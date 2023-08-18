@@ -6,9 +6,6 @@ package query
 import (
 	"fmt"
 	"math"
-	"sort"
-	"strconv"
-	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -16,7 +13,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -28,7 +24,7 @@ import (
 
 type Where struct {
 	t       QueryTran
-	colSels map[string]filter
+	colSels map[string][]span // from NewWhere, result of perField
 	// tbl will be set if the source is a Table, nil otherwise
 	tbl *Table
 	// idxSel is for the chosen index
@@ -44,7 +40,7 @@ type Where struct {
 	selectCols []string
 	selectVals []string
 
-	idxSels    []idxSel
+	idxSels    []idxSel // from optInit, result of perIndex
 	whereFixed []Fixed
 	Query1
 	// idxSelPos is the current index in idxSel.ptrngs
@@ -60,7 +56,7 @@ type Where struct {
 	singleton bool
 	selSet    bool
 
-	// exprMore is whether expr has more than the minimum idxSel
+	// exprMore is whether expr has more than idxSels
 	exprMore  bool
 	optInited bool
 }
@@ -85,9 +81,13 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	w.lookCost.Set(src.lookupCost())
 	w.calcFixed()
 	if !w.conflict {
-		cmps := w.extractCompares()
-		w.colSels = w.comparesToFilters(cmps)
-		w.conflict = w.conflict || w.exprFalse()
+		w.conflict = w.exprFalse()
+	}
+	if !w.conflict {
+		fields := w.source.Header().Physical()
+		w.colSels, w.exprMore = perField(w.expr.Exprs, fields)
+		// fmt.Println("colSels", w.colSels)
+		w.conflict = (w.colSels == nil)
 	}
 	return w
 }
@@ -142,7 +142,7 @@ func (w *Where) exprsToFixed() []Fixed {
 }
 
 func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
-	// MAYBE: handle IN and OR
+	// MAYBE: handle IN and OR, could use colSels
 	if b, ok := e.(*ast.Binary); ok && b.Tok == tok.Is {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
 			if c, ok := b.Rhs.(*ast.Constant); ok {
@@ -211,13 +211,8 @@ func (w *Where) calcNrows() (int, int) {
 	est := math.MaxInt
 	nsrc := float64(srcNrows)
 	for i := range w.idxSels {
-		ix := &w.idxSels[i]
-		var n int
-		if ix.isRanges() {
-			n = int(math.Round(ix.frac * nsrc))
-		} else { // points
-			n = len(ix.ptrngs)
-		}
+		is := &w.idxSels[i]
+		n := int(math.Round(is.frac * nsrc))
 		if n < est {
 			est = n
 		}
@@ -526,139 +521,19 @@ func (w *Where) optInit() {
 	w.optInited = true
 	w.tbl, _ = w.source.(*Table)
 	if !w.conflict && w.tbl != nil {
-		w.idxSels = w.colSelsToIdxSels(w.colSels)
-		// fmt.Printf("Where idxSels: %#v\n", w.idxSels)
-		w.exprMore = w.exprMore || len(w.idxSels) > 1
+		w.idxSels = w.perIndex(w.colSels)
+		// fmt.Println("idxSels", w.idxSels)
 		if !w.exprMore {
 			// check if any colSels were not used by idxSels
 			for _, idxSel := range w.idxSels {
-				for _, col := range idxSel.index {
-					delete(w.colSels, col)
+				for i := 0; i < idxSel.nfields; i++ {
+					delete(w.colSels, idxSel.index[i])
 				}
 			}
-			w.exprMore = w.exprMore || len(w.colSels) > 0
+			w.exprMore = len(w.colSels) > 0
 		}
 	}
 	w.setNrows(w.calcNrows())
-}
-
-// extractCompares finds sub-expressions like <field> <op> <constant>
-func (w *Where) extractCompares() []cmpExpr {
-	flds := w.source.Header().Physical()
-	cmps := make([]cmpExpr, 0, 4)
-	for _, expr := range w.expr.Exprs {
-		n := len(cmps)
-		cmps = w.binaryCompare(expr, flds, cmps)
-		cmps = w.inRange(expr, flds, cmps)
-		cmps = w.typeToRange(expr, cmps)
-		if len(cmps) == n {
-			w.exprMore = true // expr not used by cmps
-		}
-	}
-	// fmt.Printf("Where cmps %#v\n", cmps)
-	return cmps
-}
-
-func (*Where) inRange(expr ast.Expr, flds []string, cmps []cmpExpr) []cmpExpr {
-	if r, ok := expr.(*ast.InRange); ok && r.CanEvalRaw(flds) {
-		name := r.E.(*ast.Ident).Name
-		return append(cmps,
-			cmpExpr{col: name, op: r.OrgTok, val: r.Org.(*ast.Constant).Packed},
-			cmpExpr{col: name, op: r.EndTok, val: r.End.(*ast.Constant).Packed})
-	}
-	return cmps
-}
-
-func (*Where) binaryCompare(expr ast.Expr, flds []string, cmps []cmpExpr) []cmpExpr {
-	if expr.CanEvalRaw(flds) {
-		if bin, ok := expr.(*ast.Binary); ok {
-			op := bin.Tok
-			if op == tok.Isnt && bin.Rhs.(*ast.Constant).Packed == "" {
-				// treat != "" as > "" for index usage
-				op = tok.Gt
-			}
-			if op != tok.Isnt {
-				return append(cmps, cmpExpr{
-					col: bin.Lhs.(*ast.Ident).Name,
-					op:  op,
-					val: bin.Rhs.(*ast.Constant).Packed,
-				})
-			}
-		} else if in, ok := expr.(*ast.In); ok {
-			return append(cmps, cmpExpr{
-				col:  in.E.(*ast.Ident).Name,
-				op:   tok.In,
-				vals: in.Packed,
-			})
-		}
-	}
-	return cmps
-}
-
-func (*Where) typeToRange(expr ast.Expr, cmps []cmpExpr) []cmpExpr {
-	if call, ok := expr.(*ast.Call); ok {
-		if fn, ok := call.Fn.(*ast.Ident); ok {
-			if len(call.Args) == 1 {
-				if id, ok := call.Args[0].E.(*ast.Ident); ok {
-					var from, to string
-					stringQ := false
-					switch fn.Name {
-					case "Number?":
-						from = string(rune(PackMinus))
-						to = string(rune(PackPlus + 1))
-					case "String?":
-						// from should be PackString but that wouldn't include ""
-						// TODO allow multiple ranges to handle this
-						from = ""
-						to = string(rune(PackString + 1))
-						stringQ = true
-					case "Date?":
-						from = string(rune(PackDate))
-						to = string(rune(PackDate + 1))
-					default:
-						return cmps
-					}
-					return append(cmps,
-						cmpExpr{
-							col:     id.Name,
-							op:      tok.Gte,
-							val:     from,
-							stringQ: stringQ,
-						},
-						cmpExpr{
-							col: id.Name,
-							op:  tok.Lt,
-							val: to,
-						})
-				}
-			}
-		}
-	}
-	return cmps
-}
-
-// comparesToFilters combines multiple compares for each field.
-// It also sets w.conflict if any filter cannot match anything.
-func (w *Where) comparesToFilters(cmps []cmpExpr) map[string]filter {
-	// sort to group columns
-	sort.Slice(cmps, func(i, j int) bool { return cmps[i].col < cmps[j].col })
-	filters := make(map[string]filter)
-	f := filterAll
-	for i := range cmps {
-		f.andWith(cmps[i].toFilter())
-		if i+1 >= len(cmps) || cmps[i].col != cmps[i+1].col {
-			// end of a group of one column
-			if f.none() {
-				w.conflict = true
-				return nil
-			}
-			if !f.all() {
-				filters[cmps[i].col] = f
-			}
-			f = filterAll
-		}
-	}
-	return filters
 }
 
 // bestIndex returns the best (lowest cost) index with an idxSel
@@ -669,12 +544,10 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, []string) {
 		if ordered(idx, order, w.fixed) {
 			if is := w.getIdxSel(idx); is != nil {
 				varcost := w.source.lookupCost() * len(is.ptrngs)
-				if is.isRanges() {
-					tblFixCost, tblVarCost, _ :=
-						w.tbl.optimize(CursorMode, idx, frac*is.frac)
-					assert.That(tblFixCost == 0)
-					varcost += tblVarCost
-				}
+				tblFixCost, tblVarCost, _ :=
+					w.tbl.optimize(CursorMode, idx, frac*is.fracRange)
+				assert.That(tblFixCost == 0)
+				varcost += tblVarCost
 				best.update(idx, 0, varcost)
 			}
 		}
@@ -710,427 +583,6 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 	w.ctx.Hdr = w.header
 }
 
-// cmpExpr is <field> <op> <constant> or <field> in (<constants>)
-// which can be evaluated packed
-type cmpExpr struct {
-	col     string
-	val     string   // packed (binary)
-	vals    []string // packed (in)
-	op      tok.Token
-	stringQ bool // used by typeToRange
-}
-
-func (cmp cmpExpr) String() string {
-	s := cmp.col + " " + cmp.op.String() + " "
-	if cmp.vals == nil {
-		s += packToStr(cmp.val)
-	} else {
-		sep := "("
-		for _, val := range cmp.vals {
-			s += sep + packToStr(val)
-			sep = ", "
-		}
-		s += ")"
-	}
-	return s
-}
-
-func (cmp *cmpExpr) toFilter() filter {
-	if cmp.op == tok.In {
-		return filter{vals: cmp.vals}
-	}
-	// else binary
-	switch cmp.op {
-	case tok.Is:
-		return filter{vals: []string{cmp.val}}
-	case tok.Lt:
-		return filter{end: limit{val: cmp.val}}
-	case tok.Lte:
-		return filter{end: limit{val: cmp.val, inc: 1}}
-	case tok.Gt:
-		return filter{org: limit{val: cmp.val, inc: 1}, end: limitMax}
-	case tok.Gte:
-		return filter{org: limit{val: cmp.val, stringQ: cmp.stringQ},
-			end: limitMax}
-	default:
-		panic(assert.ShouldNotReachHere())
-	}
-}
-
-//-------------------------------------------------------------------
-
-// filter is either a range or a list of values
-type filter struct {
-	// org is inclusive (>=)
-	org limit
-	// end is exclusive (<)
-	end limit
-	// vals is nil for a range (org and end)
-	vals []string
-}
-
-var filterAll = filter{org: limit{val: ixkey.Min}, end: limit{val: ixkey.Max}}
-
-func (f filter) String() string {
-	if f.all() {
-		return "<all>"
-	}
-	if f.none() {
-		return "<none>"
-	}
-	if f.vals == nil {
-		return "(" + f.org.String() + ".." + f.end.String() + ")"
-	}
-	if len(f.vals) == 1 {
-		return packToStr(f.vals[0])
-	}
-	s := "["
-	sep := ""
-	for _, v := range f.vals {
-		s += sep + packToStr(v)
-		sep = ","
-	}
-	return s + "]"
-}
-
-func (f *filter) isRange() bool {
-	return len(f.vals) == 0
-}
-
-func (f *filter) isPoint() bool {
-	return len(f.vals) == 1
-}
-
-func (f *filter) all() bool {
-	return len(f.vals) == 0 && f.org == limitMin && f.end == limitMax
-}
-
-func (f *filter) none() bool {
-	return len(f.vals) == 0 && compare(f.org, f.end) >= 0
-}
-
-func (f *filter) andWith(f2 filter) {
-	if f.isRange() && f2.isRange() {
-		if (f.org.stringQ && f2.org.val == "" && f2.org.inc == 1) ||
-			(f2.org.stringQ && f.org.val == "" && f.org.inc == 1) {
-			// shrink String? range if "" not allowed
-			f.org = limit{val: string(rune(PackString)), inc: 0}
-		}
-		if compare(f2.org, f.org) > 0 {
-			f.org = f2.org
-		} else {
-			f.org.stringQ = f.org.stringQ || f2.org.stringQ
-		}
-		if compare(f2.end, f.end) < 0 {
-			f.end = f2.end
-		}
-	} else if !f.isRange() && !f2.isRange() {
-		f.vals = set.Intersect(f.vals, f2.vals)
-		f.org, f.end = limit{}, limit{}
-	} else { // set & range => set
-		if f.isRange() {
-			f.vals = f2.vals
-			f2.org, f2.end = f.org, f.end
-		}
-		vals := make([]string, 0, len(f.vals)/2)
-		for _, v := range f.vals {
-			lim := limit{val: v}
-			if compare(f2.org, lim) <= 0 && compare(lim, f2.end) < 0 {
-				vals = append(vals, v)
-			}
-		}
-		f.vals = vals
-		f.org, f.end = limit{}, limit{}
-	}
-}
-
-type limit struct {
-	val     string
-	inc     uint8
-	stringQ bool
-}
-
-var limitMin = limit{}
-var limitMax = limit{val: ixkey.Max}
-
-func compare(x, y limit) int {
-	cmp := strings.Compare(x.val, y.val)
-	if cmp == 0 {
-		cmp = ord.Compare(x.inc, y.inc)
-	}
-	return cmp
-}
-
-// valRaw is for non-encoded (single field keys)
-func (lim limit) valRaw() string {
-	if lim.inc == 0 {
-		return lim.val
-	}
-	return lim.val + "\x00"
-}
-
-func (lim limit) String() string {
-	s := packToStr(lim.val)
-	if lim.inc > 0 {
-		s += "+"
-	}
-	return s
-}
-
-func packToStr(s string) string {
-	if s == "" {
-		return "''"
-	}
-	if s[0] == 0xff {
-		return "<max>"
-	}
-	return Unpack(s).String()
-}
-
-//-------------------------------------------------------------------
-
-type idxSel struct {
-	index   []string
-	ptrngs  []pointRange
-	frac    float64
-	encoded bool
-}
-
-func (is idxSel) String() string {
-	s := str.Join(",", is.index)
-	sep := ": "
-	for _, pr := range is.ptrngs {
-		s += sep + showKey(is.encoded, pr.org)
-		sep = " | "
-		if pr.isRange() {
-			s += ".." + showKey(is.encoded, pr.end)
-		}
-	}
-	if is.frac != 0 {
-		s += " = " + strconv.FormatFloat(is.frac, 'g', 4, 64)
-	}
-	return s
-}
-
-func showKey(encode bool, key string) string {
-	if !encode {
-		return packToStr(key)
-	}
-	s := ""
-	sep := ""
-	for _, t := range ixkey.Decode(key) {
-		s += sep + packToStr(t)
-		sep = ","
-	}
-	return s
-}
-
-func (is idxSel) isRanges() bool {
-	return is.ptrngs[0].isRange()
-}
-
-// singleton returns true if we know the result is at most one record
-// because there is a single point select on a key
-func (is idxSel) singleton() bool {
-	return len(is.ptrngs) == 1 && is.ptrngs[0].end == ""
-}
-
-// colSelsToIdxSels takes filters on individual columns
-// and returns filters on indexes (possibly multi-column).
-// We can use an index if leading columns have vals
-// and optionally a final column has a range.
-// This does not need to be all the index columns, it can be a prefix of them.
-// It also sets w.singleton
-func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
-	indexes := w.tbl.Indexes()
-	idxSels := make([]idxSel, 0, len(indexes)/2)
-	for i := range w.tbl.schema.Indexes {
-		schix := &w.tbl.schema.Indexes[i]
-		idx := schix.Columns
-		key := schix.Mode == 'k'
-		uniq := schix.Mode == 'u'
-		encode := !key || len(idx) > 1
-		if filters := colSelsToIdxFilters(colSels, idx); len(filters) > 0 {
-			exploded := explodeFilters(filters, [][]filter{nil})
-			comp := compositePtrngs(encode, exploded)
-			for i := range comp {
-				c := &comp[i]
-				if c.isPoint() {
-					lookup := len(exploded[i]) == len(idx) &&
-						(key || (uniq && c.org != ""))
-					if !lookup {
-						// convert point to range
-						if !encode {
-							c.end = c.org + "\x00"
-						} else {
-							c.end = c.org + ixkey.Sep + ixkey.Max
-						}
-					}
-				}
-			}
-			frac := w.idxFrac(idx, comp)
-			idxSel := idxSel{index: idx, ptrngs: comp, frac: frac, encoded: encode}
-			w.singleton = w.singleton || idxSel.singleton()
-			idxSels = append(idxSels, idxSel)
-		}
-	}
-	return idxSels
-}
-
-// colSelsToIdxFilters returns filters for the columns of an index
-// or else nil if not possible.
-func colSelsToIdxFilters(colSels map[string]filter, idx []string) []filter {
-	const maxCount = 8 * 1024 // ???
-	filters := make([]filter, 0, len(idx))
-	count := 1
-	for _, col := range idx {
-		f, ok := colSels[col]
-		if !ok {
-			break
-		}
-		if len(f.vals) > 1 {
-			count *= len(f.vals)
-			if count > maxCount {
-				return nil
-			}
-		}
-		filters = append(filters, f)
-		if f.isRange() {
-			break // can't have anything after range
-		}
-	}
-	return filters
-}
-
-// pointRange holds either a range or a single key (in org with end = "")
-type pointRange struct {
-	org string
-	end string
-}
-
-func (pr pointRange) isPoint() bool {
-	return pr.end == ""
-}
-
-func (pr pointRange) isRange() bool {
-	return pr.end != ""
-}
-
-func (pr pointRange) String() string {
-	if pr.conflict() {
-		return "<empty>"
-	}
-	// WARNING: does NOT decode, intended for explode output
-	// use idxSel.String for compositePtrngs output
-	s := packToStr(pr.org)
-	if pr.isRange() {
-		s += ".." + packToStr(pr.end)
-	}
-	return s
-}
-
-func (pr pointRange) intersect(selOrg, selEnd string) pointRange {
-	if pr.isPoint() {
-		if pr.org == selOrg {
-			return pr
-		}
-	} else { // range
-		if pr.org <= selOrg && selOrg < pr.end {
-			return pointRange{org: selOrg, end: selEnd}
-		}
-	}
-	return pointRange{org: "z", end: "a"} // conflict
-}
-
-func (pr pointRange) conflict() bool {
-	return pr.end != "" && pr.end < pr.org
-}
-
-// explodeFilters converts multi vals filters to multi single vals filters.
-// e.g. (1|2)+(3|4) => 1+3, 1+4, 2+3, 2+4
-// Each recursion processes one element from remaining, adding to prefixes.
-func explodeFilters(remaining []filter, prefixes [][]filter) [][]filter {
-	f := remaining[0]
-	if len(f.vals) <= 1 { // single value or final range
-		for i := range prefixes {
-			prefixes[i] = append(prefixes[i], f)
-		}
-	} else { // len(f.vals) > 1
-		newpre := make([][]filter, 0, len(f.vals)*len(prefixes))
-		for i := range prefixes {
-			pre := prefixes[i]
-			// set cap to len so each append will make a new copy (COW)
-			pre = pre[:len(pre):len(pre)]
-			for _, v := range f.vals {
-				p := append(pre, filter{vals: []string{v}})
-				newpre = append(newpre, p)
-			}
-		}
-		prefixes = newpre
-	}
-	if len(remaining) > 1 {
-		return explodeFilters(remaining[1:], prefixes) // RECURSE
-	}
-	return prefixes
-}
-
-func compositePtrngs(encode bool, filters [][]filter) []pointRange {
-	result := make([]pointRange, len(filters))
-outer:
-	for i, fs := range filters {
-		if !encode {
-			assert.That(len(fs) == 1)
-			f := fs[0]
-			if f.isPoint() {
-				result[i] = pointRange{org: f.vals[0]}
-			} else { // range
-				result[i] = pointRange{org: f.org.valRaw(), end: f.end.valRaw()}
-			}
-		} else {
-			var enc ixkey.Encoder
-			for _, f := range fs {
-				if f.isPoint() {
-					enc.Add(f.vals[0])
-				} else { // final range
-					enc2 := enc.Dup()
-					enc.Add(f.org.val)
-					if f.org.inc == 1 {
-						enc.Add(ixkey.Max)
-					}
-					enc2.Add(f.end.val)
-					if f.end.inc == 1 {
-						enc2.Add(ixkey.Max)
-					}
-					result[i] = pointRange{org: enc.String(), end: enc2.String()}
-					continue outer
-				}
-			}
-			result[i] = pointRange{org: enc.String()}
-		}
-	}
-	return result
-}
-
-func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
-	iIndex := slc.IndexFn(w.tbl.indexes, idx, slices.Equal[string])
-	if iIndex < 0 {
-		panic("index not found")
-	}
-	var frac float64
-	nrows1, _ := w.tbl.Nrows()
-	for _, pr := range ptrngs {
-		if pr.end == "" { // lookup
-			if nrows1 > 0 {
-				frac += 1 / float64(nrows1)
-			}
-		} else { // range
-			frac += float64(w.t.RangeFrac(w.tbl.name, iIndex, pr.org, pr.end))
-		}
-	}
-	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
-	return frac
-}
-
 // execution --------------------------------------------------------
 
 // MakeSuTran is injected by dbms to avoid import cycle
@@ -1157,10 +609,24 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 		w.nIn++
 		return w.source.Get(th, dir)
 	}
-	if w.idxSel.isRanges() {
-		return w.getRange(th, dir)
+	for {
+		if w.idxSelPos != -1 && w.curPtrng.isRange() {
+			if row := w.tbl.Get(th, dir); row != nil {
+				return row
+			}
+		}
+		if !w.advance(dir) {
+			return nil // eof
+		}
+		if w.curPtrng.isRange() {
+			w.tbl.SelectRaw(w.curPtrng.org, w.curPtrng.end)
+		} else { // point
+			if row := w.tbl.lookup(w.curPtrng.org); row != nil {
+				w.nIn++
+				return row
+			}
+		}
 	}
-	return w.getPoint(dir)
 }
 
 func (w *Where) filter(th *Thread, row Row) bool {
@@ -1178,32 +644,6 @@ func (w *Where) filter(th *Thread, row Row) bool {
 	w.ctx.Row = row
 	defer func() { w.ctx.Th, w.ctx.Row = nil, nil }()
 	return w.expr.Eval(&w.ctx) == True
-}
-
-func (w *Where) getRange(th *Thread, dir Dir) Row {
-	for {
-		if w.idxSelPos != -1 {
-			if row := w.tbl.Get(th, dir); row != nil {
-				return row
-			}
-		}
-		if !w.advance(dir) {
-			return nil // eof
-		}
-		w.tbl.SelectRaw(w.curPtrng.org, w.curPtrng.end)
-	}
-}
-
-func (w *Where) getPoint(dir Dir) Row {
-	for {
-		if !w.advance(dir) {
-			return nil
-		}
-		if row := w.tbl.lookup(w.curPtrng.org); row != nil {
-			w.nIn++
-			return row
-		}
-	}
 }
 
 func (w *Where) advance(dir Dir) bool {

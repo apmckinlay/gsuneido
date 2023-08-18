@@ -8,113 +8,144 @@ import (
 	"math"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestExtractCompares(t *testing.T) {
-	test := func(query string, expected string) *Where {
-		t.Helper()
-		w := ParseQuery("table where "+query, testTran{}, nil).(*Where)
-		w.optInit()
-		before := w.expr.String()
-		cmps := w.extractCompares()
-		if expected == "" {
-			after := w.expr.String()
-			assert.T(t).This(after).Is(before)
-		}
-		assert.T(t).This(fmt.Sprint(cmps)).Is(expected)
-		return w
-	}
-	test("Foo()", "[]")
-	test("a isnt 1", "[]")
-	test("a is 1", "[a Is 1]")
-	test("a > 2", "[a Gt 2]")
-	test("a or b", "[]")
-	test("a is 1 or a is 2", "[a In (1, 2)]")
-	test("a is 1 and b is 2", "[a Is 1 b Is 2]")
-	test("a in (1, 2, 3)", "[a In (1, 2, 3)]")
-}
-
-func TestComparesToColSelects(t *testing.T) {
+func TestWhere_perField(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery("table where "+query, testTran{}, nil).(*Where)
-		w.optInit()
-		cmps := w.extractCompares()
-		colSels := w.comparesToFilters(cmps)
-		assert.T(t).This(fmt.Sprint(colSels)).Is("map[" + expected + "]")
+		actual := "conflict"
+		if !w.conflict {
+			actual = fmt.Sprint(w.colSels)[3:]
+		}
+		assert.T(t).Msg(query).This(actual).Is(expected)
 	}
-	test("a >= 2", "a:(2..<max>)")
-	test("a > 2", "a:(2+..<max>)")
-	test("a is 1 and b is 2", "a:1 b:2")
-	test("a in (1,2,3)", "a:[1,2,3]")
-	test("a in (1,2,3,4) and a in (3,4,5,6)", "a:[3,4]")
-	test("a in (1,2,3,4) and a > 2", "a:[3,4]")
-	test("a in (1,2,3,4) and a < 3", "a:[1,2]")
-	test("a >= 1 and a < 3", "a:(1..3)")
-	test("a > 1 and a >= 2", "a:(2..<max>)")
-	test("a > 5 and a < 3", "") // conflict
+	// nothing indexable
+	test("Foo()", "[]")
+	test("a =~ 'x'", "[]")
+	test("a", "[]")
+	// binary
+	test("a is 123", "[a:[123]]")
+	test("a isnt 123", "[a:[<123 >123]]")
+	test("a < 123", "[a:[<123]]")
+	test("a <= 123", "[a:[<=123]]")
+	test("a > 123", "[a:[>123]]")
+	test("a >= 123", "[a:[>=123]]")
+	// compare to ""
+	test("a isnt ''", "[a:[>'']]")
+	test("a < ''", "conflict")
+	test("a <= ''", "[a:['']]")
+	test("a > ''", "[a:[>'']]")
+	test("a >= ''", "[a:[<<max>]]") // everything, always matches
+	// in
+	test("a in (3,1,2)", "[a:[1 2 3]]")
+	// range
+	test("a > 3 and a < 6", "[a:[>3_<6]]")
+	test("a >= 3 and a <= 6", "[a:[>=3_<=6]]")
+	// type
+	test("String?(a)", "[a:['' >=PackString_<PackDate]]")
+	test("Number?(a)", "[a:[>=PackMinus_<PackString]]")
+	test("Date?(a)", "[a:[>=PackDate_<PackDate+1]]")
+	// or
+	test("a is 0 or b is 0", "[]")
+	test("a is 0 or a =~ 'x'", "[]")
+	test("a is 0 or a > 6", "[a:[0 >6]]")
+	test("a is false and (b is 1 or b is 2)", "[a:[false] b:[1 2]]")
+	test("a is 1 or a is 2 or a is 3", "[a:[1 2 3]]")
+	test("a is 1 or a is 2 or a is 1", "[a:[1 2]]")
+	test("a is 1 or a in (1,2,3) or a is 2", "[a:[1 2 3]]")
+	test("a > 3 or a > 6", "[a:[>3]]")
+	test("a > 3 or a is 6", "[a:[>3]]")
+	test("a > 6 or a > 3", "[a:[>3]]")
+	test("a is 6 or a > 3", "[a:[>3]]")
+	test("Number?(a) or String?(a)", "[a:['' >=PackMinus_<PackDate]]")
+	test("String?(a) or Number?(a)", "[a:['' >=PackMinus_<PackDate]]")
+	// multiple
+	test("a is 123 and b is 456", "[a:[123] b:[456]]")
+	test("a isnt 'm' and a > 'a'", "[a:[>'a'_<'m' >'m']]")
+	test("a isnt '' and a > 'm'", "[a:[>'m']]")
+	test("a isnt '' and a in ('','m')", "[a:['m']]")
+	test("a isnt '' and String?(a)", "[a:[>=PackString_<PackDate]]")
+	// intersect
+	test("a in (1,2,3) and a in (1,2,3)", "[a:[1 2 3]]")
+	test("a in (1,2,3) and a in (2,3,4)", "[a:[2 3]]")
+	test("a in (1,2,3) and a is 2", "[a:[2]]")
+	test("a in (1,2,3) and a >= 2", "[a:[2 3]]")
+	test("a < 5 and a > 2", "[a:[>2_<5]]")
+	test("a < 5 and a <= 5", "[a:[<5]]")
+	test("a >= 5 and a > 5", "[a:[>5]]")
+	// conflict
+	test("a in (1,2,3) and a in (4,5,6)", "conflict")
+	test("a in (1,3,5) and a in (2,4,6)", "conflict")
+	test("a < 5 and a > 6", "conflict")
 }
 
-func TestColSelsToIdxFilter(t *testing.T) {
+func TestWhere_span_none(t *testing.T) {
+	x := span{}
+	assert.T(t).That(x.none())
+	x.org = side{val: "a"}
+	assert.T(t).That(x.none())
+}
+
+func TestWhere_indexSpans(t *testing.T) {
 	idx := []string{"a", "b", "c"}
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery(query, testTran{}, nil).(*Where)
-		w.optInit()
-		cmps := w.extractCompares()
-		colSels := w.comparesToFilters(cmps)
-		filters := colSelsToIdxFilters(colSels, idx)
-		assert.T(t).This(fmt.Sprint(filters)).Is("[" + expected + "]")
+		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
+		idxSpans := indexSpans(idx, pf)
+		assert.T(t).This(fmt.Sprint(idxSpans)).Is("[" + expected + "]")
 	}
-	test("comp where a is 1", "1")
-	test("comp where a is 1 and c is 2", "1")
-	test("comp where a is 1 and b is 2", "1 2")
-	test("comp where a is 1 and b is 2 and c is 3", "1 2 3")
-	test("comp where a >= 4", "(4..<max>)")
-	test("comp where a >= 4 and b is 2", "(4..<max>)")
-	test("comp where a is 2 and b >= 4", "2 (4..<max>)")
-	test("comp where a in (1,2) and b in (3,4)", "[1,2] [3,4]")
+	test("comp where a is 1", "[1]")
+	test("comp where a is 1 and c is 2", "[1]")
+	test("comp where a is 1 and b is 2", "[1] [2]")
+	test("comp where a is 1 and b is 2 and c is 3", "[1] [2] [3]")
+	test("comp where a >= 4", "[>=4]")
+	test("comp where a >= 4 and b is 2", "[>=4]")
+	test("comp where a is 2 and b >= 4", "[2] [>=4]")
+	test("comp where a in (1,2) and b in (3,4)", "[1 2] [3 4]")
+	test("comp where a is '' and b isnt 0", "[''] [<0 >0]")
 	idx = []string{"id"}
-	test("customer where id is 'e'", "'e'")
+	test("customer where id is 'e'", "['e']")
 }
 
-func TestExplodeFilters(t *testing.T) {
+func TestWhere_explodeIndexSpans(t *testing.T) {
 	idx := []string{"a", "b", "c"}
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery("comp where "+query, testTran{}, nil).(*Where)
-		w.optInit()
-		cmps := w.extractCompares()
-		colSels := w.comparesToFilters(cmps)
-		filters := colSelsToIdxFilters(colSels, idx)
-		exploded := explodeFilters(filters, [][]filter{nil})
+		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
+		idxSpans := indexSpans(idx, pf)
+		exploded := explodeIndexSpans(idxSpans, [][]span{nil})
 		assert.T(t).This(fmt.Sprint(exploded)).Is("[" + expected + "]")
 	}
 	test("a is 1", "[1]")
 	test("a is 1 and b is 2", "[1 2]")
 	test("a is 1 and b is 2 and c is 3", "[1 2 3]")
-	test("a >= 4", "[(4..<max>)]")
-	test("a is 2 and b >= 4", "[2 (4..<max>)]")
+	test("a >= 4", "[>=4]")
+	test("a is 2 and b >= 4", "[2 >=4]")
 	test("a in (1,2) and b in (3,4)", "[1 3] [1 4] [2 3] [2 4]")
-	test("a in (1,2) and b >= 4", "[1 (4..<max>)] [2 (4..<max>)]")
+	test("a in (1,2) and b >= 4", "[1 >=4] [2 >=4]")
+	test("a is '' and b isnt 0", "['' <0] ['' >0]")
 }
 
-func TestColSelsToIdxSels(t *testing.T) {
+func TestWhere_perIndex(t *testing.T) {
+	table := "comp"
 	test := func(query string, expected string) {
 		t.Helper()
-		w := ParseQuery("comp where "+query, testTran{}, nil).(*Where)
+		w := ParseQuery(table+" where "+query, testTran{}, nil).(*Where)
 		w.optInit()
-		cmps := w.extractCompares()
-		colSels := w.comparesToFilters(cmps)
-		idxSels := w.colSelsToIdxSels(colSels)
+		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
+		idxSels := w.perIndex(pf)
 		assert.T(t).This(fmt.Sprint(idxSels)).Is("[" + expected + "]")
 	}
 	test("a is 1", "a,b,c: 1..1,<max> = 0.1")
 	test("a is 1 and b is 2", "a,b,c: 1,2..1,2,<max> = 0.01")
-	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3 = 0.001")
+	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3 = 0.0005")
 	test("a > 4", "a,b,c: 4,<max>..<max> = 0.5")
 	test("a <= 4", "a,b,c: ..4,<max> = 0.5")
 	test("a is 2 and b >= 4", "a,b,c: 2,4..2,<max> = 0.06")
@@ -122,6 +153,65 @@ func TestColSelsToIdxSels(t *testing.T) {
 		"2,3..2,3,<max> | 2,4..2,4,<max> = 0.04")
 	test("a in (1,2) and b > 4",
 		"a,b,c: 1,4,<max>..1,<max> | 2,4,<max>..2,<max> = 0.1")
+	test("a is 1 or a > 3", "a,b,c: 1..1,<max> | 3,<max>..<max> = 0.7")
+	test("a isnt 5", "a,b,c: ..5 | 5,<max>..<max> = 0.9")
+	test("a is '' and b isnt 0", "a,b,c: ..'',0 | '',0,<max>..'',<max> = 0.09")
+
+	table = "table"
+	test("a >= ''", "a: ''..<max> = 1")
+	// test("a >= ''", "a: '' | '\\x00'..<max> = 1.005")
+}
+
+type wtestTran struct {
+	testTran
+}
+
+func (t wtestTran) RangeFrac(table string, iIndex int, org, end string) float64 {
+	return .5
+}
+
+func TestWhere_consistent(t *testing.T) {
+	assert := assert.T(t)
+	strs := []string{"0", "1", "-1", "''", "'foo'", "true", "false", "#20230812"}
+	vals := []Value{Zero, One, MinusOne, EmptyStr, SuStr("foo"), True, False,
+		DateFromLiteral("20230812")}
+	cols := []string{"a"}
+	hdr := SimpleHeader(cols)
+	test := func(lhs int, op string, rhs int) {
+		t.Helper()
+		rec := new(RecordBuilder).Add(vals[lhs].(Packable)).Build()
+		c := &ast.Context{Hdr: hdr, Row: []DbRec{{Record: rec}}}
+		query := "table where a " + op + " " + strs[rhs]
+		w := ParseQuery(query, wtestTran{}, nil).(*Where)
+		w.optInit()
+		e := w.expr.Exprs[0]
+		assert.That(e.CanEvalRaw(cols))
+		eval := e.Eval(c) == True
+		// fmt.Println(eval, "\t", strs[lhs], op, strs[rhs])
+		var ixrange bool
+		if !w.conflict {
+			idxsel := w.idxSels[0]
+			packed := Pack(vals[lhs].(Packable))
+			for _, pr := range idxsel.ptrngs {
+				if pr.isPoint() {
+					ixrange = ixrange || packed == pr.org
+					// fmt.Printf("%q == %q\n", packed, pr.org)
+				} else { // range
+					ixrange = ixrange || pr.org <= packed && packed < pr.end
+					// fmt.Printf("%q <= %q < %q\n", pr.org, packed, pr.end)
+				}
+			}
+		}
+		assert.Msg(strs[lhs], op, strs[rhs]).This(ixrange).Is(eval)
+	}
+	ops := []string{"is", "isnt", "<", "<=", ">", ">="}
+	for lhs := range vals {
+		for _, op := range ops {
+			for rhs := range vals {
+				test(lhs, op, rhs)
+			}
+		}
+	}
 }
 
 func TestFracPos(t *testing.T) {
@@ -155,10 +245,10 @@ func TestWhere_Nrows(t *testing.T) {
 	test("inven where item >= 5", 50)
 	test("inven where item < 3 and item > 3", 0) // conflict
 	test("inven where item is 1", 1)
-	test("inven where item in (1,2,3)", 3)
+	test("inven where item in (1,2,3,4)", 2)
 	test("inven where item > 2 and item < 4", 20)
 	test("inven where item > 2 and item < 4 and qty", 10)
-	test("hist where date is 3", 5)        // half of 1/10 (not 1 since not key)
+	test("hist where date is 3", 10)
 	test("inven extend x where x > 5", 50) // not on table
 }
 

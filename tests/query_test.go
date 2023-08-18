@@ -5,6 +5,7 @@ package tests
 
 import (
 	"fmt"
+	"hash/crc64"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19"
@@ -13,6 +14,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
@@ -30,18 +33,7 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `(
-		(eta_trailer_moves
-			extend etamaster_num = etaworker_num1,
-				etapay_empty_mileage_cdn = etatm_w1pay_mileage,
-				etatm_w1pay_finalized, stmt = etatm_w1pay_finalized)
-		union
-			(eta_trailer_moves
-			extend etamaster_num = etaworker_num2,
-				etapay_empty_mileage_cdn = etatm_w2pay_mileage,
-				etatm_w2pay_finalized, stmt = etatm_w2pay_finalized))extend etapay_readyto_pay? = true,
-		etaassoc_start_date = etatm_from_date,
-		etaassoc_end_date = etatm_to_date where etamaster_num is #20230511.201100018where etapay_readyto_pay? is true and stmt is ""`
+	s := `(((cus join ivc) join (((bln extend c1 = ik)) where bk is "82")) union ((cus join (ivc union ivc)) join bln)) sort b2,c4,i4`
 	q := ParseQuery(s, tran, nil)
 	// trace.QueryOpt.Set()
 	// trace.JoinOpt.Set()
@@ -49,13 +41,51 @@ func TestQuery(t *testing.T) {
 
 	fmt.Println("----------------")
 	fmt.Println(Strategy(q))
-	// th := &Thread{}
-	// n := 0
-	// for q.Get(th, Next) != nil {
-	// 	n++
-	// }
-	// fmt.Println(n, "rows")
+	th := &Thread{}
+	n := 0
+	hdr := q.Header()
+	fields := slc.Without(hdr.GetFields(), "-")
+	hashes := make(map[uint64]struct{})
+	for {
+		row := q.Get(th, Next)
+		if row == nil {
+			break
+		}
+		hash := hashRow(hdr, fields, row)
+		if _, ok := hashes[hash]; ok {
+			panic("duplicate hash")
+		}
+		hashes[hash] = struct{}{}
+		n++
+	}
+	fmt.Println(n, "rows")
 	exit.RunFuncs()
+}
+
+func hashRow(hdr *Header, fields []string, row Row) uint64 {
+	hash := uint64(0)
+	for _, fld := range fields {
+		hash = hash*31 + hashPacked(row.GetRaw(hdr, fld))
+	}
+	return hash
+}
+
+var ecma = crc64.MakeTable(crc64.ECMA)
+
+func hashPacked(p string) uint64 {
+	if len(p) > 0 && p[0] >= PackObject {
+		return hashObject(p)
+	}
+	return crc64.Checksum(hacks.Stobs(p), ecma)
+}
+
+func hashObject(p string) uint64 {
+	hash := uint64(0)
+	for i := 0; i < len(p); i++ {
+		// use simple addition to be insensitive to member order
+		hash += uint64(p[i])
+	}
+	return hash
 }
 
 func TestQuery2(t *testing.T) {

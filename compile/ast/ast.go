@@ -450,9 +450,10 @@ func (a *InRange) Children(fn func(Node) Node) {
 type Call struct {
 	exprNodeT
 	noPos
-	Fn   Expr
-	Args []Arg
-	End  int32
+	Fn      Expr
+	Args    []Arg
+	End     int32
+	evalRaw bool
 }
 
 func (a *Call) String() string {

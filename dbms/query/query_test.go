@@ -217,6 +217,7 @@ func TestQueryBug(*testing.T) {
 	doAdmin(db, "create tmp (a,b) key(a)")
 	act("insert { a: 1 } into tmp")
 	assert.This(queryAll(db, "tmp where b > 0")).Is("")
+	// inconsistent with the language, but how it has worked historically
 }
 
 func TestExtendAllRules(*testing.T) {
