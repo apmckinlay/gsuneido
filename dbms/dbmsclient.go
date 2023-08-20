@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/csio"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -17,7 +19,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 // token is to authorize the next connection

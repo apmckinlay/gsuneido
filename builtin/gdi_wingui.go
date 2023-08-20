@@ -12,7 +12,6 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 var gdi32 = MustLoadDLL("gdi32.dll")
@@ -570,7 +569,7 @@ func Polygon(a, b, c Value) Value {
 		n = ToInt(c)
 	}
 	p := heap.Alloc(uintptr(n) * nPoint)
-	for i := 0; i < ord.Min(n, ob.ListSize()); i++ {
+	for i := 0; i < min(n, ob.ListSize()); i++ {
 		*(*stPoint)(unsafe.Pointer(uintptr(p) + uintptr(i)*nPoint)) =
 			obToPoint(ob.ListGet(i))
 	}

@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	"github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"golang.org/x/exp/slices"
 )
 
 const dbName = "testtools.tmp"

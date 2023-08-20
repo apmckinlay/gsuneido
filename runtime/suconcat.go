@@ -5,11 +5,11 @@ package runtime
 
 import (
 	"bytes"
+	"cmp"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/pack"
@@ -140,7 +140,7 @@ func (SuConcat) Type() types.Type {
 }
 
 func (c SuConcat) Compare(other Value) int {
-	if cmp := ord.Compare(ordStr, Order(other)); cmp != 0 {
+	if cmp := cmp.Compare(ordStr, Order(other)); cmp != 0 {
 		return cmp * 2
 	}
 	// now know other is a string so AsStr won't panic

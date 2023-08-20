@@ -5,8 +5,6 @@ package hash
 
 import (
 	"hash/maphash"
-
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 const maxlen = 64
@@ -31,7 +29,7 @@ func Bytes(b []byte) uint32 {
 func HashString(s string) uint32 {
 	const offset32 = 2166136261
 	const prime32 = 16777619
-	n := ord.Min(len(s), maxlen)
+	n := min(len(s), maxlen)
 	hash := uint32(offset32)
 	for i := 0; i < n; i++ {
 		hash ^= uint32(s[i])

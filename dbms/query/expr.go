@@ -4,10 +4,11 @@
 package query
 
 import (
+	"slices"
+
 	. "github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"golang.org/x/exp/slices"
 )
 
 // renameExpr renames identifiers in an expression.

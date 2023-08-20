@@ -6,14 +6,14 @@ package query
 import (
 	"strings"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 type Union struct {
@@ -107,8 +107,7 @@ func (*Union) fastSingle() bool {
 
 func (u *Union) getIndexes() [][]string {
 	// lookup can read via any index
-	return set.UnionFn(u.source1.Indexes(), u.source2.Indexes(),
-		slices.Equal[string])
+	return set.UnionFn(u.source1.Indexes(), u.source2.Indexes(), slices.Equal)
 }
 
 func (u *Union) getNrows() (int, int) {
@@ -121,7 +120,7 @@ func (u *Union) nrowsCalc(n1, n2 int) int {
 	if u.disjoint != "" {
 		return n1 + n2
 	}
-	min := ord.Max(n1, n2) // smaller could be all duplicates
+	min := max(n1, n2)     // smaller could be all duplicates
 	max := n1 + n2         // could be no duplicates
 	return (min + max) / 2 // estimate half way between
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/tokens"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -64,7 +63,7 @@ func DisasmMixed(fn *SuFunc, src string) string {
 		for i >= cp {
 			if spi < len(fn.SrcPos) {
 				ds := int(fn.SrcPos[spi])
-				printSrc(in, src[sp:ord.Min(sp+ds, srcLim)])
+				printSrc(in, src[sp:min(sp+ds, srcLim)])
 				cp += int(fn.SrcPos[spi+1])
 				sp += ds
 				spi += 2

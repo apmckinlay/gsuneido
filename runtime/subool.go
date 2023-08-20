@@ -4,9 +4,10 @@
 package runtime
 
 import (
+	"cmp"
+
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
@@ -93,7 +94,7 @@ func (SuBool) Type() types.Type {
 }
 
 func (b SuBool) Compare(other Value) int {
-	if cmp := ord.Compare(ordBool, Order(other)); cmp != 0 {
+	if cmp := cmp.Compare(ordBool, Order(other)); cmp != 0 {
 		return cmp * 2
 	}
 	if b == other {

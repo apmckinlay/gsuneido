@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 // Ranges is an ordered set of non-overlapping ranges of strings.
@@ -177,8 +176,8 @@ func (it *iter) prev() {
 
 func merge(ls1 *leafSlot, ls2 *leafSlot) bool {
 	if overlap(ls1, ls2) {
-		ls1.from = ord.Min(ls1.from, ls2.from)
-		ls1.to = ord.Max(ls1.to, ls2.to)
+		ls1.from = min(ls1.from, ls2.from)
+		ls1.to = max(ls1.to, ls2.to)
 		return true
 	}
 	return false

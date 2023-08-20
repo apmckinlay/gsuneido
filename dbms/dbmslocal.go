@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -19,7 +21,6 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 // DbmsLocal implements the Dbms interface using a local database

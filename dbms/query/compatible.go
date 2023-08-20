@@ -4,9 +4,10 @@
 package query
 
 import (
+	"slices"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"golang.org/x/exp/slices"
 )
 
 // Compatible is shared by Intersect, Minus, and Union

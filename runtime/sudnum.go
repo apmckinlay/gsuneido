@@ -4,9 +4,10 @@
 package runtime
 
 import (
+	"cmp"
+
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
@@ -65,7 +66,7 @@ func (SuDnum) Type() types.Type {
 }
 
 func (dn SuDnum) Compare(other Value) int {
-	if cmp := ord.Compare(ordNum, Order(other)); cmp != 0 {
+	if cmp := cmp.Compare(ordNum, Order(other)); cmp != 0 {
 		return cmp * 2
 	}
 	// now know other is a number and ToDnum won't panic

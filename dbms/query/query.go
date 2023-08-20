@@ -39,6 +39,8 @@ import (
 	"math"
 	"strings"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
@@ -47,11 +49,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/opt"
-	"golang.org/x/exp/slices"
 )
 
 type Query interface {
@@ -287,7 +287,7 @@ func Setup(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
 func Setup1(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
 	q = q.Transform()
 	nrows, _ := q.Nrows()
-	nrows = ord.Max(1, nrows) // avoid divide by zero
+	nrows = max(1, nrows) // avoid divide by zero
 	return setup(q, mode, 1/float64(nrows), t)
 }
 

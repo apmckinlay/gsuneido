@@ -6,13 +6,13 @@ package query
 import (
 	"log"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 // TempIndex is inserted by SetApproach as required.
@@ -259,7 +259,7 @@ func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
 
 // less2 is used for Seek
 func (ti *TempIndex) less2(th *Thread, row Row, key []string) bool {
-	n := ord.Max(len(ti.order), len(key))
+	n := max(len(ti.order), len(key))
 	for i := 0; i < n; i++ {
 		if i >= len(key) {
 			return false

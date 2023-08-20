@@ -7,9 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 func TestEqual(*testing.T) {

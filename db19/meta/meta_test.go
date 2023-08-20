@@ -11,7 +11,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -63,7 +62,7 @@ func TestChunkingSimulation(t *testing.T) {
 		data[updates[step]] = clock
 		// fmt.Println("--- update", updates[step])
 		// number of previous chunks to merge with
-		merge := ord.Min(len(chunks), bits.TrailingOnes(clock))
+		merge := min(len(chunks), bits.TrailingOnes(clock))
 		if len(chunks) >= maxChain {
 			// fmt.Println("MAX")
 			merge = maxChain

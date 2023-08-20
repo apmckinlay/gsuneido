@@ -4,10 +4,10 @@
 package runtime
 
 import (
+	"cmp"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 func TestOne(t *testing.T) {
@@ -98,8 +98,8 @@ func TestDateCompare(t *testing.T) {
 	}
 	for i := 0; i < len(vals); i++ {
 		for j := 0; j < len(vals); j++ {
-			assert.This(vals[i].Compare(vals[j])).Is(ord.Compare(i, j))
-			assert.This(vals[j].Compare(vals[i])).Is(ord.Compare(j, i))
+			assert.This(vals[i].Compare(vals[j])).Is(cmp.Compare(i, j))
+			assert.This(vals[j].Compare(vals[i])).Is(cmp.Compare(j, i))
 			assert.This(vals[i].Equal(vals[j])).Is(i == j)
 			assert.This(vals[j].Equal(vals[i])).Is(i == j)
 		}

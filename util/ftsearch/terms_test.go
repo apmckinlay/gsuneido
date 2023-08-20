@@ -11,8 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"golang.org/x/exp/slices"
 )
 
 func TestTerm_Iter(t *testing.T) {

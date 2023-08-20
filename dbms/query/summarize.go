@@ -12,7 +12,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -223,7 +222,7 @@ func (su *Summarize) optimize(mode Mode, index []string, frac float64) (Cost, Co
 
 func (su *Summarize) seqCost(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	if len(su.by) == 0 {
-		frac = ord.Min(1, frac)
+		frac = min(1, frac)
 	}
 	approach := &summarizeApproach{strategy: sumSeq, frac: frac}
 	if len(su.by) == 0 || hasKey(su.by, su.source.Keys(), su.source.Fixed()) {

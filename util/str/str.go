@@ -6,10 +6,10 @@
 package str
 
 import (
+	"cmp"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
@@ -222,7 +222,7 @@ func CmpLower(s1, s2 string) int {
 			return +1
 		}
 	}
-	return ord.Compare(n1, n2)
+	return cmp.Compare(n1, n2)
 }
 
 // ToLower is an ascii version of strings.ToLower

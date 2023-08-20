@@ -4,10 +4,10 @@
 package runtime
 
 import (
+	"cmp"
 	"fmt"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
@@ -61,7 +61,7 @@ func (d SuTimestamp) Equal(other any) bool {
 }
 
 func (d SuTimestamp) Compare(other Value) int {
-	if cmp := ord.Compare(ordDate, Order(other)); cmp != 0 {
+	if cmp := cmp.Compare(ordDate, Order(other)); cmp != 0 {
 		return cmp * 2
 	}
 	if st, ok := other.(SuTimestamp); ok {
@@ -74,5 +74,5 @@ func CompareSuTimestamp(d1, d2 SuTimestamp) int {
 	if cmp := d1.SuDate.Compare(d2.SuDate); cmp != 0 {
 		return cmp
 	}
-	return ord.Compare(d1.extra, d2.extra)
+	return cmp.Compare(d1.extra, d2.extra)
 }

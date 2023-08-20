@@ -10,7 +10,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	. "github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/cksum"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
@@ -466,7 +465,7 @@ func nmerge(no, clock int) int {
 	if no >= maxChain {
 		return no
 	}
-	return ord.Min(no, TrailingOnes(clock))
+	return min(no, TrailingOnes(clock))
 }
 
 func (c *Chain[K, E]) Cksum() uint32 {

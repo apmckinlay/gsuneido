@@ -4,10 +4,11 @@
 package query
 
 import (
+	"slices"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"golang.org/x/exp/slices"
 )
 
 type Fixed struct {

@@ -9,7 +9,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -55,7 +54,7 @@ func (pat Pattern) leftAnchored() bool {
 func (pat Pattern) ForEachMatch(s string, fn func(cap *Captures) bool) {
 	var cap Captures
 	for i := 0; i <= len(s) && pat.match(s, i, &cap, false) &&
-		fn(&cap); i = ord.Max(int(cap[1]), int(cap[0])+1) {
+		fn(&cap); i = max(int(cap[1]), int(cap[0])+1) {
 	}
 }
 

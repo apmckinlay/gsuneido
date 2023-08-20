@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"cmp"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
@@ -583,8 +583,8 @@ func ParseDate(s string, order string) SuDate {
 	}
 
 	if year == NOTSET {
-		if month >= ord.Max(now.Month()-5, 1) &&
-			month <= ord.Min(now.Month()+6, 12) {
+		if month >= max(now.Month()-5, 1) &&
+			month <= min(now.Month()+6, 12) {
 			year = now.Year()
 		} else if now.Month() < 6 {
 			year = now.Year() - 1
@@ -742,7 +742,7 @@ func (SuDate) Type() types.Type {
 }
 
 func (d SuDate) Compare(other Value) int {
-	if cmp := ord.Compare(ordDate, Order(other)); cmp != 0 {
+	if cmp := cmp.Compare(ordDate, Order(other)); cmp != 0 {
 		return cmp * 2
 	}
 	if st, ok := other.(SuTimestamp); ok {

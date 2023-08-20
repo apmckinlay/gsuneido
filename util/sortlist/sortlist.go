@@ -15,9 +15,10 @@ package sortlist
 import (
 	"sort"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
-	"golang.org/x/exp/slices"
 )
 
 const blockSize = 4096

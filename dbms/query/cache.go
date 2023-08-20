@@ -4,9 +4,10 @@
 package query
 
 import (
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"golang.org/x/exp/slices"
 )
 
 // cache is a very simple cache for query costs

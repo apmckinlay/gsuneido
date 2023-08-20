@@ -8,10 +8,11 @@ import (
 	"sort"
 	"strings"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 type Schema struct {

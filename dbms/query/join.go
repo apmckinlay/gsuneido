@@ -6,14 +6,14 @@ package query
 import (
 	"log"
 
+	"slices"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 /*
@@ -166,7 +166,7 @@ func (jl *joinLike) getHeader() *Header {
 func (jn *Join) getIndexes() [][]string {
 	// can really only provide source.indexes() but optimize may swap.
 	// optimize will return impossible for source2 indexes.
-	return set.UnionFn(jn.source1.Indexes(), jn.source2.Indexes(), slices.Equal[string])
+	return set.UnionFn(jn.source1.Indexes(), jn.source2.Indexes(), slices.Equal)
 }
 
 func (jn *Join) getKeys() [][]string {
@@ -266,7 +266,7 @@ func joinopt(src1, src2 Query, joinType joinType, nrows func() (int, int),
 	nrows1, _ := src1.Nrows()
 	nrows2, _ := src2.Nrows()
 	read2, _ := nrows()
-	frac2 := float64(read2) * frac / float64(ord.Max(1, nrows2))
+	frac2 := float64(read2) * frac / float64(max(1, nrows2))
 	best2 := bestGrouped(src2, mode, nil, frac2, by)
 	if best2.index == nil {
 		return bestJoin{bestIndex: newBestIndex()} // impossible
@@ -304,13 +304,13 @@ func (jn *Join) getNrows() (int, int) {
 func (jn *Join) nrows(n1, p1, n2, p2 int) int {
 	switch jn.joinType {
 	case one_one:
-		return ord.Min(n1, n2)
+		return min(n1, n2)
 	case n_one:
 		n1, p1, n2, p2 = n2, p2, n1, p1
 		fallthrough
 	case one_n:
-		p1 = ord.Max(1, p1) // avoid divide by zero
-		p2 = ord.Max(1, p2)
+		p1 = max(1, p1) // avoid divide by zero
+		p2 = max(1, p2)
 		if n1 <= p1*n2/p2 { // rearranged n1/p1 <= n2/p2 (for integer math)
 			return n1 * p2 / p1
 		}
@@ -325,7 +325,7 @@ func (jn *Join) nrows(n1, p1, n2, p2 int) int {
 func (jn *Join) pop(p1, p2 int) int {
 	switch jn.joinType {
 	case one_one:
-		return ord.Min(p1, p2)
+		return min(p1, p2)
 	case n_one:
 		return p1
 	case one_n:
@@ -585,14 +585,14 @@ func (lj *LeftJoin) nrows(n1, p1, n2, p2 int) int {
 	case one_one, n_one:
 		return n1
 	case one_n:
-		p1 = ord.Max(1, p1) // avoid divide by zero
-		p2 = ord.Max(1, p2)
+		p1 = max(1, p1) // avoid divide by zero
+		p2 = max(1, p2)
 		if n1 <= p1*n2/p2 { // rearranged n1/p1 <= n2/p2 (for integer math)
 			return n1 * p2 / p1
 		}
 		return n2
 	case n_n:
-		return ord.Max(n1, (n1*n2)/2) // estimate half
+		return max(n1, (n1*n2)/2) // estimate half
 	default:
 		panic(assert.ShouldNotReachHere())
 	}
@@ -605,7 +605,7 @@ func (lj *LeftJoin) pop(n1, n2 int) int {
 	case one_n:
 		return n2
 	case n_n:
-		return ord.Max(n1, (n1*n2)/2) // estimate half
+		return max(n1, (n1*n2)/2) // estimate half
 	default:
 		panic(assert.ShouldNotReachHere())
 	}

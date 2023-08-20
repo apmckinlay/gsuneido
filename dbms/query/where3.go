@@ -9,12 +9,13 @@ import (
 	"strconv"
 	"strings"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 // idxSel is the pointRanges for a single index.
@@ -184,7 +185,7 @@ func (x side) valRaw() string {
 }
 
 func (w *Where) idxFrac(idx []string, ptrngs []pointRange) (float64, float64) {
-	iIndex := slc.IndexFn(w.tbl.indexes, idx, slices.Equal[string])
+	iIndex := slc.IndexFn(w.tbl.indexes, idx, slices.Equal)
 	if iIndex < 0 {
 		panic("index not found")
 	}

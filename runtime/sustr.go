@@ -4,12 +4,12 @@
 package runtime
 
 import (
+	"cmp"
 	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/pack"
@@ -241,7 +241,7 @@ func (SuStr) Type() types.Type {
 }
 
 func (ss SuStr) Compare(other Value) int {
-	if cmp := ord.Compare(ordStr, Order(other)); cmp != 0 {
+	if cmp := cmp.Compare(ordStr, Order(other)); cmp != 0 {
 		return cmp * 2
 	}
 	return strings.Compare(string(ss), ToStr(other))

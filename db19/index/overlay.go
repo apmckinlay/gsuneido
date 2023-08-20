@@ -6,12 +6,13 @@ package index
 import (
 	"fmt"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"golang.org/x/exp/slices"
 )
 
 // Overlay is the composite in-memory representation of an index

@@ -9,7 +9,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tabs"
@@ -281,7 +280,7 @@ func string_MapN(th *Thread, this Value, args []Value) Value {
 	block := args[1]
 	var buf strings.Builder
 	for i := 0; i < len(s); i += n {
-		end := ord.Min(i+n, len(s))
+		end := min(i+n, len(s))
 		val := th.Call(block, SuStr(s[i:end]))
 		if val != nil {
 			buf.WriteString(AsStr(val))
@@ -387,7 +386,7 @@ func string_PrefixQ(this, arg1, arg2 Value) Value {
 var _ = method(string_Repeat, "(count)")
 
 func string_Repeat(this, arg Value) Value {
-	return SuStr(strings.Repeat(ToStr(this), ord.Max(0, ToInt(arg))))
+	return SuStr(strings.Repeat(ToStr(this), max(0, ToInt(arg))))
 }
 
 var _ = method(string_Replace, "(pattern, block = '', count = false)")

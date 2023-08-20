@@ -4,6 +4,8 @@
 package query
 
 import (
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -14,7 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 func NewTable(t QueryTran, name string) Query {
@@ -167,7 +168,7 @@ func (tbl *Table) setIndex(index []string) {
 		index = tbl.allKeys[0]
 	}
 	tbl.index = index
-	tbl.iIndex = slc.IndexFn(tbl.indexes, tbl.index, slices.Equal[string])
+	tbl.iIndex = slc.IndexFn(tbl.indexes, tbl.index, slices.Equal)
 	assert.Msg("setIndex", tbl.name, index).That(tbl.iIndex >= 0)
 	tbl.indexEncode = len(tbl.index) > 1 ||
 		!slc.ContainsFn(tbl.allKeys, tbl.index, set.Equal[string])

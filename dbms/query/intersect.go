@@ -4,11 +4,11 @@
 package query
 
 import (
+	"slices"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"golang.org/x/exp/slices"
 )
 
 type Intersect struct {
@@ -61,7 +61,7 @@ func (it *Intersect) getKeys() [][]string {
 }
 
 func (it *Intersect) getIndexes() [][]string {
-	return set.UnionFn(it.source1.Indexes(), it.source2.Indexes(), slices.Equal[string])
+	return set.UnionFn(it.source1.Indexes(), it.source2.Indexes(), slices.Equal)
 }
 
 func (it *Intersect) getFixed() []Fixed {
@@ -78,8 +78,8 @@ func (it *Intersect) getNrows() (int, int) {
 	}
 	nrows1, pop1 := it.source1.Nrows()
 	nrows2, pop2 := it.source2.Nrows()
-	maxNrows := ord.Min(nrows1, nrows2)
-	maxPop := ord.Min(pop1, pop2)
+	maxNrows := min(nrows1, nrows2)
+	maxPop := min(pop1, pop2)
 	return maxNrows / 2, maxPop / 2 // estimate half
 }
 

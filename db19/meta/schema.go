@@ -8,13 +8,14 @@ import (
 	"sort"
 	"strings"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
-	"golang.org/x/exp/slices"
 )
 
 // Note: views are stored with the name in Schema.Table prefixed by '='

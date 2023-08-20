@@ -6,10 +6,11 @@ package regex
 import (
 	"strings"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/generic/cache"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"golang.org/x/exp/slices"
 )
 
 /*

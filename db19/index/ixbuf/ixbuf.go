@@ -12,10 +12,10 @@ import (
 	"fmt"
 	"log"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
-	"golang.org/x/exp/slices"
 )
 
 type T = ixbuf
@@ -147,7 +147,7 @@ func (ib *ixbuf) searchChunks(key string) int {
 			j = h
 		}
 	}
-	return ord.Min(i, len(ib.chunks)-1)
+	return min(i, len(ib.chunks)-1)
 }
 
 // search does a binary search of one chunk for a key.

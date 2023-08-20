@@ -3,7 +3,7 @@
 
 package check
 
-import "golang.org/x/exp/slices"
+import "slices"
 
 // set is a specialized set of strings in a slice.
 // By only ever appending, we make it an immutable data structure.

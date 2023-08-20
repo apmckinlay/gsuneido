@@ -4,10 +4,10 @@
 package runtime
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -131,7 +131,7 @@ func (ps *ParamSpec) equalParamSpec(ps2 *ParamSpec) bool {
 type eqps interface{ equalParamSpec(*ParamSpec) bool }
 
 func (ps *ParamSpec) Compare(other Value) int {
-	if cmp := ord.Compare(OrdOther, Order(other)); cmp != 0 {
+	if cmp := cmp.Compare(OrdOther, Order(other)); cmp != 0 {
 		return cmp
 	}
 	return 0 // ???

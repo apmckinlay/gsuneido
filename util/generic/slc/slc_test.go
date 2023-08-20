@@ -1,7 +1,6 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package slc contains additions to x/exp/slices
 package slc
 
 import (

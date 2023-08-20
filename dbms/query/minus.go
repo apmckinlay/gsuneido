@@ -6,7 +6,6 @@ package query
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 type Minus struct {
@@ -46,8 +45,8 @@ func (m *Minus) getNrows() (int, int) {
 	n1, p1 := m.source1.Nrows()
 	n2, p2 := m.source2.Nrows()
 	calc := func(n1, n2 int) int {
-		min := ord.Max(0, n1-n2) // all common
-		max := n1                // none common
+		min := max(0, n1-n2) // all common
+		max := n1            // none common
 		return (min + max) / 2
 	}
 	return calc(n1, n2), calc(p1, p2)

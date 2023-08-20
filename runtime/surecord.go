@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -15,7 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 // SuRecord is an SuObject with observers and rules and a default value of "".

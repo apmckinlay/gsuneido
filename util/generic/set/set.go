@@ -10,8 +10,9 @@ package set
 // WARNING: these operations will be slow on large sets.
 
 import (
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"golang.org/x/exp/slices"
 )
 
 // AddUnique appends s unless it is already in the set
@@ -142,7 +143,7 @@ func Intersect[E comparable, S ~[]E](x, y S) S {
 	if slc.Same(x, y) {
 		return slices.Clip(x) // so append won't share
 	}
-	z := make(S, 0) //, ord.Min(len(x), len(y))/2) // ???
+	z := make(S, 0) //, min(len(x), len(y))/2) // ???
 outer:
 	for _, xe := range x {
 		for _, ye := range y {
@@ -162,7 +163,7 @@ func IntersectFn[E any, S ~[]E](x, y S, eq func(E, E) bool) S {
 	if slc.Same(x, y) {
 		return slices.Clip(x) // so append won't share
 	}
-	z := make(S, 0) //, ord.Min(len(x), len(y))/2) // ???
+	z := make(S, 0) //, min(len(x), len(y))/2) // ???
 outer:
 	for _, xe := range x {
 		for _, ye := range y {

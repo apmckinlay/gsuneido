@@ -16,10 +16,11 @@ import (
 	"fmt"
 	"strings"
 
+	"slices"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"golang.org/x/exp/slices"
 )
 
 const Min = ""

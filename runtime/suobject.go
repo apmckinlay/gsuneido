@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"cmp"
 	"log"
 	"sort"
 	"strings"
@@ -14,11 +15,10 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 /*
@@ -677,7 +677,7 @@ func deepCompare(x Value, y Value) int {
 		tx = order[x.Type()]
 		ty = order[y.Type()]
 		if tx != ty {
-			return 2 * ord.Compare(tx, ty)
+			return 2 * cmp.Compare(tx, ty)
 		}
 		switch tx {
 		case types.Object:
@@ -888,8 +888,8 @@ func (ob *SuObject) Sort(th *Thread, lt Value) {
 	ob.clock++
 	ob.version++
 	if lt == False {
-		slices.SortStableFunc(ob.list, func(x, y Value) bool {
-			return x.Compare(y) < 0
+		slices.SortStableFunc(ob.list, func(x, y Value) int {
+			return x.Compare(y)
 		})
 	} else {
 		func() {
@@ -897,8 +897,8 @@ func (ob *SuObject) Sort(th *Thread, lt Value) {
 			defer func() { ob.sorting = false }()
 			ob.Unlock() // can't hold lock while calling arbitrary code
 			defer ob.Lock()
-			slices.SortStableFunc(ob.list, func(x, y Value) bool {
-				return True == th.Call(lt, x, y)
+			sort.SliceStable(ob.list, func(i, j int) bool {
+				return True == th.Call(lt, ob.list[i], ob.list[j])
 			})
 			// note: could become concurrent while unlocked
 		}()

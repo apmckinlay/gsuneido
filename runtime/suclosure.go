@@ -4,8 +4,9 @@
 package runtime
 
 import (
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/runtime/types"
-	"golang.org/x/exp/slices"
 )
 
 // SuClosure is an instance of a closure block

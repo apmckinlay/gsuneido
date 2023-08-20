@@ -10,9 +10,10 @@ import (
 	"strconv"
 	"testing"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"golang.org/x/exp/constraints"
-	"golang.org/x/exp/slices"
 )
 
 var z = func(x int) bool { return x == 0 }

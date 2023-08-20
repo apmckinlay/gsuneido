@@ -3,7 +3,7 @@
 
 package runtime
 
-import "golang.org/x/exp/slices"
+import "slices"
 
 // Frame is the context for a function/method/block invocation.
 type Frame struct {

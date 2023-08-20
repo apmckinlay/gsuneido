@@ -15,7 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 type Project struct {
@@ -198,7 +198,7 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 		for ; i < len(ix) && slices.Contains(cols, ix[i]); i++ {
 		}
 		pre := ix[:i]
-		if i > 0 && !slc.ContainsFn(idxs2, pre, slices.Equal[string]) {
+		if i > 0 && !slc.ContainsFn(idxs2, pre, slices.Equal) {
 			idxs2 = append(idxs2, pre)
 		}
 	}

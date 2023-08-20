@@ -6,9 +6,10 @@ package btree
 import (
 	"strconv"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"golang.org/x/exp/slices"
 )
 
 // merge is one node on the current path.

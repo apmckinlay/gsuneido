@@ -1,11 +1,14 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package slc contains additions to x/exp/slices
+// Package slc contains additions to the standard slices package
 package slc
 
-import "golang.org/x/exp/slices"
-import . "golang.org/x/exp/constraints"
+import (
+	"slices"
+
+	. "golang.org/x/exp/constraints"
+)
 
 func IndexFn[E any](list []E, e E, eq func(E, E) bool) int {
 	for i, e2 := range list {

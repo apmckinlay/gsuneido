@@ -4,11 +4,12 @@
 package meta
 
 import (
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/hash"
-	"golang.org/x/exp/slices"
 )
 
 type InfoHamt = hamt.Hamt[string, *Info]

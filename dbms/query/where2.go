@@ -6,11 +6,12 @@ package query
 import (
 	"strings"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/exp/slices"
 )
 
 /*
@@ -72,7 +73,7 @@ func exprToSpans(expr ast.Expr, fields []string) (string, []span) {
 		}
 	case *ast.Call:
 		return typeSpan(expr, fields)
-	// TODO unary e.g. not Number?(x)
+		// TODO unary e.g. not Number?(x)
 	}
 	return "", nil
 }
@@ -213,7 +214,7 @@ func mergeSpans(x, y span) (span, bool) {
 }
 
 func spansOverlap(x, y span) bool {
-	return sideLte(maxSide(x.org, y.org), minSide(x.end, y.end))
+	return sideCmp(maxSide(x.org, y.org), minSide(x.end, y.end)) <= 0
 }
 
 //-------------------------------------------------------------------
@@ -236,7 +237,7 @@ func intersectSpans(spans1, spans2 []span) []span {
 		if span, ok := intersectSpan(spans1[i1], spans2[i2]); ok {
 			result = append(result, span)
 		}
-		if sideLt(spans1[i1].end, spans2[i2].end) {
+		if sideCmp(spans1[i1].end, spans2[i2].end) < 0 {
 			i1++
 		} else {
 			i2++
@@ -263,35 +264,31 @@ func (sp span) none() bool {
 }
 
 func sortByOrg(spans []span) {
-	slices.SortFunc(spans, func(x, y span) bool {
-		return sideLt(x.org, y.org)
+	slices.SortFunc(spans, func(x, y span) int {
+		return sideCmp(x.org, y.org)
 	})
 }
 
-func sideLte(x, y side) bool {
-	return !sideLt(y, x)
-}
-
-func sideLt(x, y side) bool {
+func sideCmp(x, y side) int {
 	cmp := strings.Compare(x.val, y.val)
 	if cmp == 0 {
 		cmp = cmpBool(x.inc, y.inc)
 	}
-	return cmp < 0
+	return cmp
 }
 
 func minSide(x, y side) side {
-	if sideLt(x, y) {
+	if sideCmp(x, y) <= 0 {
 		return x
 	}
 	return y
 }
 
 func maxSide(x, y side) side {
-	if sideLt(x, y) {
-		return y
+	if sideCmp(x, y) >= 0 {
+		return x
 	}
-	return x
+	return y
 }
 
 func cmpBool(x, y bool) int {

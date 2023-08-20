@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"hash/adler32"
 
+	"slices"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"golang.org/x/exp/slices"
 )
 
 var _ = builtin(QueryHash, "(query, details=false)")

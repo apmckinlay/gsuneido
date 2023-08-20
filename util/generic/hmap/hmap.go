@@ -4,8 +4,9 @@
 package hmap
 
 import (
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"golang.org/x/exp/slices"
 )
 
 // Hmap implements a hash map for SuObject
