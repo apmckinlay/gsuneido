@@ -24,7 +24,7 @@ func Warnings(query string, q Query) {
 			nWarn++
 			if !seen[query] && nWarn < 10 {
 				seen[query] = true
-				log.Println(s, query)
+				log.Println("WARNING", s, query)
 			}
 		}
 	}
