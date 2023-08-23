@@ -108,10 +108,13 @@ func main() {
 		os.Exit(0)
 	case "compact":
 		t := time.Now()
-		nTables, nViews, err := tools.Compact("suneido.db")
+		nTables, nViews, oldSize, newSize, err := tools.Compact("suneido.db")
 		ck(err)
-		Alert("compacted", nTables, "tables", nViews, "views in",
-			time.Since(t).Round(time.Millisecond))
+		oldSize /= 1024 * 1024
+		newSize /= 1024 * 1024
+		Alert("compacted", nTables, "tables", nViews, "views",
+			"in", time.Since(t).Round(time.Millisecond),
+			oldSize, "-", (oldSize-newSize), "=", newSize, "mb")
 		os.Exit(0)
 	case "check":
 		t := time.Now()

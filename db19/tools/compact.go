@@ -24,13 +24,14 @@ import (
 // Compact cleans up old records and index nodes that are no longer in use.
 // It does this by copying live data to a new database file.
 // In the process it concurrently does a full check of the database.
-func Compact(dbfile string) (nTables, nViews int, err error) {
+func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("compact failed: %v", e)
 		}
 	}()
 	src, err := OpenDb(dbfile, stor.Read, false)
+	oldSize = src.Store.Size()
 	ck(err)
 	defer src.Close()
 	dst, tmpfile := tmpdb()
@@ -78,10 +79,11 @@ func Compact(dbfile string) (nTables, nViews int, err error) {
 	close(channel)
 	wg.Wait()
 	dst.GetState().Write()
+	newSize = dst.Store.Size()
 	dst.Close()
 	src.Close()
 	ck(system.RenameBak(tmpfile, dbfile))
-	return nTables, nViews, nil
+	return nTables, nViews, oldSize, newSize, nil
 }
 
 func tmpdb() (*Database, string) {
