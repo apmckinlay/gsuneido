@@ -147,7 +147,11 @@ func (t testTran) fracPos(key string, decode bool) float64 {
 		if s == ixkey.Max {
 			n = 10
 		} else {
-			n = ToInt(Unpack(s))
+			var ok bool
+			n, ok = Unpack(s).ToInt()
+			if !ok {
+				return 0
+			}
 			if i+1 < len(vals) && vals[i+1] == "" {
 				n++
 			}

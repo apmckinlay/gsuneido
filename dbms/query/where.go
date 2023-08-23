@@ -144,10 +144,12 @@ func (w *Where) exprsToFixed() []Fixed {
 
 func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
 	// MAYBE: handle IN and OR, could use colSels
-	if b, ok := e.(*ast.Binary); ok && b.Tok == tok.Is {
+	if b, ok := e.(*ast.Binary); ok && (b.Tok == tok.Is || b.Tok == tok.Lte) {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
 			if c, ok := b.Rhs.(*ast.Constant); ok {
-				fixed = append(fixed, NewFixed(id.Name, c.Val))
+				if b.Tok == tok.Is || c.Val == EmptyStr {
+					fixed = append(fixed, NewFixed(id.Name, c.Val))
+				}
 			}
 		}
 	}

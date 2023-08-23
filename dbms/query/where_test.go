@@ -280,3 +280,26 @@ func TestWhere_Select(t *testing.T) {
 	q.Select(nil, nil)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
 }
+
+func TestWhere_ptrange(t *testing.T) {
+	table := "comp"
+	test := func(query string, selCols, selVals []string) {
+		t.Helper()
+		w := ParseQuery(table+" where "+query, testTran{}, nil).(*Where)
+		w.optInit()
+		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
+		w.idxSel = &w.perIndex(pf)[0]
+		// fmt.Printf("idxSel ptrange\n\t%q\n\t%q\n",
+		// 	w.idxSel.ptrngs[0].org, w.idxSel.ptrngs[0].end)
+		w.fixed = nil
+		w.whereFixed = nil
+		w.singleton = false
+		w.Select(selCols, selVals)
+		// fmt.Printf("selOrg, selEnd\n\t%q\n\t%q\n", w.selOrg, w.selEnd)
+		pr := w.idxSel.ptrngs[0].intersect(w.selOrg, w.selEnd)
+		// fmt.Printf("intersect\n\t%q\n\t%q\n", pr.org, pr.end)
+		assert.This(pr).Is(w.idxSel.ptrngs[0])
+	}
+	test("a is '1' and b is '2' and c is '3'",
+		[]string{"a"}, []string{Pack(SuStr("1"))})
+}

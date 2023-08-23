@@ -31,6 +31,9 @@ func TestFixed(t *testing.T) {
 		"[f=(1), g=(2), a=(5)]")
 
 	test("table where a is 1", "[a=(1)]")
+	test("table where a is ''", "[a=('')]")
+	test("table where a <= ''", "[a=('')]")
+	test("table where a <= 'x'", "[]")
 	test("table where a is 1 and b is 's' and a is b", "[a=(1), b=('s')]")
 
 	test("table union (table extend f=1)", "[f=(1,'')]")

@@ -295,12 +295,13 @@ func (pr pointRange) String() string {
 // intersect returns a new pointRange restricted to selOrg,selEnd
 func (pr pointRange) intersect(selOrg, selEnd string) pointRange {
 	if pr.isPoint() {
-		if pr.org == selOrg {
+		if selOrg <= pr.org && pr.org < selEnd {
 			return pr
 		}
 	} else { // range
-		if pr.org <= selOrg && selOrg < pr.end {
-			return pointRange{org: selOrg, end: selEnd}
+		pr = pointRange{org: max(pr.org, selOrg), end: min(pr.end, selEnd)}
+		if pr.org < pr.end {
+			return pr
 		}
 	}
 	return pointRange{org: "z", end: "a"} // conflict
