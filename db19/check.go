@@ -32,7 +32,8 @@ Deletes are also tracked by offset which is used when checking delete vs delete.
 3.  don't need to check committed reads
 */
 
-const maxTrans = 200
+// MaxTrans is the maximum number of outstanding/overlapping update transactions
+const MaxTrans = 200
 
 // Set needs to be an ordered set so that reads can check for a range
 type Set = ordset.Set
@@ -106,7 +107,7 @@ func (ck *Check) Run(fn func() error) error {
 }
 
 func (ck *Check) StartTran() *CkTran {
-	if len(ck.trans) >= maxTrans {
+	if len(ck.trans) >= MaxTrans {
 		return nil
 	}
 	start := ck.next()

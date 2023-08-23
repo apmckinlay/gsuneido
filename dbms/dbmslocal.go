@@ -304,7 +304,8 @@ func (dbms *DbmsLocal) Transaction(update bool) ITran {
 		if t := dbms.db.NewUpdateTran(); t != nil {
 			return &UpdateTranLocal{UpdateTran: t}
 		}
-		panic("too many active transactions")
+		panic(fmt.Sprintf("too many overlapping update transactions (%d)",
+			db19.MaxTrans))
 	}
 	return &ReadTranLocal{ReadTran: dbms.db.NewReadTran()}
 }

@@ -147,7 +147,7 @@ func TestTooMany(*testing.T) {
 	db, err := CreateDb(store)
 	ck(err)
 	db.CheckerSync()
-	for i := 0; i < maxTrans; i++ {
+	for i := 0; i < MaxTrans; i++ {
 		assert.That(nil != db.NewUpdateTran())
 	}
 	assert.That(nil == db.NewUpdateTran())

@@ -39,7 +39,7 @@ func TestCheckStartStop(t *testing.T) {
 
 func TestCheckLimit(t *testing.T) {
 	ck := NewCheck(nil)
-	for i := 0; i < maxTrans; i++ {
+	for i := 0; i < MaxTrans; i++ {
 		assert.T(t).That(ck.StartTran() != nil)
 	}
 	assert.T(t).That(ck.StartTran() == nil)
