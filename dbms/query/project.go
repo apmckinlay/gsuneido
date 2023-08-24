@@ -7,6 +7,8 @@ import (
 	"log"
 	"strings"
 
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -15,7 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"slices"
 )
 
 type Project struct {
@@ -241,7 +242,7 @@ func (p *Project) Transform() Query {
 			return newProject(q.source, p.columns).Transform()
 		}
 		if set.Subset(p.columns, q.by) {
-			return NewSummarize(q.source, q.by, cols, ops, ons).Transform()
+			return NewSummarize(q.source, q.strat, q.by, cols, ops, ons).Transform()
 		}
 	case *Rename:
 		return p.transformRename(q)

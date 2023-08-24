@@ -77,8 +77,8 @@ type ParserBase struct {
 	// Item is the current lexical token etc.
 	Item
 
-	// endPos is the end of the previous token
-	endPos int32
+	// EndPos is the end of the previous token
+	EndPos int32
 
 	// newline is true if the current token was preceeded by a newline
 	newline bool
@@ -168,7 +168,7 @@ func (p *ParserBase) MustMatch(token tok.Token) {
 func (p *ParserBase) Next() {
 	p.newline = false
 	p.Item = p.Lxr.Next()
-	p.endPos = int32(p.Item.Pos)
+	p.EndPos = int32(p.Item.Pos)
 	for {
 		if p.Token == tok.Newline {
 			if p.Lxr.AheadSkip(0).Token != tok.QMark {

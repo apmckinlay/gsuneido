@@ -302,7 +302,7 @@ func (w *Where) Transform() Query {
 		}
 		src := NewWhere(q.source,
 			&ast.Nary{Tok: tok.And, Exprs: before}, w.t)
-		q = NewSummarize(src, q.by, q.cols, q.ops, q.ons)
+		q = NewSummarize(src, q.strat, q.by, q.cols, q.ops, q.ons)
 		if after == nil {
 			return q.Transform()
 		}

@@ -45,7 +45,7 @@ func Checked(th *Thread, src string) (Value, []string) {
 func (p *Parser) Const() (result Value) {
 	defer func(org int32) {
 		if r, ok := result.(iSetPos); ok {
-			SetPos(r, org, p.endPos)
+			SetPos(r, org, p.EndPos)
 		}
 	}(p.Pos)
 	return p.constant()
@@ -189,7 +189,7 @@ func (p *Parser) memberList(ob container, closing tok.Token, base Gnum) {
 			p.Next()
 		}
 		if k == nil {
-			p.set(ob, nil, v, pos, p.endPos)
+			p.set(ob, nil, v, pos, p.EndPos)
 		} else {
 			p.putMem(ob, k, v, pos)
 		}
@@ -261,7 +261,7 @@ func (p *Parser) putMem(ob container, m Value, v Value, pos int32) {
 	if ob.HasKey(m) {
 		p.ErrorAt(pos, "duplicate member name ("+m.String()+")")
 	} else {
-		p.set(ob, m, v, pos, p.endPos)
+		p.set(ob, m, v, pos, p.EndPos)
 	}
 }
 
@@ -284,9 +284,9 @@ func (p *Parser) class() (result Value) {
 		base = p.ckBase(baseName)
 		p.MatchIdent()
 	}
-	pos1 := p.endPos
+	pos1 := p.EndPos
 	p.Match(tok.LCurly)
-	pos2 := p.endPos
+	pos2 := p.EndPos
 	prevClassName := p.className
 	p.className = p.getClassName()
 	mems := p.mkClass(baseName)

@@ -112,7 +112,7 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 			f := p.Expression()
 			e = p.Trinary(e, t, f)
 		case token == tok.LParen: // function call
-			e = p.Call(e, p.arguments(token), p.endPos)
+			e = p.Call(e, p.arguments(token), p.EndPos)
 		case tok.AssocStart < token && token < tok.AssocEnd:
 			// for associative operators, collect a list of contiguous
 			es := []ast.Expr{e}
@@ -210,7 +210,7 @@ func (p *Parser) same(listtype tok.Token, next tok.Token) bool {
 // atom handles atoms and prefix operators
 func (p *Parser) atom() (result ast.Expr) {
 	defer func(pos int32) {
-		SetPos(result, pos, p.endPos)
+		SetPos(result, pos, p.EndPos)
 	}(p.Pos)
 	switch token := p.Token; token {
 	case tok.String:
@@ -412,7 +412,7 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 	}
 	for p.Token != closing {
 		pos = p.Pos
-		endPos := p.endPos
+		endPos := p.EndPos
 		if p.MatchIf(tok.Colon) { // :name shortcut
 			pos = p.Pos
 			if !p.Token.IsIdent() || !ascii.IsLower(p.Text[0]) {
@@ -420,7 +420,7 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 			}
 			handlePending(p.Constant(True), endPos)
 			name := p.MatchIdent()
-			named(SuStr(name), &ast.Ident{Name: name, Pos: pos}, pos, p.endPos)
+			named(SuStr(name), &ast.Ident{Name: name, Pos: pos}, pos, p.EndPos)
 		} else {
 			expr := p.Expression() // could be name or value
 			if name := p.argname(expr); name != nil && p.MatchIf(tok.Colon) {
@@ -428,13 +428,13 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 				pending = name // it's a name but don't know value yet
 				pendingPos = pos
 			} else if pending != nil {
-				handlePending(expr, p.endPos)
+				handlePending(expr, p.EndPos)
 			} else {
 				unnamed(expr)
 			}
 		}
 		if p.MatchIf(tok.Comma) {
-			handlePending(p.Constant(True), p.endPos)
+			handlePending(p.Constant(True), p.EndPos)
 		} else if p.newline && pending == nil {
 			switch p.Token {
 			case tok.LParen, tok.LBracket, tok.LCurly, tok.Dot, tok.Add, tok.Sub:
@@ -442,7 +442,7 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 			}
 		}
 	}
-	handlePending(p.Constant(True), p.endPos)
+	handlePending(p.Constant(True), p.EndPos)
 	p.Match(closing)
 	return args
 }

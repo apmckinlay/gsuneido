@@ -5,6 +5,7 @@ package query
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/ast"
@@ -198,9 +199,16 @@ func (p *queryParser) rename(q Query) Query {
 }
 
 func (p *queryParser) summarize(q Query) Query {
+	var strat sumStrategy
+	remainder := strings.TrimSpace(p.Lxr.Source()[p.EndPos:])
+	if strings.HasPrefix(remainder, "/*map*/") {
+		strat = sumMap
+	} else if strings.HasPrefix(remainder, "/*seq*/") {
+		strat = sumSeq
+	}
 	by := p.sumBy()
 	cols, ops, ons := p.sumOps()
-	return NewSummarize(q, by, cols, ops, ons)
+	return NewSummarize(q, strat, by, cols, ops, ons)
 }
 
 func (p *queryParser) sumBy() []string {

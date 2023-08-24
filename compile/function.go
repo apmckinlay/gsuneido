@@ -20,9 +20,9 @@ func (p *Parser) function(inClass bool) (result *ast.Function) {
 	funcInfoSave := p.funcInfo
 	p.InitFuncInfo()
 	params := p.params(inClass)
-	pos1 := p.endPos
+	pos1 := p.EndPos
 	p.Match(tok.LCurly)
-	pos2 := p.endPos
+	pos2 := p.EndPos
 	body := p.statements()
 	p.Match(tok.RCurly)
 	p.processFinal()
@@ -58,7 +58,7 @@ func (p *Parser) params(inClass bool) []ast.Param {
 		if name == "unused" || name == "@unused" {
 			unused = true
 		}
-		param := mkParam(name, pos, p.endPos, unused, def)
+		param := mkParam(name, pos, p.EndPos, unused, def)
 		params = append(params, param)
 	}
 	if p.Token == tok.At {
@@ -157,7 +157,7 @@ func (p *Parser) statements() []ast.Statement {
 
 func (p *Parser) statement() (result ast.Statement) {
 	defer func(org int32) {
-		SetPos(result, org, p.endPos)
+		SetPos(result, org, p.EndPos)
 	}(p.Pos)
 	token := p.Token
 	switch token {
@@ -236,7 +236,7 @@ func (p *Parser) ifStmt() *ast.If {
 	t := p.statement()
 	stmt := &ast.If{Cond: expr, Then: t}
 	if p.MatchIf(tok.Else) {
-		stmt.ElseEnd = p.endPos
+		stmt.ElseEnd = p.EndPos
 		stmt.Else = p.statement()
 	}
 	return stmt
@@ -249,9 +249,9 @@ func (p *Parser) switchStmt() (result *ast.Switch) {
 	} else {
 		expr = p.exprExpecting(true)
 	}
-	pos1 := p.endPos
+	pos1 := p.EndPos
 	p.Match(tok.LCurly)
-	pos2 := p.endPos
+	pos2 := p.EndPos
 	var cases []ast.Case
 	for p.Token == tok.Case {
 		cases = append(cases, p.switchCase())
@@ -260,7 +260,7 @@ func (p *Parser) switchStmt() (result *ast.Switch) {
 	var posdef int32
 	if p.MatchIf(tok.Default) {
 		p.Match(tok.Colon)
-		posdef = p.endPos
+		posdef = p.EndPos
 		def = p.switchBody()
 	}
 	p.Match(tok.RCurly)
@@ -279,7 +279,7 @@ func (p *Parser) switchCase() ast.Case {
 		}
 	}
 	p.Match(tok.Colon)
-	end := p.endPos
+	end := p.EndPos
 	body := p.switchBody()
 	c := ast.Case{Exprs: exprs, Body: body}
 	c.SetPos(pos, end)
@@ -431,7 +431,7 @@ func (p *Parser) tryStmt() *ast.TryCatch {
 			}
 			p.Match(tok.RParen)
 		}
-		catchEnd = p.endPos
+		catchEnd = p.EndPos
 		catch = p.statement()
 	}
 	return &ast.TryCatch{Try: try, Catch: catch,
