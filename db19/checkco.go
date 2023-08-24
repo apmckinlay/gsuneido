@@ -98,6 +98,10 @@ type ckFinal struct {
 }
 
 func (ck *CheckCo) StartTran() *CkTran {
+	// if len(ck.c) == cap(ck.c) {
+	// 	log.Println("checker buffer full")
+	// 	return nil
+	// }
 	ret := make(chan *CkTran, 1)
 	ck.c <- &ckStart{ret: ret}
 	return <-ret
@@ -204,9 +208,11 @@ func (ck *CheckCo) Final() int {
 
 //-------------------------------------------------------------------
 
+const ckchanSize = 4 // ???
+
 func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo {
 	ck := NewCheck(db)
-	c := make(chan any, 4)
+	c := make(chan any, ckchanSize)
 	go checker(ck, c, mergeChan)
 	return &CheckCo{c: c, allDone: allDone}
 }
