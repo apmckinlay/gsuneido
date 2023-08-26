@@ -407,6 +407,11 @@ func (db *Database) RenameTable(from, to string) bool {
 func (db *Database) Drop(table string) error {
 	db.lockSchema()
 	defer db.unlockSchema()
+	state := db.GetState()
+	if ts := state.Meta.GetRoSchema(table); ts == nil &&
+		state.Meta.GetView(table) == "" {
+		return errors.New("can't drop nonexistent table: " + table)
+	}
 	var err error
 	db.RunExclusive(table, func() {
 		db.UpdateState(func(state *DbState) {

@@ -158,6 +158,7 @@ func (ck *Check) Persist() *DbState {
 }
 
 func (ck *Check) RunExclusive(table string, fn func()) any {
+	// only for tests
 	if !ck.AddExclusive(table) {
 		return "already exclusive: " + table
 	}
@@ -165,6 +166,7 @@ func (ck *Check) RunExclusive(table string, fn func()) any {
 }
 
 func (ck *Check) RunEndExclusive(table string, fn func()) (err any) {
+	// only for tests
 	defer ck.EndExclusive(table)
 	defer func() {
 		if e := recover(); e != nil {
