@@ -18,7 +18,7 @@ type suDateGlobal struct {
 }
 
 func init() {
-	ps := params(`(string=false, pattern=false,
+	ps := params(`(string=nil, pattern=nil,
 		year=nil, month=nil, day=nil,
 		hour=nil, minute=nil, second=nil, millisecond=nil)`)
 	Global.Builtin("Date", &suDateGlobal{SuBuiltin{Fn: Date,
@@ -28,11 +28,11 @@ func init() {
 var tsPat = regex.Compile(`\A\d\d\d\d\d\d\d\d\.\d\d\d\d\d\d\d\d\d\d\d\d\Z`)
 
 func Date(_ *Thread, args []Value) Value {
-	if args[0] != False && hasFields(args) {
+	if args[0] != nil && hasFields(args) {
 		panic("usage: Date() or Date(string [, pattern]) or " +
 			"Date(year:, month:, day:, hour:, minute:, second:)")
 	}
-	if args[0] != False {
+	if args[0] != nil {
 		if d, ok := args[0].(SuDate); ok {
 			return d
 		}
@@ -43,7 +43,7 @@ func Date(_ *Thread, args []Value) Value {
 		s := AsStr(args[0])
 		if strings.HasPrefix(s, "#") || tsPat.Matches(s) {
 			d = DateFromLiteral(s)
-		} else if args[1] == False {
+		} else if args[1] == nil {
 			d = ParseDate(s, "yMd")
 		} else {
 			d = ParseDate(s, AsStr(args[1]))
