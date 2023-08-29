@@ -25,8 +25,8 @@ func TestOptimize(t *testing.T) {
 		assert.T(t).Msg(query).This(q.String()).Like(expected)
 	}
 	// trace.Set(int(trace.QueryOpt))
-	// test("table sort c",
-	// 	"")
+	// test("table rename a to x, x to y sort y",
+	// 	"table^(a) RENAME a to x, x to y")
 	// t.SkipNow()
 
 	test("table",
@@ -64,6 +64,8 @@ func TestOptimize(t *testing.T) {
 
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
+	test("table rename a to x, x to y sort y",
+		"table^(a) RENAME a to x, x to y")
 
 	test("table extend x = F() sort c",
 		"table^(a) TEMPINDEX(c) EXTEND x = F()")

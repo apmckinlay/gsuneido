@@ -301,7 +301,7 @@ func (p *Project) transformRename(r *Rename) Query {
 			newTo = append(newTo, to[i])
 		}
 	}
-	newCols := slc.Replace(p.columns, to, from)
+	newCols := r.renameRev(p.columns)
 	p = newProject(r.source, newCols)
 	r = NewRename(p, newFrom, newTo)
 	return r.Transform()

@@ -25,13 +25,6 @@ func TestTransform(t *testing.T) {
 	}
 	test("table", "")
 	test("table rename a to x, c to y", "")
-	test("table rename a to x rename b to y rename c to z",
-		"table rename a to x, b to y, c to z")
-	test("table rename a to x rename x to y rename y to z",
-		"table rename a to z")
-	test("table rename a to aa, b to bb rename bb to b, aa to a",
-		"table")
-
 	test("table remove c, d, e",
 		"table project a,b")
 	test("table remove x, y, z",
@@ -54,8 +47,18 @@ func TestTransform(t *testing.T) {
 	test("customer project id, name project id",
 		"customer PROJECT id")
 	// combine rename's
+	test("table rename a to x rename b to y rename c to z",
+		"table rename a to x, b to y, c to z")
+	test("table rename a to x rename x to y rename y to z",
+		"table rename a to x, x to y, y to z")
+	test("table rename a to aa, b to bb rename bb to b, aa to a",
+		"table rename a to aa, b to bb, bb to b, aa to a")
+	test("table rename a to x rename c to a",
+		"table rename a to x, c to a")
 	test("customer rename id to x rename name to y",
-		"customer RENAME id to x, name to y")
+		"customer rename id to x, name to y")
+	test("table rename a to x rename x to y",
+		"table rename a to x, x to y")
 	// combine where's
 	test("customer where id is 5 where city is 6 where name is 7",
 		"customer WHERE id is 5 and city is 6 and name is 7")

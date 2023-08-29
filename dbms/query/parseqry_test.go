@@ -81,6 +81,11 @@ func TestParseQuery(t *testing.T) {
 		"assignment operators are not allowed")
 	xtest("cus extend x = cnum.Map({ it.Size() })",
 		"queries do not support blocks")
+
+	xtest("table rename a to x, a to y",
+		"rename: nonexistent column: a")
+	xtest("table rename a to x, b to x",
+		"rename: column already exists: x")
 }
 
 func TestParseQuery2(t *testing.T) {
