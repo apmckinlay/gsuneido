@@ -313,7 +313,6 @@ func (p *Project) transformExtend(e *Extend) Query {
 		// rules make it too hard to determine what fields they use
 		return p.transform()
 	}
-	// orig := Format(p)
 	extendUses := exprsCols(e.exprs)
 	// split the extend into what can go after the project,
 	// and what has to stay before the project
@@ -342,6 +341,9 @@ func (p *Project) transformExtend(e *Extend) Query {
 	if len(newProjCols) == 0 {
 		// the before extend is irrelevant with ProjectNone
 		return NewExtend(&ProjectNone{}, afterCols, afterExprs)
+	}
+	if slices.Equal(beforeCols, e.cols) {
+		return p.transform()
 	}
 	var result Query
 	if len(beforeCols) > 0 {

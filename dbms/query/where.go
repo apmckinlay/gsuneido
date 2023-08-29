@@ -472,6 +472,9 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 	if exprs1 != nil || exprs2 != nil {
 		q2 = newQ2(src1, src2).Transform()
 	}
+	if exprs1 == nil && exprs2 == nil {
+		return w
+	}
 	if common != nil {
 		e := &ast.Nary{Tok: tok.And, Exprs: common}
 		return NewWhere(q2, e, w.t)

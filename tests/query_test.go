@@ -38,6 +38,7 @@ func TestQuery(t *testing.T) {
 	// trace.QueryOpt.Set()
 	// trace.JoinOpt.Set()
 	q, _, _ = Setup(q, ReadMode, tran)
+	Warnings("", q)
 
 	fmt.Println("----------------")
 	fmt.Println(Strategy(q))

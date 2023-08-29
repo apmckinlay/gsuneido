@@ -277,8 +277,23 @@ type QueryTran interface {
 // It calls Transform, Optimize, and SetApproach.
 // The resulting Query is ready for execution.
 func Setup(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
-	q = q.Transform()
+	q = transform(q)
 	return setup(q, mode, 1, t)
+}
+
+func transform(q Query) Query {
+	// fmt.Println("================================")
+	for i := 0; ; i++ {
+		assert.That(i < 5)
+		// fmt.Println(i, Strategy(q))
+		orig := q
+		q = q.Transform()
+		if q == orig {
+			break
+		}
+		// fmt.Println("------------------------------")
+	}
+	return q
 }
 
 // Setup1 is the same as Setup except it passes a frac of 1/nrows

@@ -220,6 +220,10 @@ func (*TablesLookup) Nrows() (int, int) {
 	return 1, 1
 }
 
+func (tl *TablesLookup) Transform() Query {
+	return tl
+}
+
 func (tl *TablesLookup) Get(*Thread, Dir) Row {
 	if tl.state != eof {
 		tl.state = eof
