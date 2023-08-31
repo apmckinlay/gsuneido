@@ -177,6 +177,7 @@ func (th *Thread) Reset() {
 	th.InHandler = false
 	th.Suneido.Store(nil)
 	th.session.Store("")
+	th.ReturnThrow = false
 }
 
 // GetState and RestoreState are used by callbacks_windows.go

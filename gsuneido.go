@@ -410,7 +410,7 @@ func eval(src string) {
 		fmt.Println("(" + s + ")")
 	}
 	fn := v.(*SuFunc)
-	// DisasmMixed(os.Stdout, fn, src)
+	// fmt.Println(DisasmMixed(fn, src))
 
 	mainThread.Reset()
 	result := mainThread.Call(fn)

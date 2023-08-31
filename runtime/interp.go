@@ -496,15 +496,18 @@ loop:
 			result := f.Call(th, nil, argSpec)
 			th.sp = base
 			if th.ReturnThrow {
-				if fr.ip < len(code) && op.Opcode(code[fr.ip]) != op.Return {
-					th.ReturnThrow = false
-				}
-				if oc == op.CallFuncDiscard &&
-					result != EmptyStr && result != True {
-					if s, ok := result.ToStr(); ok {
-						panic(s)
+				// NOTE: this code should be kept in sync with CallMeth
+				th.ReturnThrow = false // default is to clear the flag
+				if oc == op.CallFuncDiscard {
+					if result != EmptyStr && result != True {
+						if s, ok := result.ToStr(); ok {
+							panic(s)
+						}
+						panic("return value not checked")
 					}
-					panic("return value not checked")
+				} else if fr.ip >= len(code) ||
+					op.Opcode(code[fr.ip]) == op.Return {
+					th.ReturnThrow = true // propagate if returning result
 				}
 			}
 			pushResult(result)
@@ -547,15 +550,18 @@ loop:
 					result := f.Call(th, this, argSpec)
 					th.sp = base
 					if th.ReturnThrow {
-						if fr.ip < len(code) && op.Opcode(code[fr.ip]) != op.Return {
-							th.ReturnThrow = false
-						}
-						if oc == op.CallFuncDiscard &&
-							result != EmptyStr && result != True {
-							if s, ok := result.ToStr(); ok {
-								panic(s)
+						// NOTE: this code should be kept in sync with CallFunc
+						th.ReturnThrow = false // default is to clear the flag
+						if oc == op.CallMethDiscard {
+							if result != EmptyStr && result != True {
+								if s, ok := result.ToStr(); ok {
+									panic(s)
+								}
+								panic("return value not checked")
 							}
-							panic("return value not checked")
+						} else if fr.ip >= len(code) ||
+							op.Opcode(code[fr.ip]) == op.Return {
+							th.ReturnThrow = true // propagate if returning result
 						}
 					}
 					pushResult(result)
