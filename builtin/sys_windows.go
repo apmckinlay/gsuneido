@@ -91,3 +91,15 @@ func boolRet(rtn uintptr) Value {
 	}
 	return True
 }
+
+var deleteFileA = kernel32.MustFindProc("DeleteFileA").Addr()
+
+func deleteFile(filename string) error {
+	file := zbuf(SuStr(filename))
+	rtn, _, e := syscall.SyscallN(deleteFileA,
+		uintptr(unsafe.Pointer(&file[0])))
+	if rtn == 0 {
+		return e
+	}
+	return nil
+}

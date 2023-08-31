@@ -63,12 +63,20 @@ func GetTempFileName(path, prefix Value) Value {
 var _ = builtin(CreateDir, "(dirname)")
 
 func CreateDir(th *Thread, args []Value) Value {
-	err := os.Mkdir(ToStr(args[0]), 0755)
-	if err == nil {
-		return True
+	path := ToStr(args[0])
+	err := os.Mkdir(path, 0755)
+	if errors.Is(err, os.ErrExist) {
+		if info, err2 := os.Stat(path); err2 == nil && info.Mode().IsDir() {
+			// not return-throw
+			return SuStr("CreateDir " + path + ": already exists")
+		}
+		err = errors.New(path + ": exists but is not a directory")
 	}
-	th.ReturnThrow = true
-	return SuStr("CreateDir: " + err.Error())
+	if err != nil {
+		th.ReturnThrow = true
+		return SuStr("CreateDir: " + err.Error())
+	}
+	return True
 }
 
 func init() { // TEMP for transition
@@ -79,44 +87,45 @@ func init() { // TEMP for transition
 var _ = builtin(DeleteFileApi, "(filename)")
 
 func DeleteFileApi(th *Thread, args []Value) Value {
-	err := os.Remove(ToStr(args[0]))
-	if err == nil {
-		return True
+	path := ToStr(args[0])
+	err := deleteFile(path) // see sys_unix.go and sys_windows.go
+	if errors.Is(err, os.ErrNotExist) {
+		return SuStr("DeleteFileApi " + path + ": does not exist")
 	}
-	th.ReturnThrow = true
-	return SuStr("DeleteFileApi: " + err.Error())
+	if err != nil {
+		th.ReturnThrow = true
+		return SuStr("DeleteFileApi " + path + ": " + err.Error())
+	}
+	return True
 }
 
 var _ = builtin(FileExistsQ, "(filename)")
 
 func FileExistsQ(arg Value) Value {
-	filename := ToStr(arg)
-	_, err := os.Stat(filename)
+	path := ToStr(arg)
+	info, err := os.Stat(path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		log.Println("INFO: FileExists?", filename, err)
+		log.Println("INFO: FileExists?", path, err)
 	}
-	return SuBool(err == nil)
+	return SuBool(err == nil && info.Mode().IsRegular())
 }
 
 var _ = builtin(DirExistsQ, "(filename)")
 
 func DirExistsQ(arg Value) Value {
-	filename := ToStr(arg)
-	info, err := os.Stat(filename)
-	if err == nil {
-		return SuBool(info.Mode().IsDir())
+	path := ToStr(arg)
+	info, err := os.Stat(path)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		log.Println("INFO: DirExists?", path, err)
 	}
-	if !errors.Is(err, fs.ErrNotExist) {
-		log.Println("INFO: DirExists?", filename, err)
-	}
-	return False
+	return SuBool(err == nil && info.Mode().IsDir())
 }
 
 var _ = builtin(MoveFile, "(from, to)")
 
 func MoveFile(th *Thread, args []Value) Value {
 	from := ToStr(args[0])
-    to := ToStr(args[1])
+	to := ToStr(args[1])
 	err := os.Rename(from, to)
 	if err == nil {
 		return True
@@ -128,19 +137,20 @@ func MoveFile(th *Thread, args []Value) Value {
 var _ = builtin(DeleteDir, "(dir)")
 
 func DeleteDir(th *Thread, args []Value) Value {
-	th.ReturnThrow = true
-	dirname := ToStr(args[0])
-	info, err := os.Stat(dirname)
+	path := ToStr(args[0])
+	info, err := os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return SuStr("DeleteDir: " + err.Error())
+		// not return-throw
+		return SuStr("DeleteDir " + path + ": does not exist")
 	}
+	th.ReturnThrow = true
 	if err != nil {
 		return SuStr("DeleteDir: " + err.Error())
 	}
 	if !info.Mode().IsDir() {
-		return SuStr("DeleteDir: not a directory")
+		return SuStr("DeleteDir " + path + ": not a directory")
 	}
-	err = os.RemoveAll(dirname)
+	err = os.RemoveAll(path)
 	if err != nil {
 		return SuStr("DeleteDir: " + err.Error())
 	}

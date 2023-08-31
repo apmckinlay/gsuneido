@@ -71,3 +71,16 @@ func CopyFile(th *Thread, args []Value) Value {
 
 	return True
 }
+
+// Go os.Remove handles both files and directories.
+// We only want to remove files.
+
+func deleteFile(path string) error {
+	// loop on EINTR the same as os.Remove
+	for {
+		err := syscall.Unlink(path)
+		if err != syscall.EINTR {
+			return err
+		}
+	}
+}
