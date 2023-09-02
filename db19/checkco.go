@@ -14,7 +14,6 @@ import (
 type CheckCo struct {
 	c       chan any
 	allDone chan void
-	// limiter  *rate.Limiter
 }
 
 // message types
@@ -98,12 +97,7 @@ type ckFinal struct {
 	ret chan int
 }
 
-// var bgnd = context.Background()
-
 func (ck *CheckCo) StartTran() *CkTran {
-	// if throttle.Load() {
-	// 	ck.limiter.Wait(bgnd)
-	// }
 	ret := make(chan *CkTran, 1)
 	ck.c <- &ckStart{ret: ret}
 	return <-ret
@@ -211,13 +205,12 @@ func (ck *CheckCo) Final() int {
 //-------------------------------------------------------------------
 
 const ckchanSize = 4 // ???
-// const throttleRate = 10 // transactions per second // ???
 
 func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo {
 	ck := NewCheck(db)
 	c := make(chan any, ckchanSize)
 	go checker(ck, c, mergeChan)
-	return &CheckCo{c: c, allDone: allDone /*, limiter: rate.NewLimiter(10, 1)*/}
+	return &CheckCo{c: c, allDone: allDone}
 }
 
 func (ck *CheckCo) Stop() {
