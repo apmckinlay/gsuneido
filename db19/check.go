@@ -33,7 +33,10 @@ Deletes are also tracked by offset which is used when checking delete vs delete.
 */
 
 // MaxTrans is the maximum number of outstanding/overlapping update transactions
-const MaxTrans = 200
+const MaxTrans = 500 // ???
+// const startThrottle = 200 // ???
+// const endThrottle = 180   // ???
+// var throttle goatomic.Bool
 
 // Set needs to be an ordered set so that reads can check for a range
 type Set = ordset.Set
@@ -106,7 +109,19 @@ func (ck *Check) Run(fn func() error) error {
 	return fn()
 }
 
+var logAt = 100
+
 func (ck *Check) StartTran() *CkTran {
+	if len(ck.trans) > logAt {
+		log.Println("outstanding transactions reached", logAt)
+		logAt += 100
+	}
+	// if len(ck.trans) >= startThrottle {
+	// 	if !throttle.Load() {
+	// 		log.Println("transaction throttle START at", startThrottle)
+	// 		throttle.Store(true) // cleared by cleanEnded
+	// 	}
+	// }
 	if len(ck.trans) >= MaxTrans {
 		return nil
 	}
@@ -509,6 +524,12 @@ func (ck *Check) cleanEnded() {
 			delete(ck.exclusive, table)
 		}
 	}
+	// if len(ck.trans) < endThrottle {
+	// 	if throttle.Load() {
+	// 		log.Println("transaction throttle END at", endThrottle)
+	// 		throttle.Store(false)
+	// 	}
+	// }
 }
 
 // MaxAge is the maximum number of ticks that a transaction can be outstanding.
