@@ -4,81 +4,80 @@
 package query
 
 import (
-	"slices"
-
 	. "github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
-// renameExpr renames identifiers in an expression.
+// renameExpr is used by Where Transform on Rename.
+// It renames identifiers in an expression.
 // It does not modify the expression.
 // If any renames are done, it returns a new expression.
-// It is used by Where Transform
-func renameExpr(expr Expr, from, to []string) Expr {
+func renameExpr(expr Expr, r *Rename) Expr {
 	switch e := expr.(type) {
 	case *Constant:
 		return expr
 	case *Ident:
 		// this is the actual rename
 		// the other cases are just traversal and path copying
-		if i := slices.Index(from, e.Name); i != -1 {
-			return &Ident{Name: to[i]}
+		if to := r.renameRev([]string{e.Name})[0]; to != e.Name {
+			return &Ident{Name: to}
 		}
 		return expr
 	case *Unary:
-		newExpr := renameExpr(e.E, from, to)
+		newExpr := renameExpr(e.E, r)
 		if newExpr == expr {
 			return expr
 		}
 		return &Unary{Tok: e.Tok, E: newExpr}
 	case *Binary:
-		lhs := renameExpr(e.Lhs, from, to)
-		rhs := renameExpr(e.Rhs, from, to)
+		lhs := renameExpr(e.Lhs, r)
+		rhs := renameExpr(e.Rhs, r)
 		if lhs == e.Lhs && rhs == e.Rhs {
 			return expr
 		}
 		return &Binary{Tok: e.Tok, Lhs: lhs, Rhs: rhs}
 	case *Mem:
-		e2 := renameExpr(e.E, from, to)
-		m := renameExpr(e.M, from, to)
+		e2 := renameExpr(e.E, r)
+		m := renameExpr(e.M, r)
 		if e2 == e.E && m == e.M {
 			return expr
 		}
 		return &Mem{E: e2, M: m}
 	case *Trinary:
-		cond := renameExpr(e.Cond, from, to)
-		t := renameExpr(e.T, from, to)
-		f := renameExpr(e.F, from, to)
+		cond := renameExpr(e.Cond, r)
+		t := renameExpr(e.T, r)
+		f := renameExpr(e.F, r)
 		if cond == e.Cond && t == e.T && f == e.F {
 			return expr
 		}
 		return &Trinary{Cond: cond, T: t, F: f}
 	case *RangeTo:
-		cond := renameExpr(e.E, from, to)
-		f := renameExpr(e.From, from, to)
-		t := renameExpr(e.To, from, to)
+		cond := renameExpr(e.E, r)
+		f := renameExpr(e.From, r)
+		t := renameExpr(e.To, r)
 		if cond == e.E && f == e.From && t == e.To {
 			return expr
 		}
 		return &RangeTo{E: cond, From: f, To: t}
 	case *RangeLen:
-		cond := renameExpr(e.E, from, to)
-		f := renameExpr(e.From, from, to)
-		n := renameExpr(e.Len, from, to)
+		cond := renameExpr(e.E, r)
+		f := renameExpr(e.From, r)
+		n := renameExpr(e.Len, r)
 		if cond == e.E && f == e.From && n == e.Len {
 			return expr
 		}
 		return &RangeLen{E: cond, From: f, Len: n}
 	case *Nary:
-		exprs := renameExprs(e.Exprs, from, to)
+		exprs := renameExprs(e.Exprs, r)
 		if exprs == nil {
 			return expr
 		}
 		return &Nary{Tok: e.Tok, Exprs: exprs}
 	case *Call:
-		fn := renameExpr(e.Fn, from, to)
-		args := renameArgs(e.Args, from, to)
+		fn := renameExpr(e.Fn, r)
+		args := renameArgs(e.Args, r)
 		if fn == e.Fn && args == nil {
 			return expr
 		}
@@ -87,8 +86,8 @@ func renameExpr(expr Expr, from, to []string) Expr {
 		}
 		return &Call{Fn: fn, Args: args}
 	case *In:
-		e2 := renameExpr(e.E, from, to)
-		exprs := renameExprs(e.Exprs, from, to)
+		e2 := renameExpr(e.E, r)
+		exprs := renameExprs(e.Exprs, r)
 		if e2 == e.E && exprs == nil {
 			return expr
 		}
@@ -97,7 +96,7 @@ func renameExpr(expr Expr, from, to []string) Expr {
 		}
 		return &In{E: e2, Exprs: exprs}
 	case *InRange:
-		e2 := renameExpr(e.E, from, to)
+		e2 := renameExpr(e.E, r)
 		if e2 == e.E {
 			return expr
 		}
@@ -108,10 +107,10 @@ func renameExpr(expr Expr, from, to []string) Expr {
 	}
 }
 
-func renameExprs(exprs []Expr, from, to []string) []Expr {
+func renameExprs(exprs []Expr, r *Rename) []Expr {
 	var newExprs []Expr
 	for i, e := range exprs {
-		e2 := renameExpr(e, from, to)
+		e2 := renameExpr(e, r)
 		if e2 != e {
 			if newExprs == nil {
 				newExprs = make([]Expr, len(exprs))
@@ -125,10 +124,10 @@ func renameExprs(exprs []Expr, from, to []string) []Expr {
 	return newExprs
 }
 
-func renameArgs(args []Arg, from, to []string) []Arg {
+func renameArgs(args []Arg, r *Rename) []Arg {
 	var newArgs []Arg
 	for i, a := range args {
-		e2 := renameExpr(a.E, from, to)
+		e2 := renameExpr(a.E, r)
 		if e2 != a.E {
 			if newArgs == nil {
 				newArgs = make([]Arg, len(args))
@@ -144,7 +143,10 @@ func renameArgs(args []Arg, from, to []string) []Arg {
 
 var aFolder Folder
 
-// replaceExpr is used by Where Transform
+// replaceExpr is used by Where Transform on Extend.
+// It replaces identifiers in an expression with expressions.
+// It does not modify the original expression.
+// If any replacements are done, it returns a new expression.
 func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 	switch e := expr.(type) {
 	case *Constant:
@@ -152,7 +154,10 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 	case *Ident:
 		// this is the actual replace
 		// the other cases are just traversal and path copying
-		if i := slices.Index(from, e.Name); i != -1 {
+		if i := slc.LastIndex(from, e.Name); i != -1 {
+			if i > 0 {
+				return replaceExpr(to[i], from[:i], to[:i])
+			}
 			return to[i]
 		}
 		return expr

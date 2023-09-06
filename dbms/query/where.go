@@ -262,7 +262,7 @@ func (w *Where) Transform() Query {
 		return q.Transform()
 	case *Rename:
 		// move where before rename
-		newExpr := renameExpr(w.expr, q.to, q.from)
+		newExpr := renameExpr(w.expr, q)
 		src := NewWhere(q.source, newExpr, w.t)
 		return NewRename(src, q.from, q.to).Transform()
 	case *Extend:

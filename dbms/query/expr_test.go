@@ -138,14 +138,13 @@ func TestExprColumns(t *testing.T) {
 }
 
 func TestExprRename(t *testing.T) {
-	from := []string{"b", "d"}
-	to := []string{"B", "D"}
+	r := &Rename{from: []string{"B", "D"}, to: []string{"b", "d"}}
 	test := func(src string, expected string) {
 		t.Helper()
 		p := NewQueryParser(src, nil, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
-		result := renameExpr(expr, from, to)
+		result := renameExpr(expr, r)
 		assert.T(t).Msg(src).This(result.Echo()).Is(expected)
 	}
 	test("123", "123")
@@ -168,22 +167,30 @@ func TestExprRename(t *testing.T) {
 }
 
 func TestExprReplace(t *testing.T) {
-	from := []string{"x", "y", "z"}
+	cols := []string{"x", "y", "z"}
 	expr := NewQueryParser("5", nil, nil).Expression()
-	to := []ast.Expr{expr, expr, expr}
+	exprs := []ast.Expr{expr, expr, expr}
 	test := func(src string, expected string) {
 		t.Helper()
 		p := NewQueryParser(src, nil, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
-		result := replaceExpr(expr, from, to)
+		result := replaceExpr(expr, cols, exprs)
 		assert.T(t).Msg(src).This(result.Echo()).Is(expected)
-		result = replaceExpr(expr, from, to)
+		result = replaceExpr(expr, cols, exprs)
 		assert.T(t).Msg(src).This(result.Echo()).Is(expected)
 	}
-	test("x is a", "a is 5")
+	test("a is x", "a is 5")
+	test("x is a", "a is 5") // reversed
 	test("x is 6", "false") // folded
 	test("'=' $ x", `"=5"`)
 	test("1 + x", `6`)
 	test("x + y + z", `15`)
+
+	// extend y = x, z = y where a is z => where a is x
+	cols = []string{"y", "z"}
+	expr = NewQueryParser("x", nil, nil).Expression()
+	expr2 := NewQueryParser("y", nil, nil).Expression()
+	exprs = []ast.Expr{expr, expr2}
+	test("a is z", "a is x")
 }

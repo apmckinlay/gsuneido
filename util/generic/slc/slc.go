@@ -4,9 +4,16 @@
 // Package slc contains additions to the standard slices package
 package slc
 
-import (
-	. "golang.org/x/exp/constraints"
-)
+import "cmp"
+
+func LastIndex[E comparable](list []E, e E) int {
+	for i := len(list) - 1; i >= 0; i-- {
+		if list[i] == e {
+			return i
+		}
+	}
+	return -1
+}
 
 func IndexFn[E any](list []E, e E, eq func(E, E) bool) int {
 	for i, e2 := range list {
@@ -155,7 +162,7 @@ func MapFn[S ~[]E, E any](list S, fn func(E) E) S {
 }
 
 // Min returns the minimum value in the list
-func Min[E Ordered](list []E) E {
+func Min[E cmp.Ordered](list []E) E {
 	min := list[0]
 	for _, x := range list {
 		if x < min {
@@ -166,7 +173,7 @@ func Min[E Ordered](list []E) E {
 }
 
 // Max returns the maximum value in the list
-func Max[E Ordered](list []E) E {
+func Max[E cmp.Ordered](list []E) E {
 	max := list[0]
 	for _, x := range list {
 		if x > max {
