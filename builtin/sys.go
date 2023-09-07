@@ -90,6 +90,7 @@ func DeleteFileApi(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
 	err := deleteFile(path) // see sys_unix.go and sys_windows.go
 	if errors.Is(err, os.ErrNotExist) {
+		// not return-throw
 		return SuStr("DeleteFileApi " + path + ": does not exist")
 	}
 	if err != nil {
