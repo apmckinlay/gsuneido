@@ -94,20 +94,20 @@ func (e *Extend) getRowSize() int {
 }
 
 func (e *Extend) Transform() Query {
+	src := e.source.Transform()
+
 	// remove empty Extends
 	if len(e.cols) == 0 {
-		return e.source.Transform()
+		return src
 	}
-	src := e.source
 	cols := e.cols
 	exprs := e.exprs
 	// combine Extends
-	for e2, ok := src.(*Extend); ok; e2, ok = src.(*Extend) {
+	if e2, ok := src.(*Extend); ok {
 		src = e2.source
 		cols = append(e2.cols, cols...)
 		exprs = append(e2.exprs, exprs...)
 	}
-	src = src.Transform()
 	if _, ok := src.(*Nothing); ok {
 		return NewNothing(e.Columns())
 	}

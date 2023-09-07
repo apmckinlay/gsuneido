@@ -62,6 +62,12 @@ type Query interface {
 	// This stage is not cost based, transforms are applied when possible.
 	//
 	// Transform methods MUST ensure they call Transform on their children.
+	// Transform is (mostly) bottom up, partly for path copying.
+	// Which means Transform methods should start by calling Transform
+	// on their children.
+	//
+	// Any changes should build new nodes, NOT modify nodes.
+	// This is partly to ensure that constructor validation is done.
 	Transform() Query
 
 	// SetTran is used for cursors
@@ -277,23 +283,8 @@ type QueryTran interface {
 // It calls Transform, Optimize, and SetApproach.
 // The resulting Query is ready for execution.
 func Setup(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
-	q = transform(q)
+	q = q.Transform()
 	return setup(q, mode, 1, t)
-}
-
-func transform(q Query) Query {
-	// fmt.Println("================================")
-	for i := 0; ; i++ {
-		assert.That(i < 5)
-		// fmt.Println(i, Strategy(q))
-		orig := q
-		q = q.Transform()
-		if q == orig {
-			break
-		}
-		// fmt.Println("------------------------------")
-	}
-	return q
 }
 
 // Setup1 is the same as Setup except it passes a frac of 1/nrows
@@ -575,7 +566,8 @@ func (q2 *Query2) keypairs() [][]string {
 }
 
 type q2i interface {
-	q1i
+	stringOp() string
+	Source() Query
 	Source2() Query
 }
 

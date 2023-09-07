@@ -191,13 +191,13 @@ func (*Summarize) Output(*Thread, Record) {
 }
 
 func (su *Summarize) Transform() Query {
-	if p, ok := su.source.(*Project); ok && p.unique {
-		// remove project-copy
-		su = NewSummarize(p.source, su.strat, su.by, su.cols, su.ops, su.ons)
-	}
 	src := su.source.Transform()
 	if _, ok := src.(*Nothing); ok {
 		return NewNothing(su.Columns())
+	}
+	if p, ok := src.(*Project); ok && p.unique {
+		// remove project-copy
+		return NewSummarize(p.source, su.strat, su.by, su.cols, su.ops, su.ons)
 	}
 	if src != su.source {
 		return NewSummarize(src, su.strat, su.by, su.cols, su.ops, su.ons)

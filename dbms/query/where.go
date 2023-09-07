@@ -227,33 +227,22 @@ func (w *Where) calcNrows() (int, int) {
 }
 
 func (w *Where) Transform() Query {
+	src := w.source.Transform()
 	if len(w.expr.Exprs) == 0 {
 		// remove empty where
-		return w.source.Transform()
+		return src
 	}
 	if w.conflict {
 		return NewNothing(w.Columns())
 	}
-	if tl := w.tablesLookup(); tl != nil {
-		return tl
-	}
-	if lj := w.leftJoinToJoin(); lj != nil {
-		// convert leftjoin to join
-		src := NewJoin(lj.source1, lj.source2, lj.by)
-		return NewWhere(src, w.expr, w.t).Transform()
-	}
-	switch q := w.source.(type) {
+	switch q := src.(type) {
+	case *Nothing:
+		return NewNothing(w.Columns())
+	case *Tables:
+		return w.tablesLookup(q)
 	case *Where:
 		// combine consecutive where's
-		exprs := w.expr.Exprs
-		for {
-			exprs = slc.With(q.expr.Exprs, exprs...)
-			if src, ok := q.source.(*Where); ok {
-				q = src
-			} else {
-				break
-			}
-		}
+		exprs := slc.With(q.expr.Exprs, w.expr.Exprs...)
 		e := &ast.Nary{Tok: tok.And, Exprs: exprs}
 		return NewWhere(q.source, e, w.t).Transform()
 	case *Project:
@@ -276,7 +265,7 @@ func (w *Where) Transform() Query {
 			}
 		}
 		if before == nil { // no split
-			return w.transform()
+			return w.transform(src)
 		}
 		src := NewWhere(q.source,
 			&ast.Nary{Tok: tok.And, Exprs: before}, w.t)
@@ -298,7 +287,7 @@ func (w *Where) Transform() Query {
 			}
 		}
 		if before == nil { // no split
-			return w.transform()
+			return w.transform(src)
 		}
 		src := NewWhere(q.source,
 			&ast.Nary{Tok: tok.And, Exprs: before}, w.t)
@@ -329,14 +318,19 @@ func (w *Where) Transform() Query {
 	case *Times:
 		// split where over times
 		return w.split(q, func(src1, src2 Query) Query {
-			return NewTimes(src1, src2)
+			return NewTimes(src1, src2).Transform()
 		})
 	case *Join:
 		// split where over join
 		return w.split(q, func(src1, src2 Query) Query {
-			return NewJoin(src1, src2, q.by)
+			return NewJoin(src1, src2, q.by).Transform()
 		})
 	case *LeftJoin:
+		if w.leftJoinToJoin(q) {
+			return w.split(q, func(src1, src2 Query) Query {
+				return NewJoin(src1, src2, q.by).Transform()
+			})
+		}
 		// split where over leftjoin (left side only)
 		cols1 := q.source1.Columns()
 		var common, exprs1 []ast.Expr
@@ -348,7 +342,7 @@ func (w *Where) Transform() Query {
 			}
 		}
 		if exprs1 == nil { // no split
-			return w.transform()
+			return w.transform(src)
 		}
 		src1 := NewWhere(q.source1,
 			&ast.Nary{Tok: tok.And, Exprs: exprs1}, w.t)
@@ -357,34 +351,26 @@ func (w *Where) Transform() Query {
 			return q2
 		}
 		e := &ast.Nary{Tok: tok.And, Exprs: common}
-		return NewWhere(q2, e, w.t)
+		return NewWhere(q2, e, w.t).Transform()
 	default:
-		return w.transform()
+		return w.transform(src)
 	}
 }
 
-func (w *Where) transform() Query {
-	src := w.source.Transform()
-	if _, ok := src.(*Nothing); ok {
-		return NewNothing(w.Columns())
-	}
+func (w *Where) transform(src Query) Query {
 	if src != w.source {
 		return NewWhere(src, w.expr, w.t)
 	}
 	return w
 }
 
-func (w *Where) tablesLookup() Query {
+func (w *Where) tablesLookup(tables *Tables) Query {
 	// Optimize: tables where table|tablename = <string>
 	// This is to handle the speed issue from heavy use of TableExists?.
 	// It could be more general.
-	tables, ok := w.source.(*Tables)
-	if !ok {
-		return nil
-	}
 	col, val := w.lookup1()
 	if col != "table" && col != "tablename" {
-		return nil
+		return w
 	}
 	s, ok := val.ToStr()
 	if !ok {
@@ -406,17 +392,15 @@ func (w *Where) lookup1() (string, Value) {
 	return "", nil
 }
 
-func (w *Where) leftJoinToJoin() *LeftJoin {
-	if lj, ok := w.source.(*LeftJoin); ok {
-		cols := lj.source2.Header().GetFields()
-		cols = set.Difference(cols, lj.by)
-		for _, e := range w.expr.Exprs {
-			if set.Subset(cols, e.Columns()) && ast.CantBeEmpty(e, cols) {
-				return lj
-			}
+func (w *Where) leftJoinToJoin(lj *LeftJoin) bool {
+	cols := lj.source2.Header().GetFields()
+	cols = set.Difference(cols, lj.by)
+	for _, e := range w.expr.Exprs {
+		if set.Subset(cols, e.Columns()) && ast.CantBeEmpty(e, cols) {
+			return true
 		}
 	}
-	return nil
+	return false
 }
 
 func (w *Where) project(q Query) *ast.Nary {

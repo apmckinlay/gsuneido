@@ -53,10 +53,10 @@ func (m *Minus) getNrows() (int, int) {
 }
 
 func (m *Minus) Transform() Query {
-	if m.disjoint != "" {
-		return m.source1
-	}
 	src1 := m.source1.Transform()
+	if m.disjoint != "" {
+		return src1
+	}
 	if _, ok := src1.(*Nothing); ok {
 		return NewNothing(m.Columns())
 	}

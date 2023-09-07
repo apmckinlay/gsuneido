@@ -21,7 +21,7 @@ func TestTransform(t *testing.T) {
 			expected = from
 		}
 		q := ParseQuery(from, testTran{}, nil)
-		q = transform(q)
+		q = q.Transform()
 		actual := str.ToLower(q.String())
 		// *1 depends on whether optInit runs, e.g. if Nrows is called
 		actual = strings.ReplaceAll(actual, "where*1", "where")
@@ -78,10 +78,10 @@ func TestTransform(t *testing.T) {
 	test("customer where id is 5 where city is 6 where name is 7",
 		"customer WHERE id is 5 and city is 6 and name is 7")
 	// leftjoin to join
-	test("cus leftjoin task where cnum is 1 and tnum is 2",
-		"cus where cnum is 1 join 1:1 by(cnum) (task where cnum is 1 and tnum is 2)")
-	test("cus leftjoin task where cnum is 1 where tnum is 2",
-		"cus where cnum is 1 join 1:1 by(cnum) (task where cnum is 1 and tnum is 2)")
+	test("(cus leftjoin task) where cnum is 1 where tnum is 2",
+		"cus where cnum is 1 join 1:1 by(cnum) (task where tnum is 2)")
+	test("(cus leftjoin task) where tnum is 2 where cnum is 1",
+		"cus where cnum is 1 join 1:1 by(cnum) (task where tnum is 2 and cnum is 1)")
 
 	// remove projects of all fields
 	test("customer project id, city, name", "customer")
@@ -133,6 +133,8 @@ func TestTransform(t *testing.T) {
 	// move where before project
 	test("trans project id,cost where id is 5",
 		"trans WHERE id is 5 PROJECT id,cost")
+	test("table project a,b where a is 5 project b",
+		"table where a is 5 project b")
 	// move where before rename
 	test("trans where cost is 200 rename cost to x where id is 5",
 		"trans WHERE cost is 200 and id is 5 RENAME cost to x")

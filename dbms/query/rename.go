@@ -145,20 +145,20 @@ func (r *Rename) Fixed() []Fixed {
 }
 
 func (r *Rename) Transform() Query {
+	src := r.source.Transform()
+
 	// remove empty Renames
 	if len(r.from) == 0 {
-		return r.source.Transform()
+		return src
 	}
 	// combine Renames
-	src := r.source
 	from := r.from
 	to := r.to
-	for r2, ok := src.(*Rename); ok; r2, ok = src.(*Rename) {
+	if r2, ok := src.(*Rename); ok {
 		from = slc.With(r2.from, from...)
 		to = slc.With(r2.to, to...)
 		src = r2.source
 	}
-	src = src.Transform()
 	if _, ok := src.(*Nothing); ok {
 		tmp := Rename{from: from, to: to}
 		return NewNothing(tmp.renameFwd(src.Columns()))

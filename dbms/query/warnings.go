@@ -58,7 +58,7 @@ func warnings(q Query) int { // recursive
 	switch q := q.(type) {
 	case *Project:
 		if _, ok := q.source.(*Project); ok {
-			panic("transform did not merge project")
+			log.Println("ERROR: transform did not merge project")
 		}
 		if !q.unique {
 			w |= projectNotUnique
@@ -77,15 +77,15 @@ func warnings(q Query) int { // recursive
 		}
 	case *Where:
 		if _, ok := q.source.(*Where); ok {
-			panic("transform did not merge where")
+			log.Println("ERROR: transform did not merge where")
 		}
 	case *Extend:
 		if _, ok := q.source.(*Extend); ok {
-			panic("transform did not merge extend")
+			log.Println("ERROR: transform did not merge extend")
 		}
 	case *Rename:
 		if _, ok := q.source.(*Rename); ok {
-			panic("transform did not merge rename")
+			log.Println("ERROR: transform did not merge rename")
 		}
 	}
 	switch q := q.(type) {

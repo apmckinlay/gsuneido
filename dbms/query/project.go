@@ -215,18 +215,18 @@ func (p *Project) getNrows() (int, int) {
 }
 
 func (p *Project) Transform() Query {
+	src := p.source.Transform()
+	if _, ok := src.(*Nothing); ok {
+		return NewNothing(p.columns)
+	}
 	if set.Equal(p.columns, p.source.Columns()) {
 		// remove projects of all columns
-		return p.source.Transform()
+		return src
 	}
-	switch q := p.source.(type) {
+	switch q := src.(type) {
 	case *Project:
 		// combine projects by removing all but the first
-		var src Query
-		for ok := true; ok; q, ok = q.source.(*Project) {
-			src = q.source
-		}
-		return newProject(src, p.columns).Transform()
+		return newProject(q.source, p.columns).Transform()
 	case *Summarize:
 		cols := make([]string, 0, len(q.cols))
 		ops := make([]string, 0, len(q.ops))
@@ -269,7 +269,7 @@ func (p *Project) Transform() Query {
 			return NewIntersect(p.splitOver(&q.Query2)).Transform()
 		}
 	}
-	return p.transform()
+	return p.transform(src)
 }
 
 func (p *Project) splitOver(q2 *Query2) (Query, Query) {
@@ -296,22 +296,27 @@ func (p *Project) transformRename(r *Rename) Query {
 		if p.unique {
 			ck = strings.TrimSuffix(to[i], "_deps")
 		}
-		if slices.Contains(p.columns, ck) {
+		if slices.Contains(p.columns, ck) || chained(from, to, i) {
 			newFrom = append(newFrom, from[i])
 			newTo = append(newTo, to[i])
 		}
 	}
-	newCols := r.renameRev(p.columns)
-	p = newProject(r.source, newCols)
+	newProj := r.renameRev(p.columns)
+	p = newProject(r.source, newProj)
 	r = NewRename(p, newFrom, newTo)
 	return r.Transform()
+}
+
+func chained(from, to []string, i int) bool {
+	j := slices.Index(from[i:], to[i])
+	return j >= 0
 }
 
 // transformExtend tries to move projects before extends.
 func (p *Project) transformExtend(e *Extend) Query {
 	if e.hasRules() {
 		// rules make it too hard to determine what fields they use
-		return p.transform()
+		return p.transform(e)
 	}
 	extendUses := exprsCols(e.exprs)
 	// split the extend into what can go after the project,
@@ -343,27 +348,23 @@ func (p *Project) transformExtend(e *Extend) Query {
 		return NewExtend(&ProjectNone{}, afterCols, afterExprs)
 	}
 	if slices.Equal(beforeCols, e.cols) {
-		return p.transform()
+		return p.transform(e)
 	}
 	var result Query
 	if len(beforeCols) > 0 {
-		q := NewExtend(e.source, beforeCols, beforeExprs).Transform()
+		q := NewExtend(e.source, beforeCols, beforeExprs)
 		result = newProject(q, newProjCols)
 	} else {
 		// drop original extend since no columns left
-		result = newProject(e.source, newProjCols).Transform()
+		result = newProject(e.source, newProjCols)
 	}
 	if len(afterCols) > 0 {
 		result = NewExtend(result, afterCols, afterExprs)
 	}
-	return result
+	return result.Transform()
 }
 
-func (p *Project) transform() Query {
-	src := p.source.Transform()
-	if _, ok := src.(*Nothing); ok {
-		return NewNothing(p.columns)
-	}
+func (p *Project) transform(src Query) Query {
 	if src != p.source {
 		return newProject(src, p.columns)
 	}
