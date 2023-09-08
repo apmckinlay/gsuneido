@@ -27,7 +27,7 @@ import (
 )
 
 // This is the multiplexed server.
-// It only works with the gSuneido mulitplexed client.
+// It only works with the gSuneido multiplexed client.
 
 var workers *mux.Workers
 
