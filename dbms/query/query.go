@@ -328,6 +328,9 @@ const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 // Optimize determines the best (lowest estimated cost) query execution approach
 func Optimize(q Query, mode Mode, index []string, frac float64) (
 	fixcost, varcost Cost) {
+	if len(index) == 0 {
+		index = nil
+	}
 	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
 	if fastSingle(q, index) {
 		index = nil
