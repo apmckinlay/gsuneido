@@ -291,16 +291,18 @@ func (p *Project) transformRename(r *Rename) Query {
 	var newFrom, newTo []string
 	from := r.from
 	to := r.to
-	for i := range to {
+	for i := len(to) - 1; i >= 0; i-- {
 		ck := to[i]
 		if p.unique {
 			ck = strings.TrimSuffix(to[i], "_deps")
 		}
-		if slices.Contains(p.columns, ck) || chained(from, to, i) {
+		if slices.Contains(p.columns, ck) || slices.Contains(newFrom, ck) {
 			newFrom = append(newFrom, from[i])
 			newTo = append(newTo, to[i])
 		}
 	}
+	slices.Reverse(newFrom)
+	slices.Reverse(newTo)
 	newProj := r.renameRev(p.columns)
 	p = newProject(r.source, newProj)
 	r = NewRename(p, newFrom, newTo)
