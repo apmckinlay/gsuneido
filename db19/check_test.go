@@ -5,6 +5,7 @@ package db19
 
 import (
 	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -34,7 +35,7 @@ func TestCheckStartStop(t *testing.T) {
 			ck.Commit(tn)
 		}
 	}
-	assert.T(t).This(len(ck.trans)).Is(0)
+	assert.T(t).This(ck.count()).Is(0)
 }
 
 func TestCheckLimit(t *testing.T) {
@@ -80,7 +81,7 @@ func TestCheckActions(t *testing.T) {
 //   - transaction number 1 or 2
 //   - action type: (r)ead, (w)rite, (c)ommit, (a)bort
 //   - read is followed by two characters specifying a key range
-//   - write is folloed by one character specifying a key
+//   - write is followed by one character specifying a key
 //
 // If the type is capitalized (R, W, C, A) then the action is expected to fail
 func script(t *testing.T, s string) {
@@ -172,3 +173,48 @@ func TestCheckMax(t *testing.T) {
 // 	}
 // 	return strings.TrimSpace(b.String())
 // }
+
+func BenchmarkCheck(b *testing.B) {
+	const ntrans = 400
+	const ntables = 7 // per transaction
+	tables := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
+		"k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w",
+		"x", "y", "z"}
+	const nacts = 5 // per table
+	const nindexes = 5
+	keys := make([]string, nindexes)
+	makeKeys := func() []string {
+		for i := 0; i < nindexes; i++ {
+			keys[i] = strconv.Itoa(rand.Intn(9999))
+		}
+		return keys
+	}
+	const keyRange = 999999
+
+	var ck *Check
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if i%ntrans == 0 {
+			ck = NewCheck(nil)
+		}
+		ct := ck.StartTran()
+		for j := 0; j < ntables; j++ {
+			table := tables[rand.Intn(len(tables))]
+			for k := 0; k < nacts; k++ {
+				switch rand.Intn(3) {
+				case 0:
+					index := rand.Intn(nindexes)
+					n := rand.Intn(keyRange)
+					from := strconv.Itoa(n)
+					to := strconv.Itoa(n + rand.Intn(99))
+					ck.Read(ct, table, index, from, to)
+				case 1:
+					ck.Output(ct, table, makeKeys())
+				case 2:
+					offset := uint64(rand.Intn(keyRange)) + 1 // not zero
+					ck.Delete(ct, table, offset, makeKeys())
+				}
+			}
+		}
+	}
+}
