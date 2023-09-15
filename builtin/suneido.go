@@ -60,7 +60,7 @@ func suneido_GoMetric(th *Thread, args []Value) Value {
 	case metrics.KindUint64:
 		return Int64Val(int64(sample[0].Value.Uint64()))
 	case metrics.KindFloat64:
-		return SuDnum{Dnum: dnum.FromFloat(float64(sample[0].Value.Float64()))}
+		return SuDnum{Dnum: dnum.FromFloat(sample[0].Value.Float64())}
 	default:
 		return False
 	}
