@@ -140,9 +140,8 @@ var _ = method(runpiped_ExitValue, "()")
 
 func runpiped_ExitValue(this Value) Value {
 	rp := rpOpen(this)
+	defer rp.close()
 	cmd := rp.cmd
-	rp.r = nil
-	rp.w = nil
 	err := cmd.Wait()
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
