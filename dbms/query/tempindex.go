@@ -34,6 +34,9 @@ type TempIndex struct {
 var selMin []string
 var selMax = []string{ixkey.Max}
 
+const tempindexWarn = 200_000 // ???
+const derivedWarn = 8_000_000 // ??? // derivedWarn is also used by Project
+
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	order = withoutFixed(order, src.Fixed())
 	ti := TempIndex{order: order, tran: tran, selOrg: selMin, selEnd: selMax}
@@ -232,12 +235,22 @@ func (ti *TempIndex) single() rowIter {
 	b := sortlist.NewSorting(
 		func(x DbRec) bool { return x == DbRec{} },
 		func(x, y DbRec) bool { return ti.less(&th2, Row{x}, Row{y}) })
+	nrows := 0
+	warned := false
 	for {
 		row := ti.source.Get(ti.th, Next)
 		if row == nil {
 			break
 		}
 		b.Add(row[0])
+		nrows++
+		if nrows > tempindexWarn && !warned {
+			log.Println("WARNING temp index large >", tempindexWarn)
+			warned = true
+		}
+	}
+	if nrows > 2*tempindexWarn {
+		log.Println("WARNING temp index large =", nrows)
 	}
 	// lt must be consistent with singleLess
 	lt := func(rec DbRec, key []string) bool {
@@ -309,9 +322,6 @@ type multiIter struct {
 	iter *sortlist.Iter[Row]
 }
 
-const tempindexWarn = 100_000 // ???
-const derivedWarn = 4_000_000 // derivedWarn is also used by Project
-
 func (ti *TempIndex) multi() rowIter {
 	// sortlist uses a goroutine
 	// so UIThread must be false
@@ -328,26 +338,33 @@ func (ti *TempIndex) multi() rowIter {
 			return ti.less(&th2, xrow, yrow)
 		})
 	nrows := 0
+	warned := false
 	derived := 0
 	derivedWarned := false
-	tempindexWarned := false
 	for {
 		row := ti.source.Get(ti.th, Next)
 		if row == nil {
 			break
 		}
 		nrows++
-		if !tempindexWarned && nrows > tempindexWarn {
-			tempindexWarned = true
-			log.Printf("WARNING temp index large (> %d)", tempindexWarn)
+		if nrows > tempindexWarn && !warned {
+			log.Println("WARNING temp index large >", tempindexWarn)
+			warned = true
 		}
 		derived += row.Derived()
-		if !derivedWarned && derived > derivedWarn {
+		if derived > derivedWarn && !derivedWarned {
+			log.Println("WARNING temp index derived large >", derivedWarn,
+				"average", derived/nrows)
 			derivedWarned = true
-			log.Printf("WARNING temp index derived large (> %d) average %d",
-				derivedWarn, derived/nrows)
 		}
 		b.Add(row)
+	}
+	if nrows > 2*tempindexWarn {
+		log.Println("WARNING temp index large =", nrows)
+	}
+	if derived > 2*derivedWarn {
+		log.Println("WARNING temp index derived large =",
+			derived, "average", derived/nrows)
 	}
 	lt := func(row Row, key []string) bool {
 		return ti.less2(ti.th, row, key)
