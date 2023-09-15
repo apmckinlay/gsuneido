@@ -68,6 +68,8 @@ loop:
 			} else {
 				error("timeout value required")
 			}
+		case match(&args, "-web"), match(&args, "-w"):
+			WebServer = true
 		case match(&args, "--"):
 			break loop
 		default:

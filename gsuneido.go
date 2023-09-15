@@ -114,7 +114,7 @@ func main() {
 		newSize /= 1024 * 1024
 		Alert("compacted", nTables, "tables", nViews, "views",
 			"in", time.Since(t).Round(time.Millisecond),
-			oldSize, "-", (oldSize-newSize), "=", newSize, "mb")
+			oldSize, "-", (oldSize - newSize), "=", newSize, "mb")
 		os.Exit(0)
 	case "check":
 		t := time.Now()
@@ -179,6 +179,9 @@ func main() {
 		clientErrorLog()
 	} else {
 		openDbms()
+		if options.WebServer {
+			startHttpStatus()
+		}
 	}
 	if options.Action == "repl" ||
 		(options.Action == "client" && options.Mode != "gui") {
@@ -248,8 +251,8 @@ func clientErrorLog() {
 // startServer does not return
 func startServer() {
 	log.Println("starting server")
-	startHttpStatus()
 	openDbms()
+	startHttpStatus()
 	Libload = libload // dependency injection
 	mainThread = &Thread{}
 	mainThread.Name = "main"
