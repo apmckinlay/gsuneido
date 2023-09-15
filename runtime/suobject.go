@@ -6,6 +6,7 @@ package runtime
 import (
 	"cmp"
 	"log"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -18,7 +19,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
-	"slices"
 )
 
 /*
@@ -57,10 +57,13 @@ type SuObject struct {
 	version int32
 	// clock is incremented by any modification, including in-place updates.
 	// It is used to detect modification during packing.
-	clock    uint32
-	readonly bool
-	sorting  bool
+	clock      uint32
+	readonly   bool
+	sorting    bool
+	sizeWarned bool
 }
+
+const obSizeWarn = 64_000 // ??? // LibLocate.list is 52,000
 
 // NewSuObject creates an SuObject from a slice of Value's
 func NewSuObject(args []Value) *SuObject {
@@ -240,6 +243,10 @@ func (ob *SuObject) set(key, val Value) {
 		}
 	}
 	ob.named.Put(key, val)
+	if ob.named.Size() > obSizeWarn && !ob.sizeWarned {
+		log.Println("WARNING object named size >", obSizeWarn)
+		ob.sizeWarned = true
+	}
 }
 
 // Delete removes a key.
@@ -464,6 +471,10 @@ func (ob *SuObject) migrate() {
 			break
 		}
 		ob.list = append(ob.list, x)
+	}
+	if len(ob.list) > obSizeWarn && !ob.sizeWarned {
+		log.Println("WARNING object list size >", obSizeWarn)
+		ob.sizeWarned = true
 	}
 }
 
