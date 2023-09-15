@@ -38,7 +38,13 @@ func ob_Add(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 			putAt(th, ob, at, iter)
 		}
 	} else {
-		addAt(ob, ob.ListSize(), iter)
+		for {
+			k, v := iter()
+			if k != nil || v == nil {
+				break
+			}
+			ob.Add(v)
+		}
 	}
 	return this
 }
