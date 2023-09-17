@@ -179,6 +179,7 @@ func main() {
 		clientErrorLog()
 	} else {
 		openDbms()
+		options.DbStatus.Store("")
 		if options.WebServer {
 			startHttpStatus()
 		}
