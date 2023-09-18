@@ -43,7 +43,8 @@ var help = `options:
 	-r[epl]
 	-s[erver]
 	-u[nattended]
-	-v[ersion]`
+	-v[ersion]
+	-w[eb]`
 
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal *dbms.DbmsLocal
