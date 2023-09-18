@@ -4,8 +4,6 @@
 package query
 
 import (
-	"log"
-
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -245,12 +243,12 @@ func (ti *TempIndex) single() rowIter {
 		b.Add(row[0])
 		nrows++
 		if nrows > tempindexWarn && !warned {
-			log.Println("WARNING temp index large >", tempindexWarn)
+			Warning("temp index large >", tempindexWarn)
 			warned = true
 		}
 	}
 	if nrows > 2*tempindexWarn {
-		log.Println("WARNING temp index large =", nrows)
+		Warning("temp index large =", nrows)
 	}
 	// lt must be consistent with singleLess
 	lt := func(rec DbRec, key []string) bool {
@@ -348,22 +346,22 @@ func (ti *TempIndex) multi() rowIter {
 		}
 		nrows++
 		if nrows > tempindexWarn && !warned {
-			log.Println("WARNING temp index large >", tempindexWarn)
+			Warning("temp index large >", tempindexWarn)
 			warned = true
 		}
 		derived += row.Derived()
 		if derived > derivedWarn && !derivedWarned {
-			log.Println("WARNING temp index derived large >", derivedWarn,
+			Warning("temp index derived large >", derivedWarn,
 				"average", derived/nrows)
 			derivedWarned = true
 		}
 		b.Add(row)
 	}
 	if nrows > 2*tempindexWarn {
-		log.Println("WARNING temp index large =", nrows)
+		Warning("temp index large =", nrows)
 	}
 	if derived > 2*derivedWarn {
-		log.Println("WARNING temp index derived large =",
+		Warning("temp index derived large =",
 			derived, "average", derived/nrows)
 	}
 	lt := func(row Row, key []string) bool {

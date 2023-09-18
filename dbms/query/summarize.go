@@ -5,7 +5,6 @@ package query
 
 import (
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 
@@ -429,7 +428,7 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 			if !warned && sumMap.Size() > mapLimit {
 				// log inside loop in case we run out of memory
 				warned = true
-				log.Printf("WARNING summarize-map large (> %d)", mapLimit)
+				Warning("summarize-map large >", mapLimit)
 			}
 		}
 		su.addToSums(sums, row, th, su.st)

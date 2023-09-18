@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
+	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 var BuiltDate string
@@ -40,15 +41,19 @@ var (
 var CmdLine string
 
 // log file names, port is added when client
-var (
-	Errlog = "error.log"
-)
+var Errlog = "error.log"
 
 // debugging options
 const (
 	ThreadDisabled        = false
 	TimersDisabled        = false
 	ClearCallbackDisabled = false
+)
+
+var (
+	AllWarningsThrow = regex.Compile("")
+	NoWarningsThrow  = regex.Compile(`\A\Z`)
+	WarningsThrow    = NoWarningsThrow
 )
 
 // Coverage controls whether Cover op codes are added by codegen.

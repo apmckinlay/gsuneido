@@ -4,7 +4,6 @@
 package query
 
 import (
-	"log"
 	"strings"
 
 	"slices"
@@ -596,12 +595,12 @@ func (p *Project) addResult(th *Thread, row Row) (Row, bool) {
 	} else {
 		if !p.warned && p.results.Size() > mapLimit {
 			p.warned = true
-			log.Printf("WARNING project-map large (> %d)", mapLimit)
+			Warning("project-map large >", mapLimit)
 		}
 		if !p.derivedWarned && p.derived > derivedWarn {
 			p.derivedWarned = true
-			log.Printf("WARNING project-map derived large (> %d) average %d",
-				derivedWarn, p.derived/p.results.Size())
+			Warning("project-map derived large >",
+				derivedWarn, "average", p.derived/p.results.Size())
 		}
 		return row, false
 	}

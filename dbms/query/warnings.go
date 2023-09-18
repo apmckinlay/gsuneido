@@ -11,22 +11,10 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-var seen = map[string]bool{}
-var nWarn = 0
-
 func Warnings(query string, q Query) {
 	w := warnings(q)
-	s := warnStr(query, w)
-	if s != "" {
-		if Suneido.Get(nil, SuStr("User")) == SuStr("default") {
-			panic(s)
-		} else {
-			nWarn++
-			if !seen[query] && nWarn < 10 {
-				seen[query] = true
-				log.Println("WARNING", s, query)
-			}
-		}
+	if s := warnStr(query, w); s != "" {
+		Warning(s, query)
 	}
 }
 

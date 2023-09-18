@@ -244,7 +244,7 @@ func (ob *SuObject) set(key, val Value) {
 	}
 	ob.named.Put(key, val)
 	if ob.named.Size() > obSizeWarn && !ob.sizeWarned {
-		log.Println("WARNING object named size >", obSizeWarn)
+		Warning("object named size >", obSizeWarn)
 		ob.sizeWarned = true
 	}
 }
@@ -473,7 +473,7 @@ func (ob *SuObject) migrate() {
 		ob.list = append(ob.list, x)
 	}
 	if len(ob.list) > obSizeWarn && !ob.sizeWarned {
-		log.Println("WARNING object list size >", obSizeWarn)
+		Warning("object list size >", obSizeWarn)
 		ob.sizeWarned = true
 	}
 }

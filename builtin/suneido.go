@@ -108,3 +108,17 @@ func suneido_StrictCompareDb(x Value) Value {
 	options.StrictCompareDb = ToBool(x)
 	return nil
 }
+
+var _ = staticMethod(suneido_WarningsThrow, "(bool = true)")
+
+func suneido_WarningsThrow(x Value) Value {
+	switch x {
+	case True:
+		options.WarningsThrow = options.AllWarningsThrow
+	case False:
+		options.WarningsThrow = options.NoWarningsThrow
+	default:
+		options.WarningsThrow = regex.Compile(ToStr(x))
+	}
+	return nil
+}
