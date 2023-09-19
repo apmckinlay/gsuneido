@@ -31,9 +31,9 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 		}
 	}()
 	src, err := OpenDb(dbfile, stor.Read, false)
-	oldSize = src.Store.Size()
 	ck(err)
 	defer src.Close()
+	oldSize = src.Store.Size()
 	dst, tmpfile := tmpdb()
 	defer func() { dst.Close(); os.Remove(tmpfile) }()
 
