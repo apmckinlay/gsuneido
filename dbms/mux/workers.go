@@ -12,10 +12,12 @@ import (
 
 // Workers creates worker goroutines on demand.
 // It is not used by mux directly, but can be used by server handlers.
-// Worker goroutines terminate if idle for longer than timeout.
+// The number of workers is not limited.
+// Unnecessary workers will be terminated.
 type Workers struct {
-	ch chan task
-	h  workfn
+	ch        chan task
+	h         workfn
+	killClock atomic.Int64
 }
 
 type task struct {
@@ -32,7 +34,9 @@ type workfn func(wb *WriteBuf, th *runtime.Thread, id uint64, rb []byte)
 // NewWorkers creates a new goroutine pool
 func NewWorkers(h workfn) *Workers {
 	ch := make(chan task) // intentionally unbuffered
-	return &Workers{ch: ch, h: h}
+	ws := &Workers{ch: ch, h: h}
+	go ws.killer()
+	return ws
 }
 
 // Submit passes a task to a worker
@@ -43,11 +47,10 @@ func (ws *Workers) Submit(c *conn, id uint64, data []byte) {
 	case ws.ch <- t:
 	default:
 		// otherwise start a new one
+		ws.killClock.Store(0) // prevent immediate kill
 		go ws.worker(t)
 	}
 }
-
-const timeout = 5 * time.Second // ???
 
 func (ws *Workers) worker(t task) {
 	nworkers.Add(1)
@@ -55,20 +58,26 @@ func (ws *Workers) worker(t task) {
 	// each worker has its own WriteBuf and Thread
 	wb := newWriteBuf(nil, 0)
 	th := &runtime.Thread{}
-	timer := time.NewTimer(timeout)
 	for {
 		wb.conn = t.c
 		wb.id = uint32(t.id)
 		ws.h(wb, th, t.id, t.data) // do the task
-		select {
-		case t = <-ws.ch:
-			if !timer.Stop() {
-				<-timer.C
-			}
-			timer.Reset(timeout)
-		case <-timer.C:
-			return // idle timeout, worker terminates
+		t = <-ws.ch                // blocking, wait for message
+		if t.c == nil {
+			return // got poison pill so terminate
 		}
 		th.Reset()
+	}
+}
+
+func (ws *Workers) killer() {
+	const interval = 2 * time.Second
+	const createDelay = 10 // * interval
+	const minWorkers = 3
+	for {
+		time.Sleep(interval)
+		if ws.killClock.Add(1) > createDelay && nworkers.Load() > minWorkers {
+			ws.ch <- task{} // send poison pill to a worker
+		}
 	}
 }
