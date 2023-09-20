@@ -10,13 +10,11 @@ package tr
 
 import (
 	"strings"
-
-	"github.com/apmckinlay/gsuneido/util/generic/cache"
 )
 
-type trset string
+type Set string
 
-var EmptySet = trset("")
+var EmptySet = Set("")
 
 // Replace translates, squeezes, or deletes characters from the src string.
 // If the first character of from is '^' then the from set is complemented.
@@ -25,7 +23,7 @@ var EmptySet = trset("")
 // If the to set is shorter than the from set, then
 // the last character in the to set is repeated to make the sets the same length,
 // and this repeated character is never put more than once in a row in the output.
-func Replace(src string, from trset, to trset) string {
+func Replace(src string, from Set, to Set) string {
 	srclen := len(src)
 	if srclen == 0 || len(from) == 0 {
 		return src
@@ -83,9 +81,9 @@ scan:
 	return buf.String()
 }
 
-func Set(s string) trset {
+func New(s string) Set {
 	if len(s) < 3 {
-		return trset(s)
+		return Set(s)
 	}
 	i := 0
 	if s[0] == '^' {
@@ -93,12 +91,12 @@ func Set(s string) trset {
 	}
 	dash := strings.IndexByte(s[i+1:len(s)-1], '-')
 	if dash == -1 {
-		return trset(s) // no ranges to expand
+		return Set(s) // no ranges to expand
 	}
 	return expandRanges(s)
 }
 
-func expandRanges(s string) trset {
+func expandRanges(s string) Set {
 	slen := len(s)
 	buf := strings.Builder{}
 	buf.Grow(slen)
@@ -117,10 +115,10 @@ func expandRanges(s string) trset {
 			buf.WriteByte(c)
 		}
 	}
-	return trset(buf.String())
+	return Set(buf.String())
 }
 
-func xindex(from trset, c byte, allbut bool, lastto int) int {
+func xindex(from Set, c byte, allbut bool, lastto int) int {
 	i := strings.IndexByte(string(from), c)
 	if allbut {
 		if i == -1 {
@@ -129,15 +127,4 @@ func xindex(from trset, c byte, allbut bool, lastto int) int {
 		return -1
 	}
 	return i
-}
-
-type Cache struct {
-	*cache.Cache[string, trset]
-}
-
-func (c *Cache) Get(s string) trset {
-	if c.Cache == nil {
-		c.Cache = cache.New(Set)
-	}
-	return c.Cache.Get(s)
 }

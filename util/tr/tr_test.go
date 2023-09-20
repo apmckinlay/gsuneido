@@ -13,7 +13,7 @@ import (
 func Test_makset(t *testing.T) {
 	test := func(s, expected string) {
 		t.Helper()
-		assert.T(t).This(string(Set(s))).Is(expected)
+		assert.T(t).This(string(New(s))).Is(expected)
 	}
 	test("", "")
 	test("foo", "foo")
@@ -26,7 +26,7 @@ func Test_makset(t *testing.T) {
 
 func Fuzz_makset(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s string) {
-		Set(s)
+		New(s)
 	})
 }
 
@@ -34,7 +34,7 @@ func Fuzz_makset(f *testing.F) {
 
 func FuzzReplace(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s1, s2, s3 string) {
-		Replace(s1, Set(s2), Set(s3))
+		Replace(s1, New(s2), New(s3))
 	})
 }
 
@@ -51,7 +51,7 @@ func TestPtest(t *testing.T) {
 // pt_tr is a ptest for matching
 // usage: "string", "from", "to", "result"
 func ptTr(args []string, _ []bool) bool {
-	return Replace(args[0], Set(args[1]), Set(args[2])) == args[3]
+	return Replace(args[0], New(args[1]), New(args[2])) == args[3]
 }
 
 var _ = ptest.Add("tr", ptTr)

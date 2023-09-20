@@ -466,8 +466,8 @@ func string_ToUtf8(this Value) Value {
 var _ = method(string_Tr, "(from, to='')")
 
 func string_Tr(th *Thread, this Value, args []Value) Value {
-	from := th.TrCache.Get(ToStr(args[0]))
-	to := th.TrCache.Get(ToStr(args[1]))
+	from := th.TrSet(args[0])
+	to := th.TrSet(args[1])
 	return SuStr(tr.Replace(ToStr(this), from, to))
 }
 

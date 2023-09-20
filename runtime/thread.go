@@ -15,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
+	"github.com/apmckinlay/gsuneido/util/generic/cache"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tr"
@@ -56,9 +57,9 @@ type Thread struct {
 	blockReturnFrame *Frame
 
 	// RxCache is per thread so no locking is required
-	rxCache regex.Cache
+	rxCache *cache.Cache[string, regex.Pattern]
 	// TrCache is per thread so no locking is required
-	TrCache tr.Cache
+	trCache *cache.Cache[string, tr.Set]
 
 	// Name is the name of the thread (default is Thread-#)
 	Name string
@@ -339,7 +340,17 @@ func (th *Thread) Regex(x Value) regex.Pattern {
 	if sr, ok := x.(SuRegex); ok {
 		return sr.Pat
 	}
+	if th.rxCache == nil {
+		th.rxCache = cache.New(regex.Compile)
+	}
 	return th.rxCache.Get(ToStr(x))
+}
+
+func (th *Thread) TrSet(x Value) tr.Set {
+	if th.trCache == nil {
+		th.trCache = cache.New(tr.New)
+	}
+	return th.trCache.Get(ToStr(x))
 }
 
 //-------------------------------------------------------------------
