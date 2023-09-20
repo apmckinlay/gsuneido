@@ -4,6 +4,7 @@
 package mux
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -22,6 +23,9 @@ type task struct {
 	data []byte
 	id   uint64
 }
+
+var nworkers atomic.Int64
+var _ = runtime.AddInfo("server.nworkers", &nworkers)
 
 type workfn func(wb *WriteBuf, th *runtime.Thread, id uint64, rb []byte)
 
@@ -43,9 +47,11 @@ func (ws *Workers) Submit(c *conn, id uint64, data []byte) {
 	}
 }
 
-const timeout = 5 * time.Second //1 * time.Minute // ???
+const timeout = 5 * time.Second // ???
 
 func (ws *Workers) worker(t task) {
+	nworkers.Add(1)
+	defer nworkers.Add(-1)
 	// each worker has its own WriteBuf and Thread
 	wb := newWriteBuf(nil, 0)
 	th := &runtime.Thread{}

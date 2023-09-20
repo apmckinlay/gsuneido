@@ -122,3 +122,15 @@ func suneido_WarningsThrow(x Value) Value {
 	}
 	return nil
 }
+
+var _ = staticMethod(suneido_Info, "(name)")
+
+func suneido_Info(x Value) Value {
+    return SuStr(InfoStr(ToStr(x)))
+}
+
+var _ = staticMethod(suneido_InfoList, "()")
+
+func suneido_InfoList() Value {
+    return InfoList()
+}
