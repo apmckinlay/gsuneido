@@ -4,11 +4,8 @@ BUILT=$(shell date "+%b %-d %Y %R")
 GO = go
 GOOS = $(shell go env GOOS)
 GOARCH = $(shell go env GOARCH)
-ifneq ($(GOOS),darwin)
-TRIMPATH = -trimpath
-endif
 OUTPUT = gs_$(GOOS)_$(GOARCH)
-BUILD = build -buildvcs=true $(TRIMPATH) -o $(OUTPUT)
+BUILD = build -buildvcs=true -trimpath -o $(OUTPUT)
 LDFLAGS = -s -w -X 'main.builtDate=$(BUILT)'
 ifdef PATHEXT
 	# Windows stuff
