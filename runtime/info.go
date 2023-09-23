@@ -14,6 +14,7 @@ var infos = map[string]any{}
 
 // AddInfo registers a reference to a value.
 // It is NOT thread-safe and should only be called during initialization.
+// ref's should be thread-safe.
 // The return type is to allow var _ = AddInfo("name", ref)
 func AddInfo(name string, ref any) struct{} {
 	infos[name] = ref
@@ -27,11 +28,15 @@ func InfoStr(name string) string {
 	}
 	switch x := x.(type) {
 	case *atomic.Int64:
-		return strconv.FormatInt(x.Load(), 10)
+		return strconv.Itoa(int(x.Load()))
+	case *atomic.Int32:
+		return strconv.Itoa(int(x.Load()))
+	case func() int:
+		return strconv.Itoa(int(x()))
 	}
 	panic("unknown info type")
 }
 
-func InfoList() *SuObject {
-	return SuObjectOfStrs(maps.Keys(infos))
+func InfoList() []string {
+	return maps.Keys(infos)
 }

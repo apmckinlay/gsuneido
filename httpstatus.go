@@ -18,6 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/options"
+	rt "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -52,7 +53,7 @@ func httpStatus(w http.ResponseWriter, _ *http.Request) {
 	io.WriteString(w,
 		`<html>
 		<head>
-		<title>Suneido Server Monitor</title>
+		<title>Suneido Monitor</title>
 		<meta http-equiv="refresh" content="5" />
 		</head>
 		<body>
@@ -75,15 +76,18 @@ func body() string {
 	case "repairing":
 		return `<h2 style="color: red;">Repairing database ...<h2>`
 	}
-	return extra + `
+	s := extra + `
 		<p>Built: ` + options.BuiltStr() + `</p>
-		<p>Heap: ` + heap() + `</p>
-		<p>Database: ` + mb(dbmsLocal.Size()) + `
-		` + threads() + `
+		<p>Heap: ` + heap() + `</p>` +
+		threads()
+	if dbmsLocal != nil {
+		s += `<p>Database: ` + mb(dbmsLocal.Size()) + `
 		` + trans() + `
-		` + dbms.Conns() + `
-		<p><a href="metrics/">Go metrics</a> &nbsp;&nbsp;
-			<a href="debug/pprof/">Go pprof</a></p>`
+		` + dbms.Conns()
+	}
+	return s + `<p><a href="info/">Suneido Info</a> &nbsp;&nbsp;
+			<a href="metrics/">Go metrics</a> &nbsp;&nbsp;
+			<a href="debug/pprof/">Go pprof</a>	</p>`
 }
 
 func mb(n uint64) string {
@@ -144,8 +148,8 @@ func httpMetrics(w http.ResponseWriter, req *http.Request) {
 					strings.TrimPrefix(d.Name, "/"), d.Name)
 				fmt.Fprintln(w, "<p>"+d.Description+"</p>")
 			}
-			io.WriteString(w, `</body></html>`)
 		}
+		io.WriteString(w, `</body></html>`)
 	} else {
 		sample := make([]metrics.Sample, 1)
 		sample[0].Name = req.URL.Path[8:] // remove /metrics
@@ -164,3 +168,25 @@ func httpMetrics(w http.ResponseWriter, req *http.Request) {
 }
 
 var printer = message.NewPrinter(language.English)
+
+func httpInfo(w http.ResponseWriter, req *http.Request) {
+	if req.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if req.URL.Path == "/info" || req.URL.Path == "/info/" {
+		io.WriteString(w,
+			`<html>
+			<head><title>Suneido Info</title></head>
+			<body>
+			<h1>Suneido Info</h1>
+			<pre>`)
+		for _, name := range rt.InfoList() {
+			fmt.Fprintf(w, `<a href="%s">%s</a>`+"\n\n", name, name)
+		}
+		io.WriteString(w, `</pre></body></html>`)
+	} else {
+		s := rt.InfoStr(req.URL.Path[6:]) // skip /info/
+		fmt.Fprint(w, req.URL.Path, " = ", s)
+	}
+}
