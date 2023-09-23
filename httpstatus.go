@@ -30,12 +30,15 @@ func startHttpStatus() {
 	}
 	http.HandleFunc("/", httpStatus)
 	http.HandleFunc("/metrics/", httpMetrics)
-	port := 3148
-	if options.Port != "" {
-		port, _ = strconv.Atoi(options.Port)
-		port++
+	http.HandleFunc("/info/", httpInfo)
+	port := "3148"
+	if options.WebPort != "" {
+		port = options.WebPort
+	} else if options.Port != "" {
+		p, _ := strconv.Atoi(options.Port)
+		port = strconv.Itoa(p + 1)
 	}
-	addr := ":" + strconv.Itoa(port)
+	addr := ":" + port
 	go func() {
 		httpServer = &http.Server{Addr: addr}
 		err := httpServer.ListenAndServe()

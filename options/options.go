@@ -27,6 +27,7 @@ var (
 	Unattended     bool
 	IgnoreVersion  bool
 	WebServer      bool
+	WebPort        string
 	TimeoutMinutes = 2 * 60 // 2 hours
 )
 

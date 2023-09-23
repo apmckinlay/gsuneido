@@ -27,15 +27,15 @@ loop:
 		case match(&args, "-client"), match(&args, "-c"):
 			setAction("client")
 			Arg = "127.0.0.1"
-			args = optionalArg(args)
+			args = optionalArg(args, &Arg)
 		case match(&args, "-repair"):
 			setAction("repair")
 		case match(&args, "-dump"), match(&args, "-d"):
 			setAction("dump")
-			args = optionalArg(args)
+			args = optionalArg(args, &Arg)
 		case match(&args, "-load"), match(&args, "-l"):
 			setAction("load")
-			args = optionalArg(args)
+			args = optionalArg(args, &Arg)
 		case match(&args, "-repl"), match(&args, "-r"):
 			if Mode == "gui" {
 				error("-repl not support for gui mode")
@@ -43,11 +43,11 @@ loop:
 				setAction("repl")
 			}
 		case match(&args, "-port"), match(&args, "-p"):
-			if len(args) > 0 && args[0][0] != '-' {
-				Port = args[0]
-				args = args[1:]
-			} else {
+			args = optionalArg(args, &Port)
+			if Port == "" {
 				error("port number required")
+			} else if _, err := strconv.Atoi(Port); err != nil {
+				error("invalid port number")
 			}
 		case match(&args, "-server"), match(&args, "-s"):
 			setAction("server")
@@ -58,18 +58,25 @@ loop:
 		case match(&args, "-ignoreversion"), match(&args, "-iv"):
 			IgnoreVersion = true
 		case match(&args, "-timeout"), match(&args, "-to"):
-			if len(args) > 0 {
-				to, err := strconv.Atoi(args[0])
+			to := ""
+			args = optionalArg(args, &to)
+			if to == "" {
+				error("timeout value required")
+			} else {
+				n, err := strconv.Atoi(args[0])
 				if err != nil {
 					error("invalid timeout: " + err.Error())
 				}
-				TimeoutMinutes = to
-				args = args[1:]
-			} else {
-				error("timeout value required")
+				TimeoutMinutes = n
 			}
 		case match(&args, "-web"), match(&args, "-w"):
 			WebServer = true
+			args = optEqualArg(args, &WebPort)
+			if WebPort != "" {
+				if _, err := strconv.Atoi(WebPort); err != nil {
+					error("invalid web port number")
+				}
+			}
 		case match(&args, "--"):
 			break loop
 		default:
@@ -95,6 +102,10 @@ func match(pargs *[]string, s string) bool {
 		*pargs = (*pargs)[1:]
 		return true
 	}
+	if strings.HasPrefix(arg, s+"=") {
+		(*pargs)[0] = strings.TrimPrefix(arg, s) // leave the '='
+		return true
+	}
 	return false
 }
 
@@ -107,9 +118,21 @@ func setAction(action string) {
 	}
 }
 
-func optionalArg(args []string) []string {
+func optionalArg(args []string, parg *string) []string {
+	if len(args) > 0 && strings.HasPrefix(args[0], "=") {
+		*parg = args[0][1:]
+		args = args[1:]
+	}
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		Arg = args[0]
+		*parg = args[0]
+		args = args[1:]
+	}
+	return args
+}
+
+func optEqualArg(args []string, parg *string) []string {
+	if len(args) > 0 && strings.HasPrefix(args[0], "=") {
+		*parg = args[0][1:]
 		args = args[1:]
 	}
 	return args

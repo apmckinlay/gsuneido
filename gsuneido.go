@@ -33,18 +33,17 @@ var mode = ""                       // set by: go build -ldflags "-X main.mode=g
 
 var help = `options:
 	-check
-	-c[lient] [ipaddress] (default 127.0.0.1)
+	-c[lient][=ipaddress] (default 127.0.0.1)
 	-d[ump] [table]
 	-h[elp] or -?
 	-l[oad] [table]
-	-n[o]r[elaunch]
-	-p[ort] # (default 3147)
+	-p[ort][=#] (default 3147)
 	-repair
 	-r[epl]
 	-s[erver]
 	-u[nattended]
 	-v[ersion]
-	-w[eb]`
+	-w[eb][=#] (default -port + 1)`
 
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal *dbms.DbmsLocal
@@ -140,7 +139,12 @@ func main() {
 	case "help":
 		Alert(help)
 		os.Exit(0)
-	case "repl", "client":
+	case "client":
+		if options.WebServer {
+			options.DbStatus.Store("")
+			startHttpStatus()
+		}
+	case "repl":
 		// handled below
 	case "error":
 		Fatal(options.Error)
@@ -180,8 +184,8 @@ func main() {
 		clientErrorLog()
 	} else {
 		openDbms()
-		options.DbStatus.Store("")
 		if options.WebServer {
+			options.DbStatus.Store("")
 			startHttpStatus()
 		}
 	}
