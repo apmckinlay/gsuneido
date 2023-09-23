@@ -22,6 +22,7 @@ type suSocketClient struct {
 }
 
 var nSocketClient atomic.Int32
+var _ = AddInfo("builtin.nSocketClient", &nSocketClient)
 
 var _ = builtin(SocketClient,
 	"(ipaddress, port, timeout=60, timeoutConnect=0, block=false)")

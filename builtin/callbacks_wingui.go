@@ -267,6 +267,8 @@ func CallbacksCount() int {
 	return n
 }
 
+var _ = AddInfo("windows.nCallback", CallbacksCount)
+
 var _ = builtin(ClearCallback, "(fn)")
 
 func ClearCallback(fn Value) Value {
@@ -276,3 +278,5 @@ func ClearCallback(fn Value) Value {
 func WndProcCount() int {
 	return len(hwndToCb)
 }
+
+var _ = AddInfo("windows.nWndProc", WndProcCount)

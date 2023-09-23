@@ -23,6 +23,7 @@ type suRunPiped struct {
 }
 
 var nRunPiped atomic.Int32
+var _ = AddInfo("builtin.nRunPiped", &nRunPiped)
 
 var _ = builtin(RunPiped, "(command, block=false)")
 

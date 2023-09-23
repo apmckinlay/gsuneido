@@ -89,6 +89,8 @@ func thread_Count() Value {
 	return IntVal(threads.count())
 }
 
+var _ = AddInfo("builtin.nThread", threads.count)
+
 var _ = staticMethod(thread_List, "()")
 
 func thread_List() Value {

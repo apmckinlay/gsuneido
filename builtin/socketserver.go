@@ -94,11 +94,16 @@ func (sm *suServerMaster) String() string {
 	return "SocketServer master"
 }
 
-var nSocketServerClient atomic.Int32
+var nSocketServer atomic.Int32
+var _ = AddInfo("server.nSocketServer", &nSocketServer)
+
+var nSocketServerConn atomic.Int32
+var _ = AddInfo("server.nSocketServerConn", &nSocketServerConn)
 
 const ssmax = 500 // for all SocketServer's
 
 func (sm *suServerMaster) listen(name string, port int) {
+	nSocketServer.Add(1)
 	addr := ":" + strconv.Itoa(port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -110,7 +115,7 @@ func (sm *suServerMaster) listen(name string, port int) {
 		if err != nil {
 			panic(err)
 		}
-		if nSocketServerClient.Load() > ssmax {
+		if nSocketServerConn.Load() > ssmax {
 			log.Printf("SocketServer: too many connections, stopping (%d %s)",
 				port, name)
 			return
@@ -120,7 +125,7 @@ func (sm *suServerMaster) listen(name string, port int) {
 }
 
 func (sm *suServerMaster) connect(name string, conn net.Conn) {
-	nSocketServerClient.Add(1)
+	nSocketServerConn.Add(1)
 	client := suSocketClient{
 		conn: conn.(*net.TCPConn), rdr: bufio.NewReader(conn),
 		// no timeout to match jSuneido
@@ -172,7 +177,7 @@ func (sc *suServerConnect) Close() {
 		sc.client.conn.Close()
 		sc.client.conn = nil
 	}
-	nSocketServerClient.Add(-1)
+	nSocketServerConn.Add(-1)
 }
 
 var socketServerMethods = methods()

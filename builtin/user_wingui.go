@@ -2326,3 +2326,19 @@ func GetGuiResources() (int, int) {
 		uintptr(GR_USEROBJECTS))
 	return int(gdi), int(user)
 }
+
+var _ = AddInfo("windows.nGdiObject", func () int {
+	hProcess, _ := syscall.GetCurrentProcess()
+	n, _, _ := syscall.SyscallN(getGuiResources,
+		uintptr(hProcess),
+		uintptr(GR_GDIOBJECTS))
+	return int(n)
+})
+
+var _ = AddInfo("windows.nUserObject", func () int {
+	hProcess, _ := syscall.GetCurrentProcess()
+	n, _, _ := syscall.SyscallN(getGuiResources,
+		uintptr(hProcess),
+		uintptr(GR_USEROBJECTS))
+	return int(n)
+})

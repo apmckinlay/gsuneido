@@ -16,7 +16,7 @@ func ResourceCounts() Value {
 	add(ob, "File", int(nFile.Load()))
 	add(ob, "RunPiped", int(nRunPiped.Load()))
 	add(ob, "SocketClient", int(nSocketClient.Load()))
-	add(ob, "SocketServerClient", int(nSocketServerClient.Load()))
+	add(ob, "SocketServerClient", int(nSocketServerConn.Load()))
 	add(ob, "Callbacks", CallbacksCount())
 	add(ob, "WndProcs", WndProcCount())
 	gdi, user := GetGuiResources()

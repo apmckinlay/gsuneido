@@ -34,6 +34,7 @@ type suFile struct {
 }
 
 var nFile atomic.Int32
+var _ = AddInfo("builtin.nFile", &nFile)
 
 var _ = builtin(File, "(filename, mode='r', block=false)")
 

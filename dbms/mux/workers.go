@@ -26,8 +26,8 @@ type task struct {
 	id   uint64
 }
 
-var nworkers atomic.Int64
-var _ = runtime.AddInfo("server.nworkers", &nworkers)
+var nWorker atomic.Int64
+var _ = runtime.AddInfo("server.nWorker", &nWorker)
 
 type workfn func(wb *WriteBuf, th *runtime.Thread, id uint64, rb []byte)
 
@@ -53,8 +53,8 @@ func (ws *Workers) Submit(c *conn, id uint64, data []byte) {
 }
 
 func (ws *Workers) worker(t task) {
-	nworkers.Add(1)
-	defer nworkers.Add(-1)
+	nWorker.Add(1)
+	defer nWorker.Add(-1)
 	// each worker has its own WriteBuf and Thread
 	wb := newWriteBuf(nil, 0)
 	th := &runtime.Thread{}
@@ -76,7 +76,7 @@ func (ws *Workers) killer() {
 	const minWorkers = 3
 	for {
 		time.Sleep(interval)
-		if ws.killClock.Add(1) > createDelay && nworkers.Load() > minWorkers {
+		if ws.killClock.Add(1) > createDelay && nWorker.Load() > minWorkers {
 			ws.ch <- task{} // send poison pill to a worker
 		}
 	}
