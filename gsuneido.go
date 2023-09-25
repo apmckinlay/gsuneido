@@ -34,14 +34,13 @@ var mode = ""                       // set by: go build -ldflags "-X main.mode=g
 var help = `options:
 	-check
 	-c[lient][=ipaddress] (default 127.0.0.1)
+	-compact
 	-d[ump] [table]
 	-h[elp] or -?
 	-l[oad] [table]
 	-p[ort][=#] (default 3147)
 	-repair
-	-r[epl]
 	-s[erver]
-	-u[nattended]
 	-v[ersion]
 	-w[eb][=#] (default -port + 1)`
 
@@ -62,9 +61,6 @@ func main() {
 	}
 	if err := system.Service("gSuneido", redirect, exit.RunFuncs); err != nil {
 		Fatal(err)
-	}
-	if options.Action == "" && mode != "gui" {
-		options.Action = "repl"
 	}
 
 	switch options.Action {
@@ -144,8 +140,6 @@ func main() {
 			options.DbStatus.Store("")
 			startHttpStatus()
 		}
-	case "repl":
-		// handled below
 	case "error":
 		Fatal(options.Error)
 	default:
@@ -189,13 +183,12 @@ func main() {
 			startHttpStatus()
 		}
 	}
-	if options.Action == "repl" ||
-		(options.Action == "client" && options.Mode != "gui") {
-		run("Init.Repl()")
-		repl()
-	} else {
+	if mode == "gui" {
 		run("Init()")
 		builtin.Run()
+	} else {
+		run("Init.Repl()")
+		repl()
 	}
 }
 

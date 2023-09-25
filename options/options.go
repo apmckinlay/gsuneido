@@ -24,7 +24,6 @@ var (
 	Error          string
 	Arg            string
 	Port           string
-	Unattended     bool
 	IgnoreVersion  bool
 	WebServer      bool
 	WebPort        string

@@ -99,7 +99,7 @@ func GetCallback(nargs, i int) uintptr {
 func Alert(args ...any) {
 	s := fmt.Sprintln(args...)
 	log.Print("Alert: ", s)
-	if !options.Unattended {
+	if options.Mode == "gui" {
 		C.alert(C.CString(s), 0)
 	}
 }
@@ -107,7 +107,7 @@ func Alert(args ...any) {
 func AlertCancel(args ...any) bool {
 	s := fmt.Sprintln(args...)
 	log.Print("Alert: ", s)
-	if !options.Unattended {
+	if options.Mode == "gui" {
 		if 2 == C.alert(C.CString(s), 1) {
 			return false // cancel
 		}
@@ -120,9 +120,9 @@ var fatalOnce sync.Once
 func Fatal(s string) {
 	go func() {
 		time.Sleep(10 * time.Second)
-		exit.Exit(1)
+		exit.Exit(1) // failsafe
 	}()
-	if !options.Unattended {
+	if options.Mode == "gui" {
 		fatalOnce.Do(func() {
 			C.fatal(C.CString(s[:len(s)-1]))
 		})

@@ -4,6 +4,7 @@
 package options
 
 import (
+	"math/bits"
 	"strconv"
 	"strings"
 )
@@ -22,37 +23,31 @@ loop:
 			setAction("help")
 		case match(&args, "-check"):
 			setAction("check")
-		case match(&args, "-compact"):
-			setAction("compact")
 		case match(&args, "-client"), match(&args, "-c"):
 			setAction("client")
 			Arg = "127.0.0.1"
 			args = optionalArg(args, &Arg)
-		case match(&args, "-repair"):
-			setAction("repair")
+		case match(&args, "-compact"):
+			setAction("compact")
 		case match(&args, "-dump"), match(&args, "-d"):
 			setAction("dump")
 			args = optionalArg(args, &Arg)
 		case match(&args, "-load"), match(&args, "-l"):
 			setAction("load")
 			args = optionalArg(args, &Arg)
-		case match(&args, "-repl"), match(&args, "-r"):
-			if Mode == "gui" {
-				error("-repl not support for gui mode")
-			} else {
-				setAction("repl")
-			}
 		case match(&args, "-port"), match(&args, "-p"):
 			args = optionalArg(args, &Port)
 			if Port == "" {
 				error("port number required")
-			} else if _, err := strconv.Atoi(Port); err != nil {
+			} else if _, ok := atoui(Port); !ok {
 				error("invalid port number")
 			}
+		case match(&args, "-repair"):
+			setAction("repair")
 		case match(&args, "-server"), match(&args, "-s"):
 			setAction("server")
 		case match(&args, "-unattended"), match(&args, "-u"):
-			Unattended = true
+			//TEMP for backward compatibility
 		case match(&args, "-version"), match(&args, "-v"):
 			Action = "version"
 		case match(&args, "-ignoreversion"), match(&args, "-iv"):
@@ -62,18 +57,16 @@ loop:
 			args = optionalArg(args, &to)
 			if to == "" {
 				error("timeout value required")
-			} else {
-				n, err := strconv.Atoi(args[0])
-				if err != nil {
-					error("invalid timeout: " + err.Error())
-				}
+			} else if n, ok := atoui(to); ok {
 				TimeoutMinutes = n
+			} else {
+				error("invalid timeout value")
 			}
 		case match(&args, "-web"), match(&args, "-w"):
 			WebServer = true
 			args = optEqualArg(args, &WebPort)
 			if WebPort != "" {
-				if _, err := strconv.Atoi(WebPort); err != nil {
+				if _, ok := atoui(WebPort); !ok {
 					error("invalid web port number")
 				}
 			}
@@ -94,6 +87,11 @@ loop:
 		Port = "3147"
 	}
 	CmdLine = remainder(args)
+}
+
+func atoui(s string) (int, bool) {
+	n, err := strconv.ParseUint(s, 10, bits.UintSize)
+	return int(n), err == nil
 }
 
 func match(pargs *[]string, s string) bool {
@@ -119,13 +117,14 @@ func setAction(action string) {
 }
 
 func optionalArg(args []string, parg *string) []string {
-	if len(args) > 0 && strings.HasPrefix(args[0], "=") {
-		*parg = args[0][1:]
-		args = args[1:]
-	}
-	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		*parg = args[0]
-		args = args[1:]
+	if len(args) > 0 {
+		if strings.HasPrefix(args[0], "=") {
+			*parg = args[0][1:]
+			args = args[1:]
+		} else if !strings.HasPrefix(args[0], "-") { //DEPRECATED
+			*parg = args[0]
+			args = args[1:]
+		}
 	}
 	return args
 }
