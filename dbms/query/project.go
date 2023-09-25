@@ -241,7 +241,7 @@ func (p *Project) Transform() Query {
 			return newProject(q.source, p.columns).Transform()
 		}
 		if set.Subset(p.columns, q.by) {
-			return NewSummarize(q.source, q.strat, q.by, cols, ops, ons).Transform()
+			return NewSummarize(q.source, q.hint, q.by, cols, ops, ons).Transform()
 		}
 	case *Rename:
 		return p.transformRename(q)

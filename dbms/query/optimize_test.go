@@ -134,14 +134,25 @@ func TestOptimize(t *testing.T) {
 	test("trans summarize item, total cost sort total_cost",
 		"trans^(item) SUMMARIZE-SEQ item, total cost"+
 			" TEMPINDEX(total_cost)")
-	test("trans summarize id, total cost",
-		"trans^(date,item,id) SUMMARIZE-MAP id, total cost")
 	test("supplier summarize max supplier", // key
 		"supplier^(supplier) SUMMARIZE-IDX* max supplier")
 	test("supplier summarize max supplier sort name", // ignore sort
 		"supplier^(supplier) SUMMARIZE-IDX* max supplier")
 	test("supplier summarize max city", // index
 		"supplier^(city) SUMMARIZE-IDX max city")
+	// hints
+	test("hist summarize id, total cost",
+		"hist^(date) SUMMARIZE-MAP id, total cost")
+	test("hist summarize/*small*/ id, total cost",
+		"hist^(date) SUMMARIZE-MAP id, total cost")
+	test("hist summarize/*large*/ id, total cost",
+		"hist^(date) TEMPINDEX(id) SUMMARIZE-SEQ id, total cost")
+	test("trans summarize id, count",
+		"trans^(date,item,id) TEMPINDEX(id) SUMMARIZE-SEQ id, count")
+	test("trans summarize/*large*/ id, count",
+		"trans^(date,item,id) TEMPINDEX(id) SUMMARIZE-SEQ id, count")
+	test("trans summarize/*small*/ id, count",
+		"trans^(date,item,id) SUMMARIZE-MAP id, count")
 
 	test("customer times inven",
 		"customer^(id) TIMES inven^(item)")

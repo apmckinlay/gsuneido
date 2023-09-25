@@ -68,7 +68,7 @@ var testInfo = map[string]*meta.Info{
 	"alias":   {Nrows: 10, Size: 1000},
 	"task":    {Nrows: 200, Size: 20000},
 	"columns": {Nrows: 1000, Size: 100000},
-	"trans":   {Nrows: 1000, Size: 100000},
+	"trans":   {Nrows: 200000, Size: 100000},
 	"hist2":   {Nrows: 1000, Size: 100000},
 	"comp":    {Nrows: 1000, Size: 100000},
 }
