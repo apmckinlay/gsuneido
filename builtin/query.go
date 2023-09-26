@@ -105,12 +105,6 @@ func query_Next(th *Thread, this Value, _ []Value) Value {
 	return this.(*SuQuery).GetRec(th, Next)
 }
 
-var _ = method(query_NewRecord, "(@args)") // deprecated
-
-func query_NewRecord(_ Value, arg Value) Value {
-	return SuRecordFromObject(arg.(*SuObject))
-}
-
 var _ = method(query_Prev, "()")
 
 func query_Prev(th *Thread, this Value, _ []Value) Value {
