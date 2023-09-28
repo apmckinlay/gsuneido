@@ -170,7 +170,7 @@ func (su *Summarize) string2() string {
 }
 
 func (su *Summarize) format() string {
-	return "summarize" + su.string2()
+	return "summarize" + str.Opt("/*", string(su.hint), "*/") + su.string2()
 }
 
 func (su *Summarize) getNrows() (int, int) {
