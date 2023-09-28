@@ -19,6 +19,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+// This is the mux client that matches DbmsServer.
+// See DbmsClient for the version that matches jSuneido.
+
 type muxClient struct {
 	cc *mux.ClientConn
 }

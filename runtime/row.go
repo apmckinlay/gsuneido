@@ -209,7 +209,11 @@ func JoinHeaders(x, y *Header) *Header {
 	return NewHeader(fields, columns)
 }
 
-// Rules is a list of the rule columns i.e. columns that are not fields
+// Rules is a list of the derived columns.
+// i.e. columns that are not fields.
+// WARNING: This is not exact with Query2.
+// Rules will *not* include columns that are fields on one source
+// and rules on the other source.
 func (hdr *Header) Rules() []string {
 	rules := []string{}
 	for _, col := range hdr.Columns {
@@ -302,7 +306,10 @@ func EqualRows(hdr1 *Header, r1 Row, hdr2 *Header, r2 Row, cols []string,
 // 	return true
 // }
 
-// Schema is GetFields() plus the derived columns with the rules capitalized
+// Schema is GetFields() plus derived columns with rules capitalized
+// WARNING: This is not exact with Query2.
+// Rules will *not* include columns that are rules on one source
+// but fields on the other source.
 func (hdr *Header) Schema() []string {
 	fields := hdr.GetFields()
 	return hdr.AppendDerived(fields)
