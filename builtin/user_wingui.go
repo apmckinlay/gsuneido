@@ -13,9 +13,9 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/options"
-	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"golang.org/x/sys/windows"
 )
@@ -2327,7 +2327,7 @@ func GetGuiResources() (int, int) {
 	return int(gdi), int(user)
 }
 
-var _ = AddInfo("windows.nGdiObject", func () int {
+var _ = AddInfo("windows.nGdiObject", func() int {
 	hProcess, _ := syscall.GetCurrentProcess()
 	n, _, _ := syscall.SyscallN(getGuiResources,
 		uintptr(hProcess),
@@ -2335,7 +2335,7 @@ var _ = AddInfo("windows.nGdiObject", func () int {
 	return int(n)
 })
 
-var _ = AddInfo("windows.nUserObject", func () int {
+var _ = AddInfo("windows.nUserObject", func() int {
 	hProcess, _ := syscall.GetCurrentProcess()
 	n, _, _ := syscall.SyscallN(getGuiResources,
 		uintptr(hProcess),

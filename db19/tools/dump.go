@@ -12,12 +12,12 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
-	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/system"
@@ -152,8 +152,8 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	return count
 }
 
-func squeeze(rec rt.Record, cols []string) rt.Record {
-	var rb rt.RecordBuilder
+func squeeze(rec core.Record, cols []string) core.Record {
+	var rb core.RecordBuilder
 	for i, col := range cols {
 		if col != "-" {
 			rb.AddRaw(rec.GetRaw(i))
@@ -174,9 +174,9 @@ func dumpViews(state *DbState, w *bufio.Writer) int {
 	w.WriteString("====== views (view_name,view_definition) key(view_name)\n")
 	nrecs := 0
 	state.Meta.ForEachView(func(name, def string) {
-		var b rt.RecordBuilder
-		b.Add(rt.SuStr(name))
-		b.Add(rt.SuStr(def))
+		var b core.RecordBuilder
+		b.Add(core.SuStr(name))
+		b.Add(core.SuStr(def))
 		rec := b.Trim().Build()
 		writeInt(w, len(rec))
 		w.WriteString(string(rec))

@@ -9,7 +9,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
-	rt "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -32,8 +32,8 @@ func TestClassName(t *testing.T) {
 
 func TestParseExpression(t *testing.T) {
 	className := ""
-	rt.DefaultSingleQuotes = true
-	defer func() { rt.DefaultSingleQuotes = false }()
+	core.DefaultSingleQuotes = true
+	defer func() { core.DefaultSingleQuotes = false }()
 	parseExpr := func(src string) ast.Expr {
 		t.Helper()
 		p := NewParser(src)
@@ -232,8 +232,8 @@ func TestParseParams(t *testing.T) {
 }
 
 func TestParseStatements(t *testing.T) {
-	rt.DefaultSingleQuotes = true
-	defer func() { rt.DefaultSingleQuotes = false }()
+	core.DefaultSingleQuotes = true
+	defer func() { core.DefaultSingleQuotes = false }()
 	test := func(src string, expected string) {
 		t.Helper()
 		p := NewParser(src + " }")

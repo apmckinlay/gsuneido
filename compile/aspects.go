@@ -8,7 +8,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/compile/check"
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/core"
 )
 
 // Aspects allows tailoring the parser for different purposes.
@@ -19,7 +19,7 @@ type Aspects interface {
 	maker
 
 	privatize(name, className string) string
-	codegen(lib, name string, fn *ast.Function, prevDef runtime.Value) runtime.Value
+	codegen(lib, name string, fn *ast.Function, prevDef core.Value) core.Value
 }
 
 type checker interface {
@@ -36,8 +36,8 @@ type maker interface {
 	mkRecord() container
 	mkRecOrOb(container) container
 	mkClass(base string) container
-	mkConcat([]string) runtime.Value
-	set(c container, key, val runtime.Value, pos, end int32)
+	mkConcat([]string) core.Value
+	set(c container, key, val core.Value, pos, end int32)
 	setPos(container, int32, int32)
 }
 
@@ -59,7 +59,7 @@ func (*cgAspectsBase) privatize(name, className string) string {
 	return className + "_" + name
 }
 
-func (*cgAspectsBase) codegen(lib, name string, fn *ast.Function, prevDef runtime.Value) runtime.Value {
+func (*cgAspectsBase) codegen(lib, name string, fn *ast.Function, prevDef core.Value) core.Value {
 	return codegen(lib, name, fn, prevDef)
 }
 
@@ -83,7 +83,7 @@ type astAspects struct {
 	nilChecker
 }
 
-func (*astAspects) Symbol(s runtime.SuStr) ast.Expr {
+func (*astAspects) Symbol(s core.SuStr) ast.Expr {
 	return &ast.Symbol{Constant: ast.Constant{Val: s}}
 }
 
@@ -91,7 +91,7 @@ func (*astAspects) privatize(name, _ string) string {
 	return name
 }
 
-func (*astAspects) codegen(_, _ string, fn *ast.Function, _ runtime.Value) runtime.Value {
+func (*astAspects) codegen(_, _ string, fn *ast.Function, _ core.Value) core.Value {
 	return fn
 }
 

@@ -6,7 +6,7 @@ package builtin
 import (
 	"os"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var _ = builtin(Getenv, "(string)")

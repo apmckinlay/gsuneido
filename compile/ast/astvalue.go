@@ -4,8 +4,8 @@
 package ast
 
 import (
-	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/types"
 )
 
 // this implements the Value interface for AST nodes

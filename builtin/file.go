@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync/atomic"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/types"
 )
 
 type iFile interface {

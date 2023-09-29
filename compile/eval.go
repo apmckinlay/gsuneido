@@ -6,7 +6,7 @@ package compile
 import (
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 

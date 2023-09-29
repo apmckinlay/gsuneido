@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 const maxDir = 10000

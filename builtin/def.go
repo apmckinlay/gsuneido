@@ -5,7 +5,7 @@ package builtin
 
 import (
 	"github.com/apmckinlay/gsuneido/compile"
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 // DefDef must be called to make Def available

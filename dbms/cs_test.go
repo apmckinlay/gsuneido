@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/mux"
 	"github.com/apmckinlay/gsuneido/options"
-	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -29,10 +29,10 @@ func TestClientServer(*testing.T) {
 	assert.This(errmsg).Is("")
 	c := NewDbmsClient(p2)
 	ses := c.NewSession()
-	ses.Get(nil, "tables", runtime.Next, nil)
+	ses.Get(nil, "tables", core.Next, nil)
 
 	ses2 := c.NewSession()
-	ses2.Get(nil, "tables", runtime.Prev, nil)
+	ses2.Get(nil, "tables", core.Prev, nil)
 	ses2.Close()
 
 	time.Sleep(25 * time.Millisecond)

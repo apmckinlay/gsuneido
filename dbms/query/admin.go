@@ -6,8 +6,8 @@ package query
 import (
 	"strings"
 
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
-	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 func DoAdmin(db *db19.Database, cmd string, sv *Sviews) {

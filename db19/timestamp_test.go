@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -20,7 +20,7 @@ func TestTimestamp(t *testing.T) {
 		prev = ts
 	}
 	if !testing.Short() {
-		prev = runtime.Now()
+		prev = core.Now()
 		time.Sleep(1100 * time.Millisecond)
 		assert.T(t).That(Timestamp().Compare(prev) > 0)
 	}

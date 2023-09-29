@@ -10,7 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/check"
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -214,7 +214,7 @@ func TestCheckResults(t *testing.T) {
 	test("function (a) { a ? b=1 : a(c=1, b=c); b }")
 
 	// missing comma
-	runtime.Global.TestDef("Object", runtime.False)
+	core.Global.TestDef("Object", core.False)
 	test(`function (f, x) { f(x[0]) }`)
 	test(`function (f, x) { f(x(0)) }`)
 	test(`function (f, x) { f(x{}) }`)

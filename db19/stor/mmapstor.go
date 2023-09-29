@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/filelock"
-	"github.com/apmckinlay/gsuneido/runtime"
 )
 
 // NOTE: no provision for unmapping (same as Java)
@@ -51,7 +51,7 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 		err = filelock.Lock(file)
 	}
 	if err != nil {
-		runtime.Fatal(err)
+		core.Fatal(err)
 	}
 	fi, err := file.Stat()
 	if err != nil {

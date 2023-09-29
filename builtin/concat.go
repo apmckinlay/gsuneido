@@ -4,7 +4,7 @@
 package builtin
 
 import (
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 // DefConcat must be called to make Concat available

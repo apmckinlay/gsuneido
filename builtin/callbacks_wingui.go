@@ -12,9 +12,9 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/options"
-	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
 // use the very last 4 argument callback

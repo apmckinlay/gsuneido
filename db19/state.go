@@ -9,9 +9,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/generic/cache"
@@ -72,7 +72,7 @@ func (sh *stateHolder) updateState(fn func(*DbState)) {
 	defer sh.mutex.Unlock()
 	oldState := sh.get()
 	if oldState == nil {
-		runtime.Fatal("database closed")
+		core.Fatal("database closed")
 	}
 	newState := *oldState // shallow copy
 	fn(&newState)

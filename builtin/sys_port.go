@@ -8,7 +8,7 @@ package builtin
 import (
 	"os"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 func init() {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -99,7 +99,7 @@ func TestTransform(t *testing.T) {
 	test("customer rename id to num, name to nom project num, city",
 		"customer PROJECT id,city RENAME id to num")
 	test("customer rename id to id2, id2 to id3 remove id3",
-        "customer PROJECT name,city")
+		"customer PROJECT name,city")
 	// move project before rename & remove empty rename
 	test("customer rename id to num, name to nom project city",
 		"customer PROJECT city")

@@ -9,8 +9,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/options"
-	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -182,7 +182,7 @@ func TestExprReplace(t *testing.T) {
 	}
 	test("a is x", "a is 5")
 	test("x is a", "a is 5") // reversed
-	test("x is 6", "false") // folded
+	test("x is 6", "false")  // folded
 	test("'=' $ x", `"=5"`)
 	test("1 + x", `6`)
 	test("x + y + z", `15`)

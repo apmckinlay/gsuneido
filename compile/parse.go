@@ -11,14 +11,14 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/check"
 	. "github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/core"
 )
 
 func NewParser(src string) *Parser {
 	return newParser(NewLexer(src), &cgAspects{})
 }
 
-func CheckParser(src string, t *runtime.Thread) *Parser {
+func CheckParser(src string, t *core.Thread) *Parser {
 	a := &cgckAspects{}
 	a.Check = check.New(t)
 	return newParser(NewLexer(src), a)
@@ -90,7 +90,7 @@ type ParserBase struct {
 type Parser struct {
 
 	// prevDef is used by libload for _Name
-	prevDef runtime.Value
+	prevDef core.Value
 
 	// funcInfo is information gathered specific to a function
 	// it must be saved/reset/restored for nested functions
@@ -196,7 +196,7 @@ func (p *ParserBase) ErrorAt(pos int32, args ...any) string {
 	panic("syntax error @" + strconv.Itoa(int(pos)) + " " + fmt.Sprint(args...))
 }
 
-func (*Parser) Constant(val runtime.Value) Expr {
+func (*Parser) Constant(val core.Value) Expr {
 	return &ast.Constant{Val: val}
 }
 

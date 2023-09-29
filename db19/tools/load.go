@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
@@ -21,7 +22,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
-	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/errs"
@@ -288,7 +288,7 @@ func loadViews(db *Database, in *bufio.Reader, schema string) int {
 		_, err = io.ReadFull(in, buf[:n])
 		ck(err)
 
-		rec := rt.Record(string(buf[:n]))
+		rec := core.Record(string(buf[:n]))
 		name := rec.GetStr(0)
 		def := rec.GetStr(1)
 		db.AddView(name, def)

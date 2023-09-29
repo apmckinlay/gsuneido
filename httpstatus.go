@@ -16,9 +16,9 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/builtin"
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/options"
-	rt "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -181,12 +181,12 @@ func httpInfo(w http.ResponseWriter, req *http.Request) {
 			<body>
 			<h1>Suneido Info</h1>
 			<pre>`)
-		for _, name := range rt.InfoList() {
+		for _, name := range core.InfoList() {
 			fmt.Fprintf(w, `<a href="%s">%s</a>`+"\n\n", name, name)
 		}
 		io.WriteString(w, `</pre></body></html>`)
 	} else {
-		s := rt.InfoStr(req.URL.Path[6:]) // skip /info/
+		s := core.InfoStr(req.URL.Path[6:]) // skip /info/
 		fmt.Fprint(w, req.URL.Path, " = ", s)
 	}
 }

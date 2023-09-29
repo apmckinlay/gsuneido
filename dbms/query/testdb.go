@@ -6,10 +6,10 @@ package query
 import (
 	"time"
 
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 type heapdb struct {

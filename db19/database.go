@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -15,7 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
-	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -35,7 +35,7 @@ type Database struct {
 	// It must only updated via UpdateState.
 	state stateHolder
 
-	rt.Sviews
+	core.Sviews
 	mode stor.Mode
 	// schemaLock is used to prevent concurrent schema modification
 	schemaLock atomic.Bool
@@ -104,7 +104,7 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 	}()
 	buf := store.Data(0)
 	if magicBase != string(buf[:len(magicBase)]) {
-		rt.Fatal("not a valid database file")
+		core.Fatal("not a valid database file")
 	}
 	if magicPrev == string(buf[:len(magicPrev)]) {
 		if mode == stor.Update {
@@ -113,7 +113,7 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 		}
 	} else if magic != string(buf[:len(magic)]) &&
 		magicPrev != string(buf[:len(magicPrev)]) {
-		rt.Fatal("invalid database version")
+		core.Fatal("invalid database version")
 	}
 	size := stor.ReadSmallOffset(buf[len(magic):])
 	if size != store.Size() {
@@ -608,16 +608,16 @@ func getLeafKey(store *stor.Stor, is *ixkey.Spec, off uint64) string {
 	return is.Key(OffToRec(store, off))
 }
 
-func OffToRec(store *stor.Stor, off uint64) rt.Record {
+func OffToRec(store *stor.Stor, off uint64) core.Record {
 	buf := store.Data(off)
-	size := rt.RecLen(buf)
-	return rt.Record(hacks.BStoS(buf[:size]))
+	size := core.RecLen(buf)
+	return core.Record(hacks.BStoS(buf[:size]))
 }
 
 // OffToRecCk verifies the checksum following the record
-func OffToRecCk(store *stor.Stor, off uint64) rt.Record {
+func OffToRecCk(store *stor.Stor, off uint64) core.Record {
 	buf := store.Data(off)
-	size := rt.RecLen(buf)
+	size := core.RecLen(buf)
 	cksum.MustCheck(buf[:size+cksum.Len])
-	return rt.Record(hacks.BStoS(buf[:size]))
+	return core.Record(hacks.BStoS(buf[:size]))
 }

@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	rt "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -46,8 +46,8 @@ func TestFinal(t *testing.T) {
 }
 
 func TestPropFold(t *testing.T) {
-	rt.DefaultSingleQuotes = true
-	defer func() { rt.DefaultSingleQuotes = false }()
+	core.DefaultSingleQuotes = true
+	defer func() { core.DefaultSingleQuotes = false }()
 	test := func(src string, expected string) {
 		t.Helper()
 		p := NewParser("function () {\n" + src + "\n}")

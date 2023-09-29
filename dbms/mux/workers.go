@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/core"
 )
 
 // Workers creates worker goroutines on demand.
@@ -27,9 +27,9 @@ type task struct {
 }
 
 var nWorker atomic.Int64
-var _ = runtime.AddInfo("server.nWorker", &nWorker)
+var _ = core.AddInfo("server.nWorker", &nWorker)
 
-type workfn func(wb *WriteBuf, th *runtime.Thread, id uint64, rb []byte)
+type workfn func(wb *WriteBuf, th *core.Thread, id uint64, rb []byte)
 
 // NewWorkers creates a new goroutine pool
 func NewWorkers(h workfn) *Workers {
@@ -57,7 +57,7 @@ func (ws *Workers) worker(t task) {
 	defer nWorker.Add(-1)
 	// each worker has its own WriteBuf and Thread
 	wb := newWriteBuf(nil, 0)
-	th := &runtime.Thread{}
+	th := &core.Thread{}
 	for {
 		wb.conn = t.c
 		wb.id = uint32(t.id)

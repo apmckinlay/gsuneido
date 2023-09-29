@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/race"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -20,7 +20,7 @@ func TestMux(t *testing.T) {
 	p1, p2 := net.Pipe()
 	client := NewClientConn(p1)
 	var n atomic.Int32
-	workers := NewWorkers(func(wb *WriteBuf, _ *runtime.Thread, id uint64, data []byte) {
+	workers := NewWorkers(func(wb *WriteBuf, _ *core.Thread, id uint64, data []byte) {
 		n.Add(1)
 		wb.Write(bytes.ToUpper(data)).EndMsg()
 	})

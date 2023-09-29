@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/apmckinlay/gsuneido/builtin/heap"
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var advapi32 = MustLoadDLL("advapi32.dll")

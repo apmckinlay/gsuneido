@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 type suRunPiped struct {

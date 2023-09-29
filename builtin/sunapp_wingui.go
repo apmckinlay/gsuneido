@@ -8,7 +8,7 @@ package builtin
 import (
 	"fmt"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var sunappThread *Thread

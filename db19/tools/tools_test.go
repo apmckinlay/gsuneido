@@ -10,11 +10,11 @@ import (
 
 	"slices"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	"github.com/apmckinlay/gsuneido/dbms/query"
-	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -60,8 +60,8 @@ func createDb() {
 	db, err := db19.CreateDb(store)
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
-	db19.MakeSuTran = func(ut *db19.UpdateTran) *runtime.SuTran {
-		return runtime.NewSuTran(nil, true)
+	db19.MakeSuTran = func(ut *db19.UpdateTran) *core.SuTran {
+		return core.NewSuTran(nil, true)
 	}
 	adm := func(admin string) {
 		query.DoAdmin(db, admin, nil)

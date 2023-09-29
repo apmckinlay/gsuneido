@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
-	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 func DoAction(th *Thread, ut *db19.UpdateTran, action string, sv *Sviews) int {

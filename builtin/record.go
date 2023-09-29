@@ -4,8 +4,8 @@
 package builtin
 
 import (
-	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/trace"
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/trace"
 )
 
 var _ = builtin(record, "(@args)")

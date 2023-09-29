@@ -5,7 +5,7 @@ package builtin
 
 import (
 	"github.com/apmckinlay/gsuneido/compile/lexer"
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var _ = builtin(QueryScanner, "(string)")

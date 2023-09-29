@@ -12,12 +12,12 @@ import (
 
 	"slices"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
@@ -41,7 +41,7 @@ const (
 	aborted
 )
 
-func (t *tran) GetSviews() *rt.Sviews {
+func (t *tran) GetSviews() *core.Sviews {
 	return &t.db.Sviews
 }
 
@@ -144,10 +144,10 @@ func (t *ReadTran) GetIndexI(table string, iIndex int) *index.Overlay {
 	return ti.Indexes[iIndex]
 }
 
-func (t *ReadTran) GetRecord(off uint64) rt.Record {
+func (t *ReadTran) GetRecord(off uint64) core.Record {
 	buf := t.db.Store.Data(off)
-	size := rt.RecLen(buf)
-	return rt.Record(hacks.BStoS(buf[:size]))
+	size := core.RecLen(buf)
+	return core.Record(hacks.BStoS(buf[:size]))
 }
 
 func (t *ReadTran) ColToFld(table, col string) int {
@@ -166,13 +166,13 @@ func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 
 }
 
 // Lookup returns the DbRec for a key, or nil if not found
-func (t *ReadTran) Lookup(table string, iIndex int, key string) *rt.DbRec {
+func (t *ReadTran) Lookup(table string, iIndex int, key string) *core.DbRec {
 	idx := t.meta.GetRoInfo(table).Indexes[iIndex]
 	off := idx.Lookup(key)
 	if off == 0 {
 		return nil
 	}
-	return &rt.DbRec{Off: off, Record: t.GetRecord(off)}
+	return &core.DbRec{Off: off, Record: t.GetRecord(off)}
 }
 
 func (t *ReadTran) Read(string, int, string, string) {
@@ -180,15 +180,15 @@ func (t *ReadTran) Read(string, int, string, string) {
 	// See UpdateTran Read.
 }
 
-func (t *ReadTran) Output(*rt.Thread, string, rt.Record) {
+func (t *ReadTran) Output(*core.Thread, string, core.Record) {
 	panic("can't output to read-only transaction")
 }
 
-func (t *ReadTran) Delete(*rt.Thread, string, uint64) {
+func (t *ReadTran) Delete(*core.Thread, string, uint64) {
 	panic("can't delete from read-only transaction")
 }
 
-func (t *ReadTran) Update(*rt.Thread, string, uint64, rt.Record) uint64 {
+func (t *ReadTran) Update(*core.Thread, string, uint64, core.Record) uint64 {
 	panic("can't update from read-only transaction")
 }
 
@@ -326,7 +326,7 @@ func (t *UpdateTran) num() int {
 }
 
 // Lookup returns the DbRec for a key, or nil if not found
-func (t *UpdateTran) Lookup(table string, iIndex int, key string) *rt.DbRec {
+func (t *UpdateTran) Lookup(table string, iIndex int, key string) *core.DbRec {
 	t.Read(table, iIndex, key, key)
 	return t.ReadTran.Lookup(table, iIndex, key)
 }
@@ -345,7 +345,7 @@ func (t *UpdateTran) write() {
 	}
 }
 
-func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
+func (t *UpdateTran) Output(th *core.Thread, table string, rec core.Record) {
 	if t.db.corrupted.Load() {
 		return
 	}
@@ -390,7 +390,7 @@ func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
 }
 
 func (t *UpdateTran) dupOutputBlock(table string, iIndex int, ix schema.Index,
-	ov *index.Overlay, rec rt.Record, key string) {
+	ov *index.Overlay, rec core.Record, key string) {
 	if needsDupCheck(ix, rec) {
 		if ov.Lookup(key) != 0 {
 			panic(fmt.Sprint("duplicate key: ",
@@ -400,7 +400,7 @@ func (t *UpdateTran) dupOutputBlock(table string, iIndex int, ix schema.Index,
 	}
 }
 
-func needsDupCheck(ix schema.Index, rec rt.Record) bool {
+func needsDupCheck(ix schema.Index, rec core.Record) bool {
 	if ix.Primary {
 		return true
 	}
@@ -410,7 +410,7 @@ func needsDupCheck(ix schema.Index, rec rt.Record) bool {
 	return false
 }
 
-func uniqueIndexEmpty(rec rt.Record, is ixkey.Spec) bool {
+func uniqueIndexEmpty(rec core.Record, is ixkey.Spec) bool {
 	for _, f := range is.Fields {
 		if rec.GetRaw(f) != "" {
 			return false
@@ -419,7 +419,7 @@ func uniqueIndexEmpty(rec rt.Record, is ixkey.Spec) bool {
 	return true
 }
 
-func (t *UpdateTran) fkeyOutputBlock(ts *meta.Schema, i int, rec rt.Record) {
+func (t *UpdateTran) fkeyOutputBlock(ts *meta.Schema, i int, rec core.Record) {
 	ix := &ts.Indexes[i]
 	fk := ix.Fk
 	if fk.Table != "" {
@@ -442,7 +442,7 @@ func (t *ReadTran) fkeyOutputExists(table string, iIndex int, key string) bool {
 	return idx.Lookup(key) != 0
 }
 
-func (t *UpdateTran) Delete(th *rt.Thread, table string, off uint64) {
+func (t *UpdateTran) Delete(th *core.Thread, table string, off uint64) {
 	t.write()
 	ts := t.getSchema(table)
 	rec := t.GetRecord(off)
@@ -535,7 +535,7 @@ func rangeEnd(key string, n int) string {
 	return sb.String()
 }
 
-func (t *UpdateTran) fkeyDeleteCascade(th *rt.Thread, ts *meta.Schema, i int, key string) {
+func (t *UpdateTran) fkeyDeleteCascade(th *core.Thread, ts *meta.Schema, i int, key string) {
 	if key == "" {
 		return
 	}
@@ -563,12 +563,12 @@ func (t *UpdateTran) cascade(fk *schema.Fkey, encoded bool, key string) *index.O
 	return iter
 }
 
-func (t *UpdateTran) Update(th *rt.Thread, table string, oldoff uint64, newrec rt.Record) uint64 {
+func (t *UpdateTran) Update(th *core.Thread, table string, oldoff uint64, newrec core.Record) uint64 {
 	t.write()
 	return t.update(th, table, oldoff, newrec, true)
 }
 
-func (t *UpdateTran) update(th *rt.Thread, table string, oldoff uint64, newrec rt.Record,
+func (t *UpdateTran) update(th *core.Thread, table string, oldoff uint64, newrec core.Record,
 	block bool) uint64 {
 	if t.db.corrupted.Load() {
 		return oldoff
@@ -633,8 +633,8 @@ func (t *UpdateTran) update(th *rt.Thread, table string, oldoff uint64, newrec r
 	return newoff
 }
 
-func (t *UpdateTran) fkeyUpdateCascade(th *rt.Thread, ts *meta.Schema, i int,
-	rec rt.Record, key string) { // rec is old, key is new
+func (t *UpdateTran) fkeyUpdateCascade(th *core.Thread, ts *meta.Schema, i int,
+	rec core.Record, key string) { // rec is old, key is new
 	ixcols := ts.Indexes[i].Columns
 	encoded := ts.Indexes[i].Ixspec.Encodes()
 	fkToHere := ts.Indexes[i].FkToHere
@@ -649,7 +649,7 @@ func (t *UpdateTran) fkeyUpdateCascade(th *rt.Thread, ts *meta.Schema, i int,
 		for iter.Next(t); !iter.Eof(); iter.Next(t) {
 			_, off := iter.Cur()
 			oldrec := t.GetRecord(off)
-			rb := rt.RecordBuilder{}
+			rb := core.RecordBuilder{}
 			for i, col := range ts2.Columns {
 				if j := slices.Index(ixcols2, col); j != -1 {
 					k := slices.Index(ts.Columns, ixcols[j])

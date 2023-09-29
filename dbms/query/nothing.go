@@ -3,7 +3,7 @@
 
 package query
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import . "github.com/apmckinlay/gsuneido/core"
 
 // Nothing is a null query that produces no output.
 // It results from a Join, Where, or Intersect with a Fixed conflict.

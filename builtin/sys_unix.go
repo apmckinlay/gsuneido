@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var _ = builtin(GetDiskFreeSpace, "(dir = '.')")

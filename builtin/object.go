@@ -6,8 +6,8 @@ package builtin
 import (
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/types"
 )
 
 var _ = builtin(ConcurrentQ, "(value)")

@@ -9,7 +9,7 @@ import (
 
 	"crypto/sha256"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 type suSha256 struct {

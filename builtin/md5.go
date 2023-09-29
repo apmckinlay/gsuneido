@@ -9,7 +9,7 @@ import (
 
 	"crypto/md5"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 // The built-in hashes are Adler32, Md5, Sha1, Sha256.

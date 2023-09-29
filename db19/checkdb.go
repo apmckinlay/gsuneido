@@ -9,11 +9,11 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
-	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
@@ -93,7 +93,7 @@ func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64, uint64) {
 	count := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		buf := state.store.Data(off)
-		n := runtime.RecLen(buf)
+		n := core.RecLen(buf)
 		cksum.MustCheck(buf[:n+cksum.Len])
 		size += uint64(n)
 	})

@@ -10,9 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
@@ -171,7 +171,7 @@ func (bt *btree) quickCheck1(depth int, offset uint64, recent int64) {
 			// only checksum data records in the recent part of the file
 			if int64(it.offset) > recent {
 				buf := bt.stor.Data(it.offset)
-				size := runtime.RecLen(buf)
+				size := core.RecLen(buf)
 				cksum.MustCheck(buf[:size+cksum.Len])
 			}
 		}

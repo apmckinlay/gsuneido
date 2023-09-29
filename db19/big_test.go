@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
-	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -127,7 +127,7 @@ func createTables() []string {
 
 var ntrans atomic.Int32
 
-var data = rt.SuStr(str.Random(1024, 1024))
+var data = core.SuStr(str.Random(1024, 1024))
 
 func createData(db *Database, tables []string, i, n int) {
 	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -139,8 +139,8 @@ func createData(db *Database, tables []string, i, n int) {
 			table := tables[rand.Intn(ntables)]
 			nr := 1 + rand.Intn(rowsPerTable)
 			for k := 0; k <= nr && i < n; k++ {
-				var b rt.RecordBuilder
-				b.Add(rt.IntVal(i ^ 0x5555))
+				var b core.RecordBuilder
+				b.Add(core.IntVal(i ^ 0x5555))
 				b.Add(data)
 				rec := b.Build()
 				ut.Output(nil, table, rec)

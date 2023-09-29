@@ -5,7 +5,7 @@ package ast
 
 import (
 	"github.com/apmckinlay/gsuneido/compile/tokens"
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 type Token = tokens.Token

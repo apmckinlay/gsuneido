@@ -6,11 +6,11 @@ package query
 import (
 	"strings"
 
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 // testTran has hard coded table schemas for tests

@@ -10,7 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var comdlg32 = MustLoadDLL("comdlg32.dll")

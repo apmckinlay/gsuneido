@@ -6,8 +6,8 @@ package builtin
 import (
 	"runtime/debug"
 
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/options"
-	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 var _ = builtin(Built, "()")

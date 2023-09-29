@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 	"golang.org/x/sys/windows"
 )
 

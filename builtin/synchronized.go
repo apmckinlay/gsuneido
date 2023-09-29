@@ -6,7 +6,7 @@ package builtin
 import (
 	"sync"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 // Synchronized is used recursively

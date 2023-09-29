@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var InheritHandles = false

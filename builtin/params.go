@@ -4,7 +4,7 @@
 package builtin
 
 import (
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 type paramsable interface {

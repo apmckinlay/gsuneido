@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var timestamp SuDate

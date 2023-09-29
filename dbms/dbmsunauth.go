@@ -3,7 +3,7 @@
 
 package dbms
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import . "github.com/apmckinlay/gsuneido/core"
 
 func Unauth(dbms *DbmsLocal) IDbms {
 	return &DbmsUnauth{dbms: dbms}

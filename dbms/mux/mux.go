@@ -11,8 +11,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/trace"
+	"github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -196,7 +196,7 @@ func (c *conn) reader(handler func(uint32, []byte)) {
 func (cc *ClientConn) client(id uint32, data []byte) {
 	// need to send id for client to pipeline messages
 	if data == nil {
-		runtime.Fatal("lost connection:", cc.err.Load())
+		core.Fatal("lost connection:", cc.err.Load())
 	}
 	cc.getrch(id) <- data
 }

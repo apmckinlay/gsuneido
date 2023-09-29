@@ -10,8 +10,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 /*

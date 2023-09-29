@@ -12,16 +12,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func init() {
-	MakeSuTran = func(ut *UpdateTran) *rt.SuTran {
-		return rt.NewSuTran(nil, true)
+	MakeSuTran = func(ut *UpdateTran) *core.SuTran {
+		return core.NewSuTran(nil, true)
 	}
 }
 
@@ -129,10 +129,10 @@ func output1(db *Database) *UpdateTran {
 	// NOTE: does not commit
 }
 
-func mkrec(args ...string) rt.Record {
-	var b rt.RecordBuilder
+func mkrec(args ...string) core.Record {
+	var b core.RecordBuilder
 	for _, a := range args {
-		b.Add(rt.SuStr(a))
+		b.Add(core.SuStr(a))
 	}
 	return b.Build()
 }

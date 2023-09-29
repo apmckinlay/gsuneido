@@ -6,8 +6,8 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
-	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 type Action interface {

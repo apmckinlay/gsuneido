@@ -10,7 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,

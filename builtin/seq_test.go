@@ -8,7 +8,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/race"
 )
@@ -46,7 +46,7 @@ func TestConcurrentSequence(t *testing.T) {
 	if testing.Short() {
 		size = 10_000
 	}
-	sq := runtime.NewSuSequence(&seqIter{by: 1, to: 1_000})
+	sq := core.NewSuSequence(&seqIter{by: 1, to: 1_000})
 	sq.SetConcurrent()
 	var wg sync.WaitGroup
 	const nthreads = 6

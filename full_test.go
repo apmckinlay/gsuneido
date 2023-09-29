@@ -7,7 +7,7 @@ package main
 
 // 	"github.com/apmckinlay/gsuneido/builtin"
 // 	"github.com/apmckinlay/gsuneido/options"
-// 	. "github.com/apmckinlay/gsuneido/runtime"
+// 	. "github.com/apmckinlay/gsuneido/core"
 // )
 
 // func TestFull(t *testing.T) {

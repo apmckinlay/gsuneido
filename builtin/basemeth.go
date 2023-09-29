@@ -4,8 +4,8 @@
 package builtin
 
 import (
-	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/types"
 )
 
 // methods common to SuClass and SuInstance

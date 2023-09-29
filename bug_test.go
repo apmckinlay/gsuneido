@@ -4,7 +4,7 @@ package main
 // 	"testing"
 
 // 	"github.com/apmckinlay/gsuneido/builtin"
-// 	. "github.com/apmckinlay/gsuneido/runtime"
+// 	. "github.com/apmckinlay/gsuneido/core"
 // 	"github.com/apmckinlay/gsuneido/util/exit"
 // )
 

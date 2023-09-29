@@ -17,7 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tr"
 
 	"github.com/apmckinlay/gsuneido/compile"
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
 )

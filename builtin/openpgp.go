@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/system"
 
 	//lint:ignore SA1019 best option

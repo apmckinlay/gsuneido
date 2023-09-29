@@ -8,7 +8,7 @@ import (
 	"io"
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"golang.org/x/exp/maps"
 )

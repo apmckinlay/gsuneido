@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/core"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/dbms"
-	"github.com/apmckinlay/gsuneido/runtime"
-	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -28,7 +28,7 @@ func TestTimestamp(t *testing.T) {
 	for i := 0; i < 8; i++ {
 		wg.Add(1)
 		go func() {
-			var th runtime.Thread
+			var th core.Thread
 			th.SetDbms(&dbms.DbmsLocal{})
 			var ts Value
 			for i := 0; i < 100; i++ {

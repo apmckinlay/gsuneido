@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 type suSocketClient struct {

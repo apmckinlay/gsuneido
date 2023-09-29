@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 	"golang.org/x/sys/windows"
 )
 

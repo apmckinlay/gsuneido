@@ -6,7 +6,7 @@ package builtin
 import (
 	"math/rand"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var _ = builtin(Random, "(limit)")

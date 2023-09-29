@@ -3,7 +3,7 @@
 
 package builtin
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import . "github.com/apmckinlay/gsuneido/core"
 
 var _ = builtin(display, "(value, quotes=0)")
 

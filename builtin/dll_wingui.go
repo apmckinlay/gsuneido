@@ -11,7 +11,7 @@ import (
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/builtin/heap"
-	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"golang.org/x/sys/windows"
 )

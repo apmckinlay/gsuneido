@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 

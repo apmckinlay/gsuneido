@@ -3,7 +3,7 @@
 
 package query
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import . "github.com/apmckinlay/gsuneido/core"
 
 // ProjectNone produces a single empty row with no columns.
 // It results from a Project with no columns.
