@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
+	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
@@ -68,7 +68,7 @@ var Nworkers = func() int {
 // - starting
 // - repairing
 // - corrupted
-var DbStatus myatomic.String
+var DbStatus atomics.String
 
 func init() {
 	DbStatus.Store("starting")

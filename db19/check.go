@@ -10,7 +10,7 @@ import (
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/atomic"
+	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/ordset"
 	"github.com/apmckinlay/gsuneido/util/ranges"
 )
@@ -77,7 +77,7 @@ type Check struct {
 type CkTran struct {
 	// failure is written by CkTran.abort and read by UpdateTran.
 	// It is set to either a conflict or a timeout.
-	failure atomic.String
+	failure atomics.String
 	tables  []string
 	state   *DbState
 	// start is the start time and also used as an identifier

@@ -14,7 +14,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
-	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
+	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/generic/cache"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -41,7 +41,7 @@ type Thread struct {
 	// Session is the name of the database session for clients and standalone.
 	// Server tracks client session names separately.
 	// Needs atomic because we access MainThread from other threads.
-	session myatomic.String
+	session atomics.String
 
 	// dbms is the database (client or local) for this Thread
 	dbms IDbms

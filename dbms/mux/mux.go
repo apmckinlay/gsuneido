@@ -14,7 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
+	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
@@ -22,7 +22,7 @@ const HeaderSize = 4 + 4 + 1 /* size + id + final */
 
 type conn struct {
 	rw    io.ReadWriteCloser // the underlying connection
-	err   myatomic.String
+	err   atomics.String
 	wlock sync.Mutex       // used by write to keep header and data together
 	hdr   [HeaderSize]byte // used by write, guarded by wlock
 }
