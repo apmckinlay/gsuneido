@@ -19,7 +19,7 @@ import (
 
 const traceLimit = 100
 
-// ReadWrite handles encode/decode for dbmsClient
+// ReadWrite handles encode/decode for jsunClient
 // for the old jSuneido client/server protocol.
 // It uses bufio for buffering.
 type ReadWrite struct {
@@ -321,8 +321,7 @@ func limit(n int64) int {
 	return int(n)
 }
 
-// Request is used by DbmsClient.
-// It does Flush and GetBool for the result.
+// Request does Flush and GetBool for the result.
 // If the result is false, it does GetStr for the error and panics with it.
 func (rw *ReadWrite) Request() {
 	rw.ck(rw.w.Flush())

@@ -20,7 +20,7 @@ import (
 )
 
 // This is the mux client that matches DbmsServer.
-// See DbmsClient for the version that matches jSuneido.
+// See jsunClient for the version that matches jSuneido.
 
 type muxClient struct {
 	cc *mux.ClientConn

@@ -27,18 +27,18 @@ var token string
 // tokenLock guards token
 var tokenLock sync.Mutex
 
-// dbmsClient is the client for the jSuneido server
-type dbmsClient struct {
+// jsunClient is the client for the jSuneido server
+type jsunClient struct {
 	*csio.ReadWrite
 	conn net.Conn
 }
 
-func NewDbmsClient(conn net.Conn) *dbmsClient {
+func NewJsunClient(conn net.Conn) *jsunClient {
 	errfn := func(err string) {
 		Fatal("client:", err)
 	}
 	rw := csio.NewReadWrite(conn, errfn)
-	c := &dbmsClient{ReadWrite: rw, conn: conn}
+	c := &jsunClient{ReadWrite: rw, conn: conn}
 	tokenLock.Lock()
 	defer tokenLock.Unlock()
 	if token != "" {
@@ -50,13 +50,13 @@ func NewDbmsClient(conn net.Conn) *dbmsClient {
 
 // Dbms interface
 
-var _ IDbms = (*dbmsClient)(nil)
+var _ IDbms = (*jsunClient)(nil)
 
-func (dc *dbmsClient) Admin(admin string, _ *Sviews) {
+func (dc *jsunClient) Admin(admin string, _ *Sviews) {
 	dc.PutCmd(commands.Admin).PutStr(admin).Request()
 }
 
-func (dc *dbmsClient) Auth(_ *Thread, s string) bool {
+func (dc *jsunClient) Auth(_ *Thread, s string) bool {
 	if !dc.auth(s) {
 		return false
 	}
@@ -68,7 +68,7 @@ func (dc *dbmsClient) Auth(_ *Thread, s string) bool {
 	return true
 }
 
-func (dc *dbmsClient) auth(s string) bool {
+func (dc *jsunClient) auth(s string) bool {
 	if s == "" {
 		return false
 	}
@@ -76,12 +76,12 @@ func (dc *dbmsClient) auth(s string) bool {
 	return dc.GetBool()
 }
 
-func (dc *dbmsClient) Check() string {
+func (dc *jsunClient) Check() string {
 	dc.PutCmd(commands.Check).Request()
 	return dc.GetStr()
 }
 
-func (dc *dbmsClient) Close() {
+func (dc *jsunClient) Close() {
 	// On Windows, Close() is not sufficient for a graceful close.
 	// If the client exits afterwards, the server gets WSAECONNRESET.
 	// Tried delays, CloseWrite, SetLinger but nothing helps.
@@ -92,37 +92,37 @@ func (dc *dbmsClient) Close() {
 	}
 }
 
-func (dc *dbmsClient) Connections() Value {
+func (dc *jsunClient) Connections() Value {
 	dc.PutCmd(commands.Connections).Request()
 	ob := dc.GetVal().(*SuObject)
 	ob.SetReadOnly()
 	return ob
 }
 
-func (dc *dbmsClient) Cursor(query string, _ *Sviews) ICursor {
+func (dc *jsunClient) Cursor(query string, _ *Sviews) ICursor {
 	dc.PutCmd(commands.Cursor).PutStr(query).Request()
 	cn := dc.GetInt()
 	return newClientCursor(dc, cn)
 }
 
-func (dc *dbmsClient) Cursors() int {
+func (dc *jsunClient) Cursors() int {
 	dc.PutCmd(commands.Cursors).Request()
 	return dc.GetInt()
 }
 
-func (dc *dbmsClient) DisableTrigger(string) {
+func (dc *jsunClient) DisableTrigger(string) {
 	panic("DoWithoutTriggers can't be used by a client")
 }
-func (dc *dbmsClient) EnableTrigger(string) {
+func (dc *jsunClient) EnableTrigger(string) {
 	assert.ShouldNotReachHere()
 }
 
-func (dc *dbmsClient) Dump(table string) string {
+func (dc *jsunClient) Dump(table string) string {
 	dc.PutCmd(commands.Dump).PutStr(table).Request()
 	return dc.GetStr()
 }
 
-func (dc *dbmsClient) Exec(_ *Thread, args Value) Value {
+func (dc *jsunClient) Exec(_ *Thread, args Value) Value {
 	packed := PackValue(args) // do this first because it could panic
 	if trace.ClientServer.On() {
 		if len(packed) < 100 {
@@ -134,17 +134,17 @@ func (dc *dbmsClient) Exec(_ *Thread, args Value) Value {
 	return dc.ValueResult()
 }
 
-func (dc *dbmsClient) Final() int {
+func (dc *jsunClient) Final() int {
 	dc.PutCmd(commands.Final).Request()
 	return dc.GetInt()
 }
 
-func (dc *dbmsClient) Get(_ *Thread, query string, dir Dir,
+func (dc *jsunClient) Get(_ *Thread, query string, dir Dir,
 	_ *Sviews) (Row, *Header, string) {
 	return dc.get(0, query, dir)
 }
 
-func (dc *dbmsClient) get(tn int, query string, dir Dir) (Row, *Header, string) {
+func (dc *jsunClient) get(tn int, query string, dir Dir) (Row, *Header, string) {
 	dc.PutCmd(commands.GetOne).PutByte(byte(dir)).PutInt(tn).PutStr(query).Request()
 	if !dc.GetBool() {
 		return nil, nil, ""
@@ -155,26 +155,26 @@ func (dc *dbmsClient) get(tn int, query string, dir Dir) (Row, *Header, string) 
 	return row, hdr, "updateable"
 }
 
-func (dc *dbmsClient) Info() Value {
+func (dc *jsunClient) Info() Value {
 	dc.PutCmd(commands.Info).Request()
 	return dc.GetVal()
 }
 
-func (dc *dbmsClient) Kill(sessionid string) int {
+func (dc *jsunClient) Kill(sessionid string) int {
 	dc.PutCmd(commands.Kill).PutStr(sessionid).Request()
 	return dc.GetInt()
 }
 
-func (dc *dbmsClient) Load(table string) int {
+func (dc *jsunClient) Load(table string) int {
 	dc.PutCmd(commands.Load).PutStr(table).Request()
 	return dc.GetInt()
 }
 
-func (dc *dbmsClient) Log(s string) {
+func (dc *jsunClient) Log(s string) {
 	dc.PutCmd(commands.Log).PutStr(s).Request()
 }
 
-func (dc *dbmsClient) LibGet(name string) []string {
+func (dc *jsunClient) LibGet(name string) []string {
 	dc.PutCmd(commands.LibGet).PutStr(name).Request()
 	n := dc.GetSize()
 	v := make([]string, 2*n)
@@ -189,26 +189,26 @@ func (dc *dbmsClient) LibGet(name string) []string {
 	return v
 }
 
-func (dc *dbmsClient) Libraries() []string {
+func (dc *jsunClient) Libraries() []string {
 	dc.PutCmd(commands.Libraries).Request()
 	return dc.GetStrs()
 }
 
-func (dc *dbmsClient) Nonce(*Thread) string {
+func (dc *jsunClient) Nonce(*Thread) string {
 	dc.PutCmd(commands.Nonce).Request()
 	return dc.GetStr()
 }
 
-func (dc *dbmsClient) Run(_ *Thread, code string) Value {
+func (dc *jsunClient) Run(_ *Thread, code string) Value {
 	dc.PutCmd(commands.Run).PutStr(code).Request()
 	return dc.ValueResult()
 }
 
-func (dc *dbmsClient) Schema(string) string {
+func (dc *jsunClient) Schema(string) string {
 	panic("Schema only available standalone")
 }
 
-func (dc *dbmsClient) SessionId(th *Thread, id string) string {
+func (dc *jsunClient) SessionId(th *Thread, id string) string {
 	if s := th.Session(); s != "" && id == "" {
 		return s // use cached value
 	}
@@ -218,28 +218,28 @@ func (dc *dbmsClient) SessionId(th *Thread, id string) string {
 	return s
 }
 
-func (dc *dbmsClient) Size() uint64 {
+func (dc *jsunClient) Size() uint64 {
 	dc.PutCmd(commands.Size).Request()
 	return uint64(dc.GetInt64())
 }
 
-func (dc *dbmsClient) Timestamp() SuDate {
+func (dc *jsunClient) Timestamp() SuDate {
 	dc.PutCmd(commands.Timestamp).Request()
 	return dc.GetVal().(SuDate)
 }
 
-func (dc *dbmsClient) Token() string {
+func (dc *jsunClient) Token() string {
 	dc.PutCmd(commands.Token).Request()
 	return dc.GetStr()
 }
 
-func (dc *dbmsClient) Transaction(update bool) ITran {
+func (dc *jsunClient) Transaction(update bool) ITran {
 	dc.PutCmd(commands.Transaction).PutBool(update).Request()
 	tn := dc.GetInt()
 	return &TranClient{dc: dc, tn: tn}
 }
 
-func (dc *dbmsClient) Transactions() *SuObject {
+func (dc *jsunClient) Transactions() *SuObject {
 	dc.PutCmd(commands.Transactions).Request()
 	ob := &SuObject{}
 	for n := dc.GetInt(); n > 0; n-- {
@@ -248,12 +248,12 @@ func (dc *dbmsClient) Transactions() *SuObject {
 	return ob
 }
 
-func (dc *dbmsClient) Unuse(lib string) bool {
+func (dc *jsunClient) Unuse(lib string) bool {
 	panic("can't Unuse('" + lib + "')\n" +
 		"When client-server, only the server can Unuse")
 }
 
-func (dc *dbmsClient) Use(lib string) bool {
+func (dc *jsunClient) Use(lib string) bool {
 	if slices.Contains(dc.Libraries(), lib) {
 		return false
 	}
@@ -261,11 +261,11 @@ func (dc *dbmsClient) Use(lib string) bool {
 		"When client-server, only the server can Use")
 }
 
-func (dc *dbmsClient) Unwrap() IDbms {
+func (dc *jsunClient) Unwrap() IDbms {
 	return dc
 }
 
-func (dc *dbmsClient) getHdr() *Header {
+func (dc *jsunClient) getHdr() *Header {
 	n := dc.GetInt()
 	fields := make([]string, 0, n)
 	columns := make([]string, 0, n)
@@ -283,14 +283,14 @@ func (dc *dbmsClient) getHdr() *Header {
 	return NewHeader([][]string{fields}, columns)
 }
 
-func (dc *dbmsClient) getRow(off int) Row {
+func (dc *jsunClient) getRow(off int) Row {
 	return Row([]DbRec{{Record: dc.GetRec(), Off: uint64(off)}})
 }
 
 // ------------------------------------------------------------------
 
 type TranClient struct {
-	dc       *dbmsClient
+	dc       *jsunClient
 	conflict string
 	tn       int
 	ended    bool
@@ -370,7 +370,7 @@ func (tc *TranClient) String() string {
 
 // clientQueryCursor is the common stuff for clientQuery and clientCursor
 type clientQueryCursor struct {
-	dc   *dbmsClient
+	dc   *jsunClient
 	hdr  *Header
 	keys []string // cache
 	id   int
@@ -432,7 +432,7 @@ type clientQuery struct {
 	clientQueryCursor
 }
 
-func newClientQuery(dc *dbmsClient, qn int) *clientQuery {
+func newClientQuery(dc *jsunClient, qn int) *clientQuery {
 	return &clientQuery{clientQueryCursor{dc: dc, id: qn, qc: query}}
 }
 
@@ -457,7 +457,7 @@ type clientCursor struct {
 	clientQueryCursor
 }
 
-func newClientCursor(dc *dbmsClient, cn int) *clientCursor {
+func newClientCursor(dc *jsunClient, cn int) *clientCursor {
 	return &clientCursor{clientQueryCursor{dc: dc, id: cn, qc: cursor}}
 }
 

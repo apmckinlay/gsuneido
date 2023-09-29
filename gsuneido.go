@@ -164,10 +164,10 @@ func main() {
 	if options.Action == "client" {
 		conn, jserver := dbms.ConnectClient(options.Arg, options.Port)
 		if jserver {
-			mainThread.SetDbms(dbms.NewDbmsClient(conn))
+			mainThread.SetDbms(dbms.NewJsunClient(conn))
 			GetDbms = func() IDbms {
 				conn, _ := dbms.ConnectClient(options.Arg, options.Port)
-				return dbms.NewDbmsClient(conn)
+				return dbms.NewJsunClient(conn)
 			}
 		} else {
 			client := dbms.NewMuxClient(conn)
