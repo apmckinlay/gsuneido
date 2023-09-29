@@ -59,27 +59,33 @@ func TestCheckActions(t *testing.T) {
 	script(t, "1d1 2D1 1c")
 	script(t, "1o1 1a 2o1 2c")
 	script(t, "1d4 1d5 2d3 2D5")
-	script(t, "1r55 1o5 2R55")
-	script(t, "1r55 1o5 1c 2R55")
-	script(t, "1r55 2r55 1O5")
+	script(t, "1r55 1o5 2r55 2O8")
+	script(t, "1r55 1o5 1c 2r55 2O8")
+	script(t, "1r55 2r55 2o8 1O5")
+	script(t, "1r57 1o9 2D6")
 	// conflict with ended
 	script(t, "1d1 1c 2D1")
 	script(t, "2d1 2c 1D1 1C")
+	script(t, "1r3 2d3 2c 2D3")
 
 	// reads
-	script(t, "1o4 1r68 2r77 2R35")
-	script(t, "1r35 2O4")
+	script(t, "1o4 1r68 2o3 2r77 2R35")
+	script(t, "1o8 1r35 2O4")
 
 	// don't check writes against committed reads
 	script(t, "1r11 1c 2o1 2c")
 	// but still check reads against committed writes
-	script(t, "2o1 2c 1R11")
+	script(t, "2o1 2c 1o9 1R11")
+
+	// delayed read conflicts
+	script(t, "1r24 2o3 1c")
+	script(t, "1r24 2o3 1D3")
 }
 
 // script takes a string containing a space separated list of actions.
 // Each action consists of:
 //   - transaction number 1 or 2
-//   - action type: (r)ead, (w)rite, (c)ommit, (a)bort
+//   - action type: (r)ead, (o)utput, (d)elete, (c)ommit, (a)bort
 //   - read is followed by two characters specifying a key range
 //   - write is followed by one character specifying a key
 //

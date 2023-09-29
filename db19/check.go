@@ -84,9 +84,11 @@ type CkTran struct {
 	start int
 	// end is math.MaxInt if the transaction is not ended
 	end int
-	// birth is updated by tick and used to abort long transactions
-	birth     int
-	readCount int
+	// birth is used by tick to abort long transactions
+	birth        int
+	readCount    int
+	hasUpdates   bool
+	readConflict string
 }
 
 // readMax is higher than jSuneido to account for duplicate checks
@@ -211,8 +213,12 @@ func (ck *Check) RunEndExclusive(table string, fn func()) (err any) {
 // Will conflict if another transaction has a write within the range.
 func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool {
 	traceln("T", t.start, "read", table, "index", index, "from", from, "to", to)
-	t, ok := ck.actvTran[t.start]
-	if !ok {
+	if t.readConflict != "" {
+		// once we have a conflict, we don't need to check any more reads
+		// either it will be read-only (no conflicts) or it will abort
+		return true
+	}
+	if _, ok := ck.actvTran[t.start]; !ok {
 		return false // it's gone, presumably aborted
 	}
 	assert.That(!t.ended())
@@ -286,15 +292,29 @@ func (ck *Check) Update(t *CkTran,
 // Outputs only need to be checked against outstanding reads.
 // The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
 func (ck *Check) Output(t *CkTran, table string, keys []string) bool {
+	if !ck.gotUpdate(t) {
+		return false
+	}
 	return ck.output(t, table, keys, nil)
+}
+
+// gotUpdate returns false if it aborts the transaction
+func (ck *Check) gotUpdate(t *CkTran) bool {
+	if !t.hasUpdates {
+		if t.readConflict != "" {
+			ck.abort(t.start, t.readConflict)
+			return false
+		}
+		t.hasUpdates = true
+	}
+	return true
 }
 
 // output adds an output action.
 // oldkeys is used by Update so we can tell if the key changed.
 func (ck *Check) output(t *CkTran, table string, keys, oldkeys []string) bool {
 	traceln("T", t.start, "output", table, "keys", keys)
-	t, ok := ck.actvTran[t.start]
-	if !ok {
+	if _, ok := ck.actvTran[t.start]; !ok {
 		return false // it's gone, presumably aborted
 	}
 	assert.That(!t.ended())
@@ -341,8 +361,10 @@ func (ck *Check) saveOutput(t *CkTran, table string, keys []string) bool {
 // The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
 func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool {
 	traceln("T", t.start, "delete", table, "off", off, "keys", keys)
-	t, ok := ck.actvTran[t.start]
-	if !ok {
+	if !ck.gotUpdate(t) {
+		return false
+	}
+	if _, ok := ck.actvTran[t.start]; !ok {
 		return false // it's gone, presumably aborted
 	}
 	assert.That(!t.ended())
@@ -414,8 +436,7 @@ func (cw ckwrites) with(index int, key string) ckwrites {
 }
 
 func (ck *Check) ReadCount(t *CkTran) int {
-	t, ok := ck.actvTran[t.start]
-	if !ok {
+	if _, ok := ck.actvTran[t.start]; !ok {
 		return -1 // it's gone, presumably aborted
 	}
 	return t.readCount
@@ -426,9 +447,21 @@ var checkerAbortT1 = false
 
 // abort1of aborts one of t1 and t2.
 // If t2 is committed, abort t1, otherwise choose randomly.
-// It returns true if t1 is aborted, false if t2 is aborted.
+// It returns true if t1 is aborted, false otherwise.
 func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2, table string) bool {
 	traceln("conflict with", t2)
+	if !t1.hasUpdates {
+		t1.readConflict = act1 + " in this transaction conflicted with " +
+			act2 + " in another transaction (" + table + ")"
+		traceln(t1, "readConflict =", t1.readConflict)
+		return false // t1 not aborted
+	}
+	if !t2.hasUpdates {
+		t2.readConflict = act2 + " in this transaction conflicted with " +
+			act1 + " in another transaction (" + table + ")"
+		traceln(t2, "readConflict =", t2.readConflict)
+		return false // t1 not aborted
+	}
 	if t2.ended() || checkerAbortT1 || rand.Intn(2) == 1 {
 		ck.abort(t1.start, act1+" in this transaction conflicted with "+
 			act2+" in another transaction ("+table+")")
@@ -463,7 +496,7 @@ func (ck *Check) abort(tn int, reason string) bool {
 		reason = "abort"
 	}
 	t.failure.Store(reason)
-	ck.remove(t)
+	ck.removeByTable(t)
 	delete(ck.actvTran, tn)
 	if tn == ck.oldest {
 		ck.oldest = math.MaxInt // need to find the new oldest
@@ -492,8 +525,15 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 	}
 	// move transaction from active to committed
 	delete(ck.actvTran, tn)
-	ck.cmtdTran[tn] = t
-	tw := ck.tablesWritten(t)
+	tw := []string{} // not nil
+	if ut.ct.hasUpdates {
+		assert.That(ut.ct.readConflict == "")
+		ck.cmtdTran[tn] = t
+		tw = ck.tablesWritten(t)
+	} else {
+		traceln(t, "commit with no updates")
+		ck.removeByTable(t)
+	}
 	ck.cleanEnded()
 	return tw
 }
@@ -532,7 +572,7 @@ func (ck *Check) cleanEnded() {
 		// assert.That(t.ended())
 		if t.end < ck.oldest {
 			traceln("REMOVE", tn, "->", t.end)
-			ck.remove(t)
+			ck.removeByTable(t)
 			delete(ck.cmtdTran, tn)
 		}
 	}
@@ -544,9 +584,9 @@ func (ck *Check) cleanEnded() {
 	}
 }
 
-// remove is called by abort and cleanEnded to remove from bytable.
+// removeByTable is called by abort and cleanEnded to removeByTable from bytable.
 // Note: the caller must still delete from actvTran or cmtdTran.
-func (ck *Check) remove(t *CkTran) {
+func (ck *Check) removeByTable(t *CkTran) {
 	for _, table := range t.tables {
 		ts := ck.bytable[table]
 		delete(ts, t.start)
