@@ -27,7 +27,7 @@ func TestClientServer(*testing.T) {
 	jserver, errmsg := checkHello(p2)
 	assert.False(jserver)
 	assert.This(errmsg).Is("")
-	c := NewMuxClient(p2)
+	c := NewDbmsClient(p2)
 	ses := c.NewSession()
 	ses.Get(nil, "tables", runtime.Next, nil)
 

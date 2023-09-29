@@ -22,21 +22,21 @@ import (
 // This is the mux client that matches DbmsServer.
 // See jsunClient for the version that matches jSuneido.
 
-type muxClient struct {
+type dbmsClient struct {
 	cc *mux.ClientConn
 }
 
-func NewMuxClient(conn net.Conn) *muxClient {
+func NewDbmsClient(conn net.Conn) *dbmsClient {
 	conn.Write(hello())
 	cc := mux.NewClientConn(conn)
-	return &muxClient{cc: cc}
+	return &dbmsClient{cc: cc}
 }
 
 type muxSession struct {
 	*mux.ClientSession
 }
 
-func (dc *muxClient) NewSession() *muxSession {
+func (dc *dbmsClient) NewSession() *muxSession {
 	cs := dc.cc.NewClientSession()
 	return &muxSession{ClientSession: cs}
 }

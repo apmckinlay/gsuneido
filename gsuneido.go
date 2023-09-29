@@ -170,7 +170,7 @@ func main() {
 				return dbms.NewJsunClient(conn)
 			}
 		} else {
-			client := dbms.NewMuxClient(conn)
+			client := dbms.NewDbmsClient(conn)
 			GetDbms = func() IDbms {
 				return client.NewSession()
 			}
