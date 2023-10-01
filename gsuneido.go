@@ -46,7 +46,7 @@ var help = `options:
 
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal *dbms.DbmsLocal
-var mainThread *Thread
+var mainThread Thread
 
 func main() {
 	options.BuiltDate = builtDate
@@ -57,10 +57,11 @@ func main() {
 	}
 	if mode == "gui" {
 		redirect()
-		// sync.Opts.LogBuf = os.Stderr
-	}
-	if err := system.Service("gSuneido", redirect, exit.RunFuncs); err != nil {
-		Fatal(err)
+	} else {
+		err := system.Service("gSuneido", redirect, exit.RunFuncs)
+		if err != nil {
+			Fatal(err)
+		}
 	}
 
 	switch options.Action {
@@ -147,12 +148,10 @@ func main() {
 		os.Exit(1)
 	}
 	Libload = libload // dependency injection
-	mainThread = &Thread{}
 	mainThread.Name = "main"
 	mainThread.UIThread = true
-	MainThread = mainThread
-	builtin.UIThread = mainThread
-	// exit.Add(func() { mainThread.Close() }) // causes race if run by thread
+	MainThread = &mainThread
+	builtin.UIThread = &mainThread
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR:", e, "(exiting)")
@@ -175,7 +174,9 @@ func main() {
 				return client.NewSession()
 			}
 		}
-		clientErrorLog()
+		if mode == "gui" {
+			clientErrorLog()
+		}
 	} else {
 		openDbms()
 		if options.WebServer {
@@ -193,7 +194,13 @@ func main() {
 }
 
 func redirect() {
-	if err := system.Redirect(options.Errlog); err != nil {
+	getId := func() string {
+		if MainThread == nil {
+			return ""
+		}
+		return MainThread.Session()
+	}
+	if err := system.Redirect(options.Errlog, getId); err != nil {
 		Fatal("Redirect failed:", err)
 	}
 }
@@ -201,11 +208,11 @@ func redirect() {
 func run(src string) {
 	defer func() {
 		if e := recover(); e != nil {
-			LogUncaught(mainThread, src, e)
+			LogUncaught(&mainThread, src, e)
 			Fatal("ERROR from", src, e)
 		}
 	}()
-	compile.EvalString(mainThread, src)
+	compile.EvalString(&mainThread, src)
 }
 
 func ck(err error) {
@@ -220,9 +227,6 @@ func ck(err error) {
 func clientErrorLog() {
 	dbms := mainThread.Dbms()
 
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
-	log.SetPrefix(mainThread.SessionId("") + " ")
-
 	f, err := os.Open(options.Errlog)
 	if err != nil {
 		return
@@ -231,7 +235,7 @@ func clientErrorLog() {
 		f.Close()
 		os.Truncate(options.Errlog, 0) // can't remove since open as stderr
 		if e := recover(); e != nil {
-			dbms.Log("log previous errors: " + fmt.Sprint(e))
+			dbms.Log("send previous errors: " + fmt.Sprint(e))
 		}
 	}()
 	// send errors to server
@@ -239,9 +243,9 @@ func clientErrorLog() {
 	in.Buffer(nil, 1024)
 	nlines := 0
 	for in.Scan() {
-		dbms.Log("PREVIOUS: " + in.Text())
+		dbms.Log("PREV: " + in.Text())
 		if nlines++; nlines > 1000 {
-			dbms.Log("PREVIOUS: too many errors")
+			dbms.Log("PREV: too many errors")
 			break
 		}
 	}
@@ -253,7 +257,6 @@ func startServer() {
 	openDbms()
 	startHttpStatus()
 	Libload = libload // dependency injection
-	mainThread = &Thread{}
 	mainThread.Name = "main"
 	run("Init()")
 	options.DbStatus.Store("")
@@ -403,11 +406,11 @@ func showOptions() {
 func eval(src string) {
 	defer func() {
 		if e := recover(); e != nil {
-			LogUncaught(mainThread, "repl", e)
+			LogUncaught(&mainThread, "repl", e)
 		}
 	}()
 	src = "function () {\n" + src + "\n}"
-	v, results := compile.Checked(mainThread, src)
+	v, results := compile.Checked(&mainThread, src)
 	for _, s := range results {
 		fmt.Println("(" + s + ")")
 	}
