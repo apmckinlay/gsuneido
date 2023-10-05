@@ -175,6 +175,9 @@ func (q *SuCursor) Lookup(_ *Thread, method string) Callable {
 }
 
 func (q *SuCursor) GetRec(th *Thread, tran *SuTran, dir Dir) Value {
+	if tran.Ended() {
+		panic("can't use ended transaction")
+	}
 	if dir == q.eof {
 		return False
 	}
