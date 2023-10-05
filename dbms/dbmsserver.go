@@ -508,15 +508,13 @@ func cmdGet(ss *serverSession) {
 
 func (ss *serverSession) getQorTC() (tbl string, hdr *Header, row Row) {
 	dir := ss.getDir()
-	tn := ss.GetInt()
-	qn := ss.GetInt()
-	if tn == 0 {
-		q := ss.queries[qn]
+	t := ss.getTran()
+	if t == nil {
+		q := ss.getQuery()
 		hdr = q.Header()
 		row, tbl = q.Get(ss.thread, dir)
 	} else {
-		t := ss.trans[tn]
-		c := ss.cursors[qn]
+		c := ss.getCursor()
 		hdr = c.Header()
 		row, tbl = c.Get(ss.thread, t, dir)
 	}
@@ -723,6 +721,15 @@ func (ss *serverSession) getQuery() IQuery {
 		ss.error("dbms server: query not found")
 	}
 	return q
+}
+
+func (ss *serverSession) getCursor() ICursor {
+	qn := ss.GetInt()
+	c := ss.cursors[qn]
+	if c == nil {
+		ss.error("dbms server: query not found")
+	}
+	return c
 }
 
 func cmdQuery(ss *serverSession) {
