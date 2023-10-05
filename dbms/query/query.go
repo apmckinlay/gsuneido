@@ -116,7 +116,7 @@ type Query interface {
 	Get(th *Thread, dir Dir) Row
 
 	// Lookup returns the row matching the given key value, or nil if not found.
-	// It is used by Compatible (Intersect, Minus, Union). See also: Select
+	// It is used by Where and Compatible (Intersect, Minus, Union)
 	// It is valid (although not necessarily the most efficient)
 	// to implement Lookup with Select and Get
 	// in which case it should leave the select cleared.
@@ -124,7 +124,7 @@ type Query interface {
 	Lookup(th *Thread, cols, vals []string) Row
 
 	// Select restricts the query to records matching the given packed values.
-	// It is used by Join and LeftJoin. See also: Lookup
+	// It is used by Where, Join, and LeftJoin.
 	// To clear the select, use Select(nil, nil)
 	// Select should rewind.
 	Select(cols, vals []string)

@@ -195,7 +195,7 @@ func (w *Where) Indexes() [][]string {
 }
 
 func (w *Where) Nrows() (int, int) {
-	w.optInit()
+	w.optInit() // calls calcNrows
 	return w.nNrows.Get(), w.pNrows.Get()
 }
 
