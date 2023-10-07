@@ -114,8 +114,8 @@ func (a assert) False(b bool) {
 // That gives an error if the value is not true.
 // That(x) is the same as True(x)
 func That(cond bool) {
-	if !cond { // redundant inline for speed
-		assert{}.That(cond)
+	if !cond {
+		panic("ASSERT FAILED")
 	}
 }
 
@@ -362,7 +362,6 @@ func (a assert) fail(args ...any) {
 		args = append(append(args, "msg: "), a.msg...)
 	}
 	s := fmt.Sprintln(args...)
-	s = strings.TrimRight(s, "\r\n")
 	log.Println("ASSERT FAILED:", s)
 	dbg.PrintStack()
 	if a.t != nil {
