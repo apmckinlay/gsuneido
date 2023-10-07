@@ -48,7 +48,10 @@ func TestOverIter(t *testing.T) {
 	test := func(expected int) {
 		t.Helper()
 		if expected == -1 {
-			assert.Msg("expected Eof").That(it.Eof())
+			if !it.Eof() {
+				key, off := it.Cur()
+				panic(fmt.Sprintln("expected Eof, got", key, off))
+			}
 		} else {
 			assert.That(!it.Eof())
 			key, off := it.Cur()
@@ -146,7 +149,7 @@ func TestOverIterDeletePrevBug(*testing.T) {
 	// assert.This(key).Is("9")
 	// assert.This(off).Is(9)
 
-	ov.Delete("9", uint64(9))
+	ov.Delete("9", 9)
 	it := NewOverIter("", 0)
 	it.Prev(t)
 	assert.That(!it.Eof())
@@ -301,7 +304,10 @@ func TestOverIterRandom(*testing.T) {
 		}
 	}()
 	const sizing = 15
-	const N = 1_000_000
+	var N = 5_000_000
+	if testing.Short() {
+		N = 200_000
+	}
 	for n := 1; n < N; n++ { // reserve 0 for deleted
 		trace(n, " ")
 		switch rand.Intn(7) {

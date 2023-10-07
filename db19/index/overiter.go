@@ -77,6 +77,10 @@ func (mi *OverIter) Range(rng Range) {
 	}
 }
 
+func (mi *OverIter) Print() {
+	mi.overlay.Print()
+}
+
 // Next -------------------------------------------------------------
 func (mi *OverIter) Next(t oiTran) {
 	// NOTE: keep this code in sync with Prev
