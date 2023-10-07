@@ -64,7 +64,7 @@ func TestBig(*testing.T) {
 	db.ck.Stop()
 	db.ck = nil
 
-	ck(db.Check())
+	db.MustCheck()
 
 	nr := 0
 	state := db.GetState()
@@ -73,7 +73,7 @@ func TestBig(*testing.T) {
 		nr += ti.Nrows
 	})
 	assert.This(nr).Is(nrows)
-	ck(db.Check())
+	db.MustCheck()
 
 	db.Close()
 	ck(CheckDatabase(dbfile))

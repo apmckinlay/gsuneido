@@ -64,6 +64,12 @@ func (db *Database) Check() (ec error) {
 	return nil // may be overridden by defer/recover
 }
 
+func (db *Database) MustCheck() {
+	if err := db.Check(); err != nil {
+        panic(err)
+    }
+}
+
 func checkTable(state *DbState, table string) {
 	info := state.Meta.GetRoInfo(table)
 	if info == nil {

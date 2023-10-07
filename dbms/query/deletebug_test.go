@@ -73,6 +73,7 @@ func TestDeleteBug(*testing.T) {
 		act("insert { k: 1 } into tmp")
 		act("delete tmp")
 	}
+	db.MustCheck()
 }
 
 func TestDeleteSynch(*testing.T) {
@@ -94,4 +95,5 @@ func TestDeleteSynch(*testing.T) {
 		act("insert { k: 1 } into tmp")
 		act("delete tmp")
 	}
+	db.MustCheck()
 }

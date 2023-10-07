@@ -139,8 +139,7 @@ func TestForeignKeys(*testing.T) {
 	act("insert { a: 'a1', b: 'b2', d: 'd2', e: 'e2' } into lin8")
 	act("update hdr8 where a is 'a1' and b is '' set a = 'a0'")
 	assert.This(queryAll(db, "lin8")).Is("a=a0 d=d1 e=e1 | a=a1 b=b2 d=d2 e=e2")
-
-	db.Check()
+	db.MustCheck()
 }
 
 func queryAll(db *db19.Database, query string) string {

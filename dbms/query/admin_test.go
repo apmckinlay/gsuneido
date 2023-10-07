@@ -52,6 +52,7 @@ func TestAdminCreate(t *testing.T) {
 		"invalid index column: bar")
 	xtest("xtmp (one,two,three_lower!) key(one)",
 		"_lower! nonexistent column: three")
+	db.MustCheck()
 }
 
 func TestAdminEnsure(t *testing.T) {
@@ -93,6 +94,7 @@ func TestAdminEnsure(t *testing.T) {
 	doAdmin(db, "create tmp4 "+tmpschema)
 	doAdmin(db, "ensure tmp4 (X)")
 	assert.T(t).This(db.Schema("tmp4")).Is("tmp4 (a,b,c,d,X) key(a) index(b,c)")
+	db.MustCheck()
 }
 
 func TestAdminEnsure2(*testing.T) {
@@ -100,6 +102,7 @@ func TestAdminEnsure2(*testing.T) {
 	defer db.Close()
 	act(db, "insert { a: 1 } into tmp")
 	doAdmin(db, "ensure tmp (x, y) index unique(x)")
+	db.MustCheck()
 }
 
 func TestAdminRename(t *testing.T) {
@@ -114,6 +117,7 @@ func TestAdminRename(t *testing.T) {
 		Panics("existing table: tmp")
 	doAdmin(db, "rename tmp to foo")
 	assert.T(t).This(db.Schema("foo")).Is("foo " + tmpschema)
+	db.MustCheck()
 }
 
 func TestAdminAlterCreate(t *testing.T) {
@@ -142,6 +146,7 @@ func TestAdminAlterCreate(t *testing.T) {
 		Panics("duplicate index")
 	assert.T(t).This(func() { doAdmin(db, "alter tmp create key(x)") }).
 		Panics("duplicate index")
+	db.MustCheck()
 }
 
 func TestAdminAlterRename(t *testing.T) {
@@ -164,6 +169,7 @@ func TestAdminAlterRename(t *testing.T) {
 		Panics("can't rename to existing column: z")
 	doAdmin(db, "alter tmp rename a to b, b to z, x to b")
 	assert.T(t).This(db.Schema("tmp")).Is("tmp (z,b,c,d) key(z) index(b,c)")
+	db.MustCheck()
 }
 
 func TestAdminAlterDrop(t *testing.T) {
@@ -199,6 +205,7 @@ func TestAdminAlterDrop(t *testing.T) {
 	act(db, "insert { a: 1 } into tmp5")
 	assert.T(t).This(func() { act(db, "insert { a: 1 } into tmp5") }).
 		Panics("duplicate")
+	db.MustCheck()
 }
 
 func TestAdminDrop(t *testing.T) {
@@ -210,6 +217,7 @@ func TestAdminDrop(t *testing.T) {
 		Panics("can't drop nonexistent table: nonex")
 	doAdmin(db, "drop tmp")
 	assert.T(t).This(db.Schema("tmp")).Is("")
+	db.MustCheck()
 }
 
 func TestView(t *testing.T) {
@@ -226,6 +234,7 @@ func TestView(t *testing.T) {
 	assert.T(t).This(db.GetView("foo")).Is("")
 	doAdmin(db, "view tmp = over ride")
 	assert.T(t).This(db.GetView("tmp")).Is("over ride")
+	db.MustCheck()
 }
 
 func TestFkey(t *testing.T) {
@@ -329,7 +338,7 @@ func TestFkey(t *testing.T) {
 	schemas["head"] = "head (a,b) key(a) key(b) from line(d)"
 	check()
 
-	db.Check()
+	db.MustCheck()
 	db.Close()
 	db, err = db19.OpenDbStor(store, stor.Read, false)
 	ck(err)
@@ -341,11 +350,11 @@ func TestCreateIndexOnExistingTable(*testing.T) {
 	act(db, "insert { a: 1, b: 2, c: 3, d: 4 } into tmp")
 	act(db, "insert { a: 3, b: 4 } into tmp")
 	time.Sleep(100 * time.Millisecond) // ensure persisted
-	assert.This(db.Check()).Is(nil)
+	db.MustCheck()
 	doAdmin(db, "ensure tmp index(d)")
-	assert.This(db.Check()).Is(nil)
+	db.MustCheck()
 	doAdmin(db, "ensure tmp key(c,d)")
-	assert.This(db.Check()).Is(nil)
+	db.MustCheck()
 }
 
 func TestNoColumns(*testing.T) {
@@ -353,11 +362,11 @@ func TestNoColumns(*testing.T) {
 	db, err := db19.CreateDb(store)
 	ck(err)
 	doAdmin(db, "create nocols () key()")
-	db.Check()
+	db.MustCheck()
 	db.Close()
 	db, err = db19.OpenDbStor(store, stor.Read, false)
 	ck(err)
-	db.Check()
+	db.MustCheck()
 }
 
 func act(db *db19.Database, act string) {

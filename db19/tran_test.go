@@ -50,7 +50,7 @@ func TestConcurrent(t *testing.T) {
 	db.ck.Stop()
 	db.ck = nil
 
-	ck(db.Check())
+	db.MustCheck()
 	var nout = nclients * ntrans
 	rt := db.NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
@@ -79,12 +79,12 @@ func TestTran(t *testing.T) {
 				db, err = OpenDatabase("tmp.db")
 				ck(err)
 				db.CheckerSync()
-				ck(db.Check())
+				db.MustCheck()
 			}
 		}
 	}
 	db.persist(&execPersistSingle{})
-	ck(db.Check())
+	db.MustCheck()
 	rt := db.NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
@@ -93,7 +93,7 @@ func TestTran(t *testing.T) {
 
 	db, err = OpenDatabaseRead("tmp.db")
 	ck(err)
-	ck(db.Check())
+	db.MustCheck()
 	rt = db.NewReadTran()
 	ti = rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
