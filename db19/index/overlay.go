@@ -63,12 +63,8 @@ func (ov *Overlay) BtreeLevels() int {
 
 // Mutable returns a modifiable copy of an Overlay
 func (ov *Overlay) Mutable() *Overlay {
-	assert.That(ov.mut == nil)
-	assert.That(len(ov.layers) > 0)
-	assert.That(ov.layers[0] != nil)
-	layers := slices.Clone(ov.layers)
-	assert.That(len(layers) >= 1)
-	return &Overlay{bt: ov.bt, layers: layers, mut: &ixbuf.T{}}
+	assert.That(ov.mut == nil && len(ov.layers) > 0 && ov.layers[0] != nil)
+	return &Overlay{bt: ov.bt, layers: ov.layers, mut: &ixbuf.T{}}
 }
 
 // Copy is for debugging
@@ -211,7 +207,7 @@ type SaveResult = *btree.T
 // Save updates the stored btree with the base ixbuf
 // and returns the new btree to later pass to WithSaved
 func (ov *Overlay) Save() SaveResult {
-	assert.That(ov.mut == nil)
+	assert.That(ov.mut == nil && len(ov.layers) == 1)
 	return ov.bt.MergeAndSave(ov.layers[0].Iter())
 }
 

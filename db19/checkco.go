@@ -267,11 +267,13 @@ func (ck *Check) dispatch(msg any, mergeChan chan todo) {
 		tablesWritten := ck.commit(msg.t)
 		if tablesWritten == nil {
 			msg.ret <- false
-			return
+		} else if len(tablesWritten) == 0 {
+			msg.ret <- true
+		} else {
+			msg.t.commit()
+			msg.ret <- true
+			mergeChan <- todo{tables: tablesWritten, meta: msg.t.meta}
 		}
-		msg.t.commit()
-		msg.ret <- true
-		mergeChan <- todo{tables: tablesWritten, meta: msg.t.meta}
 	case *ckAddExcl:
 		msg.ret <- ck.AddExclusive(msg.table)
 	case *ckEndExcl:

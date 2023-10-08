@@ -82,23 +82,18 @@ func (mi *OverIter) Print() {
 }
 
 // Next -------------------------------------------------------------
+
 func (mi *OverIter) Next(t oiTran) {
 	// NOTE: keep this code in sync with Prev
 	if mi.state == eof {
 		return // stick at eof
 	}
+	modified := mi.update(t)
 	if mi.state == rewound {
-		if t != mi.tran {
-			// some of the iterators may still be valid
-			// but simplest is just to get fresh iterators
-			ov := t.GetIndexI(mi.table, mi.iIndex)
-			mi.newIters(ov)
-			mi.tran = t
-		}
 		mi.all(iterT.Next)
 		mi.state = front
 	} else {
-		mi.modNext(t)
+		mi.modNext(modified)
 	}
 	lastState := mi.state
 	mi.curIter, mi.curKey, mi.curOff = mi.minIter()
@@ -113,6 +108,16 @@ func (mi *OverIter) Next(t oiTran) {
 			mi.tran.Read(mi.table, mi.iIndex, mi.rng.Org, mi.curKey)
 		}
 	}
+}
+
+func (mi *OverIter) update(t oiTran) bool {
+	ov := t.GetIndexI(mi.table, mi.iIndex)
+	if ov == mi.overlay {
+		return false
+	}
+	mi.tran = t
+	mi.newIters(ov)
+	return true
 }
 
 func (mi *OverIter) newIters(ov *Overlay) {
@@ -137,17 +142,8 @@ func (mi *OverIter) all(fn func(it iterT)) {
 	}
 }
 
-func (mi *OverIter) modNext(t oiTran) {
+func (mi *OverIter) modNext(modified bool) {
 	// NOTE: keep this code in sync with modPrev
-	modified := false
-	if t != mi.tran {
-		ov := t.GetIndexI(mi.table, mi.iIndex)
-		if !mi.keepIters(ov) {
-			mi.newIters(ov)
-			modified = true
-		}
-		mi.tran = t
-	}
 	for _, it := range mi.iters {
 		if modified || it.Modified() {
 			it.Seek(mi.curKey)
@@ -174,20 +170,6 @@ func atKey(it iterator.T, key string) bool {
 	}
 	itkey, _ := it.Cur()
 	return itkey == key
-}
-
-func (mi *OverIter) keepIters(ov *Overlay) bool {
-	if ov.bt != mi.overlay.bt ||
-		len(ov.layers) != len(mi.overlay.layers) ||
-		(ov.mut == nil) != (mi.overlay.mut == nil) {
-		return false
-	}
-	for i, layer := range mi.overlay.layers {
-		if layer != ov.layers[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // minIter finds the the minimum current key
@@ -237,23 +219,18 @@ func (mi *OverIter) ifKey(i int, key string, fn func(iterator.T)) {
 }
 
 // Prev -------------------------------------------------------------
+
 func (mi *OverIter) Prev(t oiTran) {
 	// NOTE: keep this code in sync with Next
 	if mi.state == eof {
 		return // stick at eof
 	}
+	modified := mi.update(t)
 	if mi.state == rewound {
-		if t != mi.tran {
-			// some of the iterators may still be valid
-			// but simplest just to get fresh iterators
-			ov := t.GetIndexI(mi.table, mi.iIndex)
-			mi.newIters(ov)
-			mi.tran = t
-		}
 		mi.all(iterT.Prev)
 		mi.state = back
 	} else {
-		mi.modPrev(t)
+		mi.modPrev(modified)
 	}
 	lastState := mi.state
 	mi.curIter, mi.curKey, mi.curOff = mi.maxIter()
@@ -270,17 +247,8 @@ func (mi *OverIter) Prev(t oiTran) {
 	}
 }
 
-func (mi *OverIter) modPrev(t oiTran) {
+func (mi *OverIter) modPrev(modified bool) {
 	// NOTE: keep this code in sync with modNext
-	modified := false
-	if t != mi.tran {
-		ov := t.GetIndexI(mi.table, mi.iIndex)
-		if !mi.keepIters(ov) {
-			mi.newIters(ov)
-			modified = true
-		}
-		mi.tran = t
-	}
 	for _, it := range mi.iters {
 		if modified || it.Modified() {
 			it.SeekAll(mi.curKey)

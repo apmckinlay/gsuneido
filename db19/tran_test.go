@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -198,4 +199,41 @@ func TestOutputDupConflict(*testing.T) {
 	t1.Output(nil, "mytable", mkrec("1"))
 	assert.This(func() { t2.Output(nil, "mytable", mkrec("1")) }).
 		Panics("conflicted")
+}
+
+func TestGetIndexI(*testing.T) {
+	db, err := CreateDb(stor.HeapStor(8192))
+	ck(err)
+	StartConcur(db, 50*time.Millisecond)
+	createTbl(db)
+
+	ut := db.NewUpdateTran()
+	it := index.NewOverIter("mytable", 0)
+	it.Next(ut)                           // incorrectly got r/o info
+	ut.Output(nil, "mytable", mkrec("1")) // updates r/w info
+	it.Rewind()
+	it.Next(ut) // output wasn't visible through r/o info
+	assert.That(!it.Eof())
+	key, _ := it.Cur()
+	assert.This(core.Unpack(key)).Is(core.SuStr("1"))
+	ut.Commit()
+
+	db.MustCheck()
+}
+
+func TestGetIndexI2(t *testing.T) {
+	db, err := CreateDb(stor.HeapStor(8192))
+	ck(err)
+	StartConcur(db, 50*time.Millisecond)
+	createTbl(db)
+
+	ut := db.NewUpdateTran()
+	ut.GetIndexI("mytable", 0) // creates mut's
+	ut.Commit()                // moves mut's to layers but does not merge
+
+	ut = db.NewUpdateTran()
+	ut.Output(nil, "mytable", mkrec("1")) // merges wrong layer
+	ut.Commit()
+
+	db.MustCheck()
 }
