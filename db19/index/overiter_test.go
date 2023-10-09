@@ -271,15 +271,15 @@ func TestOverIterRandom(*testing.T) {
 	ibs := []*ixbuf.T{{}, {}, {}}
 	ov := &Overlay{bt: bt, layers: ibs}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
-	mi := NewOverIter("", 0)
+	oi := NewOverIter("", 0)
 	check := func() {
 		if it.Eof() {
 			traceln("EOF")
-			assert.That(mi.Eof())
+			assert.That(oi.Eof())
 			it.Rewind()
-			mi.Rewind()
+			oi.Rewind()
 		} else {
-			key, off := mi.Cur()
+			key, off := oi.Cur()
 			traceln(key, off)
 			assert.This(key).Is(it.Cur())
 			assert.This(off).Is(keyoff[key])
@@ -288,10 +288,10 @@ func TestOverIterRandom(*testing.T) {
 	defer func() {
 		if e := recover(); e != nil {
 			traceln("===== merge")
-			mi.Rewind()
-			for mi.Next(tran); !mi.Eof(); mi.Next(tran) {
-				key, _ := mi.Cur()
-				traceln(mi.curIter, key)
+			oi.Rewind()
+			for oi.Next(tran); !oi.Eof(); oi.Next(tran) {
+				key, _ := oi.Cur()
+				traceln(oi.curIter, key)
 			}
 			traceln("===== dumb")
 			it.Rewind()
@@ -335,18 +335,18 @@ func TestOverIterRandom(*testing.T) {
 		case 1: // rewind
 			traceln("rewind")
 			it.Rewind()
-			mi.Rewind()
+			oi.Rewind()
 		case 2:
 			traceln("invalidate")
 			tran = &testTran{getIndex: func() *Overlay { return ov }}
 		case 3, 4: // next
 			it.Next()
-			mi.Next(tran)
+			oi.Next(tran)
 			trace("next ")
 			check()
 		case 5, 6: // prev
 			it.Prev()
-			mi.Prev(tran)
+			oi.Prev(tran)
 			trace("prev ")
 			check()
 		}
@@ -373,7 +373,7 @@ func TestOverIterRandom2(t *testing.T) {
 	}
 	ov := &Overlay{bt: bt, layers: ibs}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
-	mi := NewOverIter("", 0)
+	oi := NewOverIter("", 0)
 
 	keys := make([]string, nkeys)
 	randkey := str.UniqueRandom(3, 3)
@@ -407,45 +407,45 @@ func TestOverIterRandom2(t *testing.T) {
 
 	// forward
 	for it.Next(); !it.Eof(); it.Next() {
-		mi.Next(tran)
-		assert.False(mi.Eof())
-		key, off := mi.Cur()
+		oi.Next(tran)
+		assert.False(oi.Eof())
+		key, off := oi.Cur()
 		assert.This(key).Is(it.Cur())
 		assert.This(off).Is(keyoff[key])
 	}
-	mi.Next(tran)
-	assert.True(mi.Eof())
+	oi.Next(tran)
+	assert.True(oi.Eof())
 
 	// reverse
 	it.Rewind()
-	mi.Rewind()
+	oi.Rewind()
 	for it.Prev(); !it.Eof(); it.Prev() {
-		mi.Prev(tran)
-		assert.False(mi.Eof())
-		key, off := mi.Cur()
+		oi.Prev(tran)
+		assert.False(oi.Eof())
+		key, off := oi.Cur()
 		assert.This(key).Is(it.Cur())
 		assert.This(off).Is(keyoff[key])
 	}
-	mi.Prev(tran)
-	assert.True(mi.Eof())
+	oi.Prev(tran)
+	assert.True(oi.Eof())
 
 	// random walk
 	it.Rewind()
-	mi.Rewind()
+	oi.Rewind()
 	for i := 0; i < steps; i++ {
 		if rand.Intn(2) == 1 {
 			it.Next()
-			mi.Next(tran)
+			oi.Next(tran)
 		} else {
 			it.Prev()
-			mi.Prev(tran)
+			oi.Prev(tran)
 		}
 		if it.Eof() {
-			assert.That(mi.Eof())
+			assert.That(oi.Eof())
 			it.Rewind()
-			mi.Rewind()
+			oi.Rewind()
 		} else {
-			key, off := mi.Cur()
+			key, off := oi.Cur()
 			assert.This(key).Is(it.Cur())
 			assert.This(off).Is(keyoff[key])
 		}

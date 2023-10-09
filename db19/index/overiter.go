@@ -59,68 +59,68 @@ func NewOverIter(table string, iIndex int) *OverIter {
 	return &OverIter{table: table, iIndex: iIndex, rng: iterator.All}
 }
 
-func (mi *OverIter) Eof() bool {
-	return mi.state == eof
+func (oi *OverIter) Eof() bool {
+	return oi.state == eof
 }
 
-func (mi *OverIter) Cur() (string, uint64) {
-	assert.Msg("OverIter Cur eof").That(mi.state != eof && mi.state != rewound)
-	assert.Msg("OverIter Cur deleted").That(mi.curOff&ixbuf.Delete == 0)
-	return mi.curKey, mi.curOff
+func (oi *OverIter) Cur() (string, uint64) {
+	assert.Msg("OverIter Cur eof").That(oi.state != eof && oi.state != rewound)
+	assert.Msg("OverIter Cur deleted").That(oi.curOff&ixbuf.Delete == 0)
+	return oi.curKey, oi.curOff
 }
 
-func (mi *OverIter) Range(rng Range) {
-	mi.rng = rng
-	mi.state = rewound
-	for _, it := range mi.iters {
+func (oi *OverIter) Range(rng Range) {
+	oi.rng = rng
+	oi.state = rewound
+	for _, it := range oi.iters {
 		it.Range(rng)
 	}
 }
 
-func (mi *OverIter) Print() {
-	mi.overlay.Print()
+func (oi *OverIter) Print() {
+	oi.overlay.Print()
 }
 
 // Next -------------------------------------------------------------
 
-func (mi *OverIter) Next(t oiTran) {
+func (oi *OverIter) Next(t oiTran) {
 	// NOTE: keep this code in sync with Prev
-	if mi.state == eof {
+	if oi.state == eof {
 		return // stick at eof
 	}
-	modified := mi.update(t)
-	if mi.state == rewound {
-		mi.all(iterT.Next)
-		mi.state = front
+	modified := oi.update(t)
+	if oi.state == rewound {
+		oi.all(iterT.Next)
+		oi.state = front
 	} else {
-		mi.modNext(modified)
+		oi.modNext(modified)
 	}
-	lastState := mi.state
-	mi.curIter, mi.curKey, mi.curOff = mi.minIter()
-	if mi.curIter == -1 {
-		mi.state = eof
+	lastState := oi.state
+	oi.curIter, oi.curKey, oi.curOff = oi.minIter()
+	if oi.curIter == -1 {
+		oi.state = eof
 	}
-	mi.lastDir = next
+	oi.lastDir = next
 	if lastState == front {
-		if mi.state == eof {
-			mi.tran.Read(mi.table, mi.iIndex, mi.rng.Org, mi.rng.End)
+		if oi.state == eof {
+			oi.tran.Read(oi.table, oi.iIndex, oi.rng.Org, oi.rng.End)
 		} else {
-			mi.tran.Read(mi.table, mi.iIndex, mi.rng.Org, mi.curKey)
+			oi.tran.Read(oi.table, oi.iIndex, oi.rng.Org, oi.curKey)
 		}
 	}
 }
 
-func (mi *OverIter) update(t oiTran) bool {
-	ov := t.GetIndexI(mi.table, mi.iIndex)
-	if ov == mi.overlay {
+func (oi *OverIter) update(t oiTran) bool {
+	ov := t.GetIndexI(oi.table, oi.iIndex)
+	if ov == oi.overlay {
 		return false
 	}
-	mi.tran = t
-	mi.newIters(ov)
+	oi.tran = t
+	oi.newIters(ov)
 	return true
 }
 
-func (mi *OverIter) newIters(ov *Overlay) {
+func (oi *OverIter) newIters(ov *Overlay) {
 	its := make([]iterT, 0, 2+len(ov.layers))
 	its = append(its, ov.bt.Iterator())
 	for _, ib := range ov.layers {
@@ -130,35 +130,35 @@ func (mi *OverIter) newIters(ov *Overlay) {
 		its = append(its, ov.mut.Iterator())
 	}
 	for _, it := range its {
-		it.Range(mi.rng)
+		it.Range(oi.rng)
 	}
-	mi.iters = its
-	mi.overlay = ov
+	oi.iters = its
+	oi.overlay = ov
 }
 
-func (mi *OverIter) all(fn func(it iterT)) {
-	for _, it := range mi.iters {
+func (oi *OverIter) all(fn func(it iterT)) {
+	for _, it := range oi.iters {
 		fn(it)
 	}
 }
 
-func (mi *OverIter) modNext(modified bool) {
+func (oi *OverIter) modNext(modified bool) {
 	// NOTE: keep this code in sync with modPrev
-	for _, it := range mi.iters {
+	for _, it := range oi.iters {
 		if modified || it.Modified() {
-			it.Seek(mi.curKey)
+			it.Seek(oi.curKey)
 			if !it.Eof() {
 				key, _ := it.Cur()
-				if key <= mi.curKey {
+				if key <= oi.curKey {
 					it.Next()
 				}
 			}
-		} else if mi.lastDir != next {
+		} else if oi.lastDir != next {
 			if it.Eof() {
 				it.Rewind()
 			}
 			it.Next()
-		} else if atKey(it, mi.curKey) {
+		} else if atKey(it, oi.curKey) {
 			it.Next()
 		}
 	}
@@ -173,14 +173,14 @@ func atKey(it iterator.T, key string) bool {
 }
 
 // minIter finds the the minimum current key
-func (mi *OverIter) minIter() (int, string, uint64) {
+func (oi *OverIter) minIter() (int, string, uint64) {
 	// NOTE: keep this code in sync with maxIter
 outer:
 	for {
 		itMin := -1
 		var keyMin string
 		var offMin uint64
-		for i, it := range mi.iters {
+		for i, it := range oi.iters {
 			if it.Eof() {
 				continue
 			}
@@ -192,7 +192,7 @@ outer:
 			} else if key == keyMin {
 				off = ixbuf.Combine(offMin, off)
 				if off == 0 || off&ixbuf.Delete != 0 {
-					mi.ifKey(i, key, iterator.T.Next)
+					oi.ifKey(i, key, iterator.T.Next)
 					// delete so skip
 					// may not be the final minimum, but still need to skip
 					it.Next()
@@ -206,9 +206,9 @@ outer:
 	}
 }
 
-func (mi *OverIter) ifKey(i int, key string, fn func(iterator.T)) {
+func (oi *OverIter) ifKey(i int, key string, fn func(iterator.T)) {
 	for j := 0; j < i; j++ {
-		itj := mi.iters[j]
+		itj := oi.iters[j]
 		if !itj.Eof() {
 			k, _ := itj.Cur()
 			if k == key {
@@ -220,64 +220,64 @@ func (mi *OverIter) ifKey(i int, key string, fn func(iterator.T)) {
 
 // Prev -------------------------------------------------------------
 
-func (mi *OverIter) Prev(t oiTran) {
+func (oi *OverIter) Prev(t oiTran) {
 	// NOTE: keep this code in sync with Next
-	if mi.state == eof {
+	if oi.state == eof {
 		return // stick at eof
 	}
-	modified := mi.update(t)
-	if mi.state == rewound {
-		mi.all(iterT.Prev)
-		mi.state = back
+	modified := oi.update(t)
+	if oi.state == rewound {
+		oi.all(iterT.Prev)
+		oi.state = back
 	} else {
-		mi.modPrev(modified)
+		oi.modPrev(modified)
 	}
-	lastState := mi.state
-	mi.curIter, mi.curKey, mi.curOff = mi.maxIter()
-	if mi.curIter == -1 {
-		mi.state = eof
+	lastState := oi.state
+	oi.curIter, oi.curKey, oi.curOff = oi.maxIter()
+	if oi.curIter == -1 {
+		oi.state = eof
 	}
-	mi.lastDir = prev
+	oi.lastDir = prev
 	if lastState == back {
-		if mi.state == eof {
-			mi.tran.Read(mi.table, mi.iIndex, mi.rng.Org, mi.rng.End)
+		if oi.state == eof {
+			oi.tran.Read(oi.table, oi.iIndex, oi.rng.Org, oi.rng.End)
 		} else {
-			mi.tran.Read(mi.table, mi.iIndex, mi.curKey, mi.rng.End)
+			oi.tran.Read(oi.table, oi.iIndex, oi.curKey, oi.rng.End)
 		}
 	}
 }
 
-func (mi *OverIter) modPrev(modified bool) {
+func (oi *OverIter) modPrev(modified bool) {
 	// NOTE: keep this code in sync with modNext
-	for _, it := range mi.iters {
+	for _, it := range oi.iters {
 		if modified || it.Modified() {
-			it.SeekAll(mi.curKey)
+			it.SeekAll(oi.curKey)
 			if !it.Eof() {
 				key, _ := it.Cur()
-				if key >= mi.curKey {
+				if key >= oi.curKey {
 					it.Prev()
 				}
 			}
-		} else if mi.lastDir != prev {
+		} else if oi.lastDir != prev {
 			if it.Eof() {
 				it.Rewind()
 			}
 			it.Prev()
-		} else if atKey(it, mi.curKey) {
+		} else if atKey(it, oi.curKey) {
 			it.Prev()
 		}
 	}
 }
 
 // maxIter finds the maximum current key
-func (mi *OverIter) maxIter() (int, string, uint64) {
+func (oi *OverIter) maxIter() (int, string, uint64) {
 	// NOTE: keep this code in sync with minIter
 outer:
 	for {
 		itMax := -1
 		var keyMax string
 		var offMax uint64
-		for i, it := range mi.iters {
+		for i, it := range oi.iters {
 			if it.Eof() {
 				continue
 			}
@@ -289,7 +289,7 @@ outer:
 			} else if key == keyMax {
 				off = ixbuf.Combine(offMax, off)
 				if off == 0 || off&ixbuf.Delete != 0 {
-					mi.ifKey(i, key, iterator.T.Prev)
+					oi.ifKey(i, key, iterator.T.Prev)
 					// delete so skip
 					// may not be the final minimum, but still need to skip
 					it.Prev()
@@ -303,10 +303,10 @@ outer:
 	}
 }
 
-func (mi *OverIter) Rewind() {
-	mi.all(iterT.Rewind)
-	mi.state = rewound
-	mi.curIter = -1
-	mi.curKey = ""
-	mi.curOff = 0
+func (oi *OverIter) Rewind() {
+	oi.all(iterT.Rewind)
+	oi.state = rewound
+	oi.curIter = -1
+	oi.curKey = ""
+	oi.curOff = 0
 }
