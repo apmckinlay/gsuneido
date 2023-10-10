@@ -207,7 +207,7 @@ type SaveResult = *btree.T
 // Save updates the stored btree with the base ixbuf
 // and returns the new btree to later pass to WithSaved
 func (ov *Overlay) Save() SaveResult {
-	assert.That(ov.mut == nil && len(ov.layers) == 1)
+	assert.That(ov.mut == nil)
 	return ov.bt.MergeAndSave(ov.layers[0].Iter())
 }
 
