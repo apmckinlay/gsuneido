@@ -15,6 +15,8 @@ import (
 
 // NOTE: these tests depend on the race detector to find problems
 
+var X int
+
 func TestConcurrentMutex(t *testing.T) {
 	if !race.Enabled {
 		t.Skip("RACE NOT ENABLED")
@@ -25,7 +27,7 @@ func TestConcurrentMutex(t *testing.T) {
 	go func() {
 		time.Sleep(40 * time.Millisecond)
 		mu.Lock()
-		//lint:ignore SA2001 testing
+		X++
 		mu.Unlock()
 		assert.That(concurrent == true)
 	}()

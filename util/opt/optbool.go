@@ -11,7 +11,7 @@ type Bool struct {
 
 const (
 	OptBoolFalse byte = 1
-	OptBoolTrue       = 2
+	OptBoolTrue  byte = 2
 )
 
 func (b *Bool) Set(v bool) {

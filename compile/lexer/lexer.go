@@ -600,14 +600,6 @@ func (lxr *Lexer) matchOneOf(valid string) bool {
 	return false
 }
 
-func (lxr *Lexer) matchIf(f func(c byte) bool) bool {
-	if f(lxr.peek()) {
-		lxr.si++
-		return true
-	}
-	return false
-}
-
 // matchWhile returns whether it matched anything
 func (lxr *Lexer) matchWhile(f func(c byte) bool) bool {
 	start := lxr.si

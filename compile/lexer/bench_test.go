@@ -89,40 +89,6 @@ outer:
 	fmt.Println("failed")
 }
 
-var khash = []struct {
-	kw  string
-	tok tok.Token
-}{
-	29: {"is", tok.Is},
-	54: {"return", tok.Return},
-	67: {"super", tok.Super},
-	53: {"in", tok.In},
-	42: {"forever", tok.Forever},
-	71: {"catch", tok.Catch},
-	61: {"if", tok.If},
-	55: {"or", tok.Or},
-	27: {"while", tok.While},
-	28: {"do", tok.Do},
-	10: {"not", tok.Not},
-	4:  {"true", tok.True},
-	34: {"break", tok.Break},
-	23: {"case", tok.Case},
-	74: {"false", tok.False},
-	52: {"this", tok.This},
-	12: {"default", tok.Default},
-	11: {"continue", tok.Continue},
-	24: {"throw", tok.Throw},
-	49: {"isnt", tok.Isnt},
-	32: {"try", tok.Try},
-	46: {"function", tok.Function},
-	75: {"switch", tok.Switch},
-	2:  {"for", tok.For},
-	17: {"and", tok.And},
-	33: {"else", tok.Else},
-	58: {"new", tok.New},
-	3:  {"class", tok.Class},
-}
-
 var hashk = [128]string{
 	24: "throw",
 	17: "and",

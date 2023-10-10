@@ -308,11 +308,6 @@ func (p *Project) transformRename(r *Rename) Query {
 	return r.Transform()
 }
 
-func chained(from, to []string, i int) bool {
-	j := slices.Index(from[i:], to[i])
-	return j >= 0
-}
-
 // transformExtend tries to move projects before extends.
 func (p *Project) transformExtend(e *Extend) Query {
 	if e.hasRules() {

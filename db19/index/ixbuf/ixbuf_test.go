@@ -259,14 +259,12 @@ func TestGoal(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	const nkeys = 1000
-	rand.Seed(12345)
-	r := str.UniqueRandom(4, 8)
+	r := str.UniqueRandom(4, 8, 12345)
 	ib := &ixbuf{}
 	for i := 0; i < nkeys; i++ {
 		ib.Insert(r(), 1)
 	}
-	rand.Seed(12345)
-	r = str.UniqueRandom(4, 8)
+	r = str.UniqueRandom(4, 8, 12345)
 	for i := 0; i < nkeys; i++ {
 		ib.Delete(r(), 1)
 		ib.check()
@@ -276,14 +274,12 @@ func TestDelete(t *testing.T) {
 
 func TestLookup(*testing.T) {
 	const nkeys = 1000
-	rand.Seed(12345)
-	r := str.UniqueRandom(4, 8)
+	r := str.UniqueRandom(4, 8, 12345)
 	ib := &ixbuf{}
 	for i := 1; i < nkeys; i++ {
 		ib.Insert(r(), uint64(i))
 	}
-	rand.Seed(12345)
-	r = str.UniqueRandom(4, 8)
+	r = str.UniqueRandom(4, 8, 12345)
 	for i := 1; i < nkeys; i++ {
 		k := r()
 		assert.This(ib.Lookup(k)).Is(i)

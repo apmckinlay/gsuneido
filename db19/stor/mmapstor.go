@@ -24,7 +24,7 @@ const (
 
 type mmapStor struct {
 	file     *os.File
-	ptrs     []uintptr // for windows
+	ptrs     []uintptr //nolint:unused // for windows
 	mode     Mode
 	flushing atomic.Bool
 }

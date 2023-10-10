@@ -408,8 +408,7 @@ func BenchmarkNoOptMod(b *testing.B) {
 	orig := [][]string{{"a"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}}
 	for i := 0; i < b.N; i++ {
 		result = make([][]string, len(orig))
-		//lint:ignore S1011 testing
-		for _, o := range orig {
+		for _, o := range orig { //nolint:gosimple
 			result = append(result, o)
 		}
 	}

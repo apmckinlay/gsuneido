@@ -109,14 +109,12 @@ func TestDups(t *testing.T) {
 	for _, n := range []int{50, 5000} {
 		var x Set
 		seed := time.Now().UnixNano()
-		rand.Seed(seed)
-		randKey := str.UniqueRandom(3, 10)
+		randKey := str.UniqueRandom(3, 10, seed)
 		for i := 0; i < n; i++ {
 			assert.That(x.Insert(randKey()))
 		}
 		assert.This(x.count()).Is(n)
-		rand.Seed(seed)
-		randKey = str.UniqueRandom(3, 10)
+		randKey = str.UniqueRandom(3, 10, seed)
 		for i := 0; i < n; i++ {
 			assert.That(x.Insert(randKey()))
 		}

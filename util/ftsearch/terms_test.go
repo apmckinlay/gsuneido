@@ -59,7 +59,6 @@ func assertApprox(x float64, y string) {
 func TestResults(t *testing.T) {
 	var r results
 	const keep = 4
-	const n = 50
 	scores := make([]float64, 5)
 	for i := range scores {
 		scores[i] = rand.Float64()

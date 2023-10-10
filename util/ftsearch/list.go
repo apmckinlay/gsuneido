@@ -67,9 +67,7 @@ func (cl list) pack(buf []byte) []byte {
 	for _, d := range cl.docIds {
 		buf = packUint16(buf, d)
 	}
-	for _, c := range cl.counts {
-		buf = append(buf, c)
-	}
+	buf = append(buf, cl.counts...)
 	return buf
 }
 

@@ -162,16 +162,6 @@ func typeSpan(call *ast.Call, fields []string) (string, []span) {
 	return "", nil
 }
 
-func isColumn(e ast.Expr, cols []string) string {
-	// see also: ast.IsColumn
-	if id, ok := e.(*ast.Ident); ok && (slices.Contains(cols, id.Name) ||
-		(strings.HasSuffix(id.Name, "_lower!") &&
-			slices.Contains(cols, strings.TrimSuffix(id.Name, "_lower!")))) {
-		return id.Name
-	}
-	return ""
-}
-
 func orSpan(nary *ast.Nary, fields []string) (string, []span) {
 	var col string
 	var spans []span
