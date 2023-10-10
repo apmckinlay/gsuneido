@@ -62,17 +62,17 @@ func exprToSpans(expr ast.Expr, fields []string) (string, []span) {
 	}
 	switch expr := expr.(type) {
 	case *ast.Binary:
-		return binarySpan(expr, fields)
+		return binarySpan(expr)
 	case *ast.InRange:
-		return rangeSpan(expr, fields)
+		return rangeSpan(expr)
 	case *ast.In:
-		return inSpan(expr, fields)
+		return inSpan(expr)
 	case *ast.Nary:
 		if expr.Tok == tok.Or {
 			return orSpan(expr, fields)
 		}
 	case *ast.Call:
-		return typeSpan(expr, fields)
+		return typeSpan(expr)
 		// TODO unary e.g. not Number?(x)
 	}
 	return "", nil
@@ -84,7 +84,7 @@ var sideMax = side{val: ixkey.Max}
 var conflictSpans = []span{{org: sideMax, end: sideMin}}
 var isntqqSpans = []span{{org: side{val: "", inc: true}, end: sideMax}}
 
-func binarySpan(bin *ast.Binary, fields []string) (string, []span) {
+func binarySpan(bin *ast.Binary) (string, []span) {
 	// TOTO make LT, GT, GTE match the language
 	// currently they are consistent with previous behavior
 	// Changing them will require application code changes.
@@ -121,13 +121,13 @@ func valSpan(val string) span {
 	return span{org: side{val: val}, end: side{val: val, inc: true}}
 }
 
-func rangeSpan(r *ast.InRange, fields []string) (string, []span) {
+func rangeSpan(r *ast.InRange) (string, []span) {
 	return r.E.(*ast.Ident).Name, []span{{
 		org: side{val: r.Org.(*ast.Constant).Packed, inc: r.OrgTok == tok.Gt},
 		end: side{val: r.End.(*ast.Constant).Packed, inc: r.EndTok == tok.Lte}}}
 }
 
-func inSpan(in *ast.In, fields []string) (string, []span) {
+func inSpan(in *ast.In) (string, []span) {
 	spans := make([]span, 0, len(in.Packed))
 	for _, v := range in.Packed {
 		spans = append(spans,
@@ -148,7 +148,7 @@ var strSpan = []span{
 	{org: side{val: string(rune(PackString))},
 		end: side{val: string(rune(PackString + 1))}}}
 
-func typeSpan(call *ast.Call, fields []string) (string, []span) {
+func typeSpan(call *ast.Call) (string, []span) {
 	fn := call.Fn.(*ast.Ident)
 	id := call.Args[0].E.(*ast.Ident).Name
 	switch fn.Name {
