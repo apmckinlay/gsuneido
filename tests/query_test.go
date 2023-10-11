@@ -8,10 +8,12 @@ import (
 	"hash/crc64"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/dbms/query"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -203,4 +205,25 @@ func equalCols(x, y Row, hdr *Header, cols []string, th *Thread, st *SuTran) boo
 		}
 	}
 	return true
+}
+
+func TestHeader_Union(t *testing.T) {
+	Global.TestDef("Rule_two",
+		compile.Constant("function() { return 22 }"))
+	hdr1 := SimpleHeader([]string{"one", "two", "three"})
+	hdr2 := NewHeader([][]string{{"one", "three"}},
+		[]string{"one", "two", "three"}) // two is a rule
+	hdr := JoinHeaders(hdr1, hdr2)
+	rec1 := new(RecordBuilder).Add(IntVal(1)).Add(IntVal(2)).Add(IntVal(3)).Build()
+	rec2 := new(RecordBuilder).Add(IntVal(11)).Add(IntVal(33)).Build()
+	row1 := Row{DbRec{Record: rec1}, DbRec{}}
+	row2 := Row{DbRec{}, DbRec{Record: rec2}}
+
+	th := &Thread{}
+	assert.This(row1.GetVal(hdr, "one", th, nil)).Is(IntVal(1))
+	assert.This(row1.GetVal(hdr, "two", th, nil)).Is(IntVal(2))
+	assert.This(row1.GetVal(hdr, "three", th, nil)).Is(IntVal(3))
+	assert.This(row2.GetVal(hdr, "one", th, nil)).Is(IntVal(11))
+	assert.This(row2.GetVal(hdr, "two", th, nil)).Is(IntVal(22))
+	assert.This(row2.GetVal(hdr, "three", th, nil)).Is(IntVal(33))
 }
