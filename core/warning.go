@@ -12,7 +12,7 @@ import (
 
 func Warning(args ...any) {
 	s := fmt.Sprintln(args...)
-	if options.WarningsThrow.Matches(s) {
+	if options.WarningsThrow.Load().Matches(s) {
 		panic(s)
 	} else {
 		log.Print("WARNING ", s)

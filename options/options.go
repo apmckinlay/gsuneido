@@ -32,6 +32,7 @@ var (
 
 // StrictCompare determines whether comparisons between different types
 // are allowed (old behavior) or throw an exception (new behavior)
+// NOT thread safe, but don't want overhead on every compare
 var (
 	StrictCompare   = false
 	StrictCompareDb = false
@@ -53,8 +54,12 @@ const (
 var (
 	AllWarningsThrow = regex.Compile("")
 	NoWarningsThrow  = regex.Compile(`\A\Z`)
-	WarningsThrow    = NoWarningsThrow
+	WarningsThrow    atomics.Value[regex.Pattern]
 )
+
+func init() {
+	WarningsThrow.Store(NoWarningsThrow)
+}
 
 // Coverage controls whether Cover op codes are added by codegen.
 var Coverage atomic.Bool

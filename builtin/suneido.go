@@ -114,11 +114,11 @@ var _ = staticMethod(suneido_WarningsThrow, "(bool = true)")
 func suneido_WarningsThrow(x Value) Value {
 	switch x {
 	case True:
-		options.WarningsThrow = options.AllWarningsThrow
+		options.WarningsThrow.Store(options.AllWarningsThrow)
 	case False:
-		options.WarningsThrow = options.NoWarningsThrow
+		options.WarningsThrow.Store(options.NoWarningsThrow)
 	default:
-		options.WarningsThrow = regex.Compile(ToStr(x))
+		options.WarningsThrow.Store(regex.Compile(ToStr(x)))
 	}
 	return nil
 }
