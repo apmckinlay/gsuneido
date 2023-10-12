@@ -3,10 +3,10 @@
 
 package atomics
 
-import goatomic "sync/atomic"
+import "sync/atomic"
 
 type String struct {
-	v goatomic.Value
+	v atomic.Value
 }
 
 func (as *String) Store(s string) {
@@ -19,4 +19,21 @@ func (as *String) Load() string {
 		return ""
 	}
 	return x.(string)
+}
+
+type Value[T any] struct {
+	v atomic.Value
+}
+
+func (a *Value[T]) Store(x T) {
+	a.v.Store(x)
+}
+
+func (a *Value[T]) Load() T {
+	x := a.v.Load()
+	if x == nil {
+		var z T
+		return z
+	}
+	return x.(T)
 }
