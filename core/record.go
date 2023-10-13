@@ -94,6 +94,9 @@ func (r Record) GetVal(i int) Value {
 // GetStr is a more direct method to get a packed string
 func (r Record) GetStr(i int) string {
 	s := r.GetRaw(i)
+	if s == "" {
+		return ""
+	}
 	if s[0] != PackString {
 		panic("Record GetStr not string")
 	}
