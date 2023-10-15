@@ -45,7 +45,7 @@ type SuObject struct {
 	// The count is incremented when a lazy/deferred copy is made (in slice).
 	// If count > 0 then the list and named must be copied before updating.
 	// This is handled by startMutate.
-	// It must be atomic because it may be shared by muliple objects
+	// It must be atomic because it may be shared by multiple objects
 	// and therefore is not guarded by the object lock.
 	copyCount *atomic.Int32
 	list      []Value
@@ -742,7 +742,7 @@ func (ob *SuObject) Slice(n int) Container {
 	return ob.slice(n)
 }
 
-// Find returns the key of the first occurence of the value else False.
+// Find returns the key of the first occurrence of the value else False.
 // Lock to avoid object-modified-during-iteration.
 func (ob *SuObject) Find(val Value) Value {
 	if ob.RLock() {

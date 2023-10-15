@@ -47,7 +47,7 @@ func HasPrefix[E comparable](list, list2 []E) bool {
 }
 
 // Without returns a new slice
-// omitting any occurences of the given value,
+// omitting any occurrences of the given value,
 // maintaining the existing order.
 func Without[S ~[]E, E comparable](list S, str E) S {
 	dest := make(S, 0, len(list))

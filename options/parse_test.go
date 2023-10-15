@@ -85,7 +85,7 @@ func TestParse(t *testing.T) {
 	test("-c -port1234", "error invalid command line argument")
 	test("-s -port=1.2.3.4", "error invalid port number")
 	test("-check -port=1234",
-		"error port should only be specifed with -server or -client")
+		"error port should only be specified with -server or -client")
 
 	test("-dump", "dump")
 	test("-dump stdlib", "dump stdlib")

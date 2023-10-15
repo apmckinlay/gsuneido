@@ -317,7 +317,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	return mu.freeze()
 }
 
-// replaceUnique replaces occurences of from with to.
+// replaceUnique replaces occurrences of from with to.
 // Assumes list values are unique (no duplicates).
 // from values must exist.
 // Replacements must preserve uniqueness.
@@ -337,7 +337,7 @@ func replaceUnique(list, from, to []string) []string {
 	return list
 }
 
-// replace replaces occurences of from with to.
+// replace replaces occurrences of from with to.
 // Replacements are done in from/to order.
 func replace(list, from, to []string) []string {
 	cloned := false

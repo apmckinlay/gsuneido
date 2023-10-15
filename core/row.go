@@ -233,7 +233,7 @@ func (hdr *Header) HasField(col string) bool {
 	return false
 }
 
-// find returns the location of the first occurence of fld in hdr.Fields
+// find returns the location of the first occurrence of fld in hdr.Fields
 // and caches the result. (Multiple occurrences come from union.)
 func (hdr *Header) find(fld string) (rowAt, bool) {
 	if at, ok := hdr.cache[fld]; ok {

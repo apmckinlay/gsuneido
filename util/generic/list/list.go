@@ -37,7 +37,7 @@ func (il *List[T]) Has(v T) bool {
 	return false
 }
 
-// Remove deletes the first occurence of a value
+// Remove deletes the first occurrence of a value
 // and returns true if the value was found, otherwise false.
 func (il *List[T]) Remove(v T) bool {
 	for i, x := range il.List {

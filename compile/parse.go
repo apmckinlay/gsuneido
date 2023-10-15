@@ -80,7 +80,7 @@ type ParserBase struct {
 	// EndPos is the end of the previous token
 	EndPos int32
 
-	// newline is true if the current token was preceeded by a newline
+	// newline is true if the current token was preceded by a newline
 	newline bool
 
 	// EqToIs treats Eq as Is for queries

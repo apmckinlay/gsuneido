@@ -80,7 +80,7 @@ loop:
 		}
 	}
 	if Port != "" && Action != "client" && Action != "server" {
-		error("port should only be specifed with -server or -client, not " +
+		error("port should only be specified with -server or -client, not " +
 			Action)
 	}
 	if Port == "" && (Action == "client" || Action == "server") {

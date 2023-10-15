@@ -232,7 +232,7 @@ func (q *queryBase) lookupCost() Cost {
 	return q.lookCost.Get()
 }
 
-// Updateable is overriden by Query1
+// Updateable is overridden by Query1
 func (*queryBase) Updateable() string {
 	return ""
 }
