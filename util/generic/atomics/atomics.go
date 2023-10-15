@@ -37,3 +37,7 @@ func (a *Value[T]) Load() T {
 	}
 	return x.(T)
 }
+
+func (a *Value[T]) Swap(new T) T {
+	return a.v.Swap(new).(T)
+}

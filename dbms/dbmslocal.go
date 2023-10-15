@@ -19,6 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -27,8 +28,8 @@ import (
 // i.e. standalone
 type DbmsLocal struct {
 	db        *db19.Database
-	libraries atomic.Value // []string
-	badlibs   atomic.Int32 // limits logging
+	libraries atomics.Value[[]string]
+	badlibs   atomic.Bool // limits logging
 }
 
 func NewDbmsLocal(db *db19.Database) *DbmsLocal {
@@ -210,7 +211,7 @@ func (dbms *DbmsLocal) LibGet(name string) []string {
 
 	results := make([]string, 0, 2)
 	rt := dbms.db.NewReadTran()
-	libs := dbms.libraries.Load().([]string)
+	libs := dbms.libraries.Load()
 	for _, lib := range libs {
 		s := dbms.libGet(rt, lib, name)
 		if s != "" {
@@ -250,14 +251,14 @@ func (dbms *DbmsLocal) libGet(rt *db19.ReadTran, lib, name string) string {
 }
 
 func (dbms *DbmsLocal) liblog(lib string) {
-	if dbms.badlibs.Add(1) <= 1 {
+	if !dbms.badlibs.Swap(true) {
 		log.Println("ERROR: invalid library: " + lib)
 	}
 }
 
 func (dbms *DbmsLocal) Libraries() []string {
 	// library list is not mutated so it's thread safe to return
-	return dbms.libraries.Load().([]string)
+	return dbms.libraries.Load()
 }
 
 func (*DbmsLocal) Log(s string) {
@@ -350,13 +351,13 @@ func (dbms *DbmsLocal) checkLibrary(lib string) {
 }
 
 func (dbms *DbmsLocal) updateLibraries(fn func(libs []string) []string) bool {
-	oldlibs := dbms.libraries.Load().([]string)
+	oldlibs := dbms.libraries.Load()
 	newlibs := fn(oldlibs)
 	if newlibs == nil {
 		return false
 	}
-	dbms.badlibs.Store(0) // reset logging
-	return slices.Equal(oldlibs, dbms.libraries.Swap(newlibs).([]string))
+	dbms.badlibs.Store(false) // reset logging
+	return slices.Equal(oldlibs, dbms.libraries.Swap(newlibs))
 }
 
 func (dbms *DbmsLocal) Unwrap() IDbms {
