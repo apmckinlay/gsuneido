@@ -1,6 +1,7 @@
 linters:
   enable:
     - revive
+    - misspell
   disable:
     - errcheck
 
