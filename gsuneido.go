@@ -445,13 +445,13 @@ func libload(th *Thread, name string) (result Value, e any) {
 	ovLib, ovText := LibraryOverrides.Get(name)
 	i := 0
 	for _, lib := range libs {
-		if mode == "gui" && strings.HasSuffix(lib, "webgui") {
-			continue
-		}
 		var src string
 		if slc.StartsWith(defs[i:], lib) {
 			src = defs[i+1]
 			i += 2
+		}
+		if mode == "gui" && strings.HasSuffix(lib, "webgui") {
+			continue
 		}
 		if lib == ovLib {
 			src = ovText
