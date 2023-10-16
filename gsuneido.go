@@ -23,6 +23,7 @@ import (
 	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/exit"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/system"
 	// sync "github.com/sasha-s/go-deadlock"
@@ -435,22 +436,35 @@ func libload(th *Thread, name string) (result Value, e any) {
 			result = nil
 		}
 	}()
-	defs := th.Dbms().LibGet(name)
-	if len(defs) == 0 {
-		// fmt.Println("LOAD", name, "MISSING")
-		return nil, nil
+	libs := LibsList.Load()
+	if libs == nil {
+		libs = th.Dbms().Libraries()
+		LibsList.Store(libs)
 	}
-	for i := 0; i < len(defs); i += 2 {
-		lib := defs[i]
-		src := defs[i+1]
-		if s, ok := LibraryOverrides.Get(lib, name); ok {
-			src = s
-		}
+	defs := th.Dbms().LibGet(name)
+	ovLib, ovText := LibraryOverrides.Get(name)
+	i := 0
+	for _, lib := range libs {
 		if mode == "gui" && strings.HasSuffix(lib, "webgui") {
 			continue
 		}
-		result = llcompile(lib, name, src, result)
-		// fmt.Println("LOAD", name, "SUCCEEDED")
+		var src string
+		if slc.StartsWith(defs[i:], lib) {
+			src = defs[i+1]
+			i += 2
+		}
+		if lib == ovLib {
+			src = ovText
+		}
+		if src != "" {
+			result = llcompile(lib, name, src, result)
+		}
+	}
+	if ovLib == "" && ovText != "" {
+		result = llcompile("", name, ovText, result)
+	}
+	if i < len(defs) {
+		Fatal("libraries changed without unload", "(" + defs[i] + ")")
 	}
 	return result, nil
 }

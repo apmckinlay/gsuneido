@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 )
 
 // globals generally follows the usual style that public methods lock
@@ -68,6 +69,7 @@ var _ = func() int { // needs to be var, init() is run later
 	return 0
 }()
 
+// Builtin is used to set up built-in values
 func (typeGlobal) Builtin(name string, value Value) Value {
 	// only called by single threaded init so no locking required
 	if gn, ok := g.name2num[name]; ok && g.builtins[gn] != nil {
@@ -88,30 +90,38 @@ func GetBuiltinNames() []Value {
 	return names
 }
 
-// Add adds a new name and value to globals.
-// This is used for set up of built-in globals
-// The return value is so it can be used like:
-// var _ = globals.Add(...)
+// Add is used by tests
 func (typeGlobal) Add(name string, val Value) Gnum {
 	g.lock.Lock()
 	defer g.lock.Unlock()
-	if _, ok := g.name2num[name]; ok {
-		panic("duplicate global: " + name)
-	}
 	return Global.add(name, val)
 }
 
-// add requires caller to write Lock
+// add creates a new name and value to globals.
+// This is used for set up of built-in globals
+// Callers should write Lock (unless during init)
 func (typeGlobal) add(name string, val Value) Gnum {
+	if _, ok := g.name2num[name]; ok {
+		panic("duplicate global: " + name)
+	}
 	gnum := len(g.names)
 	if gnum > math.MaxUint16 {
 		Fatal("too many globals")
 	}
-	g.name2num[name] = gnum
+	g.name2num[name] = gnum // this is the only place we add to name2num
 	g.names = append(g.names, name)
 	g.values = append(g.values, val)
 	return gnum
 }
+
+var _ = AddInfo("core.nGlobal", func() int { return len(g.names) })
+var _ = AddInfo("core.lastGlobals", func() string {
+	s := ""
+	for i := len(g.names) - 1; i >= len(g.names)-10; i-- {
+		s += g.names[i] + "\n"
+	}
+	return s
+})
 
 // TestDef sets a global for tests.
 // WARNING: no locking
@@ -309,7 +319,11 @@ func (typeGlobal) UnloadAll() {
 	g.errors = make(map[Gnum]any)
 	g.noDef = make(map[string]struct{})
 	LibraryOverrides.ClearOriginals()
+	LibsList.Store(nil)
 }
+
+// LibsList is used by libload
+var LibsList atomics.Value[[]string]
 
 func (typeGlobal) SetName(name string, val Value) {
 	g.lock.Lock()

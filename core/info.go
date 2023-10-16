@@ -33,6 +33,8 @@ func InfoStr(name string) string {
 		return strconv.Itoa(int(x.Load()))
 	case func() int:
 		return strconv.Itoa(int(x()))
+	case func() string:
+		return x()
 	}
 	panic("unknown info type")
 }

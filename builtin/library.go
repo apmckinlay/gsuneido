@@ -46,9 +46,8 @@ func Unload(arg Value) Value {
 
 var _ = builtin(LibraryOverride, "(lib, name, text='')")
 
-func LibraryOverride(lib, nameval, text Value) Value {
-	name := ToStr(nameval)
-	LibraryOverrides.Put(ToStr(lib), name, ToStr(text))
+func LibraryOverride(lib, name, text Value) Value {
+	LibraryOverrides.Put(ToStr(lib), ToStr(name), ToStr(text))
 	return nil
 }
 

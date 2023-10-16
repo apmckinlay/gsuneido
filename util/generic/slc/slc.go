@@ -182,3 +182,7 @@ func Max[E cmp.Ordered](list []E) E {
 	}
 	return max
 }
+
+func StartsWith[E comparable](list []E, e E) bool {
+	return len(list) > 0 && list[0] == e
+}
