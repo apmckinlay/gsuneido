@@ -16,6 +16,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
 type T = ixbuf
@@ -262,11 +263,11 @@ func OffString(off uint64) string {
 	s := fmt.Sprintf("%d", off&0xffffffffff)
 	off &^= 0xffffffffff
 	if off&Update != 0 {
-		s += " update"
+		s = "update " + s
 		off &^= Update
 	}
 	if off&Delete != 0 {
-		s += " delete"
+		s = "delete " + s
 		off &^= Delete
 	}
 	if off != 0 {
@@ -281,6 +282,11 @@ const (
 	update_update = 0b_01_01 //lint:ignore ST1003 for clarity
 	update_delete = 0b_01_10 //lint:ignore ST1003 for clarity
 	delete_add    = 0b_10_00 //lint:ignore ST1003 for clarity
+	// INVALID:
+	// add_add			= 0b00_00
+	// delete_delete	= 0b10_10
+	// delete_update	= 0b10_01
+	// update_add		= 0b01_00
 )
 
 func Combine(off1, off2 uint64) uint64 {
@@ -297,7 +303,9 @@ func Combine(off1, off2 uint64) uint64 {
 	case delete_add:
 		return off2 | Update
 	default:
-		log.Printf("ixbuf invalid Combine %b\n", ops)
+		log.Printf("ixbuf invalid Combine %b %s %s\n",
+			ops, OffString(off1), OffString(off2))
+		dbg.PrintStack()
 		panic("ixbuf invalid Combine")
 	}
 }

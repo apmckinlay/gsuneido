@@ -471,3 +471,7 @@ func chunkstr(c chunk) string {
 		return fmt.Sprint(c[0].key, " -> ", c.lastKey(), " (", len(c), ")")
 	}
 }
+
+// func TestCombine(t *testing.T) {
+// 	Combine(123 | Delete, 456 | Update)
+// }
