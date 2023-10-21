@@ -125,7 +125,8 @@ func Allow[S ~[]E, E any](s S, n int) S {
 	return Grow(s, n-len(s))
 }
 
-// With returns a copy of the list with the values appended
+// With returns a copy of the list with the values appended.
+// Unlike append, it allocates just the right size, no extra.
 func With[S ~[]E, E any](s1 S, s2 ...E) S {
 	result := make(S, len(s1)+len(s2))
 	copy(result, s1)

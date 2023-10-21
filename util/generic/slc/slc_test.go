@@ -4,6 +4,7 @@
 package slc
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -59,4 +60,53 @@ func TestMap(t *testing.T) {
 	assert(MapFn(nill, fn)).Is(nil)
 	assert(MapFn([]int{1}, fn)).Is([]int{10})
 	assert(MapFn([]int{1, 2, 3}, fn)).Is([]int{10, 20, 30})
+}
+
+var X []int
+
+func BenchmarkClipAppend(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for n := 0; n < 10; n++ {
+			X = nil
+			for j := 0; j < n; j++ {
+				X = append(slices.Clip(X), j)
+			}
+		}
+	}
+}
+
+func BenchmarkCloneAppend(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for n := 0; n < 10; n++ {
+			X = nil
+			for j := 0; j < n; j++ {
+				X = append(slices.Clone(X), j)
+			}
+		}
+	}
+}
+
+func BenchmarkNewAppend(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for n := 0; n < 10; n++ {
+			X = nil
+			for j := 0; j < n; j++ {
+				y := make([]int, len(X) + 1)
+				copy(y, X)
+				y[len(X)] = j
+				X = y
+			}
+		}
+	}
+}
+
+func BenchmarkWith(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		for n := 0; n < 10; n++ {
+			X = nil
+			for j := 0; j < n; j++ {
+				X = With(X, j)
+			}
+		}
+	}
 }
