@@ -13,6 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 // Overlay is the composite in-memory representation of an index
@@ -173,10 +174,7 @@ func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 // The checker ensures that the updates are independent.
 func (ov *Overlay) UpdateWith(latest *Overlay) {
 	ov.bt = latest.bt
-	// reuse the new slice and overwrite ov.layers with the latest
-	ov.layers = append(ov.layers[:0], latest.layers...) // copy
-	// add mut updates
-	ov.layers = append(ov.layers, ov.mut)
+	ov.layers = slc.With(latest.layers, ov.mut)
 	ov.mut = nil
 	assert.That(len(ov.layers) >= 2)
 }
