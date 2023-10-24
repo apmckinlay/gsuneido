@@ -72,8 +72,7 @@ func main() {
 		if mode == "gui" {
 			Fatal("Please use gsport for server mode")
 		}
-		startServer()
-		os.Exit(0)
+		runServer()
 	case "dump":
 		t := time.Now()
 		if options.Arg == "" {
@@ -252,8 +251,8 @@ func clientErrorLog() {
 	}
 }
 
-// startServer does not return
-func startServer() {
+// runServer does not return
+func runServer() {
 	log.Println("starting server")
 	openDbms()
 	startHttpStatus()
@@ -263,6 +262,7 @@ func startServer() {
 	options.DbStatus.Store("")
 	exit.Add(stopServer)
 	dbms.Server(dbmsLocal)
+	log.Fatalln("server should not return")
 }
 
 func stopServer() {
@@ -303,7 +303,13 @@ func openDbms() {
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	DbmsAuth = options.Action == "server" || mode != "gui" || !db.HaveUsers()
 	GetDbms = getDbms
-	exit.Add(db.CloseKeepMapped) // keep mapped to avoid errors during shutdown
+	exit.Add(func() {
+		if options.Action == "server" {
+			log.Println("database closing")
+			defer log.Println("database closed")
+		}
+		db.CloseKeepMapped()
+	}) // keep mapped to avoid errors during shutdown
 	// go checkState()
 }
 
@@ -464,7 +470,7 @@ func libload(th *Thread, name string) (result Value, e any) {
 		result = llcompile("", name, ovText, result)
 	}
 	if i < len(defs) {
-		Fatal("libraries changed without unload", "(" + defs[i] + ")")
+		Fatal("libraries changed without unload", "("+defs[i]+")")
 	}
 	return result, nil
 }

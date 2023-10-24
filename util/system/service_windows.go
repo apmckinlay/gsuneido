@@ -117,6 +117,7 @@ func updateStatus(state, accept uint32) {
 	ss.ServiceType = windows.SERVICE_WIN32_OWN_PROCESS
 	ss.CurrentState = state
 	ss.ControlsAccepted = accept
+	ss.WaitHint = 10_000 // 10 seconds
 	err := windows.SetServiceStatus(serviceHandle, &ss)
 	if err != nil {
 		log.Println("updateStatus", err)
