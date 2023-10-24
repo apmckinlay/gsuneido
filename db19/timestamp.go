@@ -4,6 +4,7 @@
 package db19
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 
 var timestamp SuDate
 var tsLock sync.Mutex
+var timeError = false
 
 // StartTimestamp is called by gsuneido.go openDbms
 func StartTimestamps() {
@@ -25,8 +27,17 @@ func ticker() {
 		time.Sleep(1 * time.Second)
 		t := Now().WithoutMs()
 		tsLock.Lock()
-		if t.Compare(timestamp) > 0 {
-			timestamp = t
+		d := t.MinusMs(timestamp)
+		if d > 0 {
+			if d > 5000 {
+				log.Println("ERROR: time skip from", timestamp, "to", t,
+					"=", time.Duration(d) * time.Millisecond)
+			}
+			timestamp = t // normal case
+			timeError = false
+		} else if d < 0 && !timeError {
+			log.Println("ERROR: time went backwards from", timestamp, "to", t)
+			timeError = true
 		}
 		tsLock.Unlock()
 	}
