@@ -56,12 +56,16 @@ func main() {
 	if options.Action == "client" {
 		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
+	Exit = exit.Exit
 	if mode == "gui" {
 		redirect()
 	} else {
-		err := system.Service("gSuneido", redirect, exit.RunFuncs)
+		svc, err := system.Service("gSuneido", redirect, exit.RunFuncs)
 		if err != nil {
 			Fatal(err)
+		}
+		if svc {
+			Exit = system.StopService
 		}
 	}
 
@@ -155,9 +159,9 @@ func main() {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR:", e, "(exiting)")
-			exit.Exit(1)
+			Exit(1)
 		}
-		exit.Exit(0)
+		Exit(0)
 	}()
 	// dependency injection of GetDbms
 	if options.Action == "client" {

@@ -158,20 +158,26 @@ void fatal(char* msg) {
 
 const int CTRL_BREAK_ID = 1; // arbitrary value passed to RegisterHotKey
 
+#include <io.h>
+const int STDERR = 2;
+
 static int interrupt() {
 	MSG msg;
-
+	int n = 0;
 	int hotkey = 0;
 	if (HIWORD(GetQueueStatus(QS_HOTKEY))) {
-		while (PeekMessage(&msg, NULL, WM_HOTKEY, WM_HOTKEY, PM_REMOVE))
+		while (PeekMessage(&msg, NULL, WM_HOTKEY, WM_HOTKEY, PM_REMOVE)) {
 			if (msg.wParam == CTRL_BREAK_ID)
 				hotkey = 1;
+			if (++n > 100) {
+				const char* msg = "FATAL: interrupt too many loops\r\n";
+				write(STDERR, msg, strlen(msg));
+				exit(1);
+			}
+		}
 	}
 	return hotkey;
 }
-
-#include <io.h>
-const int STDERR = 2;
 
 uintptr interact() {
 	if (GetCurrentThreadId() != main_threadid) {

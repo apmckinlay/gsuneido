@@ -6,9 +6,10 @@ package core
 import (
 	"fmt"
 	"log"
-
-	"github.com/apmckinlay/gsuneido/util/exit"
 )
+
+// Exit is injected by gSuneido
+var Exit func(code int)
 
 func Fatal(args ...any) {
 	s := fmt.Sprintln(args...)
@@ -17,5 +18,5 @@ func Fatal(args ...any) {
 	// 	dbg.PrintStack()
 	// }
 	Fatal2(s)
-	exit.Exit(1)
+	Exit(1)
 }

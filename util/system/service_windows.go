@@ -43,10 +43,10 @@ var (
 // If running as a service it changes the working directory to the exe directory.
 // The start function is called if running as a service.
 // The stop function is called when the service is stopped.
-func Service(name string, start, stop func()) error {
+func Service(name string, start, stop func()) (bool, error) {
 	inService, err := svc.IsWindowsService()
 	if err != nil || !inService {
-		return err
+		return false, err
 	}
 	os.Chdir(filepath.Dir(os.Args[0]))
 	if start != nil {
@@ -55,7 +55,7 @@ func Service(name string, start, stop func()) error {
 	serviceName = name
 	stopFunc = stop
 	go runService(name)
-	return nil
+	return true, nil
 }
 
 func runService(name string) {
@@ -93,20 +93,24 @@ func serviceMain(uint32, **uint16) uintptr {
 		windows.SERVICE_ACCEPT_STOP|windows.SERVICE_ACCEPT_SHUTDOWN)
 
 	<-stopChan // wait for ctlHandler
+	StopService(0)
 
+	return windows.NO_ERROR
+}
+
+// StopService does not return
+func StopService(code int) {
+	updateStatus(windows.SERVICE_STOP_PENDING, 0)
 	if stopFunc != nil {
 		stopFunc()
 	}
-
 	updateStatus(windows.SERVICE_STOPPED, 0)
-	os.Exit(0)
-	return windows.NO_ERROR
+	os.Exit(code)
 }
 
 func ctlHandler(ctl, _, _, _ uintptr) uintptr {
 	switch ctl {
 	case windows.SERVICE_CONTROL_STOP, windows.SERVICE_CONTROL_SHUTDOWN:
-		updateStatus(windows.SERVICE_STOP_PENDING, 0)
 		stopChan <- true
 	}
 	return 0

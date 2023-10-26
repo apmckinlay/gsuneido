@@ -22,11 +22,6 @@ func Add(fn func()) {
 // Exit calls RunFuncs and then os.Exit
 // It also starts a failsafe timer which will exit in 10 seconds regardless.
 func Exit(code int) {
-	// failsafe in case exit funcs don't return
-	go func() {
-		time.Sleep(10 * time.Second)
-		log.Fatalln("exit timeout")
-	}()
 	RunFuncs()
 	os.Exit(code)
 }
@@ -35,6 +30,12 @@ func Exit(code int) {
 // Only the first caller will run them, any other callers will block.
 // The functions are run in the reverse order that they were Add'ed.
 func RunFuncs() {
+	// failsafe in case exit funcs don't return
+	go func() {
+		time.Sleep(10 * time.Second)
+		log.Fatalln("exit timeout")
+	}()
+	
 	hanger.Lock() // never unlocked
 
 	for i := len(exitfns) - 1; i >= 0; i-- {

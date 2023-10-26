@@ -5,6 +5,9 @@
 
 package system
 
-func Service(name string, start, stop func()) error {
-	return nil
+func Service(name string, start, stop func()) (bool, error) {
+	return false, nil
+}
+
+func StopService(code int) {
 }
