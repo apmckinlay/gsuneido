@@ -230,6 +230,7 @@ uintptr interact() {
             args[0] = msg_result;
             break;
 		case msg_result:
+			args[0] = msg_none;
 			return args[1];
 		}
 		signalAndWait();
@@ -240,7 +241,7 @@ static CRITICAL_SECTION lock;
 static CONDITION_VARIABLE cond = CONDITION_VARIABLE_INIT;
 
 void signalAndWait() {
-	WakeConditionVariable(&cond);
+	WakeConditionVariable(&cond); // allow other side to run
 	SleepConditionVariableCS(&cond, &lock, INFINITE);
 }
 
@@ -378,8 +379,8 @@ static DWORD WINAPI thread(LPVOID lpParameter) {
 	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
 	CreateThread(NULL, 8192, timer_thread, 0, 0, 0);
 	setupHelper();
-	signalAndWait();
-	interact(); // allow go side to run init, finishing with result
+	args[0] = msg_none;
+	interact(); // let start() continue and return
 	SetTimer(0, 0, timerIntervalMS, timer);
 	int exitcode = message_loop(0);
 	destroy_windows();
@@ -395,7 +396,7 @@ void start() {
 	InitializeCriticalSection(&lock);
 	EnterCriticalSection(&lock);
 	CreateThread(NULL, stack_size, thread, 0, 0, &threadid);
-	EnterCriticalSection(&lock); // wait for thread to be in signalAndWait
+	SleepConditionVariableCS(&cond, &lock, INFINITE);
 }
 
 // suneidoAPP is called by sunapp.cpp

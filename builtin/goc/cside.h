@@ -25,6 +25,7 @@ int alert(char* msg, int type);
 void fatal(char* msg);
 
 enum {
+	msg_none,
 	msg_result,
 	msg_syscall,
 	msg_callback2,
