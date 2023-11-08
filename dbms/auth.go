@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/sha1"
 	"io"
+	"sync"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/hacks"
@@ -17,6 +18,7 @@ const nonceSize = 8
 const tokenSize = 16
 
 var tokens = make(map[string]bool)
+var tokensLock sync.Mutex
 
 func Nonce() string {
 	buf := make([]byte, nonceSize)
@@ -26,17 +28,25 @@ func Nonce() string {
 	return hacks.BStoS(buf)
 }
 
+// Token generates a random token.
+// It is used by dbms.Token
 func Token() string {
 	buf := make([]byte, tokenSize)
 	if _, err := rand.Read(buf); err != nil {
 		panic("Token: " + err.Error())
 	}
 	s := hacks.BStoS(buf)
+	tokensLock.Lock()
+	defer tokensLock.Unlock()
 	tokens[s] = true
 	return s
 }
 
+// AuthToken verifies that the given token is valid.
+// It is used by dbms.Auth
 func AuthToken(s string) bool {
+	tokensLock.Lock()
+	defer tokensLock.Unlock()
 	if tokens[s] {
 		delete(tokens, s)
 		return true
