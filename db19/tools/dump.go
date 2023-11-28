@@ -101,7 +101,9 @@ func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 		return 0, err
 	}
 	f.Close()
-	ck(system.RenameBak(tmpfile, to))
+	if err := system.RenameBak(tmpfile, to); err != nil {
+		return 0, err
+	}
 	return nrecs, nil
 }
 
