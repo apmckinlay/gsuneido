@@ -66,31 +66,35 @@ func (db *Database) Check() (ec error) {
 
 func (db *Database) MustCheck() {
 	if err := db.Check(); err != nil {
-        panic(err)
-    }
+		panic(err)
+	}
 }
 
 func checkTable(state *DbState, table string) {
 	info := state.Meta.GetRoInfo(table)
+	sc := state.Meta.GetRoSchema(table)
 	if info == nil {
 		panic("info missing")
 	}
-	count, size, sum := checkFirstIndex(state, info.Indexes[0])
+	count, size, sum := checkFirstIndex(state, table, sc.Indexes[0].Columns,
+		info.Indexes[0])
 	if count != info.Nrows {
-		panic(fmt.Sprintln("info.Nrows is ", info.Nrows, " index has ", count))
+		panic(fmt.Sprintln(table, sc.Indexes[0].Columns,
+			"count", count, "should equal info", info.Nrows))
 	}
 	if size != info.Size {
-		panic(fmt.Sprintln("info.Size is ", info.Size, " data has ", size))
+		panic(fmt.Sprintln(table, "size", size, "should equal info", info.Size))
 	}
-	for i, ix := range info.Indexes[1:] {
-		CheckOtherIndex(ix, count, sum, i)
+	for i := 1; i < len(info.Indexes); i++ {
+		CheckOtherIndex(table, sc.Indexes[i].Columns, info.Indexes[i], count, sum)
 	}
 }
 
-func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64, uint64) {
+func checkFirstIndex(state *DbState, table string, ixcols []string,
+	ix *index.Overlay) (int, uint64, uint64) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(fmt.Sprintln(0, e))
+			panic(fmt.Sprintln(table, ixcols, e))
 		}
 	}()
 	sum := uint64(0)
@@ -106,10 +110,10 @@ func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64, uint64) {
 	return count, size, sum
 }
 
-func CheckOtherIndex(ix *index.Overlay, nrows int, sumPrev uint64, iIndex int) {
+func CheckOtherIndex(table string, ixcols []string, ix *index.Overlay, nrows int, sumPrev uint64) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(fmt.Sprintln(iIndex, e))
+			panic(fmt.Sprintln(table, ixcols, e))
 		}
 	}()
 	ix.CheckMerged()
@@ -118,7 +122,7 @@ func CheckOtherIndex(ix *index.Overlay, nrows int, sumPrev uint64, iIndex int) {
 		sum += off // addition so order doesn't matter
 	})
 	if count != nrows {
-		panic(fmt.Sprintln("info.Nrows is ", nrows, " index has ", count))
+		panic(fmt.Sprintln("count", count, "should equal info", nrows))
 	}
 	if sum != sumPrev {
 		panic("checksum mismatch")
@@ -134,9 +138,6 @@ type ErrCorrupt struct {
 
 func (ec *ErrCorrupt) Error() string {
 	s := "database corrupt"
-	if ec.table != "" {
-		s += ": " + ec.table
-	}
 	if ec.err != nil {
 		s += ": " + fmt.Sprint(ec.err)
 	}

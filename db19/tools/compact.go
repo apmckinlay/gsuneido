@@ -113,6 +113,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	}()
 	hasdel := ts.HasDeleted()
 	info := state.Meta.GetRoInfo(ts.Table)
+	sc := state.Meta.GetRoSchema(ts.Table)
 	sum := uint64(0)
 	size := uint64(0)
 	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
@@ -142,7 +143,8 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	list.Finish()
 	assert.This(count).Is(info.Nrows)
 	for i := 1; i < len(info.Indexes); i++ {
-		CheckOtherIndex(info.Indexes[i], count, sum, i)
+		CheckOtherIndex(ts.Table, sc.Indexes[i].Columns, info.Indexes[i],
+			count, sum)
 	}
 	if hasdel {
 		ts.Columns = slc.Without(ts.Columns, "-")

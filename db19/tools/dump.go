@@ -31,7 +31,9 @@ const dumpVersionBase = "Suneido dump"
 // In the process it concurrently does a full check of the database.
 func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
-	ck(err)
+	if err != nil {
+		return 0, 0, err
+	}
 	defer db.Close()
 	return Dump(db, to)
 }
@@ -81,7 +83,9 @@ func dump(db *Database, w *bufio.Writer) (nTables, nViews int) {
 // It returns the number of records dumped or panics on error.
 func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
-	ck(err)
+	if err != nil {
+		return 0, err
+	}
 	defer db.Close()
 	return DumpDbTable(db, table, to)
 }
@@ -155,7 +159,10 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 		w.WriteString(string(rec))
 	})
 	writeInt(w, 0) // end of table records
-	assert.This(count).Is(info.Nrows)
+	if count != info.Nrows {
+		panic(fmt.Sprintln("dump", table, sc.Indexes[0].Columns,
+			"count", count, "should equal info", info.Nrows))
+	}
 	ics.checkOtherIndexes(info, count, sum) // concurrent
 	return count
 }
@@ -220,15 +227,18 @@ type indexCheckers struct {
 }
 
 type indexCheck struct {
-	index *index.Overlay
-	count int
-	sum   uint64
+	table  string
+	ixcols []string
+	index  *index.Overlay
+	count  int
+	sum    uint64
 }
 
 func (ics *indexCheckers) checkOtherIndexes(info *meta.Info, count int, sum uint64) {
 	for i := 1; i < len(info.Indexes); i++ {
 		select {
-		case ics.work <- indexCheck{index: info.Indexes[i], count: count, sum: sum}:
+		case ics.work <- indexCheck{table: info.Table,
+			index: info.Indexes[i], count: count, sum: sum}:
 		case <-ics.stop:
 			panic("") // overridden by finish
 		}
@@ -244,7 +254,7 @@ func (ics *indexCheckers) worker() {
 		ics.wg.Done()
 	}()
 	for ic := range ics.work {
-		CheckOtherIndex(ic.index, ic.count, ic.sum, -1)
+		CheckOtherIndex(ic.table, ic.ixcols, ic.index, ic.count, ic.sum)
 	}
 }
 
