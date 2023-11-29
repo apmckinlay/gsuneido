@@ -13,7 +13,7 @@ import (
 )
 
 func TestCheckStartStop(t *testing.T) {
-	ck := NewCheck(nil)
+	ck := NewCheck(&Database{})
 	const ntrans = 20
 	var trans [ntrans]*UpdateTran
 	const ntimes = 5000
@@ -106,7 +106,7 @@ func script(t *testing.T, s string) {
 			t.FailNow()
 		}
 	}
-	ck := NewCheck(nil)
+	ck := NewCheck(&Database{})
 	ts := []*UpdateTran{{ct: ck.StartTran()}, {ct: ck.StartTran()}}
 	for len(s) > 0 {
 		t := ts[s[0]-'1']

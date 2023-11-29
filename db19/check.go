@@ -513,6 +513,11 @@ func (ck *Check) Commit(ut *UpdateTran) bool {
 }
 
 func (ck *Check) commit(ut *UpdateTran) []string {
+	tw := []string{} // not nil
+	if ck.db.Corrupted() {
+		ck.Abort(ut.ct, "database is locked")
+		return tw // not nil/failure
+	}
 	tn := ut.ct.start
 	traceln("commit", tn)
 	t, ok := ck.actvTran[tn]
@@ -525,7 +530,6 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 	}
 	// move transaction from active to committed
 	delete(ck.actvTran, tn)
-	tw := []string{} // not nil
 	if ut.ct.hasUpdates {
 		assert.That(ut.ct.readConflict == "")
 		ck.cmtdTran[tn] = t

@@ -125,6 +125,9 @@ func LoadTable(table, dbfile string) (int, error) {
 // It will replace an already existing table.
 // It returns the number of records loaded.
 func LoadDbTable(table string, db *Database) (n int, err error) {
+	if db.Corrupted() {
+		return 0, fmt.Errorf("load not allowed when database is locked")
+	}
 	db.AddExclusive(table)
 	defer func() {
 		db.EndExclusive(table)

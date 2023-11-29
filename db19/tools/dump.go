@@ -37,6 +37,9 @@ func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 }
 
 func Dump(db *Database, to string) (nTables, nViews int, err error) {
+	if db.Corrupted() {
+		return 0, 0, fmt.Errorf("dump not allowed when database is locked")
+	}
 	defer func() {
 		if e := recover(); e != nil {
 			db.Corrupt()
@@ -84,6 +87,9 @@ func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 }
 
 func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
+	if db.Corrupted() {
+		return 0, fmt.Errorf("dump not allowed when database is locked")
+	}
 	defer func() {
 		if e := recover(); e != nil {
 			db.Corrupt()

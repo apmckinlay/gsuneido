@@ -347,7 +347,7 @@ func (t *UpdateTran) write() {
 
 func (t *UpdateTran) Output(th *core.Thread, table string, rec core.Record) {
 	if t.db.corrupted.Load() {
-		return
+		return // prevent appending to database
 	}
 	t.write()
 	ts := t.getSchema(table)
@@ -571,7 +571,7 @@ func (t *UpdateTran) Update(th *core.Thread, table string, oldoff uint64, newrec
 func (t *UpdateTran) update(th *core.Thread, table string, oldoff uint64, newrec core.Record,
 	block bool) uint64 {
 	if t.db.corrupted.Load() {
-		return oldoff
+		return oldoff // prevent appending to database
 	}
 	ts := t.getSchema(table)
 	newrec = newrec.Truncate(len(ts.Columns))

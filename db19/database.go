@@ -116,7 +116,9 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 		core.Fatal("invalid database version")
 	}
 	size := stor.ReadSmallOffset(buf[len(magic):])
-	if size != store.Size() {
+	if size == 0 {
+		return nil, errors.New("corruption previously detected")
+	} else if size != store.Size() {
 		return nil, errors.New("bad size, not shut down properly?")
 	}
 
@@ -194,6 +196,9 @@ func (db *Database) Create(schema *schema.Schema) {
 }
 
 func (db *Database) lockSchema() {
+	if db.Corrupted() {
+		panic("database is locked")
+	}
 	if !db.schemaLock.CompareAndSwap(false, true) {
 		panic("concurrent schema modifications are not allowed")
 	}
@@ -487,6 +492,9 @@ func (db *Database) AlterDrop(schema *schema.Schema) bool {
 }
 
 func (db *Database) AddView(name, def string) bool {
+	if db.Corrupted() {
+		panic("database is locked")
+	}
 	result := false
 	db.UpdateState(func(state *DbState) {
 		if m := state.Meta.AddView(name, def); m != nil {
@@ -557,6 +565,10 @@ func (db *Database) Corrupt() {
 			f.Write(buf)
 		}
 	}
+}
+
+func (db *Database) Corrupted() bool {
+	return db.corrupted.Load()
 }
 
 // Close closes the database store, writing the current size to the start.

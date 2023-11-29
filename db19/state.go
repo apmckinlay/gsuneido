@@ -64,6 +64,7 @@ func (db *Database) Persist() *DbState {
 //
 // UpdateState is guarded by a mutex
 func (db *Database) UpdateState(fn func(*DbState)) {
+	assert.Msg("UpdateState called when database locked").That(!db.Corrupted())
 	db.state.updateState(fn)
 }
 
@@ -116,7 +117,7 @@ func (db *Database) CommitMerge(ut *UpdateTran) {
 // NOTE: persist should only be called by the checker.
 func (db *Database) persist(exec execPersist) *DbState {
 	if db.corrupted.Load() {
-		return db.GetState()
+		return nil
 	}
 	// fmt.Println("persist")
 	var newState *DbState
