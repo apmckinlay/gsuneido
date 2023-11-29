@@ -374,36 +374,39 @@ func digit(c byte, radix int) int {
 
 func (lxr *Lexer) number(start int) Item {
 	// see also string_NumberQ
+	errit := func () Item {
+		return it(tok.Error, start, lxr.src[start:lxr.si])
+	}
 	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
 		lxr.match('_') // seems inconsistent but Go allows it
 		if !lxr.matchWithUnderscores(IsHexDigit) {
-			return Item{Token: tok.Error}
+			return errit()
 		}
 	} else {
 		lxr.si = start
 		before, after := false, false
 		if lxr.peek() != '.' {
 			if !lxr.matchWithUnderscores(IsDigit) {
-				return Item{Token: tok.Error}
+				return errit()
 			}
 			before = true
 		}
 		lxr.match('.')
 		if IsDigit(lxr.peek()) {
 			if !lxr.matchWithUnderscores(IsDigit) {
-				return Item{Token: tok.Error}
+				return errit()
 			}
 			after = true
 		}
 		if !before && !after {
-			return Item{Token: tok.Error}
+			return errit()
 		}
 		exp := lxr.si
 		if lxr.matchOneOf("eE") {
 			lxr.matchOneOf("+-")
 			if IsDigit(lxr.peek()) {
 				if !lxr.matchWithUnderscores(IsDigit) {
-					return Item{Token: tok.Error}
+					return errit()
 				}
 			} else {
 				lxr.si = exp
