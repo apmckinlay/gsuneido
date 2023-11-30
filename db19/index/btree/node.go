@@ -381,6 +381,8 @@ func (it *nodeIter) eof() bool {
 	return it.pos+it.fLen() >= len(it.node)
 }
 
+// copyFrom copies an iterator
+// NOTE: it should be initialized like: it := nodeIter{node: nd}
 func (it *nodeIter) copyFrom(src *nodeIter) {
 	it.pos = src.pos
 	it.npre = src.npre

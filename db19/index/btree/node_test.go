@@ -514,8 +514,7 @@ func Example_merge_split() {
 	b.Add("1300xxxx", 1300, 1)
 	b.Add("1305xxxx", 1305, 1)
 	m := merge{node: b.node, modified: true}
-	left, right, splitKey := m.split()
-	// assert.T(t).This(splitKey).Is("13")
+	left, right, splitKey := m.split(b.node.Size())
 	fmt.Println("splitKey", splitKey)
 	fmt.Println("LEFT ---")
 	left.print()
@@ -523,12 +522,31 @@ func Example_merge_split() {
 	right.print()
 
 	// Output:
-	// splitKey 13
+	// splitKey 129
 	// LEFT ---
 	// 1234 ''
 	// 1235 1235
-	// 1299 129
 	// RIGHT ---
-	// 1300 ''
+	// 1299 ''
+	// 1300 13
 	// 1305 1305
+}
+
+func Test_split_bug(*testing.T) {
+	var b nodeBuilder
+	b.Add("a", 1, 1)
+	b.Add("b", 2, 1)
+	b.Add("c", 3, 1)
+	b.Add("d", 4, 1)
+	b.Add("e", 5, 1)
+	b.Add("f", 6, 1)
+	b.Add("g", 7, 1)
+	b.Add(strings.Repeat("z", 64), 8, 99)
+	m := merge{node: b.node, modified: true}
+	left, right, splitKey := m.split(b.node.Size())
+	fmt.Println("splitKey", splitKey)
+	fmt.Println("LEFT ---")
+	left.print()
+	fmt.Println("RIGHT ---")
+	right.print()
 }

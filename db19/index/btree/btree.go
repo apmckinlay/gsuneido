@@ -49,7 +49,7 @@ const maxlevels = 8
 // var rather than const because it is overridden by tests.
 var MaxNodeSize = 1024
 
-var MinSplitSize = 6 // for builder that will be split 4 and 2
+const MinSplitSize = 6 // for builder that will be split 4 and 2
 
 // EntrySize is the estimated average entry size
 const EntrySize = 10

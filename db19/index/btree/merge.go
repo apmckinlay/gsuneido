@@ -135,9 +135,11 @@ func (st *state) ascend() {
 
 	insertOff := uint64(0)
 	insertKey := ""
-	if shouldSplit(m.node, m.node.Size()) {
+	count := m.node.Size()
+	if shouldSplit(m.node, count) {
 		_ = t && trace("split", m)
-		left, right, splitKey := m.split()
+		left, right, splitKey := m.split(count)
+		_ = t && trace("splitKey", splitKey)
 		m.node = left
 		insertKey = splitKey
 		insertOff = right.putNode(bt.stor)
@@ -229,14 +231,16 @@ func (m *merge) getMutableNode() node {
 	return m.node
 }
 
-func (m *merge) split() (left, right node, splitKey string) {
+func (m *merge) split(count int) (left, right node, splitKey string) {
 	nd := m.getMutableNode()
-	size := len(nd)
-	splitSize := size / 2
+	splitCount := count / 2
 	it := nd.iter()
-	for it.next() && it.pos < splitSize {
+	for i := 0; it.next() && i < splitCount; i++ {
 	}
+	assert.That(it.pos > 0)
+	assert.That(it.pos < len(nd))
 	splitKey = string(it.known)
+	assert.That(splitKey != "")
 
 	left = nd[:it.pos]
 
