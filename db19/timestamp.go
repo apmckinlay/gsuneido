@@ -30,13 +30,13 @@ func ticker() {
 		d := t.MinusMs(timestamp)
 		if d > 0 {
 			if d > 5000 {
-				log.Println("ERROR: time skip from", timestamp, "to", t,
+				log.Println("INFO: time skip from", timestamp, "to", t,
 					"=", time.Duration(d) * time.Millisecond)
 			}
 			timestamp = t // normal case
 			timeError = false
 		} else if d < 0 && !timeError {
-			log.Println("ERROR: time went backwards from", timestamp, "to", t)
+			log.Println("INFO: time went backwards from", timestamp, "to", t)
 			timeError = true
 		}
 		tsLock.Unlock()
