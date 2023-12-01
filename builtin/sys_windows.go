@@ -70,12 +70,15 @@ var _ = builtin(CopyFile, "(from, to, failIfExists)")
 func CopyFile(th *Thread, args []Value) Value {
 	from := zbuf(args[0])
 	to := zbuf(args[1])
-	rtn, _, _ := syscall.SyscallN(copyFile,
+	rtn, _, e := syscall.SyscallN(copyFile,
 		uintptr(unsafe.Pointer(&from[0])),
 		uintptr(unsafe.Pointer(&to[0])),
 		boolArg(args[2]))
-	th.ReturnThrow = true
-	return boolRet(rtn)
+	if rtn == 0 {
+        th.ReturnThrow = true
+        return SuStr("CopyFile: " + e.Error())
+    }
+	return True
 }
 
 func boolArg(arg Value) uintptr {
