@@ -128,11 +128,11 @@ func MoveFile(th *Thread, args []Value) Value {
 	from := ToStr(args[0])
 	to := ToStr(args[1])
 	err := os.Rename(from, to)
-	if err == nil {
-		return True
+	if err != nil {
+		th.ReturnThrow = true
+		return SuStr("MoveFile: " + err.Error())
 	}
-	th.ReturnThrow = true
-	return SuStr("MoveFile: " + err.Error())
+	return True
 }
 
 var _ = builtin(DeleteDir, "(dir)")
