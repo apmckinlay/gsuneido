@@ -35,7 +35,6 @@ type Database struct {
 	// It must only updated via UpdateState.
 	state stateHolder
 
-	core.Sviews
 	mode stor.Mode
 	// schemaLock is used to prevent concurrent schema modification
 	schemaLock atomic.Bool

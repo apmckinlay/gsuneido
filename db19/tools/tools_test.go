@@ -69,7 +69,7 @@ func createDb() {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		query.DoAction(nil, ut, act, nil)
+		query.DoAction(nil, ut, act)
 	}
 	for _, table := range []string{"foo", "bar"} {
 		adm("create " + table + " " + schema)

@@ -125,8 +125,7 @@ func (ms *muxSession) Final() int {
 	return ms.GetInt()
 }
 
-func (ms *muxSession) Get(_ *Thread, query string, dir Dir,
-	_ *Sviews) (Row, *Header, string) {
+func (ms *muxSession) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
 	return ms.get(0, query, dir)
 }
 
@@ -337,8 +336,7 @@ func (tc *muxTran) Delete(_ *Thread, table string, off uint64) {
 	tc.Request()
 }
 
-func (tc *muxTran) Get(_ *Thread, query string, dir Dir,
-	_ *Sviews) (Row, *Header, string) {
+func (tc *muxTran) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
 	return tc.get(tc.tn, query, dir)
 }
 
@@ -355,7 +353,7 @@ func (tc *muxTran) ReadCount() int {
 	return tc.GetInt()
 }
 
-func (tc *muxTran) Action(_ *Thread, action string, _ *Sviews) int {
+func (tc *muxTran) Action(_ *Thread, action string) int {
 	tc.PutCmd(commands.Action).PutInt(tc.tn).PutStr(action)
 	tc.Request()
 	return tc.GetInt()

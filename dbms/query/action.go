@@ -11,8 +11,8 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 )
 
-func DoAction(th *Thread, ut *db19.UpdateTran, action string, sv *Sviews) int {
-	a := ParseAction(action, ut, sv)
+func DoAction(th *Thread, ut *db19.UpdateTran, action string) int {
+	a := ParseAction(action, ut, th.Sviews())
 	return a.execute(th, ut)
 }
 

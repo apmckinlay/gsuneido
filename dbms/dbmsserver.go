@@ -49,7 +49,7 @@ type serverConn struct {
 	id uint32
 }
 
-// serverSession is one client session (thread)
+// serverSession is one client session
 type serverSession struct {
 	sc *serverConn
 	*mux.WriteBuf
@@ -199,6 +199,7 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	ss.ReadBuf.SetBuf(req)
 	ss.WriteBuf = wb
 	th.SetSession(ss.sessionId)
+	th.SetSviews(&sc.Sviews)
 	ss.thread = th
 	ss.request()
 }
@@ -362,7 +363,7 @@ func (ss *serverSession) tran(tn int) ITran {
 func cmdAction(ss *serverSession) {
 	tran := ss.getTran()
 	action := ss.GetStr()
-	n := tran.Action(ss.thread, action, &ss.sc.Sviews)
+	n := tran.Action(ss.thread, action)
 	ss.PutBool(true).PutInt(n)
 }
 
@@ -477,7 +478,7 @@ func cmdDump(ss *serverSession) {
 }
 
 func cmdEndSession(ss *serverSession) {
-	// ss.sc.serverLog("closing connection: received EndSession") //TEMP
+	// ss.sc.serverLog("closing connection: received EndSession")
 	ss.close()
 	// no response
 }
@@ -603,13 +604,13 @@ func cmdGetOne(ss *serverSession) {
 	}
 	tran := ss.getTran()
 	query := ss.GetStr()
-	var g func(*Thread, string, Dir, *Sviews) (Row, *Header, string)
+	var g func(*Thread, string, Dir) (Row, *Header, string)
 	if tran == nil {
 		g = ss.sc.dbms.Get
 	} else {
 		g = tran.Get
 	}
-	row, hdr, tbl := g(ss.thread, query, dir, &ss.sc.Sviews)
+	row, hdr, tbl := g(ss.thread, query, dir)
 	ss.rowResult(tbl, hdr, true, row)
 }
 

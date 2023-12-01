@@ -372,6 +372,6 @@ func TestNoColumns(*testing.T) {
 func act(db *db19.Database, act string) {
 	ut := db.NewUpdateTran()
 	defer ut.Commit()
-	n := DoAction(nil, ut, act, nil)
+	n := DoAction(nil, ut, act)
 	assert.This(n).Is(1)
 }

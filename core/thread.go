@@ -105,6 +105,9 @@ type Thread struct {
 	// ReturnThrow is set by op.ReturnThrow and used by op.Call*Discard
 	// and by some built-in functions.
 	ReturnThrow bool
+
+	// Sviews are the session view definitions for this thread
+	sv *Sviews
 }
 
 var threadNum atomic.Int32
@@ -119,6 +122,7 @@ func NewThread(parent *Thread) *Thread {
 			suneido.SetConcurrent()
 			th.Suneido.Store(suneido)
 		}
+		th.sv = parent.sv
 	}
 	return th
 }
@@ -152,6 +156,10 @@ func (th *Thread) SetSession(s string) {
 		th = th.subThreadOf
 	}
 	th.session.Store(s)
+}
+
+func (th *Thread) SetSviews(sv *Sviews) {
+	th.sv = sv
 }
 
 // Push pushes a value onto the value stack
@@ -349,6 +357,13 @@ func (th *Thread) TrSet(x Value) tr.Set {
 		th.trCache = cache.New(tr.New)
 	}
 	return th.trCache.Get(ToStr(x))
+}
+
+func (th *Thread) Sviews() *Sviews {
+	if th == nil {
+		return nil
+	}
+	return th.sv
 }
 
 //-------------------------------------------------------------------

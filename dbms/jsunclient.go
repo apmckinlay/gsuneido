@@ -139,8 +139,7 @@ func (dc *jsunClient) Final() int {
 	return dc.GetInt()
 }
 
-func (dc *jsunClient) Get(_ *Thread, query string, dir Dir,
-	_ *Sviews) (Row, *Header, string) {
+func (dc *jsunClient) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
 	return dc.get(0, query, dir)
 }
 
@@ -330,8 +329,7 @@ func (tc *TranClient) Delete(_ *Thread, _ string, off uint64) {
 	tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(int(off)).Request()
 }
 
-func (tc *TranClient) Get(_ *Thread, query string, dir Dir,
-	_ *Sviews) (Row, *Header, string) {
+func (tc *TranClient) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
 	return tc.dc.get(tc.tn, query, dir)
 }
 
@@ -346,7 +344,7 @@ func (tc *TranClient) ReadCount() int {
 	return tc.dc.GetInt()
 }
 
-func (tc *TranClient) Action(_ *Thread, action string, _ *Sviews) int {
+func (tc *TranClient) Action(_ *Thread, action string) int {
 	tc.dc.PutCmd(commands.Action).PutInt(tc.tn).PutStr(action).Request()
 	return tc.dc.GetInt()
 }

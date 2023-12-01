@@ -61,7 +61,7 @@ func TestDeleteBug(*testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	DoAdmin(db, "create tmp(k) key(k)", nil)
@@ -83,7 +83,7 @@ func TestDeleteSynch(*testing.T) {
 	db.CheckerSync()
 	act := func(act string) {
 		ut := db.NewUpdateTran()
-		DoAction(nil, ut, act, nil)
+		DoAction(nil, ut, act)
 		db.CommitMerge(ut)
 	}
 	DoAdmin(db, "create tmp(k) key(k)", nil)

@@ -38,7 +38,7 @@ func (hdb heapdb) adm(admin string) {
 func (hdb heapdb) act(act string) {
 	ut := hdb.NewUpdateTran()
 	defer ut.Commit()
-	DoAction(nil, ut, act, nil)
+	DoAction(nil, ut, act)
 }
 
 func (hdb heapdb) reopen() heapdb {

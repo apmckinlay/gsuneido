@@ -44,9 +44,6 @@ var _ IDbms = (*DbmsLocal)(nil)
 
 func (dbms *DbmsLocal) Admin(admin string, sv *Sviews) {
 	trace.Dbms.Println("Admin", admin)
-	if sv == nil {
-		sv = &dbms.db.Sviews
-	}
 	qry.DoAdmin(dbms.db, admin, sv)
 }
 
@@ -86,9 +83,6 @@ func (*DbmsLocal) Connections() Value {
 }
 
 func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
-	if sv == nil {
-		sv = &dbms.db.Sviews
-	}
 	tran := dbms.db.NewReadTran()
 	q, fixcost, varcost := buildQuery(query, tran, sv, qry.CursorMode)
 	trace.Query.Println("cursor", fixcost+varcost, "-", query)
@@ -148,18 +142,14 @@ func (dbms *DbmsLocal) Final() int {
 
 // Get implements QueryFirst, QueryLast, Query1
 func (dbms *DbmsLocal) Get(
-	th *Thread, query string, dir Dir, sv *Sviews) (Row, *Header, string) {
+	th *Thread, query string, dir Dir) (Row, *Header, string) {
 	tran := dbms.db.NewReadTran()
 	defer tran.Complete()
-	if sv == nil {
-		sv = &dbms.db.Sviews
-	}
-	return get(th, tran, query, dir, sv)
+	return get(th, tran, query, dir)
 }
 
-func get(th *Thread, tran qry.QueryTran, query string, dir Dir,
-	sv *Sviews) (Row, *Header, string) {
-	q, fixcost, varcost := buildQuery(query, tran, sv, qry.ReadMode)
+func get(th *Thread, tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
+	q, fixcost, varcost := buildQuery(query, tran, th.Sviews(), qry.ReadMode)
 	if trace.Query.On() {
 		d := map[Dir]string{Only: "one", Next: "first", Prev: "last"}[dir]
 		trace.Query.Println(d, fixcost+varcost, "-", query)
@@ -407,24 +397,17 @@ type ReadTranLocal struct {
 	TranLocal
 }
 
-func (t ReadTranLocal) Get(th *Thread, query string, dir Dir,
-	sv *Sviews) (Row, *Header, string) {
-	if sv == nil {
-		sv = t.GetSviews()
-	}
-	return get(th, t.ReadTran, query, dir, sv)
+func (t ReadTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, string) {
+	return get(th, t.ReadTran, query, dir)
 }
 
 func (t ReadTranLocal) Query(query string, sv *Sviews) IQuery {
-	if sv == nil {
-		sv = t.GetSviews()
-	}
 	q, fixcost, varcost := buildQuery(query, t.ReadTran, sv, qry.ReadMode)
 	trace.Query.Println(fixcost+varcost, "-", query)
 	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.ReadMode}
 }
 
-func (t ReadTranLocal) Action(*Thread, string, *Sviews) int {
+func (t ReadTranLocal) Action(*Thread, string) int {
 	panic("cannot do action in read-only transaction")
 }
 
@@ -435,29 +418,19 @@ type UpdateTranLocal struct {
 	TranLocal
 }
 
-func (t UpdateTranLocal) Get(th *Thread, query string, dir Dir,
-	sv *Sviews) (Row, *Header, string) {
-	if sv == nil {
-		sv = t.GetSviews()
-	}
-	return get(th, t.UpdateTran, query, dir, sv)
+func (t UpdateTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, string) {
+	return get(th, t.UpdateTran, query, dir)
 }
 
 func (t UpdateTranLocal) Query(query string, sv *Sviews) IQuery {
-	if sv == nil {
-		sv = t.GetSviews()
-	}
 	q, fixcost, varcost := buildQuery(query, t.UpdateTran, sv, qry.UpdateMode)
 	trace.Query.Println("update", fixcost+varcost, "-", query)
 	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.UpdateMode}
 }
 
-func (t UpdateTranLocal) Action(th *Thread, action string, sv *Sviews) int {
+func (t UpdateTranLocal) Action(th *Thread, action string) int {
 	trace.Dbms.Println("Action", action)
-	if sv == nil {
-		sv = t.GetSviews()
-	}
-	return qry.DoAction(th, t.UpdateTran, action, sv)
+	return qry.DoAction(th, t.UpdateTran, action)
 }
 
 // queryLocal

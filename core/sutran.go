@@ -91,7 +91,7 @@ func (st *SuTran) Delete(th *Thread, table string, off uint64) {
 
 func (st *SuTran) GetRow(th *Thread, query string, dir Dir) (Row, *Header, string) {
 	st.ckActive()
-	return st.itran.Get(th, query, dir, nil)
+	return st.itran.Get(th, query, dir)
 }
 
 func (st *SuTran) Query(th *Thread, query string) *SuQuery {
@@ -106,7 +106,7 @@ func (st *SuTran) ReadCount() int {
 
 func (st *SuTran) Action(th *Thread, action string) int {
 	st.ckActive()
-	return st.itran.Action(th, action, nil)
+	return st.itran.Action(th, action)
 }
 
 func (st *SuTran) Rollback() {

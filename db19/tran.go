@@ -41,10 +41,6 @@ const (
 	aborted
 )
 
-func (t *tran) GetSviews() *core.Sviews {
-	return &t.db.Sviews
-}
-
 // GetInfo returns read-only Info for the table or nil if not found
 func (t *tran) GetInfo(table string) *meta.Info {
 	return t.meta.GetRoInfo(table)

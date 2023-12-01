@@ -29,10 +29,10 @@ func TestClientServer(*testing.T) {
 	assert.This(errmsg).Is("")
 	c := NewDbmsClient(p2)
 	ses := c.NewSession()
-	ses.Get(nil, "tables", core.Next, nil)
+	ses.Get(nil, "tables", core.Next)
 
 	ses2 := c.NewSession()
-	ses2.Get(nil, "tables", core.Prev, nil)
+	ses2.Get(nil, "tables", core.Prev)
 	ses2.Close()
 
 	time.Sleep(25 * time.Millisecond)

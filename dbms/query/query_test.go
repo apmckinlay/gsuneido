@@ -46,7 +46,7 @@ func TestForeignKeys(*testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 
@@ -210,7 +210,7 @@ func TestQueryBug(*testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	doAdmin(db, "create tmp (a,b) key(a)")
@@ -243,7 +243,7 @@ func TestDuplicateKey(*testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	doAdmin(db, "create tmp (k,u,i) key(k) index unique(u) index(i)")
@@ -267,7 +267,7 @@ func TestWhereSelectBug(t *testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	doAdmin(db, "create t2 (d) key (d)")
@@ -303,7 +303,7 @@ func TestJoinBug(t *testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	doAdmin(db, "create t1 (a) key(a)")
@@ -322,7 +322,7 @@ func TestSelectOnSingleton(t *testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	doAdmin(db, "create t1 (a) key(a)")
@@ -342,7 +342,7 @@ func TestSingleton(t *testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	doAdmin(db, "create tmp (a,b) key(a) key(b)")

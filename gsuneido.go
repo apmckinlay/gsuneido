@@ -154,6 +154,7 @@ func main() {
 	Libload = libload // dependency injection
 	mainThread.Name = "main"
 	mainThread.UIThread = true
+	mainThread.SetSviews(&Sviews{})
 	MainThread = &mainThread
 	builtin.UIThread = &mainThread
 	defer func() {
