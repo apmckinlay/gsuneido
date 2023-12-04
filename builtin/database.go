@@ -20,7 +20,7 @@ func init() {
 }
 
 func Database(th *Thread, args []Value) Value {
-	th.Dbms().Admin(ToStr(args[0]), nil)
+	th.Dbms().Admin(ToStr(args[0]), th.Sviews())
 	return nil
 }
 

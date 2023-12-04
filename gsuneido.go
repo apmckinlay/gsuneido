@@ -48,6 +48,7 @@ var help = `options:
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal *dbms.DbmsLocal
 var mainThread Thread
+var sviews Sviews
 
 func main() {
 	options.BuiltDate = builtDate
@@ -68,6 +69,11 @@ func main() {
 			Exit = system.StopService
 		}
 	}
+
+	Libload = libload // dependency injection
+	mainThread.Name = "main"
+	mainThread.SetSviews(&sviews)
+	MainThread = &mainThread
 
 	switch options.Action {
 	case "":
@@ -151,11 +157,7 @@ func main() {
 		Alert("invalid action:", options.Action)
 		os.Exit(1)
 	}
-	Libload = libload // dependency injection
-	mainThread.Name = "main"
 	mainThread.UIThread = true
-	mainThread.SetSviews(&Sviews{})
-	MainThread = &mainThread
 	builtin.UIThread = &mainThread
 	defer func() {
 		if e := recover(); e != nil {
@@ -261,8 +263,6 @@ func runServer() {
 	log.Println("starting server")
 	openDbms()
 	startHttpStatus()
-	Libload = libload // dependency injection
-	mainThread.Name = "main"
 	run("Init()")
 	options.DbStatus.Store("")
 	exit.Add(stopServer)
@@ -430,6 +430,7 @@ func eval(src string) {
 	// fmt.Println(DisasmMixed(fn, src))
 
 	mainThread.Reset()
+	mainThread.SetSviews(&sviews)
 	result := mainThread.Call(fn)
 	if result != nil {
 		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
