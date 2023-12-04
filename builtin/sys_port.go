@@ -32,7 +32,7 @@ var _ = builtin(GetComputerName, "()")
 func GetComputerName() Value {
 	name, err := os.Hostname()
 	if err != nil {
-		panic("GetComputerName " + err.Error())
+		panic("GetComputerName: " + err.Error())
 	}
 	return SuStr(name)
 }

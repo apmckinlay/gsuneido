@@ -13,11 +13,6 @@ import (
 
 var kernel32 = windows.MustLoadDLL("kernel32.dll")
 
-// dll bool Kernel32:GetDiskFreeSpaceEx()
-// [in] string			directoryName,
-// ULARGE_INTEGER*		freeBytesAvailableToCaller,
-// ULARGE_INTEGER*		totalNumberOfBytes,
-// ULARGE_INTEGER*		totalNumberOfFreeBytes)
 var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
 
 var _ = builtin(GetDiskFreeSpace, "(dir = '.')")
@@ -25,11 +20,14 @@ var _ = builtin(GetDiskFreeSpace, "(dir = '.')")
 func GetDiskFreeSpace(arg Value) Value {
 	dir := zbuf(arg)
 	var n int64
-	syscall.SyscallN(getDiskFreeSpaceEx,
+	rtn, _, e := syscall.SyscallN(getDiskFreeSpaceEx,
 		uintptr(unsafe.Pointer(&dir[0])),
 		uintptr(unsafe.Pointer(&n)),
 		0,
 		0)
+	if rtn == 0 {
+        panic("GetDiskFreeSpace: " + e.Error())
+    }
 	return Int64Val(n)
 }
 
@@ -56,10 +54,10 @@ var globalMemoryStatusEx = kernel32.MustFindProc("GlobalMemoryStatusEx").Addr()
 func systemMemory() uint64 {
 	buf := make([]byte, nMemoryStatusEx)
 	(*stMemoryStatusEx)(unsafe.Pointer(&buf[0])).dwLength = uint32(nMemoryStatusEx)
-	rtn, _, _ := syscall.SyscallN(globalMemoryStatusEx,
+	rtn, _, e := syscall.SyscallN(globalMemoryStatusEx,
 		uintptr(unsafe.Pointer(&buf[0])))
 	if rtn == 0 {
-		return 0
+		panic("SystemMemory: " + e.Error())
 	}
 	return (*stMemoryStatusEx)(unsafe.Pointer(&buf[0])).ullTotalPhys
 }

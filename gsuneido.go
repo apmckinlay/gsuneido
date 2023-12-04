@@ -267,7 +267,7 @@ func runServer() {
 	options.DbStatus.Store("")
 	exit.Add(stopServer)
 	dbms.Server(dbmsLocal)
-	log.Fatalln("server should not return")
+	log.Fatalln("FATAL server should not return")
 }
 
 func stopServer() {

@@ -33,9 +33,9 @@ func RunFuncs() {
 	// failsafe in case exit funcs don't return
 	go func() {
 		time.Sleep(10 * time.Second)
-		log.Fatalln("exit timeout")
+		log.Fatalln("FATAL exit timeout")
 	}()
-	
+
 	hanger.Lock() // never unlocked
 
 	for i := len(exitfns) - 1; i >= 0; i-- {
@@ -53,5 +53,5 @@ func RunFuncs() {
 // Wait should only be called after Exit or RunFuncs. It blocks until exit.
 func Wait() {
 	hanger.Lock() // should be locked
-	log.Fatalln("exit.Wait: shouldn't reach here")
+	log.Fatalln("FATAL exit.Wait: shouldn't reach here")
 }

@@ -19,7 +19,10 @@ var _ = builtin(GetDiskFreeSpace, "(dir = '.')")
 
 func GetDiskFreeSpace(arg Value) Value {
 	var stat syscall.Statfs_t
-	syscall.Statfs(ToStr(arg), &stat)
+	err := syscall.Statfs(ToStr(arg), &stat)
+	if err != nil {
+		panic("GetDiskFreeSpace: " + err.Error())
+	}
 	freeBytes := stat.Bavail * uint64(stat.Bsize)
 	return Int64Val(int64(freeBytes))
 }
