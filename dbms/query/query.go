@@ -694,7 +694,7 @@ func bestGrouped(source Query, mode Mode, index []string, frac float64, cols []s
 func countUnfixed(cols []string, fixed []Fixed) int {
 	nunfixed := 0
 	for _, col := range cols {
-		if !isFixed(fixed, col) {
+		if !isSingleFixed(fixed, col) {
 			nunfixed++
 		}
 	}
@@ -709,7 +709,7 @@ func grouped(index []string, cols []string, nColsUnfixed int, fixed []Fixed) boo
 	}
 	n := 0
 	for _, col := range index {
-		if isFixed(fixed, col) {
+		if isSingleFixed(fixed, col) {
 			continue
 		}
 		if !slices.Contains(cols, col) {
@@ -734,15 +734,15 @@ func ordered(index []string, order []string, fixed []Fixed) bool {
 		if index[i] == order[o] {
 			o++
 			i++
-		} else if isFixed(fixed, index[i]) {
+		} else if isSingleFixed(fixed, index[i]) {
 			i++
-		} else if isFixed(fixed, order[o]) {
+		} else if isSingleFixed(fixed, order[o]) {
 			o++
 		} else {
 			return false
 		}
 	}
-	for o < on && isFixed(fixed, order[o]) {
+	for o < on && isSingleFixed(fixed, order[o]) {
 		o++
 	}
 	return o >= on

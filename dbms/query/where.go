@@ -718,7 +718,7 @@ func (w *Where) addFixed(cols []string, vals []string) ([]string, []string) {
 	cols = slices.Clip(cols)
 	vals = slices.Clip(vals)
 	for _, fix := range w.fixed {
-		if len(fix.values) == 1 && !slices.Contains(cols, fix.col) {
+		if fix.single() && !slices.Contains(cols, fix.col) {
 			cols = append(cols, fix.col)
 			vals = append(vals, fix.values[0])
 		}

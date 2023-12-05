@@ -47,6 +47,7 @@ func (f *Fixed) String() string {
 // plus the ones from fixed2 that are not in fixed1,
 // plus the intersection of values of ones that are in both.
 // If an intersection is empty, that is a conflict (none).
+// e.g. a: 1, b: 2|3 COMBINE b: 3|4, c: 5 => a: 1, b: 3, c: 5
 func combineFixed(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	if len(fixed1) == 0 {
 		return fixed2, false
@@ -57,15 +58,15 @@ func combineFixed(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	result = make([]Fixed, 0, len(fixed1)+len(fixed2))
 	// add fixed1 that are not in fixed2
 	for _, sf := range fixed1 {
-		if getFixed(fixed2, sf.col) == nil {
+		if !isFixed(fixed2, sf.col) {
 			result = append(result, sf)
 		}
 	}
 	// process fixed2
 	for _, f2 := range fixed2 {
-		if srcvals := getFixed(fixed1, f2.col); srcvals != nil {
+		if src1vals := getFixed(fixed1, f2.col); src1vals != nil {
 			// field is in both
-			vals := set.Intersect(srcvals, f2.values)
+			vals := set.Intersect(src1vals, f2.values)
 			if len(vals) == 0 {
 				return nil, true // can't match anything
 			}
@@ -100,10 +101,19 @@ func FixedIntersect(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	return result, false
 }
 
-// isFixed returns true if col is fixed with a single value
+// isSingleFixed returns true if col is fixed with a single value
+func isSingleFixed(fixed []Fixed, col string) bool {
+	for _, f := range fixed {
+		if col == f.col && f.single() {
+			return true
+		}
+	}
+	return false
+}
+
 func isFixed(fixed []Fixed, col string) bool {
 	for _, f := range fixed {
-		if col == f.col && len(f.values) == 1 {
+		if col == f.col {
 			return true
 		}
 	}
@@ -120,9 +130,13 @@ func getFixed(fixed []Fixed, col string) []string {
 	return nil
 }
 
+func (f *Fixed) single() bool {
+	return len(f.values) == 1
+}
+
 func withoutFixed(cols []string, fixed []Fixed) []string {
 	return slc.WithoutFn(cols,
-		func(col string) bool { return isFixed(fixed, col) })
+		func(col string) bool { return isSingleFixed(fixed, col) })
 }
 
 func withoutFixed2(cols [][]string, fixed []Fixed) [][]string {

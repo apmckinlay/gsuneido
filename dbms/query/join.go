@@ -26,7 +26,7 @@ import (
 
 // joinLike is common stuff for Join, LeftJoin, and Times
 type joinLike struct {
-	saIndex  []string
+	saIndex  []string // set approach index
 	sel2cols []string
 	sel2vals []string
 	Query2
@@ -382,10 +382,12 @@ func (jb *joinBase) projectRow(th *Thread, row Row) []string {
 
 func (jn *Join) Select(cols, vals []string) {
 	// fmt.Println(jn.stringOp(), "Select", cols, unpack(vals))
-	jn.select2(cols, vals, jn.fastSingle())
+	jn.select1(cols, vals, jn.fastSingle())
 }
 
-func (jb *joinBase) select2(cols, vals []string, fastSingle bool) {
+// select1 processes cols,vals and calls source1.Select.
+// It is used by Join and LeftJoin
+func (jb *joinBase) select1(cols, vals []string, fastSingle bool) {
 	jb.Rewind()
 	if cols == nil { // clear
 		jb.conflict1, jb.conflict2 = false, false
@@ -393,15 +395,51 @@ func (jb *joinBase) select2(cols, vals []string, fastSingle bool) {
 		jb.sel2cols, jb.sel2vals = nil, nil
 		return
 	}
-	if fastSingle {
-		jb.sel2cols, jb.sel2vals = jb.selectByCols(cols, vals)
+	cols2, vals2 := jb.addSource2Fixed(cols, vals)
+	if jb.conflict1 {
 		return
 	}
-	sel1cols, sel1vals := jb.splitSelect(cols, vals)
+	if fastSingle {
+		jb.sel2cols, jb.sel2vals = jb.selectByCols(cols2, vals2)
+		return
+	}
+	sel1cols, sel1vals := jb.splitSelect(cols2, vals2)
 	if jb.conflict1 { // not conflict2 because of LeftJoin
 		return
 	}
 	jb.source1.Select(sel1cols, sel1vals)
+}
+
+func (jb *joinBase) addSource2Fixed(cols, vals []string) ([]string, []string) {
+	fixed := jb.Fixed()
+	if fixed == nil {
+		return cols, vals
+	}
+	src2cols := jb.source2.Columns()
+	cols2 := slices.Clip(cols)
+	vals2 := slices.Clip(vals)
+	// add fixed for source2
+	// We're only concerned with single valued fixed
+	// because that's all that can be applied to indexes.
+	for _, f := range fixed {
+		col := f.col
+		if !slices.Contains(src2cols, col) {
+			continue
+		}
+		v := f.values
+		if i := slices.Index(cols, col); i != -1 {
+			if !slices.Contains(v, vals[i]) {
+				jb.conflict1 = true
+				return nil, nil // conflict
+			}
+			continue
+		}
+		if len(v) == 1 {
+			cols2 = append(cols2, col)
+			vals2 = append(vals2, v[0])
+		}
+	}
+	return cols2, vals2
 }
 
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
@@ -665,7 +703,7 @@ func (lj *LeftJoin) filter(row1, row2 Row) Row {
 
 func (lj *LeftJoin) Select(cols, vals []string) {
 	// fmt.Println(lj.stringOp(), "Select", cols, unpack(vals))
-	lj.select2(cols, vals, lj.fastSingle())
+	lj.select1(cols, vals, lj.fastSingle())
 }
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {

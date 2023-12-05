@@ -134,7 +134,7 @@ func hasKey(cols []string, keys [][]string, fixed []Fixed) bool {
 outer:
 	for _, key := range keys {
 		for _, k := range key {
-			if !isFixed(fixed, k) && !slices.Contains(cols, k) {
+			if !isSingleFixed(fixed, k) && !slices.Contains(cols, k) {
 				continue outer
 			}
 		}
