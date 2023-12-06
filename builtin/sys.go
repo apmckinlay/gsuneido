@@ -6,7 +6,6 @@ package builtin
 import (
 	"errors"
 	"io/fs"
-	"log"
 	"net"
 	"os"
 	"runtime"
@@ -106,7 +105,7 @@ func FileExistsQ(arg Value) Value {
 	path := ToStr(arg)
 	info, err := os.Stat(path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		log.Println("INFO: FileExists?", path, err)
+		panic("FileExists?: " + err.Error())
 	}
 	return SuBool(err == nil && info.Mode().IsRegular())
 }
@@ -117,7 +116,7 @@ func DirExistsQ(arg Value) Value {
 	path := ToStr(arg)
 	info, err := os.Stat(path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		log.Println("INFO: DirExists?", path, err)
+		panic("DirExists?: " + err.Error())
 	}
 	return SuBool(err == nil && info.Mode().IsDir())
 }
