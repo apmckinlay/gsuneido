@@ -265,7 +265,7 @@ func runServer() {
 	startHttpStatus()
 	run("Init()")
 	options.DbStatus.Store("")
-	exit.Add(stopServer)
+	exit.Add("stop server", stopServer)
 	dbms.Server(dbmsLocal)
 	log.Fatalln("FATAL server should not return")
 }
@@ -308,7 +308,7 @@ func openDbms() {
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	DbmsAuth = options.Action == "server" || mode != "gui" || !db.HaveUsers()
 	GetDbms = getDbms
-	exit.Add(func() {
+	exit.Add("close database", func() {
 		if options.Action == "server" {
 			log.Println("database closing")
 			defer log.Println("database closed")
