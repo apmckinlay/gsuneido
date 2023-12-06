@@ -39,6 +39,10 @@ func TestOptimize(t *testing.T) {
 		"table^(a) TEMPINDEX(c)")
 	test("hist where date is 5",
 		"hist^(date) WHERE date is 5") // not WHERE*1
+	test("comp where a=1 sort c, a, b",
+		"comp^(a,b,c) WHERE a is 1 TEMPINDEX(c,b)")
+	test("comp where a=1 and b=2 and c=3 sort c, a, b",
+		"comp^(a,b,c) WHERE*1 a is 1 and b is 2 and c is 3")
 
 	test("supplier",
 		"supplier^(supplier)")
