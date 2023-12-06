@@ -35,10 +35,11 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `cus union cus union cus extend bk = c3
-		join
-		((ivc where ik is "4") join bln) where ck is ""
-		sort ck`
+	s := `	(cus
+				where ck is ""
+				extend r1, i3 = c4)
+			join by(ck,i3)
+				ivc`
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
 	q := ParseQuery(s, tran, nil)

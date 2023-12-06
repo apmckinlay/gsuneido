@@ -69,3 +69,14 @@ func TestExtendSelect(t *testing.T) {
 
 	assert.That(q.Lookup(nil, ex, two) != nil)
 }
+
+func TestExtendRuleBug(t *testing.T) {
+	db := heapDb()
+	db.adm("create cus (ck, c4) key(ck)")
+	db.act("insert { ck: 1, c4: 2  } into cus")
+	db.adm("create ivc (ik, ck, i3) key(ik)")
+	db.act("insert { ck: 1, ik: 3, i3: 2 } into ivc")
+	assert.This(queryAll(db.Database,
+		"(cus where ck is 1 extend r1, i3 = c4) join by(ck,i3) ivc")).
+		Is("ik=3 ck=1 i3=2 c4=2")
+}

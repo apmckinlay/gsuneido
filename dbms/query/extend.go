@@ -18,7 +18,8 @@ type Extend struct {
 	ctx      ast.Context
 	cols     []string
 	exprs    []ast.Expr
-	exprCols []string
+	exprCols []string // columns used in exprs
+	physical []string // cols with exprs
 	selCols  []string
 	selVals  []string
 	Query1
@@ -41,6 +42,7 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 		}
 	}
 	e.exprCols = exprCols
+	e.physical = e.getPhysical()
 	e.header = e.getHeader()
 	e.keys = src.Keys()
 	e.indexes = src.Indexes()
@@ -64,6 +66,29 @@ func (e *Extend) checkDependencies() {
 		}
 		avail = append(avail, e.cols[i])
 	}
+}
+
+func (e *Extend) getPhysical() []string {
+	if !e.hasExprs {
+		return nil
+	}
+	physical := make([]string, 0, len(e.cols))
+	for i, col := range e.cols {
+		if e.exprs[i] != nil {
+			physical = append(physical, col)
+		}
+	}
+	return physical
+}
+
+func (e *Extend) getHeader() *Header {
+	srchdr := e.source.Header()
+	cols := append(srchdr.Columns, e.cols...)
+	flds := srchdr.Fields
+	if e.physical != nil {
+		flds = append(flds, e.physical)
+	}
+	return NewHeader(flds, cols)
 }
 
 func (e *Extend) SetTran(t QueryTran) {
@@ -180,22 +205,6 @@ func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran
 
 // execution --------------------------------------------------------
 
-func (e *Extend) getHeader() *Header {
-	hdr := e.source.Header()
-	cols := append(hdr.Columns, e.cols...)
-	flds := hdr.Fields
-	if e.hasExprs {
-		physical := make([]string, 0, len(cols))
-		for i, col := range e.cols {
-			if e.exprs[i] != nil {
-				physical = append(physical, col)
-			}
-		}
-		flds = append(hdr.Fields, physical)
-	}
-	return NewHeader(flds, cols)
-}
-
 func (e *Extend) Get(th *Thread, dir Dir) Row {
 	if e.conflict {
 		return nil
@@ -225,7 +234,7 @@ func (e *Extend) extendRow(th *Thread, row Row) Row {
 	rec := rb.Trim().Build()
 	// filter for select/lookup
 	for i, col := range e.selCols {
-		j := slices.Index(e.cols, col)
+		j := slices.Index(e.physical, col)
 		x := rec.GetRaw(j)
 		if x != e.selVals[i] {
 			return nil
