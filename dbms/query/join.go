@@ -30,8 +30,11 @@ type joinLike struct {
 	sel2cols []string
 	sel2vals []string
 	Query2
-	conflict1 bool
-	conflict2 bool
+	// conflict1 and conflict2 are used transiently,
+	// set by Fixed for Transform,
+	// set by addSource2Fixed & splitSelect for Select, Lookup, and Get.
+	// Be careful to clear them before use.
+	conflict1, conflict2 bool
 }
 
 // joinBase is common stuff for Join and LeftJoin
@@ -388,9 +391,9 @@ func (jn *Join) Select(cols, vals []string) {
 // select1 processes cols,vals and calls source1.Select.
 // It is used by Join and LeftJoin
 func (jb *joinBase) select1(cols, vals []string, fastSingle bool) {
+	jb.conflict1, jb.conflict2 = false, false
 	jb.Rewind()
 	if cols == nil { // clear
-		jb.conflict1, jb.conflict2 = false, false
 		jb.source1.Select(nil, nil)
 		jb.sel2cols, jb.sel2vals = nil, nil
 		return
@@ -430,7 +433,7 @@ func (jb *joinBase) addSource2Fixed(cols, vals []string) ([]string, []string) {
 		if i := slices.Index(cols, col); i != -1 {
 			if !slices.Contains(v, vals[i]) {
 				jb.conflict1 = true
-				return nil, nil // conflict
+				return nil, nil
 			}
 			continue
 		}
@@ -443,6 +446,7 @@ func (jb *joinBase) addSource2Fixed(cols, vals []string) ([]string, []string) {
 }
 
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
+	jn.conflict1, jn.conflict2 = false, false
 	defer jn.Select(nil, nil) // clear select
 	if jn.fastSingle() {
 		jn.sel2cols, jn.sel2vals = jn.selectByCols(cols, vals)
@@ -468,11 +472,43 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	return JoinRows(jn.row1, row2)
 }
 
+func (jl *joinLike) selectByCols(cols, vals []string) ([]string, []string) {
+	columns1 := jl.source1.Columns()
+	columns2 := jl.source2.Columns()
+	var cols1, vals1, cols2, vals2 []string
+	var done1, done2 bool
+	if set.Subset(columns1, cols) {
+		cols1, vals1, done1 = cols, vals, true
+	}
+	if set.Subset(columns2, cols) {
+		cols2, vals2, done2 = cols, vals, true
+	}
+	for i, col := range cols {
+		used := false
+		if slices.Contains(columns1, col) {
+			used = true
+			if !done1 {
+				cols1 = append(cols1, col)
+				vals1 = append(vals1, vals[i])
+			}
+		}
+		if slices.Contains(columns2, col) {
+			used = true
+			if !done2 {
+				cols2 = append(cols2, col)
+				vals2 = append(vals2, vals[i])
+			}
+		}
+		assert.That(used)
+	}
+	jl.source1.Select(cols1, vals1)
+	return slices.Clip(cols2), slices.Clip(vals2)
+}
+
 func (jl *joinLike) splitSelect(cols, vals []string) (
 	sel1cols, sel1vals []string) {
 	fixed1 := jl.source1.Fixed()
 	fixed2 := jl.source2.Fixed()
-	jl.conflict1, jl.conflict2 = false, false
 	for i, col := range cols {
 		if slices.Contains(jl.saIndex, col) {
 			sel1cols = append(sel1cols, col)
@@ -707,6 +743,7 @@ func (lj *LeftJoin) Select(cols, vals []string) {
 }
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
+	lj.conflict1, lj.conflict2 = false, false
 	defer lj.Select(nil, nil) // clear select
 	if lj.fastSingle() {
 		lj.sel2cols, lj.sel2vals = lj.selectByCols(cols, vals)

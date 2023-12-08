@@ -136,9 +136,9 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 }
 
 func (t *Times) Select(cols, vals []string) {
+	t.conflict1, t.conflict2 = false, false
 	t.Rewind()
 	if cols == nil { // clear
-		t.conflict1, t.conflict2 = false, false
 		t.source1.Select(nil, nil)
 		t.source2.Select(nil, nil)
 		return
@@ -155,6 +155,8 @@ func (t *Times) Select(cols, vals []string) {
 }
 
 func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
+	t.conflict1, t.conflict2 = false, false
+	defer t.Select(nil, nil) // clear select
 	if t.fastSingle() {
 		t.source2.Select(t.selectByCols(cols, vals))
 	} else {
@@ -165,6 +167,5 @@ func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
 		t.source1.Select(sel1cols, sel1vals)
 	}
 	row := t.Get(th, Next)
-	t.Select(nil, nil) // clear select
 	return row
 }
