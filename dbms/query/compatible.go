@@ -68,7 +68,8 @@ func (c *Compatible) SetTran(t QueryTran) {
 	c.st = MakeSuTran(t)
 }
 
-// source2Has returns true if a row from source exists in source2
+// source2Has returns true if a row from source exists in source2.
+// It does Lookup on source2.
 func (c *Compatible) source2Has(th *Thread, row Row) bool {
 	if c.disjoint != "" {
 		return false
