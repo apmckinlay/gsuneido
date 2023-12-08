@@ -36,3 +36,35 @@ func TestJoin_nrows(t *testing.T) {
 	test(2, 100, 200, 2000, 40)
 	test(2, 100, 10, 2000, 10)
 }
+
+func TestJoinSelectFixedBug(t *testing.T) {
+	// Without join addSource2Fixed this test should give:
+	// 		ASSERT FAILED: msg:  selEnd no data
+	db := heapDb()
+	db.adm("create cus (c3, ck) key(c3, ck)")
+	db.act("insert { c3: 4 } into cus")
+	db.adm("create ivc (ck, ik) key(ik)")
+	db.adm("create bln (bk, ik) key (ik,bk)")
+	query := `
+			((cus extend bk = c3)
+		join by(ck,bk)
+				(bln
+			join by(ik)
+				(ivc where ik is 4)))
+		where ck is "" `
+	joinRev = impossible
+	defer func() { joinRev = 0 }()
+	tran := sizeTran{db.NewReadTran()}
+	q := ParseQuery(query, tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	assert.This(Strategy(q)).Like(`
+			{1_000 0+250_000} cus^(c3,ck)
+			{500/1_000 0+250_000} WHERE ck is ""
+			{500/1_000 0+250_000} EXTEND bk = c3
+		{1/1_000 0+1_500_500} JOIN n:1 by(ck,bk)
+				{1_000 0+250_000} bln^(ik,bk)
+			{1/1_000 0+750_500} JOIN n:1 by(ik)
+				{0.001x 1_000 0+500} ivc^(ik)
+				{1/1_000 0+500} WHERE*1 ik is 4 and ck is ""`)
+	assert.This(queryAll2(q)).Is("")
+}
