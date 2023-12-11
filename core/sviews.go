@@ -11,6 +11,9 @@ type Sviews struct {
 }
 
 func (sv *Sviews) AddSview(name, def string) {
+	if sv == nil {
+		panic("session views not allowed here")
+	}
 	sv.lock.Lock()
 	defer sv.lock.Unlock()
 	if sv.defs == nil {
@@ -20,12 +23,18 @@ func (sv *Sviews) AddSview(name, def string) {
 }
 
 func (sv *Sviews) GetSview(name string) string {
+	if sv == nil {
+		return ""
+	}
 	sv.lock.Lock()
 	defer sv.lock.Unlock()
 	return sv.defs[name]
 }
 
 func (sv *Sviews) DropSview(name string) bool {
+	if sv == nil {
+        return false
+    }
 	sv.lock.Lock()
 	defer sv.lock.Unlock()
 	if _, ok := sv.defs[name]; ok {
