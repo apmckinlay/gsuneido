@@ -6,6 +6,7 @@ package tests
 import (
 	"fmt"
 	"hash/crc64"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -35,11 +36,7 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `	(cus
-				where ck is ""
-				extend r1, i3 = c4)
-			join by(ck,i3)
-				ivc`
+	s := `(((cus union cus) extend x1 = "1") leftjoin (((bln where ik is "95") leftjoin ivc) where bk is "25"))`
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
 	q := ParseQuery(s, tran, nil)
@@ -60,6 +57,7 @@ func TestQuery(t *testing.T) {
 		if row == nil {
 			break
 		}
+		fmt.Println(row2str(hdr, row))
 		hash := hashRow(hdr, fields, row)
 		if _, ok := hashes[hash]; ok {
 			panic("duplicate hash")
@@ -69,6 +67,22 @@ func TestQuery(t *testing.T) {
 	}
 	fmt.Println(n, "rows")
 	exit.RunFuncs()
+}
+
+func row2str(hdr *Header, row Row) string {
+	if row == nil {
+		return "nil"
+	}
+	var sb strings.Builder
+	sep := ""
+	for _, col := range hdr.Columns {
+		val := row.GetVal(hdr, col, nil, nil)
+		if val != EmptyStr {
+			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
+			sep = " "
+		}
+	}
+	return sb.String()
 }
 
 func hashRow(hdr *Header, fields []string, row Row) uint64 {

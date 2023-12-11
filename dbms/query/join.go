@@ -385,12 +385,12 @@ func (jb *joinBase) projectRow(th *Thread, row Row) []string {
 
 func (jn *Join) Select(cols, vals []string) {
 	// fmt.Println(jn.stringOp(), "Select", cols, unpack(vals))
-	jn.select1(cols, vals, jn.fastSingle())
+	jn.select1(cols, vals, jn.fastSingle(), false)
 }
 
 // select1 processes cols,vals and calls source1.Select.
 // It is used by Join and LeftJoin
-func (jb *joinBase) select1(cols, vals []string, fastSingle bool) {
+func (jb *joinBase) select1(cols, vals []string, fastSingle, leftjoin bool) {
 	jb.conflict1, jb.conflict2 = false, false
 	jb.Rewind()
 	if cols == nil { // clear
@@ -398,7 +398,7 @@ func (jb *joinBase) select1(cols, vals []string, fastSingle bool) {
 		jb.sel2cols, jb.sel2vals = nil, nil
 		return
 	}
-	cols2, vals2 := jb.addSource2Fixed(cols, vals)
+	cols2, vals2 := jb.addSource2Fixed(cols, vals, leftjoin)
 	if jb.conflict1 {
 		return
 	}
@@ -413,7 +413,8 @@ func (jb *joinBase) select1(cols, vals []string, fastSingle bool) {
 	jb.source1.Select(sel1cols, sel1vals)
 }
 
-func (jb *joinBase) addSource2Fixed(cols, vals []string) ([]string, []string) {
+func (jb *joinBase) addSource2Fixed(
+	cols, vals []string, leftjoin bool) ([]string, []string) {
 	fixed := jb.Fixed()
 	if fixed == nil {
 		return cols, vals
@@ -438,8 +439,12 @@ func (jb *joinBase) addSource2Fixed(cols, vals []string) ([]string, []string) {
 			continue
 		}
 		if len(v) == 1 {
-			cols2 = append(cols2, col)
-			vals2 = append(vals2, v[0])
+			// if leftjoin then source2 can be empty
+			// so there can only be single value if it is ""
+			if !leftjoin || v[0] == "" {
+				cols2 = append(cols2, col)
+				vals2 = append(vals2, v[0])
+			}
 		}
 	}
 	return cols2, vals2
@@ -739,7 +744,7 @@ func (lj *LeftJoin) filter(row1, row2 Row) Row {
 
 func (lj *LeftJoin) Select(cols, vals []string) {
 	// fmt.Println(lj.stringOp(), "Select", cols, unpack(vals))
-	lj.select1(cols, vals, lj.fastSingle())
+	lj.select1(cols, vals, lj.fastSingle(), true)
 }
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
