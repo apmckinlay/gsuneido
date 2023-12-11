@@ -6,14 +6,15 @@ package core
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/core/trace"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/generic/cache"
 	"github.com/apmckinlay/gsuneido/util/regex"
@@ -108,6 +109,8 @@ type Thread struct {
 
 	// Sviews are the session view definitions for this thread
 	sv *Sviews
+
+	Rand *rand.Rand
 }
 
 var threadNum atomic.Int32
