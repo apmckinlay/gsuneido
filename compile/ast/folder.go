@@ -8,6 +8,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 // Folder implements constant folding for expressions.
@@ -32,6 +34,7 @@ func (f Folder) Unary(token tok.Token, expr Expr) Expr {
 }
 
 func (f Folder) foldUnary(u *Unary) Expr {
+	//TODO not x is y => x isnt y, not x =~ y => x !~ y
 	if c, ok := u.E.(*Constant); ok && u.Tok != tok.Div {
 		return f.constant(u.eval(c.Val))
 	}
@@ -89,6 +92,12 @@ func (f Folder) In(e Expr, exprs []Expr) Expr {
 func (f Folder) foldIn(in *In) Expr {
 	if len(in.Exprs) == 0 {
 		return f.constant(False)
+	}
+	if exprs := set.Unique(in.Exprs); !slc.Same(exprs, in.Exprs) {
+		in = &In{E: in.E, Exprs: exprs}
+	}
+	if len(in.Exprs) == 1 {
+		return f.Binary(in.E, tok.Is, in.Exprs[0])
 	}
 	c, ok := in.E.(*Constant)
 	if !ok {

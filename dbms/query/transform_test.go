@@ -178,9 +178,9 @@ func TestTransform(t *testing.T) {
 	test("(tables leftjoin columns) where column is 123",
 		// 1:1 because of `column is 123`
 		"tables JOIN 1:1 by(table) (columns WHERE column is 123)")
+	// same due to folding
 	test("(tables leftjoin columns) where column in (123)",
-		// not 1:1 because `in (123)` isn't seen by Fixed()
-		"tables JOIN 1:n by(table) (columns WHERE column in (123))")
+		"tables JOIN 1:1 by(table) (columns WHERE column is 123)")
 	test("(tables leftjoin columns) where table isnt ''",
 		"tables WHERE table isnt '' LEFTJOIN 1:n by(table) columns")
 
