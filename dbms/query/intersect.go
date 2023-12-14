@@ -122,7 +122,7 @@ func (*Intersect) cost(src1, src2 Query, mode Mode, index []string, frac float64
 	// iterate source and lookup on source2
 	fixcost1, varcost1 := Optimize(src1, mode, index, frac)
 	nrows1, _ := src1.Nrows()
-	best2 := bestKey2(src2, mode, int(float64(nrows1)*frac))
+	best2 := bestLookupKey(src2, mode, int(float64(nrows1)*frac))
 	return fixcost1 + best2.fixcost, varcost1 + best2.varcost, best2.index
 }
 

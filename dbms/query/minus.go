@@ -75,7 +75,7 @@ func (m *Minus) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 	// iterate source and lookup on source2
 	fixcost, varcost := Optimize(m.source1, mode, index, frac)
 	nrows1, _ := m.source1.Nrows()
-	best2 := bestKey2(m.source2, mode, int(float64(nrows1)*frac))
+	best2 := bestLookupKey(m.source2, mode, int(float64(nrows1)*frac))
 	return fixcost + best2.fixcost, varcost + best2.varcost,
 		&minusApproach{keyIndex: best2.index}
 }
