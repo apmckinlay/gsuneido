@@ -79,28 +79,6 @@ func combineFixed(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	return result, false
 }
 
-// FixedIntersect is used by Intersect.
-// It returns none = true if there are both fixed1 and fixed2,
-// but nothing in common.
-func FixedIntersect(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
-	if len(fixed1) == 0 || len(fixed2) == 0 {
-		return nil, false
-	}
-	result = make([]Fixed, len(fixed1))
-	for i, f1 := range fixed1 {
-		if vals2 := getFixed(fixed2, f1.col); vals2 != nil {
-			vals := set.Intersect(f1.values, vals2)
-			if len(vals) == 0 {
-				return nil, true // can't match anything
-			}
-			result[i] = Fixed{col: f1.col, values: vals}
-		} else {
-			result[i] = f1
-		}
-	}
-	return result, false
-}
-
 // isSingleFixed returns true if col is fixed with a single value
 func isSingleFixed(fixed []Fixed, col string) bool {
 	for _, f := range fixed {

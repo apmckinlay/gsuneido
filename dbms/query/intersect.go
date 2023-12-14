@@ -65,7 +65,8 @@ func (it *Intersect) getIndexes() [][]string {
 }
 
 func (it *Intersect) getFixed() []Fixed {
-	fixed, none := FixedIntersect(it.source1.Fixed(), it.source2.Fixed())
+	// same as Join
+	fixed, none := combineFixed(it.source1.Fixed(), it.source2.Fixed())
 	if none {
 		it.conflict = true
 	}
