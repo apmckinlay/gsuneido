@@ -43,7 +43,7 @@ func TestFixed(t *testing.T) {
 	test("(table extend f=1, g=2) project a,g", "[g=(2)]")
 	test("(table extend f=1, g=2) project a,f,g", "[f=(1), g=(2)]")
 
-	test("(table extend f=1) join (table extend f=1, g=2)", "[f=(1), g=(2)]")
+	test("(table extend f=1) join (table extend f=1, g=2)", "[g=(2), f=(1)]")
 
 	test("table extend f=1, g=2 rename g to h", "[f=(1), h=(2)]")
 

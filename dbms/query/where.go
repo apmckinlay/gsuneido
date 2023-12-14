@@ -60,6 +60,9 @@ type Where struct {
 	// exprMore is whether expr has more than idxSels
 	exprMore  bool
 	optInited bool
+
+	// added is true if the Where was added by Join. It is set by Join.
+	added bool
 }
 
 type whereApproach struct {
@@ -323,12 +326,14 @@ func (w *Where) Transform() Query {
 	case *Join:
 		// split where over join
 		return w.split(q, func(src1, src2 Query) Query {
-			return NewJoin(src1, src2, q.by).Transform()
+			return NewJoin(src1, src2, q.by, w.t, true).Transform()
 		})
 	case *LeftJoin:
 		if w.leftJoinToJoin(q) {
 			return w.split(q, func(src1, src2 Query) Query {
-				return NewJoin(src1, src2, q.by).Transform()
+				// passing moved=false
+				// since LeftJoin will only have done half of handleFixed
+				return NewJoin(src1, src2, q.by, w.t, false).Transform()
 			})
 		}
 		// split where over leftjoin (left side only)
@@ -346,7 +351,7 @@ func (w *Where) Transform() Query {
 		}
 		src1 := NewWhere(q.source1,
 			&ast.Nary{Tok: tok.And, Exprs: exprs1}, w.t)
-		q2 := NewLeftJoin(src1, q.source2, q.by).Transform()
+		q2 := NewLeftJoin(src1, q.source2, q.by, w.t, true).Transform()
 		if common == nil {
 			return q2
 		}

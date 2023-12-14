@@ -16,6 +16,9 @@ func Format(t QueryTran, query string) string {
 }
 
 func format(indent int, q Query, parens int) string { // recursive
+	if w, ok := q.(*Where); ok && w.added {
+		q = w.Source()
+	}
 	in := strings.Repeat(" ", indent*4)
 	var s string
 	switch q := q.(type) {

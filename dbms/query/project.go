@@ -252,12 +252,12 @@ func (p *Project) Transform() Query {
 	case *Join:
 		if set.Subset(p.columns, q.by) {
 			src1, src2 := p.splitOver(&q.Query2)
-			return NewJoin(src1, src2, q.by).Transform()
+			return NewJoin(src1, src2, q.by, q.qt, true).Transform()
 		}
 	case *LeftJoin:
 		if set.Subset(p.columns, q.by) {
 			src1, src2 := p.splitOver(&q.Query2)
-			return NewLeftJoin(src1, src2, q.by).Transform()
+			return NewLeftJoin(src1, src2, q.by, q.qt, true).Transform()
 		}
 	case *Union:
 		if p.splitable(&q.Compatible) {

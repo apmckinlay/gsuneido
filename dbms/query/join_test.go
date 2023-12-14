@@ -37,8 +37,8 @@ func TestJoin_nrows(t *testing.T) {
 	test(2, 100, 10, 2000, 10)
 }
 
-func TestJoinSelectFixedBug(t *testing.T) {
-	// Without join addSource2Fixed this test should give:
+func TestJoin_SelectFixedBug(t *testing.T) {
+	// Without handleFixed this test should give:
 	// 		ASSERT FAILED: msg:  selEnd no data
 	db := heapDb()
 	db.adm("create cus (c3, ck) key(c3, ck)")
@@ -61,9 +61,10 @@ func TestJoinSelectFixedBug(t *testing.T) {
 			{1_000 0+250_000} cus^(c3,ck)
 			{500/1_000 0+250_000} WHERE ck is ""
 			{500/1_000 0+250_000} EXTEND bk = c3
-		{1/1_000 0+1_500_500} JOIN n:1 by(ck,bk)
-				{1_000 0+250_000} bln^(ik,bk)
-			{1/1_000 0+750_500} JOIN n:1 by(ik)
+		{1/1_000 0+1_126_000} JOIN n:1 by(ck,bk)
+				{0.500x 1_000 0+125_500} bln^(ik,bk)
+				{500/1_000 0+125_500} WHERE ik is 4
+			{1/1_000 0+376_000} JOIN n:1 by(ik)
 				{0.001x 1_000 0+500} ivc^(ik)
 				{1/1_000 0+500} WHERE*1 ik is 4 and ck is ""`)
 	assert.This(queryAll2(q)).Is("")

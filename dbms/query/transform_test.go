@@ -79,7 +79,7 @@ func TestTransform(t *testing.T) {
 		"customer WHERE id is 5 and city is 6 and name is 7")
 	// leftjoin to join
 	test("(cus leftjoin task) where cnum is 1 where tnum is 2",
-		"cus where cnum is 1 join 1:1 by(cnum) (task where tnum is 2)")
+		"cus where cnum is 1 join 1:1 by(cnum) (task where tnum is 2 and cnum is 1)")
 	test("(cus leftjoin task) where tnum is 2 where cnum is 1",
 		"cus where cnum is 1 join 1:1 by(cnum) (task where tnum is 2 and cnum is 1)")
 

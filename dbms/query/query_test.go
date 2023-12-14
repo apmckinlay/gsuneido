@@ -15,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 func TestKeys(t *testing.T) {
@@ -433,19 +434,25 @@ func TestJoin_splitSelect(t *testing.T) {
 	q2 := newTestQop([]string{"c", "d", "e"})
 	q1.indexes = [][]string{{"c"}}
 	q2.fixed = []Fixed{
-		{col: "c", values: []string{"1"}},
-		{col: "e", values: []string{"2", ""}},
+		{col: "c", values: fixvals("1")},
+		{col: "e", values: fixvals("2", "")},
 	}
-	jn := NewJoin(q1, q2, nil)
+	jn := NewJoin(q1, q2, nil, nil, false)
 	assert.This(jn.by).Is([]string{"c"})
 	jn.saIndex = []string{"a"}
 
 	cols := []string{"a", "c"}
-	vals := []string{"9", "1"}
+	vals := fixvals("9", "1")
 	jn.Select(cols, vals)
 	assert.This(q1.sel).
-		Is(sel{cols: []string{"a"}, vals: []string{"9"}})
+		Is(sel{cols: []string{"a"}, vals: fixvals("9")})
 	assert.That(!jn.conflict1 && !jn.conflict2)
+}
+
+func fixvals(strs ...string) []string {
+	return slc.MapFn(strs, func(s string) string {
+		return Pack(SuStr(s))
+	})
 }
 
 type TestQop struct {

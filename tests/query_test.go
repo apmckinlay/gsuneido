@@ -36,7 +36,7 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `(((cus union cus) extend x1 = "1") leftjoin (((bln where ik is "95") leftjoin ivc) where bk is "25"))`
+	s := `(aln join ((ivc where ik is "12") leftjoin (((cus extend ik = c2)))))`
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
 	q := ParseQuery(s, tran, nil)
@@ -57,7 +57,7 @@ func TestQuery(t *testing.T) {
 		if row == nil {
 			break
 		}
-		fmt.Println(row2str(hdr, row))
+		// fmt.Println(row2str(hdr, row))
 		hash := hashRow(hdr, fields, row)
 		if _, ok := hashes[hash]; ok {
 			panic("duplicate hash")

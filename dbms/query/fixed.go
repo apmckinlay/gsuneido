@@ -130,6 +130,16 @@ func getFixed(fixed []Fixed, col string) []string {
 	return nil
 }
 
+// findFixed returns the Fixed for a column, or nil if not found
+func findFixed(fixed []Fixed, col string) *Fixed {
+	for i := range fixed {
+		if col == fixed[i].col {
+			return &fixed[i]
+		}
+	}
+	return nil
+}
+
 func (f *Fixed) single() bool {
 	return len(f.values) == 1
 }
