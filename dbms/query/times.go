@@ -5,7 +5,6 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -51,9 +50,8 @@ func (t *Times) getIndexes() [][]string {
 }
 
 func (t *Times) getFixed() []Fixed {
-	fixed, conflict := combineFixed(t.source1.Fixed(), t.source2.Fixed())
-	assert.That(!conflict) // because no common columns
-	return fixed
+	// no common columns so no overlap
+	return slc.With(t.source1.Fixed(), t.source2.Fixed()...)
 }
 
 func (t *Times) Transform() Query {
@@ -72,6 +70,7 @@ func (t *Times) Transform() Query {
 }
 
 func (t *Times) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
+	//TODO index could be split, first part on source1, second part on source2
 	opt := func(src1, src2 Query) (Cost, Cost) {
 		nrows1, _ := src1.Nrows()
 		fixcost1, varcost1 := Optimize(src1, mode, index, frac)
