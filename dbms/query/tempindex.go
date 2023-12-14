@@ -4,6 +4,7 @@
 package query
 
 import (
+	"log"
 	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -248,7 +249,7 @@ func (ti *TempIndex) single() rowIter {
 		}
 	}
 	if nrows > 2*tempindexWarn {
-		Warning("temp index large =", nrows)
+		log.Println("temp index large =", nrows)
 	}
 	// lt must be consistent with singleLess
 	lt := func(rec DbRec, key []string) bool {
@@ -358,10 +359,10 @@ func (ti *TempIndex) multi() rowIter {
 		b.Add(row)
 	}
 	if nrows > 2*tempindexWarn {
-		Warning("temp index large =", nrows)
+		log.Println("temp index large =", nrows)
 	}
 	if derived > 2*derivedWarn {
-		Warning("temp index derived large =",
+		log.Println("temp index derived large =",
 			derived, "average", derived/nrows)
 	}
 	lt := func(row Row, key []string) bool {

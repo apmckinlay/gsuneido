@@ -5,6 +5,7 @@ package query
 
 import (
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 
@@ -262,10 +263,10 @@ func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 }
 
 func (su *Summarize) mapCost(mode Mode, index []string, _ float64) (Cost, Cost, any) {
-	//FIXME technically, map should only be allowed in ReadMode
+	// WARNING technically, map should only be allowed in ReadMode
 	nrows, _ := su.Nrows()
 	if index != nil || su.hint == sumLarge ||
-		(nrows > mapLimit && su.hint != sumSmall) {
+		(nrows > mapThreshold && su.hint != sumSmall) {
 		return impossible, impossible, nil
 	}
 	fixcost, varcost := Optimize(su.source, mode, nil, 1)
@@ -430,13 +431,16 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 		if sums == nil {
 			sums = su.newSums()
 			sumMap.Put(rh, sums)
-			if !warned && sumMap.Size() > mapLimit {
+			if !warned && sumMap.Size() > mapWarn {
 				// log inside loop in case we run out of memory
 				warned = true
-				Warning("summarize-map large >", mapLimit)
+				Warning("summarize-map large >", mapWarn)
 			}
 		}
 		su.addToSums(sums, row, th, su.st)
+	}
+	if sumMap.Size() > 2*mapWarn {
+		log.Println("summarize-map large =", sumMap.Size())
 	}
 	i := 0
 	list := make([]mapPair, sumMap.Size())

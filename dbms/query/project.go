@@ -424,11 +424,15 @@ func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 		&projectApproach{strategy: projSeq, index: seq.index}
 }
 
-const mapLimit = 16384 // mapLimit is also used by Summarize
+// mapThreshold and mapWarn are used by Project and Summarize
+const (
+	mapThreshold = 10000 // used by optimize
+	mapWarn      = 20000
+)
 
 func (p *Project) mapCost(mode Mode, index []string, frac float64) (Cost, Cost) {
 	nrows, _ := p.Nrows()
-	if mode != ReadMode || nrows > mapLimit {
+	if mode != ReadMode || nrows > mapThreshold {
 		return impossible, impossible
 	}
 	// assume we're reading Next (normal)
@@ -588,10 +592,11 @@ func (p *Project) addResult(th *Thread, row Row) (Row, bool) {
 	if existed {
 		return k.row, true
 	} else {
-		if !p.warned && p.results.Size() > mapLimit {
+		if !p.warned && p.results.Size() > mapWarn {
 			p.warned = true
-			Warning("project-map large >", mapLimit)
+			Warning("project-map large >", mapWarn)
 		}
+		p.derived += row.Derived()
 		if !p.derivedWarned && p.derived > derivedWarn {
 			p.derivedWarned = true
 			Warning("project-map derived large >",
