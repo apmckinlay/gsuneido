@@ -713,12 +713,12 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) Row {
 			return nil
 		}
 		if lj.conflict2 {
-			return lj.filter(lj.row1, lj.empty2)
+			return JoinRows(lj.row1, lj.empty2)
 		}
 		lj.row2 = lj.source2.Get(th, dir)
 		if lj.shouldOutput(lj.row2) {
 			if lj.row2 == nil {
-				return lj.filter(lj.row1, lj.empty2)
+				return JoinRows(lj.row1, lj.empty2)
 			}
 			return lj.filter(lj.row1, lj.row2)
 		}
