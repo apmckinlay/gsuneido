@@ -13,16 +13,18 @@ import (
 
 var timestamp SuDate
 var tsLock sync.Mutex
-var timeError = false
 
 // StartTimestamp is called by gsuneido.go openDbms
 func StartTimestamps() {
-	timestamp = Now().WithoutMs()
+	// start timestamp ahead one second
+	// to avoid overlap if it restarts in less than a second.
+	timestamp = Now().WithoutMs().Plus(0, 0, 0, 0, 0, 0, 990)
 	go ticker()
 }
 
 // ticker runs on the dbms i.e. server or standalone, not client
 func ticker() {
+	var timeError = false
 	for {
 		time.Sleep(1 * time.Second)
 		t := Now().WithoutMs()
