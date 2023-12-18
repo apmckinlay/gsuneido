@@ -269,8 +269,10 @@ func (jn *Join) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 	rev.fixcost += outOfOrder + joinRev
 	if trace.JoinOpt.On() {
 		trace.JoinOpt.Println(mode, index, frac)
-		trace.Println("    fwd", fwd.index2, "=", fwd.fixcost, fwd.varcost)
-		trace.Println("    rev", rev.index2, "=", rev.fixcost, rev.varcost)
+		trace.Println("    fwd index1", fwd.index1, "index2", fwd.index2,
+			"=", fwd.fixcost, fwd.varcost)
+		trace.Println("    rev index1", rev.index1, "index2", rev.index2,
+			"=", rev.fixcost, rev.varcost)
 		trace.Println(strategy(jn, 1))
 	}
 	approach := &joinApproach{}

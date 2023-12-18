@@ -4,6 +4,7 @@
 package query
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -68,4 +69,35 @@ func TestJoin_SelectFixedBug(t *testing.T) {
 				{0.001x 1_000 0+500} ivc^(ik)
 				{1/1_000 0+500} WHERE*1 ik is 4 and ck is ""`)
 	assert.This(queryAll2(q)).Is("")
+}
+
+func TestJoin_EmptyTempIndexBug(t *testing.T) {
+	db := heapDb()
+	db.adm("create ivc (ck, ik) key(ik)")
+	// db.act("insert { c3: 4 } into cus")
+	db.adm("create bln (bk, ik) key (ik,bk)")
+	query := `
+			(bln
+		join by(ik)
+			(ivc where ik is 4 and ck is ""))`
+	joinRev = impossible
+	defer func() { joinRev = 0 }()
+	tran := sizeTran{db.NewReadTran()}
+	q := ParseQuery(query, tran, nil)
+	idx := []string{"ck", "ik"}
+	q = setupIndex(q, ReadMode, idx, tran)
+	// fmt.Println(Strategy(q))
+	assert.T(t).Msg("empty TempIndex").
+		That(!strings.Contains(Strategy(q), "TEMPINDEX()"))
+	q.Select(idx, []string{"", ""})
+}
+
+func setupIndex(q Query, mode Mode, index []string, tran QueryTran) Query {
+	q = q.Transform()
+	fixcost, varcost := Optimize(q, mode, index, float64(1))
+	if fixcost+varcost >= impossible {
+		panic("impossible")
+	}
+	q = SetApproach(q, index, float64(1), tran)
+	return q
 }

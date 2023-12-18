@@ -161,3 +161,12 @@ func conflictFixed(cols, vals []string, fixed []Fixed) bool {
 	_, conflict := selectFixed(cols, vals, fixed)
 	return conflict
 }
+
+func allFixed(fixed []Fixed, cols []string) bool {
+	for _, col := range cols {
+		if !isSingleFixed(fixed, col) {
+			return false
+        }
+	}
+	return true
+}

@@ -36,9 +36,10 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `(aln join ((ivc where ik is "12") leftjoin (((cus extend ik = c2)))))`
+	s := `(cus union cus union cus) join ivc where ck = "" sort ck`
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
+	fmt.Println("----------------")
 	q := ParseQuery(s, tran, nil)
 	// trace.QueryOpt.Set()
 	// trace.JoinOpt.Set()
@@ -47,6 +48,7 @@ func TestQuery(t *testing.T) {
 
 	fmt.Println("----------------")
 	fmt.Println(Strategy(q))
+	fmt.Println("----------------")
 	th := &Thread{}
 	n := 0
 	hdr := q.Header()

@@ -333,7 +333,7 @@ func Optimize(q Query, mode Mode, index []string, frac float64) (
 		index = nil //TODO why is this needed?
 	}
 	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
-	if fastSingle(q, index) {
+	if fastSingle(q, index) || allFixed(q.Fixed(), index) {
 		index = nil
 	}
 	if fixcost, varcost, _ := q.cacheGet(index, frac); varcost >= 0 {
@@ -472,7 +472,7 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) (
 // SetApproach finalizes the chosen approach.
 // It also adds temp indexes where required.
 func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
-	if fastSingle(q, index) {
+	if fastSingle(q, index) || allFixed(q.Fixed(), index) {
 		index = nil
 	}
 	fixcost, varcost, approach := q.cacheGet(index, frac)

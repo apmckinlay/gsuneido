@@ -107,6 +107,7 @@ func (*Union) fastSingle() bool {
 
 func (u *Union) getIndexes() [][]string {
 	// lookup can read via any index
+	// merge cannot but that will be handled by optimize
 	return set.UnionFn(u.source1.Indexes(), u.source2.Indexes(), slices.Equal)
 }
 
