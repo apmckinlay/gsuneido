@@ -88,7 +88,8 @@ type Query interface {
 	SingleTable() bool
 
 	// Indexes returns all the indexes.
-	// Unlike Keys, Indexes are physical i.e. fast access paths
+	// Unlike Keys, Indexes are physical i.e. fast access paths.
+	// Where returns []string{} not nil for singleton. (slc.Empty)
 	Indexes() [][]string
 
 	// Keys returns sets of fields that are unique keys.
@@ -329,7 +330,7 @@ const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 func Optimize(q Query, mode Mode, index []string, frac float64) (
 	fixcost, varcost Cost) {
 	if len(index) == 0 {
-		index = nil
+		index = nil //TODO why is this needed?
 	}
 	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
 	if fastSingle(q, index) {
@@ -339,7 +340,7 @@ func Optimize(q Query, mode Mode, index []string, frac float64) (
 		return fixcost, varcost
 	}
 	fixcost, varcost, app := optTempIndex(q, mode, index, frac)
-	assert.That(fixcost >= 0 && varcost >= 0)
+	assert.Msg("negative cost").That(fixcost >= 0 && varcost >= 0)
 	q.cacheAdd(index, frac, fixcost, varcost, app)
 	return fixcost, varcost
 }
@@ -475,8 +476,10 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 		index = nil
 	}
 	fixcost, varcost, approach := q.cacheGet(index, frac)
-	assert.That(fixcost >= 0)
-	assert.That(varcost >= 0)
+	if fixcost == -1 {
+		panic("SetApproach: not found in cache")
+	}
+	assert.Msg("negative cost").That(fixcost >= 0 && varcost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
 		q.cacheSetCost(1, app.srcfixcost, app.srcvarcost)
 		q.setApproach(nil, 1, app.approach, tran)
@@ -692,6 +695,7 @@ func grouped(index []string, cols []string, nColsUnfixed int, fixed []Fixed) boo
 
 // ordered returns whether an index supplies an order
 // taking fixed into consideration.
+// It is used by Where and Sort.
 func ordered(index []string, order []string, fixed []Fixed) bool {
 	i := 0
 	o := 0

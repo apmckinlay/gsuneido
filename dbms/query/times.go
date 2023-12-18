@@ -91,7 +91,6 @@ func (t *Times) setApproach(index []string, frac float64, approach any, tran Que
 		t.source1, t.source2 = t.source2, t.source1
 	}
 	t.source1 = SetApproach(t.source1, index, frac, tran)
-	t.saIndex = index
 	nrows1, _ := t.source1.Nrows()
 	t.source2 = SetApproach(t.source2, nil, frac*float64(nrows1), tran)
 	t.header = t.getHeader()

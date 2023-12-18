@@ -77,7 +77,7 @@ func (sort *Sort) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 	assert.That(index == nil)
 	src := sort.source
 	fixcost, varcost := Optimize(src, mode, sort.order, frac) // adds temp index if needed
-	best := bestOrdered(src, src.Indexes(), sort.order, mode, frac)
+	best := bestOrdered(src, sort.order, mode, frac, sort.fixed)
 	if fixcost+varcost < best.fixcost+best.varcost {
 		return fixcost, varcost, sortApproach{index: sort.order}
 	}
@@ -86,11 +86,9 @@ func (sort *Sort) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 
 // bestOrdered returns the best index that supplies the required order
 // taking fixed into consideration.
-func bestOrdered(q Query, indexes [][]string, order []string,
-	mode Mode, frac float64) bestIndex {
+func bestOrdered(q Query, order []string, mode Mode, frac float64, fixed []Fixed) bestIndex {
 	best := newBestIndex()
-	fixed := q.Fixed()
-	for _, ix := range indexes {
+	for _, ix := range q.Indexes() {
 		if ordered(ix, order, fixed) {
 			fixcost, varcost := Optimize(q, mode, ix, frac)
 			best.update(ix, fixcost, varcost)

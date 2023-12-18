@@ -138,13 +138,19 @@ func fixedWith(fixed Fixed, val string) Fixed {
 }
 
 func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) {
+	// fixed 1,2,3 val 5 => conflict
+	// fixed 2 val 2 => satisfied
+	// fixed 1,2,3 val 2 => not conflict, not satisfied
+	if len(fixed) == 0 {
+		return false, false
+	}
 	satisfied = true
 	for i, col := range cols {
-		if fv := getFixed(fixed, col); len(fv) == 1 {
-			if fv[0] != vals[i] {
-				return false, true // conflict
-			}
-		} else {
+		fv := getFixed(fixed, col)
+		if fv != nil && !slices.Contains(fv, vals[i]) {
+			return false, true // conflict
+		}
+		if fv == nil || len(fv) > 1 {
 			satisfied = false
 		}
 	}

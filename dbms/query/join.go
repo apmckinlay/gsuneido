@@ -14,7 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -28,7 +27,6 @@ import (
 
 // joinLike is common stuff for Join, LeftJoin, and Times
 type joinLike struct {
-	saIndex  []string // set approach index
 	sel2cols []string
 	sel2vals []string
 	Query2
@@ -62,6 +60,7 @@ type lookupInfo struct {
 }
 
 type joinApproach struct {
+	index1  []string
 	index2  []string
 	frac2   float64
 	reverse bool
@@ -264,14 +263,14 @@ var joinRev = 0 // tests can set to impossible to prevent reverse
 
 func (jn *Join) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	fwd := joinopt(jn.source1, jn.source2, jn.joinType, jn.Nrows,
-		mode, index, frac, jn.by)
+		mode, index, frac, jn.by, jn.fixed)
 	rev := joinopt(jn.source2, jn.source1, jn.joinType.reverse(), jn.Nrows,
-		mode, index, frac, jn.by)
+		mode, index, frac, jn.by, jn.fixed)
 	rev.fixcost += outOfOrder + joinRev
 	if trace.JoinOpt.On() {
 		trace.JoinOpt.Println(mode, index, frac)
-		trace.Println("    fwd", fwd.index, "=", fwd.fixcost, fwd.varcost)
-		trace.Println("    rev", rev.index, "=", rev.fixcost, rev.varcost)
+		trace.Println("    fwd", fwd.index2, "=", fwd.fixcost, fwd.varcost)
+		trace.Println("    rev", rev.index2, "=", rev.fixcost, rev.varcost)
 		trace.Println(strategy(jn, 1))
 	}
 	approach := &joinApproach{}
@@ -279,10 +278,11 @@ func (jn *Join) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 		fwd = rev
 		approach.reverse = true
 	}
-	if fwd.index == nil {
+	if fwd.fixcost == impossible {
 		return impossible, impossible, nil
 	}
-	approach.index2 = fwd.index
+	approach.index1 = fwd.index1
+	approach.index2 = fwd.index2
 	approach.frac2 = fwd.frac2
 	return fwd.fixcost, fwd.varcost, approach
 }
@@ -297,20 +297,20 @@ func (jt joinType) reverse() joinType {
 	return jt
 }
 
-type bestJoin struct {
-	bestIndex
-	frac2 float64
+type joinCost struct {
+	index1  []string
+	index2  []string
+	frac2   float64
+	fixcost Cost
+	varcost Cost
 }
 
 func joinopt(src1, src2 Query, joinType joinType, nrows func() (int, int),
-	mode Mode, index []string, frac float64, by []string) bestJoin {
-	if slc.Empty(index) && !src1.fastSingle() {
-		return bestJoin{bestIndex: newBestIndex()} // impossible
-	}
+	mode Mode, index []string, frac float64, by []string, fixed []Fixed) joinCost {
 	// always have to read all of source 1
-	fixcost1, varcost1 := Optimize(src1, mode, index, frac)
+	fixcost1, varcost1, index := optOrdered(src1, mode, index, frac, fixed)
 	if fixcost1+varcost1 >= impossible {
-		return bestJoin{bestIndex: newBestIndex()} // impossible
+		return joinCost{fixcost: impossible}
 	}
 	nrows1, _ := src1.Nrows()
 	nrows2, _ := src2.Nrows()
@@ -318,18 +318,32 @@ func joinopt(src1, src2 Query, joinType joinType, nrows func() (int, int),
 	frac2 := float64(read2) * frac / float64(max(1, nrows2))
 	best2 := bestGrouped(src2, mode, nil, frac2, by)
 	if best2.index == nil {
-		return bestJoin{bestIndex: newBestIndex()} // impossible
+		return joinCost{fixcost: impossible}
 	}
 	varcost2 := Cost(frac * float64(nrows1*src2.lookupCost()))
 	// trace.Println("joinopt", joinType, "frac", frac)
 	// trace.Println("   ", nrows1, joinType, nrows2, "=> read2", read2, "=> frac2", frac2)
 	// trace.Println("    best2", best2.index, "=", best2.fixcost, best2.varcost)
 	// trace.Println("    nrows1", nrows1, "lookups", nrows1 * src2.lookupCost())
-	return bestJoin{frac2: frac2, bestIndex: bestIndex{
-		index:   best2.index,
+	return joinCost{index1: index, index2: best2.index, frac2: frac2,
 		fixcost: fixcost1 + best2.fixcost,
 		varcost: varcost1 + varcost2 + best2.varcost,
-	}}
+	}
+}
+
+func optOrdered(q Query, mode Mode, index []string, frac float64, fixed []Fixed) (Cost, Cost, []string) {
+	//TODO singleton ?
+	//TODO all cols fixed ?
+	if len(index) > 0 && len(fixed) > 0 {
+		best := bestOrdered(q, index, mode, frac, fixed)
+		if best.index != nil {
+			// fmt.Println("best", best.index, "index", index, "indexes", q.Indexes(),
+			// 	"fixed", fixedStr(fixed))
+			index = best.index
+		}
+	}
+	fixcost, varcost := Optimize(q, mode, index, frac)
+	return fixcost, varcost, index
 }
 
 func (jn *Join) setApproach(index []string, frac float64, approach any, tran QueryTran) {
@@ -338,10 +352,9 @@ func (jn *Join) setApproach(index []string, frac float64, approach any, tran Que
 		jn.source1, jn.source2 = jn.source2, jn.source1
 		jn.joinType = jn.joinType.reverse()
 	}
-	jn.source1 = SetApproach(jn.source1, index, frac, tran)
+	jn.source1 = SetApproach(jn.source1, ap.index1, frac, tran)
 	jn.source2 = SetApproach(jn.source2, ap.index2, ap.frac2, tran)
 	jn.header = jn.getHeader()
-	jn.saIndex = index
 }
 
 func (jn *Join) getNrows() (int, int) {
@@ -522,20 +535,21 @@ func (jl *joinLike) selectByCols(cols, vals []string) ([]string, []string) {
 
 func (jl *joinLike) splitSelect(cols, vals []string) (
 	sel1cols, sel1vals []string) {
+	columns1 := jl.source1.Columns()
 	fixed1 := jl.source1.Fixed()
 	fixed2 := jl.source2.Fixed()
 	for i, col := range cols {
-		if slices.Contains(jl.saIndex, col) {
+		if slices.Contains(columns1, col) {
 			sel1cols = append(sel1cols, col)
 			sel1vals = append(sel1vals, vals[i])
 			continue
 		}
 		fixVals1 := getFixed(fixed1, col)
-		if len(fixVals1) == 1 && fixVals1[0] != vals[i] {
+		if fixVals1 != nil && !slices.Contains(fixVals1, vals[i]) {
 			jl.conflict1 = true
 		}
 		fixVals2 := getFixed(fixed2, col)
-		if len(fixVals2) == 1 && fixVals2[0] != vals[i] {
+		if fixVals2 != nil && !slices.Contains(fixVals2, vals[i]) {
 			jl.conflict2 = true
 		}
 	}
@@ -544,7 +558,7 @@ func (jl *joinLike) splitSelect(cols, vals []string) (
 }
 
 func (jb *joinBase) lookupFallback(sel1cols []string) bool {
-	if jb.lookup == nil {
+	if jb.lookup == nil { // memoize
 		jb.lookup = &lookupInfo{
 			keys1:  jb.source1.Keys(),
 			fixed1: jb.source1.Fixed(),
@@ -650,19 +664,18 @@ func (lj *LeftJoin) Transform() Query {
 }
 
 func (lj *LeftJoin) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	best := joinopt(lj.source1, lj.source2, lj.joinType, lj.Nrows,
-		mode, index, frac, lj.by)
-	return best.fixcost, best.varcost,
-		&joinApproach{index2: best.index, frac2: best.frac2}
+	jc := joinopt(lj.source1, lj.source2, lj.joinType, lj.Nrows,
+		mode, index, frac, lj.by, lj.fixed)
+	return jc.fixcost, jc.varcost,
+		&joinApproach{index1: jc.index1, index2: jc.index2, frac2: jc.frac2}
 }
 
 func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
-	lj.source1 = SetApproach(lj.source1, index, frac, tran)
+	lj.source1 = SetApproach(lj.source1, ap.index1, frac, tran)
 	lj.source2 = SetApproach(lj.source2, ap.index2, ap.frac2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 	lj.header = lj.getHeader()
-	lj.saIndex = index
 }
 
 func (lj *LeftJoin) getNrows() (int, int) {

@@ -439,14 +439,14 @@ func TestJoin_splitSelect(t *testing.T) {
 	}
 	jn := NewJoin(q1, q2, nil, nil, false)
 	assert.This(jn.by).Is([]string{"c"})
-	jn.saIndex = []string{"a"}
 
 	cols := []string{"a", "c"}
 	vals := fixvals("9", "1")
 	jn.Select(cols, vals)
-	assert.This(q1.sel).
-		Is(sel{cols: []string{"a"}, vals: fixvals("9")})
+	assert.This(q1.sel).Is(sel{cols: cols, vals: vals})
 	assert.That(!jn.conflict1 && !jn.conflict2)
+
+	//TODO test conflict
 }
 
 func fixvals(strs ...string) []string {
