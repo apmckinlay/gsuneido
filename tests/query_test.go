@@ -36,7 +36,9 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `(cus union cus union cus) join ivc where ck = "" sort ck`
+	s := `ftw_purchases join ftw_equipment
+			where ftwpurchase_city
+			where ftwequip_name or ftwpurchase_date`
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
 	fmt.Println("----------------")

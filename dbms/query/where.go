@@ -461,7 +461,7 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 		q2 = newQ2(src1, src2).Transform()
 	}
 	if exprs1 == nil && exprs2 == nil {
-		return w
+		return w.transform(q2)
 	}
 	if common != nil {
 		e := &ast.Nary{Tok: tok.And, Exprs: common}
