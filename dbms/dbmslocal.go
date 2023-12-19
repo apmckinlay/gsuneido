@@ -149,7 +149,9 @@ func (dbms *DbmsLocal) Get(
 }
 
 func get(th *Thread, tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
-	q, fixcost, varcost := buildQuery(query, tran, th.Sviews(), qry.ReadMode)
+	q := qry.ParseQuery(query, tran, th.Sviews())
+	q, fixcost, varcost := qry.Setup1(q, qry.ReadMode, tran)
+	qry.Warnings(query, q)
 	if trace.Query.On() {
 		d := map[Dir]string{Only: "one", Next: "first", Prev: "last"}[dir]
 		trace.Query.Println(d, fixcost+varcost, "-", query)
