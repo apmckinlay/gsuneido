@@ -41,7 +41,7 @@ func (c *cache) cacheAdd(index []string, frac float64,
 }
 
 // cacheGet returns the cost and approach associated with an index
-// or -1 if the index as not been added.
+// or -1 if the index has not been added.
 func (c *cache) cacheGet(index []string, frac float64) (
 	fixcost, varcost Cost, approach any) {
 	for i := range c.entries {
