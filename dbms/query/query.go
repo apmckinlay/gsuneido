@@ -329,20 +329,27 @@ const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 // Optimize determines the best (lowest estimated cost) query execution approach
 func Optimize(q Query, mode Mode, index []string, frac float64) (
 	fixcost, varcost Cost) {
-	if len(index) == 0 {
-		index = nil //TODO why is this needed?
-	}
+	fixcost, varcost, _ = optimize(q, mode, index, frac)
+	return fixcost, varcost
+}
+
+// optimize is used by Optimize and LookupCost
+func optimize(q Query, mode Mode, index []string, frac float64) (
+	fixcost, varcost Cost, approach any) {
 	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
-	if fastSingle(q, index) || allFixed(q.Fixed(), index) {
+
+	// short circuit on empty index
+	// Note: this condition should match SetApproach
+	if len(index) == 0 || fastSingle(q, index) || allFixed(q.Fixed(), index) {
 		index = nil
 	}
-	if fixcost, varcost, _ := q.cacheGet(index, frac); varcost >= 0 {
-		return fixcost, varcost
+	if fixcost, varcost, app := q.cacheGet(index, frac); varcost >= 0 {
+		return fixcost, varcost, app
 	}
 	fixcost, varcost, app := optTempIndex(q, mode, index, frac)
 	assert.Msg("negative cost").That(fixcost >= 0 && varcost >= 0)
 	q.cacheAdd(index, frac, fixcost, varcost, app)
-	return fixcost, varcost
+	return fixcost, varcost, app
 }
 
 func fastSingle(q Query, index []string) bool {
@@ -443,15 +450,11 @@ func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 
 func LookupCost(q Query, mode Mode, index []string, nrows int) (
 	Cost, Cost) {
-	if fastSingle(q, index) {
-		index = nil
-	}
-	fixcost, varcost := Optimize(q, mode, index, 0)
+	fixcost, varcost, approach := optimize(q, mode, index, 0)
 	if fixcost+varcost >= impossible {
 		return impossible, impossible
 	}
 	var lookupCost Cost
-	_, _, approach := q.cacheGet(index, 0)
 	if _, ok := approach.(*tempIndex); ok {
 		if q.SingleTable() {
 			lookupCost = 200 // ???
@@ -472,7 +475,9 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) (
 // SetApproach finalizes the chosen approach.
 // It also adds temp indexes where required.
 func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
-	if fastSingle(q, index) || allFixed(q.Fixed(), index) {
+	// short circuit on empty index
+	// Note: this condition should match Optimize
+	if len(index) == 0 || fastSingle(q, index) || allFixed(q.Fixed(), index) {
 		index = nil
 	}
 	fixcost, varcost, approach := q.cacheGet(index, frac)
