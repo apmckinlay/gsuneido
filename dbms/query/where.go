@@ -59,11 +59,18 @@ type Where struct {
 
 	// exprMore is whether expr has more than idxSels
 	exprMore  bool
-	optInited bool
+	optInited
 
 	// added is true if the Where was added by Join. It is set by Join.
 	added bool
 }
+
+type optInited byte
+const (
+	optInitNo optInited = iota
+    optInitInProgress
+    optInitYes
+)
 
 type whereApproach struct {
 	index []string
@@ -185,15 +192,7 @@ func (w *Where) fastSingle() bool {
 }
 
 func (w *Where) Indexes() [][]string {
-	if w.indexes == nil {
-		w.optInit()
-		if !w.singleton {
-			w.indexes = w.source.Indexes()
-		}
-		if w.indexes == nil {
-			w.indexes = [][]string{} // not nil
-		}
-	}
+	w.optInit() // sets indexes
 	return w.indexes
 }
 
@@ -203,7 +202,7 @@ func (w *Where) Nrows() (int, int) {
 }
 
 func (w *Where) calcNrows() (int, int) {
-	assert.That(w.optInited)
+	assert.That(w.optInited == optInitInProgress)
 	srcNrows, srcPop := w.source.Nrows()
 	if w.conflict || srcPop == 0 {
 		return 0, srcPop
@@ -510,10 +509,11 @@ func (w *Where) exprFalse() bool {
 }
 
 func (w *Where) optInit() {
-	if w.optInited {
+	if w.optInited == optInitYes {
 		return
 	}
-	w.optInited = true
+	assert.That(w.optInited == optInitNo)
+	w.optInited = optInitInProgress
 	w.tbl, _ = w.source.(*Table)
 	if !w.conflict && w.tbl != nil {
 		w.idxSels = w.perIndex(w.colSels)
@@ -529,6 +529,10 @@ func (w *Where) optInit() {
 		}
 	}
 	w.setNrows(w.calcNrows())
+	if !w.singleton {
+		w.indexes = w.source.Indexes()
+	}
+	w.optInited = optInitYes
 }
 
 // bestIndex returns the best (lowest cost) index with an idxSel
