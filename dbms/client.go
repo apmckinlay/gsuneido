@@ -5,6 +5,7 @@ package dbms
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -58,7 +59,8 @@ func checkHello(conn net.Conn) (jserver bool, errmsg string) {
 	}
 	s = strings.TrimPrefix(s, "Suneido ")
 	if noTime(s) != noTime(options.BuiltDate) && !options.IgnoreVersion {
-		return false, "hello: version mismatch"
+		return false, fmt.Sprintf("version mismatch (got %s, want %s)",
+			noTime(s), noTime(options.BuiltDate))
 	}
 	return false, ""
 }
