@@ -78,11 +78,6 @@ func OpenDatabase(filename string) (*Database, error) {
 	return OpenDb(filename, stor.Update, true)
 }
 
-// OpenDatabaseRead opens the database in the named file for read only.
-func OpenDatabaseRead(filename string) (*Database, error) {
-	return OpenDb(filename, stor.Read, true)
-}
-
 // OpenDb opens the database in the named file.
 // NOTE: The returned Database does not have a checker.
 func OpenDb(filename string, mode stor.Mode, check bool) (db *Database, err error) {

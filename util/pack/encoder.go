@@ -20,12 +20,6 @@ func NewEncoder(size int) *Encoder {
 	return &Encoder{make([]byte, 0, size)}
 }
 
-// NewMmapEncoder returns an Encoder wrapping a memory mapped byte slice.
-// It should NOT be used with other byte slices.
-func NewMmapEncoder(buf []byte) *Encoder {
-	return &Encoder{buf}
-}
-
 // String returns the accumulated data as a string.
 func (e *Encoder) String() string {
 	s := hacks.BStoS(e.buf)

@@ -13,6 +13,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	. "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/exit"
@@ -28,7 +29,7 @@ func TestQuery(t *testing.T) {
 	}
 	// Global.TestDef("Rule_c",
 	// 	compile.Constant("function() { return .b }"))
-	db, err := db19.OpenDatabaseRead("../suneido.db")
+	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -119,7 +120,7 @@ func TestQuery2(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	db, err := db19.OpenDatabaseRead("../suneido.db")
+	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -146,7 +147,7 @@ func TestQuery2(t *testing.T) {
 }
 
 func BenchmarkProject_Old(b *testing.B) {
-	db, err := db19.OpenDatabaseRead("../suneido.db")
+	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -174,7 +175,7 @@ func BenchmarkProject_Old(b *testing.B) {
 }
 
 func BenchmarkProject_Hmap(b *testing.B) {
-	db, err := db19.OpenDatabaseRead("../suneido.db")
+	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())
 	}

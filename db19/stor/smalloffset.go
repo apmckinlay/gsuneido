@@ -13,24 +13,6 @@ type SmallOffset [SmallOffsetLen]byte
 const MaxSmallOffset = 1<<40 - 1
 const SmallOffsetLen = 5
 
-func NewSmallOffset(offset uint64) SmallOffset {
-	var so SmallOffset
-	so[0] = byte(offset)
-	so[1] = byte(offset >> 8)
-	so[2] = byte(offset >> 16)
-	so[3] = byte(offset >> 24)
-	so[4] = byte(offset >> 32)
-	return so
-}
-
-func (so SmallOffset) Offset() uint64 {
-	return uint64(so[0]) +
-		uint64(so[1])<<8 +
-		uint64(so[2])<<16 +
-		uint64(so[3])<<24 +
-		uint64(so[4])<<32
-}
-
 func WriteSmallOffset(buf []byte, offset uint64) {
 	buf[0] = byte(offset)
 	buf[1] = byte(offset >> 8)
@@ -54,12 +36,4 @@ func ReadSmallOffset(buf []byte) uint64 {
 		uint64(buf[2])<<16 +
 		uint64(buf[3])<<24 +
 		uint64(buf[4])<<32
-}
-
-func EqualSmallOffset(buf []byte, offset uint64) bool {
-	return buf[0] == byte(offset) &&
-		buf[1] == byte(offset>>8) &&
-		buf[2] == byte(offset>>16) &&
-		buf[3] == byte(offset>>24) &&
-		buf[4] == byte(offset>>32)
 }

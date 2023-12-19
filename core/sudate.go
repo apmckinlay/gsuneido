@@ -125,13 +125,6 @@ func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
 	return t.Year() == yr && int(t.Month()) == mon && t.Day() == day
 }
 
-// OffsetUTC returns the offset from local to UTC in minutes
-func OffsetUTC() int {
-	t := time.Now()
-	_, offset := t.Zone()
-	return -offset / 60
-}
-
 // getters
 
 func (d SuDate) Year() int {

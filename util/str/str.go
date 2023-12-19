@@ -267,12 +267,6 @@ func ToUpper(s string) string {
 	return s
 }
 
-// Contains returns whether the string contains the given byte.
-// Equivalent to strings.ContainsRune but slightly simpler.
-func Contains(s string, c byte) bool {
-	return strings.IndexByte(s, c) >= 0
-}
-
 // EqualCI checks if two strings are equal ignoring (ascii) case
 func EqualCI(x, y string) bool {
 	if len(x) != len(y) {

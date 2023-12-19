@@ -9,7 +9,6 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/generic/cache"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
@@ -632,17 +631,4 @@ func (co *compiler) onePass3() {
 			pi += 1 + int(co.prog[pi+1])
 		}
 	}
-}
-
-// Cache ----------------------------------------------------------------------
-
-type Cache struct {
-	*cache.Cache[string, Pattern]
-}
-
-func (c *Cache) Get(s string) Pattern {
-	if c.Cache == nil {
-		c.Cache = cache.New(Compile)
-	}
-	return c.Cache.Get(s)
 }

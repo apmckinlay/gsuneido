@@ -4,7 +4,6 @@
 package core
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
@@ -17,7 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
@@ -391,12 +389,4 @@ func catchMatch(e, pat string) bool {
 		}
 	}
 	return false
-}
-
-func Unpack64(s string) Value {
-	data, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		panic("Unpack64 bad data")
-	}
-	return Unpack(hacks.BStoS(data))
 }

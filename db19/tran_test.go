@@ -92,7 +92,7 @@ func TestTran(t *testing.T) {
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 	db.Close()
 
-	db, err = OpenDatabaseRead("tmp.db")
+	db, err = OpenDb("tmp.db", stor.Read, true)
 	ck(err)
 	db.MustCheck()
 	rt = db.NewReadTran()
