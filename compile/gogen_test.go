@@ -1,15 +1,19 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+//go:build gogen
+
 package compile
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strings"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -53,7 +57,7 @@ func ExampleGoGen_c() {
 		"hello"
 		}`)
 	fmt.Println(src)
-	fmt.Println("_c0_", Unpack64(`BGhlbGxv`))
+	fmt.Println("_c0_", unpack64(`BGhlbGxv`))
 	// output:
 	//
 	// var _c0_ = Unpack64(`BGhlbGxv`)
@@ -70,7 +74,15 @@ func TestPack64(t *testing.T) {
 	b := g.init.String()
 	b = str.AfterFirst(b, "`")
 	b = str.BeforeLast(b, "`")
-	assert.T(t).This(Unpack64(b)).Is(s)
+	assert.T(t).This(unpack64(b)).Is(s)
+}
+
+func unpack64(s string) Value {
+	data, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic("Unpack64 bad data")
+	}
+	return Unpack(hacks.BStoS(data))
 }
 
 func TestGoGen(t *testing.T) {

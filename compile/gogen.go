@@ -1,6 +1,8 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+//go:build gogen
+
 package compile
 
 import (
@@ -14,6 +16,16 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+func GogenParser(src string) *Parser {
+	return newParser(NewLexer(src), &gogenAspects{})
+}
+
+// gogenAspects is used when transpiling to Go ----------------------
+type gogenAspects struct {
+	cgAspectsBase
+	nilChecker
+}
 
 func GoGen(src string) string {
 	p := GogenParser(src)

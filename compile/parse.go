@@ -28,10 +28,6 @@ func AstParser(src string) *Parser {
 	return newParser(NewLexer(src), &astAspects{})
 }
 
-func GogenParser(src string) *Parser {
-	return newParser(NewLexer(src), &gogenAspects{})
-}
-
 func QueryParser(src string) *Parser {
 	return newParser(NewQueryLexer(src), &actionAspects{})
 }

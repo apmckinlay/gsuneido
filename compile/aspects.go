@@ -68,14 +68,6 @@ type cgckAspects struct {
 	*check.Check
 }
 
-// gogenAspects is used when transpiling to Go ----------------------
-type gogenAspects struct {
-	cgAspectsBase
-	nilChecker
-}
-
-// codegen defined in gogen.go
-
 // astAspects is used to generate an AST ----------------------------
 type astAspects struct {
 	ast.Factory
