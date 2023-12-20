@@ -216,7 +216,7 @@ func (p *Project) getNrows() (int, int) {
 func (p *Project) Transform() Query {
 	src := p.source.Transform()
 	if _, ok := src.(*Nothing); ok {
-		return NewNothing(p.columns)
+		return NewNothing(p)
 	}
 	if set.Equal(p.columns, p.source.Columns()) {
 		// remove projects of all columns

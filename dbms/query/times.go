@@ -57,11 +57,11 @@ func (t *Times) getFixed() []Fixed {
 func (t *Times) Transform() Query {
 	src1 := t.source1.Transform()
 	if _, ok := src1.(*Nothing); ok {
-		return NewNothing(t.Columns())
+		return NewNothing(t)
 	}
 	src2 := t.source2.Transform()
 	if _, ok := src2.(*Nothing); ok {
-		return NewNothing(t.Columns())
+		return NewNothing(t)
 	}
 	if src1 != t.source1 || src2 != t.source2 {
 		return NewTimes(src1, src2)

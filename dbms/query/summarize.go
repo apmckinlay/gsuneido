@@ -200,7 +200,7 @@ func (*Summarize) Output(*Thread, Record) {
 func (su *Summarize) Transform() Query {
 	src := su.source.Transform()
 	if _, ok := src.(*Nothing); ok {
-		return NewNothing(su.Columns())
+		return NewNothing(su)
 	}
 	if p, ok := src.(*Project); ok && p.unique {
 		// remove project-copy

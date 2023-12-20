@@ -235,11 +235,11 @@ func (w *Where) Transform() Query {
 		return src
 	}
 	if w.conflict {
-		return NewNothing(w.Columns())
+		return NewNothing(w)
 	}
 	switch q := src.(type) {
 	case *Nothing:
-		return NewNothing(w.Columns())
+		return NewNothing(w)
 	case *Tables:
 		return w.tablesLookup(q)
 	case *Where:
@@ -378,7 +378,7 @@ func (w *Where) tablesLookup(tables *Tables) Query {
 	}
 	s, ok := val.ToStr()
 	if !ok {
-		return NewNothing(w.Columns())
+		return NewNothing(w)
 	}
 	return NewTablesLookup(tables.tran, s)
 }

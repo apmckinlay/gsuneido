@@ -85,20 +85,19 @@ func (it *Intersect) getNrows() (int, int) {
 }
 
 func (it *Intersect) Transform() Query {
-	cols := it.Columns()
 	if it.disjoint != "" {
-		return NewNothing(cols)
+		return NewNothing(it)
 	}
 	if it.Fixed(); it.conflict {
-		return NewNothing(cols)
+		return NewNothing(it)
 	}
 	src1 := it.source1.Transform()
 	if _, ok := src1.(*Nothing); ok {
-		return NewNothing(cols)
+		return NewNothing(it)
 	}
 	src2 := it.source2.Transform()
 	if _, ok := src2.(*Nothing); ok {
-		return NewNothing(cols)
+		return NewNothing(it)
 	}
 	if src1 != it.source1 || src2 != it.source2 {
 		return NewIntersect(src1, src2)

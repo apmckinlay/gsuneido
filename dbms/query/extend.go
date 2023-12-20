@@ -134,7 +134,7 @@ func (e *Extend) Transform() Query {
 		exprs = append(e2.exprs, exprs...)
 	}
 	if _, ok := src.(*Nothing); ok {
-		return NewNothing(e.Columns())
+		return NewNothing(e)
 	}
 	if src != e.source {
 		return NewExtend(src, cols, exprs)

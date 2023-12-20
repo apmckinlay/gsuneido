@@ -58,7 +58,7 @@ func (m *Minus) Transform() Query {
 		return src1
 	}
 	if _, ok := src1.(*Nothing); ok {
-		return NewNothing(m.Columns())
+		return NewNothing(m)
 	}
 	src2 := m.source2.Transform()
 	if _, ok := src2.(*Nothing); ok {

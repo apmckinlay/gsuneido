@@ -63,17 +63,17 @@ func TestFixed(t *testing.T) {
 		assert.T(t).This(q.String()).Is(expected)
 	}
 	test2("table extend f=1 where f is 2",
-		"NOTHING")
+		"NOTHING(table)")
 	test2("table extend f=1, g=2 where f is 1",
 		"table^(a) WHERE true EXTEND f = 1, g = 2") //TODO remove WHERE true
 	test2("table extend f=1, g=2 where f is 3",
-		"NOTHING")
+		"NOTHING(table)")
 	test2("tables extend x=1 join (columns extend x=2)",
 		"NOTHING")
 	test2("tables extend x=1 leftjoin (columns extend x=2)",
 		"tables EXTEND x = 1, column = '', field = ''")
 	test2("table where a = 1 and a = 2",
-		"NOTHING")
+		"NOTHING(table)")
 	test2("(table union table2) where a = 1",
 		"table^(a) WHERE*1 a is 1 EXTEND d = '', e = ''")
 	test2("(table minus table2) where a = 1",

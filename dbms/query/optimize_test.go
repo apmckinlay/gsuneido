@@ -58,6 +58,8 @@ func TestOptimize(t *testing.T) {
 		"supplier^(supplier) WHERE*1 supplier is 3 and city is 5")
 	test("supplier where String?(city)",
 		"supplier^(city) WHERE String?(city)")
+	test("supplier where false",
+		"NOTHING(supplier)")
 
 	test("supplier where Func(name)",
 		"supplier^(supplier) WHERE Func(name)")
@@ -162,6 +164,8 @@ func TestOptimize(t *testing.T) {
 		"customer^(id) TIMES inven^(item)")
 	test("inven times customer sort id",
 		"customer^(id) TIMES inven^(item)")
+	test("inven times (customer where false)",
+		"NOTHING")
 
 	test("hist join customer",
 		"hist^(date) JOIN n:1 by(id) customer^(id)")

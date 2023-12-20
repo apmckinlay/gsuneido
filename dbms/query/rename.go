@@ -160,8 +160,7 @@ func (r *Rename) Transform() Query {
 		src = r2.source
 	}
 	if _, ok := src.(*Nothing); ok {
-		tmp := Rename{from: from, to: to}
-		return NewNothing(tmp.renameFwd(src.Columns()))
+		return NewNothing(r)
 	}
 	if len(from) == 0 {
 		return src

@@ -241,17 +241,16 @@ func (jn *Join) getFixed() []Fixed {
 }
 
 func (jn *Join) Transform() Query {
-	cols := jn.Columns()
 	if jn.Fixed(); jn.conflict1 {
-		return NewNothing(cols)
+		return NewNothing(jn)
 	}
 	src1 := jn.source1.Transform()
 	if _, ok := src1.(*Nothing); ok {
-		return NewNothing(cols)
+		return NewNothing(jn)
 	}
 	src2 := jn.source2.Transform()
 	if _, ok := src2.(*Nothing); ok {
-		return NewNothing(cols)
+		return NewNothing(jn)
 	}
 	if src1 != jn.source1 || src2 != jn.source2 {
 		return NewJoin(src1, src2, jn.by, jn.qt, true)
@@ -650,7 +649,7 @@ func (lj *LeftJoin) getFixed() []Fixed {
 func (lj *LeftJoin) Transform() Query {
 	src1 := lj.source1.Transform()
 	if _, ok := src1.(*Nothing); ok {
-		return NewNothing(lj.Columns())
+		return NewNothing(lj)
 	}
 	src2 := lj.source2.Transform()
 	_, src2Nothing := src2.(*Nothing)
