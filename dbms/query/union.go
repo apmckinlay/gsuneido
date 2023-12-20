@@ -44,7 +44,8 @@ type unionStrategy int
 const (
 	// unionMerge is a merge of source and source2
 	unionMerge unionStrategy = iota + 2
-	// unionLookup is source not in source2, followed by source2 (unordered)
+	// unionLookup is source not in source2, followed by source2 (unordered).
+	// Also used for disjoint, but without lookups.
 	unionLookup
 )
 
@@ -536,12 +537,16 @@ func removeNonexistentEmpty(srccols, cols, vals []string) ([]string, []string) {
 					newvals = append(newvals, vals[i])
 				}
 			}
+			if len(newcols) == 0 {
+				return nil, nil
+			}
 			return newcols, newvals
 		}
 	}
 	return cols, vals
 }
 
+// selConflict is also used by Table
 func selConflict(srcCols, cols, vals []string) bool {
 	for i, col := range cols {
 		if vals[i] != "" && !slices.Contains(srcCols, col) {

@@ -101,6 +101,5 @@ func TestUnion_removeNonexistentEmpty(t *testing.T) {
 		[]string{"a", "c", "x"}, []string{"1", "2", "3"})
 	test([]string{"a", "n", "c", "x"}, []string{"1", "", "2", "3"},
 		[]string{"a", "c", "x"}, []string{"1", "2", "3"})
-	test([]string{"x", "y"}, []string{"", ""},
-		[]string{}, []string{})
+	test([]string{"x", "y"}, []string{"", ""}, nil, nil)
 }
