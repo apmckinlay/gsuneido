@@ -37,9 +37,7 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `ftw_purchases join ftw_equipment
-			where ftwpurchase_city
-			where ftwequip_name or ftwpurchase_date`
+	s := `cus leftjoin (((bln where ik is "95") leftjoin ivc) where bk is "25")`
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
 	fmt.Println("----------------")
@@ -62,7 +60,7 @@ func TestQuery(t *testing.T) {
 		if row == nil {
 			break
 		}
-		// fmt.Println(row2str(hdr, row))
+		fmt.Println(row2str(hdr, row))
 		hash := hashRow(hdr, fields, row)
 		if _, ok := hashes[hash]; ok {
 			panic("duplicate hash")
