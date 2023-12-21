@@ -429,6 +429,7 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	if jn.row1 == nil {
 		return false
 	}
+	// fmt.Println("Join row1", jn.row1)
 	sel2cols := append(jn.sel2cols, jn.by...)
 	sel2vals := append(jn.sel2vals, jn.projectRow(th, jn.row1)...)
 	jn.source2.Select(sel2cols, sel2vals)
@@ -445,12 +446,12 @@ func (jb *joinBase) projectRow(th *Thread, row Row) []string {
 
 func (jn *Join) Select(cols, vals []string) {
 	// fmt.Println(jn.stringOp(), "Select", cols, unpack(vals))
-	jn.select1(cols, vals, jn.fastSingle(), false)
+	jn.select1(cols, vals, jn.fastSingle())
 }
 
 // select1 processes cols,vals and calls source1.Select.
 // It is used by Join and LeftJoin
-func (jb *joinBase) select1(cols, vals []string, fastSingle, leftjoin bool) {
+func (jb *joinBase) select1(cols, vals []string, fastSingle bool) {
 	jb.conflict1, jb.conflict2 = false, false
 	jb.Rewind()
 	if cols == nil { // clear
@@ -501,9 +502,11 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	return JoinRows(jn.row1, row2)
 }
 
+// selectByCols splits the select,
+// does source1.Select, and returns the source2 select
 func (jl *joinLike) selectByCols(cols, vals []string) ([]string, []string) {
 	columns1 := jl.source1.Columns()
-	columns2 := jl.source2.Columns()
+	columns2 := set.Difference(jl.source2.Columns(), columns1)
 	var cols1, vals1, cols2, vals2 []string
 	var done1, done2 bool
 	if set.Subset(columns1, cols) {
@@ -534,6 +537,8 @@ func (jl *joinLike) selectByCols(cols, vals []string) ([]string, []string) {
 	return slices.Clip(cols2), slices.Clip(vals2)
 }
 
+// splitSelect returns the select for source1 columns
+// and sets conflict1 and conflict2 based on fixed
 func (jl *joinLike) splitSelect(cols, vals []string) (
 	sel1cols, sel1vals []string) {
 	columns1 := jl.source1.Columns()
@@ -771,7 +776,7 @@ func (lj *LeftJoin) filter(row1, row2 Row) Row {
 
 func (lj *LeftJoin) Select(cols, vals []string) {
 	// fmt.Println(lj.stringOp(), "Select", cols, unpack(vals))
-	lj.select1(cols, vals, lj.fastSingle(), true)
+	lj.select1(cols, vals, lj.fastSingle())
 }
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
