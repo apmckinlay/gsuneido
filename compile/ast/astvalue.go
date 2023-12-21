@@ -10,6 +10,7 @@ import (
 
 // this implements the Value interface for AST nodes
 // to expose them to the Suneido language
+// See also: astContainer
 
 // expressions ------------------------------------------------------
 
