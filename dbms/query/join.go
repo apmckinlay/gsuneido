@@ -449,7 +449,7 @@ func (jn *Join) Select(cols, vals []string) {
 	jn.select1(cols, vals, jn.fastSingle())
 }
 
-// select1 processes cols,vals and calls source1.Select.
+// select1 processes cols,vals and calls source1 Select.
 // It is used by Join and LeftJoin
 func (jb *joinBase) select1(cols, vals []string, fastSingle bool) {
 	jb.conflict1, jb.conflict2 = false, false
@@ -468,38 +468,6 @@ func (jb *joinBase) select1(cols, vals []string, fastSingle bool) {
 		return
 	}
 	jb.source1.Select(sel1cols, sel1vals)
-}
-
-func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
-	// fmt.Println(jn.stringOp(), "Lookup", cols, unpack(vals))
-	jn.conflict1, jn.conflict2 = false, false
-	defer jn.Select(nil, nil) // clear select
-	if jn.fastSingle() {
-		jn.sel2cols, jn.sel2vals = jn.selectByCols(cols, vals)
-		return jn.Get(th, Next)
-	}
-	sel1cols, sel1vals := jn.splitSelect(cols, vals)
-	if jn.conflict1 || jn.conflict2 {
-		return nil
-	}
-	if jn.lookupFallback(sel1cols) {
-		jn.Select(cols, vals)
-		x := jn.Get(th, Next)
-		if x != nil {
-			assert.That(jn.Get(th, Next) == nil)
-		}
-		return x
-	}
-	jn.row1 = jn.source1.Lookup(th, sel1cols, sel1vals)
-	if jn.row1 == nil {
-		return nil
-	}
-	jn.source2.Select(jn.by, jn.projectRow(th, jn.row1))
-	row2 := jn.source2.Get(th, Next)
-	if row2 == nil {
-		return nil
-	}
-	return JoinRows(jn.row1, row2)
 }
 
 // selectByCols splits the select,
@@ -561,6 +529,38 @@ func (jl *joinLike) splitSelect(cols, vals []string) (
 	}
 	// fmt.Println("joinLike splitSelect", cols, "saIndex", jl.saIndex, "=>", sel1cols)
 	return
+}
+
+func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
+	// fmt.Println(jn.stringOp(), "Lookup", cols, unpack(vals))
+	jn.conflict1, jn.conflict2 = false, false
+	defer jn.Select(nil, nil) // clear select
+	if jn.fastSingle() {
+		jn.sel2cols, jn.sel2vals = jn.selectByCols(cols, vals)
+		return jn.Get(th, Next)
+	}
+	sel1cols, sel1vals := jn.splitSelect(cols, vals)
+	if jn.conflict1 || jn.conflict2 {
+		return nil
+	}
+	if jn.lookupFallback(sel1cols) {
+		jn.Select(cols, vals)
+		x := jn.Get(th, Next)
+		if x != nil {
+			assert.That(jn.Get(th, Next) == nil)
+		}
+		return x
+	}
+	jn.row1 = jn.source1.Lookup(th, sel1cols, sel1vals)
+	if jn.row1 == nil {
+		return nil
+	}
+	jn.source2.Select(jn.by, jn.projectRow(th, jn.row1))
+	row2 := jn.source2.Get(th, Next)
+	if row2 == nil {
+		return nil
+	}
+	return JoinRows(jn.row1, row2)
 }
 
 func (jb *joinBase) lookupFallback(sel1cols []string) bool {
