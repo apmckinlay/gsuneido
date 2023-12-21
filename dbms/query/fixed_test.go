@@ -17,18 +17,27 @@ func TestFixed(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
-		assert.T(t).This(fixedStr(q.Fixed())).Is(expected)
+		assert.T(t).Msg(q).This(fixedStr(q.Fixed())).Is(expected)
 	}
 	test("table", "[]")
 
 	test("table extend f=1", "[f=(1)]")
 	test("table extend f=1, g='s'", "[f=(1), g=('s')]")
 	test("table extend f=1 extend g=2", "[f=(1), g=(2)]")
+
 	test("table extend f=1 where f is 1", "[f=(1)]")
 	test("table extend f=1, g=2 where a=5",
-		"[f=(1), g=(2), a=(5)]")
+		"[a=(5), f=(1), g=(2)]")
 	test("table extend f=1, g=2 where g in (1,2,3) and a=5",
-		"[f=(1), g=(2), a=(5)]")
+		"[a=(5), f=(1), g=(2)]")
+	test("table extend x=a where x is 5",
+		"[x=(5)]")
+	test("table where a is 5 extend x=a",
+		"[a=(5), x=(5)]")
+	test("table extend x=a, y=x where y is 5",
+		"[y=(5)]")
+	test("table where a is 5 extend x=a, y=x",
+		"[a=(5), x=(5), y=(5)]")
 
 	test("table where a is 1", "[a=(1)]")
 	test("table where a is ''", "[a=('')]")
@@ -43,7 +52,7 @@ func TestFixed(t *testing.T) {
 	test("(table extend f=1, g=2) project a,g", "[g=(2)]")
 	test("(table extend f=1, g=2) project a,f,g", "[f=(1), g=(2)]")
 
-	test("(table extend f=1) join (table extend f=1, g=2)", "[g=(2), f=(1)]")
+	test("(table extend f=1) join (table extend f=1, g=2)", "[f=(1), g=(2)]")
 
 	test("table extend f=1, g=2 rename g to h", "[f=(1), h=(2)]")
 

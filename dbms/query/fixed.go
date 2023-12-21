@@ -5,6 +5,7 @@ package query
 
 import (
 	"slices"
+	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -23,6 +24,8 @@ func NewFixed(col string, val Value) Fixed {
 }
 
 func fixedStr(fixed []Fixed) string {
+	slices.SortFunc(fixed,
+		func(x, y Fixed) int { return strings.Compare(x.col, y.col) })
 	s := "["
 	sep := ""
 	for _, fxd := range fixed {
@@ -166,7 +169,7 @@ func allFixed(fixed []Fixed, cols []string) bool {
 	for _, col := range cols {
 		if !isSingleFixed(fixed, col) {
 			return false
-        }
+		}
 	}
 	return true
 }
