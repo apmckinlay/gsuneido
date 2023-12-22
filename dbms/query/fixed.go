@@ -45,7 +45,7 @@ func (f *Fixed) String() string {
 	return s + ")"
 }
 
-// combineFixed is used by Where and Join.
+// combineFixed is used by Where, Join, and Intersect.
 // The result is all the ones from fixed1 that are not in fixed2,
 // plus the ones from fixed2 that are not in fixed1,
 // plus the intersection of values of ones that are in both.
