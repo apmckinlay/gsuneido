@@ -292,7 +292,6 @@ func TestWhere_ptrange(t *testing.T) {
 		// fmt.Printf("idxSel ptrange\n\t%q\n\t%q\n",
 		// 	w.idxSel.ptrngs[0].org, w.idxSel.ptrngs[0].end)
 		w.fixed = nil
-		w.whereFixed = nil
 		w.singleton = false
 		w.Select(selCols, selVals)
 		// fmt.Printf("selOrg, selEnd\n\t%q\n\t%q\n", w.selOrg, w.selEnd)

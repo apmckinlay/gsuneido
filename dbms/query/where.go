@@ -42,7 +42,6 @@ type Where struct {
 	selectVals []string
 
 	idxSels    []idxSel // from optInit, result of perIndex
-	whereFixed []Fixed
 	Query1
 	// idxSelPos is the current index in idxSel.ptrngs
 	idxSelPos int
@@ -136,8 +135,7 @@ func (w *Where) format() string {
 
 // calcFixed sets w.whereFixed and w.fixed and may set w.conflict
 func (w *Where) calcFixed() {
-	w.whereFixed = w.exprsToFixed()
-	fixed, none := combineFixed(w.source.Fixed(), w.whereFixed)
+	fixed, none := combineFixed(w.source.Fixed(), w.exprsToFixed())
 	if none {
 		w.conflict = true
 	}
@@ -693,7 +691,7 @@ func (w *Where) Select(cols, vals []string) {
 	// Note: conflict could come from any of expr, not just fixed.
 	// But to evaluate that would require building a Row.
 	// It should be rare.
-	satisfied, conflict := selectFixed(cols, vals, w.whereFixed)
+	satisfied, conflict := selectFixed(cols, vals, w.Fixed())
 	if conflict {
 		w.selOrg, w.selEnd = ixkey.Max, ""
 		w.selSet = true
