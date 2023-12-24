@@ -112,6 +112,8 @@ type Query interface {
 	// rowSize returns the average number of bytes per row
 	rowSize() int
 
+	// Rewind resets the query so Get Next gets first, or Prev gets last
+	// It does *not* clear any Select.
 	Rewind()
 
 	Get(th *Thread, dir Dir) Row
@@ -163,6 +165,7 @@ type Query interface {
 	// fastSingle returns whether it's a fast singleton.
 	// This is mostly equivalent to whether it has an empty key().
 	// Join, Intersect, and Union return false because it depends on strategy.
+	// It is used by optimize (below)
 	fastSingle() bool
 }
 
