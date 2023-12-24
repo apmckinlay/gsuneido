@@ -111,9 +111,6 @@ func (t *Times) Rewind() {
 }
 
 func (t *Times) Get(th *Thread, dir Dir) Row {
-	if t.conflict1 || t.conflict2 {
-		return nil
-	}
 	row2 := t.source2.Get(th, dir)
 	if t.rewound {
 		t.rewound = false
@@ -134,36 +131,19 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 }
 
 func (t *Times) Select(cols, vals []string) {
-	t.conflict1, t.conflict2 = false, false
 	t.Rewind()
-	if cols == nil { // clear
-		t.source1.Select(nil, nil)
-		t.source2.Select(nil, nil)
-		return
+	t.select1(cols, vals)
+	if len(t.sel2cols) > 0 {
+		t.source2.Select(t.sel2cols, t.sel2vals)
 	}
-	if t.fastSingle() {
-		t.source2.Select(t.selectByCols(cols, vals))
-		return
-	}
-	sel1cols, sel1vals := t.splitSelect(cols, vals)
-	if t.conflict1 || t.conflict2 {
-		return
-	}
-	t.source1.Select(sel1cols, sel1vals)
 }
 
 func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
-	t.conflict1, t.conflict2 = false, false
-	defer t.Select(nil, nil) // clear select
-	if t.fastSingle() {
-		t.source2.Select(t.selectByCols(cols, vals))
-	} else {
-		sel1cols, sel1vals := t.splitSelect(cols, vals)
-		if t.conflict1 || t.conflict2 {
-			return nil
-		}
-		t.source1.Select(sel1cols, sel1vals)
+	// could use source1.Lookup like (Left)Join
+	// but Times isn't used much
+	t.select1(cols, vals)
+	if len(t.sel2cols) > 0 {
+		t.source2.Select(t.sel2cols, t.sel2vals)
 	}
-	row := t.Get(th, Next)
-	return row
+	return t.Get(th, Next)
 }

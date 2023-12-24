@@ -437,16 +437,13 @@ func TestJoin_splitSelect(t *testing.T) {
 		{col: "c", values: fixvals("1")},
 		{col: "e", values: fixvals("2", "")},
 	}
-	jn := NewJoin(q1, q2, nil, nil, false)
+	jn := NewJoin(q1, q2, nil, nil, false).(*Join)
 	assert.This(jn.by).Is([]string{"c"})
 
 	cols := []string{"a", "c"}
 	vals := fixvals("9", "1")
 	jn.Select(cols, vals)
 	assert.This(q1.sel).Is(sel{cols: cols, vals: vals})
-	assert.That(!jn.conflict1 && !jn.conflict2)
-
-	//TODO test conflict
 }
 
 func fixvals(strs ...string) []string {
