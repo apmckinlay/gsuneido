@@ -437,7 +437,7 @@ func TestJoin_splitSelect(t *testing.T) {
 		{col: "c", values: fixvals("1")},
 		{col: "e", values: fixvals("2", "")},
 	}
-	jn := NewJoin(q1, q2, nil, nil, false).(*Join)
+	jn := NewJoin(q1, q2, nil, nil).(*Join)
 	assert.This(jn.by).Is([]string{"c"})
 
 	cols := []string{"a", "c"}

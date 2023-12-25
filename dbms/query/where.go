@@ -160,8 +160,30 @@ func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
 				}
 			}
 		}
+	} else if f := inToFixed(e); f != nil {
+		fixed = append(fixed, *f)
 	}
 	return fixed
+}
+
+func inToFixed(e ast.Expr) *Fixed {
+	in, ok := e.(*ast.In)
+	if !ok {
+		return nil
+	}
+	id, ok := in.E.(*ast.Ident)
+	if !ok {
+		return nil
+	}
+	var vals []string
+	for _, e2 := range in.Exprs {
+		if c, ok := e2.(*ast.Constant); ok {
+			vals = append(vals, Pack(c.Val.(Packable)))
+		} else {
+			return nil
+		}
+	}
+	return &Fixed{col: id.Name, values: vals}
 }
 
 func (w *Where) Keys() [][]string {
@@ -323,14 +345,14 @@ func (w *Where) Transform() Query {
 	case *Join:
 		// split where over join
 		return w.split(q, func(src1, src2 Query) Query {
-			return NewJoin(src1, src2, q.by, w.t, true).Transform()
+			return NewJoin(src1, src2, q.by, w.t).Transform()
 		})
 	case *LeftJoin:
 		if w.leftJoinToJoin(q) {
 			return w.split(q, func(src1, src2 Query) Query {
 				// passing moved=false
 				// since LeftJoin will only have done half of handleFixed
-				return NewJoin(src1, src2, q.by, w.t, false).Transform()
+				return NewJoin(src1, src2, q.by, w.t).Transform()
 			})
 		}
 		// split where over leftjoin (left side only)
@@ -348,7 +370,7 @@ func (w *Where) Transform() Query {
 		}
 		src1 := NewWhere(q.source1,
 			&ast.Nary{Tok: tok.And, Exprs: exprs1}, w.t)
-		q2 := NewLeftJoin(src1, q.source2, q.by, w.t, true).Transform()
+		q2 := NewLeftJoin(src1, q.source2, q.by, w.t).Transform()
 		if common == nil {
 			return q2
 		}

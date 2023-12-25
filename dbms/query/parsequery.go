@@ -150,13 +150,13 @@ func (p *queryParser) intersect(q Query) Query {
 func (p *queryParser) join(q Query) Query {
 	by := p.joinBy()
 	q2 := p.source()
-	return NewJoin(q, q2, by, p.t, false)
+	return NewJoin(q, q2, by, p.t)
 }
 
 func (p *queryParser) leftjoin(q Query) Query {
 	by := p.joinBy()
 	q2 := p.source()
-	return NewLeftJoin(q, q2, by, p.t, false)
+	return NewLeftJoin(q, q2, by, p.t)
 }
 
 func (p *queryParser) joinBy() []string {
