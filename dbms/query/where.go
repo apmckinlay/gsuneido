@@ -41,7 +41,7 @@ type Where struct {
 	selectCols []string
 	selectVals []string
 
-	idxSels    []idxSel // from optInit, result of perIndex
+	idxSels []idxSel // from optInit, result of perIndex
 	Query1
 	// idxSelPos is the current index in idxSel.ptrngs
 	idxSelPos int
@@ -57,7 +57,7 @@ type Where struct {
 	selSet    bool
 
 	// exprMore is whether expr has more than idxSels
-	exprMore  bool
+	exprMore bool
 	optInited
 
 	// added is true if the Where was added by Join. It is set by Join.
@@ -65,10 +65,11 @@ type Where struct {
 }
 
 type optInited byte
+
 const (
 	optInitNo optInited = iota
-    optInitInProgress
-    optInitYes
+	optInitInProgress
+	optInitYes
 )
 
 type whereApproach struct {
@@ -133,7 +134,7 @@ func (w *Where) format() string {
 	return "where " + w.expr.Echo()
 }
 
-// calcFixed sets w.whereFixed and w.fixed and may set w.conflict
+// calcFixed sets w.fixed and may set w.conflict
 func (w *Where) calcFixed() {
 	fixed, none := combineFixed(w.source.Fixed(), w.exprsToFixed())
 	if none {
