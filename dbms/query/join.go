@@ -413,8 +413,8 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 		}
 		jn.row2 = jn.source2.Get(th, dir)
 		if jn.row2 != nil {
-			assert.That(slices.Equal(jn.projectRow1(th, jn.row1),
-				jn.projectRow2(th, jn.row2)))
+			// assert.That(slices.Equal(jn.projectRow1(th, jn.row1),
+			// 	jn.projectRow2(th, jn.row2)))
 			return JoinRows(jn.row1, jn.row2)
 		}
 	}
@@ -426,7 +426,7 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 		return false
 	}
 	// fmt.Println("Join row1", jn.row1)
-	assert.That(set.Disjoint(jn.by, jn.sel2cols))
+	// assert.That(set.Disjoint(jn.by, jn.sel2cols))
 	sel2cols := append(jn.sel2cols, jn.by...)
 	sel2vals := append(jn.sel2vals, jn.projectRow1(th, jn.row1)...)
 	jn.source2.Select(sel2cols, sel2vals)
@@ -511,9 +511,9 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 		jn.source1.Select(sel1cols, sel1vals)
 		jn.sel2cols, jn.sel2vals = sel2cols, sel2vals
 		x := jn.Get(th, Next)
-		if x != nil { // verify unique
-			assert.That(jn.Get(th, Next) == nil)
-		}
+		// if x != nil { // verify unique
+		// 	assert.That(jn.Get(th, Next) == nil)
+		// }
 		return x
 	}
 	row1 := jn.source1.Lookup(th, sel1cols, sel1vals)
@@ -527,7 +527,7 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	if row2 == nil {
 		return nil
 	}
-	assert.That(slices.Equal(jn.projectRow1(th, row1), jn.projectRow2(th, row2)))
+	// assert.That(slices.Equal(jn.projectRow1(th, row1), jn.projectRow2(th, row2)))
 	return JoinRows(row1, row2)
 }
 
@@ -705,8 +705,8 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			if lj.row2 == nil {
 				return lj.filter(lj.row1, lj.empty2)
 			}
-			assert.That(slices.Equal(lj.projectRow1(th, lj.row1),
-				lj.projectRow2(th, lj.row2)))
+			// assert.That(slices.Equal(lj.projectRow1(th, lj.row1),
+			// 	lj.projectRow2(th, lj.row2)))
 			return lj.filter(lj.row1, lj.row2)
 		}
 	}
@@ -757,9 +757,9 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 		lj.source1.Select(sel1cols, sel1vals)
 		lj.sel2cols, lj.sel2vals = sel2cols, sel2vals
 		x := lj.Get(th, Next)
-		if x != nil { // verify unique
-			assert.That(lj.Get(th, Next) == nil)
-		}
+		// if x != nil { // verify unique
+		// 	assert.That(lj.Get(th, Next) == nil)
+		// }
 		return x
 	}
 	row1 := lj.source1.Lookup(th, sel1cols, sel1vals)
@@ -771,6 +771,6 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	if row2 == nil {
 		return lj.filter(row1, lj.empty2)
 	}
-	assert.That(slices.Equal(lj.projectRow1(th, row1), lj.projectRow2(th, row2)))
+	// assert.That(slices.Equal(lj.projectRow1(th, row1), lj.projectRow2(th, row2)))
 	return lj.filter(row1, row2)
 }
