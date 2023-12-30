@@ -7,6 +7,8 @@ Go implementation of Suneido (http://suneido.com).
 
 See also: [cSuneido](https://github.com/apmckinlay/csuneido), [jSuneido](https://github.com/apmckinlay/jsuneido), [suneido_tests](https://github.com/apmckinlay/suneido_tests)
 
+[Documentation](http://apmckinlay.github.io/gsuneido/)
+
 ### Status
 
 As of August 2019 it successfully runs all the standard library tests.
@@ -20,3 +22,5 @@ As of March 2021 we are no longer using cSuneido, all customers are on gSuneido.
 
 As of July 2022 the database and server are complete. All our tests pass.<br/>
 We are using it on some beta systems.
+
+As of January 2024 gSuneido has replaced jSuneido on all our services and customer systems.
