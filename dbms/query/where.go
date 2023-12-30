@@ -136,55 +136,86 @@ func (w *Where) format() string {
 
 // calcFixed sets w.fixed and may set w.conflict
 func (w *Where) calcFixed() {
-	fixed, none := combineFixed(w.source.Fixed(), w.exprsToFixed())
+	efixed, conflict := w.exprsToFixed()
+	if conflict {
+        w.conflict = true
+		return
+	}
+	fixed, none := combineFixed(w.source.Fixed(), efixed)
 	if none {
 		w.conflict = true
+		return
 	}
 	w.fixed = fixed
 }
 
-func (w *Where) exprsToFixed() []Fixed {
-	var fixed []Fixed
+func (w *Where) exprsToFixed() (fixed []Fixed, conflict bool) {
 	for _, e := range w.expr.Exprs {
-		fixed = addFixed(fixed, e)
+		fixed, conflict = addFixed(fixed, e)
+		if conflict {
+			return nil, true
+		}
 	}
-	return fixed
+	return fixed, false
 }
 
-func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
-	// MAYBE: handle IN and OR, could use colSels
+func addFixed(fixed []Fixed, e ast.Expr) ([]Fixed, bool) {
+	// MAYBE: handle OR, could use colSels
 	if b, ok := e.(*ast.Binary); ok && (b.Tok == tok.Is || b.Tok == tok.Lte) {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
 			if c, ok := b.Rhs.(*ast.Constant); ok {
 				if b.Tok == tok.Is || c.Val == EmptyStr {
-					fixed = append(fixed, NewFixed(id.Name, c.Val))
+					return fixedAnd(fixed, id.Name,  c.Val)
 				}
 			}
 		}
-	} else if f := inToFixed(e); f != nil {
-		fixed = append(fixed, *f)
+	} else if col, vals := inToFixed(e); col != "" {
+		return fixedAnd(fixed, col, vals...)
 	}
-	return fixed
+	return fixed, false
 }
 
-func inToFixed(e ast.Expr) *Fixed {
+func inToFixed(e ast.Expr) (col string, vals []Value) {
 	in, ok := e.(*ast.In)
 	if !ok {
-		return nil
+		return "", nil
 	}
 	id, ok := in.E.(*ast.Ident)
 	if !ok {
-		return nil
+		return "", nil
 	}
-	var vals []string
 	for _, e2 := range in.Exprs {
 		if c, ok := e2.(*ast.Constant); ok {
-			vals = append(vals, Pack(c.Val.(Packable)))
+			vals = append(vals, c.Val)
 		} else {
-			return nil
+			return "", nil
 		}
 	}
-	return &Fixed{col: id.Name, values: vals}
+	return id.Name, vals
+}
+
+// fixedAnd adds col,vals to fixed, handling if col already exists
+func fixedAnd(fixed []Fixed, col string, vals ...Value) ([]Fixed, bool) {
+	vs := make([]string, len(vals))
+	for i, v := range vals {
+        vs[i] = Pack(v.(Packable))
+    }
+	for i, f := range fixed {
+		if f.col == col {
+			v := set.Intersect(f.values, vs)
+			if len(v) == 0 {
+                return nil, true // conflict
+            }
+			if len(v) == len(f.values) {
+				return fixed, false // no change
+			}
+			fixed := slices.Clone(fixed)
+			fixed[i].values = v
+			return fixed, false
+		}
+	}
+	// col not found
+	return append(fixed, Fixed{col: col, values: vs}), false
 }
 
 func (w *Where) Keys() [][]string {
@@ -346,13 +377,11 @@ func (w *Where) Transform() Query {
 	case *Join:
 		// split where over join
 		return w.split(q, func(src1, src2 Query) Query {
-			return NewJoin(src1, src2, q.by, w.t).Transform()
+			return q.With(src1, src2).Transform()
 		})
 	case *LeftJoin:
 		if w.leftJoinToJoin(q) {
 			return w.split(q, func(src1, src2 Query) Query {
-				// passing moved=false
-				// since LeftJoin will only have done half of handleFixed
 				return NewJoin(src1, src2, q.by, w.t).Transform()
 			})
 		}
@@ -371,7 +400,7 @@ func (w *Where) Transform() Query {
 		}
 		src1 := NewWhere(q.source1,
 			&ast.Nary{Tok: tok.And, Exprs: exprs1}, w.t)
-		q2 := NewLeftJoin(src1, q.source2, q.by, w.t).Transform()
+		q2 := q.With(src1, q.source2).Transform()
 		if common == nil {
 			return q2
 		}

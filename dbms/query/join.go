@@ -35,12 +35,14 @@ type joinLike struct {
 
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
-	qt     QueryTran
-	st     *SuTran
-	lookup *lookupInfo
-	by     []string
-	row1   Row
-	row2   Row // nil when we need a new row1
+	qt         QueryTran
+	st         *SuTran
+	lookup     *lookupInfo
+	by         []string
+	prevFixed1 []Fixed
+	prevFixed2 []Fixed
+	row1       Row
+	row2       Row // nil when we need a new row1
 	joinLike
 	joinType
 }
@@ -89,7 +91,13 @@ func (jt joinType) String() string {
 }
 
 func NewJoin(src1, src2 Query, by []string, t QueryTran) Query {
-	jn := &Join{joinBase: newJoinBase(false, src1, src2, by, t)}
+	return newJoin(src1, src2, by, t, nil, nil)
+}
+
+func newJoin(src1, src2 Query, by []string, t QueryTran,
+	prevFixed1, prevFixed2 []Fixed) Query {
+	jn := &Join{joinBase: newJoinBase(false, src1, src2, by, t,
+		prevFixed1, prevFixed2)}
 	jn.keys = jn.getKeys()
 	jn.indexes = jn.getIndexes()
 	fixed, none := combineFixed(src1.Fixed(), src2.Fixed())
@@ -102,7 +110,12 @@ func NewJoin(src1, src2 Query, by []string, t QueryTran) Query {
 	return jn
 }
 
-func newJoinBase(leftjoin bool, src1, src2 Query, by []string, t QueryTran) joinBase {
+func (jn *Join) With(src1, src2 Query) Query {
+	return newJoin(src1, src2, jn.by, jn.qt, jn.prevFixed1, jn.prevFixed2)
+}
+
+func newJoinBase(leftjoin bool, src1, src2 Query, by []string, t QueryTran,
+	prevFixed1, prevFixed2 []Fixed) joinBase {
 	b := set.Intersect(src1.Columns(), src2.Columns())
 	if len(b) == 0 {
 		panic("join: common columns required")
@@ -112,8 +125,12 @@ func newJoinBase(leftjoin bool, src1, src2 Query, by []string, t QueryTran) join
 	} else if !set.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
-	src1, src2 = handleFixed(leftjoin, src1, src2, by, t)
-	jb := joinBase{qt: t, joinLike: newJoinLike(src1, src2)}
+	fix1, fix2 := src1.Fixed(), src2.Fixed()
+	if !equalFixed(fix1, prevFixed1) || !equalFixed(fix2, prevFixed2) {
+		src1, src2 = handleFixed(leftjoin, src1, src2, by, t, fix1, fix2)
+	}
+	jb := joinBase{qt: t,
+		joinLike: newJoinLike(src1, src2), prevFixed1: fix1, prevFixed2: fix2}
 	jb.by = by
 	k1 := hasKey(by, src1.Keys(), src1.Fixed())
 	k2 := hasKey(by, src2.Keys(), src2.Fixed())
@@ -131,34 +148,32 @@ func newJoinBase(leftjoin bool, src1, src2 Query, by []string, t QueryTran) join
 
 // handleFixed adds a Where to each source
 // for Fixed from the other source for common by columns
-func handleFixed(leftjoin bool, src1, src2 Query, by []string, t QueryTran) (Query, Query) {
+func handleFixed(leftjoin bool, src1, src2 Query, by []string, t QueryTran,
+	fix1, fix2 []Fixed) (Query, Query) {
 	if leftjoin {
 		// for leftjoin, we can only apply fixed from src1 to src2
 		// can't do the reverse because src2 is "optional"
-		return src1, fixSource(src2, src1, by, t)
+		return src1, fixSource(fix1, fix2, src2, by, t)
 	}
-	return fixSource(src1, src2, by, t), fixSource(src2, src1, by, t)
+	return fixSource(fix2, fix1, src1, by, t), fixSource(fix1, fix2, src2, by, t)
 }
 
-// fixSource adds a Where to wq for fixed from fq for common by columns.
+// fixSource adds a Where to `to` for fixed from `from` for common by columns.
 // It doesn't check if the where is conflicting, that should be handled by Where
-func fixSource(wq, fq Query, by []string, t QueryTran) Query {
-	fixed := fq.Fixed()
-	wfixed := wq.Fixed()
+func fixSource(fromFixed, toFixed []Fixed, to Query, by []string, t QueryTran) Query {
 	var exprs []ast.Expr
 	for _, col := range by {
-		if fv := getFixed(fixed, col); fv != nil {
-			if wv := getFixed(wfixed, col); wv == nil || !set.Subset(wv, fv) {
-				fv = set.Difference(fv, wv)
-				exprs = append(exprs, fixedToExpr(col, fv))
+		if frf := getFixed(fromFixed, col); frf != nil {
+			if tof := getFixed(toFixed, col); !set.Equal(frf, tof) {
+				exprs = append(exprs, fixedToExpr(col, frf))
 			}
 		}
 	}
 	if len(exprs) == 0 {
-		return wq
+		return to
 	}
 	expr := &ast.Nary{Tok: tok.And, Exprs: exprs}
-	w := NewWhere(wq, expr, t)
+	w := NewWhere(to, expr, t)
 	w.added = true
 	return w
 }
@@ -243,7 +258,7 @@ func (jn *Join) Transform() Query {
 		return NewNothing(jn)
 	}
 	if src1 != jn.source1 || src2 != jn.source2 {
-		q := NewJoin(src1, src2, jn.by, jn.qt)
+		q := jn.With(src1, src2)
 		if j, ok := q.(*Join); ok && j.source1 != src1 || j.source2 != src2 {
 			return j.Transform()
 		}
@@ -561,7 +576,13 @@ type LeftJoin struct {
 }
 
 func NewLeftJoin(src1, src2 Query, by []string, t QueryTran) *LeftJoin {
-	lj := &LeftJoin{joinBase: newJoinBase(true, src1, src2, by, t)}
+	return newLeftJoin(src1, src2, by, t, nil, nil)
+}
+
+func newLeftJoin(src1, src2 Query, by []string, t QueryTran,
+	prevFixed1, prevFixed2 []Fixed) *LeftJoin {
+	lj := &LeftJoin{joinBase: newJoinBase(true, src1, src2, by, t,
+		prevFixed1, prevFixed2)}
 	lj.keys = lj.getKeys()
 	lj.indexes = lj.source1.Indexes()
 	lj.fixed = lj.getFixed()
@@ -569,6 +590,10 @@ func NewLeftJoin(src1, src2 Query, by []string, t QueryTran) *LeftJoin {
 	lj.fast1.Set(src1.fastSingle() &&
 		(lj.joinType == one_one || lj.joinType == n_one || src2.fastSingle()))
 	return lj
+}
+
+func (lj *LeftJoin) With(src1, src2 Query) *LeftJoin {
+	return newLeftJoin(src1, src2, lj.by, lj.qt, lj.prevFixed1, lj.prevFixed2)
 }
 
 func (lj *LeftJoin) String() string {
@@ -632,7 +657,7 @@ func (lj *LeftJoin) Transform() Query {
 		return keepCols(src1, src2, lj.Header())
 	}
 	if src1 != lj.source1 || src2 != lj.source2 {
-		j := NewLeftJoin(src1, src2, lj.by, lj.qt)
+		j := lj.With(src1, src2)
 		if j.source1 != src1 || j.source2 != src2 {
 			return j.Transform()
 		}

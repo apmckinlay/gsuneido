@@ -313,4 +313,8 @@ func TestWhere_fixed(t *testing.T) {
 	test("a is 1", "[a=(1)]")
 	test("a is 1 and b is 2", "[a=(1), b=(2)]")
 	test("a in (1,2,3)", "[a=(1,2,3)]")
+	test("a is 1 and a is 1", "[a=(1)]")
+	test("a in (1,2) and a is 1", "[a=(1)]")
+	test("a in (1,2,3) and a in (2,3,4)", "[a=(2,3)]")
+	test("a in (1,2) and a in (3,4)", "[]")
 }

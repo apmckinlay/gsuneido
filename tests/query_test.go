@@ -37,7 +37,7 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `aln join ((ivc where ik is "96") leftjoin (cus extend ik = c3))`
+	s := `((cus leftjoin (ivc where ik is "3")) join ((aln union bln) where ik is "3"))`
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
 	fmt.Println("----------------")

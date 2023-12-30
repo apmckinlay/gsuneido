@@ -173,3 +173,9 @@ func allFixed(fixed []Fixed, cols []string) bool {
 	}
 	return true
 }
+
+func equalFixed(fixed1, fixed2 []Fixed) bool {
+	return slices.EqualFunc(fixed1, fixed2, func(x, y Fixed) bool {
+		return x.col == y.col && slices.Equal(x.values, y.values)
+	})
+}
