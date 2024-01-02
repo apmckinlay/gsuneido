@@ -12,6 +12,11 @@
 	- [Strings](#strings)
 		- [Concatenation](#concatenation)
 	- [Exceptions](#exceptions)
+	- [Objects](#objects)
+	- [Records](#records)
+	- [Classes](#classes)
+		- [Private Class Members](#private-class-members)
+		- [Getters](#getters)
 	- [Functions \& Methods](#functions--methods)
 		- [Arguments](#arguments)
 		- [Parameters](#parameters)
@@ -20,9 +25,6 @@
 - [Compiler](#compiler)
 	- [Byte Code](#byte-code)
 	- [Interpreter](#interpreter)
-	- [Classes](#classes)
-		- [Private Class Members](#private-class-members)
-		- [Getters](#getters)
 - [Windows Interface](#windows-interface)
 	- [COM](#com)
 	- [SuneidoAPP](#suneidoapp)
@@ -32,8 +34,8 @@
 	- [Shutdown \& Startup](#shutdown--startup)
 	- [Repair](#repair)
 	- [Packing](#packing)
-		- [Objects](#objects)
-		- [Records](#records)
+		- [Objects](#objects-1)
+		- [Records](#records-1)
 	- [Indexes](#indexes)
 	- [Optimizations](#optimizations)
 		- [Btrees](#btrees)
@@ -78,6 +80,8 @@ This is a work in progress. It will likely never be "complete". But it may be us
 - **res** - windows resources
 - **util** - low level general purpose utilities
 
+Source file names starting with "su" are usually the language level implementation. e.g. dnum.go is the internal implementation, sudnum.go is the Value wrapper.
+
 # Tests & Benchmarks
 
 Uses the Go testing framework.
@@ -88,7 +92,7 @@ To reduce the duplication of tests in the different implementations, there are "
 
 The files are designed to be read by the Suneido lexer/scanner and executed by "fixtures" that must be written for each implementation.
 
-<http://thesoftwarelife.blogspot.ca/2014/05/portable-tests.html>
+See also <http://thesoftwarelife.blogspot.ca/2014/05/portable-tests.html>
 
 # Language
 
@@ -128,7 +132,9 @@ This means we can't use the **binary** floating point numbers normally provided 
 
 Dnum has a 64 bit coefficient and 8 bit sign and exponent. Only 16 of the possible 19 decimal digits are used. This allows splitting into two 8 decimal digit halves which fit into 32 bits for faster processing.  The coefficient is kept “maximized” i.e. “shifted” left as far as possible.
 
-See [Bit Twiddling (Dnum)](https://thesoftwarelife.blogspot.com/2018/03/bit-twiddling.html)
+It would be more compact to combine a 56 bit coefficient and 8 bit exponent into a single 64 bit value. But we want to be able to store 64 integers, especially for the Windows interface.
+
+See also [Bit Twiddling (Dnum)](https://thesoftwarelife.blogspot.com/2018/03/bit-twiddling.html)
 
 ### Integers
 
@@ -138,7 +144,7 @@ Although Suneido only has one kind of number (decimal floating point), for perfo
 
 In earlier versions of Go, integers were automatically stored within interfaces - perfect for Suneido - but this was removed so the garbage collector would not have to deal with non-pointer values.
 
-At first glance, it appears Go can't support immediate integers but it turns out to be possible.
+At first glance, it appears Go can't support immediate (non-heap) integers in interfaces but it turns out it is possible.
 
 The way to work within Go’s type safety is to use pointers into a large array of bytes. If we make the array 64 kB then we can handle 16 bit integers. We don't actually store anything in the array and we don't initialize it, so it doesn't take up any physical memory. So a small immediate integer type can be created with:
 
@@ -155,7 +161,9 @@ We can then define methods on *smi to support the Value interface. (core/suint.g
 
 To get the integer back out of the pointer we have to use the unsafe package, but in a safe way :-)
 
-[Go Interfaces and Immediate Integers](https://thesoftwarelife.blogspot.com/2017/09/go-interfaces-and-immediate-integers.html)
+Because they are pointers, they can be stored in Go interfaces (like Value) without allocation, unlike the Go integer types.
+
+See also [Go Interfaces and Immediate Integers](https://thesoftwarelife.blogspot.com/2017/09/go-interfaces-and-immediate-integers.html)
 
 ## Strings
 
@@ -178,6 +186,54 @@ Exceptions in Suneido are strings, but they also have a Callstack attached.
 Concatenating onto an exception maintains the exception information.
 
 Go doesn't have try-catch like C++ or Java. However, it does have panic and recover which gSuneido uses to implement try-catch primarily in core/interp.go
+
+## Objects
+
+See core/suobject.go
+
+In Suneido, an "object" is a general purpose data structure combining a list/array (a slice of Value) and a hash map. The hash map is not a native Go map because of their limitations on key types. The hash map implementation is in util/hmap/hmap.go
+
+Objects are a good fit for function call arguments, with unnamed arguments in the list part, and named arguments in the map part.
+
+In Suneido, ob.name is equivalent to ob["name"]
+
+ob[num] may be in the list or map part. Contiguous members starting at 0 (zero) are in the list part. All other members, including numeric, are in the map part. Values are automatically moved between the list and map as necessary to maintain this. For example, if we have members 0,1,2 in the list part and 4,5,6 in the map part, and we inserted member 3, then 4,5,6 would be "migrated" to the list part.
+
+object.Copy is copy on write. This is useful to minimize the overhead of "defensive" copies since they won't actually be copied unless modified.
+
+## Records
+
+Records are primarily used for reading and writing to the database.
+
+Currently, a record is an object with the addition of rules and observers. Records with rules and observers are also useful in user interface code.
+
+Records originating from the database are kept internally in the database Row form and only unpacked lazily. See [Packing](#packing)
+
+However, in the future the list part may be removed (it is seldom used) and the map part may be restricted to string keys like [Classes](#classes)
+
+## Classes
+
+Classes and instances of classes were originally just objects with the addition of a class reference. Later classes and instances became maps from strings (member names) to values. (No unnamed list members.)
+
+### Private Class Members
+
+Suneido fakes private members by prefixing them with their class name. e.g. in MyClass a private member foo becomes MyClass_foo. Although this is primarily an implementation detail, these members are visible to Suneido code and tests take advantage of this. However, we avoid bypassing privacy in actual application code.
+
+Anonymous classes are given a system generated internal name (e.g. Class123) for privatization.
+
+Privatization is done at compile time, for class members like:
+
+`foo: 123`
+
+and for member references like:
+
+`.foo`
+
+### Getters
+
+If code reads a member that does not exist, Suneido will look for a "getter" i.e. a method that will provide the value, either Getter_(name) or getter_name or Getter_Name
+
+Private getters e.g. getter_foo() are privatized to Getter_MyClass_foo
 
 ## Functions & Methods
 
@@ -250,7 +306,7 @@ while iter != (x = iter.Next())
 
 However, user defined classes cannot define their own Iter method because it is built-in on classes and instances to iterate through the members.
 
-A **sequence** is a kind of virtual object that wraps an iterator and instantiates it lazily. Sequences are returns by some built-in methods like Seq and object.Members. They can also be explicitly created using the Suneido language Sequence(iter) function.
+A **sequence** is a kind of virtual object that wraps an iterator and instantiates it lazily. Sequences are returned by some built-in methods like `Seq` and `object.Members`. They can also be explicitly created using the Suneido language `Sequence` (iter) function.
 
 The iterator passed to Sequence should also have Infinite? and Dup methods. An infinite sequence (e.g. all the odd numbers) will throw an error if anything tries to instantiate it. Dup should return a copy of the iterator that is reset to start at the beginning.
 
@@ -258,13 +314,13 @@ In most cases, sequences can be used transparently. However there are subtle dif
 
 Internal iterators implement the **core.Iter** interface with Next, Infinite, and Dup.
 
-**SuIter** is a Value that adapts anything implementing the runtime.Iter interface so it can be used as a Suneido language iterator.
+**SuIter** is a Value that adapts anything implementing the core.Iter interface so it can be used as a Suneido language iterator.
 
-**wrapIter** adapts a Suneido iterator (a class with Next,Dup,Infinite) to the runtime.Iter interface i.e. the reverse of runtime.SuIter
+**wrapIter** adapts a Suneido iterator (a class with Next,Dup,Infinite) to the core.Iter interface i.e. the reverse of core.SuIter
 
 The Suneido language **Sequence** function returns an SuSequence wrapping a Suneido iterator.
 
-SuSequence is a Value that wraps a runtime.Iter and instantiates it lazily. The Iter is either built-in e.g. Seq or object.Members, or user defined via Suneido Sequence. SuSequence wraps a runtimer.Iter rather than a Suneido iterator so it is more efficient for built-in iterators like object.Members.
+SuSequence is a Value that wraps a core.Iter and instantiates it lazily. The Iter is either built-in e.g. Seq or object.Members, or user defined via Suneido Sequence. SuSequence wraps a core.Iter rather than a Suneido iterator so it is more efficient for built-in iterators like object.Members.
 
 # Compiler
 
@@ -276,43 +332,19 @@ gSuneido uses [Precedence Climbing Expression Parsing](https://thesoftwarelife.b
 
 Constant folding is done as part of the AST building. This is naturally bottom up, and eliminates the need for a separate tree traversal. It is implemented as a wrapper (decorator) around the node factory, so it is easily bypassed if you want the AST one to one with the source code.
 
-gSuneido also does [constant *propagation*](https://thesoftwarelife.blogspot.com/2020/04/constant-propogation-and-folding.html). Final variables, ones that are assigned once and never modified, are identified during parsing. If any are found then an extra pass is made over the AST to propagate. Folding is also done during this pass because propagation may create new opportunities.
+gSuneido also does [constant propagation and folding](https://thesoftwarelife.blogspot.com/2020/04/constant-propogation-and-folding.html). Final variables, ones that are assigned once and never modified, are identified during parsing. If any are found then an extra pass is made over the AST to propagate. Folding is also done during this pass because propagation may create new opportunities.
 
 If any blocks are found during parsing, an extra pass is done over the AST to determine which of them can be compiled as regular functions instead of closures.
 
 ## Byte Code
 
-Does not pack any options or arguments into the op codes or use variable length ints for arguments. This simplifies the interpreter. It also means there are lots of byte codes available, allowing specialized op codes for things like for-in.
+The gSuneido byte code does not pack any options or arguments into the op codes or use variable length ints for arguments. This simplifies the interpreter. It also means there are lots of byte codes available, allowing specialized op codes for things like for-in.
 
 ## Interpreter
 
 A standard loop containing a giant switch with one case per op code.
 
 Because Go can only recover from (catch) a panic on the way out of a function, we need another wrapper function that reenters the interpreter if the exception is caught.
-
-## Classes
-
-Classes and instances of classes were originally just objects with the addition of a class reference. Later classes and instances became maps from strings (member names) to values. (No unnamed list members.)
-
-### Private Class Members
-
-Suneido fakes private members by prefixing them with their class name. e.g. in MyClass a private member foo becomes MyClass_foo. Although this is primarily an implementation detail, these members are visible to Suneido code and tests take advantage of this. However, we avoid bypassing privacy in actual application code.
-
-Anonymous classes are given a system generated internal name (e.g. Class123) for privatization.
-
-Privatization is done at compile time, for class members like:
-
-`foo: 123`
-
-and for member references like:
-
-`.foo`
-
-### Getters
-
-If code reads a member that does not exist, Suneido will look for a "getter" i.e. a method that will provide the value, either Getter_(name) or getter_name or Getter_Name
-
-Private getters e.g. getter_foo() are privatized to Getter_MyClass_foo
 
 # Windows Interface
 
