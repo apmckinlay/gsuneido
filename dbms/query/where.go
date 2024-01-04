@@ -281,13 +281,13 @@ func (w *Where) calcNrows() (int, int) {
 }
 
 func (w *Where) Transform() Query {
+	if w.conflict {
+		return NewNothing(w)
+	}
 	src := w.source.Transform()
 	if len(w.expr.Exprs) == 0 {
 		// remove empty where
 		return src
-	}
-	if w.conflict {
-		return NewNothing(w)
 	}
 	switch q := src.(type) {
 	case *Nothing:

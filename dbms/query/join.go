@@ -49,6 +49,7 @@ type joinBase struct {
 
 type Join struct {
 	joinBase
+	conflict bool
 }
 
 type lookupInfo struct {
@@ -95,15 +96,13 @@ func NewJoin(src1, src2 Query, by []string, t QueryTran) Query {
 }
 
 func newJoin(src1, src2 Query, by []string, t QueryTran,
-	prevFixed1, prevFixed2 []Fixed) Query {
+	prevFixed1, prevFixed2 []Fixed) *Join {
 	jn := &Join{joinBase: newJoinBase(false, src1, src2, by, t,
 		prevFixed1, prevFixed2)}
 	jn.keys = jn.getKeys()
 	jn.indexes = jn.getIndexes()
 	fixed, none := combineFixed(src1.Fixed(), src2.Fixed())
-	if none {
-		return NewNothing(jn)
-	}
+	jn.conflict = none
 	jn.fixed = fixed
 	jn.setNrows(jn.getNrows())
 	jn.fast1.Set(src1.fastSingle() && src2.fastSingle())
@@ -250,6 +249,9 @@ func (jn *Join) getKeys() [][]string {
 }
 
 func (jn *Join) Transform() Query {
+	if jn.conflict {
+		return NewNothing(jn)
+	}
 	src1 := jn.source1.Transform()
 	if _, ok := src1.(*Nothing); ok {
 		return NewNothing(jn)
