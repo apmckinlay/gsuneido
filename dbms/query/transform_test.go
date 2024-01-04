@@ -15,6 +15,7 @@ import (
 func TestTransform(t *testing.T) {
 	DefaultSingleQuotes = true
 	defer func() { DefaultSingleQuotes = false }()
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	test := func(from, expected string) {
 		t.Helper()
 		if expected == "" {
@@ -208,4 +209,26 @@ func TestTransform(t *testing.T) {
 		"table summarize a, total b")
 	test("table project b, c summarize b, total c",
 		"table project b,c summarize b, total c")
+
+	test("trans where id is 1 join customer",
+		"trans where id is 1 join n:1 by(id) (customer where id is 1)")
+	test("trans join (customer where id is 1)",
+		"trans where id is 1 join n:1 by(id) (customer where id is 1)")
+	test("trans where id is 1 join (customer where id is 1)",
+		"trans where id is 1 join n:1 by(id) (customer where id is 1)")
+	test("trans where id is 1 join (customer where id is 2)",
+		"NOTHING")
+	test("(abc where b is 1) join (bcd where c is 2)",
+		"abc where b is 1 and c is 2 join 1:1 by(b,c) (bcd where c is 2 and b is 1)")
+
+	test("trans where id is 1 leftjoin customer",
+		"trans where id is 1 leftjoin n:1 by(id) (customer where id is 1)")
+	test("trans leftjoin (customer where id is 1)",
+		"trans leftjoin n:1 by(id) (customer where id is 1)")
+	test("trans where id is 1 leftjoin (customer where id is 1)",
+		"trans where id is 1 leftjoin n:1 by(id) (customer where id is 1)")
+	test("trans where id is 1 leftjoin (customer where id is 2)",
+		"trans where id is 1 extend name = '', city = ''")
+	test("(abc where b is 1) leftjoin (bcd where c is 2)",
+		"abc where b is 1 leftjoin 1:1 by(b,c) (bcd where c is 2 and b is 1)")
 }

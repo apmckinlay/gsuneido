@@ -59,9 +59,6 @@ type Where struct {
 	// exprMore is whether expr has more than idxSels
 	exprMore bool
 	optInited
-
-	// added is true if the Where was added by Join. It is set by Join.
-	added bool
 }
 
 type optInited byte

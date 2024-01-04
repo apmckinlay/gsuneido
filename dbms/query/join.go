@@ -109,7 +109,7 @@ func newJoin(src1, src2 Query, by []string, t QueryTran,
 	return jn
 }
 
-func (jn *Join) With(src1, src2 Query) Query {
+func (jn *Join) With(src1, src2 Query) *Join {
 	return newJoin(src1, src2, jn.by, jn.qt, jn.prevFixed1, jn.prevFixed2)
 }
 
@@ -124,12 +124,7 @@ func newJoinBase(leftjoin bool, src1, src2 Query, by []string, t QueryTran,
 	} else if !set.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
-	fix1, fix2 := src1.Fixed(), src2.Fixed()
-	if !equalFixed(fix1, prevFixed1) || !equalFixed(fix2, prevFixed2) {
-		src1, src2 = handleFixed(leftjoin, src1, src2, by, t, fix1, fix2)
-	}
-	jb := joinBase{qt: t, st: MakeSuTran(t),
-		joinLike: newJoinLike(src1, src2), prevFixed1: fix1, prevFixed2: fix2}
+	jb := joinBase{qt: t, st: MakeSuTran(t), joinLike: newJoinLike(src1, src2), prevFixed1: prevFixed1, prevFixed2: prevFixed2}
 	jb.by = by
 	k1 := hasKey(by, src1.Keys(), src1.Fixed())
 	k2 := hasKey(by, src2.Keys(), src2.Fixed())
@@ -143,38 +138,6 @@ func newJoinBase(leftjoin bool, src1, src2 Query, by []string, t QueryTran,
 		jb.joinType = n_n
 	}
 	return jb
-}
-
-// handleFixed adds a Where to each source
-// for Fixed from the other source for common by columns
-func handleFixed(leftjoin bool, src1, src2 Query, by []string, t QueryTran,
-	fix1, fix2 []Fixed) (Query, Query) {
-	if leftjoin {
-		// for leftjoin, we can only apply fixed from src1 to src2
-		// can't do the reverse because src2 is "optional"
-		return src1, fixSource(fix1, fix2, src2, by, t)
-	}
-	return fixSource(fix2, fix1, src1, by, t), fixSource(fix1, fix2, src2, by, t)
-}
-
-// fixSource adds a Where to `to` for fixed from `from` for common by columns.
-// It doesn't check if the where is conflicting, that should be handled by Where
-func fixSource(fromFixed, toFixed []Fixed, to Query, by []string, t QueryTran) Query {
-	var exprs []ast.Expr
-	for _, col := range by {
-		if frf := getFixed(fromFixed, col); frf != nil {
-			if tof := getFixed(toFixed, col); !set.Equal(frf, tof) {
-				exprs = append(exprs, fixedToExpr(col, frf))
-			}
-		}
-	}
-	if len(exprs) == 0 {
-		return to
-	}
-	expr := &ast.Nary{Tok: tok.And, Exprs: exprs}
-	w := NewWhere(to, expr, t)
-	w.added = true
-	return w
 }
 
 func fixedToExpr(col string, values []string) ast.Expr {
@@ -260,14 +223,34 @@ func (jn *Join) Transform() Query {
 	if _, ok := src2.(*Nothing); ok {
 		return NewNothing(jn)
 	}
+	fix1, fix2 := src1.Fixed(), src2.Fixed()
+	if !equalFixed(fix1, jn.prevFixed1) || !equalFixed(fix2, jn.prevFixed2) {
+		src1 = copyFixed(fix2, fix1, src1, jn.by, jn.qt)
+		src2 = copyFixed(fix1, fix2, src2, jn.by, jn.qt)
+		jn.prevFixed1, jn.prevFixed2 = fix1, fix2
+	}
 	if src1 != jn.source1 || src2 != jn.source2 {
-		q := jn.With(src1, src2)
-		if j, ok := q.(*Join); ok && j.source1 != src1 || j.source2 != src2 {
-			return j.Transform()
-		}
-		return q
+		return jn.With(src1, src2).Transform()
 	}
 	return jn
+}
+
+// copyFixed adds a Where to `to` for fixed from `from` for common by columns.
+// It doesn't check if the where is conflicting, that should be handled by Where
+func copyFixed(fromFixed, toFixed []Fixed, to Query, by []string, t QueryTran) Query {
+	var exprs []ast.Expr
+	for _, col := range by {
+		if frf := getFixed(fromFixed, col); frf != nil {
+			if tof := getFixed(toFixed, col); !set.Equal(frf, tof) {
+				exprs = append(exprs, fixedToExpr(col, frf))
+			}
+		}
+	}
+	if len(exprs) == 0 {
+		return to
+	}
+	expr := &ast.Nary{Tok: tok.And, Exprs: exprs}
+	return NewWhere(to, expr, t)
 }
 
 var joinRev = 0 // tests can set to impossible to prevent reverse
@@ -661,19 +644,33 @@ func (lj *LeftJoin) Transform() Query {
 	}
 	src2 := lj.source2.Transform()
 	_, src2Nothing := src2.(*Nothing)
-	_, none := combineFixed(src1.Fixed(), src2.Fixed())
-	if none || src2Nothing {
+	fix1, fix2 := src1.Fixed(), src2.Fixed()
+	if src2Nothing || fixedConflict(fix1, fix2) {
 		// remove useless left join
 		return keepCols(src1, src2, lj.Header())
 	}
+	if !equalFixed(fix1, lj.prevFixed1) || !equalFixed(fix2, lj.prevFixed2) {
+		// for leftjoin, we can only apply fixed from src1 to src2
+		// can't do the reverse because src2 is "optional"
+		src2 = copyFixed(fix1, fix2, src2, lj.by, lj.qt)
+		lj.prevFixed1, lj.prevFixed2 = fix1, fix2
+	}
 	if src1 != lj.source1 || src2 != lj.source2 {
-		j := lj.With(src1, src2)
-		if j.source1 != src1 || j.source2 != src2 {
-			return j.Transform()
-		}
-		return j
+		return lj.With(src1, src2).Transform()
 	}
 	return lj
+}
+
+func fixedConflict(fixed1, fixed2 []Fixed) bool {
+	for _, f2 := range fixed2 {
+		if src1vals := getFixed(fixed1, f2.col); src1vals != nil {
+			// field is in both
+			if set.Disjoint(src1vals, f2.values) {
+				return true // can't match anything
+			}
+		}
+	}
+	return false
 }
 
 func (lj *LeftJoin) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
