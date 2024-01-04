@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -156,6 +157,7 @@ func (row Row) SameAs(row2 Row) bool {
 	return true
 }
 
+// Derived returns the total size of the non-database records (with no offset)
 func (row Row) Derived() int {
 	n := 0
 	for _, dbrec := range row {
@@ -201,17 +203,20 @@ func (hdr *Header) Dup() *Header {
 	return NewHeader(hdr.Fields, hdr.Columns)
 }
 
+// JoinHeaders appends the fields, and unions the columns.
+// It is used by Join and Union.
+// WARNING: if field on one and rule on the other,
+// the result will look like it's a field.
+// See also: Header.Rules
 func JoinHeaders(x, y *Header) *Header {
-	//TODO what if rule on one and field on the other ???
-	fields := make([][]string, 0, len(x.Fields)+len(y.Fields))
-	fields = append(append(fields, x.Fields...), y.Fields...)
+	fields := slc.With(x.Fields, y.Fields...)
 	columns := set.Union(x.Columns, y.Columns)
 	return NewHeader(fields, columns)
 }
 
 // Rules is a list of the derived columns.
 // i.e. columns that are not fields.
-// WARNING: This is not exact with Query2.
+// WARNING: This is not exact after JoinHeaders (Join and Union).
 // Rules will *not* include columns that are fields on one source
 // and rules on the other source.
 func (hdr *Header) Rules() []string {
