@@ -19,7 +19,7 @@ type Nothing struct {
 
 func NewNothing(q Query) *Nothing {
 	no := Nothing{table: q.Updateable()}
-	no.header = SimpleHeader(q.Columns())
+	no.header = q.Header()
 	return &no
 }
 
