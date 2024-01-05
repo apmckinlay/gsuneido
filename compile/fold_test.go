@@ -143,6 +143,10 @@ func TestPropFold(t *testing.T) {
 	test("'hello' =~ 'lo'", "true")
 	test("s = 'hello'; s =~ 'lo'", "'hello'\ntrue")
 
+	// in => is
+	test("x in (1)", "Binary(Is x 1)")
+	test("x not in (1)", "Unary(Not Binary(Is x 1))")
+
 	// or => in
 	test("a is 1 or a is 2", "In(a [1 2])")
 	test("a is 1 or a is 2 or b is 3 or b is 4",
