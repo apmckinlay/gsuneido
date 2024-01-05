@@ -21,6 +21,7 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -192,7 +193,11 @@ func (a *Unary) Echo() string {
 		tok.Sub: "-",
 		tok.Not: "not ",
 	}
-	return op[a.Tok] + a.E.Echo()
+	e := a.E.Echo()
+	if strings.Contains(e, " ") {
+		e = "(" + e + ")"
+	}
+	return op[a.Tok] + e
 }
 
 func (a *Unary) Children(fn func(Node) Node) {
