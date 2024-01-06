@@ -50,9 +50,17 @@ func suneido_Regex(arg Value) Value {
 	return SuRegex{Pat: regex.Compile(ToStr(arg))}
 }
 
-var _ = staticMethod(suneido_GoMetric, "(name)")
+var _ = staticMethod(suneido_GoMetric, "(name = false)")
 
 func suneido_GoMetric(th *Thread, args []Value) Value {
+	if args[0] == False {
+		all := metrics.All()
+		ob := SuObject{}
+		for _, d := range all {
+			ob.Add(SuStr(d.Name))
+		}
+		return &ob
+	}
 	sample := make([]metrics.Sample, 1)
 	sample[0].Name = ToStr(args[0])
 	metrics.Read(sample)
@@ -123,14 +131,11 @@ func suneido_WarningsThrow(x Value) Value {
 	return nil
 }
 
-var _ = staticMethod(suneido_Info, "(name)")
+var _ = staticMethod(suneido_Info, "(name = false)")
 
 func suneido_Info(x Value) Value {
+	if x == False {
+		return SuObjectOfStrs(InfoList())
+	}
 	return SuStr(InfoStr(ToStr(x)))
-}
-
-var _ = staticMethod(suneido_InfoList, "()")
-
-func suneido_InfoList() Value {
-	return SuObjectOfStrs(InfoList())
 }
