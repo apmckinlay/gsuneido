@@ -247,7 +247,7 @@ func (c *SuClass) New(th *Thread, as *ArgSpec) *SuInstance {
 	return ob
 }
 
-var _ Named = &SuClass{}
+var _ Named = (*SuClass)(nil)
 
 func (c *SuClass) GetName() string {
 	return c.Name
