@@ -313,11 +313,9 @@ func (typeGlobal) unload(name string) {
 func (typeGlobal) UnloadAll() {
 	g.lock.Lock()
 	defer g.lock.Unlock()
-	for i := range g.values {
-		g.values[i] = nil
-	}
-	g.errors = make(map[Gnum]any)
-	g.noDef = make(map[string]struct{})
+	clear(g.values)
+	clear(g.errors)
+	clear(g.noDef)
 	LibraryOverrides.ClearOriginals()
 	LibsList.Store(nil)
 }

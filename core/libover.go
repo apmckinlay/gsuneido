@@ -61,7 +61,7 @@ func (lo *libraryOverrides) Unload(name string) {
 func (lo *libraryOverrides) ClearOriginals() {
 	lo.lock.Lock()
 	defer lo.lock.Unlock()
-	lo.originals = make(map[string]Value)
+	clear(lo.originals)
 }
 
 func (lo *libraryOverrides) Clear() {
