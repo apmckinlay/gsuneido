@@ -362,11 +362,12 @@ func (a assert) fail(args ...any) {
 		args = append(append(args, "msg: "), a.msg...)
 	}
 	s := fmt.Sprintln(args...)
-	log.Println("ASSERT FAILED:", s)
 	dbg.PrintStack()
+
 	if a.t != nil {
 		a.t.Error("\n" + s)
 	} else {
+		log.Println("ASSERT FAILED:", s)
 		panic("assert failed: " + s)
 	}
 }
