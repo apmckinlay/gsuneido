@@ -250,6 +250,7 @@ func (e *Extend) extendRow(th *Thread, row Row) Record {
 func (e *Extend) filter(rec Record) bool {
 	for i, col := range e.selCols {
 		j := slices.Index(e.physical, col)
+		assert.That(j != -1)
 		x := rec.GetRaw(j)
 		if x != e.selVals[i] {
 			return false
