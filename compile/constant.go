@@ -173,12 +173,14 @@ func (p *Parser) object() Value {
 	}
 	if p, ok := ob.(protectable); ok {
 		p.SetReadOnly()
+		p.SetConcurrent()
 	}
 	return ob.(Value)
 }
 
 type protectable interface {
 	SetReadOnly()
+	SetConcurrent()
 }
 
 func (p *Parser) memberList(ob container, closing tok.Token, base Gnum) {
@@ -294,6 +296,12 @@ func (p *Parser) class() (result Value) {
 	p.setPos(mems, pos1, pos2)
 	p.className = prevClassName
 	if cc, ok := mems.(classBuilder); ok {
+		// need to call SetConcurrent on members that are objects
+		// so that copyCount gets initialized
+		// since SuClass.SetConcurrent doesn't do anything
+		for _, v := range cc {
+			v.SetConcurrent()
+		}
 		return &SuClass{Base: base, Lib: p.lib, Name: p.name,
 			MemBase: MemBase{Data: cc}}
 	}

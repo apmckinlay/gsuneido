@@ -22,8 +22,7 @@ type SuClass struct {
 	Lib          string
 	Name         string
 	MemBase
-	Base     Gnum
-	noGetter bool
+	Base Gnum
 }
 
 // NOTE: the parents argument on some SuClass methods is used by SuInstance
@@ -102,14 +101,10 @@ func (c *SuClass) get1(th *Thread, this Value, m Value, parents []*SuClass) Valu
 		}
 		return val
 	}
-	if !c.noGetter {
-		if getter := c.get2(th, "Getter_", parents); getter != nil {
-			return th.CallThis(getter, this, m)
-		}
-		c.noGetter = true
+	if getter := c.get2(th, "Getter_", parents); getter != nil {
+		return th.CallThis(getter, this, m)
 	}
-	getterName := "Getter_" + ms
-	if getter := c.get2(th, getterName, parents); getter != nil {
+	if getter := c.get2(th, "Getter_"+ms, parents); getter != nil {
 		return th.CallThis(getter, this)
 	}
 	return nil

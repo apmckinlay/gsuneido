@@ -410,9 +410,11 @@ func (ob *SuObject) size() int {
 
 // Add appends a value to the list portion
 func (ob *SuObject) Add(val Value) {
+	if ob.concurrent {
+		val.SetConcurrent()
+	}
 	if ob.Lock() {
 		defer ob.Unlock()
-		val.SetConcurrent()
 	}
 	ob.add(val)
 }
@@ -429,9 +431,11 @@ func (ob *SuObject) add(val Value) {
 // Insert inserts at the given position.
 // If the position is within the list, following values are moved over.
 func (ob *SuObject) Insert(at int, val Value) {
+	if ob.concurrent {
+		val.SetConcurrent()
+	}
 	if ob.Lock() {
 		defer ob.Unlock()
-		val.SetConcurrent()
 	}
 	defer ob.endMutate(ob.startMutate())
 	if 0 <= at && at <= len(ob.list) {
@@ -455,6 +459,7 @@ func (ob *SuObject) mustBeMutable() {
 	if ob.copyCount != nil && ob.copyCount.Load() > 0 {
 		// copy on write i.e. unshare, disconnect
 		// two threads could (rarely) get in here at the same time
+		// (on different objects, since we lock)
 		ob.list = slices.Clone(ob.list)
 		ob.named = *ob.named.Copy()
 		// must do this last because if count goes to zero
@@ -893,8 +898,9 @@ func (ob *SuObject) ToRecord(th *Thread, hdr *Header) Record {
 }
 
 func (ob *SuObject) Sort(th *Thread, lt Value) {
-	ob.Lock()
-	defer ob.Unlock()
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
 	ob.mustBeMutable()
 	ob.clock++
 	ob.version++
@@ -909,7 +915,11 @@ func (ob *SuObject) Sort(th *Thread, lt Value) {
 			ob.Unlock() // can't hold lock while calling arbitrary code
 			defer ob.Lock()
 			sort.SliceStable(ob.list, func(i, j int) bool {
-				return True == th.Call(lt, ob.list[i], ob.list[j])
+				lt := th.Call(lt, ob.list[i], ob.list[j])
+				if lt != True && lt!= False {
+					Warning("Sort! functions should return true or false")
+				}
+				return lt == True //TODO remove warning and use ToBool
 			})
 			// note: could become concurrent while unlocked
 		}()
@@ -917,10 +927,11 @@ func (ob *SuObject) Sort(th *Thread, lt Value) {
 }
 
 func (ob *SuObject) Unique() {
-	conc := ob.Lock()
-	defer ob.Unlock()
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
 	defer ob.endMutate(ob.startMutate())
-	if !conc {
+	if !ob.concurrent {
 		ob.list = unique(ob.list)
 	} else { // concurrent
 		func() {
@@ -957,7 +968,8 @@ func unique(list []Value) []Value {
 
 // SetConcurrent when readonly does not need to set shouldLock.
 // But it still needs to set its children to concurrent
-// because they may be SuRecords that require locking when readonly.
+// because they may be SuRecords that require locking when readonly
+// or other objects that require copyCount initialization.
 func (ob *SuObject) SetConcurrent() {
 	if !ob.concurrent {
 		ob.concurrent = true
@@ -1032,11 +1044,11 @@ func (ob *SuObject) isReadOnly() bool {
 }
 
 func (ob *SuObject) SetDefault(def Value) {
+	if def != nil && ob.concurrent {
+		def.SetConcurrent()
+	}
 	if ob.Lock() {
 		defer ob.Unlock()
-		if def != nil {
-			def.SetConcurrent()
-		}
 	}
 	ob.mustBeMutable()
 	ob.defval = def
@@ -1188,10 +1200,11 @@ func unpackValue(buf *pack.Decoder) Value {
 // rwMayLock is similar to MayLock except that it has a read-write lock.
 type rwMayLock struct {
 	lock sync.RWMutex
-	// concurrent is whether it's accessible to multiple goroutines
+	// concurrent is whether it's accessible to multiple goroutines.
+	// It is needed so SetChildConc is only called once.
 	concurrent bool
 	// shouldLock is whether we need to lock or not.
-	// This is usually true, except for SuObjects
+	// This is usually true when concurrent, except for SuObject's
 	// that are already readonly when SetConcurrent is called
 	shouldLock bool
 }

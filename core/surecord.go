@@ -217,7 +217,7 @@ func (r *SuRecord) ToContainer() (Container, bool) {
 }
 
 // SetConcurrent for SuRecord differs from SuObject.
-// Unlike SuObjct, SuRecord needs to lock when readonly
+// Unlike SuObject, SuRecord needs to lock when readonly
 // because it modifies dependents and hdr's cache etc.
 func (r *SuRecord) SetConcurrent() {
 	if !r.ob.concurrent {
