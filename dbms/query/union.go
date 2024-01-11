@@ -561,3 +561,27 @@ func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
 	defer u.Select(nil, nil) // clear select
 	return u.Get(th, Next)
 }
+
+func (u *Union) Simple(th *Thread) []Row {
+	// rows1 + rows2 not in rows1
+	cols := u.Columns()
+	empty1 := make(Row, len(u.source1.Header().Fields))
+	empty2 := make(Row, len(u.source2.Header().Fields))
+	rows1 := u.source1.Simple(th)
+	rows2 := u.source2.Simple(th)
+	rows := rows1
+outer:
+	for _, row2 := range rows2 {
+		for _, row1 := range rows1 {
+			if EqualRows(u.source1.Header(), row1, u.source2.Header(), row2,
+				cols, th, nil) {
+				continue outer
+			}
+		}
+		rows = append(rows, JoinRows(empty1, row2))
+	}
+	for i := range rows[:len(rows1)] {
+		rows[i] = JoinRows(rows[i], empty2)
+	}
+	return rows
+}

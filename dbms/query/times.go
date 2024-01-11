@@ -5,6 +5,7 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -146,4 +147,17 @@ func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
 		t.source2.Select(t.sel2cols, t.sel2vals)
 	}
 	return t.Get(th, Next)
+}
+
+func (t *Times) Simple(th *Thread) []Row {
+	rows1 := t.source1.Simple(th)
+	rows2 := t.source2.Simple(th)
+	assert.Msg("Times Simple too big").That(len(rows1)*len(rows2) < maxSimple)
+	rows := make([]Row, 0, len(rows1)*len(rows2))
+	for _, row1 := range rows1 {
+		for _, row2 := range rows2 {
+			rows = append(rows, JoinRows(row1, row2))
+		}
+	}
+	return rows
 }

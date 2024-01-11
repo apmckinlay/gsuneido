@@ -88,6 +88,10 @@ func (*schemaTable) fastSingle() bool {
 	return false
 }
 
+func (*schemaTable) Simple(*Thread) []Row {
+	panic("Simple not implemented for schema tables")
+}
+
 //-------------------------------------------------------------------
 
 type Tables struct {

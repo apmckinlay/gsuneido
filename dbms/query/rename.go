@@ -194,3 +194,7 @@ func (r *Rename) Select(cols, vals []string) {
 func (r *Rename) Lookup(th *Thread, cols, vals []string) Row {
 	return r.source.Lookup(th, r.renameRev(cols), vals)
 }
+
+func (r *Rename) Simple(th *Thread) []Row {
+	return r.source.Simple(th)
+}

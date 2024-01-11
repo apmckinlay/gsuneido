@@ -167,6 +167,11 @@ type Query interface {
 	// Join, Intersect, and Union return false because it depends on strategy.
 	// It is used by optimize (below)
 	fastSingle() bool
+
+	// Simple is simple, alternate execution method for testing.
+	// It should normally be used after just parsing,
+	// without transform or optimize.
+	Simple(th *Thread) []Row
 }
 
 // queryBase is embedded by almost all Query types

@@ -155,3 +155,21 @@ func (it *Intersect) Lookup(th *Thread, cols, vals []string) Row {
 }
 
 // COULD have a "merge" strategy (like Union)
+
+func (it *Intersect) Simple(th *Thread) []Row {
+	cols := it.Columns()
+	rows1 := it.source1.Simple(th)
+	rows2 := it.source2.Simple(th)
+	dst := 0
+	for _, row1 := range rows1 {
+		for _, row2 := range rows2 {
+			if EqualRows(it.source1.Header(), row1, it.source2.Header(), row2,
+				cols, th, nil) {
+				rows1[dst] = row1
+				dst++
+				break
+			}
+		}
+	}
+	return rows1[:dst]
+}

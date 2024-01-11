@@ -94,3 +94,7 @@ func (*Nothing) Rewind() {
 
 func (*Nothing) Select([]string, []string) {
 }
+
+func (*Nothing) Simple(*Thread) []Row {
+	return nil
+}

@@ -73,6 +73,10 @@ func (*TempIndex) setApproach([]string, float64, any, QueryTran) {
 	assert.ShouldNotReachHere()
 }
 
+func (*TempIndex) Simple(*Thread) []Row {
+	panic(assert.ShouldNotReachHere())
+}
+
 // execution --------------------------------------------------------
 
 func (ti *TempIndex) Rewind() {

@@ -37,7 +37,7 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `((cus leftjoin (ivc where ik is "3")) join ((aln union bln) where ik is "3"))`
+	s := `bln join by(ik,b2) ((ivc where ik is "") leftjoin by(ck) (cus extend b2 = c1))`
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
 	fmt.Println("----------------")
@@ -60,7 +60,7 @@ func TestQuery(t *testing.T) {
 		if row == nil {
 			break
 		}
-		fmt.Println(row2str(hdr, row))
+		// fmt.Println(row2str(hdr, row))
 		hash := hashRow(hdr, fields, row)
 		if _, ok := hashes[hash]; ok {
 			panic("duplicate hash")
@@ -249,4 +249,25 @@ func TestHeader_Union(t *testing.T) {
 	assert.This(row2.GetVal(hdr, "one", th, nil)).Is(IntVal(11))
 	assert.This(row2.GetVal(hdr, "two", th, nil)).Is(IntVal(22))
 	assert.This(row2.GetVal(hdr, "three", th, nil)).Is(IntVal(33))
+}
+
+func TestSimple(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	MakeSuTran = func(qt QueryTran) *SuTran {
+		return nil
+	}
+	s := `(((cus extend r0 union cus) join ivc) join aln) union (((ivc where ik is '7' project ik,i2,i3,ck leftjoin cus) union (cus join (ivc where ik is '7'))) join (aln where ik is '7'))`
+	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
+	if err != nil {
+		panic(err.Error())
+	}
+	tran := db.NewReadTran()
+	fmt.Println("----------------")
+	fmt.Println(Format(tran, s))
+	fmt.Println("----------------")
+	q := ParseQuery(s, tran, nil)
+	th := &Thread{}
+	q.Simple(th)
 }

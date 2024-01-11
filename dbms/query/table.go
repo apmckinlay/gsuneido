@@ -336,3 +336,23 @@ func (tbl *Table) ensureIter() *index.OverIter {
 	}
 	return tbl.iter
 }
+
+const maxSimple = 2000
+
+func (tbl *Table) Simple(*Thread) []Row {
+	// can't use info.Nrows because sizeTran overrides it for tests
+	tbl.ensureIter()
+	rows := make([]Row, 0, 8)
+	for {
+		tbl.iter.Next(tbl.tran)
+		if tbl.iter.Eof() {
+			break
+		}
+		_, off := tbl.iter.Cur()
+		rec := tbl.tran.GetRecord(off)
+		row := Row{DbRec{Record: rec, Off: off}}
+		rows = append(rows, row)
+		assert.Msg("too large for simple").That(len(rows) < maxSimple)
+	}
+	return rows
+}

@@ -106,3 +106,22 @@ func (m *Minus) Lookup(th *Thread, cols, vals []string) Row {
 }
 
 // COULD have a "merge" strategy (like Union)
+
+func (m *Minus) Simple(th *Thread) []Row {
+	cols := m.Columns()
+	rows1 := m.source1.Simple(th)
+	rows2 := m.source2.Simple(th)
+	dst := 0
+outer:
+	for _, row1 := range rows1 {
+		for _, row2 := range rows2 {
+			if EqualRows(m.source1.Header(), row1, m.source2.Header(), row2,
+				cols, th, nil) {
+				continue outer
+			}
+		}
+		rows1[dst] = row1
+		dst++
+	}
+	return rows1[:dst]
+}

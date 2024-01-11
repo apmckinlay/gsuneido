@@ -313,3 +313,15 @@ func (e *Extend) splitSelect(cols, vals []string) ([]string, []string) {
 	e.selCols, e.selVals = ecols, evals
 	return srccols, srcvals
 }
+
+func (e *Extend) Simple(th *Thread) []Row {
+	e.header = e.getHeader()
+	e.ctx.Hdr = e.header
+	rows := e.source.Simple(th)
+	if e.hasExprs {
+		for i, row := range rows {
+			rows[i] = append(row, DbRec{Record: e.extendRow(th, row)})
+		}
+	}
+	return rows
+}

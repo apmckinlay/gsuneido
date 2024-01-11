@@ -551,6 +551,22 @@ func (jb *joinBase) lookupFallback(sel1cols []string) bool {
 	}
 	return false
 }
+
+func (jn *Join) Simple(th *Thread) []Row {
+	st := MakeSuTran(jn.qt)
+	rows1 := jn.source1.Simple(th)
+	rows2 := jn.source2.Simple(th)
+	rows := make([]Row, 0, len(rows1))
+	for _, row1 := range rows1 {
+		for _, row2 := range rows2 {
+			if jn.equalBy(th, st, row1, row2) {
+				rows = append(rows, JoinRows(row1, row2))
+			}
+		}
+	}
+	return rows
+}
+
 func (jb *joinBase) equalBy(th *Thread, st *SuTran, row1, row2 Row) bool {
 	for _, f := range jb.by {
 		if row1.GetRawVal(jb.source1.Header(), f, th, st) !=
@@ -800,4 +816,24 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 		return nil
 	}
 	return JoinRows(row1, row2)
+}
+
+func (lj *LeftJoin) Simple(th *Thread) []Row {
+	empty2 := make(Row, len(lj.source2.Header().Fields))
+	rows1 := lj.source1.Simple(th)
+	rows2 := lj.source2.Simple(th)
+	rows := make([]Row, 0, len(rows1))
+	for i1 := 0; i1 < len(rows1); i1++ {
+		row1out := false
+		for i2 := 0; i2 < len(rows2); i2++ {
+			if lj.equalBy(th, lj.st, rows1[i1], rows2[i2]) {
+				rows = append(rows, JoinRows(rows1[i1], rows2[i2]))
+				row1out = true
+			}
+		}
+		if !row1out {
+			rows = append(rows, JoinRows(rows1[i1], empty2))
+		}
+	}
+	return rows
 }

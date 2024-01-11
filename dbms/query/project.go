@@ -637,3 +637,20 @@ func (p *Project) getLookupCost() Cost {
 	}
 	return 2 * srcCost // ??? (matches Nrows)
 }
+
+func (p *Project) Simple(th *Thread) []Row {
+	hdr := p.Header()
+	dst := 0
+	rows := p.source.Simple(th)
+outer:
+	for i := range rows {
+		for j := 0; j < i; j++ {
+			if hdr.EqualRows(rows[i], rows[j], th, nil) {
+				continue outer
+			}
+		}
+		rows[dst] = rows[i]
+		dst++
+	}
+	return rows[:dst]
+}

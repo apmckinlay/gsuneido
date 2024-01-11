@@ -824,3 +824,16 @@ func (w *Where) slowQueries() {
 func (w *Where) slow() bool {
 	return w.nIn > 100 && w.nIn > w.nOut*100
 }
+
+func (w *Where) Simple(th *Thread) []Row {
+	w.ctx.Hdr = w.header
+	rows := w.source.Simple(th)
+	dst := 0
+	for _, row := range rows {
+		if w.filter(nil, row) {
+			rows[dst] = row
+			dst++
+		}
+	}
+	return rows[:dst]
+}

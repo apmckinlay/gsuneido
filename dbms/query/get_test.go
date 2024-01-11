@@ -5,6 +5,7 @@ package query
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -40,7 +41,39 @@ func TestQueryGet(t *testing.T) {
 	th := &Thread{}
 	db := testDb()
 	defer db.Close()
-	get := func(q Query, dir Dir) string {
+	str := func(hdr *Header, rows []Row, hasSort bool) string {
+		hdr.Columns = slices.Clone(hdr.Columns)
+		slices.Sort(hdr.Columns)
+		if !hasSort && len(rows) > 1 {
+			slices.SortFunc(rows, func(x, y Row) int {
+				for _, col := range hdr.Columns {
+					xs := x.GetRawVal(hdr, col, nil, nil)
+					ys := y.GetRawVal(hdr, col, nil, nil)
+					if cmp := strings.Compare(xs, ys); cmp != 0 {
+						return cmp
+					}
+				}
+				return 0
+			})
+		}
+		var sb strings.Builder
+		for _, col := range hdr.Columns {
+			sb.WriteString(col)
+			sb.WriteString("\t")
+		}
+		sb.WriteString("\n")
+		for _, row := range rows {
+			for _, col := range hdr.Columns {
+				sb.WriteString(row.GetVal(hdr, col, nil, nil).String())
+				sb.WriteString("\t")
+			}
+			sb.WriteString("\n")
+		}
+		s := sb.String()
+		s = strings.ReplaceAll(s, `"`, "'")
+		return s
+	}
+	get := func(q Query, dir Dir, hasSort bool) string {
 		t.Helper()
 		var rows []Row
 		q.Rewind()
@@ -51,31 +84,13 @@ func TestQueryGet(t *testing.T) {
 		if dir == Prev {
 			slc.Reverse(rows)
 		}
-		hdr := q.Header()
-		var sb strings.Builder
-		for _, col := range hdr.Columns {
-			sb.WriteString(col)
-			sb.WriteString("\t")
-		}
-		sb.WriteString("\n")
-		for _, row := range rows {
-			for _, col := range hdr.Columns {
-				if row.GetVal(hdr, col, nil, nil) == nil {
-					fmt.Println(col, "is nil in", row)
-				}
-				sb.WriteString(row.GetVal(hdr, col, nil, nil).String())
-				sb.WriteString("\t")
-			}
-			sb.WriteString("\n")
-		}
-		s := sb.String()
-		s = strings.ReplaceAll(s, `"`, "'")
-		return s
+		return str(q.Header(), rows, hasSort)
 	}
 	test := func(query, strategy, expected string) {
 		t.Helper()
 		tran := sizeTran{db.NewReadTran()}
 		q := ParseQuery(query, tran, nil)
+		_, hasSort := q.(*Sort)
 
 		query2 := format(0, q, 0)
 		q2 := ParseQuery(query2, tran, nil)
@@ -84,209 +99,218 @@ func TestQueryGet(t *testing.T) {
 		q, _, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(q.String(), `"`, "'")
 		assert.T(t).This(qs).Is(strategy)
-		assert.T(t).Msg("forward:", query).This(get(q, Next)).Like(expected)
-		assert.T(t).Msg("reverse:", query).This(get(q, Prev)).Like(expected)
+		assert.T(t).Msg("forward:", query).This(get(q, Next, hasSort)).Like(expected)
+		assert.T(t).Msg("reverse:", query).This(get(q, Prev, hasSort)).Like(expected)
+
+		if !strings.Contains(query, "tables") &&
+			!strings.Contains(query, "columns") &&
+			!strings.Contains(query, "indexes") &&
+			!strings.Contains(query, "summarize") {
+			simple := str(q2.Header(), q2.Simple(th), hasSort)
+			assert.T(t).Msg("simple:", query).This(simple).Like(expected)
+		}
 	}
+
 	test("indexes project table, columns, key",
 		"indexes PROJECT-COPY table,columns,key",
-		`table		columns			key
-        'alias'		'id'			true
-        'co'		'tnum'			true
-        'cus'		'cnum'			true
-        'cus'		'abbrev'		true
-        'customer'	'id'			true
-        'dates'		'date'			true
-        'hist'		'date'			false
-        'hist'		'date,item,id'	true
-        'hist2'		'date'			true
-        'hist2'		'id'			false
-        'inven'		'item'			true
-        'supplier'	'supplier'		true
-        'supplier'	'city'			false
-        'task'		'tnum'			true
-        'trans'		'item'			false
-        'trans'		'date,item,id'	true`)
+		`columns	key	table
+		'abbrev'	true	'cus'
+		'city'	false	'supplier'
+		'cnum'	true	'cus'
+		'date'	false	'hist'
+		'date'	true	'dates'
+		'date'	true	'hist2'
+		'date,item,id'	true	'hist'
+		'date,item,id'	true	'trans'
+		'id'	false	'hist2'
+		'id'	true	'alias'
+		'id'	true	'customer'
+		'item'	false	'trans'
+		'item'	true	'inven'
+		'supplier'	true	'supplier'
+		'tnum'	true	'co'
+		'tnum'	true	'task'`)
 	test("columns",
 		"columns",
-		`table   column  field
-        'alias' 'id'    0
-        'alias' 'name2' 1
-        'co'    'tnum'  0
-        'co'    'signed'        1
-        'columns'       'table' 0
-        'columns'       'column'        1
-        'columns'       'field' 2
-        'cus'   'cnum'  0
-        'cus'   'abbrev'        1
-        'cus'   'name'  2
-        'customer'      'id'    0
-        'customer'      'name'  1
-        'customer'      'city'  2
-        'dates' 'date'  0
-        'hist'  'date'  0
-        'hist'  'item'  1
-        'hist'  'id'    2
-        'hist'  'cost'  3
-        'hist2' 'date'  0
-        'hist2' 'item'  1
-        'hist2' 'id'    2
-        'hist2' 'cost'  3
-        'indexes'       'table' 0
-        'indexes'       'columns'       1
-        'indexes'       'key'   2
-        'indexes'		'fktable'	3
-        'indexes'		'fkcolumns'	4
-        'indexes'		'fkmode'	5
-        'inven' 'item'  0
-        'inven' 'qty'   1
-        'supplier'      'supplier'      0
-        'supplier'      'name'  1
-        'supplier'      'city'  2
-        'tables'        'table' 0
-        'tables'        'tablename'     1
-        'tables'        'nrows' 2
-        'tables'        'totalsize'     3
-        'task'  'tnum'  0
-        'task'  'cnum'  1
-        'trans' 'item'  0
-        'trans' 'id'    1
-        'trans' 'cost'  2
-        'trans' 'date'  3
-        'views' 'view_name'     0
-        'views' 'view_definition'       1`)
+		`column	field	table
+		'abbrev'	1	'cus'
+		'city'	2	'customer'
+		'city'	2	'supplier'
+		'cnum'	0	'cus'
+		'cnum'	1	'task'
+		'column'	1	'columns'
+		'columns'	1	'indexes'
+		'cost'	2	'trans'
+		'cost'	3	'hist'
+		'cost'	3	'hist2'
+		'date'	0	'dates'
+		'date'	0	'hist'
+		'date'	0	'hist2'
+		'date'	3	'trans'
+		'field'	2	'columns'
+		'fkcolumns'	4	'indexes'
+		'fkmode'	5	'indexes'
+		'fktable'	3	'indexes'
+		'id'	0	'alias'
+		'id'	0	'customer'
+		'id'	1	'trans'
+		'id'	2	'hist'
+		'id'	2	'hist2'
+		'item'	0	'inven'
+		'item'	0	'trans'
+		'item'	1	'hist'
+		'item'	1	'hist2'
+		'key'	2	'indexes'
+		'name'	1	'customer'
+		'name'	1	'supplier'
+		'name'	2	'cus'
+		'name2'	1	'alias'
+		'nrows'	2	'tables'
+		'qty'	1	'inven'
+		'signed'	1	'co'
+		'supplier'	0	'supplier'
+		'table'	0	'columns'
+		'table'	0	'indexes'
+		'table'	0	'tables'
+		'tablename'	1	'tables'
+		'tnum'	0	'co'
+		'tnum'	0	'task'
+		'totalsize'	3	'tables'
+		'view_definition'	1	'views'
+		'view_name'	0	'views'`)
 	test("tables",
 		"tables",
-		`table   tablename       nrows   totalsize
-        'alias' 'alias' 2       25
-        'co'    'co'    4       55
-        'columns'       'columns'       45       0
-        'cus'   'cus'   4       64
-        'customer'      'customer'      4       98
-        'dates' 'dates' 4       52
-        'hist'  'hist'  4       91
-        'hist2' 'hist2' 3       68
-        'indexes'       'indexes'       16      0
-        'inven' 'inven' 3       42
-        'supplier'      'supplier'      4       128
-        'tables'        'tables'        15      0
-        'task'  'task'  8       95
-        'trans' 'trans' 4       92
-		'views' 'views' 0       0`)
+		`nrows	table	tablename	totalsize
+		0	'views'	'views'	0
+		2	'alias'	'alias'	25
+		3	'hist2'	'hist2'	68
+		3	'inven'	'inven'	42
+		4	'co'	'co'	55
+		4	'cus'	'cus'	64
+		4	'customer'	'customer'	98
+		4	'dates'	'dates'	52
+		4	'hist'	'hist'	91
+		4	'supplier'	'supplier'	128
+		4	'trans'	'trans'	92
+		8	'task'	'task'	95
+		15	'tables'	'tables'	0
+		16	'indexes'	'indexes'	0
+		45	'columns'	'columns'	0`)
 	test("customer",
 		"customer^(id)",
-		`id	name	city
-		'a'	'axon'	'saskatoon'
-		'c'	'calac'	'calgary'
-		'e'	'emerald'	'vancouver'
-		'i'	'intercon'	'saskatoon'`)
+		`city	id	name
+		'calgary'	'c'	'calac'
+		'saskatoon'	'a'	'axon'
+		'saskatoon'	'i'	'intercon'
+		'vancouver'	'e'	'emerald'`)
 	test("hist",
 		"hist^(date)",
-		`date	item	id	cost
-		970101	'disk'	'a'	100
-		970101	'disk'	'e'	200
-		970102	'mouse'	'c'	200
-		970103	'pencil'	'e'	300`)
+		`cost	date	id	item
+		100	970101	'a'	'disk'
+		200	970101	'e'	'disk'
+		200	970102	'c'	'mouse'
+		300	970103	'e'	'pencil'`)
 	test("trans",
 		"trans^(item)",
-		`item		id	cost	date
-		'disk'		'a'	100	970101
-		'eraser'	'c'	150	970201
-		'mouse'		'e'	200	960204
-		'mouse'		'c'	200	970101`)
+		`cost	date	id	item
+		100	970101	'a'	'disk'
+		150	970201	'c'	'eraser'
+		200	960204	'e'	'mouse'
+		200	970101	'c'	'mouse'`)
 
 	// rename
 	test("trans rename id to code, date to when",
 		"trans^(item) RENAME id to code, date to when",
-		`item	code	cost	when
-		'disk'	'a'	100	970101
-		'eraser'	'c'	150	970201
-		'mouse'	'e'	200	960204
-		'mouse'	'c'	200	970101`)
+		`code	cost	item	when
+		'a'	100	'disk'	970101
+		'c'	150	'eraser'	970201
+		'c'	200	'mouse'	970101
+		'e'	200	'mouse'	960204`)
 
 	// sort
 	test("customer sort id",
 		"customer^(id)",
-		`id	name	city
-		'a'	'axon'	'saskatoon'
-		'c'	'calac'	'calgary'
-		'e'	'emerald'	'vancouver'
-		'i'	'intercon'	'saskatoon'`)
+		`city	id	name
+		'saskatoon'	'a'	'axon'
+		'calgary'	'c'	'calac'
+		'vancouver'	'e'	'emerald'
+		'saskatoon'	'i'	'intercon'`)
 	test("customer sort reverse id",
 		"customer^(id) reverse",
-		`id	name	city
-		'i'	'intercon'	'saskatoon'
-		'e'	'emerald'	'vancouver'
-		'c'	'calac'	'calgary'
-		'a'	'axon'	'saskatoon'`)
+		`city	id	name
+		'saskatoon'	'i'	'intercon'
+		'vancouver'	'e'	'emerald'
+		'calgary'	'c'	'calac'
+		'saskatoon'	'a'	'axon'`)
 	test("customer sort city",
 		"customer^(id) TEMPINDEX(city)",
-		`id	name	city
-		'c'	'calac'	'calgary'
-		'a'	'axon'	'saskatoon'
-		'i'	'intercon'	'saskatoon'
-		'e'	'emerald'	'vancouver'`)
-	test("customer sort reverse city",
-		"customer^(id) TEMPINDEX(city) reverse",
-		`id	name	city
-		'e'	'emerald'	'vancouver'
-		'i'	'intercon'	'saskatoon'
-		'a'	'axon'	'saskatoon'
-		'c'	'calac'	'calgary'`)
+		`city	id	name
+		'calgary'	'c'	'calac'
+		'saskatoon'	'a'	'axon'
+		'saskatoon'	'i'	'intercon'
+		'vancouver'	'e'	'emerald'`)
+	test("customer sort reverse city, name",
+		"customer^(id) TEMPINDEX(city,name) reverse",
+		`city	id	name
+		'vancouver'	'e'	'emerald'
+		'saskatoon'	'i'	'intercon'
+		'saskatoon'	'a'	'axon'
+		'calgary'	'c'	'calac'`)
 	test("task sort cnum, tnum",
 		"task^(tnum) TEMPINDEX(cnum,tnum)",
-		`tnum	cnum
-		100	1
-		104	1
-		101	2
-		105	2
-		102	3
-		106	3
-		103	4
-		107	4`)
+		`cnum	tnum
+		1	100
+		1	104
+		2	101
+		2	105
+		3	102
+		3	106
+		4	103
+		4	107`)
 	test("customer times inven sort qty, id",
 		"(customer^(id) TIMES inven^(item)) TEMPINDEX(qty,id)",
-		`id	name	city	item	qty
-		'a'	'axon'	'saskatoon'	'mouse'	2
-		'c'	'calac'	'calgary'	'mouse'	2
-		'e'	'emerald'	'vancouver'	'mouse'	2
-		'i'	'intercon'	'saskatoon'	'mouse'	2
-		'a'	'axon'	'saskatoon'	'disk'	5
-		'c'	'calac'	'calgary'	'disk'	5
-		'e'	'emerald'	'vancouver'	'disk'	5
-		'i'	'intercon'	'saskatoon'	'disk'	5
-		'a'	'axon'	'saskatoon'	'pencil'	7
-		'c'	'calac'	'calgary'	'pencil'	7
-		'e'	'emerald'	'vancouver'	'pencil'	7
-		'i'	'intercon'	'saskatoon'	'pencil'	7`)
+		`city	id	item	name	qty
+		'saskatoon'	'a'	'mouse'	'axon'	2
+		'calgary'	'c'	'mouse'	'calac'	2
+		'vancouver'	'e'	'mouse'	'emerald'	2
+		'saskatoon'	'i'	'mouse'	'intercon'	2
+		'saskatoon'	'a'	'disk'	'axon'	5
+		'calgary'	'c'	'disk'	'calac'	5
+		'vancouver'	'e'	'disk'	'emerald'	5
+		'saskatoon'	'i'	'disk'	'intercon'	5
+		'saskatoon'	'a'	'pencil'	'axon'	7
+		'calgary'	'c'	'pencil'	'calac'	7
+		'vancouver'	'e'	'pencil'	'emerald'	7
+		'saskatoon'	'i'	'pencil'	'intercon'	7`)
 	test("customer extend up = city[1..] sort up",
 		"customer^(id) EXTEND up = city[1..] TEMPINDEX(up)",
-		`id	name	city	up
-		'c'	'calac'	'calgary'	'algary'
-		'e'	'emerald'	'vancouver'	'ancouver'
-		'a'	'axon'	'saskatoon'	'askatoon'
-		'i'	'intercon'	'saskatoon'	'askatoon'`)
+		`city	id	name	up
+		'calgary'	'c'	'calac'	'algary'
+		'vancouver'	'e'	'emerald'	'ancouver'
+		'saskatoon'	'a'	'axon'	'askatoon'
+		'saskatoon'	'i'	'intercon'	'askatoon'`)
 	test("trans minus hist sort id, cost",
 		"(trans^(item) MINUS hist^(date,item,id)) TEMPINDEX(id,cost)",
-		`item		id	cost	date
-		'eraser'	'c'	150		970201
-		'mouse'		'c'	200		970101
-		'mouse'		'e'	200		960204`)
+		`cost	date	id	item
+		150	970201	'c'	'eraser'
+		200	970101	'c'	'mouse'
+		200	960204	'e'	'mouse'`)
 	test("customer rename id to id_new sort id_new",
 		"customer^(id) RENAME id to id_new",
-		`id_new	name	city
-		'a'		'axon'	'saskatoon'
-		'c'		'calac'	'calgary'
-		'e'		'emerald'	'vancouver'
-		'i'		'intercon'	'saskatoon'`)
+		`city	id_new	name
+		'saskatoon'	'a'	'axon'
+		'calgary'	'c'	'calac'
+		'vancouver'	'e'	'emerald'
+		'saskatoon'	'i'	'intercon'`)
 
 	// project
 	test("customer project city, id",
 		"customer^(id) PROJECT-COPY city,id",
 		`city	id
-		'saskatoon'	'a'
 		'calgary'	'c'
-		'vancouver'	'e'
-		'saskatoon'	'i'`)
+		'saskatoon'	'a'
+		'saskatoon'	'i'
+		'vancouver'	'e'`)
 	test("supplier project city",
 		"supplier^(city) PROJECT-SEQ city",
 		`city
@@ -302,68 +326,68 @@ func TestQueryGet(t *testing.T) {
 	test("customer project city",
 		"customer^(id) PROJECT-MAP city",
 		`city
-		'saskatoon'
 		'calgary'
+		'saskatoon'
 		'vancouver'`)
 
 	// extend
 	test("trans extend newcost = cost * 1.1",
 		"trans^(item) EXTEND newcost = cost * 1.1",
-		`item	id	cost	date	newcost
-		'disk'	'a'	100	970101	110
-		'eraser'	'c'	150	970201	165
-		'mouse'	'e'	200	960204	220
-		'mouse'	'c'	200	970101	220`)
+		`cost	date	id	item	newcost
+		100	970101	'a'	'disk'	110
+		150	970201	'c'	'eraser'	165
+		200	960204	'e'	'mouse'	220
+		200	970101	'c'	'mouse'	220`)
 	test("trans extend x = cost * 1.1, y = x $ '*'",
 		"trans^(item) EXTEND x = cost * 1.1, y = x $ '*'",
-		`item	id	cost	date	x	y
-		'disk'	'a'	100	970101	110	'110*'
-		'eraser'	'c'	150	970201	165	'165*'
-		'mouse'	'e'	200	960204	220	'220*'
-		'mouse'	'c'	200	970101	220	'220*'`)
+		`cost	date	id	item	x	y
+		100	970101	'a'	'disk'	110	'110*'
+		150	970201	'c'	'eraser'	165	'165*'
+		200	960204	'e'	'mouse'	220	'220*'
+		200	970101	'c'	'mouse'	220	'220*'`)
 
 	// times
 	test("customer times inven",
 		"customer^(id) TIMES inven^(item)",
-		`id	name	city	item	qty
-		'a'	'axon'	'saskatoon'	'disk'	5
-		'a'	'axon'	'saskatoon'	'mouse'	2
-		'a'	'axon'	'saskatoon'	'pencil'	7
-		'c'	'calac'	'calgary'	'disk'	5
-		'c'	'calac'	'calgary'	'mouse'	2
-		'c'	'calac'	'calgary'	'pencil'	7
-		'e'	'emerald'	'vancouver'	'disk'	5
-		'e'	'emerald'	'vancouver'	'mouse'	2
-		'e'	'emerald'	'vancouver'	'pencil'	7
-		'i'	'intercon'	'saskatoon'	'disk'	5
-		'i'	'intercon'	'saskatoon'	'mouse'	2
-		'i'	'intercon'	'saskatoon'	'pencil'	7`)
+		`city	id	item	name	qty
+		'calgary'	'c'	'disk'	'calac'	5
+		'calgary'	'c'	'mouse'	'calac'	2
+		'calgary'	'c'	'pencil'	'calac'	7
+		'saskatoon'	'a'	'disk'	'axon'	5
+		'saskatoon'	'a'	'mouse'	'axon'	2
+		'saskatoon'	'a'	'pencil'	'axon'	7
+		'saskatoon'	'i'	'disk'	'intercon'	5
+		'saskatoon'	'i'	'mouse'	'intercon'	2
+		'saskatoon'	'i'	'pencil'	'intercon'	7
+		'vancouver'	'e'	'disk'	'emerald'	5
+		'vancouver'	'e'	'mouse'	'emerald'	2
+		'vancouver'	'e'	'pencil'	'emerald'	7`)
 
 	// minus
 	test("trans minus trans",
 		"trans^(item) MINUS trans^(date,item,id)",
-		`item		id	cost	date`)
+		`cost	date	id	item`)
 	test("hist minus hist2",
 		"hist^(date) MINUS hist2^(date)",
-		`date	item	id	cost
-        970101	'disk'	'e'	200
-        970102	'mouse'	'c'	200`)
+		`cost	date	id	item
+		200	970101	'e'	'disk'
+		200	970102	'c'	'mouse'`)
 	test("trans minus hist",
 		"trans^(item) MINUS hist^(date,item,id)",
-		`item		id	cost	date
-		'eraser'	'c'	150		970201
-		'mouse'		'e'	200		960204
-		'mouse'		'c'	200		970101`)
+		`cost	date	id	item
+		150	970201	'c'	'eraser'
+		200	960204	'e'	'mouse'
+		200	970101	'c'	'mouse'`)
 	test("trans minus hist sort date",
 		"trans^(date,item,id) MINUS hist^(date,item,id)",
-		`item		id	cost	date
-		'mouse'		'e'	200		960204
-		'mouse'		'c'	200		970101
-		'eraser'	'c'	150		970201`)
+		`cost	date	id	item
+		200	960204	'e'	'mouse'
+		200	970101	'c'	'mouse'
+		150	970201	'c'	'eraser'`)
 	test("(trans minus trans) where item = 0",
 		"trans^(item) WHERE item is 0 MINUS "+
 			"(trans^(date,item,id) WHERE item is 0)",
-		`item		id	cost	date`)
+		`cost	date	id	item`)
 	test("inven minus (inven where item = 'mouse')",
 		"inven^(item) MINUS (inven^(item) WHERE*1 item is 'mouse')",
 		`item		qty
@@ -373,43 +397,43 @@ func TestQueryGet(t *testing.T) {
 	// intersect
 	test("trans intersect trans",
 		"trans^(item) INTERSECT trans^(date,item,id)",
-		`item		id	cost	date
-		'disk'		'a'	100	970101
-		'eraser'	'c'	150	970201
-		'mouse'		'e'	200	960204
-		'mouse'		'c'	200	970101`)
+		`cost	date	id	item
+		100	970101	'a'	'disk'
+		150	970201	'c'	'eraser'
+		200	960204	'e'	'mouse'
+		200	970101	'c'	'mouse'`)
 	test("trans intersect hist",
 		"trans^(item) INTERSECT hist^(date,item,id)",
-		`item	id	cost	date
-		'disk'	'a'	100		970101`)
+		`cost	date	id	item
+		100	970101	'a'	'disk'`)
 	test("hist intersect hist2",
 		"hist^(date) INTERSECT hist2^(date)",
-		`date	item		id	cost
-        970101	'disk'		'a'	100
-        970103	'pencil'	'e'	300`)
+		`cost	date	id	item
+		100	970101	'a'	'disk'
+		300	970103	'e'	'pencil'`)
 	test("(hist intersect hist2) where cost = 100",
 		"hist^(date) WHERE cost is 100 INTERSECT (hist2^(date) WHERE cost is 100)",
-		`date	item		id	cost
-        970101	'disk'		'a'	100`)
+		`cost	date	id	item
+		100	970101	'a'	'disk'`)
 
 	// union
 	test("hist2 union hist",
 		"hist2^(date) UNION-LOOKUP(date,item,id) hist^(date,item,id)",
-		`date	item	 id		cost
-		970102	'disk'	 'e'	200
-		970101	'disk'	 'a'	100
-		970101	'disk'	 'e'	200
-		970102	'mouse'	 'c'	200
-		970103	'pencil' 'e'	300`)
+		`cost	date	id	item
+		100	970101	'a'	'disk'
+		200	970101	'e'	'disk'
+		200	970102	'c'	'mouse'
+		200	970102	'e'	'disk'
+		300	970103	'e'	'pencil'`)
 	test("hist2 union trans",
 		"hist2^(date) UNION-LOOKUP(date,item,id) trans^(date,item,id)",
-		`date	item	 id		cost
-        970102	'disk'	 'e'	200
-        970103	'pencil' 'e'	300
-        960204	'mouse'	 'e'	200
-        970101	'disk'	 'a'	100
-        970101	'mouse'	 'c'	200
-        970201	'eraser' 'c'	150`)
+		`cost	date	id	item
+		100	970101	'a'	'disk'
+		150	970201	'c'	'eraser'
+		200	960204	'e'	'mouse'
+		200	970101	'c'	'mouse'
+		200	970102	'e'	'disk'
+		300	970103	'e'	'pencil'`)
 	test("alias union alias",
 		"alias^(id) UNION-MERGE(id) alias^(id)",
 		`id name2
@@ -417,42 +441,42 @@ func TestQueryGet(t *testing.T) {
 		'c'	'trical'`)
 	test("trans union hist",
 		"trans^(date,item,id) UNION-MERGE(date,item,id) hist^(date,item,id)",
-		`item	id	cost	date
-		'mouse'	'e'	200	960204
-		'disk'	'a'	100	970101
-		'disk'	'e'	200	970101
-		'mouse'	'c'	200	970101
-		'mouse'	'c'	200	970102
-		'pencil'	'e'	300	970103
-		'eraser'	'c'	150	970201`)
-	test("trans union trans sort id",
+		`cost	date	id	item
+		100	970101	'a'	'disk'
+		150	970201	'c'	'eraser'
+		200	960204	'e'	'mouse'
+		200	970101	'c'	'mouse'
+		200	970101	'e'	'disk'
+		200	970102	'c'	'mouse'
+		300	970103	'e'	'pencil'`)
+	test("trans union trans sort id,cost",
 		"(trans^(date,item,id) UNION-MERGE(date,item,id) "+
-			"trans^(date,item,id)) TEMPINDEX(id)",
-		`item		id	cost	date
-		'disk'		'a'	100	970101
-		'mouse'		'c'	200	970101
-		'eraser'	'c'	150	970201
-		'mouse'		'e'	200	960204`)
+			"trans^(date,item,id)) TEMPINDEX(id,cost)",
+		`cost	date	id	item
+		100	970101	'a'	'disk'
+		150	970201	'c'	'eraser'
+		200	970101	'c'	'mouse'
+		200	960204	'e'	'mouse'`)
 	test("(hist2 rename cost to amt) union (trans rename cost to amt)",
 		"hist2^(date) RENAME cost to amt UNION-LOOKUP(date,item,id) "+
 			"(trans^(date,item,id) RENAME cost to amt)",
-		`date	item	 id		amt
-        970102	'disk'	 'e'	200
-        970103	'pencil' 'e'	300
-        960204	'mouse'	 'e'	200
-        970101	'disk'	 'a'	100
-        970101	'mouse'	 'c'	200
-        970201	'eraser' 'c'	150`)
+		`amt	date	id	item
+		100	970101	'a'	'disk'
+		150	970201	'c'	'eraser'
+		200	960204	'e'	'mouse'
+		200	970101	'c'	'mouse'
+		200	970102	'e'	'disk'
+		300	970103	'e'	'pencil'`)
 	test("(hist2 extend x = 1) union (trans extend x = 1)",
 		"hist2^(date) EXTEND x = 1 UNION-LOOKUP(date,item,id) "+
 			"(trans^(date,item,id) EXTEND x = 1)",
-		`date	item	 id		cost  x
-        970102	'disk'	 'e'	200   1
-        970103	'pencil' 'e'	300   1
-        960204	'mouse'	 'e'	200   1
-        970101	'disk'	 'a'	100   1
-        970101	'mouse'	 'c'	200   1
-        970201	'eraser' 'c'	150   1`)
+		`cost	date	id	item	x
+		100	970101	'a'	'disk'	1
+		150	970201	'c'	'eraser'	1
+		200	960204	'e'	'mouse'	1
+		200	970101	'c'	'mouse'	1
+		200	970102	'e'	'disk'	1
+		300	970103	'e'	'pencil'	1`)
 	test("(co where tnum = 100 remove signed) union "+
 		"(co where tnum = 100 remove signed)",
 		"co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY tnum UNION-MERGE() "+
@@ -470,9 +494,9 @@ func TestQueryGet(t *testing.T) {
 		"co^(tnum) WHERE*1 tnum is 100 UNION-LOOKUP(tnum) "+
 			"(co^(tnum) WHERE*1 tnum is 100 UNION-DISJOINT(tnum)-MERGE(tnum) "+
 			"(co^(tnum) WHERE*1 tnum is 102))",
-		`tnum	signed
-        100		990101
-        102		990102`)
+		`signed	tnum
+		990101	100
+		990102	102`)
 	test("(((co where tnum = 100) union (co where tnum = 102)) remove tnum)"+
 		" union "+
 		"(((co where tnum = 104) union (co where tnum = 106)) remove tnum)",
@@ -493,85 +517,85 @@ func TestQueryGet(t *testing.T) {
 	// join
 	test("customer join alias",
 		"customer^(id) JOIN 1:1 by(id) alias^(id)",
-		`id	name	city	name2
-        'a'	'axon'	'saskatoon'	'abc'
-        'c'	'calac'	'calgary'	'trical'`)
+		`city	id	name	name2
+		'calgary'	'c'	'calac'	'trical'
+		'saskatoon'	'a'	'axon'	'abc'`)
 	test("trans join inven",
 		"inven^(item) JOIN 1:n by(item) trans^(item)",
-		`item	qty	id	cost	date
-		'disk'	5	'a'	100	970101
-		'mouse'	2	'e'	200	960204
-		'mouse'	2	'c'	200	970101`)
+		`cost	date	id	item	qty
+		100	970101	'a'	'disk'	5
+		200	960204	'e'	'mouse'	2
+		200	970101	'c'	'mouse'	2`)
 	test("customer leftjoin alias",
 		"customer^(id) LEFTJOIN 1:1 by(id) alias^(id)",
-		`id	name	city	name2
-        'a'	'axon'	'saskatoon'	'abc'
-        'c'	'calac'	'calgary'	'trical'
-        'e'	'emerald'	'vancouver'	''
-        'i'	'intercon'	'saskatoon'	''`)
+		`city	id	name	name2
+		'calgary'	'c'	'calac'	'trical'
+		'saskatoon'	'a'	'axon'	'abc'
+		'saskatoon'	'i'	'intercon'	''
+		'vancouver'	'e'	'emerald'	''`)
 	test("inven leftjoin trans",
 		"inven^(item) LEFTJOIN 1:n by(item) trans^(item)",
-		`item	qty	id	cost date
-		'disk'	 5	'a'	100	 970101
-		'mouse'	 2	'e'	200	 960204
-		'mouse'	 2	'c'	200	 970101
-		'pencil' 7	''	''	 ''`)
+		`cost	date	id	item	qty
+		''	''	''	'pencil'	7
+		100	970101	'a'	'disk'	5
+		200	960204	'e'	'mouse'	2
+		200	970101	'c'	'mouse'	2`)
 	test("customer leftjoin hist2",
 		"customer^(id) LEFTJOIN 1:n by(id) hist2^(id)",
-		`id	name	city	date	item	cost
-		'a'	'axon'	'saskatoon'	970101	'disk'	100
-		'c'	'calac'	'calgary'	''	''	''
-		'e'	'emerald'	'vancouver'	970102	'disk'	200
-		'e'	'emerald'	'vancouver'	970103	'pencil'	300
-		'i'	'intercon'	'saskatoon'	''	''	''`)
+		`city	cost	date	id	item	name
+		'calgary'	''	''	'c'	''	'calac'
+		'saskatoon'	''	''	'i'	''	'intercon'
+		'saskatoon'	100	970101	'a'	'disk'	'axon'
+		'vancouver'	200	970102	'e'	'disk'	'emerald'
+		'vancouver'	300	970103	'e'	'pencil'	'emerald'`)
 	test("hist join customer",
 		"hist^(date) JOIN n:1 by(id) customer^(id)",
-		`date	item	id	cost	name	city
-		970101	'disk'	'a'	100	'axon'	'saskatoon'
-		970101	'disk'	'e'	200	'emerald'	'vancouver'
-		970102	'mouse'	'c'	200	'calac'	'calgary'
-		970103	'pencil'	'e'	300	'emerald'	'vancouver'`)
+		`city	cost	date	id	item	name
+		'calgary'	200	970102	'c'	'mouse'	'calac'
+		'saskatoon'	100	970101	'a'	'disk'	'axon'
+		'vancouver'	200	970101	'e'	'disk'	'emerald'
+		'vancouver'	300	970103	'e'	'pencil'	'emerald'`)
 	test("customer leftjoin (alias where name2 is 'abc')",
 		"customer^(id) LEFTJOIN 1:1 by(id) (alias^(id) WHERE name2 is 'abc')",
-		`id	name	city	name2
-        'a'	'axon'	'saskatoon'	'abc'
-        'c'	'calac'	'calgary'	''
-        'e'	'emerald'	'vancouver'	''
-        'i'	'intercon'	'saskatoon'	''`)
+		`city	id	name	name2
+		'calgary'	'c'	'calac'	''
+		'saskatoon'	'a'	'axon'	'abc'
+		'saskatoon'	'i'	'intercon'	''
+		'vancouver'	'e'	'emerald'	''`)
 	test("customer leftjoin (alias where id is 'c')",
 		"customer^(id) LEFTJOIN 1:1 by(id) (alias^(id) WHERE*1 id is 'c')",
-		`id	name	city	name2
-        'a'	'axon'	'saskatoon'	''
-        'c'	'calac'	'calgary'	'trical'
-        'e'	'emerald'	'vancouver'	''
-        'i'	'intercon'	'saskatoon'	''`)
+		`city	id	name	name2
+		'calgary'	'c'	'calac'	'trical'
+		'saskatoon'	'a'	'axon'	''
+		'saskatoon'	'i'	'intercon'	''
+		'vancouver'	'e'	'emerald'	''`)
 	test("customer leftjoin (trans where date = 970101 and item = 'mouse')",
 		"customer^(id) LEFTJOIN 1:1 by(id) "+
 			"(trans^(date,item,id) WHERE date is 970101 and item is 'mouse')",
-		`id	name	city	item	cost	date
-        'a'	'axon'	'saskatoon'	''	''	''
-        'c'	'calac'	'calgary'	'mouse'	200	970101
-        'e'	'emerald'	'vancouver'	''	''	''
-        'i'	'intercon'	'saskatoon'	''	''	''`)
+		`city	cost	date	id	item	name
+		'calgary'	200	970101	'c'	'mouse'	'calac'
+		'saskatoon'	''	''	'a'	''	'axon'
+		'saskatoon'	''	''	'i'	''	'intercon'
+		'vancouver'	''	''	'e'	''	'emerald'`)
 
 	// where
 	test("customer where id > 'd'", // range
 		"customer^(id) WHERE id > 'd'",
-		`id	name	city
-		'e'	'emerald'	'vancouver'
-		'i'	'intercon'	'saskatoon'`)
+		`city	id	name
+		'saskatoon'	'i'	'intercon'
+		'vancouver'	'e'	'emerald'`)
 	test("customer where id > 'd' and id < 'j'", // range
 		"customer^(id) WHERE id > 'd' and id < 'j'",
-		`id	name	city
-		'e'	'emerald'	'vancouver'
-		'i'	'intercon'	'saskatoon'`)
+		`city	id	name
+		'saskatoon'	'i'	'intercon'
+		'vancouver'	'e'	'emerald'`)
 	test("customer where id is 'e'", // point
 		"customer^(id) WHERE*1 id is 'e'",
-		`id	name	city
-		'e'	'emerald'	'vancouver'`)
+		`city	id	name
+		'vancouver'	'e'	'emerald'`)
 	test("customer where id is 'd'", // point
 		"customer^(id) WHERE*1 id is 'd'",
-		`id	name	city`)
+		`city	id	name`)
 	test("inven where qty > 0", // filter
 		"inven^(item) WHERE qty > 0",
 		`item	qty
@@ -596,25 +620,25 @@ func TestQueryGet(t *testing.T) {
 		'pencil'	7`)
 	test("cus where cnum is 2 and abbrev is 'b'", // points
 		"cus^(cnum) WHERE*1 cnum is 2 and abbrev is 'b'",
-		`cnum	abbrev	name
-		2	'b'	'bill'`)
+		`abbrev	cnum	name
+		'b'	2	'bill'`)
 	test("cus where cnum is 2 and abbrev >= 'b' and abbrev < 'c'", // point
 		"cus^(cnum) WHERE*1 cnum is 2 and abbrev >= 'b' and abbrev < 'c'",
-		`cnum	abbrev	name
-		2	'b'	'bill'`)
+		`abbrev	cnum	name
+		'b'	2	'bill'`)
 	test("hist where date in (970101, 970102) and item < 'z'", // ranges
 		"hist^(date) WHERE date in (970101, 970102) and item < 'z'",
-		`date	item	id	cost
-        970101	'disk'	'a'	100
-        970101	'disk'	'e'	200
-        970102	'mouse'	'c'	200`)
+		`cost	date	id	item
+		100	970101	'a'	'disk'
+		200	970101	'e'	'disk'
+		200	970102	'c'	'mouse'`)
 	test("customer where id not in ('z')",
-		"customer^(id) WHERE not id is 'z'",
-		`id	name	city
-		'a'	'axon'	'saskatoon'
-		'c'	'calac'	'calgary'
-		'e'	'emerald'	'vancouver'
-		'i'	'intercon'	'saskatoon'`)
+		"customer^(id) WHERE not (id is 'z')",
+		`city	id	name
+		'calgary'	'c'	'calac'
+		'saskatoon'	'a'	'axon'
+		'saskatoon'	'i'	'intercon'
+		'vancouver'	'e'	'emerald'`)
 
 	// summarize
 	test("customer summarize count",
@@ -627,8 +651,8 @@ func TestQueryGet(t *testing.T) {
 		970103`)
 	test("customer summarize max id",
 		"customer^(id) SUMMARIZE-IDX* max id",
-		`id	name		city		max_id
-		'i'	'intercon'	'saskatoon' 'i'`)
+		`city	id	max_id	name
+		'saskatoon'	'i'	'i'	'intercon'`)
 	test("hist summarize item, total cost sort item",
 		"hist^(date) SUMMARIZE-MAP item, total cost TEMPINDEX(item)",
 		`item		total_cost
@@ -638,10 +662,10 @@ func TestQueryGet(t *testing.T) {
 	test("hist summarize item, total cost, max id, average cost sort item",
 		"hist^(date) SUMMARIZE-MAP item, total cost, "+
 			"average cost, max id TEMPINDEX(item)",
-		`item		total_cost	average_cost max_id
-        'disk'		300		    150			 'e'
-        'mouse'		200		    200			 'c'
-        'pencil'	300		    300			 'e'`)
+		`average_cost	item	max_id	total_cost
+		150	'disk'	'e'	300
+		200	'mouse'	'c'	200
+		300	'pencil'	'e'	300`)
 	test("hist summarize item, total cost sort total_cost, item",
 		"hist^(date) SUMMARIZE-MAP item, total cost "+
 			"TEMPINDEX(total_cost,item)",
@@ -656,18 +680,18 @@ func TestQueryGet(t *testing.T) {
 	test("hist summarize min cost, average cost, max cost, sum = total cost",
 		"hist^(date) SUMMARIZE-SEQ min cost, "+
 			"average cost, max cost, sum = total cost",
-		`min_cost	average_cost	max_cost	sum
-		100			200				300			800`)
+		`average_cost	max_cost	min_cost	sum
+		200	300	100	800`)
 	test("hist summarize item, total cost, count sort item",
 		"hist^(date) SUMMARIZE-MAP item, count, total cost TEMPINDEX(item)",
-		`item		count	total_cost
-		'disk'		2		300
-		'mouse'		1		200
-		'pencil'	1    	300			`)
+		`count	item	total_cost
+		2	'disk'	300
+		1	'mouse'	200
+		1	'pencil'	300`)
 	test("inven summarize max item",
 		"inven^(item) SUMMARIZE-IDX* max item",
-		`item	qty	max_item
-		'pencil'	7	'pencil'`)
+		`item	max_item	qty
+		'pencil'	'pencil'	7`)
 	test("hist summarize date, list id",
 		"hist^(date) SUMMARIZE-SEQ date, list id",
 		`date	list_id
@@ -686,8 +710,8 @@ func TestQueryGet(t *testing.T) {
 		#('a', 'c', 'e')`)
 	test("cus summarize max cnum sort name",
 		"cus^(cnum) SUMMARIZE-IDX* max cnum",
-		`cnum	abbrev	name	max_cnum
-		4		'd'		'dick'	4`)
+		`abbrev	cnum	max_cnum	name
+		'd'	4	4	'dick'`)
 	test("supplier summarize min city",
 		"supplier^(city) SUMMARIZE-IDX min city",
 		`min_city
@@ -698,8 +722,8 @@ func TestQueryGet(t *testing.T) {
 		'vancouver'`)
 	test("supplier summarize min city, max city",
 		"supplier^(supplier) SUMMARIZE-SEQ min city, max city",
-		`min_city	max_city
-		'calgary'	'vancouver'`)
+		`max_city	min_city
+		'vancouver'	'calgary'`)
 	test("hist summarize max cost",
 		"hist^(date) SUMMARIZE-SEQ max cost",
 		`max_cost
@@ -711,7 +735,7 @@ func TestQueryGet(t *testing.T) {
 		`table`)
 	test("tables minus tables",
 		"tables MINUS (tables TEMPINDEX(table))",
-		`table	tablename	nrows	totalsize`)
+		`nrows	table	tablename	totalsize`)
 
 	test("(customer project id) union (customer project id)",
 		"customer^(id) PROJECT-COPY id UNION-MERGE(id) (customer^(id) PROJECT-COPY id)",
@@ -723,40 +747,40 @@ func TestQueryGet(t *testing.T) {
 	test("(trans project item,date) union (trans project date,item)",
 		"trans^(date,item,id) PROJECT-SEQ item,date UNION-MERGE(item,date) "+
 			"(trans^(date,item,id) PROJECT-SEQ date,item)",
-		`item		date
-		'mouse'		960204
-		'disk'		970101
-		'mouse'		970101
-		'eraser'	970201`)
+		`date	item
+		960204	'mouse'
+		970101	'disk'
+		970101	'mouse'
+		970201	'eraser'`)
 
 	test("(customer summarize id, count) union (customer summarize id, count)",
 		"customer^(id) SUMMARIZE-SEQ id, count UNION-MERGE(id) "+
 			"(customer^(id) SUMMARIZE-SEQ id, count)",
-		`id		count
-		'a'		1
-		'c'		1
-		'e'		1
-		'i'		1`)
+		`count	id
+		1	'a'
+		1	'c'
+		1	'e'
+		1	'i'`)
 	test("(trans summarize item,date, count) union (trans summarize date,item, count)",
 		"trans^(date,item,id) SUMMARIZE-SEQ item, date, count "+
 			"UNION-MERGE(item,date) "+
 			"(trans^(date,item,id) SUMMARIZE-SEQ date, item, count)",
-		`item		date	count
-		'mouse'		960204	1
-		'disk'		970101	1
-		'mouse'		970101	1
-		'eraser'	970201	1`)
+		`count	date	item
+		1	960204	'mouse'
+		1	970101	'disk'
+		1	970101	'mouse'
+		1	970201	'eraser'`)
 
 	test("(customer project id) join (hist project id)",
 		"hist^(date) PROJECT-MAP id JOIN 1:1 by(id) (customer^(id) PROJECT-COPY id)",
 		`id
 		'a'
-		'e'
-		'c'`)
+		'c'
+		'e'`)
 	test("(customer summarize id,count) join (hist summarize id,count) sort id",
 		"customer^(id) SUMMARIZE-SEQ id, count JOIN 1:1 by(id,count) "+
 			"(hist^(date) SUMMARIZE-MAP id, count TEMPINDEX(id,count))",
-		`id	count
-		'a'	1
-		'c'	1`)
+		`count	id
+		1	'a'
+		1	'c'`)
 }

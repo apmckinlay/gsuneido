@@ -23,68 +23,77 @@ type rowHash struct {
 }
 
 func QueryHash(th *Thread, args []Value) Value {
-	query := ToStr(args[0])
+	query := ToStr(args[0]) + `
+		/* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE */
+		/* CHECKQUERY SUPPRESS: UNION NOT DISJOINT */
+		/* CHECKQUERY SUPPRESS: JOIN MANY TO MANY */`
 	details := ToBool(args[1])
 	tran := th.Dbms().Transaction(false)
 	defer tran.Complete()
 	q := tran.Query(query, nil)
-	hdr := q.Header()
-	// fmt.Println(hdr)
-	fields := slc.Without(hdr.GetFields(), "-")
-	slices.Sort(fields)
-	// fmt.Println("Fields", fields)
-	colhash := hashCols(hdr)
-	hash := colhash
-	// type fmtable interface{ Format() string }
-	// fmt.Println(q.(fmtable).Format())
+	qh := NewQueryHasher(q.Header())
 
 	hfn := func(row rowHash) uint32 { return row.hash }
 	eqfn := func(x, y rowHash) bool {
-		return x.hash == y.hash && equalRow(x.row, y.row, hdr, fields)
+		return x.hash == y.hash && equalRow(x.row, y.row, qh.hdr, qh.fields)
 	}
 	rows := hmap.NewHmapFuncs[rowHash, struct{}](hfn, eqfn)
 
-	n := 0
 	for row, _ := q.Get(th, Next); row != nil; row, _ = q.Get(th, Next) {
-		rh := rowHash{row: row, hash: hashRow(hdr, fields, row)}
-		_, _, ok := rows.GetPut(rh, struct{}{})
-		if ok {
+		rh := rowHash{row: row, hash: qh.Row(row)}
+		if _, _, exists := rows.GetPut(rh, struct{}{}); exists {
 			panic("QueryHash: duplicate row")
 		}
-		hash += rh.hash
-		// fmt.Println("row", row)
-		n++
-		// fmt.Println(n, hash)
-		// if n >= 10 {
-		// 	break
-		// }
 	}
-	if details {
-		return SuStr(fmt.Sprintln("nrows", n, "hash", hash,
-			"ncols", len(hdr.Columns), "hash", colhash))
-	}
-	return IntVal(int(hash))
+	return qh.Result(details)
 }
 
-func hashCols(hdr *Header) uint32 {
+func equalRow(x, y Row, hdr *Header, cols []string) bool {
+	for _, col := range cols {
+		if x.GetRaw(hdr, col) != y.GetRaw(hdr, col) {
+			return false
+		}
+	}
+	return true
+}
+
+//-------------------------------------------------------------------
+
+type queryHasher struct {
+	hdr *Header
+	fields []string
+	ncols int
+	colsHash uint32
+	nrows int
+	hash uint32
+}
+
+func NewQueryHasher(hdr *Header) *queryHasher {
+	qh := queryHasher{}
+	qh.hdr = hdr
+	qh.fields = slc.Without(hdr.GetFields(), "-")
+	slices.Sort(qh.fields)
 	cols := slices.Clone(hdr.Columns)
 	slices.Sort(cols)
 	hash := uint32(31)
 	for _, col := range cols {
-		// fmt.Println(col)
 		hash = hash*31 + adler32.Checksum(hacks.Stobs(col))
 	}
-	return hash
+	qh.ncols = len(cols)
+	qh.colsHash = hash
+	qh.hash = hash
+	return &qh
 }
 
-func hashRow(hdr *Header, fields []string, row Row) uint32 {
+
+func (qh *queryHasher) Row(row Row) uint32 {
 	hash := uint32(0)
-	// fmt.Print(">>> ")
-	for _, fld := range fields {
-		hash = hash*31 + hashPacked(row.GetRaw(hdr, fld))
-		// fmt.Print(fld, ": ", Unpack(row.GetRaw(hdr, fld)), " ")
+	for _, fld := range qh.fields {
+		hash = hash*31 + hashPacked(row.GetRaw(qh.hdr, fld))
 	}
-	// fmt.Println()
+	//TODO order sensitive if sorted
+	qh.hash += hash // '+' to ignore order
+	qh.nrows++
 	return hash
 }
 
@@ -104,11 +113,10 @@ func hashObject(p string) uint32 {
 	return hash
 }
 
-func equalRow(x, y Row, hdr *Header, cols []string) bool {
-	for _, col := range cols {
-		if x.GetRaw(hdr, col) != y.GetRaw(hdr, col) {
-			return false
-		}
+func (qh *queryHasher) Result(details bool) Value {
+	if details {
+		return SuStr(fmt.Sprintln("nrows", qh.nrows, "hash", qh.hash,
+			"ncols", qh.ncols, "hash", qh.colsHash))
 	}
-	return true
+	return IntVal(int(qh.hash))
 }

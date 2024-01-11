@@ -558,6 +558,10 @@ func (su *Summarize) Select(cols, vals []string) {
 	su.rewound = true
 }
 
+func (*Summarize) Simple(*Thread) []Row {
+	panic("Simple not implemented for summarize")
+}
+
 // operations -------------------------------------------------------
 
 func (su *Summarize) newSums() []sumOp {
