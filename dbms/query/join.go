@@ -414,7 +414,7 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 		}
 		jn.row2 = jn.source2.Get(th, dir)
 		if jn.row2 != nil {
-			// assert.That(jn.sameBy(th, jn.st, jn.row1, jn.row2))
+			// assert.That(jn.equalBy(th, jn.st, jn.row1, jn.row2))
 			return JoinRows(jn.row1, jn.row2)
 		}
 	}
@@ -527,7 +527,7 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	if row2 == nil {
 		return nil
 	}
-	// assert.That(jn.sameBy(th, jn.st, row1, row2))
+	// assert.That(jn.equalBy(th, jn.st, row1, row2))
 	return JoinRows(row1, row2)
 }
 
@@ -551,7 +551,7 @@ func (jb *joinBase) lookupFallback(sel1cols []string) bool {
 	}
 	return false
 }
-func (jb *joinBase) sameBy(th *Thread, st *SuTran, row1, row2 Row) bool {
+func (jb *joinBase) equalBy(th *Thread, st *SuTran, row1, row2 Row) bool {
 	for _, f := range jb.by {
 		if row1.GetRawVal(jb.source1.Header(), f, th, st) !=
 			row2.GetRawVal(jb.source2.Header(), f, th, st) {
@@ -746,7 +746,7 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			if row2 == nil {
 				row2 = lj.empty2
 			} else {
-				// assert.That(lj.sameBy(th, lj.st, lj.row1, row2))
+				// assert.That(lj.equalBy(th, lj.st, lj.row1, row2))
 			}
 			if lj.filter2(row2) {
 				return JoinRows(lj.row1, row2)
@@ -794,7 +794,7 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	if row2 == nil {
 		row2 = lj.empty2
 	} else {
-		// assert.That(lj.sameBy(th, lj.st, row1, row2))
+		// assert.That(lj.equalBy(th, lj.st, row1, row2))
 	}
 	if !lj.filter2(row2) {
 		return nil
