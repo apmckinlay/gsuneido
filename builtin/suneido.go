@@ -117,7 +117,7 @@ func suneido_StrictCompareDb(x Value) Value {
 	return nil
 }
 
-var _ = staticMethod(suneido_WarningsThrow, "(bool = true)")
+var _ = staticMethod(suneido_WarningsThrow, "(arg = true)")
 
 func suneido_WarningsThrow(x Value) Value {
 	switch x {
