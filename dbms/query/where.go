@@ -135,7 +135,7 @@ func (w *Where) format() string {
 func (w *Where) calcFixed() {
 	efixed, conflict := w.exprsToFixed()
 	if conflict {
-        w.conflict = true
+		w.conflict = true
 		return
 	}
 	fixed, none := combineFixed(w.source.Fixed(), efixed)
@@ -162,7 +162,7 @@ func addFixed(fixed []Fixed, e ast.Expr) ([]Fixed, bool) {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
 			if c, ok := b.Rhs.(*ast.Constant); ok {
 				if b.Tok == tok.Is || c.Val == EmptyStr {
-					return fixedAnd(fixed, id.Name,  c.Val)
+					return fixedAnd(fixed, id.Name, c.Val)
 				}
 			}
 		}
@@ -195,14 +195,14 @@ func inToFixed(e ast.Expr) (col string, vals []Value) {
 func fixedAnd(fixed []Fixed, col string, vals ...Value) ([]Fixed, bool) {
 	vs := make([]string, len(vals))
 	for i, v := range vals {
-        vs[i] = Pack(v.(Packable))
-    }
+		vs[i] = Pack(v.(Packable))
+	}
 	for i, f := range fixed {
 		if f.col == col {
 			v := set.Intersect(f.values, vs)
 			if len(v) == 0 {
-                return nil, true // conflict
-            }
+				return nil, true // conflict
+			}
 			if len(v) == len(f.values) {
 				return fixed, false // no change
 			}
