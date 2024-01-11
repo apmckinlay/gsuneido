@@ -28,7 +28,7 @@ func Random(th *Thread, args []Value) Value {
 
 func initRand(th *Thread) {
 	if th.Rand == nil {
-		th.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+		th.Rand = rand.New(rand.NewSource(time.Now().UnixNano() * rand.Int63()))
 	}
 }
 
