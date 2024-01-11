@@ -29,8 +29,7 @@ type DbRec struct {
 }
 
 func JoinRows(row1, row2 Row) Row {
-	result := make(Row, 0, len(row1)+len(row2))
-	return append(append(result, row1...), row2...)
+	return slc.With(row1, row2...)
 }
 
 // GetVal is used by query summarize and expr.
@@ -135,7 +134,8 @@ func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
 }
 
 // SameAs returns true if the db records have the same Off's
-// and derived records (with Off == 0) are equal
+// and derived records (with Off == 0) are equal.
+// WARNING: this is not general equality, for that see EqualRows.
 func (row Row) SameAs(row2 Row) bool {
 	if len(row) != len(row2) {
 		return false
