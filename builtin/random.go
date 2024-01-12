@@ -17,11 +17,14 @@ type suRandomGlobal struct {
 func init() {
 	Global.Builtin("Random", &suRandomGlobal{
 		SuBuiltin{Fn: Random,
-			BuiltinParams: BuiltinParams{ParamSpec: params("(limit)")}}})
+			BuiltinParams: BuiltinParams{ParamSpec: params("(limit = false)")}}})
 }
 
 func Random(th *Thread, args []Value) Value {
 	initRand(th)
+	if args[0] == False {
+		return Int64Val(th.Rand.Int63n(1_0000_0000_0000_0000)) // dnum range
+	}
 	limit := IfInt(args[0])
 	return IntVal(th.Rand.Intn(limit))
 }
