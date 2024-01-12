@@ -130,9 +130,7 @@ Numbers in Suneido are stored in **decimal** floating point so that decimal frac
 
 This means we can't use the **binary** floating point numbers normally provided by hardware and languages.
 
-Dnum has a 64 bit coefficient and 8 bit sign and exponent. Only 16 of the possible 19 decimal digits are used. This allows splitting into two 8 decimal digit halves which fit into 32 bits for faster processing.  The coefficient is kept “maximized” i.e. “shifted” left as far as possible.
-
-It would be more compact to combine a 56 bit coefficient and 8 bit exponent into a single 64 bit value. But we want to be able to store 64 integers, especially for the Windows interface.
+Dnum has a 64 bit coefficient, an 8 bit sign, and an 8 bit exponent. Only 16 of the possible 19 decimal digits are used. This allows splitting into two 8 decimal digit halves which fit into 32 bits for faster processing.  The coefficient is kept “maximized” i.e. “shifted” left as far as possible.
 
 See also [Bit Twiddling (Dnum)](https://thesoftwarelife.blogspot.com/2018/03/bit-twiddling.html)
 
