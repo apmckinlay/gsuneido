@@ -5,6 +5,7 @@ package db19
 
 import (
 	"errors"
+	"log"
 	"os"
 	"sync/atomic"
 
@@ -543,10 +544,12 @@ func (db *Database) ckOpen() {
 	}
 }
 
+// Corrupt marks the database as corrupted.
 func (db *Database) Corrupt() {
 	if db.corrupted.Swap(true) {
 		return
 	}
+	log.Println("database corruption detected")
 	options.DbStatus.Store("corrupted")
 	buf := make([]byte, stor.SmallOffsetLen)
 	if db.mode != stor.Read {
