@@ -61,7 +61,7 @@ func GetTempFileName(path, prefix Value) Value {
 
 var _ = builtin(CreateDir, "(dirname)")
 
-func CreateDir(th *Thread, args []Value) Value {
+func CreateDir(th *Thread, args []Value) Value { //TEMP for transition
 	path := ToStr(args[0])
 	err := os.Mkdir(path, 0755)
 	if errors.Is(err, os.ErrExist) {
@@ -74,6 +74,24 @@ func CreateDir(th *Thread, args []Value) Value {
 	if err != nil {
 		th.ReturnThrow = true
 		return SuStr("CreateDir: " + err.Error())
+	}
+	return True
+}
+
+var _ = builtin(EnsureDir, "(dirname)")
+
+func EnsureDir(th *Thread, args []Value) Value {
+	path := ToStr(args[0])
+	err := os.Mkdir(path, 0755)
+	if errors.Is(err, os.ErrExist) {
+		if info, err2 := os.Stat(path); err2 == nil && info.Mode().IsDir() {
+			return True
+		}
+		err = errors.New(path + ": exists but is not a directory")
+	}
+	if err != nil {
+		th.ReturnThrow = true
+		return SuStr("EnsureDir: " + err.Error())
 	}
 	return True
 }
