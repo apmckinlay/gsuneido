@@ -135,8 +135,7 @@ func DeleteDir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
 	info, err := os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {
-		// not return-throw
-		return SuStr("DeleteDir " + path + ": does not exist")
+		return True
 	}
 	th.ReturnThrow = true
 	if err != nil {
