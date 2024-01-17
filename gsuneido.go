@@ -319,11 +319,11 @@ func openDbms() {
 }
 
 func persistInterval() time.Duration {
-	if options.Action == "server" {
-		return 60 * time.Second
+	d := 60 * time.Second
+	if options.Mode == "gui" {
+		d = 10 * time.Second
 	}
-	// else standalone
-	return 10 * time.Second
+	return d
 }
 
 func getDbms() IDbms {
