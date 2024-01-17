@@ -78,11 +78,6 @@ func CreateDir(th *Thread, args []Value) Value {
 	return True
 }
 
-func init() { // TEMP for transition
-	Global.Builtin("CreateDirectory",
-		builtinVal("CreateDirectory", CreateDir, "(dirname)"))
-}
-
 var _ = builtin(DeleteFileApi, "(filename)")
 
 func DeleteFileApi(th *Thread, args []Value) Value {
