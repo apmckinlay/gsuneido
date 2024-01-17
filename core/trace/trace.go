@@ -30,26 +30,26 @@ const (
 	Functions what = 1 << iota
 	Statements
 	Opcodes
-	Records
+	Records // used
 	Libraries
-	SlowQuery
-	Query
+	SlowQuery // used
+	Query     // used
 	Symbol
 	AllIndex
 	Table
 	Select
 	TempIndex
-	QueryOpt
+	QueryOpt // used
 
-	Console
-	LogFile
+	Console // used
+	LogFile // used
 
-	ClientServer
+	ClientServer // used
 	Exceptions
 	Globals
 
-	JoinOpt
-	Dbms
+	JoinOpt // used
+	Dbms    // used
 )
 
 func (w what) String() string {
