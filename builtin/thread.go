@@ -103,6 +103,18 @@ func thread_List() Value {
 	return ob
 }
 
+var _ = staticMethod(thread_List2, "()")
+
+func thread_List2() Value { //TEMP for transition from members
+	ob := &SuObject{}
+	threads.lock.Lock()
+	defer threads.lock.Unlock()
+	for _, t := range threads.list {
+		ob.Add(SuStr(t.Name))
+	}
+	return ob
+}
+
 var _ = staticMethod(thread_Sleep, "(ms)")
 
 func thread_Sleep(ms Value) Value {
