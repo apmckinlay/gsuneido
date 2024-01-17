@@ -279,17 +279,6 @@ func GetCurrentThreadId() Value {
 	return intRet(goc.CThreadId()) // thread safe
 }
 
-// dll long Kernel32:GetFileAttributes([in] string lpFileName)
-var getFileAttributes = kernel32.MustFindProc("GetFileAttributesA").Addr()
-var _ = builtin(GetFileAttributes, "(lpFileName)")
-
-func GetFileAttributes(a Value) Value {
-	name := zbuf(a)
-	rtn, _, _ := syscall.SyscallN(getFileAttributes,
-		uintptr(unsafe.Pointer(&name[0])))
-	return intRet(rtn)
-}
-
 // dll pointer Kernel32:GetStdHandle(long nStdHandle)
 var getStdHandle = kernel32.MustFindProc("GetStdHandle").Addr()
 var _ = builtin(GetStdHandle, "(nStdHandle)")
@@ -338,19 +327,6 @@ func SetCurrentDirectory(a Value) Value {
 	name := zbuf(a)
 	rtn, _, _ := syscall.SyscallN(setCurrentDirectory,
 		uintptr(unsafe.Pointer(&name[0])))
-	return boolRet(rtn)
-}
-
-// dll bool Kernel32:SetFileAttributes(
-// [in] string lpFileName, long dwFileAttributes)
-var setFileAttributes = kernel32.MustFindProc("SetFileAttributesA").Addr()
-var _ = builtin(SetFileAttributes, "(lpFileName, dwFileAttributes)")
-
-func SetFileAttributes(a, b Value) Value {
-	name := zbuf(a)
-	rtn, _, _ := syscall.SyscallN(setFileAttributes,
-		uintptr(unsafe.Pointer(&name[0])),
-		intArg(b))
 	return boolRet(rtn)
 }
 
