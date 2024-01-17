@@ -16,12 +16,14 @@ func Built() Value {
 	return SuStr(options.BuiltStr())
 }
 
-var _ = builtin(BuildInfo, "()")
+var _ = AddInfo("built", func() string {
+	return options.BuiltStr()
+})
 
-func BuildInfo() Value {
+var _ = AddInfo("build_info", func() string {
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
-		return EmptyStr
+		return ""
 	}
-	return SuStr(bi.String())
-}
+	return bi.String()
+})
