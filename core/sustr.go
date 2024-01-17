@@ -82,6 +82,8 @@ func escapeStr(s string, which int) string {
 		q = singleQuote
 	case 2:
 		q = doubleQuote
+	default:
+		panic("invalid quotes value")
 	}
 	if q == backQuote {
 		buf := make([]byte, 2+len(s))
