@@ -84,6 +84,15 @@ func SuObjectOfStrs(strs []string) *SuObject {
 	return NewSuObject(list)
 }
 
+// SuObjectOfArgs is used by massage and lrucache
+func SuObjectOfArgs(args []Value, unnamed int, as *ArgSpec) *SuObject {
+	ob := SuObjectOf(slices.Clone(args[:unnamed])...)
+	for i, ni := range as.Spec {
+		ob.Set(as.Names[ni], args[unnamed+i])
+	}
+	return ob
+}
+
 func (ob *SuObject) Copy() Container {
 	if ob.RLock() {
 		defer ob.RUnlock()

@@ -77,16 +77,7 @@ func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 			return
 		}
 		// args => @param
-		ob := &SuObject{}
-		for i := 0; i < unnamed; i++ {
-			ob.Add(args[i])
-			args[i] = nil
-		}
-		for i, ni := range as.Spec {
-			ob.Set(as.Names[ni], args[unnamed+i])
-			args[unnamed+i] = nil
-		}
-		args[0] = ob
+		args[0] = SuObjectOfArgs(args, unnamed, as)
 		return
 	}
 	if atArg {

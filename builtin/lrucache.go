@@ -5,7 +5,6 @@ package builtin
 
 import (
 	"bytes"
-	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
@@ -68,11 +67,7 @@ func lru_Get(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	key := args[0]
 	if as.Nargs > 1 {
 		unnamed := int(as.Nargs) - len(as.Spec) // only valid if !atArg
-		ob := SuObjectOf(slices.Clone(args[:unnamed])...)
-		for i, ni := range as.Spec {
-			ob.Set(as.Names[ni], args[unnamed+i])
-		}
-		key = ob
+		key = SuObjectOfArgs(args, unnamed, as)
 	}
 	slc := this.(*suLruCache)
 	val := slc.Fetch(key)
