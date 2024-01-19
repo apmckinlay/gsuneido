@@ -54,13 +54,10 @@ func (d *suLruCacheGlobal) String() string {
 	return "LruCache /* builtin class */"
 }
 
-//TODO merge GetN and GetN1 into Get using methodRaw
-
 var suLruCacheMethods = methods()
 
 // Get calls the getter with exactly the same arguments it receives.
 // If called with multiple arguments, the hash key is an @args object.
-// TODO after jSuneido is gone, we can replace GetN and GetN1 with Get
 var _ = method(lru_Get, "(@args)")
 
 func lru_Get(
@@ -84,32 +81,6 @@ func lru_Get(
 	val := slc.Fetch(key)
 	if val == nil {
 		val = slc.Fn.Call(th, nil, as) // call with existing stack args
-		slc.Insert(key, val)
-	}
-	return val
-}
-
-var _ = method(lru_GetN, "(@x)")
-
-func lru_GetN(th *Thread, this Value, args []Value) Value {
-	slc := this.(*suLruCache)
-	key := args[0]
-	val := slc.Fetch(key)
-	if val == nil {
-		val = th.CallEach(slc.Fn, key)
-		slc.Insert(key, val)
-	}
-	return val
-}
-
-var _ = method(lru_GetN1, "(x)")
-
-func lru_GetN1(th *Thread, this Value, args []Value) Value {
-	slc := this.(*suLruCache)
-	key := args[0]
-	val := slc.Fetch(key)
-	if val == nil {
-		val = th.CallEach(slc.Fn, key)
 		slc.Insert(key, val)
 	}
 	return val
