@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"bytes"
+	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
@@ -60,18 +61,14 @@ var suLruCacheMethods = methods()
 // If called with multiple arguments, the hash key is an @args object.
 var _ = method(lru_Get, "(@args)")
 
-func lru_Get(
-	th *Thread, as *ArgSpec, this Value, args []Value) Value {
+func lru_Get(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if as.Nargs == 0 {
 		panic("missing argument")
 	}
 	key := args[0]
 	if as.Nargs > 1 {
 		unnamed := int(as.Nargs) - len(as.Spec) // only valid if !atArg
-		ob := &SuObject{}
-		for i := 0; i < unnamed; i++ {
-			ob.Add(args[i])
-		}
+		ob := SuObjectOf(slices.Clone(args[:unnamed])...)
 		for i, ni := range as.Spec {
 			ob.Set(as.Names[ni], args[unnamed+i])
 		}
