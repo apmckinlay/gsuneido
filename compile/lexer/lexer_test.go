@@ -46,16 +46,17 @@ func TestLexer(t *testing.T) {
 	first("1_2.3_4", "12.34", tok.Number)
 	first("12.34_5", "12.345", tok.Number)
 	first("'hello'", "hello", tok.String)
-	first("'hello", "hello", tok.String)
+	first("'hello", "missing closing quote", tok.Error)
 	first("`hello`", "hello", tok.String)
-	first("`hello", "hello", tok.String)
+	first("`hello", "missing closing quote", tok.Error)
 	first("'foo\\'bar'", "foo'bar", tok.String)
 	first(`"\"foo\""`, `"foo"`, tok.String)
-	first("\\", "\\", tok.Error)
+	first(`\`, `\`, tok.Error)
 	first("//foo\r\nbar", "//foo", tok.Comment) // not including \r\n
-	first("'", "", tok.String)
-	first("\"", "", tok.String)
-	first("`", "", tok.String)
+	first("/* foo", "missing end of comment", tok.Error)
+	first("'", "missing closing quote", tok.Error)
+	first(`"`, "missing closing quote", tok.Error)
+	first("`", "missing closing quote", tok.Error)
 
 	check := func(source string, expected ...tok.Token) {
 		t.Helper()
@@ -79,6 +80,17 @@ func TestLexer(t *testing.T) {
 	check("#20181112.End", tok.Hash, tok.Number, tok.Dot, tok.Identifier)
 	check("0xff.Chr", tok.Number, tok.Dot, tok.Identifier)
 	check("//foo\n0x8002 //bar", tok.Comment, tok.Number, tok.Comment)
+	check(`Use('onelib')
+		Use('twolib')`,
+		tok.Identifier, tok.LParen, tok.String, tok.RParen,
+		tok.Identifier, tok.LParen, tok.String, tok.RParen)
+	check(`(/* comment */)`, tok.LParen, tok.Comment, tok.RParen)
+	check(`/*one*/`, tok.Comment)
+	check(`tables
+		/* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE */
+		/* CHECKQUERY SUPPRESS: UNION NOT DISJOINT */
+		/* CHECKQUERY SUPPRESS: JOIN MANY TO MANY */`,
+		tok.Identifier, tok.Comment, tok.Comment, tok.Comment)
 	check(`and break
 		case catch continue class default do
 		else for forever function if is isnt or not

@@ -301,13 +301,26 @@ loop:
 }
 
 func (lxr *Lexer) spanComment(start int) Item {
-	return it(tok.Comment, start, lxr.matchUntil(start, "*/"))
+	for ; ; lxr.si++ {
+		if lxr.si > len(lxr.src) {
+			return it(tok.Error, start, "missing end of comment")
+		}
+		if strings.HasSuffix(lxr.src[:lxr.si], "*/") {
+			return it(tok.Comment, start, lxr.src[start:lxr.si])
+		}
+	}
 }
 
 func (lxr *Lexer) rawString(start int) Item {
-	s := lxr.matchUntil(start+1, "`")
-	s = strings.TrimSuffix(s, "`")
-	return it(tok.String, start, s)
+	for ; ; lxr.si++ {
+		if lxr.si >= len(lxr.src) {
+			return it(tok.Error, start, "missing closing quote")
+		}
+		if lxr.src[lxr.si] == '`' {
+			lxr.si++
+			return it(tok.String, start, lxr.src[start+1:lxr.si-1])
+		}
+	}
 }
 
 func (lxr *Lexer) quotedString(start int, quote byte) Item {
@@ -316,7 +329,7 @@ func (lxr *Lexer) quotedString(start int, quote byte) Item {
 	for i := 0; ; i++ {
 		if i >= len(src) {
 			lxr.si += len(src)
-			return it(tok.String, start, strings.Clone(src)) // no closing quote
+			return it(tok.Error, start, "missing closing quote")
 		} else if src[i] == '\\' {
 			break
 		} else if src[i] == byte(quote) {
@@ -374,7 +387,7 @@ func digit(c byte, radix int) int {
 
 func (lxr *Lexer) number(start int) Item {
 	// see also string_NumberQ
-	errit := func () Item {
+	errit := func() Item {
 		return it(tok.Error, start, lxr.src[start:lxr.si])
 	}
 	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
@@ -609,10 +622,4 @@ func (lxr *Lexer) matchWhile(f func(c byte) bool) bool {
 	for ; f(lxr.peek()); lxr.si++ {
 	}
 	return lxr.si > start
-}
-
-func (lxr *Lexer) matchUntil(start int, s string) string {
-	for lxr.read(); lxr.si < len(lxr.src) && !strings.HasSuffix(lxr.src[:lxr.si], s); lxr.si++ {
-	}
-	return lxr.src[start:lxr.si]
 }

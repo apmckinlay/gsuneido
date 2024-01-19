@@ -102,7 +102,7 @@ func (p *Parser) constant() Value {
 			return SuStr(s)
 		}
 	}
-	panic(p.Error("invalid constant, unexpected " + p.Token.String()))
+	panic(p.Error("invalid constant, unexpected " + p.Item.String()))
 }
 
 func (p *Parser) functionValue() Value {
