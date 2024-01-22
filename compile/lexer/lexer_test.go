@@ -26,8 +26,13 @@ func TestLexer(t *testing.T) {
 	assert := assert.T(t).This
 	first := func(src string, text string, token tok.Token) {
 		t.Helper()
-		assert(NewLexer(src).Next()).Is(Item{Text: text, Pos: 0, Token: token})
-	}
+		lxr := NewLexer(src)
+		it := lxr.Next()
+		assert(it).Is(Item{Text: text, Pos: 0, Token: token})
+		from := it.Pos
+		to := lxr.Position()
+		S = src[from:to]
+		}
 	first("function", "function", tok.Function)
 	first("foo", "foo", tok.Identifier)
 	first("#foo", "foo", tok.Symbol)
@@ -71,7 +76,10 @@ func TestLexer(t *testing.T) {
 			}
 			assert(item.Token).Msg(i, item).Is(expected[i])
 			i++
-		}
+			from := item.Pos
+			to := lexer.Position()
+			S = source[from:to]
+			}
 		assert(lexer.Next().Token).Msg("didn't consume input").Is(tok.Eof)
 	}
 	check("f()", tok.Identifier, tok.LParen, tok.RParen)

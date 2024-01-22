@@ -303,6 +303,7 @@ loop:
 func (lxr *Lexer) spanComment(start int) Item {
 	for ; ; lxr.si++ {
 		if lxr.si > len(lxr.src) {
+			lxr.si = len(lxr.src)
 			return it(tok.Error, start, "missing end of comment")
 		}
 		if strings.HasSuffix(lxr.src[:lxr.si], "*/") {
