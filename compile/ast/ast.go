@@ -798,15 +798,19 @@ func (a *ForIn) Children(fn func(Node) Node) {
 }
 
 type For struct {
-	Cond Expr
-	Body Statement
-	Init []Expr
-	Inc  []Expr
+	Slice bool
+	Cond  Expr
+	Body  Statement
+	Init  []Expr
+	Inc   []Expr
 	stmtNodeT
 }
 
 func (a *For) String() string {
 	s := "For("
+	if a.Slice {
+		s = "ForSlice("
+	}
 	sep := ""
 	for _, e := range a.Init {
 		s += sep + e.String()

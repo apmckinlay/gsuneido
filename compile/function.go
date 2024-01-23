@@ -315,8 +315,11 @@ func (p *Parser) dowhileStmt() *ast.DoWhile {
 func (p *Parser) forStmt() ast.Statement {
 	// easier to check before matching For so everything is ahead
 	forIn := p.isForIn()
+	forSlice := p.isForSlice()
 	p.Match(tok.For)
-	if forIn {
+	if forSlice {
+		return p.forSlice()
+	} else if forIn {
 		return p.forIn()
 	}
 	return p.forClassic()
@@ -331,6 +334,20 @@ func (p *Parser) isForIn() bool {
 		return false
 	}
 	return p.Lxr.AheadSkip(i+1).Token == tok.In
+}
+
+func (p *Parser) isForSlice() bool {
+	i := 0
+	if p.Lxr.AheadSkip(i).Token == tok.LParen {
+		i++
+	}
+	hasInToken := p.Lxr.AheadSkip(i+1).Token == tok.In
+	hasIdentToken := p.Lxr.AheadSkip(i+2).Token == tok.Identifier
+	hasNumberToken := p.Lxr.AheadSkip(i+2).Token == tok.Number
+	if hasInToken && (hasIdentToken || hasNumberToken) {
+		return p.Lxr.AheadSkip(i+3).Token == tok.RangeTo 
+	}
+	return false
 }
 
 func (p *Parser) forIn() *ast.ForIn {
@@ -348,6 +365,33 @@ func (p *Parser) forIn() *ast.ForIn {
 	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
 }
 
+func (p *Parser) forSlice() *ast.For {
+	p.MatchIf(tok.LParen)
+	iter_var := ast.Ident{Name: p.MatchIdent(), Pos: p.Pos}
+	p.Match(tok.In)
+
+//	init := p.optExprList(tok.RangeTo)
+	init := p.Expression()
+	var init_ast = []ast.Expr{&ast.Binary{Tok: tok.Eq, Lhs: &iter_var, Rhs: init,}}
+
+	p.Match(tok.RangeTo)
+
+	var cond_ast ast.Expr
+	if p.MatchIf(tok.Eq) {
+//		cond := p.optExprList(tok.Whitespace)
+		cond := p.Expression()
+		cond_ast = &ast.Binary{Tok: tok.Lte, Lhs: &iter_var, Rhs: cond,}
+	} else if p.MatchIf(tok.Lt) {
+//		cond := p.optExprList(tok.Whitespace)
+		cond := p.Expression()
+		cond_ast = &ast.Binary{Tok: tok.Lt, Lhs: &iter_var, Rhs: cond,}
+	}
+
+	body := p.statement()
+	inc := []ast.Expr{&ast.Unary{Tok: tok.Inc, E: &iter_var}}
+	return &ast.For{ Slice: true, Init: init_ast, Cond: cond_ast, Inc: inc, Body: body }
+}
+
 func (p *Parser) forClassic() *ast.For {
 	p.Match(tok.LParen)
 	init := p.optExprList(tok.Semicolon)
@@ -360,7 +404,7 @@ func (p *Parser) forClassic() *ast.For {
 	inc := p.optExprList(tok.RParen)
 	p.Match(tok.RParen)
 	body := p.statement()
-	return &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
+	return &ast.For{Slice: false, Init: init, Cond: cond, Inc: inc, Body: body}
 }
 
 func (p *Parser) optExprList(after tok.Token) []ast.Expr {
