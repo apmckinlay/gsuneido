@@ -85,7 +85,9 @@ func SuObjectOfStrs(strs []string) *SuObject {
 }
 
 // SuObjectOfArgs is used by massage and lrucache
-func SuObjectOfArgs(args []Value, unnamed int, as *ArgSpec) *SuObject {
+func SuObjectOfArgs(args []Value, as *ArgSpec) *SuObject {
+	assert.That(as.Each == 0)
+	unnamed := int(as.Nargs) - len(as.Spec)
 	ob := SuObjectOf(slices.Clone(args[:unnamed])...)
 	for i, ni := range as.Spec {
 		ob.Set(as.Names[ni], args[unnamed+i])

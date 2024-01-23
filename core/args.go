@@ -77,7 +77,7 @@ func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 			return
 		}
 		// args => @param
-		args[0] = SuObjectOfArgs(args, unnamed, as)
+		args[0] = SuObjectOfArgs(args, as)
 		return
 	}
 	if atArg {
