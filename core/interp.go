@@ -532,8 +532,7 @@ loop:
 						for i, p := range instance.parents {
 							if p.Base == super {
 								c := instance.parents[i+1]
-								f = c.lookup(th, string(methstr),
-									instance.parents[i+1:])
+								f = c.lookup(th, methstr, instance.parents[i+1:])
 								super = 0
 								goto done
 							}
@@ -543,7 +542,7 @@ loop:
 					ob = Global.Get(th, super)
 					super = 0
 				}
-				f = ob.Lookup(th, string(methstr))
+				f = ob.Lookup(th, methstr)
 			done:
 				if f != nil {
 					// fmt.Println(strings.Repeat("   ", t.fp+1), f)
