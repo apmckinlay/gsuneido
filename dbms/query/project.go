@@ -33,6 +33,7 @@ type Project struct {
 	warned        bool
 	derivedWarned bool
 	derived       int
+	th            *Thread
 }
 
 type mapType = hmap.Hmap[rowHash, struct{}, hmap.Funcs[rowHash]]
@@ -524,13 +525,15 @@ type rowHash struct {
 }
 
 func (p *Project) getMap(th *Thread, dir Dir) Row {
+	p.th = th
+	defer func() { p.th = nil }()
 	if p.rewound {
 		p.rewound = false
 		if p.results == nil {
 			hfn := func(k rowHash) uint32 { return k.hash }
 			eqfn := func(x, y rowHash) bool {
 				return x.hash == y.hash &&
-					equalCols(x.row, y.row, p.source.Header(), p.columns, th, p.st)
+					equalCols(x.row, y.row, p.source.Header(), p.columns, p.th, p.st)
 			}
 			p.results = hmap.NewHmapFuncs[rowHash, struct{}](hfn, eqfn)
 		}

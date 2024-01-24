@@ -32,6 +32,7 @@ type Summarize struct {
 	rewound  bool
 	unique   bool
 	hint     sumHint
+	th       *Thread
 }
 
 type summarizeApproach struct {
@@ -382,9 +383,11 @@ type mapPair struct {
 }
 
 func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
+	su.th = th
+	defer func() { su.th = nil }()
 	if su.rewound {
 		assert.That(!su.wholeRow)
-		t.mapList = su.buildMap(th)
+		t.mapList = su.buildMap()
 		if dir == Next {
 			t.mapPos = -1
 		} else { // Prev
@@ -412,21 +415,21 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 	return Row{DbRec{Record: rb.Build()}}
 }
 
-func (su *Summarize) buildMap(th *Thread) []mapPair {
+func (su *Summarize) buildMap() []mapPair {
 	hdr := su.source.Header()
 	hfn := func(k rowHash) uint32 { return k.hash }
 	eqfn := func(x, y rowHash) bool {
 		return x.hash == y.hash &&
-			equalCols(x.row, y.row, hdr, su.by, th, su.st)
+			equalCols(x.row, y.row, hdr, su.by, su.th, su.st)
 	}
 	sumMap := hmap.NewHmapFuncs[rowHash, []sumOp](hfn, eqfn)
 	warned := false
 	for {
-		row := su.source.Get(th, Next)
+		row := su.source.Get(su.th, Next)
 		if row == nil {
 			break
 		}
-		rh := rowHash{hash: hashCols(row, hdr, su.by, th, su.st), row: row}
+		rh := rowHash{hash: hashCols(row, hdr, su.by, su.th, su.st), row: row}
 		sums := sumMap.Get(rh)
 		if sums == nil {
 			sums = su.newSums()
@@ -437,7 +440,7 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 				Warning("summarize-map large >", mapWarn)
 			}
 		}
-		su.addToSums(sums, row, th, su.st)
+		su.addToSums(sums, row, su.th, su.st)
 	}
 	if sumMap.Size() > 2*mapWarn {
 		log.Println("summarize-map large =", sumMap.Size())

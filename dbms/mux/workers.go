@@ -4,10 +4,12 @@
 package mux
 
 import (
+	"log"
 	"sync/atomic"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
 // Workers creates worker goroutines on demand.
@@ -57,11 +59,23 @@ func (ws *Workers) worker(t task) {
 	defer nWorker.Add(-1)
 	// each worker has its own WriteBuf and Thread
 	wb := newWriteBuf(nil, 0)
-	th := &core.Thread{}
+	th := core.NewThread(nil)
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("worker panic:", e)
+			dbg.PrintStack()
+			if se, ok := e.(*core.SuExcept); ok {
+				core.PrintStack(se.Callstack)
+			} else {
+				th.PrintStack()
+			}
+		}
+	}()
 	for {
 		wb.conn = t.c
 		wb.id = uint32(t.id)
 		ws.h(wb, th, t.id, t.data) // do the task
+		th.Invalidate()
 		t = <-ws.ch                // blocking, wait for message
 		if t.c == nil {
 			return // got poison pill so terminate

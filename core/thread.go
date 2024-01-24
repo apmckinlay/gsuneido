@@ -6,6 +6,7 @@ package core
 import (
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"os"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/generic/cache"
 	"github.com/apmckinlay/gsuneido/util/regex"
@@ -141,8 +143,16 @@ func setup(th *Thread) *Thread {
 	return th
 }
 
+// Invalidate is used by workers to help detect use of thread after request
+func (th *Thread) Invalidate() {
+	th.Name = "INVALID"
+	th.sp = math.MaxInt
+	th.fp = math.MaxInt
+}
+
 // Reset is equivalent to calling NewThread(nil)
 func (th *Thread) Reset() {
+	assert.That(len(th.rules.list) == 0)
 	*th = Thread{} // zero it
 	setup(th)
 }
