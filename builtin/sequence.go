@@ -23,6 +23,7 @@ type wrapIter struct {
 	// When not concurrent we use the creating thread,
 	// when concurrent we use a temporary thread with th.Suneido
 	th         *Thread
+	suneido    *SuneidoObject
 	concurrent bool
 }
 
@@ -44,11 +45,15 @@ func (wi *wrapIter) Dup() Iter {
 }
 
 func (wi *wrapIter) SetConcurrent() {
-	wi.concurrent = true
-	if suneido := wi.th.Suneido.Load(); suneido != nil {
-		suneido.SetConcurrent()
+	if !wi.concurrent {
+		wi.concurrent = true
+		if suneido := wi.th.Suneido.Load(); suneido != nil {
+			suneido.SetConcurrent()
+			wi.suneido = suneido
+		}
+		wi.th = nil
+		wi.it.SetConcurrent()
 	}
-	wi.it.SetConcurrent()
 }
 
 func (wi *wrapIter) IsConcurrent() Value {
@@ -58,8 +63,9 @@ func (wi *wrapIter) IsConcurrent() Value {
 func (wi *wrapIter) call(method string) Value {
 	th := wi.th
 	if wi.concurrent { // concurrent
-		th = &Thread{Name: "*internal*"}
-		th.Suneido.Store(wi.th.Suneido.Load())
+		th = NewThread(nil)
+		th.Name = "*internal*"
+		th.Suneido.Store(wi.suneido)
 		defer th.Close()
 	}
 	return th.CallLookup(wi.it, method)
