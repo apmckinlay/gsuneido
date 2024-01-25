@@ -124,6 +124,9 @@ type funcInfo struct {
 
 	// hasBlocks is whether the function has any blocks
 	hasBlocks bool
+
+	// inTry is used to give an error for nested try
+	inTry bool
 }
 
 // disqualified is a special value for final

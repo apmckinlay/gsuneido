@@ -410,7 +410,12 @@ func (p *Parser) returnStmt() *ast.Return {
 }
 
 func (p *Parser) tryStmt() *ast.TryCatch {
+	if p.inTry {
+		p.Error("nested try not supported")
+	}
+	p.funcInfo.inTry = true
 	try := p.statement()
+	p.funcInfo.inTry = false
 	var catchVar string
 	var varPos int32
 	var catchFilter string
