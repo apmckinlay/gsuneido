@@ -482,6 +482,33 @@ func TestControl(t *testing.T) {
         13: Jump 3
         16: Jump 3
         19: Pop`)
+
+	test(`for ..10 { body }`, `
+		0: Int 10
+		3: Zero
+		4: Jump 12
+		7: Load body
+		9: Pop
+		10: One
+		11: Add
+		12: JumpLt 7
+		15: Pop
+		16: Pop`)
+
+	// same as for (i = 0; i < 10; ++i)
+	test(`for i in 0..10 { body }`, `
+		0: Int 10
+		3: Zero
+		4: Store i
+		6: Jump 16
+		9: Load body
+		11: Pop
+		12: One
+		13: Add
+		14: Store i
+		16: JumpLt 9
+		19: Pop
+		20: Pop`)
 }
 
 func TestBlock(t *testing.T) {

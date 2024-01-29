@@ -159,7 +159,7 @@ func (d *dasm) next() {
 		gn := fetchUint16()
 		s += " " + Global.Name(gn)
 	case op.Jump, op.JumpTrue, op.JumpFalse, op.And, op.Or, op.QMark, op.In, op.JumpIs,
-		op.JumpIsnt, op.Catch:
+		op.JumpIsnt, op.JumpLt, op.Catch:
 		j := fetchInt16()
 		s += fmt.Sprint(" ", d.i+j)
 	case op.ForIn:

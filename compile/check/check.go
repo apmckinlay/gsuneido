@@ -199,8 +199,11 @@ func (ck *Check) statement(
 		}
 		init = init.union(initInAll)
 	case *ast.ForIn:
-		init = ck.initVar(init, stmt.Var.Name, int(stmt.Var.Pos))
+		if stmt.Var.Name != "" {
+			init = ck.initVar(init, stmt.Var.Name, int(stmt.Var.Pos))
+		}
 		init, _ = ck.expr(stmt.E, init)
+		init, _ = ck.expr(stmt.E2, init)
 		ck.statement(stmt.Body, init, false)
 	case *ast.For:
 		for _, expr := range stmt.Init {

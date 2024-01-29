@@ -783,17 +783,28 @@ func (a *Forever) Children(fn func(Node) Node) {
 
 type ForIn struct {
 	E    Expr
+	E2   Expr // used by for-range
 	Body Statement
-	Var  Ident
+	Var  Ident // optional with for-range
 	stmtNodeT
 }
 
 func (a *ForIn) String() string {
-	return "ForIn(" + a.Var.Name + " " + a.E.String() + "\n" + a.Body.String() + ")"
+	s := "ForIn("
+	if a.Var.Name != "" {
+		s += a.Var.Name + " "
+	}
+	s += a.E.String()
+	if a.E2 != nil {
+		s += " " + a.E2.String()
+	}
+	s += "\n" + a.Body.String() + ")"
+	return s
 }
 
 func (a *ForIn) Children(fn func(Node) Node) {
 	childExpr(fn, &a.E)
+	childExpr(fn, &a.E2)
 	childStmt(fn, &a.Body)
 }
 

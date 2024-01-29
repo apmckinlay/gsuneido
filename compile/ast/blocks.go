@@ -144,8 +144,11 @@ func (b *bloks) statement(stmt Statement, vars strset) {
 			b.statement(d, vars)
 		}
 	case *ForIn:
-		vars[stmt.Var.Name] = yes
+		if stmt.Var.Name != "" {
+			vars[stmt.Var.Name] = yes
+		}
 		b.expr(stmt.E, vars)
+		b.expr(stmt.E2, vars)
 		b.statement(stmt.Body, vars)
 	case *For:
 		for _, expr := range stmt.Init {

@@ -105,6 +105,7 @@ func (f *fold) children(node Node) {
 		return
 	case *ForIn:
 		f.childExpr(&node.E)
+		f.childExpr(&node.E2)
 		save = f.values
 		f.childStmt(&node.Body)
 		f.values = save

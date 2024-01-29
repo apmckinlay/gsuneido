@@ -179,10 +179,6 @@ loop:
 		switch oc {
 		case op.Pop:
 			th.Pop()
-		case op.Dup:
-			th.Push(th.Top())
-		case op.Swap:
-			th.Swap()
 		case op.This:
 			if fr.this == nil {
 				panic("uninitialized: this")
@@ -428,6 +424,12 @@ loop:
 			x := th.Pop()
 			if !x.Equal(y) {
 				th.Push(x)
+				jump()
+			} else {
+				fr.ip += 2
+			}
+		case op.JumpLt:
+			if OpLt(th.stack[th.sp-1], th.stack[th.sp-2]) == True {
 				jump()
 			} else {
 				fr.ip += 2

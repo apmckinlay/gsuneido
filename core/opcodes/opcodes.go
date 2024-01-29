@@ -19,10 +19,6 @@ const (
 
 	// Pop pops the top of the stack
 	Pop
-	// Dup duplicates the top of the stack
-	Dup
-	// Swap swaps the top two values
-	Swap
 
 	// push values --------------------------------------------------
 
@@ -49,7 +45,7 @@ const (
 
 	// Load <uint8> pushes a local variable onto the stack
 	Load
-	// Store <uint8> pops the top value off the stack into a local variable
+	// Store <uint8> assigns the top value into a local variable (no pop)
 	Store
 	// LoadStore <local uint8> <op uint8> replaces the top value
 	// with ob[m] op= val
@@ -161,6 +157,8 @@ const (
 	// else it pops the second value on the stack and continues
 	// panics if top is not True or False
 	JumpIsnt
+	// JumpLt <int16> jumps if the top is less than the next value (no pop)
+	JumpLt
 	// Iter replaces the top with top.Iter()
 	Iter
 	// ForIn <int16> <uint8> calls top.Next()

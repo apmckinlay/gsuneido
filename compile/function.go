@@ -318,6 +318,8 @@ func (p *Parser) forStmt() ast.Statement {
 	p.Match(tok.For)
 	if forIn {
 		return p.forIn()
+	} else if p.Token != tok.LParen {
+		return p.forRange()
 	}
 	return p.forClassic()
 }
@@ -341,11 +343,25 @@ func (p *Parser) forIn() *ast.ForIn {
 	p.MatchIdent()
 	p.Match(tok.In)
 	expr := p.exprExpecting(!parens)
+	var expr2 Expr
+	if !parens && p.Token == tok.RangeTo {
+		p.Next()
+		expr2 = p.exprExpecting(!parens)
+	}
 	if parens {
 		p.Match(tok.RParen)
 	}
 	body := p.statement()
-	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
+	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos},
+		E: expr, E2: expr2, Body: body}
+}
+
+func (p *Parser) forRange() *ast.ForIn {
+	p.Match(tok.RangeTo)
+	expr := p.Constant(Zero)
+	expr2 := p.exprExpecting(true)
+	body := p.statement()
+	return &ast.ForIn{E: expr, E2: expr2, Body: body}
 }
 
 func (p *Parser) forClassic() *ast.For {

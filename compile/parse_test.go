@@ -302,6 +302,8 @@ func TestParseStatements(t *testing.T) {
 	test("for x in ob\nstmt", "ForIn(x ob\nstmt)")
 	test("for x in ob { stmt }", "ForIn(x ob\nstmt)")
 	test("for (x in ob) stmt", "ForIn(x ob\nstmt)")
+	test("for x in 0..10 \n stmt", "ForIn(x 0 10\nstmt)")
+	test("for ..10 \n stmt", "ForIn(0 10\nstmt)")
 
 	// for
 	test("for (;;) stmt", "For(; ; \n stmt)")
