@@ -4,11 +4,13 @@
 package builtin
 
 import (
+	"encoding/hex"
 	"math"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tabs"
@@ -449,6 +451,24 @@ var _ = method(string_SuffixQ, "(string)")
 
 func string_SuffixQ(this, arg Value) Value {
 	return SuBool(strings.HasSuffix(ToStr(this), ToStr(arg)))
+}
+
+var _ = method(string_ToHex, "()")
+
+func string_ToHex(this Value) Value {
+	s := ToStr(this)
+	return SuStr(hex.EncodeToString(hacks.Stobs(s)))
+}
+
+var _ = method(string_FromHex, "()")
+
+func string_FromHex(this Value) Value {
+	s := ToStr(this)
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		panic("string.FromHex invalid hex string")
+	}
+	return SuStr(hacks.BStoS(b))
 }
 
 var _ = method(string_ToUtf8, "()")
