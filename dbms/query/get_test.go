@@ -165,37 +165,36 @@ func TestQueryGet(t *testing.T) {
 		'name'	1	'supplier'
 		'name'	2	'cus'
 		'name2'	1	'alias'
-		'nrows'	2	'tables'
+		'nrows'	1	'tables'
 		'qty'	1	'inven'
 		'signed'	1	'co'
 		'supplier'	0	'supplier'
 		'table'	0	'columns'
 		'table'	0	'indexes'
 		'table'	0	'tables'
-		'tablename'	1	'tables'
 		'tnum'	0	'co'
 		'tnum'	0	'task'
-		'totalsize'	3	'tables'
+		'totalsize'	2	'tables'
 		'view_definition'	1	'views'
 		'view_name'	0	'views'`)
 	test("tables",
 		"tables",
-		`nrows	table	tablename	totalsize
-		0	'views'	'views'	0
-		2	'alias'	'alias'	25
-		3	'hist2'	'hist2'	68
-		3	'inven'	'inven'	42
-		4	'co'	'co'	55
-		4	'cus'	'cus'	64
-		4	'customer'	'customer'	98
-		4	'dates'	'dates'	52
-		4	'hist'	'hist'	91
-		4	'supplier'	'supplier'	128
-		4	'trans'	'trans'	92
-		8	'task'	'task'	95
-		15	'tables'	'tables'	0
-		16	'indexes'	'indexes'	0
-		45	'columns'	'columns'	0`)
+		`nrows	table	totalsize
+		0	'views'	0
+		2	'alias'	25
+		3	'hist2'	68
+		3	'inven'	42
+		4	'co'	55
+		4	'cus'	64
+		4	'customer'	98
+		4	'dates'	52
+		4	'hist'	91
+		4	'supplier'	128
+		4	'trans'	92
+		8	'task'	95
+		15	'tables'	0
+		16	'indexes'	0
+		44	'columns'	0`)
 	test("customer",
 		"customer^(id)",
 		`city	id	name
@@ -735,7 +734,7 @@ func TestQueryGet(t *testing.T) {
 		`table`)
 	test("tables minus tables",
 		"tables MINUS (tables TEMPINDEX(table))",
-		`nrows	table	tablename	totalsize`)
+		`nrows	table	totalsize`)
 
 	test("(customer project id) union (customer project id)",
 		"customer^(id) PROJECT-COPY id UNION-MERGE(id) (customer^(id) PROJECT-COPY id)",

@@ -416,11 +416,11 @@ func (w *Where) transform(src Query) Query {
 }
 
 func (w *Where) tablesLookup(tables *Tables) Query {
-	// Optimize: tables where table|tablename = <string>
+	// Optimize: tables where table = <string>
 	// This is to handle the speed issue from heavy use of TableExists?.
 	// It could be more general.
 	col, val := w.lookup1()
-	if col != "table" && col != "tablename" {
+	if col != "table" {
 		return w
 	}
 	s, ok := val.ToStr()
