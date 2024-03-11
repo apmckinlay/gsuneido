@@ -26,8 +26,8 @@ func GetDiskFreeSpace(arg Value) Value {
 		0,
 		0)
 	if rtn == 0 {
-        panic("GetDiskFreeSpace: " + e.Error())
-    }
+		panic("GetDiskFreeSpace: " + e.Error())
+	}
 	return Int64Val(n)
 }
 
@@ -73,9 +73,9 @@ func CopyFile(th *Thread, args []Value) Value {
 		uintptr(unsafe.Pointer(&to[0])),
 		boolArg(args[2]))
 	if rtn == 0 {
-        th.ReturnThrow = true
-        return SuStr("CopyFile: " + e.Error())
-    }
+		th.ReturnThrow = true
+		return SuStr("CopyFile: " + e.Error())
+	}
 	return True
 }
 
@@ -94,11 +94,24 @@ func boolRet(rtn uintptr) Value {
 }
 
 var deleteFileA = kernel32.MustFindProc("DeleteFileA").Addr()
+var setFileAttributesA = kernel32.MustFindProc("SetFileAttributesA").Addr()
+
+const access_denied = 5
 
 func deleteFile(filename string) error {
 	file := zbuf(SuStr(filename))
 	rtn, _, e := syscall.SyscallN(deleteFileA,
 		uintptr(unsafe.Pointer(&file[0])))
+	if rtn == 0 && e == access_denied {
+		// retry after removing the read-only attribute
+		r, _, _ := syscall.SyscallN(setFileAttributesA,
+			uintptr(unsafe.Pointer(&file[0])),
+			windows.FILE_ATTRIBUTE_NORMAL)
+		if r != 0 {
+			rtn, _, e = syscall.SyscallN(deleteFileA,
+				uintptr(unsafe.Pointer(&file[0])))
+		}
+	}
 	if rtn == 0 {
 		return e
 	}
