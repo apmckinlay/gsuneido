@@ -201,3 +201,24 @@ func OSName() Value {
 	os = strings.Replace(os, "darwin", "macos", 1)
 	return SuStr(os)
 }
+
+var _ = builtin(FileInfo, "(file)")
+
+func FileInfo(th *Thread, args []Value) Value {
+	path := ToStr(args[0])
+	info, err := os.Stat(path)
+	ob := &SuObject{}
+	if err != nil {
+		error := err.Error()
+		if errors.Is(err, fs.ErrNotExist) {
+			error = "nonexistent"
+		}
+		ob.Set(SuStr("error"), SuStr(error))
+	} else {
+		ob.Set(SuStr("size"), Int64Val(info.Size()))
+		ob.Set(SuStr("mode"), IntVal(int(info.Mode())))
+		ob.Set(SuStr("isdir"), SuBool(info.IsDir()))
+		ob.Set(SuStr("modified"), FromGoTime(info.ModTime()))
+	}
+	return ob
+}
