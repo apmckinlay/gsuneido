@@ -342,7 +342,12 @@ func (p *Parser) forIn() *ast.ForIn {
 	pos := p.Pos
 	p.MatchIdent()
 	p.Match(tok.In)
-	expr := p.exprExpecting(!parens)
+	var expr ast.Expr
+	if p.Token == tok.RangeTo {
+		expr = p.Constant(Zero)
+	} else {
+		expr = p.exprExpecting(!parens)
+	}
 	var expr2 Expr
 	if !parens && p.Token == tok.RangeTo {
 		p.Next()

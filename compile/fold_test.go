@@ -197,6 +197,12 @@ func TestPropFold(t *testing.T) {
         8
         ForIn(i 1 9
 		Call(T))`)
+	test(`t = 8
+		for i in ..t+1
+			T()`,
+		`8
+        ForIn(i 0 9
+		Call(T))`)
 	test(`n = 5
 		for ..n+1
 			T()`,
