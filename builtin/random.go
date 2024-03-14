@@ -4,10 +4,12 @@
 package builtin
 
 import (
+	crypto "crypto/rand"
 	"math/rand"
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
 type suRandomGlobal struct {
@@ -50,4 +52,16 @@ func (d *suRandomGlobal) Lookup(th *Thread, method string) Callable {
 		return f
 	}
 	return d.SuBuiltin.Lookup(th, method) // for Params
+}
+
+var _ = builtin(RandomBytes, "(n)")
+
+func RandomBytes(arg Value) Value {
+	n := ToInt(arg)
+	if n < 0 || 128 < n {
+		panic("RandomBytes: allowed range is 0 to 128")
+	}
+	buf := make([]byte, n)
+	crypto.Read(buf)
+	return SuStr(hacks.BStoS(buf))
 }
