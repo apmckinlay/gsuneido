@@ -549,7 +549,7 @@ func (db *Database) Corrupt() {
 	if db.corrupted.Swap(true) {
 		return
 	}
-	log.Println("database corruption detected")
+	log.Println("ERROR database corruption detected")
 	options.DbStatus.Store("corrupted")
 	buf := make([]byte, stor.SmallOffsetLen)
 	if db.mode != stor.Read {
