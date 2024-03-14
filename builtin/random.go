@@ -54,7 +54,7 @@ func (d *suRandomGlobal) Lookup(th *Thread, method string) Callable {
 	return d.SuBuiltin.Lookup(th, method) // for Params
 }
 
-var _ = builtin(RandomBytes, "(n)")
+var _ = builtin(RandomBytes, "(nbytes)")
 
 func RandomBytes(arg Value) Value {
 	n := ToInt(arg)
