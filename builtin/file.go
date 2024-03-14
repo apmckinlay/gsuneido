@@ -12,6 +12,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
 type iFile interface {
@@ -174,7 +175,7 @@ func file_Read(this, arg Value) Value {
 	if err != nil {
 		panic("File: Read: " + err.Error())
 	}
-	return SuStr(string(buf))
+	return SuStr(hacks.BStoS(buf))
 }
 
 var _ = method(file_Readline, "()")
