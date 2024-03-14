@@ -338,7 +338,7 @@ func putAt(th *Thread, ob Container, at Value, iter ArgsIter) {
 func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {
 	ai := NewArgsIter(as, args)
 	for k, v := ai(); v != nil; k, v = ai() {
-		if k == nil && v != nil {
+		if k == nil {
 			panic("usage: () or (list:) or (named:)")
 		}
 		if k.Equal(SuStr("list")) {

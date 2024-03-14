@@ -98,9 +98,10 @@ func suneido_ShouldNotReachHere() Value {
 
 var _ = staticMethod(suneido_RuntimeError, "()")
 
+var Nil []Value
+
 func suneido_RuntimeError() Value {
-	var x []Value
-	return x[123]
+	return Nil[123]
 }
 
 var _ = staticMethod(suneido_StrictCompare, "(bool)")

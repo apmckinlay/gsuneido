@@ -15,7 +15,7 @@ func TestInterp(t *testing.T) {
 		fn := &SuFunc{Code: string(code)}
 		var th Thread
 		result := th.Call(fn)
-		assert.T(t).This(result).Is(SuInt(8))
+		assert.T(t).This(result).Is(expected)
 	}
 	test(SuInt(8), byte(op.Int), 0, 3, byte(op.Int), 0, 5, byte(op.Add), byte(op.Return))
 }
