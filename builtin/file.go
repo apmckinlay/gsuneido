@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -32,6 +33,7 @@ type suFile struct {
 	// Any reads or writes must update this.
 	// Not used for "a" (append) mode.
 	tell int64
+	bufs sync.Pool
 }
 
 var nFile atomic.Int32
@@ -176,6 +178,40 @@ func file_Read(this, arg Value) Value {
 		panic("File: Read: " + err.Error())
 	}
 	return SuStr(hacks.BStoS(buf))
+}
+
+var _ = method(file_CopyTo, "(dest, nbytes)")
+
+func file_CopyTo(th *Thread, this Value, args []Value) Value {
+	src := sfOpenRead(this)
+	dst := sfOpenWrite(args[0])
+	n := ToInt(args[1])
+	const max = 64 * 1042
+	if n < 0 || max < n {
+		panic("File: CopyTo: invalid nbytes")
+	}
+	buf := src.getBuf(n)
+	defer src.bufs.Put(buf)
+	nr, err := io.ReadFull(src.f, buf[:n])
+	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		panic("File: CopyTo: " + err.Error())
+	}
+	_, err = dst.f.Write(buf[:nr])
+	if err != nil {
+		panic("File: CopyTo: " + err.Error())
+	}
+	if nr != n {
+		th.ReturnThrow = true
+	}
+	return IntVal(nr)
+}
+
+func (sf *suFile) getBuf(n int) []byte {
+	b := sf.bufs.Get()
+	if b != nil && cap(b.([]byte)) >= n {
+		return b.([]byte)[:n]
+	}
+	return make([]byte, n)
 }
 
 var _ = method(file_Readline, "()")
