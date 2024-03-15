@@ -101,12 +101,6 @@ func (ms *muxSession) EnableTrigger(string) {
 	assert.ShouldNotReachHere()
 }
 
-func (ms *muxSession) Dump(table string) string {
-	ms.PutCmd(commands.Dump).PutStr(table)
-	ms.Request()
-	return ms.GetStr()
-}
-
 func (ms *muxSession) Exec(_ *Thread, args Value) Value {
 	packed := PackValue(args) // do this first because it could panic
 	if trace.ClientServer.On() {
@@ -150,12 +144,6 @@ func (ms *muxSession) Info() Value {
 
 func (ms *muxSession) Kill(sessionid string) int {
 	ms.PutCmd(commands.Kill).PutStr(sessionid)
-	ms.Request()
-	return ms.GetInt()
-}
-
-func (ms *muxSession) Load(table string) int {
-	ms.PutCmd(commands.Load).PutStr(table)
 	ms.Request()
 	return ms.GetInt()
 }

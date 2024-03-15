@@ -31,10 +31,6 @@ type IDbms interface {
 	DisableTrigger(table string)
 	EnableTrigger(table string)
 
-	// Dump dumps a table or the entire database like -dump
-	// It returns "" or an error message.
-	Dump(table string) string
-
 	// Exec is used by the new style ServerEval(...)
 	Exec(th *Thread, args Value) Value
 
@@ -59,10 +55,6 @@ type IDbms interface {
 
 	// Libraries returns a list of the libraries currently in use
 	Libraries() []string
-
-	// Load loads a table like -load
-	// It returns the number of records loaded.
-	Load(table string) int
 
 	// Log writes to the server's error.log
 	Log(string)

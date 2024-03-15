@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/dbms"
 )
 
 type suDatabaseGlobal struct {
@@ -56,13 +57,19 @@ func db_Cursors(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Cursors())
 }
 
-var _ = staticMethod(db_Dump, "(table = '')")
+var _ = staticMethod(db_Dump, "(table = '', to = '')")
 
 func db_Dump(th *Thread, args []Value) Value {
-	if err := th.Dbms().Dump(ToStr(args[0])); err != "" {
-		panic(strings.Replace(err, "dump", "Database.Dump", 1))
+	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
+		err := dbms.Dump(ToStr(args[0]), ToStr(args[1]))
+		if err != "" {
+			th.ReturnThrow = true
+			return SuStr(strings.Replace(err, "dump", "Database.Dump", 1))
+		}
+		return EmptyStr
 	}
-	return nil
+	return th.Dbms().Exec(th,
+		SuObjectOf(SuStr("Database.Dump"), args[0], args[1]))
 }
 
 var _ = staticMethod(db_Final, "()")
@@ -83,10 +90,14 @@ func db_Kill(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Kill(ToStr(args[0])))
 }
 
-var _ = staticMethod(db_Load, "(table)")
+var _ = staticMethod(db_Load, "(table, from = '')")
 
 func db_Load(th *Thread, args []Value) Value {
-	return IntVal(th.Dbms().Load(ToStr(args[0])))
+	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
+		return IntVal(dbms.Load(ToStr(args[0]), ToStr(args[1])))
+	}
+	return th.Dbms().Exec(th,
+		SuObjectOf(SuStr("Database.Load"), args[0], args[1]))
 }
 
 var _ = staticMethod(db_Nonce, "()")

@@ -471,12 +471,6 @@ func cmdCursors(ss *serverSession) {
 	ss.PutBool(true).PutInt(len(ss.cursors))
 }
 
-func cmdDump(ss *serverSession) {
-	table := ss.GetStr()
-	s := ss.sc.dbms.Dump(table)
-	ss.PutBool(true).PutStr(s)
-}
-
 func cmdEndSession(ss *serverSession) {
 	// ss.sc.serverLog("closing connection: received EndSession")
 	ss.close()
@@ -686,12 +680,6 @@ func cmdLibraries(ss *serverSession) {
 	ss.PutBool(true).PutStrs(libs)
 }
 
-func cmdLoad(ss *serverSession) {
-	table := ss.GetStr()
-	n := ss.sc.dbms.Load(table)
-	ss.PutBool(true).PutInt(n)
-}
-
 func cmdLog(ss *serverSession) {
 	s := ss.GetStr()
 	ss.sc.dbms.Log(s)
@@ -840,7 +828,6 @@ var cmds = []command{ // order must match commmands.go
 	cmdConnections,
 	cmdCursor,
 	cmdCursors,
-	cmdDump,
 	cmdErase,
 	cmdExec,
 	cmdStrategy,
@@ -853,7 +840,6 @@ var cmds = []command{ // order must match commmands.go
 	cmdKill,
 	cmdLibGet,
 	cmdLibraries,
-	cmdLoad,
 	cmdLog,
 	cmdNonce,
 	cmdOrder,

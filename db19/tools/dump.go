@@ -27,7 +27,7 @@ const dumpVersion = "Suneido dump 3\n"
 const dumpVersionPrev = "Suneido dump 2\n"
 const dumpVersionBase = "Suneido dump"
 
-// DumpDatabase exports a dumped database to a file.
+// DumpDatabase exports the entire database to a file.
 // In the process it concurrently does a full check of the database.
 func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
@@ -38,6 +38,7 @@ func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 	return Dump(db, to)
 }
 
+// Dump checks and exports the entire database to a file
 func Dump(db *Database, to string) (nTables, nViews int, err error) {
 	if db.Corrupted() {
 		return 0, 0, fmt.Errorf("dump not allowed when database is locked")

@@ -109,12 +109,18 @@ func (dbms *DbmsLocal) EnableTrigger(table string) {
 	dbms.db.EnableTrigger(table)
 }
 
-func (dbms *DbmsLocal) Dump(table string) string {
+func (dbms *DbmsLocal) Dump(table, to string) string {
 	var err error
 	if table == "" {
-		_, _, err = tools.Dump(dbms.db, "database.su")
+		if to == "" {
+			to = "database.su"
+		}
+		_, _, err = tools.Dump(dbms.db, to)
 	} else {
-		_, err = tools.DumpDbTable(dbms.db, table, table+".su")
+		if to == "" {
+			to = table + ".su"
+        }
+		_, err = tools.DumpDbTable(dbms.db, table, to)
 	}
 	if err != nil {
 		return err.Error()
@@ -185,8 +191,11 @@ func (*DbmsLocal) Kill(addr string) int {
 	return 0
 }
 
-func (dbms *DbmsLocal) Load(table string) int {
-	n, err := tools.LoadDbTable(table, dbms.db)
+func (dbms *DbmsLocal) Load(table, from string) int {
+	if from == "" {
+		from = table + ".su"
+	}
+	n, err := tools.LoadDbTable(table, from, dbms.db)
 	if err != nil {
 		panic(err.Error())
 	}

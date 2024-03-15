@@ -118,13 +118,13 @@ func LoadTable(table, dbfile string) (int, error) {
 		return 0, fmt.Errorf("error loading %s: %w", table, err)
 	}
 	defer db.Close()
-	return LoadDbTable(table, db)
+	return LoadDbTable(table, "", db)
 }
 
 // LoadDbTable loads a single table. It is use by dbms.Load / Database.Load
 // It will replace an already existing table.
 // It returns the number of records loaded.
-func LoadDbTable(table string, db *Database) (n int, err error) {
+func LoadDbTable(table, from string, db *Database) (n int, err error) {
 	if db.Corrupted() {
 		return 0, fmt.Errorf("load not allowed when database is locked")
 	}
@@ -135,7 +135,7 @@ func LoadDbTable(table string, db *Database) (n int, err error) {
 			err = fmt.Errorf("error loading %s: %v", table, e)
 		}
 	}()
-	f, r := open(table + ".su")
+	f, r := open(from)
 	defer f.Close()
 	schem := table + " " + readLinePrefixed(r, "====== ")
 	nrecs, size, list := loadTable1(db, r, schem)

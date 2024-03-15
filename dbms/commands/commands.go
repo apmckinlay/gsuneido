@@ -18,7 +18,6 @@ const (
 	Connections
 	Cursor
 	Cursors
-	Dump
 	Erase
 	Exec
 	Strategy
@@ -31,7 +30,6 @@ const (
 	Kill
 	LibGet
 	Libraries
-	Load
 	Log
 	Nonce
 	Order
