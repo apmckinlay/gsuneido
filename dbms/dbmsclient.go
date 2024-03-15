@@ -387,6 +387,13 @@ type muxQueryCursor struct {
 	qc   qcType
 }
 
+type qcType byte
+
+const (
+	query  qcType = 'q'
+	cursor qcType = 'c'
+)
+
 func (qc *muxQueryCursor) Close() {
 	qc.PutCmd(commands.Close).PutInt(qc.id).PutByte(byte(qc.qc))
 	qc.Request()

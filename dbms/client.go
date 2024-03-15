@@ -18,17 +18,17 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func ConnectClient(addr string, port string) (conn net.Conn, jserver bool) {
+func ConnectClient(addr string, port string) net.Conn {
 	conn, err := net.Dial("tcp", addr+":"+port)
 	if err != nil {
 		checkServerStatus(addr, port)
 		cantConnect(err.Error())
 	}
-	jserver, errmsg := checkHello(conn)
+	errmsg := checkHello(conn)
 	if errmsg != "" {
 		cantConnect(errmsg)
 	}
-	return conn, jserver
+	return conn
 }
 
 func cantConnect(s string) {
@@ -38,31 +38,28 @@ func cantConnect(s string) {
 const helloTimeout = 500 * time.Millisecond
 
 // checkHello is used by both the client and the server
-func checkHello(conn net.Conn) (jserver bool, errmsg string) {
+func checkHello(conn net.Conn) string {
 	var buf [helloSize]byte
 	conn.SetReadDeadline(time.Now().Add(helloTimeout))
 	n, err := io.ReadFull(conn, buf[:])
 	var never time.Time
 	conn.SetReadDeadline(never)
 	if n == 0 {
-		return false, "hello: timeout"
+		return "hello: timeout"
 	}
 	if n != helloSize || err != nil {
-		return false, "hello: invalid response"
+		return "hello: invalid response"
 	}
 	s := string(buf[:])
 	if !strings.HasPrefix(s, "Suneido ") {
-		return false, "hello: invalid response"
-	}
-	if strings.Contains(s, " (Java)") {
-		return true, ""
+		return "hello: invalid response"
 	}
 	s = strings.TrimPrefix(s, "Suneido ")
 	if noTime(s) != noTime(options.BuiltDate) && !options.IgnoreVersion {
-		return false, fmt.Sprintf("version mismatch (got %s, want %s)",
+		return fmt.Sprintf("version mismatch (got %s, want %s)",
 			noTime(s), noTime(options.BuiltDate))
 	}
-	return false, ""
+	return ""
 }
 
 func noTime(s string) string {

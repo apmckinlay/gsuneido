@@ -134,7 +134,7 @@ func (sc *serverConn) serverLog(args ...any) {
 func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	trace.ClientServer.Println("server connection")
 	conn.Write(hello())
-	if _, errmsg := checkHello(conn); errmsg != "" {
+	if errmsg := checkHello(conn); errmsg != "" {
 		conn.Close()
 		return
 	}

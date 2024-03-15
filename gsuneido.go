@@ -168,18 +168,10 @@ func main() {
 	}()
 	// dependency injection of GetDbms
 	if options.Action == "client" {
-		conn, jserver := dbms.ConnectClient(options.Arg, options.Port)
-		if jserver {
-			mainThread.SetDbms(dbms.NewJsunClient(conn))
-			GetDbms = func() IDbms {
-				conn, _ := dbms.ConnectClient(options.Arg, options.Port)
-				return dbms.NewJsunClient(conn)
-			}
-		} else {
-			client := dbms.NewDbmsClient(conn)
-			GetDbms = func() IDbms {
-				return client.NewSession()
-			}
+		conn := dbms.ConnectClient(options.Arg, options.Port)
+		client := dbms.NewDbmsClient(conn)
+		GetDbms = func() IDbms {
+			return client.NewSession()
 		}
 		if mode == "gui" {
 			clientErrorLog()
