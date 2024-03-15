@@ -106,7 +106,7 @@ func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 	}
 	tmpfile := f.Name()
 	defer func() { f.Close(); os.Remove(tmpfile) }()
-	nrecs = dumpDbTable(db, nrecs, table, w, f)
+	nrecs = dumpDbTable(db, table, w)
 	if err := w.Flush(); err != nil {
 		return 0, err
 	}
@@ -117,7 +117,7 @@ func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 	return nrecs, nil
 }
 
-func dumpDbTable(db *Database, nrecs int, table string, w *bufio.Writer, f *os.File) int {
+func dumpDbTable(db *Database, table string, w *bufio.Writer) int {
 	ics := newIndexCheckers()
 	defer ics.finish()
 	state := db.Persist()
