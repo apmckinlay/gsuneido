@@ -67,15 +67,15 @@ func TestLoadFkey(*testing.T) {
 	_, err = DumpDbTable(db, "tmp3", "tmp3.su", "")
 	ck(err)
 	defer os.Remove("tmp3.su")
-	_, err = LoadDbTable("tmp", "", db)
+	_, err = LoadDbTable("tmp", "tmp.su", db)
 	assert.That(strings.Contains(err.Error(),
 		"can't overwrite table that foreign keys point to"))
-	_, err = LoadDbTable("tmp2", "", db)
+	_, err = LoadDbTable("tmp2", "tmp2.su", db)
 	assert.That(strings.Contains(err.Error(),
 		"can't load single table with foreign keys"))
-	_, err = LoadDbTable("tmp3", "", db)
+	_, err = LoadDbTable("tmp3", "tmp3.su", db)
 	ck(err)
 	doAdmin("drop tmp3")
-	_, err = LoadDbTable("tmp3", "", db)
+	_, err = LoadDbTable("tmp3", "tmp3.su", db)
 	ck(err)
 }

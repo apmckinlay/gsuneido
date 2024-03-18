@@ -118,7 +118,7 @@ func LoadTable(table, dbfile string) (int, error) {
 		return 0, fmt.Errorf("error loading %s: %w", table, err)
 	}
 	defer db.Close()
-	return LoadDbTable(table, "", db)
+	return LoadDbTable(table, table + ".su", db)
 }
 
 // LoadDbTable loads a single table. It is use by dbms.Load / Database.Load
