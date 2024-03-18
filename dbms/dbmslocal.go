@@ -109,18 +109,18 @@ func (dbms *DbmsLocal) EnableTrigger(table string) {
 	dbms.db.EnableTrigger(table)
 }
 
-func (dbms *DbmsLocal) Dump(table, to string) string {
+func (dbms *DbmsLocal) Dump(table, to, publicKey string) string {
 	var err error
 	if table == "" {
 		if to == "" {
 			to = "database.su"
 		}
-		_, _, err = tools.Dump(dbms.db, to)
+		_, _, err = tools.Dump(dbms.db, to, publicKey)
 	} else {
 		if to == "" {
 			to = table + ".su"
         }
-		_, err = tools.DumpDbTable(dbms.db, table, to)
+		_, err = tools.DumpDbTable(dbms.db, table, to, publicKey)
 	}
 	if err != nil {
 		return err.Error()

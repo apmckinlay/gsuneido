@@ -57,11 +57,11 @@ func db_Cursors(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Cursors())
 }
 
-var _ = staticMethod(db_Dump, "(table = '', to = '')")
+var _ = staticMethod(db_Dump, "(table = '', to = '', publicEncrypt = '')")
 
 func db_Dump(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
-		err := dbms.Dump(ToStr(args[0]), ToStr(args[1]))
+		err := dbms.Dump(ToStr(args[0]), ToStr(args[1]), ToStr(args[2]))
 		if err != "" {
 			th.ReturnThrow = true
 			return SuStr(strings.Replace(err, "dump", "Database.Dump", 1))
@@ -69,7 +69,7 @@ func db_Dump(th *Thread, args []Value) Value {
 		return EmptyStr
 	}
 	return th.Dbms().Exec(th,
-		SuObjectOf(SuStr("Database.Dump"), args[0], args[1]))
+		SuObjectOf(SuStr("Database.Dump"), args[0], args[1], args[2]))
 }
 
 var _ = staticMethod(db_Final, "()")

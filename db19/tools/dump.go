@@ -6,12 +6,15 @@ package tools
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 
+	"github.com/ProtonMail/gopenpgp/v2/crypto"
 	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -19,6 +22,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/system"
 )
@@ -35,21 +39,24 @@ func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 		return 0, 0, err
 	}
 	defer db.Close()
-	return Dump(db, to)
+	return Dump(db, to, "")
 }
 
 // Dump checks and exports the entire database to a file
-func Dump(db *Database, to string) (nTables, nViews int, err error) {
+func Dump(db *Database, to, publicKey string) (nTables, nViews int, err error) {
 	if db.Corrupted() {
 		return 0, 0, fmt.Errorf("dump not allowed when database is locked")
 	}
 	defer func() {
 		if e := recover(); e != nil {
+			if strings.HasPrefix(fmt.Sprint(e), "gopenpgp: ") {
+				panic(e)
+			}
 			db.Corrupt()
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
-	f, w, err := dumpOpen()
+	f, w, err := dumpOpen(publicKey)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -64,7 +71,7 @@ func Dump(db *Database, to string) (nTables, nViews int, err error) {
 	return nTables, nViews, nil
 }
 
-func dump(db *Database, w *bufio.Writer) (nTables, nViews int) {
+func dump(db *Database, w WriterPlus) (nTables, nViews int) {
 	ics := newIndexCheckers()
 	defer ics.finish()
 	state := db.Persist()
@@ -88,20 +95,23 @@ func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 		return 0, err
 	}
 	defer db.Close()
-	return DumpDbTable(db, table, to)
+	return DumpDbTable(db, table, to, "")
 }
 
-func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
+func DumpDbTable(db *Database, table, to, publicKey string) (nrecs int, err error) {
 	if db.Corrupted() {
 		return 0, fmt.Errorf("dump not allowed when database is locked")
 	}
 	defer func() {
 		if e := recover(); e != nil {
+			if strings.HasPrefix(fmt.Sprint(e), "gopenpgp: ") {
+				panic(e)
+			}
 			db.Corrupt()
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
-	f, w, err := dumpOpen()
+	f, w, err := dumpOpen(publicKey)
 	if err != nil {
 		return 0, err
 	}
@@ -118,25 +128,62 @@ func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 	return nrecs, nil
 }
 
-func dumpDbTable(db *Database, table string, w *bufio.Writer) int {
+func dumpDbTable(db *Database, table string, w WriterPlus) int {
 	ics := newIndexCheckers()
 	defer ics.finish()
 	state := db.Persist()
 	return dumpTable2(db, state, table, false, w, ics)
 }
 
-func dumpOpen() (*os.File, *bufio.Writer, error) {
+func dumpOpen(publicKey string) (*os.File, WriterPlus, error) {
 	f, err := os.CreateTemp(".", "gs*.tmp")
 	if err != nil {
 		return nil, nil, err
 	}
-	w := bufio.NewWriter(f)
+	var w WriterPlus = bufio.NewWriter(f)
+	if publicKey != "" {
+		w = writerPlus{encryptor(publicKey, f)}
+	}
 	w.WriteString(dumpVersion)
 	return f, w, nil
 }
 
+func encryptor(publicKey string, dst io.Writer) io.WriteCloser {
+	publicKeyObj, err := crypto.NewKeyFromArmored(publicKey)
+	ck(err)
+	publicKeyRing, err := crypto.NewKeyRing(publicKeyObj)
+	ck(err)
+	encryptor, err := publicKeyRing.EncryptStreamWithCompression(dst, nil, nil)
+	ck(err)
+	return encryptor
+}
+
+type WriterPlus interface {
+	io.Writer
+	WriteString(s string) (n int, err error)
+	WriteByte(b byte) error
+	Flush() error
+}
+
+type writerPlus struct {
+	io.WriteCloser
+}
+
+func (w writerPlus) WriteString(s string) (n int, err error) {
+	return w.Write(hacks.Stobs(s))
+}
+
+func (w writerPlus) WriteByte(b byte) error {
+	_, err := w.Write(hacks.Btobs(b))
+	return err
+}
+
+func (w writerPlus) Flush() error {
+	return w.WriteCloser.Close()
+}
+
 func dumpTable2(db *Database, state *DbState, table string, multi bool,
-	w *bufio.Writer, ics *indexCheckers) int {
+	w WriterPlus, ics *indexCheckers) int {
 	w.WriteString("====== ")
 	sc := state.Meta.GetRoSchema(table)
 	if sc == nil {
@@ -178,7 +225,7 @@ func squeeze(rec core.Record, cols []string) core.Record {
 	return rb.Build()
 }
 
-func writeInt(w *bufio.Writer, n int) {
+func writeInt(w WriterPlus, n int) {
 	assert.That(0 <= n && n <= math.MaxUint32)
 	w.WriteByte(byte(n >> 24))
 	w.WriteByte(byte(n >> 16))
@@ -186,7 +233,7 @@ func writeInt(w *bufio.Writer, n int) {
 	w.WriteByte(byte(n))
 }
 
-func dumpViews(state *DbState, w *bufio.Writer) int {
+func dumpViews(state *DbState, w WriterPlus) int {
 	w.WriteString("====== views (view_name,view_definition) key(view_name)\n")
 	nrecs := 0
 	state.Meta.ForEachView(func(name, def string) {
