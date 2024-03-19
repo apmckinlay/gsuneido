@@ -140,8 +140,10 @@ func dumpOpen(publicKey string) (*os.File, WriterPlus, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	var w WriterPlus = bufio.NewWriter(f)
-	if publicKey != "" {
+	var w WriterPlus
+	if publicKey == "" {
+		w = bufio.NewWriter(f)
+	} else {
 		w = writerPlus{encryptor(publicKey, f)}
 	}
 	w.WriteString(dumpVersion)
