@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/ProtonMail/gopenpgp/v2/crypto"
 	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -44,14 +45,15 @@ type loadJob struct {
 // It returns the number of tables loaded. Errors are fatal.
 // It does NOT check foreign key data
 // because it assumes the dump was from a valid database.
-func LoadDatabase(from, dbfile string) (nTables, nViews int, err error) {
+func LoadDatabase(from, dbfile, privateKey, passphrase string) (
+	nTables, nViews int, err error) {
 	var errVal atomic.Value // error
 	defer func() {
 		if e := recover(); e != nil {
 			err = errs.From(e)
 		}
 	}()
-	f, r := open(from)
+	f, r := loadOpen(from, privateKey, passphrase)
 	defer f.Close()
 	db, tmpfile := tmpdb()
 	defer func() { db.Close(); os.Remove(tmpfile) }()
@@ -118,13 +120,14 @@ func LoadTable(table, dbfile string) (int, error) {
 		return 0, fmt.Errorf("error loading %s: %w", table, err)
 	}
 	defer db.Close()
-	return LoadDbTable(table, table + ".su", db)
+	return LoadDbTable(table, table+".su", "", "", db)
 }
 
 // LoadDbTable loads a single table. It is use by dbms.Load / Database.Load
 // It will replace an already existing table.
 // It returns the number of records loaded.
-func LoadDbTable(table, from string, db *Database) (n int, err error) {
+func LoadDbTable(table, from, privateKey, passphrase string,
+	db *Database) (n int, err error) {
 	if db.Corrupted() {
 		return 0, fmt.Errorf("load not allowed when database is locked")
 	}
@@ -135,7 +138,7 @@ func LoadDbTable(table, from string, db *Database) (n int, err error) {
 			err = fmt.Errorf("error loading %s: %v", table, e)
 		}
 	}()
-	f, r := open(from)
+	f, r := loadOpen(from, privateKey, passphrase)
 	defer f.Close()
 	schem := table + " " + readLinePrefixed(r, "====== ")
 	nrecs, size, list := loadTable1(db, r, schem)
@@ -144,12 +147,15 @@ func LoadDbTable(table, from string, db *Database) (n int, err error) {
 	return nrecs, nil
 }
 
-func open(filename string) (*os.File, *bufio.Reader) {
+func loadOpen(filename, privateKey, passphrase string) (*os.File, *bufio.Reader) {
 	f, err := os.Open(filename)
-	if err != nil {
-		panic(err)
+	ck(err)
+	var r *bufio.Reader
+	if privateKey == "" {
+		r = bufio.NewReader(f)
+	} else {
+		r = bufio.NewReader(decryptor(privateKey, passphrase, f))
 	}
-	r := bufio.NewReader(f)
 	s, err := r.ReadString('\n')
 	ck(err)
 	if !strings.HasPrefix(s, dumpVersionBase) {
@@ -159,6 +165,19 @@ func open(filename string) (*os.File, *bufio.Reader) {
 		panic("invalid dump version")
 	}
 	return f, r
+}
+
+func decryptor(privateKey, passphrase string, src io.Reader) io.Reader {
+	privateKeyObj, err := crypto.NewKeyFromArmored(privateKey)
+	ck(err)
+	privateKeyUnlocked, err := privateKeyObj.Unlock([]byte(passphrase))
+	ck(err)
+	defer privateKeyUnlocked.ClearPrivateParams()
+	privateKeyRing, err := crypto.NewKeyRing(privateKeyUnlocked)
+	ck(err)
+	decryptor, err := privateKeyRing.DecryptStream(src, nil, 0)
+	ck(err)
+	return decryptor
 }
 
 // loadTable1 reads the data

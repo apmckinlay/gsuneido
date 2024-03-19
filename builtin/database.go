@@ -57,7 +57,7 @@ func db_Cursors(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Cursors())
 }
 
-var _ = staticMethod(db_Dump, "(table = '', to = '', publicEncrypt = '')")
+var _ = staticMethod(db_Dump, "(table = '', to = '', publicKey = '')")
 
 func db_Dump(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
@@ -90,14 +90,14 @@ func db_Kill(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Kill(ToStr(args[0])))
 }
 
-var _ = staticMethod(db_Load, "(table, from = '')")
+var _ = staticMethod(db_Load, "(table, from = '', privateKey = '', passphrase = '')")
 
 func db_Load(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
-		return IntVal(dbms.Load(ToStr(args[0]), ToStr(args[1])))
+		return IntVal(dbms.Load(ToStr(args[0]), ToStr(args[1]), ToStr(args[2]), ToStr(args[3])))
 	}
 	return th.Dbms().Exec(th,
-		SuObjectOf(SuStr("Database.Load"), args[0], args[1]))
+		SuObjectOf(SuStr("Database.Load"), args[0], args[1], args[2], args[3]))
 }
 
 var _ = staticMethod(db_Nonce, "()")

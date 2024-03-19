@@ -100,13 +100,29 @@ func main() {
 		os.Exit(0)
 	case "load":
 		t := time.Now()
-		if options.Arg == "" {
-			nTables, nViews, err := tools.LoadDatabase("database.su", "suneido.db")
+		privateKey := ""
+		if options.Passphrase != "" {
+			buf, err := io.ReadAll(os.Stdin)
+			ck(err)
+			privateKey = string(buf)
+		}
+		from := "database.su"
+		table := ""
+		if options.Arg != "" {
+			if strings.HasPrefix(options.Arg, "@") {
+				from = options.Arg[1:]
+			} else {
+				table = options.Arg
+			}
+		}
+		if table == "" {
+			nTables, nViews, err := tools.LoadDatabase(from, "suneido.db",
+				privateKey, options.Passphrase)
 			ck(err)
 			Alert("loaded", nTables, "tables", nViews, "views in",
 				time.Since(t).Round(time.Millisecond))
 		} else {
-			table := strings.TrimSuffix(options.Arg, ".su")
+			table = strings.TrimSuffix(table, ".su")
 			n, err := tools.LoadTable(table, "suneido.db")
 			ck(err)
 			Alert("loaded", n, "records to", table,

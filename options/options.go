@@ -28,6 +28,7 @@ var (
 	WebServer      bool
 	WebPort        string
 	TimeoutMinutes = 2 * 60 // 2 hours
+	Passphrase     string   // used with -load
 )
 
 // StrictCompare determines whether comparisons between different types

@@ -119,7 +119,7 @@ func (dbms *DbmsLocal) Dump(table, to, publicKey string) string {
 	} else {
 		if to == "" {
 			to = table + ".su"
-        }
+		}
 		_, err = tools.DumpDbTable(dbms.db, table, to, publicKey)
 	}
 	if err != nil {
@@ -191,11 +191,11 @@ func (*DbmsLocal) Kill(addr string) int {
 	return 0
 }
 
-func (dbms *DbmsLocal) Load(table, from string) int {
+func (dbms *DbmsLocal) Load(table, from, privateKey, passphrase string) int {
 	if from == "" {
 		from = table + ".su"
 	}
-	n, err := tools.LoadDbTable(table, from, dbms.db)
+	n, err := tools.LoadDbTable(table, from, privateKey, passphrase, dbms.db)
 	if err != nil {
 		panic(err.Error())
 	}

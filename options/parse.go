@@ -35,6 +35,14 @@ loop:
 		case match(&args, "-load"), match(&args, "-l"):
 			setAction("load")
 			args = optionalArg(args, &Arg)
+		case match(&args, "-passphrase"), match(&args, "-pp"):
+			if Action != "load" {
+				error("passphrase only valid with -load")
+			}
+			args = optionalArg(args, &Passphrase)
+			if Passphrase == "" {
+				error("passphrase required")
+			}
 		case match(&args, "-port"), match(&args, "-p"):
 			args = optionalArg(args, &Port)
 			if Port == "" {

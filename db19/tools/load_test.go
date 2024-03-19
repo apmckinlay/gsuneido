@@ -38,7 +38,7 @@ func TestLoadDatabase(*testing.T) {
 	}
 	t := time.Now()
 	defer os.Remove("tmp.db")
-	nTables, nViews, e := LoadDatabase("../../database.su", "tmp.db")
+	nTables, nViews, e := LoadDatabase("../../database.su", "tmp.db", "", "")
 	assert.This(e).Is(nil)
 	fmt.Println("loaded", nTables, "tables", nViews, "views in",
 		time.Since(t).Round(time.Millisecond))
@@ -67,15 +67,15 @@ func TestLoadFkey(*testing.T) {
 	_, err = DumpDbTable(db, "tmp3", "tmp3.su", "")
 	ck(err)
 	defer os.Remove("tmp3.su")
-	_, err = LoadDbTable("tmp", "tmp.su", db)
+	_, err = LoadDbTable("tmp", "tmp.su", "", "", db)
 	assert.That(strings.Contains(err.Error(),
 		"can't overwrite table that foreign keys point to"))
-	_, err = LoadDbTable("tmp2", "tmp2.su", db)
+	_, err = LoadDbTable("tmp2", "tmp2.su", "", "", db)
 	assert.That(strings.Contains(err.Error(),
 		"can't load single table with foreign keys"))
-	_, err = LoadDbTable("tmp3", "tmp3.su", db)
+	_, err = LoadDbTable("tmp3", "tmp3.su", "", "", db)
 	ck(err)
 	doAdmin("drop tmp3")
-	_, err = LoadDbTable("tmp3", "tmp3.su", db)
+	_, err = LoadDbTable("tmp3", "tmp3.su", "", "", db)
 	ck(err)
 }
