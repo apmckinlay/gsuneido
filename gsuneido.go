@@ -38,7 +38,8 @@ var help = `options:
 	-compact
 	-d[ump] [table]
 	-h[elp] or -?
-	-l[oad] [table]
+	-l[oad] [table] (or @filename)
+	-p[ass]p[hrase]=string (for -load)
 	-p[ort][=#] (default 3147)
 	-repair
 	-s[erver]
