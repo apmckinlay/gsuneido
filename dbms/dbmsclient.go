@@ -76,9 +76,7 @@ func (ms *muxSession) Close() {
 func (ms *muxSession) Connections() Value {
 	ms.PutCmd(commands.Connections)
 	ms.Request()
-	ob := ms.GetVal().(*SuObject)
-	ob.SetReadOnly()
-	return ob
+	return ms.GetVal().(*SuObject)
 }
 
 func (ms *muxSession) Cursor(query string, _ *Sviews) ICursor {

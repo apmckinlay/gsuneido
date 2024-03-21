@@ -79,7 +79,7 @@ func (*DbmsLocal) Connections() Value {
 	if options.Action == "server" {
 		return connections()
 	}
-	return EmptyObject
+	return &SuObject{}
 }
 
 func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
