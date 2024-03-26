@@ -22,6 +22,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/exit"
+	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/time/rate"
 )
@@ -54,10 +55,11 @@ type serverSession struct {
 	sc *serverConn
 	*mux.WriteBuf
 	thread    *Thread
+	transLock sync.Mutex // guards trans
 	trans     map[int]ITran
 	cursors   map[int]ICursor
 	queries   map[int]IQuery
-	sessionId string
+	sessionId atomics.String
 	nonce     string
 	mux.ReadBuf
 	// id is primarily used as a key to store the set of sessions in a map
@@ -176,6 +178,11 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 		return
 	}
 	sc := serverConns[connId]
+	if sc == nil {
+		serverConnsLock.Unlock()
+		log.Println("dbms server doRequest: no such connection")
+		return
+	}
 	sc.idleCount = 0
 	serverConnsLock.Unlock()
 
@@ -185,20 +192,20 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	if ss == nil { // new session
 		trace.ClientServer.Println("server session", sid)
 		ss = &serverSession{
-			id:        sid,
-			sc:        sc,
-			sessionId: sc.remoteAddr,
-			trans:     make(map[int]ITran),
-			cursors:   make(map[int]ICursor),
-			queries:   make(map[int]IQuery),
+			id:      sid,
+			sc:      sc,
+			trans:   make(map[int]ITran),
+			cursors: make(map[int]ICursor),
+			queries: make(map[int]IQuery),
 		}
+		ss.sessionId.Store(sc.remoteAddr)
 		sc.sessions[sid] = ss
 	}
 	sc.sessionsLock.Unlock()
 
 	ss.ReadBuf.SetBuf(req)
 	ss.WriteBuf = wb
-	th.SetSession(ss.sessionId)
+	th.SetSession(ss.sessionId.Load())
 	th.SetSviews(&sc.Sviews)
 	ss.thread = th
 	ss.request()
@@ -208,7 +215,7 @@ func (ss *serverSession) request() {
 	var icmd commands.Command
 	defer func() {
 		if e := recover(); e != nil {
-			LogInternalError(ss.thread, ss.sessionId, e)
+			LogInternalError(ss.thread, ss.sessionId.Load(), e)
 			ss.ResetWrite()
 			ss.PutBool(false).PutStr(errToStr(e)).EndMsg()
 		}
@@ -252,6 +259,8 @@ func (ss *serverSession) close() {
 }
 
 func (ss *serverSession) abort() {
+	ss.transLock.Lock()
+	defer ss.transLock.Unlock()
 	for _, tran := range ss.trans {
 		tran.Abort()
 	}
@@ -260,6 +269,8 @@ func (ss *serverSession) abort() {
 func (sc *serverConn) close() {
 	trace.ClientServer.Println("closing connection")
 	sc.conn.Close()
+	sc.sessionsLock.Lock()
+	defer sc.sessionsLock.Unlock()
 	for _, ss := range sc.sessions {
 		ss.abort()
 	}
@@ -283,7 +294,7 @@ func Conns() string {
 		sc.sessionsLock.Lock()
 		var sessions []string
 		for _, ss := range sc.sessions {
-			sessions = append(sessions, ss.sessionId)
+			sessions = append(sessions, ss.sessionId.Load())
 		}
 		sort.Strings(sessions)
 		for _, sid := range sessions {
@@ -340,8 +351,14 @@ func cmdAbort(ss *serverSession) {
 	tn := ss.GetInt()
 	tran := ss.tran(tn)
 	tran.Abort()
-	delete(ss.trans, tn)
+	ss.deleteTran(tn)
 	ss.PutBool(true)
+}
+
+func (ss *serverSession) deleteTran(tn int) {
+	ss.transLock.Lock()
+	defer ss.transLock.Unlock()
+	delete(ss.trans, tn)
 }
 
 func (ss *serverSession) getTran() ITran {
@@ -353,6 +370,8 @@ func (ss *serverSession) getTran() ITran {
 }
 
 func (ss *serverSession) tran(tn int) ITran {
+	ss.transLock.Lock()
+	defer ss.transLock.Unlock()
 	tran, ok := ss.trans[tn]
 	if !ok {
 		ss.error("transaction not found")
@@ -432,7 +451,7 @@ func cmdCommit(ss *serverSession) {
 	tn := ss.GetInt()
 	tran := ss.tran(tn)
 	result := tran.Complete()
-	delete(ss.trans, tn)
+	ss.deleteTran(tn)
 	ss.PutBool(true)
 	if result == "" {
 		ss.PutBool(true)
@@ -452,7 +471,7 @@ func connections() *SuObject {
 	for _, sc := range serverConns {
 		sc.sessionsLock.Lock()
 		for _, ss := range sc.sessions {
-			list.Add(SuStr(ss.sessionId))
+			list.Add(SuStr(ss.sessionId.Load()))
 		}
 		sc.sessionsLock.Unlock()
 	}
@@ -650,15 +669,19 @@ func kill(sid string) int {
 	defer serverConnsLock.Unlock()
 	nkilled := 0
 	for id, sc := range serverConns {
-		for _, ss := range sc.sessions {
-			if ss.sessionId == sid {
-				sc.serverLog("dbms server: kill:", sid)
-				delete(serverConns, id)
-				sc.conn.Close()
-				nkilled++
-				break
+		func() {
+			sc.sessionsLock.Lock()
+			defer sc.sessionsLock.Unlock()
+			for _, ss := range sc.sessions {
+				if ss.sessionId.Load() == sid {
+					sc.serverLog("dbms server: kill:", sid)
+					delete(serverConns, id)
+					sc.conn.Close()
+					nkilled++
+					break
+				}
 			}
-		}
+		}()
 	}
 	return nkilled
 }
@@ -750,9 +773,9 @@ func cmdRun(ss *serverSession) {
 func cmdSessionId(ss *serverSession) {
 	s := ss.GetStr()
 	if s != "" {
-		ss.sessionId = s
+		ss.sessionId.Store(s)
 	}
-	ss.PutBool(true).PutStr(ss.sessionId)
+	ss.PutBool(true).PutStr(ss.sessionId.Load())
 }
 
 func cmdSize(ss *serverSession) {
@@ -781,7 +804,11 @@ func cmdTransaction(ss *serverSession) {
 	update := ss.GetBool()
 	tran := ss.sc.dbms.Transaction(update)
 	tn := ss.nextNum(update)
-	ss.trans[tn] = tran
+	func() {
+		ss.transLock.Lock()
+		defer ss.transLock.Unlock()
+		ss.trans[tn] = tran
+	}()
 	ss.PutBool(true).PutInt(tn)
 }
 
@@ -795,10 +822,15 @@ func (ss *serverSession) nextNum(update bool) int {
 }
 
 func cmdTransactions(ss *serverSession) {
-	list := make([]int, 0, len(ss.trans))
-	for tn := range ss.trans {
-		list = append(list, tn)
-	}
+	var list []int
+	func() {
+		ss.transLock.Lock()
+		defer ss.transLock.Unlock()
+		list = make([]int, 0, len(ss.trans))
+		for tn := range ss.trans {
+			list = append(list, tn)
+		}
+	}()
 	ss.PutBool(true).PutInts(list)
 }
 
