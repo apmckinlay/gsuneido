@@ -36,7 +36,7 @@ ifdef PATHEXT
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)" -race -o race/
 	$(PORTABLE) -race -o race/gsport.exe
 else
-	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)" -race -o race/$(OUTPUT)
+	$(GO) $(BUILD) -v -ldflags "$(LDFLAGS)" -race -o race/$(OUTPUT)
 endif
 
 portable:
