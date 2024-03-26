@@ -150,11 +150,18 @@ func (th *Thread) Invalidate() {
 	th.fp = math.MaxInt
 }
 
-// Reset is equivalent to calling NewThread(nil)
+// Reset clears the thread except for Num, Name, session, and dbms
 func (th *Thread) Reset() {
 	assert.That(len(th.rules.list) == 0)
+	num := th.Num
+	name := th.Name
+	session := th.session.Load()
+	dbms := th.dbms
 	*th = Thread{} // zero it
-	setup(th)
+	th.Num = num
+	th.Name = name
+	th.session.Store(session)
+	th.dbms = dbms
 }
 
 func (th *Thread) Session() string {
