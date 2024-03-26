@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -18,11 +19,11 @@ import (
 type what int
 
 // var cur = ClientServer
-var cur = what(0)
+var cur atomics.Value[what]
 
 func Set(w int) int {
-	prev := cur
-	cur = what(w)
+	prev := cur.Load()
+	cur.Store(what(w))
 	return int(prev)
 }
 
@@ -78,12 +79,12 @@ func (w what) String() string {
 }
 
 func (w what) Set() {
-	cur |= w
+	cur.Store(cur.Load() | w)
 }
 
 func (w what) Println(first any, rest ...any) {
 	// kept short in hopes it will be inlined
-	if cur&w != 0 {
+	if cur.Load()&w != 0 {
 		format(&first)
 		for i := range rest {
 			format(&rest[i])
@@ -101,10 +102,11 @@ func Println(args ...any) {
 }
 
 func Print(s string) {
-	if cur&LogFile != 0 || cur&(LogFile|Console) == 0 {
+	c := cur.Load()
+	if c&LogFile != 0 || c&(LogFile|Console) == 0 {
 		logPrint(s)
 	}
-	if cur&Console != 0 || cur&(LogFile|Console) == 0 {
+	if c&Console != 0 || c&(LogFile|Console) == 0 {
 		consolePrint(s)
 	}
 }
@@ -149,7 +151,7 @@ func Number(n any) string {
 }
 
 func (w what) On() bool {
-	return cur&w != 0
+	return cur.Load()&w != 0
 }
 
 var traceLog *os.File
