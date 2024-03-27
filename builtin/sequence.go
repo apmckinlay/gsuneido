@@ -41,7 +41,7 @@ func (wi *wrapIter) Infinite() (result bool) {
 
 func (wi *wrapIter) Dup() Iter {
 	it := wi.call("Dup")
-	return &wrapIter{it: it, th: wi.th, concurrent: wi.concurrent}
+	return &wrapIter{it: it, th: wi.th, suneido: wi.suneido, concurrent: wi.concurrent}
 }
 
 func (wi *wrapIter) SetConcurrent() {
