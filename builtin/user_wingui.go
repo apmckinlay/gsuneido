@@ -2311,6 +2311,16 @@ func MapWindowRect(a, b, c Value) Value {
 	return intRet(rtn)
 }
 
+func init() {
+	SuneidoObjectMethods["CNullPointer"] =
+		builtinVal("CNullPointer", CNullPointer, "()")
+}
+
+func CNullPointer() Value {
+	goc.Syscall1(0, 0)
+	return nil
+}
+
 var getGuiResources = user32.MustFindProc("GetGuiResources").Addr()
 
 const GR_GDIOBJECTS = 0
