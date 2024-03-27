@@ -91,9 +91,9 @@ func thread_Count() Value {
 
 var _ = AddInfo("builtin.nThread", threads.count)
 
-var _ = staticMethod(thread_List2, "()")
+var _ = staticMethod(thread_List, "()")
 
-func thread_List2() Value { //TEMP for transition from members
+func thread_List() Value {
 	ob := &SuObject{}
 	threads.lock.Lock()
 	defer threads.lock.Unlock()
@@ -101,6 +101,12 @@ func thread_List2() Value { //TEMP for transition from members
 		ob.Add(SuStr(t.Name))
 	}
 	return ob
+}
+
+var _ = staticMethod(thread_List2, "()")
+
+func thread_List2() Value { //TEMP for transition from members
+	return thread_List()
 }
 
 var _ = staticMethod(thread_Sleep, "(ms)")
