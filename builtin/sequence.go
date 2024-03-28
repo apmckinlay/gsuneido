@@ -21,7 +21,7 @@ func Sequence(th *Thread, args []Value) Value {
 type wrapIter struct {
 	it Value
 	// When not concurrent we use the creating thread,
-	// when concurrent we use a temporary thread with th.Suneido
+	// when concurrent we use a temporary thread with this suneido
 	th         *Thread
 	suneido    *SuneidoObject
 	concurrent bool
