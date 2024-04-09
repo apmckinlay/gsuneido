@@ -5,6 +5,6 @@
 
 package system
 
-func Redirect(string, func() string) error {
+func Redirect(string) error {
 	return nil
 }

@@ -156,10 +156,13 @@ void fatal(char* msg) {
 	msgbox(msg, "FATAL", 0);
 }
 
-const int CTRL_BREAK_ID = 1; // arbitrary value passed to RegisterHotKey
+void msgexit(const char* msg) {
+	DWORD nw;
+	WriteFile(GetStdHandle(STD_ERROR_HANDLE), msg, strlen(msg), &nw, 0);
+	exit(1);
+}
 
-#include <io.h>
-const int STDERR = 2;
+const int CTRL_BREAK_ID = 1; // arbitrary value passed to RegisterHotKey
 
 static int interrupt() {
 	MSG msg;
@@ -169,22 +172,16 @@ static int interrupt() {
 		while (PeekMessage(&msg, NULL, WM_HOTKEY, WM_HOTKEY, PM_REMOVE)) {
 			if (msg.wParam == CTRL_BREAK_ID)
 				hotkey = 1;
-			if (++n > 100) {
-				const char* msg = "FATAL: interrupt too many loops\r\n";
-				write(STDERR, msg, strlen(msg));
-				exit(1);
-			}
+			if (++n > 100)
+				msgexit("FATAL: interrupt too many loops\r\n");
 		}
 	}
 	return hotkey;
 }
 
 uintptr interact() {
-	if (GetCurrentThreadId() != main_threadid) {
-		const char* msg = "FATAL: interact called from different thread\r\n";
-		write(STDERR, msg, strlen(msg));
-		exit(1);
-	}
+	if (GetCurrentThreadId() != main_threadid)
+		msgexit("FATAL: interact called from different thread\r\n");
 	for (;;) {
 		// these are the messages sent from go-side to c-side
 		switch (args[0]) {
@@ -371,12 +368,23 @@ static int setupHelper() {
 
 int sunapp_register_classes();
 
+#include <stdio.h>
+
+static LONG WINAPI filter(EXCEPTION_POINTERS* p_info) {
+	unsigned int e = p_info->ExceptionRecord->ExceptionCode;
+	char buf[64];
+	snprintf(buf, sizeof buf, "FATAL: unhandled C exception %x\r\n", e);
+	msgexit(buf);
+	return EXCEPTION_EXECUTE_HANDLER;
+}
+
 static DWORD WINAPI thread(LPVOID lpParameter) {
 	OleInitialize(NULL);
 	sunapp_register_classes();
 	RegisterHotKey(0, CTRL_BREAK_ID, MOD_CONTROL, VK_CANCEL);
 	main_threadid = GetCurrentThreadId();
 	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
+	SetUnhandledExceptionFilter(filter);
 	CreateThread(NULL, 8192, timer_thread, 0, 0, 0);
 	setupHelper();
 	args[0] = msg_none;

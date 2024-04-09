@@ -6,6 +6,7 @@ package core
 import (
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -344,6 +345,9 @@ func (th *Thread) Cat(x, y Value) Value {
 }
 
 func (th *Thread) SessionId(id string) string {
+	if id != "" && th == MainThread {
+		log.SetPrefix(id + " ")
+	}
 	if th.dbms == nil {
 		// don't create a connection just to get/set the session id
 		if id != "" {

@@ -210,13 +210,7 @@ func main() {
 }
 
 func redirect() {
-	getId := func() string {
-		if MainThread == nil {
-			return ""
-		}
-		return MainThread.Session()
-	}
-	if err := system.Redirect(options.Errlog, getId); err != nil {
+	if err := system.Redirect(options.Errlog); err != nil {
 		Fatal("Redirect failed:", err)
 	}
 }
@@ -241,12 +235,15 @@ func ck(err error) {
 // This is to record errors that occurred on the client
 // when the server was not connected.
 func clientErrorLog() {
-	dbms := mainThread.Dbms()
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
+	sid := mainThread.SessionId("") + " "
+	log.SetPrefix(sid)
 
 	f, err := os.Open(options.Errlog)
 	if err != nil {
 		return
 	}
+	dbms := mainThread.Dbms()
 	defer func() {
 		f.Close()
 		os.Truncate(options.Errlog, 0) // can't remove since open as stderr
@@ -259,7 +256,11 @@ func clientErrorLog() {
 	in.Buffer(nil, 1024)
 	nlines := 0
 	for in.Scan() {
-		dbms.Log("PREV: " + in.Text())
+		s := "PREV: " + in.Text()
+		if !strings.Contains(s, sid) {
+			s = sid + s
+        }
+		dbms.Log(s)
 		if nlines++; nlines > 1000 {
 			dbms.Log("PREV: too many errors")
 			break
