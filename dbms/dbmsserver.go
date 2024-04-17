@@ -52,15 +52,15 @@ type serverConn struct {
 
 // serverSession is one client session
 type serverSession struct {
-	sc *serverConn
-	*mux.WriteBuf
-	thread    *Thread
-	transLock sync.Mutex // guards trans
-	trans     map[int]ITran
-	cursors   map[int]ICursor
-	queries   map[int]IQuery
-	sessionId atomics.String
-	nonce     string
+	sc            *serverConn
+	*mux.WriteBuf            // set per request
+	thread        *Thread    // set per request
+	transLock     sync.Mutex // guards trans
+	trans         map[int]ITran
+	cursors       map[int]ICursor
+	queries       map[int]IQuery
+	sessionId     atomics.String
+	nonce         string
 	mux.ReadBuf
 	// id is primarily used as a key to store the set of sessions in a map
 	id uint32
@@ -248,7 +248,7 @@ func errToStr(e any) string {
 
 func (ss *serverSession) error(err string) {
 	ss.close()
-	log.Panicln("dbms server, closing connection:", err)
+	log.Panicln("dbms server, closing session:", err)
 }
 
 func (ss *serverSession) close() {
@@ -371,8 +371,8 @@ func (ss *serverSession) getTran() ITran {
 
 func (ss *serverSession) tran(tn int) ITran {
 	ss.transLock.Lock()
-	defer ss.transLock.Unlock()
 	tran, ok := ss.trans[tn]
+	ss.transLock.Unlock() // must release before ss.error
 	if !ok {
 		ss.error("transaction not found")
 	}
@@ -891,4 +891,10 @@ var cmds = []command{ // order must match commmands.go
 	cmdWriteCount,
 	cmdEndSession,
 	cmdAsof,
+	nil,
+}
+
+func init() {
+	assert.Msg("dbmsserver cmds").
+		That(cmds[commands.Asof] != nil && cmds[commands.Asof+1] == nil)
 }

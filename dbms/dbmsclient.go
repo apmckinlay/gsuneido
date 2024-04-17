@@ -278,15 +278,12 @@ func (ms *muxSession) getRow(off int) Row {
 
 type muxTran struct {
 	*muxSession
-	conflict string
 	tn       int
-	ended    bool
 }
 
 var _ ITran = (*muxTran)(nil)
 
 func (tc *muxTran) Abort() string {
-	tc.ended = true
 	tc.PutCmd(commands.Abort).PutInt(tc.tn)
 	tc.Request()
 	return ""
@@ -299,22 +296,12 @@ func (tc *muxTran) Asof(asof int64) int64 {
 }
 
 func (tc *muxTran) Complete() string {
-	tc.ended = true
 	tc.PutCmd(commands.Commit).PutInt(tc.tn)
 	tc.Request()
 	if tc.GetBool() {
 		return ""
 	}
-	tc.conflict = tc.GetStr()
-	return tc.conflict
-}
-
-func (tc *muxTran) Conflict() string {
-	return tc.conflict
-}
-
-func (tc *muxTran) Ended() bool {
-	return tc.ended
+	return tc.GetStr()
 }
 
 func (tc *muxTran) Delete(_ *Thread, table string, off uint64) {

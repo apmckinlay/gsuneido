@@ -16,7 +16,16 @@ type SuTran struct {
 	itran     ITran
 	data      *SuObject
 	updatable bool
+	status    stStatus
 }
+
+type stStatus int
+
+const (
+	stActive stStatus = iota
+	stCompleted
+	stAborted
+)
 
 func NewSuTran(itran ITran, updatable bool) *SuTran {
 	return &SuTran{itran: itran, updatable: updatable}
@@ -52,6 +61,7 @@ func (st *SuTran) Lookup(th *Thread, method string) Callable {
 //-------------------------------------------------------------------
 
 func (st *SuTran) Asof(val Value) Value {
+	st.ckActive()
 	var asof int64
 	switch val {
 	case False:
@@ -71,17 +81,21 @@ func (st *SuTran) Asof(val Value) Value {
 }
 
 func (st *SuTran) Complete() {
-	if conflict := st.itran.Complete(); conflict != "" {
-		panic("transaction.Complete failed: " + conflict)
+	switch st.status {
+	case stCompleted:
+		return
+	case stAborted:
+		panic("transaction.Complete failed: already aborted")
 	}
-}
-
-func (st *SuTran) Conflict() string {
-	return st.itran.Conflict()
+	if err := st.itran.Complete(); err != "" {
+		st.status = stAborted
+		panic("transaction.Complete failed: " + err)
+	}
+	st.status = stCompleted
 }
 
 func (st *SuTran) Ended() bool {
-	return st.itran.Ended()
+	return st.status != stActive
 }
 
 func (st *SuTran) Delete(th *Thread, table string, off uint64) {
@@ -101,6 +115,7 @@ func (st *SuTran) Query(th *Thread, query string) *SuQuery {
 }
 
 func (st *SuTran) ReadCount() int {
+	st.ckActive()
 	return st.itran.ReadCount()
 }
 
@@ -110,8 +125,15 @@ func (st *SuTran) Action(th *Thread, action string) int {
 }
 
 func (st *SuTran) Rollback() {
+	switch st.status {
+	case stAborted:
+		return
+	case stCompleted:
+		panic("transaction.Rollback failed: already completed")
+	}
+	st.status = stAborted
 	if err := st.itran.Abort(); err != "" {
-		panic("transaction Rollback failed: " + err)
+		panic("transaction.Rollback failed: " + err)
 	}
 }
 
@@ -125,13 +147,8 @@ func (st *SuTran) Update(th *Thread, table string, off uint64, rec Record) uint6
 }
 
 func (st *SuTran) WriteCount() int {
+	st.ckActive()
 	return st.itran.WriteCount()
-}
-
-func (st *SuTran) ckActive() {
-	if st.itran.Ended() {
-		panic("can't use ended transaction")
-	}
 }
 
 func (st *SuTran) Data() *SuObject {
@@ -139,4 +156,10 @@ func (st *SuTran) Data() *SuObject {
 		st.data = &SuObject{}
 	}
 	return st.data
+}
+
+func (st *SuTran) ckActive() {
+	if st.status != stActive {
+		panic("can't use ended transaction")
+	}
 }

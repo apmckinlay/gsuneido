@@ -53,12 +53,6 @@ func tran_Complete(this Value) Value {
 	return nil
 }
 
-var _ = method(tran_Conflict, "()")
-
-func tran_Conflict(this Value) Value {
-	return SuStr(this.(*SuTran).Conflict())
-}
-
 var _ = method(tran_Data, "()")
 
 func tran_Data(this Value) Value {

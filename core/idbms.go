@@ -107,10 +107,6 @@ type ITran interface {
 	// It returns "" on success, otherwise the conflict.
 	Complete() string
 
-	Conflict() string
-
-	Ended() bool
-
 	// Delete deletes a record
 	Delete(th *Thread, table string, off uint64)
 
