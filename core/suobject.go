@@ -5,6 +5,7 @@ package core
 
 import (
 	"cmp"
+	"fmt"
 	"log"
 	"slices"
 	"sort"
@@ -57,13 +58,12 @@ type SuObject struct {
 	version int32
 	// clock is incremented by any modification, including in-place updates.
 	// It is used to detect modification during packing.
-	clock      uint32
-	readonly   bool
-	sorting    bool
-	sizeWarned bool
+	clock    uint32
+	readonly bool
+	sorting  bool
 }
 
-const obSizeWarn = 64_000 // ??? // LibLocate.list is 52,000
+const obSizeLimit = 64_000 // ??? // LibLocate.list is 52,000
 
 // NewSuObject creates an SuObject from a slice of Value's
 func NewSuObject(args []Value) *SuObject {
@@ -254,9 +254,12 @@ func (ob *SuObject) set(key, val Value) {
 		}
 	}
 	ob.named.Put(key, val)
-	if ob.named.Size() > obSizeWarn && !ob.sizeWarned {
-		Warning("object named size >", obSizeWarn)
-		ob.sizeWarned = true
+	ob.ckSize()
+}
+
+func (ob *SuObject) ckSize() {
+	if ob.size() > obSizeLimit {
+		panic(fmt.Sprintf("object too large (> %d)", obSizeLimit))
 	}
 }
 
@@ -488,10 +491,7 @@ func (ob *SuObject) migrate() {
 		}
 		ob.list = append(ob.list, x)
 	}
-	if len(ob.list) > obSizeWarn && !ob.sizeWarned {
-		Warning("object list size >", obSizeWarn)
-		ob.sizeWarned = true
-	}
+	ob.ckSize()
 }
 
 // vstack is used by Display and Show
@@ -927,7 +927,7 @@ func (ob *SuObject) Sort(th *Thread, lt Value) {
 			defer ob.Lock()
 			sort.SliceStable(ob.list, func(i, j int) bool {
 				lt := th.Call(lt, ob.list[i], ob.list[j])
-				if lt != True && lt!= False {
+				if lt != True && lt != False {
 					Warning("Sort! functions should return true or false")
 				}
 				return lt == True //TODO remove warning and use ToBool
