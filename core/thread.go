@@ -208,21 +208,22 @@ func (th *Thread) Swap() {
 	th.stack[th.sp-1], th.stack[th.sp-2] = th.stack[th.sp-2], th.stack[th.sp-1]
 }
 
-// GetState and RestoreState are used by callbacks_windows.go
+// Get/Check/RestoreState are used by callbacks_windows.go and updateui_wingui.go
 
-type state struct {
-	fp int
-	sp int
+type ThreadState struct {
+	fp          int
+	sp          int
+	returnThrow bool
 }
 
-func (th *Thread) GetState() state {
-	return state{fp: th.fp, sp: th.sp}
+func (th *Thread) GetState() ThreadState {
+	return ThreadState{fp: th.fp, sp: th.sp, returnThrow: th.ReturnThrow}
 }
 
-func (th *Thread) RestoreState(st any) {
-	s := st.(state)
-	th.fp = s.fp
-	th.sp = s.sp
+func (th *Thread) RestoreState(st ThreadState) {
+	th.fp = st.fp
+	th.sp = st.sp
+	th.ReturnThrow = st.returnThrow
 }
 
 // Callstack captures the call stack
@@ -328,7 +329,7 @@ func (th *Thread) Close() {
 }
 
 // SubThread is a NewThread with the same dbms as this thread.
-// This is used for the RunOnGoSide and SuneidoAPP threads.
+// This is used for SuneidoAPP threads.
 // We want a new thread for isolation e.g. for exceptions or dynamic variables
 // but we don't need the overhead of another dbms connection.
 // WARNING: This should only be used where it is guaranteed

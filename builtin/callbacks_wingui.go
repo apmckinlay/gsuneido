@@ -124,7 +124,7 @@ func call(fn Value, args ...Value) uintptr {
 	return uintptr(ToInt(x))
 }
 
-func handler(e any, state any) {
+func handler(e any, state ThreadState) {
 	if UIThread.InHandler {
 		LogUncaught(UIThread, "Handler", e)
 		Alert("Error in Handler:", e)

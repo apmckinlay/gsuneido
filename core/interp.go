@@ -166,11 +166,11 @@ loop:
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
 		if th.UIThread {
 			if th.OpCount == 0 {
+				th.OpCount = 1009 // reset counter
 				RunOnGoSide()
 				if Interrupt() {
 					panic("interrupt")
 				}
-				th.OpCount = 1009 // otherwise it won't trigger again
 			}
 			th.OpCount--
 		}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"golang.org/x/sys/windows"
 )
 
@@ -22,10 +23,10 @@ var rogsChan = make(chan func(), 1)
 var _ = builtin(UpdateUI, "(block)")
 
 func UpdateUI(th *Thread, args []Value) Value {
+	block := args[0]
 	if windows.GetCurrentThreadId() == uiThreadId {
-		Synchronized(th, args)
+		th.Call(block)
 	} else {
-		block := args[0]
 		block.SetConcurrent()
 		rogsChan <- func() { runUI(block) }
 		notifyCside()
@@ -45,7 +46,8 @@ func notifyCside() {
 	}
 }
 
-// runOnGoSide is called from goc.RunOnGoSide and runtime.RunOnGoSide
+// runOnGoSide is used by runtime.RunOnGoSide (called by interp)
+// and goc.RunOnGoSide (called by cside)
 func runOnGoSide() {
 	for {
 		select {
@@ -57,17 +59,15 @@ func runOnGoSide() {
 	}
 }
 
-var updateThread *Thread
-
 func runUI(block Value) {
+	state := UIThread.GetState()
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR in UpdateUI:", e)
 			UIThread.PrintStack()
+			dbg.PrintStack()
 		}
+		UIThread.RestoreState(state)
 	}()
-	if updateThread == nil {
-		updateThread = UIThread.SubThread()
-	}
-	updateThread.Call(block)
+	UIThread.Call(block)
 }
