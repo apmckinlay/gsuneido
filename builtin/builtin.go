@@ -14,8 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-var UIThread *Thread // set by main
-
 // builtin function names can end in Q or X for ? or !
 func builtin(f any, p string) any {
 	name := funcName(f)

@@ -48,7 +48,7 @@ var help = `options:
 
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal *dbms.DbmsLocal
-var mainThread Thread
+var mainThread = Thread{Name: "main", UIThread: true, OpCount: 1009}
 var sviews Sviews
 
 func main() {
@@ -72,7 +72,6 @@ func main() {
 	}
 
 	Libload = libload // dependency injection
-	mainThread.Name = "main"
 	mainThread.SetSviews(&sviews)
 	MainThread = &mainThread
 
@@ -174,8 +173,6 @@ func main() {
 		Alert("invalid action:", options.Action)
 		os.Exit(1)
 	}
-	mainThread.UIThread = true
-	builtin.UIThread = &mainThread
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR:", e, "(exiting)")

@@ -20,6 +20,7 @@ func MessageLoop(_ *Thread, args []Value) Value {
 	return nil
 }
 
+// uiThreadId is used to detect calls from other threads (not allowed)
 var uiThreadId uint32
 
 func init() {
@@ -33,7 +34,6 @@ func init() {
 	Interrupt = goc.Interrupt
 	goc.Shutdown = shutdown
 
-	// used to detect calls from other threads (not allowed)
 	runtime.LockOSThread()
 	uiThreadId = windows.GetCurrentThreadId()
 

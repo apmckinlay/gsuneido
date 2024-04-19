@@ -60,14 +60,14 @@ func runOnGoSide() {
 }
 
 func runUI(block Value) {
-	state := UIThread.GetState()
+	state := MainThread.GetState()
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR in UpdateUI:", e)
-			UIThread.PrintStack()
+			MainThread.PrintStack()
 			dbg.PrintStack()
 		}
-		UIThread.RestoreState(state)
+		MainThread.RestoreState(state)
 	}()
-	UIThread.Call(block)
+	MainThread.Call(block)
 }

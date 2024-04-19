@@ -16,7 +16,7 @@ var sunappThread *Thread
 // sunAPP is called by goside.go <- interact <- cside.c <- sunapp.cpp
 func sunAPP(url string) (result string) {
 	if sunappThread == nil {
-		sunappThread = UIThread.SubThread()
+		sunappThread = MainThread.SubThread()
 	}
 	defer func() {
 		if err := recover(); err != nil {

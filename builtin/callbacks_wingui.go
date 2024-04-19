@@ -104,7 +104,7 @@ func (cb *callback) callv(args ...Value) uintptr {
 
 func call(fn Value, args ...Value) uintptr {
 	heapSize := heap.CurSize()
-	state := UIThread.GetState()
+	state := MainThread.GetState()
 	defer func() {
 		if e := recover(); e != nil {
 			handler(e, state)
@@ -114,7 +114,7 @@ func call(fn Value, args ...Value) uintptr {
 				"in", fn, args)
 		}
 	}()
-	x := UIThread.Call(fn, args...)
+	x := MainThread.Call(fn, args...)
 	if x == nil || x == False {
 		return 0
 	}
@@ -125,23 +125,23 @@ func call(fn Value, args ...Value) uintptr {
 }
 
 func handler(e any, state ThreadState) {
-	if UIThread.InHandler {
-		LogUncaught(UIThread, "Handler", e)
+	if MainThread.InHandler {
+		LogUncaught(MainThread, "Handler", e)
 		Alert("Error in Handler:", e)
 		return
 	}
-	UIThread.InHandler = true
+	MainThread.InHandler = true
 	defer func() {
-		UIThread.InHandler = false
-		UIThread.RestoreState(state)
+		MainThread.InHandler = false
+		MainThread.RestoreState(state)
 		if e := recover(); e != nil {
-			LogUncaught(UIThread, "Handler", e)
+			LogUncaught(MainThread, "Handler", e)
 			Alert("Error in Handler:", e)
 		}
 	}()
-	se := ToSuExcept(UIThread, e)
-	handler := Global.GetName(UIThread, "Handler")
-	UIThread.Call(handler, se, Zero, se.Callstack)
+	se := ToSuExcept(MainThread, e)
+	handler := Global.GetName(MainThread, "Handler")
+	MainThread.Call(handler, se, Zero, se.Callstack)
 }
 
 var cblock sync.Mutex

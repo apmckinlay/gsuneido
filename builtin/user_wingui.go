@@ -409,17 +409,17 @@ func psArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
 var callWindowProc = user32.MustFindProc("CallWindowProcA").Addr()
 var _ = builtin(CallWindowProc, "(wndprcPrev, hwnd, msg, wParam, lParam)")
 
-func CallWindowProc(a, b, c, d, e Value) Value {
-	if a.Type() != types.Number {
+func CallWindowProc(th *Thread, a []Value) Value {
+	if a[0].Type() != types.Number {
 		// presumably a previous callback returned by SetWindowProc
-		return UIThread.Call(a, b, c, d, e)
+		return th.Call(a[0], a[1], a[2], a[3], a[4])
 	}
 	rtn := goc.Syscall5(callWindowProc,
-		intArg(a),
-		intArg(b),
-		intArg(c),
-		intArg(d),
-		intArg(e))
+		intArg(a[0]),
+		intArg(a[1]),
+		intArg(a[2]),
+		intArg(a[3]),
+		intArg(a[4]))
 	return intRet(rtn)
 }
 
