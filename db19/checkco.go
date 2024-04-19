@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
@@ -214,6 +215,9 @@ func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo
 }
 
 func (ck *CheckCo) Stop() {
+	if options.Action == "server" && len(ck.c) > 0 {
+		log.Println("channel len", len(ck.c))
+	}
 	// send nil rather than closing
 	// so other threads don't get "send on closed channel"
 	ck.c <- nil

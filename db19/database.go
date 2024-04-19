@@ -581,6 +581,9 @@ func (db *Database) close(unmap bool) {
 	}
 	if db.ck != nil {
 		db.ck.Stop() // writes final state
+		if options.Action == "server" {
+			log.Println("database stopped")
+		}
 	} else if db.mode != stor.Read {
 		db.persist(&execPersistSingle{}) // for testing
 	}

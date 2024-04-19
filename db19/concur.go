@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
@@ -84,6 +85,10 @@ loop:
 	close(em.jobChan)
 	if db.GetState() != prevState ||
 		prevState.Off != db.Store.Size()-uint64(stateLen) {
+		if options.Action == "server" {
+			log.Println("persist starting")
+			defer log.Println("persist finished")
+		}
 		db.persist(ep)
 	}
 	close(allDone)
