@@ -138,5 +138,5 @@ func suneido_Info(x Value) Value {
 	if x == False {
 		return SuObjectOfStrs(InfoList())
 	}
-	return SuStr(InfoStr(ToStr(x)))
+	return InfoStr(ToStr(x))
 }

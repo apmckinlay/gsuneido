@@ -4,7 +4,6 @@
 package core
 
 import (
-	"strconv"
 	"sync/atomic"
 
 	"golang.org/x/exp/maps"
@@ -21,19 +20,21 @@ func AddInfo(name string, ref any) struct{} {
 	return struct{}{}
 }
 
-func InfoStr(name string) string {
+func InfoStr(name string) Value {
 	x, ok := infos[name]
 	if !ok {
-		return ""
+		return nil
 	}
 	switch x := x.(type) {
 	case *atomic.Int64:
-		return strconv.Itoa(int(x.Load()))
+		return Int64Val(x.Load())
 	case *atomic.Int32:
-		return strconv.Itoa(int(x.Load()))
+		return IntVal(int(x.Load()))
 	case func() int:
-		return strconv.Itoa(int(x()))
+		return IntVal(x())
 	case func() string:
+		return SuStr(x())
+	case func() Value:
 		return x()
 	}
 	panic("unknown info type")
