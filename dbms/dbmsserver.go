@@ -59,12 +59,16 @@ type serverSession struct {
 	trans         map[int]ITran
 	cursors       map[int]ICursor
 	queries       map[int]IQuery
+	tranQueries   map[int]intSet // transaction id => query ids
+	queryTrans    map[int]int    // query id => transaction id
 	sessionId     atomics.String
 	nonce         string
 	mux.ReadBuf
 	// id is primarily used as a key to store the set of sessions in a map
 	id uint32
 }
+
+type intSet map[int]struct{}
 
 // Server listens and accepts connections. It never returns.
 func Server(dbms *DbmsLocal) {
@@ -192,11 +196,13 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	if ss == nil { // new session
 		trace.ClientServer.Println("server session", sid)
 		ss = &serverSession{
-			id:      sid,
-			sc:      sc,
-			trans:   make(map[int]ITran),
-			cursors: make(map[int]ICursor),
-			queries: make(map[int]IQuery),
+			id:          sid,
+			sc:          sc,
+			trans:       make(map[int]ITran),
+			cursors:     make(map[int]ICursor),
+			queries:     make(map[int]IQuery),
+			tranQueries: make(map[int]intSet),
+			queryTrans:  make(map[int]int),
 		}
 		ss.sessionId.Store(sc.remoteAddr)
 		sc.sessions[sid] = ss
@@ -323,25 +329,36 @@ func StopServer() {
 	serverConns = nil
 }
 
-var _ = AddInfo("server.nConnection", func() int {
-	serverConnsLock.Lock()
-	defer serverConnsLock.Unlock()
-	return len(serverConns)
-})
-
-var _ = AddInfo("server.nSession", func() int {
-	nses := 0
-	serverConnsLock.Lock()
-	defer serverConnsLock.Unlock()
-	for _, sc := range serverConns {
-		sc.sessionsLock.Lock()
-		nses += len(sc.sessions)
-		sc.sessionsLock.Unlock()
+var _ = AddInfo("server.info", func() Value {
+	if options.Action != "server" {
+		panic("server.info when not in server mode")
 	}
-	return nses
+	var nconns, nsess, ntrans, nqueries, ncursors int
+	serverConnsLock.Lock()
+	defer serverConnsLock.Unlock()
+	nconns += len(serverConns)
+	for _, sc := range serverConns {
+		func() {
+			sc.sessionsLock.Lock()
+			defer sc.sessionsLock.Unlock()
+			nsess += len(sc.sessions)
+			for _, ss := range sc.sessions {
+				ntrans += len(ss.trans)
+				nqueries += len(ss.queries)
+				ncursors += len(ss.cursors)
+			}
+		}()
+	}
+	ob := &SuObject{}
+	ob.Set(SuStr("connections"), IntVal(nconns))
+	ob.Set(SuStr("sessions"), IntVal(nsess))
+	ob.Set(SuStr("transactions"), IntVal(ntrans))
+	ob.Set(SuStr("queries"), IntVal(nqueries))
+	ob.Set(SuStr("cursors"), IntVal(ncursors))
+	return ob
 })
 
-//-------------------------------------------------------------------
+// commands ---------------------------------------------------------
 
 // NOTE: as soon as we send the response we may get a new request
 // which will take over the serverSession (ss)
@@ -359,14 +376,22 @@ func (ss *serverSession) deleteTran(tn int) {
 	ss.transLock.Lock()
 	defer ss.transLock.Unlock()
 	delete(ss.trans, tn)
+	for qn := range ss.tranQueries[tn] {
+		delete(ss.queries, qn)
+		delete(ss.queryTrans, qn)
+		if len(ss.queries) != len(ss.queryTrans) {
+			log.Println("ERROR deleteTran", len(ss.queries), "!=", len(ss.queryTrans))
+		}
+	}
+	delete(ss.tranQueries, tn)
 }
 
-func (ss *serverSession) getTran() ITran {
+func (ss *serverSession) getTran() (ITran, int) {
 	tn := ss.GetInt()
 	if tn == 0 {
-		return nil
+		return nil, 0
 	}
-	return ss.tran(tn)
+	return ss.tran(tn), tn
 }
 
 func (ss *serverSession) tran(tn int) ITran {
@@ -380,7 +405,7 @@ func (ss *serverSession) tran(tn int) ITran {
 }
 
 func cmdAction(ss *serverSession) {
-	tran := ss.getTran()
+	tran, _ := ss.getTran()
 	action := ss.GetStr()
 	n := tran.Action(ss.thread, action)
 	ss.PutBool(true).PutInt(n)
@@ -425,21 +450,27 @@ func cmdCheck(ss *serverSession) {
 }
 
 func cmdClose(ss *serverSession) {
-	n := ss.GetInt()
+	qn := ss.GetInt()
 	switch ss.GetChar() {
 	case 'q':
-		q := ss.queries[n]
+		q := ss.queries[qn]
 		if q == nil {
 			ss.error("query not found")
 		}
-		delete(ss.queries, n)
+		delete(ss.queries, qn)
+		tn := ss.queryTrans[qn]
+		delete(ss.queryTrans, qn)
+		if len(ss.queries) != len(ss.queryTrans) {
+			log.Println("ERROR cmdClose", len(ss.queries), "!=", len(ss.queryTrans))
+		}
+		delete(ss.tranQueries[tn], qn)
 		q.Close()
 	case 'c':
-		c := ss.cursors[n]
+		c := ss.cursors[qn]
 		if c == nil {
 			ss.error("cursor not found")
 		}
-		delete(ss.cursors, n)
+		delete(ss.cursors, qn)
 		c.Close()
 	default:
 		ss.error("dbms server expected q or c")
@@ -497,7 +528,7 @@ func cmdEndSession(ss *serverSession) {
 }
 
 func cmdErase(ss *serverSession) {
-	tran := ss.getTran()
+	tran, _ := ss.getTran()
 	table := ss.GetStr()
 	off := uint64(ss.GetInt64())
 	tran.Delete(ss.thread, table, off)
@@ -522,7 +553,7 @@ func cmdGet(ss *serverSession) {
 
 func (ss *serverSession) getQorTC() (tbl string, hdr *Header, row Row) {
 	dir := ss.getDir()
-	t := ss.getTran()
+	t, _ := ss.getTran()
 	if t == nil {
 		q := ss.getQuery()
 		hdr = q.Header()
@@ -615,7 +646,7 @@ func cmdGetOne(ss *serverSession) {
 	default:
 		ss.error("dbms server: expected + - 1")
 	}
-	tran := ss.getTran()
+	tran, _ := ss.getTran()
 	query := ss.GetStr()
 	var g func(*Thread, string, Dir) (Row, *Header, string)
 	if tran == nil {
@@ -745,12 +776,20 @@ func (ss *serverSession) getCursor() ICursor {
 }
 
 func cmdQuery(ss *serverSession) {
-	tran := ss.getTran()
+	tran, tn := ss.getTran()
 	query := ss.GetStr()
 	q := tran.Query(query, &ss.sc.Sviews)
-	num := int(lastNum.Add(1))
-	ss.queries[num] = q
-	ss.PutBool(true).PutInt(num)
+	qn := int(lastNum.Add(1))
+	ss.queries[qn] = q
+	ss.queryTrans[qn] = tn
+	if ss.tranQueries[tn] == nil {
+		ss.tranQueries[tn] = make(intSet)
+	}
+	ss.tranQueries[tn][qn] = struct{}{}
+	if len(ss.queries) != len(ss.queryTrans) {
+		log.Println("ERROR cmdQuery", len(ss.queries), "!=", len(ss.queryTrans))
+	}
+	ss.PutBool(true).PutInt(qn)
 }
 
 func cmdReadCount(ss *serverSession) {
@@ -835,7 +874,7 @@ func cmdTransactions(ss *serverSession) {
 }
 
 func cmdUpdate(ss *serverSession) {
-	tran := ss.getTran()
+	tran, _ := ss.getTran()
 	table := ss.GetStr()
 	off := uint64(ss.GetInt64())
 	rec := ss.GetRec()
