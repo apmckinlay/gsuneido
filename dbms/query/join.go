@@ -97,7 +97,7 @@ func NewJoin(src1, src2 Query, by []string, t QueryTran) Query {
 
 func newJoin(src1, src2 Query, by []string, t QueryTran,
 	prevFixed1, prevFixed2 []Fixed) *Join {
-	jn := &Join{joinBase: newJoinBase(false, src1, src2, by, t,
+	jn := &Join{joinBase: newJoinBase(src1, src2, by, t,
 		prevFixed1, prevFixed2)}
 	jn.keys = jn.getKeys()
 	jn.indexes = jn.getIndexes()
@@ -113,7 +113,7 @@ func (jn *Join) With(src1, src2 Query) *Join {
 	return newJoin(src1, src2, jn.by, jn.qt, jn.prevFixed1, jn.prevFixed2)
 }
 
-func newJoinBase(leftjoin bool, src1, src2 Query, by []string, t QueryTran,
+func newJoinBase(src1, src2 Query, by []string, t QueryTran,
 	prevFixed1, prevFixed2 []Fixed) joinBase {
 	b := set.Intersect(src1.Columns(), src2.Columns())
 	if len(b) == 0 {
@@ -256,9 +256,9 @@ func copyFixed(fromFixed, toFixed []Fixed, to Query, by []string, t QueryTran) Q
 var joinRev = 0 // tests can set to impossible to prevent reverse
 
 func (jn *Join) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	fwd := joinopt(jn.source1, jn.source2, jn.joinType, jn.Nrows,
+	fwd := joinopt(jn.source1, jn.source2, jn.Nrows,
 		mode, index, frac, jn.by, jn.fixed)
-	rev := joinopt(jn.source2, jn.source1, jn.joinType.reverse(), jn.Nrows,
+	rev := joinopt(jn.source2, jn.source1, jn.Nrows,
 		mode, index, frac, jn.by, jn.fixed)
 	rev.fixcost += outOfOrder + joinRev
 	if trace.JoinOpt.On() {
@@ -301,7 +301,7 @@ type joinCost struct {
 	varcost Cost
 }
 
-func joinopt(src1, src2 Query, joinType joinType, nrows func() (int, int),
+func joinopt(src1, src2 Query, nrows func() (int, int),
 	mode Mode, index []string, frac float64, by []string, fixed []Fixed) joinCost {
 	// always have to read all of source 1
 	fixcost1, varcost1, index := optOrdered(src1, mode, index, frac, fixed)
@@ -590,7 +590,7 @@ func NewLeftJoin(src1, src2 Query, by []string, t QueryTran) *LeftJoin {
 
 func newLeftJoin(src1, src2 Query, by []string, t QueryTran,
 	prevFixed1, prevFixed2 []Fixed) *LeftJoin {
-	lj := &LeftJoin{joinBase: newJoinBase(true, src1, src2, by, t,
+	lj := &LeftJoin{joinBase: newJoinBase(src1, src2, by, t,
 		prevFixed1, prevFixed2)}
 	lj.keys = lj.getKeys()
 	lj.indexes = lj.source1.Indexes()
@@ -690,7 +690,7 @@ func fixedConflict(fixed1, fixed2 []Fixed) bool {
 }
 
 func (lj *LeftJoin) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	jc := joinopt(lj.source1, lj.source2, lj.joinType, lj.Nrows,
+	jc := joinopt(lj.source1, lj.source2, lj.Nrows,
 		mode, index, frac, lj.by, lj.fixed)
 	return jc.fixcost, jc.varcost,
 		&joinApproach{index1: jc.index1, index2: jc.index2, frac2: jc.frac2}
