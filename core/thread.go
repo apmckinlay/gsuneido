@@ -37,24 +37,18 @@ const maxStack = 1024
 const maxFrames = 256
 
 type Thread struct {
+	thread1
+	thread2
+}
+
+// thread1 is the reset-able part of Thread
+type thread1 struct {
 
 	// stack is the Value stack for arguments and expressions.
 	// The end of the slice is the top of the stack.
 	stack [maxStack]Value
 
-	// Session is the name of the database session for clients and standalone.
-	// Server tracks client session names separately.
-	// Needs atomic because we access MainThread from other threads.
-	session atomics.String
-
-	// dbms is the database (client or local) for this Thread
-	dbms IDbms
-
-	// Suneido is a per-thread SuneidoObject that overrides the global one.
-	// Needs atomic because sequence.go wrapIter may access from other threads.
-	Suneido atomic.Pointer[SuneidoObject]
-
-	// subThreadOf is used for sessions
+	// subThreadOf is used for sessions.
 	subThreadOf *Thread
 
 	// blockReturnFrame is the parent frame of the block that is returning
@@ -64,9 +58,6 @@ type Thread struct {
 	rxCache *cache.Cache[string, regex.Pattern]
 	// TrCache is per thread so no locking is required
 	trCache *cache.Cache[string, tr.Set]
-
-	// Name is the name of the thread (default is Thread-#)
-	Name string
 
 	Nonce string
 
@@ -96,9 +87,6 @@ type Thread struct {
 	// fpMax is the "high water" mark for fp
 	fpMax int
 
-	// Num is a unique number assigned to the thread
-	Num int32
-
 	// UIThread is only set for the main UI thread.
 	// It controls whether interp checks for UI requests from other threads.
 	UIThread bool
@@ -114,6 +102,27 @@ type Thread struct {
 	sv *Sviews
 
 	Rand *rand.Rand
+}
+
+// thread2 is the non-reset-able part of Thread
+type thread2 struct {
+	// Session is the name of the database session for clients and standalone.
+	// Server tracks client session names separately.
+	// Needs atomic because we access MainThread from other threads.
+	session atomics.String
+
+	// Suneido is a per-thread SuneidoObject that overrides the global one.
+	// Needs atomic because sequence.go wrapIter may access from other threads.
+	Suneido atomic.Pointer[SuneidoObject]
+
+	// dbms is the database (client or local) for this Thread
+	dbms IDbms
+
+	// Num is a unique number assigned to the thread
+	Num int32
+
+	// Name is the name of the thread (default is Thread-#)
+	Name string
 }
 
 var threadNum atomic.Int32
@@ -138,7 +147,7 @@ func setup(th *Thread) *Thread {
 	th.Name = "Thread-" + strconv.Itoa(int(th.Num))
 	mts := ""
 	if MainThread != nil {
-		mts = MainThread.Session()
+		mts = MainThread.session.Load()
 	}
 	th.session.Store(str.Opt(mts, ":") + th.Name)
 	return th
@@ -151,18 +160,11 @@ func (th *Thread) Invalidate() {
 	th.fp = math.MaxInt
 }
 
-// Reset clears the thread except for Num, Name, session, and dbms
+// Reset clears the thread except for Num, Name, session, and dbms.
+// It is used by the repl and by dbms server workers.
 func (th *Thread) Reset() {
 	assert.That(len(th.rules.list) == 0)
-	num := th.Num
-	name := th.Name
-	session := th.session.Load()
-	dbms := th.dbms
-	*th = Thread{} // zero it
-	th.Num = num
-	th.Name = name
-	th.session.Store(session)
-	th.dbms = dbms
+	th.thread1 = thread1{} // zero it
 }
 
 func (th *Thread) Session() string {

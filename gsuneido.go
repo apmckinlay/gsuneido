@@ -48,7 +48,7 @@ var help = `options:
 
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal *dbms.DbmsLocal
-var mainThread = Thread{Name: "main", UIThread: true, OpCount: 1009}
+var mainThread Thread
 var sviews Sviews
 
 func main() {
@@ -72,6 +72,9 @@ func main() {
 	}
 
 	Libload = libload // dependency injection
+	mainThread.Name = "main"
+	mainThread.UIThread = true
+	mainThread.OpCount = 1009
 	mainThread.SetSviews(&sviews)
 	MainThread = &mainThread
 
