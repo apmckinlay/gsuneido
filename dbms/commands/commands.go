@@ -49,5 +49,4 @@ const (
 	WriteCount
 	EndSession
 	Asof
-	Eof
 )
