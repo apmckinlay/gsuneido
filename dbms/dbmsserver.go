@@ -50,12 +50,12 @@ type serverConn struct {
 	id uint32
 }
 
-// serverSession is one client session
+// serverSession handles one client session.
+// It should be thread contained, other than sessionId
 type serverSession struct {
 	sc            *serverConn
-	*mux.WriteBuf            // set per request
-	thread        *Thread    // set per request
-	transLock     sync.Mutex // guards trans
+	*mux.WriteBuf         // set per request
+	thread        *Thread // set per request
 	trans         map[int]ITran
 	cursors       map[int]ICursor
 	queries       map[int]IQuery
@@ -123,11 +123,10 @@ func idleCheck() {
 	serverConnsLock.Lock()
 	defer serverConnsLock.Unlock()
 	for _, sc := range serverConns {
-		sc.idleCount++
+		sc.idleCount++ // reset by doRequest
 		if sc.idleCount > options.TimeoutMinutes {
 			sc.serverLog("closing idle connection")
 			sc.close()
-			delete(serverConns, sc.id)
 		}
 	}
 }
@@ -158,7 +157,6 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 }
 
 // helloSize is the size of the initial connection message from the server
-// the size must match cSuneido and jSuneido
 const helloSize = 50
 
 var helloBuf [helloSize]byte
@@ -171,11 +169,11 @@ func hello() []byte {
 	return helloBuf[:]
 }
 
-// doRequest is called by workers
+// doRequest is called by workers (multi-threaded)
 func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	connId := uint32(id >> 32)
 	serverConnsLock.Lock()
-	if req == nil { // closing
+	if req == nil { // closing, e.g. error or lost connection in mux reader
 		// log.Println("dbms server: nil request (closing)")
 		delete(serverConns, connId)
 		serverConnsLock.Unlock()
@@ -227,13 +225,12 @@ func (ss *serverSession) request() {
 		}
 	}()
 	icmd = ss.GetCmd()
-	if icmd == commands.Eof {
-		ss.close()
-		return
-	}
 	if int(icmd) >= len(cmds) {
-		ss.close()
-		ss.sc.serverLog("closing connection: invalid command")
+		serverConnsLock.Lock()
+		defer serverConnsLock.Unlock()
+		ss.sc.close()
+		ss.sc.serverLog("closed connection: invalid command")
+		return
 	}
 	cmd := cmds[icmd]
 	cmd(ss)
@@ -265,23 +262,23 @@ func (ss *serverSession) close() {
 }
 
 func (ss *serverSession) abort() {
-	ss.transLock.Lock()
-	defer ss.transLock.Unlock()
 	for _, tran := range ss.trans {
 		tran.Abort()
 	}
 }
 
+// close is called by idleCheck and bad request. MUST hold serverConnsLock
 func (sc *serverConn) close() {
 	trace.ClientServer.Println("closing connection")
 	sc.conn.Close()
-	sc.sessionsLock.Lock()
-	defer sc.sessionsLock.Unlock()
-	for _, ss := range sc.sessions {
-		ss.abort()
-	}
+	delete(serverConns, sc.id)
+	// intentionally don't close the sessions and their transactions
+	// because that would require additional locking
+	// read-only transactions don't need to be closed
+	// and update transactions will time out
 }
 
+// Conns is used by HttpStatus
 func Conns() string {
 	var sb strings.Builder
 	sb.WriteString("<p>Connections:</p>\r\n<ul>\r\n")
@@ -329,35 +326,6 @@ func StopServer() {
 	serverConns = nil
 }
 
-var _ = AddInfo("server.info", func() Value {
-	if options.Action != "server" {
-		panic("server.info when not in server mode")
-	}
-	var nconns, nsess, ntrans, nqueries, ncursors int
-	serverConnsLock.Lock()
-	defer serverConnsLock.Unlock()
-	nconns += len(serverConns)
-	for _, sc := range serverConns {
-		func() {
-			sc.sessionsLock.Lock()
-			defer sc.sessionsLock.Unlock()
-			nsess += len(sc.sessions)
-			for _, ss := range sc.sessions {
-				ntrans += len(ss.trans)
-				nqueries += len(ss.queries)
-				ncursors += len(ss.cursors)
-			}
-		}()
-	}
-	ob := &SuObject{}
-	ob.Set(SuStr("connections"), IntVal(nconns))
-	ob.Set(SuStr("sessions"), IntVal(nsess))
-	ob.Set(SuStr("transactions"), IntVal(ntrans))
-	ob.Set(SuStr("queries"), IntVal(nqueries))
-	ob.Set(SuStr("cursors"), IntVal(ncursors))
-	return ob
-})
-
 // commands ---------------------------------------------------------
 
 // NOTE: as soon as we send the response we may get a new request
@@ -373,8 +341,6 @@ func cmdAbort(ss *serverSession) {
 }
 
 func (ss *serverSession) deleteTran(tn int) {
-	ss.transLock.Lock()
-	defer ss.transLock.Unlock()
 	delete(ss.trans, tn)
 	for qn := range ss.tranQueries[tn] {
 		delete(ss.queries, qn)
@@ -395,9 +361,7 @@ func (ss *serverSession) getTran() (ITran, int) {
 }
 
 func (ss *serverSession) tran(tn int) ITran {
-	ss.transLock.Lock()
 	tran, ok := ss.trans[tn]
-	ss.transLock.Unlock() // must release before ss.error
 	if !ok {
 		ss.error("transaction not found")
 	}
@@ -843,11 +807,7 @@ func cmdTransaction(ss *serverSession) {
 	update := ss.GetBool()
 	tran := ss.sc.dbms.Transaction(update)
 	tn := ss.nextNum(update)
-	func() {
-		ss.transLock.Lock()
-		defer ss.transLock.Unlock()
-		ss.trans[tn] = tran
-	}()
+	ss.trans[tn] = tran
 	ss.PutBool(true).PutInt(tn)
 }
 
@@ -862,14 +822,10 @@ func (ss *serverSession) nextNum(update bool) int {
 
 func cmdTransactions(ss *serverSession) {
 	var list []int
-	func() {
-		ss.transLock.Lock()
-		defer ss.transLock.Unlock()
-		list = make([]int, 0, len(ss.trans))
-		for tn := range ss.trans {
-			list = append(list, tn)
-		}
-	}()
+	list = make([]int, 0, len(ss.trans))
+	for tn := range ss.trans {
+		list = append(list, tn)
+	}
 	ss.PutBool(true).PutInts(list)
 }
 

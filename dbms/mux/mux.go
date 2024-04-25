@@ -149,7 +149,7 @@ func (*conn) putHdr(buf []byte, id uint32, size int, final bool) {
 
 const maxSize = 1024 * 1024 // 1 mb
 
-// reader reads from the connection
+// reader reads from one connection
 // and calls handler when it has a complete message.
 // client and server have different handlers.
 // Any errors close the connection.
