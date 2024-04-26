@@ -134,6 +134,8 @@ type ITran interface {
 	// and returns the date-time for the transaction,
 	// with the date-times as unix milli
 	Asof(int64) int64
+
+	Num() int
 }
 
 type Dir byte

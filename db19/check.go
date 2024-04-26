@@ -120,7 +120,8 @@ func NewCheck(db *Database) *Check {
 		cmtdTran:  make(map[int]*CkTran),
 		bytable:   make(map[string]map[int]*actions),
 		oldest:    math.MaxInt,
-		exclusive: make(map[string]int)}
+		exclusive: make(map[string]int),
+		seq:       1} // odd
 }
 
 func (ck *Check) Run(fn func() error) error {
@@ -152,7 +153,7 @@ func (ck *Check) count() int {
 }
 
 func (ck *Check) next() int {
-	ck.seq++
+	ck.seq += 2 // odd
 	return ck.seq
 }
 
@@ -626,7 +627,7 @@ func traceln(...any) {
 
 // Transactions returns a list of the active update transactions
 func (ck *Check) Transactions() []int {
-	trans := make([]int, 0, 4)
+	trans := make([]int, 0, len(ck.actvTran))
 	for _, t := range ck.actvTran {
 		// assert.That(!t.ended())
 		trans = append(trans, t.start)

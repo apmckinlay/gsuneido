@@ -228,11 +228,7 @@ func (ms *muxSession) Transaction(update bool) ITran {
 func (ms *muxSession) Transactions() *SuObject {
 	ms.PutCmd(commands.Transactions)
 	ms.Request()
-	ob := &SuObject{}
-	for n := ms.GetInt(); n > 0; n-- {
-		ob.Add(IntVal(ms.GetInt()))
-	}
-	return ob
+	return ms.GetVal().(*SuObject)
 }
 
 func (ms *muxSession) Unuse(lib string) bool {
@@ -345,8 +341,16 @@ func (tc *muxTran) WriteCount() int {
 	return tc.GetInt()
 }
 
+func (tc *muxTran) Num() int {
+	return tc.tn
+}
+
 func (tc *muxTran) String() string {
-	return "Transaction" + strconv.Itoa(tc.tn)
+	pre := "rt"
+	if tc.tn % 2 == 1 {
+		pre = "ut"
+    }
+	return pre + strconv.Itoa(tc.tn)
 }
 
 // ------------------------------------------------------------------

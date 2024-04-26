@@ -35,7 +35,7 @@ var workers *mux.Workers
 var serverConns = make(map[uint32]*serverConn)
 var serverConnsLock sync.Mutex // guards serverConns and idleCount
 
-var lastNum atomic.Int64 // used for queries, cursors, and transactions
+var lastNum atomic.Int64 // used for queries, cursors
 
 // serverConn is one client connection which handles multiple sessions
 type serverConn struct {
@@ -806,27 +806,14 @@ func cmdToken(ss *serverSession) {
 func cmdTransaction(ss *serverSession) {
 	update := ss.GetBool()
 	tran := ss.sc.dbms.Transaction(update)
-	tn := ss.nextNum(update)
+	tn := tran.Num()
 	ss.trans[tn] = tran
 	ss.PutBool(true).PutInt(tn)
 }
 
-func (ss *serverSession) nextNum(update bool) int {
-	num := int(lastNum.Add(1))
-	// update tran# are odd, read-only are even
-	for ((num % 2) == 1) != update {
-		num = int(lastNum.Add(1))
-	}
-	return num
-}
-
 func cmdTransactions(ss *serverSession) {
-	var list []int
-	list = make([]int, 0, len(ss.trans))
-	for tn := range ss.trans {
-		list = append(list, tn)
-	}
-	ss.PutBool(true).PutInts(list)
+	list := ss.sc.dbms.Transactions()
+	ss.PutBool(true).PutVal(list)
 }
 
 func cmdUpdate(ss *serverSession) {

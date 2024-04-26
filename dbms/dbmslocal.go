@@ -318,9 +318,10 @@ func (dbms *DbmsLocal) Transactions() *SuObject {
 	if trans == nil {
 		return SuObjectOf(Zero) // corrupt
 	}
+	slices.Sort(trans)
 	var ob SuObject
 	for _, t := range trans {
-		ob.Add(IntVal(t<<1 | 1)) // update tran# are odd
+		ob.Add(IntVal(t))
 	}
 	return &ob
 }
@@ -399,13 +400,8 @@ func init() {
 	}
 }
 
-type TranLocal interface {
-	Num() int
-}
-
 type ReadTranLocal struct {
 	*db19.ReadTran
-	TranLocal
 }
 
 func (t ReadTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, string) {
@@ -426,7 +422,6 @@ func (t ReadTranLocal) Action(*Thread, string) int {
 
 type UpdateTranLocal struct {
 	*db19.UpdateTran
-	TranLocal
 }
 
 func (t UpdateTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, string) {

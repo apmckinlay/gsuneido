@@ -25,10 +25,10 @@ import (
 )
 
 type tran struct {
-	db     *Database
-	meta   *meta.Meta
-	asof   int64
-	off    uint64
+	db   *Database
+	meta *meta.Meta
+	asof int64
+	off  uint64
 }
 
 // GetInfo returns read-only Info for the table or nil if not found
@@ -98,11 +98,15 @@ var nextReadTran atomic.Int32
 func (db *Database) NewReadTran() *ReadTran {
 	state := db.GetState()
 	return &ReadTran{tran: tran{db: db, meta: state.Meta},
-		num: int(nextReadTran.Add(1))}
+		num: int(nextReadTran.Add(2))} // even
 }
 
 func (t *ReadTran) String() string {
 	return "rt" + strconv.Itoa(t.num)
+}
+
+func (t *ReadTran) Num() int {
+	return t.num
 }
 
 func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
@@ -236,6 +240,10 @@ func (db *Database) NewUpdateTran() *UpdateTran {
 
 func (t *UpdateTran) String() string {
 	return t.ct.String()
+}
+
+func (t *UpdateTran) Num() int {
+	return t.ct.start
 }
 
 func (t *UpdateTran) ReadCount() int {
