@@ -103,12 +103,6 @@ func thread_List() Value {
 	return ob
 }
 
-var _ = staticMethod(thread_List2, "()")
-
-func thread_List2() Value { //TEMP for transition from members
-	return thread_List()
-}
-
 var _ = staticMethod(thread_Sleep, "(ms)")
 
 func thread_Sleep(ms Value) Value {
