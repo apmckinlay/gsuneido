@@ -8,9 +8,8 @@ import (
 	op "github.com/apmckinlay/gsuneido/core/opcodes"
 )
 
-// RunOnGoSide is injected
-var RunOnGoSide = func() {}
-var Interrupt = func() bool { return false }
+var RunOnGoSide func()    // injected
+var Interrupt func() bool // injected
 
 var BlockBreak = BuiltinSuExcept("block:break")
 var BlockContinue = BuiltinSuExcept("block:continue")
@@ -164,15 +163,17 @@ loop:
 		// fmt.Println("stack:", t.sp, t.stack[max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
-		if th.UIThread {
-			if th.OpCount == 0 {
-				th.OpCount = 1009 // reset counter
-				RunOnGoSide()
-				if Interrupt() {
-					panic("interrupt")
+		if wingui { // const so should be compiled away
+			if th == MainThread {
+				if th.OpCount == 0 {
+					th.OpCount = 1009 // reset counter
+					RunOnGoSide()
+					if Interrupt() {
+						panic("interrupt")
+					}
 				}
+				th.OpCount--
 			}
-			th.OpCount--
 		}
 		oc = op.Opcode(code[fr.ip])
 		fr.ip++

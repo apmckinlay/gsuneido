@@ -11,19 +11,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-func init() {
-	c := make(chan os.Signal, 1)
-	// signal.Notify(c, os.Interrupt)
-	Interrupt = func() bool {
-		select {
-		case <-c:
-			return true
-		default:
-			return false
-		}
-	}
-}
-
 func Run() {
 }
 

@@ -230,14 +230,6 @@ type singleIter struct {
 }
 
 func (ti *TempIndex) single() rowIter {
-	// sortlist uses a goroutine
-	// so UIThread must be false
-	// so interp doesn't call Interrupt
-	// leading to "illegal UI call from background thread"
-	defer func(prev bool) {
-		ti.th.UIThread = prev
-	}(ti.th.UIThread)
-	ti.th.UIThread = false
 	var th2 Thread // separate thread because sortlist runs in the background
 	b := sortlist.NewSorting(
 		func(x DbRec) bool { return x == DbRec{} },
@@ -259,7 +251,7 @@ func (ti *TempIndex) single() rowIter {
 	if nrows > 2*tempindexWarn {
 		log.Println("temp index large =", nrows)
 	}
-	// lt must be consistent with singleLess
+	// NOTE: the closure captures ti not ti.th
 	lt := func(rec DbRec, key []string) bool {
 		return ti.less2(ti.th, Row{rec}, key)
 	}
@@ -330,14 +322,6 @@ type multiIter struct {
 }
 
 func (ti *TempIndex) multi() rowIter {
-	// sortlist uses a goroutine
-	// so UIThread must be false
-	// so interp doesn't call Interrupt
-	// leading to "illegal UI call from background thread"
-	defer func(prev bool) {
-		ti.th.UIThread = prev
-	}(ti.th.UIThread)
-	ti.th.UIThread = false
 	var th2 Thread // separate thread because sortlist runs in the background
 	b := sortlist.NewSorting(
 		func(row Row) bool { return row == nil },
@@ -373,6 +357,7 @@ func (ti *TempIndex) multi() rowIter {
 		log.Println("temp index derived large =",
 			derived, "average", derived/nrows)
 	}
+	// NOTE: the closure captures ti not ti.th
 	lt := func(row Row, key []string) bool {
 		return ti.less2(ti.th, row, key)
 	}

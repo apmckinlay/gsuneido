@@ -73,7 +73,6 @@ func main() {
 
 	Libload = libload // dependency injection
 	mainThread.Name = "main"
-	mainThread.UIThread = true
 	mainThread.OpCount = 1009
 	mainThread.SetSviews(&sviews)
 	MainThread = &mainThread

@@ -87,10 +87,6 @@ type thread1 struct {
 	// fpMax is the "high water" mark for fp
 	fpMax int
 
-	// UIThread is only set for the main UI thread.
-	// It controls whether interp checks for UI requests from other threads.
-	UIThread bool
-
 	// InHandler is used to detect nested handler calls
 	InHandler bool
 
