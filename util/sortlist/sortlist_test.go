@@ -55,7 +55,7 @@ func FuzzSort(f *testing.F) {
 	})
 }
 
-func testSorting(t *testing.T, nb uint8, n2 uint16) {
+func testSorting(_ *testing.T, nb uint8, n2 uint16) {
 	n := int(nb)*blockSize + int(n2)
 	if n > 100_000 {
 		return
@@ -68,7 +68,7 @@ func testSorting(t *testing.T, nb uint8, n2 uint16) {
 	bldrInorder(bldr, n)
 }
 
-func testUnsorted(t *testing.T, nb uint8, n2 uint16) {
+func testUnsorted(_ *testing.T, nb uint8, n2 uint16) {
 	n := int(nb)*blockSize + int(n2)
 	if n > 100_000 {
 		return

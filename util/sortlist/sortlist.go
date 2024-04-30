@@ -45,6 +45,7 @@ type Builder[T any] struct {
 }
 
 // NewSorting returns a new list Builder with incremental sorting.
+// WARNING: this creates a goroutine which must be ended by Finish.
 func NewSorting[T any](zero func(x T) bool, less func(x, y T) bool) *Builder[T] {
 	li := &Builder[T]{less: less, zero: zero, blocks: make([]*block[T], 0, 4),
 		work: make(chan void), done: make(chan any), zeroBlock: &block[T]{}}
@@ -88,7 +89,7 @@ func (b *Builder[T]) Add(x T) {
 func (b *Builder[T]) Finish() List[T] {
 	var zero T
 	size := len(b.blocks)*blockSize + b.i
-	if b.done == nil {
+	if b.done == nil { // unsorted, no worker
 		if b.block != nil { // partial last block
 			b.block[b.i] = zero // terminator
 			b.blocks = append(b.blocks, b.block)
