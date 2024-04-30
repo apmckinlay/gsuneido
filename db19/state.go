@@ -112,9 +112,7 @@ func (db *Database) CommitMerge(ut *UpdateTran) {
 //-------------------------------------------------------------------
 
 // persist writes index changes (and a new state) to the database file.
-// It is called from concur.go regularly e.g. once per minute.
-// flatten applies to the schema and info chains (not indexes).
-// NOTE: persist should only be called by the checker.
+// It is called from concur.go regularly e.g. once per minute and at shutdown.
 func (db *Database) persist(exec execPersist) *DbState {
 	if db.corrupted.Load() {
 		return nil
