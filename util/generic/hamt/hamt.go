@@ -318,37 +318,6 @@ func (nd *node[K, E]) forEach(fn func(E)) {
 
 //-------------------------------------------------------------------
 
-func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64,
-	filter func(it E) bool) uint64 {
-	size := 0
-	ck := uint32(0)
-	ht.ForEach(func(it E) {
-		if filter(it) {
-			size += it.StorSize()
-		}
-		if !it.IsTomb() {
-			ck += it.Cksum()
-		}
-	})
-	if size == 0 {
-		return 0
-	}
-	size += 3 + 5 + cksum.Len + 4
-	off, buf := st.Alloc(size)
-	w := stor.NewWriter(buf)
-	w.Put3(size)
-	w.Put5(prevOff)
-	w.Put4(int(ck))
-	ht.ForEach(func(it E) {
-		if filter(it) {
-			it.Write(w)
-		}
-	})
-	assert.That(w.Len() == size-cksum.Len)
-	cksum.Update(buf)
-	return off
-}
-
 func ReadChain[K comparable, E Item[K]](st *stor.Stor, off uint64,
 	rdfn func(st *stor.Stor, r *stor.Reader) E) Chain[K, E] {
 	offs := make([]uint64, 0, 8)
@@ -466,6 +435,37 @@ func nmerge(no, clock int) int {
 		return no
 	}
 	return min(no, TrailingOnes(clock))
+}
+
+func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64,
+	filter func(it E) bool) uint64 {
+	size := 0
+	ck := uint32(0)
+	ht.ForEach(func(it E) {
+		if filter(it) {
+			size += it.StorSize()
+		}
+		if !it.IsTomb() {
+			ck += it.Cksum()
+		}
+	})
+	if size == 0 {
+		return 0
+	}
+	size += 3 + 5 + cksum.Len + 4
+	off, buf := st.Alloc(size)
+	w := stor.NewWriter(buf)
+	w.Put3(size)
+	w.Put5(prevOff)
+	w.Put4(int(ck))
+	ht.ForEach(func(it E) {
+		if filter(it) {
+			it.Write(w)
+		}
+	})
+	assert.That(w.Len() == size-cksum.Len)
+	cksum.Update(buf)
+	return off
 }
 
 func (c *Chain[K, E]) Cksum() uint32 {
