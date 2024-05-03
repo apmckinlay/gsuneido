@@ -172,6 +172,13 @@ func TestAdminAlterRename(t *testing.T) {
 	db.MustCheck()
 }
 
+func TestAdminAlterRename_BestKey(t *testing.T) {
+	db := createTestDb()
+	defer db.Close()
+	doAdmin(db, "alter tmp rename a to x")
+	db.MustCheck()
+}
+
 func TestAdminAlterDrop(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()

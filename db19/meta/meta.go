@@ -308,6 +308,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 			panic("rename causes duplicate index: " + str.Join("(,)", cols))
 		}
 		ix.Columns = cols
+		ix.BestKey = replace(ix.BestKey, from, to)
 	}
 	// ixspecs are ok since they are field indexes, not names
 	mu := newMetaUpdate(m)
