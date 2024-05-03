@@ -30,11 +30,11 @@ const chanBuffers = 4 // ???
 func StartConcur(db *Database, persistInterval time.Duration) {
 	mergeChan := make(chan todo, chanBuffers)
 	allDone := make(chan void)
-	go merger(db, mergeChan, persistInterval, allDone)
+	go merger(db, db.GetState(), mergeChan, persistInterval, allDone)
 	db.ck = StartCheckCo(db, mergeChan, allDone)
 }
 
-func merger(db *Database, mergeChan chan todo,
+func merger(db *Database, prevState *DbState, mergeChan chan todo,
 	persistInterval time.Duration, allDone chan void) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -47,7 +47,6 @@ func merger(db *Database, mergeChan chan todo,
 	// ep := &execPersistSingle{}
 	merges := &mergeList{}
 	ticker := time.NewTicker(persistInterval)
-	prevState := db.GetState()
 loop:
 	for {
 		select {
