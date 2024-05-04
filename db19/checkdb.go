@@ -74,16 +74,16 @@ func checkTable(state *DbState, table string) {
 	info := state.Meta.GetRoInfo(table)
 	sc := state.Meta.GetRoSchema(table)
 	if info == nil {
-		panic("info missing")
+		panic("info missing for " + table)
 	}
 	count, size, sum := checkFirstIndex(state, table, sc.Indexes[0].Columns,
 		info.Indexes[0])
 	if count != info.Nrows {
-		panic(fmt.Sprintln(table, sc.Indexes[0].Columns,
-			"count", count, "should equal info", info.Nrows))
+		panic(fmt.Sprint(table, " ", sc.Indexes[0].Columns,
+			" count ", count, " should equal info ", info.Nrows))
 	}
 	if size != info.Size {
-		panic(fmt.Sprintln(table, "size", size, "should equal info", info.Size))
+		panic(fmt.Sprint(table, " size ", size, " should equal info ", info.Size))
 	}
 	for i := 1; i < len(info.Indexes); i++ {
 		CheckOtherIndex(table, sc.Indexes[i].Columns, info.Indexes[i], count, sum)
@@ -122,7 +122,7 @@ func CheckOtherIndex(table string, ixcols []string, ix *index.Overlay, nrows int
 		sum += off // addition so order doesn't matter
 	})
 	if count != nrows {
-		panic(fmt.Sprintln("count", count, "should equal info", nrows))
+		panic(fmt.Sprint("count ", count, " should equal info ", nrows))
 	}
 	if sum != sumPrev {
 		panic("checksum mismatch")
