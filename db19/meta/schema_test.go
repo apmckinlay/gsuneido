@@ -15,8 +15,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func allSchema(*Schema) bool { return true }
-
 func TestSchema(t *testing.T) {
 	tbl := SchemaHamt{}.Mutable()
 	const n = 900
@@ -34,9 +32,9 @@ func TestSchema(t *testing.T) {
 	}
 	st := stor.HeapStor(32 * 1024)
 	st.Alloc(1) // avoid offset 0
-	off := tbl.Write(st, 0, allSchema)
+	off := tbl.Freeze().Write(st, 0, hamt.All)
 
-	test := func(i int, table string, ts *Schema) {
+	test := func(_ int, table string, ts *Schema) {
 		t.Helper()
 		assert := assert.T(t).This
 		assert(ts.Table).Msg("table").Is(table)

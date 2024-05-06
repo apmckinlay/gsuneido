@@ -134,6 +134,12 @@ func (db *Database) persist(exec execPersist) *DbState {
 	return newState
 }
 
+// PersistSync is for tests
+func (db *Database) PersistSync() {
+	db.GetState().Meta.ResetClock() // prevent flattening
+	assert.That(db.persist(&execPersistSingle{}) != nil)
+}
+
 const magic1 = "\x01\x23\x45\x67\x89\xab\xcd\xef"
 const magic2 = "\xfe\xdc\xba\x98\x76\x54\x32\x10"
 const dateSize = 8

@@ -36,6 +36,15 @@ func (m *Meta) Cksum() uint32 {
 	return m.schema.Cksum() + m.info.Cksum()
 }
 
+func (m *Meta) CksumData() uint32 {
+	return m.schema.Hamt.Cksum() + m.info.Hamt.Cksum()
+}
+
+func (m *Meta) ResetClock() { // for testing only
+	m.schema.Clock = 0
+	m.info.Clock = 0
+}
+
 // Mutable returns a mutable copy of a Meta. Used by UpdateTran.
 func (m *Meta) Mutable() *Meta {
 	assert.That(m.difInfo == nil)
@@ -215,7 +224,11 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta
 	if ti.Nrows == 0 {
 		newIdxs = nil
 	}
-	return newIdxs, m.PutNew(ts, ti, ac)
+	mu := newMetaUpdate(m)
+	mu.putSchema(ts)
+	mu.putInfo(ti)
+	m.createFkeys(mu, &ts.Schema, ac)
+	return newIdxs, mu.freeze()
 }
 
 func (m *Meta) RenameTable(from, to string) *Meta {
@@ -361,13 +374,23 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 	createColumns(ts, ac.Columns)
 	createDerived(ts, ac.Derived)
 	createIndexes(ts, ti, ac.Indexes, store)
-	return m.PutNew(ts, ti, ac)
+	mu := newMetaUpdate(m)
+	mu.putSchema(ts)
+	mu.putInfo(ti)
+	m.createFkeys(mu, &ts.Schema, ac)
+	return mu.freeze()
 }
 
 // PutNew puts the schema & info and creates Fkeys
 func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
-	ts.created = m.schema.Clock
-	ti.created = m.info.Clock
+	ts2, oldSchema := m.schema.Get(ts.Table)
+	ti2, oldInfo := m.info.Get(ti.Table)
+	if !oldSchema && !oldInfo {
+		ts.created = m.schema.Clock
+		ti.created = m.info.Clock
+	} else {
+		assert.That(oldSchema && oldInfo && ts2.IsTomb() && ti2.IsTomb())
+	}
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)

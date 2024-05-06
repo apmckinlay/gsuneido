@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
@@ -41,14 +42,21 @@ func quickCheckTable(state *DbState, table string) {
 
 // full check -------------------------------------------------------
 
-// CheckDatabase checks the integrity of the database.
+// CheckDatabase is called by -check and -repair
 func CheckDatabase(dbfile string) (ec error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
 	if err != nil {
 		return newErrCorrupt(err)
 	}
 	defer db.Close()
-	return db.Check()
+	defer func() {
+		if e := recover(); e != nil {
+			db.Corrupt()
+			ec = newErrCorrupt(e)
+		}
+	}()
+	runParallel(db.GetState(), checkTable)
+	return nil // may be overridden by defer/recover
 }
 
 // Check is called by the builtin Database.Check()
@@ -61,6 +69,12 @@ func (db *Database) Check() (ec error) {
 	}()
 	state := db.Persist()
 	runParallel(state, checkTable)
+
+	if state.Off != 0 {
+		state2 := ReadState(db.Store, state.Off)
+		assert.This(state.Meta.CksumData()).Is(state2.Meta.CksumData())
+	}
+
 	return nil // may be overridden by defer/recover
 }
 

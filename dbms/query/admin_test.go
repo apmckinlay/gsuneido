@@ -28,6 +28,58 @@ func createTestDb() *db19.Database {
 	return db
 }
 
+func TestCreateDropBug(t *testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := db19.CreateDb(store)
+	ck(err)
+	db.CheckerSync()
+
+	doAdmin(db, "create tmp (k) key(k)")
+	db.PersistSync()
+	doAdmin(db, "drop tmp")
+	doAdmin(db, "create tmp (x) key(x)")
+	doAdmin(db, "drop tmp")
+
+	db.Close()
+	db, err = db19.OpenDbStor(store, stor.Read, true)
+	ck(err)
+	assert.This(db.Schema("tmp")).Is("")
+}
+
+func TestEnsureBug(t *testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := db19.CreateDb(store)
+	ck(err)
+	db.CheckerSync()
+
+	doAdmin(db, "create tmp (k) key(k)")
+	db.PersistSync()
+	doAdmin(db, "ensure tmp (x)")
+	doAdmin(db, "drop tmp")
+
+	db.Close()
+	db, err = db19.OpenDbStor(store, stor.Read, true)
+	ck(err)
+	assert.This(db.Schema("tmp")).Is("")
+}
+
+func TestAlterCreateBug(t *testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := db19.CreateDb(store)
+	ck(err)
+	db.CheckerSync()
+
+	doAdmin(db, "create tmp (k) key(k)")
+	db.PersistSync()
+	doAdmin(db, "alter tmp create (x)")
+	doAdmin(db, "drop tmp")
+
+	db.Close()
+	db, err = db19.OpenDbStor(store, stor.Read, true)
+	ck(err)
+	assert.This(db.Schema("tmp")).Is("")
+}
+
 func TestAdminCreate(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()

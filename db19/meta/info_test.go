@@ -13,8 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func allInfo(*Info) bool { return true }
-
 func TestInfo(t *testing.T) {
 	assert := assert.T(t)
 	one := &Info{
@@ -35,10 +33,11 @@ func TestInfo(t *testing.T) {
 	tbl := InfoHamt{}.Mutable()
 	tbl.Put(one)
 	tbl.Put(two)
+	tbl = tbl.Freeze()
 
 	st := stor.HeapStor(8192)
 	st.Alloc(1) // avoid offset 0
-	off := tbl.Write(st, 0, allInfo)
+	off := tbl.Write(st, 0, hamt.All)
 
 	ic := hamt.ReadChain[string](st, off, ReadInfo)
 	assert.This(ic.Ages[0]).Is(ic.MustGet("one").lastMod)
@@ -59,7 +58,7 @@ func TestInfo2(t *testing.T) {
 	data := mkdata(tbl, n)
 	st := stor.HeapStor(32 * 1024)
 	st.Alloc(1) // avoid offset 0
-	off := tbl.Write(st, 0, allInfo)
+	off := tbl.Freeze().Write(st, 0, hamt.All)
 
 	tbl = hamt.ReadChain[string](st, off, ReadInfo).Hamt
 	for i, s := range data {

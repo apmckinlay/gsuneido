@@ -4,6 +4,7 @@
 package hamt
 
 import (
+	"math"
 	"math/bits"
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -320,23 +321,27 @@ func (nd *node[K, E]) forEach(fn func(E)) {
 
 func ReadChain[K comparable, E Item[K]](st *stor.Stor, off uint64,
 	rdfn func(st *stor.Stor, r *stor.Reader) E) Chain[K, E] {
+	if off == 0 {
+		return Chain[K, E]{}
+	}
 	offs := make([]uint64, 0, 8)
 	ht := Hamt[K, E]{}.Mutable()
-	tomb := make(map[K]struct{}, 16)
 	offs = append(offs, off)
-	var ck uint32
 	lastMod := -1
-	off, ck = ht.read(st, off, tomb, lastMod, rdfn)
-	for lastMod--; off != 0; lastMod-- {
-		offs = append(offs, off)
-		off, _ = ht.read(st, off, tomb, lastMod, rdfn)
+	// the checksum of the most recent chunk is the checksum of the Hamt
+	next, ck := ht.read(st, off, lastMod, rdfn)
+	for lastMod--; next != 0; lastMod-- {
+		offs = append(offs, next)
+		next, _ = ht.read(st, next, lastMod, rdfn)
 	}
 	ck2 := uint32(0)
 	ht.ForEach(func(it E) {
-		ck2 += it.Cksum()
+		if !it.IsTomb() {
+			ck2 += it.Cksum()
+		}
 	})
 	if ck != ck2 {
-		panic("Item checksum mismatch")
+		panic("metadata checksum mismatch")
 	}
 	ages := make([]int, len(offs))
 	for i := range ages {
@@ -350,7 +355,7 @@ func ReadChain[K comparable, E Item[K]](st *stor.Stor, off uint64,
 	}
 }
 
-func (ht Hamt[K, E]) read(st *stor.Stor, off uint64, tomb map[K]struct{},
+func (ht Hamt[K, E]) read(st *stor.Stor, off uint64,
 	lastMod int, rdfn func(st *stor.Stor, r *stor.Reader) E) (uint64, uint32) {
 	initial := ht.IsNil() // optimization
 	buf := st.Data(off)
@@ -361,15 +366,10 @@ func (ht Hamt[K, E]) read(st *stor.Stor, off uint64, tomb map[K]struct{},
 	ck := uint32(r.Get4())
 	for r.Remaining() > 0 {
 		it := rdfn(st, r)
+		// reading newest first, so ignore older versions
 		if initial || ht.get(it.Key()) == nil {
-			// doesn't exist yet
-			key := it.Key()
-			if it.IsTomb() {
-				tomb[key] = struct{}{}
-			} else if _, ok := tomb[key]; !ok {
-				it.SetLastMod(lastMod)
-				ht.Put(it)
-			}
+			it.SetLastMod(lastMod)
+			ht.Put(it)
 		}
 	}
 	return prevOff, ck
@@ -389,6 +389,8 @@ type Chain[K comparable, E Item[K]] struct {
 	Clock int
 }
 
+const All = math.MinInt
+
 // WriteChain writes a new chunk of items
 // containing at least the newly modified items
 // plus the contents of zero or more older chunks.
@@ -397,21 +399,22 @@ type Chain[K comparable, E Item[K]] struct {
 // but actually we write a new chunk containing old and new items
 // and unlink/abandon the old chunk(s).
 func (c *Chain[K, E]) WriteChain(store *stor.Stor) (uint64, Chain[K, E]) {
+	assert.That(!c.mutable)
 	no := len(c.Offs)
 	merge := nmerge(no, c.Clock)
 	oldest := c.Clock
 	if merge > 0 {
 		oldest = c.Ages[no-merge]
 	}
-	filter := func(item E) bool { return item.LastMod() >= oldest }
+	lastMod := oldest
 	if merge == no {
-		filter = func(item E) bool { return !item.IsTomb() }
+		lastMod = All
 	}
 	prevOff := uint64(0)
 	if no > 0 && merge < no {
 		prevOff = c.Offs[no-merge-1]
 	}
-	off := c.Write(store, prevOff, filter)
+	off := c.Write(store, prevOff, lastMod)
 	if off == 0 {
 		if no > 0 {
 			off = c.Offs[no-1] // nothing written, return current chain
@@ -437,19 +440,22 @@ func nmerge(no, clock int) int {
 	return min(no, TrailingOnes(clock))
 }
 
-func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64,
-	filter func(it E) bool) uint64 {
+func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64, lastMod int) uint64 {
 	size := 0
 	ck := uint32(0)
 	ht.ForEach(func(it E) {
-		if filter(it) {
-			size += it.StorSize()
-		}
-		if !it.IsTomb() {
+		if it.IsTomb() {
+			if lastMod == All {
+				return
+			}
+		} else {
 			ck += it.Cksum()
 		}
+		if it.LastMod() >= lastMod {
+			size += it.StorSize()
+		}
 	})
-	if size == 0 {
+	if size == 0 && (prevOff == 0 || lastMod != All) {
 		return 0
 	}
 	size += 3 + 5 + cksum.Len + 4
@@ -459,8 +465,10 @@ func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64,
 	w.Put5(prevOff)
 	w.Put4(int(ck))
 	ht.ForEach(func(it E) {
-		if filter(it) {
-			it.Write(w)
+		if lastMod != All || !it.IsTomb() {
+			if it.LastMod() >= lastMod {
+				it.Write(w)
+			}
 		}
 	})
 	assert.That(w.Len() == size-cksum.Len)
@@ -475,6 +483,17 @@ func (c *Chain[K, E]) Cksum() uint32 {
 	}
 	c.ForEach(func(it E) {
 		cksum += it.Cksum()
+	})
+	return cksum
+}
+
+// Cksum on Hamt is for the logical state, whereas Cksum on Chain is physical.
+func (ht Hamt[K, E]) Cksum() uint32 {
+	cksum := uint32(0)
+	ht.ForEach(func(it E) {
+		if !it.IsTomb() {
+			cksum += it.Cksum()
+		}
 	})
 	return cksum
 }

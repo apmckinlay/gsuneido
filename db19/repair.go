@@ -51,6 +51,7 @@ func prevState(store *stor.Stor, off uint64) (off2 uint64, state *DbState) {
 	}
 	defer func() {
 		if e := recover(); e != nil {
+			// fmt.Println("bad prevState", off2, e)
 			state = nil
 		}
 	}()
