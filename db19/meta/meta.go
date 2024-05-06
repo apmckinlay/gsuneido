@@ -153,6 +153,23 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	return &cp
 }
 
+// PutNew sets created so drop knows it doesn't need a tombstone
+func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
+	ts2, oldSchema := m.schema.Get(ts.Table)
+	ti2, oldInfo := m.info.Get(ti.Table)
+	if !oldSchema && !oldInfo {
+		ts.created = m.schema.Clock
+		ti.created = m.info.Clock
+	} else {
+		assert.That(oldSchema && oldInfo && ts2.IsTomb() && ti2.IsTomb())
+	}
+	mu := newMetaUpdate(m)
+	mu.putSchema(ts)
+	mu.putInfo(ti)
+	m.createFkeys(mu, &ts.Schema, ac)
+	return mu.freeze()
+}
+
 type metaUpdate struct {
 	meta   *Meta      // original
 	schema SchemaHamt // mutable
@@ -374,23 +391,6 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 	createColumns(ts, ac.Columns)
 	createDerived(ts, ac.Derived)
 	createIndexes(ts, ti, ac.Indexes, store)
-	mu := newMetaUpdate(m)
-	mu.putSchema(ts)
-	mu.putInfo(ti)
-	m.createFkeys(mu, &ts.Schema, ac)
-	return mu.freeze()
-}
-
-// PutNew puts the schema & info and creates Fkeys
-func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
-	ts2, oldSchema := m.schema.Get(ts.Table)
-	ti2, oldInfo := m.info.Get(ti.Table)
-	if !oldSchema && !oldInfo {
-		ts.created = m.schema.Clock
-		ti.created = m.info.Clock
-	} else {
-		assert.That(oldSchema && oldInfo && ts2.IsTomb() && ti2.IsTomb())
-	}
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)

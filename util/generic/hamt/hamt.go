@@ -319,62 +319,6 @@ func (nd *node[K, E]) forEach(fn func(E)) {
 
 //-------------------------------------------------------------------
 
-func ReadChain[K comparable, E Item[K]](st *stor.Stor, off uint64,
-	rdfn func(st *stor.Stor, r *stor.Reader) E) Chain[K, E] {
-	if off == 0 {
-		return Chain[K, E]{}
-	}
-	offs := make([]uint64, 0, 8)
-	ht := Hamt[K, E]{}.Mutable()
-	offs = append(offs, off)
-	lastMod := -1
-	// the checksum of the most recent chunk is the checksum of the Hamt
-	next, ck := ht.read(st, off, lastMod, rdfn)
-	for lastMod--; next != 0; lastMod-- {
-		offs = append(offs, next)
-		next, _ = ht.read(st, next, lastMod, rdfn)
-	}
-	ck2 := uint32(0)
-	ht.ForEach(func(it E) {
-		if !it.IsTomb() {
-			ck2 += it.Cksum()
-		}
-	})
-	if ck != ck2 {
-		panic("metadata checksum mismatch")
-	}
-	ages := make([]int, len(offs))
-	for i := range ages {
-		lastMod++
-		ages[i] = lastMod
-	}
-	return Chain[K, E]{
-		Hamt: ht.Freeze(),
-		Offs: slc.Reverse(offs),
-		Ages: ages,
-	}
-}
-
-func (ht Hamt[K, E]) read(st *stor.Stor, off uint64,
-	lastMod int, rdfn func(st *stor.Stor, r *stor.Reader) E) (uint64, uint32) {
-	initial := ht.IsNil() // optimization
-	buf := st.Data(off)
-	size := stor.NewReader(buf).Get3()
-	cksum.MustCheck(buf[:size])
-	r := stor.NewReader(buf[3 : size-cksum.Len])
-	prevOff := r.Get5()
-	ck := uint32(r.Get4())
-	for r.Remaining() > 0 {
-		it := rdfn(st, r)
-		// reading newest first, so ignore older versions
-		if initial || ht.get(it.Key()) == nil {
-			it.SetLastMod(lastMod)
-			ht.Put(it)
-		}
-	}
-	return prevOff, ck
-}
-
 type Chain[K comparable, E Item[K]] struct {
 	Hamt[K, E]
 	// offs are the offsets in the database file
@@ -475,6 +419,66 @@ func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64, lastMod int) uint64 {
 	cksum.Update(buf)
 	return off
 }
+
+//-------------------------------------------------------------------
+
+func ReadChain[K comparable, E Item[K]](st *stor.Stor, off uint64,
+	rdfn func(st *stor.Stor, r *stor.Reader) E) Chain[K, E] {
+	if off == 0 {
+		return Chain[K, E]{}
+	}
+	offs := make([]uint64, 0, 8)
+	ht := Hamt[K, E]{}.Mutable()
+	offs = append(offs, off)
+	lastMod := -1
+	// the checksum of the most recent chunk is the checksum of the Hamt
+	next, ck := ht.read(st, off, lastMod, rdfn)
+	for lastMod--; next != 0; lastMod-- {
+		offs = append(offs, next)
+		next, _ = ht.read(st, next, lastMod, rdfn)
+	}
+	ck2 := uint32(0)
+	ht.ForEach(func(it E) {
+		if !it.IsTomb() {
+			ck2 += it.Cksum()
+		}
+	})
+	if ck != ck2 {
+		panic("metadata checksum mismatch")
+	}
+	ages := make([]int, len(offs))
+	for i := range ages {
+		lastMod++
+		ages[i] = lastMod
+	}
+	return Chain[K, E]{
+		Hamt: ht.Freeze(),
+		Offs: slc.Reverse(offs),
+		Ages: ages,
+	}
+}
+
+func (ht Hamt[K, E]) read(st *stor.Stor, off uint64,
+	lastMod int, rdfn func(st *stor.Stor, r *stor.Reader) E) (uint64, uint32) {
+	initial := ht.IsNil() // optimization
+	buf := st.Data(off)
+	size := stor.NewReader(buf).Get3()
+	cksum.MustCheck(buf[:size])
+	r := stor.NewReader(buf[3 : size-cksum.Len])
+	prevOff := r.Get5()
+	ck := uint32(r.Get4())
+	for r.Remaining() > 0 {
+		it := rdfn(st, r)
+		// reading newest first, so ignore older versions
+		if initial || ht.get(it.Key()) == nil {
+			it.SetLastMod(lastMod)
+			ht.Put(it)
+		}
+	}
+	return prevOff, ck
+}
+
+//-------------------------------------------------------------------
 
 func (c *Chain[K, E]) Cksum() uint32 {
 	cksum := uint32(c.Clock)
