@@ -115,6 +115,8 @@ func (a assert) False(b bool) {
 // That(x) is the same as True(x)
 func That(cond bool) {
 	if !cond {
+		log.Println("ERROR: ASSERT FAILED")
+		dbg.PrintStack()
 		panic("ASSERT FAILED")
 	}
 }
