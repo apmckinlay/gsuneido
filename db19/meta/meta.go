@@ -155,13 +155,11 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 
 // PutNew sets created so drop knows it doesn't need a tombstone
 func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
-	ts2, oldSchema := m.schema.Get(ts.Table)
-	ti2, oldInfo := m.info.Get(ti.Table)
-	if !oldSchema && !oldInfo {
+	if _, ok := m.schema.Get(ts.Table); !ok {
 		ts.created = m.schema.Clock
+	}
+	if _, ok := m.info.Get(ti.Table); !ok {
 		ti.created = m.info.Clock
-	} else {
-		assert.That(oldSchema && oldInfo && ts2.IsTomb() && ti2.IsTomb())
 	}
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
