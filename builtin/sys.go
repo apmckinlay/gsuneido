@@ -162,6 +162,7 @@ func DeleteDir(th *Thread, args []Value) Value {
 	if !info.Mode().IsDir() {
 		return SuStr("DeleteDir " + path + ": not a directory")
 	}
+	path = strings.TrimRight(path, `/\`)
 	err = os.RemoveAll(path)
 	if err != nil {
 		return SuStr("DeleteDir: " + err.Error())
