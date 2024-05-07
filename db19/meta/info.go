@@ -122,7 +122,7 @@ type PersistUpdate struct {
 	results []SaveResult // per index
 }
 
-// Persist is called by state.Persist to write the state to the database.
+// Persist is called by state.Persist to write the index updates.
 // It collects the new btree roots which are then applied by Apply.
 // WARNING: must not modify meta.
 func (m *Meta) Persist(exec func(func() PersistUpdate)) {
