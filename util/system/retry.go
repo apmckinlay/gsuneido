@@ -4,7 +4,7 @@
 package system
 
 import (
-	"math/rand"
+	rand "math/rand/v2"
 	"time"
 )
 
@@ -14,7 +14,7 @@ func Retry(fn func() error) (e error) {
 		if e == nil {
 			return nil
 		}
-		time.Sleep(time.Millisecond * time.Duration(i+rand.Intn(i)))
+		time.Sleep(time.Millisecond * time.Duration(i+rand.IntN(i)))
 	}
 	return e // the last error
 }

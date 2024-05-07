@@ -6,7 +6,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
+	rand "math/rand/v2"
 	"os"
 	"strconv"
 )
@@ -44,11 +44,11 @@ func main() {
 	fmt.Println("size", size)
 	for i := 0; i < nspots; i++ {
 		// at := int64(rand.Int63n(size - int64(bytesPerSpot)))
-		at := size - rand.Int63n(1_000_000) - int64(bytesPerSpot) // near end
+		at := size - rand.Int64N(1_000_000) - int64(bytesPerSpot) // near end
 		fmt.Println("zapped", file, "-", bytesPerSpot, "bytes at", at)
 		f.Seek(at, 0)
 		for j := 0; j < bytesPerSpot; j++ {
-			f.WriteString(string(rune(rand.Intn(256))))
+			f.WriteString(string(rune(rand.IntN(256))))
 		}
 	}
 }

@@ -4,7 +4,7 @@
 package testdata
 
 import (
-	"math/rand"
+	rand "math/rand/v2"
 	"sort"
 	"strings"
 
@@ -59,7 +59,7 @@ func (d *dat) NextOff() uint64 {
 }
 
 func (d *dat) Rand() (int, string, uint64) {
-	i := rand.Intn(len(d.Keys))
+	i := rand.IntN(len(d.Keys))
 	key := d.Keys[i]
 	off := d.K2o[key]
 	return i, key, off

@@ -1,12 +1,13 @@
 package str
 
 import (
-	"math/rand"
+	rand "math/rand/v2"
 	"strings"
-	"time"
 )
 
-var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
+// WARNING: not thread safe
+
+var rnd = rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
 
 const alpha = "abcdefghijklmnopqrstuvwxyz"
 
@@ -15,7 +16,7 @@ func Random(min, max int) string {
 }
 
 func RandomOf(min, max int, chars string) string {
-	return randomOf(min, max, chars, rand.Intn)
+	return randomOf(min, max, chars, rand.IntN)
 }
 
 func randomOf(min, max int, chars string, randIntn func(int) int) string {
@@ -36,14 +37,14 @@ func UniqueRandomOf(min, max int, chars string, seed ...int64) func() string {
 	type set struct{}
 	var mark set
 	prev := map[string]set{}
-	randIntn := rand.Intn
+	randIntN := rand.IntN
 	if len(seed) > 0 {
-		randIntn = rand.New(rand.NewSource(seed[0])).Intn
+		randIntN = rand.New(rand.NewPCG(uint64(seed[0]), uint64(seed[0]))).IntN
 	}
 	return func() string {
 		var key string
 		for i := 0; i < 10; i++ {
-			key = randomOf(min, max, chars, randIntn)
+			key = randomOf(min, max, chars, randIntN)
 			if _, ok := prev[key]; !ok {
 				prev[key] = mark
 				return key

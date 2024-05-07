@@ -6,7 +6,7 @@ package db19
 import (
 	"log"
 	"math"
-	"math/rand"
+	rand "math/rand/v2"
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -463,7 +463,7 @@ func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2, table string) bool {
 		traceln(t2, "readConflict =", t2.readConflict)
 		return false // t1 not aborted
 	}
-	if t2.ended() || checkerAbortT1 || rand.Intn(2) == 1 {
+	if t2.ended() || checkerAbortT1 || rand.IntN(2) == 1 {
 		ck.abort(t1.start, act1+" in this transaction conflicted with "+
 			act2+" in another transaction ("+table+")")
 		return true

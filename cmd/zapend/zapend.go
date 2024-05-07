@@ -6,7 +6,7 @@ package main
 import (
 	"fmt"
 	"log"
-	"math/rand"
+	rand "math/rand/v2"
 	"os"
 	"strconv"
 )
@@ -39,7 +39,7 @@ func main() {
 	f.Seek(at, 0)
 	buf := make([]byte, 1)
 	for j := 0; j < bytes; j++ {
-		buf[0] = byte(rand.Intn(256))
+		buf[0] = byte(rand.IntN(256))
 		f.Write(buf)
 	}
 }
