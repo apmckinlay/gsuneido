@@ -13,7 +13,8 @@ ifdef PATHEXT
 	OUTPUT = gsuneido.exe gsuneido.com gsport.exe
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
 	CONSOLE = $(GO) $(BUILD) -o gsuneido.com -ldflags "$(LDFLAGS)" -tags com
-	PORTABLE = export CGO_ENABLED=0 ; $(GO) $(BUILD) -o gsport.exe -ldflags "$(LDFLAGS)" -tags portable
+	PORTABLE = export CGO_ENABLED=0 ; $(GO) $(BUILD) -o gsport.exe \
+		-ldflags "$(LDFLAGS)" -tags portable
 endif
 
 build:
@@ -42,6 +43,10 @@ endif
 portable:
 	# a Windows version without the Windows stuff
 	$(PORTABLE)
+
+arm:
+	export CGO_ENABLED=0 GOARCH=arm64 GOOS=linux ; $(GO) build -buildvcs=true \
+		-trimpath -o gs_linux_arm64 -v -ldflags "$(LDFLAGS)"
 
 test:
 	$(GO) test -short ./...
@@ -88,4 +93,5 @@ help:
 	@echo "clean"
 	@echo "    remove built files"
 
-.PHONY : build gsuneido portable test generate clean zap race racetest release help
+.PHONY : build gsuneido portable test generate clean zap race racetest release \
+	help arm
