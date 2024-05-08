@@ -113,6 +113,26 @@ func opgp_KeyGen(name, email, passphrase Value) Value {
 	return ob
 }
 
+var _ = staticMethod(opgp_KeyId, "(key)")
+
+func opgp_KeyId(key Value) Value {
+	keyOb, err := crypto.NewKeyFromArmored(ToStr(key))
+	ck(err)
+	return SuStr(keyOb.GetHexKeyID())
+}
+
+var _ = staticMethod(opgp_KeyEntity, "(key)")
+
+func opgp_KeyEntity(key Value) Value {
+	keyOb, err := crypto.NewKeyFromArmored(ToStr(key))
+	ck(err)
+	e := keyOb.GetEntity()
+	for name := range e.Identities {
+		return SuStr(name)
+	}
+	return False
+}
+
 //-------------------------------------------------------------------
 
 type encdec[T any] func(passphrase T, src io.Reader, dst io.Writer)
