@@ -569,9 +569,13 @@ The schema and info are stored in [hash array mapped tries](https://thesoftwarel
 
 Once again, there is a tradeoff between writing and reading. For writing, it's faster to save just the changes but then you end up with a long linked list of changes, which is slow to read.  Note that we only have to read it at startup, after that we  can use the in-memory version. If you save the entire meta data at each persist, that makes it easy to read, but it causes write amplification because you're rewriting all the unchanged data.
 
-Instead, we compromise. Sometimes we write just the changes. Other times, to prevent the linked list from getting too big, we write bigger chunks. This is a bit like a [log structured merge tree](https://en.wikipedia.org/wiki/Log-structured_merge-tree) (LSM tree).
+Instead, we compromise. Sometimes we write just the changes. Other times, to prevent the linked list from getting too big, we write bigger chunks. This is a bit like a [log structured merge tree](https://en.wikipedia.org/wiki/Log-structured_merge-tree) (LSM tree). Because sometimes we write just the recent changes, we need to track "tombstones" for deleted tables. If the table was created since the last persist, we can skip the tombstone since it's unnecessary. This is implemented by tracking the create time of entries. When the chain reaches a maximum length we write out then entire schema or info in one chunk. In this case we don't need to write any tombstones.
 
-We have all the data in memory, so rather than actually merging data from disk, we track the "age" of each entry (when it was last updated) and then we can write a bigger chunk by going back further in age.
+We have all the data in memory, so rather than actually merging chunks from disk, we track the "age" of each entry (when it was last updated) and then we can write a bigger chunk by going back further in age.
+
+Each time we write a chunk of changes, we also write a checksum of the hamt. This is a checksum of the entire hamt, not just the changes. The checksum excludes tombstones. When we read a chain of chunks we compare the checksum of the most recent chunk to the resulting hamt. This is more to catch errors in the code rather than memory or storage errors.
+
+Database.Check() checks the in-memory meta data first, including all the indexes. Then it rereads the disk meta data and confirms (by checksum) that it matches the in-memory meta data.
 
 ## Queries
 
