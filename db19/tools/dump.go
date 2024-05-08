@@ -64,10 +64,12 @@ func Dump(db *Database, to, publicKey string) (nTables, nViews int, err error) {
 	defer func() { f.Close(); os.Remove(tmpfile) }()
 	nTables, nViews = dump(db, w)
 	if err := w.Flush(); err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("dump failed: %v", err)
 	}
 	f.Close()
-	ck(system.RenameBak(tmpfile, to))
+	if err := system.RenameBak(tmpfile, to); err!= nil {
+		return 0, 0, fmt.Errorf("dump failed: %v", err)
+	}
 	return nTables, nViews, nil
 }
 
