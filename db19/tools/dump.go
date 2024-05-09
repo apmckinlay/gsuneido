@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path"
 	"sort"
 	"strings"
 	"sync"
@@ -56,7 +57,7 @@ func Dump(db *Database, to, publicKey string) (nTables, nViews int, err error) {
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
-	f, w, err := dumpOpen(publicKey)
+	f, w, err := dumpOpen(to, publicKey)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -67,7 +68,7 @@ func Dump(db *Database, to, publicKey string) (nTables, nViews int, err error) {
 		return 0, 0, fmt.Errorf("dump failed: %v", err)
 	}
 	f.Close()
-	if err := system.RenameBak(tmpfile, to); err!= nil {
+	if err := system.RenameBak(tmpfile, to); err != nil {
 		return 0, 0, fmt.Errorf("dump failed: %v", err)
 	}
 	return nTables, nViews, nil
@@ -113,7 +114,7 @@ func DumpDbTable(db *Database, table, to, publicKey string) (nrecs int, err erro
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
-	f, w, err := dumpOpen(publicKey)
+	f, w, err := dumpOpen(to, publicKey)
 	if err != nil {
 		return 0, err
 	}
@@ -137,8 +138,10 @@ func dumpDbTable(db *Database, table string, w WriterPlus) int {
 	return dumpTable2(db, state, table, false, w, ics)
 }
 
-func dumpOpen(publicKey string) (*os.File, WriterPlus, error) {
-	f, err := os.CreateTemp(".", "gs*.tmp")
+func dumpOpen(to, publicKey string) (*os.File, WriterPlus, error) {
+	to = strings.Replace(to, `\`, `/`, -1)
+	dir := path.Dir(to)
+	f, err := os.CreateTemp(dir, "gs*.tmp")
 	if err != nil {
 		return nil, nil, err
 	}
