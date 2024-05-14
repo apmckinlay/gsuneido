@@ -308,8 +308,10 @@ func (p *Parser) whileStmt() *ast.While {
 func (p *Parser) dowhileStmt() *ast.DoWhile {
 	body := p.statement()
 	p.Match(tok.While)
-	cond := p.Expression()
-	return &ast.DoWhile{Body: body, Cond: cond}
+	pos := p.Pos
+	expr := p.Expression()
+	return &ast.DoWhile{Body: body,
+		Cond: p.exprPos(expr, pos, p.EndPos)}
 }
 
 func (p *Parser) forStmt() ast.Statement {
@@ -346,12 +348,16 @@ func (p *Parser) forIn() *ast.ForIn {
 	if p.Token == tok.RangeTo {
 		expr = p.Constant(Zero)
 	} else {
+		pos := p.Pos
 		expr = p.exprExpecting(!parens)
+		expr = p.exprPos(expr, pos, p.EndPos)
 	}
 	var expr2 Expr
 	if !parens && p.Token == tok.RangeTo {
 		p.Next()
+		pos := p.Pos
 		expr2 = p.exprExpecting(!parens)
+		expr2 = p.exprPos(expr2, pos, p.EndPos)
 	}
 	if parens {
 		p.Match(tok.RParen)
@@ -398,11 +404,13 @@ func (p *Parser) optExprList(after tok.Token) []ast.Expr {
 	return exprs
 }
 
-// used by if, while, and do-while
+// used by if and while
 func (p *Parser) ctrlExpr() ast.Expr {
 	parens := p.MatchIf(tok.LParen)
 	keepParens := p.Token == tok.LParen
+	pos := p.Pos
 	expr := p.exprExpecting(!parens)
+	expr = p.exprPos(expr, pos, p.EndPos)
 	if parens {
 		p.Match(tok.RParen)
 	}

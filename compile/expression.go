@@ -22,9 +22,11 @@ func (p *Parser) Expression() ast.Expr {
 // A given call processes everything >= minprec.
 // It recurses to process the right hand side of each operator.
 func (p *Parser) pcExpr(minprec int8) ast.Expr {
+	org := p.Pos
 	e := p.atom()
 	// fmt.Println("pcExpr minprec", minprec, "atom", e)
 	for p.Token != tok.Eof {
+		end := p.EndPos
 		token := p.Token
 		prec := precedence[token]
 		// fmt.Println("loop ", p.Item, "prec", prec)
@@ -107,9 +109,14 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 			p.assignName = ""
 			e = p.Binary(e, token, rhs)
 		case token == tok.QMark:
-			t := p.Expression()
+			e = p.exprPos(e, org, end)
+			pos := p.Pos
+			expr := p.Expression()
+			t := p.exprPos(expr, pos, p.EndPos)
 			p.Match(tok.Colon)
-			f := p.Expression()
+			pos = p.Pos
+			expr = p.Expression()
+			f := p.exprPos(expr, pos, p.EndPos)
 			e = p.Trinary(e, t, f)
 		case token == tok.LParen: // function call
 			e = p.Call(e, p.arguments(token), p.EndPos)

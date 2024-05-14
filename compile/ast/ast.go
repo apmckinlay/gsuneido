@@ -972,3 +972,10 @@ func (a *Switch) Children(fn func(Node) Node) {
 		childStmt(fn, &a.Default[i])
 	}
 }
+
+type ExprPos struct {
+	SuAstNode
+	Expr
+	Pos int32
+	End int32
+}

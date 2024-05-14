@@ -20,6 +20,8 @@ type Aspects interface {
 
 	privatize(name, className string) string
 	codegen(lib, name string, fn *ast.Function, prevDef core.Value) core.Value
+	// exprPos is used to wrap expressions with their position for astvalue
+	exprPos(expr ast.Expr, pos, end int32) ast.Expr
 }
 
 type checker interface {
@@ -63,6 +65,10 @@ func (*cgAspectsBase) codegen(lib, name string, fn *ast.Function, prevDef core.V
 	return codegen(lib, name, fn, prevDef)
 }
 
+func (*cgAspectsBase) exprPos(expr ast.Expr, _, _ int32) ast.Expr {
+	return expr
+}
+
 type cgckAspects struct {
 	cgAspectsBase
 	*check.Check
@@ -85,6 +91,10 @@ func (*astAspects) privatize(name, _ string) string {
 
 func (*astAspects) codegen(_, _ string, fn *ast.Function, _ core.Value) core.Value {
 	return fn
+}
+
+func (astMaker) exprPos(expr ast.Expr, pos, end int32) ast.Expr {
+	return &ast.ExprPos{Expr: expr, Pos: pos, End: end}
 }
 
 type nilChecker struct{}
