@@ -105,8 +105,8 @@ func (en *exprNodeT) Echo() string {
 type Ident struct {
 	exprNodeT
 	Name     string
-	Pos      int32
-	Implicit bool // for implicit Record, Object, this
+	Pos      int32 // for check errors
+	Implicit bool  // for implicit Record, Object, this
 }
 
 func (a *Ident) String() string {
