@@ -273,7 +273,9 @@ func (p *Parser) switchCase() ast.Case {
 	p.Match(tok.Case)
 	var exprs []ast.Expr
 	for {
-		exprs = append(exprs, p.Expression())
+		pos := p.Pos
+		expr := p.Expression()
+		exprs = append(exprs, p.exprPos(expr, pos, p.EndPos))
 		if !p.MatchIf(tok.Comma) {
 			break
 		}
