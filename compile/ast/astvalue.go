@@ -559,12 +559,12 @@ func (a *Continue) Get(_ *Thread, m Value) Value {
 
 func (a *ExprPos) Get(t *Thread, m Value) Value {
 	switch m {
-    case SuStr("pos"):
-        return IntVal(int(a.Pos))
-    case SuStr("end"):
-        return IntVal(int(a.End))
-    }
-    return a.Expr.Get(t, m)
+	case SuStr("pos"):
+		return IntVal(int(a.Pos))
+	case SuStr("end"):
+		return IntVal(int(a.End))
+	}
+	return a.Expr.Get(t, m)
 }
 
 //-------------------------------------------------------------------
