@@ -203,9 +203,9 @@ func OSName() Value {
 	return SuStr(os)
 }
 
-var _ = builtin(FileSize2, "(file)")
+var _ = builtin(FileSize, "(file)")
 
-func FileSize2(th *Thread, args []Value) Value {
+func FileSize(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
 	info, err := os.Stat(path)
 	if err != nil {
