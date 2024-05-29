@@ -325,6 +325,24 @@ func (bt *btree) print1(depth int, offset uint64) {
 	}
 }
 
+func (bt *btree) NodeSizes() {
+	bt.nodeSizes(0, bt.root)
+}
+
+func (bt *btree) nodeSizes(depth int, offset uint64) int {
+	nd := bt.getNode(offset)
+	n := 0
+	for it := nd.iter(); it.next(); {
+		if depth < bt.treeLevels {
+			n += bt.nodeSizes(depth+1, it.offset)
+		} else {
+			n++
+		}
+	}
+	fmt.Println(depth, n)
+	return n
+}
+
 //-------------------------------------------------------------------
 
 func (bt *btree) StorSize() int {
@@ -344,18 +362,28 @@ func Read(st *stor.Stor, r *stor.Reader) *btree {
 //-------------------------------------------------------------------
 
 // RangeFrac returns the fraction of the btree (0 to 1) in the range org to end
-func (bt *btree) RangeFrac(org, end string) float32 {
-	if bt.empty() {
+func (bt *btree) RangeFrac(org, end string, nrecs int) float32 {
+	if bt.empty() || nrecs == 0 {
 		// don't know if table is empty or if there are records are in the ixbufs
 		// fraction is between 0 and 1 so just return half
 		return .5
 	}
-	frac := bt.fracPos(end) - bt.fracPos(org)
-	const minFrac = 1e-9
-	if frac < minFrac {
-		return minFrac
+
+	// count the records (up to iterLimit) to get an exact result
+	const iterLimit = 100 // ???
+	it := bt.Iterator()
+	it.Range(Range{Org: org, End: end})
+	n := 0
+	for it.Next(); n < iterLimit; it.Next() {
+		if it.Eof() {
+			return float32(n) / float32(nrecs)
+		}
+		n++
 	}
-	return frac
+	minResult := iterLimit / float32(nrecs)
+
+	frac := bt.fracPos(end) - bt.fracPos(org)
+	return max(frac, minResult)
 }
 
 func (bt *btree) empty() bool {
@@ -373,56 +401,57 @@ func (bt *btree) fracPos(key string) float32 {
 	if key == ixkey.Max {
 		return 1
 	}
+	frac := float32(0)
+	div := float32(1)
 	off := bt.root
-	node := bt.getNode(off)
-	i := 0
-	n := 0
-	for it := node.iter(); it.next(); n++ {
-		if key >= string(it.known) {
-			i = n
-			off = it.offset
+	exact := true
+	for level := 0; level <= bt.treeLevels; level++ {
+		node := bt.getNode(off)
+		i := 0
+		n := 0
+		for it := node.iter(); it.next(); n++ {
+			k := string(it.known)
+			if key >= k {
+				i = n
+				off = it.offset
+			}
+		}
+		const smallRoot = 10 // ???
+		if level == 0 && n < smallRoot {
+			i, n, off = bt.rootChildren(node, key)
+			level++
+		}
+		if n == 0 {
+			return frac
+		}
+		frac += float32(i) / float32(n) / div
+		if exact {
+			exact = false
+			div = float32(n)
+		} else {
+			div *= float32(Fanout) // ???
 		}
 	}
-	if n == 0 {
-		return 0
-	}
-	frac := float32(i) / float32(n)
-	if bt.treeLevels == 0 {
-		return frac
-	}
-	//===
-	div := float32(n) // each node is 1/n of the keys
-	node = bt.getNode(off)
-	i, n = 0, 0
-	for it := node.iter(); it.next(); n++ {
-		if key >= string(it.known) {
-			i = n
-			off = it.offset
-		}
-	}
-	if n == 0 {
-		return frac
-	}
-	f := float32(i) / float32(n)
-	frac += f / div
-	if bt.treeLevels == 1 {
-		return frac
-	}
-	//===
-	div *= float32(Fanout)
-	node = bt.getNode(off)
-	i, n = 0, 0
-	for it := node.iter(); it.next(); n++ {
-		if key >= string(it.known) {
-			i = n
-		}
-	}
-	if n == 0 {
-		return frac
-	}
-	f = float32(i) / float32(n)
-	frac += f / div
 	return frac
+}
+
+// rootChildren helps when the root is small
+// by scanning the children as if they were one bigger node
+func (bt *btree) rootChildren(root node, key string) (i, n int, off uint64) {
+	for rit := root.iter(); rit.next(); {
+		node := bt.getNode(rit.offset)
+		for it := node.iter(); it.next(); n++ {
+			k := string(it.known)
+			if k == "" {
+				k = string(rit.known)
+			}
+			if key >= k {
+				i = n
+				off = it.offset
+			}
+		}
+	}
+	return
 }
 
 // trace ------------------------------------------------------------
