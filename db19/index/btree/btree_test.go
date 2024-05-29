@@ -127,12 +127,12 @@ func TestBtreeFracPos(t *testing.T) {
 		//		assert.That(len(b.levels[len(b.levels)-1].nb.node) > 190)
 		bt = b.Finish()
 	}
-	test := func(key string, expected float32) {
+	test := func(key string, expected float64) {
 		t.Helper()
 		fracPos := bt.fracPos(key)
 		diff := fracPos - expected
 		// fmt.Println(key, "expected", expected, "got", fracPos, "diff", diff)
-		if math.Abs(float64(diff)) > .025 {
+		if math.Abs(diff) > .025 {
 			t.Error("\nkey", fmt.Sprintf("%q", key),
 				"got", fracPos, "expected", expected, "difference", diff)
 		}
@@ -142,7 +142,7 @@ func TestBtreeFracPos(t *testing.T) {
 	assert.Msg("tree levels").This(bt.treeLevels).Is(0)
 	test(ixkey.Min, 0)
 	for i := 0; i < n; i++ {
-		test(key(i), float32(i)/float32(n))
+		test(key(i), float64(i)/float64(n))
 	}
 	test(ixkey.Max, 1)
 
@@ -152,7 +152,7 @@ func TestBtreeFracPos(t *testing.T) {
 	assert.This(bt.getNode(bt.root).Size()).Is(2)
 	test(ixkey.Min, 0)
 	for i := 0; i < n; i += 100 {
-		exp := float32(i) / float32(n)
+		exp := float64(i) / float64(n)
 		test(key(i), exp)
 	}
 	test(ixkey.Max, 1)

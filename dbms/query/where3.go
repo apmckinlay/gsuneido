@@ -195,7 +195,7 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) (float64, float64) {
 		if pr.isPoint() {
 			npoints++
 		} else { // range
-			fracRange += float64(w.t.RangeFrac(w.tbl.name, iIndex, pr.org, pr.end))
+			fracRange += w.t.RangeFrac(w.tbl.name, iIndex, pr.org, pr.end)
 		}
 	}
 	frac = fracRange

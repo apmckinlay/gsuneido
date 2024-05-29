@@ -362,7 +362,7 @@ func Read(st *stor.Stor, r *stor.Reader) *btree {
 //-------------------------------------------------------------------
 
 // RangeFrac returns the fraction of the btree (0 to 1) in the range org to end
-func (bt *btree) RangeFrac(org, end string, nrecs int) float32 {
+func (bt *btree) RangeFrac(org, end string, nrecs int) float64 {
 	if bt.empty() || nrecs == 0 {
 		// don't know if table is empty or if there are records are in the ixbufs
 		// fraction is between 0 and 1 so just return half
@@ -376,11 +376,11 @@ func (bt *btree) RangeFrac(org, end string, nrecs int) float32 {
 	n := 0
 	for it.Next(); n < iterLimit; it.Next() {
 		if it.Eof() {
-			return float32(n) / float32(nrecs)
+			return float64(n) / float64(nrecs)
 		}
 		n++
 	}
-	minResult := iterLimit / float32(nrecs)
+	minResult := iterLimit / float64(nrecs)
 
 	frac := bt.fracPos(end) - bt.fracPos(org)
 	return max(frac, minResult)
@@ -394,15 +394,15 @@ func (bt *btree) empty() bool {
 	return len(root) == 0
 }
 
-func (bt *btree) fracPos(key string) float32 {
+func (bt *btree) fracPos(key string) float64 {
 	if key == ixkey.Min {
 		return 0
 	}
 	if key == ixkey.Max {
 		return 1
 	}
-	frac := float32(0)
-	div := float32(1)
+	frac := float64(0)
+	div := float64(1)
 	off := bt.root
 	exact := true
 	for level := 0; level <= bt.treeLevels; level++ {
@@ -424,12 +424,12 @@ func (bt *btree) fracPos(key string) float32 {
 		if n == 0 {
 			return frac
 		}
-		frac += float32(i) / float32(n) / div
+		frac += float64(i) / float64(n) / div
 		if exact {
 			exact = false
-			div = float32(n)
+			div = float64(n)
 		} else {
-			div *= float32(Fanout) // ???
+			div *= float64(Fanout) // ???
 		}
 	}
 	return frac
