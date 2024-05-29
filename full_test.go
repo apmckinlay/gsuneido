@@ -5,19 +5,17 @@ package main
 // import (
 // 	"testing"
 
-// 	"github.com/apmckinlay/gsuneido/builtin"
-// 	"github.com/apmckinlay/gsuneido/options"
 // 	. "github.com/apmckinlay/gsuneido/core"
+// 	"github.com/apmckinlay/gsuneido/options"
 // )
 
 // func TestFull(t *testing.T) {
 // 	options.BuiltDate = builtDate
 // 	Libload = libload // dependency injection
-// 	mainThread = &Thread{}
 // 	mainThread.Name = "main"
-// 	mainThread.UIThread = true
-// 	MainThread = mainThread
-// 	builtin.UIThread = mainThread
+// 	mainThread.OpCount = 1009
+// 	mainThread.SetSviews(&sviews)
+// 	MainThread = &mainThread
 // 	openDbms()
 // 	defer db.CloseKeepMapped()
 // 	run("Init.Repl()")
