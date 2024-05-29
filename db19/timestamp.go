@@ -9,6 +9,7 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/generic/ints"
 )
 
 var timestamp SuDate
@@ -24,28 +25,25 @@ func StartTimestamps() {
 
 // ticker runs on the dbms i.e. server or standalone, not client
 func ticker() {
-	var timeError = false
+	prev := Now().WithoutMs()
 	for {
 		time.Sleep(1 * time.Second)
 		t := Now().WithoutMs()
+		if d := t.MinusMs(prev); ints.Abs(d) > 5000 {
+			log.Println("ERROR: time skip from", prev, "to", t,
+				"=", time.Duration(d)*time.Millisecond)
+		}
+		prev = t
 		tsLock.Lock()
-		d := t.MinusMs(timestamp)
-		if d > 0 {
-			if d > 5000 {
-				log.Println("INFO: time skip from", timestamp, "to", t,
-					"=", time.Duration(d) * time.Millisecond)
-			}
-			timestamp = t // normal case
-			timeError = false
-		} else if d < 0 && !timeError {
-			log.Println("INFO: time went backwards from", timestamp, "to", t)
-			timeError = true
+		if t.Compare(timestamp) > 0 {
+			// only update timestamp forwards
+			timestamp = t
 		}
 		tsLock.Unlock()
 	}
 }
 
-// Timestamp is the backend
+// Timestamp is the backend. See also Thread.Timestamp
 func Timestamp() SuDate {
 	tsLock.Lock()
 	defer tsLock.Unlock()

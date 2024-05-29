@@ -400,6 +400,7 @@ var tsLock sync.Mutex
 // Timestamp is a Thread method for convenience, so it has access to the dbms.
 // It is not "per thread".
 // This is the "client" version of Timestamp.
+// See also db19/timestamp.go
 func (th *Thread) Timestamp() PackableValue {
 	tsLock.Lock()
 	defer tsLock.Unlock()
