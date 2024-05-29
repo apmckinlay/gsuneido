@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -169,10 +170,15 @@ func symEncrypt(passphrase Value, src io.Reader, dst io.Writer) {
 }
 
 func symDecrypt(passphrase Value, src io.Reader, dst io.Writer) {
-	keyRing := func(keys []openpgp.Key, symmetric bool) ([]byte, error) {
-		return []byte(ToStr(passphrase)), nil
+	first := true
+	prompt := func(keys []openpgp.Key, symmetric bool) ([]byte, error) {
+		if first {
+			first = false
+			return []byte(ToStr(passphrase)), nil
+		}
+		return nil, errors.New("Symmetric Decrypt: invalid passphrase")
 	}
-	md, err := openpgp.ReadMessage(src, nil, keyRing, nil)
+	md, err := openpgp.ReadMessage(src, nil, prompt, nil)
 	ck(err)
 	_, err = io.Copy(dst, md.UnverifiedBody)
 	ck(err)
