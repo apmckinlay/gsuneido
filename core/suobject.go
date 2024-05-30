@@ -237,6 +237,17 @@ func (ob *SuObject) Set(key, val Value) {
 	ob.set(key, val)
 }
 
+func (ob *SuObject) CompareAndSet(key, newval, oldval Value) bool {
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	if ob.get(key) == oldval {
+		ob.set(key, newval)
+        return true
+	}
+	return false
+}
+
 // set implements Set without locking
 func (ob *SuObject) set(key, val Value) {
 	if ob.concurrent {

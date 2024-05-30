@@ -363,3 +363,11 @@ func EvalAsMethod(th *Thread, as *ArgSpec, ob Value, args []Value) Value {
 	}
 	return f.Call(th, ob, as.DropFirst())
 }
+
+var _ = method(ob_CompareAndSet, "(member, newValue, oldValue = nil)")
+
+func ob_CompareAndSet(th *Thread, this Value, args []Value) Value {
+	th.ReturnThrow = true
+	return SuBool(ToContainer(this).ToObject().
+		CompareAndSet(args[0], args[1], args[2]))
+}
