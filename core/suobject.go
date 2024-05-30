@@ -17,7 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
-	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
 )
@@ -243,7 +242,7 @@ func (ob *SuObject) CompareAndSet(key, newval, oldval Value) bool {
 	}
 	if ob.get(key) == oldval {
 		ob.set(key, newval)
-        return true
+		return true
 	}
 	return false
 }
@@ -643,7 +642,7 @@ func (buf *limitBuf) String() string {
 	return buf.sb.String()
 }
 
-func (ob *SuObject) Hash() uint32 {
+func (ob *SuObject) Hash() uint64 {
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
@@ -669,17 +668,17 @@ func (ob *SuObject) Hash() uint32 {
 }
 
 // Hash2 is shallow to prevents infinite recursion and deadlock
-func (ob *SuObject) Hash2() uint32 {
+func (ob *SuObject) Hash2() uint64 {
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
 	return ob.hash2()
 }
 
-func (ob *SuObject) hash2() uint32 {
-	hash := uint32(17)
-	hash = 31*hash + uint32(ob.named.Size())
-	hash = 31*hash + uint32(len(ob.list))
+func (ob *SuObject) hash2() uint64 {
+	hash := uint64(17)
+	hash = 31*hash + uint64(ob.named.Size())
+	hash = 31*hash + uint64(len(ob.list))
 	return hash
 }
 
@@ -1112,17 +1111,17 @@ func (ob *SuObject) BinarySearch2(th *Thread, value, lt Value) int {
 
 var _ Packable = (*SuObject)(nil)
 
-func (ob *SuObject) PackSize(hash *uint32) int {
+func (ob *SuObject) PackSize(hash *uint64) int {
 	return ob.PackSize2(hash, newPackStack())
 }
 
-func (ob *SuObject) PackSize2(hash *uint32, stack packStack) int {
+func (ob *SuObject) PackSize2(hash *uint64, stack packStack) int {
 	// must check stack before locking to avoid recursive deadlock
 	stack.push(ob)
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
-	*hash = hacks.CrcUint32(*hash, ob.clock)
+	*hash = *hash * 31 + uint64(ob.clock)
 	if ob.size() == 0 {
 		return 1 // just tag
 	}
@@ -1139,7 +1138,7 @@ func (ob *SuObject) PackSize2(hash *uint32, stack packStack) int {
 	return ps
 }
 
-func packSize(x Value, hash *uint32, stack packStack) int {
+func packSize(x Value, hash *uint64, stack packStack) int {
 	if p, ok := x.(Packable); ok {
 		n := p.PackSize2(hash, stack)
 		return varint.Len(uint64(n)) + n
@@ -1147,15 +1146,15 @@ func packSize(x Value, hash *uint32, stack packStack) int {
 	panic("can't pack " + ErrType(x))
 }
 
-func (ob *SuObject) Pack(hash *uint32, buf *pack.Encoder) {
+func (ob *SuObject) Pack(hash *uint64, buf *pack.Encoder) {
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
 	ob.pack(hash, buf, PackObject)
 }
 
-func (ob *SuObject) pack(hash *uint32, buf *pack.Encoder, tag byte) {
-	*hash = hacks.CrcUint32(*hash, ob.clock)
+func (ob *SuObject) pack(hash *uint64, buf *pack.Encoder, tag byte) {
+	*hash = *hash * 31 + uint64(ob.clock)
 	buf.Put1(tag)
 	if ob.size() == 0 {
 		return
@@ -1172,7 +1171,7 @@ func (ob *SuObject) pack(hash *uint32, buf *pack.Encoder, tag byte) {
 	}
 }
 
-func packValue(x Value, hash *uint32, buf *pack.Encoder) {
+func packValue(x Value, hash *uint64, buf *pack.Encoder) {
 	buf0 := *buf
 	buf.Put1(0) // 99% of the time we only need one byte for the size
 	x.(Packable).Pack(hash, buf)

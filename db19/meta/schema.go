@@ -37,7 +37,7 @@ func (ts *Schema) Key() string {
 	return ts.Table
 }
 
-func (*Schema) Hash(key string) uint32 {
+func (*Schema) Hash(key string) uint64 {
 	return hash.String(key)
 }
 

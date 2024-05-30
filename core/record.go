@@ -193,15 +193,15 @@ type Packed string
 
 var _ Packable = (*Packed)(nil)
 
-func (p Packed) Pack(_ *uint32, buf *pack.Encoder) {
+func (p Packed) Pack(_ *uint64, buf *pack.Encoder) {
 	buf.PutStr(string(p))
 }
 
-func (p Packed) PackSize(*uint32) int {
+func (p Packed) PackSize(*uint64) int {
 	return len(p)
 }
 
-func (p Packed) PackSize2(*uint32, packStack) int {
+func (p Packed) PackSize2(*uint64, packStack) int {
 	return len(p)
 }
 
@@ -220,7 +220,7 @@ func (b *RecordBuilder) Trim() *RecordBuilder {
 const maxRecordLen = 1_000_000
 
 func (b *RecordBuilder) Build() Record {
-	var hash uint32
+	hash := uint64(17)
 	var stack packStack
 	if len(b.vals) > MaxValues {
 		panic("too many values for record")
@@ -266,7 +266,7 @@ func tblength(nfields, datasize int) int {
 	return hdrlen + 4*(1+nfields) + datasize
 }
 
-func (b *RecordBuilder) build(hash *uint32, dst *pack.Encoder, length int, sizes []int) {
+func (b *RecordBuilder) build(hash *uint64, dst *pack.Encoder, length int, sizes []int) {
 	b.buildHeader(dst, length, sizes)
 	nfields := len(b.vals)
 	for i := nfields - 1; i >= 0; i-- {

@@ -292,8 +292,8 @@ func BenchmarkKeywordHmap(b *testing.B) {
 
 type helper struct{}
 
-func (h helper) Hash(s string) uint32 {
-	return uint32(s[0]) + uint32(s[1])<<8 + uint32(len(s))<<16
+func (h helper) Hash(s string) uint64 {
+	return uint64(s[0]) + uint64(s[1])<<8 + uint64(len(s))<<16
 }
 
 func (h helper) Equal(s1, s2 string) bool {

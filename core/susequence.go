@@ -137,11 +137,11 @@ func (seq *SuSequence) Equal(other any) bool {
 	return x.Equal(other)
 }
 
-func (seq *SuSequence) Hash() uint32 {
+func (seq *SuSequence) Hash() uint64 {
 	return seq.instantiate().Hash()
 }
 
-func (seq *SuSequence) Hash2() uint32 {
+func (seq *SuSequence) Hash2() uint64 {
 	return seq.instantiate().Hash2()
 }
 
@@ -194,14 +194,14 @@ func (seq *SuSequence) SetConcurrent() {
 
 var _ Packable = (*SuSequence)(nil)
 
-func (seq *SuSequence) PackSize(hash *uint32) int {
+func (seq *SuSequence) PackSize(hash *uint64) int {
 	return seq.instantiate().PackSize(hash)
 }
 
-func (seq *SuSequence) Pack(hash *uint32, buf *pack.Encoder) {
+func (seq *SuSequence) Pack(hash *uint64, buf *pack.Encoder) {
 	seq.instantiate().Pack(hash, buf)
 }
 
-func (seq *SuSequence) PackSize2(hash *uint32, stack packStack) int {
+func (seq *SuSequence) PackSize2(hash *uint64, stack packStack) int {
 	return seq.instantiate().PackSize2(hash, stack)
 }

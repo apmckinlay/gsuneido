@@ -109,11 +109,11 @@ func (*smi) RangeLen(int, int) Value {
 	panic("number does not support range")
 }
 
-func (si *smi) Hash() uint32 {
-	return uint32(si.toInt())
+func (si *smi) Hash() uint64 {
+	return uint64(si.toInt())
 }
 
-func (si *smi) Hash2() uint32 {
+func (si *smi) Hash2() uint64 {
 	return si.Hash()
 }
 
@@ -168,14 +168,14 @@ func (*smi) SetConcurrent() {
 
 var _ Packable = SuInt(0)
 
-func (si *smi) PackSize(*uint32) int {
+func (si *smi) PackSize(*uint64) int {
 	return SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.PackSize(nil)
 }
 
-func (si *smi) PackSize2(*uint32, packStack) int {
+func (si *smi) PackSize2(*uint64, packStack) int {
 	return si.PackSize(nil)
 }
 
-func (si *smi) Pack(hash *uint32, buf *pack.Encoder) {
+func (si *smi) Pack(hash *uint64, buf *pack.Encoder) {
 	SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.Pack(hash, buf)
 }

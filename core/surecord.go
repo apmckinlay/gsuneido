@@ -197,11 +197,11 @@ func (r *SuRecord) Equal(other any) bool {
 	return ok && deepEqual(r, val)
 }
 
-func (r *SuRecord) Hash() uint32 {
+func (r *SuRecord) Hash() uint64 {
 	return r.ToObject().Hash()
 }
 
-func (r *SuRecord) Hash2() uint32 {
+func (r *SuRecord) Hash2() uint64 {
 	return r.ToObject().Hash2()
 }
 
@@ -934,15 +934,15 @@ func (*SuRecord) Lookup(th *Thread, method string) Callable {
 
 var _ Packable = (*SuRecord)(nil)
 
-func (r *SuRecord) PackSize(hash *uint32) int {
+func (r *SuRecord) PackSize(hash *uint64) int {
 	return r.ToObject().PackSize(hash)
 }
 
-func (r *SuRecord) PackSize2(hash *uint32, stack packStack) int {
+func (r *SuRecord) PackSize2(hash *uint64, stack packStack) int {
 	return r.ToObject().PackSize2(hash, stack)
 }
 
-func (r *SuRecord) Pack(hash *uint32, buf *pack.Encoder) {
+func (r *SuRecord) Pack(hash *uint64, buf *pack.Encoder) {
 	r.ToObject().pack(hash, buf, PackRecord)
 }
 

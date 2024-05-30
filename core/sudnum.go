@@ -41,14 +41,14 @@ func (dn SuDnum) String() string {
 	return dn.Dnum.String()
 }
 
-func (dn SuDnum) Hash() uint32 {
+func (dn SuDnum) Hash() uint64 {
 	if n, ok := dn.ToInt64(); ok && MinSuInt <= n && n <= MaxSuInt {
-		return uint32(n) // for compatibility with SuInt
+		return uint64(n) // for compatibility with SuInt
 	}
 	return dn.Dnum.Hash()
 }
 
-func (dn SuDnum) Hash2() uint32 {
+func (dn SuDnum) Hash2() uint64 {
 	return dn.Hash()
 }
 
@@ -108,7 +108,7 @@ const E6 = uint64(1e6)
 const E4 = uint64(1e4)
 const E2 = uint64(1e2)
 
-func (dn SuDnum) PackSize(*uint32) int {
+func (dn SuDnum) PackSize(*uint64) int {
 	if dn.Sign() == 0 {
 		return 1 // just tag
 	}
@@ -148,11 +148,11 @@ func (dn SuDnum) PackSize(*uint32) int {
 	return 10
 }
 
-func (dn SuDnum) PackSize2(*uint32, packStack) int {
+func (dn SuDnum) PackSize2(*uint64, packStack) int {
 	return dn.PackSize(nil)
 }
 
-func (dn SuDnum) Pack(_ *uint32, buf *pack.Encoder) {
+func (dn SuDnum) Pack(_ *uint64, buf *pack.Encoder) {
 	xor := byte(0)
 	if dn.Sign() < 0 {
 		xor = 0xff

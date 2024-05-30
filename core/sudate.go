@@ -719,14 +719,14 @@ func (d SuDate) Equal(other any) bool {
 	return d == other
 }
 
-func (d SuDate) Hash() uint32 {
-	h := uint32(17)
-	h = 31*h + d.date
-	h = 31*h + d.time
+func (d SuDate) Hash() uint64 {
+	h := uint64(17)
+	h = 31*h + uint64(d.date)
+	h = 31*h + uint64(d.time)
 	return h
 }
 
-func (d SuDate) Hash2() uint32 {
+func (d SuDate) Hash2() uint64 {
 	return d.Hash()
 }
 
@@ -772,16 +772,16 @@ func (SuDate) Lookup(th *Thread, method string) Callable {
 var _ Packable = SuDate{}
 
 // PackSize returns the packed size (Packable interface)
-func (SuDate) PackSize(*uint32) int {
+func (SuDate) PackSize(*uint64) int {
 	return 9
 }
 
-func (SuDate) PackSize2(*uint32, packStack) int {
+func (SuDate) PackSize2(*uint64, packStack) int {
 	return 9
 }
 
 // Pack packs into the supplied byte slice (Packable interface)
-func (d SuDate) Pack(_ *uint32, buf *pack.Encoder) {
+func (d SuDate) Pack(_ *uint64, buf *pack.Encoder) {
 	buf.Put1(PackDate).Uint32(d.date).Uint32(d.time)
 }
 

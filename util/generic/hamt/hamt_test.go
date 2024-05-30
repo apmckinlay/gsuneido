@@ -26,8 +26,8 @@ func (f *Foo) Key() int {
 	return f.key
 }
 
-func (*Foo) Hash(key int) uint32 {
-	return uint32(key) & 0xffff // reduce bits to force overflows
+func (*Foo) Hash(key int) uint64 {
+	return uint64(key) & 0xffff // reduce bits to force overflows
 
 }
 

@@ -217,11 +217,11 @@ func (ss SuStr) RangeLen(from int, n int) Value {
 	return SuStr(string(ss)[from : from+n])
 }
 
-func (ss SuStr) Hash() uint32 {
+func (ss SuStr) Hash() uint64 {
 	return hash.String(string(ss))
 }
 
-func (ss SuStr) Hash2() uint32 {
+func (ss SuStr) Hash2() uint64 {
 	return ss.Hash()
 }
 
@@ -282,18 +282,18 @@ func (SuStr) SetConcurrent() {
 
 var _ Packable = SuStr("")
 
-func (ss SuStr) PackSize(*uint32) int {
+func (ss SuStr) PackSize(*uint64) int {
 	if ss == "" {
 		return 0
 	}
 	return 1 + len(ss)
 }
 
-func (ss SuStr) PackSize2(*uint32, packStack) int {
+func (ss SuStr) PackSize2(*uint64, packStack) int {
 	return ss.PackSize(nil)
 }
 
-func (ss SuStr) Pack(_ *uint32, buf *pack.Encoder) {
+func (ss SuStr) Pack(_ *uint64, buf *pack.Encoder) {
 	if ss != "" {
 		buf.Put1(PackString).PutStr(string(ss))
 	}

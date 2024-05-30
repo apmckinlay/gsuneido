@@ -699,9 +699,8 @@ func Div(x, y Dnum) Dnum {
 }
 
 // Hash returns a hash value for a Dnum
-func (dn Dnum) Hash() uint32 {
-	return uint32(dn.coef>>32) ^ uint32(dn.coef) ^
-		uint32(dn.sign)<<16 ^ uint32(dn.exp)<<8
+func (dn Dnum) Hash() uint64 {
+	return dn.coef ^ uint64(dn.sign)<<16 ^ uint64(dn.exp)<<8
 }
 
 // Format converts a number to a string with a specified format

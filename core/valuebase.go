@@ -89,11 +89,11 @@ func (ValueBase[E]) RangeLen(int, int) Value {
 	panic(typeName[E]() + " does not support range")
 }
 
-func (ValueBase[E]) Hash() uint32 {
+func (ValueBase[E]) Hash() uint64 {
 	panic(typeName[E]() + " hash not implemented")
 }
 
-func (ValueBase[E]) Hash2() uint32 {
+func (ValueBase[E]) Hash2() uint64 {
 	panic(typeName[E]() + " hash not implemented")
 }
 

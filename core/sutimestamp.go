@@ -26,23 +26,23 @@ func (d SuTimestamp) String() string {
 		d.extra)
 }
 
-func (d SuTimestamp) Hash() uint32 {
+func (d SuTimestamp) Hash() uint64 {
 	h := d.SuDate.Hash()
-	h = 31*h + uint32(d.extra)
+	h = 31*h + uint64(d.extra)
 	return h
 }
 
 // packing
 
-func (SuTimestamp) PackSize(*uint32) int {
+func (SuTimestamp) PackSize(*uint64) int {
 	return 10
 }
 
-func (SuTimestamp) PackSize2(*uint32, packStack) int {
+func (SuTimestamp) PackSize2(*uint64, packStack) int {
 	return 10
 }
 
-func (d SuTimestamp) Pack(h *uint32, buf *pack.Encoder) {
+func (d SuTimestamp) Pack(h *uint64, buf *pack.Encoder) {
 	assert.That(d.extra != 0)
 	d.SuDate.Pack(h, buf)
 	buf.Put1(d.extra)

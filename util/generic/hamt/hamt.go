@@ -16,7 +16,7 @@ import (
 
 type Item[K comparable] interface {
 	Key() K
-	Hash(K) uint32
+	Hash(K) uint64
 	Cksum() uint32
 	StorSize() int
 	IsTomb() bool
@@ -97,7 +97,7 @@ func (ht Hamt[K, E]) get(key K) *E {
 	return nil // not found
 }
 
-func hashbit(hash uint32, shift int) uint32 {
+func hashbit(hash uint64, shift int) uint32 {
 	return 1 << ((hash >> shift) & maskItem)
 }
 
@@ -123,7 +123,7 @@ func (ht Hamt[K, E]) Put(item E) {
 	ht.root.with(ht.generation, item, key, hash, 0)
 }
 
-func (nd *node[K, E]) with(gen uint32, item E, key K, hash uint32, shift int) *node[K, E] {
+func (nd *node[K, E]) with(gen uint32, item E, key K, hash uint64, shift int) *node[K, E] {
 	// recursive
 	if nd.generation != gen {
 		// path copy on the way down the tree
@@ -201,7 +201,7 @@ func (ht Hamt[K, E]) Delete(key K) bool {
 	return ok
 }
 
-func (nd *node[K, E]) without(gen uint32, key K, hash uint32, shift int) (*node[K, E], bool) {
+func (nd *node[K, E]) without(gen uint32, key K, hash uint64, shift int) (*node[K, E], bool) {
 	// recursive
 	if nd.generation != gen {
 		// path copy on the way down the tree

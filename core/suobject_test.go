@@ -205,7 +205,7 @@ func TestSuObjectPackValue(t *testing.T) {
 	test := func(v1 Value) {
 		t.Helper()
 		enc := pack.NewEncoder(50)
-		var hash uint32
+		var hash uint64
 		packValue(v1, &hash, enc)
 		s := enc.String()
 		dec := pack.NewDecoder(s)
@@ -248,7 +248,7 @@ func TestSuObjectPack2(t *testing.T) {
 func TestSuObjectPack3(t *testing.T) {
 	ob := &SuObject{}
 	ob.Add(One)
-	var hash1, hash2 uint32
+	var hash1, hash2 uint64
 	size := ob.PackSize(&hash1)
 	ob.DeleteAll()
 	buf := pack.NewEncoder(size)

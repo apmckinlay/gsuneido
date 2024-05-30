@@ -31,7 +31,7 @@ func (ti *Info) Key() string {
 	return ti.Table
 }
 
-func (*Info) Hash(key string) uint32 {
+func (*Info) Hash(key string) uint64 {
 	return hash.String(key)
 }
 

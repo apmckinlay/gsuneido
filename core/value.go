@@ -71,10 +71,10 @@ type Value interface {
 
 	Equal(other any) bool
 
-	Hash() uint32
+	Hash() uint64
 
 	// Hash2 is used by object to shallow hash contents
-	Hash2() uint32
+	Hash2() uint64
 
 	// Type returns the Suneido name for the type
 	Type() types.Type
@@ -300,8 +300,8 @@ func PackValue(v Value) string {
 // PackSize returns the pack size of the value if it is Packable, else it panics
 func PackSize(v Value) int {
 	if p, ok := v.(Packable); ok {
-		var clock uint32
-		return p.PackSize(&clock)
+		hash := uint64(17)
+		return p.PackSize(&hash)
 	}
 	panic("can't pack " + ErrType(v))
 }

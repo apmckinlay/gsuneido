@@ -7,25 +7,33 @@ import (
 	"hash/maphash"
 )
 
-const maxlen = 64
+const maxlen = 64 // ???
 
 var seed maphash.Seed = maphash.MakeSeed()
 
-func String(s string) uint32 {
+// String uses maphash.String to hash the first 64 bytes of s
+func String(s string) uint64 {
 	if len(s) > maxlen {
-		s = s[:maxlen]
+		return 31 * maphash.String(seed, s[:maxlen]) + uint64(len(s))
 	}
-	return uint32(maphash.String(seed, s))
+	return maphash.String(seed, s)
 }
 
-func Bytes(b []byte) uint32 {
+// FullString uses maphash.FullString to hash all of s
+func FullString(s string) uint64 {
+	return maphash.String(seed, s)
+}
+
+// Bytes uses maphash.Bytes to hash the first 64 bytes of b
+func Bytes(b []byte) uint64 {
 	if len(b) > maxlen {
-		b = b[:maxlen]
+		return 31 * maphash.Bytes(seed, b[:maxlen]) + uint64(len(b))
 	}
-	return uint32(maphash.Bytes(seed, b))
+	return maphash.Bytes(seed, b)
 }
 
 // HashString is the old version, used for compatibility with db checksums.
+// It hashes the entire string.
 func HashString(s string) uint32 {
 	const offset32 = 2166136261
 	const prime32 = 16777619

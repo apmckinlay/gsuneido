@@ -115,11 +115,11 @@ func (c SuConcat) RangeLen(from int, n int) Value {
 	return SuStr(c.toStr()[from : from+n])
 }
 
-func (c SuConcat) Hash() uint32 {
+func (c SuConcat) Hash() uint64 {
 	return hash.Bytes(c.buf.bs[:c.n])
 }
 
-func (c SuConcat) Hash2() uint32 {
+func (c SuConcat) Hash2() uint64 {
 	return c.Hash()
 }
 
@@ -160,18 +160,18 @@ func (SuConcat) Lookup(th *Thread, method string) Callable {
 
 var _ Packable = SuConcat{}
 
-func (c SuConcat) PackSize(*uint32) int {
+func (c SuConcat) PackSize(*uint64) int {
 	if c.n == 0 {
 		return 0
 	}
 	return 1 + c.n
 }
 
-func (c SuConcat) PackSize2(*uint32, packStack) int {
+func (c SuConcat) PackSize2(*uint64, packStack) int {
 	return c.PackSize(nil)
 }
 
-func (c SuConcat) Pack(_ *uint32, buf *pack.Encoder) {
+func (c SuConcat) Pack(_ *uint64, buf *pack.Encoder) {
 	if c.n > 0 {
 		buf.Put1(PackString).Put(c.buf.bs[:c.n])
 	}

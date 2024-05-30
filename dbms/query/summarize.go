@@ -417,7 +417,7 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 
 func (su *Summarize) buildMap() []mapPair {
 	hdr := su.source.Header()
-	hfn := func(k rowHash) uint32 { return k.hash }
+	hfn := func(k rowHash) uint64 { return k.hash }
 	eqfn := func(x, y rowHash) bool {
 		return x.hash == y.hash &&
 			equalCols(x.row, y.row, hdr, su.by, su.th, su.st)

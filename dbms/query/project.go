@@ -521,7 +521,7 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 
 type rowHash struct {
 	row  Row
-	hash uint32
+	hash uint64
 }
 
 func (p *Project) getMap(th *Thread, dir Dir) Row {
@@ -530,7 +530,7 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 	if p.rewound {
 		p.rewound = false
 		if p.results == nil {
-			hfn := func(k rowHash) uint32 { return k.hash }
+			hfn := func(k rowHash) uint64 { return k.hash }
 			eqfn := func(x, y rowHash) bool {
 				return x.hash == y.hash &&
 					equalCols(x.row, y.row, p.source.Header(), p.columns, p.th, p.st)
@@ -557,8 +557,8 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 	return nil
 }
 
-func hashCols(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) uint32 {
-	h := uint32(31)
+func hashCols(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) uint64 {
+	h := uint64(31)
 	for _, col := range cols {
 		x := row.GetRawVal(hdr, col, th, st)
 		h = 31*h + hash.String(x)

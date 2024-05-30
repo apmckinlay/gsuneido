@@ -5,21 +5,20 @@ package builtin
 
 import (
 	"fmt"
-	"hash/adler32"
 
 	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
 var _ = builtin(QueryHash, "(query, details=false)")
 
 type rowHash struct {
 	row  Row
-	hash uint32
+	hash uint64
 }
 
 func QueryHash(th *Thread, args []Value) Value {
@@ -33,7 +32,7 @@ func QueryHash(th *Thread, args []Value) Value {
 	q := tran.Query(query, nil)
 	qh := NewQueryHasher(q.Header())
 
-	hfn := func(row rowHash) uint32 { return row.hash }
+	hfn := func(row rowHash) uint64 { return row.hash }
 	eqfn := func(x, y rowHash) bool {
 		return x.hash == y.hash && equalRow(x.row, y.row, qh.hdr, qh.fields)
 	}
@@ -60,12 +59,12 @@ func equalRow(x, y Row, hdr *Header, cols []string) bool {
 //-------------------------------------------------------------------
 
 type queryHasher struct {
-	hdr *Header
-	fields []string
-	ncols int
-	colsHash uint32
-	nrows int
-	hash uint32
+	hdr      *Header
+	fields   []string
+	ncols    int
+	colsHash uint64
+	nrows    int
+	hash     uint64
 }
 
 func NewQueryHasher(hdr *Header) *queryHasher {
@@ -75,19 +74,18 @@ func NewQueryHasher(hdr *Header) *queryHasher {
 	slices.Sort(qh.fields)
 	cols := slices.Clone(hdr.Columns)
 	slices.Sort(cols)
-	hash := uint32(31)
+	h := uint64(17)
 	for _, col := range cols {
-		hash = hash*31 + adler32.Checksum(hacks.Stobs(col))
+		h = h*31 + hash.String(col)
 	}
 	qh.ncols = len(cols)
-	qh.colsHash = hash
-	qh.hash = hash
+	qh.colsHash = h
+	qh.hash = h
 	return &qh
 }
 
-
-func (qh *queryHasher) Row(row Row) uint32 {
-	hash := uint32(0)
+func (qh *queryHasher) Row(row Row) uint64 {
+	hash := uint64(17)
 	for _, fld := range qh.fields {
 		hash = hash*31 + hashPacked(row.GetRaw(qh.hdr, fld))
 	}
@@ -97,18 +95,18 @@ func (qh *queryHasher) Row(row Row) uint32 {
 	return hash
 }
 
-func hashPacked(p string) uint32 {
+func hashPacked(p string) uint64 {
 	if len(p) > 0 && p[0] >= PackObject {
 		return hashObject(p)
 	}
-	return adler32.Checksum(hacks.Stobs(p))
+	return hash.FullString(p)
 }
 
-func hashObject(p string) uint32 {
-	hash := uint32(0)
+func hashObject(p string) uint64 {
+	hash := uint64(17)
 	for i := 0; i < len(p); i++ {
 		// use simple addition to be insensitive to member order
-		hash += uint32(p[i])
+		hash += uint64(p[i])
 	}
 	return hash
 }

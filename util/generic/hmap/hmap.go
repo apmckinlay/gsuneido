@@ -23,7 +23,7 @@ type Hmap[K any, V any, H Helper[K]] struct {
 }
 
 type Helper[K any] interface {
-	Hash(k K) uint32
+	Hash(k K) uint64
 	Equal(x, y K) bool
 }
 
@@ -31,11 +31,11 @@ type Helper[K any] interface {
 type Meth[K Key] struct{}
 
 type Key interface {
-	Hash() uint32
+	Hash() uint64
 	Equal(any) bool
 }
 
-func (m Meth[K]) Hash(k K) uint32 {
+func (m Meth[K]) Hash(k K) uint64 {
 	return k.Hash()
 }
 func (m Meth[K]) Equal(x, y K) bool {
@@ -45,11 +45,11 @@ func (m Meth[K]) Equal(x, y K) bool {
 // Funcs is a helper that is configured with hash and equals functions.
 // This allows using closures which allows context.
 type Funcs[K any] struct {
-	hfn  func(k K) uint32
+	hfn  func(k K) uint64
 	eqfn func(x, y K) bool
 }
 
-func (m Funcs[K]) Hash(k K) uint32 {
+func (m Funcs[K]) Hash(k K) uint64 {
 	return m.hfn(k)
 }
 func (m Funcs[K]) Equal(x, y K) bool {
@@ -57,7 +57,7 @@ func (m Funcs[K]) Equal(x, y K) bool {
 }
 
 func NewHmapFuncs[K any, V any](
-	hfn func(k K) uint32,
+	hfn func(k K) uint64,
 	eqfn func(x, y K) bool) *Hmap[K, V, Funcs[K]] {
 	return &Hmap[K, V, Funcs[K]]{help: Funcs[K]{hfn: hfn, eqfn: eqfn}}
 }
@@ -146,9 +146,9 @@ func indexInBlock(i int) int {
 }
 
 // hashToIndex uses Fibonaci
-func (h *Hmap[K, V, H]) hashToIndex(hash uint32) int {
-	const phi32 = 2654435769
-	return int((hash * phi32) >> h.capShift)
+func (h *Hmap[K, V, H]) hashToIndex(hash uint64) int {
+	const phi64 = 11400714819323198485
+	return int((hash * phi64) >> h.capShift)
 	//return int(hash % h.cap()) // simpler for debugging
 }
 
@@ -243,7 +243,7 @@ func (h *Hmap[K, V, H]) getPut(key K, val V, update bool) (k K, v V, ok bool) {
 func (h *Hmap[K, V, H]) grow() {
 	if h.cap() == 0 {
 		h.blocks = make([]block[K, V], 1)
-		h.capShift = 32 - 3
+		h.capShift = 64 - 3
 		return
 	}
 	assert.Msg("grow while growing").That(!h.growing)

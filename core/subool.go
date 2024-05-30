@@ -72,14 +72,14 @@ func (SuBool) RangeLen(int, int) Value {
 	panic("boolean does not support range")
 }
 
-func (b SuBool) Hash() uint32 {
+func (b SuBool) Hash() uint64 {
 	if !b {
 		return 0x11111111
 	}
 	return 0x22222222
 }
 
-func (b SuBool) Hash2() uint32 {
+func (b SuBool) Hash2() uint64 {
 	return b.Hash()
 }
 
@@ -123,15 +123,15 @@ func (SuBool) SetConcurrent() {
 
 var _ Packable = SuBool(true)
 
-func (SuBool) PackSize(*uint32) int {
+func (SuBool) PackSize(*uint64) int {
 	return 1
 }
 
-func (SuBool) PackSize2(*uint32, packStack) int {
+func (SuBool) PackSize2(*uint64, packStack) int {
 	return 1
 }
 
-func (b SuBool) Pack(_ *uint32, buf *pack.Encoder) {
+func (b SuBool) Pack(_ *uint64, buf *pack.Encoder) {
 	if b {
 		buf.Put1(PackTrue)
 	} else {

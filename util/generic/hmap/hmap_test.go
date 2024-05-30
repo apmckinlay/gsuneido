@@ -15,8 +15,8 @@ import (
 
 type intkey int
 
-func (ik intkey) Hash() uint32 {
-	return uint32(ik)
+func (ik intkey) Hash() uint64 {
+	return uint64(ik)
 }
 
 func (ik intkey) Equal(ik2 any) bool {
@@ -144,7 +144,7 @@ func TestHmap_random(t *testing.T) {
 }
 
 func TestHmap_funcs(t *testing.T) {
-	hm := NewHmapFuncs[int, int](func(i int) uint32 { return uint32(i) },
+	hm := NewHmapFuncs[int, int](func(i int) uint64 { return uint64(i) },
 		func(x, y int) bool { return x == y })
 	hm.Put(123, 456)
 	assert.That(hm.Has(123))
@@ -219,8 +219,8 @@ func (tk *testKey) Equal(other any) bool {
 	return tk == other.(*testKey)
 }
 
-func (tk *testKey) Hash() uint32 {
-	return uint32(tk.hash)
+func (tk *testKey) Hash() uint64 {
+	return uint64(tk.hash)
 }
 
 type tkType = Hmap[*testKey, int, Meth[*testKey]]

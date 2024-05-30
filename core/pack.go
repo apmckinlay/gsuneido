@@ -18,11 +18,11 @@ import (
 type Packable interface {
 	// PackSize returns the size (in bytes) of the packed value.
 	// object/record set hash to detect nested changes.
-	PackSize(hash *uint32) int
+	PackSize(hash *uint64) int
 	// PackSize2 is used by object/record to handle nesting
-	PackSize2(hash *uint32, stack packStack) int
+	PackSize2(hash *uint64, stack packStack) int
 	// Pack appends the value to the Encoder
-	Pack(hash *uint32, buf *pack.Encoder)
+	Pack(hash *uint64, buf *pack.Encoder)
 }
 
 // Packed values start with one of the following type tags,
@@ -92,9 +92,10 @@ func Pack(x Packable) string {
 }
 
 func Pack2(x Packable) *pack.Encoder {
-	var hash1, hash2 uint32
+	hash1 := uint64(17)
 	size := x.PackSize(&hash1)
 	buf := pack.NewEncoder(size)
+	hash2 := uint64(17)
 	x.Pack(&hash2, buf)
 	if hash1 != hash2 || len(buf.Buffer()) != size {
 		panic("object modified during packing")
