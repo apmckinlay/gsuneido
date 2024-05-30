@@ -63,7 +63,7 @@ func wg_Thread(th *Thread, this Value, args []Value) Value {
 	return nil
 }
 
-var _ = method(wg_Wait, "(secs = 5)")
+var _ = method(wg_Wait, "(secs = 10)")
 
 func wg_Wait(th *Thread, this Value, args []Value) Value {
 	timeout := IfInt(args[0])
