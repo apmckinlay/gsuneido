@@ -255,7 +255,7 @@ func TestSimple(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping test in short mode")
 	}
-	MakeSuTran = func(qt QueryTran) *SuTran {
+	MakeSuTran = func(QueryTran) *SuTran {
 		return nil
 	}
 	s := `(((cus extend r0 union cus) join ivc) join aln) union (((ivc where ik is '7' project ik,i2,i3,ck leftjoin cus) union (cus join (ivc where ik is '7'))) join (aln where ik is '7'))`
