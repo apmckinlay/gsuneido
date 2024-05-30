@@ -937,11 +937,7 @@ func (ob *SuObject) Sort(th *Thread, lt Value) {
 			ob.Unlock() // can't hold lock while calling arbitrary code
 			defer ob.Lock()
 			sort.SliceStable(ob.list, func(i, j int) bool {
-				lt := th.Call(lt, ob.list[i], ob.list[j])
-				if lt != True && lt != False {
-					Warning("Sort! functions should return true or false")
-				}
-				return lt == True //TODO remove warning and use ToBool
+				return ToBool(th.Call(lt, ob.list[i], ob.list[j]))
 			})
 			// note: could become concurrent while unlocked
 		}()
