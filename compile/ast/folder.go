@@ -194,8 +194,9 @@ func commutative(exprs []Expr, bop bopfn, zero, identity Value) []Expr {
 		}
 	}
 	if dst == 1 && first != -1 {
-		// compile-time type check
-		bop(identity, exprs[first].(*Constant).Val)
+		// compile-time type check/conversion
+		val := exprs[0].(*Constant).Val
+		exprs[0] = &Constant{Val: bop(identity, val)}
 	}
 	if dst <= 1 && first == -1 {
 		// keep operation as run-time type check

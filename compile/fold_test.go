@@ -211,6 +211,11 @@ func TestPropFold(t *testing.T) {
         Call(T))`)
 
 	// commutative
+	test("0 + ''", "0")
+	test("'' + 0", "0")
+	test("false + ''", "0")
+	test("'' + false", "0")
+	test("x + 0 + 0 + 0", "Nary(Add x 0)")
 	test("a * 0 * b", "Nary(Mul a b 0)") // short circuit
 	test("a & 0 & b", "0")               // short circuit
 	test("1 * a * 1", "Nary(Mul a 1)")
