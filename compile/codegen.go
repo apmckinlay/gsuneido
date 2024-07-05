@@ -16,6 +16,7 @@ import (
 	op "github.com/apmckinlay/gsuneido/core/opcodes"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -80,6 +81,7 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	}()
 	cg.function(fn)
 	cg.finishParamSpec()
+	cg.argspecs = slc.Shrink(cg.argspecs)
 	for i := range cg.argspecs {
 		cg.argspecs[i].Names = cg.Values
 	}
@@ -88,7 +90,7 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 		Code:      hacks.BStoS(cg.code),
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
-		ArgSpecs:  cg.argspecs, //TODO shrink to fit
+		ArgSpecs:  cg.argspecs,
 		SrcPos:    hacks.BStoS(cg.srcPos),
 		SrcBase:   cg.srcBase,
 	}
@@ -489,7 +491,7 @@ func (cg *cgen) forRange(node *ast.ForIn) {
 		}
 	}
 	cg.expr(node.E2) // stays on stack
-	cg.expr(node.E) // stays on stack
+	cg.expr(node.E)  // stays on stack
 	store()
 	labels := &Labels{brk: -1, cont: -1}
 	cond := cg.emitJump(op.Jump, -1)

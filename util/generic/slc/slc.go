@@ -125,6 +125,17 @@ func Allow[S ~[]E, E any](s S, n int) S {
 	return Grow(s, n-len(s))
 }
 
+// Shrink returns a copy of the list with the excess capacity removed
+// or the original if there is no excess capacity.
+func Shrink[S ~[]E, E any](s S) S {
+	if len(s) == cap(s) {
+        return s
+    }
+	t := make(S, len(s))
+	copy(t, s)
+	return t
+}
+
 // With returns a copy of the list with the values appended.
 // Unlike append, it allocates just the right size, no extra.
 func With[S ~[]E, E any](s1 S, s2 ...E) S {
