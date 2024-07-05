@@ -80,8 +80,8 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	}()
 	cg.function(fn)
 	cg.finishParamSpec()
-	for _, as := range cg.argspecs {
-		as.Names = cg.Values
+	for i := range cg.argspecs {
+		cg.argspecs[i].Names = cg.Values
 	}
 
 	return &SuFunc{
