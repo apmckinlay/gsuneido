@@ -330,6 +330,10 @@ func (f Folder) foldMul(exprs []Expr) []Expr {
 		if ud := unaryDivConst(e); ud != nil {
 			div = OpMul(div, ud)
 		} else if c, ok := e.(*Constant); ok {
+			if c.Val.Equal(Zero) {
+				exprs[0] = c
+				return exprs[:1]
+			}
 			mul = OpMul(mul, c.Val)
 		} else {
 			exprs[dst] = e

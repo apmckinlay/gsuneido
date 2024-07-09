@@ -32,6 +32,39 @@ func TestInRange(t *testing.T) {
 	assert.That(th.Call(f, EmptyStr) == False)
 }
 
+func BenchmarkForInSeq(b *testing.B) {
+	f := compile.Constant(`function () {
+		for i in Seq(1000)
+		    {}
+	}`)
+	var th Thread
+	for i := 0; i < b.N; i++ {
+		th.Call(f)
+    }
+}
+
+func BenchmarkForInCounted(b *testing.B) {
+	f := compile.Constant(`function () {
+		for i in ..1000
+		    {}
+	}`)
+	var th Thread
+	for i := 0; i < b.N; i++ {
+		th.Call(f)
+    }
+}
+
+func BenchmarkForClassic(b *testing.B) {
+	f := compile.Constant(`function () {
+		for (i = 0; i < 1000; i++)
+		    {}
+	}`)
+	var th Thread
+	for i := 0; i < b.N; i++ {
+		th.Call(f)
+    }
+}
+
 func TestNaming(t *testing.T) {
 	var th Thread
 	test := func(src, expected string) {
