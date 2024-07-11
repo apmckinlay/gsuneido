@@ -448,6 +448,21 @@ loop:
 			} else {
 				fr.ip += brk - 1 // break
 			}
+		case op.ForRange:
+			th.stack[th.sp-1] = OpAdd1(th.stack[th.sp-1])
+			if strictCompare(th.stack[th.sp-1], th.stack[th.sp-2]) < 0 {
+				jump()
+			} else {
+				fr.ip += 2
+			}
+		case op.ForRangeVar:
+			th.stack[th.sp-1] = OpAdd1(th.stack[th.sp-1])
+			fr.locals.v[fetchUint8()] = th.stack[th.sp-1]
+			if strictCompare(th.stack[th.sp-1], th.stack[th.sp-2]) < 0 {
+				jump()
+			} else {
+				fr.ip += 2
+			}
 		case op.ReturnNil:
 			th.Push(nil)
 			break loop

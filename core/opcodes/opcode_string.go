@@ -68,29 +68,31 @@ func _() {
 	_ = x[JumpLt-57]
 	_ = x[Iter-58]
 	_ = x[ForIn-59]
-	_ = x[Throw-60]
-	_ = x[Try-61]
-	_ = x[Catch-62]
-	_ = x[CallFuncDiscard-63]
-	_ = x[CallFuncNoNil-64]
-	_ = x[CallFuncNilOk-65]
-	_ = x[CallMethDiscard-66]
-	_ = x[CallMethNoNil-67]
-	_ = x[CallMethNilOk-68]
-	_ = x[Super-69]
-	_ = x[Return-70]
-	_ = x[ReturnNil-71]
-	_ = x[ReturnThrow-72]
-	_ = x[Closure-73]
-	_ = x[BlockBreak-74]
-	_ = x[BlockContinue-75]
-	_ = x[BlockReturn-76]
-	_ = x[BlockReturnNil-77]
+	_ = x[ForRange-60]
+	_ = x[ForRangeVar-61]
+	_ = x[Throw-62]
+	_ = x[Try-63]
+	_ = x[Catch-64]
+	_ = x[CallFuncDiscard-65]
+	_ = x[CallFuncNoNil-66]
+	_ = x[CallFuncNilOk-67]
+	_ = x[CallMethDiscard-68]
+	_ = x[CallMethNoNil-69]
+	_ = x[CallMethNilOk-70]
+	_ = x[Super-71]
+	_ = x[Return-72]
+	_ = x[ReturnNil-73]
+	_ = x[ReturnThrow-74]
+	_ = x[Closure-75]
+	_ = x[BlockBreak-76]
+	_ = x[BlockContinue-77]
+	_ = x[BlockReturn-78]
+	_ = x[BlockReturnNil-79]
 }
 
-const _Opcode_name = "NopPopIntValueTrueFalseZeroOneMinusOneMaxIntEmptyStrLoadStoreLoadStoreDyloadGlobalGetPutGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusInRangeOrAndBoolQMarkInCoverJumpJumpTrueJumpFalseJumpIsJumpIsntJumpLtIterForInThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilReturnThrowClosureBlockBreakBlockContinueBlockReturnBlockReturnNil"
+const _Opcode_name = "NopPopIntValueTrueFalseZeroOneMinusOneMaxIntEmptyStrLoadStoreLoadStoreDyloadGlobalGetPutGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusInRangeOrAndBoolQMarkInCoverJumpJumpTrueJumpFalseJumpIsJumpIsntJumpLtIterForInForRangeForRangeVarThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilReturnThrowClosureBlockBreakBlockContinueBlockReturnBlockReturnNil"
 
-var _Opcode_index = [...]uint16{0, 3, 6, 9, 14, 18, 23, 27, 30, 38, 44, 52, 56, 61, 70, 76, 82, 85, 88, 94, 101, 109, 113, 115, 119, 124, 132, 134, 137, 139, 142, 145, 148, 151, 154, 157, 160, 169, 179, 184, 190, 196, 202, 205, 214, 224, 231, 233, 236, 240, 245, 247, 252, 256, 264, 273, 279, 287, 293, 297, 302, 307, 310, 315, 330, 343, 356, 371, 384, 397, 402, 408, 417, 428, 435, 445, 458, 469, 483}
+var _Opcode_index = [...]uint16{0, 3, 6, 9, 14, 18, 23, 27, 30, 38, 44, 52, 56, 61, 70, 76, 82, 85, 88, 94, 101, 109, 113, 115, 119, 124, 132, 134, 137, 139, 142, 145, 148, 151, 154, 157, 160, 169, 179, 184, 190, 196, 202, 205, 214, 224, 231, 233, 236, 240, 245, 247, 252, 256, 264, 273, 279, 287, 293, 297, 302, 310, 321, 326, 329, 334, 349, 362, 375, 390, 403, 416, 421, 427, 436, 447, 454, 464, 477, 488, 502}
 
 func (i Opcode) String() string {
 	if i >= Opcode(len(_Opcode_index)-1) {

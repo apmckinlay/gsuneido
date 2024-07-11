@@ -483,30 +483,26 @@ func (cg *cgen) emitForIn(name string, labels *Labels) {
 	labels.brk = adr
 }
 
+var fldr ast.Folder
+var minusOne = &ast.Constant{Val: MinusOne}
+
 func (cg *cgen) forRange(node *ast.ForIn) {
-	store := func() {}
-	if node.Var.Name != "" {
-		store = func() {
-			cg.store(cg.name(node.Var.Name))
-		}
-	}
-	cg.expr(node.E2) // stays on stack
-	cg.expr(node.E)  // stays on stack
-	store()
+	cg.expr(node.E2)                                          // stays on stack
+	cg.expr(fldr.Nary(tok.Add, []ast.Expr{node.E, minusOne})) // stays on stack
 	labels := &Labels{brk: -1, cont: -1}
-	cond := cg.emitJump(op.Jump, -1)
+	start := cg.emitJump(op.Jump, -1)
 	loop := cg.label()
 	cg.statement(node.Body, labels, false)
+
 	cg.placeLabel(labels.cont)
-
-	// increment
-	cg.emit(op.One)
-	cg.emit(op.Add)
-	store()
-
-	// condition
-	cg.placeLabel(cond)
-	cg.emitBwdJump(op.JumpLt, loop)
+	cg.placeLabel(start)
+	if node.Var.Name == "" {
+		cg.emitBwdJump(op.ForRange, loop)
+	} else {
+		label := loop - len(cg.code) - 4
+		cg.emit(op.ForRangeVar, byte(cg.name(node.Var.Name)),
+			byte(label>>8), byte(label))
+	}
 
 	cg.placeLabel(labels.brk)
 	cg.emit(op.Pop)

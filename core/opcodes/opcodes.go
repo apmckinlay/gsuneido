@@ -165,6 +165,11 @@ const (
 	// if the result is equal to top, it jumps
 	// else it continues
 	ForIn
+	// ForCount <int16> increments top and jumps if greater than second
+	ForRange
+	// ForRangeVar <uint8> <int16> increments top, stores it,
+	// and jumps if greater than second
+	ForRangeVar
 
 	// exceptions ---------------------------------------------------
 

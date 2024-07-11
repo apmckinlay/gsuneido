@@ -82,6 +82,13 @@ func OpAdd(x Value, y Value) Value {
 	return SuDnum{Dnum: dnum.Add(ToDnum(x), ToDnum(y))}
 }
 
+func OpAdd1(x Value) Value {
+	if si, ok := x.(*smi); ok {
+		return IntVal(si.toInt() + 1)
+	}
+	return SuDnum{Dnum: dnum.Add(ToDnum(x), dnum.One)}
+}
+
 func OpSub(x Value, y Value) Value {
 	if xi, xok := SuIntToInt(x); xok {
 		if yi, yok := SuIntToInt(y); yok {
