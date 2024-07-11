@@ -472,16 +472,20 @@ func TestControl(t *testing.T) {
 		26: Lt
 		27: JumpTrue 7`)
 
-	test(`for (x in y) { a; break; continue }`, `
+	test(`for (x in y) { a; break; b; continue; c }`, `
 		0: Load y
-        2: Iter
-        3: ForIn x 19
-        7: Load a
-        9: Pop
-        10: Jump 19
-        13: Jump 3
-        16: Jump 3
-        19: Pop`)
+		2: Iter
+		3: Jump 21
+		6: Load a
+		8: Pop
+		9: Jump 25
+		12: Load b
+		14: Pop
+		15: Jump 21
+		18: Load c
+		20: Pop
+		21: ForIn x 6
+		25: Pop`)
 
 	test(`for ..10 { a; break; b; continue; c }`, `
 		0: Int 10

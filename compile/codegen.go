@@ -468,10 +468,16 @@ func (cg *cgen) forInStmt(node *ast.ForIn) {
 	}
 	cg.expr(node.E)
 	cg.emit(op.Iter)
-	labels := cg.newLabels()
-	cg.emitForIn(node.Var.Name, labels)
+	labels := &Labels{brk: -1, cont: -1}
+	start := cg.emitJump(op.Jump, -1)
+	loop := cg.label()
 	cg.statement(node.Body, labels, false)
-	cg.emitBwdJump(op.Jump, labels.cont)
+
+	cg.placeLabel(labels.cont)
+	cg.placeLabel(start)
+	label := loop - len(cg.code) - 4
+	cg.emit(op.ForIn, byte(cg.name(node.Var.Name)),
+		byte(label>>8), byte(label))
 	cg.placeLabel(labels.brk)
 	cg.emit(op.Pop)
 }

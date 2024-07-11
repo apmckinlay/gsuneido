@@ -438,15 +438,12 @@ loop:
 		case op.Iter:
 			th.stack[th.sp-1] = OpIter(th.stack[th.sp-1])
 		case op.ForIn:
-			brk := fetchInt16()
-			local := fetchUint8()
-			iter := th.Top()
-			nextable := iter.(interface{ Next() Value })
-			next := nextable.Next()
+			next := th.Top().(interface{ Next() Value }).Next()
 			if next != nil {
-				fr.locals.v[local] = next
+				fr.locals.v[fetchUint8()] = next
+				jump()
 			} else {
-				fr.ip += brk - 1 // break
+				fr.ip += 3
 			}
 		case op.ForRange:
 			th.stack[th.sp-1] = OpAdd1(th.stack[th.sp-1])
