@@ -430,7 +430,7 @@ loop:
 				fr.ip += 2
 			}
 		case op.JumpLt:
-			if OpLt(th.stack[th.sp-1], th.stack[th.sp-2]) == True {
+			if strictCompare(th.stack[th.sp-1], th.stack[th.sp-2]) < 0 {
 				jump()
 			} else {
 				fr.ip += 2
