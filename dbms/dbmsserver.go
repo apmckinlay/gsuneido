@@ -168,19 +168,6 @@ func serverVersionMismatch(dbms *DbmsLocal, conn net.Conn) {
 	io.WriteString(conn, s)
 }
 
-// helloSize is the size of the initial connection message from the server
-const helloSize = 50
-
-var helloBuf [helloSize]byte
-var helloOnce sync.Once
-
-func hello() []byte {
-	helloOnce.Do(func() {
-		copy(helloBuf[:], "Suneido "+options.BuiltStr()+"\r\n")
-	})
-	return helloBuf[:]
-}
-
 // doRequest is called by workers (multi-threaded)
 func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	connId := uint32(id >> 32)

@@ -5,7 +5,6 @@ package dbms
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -14,8 +13,6 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/options"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 var VersionMismatch func(string) // injected by gsuneido.go
@@ -49,42 +46,6 @@ func clientVersionMismatch(conn net.Conn) {
 	VersionMismatch(string(buf))
 }
 
-func cantConnect(s string) {
-	Fatal("client: connect failed:", s)
-}
-
-const helloTimeout = 500 * time.Millisecond
-
-// checkHello is used by both the client and the server
-func checkHello(conn net.Conn) string {
-	var buf [helloSize]byte
-	conn.SetReadDeadline(time.Now().Add(helloTimeout))
-	n, err := io.ReadFull(conn, buf[:])
-	var never time.Time
-	conn.SetReadDeadline(never)
-	if n == 0 {
-		return "hello: timeout"
-	}
-	if n != helloSize || err != nil {
-		return "hello: invalid response"
-	}
-	s := string(buf[:])
-	if !strings.HasPrefix(s, "Suneido ") {
-		return "hello: invalid response"
-	}
-	s = strings.TrimPrefix(s, "Suneido ")
-	if noTime(s) != noTime(options.BuiltDate) && !options.IgnoreVersion {
-		return fmt.Sprintf("version mismatch (got %s, want %s)",
-			noTime(s), noTime(options.BuiltDate))
-	}
-	return ""
-}
-
-func noTime(s string) string {
-	s = str.BeforeFirst(s, ":")
-	return str.BeforeLast(s, " ")
-}
-
 func checkServerStatus(addr string, port string) {
 	p, err := strconv.Atoi(port)
 	if err != nil {
@@ -106,4 +67,8 @@ func checkServerStatus(addr string, port string) {
 		bytes.Contains(buf, []byte("Repairing database ...")) {
 		cantConnect("Database is being repaired, please try again later")
 	}
+}
+
+func cantConnect(s string) {
+	Fatal("client: connect failed:", s)
 }
