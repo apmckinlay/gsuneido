@@ -998,7 +998,7 @@ func SetTimer(a, b, c, d Value) Value {
 }
 
 // gocSetTimer is called by SetTimer directly if on main UI thread
-// and via updateUI2 if from background thread
+// and via runOnGoSide if from another thread
 func gocSetTimer(hwnd, id, ms, cb Value) Value {
 	rtn := goc.Syscall4(setTimer,
 		intArg(hwnd),
@@ -1039,7 +1039,7 @@ func KillTimer(a, b Value) Value {
 }
 
 // gocKillTimer is called by KillTimer directly if on main UI thread
-// and via updateUI2 if from background thread
+// and via runOnGoSide if from another thread
 func gocKillTimer(hwnd, id Value) Value {
 	rtn := goc.Syscall2(killTimer,
 		intArg(hwnd),

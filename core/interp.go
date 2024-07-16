@@ -11,6 +11,10 @@ import (
 var RunOnGoSide func()    // injected
 var Interrupt func() bool // injected
 
+const opInterval = 4001 // ???
+var opCount int = opInterval
+var InRunUI = false // no synchronization since only accessed by main thread
+
 var BlockBreak = BuiltinSuExcept("block:break")
 var BlockContinue = BuiltinSuExcept("block:continue")
 var BlockReturn = BuiltinSuExcept("block return")
@@ -164,15 +168,15 @@ loop:
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
 		if wingui { // const so should be compiled away
-			if th == MainThread {
-				if th.OpCount == 0 {
-					th.OpCount = 1009 // reset counter
+			if th == MainThread && !InRunUI {
+				opCount--
+				if opCount <= 0 {
+					opCount = opInterval // reset counter
 					RunOnGoSide()
 					if Interrupt() {
 						panic("interrupt")
 					}
 				}
-				th.OpCount--
 			}
 		}
 		oc = op.Opcode(code[fr.ip])

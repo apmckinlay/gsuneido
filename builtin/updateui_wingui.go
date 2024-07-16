@@ -12,7 +12,6 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/dbg"
-	"golang.org/x/sys/windows"
 )
 
 // rogsChan is used by other threads to Run code On the Go Side UI thread
@@ -22,25 +21,32 @@ var rogsChan = make(chan func(), 1)
 // UpdateUI runs the block on the main UI thread
 var _ = builtin(UpdateUI, "(block)")
 
+// UpdateUI runs the block on the main UI thread
+// The block will be run in one of two ways:
+// If executing in the interpreter in MainThread,
+// it periodically calls runOnGoSide.
+// If executing in the C message loop,
+// the cside timer will trigger a call back to runOnGoSide.
 func UpdateUI(th *Thread, args []Value) Value {
 	block := args[0]
-	if windows.GetCurrentThreadId() == uiThreadId {
+	if th == MainThread {
 		th.Call(block)
 	} else {
 		block.SetConcurrent()
 		rogsChan <- func() { runUI(block) }
-		notifyCside()
 	}
 	return nil
 }
 
-const notifyWparam = 0xffffffff
+const notifyMsg = WM_USER
 
-// notifyCside is used by UpdateUI, SetTimer, and KillTimer
+// notifyCside is used by SetTimer, and KillTimer
+// It uses PostMessage (high priority) to C side
+// to handle when we're running in the message loop.
 func notifyCside() {
 	// NOTE: this has to be the Go Syscall, not goc.Syscall
 	r, _, _ := syscall.SyscallN(postMessage,
-		goc.CHelperHwnd(), WM_USER, notifyWparam, 0)
+		goc.CHelperHwnd(), notifyMsg, 0, 0)
 	if r == 0 {
 		log.Panicln("notifyCside PostMessage failed")
 	}
@@ -49,7 +55,7 @@ func notifyCside() {
 // runOnGoSide is used by runtime.RunOnGoSide (called by interp)
 // and goc.RunOnGoSide (called by cside)
 func runOnGoSide() {
-	for {
+	for range 8 { // process available messages, but not forever
 		select {
 		case fn := <-rogsChan:
 			fn()

@@ -2,6 +2,7 @@
 // Governed by the MIT license found in the LICENSE file.
 
 #include "cside.h"
+#include <stdatomic.h>
 
 extern void timerId();
 int Scintilla_RegisterClasses(void* hInstance);
@@ -246,8 +247,8 @@ const int stack_size = 16 * 1024; // ???
 
 enum { END_MSG_LOOP = 0xebb };
 
-static int volatile ticks = 0;
-static HCURSOR volatile prev_cursor = 0;
+static _Atomic int ticks = 0;
+static _Atomic HCURSOR prev_cursor = 0;
 static HHOOK hook = 0;
 
 static DWORD WINAPI timer_thread(LPVOID lpParameter) {
@@ -316,35 +317,39 @@ static void destroy_windows() {
 
 // timer is called by a Windows timer so it will get called
 // even if a Windows message loop is running e.g. in MessageBox
+// But timers are the lowest priority,
+// so it will only be called when there are no other messages to process.
 static VOID CALLBACK timer(
 	HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
-	if (ticks <= 3) {
-		// our message loop isnt running
-		args[0] = msg_runongoside;
-		interact();
-	}
+	args[0] = msg_runongoside;
+	interact();
 }
 
-const int timerIntervalMS = 50;
+const int timerIntervalMS = 10;
 uintptr helperHwnd = 0; // set by setupHelper
-const WPARAM notifyWparam = 0xffffffff;
-const WPARAM sunappWparam = 0xeeeeeeee;
+
+const UINT notifyMsg = WM_USER;
+const UINT sunappMsg = WM_USER + 1;
 
 static LRESULT CALLBACK helperWndProc(
 	HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	if (uMsg == WM_USER && wParam == notifyWparam) {
+	if (uMsg == notifyMsg) {
+		// coalesce messages that accumulate while running on Go side
+		MSG msg;
+		while (PeekMessage(&msg, hwnd, notifyMsg, notifyMsg, PM_REMOVE)) {
+		}
 		args[0] = msg_runongoside;
 		interact();
-	} else if (uMsg == WM_USER && wParam == sunappWparam) {
+		return 0;
+	} else if (uMsg == sunappMsg) {
 		buf_t* buf = (buf_t*) lParam;
 		args[0] = msg_sunapp;
 		args[1] = (uintptr) buf->buf;
 		buf->buf = (char*) interact();
 		buf->size = args[2];
-	} else {
-		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+		return 0;
 	}
-	return 0;
+	return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
 static int setupHelper() {
@@ -356,8 +361,8 @@ static int setupHelper() {
 		return FALSE;
 	}
 
-	HWND hwnd = CreateWindow("helper", "helper", WS_OVERLAPPEDWINDOW, 0, 0, 0,
-		0, HWND_MESSAGE, NULL, NULL, NULL);
+	HWND hwnd = CreateWindow("helper", "helper", WS_OVERLAPPEDWINDOW,
+		0, 0, 0, 0, HWND_MESSAGE, NULL, NULL, NULL);
 	if (!hwnd) {
 		return FALSE;
 	}
@@ -412,7 +417,7 @@ buf_t suneidoAPP(char* url) {
 	buf_t buf;
 	if (GetCurrentThreadId() != main_threadid) {
 		buf.buf = url;
-		SendMessageA((HWND) helperHwnd, WM_USER, sunappWparam, (LPARAM) &buf);
+		SendMessageA((HWND) helperHwnd, sunappMsg, 0, (LPARAM) &buf);
 		return buf;
 	}
 	args[0] = msg_sunapp;
