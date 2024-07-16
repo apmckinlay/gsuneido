@@ -214,7 +214,7 @@ func (dbms *DbmsLocal) LibGet(name string) []string {
 	rt := dbms.db.NewReadTran()
 	libs := dbms.libraries.Load()
 	for _, lib := range libs {
-		s := dbms.libGet(rt, lib, name)
+		s := dbms.LibGet1(rt, lib, name)
 		if s != "" {
 			results = append(results, lib, string(s))
 		}
@@ -224,7 +224,7 @@ func (dbms *DbmsLocal) LibGet(name string) []string {
 
 var libKey = []string{"name", "group"} // const
 
-func (dbms *DbmsLocal) libGet(rt *db19.ReadTran, lib, name string) string {
+func (dbms *DbmsLocal) LibGet1(rt *db19.ReadTran, lib, name string) string {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("libGet", lib, name, e)

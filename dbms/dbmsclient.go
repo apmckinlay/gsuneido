@@ -20,13 +20,11 @@ import (
 )
 
 // dbmsClient is the mux client that matches dbmsserver.
-// See jsunClient for the version that matches jSuneido.
 type dbmsClient struct {
 	cc *mux.ClientConn
 }
 
 func NewDbmsClient(conn net.Conn) *dbmsClient {
-	conn.Write(hello())
 	cc := mux.NewClientConn(conn)
 	return &dbmsClient{cc: cc}
 }

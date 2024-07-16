@@ -18,17 +18,35 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+var VersionMismatch func(string) // injected by gsuneido.go
+
 func ConnectClient(addr string, port string) net.Conn {
 	conn, err := net.Dial("tcp", addr+":"+port)
 	if err != nil {
 		checkServerStatus(addr, port)
 		cantConnect(err.Error())
 	}
+	conn.Write(hello())
 	errmsg := checkHello(conn)
 	if errmsg != "" {
+		if strings.HasPrefix(errmsg, "version mismatch") {
+			clientVersionMismatch(conn)
+		}
 		cantConnect(errmsg)
 	}
 	return conn
+}
+
+func clientVersionMismatch(conn net.Conn) {
+	buf := make([]byte, 2)
+	io.ReadFull(conn, buf)
+	n := int(buf[0])<<8 | int(buf[1])
+	if n == 0 {
+		return
+	}
+	buf = make([]byte, n)
+	io.ReadFull(conn, buf)
+	VersionMismatch(string(buf))
 }
 
 func cantConnect(s string) {

@@ -168,6 +168,7 @@ func main() {
 			options.DbStatus.Store("")
 			startHttpStatus()
 		}
+		dbms.VersionMismatch = versionMismatch
 	case "error":
 		Fatal(options.Error)
 	default:
@@ -211,6 +212,16 @@ func redirect() {
 	if err := system.Redirect(options.Errlog); err != nil {
 		Fatal("Redirect failed:", err)
 	}
+}
+
+func versionMismatch(s string) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("client: version mismatch:", err)
+		}
+	}()
+	fn := compile.NamedConstant("stdlib", "VersionMismatch", s, nil).(*SuFunc)
+	mainThread.Call(fn)
 }
 
 func run(src string) {
@@ -257,7 +268,7 @@ func clientErrorLog() {
 		s := "PREV: " + in.Text()
 		if !strings.Contains(s, sid) {
 			s = sid + s
-        }
+		}
 		dbms.Log(s)
 		if nlines++; nlines > 1000 {
 			dbms.Log("PREV: too many errors")

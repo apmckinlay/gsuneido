@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"sort"
@@ -140,6 +141,9 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	trace.ClientServer.Println("server connection")
 	conn.Write(hello())
 	if errmsg := checkHello(conn); errmsg != "" {
+		if strings.HasPrefix(errmsg, "version mismatch") {
+			serverVersionMismatch(dbms, conn)
+		}
 		conn.Close()
 		return
 	}
@@ -154,6 +158,14 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	serverConns[sc.id] = sc
 	serverConnsLock.Unlock()
 	msc.Run(workers.Submit)
+}
+
+func serverVersionMismatch(dbms *DbmsLocal, conn net.Conn) {
+	rt := dbms.db.NewReadTran()
+	s := dbms.LibGet1(rt, "stdlib", "VersionMismatch")
+	n := len(s)
+	conn.Write([]byte{byte(n >> 8), byte(n)})
+	io.WriteString(conn, s)
 }
 
 // helloSize is the size of the initial connection message from the server

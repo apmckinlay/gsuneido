@@ -26,6 +26,7 @@ func TestClientServer(*testing.T) {
 	go newServerConn(dbmsLocal, p1)
 	errmsg := checkHello(p2)
 	assert.This(errmsg).Is("")
+	p2.Write(hello())
 	c := NewDbmsClient(p2)
 	ses := c.NewSession()
 	ses.Get(nil, "tables", core.Next)
