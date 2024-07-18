@@ -11,6 +11,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
@@ -52,9 +53,12 @@ func notifyCside() {
 	}
 }
 
-// runOnGoSide is used by runtime.RunOnGoSide (called by interp)
-// and goc.RunOnGoSide (called by cside)
+// runOnGoSide is called by interp via runtime.RunOnGoSide
+// and cside via goc.RunOnGoSide
 func runOnGoSide() {
+	assert.That(InRunUI == false)
+	InRunUI = true
+	defer func() { InRunUI = false }()
 	for range 8 { // process available messages, but not forever
 		select {
 		case fn := <-rogsChan:
