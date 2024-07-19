@@ -6,6 +6,9 @@
 package builtin
 
 import (
+	"log"
+	"time"
+
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -15,6 +18,10 @@ func exit(arg Value) Value {
 	if arg == True {
 		Exit(0) // immediate exit
 	}
+	go func() {
+		time.Sleep(15 * time.Second) // longer than exit.Exit timeout
+		log.Fatalln("FATAL wingui Exit() timeout")
+	}()
 	postQuit(uintptr(IfInt(arg)))
 	return nil
 }
