@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -54,7 +55,7 @@ var sviews Sviews
 func main() {
 	options.BuiltDate = builtDate
 	options.Mode = mode
-	options.Parse(os.Args[1:])
+	options.Parse(getargs())
 	if options.Action == "client" {
 		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
@@ -206,6 +207,27 @@ func main() {
 		run("Init.Repl()")
 		repl()
 	}
+}
+
+func getargs() []string {
+	args := os.Args[1:]
+	if len(args) > 0 {
+		return args
+	}
+	b, err := os.ReadFile("suneido.args")
+	if errors.Is(err, os.ErrNotExist) {
+		path, err := os.Executable()
+		ck(err)
+		path = filepath.Dir(path) + "/suneido.args"
+		b, err = os.ReadFile(path)
+		if errors.Is(err, os.ErrNotExist) {
+			return args
+		}
+	}
+	ck(err)
+	s := strings.TrimSpace(string(b))
+	args = builtin.SplitCommand(s)
+	return args
 }
 
 func redirect() {

@@ -29,7 +29,7 @@ var _ = builtin(RunPiped, "(command, block=false)")
 
 func RunPiped(th *Thread, args []Value) Value {
 	command := ToStr(args[0])
-	cmdargs := splitCommand(command)
+	cmdargs := SplitCommand(command)
 	cmd := exec.Command(cmdargs[0])
 	if errors.Is(cmd.Err, exec.ErrDot) {
 		cmd.Err = nil
@@ -63,7 +63,7 @@ func RunPiped(th *Thread, args []Value) Value {
 	return th.Call(args[1], rp)
 }
 
-func splitCommand(s string) []string {
+func SplitCommand(s string) []string {
 	args := []string{}
 	for {
 		s = strings.TrimLeft(s, " \t")
