@@ -4,11 +4,12 @@
 package db19
 
 import (
+	"fmt"
 	"log"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
+	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
 // CheckCo is the concurrent, channel based interface to Check
@@ -215,9 +216,8 @@ func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo
 }
 
 func (ck *CheckCo) Stop() {
-	if options.Action == "server" && len(ck.c) > 0 {
-		log.Println("channel len", len(ck.c))
-	}
+	exit.Progress(fmt.Sprint("checker stopping, chan len ", len(ck.c)))
+	defer exit.Progress("checker stopped")
 	// send nil rather than closing
 	// so other threads don't get "send on closed channel"
 	ck.c <- nil

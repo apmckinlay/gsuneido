@@ -290,7 +290,8 @@ func runServer() {
 }
 
 func stopServer() {
-	log.Println("server stopping")
+	exit.Progress("server stopping")
+	defer exit.Progress("server stopped")
 	httpServer.Close()
 	dbms.StopServer()
 	heap := builtin.HeapSys()
@@ -328,10 +329,8 @@ func openDbms() {
 	DbmsAuth = options.Action == "server" || mode != "gui" || !db.HaveUsers()
 	GetDbms = getDbms
 	exit.Add("close database", func() {
-		if options.Action == "server" {
-			log.Println("database closing")
-			defer log.Println("database closed")
-		}
+		exit.Progress("database closing")
+		defer exit.Progress("database closed")
 		db.CloseKeepMapped()
 	}) // keep mapped to avoid errors during shutdown
 	// go checkState()

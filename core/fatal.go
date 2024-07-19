@@ -8,7 +8,7 @@ import (
 	"log"
 )
 
-// Exit is injected by gSuneido
+// Exit is injected by gSuneido as either exit.Exit or stopService
 var Exit func(code int)
 
 func Fatal(args ...any) {

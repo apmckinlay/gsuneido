@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
-	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
+	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
 type void = struct{}
@@ -84,10 +84,8 @@ loop:
 	close(em.jobChan)
 	if db.GetState() != prevState ||
 		prevState.Off != db.Store.Size()-uint64(stateLen) {
-		if options.Action == "server" {
-			log.Println("persist starting")
-			defer log.Println("persist finished")
-		}
+		exit.Progress("persist starting")
+		defer exit.Progress("persist finished")
 		db.persist(ep)
 	}
 	close(allDone)

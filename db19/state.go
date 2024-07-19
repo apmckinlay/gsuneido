@@ -73,7 +73,7 @@ func (sh *stateHolder) updateState(fn func(*DbState)) {
 	defer sh.mutex.Unlock()
 	oldState := sh.get()
 	if oldState == nil {
-		core.Fatal("database closed")
+		core.Fatal("can't update closed database")
 	}
 	newState := *oldState // shallow copy
 	fn(&newState)
