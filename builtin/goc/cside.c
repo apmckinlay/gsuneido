@@ -157,9 +157,13 @@ void fatal(char* msg) {
 	msgbox(msg, "FATAL", 0);
 }
 
-void msgexit(const char* msg) {
+void errmsg(const char* msg) {
 	DWORD nw;
 	WriteFile(GetStdHandle(STD_ERROR_HANDLE), msg, strlen(msg), &nw, 0);
+}
+
+void msgexit(const char* msg) {
+	errmsg(msg);
 	exit(1);
 }
 
@@ -334,10 +338,6 @@ const UINT sunappMsg = WM_USER + 1;
 static LRESULT CALLBACK helperWndProc(
 	HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	if (uMsg == notifyMsg) {
-		// coalesce messages that accumulate while running on Go side
-		MSG msg;
-		while (PeekMessage(&msg, hwnd, notifyMsg, notifyMsg, PM_REMOVE)) {
-		}
 		args[0] = msg_runongoside;
 		interact();
 		return 0;
