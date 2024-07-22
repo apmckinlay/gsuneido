@@ -125,14 +125,14 @@ func (sort *Sort) Select(cols, vals []string) {
 func (sort *Sort) Simple(th *Thread) []Row {
 	rev := 1
 	if sort.reverse {
-        rev = -1
-    }
+		rev = -1
+	}
 	rows := sort.source.Simple(th)
 	cmp := func(xrow, yrow Row) int {
 		for _, col := range sort.order {
 			x := xrow.GetRawVal(sort.header, col, th, nil)
 			y := yrow.GetRawVal(sort.header, col, th, nil)
-			if c := strings.Compare(x, y); c!= 0 {
+			if c := strings.Compare(x, y); c != 0 {
 				return c * rev
 			}
 		}
