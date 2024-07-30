@@ -327,7 +327,11 @@ var db *db19.Database
 func openDbms() {
 	var err error
 	db, err = db19.OpenDatabase("suneido.db")
-	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrPermission) {
+	if errors.Is(err, fs.ErrNotExist) {
+		runCommandLine()
+		exit.Exit(0)
+	}
+	if errors.Is(err, fs.ErrPermission) {
 		Fatal(err)
 	}
 	if err != nil {
@@ -357,6 +361,27 @@ func openDbms() {
 		db.CloseKeepMapped()
 	}) // keep mapped to avoid errors during shutdown
 	// go checkState()
+}
+
+func runCommandLine() {
+	cmd := options.CmdLine
+	if len(cmd) > 1 && cmd[0] == '"' && cmd[len(cmd)-1] == '"' {
+		cmd = cmd[1 : len(cmd)-1]
+    }
+	if cmd == "" {
+		return
+	}
+	defer func() {
+		if err := recover(); err != nil {
+			Fatal("runCommandLine:", err)
+		}
+	}()
+	if s, err := os.ReadFile(cmd); err == nil {
+		fn := compile.NamedConstant("", "runCommandLine", string(s), nil)
+		mainThread.Call(fn)
+		return
+	}
+	compile.EvalString(&mainThread, cmd)
 }
 
 func persistInterval() time.Duration {
