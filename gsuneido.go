@@ -239,11 +239,12 @@ func redirect() {
 func versionMismatch(s string) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("client: version mismatch:", err)
+			Fatal("VersionMismatch:", err)
 		}
 	}()
-	fn := compile.NamedConstant("stdlib", "VersionMismatch", s, nil).(*SuFunc)
+	fn := compile.NamedConstant("stdlib", "VersionMismatch", s, nil)
 	mainThread.Call(fn)
+	exit.Exit(0)
 }
 
 func run(src string) {

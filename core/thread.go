@@ -301,7 +301,7 @@ func (th *Thread) SetDbms(dbms IDbms) {
 }
 
 // GetDbms requires dependency injection
-var GetDbms func() IDbms
+var GetDbms = func() IDbms { panic("no dbms") }
 
 var DbmsAuth = false
 
