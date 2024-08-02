@@ -30,6 +30,10 @@ func ParseQuery(src string, t QueryTran, sv *Sviews) Query {
 	return parseQuery(src, t, sv, nil, false)
 }
 
+func JustParse(t QueryTran, query string) Query {
+	return parseQuery(query, t, nil, nil, true)
+}
+
 func parseQuery(src string, t QueryTran, sv *Sviews, viewNest []string, wrapViews bool) Query {
 	p := NewQueryParser(src, t, sv)
 	p.viewNest = viewNest

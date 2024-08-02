@@ -20,6 +20,7 @@
 			Summarize
 			TempIndex
 			Where
+			View
 		Query2
 			Compatible
 				Union
@@ -172,6 +173,8 @@ type Query interface {
 	// It should normally be used after just parsing,
 	// without transform or optimize.
 	Simple(th *Thread) []Row
+
+	ValueGet(key Value) Value
 }
 
 // queryBase is embedded by almost all Query types

@@ -409,6 +409,10 @@ func (qc *muxQueryCursor) Strategy(formatted bool) string {
 	return qc.GetStr()
 }
 
+func (qc *muxQueryCursor) Tree() Value {
+	return nil
+}
+
 // muxQuery implements IQuery ------------------------------------
 type muxQuery struct {
 	muxQueryCursor

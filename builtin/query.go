@@ -145,6 +145,12 @@ func query_Strategy(_ *Thread, this Value, args []Value) Value {
 	return this.(ISuQueryCursor).Strategy(formatted)
 }
 
+var _ = method(query_Tree, "()")
+
+func query_Tree(this Value) Value {
+	return this.(*SuQuery).Tree()
+}
+
 var _ = builtin(formatQuery, "(query)")
 
 func formatQuery(th *Thread, args []Value) Value {

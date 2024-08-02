@@ -28,6 +28,7 @@ const (
 	Cursor
 	File
 	AstNode
+	QueryNode
 	BuiltinClass
 	LruCache
 	N

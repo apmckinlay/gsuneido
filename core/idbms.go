@@ -199,6 +199,8 @@ type IQueryCursor interface {
 
 	// Strategy returns a description of the optimized query
 	Strategy(formatted bool) string
+
+	Tree() Value
 }
 
 // For timestamps with milliseconds up to TsThreshold,

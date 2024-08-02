@@ -153,6 +153,10 @@ func (q *SuQuery) ckActive() {
 	}
 }
 
+func (q *SuQuery) Tree() Value {
+	return q.iqc.Tree()
+}
+
 // SuCursor ---------------------------------------------------------
 
 type SuCursor struct {

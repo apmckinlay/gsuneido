@@ -486,6 +486,10 @@ func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
 	return row, q.Query.Updateable()
 }
 
+func (q queryLocal) Tree() Value {
+	return qry.NewSuQueryNode(q.Query)
+}
+
 func (q queryLocal) Close() {
 }
 
