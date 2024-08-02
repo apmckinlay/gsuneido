@@ -57,6 +57,14 @@ func (sort *Sort) stringOp() string {
 	return "SORT " + str.Opt(r, " ") + str.Join(", ", sort.order)
 }
 
+func (sort *Sort) format() string {
+	r := ""
+	if sort.reverse {
+		r = "reverse"
+	}
+	return "sort " + str.Opt(r, " ") + str.Join(", ", sort.order)
+}
+
 func (sort *Sort) Order() []string {
 	return sort.order
 }
