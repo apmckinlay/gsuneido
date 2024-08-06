@@ -48,9 +48,6 @@ type thread1 struct {
 	// The end of the slice is the top of the stack.
 	stack [maxStack]Value
 
-	// subThreadOf is used for sessions.
-	subThreadOf *Thread
-
 	// blockReturnFrame is the parent frame of the block that is returning
 	blockReturnFrame *Frame
 
@@ -162,16 +159,10 @@ func (th *Thread) Reset() {
 }
 
 func (th *Thread) Session() string {
-	if th.subThreadOf != nil {
-		th = th.subThreadOf
-	}
 	return th.session.Load()
 }
 
 func (th *Thread) SetSession(s string) {
-	if th.subThreadOf != nil {
-		th = th.subThreadOf
-	}
 	th.session.Store(s)
 }
 
@@ -322,19 +313,6 @@ func (th *Thread) Close() {
 		th.dbms.Close()
 		th.dbms = nil
 	}
-}
-
-// SubThread is a NewThread with the same dbms as this thread.
-// This is used for SuneidoAPP threads.
-// We want a new thread for isolation e.g. for exceptions or dynamic variables
-// but we don't need the overhead of another dbms connection.
-// WARNING: This should only be used where it is guaranteed
-// that the Threads will NOT be used concurrently.
-func (th *Thread) SubThread() *Thread {
-	t2 := NewThread(th)
-	t2.dbms = th.dbms
-	t2.subThreadOf = th
-	return t2
 }
 
 func (th *Thread) Cat(x, y Value) Value {

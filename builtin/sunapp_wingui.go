@@ -11,18 +11,15 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var sunappThread *Thread
-
 // sunAPP is called by goside.go <- interact <- cside.c <- sunapp.cpp
 func sunAPP(url string) (result string) {
-	if sunappThread == nil {
-		sunappThread = MainThread.SubThread()
-	}
+	state := MainThread.GetState()
 	defer func() {
 		if err := recover(); err != nil {
 			result = fmt.Sprint("SuneidoApp("+url+")", err)
 		}
+		MainThread.RestoreState(state)
 	}()
-	f := Global.GetName(sunappThread, "SuneidoAPP")
-	return ToStr(sunappThread.Call(f, SuStr(url)))
+	f := Global.GetName(MainThread, "SuneidoAPP")
+	return ToStr(MainThread.Call(f, SuStr(url)))
 }
