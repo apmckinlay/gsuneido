@@ -6,6 +6,7 @@ package core
 import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	op "github.com/apmckinlay/gsuneido/core/opcodes"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 var RunOnGoSide func()    // injected
@@ -40,14 +41,10 @@ func (th *Thread) run(frame Frame) Value {
 		panic("function call overflow")
 	}
 	if th.profile.enabled {
-		th.profile.lock.Lock()
-		th.profile.calls[frame.fn.Name]++
+		th.profile.calls[frame.fn]++
 	}
 	th.frames[th.fp] = frame
 	th.fp++
-	if th.profile.enabled {
-		th.profile.lock.Unlock()
-	}
 	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	// fmt.Println(strings.Repeat("    ", t.fp) + "run:", t.frames[t.fp].fn)
 	sp := th.sp
@@ -135,10 +132,21 @@ func (th *Thread) interp(catchJump, catchSp *int) (ret Value) {
 		}
 	}
 
-	profileOpCount := 0
+	var fp int
+	var profileBefore uint64
+	if th.profile.enabled {
+		fp = th.fp
+		profileBefore = tsc.Read()
+	}
 	defer func() {
-		if th.profile.enabled && profileOpCount > 0 {
-			th.profile.ops[fr.fn.Name] += int32(profileOpCount)
+		if profileBefore > 0 {
+			t := int64(tsc.Read() - profileBefore)
+			th.profile.self[fr.fn] += t
+			th.profile.total[fr.fn] += t
+			if i := fp - 2; i >= 0 {
+				fn := th.frames[i].fn
+				th.profile.self[fn] -= t
+			}
 		}
 		// this is an optimization to avoid unnecessary recover/repanic
 		if *catchJump == 0 && th.blockReturnFrame == nil {
@@ -163,7 +171,6 @@ func (th *Thread) interp(catchJump, catchSp *int) (ret Value) {
 
 loop:
 	for fr.ip < len(code) {
-		profileOpCount++
 		// fmt.Println("stack:", t.sp, t.stack[max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
@@ -488,7 +495,7 @@ loop:
 			if fr.blockParent != nil {
 				parent = fr.blockParent
 			}
-			block := &SuClosure{SuFunc: *fn, locals: fr.locals.v, this: fr.this,
+			block := &SuClosure{SuFunc: fn, locals: fr.locals.v, this: fr.this,
 				parent: parent}
 			th.Push(block)
 		case op.BlockBreak:

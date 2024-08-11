@@ -16,7 +16,7 @@ type SuClosure struct {
 	// It is used by interp to handle block returns.
 	parent *Frame
 	locals []Value // if concurrent, then read-only
-	SuFunc
+	*SuFunc
 	concurrent bool
 }
 
@@ -25,11 +25,15 @@ type SuClosure struct {
 var _ Value = (*SuClosure)(nil)
 
 func (b *SuClosure) String() string {
-	return "/* block */"
+	return "/* closure */"
+}
+
+func (b *SuClosure) Equal(other any) bool {
+	return b == other
 }
 
 func (b *SuClosure) Call(th *Thread, this Value, as *ArgSpec) Value {
-	bf := &b.SuFunc
+	bf := b.SuFunc
 
 	v := b.locals
 	if b.concurrent {
