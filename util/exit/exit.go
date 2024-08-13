@@ -9,6 +9,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 )
 
 type exitfn struct {
@@ -49,7 +51,7 @@ func RunFuncs() {
 		if i >= 0 {
 			fmt.Println("Exit:", exitfns[i].desc, "didn't finish")
 		}
-		for _, s := range progress {
+		for _, s := range progress.Load() {
 			fmt.Println(s)
 		}
 		log.Fatalln("FATAL exit timeout")
@@ -64,7 +66,7 @@ func RunFuncs() {
 					log.Println("ERROR during Exit"+exitfns[i].desc, ":", e)
 				}
 			}()
-			progress = nil
+			progress.Store(nil)
 			exitfns[i].fn()
 			ds[i] = time.Since(t)
 		}()
@@ -77,8 +79,8 @@ func Wait() {
 	log.Fatalln("FATAL exit.Wait: shouldn't reach here")
 }
 
-var progress []string
+var progress atomics.Value[[]string]
 
 func Progress(s string) {
-	progress = append(progress, fmt.Sprint(time.Since(t), " ", s))
+	progress.Store(append(progress.Load(), fmt.Sprint(time.Since(t), " ", s)))
 }
