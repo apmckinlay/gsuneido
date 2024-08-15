@@ -38,6 +38,7 @@ var help = `options:
 	-c[lient][=ipaddress] (default 127.0.0.1)
 	-compact
 	-d[ump] [table]
+	-e[rrlog]=path
 	-h[elp] or -?
 	-l[oad] [table] (or @filename)
 	-p[ass]p[hrase]=string (for -load)
@@ -56,7 +57,7 @@ func main() {
 	options.BuiltDate = builtDate
 	options.Mode = mode
 	options.Parse(getargs())
-	if options.Action == "client" {
+	if options.Action == "client" && options.Errlog == "error.log" {
 		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
 	Exit = exit.Exit

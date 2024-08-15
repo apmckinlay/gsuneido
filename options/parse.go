@@ -32,6 +32,11 @@ loop:
 		case match(&args, "-dump"), match(&args, "-d"):
 			setAction("dump")
 			args = optionalArg(args, &Arg)
+		case match(&args, "-errlog"), match(&args, "-e"):
+			args = optionalArg(args, &Errlog)
+			if Errlog == "" {
+                error("error log path required")
+            }
 		case match(&args, "-load"), match(&args, "-l"):
 			setAction("load")
 			args = optionalArg(args, &Arg)

@@ -29,6 +29,7 @@ var (
 	WebPort        string
 	TimeoutMinutes = 2 * 60 // 2 hours
 	Passphrase     string   // used with -load
+	Errlog         = "error.log"
 )
 
 // StrictCompare determines whether comparisons between different types
@@ -41,9 +42,6 @@ var (
 
 // CmdLine is the remaining command line arguments
 var CmdLine string
-
-// Errlog is the log file name, set specially when client
-var Errlog = "error.log"
 
 // debugging options
 const (
