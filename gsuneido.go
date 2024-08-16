@@ -38,7 +38,7 @@ var help = `options:
 	-c[lient][=ipaddress] (default 127.0.0.1)
 	-compact
 	-d[ump] [table]
-	-e[rrlog]=path
+	-e[rr]p[ort]=#
 	-h[elp] or -?
 	-l[oad] [table] (or @filename)
 	-p[ass]p[hrase]=string (for -load)
@@ -52,13 +52,16 @@ var help = `options:
 var dbmsLocal *dbms.DbmsLocal
 var mainThread Thread
 var sviews Sviews
+var errlog = "error.log"
 
 func main() {
 	options.BuiltDate = builtDate
 	options.Mode = mode
 	options.Parse(getargs())
-	if options.Action == "client" && options.Errlog == "error.log" {
-		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
+	if options.Action == "client" {
+		errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
+	} else if options.ErrPort != "" {
+		errlog = builtin.ErrlogDir() + "suneido" + options.ErrPort + ".err"
 	}
 	Exit = exit.Exit
 	if mode == "gui" {
@@ -232,7 +235,7 @@ func getargs() []string {
 }
 
 func redirect() {
-	if err := system.Redirect(options.Errlog); err != nil {
+	if err := system.Redirect(errlog); err != nil {
 		Fatal("Redirect failed:", err)
 	}
 }
@@ -272,14 +275,14 @@ func clientErrorLog() {
 	sid := mainThread.SessionId("") + " "
 	log.SetPrefix(sid)
 
-	f, err := os.Open(options.Errlog)
+	f, err := os.Open(errlog)
 	if err != nil {
 		return
 	}
 	dbms := mainThread.Dbms()
 	defer func() {
 		f.Close()
-		os.Truncate(options.Errlog, 0) // can't remove since open as stderr
+		os.Truncate(errlog, 0) // can't remove since open as stderr
 		if e := recover(); e != nil {
 			dbms.Log("send previous errors: " + fmt.Sprint(e))
 		}
@@ -368,7 +371,7 @@ func runCommandLine() {
 	cmd := options.CmdLine
 	if len(cmd) > 1 && cmd[0] == '"' && cmd[len(cmd)-1] == '"' {
 		cmd = cmd[1 : len(cmd)-1]
-    }
+	}
 	if cmd == "" {
 		return
 	}

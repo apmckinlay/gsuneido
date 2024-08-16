@@ -7,6 +7,7 @@ package builtin
 
 import (
 	"os"
+	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
 )
@@ -37,7 +38,11 @@ func GetGuiResources() (int, int) {
 }
 
 func ErrlogDir() string {
-	return os.TempDir()
+	dir := strings.ReplaceAll(os.TempDir(), `\`, "/")
+	if !strings.HasSuffix(dir, "/") {
+		dir += "/"
+	}
+	return dir
 }
 
 func OnUIThread() bool {

@@ -32,11 +32,13 @@ loop:
 		case match(&args, "-dump"), match(&args, "-d"):
 			setAction("dump")
 			args = optionalArg(args, &Arg)
-		case match(&args, "-errlog"), match(&args, "-e"):
-			args = optionalArg(args, &Errlog)
-			if Errlog == "" {
-                error("error log path required")
-            }
+		case match(&args, "-errport"), match(&args, "-ep"):
+			args = optionalArg(args, &ErrPort)
+			if ErrPort == "" {
+                error("error log port required")
+            } else if _, ok := atoui(ErrPort); !ok {
+				error("invalid port number")
+			}
 		case match(&args, "-load"), match(&args, "-l"):
 			setAction("load")
 			args = optionalArg(args, &Arg)
