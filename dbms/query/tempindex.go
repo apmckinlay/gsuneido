@@ -220,6 +220,10 @@ func (ti *TempIndex) conflict() bool {
 		len(ti.selEnd) == 1 && ti.selEnd[0] == ixkey.Min
 }
 
+func (ti *TempIndex) hash() Qhash {
+	return ti.source.hash()
+}
+
 //-------------------------------------------------------------------
 // single is for ti.source.SingleTable.
 // Since there is only one table,

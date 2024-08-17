@@ -4,6 +4,7 @@
 package query
 
 import (
+	"fmt"
 	"strings"
 
 	"slices"
@@ -49,8 +50,9 @@ const (
 	unionLookup
 )
 
-func NewUnion(src1, src2 Query) *Union {
+func NewUnion(src1, src2 Query, t QueryTran) *Union {
 	u := &Union{Compatible: *newCompatible(src1, src2)}
+	u.t = t
 	u.header = JoinHeaders(src1.Header(), src2.Header())
 	u.indexes = u.getIndexes()
 	u.setNrows(u.getNrows())
@@ -115,6 +117,11 @@ func (u *Union) getIndexes() [][]string {
 func (u *Union) getNrows() (int, int) {
 	n1, p1 := u.source1.Nrows()
 	n2, p2 := u.source2.Nrows()
+	if n, ok := u.nrcGet(u.hash()); ok {
+		fmt.Println("Got", n)
+		fmt.Println(format(1, u, 0))
+		return n, u.nrowsCalc(p1, p2)
+	}
 	return u.nrowsCalc(n1, n2), u.nrowsCalc(p1, p2)
 }
 
@@ -139,7 +146,7 @@ func (u *Union) Transform() Query {
 		return keepCols(src1, src2, u.header)
 	}
 	if src1 != u.source1 || src2 != u.source2 {
-		return NewUnion(src1, src2)
+		return NewUnion(src1, src2, u.t)
 	}
 	return u
 }
@@ -369,23 +376,44 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 	u.src2get = u.source2.Get
 }
 
+func (u *Union) hash() Qhash {
+	return hashq2(u)
+}
+
 // execution --------------------------------------------------------
 
 func (u *Union) Rewind() {
 	u.source1.Rewind()
 	u.source2.Rewind()
 	u.rewound = true
+	u.nc.N = 0
 }
 
 func (u *Union) Get(th *Thread, dir Dir) Row {
-	defer func() { u.rewound = false }()
+	if dir != Next {
+		u.nc.State = NcInvalid
+	}
+	var row Row
 	switch u.strategy {
 	case unionLookup:
-		return u.getLookup(th, dir)
+		row = u.getLookup(th, dir)
 	case unionMerge:
-		return u.getMerge(th, dir)
+		row = u.getMerge(th, dir)
+	default:
+		panic(assert.ShouldNotReachHere())
 	}
-	panic(assert.ShouldNotReachHere())
+	if row != nil {
+		u.nc.N++
+	} else if u.nrcAdd(u.hash()) {
+		fmt.Println("Add estimated:", u.nNrows.Get(), "actual:", u.nc.N)
+		fmt.Println(format(1, u, 0))
+	}
+	u.rewound = false
+	return row
+}
+
+func (u *Union) SetTran(t QueryTran) {
+	u.t = t
 }
 
 func (u *Union) getLookup(th *Thread, dir Dir) Row {
@@ -504,6 +532,7 @@ func nothing(*Thread, Dir) Row { return nil }
 
 func (u *Union) Select(cols, vals []string) {
 	// fmt.Println("Union Select", cols, unpack(vals))
+	u.nc.State = NcInvalid
 	u.rewound = true
 	u.src1get = u.source1.Get
 	u.src2get = u.source2.Get
@@ -557,6 +586,7 @@ func selConflict(srcCols, cols, vals []string) bool {
 }
 
 func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
+	u.nc.State = NcInvalid
 	u.Select(cols, vals)
 	defer u.Select(nil, nil) // clear select
 	return u.Get(th, Next)

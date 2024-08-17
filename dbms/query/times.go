@@ -103,6 +103,10 @@ func (t *Times) getNrows() (int, int) {
 	return n1 * n2, p1 * p2
 }
 
+func (t *Times) hash() Qhash {
+	return hashq2(t)
+}
+
 // execution --------------------------------------------------------
 
 func (t *Times) Rewind() {

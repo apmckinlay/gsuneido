@@ -35,7 +35,6 @@ type joinLike struct {
 
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
-	qt         QueryTran
 	st         *SuTran
 	lookup     *lookupInfo
 	by         []string
@@ -110,7 +109,7 @@ func newJoin(src1, src2 Query, by []string, t QueryTran,
 }
 
 func (jn *Join) With(src1, src2 Query) *Join {
-	return newJoin(src1, src2, jn.by, jn.qt, jn.prevFixed1, jn.prevFixed2)
+	return newJoin(src1, src2, jn.by, jn.t, jn.prevFixed1, jn.prevFixed2)
 }
 
 func newJoinBase(src1, src2 Query, by []string, t QueryTran,
@@ -124,7 +123,8 @@ func newJoinBase(src1, src2 Query, by []string, t QueryTran,
 	} else if !set.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
-	jb := joinBase{qt: t, st: MakeSuTran(t), joinLike: newJoinLike(src1, src2), prevFixed1: prevFixed1, prevFixed2: prevFixed2}
+	jb := joinBase{st: MakeSuTran(t), joinLike: newJoinLike(src1, src2), prevFixed1: prevFixed1, prevFixed2: prevFixed2}
+	jb.t = t
 	jb.by = by
 	k1 := hasKey(by, src1.Keys(), src1.Fixed())
 	k2 := hasKey(by, src2.Keys(), src2.Fixed())
@@ -181,9 +181,9 @@ func (jb *joinBase) bystr() string {
 	return " " + str.Opt(jb.joinType.String(), " ") + "by" + str.Join("(,)", jb.by)
 }
 
-func (jb *joinBase) SetTran(qt QueryTran) {
-	jb.qt = qt
-	jb.st = MakeSuTran(qt)
+func (jb *joinBase) SetTran(t QueryTran) {
+	jb.t = t
+	jb.st = MakeSuTran(t)
 }
 
 func (jl *joinLike) getHeader() *Header {
@@ -225,8 +225,8 @@ func (jn *Join) Transform() Query {
 	}
 	fix1, fix2 := src1.Fixed(), src2.Fixed()
 	if !equalFixed(fix1, jn.prevFixed1) || !equalFixed(fix2, jn.prevFixed2) {
-		src1 = copyFixed(fix2, fix1, src1, jn.by, jn.qt)
-		src2 = copyFixed(fix1, fix2, src2, jn.by, jn.qt)
+		src1 = copyFixed(fix2, fix1, src1, jn.by, jn.t)
+		src2 = copyFixed(fix1, fix2, src2, jn.by, jn.t)
 		jn.prevFixed1, jn.prevFixed2 = fix1, fix2
 	}
 	if src1 != jn.source1 || src2 != jn.source2 {
@@ -356,6 +356,11 @@ func (jn *Join) setApproach(index []string, frac float64, approach any, tran Que
 func (jn *Join) getNrows() (int, int) {
 	n1, p1 := jn.source1.Nrows()
 	n2, p2 := jn.source2.Nrows()
+	if n, ok := jn.nrcGet(jn.hash()); ok {
+		fmt.Println("Got", n)
+		fmt.Println(format(1, jn, 0))
+		return n, jn.pop(p1, p2)
+	}
 	return jn.nrows(n1, p1, n2, p2), jn.pop(p1, p2)
 }
 
@@ -395,9 +400,14 @@ func (jn *Join) pop(p1, p2 int) int {
 	}
 }
 
+func (jn *Join) hash() Qhash {
+	return hashq2(jn)
+}
+
 // execution --------------------------------------------------------
 
 func (jb *joinBase) Rewind() {
+	jb.nc.N = 0
 	jb.source1.Rewind()
 	jb.source2.Rewind()
 	jb.rewind()
@@ -408,13 +418,21 @@ func (jb *joinBase) rewind() {
 }
 
 func (jn *Join) Get(th *Thread, dir Dir) Row {
+	if dir != Next {
+		jn.nc.State = NcInvalid
+	}
 	for {
 		if jn.row2 == nil && !jn.nextRow1(th, dir) {
+			if jn.nrcAdd(jn.hash()) {
+				fmt.Println("Add estimated:", jn.nNrows.Get(), "actual:", jn.nc.N)
+				fmt.Println(format(1, jn, 0))
+			}
 			return nil
 		}
 		jn.row2 = jn.source2.Get(th, dir)
 		if jn.row2 != nil {
 			// assert.That(jn.equalBy(th, jn.st, jn.row1, jn.row2))
+			jn.nc.N++
 			return JoinRows(jn.row1, jn.row2)
 		}
 	}
@@ -467,6 +485,7 @@ func rowstr(hdr *Header, row Row) string {
 
 func (jn *Join) Select(cols, vals []string) {
 	// fmt.Println(jn.stringOp(), "Select", cols, unpack(vals))
+	jn.nc.State = NcInvalid
 	jn.rewind()
 	jn.select1(cols, vals)
 }
@@ -504,6 +523,7 @@ func (jl *joinLike) splitSelect(cols, vals []string) (
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	// fmt.Println(jn.stringOp(), "Lookup", cols, unpack(vals))
 	defer jn.Select(nil, nil)
+	jn.nc.State = NcInvalid
 	sel1cols, sel1vals, sel2cols, sel2vals := jn.splitSelect(cols, vals)
 	if jn.lookupFallback(sel1cols) {
 		// log.Println("INFO Join Lookup fallback to Select & Get")
@@ -553,7 +573,7 @@ func (jb *joinBase) lookupFallback(sel1cols []string) bool {
 }
 
 func (jn *Join) Simple(th *Thread) []Row {
-	st := MakeSuTran(jn.qt)
+	st := MakeSuTran(jn.t)
 	rows1 := jn.source1.Simple(th)
 	rows2 := jn.source2.Simple(th)
 	rows := make([]Row, 0, len(rows1))
@@ -602,7 +622,7 @@ func newLeftJoin(src1, src2 Query, by []string, t QueryTran,
 }
 
 func (lj *LeftJoin) With(src1, src2 Query) *LeftJoin {
-	return newLeftJoin(src1, src2, lj.by, lj.qt, lj.prevFixed1, lj.prevFixed2)
+	return newLeftJoin(src1, src2, lj.by, lj.t, lj.prevFixed1, lj.prevFixed2)
 }
 
 func (lj *LeftJoin) String() string {
@@ -668,7 +688,7 @@ func (lj *LeftJoin) Transform() Query {
 	if !equalFixed(fix1, lj.prevFixed1) || !equalFixed(fix2, lj.prevFixed2) {
 		// for leftjoin, we can only apply fixed from src1 to src2
 		// can't do the reverse because src2 is "optional"
-		src2 = copyFixed(fix1, fix2, src2, lj.by, lj.qt)
+		src2 = copyFixed(fix1, fix2, src2, lj.by, lj.t)
 		lj.prevFixed1, lj.prevFixed2 = fix1, fix2
 	}
 	if src1 != lj.source1 || src2 != lj.source2 {
@@ -741,7 +761,11 @@ func (lj *LeftJoin) pop(n1, n2 int) int {
 	}
 }
 
-// execution
+func (lj *LeftJoin) hash() Qhash {
+	return hashq2(lj)
+}
+
+// execution --------------------------------------------------------
 
 func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 	row1out := true
@@ -783,12 +807,14 @@ func (lj *LeftJoin) filter2(row2 Row) bool {
 
 func (lj *LeftJoin) Select(cols, vals []string) {
 	// fmt.Println(lj.stringOp(), "Select", cols, unpack(vals))
+	lj.nc.State = NcInvalid
 	lj.rewind()
 	lj.select1(cols, vals)
 }
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	defer lj.Select(nil, nil)
+	lj.nc.State = NcInvalid
 	sel1cols, sel1vals, sel2cols, sel2vals := lj.splitSelect(cols, vals)
 	lj.sel2cols, lj.sel2vals = sel2cols, sel2vals
 	if lj.lookupFallback(sel1cols) {

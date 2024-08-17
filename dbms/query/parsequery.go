@@ -181,12 +181,12 @@ func (p *queryParser) minus(q Query) Query {
 
 func (p *queryParser) project(q Query) Query {
 	cols := p.commaList()
-	return NewProject(q, cols)
+	return NewProject(q, cols, p.t)
 }
 
 func (p *queryParser) remove(q Query) Query {
 	cols := p.commaList()
-	return NewRemove(q, cols)
+	return NewRemove(q, cols, p.t)
 }
 
 func (p *queryParser) rename(q Query) Query {
@@ -261,7 +261,7 @@ func (p *queryParser) times(q Query) Query {
 
 func (p *queryParser) union(q Query) Query {
 	q2 := p.source()
-	return NewUnion(q, q2)
+	return NewUnion(q, q2, p.t)
 }
 
 func (p *queryParser) where(q Query) Query {

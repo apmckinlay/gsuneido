@@ -24,7 +24,6 @@ import (
 // instead, construct a new one with NewWhere
 
 type Where struct {
-	t       QueryTran
 	colSels map[string][]span // from NewWhere, result of perField
 	// tbl will be set if the source is a Table, nil otherwise
 	tbl *Table
@@ -82,7 +81,8 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
 	}
-	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
+	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary)}
+	w.t = t
 	w.header = src.Header()
 	w.rowSiz.Set(src.rowSize())
 	w.singleTbl.Set(src.SingleTable())
@@ -259,6 +259,11 @@ func (w *Where) calcNrows() (int, int) {
 	if w.singleton {
 		return 1, srcPop
 	}
+	if n, ok := w.nrcGet(w.hash()); ok {
+		fmt.Println("Got", n)
+		fmt.Println(format(1, w, 0))
+		return n, srcPop
+	}
 	if len(w.idxSels) == 0 {
 		return srcNrows / 2, srcPop
 	}
@@ -298,7 +303,7 @@ func (w *Where) Transform() Query {
 		return NewWhere(q.source, e, w.t).Transform()
 	case *Project:
 		// move where before project
-		q = newProject(NewWhere(q.source, w.expr, w.t), q.columns)
+		q = newProject(NewWhere(q.source, w.expr, w.t), q.columns, w.t)
 		return q.Transform()
 	case *Rename:
 		// move where before rename
@@ -365,7 +370,7 @@ func (w *Where) Transform() Query {
 		// need project because Union Columns is the union
 		src1 := NewWhere(q.source1, w.project(q.source1), w.t)
 		src2 := NewWhere(q.source2, w.project(q.source2), w.t)
-		return NewUnion(src1, src2).Transform()
+		return NewUnion(src1, src2, w.t).Transform()
 	case *Times:
 		// split where over times
 		return w.split(q, func(src1, src2 Query) Query {
@@ -517,6 +522,10 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 	return q2
 }
 
+func (w *Where) hash() Qhash {
+	return hashq1(w)
+}
+
 // optimize ---------------------------------------------------------
 
 func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cost, a any) {
@@ -632,18 +641,27 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 // execution --------------------------------------------------------
 
 // MakeSuTran is injected by dbms to avoid import cycle
-var MakeSuTran func(qt QueryTran) *SuTran
+var MakeSuTran func(QueryTran) *SuTran
 
 func (w *Where) Get(th *Thread, dir Dir) Row {
 	if w.selSet && w.selOrg == ixkey.Max && w.selEnd == "" {
 		return nil // conflict from Select
+	}
+	if dir != Next {
+		w.nc.State = NcInvalid
 	}
 	for {
 		row := w.get(th, dir)
 		if w.filter(th, row) {
 			w.nOut++
 			if row == nil {
+				if w.nrcAdd(w.hash()) {
+					fmt.Println("Add", "estimated:", w.nNrows.Get(), "actual", w.nc.N)
+					fmt.Println(format(1, w, 0))
+				}
 				w.slowQueries()
+			} else {
+				w.nc.N++
 			}
 			return row
 		}
@@ -720,12 +738,14 @@ func (w *Where) advance(dir Dir) bool {
 }
 
 func (w *Where) Rewind() {
+	w.nc.N = 0
 	w.source.Rewind()
 	w.idxSelPos = -1
 }
 
 func (w *Where) Select(cols, vals []string) {
 	// fmt.Println("Where", w.tbl.name, "Select", cols, unpack(vals))
+	w.nc.State = NcInvalid
 	w.Rewind()
 	w.selOrg, w.selEnd = "", ""
 	w.selSet = false
@@ -783,6 +803,7 @@ func (w *Where) addFixed(cols []string, vals []string) ([]string, []string) {
 }
 
 func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
+	w.nc.State = NcInvalid
 	if conflictFixed(cols, vals, w.Fixed()) {
 		return nil
 	}

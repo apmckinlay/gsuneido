@@ -4,6 +4,9 @@
 package query
 
 import (
+	"crypto/sha1"
+	"fmt"
+	"io"
 	"strings"
 
 	"slices"
@@ -54,7 +57,7 @@ const (
 	projMap
 )
 
-func NewProject(src Query, cols []string) *Project {
+func NewProject(src Query, cols []string, t QueryTran) *Project {
 	assert.That(len(cols) > 0)
 	cols = set.Unique(cols)
 	srcCols := src.Columns()
@@ -67,10 +70,10 @@ func NewProject(src Query, cols []string) *Project {
 			panic("can't project _lower! fields")
 		}
 	}
-	return newProject2(src, cols, true)
+	return newProject2(src, cols, true, t)
 }
 
-func NewRemove(src Query, cols []string) *Project {
+func NewRemove(src Query, cols []string, t QueryTran) *Project {
 	proj := slc.WithoutFn(src.Columns(), func(col string) bool {
 		return slices.Contains(cols, col) ||
 			strings.HasSuffix(col, "_lower!") ||
@@ -80,16 +83,16 @@ func NewRemove(src Query, cols []string) *Project {
 	if len(proj) == 0 {
 		panic("remove: can't remove all columns")
 	}
-	p := newProject(src, proj)
+	p := newProject(src, proj, t)
 	p.remove = cols
 	return p
 }
 
 // newProject is common to NewProject and NewRemove
-func newProject(src Query, cols []string) *Project {
-	return newProject2(src, cols, false)
+func newProject(src Query, cols []string, t QueryTran) *Project {
+	return newProject2(src, cols, false, t)
 }
-func newProject2(src Query, cols []string, includeDeps bool) *Project {
+func newProject2(src Query, cols []string, includeDeps bool, t QueryTran) *Project {
 	p := &Project{Query1: Query1{source: src}, rewound: true}
 	if hasKey(cols, src.Keys(), src.Fixed()) {
 		p.unique = true
@@ -97,6 +100,7 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 			cols = p.includeDeps(cols, src.Columns())
 		}
 	}
+	p.t = t
 	p.columns = cols
 	p.header = p.getHeader()
 	p.keys = projectKeys(src.Keys(), p.columns)
@@ -173,6 +177,7 @@ func (p *Project) format() string {
 }
 
 func (p *Project) SetTran(t QueryTran) {
+	p.t = t
 	p.st = MakeSuTran(t)
 }
 
@@ -209,6 +214,11 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 func (p *Project) getNrows() (int, int) {
 	nr, pop := p.source.Nrows()
 	if !p.unique {
+		if n, ok := p.nrcGet(p.hash()); ok {
+			fmt.Println("Got", n)
+			fmt.Println(format(1, p, 0))
+			return n, pop
+		}
 		nr /= 2 // ??? (matches lookupCost)
 	}
 	return nr, pop
@@ -226,7 +236,7 @@ func (p *Project) Transform() Query {
 	switch q := src.(type) {
 	case *Project:
 		// combine projects by removing all but the first
-		return newProject(q.source, p.columns).Transform()
+		return newProject(q.source, p.columns, p.t).Transform()
 	case *Summarize:
 		cols := make([]string, 0, len(q.cols))
 		ops := make([]string, 0, len(q.ops))
@@ -239,7 +249,7 @@ func (p *Project) Transform() Query {
 			}
 		}
 		if len(cols) == 0 { // no summaries left
-			return newProject(q.source, p.columns).Transform()
+			return newProject(q.source, p.columns, p.t).Transform()
 		}
 		if set.Subset(p.columns, q.by) {
 			return NewSummarize(q.source, q.hint, q.by, cols, ops, ons).Transform()
@@ -262,7 +272,8 @@ func (p *Project) Transform() Query {
 		}
 	case *Union:
 		if p.splitable(&q.Compatible) {
-			return NewUnion(p.splitOver(&q.Query2)).Transform()
+			q1, q2 := p.splitOver(&q.Query2)
+			return NewUnion(q1, q2, p.t).Transform()
 		}
 	case *Intersect:
 		if p.splitable(&q.Compatible) {
@@ -274,9 +285,9 @@ func (p *Project) Transform() Query {
 
 func (p *Project) splitOver(q2 *Query2) (Query, Query) {
 	src1 := newProject(q2.source1,
-		set.Intersect(p.columns, q2.source1.Columns()))
+		set.Intersect(p.columns, q2.source1.Columns()), p.t)
 	src2 := newProject(q2.source2,
-		set.Intersect(p.columns, q2.source2.Columns()))
+		set.Intersect(p.columns, q2.source2.Columns()), p.t)
 	return src1, src2
 }
 
@@ -304,7 +315,7 @@ func (p *Project) transformRename(r *Rename) Query {
 	slices.Reverse(newFrom)
 	slices.Reverse(newTo)
 	newProj := r.renameRev(p.columns)
-	p = newProject(r.source, newProj)
+	p = newProject(r.source, newProj, p.t)
 	r = NewRename(p, newFrom, newTo)
 	return r.Transform()
 }
@@ -350,10 +361,10 @@ func (p *Project) transformExtend(e *Extend) Query {
 	var result Query
 	if len(beforeCols) > 0 {
 		q := NewExtend(e.source, beforeCols, beforeExprs)
-		result = newProject(q, newProjCols)
+		result = newProject(q, newProjCols, p.t)
 	} else {
 		// drop original extend since no columns left
-		result = newProject(e.source, newProjCols)
+		result = newProject(e.source, newProjCols, p.t)
 	}
 	if len(afterCols) > 0 {
 		result = NewExtend(result, afterCols, afterExprs)
@@ -363,7 +374,7 @@ func (p *Project) transformExtend(e *Extend) Query {
 
 func (p *Project) transform(src Query) Query {
 	if src != p.source {
-		return newProject(src, p.columns)
+		return newProject(src, p.columns, p.t)
 	}
 	return p
 }
@@ -448,6 +459,16 @@ func (p *Project) setApproach(_ []string, frac float64, approach any, tran Query
 	p.header = p.getHeader()
 }
 
+func (p *Project) hash() Qhash {
+	h := sha1.New()
+	sh := p.source.hash()
+	h.Write(sh[:])
+	for _, col := range p.columns {
+		io.WriteString(h, col)
+	}
+	return Qhash(h.Sum(nil))
+}
+
 // execution --------------------------------------------------------
 
 func projectFields(fs []string, pcols []string) []string {
@@ -467,16 +488,26 @@ func (p *Project) Rewind() {
 	p.source.Rewind()
 }
 
-func (p *Project) Get(th *Thread, dir Dir) Row {
+func (p *Project) Get(th *Thread, dir Dir) (row Row) {
 	switch p.strategy {
 	case projCopy:
-		return p.source.Get(th, dir)
+		row = p.source.Get(th, dir)
 	case projSeq:
-		return p.getSeq(th, dir)
+		row = p.getSeq(th, dir)
 	case projMap:
-		return p.getMap(th, dir)
+		row = p.getMap(th, dir)
+	default:
+		assert.ShouldNotReachHere()
 	}
-	panic("should not reach here")
+	if row != nil {
+		p.nc.N++
+	} else if !p.unique {
+		if p.nrcAdd(p.hash()) {
+			fmt.Println("Add estimated:", p.nNrows.Get(), "actual:", p.nc.N)
+			fmt.Println(format(1, p, 0))
+		}
+	}
+	return row
 }
 
 func (p *Project) getSeq(th *Thread, dir Dir) Row {

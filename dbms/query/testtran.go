@@ -195,3 +195,16 @@ func (t testTran) MakeLess(*ixkey.Spec) func(x, y uint64) bool {
 
 func (t testTran) Read(string, int, string, string) {
 }
+
+func (testTran) NrowsCache() any {
+	return testCache{}
+}
+
+type testCache struct{}
+
+func (testCache) Add(h Qhash, n int) {
+}
+
+func (testCache) Get(h Qhash) (int, bool) {
+	return 0, false
+}

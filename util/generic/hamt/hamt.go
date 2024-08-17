@@ -108,8 +108,9 @@ func (ht Hamt[K, E]) Mutable() Hamt[K, E] {
 	nd := ht.root
 	if nd == nil {
 		nd = &node[K, E]{generation: gen}
+	} else {
+		nd = nd.dup()
 	}
-	nd = nd.dup()
 	nd.generation = gen
 	return Hamt[K, E]{root: nd, mutable: true, generation: gen}
 }

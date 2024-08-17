@@ -8,9 +8,11 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	. "github.com/apmckinlay/gsuneido/core"
 )
 
 func TestFormat(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	tran := &testTran{}
 	test := func(query, expected string) {
 		actual := Format(tran, query)

@@ -4,6 +4,7 @@
 package query
 
 import (
+	"crypto/sha1"
 	"sort"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -200,6 +201,11 @@ func (ts *Tables) ensure() {
 		func(i, j int) bool { return ts.info[i].Table < ts.info[j].Table })
 }
 
+func (*Tables) hash() Qhash {
+	return Qhash{21, 96, 173, 61, 103, 60, 9, 205, 182, 194, 227, 166, 31,
+		122, 49, 183, 14, 68, 42, 106}
+}
+
 //-------------------------------------------------------------------
 
 // TablesLookup is used to optimize lookups on tables.
@@ -244,6 +250,10 @@ func (tl *TablesLookup) Get(*Thread, Dir) Row {
 		}
 	}
 	return nil
+}
+
+func (tl *TablesLookup) hash() Qhash {
+	return sha1.Sum([]byte(tl.table))
 }
 
 //-------------------------------------------------------------------
@@ -381,6 +391,11 @@ func (cs *Columns) ensure() {
 	cs.nrows = cs.getNrows()
 }
 
+func (*Columns) hash() Qhash {
+	return Qhash{144, 169, 159, 165, 216, 166, 234, 215, 140, 106, 166, 173,
+		215, 76, 155, 49, 183, 73, 5, 32}
+}
+
 //-------------------------------------------------------------------
 // note: indexes does not include tables, columns, indexes, views
 
@@ -507,6 +522,11 @@ func (is *Indexes) ensure() {
 	is.nrows = is.getNrows()
 }
 
+func (*Indexes) hash() Qhash {
+	return Qhash{167, 7, 65, 50, 35, 10, 38, 118, 130, 38, 232, 158, 86, 34,
+		136, 227, 108, 110, 200, 10}
+}
+
 //-------------------------------------------------------------------
 
 type Views struct {
@@ -602,6 +622,11 @@ func (vs *Views) Swap(i, j int) {
 	vs.views[i+1], vs.views[j+1] = vs.views[j+1], vs.views[i+1]
 }
 
+func (*Views) hash() Qhash {
+	return Qhash{226, 46, 246, 158, 90, 130, 67, 140, 31, 243, 201, 80, 218,
+		159, 217, 247, 153, 168, 154, 129}
+}
+
 //-------------------------------------------------------------------
 
 type History struct {
@@ -666,4 +691,9 @@ func (his *History) Get(_ *Thread, dir Dir) Row {
 	rb.Add(SuDateFromUnixMilli(state.Asof))
 	rec := rb.Build()
 	return Row{DbRec{Record: rec}}
+}
+
+func (*History) hash() Qhash {
+	return Qhash{159, 200, 62, 22, 87, 225, 105, 91, 247, 195, 89, 19, 83,
+		100, 68, 137, 14, 61, 142, 145}
 }

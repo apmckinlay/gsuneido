@@ -65,3 +65,7 @@ func (v *View) setApproach(index []string, frac float64, approach any, tran Quer
 func (*View) Simple(*Thread) []Row {
 	panic(assert.ShouldNotReachHere())
 }
+
+func (*View) hash() Qhash {
+	panic(assert.ShouldNotReachHere())
+}

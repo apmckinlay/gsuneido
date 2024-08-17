@@ -181,6 +181,10 @@ func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran
 	r.header = r.getHeader()
 }
 
+func (r *Rename) hash() Qhash {
+	return hashq1(r)
+}
+
 // execution --------------------------------------------------------
 
 func (r *Rename) Get(th *Thread, dir Dir) Row {

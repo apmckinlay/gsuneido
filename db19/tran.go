@@ -17,6 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/dbms/query/nrc"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
@@ -28,6 +29,7 @@ type tran struct {
 	meta *meta.Meta
 	asof int64
 	off  uint64
+	nc   nrc.Batch
 }
 
 // GetInfo returns read-only Info for the table or nil if not found
@@ -207,11 +209,17 @@ func (t *ReadTran) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {
 }
 
 func (t *ReadTran) Complete() string {
+	t.nc.Save()
 	return ""
 }
 
 func (t *ReadTran) Abort() string {
+	t.nc.Save()
 	return ""
+}
+
+func (t *ReadTran) NrowsCache() any {
+	return &t.nc
 }
 
 //-------------------------------------------------------------------
@@ -253,6 +261,7 @@ func (t *UpdateTran) WriteCount() int {
 
 // Complete returns "" on success, otherwise an error
 func (t *UpdateTran) Complete() string {
+	defer t.nc.Save()
 	if !t.db.ck.Commit(t) {
 		return t.ct.failure.Load()
 	}
@@ -274,6 +283,7 @@ func (t *UpdateTran) commit() int {
 
 // Abort returns "" if it succeeds or if the transaction was already aborted.
 func (t *UpdateTran) Abort() string {
+	defer t.nc.Save()
 	if !t.db.ck.Abort(t.ct, "aborted") {
 		return "abort failed"
 	}

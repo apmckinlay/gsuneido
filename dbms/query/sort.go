@@ -114,6 +114,10 @@ func (sort *Sort) setApproach(_ []string, frac float64, approach any, tran Query
 	sort.header = sort.source.Header()
 }
 
+func (sort *Sort) hash() Qhash {
+	return hashq1(sort)
+}
+
 // execution --------------------------------------------------------
 
 // Only implements reverse.

@@ -208,6 +208,10 @@ func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran
 	e.ctx.Hdr = e.header
 }
 
+func (e *Extend) hash() Qhash {
+	return hashq1(e)
+}
+
 // execution --------------------------------------------------------
 
 func (e *Extend) Get(th *Thread, dir Dir) Row {

@@ -173,3 +173,7 @@ func (it *Intersect) Simple(th *Thread) []Row {
 	}
 	return rows1[:dst]
 }
+
+func (it *Intersect) hash() Qhash {
+	return hashq2(it)
+}

@@ -98,3 +98,8 @@ func (*Nothing) Select([]string, []string) {
 func (*Nothing) Simple(*Thread) []Row {
 	return nil
 }
+
+func (*Nothing) hash() Qhash {
+	return Qhash{143, 56, 99, 174, 152, 108, 230, 206, 72, 28, 153, 37, 43,
+		113, 20, 144, 207, 227, 223, 83}
+}

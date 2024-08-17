@@ -272,7 +272,7 @@ func (ms *muxSession) getRow(off int) Row {
 
 type muxTran struct {
 	*muxSession
-	tn       int
+	tn int
 }
 
 var _ ITran = (*muxTran)(nil)
@@ -343,11 +343,15 @@ func (tc *muxTran) Num() int {
 	return tc.tn
 }
 
+func (*muxTran) NrowsCache() any {
+	panic(assert.ShouldNotReachHere())
+}
+
 func (tc *muxTran) String() string {
 	pre := "rt"
-	if tc.tn % 2 == 1 {
+	if tc.tn%2 == 1 {
 		pre = "ut"
-    }
+	}
 	return pre + strconv.Itoa(tc.tn)
 }
 

@@ -427,6 +427,7 @@ func BenchmarkOptMod(b *testing.B) {
 }
 
 func TestJoin_splitSelect(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	joinRev = impossible
 	defer func() { joinRev = 0 }()
 	q1 := newTestQop([]string{"a", "b", "c"})
@@ -437,7 +438,7 @@ func TestJoin_splitSelect(t *testing.T) {
 		{col: "c", values: fixvals("1")},
 		{col: "e", values: fixvals("2", "")},
 	}
-	jn := NewJoin(q1, q2, nil, nil).(*Join)
+	jn := NewJoin(q1, q2, nil, testTran{}).(*Join)
 	assert.This(jn.by).Is([]string{"c"})
 
 	cols := []string{"a", "c"}

@@ -4,6 +4,7 @@
 package query
 
 import (
+	"crypto/sha1"
 	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -355,4 +356,8 @@ func (tbl *Table) Simple(*Thread) []Row {
 		assert.Msg("too large for simple").That(len(rows) < maxSimple)
 	}
 	return rows
+}
+
+func (tbl *Table) hash() Qhash {
+	return sha1.Sum([]byte(tbl.name))
 }

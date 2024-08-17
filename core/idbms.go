@@ -136,6 +136,8 @@ type ITran interface {
 	Asof(int64) int64
 
 	Num() int
+
+	NrowsCache() any
 }
 
 type Dir byte

@@ -12,6 +12,8 @@
 			TablesLookup
 			Columns
 			Indexes
+			Views
+			History
 		Query1
 			Extend
 			Project / Remove
@@ -36,7 +38,9 @@
 package query
 
 import (
+	"crypto/sha1"
 	"fmt"
+	"io"
 	"math"
 	"strings"
 
@@ -49,11 +53,15 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/dbms/query/nrc"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/ints"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/opt"
 )
+
+type Qhash = nrc.Hash
 
 type Query interface {
 	// Columns is all the available columns, including derived
@@ -175,6 +183,8 @@ type Query interface {
 	Simple(th *Thread) []Row
 
 	ValueGet(key Value) Value
+
+	hash() Qhash
 }
 
 // queryBase is embedded by almost all Query types
@@ -182,6 +192,7 @@ type queryBase struct {
 	// header must be set by constructors and setApproach.
 	// setApproach is necessary because the sources may get reversed
 	// which affects the order of Fields
+	t         QueryTran
 	header    *Header
 	keys      [][]string
 	indexes   [][]string
@@ -192,6 +203,8 @@ type queryBase struct {
 	fast1     opt.Bool
 	singleTbl opt.Bool
 	lookCost  opt.Int
+	qh        Qhash
+	nc        NrowsCount
 	cache
 }
 
@@ -249,6 +262,15 @@ func (*queryBase) Updateable() string {
 	return ""
 }
 
+func (q *queryBase) setHash(h Qhash) {
+	assert.That(h != zeroHash)
+	q.qh = h
+}
+
+func (q *queryBase) getHash() Qhash {
+	return q.qh
+}
+
 // Mode is the transaction context - cursor, read, or update.
 // It affects the use of temporary indexes.
 type Mode int
@@ -289,6 +311,7 @@ type QueryTran interface {
 	GetRecord(off uint64) Record
 	MakeLess(is *ixkey.Spec) func(x, y uint64) bool
 	Read(string, int, string, string)
+	NrowsCache() any
 }
 
 // Setup prepares a parsed query for execution.
@@ -545,6 +568,8 @@ func (q1 *Query1) Rewind() {
 type q1i interface {
 	Source() Query
 	stringOp() string
+	setHash(h Qhash)
+	getHash() Qhash
 }
 
 func (q1 *Query1) Source() Query {
@@ -588,8 +613,7 @@ func (q2 *Query2) keypairs() [][]string {
 }
 
 type q2i interface {
-	stringOp() string
-	Source() Query
+	q1i
 	Source2() Query
 }
 
@@ -831,4 +855,77 @@ func unpack(packed []string) []Value {
 		}
 	}
 	return vals
+}
+
+// ------------------------------------------------------------------
+
+var zeroHash Qhash
+
+func hashq1(q q1i) Qhash {
+	if qh := q.getHash(); qh != zeroHash {
+		return qh
+	}
+	h := sha1.New()
+	sh := q.Source().hash()
+	h.Write(sh[:])
+	io.WriteString(h, format1(q))
+	qh := Qhash(h.Sum(nil))
+	q.setHash(qh)
+	return qh
+}
+
+func hashq2(q q2i) Qhash {
+	if qh := q.getHash(); qh != zeroHash {
+		return qh
+	}
+	h := sha1.New()
+	h1 := q.Source().hash()
+	h2 := q.Source2().hash()
+	// hash sources so order doesn't matter
+	if slices.Compare(h1[:], h2[:]) <= 0 {
+		h.Write(h1[:])
+		h.Write(h2[:])
+	} else {
+		h.Write(h2[:])
+		h.Write(h1[:])
+	}
+	io.WriteString(h, format1(q))
+	qh := Qhash(h.Sum(nil))
+	q.setHash(qh)
+	return qh
+}
+
+type NrowsCount struct {
+	N     uint32
+	State NrowsCountState
+}
+
+type NrowsCountState byte
+
+const (
+	NcCounting NrowsCountState = iota
+	NcComplete
+	NcInvalid
+)
+
+func (q *queryBase) nrcGet(h Qhash) (int, bool) {
+	return q.t.NrowsCache().(nrc.Intfc).Get(h)
+}
+
+func (q *queryBase) nrcAdd(h Qhash) bool {
+	est := q.nNrows.Get()
+	if q.nc.State == NcCounting && nrowsSigDiff(int(q.nc.N), est) {
+		assert.That(h != zeroHash)
+		q.t.NrowsCache().(nrc.Intfc).Add(h, int(q.nc.N))
+		q.nc.State = NcComplete // avoid multiple output
+		return true
+	}
+	return false
+}
+
+func nrowsSigDiff(x, y int) bool {
+	const absDiff = 100    // ???
+	const percentDiff = 33 // ???
+	return ints.Abs(x-y) > absDiff &&
+		ints.Abs(x-y)*100/max(x, y) /*0..100*/ > percentDiff
 }

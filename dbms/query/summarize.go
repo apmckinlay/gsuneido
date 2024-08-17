@@ -4,7 +4,9 @@
 package query
 
 import (
+	"crypto/sha1"
 	"fmt"
+	"io"
 	"log"
 	"sort"
 	"strings"
@@ -292,6 +294,14 @@ func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran Qu
 	su.source = SetApproach(su.source, su.index, su.frac, tran)
 	su.rewound = true
 	su.header = su.getHeader()
+}
+
+func (su *Summarize) hash() Qhash {
+	h := sha1.New()
+	sh := su.source.hash()
+	h.Write(sh[:])
+	io.WriteString(h, "summarize"+su.string2())
+	return Qhash(h.Sum(nil))
 }
 
 // execution --------------------------------------------------------

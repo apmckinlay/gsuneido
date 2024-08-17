@@ -125,3 +125,7 @@ outer:
 	}
 	return rows1[:dst]
 }
+
+func (m *Minus) hash() Qhash {
+	return hashq2(m)
+}
