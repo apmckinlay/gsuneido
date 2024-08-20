@@ -80,3 +80,18 @@ func TestExtendRuleBug(t *testing.T) {
 		"(cus where ck is 1 extend r1, i3 = c4) join by(ck,i3) ivc")).
 		Is("ik=3 ck=1 i3=2 c4=2")
 }
+
+func BenchmarkExtend(b *testing.B) {
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	q := ParseQuery("table extend z=1, aa=a, y=2, bb=b, x=3, cc=c", testTran{}, nil)
+	e := q.(*Extend)
+	e.ctx.Hdr = e.getHeader()
+	var rb RecordBuilder
+	rb.Add(SuStr("eh"))
+	rb.Add(SuStr("be"))
+	rb.Add(SuStr("see"))
+	row := []DbRec{{Record: rb.Build()}}
+	for i := 0; i < b.N; i++ {
+		e.extendRow(nil, row)
+	}
+}

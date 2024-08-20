@@ -6,11 +6,13 @@ package query
 import (
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestParseQuery(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *core.SuTran { return nil }
 	test := func(args ...string) {
 		t.Helper()
 		query := args[0]
@@ -59,8 +61,8 @@ func TestParseQuery(t *testing.T) {
 	test("(cus join task) project cnum, abbrev, tnum rename cnum to c sort tnum, c",
 		"(cus join 1:n by(cnum) task) project cnum,abbrev,tnum"+
 			" rename cnum to c sort tnum, c")
-	test("cus extend x = function(){123}",
-		"cus extend x = /* function */")
+	test("cus extend x = 123",
+		"cus extend x = 123")
 	test("cus extend x = function(){123}()",
 		"cus extend x = /* function */()")
 	test("cus extend x = cnum.Map(function(){123})",

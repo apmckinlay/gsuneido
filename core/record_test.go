@@ -50,3 +50,14 @@ func TestLength(t *testing.T) {
 
 	assert(tblength(1, 0x10000)).Is(0x1000a)
 }
+
+func BenchmarkRecordBuilder(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+        b := RecordBuilder{}
+        for j := 0; j < 10; j++ {
+            b.Add(SuStr("hello"))
+            b.AddRaw("world")
+			b.Build()
+        }
+    }
+}
