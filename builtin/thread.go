@@ -136,6 +136,12 @@ func thread_NewSuneidoGlobal(th *Thread, _ []Value) Value {
 	return nil
 }
 
+var _ = staticMethod(thread_MainQ, "()")
+
+func thread_MainQ(th *Thread, _ []Value) Value {
+	return SuBool(th == MainThread)
+}
+
 func (d *suThreadGlobal) Get(_ *Thread, key Value) Value {
 	m := ToStr(key)
 	if fn, ok := threadMethods[m]; ok {
