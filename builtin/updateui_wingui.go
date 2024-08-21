@@ -11,7 +11,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
@@ -56,7 +55,9 @@ func notifyCside() {
 // runOnGoSide is called by interp via runtime.RunOnGoSide
 // and cside via goc.RunOnGoSide
 func runOnGoSide() {
-	assert.That(InRunUI == false)
+	if InRunUI {
+		return // don't want to reenter and run recursively
+	}
 	InRunUI = true
 	defer func() { InRunUI = false }()
 	for range 8 { // process available messages, but not forever
