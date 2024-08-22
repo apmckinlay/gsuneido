@@ -333,9 +333,6 @@ func CreateWindowEx(_ *Thread, a []Value) Value {
 		intArg(a[9]),
 		intArg(a[10]),
 		intArg(a[11]))
-	// if rtn == 0 {
-	// 	log.Println("CreateWindowEx failed, GetLastError", goc.LastError)
-	// }
 	return intRet(rtn)
 }
 
@@ -2218,80 +2215,6 @@ func LoadImage(a, b, c, d, e, f Value) Value {
 		intArg(e),
 		intArg(f))
 	return intRet(rtn)
-}
-
-// dll long User32:GetMessage(
-// MSG* msg, pointer hwnd, long minfilter, long maxfilter)
-var getMessage = user32.MustFindProc("GetMessageA").Addr()
-var _ = builtin(GetMessage, "(msg, hwnd, minfilter, maxfilter)")
-
-func GetMessage(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nMsg)
-	rtn := goc.Syscall4(getMessage,
-		uintptr(p),
-		intArg(b),
-		intArg(c),
-		intArg(d))
-	msg := (*stMsg)(p)
-	a.Put(nil, SuStr("hwnd"), IntVal(int(msg.hwnd)))
-	a.Put(nil, SuStr("message"), IntVal(int(msg.message)))
-	a.Put(nil, SuStr("wParam"), IntVal(int(msg.wParam)))
-	a.Put(nil, SuStr("lParam"), IntVal(int(msg.lParam)))
-	a.Put(nil, SuStr("time"), IntVal(int(msg.time)))
-	a.Put(nil, SuStr("pt"), pointToOb(&msg.pt, nil))
-	return intRet(rtn)
-}
-
-// dll bool User32:IsDialogMessage(pointer hDlg, MSG* lpMsg)
-var isDialogMessage = user32.MustFindProc("IsDialogMessageA").Addr()
-var _ = builtin(IsDialogMessage, "(hDlg, lpMsg)")
-
-func IsDialogMessage(a, b Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := obToMSG(b)
-	rtn := goc.Syscall2(isDialogMessage,
-		intArg(a),
-		uintptr(p))
-	return boolRet(rtn)
-}
-
-// dll bool User32:TranslateMessage(MSG* msg)
-var translateMessage = user32.MustFindProc("TranslateMessage").Addr()
-var _ = builtin(TranslateMessage, "(msg)")
-
-func TranslateMessage(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := obToMSG(a)
-	rtn := goc.Syscall1(translateMessage,
-		uintptr(p))
-	return boolRet(rtn)
-}
-
-// dll long User32:DispatchMessage(MSG* msg)
-var dispatchMessage = user32.MustFindProc("DispatchMessageA").Addr()
-var _ = builtin(DispatchMessage, "(msg)")
-
-func DispatchMessage(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := obToMSG(a)
-	rtn := goc.Syscall1(dispatchMessage,
-		uintptr(p))
-	return intRet(rtn)
-}
-
-// obToMSG callers must defer heap.FreeTo
-func obToMSG(ob Value) unsafe.Pointer {
-	p := heap.Alloc(nMsg)
-	*(*stMsg)(p) = stMsg{
-		hwnd:    getUintptr(ob, "hwnd"),
-		message: uint32(getInt(ob, "message")),
-		wParam:  getUintptr(ob, "wParam"),
-		lParam:  getUintptr(ob, "lParam"),
-		time:    uint32(getInt(ob, "time")),
-		pt:      getPoint(ob, "pt"),
-	}
-	return p
 }
 
 // dll long User32:MapWindowPoints(pointer hwndfrom, pointer hwndto, RECT* p,

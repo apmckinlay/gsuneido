@@ -132,16 +132,14 @@ func Fatal(s string) {
 
 // must be injected
 var (
-	TimerId     func(a uintptr)
 	Callback2   func(i, a, b uintptr) uintptr
 	Callback3   func(i, a, b, c uintptr) uintptr
 	Callback4   func(i, a, b, c, d uintptr) uintptr
 	RunOnGoSide func()
 	SunAPP      func(string) string
 	Shutdown    func(exitcode int)
+	RunDelayed0 func()
 )
-
-// var LastError uintptr
 
 func interact(args ...uintptr) uintptr {
 	if windows.GetCurrentThreadId() != uiThreadId {
@@ -166,9 +164,6 @@ func interact(args ...uintptr) uintptr {
 			C.args[1] = C.uintptr(Callback4(uintptr(C.args[1]),
 				uintptr(C.args[2]), uintptr(C.args[3]), uintptr(C.args[4]),
 				uintptr(C.args[5])))
-		case C.msg_timerid:
-			TimerId(uintptr(C.args[1]))
-			C.args[0] = C.msg_result
 		case C.msg_runongoside:
 			RunOnGoSide()
 			C.args[0] = C.msg_result
@@ -181,7 +176,6 @@ func interact(args ...uintptr) uintptr {
 		case C.msg_shutdown:
 			Shutdown(int(C.args[1]))
 		case C.msg_result:
-			// LastError = uintptr(C.args[2]) // for syscall
 			return uintptr(C.args[1])
 		}
 		C.signalAndWait()

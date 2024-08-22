@@ -4,7 +4,6 @@
 #include "cside.h"
 #include <stdatomic.h>
 
-extern void timerId();
 int Scintilla_RegisterClasses(void* hInstance);
 
 uintptr interact();
