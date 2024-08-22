@@ -183,10 +183,17 @@ static int interrupt() {
 	return hotkey;
 }
 
+// interact does a call *to* the other side with signalAndWait
+// which blocks us and unblocks the other side.
+// signalAndWait will return when the other side does signalAndWait.
+// We will get the result via msg_result and return.
+// However in between there may be calls *from* the other side
+// which is why there is the loop.
 uintptr interact() {
 	if (GetCurrentThreadId() != main_threadid)
 		msgexit("FATAL: interact called from different thread\r\n");
 	for (;;) {
+		signalAndWait(); // block us and unblock the other side
 		// these are the messages sent from go-side to c-side
 		switch (args[0]) {
 		case msg_syscall:
@@ -234,7 +241,6 @@ uintptr interact() {
 			args[0] = msg_none;
 			return args[1];
 		}
-		signalAndWait();
 	}
 }
 

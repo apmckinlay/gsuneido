@@ -141,6 +141,12 @@ var (
 	RunDelayed0 func()
 )
 
+// interact does a call *to* the other side with signalAndWait
+// which blocks us and unblocks the other side.
+// signalAndWait will return when the other side does signalAndWait.
+// We will get the result via msg_result and return.
+// However in between there may be calls *from* the other side
+// which is why there is the loop.
 func interact(args ...uintptr) uintptr {
 	if windows.GetCurrentThreadId() != uiThreadId {
 		panic("illegal UI call from background thread")
@@ -149,6 +155,7 @@ func interact(args ...uintptr) uintptr {
 		C.args[i] = C.uintptr(a)
 	}
 	for {
+		C.signalAndWait() // block us and unblock the other side
 		// these are the messages sent from c-side to go-side
 		switch C.args[0] {
 		case C.msg_callback2:
@@ -178,7 +185,7 @@ func interact(args ...uintptr) uintptr {
 		case C.msg_result:
 			return uintptr(C.args[1])
 		}
-		C.signalAndWait()
+		// RunDelayed0()
 	}
 }
 

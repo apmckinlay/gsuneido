@@ -7,9 +7,7 @@ package builtin
 
 import (
 	"log"
-	"syscall"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 )
@@ -38,18 +36,17 @@ func UpdateUI(th *Thread, args []Value) Value {
 	return nil
 }
 
-const notifyMsg = WM_USER
-
-// notifyCside is used by SetTimer, and KillTimer
-// It uses PostMessage (high priority) to C side
-// to handle when we're running in the message loop.
-func notifyCside() {
-	// NOTE: this has to be the Go Syscall, not goc.Syscall
-	r, _, _ := syscall.SyscallN(postMessage,
-		goc.CHelperHwnd(), notifyMsg, 0, 0)
-	if r == 0 {
-		log.Panicln("notifyCside PostMessage failed")
-	}
+func runUI(block Value) {
+	state := MainThread.GetState()
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("ERROR in UpdateUI:", e)
+			MainThread.PrintStack()
+			dbg.PrintStack()
+		}
+		MainThread.RestoreState(state)
+	}()
+	MainThread.Call(block)
 }
 
 // runOnGoSide is called by interp via runtime.RunOnGoSide
@@ -68,17 +65,4 @@ func runOnGoSide() {
 			return
 		}
 	}
-}
-
-func runUI(block Value) {
-	state := MainThread.GetState()
-	defer func() {
-		if e := recover(); e != nil {
-			log.Println("ERROR in UpdateUI:", e)
-			MainThread.PrintStack()
-			dbg.PrintStack()
-		}
-		MainThread.RestoreState(state)
-	}()
-	MainThread.Call(block)
 }

@@ -1044,6 +1044,20 @@ func gocKillTimer(hwnd, id Value) Value {
 	return boolRet(rtn)
 }
 
+const notifyMsg = WM_USER
+
+// notifyCside is used by SetTimer and KillTimer
+// It uses PostMessage (high priority) to C side
+// to handle when we're running in the message loop.
+func notifyCside() {
+	// NOTE: this has to be the Go Syscall, not goc.Syscall
+	r, _, _ := syscall.SyscallN(postMessage,
+		goc.CHelperHwnd(), notifyMsg, 0, 0)
+	if r == 0 {
+		log.Panicln("notifyCside PostMessage failed")
+	}
+}
+
 // dll User32:SetWindowLong(pointer hwnd, int offset, long value) long
 var setWindowLong = user32.MustFindProc("SetWindowLongA").Addr()
 var _ = builtin(SetWindowLong, "(hwnd, offset, value)")
