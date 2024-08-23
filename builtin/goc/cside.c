@@ -237,6 +237,10 @@ uintptr interact() {
             args[1] = CreateLexer((const char*)args[1]);
             args[0] = msg_result;
             break;
+		case msg_setupconsole:
+			args[1] = DeleteMenu(GetSystemMenu(GetConsoleWindow(), 0),
+				SC_CLOSE, MF_BYCOMMAND);
+			args[0] = msg_result;
 		case msg_result:
 			args[0] = msg_none;
 			return args[1];

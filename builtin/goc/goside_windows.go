@@ -78,6 +78,10 @@ func CreateLexer(name uintptr) uintptr {
 	return interact(C.msg_createlexer, name)
 }
 
+func SetupConsole() {
+	interact(C.msg_setupconsole)
+}
+
 // Interrupt checks if control+break has been pressed.
 // It is called regularly by Interp.
 func Interrupt() bool {

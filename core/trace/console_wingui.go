@@ -16,12 +16,14 @@ import (
 
 var traceConOnce sync.Once
 var traceCon *os.File
+var SetupConsole func() // injected
 
 func consolePrint(s string) {
 	traceConOnce.Do(func() {
 		traceCon = os.Stdout
 		if options.Mode == "gui" {
 			allocConsole()
+			SetupConsole()
 			f, err := os.OpenFile("CONOUT$", os.O_WRONLY, 0644)
 			if err == nil && f != nil {
 				traceCon = f

@@ -32,7 +32,6 @@ enum {
 	msg_callback3,
 	msg_callback4,
 	msg_msgloop,
-	msg_timerid,
 	msg_runongoside,
 	msg_sunapp,
 	msg_queryidispatch,
@@ -44,6 +43,7 @@ enum {
 	msg_unembedbrowserobject,
     msg_createlexer,
 	msg_shutdown,
+	msg_setupconsole,
 };
 
 typedef uintptr(__stdcall* cb2_t)(uintptr a, uintptr b);

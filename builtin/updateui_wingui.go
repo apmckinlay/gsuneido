@@ -8,9 +8,22 @@ package builtin
 import (
 	"log"
 
+	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/dbg"
+	"golang.org/x/sys/windows"
 )
+
+func init() {
+	trace.SetupConsole = func() {
+		if windows.GetCurrentThreadId() == uiThreadId {
+			goc.SetupConsole()
+		} else {
+			rogsChan <- goc.SetupConsole
+		}
+	}
+}
 
 // rogsChan is used by other threads to Run code On the Go Side UI thread
 // Need buffer so we can send to channel and then notifyCside
