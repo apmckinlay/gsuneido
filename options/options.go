@@ -29,7 +29,6 @@ var (
 	WebPort        string
 	TimeoutMinutes = 2 * 60 // 2 hours
 	Passphrase     string   // used with -load
-	ErrPort        string
 )
 
 // StrictCompare determines whether comparisons between different types
