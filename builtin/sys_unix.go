@@ -59,7 +59,7 @@ func CopyFile(th *Thread, args []Value) Value {
 	defer destFile.Close()
 	// needed when the destination is on a Samba network drive
 	if err := destFile.Chmod(fi.Mode()); err != nil {
-		log.Println("WARN CopyFile Chmod", err)
+		log.Println("WARNING: CopyFile Chmod", err)
 	}
 
 	_, err = io.Copy(destFile, srcFile)
@@ -69,7 +69,7 @@ func CopyFile(th *Thread, args []Value) Value {
 
 	destFile.Close()
 	if err := os.Chtimes(to, time.Now(), fi.ModTime()); err != nil {
-		log.Println("WARN CopyFile Chtimes", err)
+		log.Println("WARNING: CopyFile Chtimes", err)
 	}
 
 	return True

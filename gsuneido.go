@@ -252,7 +252,7 @@ func run(src string) {
 	defer func() {
 		if e := recover(); e != nil {
 			LogUncaught(&mainThread, src, e)
-			Fatal("ERROR from", src, e)
+			Fatal("ERROR: from", src, e)
 		}
 	}()
 	compile.EvalString(&mainThread, src)
@@ -310,7 +310,7 @@ func runServer() {
 	options.DbStatus.Store("")
 	exit.Add("stop server", stopServer)
 	dbms.Server(dbmsLocal)
-	log.Fatalln("FATAL server should not return")
+	log.Fatalln("FATAL: server should not return")
 }
 
 func stopServer() {

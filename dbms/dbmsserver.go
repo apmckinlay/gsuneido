@@ -96,7 +96,7 @@ func Server(dbms *DbmsLocal) {
 				if max := 1 * time.Second; tempDelay > max {
 					tempDelay = max
 				}
-				log.Println("ERROR dbms server accept:", err)
+				log.Println("ERROR: dbms server accept:", err)
 				time.Sleep(tempDelay)
 				continue
 			}
@@ -345,7 +345,7 @@ func (ss *serverSession) deleteTran(tn int) {
 		delete(ss.queries, qn)
 		delete(ss.queryTrans, qn)
 		if len(ss.queries) != len(ss.queryTrans) {
-			log.Println("ERROR deleteTran", len(ss.queries), "!=", len(ss.queryTrans))
+			log.Println("ERROR: deleteTran", len(ss.queries), "!=", len(ss.queryTrans))
 		}
 	}
 	delete(ss.tranQueries, tn)
@@ -424,7 +424,7 @@ func cmdClose(ss *serverSession) {
 		tn := ss.queryTrans[qn]
 		delete(ss.queryTrans, qn)
 		if len(ss.queries) != len(ss.queryTrans) {
-			log.Println("ERROR cmdClose", len(ss.queries), "!=", len(ss.queryTrans))
+			log.Println("ERROR: cmdClose", len(ss.queries), "!=", len(ss.queryTrans))
 		}
 		delete(ss.tranQueries[tn], qn)
 		q.Close()
@@ -750,7 +750,7 @@ func cmdQuery(ss *serverSession) {
 	}
 	ss.tranQueries[tn][qn] = struct{}{}
 	if len(ss.queries) != len(ss.queryTrans) {
-		log.Println("ERROR cmdQuery", len(ss.queries), "!=", len(ss.queryTrans))
+		log.Println("ERROR: cmdQuery", len(ss.queries), "!=", len(ss.queryTrans))
 	}
 	ss.PutBool(true).PutInt(qn)
 }

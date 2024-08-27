@@ -75,7 +75,7 @@ var _ = func() int { // needs to be var, init() is run later
 func (typeGlobal) Builtin(name string, value Value) Value {
 	// only called by single threaded init so no locking required
 	if gn, ok := g.name2num[name]; ok && g.builtins[gn] != nil {
-		log.Fatalln("FATAL duplicate builtin: " + name)
+		log.Fatalln("FATAL: duplicate builtin: " + name)
 	}
 	gnum := Global.add(name, nil)
 	g.builtins[gnum] = value

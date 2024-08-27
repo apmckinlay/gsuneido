@@ -85,7 +85,7 @@ func callback4(i, a, b, c, d uintptr) uintptr {
 				IntVal(int(c)),
 				IntVal(int(d)))
 		}
-		log.Fatalln("FATAL WndProc callback missing hwnd")
+		log.Fatalln("FATAL: WndProc callback missing hwnd")
 	}
 	return cb4s[i].callv(
 		IntVal(int(a)),

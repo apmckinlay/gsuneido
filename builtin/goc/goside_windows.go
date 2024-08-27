@@ -39,7 +39,7 @@ func Run() {
 	C.args[0] = C.msg_result
 	C.signalAndWait() // return from C.thread interact
 	interact()
-	log.Fatalln("FATAL should not reach here")
+	log.Fatalln("FATAL: should not reach here")
 }
 
 func CThreadId() uintptr {

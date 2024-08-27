@@ -15,6 +15,6 @@ func Warning(args ...any) {
 	if options.WarningsThrow.Load().Matches(s) {
 		panic(s)
 	} else {
-		log.Print("WARNING ", s)
+		log.Print("WARNING: ", s)
 	}
 }

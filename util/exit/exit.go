@@ -54,7 +54,7 @@ func RunFuncs() {
 		for _, s := range progress.Load() {
 			fmt.Println(s)
 		}
-		log.Fatalln("FATAL exit timeout")
+		log.Fatalln("FATAL: exit timeout")
 	}()
 
 	hanger.Lock() // never unlocked
@@ -63,7 +63,7 @@ func RunFuncs() {
 		func() {
 			defer func() {
 				if e := recover(); e != nil {
-					log.Println("ERROR during Exit"+exitfns[i].desc, ":", e)
+					log.Println("ERROR: Exit:", exitfns[i].desc + ":", e)
 				}
 			}()
 			progress.Store(nil)
@@ -76,7 +76,7 @@ func RunFuncs() {
 // Wait should only be called after Exit or RunFuncs. It blocks until exit.
 func Wait() {
 	hanger.Lock() // should be locked
-	log.Fatalln("FATAL exit.Wait: shouldn't reach here")
+	log.Fatalln("FATAL: exit.Wait: shouldn't reach here")
 }
 
 var progress atomics.Value[[]string]

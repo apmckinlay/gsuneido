@@ -20,7 +20,7 @@ import (
 func MustLoadDLL(name string) *mydll {
 	d, err := windows.LoadDLL(name)
 	if err != nil {
-		log.Fatalln("FATAL", err)
+		log.Fatalln("FATAL:", err)
 	}
 	return (*mydll)(d)
 }
@@ -31,7 +31,7 @@ type mydll windows.DLL
 func (d *mydll) MustFindProc(name string) *windows.Proc {
 	p, err := (*windows.DLL)(d).FindProc(name)
 	if err != nil {
-		log.Fatalln("FATAL", err)
+		log.Fatalln("FATAL:", err)
 	}
 	return p
 }

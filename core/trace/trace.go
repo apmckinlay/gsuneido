@@ -163,7 +163,7 @@ func logPrint(s string) {
 		traceLog, err = os.OpenFile("trace.log",
 			os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
-			log.Println("ERROR", err)
+			log.Println("ERROR:", err)
 		}
 	})
 	if traceLog != nil {

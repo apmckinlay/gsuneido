@@ -80,7 +80,7 @@ var _ = builtin(Defer, "(block)")
 
 func Defer(th *Thread, args []Value) Value {
 	if th != MainThread {
-		panic("ERROR Defer can only be used from the main GUI thread")
+		panic("ERROR: Defer can only be used from the main GUI thread")
 	}
 	id := dqMustPut(args[0]) // can't block because MainThread is the consumer
 	return &killer{kill: func() { dqRemove(id) }}
@@ -90,7 +90,7 @@ var _ = builtin(RunOnGui, "(block)")
 
 func RunOnGui(th *Thread, args []Value) Value {
 	if th == MainThread {
-		panic("ERROR RunOnGui can only be used from other threads")
+		panic("ERROR: RunOnGui can only be used from other threads")
 	}
 	id := dqPut(args[0]) // blocks if queue is full
 	return &killer{kill: func() { dqRemove(id) }}
@@ -100,16 +100,16 @@ var _ = builtin(Delay, "(delayMs, block)")
 
 func Delay(th *Thread, args []Value) Value {
 	if th != MainThread {
-		panic("ERROR Delay can only be called from the main GUI thread")
+		panic("ERROR: Delay can only be called from the main GUI thread")
 	}
 	const minDelay = 100 // ms
 	if ToInt(args[0]) < minDelay {
-		panic(fmt.Sprint("ERROR Delay minimum is ", minDelay, " (ms)"))
+		panic(fmt.Sprint("ERROR: Delay minimum is ", minDelay, " (ms)"))
 	}
 	tf := &timerFn{callback: args[1]}
 	tf.timerid = gocSetTimer(Zero, Zero, args[0], tf)
 	if tf.timerid == Zero {
-		panic("ERROR Delay SetTimer failed")
+		panic("ERROR: Delay SetTimer failed")
 	}
 	return &killer{kill: func() { tf.kill() }}
 }

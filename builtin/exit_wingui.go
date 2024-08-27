@@ -20,7 +20,7 @@ func exit(arg Value) Value {
 	}
 	go func() {
 		time.Sleep(15 * time.Second) // longer than exit.Exit timeout
-		log.Fatalln("FATAL wingui Exit() timeout")
+		log.Fatalln("FATAL: wingui Exit() timeout")
 	}()
 	postQuit(uintptr(IfInt(arg)))
 	return nil

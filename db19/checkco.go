@@ -228,7 +228,7 @@ func checker(ck *Check, c chan any, mergeChan chan todo) {
 	defer func() {
 		if e := recover(); e != nil {
 			dbg.PrintStack()
-			log.Fatalln("FATAL ERROR in checker:", e)
+			log.Fatalln("FATAL: in checker:", e)
 		}
 	}()
 	ticker := time.NewTicker(time.Second)

@@ -742,7 +742,7 @@ func (r *SuRecord) catchRule(th *Thread, rule Value, key string) Value {
 		assert.That(th.Num == thNum) // i.e. not reused
 		th.rules.pop()
 		if e := recover(); e != nil {
-			log.Println("ERROR in rule for", key, e)
+			log.Println("ERROR: in rule for", key, e)
 			WrapPanic(e, "rule for "+key)
 		}
 	}()

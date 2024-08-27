@@ -39,7 +39,7 @@ const derivedWarn = 8_000_000 // ??? // derivedWarn is also used by Project
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	order = withoutFixed(order, src.Fixed())
 	if len(order) == 0 {
-		log.Println("ERROR empty TempIndex")
+		log.Println("ERROR: empty TempIndex")
 	}
 	ti := TempIndex{order: order, tran: tran, selOrg: selMin, selEnd: selMax}
 	ti.source = src

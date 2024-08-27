@@ -39,7 +39,7 @@ func merger(db *Database, prevState *DbState, mergeChan chan todo,
 	defer func() {
 		if e := recover(); e != nil {
 			dbg.PrintStack()
-			log.Fatalln("FATAL ERROR in merger:", e)
+			log.Fatalln("FATAL: in merger:", e)
 		}
 	}()
 	em := startMergeWorkers()

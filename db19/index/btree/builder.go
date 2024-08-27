@@ -68,7 +68,7 @@ func shouldSplit(nd node, nodeCount int) bool {
 		return true
 	}
 	if len(nd) > 8*MaxNodeSize {
-		log.Println("ERROR btree node too large", len(nd), "count", nodeCount)
+		log.Println("ERROR: btree node too large", len(nd), "count", nodeCount)
 	}
 	return false
 }

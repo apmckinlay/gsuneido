@@ -309,7 +309,7 @@ func ToSuExcept(th *Thread, e any) *SuExcept {
 		case error:
 			var perr runtime.Error
 			if errors.As(e, &perr) {
-				log.Println("ERROR", e)
+				log.Println("ERROR:", e)
 				dbg.PrintStack()
 				printSuStack(th, e)
 			}
@@ -340,7 +340,7 @@ func printSuStack(th *Thread, e any) {
 // It is used by dbmsserver
 func LogInternalError(th *Thread, from string, e any) {
 	if isRuntimeError(e) {
-		log.Println("ERROR", from, e)
+		log.Println("ERROR:", from, e)
 		dbg.PrintStack()
 		printSuStack(th, e)
 	} else if s, ok := e.(string); ok {
@@ -357,7 +357,7 @@ func logStringError(th *Thread, e string) {
 }
 
 func LogUncaught(th *Thread, where string, e any) {
-	log.Println("ERROR", "uncaught in", where+":", e)
+	log.Println("ERROR:", "uncaught in", where+":", e)
 	if isRuntimeError(e) {
 		dbg.PrintStack()
 	}

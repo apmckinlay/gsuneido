@@ -40,7 +40,7 @@ func runUI(block Value) {
 	state := MainThread.GetState()
 	defer func() {
 		if e := recover(); e != nil {
-			log.Println("ERROR in UpdateUI:", e)
+			log.Println("ERROR: in UpdateUI:", e)
 			MainThread.PrintStack()
 			dbg.PrintStack()
 		}
