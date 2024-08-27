@@ -30,6 +30,7 @@ func init() {
 	goc.Callback4 = callback4
 	goc.SunAPP = sunAPP
 	goc.RunOnGoSide = runOnGoSide
+	goc.RunDefer = runDefer
 	RunOnGoSide = runOnGoSide // runtime
 	Interrupt = goc.Interrupt
 	goc.Shutdown = shutdown

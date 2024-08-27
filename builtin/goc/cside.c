@@ -334,7 +334,7 @@ static void destroy_windows() {
 // so it will only be called when there are no other messages to process.
 static VOID CALLBACK timer(
 	HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
-	args[0] = msg_runongoside;
+	args[0] = msg_timer;
 	interact();
 }
 
@@ -347,7 +347,7 @@ const UINT sunappMsg = WM_USER + 1;
 static LRESULT CALLBACK helperWndProc(
 	HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	if (uMsg == notifyMsg) {
-		args[0] = msg_runongoside;
+		args[0] = msg_notify;
 		interact();
 		return 0;
 	} else if (uMsg == sunappMsg) {

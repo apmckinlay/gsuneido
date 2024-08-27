@@ -134,7 +134,7 @@ func Fatal(s string) {
 	}
 }
 
-// must be injected
+// injected
 var (
 	Callback2   func(i, a, b uintptr) uintptr
 	Callback3   func(i, a, b, c uintptr) uintptr
@@ -142,7 +142,7 @@ var (
 	RunOnGoSide func()
 	SunAPP      func(string) string
 	Shutdown    func(exitcode int)
-	RunDelayed0 func()
+	RunDefer    func()
 )
 
 // interact does a call *to* the other side with signalAndWait
@@ -175,7 +175,10 @@ func interact(args ...uintptr) uintptr {
 			C.args[1] = C.uintptr(Callback4(uintptr(C.args[1]),
 				uintptr(C.args[2]), uintptr(C.args[3]), uintptr(C.args[4]),
 				uintptr(C.args[5])))
-		case C.msg_runongoside:
+		case C.msg_timer:
+			RunDefer()
+			fallthrough
+		case C.msg_notify:
 			RunOnGoSide()
 			C.args[0] = C.msg_result
 		case C.msg_sunapp:
@@ -189,7 +192,6 @@ func interact(args ...uintptr) uintptr {
 		case C.msg_result:
 			return uintptr(C.args[1])
 		}
-		// RunDelayed0()
 	}
 }
 
