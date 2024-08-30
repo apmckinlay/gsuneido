@@ -11,6 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 type Extend struct {
@@ -219,6 +220,7 @@ func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran
 // execution --------------------------------------------------------
 
 func (e *Extend) Get(th *Thread, dir Dir) Row {
+	defer func(t uint64) { e.tget += tsc.Read() - t }(tsc.Read())
 	if e.conflict {
 		return nil
 	}

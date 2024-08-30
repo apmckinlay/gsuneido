@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 // TempIndex is inserted by SetApproach as required.
@@ -150,6 +151,7 @@ func (ti *TempIndex) matches(row Row, key []string) bool {
 }
 
 func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
+	defer func(t uint64) { ti.tget += tsc.Read() - t }(tsc.Read())
 	ti.th = th
 	defer func() { ti.th = nil }()
 	if ti.iter == nil {

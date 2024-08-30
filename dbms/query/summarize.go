@@ -15,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 type Summarize struct {
@@ -319,6 +320,7 @@ func (su *Summarize) Rewind() {
 }
 
 func (su *Summarize) Get(th *Thread, dir Dir) Row {
+	defer func(t uint64) { su.tget += tsc.Read() - t }(tsc.Read())
 	defer func() { su.rewound = false }()
 	return su.get(th, su, dir)
 }

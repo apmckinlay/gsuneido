@@ -16,6 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 type Project struct {
@@ -468,6 +469,7 @@ func (p *Project) Rewind() {
 }
 
 func (p *Project) Get(th *Thread, dir Dir) Row {
+	defer func(t uint64) { p.tget += tsc.Read() - t }(tsc.Read())
 	switch p.strategy {
 	case projCopy:
 		return p.source.Get(th, dir)

@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 // schema implements virtual tables for tables, columns, indexes, and views
@@ -20,6 +21,8 @@ type schemaTable struct {
 	tran QueryTran
 	cache
 	state
+	tget     uint64
+	tgetself uint64
 }
 
 type state int
@@ -92,6 +95,18 @@ func (*schemaTable) Simple(*Thread) []Row {
 	panic("Simple not implemented for schema tables")
 }
 
+func (st *schemaTable) tGet() uint64 {
+	return st.tget
+}
+
+func (st *schemaTable) tGetSelf() uint64 {
+	return st.tgetself
+}
+
+func (st *schemaTable) setSelf(t uint64) {
+	st.tgetself = t
+}
+
 //-------------------------------------------------------------------
 
 type Tables struct {
@@ -139,6 +154,7 @@ func (ts *Tables) Rewind() {
 }
 
 func (ts *Tables) Get(_ *Thread, dir Dir) Row {
+	defer func(t uint64) { ts.tget += tsc.Read() - t }(tsc.Read())
 	ts.ensure()
 	if ts.state == eof {
 		return nil
@@ -228,6 +244,7 @@ func (tl *TablesLookup) Transform() Query {
 }
 
 func (tl *TablesLookup) Get(*Thread, Dir) Row {
+	defer func(t uint64) { tl.tget += tsc.Read() - t }(tsc.Read())
 	if tl.state != eof {
 		tl.state = eof
 		switch tl.table {
@@ -307,6 +324,7 @@ func (cs *Columns) Rewind() {
 }
 
 func (cs *Columns) Get(_ *Thread, dir Dir) Row {
+	defer func(t uint64) { cs.tget += tsc.Read() - t }(tsc.Read())
 	cs.ensure()
 	if cs.state == eof {
 		return nil
@@ -438,6 +456,7 @@ func (is *Indexes) Rewind() {
 }
 
 func (is *Indexes) Get(_ *Thread, dir Dir) Row {
+	defer func(t uint64) { is.tget += tsc.Read() - t }(tsc.Read())
 	is.ensure()
 	if is.state == eof {
 		return nil
@@ -644,6 +663,7 @@ func (his *History) Rewind() {
 }
 
 func (his *History) Get(_ *Thread, dir Dir) Row {
+	defer func(t uint64) { his.tget += tsc.Read() - t }(tsc.Read())
 	if his.state == eof {
 		return nil
 	}

@@ -46,16 +46,6 @@ func qryBase(q Query, key Value) Value {
 		return SuBool(q.fastSingle())
 	case SuStr("nchild"):
 		return Zero // overridden by Query1 and Query2
-	}
-	return qryCost(q, key)
-}
-
-type costable interface {
-	cacheCost() (float64, Cost, Cost)
-}
-
-func qryCost(q costable, key Value) Value {
-	switch key {
 	case SuStr("frac"):
 		frac, _, _ := q.cacheCost()
 		return SuDnum{Dnum: dnum.FromFloat(frac)}
@@ -65,6 +55,10 @@ func qryCost(q costable, key Value) Value {
 	case SuStr("varcost"):
 		_, _, varcost := q.cacheCost()
 		return IntVal(varcost)
+	case SuStr("tget"):
+		return Int64Val(int64(q.tGet()))
+	case SuStr("tgetself"):
+		return Int64Val(int64(q.tGetSelf()))
 	}
 	return nil
 }
@@ -88,7 +82,7 @@ func (q *Tables) ValueGet(key Value) Value {
 	case SuStr("name"), SuStr("string"), SuStr("strategy"):
 		return SuStr("tables")
 	}
-	return qryCost(q, key)
+	return qryBase(q, key)
 }
 
 func (q *TablesLookup) ValueGet(key Value) Value {
@@ -100,7 +94,7 @@ func (q *TablesLookup) ValueGet(key Value) Value {
 	case SuStr("string"), SuStr("strategy"):
 		return SuStr(q.String())
 	}
-	return qryCost(q, key)
+	return qryBase(q, key)
 }
 
 func (q *Columns) ValueGet(key Value) Value {
@@ -110,7 +104,7 @@ func (q *Columns) ValueGet(key Value) Value {
 	case SuStr("name"), SuStr("string"), SuStr("strategy"):
 		return SuStr("columns")
 	}
-	return qryCost(q, key)
+	return qryBase(q, key)
 }
 
 func (q *Indexes) ValueGet(key Value) Value {
@@ -120,7 +114,7 @@ func (q *Indexes) ValueGet(key Value) Value {
 	case SuStr("name"), SuStr("string"), SuStr("strategy"):
 		return SuStr("indexes")
 	}
-	return qryCost(q, key)
+	return qryBase(q, key)
 }
 
 func (q *Views) ValueGet(key Value) Value {
@@ -130,7 +124,7 @@ func (q *Views) ValueGet(key Value) Value {
 	case SuStr("name"), SuStr("string"), SuStr("strategy"):
 		return SuStr("views")
 	}
-	return qryCost(q, key)
+	return qryBase(q, key)
 }
 
 func (q *History) ValueGet(key Value) Value {
@@ -140,7 +134,7 @@ func (q *History) ValueGet(key Value) Value {
 	case SuStr("name"), SuStr("string"), SuStr("strategy"):
 		return SuStr("history")
 	}
-	return qryCost(q, key)
+	return qryBase(q, key)
 }
 
 func (q *Nothing) ValueGet(key Value) Value {
@@ -150,7 +144,7 @@ func (q *Nothing) ValueGet(key Value) Value {
 	case SuStr("string"), SuStr("strategy"):
 		return SuStr("nothing(" + q.table + ")")
 	}
-	return qryCost(q, key)
+	return qryBase(q, key)
 }
 
 func (q *ProjectNone) ValueGet(key Value) Value {
@@ -158,7 +152,7 @@ func (q *ProjectNone) ValueGet(key Value) Value {
 	case SuStr("type"), SuStr("string"), SuStr("strategy"):
 		return SuStr("projectNone")
 	}
-	return qryCost(q, key)
+	return qryBase(q, key)
 }
 
 //-------------------------------------------------------------------

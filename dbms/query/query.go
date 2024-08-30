@@ -12,6 +12,7 @@
 			TablesLookup
 			Columns
 			Indexes
+			History
 		Query1
 			Extend
 			Project / Remove
@@ -174,7 +175,16 @@ type Query interface {
 	// without transform or optimize.
 	Simple(th *Thread) []Row
 
+	// ValueGet is for Suneido.ParseQuery and queryvalue.go
+	// It would be Get, but that is already used in Query.
 	ValueGet(key Value) Value
+
+	// tGet is the tsc/time taken by Get
+	tGet() uint64
+
+	setSelf(t uint64)
+
+	tGetSelf() uint64
 }
 
 // queryBase is embedded by almost all Query types
@@ -192,6 +202,8 @@ type queryBase struct {
 	fast1     opt.Bool
 	singleTbl opt.Bool
 	lookCost  opt.Int
+	tget      uint64
+	tgetself  uint64
 	cache
 }
 
@@ -247,6 +259,18 @@ func (q *queryBase) lookupCost() Cost {
 // Updateable is overridden by Query1
 func (*queryBase) Updateable() string {
 	return ""
+}
+
+func (q *queryBase) tGet() uint64 {
+	return q.tget
+}
+
+func (q *queryBase) tGetSelf() uint64 {
+	return q.tgetself
+}
+
+func (q *queryBase) setSelf(t uint64) {
+	q.tgetself = t
 }
 
 // Mode is the transaction context - cursor, read, or update.
@@ -817,6 +841,23 @@ func strategy(q Query, indent int) string { // recursive
 			in + cost + q.stringOp()
 	default:
 		return in + cost + q.String()
+	}
+}
+
+func CalcSelf(q0 Query) { // recursive
+	if q0.tGetSelf() != 0 {
+		return // already calculated
+	}
+	switch q := q0.(type) {
+	case q2i:
+		q0.setSelf(q0.tGet() - q.Source().tGet() - q.Source2().tGet())
+		CalcSelf(q.Source())
+		CalcSelf(q.Source2())
+	case q1i:
+		q0.setSelf(q0.tGet() - q.Source().tGet())
+		CalcSelf(q.Source())
+	default:
+		q0.setSelf(q0.tGet())
 	}
 }
 

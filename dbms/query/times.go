@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 type Times struct {
@@ -112,6 +113,7 @@ func (t *Times) Rewind() {
 }
 
 func (t *Times) Get(th *Thread, dir Dir) Row {
+	defer func(t0 uint64) { t.tget += tsc.Read() - t0 }(tsc.Read())
 	row2 := t.source2.Get(th, dir)
 	if t.rewound {
 		t.rewound = false

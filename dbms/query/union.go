@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 type Union struct {
@@ -378,6 +379,7 @@ func (u *Union) Rewind() {
 }
 
 func (u *Union) Get(th *Thread, dir Dir) Row {
+	defer func(t uint64) { u.tget += tsc.Read() - t }(tsc.Read())
 	defer func() { u.rewound = false }()
 	switch u.strategy {
 	case unionLookup:

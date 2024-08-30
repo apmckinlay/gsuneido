@@ -16,6 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 func NewTable(t QueryTran, name string) Query {
@@ -225,6 +226,7 @@ func (tbl *Table) Rewind() {
 }
 
 func (tbl *Table) Get(_ *Thread, dir Dir) Row {
+	defer func(t uint64) { tbl.tget += tsc.Read() - t }(tsc.Read())
 	tbl.ensureIter()
 	if dir == Prev {
 		tbl.iter.Prev(tbl.tran)

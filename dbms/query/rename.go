@@ -10,6 +10,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 type Rename struct {
@@ -184,6 +185,7 @@ func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran
 // execution --------------------------------------------------------
 
 func (r *Rename) Get(th *Thread, dir Dir) Row {
+	defer func(t uint64) { r.tget += tsc.Read() - t }(tsc.Read())
 	return r.source.Get(th, dir)
 }
 

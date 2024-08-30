@@ -487,6 +487,7 @@ func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
 }
 
 func (q queryLocal) Tree() Value {
+	qry.CalcSelf(q.Query)
 	return qry.NewSuQueryNode(q.Query)
 }
 
