@@ -14,16 +14,18 @@ import (
 )
 
 type Queue[T any] struct {
-	size  int
+	warn  int
 	limit int
 	items []T
 	lock  sync.Mutex
 	cond  sync.Cond
 }
 
-// New creates a new queue with the given size.
-func New[T any](size, limit int) *Queue[T] {
-	q := &Queue[T]{size: size, limit: limit}
+// New creates a new queue.
+// It logs a warning if the queue exceeds warn items
+// and blocks or panics if the queue exceeds limit items.
+func New[T any](warn, limit int) *Queue[T] {
+	q := &Queue[T]{warn: warn, limit: limit}
 	q.cond.L = &q.lock
 	return q
 }
@@ -45,8 +47,8 @@ func (q *Queue[T]) Put(item T) {
 func (q *Queue[T]) MustPut(item T) {
 	q.lock.Lock()
 	defer q.lock.Unlock()
-	if len(q.items) == q.size {
-		log.Println("WARNING: Queue over", q.size, "items")
+	if len(q.items) == q.warn {
+		log.Println("WARNING: Queue over", q.warn, "items")
 	}
 	if len(q.items) > q.limit {
 		panic(fmt.Sprint("ERROR: Queue over ", q.limit, " items"))
@@ -87,4 +89,10 @@ func popfirst[T any](x *[]T) T {
 	it := (*x)[0]
 	*x = (*x)[:copy(*x, (*x)[1:])]
 	return it
+}
+
+func (q *Queue[T]) Size() int {
+	q.lock.Lock()
+    defer q.lock.Unlock()
+    return len(q.items)
 }

@@ -26,6 +26,8 @@ func InfoStr(name string) Value {
 		return nil
 	}
 	switch x := x.(type) {
+	case *int:
+		return IntVal(*x)
 	case *atomic.Int64:
 		return Int64Val(x.Load())
 	case *atomic.Int32:

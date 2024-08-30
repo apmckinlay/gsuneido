@@ -7,6 +7,7 @@ package builtin
 
 import (
 	"log"
+	"strconv"
 	"syscall"
 	"time"
 	"unsafe"
@@ -994,14 +995,30 @@ func SetTimer(a, b, c, d Value) Value {
 	}
 }
 
+var nTimer = 0
+
+const warnTimers = 32
+const maxTimers = 64
+
+var _ = AddInfo("windows.nTimer", &nTimer)
+
 // gocSetTimer is called by SetTimer directly if on main UI thread
 // and via runOnGoSide if from another thread
 func gocSetTimer(hwnd, id, ms, cb Value) Value {
+	if nTimer > warnTimers {
+		if nTimer > maxTimers {
+			panic("ERROR: SetTimer: over " + strconv.Itoa(maxTimers))
+		}
+		log.Println("WARNING: SetTimer: over", warnTimers)
+	}
 	rtn := goc.Syscall4(setTimer,
 		intArg(hwnd),
 		intArg(id),
 		intArg(ms),
 		NewCallback(cb, 4))
+	if rtn != 0 {
+		nTimer++
+	}
 	return intRet(rtn)
 }
 
@@ -1041,6 +1058,9 @@ func gocKillTimer(hwnd, id Value) Value {
 	rtn := goc.Syscall2(killTimer,
 		intArg(hwnd),
 		intArg(id))
+	if rtn != 0 {
+		nTimer--
+	}
 	return boolRet(rtn)
 }
 

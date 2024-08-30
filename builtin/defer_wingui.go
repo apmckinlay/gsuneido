@@ -27,7 +27,7 @@ func init() {
 	}
 }
 
-var deferQueue = queue.New[dqitem](20, 50)
+var deferQueue = queue.New[dqitem](32, 64)
 
 type dqitem struct {
 	id int
@@ -73,6 +73,7 @@ func runDefer() {
 		MainThread.RestoreState(state)
 	}
 }
+var _ = AddInfo("windows.nDefer", deferQueue.Size)
 
 //-------------------------------------------------------------------
 
@@ -157,14 +158,20 @@ func (k *killer) Equal(other any) bool {
 	return k == other
 }
 
-func (k *killer) Lookup(_ *Thread, method string) Callable {
-	if method == "Kill" {
-		return builtinVal("Kill", func() Value { k.kill(); return nil }, "()")
-	}
-	return nil
-}
-
 func (k *killer) SetConcurrent() {
 	// need to allow this because of saving in concurrent places
 	// still shouldn't be calling it from other threads
+}
+
+func (k *killer) Lookup(_ *Thread, method string) Callable {
+	return killerMethods[method]
+}
+
+var killerMethods = methods()
+
+var _ = method(killer_Kill, "()")
+
+func killer_Kill(this Value) Value {
+	this.(*killer).kill()
+    return nil
 }
