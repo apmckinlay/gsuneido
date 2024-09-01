@@ -255,6 +255,8 @@ func (q *View) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("view")
+	case SuStr("name"):
+		return SuStr(q.name)
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
