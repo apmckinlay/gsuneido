@@ -122,7 +122,7 @@ func (tf *timerFn) kill() bool {
 	tid := tf.timerid
 	tf.timerid = Zero
 	gocKillTimer(Zero, tid)
-	clearCallback(tf.callback)
+	clearCallback(tf)
 	return true
 }
 
