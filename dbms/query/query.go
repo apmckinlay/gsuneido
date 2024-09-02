@@ -568,7 +568,7 @@ func (q1 *Query1) Rewind() {
 
 type q1i interface {
 	Source() Query
-	stringOp() string
+	strategy() string
 }
 
 func (q1 *Query1) Source() Query {
@@ -612,7 +612,7 @@ func (q2 *Query2) keypairs() [][]string {
 }
 
 type q2i interface {
-	stringOp() string
+	strategy() string
 	Source() Query
 	Source2() Query
 }
@@ -834,11 +834,11 @@ func strategy(q Query, indent int) string { // recursive
 	switch q := q.(type) {
 	case q2i:
 		return strategy(q.Source(), indent+1) + "\n" +
-			in + cost + q.stringOp() + "\n" +
+			in + cost + q.strategy() + "\n" +
 			strategy(q.Source2(), indent+1)
 	case q1i:
 		return strategy(q.Source(), indent) + "\n" +
-			in + cost + q.stringOp()
+			in + cost + q.strategy()
 	default:
 		return in + cost + q.String()
 	}

@@ -69,10 +69,10 @@ func (r *Rename) renameDependencies(src []string) {
 }
 
 func (r *Rename) String() string {
-	return parenQ2(r.source) + " " + r.stringOp()
+	return parenQ2(r.source) + " " + r.strategy()
 }
 
-func (r *Rename) stringOp() string {
+func (r *Rename) strategy() string {
 	sep := ""
 	var sb strings.Builder
 	sb.WriteString("RENAME ")

@@ -36,7 +36,7 @@ func (t *Times) String() string {
 	return t.Query2.String2("TIMES")
 }
 
-func (t *Times) stringOp() string {
+func (t *Times) strategy() string {
 	return "TIMES"
 }
 

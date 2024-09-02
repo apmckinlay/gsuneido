@@ -57,7 +57,7 @@ func format1(q q1i) string {
 	if f, ok := q.(formatable); ok {
 		return f.format()
 	}
-	op, rest, _ := strings.Cut(q.stringOp(), " ")
+	op, rest, _ := strings.Cut(q.strategy(), " ")
 	return str.ToLower(op) + str.Opt(" ", rest)
 }
 

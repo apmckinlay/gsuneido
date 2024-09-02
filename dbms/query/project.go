@@ -40,8 +40,8 @@ type Project struct {
 type mapType = hmap.Hmap[rowHash, struct{}, hmap.Funcs[rowHash]]
 
 type projectApproach struct {
-	index    []string
-	strategy projectStrategy
+	index []string
+	strat projectStrategy
 }
 
 type projectStrategy int
@@ -146,12 +146,12 @@ outer:
 }
 
 func (p *Project) String() string {
-	return parenQ2(p.source) + " " + p.stringOp()
+	return parenQ2(p.source) + " " + p.strategy()
 }
 
-func (p *Project) stringOp() string {
+func (p *Project) strategy() string {
 	s := "PROJECT"
-	switch p.strategy {
+	switch p.strat {
 	case projSeq:
 		s += "-SEQ"
 	case projCopy:
@@ -412,7 +412,7 @@ func (p *Project) Updateable() string {
 
 func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	if p.unique {
-		approach := &projectApproach{strategy: projCopy, index: index}
+		approach := &projectApproach{strat: projCopy, index: index}
 		fixcost, varcost := Optimize(p.source, mode, index, frac)
 		return fixcost, varcost, approach
 	}
@@ -420,10 +420,10 @@ func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 	fixcostMap, varcostMap := p.mapCost(mode, index, frac)
 	if fixcostMap+varcostMap < seq.cost() {
 		return fixcostMap, varcostMap,
-			&projectApproach{strategy: projMap, index: index}
+			&projectApproach{strat: projMap, index: index}
 	}
 	return seq.fixcost, seq.varcost,
-		&projectApproach{strategy: projSeq, index: seq.index}
+		&projectApproach{strat: projSeq, index: seq.index}
 }
 
 // mapThreshold and mapWarn are used by Project and Summarize
@@ -470,7 +470,7 @@ func (p *Project) Rewind() {
 
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { p.tget += tsc.Read() - t }(tsc.Read())
-	switch p.strategy {
+	switch p.strat {
 	case projCopy:
 		return p.source.Get(th, dir)
 	case projSeq:
@@ -612,7 +612,7 @@ func (p *Project) addResult(th *Thread, row Row) (Row, bool) {
 }
 
 func (p *Project) Output(th *Thread, rec Record) {
-	if p.strategy != projCopy {
+	if p.strat != projCopy {
 		panic("can't output to a project that doesn't include a key")
 	}
 	p.source.Output(th, rec)
@@ -620,14 +620,14 @@ func (p *Project) Output(th *Thread, rec Record) {
 
 func (p *Project) Select(cols, vals []string) {
 	p.source.Select(cols, vals)
-	if p.strategy == projMap {
+	if p.strat == projMap {
 		p.indexed = false
 	}
 	p.rewound = true
 }
 
 func (p *Project) Lookup(th *Thread, cols, vals []string) Row {
-	if p.strategy == projCopy {
+	if p.strat == projCopy {
 		return p.source.Lookup(th, cols, vals)
 	}
 	p.Select(cols, vals)

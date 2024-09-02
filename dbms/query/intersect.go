@@ -36,11 +36,11 @@ func NewIntersect(src1, src2 Query) *Intersect {
 }
 
 func (it *Intersect) String() string {
-	return it.String2(it.stringOp())
+	return it.String2(it.strategy())
 }
 
-func (it *Intersect) stringOp() string {
-	return it.Compatible.stringOp("INTERSECT", "")
+func (it *Intersect) strategy() string {
+	return it.Compatible.strategy("INTERSECT", "")
 }
 
 func (*Intersect) format() string {

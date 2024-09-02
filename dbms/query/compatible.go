@@ -57,7 +57,7 @@ func (c *Compatible) String2(op string) string {
 	return c.Query2.String2(op)
 }
 
-func (c *Compatible) stringOp(op, strategy string) string {
+func (c *Compatible) strategy(op, strategy string) string {
 	if c.disjoint != "" {
 		op += "-DISJOINT(" + c.disjoint + ")"
 	}

@@ -55,10 +55,10 @@ func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 }
 
 func (ti *TempIndex) String() string {
-	return parenQ2(ti.source) + " " + ti.stringOp()
+	return parenQ2(ti.source) + " " + ti.strategy()
 }
 
-func (ti *TempIndex) stringOp() string {
+func (ti *TempIndex) strategy() string {
 	return "TEMPINDEX" + str.Join("(,)", ti.order)
 }
 

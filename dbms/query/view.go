@@ -34,7 +34,7 @@ func NewView(name string, src Query) *View {
 	return v
 }
 
-func (v *View) stringOp() string {
+func (v *View) strategy() string {
 	return "VIEW " + v.name
 }
 
@@ -55,7 +55,7 @@ func (v *View) Lookup(th *Thread, cols []string, vals []string) Row {
 }
 
 func (v *View) String() string {
-	return v.stringOp() + " = " + v.source.String()
+	return v.strategy() + " = " + v.source.String()
 }
 
 func (v *View) setApproach(index []string, frac float64, approach any, tran QueryTran) {

@@ -108,10 +108,10 @@ func (w *Where) SetTran(t QueryTran) {
 }
 
 func (w *Where) String() string {
-	return parenQ2(w.source) + " " + w.stringOp()
+	return parenQ2(w.source) + " " + w.strategy()
 }
 
-func (w *Where) stringOp() string {
+func (w *Where) strategy() string {
 	s := "WHERE"
 	if w.conflict {
 		return s + " nothing"

@@ -174,7 +174,7 @@ func (q *Extend) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query1(q, key)
 }
@@ -186,7 +186,7 @@ func (q *Project) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query1(q, key)
 }
@@ -198,7 +198,7 @@ func (q *Rename) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query1(q, key)
 }
@@ -210,7 +210,7 @@ func (q *Sort) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query1(q, key)
 }
@@ -222,7 +222,7 @@ func (q *Summarize) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query1(q, key)
 }
@@ -234,7 +234,7 @@ func (q *TempIndex) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query1(q, key)
 }
@@ -246,7 +246,7 @@ func (q *Where) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query1(q, key)
 }
@@ -260,7 +260,7 @@ func (q *View) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query1(q, key)
 }
@@ -288,7 +288,7 @@ func (q *Union) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query2(q, key)
 }
@@ -300,7 +300,7 @@ func (q *Intersect) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query2(q, key)
 }
@@ -312,7 +312,7 @@ func (q *Minus) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query2(q, key)
 }
@@ -324,7 +324,7 @@ func (q *Times) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query2(q, key)
 }
@@ -336,7 +336,7 @@ func (q *Join) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query2(q, key)
 }
@@ -348,7 +348,7 @@ func (q *LeftJoin) ValueGet(key Value) Value {
 	case SuStr("string"):
 		return SuStr(format1(q))
 	case SuStr("strategy"):
-		return SuStr(q.stringOp())
+		return SuStr(q.strategy())
 	}
 	return query2(q, key)
 }
