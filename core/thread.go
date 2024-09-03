@@ -156,6 +156,7 @@ func (th *Thread) Reset() {
 	assert.That(len(th.rules.list) == 0)
 	th.thread1 = thread1{} // zero it
 	th.Name = str.BeforeFirst(th.Name, " ")
+	th.Suneido.Store(nil)
 }
 
 func (th *Thread) Session() string {
