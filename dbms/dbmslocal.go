@@ -466,7 +466,7 @@ func (q queryLocal) Strategy(formatted bool) string {
 	if formatted {
 		strategy = qry.Strategy(q.Query) + "\n"
 	} else {
-		strategy = q.String() + " "
+		strategy = qry.String(q.Query) + " "
 	}
 	n, _ := q.Nrows()
 	return fmt.Sprint(strategy,

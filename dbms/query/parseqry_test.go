@@ -8,7 +8,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestParseQuery(t *testing.T) {
@@ -21,28 +20,28 @@ func TestParseQuery(t *testing.T) {
 			expected = args[1]
 		}
 		q := ParseQuery(query, testTran{}, nil)
-		qs := str.ToLower(q.String())
+		qs := String(q)
 		assert.T(t).This(qs).Is(expected)
 	}
 	test("table")
 	test("table sort a")
 	test("table sort reverse a, b")
 	test("table project a")
-	test("table project a,b,c")
+	test("table project a, b, c")
 	test("table rename a to aa")
 	test("table rename a to aa, c to cc")
 	test("table intersect table2")
 	test("table minus table2")
 	test("table times cus")
-	test("table union table2")
+	test("table union /*NOT DISJOINT*/ table2")
 	test("cus join task",
-		"cus join 1:n by(cnum) task")
+		"cus join by(cnum) task")
 	test("cus join by(cnum) task",
-		"cus join 1:n by(cnum) task")
+		"cus join by(cnum) task")
 	test("cus leftjoin task",
-		"cus leftjoin 1:n by(cnum) task")
+		"cus leftjoin by(cnum) task")
 	test("cus leftjoin by(cnum) task",
-		"cus leftjoin 1:n by(cnum) task")
+		"cus leftjoin by(cnum) task")
 	test("table summarize count",
 		"table summarize count")
 	test("table summarize n = count")
@@ -55,18 +54,18 @@ func TestParseQuery(t *testing.T) {
 		"table summarize a, b, count")
 
 	test("(table union table2) join table2",
-		"(table union table2) join n:1 by(c,d,e) table2")
+		"(table union /*NOT DISJOINT*/ table2) join by(c,d,e) table2")
 	test("cus join task sort tnum",
-		"cus join 1:n by(cnum) task sort tnum")
+		"cus join by(cnum) task sort tnum")
 	test("(cus join task) project cnum, abbrev, tnum rename cnum to c sort tnum, c",
-		"(cus join 1:n by(cnum) task) project cnum,abbrev,tnum"+
+		"(cus join by(cnum) task) project cnum, abbrev, tnum"+
 			" rename cnum to c sort tnum, c")
 	test("cus extend x = 123",
 		"cus extend x = 123")
 	test("cus extend x = function(){123}()",
 		"cus extend x = /* function */()")
 	test("cus extend x = cnum.Map(function(){123})",
-		"cus extend x = cnum.map(/* function */)") // (test does lower)
+		"cus extend x = cnum.Map(/* function */)") // (test does lower)
 
 	xtest := func(s, err string) {
 		fn := func() { ParseQuery(s, testTran{}, nil) }
@@ -94,7 +93,7 @@ func TestParseQuery2(t *testing.T) {
 	test := func(s string) {
 		t.Helper()
 		q := ParseQuery(s, testTran{}, nil)
-		assert.T(t).This(str.ToLower(q.String())).Is(s)
+		assert.T(t).This(String(q)).Is(s)
 	}
 
 	test("table extend one")
@@ -106,10 +105,14 @@ func TestParseQuery2(t *testing.T) {
 
 	s := "table where (((a > 1)))"
 	q := ParseQuery(s, testTran{}, nil)
-	assert.T(t).This(q.String()).Is("table WHERE a > 1")
+	assert.T(t).This(String(q)).Is("table where a > 1")
 }
 
 func TestParseQueryView(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *core.SuTran {
+		return nil
+	}
 	q := ParseQuery("table union myview", testTran{}, nil)
-	assert.T(t).This(q.String()).Is("table UNION (cus JOIN 1:n by(cnum) task)")
+	assert.T(t).This(String(q)).
+		Is("table union /*NOT DISJOINT*/ (cus join by(cnum) task)")
 }

@@ -6,8 +6,6 @@ package query
 import (
 	"reflect"
 	"strings"
-
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func Format(t QueryTran, query string) string {
@@ -27,19 +25,19 @@ func format(indent int, q Query, parens int) string { // recursive
 			leftin--
 		}
 		s = format(leftin, q.Source(), 1) + "\n" +
-			in + format1(q) + "\n" +
+			in + q.String() + "\n" +
 			format(indent, q.Source2(), 1)
 		if parens >= 1 {
 			s = addParens(s)
 		}
 	case *Sort:
 		s = format(indent, q.Source(), 0) + "\n" +
-			in + format1(q)
+			in + q.String()
 	case *View:
-		s = in + q.name + " /*view*/"
+		s = in + q.String()
 	case q1i:
 		s = format(indent, q.Source(), 2) + "\n" +
-			in + format1(q)
+			in + q.String()
 		if parens == 1 {
 			s = addParens(s)
 		}
@@ -47,18 +45,6 @@ func format(indent int, q Query, parens int) string { // recursive
 		s = in + q.String()
 	}
 	return s
-}
-
-type formatable interface {
-	format() string
-}
-
-func format1(q q1i) string {
-	if f, ok := q.(formatable); ok {
-		return f.format()
-	}
-	op, rest, _ := strings.Cut(q.strategy(), " ")
-	return str.ToLower(op) + str.Opt(" ", rest)
 }
 
 func which(x any) string {

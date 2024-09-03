@@ -132,22 +132,22 @@ func (su *Summarize) SetTran(t QueryTran) {
 }
 
 func (su *Summarize) String() string {
-	return parenQ2(su.source) + " " + su.strategy()
-}
-
-func (su *Summarize) strategy() string {
-	s := "SUMMARIZE"
+	s := "summarize"
 	switch su.strat {
+	case 0:
+		s += str.Opt("/*", string(su.hint), "*/")
 	case sumSeq:
-		s += "-SEQ"
+		s += "-seq"
 	case sumMap:
-		s += "-MAP"
+		s += "-map"
 	case sumIdx:
-		s += "-IDX"
+		s += "-idx"
 	case sumTbl:
-		s += "-TBL"
+		s += "-tbl"
+	default:
+		assert.ShouldNotReachHere()
 	}
-	if su.wholeRow {
+	if su.strat != 0 && su.wholeRow {
 		s += "*"
 	}
 	return s + su.string2()
@@ -171,10 +171,6 @@ func (su *Summarize) string2() string {
 		}
 	}
 	return s
-}
-
-func (su *Summarize) format() string {
-	return "summarize" + str.Opt("/*", string(su.hint), "*/") + su.string2()
 }
 
 func (su *Summarize) getNrows() (int, int) {
@@ -289,6 +285,8 @@ func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran Qu
 	case sumSeq:
 		t := sumSeqT{}
 		su.get = t.getSeq
+	default:
+		assert.ShouldNotReachHere()
 	}
 	su.source = SetApproach(su.source, su.index, su.frac, tran)
 	su.rewound = true

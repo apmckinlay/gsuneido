@@ -60,6 +60,7 @@ type Where struct {
 	// exprMore is whether expr has more than idxSels
 	exprMore bool
 	optInited
+	optimized bool
 }
 
 type optInited byte
@@ -108,15 +109,14 @@ func (w *Where) SetTran(t QueryTran) {
 }
 
 func (w *Where) String() string {
-	return parenQ2(w.source) + " " + w.strategy()
-}
-
-func (w *Where) strategy() string {
-	s := "WHERE"
+	s := "where"
 	if w.conflict {
-		return s + " nothing"
+		s += " /*NOTHING*/"
+		if w.optimized {
+			return s
+		}
 	}
-	if w.singleton {
+	if w.optimized && w.singleton {
 		s += "*1"
 	}
 	if len(w.expr.Exprs) > 0 {
@@ -126,10 +126,6 @@ func (w *Where) strategy() string {
 		s += fmt.Sprintf(" /*SLOW %d->%d*/", w.nIn, w.nOut)
 	}
 	return s
-}
-
-func (w *Where) format() string {
-	return "where " + w.expr.Echo()
 }
 
 // calcFixed sets w.fixed and may set w.conflict
@@ -613,6 +609,7 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 }
 
 func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTran) {
+	w.optimized = true
 	if w.conflict {
 		return
 	}

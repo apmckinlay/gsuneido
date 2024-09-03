@@ -288,7 +288,7 @@ func TestWhereSelectBug(t *testing.T) {
 	q = q.Transform()
 	_, _, app := q.optimize(ReadMode, idx, 1)
 	q.setApproach(idx, 1, app, tran)
-	assert.T(t).This(q.String()).Is("t1^(b) WHERE d is '1' and b < 'z'")
+	assert.T(t).This(String(q)).Is("t1^(b) where d is '1' and b < 'z'")
 	vals := []string{Pack(SuStr("1"))}
 	q.Select(idx, vals)
 	assert.T(t).This(queryAll2(q)).
@@ -352,7 +352,7 @@ func TestSingleton(t *testing.T) {
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery("tmp where a = 3", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
-	assert.This(q.String()).Is("tmp^(a) WHERE*1 a is 3") // singleton
+	assert.This(String(q)).Is("tmp^(a) where*1 a is 3") // singleton
 	// reading by a, but singleton so we can Select/Lookup on b
 	bcols := []string{"b"}
 	bvals := []string{Pack(SuInt(4))}

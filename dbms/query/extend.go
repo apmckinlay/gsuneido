@@ -107,11 +107,7 @@ func (e *Extend) SetTran(t QueryTran) {
 }
 
 func (e *Extend) String() string {
-	return parenQ2(e.source) + " " + e.strategy()
-}
-
-func (e *Extend) strategy() string {
-	s := "EXTEND "
+	s := "extend "
 	sep := ""
 	for i, c := range e.cols {
 		s += sep + c

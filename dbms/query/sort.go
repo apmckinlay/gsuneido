@@ -44,24 +44,12 @@ func NewSort(src Query, reverse bool, order []string) *Sort {
 }
 
 func (sort *Sort) String() string {
-	return sort.source.String() + str.Opt(" ", sort.strategy())
-}
-
-func (sort *Sort) strategy() string {
 	r := ""
 	if sort.reverse {
 		r = "reverse"
 	}
 	if sort.index != nil {
 		return r
-	}
-	return "SORT " + str.Opt(r, " ") + str.Join(", ", sort.order)
-}
-
-func (sort *Sort) format() string {
-	r := ""
-	if sort.reverse {
-		r = "reverse"
 	}
 	return "sort " + str.Opt(r, " ") + str.Join(", ", sort.order)
 }

@@ -60,14 +60,14 @@ func TestJoin_SelectFixedBug(t *testing.T) {
 	q, _, _ = Setup(q, ReadMode, tran)
 	assert.This(Strategy(q)).Like(`
 			{1_000 0+250_000} cus^(c3,ck)
-			{500/1_000 0+250_000} WHERE ck is ""
-			{500/1_000 0+250_000} EXTEND bk = c3
-		{1/1_000 0+1_126_000} JOIN n:1 by(ck,bk)
+			{500/1_000 0+250_000} where ck is ""
+			{500/1_000 0+250_000} extend bk = c3
+		{1/1_000 0+1_126_000} join n:1 by(ck,bk)
 				{0.500x 1_000 0+125_500} bln^(ik,bk)
-				{500/1_000 0+125_500} WHERE ik is 4
-			{1/1_000 0+376_000} JOIN n:1 by(ik)
+				{500/1_000 0+125_500} where ik is 4
+			{1/1_000 0+376_000} join n:1 by(ik)
 				{0.001x 1_000 0+500} ivc^(ik)
-				{1/1_000 0+500} WHERE*1 ik is 4 and ck is ""`)
+				{1/1_000 0+500} where*1 ik is 4 and ck is ""`)
 	assert.This(queryAll2(q)).Is("")
 }
 

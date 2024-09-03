@@ -16,7 +16,7 @@ type ProjectNone struct {
 var _ Query = (*ProjectNone)(nil)
 
 func (*ProjectNone) String() string {
-	return "PROJECT-NONE"
+	return "project-none"
 }
 
 func (pn *ProjectNone) Transform() Query {

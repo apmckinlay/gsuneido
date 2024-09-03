@@ -146,31 +146,27 @@ outer:
 }
 
 func (p *Project) String() string {
-	return parenQ2(p.source) + " " + p.strategy()
-}
-
-func (p *Project) strategy() string {
-	s := "PROJECT"
+	s := "project"
+	cols := p.columns
 	switch p.strat {
+	case 0:
+		if p.remove != nil {
+			s = "remove"
+			cols = p.remove
+		}
+		if !p.unique {
+			s += " /*NOT UNIQUE*/"
+		}
 	case projSeq:
-		s += "-SEQ"
+		s += "-seq"
 	case projCopy:
-		s += "-COPY"
+		s += "-copy"
 	case projMap:
-		s += "-MAP"
+		s += "-map"
+	default:
+		assert.ShouldNotReachHere()
 	}
-	return s + " " + str.Join(",", p.columns)
-}
-
-func (p *Project) format() string {
-	warn := ""
-	if !p.unique {
-		warn = "/*NOT UNIQUE*/ "
-	}
-	if p.remove != nil {
-		return "remove " + warn + str.Join(", ", p.remove)
-	}
-	return "project " + warn + str.Join(", ", p.columns)
+	return s + " " + str.Join(", ", cols)
 }
 
 func (p *Project) SetTran(t QueryTran) {
@@ -216,6 +212,7 @@ func (p *Project) getNrows() (int, int) {
 }
 
 func (p *Project) Transform() Query {
+	p.remove = nil
 	src := p.source.Transform()
 	if _, ok := src.(*Nothing); ok {
 		return NewNothing(p)
@@ -478,7 +475,7 @@ func (p *Project) Get(th *Thread, dir Dir) Row {
 	case projMap:
 		return p.getMap(th, dir)
 	}
-	panic("should not reach here")
+	panic(assert.ShouldNotReachHere())
 }
 
 func (p *Project) getSeq(th *Thread, dir Dir) Row {

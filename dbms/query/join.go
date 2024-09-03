@@ -46,6 +46,7 @@ type joinBase struct {
 	row2       Row // nil when we need a new row1
 	joinLike
 	joinType
+	optimized bool
 }
 
 type Join struct {
@@ -160,26 +161,16 @@ func newJoinLike(src1, src2 Query) joinLike {
 }
 
 func (jn *Join) String() string {
-	return parenQ2(jn.source1) + " " + jn.strategy() + " " + paren(jn.source2)
+	return jn.joinBase.String("join")
 }
 
-func (jn *Join) strategy() string {
-	return "JOIN" + jn.bystr()
-}
-
-func (jn *Join) format() string {
-	s := "join by" + str.Join("(,)", jn.by)
-	if jn.joinType == n_n {
-		s += " /*MANY TO MANY*/"
+func (jb *joinBase) String(op string) string {
+	if jb.optimized {
+		op += " " + jb.joinType.String()
+	} else if jb.joinType == n_n {
+		op += " /*MANY TO MANY*/"
 	}
-	return s
-}
-
-func (jb *joinBase) bystr() string {
-	if len(jb.by) == 0 {
-		return ""
-	}
-	return " " + str.Opt(jb.joinType.String(), " ") + "by" + str.Join("(,)", jb.by)
+	return op + " by" + str.Join("(,)", jb.by)
 }
 
 func (jb *joinBase) SetTran(qt QueryTran) {
@@ -213,6 +204,7 @@ func (jn *Join) getKeys() [][]string {
 }
 
 func (jn *Join) Transform() Query {
+	jn.optimized = true
 	if jn.conflict {
 		return NewNothing(jn)
 	}
@@ -608,19 +600,7 @@ func (lj *LeftJoin) With(src1, src2 Query) *LeftJoin {
 }
 
 func (lj *LeftJoin) String() string {
-	return parenQ2(lj.source1) + " " + lj.strategy() + " " + paren(lj.source2)
-}
-
-func (lj *LeftJoin) strategy() string {
-	return "LEFTJOIN" + lj.bystr()
-}
-
-func (lj *LeftJoin) format() string {
-	s := "leftjoin by" + str.Join("(,)", lj.by)
-	if lj.joinType == n_n {
-		s += " /*MANY TO MANY*/"
-	}
-	return s
+	return lj.joinBase.String("leftjoin")
 }
 
 func (lj *LeftJoin) getKeys() [][]string {
@@ -656,6 +636,7 @@ func (lj *LeftJoin) getFixed() []Fixed {
 }
 
 func (lj *LeftJoin) Transform() Query {
+	lj.optimized = true
 	src1 := lj.source1.Transform()
 	if _, ok := src1.(*Nothing); ok {
 		return NewNothing(lj)

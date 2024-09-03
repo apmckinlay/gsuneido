@@ -13,7 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
@@ -60,30 +59,25 @@ func NewUnion(src1, src2 Query) *Union {
 }
 
 func (u *Union) String() string {
-	return u.String2(u.strategy())
-}
-
-func (u *Union) strategy() string {
-	strategy := ""
+	s := "union"
+	if u.strat == 0 { // not optimized
+		if u.disjoint == "" {
+			s += " /*NOT DISJOINT*/"
+		}
+		return s
+	}
+	if u.disjoint != "" {
+		s += "-disjoint(" + u.disjoint + ")"
+	}
 	switch u.strat {
 	case unionMerge:
-		strategy += "-MERGE"
+		s += "-merge"
 	case unionLookup:
 		if u.disjoint == "" {
-			strategy += "-LOOKUP"
+			s += "-lookup"
 		}
 	}
-	if u.keyIndex != nil {
-		strategy += str.Join("(,)", u.keyIndex)
-	}
-	return u.Compatible.strategy("UNION", strategy)
-}
-
-func (u *Union) format() string {
-	if u.disjoint == "" {
-		return "union /*NOT DISJOINT*/"
-	}
-	return "union"
+	return u.Compatible.String(s)
 }
 
 func (u *Union) Keys() [][]string {

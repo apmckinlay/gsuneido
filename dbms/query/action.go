@@ -24,7 +24,7 @@ type insertRecordAction struct {
 }
 
 func (a *insertRecordAction) String() string {
-	return "insert " + a.record.Show() + " into " + a.query.String()
+	return "insert " + a.record.Show() + " into " + String(a.query)
 }
 
 func (a *insertRecordAction) execute(th *Thread, ut *db19.UpdateTran) int {
@@ -44,7 +44,7 @@ type insertQueryAction struct {
 }
 
 func (a *insertQueryAction) String() string {
-	return "insert " + a.query.String() + " into " + a.table
+	return "insert " + String(a.query) + " into " + a.table
 }
 
 func (a *insertQueryAction) execute(th *Thread, ut *db19.UpdateTran) int {
@@ -83,7 +83,7 @@ type updateAction struct {
 }
 
 func (a *updateAction) String() string {
-	s := "update " + a.query.String() + " set "
+	s := "update " + String(a.query) + " set "
 	sep := ""
 	for i := range a.cols {
 		s += sep + a.cols[i] + " = " + a.exprs[i].String()
@@ -127,7 +127,7 @@ type deleteAction struct {
 }
 
 func (a *deleteAction) String() string {
-	return "delete " + a.query.String()
+	return "delete " + String(a.query)
 }
 
 func (a *deleteAction) execute(th *Thread, ut *db19.UpdateTran) int {

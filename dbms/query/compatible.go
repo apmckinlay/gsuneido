@@ -8,6 +8,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // Compatible is shared by Intersect, Minus, and Union
@@ -53,15 +54,11 @@ done:
 	return c
 }
 
-func (c *Compatible) String2(op string) string {
-	return c.Query2.String2(op)
-}
-
-func (c *Compatible) strategy(op, strategy string) string {
-	if c.disjoint != "" {
-		op += "-DISJOINT(" + c.disjoint + ")"
+func (c *Compatible) String(s string) string {
+	if c.keyIndex != nil {
+		s += str.Join("(,)", c.keyIndex)
 	}
-	return op + strategy
+	return s
 }
 
 func (c *Compatible) SetTran(t QueryTran) {

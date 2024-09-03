@@ -31,15 +31,7 @@ func NewMinus(src1, src2 Query) *Minus {
 }
 
 func (m *Minus) String() string {
-	return m.String2(m.strategy())
-}
-
-func (m *Minus) strategy() string {
-	return m.Compatible.strategy("MINUS", "")
-}
-
-func (*Minus) format() string {
-	return "minus"
+	return m.Compatible.String("minus")
 }
 
 func (m *Minus) getNrows() (int, int) {

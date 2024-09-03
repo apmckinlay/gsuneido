@@ -12,6 +12,7 @@ import (
 )
 
 func TestFixed(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	DefaultSingleQuotes = true
 	defer func() { DefaultSingleQuotes = false }()
 	test := func(query, expected string) {
@@ -69,24 +70,24 @@ func TestFixed(t *testing.T) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
 		q, _, _ = Setup(q, ReadMode, testTran{})
-		assert.T(t).This(q.String()).Is(expected)
+		assert.T(t).This(String(q)).Is(expected)
 	}
 	test2("table extend f=1 where f is 2",
-		"NOTHING(table)")
+		"nothing(table)")
 	test2("table extend f=1, g=2 where f is 1",
-		"table^(a) WHERE true EXTEND f = 1, g = 2") //TODO remove WHERE true
+		"table^(a) where true extend f = 1, g = 2") //TODO remove where true
 	test2("table extend f=1, g=2 where f is 3",
-		"NOTHING(table)")
+		"nothing(table)")
 	test2("tables extend x=1 join (columns extend x=2)",
-		"NOTHING")
+		"nothing")
 	test2("tables extend x=1 leftjoin (columns extend x=2)",
-		"tables EXTEND x = 1, column = '', field = ''")
+		"tables extend x = 1, column = '', field = ''")
 	test2("table where a = 1 and a = 2",
-		"NOTHING(table)")
+		"nothing(table)")
 	test2("(table union table2) where a = 1",
-		"table^(a) WHERE*1 a is 1 EXTEND d = '', e = ''")
+		"table^(a) where*1 a is 1 extend d = '', e = ''")
 	test2("(table minus table2) where a = 1",
-		"table^(a) WHERE*1 a is 1")
+		"table^(a) where*1 a is 1")
 }
 
 func TestCombineFixed(t *testing.T) {

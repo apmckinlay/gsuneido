@@ -69,13 +69,9 @@ func (r *Rename) renameDependencies(src []string) {
 }
 
 func (r *Rename) String() string {
-	return parenQ2(r.source) + " " + r.strategy()
-}
-
-func (r *Rename) strategy() string {
 	sep := ""
 	var sb strings.Builder
-	sb.WriteString("RENAME ")
+	sb.WriteString("rename ")
 	for i, from := range r.from {
 		sb.WriteString(sep)
 		sb.WriteString(from)

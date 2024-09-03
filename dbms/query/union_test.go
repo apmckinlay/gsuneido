@@ -52,7 +52,7 @@ func TestUnion_MergeSwitchDir(t *testing.T) {
 	q := ParseQuery("one union two", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	// fmt.Println(Format(q))
-	assert.That(strings.Contains(q.String(), "MERGE"))
+	assert.That(strings.Contains(q.String(), "merge"))
 
 	get := func(dir Dir) Row {
 		// fmt.Println(dir)

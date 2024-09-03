@@ -7,14 +7,13 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestParseAct(t *testing.T) {
 	test := func(s string) {
 		t.Helper()
 		act := ParseAction(s, testTran{}, nil)
-		assert.T(t).This(str.ToLower(act.String())).Is(s)
+		assert.T(t).This(act.String()).Is(s)
 	}
 	test("insert [a: 1, b: 3] into table")
 	test("insert table into table1")

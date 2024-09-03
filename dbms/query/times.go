@@ -33,11 +33,7 @@ func NewTimes(src1, src2 Query) *Times {
 }
 
 func (t *Times) String() string {
-	return t.Query2.String2("TIMES")
-}
-
-func (t *Times) strategy() string {
-	return "TIMES"
+	return "times"
 }
 
 func (t *Times) getKeys() [][]string {

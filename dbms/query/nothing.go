@@ -26,7 +26,7 @@ func NewNothing(q Query) *Nothing {
 var _ Query = (*Nothing)(nil)
 
 func (no *Nothing) String() string {
-	return "NOTHING" + str.Opt("(", no.table, ")")
+	return "nothing" + str.Opt("(", no.table, ")")
 }
 
 func (no *Nothing) Transform() Query {

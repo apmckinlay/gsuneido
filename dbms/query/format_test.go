@@ -7,12 +7,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestFormat(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *core.SuTran { return nil }
 	tran := &testTran{}
 	test := func(query, expected string) {
+		t.Helper()
 		actual := Format(tran, query)
 		assert.T(t).This(actual).Is(strings.Trim(expected, "\r\n"))
 	}

@@ -36,15 +36,7 @@ func NewIntersect(src1, src2 Query) *Intersect {
 }
 
 func (it *Intersect) String() string {
-	return it.String2(it.strategy())
-}
-
-func (it *Intersect) strategy() string {
-	return it.Compatible.strategy("INTERSECT", "")
-}
-
-func (*Intersect) format() string {
-	return "intersect"
+	return it.Compatible.String("intersect")
 }
 
 func (it *Intersect) getHeader() *Header {

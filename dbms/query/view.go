@@ -34,10 +34,6 @@ func NewView(name string, src Query) *View {
 	return v
 }
 
-func (v *View) strategy() string {
-	return "VIEW " + v.name
-}
-
 func (v *View) Transform() Query {
 	panic(assert.ShouldNotReachHere())
 }
@@ -55,7 +51,7 @@ func (v *View) Lookup(th *Thread, cols []string, vals []string) Row {
 }
 
 func (v *View) String() string {
-	return v.strategy() + " = " + v.source.String()
+	return v.name + " /*view*/"
 }
 
 func (v *View) setApproach(index []string, frac float64, approach any, tran QueryTran) {
