@@ -42,6 +42,8 @@ func qryBase(q Query, key Value) Value {
 	switch key {
 	case SuStr("string"):
 		return SuStr(q.String())
+	case SuStr("String"):
+		return SuStr(String(q))
 	case SuStr("nrows"):
 		n, _ := q.Nrows()
 		return IntVal(n)
@@ -218,7 +220,7 @@ func (q *TempIndex) ValueGet(key Value) Value {
 func (q *Where) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
-		return SuStr("rename")
+		return SuStr("where")
 	}
 	return query1(q, key)
 }
