@@ -163,7 +163,7 @@ func (h *Hmap[K, V, H]) Get(key K) V {
 	return x
 }
 
-// Get returns the value for the key or nil if not found
+// Has returns true if the key exists in the table, false otherwise
 func (h *Hmap[K, V, H]) Has(key K) bool {
 	_, _, ok := h.Get2(key)
 	return ok
