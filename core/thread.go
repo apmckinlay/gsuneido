@@ -335,9 +335,7 @@ func (th *Thread) SessionId(id string) string {
 }
 
 func (th *Thread) RunWithMainSuneido(fn func() Value) Value {
-	defer func(orig *SuneidoObject) {
-		th.Suneido.Store(orig)
-	}(th.Suneido.Load())
+	defer th.Suneido.Store(th.Suneido.Load())
 	th.Suneido.Store(nil)
 	return fn()
 }
