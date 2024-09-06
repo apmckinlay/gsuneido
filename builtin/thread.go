@@ -4,6 +4,7 @@
 package builtin
 
 import (
+	"runtime"
 	"sync"
 	"time"
 
@@ -73,6 +74,13 @@ func threadCallClass(th *Thread, args []Value) Value {
 }
 
 var threadMethods = methods()
+
+var _ = staticMethod(thread_GC, "()")
+
+func thread_GC() Value {
+	runtime.GC()
+	return nil
+}
 
 var _ = staticMethod(thread_Name, "(name=false)")
 
