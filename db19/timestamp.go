@@ -30,7 +30,11 @@ func ticker() {
 		time.Sleep(1 * time.Second)
 		t := Now().WithoutMs()
 		if d := t.MinusMs(prev); ints.Abs(d) > 5000 {
-			log.Println("ERROR: time skip from", prev, "to", t,
+			level := "INFO: "
+			if d < 0 {
+				level = "ERROR: "
+			}
+			log.Println(level, "time skip from", prev, "to", t,
 				"=", time.Duration(d)*time.Millisecond)
 		}
 		prev = t
