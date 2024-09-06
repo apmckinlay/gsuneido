@@ -3,7 +3,7 @@
 
 package check
 
-import "slices"
+import "github.com/apmckinlay/gsuneido/util/generic/slc"
 
 // set is a specialized set of strings in a slice.
 // By only ever appending, we make it an immutable data structure.
@@ -82,5 +82,5 @@ func (ls set) cow() set {
 }
 
 func (ls set) copy() set {
-	return slices.Clone(ls)
+	return slc.Clone(ls)
 }

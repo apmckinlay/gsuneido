@@ -71,7 +71,7 @@ func (m *Meta) GetRoInfo(table string) *Info {
 //lint:ignore U1000 for debugging
 func copyInfo(ti *Info) *Info {
 	cp := *ti
-	cp.Indexes = slices.Clone(cp.Indexes)
+	cp.Indexes = slc.Clone(cp.Indexes)
 	for i, ov := range cp.Indexes {
 		cp.Indexes[i] = ov.Copy()
 	}
@@ -88,7 +88,7 @@ func (m *Meta) GetRwInfo(table string) *Info {
 	}
 	ti := *pti // copy
 
-	ti.Indexes = slices.Clone(ti.Indexes)
+	ti.Indexes = slc.Clone(ti.Indexes)
 	for i := range ti.Indexes {
 		ti.Indexes[i] = ti.Indexes[i].Mutable()
 	}
@@ -328,7 +328,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	tsNew := *ts // copy
 	tsNew.Columns = replaceUnique(ts.Columns, from, to)
 	tsNew.Derived = replace(ts.Derived, from, to)
-	tsNew.Indexes = slices.Clone(ts.Indexes)
+	tsNew.Indexes = slc.Clone(ts.Indexes)
 	for i := range tsNew.Indexes {
 		ix := &tsNew.Indexes[i]
 		cols := replace(ix.Columns, from, to)
@@ -352,7 +352,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 // Replacements must preserve uniqueness.
 // Replacements are done in from/to order.
 func replaceUnique(list, from, to []string) []string {
-	list = slices.Clone(list)
+	list = slc.Clone(list)
 	for i, f := range from {
 		j := slices.Index(list, f)
 		if j == -1 {
@@ -374,7 +374,7 @@ func replace(list, from, to []string) []string {
 		for j := range list {
 			if list[j] == f {
 				if !cloned {
-					list = slices.Clone(list)
+					list = slc.Clone(list)
 					cloned = true
 				}
 				list[j] = to[i]
@@ -469,7 +469,7 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 				ac.Table + " -> " + fk.Table)
 		}
 		found := false
-		target.Indexes = slices.Clone(target.Indexes)
+		target.Indexes = slc.Clone(target.Indexes)
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
 			if slices.Equal(fkCols, ix.Columns) {
@@ -545,11 +545,11 @@ func updateFkeysIIndex(mu *metaUpdate, sch *schema.Schema) {
 
 func updateOtherFkToHere(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 	ts := mu.getSchema(fk.Table)
-	ts.Indexes = slices.Clone(ts.Indexes)
+	ts.Indexes = slc.Clone(ts.Indexes)
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
 		for j := range ix.FkToHere {
-			ix.FkToHere = slices.Clone(ix.FkToHere)
+			ix.FkToHere = slc.Clone(ix.FkToHere)
 			fk2 := &ix.FkToHere[j]
 			if fk2.Table == table && slices.Equal(ix.Columns, fk.Columns) {
 				fk2.IIndex = iindex
@@ -561,7 +561,7 @@ func updateOtherFkToHere(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 
 func updateOtherFk(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 	ts := mu.getSchema(fk.Table)
-	ts.Indexes = slices.Clone(ts.Indexes)
+	ts.Indexes = slc.Clone(ts.Indexes)
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
 		if ix.Fk.Table == table && slices.Equal(ix.Columns, fk.Columns) {
@@ -708,7 +708,7 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 			continue
 		}
 		target := *t // copy
-		target.Indexes = slices.Clone(target.Indexes)
+		target.Indexes = slc.Clone(target.Indexes)
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
 			if slices.Equal(fkCols, ix.Columns) {
@@ -746,7 +746,7 @@ func (m *Meta) TouchTable(table string) *Meta {
 // TouchIndexes is for tests
 func (m *Meta) TouchIndexes(table string) *Meta {
 	schema := *m.GetRoSchema(table) // copy
-	schema.Indexes = slices.Clone(schema.Indexes)
+	schema.Indexes = slc.Clone(schema.Indexes)
 	mu := newMetaUpdate(m)
 	mu.putSchema(&schema)
 	return mu.freeze()

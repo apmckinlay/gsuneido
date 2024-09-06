@@ -12,11 +12,10 @@ import (
 	"fmt"
 	"log"
 
-	"slices"
-
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 type T = ixbuf
@@ -360,7 +359,7 @@ func (m *merge) flushbuf() {
 	if len(m.buf) == 0 {
 		return
 	}
-	m.out = append(m.out, slices.Clone(m.buf))
+	m.out = append(m.out, slc.Clone(m.buf))
 	m.size += len(m.buf)
 	m.buf = m.buf[:0] // reuse buf
 }

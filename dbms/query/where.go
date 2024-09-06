@@ -203,7 +203,7 @@ func fixedAnd(fixed []Fixed, col string, vals ...Value) ([]Fixed, bool) {
 			if len(v) == len(f.values) {
 				return fixed, false // no change
 			}
-			fixed := slices.Clone(fixed)
+			fixed := slc.Clone(fixed)
 			fixed[i].values = v
 			return fixed, false
 		}

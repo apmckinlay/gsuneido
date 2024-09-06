@@ -17,6 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
 )
@@ -87,7 +88,7 @@ func SuObjectOfStrs(strs []string) *SuObject {
 func SuObjectOfArgs(args []Value, as *ArgSpec) *SuObject {
 	assert.That(as.Each == 0)
 	unnamed := int(as.Nargs) - len(as.Spec)
-	ob := SuObjectOf(slices.Clone(args[:unnamed])...)
+	ob := SuObjectOf(slc.Clone(args[:unnamed])...)
 	for i, ni := range as.Spec {
 		ob.Set(as.Names[ni], args[unnamed+i])
 	}
@@ -484,7 +485,7 @@ func (ob *SuObject) mustBeMutable() {
 		// copy on write i.e. unshare, disconnect
 		// two threads could (rarely) get in here at the same time
 		// (on different objects, since we lock)
-		ob.list = slices.Clone(ob.list)
+		ob.list = slc.Clone(ob.list)
 		ob.named = *ob.named.Copy()
 		// must do this last because if count goes to zero
 		// then another thread could modify
@@ -1121,7 +1122,7 @@ func (ob *SuObject) PackSize2(hash *uint64, stack packStack) int {
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
-	*hash = *hash * 31 + uint64(ob.clock)
+	*hash = *hash*31 + uint64(ob.clock)
 	if ob.size() == 0 {
 		return 1 // just tag
 	}
@@ -1154,7 +1155,7 @@ func (ob *SuObject) Pack(hash *uint64, buf *pack.Encoder) {
 }
 
 func (ob *SuObject) pack(hash *uint64, buf *pack.Encoder, tag byte) {
-	*hash = *hash * 31 + uint64(ob.clock)
+	*hash = *hash*31 + uint64(ob.clock)
 	buf.Put1(tag)
 	if ob.size() == 0 {
 		return

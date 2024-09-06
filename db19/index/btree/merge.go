@@ -6,10 +6,9 @@ package btree
 import (
 	"strconv"
 
-	"slices"
-
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 // merge is one node on the current path.
@@ -225,7 +224,7 @@ func (m *merge) updateNode(key string, off uint64, get func(uint64) string) {
 
 func (m *merge) getMutableNode() node {
 	if !m.modified {
-		m.node = slices.Clone(m.node)
+		m.node = slc.Clone(m.node)
 		m.modified = true
 	}
 	return m.node

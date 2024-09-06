@@ -6,8 +6,6 @@ package index
 import (
 	"fmt"
 
-	"slices"
-
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -71,7 +69,7 @@ func (ov *Overlay) Mutable() *Overlay {
 // Copy is for debugging
 func (ov *Overlay) Copy() *Overlay {
 	assert.That(ov.mut == nil)
-	layers := slices.Clone(ov.layers)
+	layers := slc.Clone(ov.layers)
 	assert.That(len(layers) >= 1)
 	return &Overlay{bt: ov.bt, layers: layers}
 }

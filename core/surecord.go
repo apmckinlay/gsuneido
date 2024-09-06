@@ -15,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/list"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -151,7 +152,7 @@ func (r *SuRecord) copyDeps() map[string][]string {
 	r.ensureDeps()
 	copy := make(map[string][]string, len(r.dependents))
 	for k, v := range r.dependents {
-		copy[k] = slices.Clone(v)
+		copy[k] = slc.Clone(v)
 	}
 	return copy
 }
@@ -525,7 +526,7 @@ func (r *SuRecord) Observer(ofn Value) {
 		defer r.Unlock()
 		ofn.SetConcurrent()
 	}
-	r.observers.List = slices.Clone(r.observers.List) // copy on write
+	r.observers.List = slc.Clone(r.observers.List) // copy on write
 	r.observers.Push(ofn)
 }
 
@@ -533,7 +534,7 @@ func (r *SuRecord) RemoveObserver(ofn Value) bool {
 	if r.Lock() {
 		defer r.Unlock()
 	}
-	r.observers.List = slices.Clone(r.observers.List) // copy on write
+	r.observers.List = slc.Clone(r.observers.List) // copy on write
 	return r.observers.Remove(ofn)
 }
 

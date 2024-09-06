@@ -3,7 +3,7 @@
 
 package core
 
-import "slices"
+import "github.com/apmckinlay/gsuneido/util/generic/slc"
 
 // Frame is the context for a function/method/block invocation.
 type Frame struct {
@@ -38,6 +38,6 @@ func (ls *locals) moveToHeap() {
 	}
 	// not concurrent at this point
 	oldlocals := ls.v
-	ls.v = slices.Clone(oldlocals)
+	ls.v = slc.Clone(oldlocals)
 	ls.onHeap = true
 }

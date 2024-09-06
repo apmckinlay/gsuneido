@@ -198,3 +198,14 @@ func Max[E cmp.Ordered](list []E) E {
 func StartsWith[E comparable](list []E, e E) bool {
 	return len(list) > 0 && list[0] == e
 }
+
+// Clone is like slices.Clone except that
+// it guarantees that the returned slice does not reference the original.
+// slices.Clone for a zero length slice still references the original
+// which can cause memory retention issues.
+func Clone[E any](list []E) []E {
+	if list == nil {
+		return nil
+    }
+	return append([]E{}, list...)
+}

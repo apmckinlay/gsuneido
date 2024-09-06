@@ -525,8 +525,8 @@ func (u *Union) Select(cols, vals []string) {
 func removeNonexistentEmpty(srccols, cols, vals []string) ([]string, []string) {
 	for i, col := range cols {
 		if !slices.Contains(srccols, col) && vals[i] == "" {
-			newcols := slices.Clone(cols[:i])
-			newvals := slices.Clone(vals[:i])
+			newcols := slc.Clone(cols[:i])
+			newvals := slc.Clone(vals[:i])
 			for ; i < len(cols); i++ {
 				if slices.Contains(srccols, cols[i]) || vals[i] != "" {
 					newcols = append(newcols, cols[i])

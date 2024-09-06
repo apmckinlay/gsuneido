@@ -4,11 +4,10 @@
 package meta
 
 import (
-	"slices"
-
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
@@ -168,7 +167,7 @@ func Apply[U applyable](m *Meta, updates []U) {
 	info := m.info.Mutable()
 	for _, up := range updates {
 		ti := *info.MustGet(up.Table()) // copy
-		ti.Indexes = slices.Clone(ti.Indexes)
+		ti.Indexes = slc.Clone(ti.Indexes)
 		for i, ov := range ti.Indexes {
 			ti.Indexes[i] = up.Apply(ov, i)
 		}

@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -91,7 +92,7 @@ func BenchmarkNewAppend(b *testing.B) {
 		for n := 0; n < 10; n++ {
 			X = nil
 			for j := 0; j < n; j++ {
-				y := make([]int, len(X) + 1)
+				y := make([]int, len(X)+1)
 				copy(y, X)
 				y[len(X)] = j
 				X = y
@@ -109,4 +110,21 @@ func BenchmarkWith(b *testing.B) {
 			}
 		}
 	}
+}
+
+func TestClone(t *testing.T) {
+	assert := assert.T(t).This
+	var nilList []int
+	var emptyList = []int{}
+	var list1 = []int{1, 2, 3}
+
+	assert(Clone(nilList) == nil)
+	assert(Clone(emptyList) != nil)
+	assert(Clone(list1)).Is([]int{1, 2, 3})
+
+	x := Clone(emptyList)
+	assert(unsafe.SliceData(x) != unsafe.SliceData(nilList))
+
+	x = slices.Clone(emptyList)
+	assert(unsafe.SliceData(x) == unsafe.SliceData(nilList)) // bad for GC
 }

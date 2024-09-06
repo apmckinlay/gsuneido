@@ -72,7 +72,7 @@ func NewQueryHasher(hdr *Header) *queryHasher {
 	qh.hdr = hdr
 	qh.fields = slc.Without(hdr.GetFields(), "-")
 	slices.Sort(qh.fields)
-	cols := slices.Clone(hdr.Columns)
+	cols := slc.Clone(hdr.Columns)
 	slices.Sort(cols)
 	h := uint64(17)
 	for _, col := range cols {

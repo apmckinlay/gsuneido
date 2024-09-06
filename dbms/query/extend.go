@@ -10,6 +10,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
@@ -64,7 +65,7 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 }
 
 func (e *Extend) checkDependencies() {
-	avail := slices.Clone(e.source.Columns())
+	avail := slc.Clone(e.source.Columns())
 	for i := range e.cols {
 		if e.exprs[i] != nil {
 			ecols := e.exprs[i].Columns()

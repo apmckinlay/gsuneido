@@ -36,7 +36,7 @@ func NewRename(src Query, from, to []string) *Rename {
 }
 
 func checkRename(srcCols []string, from []string, to []string) {
-	cols := slices.Clone(srcCols)
+	cols := slc.Clone(srcCols)
 	for i, f := range from {
 		j := slices.Index(cols, f)
 		if j == -1 {
@@ -87,7 +87,7 @@ func (r *Rename) renameFwd(list []string) []string {
 	for i := range r.from {
 		if j := slices.Index(list, r.from[i]); j != -1 {
 			if !cloned {
-				list = slices.Clone(list)
+				list = slc.Clone(list)
 				cloned = true
 			}
 			list[j] = r.to[i]
@@ -101,7 +101,7 @@ func (r *Rename) renameRev(list []string) []string {
 	for i := len(r.to) - 1; i >= 0; i-- {
 		if j := slices.Index(list, r.to[i]); j != -1 {
 			if !cloned {
-				list = slices.Clone(list)
+				list = slc.Clone(list)
 				cloned = true
 			}
 			list[j] = r.from[i]
@@ -126,7 +126,7 @@ func (r *Rename) Fixed() []Fixed {
 			for j, fxd := range r.fixed {
 				if fxd.col == from {
 					if !cloned {
-						r.fixed = slices.Clone(r.fixed)
+						r.fixed = slc.Clone(r.fixed)
 						cloned = true
 					}
 					r.fixed[j] = Fixed{col: r.to[i], values: fxd.values}
