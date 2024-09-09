@@ -9,6 +9,7 @@ import (
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/db19/filelock"
+	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
 func (ms *mmapStor) Get(chunk int) []byte {
@@ -77,6 +78,10 @@ func (ms *mmapStor) close(size int64, unmap bool) {
 		}
 	}
 	ms.file.Truncate(size) // may not work if not unmap
+	exit.Progress("unlocking")
 	filelock.Unlock(ms.file)
+	exit.Progress("unlocked")
+	exit.Progress("file closing")
 	ms.file.Close()
+	exit.Progress("file closed")
 }

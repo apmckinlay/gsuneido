@@ -218,7 +218,9 @@ func (s *Stor) Close(unmap bool, callback ...func(uint64)) {
 		size = s.size.Swap(closedSize)
 	}
 	if size < closedSize {
+		exit.Progress("flushing")
 		s.Flush()
+		exit.Progress("flushed")
 		for _, f := range callback {
 			f(size)
 		}
