@@ -150,6 +150,16 @@ func thread_MainQ(th *Thread, _ []Value) Value {
 	return SuBool(th == MainThread)
 }
 
+var _ = staticMethod(thread_Exit, "()")
+
+func thread_Exit(th *Thread, _ []Value) Value {
+	if th == MainThread {
+		panic("suneido: cannot use Thread.Exit on main thread")
+	}
+	runtime.Goexit()
+	return nil
+}
+
 func (d *suThreadGlobal) Get(_ *Thread, key Value) Value {
 	m := ToStr(key)
 	if fn, ok := threadMethods[m]; ok {
