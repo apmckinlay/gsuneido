@@ -225,3 +225,15 @@ func (ob *SuInstance) Clear() {
 func (ob *SuInstance) size() int {
 	return len(ob.Data)
 }
+
+func (ob *SuInstance) CompareAndSet(key, newval, oldval Value) bool {
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	// only looks at instance itself, not parent classes
+	if x, _ := ob.Data[ToStr(key)]; x == oldval { // intentionally ==
+		ob.put(key, newval)
+		return true
+	}
+	return false
+}

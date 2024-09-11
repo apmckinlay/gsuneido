@@ -60,3 +60,10 @@ var _ = method(instance_ReadonlyQ, "()")
 func instance_ReadonlyQ(this Value) Value {
 	return False
 }
+
+var _ = method(instance_CompareAndSet, "(member, newValue, oldValue = nil)")
+
+func instance_CompareAndSet(th *Thread, this Value, args []Value) Value {
+	th.ReturnThrow = true
+	return SuBool(this.(*SuInstance).CompareAndSet(args[0], args[1], args[2]))
+}
