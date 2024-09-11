@@ -241,7 +241,7 @@ func (ob *SuObject) CompareAndSet(key, newval, oldval Value) bool {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	if ob.get(key) == oldval {
+	if ob.getIfPresent(key) == oldval { // intentionally == not Equals
 		ob.set(key, newval)
 		return true
 	}
