@@ -136,6 +136,17 @@ func db_Transactions(th *Thread, args []Value) Value {
 	return th.Dbms().Transactions()
 }
 
+var _ = staticMethod(db_CorruptedQ, "()")
+
+func db_CorruptedQ(th *Thread, args []Value) Value {
+	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
+		return SuBool(dbms.Corrupted())
+	}
+	return th.Dbms().Exec(th, SuObjectOf(SuStr("Database.Corrupted?")))
+}
+
+//-------------------------------------------------------------------
+
 func (d *suDatabaseGlobal) Get(th *Thread, key Value) Value {
 	m := ToStr(key)
 	if fn, ok := databaseMethods[m]; ok {

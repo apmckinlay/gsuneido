@@ -102,6 +102,10 @@ func (*DbmsLocal) Cursors() int {
 	return 0
 }
 
+func (dbms *DbmsLocal) Corrupted() bool {
+	return dbms.db.Corrupted()
+}
+
 func (dbms *DbmsLocal) DisableTrigger(table string) {
 	dbms.db.DisableTrigger(table)
 }
