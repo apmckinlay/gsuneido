@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/metrics"
 	"strings"
 	"time"
 
@@ -320,7 +321,15 @@ func stopServer() {
 	dbms.StopServer()
 	heap := builtin.HeapSys()
 	log.Println("server stopped, heap:", heap/(1024*1024), "mb,",
+		"in use:", heapInUse()/(1024*1024), "mb,",
 		"goroutines:", runtime.NumGoroutine())
+}
+
+func heapInUse() uint64 {
+	sample := make([]metrics.Sample, 1)
+	sample[0].Name = "/gc/heap/live:bytes"
+	metrics.Read(sample)
+	return sample[0].Value.Uint64()
 }
 
 var db *db19.Database
