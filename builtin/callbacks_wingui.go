@@ -134,9 +134,9 @@ func handler(e any, state ThreadState) {
 	defer func() {
 		MainThread.InHandler = false
 		MainThread.RestoreState(state)
-		if e := recover(); e != nil {
-			LogUncaught(MainThread, "Handler", e)
-			Alert("Error in Handler:", e)
+		if e2 := recover(); e2 != nil {
+			LogUncaught(MainThread, "Handler", e2)
+			Alert("Error in Handler:", e2, "\ncaused by", e)
 		}
 	}()
 	se := ToSuExcept(MainThread, e)
