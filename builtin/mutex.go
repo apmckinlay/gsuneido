@@ -4,20 +4,18 @@
 package builtin
 
 import (
-	"time"
-
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
 type suMutex struct {
 	ValueBase[suMutex]
-	ch chan struct{}
+	mut MutexT
 }
 
 var _ = builtin(Mutex, "()")
 
 func Mutex() Value {
-	return &suMutex{ch: make(chan struct{}, 1)}
+	return &suMutex{mut: MakeMutexT()}
 }
 
 var suMutexMethods = methods()
@@ -26,8 +24,8 @@ var _ = method(mu_Do, "(block)")
 
 func mu_Do(th *Thread, this Value, args []Value) Value {
 	sm := this.(*suMutex)
-	sm.lock()
-	defer sm.unlock()
+	sm.mut.Lock()
+	defer sm.mut.Unlock()
 	return th.Call(args[0])
 }
 
@@ -45,24 +43,4 @@ func (*suMutex) Lookup(_ *Thread, method string) Callable {
 
 func (*suMutex) SetConcurrent() {
 	// ok for concurrent use
-}
-
-//-------------------------------------------------------------------
-
-func (sm *suMutex) lock() {
-	select {
-	case sm.ch <- struct{}{}:
-		// lock acquired
-	case <-time.After(10 * time.Second):
-		panic("Mutex: lock timeout")
-	}
-}
-
-func (sm *suMutex) unlock() {
-	select {
-	case <-sm.ch:
-		// lock released
-	default:
-		panic("Mutex: unlock failed")
-	}
 }

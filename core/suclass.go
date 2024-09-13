@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -23,6 +24,7 @@ type SuClass struct {
 	Name         string
 	MemBase
 	Base Gnum
+	Mut  atomic.Pointer[MutexT]
 }
 
 // NOTE: the parents argument on some SuClass methods is used by SuInstance
@@ -299,5 +301,31 @@ func (c *SuClass) stopCoverage(ob *SuObject, first, count *bool) {
 			}
 			f.getCoverage(ob, *count)
 		}
+	}
+}
+
+//-------------------------------------------------------------------
+
+type MutexT chan struct{}
+
+func MakeMutexT() MutexT {
+	return make(chan struct{}, 1)
+}
+
+func (mt MutexT) Lock() {
+	select {
+	case mt <- struct{}{}:
+		// lock acquired
+	case <-time.After(10 * time.Second):
+		panic("lock timeout")
+	}
+}
+
+func (mt MutexT) Unlock() {
+	select {
+	case <-mt:
+		// lock released
+	default:
+		panic("unlock failed")
 	}
 }

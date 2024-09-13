@@ -364,6 +364,11 @@ func (th *Thread) Sviews() *Sviews {
 	return th.sv
 }
 
+// CodeClass returns the ClassName of the current function
+func (th *Thread) ClassName() string {
+	return th.frames[th.fp-1].fn.ClassName
+}
+
 //-------------------------------------------------------------------
 
 var tsCount int
