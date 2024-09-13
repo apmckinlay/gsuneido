@@ -255,7 +255,11 @@ var _ = method(file_Tell, "()")
 func file_Tell(this Value) Value {
 	sf := sfOpen(this)
 	if sf.mode == "a" {
-		panic("File: Tell: invalid with mode 'a'")
+		off, err := sf.f.Seek(0, io.SeekEnd)
+		if err != nil {
+			panic("File: " + err.Error())
+		}
+		return Int64Val(off)
 	}
 	return Int64Val(sf.tell)
 }
@@ -363,8 +367,8 @@ func (a appender) Read([]byte) (int, error) {
 	panic("appender Read not implemented")
 }
 
-func (a appender) Seek(int64, int) (int64, error) {
-	panic("appender Seek not implemented")
+func (a appender) Seek(off int64, whence int) (int64, error) {
+	return a.f.Seek(off, whence)
 }
 
 func (a appender) Close() error {
