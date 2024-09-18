@@ -47,6 +47,7 @@ type Database struct {
 const magic = "gsndo002"
 const magicPrev = "gsndo001"
 const magicBase = "gsndo"
+const dbHeaderSize = 8 /* len(magic) */ + stor.SmallOffsetLen
 
 // CreateDatabase creates an empty database in the named file.
 // NOTE: The returned Database does not have a checker.
@@ -64,10 +65,9 @@ func CreateDb(store *stor.Stor) (*Database, error) {
 	var db Database
 	db.state.set(&DbState{store: store, Meta: &meta.Meta{}})
 
-	n := len(magic) + stor.SmallOffsetLen
-	_, buf := store.Alloc(n)
+	_, buf := store.Alloc(dbHeaderSize)
 	copy(buf, magic)
-	stor.WriteSmallOffset(buf[len(magic):], uint64(n))
+	stor.WriteSmallOffset(buf[len(magic):], dbHeaderSize)
 	db.Store = store
 	db.mode = stor.Create
 	return &db, nil
@@ -618,6 +618,9 @@ func getLeafKey(store *stor.Stor, is *ixkey.Spec, off uint64) string {
 }
 
 func OffToRec(store *stor.Stor, off uint64) core.Record {
+	if off < dbHeaderSize {
+		panic("OffToRec: invalid offset 0")
+	}
 	buf := store.Data(off)
 	size := core.RecLen(buf)
 	return core.Record(hacks.BStoS(buf[:size]))

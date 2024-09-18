@@ -85,30 +85,35 @@ func (db *Database) MustCheck() {
 }
 
 func checkTable(state *DbState, table string) {
+	defer func() {
+		if e := recover(); e != nil {
+			panic(fmt.Sprintln(table + ":", e))
+		}
+	}()
 	info := state.Meta.GetRoInfo(table)
 	sc := state.Meta.GetRoSchema(table)
 	if info == nil {
 		panic("info missing for " + table)
 	}
-	count, size, sum := checkFirstIndex(state, table, sc.Indexes[0].Columns,
+	count, size, sum := checkFirstIndex(state, sc.Indexes[0].Columns,
 		info.Indexes[0])
 	if count != info.Nrows {
-		panic(fmt.Sprint(table, " ", sc.Indexes[0].Columns,
+		panic(fmt.Sprint(sc.Indexes[0].Columns,
 			" count ", count, " should equal info ", info.Nrows))
 	}
 	if size != info.Size {
-		panic(fmt.Sprint(table, " size ", size, " should equal info ", info.Size))
+		panic(fmt.Sprint("size ", size, " should equal info ", info.Size))
 	}
 	for i := 1; i < len(info.Indexes); i++ {
-		CheckOtherIndex(table, sc.Indexes[i].Columns, info.Indexes[i], count, sum)
+		CheckOtherIndex(sc.Indexes[i].Columns, info.Indexes[i], count, sum)
 	}
 }
 
-func checkFirstIndex(state *DbState, table string, ixcols []string,
+func checkFirstIndex(state *DbState, ixcols []string,
 	ix *index.Overlay) (int, uint64, uint64) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(fmt.Sprintln(table, ixcols, e))
+			panic(fmt.Sprintln(ixcols, e))
 		}
 	}()
 	sum := uint64(0)
@@ -124,10 +129,10 @@ func checkFirstIndex(state *DbState, table string, ixcols []string,
 	return count, size, sum
 }
 
-func CheckOtherIndex(table string, ixcols []string, ix *index.Overlay, nrows int, sumPrev uint64) {
+func CheckOtherIndex(ixcols []string, ix *index.Overlay, nrows int, sumPrev uint64) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(fmt.Sprintln(table, ixcols, e))
+			panic(fmt.Sprintln(ixcols, e))
 		}
 	}()
 	ix.CheckMerged()

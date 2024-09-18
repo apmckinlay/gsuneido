@@ -194,14 +194,14 @@ func (bt *btree) check1(depth int, offset uint64, key *string,
 	size += len(nd)
 	nnodes++
 	for it := nd.iter(); it.next(); {
-		offset := it.offset
+		off := it.offset
 		if depth < bt.treeLevels {
 			// tree
 			if it.pos > 0 && *key > string(it.known) {
 				panic("keys out of order")
 			}
 			*key = string(it.known)
-			c, s, n := bt.check1(depth+1, offset, key, fn) // RECURSE
+			c, s, n := bt.check1(depth+1, off, key, fn) // RECURSE
 			count += c
 			size += s
 			nnodes += n
@@ -209,9 +209,9 @@ func (bt *btree) check1(depth int, offset uint64, key *string,
 			// leaf
 			count++
 			if fn != nil {
-				fn(offset)
+				fn(off)
 			}
-			itkey := bt.getLeafKey(offset)
+			itkey := bt.getLeafKey(off)
 			if !strings.HasPrefix(itkey, string(it.known)) {
 				// fmt.Printf("known %q index %q\nvalues %v\n",
 				// 	string(it.known), itkey, ixkey.DecodeValues(itkey))

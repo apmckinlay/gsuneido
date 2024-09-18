@@ -218,7 +218,7 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 		panic(fmt.Sprintln("dump", table, sc.Indexes[0].Columns,
 			"count", count, "should equal info", info.Nrows))
 	}
-	ics.checkOtherIndexes(info, count, sum) // concurrent
+	ics.checkOtherIndexes(sc, info, count, sum) // concurrent
 	return count
 }
 
@@ -289,10 +289,11 @@ type indexCheck struct {
 	sum    uint64
 }
 
-func (ics *indexCheckers) checkOtherIndexes(info *meta.Info, count int, sum uint64) {
+func (ics *indexCheckers) checkOtherIndexes(sc *meta.Schema, info *meta.Info,
+	count int, sum uint64) {
 	for i := 1; i < len(info.Indexes); i++ {
 		select {
-		case ics.work <- indexCheck{table: info.Table,
+		case ics.work <- indexCheck{table: info.Table, ixcols: sc.Indexes[0].Columns,
 			index: info.Indexes[i], count: count, sum: sum}:
 		case <-ics.stop:
 			panic("") // overridden by finish
@@ -301,15 +302,17 @@ func (ics *indexCheckers) checkOtherIndexes(info *meta.Info, count int, sum uint
 }
 
 func (ics *indexCheckers) worker() {
+	var table string
 	defer func() {
 		if e := recover(); e != nil {
-			ics.err.Store(e)
+			ics.err.Store(fmt.Errorf("%s: %v", table, e))
 			ics.once.Do(func() { close(ics.stop) }) // notify main thread
 		}
 		ics.wg.Done()
 	}()
 	for ic := range ics.work {
-		CheckOtherIndex(ic.table, ic.ixcols, ic.index, ic.count, ic.sum)
+		table = ic.table
+		CheckOtherIndex(ic.ixcols, ic.index, ic.count, ic.sum)
 	}
 }
 
