@@ -792,6 +792,8 @@ func String(q Query) string {
 		return paren2(qi.Source()) + " " + q.String() + " " + paren1(qi.Source2())
 	case *Sort:
 		return String(qi.Source()) + str.Opt(" ", q.String()) // no parens
+	case *View:
+		return q.String()
 	case q1i:
 		return paren2(qi.Source()) + str.Opt(" ", q.String())
 	default:
