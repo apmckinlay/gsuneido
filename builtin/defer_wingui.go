@@ -68,8 +68,10 @@ func runDefer() {
 		}
 		MainThread.RestoreState(state)
 	}()
-	for fn := dqGet(); fn != nil; fn = dqGet() {
-		MainThread.Call(fn)
+	// Only run the ones currently in the queue, not the ones added by these.
+	// Otherwise chaining runs continuously, blocking the GUI
+	for range deferQueue.Size() {
+		MainThread.Call(dqGet())
 		MainThread.RestoreState(state)
 	}
 }
