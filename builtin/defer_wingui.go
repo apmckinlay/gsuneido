@@ -71,7 +71,11 @@ func runDefer() {
 	// Only run the ones currently in the queue, not the ones added by these.
 	// Otherwise chaining runs continuously, blocking the GUI
 	for range deferQueue.Size() {
-		MainThread.Call(dqGet())
+		fn := dqGet()
+		if fn == nil {
+            break
+        }
+		MainThread.Call(fn)
 		MainThread.RestoreState(state)
 	}
 }
