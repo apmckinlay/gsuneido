@@ -110,6 +110,7 @@ uintptr invoke(
 long release(uintptr iunk);
 long EmbedBrowserObject(uintptr hwnd, uintptr pBrowserObject, uintptr pPtr);
 void UnEmbedBrowserObject(uintptr browserObject, uintptr ptr);
+long WebView2(uintptr op, uintptr arg1, uintptr arg2, uintptr arg3, uintptr arg4, uintptr arg5);
 uintptr CreateLexer(const char* name);
 
 #undef UNICODE
@@ -231,6 +232,10 @@ uintptr interact() {
 			break;
 		case msg_unembedbrowserobject:
 			UnEmbedBrowserObject(args[1], args[2]);
+			args[0] = msg_result;
+			break;
+		case msg_webview2:
+			args[1] = WebView2(args[1], args[2], args[3], args[4], args[5], args[6]);
 			args[0] = msg_result;
 			break;
         case msg_createlexer:

@@ -42,6 +42,7 @@ enum {
 	msg_interrupt,
 	msg_embedbrowserobject,
 	msg_unembedbrowserobject,
+	msg_webview2,
     msg_createlexer,
 	msg_shutdown,
 	msg_setupconsole,

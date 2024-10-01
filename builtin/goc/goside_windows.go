@@ -5,7 +5,7 @@ package goc
 
 // #cgo CFLAGS: -DWINVER=0x601 -D_WIN32_WINNT=0x0601
 // #cgo LDFLAGS: -L . -lscintilla -llexilla -lgdi32 -lcomdlg32 -lcomctl32 -limm32 -lmsimg32
-// #cgo LDFLAGS: -lurlmon -lole32 -loleaut32 -luuid -lwininet -static
+// #cgo LDFLAGS: -lurlmon -lole32 -loleaut32 -luuid -lwininet -lshlwapi -static
 // #include "cside.h"
 import "C"
 
@@ -72,6 +72,10 @@ func EmbedBrowserObject(hwnd, iunk, pptr uintptr) uintptr {
 
 func UnEmbedBrowserObject(iunk, ptr uintptr) {
 	interact(C.msg_unembedbrowserobject, iunk, ptr)
+}
+
+func WebBrowser2(op, arg1, arg2, arg3, arg4, arg5 uintptr) uintptr {
+	return interact(C.msg_webview2, op, arg1, arg2, arg3, arg4, arg5);
 }
 
 func CreateLexer(name uintptr) uintptr {
