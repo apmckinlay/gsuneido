@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -532,7 +533,7 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) Value 
 	}
 	pat := th.Regex(patarg)
 	rep := ""
-	if !isFunc(reparg) {
+	if !callable(reparg) {
 		rep = AsStr(reparg)
 		reparg = nil
 		// use Go strings.Replace if literal
@@ -575,6 +576,15 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) Value 
 		buf.WriteString(s[from:])
 	}
 	return SuStr(buf.String())
+}
+
+func callable(v Value) bool {
+	switch v.Type() {
+	case types.Function, types.Block, types.Method, types.BuiltinFunction,
+		types.Object, types.Class, types.Instance:
+		return true
+	}
+	return false
 }
 
 func position(arg Value, n int) int {

@@ -68,8 +68,7 @@ const (
 )
 
 var ParamSpec0 = ParamSpec{Nparams: 0, Signature: ^Sig0}
-var ParamSpec1 = ParamSpec{Nparams: 1, Signature: ^Sig1}
-var ParamSpec2 = ParamSpec{Nparams: 2, Signature: ^Sig2}
+var ParamSpec1 = ParamSpec{Nparams: 1, Signature: ^Sig1, Flags: []Flag{0}}
 
 var ParamSpecAt = ParamSpec{Nparams: 1, Flags: []Flag{AtParam}}
 

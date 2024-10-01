@@ -70,13 +70,9 @@ func InstanceQ(arg Value) Value {
 var _ = builtin(FunctionQ, "(value)")
 
 func FunctionQ(arg Value) Value {
-	return SuBool(isFunc(arg))
-}
-
-func isFunc(v Value) bool {
-	switch v.Type() {
+	switch arg.Type() {
 	case types.Function, types.Block, types.Method, types.BuiltinFunction:
-		return true
+		return True
 	}
-	return false
+	return False
 }

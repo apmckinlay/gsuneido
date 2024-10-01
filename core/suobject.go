@@ -748,8 +748,12 @@ func children(ob *SuObject, stack *[]Value) []Value {
 	return (*stack)[start:]
 }
 
-func (*SuObject) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call Object")
+func (ob *SuObject) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	args := th.Args(&ParamSpec1, as)
+	if x := ob.Get(th, args[0]); x != nil {
+		return x
+    }
+	return args[0]
 }
 
 // ObjectMethods is initialized by the builtin package
