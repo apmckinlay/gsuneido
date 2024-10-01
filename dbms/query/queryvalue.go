@@ -63,6 +63,9 @@ func qryBase(q Query, key Value) Value {
 	case SuStr("varcost"):
 		_, _, varcost := q.cacheCost()
 		return IntVal(varcost)
+	case SuStr("cost"):
+		_, fixcost, varcost := q.cacheCost()
+		return IntVal(fixcost + varcost)
 	case SuStr("tget"):
 		return Int64Val(int64(q.tGet()))
 	case SuStr("tgetself"):
