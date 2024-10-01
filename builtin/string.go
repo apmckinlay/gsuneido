@@ -281,6 +281,7 @@ func string_MapN(th *Thread, this Value, args []Value) Value {
 	n := IfInt(args[0])
 	block := args[1]
 	var buf strings.Builder
+	buf.Grow(len(s)) // ???
 	for i := 0; i < len(s); i += n {
 		end := min(i+n, len(s))
 		val := th.Call(block, SuStr(s[i:end]))
@@ -546,6 +547,9 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) Value 
 	nreps := 0
 	var buf strings.Builder
 	pat.ForEachMatch(s, func(cap *regex.Captures) bool {
+		if buf.Cap() == 0 {
+			buf.Grow(len(s)) // ???
+		}
 		pos, end := cap[0], cap[1]
 		buf.WriteString(s[from:pos])
 		if reparg == nil {
