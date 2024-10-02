@@ -373,7 +373,7 @@ func (a *Mem) String() string {
 }
 
 func (a *Mem) Echo() string {
-	s := a.E.String()
+	s := a.E.Echo()
 	if c, ok := a.M.(*Constant); ok {
 		if cs, ok := c.Val.(SuStr); ok && lexer.IsIdentifier(string(cs)) {
 			return s + "." + string(cs)

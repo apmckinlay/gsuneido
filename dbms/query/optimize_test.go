@@ -69,6 +69,8 @@ func TestOptimize(t *testing.T) {
 		"supplier^(city) where city is 5 and Func(name)") // previous bug
 	test("supplier where Func(name) and city is 5",
 		"supplier^(city) where Func(name) and city is 5")
+	test("supplier where Func(name).x",
+		"supplier^(supplier) where Func(name).x")
 
 	test("table rename b to bb sort c",
 		"table^(a) tempindex(c) rename b to bb")
