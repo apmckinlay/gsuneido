@@ -7,7 +7,6 @@ package builtin
 
 import (
 	"log"
-	"strconv"
 	"syscall"
 	"time"
 	"unsafe"
@@ -1007,7 +1006,7 @@ var _ = AddInfo("windows.nTimer", &nTimer)
 func gocSetTimer(hwnd, id, ms, cb Value) Value {
 	if nTimer > warnTimers {
 		if nTimer > maxTimers {
-			panic("ERROR: SetTimer: over " + strconv.Itoa(maxTimers))
+			log.Panicln("ERROR: SetTimer: over", maxTimers)
 		}
 		log.Println("WARNING: SetTimer: over", warnTimers)
 	}
