@@ -55,6 +55,15 @@ func getParents(th *Thread, class *SuClass) []*SuClass {
 	return parents
 }
 
+func (ob *SuInstance) FindParent(name string) *SuClass {
+	for _, c := range ob.parents {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
+}
+
 func (ob *SuInstance) Base() *SuClass {
 	return ob.class
 }

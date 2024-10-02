@@ -88,7 +88,17 @@ var _ = method(base_Synchronized, "(block)")
 
 func base_Synchronized(th *Thread, this Value, args []Value) Value {
 	name := th.ClassName()
-	c, _ := Global.GetIfPresent(name).(*SuClass)
+	var c *SuClass
+	if instance, ok := this.(*SuInstance); ok {
+		c = instance.FindParent(name) // to handle Unload
+	} else if x, ok := this.(*SuClass); ok && x.Name == name {
+		c = x
+	} else {
+		x := Global.GetName(th, name)
+		if y, ok := x.(*SuClass); ok {
+			c = y
+		}
+	}
 	if c == nil {
 		panic("Synchronized: can't get code class " + name)
 	}
