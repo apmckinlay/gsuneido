@@ -6,6 +6,7 @@ package core
 import (
 	"bytes"
 	"cmp"
+	"fmt"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core/types"
@@ -50,8 +51,17 @@ func (c SuConcat) Len() int {
 	return c.n
 }
 
+const StringLimit = 32_000_000 // ???
+
+func CheckStringSize(op string, n int) {
+	if n > StringLimit {
+		panic(fmt.Sprint("ERROR ", op + ": string > ", StringLimit))
+	}
+}
+
 // Add appends a string to an SuConcat
 func (c SuConcat) Add(s string) SuConcat {
+	CheckStringSize("concatenate", c.n + len(s))
 	buf := c.buf
 	if buf.concurrent || // shared between threads
 		len(buf.bs) != c.n { // another SuConcat has appended their own stuff

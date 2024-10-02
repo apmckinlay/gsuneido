@@ -288,6 +288,7 @@ func string_MapN(th *Thread, this Value, args []Value) Value {
 		val := th.Call(block, SuStr(s[i:end]))
 		if val != nil {
 			buf.WriteString(AsStr(val))
+			CheckStringSize("MapN", buf.Len())
 		}
 	}
 	return SuStr(buf.String())
@@ -390,7 +391,10 @@ func string_PrefixQ(this, arg1, arg2 Value) Value {
 var _ = method(string_Repeat, "(count)")
 
 func string_Repeat(this, arg Value) Value {
-	return SuStr(strings.Repeat(ToStr(this), max(0, ToInt(arg))))
+	s := ToStr(this)
+	n := max(0, ToInt(arg))
+	CheckStringSize("Repeat", len(s) * n)
+	return SuStr(strings.Repeat(s, n))
 }
 
 var _ = method(string_Replace, "(pattern, block = '', count = false)")
@@ -551,6 +555,7 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) Value 
 		if buf.Cap() == 0 {
 			buf.Grow(len(s)) // ???
 		}
+		CheckStringSize("Replace", buf.Len())
 		pos, end := cap[0], cap[1]
 		buf.WriteString(s[from:pos])
 		if reparg == nil {
