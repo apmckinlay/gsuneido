@@ -285,7 +285,7 @@ func string_MapN(th *Thread, this Value, args []Value) Value {
 	buf.Grow(len(s)) // ???
 	for i := 0; i < len(s); i += n {
 		end := min(i+n, len(s))
-		val := th.Call(block, SuStr(s[i:end]))
+		val := th.Call(block, SuStr1(s[i:end]))
 		if val != nil {
 			buf.WriteString(AsStr(val))
 			CheckStringSize("MapN", buf.Len())
@@ -563,7 +563,7 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) Value 
 			buf.WriteString(t)
 		} else {
 			r := s[pos:end]
-			v := th.Call(reparg, SuStr(r))
+			v := th.Call(reparg, SuStr1(r))
 			if v != nil {
 				r = AsStr(v)
 			}

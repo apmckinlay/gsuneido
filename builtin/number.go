@@ -54,8 +54,7 @@ var _ = exportMethods(&NumMethods)
 var _ = method(num_Chr, "()")
 
 func num_Chr(this Value) Value {
-	n := byte(ToInt(this))
-	return SuStr(string([]byte{n}))
+	return SuStr1s[ToInt(this) & 0xff]
 }
 
 var _ = method(num_Int, "()")
