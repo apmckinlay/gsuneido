@@ -163,13 +163,13 @@ var _ = method(file_Read, "(nbytes=false)")
 func file_Read(this, arg Value) Value {
 	sf := sfOpenRead(this)
 	n := int(sf.size() - sf.tell) // remaining
-	if n == 0 {                   // at end
-		return False
-	}
 	if arg != False {
-		if m := ToInt(arg); m < n {
+		if m := IfInt(arg); m < n {
 			n = m
 		}
+	}
+	if n == 0 { // at end
+		return False
 	}
 	buf := make([]byte, n)
 	_, err := io.ReadFull(sf.r, buf)
