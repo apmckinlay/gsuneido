@@ -407,8 +407,8 @@ static DWORD WINAPI thread(LPVOID lpParameter) {
 	CreateThread(NULL, 8192, timer_thread, 0, 0, 0);
 	setupHelper();
 	args[0] = msg_none;
-	interact(); // let start() continue and return
 	SetTimer(0, 0, timerIntervalMS, timer);
+	interact(); // let start() continue and return
 	int exitcode = message_loop(0);
 	destroy_windows();
 	args[0] = msg_shutdown;
