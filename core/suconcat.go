@@ -55,7 +55,7 @@ const StringLimit = 32_000_000 // ???
 
 func CheckStringSize(op string, n int) {
 	if n > StringLimit {
-		panic(fmt.Sprint("ERROR ", op + ": string > ", StringLimit))
+		panic(fmt.Sprint("ERROR: ", op + ": string > ", StringLimit))
 	}
 }
 
