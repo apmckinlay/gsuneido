@@ -16,7 +16,7 @@ import (
 regular expression grammar and compiled form:
 
 regex		:	seq					... DoneSave1
-			|	seq (| seq)+		SplitFirst seq (Jump SplitFirst seq)+
+			|	seq (| seq)+		SplitNext seq (Jump SplitNext seq)+
 
 seq   		:	element+
 
@@ -33,12 +33,12 @@ element		:	^					opLineStart
 			|	(?m)				multi-line mode (handled by compile)
 			|	(?-m)				(handled by compile)
 			|	simple
-			|	simple ?			SplitFirst simple
-			|	simple ??			SplitLast simple
-			|	simple +			simple SplitFirst
-			|	simple +?			simple SplitLast
-			|	simple *			SplitFirst simple Jump
-			|	simple *?			SplitLast simple Jump
+			|	simple ?			SplitNext simple
+			|	simple ??			SplitJump simple
+			|	simple +			simple SplitJump
+			|	simple +?			simple SplitNext
+			|	simple *			SplitNext simple SplitJump
+			|	simple *?			SplitJump simple Jump
 
 simple		:	.					opAny
 			|	char	 			Char c
