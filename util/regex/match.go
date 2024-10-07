@@ -9,11 +9,14 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Captures [20]int32 // 2 * 10 (\0 to \9)
+
+var newCapture = Captures{
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
+	-1, -1, -1, -1, -1, -1, -1, -1, -1, -1}
 
 // Matches is a shortcut for Match(s, nil)
 func (pat Pattern) Matches(s string) bool {
@@ -59,7 +62,7 @@ func (pat Pattern) ForEachMatch(s string, fn func(cap *Captures) bool) {
 }
 
 type state struct {
-	cap *Captures
+	cap Captures
 	pi  int16
 }
 
@@ -78,7 +81,7 @@ func (pat Pattern) Match(s string, cap *Captures) bool {
 func (pat Pattern) match(s string, start int, cap *Captures, fixed bool) bool {
 	_ = t && trace.Println(pat)
 	if cap != nil {
-		slc.Fill(cap[:], -1)
+		*cap = newCapture
 	}
 	piStart := int16(0)
 	prefix := ""
@@ -100,8 +103,8 @@ func (pat Pattern) match(s string, start int, cap *Captures, fixed bool) bool {
 		return false
 	}
 	cap2 := dup(cap)
-	var cur []state
-	var next []state
+	var cur = make([]state, 0, 4)
+	var next = make([]state, 0, 4)
 	var live = &BitSet{}
 	matched := false
 	for si := start; si <= len(s); si++ {
@@ -127,7 +130,7 @@ func (pat Pattern) match(s string, start int, cap *Captures, fixed bool) bool {
 			}
 		}
 		if !matched {
-			if cap != nil {
+			if cap2 != nil {
 				cap2[0] = int32(si) // Save 0
 			}
 			cur = pat.addstate(s, si, live, cur, piStart, cap2)
@@ -176,7 +179,7 @@ func (pat Pattern) match(s string, start int, cap *Captures, fixed bool) bool {
 				}
 				if !matched || int(cap[1]) < si {
 					cur[ci].cap[1] = int32(si)
-					*cap = *cur[ci].cap
+					*cap = cur[ci].cap
 				}
 				cur = cur[:0] // cut off lower priority threads
 				matched = true
@@ -184,7 +187,7 @@ func (pat Pattern) match(s string, start int, cap *Captures, fixed bool) bool {
 				panic(assert.ShouldNotReachHere())
 			}
 			if add > 0 {
-				next = pat.addstate(s, si+1, live, next, add, cur[ci].cap)
+				next = pat.addstate(s, si+1, live, next, add, &cur[ci].cap)
 			}
 		}
 		cur, next = next, cur // swap
@@ -218,11 +221,11 @@ func (pat Pattern) addstate(s string, si int, live *BitSet, states []state,
 			pi += jmp
 		case opSave:
 			if cap != nil {
-				c := pat[pi+1]
-				orig := cap[c]
-				cap[c] = int32(si)
+				ci := pat[pi+1]
+				orig := cap[ci]
+				cap[ci] = int32(si)
 				states = pat.addstate(s, si, live, states, pi+2, cap)
-				cap[c] = orig
+				cap[ci] = orig
 				return states
 			}
 			pi += 2
@@ -233,7 +236,11 @@ func (pat Pattern) addstate(s string, si int, live *BitSet, states []state,
 			_ = t && trace.Println("YES")
 			pi++
 		default:
-			states = append(states, state{pi: pi, cap: dup(cap)})
+			st := state{pi: pi}
+			if cap != nil {
+				st.cap = *cap
+			}
+			states = append(states, st)
 			return states
 		}
 	}

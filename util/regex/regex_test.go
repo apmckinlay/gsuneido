@@ -508,6 +508,15 @@ func TestLiteralRep(t *testing.T) {
 	test(`\2 \1`, false)
 }
 
+func BenchmarkMatch(b *testing.B) {
+	s := strings.Repeat("helloworld", 1000)
+	pat := Compile("x|y|z")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		pat.match(s, 0, &Captures{}, false)
+	}
+}
+
 // ptest support ----------------------------------------------------
 
 func TestPtest(t *testing.T) {
