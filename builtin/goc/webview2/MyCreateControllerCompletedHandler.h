@@ -111,6 +111,23 @@ public:
         webview2_11->Release();
         contextMenuHandler->Release();
 
+        ICoreWebView2_13 *webview2_13;
+        rtn = webview2->QueryInterface(IID_ICoreWebView2_13, (void**)&webview2_13);
+        if (SUCCEEDED(rtn) && webview2_13 != nullptr) {
+            ICoreWebView2Profile *profile;
+            if (SUCCEEDED(webview2_13->get_Profile(&profile) && profile != nullptr)) {
+                profile->put_PreferredColorScheme(COREWEBVIEW2_PREFERRED_COLOR_SCHEME_LIGHT);
+                profile->Release();
+            }
+            webview2_13->Release();
+        }
+
+        ICoreWebView2Settings *settings;
+        if (SUCCEEDED(webview2->get_Settings(&settings) && settings != nullptr)) {
+            settings->put_IsStatusBarEnabled(FALSE);
+            settings->Release();
+        }
+
         pBrowserObject->SetController(controller);
         pBrowserObject->SetWebView2(webview2);
         pBrowserObject->onReady(FINISH, OK);
