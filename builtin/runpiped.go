@@ -201,6 +201,16 @@ func runpiped_Writeline(this, arg Value) Value {
 	return arg
 }
 
+var _ = method(runpiped_CopyTo, "(dest, nbytes = false)")
+
+func runpiped_CopyTo(th *Thread, this Value, args []Value) Value {
+	return CopyTo(th, rpOpen(this).r, args[0], args[1])
+}
+
+func (rp *suRunPiped) writer() io.Writer {
+	return rpWrite(rp).w
+}
+
 var newline = func() string {
 	if runtime.GOOS == "windows" {
 		return "\r\n"

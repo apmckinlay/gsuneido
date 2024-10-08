@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"bufio"
+	"io"
 	"log"
 	"net"
 	"strconv"
@@ -171,6 +172,10 @@ func (sc *suServerConnect) Lookup(th *Thread, method string) Callable {
 		return f
 	}
 	return sc.SuInstance.Lookup(th, method)
+}
+
+func (sc *suServerConnect) writer() io.Writer {
+	return sc.client.writer()
 }
 
 func (sc *suServerConnect) close() {
