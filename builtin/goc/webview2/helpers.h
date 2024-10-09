@@ -100,7 +100,9 @@ char hexToChar(const char* hex) {
 
 void decodeURI(const char* src, char* dest) {
     while (*src) {
-        if (*src == '%') {
+        if (*src == '#') {
+            break;
+        } else if (*src == '%') {
             if (*(src + 1) && *(src + 2)) {
                 *dest = hexToChar(src + 1);
                 src += 2;
