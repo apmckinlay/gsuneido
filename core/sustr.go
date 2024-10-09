@@ -207,6 +207,9 @@ func (ss SuStr) RangeTo(from int, to int) Value {
 	size := len(ss)
 	from = prepFrom(from, size)
 	to = prepTo(from, to, size)
+	if from == 0 && to == size {
+		return ss
+	}
 	return SuStr1(string(ss)[from:to])
 }
 
@@ -214,6 +217,9 @@ func (ss SuStr) RangeLen(from int, n int) Value {
 	size := len(ss)
 	from = prepFrom(from, size)
 	n = prepLen(n, size-from)
+	if from == 0 && n == size {
+		return ss
+	}
 	return SuStr1(string(ss)[from : from+n])
 }
 

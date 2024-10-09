@@ -25,6 +25,14 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
+// sameStr avoids allocation from converting SuStr to value
+func sameStr(x Value, s string) Value {
+	if ss, ok := x.(SuStr); ok && hacks.SameString(s, string(ss)) {
+		return x
+	}
+	return SuStr(s)
+}
+
 var _ = exportMethods(&StringMethods)
 
 var _ = method(string_AlphaQ, "()")
@@ -91,7 +99,7 @@ func string_Count(this, arg Value) Value {
 var _ = method(string_Detab, "()")
 
 func string_Detab(this Value) Value {
-	return SuStr(tabs.Detab(ToStr(this)))
+	return sameStr(this, tabs.Detab(ToStr(this)))
 }
 
 var _ = method(string_Entab, "()")
@@ -258,7 +266,7 @@ func string_Iter(this Value) Value {
 var _ = method(string_Lower, "()")
 
 func string_Lower(this Value) Value {
-	return SuStr(str.ToLower(ToStr(this)))
+	return sameStr(this, str.ToLower(ToStr(this)))
 }
 
 var _ = method(string_LowerQ, "()")
@@ -404,7 +412,7 @@ func string_Replace(th *Thread, this Value, args []Value) Value {
 	if args[2] != False {
 		count = ToInt(args[2])
 	}
-	return replace(th, ToStr(this), args[0], args[1], count)
+	return sameStr(this, replace(th, ToStr(this), args[0], args[1], count))
 }
 
 var _ = method(string_Reverse, "()")
@@ -418,7 +426,7 @@ func string_Reverse(this Value) Value {
 		lo++
 		hi--
 	}
-	return SuStr(string(s))
+	return SuStr(hacks.BStoS(s))
 }
 
 var _ = method(string_ServerEval, "()")
@@ -494,7 +502,7 @@ var _ = method(string_Tr, "(from, to='')")
 func string_Tr(th *Thread, this Value, args []Value) Value {
 	from := th.TrSet(args[0])
 	to := th.TrSet(args[1])
-	return SuStr(tr.Replace(ToStr(this), from, to))
+	return sameStr(this, tr.Replace(ToStr(this), from, to))
 }
 
 var _ = method(string_Unescape, "()")
@@ -514,7 +522,7 @@ func string_Unescape(this Value) Value {
 var _ = method(string_Upper, "()")
 
 func string_Upper(this Value) Value {
-	return SuStr(str.ToUpper(ToStr(this)))
+	return sameStr(this, str.ToUpper(ToStr(this)))
 }
 
 var _ = method(string_UpperQ, "()")
@@ -531,9 +539,9 @@ func string_UpperQ(this Value) Value {
 	return SuBool(result)
 }
 
-func replace(th *Thread, s string, patarg Value, reparg Value, count int) Value {
+func replace(th *Thread, s string, patarg Value, reparg Value, count int) string {
 	if count <= 0 || (patarg == EmptyStr && reparg == EmptyStr) {
-		return SuStr(s)
+		return s
 	}
 	pat := th.Regex(patarg)
 	rep := ""
@@ -543,7 +551,7 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) Value 
 		// use Go strings.Replace if literal
 		if p, ok := pat.Literal(); ok {
 			if r, ok := regex.LiteralRep(rep); ok {
-				return SuStr(strings.Replace(s, p, r, count))
+				return strings.Replace(s, p, r, count)
 			}
 		}
 	}
@@ -575,12 +583,12 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) Value 
 	})
 	if nreps == 0 {
 		// avoid copy if no replacements
-		return SuStr(s)
+		return s
 	}
 	if from < len(s) {
 		buf.WriteString(s[from:])
 	}
-	return SuStr(buf.String())
+	return buf.String()
 }
 
 func callable(v Value) bool {
