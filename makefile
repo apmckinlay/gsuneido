@@ -15,11 +15,11 @@ ifdef PATHEXT
 	CONSOLE = $(GO) $(BUILD) -o gsuneido.com -ldflags "$(LDFLAGS)" -tags com
 	PORTABLE = export CGO_ENABLED=0 ; $(GO) $(BUILD) -o gsport.exe \
 		-ldflags "$(LDFLAGS)" -tags portable
-	CSIDE = builtin/goc/cside.h
-	DEPS = builtin/goc/webview2.cpp $(wildcard builtin/goc/webview2/*)
+	CSIDE = $(GO) run cmd/deps/deps.go
 endif
 
-build: $(CSIDE)
+build:
+	@$(CSIDE)
 	@$(GO) version
 	@rm -f $(OUTPUT)
 ifdef PATHEXT
@@ -30,15 +30,14 @@ else
 	export CGO_ENABLED=0 ; $(GO) $(BUILD) -v -ldflags "$(LDFLAGS)"
 endif
 
-$(CSIDE) : $(DEPS)
-	touch builtin/goc/cside.h
-
-gsuneido: $(CSIDE)
+gsuneido:
+	@$(CSIDE)
 	@rm -f gsuneido.exe
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)"
 
 race:
 ifdef PATHEXT
+	@$(CSIDE)
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)" -race -o race/
 	$(PORTABLE) -race -o race/gsport.exe
 else
