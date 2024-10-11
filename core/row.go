@@ -119,7 +119,10 @@ func getRule(th *Thread, key string) Value {
 func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
 	// find will only return the first possible location
 	at, ok := hdr.find(fld)
-	if ok && row[at.Reci].Record != "" { // not empty side of union
+	if !ok {
+		return "", false
+	}
+	if row[at.Reci].Record != "" { // not empty side of union
 		return row[at.Reci].GetRaw(int(at.Fldi)), true
 	}
 	// handle nil records from Union
