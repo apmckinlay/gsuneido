@@ -147,13 +147,13 @@ func thread_NewSuneidoGlobal(th *Thread, _ []Value) Value {
 var _ = staticMethod(thread_MainQ, "()")
 
 func thread_MainQ(th *Thread, _ []Value) Value {
-	return SuBool(th == MainThread)
+	return SuBool(th == MainThread || OnUIThread())
 }
 
 var _ = staticMethod(thread_Exit, "()")
 
 func thread_Exit(th *Thread, _ []Value) Value {
-	if th == MainThread {
+	if th == MainThread || OnUIThread() {
 		panic("suneido: cannot use Thread.Exit on main thread")
 	}
 	runtime.Goexit()
