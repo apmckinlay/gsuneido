@@ -43,11 +43,11 @@ func Alloc(n uintptr) unsafe.Pointer {
 
 func alloc(n int) int {
 	n = ((n - 1) | (align - 1)) + 1 // requires align is power of 2
-	i := heapnext
-	heapnext += n
-	if heapnext > heapsize {
+	if heapnext + n > heapsize {
 		panic("Windows dll interface argument space limit exceeded")
 	}
+	i := heapnext
+	heapnext += n
 	return i
 }
 
