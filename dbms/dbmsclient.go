@@ -410,7 +410,7 @@ func (qc *muxQueryCursor) Strategy(formatted bool) string {
 }
 
 func (qc *muxQueryCursor) Tree() Value {
-	return nil
+	panic("query Tree is not supported from a client")
 }
 
 // muxQuery implements IQuery ------------------------------------
