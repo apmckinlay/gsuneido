@@ -110,6 +110,7 @@ func (t *Times) Rewind() {
 
 func (t *Times) Get(th *Thread, dir Dir) Row {
 	defer func(t0 uint64) { t.tget += tsc.Read() - t0 }(tsc.Read())
+	t.ngets++
 	row2 := t.source2.Get(th, dir)
 	if t.rewound {
 		t.rewound = false

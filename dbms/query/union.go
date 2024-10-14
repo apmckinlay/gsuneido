@@ -374,6 +374,7 @@ func (u *Union) Rewind() {
 
 func (u *Union) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { u.tget += tsc.Read() - t }(tsc.Read())
+	u.ngets++
 	defer func() { u.rewound = false }()
 	switch u.strat {
 	case unionLookup:

@@ -110,6 +110,7 @@ func (sort *Sort) setApproach(_ []string, frac float64, approach any, tran Query
 
 func (sort *Sort) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { sort.tget += tsc.Read() - t }(tsc.Read())
+	sort.ngets++
 	if sort.reverse {
 		dir = dir.Reverse()
 	}

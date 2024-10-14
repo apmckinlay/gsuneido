@@ -70,6 +70,8 @@ func qryBase(q Query, key Value) Value {
 		return Int64Val(int64(q.tGet()))
 	case SuStr("tgetself"):
 		return Int64Val(int64(q.tGetSelf()))
+	case SuStr("ngets"):
+		return IntVal(q.nGets())
 	}
 	return nil
 }

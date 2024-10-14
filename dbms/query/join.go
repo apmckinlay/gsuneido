@@ -402,6 +402,7 @@ func (jb *joinBase) rewind() {
 
 func (jn *Join) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { jn.tget += tsc.Read() - t }(tsc.Read())
+	jn.ngets++
 	for {
 		if jn.row2 == nil && !jn.nextRow1(th, dir) {
 			return nil
@@ -728,6 +729,7 @@ func (lj *LeftJoin) pop(n1, n2 int) int {
 
 func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 	defer func(t uint64) { lj.tget += tsc.Read() - t }(tsc.Read())
+	lj.ngets++
 	row1out := true
 	for {
 		if lj.row2 == nil {

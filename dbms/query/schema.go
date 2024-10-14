@@ -21,11 +21,12 @@ type schemaTable struct {
 	tran QueryTran
 	cache
 	state
+	ngets    int32
 	tget     uint64
 	tgetself uint64
 }
 
-type state int
+type state byte
 
 const (
 	rewound state = iota
@@ -107,6 +108,10 @@ func (st *schemaTable) setSelf(t uint64) {
 	st.tgetself = t
 }
 
+func (st *schemaTable) nGets() int {
+    return int(st.ngets)
+}
+
 //-------------------------------------------------------------------
 
 type Tables struct {
@@ -155,6 +160,7 @@ func (ts *Tables) Rewind() {
 
 func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { ts.tget += tsc.Read() - t }(tsc.Read())
+	ts.ngets++
 	ts.ensure()
 	if ts.state == eof {
 		return nil
@@ -245,6 +251,7 @@ func (tl *TablesLookup) Transform() Query {
 
 func (tl *TablesLookup) Get(*Thread, Dir) Row {
 	defer func(t uint64) { tl.tget += tsc.Read() - t }(tsc.Read())
+	tl.ngets++
 	if tl.state != eof {
 		tl.state = eof
 		switch tl.table {
@@ -325,6 +332,7 @@ func (cs *Columns) Rewind() {
 
 func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { cs.tget += tsc.Read() - t }(tsc.Read())
+	cs.ngets++
 	cs.ensure()
 	if cs.state == eof {
 		return nil
@@ -457,6 +465,7 @@ func (is *Indexes) Rewind() {
 
 func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { is.tget += tsc.Read() - t }(tsc.Read())
+	is.ngets++
 	is.ensure()
 	if is.state == eof {
 		return nil
@@ -664,6 +673,7 @@ func (his *History) Rewind() {
 
 func (his *History) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { his.tget += tsc.Read() - t }(tsc.Read())
+	his.ngets++
 	if his.state == eof {
 		return nil
 	}

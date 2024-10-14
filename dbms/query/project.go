@@ -467,6 +467,7 @@ func (p *Project) Rewind() {
 
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { p.tget += tsc.Read() - t }(tsc.Read())
+	p.ngets++
 	switch p.strat {
 	case projCopy:
 		return p.source.Get(th, dir)

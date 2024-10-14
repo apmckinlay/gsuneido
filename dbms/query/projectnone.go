@@ -119,3 +119,7 @@ func (*ProjectNone) tGetSelf() uint64 {
 
 func (*ProjectNone) setSelf(t uint64) {
 }
+
+func (*ProjectNone) nGets() int {
+	return 0
+}

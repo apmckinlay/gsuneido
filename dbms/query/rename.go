@@ -182,6 +182,7 @@ func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran
 
 func (r *Rename) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { r.tget += tsc.Read() - t }(tsc.Read())
+	r.ngets++
 	return r.source.Get(th, dir)
 }
 

@@ -148,6 +148,7 @@ func (ti *TempIndex) matches(row Row, key []string) bool {
 
 func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { ti.tget += tsc.Read() - t }(tsc.Read())
+	ti.ngets++
 	ti.th = th
 	defer func() { ti.th = nil }()
 	if ti.iter == nil {
