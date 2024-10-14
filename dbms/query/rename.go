@@ -187,10 +187,12 @@ func (r *Rename) Get(th *Thread, dir Dir) Row {
 }
 
 func (r *Rename) Select(cols, vals []string) {
+	r.nsels++
 	r.source.Select(r.renameRev(cols), vals)
 }
 
 func (r *Rename) Lookup(th *Thread, cols, vals []string) Row {
+	r.nlooks++
 	return r.source.Lookup(th, r.renameRev(cols), vals)
 }
 

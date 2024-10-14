@@ -109,7 +109,15 @@ func (st *schemaTable) setSelf(t uint64) {
 }
 
 func (st *schemaTable) nGets() int {
-    return int(st.ngets)
+	return int(st.ngets)
+}
+
+func (st *schemaTable) nSels() int {
+	return 0
+}
+
+func (st *schemaTable) nLooks() int {
+	return 0
 }
 
 //-------------------------------------------------------------------

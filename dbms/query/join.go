@@ -462,6 +462,7 @@ func rowstr(hdr *Header, row Row) string {
 
 func (jn *Join) Select(cols, vals []string) {
 	// fmt.Println(jn.strategy(), "Select", cols, unpack(vals))
+	jn.nsels++
 	jn.rewind()
 	jn.select1(cols, vals)
 }
@@ -498,6 +499,7 @@ func (jl *joinLike) splitSelect(cols, vals []string) (
 
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	// fmt.Println(jn.strategy(), "Lookup", cols, unpack(vals))
+	jn.nlooks++
 	defer jn.Select(nil, nil)
 	sel1cols, sel1vals, sel2cols, sel2vals := jn.splitSelect(cols, vals)
 	if jn.lookupFallback(sel1cols) {
@@ -769,11 +771,13 @@ func (lj *LeftJoin) filter2(row2 Row) bool {
 
 func (lj *LeftJoin) Select(cols, vals []string) {
 	// fmt.Println(lj.strategy(), "Select", cols, unpack(vals))
+	lj.nsels++
 	lj.rewind()
 	lj.select1(cols, vals)
 }
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
+	lj.nlooks++
 	defer lj.Select(nil, nil)
 	sel1cols, sel1vals, sel2cols, sel2vals := lj.splitSelect(cols, vals)
 	lj.sel2cols, lj.sel2vals = sel2cols, sel2vals

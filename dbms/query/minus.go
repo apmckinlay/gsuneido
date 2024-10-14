@@ -93,6 +93,7 @@ func (m *Minus) Get(th *Thread, dir Dir) Row {
 }
 
 func (m *Minus) Lookup(th *Thread, cols, vals []string) Row {
+	m.nlooks++
 	row := m.source1.Lookup(th, cols, vals)
 	if row == nil || !m.source2Has(th, row) {
 		return row

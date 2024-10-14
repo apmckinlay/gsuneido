@@ -501,6 +501,7 @@ func nothing(*Thread, Dir) Row { return nil }
 
 func (u *Union) Select(cols, vals []string) {
 	// fmt.Println("Union Select", cols, unpack(vals))
+	u.nsels++
 	u.rewound = true
 	u.src1get = u.source1.Get
 	u.src2get = u.source2.Get
@@ -554,6 +555,7 @@ func selConflict(srcCols, cols, vals []string) bool {
 }
 
 func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
+	u.nlooks++
 	u.Select(cols, vals)
 	defer u.Select(nil, nil) // clear select
 	return u.Get(th, Next)

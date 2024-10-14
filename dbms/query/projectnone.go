@@ -123,3 +123,11 @@ func (*ProjectNone) setSelf(t uint64) {
 func (*ProjectNone) nGets() int {
 	return 0
 }
+
+func (*ProjectNone) nSels() int {
+	return 0
+}
+
+func (*ProjectNone) nLooks() int {
+	return 0
+}

@@ -188,6 +188,8 @@ type Query interface {
 	tGetSelf() uint64
 
 	nGets() int
+	nSels() int
+	nLooks() int
 }
 
 // queryBase is embedded by almost all Query types
@@ -205,6 +207,8 @@ type queryBase struct {
 	fast1     opt.Bool
 	singleTbl opt.Bool
 	ngets     int32
+	nsels     int32
+	nlooks    int32
 	lookCost  opt.Int
 	tget      uint64
 	tgetself  uint64
@@ -279,6 +283,14 @@ func (q *queryBase) setSelf(t uint64) {
 
 func (q *queryBase) nGets() int {
 	return int(q.ngets)
+}
+
+func (q *queryBase) nSels() int {
+	return int(q.nsels)
+}
+
+func (q *queryBase) nLooks() int {
+	return int(q.nlooks)
 }
 
 // Mode is the transaction context - cursor, read, or update.

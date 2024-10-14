@@ -72,6 +72,10 @@ func qryBase(q Query, key Value) Value {
 		return Int64Val(int64(q.tGetSelf()))
 	case SuStr("ngets"):
 		return IntVal(q.nGets())
+	case SuStr("nsels"):
+		return IntVal(q.nSels())
+	case SuStr("nlooks"):
+		return IntVal(q.nLooks())
 	}
 	return nil
 }

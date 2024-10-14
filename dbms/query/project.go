@@ -617,6 +617,7 @@ func (p *Project) Output(th *Thread, rec Record) {
 }
 
 func (p *Project) Select(cols, vals []string) {
+	p.nsels++
 	p.source.Select(cols, vals)
 	if p.strat == projMap {
 		p.indexed = false
@@ -625,6 +626,7 @@ func (p *Project) Select(cols, vals []string) {
 }
 
 func (p *Project) Lookup(th *Thread, cols, vals []string) Row {
+	p.nlooks++
 	if p.strat == projCopy {
 		return p.source.Lookup(th, cols, vals)
 	}

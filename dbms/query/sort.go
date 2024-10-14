@@ -118,6 +118,7 @@ func (sort *Sort) Get(th *Thread, dir Dir) Row {
 }
 
 func (sort *Sort) Select(cols, vals []string) {
+	sort.nsels++
 	sort.source.Select(cols, vals)
 }
 

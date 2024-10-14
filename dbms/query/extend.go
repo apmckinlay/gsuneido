@@ -276,6 +276,7 @@ func (e *Extend) filter(rec Record) bool {
 
 func (e *Extend) Select(cols, vals []string) {
 	// fmt.Println("Extend Select", cols, unpack(vals))
+	e.nsels++
 	e.conflict = false
 	e.selCols, e.selVals = nil, nil
 	if cols == nil && vals == nil {
@@ -293,6 +294,7 @@ func (e *Extend) Select(cols, vals []string) {
 }
 
 func (e *Extend) Lookup(th *Thread, cols, vals []string) Row {
+	e.nlooks++
 	if conflictFixed(cols, vals, e.Fixed()) {
 		return nil
 	}

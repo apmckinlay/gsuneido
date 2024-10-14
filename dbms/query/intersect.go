@@ -142,6 +142,7 @@ func (it *Intersect) Get(th *Thread, dir Dir) Row {
 }
 
 func (it *Intersect) Lookup(th *Thread, cols, vals []string) Row {
+	it.nlooks++
 	row := it.source1.Lookup(th, cols, vals)
 	if row == nil || it.source2Has(th, row) {
 		return row

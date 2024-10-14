@@ -726,6 +726,7 @@ func (w *Where) Rewind() {
 
 func (w *Where) Select(cols, vals []string) {
 	// fmt.Println("Where", w.tbl.name, "Select", cols, unpack(vals))
+	w.nsels++
 	w.Rewind()
 	w.selOrg, w.selEnd = "", ""
 	w.selSet = false
@@ -783,6 +784,7 @@ func (w *Where) addFixed(cols []string, vals []string) ([]string, []string) {
 }
 
 func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
+	w.nlooks++
 	if conflictFixed(cols, vals, w.Fixed()) {
 		return nil
 	}

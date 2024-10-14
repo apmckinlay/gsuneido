@@ -119,5 +119,6 @@ func (c1 *Compatible1) Rewind() {
 }
 
 func (c1 *Compatible1) Select(cols, vals []string) {
+	c1.nsels++
 	c1.source1.Select(cols, vals)
 }

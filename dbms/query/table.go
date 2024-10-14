@@ -194,6 +194,7 @@ func (tbl *Table) lookupCost() Cost {
 func (tbl *Table) Lookup(_ *Thread, cols, vals []string) Row {
 	assert.That(tbl.hasKey(cols))
 	assert.That(!selConflict(tbl.header.Columns, cols, vals))
+	tbl.nlooks++
 	key := selOrg(tbl.indexEncode, tbl.index, cols, vals, true)
 	return tbl.lookup(key)
 }
@@ -247,6 +248,7 @@ func (tbl *Table) Get(_ *Thread, dir Dir) Row {
 }
 
 func (tbl *Table) Select(cols, vals []string) {
+	tbl.nsels++
 	if tbl.singleton {
 		tbl.selcols, tbl.selvals = cols, vals
 		tbl.ensureIter().Range(iterator.All)

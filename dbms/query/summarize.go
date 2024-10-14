@@ -357,6 +357,7 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 }
 
 func (su *Summarize) Lookup(th *Thread, cols, vals []string) Row {
+	su.nlooks++
 	su.Select(cols, vals)
 	defer su.Select(nil, nil) // clear
 	return su.Get(th, Next)
@@ -558,6 +559,7 @@ func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 }
 
 func (su *Summarize) Select(cols, vals []string) {
+	su.nsels++
 	su.source.Select(cols, vals)
 	su.rewound = true
 }
