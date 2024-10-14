@@ -55,27 +55,24 @@ func qryBase(q Query, key Value) Value {
 	case SuStr("nchild"):
 		return Zero // overridden by Query1 and Query2
 	case SuStr("frac"):
-		frac, _, _ := q.cacheCost()
-		return SuDnum{Dnum: dnum.FromFloat(frac)}
+		return SuDnum{Dnum: dnum.FromFloat(q.Metrics().frac)}
 	case SuStr("fixcost"):
-		_, fixcost, _ := q.cacheCost()
-		return IntVal(fixcost)
+		return IntVal(q.Metrics().fixcost)
 	case SuStr("varcost"):
-		_, _, varcost := q.cacheCost()
-		return IntVal(varcost)
+		return IntVal(q.Metrics().varcost)
 	case SuStr("cost"):
-		_, fixcost, varcost := q.cacheCost()
-		return IntVal(fixcost + varcost)
+		m := q.Metrics()
+		return IntVal(m.fixcost + m.varcost)
 	case SuStr("tget"):
-		return Int64Val(int64(q.tGet()))
+		return Int64Val(int64(q.Metrics().tget))
 	case SuStr("tgetself"):
-		return Int64Val(int64(q.tGetSelf()))
+		return Int64Val(int64(q.Metrics().tgetself))
 	case SuStr("ngets"):
-		return IntVal(q.nGets())
+		return IntVal(int(q.Metrics().ngets))
 	case SuStr("nsels"):
-		return IntVal(q.nSels())
+		return IntVal(int(q.Metrics().nsels))
 	case SuStr("nlooks"):
-		return IntVal(q.nLooks())
+		return IntVal(int(q.Metrics().nlooks))
 	}
 	return nil
 }

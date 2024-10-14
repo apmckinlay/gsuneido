@@ -146,8 +146,7 @@ type Query interface {
 	// or -1 if the index has not been added.
 	cacheGet(index []string, frac float64) (fixcost, varcost Cost, approach any)
 
-	cacheSetCost(frac float64, fixcost, varcost Cost)
-	cacheCost() (frac float64, fixcost, varcost Cost)
+	cacheClear()
 
 	// optimize determines the minimum cost strategy based on estimates.
 	//
@@ -180,16 +179,7 @@ type Query interface {
 	// It would be Get, but that is already used in Query.
 	ValueGet(key Value) Value
 
-	// tGet is the tsc/time taken by Get
-	tGet() uint64
-
-	setSelf(t uint64)
-
-	tGetSelf() uint64
-
-	nGets() int
-	nSels() int
-	nLooks() int
+	Metrics() *metrics
 }
 
 // queryBase is embedded by almost all Query types
@@ -206,13 +196,26 @@ type queryBase struct {
 	rowSiz    opt.Int
 	fast1     opt.Bool
 	singleTbl opt.Bool
-	ngets     int32
-	nsels     int32
-	nlooks    int32
 	lookCost  opt.Int
-	tget      uint64
-	tgetself  uint64
 	cache
+	metrics
+}
+
+type metrics struct {
+	fixcost  Cost
+	varcost  Cost
+	frac     float64
+	ngets    int32
+	nsels    int32
+	nlooks   int32
+	tget     uint64
+	tgetself uint64
+}
+
+func (m *metrics) setCost(frac float64, fixcost, varcost Cost) {
+	m.frac = frac
+	m.fixcost = fixcost
+	m.varcost = varcost
 }
 
 func (q *queryBase) Columns() []string {
@@ -273,24 +276,8 @@ func (q *queryBase) tGet() uint64 {
 	return q.tget
 }
 
-func (q *queryBase) tGetSelf() uint64 {
-	return q.tgetself
-}
-
-func (q *queryBase) setSelf(t uint64) {
-	q.tgetself = t
-}
-
-func (q *queryBase) nGets() int {
-	return int(q.ngets)
-}
-
-func (q *queryBase) nSels() int {
-	return int(q.nsels)
-}
-
-func (q *queryBase) nLooks() int {
-	return int(q.nlooks)
+func (q *queryBase) Metrics() *metrics {
+	return &q.metrics
 }
 
 // Mode is the transaction context - cursor, read, or update.
@@ -536,18 +523,19 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 		index = nil
 	}
 	fixcost, varcost, approach := q.cacheGet(index, frac)
+	q.cacheClear()
 	if fixcost == -1 {
 		panic("SetApproach: not found in cache")
 	}
 	assert.Msg("negative cost").That(fixcost >= 0 && varcost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
-		q.cacheSetCost(1, app.srcfixcost, app.srcvarcost)
+		q.Metrics().setCost(1, app.srcfixcost, app.srcvarcost)
 		q.setApproach(nil, 1, app.approach, tran)
 		ti := NewTempIndex(q, app.index, tran)
-		ti.cacheSetCost(frac, fixcost, varcost)
+		ti.setCost(frac, fixcost, varcost)
 		return ti
 	}
-	q.cacheSetCost(frac, fixcost, varcost)
+	q.Metrics().setCost(frac, fixcost, varcost)
 	q.setApproach(index, frac, approach, tran)
 	return q
 }
@@ -847,17 +835,17 @@ const indent1 = "    "
 func strategy(q Query, indent int) string { // recursive
 	in := strings.Repeat(indent1, indent)
 	nrows, pop := q.Nrows()
-	frac, fixcost, varcost := q.cacheCost()
+	m := q.Metrics()
 	cost := "{"
-	if frac != 1 {
-		cost += fmt.Sprintf("%.3fx ", frac)
+	if m.frac != 1 {
+		cost += fmt.Sprintf("%.3fx ", m.frac)
 	}
 	cost += trace.Number(nrows)
 	if nrows != pop {
 		cost += "/" + trace.Number(pop)
 	}
-	if fixcost+varcost > 0 {
-		cost += " " + trace.Number(fixcost) + "+" + trace.Number(varcost)
+	if m.fixcost+m.varcost > 0 {
+		cost += " " + trace.Number(m.fixcost) + "+" + trace.Number(m.varcost)
 	}
 	cost += "} "
 	switch q := q.(type) {
@@ -874,19 +862,21 @@ func strategy(q Query, indent int) string { // recursive
 }
 
 func CalcSelf(q0 Query) { // recursive
-	if q0.tGetSelf() != 0 {
+	m := q0.Metrics()
+	if m.tgetself != 0 {
 		return // already calculated
 	}
 	switch q := q0.(type) {
 	case q2i:
-		q0.setSelf(q0.tGet() - q.Source().tGet() - q.Source2().tGet())
+		m.tgetself = m.tget -
+			q.Source().Metrics().tget - q.Source2().Metrics().tget
 		CalcSelf(q.Source())
 		CalcSelf(q.Source2())
 	case q1i:
-		q0.setSelf(q0.tGet() - q.Source().tGet())
+		m.tgetself = m.tget - q.Source().Metrics().tget
 		CalcSelf(q.Source())
 	default:
-		q0.setSelf(q0.tGet())
+		m.tgetself = q0.Metrics().tget
 	}
 }
 

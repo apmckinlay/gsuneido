@@ -21,9 +21,7 @@ type schemaTable struct {
 	tran QueryTran
 	cache
 	state
-	ngets    int32
-	tget     uint64
-	tgetself uint64
+	metrics
 }
 
 type state byte
@@ -96,28 +94,8 @@ func (*schemaTable) Simple(*Thread) []Row {
 	panic("Simple not implemented for schema tables")
 }
 
-func (st *schemaTable) tGet() uint64 {
-	return st.tget
-}
-
-func (st *schemaTable) tGetSelf() uint64 {
-	return st.tgetself
-}
-
-func (st *schemaTable) setSelf(t uint64) {
-	st.tgetself = t
-}
-
-func (st *schemaTable) nGets() int {
-	return int(st.ngets)
-}
-
-func (st *schemaTable) nSels() int {
-	return 0
-}
-
-func (st *schemaTable) nLooks() int {
-	return 0
+func (st *schemaTable) Metrics() *metrics {
+	return &st.metrics
 }
 
 //-------------------------------------------------------------------

@@ -109,25 +109,8 @@ func (*ProjectNone) Simple(*Thread) []Row {
 	return nil
 }
 
-func (*ProjectNone) tGet() uint64 {
-	return 0
-}
+var noMetrics metrics
 
-func (*ProjectNone) tGetSelf() uint64 {
-	return 0
-}
-
-func (*ProjectNone) setSelf(t uint64) {
-}
-
-func (*ProjectNone) nGets() int {
-	return 0
-}
-
-func (*ProjectNone) nSels() int {
-	return 0
-}
-
-func (*ProjectNone) nLooks() int {
-	return 0
+func (*ProjectNone) Metrics() *metrics {
+	return &noMetrics
 }
