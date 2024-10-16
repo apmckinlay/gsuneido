@@ -63,6 +63,8 @@ func qryBase(q Query, key Value) Value {
 	case SuStr("cost"):
 		m := q.Metrics()
 		return IntVal(m.fixcost + m.varcost)
+	case SuStr("costself"):
+		return IntVal(int(q.Metrics().costself))
 	case SuStr("tget"):
 		return Int64Val(int64(q.Metrics().tget))
 	case SuStr("tgetself"):

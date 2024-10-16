@@ -204,6 +204,7 @@ type queryBase struct {
 type metrics struct {
 	fixcost  Cost
 	varcost  Cost
+	costself Cost
 	frac     float64
 	ngets    int32
 	nsels    int32
@@ -868,15 +869,21 @@ func CalcSelf(q0 Query) { // recursive
 	}
 	switch q := q0.(type) {
 	case q2i:
-		m.tgetself = m.tget -
-			q.Source().Metrics().tget - q.Source2().Metrics().tget
+		m1 := q.Source().Metrics()
+		m2 := q.Source2().Metrics()
+		m.tgetself = m.tget - (m1.tget + m2.tget)
+		m.costself = (m.fixcost + m.varcost) -
+			(m1.fixcost + m1.varcost + m2.fixcost + m2.varcost)
 		CalcSelf(q.Source())
 		CalcSelf(q.Source2())
 	case q1i:
-		m.tgetself = m.tget - q.Source().Metrics().tget
+		sm := q.Source().Metrics()
+		m.tgetself = m.tget - sm.tget
+		m.costself = (m.fixcost + m.varcost) - (sm.fixcost + sm.varcost)
 		CalcSelf(q.Source())
 	default:
 		m.tgetself = q0.Metrics().tget
+		m.costself = q0.Metrics().fixcost + q0.Metrics().varcost
 	}
 }
 
