@@ -20,6 +20,7 @@ type ISuQueryCursor interface {
 	Rewind()
 	RuleColumns() Value
 	Strategy(formatted bool) Value
+	Tree() Value
 }
 
 // SuQueryCursor is the common base for SuQuery and SuCursor
@@ -74,6 +75,11 @@ func (qc *SuQueryCursor) RuleColumns() Value {
 func (qc *SuQueryCursor) Strategy(formatted bool) Value {
 	qc.ckActive()
 	return SuStr(qc.iqc.Strategy(formatted))
+}
+
+func (qc *SuQueryCursor) Tree() Value {
+	qc.ckActive()
+	return qc.iqc.Tree()
 }
 
 func (qc *SuQueryCursor) Close() {
