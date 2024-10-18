@@ -228,7 +228,6 @@ func (tbl *Table) Rewind() {
 
 func (tbl *Table) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { tbl.tget += tsc.Read() - t }(tsc.Read())
-	tbl.ngets++
 	tbl.ensureIter()
 	if dir == Prev {
 		tbl.iter.Prev(tbl.tran)
@@ -244,6 +243,7 @@ func (tbl *Table) Get(_ *Thread, dir Dir) Row {
 	if tbl.singleton && !singletonFilter(tbl.header, row, tbl.selcols, tbl.selvals) {
 		return nil
 	}
+	tbl.ngets++
 	return row
 }
 

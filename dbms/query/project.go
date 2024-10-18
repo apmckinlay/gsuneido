@@ -467,16 +467,21 @@ func (p *Project) Rewind() {
 
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { p.tget += tsc.Read() - t }(tsc.Read())
-	p.ngets++
+	var row Row
 	switch p.strat {
 	case projCopy:
-		return p.source.Get(th, dir)
+		row = p.source.Get(th, dir)
 	case projSeq:
-		return p.getSeq(th, dir)
+		row = p.getSeq(th, dir)
 	case projMap:
-		return p.getMap(th, dir)
+		row = p.getMap(th, dir)
+	default:
+		panic(assert.ShouldNotReachHere())
 	}
-	panic(assert.ShouldNotReachHere())
+	if row != nil {
+		p.ngets++
+	}
+	return row
 }
 
 func (p *Project) getSeq(th *Thread, dir Dir) Row {

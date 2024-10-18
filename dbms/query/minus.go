@@ -83,10 +83,13 @@ func (m *Minus) setApproach(index []string, frac float64, approach any, tran Que
 
 func (m *Minus) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { m.tget += tsc.Read() - t }(tsc.Read())
-	m.ngets++
 	for {
 		row := m.source1.Get(th, dir)
-		if row == nil || !m.source2Has(th, row) {
+		if row == nil {
+			return nil
+		}
+		if !m.source2Has(th, row) {
+			m.ngets++
 			return row
 		}
 	}

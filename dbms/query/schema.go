@@ -146,7 +146,6 @@ func (ts *Tables) Rewind() {
 
 func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { ts.tget += tsc.Read() - t }(tsc.Read())
-	ts.ngets++
 	ts.ensure()
 	if ts.state == eof {
 		return nil
@@ -167,6 +166,7 @@ func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 		return nil
 	}
 	ts.state = within
+	ts.ngets++
 	return ts.row(ts.info[ts.i])
 }
 
@@ -237,7 +237,6 @@ func (tl *TablesLookup) Transform() Query {
 
 func (tl *TablesLookup) Get(*Thread, Dir) Row {
 	defer func(t uint64) { tl.tget += tsc.Read() - t }(tsc.Read())
-	tl.ngets++
 	if tl.state != eof {
 		tl.state = eof
 		switch tl.table {
@@ -245,10 +244,12 @@ func (tl *TablesLookup) Get(*Thread, Dir) Row {
 			var rb RecordBuilder
 			rb.Add(SuStr(tl.table))
 			rec := rb.Build()
+			tl.ngets++
 			return Row{DbRec{Record: rec}}
 		default:
 			ti := tl.tran.GetInfo(tl.table)
 			if ti != nil {
+				tl.ngets++
 				return tl.row(ti)
 			}
 		}
@@ -318,7 +319,6 @@ func (cs *Columns) Rewind() {
 
 func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { cs.tget += tsc.Read() - t }(tsc.Read())
-	cs.ngets++
 	cs.ensure()
 	if cs.state == eof {
 		return nil
@@ -366,6 +366,7 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	rb.Add(SuStr(col))
 	rb.Add(IntVal(fld))
 	rec := rb.Build()
+	cs.ngets++
 	return Row{DbRec{Record: rec}}
 }
 
@@ -451,7 +452,6 @@ func (is *Indexes) Rewind() {
 
 func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { is.tget += tsc.Read() - t }(tsc.Read())
-	is.ngets++
 	is.ensure()
 	if is.state == eof {
 		return nil
@@ -508,6 +508,7 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 		rb.Add(SuInt(int(idx.Fk.Mode)))
 	}
 	rec := rb.Build()
+	is.ngets++
 	return Row{DbRec{Record: rec}}
 }
 
@@ -659,7 +660,6 @@ func (his *History) Rewind() {
 
 func (his *History) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { his.tget += tsc.Read() - t }(tsc.Read())
-	his.ngets++
 	if his.state == eof {
 		return nil
 	}
@@ -681,5 +681,6 @@ func (his *History) Get(_ *Thread, dir Dir) Row {
 	var rb RecordBuilder
 	rb.Add(SuDateFromUnixMilli(state.Asof))
 	rec := rb.Build()
+	his.ngets++
 	return Row{DbRec{Record: rec}}
 }

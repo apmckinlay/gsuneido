@@ -402,7 +402,6 @@ func (jb *joinBase) rewind() {
 
 func (jn *Join) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { jn.tget += tsc.Read() - t }(tsc.Read())
-	jn.ngets++
 	for {
 		if jn.row2 == nil && !jn.nextRow1(th, dir) {
 			return nil
@@ -410,6 +409,7 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 		jn.row2 = jn.source2.Get(th, dir)
 		if jn.row2 != nil {
 			// assert.That(jn.equalBy(th, jn.st, jn.row1, jn.row2))
+			jn.ngets++
 			return JoinRows(jn.row1, jn.row2)
 		}
 	}
@@ -731,7 +731,6 @@ func (lj *LeftJoin) pop(n1, n2 int) int {
 
 func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 	defer func(t uint64) { lj.tget += tsc.Read() - t }(tsc.Read())
-	lj.ngets++
 	row1out := true
 	for {
 		if lj.row2 == nil {
@@ -753,6 +752,7 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 				// assert.That(lj.equalBy(th, lj.st, lj.row1, row2))
 			}
 			if lj.filter2(row2) {
+				lj.ngets++
 				return JoinRows(lj.row1, row2)
 			}
 		}

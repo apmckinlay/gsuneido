@@ -374,15 +374,20 @@ func (u *Union) Rewind() {
 
 func (u *Union) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { u.tget += tsc.Read() - t }(tsc.Read())
-	u.ngets++
 	defer func() { u.rewound = false }()
+	var row Row
 	switch u.strat {
 	case unionLookup:
-		return u.getLookup(th, dir)
+		row = u.getLookup(th, dir)
 	case unionMerge:
-		return u.getMerge(th, dir)
+		row = u.getMerge(th, dir)
+	default:
+		panic(assert.ShouldNotReachHere())
 	}
-	panic(assert.ShouldNotReachHere())
+	if row != nil {
+		u.ngets++
+	}
+	return row
 }
 
 func (u *Union) getLookup(th *Thread, dir Dir) Row {

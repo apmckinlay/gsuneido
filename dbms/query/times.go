@@ -110,7 +110,6 @@ func (t *Times) Rewind() {
 
 func (t *Times) Get(th *Thread, dir Dir) Row {
 	defer func(t0 uint64) { t.tget += tsc.Read() - t0 }(tsc.Read())
-	t.ngets++
 	row2 := t.source2.Get(th, dir)
 	if t.rewound {
 		t.rewound = false
@@ -127,6 +126,7 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 		t.source2.Rewind()
 		row2 = t.source2.Get(th, dir)
 	}
+	t.ngets++
 	return JoinRows(t.row1, row2)
 }
 

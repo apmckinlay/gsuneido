@@ -218,7 +218,6 @@ func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran
 
 func (e *Extend) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { e.tget += tsc.Read() - t }(tsc.Read())
-	e.ngets++
 	if e.conflict {
 		return nil
 	}
@@ -228,10 +227,12 @@ func (e *Extend) Get(th *Thread, dir Dir) Row {
 			return nil
 		}
 		if !e.hasExprs {
+			e.ngets++
 			return row
 		}
 		rec := e.extendRow(th, row)
 		if e.filter(rec) {
+			e.ngets++
 			return append(row, DbRec{Record: rec})
 		}
 	}

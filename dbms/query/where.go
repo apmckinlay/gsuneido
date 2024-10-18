@@ -634,7 +634,6 @@ var MakeSuTran func(qt QueryTran) *SuTran
 
 func (w *Where) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { w.tget += tsc.Read() - t }(tsc.Read())
-	w.ngets++
 	if w.selSet && w.selOrg == ixkey.Max && w.selEnd == "" {
 		return nil // conflict from Select
 	}
@@ -644,7 +643,9 @@ func (w *Where) Get(th *Thread, dir Dir) Row {
 			w.nOut++
 			if row == nil {
 				w.slowQueries()
+				return nil
 			}
+			w.ngets++
 			return row
 		}
 	}

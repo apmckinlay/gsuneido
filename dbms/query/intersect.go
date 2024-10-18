@@ -132,10 +132,13 @@ func (it *Intersect) setApproach(index []string, frac float64, approach any,
 
 func (it *Intersect) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { it.tget += tsc.Read() - t }(tsc.Read())
-	it.ngets++
 	for {
 		row := it.source1.Get(th, dir)
-		if row == nil || it.source2Has(th, row) {
+		if row == nil {
+			return nil
+		}
+		if it.source2Has(th, row) {
+			it.ngets++
 			return row
 		}
 	}
