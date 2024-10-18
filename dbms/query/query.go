@@ -213,6 +213,11 @@ type metrics struct {
 	tgetself uint64
 }
 
+func (m *metrics) String() string {
+	return fmt.Sprintf("metrics{fixcost: %v varcost: %v costself: %v frac: %.2f ngets: %d nsels: %d nlooks: %d tget: %d tgetself: %d}",
+		m.fixcost, m.varcost, m.costself, m.frac, m.ngets, m.nsels, m.nlooks, m.tget, m.tgetself)
+}
+
 func (m *metrics) setCost(frac float64, fixcost, varcost Cost) {
 	m.frac = frac
 	m.fixcost = fixcost
@@ -344,7 +349,7 @@ func Setup1(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
 func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
 	fixcost, varcost := Optimize(q, mode, nil, frac)
 	if fixcost+varcost >= impossible {
-		panic("invalid query: " + q.String())
+		panic("invalid query: " + String(q))
 	}
 	q = SetApproach(q, nil, frac, t)
 	return q, fixcost, varcost
@@ -359,7 +364,7 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 		best.update(b.index, b.fixcost, b.varcost)
 	}
 	if best.fixcost+best.varcost >= impossible {
-		panic("invalid query: " + q.String())
+		panic("invalid query: " + String(q))
 	}
 	q = SetApproach(q, best.index, 1, t)
 	return q
