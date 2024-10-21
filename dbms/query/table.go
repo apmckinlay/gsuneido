@@ -146,7 +146,8 @@ func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, an
 		index = tbl.indexes[i]
 	}
 	varcost := tbl.info.Nrows * 250 // empirical
-	trace.QueryOpt.Println("optimize", tbl.name, index, frac, "=", Cost(frac*float64(varcost)))
+	trace.QueryOpt.Println("Table optimize", tbl.name, index, frac, "=",
+		Cost(frac*float64(varcost)))
 	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
 }
 

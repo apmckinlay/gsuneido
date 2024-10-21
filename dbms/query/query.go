@@ -404,6 +404,9 @@ func fastSingle(q Query, index []string) bool {
 	return q.fastSingle() && set.Subset(q.Columns(), index)
 }
 
+// optTempIndex determines if a TempIndex is a benefit
+// and if it is, returns a special tempIndex approach
+// that is processed by SetApproach which creates the actual TempIndex
 func optTempIndex(q Query, mode Mode, index []string, frac float64) (
 	fixcost, varcost Cost, approach any) {
 	traceQO := func(more ...any) {
@@ -413,58 +416,114 @@ func optTempIndex(q Query, mode Mode, index []string, frac float64) (
 			trace.Println(strategy(q, 1))
 		}
 	}
+	traceQO("optTempIndex", "----------------")
 	if !set.Subset(q.Columns(), index) {
 		traceQO("impossible index not a subset of columns")
 		return impossible, impossible, nil
 	}
-	if len(index) == 0 || !tempIndexable(mode) {
-		fixcost, varcost, approach = q.optimize(mode, index, frac)
-		traceQO(fixcost + varcost)
-		return fixcost, varcost, approach
-	}
-	noIndexFixCost, noIndexVarCost, noIndexApp := q.optimize(mode, nil, 1)
-	assert.That(noIndexFixCost >= 0)
-	assert.That(noIndexVarCost >= 0)
-	noIndexCost := noIndexFixCost + noIndexVarCost
-	if noIndexCost >= impossible {
-		traceQO("impossible even without index")
-		return impossible, impossible, nil
-	}
 
 	indexedFixCost, indexedVarCost, indexedApp := q.optimize(mode, index, frac)
-	assert.That(indexedFixCost >= 0)
-	assert.That(indexedVarCost >= 0)
-	indexedCost := indexedFixCost + indexedVarCost
+	assert.That(indexedFixCost >= 0 && indexedVarCost >= 0)
+
+	if len(index) == 0 || !tempIndexable(mode) {
+		traceQO(indexedFixCost + indexedVarCost)
+		return indexedFixCost, indexedVarCost, indexedApp
+	}
 
 	nrows, _ := q.Nrows()
 	assert.That(nrows >= 0)
-	tempindexFixCost := noIndexCost + 1000 // ???
-	tempindexFixCost += 100 * len(index)   // prefer fewer fields
-	if nrows > 0 {
-		fnrows := float64(nrows)
-		tempindexFixCost += Cost(265 * fnrows * math.Log(fnrows)) // empirical
-	}
-	tempindexVarCost := Cost(frac * float64(nrows*100)) // ???
-	if !q.SingleTable() {
-		tempindexVarCost *= 2 // ???
-	}
-	tempindexCost := tempindexFixCost + tempindexVarCost
+	best := newBestApp()
 
-	if indexedCost <= tempindexCost {
-		traceQO("indexed", indexedCost, "<=", tempindexCost)
+	// with no index
+	optTI(best, q, mode, nil, frac, nrows, factorNone)
+
+	// with required index
+	optTI(best, q, mode, index, frac, nrows, factorAll)
+
+	// with "best" index
+	if bestIndex := tempIndexBest(q, index); bestIndex != nil {
+		optTI(best, q, mode, bestIndex, frac, nrows, factorPre)
+	}
+
+	tempIndexCost := best.fixcost + best.varcost
+	indexedCost := indexedFixCost + indexedVarCost
+	if indexedCost <= tempIndexCost {
+		traceQO("indexed", indexedCost, "<=", tempIndexCost)
 		return indexedFixCost, indexedVarCost, indexedApp
 	}
-	traceQO("tempindex", tempindexCost, "<", indexedCost)
-	// trace.Println("    noIndex", noIndexFixCost, noIndexVarCost,
-	// 	"indexed", indexedFixCost, indexedVarCost)
-	return tempindexFixCost, tempindexVarCost,
-		&tempIndex{approach: noIndexApp, index: index,
-			srcfixcost: noIndexFixCost, srcvarcost: noIndexVarCost}
+	traceQO("tempindex", best.index, tempIndexCost, "<", indexedCost)
+	return best.fixcost, best.varcost,
+		&tempIndex{index: index, srcapp: best.srcapp, srcindex: best.index,
+			srcfixcost: best.srcfixcost, srcvarcost: best.srcvarcost}
 }
 
-type tempIndex struct {
-	approach   any
+const factorAll = 105  // ???
+const factorPre = 110  // ???
+const factorNone = 256 // ???
+
+func optTI(best *bestTI, q Query, mode Mode, index []string, frac float64,
+	nrows, factor int) {
+	srcfixcost, srcvarcost, srcapp := q.optimize(mode, index, 1) // frac=1
+	assert.That(srcfixcost >= 0 && srcvarcost >= 0)
+	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, index, nrows, frac, factor)
+	if fixcost+varcost < best.fixcost+best.varcost {
+		best.index = index
+		best.srcfixcost = srcfixcost
+		best.srcvarcost = srcvarcost
+		best.srcapp = srcapp
+		best.fixcost = fixcost
+		best.varcost = varcost
+	}
+}
+
+func ticost(srccost int, q Query, index []string, nrows int, frac float64,
+	factor int) (Cost, Cost) {
+	fixcost := srccost + 1000   // ???
+	fixcost += 100 * len(index) // prefer fewer fields
+	if nrows > 0 {
+		fnrows := float64(nrows)
+		fixcost += factor * Cost(fnrows*math.Log(fnrows)) // empirical
+	}
+	varcost := Cost(frac * float64(nrows) * 100) // ???
+	if !q.SingleTable() {
+		varcost *= 2 // ???
+	}
+	return fixcost, varcost
+}
+
+func tempIndexBest(q Query, index []string) []string {
+	fixed := q.Fixed()
+	var bestIndex []string
+	var bestOn int
+	for _, ix := range q.Indexes() {
+		on := orderedn(ix, index, fixed)
+		if on > 0 && on < len(index) && on > bestOn {
+			bestOn = on
+			bestIndex = ix
+		}
+	}
+	return bestIndex
+}
+
+type bestTI struct {
 	index      []string
+	srcfixcost Cost
+	srcvarcost Cost
+	srcapp     any
+	fixcost    Cost
+	varcost    Cost
+}
+
+func newBestApp() *bestTI {
+	return &bestTI{fixcost: impossible, varcost: impossible}
+}
+
+// tempIndex is a special approach that is added by optTempIndex
+// to be used by SetApproach to insert a TempIndex when required
+type tempIndex struct {
+	index      []string
+	srcapp     any
+	srcindex   []string
 	srcfixcost Cost
 	srcvarcost Cost
 }
@@ -536,7 +595,7 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 	assert.Msg("negative cost").That(fixcost >= 0 && varcost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
 		q.Metrics().setCost(1, app.srcfixcost, app.srcvarcost)
-		q.setApproach(nil, 1, app.approach, tran)
+		q.setApproach(app.srcindex, 1, app.srcapp, tran)
 		ti := NewTempIndex(q, app.index, tran)
 		ti.setCost(frac, fixcost, varcost)
 		return ti
@@ -727,6 +786,11 @@ func grouped(index []string, cols []string, nColsUnfixed int, fixed []Fixed) boo
 // taking fixed into consideration.
 // It is used by Where and Sort.
 func ordered(index []string, order []string, fixed []Fixed) bool {
+	return orderedn(index, order, fixed) >= len(order)
+}
+
+// orderedn returns the number of fields in order that are satisfied
+func orderedn(index []string, order []string, fixed []Fixed) int {
 	i := 0
 	o := 0
 	in := len(index)
@@ -740,13 +804,13 @@ func ordered(index []string, order []string, fixed []Fixed) bool {
 		} else if isSingleFixed(fixed, order[o]) {
 			o++
 		} else {
-			return false
+			return o
 		}
 	}
 	for o < on && isSingleFixed(fixed, order[o]) {
 		o++
 	}
-	return o >= on
+	return o
 }
 
 func withoutDupsOrSupersets(keys [][]string) [][]string {

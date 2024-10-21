@@ -48,7 +48,7 @@ func (sort *Sort) String() string {
 	if sort.reverse {
 		r = "reverse"
 	}
-	if sort.index != nil {
+	if sort.index != nil { // optimized
 		return r
 	}
 	return "sort " + str.Opt(r, " ") + str.Join(", ", sort.order)

@@ -548,7 +548,7 @@ func TestQueryGet(t *testing.T) {
 		'vancouver'	200	970102	'e'	'disk'	'emerald'
 		'vancouver'	300	970103	'e'	'pencil'	'emerald'`)
 	test("hist join customer",
-		"hist^(date) join n:1 by(id) customer^(id)",
+		"hist^(date) join n:1 by(id) (customer^(id) tempindex(id))",
 		`city	cost	date	id	item	name
 		'calgary'	200	970102	'c'	'mouse'	'calac'
 		'saskatoon'	100	970101	'a'	'disk'	'axon'
