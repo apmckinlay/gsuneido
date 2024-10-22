@@ -141,6 +141,14 @@ long DoPrint(MyBrowserObject* pBrowserObject) {
     return result;
 }
 
+long SetFocus(MyBrowserObject* pBrowserObject) {
+    if (pBrowserObject->controller == 0) {
+        return NOT_READY;
+    }
+
+    return pBrowserObject->controller->MoveFocus(COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
+}
+
 extern "C"
 long WebView2(uintptr op, uintptr arg1, uintptr arg2, uintptr arg3, uintptr arg4, uintptr arg5) {
     switch (op) {
@@ -160,6 +168,8 @@ long WebView2(uintptr op, uintptr arg1, uintptr arg2, uintptr arg3, uintptr arg4
             return GetSource((MyBrowserObject*)arg1, (char*)arg2);
         case webview2_print:
             return DoPrint((MyBrowserObject*)arg1);
+        case webview2_set_focus:
+            return SetFocus((MyBrowserObject*)arg1);
     }
     return INVALID_OP;
 }

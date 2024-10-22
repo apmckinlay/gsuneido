@@ -21,6 +21,7 @@ const (
 	webview2_execute_script
 	webview2_get_source
 	webview2_print
+	webview2_set_focus
 )
 
 type suWebBrowser2 struct {
@@ -120,6 +121,15 @@ func web2_Print(this Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	wb := this.(*suWebBrowser2)
 	rtn := goc.WebBrowser2(webview2_print, wb.iOleObject, 0, 0, 0, 0)
+	return intRet(rtn)
+}
+
+var _ = method(web2_SetFocus, "()")
+
+func web2_SetFocus(this Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	wb := this.(*suWebBrowser2)
+	rtn := goc.WebBrowser2(webview2_set_focus, wb.iOleObject, 0, 0, 0, 0)
 	return intRet(rtn)
 }
 

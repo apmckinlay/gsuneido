@@ -20,6 +20,7 @@ enum webview2_ops {
     webview2_execute_script,
     webview2_get_source,
     webview2_print,
+    webview2_set_focus,
 };
 
 enum WEBVIEW_RESULT {
