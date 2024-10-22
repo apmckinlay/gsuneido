@@ -522,7 +522,7 @@ loop:
 			result := f.Call(th, nil, argSpec)
 			th.sp = base
 			if th.ReturnThrow {
-				// NOTE: this code should be kept in sync with CallMeth
+				// NOTE: this should be kept in sync with CallMeth & Finally
 				th.ReturnThrow = false // default is to clear the flag
 				if oc == op.CallFuncDiscard {
 					if result != EmptyStr && result != True {

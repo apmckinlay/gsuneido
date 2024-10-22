@@ -14,11 +14,24 @@ func Finally(th *Thread, args []Value) Value {
 		e := recover()
 		func() {
 			defer func() {
-				if e != nil {
+				if e != nil && e != BlockReturn {
 					recover() // if main block panics, ignore finally panic
 				}
 			}()
-			th.Call(args[1])
+			returnThrow := th.ReturnThrow
+			th.ReturnThrow = false
+			result := th.Call(args[1])
+			// the following should match interp op.Call*
+			if th.ReturnThrow {
+				th.ReturnThrow = false
+				if result != EmptyStr && result != True {
+					if s, ok := result.ToStr(); ok {
+						panic(s)
+					}
+					panic("return value not checked")
+				}
+			}
+			th.ReturnThrow = returnThrow
 		}()
 		if e != nil {
 			panic(e)
