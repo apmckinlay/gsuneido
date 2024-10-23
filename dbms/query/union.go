@@ -55,6 +55,7 @@ func NewUnion(src1, src2 Query) *Union {
 	u.indexes = u.getIndexes()
 	u.setNrows(u.getNrows())
 	u.rowSiz.Set((u.source1.rowSize() + u.source2.rowSize()) / 2)
+	u.lookCost.Set(src1.lookupCost() + src2.lookupCost())
 	return u
 }
 

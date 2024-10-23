@@ -50,7 +50,6 @@ func newCompatible(src1, src2 Query) *Compatible {
 		}
 	}
 done:
-	c.lookCost.Set(c.getLookupCost())
 	return c
 }
 
@@ -98,14 +97,6 @@ func bestLookupKey(q Query, mode Mode, nrows int) bestIndex {
 	return best
 }
 
-func (c *Compatible) getLookupCost() int {
-	cost := c.source1.lookupCost()
-	if c.disjoint == "" {
-		cost += c.source2.lookupCost()
-	}
-	return cost
-}
-
 //-------------------------------------------------------------------
 
 // Compatible1 is embedded by Intersect and Minus
@@ -121,4 +112,12 @@ func (c1 *Compatible1) Rewind() {
 func (c1 *Compatible1) Select(cols, vals []string) {
 	c1.nsels++
 	c1.source1.Select(cols, vals)
+}
+
+func (c1 *Compatible1) getLookupCost() int {
+	cost := c1.source1.lookupCost()
+	if c1.disjoint == "" {
+		cost += c1.source2.lookupCost()
+	}
+	return cost
 }
