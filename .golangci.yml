@@ -12,3 +12,6 @@ linters-settings:
         disabled: true
       - name: var-naming
         disabled: true
+	misspell:
+	  ignore-words:
+		  - strat
