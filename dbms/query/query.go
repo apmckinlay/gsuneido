@@ -491,6 +491,10 @@ func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 	return fixcost, varcost
 }
 
+// tempIndexBest finds the index that has the longest common prefix.
+// NOTE: it assumes that all indexes have the same cost
+// which is true for simple cases like a table
+// but not for more complex queries.
 func tempIndexBest(q Query, index []string) []string {
 	fixed := q.Fixed()
 	var bestIndex []string
