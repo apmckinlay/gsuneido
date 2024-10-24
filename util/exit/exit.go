@@ -23,8 +23,10 @@ var exitfns []exitfn
 var hanger sync.Mutex
 
 // Add registers a function to be called on exit.
-func Add(desc string, fn func()) {
+// The return value is to allow: var _ = exit.Add(...)
+func Add(desc string, fn func()) int {
 	exitfns = append(exitfns, exitfn{desc: desc, fn: fn})
+	return 0
 }
 
 // Exit calls RunFuncs and then os.Exit
