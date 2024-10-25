@@ -401,7 +401,7 @@ var _ = method(string_Repeat, "(count)")
 func string_Repeat(this, arg Value) Value {
 	s := ToStr(this)
 	n := max(0, ToInt(arg))
-	CheckStringSize("Repeat", len(s) * n)
+	CheckStringSize("Repeat", len(s)*n)
 	return SuStr(strings.Repeat(s, n))
 }
 
