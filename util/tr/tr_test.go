@@ -22,6 +22,8 @@ func Test_makset(t *testing.T) {
 	test("foo-", "foo-")
 	test("m-p", "mnop")
 	test("-0-9-", "-0123456789-")
+	test("\xfa-\xff", "\xfa\xfb\xfc\xfd\xfe\xff")
+	test("z-a", "")
 }
 
 func Fuzz_makset(f *testing.F) {

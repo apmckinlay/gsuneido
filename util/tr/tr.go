@@ -14,8 +14,6 @@ import (
 
 type Set string
 
-var EmptySet = Set("")
-
 // Replace translates, squeezes, or deletes characters from the src string.
 // If the first character of from is '^' then the from set is complemented.
 // Ranges are specified with '-' between to characters.
@@ -106,13 +104,14 @@ func expandRanges(s string) Set {
 		slen--
 	}
 	for i := 0; i < slen; i++ {
-		c := s[i]
-		if c == '-' && i > 0 && i+1 < slen {
-			for r := s[i-1] + 1; r < s[i+1]; r++ {
-				buf.WriteByte(r)
+		if i+2 < slen && s[i+1] == '-' { // range
+			// need to use int to prevent 0xff from wrapping around
+			for c := int(s[i]); c <= int(s[i+2]); c++ {
+				buf.WriteByte(byte(c))
 			}
+			i += 2
 		} else {
-			buf.WriteByte(c)
+			buf.WriteByte(s[i])
 		}
 	}
 	return Set(buf.String())
