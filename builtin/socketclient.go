@@ -85,6 +85,7 @@ var _ = method(sock_Read, "(n)")
 func sock_Read(this, arg Value) Value {
 	sc := scOpen(this)
 	n := ToInt(arg)
+	CheckStringSize("socket.Read", n)
 	buf := make([]byte, n)
 	if sc.timeout > 0 {
 		sc.conn.SetDeadline(time.Now().Add(sc.timeout))

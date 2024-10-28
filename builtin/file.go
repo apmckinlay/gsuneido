@@ -170,6 +170,7 @@ func file_Read(this, arg Value) Value {
 	if n == 0 { // at end
 		return False
 	}
+	CheckStringSize("file.Read", n)
 	buf := make([]byte, n)
 	_, err := io.ReadFull(sf.r, buf)
 	sf.tell += int64(n)

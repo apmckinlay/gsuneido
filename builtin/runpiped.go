@@ -163,6 +163,7 @@ var _ = method(runpiped_Read, "(nbytes=1024)")
 func runpiped_Read(this, arg Value) Value {
 	f := rpOpen(this).r
 	n := IfInt(arg)
+	CheckStringSize("runpiped.Read", n)
 	buf := make([]byte, n)
 	m, err := f.Read(buf)
 	if m == 0 || err == io.EOF {
