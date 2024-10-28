@@ -165,24 +165,12 @@ func string_Find(this, arg1, arg2 Value) Value {
 	return IntVal(pos + i)
 }
 
-var _ = method(string_Find1of, "(string, pos=0)")
+var _ = method(string_Find1of, "(chars, pos=0)")
 
 func string_Find1of(this, arg1, arg2 Value) Value {
 	s := ToStr(this)
 	pos := position(arg2, len(s))
-	i := strings.IndexAny(s[pos:], ToStr(arg1))
-	if i == -1 {
-		return IntVal(len(s))
-	}
-	return IntVal(pos + i)
-}
-
-var _ = method(string_Findnot1of, "(string, pos=0)")
-
-func string_Findnot1of(this, arg1, arg2 Value) Value {
-	s := ToStr(this)
-	pos := position(arg2, len(s))
-	i := str.IndexNotAny(s[pos:], ToStr(arg1))
+	i := str.Find1of(s[pos:], ToStr(arg1))
 	if i == -1 {
 		return IntVal(len(s))
 	}
@@ -210,7 +198,7 @@ func string_FindLast(this, arg1, arg2 Value) Value {
 	return intOrFalse(strings.LastIndex(s[:end], substr))
 }
 
-var _ = method(string_FindLast1of, "(string, pos=false)")
+var _ = method(string_FindLast1of, "(chars, pos=false)")
 
 func string_FindLast1of(this, arg1, arg2 Value) Value {
 	set := ToStr(arg1)
@@ -222,19 +210,7 @@ func string_FindLast1of(this, arg1, arg2 Value) Value {
 	if end < 0 {
 		return False
 	}
-	return intOrFalse(strings.LastIndexAny(s[:end], set))
-}
-
-var _ = method(string_FindLastnot1of, "(string, pos=false)")
-
-func string_FindLastnot1of(this, arg1, arg2 Value) Value {
-	s := ToStr(this)
-	set := ToStr(arg1)
-	end := last1ofEnd(s, arg2)
-	if end < 0 || set == "" {
-		return False
-	}
-	return intOrFalse(str.LastIndexNotAny(s[:end], set))
+	return intOrFalse(str.FindLast1of(s[:end], set))
 }
 
 var _ = method(string_FromUtf8, "()")
