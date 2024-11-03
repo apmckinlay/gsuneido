@@ -50,7 +50,7 @@ func TestBig(*testing.T) {
 	count := nrows / nthreads
 	start := 0
 	var wg sync.WaitGroup
-	for i := 0; i < nthreads; i++ {
+	for range nthreads {
 		wg.Add(1)
 		go func(start int) {
 			createData(db, tables, start, count)
@@ -84,19 +84,19 @@ func createTables() []string {
 	ck(err)
 	tables := make([]string, ntables)
 	randTable := str.UniqueRandom(4, 16)
-	for i := 0; i < ntables; i++ {
+	for i := range ntables {
 		table := randTable()
 		tables[i] = table
 		randCol := str.UniqueRandom(4, 16)
 		ncols := fromHash(table, maxcols)
 		cols := make([]string, ncols)
-		for j := 0; j < ncols; j++ {
+		for j := range ncols {
 			cols[j] = randCol()
 		}
 		nidxs := fromHash(table, maxidxs)
 		idxSchema := make([]schema.Index, nidxs)
 		idxInfo := make([]*index.Overlay, nidxs)
-		for j := 0; j < nidxs; j++ {
+		for j := range nidxs {
 			var idxcols []string
 			var mode byte
 			if j == 0 {
@@ -105,7 +105,7 @@ func createTables() []string {
 			} else {
 				nidxcols := fromHash(table, (maxidxcols))
 				idxcols := make([]string, nidxcols)
-				for k := 0; k < nidxcols; k++ {
+				for k := range nidxcols {
 					f := fromHash(table, ncols) - 1
 					idxcols[k] = cols[f]
 				}
@@ -135,7 +135,7 @@ func createData(db *Database, tables []string, i, n int) {
 	for i < n {
 		ut := db.NewUpdateTran()
 		nt := 1 + rand.Intn(tablesPerTran)
-		for j := 0; j < nt && i < n; j++ {
+		for range min(nt, n) {
 			table := tables[rand.Intn(ntables)]
 			nr := 1 + rand.Intn(rowsPerTable)
 			for k := 0; k <= nr && i < n; k++ {

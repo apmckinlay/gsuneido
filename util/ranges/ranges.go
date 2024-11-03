@@ -305,7 +305,7 @@ func (rs *Ranges) String() string {
 		return rs.leaf.String()
 	}
 	var b strings.Builder
-	for i := 0; i < rs.tree.size; i++ {
+	for i := range rs.tree.size {
 		b.WriteString(rs.tree.slots[i].val + " =>\n")
 		b.WriteString(rs.tree.slots[i].leaf.String())
 		b.WriteString("\n")
@@ -315,7 +315,7 @@ func (rs *Ranges) String() string {
 
 func (leaf *leafNode) String() string {
 	var b strings.Builder
-	for i := 0; i < leaf.size; i++ {
+	for i := range leaf.size {
 		ls := leaf.slots[i]
 		b.WriteString(ls.from + "->" + ls.to + " ")
 	}
@@ -334,7 +334,7 @@ func (ls *leafSlot) String() string {
 // 		return rs.leaf.size
 // 	}
 // 	n := 0
-// 	for i := 0; i < rs.tree.size; i++ {
+// 	for i := range rs.tree.size {
 // 		n += rs.tree.slots[i].leaf.size
 // 	}
 // 	return n

@@ -12,7 +12,7 @@ func EscapeArg(s string) string {
 	}
 	n := len(s)
 	hasSpace := false
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		switch s[i] {
 		case '"', '\\':
 			n++
@@ -34,7 +34,7 @@ func EscapeArg(s string) string {
 		j++
 	}
 	slashes := 0
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		switch s[i] {
 		default:
 			slashes = 0

@@ -63,7 +63,7 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 	chunks := make([][]byte, nchunks)
 
 	last := nchunks - 1
-	for i := 0; i < nchunks; i++ {
+	for i := range nchunks {
 		if i < last {
 			impl.mode = Read // map full chunks as READ
 		} else {
@@ -113,7 +113,7 @@ func (ms *mmapStor) Flush(chunk []byte) {
 
 func (ms *mmapStor) Close(size int64, unmap bool) {
 	// wait up to 10 milliseconds for flush to finish
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		if !ms.flushing.Load() {
 			break
 		}

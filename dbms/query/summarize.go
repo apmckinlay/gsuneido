@@ -70,7 +70,7 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 	}
 	check(by)
 	check(ons)
-	for i := 0; i < len(cols); i++ {
+	for i := range len(cols) {
 		if cols[i] == "" {
 			cols[i] = defaultColName(ops[i], ons[i])
 		}

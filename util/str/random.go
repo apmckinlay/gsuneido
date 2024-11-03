@@ -23,7 +23,7 @@ func randomOf(min, max int, chars string, randIntn func(int) int) string {
 	n := min + randIntn(1+max-min)
 	var b strings.Builder
 	b.Grow(n)
-	for i := 0; i < n; i++ {
+	for range n {
 		b.WriteByte(chars[randIntn(len(chars))])
 	}
 	return b.String()
@@ -43,7 +43,7 @@ func UniqueRandomOf(min, max int, chars string, seed ...int64) func() string {
 	}
 	return func() string {
 		var key string
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			key = randomOf(min, max, chars, randIntN)
 			if _, ok := prev[key]; !ok {
 				prev[key] = mark

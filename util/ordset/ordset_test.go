@@ -23,12 +23,12 @@ func TestRandom(t *testing.T) {
 	}
 	const n = nodeSize * 75
 	data := make([]string, n)
-	for g := 0; g < nGenerate; g++ {
+	for range nGenerate {
 		randKey := str.UniqueRandom(3, 10)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			data[i] = randKey()
 		}
-		for si := 0; si < nShuffle; si++ {
+		for range nShuffle {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
 			var x Set
@@ -44,7 +44,7 @@ func TestUnevenSplit(t *testing.T) {
 	const n = nodeSize * 87 // won't fit without uneven splits
 	data := make([]string, n)
 	randKey := str.UniqueRandom(3, 10)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		data[i] = randKey()
 	}
 	sort.Strings(data)
@@ -66,7 +66,7 @@ func TestAnyInRange(t *testing.T) {
 	data := make([]string, n)
 	randKey := str.UniqueRandom(3, 10)
 	var x Set
-	for i := 0; i < n; i++ {
+	for i := range n {
 		data[i] = randKey()
 		x.Insert(data[i])
 	}
@@ -81,7 +81,7 @@ func TestAnyInRange(t *testing.T) {
 	yes(0)
 	yes(n - 1)
 	const ntimes = 1000
-	for i := 0; i < ntimes; i++ {
+	for range ntimes {
 		d := rand.Intn(n - 1)
 		assert.False(x.AnyInRange(bigger(data[d]), smaller(data[d+1])))
 		yes(rand.Intn(n))
@@ -97,7 +97,7 @@ func TestOverflow(t *testing.T) {
 	}
 	var x Set
 	randKey := str.UniqueRandom(3, 10)
-	for i := 0; i < 20000; i++ {
+	for i := range 20000 {
 		if !x.Insert(randKey()) {
 			fmt.Println(i)
 			break
@@ -110,12 +110,12 @@ func TestDups(t *testing.T) {
 		var x Set
 		seed := time.Now().UnixNano()
 		randKey := str.UniqueRandom(3, 10, seed)
-		for i := 0; i < n; i++ {
+		for range n {
 			assert.That(x.Insert(randKey()))
 		}
 		assert.This(x.count()).Is(n)
 		randKey = str.UniqueRandom(3, 10, seed)
-		for i := 0; i < n; i++ {
+		for range n {
 			assert.That(x.Insert(randKey()))
 		}
 		assert.This(x.count()).Is(n)
@@ -127,7 +127,7 @@ func (set *Set) count() int {
 		return set.leaf.size
 	}
 	n := 0
-	for i := 0; i < set.tree.size; i++ {
+	for i := range set.tree.size {
 		n += set.tree.slots[i].leaf.size
 	}
 	return n

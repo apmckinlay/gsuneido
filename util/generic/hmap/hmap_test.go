@@ -80,7 +80,7 @@ func TestHmap(t *testing.T) {
 	del(32) // beginning of chain
 
 	// trigger grow
-	for i := 0; i < 10; i++ { // long chain
+	for i := range 10 { // long chain
 		put(i, "x")
 	}
 	for i := 15; i < 100; i += 10 {
@@ -94,7 +94,7 @@ func check(t *testing.T, data map[int]string, hmap *int2string) {
 	//fmt.Println(data)
 	//fmt.Println(hmap)
 	assert(hmap.Size()).Msg("size").Is(len(data))
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		s, ok := data[i]
 		if ok {
 			assert(hmap.Get(intkey(i))).Is(s)
@@ -106,7 +106,7 @@ func check(t *testing.T, data map[int]string, hmap *int2string) {
 
 func TestHmap_full(*testing.T) {
 	h := int2string{}
-	for i := 0; i < 80; i++ {
+	for i := range 80 {
 		h.Put(intkey(i), "")
 	}
 }
@@ -119,18 +119,18 @@ func TestHmap_random(t *testing.T) {
 	hm := int2int{}
 	assert(hm.Size()).Is(0)
 	nums := map[int]int{}
-	for i := 0; i < N; i++ {
+	for i := range N {
 		n := r.Intn(N)
 		hm.Put(intkey(n), i)
 		nums[n] = i
 	}
 	r.Seed(seed)
-	for i := 0; i < N; i++ {
+	for range N {
 		n := r.Intn(N)
 		assert(hm.Get(intkey(n))).Is(nums[n])
 	}
 	r.Seed(seed)
-	for i := 0; i < N; i++ {
+	for range N {
 		n := r.Intn(N)
 		v := hm.Del(intkey(n))
 		if nums[n] == -1 {
@@ -186,7 +186,7 @@ func TestHmap_Iter(t *testing.T) {
 		}
 		assert(len(nums)).Is(n)
 		sort.Ints(nums)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			assert(nums[i]).Is(i + 1)
 		}
 	}
@@ -228,7 +228,7 @@ type tkType = Hmap[*testKey, int, Meth[*testKey]]
 func TestHmapSameHash(t *testing.T) {
 	const N = 100000
 	hm := &tkType{}
-	for i := 0; i < N; i++ {
+	for i := range N {
 		hm.Put(&testKey{i}, i)
 	}
 }
@@ -248,18 +248,18 @@ func FuzzHmap(f *testing.F) {
 
 func BenchmarkHmap_Get(b *testing.B) {
 	hm := int2int{}
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		hm.Put(intkey(i), i)
 	}
-	for n := 0; n < b.N; n++ {
+	for n := range b.N {
 		hm.Get(intkey(n % 100))
 	}
 }
 
 func BenchmarkHmap_Put(b *testing.B) {
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		hm := int2int{}
-		for i := 0; i < 100; i++ {
+		for i := range 100 {
 			hm.Put(mix(i), i)
 		}
 	}
@@ -280,7 +280,7 @@ func BenchmarkHmap_chainIter(b *testing.B) {
 	h.grow()
 	k := intkey(123)
 	var iter chainIter[intkey, int, Meth[intkey]]
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		iter = h.iterFromKey(k)
 	}
 	iter.next()

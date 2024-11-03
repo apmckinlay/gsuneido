@@ -38,7 +38,7 @@ func main() {
 	at := size - int64(bytes)
 	f.Seek(at, 0)
 	buf := make([]byte, 1)
-	for j := 0; j < bytes; j++ {
+	for range bytes {
 		buf[0] = byte(rand.IntN(256))
 		f.Write(buf)
 	}

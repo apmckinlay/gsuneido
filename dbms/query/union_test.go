@@ -70,7 +70,7 @@ func TestUnion_MergeSwitchDir(t *testing.T) {
 
 	// random walk
 	cur := 0 // rewound
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		dir := Next
 		if rand.Int()%2 == 0 {
 			dir = Prev

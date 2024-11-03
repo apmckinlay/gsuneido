@@ -42,7 +42,7 @@ func TestIterator(*testing.T) {
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
 	randKey := str.UniqueRandomOf(4, 6, "abcde")
-	for i := 0; i < n; i++ {
+	for i := range n {
 		data[i] = randKey()
 	}
 	sort.Strings(data[:])
@@ -60,7 +60,7 @@ func TestIterator(*testing.T) {
 	}
 
 	// test Iterator Next
-	for i := 0; i < n; i++ {
+	for i := range n {
 		it.Next()
 		test(i)
 	}
@@ -128,7 +128,7 @@ func TestIterator(*testing.T) {
 
 	end := n / 2
 	it.Range(Range{End: data[end]})
-	for i := 0; i < end; i++ {
+	for i := range end {
 		it.Next()
 		test(i)
 	}

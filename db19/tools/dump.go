@@ -264,7 +264,7 @@ func newIndexCheckers() *indexCheckers {
 		stop: make(chan void)}
 	nw := options.Nworkers
 	ics.wg.Add(nw)
-	for i := 0; i < nw; i++ {
+	for range nw {
 		go ics.worker()
 	}
 	return &ics

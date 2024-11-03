@@ -155,7 +155,7 @@ func funcName(f any) string {
 func params(s string) ParamSpec {
 	s = strings.ReplaceAll(s, "nil", "'nil'")
 	fn := compile.Constant("function " + s + " {}").(*SuFunc)
-	for i := 0; i < int(fn.ParamSpec.Ndefaults); i++ {
+	for i := range int(fn.ParamSpec.Ndefaults) {
 		if fn.Values[i].Equal(SuStr("nil")) {
 			fn.Values[i] = nil
 		}

@@ -62,7 +62,7 @@ func TestConcurrentSuObjectIter(t *testing.T) {
 	}
 	ob := SuObjectOf(One, True)
 	ob.SetConcurrent()
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		go func() {
 			time.Sleep(20 * time.Millisecond)
 			iter := ob.Iter2(true, true)

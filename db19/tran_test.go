@@ -36,11 +36,11 @@ func TestConcurrent(t *testing.T) {
 		ntrans = 100
 	}
 	var wg sync.WaitGroup
-	for i := 0; i < nclients; i++ {
+	for range nclients {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := 0; j < ntrans; j++ {
+			for range ntrans {
 				ut := output1(db)
 				ut.Commit()
 				// time.Sleep(time.Duration(rand.Intn(900)) * time.Microsecond)
@@ -69,7 +69,7 @@ func TestTran(t *testing.T) {
 	db.CheckerSync()
 
 	const nout = 4000
-	for i := 0; i < nout; i++ {
+	for i := range nout {
 		ut := output1(db)
 		db.CommitMerge(ut) // commit synchronously
 		if i%100 == 50 {
@@ -148,7 +148,7 @@ func TestTooMany(*testing.T) {
 	db, err := CreateDb(store)
 	ck(err)
 	db.CheckerSync()
-	for i := 0; i < MaxTrans; i++ {
+	for range MaxTrans {
 		assert.That(nil != db.NewUpdateTran())
 	}
 	assert.That(nil == db.NewUpdateTran())

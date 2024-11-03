@@ -12,7 +12,7 @@ func Find1of(s, chars string) int {
 		return -1
 	}
 	b := makeBits(chars)
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		if b.contains(s[i]) {
 			return i
 		}

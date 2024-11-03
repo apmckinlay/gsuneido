@@ -252,7 +252,7 @@ func (h *Hmap[K, V, H]) grow() {
 	h.capShift--
 	h.size = 0
 	for _, b := range oldblocks {
-		for ib := 0; ib < blockSize; ib++ {
+		for ib := range blockSize {
 			if b.meta[ib] != metaEmpty {
 				h.Put(b.key[ib], b.val[ib])
 			}

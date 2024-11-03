@@ -15,8 +15,8 @@ func TestFind1of(t *testing.T) {
 		first := expected[0]
 		last := first
 		if len(expected) > 1 {
-            last = expected[1]
-        }
+			last = expected[1]
+		}
 		assert.T(t).This(Find1of(s, chars)).Is(first)
 		assert.T(t).This(FindLast1of(s, chars)).Is(last)
 	}
@@ -69,7 +69,7 @@ func TestMakeBits(t *testing.T) {
 func (b bits) String() string {
 	var s string
 	for i := range b {
-		for j := 0; j < 64; j++ {
+		for j := range 64 {
 			if b[i]&(1<<uint(j)) != 0 {
 				s += string(rune(i*64 + j))
 			}
@@ -77,7 +77,7 @@ func (b bits) String() string {
 	}
 	t := "!"
 	for i := range b {
-		for j := 0; j < 64; j++ {
+		for j := range 64 {
 			if b[i]&(1<<uint(j)) == 0 {
 				t += string(rune(i*64 + j))
 			}

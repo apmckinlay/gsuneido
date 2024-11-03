@@ -106,7 +106,7 @@ func TestRandom(t *testing.T) {
 		n = 10000
 	}
 	fields := []int{0, 1, 2}
-	for i := 0; i < n; i++ {
+	for range n {
 		x := gen()
 		y := gen()
 		yenc := key(y, fields, nil)
@@ -123,7 +123,7 @@ func compare(r1, r2 Record, flds, flds2 []int) int {
 
 func gen() Record {
 	var b RecordBuilder
-	for i := 0; i < m; i++ {
+	for range m {
 		x := make([]byte, rand.Intn(6)+1)
 		for j := range x {
 			x[j] = byte(rand.Intn(4)) // 25% zeros
@@ -134,7 +134,7 @@ func gen() Record {
 }
 
 func lt(x Record, y Record) bool {
-	for i := 0; i < x.Len() && i < y.Len(); i++ {
+	for i := range min(x.Len(), y.Len()) {
 		if cmp := strings.Compare(x.GetRaw(i), y.GetRaw(i)); cmp != 0 {
 			return cmp < 0
 		}

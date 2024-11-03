@@ -23,8 +23,8 @@ func TestDeepEqual(t *testing.T) {
 			t.Error("failed", xkind, ykind, conc)
 		}
 	}
-	for xk := 0; xk < nkinds; xk++ {
-		for yk := 0; yk < nkinds; yk++ {
+	for xk := range nkinds {
+		for yk := range nkinds {
 			for c := 0; c <= xyconc; c++ {
 				test(xk, yk, c)
 			}

@@ -11,25 +11,25 @@ import (
 )
 
 func TestIsLower(*testing.T) {
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		assert.This(IsLower(byte(i))).Is('a' <= i && i <= 'z')
 	}
 }
 
 func TestIsUpper(*testing.T) {
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		assert.This(IsUpper(byte(i))).Is('A' <= i && i <= 'Z')
 	}
 }
 
 func TestToLower(*testing.T) {
-	for i := 0; i < 128; i++ {
+	for i := range 128 {
 		assert.This(ToLower(byte(i))).Is(byte(unicode.ToLower(rune(i))))
 	}
 }
 
 func TestToUpper(*testing.T) {
-	for i := 0; i < 128; i++ {
+	for i := range 128 {
 		assert.This(ToUpper(byte(i))).Is(byte(unicode.ToUpper(rune(i))))
 	}
 }

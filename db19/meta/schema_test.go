@@ -20,7 +20,7 @@ func TestSchema(t *testing.T) {
 	const n = 900
 	data := make([]string, n)
 	randStr := str.UniqueRandom(4, 4)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		data[i] = randStr()
 		tbl.Put(&Schema{Schema: schema.Schema{
 			Table:   data[i],

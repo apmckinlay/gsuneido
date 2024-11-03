@@ -813,9 +813,9 @@ func (lj *LeftJoin) Simple(th *Thread) []Row {
 	rows1 := lj.source1.Simple(th)
 	rows2 := lj.source2.Simple(th)
 	rows := make([]Row, 0, len(rows1))
-	for i1 := 0; i1 < len(rows1); i1++ {
+	for i1 := range len(rows1) {
 		row1out := false
-		for i2 := 0; i2 < len(rows2); i2++ {
+		for i2 := range len(rows2) {
 			if lj.equalBy(th, lj.st, rows1[i1], rows2[i2]) {
 				rows = append(rows, JoinRows(rows1[i1], rows2[i2]))
 				row1out = true

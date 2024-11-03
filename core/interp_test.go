@@ -54,7 +54,7 @@ func TestCatchMatch(t *testing.T) {
 
 func BenchmarkJit(b *testing.B) {
 	th := &Thread{}
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		th.Reset()
 		result := jitfn(th)
 		if !result.Equal(SuInt(4950)) {
@@ -80,7 +80,7 @@ func jitfn(th *Thread) Value {
 }
 
 func BenchmarkTranspile(b *testing.B) {
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		result := transpilefn()
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result")
@@ -102,7 +102,7 @@ func transpilefn() Value {
 }
 
 func BenchmarkSpecialize(b *testing.B) {
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		result := specialized()
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result")
@@ -128,7 +128,7 @@ var r Value
 func BenchmarkLoadStore(b *testing.B) {
 	x := One
 	y := One
-	for n := 0; n < b.N; n++ {
+	for n := range b.N {
 		switch n % 11 {
 		case 0:
 			r = OpAdd(x, y)
@@ -160,7 +160,7 @@ func BenchmarkLoadStore2(b *testing.B) {
 	x := One
 	y := One
 	var th *Thread
-	for n := 0; n < b.N; n++ {
+	for n := range b.N {
 		op := []func(x, y Value) Value{
 			OpAdd, OpSub, th.Cat, OpMul, OpDiv, OpMod,
 			OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n%11]
@@ -171,7 +171,7 @@ func BenchmarkLoadStore2(b *testing.B) {
 func BenchmarkLoadStore3(b *testing.B) {
 	x := One
 	y := MinusOne
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		r = OpSub(x, y)
 	}
 }

@@ -73,7 +73,7 @@ func TestInfo2(t *testing.T) {
 func mkdata(tbl InfoHamt, n int) []string {
 	data := make([]string, n)
 	randStr := str.UniqueRandom(4, 4)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		data[i] = randStr()
 		tbl.Put(&Info{Table: data[i], Nrows: i,
 			Indexes: []*index.Overlay{index.OverlayStub()}})

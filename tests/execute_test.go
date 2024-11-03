@@ -38,9 +38,9 @@ func BenchmarkForInSeq(b *testing.B) {
 		    {}
 	}`)
 	var th Thread
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		th.Call(f)
-    }
+	}
 }
 
 func BenchmarkForInCounted(b *testing.B) {
@@ -49,9 +49,9 @@ func BenchmarkForInCounted(b *testing.B) {
 		    {}
 	}`)
 	var th Thread
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		th.Call(f)
-    }
+	}
 }
 
 func BenchmarkForClassic(b *testing.B) {
@@ -60,9 +60,9 @@ func BenchmarkForClassic(b *testing.B) {
 		    {}
 	}`)
 	var th Thread
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		th.Call(f)
-    }
+	}
 }
 
 func TestNaming(t *testing.T) {
@@ -101,7 +101,7 @@ func BenchmarkCat(b *testing.B) {
 				s $= "abc"
 			}`).(*SuFunc)
 	var th Thread
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		th.Call(f)
 	}
 }
@@ -116,7 +116,7 @@ func BenchmarkJoin(b *testing.B) {
 			ob.Join()
 			}`).(*SuFunc)
 	var th Thread
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		th.Call(f)
 	}
 }
@@ -129,7 +129,7 @@ func BenchmarkBase(b *testing.B) {
 				;
 			}`).(*SuFunc)
 	var th Thread
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		th.Call(f)
 	}
 }
@@ -292,7 +292,7 @@ func strToList(s string) *SuObject {
 
 func ptCompare(args []string, _ []bool) bool {
 	n := len(args)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		x := constant(args[i])
 		if x.Compare(x) != 0 {
 			return false
@@ -310,7 +310,7 @@ func ptCompare(args []string, _ []bool) bool {
 
 func ptComparePacked(args []string, _ []bool) bool {
 	n := len(args)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		x := constant(args[i])
 		xp := Pack(x.(Packable))
 		x2 := Unpack(xp)
@@ -352,7 +352,7 @@ func BenchmarkInterp(b *testing.B) {
 	}`
 	fn := compile.Constant(src).(*SuFunc)
 	var th Thread
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		result := th.Call(fn)
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result " + result.String())
@@ -365,7 +365,7 @@ func BenchmarkCall(b *testing.B) {
 	as := &ArgSpec1
 	th := &Thread{}
 	th.Push(SuInt(123))
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		f.Call(th, nil, as)
 	}
 }

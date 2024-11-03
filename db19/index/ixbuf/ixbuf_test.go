@@ -20,7 +20,7 @@ func TestInsert(t *testing.T) {
 	r := str.UniqueRandom(4, 8)
 	const nkeys = 16000
 	ib := &ixbuf{}
-	for i := 0; i < nkeys; i++ {
+	for i := range nkeys {
 		ib.Insert(r(), uint64(i))
 	}
 	assert.T(t).This(ib.size).Is(nkeys)
@@ -36,9 +36,9 @@ func TestBig(t *testing.T) {
 		n = 64
 	}
 	const m = 1000
-	for j := 0; j < n; j++ {
+	for range n {
 		ib := &ixbuf{}
-		for i := 0; i < m; i++ {
+		for i := range m {
 			ib.Insert(r(), uint64(i))
 		}
 		big = Merge(big, ib)
@@ -52,13 +52,13 @@ func BenchmarkInsert(b *testing.B) {
 	const nkeys = 100
 	keys := make([]string, nkeys)
 	r := str.UniqueRandom(4, 32)
-	for i := 0; i < nkeys; i++ {
+	for i := range nkeys {
 		keys[i] = r()
 	}
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		Ib = &ixbuf{}
-		for j := 0; j < nkeys; j++ {
+		for j := range nkeys {
 			Ib.Insert(keys[j], uint64(j))
 		}
 	}
@@ -86,7 +86,7 @@ func TestMerge(t *testing.T) {
 	ib.check()
 
 	c := &ixbuf{}
-	for i := 0; i < 25; i++ {
+	for i := range 25 {
 		c.Insert(strconv.Itoa(i), uint64(i))
 	}
 	ib = Merge(b, c, a)
@@ -105,7 +105,7 @@ func TestMerge(t *testing.T) {
 	r := str.UniqueRandom(4, 8)
 	gen := func(nkeys int) *ixbuf {
 		t := &ixbuf{}
-		for i := 0; i < nkeys; i++ {
+		for range nkeys {
 			t.Insert(r(), 1)
 		}
 		// t.print()
@@ -148,10 +148,10 @@ func TestMergeRandom(*testing.T) {
 	ib := &ixbuf{}
 	var s slot
 	r := str.UniqueRandom(4, 8)
-	for i := 0; i < n; i++ {
+	for range n {
 		nacts := rand.Intn(11)
 		x := &ixbuf{}
-		for j := 0; j < nacts; j++ {
+		for range nacts {
 			k := rand.Intn(4)
 			switch {
 			case k == 0 || k == 1 || len(data) == 0: // add
@@ -199,7 +199,7 @@ func TestMergeUneven(*testing.T) {
 	r := str.UniqueRandom(4, 8)
 	gen := func(nkeys int) *ixbuf {
 		ib := &ixbuf{}
-		for i := 0; i < nkeys; i++ {
+		for range nkeys {
 			ib.Insert(r(), 1)
 		}
 		return ib
@@ -236,7 +236,7 @@ func BenchmarkMerge(b *testing.B) {
 	r := str.UniqueRandom(4, 8)
 	gen := func(nkeys int) *ixbuf {
 		ib := &ixbuf{}
-		for i := 0; i < nkeys; i++ {
+		for range nkeys {
 			ib.Insert(r(), 1)
 		}
 		return ib
@@ -244,7 +244,7 @@ func BenchmarkMerge(b *testing.B) {
 	x := gen(1000)
 	y := gen(1)
 	b.Run("bench", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			Ib = Merge(x, y)
 		}
 	})
@@ -261,11 +261,11 @@ func TestDelete(t *testing.T) {
 	const nkeys = 1000
 	r := str.UniqueRandom(4, 8, 12345)
 	ib := &ixbuf{}
-	for i := 0; i < nkeys; i++ {
+	for range nkeys {
 		ib.Insert(r(), 1)
 	}
 	r = str.UniqueRandom(4, 8, 12345)
-	for i := 0; i < nkeys; i++ {
+	for range nkeys {
 		ib.Delete(r(), 1)
 		ib.check()
 	}
@@ -286,7 +286,7 @@ func TestLookup(*testing.T) {
 		assert.This(ib.Lookup(k + " ")).Is(0)
 		assert.This(ib.Lookup(k + "~")).Is(0)
 	}
-	for i := 0; i < nkeys; i++ {
+	for range nkeys {
 		assert.This(ib.Lookup(r())).Is(0) // nonexistent
 	}
 }
@@ -336,11 +336,11 @@ func TestIterator(t *testing.T) {
 	testNext(eof)
 	testPrev(eof)
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		ib.Insert(strconv.Itoa(i), uint64(i))
 	}
 	it.Rewind()
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		testNext(i)
 	}
 	testNext(eof)

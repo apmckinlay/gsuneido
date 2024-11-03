@@ -61,7 +61,7 @@ func LoadDatabase(from, dbfile, privateKey, passphrase string) (
 	// start the workers that build the indexes
 	var wg sync.WaitGroup
 	channel := make(chan *loadJob)
-	for i := 0; i < options.Nworkers; i++ {
+	for range options.Nworkers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

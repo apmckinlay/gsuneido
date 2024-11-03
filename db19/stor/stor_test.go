@@ -35,7 +35,7 @@ func TestData(t *testing.T) {
 	offset, buf := hs.Alloc(12)
 	assert.T(t).This(len(buf)).Is(12)             // Alloc gives correct length
 	assert.T(t).This(len(hs.Data(offset))).Is(52) // Data gives to end of chunk
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		buf[i] = byte(i)
 	}
 }
@@ -51,21 +51,21 @@ func TestMmapWrite(t *testing.T) {
 	ms, _ := MmapStor("stor_test.tmp", Create)
 	const N = 100
 	_, buf := ms.Alloc(N)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		buf[i] = byte(i)
 	}
 	ms.Close(true)
 
 	ms, _ = MmapStor("stor_test.tmp", Update)
 	data := ms.Data(0)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		assert.T(t).This(data[i]).Is(byte(i))
 	}
 	ms.Close(true)
 
 	ms, _ = MmapStor("stor_test.tmp", Read)
 	data = ms.Data(0)
-	for i := 0; i < N; i++ {
+	for i := range N {
 		assert.T(t).This(data[i]).Is(byte(i))
 	}
 	ms.Close(true)
@@ -81,7 +81,7 @@ func TestLastOffset(t *testing.T) {
 
 	const N = 10
 	const magic = "helloworld"
-	for i := 0; i < N; i++ {
+	for i := range N {
 		off, buf := ms.Alloc(10)
 		assert(off).Is(i * 100)
 		copy(buf, magic)
@@ -111,11 +111,11 @@ func TestStress(*testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
-	for i := 0; i < nThreads; i++ {
+	for range nThreads {
 		wg.Add(1)
 		go func() {
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
-			for i := 0; i < nIterations; i++ {
+			for range nIterations {
 				n := r.Intn(allocSize) + 1
 				s.Alloc(n)
 			}
@@ -173,7 +173,7 @@ func BenchmarkFlush(b *testing.B) {
 		os.Remove("stor.tmp")
 	}()
 	var flushing atomic.Bool
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, buf := s.Alloc(1)
 		slc.Fill(buf, 123)
 		if flushing.CompareAndSwap(false, true) {

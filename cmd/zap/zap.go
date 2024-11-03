@@ -42,12 +42,12 @@ func main() {
 	stat, _ := f.Stat()
 	size := stat.Size()
 	fmt.Println("size", size)
-	for i := 0; i < nspots; i++ {
+	for range nspots {
 		// at := int64(rand.Int63n(size - int64(bytesPerSpot)))
 		at := size - rand.Int64N(1_000_000) - int64(bytesPerSpot) // near end
 		fmt.Println("zapped", file, "-", bytesPerSpot, "bytes at", at)
 		f.Seek(at, 0)
-		for j := 0; j < bytesPerSpot; j++ {
+		for range bytesPerSpot {
 			f.WriteString(string(rune(rand.IntN(256))))
 		}
 	}

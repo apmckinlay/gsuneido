@@ -62,7 +62,7 @@ func testIterEmpty(it iterator.T) {
 
 func testIterRange(it iterator.T) {
 	test := func(fn func(), expected, delta int) {
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			fn()
 			_, off := it.Cur()
 			assert.This(off).Is(expected)
@@ -81,7 +81,7 @@ func testIterRange(it iterator.T) {
 	it.Rewind()
 	test(it.Prev, 9999, -1)
 
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		org := 1000 + rand.Intn(4499)
 		end := 9999 - rand.Intn(4499)
 		it.Range(Range{Org: itoa(org), End: itoa(end)})

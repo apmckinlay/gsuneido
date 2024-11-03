@@ -55,7 +55,7 @@ func OleLoadPicture(a, b, c, d, e Value) Value {
 		Data3: int16(getInt(d, "Data3")),
 	}
 	data4 := d.Get(nil, SuStr("Data4"))
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		guid.Data4[i] = byte(ToInt(data4.Get(nil, SuInt(i))))
 	}
 	rtn := goc.Syscall5(oleLoadPicture,

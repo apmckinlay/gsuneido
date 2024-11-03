@@ -101,7 +101,7 @@ func Unpack[T bytes](buf T) *Index {
 	}
 	n, buf = unpackUint32(buf)
 	idx.terms = make(map[string]*term, n)
-	for i := 0; i < n; i++ {
+	for range n {
 		var t term
 		t.term, buf = unpackString(buf)
 		t.ndocsWithTerm, buf = unpackUint32(buf)

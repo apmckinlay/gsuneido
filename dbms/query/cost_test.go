@@ -43,7 +43,7 @@ func BenchmarkTempindex(b *testing.B) {
 			q, _, _ = Setup(q, ReadMode, tran)
 			ti := q.(*Sort).source.(*TempIndex)
 			b.Run(tbl, func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					q.Rewind()
 					ti.iter = nil // force rebuilding index
 					ti.source.Rewind()
@@ -78,7 +78,7 @@ func BenchmarkLookup(b *testing.B) {
 			q, _, _ = Setup(q, ReadMode, tran)
 			b.Run(tbl, func(b *testing.B) {
 				successful := 0
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					r := rand.Intn(nrecs * 2)
 					vals := []string{Pack(IntVal(r))}
 					if q.Lookup(th, cols, vals) != nil {
@@ -108,7 +108,7 @@ func BenchmarkCosting(b *testing.B) {
 			q := ParseQuery(tbl, tran, nil)
 			q, _, _ = Setup(q, ReadMode, tran)
 			b.Run(tbl, func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
+				for range b.N {
 					q.Rewind()
 					n := 0
 					for {
@@ -166,12 +166,12 @@ func mkschema(nrecs, rsize int) string {
 
 func createData(db *db19.Database, nrecs, rsize int) {
 	tbl := tblname(nrecs, rsize)
-	for i := 0; i < nrecs; i++ {
+	for i := range nrecs {
 		t := db.NewUpdateTran()
 		var rb RecordBuilder
 		rb.Add(IntVal(i * 2))
 		rb.Add(IntVal(rand.Intn(nrecs)))
-		for j := 0; j < 10; j++ {
+		for range 10 {
 			rb.Add(SuStr(strings.Repeat("x", rsize/10)))
 		}
 		t.Output(nil, tbl, rb.Build())

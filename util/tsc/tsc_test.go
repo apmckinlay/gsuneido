@@ -21,7 +21,7 @@ func TestRead(*testing.T) {
 }
 
 func BenchmarkRead(b *testing.B) {
-    for i := 0; i < b.N; i++ {
-        Read()
-    }
+	for range b.N {
+		Read()
+	}
 }

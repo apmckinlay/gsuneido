@@ -19,7 +19,7 @@ func TestMeta(t *testing.T) {
 	const n = 1000
 	data := make([]string, n)
 	randStr := str.UniqueRandom(4, 4)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		data[i] = randStr()
 		tbl.Put(&Info{
 			Table: data[i],
@@ -28,9 +28,9 @@ func TestMeta(t *testing.T) {
 	tbl = tbl.Freeze()
 	meta := &Meta{info: hamt.Chain[string, *Info]{Hamt: tbl}}
 
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		m := meta.Mutable()
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			m.GetRoInfo(data[rand.Intn(100)])
 			m.GetRwInfo(data[rand.Intn(100)])
 		}
@@ -58,7 +58,7 @@ func TestChunkingSimulation(t *testing.T) {
 	ages := []int{} // parallel with chunks
 	updates := rand.Perm(n)
 	// run simulation
-	for step := 0; step < n; step++ {
+	for step := range n {
 		data[updates[step]] = clock
 		// fmt.Println("--- update", updates[step])
 		// number of previous chunks to merge with
@@ -89,7 +89,7 @@ func TestChunkingSimulation(t *testing.T) {
 	}
 	assert.T(t).This(len(chunks)).Is(1)
 	assert.T(t).This(ages[0]).Is(0)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		assert.That(chunks[0][i] == i)
 	}
 }

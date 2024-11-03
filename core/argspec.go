@@ -103,7 +103,7 @@ func (as *ArgSpec) String() string {
 			buf.WriteString(strconv.Itoa(int(as.Each - 1)))
 		}
 	} else {
-		for i := 0; i < as.Unnamed(); i++ {
+		for range as.Unnamed() {
 			buf.WriteString(sep)
 			buf.WriteString("?")
 			sep = ", "

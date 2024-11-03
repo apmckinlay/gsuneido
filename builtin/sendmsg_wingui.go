@@ -320,7 +320,7 @@ func SendMessageSBPART(a, b, c, d Value) Value {
 	var ob Container
 	if parts := d.Get(nil, SuStr("parts")); parts != nil {
 		ob = ToContainer(parts)
-		for i := 0; i < np && i < ob.ListSize(); i++ {
+		for i := range min(np, ob.ListSize()) {
 			*(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i))) =
 				int32(ToInt(ob.ListGet(i)))
 		}
@@ -333,7 +333,7 @@ func SendMessageSBPART(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(p))
-	for i := 0; i < np; i++ {
+	for i := range np {
 		x := *(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i)))
 		ob.Put(nil, SuInt(i), IntVal(int(x)))
 	}
@@ -668,7 +668,7 @@ func SendMessageListColumnOrder(a, b, c, d Value) Value {
 		colsob = &SuObject{}
 		d.Put(nil, SuStr("order"), colsob)
 	}
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if x := colsob.Get(nil, IntVal(i)); x != nil {
 			*(*int32)(unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)) =
 				int32(ToInt(x))
@@ -679,7 +679,7 @@ func SendMessageListColumnOrder(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(p))
-	for i := 0; i < n; i++ {
+	for i := range n {
 		colsob.Put(nil, IntVal(i), IntVal(int(*(*int32)(
 			unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)))))
 	}

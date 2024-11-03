@@ -34,9 +34,9 @@ func TestBlocks(t *testing.T) {
 
 func BenchmarkBlocksCopy(b *testing.B) {
 	buf := make([]byte, 50)
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		w := write1{buf}
-		for j := 0; j < 10; j++ {
+		for range 10 {
 			w.put5copy(i)
 		}
 	}
@@ -58,9 +58,9 @@ func (w *write1) put5copy(n int) {
 
 func BenchmarkBlocksCopy2(b *testing.B) {
 	buf := make([]byte, 50)
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		w := write2{buf: buf}
-		for j := 0; j < 10; j++ {
+		for range 10 {
 			w.put5copy(i)
 		}
 	}
@@ -83,9 +83,9 @@ func (w *write2) put5copy(n int) {
 
 func BenchmarkBlocksAppend(b *testing.B) {
 	buf := make([]byte, 50)
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		w := write1{buf[:0]}
-		for j := 0; j < 10; j++ {
+		for range 10 {
 			w.put5append(i)
 		}
 	}

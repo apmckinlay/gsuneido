@@ -250,7 +250,7 @@ func (ms *muxSession) getHdr() *Header {
 	n := ms.GetInt()
 	fields := make([]string, 0, n)
 	columns := make([]string, 0, n)
-	for i := 0; i < n; i++ {
+	for range n {
 		s := ms.GetStr()
 		if ascii.IsUpper(s[0]) {
 			s = str.UnCapitalize(s)
@@ -272,7 +272,7 @@ func (ms *muxSession) getRow(off int) Row {
 
 type muxTran struct {
 	*muxSession
-	tn       int
+	tn int
 }
 
 var _ ITran = (*muxTran)(nil)
@@ -345,9 +345,9 @@ func (tc *muxTran) Num() int {
 
 func (tc *muxTran) String() string {
 	pre := "rt"
-	if tc.tn % 2 == 1 {
+	if tc.tn%2 == 1 {
 		pre = "ut"
-    }
+	}
 	return pre + strconv.Itoa(tc.tn)
 }
 

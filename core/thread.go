@@ -274,7 +274,7 @@ func PrintStack(cs *SuObject) {
 	if cs == nil {
 		return
 	}
-	for i := 0; i < cs.ListSize(); i++ {
+	for i := range cs.ListSize() {
 		frame := cs.ListGet(i)
 		fn := frame.Get(nil, SuStr("fn"))
 		fmt.Fprintln(os.Stderr, fn)

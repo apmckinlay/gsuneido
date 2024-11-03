@@ -18,37 +18,37 @@ var T tok.Token
 var S string
 
 func BenchmarkKeyword(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		T, S = keyword(keywords[i%len(keywords)].kw)
 	}
 }
 
 func BenchmarkKeywordLinear(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		T, S = keywordLinear(keywords[i%len(keywords)].kw)
 	}
 }
 
 func BenchmarkQueryKeyword(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		T, S = queryKeyword(qrykwds[i%len(qrykwds)])
 	}
 }
 
 func BenchmarkQueryKeywordMap(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		T, S = queryKeywordMap(qrykwds[i%len(qrykwds)])
 	}
 }
 
 func BenchmarkKeySwitch(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		T, S = keyword(keywords[i%len(keywords)].kw)
 	}
 }
 
 func BenchmarkPerfect(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		T, S = perfect(keywords[i%len(keywords)].kw)
 	}
 }
@@ -284,7 +284,7 @@ func keywordHmap(s string) (tok.Token, string) {
 }
 
 func BenchmarkKeywordHmap(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		T, S = keywordHmap(keywords[i%len(keywords)].kw)
 		assert.That(S != "")
 	}
@@ -376,7 +376,7 @@ func keywordLinear2(s string) (tok.Token, string) {
 }
 
 func BenchmarkKeywordLinear2(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		T, S = keywordLinear2(keywords[i%len(keywords)].kw)
 	}
 }

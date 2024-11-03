@@ -79,7 +79,7 @@ func NewStor(impl storage, chunksize uint64, size uint64, chunks [][]byte) *Stor
 func (s *Stor) Alloc(n int) (Offset, []byte) {
 	assert.That(0 < n && n <= int(s.chunksize))
 	const maxRetries = 3
-	for i := 0; i < maxRetries; i++ {
+	for range maxRetries {
 		allocChunk := s.allocChunk.Load()
 		// another thread could Alloc at this point and advance to the next chunk
 		// which will be caught by the endchunk check (and retry)

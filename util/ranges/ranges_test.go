@@ -111,7 +111,7 @@ func TestRandomNonOverlapping(t *testing.T) {
 	const n = 2 * nodeSize * 80
 	data := make([]string, n)
 	randKey := str.UniqueRandom(3, 10)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		data[i] = randKey()
 	}
 	sort.Strings(data)
@@ -162,7 +162,7 @@ func TestOverflow(t *testing.T) {
 	const n = 12000 * 3
 	data := make([]string, n)
 	randKey := str.UniqueRandom(4, 10)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		data[i] = randKey()
 	}
 	sort.Strings(data)
@@ -194,14 +194,14 @@ func (rs *Ranges) ForEach(fn visitor) {
 	if rs.tree == nil {
 		rs.leaf.forEach(fn)
 	} else {
-		for i := 0; i < rs.tree.size; i++ {
+		for i := range rs.tree.size {
 			rs.tree.slots[i].leaf.forEach(fn)
 		}
 	}
 }
 
 func (leaf *leafNode) forEach(fn visitor) {
-	for i := 0; i < leaf.size; i++ {
+	for i := range leaf.size {
 		fn(leaf.slots[i].from, leaf.slots[i].to)
 	}
 }

@@ -93,7 +93,7 @@ func TestBm25(t *testing.T) {
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].DocId < results[j].DocId
 	})
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		assertApprox(results[i].Score, "0.0741")
 	}
 	assertApprox(results[4].Score, "0.1358")

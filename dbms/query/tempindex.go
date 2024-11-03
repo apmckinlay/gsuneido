@@ -273,7 +273,7 @@ func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
 // less2 is used for Seek
 func (ti *TempIndex) less2(th *Thread, row Row, key []string) bool {
 	n := max(len(ti.order), len(key))
-	for i := 0; i < n; i++ {
+	for i := range n {
 		if i >= len(key) {
 			return false
 		}

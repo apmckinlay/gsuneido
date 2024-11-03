@@ -407,7 +407,7 @@ var result [][]string
 
 func BenchmarkNoOptMod(b *testing.B) {
 	orig := [][]string{{"a"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}}
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		result = make([][]string, len(orig))
 		for _, o := range orig { //nolint:gosimple
 			result = append(result, o)
@@ -417,7 +417,7 @@ func BenchmarkNoOptMod(b *testing.B) {
 
 func BenchmarkOptMod(b *testing.B) {
 	orig := [][]string{{"a"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}}
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		om := newOptMod(orig)
 		for _, o := range orig {
 			om.add(o)

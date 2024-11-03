@@ -86,7 +86,7 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	ts.Derived = r.GetStrs()
 	if n := r.Get1(); n > 0 {
 		ts.Indexes = make([]schema.Index, n)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			mode := byte(r.Get1())
 			columns := r.GetStrs()
 			var bestKey []string
@@ -162,7 +162,7 @@ func (ts *Schema) setPrimary() {
 	}
 outer:
 	for i := 1; i < len(keys); i++ {
-		for j := 0; j < i; j++ {
+		for j := range i {
 			if keys[j].Primary && subset(keys[i].Columns, keys[j].Columns) {
 				continue outer
 			}

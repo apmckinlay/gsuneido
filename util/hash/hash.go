@@ -14,7 +14,7 @@ var seed maphash.Seed = maphash.MakeSeed()
 // String uses maphash.String to hash the first 64 bytes of s
 func String(s string) uint64 {
 	if len(s) > maxlen {
-		return 31 * maphash.String(seed, s[:maxlen]) + uint64(len(s))
+		return 31*maphash.String(seed, s[:maxlen]) + uint64(len(s))
 	}
 	return maphash.String(seed, s)
 }
@@ -27,7 +27,7 @@ func FullString(s string) uint64 {
 // Bytes uses maphash.Bytes to hash the first 64 bytes of b
 func Bytes(b []byte) uint64 {
 	if len(b) > maxlen {
-		return 31 * maphash.Bytes(seed, b[:maxlen]) + uint64(len(b))
+		return 31*maphash.Bytes(seed, b[:maxlen]) + uint64(len(b))
 	}
 	return maphash.Bytes(seed, b)
 }
@@ -38,7 +38,7 @@ func HashString(s string) uint32 {
 	const prime32 = 16777619
 	n := min(len(s), maxlen)
 	hash := uint32(offset32)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		hash ^= uint32(s[i])
 		hash *= prime32
 	}

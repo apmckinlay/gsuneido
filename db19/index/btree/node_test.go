@@ -105,7 +105,7 @@ func TestNodeInsert(*testing.T) {
 
 		// random
 		const nperms = 100
-		for i := 0; i < nperms; i++ {
+		for range nperms {
 			rnd := node{}
 			perm := rand.Perm(len(data))
 			for _, j := range perm {
@@ -166,13 +166,13 @@ func TestNodeInsertRandom(*testing.T) {
 	}
 	var data = make([]string, nData)
 	get := func(i uint64) string { return data[i] }
-	for gi := 0; gi < nGenerate; gi++ {
+	for range nGenerate {
 		data = data[0:nData]
 		randKey := str.UniqueRandomOf(1, 6, "abcdef")
-		for di := 0; di < nData; di++ {
+		for di := range nData {
 			data[di] = randKey()
 		}
-		for si := 0; si < nShuffle; si++ {
+		for range nShuffle {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
 			var nd node
@@ -189,7 +189,7 @@ func TestNodeInsertWords(*testing.T) {
 	data := words
 	const nShuffle = 100
 	get := func(i uint64) string { return data[i] }
-	for si := 0; si < nShuffle; si++ {
+	for range nShuffle {
 		rand.Shuffle(len(data),
 			func(i, j int) { data[i], data[j] = data[j], data[i] })
 		var nd node
@@ -331,7 +331,7 @@ func TestNodeDelete(*testing.T) {
 	if testing.Short() {
 		ntimes = 10000
 	}
-	for i := 0; i < ntimes; i++ {
+	for i := range ntimes {
 		if i < len(datas) {
 			data = strings.Fields(datas[i])
 		} else {
@@ -344,7 +344,7 @@ func TestNodeDelete(*testing.T) {
 			sort.Strings(data)
 		}
 		var datawo []string
-		for i := 0; i < len(data); i++ {
+		for i := range len(data) {
 			all := build(data)
 			datawo = append(datawo[:0], data...)
 			datawo[i] = ""
@@ -428,7 +428,7 @@ func TestNodeInsertDelete(*testing.T) {
 	if testing.Short() {
 		N = 100_000
 	}
-	for i := 0; i < N; i++ {
+	for i := range N {
 		if rand.Intn(13)+1 > len(data) {
 			// insert
 			key := r()
@@ -470,7 +470,7 @@ func BenchmarkNode(b *testing.B) {
 	}
 	ND = nd
 
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		iter := nd.iter()
 		for iter.next() {
 			S1 = iter.known

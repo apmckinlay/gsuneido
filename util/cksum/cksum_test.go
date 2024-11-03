@@ -15,26 +15,26 @@ const ndata = 1023
 var Data = make([]byte, ndata)
 
 func init() {
-	for i := 0; i < ndata; i++ {
+	for i := range ndata {
 		Data[i] = byte(rand.Int31n(256))
 	}
 }
 
 func BenchmarkAdler32(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		Sum += adler32.Checksum(Data)
 	}
 }
 
 func BenchmarkCrc32IEEE(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		Sum += crc32.Checksum(Data, crc32.IEEETable)
 	}
 }
 
 func BenchmarkCrc32Cast(b *testing.B) {
 	table := crc32.MakeTable(crc32.Castagnoli)
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		Sum += crc32.Checksum(Data, table)
 	}
 }
@@ -45,9 +45,9 @@ func TestDetection(*testing.T) {
 	}
 	table := crc32.MakeTable(crc32.Castagnoli)
 	var diff, lodiff, hidiff int
-	for i := 0; i < 100000; i++ {
+	for range 100000 {
 		a := crc32.Checksum(Data, table)
-		for j := 0; j < 4; j++ {
+		for range 4 {
 			Data[rand.Int31n(ndata)] = byte(rand.Int31n(256))
 		}
 		b := crc32.Checksum(Data, table)

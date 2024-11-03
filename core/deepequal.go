@@ -186,7 +186,7 @@ func ydeObject(y *SuObject, stack *[]Value, listSize, namedSize int) (todo []Val
 	}
 	n := len(*stack)
 	start := n - namedSize
-	for i := 0; i < namedSize; i++ {
+	for i := range namedSize {
 		p := &(*stack)[start+i]
 		*p = y.namedGet(*p)
 	}
@@ -221,7 +221,7 @@ func ydeInstance(y *SuInstance, stack *[]Value, size int) (todo []Value, sizesEq
 	}
 	n := len(*stack)
 	start := n - size
-	for i := 0; i < size; i++ {
+	for i := range size {
 		p := &(*stack)[start+i]
 		*p = y.Data[string((*p).(SuStr))]
 	}

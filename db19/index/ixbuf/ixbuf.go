@@ -330,7 +330,7 @@ func (m *merge) outputSlot(s2 slot) {
 func (m *merge) passthru(in []chunk, i int) bool {
 	// i is the minimum
 	lastkey := in[i].lastKey()
-	for j := 0; j < len(m.in); j++ {
+	for j := range len(m.in) {
 		if j != i && lastkey >= in[j].firstKey() {
 			return false
 		}

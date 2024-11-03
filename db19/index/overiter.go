@@ -207,7 +207,7 @@ outer:
 }
 
 func (oi *OverIter) ifKey(i int, key string, fn func(iterator.T)) {
-	for j := 0; j < i; j++ {
+	for j := range i {
 		itj := oi.iters[j]
 		if !itj.Eof() {
 			k, _ := itj.Cur()

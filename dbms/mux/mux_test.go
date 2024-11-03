@@ -35,7 +35,7 @@ func TestMux(t *testing.T) {
 	var wg sync.WaitGroup
 	clientThread := func() {
 		session := client.NewClientSession()
-		for i := 0; i < nmsgs; i++ {
+		for range nmsgs {
 			a := str.Random(1, 100)
 			b := str.Random(1, 2*bufSize)
 			session.WriteString(a)
@@ -46,7 +46,7 @@ func TestMux(t *testing.T) {
 		}
 		wg.Done()
 	}
-	for i := 0; i < nthreads; i++ {
+	for range nthreads {
 		wg.Add(1)
 		go clientThread()
 	}

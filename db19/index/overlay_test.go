@@ -37,7 +37,7 @@ func TestOverlay(*testing.T) {
 	data = insert(data, n, randKey, u)
 	checkIter(data, ov)
 
-	for i := 0; i < n/2; i++ {
+	for range n / 2 {
 		j := rand.Intn(len(data))
 		if data[j] != "" {
 			ov.Delete(data[j], key2off(data[j]))
@@ -48,7 +48,7 @@ func TestOverlay(*testing.T) {
 }
 
 func insert(data []string, n int, randKey func() string, dest *ixbuf.T) []string {
-	for i := 0; i < n; i++ {
+	for range n {
 		key := randKey()
 		off := key2off(key)
 		data = append(data, key)
@@ -106,7 +106,7 @@ func TestOverlayBug(*testing.T) {
 }
 
 func insertTestData(dat *testdata.T, n int, dest *ixbuf.T) {
-	for i := 0; i < n; i++ {
+	for range n {
 		dest.Insert(dat.Gen())
 	}
 }
@@ -132,7 +132,7 @@ func TestOverlayMerge(t *testing.T) {
 	randIxbuf := func() *ixbuf.T {
 		const n = 300
 		mut := &ixbuf.T{}
-		for i := 0; i < n; i++ {
+		for range n {
 			key := randKey()
 			off := uint64(len(data))
 			data = append(data, key)
@@ -180,7 +180,7 @@ func TestOverlayLookup(*testing.T) {
 	btree.MaxNodeSize = 128
 	store := stor.HeapStor(8192)
 	randBtree := func(nkeys int) *btree.T {
-		for i := 0; i < nkeys; i++ {
+		for range nkeys {
 			dat.Gen()
 		}
 		sort.Strings(dat.Keys)
@@ -192,7 +192,7 @@ func TestOverlayLookup(*testing.T) {
 	}
 	randIxbuf := func(nkeys int) *ixbuf.T {
 		ib := &ixbuf.T{}
-		for i := 0; i < nkeys; i++ {
+		for range nkeys {
 			ib.Insert(dat.Gen())
 		}
 		return ib

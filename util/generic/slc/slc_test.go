@@ -66,10 +66,10 @@ func TestMap(t *testing.T) {
 var X []int
 
 func BenchmarkClipAppend(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		for n := 0; n < 10; n++ {
+	for range b.N {
+		for n := range 10 {
 			X = nil
-			for j := 0; j < n; j++ {
+			for j := range n {
 				X = append(slices.Clip(X), j)
 			}
 		}
@@ -77,10 +77,10 @@ func BenchmarkClipAppend(b *testing.B) {
 }
 
 func BenchmarkCloneAppend(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		for n := 0; n < 10; n++ {
+	for range b.N {
+		for n := range 10 {
 			X = nil
-			for j := 0; j < n; j++ {
+			for j := range n {
 				X = append(slices.Clone(X), j)
 			}
 		}
@@ -88,10 +88,10 @@ func BenchmarkCloneAppend(b *testing.B) {
 }
 
 func BenchmarkNewAppend(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		for n := 0; n < 10; n++ {
+	for range b.N {
+		for n := range 10 {
 			X = nil
-			for j := 0; j < n; j++ {
+			for j := range n {
 				y := make([]int, len(X)+1)
 				copy(y, X)
 				y[len(X)] = j
@@ -102,10 +102,10 @@ func BenchmarkNewAppend(b *testing.B) {
 }
 
 func BenchmarkWith(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		for n := 0; n < 10; n++ {
+	for range b.N {
+		for n := range 10 {
 			X = nil
-			for j := 0; j < n; j++ {
+			for j := range n {
 				X = With(X, j)
 			}
 		}

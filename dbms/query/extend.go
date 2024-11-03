@@ -182,7 +182,7 @@ func (e *Extend) needRule2(col string) bool {
 func (e *Extend) Fixed() []Fixed {
 	if e.fixed == nil {
 		e.fixed = append([]Fixed{}, e.source.Fixed()...) // non-nil copy
-		for i := 0; i < len(e.cols); i++ {
+		for i := range len(e.cols) {
 			if expr := e.exprs[i]; expr != nil {
 				switch expr := expr.(type) {
 				case *ast.Constant: // col = <Constant>

@@ -70,7 +70,7 @@ func TestRandom(t *testing.T) {
 	}
 	seed := time.Now().UnixNano()
 	r := rand.New(rand.NewSource(seed))
-	for i := 0; i < n; i++ {
+	for i := range n {
 		f := int(r.Int31())
 		ht.Put(&Foo{f, strconv.Itoa(f)})
 		// ht.check()
@@ -79,7 +79,7 @@ func TestRandom(t *testing.T) {
 		}
 	}
 	r.Seed(seed)
-	for i := 0; i < n; i++ {
+	for range n {
 		f := int(r.Int31())
 		ht.Put(&Foo{f, strconv.Itoa(f)})
 		// ht.check()
@@ -87,7 +87,7 @@ func TestRandom(t *testing.T) {
 	nums := map[int]bool{}
 	ht = ht.Freeze()
 	r.Seed(seed)
-	for i := 0; i < n; i++ {
+	for range n {
 		f := int(r.Int31())
 		foo, ok := ht.Get(f)
 		assert.True(ok)
@@ -147,7 +147,7 @@ func TestDelete(*testing.T) {
 	if testing.Short() {
 		nShuffles = 1000
 	}
-	for i := 0; i < nShuffles; i++ {
+	for range nShuffles {
 		rand.Shuffle(len(data), func(i, j int) { data[i], data[j] = data[j], data[i] })
 		ht := FooHamt{}.Mutable()
 		for _, d := range data {

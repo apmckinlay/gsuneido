@@ -21,19 +21,19 @@ var Sum = uint64(0)
 var S = "now is the time"
 
 func BenchmarkString(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		Sum += String(S)
 	}
 }
 
 func BenchmarkHashString(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		Sum += uint64(HashString(S))
 	}
 }
 
 func BenchmarkMaphash(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		h := maphash.Hash{}
 		h.WriteString(S)
 		Sum += h.Sum64()
@@ -42,7 +42,7 @@ func BenchmarkMaphash(b *testing.B) {
 
 func BenchmarkFnv(b *testing.B) {
 	h := fnv.New64()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		h.Reset()
 		h.Write([]byte(S))
 		Sum += h.Sum64()

@@ -96,8 +96,8 @@ func TestDateCompare(t *testing.T) {
 			}
 		}
 	}
-	for i := 0; i < len(vals); i++ {
-		for j := 0; j < len(vals); j++ {
+	for i := range len(vals) {
+		for j := range len(vals) {
 			assert.This(vals[i].Compare(vals[j])).Is(cmp.Compare(i, j))
 			assert.This(vals[j].Compare(vals[i])).Is(cmp.Compare(j, i))
 			assert.This(vals[i].Equal(vals[j])).Is(i == j)

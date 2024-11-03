@@ -17,7 +17,7 @@ func TestCheckStartStop(t *testing.T) {
 	const ntrans = 20
 	var trans [ntrans]*UpdateTran
 	const ntimes = 5000
-	for i := 0; i < ntimes; i++ {
+	for range ntimes {
 		j := rand.Intn(ntrans)
 		if trans[j] == nil {
 			trans[j] = &UpdateTran{ct: ck.StartTran()}
@@ -40,7 +40,7 @@ func TestCheckStartStop(t *testing.T) {
 
 func TestCheckLimit(t *testing.T) {
 	ck := NewCheck(nil)
-	for i := 0; i < MaxTrans; i++ {
+	for range MaxTrans {
 		assert.T(t).That(ck.StartTran() != nil)
 	}
 	assert.T(t).That(ck.StartTran() == nil)
@@ -151,7 +151,7 @@ func TestCheckMax(t *testing.T) {
 	ck := NewCheck(nil)
 	ct := ck.StartTran()
 	randTable := str.UniqueRandom(3, 10)
-	for i := 0; i < readMax; i++ {
+	for range readMax {
 		assert.True(ck.Read(ct, randTable(), 0, "bar", "foo"))
 	}
 	assert.False(ck.Read(ct, randTable(), 0, "bar", "foo"))
@@ -190,7 +190,7 @@ func BenchmarkCheck(b *testing.B) {
 	const nindexes = 5
 	keys := make([]string, nindexes)
 	makeKeys := func() []string {
-		for i := 0; i < nindexes; i++ {
+		for i := range nindexes {
 			keys[i] = strconv.Itoa(rand.Intn(9999))
 		}
 		return keys
@@ -199,14 +199,14 @@ func BenchmarkCheck(b *testing.B) {
 
 	var ck *Check
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		if i%ntrans == 0 {
 			ck = NewCheck(nil)
 		}
 		ct := ck.StartTran()
-		for j := 0; j < ntables; j++ {
+		for range ntables {
 			table := tables[rand.Intn(len(tables))]
-			for k := 0; k < nacts; k++ {
+			for range nacts {
 				switch rand.Intn(3) {
 				case 0:
 					index := rand.Intn(nindexes)

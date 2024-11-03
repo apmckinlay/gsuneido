@@ -180,7 +180,7 @@ func Subn(s string, i, n int) string {
 func CmpLower(s1, s2 string) int {
 	n1 := len(s1)
 	n2 := len(s2)
-	for i := 0; i < n1 && i < n2; i++ {
+	for i := range min(n1, n2) {
 		c1 := ascii.ToLower(s1[i])
 		c2 := ascii.ToLower(s2[i])
 		if c1 < c2 {
@@ -195,7 +195,7 @@ func CmpLower(s1, s2 string) int {
 
 // ToLower is an ascii version of strings.ToLower
 func ToLower(s string) string {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		c := s[i]
 		if 'A' <= c && c <= 'Z' {
 			lower := make([]byte, len(s))
@@ -216,7 +216,7 @@ func ToLower(s string) string {
 
 // ToUpper is an ascii version os strings.ToUpper
 func ToUpper(s string) string {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		c := s[i]
 		if 'a' <= c && c <= 'z' {
 			upper := make([]byte, len(s))
@@ -240,7 +240,7 @@ func EqualCI(x, y string) bool {
 	if len(x) != len(y) {
 		return false
 	}
-	for i := 0; i < len(x); i++ {
+	for i := range len(x) {
 		if ascii.ToLower(x[i]) != ascii.ToLower(y[i]) {
 			return false
 		}

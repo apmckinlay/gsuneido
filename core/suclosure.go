@@ -44,7 +44,7 @@ func (b *SuClosure) Call(th *Thread, this Value, as *ArgSpec) Value {
 	args := th.Args(&b.ParamSpec, as)
 
 	// copy args
-	for i := 0; i < int(b.Nparams); i++ {
+	for i := range int(b.Nparams) {
 		v[int(bf.Offset)+i] = args[i]
 	}
 

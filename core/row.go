@@ -91,7 +91,7 @@ func lowerRaw(x string) string {
 		return x
 	}
 	hasUpper := false
-	for i := 0; i < len(x); i++ {
+	for i := range len(x) {
 		hasUpper = hasUpper || ascii.IsUpper(x[i])
 	}
 	if !hasUpper {

@@ -565,7 +565,7 @@ func (w *Where) optInit() {
 		if !w.exprMore {
 			// check if any colSels were not used by idxSels
 			for _, idxSel := range w.idxSels {
-				for i := 0; i < idxSel.nfields; i++ {
+				for i := range idxSel.nfields {
 					delete(w.colSels, idxSel.index[i])
 				}
 			}

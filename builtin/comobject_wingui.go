@@ -284,7 +284,7 @@ func bstrToString(v *stVariant) string {
 	p := uintptr(v.val)
 	length := SysStringLen(p)
 	a := make([]uint16, length)
-	for i := 0; i < int(length); i++ {
+	for i := range int(length) {
 		a[i] = *(*uint16)(unsafe.Pointer(p))
 		p += 2
 	}

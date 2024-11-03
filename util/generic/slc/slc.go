@@ -103,7 +103,7 @@ func Reverse[S ~[]E, E any](x S) S {
 
 // Fill sets all the elements of data to value
 func Fill[E any](data []E, value E) {
-	for i := 0; i < len(data); i++ {
+	for i := range len(data) {
 		data[i] = value
 	}
 }
@@ -129,8 +129,8 @@ func Allow[S ~[]E, E any](s S, n int) S {
 // or the original if there is no excess capacity.
 func Shrink[S ~[]E, E any](s S) S {
 	if len(s) == cap(s) {
-        return s
-    }
+		return s
+	}
 	t := make(S, len(s))
 	copy(t, s)
 	return t
@@ -206,6 +206,6 @@ func StartsWith[E comparable](list []E, e E) bool {
 func Clone[E any](list []E) []E {
 	if list == nil {
 		return nil
-    }
+	}
 	return append([]E{}, list...)
 }

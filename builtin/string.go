@@ -355,7 +355,7 @@ func string_NumericQ(this Value) Value {
 	if len(s) == 0 {
 		return False
 	}
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		if !ascii.IsDigit(s[i]) {
 			return False
 		}

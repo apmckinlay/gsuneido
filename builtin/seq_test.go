@@ -32,7 +32,7 @@ func TestConcurrentSeq(t *testing.T) {
 		}
 	}
 	const nthreads = 6
-	for i := 0; i < nthreads; i++ {
+	for range nthreads {
 		go fn()
 	}
 	fn()
@@ -50,11 +50,11 @@ func TestConcurrentSequence(t *testing.T) {
 	sq.SetConcurrent()
 	var wg sync.WaitGroup
 	const nthreads = 6
-	for i := 0; i < nthreads; i++ {
+	for range nthreads {
 		wg.Add(1)
 		go func() {
 			n := rand.Intn(size)
-			for i := 0; i < n; i++ {
+			for i := range n {
 				sq.Infinite()
 				sq.Instantiated()
 				sq.Iter().Next()

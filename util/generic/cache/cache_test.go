@@ -20,7 +20,7 @@ func TestCache(t *testing.T) {
 	assert.T(t).This(c.Get("foo")).Is("foofoo")
 	assert.T(t).This(c.Get("bar")).Is("barbar")
 	assert.T(t).This(n).Is(2)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		s := strconv.Itoa(i)
 		assert.T(t).This(c.Get(s)).Is(s + s)
 	}

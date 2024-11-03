@@ -204,7 +204,7 @@ func (d *dasm) next() {
 }
 
 func DisasmRaw(code string, fn func(i int)) {
-	for i := 0; i < len(code); i++ {
+	for i := range len(code) {
 		fn(i)
 		switch op.Opcode(code[i]) {
 		case op.Value, op.Closure, op.Load, op.Store, op.Dyload,

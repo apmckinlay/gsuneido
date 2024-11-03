@@ -654,7 +654,7 @@ func (p *Project) Simple(th *Thread) []Row {
 	rows := p.source.Simple(th)
 outer:
 	for i := range rows {
-		for j := 0; j < i; j++ {
+		for j := range i {
 			if hdr.EqualRows(rows[i], rows[j], th, nil) {
 				continue outer
 			}

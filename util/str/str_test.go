@@ -128,7 +128,7 @@ func BenchmarkEqualCI(b *testing.B) {
 		"!@#$$%%^&^&*&*(",
 	}
 	var a bool
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		x := strs[i%len(strs)]
 		y := strs[(i+1)%len(strs)]
 		a = a || EqualCI(x, y)
@@ -148,7 +148,7 @@ func BenchmarkEqualLower(b *testing.B) {
 		"!@#$$%%^&^&*&*(",
 	}
 	var a bool
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		x := strs[i%len(strs)]
 		y := strs[(i+1)%len(strs)]
 		a = a || ToLower(x) == ToLower(y)
@@ -175,7 +175,7 @@ func TestToUpper(t *testing.T) {
 var S string
 
 func BenchmarkToLower(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		S = ToLower("foo Bar")
 	}
 }

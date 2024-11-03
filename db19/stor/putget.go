@@ -171,7 +171,7 @@ func (r *Reader) GetStr() string {
 func (r *Reader) GetStrs() []string {
 	n := r.Get2()
 	ss := make([]string, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		ss[i] = r.GetStr()
 	}
 	return ss

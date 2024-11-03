@@ -252,7 +252,7 @@ func (c *SuClass) GetName() string {
 
 // Finder implements Findable
 func (c *SuClass) Finder(th *Thread, fn func(v Value, mb *MemBase) Value) Value {
-	for i := 0; i < inheritanceLimit; i++ {
+	for range inheritanceLimit {
 		if x := fn(c, &c.MemBase); x != nil {
 			return x
 		}

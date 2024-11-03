@@ -110,7 +110,7 @@ func TestSuObjectDelete(t *testing.T) {
 	ob := SuObject{}
 	ob.Delete(nil, Zero)
 	ob.Delete(nil, SuStr("baz"))
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		ob.Add(SuInt(i))
 	}
 	ob.Set(SuStr("foo"), SuInt(8))
@@ -135,7 +135,7 @@ func TestSuObjectErase(t *testing.T) {
 	ob := SuObject{}
 	ob.Erase(nil, Zero)
 	ob.Erase(nil, SuStr("baz"))
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		ob.Add(SuInt(i))
 	}
 	ob.Set(SuInt(88), SuInt(8))
@@ -267,7 +267,7 @@ func TestSuObjectCompare(t *testing.T) {
 	x.Add(Zero)
 	y := &SuObject{}
 	y.Add(One)
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		assert.T(t).This(x.Compare(y)).Is(-1)
 		assert.T(t).This(y.Compare(x)).Is(1)
 		x.SetConcurrent()

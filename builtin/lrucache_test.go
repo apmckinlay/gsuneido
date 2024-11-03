@@ -15,7 +15,7 @@ func TestLruCache(t *testing.T) {
 	const size = 20
 	get := func(key Value) Value { return key }
 	lc := newLruCache(size)
-	for i := 0; i < size; i++ {
+	for range size {
 		n := IntVal(int(rand.Uint32()))
 		n2 := lc.GetPut(n, get)
 		assert.This(n2).Is(n)
@@ -24,7 +24,7 @@ func TestLruCache(t *testing.T) {
 	}
 	assert.T(t).Msg("misses").This(lc.misses).Is(size)
 	assert.T(t).Msg("hits").This(lc.hits).Is(size)
-	for i := 0; i < size; i++ {
+	for range size {
 		n := IntVal(int(rand.Uint32()))
 		n2 := lc.GetPut(n, get)
 		assert.This(n2).Is(n)
@@ -35,7 +35,7 @@ func TestLruCache(t *testing.T) {
 	assert.T(t).Msg("hits").This(lc.hits).Is(size * 2)
 
 	lc = newLruCache(size)
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		n := IntVal(rand.Intn(size + 5))
 		n2 := lc.GetPut(n, get)
 		assert.This(n2).Is(n)

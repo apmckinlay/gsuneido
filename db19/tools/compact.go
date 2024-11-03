@@ -64,7 +64,7 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 	}
 	var wg sync.WaitGroup
 	channel := make(chan compactJob)
-	for i := 0; i < options.Nworkers; i++ {
+	for range options.Nworkers {
 		wg.Add(1)
 		go func() {
 			for job := range channel {

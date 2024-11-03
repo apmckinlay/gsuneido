@@ -32,7 +32,7 @@ func (th *Thread) args(ps *ParamSpec, as *ArgSpec) []Value {
 		th.Push(nil)
 	}
 	locals := th.stack[base:]
-	for i := 0; i < nargs; i++ {
+	for i := range nargs {
 		if locals[i] == nil {
 			panic("missing argument " + strconv.Itoa(i) + " in " + as.String())
 		}
@@ -87,11 +87,11 @@ func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		if ob.ListSize()-each > int(ps.Nparams) {
 			panic("too many arguments")
 		}
-		for i := 0; i < min(int(ps.Nparams), ob.ListSize()-each); i++ {
+		for i := range min(int(ps.Nparams), ob.ListSize()-each) {
 			args[i] = ob.ListGet(i + each)
 		}
 		// named members may overwrite unnamed (same as when passed individually)
-		for i := 0; i < int(ps.Nparams); i++ {
+		for i := range int(ps.Nparams) {
 			if x := ob.GetIfPresent(th, SuStr(ps.ParamName(i))); x != nil {
 				args[i] = x
 			}
@@ -109,7 +109,7 @@ func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 		// move applicable named args back to correct position
 		for si, ni := range as.Spec {
-			for i := 0; i < int(ps.Nparams); i++ {
+			for i := range int(ps.Nparams) {
 				if as.Names[ni] == SuStr(ps.ParamName(i)) {
 					args[i] = tmp[si]
 				}
@@ -118,7 +118,7 @@ func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	}
 
 	// fill in dynamic
-	for i := 0; i < int(ps.Nparams); i++ {
+	for i := range int(ps.Nparams) {
 		if args[i] == nil && ps.Flags[i]&DynParam != 0 {
 			if x := th.dyn("_" + ps.ParamName(i)); x != nil {
 				args[i] = x
@@ -135,7 +135,7 @@ func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	}
 
 	// check that all parameters now have values
-	for i := 0; i < noDefs; i++ {
+	for i := range noDefs {
 		if args[i] == nil {
 			panic("missing argument")
 		}

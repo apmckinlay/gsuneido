@@ -14,7 +14,7 @@ import (
 func TestTimestamp(t *testing.T) {
 	StartTimestamps()
 	prev := Timestamp()
-	for i := 0; i < 1100; i++ {
+	for range 1100 {
 		ts := Timestamp()
 		assert.T(t).That(ts.Compare(prev) > 0)
 		prev = ts

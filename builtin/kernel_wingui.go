@@ -239,7 +239,7 @@ func CopyMemory(a, b, c Value) Value {
 	dst := uintptr(ToInt(a))
 	src := ToStr(b)
 	n := ToInt(c)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		*(*byte)(unsafe.Pointer(dst + uintptr(i))) = src[i]
 	}
 	return nil

@@ -121,7 +121,7 @@ func TestBtreeFracPos(t *testing.T) {
 		stor := stor.HeapStor(8192)
 		stor.Alloc(8)
 		b := Builder(stor)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			assert.That(b.Add(key(i), 1))
 		}
 		//		assert.That(len(b.levels[len(b.levels)-1].nb.node) > 190)
@@ -141,7 +141,7 @@ func TestBtreeFracPos(t *testing.T) {
 	makeBtree(n)
 	assert.Msg("tree levels").This(bt.treeLevels).Is(0)
 	test(ixkey.Min, 0)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		test(key(i), float64(i)/float64(n))
 	}
 	test(ixkey.Max, 1)

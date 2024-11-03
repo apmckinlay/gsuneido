@@ -55,10 +55,10 @@ func TestEscape(t *testing.T) {
 	for which = 0; which <= 2; which++ {
 		// every 1 and 2 byte combination
 		buf := make([]byte, 2)
-		for i := 0; i < 256; i++ {
+		for i := range 256 {
 			buf[0] = byte(i)
 			test(string(buf[:1]), "")
-			for j := 0; j < 256; j++ {
+			for j := range 256 {
 				buf[1] = byte(j)
 				test(string(buf), "")
 			}
@@ -71,7 +71,7 @@ func TestEscape(t *testing.T) {
 
 		// random 8 byte strings
 		buf = make([]byte, 8)
-		for i := 0; i < N; i++ {
+		for range N {
 			for i := range buf {
 				buf[i] = byte(rand.Intn(256))
 			}
@@ -80,10 +80,10 @@ func TestEscape(t *testing.T) {
 
 		// shuffles of all possible bytes
 		buf = make([]byte, 256)
-		for i := 0; i < 256; i++ {
+		for i := range 256 {
 			buf[i] = byte(i)
 		}
-		for i := 0; i < N; i++ {
+		for range N {
 			rand.Shuffle(256, func(i, j int) { buf[i], buf[j] = buf[j], buf[i] })
 			test(string(buf), "")
 		}
@@ -106,14 +106,14 @@ var M Value
 
 func BenchmarkSuStr(b *testing.B) {
 	s := "x"
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		M = SuStr(s)
 	}
 }
 
 func BenchmarkSuStr1(b *testing.B) {
 	s := "x"
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		M = SuStr1(s)
 	}
 }

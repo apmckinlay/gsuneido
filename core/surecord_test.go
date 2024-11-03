@@ -83,7 +83,7 @@ func TestSuRecord_Concurrency(t *testing.T) {
 	run := func() {
 		th := &Thread{}
 		defer wg.Done()
-		for i := 0; i < nActions; i++ {
+		for range nActions {
 			switch rand.Intn(12) {
 			case 0:
 				getrec().Get(th, randCol())
@@ -126,7 +126,7 @@ func TestSuRecord_Concurrency(t *testing.T) {
 			}
 		}
 	}
-	for i := 0; i < nThreads; i++ {
+	for range nThreads {
 		wg.Add(1)
 		go run()
 	}
@@ -151,7 +151,7 @@ func TestSuRecord_validRule(t *testing.T) {
 func BenchmarkSuRecord(b *testing.B) {
 	th := &Thread{}
 	var rec SuRecord
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		rec = SuRecord{}
 		rec.Get(th, SuStr("foo"))
 	}

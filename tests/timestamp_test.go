@@ -25,15 +25,15 @@ func TestTimestamp(t *testing.T) {
 	var lock sync.Mutex
 	var prev Value = SuDate{}
 	var wg sync.WaitGroup
-	for i := 0; i < 8; i++ {
+	for range 8 {
 		wg.Add(1)
 		go func() {
 			var th core.Thread
 			th.SetDbms(&dbms.DbmsLocal{})
 			var ts Value
-			for i := 0; i < 100; i++ {
+			for range 100 {
 				n := rand.Intn(50)
-				for j := 0; j < n; j++ {
+				for range n {
 					lock.Lock()
 					ts = th.Timestamp()
 					assert.That(ts.Compare(prev) > 0)

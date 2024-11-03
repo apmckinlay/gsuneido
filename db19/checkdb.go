@@ -87,7 +87,7 @@ func (db *Database) MustCheck() {
 func checkTable(state *DbState, table string) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(fmt.Sprintln(table + ":", e))
+			panic(fmt.Sprintln(table+":", e))
 		}
 	}()
 	info := state.Meta.GetRoInfo(table)
@@ -206,7 +206,7 @@ func newTableCheckers(state *DbState, fn func(*DbState, string)) *tableCheckers 
 	}
 	nw := options.Nworkers
 	tcs.wg.Add(nw)
-	for i := 0; i < nw; i++ {
+	for range nw {
 		go tcs.worker()
 	}
 	return &tcs

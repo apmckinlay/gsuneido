@@ -18,7 +18,7 @@ func BenchmarkGetStr(b *testing.B) {
 	const n = 100
 	buf := heap.Alloc(n)
 	var s SuStr
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		s = SuStr(heap.GetStrN(buf, n))
 	}
 	result = s
@@ -28,7 +28,7 @@ func BenchmarkBufToStr(b *testing.B) {
 	const n = 100
 	buf := heap.Alloc(n)
 	var s Value
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		s = bufStrN(buf, n)
 	}
 	result = s

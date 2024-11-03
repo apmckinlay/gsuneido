@@ -1,0 +1,342 @@
+(((
+			(/* tableHint: */ etaao_equip_pay where etaequipstmt_num is "")
+			join by(etaequip_num)
+			(eta_equipment where etaequip_owner_operator? is true
+				project etaequip_num, etaequip_name, etaequip_type,
+				etaequip_treatas_type, etaequip_owner_operator?, etapay_uom)
+			where etaet_num is ""
+			extend
+				type = "equip",
+				etaassoc_type = etaequip_treatas_type,
+				etaassoc_name = etaequip_name,
+				etaworker_num = "",
+				config_value = etaeo_config_date,
+				config_field = etaeo_config_date_field,
+				etaassoc_start_date = etaao_start_date,
+				etaassoc_end_date = etaao_end_date,
+				etapay_num = etaeo_num) join by (etaorder_num)
+					(eta_orders rename bizpartner_broker_num to bizpartner_num_broker, bizpartner_info1 to bizpartner_info1_order, bizpartner_info2 to bizpartner_info2_order, bizpartner_num to bizpartner_num_billto extend etaorder_trips,etaorder_consignee_required_time,etaorder_shipper_required_time,etaorder_country_shipper,etaorder_country_consignee,etaorder_acemanif_number,etaorder_has_synced_ids?,etaorder_flag_info,etaorder_flag_names,etaorder_flag_descriptions,etaorder_driving_hours_dispatch,etaorder_dh_remaining_dispatch,etaorder_has_attachment,etaorder_carriers_phone,bizpartner_billto_phone,bizpartner_abbrev_billto,etaorder_last_activity_date,etaorder_last_activity_notes rename
+				etaorder_start_date to etatran_start_date,
+				etaorder_status to etatran_status,
+				etaorder_billable_miles to billable_miles,
+				etaorder_comments to etatran_comments,
+				etaorder_fuel_surcharge_amount to etatran_fuel_surcharge_amount,
+				etaorder_date_modified to config_date_modified,
+				etaorder_taxcodes to taxcodes,
+				etaorder_void_user to etatran_void_user,
+				etaorder_void_date to etatran_void_date,
+				etaorder_invoice to etaassoc_invoice,
+				etaorder_custpo to etatran_custpo,
+				gldept_id to gldept_id_sales,
+				glacct_num to glacct_num_sales,
+				bizpartner_num_broker to bizpartner_broker_num,
+				etaorder_desc to etatran_desc,
+				etaorder_rate to etatran_rate
+			extend eta_source_tran, etaorder_attachments_string,
+				etatran_amount = etaorder_total_amount,
+				exchgrate = etaorder_exchgrate,
+				bizpartner_name_shipper = etaorder_shipper_name,
+				bizpartner_abbrev_shipper = etaorder_shipper_abbrev,
+				bizpartner_name_consignee = etaorder_consignee_name,
+				bizpartner_abbrev_consignee = etaorder_consignee_abbrev,
+				etatran_end_date = etaorder_end_date
+			remove etaorder_copied_from, etaorder_lane_generatedId,
+				etaorder_pay_to_fuelsc, etaorder_pay_to_othercharges,
+				etaorder_pay_to_pickdrop, bizpartner_abbrev_billto
+			)) union
+			((
+				(etaao_workers_pay
+					extend etapr_pay_finalized?
+					where etaworkerstmt_date is "" and etapr_pay_finalized? is "")
+				join by(etaworker_num)
+				(eta_workers project etaworker_num, etaworker_name, etapay_uom)
+				where etawt_num is ""
+				extend
+					type = "worker",
+					etaassoc_name = etaworker_name,
+					etaequip_num = "",
+					etaassoc_type = "Driver",
+					config_value = etawo_config_date,
+					config_field = etawo_config_date_field,
+					etaassoc_start_date = etaao_start_date,
+					etaassoc_end_date = etaao_end_date,
+					etapay_num = etawo_num) join by (etaorder_num)
+						(eta_orders rename bizpartner_broker_num to bizpartner_num_broker, bizpartner_info1 to bizpartner_info1_order, bizpartner_info2 to bizpartner_info2_order, bizpartner_num to bizpartner_num_billto extend etaorder_trips,etaorder_consignee_required_time,etaorder_shipper_required_time,etaorder_country_shipper,etaorder_country_consignee,etaorder_acemanif_number,etaorder_has_synced_ids?,etaorder_flag_info,etaorder_flag_names,etaorder_flag_descriptions,etaorder_driving_hours_dispatch,etaorder_dh_remaining_dispatch,etaorder_has_attachment,etaorder_carriers_phone,bizpartner_billto_phone,bizpartner_abbrev_billto,etaorder_last_activity_date,etaorder_last_activity_notes rename
+				etaorder_start_date to etatran_start_date,
+				etaorder_status to etatran_status,
+				etaorder_billable_miles to billable_miles,
+				etaorder_comments to etatran_comments,
+				etaorder_fuel_surcharge_amount to etatran_fuel_surcharge_amount,
+				etaorder_date_modified to config_date_modified,
+				etaorder_taxcodes to taxcodes,
+				etaorder_void_user to etatran_void_user,
+				etaorder_void_date to etatran_void_date,
+				etaorder_invoice to etaassoc_invoice,
+				etaorder_custpo to etatran_custpo,
+				gldept_id to gldept_id_sales,
+				glacct_num to glacct_num_sales,
+				bizpartner_num_broker to bizpartner_broker_num,
+				etaorder_desc to etatran_desc,
+				etaorder_rate to etatran_rate
+			extend eta_source_tran, etaorder_attachments_string,
+				etatran_amount = etaorder_total_amount,
+				exchgrate = etaorder_exchgrate,
+				bizpartner_name_shipper = etaorder_shipper_name,
+				bizpartner_abbrev_shipper = etaorder_shipper_abbrev,
+				bizpartner_name_consignee = etaorder_consignee_name,
+				bizpartner_abbrev_consignee = etaorder_consignee_abbrev,
+				etatran_end_date = etaorder_end_date
+			remove etaorder_copied_from, etaorder_lane_generatedId,
+				etaorder_pay_to_fuelsc, etaorder_pay_to_othercharges,
+				etaorder_pay_to_pickdrop, bizpartner_abbrev_billto
+			))
+				extend pay_type = "orders"
+				remove etaao_allocation_isdefault, etaao_status)
+				 union (((
+			(etaat_equip_pay where etaequipstmt_num is "")
+			join by(etaequip_num)
+			(eta_equipment where etaequip_owner_operator? is true
+				project etaequip_num, etaequip_name, etaequip_type,
+				etaequip_treatas_type, etaequip_owner_operator?, etapay_uom)
+			extend type = "equip",
+				etaassoc_name = etaequip_name,
+				etaworker_num = "",
+				etaassoc_type = etaequip_treatas_type,
+				etaassoc_start_date = etaat_start_date,
+				etaassoc_end_date = etaat_end_date,
+				etapay_num = etaet_num) join by (etatrip_num)
+					(eta_trips
+			extend etatrip_has_attachment, etatrip_last_activity_date,
+				etaorder_last_activity_date = etatrip_last_activity_date,
+				etatrip_last_activity_notes,
+				etaorder_last_activity_notes = etatrip_last_activity_notes,
+				etatrip_has_synced_ids?, eta_source_tran
+			rename etatrip_status to etatran_status,
+				etatrip_comments to etatran_comments,
+				etatrip_has_attachment to etaorder_has_attachment,
+				etatrip_has_synced_ids? to etaorder_has_synced_ids?,
+				etatrip_date_modified to config_date_modified,
+				etatrip_assocsplit_isdefault to etaorder_assocsplit_isdefault,
+				etatrip_attachments to etaorder_attachments,
+				etatrip_start_date to etatran_start_date,
+				etatrip_actual_end_date to etatran_end_date
+			remove etatrip_last_activity_notes, etatrip_last_activity_date))
+			union
+			((
+				(etaat_workers_pay
+					extend etapr_pay_finalized?
+					where etaworkerstmt_date is "" and etapr_pay_finalized? is "")
+				join by(etaworker_num)
+				(eta_workers project etaworker_num, etaworker_name, etapay_uom)
+				extend type = "worker",
+					etaassoc_name = etaworker_name,
+					etaequip_num = "",
+					etaassoc_type = "Driver",
+					etaassoc_start_date = etaat_start_date,
+					etaassoc_end_date = etaat_end_date,
+					etapay_num = etawt_num) join by (etatrip_num)
+					(eta_trips
+			extend etatrip_has_attachment, etatrip_last_activity_date,
+				etaorder_last_activity_date = etatrip_last_activity_date,
+				etatrip_last_activity_notes,
+				etaorder_last_activity_notes = etatrip_last_activity_notes,
+				etatrip_has_synced_ids?, eta_source_tran
+			rename etatrip_status to etatran_status,
+				etatrip_comments to etatran_comments,
+				etatrip_has_attachment to etaorder_has_attachment,
+				etatrip_has_synced_ids? to etaorder_has_synced_ids?,
+				etatrip_date_modified to config_date_modified,
+				etatrip_assocsplit_isdefault to etaorder_assocsplit_isdefault,
+				etatrip_attachments to etaorder_attachments,
+				etatrip_start_date to etatran_start_date,
+				etatrip_actual_end_date to etatran_end_date
+			remove etatrip_last_activity_notes, etatrip_last_activity_date))
+			extend
+				pay_type = "trips"
+			remove etaat_allocation_isdefault)
+			 union (((/* THIS IS THE JOB */ /* tableHint: */ etaaj_equip_pay where etaequipstmt_num is "")
+			join by(etaequip_num)
+			(eta_equipment where etaequip_owner_operator? is true
+				project etaequip_num, etaequip_name, etaequip_type,
+					etaequip_treatas_type, etaequip_owner_operator?, etapay_uom)
+				join by(etajob_num) (eta_jobs
+				project etajob_num, etajob_job, etajob_void_date, etajob_invoice,
+					etajob_currency, etajob_exchgrate, etajob_end_date, etajob_status,
+					etajob_TS)
+			rename etajob_status to etatran_status,
+				etajob_invoice to etaassoc_invoice,
+				etajob_void_date to etatran_void_date,
+				etajob_currency to etaorder_currency,
+				etajob_exchgrate to exchg_rate
+			extend
+				etatran_end_date = etajob_end_date
+			extend type = "equip",
+				etaassoc_name = etaequip_name,
+				etaworker_num = "",
+				etaassoc_type = etaequip_treatas_type,
+				etaassoc_start_date = Eta_JobDateNoTime(etajoblin_start_date),
+				etaassoc_end_date = Eta_JobDateNoTime(etajoblin_end_date),
+				etaorder_pod_date = Eta_JobDateNoTime(etajoblin_end_date),
+				void_date = etatran_void_date,
+				config_value = etaej_config_date,
+				config_field = etaej_config_date_field,
+				etapay_num = etaej_num,
+				eta_source_tran)
+			union
+			((etaaj_workers_pay extend etapr_pay_finalized?
+				where etaworkerstmt_date is "" and
+					etapr_pay_finalized? is "")
+				join by(etaworker_num)
+				(eta_workers project etaworker_num, etaworker_name, etapay_uom)
+				join by(etajob_num) (eta_jobs
+				project etajob_num, etajob_job, etajob_void_date, etajob_invoice,
+					etajob_currency, etajob_exchgrate, etajob_end_date, etajob_status,
+					etajob_TS)
+			rename etajob_status to etatran_status,
+				etajob_invoice to etaassoc_invoice,
+				etajob_void_date to etatran_void_date,
+				etajob_currency to etaorder_currency,
+				etajob_exchgrate to exchg_rate
+			extend
+				etatran_end_date = etajob_end_date
+				extend type = "worker",
+					etaassoc_type = "Driver",
+					etaequip_treatas_type = "",
+					etaassoc_name = etaworker_name,
+					etaequip_num = "",
+					stmt_date = etaworkerstmt_date is ""
+						? etaequipstmt_date : etaworkerstmt_date,
+					etaassoc_start_date = Eta_JobDateNoTime(etajoblin_start_date),
+					etaassoc_end_date = Eta_JobDateNoTime(etajoblin_end_date),
+					etaorder_pod_date = Eta_JobDateNoTime(etajoblin_end_date),
+					void_date = etatran_void_date,
+					config_value = etawj_config_date,
+					config_field = etawj_config_date_field,
+					etapay_num = etawj_num,
+					eta_source_tran)
+			extend 	pay_type = "jobs") union ((
+			(/* tableHint: */ eta_equip_orders
+			where ti_num > "" and etaequipstmt_num is "")
+			join by(etaequip_num)
+			(eta_equipment where etaequip_owner_operator? is true
+				project etaequip_num, etaequip_name, etaequip_type,
+					etaequip_treatas_type, etaequip_owner_operator?, etapay_uom)
+			join by(ti_num) (ti_tickets
+	extend
+		ti_ticket_last_activity_date,
+		etaorder_last_activity_date = ti_ticket_last_activity_date,
+		ti_ticket_last_activity_notes,
+		etaorder_last_activity_notes = ti_ticket_last_activity_notes,
+		ti_has_synced_ids?,
+		titicket_flag_descriptions,
+		titicket_flag_names,
+		eta_source_tran,
+		ti_net_amount,
+		etaorder_net_amount = ti_net_amount,
+		etatran_amount = ti_net_amount,
+		etaorder_exchgrate = ti_exchgrate,
+		etatran_end_date = ti_end_date
+	rename
+		ti_date to etatran_start_date,
+
+		ti_currency to etaorder_currency,
+		ti_exchgrate to exchgrate,
+		ti_invoice to etaassoc_invoice,
+		ti_invoice_date to etatran_invoice_date,
+		ti_status to etatran_status,
+		ti_billable_miles to billable_miles,
+		ti_comments to etatran_comments,
+		ti_fuel_surcharge_amount to etatran_fuel_surcharge_amount,
+		ti_date_modified to config_date_modified,
+		ti_taxcodes to taxcodes,
+		ti_void_user to etatran_void_user,
+		ti_void_date to etatran_void_date,
+		ti_has_synced_ids? to etaorder_has_synced_ids?,
+		titicket_flag_descriptions to etaorder_flag_descriptions,
+		titicket_flag_names to etaorder_flag_names,
+		gldept_id to gldept_id_sales,
+		glacct_num to glacct_num_sales,
+		ti_gldept_id to etaorder_gldept_id,
+		ti_ivc_remarks to etaorder_ivc_remarks,
+		bizpartner_num to bizpartner_num_billto,
+		ti_attachments to etaorder_attachments,
+		etaorder_custpo to etatran_custpo,
+		ti_rate to etatran_rate,
+		ti_no_charge? to etaorder_no_charge?
+	remove ti_copied_from, ti_ticket_last_activity_date, ti_ticket_last_activity_notes,
+		ti_copied_from_booking, etaao_allocation_isdefault, titender_num)
+			extend type = "equip",
+				etaassoc_name = etaequip_name,
+				etaworker_num = "",
+				etaassoc_type = etaequip_treatas_type,
+				etaassoc_start_date = etatran_start_date,
+				etaassoc_end_date = etatran_end_date,
+				etaorder_pod_date = etatran_end_date,
+				config_value = etaeo_config_date,
+				config_field = etaeo_config_date_field,
+				etapay_num = etaeo_num)
+			union
+				(
+				(eta_workers_orders
+					extend etapr_pay_finalized?
+					where ti_num > "" and etaworkerstmt_date is "" and
+						etapr_pay_finalized? is "")
+				join by(etaworker_num)
+				(eta_workers project etaworker_num, etaworker_name, etapay_uom)
+				join by(ti_num) (ti_tickets
+	extend
+		ti_ticket_last_activity_date,
+		etaorder_last_activity_date = ti_ticket_last_activity_date,
+		ti_ticket_last_activity_notes,
+		etaorder_last_activity_notes = ti_ticket_last_activity_notes,
+		ti_has_synced_ids?,
+		titicket_flag_descriptions,
+		titicket_flag_names,
+		eta_source_tran,
+		ti_net_amount,
+		etaorder_net_amount = ti_net_amount,
+		etatran_amount = ti_net_amount,
+		etaorder_exchgrate = ti_exchgrate,
+		etatran_end_date = ti_end_date
+	rename
+		ti_date to etatran_start_date,
+
+		ti_currency to etaorder_currency,
+		ti_exchgrate to exchgrate,
+		ti_invoice to etaassoc_invoice,
+		ti_invoice_date to etatran_invoice_date,
+		ti_status to etatran_status,
+		ti_billable_miles to billable_miles,
+		ti_comments to etatran_comments,
+		ti_fuel_surcharge_amount to etatran_fuel_surcharge_amount,
+		ti_date_modified to config_date_modified,
+		ti_taxcodes to taxcodes,
+		ti_void_user to etatran_void_user,
+		ti_void_date to etatran_void_date,
+		ti_has_synced_ids? to etaorder_has_synced_ids?,
+		titicket_flag_descriptions to etaorder_flag_descriptions,
+		titicket_flag_names to etaorder_flag_names,
+		gldept_id to gldept_id_sales,
+		glacct_num to glacct_num_sales,
+		ti_gldept_id to etaorder_gldept_id,
+		ti_ivc_remarks to etaorder_ivc_remarks,
+		bizpartner_num to bizpartner_num_billto,
+		ti_attachments to etaorder_attachments,
+		etaorder_custpo to etatran_custpo,
+		ti_rate to etatran_rate,
+		ti_no_charge? to etaorder_no_charge?
+	remove ti_copied_from, ti_ticket_last_activity_date, ti_ticket_last_activity_notes,
+		ti_copied_from_booking, etaao_allocation_isdefault, titender_num)
+				extend type = "worker",
+					etaassoc_type = "Driver",
+					etaassoc_name = etaworker_name,
+					etaequip_num = "",
+					etaassoc_start_date = etatran_start_date,
+					etaassoc_end_date = etatran_end_date,
+					etaorder_pod_date = etatran_end_date,
+					config_value = etawo_config_date,
+					config_field = etawo_config_date_field,
+					etapay_num = etawo_num)
+			extend pay_type = "tickets") extend etaassoc_readyto_pay? = etapay_readyto_pay?,
+			etaassoc_only_invoiced,
+			etaequip_num_owner_operator = etaequip_num 

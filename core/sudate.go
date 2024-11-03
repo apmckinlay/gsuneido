@@ -459,7 +459,7 @@ func ParseDate(s string, order string) SuDate {
 					tok(dig.get(2))
 				} else if size == 8 {
 					// date with no separators with yyyy
-					for i := 0; i < 3; i++ {
+					for i := range 3 {
 						if syspat[i] == 'y' {
 							tok(dig.get(4))
 						} else {
@@ -556,7 +556,7 @@ func ParseDate(s string, order string) SuDate {
 
 	if pat < len(datePatterns) {
 		// use match
-		for t := 0; t < len(p); t++ {
+		for t := range len(p) {
 			if p[t] == 'y' {
 				year = tokens[t]
 			} else if p[t] == 'm' {

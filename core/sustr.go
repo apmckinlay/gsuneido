@@ -339,7 +339,7 @@ func (si *stringIter) Infinite() bool {
 func (si *stringIter) Instantiate() *SuObject {
 	InstantiateMax(len(si.s))
 	list := make([]Value, len(si.s))
-	for i := 0; i < len(si.s); i++ {
+	for i := range len(si.s) {
 		list[i] = SuStr1s[si.s[i]]
 	}
 	return NewSuObject(list)

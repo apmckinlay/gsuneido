@@ -76,7 +76,7 @@ func shouldSplit(nd node, nodeCount int) bool {
 func (b *builder) Finish() *btree {
 	var key string
 	var off uint64
-	for li := 0; li < len(b.levels); li++ {
+	for li := range len(b.levels) {
 		if li > 0 {
 			// allow node to slightly exceed max size
 			b.levels[li].nb.Add(key, off, embedAll)

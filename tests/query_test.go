@@ -107,7 +107,7 @@ func hashPacked(p string) uint64 {
 
 func hashObject(p string) uint64 {
 	hash := uint64(0)
-	for i := 0; i < len(p); i++ {
+	for i := range len(p) {
 		// use simple addition to be insensitive to member order
 		hash += uint64(p[i])
 	}
@@ -161,7 +161,7 @@ func BenchmarkProject_Old(b *testing.B) {
 	}
 	hdr := q.Header()
 	cols := []string{"gltran_currency", "gltran_date", "glacct_num"}
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		results := make(map[string]Row)
 		for _, row := range data {
 			key := ixkey.Make(row, hdr, cols, nil, nil)
@@ -202,7 +202,7 @@ func BenchmarkProject_Hmap(b *testing.B) {
 		return x.hash == y.hash &&
 			equalCols(x.row, y.row, hdr, cols, nil, nil)
 	}
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		results := hmap.NewHmapFuncs[T, struct{}](hfn, eqfn)
 		for _, row := range data {
 			hn++

@@ -23,7 +23,7 @@ func consolePrint(s string) {
 		traceCon = os.Stdout
 		if options.Mode == "gui" {
 			allocConsole()
-			SetupConsole()
+			// SetupConsole()
 			f, err := os.OpenFile("CONOUT$", os.O_WRONLY, 0644)
 			if err == nil && f != nil {
 				traceCon = f

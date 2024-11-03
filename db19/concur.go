@@ -134,7 +134,7 @@ func startMergeWorkers() *execMulti {
 		jobChan:    make(chan job, 1),
 		resultChan: make(chan meta.MergeUpdate, 1),
 	}
-	for i := 0; i < nMergeWorkers; i++ {
+	for range nMergeWorkers {
 		go em.worker()
 	}
 	return em
@@ -268,7 +268,7 @@ const nPersistWorkers = 8 // ???
 func startExecPersistMulti() *execPersistMulti {
 	workChan := make(chan func() meta.PersistUpdate, 1)
 	resultChan := make(chan meta.PersistUpdate, 1)
-	for i := 0; i < nPersistWorkers; i++ {
+	for range nPersistWorkers {
 		go persistWorker(workChan, resultChan)
 	}
 	return &execPersistMulti{workChan: workChan, resultChan: resultChan}

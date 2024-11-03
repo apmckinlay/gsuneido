@@ -752,7 +752,7 @@ func (ob *SuObject) Call(th *Thread, _ Value, as *ArgSpec) Value {
 	args := th.Args(&ParamSpec1, as)
 	if x := ob.Get(th, args[0]); x != nil {
 		return x
-    }
+	}
 	return args[0]
 }
 
@@ -1007,7 +1007,7 @@ func (ob *SuObject) SetConcurrent() {
 
 func (ob *SuObject) SetChildConc() {
 	// recursive, deep
-	for i := 0; i < len(ob.list); i++ {
+	for i := range len(ob.list) {
 		ob.list[i].SetConcurrent()
 	}
 	iter := ob.named.Iter()
@@ -1200,11 +1200,11 @@ func unpackObject(s string, ob *SuObject) *SuObject {
 	buf := pack.NewDecoder(s[1:])
 	n := int(buf.VarUint())
 	ob.list = make([]Value, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		ob.list[i] = unpackValue(buf)
 	}
 	n = int(buf.VarUint())
-	for i := 0; i < n; i++ {
+	for range n {
 		k := unpackValue(buf)
 		v := unpackValue(buf)
 		ob.named.Put(k, v)

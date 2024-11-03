@@ -61,7 +61,7 @@ func testSorting(_ *testing.T, nb uint8, n2 uint16) {
 		return
 	}
 	bldr := NewSorting(z, lt)
-	for j := 0; j < n; j++ {
+	for range n {
 		bldr.Add(1 + int(rand.Int31())) // +1 so no zeros
 	}
 	bldr.Finish()
@@ -74,7 +74,7 @@ func testUnsorted(_ *testing.T, nb uint8, n2 uint16) {
 		return
 	}
 	bldr := NewUnsorted(z)
-	for j := 0; j < n; j++ {
+	for range n {
 		bldr.Add(1 + int(rand.Int31())) // +1 so no zeros
 	}
 	bldr.Finish()
@@ -94,7 +94,7 @@ func TestBuilder(*testing.T) {
 
 func test(nitems int) {
 	bldr := NewSorting(z, lt)
-	for j := 0; j < nitems; j++ {
+	for range nitems {
 		bldr.Add(randint())
 	}
 	list := bldr.Finish()
@@ -126,7 +126,7 @@ var N int
 
 func randint() int {
 	// small delay to simulate work
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		N++
 	}
 	return 1 + int(rand.Int31()) // +1 so no zeros
@@ -186,7 +186,7 @@ func TestIterEmpty(t *testing.T) {
 
 func TestIterOne(t *testing.T) {
 	b := NewUnsorted(z)
-	for i := 0; i < blockSize; i++ {
+	for i := range blockSize {
 		b.Add(int(i + 1))
 	}
 	list := b.Finish() // empty
@@ -279,7 +279,7 @@ const nitems = 4 * blockSize // number of blocks must be power of 2 for merging
 var G int
 
 func BenchmarkSimple(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		slice := mksimple()
 		G = slice[0]
 	}
@@ -294,7 +294,7 @@ func TestSimple(*testing.T) {
 
 func mksimple() []int {
 	slice := []int{}
-	for j := 0; j < nitems; j++ {
+	for range nitems {
 		slice = append(slice, randint())
 	}
 	sort.Sort(uint64Slice(slice))
@@ -312,7 +312,7 @@ func (p uint64Slice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 //-------------------------------------------------------------------
 
 func BenchmarkChunked(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		list := mkchunked()
 		G = list.blocks[0][0]
 	}
@@ -325,7 +325,7 @@ func TestChunked(*testing.T) {
 
 func mkchunked() *chunked {
 	list := newchunked()
-	for j := 0; j < nitems; j++ {
+	for range nitems {
 		list.Add(randint())
 	}
 	sort.Sort(list)
@@ -351,7 +351,7 @@ func ckblocks(blocks []*block[int]) {
 //-------------------------------------------------------------------
 
 func BenchmarkMerged(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		list := mkmerged()
 		G = list.blocks[0][0]
 	}
@@ -364,7 +364,7 @@ func TestMerged(*testing.T) {
 
 func mkmerged() *merged {
 	list := newmerged()
-	for j := 0; j < nitems; j++ {
+	for range nitems {
 		list.Add(randint())
 	}
 	return list
@@ -373,7 +373,7 @@ func mkmerged() *merged {
 //-------------------------------------------------------------------
 
 func BenchmarkConc(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		list := mkconc()
 		G = list.blocks[0][0]
 	}
@@ -386,7 +386,7 @@ func TestConc(*testing.T) {
 
 func mkconc() *conc {
 	list := newconc()
-	for j := 0; j < nitems; j++ {
+	for range nitems {
 		list.Add(randint())
 	}
 	list.End()

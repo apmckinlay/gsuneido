@@ -39,7 +39,7 @@ func BenchmarkInt(b *testing.B) {
 		n /= 2
 		m *= 2
 	}
-	for i := 0; i < m; i++ {
+	for range m {
 		th.Call(fn, SuInt(n))
 	}
 }

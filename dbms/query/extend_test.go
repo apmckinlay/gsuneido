@@ -91,7 +91,7 @@ func BenchmarkExtend(b *testing.B) {
 	rb.Add(SuStr("be"))
 	rb.Add(SuStr("see"))
 	row := []DbRec{{Record: rb.Build()}}
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		e.extendRow(nil, row)
 	}
 }

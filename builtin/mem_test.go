@@ -9,20 +9,20 @@ import (
 func BenchmarkMetric(b *testing.B) {
 	sample := make([]metrics.Sample, 1)
 	sample[0].Name = "/memory/classes/heap/objects:bytes"
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		metrics.Read(sample)
 	}
 }
 
 func BenchmarkMemStat(b *testing.B) {
 	var ms runtime.MemStats
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		runtime.ReadMemStats(&ms)
 	}
 }
 
 func BenchmarkSystemMemory(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		systemMemory()
 	}
 }

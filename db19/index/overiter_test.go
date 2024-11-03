@@ -67,7 +67,7 @@ func TestOverIter(t *testing.T) {
 	tran := newTran()
 	testNext := func(expected int) { it.Next(tran); t.Helper(); test(expected) }
 	testPrev := func(expected int) { it.Prev(tran); t.Helper(); test(expected) }
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		testNext(i)
 		if i == 5 {
 			tran = newTran()
@@ -161,7 +161,7 @@ func TestOverIterDeletePrevBug(*testing.T) {
 func TestOverIterReads(*testing.T) {
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	ib := &ixbuf.T{}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		ib.Insert(strconv.Itoa(i), uint64(i))
 	}
 	t := &testTran{getIndex: func() *Overlay {
@@ -223,7 +223,7 @@ func TestOverIterCombine(*testing.T) {
 	count := len(data)
 	assert.This(count).Is(n * 2)
 
-	for i := 0; i < n/2; i++ {
+	for range n / 2 {
 		j := rand.Intn(len(data))
 		if data[j] != "" {
 			ov.Delete(data[j], key2off(data[j]))
@@ -368,7 +368,7 @@ func TestOverIterRandom2(t *testing.T) {
 	keyoff := map[string]uint64{}
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	ibs := []*ixbuf.T{}
-	for i := 0; i < nlayers; i++ {
+	for range nlayers {
 		ibs = append(ibs, &ixbuf.T{})
 	}
 	ov := &Overlay{bt: bt, layers: ibs}
@@ -377,13 +377,13 @@ func TestOverIterRandom2(t *testing.T) {
 
 	keys := make([]string, nkeys)
 	randkey := str.UniqueRandom(3, 3)
-	for i := 0; i < nkeys; i++ {
+	for i := range nkeys {
 		keys[i] = randkey()
 	}
 
 	nextoff := uint64(1)
-	for i := 0; i < nlayers; i++ {
-		for j := 0; j < nkeys/5; j++ {
+	for i := range nlayers {
+		for range nkeys / 5 {
 			key := keys[rand.Intn(nkeys)]
 			if off := keyoff[key]; off != 0 {
 				if rand.Intn(3) == 1 {
@@ -432,7 +432,7 @@ func TestOverIterRandom2(t *testing.T) {
 	// random walk
 	it.Rewind()
 	oi.Rewind()
-	for i := 0; i < steps; i++ {
+	for range steps {
 		if rand.Intn(2) == 1 {
 			it.Next()
 			oi.Next(tran)

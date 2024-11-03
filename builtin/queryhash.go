@@ -104,7 +104,7 @@ func hashPacked(p string) uint64 {
 
 func hashObject(p string) uint64 {
 	hash := uint64(17)
-	for i := 0; i < len(p); i++ {
+	for i := range len(p) {
 		// use simple addition to be insensitive to member order
 		hash += uint64(p[i])
 	}

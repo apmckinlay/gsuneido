@@ -243,7 +243,7 @@ func ChooseColor(a Value) Value {
 	custColors := (*CustColors)(heap.Alloc(nCustColors * int32Size))
 	ccs := a.Get(nil, SuStr("custColors"))
 	if ccs != nil {
-		for i := 0; i < nCustColors; i++ {
+		for i := range nCustColors {
 			if x := ccs.Get(nil, SuInt(i)); x != nil {
 				custColors[i] = int32(ToInt(x))
 			}
@@ -267,7 +267,7 @@ func ChooseColor(a Value) Value {
 	a.Put(nil, SuStr("rgbResult"), IntVal(int(cc.rgbResult)))
 	a.Put(nil, SuStr("flags"), IntVal(int(cc.flags)))
 	if ccs != nil {
-		for i := 0; i < nCustColors; i++ {
+		for i := range nCustColors {
 			ccs.Put(nil, SuInt(i), IntVal(int(custColors[i])))
 		}
 	}

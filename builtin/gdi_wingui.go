@@ -569,7 +569,7 @@ func Polygon(a, b, c Value) Value {
 		n = ToInt(c)
 	}
 	p := heap.Alloc(uintptr(n) * nPoint)
-	for i := 0; i < min(n, ob.ListSize()); i++ {
+	for i := range min(n, ob.ListSize()) {
 		*(*stPoint)(unsafe.Pointer(uintptr(p) + uintptr(i)*nPoint)) =
 			obToPoint(ob.ListGet(i))
 	}

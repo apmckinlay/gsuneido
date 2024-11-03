@@ -56,7 +56,7 @@ func (cc *cclass) addRange(from, to byte) *cclass {
 
 // addChars adds characters to a character class instruction
 func (cc *cclass) addChars(s string) *cclass {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		c := s[i]
 		cc[c>>3] |= (1 << (c & 7))
 	}
@@ -119,7 +119,7 @@ func (cc *cclass) listLen() int {
 // list returns the cclass as a list of characters
 func (cc *cclass) list() []byte {
 	list := make([]byte, 0, 16)
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		if cc[i>>3]&(1<<(i&7)) != 0 {
 			list = append(list, byte(i))
 		}

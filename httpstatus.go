@@ -121,7 +121,7 @@ func trans() string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "<p>Transactions: (%d) ", n)
 	sep := ""
-	for i := 0; i < n; i++ {
+	for i := range n {
 		sb.WriteString(sep)
 		sb.WriteString(list.ListGet(i).String())
 		sep = ", "

@@ -33,9 +33,9 @@ var abc = SuStr("abc")
 var G Value
 
 func BenchmarkCat(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		s := EmptyStr
-		for j := 0; j < 10000; j++ {
+		for range 10000 {
 			s = OpCat(nil, s, abc)
 		}
 		G = s
@@ -43,9 +43,9 @@ func BenchmarkCat(b *testing.B) {
 }
 
 func BenchmarkJoin(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		ob := &SuObject{}
-		for j := 0; j < 10000; j++ {
+		for range 10000 {
 			ob.Add(abc)
 		}
 		G = join(ob, EmptyStr)

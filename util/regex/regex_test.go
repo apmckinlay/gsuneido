@@ -303,7 +303,7 @@ var M bool
 
 func BenchmarkOnePass(b *testing.B) {
 	pat := Compile("^a+b")
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		M = pat.Match("aaab", nil)
 	}
 }
@@ -512,7 +512,7 @@ func BenchmarkMatch(b *testing.B) {
 	s := strings.Repeat("helloworld", 1000)
 	pat := Compile("x|y|z")
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		pat.match(s, 0, &Captures{}, false)
 	}
 }

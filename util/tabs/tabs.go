@@ -18,7 +18,7 @@ func Detab(s string) string {
 	var buf strings.Builder
 	buf.Grow(n + n/4)
 	col := 0
-	for i := 0; i < n; i++ {
+	for i := range n {
 		switch s[i] {
 		case '\t':
 			buf.WriteByte(' ')

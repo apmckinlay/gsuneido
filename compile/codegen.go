@@ -112,7 +112,7 @@ func codegenClosureBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
 	assert.That(base <= math.MaxUint8)
 	f.Offset = uint8(base)
 	copy(f.Names, outerNames)
-	for i := 0; i < int(f.Nparams); i++ {
+	for i := range int(f.Nparams) {
 		outerNames[base+i] += "|" + strconv.Itoa(base+i)
 	}
 	return f, outerNames

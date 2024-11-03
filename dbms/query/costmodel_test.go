@@ -37,7 +37,7 @@ func TestCostModel(*testing.T) {
 	const nreads = 10_000
 	for readSize := 16; readSize <= 64*1024; readSize *= 2 {
 		t := time.Now()
-		for i := 0; i < nreads; i++ {
+		for range nreads {
 			off := rand.Intn(dbsize)
 			buf := db.Data(uint64(off))
 			if len(buf) > readSize {

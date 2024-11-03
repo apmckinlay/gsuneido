@@ -136,7 +136,7 @@ func stringArg(v Value) unsafe.Pointer {
 // bufToPtr copies data to an unsafe.Pointer
 // WARNING: p must point to at least len(s) bytes
 func bufToPtr(s string, p unsafe.Pointer) {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(i))) = s[i]
 	}
 }
@@ -144,7 +144,7 @@ func bufToPtr(s string, p unsafe.Pointer) {
 // strToPtr copies a nul terminated string to an unsafe.Pointer
 // WARNING: p must point to at least len(s)+1 bytes
 func strToPtr(s string, p unsafe.Pointer) {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(i))) = s[i]
 	}
 	*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(len(s)))) = 0
