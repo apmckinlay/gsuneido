@@ -33,7 +33,6 @@ func Bytes(b []byte) uint64 {
 }
 
 // HashString is the old version, used for compatibility with db checksums.
-// It hashes the entire string.
 func HashString(s string) uint32 {
 	const offset32 = 2166136261
 	const prime32 = 16777619
