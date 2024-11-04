@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"iter"
 	"log"
 	"os"
 	"path/filepath"
@@ -26,76 +27,83 @@ func dir(th *Thread, args []Value) Value {
 	block := args[3]
 	if block == False {
 		ob := &SuObject{}
-		forEachDir(path, justfiles, details, func(entry Value) {
+		for entry := range dirEntries(path, justfiles, details) {
 			if ob.Size() >= maxDir {
-				panic("Dir: too many files")
+				log.Panicln("ERROR: Dir: too many files")
 			}
 			ob.Add(entry)
-		})
+		}
 		return ob
 	}
 	// block form
-	forEachDir(path, justfiles, details, func(entry Value) {
-		th.Call(block, entry)
-	})
+	dirEntries(path, justfiles, details)(
+		func(entry Value) (ret bool) {
+			defer func() {
+				if e := recover(); e != nil && e != BlockContinue {
+					panic(e)
+				}
+				ret = true
+			}()
+			th.Call(block, entry)
+			return true
+		})
 	return nil
 }
 
-func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
-	dir, pat := filepath.Split(dir)
-	if dir == "" {
-		dir = "."
-	}
-	if strings.HasSuffix(pat, "*.*") {
-		pat = pat[:len(pat)-2] // switch *.* to *
-	}
-	match := newMatcher(pat)
-	f, err := os.Open(dir)
-	if err != nil {
-		// should panic, but cSuneido doesn't
-		if !errors.Is(err, fs.ErrNotExist) &&
-			!strings.Contains(err.Error(), "syntax is incorrect") { // Windows
-			log.Println("ERROR: Dir:", err)
+func dirEntries(dir string, justfiles, details bool) iter.Seq[Value] {
+	return func(yield func(Value) bool) {
+		dir, pat := filepath.Split(dir)
+		if dir == "" {
+			dir = "."
 		}
-		return
-	}
-	defer func() {
-		f.Close()
-		if e := recover(); e != nil && e != BlockBreak {
-			panic(e)
+		if strings.HasSuffix(pat, "*.*") {
+			pat = pat[:len(pat)-2] // switch *.* to *
 		}
-	}()
-	for {
-		list, err := f.Readdir(100)
+		match := newMatcher(pat)
+		f, err := os.Open(dir)
 		if err != nil {
-			if err != io.EOF {
-				panic(err.Error())
+			if !errors.Is(err, fs.ErrNotExist) {
+				log.Panicln("ERROR: Dir:", err)
 			}
-			break
+			return
 		}
-		for _, info := range list {
-			name := info.Name()
-			if match(name) && (!justfiles || !info.IsDir()) {
-				suffix := ""
-				if info.IsDir() {
-					suffix = "/"
+		defer func() {
+			f.Close()
+			if e := recover(); e != nil && e != BlockBreak {
+				panic(e)
+			}
+		}()
+		for {
+			list, err := f.ReadDir(100)
+			if err != nil {
+				if err != io.EOF {
+					panic(err.Error())
 				}
-				var entry Value = SuStr(info.Name() + suffix)
-				if details {
-					ob := &SuObject{}
-					ob.Set(SuStr("name"), entry)
-					ob.Set(SuStr("size"), Int64Val(info.Size()))
-					ob.Set(SuStr("date"), FromGoTime(info.ModTime()))
-					entry = ob
-				}
-				func() {
-					defer func() {
-						if e := recover(); e != nil && e != BlockContinue {
-							panic(e)
+				break
+			}
+			for _, ent := range list {
+				name := ent.Name()
+				if match(name) && (!justfiles || !ent.IsDir()) {
+					suffix := ""
+					if ent.IsDir() {
+						suffix = "/"
+					}
+					var entry Value = SuStr(ent.Name() + suffix)
+					if details {
+						info, err := ent.Info()
+						if err != nil {
+							log.Panicln("ERROR: Dir:", err)
 						}
-					}()
-					fn(entry)
-				}()
+						ob := &SuObject{}
+						ob.Set(SuStr("name"), entry)
+						ob.Set(SuStr("size"), Int64Val(info.Size()))
+						ob.Set(SuStr("date"), FromGoTime(info.ModTime()))
+						entry = ob
+					}
+					if !yield(entry) {
+						return
+					}
+				}
 			}
 		}
 	}
