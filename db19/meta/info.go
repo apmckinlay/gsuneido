@@ -125,7 +125,7 @@ type PersistUpdate struct {
 // It collects the new btree roots which are then applied by Apply.
 // WARNING: must not modify meta.
 func (m *Meta) Persist(exec func(func() PersistUpdate)) {
-	m.info.ForEach(func(ti *Info) {
+	for ti := range m.info.All() {
 		if len(ti.Indexes) >= 1 && ti.Indexes[0].Modified() {
 			exec(func() PersistUpdate {
 				results := make([]SaveResult, len(ti.Indexes))
@@ -135,7 +135,7 @@ func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 				return PersistUpdate{table: ti.Table, results: results}
 			})
 		}
-	})
+	}
 }
 
 func (pu PersistUpdate) Table() string {

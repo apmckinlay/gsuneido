@@ -104,7 +104,9 @@ func TestRandom(t *testing.T) {
 		// ht.check()
 		// ht.print()
 	}
-	ht.ForEach(func(*Foo) { panic("should be empty") })
+	for range ht.All() {
+		panic("should be empty")
+	}
 }
 
 func TestPersistent(t *testing.T) {
@@ -129,9 +131,9 @@ func TestPersistent(t *testing.T) {
 
 func tostr(ht FooHamt) string {
 	var list []string
-	ht.ForEach(func(f *Foo) {
+	for f := range ht.All() {
 		list = append(list, f.data)
-	})
+	}
 	sort.Strings(list)
 	return str.Join("{,}", list)
 }
@@ -221,10 +223,10 @@ func print1(depth int, nd *FooNode) {
 
 func check(ht FooHamt) {
 	keys := make(map[int]bool)
-	ht.ForEach(func(foo *Foo) {
+	for foo := range ht.All() {
 		if _, ok := keys[foo.key]; ok {
 			panic("duplicate key")
 		}
 		keys[foo.key] = true
-	})
+	}
 }

@@ -4,6 +4,7 @@
 package hamt
 
 import (
+	"iter"
 	"math"
 	"math/bits"
 
@@ -303,19 +304,26 @@ func clearHighestOneBit(n uint32) uint32 {
 
 //-------------------------------------------------------------------
 
-func (ht Hamt[K, E]) ForEach(fn func(E)) {
-	if ht.root != nil {
-		ht.root.forEach(fn)
+func (ht Hamt[K, E]) All() iter.Seq[E] {
+	return func(yield func(E) bool) {
+		if ht.root != nil {
+			ht.root.forEach(yield)
+		}
 	}
 }
 
-func (nd *node[K, E]) forEach(fn func(E)) {
+func (nd *node[K, E]) forEach(fn func(E) bool) bool {
 	for i := range nd.vals {
-		fn(nd.vals[i])
+		if !fn(nd.vals[i]) {
+			return false
+		}
 	}
 	for _, p := range nd.ptrs {
-		p.forEach(fn)
+		if !p.forEach(fn) {
+			return false
+		}
 	}
+	return true
 }
 
 //-------------------------------------------------------------------
@@ -388,10 +396,10 @@ func nmerge(no, clock int) int {
 func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64, lastMod int) uint64 {
 	size := 0
 	ck := uint32(0)
-	ht.ForEach(func(it E) {
+	for it := range ht.All() {
 		if it.IsTomb() {
 			if lastMod == All {
-				return
+				continue
 			}
 		} else {
 			ck += it.Cksum()
@@ -399,7 +407,7 @@ func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64, lastMod int) uint64 {
 		if it.LastMod() >= lastMod {
 			size += it.StorSize()
 		}
-	})
+	}
 	if size == 0 && (prevOff == 0 || lastMod != All) {
 		return 0
 	}
@@ -409,13 +417,13 @@ func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64, lastMod int) uint64 {
 	w.Put3(size)
 	w.Put5(prevOff)
 	w.Put4(int(ck))
-	ht.ForEach(func(it E) {
+	for it := range ht.All() {
 		if lastMod != All || !it.IsTomb() {
 			if it.LastMod() >= lastMod {
 				it.Write(w)
 			}
 		}
-	})
+	}
 	assert.That(w.Len() == size-cksum.Len)
 	cksum.Update(buf)
 	return off
@@ -439,11 +447,11 @@ func ReadChain[K comparable, E Item[K]](st *stor.Stor, off uint64,
 		next, _ = ht.read(st, next, lastMod, rdfn)
 	}
 	ck2 := uint32(0)
-	ht.ForEach(func(it E) {
+	for it := range ht.All() {
 		if !it.IsTomb() {
 			ck2 += it.Cksum()
 		}
-	})
+	}
 	if ck != ck2 {
 		panic("metadata checksum mismatch")
 	}
@@ -486,19 +494,19 @@ func (c *Chain[K, E]) Cksum() uint32 {
 	for i := range c.Offs {
 		cksum += uint32(c.Offs[i]) + uint32(c.Ages[i])
 	}
-	c.ForEach(func(it E) {
+	for it := range c.All() {
 		cksum += it.Cksum()
-	})
+	}
 	return cksum
 }
 
 // Cksum on Hamt is for the logical state, whereas Cksum on Chain is physical.
 func (ht Hamt[K, E]) Cksum() uint32 {
 	cksum := uint32(0)
-	ht.ForEach(func(it E) {
+	for it := range ht.All() {
 		if !it.IsTomb() {
 			cksum += it.Cksum()
 		}
-	})
+	}
 	return cksum
 }

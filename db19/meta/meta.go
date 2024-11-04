@@ -114,27 +114,27 @@ func (m *Meta) GetView(name string) string {
 }
 
 func (m *Meta) ForEachSchema(fn func(*Schema)) {
-	m.schema.ForEach(func(schema *Schema) {
+	for schema := range m.schema.All() {
 		if schema.isTable() {
 			fn(schema)
 		}
-	})
+	}
 }
 
 func (m *Meta) ForEachView(fn func(name, def string)) {
-	m.schema.ForEach(func(schema *Schema) {
+	for schema := range m.schema.All() {
 		if schema.isView() {
 			fn(schema.Table[1:], schema.Columns[0])
 		}
-	})
+	}
 }
 
 func (m *Meta) ForEachInfo(fn func(*Info)) {
-	m.info.ForEach(func(info *Info) {
+	for info := range m.info.All() {
 		if !info.IsTomb() {
 			fn(info)
 		}
-	})
+	}
 }
 
 // Put is used by Database.LoadedTable and admin schema changes
@@ -801,15 +801,15 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 		info:   hamt.ReadChain[string](store, offInfo, ReadInfo)}
 	// copy Ixspec to Info from Schema (constructed by ReadSchema)
 	// Ok to modify since it's not in use yet.
-	m.info.ForEach(func(ti *Info) {
+	for ti := range m.info.All() {
 		if ti.IsTomb() {
-			return
+			continue
 		}
 		ts := m.schema.MustGet(ti.Table)
 		for i := range ti.Indexes {
 			ti.Indexes[i].SetIxspec(&ts.Indexes[i].Ixspec)
 		}
-	})
+	}
 	linkFkeys(&m)
 	return &m
 }
@@ -818,9 +818,9 @@ type Fkey = schema.Fkey
 
 // linkFkeys links foreign keys to targets (Fk and FkToHere[])
 func linkFkeys(m *Meta) {
-	m.schema.ForEach(func(s *Schema) {
+	for s := range m.schema.All() {
 		if s.IsTomb() {
-			return
+			continue
 		}
 		for i := range s.Indexes {
 			fk := &s.Indexes[i].Fk
@@ -846,17 +846,17 @@ func linkFkeys(m *Meta) {
 				}
 			}
 		}
-	})
+	}
 }
 
 //-------------------------------------------------------------------
 
 func (m *Meta) CheckAllMerged() {
-	m.info.ForEach(func(ti *Info) {
+	for ti := range m.info.All() {
 		for _, ov := range ti.Indexes {
 			ov.CheckMerged()
 		}
-	})
+	}
 }
 
 func (m *Meta) Offsets() (schemaOff, infoOff uint64) {
