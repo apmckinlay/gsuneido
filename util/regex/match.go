@@ -5,6 +5,7 @@ package regex
 
 import (
 	"fmt"
+	"iter"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -52,12 +53,12 @@ func (pat Pattern) leftAnchored() bool {
 	return opType(pat[piStart]) == opStrStart
 }
 
-// ForEachMatch calls action for each non-overlapping match in the string.
-// The action should return true to continue, false to stop.
-func (pat Pattern) ForEachMatch(s string, fn func(cap *Captures) bool) {
-	var cap Captures
-	for i := 0; i <= len(s) && pat.match(s, i, &cap, false) &&
-		fn(&cap); i = max(int(cap[1]), int(cap[0])+1) {
+func (pat Pattern) All(s string) iter.Seq[*Captures] {
+	return func(yield func(*Captures) bool) {
+		var cap Captures
+		for i := 0; i <= len(s) && pat.match(s, i, &cap, false) &&
+			yield(&cap); i = max(int(cap[1]), int(cap[0])+1) {
+		}
 	}
 }
 

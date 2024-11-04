@@ -535,7 +535,7 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) string
 	from := 0
 	nreps := 0
 	var buf strings.Builder
-	pat.ForEachMatch(s, func(cap *regex.Captures) bool {
+	for cap := range pat.All(s) {
 		if buf.Cap() == 0 {
 			buf.Grow(len(s)) // ???
 		}
@@ -555,8 +555,10 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) string
 		}
 		from = int(end)
 		nreps++
-		return nreps < count
-	})
+		if nreps >= count {
+			break
+		}
+	}
 	if nreps == 0 {
 		// avoid copy if no replacements
 		return s
