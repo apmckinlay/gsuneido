@@ -712,7 +712,6 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
 			if slices.Equal(fkCols, ix.Columns) {
-				fk.IIndex = j
 				fkToHere := make([]Fkey, 0, len(ix.FkToHere))
 				for k := range ix.FkToHere {
 					fk2 := &ix.FkToHere[k]
