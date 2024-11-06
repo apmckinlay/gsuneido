@@ -5,6 +5,7 @@ package ranges
 
 import (
 	"fmt"
+	stditer "iter"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -145,7 +146,7 @@ func smaller(s string) string {
 func (rs *Ranges) check() int {
 	n := 0
 	prevTo := ""
-	rs.ForEach(func(from, to string) {
+	for from, to := range rs.All() {
 		if prevTo >= from {
 			panic("check: out of order " + prevTo + ", " + from)
 		}
@@ -154,7 +155,7 @@ func (rs *Ranges) check() int {
 		}
 		prevTo = to
 		n++
-	})
+	}
 	return n
 }
 
@@ -188,20 +189,25 @@ func TestAddReturn(t *testing.T) {
 
 //-------------------------------------------------------------------
 
-type visitor func(from, to string)
-
-func (rs *Ranges) ForEach(fn visitor) {
-	if rs.tree == nil {
-		rs.leaf.forEach(fn)
-	} else {
-		for i := range rs.tree.size {
-			rs.tree.slots[i].leaf.forEach(fn)
+func (rs *Ranges) All() stditer.Seq2[string, string] {
+	return func(yield func(from, to string) bool) {
+		if rs.tree == nil {
+			rs.leaf.forEach(yield)
+		} else {
+			for i := range rs.tree.size {
+				if !rs.tree.slots[i].leaf.forEach(yield) {
+					return
+				}
+			}
 		}
 	}
 }
 
-func (leaf *leafNode) forEach(fn visitor) {
+func (leaf *leafNode) forEach(yield func(from, to string) bool) bool {
 	for i := range leaf.size {
-		fn(leaf.slots[i].from, leaf.slots[i].to)
+		if !yield(leaf.slots[i].from, leaf.slots[i].to) {
+			return false
+		}
 	}
+	return true
 }
