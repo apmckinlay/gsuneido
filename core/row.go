@@ -70,13 +70,13 @@ func (row Row) GetRaw(hdr *Header, fld string) string {
 
 // GetRawVal is like GetVal (i.e. handles rules) but returns a raw/packed value.
 func (row Row) GetRawVal(hdr *Header, fld string, th *Thread, tran *SuTran) string {
+	if raw, ok := row.getRaw2(hdr, fld); ok {
+		return raw
+	}
 	if strings.HasSuffix(fld, "_lower!") {
 		base := fld[:len(fld)-7]
 		x, _ := row.getRaw2(hdr, base)
 		return lowerRaw(x)
-	}
-	if raw, ok := row.getRaw2(hdr, fld); ok {
-		return raw
 	}
 	if nil == getRule(th, fld) {
 		return ""
@@ -126,10 +126,11 @@ func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
 		return row[at.Reci].GetRaw(int(at.Fldi)), true
 	}
 	// handle nil records from Union
-	for reci := int(at.Reci + 1); reci < len(hdr.Fields); reci++ {
-		if fldi := slices.Index(hdr.Fields[reci], fld); fldi >= 0 {
-			if row[reci].Record != "" {
-				return row[reci].GetRaw(int(fldi)), true
+	n := min(len(row), len(hdr.Fields))
+	for reci := int(at.Reci + 1); reci < n; reci++ {
+		if row[reci].Record != "" {
+			if fldi := slices.Index(hdr.Fields[reci], fld); fldi >= 0 {
+				return row[reci].GetRaw(fldi), true
 			}
 		}
 	}
