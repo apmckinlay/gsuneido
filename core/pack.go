@@ -38,6 +38,7 @@ const (
 	PackDate
 	PackObject
 	PackRecord
+	PackForward // for query extend
 )
 
 type packStack []Value

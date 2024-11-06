@@ -25,6 +25,7 @@ type Extend struct {
 	selCols  []string
 	selVals  []string
 	srcFlds  []string
+	fwd      map[int]string
 	Query1
 	hasExprs bool
 	conflict bool
@@ -56,9 +57,19 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 	e.singleTbl.Set(!e.hasExprs && src.SingleTable())
 	e.lookCost.Set(src.lookupCost())
 
-	for _, expr := range e.exprs {
+	for i, expr := range e.exprs {
 		if c, ok := expr.(*ast.Constant); ok {
 			c.Packed = Pack(c.Val.(Packable))
+		}
+		if Suneido.Get(nil, SuStr("ExtendForward")) == True {
+			if id, ok := expr.(*ast.Ident); ok && !e.header.HasField(id.Name) {
+				assert.That(id.Name != e.cols[i])
+				if e.fwd == nil {
+					e.fwd = make(map[int]string)
+				}
+				e.fwd[i] = string(rune(PackForward)) + id.Name
+				// fmt.Println("Extend: forward", e.cols[i], "=", id)
+			}
 		}
 	}
 	return e
@@ -245,13 +256,15 @@ func (e *Extend) extendRow(th *Thread, row Row) Record {
 		e.ctx.Tran = MakeSuTran(e.t)
 	}
 	var rb RecordBuilder
-	for _, expr := range e.exprs {
+	for i, expr := range e.exprs {
 		if expr != nil {
 			if c, ok := expr.(*ast.Constant); ok {
 				rb.AddRaw(c.Packed)
 			} else if ast.IsColumn(expr, e.srcFlds) {
 				fld := expr.(*ast.Ident).Name
 				rb.AddRaw(row.GetRawVal(e.header, fld, e.ctx.Th, e.ctx.Tran))
+			} else if f, ok := e.fwd[i]; ok {
+				rb.AddRaw(f)
 			} else {
 				// incrementally build record so extends can see previous ones
 				e.ctx.Row = append(row, DbRec{Record: rb.Build()})
