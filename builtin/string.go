@@ -419,14 +419,20 @@ func string_Size(this Value) Value {
 	// "this" should always have Len
 }
 
-var _ = method(string_Split, "(separator)")
+var _ = method(string_Split, "(separator = '')")
 
 func string_Split(this, arg Value) Value {
+	s := ToStr(this)
 	sep := ToStr(arg)
 	if sep == "" {
-		panic("string.Split separator must not be empty string")
+		// split bytes
+		v := make([]Value, len(s))
+		for i := range len(s) {
+			v[i] = SuStr1s[s[i]]
+		}
+		return SuObjectOf(v...)
 	}
-	strs := strings.Split(ToStr(this), sep)
+	strs := strings.Split(s, sep)
 	if strs[len(strs)-1] == "" {
 		strs = strs[:len(strs)-1]
 	}
