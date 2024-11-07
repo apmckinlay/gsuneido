@@ -66,7 +66,7 @@ func (seq *seqIter) Infinite() bool {
 }
 
 func (seq *seqIter) Instantiate() *SuObject {
-	n := (seq.to - seq.from + (seq.by - 1)) / seq.by
+	n := max(0, (seq.to - seq.from + (seq.by - 1)) / seq.by)
 	InstantiateMax(n)
 	list := make([]Value, n)
 	i := seq.from
