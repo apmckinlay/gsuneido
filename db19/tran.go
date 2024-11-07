@@ -54,26 +54,18 @@ func (t *UpdateTran) getRwInfo(table string) *meta.Info {
 }
 
 func (t *tran) GetAllInfo() []*meta.Info {
-	infos := make([]*meta.Info, 0, 32)
-	t.meta.ForEachInfo(func(info *meta.Info) { infos = append(infos, info) })
-	return infos
+	return slices.AppendSeq(make([]*meta.Info, 0, 32), t.meta.Infos())
 }
 
 func (t *tran) GetAllSchema() []*meta.Schema {
-	schemas := make([]*meta.Schema, 0, 32)
-	t.meta.ForEachSchema(
-		func(schema *meta.Schema) {
-			assert.That(len(schema.Indexes) > 0)
-			schemas = append(schemas, schema)
-		})
-	return schemas
+	return slices.AppendSeq(make([]*meta.Schema, 0, 32), t.meta.Tables())
 }
 
 func (t *tran) GetAllViews() []string {
 	defs := make([]string, 0, 16)
-	t.meta.ForEachView(func(name, def string) {
+	for name, def := range t.meta.Views() {
 		defs = append(defs, name, def)
-	})
+	}
 	return defs
 }
 

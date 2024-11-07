@@ -69,9 +69,9 @@ func TestBig(*testing.T) {
 	nr := 0
 	state := db.GetState()
 	state.Meta.CheckAllMerged()
-	state.Meta.ForEachInfo(func(ti *meta.Info) {
+	for ti := range state.Meta.Infos() {
 		nr += ti.Nrows
-	})
+	}
 	assert.This(nr).Is(nrows)
 	db.MustCheck()
 

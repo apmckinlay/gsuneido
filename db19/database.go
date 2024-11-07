@@ -166,9 +166,9 @@ func (db *Database) OverwriteTable(ts *meta.Schema, ti *meta.Info) {
 // CheckAllFkeys is used after loading an entire database.
 func (db *Database) CheckAllFkeys() {
 	state := db.GetState()
-	state.Meta.ForEachSchema(func(ts *meta.Schema) {
+	for ts := range state.Meta.Tables() {
 		state.Meta.CheckFkeys(&ts.Schema)
-	})
+	}
 }
 
 // schema changes ---------------------------------------------------

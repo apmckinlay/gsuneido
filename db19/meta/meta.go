@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"iter"
 	"log"
 
 	"slices"
@@ -113,27 +114,27 @@ func (m *Meta) GetView(name string) string {
 	return ts.Columns[0]
 }
 
-func (m *Meta) ForEachSchema(fn func(*Schema)) {
-	for schema := range m.schema.All() {
-		if schema.isTable() {
-			fn(schema)
-		}
+func (m *Meta) Tables() iter.Seq[*Schema] {
+	return func(yield func(*Schema) bool) {
+		m.schema.All()(func(schema *Schema) bool {
+			return !schema.isTable() || yield(schema)
+		})
 	}
 }
 
-func (m *Meta) ForEachView(fn func(name, def string)) {
-	for schema := range m.schema.All() {
-		if schema.isView() {
-			fn(schema.Table[1:], schema.Columns[0])
-		}
+func (m *Meta) Views() iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {
+		m.schema.All()(func(schema *Schema) bool {
+			return !schema.isView() || yield(schema.Table[1:], schema.Columns[0])
+		})
 	}
 }
 
-func (m *Meta) ForEachInfo(fn func(*Info)) {
-	for info := range m.info.All() {
-		if !info.IsTomb() {
-			fn(info)
-		}
+func (m *Meta) Infos() iter.Seq[*Info] {
+	return func(yield func(*Info) bool) {
+		m.info.All()(func(info *Info) bool {
+			return info.IsTomb() || yield(info)
+		})
 	}
 }
 

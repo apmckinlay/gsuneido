@@ -11,7 +11,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -188,13 +187,13 @@ func newErrCorrupt(e any) *ErrCorrupt {
 func runParallel(state *DbState, fn func(*DbState, string)) {
 	tcs := newTableCheckers(state, fn)
 	defer tcs.finish()
-	tcs.state.Meta.ForEachSchema(func(ts *meta.Schema) {
+	for ts := range state.Meta.Tables() {
 		select {
 		case tcs.work <- ts.Table:
 		case <-tcs.stop:
 			panic("") // overridden by finish
 		}
-	})
+	}
 }
 
 func newTableCheckers(state *DbState, fn func(*DbState, string)) *tableCheckers {

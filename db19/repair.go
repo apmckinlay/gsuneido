@@ -10,7 +10,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/system"
 )
@@ -72,7 +71,7 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 	if table != "" {
 		tcs.work <- table
 	}
-	tcs.state.Meta.ForEachSchema(func(ts *meta.Schema) {
+	for ts := range state.Meta.Tables() {
 		if ts.Table == table {
 			return // continue
 		}
@@ -81,7 +80,7 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 		case <-tcs.stop:
 			panic("") // overridden by finish
 		}
-	})
+	}
 	return nil
 }
 

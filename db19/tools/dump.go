@@ -80,9 +80,9 @@ func dump(db *Database, w WriterPlus) (nTables, nViews int) {
 	state := db.Persist()
 	nViews = dumpViews(state, w)
 	tables := make([]string, 0, 512)
-	state.Meta.ForEachSchema(func(sc *meta.Schema) {
+	for sc := range state.Meta.Tables() {
 		tables = append(tables, sc.Table)
-	})
+	}
 	sort.Strings(tables)
 	for _, table := range tables {
 		dumpTable2(db, state, table, true, w, ics)
@@ -243,7 +243,7 @@ func writeInt(w WriterPlus, n int) {
 func dumpViews(state *DbState, w WriterPlus) int {
 	w.WriteString("====== views (view_name,view_definition) key(view_name)\n")
 	nrecs := 0
-	state.Meta.ForEachView(func(name, def string) {
+	for name, def := range state.Meta.Views() {
 		var b core.RecordBuilder
 		b.Add(core.SuStr(name))
 		b.Add(core.SuStr(def))
@@ -251,7 +251,7 @@ func dumpViews(state *DbState, w WriterPlus) int {
 		writeInt(w, len(rec))
 		w.WriteString(string(rec))
 		nrecs++
-	})
+	}
 	writeInt(w, 0) // end of table records
 	return nrecs
 }

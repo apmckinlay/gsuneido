@@ -46,12 +46,12 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 	nViews = copyViews(state, dst)
 
 	schemas := make([]schemaSize, 0, 128)
-	state.Meta.ForEachSchema(func(sc *meta.Schema) {
+	for sc := range state.Meta.Tables() {
 		ti := state.Meta.GetRoInfo(sc.Table)
 		ss := schemaSize{sc: sc, nrows: ti.Nrows}
 		schemas = append(schemas, ss)
 		nTables++
-	})
+	}
 	// sort reverse to start largest first
 	sort.Slice(schemas, func(i, j int) bool {
 		return schemas[i].nrows > schemas[j].nrows
@@ -98,10 +98,10 @@ func tmpdb() (*Database, string) {
 
 func copyViews(state *DbState, dst *Database) int {
 	n := 0
-	state.Meta.ForEachView(func(name, def string) {
+	for name, def := range state.Meta.Views() {
 		dst.AddView(name, def)
 		n++
-	})
+	}
 	return n
 }
 
