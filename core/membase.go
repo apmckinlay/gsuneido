@@ -54,3 +54,24 @@ func (mb *MemBase) Has(m string) bool {
 	_, ok := mb.Data[m]
 	return ok
 }
+
+var _ iter2able = (*MemBase)(nil)
+
+func (mb *MemBase) Iter2(bool, bool) func() (Value, Value) {
+	if mb.Lock() {
+		defer mb.lock.Unlock()
+	}
+	// can't use iter.Pull2 because it requires calling stop
+	data := make([]Value, 0, 2*len(mb.Data)) // snapshot
+	for k, v := range mb.Data {
+		data = append(data, SuStr(k), v)
+	}
+	i := 0
+	return func() (Value, Value) {
+		if i >= len(data) {
+			return nil, nil
+		}
+		i += 2
+		return data[i-2], data[i-1]
+	}
+}
