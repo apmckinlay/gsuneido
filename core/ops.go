@@ -291,6 +291,19 @@ func OpIter(x Value) SuIter {
 	return SuIter{Iter: iterable.Iter()}
 }
 
+type iter2 = func() (Value, Value)
+type iter2able interface{ Iter2(bool, bool) iter2 }
+
+var _ iter2able = (*SuObject)(nil)
+
+func OpIter2(x Value) SuIter2 {
+	iterable, ok := x.(iter2able)
+	if !ok {
+		panic("can't iterate " + x.Type().String())
+	}
+	return SuIter2{iter2: iterable.Iter2(true, true)}
+}
+
 func OpCatch(th *Thread, e any, catchPat string) *SuExcept {
 	se := ToSuExcept(th, e)
 	if catchMatch(string(se.SuStr), catchPat) {

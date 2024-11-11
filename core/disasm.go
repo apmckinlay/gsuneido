@@ -102,6 +102,15 @@ func disasm(nest int, fn *SuFunc, out outfn) {
 	}
 }
 
+func Disasm1(fn *SuFunc, ip int) string {
+	var output string
+	d := &dasm{fn: fn, i: ip, out: func(_ *SuFunc, _, i int, s string, _ int) {
+		output = fmt.Sprintf("%5d: %s", i, s)
+	}}
+	d.next()
+	return output
+}
+
 type dasm struct {
 	fn   *SuFunc
 	out  outfn
@@ -166,6 +175,11 @@ func (d *dasm) next() {
 		idx := fetchUint8()
 		j := fetchInt16()
 		s += " " + d.fn.Names[idx] + fmt.Sprint(" ", d.i+j)
+	case op.ForIn2:
+		v1 := fetchUint8()
+		v2 := fetchUint8()
+		j := fetchInt16()
+		s += " " + d.fn.Names[v1] + " " + d.fn.Names[v2] + fmt.Sprint(" ", d.i+j)
 	case op.ForRange:
 		j := fetchInt16()
 		s += fmt.Sprint(" ", d.i+j)
@@ -217,6 +231,8 @@ func DisasmRaw(code string, fn func(i int)) {
 			i += 2
 		case op.ForIn, op.Try:
 			i += 3
+		case op.ForIn2:
+			i += 4
 		}
 	}
 }

@@ -202,6 +202,9 @@ func (ck *Check) statement(
 		if stmt.Var.Name != "" {
 			init = ck.initVar(init, stmt.Var.Name, int(stmt.Var.Pos))
 		}
+		if stmt.Var2.Name != "" {
+			init = ck.initVar(init, stmt.Var2.Name, int(stmt.Var2.Pos))
+		}
 		init, _ = ck.expr(stmt.E, init)
 		init, _ = ck.expr(stmt.E2, init)
 		ck.statement(stmt.Body, init, false)

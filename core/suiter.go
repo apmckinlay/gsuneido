@@ -3,7 +3,10 @@
 
 package core
 
-import "github.com/apmckinlay/gsuneido/core/types"
+import (
+	"github.com/apmckinlay/gsuneido/core/types"
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
 
 // SuIter is a Value that wraps a runtime.Iter
 // and provides the Suneido interator interface (Next,Dup,Infinite)
@@ -38,4 +41,17 @@ func (it SuIter) SetConcurrent() {
 
 func (it SuIter) IsConcurrent() Value {
 	return it.Iter.IsConcurrent()
+}
+
+//-------------------------------------------------------------------
+
+type SuIter2 struct {
+	ValueBase[SuIter2]
+	iter2
+}
+
+var _ Value = (*SuIter2)(nil)
+
+func (it SuIter2) Equal(other any) bool {
+	panic(assert.ShouldNotReachHere())
 }

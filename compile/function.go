@@ -336,7 +336,8 @@ func (p *Parser) isForIn() bool {
 	if !p.Lxr.AheadSkip(i).Token.IsIdent() {
 		return false
 	}
-	return p.Lxr.AheadSkip(i+1).Token == tok.In
+	t := p.Lxr.AheadSkip(i+1).Token
+	return t == tok.In || t == tok.Comma
 }
 
 func (p *Parser) forIn() *ast.ForIn {
@@ -345,6 +346,13 @@ func (p *Parser) forIn() *ast.ForIn {
 	p.final[id] = disqualified
 	pos := p.Pos
 	p.MatchIdent()
+	var var2 ast.Ident
+	if p.MatchIf(tok.Comma) {
+		var2.Name = p.Text
+        p.final[var2.Name] = disqualified
+		var2.Pos = p.Pos
+        p.MatchIdent()
+	}
 	p.Match(tok.In)
 	var expr ast.Expr
 	if p.Token == tok.RangeTo {
@@ -365,7 +373,7 @@ func (p *Parser) forIn() *ast.ForIn {
 		p.Match(tok.RParen)
 	}
 	body := p.statement()
-	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos},
+	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, Var2: var2,
 		E: expr, E2: expr2, Body: body}
 }
 

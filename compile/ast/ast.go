@@ -786,6 +786,7 @@ type ForIn struct {
 	E2   Expr // used by for-range
 	Body Statement
 	Var  Ident // optional with for-range
+	Var2 Ident // used with: for m,v in ob
 	stmtNodeT
 }
 
@@ -793,6 +794,9 @@ func (a *ForIn) String() string {
 	s := "ForIn("
 	if a.Var.Name != "" {
 		s += a.Var.Name + " "
+	}
+	if a.Var2.Name != "" {
+		s += a.Var2.Name + " "
 	}
 	s += a.E.String()
 	if a.E2 != nil {

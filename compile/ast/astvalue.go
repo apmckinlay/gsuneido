@@ -483,6 +483,8 @@ func (a *ForIn) Get(_ *Thread, m Value) Value {
 		return SuStr("ForIn")
 	case SuStr("var"):
 		return SuStr(a.Var.Name)
+	case SuStr("var2"):
+		return SuStr(a.Var2.Name)
 	case SuStr("expr"):
 		return a.E.(Value)
 	case SuStr("expr2"):

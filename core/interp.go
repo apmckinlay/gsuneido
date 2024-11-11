@@ -172,8 +172,7 @@ func (th *Thread) interp(catchJump, catchSp *int) (ret Value) {
 loop:
 	for fr.ip < len(code) {
 		// fmt.Println("stack:", t.sp, t.stack[max(0, t.sp-3):t.sp])
-		// _, da := Disasm1(fr.fn, fr.ip)
-		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
+		// fmt.Println(Disasm1(fr.fn, fr.ip))
 		if wingui { // const so should be compiled away
 			if th == MainThread && !InRunUI {
 				opCount--
@@ -448,6 +447,8 @@ loop:
 			}
 		case op.Iter:
 			th.stack[th.sp-1] = OpIter(th.stack[th.sp-1])
+		case op.Iter2:
+			th.stack[th.sp-1] = OpIter2(th.stack[th.sp-1])
 		case op.ForIn:
 			next := th.Top().(interface{ Next() Value }).Next()
 			if next != nil {
@@ -455,6 +456,15 @@ loop:
 				jump()
 			} else {
 				fr.ip += 3
+			}
+		case op.ForIn2:
+			m, v := th.Top().(SuIter2).iter2()
+			if m != nil {
+				fr.locals.v[fetchUint8()] = m
+				fr.locals.v[fetchUint8()] = v
+				jump()
+			} else {
+				fr.ip += 4
 			}
 		case op.ForRange:
 			th.stack[th.sp-1] = OpAdd1(th.stack[th.sp-1])

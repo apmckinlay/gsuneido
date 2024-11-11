@@ -467,7 +467,11 @@ func (cg *cgen) forInStmt(node *ast.ForIn) {
 		return
 	}
 	cg.expr(node.E)
-	cg.emit(op.Iter)
+	if node.Var2.Name == "" {
+		cg.emit(op.Iter)
+	} else {
+		cg.emit(op.Iter2)
+	}
 	labels := &Labels{brk: -1, cont: -1}
 	start := cg.emitJump(op.Jump, -1)
 	loop := cg.label()
@@ -476,8 +480,15 @@ func (cg *cgen) forInStmt(node *ast.ForIn) {
 	cg.placeLabel(labels.cont)
 	cg.placeLabel(start)
 	label := loop - len(cg.code) - 4
-	cg.emit(op.ForIn, byte(cg.name(node.Var.Name)),
-		byte(label>>8), byte(label))
+	if node.Var2.Name == "" {
+		cg.emit(op.ForIn, byte(cg.name(node.Var.Name)),
+			byte(label>>8), byte(label))
+	} else {
+		label--
+		cg.emit(op.ForIn2,
+			byte(cg.name(node.Var.Name)), byte(cg.name(node.Var2.Name)),
+			byte(label>>8), byte(label))
+	}
 	cg.placeLabel(labels.brk)
 	cg.emit(op.Pop)
 }

@@ -487,6 +487,32 @@ func TestControl(t *testing.T) {
 		21: ForIn x 6
 		25: Pop`)
 
+	test("for m,v in ob \n { a; break; b; continue; c }", `
+		0: Load ob
+		2: Iter2
+		3: Jump 21
+		6: Load a
+		8: Pop
+		9: Jump 26
+		12: Load b
+		14: Pop
+		15: Jump 21
+		18: Load c
+		20: Pop
+		21: ForIn2 m v 6
+		26: Pop`)
+
+	test("for m,v in ob \n Print(m, v)", `
+		0: Load ob
+		2: Iter2
+		3: Jump 15
+		6: Load m
+		8: Load v
+		10: Global Print
+		13: CallFuncDiscard (?, ?)
+		15: ForIn2 m v 6
+		20: Pop`)
+
 	test(`for ..10 { a; break; b; continue; c }`, `
 		0: Int 10
 		3: MinusOne

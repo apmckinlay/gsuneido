@@ -67,32 +67,34 @@ func _() {
 	_ = x[JumpIsnt-56]
 	_ = x[JumpLt-57]
 	_ = x[Iter-58]
-	_ = x[ForIn-59]
-	_ = x[ForRange-60]
-	_ = x[ForRangeVar-61]
-	_ = x[Throw-62]
-	_ = x[Try-63]
-	_ = x[Catch-64]
-	_ = x[CallFuncDiscard-65]
-	_ = x[CallFuncNoNil-66]
-	_ = x[CallFuncNilOk-67]
-	_ = x[CallMethDiscard-68]
-	_ = x[CallMethNoNil-69]
-	_ = x[CallMethNilOk-70]
-	_ = x[Super-71]
-	_ = x[Return-72]
-	_ = x[ReturnNil-73]
-	_ = x[ReturnThrow-74]
-	_ = x[Closure-75]
-	_ = x[BlockBreak-76]
-	_ = x[BlockContinue-77]
-	_ = x[BlockReturn-78]
-	_ = x[BlockReturnNil-79]
+	_ = x[Iter2-59]
+	_ = x[ForIn-60]
+	_ = x[ForIn2-61]
+	_ = x[ForRange-62]
+	_ = x[ForRangeVar-63]
+	_ = x[Throw-64]
+	_ = x[Try-65]
+	_ = x[Catch-66]
+	_ = x[CallFuncDiscard-67]
+	_ = x[CallFuncNoNil-68]
+	_ = x[CallFuncNilOk-69]
+	_ = x[CallMethDiscard-70]
+	_ = x[CallMethNoNil-71]
+	_ = x[CallMethNilOk-72]
+	_ = x[Super-73]
+	_ = x[Return-74]
+	_ = x[ReturnNil-75]
+	_ = x[ReturnThrow-76]
+	_ = x[Closure-77]
+	_ = x[BlockBreak-78]
+	_ = x[BlockContinue-79]
+	_ = x[BlockReturn-80]
+	_ = x[BlockReturnNil-81]
 }
 
-const _Opcode_name = "NopPopIntValueTrueFalseZeroOneMinusOneMaxIntEmptyStrLoadStoreLoadStoreDyloadGlobalGetPutGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusInRangeOrAndBoolQMarkInCoverJumpJumpTrueJumpFalseJumpIsJumpIsntJumpLtIterForInForRangeForRangeVarThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilReturnThrowClosureBlockBreakBlockContinueBlockReturnBlockReturnNil"
+const _Opcode_name = "NopPopIntValueTrueFalseZeroOneMinusOneMaxIntEmptyStrLoadStoreLoadStoreDyloadGlobalGetPutGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusInRangeOrAndBoolQMarkInCoverJumpJumpTrueJumpFalseJumpIsJumpIsntJumpLtIterIter2ForInForIn2ForRangeForRangeVarThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilReturnThrowClosureBlockBreakBlockContinueBlockReturnBlockReturnNil"
 
-var _Opcode_index = [...]uint16{0, 3, 6, 9, 14, 18, 23, 27, 30, 38, 44, 52, 56, 61, 70, 76, 82, 85, 88, 94, 101, 109, 113, 115, 119, 124, 132, 134, 137, 139, 142, 145, 148, 151, 154, 157, 160, 169, 179, 184, 190, 196, 202, 205, 214, 224, 231, 233, 236, 240, 245, 247, 252, 256, 264, 273, 279, 287, 293, 297, 302, 310, 321, 326, 329, 334, 349, 362, 375, 390, 403, 416, 421, 427, 436, 447, 454, 464, 477, 488, 502}
+var _Opcode_index = [...]uint16{0, 3, 6, 9, 14, 18, 23, 27, 30, 38, 44, 52, 56, 61, 70, 76, 82, 85, 88, 94, 101, 109, 113, 115, 119, 124, 132, 134, 137, 139, 142, 145, 148, 151, 154, 157, 160, 169, 179, 184, 190, 196, 202, 205, 214, 224, 231, 233, 236, 240, 245, 247, 252, 256, 264, 273, 279, 287, 293, 297, 302, 307, 313, 321, 332, 337, 340, 345, 360, 373, 386, 401, 414, 427, 432, 438, 447, 458, 465, 475, 488, 499, 513}
 
 func (i Opcode) String() string {
 	if i >= Opcode(len(_Opcode_index)-1) {
