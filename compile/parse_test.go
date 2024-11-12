@@ -310,6 +310,10 @@ func TestParseStatements(t *testing.T) {
 	test("for (;;) stmt", "For(; ; \n stmt)")
 	test("for (i = 0; i < 9; ++i) stmt",
 		"For(Binary(Eq i 0); Binary(Lt i 9); Unary(Inc i) \n stmt)")
+	test("for (i = 0, j = 1; i < 9; ++i, ++j) stmt",
+		"For(Binary(Eq i 0),Binary(Eq j 1); Binary(Lt i 9); Unary(Inc i),Unary(Inc j) \n stmt)")
+	test("for (x, i = 0; i < 9; ++i) stmt",
+		"For(x,Binary(Eq i 0); Binary(Lt i 9); Unary(Inc i) \n stmt)")
 
 	// try-catch
 	test("try stmt", "Try(stmt)")

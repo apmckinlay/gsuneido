@@ -336,8 +336,15 @@ func (p *Parser) isForIn() bool {
 	if !p.Lxr.AheadSkip(i).Token.IsIdent() {
 		return false
 	}
-	t := p.Lxr.AheadSkip(i+1).Token
-	return t == tok.In || t == tok.Comma
+	i++
+	if p.Lxr.AheadSkip(i).Token == tok.Comma {
+		i++
+		if !p.Lxr.AheadSkip(i).Token.IsIdent() {
+			return false
+		}
+		i++
+	}
+	return p.Lxr.AheadSkip(i).Token == tok.In
 }
 
 func (p *Parser) forIn() *ast.ForIn {
@@ -349,9 +356,9 @@ func (p *Parser) forIn() *ast.ForIn {
 	var var2 ast.Ident
 	if p.MatchIf(tok.Comma) {
 		var2.Name = p.Text
-        p.final[var2.Name] = disqualified
+		p.final[var2.Name] = disqualified
 		var2.Pos = p.Pos
-        p.MatchIdent()
+		p.MatchIdent()
 	}
 	p.Match(tok.In)
 	var expr ast.Expr
