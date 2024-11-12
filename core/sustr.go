@@ -276,7 +276,7 @@ var StringMethods Methods
 
 var gnStrings = Global.Num("Strings")
 
-func (SuStr) Lookup(th *Thread, method string) Callable {
+func (SuStr) Lookup(th *Thread, method string) Value {
 	return Lookup(th, StringMethods, gnStrings, method)
 }
 

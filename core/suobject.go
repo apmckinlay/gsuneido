@@ -761,7 +761,7 @@ var ObjectMethods Methods
 
 var gnObjects = Global.Num("Objects")
 
-func (*SuObject) Lookup(th *Thread, method string) Callable {
+func (*SuObject) Lookup(th *Thread, method string) Value {
 	return Lookup(th, ObjectMethods, gnObjects, method)
 }
 

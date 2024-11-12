@@ -158,7 +158,7 @@ var SequenceMethods Methods
 
 var gnSequences = Global.Num("Sequences")
 
-func (seq *SuSequence) Lookup(th *Thread, method string) Callable {
+func (seq *SuSequence) Lookup(th *Thread, method string) Value {
 	if seq.asSeq(method) {
 		if m := Lookup(th, SequenceMethods, gnSequences, method); m != nil {
 			return m

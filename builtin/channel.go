@@ -115,7 +115,7 @@ func (sc *suChannel) Equal(other any) bool {
 	return sc == other
 }
 
-func (*suChannel) Lookup(_ *Thread, method string) Callable {
+func (*suChannel) Lookup(_ *Thread, method string) Value {
 	return suChannelMethods[method]
 }
 

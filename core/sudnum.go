@@ -82,7 +82,7 @@ var NumMethods Methods
 
 var gnNumbers = Global.Num("Numbers")
 
-func (SuDnum) Lookup(th *Thread, method string) Callable {
+func (SuDnum) Lookup(th *Thread, method string) Value {
 	return Lookup(th, NumMethods, gnNumbers, method)
 }
 

@@ -80,7 +80,7 @@ func st_Size(this Value) Value {
 	return IntVal(this.(sizeable).Size())
 }
 
-func (*suStructGlobal) Lookup(_ *Thread, method string) Callable {
+func (*suStructGlobal) Lookup(_ *Thread, method string) Value {
 	return structMethods[method]
 }
 

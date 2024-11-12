@@ -93,7 +93,7 @@ func (wg *suWaitGroup) Equal(other any) bool {
 	return wg == other
 }
 
-func (*suWaitGroup) Lookup(_ *Thread, method string) Callable {
+func (*suWaitGroup) Lookup(_ *Thread, method string) Value {
 	return suWaitGroupMethods[method]
 }
 

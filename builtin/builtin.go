@@ -173,6 +173,6 @@ func (*staticClass[E]) SetConcurrent() {
 	// read-only so ok
 }
 
-func methodList(m map[string]Callable) Value {
+func methodList(m map[string]Value) Value {
 	return SuObjectOfStrs(slices.AppendSeq(make([]string, 0, len(m)), maps.Keys(m)))
 }

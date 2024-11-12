@@ -55,7 +55,7 @@ func rnd_Members() Value {
 
 var rnd_members = methodList(randomMethods)
 
-func (d *suRandomGlobal) Lookup(th *Thread, method string) Callable {
+func (d *suRandomGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := randomMethods[method]; ok {
 		return f
 	}

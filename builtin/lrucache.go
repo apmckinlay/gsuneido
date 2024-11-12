@@ -51,7 +51,7 @@ func lru_Members() Value {
 
 var lru_members = methodList(lruStaticMethods)
 
-func (d *suLruCacheGlobal) Lookup(th *Thread, method string) Callable {
+func (d *suLruCacheGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := lruStaticMethods[method]; ok {
 		return f
 	}
@@ -167,7 +167,7 @@ func (slc *suLruCache) SetConcurrent() {
 	}
 }
 
-func (*suLruCache) Lookup(_ *Thread, method string) Callable {
+func (*suLruCache) Lookup(_ *Thread, method string) Value {
 	return suLruCacheMethods[method]
 }
 

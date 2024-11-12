@@ -30,7 +30,7 @@ func (sc *suScanner) Equal(other any) bool {
 	return sc == other
 }
 
-func (*suScanner) Lookup(_ *Thread, method string) Callable {
+func (*suScanner) Lookup(_ *Thread, method string) Value {
 	return scannerMethods[method]
 }
 

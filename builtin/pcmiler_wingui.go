@@ -30,7 +30,7 @@ func (sp *suPcmsrv64) Equal(other any) bool {
 	return sp == other
 }
 
-func (*suPcmsrv64) Lookup(_ *Thread, method string) Callable {
+func (*suPcmsrv64) Lookup(_ *Thread, method string) Value {
 	return pcmMethods[method]
 }
 

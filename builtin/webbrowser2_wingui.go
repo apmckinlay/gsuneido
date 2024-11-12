@@ -133,6 +133,6 @@ func web2_SetFocus(this Value) Value {
 	return intRet(rtn)
 }
 
-func (swb *suWebBrowser2) Lookup(th *Thread, method string) Callable {
-	return suWebBrowser2Methods[method];
+func (swb *suWebBrowser2) Lookup(th *Thread, method string) Value {
+	return suWebBrowser2Methods[method]
 }

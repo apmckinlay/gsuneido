@@ -42,7 +42,7 @@ func (h suSha1) Equal(other any) bool {
 	return h == other
 }
 
-func (suSha1) Lookup(_ *Thread, method string) Callable {
+func (suSha1) Lookup(_ *Thread, method string) Value {
 	return sha1Methods[method]
 }
 

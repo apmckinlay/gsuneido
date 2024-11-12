@@ -151,7 +151,7 @@ var IntMethods Methods
 
 var anSuDnum = SuDnum{}
 
-func (*smi) Lookup(th *Thread, method string) Callable {
+func (*smi) Lookup(th *Thread, method string) Value {
 	if m := IntMethods[method]; m != nil {
 		return m
 	}

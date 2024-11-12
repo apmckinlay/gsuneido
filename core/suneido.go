@@ -12,7 +12,7 @@ type SuneidoObject struct {
 // SuneidoObjectMethods is initialized by builtin/suneido.go
 var SuneidoObjectMethods Methods
 
-func (so *SuneidoObject) Lookup(th *Thread, method string) Callable {
+func (so *SuneidoObject) Lookup(th *Thread, method string) Value {
 	if m := SuneidoObjectMethods[method]; m != nil {
 		return m
 	}

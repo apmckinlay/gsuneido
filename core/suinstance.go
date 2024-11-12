@@ -180,7 +180,7 @@ func (ob *SuInstance) SetConcurrent() {
 // InstanceMethods is initialized by the builtin package
 var InstanceMethods Methods
 
-func (ob *SuInstance) Lookup(th *Thread, method string) Callable {
+func (ob *SuInstance) Lookup(th *Thread, method string) Value {
 	if method == "*new*" {
 		panic("can't create instance of instance")
 	}
@@ -195,7 +195,7 @@ func (ob *SuInstance) Call(th *Thread, _ Value, as *ArgSpec) Value {
 		return f.Call(th, ob, as)
 	}
 	if f := ob.class.get2(th, "Default", ob.parents); f != nil {
-		da := &defaultAdapter{f, "Call"}
+		da := &defaultAdapter{fn: f, method: "Call"}
 		return da.Call(th, ob, as)
 	}
 	panic("method not found: Call")

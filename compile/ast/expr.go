@@ -477,7 +477,7 @@ func (a *Call) Eval(c *Context) Value {
 	for i, a := range a.Args {
 		args[i] = a.E.Eval(c)
 	}
-	var fn Callable
+	var fn Value
 	var this Value
 	switch f := a.Fn.(type) {
 	case *Ident:

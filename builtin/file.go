@@ -132,7 +132,7 @@ func (sf *suFile) Equal(other any) bool {
 	return sf == other
 }
 
-func (*suFile) Lookup(_ *Thread, method string) Callable {
+func (*suFile) Lookup(_ *Thread, method string) Value {
 	return suFileMethods[method]
 }
 

@@ -179,7 +179,7 @@ func (d *suThreadGlobal) Get(_ *Thread, key Value) Value {
 	return nil
 }
 
-func (d *suThreadGlobal) Lookup(th *Thread, method string) Callable {
+func (d *suThreadGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := threadMethods[method]; ok {
 		return f
 	}

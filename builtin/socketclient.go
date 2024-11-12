@@ -62,7 +62,7 @@ func (*suSocketClient) SetConcurrent() {
 	// panic("SocketClient cannot be set to concurrent")
 }
 
-func (*suSocketClient) Lookup(_ *Thread, method string) Callable {
+func (*suSocketClient) Lookup(_ *Thread, method string) Value {
 	return suSocketClientMethods[method]
 }
 

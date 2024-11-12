@@ -143,7 +143,7 @@ func (ParamSpec) SetConcurrent() {
 // ParamsMethods is initialized by the builtin package
 var ParamsMethods Methods
 
-func (*ParamSpec) Lookup(_ *Thread, method string) Callable {
+func (*ParamSpec) Lookup(_ *Thread, method string) Value {
 	return ParamsMethods[method]
 }
 

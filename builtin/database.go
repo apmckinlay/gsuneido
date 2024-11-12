@@ -166,7 +166,7 @@ func (d *suDatabaseGlobal) Get(th *Thread, key Value) Value {
 	return nil
 }
 
-func (d *suDatabaseGlobal) Lookup(th *Thread, method string) Callable {
+func (d *suDatabaseGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := databaseMethods[method]; ok {
 		return f
 	}

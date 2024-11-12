@@ -28,6 +28,6 @@ func (SuRegex) SetConcurrent() {
 // RegexMethods is initialized by the builtin package
 var RegexMethods Methods
 
-func (SuRegex) Lookup(_ *Thread, method string) Callable {
+func (SuRegex) Lookup(_ *Thread, method string) Value {
 	return RegexMethods[method]
 }

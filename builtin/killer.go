@@ -21,7 +21,7 @@ func (k *killer) SetConcurrent() {
 	// still shouldn't be calling it from other threads
 }
 
-func (k *killer) Lookup(_ *Thread, method string) Callable {
+func (k *killer) Lookup(_ *Thread, method string) Value {
 	return killerMethods[method]
 }
 

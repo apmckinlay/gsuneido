@@ -132,7 +132,7 @@ func (d *suDateGlobal) Get(th *Thread, key Value) Value {
 	return nil
 }
 
-func (d *suDateGlobal) Lookup(th *Thread, method string) Callable {
+func (d *suDateGlobal) Lookup(th *Thread, method string) Value {
 	if fn, ok := dateStaticMethods[method]; ok {
 		return fn
 	}

@@ -28,7 +28,7 @@ func (sfs *suFtsearch) Equal(other any) bool {
 	return sfs == other
 }
 
-func (*suFtsearch) Lookup(_ *Thread, method string) Callable {
+func (*suFtsearch) Lookup(_ *Thread, method string) Value {
 	return ftsearchMethods[method]
 }
 
@@ -75,7 +75,7 @@ func (sfb *suFtsBuilder) Equal(other any) bool {
 	return sfb == other
 }
 
-func (*suFtsBuilder) Lookup(_ *Thread, method string) Callable {
+func (*suFtsBuilder) Lookup(_ *Thread, method string) Value {
 	return ftsBuilderMethods[method]
 }
 
@@ -131,7 +131,7 @@ func (*suFtsIndex) SetConcurrent() {
 	// protected by atomic
 }
 
-func (*suFtsIndex) Lookup(_ *Thread, method string) Callable {
+func (*suFtsIndex) Lookup(_ *Thread, method string) Value {
 	return ftsIndexMethods[method]
 }
 

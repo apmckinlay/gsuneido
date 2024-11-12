@@ -934,7 +934,7 @@ var RecordMethods Methods
 
 var gnRecords = Global.Num("Records")
 
-func (*SuRecord) Lookup(th *Thread, method string) Callable {
+func (*SuRecord) Lookup(th *Thread, method string) Value {
 	if m := Lookup(th, RecordMethods, gnRecords, method); m != nil {
 		return m
 	}
@@ -1029,5 +1029,5 @@ func (r fwdrule) Equal(other any) bool {
 }
 
 func (fwdrule) SetConcurrent() {
-    // ok for concurrent use
+	// ok for concurrent use
 }

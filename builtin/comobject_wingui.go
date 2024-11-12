@@ -95,7 +95,7 @@ func (*suCOMObject) SetConcurrent() {
 	// ok since immutable (assuming the COM object is thread safe)
 }
 
-func (sco *suCOMObject) Lookup(_ *Thread, method string) Callable {
+func (sco *suCOMObject) Lookup(_ *Thread, method string) Value {
 	if f, ok := suComObjectMethods[method]; ok {
 		return f
 	}

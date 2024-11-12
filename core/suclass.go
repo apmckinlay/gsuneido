@@ -171,11 +171,11 @@ var ClassMethods Methods
 var DefaultNewMethod = &SuBuiltin0{func() Value { return nil },
 	BuiltinParams{ParamSpec: ParamSpec0}}
 
-func (c *SuClass) Lookup(th *Thread, method string) Callable {
+func (c *SuClass) Lookup(th *Thread, method string) Value {
 	return c.lookup(th, method, nil)
 }
 
-func (c *SuClass) lookup(th *Thread, method string, parents []*SuClass) Callable {
+func (c *SuClass) lookup(th *Thread, method string, parents []*SuClass) Value {
 	if f, ok := ClassMethods[method]; ok {
 		return f
 	}
@@ -200,8 +200,19 @@ func (c *SuClass) lookup(th *Thread, method string, parents []*SuClass) Callable
 
 // defaultAdapter wraps a Default method to insert the method argument
 type defaultAdapter struct {
-	fn     Callable
+	ValueBase[*defaultAdapter]
+	fn     Value
 	method string
+}
+
+var _ Value = (*defaultAdapter)(nil)
+
+func (d *defaultAdapter) Equal(other any) bool {
+	return d == other
+}
+
+func (*defaultAdapter) SetConcurrent() {
+	// immutable so ok
 }
 
 func (d *defaultAdapter) Call(th *Thread, this Value, as *ArgSpec) Value {

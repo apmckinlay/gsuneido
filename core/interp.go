@@ -561,7 +561,7 @@ loop:
 			base := th.sp - int(argSpec.Nargs) - 1
 			this := th.stack[base]
 			if methstr, ok := method.ToStr(); ok {
-				var f Callable
+				var f Value
 				ob := this
 				if super > 0 {
 					if instance, ok := this.(*SuInstance); ok {

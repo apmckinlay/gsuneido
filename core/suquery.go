@@ -124,7 +124,7 @@ func (*SuQuery) SetConcurrent() {
 // QueryMethods is initialized by the builtin package
 var QueryMethods Methods
 
-func (q *SuQuery) Lookup(_ *Thread, method string) Callable {
+func (q *SuQuery) Lookup(_ *Thread, method string) Value {
 	//FIXME concurrency
 	// if q.owner != th {
 	// 	panic("can't use a query from a different thread")
@@ -195,7 +195,7 @@ func (*SuCursor) SetConcurrent() {
 // CursorMethods is initialized by the builtin package
 var CursorMethods Methods
 
-func (q *SuCursor) Lookup(_ *Thread, method string) Callable {
+func (q *SuCursor) Lookup(_ *Thread, method string) Value {
 	if f, ok := CursorMethods[method]; ok {
 		return f
 	}

@@ -65,7 +65,7 @@ func (ValueBase[E]) ToStr() (string, bool) {
 	return "", false
 }
 
-func (ValueBase[E]) Lookup(*Thread, string) Callable {
+func (ValueBase[E]) Lookup(*Thread, string) Value {
 	return nil // no methods
 }
 

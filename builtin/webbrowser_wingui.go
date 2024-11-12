@@ -58,7 +58,7 @@ func web_GetIOleObject(this Value) Value {
 	return IntVal((int)(this.(*suWebBrowser).iOleObject))
 }
 
-func (swb *suWebBrowser) Lookup(th *Thread, method string) Callable {
+func (swb *suWebBrowser) Lookup(th *Thread, method string) Value {
 	if f, ok := suWebBrowserMethods[method]; ok {
 		return f
 	}

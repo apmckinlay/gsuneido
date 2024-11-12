@@ -35,7 +35,7 @@ func (pgp *suOpenPGP) Equal(other any) bool {
 	return pgp == other
 }
 
-func (*suOpenPGP) Lookup(_ *Thread, method string) Callable {
+func (*suOpenPGP) Lookup(_ *Thread, method string) Value {
 	return openpgpMethods[method]
 }
 

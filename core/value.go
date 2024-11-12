@@ -82,10 +82,10 @@ type Value interface {
 	// Compare returns -1 for less, 0 for equal, +1 for greater
 	Compare(other Value) int
 
-	Callable
+	Call(th *Thread, this Value, as *ArgSpec) Value
 
-	// Lookup returns a Callable or nil if the method isn't found
-	Lookup(th *Thread, method string) Callable
+	// Lookup returns a Value or nil if the method isn't found
+	Lookup(th *Thread, method string) Value
 
 	// SetConcurrent is called when a Value is
 	// about to become reachable by multiple threads.
@@ -95,11 +95,6 @@ type Value interface {
 	// NOTE: SetConcurrent cannot call abitrary code
 	// because it is called when holding a lock.
 	SetConcurrent()
-}
-
-// Callable is returned by Lookup
-type Callable interface {
-	Call(th *Thread, this Value, as *ArgSpec) Value
 }
 
 type Ord int
@@ -269,14 +264,14 @@ func ToBool(x Value) bool {
 // Lookup looks for a method first in a methods map,
 // and then in a global user defined class
 // returning nil if not found in either place
-func Lookup(th *Thread, methods Methods, gnUserDef int, method string) Callable {
+func Lookup(th *Thread, methods Methods, gnUserDef int, method string) Value {
 	if m := methods[method]; m != nil {
 		return m
 	}
 	return UserDef(th, gnUserDef, method)
 }
 
-func UserDef(th *Thread, gnUserDef int, method string) Callable {
+func UserDef(th *Thread, gnUserDef int, method string) Value {
 	if userdef := Global.Find(th, gnUserDef); userdef != nil {
 		if c, ok := userdef.(*SuClass); ok {
 			return c.get2(th, method, nil)

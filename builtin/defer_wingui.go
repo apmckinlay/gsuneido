@@ -31,24 +31,24 @@ var deferQueue = queue.New[dqitem](32, 64)
 
 type dqitem struct {
 	id int
-	fn Callable
+	fn Value
 }
 
 var dqid atomic.Int32
 
-func dqPut(fn Callable) int {
+func dqPut(fn Value) int {
 	id := int(dqid.Add(1))
 	deferQueue.Put(dqitem{id: id, fn: fn})
 	return id
 }
 
-func dqMustPut(fn Callable) int {
+func dqMustPut(fn Value) int {
 	id := int(dqid.Add(1))
 	deferQueue.MustPut(dqitem{id: id, fn: fn})
 	return id
 }
 
-func dqGet() Callable {
+func dqGet() Value {
 	if it, ok := deferQueue.TryGet(); ok {
 		return it.fn
 	}

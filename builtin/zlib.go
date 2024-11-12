@@ -28,7 +28,7 @@ func (z *suZlib) Equal(other any) bool {
 	return z == other
 }
 
-func (*suZlib) Lookup(_ *Thread, method string) Callable {
+func (*suZlib) Lookup(_ *Thread, method string) Value {
 	return zlibMethods[method]
 }
 

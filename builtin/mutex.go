@@ -37,7 +37,7 @@ func (sm *suMutex) Equal(other any) bool {
 	return sm == other
 }
 
-func (*suMutex) Lookup(_ *Thread, method string) Callable {
+func (*suMutex) Lookup(_ *Thread, method string) Value {
 	return suMutexMethods[method]
 }
 

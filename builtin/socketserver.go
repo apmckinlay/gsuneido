@@ -164,7 +164,7 @@ type suServerConnect struct {
 	manualClose bool
 }
 
-func (sc *suServerConnect) Lookup(th *Thread, method string) Callable {
+func (sc *suServerConnect) Lookup(th *Thread, method string) Value {
 	if f, ok := socketServerMethods[method]; ok {
 		return f
 	}

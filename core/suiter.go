@@ -23,7 +23,7 @@ var _ Value = (*SuIter)(nil)
 // IterMethods is set by builtin/iter.go
 var IterMethods Methods
 
-func (SuIter) Lookup(_ *Thread, method string) Callable {
+func (SuIter) Lookup(_ *Thread, method string) Value {
 	return IterMethods[method]
 }
 

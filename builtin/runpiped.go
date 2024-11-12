@@ -115,7 +115,7 @@ func (*suRunPiped) SetConcurrent() {
 	// panic("RunPiped cannot be set to concurrent")
 }
 
-func (*suRunPiped) Lookup(_ *Thread, method string) Callable {
+func (*suRunPiped) Lookup(_ *Thread, method string) Value {
 	return suRunPipedMethods[method]
 }
 
