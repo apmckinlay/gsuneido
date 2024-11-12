@@ -17,7 +17,6 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/gopenpgp/v2/crypto"
 	"github.com/ProtonMail/gopenpgp/v2/helper"
-	"golang.org/x/exp/maps"
 )
 
 type suOpenPGP struct {
@@ -41,12 +40,6 @@ func (*suOpenPGP) Lookup(_ *Thread, method string) Callable {
 }
 
 var openpgpMethods = methods()
-
-var _ = staticMethod(opgp_Members, "()")
-
-func opgp_Members() Value {
-	return SuObjectOfStrs(maps.Keys(openpgpMethods))
-}
 
 var _ = staticMethod(opgp_SymmetricEncrypt,
 	"(passphrase, source, toFile = false)")
@@ -133,6 +126,14 @@ func opgp_KeyEntity(key Value) Value {
 	}
 	return False
 }
+
+var _ = staticMethod(opgp_Members, "()")
+
+func opgp_Members() Value {
+	return opgp_members
+}
+
+var opgp_members = methodList(openpgpMethods)
 
 //-------------------------------------------------------------------
 

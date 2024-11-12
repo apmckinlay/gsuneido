@@ -4,8 +4,10 @@
 package builtin
 
 import (
+	"maps"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -169,4 +171,8 @@ type staticClass[E any] struct {
 
 func (*staticClass[E]) SetConcurrent() {
 	// read-only so ok
+}
+
+func methodList(m map[string]Callable) Value {
+	return SuObjectOfStrs(slices.AppendSeq(make([]string, 0, len(m)), maps.Keys(m)))
 }

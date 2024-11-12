@@ -10,7 +10,6 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"golang.org/x/exp/maps"
 )
 
 type suZlib struct {
@@ -34,12 +33,6 @@ func (*suZlib) Lookup(_ *Thread, method string) Callable {
 }
 
 var zlibMethods = methods()
-
-var _ = staticMethod(zlib_Members, "()")
-
-func zlib_Members() Value {
-	return SuObjectOfStrs(maps.Keys(zlibMethods))
-}
 
 var _ = staticMethod(zlib_Compress, "(string)")
 
@@ -76,3 +69,11 @@ func zlib_Uncompress(arg Value) Value {
 	assert.That(int(n) == len(b.String()))
 	return SuStr(b.String())
 }
+
+var _ = staticMethod(zlib_Members, "()")
+
+func zlib_Members() Value {
+	return zlib_members
+}
+
+var zlib_members = methodList(zlibMethods)

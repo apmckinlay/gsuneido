@@ -160,6 +160,14 @@ func thread_Exit(th *Thread, _ []Value) Value {
 	return nil
 }
 
+var _ = staticMethod(thread_Members, "()")
+
+func thread_Members() Value {
+	return thread_members
+}
+
+var thread_members = methodList(threadMethods)
+
 func (d *suThreadGlobal) Get(_ *Thread, key Value) Value {
 	m := ToStr(key)
 	if fn, ok := threadMethods[m]; ok {

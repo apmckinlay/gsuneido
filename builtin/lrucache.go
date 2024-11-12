@@ -29,7 +29,7 @@ var lruCacheCallClass = func(th *Thread, args []Value) Value {
 	return newSuLruCache(size, fn, okForResetAll)
 }
 
-var lruCacheClassMethods = methods()
+var lruStaticMethods = methods()
 
 var _ = staticMethod(lru_ResetAll, "()")
 
@@ -43,8 +43,16 @@ func lru_ResetAll(th *Thread, _ []Value) Value {
 	return nil
 }
 
+var _ = staticMethod(lru_Members, "()")
+
+func lru_Members() Value {
+	return lru_members
+}
+
+var lru_members = methodList(lruStaticMethods)
+
 func (d *suLruCacheGlobal) Lookup(th *Thread, method string) Callable {
-	if f, ok := lruCacheClassMethods[method]; ok {
+	if f, ok := lruStaticMethods[method]; ok {
 		return f
 	}
 	return d.SuBuiltin.Lookup(th, method) // for Params

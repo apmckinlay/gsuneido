@@ -47,6 +47,14 @@ func rnd_Seed(th *Thread, args []Value) Value {
 	return nil
 }
 
+var _ = staticMethod(rnd_Members, "()")
+
+func rnd_Members() Value {
+	return rnd_members
+}
+
+var rnd_members = methodList(randomMethods)
+
 func (d *suRandomGlobal) Lookup(th *Thread, method string) Callable {
 	if f, ok := randomMethods[method]; ok {
 		return f

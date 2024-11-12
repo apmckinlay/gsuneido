@@ -46,6 +46,14 @@ func ftsearch_Load(data Value) Value {
 	return newSuFtsIndex(ftsearch.Unpack(ToStr(data)))
 }
 
+var _ = staticMethod(ftsearch_Members, "()")
+
+func ftsearch_Members() Value {
+	return ftsearch_members
+}
+
+var ftsearch_members = methodList(ftsearchMethods)
+
 func newSuFtsIndex(idx *ftsearch.Index) *suFtsIndex {
 	var si suFtsIndex
 	si.idx.Store(idx)

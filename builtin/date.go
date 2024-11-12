@@ -159,6 +159,14 @@ func date_End() Value {
 	return DateEnd
 }
 
+var _ = staticMethod(date_Members, "()")
+
+func date_Members() Value {
+	return date_members
+}
+
+var date_members = methodList(dateStaticMethods)
+
 var _ = exportMethods(&DateMethods)
 
 var _ = method(date_MinusDays, "(date)")

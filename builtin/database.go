@@ -145,6 +145,14 @@ func db_CorruptedQ(th *Thread, args []Value) Value {
 	return th.Dbms().Exec(th, SuObjectOf(SuStr("Database.Corrupted?")))
 }
 
+var _ = staticMethod(db_Members, "()")
+
+func db_Members() Value {
+	return db_members
+}
+
+var db_members = methodList(databaseMethods)
+
 //-------------------------------------------------------------------
 
 func (d *suDatabaseGlobal) Get(th *Thread, key Value) Value {
