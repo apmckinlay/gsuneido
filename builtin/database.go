@@ -155,17 +155,6 @@ var db_members = methodList(databaseMethods)
 
 //-------------------------------------------------------------------
 
-func (d *suDatabaseGlobal) Get(th *Thread, key Value) Value {
-	m := ToStr(key)
-	if fn, ok := databaseMethods[m]; ok {
-		return fn.(Value)
-	}
-	if fn, ok := ParamsMethods[m]; ok {
-		return NewSuMethod(d, fn.(Value))
-	}
-	return nil
-}
-
 func (d *suDatabaseGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := databaseMethods[method]; ok {
 		return f

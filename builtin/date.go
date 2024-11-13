@@ -121,17 +121,6 @@ func named(args []Value) Value {
 	return d
 }
 
-func (d *suDateGlobal) Get(th *Thread, key Value) Value {
-	m := ToStr(key)
-	if fn, ok := dateStaticMethods[m]; ok {
-		return fn.(Value)
-	}
-	if fn, ok := ParamsMethods[m]; ok {
-		return NewSuMethod(d, fn.(Value))
-	}
-	return nil
-}
-
 func (d *suDateGlobal) Lookup(th *Thread, method string) Value {
 	if fn, ok := dateStaticMethods[method]; ok {
 		return fn

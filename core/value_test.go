@@ -31,7 +31,7 @@ func TestStringGet(t *testing.T) {
 
 func TestPanics(t *testing.T) {
 	v := SuInt(123)
-	assert.T(t).This(func() { v.Get(nil, v) }).Panics("number does not support get")
+	assert.T(t).This(v.Get(nil, v)).Is(nil)
 	ob := &SuObject{}
 	assert.T(t).This(func() { ToInt(ob) }).Panics("can't convert object to integer")
 }

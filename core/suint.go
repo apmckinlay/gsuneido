@@ -90,7 +90,7 @@ func (si *smi) String() string {
 }
 
 func (*smi) Get(*Thread, Value) Value {
-	panic("number does not support get")
+	return nil
 }
 
 func (*smi) Put(*Thread, Value, Value) {

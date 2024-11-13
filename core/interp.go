@@ -276,7 +276,15 @@ loop:
 			ob := th.Pop()
 			val := ob.Get(th, m)
 			if val == nil {
-				panic("uninitialized member: " + m.String())
+				if ss, ok := m.(SuStr); ok {
+					val = ob.Lookup(th, string(ss))
+					if val != nil {
+						val = NewSuMethod(ob, val)
+					}
+				}
+				if val == nil {
+					panic("uninitialized member: " + m.String())
+				}
 			}
 			th.Push(val)
 		case op.Put:

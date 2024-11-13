@@ -70,7 +70,7 @@ func (ValueBase[E]) Lookup(*Thread, string) Value {
 }
 
 func (ValueBase[E]) Get(*Thread, Value) Value {
-	panic(typeName[E]() + " does not support get")
+	return nil
 }
 
 func (ValueBase[E]) Put(*Thread, Value, Value) {

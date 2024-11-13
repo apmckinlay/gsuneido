@@ -168,17 +168,6 @@ func thread_Members() Value {
 
 var thread_members = methodList(threadMethods)
 
-func (d *suThreadGlobal) Get(_ *Thread, key Value) Value {
-	m := ToStr(key)
-	if fn, ok := threadMethods[m]; ok {
-		return fn.(Value)
-	}
-	if fn, ok := ParamsMethods[m]; ok {
-		return NewSuMethod(d, fn.(Value))
-	}
-	return nil
-}
-
 func (tg *suThreadGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := threadMethods[method]; ok {
 		return f
