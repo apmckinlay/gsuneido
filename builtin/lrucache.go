@@ -51,14 +51,14 @@ func lru_Members() Value {
 
 var lru_members = methodList(lruStaticMethods)
 
-func (d *suLruCacheGlobal) Lookup(th *Thread, method string) Value {
+func (lc *suLruCacheGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := lruStaticMethods[method]; ok {
 		return f
 	}
-	return d.SuBuiltin.Lookup(th, method) // for Params
+	return lc.SuBuiltin.Lookup(th, method) // for Params
 }
 
-func (d *suLruCacheGlobal) String() string {
+func (*suLruCacheGlobal) String() string {
 	return "LruCache /* builtin class */"
 }
 

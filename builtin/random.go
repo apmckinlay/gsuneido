@@ -55,11 +55,11 @@ func rnd_Members() Value {
 
 var rnd_members = methodList(randomMethods)
 
-func (d *suRandomGlobal) Lookup(th *Thread, method string) Value {
+func (r *suRandomGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := randomMethods[method]; ok {
 		return f
 	}
-	return d.SuBuiltin.Lookup(th, method) // for Params
+	return r.SuBuiltin.Lookup(th, method) // for Params
 }
 
 var _ = builtin(RandomBytes, "(nbytes)")

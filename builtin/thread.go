@@ -179,14 +179,14 @@ func (d *suThreadGlobal) Get(_ *Thread, key Value) Value {
 	return nil
 }
 
-func (d *suThreadGlobal) Lookup(th *Thread, method string) Value {
+func (tg *suThreadGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := threadMethods[method]; ok {
 		return f
 	}
-	return d.SuBuiltin.Lookup(th, method) // for Params
+	return tg.SuBuiltin.Lookup(th, method) // for Params
 }
 
-func (d *suThreadGlobal) String() string {
+func (*suThreadGlobal) String() string {
 	return "Thread /* builtin class */"
 }
 
