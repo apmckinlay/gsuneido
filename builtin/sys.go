@@ -104,6 +104,7 @@ func DeleteFileApi(th *Thread, args []Value) Value {
 	if errors.Is(err, os.ErrNotExist) {
 		// not return-throw
 		return SuStr("DeleteFileApi " + path + ": does not exist")
+		// WARNING: application code depends on "does not exist"
 	}
 	if err != nil {
 		th.ReturnThrow = true
