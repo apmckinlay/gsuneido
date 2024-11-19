@@ -77,7 +77,7 @@ func dirEntries(dir string, justfiles, details bool) iter.Seq[Value] {
 			list, err := f.ReadDir(100)
 			if err != nil {
 				if err != io.EOF {
-					panic(err.Error())
+					log.Panicln("ERROR: Dir:", err)
 				}
 				break
 			}
