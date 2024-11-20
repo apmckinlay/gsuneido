@@ -160,7 +160,7 @@ func sock_Writeline(this, arg Value) Value {
 var _ = method(sock_CopyTo, "(dest, nbytes = false)")
 
 func sock_CopyTo(th *Thread, this Value, args []Value) Value {
-	return CopyTo(th, scOpen(this).conn, args[0], args[1])
+	return CopyTo(th, scOpen(this).rdr, args[0], args[1])
 }
 
 func (sc *suSocketClient) writer() io.Writer {

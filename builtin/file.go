@@ -183,11 +183,11 @@ func file_Read(this, arg Value) Value {
 var _ = method(file_CopyTo, "(dest, nbytes = false)")
 
 func file_CopyTo(th *Thread, this Value, args []Value) Value {
-	return CopyTo(th, sfOpenRead(this).f, args[0], args[1])
+	return CopyTo(th, sfOpenRead(this).r, args[0], args[1])
 }
 
 func (sf *suFile) writer() io.Writer {
-	return sfOpenWrite(sf).f
+	return sfOpenWrite(sf).w
 }
 
 var _ = method(file_Readline, "()")
