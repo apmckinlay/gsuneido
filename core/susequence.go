@@ -160,6 +160,7 @@ var gnSequences = Global.Num("Sequences")
 
 func (seq *SuSequence) Lookup(th *Thread, method string) Value {
 	if seq.asSeq(method) {
+		// stdlib Sequences inherits from Objects so this will search both
 		if m := Lookup(th, SequenceMethods, gnSequences, method); m != nil {
 			return m
 		}
