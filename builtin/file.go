@@ -96,7 +96,11 @@ func (sf *suFile) reset() {
 }
 
 func (sf *suFile) size() int64 {
-	info, err := sf.f.(*os.File).Stat()
+	f := sf.f
+	if a, ok := sf.f.(appender); ok {
+		f = a.f
+	}
+	info, err := f.(*os.File).Stat()
 	if err != nil {
 		panic("File: " + err.Error())
 	}
@@ -224,6 +228,16 @@ func file_Seek(this, arg1, arg2 Value) Value {
 	}
 	sf.tell = offset
 	return nil
+}
+
+var _ = method(file_Size, "()")
+
+func file_Size(this Value) Value {
+	sf := sfOpen(this)
+	if sf.w != nil {
+		sf.w.Flush()
+	}
+	return Int64Val(sf.size())
 }
 
 var _ = method(file_Tell, "()")
