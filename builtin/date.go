@@ -65,16 +65,6 @@ func toDate(v Value) SuDate {
 	return v.(SuTimestamp).SuDate
 }
 
-func asDate(v Value) (SuDate, bool) {
-	if d, ok := v.(SuDate); ok {
-		return d, true
-	}
-	if t, ok := v.(SuTimestamp); ok {
-		return t.SuDate, true
-	}
-	return NilDate, false
-}
-
 func hasFields(args []Value) bool {
 	for i := 2; i <= 8; i++ {
 		if args[i] != nil {
@@ -162,7 +152,7 @@ var _ = method(date_MinusDays, "(date)")
 
 func date_MinusDays(this Value, val Value) Value {
 	t1 := toDate(this)
-	if t2, ok := asDate(val); ok {
+	if t2, ok := AsDate(val); ok {
 		return IntVal(t1.MinusDays(t2))
 	}
 	panic("date.MinusDays requires date")
@@ -172,7 +162,7 @@ var _ = method(date_MinusSeconds, "(date)")
 
 func date_MinusSeconds(this Value, val Value) Value {
 	t1 := toDate(this)
-	if t2, ok := asDate(val); ok {
+	if t2, ok := AsDate(val); ok {
 		if t1.Year()-t2.Year() >= 50 {
 			panic("date.MinusSeconds interval too large")
 		}

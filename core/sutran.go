@@ -71,7 +71,11 @@ func (st *SuTran) Asof(val Value) Value {
 	case MinusOne:
 		asof = -1
 	default:
-		asof = val.(SuDate).UnixMilli()
+		d, ok := AsDate(val)
+		if !ok {
+            panic("transaction.Asof requires a date")
+        }
+		asof = d.UnixMilli()
 	}
 	asof = st.itran.Asof(asof)
 	if asof == 0 {

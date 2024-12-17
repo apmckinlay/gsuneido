@@ -261,6 +261,16 @@ func ToBool(x Value) bool {
 	panic("can't convert " + x.Type().String() + " to Boolean")
 }
 
+func AsDate(v Value) (SuDate, bool) {
+	if d, ok := v.(SuDate); ok {
+		return d, true
+	}
+	if t, ok := v.(SuTimestamp); ok {
+		return t.SuDate, true
+	}
+	return NilDate, false
+}
+
 // Lookup looks for a method first in a methods map,
 // and then in a global user defined class
 // returning nil if not found in either place
