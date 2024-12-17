@@ -54,8 +54,11 @@ func (c SuConcat) Len() int {
 const StringLimit = 32_000_000 // ???
 
 func CheckStringSize(op string, n int) {
+	if n < 0 {
+		panic(fmt.Sprint("ERROR: ", op, ": invalid negative size ", n))
+	}
 	if n > StringLimit {
-		panic(fmt.Sprint("ERROR: ", op+": string > ", StringLimit))
+		panic(fmt.Sprint("ERROR: ", op, ": string > ", StringLimit))
 	}
 }
 
