@@ -61,7 +61,7 @@ func GetTempFileName(path, prefix Value) Value {
 
 var _ = builtin(CreateDir, "(dirname)")
 
-func CreateDir(th *Thread, args []Value) Value { //TEMP for transition
+func CreateDir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
 	err := os.Mkdir(path, 0755)
 	if errors.Is(err, os.ErrExist) {
@@ -104,7 +104,7 @@ func DeleteFileApi(th *Thread, args []Value) Value {
 	if errors.Is(err, os.ErrNotExist) {
 		// not return-throw
 		return SuStr("DeleteFileApi " + path + ": does not exist")
-		// WARNING: application code depends on "does not exist"
+		// WARNING: application code may depend on "does not exist"
 	}
 	if err != nil {
 		th.ReturnThrow = true
@@ -210,11 +210,11 @@ func FileSize(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
 	info, err := os.Stat(path)
 	if err != nil {
-		error := err.Error()
 		if errors.Is(err, fs.ErrNotExist) {
-			return False
-		}
-		panic("FileSize: " + error)
+			panic("FileSize " + path + ": does not exist")
+		// WARNING: application code may depend on "does not exist"
+	}
+		panic("FileSize: " + err.Error())
 	}
 	return Int64Val(info.Size())
 }
