@@ -75,14 +75,13 @@ func hasFields(args []Value) bool {
 }
 
 func named(args []Value) Value {
-	now := Now()
-	year := now.Year()
-	month := now.Month()
-	day := now.Day()
-	hour := now.Hour()
-	minute := now.Minute()
-	second := now.Second()
-	millisecond := now.Millisecond()
+	year := 1700
+	month := 1
+	day := 1
+	hour := 0
+	minute := 0
+	second := 0
+	millisecond := 0
 	if args[2] != nil {
 		year = ToInt(args[2])
 	}
