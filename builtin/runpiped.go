@@ -158,21 +158,31 @@ func runpiped_Flush(this Value) Value {
 	return nil
 }
 
-var _ = method(runpiped_Read, "(nbytes=1024)")
+var _ = method(runpiped_Read, "(nbytes=false)")
 
 func runpiped_Read(this, arg Value) Value {
-	f := rpOpen(this).r
-	n := IfInt(arg)
-	CheckStringSize("runpiped.Read", n)
-	buf := make([]byte, n)
-	m, err := f.Read(buf)
-	if m == 0 || err == io.EOF {
+	return limitedRead("runpiped.Read", rpOpen(this).r, arg)
+}
+
+func limitedRead(which string, r io.Reader, arg Value) Value {
+	n := StringLimit
+	if arg != False {
+		n = IfInt(arg)
+		CheckStringSize(which, n)
+	}
+	r = io.LimitReader(r, int64(n))
+	dst := &strings.Builder{}
+	m, err := io.Copy(dst, r)
+	if err != nil {
+		panic(which + ": " + err.Error())
+	}
+	if m == 0 {
 		return False
 	}
-	if err != nil {
-		panic("RunPiped: Read " + err.Error())
+	if m == StringLimit {
+		panic(which + ": string limit exceeded")
 	}
-	return SuStr(string(buf[:m]))
+	return SuStr(dst.String())
 }
 
 var _ = method(runpiped_Readline, "()")

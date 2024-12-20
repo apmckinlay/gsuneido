@@ -80,22 +80,15 @@ func sock_Close(this Value) Value {
 	return nil
 }
 
-var _ = method(sock_Read, "(n)")
+var _ = method(sock_Read, "(nbytes=false)")
 
 func sock_Read(this, arg Value) Value {
 	sc := scOpen(this)
-	n := ToInt(arg)
-	CheckStringSize("socket.Read", n)
-	buf := make([]byte, n)
 	if sc.timeout > 0 {
 		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
 		defer sc.conn.SetDeadline(noDeadline)
 	}
-	n, e := io.ReadFull(sc.rdr, buf)
-	if e != nil && e != io.ErrUnexpectedEOF {
-		panic("socketClient.Read: " + e.Error())
-	}
-	return SuStr(string(buf[:n]))
+	return limitedRead("socket.Read", sc.rdr, arg)
 }
 
 var _ = method(sock_Readline, "()")
