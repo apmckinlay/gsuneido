@@ -70,6 +70,8 @@ var crnl = []byte{'\r', '\n'}
 
 var noDeadline time.Time
 
+// socket client methods are also used by SocketServer
+
 var suSocketClientMethods = methods()
 
 var _ = method(sock_Close, "()")
