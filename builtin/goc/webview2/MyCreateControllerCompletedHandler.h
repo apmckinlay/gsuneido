@@ -79,6 +79,17 @@ public:
         }
         eventListener->Release();
 
+        MyNavigationCompletedEventHandler* eventListener2 = new MyNavigationCompletedEventHandler(pBrowserObject);
+        rtn = webview2_2->add_NavigationCompleted(eventListener2, &token);
+        if (FAILED(rtn)) {
+            webview2->Release();
+            webview2_2->Release();
+            eventListener2->Release();
+            pBrowserObject->onReady(ADD_LOAD_EVENT_LISTENER, rtn);
+            return S_OK;
+        }
+        eventListener2->Release();
+
         MyAcceleratorKeyPressedHandler* accHandler = new MyAcceleratorKeyPressedHandler(pBrowserObject);
         rtn = controller->add_AcceleratorKeyPressed(accHandler, &token);
         if (FAILED(rtn)) {

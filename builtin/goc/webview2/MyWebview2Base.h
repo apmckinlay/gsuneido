@@ -9,6 +9,7 @@ enum CALLBACK_TYPE {
     ON_LOADED,
     ON_ACCEL_KEY_PRESSED,
     ON_CONTEXT_MENU_REQUESTED,
+    ON_NAVCOMPLETED,
 };
 
 enum webview2_ops {
@@ -74,6 +75,12 @@ public:
     void onLoaded() {
         if (onCallBackFn != nullptr) {
             onCallBackFn(ON_LOADED, 0, 0, 0);
+        }
+    }
+
+    void onNavCompleted() {
+        if (onCallBackFn != nullptr) {
+            onCallBackFn(ON_NAVCOMPLETED, 0, 0, 0);
         }
     }
 
