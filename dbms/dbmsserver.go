@@ -5,7 +5,6 @@ package dbms
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -22,7 +21,6 @@ import (
 	"github.com/apmckinlay/gsuneido/dbms/mux"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/time/rate"
@@ -79,33 +77,14 @@ func Server(dbms *DbmsLocal) {
 		Fatal(err)
 	}
 	go idleTimeout()
-	var tempDelay time.Duration // how long to sleep on accept failure
 	limiter := rate.NewLimiter(rate.Limit(100), 10)
 	context := context.Background()
 	for {
 		limiter.Wait(context)
 		conn, err := l.Accept()
 		if err != nil {
-			// error handling based on Go net/http
-			if ne, ok := err.(*net.OpError); ok && ne.Temporary() {
-				if tempDelay == 0 {
-					tempDelay = 5 * time.Millisecond
-				} else {
-					tempDelay *= 2
-				}
-				if max := 1 * time.Second; tempDelay > max {
-					tempDelay = max
-				}
-				log.Println("ERROR: dbms server accept:", err)
-				time.Sleep(tempDelay)
-				continue
-			}
-			if errors.Is(err, net.ErrClosed) {
-				exit.Wait()
-			}
-			Fatal(err)
+			Fatal("DbmsServer:", err)
 		}
-		tempDelay = 0
 		// start a new goroutine to avoid blocking
 		go newServerConn(dbms, conn)
 	}
