@@ -441,7 +441,7 @@ func repl() {
 	}
 
 	builtin.DefDef()
-	builtin.DefConcat()
+	// builtin.DefConcat()
 
 	built := options.BuiltStr()
 	if options.Action == "client" {
