@@ -85,8 +85,8 @@ loop:
 	if db.GetState() != prevState ||
 		prevState.Off != db.Store.Size()-uint64(stateLen) {
 		exit.Progress("persist starting")
-		defer exit.Progress("persist finished")
 		db.persist(ep)
+		exit.Progress("persist finished")
 	}
 	close(allDone)
 }

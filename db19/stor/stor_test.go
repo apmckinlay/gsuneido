@@ -174,11 +174,11 @@ func BenchmarkFlush(b *testing.B) {
 	}()
 	var flushing atomic.Bool
 	for range b.N {
-		_, buf := s.Alloc(1)
+		off, buf := s.Alloc(1)
 		slc.Fill(buf, 123)
 		if flushing.CompareAndSwap(false, true) {
 			go func() {
-				s.Flush()
+				s.FlushTo(off)
 				flushing.Store(false)
 			}()
 		}
@@ -205,4 +205,27 @@ func TestFlag(t *testing.T) {
 	f()
 	f()
 	time.Sleep(10 * time.Millisecond)
+}
+
+func TestFlush(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	s, err := MmapStor("stor.tmp", Create)
+	if err != nil {
+		panic(err.Error())
+	}
+	s.impl.(*mmapStor).mode = Update // flush doesn't run for Create
+	for range 8 {
+		go func() {
+			for {
+				off, buf := s.Alloc(8)
+				buf[0] = 123
+				s.FlushTo(off)
+			}
+		}()
+	}
+	time.Sleep(1 * time.Second)
+	s.Close(false)
+	time.Sleep(1 * time.Second)
 }

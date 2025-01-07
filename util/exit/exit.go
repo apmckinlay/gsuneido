@@ -7,11 +7,15 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
+	"runtime"
+	"sync/atomic"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 )
+
+const Timeout = 10 * time.Second
 
 type exitfn struct {
 	desc string
@@ -19,8 +23,6 @@ type exitfn struct {
 }
 
 var exitfns []exitfn
-
-var hanger sync.Mutex
 
 // Add registers a function to be called on exit.
 // The return value is to allow: var _ = exit.Add(...)
@@ -36,17 +38,22 @@ func Exit(code int) {
 	os.Exit(code)
 }
 
+var exiting atomic.Bool
 var t time.Time
 
 // RunFuncs runs the Add'ed exit functions.
 // Only the first caller will run them, any other callers will block.
 // The functions are run in the reverse order that they were Add'ed.
 func RunFuncs() {
+	if !exiting.CompareAndSwap(false, true) {
+		log.Println("exit: already exiting")
+		runtime.Goexit()
+    }
 	i := len(exitfns) - 1
 	ds := make([]time.Duration, len(exitfns))
 	// failsafe in case exit funcs don't return
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(Timeout)
 		for j := len(exitfns) - 1; j > i; j-- {
 			fmt.Println("Exit:", ds[j], exitfns[j].desc)
 		}
@@ -57,15 +64,15 @@ func RunFuncs() {
 			fmt.Println(s)
 		}
 		log.Fatalln("FATAL: exit timeout")
+		dbg.PrintStacks()
 	}()
 
-	hanger.Lock() // never unlocked
 	t = time.Now()
 	for ; i >= 0; i-- {
 		func() {
 			defer func() {
 				if e := recover(); e != nil {
-					log.Println("ERROR: Exit:", exitfns[i].desc + ":", e)
+					log.Println("ERROR: Exit:", exitfns[i].desc+":", e)
 				}
 			}()
 			progress.Store(nil)
@@ -75,14 +82,9 @@ func RunFuncs() {
 	}
 }
 
-// Wait should only be called after Exit or RunFuncs. It blocks until exit.
-func Wait() {
-	hanger.Lock() // should be locked
-	log.Fatalln("FATAL: exit.Wait: shouldn't reach here")
-}
-
 var progress atomics.Value[[]string]
 
 func Progress(s string) {
+	// log.Println("Progress:", s)
 	progress.Store(append(progress.Load(), fmt.Sprint(time.Since(t), " ", s)))
 }

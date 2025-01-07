@@ -21,3 +21,20 @@ func PrintStack() {
 	buf = bytes.ReplaceAll(buf, []byte("github.com/apmckinlay/"), nil)
 	os.Stderr.Write(buf)
 }
+
+// PrintStacks prints the Go call stacks of all goroutines to stderr,
+// similar to runtime.Stack except all goroutines.
+func PrintStacks() {
+	var n int
+	buf := make([]byte, 4096)
+	for {
+		n = runtime.Stack(buf, true) // true: all goroutines
+		if n < len(buf) {
+			break
+		}
+		buf = make([]byte, 2*len(buf))
+	}
+	buf = buf[:n]
+	buf = bytes.ReplaceAll(buf, []byte("github.com/apmckinlay/"), nil)
+	os.Stderr.Write(buf)
+}

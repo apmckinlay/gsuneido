@@ -55,7 +55,7 @@ func (ms *mmapStor) Get(chunk int) []byte {
 	return unsafe.Slice(p, mmapChunkSize)
 }
 
-func (ms *mmapStor) flush(chunk []byte) {
+func (ms *mmapStor) Flush(chunk []byte) {
 	ptr := uintptr(unsafe.Pointer(unsafe.SliceData(chunk)))
 	if err := syscall.FlushViewOfFile(ptr, 0); err != nil {
 		log.Println("FlushViewOfFile:", err)
@@ -78,10 +78,10 @@ func (ms *mmapStor) close(size int64, unmap bool) {
 		}
 	}
 	ms.file.Truncate(size) // may not work if not unmap
-	exit.Progress("unlocking")
+	exit.Progress("    file unlocking")
 	filelock.Unlock(ms.file)
-	exit.Progress("unlocked")
-	exit.Progress("file closing")
+	exit.Progress("    file unlocked")
+	exit.Progress("    file closing")
 	ms.file.Close()
-	exit.Progress("file closed")
+	exit.Progress("    file closed")
 }

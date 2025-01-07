@@ -6,6 +6,9 @@ Package stor is used to access physical storage,
 normally by memory mapped file access.
 
 Storage is chunked. Allocations may not straddle chunks.
+
+Stor has an impl(ementation) of either heapstor or mmapstor.
+OS dependent parts of mmapstor are in mmap_nonwin.go and mmap_windows.go.
 */
 package stor
 
@@ -14,24 +17,24 @@ import (
 	"log"
 	"math"
 	"math/bits"
+	"runtime"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
 // Offset is an offset within storage
 type Offset = uint64
 
-// storage is the interface to different kinds of storage.
-// The main implementation accesses memory mapped files.
-// There is also an in memory version for testing.
+// storage is the interface to different kinds of storage,
+// either mmapstor or heapstor (for tests).
 type storage interface {
 	// Get returns the i'th chunk of storage
 	Get(chunk int) []byte
-	// Flush attempts to write changes to disk
+	// Flush writes changes to disk in the background
 	Flush(chunk []byte)
 	// Close closes the storage (if necessary)
 	Close(size int64, unmap bool)
@@ -52,6 +55,18 @@ type Stor struct {
 	// allocChunk is the chunk we're currently allocating in
 	allocChunk atomic.Int64
 	lock       sync.Mutex // guards extending the storage
+
+	prevFlushChunk atomic.Int32
+	curFlushChunk  atomic.Int32
+
+	// flushes is incremented each time a flush is requested
+	// and reset to zero by flusher
+	flushes atomic.Uint32
+
+	// flushChan is used to track whether flush is running or not
+	// in a way that we can check without blocking (in FlushTo for persist)
+	// or wait with a timeout (in flushWait for Close)
+	flushChan chan struct{}
 }
 
 // closedSize needs to allow room to be incremented.
@@ -64,7 +79,10 @@ func NewStor(impl storage, chunksize uint64, size uint64, chunks [][]byte) *Stor
 	stor := &Stor{impl: impl, chunksize: chunksize, shift: shift}
 	stor.size.Store(size)
 	stor.chunks.Store(chunks)
-	stor.allocChunk.Store(int64(len(chunks) - 1))
+	last := int64(len(chunks) - 1)
+	stor.allocChunk.Store(last)
+	stor.prevFlushChunk.Store(int32(max(0, last)))
+	stor.flushChan = make(chan struct{}, 1)
 	return stor
 }
 
@@ -85,8 +103,8 @@ func (s *Stor) Alloc(n int) (Offset, []byte) {
 		// which will be caught by the endchunk check (and retry)
 		newsize := s.size.Add(uint64(n)) // serializable
 		if newsize >= closedSize {
-			log.Println("Stor: Alloc after Close")
-			exit.Wait()
+			log.Println("stor: use after close")
+			runtime.Goexit()
 		}
 		endChunk := s.offsetToChunk(newsize - 1)
 		offset := newsize - uint64(n)
@@ -124,9 +142,6 @@ func (s *Stor) extend(allocChunk int64) {
 	// it will loop and realloc, wasting the first increment
 	// but this should be rare and relatively harmless
 	s.allocChunk.Add(1)
-	if allocChunk >= 0 {
-		s.impl.Flush(chunks[allocChunk]) // final flush of PREVIOUS chunk
-	}
 }
 
 // Data returns a byte slice starting at the given offset
@@ -150,9 +165,8 @@ func (s *Stor) offsetToChunk(offset Offset) int {
 func (s *Stor) Size() uint64 {
 	size := s.size.Load()
 	if size >= closedSize {
-		log.Println("Stor: Size after Close")
-		dbg.PrintStack()
-		exit.Wait()
+		log.Println("stor: use after close")
+		runtime.Goexit()
 	}
 	return size
 }
@@ -204,13 +218,55 @@ func (s *Stor) Write(off uint64, data []byte) {
 	}
 }
 
-func (s *Stor) Flush() {
+// Flush writes change to disk in the background.
+// It is called by persist (e.g. once per minute).
+func (s *Stor) FlushTo(offset uint64) {
+	chunk := s.offsetToChunk(offset)
+	s.curFlushChunk.Store(int32(chunk))
+	s.flushes.Add(1) // flush requested
+	select {
+	case s.flushChan <- struct{}{}:
+		go s.flusher()
+	default:
+		// flush already running
+	}
+}
+
+func (s *Stor) flusher() {
+	f := s.flushes.Swap(0)
+	for f > 0 {
+		s.flush()
+		f = s.flushes.Swap(0)
+		// loop if there have been flush requests during this flush
+	}
+	<-s.flushChan
+}
+
+func (s *Stor) flush() {
 	chunks := s.chunks.Load().([][]byte)
-	allocChunk := s.allocChunk.Load()
-	s.impl.Flush(chunks[allocChunk])
+	curFlushChunk := s.curFlushChunk.Load()
+	prevFlushChunk := s.prevFlushChunk.Load()
+	for c := prevFlushChunk; c <= curFlushChunk; c++ {
+		// log.Println("flush", c)
+		s.impl.Flush(chunks[c])
+	}
+	s.prevFlushChunk.Store(curFlushChunk)
+}
+
+// flushWait waits up to 5 seconds for flushes to finish.
+func (s *Stor) flushWait() {
+	select {
+	case s.flushChan <- struct{}{}:
+		exit.Progress("    store flushed")
+		return
+	case <-time.After(5 * time.Second):
+		log.Println("ERROR: stor: FlushWait timed out")
+		return
+	}
 }
 
 func (s *Stor) Close(unmap bool, callback ...func(uint64)) {
+	exit.Progress("  stor closing")
 	var size uint64
 	if _, ok := s.impl.(*heapStor); ok {
 		size = s.size.Load() // for tests
@@ -218,12 +274,11 @@ func (s *Stor) Close(unmap bool, callback ...func(uint64)) {
 		size = s.size.Swap(closedSize)
 	}
 	if size < closedSize {
-		exit.Progress("flushing")
-		s.Flush()
-		exit.Progress("flushed")
 		for _, f := range callback {
 			f(size)
 		}
+		s.flushWait()
 		s.impl.Close(int64(size), unmap)
 	}
+	exit.Progress("  stor closed")
 }

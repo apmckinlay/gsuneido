@@ -121,16 +121,18 @@ func (db *Database) persist(exec execPersist) *DbState {
 	var newState *DbState
 	db.GetState().Meta.Persist(exec.Submit) // outside UpdateState
 	updates := exec.Results()
+	var off uint64
 	db.UpdateState(func(state *DbState) {
 		m := *state.Meta // copy
 		meta.Apply(&m, updates)
 		state.Meta = &m
 		// Write modifies schema/info offs,ages,clock
 		// so it must be inside UpdateState
-		state.Off = state.Write()
+		off = state.Write()
+		state.Off = off
 		newState = state
 	})
-	db.Store.Flush()
+	db.Store.FlushTo(off)
 	return newState
 }
 

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"runtime"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/core"
@@ -540,7 +541,8 @@ func (db *Database) Final() int {
 
 func (db *Database) ckOpen() {
 	if db.closed.Load() {
-		exit.Wait()
+		log.Println("database: use after close")
+		runtime.Goexit()
 	}
 }
 
@@ -596,9 +598,11 @@ func (db *Database) writeSize(size uint64) {
 		return
 	}
 	// need to use Write because all but last chunk are read-only
+	exit.Progress("    size writing")
 	buf := make([]byte, stor.SmallOffsetLen)
 	stor.WriteSmallOffset(buf, size)
 	db.Store.Write(uint64(len(magic)), buf)
+	exit.Progress("    size written")
 }
 
 func (db *Database) HaveUsers() bool {

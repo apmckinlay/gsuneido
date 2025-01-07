@@ -216,12 +216,12 @@ func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo
 }
 
 func (ck *CheckCo) Stop() {
-	exit.Progress(fmt.Sprint("checker stopping, chan len ", len(ck.c)))
-	defer exit.Progress("checker stopped")
+	exit.Progress(fmt.Sprint("  checker stopping "))
 	// send nil rather than closing
 	// so other threads don't get "send on closed channel"
 	ck.c <- nil
 	<-ck.allDone // wait
+	exit.Progress("  checker stopped")
 }
 
 func checker(ck *Check, c chan any, mergeChan chan todo) {
