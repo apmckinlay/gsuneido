@@ -5,6 +5,7 @@ package tools
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -121,6 +122,9 @@ func DumpDbTable(db *Database, table, to, publicKey string) (nrecs int, err erro
 	tmpfile := f.Name()
 	defer func() { f.Close(); os.Remove(tmpfile) }()
 	nrecs = dumpDbTable(db, table, w)
+	if nrecs == -1 {
+		return 0, errors.New("can't find " + table)
+	}
 	if err := w.Flush(); err != nil {
 		return 0, err
 	}
@@ -194,7 +198,7 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	w.WriteString("====== ")
 	sc := state.Meta.GetRoSchema(table)
 	if sc == nil {
-		panic("can't find " + table)
+		return -1
 	}
 	hasdel := sc.HasDeleted()
 	schema := sc.DumpString()
