@@ -24,7 +24,6 @@ build:
 	@rm -f $(OUTPUT)
 ifdef PATHEXT
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)"
-	$(CONSOLE)
 	$(PORTABLE)
 else
 	export CGO_ENABLED=0 ; $(GO) $(BUILD) -v -ldflags "$(LDFLAGS)"
@@ -47,10 +46,16 @@ endif
 portable:
 	# a Windows version without the Windows stuff
 	$(PORTABLE)
+	
+all: build amd arm
 
-arm:
+arm: # linux
 	export CGO_ENABLED=0 GOARCH=arm64 GOOS=linux ; $(GO) build -buildvcs=true \
 		-trimpath -o gs_linux_arm64 -v -ldflags "$(LDFLAGS)"
+
+amd: # linux
+	export CGO_ENABLED=0 GOARCH=amd64 GOOS=linux ; $(GO) build -buildvcs=true \
+		-trimpath -o gs_linux_amd64 -v -ldflags "$(LDFLAGS)"
 
 test:
 	$(GO) test -short ./...
@@ -89,17 +94,21 @@ release:
 help:
 	@echo "make [target]"
 	@echo "build"
-	@echo "    build gsuneido"
+	@echo "    build for current OS"
 	@echo "gsuneido"
 	@echo "    build gsuneido executable"
 	@echo "portable"
 	@echo "    build windows gsport"
 	@echo "arm"
 	@echo "    build arm linux executable"
+	@echo "amd"
+	@echo "    build amd linux executable"
+	@echo "all"
+	@echo "    build current OS, arm, and amd executables"
 	@echo "test"
 	@echo "    run tests"
 	@echo "clean"
 	@echo "    remove built files"
 
 .PHONY : build gsuneido portable test generate clean zap race racetest release \
-	help arm
+	help arm amd all
