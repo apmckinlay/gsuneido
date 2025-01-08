@@ -283,7 +283,7 @@ loop:
 					}
 				}
 				if val == nil {
-					panic("uninitialized member: " + m.String())
+					MemberNotFound(m)
 				}
 			}
 			th.Push(val)

@@ -218,7 +218,7 @@ func (ob *SuObject) GetPut(_ *Thread, m, v Value,
 	}
 	orig := ob.get(m)
 	if orig == nil {
-		panic("uninitialized member: " + m.String())
+		MemberNotFound(m)
 	}
 	v = op(orig, v)
 	ob.set(m, v)
@@ -226,6 +226,11 @@ func (ob *SuObject) GetPut(_ *Thread, m, v Value,
 		return orig
 	}
 	return v
+}
+
+func MemberNotFound(m Value) {
+	//FIXME remove "uninitialized" after transitionF
+	panic("uninitialized member not found: " + m.String())
 }
 
 // Set implements Put, doesn't require thread.

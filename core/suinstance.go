@@ -146,7 +146,7 @@ func (ob *SuInstance) GetPut(th *Thread, m Value, v Value,
 	defer ob.Unlock()
 	orig := ob.get(th, m)
 	if orig == nil {
-		panic("uninitialized member: " + m.String())
+		MemberNotFound(m)
 	}
 	v = op(orig, v)
 	ob.put(m, v)

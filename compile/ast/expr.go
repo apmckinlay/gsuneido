@@ -440,7 +440,7 @@ func (a *Mem) Eval(c *Context) Value {
 	m := a.M.Eval(c)
 	result := e.Get(nil, m)
 	if result == nil {
-		panic("uninitialized member: " + m.String())
+		MemberNotFound(m)
 	}
 	return result
 }
