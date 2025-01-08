@@ -1,4 +1,4 @@
-# requires sh on path (e.g. from MinGW)
+# requires sh on path (e.g. from msys)
 BUILT=$(shell date "+%b %-d %Y %R")
 
 GO = go
@@ -47,8 +47,12 @@ portable:
 	# a Windows version without the Windows stuff
 	$(PORTABLE)
 	
-all: build amd arm
+all: git-status build amd arm
 
+# NOTE: requires test e.g. from msys
+git-status:
+	@test -z "$(shell git status --porcelain)"
+		
 arm: # linux
 	export CGO_ENABLED=0 GOARCH=arm64 GOOS=linux ; $(GO) build -buildvcs=true \
 		-trimpath -o gs_linux_arm64 -v -ldflags "$(LDFLAGS)"
@@ -111,4 +115,4 @@ help:
 	@echo "    remove built files"
 
 .PHONY : build gsuneido portable test generate clean zap race racetest release \
-	help arm amd all
+    help arm amd all git-status
