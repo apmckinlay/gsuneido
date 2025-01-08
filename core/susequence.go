@@ -5,6 +5,7 @@ package core
 
 import (
 	"github.com/apmckinlay/gsuneido/core/types"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
@@ -28,22 +29,33 @@ func NewSuSequence(it Iter) *SuSequence {
 }
 
 func (seq *SuSequence) Iter() Iter {
-	iter, ob := seq.iter2()
-	if ob != nil {
-		return ob.Iter()
-	}
+	iter := seq.getIter()
 	return iter.Dup() // may lock
 }
 
-func (seq *SuSequence) iter2() (Iter, *SuObject) {
+func (seq *SuSequence) Iter2(list, named bool) iter2 {
+	assert.That(list && named)
+	iter := seq.getIter()
+	i := -1
+	return func() (Value, Value) {
+		v := iter.Next()
+		if v == nil {
+			return nil, nil
+		}
+		i++
+		return IntVal(i), v
+	}
+}
+
+func (seq *SuSequence) getIter() Iter {
 	if seq.Lock() {
 		defer seq.Unlock()
 	}
 	if seq.ob != nil {
-		return nil, seq.ob
+		return seq.ob.Iter()
 	}
 	seq.duped = true
-	return seq.iter, nil
+	return seq.iter
 }
 
 func (seq *SuSequence) Instantiated() bool {

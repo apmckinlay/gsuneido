@@ -455,8 +455,6 @@ loop:
 			}
 		case op.Iter:
 			th.stack[th.sp-1] = OpIter(th.stack[th.sp-1])
-		case op.Iter2:
-			th.stack[th.sp-1] = OpIter2(th.stack[th.sp-1])
 		case op.ForIn:
 			next := th.Top().(interface{ Next() Value }).Next()
 			if next != nil {
@@ -465,6 +463,8 @@ loop:
 			} else {
 				fr.ip += 3
 			}
+		case op.Iter2:
+			th.stack[th.sp-1] = OpIter2(th.stack[th.sp-1])
 		case op.ForIn2:
 			m, v := th.Top().(SuIter2).iter2()
 			if m != nil {
