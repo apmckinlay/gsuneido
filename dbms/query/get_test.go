@@ -632,7 +632,7 @@ func TestQueryGet(t *testing.T) {
 		200	970101	'e'	'disk'
 		200	970102	'c'	'mouse'`)
 	test("customer where id not in ('z')",
-		"customer^(id) where not (id is 'z')",
+		"customer^(id) where id isnt 'z'",
 		`city	id	name
 		'calgary'	'c'	'calac'
 		'saskatoon'	'a'	'axon'

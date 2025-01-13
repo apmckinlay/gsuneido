@@ -74,6 +74,10 @@ func exprToSpans(expr ast.Expr, fields []string) (string, []span) {
 	case *ast.Call:
 		return typeSpan(expr)
 		// TODO unary e.g. not Number?(x)
+	case *ast.Unary:
+		if expr.Tok == tok.LParen {
+            return exprToSpans(expr.E, fields)
+        }
 	}
 	return "", nil
 }

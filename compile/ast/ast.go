@@ -21,7 +21,6 @@ package ast
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -188,16 +187,20 @@ func (a *Unary) Echo() string {
 	if a.Tok == tok.LParen {
 		return "(" + a.E.Echo() + ")"
 	}
+	if a.Tok == tok.Not {
+		if in, ok := a.E.(*In); ok {
+			return in.E.Echo() + " not" + in.echo()
+		}
+		if b, ok := a.E.(*Binary); ok {
+			return "not (" + b.Echo() + ")"
+		}
+	}
 	var op = map[tok.Token]string{
 		tok.Add: "+",
 		tok.Sub: "-",
 		tok.Not: "not ",
 	}
-	e := a.E.Echo()
-	if strings.Contains(e, " ") {
-		e = "(" + e + ")"
-	}
-	return op[a.Tok] + e
+	return op[a.Tok] + a.E.Echo()
 }
 
 func (a *Unary) Children(fn func(Node) Node) {
@@ -407,7 +410,11 @@ func (a *In) String() string {
 }
 
 func (a *In) Echo() string {
-	s := a.E.Echo() + " in ("
+	return a.E.Echo() + a.echo()
+}
+
+func (a *In) echo() string {
+	s := " in ("
 	sep := ""
 	for _, e := range a.Exprs {
 		s += sep + e.Echo()

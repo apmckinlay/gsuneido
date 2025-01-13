@@ -34,11 +34,35 @@ func (f Folder) Unary(token tok.Token, expr Expr) Expr {
 }
 
 func (f Folder) foldUnary(u *Unary) Expr {
-	//TODO not x is y => x isnt y, not x =~ y => x !~ y
 	if c, ok := u.E.(*Constant); ok && u.Tok != tok.Div {
 		return f.constant(u.eval(c.Val))
 	}
+	if u.Tok == tok.Not {
+		if b, ok := f.unwrap(u.E).(*Binary); ok {
+			if inverse, ok := inverseBinary[b.Tok]; ok {
+				return f.Binary(b.Lhs, inverse, b.Rhs)
+            }
+		}
+	}
 	return u
+}
+
+func (Folder) unwrap(e Expr) Expr {
+	if u, ok := e.(*Unary); ok && u.Tok == tok.LParen {
+		return u.E
+	}
+	return e
+}
+
+var inverseBinary = map[tok.Token]tok.Token{
+	tok.Is:   tok.Isnt,
+	tok.Isnt: tok.Is,
+	tok.Lt:   tok.Gte,
+	tok.Lte:  tok.Gt,
+	tok.Gt:   tok.Lte,
+	tok.Gte:  tok.Lt,
+	tok.Match: tok.MatchNot,
+	tok.MatchNot: tok.Match,
 }
 
 func (f Folder) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {

@@ -38,6 +38,7 @@ func newParser(lxr *Lexer, a Aspects) *Parser {
 	return p
 }
 
+// actionAspects are used for query parsing
 type actionAspects struct {
 	cgAspects
 }
@@ -54,9 +55,6 @@ func (aa *actionAspects) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
 func (aa *actionAspects) Unary(token tok.Token, expr Expr) Expr {
 	if token.IsIncDec() {
 		panic("increment/decrement operators are not allowed")
-	}
-	if token == tok.LParen {
-		return expr
 	}
 	return aa.cgAspects.Unary(token, expr)
 }

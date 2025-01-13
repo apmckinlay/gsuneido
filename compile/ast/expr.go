@@ -48,6 +48,13 @@ func (a *Ident) Columns() []string {
 	return []string{a.Name}
 }
 
+func (a *Unary) CanEvalRaw(flds []string) bool {
+	if a.Tok == tok.LParen {
+		return a.E.CanEvalRaw(flds)
+	}
+	return false
+}
+
 func (a *Unary) Eval(c *Context) Value {
 	return a.eval(a.E.Eval(c))
 }
