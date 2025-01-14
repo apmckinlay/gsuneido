@@ -17,6 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/system"
 )
@@ -113,29 +114,27 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	}()
 	hasdel := ts.HasDeleted()
 	info := state.Meta.GetRoInfo(ts.Table)
-	sc := state.Meta.GetRoSchema(ts.Table)
 	sum := uint64(0)
 	size := uint64(0)
 	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
 	var off2 uint64
-	var buf []byte
-	var n int
+	var dstbuf []byte
 	count := info.Indexes[0].Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
-		if hasdel {
-			rec := OffToRecCk(src.Store, off) // verify data checksums
+		buf := src.Store.Data(off)
+		n := core.RecLen(buf)
+		buf = buf[:n+cksum.Len]
+		cksum.MustCheck(buf)
+		rec := core.Record(hacks.BStoS(buf[:n]))
+		if hasdel || hasTrailingEmpty(rec) {
 			rec = squeeze(rec, ts.Columns)
 			n = len(rec)
-			off2, buf = dst.Store.Alloc(n + cksum.Len)
-			copy(buf, rec)
-			cksum.Update(buf)
+			off2, dstbuf = dst.Store.Alloc(n + cksum.Len)
+			copy(dstbuf, rec)
+			cksum.Update(dstbuf)
 		} else {
-			rec := src.Store.Data(off)
-			n = core.RecLen(rec)
-			rec = rec[:n+cksum.Len]
-			cksum.MustCheck(rec)
-			off2, buf = dst.Store.Alloc(len(rec))
-			copy(buf, rec)
+			off2, dstbuf = dst.Store.Alloc(len(buf))
+			copy(dstbuf, buf)
 		}
 		list.Add(off2)
 		size += uint64(n)
@@ -143,7 +142,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	list.Finish()
 	assert.This(count).Is(info.Nrows)
 	for i := 1; i < len(info.Indexes); i++ {
-		CheckOtherIndex(sc.Indexes[i].Columns, info.Indexes[i], count, sum)
+		CheckOtherIndex(ts.Indexes[i].Columns, info.Indexes[i], count, sum)
 	}
 	if hasdel {
 		ts.Columns = slc.Without(ts.Columns, "-")

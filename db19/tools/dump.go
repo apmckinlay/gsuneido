@@ -211,7 +211,7 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	count := info.Indexes[0].Check(func(off uint64) {
 		sum += off                       // addition so order doesn't matter
 		rec := OffToRecCk(db.Store, off) // verify data checksums
-		if hasdel {
+		if hasdel || hasTrailingEmpty(rec) {
 			rec = squeeze(rec, sc.Columns)
 		}
 		writeInt(w, len(rec))
@@ -226,6 +226,12 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	return count
 }
 
+func hasTrailingEmpty(r core.Record) bool {
+	n := r.Count()
+	return n > 0 && r.GetRaw(n-1) == ""
+}
+
+// squeeze removes deleted fields. It is used by dump and compact.
 func squeeze(rec core.Record, cols []string) core.Record {
 	var rb core.RecordBuilder
 	for i, col := range cols {
