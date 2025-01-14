@@ -233,7 +233,7 @@ func squeeze(rec core.Record, cols []string) core.Record {
 			rb.AddRaw(rec.GetRaw(i))
 		}
 	}
-	return rb.Build()
+	return rb.Trim().Build()
 }
 
 func writeInt(w WriterPlus, n int) {
