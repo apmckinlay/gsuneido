@@ -149,10 +149,12 @@ func (r Record) String() string {
 	return sb.String()
 }
 
-// Truncate shortens records to n fields and removes empty trailing fields.
+// Truncate shortens records to n fields.
 // If the record has n or less fields it is returned unchanged.
+// Otherwise it builds a new record (and trims it)
+// It is used by UpdateTran output and update.
 func (r Record) Truncate(n int) Record {
-	rn := r.Len()
+	rn := r.Count()
 	if rn <= n {
 		return r
 	}
