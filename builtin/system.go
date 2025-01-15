@@ -14,9 +14,9 @@ import (
 
 var _ = builtin(System, "(command)")
 
-func System(arg Value) Value {
+func System(th *Thread, args []Value) Value {
 	shell, flag := getShell()
-	command := ToStr(arg)
+	command := ToStr(args[0])
 	cmd := exec.Command(shell)
 	if errors.Is(cmd.Err, exec.ErrDot) {
 		cmd.Err = nil
@@ -36,7 +36,11 @@ func System(arg Value) Value {
 			panic("System failed to run: " + err.Error())
 		}
 	}
-	return IntVal(cmd.ProcessState.ExitCode())
+	result := cmd.ProcessState.ExitCode()
+	if result != 0 {
+		th.ReturnThrow = true
+	}
+	return IntVal(result)
 }
 
 func getShell() (string, string) {

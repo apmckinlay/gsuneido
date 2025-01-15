@@ -52,7 +52,11 @@ func Spawn(th *Thread, as *ArgSpec, rawargs []Value) Value {
 	}
 	if mode == wait {
 		cmd.Wait()
-		return IntVal(cmd.ProcessState.ExitCode())
+		result := cmd.ProcessState.ExitCode()
+		if result != 0 {
+			th.ReturnThrow = true
+		}
+			return IntVal(result)
 	}
 	return IntVal(cmd.Process.Pid)
 }
