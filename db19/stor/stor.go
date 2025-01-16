@@ -257,6 +257,7 @@ func (s *Stor) flush() {
 func (s *Stor) flushWait() {
 	select {
 	case s.flushChan <- struct{}{}:
+		<-s.flushChan
 		exit.Progress("    store flushed")
 		return
 	case <-time.After(5 * time.Second):
