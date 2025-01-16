@@ -151,3 +151,8 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: size, Indexes: ovs}
 	dst.AddNewTable(ts, ti)
 }
+
+func hasTrailingEmpty(r core.Record) bool {
+	n := r.Count()
+	return n > 0 && r.GetRaw(n-1) == ""
+}
