@@ -113,7 +113,7 @@ func (db *Database) CommitMerge(ut *UpdateTran) {
 
 // persist writes index changes (and a new state) to the database file.
 // It is called from concur.go regularly e.g. once per minute and at shutdown.
-func (db *Database) persist(exec execPersist) *DbState {
+func (db *Database) persist(exec execPersist, flush bool) *DbState {
 	if db.corrupted.Load() {
 		return nil
 	}
@@ -132,14 +132,16 @@ func (db *Database) persist(exec execPersist) *DbState {
 		state.Off = off
 		newState = state
 	})
-	db.Store.FlushTo(off)
+	if flush {
+		db.Store.FlushTo(off)
+	}
 	return newState
 }
 
 // PersistSync is for tests
 func (db *Database) PersistSync() {
 	db.GetState().Meta.ResetClock() // prevent flattening
-	assert.That(db.persist(&execPersistSingle{}) != nil)
+	assert.That(db.persist(&execPersistSingle{}, false) != nil)
 }
 
 const magic1 = "\x01\x23\x45\x67\x89\xab\xcd\xef"

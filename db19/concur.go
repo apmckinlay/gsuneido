@@ -61,7 +61,7 @@ loop:
 					} else {
 						// persist
 						if db.GetState() != prevState {
-							prevState = db.persist(ep)
+							prevState = db.persist(ep, true)
 						}
 						td.ret <- prevState
 					}
@@ -77,7 +77,7 @@ loop:
 			}
 		case <-ticker.C:
 			if db.GetState() != prevState {
-				prevState = db.persist(ep)
+				prevState = db.persist(ep, true)
 			}
 		}
 	}
@@ -85,7 +85,7 @@ loop:
 	if db.GetState() != prevState ||
 		prevState.Off != db.Store.Size()-uint64(stateLen) {
 		exit.Progress("persist starting")
-		db.persist(ep)
+		db.persist(ep, true)
 		exit.Progress("persist finished")
 	}
 	close(allDone)

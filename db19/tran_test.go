@@ -74,7 +74,7 @@ func TestTran(t *testing.T) {
 		db.CommitMerge(ut) // commit synchronously
 		if i%100 == 50 {
 			if i%500 != 250 {
-				db.persist(&execPersistSingle{})
+				db.persist(&execPersistSingle{}, false)
 			} else {
 				db.Close()
 				db, err = OpenDatabase("tmp.db")
@@ -84,7 +84,7 @@ func TestTran(t *testing.T) {
 			}
 		}
 	}
-	db.persist(&execPersistSingle{})
+	db.persist(&execPersistSingle{}, false)
 	db.MustCheck()
 	rt := db.NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
