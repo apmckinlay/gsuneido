@@ -196,6 +196,10 @@ func (s *Stor) LastOffset(off uint64, str string) uint64 {
 	chunks := s.chunks.Load().([][]byte)
 	c := s.offsetToChunk(off)
 	n := off & (s.chunksize - 1)
+	if n == 0 {
+		n = s.chunksize
+		c--
+	}
 	for ; c >= 0; c-- {
 		buf := chunks[c][:n]
 		if i := bytes.LastIndex(buf, b); i != -1 {

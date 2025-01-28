@@ -96,6 +96,29 @@ func TestLastOffset(t *testing.T) {
 	assert(ms.LastOffset(off, magic)).Is(0)
 }
 
+func TestLastOffset2(t *testing.T) {
+	const magic = "xyz"
+	for _, size := range []int{32, 64, 96, 128, 160} {
+		for _, pos := range []int{0, size / 2, size - len(magic)} {
+			hs := HeapStor(64)
+			for range size / 32 {
+				hs.Alloc(32)
+			}
+			copy(hs.Data(uint64(pos)), magic)
+			for _, off := range []int{0, size / 3, size - 10, size} {
+				expected := pos
+				if off <= pos {
+					expected = 0
+				}
+				fmt.Println("size", size, "pos", pos, "off", off, "expected", expected)
+				assert.T(t).
+					This(hs.LastOffset(uint64(off), magic)).
+					Is(expected)
+			}
+		}
+	}
+}
+
 func TestStress(*testing.T) {
 	var nThreads = 101
 	var nIterations = 1_000_000
