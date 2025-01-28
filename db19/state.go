@@ -121,9 +121,12 @@ func (db *Database) persist(exec execPersist, flush bool) *DbState {
 	var newState *DbState
 	db.GetState().Meta.Persist(exec.Submit) // outside UpdateState
 	updates := exec.Results()
+	// NOTE: db state could change while Meta.Persist is running
+	// This is ok because it only takes the ixbuf's
+	// which are not changing since merges aren't concurrent with persist.
 	var off uint64
 	db.UpdateState(func(state *DbState) {
-		m := *state.Meta // copy
+		m := *state.Meta // shallow copy
 		meta.Apply(&m, updates)
 		state.Meta = &m
 		// Write modifies schema/info offs,ages,clock

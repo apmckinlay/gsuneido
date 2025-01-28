@@ -18,6 +18,9 @@ type Info struct {
 	Indexes []*index.Overlay
 	Nrows   int
 	Size    uint64
+	// persistNrows and persistSize match the btrees
+	persistNrows int
+	persistSize  uint64
 	// lastMod must be set to Meta.infoClock on new or modified items.
 	// It is used for persist meta chaining/flattening.
 	lastMod int
@@ -52,11 +55,11 @@ func (ti *Info) StorSize() int {
 
 func (ti *Info) Write(w *stor.Writer) {
 	w.PutStr(ti.Table).
-		Put4(ti.Nrows).
-		Put5(ti.Size).
+		Put4(ti.persistNrows). // to match btrees
+		Put5(ti.persistSize).  // to match btrees
 		Put1(len(ti.Indexes))
 	for i := range ti.Indexes {
-		ti.Indexes[i].Write(w)
+		ti.Indexes[i].Write(w) // writes btree
 	}
 }
 
@@ -65,6 +68,8 @@ func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
 	ti.Table = r.GetStr()
 	ti.Nrows = r.Get4()
 	ti.Size = r.Get5()
+	ti.persistNrows = ti.Nrows // for Cksum
+	ti.persistSize = ti.Size   // for Cksum
 	if ni := r.Get1(); ni > 0 {
 		ti.Indexes = make([]*index.Overlay, ni)
 		for i := range ni {
@@ -108,7 +113,10 @@ func (mu MergeUpdate) Table() string {
 	return mu.table
 }
 
-func (mu MergeUpdate) Apply(ov *index.Overlay, i int) *index.Overlay {
+func (mu MergeUpdate) Apply1(ti *Info) {
+}
+
+func (mu MergeUpdate) Apply2(ov *index.Overlay, i int) *index.Overlay {
 	return ov.WithMerged(mu.results[i], mu.nmerged)
 }
 
@@ -118,10 +126,12 @@ type SaveResult = index.SaveResult
 
 type PersistUpdate struct {
 	table   string
+	nrows   int
+	size    uint64
 	results []SaveResult // per index
 }
 
-// Persist is called by state.Persist to write the index updates.
+// Persist is called by database persist to write the index updates.
 // It collects the new btree roots which are then applied by Apply.
 // WARNING: must not modify meta.
 func (m *Meta) Persist(exec func(func() PersistUpdate)) {
@@ -132,7 +142,9 @@ func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 				for i, ov := range ti.Indexes {
 					results[i] = ov.Save()
 				}
-				return PersistUpdate{table: ti.Table, results: results}
+				// capture the nrows & size that match the btrees
+				return PersistUpdate{table: ti.Table, results: results,
+					nrows: ti.Nrows, size: ti.Size}
 			})
 		}
 	}
@@ -142,12 +154,18 @@ func (pu PersistUpdate) Table() string {
 	return pu.table
 }
 
-func (pu PersistUpdate) Apply(ov *index.Overlay, i int) *index.Overlay {
+func (pu PersistUpdate) Apply1(ti *Info) {
+	ti.persistNrows = pu.nrows
+	ti.persistSize = pu.size
+}
+
+func (pu PersistUpdate) Apply2(ov *index.Overlay, i int) *index.Overlay {
 	return ov.WithSaved(pu.results[i])
 }
 
 func (ti *Info) Cksum() uint32 {
-	cksum := hash.HashString(ti.Table) + uint32(ti.Nrows) + uint32(ti.Size)
+	cksum := hash.HashString(ti.Table) +
+		uint32(ti.persistNrows) + uint32(ti.persistSize)
 	for _, ov := range ti.Indexes {
 		cksum += ov.Cksum()
 	}
@@ -158,7 +176,8 @@ func (ti *Info) Cksum() uint32 {
 
 type applyable interface {
 	Table() string
-	Apply(*index.Overlay, int) *index.Overlay
+	Apply1(ti *Info)
+	Apply2(*index.Overlay, int) *index.Overlay
 }
 
 // Apply applies the updates collected by Merge or Persist
@@ -167,9 +186,10 @@ func Apply[U applyable](m *Meta, updates []U) {
 	info := m.info.Mutable()
 	for _, up := range updates {
 		ti := *info.MustGet(up.Table()) // copy
+		up.Apply1(&ti)
 		ti.Indexes = slc.Clone(ti.Indexes)
 		for i, ov := range ti.Indexes {
-			ti.Indexes[i] = up.Apply(ov, i)
+			ti.Indexes[i] = up.Apply2(ov, i)
 		}
 		ti.lastMod = m.info.Clock
 		info.Put(&ti)
