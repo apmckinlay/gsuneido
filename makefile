@@ -43,7 +43,7 @@ else
 	$(GO) $(BUILD) -v -ldflags "$(LDFLAGS)" -race -o race/$(OUTPUT)
 endif
 
-portable:
+port:
 	# a Windows version without the Windows stuff
 	$(PORTABLE)
 	
@@ -114,5 +114,5 @@ help:
 	@echo "clean"
 	@echo "    remove built files"
 
-.PHONY : build gsuneido portable test generate clean zap race racetest release \
+.PHONY : build gsuneido port test generate clean zap race racetest release \
     help arm amd all git-status
