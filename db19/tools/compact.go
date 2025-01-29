@@ -115,7 +115,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	hasdel := ts.HasDeleted()
 	info := state.Meta.GetRoInfo(ts.Table)
 	sum := uint64(0)
-	size := uint64(0)
+	size := int64(0)
 	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
 	var off2 uint64
 	var dstbuf []byte
@@ -137,7 +137,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 			copy(dstbuf, buf)
 		}
 		list.Add(off2)
-		size += uint64(n)
+		size += int64(n)
 	})
 	list.Finish()
 	assert.This(count).Is(info.Nrows)

@@ -771,10 +771,11 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		if !ok || lti.IsTomb() {
 			continue
 		}
-		ti.Nrows = lti.Nrows + (ti.Nrows - tiOrig.Nrows)
+		dNrows := ti.Nrows - tiOrig.Nrows
+		ti.Nrows = lti.Nrows + dNrows
 		assert.That(ti.Nrows >= 0)
-		d := int64(ti.Size) - int64(tiOrig.Size)
-		ti.Size = uint64(int64(lti.Size) + d)
+		dSize := ti.Size - tiOrig.Size
+		ti.Size = lti.Size + dSize
 		for i := range ti.Indexes {
 			ti.Indexes[i].UpdateWith(lti.Indexes[i])
 		}

@@ -17,7 +17,7 @@ type Info struct {
 	Table   string
 	Indexes []*index.Overlay
 	Nrows   int
-	Size    uint64
+	Size    int64
 	// lastMod must be set to Meta.infoClock on new or modified items.
 	// It is used for persist meta chaining/flattening.
 	lastMod int

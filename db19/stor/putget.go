@@ -61,8 +61,8 @@ func (w *Writer) Put4(n int) *Writer {
 }
 
 // Put5 writes an unsigned five byte value
-func (w *Writer) Put5(n uint64) *Writer {
-	if n >= 1<<40 {
+func (w *Writer) Put5(n int64) *Writer {
+	if n < 0 || n >= 1<<40 {
 		panic("stor.Writer.Put5 value outside range")
 	}
 	w.buf = append(w.buf,
@@ -152,9 +152,9 @@ func (r *Reader) Get4() int {
 }
 
 // Get5 reads an unsigned five byte value
-func (r *Reader) Get5() uint64 {
-	n := uint64(r.buf[0]) + uint64(r.buf[1])<<8 + uint64(r.buf[2])<<16 +
-		uint64(r.buf[3])<<24 + uint64(r.buf[4])<<32
+func (r *Reader) Get5() int64 {
+	n := int64(r.buf[0]) + int64(r.buf[1])<<8 + int64(r.buf[2])<<16 +
+		int64(r.buf[3])<<24 + int64(r.buf[4])<<32
 	r.buf = r.buf[5:]
 	return n
 }

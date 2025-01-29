@@ -107,21 +107,21 @@ func checkTable(tcs *tableCheckers, table string) {
 }
 
 func checkFirstIndex(state *DbState, ixcols []string,
-	ix *index.Overlay) (int, uint64, uint64) {
+	ix *index.Overlay) (int, int64, uint64) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic(&errCorrupt{err: e, ixcols: ixcols})
 		}
 	}()
 	sum := uint64(0)
-	size := uint64(0)
+	size := int64(0)
 	ix.CheckMerged()
 	count := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		buf := state.store.Data(off)
 		n := core.RecLen(buf)
 		cksum.MustCheck(buf[:n+cksum.Len])
-		size += uint64(n)
+		size += int64(n)
 	})
 	return count, size, sum
 }

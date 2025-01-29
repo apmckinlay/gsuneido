@@ -350,11 +350,11 @@ func (bt *btree) StorSize() int {
 }
 
 func (bt *btree) Write(w *stor.Writer) {
-	w.Put5(bt.root).Put1(bt.treeLevels)
+	w.Put5(int64(bt.root)).Put1(bt.treeLevels)
 }
 
 func Read(st *stor.Stor, r *stor.Reader) *btree {
-	root := r.Get5()
+	root := uint64(r.Get5())
 	treeLevels := r.Get1()
 	return OpenBtree(st, root, treeLevels)
 }

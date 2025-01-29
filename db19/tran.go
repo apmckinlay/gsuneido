@@ -336,7 +336,7 @@ func (t *UpdateTran) Output(th *core.Thread, table string, rec core.Record) {
 		}
 	}()
 	ti.Nrows++
-	ti.Size += uint64(n)
+	ti.Size += int64(n)
 	t.db.CallTrigger(th, t, table, "", rec)
 }
 
@@ -397,7 +397,7 @@ func (t *UpdateTran) Delete(th *core.Thread, table string, off uint64) {
 	t.write()
 	ts := t.getSchema(table)
 	rec := t.GetRecord(off)
-	n := rec.Len()
+	n := int64(rec.Len())
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
 		is := ts.Indexes[i].Ixspec
@@ -421,8 +421,8 @@ func (t *UpdateTran) Delete(th *core.Thread, table string, off uint64) {
 		}
 		assert.Msg("Delete Nrows").That(ti.Nrows > 0)
 		ti.Nrows--
-		assert.Msg("Delete Size").That(ti.Size >= uint64(n))
-		ti.Size -= uint64(n)
+		assert.Msg("Delete Size").That(ti.Size >= n)
+		ti.Size -= n
 	}()
 	t.db.CallTrigger(th, t, table, rec, "")
 }
@@ -557,7 +557,7 @@ func (t *UpdateTran) update(th *core.Thread, table string, oldoff uint64, newrec
 	ti = t.getRwInfo(table)
 	d := int64(len(newrec)) - int64(len(oldrec))
 	assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
-	ti.Size = uint64(int64(ti.Size) + d)
+	ti.Size = ti.Size + d
 	func() {
 		defer func() {
 			if e := recover(); e != nil {

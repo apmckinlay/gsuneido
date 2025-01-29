@@ -415,7 +415,7 @@ func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64, lastMod int) uint64 {
 	off, buf := st.Alloc(size)
 	w := stor.NewWriter(buf)
 	w.Put3(size)
-	w.Put5(prevOff)
+	w.Put5(int64(prevOff))
 	w.Put4(int(ck))
 	for it := range ht.All() {
 		if lastMod != All || !it.IsTomb() {
@@ -474,7 +474,7 @@ func (ht Hamt[K, E]) read(st *stor.Stor, off uint64,
 	size := stor.NewReader(buf).Get3()
 	cksum.MustCheck(buf[:size])
 	r := stor.NewReader(buf[3 : size-cksum.Len])
-	prevOff := r.Get5()
+	prevOff := uint64(r.Get5())
 	ck := uint32(r.Get4())
 	for r.Remaining() > 0 {
 		it := rdfn(st, r)
