@@ -48,6 +48,8 @@ port:
 	$(PORTABLE)
 	
 all: git-status build amd arm
+	mkdir out
+	cp gsuneido.exe gsport.exe gs_linux_amd64 gs_linux_arm64 out
 
 # NOTE: requires test e.g. from msys
 git-status:
