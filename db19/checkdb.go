@@ -86,10 +86,10 @@ func checkTable(tcs *tableCheckers, table string) {
 		}
 	}
 	ixcols := sc.Indexes[ifirst].Columns
-	count, size, sum := checkFirstIndex(tcs.state, ixcols, info.Indexes[ifirst])
-	if count != info.Nrows {
+	nrows, size, sum := checkFirstIndex(tcs.state, ixcols, info.Indexes[ifirst])
+	if nrows != info.Nrows {
 		panic(&errCorrupt{ixcols: ixcols,
-			err: fmt.Sprint("count ", count, " should equal info ", info.Nrows)})
+			err: fmt.Sprint("count ", nrows, " should equal info ", info.Nrows)})
 	}
 	if size != info.Size {
 		panic(&errCorrupt{ixcols: ixcols,
@@ -102,7 +102,7 @@ func checkTable(tcs *tableCheckers, table string) {
 		if tcs.err.Load() != nil {
 			break
 		}
-		CheckOtherIndex(ix.Columns, info.Indexes[i], count, sum)
+		CheckOtherIndex(ix.Columns, info.Indexes[i], nrows, sum)
 	}
 }
 
@@ -116,14 +116,14 @@ func checkFirstIndex(state *DbState, ixcols []string,
 	sum := uint64(0)
 	size := int64(0)
 	ix.CheckMerged()
-	count := ix.Check(func(off uint64) {
+	nrows := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		buf := state.store.Data(off)
 		n := core.RecLen(buf)
 		cksum.MustCheck(buf[:n+cksum.Len])
 		size += int64(n)
 	})
-	return count, size, sum
+	return nrows, size, sum
 }
 
 func CheckOtherIndex(ixcols []string, ix *index.Overlay, nrows int, sumPrev uint64) {
@@ -134,11 +134,11 @@ func CheckOtherIndex(ixcols []string, ix *index.Overlay, nrows int, sumPrev uint
 	}()
 	ix.CheckMerged()
 	sum := uint64(0)
-	count := ix.Check(func(off uint64) {
+	nr := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 	})
-	if count != nrows {
-		panic(fmt.Sprint("count ", count, " should equal info ", nrows))
+	if nr != nrows {
+		panic(fmt.Sprint("count ", nr, " should equal info ", nrows))
 	}
 	if sum != sumPrev {
 		panic("checksum mismatch")

@@ -208,7 +208,7 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	w.WriteString(schema + "\n")
 	info := state.Meta.GetRoInfo(table)
 	sum := uint64(0)
-	count := info.Indexes[0].Check(func(off uint64) {
+	nrows := info.Indexes[0].Check(func(off uint64) {
 		sum += off                       // addition so order doesn't matter
 		rec := OffToRecCk(db.Store, off) // verify data checksums
 		if hasdel {
@@ -218,12 +218,12 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 		w.WriteString(string(rec))
 	})
 	writeInt(w, 0) // end of table records
-	if count != info.Nrows {
+	if nrows != info.Nrows {
 		panic(fmt.Sprintln("dump", table, sc.Indexes[0].Columns,
-			"count", count, "should equal info", info.Nrows))
+			"count", nrows, "should equal info", info.Nrows))
 	}
-	ics.checkOtherIndexes(sc, info, count, sum) // concurrent
-	return count
+	ics.checkOtherIndexes(sc, info, nrows, sum) // concurrent
+	return nrows
 }
 
 // squeeze removes deleted fields. It is used by dump and compact.

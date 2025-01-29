@@ -182,27 +182,27 @@ func decryptor(privateKey, passphrase string, src io.Reader) io.Reader {
 
 // loadTable1 reads the data
 func loadTable1(db *Database, r *bufio.Reader, schema string) (
-	nrecs int, size int64, list *sortlist.Builder[uint64]) {
+	nrows int, size int64, list *sortlist.Builder[uint64]) {
 	trace(schema)
 	if strings.HasPrefix(schema, "views ") {
 		return loadViews(db, r, schema), 0, nil
 	}
 	store := db.Store
 	list = sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
-	nrecs, size = readRecords(r, store, list)
-	trace("nrecs", nrecs, "data size", size)
+	nrows, size = readRecords(r, store, list)
+	trace("nrecs", nrows, "data size", size)
 	list.Finish()
-	return nrecs, size, list
+	return nrows, size, list
 }
 
 // loadTable2 builds the indexes.
 // It is multi-threaded when loading an entire database
 func loadTable2(db *Database, schema string,
-	nrecs int, size int64, list *slBuilder, overwrite bool) {
+	nrows int, size int64, list *slBuilder, overwrite bool) {
 	sch := query.NewAdminParser(schema).Schema()
 	ts := &meta.Schema{Schema: sch}
-	ovs := buildIndexes(ts, list, db.Store, nrecs)
-	ti := &meta.Info{Table: sch.Table, Nrows: nrecs, Size: size, Indexes: ovs}
+	ovs := buildIndexes(ts, list, db.Store, nrows)
+	ti := &meta.Info{Table: sch.Table, Nrows: nrows, Size: size, Indexes: ovs}
 	if overwrite {
 		if ts.HasFkey() {
 			panic("can't load single table with foreign keys")
