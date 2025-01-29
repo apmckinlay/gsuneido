@@ -120,7 +120,7 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 
 	defer func() {
 		if e := recover(); e != nil {
-			err = newErrCorrupt(e)
+			err = errCorruptWrap(e)
 			db = nil
 		}
 	}()

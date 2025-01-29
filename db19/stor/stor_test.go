@@ -90,10 +90,10 @@ func TestLastOffset(t *testing.T) {
 
 	off := ms.Size()/2 + 10
 	for i := N / 2; i >= 0; i-- {
-		off = ms.LastOffset(off, magic)
+		off = ms.LastOffset(off, magic, nil)
 		assert(off).Is(i * 100)
 	}
-	assert(ms.LastOffset(off, magic)).Is(0)
+	assert(ms.LastOffset(off, magic, nil)).Is(0)
 }
 
 func TestLastOffset2(t *testing.T) {
@@ -112,7 +112,7 @@ func TestLastOffset2(t *testing.T) {
 				}
 				fmt.Println("size", size, "pos", pos, "off", off, "expected", expected)
 				assert.T(t).
-					This(hs.LastOffset(uint64(off), magic)).
+					This(hs.LastOffset(uint64(off), magic, nil)).
 					Is(expected)
 			}
 		}

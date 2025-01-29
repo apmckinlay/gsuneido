@@ -6,6 +6,7 @@ package db19
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"sync/atomic"
 
@@ -13,27 +14,19 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // quick check ------------------------------------------------------
 
 // QuickCheck is the default partial checking done at start up.
-func (db *Database) QuickCheck() (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("check failed: %v", e)
-		}
-	}()
-	// t := time.Now()
-	runParallel(db.GetState(), quickCheckTable)
-	// fmt.Println("quick checked in", time.Since(t).Round(time.Millisecond))
-	return nil
+func (db *Database) QuickCheck() *errCorrupt {
+	return checkState(db.GetState(), quickCheckTable, "", nil)
 }
 
-func quickCheckTable(state *DbState, table string) {
-	info := state.Meta.GetRoInfo(table)
+func quickCheckTable(tcs *tableCheckers, table string) {
+	info := tcs.state.Meta.GetRoInfo(table)
 	for _, ix := range info.Indexes {
 		ix.QuickCheck()
 	}
@@ -45,36 +38,22 @@ func quickCheckTable(state *DbState, table string) {
 func CheckDatabase(dbfile string) (ec error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
 	if err != nil {
-		return newErrCorrupt(err)
+		return errCorruptWrap(err)
 	}
 	defer db.Close()
-	defer func() {
-		if e := recover(); e != nil {
-			db.Corrupt()
-			ec = newErrCorrupt(e)
-		}
-	}()
-	runParallel(db.GetState(), checkTable)
-	return nil // may be overridden by defer/recover
+	if ec := checkState(db.GetState(), checkTable, "", nil); ec != nil {
+		db.Corrupt()
+	}
+	return ec // may be overridden by defer/recover
 }
 
 // Check is called by the builtin Database.Check()
 func (db *Database) Check() (ec error) {
-	defer func() {
-		if e := recover(); e != nil {
-			db.Corrupt()
-			ec = newErrCorrupt(e)
-		}
-	}()
 	state := db.Persist()
-	runParallel(state, checkTable)
-
-	if state.Off != 0 {
-		state2 := ReadState(db.Store, state.Off)
-		assert.This(state.Meta.CksumData()).Is(state2.Meta.CksumData())
+	if ec := checkState(state, checkTable, "", nil); ec != nil {
+		db.Corrupt()
 	}
-
-	return nil // may be overridden by defer/recover
+	return ec
 }
 
 func (db *Database) MustCheck() {
@@ -83,28 +62,47 @@ func (db *Database) MustCheck() {
 	}
 }
 
-func checkTable(state *DbState, table string) {
+func checkTable(tcs *tableCheckers, table string) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(fmt.Sprintln(table+":", e))
+			if ec, ok := e.(*errCorrupt); ok {
+				ec.table = table
+				panic(ec)
+			}
+			panic(&errCorrupt{err: e, table: table})
 		}
 	}()
-	info := state.Meta.GetRoInfo(table)
-	sc := state.Meta.GetRoSchema(table)
+	info := tcs.state.Meta.GetRoInfo(table)
+	sc := tcs.state.Meta.GetRoSchema(table)
 	if info == nil {
 		panic("info missing for " + table)
 	}
-	count, size, sum := checkFirstIndex(state, sc.Indexes[0].Columns,
-		info.Indexes[0])
+	ifirst := 0
+	if table == tcs.firstTable && tcs.firstIndex != nil {
+		for i, ix := range sc.Indexes {
+			if slices.Equal(ix.Columns, tcs.firstIndex) {
+				ifirst = i
+			}
+		}
+	}
+	ixcols := sc.Indexes[ifirst].Columns
+	count, size, sum := checkFirstIndex(tcs.state, ixcols, info.Indexes[ifirst])
 	if count != info.Nrows {
-		panic(fmt.Sprint(sc.Indexes[0].Columns,
-			" count ", count, " should equal info ", info.Nrows))
+		panic(&errCorrupt{ixcols: ixcols,
+			err: fmt.Sprint("count ", count, " should equal info ", info.Nrows)})
 	}
 	if size != info.Size {
-		panic(fmt.Sprint("size ", size, " should equal info ", info.Size))
+		panic(&errCorrupt{ixcols: ixcols,
+			err: fmt.Sprint("size ", size, " should equal info ", info.Size)})
 	}
-	for i := 1; i < len(info.Indexes); i++ {
-		CheckOtherIndex(sc.Indexes[i].Columns, info.Indexes[i], count, sum)
+	for i, ix := range sc.Indexes {
+		if i == ifirst {
+			continue
+		}
+		if tcs.err.Load() != nil {
+			break
+		}
+		CheckOtherIndex(ix.Columns, info.Indexes[i], count, sum)
 	}
 }
 
@@ -112,7 +110,7 @@ func checkFirstIndex(state *DbState, ixcols []string,
 	ix *index.Overlay) (int, uint64, uint64) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(fmt.Sprintln(ixcols, e))
+			panic(&errCorrupt{err: e, ixcols: ixcols})
 		}
 	}()
 	sum := uint64(0)
@@ -131,7 +129,7 @@ func checkFirstIndex(state *DbState, ixcols []string,
 func CheckOtherIndex(ixcols []string, ix *index.Overlay, nrows int, sumPrev uint64) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(fmt.Sprintln(ixcols, e))
+			panic(&errCorrupt{err: e, ixcols: ixcols})
 		}
 	}()
 	ix.CheckMerged()
@@ -149,61 +147,87 @@ func CheckOtherIndex(ixcols []string, ix *index.Overlay, nrows int, sumPrev uint
 
 //-------------------------------------------------------------------
 
-type ErrCorrupt struct {
-	err   any
-	table string
+// errCorrupt is used to record the table and index
+// so that repair can check these first (to speed up the checking)
+type errCorrupt struct {
+	err    any
+	table  string
+	ixcols []string
 }
 
-func (ec *ErrCorrupt) Error() string {
+func (ec *errCorrupt) Error() string {
 	s := "database corrupt"
+	if ec.table != "" {
+		s += " " + ec.table
+	}
+	if ec.ixcols != nil {
+		s += " " + str.Join("[,]", ec.ixcols)
+	}
 	if ec.err != nil {
 		s += ": " + fmt.Sprint(ec.err)
 	}
 	return s
 }
 
-func (ec *ErrCorrupt) Table() string {
-	if ec == nil { // used by repair
+func (ec *errCorrupt) Table() string {
+	if ec == nil {
 		return ""
 	}
 	return ec.table
 }
 
-func newErrCorrupt(e any) *ErrCorrupt {
+func (ec *errCorrupt) Ixcols() []string {
+	if ec == nil {
+		return nil
+	}
+	return ec.ixcols
+}
+
+func errCorruptWrap(e any) *errCorrupt {
 	if e == nil {
 		return nil
 	}
-	if e2, ok := e.(*ErrCorrupt); ok {
+	if e2, ok := e.(*errCorrupt); ok {
 		return e2
 	}
 	if e2, ok := e.(error); ok {
-		return &ErrCorrupt{err: e2}
+		return &errCorrupt{err: e2}
 	}
-	return &ErrCorrupt{err: errors.New(fmt.Sprint(e))}
+	return &errCorrupt{err: errors.New(fmt.Sprint(e))}
 }
 
 //-------------------------------------------------------------------
 
-func runParallel(state *DbState, fn func(*DbState, string)) {
+// checkState runs fn for all tables in state using a worker pool.
+// fn is either quickCheckTable (for startup) or checkTable (for check & repair).
+func checkState(state *DbState, fn func(*tableCheckers, string),
+	firstTable string, firstIndex []string) (ec *errCorrupt) {
 	tcs := newTableCheckers(state, fn)
-	defer tcs.finish()
-	for ts := range state.Meta.Tables() {
-		select {
-		case tcs.work <- ts.Table:
-		case <-tcs.stop:
-			panic("") // overridden by finish
-		}
-	}
+	tcs.firstTable = firstTable
+	tcs.firstIndex = firstIndex
+	tcs.sendWork()
+	return tcs.finish()
 }
 
-func newTableCheckers(state *DbState, fn func(*DbState, string)) *tableCheckers {
+type tableCheckers struct {
+	err        atomic.Pointer[errCorrupt]
+	fn         func(*tableCheckers, string)
+	state      *DbState
+	work       chan string
+	stop       chan void
+	wg         sync.WaitGroup
+	firstTable string
+	firstIndex []string
+}
+
+func newTableCheckers(state *DbState, fn func(*tableCheckers, string)) *tableCheckers {
 	tcs := tableCheckers{
 		state: state,
 		fn:    fn,
-		work:  make(chan string, 1), // ???
+		work:  make(chan string), // no buffer to stop quickly
 		stop:  make(chan void),
 	}
-	nw := options.Nworkers
+	nw := options.Nworkers // more doesn't seem to help
 	tcs.wg.Add(nw)
 	for range nw {
 		go tcs.worker()
@@ -211,38 +235,60 @@ func newTableCheckers(state *DbState, fn func(*DbState, string)) *tableCheckers 
 	return &tcs
 }
 
-type tableCheckers struct {
-	err    atomic.Pointer[ErrCorrupt]
-	fn     func(*DbState, string)
-	state  *DbState
-	work   chan string
-	stop   chan void
-	wg     sync.WaitGroup
-	once   sync.Once
-	closed bool
+func (tcs *tableCheckers) sendWork() {
+	defer func() {
+		if e := recover(); e != nil {
+			tcs.error(e, "")
+		}
+	}()
+	if tcs.firstTable != "" {
+		tcs.work <- tcs.firstTable
+	}
+	for ts := range tcs.state.Meta.Tables() {
+		if ts.Table == tcs.firstTable {
+			continue
+		}
+		select {
+		case tcs.work <- ts.Table:
+		case <-tcs.stop: // stop is closed if a worker gets an error
+			break
+		}
+	}
 }
 
 func (tcs *tableCheckers) worker() {
 	var table string
 	defer func() {
 		if e := recover(); e != nil {
-			tcs.err.Store(&ErrCorrupt{err: e, table: table})
-			tcs.once.Do(func() { close(tcs.stop) }) // notify main thread
+			tcs.error(e, table)
 		}
 		tcs.wg.Done()
 	}()
 	for table = range tcs.work {
-		tcs.fn(tcs.state, table)
+		tcs.fn(tcs, table)
 	}
 }
 
-func (tcs *tableCheckers) finish() {
-	if !tcs.closed {
-		close(tcs.work)
-		tcs.closed = true
+func (tcs *tableCheckers) error(e any, table string) {
+	ec, _ := e.(*errCorrupt)
+	if ec == nil {
+		ec = &errCorrupt{err: e, table: table}
+	} else {
+		ec.table = table
 	}
+	if tcs.err.CompareAndSwap(nil, ec) { // save first error
+		close(tcs.stop) // notify main thread, once only
+	}
+}
+
+func (tcs *tableCheckers) finish() *errCorrupt {
+	close(tcs.work)
+	// Theoretically, we don't need to wait if we have an error
+	// but then you can get errors when you close the store.
+	// Could defer the waits to the end but that's difficult to arrange.
+	// if ec := tcs.err.Load(); ec != nil {
+	// 	return ec // if error then don't need to wait
+	// }
 	tcs.wg.Wait()
-	if err := tcs.err.Load(); err != nil {
-		panic(err)
-	}
+	return tcs.err.Load()
 }

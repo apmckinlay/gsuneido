@@ -172,6 +172,12 @@ func main() {
 			startHttpStatus()
 		}
 		dbms.VersionMismatch = versionMismatch
+	case "printstates":
+		db19.PrintStates("suneido.db", false)
+		os.Exit(0)
+	case "checkstates":
+		db19.PrintStates("suneido.db", true)
+		os.Exit(0)
 	case "error":
 		Fatal(options.Error)
 	default:

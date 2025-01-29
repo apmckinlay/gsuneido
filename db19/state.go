@@ -229,7 +229,7 @@ func stateAsof(args asofArgs) *DbState {
 	var t int64
 	off := store.Size()
 	for {
-		if off = store.LastOffset(off, magic1); off == 0 {
+		if off = store.LastOffset(off, magic1, nil); off == 0 {
 			break
 		}
 		if offSchema, offInfo, t = readState(store, off); t == 0 {
@@ -265,7 +265,7 @@ func PrevState(store *stor.Stor, off uint64) *DbState {
 		off = store.Size()
 	}
 	for {
-		off = store.LastOffset(off, magic1)
+		off = store.LastOffset(off, magic1, nil)
 		if off == 0 {
 			return nil
 		}

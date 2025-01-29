@@ -78,6 +78,10 @@ loop:
 					error("invalid web port number")
 				}
 			}
+		case match(&args, "-printstates"):
+			setAction("printstates")
+		case match(&args, "-checkstates"):
+			setAction("checkstates")
 		case match(&args, "--"):
 			break loop
 		default:

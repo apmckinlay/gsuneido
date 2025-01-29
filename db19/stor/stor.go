@@ -188,10 +188,10 @@ func (s *Stor) FirstOffset(off uint64, str string) uint64 {
 	return 0
 }
 
-// LastOffset searches backwards from a given offset for a given byte slice
+// LastOffset searches backwards from a given offset for a given string
 // and returns the offset, or 0 if not found.
 // It is used by repair and by asof/history.
-func (s *Stor) LastOffset(off uint64, str string) uint64 {
+func (s *Stor) LastOffset(off uint64, str string, stop *uint32) uint64 {
 	b := []byte(str)
 	chunks := s.chunks.Load().([][]byte)
 	c := s.offsetToChunk(off)
@@ -206,6 +206,9 @@ func (s *Stor) LastOffset(off uint64, str string) uint64 {
 			return uint64(c)*s.chunksize + uint64(i)
 		}
 		n = s.chunksize
+		if stop != nil && atomic.LoadUint32(stop) == 1 {
+			break
+		}
 	}
 	return 0
 }
