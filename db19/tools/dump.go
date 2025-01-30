@@ -248,7 +248,13 @@ func writeInt(w WriterPlus, n int) {
 func dumpViews(state *DbState, w WriterPlus) int {
 	w.WriteString("====== views (view_name,view_definition) key(view_name)\n")
 	nrecs := 0
-	for name, def := range state.Meta.Views() {
+	views := make([]string, 0, 32)
+	for name := range state.Meta.Views() {
+		views = append(views, name)
+	}
+	sort.Strings(views)
+	for _, name := range views {
+		def := state.Meta.GetView(name)
 		var b core.RecordBuilder
 		b.Add(core.SuStr(name))
 		b.Add(core.SuStr(def))
