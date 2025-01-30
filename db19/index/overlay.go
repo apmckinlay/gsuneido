@@ -188,7 +188,7 @@ func (ov *Overlay) Merge(nmerge int) MergeResult {
 	return ixbuf.Merge(ov.layers[:nmerge+1]...)
 }
 
-// WithMerged is called by Meta.ApplyMerge
+// WithMerged replaces nmerge layers with the merge result
 func (ov *Overlay) WithMerged(mr MergeResult, nmerged int) *Overlay {
 	layers := make([]*ixbuf.T, len(ov.layers)-nmerged)
 	layers[0] = mr
