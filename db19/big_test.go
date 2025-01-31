@@ -28,16 +28,16 @@ const (
 	maxcols         = 211
 	maxidxs         = 11
 	maxidxcols      = 5
-	nrows           = 1_000_000
-	nthreads        = 4 // must divide evenly into nrows
+	nrows           = 2_000_000
+	nthreads        = 8 // must divide evenly into nrows
 	tablesPerTran   = 7
 	rowsPerTable    = 7
 	persistInterval = 500 * time.Millisecond
 )
 
-func TestBig(*testing.T) {
+func TestBig(t *testing.T) {
 	if testing.Short() {
-		return
+		t.SkipNow()
 	}
 	assert.That(nrows%nthreads == 0)
 	fmt.Println("create tables")
@@ -77,6 +77,7 @@ func TestBig(*testing.T) {
 
 	db.Close()
 	ck(CheckDatabase(dbfile))
+	PrintStates(dbfile, true)
 }
 
 func createTables() []string {

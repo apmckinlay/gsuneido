@@ -201,8 +201,8 @@ func loadTable2(db *Database, schema string,
 	nrows int, size int64, list *slBuilder, overwrite bool) {
 	sch := query.NewAdminParser(schema).Schema()
 	ts := &meta.Schema{Schema: sch}
-	ovs := buildIndexes(ts, list, db.Store, nrows)
-	ti := &meta.Info{Table: sch.Table, Nrows: nrows, Size: size, Indexes: ovs}
+	indexes := buildIndexes(ts, list, db.Store, nrows)
+	ti := meta.NewInfo(sch.Table, indexes, nrows, size)
 	if overwrite {
 		if ts.HasFkey() {
 			panic("can't load single table with foreign keys")

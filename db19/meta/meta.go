@@ -773,13 +773,17 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		}
 		dNrows := ti.Nrows - tiOrig.Nrows
 		ti.Nrows = lti.Nrows + dNrows
+		ti.BtreeNrows = lti.BtreeNrows
 		assert.That(ti.Nrows >= 0)
 		dSize := ti.Size - tiOrig.Size
 		ti.Size = lti.Size + dSize
+		ti.BtreeSize = lti.BtreeSize
+		ti.Deltas = slc.With(lti.Deltas, Delta{Nrows: dNrows, Size: dSize})
 		for i := range ti.Indexes {
 			ti.Indexes[i].UpdateWith(lti.Indexes[i])
 		}
 		ti.lastMod = m.info.Clock
+		// ti.Check()
 		info.Put(ti)
 	}
 	result := *latest // copy
@@ -854,6 +858,9 @@ func linkFkeys(m *Meta) {
 
 func (m *Meta) CheckAllMerged() {
 	for ti := range m.info.All() {
+		assert.This(len(ti.Deltas)).Is(1)
+		assert.This(ti.Deltas[0].Nrows).Is(0)
+		assert.This(ti.BtreeNrows).Is(ti.Nrows)
 		for _, ov := range ti.Indexes {
 			ov.CheckMerged()
 		}

@@ -35,7 +35,7 @@ func quickCheckTable(tcs *tableCheckers, table string) {
 // full check -------------------------------------------------------
 
 // CheckDatabase is called by -check and -repair
-func CheckDatabase(dbfile string) (ec error) {
+func CheckDatabase(dbfile string) error {
 	db, err := OpenDb(dbfile, stor.Read, false)
 	if err != nil {
 		return errCorruptWrap(err)
@@ -43,8 +43,9 @@ func CheckDatabase(dbfile string) (ec error) {
 	defer db.Close()
 	if ec := checkState(db.GetState(), checkTable, "", nil); ec != nil {
 		db.Corrupt()
+		return ec
 	}
-	return ec // may be overridden by defer/recover
+	return nil
 }
 
 // Check is called by the builtin Database.Check()

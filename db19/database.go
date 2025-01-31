@@ -208,8 +208,8 @@ func (db *Database) create(state *DbState, schema *schema.Schema) {
 	schema.Check()
 	ts := &meta.Schema{Schema: *schema}
 	ts.SetupIndexes()
-	ov := db.createIndexes(ts.Indexes)
-	ti := &meta.Info{Table: schema.Table, Indexes: ov}
+	indexes := db.createIndexes(ts.Indexes)
+	ti := meta.NewInfo(schema.Table, indexes, 0, 0)
 	state.Meta = state.Meta.PutNew(ts, ti, schema)
 }
 

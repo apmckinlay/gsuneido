@@ -35,9 +35,11 @@ func TestTools(t *testing.T) {
 	}
 	createDb()
 	defer os.Remove(dbName)
-	tools.DumpDatabase(dbName, "dump_"+dbName)
+	_, _, err := tools.DumpDatabase(dbName, "dump_"+dbName)
+	ck(err)
 	defer os.Remove("dump_" + dbName)
-	tools.LoadDatabase("dump_"+dbName, "loaded_"+dbName, "", "")
+	_, _, err = tools.LoadDatabase("dump_"+dbName, "loaded_"+dbName, "", "")
+	ck(err)
 	defer os.Remove("loaded" + dbName)
 	ck(db19.CheckDatabase("loaded_" + dbName))
 	defer os.Remove("loaded_" + dbName)

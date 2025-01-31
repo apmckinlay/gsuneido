@@ -21,9 +21,7 @@ func TestMeta(t *testing.T) {
 	randStr := str.UniqueRandom(4, 4)
 	for i := range n {
 		data[i] = randStr()
-		tbl.Put(&Info{
-			Table: data[i],
-		})
+		tbl.Put(&Info{Table: data[i]})
 	}
 	tbl = tbl.Freeze()
 	meta := &Meta{info: hamt.Chain[string, *Info]{Hamt: tbl}}

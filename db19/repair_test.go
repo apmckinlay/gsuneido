@@ -56,7 +56,7 @@ func TestStates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	offsets := make([]uint64, 0, 5000)
+	var offsets []uint64
 	off := store.Size()
 	for {
 		off = store.LastOffset(off, magic1, nil)
@@ -82,7 +82,7 @@ func TestStates(t *testing.T) {
 	}
 	check(0)
 	check(len(offsets) - 1)
-	for {
+	for range 10 {
 		i := rand.IntN(len(offsets))
 		check(i)
 	}

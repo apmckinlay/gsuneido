@@ -209,3 +209,13 @@ func Clone[E any](list []E) []E {
 	}
 	return append([]E{}, list...)
 }
+
+// Dup is like Clone but it ensures no extra space is allocated
+func Dup[E any](list []E) []E {
+	if list == nil {
+		return nil
+	}
+	dup := make([]E, len(list))
+	copy(dup, list)
+	return dup
+}

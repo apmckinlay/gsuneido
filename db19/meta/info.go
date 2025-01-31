@@ -6,6 +6,7 @@ package meta
 import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
@@ -14,16 +15,32 @@ import (
 type InfoHamt = hamt.Hamt[string, *Info]
 
 type Info struct {
-	Table   string
-	Indexes []*index.Overlay
-	Nrows   int
-	Size    int64
+	Table      string
+	Indexes    []*index.Overlay
+	Nrows      int
+	Size       int64
+	BtreeNrows int
+	BtreeSize  int64
+	// Deltas tracks the count & size changes per layer
+	// parallel to the Indexes Overlay layers.
+	// Deltas + BtreeNrows/Size should equal Nrows/Size
+	Deltas []Delta
 	// lastMod must be set to Meta.infoClock on new or modified items.
 	// It is used for persist meta chaining/flattening.
 	lastMod int
 	// created is used to avoid tombstones (and persisting them)
 	// for temporary tables (e.g. from tests)
 	created int
+}
+
+type Delta struct {
+	Nrows int
+	Size  int64
+}
+
+func NewInfo(table string, indexes []*index.Overlay, nrows int, size int64) *Info {
+	return &Info{Table: table, Indexes: indexes, Deltas: []Delta{{}},
+		Nrows: nrows, Size: size, BtreeNrows: nrows, BtreeSize: size}
 }
 
 func (ti *Info) Key() string {
@@ -52,8 +69,8 @@ func (ti *Info) StorSize() int {
 
 func (ti *Info) Write(w *stor.Writer) {
 	w.PutStr(ti.Table).
-		Put4(ti.Nrows).
-		Put5(ti.Size).
+		Put4(ti.BtreeNrows).
+		Put5(ti.BtreeSize).
 		Put1(len(ti.Indexes))
 	for i := range ti.Indexes {
 		ti.Indexes[i].Write(w)
@@ -61,17 +78,17 @@ func (ti *Info) Write(w *stor.Writer) {
 }
 
 func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
-	var ti Info
-	ti.Table = r.GetStr()
-	ti.Nrows = r.Get4()
-	ti.Size = r.Get5()
+	table := r.GetStr()
+	nrows := r.Get4()
+	size := r.Get5()
+	var indexes []*index.Overlay
 	if ni := r.Get1(); ni > 0 {
-		ti.Indexes = make([]*index.Overlay, ni)
+		indexes = make([]*index.Overlay, ni)
 		for i := range ni {
-			ti.Indexes[i] = index.ReadOverlay(st, r)
+			indexes[i] = index.ReadOverlay(st, r)
 		}
 	}
-	return &ti
+	return NewInfo(table, indexes, nrows, size)
 }
 
 func (m *Meta) newInfoTomb(table string) *Info {
@@ -80,6 +97,19 @@ func (m *Meta) newInfoTomb(table string) *Info {
 
 func (ti *Info) IsTomb() bool {
 	return ti.Indexes == nil
+}
+
+func (ti *Info) Check() {
+	for i := range ti.Indexes {
+		assert.This(ti.Indexes[i].Nlayers()).Is(len(ti.Deltas))
+	}
+	sum := Delta{Nrows: ti.BtreeNrows, Size: ti.BtreeSize}
+	for _, d := range ti.Deltas {
+		sum.Nrows += d.Nrows
+		sum.Size += d.Size
+	}
+	assert.Msg("Nrows").This(sum.Nrows).Is(ti.Nrows)
+	assert.Msg("Size").This(sum.Size).Is(ti.Size)
 }
 
 //-------------------------------------------------------------------
@@ -108,7 +138,19 @@ func (mu MergeUpdate) Table() string {
 	return mu.table
 }
 
-func (mu MergeUpdate) Apply(ov *index.Overlay, i int) *index.Overlay {
+func (mu MergeUpdate) Apply1(ti *Info) {
+	var sum Delta
+	for _, d := range ti.Deltas[:1+mu.nmerged] {
+		sum.Nrows += d.Nrows
+		sum.Size += d.Size
+	}
+	deltas := make([]Delta, len(ti.Deltas)-mu.nmerged)
+	deltas[0] = sum
+	copy(deltas[1:], ti.Deltas[1+mu.nmerged:])
+	ti.Deltas = deltas
+}
+
+func (mu MergeUpdate) Apply2(ov *index.Overlay, i int) *index.Overlay {
 	return ov.WithMerged(mu.results[i], mu.nmerged)
 }
 
@@ -142,12 +184,21 @@ func (pu PersistUpdate) Table() string {
 	return pu.table
 }
 
-func (pu PersistUpdate) Apply(ov *index.Overlay, i int) *index.Overlay {
+func (mu PersistUpdate) Apply1(ti *Info) {
+	ti.BtreeNrows += ti.Deltas[0].Nrows
+	assert.That(ti.BtreeNrows >= 0)
+	ti.BtreeSize += ti.Deltas[0].Size
+	assert.That(ti.BtreeSize >= 0)
+	ti.Deltas = slc.Dup(ti.Deltas)
+	ti.Deltas[0] = Delta{}
+}
+
+func (pu PersistUpdate) Apply2(ov *index.Overlay, i int) *index.Overlay {
 	return ov.WithSaved(pu.results[i])
 }
 
 func (ti *Info) Cksum() uint32 {
-	cksum := hash.HashString(ti.Table) + uint32(ti.Nrows) + uint32(ti.Size)
+	cksum := hash.HashString(ti.Table) + uint32(ti.BtreeNrows) + uint32(ti.BtreeSize)
 	for _, ov := range ti.Indexes {
 		cksum += ov.Cksum()
 	}
@@ -158,7 +209,8 @@ func (ti *Info) Cksum() uint32 {
 
 type applyable interface {
 	Table() string
-	Apply(*index.Overlay, int) *index.Overlay
+	Apply1(ti *Info)
+	Apply2(*index.Overlay, int) *index.Overlay
 }
 
 // Apply applies the updates collected by Merge or Persist
@@ -166,10 +218,11 @@ type applyable interface {
 func Apply[U applyable](m *Meta, updates []U) {
 	info := m.info.Mutable()
 	for _, up := range updates {
-		ti := *info.MustGet(up.Table()) // copy
-		ti.Indexes = slc.Clone(ti.Indexes)
+		ti := *info.MustGet(up.Table()) // shallow copy
+		up.Apply1(&ti)
+		ti.Indexes = slc.Dup(ti.Indexes)
 		for i, ov := range ti.Indexes {
-			ti.Indexes[i] = up.Apply(ov, i)
+			ti.Indexes[i] = up.Apply2(ov, i)
 		}
 		ti.lastMod = m.info.Clock
 		info.Put(&ti)
