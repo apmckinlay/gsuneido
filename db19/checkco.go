@@ -236,7 +236,7 @@ func checker(ck *Check, c chan any, mergeChan chan todo) {
 	for {
 		select {
 		case msg := <-c:
-			if msg == nil { // Stop
+			if msg == nil { // Stop sends nil
 				if mergeChan != nil { // no channel when testing
 					close(mergeChan)
 				}

@@ -50,8 +50,8 @@ var _ = method(chan_Recv, "()")
 func chan_Recv(this Value) Value {
 	sc := this.(*suChannel)
 	select {
-	case val := <-sc.ch:
-		if val == nil {
+	case val, ok := <-sc.ch:
+		if !ok {
 			return this // closed
 		}
 		if sc.concurrent {
@@ -70,17 +70,17 @@ func chan_Recv2(this, arg Value) Value {
 	sc2 := arg.(*suChannel)
 	ob := &SuObject{}
 	select {
-	case val := <-sc.ch:
+	case val, ok := <-sc.ch:
 		ob.Add(Zero)
-		if val != nil {
+		if ok {
 			if sc.concurrent {
 				val.SetConcurrent()
 			}
 			ob.Add(val)
 		}
-	case val := <-sc2.ch:
+	case val, ok := <-sc2.ch:
 		ob.Add(One)
-		if val != nil {
+		if ok {
 			if sc2.concurrent {
 				val.SetConcurrent()
 			}
