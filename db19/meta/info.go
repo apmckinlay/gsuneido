@@ -197,7 +197,7 @@ func (mu PersistUpdate) Apply1(ti *Info) {
 	assert.That(ti.BtreeNrows >= 0)
 	ti.BtreeSize += ti.Deltas[0].Size
 	assert.That(ti.BtreeSize >= 0)
-	ti.Deltas = slc.Dup(ti.Deltas)
+	ti.Deltas = slc.Clone(ti.Deltas)
 	ti.Deltas[0] = Delta{}
 }
 
@@ -220,7 +220,7 @@ func Apply[U applyable](m *Meta, updates []U) {
 	for _, up := range updates {
 		ti := *info.MustGet(up.Table()) // shallow copy
 		up.Apply1(&ti)
-		ti.Indexes = slc.Dup(ti.Indexes)
+		ti.Indexes = slc.Clone(ti.Indexes)
 		for i, ov := range ti.Indexes {
 			ti.Indexes[i] = up.Apply2(ov, i)
 		}

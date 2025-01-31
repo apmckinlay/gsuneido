@@ -203,15 +203,8 @@ func StartsWith[E comparable](list []E, e E) bool {
 // it guarantees that the returned slice does not reference the original.
 // slices.Clone for a zero length slice still references the original
 // which can cause memory retention issues.
+// Also, the result is the exact size, no extra.
 func Clone[E any](list []E) []E {
-	if list == nil {
-		return nil
-	}
-	return append([]E{}, list...)
-}
-
-// Dup is like Clone but it ensures no extra space is allocated
-func Dup[E any](list []E) []E {
 	if list == nil {
 		return nil
 	}
