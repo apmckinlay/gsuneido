@@ -99,6 +99,14 @@ func (ti *Info) IsTomb() bool {
 	return ti.Indexes == nil
 }
 
+func (ti *Info) Cksum() uint32 {
+	cksum := hash.HashString(ti.Table) + uint32(ti.BtreeNrows) + uint32(ti.BtreeSize)
+	for _, ov := range ti.Indexes {
+		cksum += ov.Cksum()
+	}
+	return cksum
+}
+
 func (ti *Info) Check() {
 	for i := range ti.Indexes {
 		assert.This(ti.Indexes[i].Nlayers()).Is(len(ti.Deltas))
@@ -195,14 +203,6 @@ func (mu PersistUpdate) Apply1(ti *Info) {
 
 func (pu PersistUpdate) Apply2(ov *index.Overlay, i int) *index.Overlay {
 	return ov.WithSaved(pu.results[i])
-}
-
-func (ti *Info) Cksum() uint32 {
-	cksum := hash.HashString(ti.Table) + uint32(ti.BtreeNrows) + uint32(ti.BtreeSize)
-	for _, ov := range ti.Indexes {
-		cksum += ov.Cksum()
-	}
-	return cksum
 }
 
 //-------------------------------------------------------------------
