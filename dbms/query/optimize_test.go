@@ -215,6 +215,15 @@ func TestOptimize(t *testing.T) {
 	test("((inven extend x=1) where x is 2) union inven",
 		`inven^(item) extend x = ""`)
 
+	test("inven extend x = 0, c = item[1..2] where c > 0",
+		"inven^(item) where item[1..2] > 0 extend x = 0, c = item[1..2]")
+
+	test("inven extend x = 0, c = item[..2] where c > 0",
+		"inven^(item) where item[..2] > 0 extend x = 0, c = item[..2]")
+
+	test("inven extend x = 0, c = item[1..] where c > 0",
+		"inven^(item) where item[1..] > 0 extend x = 0, c = item[1..]")
+
 	mode = CursorMode
 	test("(trans union trans) join (inven union inven)",
 		"(trans^(date,item,id) union-merge(date,item,id) trans^(date,item,id)) "+

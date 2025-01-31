@@ -148,6 +148,9 @@ var aFolder Folder
 // It does not modify the original expression.
 // If any replacements are done, it returns a new expression.
 func replaceExpr(expr Expr, from []string, to []Expr) Expr {
+	if expr == nil {
+		return nil
+	}
 	switch e := expr.(type) {
 	case *Constant:
 		return expr
