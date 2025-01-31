@@ -58,6 +58,14 @@ func (p *Parser) params(inClass bool) []ast.Param {
 		if name == "unused" || name == "@unused" {
 			unused = true
 		}
+		if def != nil {
+			for i := range params {
+				x := params[i].DefVal
+				if def.Equal(x) && def.Type() == x.Type() {
+					def = x // reuse value
+				}
+			}
+		}
 		param := mkParam(name, pos, p.EndPos, unused, def)
 		params = append(params, param)
 	}
