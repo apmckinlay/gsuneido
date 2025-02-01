@@ -196,7 +196,7 @@ func (th *Thread) Swap() {
 	th.stack[th.sp-1], th.stack[th.sp-2] = th.stack[th.sp-2], th.stack[th.sp-1]
 }
 
-// Get/Check/RestoreState are used by callbacks_windows.go and updateui_wingui.go
+// Get/Check/RestoreState are used by callbacks_windows.go and defer_wingui.go
 
 type ThreadState struct {
 	fp          int
