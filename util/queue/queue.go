@@ -51,7 +51,7 @@ func (q *Queue[T]) MustPut(item T) {
 		log.Println("WARNING: Queue over", q.warn, "items")
 	}
 	if len(q.items) > q.limit {
-		panic(fmt.Sprint("ERROR: Queue over ", q.limit, " items"))
+		panic(fmt.Sprint("Queue over ", q.limit, " items"))
 	}
 	q.items = append(q.items, item)
 }

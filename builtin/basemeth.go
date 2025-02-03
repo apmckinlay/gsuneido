@@ -100,7 +100,7 @@ func base_Synchronized(th *Thread, this Value, args []Value) Value {
 		}
 	}
 	if c == nil {
-		panic("ERROR: Synchronized: can't get code class " + name)
+		panic("Synchronized: can't get code class " + name)
 	}
 	mut := c.Mut.Load()
 	if mut == nil {

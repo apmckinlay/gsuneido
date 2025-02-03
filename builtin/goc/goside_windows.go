@@ -75,7 +75,7 @@ func UnEmbedBrowserObject(iunk, ptr uintptr) {
 }
 
 func WebBrowser2(op, arg1, arg2, arg3, arg4, arg5 uintptr) uintptr {
-	return interact(C.msg_webview2, op, arg1, arg2, arg3, arg4, arg5);
+	return interact(C.msg_webview2, op, arg1, arg2, arg3, arg4, arg5)
 }
 
 func CreateLexer(name uintptr) uintptr {

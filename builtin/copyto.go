@@ -19,7 +19,7 @@ type writer interface {
 func CopyTo(th *Thread, src io.Reader, to, nbytes Value) Value {
 	tow, ok := to.(writer)
 	if !ok {
-		panic("ERROR: CopyTo: can only copy to file, pipe, or socket")
+		panic("CopyTo: can only copy to file, pipe, or socket")
 	}
 	dst := tow.writer()
 
@@ -27,13 +27,13 @@ func CopyTo(th *Thread, src io.Reader, to, nbytes Value) Value {
 	if nbytes != False {
 		n = ToInt64(nbytes)
 		if n < 0 {
-			panic("ERROR: CopyTo: nbytes cannot be negative")
+			panic("CopyTo: nbytes cannot be negative")
 		}
 		src = io.LimitReader(src, int64(n))
 	}
 	nw, err := dst.(io.ReaderFrom).ReadFrom(src)
 	if err != nil {
-		panic("ERROR: CopyTo: " + err.Error())
+		panic("CopyTo: " + err.Error())
 	}
 	if nbytes != False && nw != n {
 		th.ReturnThrow = true
