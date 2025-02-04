@@ -334,12 +334,6 @@ func (th *Thread) SessionId(id string) string {
 	return th.dbms.SessionId(th, id)
 }
 
-func (th *Thread) RunWithMainSuneido(fn func() Value) Value {
-	defer th.Suneido.Store(th.Suneido.Load())
-	th.Suneido.Store(nil)
-	return fn()
-}
-
 func (th *Thread) Regex(x Value) regex.Pattern {
 	if sr, ok := x.(SuRegex); ok {
 		return sr.Pat

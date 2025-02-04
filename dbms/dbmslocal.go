@@ -64,8 +64,9 @@ func auth(th *Thread, s string) bool {
 		th.Nonce = ""
 		return true
 	}
+	defer th.Suneido.Store(th.Suneido.Load())
+	th.Suneido.Store(nil) // use main Suneido object
 	return AuthToken(s)
-
 }
 
 func (dbms *DbmsLocal) Check() string {
@@ -133,17 +134,17 @@ func (dbms *DbmsLocal) Dump(table, to, publicKey string) string {
 }
 
 func (*DbmsLocal) Exec(th *Thread, v Value) Value {
-	return th.RunWithMainSuneido(func() Value {
-		trace.Dbms.Println("Exec", v)
-		fname := ToStr(ToContainer(v).ListGet(0))
-		if i := strings.IndexByte(fname, '.'); i != -1 {
-			ob := Global.GetName(th, fname[:i])
-			m := fname[i+1:]
-			return th.CallLookupEach1(ob, m, v)
-		}
-		fn := Global.GetName(th, fname)
-		return th.CallEach1(fn, v)
-	})
+	defer th.Suneido.Store(th.Suneido.Load())
+	th.Suneido.Store(nil) // use main Suneido object
+	trace.Dbms.Println("Exec", v)
+	fname := ToStr(ToContainer(v).ListGet(0))
+	if i := strings.IndexByte(fname, '.'); i != -1 {
+		ob := Global.GetName(th, fname[:i])
+		m := fname[i+1:]
+		return th.CallLookupEach1(ob, m, v)
+	}
+	fn := Global.GetName(th, fname)
+	return th.CallEach1(fn, v)
 }
 
 func (dbms *DbmsLocal) Final() int {
@@ -159,6 +160,8 @@ func (dbms *DbmsLocal) Get(
 }
 
 func get(th *Thread, tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
+	defer th.Suneido.Store(th.Suneido.Load())
+	th.Suneido.Store(nil) // use main Suneido object
 	q := qry.ParseQuery(query, tran, th.Sviews())
 	q, fixcost, varcost := qry.Setup1(q, qry.ReadMode, tran)
 	qry.Warnings(query, q)
@@ -276,10 +279,10 @@ func (*DbmsLocal) Nonce(th *Thread) string {
 }
 
 func (*DbmsLocal) Run(th *Thread, s string) Value {
-	return th.RunWithMainSuneido(func() Value {
-		trace.Dbms.Println("Run", s)
-		return compile.EvalString(th, s)
-	})
+	defer th.Suneido.Store(th.Suneido.Load())
+	th.Suneido.Store(nil) // use main Suneido object
+	trace.Dbms.Println("Run", s)
+	return compile.EvalString(th, s)
 }
 
 func (dbms *DbmsLocal) Schema(table string) string {
@@ -439,8 +442,17 @@ func (t UpdateTranLocal) Query(query string, sv *Sviews) IQuery {
 }
 
 func (t UpdateTranLocal) Action(th *Thread, action string) int {
+	defer th.Suneido.Store(th.Suneido.Load())
+	th.Suneido.Store(nil) // use main Suneido object
 	trace.Dbms.Println("Action", action)
 	return qry.DoAction(th, t.UpdateTran, action)
+}
+
+func (t UpdateTranLocal) Update(th *Thread, table string, oldoff uint64, newrec Record) uint64 {
+	defer th.Suneido.Store(th.Suneido.Load())
+	th.Suneido.Store(nil) // use main Suneido object
+	trace.Dbms.Println("Update", table)
+	return t.UpdateTran.Update(th, table, oldoff, newrec)
 }
 
 // queryLocal
@@ -482,6 +494,8 @@ func (q queryLocal) Order() []string {
 }
 
 func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
+	defer th.Suneido.Store(th.Suneido.Load())
+	th.Suneido.Store(nil) // use main Suneido object
 	row := q.Query.Get(th, dir)
 	if row == nil {
 		// this is required for SuQuery to stick at eof unidirectionally
