@@ -422,7 +422,7 @@ func TestNoColumns(*testing.T) {
 	ck(err)
 	doAdmin(db, "create nocols () key()")
 	db.MustCheck()
-	db.Close()
+	db.PersistClose()
 	db, err = db19.OpenDbStor(store, stor.Read, false)
 	ck(err)
 	db.MustCheck()

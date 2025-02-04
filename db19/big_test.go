@@ -122,7 +122,7 @@ func createTables() []string {
 		ti := &meta.Info{Table: table, Indexes: idxInfo}
 		db.AddNewTable(ts, ti)
 	}
-	db.Close()
+	db.PersistClose()
 	return tables
 }
 
