@@ -43,8 +43,8 @@ else
 	$(GO) $(BUILD) -v -ldflags "$(LDFLAGS)" -race -o race/$(OUTPUT)
 endif
 
-port:
-	# a Windows version without the Windows stuff
+
+port: # a Windows version without the Windows stuff
 	$(PORTABLE)
 	
 all: git-status build amd arm
@@ -103,7 +103,7 @@ help:
 	@echo "    build for current OS"
 	@echo "gsuneido"
 	@echo "    build gsuneido executable"
-	@echo "portable"
+	@echo "port"
 	@echo "    build windows gsport"
 	@echo "arm"
 	@echo "    build arm linux executable"
