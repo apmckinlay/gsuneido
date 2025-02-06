@@ -82,7 +82,7 @@ This is a work in progress. It will likely never be "complete". But it may be us
 
 Source file names starting with "su" are usually the language level implementation. e.g. dnum.go is the internal implementation, sudnum.go is the Value wrapper.
 
-# Tests & Benchmarks
+# Tests and Benchmarks
 
 Uses the Go testing framework.
 
@@ -233,7 +233,7 @@ If code reads a member that does not exist, Suneido will look for a "getter" i.e
 
 Private getters e.g. getter_foo() are privatized to Getter_MyClass_foo
 
-## Functions & Methods
+## Functions and Methods
 
 ### Arguments
 
@@ -380,7 +380,7 @@ Synchronized is a global reentrant mutex. Only one thread can be inside Synchron
 
 # Database
 
-![database design](images/suneido&#32;dbms&#32;design.svg)
+![database design](images/dbms_design.svg)
 
 ## Storage
 
@@ -392,26 +392,33 @@ Suneido currently does not reclaim file space during operation. This means the d
 
 The database is stored in a single file: suneido.db
 
-The Suneido database is "append-only" meaning that data is only ever appended. The only part of the file that is actually overwritten is the size at the beginning of the file. It is a persistent immutable data structure, so new states reuse data from previous states.
+The Suneido database is "append-only" meaning that data is only ever appended. It is a persistent immutable data structure, so new states reuse data from previous states.
 
 When the database is closed, the root of the current state is at the end of the file.
 
-To minimize write amplification, new states are only written periodically. (Once every 10 seconds when standlone, every minute when server.)
+To minimize write amplification, new states are only written periodically. (Once every 10 seconds when GUI, every minute when server.)
 
-## Shutdown & Startup
+## Shutdown and Startup
 
 At shutdown, the final state is written to the end of the file and the size of the file is written at the beginning of the file.
 
 At startup, if the stored size does not point to a valid state at the end of the file, then we know the database was not shutdown properly.
 
+## Database File Structure
+
+![database file structure](images/database_file_structure.svg)
+
 ## Repair
 
 Corruption can occur for several reasons:
 
-- Crash of process or operating system
+- Crash of Suneido 
+- Power failure
 - Hardware or operating system error e.g. disk or memory
 - Suneido process killed during io
 - Bugs in Suneido
+
+When the database is shutdown properly a shutdown marker is written to the end of the file. If corruption is detected during operation a corrupt marker is written. At startup, if the file has a corrupt marker or does not have a shutdown marker, then a full check will be required.
 
 The repair process will attempt to recover the database as of some previous point in time.
 
@@ -419,7 +426,7 @@ Recover maintains atomic transactions. i.e. either a transaction will be recover
 
 States written to the file have special markers. The repair process searches backwards through the file for these markers.
 
-Once the most recent valid state has been found, it copies up to and including the valid state to a new file and then sets the size. If it was just a bad size, and there's nothing to be truncated, then it does not copy the file, it just fixes the size.
+Once the most recent valid state has been found, it copies up to and including the valid state to a new file and renames the old file to .bak. If there's nothing to be truncated, then it does not copy the file, it just writes a shutdown marker.
 
 ## Packing
 
