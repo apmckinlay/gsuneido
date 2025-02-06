@@ -59,8 +59,7 @@ func createDb() {
 	store, err := stor.MmapStor(dbName, stor.Create)
 	ck(err)
 	defer store.Close(true)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(store)
 	db19.StartConcur(db, 50*time.Millisecond)
 	db19.MakeSuTran = func(ut *db19.UpdateTran) *core.SuTran {
 		return core.NewSuTran(nil, true)

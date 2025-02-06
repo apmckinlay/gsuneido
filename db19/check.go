@@ -515,7 +515,7 @@ func (ck *Check) Commit(ut *UpdateTran) bool {
 
 func (ck *Check) commit(ut *UpdateTran) []string {
 	tw := []string{} // not nil
-	if ck.db.Corrupted() {
+	if ck.db.IsCorrupted() {
 		ck.Abort(ut.ct, "database is locked")
 		return tw // not nil/failure
 	}

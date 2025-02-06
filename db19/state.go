@@ -48,7 +48,8 @@ func (db *Database) GetState() *DbState {
 
 // Persist forces a persist and returns a persisted state,
 // with all ixbuf layer entries merged into the btree.
-// This is used by dump, load, and checkdb.
+// Dump and checkdb use this to get a save-able state.
+// Load uses this to force a persist.
 func (db *Database) Persist() *DbState {
 	if db.ck == nil { // for tests
 		return db.GetState()
@@ -64,7 +65,7 @@ func (db *Database) Persist() *DbState {
 //
 // UpdateState is guarded by a mutex
 func (db *Database) UpdateState(fn func(*DbState)) {
-	assert.Msg("UpdateState called when database locked").That(!db.Corrupted())
+	assert.That(!db.IsCorrupted())
 	db.state.updateState(fn)
 }
 

@@ -31,8 +31,7 @@ func TestCheckCoTimeout(t *testing.T) {
 }
 
 func TestCheckCoRandom(*testing.T) {
-	db, err := CreateDb(stor.HeapStor(8192))
-	assert.That(err == nil)
+	db := CreateDb(stor.HeapStor(8192))
 	db.ck = StartCheckCo(db, mergeSink(), nil)
 	nThreads := 8
 	nTrans := 10000

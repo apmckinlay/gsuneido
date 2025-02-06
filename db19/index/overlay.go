@@ -127,6 +127,8 @@ func (ov *Overlay) RangeFrac(org, end string, nrecs int) float64 {
 	return ov.bt.RangeFrac(org, end, nrecs)
 }
 
+// Check applies a function to each entry in the btree.
+// WARNING: it ignores other layers.
 func (ov *Overlay) Check(fn func(uint64)) int {
 	n, _, _ := ov.bt.Check(fn)
 	return n

@@ -54,9 +54,7 @@ func init() {
 // }
 
 func TestDeleteBug(*testing.T) {
-	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Second)
 	act := func(act string) {
 		ut := db.NewUpdateTran()
@@ -77,9 +75,7 @@ func TestDeleteBug(*testing.T) {
 }
 
 func TestDeleteSynch(*testing.T) {
-	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db.CheckerSync()
 	act := func(act string) {
 		ut := db.NewUpdateTran()

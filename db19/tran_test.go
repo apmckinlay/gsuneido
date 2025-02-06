@@ -144,9 +144,7 @@ func ck(err error) {
 	}
 }
 func TestTooMany(*testing.T) {
-	store := stor.HeapStor(8192)
-	db, err := CreateDb(store)
-	ck(err)
+	db := CreateDb(stor.HeapStor(8192))
 	db.CheckerSync()
 	for range MaxTrans {
 		assert.That(nil != db.NewUpdateTran())
@@ -155,9 +153,7 @@ func TestTooMany(*testing.T) {
 }
 
 func TestExclusive(*testing.T) {
-	store := stor.HeapStor(8192)
-	db, err := CreateDb(store)
-	ck(err)
+	db := CreateDb(stor.HeapStor(8192))
 	db.CheckerSync()
 
 	createTbl(db)
@@ -189,9 +185,7 @@ func TestRangeEnd(t *testing.T) {
 func TestOutputDupConflict(*testing.T) {
 	checkerAbortT1 = true
 	defer func() { checkerAbortT1 = false }()
-	store := stor.HeapStor(8192)
-	db, err := CreateDb(store)
-	ck(err)
+	db := CreateDb(stor.HeapStor(8192))
 	db.CheckerSync()
 	createTbl(db)
 	t1 := db.NewUpdateTran()
@@ -202,8 +196,7 @@ func TestOutputDupConflict(*testing.T) {
 }
 
 func TestGetIndexI(*testing.T) {
-	db, err := CreateDb(stor.HeapStor(8192))
-	ck(err)
+	db := CreateDb(stor.HeapStor(8192))
 	StartConcur(db, 50*time.Millisecond)
 	createTbl(db)
 
@@ -222,8 +215,7 @@ func TestGetIndexI(*testing.T) {
 }
 
 func TestGetIndexI2(t *testing.T) {
-	db, err := CreateDb(stor.HeapStor(8192))
-	ck(err)
+	db := CreateDb(stor.HeapStor(8192))
 	StartConcur(db, 50*time.Millisecond)
 	createTbl(db)
 

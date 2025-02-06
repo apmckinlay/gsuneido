@@ -107,7 +107,7 @@ func LoadDatabase(from, dbfile, privateKey, passphrase string) (
 	return nTables, nViews, nil
 }
 
-// LoadTable is used by -load <table>.
+// LoadTable is used by -load <table>
 func LoadTable(table, dbfile string) (int, error) {
 	var db *Database
 	var err error
@@ -120,15 +120,29 @@ func LoadTable(table, dbfile string) (int, error) {
 		return 0, fmt.Errorf("error loading %s: %w", table, err)
 	}
 	defer db.Close()
-	return LoadDbTable(table, table+".su", "", "", db)
+	nrecs, err := loadDbTable(table, table+".su", "", "", db)
+	if err != nil {
+		return 0, err
+	}
+	db.GetState().Write()
+	return nrecs, nil
 }
 
-// LoadDbTable loads a single table. It is use by dbms.Load / Database.Load
-// It will replace an already existing table.
-// It returns the number of records loaded.
+// LoadDbTable is used by dbms.Load / Database.Load
+// i.e. on an already open database
 func LoadDbTable(table, from, privateKey, passphrase string,
 	db *Database) (n int, err error) {
-	if db.Corrupted() {
+	nrecs, err := loadDbTable(table, from, privateKey, passphrase, db)
+	if err != nil {
+		return 0, err
+	}
+	db.Persist() // for safety, not strictly required
+	return nrecs, nil
+}
+
+func loadDbTable(table, from, privateKey, passphrase string,
+	db *Database) (n int, err error) {
+	if db.IsCorrupted() {
 		return 0, fmt.Errorf("load not allowed when database is locked")
 	}
 	db.AddExclusive(table)
@@ -143,7 +157,6 @@ func LoadDbTable(table, from, privateKey, passphrase string,
 	schem := table + " " + readLinePrefixed(r, "====== ")
 	nrecs, size, list := loadTable1(db, r, schem)
 	loadTable2(db, schem, nrecs, size, list, true)
-	db.Persist() // for safety, not strictly required
 	return nrecs, nil
 }
 

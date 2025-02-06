@@ -20,9 +20,7 @@ func doAdmin(db *db19.Database, cmd string) {
 }
 
 func createTestDb() *db19.Database {
-	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	doAdmin(db, "create tmp "+tmpschema)
 	return db
@@ -30,8 +28,7 @@ func createTestDb() *db19.Database {
 
 func TestCreateDropBug(t *testing.T) {
 	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(store)
 	db.CheckerSync()
 
 	doAdmin(db, "create tmp (k) key(k)")
@@ -41,15 +38,13 @@ func TestCreateDropBug(t *testing.T) {
 	doAdmin(db, "drop tmp")
 
 	db.Close()
-	db, err = db19.OpenDbStor(store, stor.Read, true)
-	ck(err)
+	db, _ = db19.OpenDbStor(store, stor.Read, true)
 	assert.This(db.Schema("tmp")).Is("")
 }
 
 func TestEnsureBug(t *testing.T) {
 	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(store)
 	db.CheckerSync()
 
 	doAdmin(db, "create tmp (k) key(k)")
@@ -58,15 +53,13 @@ func TestEnsureBug(t *testing.T) {
 	doAdmin(db, "drop tmp")
 
 	db.Close()
-	db, err = db19.OpenDbStor(store, stor.Read, true)
-	ck(err)
+	db, _ = db19.OpenDbStor(store, stor.Read, true)
 	assert.This(db.Schema("tmp")).Is("")
 }
 
 func TestAlterCreateBug(t *testing.T) {
 	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(store)
 	db.CheckerSync()
 
 	doAdmin(db, "create tmp (k) key(k)")
@@ -75,8 +68,7 @@ func TestAlterCreateBug(t *testing.T) {
 	doAdmin(db, "drop tmp")
 
 	db.Close()
-	db, err = db19.OpenDbStor(store, stor.Read, true)
-	ck(err)
+	db, _ = db19.OpenDbStor(store, stor.Read, true)
 	assert.This(db.Schema("tmp")).Is("")
 }
 
@@ -298,8 +290,7 @@ func TestView(t *testing.T) {
 
 func TestFkey(t *testing.T) {
 	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(store)
 	db.CheckerSync()
 
 	schemas := map[string]string{}
@@ -399,8 +390,7 @@ func TestFkey(t *testing.T) {
 
 	db.MustCheck()
 	db.Close()
-	db, err = db19.OpenDbStor(store, stor.Read, false)
-	ck(err)
+	db, _ = db19.OpenDbStor(store, stor.Read, false)
 	check()
 }
 
@@ -418,13 +408,11 @@ func TestCreateIndexOnExistingTable(*testing.T) {
 
 func TestNoColumns(*testing.T) {
 	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(store)
 	doAdmin(db, "create nocols () key()")
 	db.MustCheck()
 	db.PersistClose()
-	db, err = db19.OpenDbStor(store, stor.Read, false)
-	ck(err)
+	db, _ = db19.OpenDbStor(store, stor.Read, false)
 	db.MustCheck()
 }
 

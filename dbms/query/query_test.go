@@ -38,9 +38,7 @@ func TestKeys(t *testing.T) {
 }
 
 func TestForeignKeys(*testing.T) {
-	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
@@ -203,8 +201,7 @@ func TestSelKeys(t *testing.T) {
 }
 
 func TestQueryBug(*testing.T) {
-	db, err := db19.CreateDb(stor.HeapStor(8192))
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
@@ -236,8 +233,7 @@ func TestExtendAllRules(*testing.T) {
 }
 
 func TestDuplicateKey(*testing.T) {
-	db, err := db19.CreateDb(stor.HeapStor(8192))
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
@@ -260,8 +256,7 @@ func TestDuplicateKey(*testing.T) {
 }
 
 func TestWhereSelectBug(t *testing.T) {
-	db, err := db19.CreateDb(stor.HeapStor(8192))
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
@@ -296,8 +291,7 @@ func TestWhereSelectBug(t *testing.T) {
 }
 
 func TestJoinBug(t *testing.T) {
-	db, err := db19.CreateDb(stor.HeapStor(8192))
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
@@ -315,8 +309,7 @@ func TestJoinBug(t *testing.T) {
 }
 
 func TestSelectOnSingleton(t *testing.T) {
-	db, err := db19.CreateDb(stor.HeapStor(8192))
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
@@ -335,8 +328,7 @@ func TestSelectOnSingleton(t *testing.T) {
 
 func TestSingleton(t *testing.T) {
 	assert := assert.T(t)
-	db, err := db19.CreateDb(stor.HeapStor(8192))
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
@@ -382,8 +374,7 @@ func TestWithoutDupsOrSupersets(t *testing.T) {
 func TestWhereSplitBug(t *testing.T) {
 	Global.TestDef("Rule_hx",
 		compile.Constant("function() { return .b }"))
-	db, err := db19.CreateDb(stor.HeapStor(8192))
-	ck(err)
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }

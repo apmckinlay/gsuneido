@@ -19,8 +19,7 @@ type heapdb struct {
 
 func heapDb() heapdb {
 	stor := stor.HeapStor(8192)
-	db, err := db19.CreateDb(stor)
-	ck(err)
+	db := db19.CreateDb(stor)
 	db19.StartConcur(db, 50*time.Millisecond)
 	db19.MakeSuTran = func(ut *db19.UpdateTran) *SuTran {
 		return NewSuTran(nil, true)

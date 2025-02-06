@@ -29,7 +29,7 @@ func TestToken(*testing.T) {
 func TestAuthUser(*testing.T) {
 	user := "fred"
 	passhash := "123"
-	db, _ := db19.CreateDb(stor.HeapStor(8192))
+	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	db19.MakeSuTran = func(ut *db19.UpdateTran) *SuTran {
 		return NewSuTran(nil, true)

@@ -14,8 +14,7 @@ import (
 // TestConcur tests that persist doesn't write anything if no activity
 func TestConcur(t *testing.T) {
 	store := stor.HeapStor(16 * 1024)
-	db, err := CreateDb(store)
-	ck(err)
+	db := CreateDb(store)
 	before := store.Size()
 	persistInterval := 20 * time.Millisecond
 	StartConcur(db, persistInterval)

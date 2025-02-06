@@ -26,21 +26,27 @@ func Repair(dbfile string, err error) (string, error) {
 		return "", err
 	}
 	defer store.Close(true)
-	r := repair{store: store, ec: ec}
+	r := repair{dbfile: dbfile, store: store, ec: ec}
+	r.oldver = bufHasPrefix(store.Data(0), magicPrev)
 	_, off, state := r.search()
 	if off == 0 {
 		return "", errors.New("repair failed - no valid states found")
 	}
-	msg := fmt.Sprint("good state ", off+uint64(stateLen), " ",
-		time.UnixMilli(state.Asof).Format(dtfmt),
-		" truncating ", store.Size()-(off+uint64(stateLen)))
-	err = truncate(dbfile, store, off)
-	return msg, err
+	truncated, err := r.fix(off)
+	if err != nil {
+		return "", err
+	}
+	msg := fmt.Sprint("good state ", trace.Number(off+uint64(stateLen)), " ",
+		time.UnixMilli(state.Asof).Format(dtfmt), 
+		" truncated ", trace.Number(truncated))
+	return msg, nil
 }
 
 type repair struct {
-	store *stor.Stor
-	ec    *errCorrupt
+	dbfile string
+	oldver bool
+	store  *stor.Stor
+	ec     *errCorrupt
 }
 
 func (r *repair) search() (int, uint64, *DbState) {
@@ -126,38 +132,42 @@ func getState(store *stor.Stor, off uint64) (state *DbState) {
 	return ReadState(store, off)
 }
 
-func truncate(dbfile string, store *stor.Stor, off uint64) error {
-	storeSize := store.Size()
-	store.Close(true)
+func (r *repair) fix(off uint64) (uint64, error) {
+	storeSize := r.store.Size()
+	r.store.Close(true)
 	size := off + uint64(stateLen)
-	if size == storeSize {
-		return fixHeader(dbfile, size)
+	if size == storeSize || size == storeSize-tailSize {
+		return 0, r.fixHead(size) // truncate 0
 	}
-	tmpfile, err := truncate2(dbfile, size)
+	tmpfile, err := r.copySize(size)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return system.RenameBak(tmpfile, dbfile)
+	if !r.oldver {
+		size += tailSize
+	}
+	return storeSize - size, system.RenameBak(tmpfile, r.dbfile)
 }
 
-func fixHeader(dbfile string, size uint64) error {
-	f, err := os.OpenFile(dbfile, os.O_WRONLY, 0)
+func (r *repair) fixHead(size uint64) error {
+	f, err := os.OpenFile(r.dbfile, os.O_WRONLY, 0)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	_, err = f.WriteAt([]byte(magic), 0)
-	if err != nil {
-		return err
+	if r.oldver {
+		buf := make([]byte, stor.SmallOffsetLen)
+		stor.WriteSmallOffset(buf, size)
+		_, err = f.WriteAt(buf, int64(len(magic)))
+	} else { // new version
+		// add or overwrite shutdown marker
+		_, err = f.WriteAt([]byte(shutdown), int64(size))
 	}
-	buf := make([]byte, stor.SmallOffsetLen)
-	stor.WriteSmallOffset(buf, size)
-	_, err = f.WriteAt(buf, int64(len(magic)))
 	return err
 }
 
-func truncate2(dbfile string, size uint64) (string, error) {
-	src, err := os.Open(dbfile)
+func (r *repair) copySize(size uint64) (string, error) {
+	src, err := os.Open(r.dbfile)
 	if err != nil {
 		return "", err
 	}
@@ -172,13 +182,14 @@ func truncate2(dbfile string, size uint64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	buf := make([]byte, stor.SmallOffsetLen)
-	stor.WriteSmallOffset(buf, size)
-	_, err = dst.WriteAt(buf, int64(len(magic)))
-	if err != nil {
-		return "", err
+	if r.oldver {
+		buf := make([]byte, stor.SmallOffsetLen)
+		stor.WriteSmallOffset(buf, size)
+		_, err = dst.WriteAt(buf, int64(len(magic)))
+	} else { // new version
+		_, err = dst.Write([]byte(shutdown))
 	}
-	return tmpfile, nil
+	return tmpfile, err
 }
 
 //-------------------------------------------------------------------

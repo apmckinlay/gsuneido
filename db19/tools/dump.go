@@ -33,8 +33,7 @@ const dumpVersion = "Suneido dump 3\n"
 const dumpVersionPrev = "Suneido dump 2\n"
 const dumpVersionBase = "Suneido dump"
 
-// DumpDatabase exports the entire database to a file.
-// In the process it concurrently does a full check of the database.
+// DumpDatabase exports the entire database to a file
 func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
 	if err != nil {
@@ -44,9 +43,10 @@ func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 	return Dump(db, to, "")
 }
 
-// Dump checks and exports the entire database to a file
+// Dump exports an entire open database to a file
+// If checks as it dumps and could mark the database as corrupted.
 func Dump(db *Database, to, publicKey string) (nTables, nViews int, err error) {
-	if db.Corrupted() {
+	if db.IsCorrupted() {
 		return 0, 0, fmt.Errorf("dump not allowed when database is locked")
 	}
 	defer func() {
@@ -91,8 +91,7 @@ func dump(db *Database, w WriterPlus) (nTables, nViews int) {
 	return len(tables), nViews
 }
 
-// DumpTable exports a dumped table to a file.
-// It returns the number of records dumped or panics on error.
+// DumpTable exports a table to a binary file
 func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
 	if err != nil {
@@ -102,8 +101,11 @@ func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 	return DumpDbTable(db, table, to, "")
 }
 
+// DumpDbTable exports a table to a binary file from an open database.
+// It returns the number of records dumped or panics on error.
+// If checks as it dumps and could mark the database as corrupted.
 func DumpDbTable(db *Database, table, to, publicKey string) (nrecs int, err error) {
-	if db.Corrupted() {
+	if db.IsCorrupted() {
 		return 0, fmt.Errorf("dump not allowed when database is locked")
 	}
 	defer func() {

@@ -5,6 +5,7 @@ package db19
 
 import (
 	"errors"
+	"io"
 	"log"
 	"os"
 	"runtime"
@@ -18,6 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -29,6 +31,8 @@ import (
 // checkdb.go, state.go, and tran.go
 
 type Database struct {
+	filename string
+
 	ck Checker
 	triggers
 	Store *stor.Stor
@@ -43,12 +47,15 @@ type Database struct {
 
 	closed    atomic.Bool
 	corrupted atomic.Bool
+	oldver    bool
 }
 
-const magic = "gsndo002"
-const magicPrev = "gsndo001"
+const magic = "gsndo003"
+const magicPrev = "gsndo002"
 const magicBase = "gsndo"
-const dbHeaderSize = 8 /* len(magic) */ + stor.SmallOffsetLen
+const tailSize = 8 // len(shutdown/corrupt)
+const shutdown = "\x2b\xc1\x85\x63\x8d\x71\x65\x6d"
+const corrupt = "\xff\xff\xff\xff\xff\xff\xff\xff"
 
 // CreateDatabase creates an empty database in the named file.
 // NOTE: The returned Database does not have a checker.
@@ -57,21 +64,21 @@ func CreateDatabase(filename string) (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	return CreateDb(store)
+	db := CreateDb(store)
+	db.filename = filename
+	return db, nil
 }
 
 // CreateDb creates an empty database in the store.
 // NOTE: The returned Database does not have a checker.
-func CreateDb(store *stor.Stor) (*Database, error) {
+func CreateDb(store *stor.Stor) *Database {
 	var db Database
 	db.state.set(&DbState{store: store, Meta: &meta.Meta{}})
-
-	_, buf := store.Alloc(dbHeaderSize)
+	_, buf := store.Alloc(len(magic))
 	copy(buf, magic)
-	stor.WriteSmallOffset(buf[len(magic):], dbHeaderSize)
 	db.Store = store
 	db.mode = stor.Create
-	return &db, nil
+	return &db
 }
 
 // OpenDatabase opens the database in the named file for read & write.
@@ -98,24 +105,35 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 			store.Close(true)
 		}
 	}()
+	db = &Database{Store: store, mode: mode}
 	buf := store.Data(0)
-	if magicBase != string(buf[:len(magicBase)]) {
+	if !bufHasPrefix(buf, magicBase) {
 		core.Fatal("not a valid database file")
 	}
-	if magicPrev == string(buf[:len(magicPrev)]) {
-		if mode == stor.Update {
-			// use Write because all but the last chunk are mapped read-only
-			store.Write(0, []byte(magic))
-		}
-	} else if magic != string(buf[:len(magic)]) &&
-		magicPrev != string(buf[:len(magicPrev)]) {
+
+	if bufHasPrefix(buf, magicPrev) {
+		db.oldver = true
+	} else if !bufHasPrefix(buf, magic) {
 		core.Fatal("invalid database version")
 	}
-	size := stor.ReadSmallOffset(buf[len(magic):])
-	if size == 0 {
-		return nil, errors.New("corruption previously detected")
-	} else if size != store.Size() {
-		return nil, errors.New("bad size, not shut down properly?")
+	var size uint64
+	if db.oldver {
+		size = stor.ReadSmallOffset(buf[len(magic):])
+		if size == 0 {
+			return nil, errors.New("corruption previously detected")
+		}
+		if size != store.Size() {
+			return nil, errors.New("bad size, not shut down properly?")
+		}
+	} else {
+		switch db.readTail() {
+		case shutdown:
+			size = store.Size() - tailSize
+		case corrupt:
+			return nil, errors.New("corruption previously detected")
+		default:
+			return nil, errors.New("not shut down properly?")
+		}
 	}
 
 	defer func() {
@@ -124,7 +142,6 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 			db = nil
 		}
 	}()
-	db = &Database{Store: store, mode: mode}
 	state := ReadState(db.Store, size-uint64(stateLen))
 	db.state.set(state)
 	if check {
@@ -133,6 +150,15 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 		}
 	}
 	return db, nil
+}
+
+func bufHasPrefix(buf []byte, prefix string) bool {
+	return len(buf) >= len(prefix) && string(buf[:len(prefix)]) == prefix
+}
+
+func (db *Database) readTail() string {
+	buf := db.Store.Data(db.Store.Size() - tailSize)
+	return string(buf[:min(tailSize, len(buf))])
 }
 
 // CheckerSync is for tests.
@@ -192,7 +218,7 @@ func (db *Database) Create(schema *schema.Schema) {
 }
 
 func (db *Database) lockSchema() {
-	if db.Corrupted() {
+	if db.IsCorrupted() {
 		panic("database is locked")
 	}
 	if !db.schemaLock.CompareAndSwap(false, true) {
@@ -488,7 +514,7 @@ func (db *Database) AlterDrop(schema *schema.Schema) bool {
 }
 
 func (db *Database) AddView(name, def string) bool {
-	if db.Corrupted() {
+	if db.IsCorrupted() {
 		panic("database is locked")
 	}
 	result := false
@@ -525,7 +551,7 @@ func (db *Database) Size() uint64 {
 // It returns nil if corrupted.
 func (db *Database) Transactions() []int {
 	db.ckOpen()
-	if db.corrupted.Load() {
+	if db.IsCorrupted() {
 		return nil
 	}
 	return db.ck.Transactions()
@@ -533,7 +559,7 @@ func (db *Database) Transactions() []int {
 
 func (db *Database) Final() int {
 	db.ckOpen()
-	if db.corrupted.Load() {
+	if db.IsCorrupted() {
 		return 0
 	}
 	return db.ck.Final()
@@ -553,20 +579,32 @@ func (db *Database) Corrupt() {
 	}
 	log.Println("ERROR: database corruption detected")
 	options.DbStatus.Store("corrupted")
-	buf := make([]byte, stor.SmallOffsetLen)
-	if db.mode != stor.Read {
-		db.Store.Write(uint64(len(magic)), buf)
-	} else {
-		f, err := os.OpenFile("suneido.db", os.O_RDWR, 0)
-		if err == nil {
-			defer f.Close()
-			f.Seek(int64(len(magic)), 0)
-			f.Write(buf)
+	if db.oldver {
+		buf := make([]byte, stor.SmallOffsetLen) // zero
+		if db.mode != stor.Read {
+			db.Store.Write(uint64(len(magic)), buf)
+		} else {
+			if f, err := os.OpenFile(db.filename, os.O_RDWR, 0); err == nil {
+				defer f.Close()
+				f.Seek(int64(len(magic)), 0)
+				f.Write(buf)
+			}
+		}
+	} else { // new version
+		if db.mode != stor.Read {
+			_, buf := db.Store.Alloc(tailSize)
+			copy(buf, corrupt)
+		} else {
+			if f, err := os.OpenFile(db.filename, os.O_RDWR, 0); err == nil {
+				defer f.Close()
+				f.Seek(-tailSize, io.SeekEnd)
+				f.WriteString(corrupt)
+			}
 		}
 	}
 }
 
-func (db *Database) Corrupted() bool {
+func (db *Database) IsCorrupted() bool {
 	return db.corrupted.Load()
 }
 
@@ -584,11 +622,20 @@ func (db *Database) close(unmap bool) {
 	if db.ck != nil {
 		db.ck.Stop() // writes final state
 	}
-	db.Store.Close(unmap, db.writeSize)
+	if db.oldver {
+		db.Store.Close(unmap, db.writeSize)
+	} else {
+		if db.mode != stor.Read && !db.IsCorrupted() && db.readTail() != shutdown {
+			_, buf := db.Store.Alloc(tailSize)
+			copy(buf, shutdown)
+		}
+		db.Store.Close(unmap)
+	}
 }
 
- // PersistClose is for tests when no checker
+// PersistClose is for tests when no checker
 func (db *Database) PersistClose() {
+	assert.That(db.ck == nil)
 	db.persist(&execPersistSingle{}, false)
 	db.close(false)
 }
@@ -598,7 +645,7 @@ func (db *Database) Closed() bool {
 }
 
 func (db *Database) writeSize(size uint64) {
-	if db.mode == stor.Read || db.corrupted.Load() {
+	if db.mode == stor.Read || db.IsCorrupted() {
 		return
 	}
 	// need to use Write because all but last chunk are read-only
@@ -626,9 +673,6 @@ func getLeafKey(store *stor.Stor, is *ixkey.Spec, off uint64) string {
 }
 
 func OffToRec(store *stor.Stor, off uint64) core.Record {
-	if off < dbHeaderSize {
-		panic("OffToRec: invalid offset 0")
-	}
 	buf := store.Data(off)
 	size := core.RecLen(buf)
 	return core.Record(hacks.BStoS(buf[:size]))
