@@ -47,7 +47,6 @@ type callback struct {
 	fn Value
 	// used is set to true when the slot is first used
 	// and stays set from then on.
-	// If it is true, then a Go callback has been created.
 	used bool
 	// active is set to true when the callback is allocated
 	// and set to false when it's cleared

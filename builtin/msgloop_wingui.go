@@ -15,8 +15,8 @@ import (
 
 var _ = builtin(MessageLoop, "(hwnd = 0)")
 
-func MessageLoop(_ *Thread, args []Value) Value {
-	goc.MessageLoop(uintptr(ToInt(args[0])))
+func MessageLoop(a Value) Value {
+	goc.MessageLoop(uintptr(ToInt(a)))
 	return nil
 }
 

@@ -17,7 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"golang.org/x/sys/windows"
 )
 
 type stRect struct {
@@ -970,7 +969,7 @@ func SetTimer(a, b, c, d Value) Value {
 	if options.TimersDisabled {
 		return Zero
 	}
-	if windows.GetCurrentThreadId() == uiThreadId {
+	if OnUIThread() {
 		return gocSetTimer(a, b, c, d)
 	}
 	// WARNING: don't use heap from background thread
@@ -1029,7 +1028,7 @@ func KillTimer(a, b Value) Value {
 	if options.TimersDisabled {
 		return False
 	}
-	if windows.GetCurrentThreadId() == uiThreadId {
+	if OnUIThread() {
 		return gocKillTimer(a, b)
 	}
 	ret := make(chan Value, 1)
