@@ -315,7 +315,8 @@ func DestroyMenu(a Value) Value {
 // long style, long x, long y, long w, long h, pointer parent, pointer menu,
 // pointer instance, pointer param) pointer
 var createWindowEx = user32.MustFindProc("CreateWindowExA").Addr()
-var _ = builtin(CreateWindowEx, "(exStyle, classname, name, style, x, y, w, h,"+" parent, menu, instance, param)")
+var _ = builtin(CreateWindowEx,
+	"(exStyle, classname, name, style, x, y, w, h, parent, menu, instance, param)")
 
 func CreateWindowEx(_ *Thread, a []Value) Value {
 	defer heap.FreeTo(heap.CurSize())
