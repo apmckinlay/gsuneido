@@ -143,7 +143,6 @@ var (
 	Callback2   func(i, a, b uintptr) uintptr
 	Callback3   func(i, a, b, c uintptr) uintptr
 	Callback4   func(i, a, b, c, d uintptr) uintptr
-	RunOnGoSide func()
 	SunAPP      func(string) string
 	Shutdown    func(exitcode int)
 	RunDefer    func()
@@ -181,9 +180,6 @@ func interact(args ...uintptr) uintptr {
 				uintptr(C.args[5])))
 		case C.msg_timer:
 			RunDefer()
-			fallthrough
-		case C.msg_notify:
-			RunOnGoSide()
 			C.args[0] = C.msg_result
 		case C.msg_sunapp:
 			s := SunAPP(C.GoString((*C.char)(unsafe.Pointer(uintptr(C.args[1])))))

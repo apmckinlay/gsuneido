@@ -346,16 +346,11 @@ static VOID CALLBACK timer(
 const int timerIntervalMS = 10;
 uintptr helperHwnd = 0; // set by setupHelper
 
-const UINT notifyMsg = WM_USER;
 const UINT sunappMsg = WM_USER + 1;
 
 static LRESULT CALLBACK helperWndProc(
 	HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	if (uMsg == notifyMsg) {
-		args[0] = msg_notify;
-		interact();
-		return 0;
-	} else if (uMsg == sunappMsg) {
+	if (uMsg == sunappMsg) {
 		buf_t* buf = (buf_t*) lParam;
 		args[0] = msg_sunapp;
 		args[1] = (uintptr) buf->buf;

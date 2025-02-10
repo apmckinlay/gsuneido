@@ -8,7 +8,6 @@ package builtin
 import (
 	"log"
 	"syscall"
-	"time"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
@@ -970,28 +969,21 @@ func SetTimer(a, b, c, d Value) Value {
 	if options.TimersDisabled {
 		return Zero
 	}
-	if OnUIThread() {
-		return gocSetTimer(a, b, c, d)
-	}
-	// WARNING: don't use heap from background thread
-	d.SetConcurrent() // since callback will be from different thread
-	ret := make(chan Value, 1)
-	rogsChan <- func() {
-		ret <- gocSetTimer(a, b, c, d)
-	}
-	notifyCside()
-	first := true
-	for {
-		select {
-		case id := <-ret:
-			return id
-		case <-time.After(5 * time.Second):
-			if first {
-				first = false
-				log.Println("SetTimer timeout")
-			}
+	if nTimer > warnTimers {
+		if nTimer > maxTimers {
+			logPanic("ERROR: SetTimer: over", maxTimers)
 		}
+		log.Println("WARNING: SetTimer: over", warnTimers)
 	}
+	rtn := goc.Syscall4(setTimer,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		NewCallback(d, 4))
+	if rtn != 0 {
+		nTimer++
+	}
+	return intRet(rtn)
 }
 
 var nTimer = 0
@@ -1001,26 +993,6 @@ const maxTimers = 64
 
 var _ = AddInfo("windows.nTimer", &nTimer)
 
-// gocSetTimer is called by SetTimer directly if on main UI thread
-// and via runOnGoSide if from another thread
-func gocSetTimer(hwnd, id, ms, cb Value) Value {
-	if nTimer > warnTimers {
-		if nTimer > maxTimers {
-			logPanic("ERROR: SetTimer: over", maxTimers)
-		}
-		log.Println("WARNING: SetTimer: over", warnTimers)
-	}
-	rtn := goc.Syscall4(setTimer,
-		intArg(hwnd),
-		intArg(id),
-		intArg(ms),
-		NewCallback(cb, 4))
-	if rtn != 0 {
-		nTimer++
-	}
-	return intRet(rtn)
-}
-
 // dll User32:KillTimer(pointer hwnd, long id) bool
 var killTimer = user32.MustFindProc("KillTimer").Addr()
 var _ = builtin(KillTimer, "(hwnd, id)")
@@ -1029,52 +1001,13 @@ func KillTimer(a, b Value) Value {
 	if options.TimersDisabled {
 		return False
 	}
-	if OnUIThread() {
-		return gocKillTimer(a, b)
-	}
-	ret := make(chan Value, 1)
-	rogsChan <- func() {
-		ret <- gocKillTimer(a, b)
-	}
-	notifyCside()
-	first := true
-	for {
-		select {
-		case id := <-ret:
-			return id
-		case <-time.After(5 * time.Second):
-			if first {
-				first = false
-				log.Println("KillTimer timeout")
-			}
-		}
-	}
-}
-
-// gocKillTimer is called by KillTimer directly if on main UI thread
-// and via runOnGoSide if from another thread
-func gocKillTimer(hwnd, id Value) Value {
 	rtn := goc.Syscall2(killTimer,
-		intArg(hwnd),
-		intArg(id))
+		intArg(a),
+		intArg(b))
 	if rtn != 0 {
 		nTimer--
 	}
 	return boolRet(rtn)
-}
-
-const notifyMsg = WM_USER
-
-// notifyCside is used by SetTimer and KillTimer
-// It uses PostMessage (high priority) to C side
-// to handle when we're running in the message loop.
-func notifyCside() {
-	// NOTE: this has to be the Go Syscall, not goc.Syscall
-	r, _, _ := syscall.SyscallN(postMessage,
-		goc.CHelperHwnd(), notifyMsg, 0, 0)
-	if r == 0 {
-		log.Panicln("notifyCside PostMessage failed")
-	}
 }
 
 // dll User32:SetWindowLong(pointer hwnd, int offset, long value) long

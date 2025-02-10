@@ -9,7 +9,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var RunOnGoSide func()    // injected
 var Interrupt func() bool // injected
 
 const opInterval = 4001 // ???
@@ -178,7 +177,6 @@ loop:
 				opCount--
 				if opCount <= 0 {
 					opCount = opInterval // reset counter
-					RunOnGoSide()
 					if Interrupt() {
 						panic("interrupt")
 					}

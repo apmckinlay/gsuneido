@@ -115,7 +115,7 @@ func Delay(th *Thread, args []Value) Value {
 		panic(fmt.Sprint("Delay minimum is ", minDelay, " (ms)"))
 	}
 	tf := &timerFn{callback: args[1]}
-	tf.timerid = gocSetTimer(Zero, Zero, args[0], tf)
+	tf.timerid = SetTimer(Zero, Zero, args[0], tf)
 	if tf.timerid == Zero {
 		panic("Delay SetTimer failed")
 	}
@@ -128,7 +128,7 @@ func (tf *timerFn) kill() bool {
 	}
 	tid := tf.timerid
 	tf.timerid = Zero
-	gocKillTimer(Zero, tid)
+	KillTimer(Zero, tid)
 	clearCallback(tf)
 	return true
 }

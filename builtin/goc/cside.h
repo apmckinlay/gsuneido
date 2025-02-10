@@ -33,7 +33,6 @@ enum {
 	msg_callback4,
 	msg_msgloop,
 	msg_timer,
-	msg_notify,
 	msg_sunapp,
 	msg_queryidispatch,
 	msg_createinstance,
@@ -61,4 +60,4 @@ typedef struct {
 	int size;
 } buf_t;
 
-// deps last modified 2024-12-30 15:52:28 UTC
+// deps last modified 2025-02-09 23:57:44 UTC
