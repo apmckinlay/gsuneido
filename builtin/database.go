@@ -25,7 +25,7 @@ func Database(th *Thread, args []Value) Value {
 	return nil
 }
 
-var databaseMethods = methods()
+var databaseMethods = methods("db")
 
 var _ = staticMethod(db_Auth, "(data)")
 

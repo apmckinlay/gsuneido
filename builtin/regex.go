@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = exportMethods(&RegexMethods)
+var _ = exportMethods(&RegexMethods, "regex")
 
 var _ = method(regex_Disasm, "()")
 

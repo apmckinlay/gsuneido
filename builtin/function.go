@@ -15,7 +15,7 @@ func CoverageEnable(a Value) Value {
 	return nil
 }
 
-var _ = exportMethods(&SuFuncMethods)
+var _ = exportMethods(&SuFuncMethods, "func")
 
 var _ = method(func_Disasm, "(source = false)")
 

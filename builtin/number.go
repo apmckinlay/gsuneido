@@ -49,7 +49,7 @@ func numFromString(s string) Value {
 var minNarrow = dnum.FromInt(MinSuInt)
 var maxNarrow = dnum.FromInt(MaxSuInt)
 
-var _ = exportMethods(&NumMethods)
+var _ = exportMethods(&NumMethods, "num")
 
 var _ = method(num_Chr, "()")
 

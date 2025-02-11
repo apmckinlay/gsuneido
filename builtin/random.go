@@ -36,7 +36,7 @@ func initRand(th *Thread) {
 	}
 }
 
-var randomMethods = methods()
+var randomMethods = methods("rnd")
 
 var _ = staticMethod(rnd_Seed, "(seed)")
 

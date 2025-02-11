@@ -142,7 +142,7 @@ func (*suFile) Lookup(_ *Thread, method string) Value {
 
 const MaxLine = 4000
 
-var suFileMethods = methods()
+var suFileMethods = methods("file")
 
 var _ = method(file_Close, "()")
 

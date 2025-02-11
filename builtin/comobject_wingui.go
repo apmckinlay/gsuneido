@@ -47,7 +47,7 @@ func COMobject(arg Value) Value {
 	panic("COMobject requires integer or string")
 }
 
-var suComObjectMethods = methods()
+var suComObjectMethods = methods("com")
 
 var _ = method(com_DispatchQ, "()")
 

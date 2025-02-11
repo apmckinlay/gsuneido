@@ -79,7 +79,7 @@ var _ Iter = (*wrapIter)(nil)
 
 // for SuSequence
 
-var _ = exportMethods(&SequenceMethods)
+var _ = exportMethods(&SequenceMethods, "seq")
 
 var _ = method(seq_Copy, "()")
 

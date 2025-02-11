@@ -72,7 +72,7 @@ func (sg *suStructGlobal) Size() int {
 
 type sizeable interface{ Size() int }
 
-var structMethods = methods()
+var structMethods = methods("st")
 
 var _ = method(st_Size, "()")
 

@@ -72,7 +72,7 @@ var noDeadline time.Time
 
 // socket client methods are also used by SocketServer
 
-var suSocketClientMethods = methods()
+var suSocketClientMethods = methods("sock")
 
 var _ = method(sock_Close, "()")
 

@@ -21,7 +21,7 @@ func WaitGroup() Value {
 	return &suWaitGroup{}
 }
 
-var suWaitGroupMethods = methods()
+var suWaitGroupMethods = methods("wg")
 
 var _ = method(wg_Add, "()")
 

@@ -9,7 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 )
 
-var _ = exportMethods(&ClassMethods)
+var _ = exportMethods(&ClassMethods, "class")
 
 func init() {
 	ClassMethods["*new*"] =

@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = exportMethods(&InstanceMethods)
+var _ = exportMethods(&InstanceMethods, "instance")
 
 var _ = method(instance_BaseQ, "(class)")
 

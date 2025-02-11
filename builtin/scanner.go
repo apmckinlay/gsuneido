@@ -34,7 +34,7 @@ func (*suScanner) Lookup(_ *Thread, method string) Value {
 	return scannerMethods[method]
 }
 
-var scannerMethods = methods()
+var scannerMethods = methods("scan")
 
 var _ = method(scan_KeywordQ, "()")
 

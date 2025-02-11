@@ -34,7 +34,7 @@ func (*suPcmsrv64) Lookup(_ *Thread, method string) Value {
 	return pcmMethods[method]
 }
 
-var pcmMethods = methods()
+var pcmMethods = methods("pcm")
 
 var _ = staticMethod(pcm_Members, "()")
 

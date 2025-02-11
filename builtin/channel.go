@@ -24,7 +24,7 @@ func Channel(size Value) Value {
 	return &suChannel{ch: make(chan Value, IfInt(size))}
 }
 
-var suChannelMethods = methods()
+var suChannelMethods = methods("chan")
 
 var _ = method(chan_Send, "(value)")
 

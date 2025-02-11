@@ -46,7 +46,7 @@ func (suMd5) Lookup(_ *Thread, method string) Value {
 	return md5Methods[method]
 }
 
-var md5Methods = methods()
+var md5Methods = methods("md5")
 
 var _ = method(md5_Update, "(string)")
 

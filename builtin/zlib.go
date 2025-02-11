@@ -32,7 +32,7 @@ func (*suZlib) Lookup(_ *Thread, method string) Value {
 	return zlibMethods[method]
 }
 
-var zlibMethods = methods()
+var zlibMethods = methods("zlib")
 
 var _ = staticMethod(zlib_Compress, "(string)")
 

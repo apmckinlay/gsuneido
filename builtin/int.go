@@ -9,7 +9,7 @@ import (
 
 // These methods are specific for int values
 
-var _ = exportMethods(&IntMethods)
+var _ = exportMethods(&IntMethods, "int")
 
 var _ = method(int_Int, "()")
 

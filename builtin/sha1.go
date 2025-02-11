@@ -46,7 +46,7 @@ func (suSha1) Lookup(_ *Thread, method string) Value {
 	return sha1Methods[method]
 }
 
-var sha1Methods = methods()
+var sha1Methods = methods("Sha1")
 
 var _ = method(Sha1_Update, "(string)")
 

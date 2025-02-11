@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = exportMethods(&IterMethods)
+var _ = exportMethods(&IterMethods, "iter")
 
 var _ = method(iter_Dup, "()")
 

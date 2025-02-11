@@ -25,7 +25,7 @@ func Cursor(th *Thread, as *ArgSpec, args []Value) Value {
 
 // see also QueryMethods
 
-var _ = exportMethods(&CursorMethods)
+var _ = exportMethods(&CursorMethods, "cursor")
 
 var _ = method(cursor_Next, "(transaction)")
 

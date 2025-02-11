@@ -64,81 +64,79 @@ func builtinVal(name string, f any, p string) Value {
 
 // curMethods and curPrefix are only used during initialization
 // which is single threaded, so no locking is required
-var (
-	curMethods Methods
-	curPrefix  string
-)
+var curMethods = make(map[string]Methods)
 
-func methods() Methods {
-	curMethods = Methods{}
-	curPrefix = ""
-	return curMethods
+func methods(prefix string) Methods {
+	if _, ok := curMethods[prefix]; ok {
+		Fatal("duplicate methods prefix:", prefix)
+	}
+	curMethods[prefix] = Methods{}
+	return curMethods[prefix]
 }
 
-func exportMethods(m *Methods) any {
-	*m = methods()
+func exportMethods(m *Methods, prefix string) any {
+	*m = methods(prefix)
 	return nil
 }
 
 // staticMethod adds to curMethods, like method,
 // but creates a standalone function like builtin
 func staticMethod(f any, p string) any {
-	name := methodName(f)
+	name, meths := methodName(f)
 	fn := builtinVal(name, f, p)
-	curMethods[name] = fn
+	meths[name] = fn
 	return nil
 }
 
 // method adds to curMethods, which is set by methods.
 // method function names must start with a prefix e.g. xyz_
 func method(f any, p string) any {
-	name := methodName(f)
+	name, meths := methodName(f)
 	ps := params(p)
 	ps.Name = name
 	switch f := f.(type) {
 	case func(this Value) Value:
 		assert.That(ps.Nparams == 0)
-		curMethods[name] = &SuBuiltinMethod0{SuBuiltin1: SuBuiltin1{Fn: f,
+		meths[name] = &SuBuiltinMethod0{SuBuiltin1: SuBuiltin1{Fn: f,
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}}
 	case func(this, a Value) Value:
 		assert.That(ps.Nparams == 1)
-		curMethods[name] = &SuBuiltinMethod1{SuBuiltin2: SuBuiltin2{Fn: f,
+		meths[name] = &SuBuiltinMethod1{SuBuiltin2: SuBuiltin2{Fn: f,
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}}
 	case func(this, a, b Value) Value:
 		assert.That(ps.Nparams == 2)
-		curMethods[name] = &SuBuiltinMethod2{SuBuiltin3: SuBuiltin3{Fn: f,
+		meths[name] = &SuBuiltinMethod2{SuBuiltin3: SuBuiltin3{Fn: f,
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}}
 	case func(this, a, b, c Value) Value:
 		assert.That(ps.Nparams == 3)
-		curMethods[name] = &SuBuiltinMethod3{SuBuiltin4: SuBuiltin4{Fn: f,
+		meths[name] = &SuBuiltinMethod3{SuBuiltin4: SuBuiltin4{Fn: f,
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}}
 	case func(th *Thread, this Value, args []Value) Value:
-		curMethods[name] = &SuBuiltinMethod{Fn: f,
+		meths[name] = &SuBuiltinMethod{Fn: f,
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}
 	case func(th *Thread, as *ArgSpec, this Value, args []Value) Value:
 		// params are just for documentation
-		curMethods[name] = &SuBuiltinMethodRaw{Fn: f, ParamSpec: params(p)}
+		meths[name] = &SuBuiltinMethodRaw{Fn: f, ParamSpec: params(p)}
 	default:
 		Fatal("invalid builtin function", name)
 	}
 	return nil
 }
 
-func methodName(f any) string {
+func methodName(f any) (string, Methods) {
 	fname := funcName(f)
 	prefix, name, _ := strings.Cut(fname, "_")
 	if name == "" {
 		Fatal("method missing prefix:", fname)
 	}
-	if curPrefix == "" {
-		curPrefix = prefix
-	} else if prefix != curPrefix {
-		Fatal("inconsistent prefix:", fname)
+	meths, ok := curMethods[prefix]
+	if !ok {
+		Fatal("unknown method prefix:", prefix)
 	}
-	if _, ok := curMethods[name]; ok {
-		Fatal("duplicate method:", fname)
+	if _, ok := meths[name]; ok {
+		Fatal("duplicate method name:", fname)
 	}
-	return name
+	return name, meths
 }
 
 func funcName(f any) string {

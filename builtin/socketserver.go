@@ -192,19 +192,19 @@ func (sc *suServerConnect) Close() {
 	nSocketServerConn.Add(-1)
 }
 
-var socketServerMethods = methods()
+var socketServerMethods = methods("sockserv")
 
-var _ = method(sock_RemoteUser, "()")
+var _ = method(sockserv_RemoteUser, "()")
 
-func sock_RemoteUser(this Value) Value {
+func sockserv_RemoteUser(this Value) Value {
 	sc := this.(*suServerConnect)
 	addr := sc.client.conn.RemoteAddr().String()
 	return SuStr(str.BeforeLast(addr, ":"))
 }
 
-var _ = method(sock_ManualClose, "()")
+var _ = method(sockserv_ManualClose, "()")
 
-func sock_ManualClose(this Value) Value {
+func sockserv_ManualClose(this Value) Value {
 	this.(*suServerConnect).manualClose = true
 	return nil
 }

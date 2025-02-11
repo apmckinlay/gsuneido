@@ -44,7 +44,7 @@ func Transaction(th *Thread, args []Value) Value {
 
 var queryBlockParams = params("(query, block = false)")
 
-var _ = exportMethods(&TranMethods)
+var _ = exportMethods(&TranMethods, "tran")
 
 var _ = method(tran_Complete, "()")
 

@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = exportMethods(&SuExceptMethods)
+var _ = exportMethods(&SuExceptMethods, "except")
 
 var _ = method(except_Callstack, "()")
 

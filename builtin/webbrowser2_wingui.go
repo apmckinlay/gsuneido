@@ -55,7 +55,7 @@ func WebBrowser2(a, b, s, cb Value) Value {
 	return swb
 }
 
-var suWebBrowser2Methods = methods()
+var suWebBrowser2Methods = methods("web2")
 
 var _ = method(web2_Release, "()")
 

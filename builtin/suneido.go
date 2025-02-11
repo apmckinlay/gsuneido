@@ -17,7 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
-var _ = exportMethods(&SuneidoObjectMethods)
+var _ = exportMethods(&SuneidoObjectMethods, "suneido")
 
 var _ = staticMethod(suneido_Compile, "(source, errob = false)")
 

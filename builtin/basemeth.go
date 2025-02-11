@@ -11,7 +11,7 @@ import (
 
 // methods common to SuClass and SuInstance
 
-var _ = exportMethods(&BaseMethods)
+var _ = exportMethods(&BaseMethods, "base")
 
 var _ = method(base_Base, "()")
 

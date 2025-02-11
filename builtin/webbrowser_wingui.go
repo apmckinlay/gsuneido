@@ -41,7 +41,7 @@ func WebBrowser(a Value) Value {
 	return swb
 }
 
-var suWebBrowserMethods = methods()
+var suWebBrowserMethods = methods("web")
 
 var _ = method(web_Release, "()")
 

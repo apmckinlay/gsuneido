@@ -29,11 +29,11 @@ var lruCacheCallClass = func(th *Thread, args []Value) Value {
 	return newSuLruCache(size, fn, okForResetAll)
 }
 
-var lruStaticMethods = methods()
+var lruStaticMethods = methods("lruStatic")
 
-var _ = staticMethod(lru_ResetAll, "()")
+var _ = staticMethod(lruStatic_ResetAll, "()")
 
-func lru_ResetAll(th *Thread, _ []Value) Value {
+func lruStatic_ResetAll(th *Thread, _ []Value) Value {
 	iter := ToContainer(Global.Find(th, GnSuneido)).Iter2(true, true)
 	for _, v := iter(); v != nil; _, v = iter() {
 		if lc, ok := v.(*suLruCache); ok && lc.okForResetAll {
@@ -43,13 +43,13 @@ func lru_ResetAll(th *Thread, _ []Value) Value {
 	return nil
 }
 
-var _ = staticMethod(lru_Members, "()")
+var _ = staticMethod(lruStatic_Members, "()")
 
-func lru_Members() Value {
-	return lru_members
+func lruStatic_Members() Value {
+	return lruStatic_members
 }
 
-var lru_members = methodList(lruStaticMethods)
+var lruStatic_members = methodList(lruStaticMethods)
 
 func (lc *suLruCacheGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := lruStaticMethods[method]; ok {
@@ -62,7 +62,7 @@ func (*suLruCacheGlobal) String() string {
 	return "LruCache /* builtin class */"
 }
 
-var suLruCacheMethods = methods()
+var suLruCacheMethods = methods("lru")
 
 // Get calls the getter with exactly the same arguments it receives.
 // If called with multiple arguments, the hash key is an @args object.

@@ -18,7 +18,7 @@ func Mutex() Value {
 	return &suMutex{mut: MakeMutexT()}
 }
 
-var suMutexMethods = methods()
+var suMutexMethods = methods("mu")
 
 var _ = method(mu_Do, "(block)")
 

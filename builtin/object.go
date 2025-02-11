@@ -24,7 +24,7 @@ func Object(arg Value) Value {
 
 // NOTE: ObjectMethods are shared with SuRecord
 
-var _ = exportMethods(&ObjectMethods)
+var _ = exportMethods(&ObjectMethods, "ob")
 
 var _ = method(ob_Add, "(@args)")
 

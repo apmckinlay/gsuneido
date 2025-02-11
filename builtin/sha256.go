@@ -46,7 +46,7 @@ func (suSha256) Lookup(_ *Thread, method string) Value {
 	return sha256Methods[method]
 }
 
-var sha256Methods = methods()
+var sha256Methods = methods("Sha256")
 
 var _ = method(Sha256_Update, "(string)")
 

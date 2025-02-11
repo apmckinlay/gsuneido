@@ -119,7 +119,7 @@ func (*suRunPiped) Lookup(_ *Thread, method string) Value {
 	return suRunPipedMethods[method]
 }
 
-var suRunPipedMethods = methods()
+var suRunPipedMethods = methods("runpiped")
 
 var _ = method(runpiped_Close, "()")
 

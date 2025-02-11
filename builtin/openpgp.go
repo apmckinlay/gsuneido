@@ -39,7 +39,7 @@ func (*suOpenPGP) Lookup(_ *Thread, method string) Value {
 	return openpgpMethods[method]
 }
 
-var openpgpMethods = methods()
+var openpgpMethods = methods("opgp")
 
 var _ = staticMethod(opgp_SymmetricEncrypt,
 	"(passphrase, source, toFile = false)")

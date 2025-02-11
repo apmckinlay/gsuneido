@@ -73,7 +73,7 @@ func threadCallClass(th *Thread, args []Value) Value {
 	return nil
 }
 
-var threadMethods = methods()
+var threadMethods = methods("thread")
 
 var _ = staticMethod(thread_GC, "()")
 

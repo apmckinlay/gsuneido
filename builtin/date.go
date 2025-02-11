@@ -123,29 +123,29 @@ func (d *suDateGlobal) String() string {
 
 var msFactor = dnum.FromStr(".001")
 
-var dateStaticMethods = methods()
+var dateStaticMethods = methods("dateStatic")
 
-var _ = staticMethod(date_Begin, "()")
+var _ = staticMethod(dateStatic_Begin, "()")
 
-func date_Begin() Value {
+func dateStatic_Begin() Value {
 	return DateBegin
 }
 
-var _ = staticMethod(date_End, "()")
+var _ = staticMethod(dateStatic_End, "()")
 
-func date_End() Value {
+func dateStatic_End() Value {
 	return DateEnd
 }
 
-var _ = staticMethod(date_Members, "()")
+var _ = staticMethod(dateStatic_Members, "()")
 
-func date_Members() Value {
+func dateStatic_Members() Value {
 	return date_members
 }
 
 var date_members = methodList(dateStaticMethods)
 
-var _ = exportMethods(&DateMethods)
+var _ = exportMethods(&DateMethods, "date")
 
 var _ = method(date_MinusDays, "(date)")
 

@@ -32,7 +32,7 @@ func (*suFtsearch) Lookup(_ *Thread, method string) Value {
 	return ftsearchMethods[method]
 }
 
-var ftsearchMethods = methods()
+var ftsearchMethods = methods("ftsearch")
 
 var _ = staticMethod(ftsearch_Create, "()")
 
@@ -79,7 +79,7 @@ func (*suFtsBuilder) Lookup(_ *Thread, method string) Value {
 	return ftsBuilderMethods[method]
 }
 
-var ftsBuilderMethods = methods()
+var ftsBuilderMethods = methods("ftsBuilder")
 
 var _ = method(ftsBuilder_Add, "(id, title, text)")
 
@@ -135,7 +135,7 @@ func (*suFtsIndex) Lookup(_ *Thread, method string) Value {
 	return ftsIndexMethods[method]
 }
 
-var ftsIndexMethods = methods()
+var ftsIndexMethods = methods("ftsIndex")
 
 var _ = method(ftsIndex_Search, "(query, scores = false)")
 

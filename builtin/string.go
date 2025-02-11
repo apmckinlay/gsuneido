@@ -33,7 +33,7 @@ func sameStr(x Value, s string) Value {
 	return SuStr(s)
 }
 
-var _ = exportMethods(&StringMethods)
+var _ = exportMethods(&StringMethods, "string")
 
 var _ = method(string_AlphaQ, "()")
 

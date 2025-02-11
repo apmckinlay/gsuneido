@@ -14,7 +14,7 @@ func record(arg Value) Value {
 	return SuRecordFromObject(arg.(*SuObject))
 }
 
-var _ = exportMethods(&RecordMethods)
+var _ = exportMethods(&RecordMethods, "record")
 
 var _ = method(record_AttachRule, "(key,callable)")
 
