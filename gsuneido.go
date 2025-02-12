@@ -24,6 +24,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/regex"
@@ -187,6 +188,7 @@ func main() {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR:", e, "(exiting)")
+			dbg.PrintStack()
 			Exit(1)
 		}
 		Exit(0)
@@ -210,7 +212,8 @@ func main() {
 	}
 	if mode == "gui" {
 		run("Init()")
-		builtin.Run()
+		exitcode := builtin.Run()
+		Exit(exitcode)
 	} else {
 		run("Init.Repl()")
 		repl()

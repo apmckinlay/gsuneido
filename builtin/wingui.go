@@ -15,7 +15,6 @@ import (
 func init() {
 	uiThreadId = windows.GetCurrentThreadId()
 	goc.SunAPP = sunAPP
-	goc.Shutdown = core.Exit
 	core.Interrupt = goc.Interrupt
 }
 
@@ -25,8 +24,8 @@ func OnUIThread() bool {
 	return windows.GetCurrentThreadId() == uiThreadId
 }
 
-func Run() {
-	goc.Run()
+func Run() int {
+	return goc.Run()
 }
 
 var _ = builtin(MessageLoop, "(hwnd = 0)")

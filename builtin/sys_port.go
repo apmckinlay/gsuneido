@@ -12,7 +12,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-func Run() {
+func Run() int {
+	return 0
 }
 
 var _ = builtin(GetComputerName, "()")

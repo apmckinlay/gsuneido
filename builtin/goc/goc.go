@@ -21,7 +21,6 @@ import (
 )
 
 var SunAPP func(string) string
-var Shutdown func(int)
 
 var uiThreadId uint32
 
@@ -31,9 +30,8 @@ func init() {
 	C.setup()
 }
 
-func Run() {
-	exitcode := C.run()
-	Shutdown(int(exitcode))
+func Run() int {
+	return int(C.run())
 }
 
 func Interrupt() bool {
