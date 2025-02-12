@@ -6,7 +6,8 @@
 package builtin
 
 import (
-	"github.com/apmckinlay/gsuneido/builtin/goc"
+	"syscall"
+
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
@@ -23,7 +24,7 @@ func DrawThemeBackground(a, b, c, d, e, f Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	r1 := heap.Alloc(nRect)
 	r2 := heap.Alloc(nRect)
-	rtn := goc.Syscall6(drawThemeBackground,
+	rtn, _, _ := syscall.SyscallN(drawThemeBackground,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -43,7 +44,7 @@ var _ = builtin(DrawThemeText, "(hTheme, hdc, iPartId, iStateId, pszText, "+
 func DrawThemeText(_ *Thread, a []Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	r := heap.Alloc(nRect)
-	rtn := goc.Syscall9(drawThemeText,
+	rtn, _, _ := syscall.SyscallN(drawThemeText,
 		intArg(a[0]),
 		intArg(a[1]),
 		intArg(a[2]),
@@ -62,7 +63,7 @@ var _ = builtin(SetWindowTheme, "(hwnd, appname, idlist)")
 
 func SetWindowTheme(a, b, c Value) Value {
 	defer heap.FreeTo(heap.CurSize())
-	rtn := goc.Syscall3(setWindowTheme,
+	rtn, _, _ := syscall.SyscallN(setWindowTheme,
 		intArg(a),
 		uintptr(stringArg(b)),
 		uintptr(stringArg(c)))
@@ -74,7 +75,7 @@ var getWindowTheme = uxtheme.MustFindProc("GetWindowTheme").Addr()
 var _ = builtin(GetWindowTheme, "(hwnd)")
 
 func GetWindowTheme(a Value) Value {
-	rtn := goc.Syscall1(getWindowTheme,
+	rtn, _, _ := syscall.SyscallN(getWindowTheme,
 		intArg(a))
 	return intRet(rtn)
 }
@@ -84,7 +85,7 @@ var isAppThemed = uxtheme.MustFindProc("IsAppThemed").Addr()
 var _ = builtin(IsAppThemed, "()")
 
 func IsAppThemed() Value {
-	rtn := goc.Syscall0(isAppThemed)
+	rtn, _, _ := syscall.SyscallN(isAppThemed)
 	return boolRet(rtn)
 }
 
@@ -93,7 +94,7 @@ var closeThemeData = uxtheme.MustFindProc("CloseThemeData").Addr()
 var _ = builtin(CloseThemeData, "(hTheme)")
 
 func CloseThemeData(a Value) Value {
-	rtn := goc.Syscall1(closeThemeData,
+	rtn, _, _ := syscall.SyscallN(closeThemeData,
 		intArg(a))
 	return intRet(rtn)
 }
@@ -104,7 +105,7 @@ var isThemeBackgroundPartiallyTransparent = uxtheme.MustFindProc("IsThemeBackgro
 var _ = builtin(IsThemeBackgroundPartiallyTransparent, "(hTheme, iPartId, iStateId)")
 
 func IsThemeBackgroundPartiallyTransparent(a, b, c Value) Value {
-	rtn := goc.Syscall3(isThemeBackgroundPartiallyTransparent,
+	rtn, _, _ := syscall.SyscallN(isThemeBackgroundPartiallyTransparent,
 		intArg(a),
 		intArg(b),
 		intArg(c))
@@ -117,7 +118,7 @@ var _ = builtin(OpenThemeData, "(hwnd, pszClassList)")
 
 func OpenThemeData(a, b Value) Value {
 	defer heap.FreeTo(heap.CurSize())
-	rtn := goc.Syscall2(openThemeData,
+	rtn, _, _ := syscall.SyscallN(openThemeData,
 		intArg(a),
 		uintptr(stringArg(b)))
 	return intRet(rtn)
@@ -131,7 +132,7 @@ var _ = builtin(DrawThemeParentBackground, "(hwnd, hdc, prc)")
 func DrawThemeParentBackground(a, b, c Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	r := heap.Alloc(nRect)
-	rtn := goc.Syscall3(drawThemeParentBackground,
+	rtn, _, _ := syscall.SyscallN(drawThemeParentBackground,
 		intArg(a),
 		intArg(b),
 		uintptr(rectArg(c, r)))

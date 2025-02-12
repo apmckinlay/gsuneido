@@ -2,7 +2,9 @@
 #define suneido_webview2_base
 
 #include "WebView2.h"
+extern "C" {
 #include "../cside.h"
+}
 
 enum CALLBACK_TYPE {
     ON_READY,

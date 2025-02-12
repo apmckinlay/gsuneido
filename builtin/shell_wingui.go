@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
@@ -22,7 +21,7 @@ var dragAcceptFiles = shell32.MustFindProc("DragAcceptFiles").Addr()
 var _ = builtin(DragAcceptFiles, "(hWnd, fAccept)")
 
 func DragAcceptFiles(a, b Value) Value {
-	goc.Syscall2(dragAcceptFiles,
+	syscall.SyscallN(dragAcceptFiles,
 		intArg(a),
 		boolArg(b))
 	return nil
@@ -35,7 +34,7 @@ var _ = builtin(SHGetPathFromIDList, "(pidl)")
 func SHGetPathFromIDList(a Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	buf := heap.Alloc(MAX_PATH)
-	rtn := goc.Syscall2(shGetPathFromIDList,
+	rtn, _, _ := syscall.SyscallN(shGetPathFromIDList,
 		intArg(a),
 		uintptr(buf))
 	if rtn == 0 {
@@ -51,14 +50,14 @@ var dragQueryFile = shell32.MustFindProc("DragQueryFile").Addr()
 var _ = builtin(DragQueryFile, "(hDrop, iFile)")
 
 func DragQueryFile(a, b Value) Value {
-	n := goc.Syscall4(dragQueryFile,
+	n, _, _ := syscall.SyscallN(dragQueryFile,
 		intArg(a),
 		intArg(b),
 		0,
 		0)
 	defer heap.FreeTo(heap.CurSize())
 	buf := heap.Alloc(n + 1)
-	goc.Syscall4(dragQueryFile,
+	syscall.SyscallN(dragQueryFile,
 		intArg(a),
 		intArg(b),
 		uintptr(buf),
@@ -69,7 +68,7 @@ func DragQueryFile(a, b Value) Value {
 var _ = builtin(DragQueryFileCount, "(hDrop)")
 
 func DragQueryFileCount(a Value) Value {
-	rtn := goc.Syscall4(dragQueryFile,
+	rtn, _, _ := syscall.SyscallN(dragQueryFile,
 		intArg(a),
 		0xffffffff,
 		0,
@@ -100,7 +99,7 @@ func Shell_NotifyIcon(a, b Value) Value {
 	getStrZbs(b, "szTip", nid.szTip[:])
 	getStrZbs(b, "szInfo", nid.szInfo[:])
 	getStrZbs(b, "szInfoTitle", nid.szInfoTitle[:])
-	rtn := goc.Syscall2(shell_NotifyIcon,
+	rtn, _, _ := syscall.SyscallN(shell_NotifyIcon,
 		intArg(a),
 		uintptr(p))
 	return boolRet(rtn)
@@ -150,7 +149,7 @@ func ShellExecuteEx(a Value) Value {
 		hIcon:        getUintptr(a, "hIcon"),
 		hProcess:     getUintptr(a, "hProcess"),
 	}
-	rtn := goc.Syscall1(shellExecuteEx,
+	rtn, _, _ := syscall.SyscallN(shellExecuteEx,
 		uintptr(p))
 	return boolRet(rtn)
 }
@@ -194,7 +193,7 @@ func SHBrowseForFolder(a Value) Value {
 		lParam:         getUintptr(a, "lParam"),
 		iImage:         getInt32(a, "iImage"),
 	}
-	rtn := goc.Syscall1(sHBrowseForFolder,
+	rtn, _, _ := syscall.SyscallN(sHBrowseForFolder,
 		uintptr(p))
 	return intRet(rtn)
 }

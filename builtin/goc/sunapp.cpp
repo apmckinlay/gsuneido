@@ -6,7 +6,9 @@
 #include <windows.h>
 #include <wininet.h>
 #include <malloc.h>
+extern "C" {
 #include "cside.h"
+}
 
 extern "C" buf_t suneidoAPP(char* s);
 

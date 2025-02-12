@@ -6,9 +6,9 @@
 package builtin
 
 import (
+	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
@@ -25,7 +25,7 @@ var _ = builtin(CreateStreamOnHGlobal, "(hGlobal, fDeleteOnRelease, ppstm)")
 func CreateStreamOnHGlobal(a, b, c Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	p := heap.Alloc(uintptrSize)
-	rtn := goc.Syscall3(createStreamOnHGlobal,
+	rtn, _, _ := syscall.SyscallN(createStreamOnHGlobal,
 		intArg(a),
 		boolArg(b),
 		uintptr(p))
@@ -58,7 +58,7 @@ func OleLoadPicture(a, b, c, d, e Value) Value {
 	for i := range 8 {
 		guid.Data4[i] = byte(ToInt(data4.Get(nil, SuInt(i))))
 	}
-	rtn := goc.Syscall5(oleLoadPicture,
+	rtn, _, _ := syscall.SyscallN(oleLoadPicture,
 		intArg(a),
 		intArg(b),
 		boolArg(c),

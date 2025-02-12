@@ -8,20 +8,22 @@ package builtin
 import (
 	"log"
 	"sync"
+	"syscall"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-// use the very last 4 argument callback
-const iWndProc = goc.Ncb4s - 1
+const ncb2s = 32
+const ncb3s = 32
+const ncb4s = 1024
 
 // wndProcCb is the single C side callback shared by WndProc's
-var wndProcCb = goc.GetCallback(4, iWndProc)
+var wndProcCb = syscall.NewCallback(wndProcCall)
 
 // hwndToCb maps hwnd's to Suneido callbacks
 var hwndToCb = map[uintptr]Value{}
@@ -56,41 +58,49 @@ type callback struct {
 	keepTill uint32
 }
 
-// var ncbs = []int{goc.Ncb2s, goc.Ncb3s, goc.Ncb4s}
-
-var cb2s [goc.Ncb2s]callback
-var cb3s [goc.Ncb3s]callback
-var cb4s [goc.Ncb4s - 1]callback // -1 to allow for wndProcCb
+var cb2s [ncb2s]callback
+var cb3s [ncb3s]callback
+var cb4s [ncb4s]callback
 
 var cbs = [3][]callback{cb2s[:], cb3s[:], cb4s[:]}
 
-func callback2(i, a, b uintptr) uintptr {
-	return cb2s[i].callv(
-		IntVal(int(a)),
-		IntVal(int(b)))
-}
-func callback3(i, a, b, c uintptr) uintptr {
-	return cb3s[i].callv(
-		IntVal(int(a)),
-		IntVal(int(b)),
-		IntVal(int(c)))
-}
-func callback4(i, a, b, c, d uintptr) uintptr {
-	if i == iWndProc {
-		if fn, ok := hwndToCb[a]; ok {
-			return call(fn,
+func newGoCallback(nargs, i int) uintptr {
+	switch nargs {
+	case 2:
+		return syscall.NewCallback(func(a, b uintptr) uintptr {
+			return cb2s[i].callv(
+				IntVal(int(a)),
+				IntVal(int(b)))
+		})
+	case 3:
+		return syscall.NewCallback(func(a, b, c uintptr) uintptr {
+			return cb3s[i].callv(
+				IntVal(int(a)),
+				IntVal(int(b)),
+				IntVal(int(c)))
+		})
+	case 4:
+		return syscall.NewCallback(func(a, b, c, d uintptr) uintptr {
+			return cb4s[i].callv(
 				IntVal(int(a)),
 				IntVal(int(b)),
 				IntVal(int(c)),
 				IntVal(int(d)))
-		}
-		log.Fatalln("FATAL: WndProc callback missing hwnd")
+		})
 	}
-	return cb4s[i].callv(
-		IntVal(int(a)),
-		IntVal(int(b)),
-		IntVal(int(c)),
-		IntVal(int(d)))
+	panic(assert.ShouldNotReachHere())
+}
+
+func wndProcCall(a, b, c, d uintptr) uintptr {
+	if fn, ok := hwndToCb[a]; ok {
+		return call(fn,
+			IntVal(int(a)),
+			IntVal(int(b)),
+			IntVal(int(c)),
+			IntVal(int(d)))
+	}
+	log.Fatalln("FATAL: WndProc callback missing hwnd")
+	return 0
 }
 
 func (cb *callback) callv(args ...Value) uintptr {
@@ -181,7 +191,7 @@ func NewCallback(fn Value, nargs int) uintptr {
 	cb := &callbacks[j]
 	cb.fn = fn
 	cb.active = true
-	return goc.GetCallback(nargs, j)
+	return newGoCallback(nargs, j)
 }
 
 // cbeq is identity equality, except for bound methods

@@ -6,9 +6,9 @@
 package builtin
 
 import (
+	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
@@ -20,7 +20,7 @@ var commDlgExtendedError = comdlg32.MustFindProc("CommDlgExtendedError").Addr()
 var _ = builtin(CommDlgExtendedError, "()")
 
 func CommDlgExtendedError() Value {
-	rtn := goc.Syscall0(commDlgExtendedError)
+	rtn, _, _ := syscall.SyscallN(commDlgExtendedError)
 	return intRet(rtn)
 }
 
@@ -51,7 +51,7 @@ func PrintDlg(a Value) Value {
 		hPrintTemplate:      getUintptr(a, "hPrintTemplate"),
 		hSetupTemplate:      getUintptr(a, "hSetupTemplate"),
 	}
-	rtn := goc.Syscall1(printDlg,
+	rtn, _, _ := syscall.SyscallN(printDlg,
 		uintptr(p))
 	a.Put(nil, SuStr("hwndOwner"), IntVal(int(pd.hwndOwner)))
 	a.Put(nil, SuStr("hDevMode"), IntVal(int(pd.hDevMode)))
@@ -118,7 +118,7 @@ func PageSetupDlg(a Value) Value {
 		lpPageSetupTemplateName: getStr(a, "lpPageSetupTemplateName"),
 		hPageSetupTemplate:      getUintptr(a, "hPageSetupTemplate"),
 	}
-	rtn := goc.Syscall1(pageSetupDlg,
+	rtn, _, _ := syscall.SyscallN(pageSetupDlg,
 		uintptr(p))
 	a.Put(nil, SuStr("hwndOwner"), IntVal(int(psd.hwndOwner)))
 	a.Put(nil, SuStr("hDevMode"), IntVal(int(psd.hDevMode)))
@@ -164,7 +164,7 @@ var _ = builtin(GetSaveFileName, "(a)")
 func GetSaveFileName(a Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	p, buf, bufsize := buildOPENFILENAME(a)
-	rtn := goc.Syscall1(getSaveFileName,
+	rtn, _, _ := syscall.SyscallN(getSaveFileName,
 		uintptr(p))
 	if rtn != 0 {
 		a.Put(nil, SuStr("file"), SuStr(heap.GetStrZ(buf, bufsize)))
@@ -179,7 +179,7 @@ var _ = builtin(GetOpenFileName, "(a)")
 func GetOpenFileName(a Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	p, buf, bufsize := buildOPENFILENAME(a)
-	rtn := goc.Syscall1(getOpenFileName,
+	rtn, _, _ := syscall.SyscallN(getOpenFileName,
 		uintptr(p))
 	if rtn != 0 {
 		a.Put(nil, SuStr("file"), bufStrZ2(buf, uintptr(bufsize)))
@@ -262,7 +262,7 @@ func ChooseColor(a Value) Value {
 		hook:         getUintptr(a, "hook"),
 		templateName: getStr(a, "templateName"),
 	}
-	rtn := goc.Syscall1(chooseColor,
+	rtn, _, _ := syscall.SyscallN(chooseColor,
 		uintptr(p))
 	a.Put(nil, SuStr("rgbResult"), IntVal(int(cc.rgbResult)))
 	a.Put(nil, SuStr("flags"), IntVal(int(cc.flags)))
@@ -334,7 +334,7 @@ func ChooseFont(a Value) Value {
 		nSizeMin:       getInt32(a, "nSizeMin"),
 		nSizeMax:       getInt32(a, "nSizeMax"),
 	}
-	rtn := goc.Syscall1(chooseFont,
+	rtn, _, _ := syscall.SyscallN(chooseFont,
 		uintptr(p))
 	lfob.Put(nil, SuStr("lfHeight"), IntVal(int(lf.lfHeight)))
 	lfob.Put(nil, SuStr("lfWidth"), IntVal(int(lf.lfWidth)))
@@ -413,7 +413,7 @@ func PrintDlgEx(a Value) Value {
 		pd.nPageRanges = 1
 		pd.nMaxPageRanges = 1
 	}
-	rtn := goc.Syscall1(printDlgEx,
+	rtn, _, _ := syscall.SyscallN(printDlgEx,
 		uintptr(p))
 	a.Put(nil, SuStr("hwndOwner"), IntVal(int(pd.hwndOwner)))
 	a.Put(nil, SuStr("hDevMode"), IntVal(int(pd.hDevMode)))

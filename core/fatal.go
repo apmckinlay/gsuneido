@@ -6,6 +6,7 @@ package core
 import (
 	"fmt"
 	"log"
+	"os"
 )
 
 // Exit is injected by gSuneido as either exit.Exit or stopService
@@ -18,5 +19,8 @@ func Fatal(args ...any) {
 	// 	dbg.PrintStack()
 	// }
 	Fatal2(s)
+	if Exit == nil { // e.g. during initialization
+		os.Exit(1)
+	}
 	Exit(1)
 }

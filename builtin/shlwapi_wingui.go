@@ -6,7 +6,8 @@
 package builtin
 
 import (
-	"github.com/apmckinlay/gsuneido/builtin/goc"
+	"syscall"
+
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
@@ -20,7 +21,7 @@ var _ = builtin(SHCreateStreamOnFile, "(pszFile, grfMode, ppstm)")
 func SHCreateStreamOnFile(a, b, c Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	p := heap.Alloc(uintptrSize)
-	rtn := goc.Syscall3(shCreateStreamOnFile,
+	rtn, _, _ := syscall.SyscallN(shCreateStreamOnFile,
 		uintptr(stringArg(a)),
 		intArg(b),
 		uintptr(p))

@@ -6,9 +6,9 @@
 package builtin
 
 import (
+	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
@@ -19,7 +19,7 @@ var sendMessage = user32.MustFindProc("SendMessageA").Addr()
 var _ = builtin(SendMessage, "(hwnd, msg, wParam, lParam)")
 
 func SendMessage(a, b, c, d Value) Value {
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -33,7 +33,7 @@ var _ = builtin(SendMessageText, "(hwnd, msg, wParam, text)")
 
 func SendMessageText(a, b, c, d Value) Value {
 	defer heap.FreeTo(heap.CurSize())
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -56,7 +56,7 @@ func SendMessageTextOut(a, b, c, d Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	n := uintptr(ToInt(d) + 1)
 	buf := heap.Alloc(n)
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -72,7 +72,7 @@ var _ = builtin(SendMessagePoint, "(hwnd, msg, wParam, point)")
 func SendMessagePoint(a, b, c, d Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	pt := heap.Alloc(nPoint)
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -86,7 +86,7 @@ var _ = builtin(SendMessageRect, "(hwnd, msg, wParam, rect)")
 func SendMessageRect(a, b, c, d Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	r := heap.Alloc(nRect)
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -114,7 +114,7 @@ func SendMessageTcitem(a, b, c, d Value) Value {
 		iImage:      getInt32(d, "iImage"),
 		lParam:      getInt32(d, "lParam"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -157,7 +157,7 @@ func SendMessageTextRange(a, b, c, d, e Value) Value {
 		chrg:      stCharRange{cpMin: int32(cpMin), cpMax: int32(cpMax)},
 		lpstrText: (*byte)(buf),
 	}
-	goc.Syscall4(sendMessage,
+	syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		0,
@@ -180,7 +180,7 @@ func SendMessageTOOLINFO(a, b, c, d Value) Value {
 		lParam:   getUintptr(d, "lParam"),
 		rect:     getRect(d, "rect"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -203,7 +203,7 @@ func SendMessageTOOLINFO2(a, b, c, d Value) Value {
 		lParam:   getUintptr(d, "lParam"),
 		rect:     getRect(d, "rect"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -239,7 +239,7 @@ func SendMessageTreeItem(a, b, c, d Value) Value {
 			cChildren:      getInt32(d, "cChildren"),
 			lParam:         getUintptr(d, "lParam"),
 		}}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -269,7 +269,7 @@ func SendMessageTreeSort(a, b, c, d Value) Value {
 		lpfnCompare: getCallback(d, "lpfnCompare", 3),
 		lParam:      getUintptr(d, "lParam"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -302,7 +302,7 @@ func SendMessageTreeInsert(a, b, c, d Value) Value {
 			cChildren:      getInt32(item, "cChildren"),
 			lParam:         getUintptr(item, "lParam"),
 		}}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -328,7 +328,7 @@ func SendMessageSBPART(a, b, c, d Value) Value {
 		ob = &SuObject{}
 		d.Put(nil, SuStr("parts"), ob)
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -353,7 +353,7 @@ func SendMessageMSG(a, b, c, d Value) Value {
 		time:    getUint32(d, "time"),
 		pt:      getPoint(d, "pt"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -381,7 +381,7 @@ func SendMessageHditem(a, b, c, d Value) Value {
 	obToHDITEM(d, hdi)
 	hdi.pszText = pszText
 	hdi.cchTextMax = n
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -455,7 +455,7 @@ func SendMessageHDHITTESTINFO(a, b, c, d Value) Value {
 		flags: getInt32(d, "flags"),
 		iItem: getInt32(d, "iItem"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -485,7 +485,7 @@ func SendMessageTreeHitTest(a, b, c, d Value) Value {
 		flags: getInt32(d, "flags"),
 		iItem: getUintptr(d, "iItem"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -514,7 +514,7 @@ func SendMessageTabHitTest(a, b, c, d Value) Value {
 		pt:    getPoint(d, "pt"),
 		flags: getInt32(d, "flags"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -549,7 +549,7 @@ func SendMessageListColumn(a, b, c, d Value) Value {
 			iOrder:     getInt32(d, "iOrder"),
 		}
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -579,7 +579,7 @@ var _ = builtin(SendMessageListItem, "(hwnd, msg, wParam, lParam)")
 func SendMessageListItem(a, b, c, d Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	p, li := obToLVITEM(d)
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -628,7 +628,7 @@ func SendMessageListItemOut(a, b, c Value) Value {
 		pszText:    (*byte)(buf),
 		cchTextMax: bufsize,
 	}
-	goc.Syscall4(sendMessage,
+	syscall.SyscallN(sendMessage,
 		intArg(a),
 		uintptr(LVM_ITEM),
 		0,
@@ -674,7 +674,7 @@ func SendMessageListColumnOrder(a, b, c, d Value) Value {
 				int32(ToInt(x))
 		}
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -699,7 +699,7 @@ func SendMessageLVHITTESTINFO(a, b, c, d Value) Value {
 		iSubItem: getInt32(d, "iSubItem"),
 		iGroup:   getInt32(d, "iGroup"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -726,7 +726,7 @@ func SendMessageSystemTime(a, b, c, d Value) Value {
 	p := heap.Alloc(nSystemTime)
 	st := (*stSystemTime)(p)
 	*st = obToSYSTEMTIME(d)
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -782,7 +782,7 @@ func SendMessageSTRange(a, b, c, d Value) Value {
 		min: obToSYSTEMTIME(d.Get(nil, SuStr("min"))),
 		max: obToSYSTEMTIME(d.Get(nil, SuStr("max"))),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
@@ -808,7 +808,7 @@ func SendMessageEDITBALLOONTIP(a, b, c, d Value) Value {
 		pszText:  getStr(d, "pszText"),
 		ttiIcon:  getInt32(d, "ttiIcon"),
 	}
-	rtn := goc.Syscall4(sendMessage,
+	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),

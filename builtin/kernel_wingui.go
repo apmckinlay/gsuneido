@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"golang.org/x/sys/windows"
 )
 
 // NOTE: We want these functions to be available on secondary threads.
@@ -275,8 +275,7 @@ func GetCurrentProcessId() Value {
 var _ = builtin(GetCurrentThreadId, "()")
 
 func GetCurrentThreadId() Value {
-	// NOTE: always returns cside thread id
-	return intRet(goc.CThreadId()) // thread safe
+	return intRet(uintptr(windows.GetCurrentThreadId()))
 }
 
 // dll pointer Kernel32:GetStdHandle(long nStdHandle)

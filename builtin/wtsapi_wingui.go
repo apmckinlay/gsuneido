@@ -6,9 +6,9 @@
 package builtin
 
 import (
+	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
@@ -20,7 +20,7 @@ var wtsapi32 = MustLoadDLL("wtsapi32.dll")
 var wtsFreeMemory = wtsapi32.MustFindProc("WTSFreeMemory").Addr()
 
 func WTSFreeMemory(adr uintptr) {
-	goc.Syscall1(wtsFreeMemory,
+	syscall.SyscallN(wtsFreeMemory,
 		adr)
 }
 
@@ -37,7 +37,7 @@ func WTS_GetClientProtocolType() int {
 	defer heap.FreeTo(heap.CurSize())
 	pbuf := heap.Alloc(uintptrSize)
 	psize := heap.Alloc(int32Size)
-	rtn := goc.Syscall5(wtsQuerySessionInformation,
+	rtn, _, _ := syscall.SyscallN(wtsQuerySessionInformation,
 		WTS_CURRENT_SERVER_HANDLE,
 		WTS_CURRENT_SESSION,
 		WTS_ClientProtocolType,
@@ -62,7 +62,7 @@ func WTS_GetSessionId() Value {
 	defer heap.FreeTo(heap.CurSize())
 	pbuf := heap.Alloc(uintptrSize)
 	psize := heap.Alloc(int32Size)
-	rtn := goc.Syscall5(wtsQuerySessionInformation,
+	rtn, _, _ := syscall.SyscallN(wtsQuerySessionInformation,
 		WTS_CURRENT_SERVER_HANDLE,
 		WTS_CURRENT_SESSION,
 		WTS_SessionId,

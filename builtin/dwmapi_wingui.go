@@ -6,7 +6,8 @@
 package builtin
 
 import (
-	"github.com/apmckinlay/gsuneido/builtin/goc"
+	"syscall"
+
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
@@ -22,7 +23,7 @@ var _ = builtin(DwmGetWindowAttributeRect,
 func DwmGetWindowAttributeRect(a, b, c, d Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	r := heap.Alloc(nRect)
-	rtn := goc.Syscall4(dwmGetWindowAttribute,
+	rtn, _, _ := syscall.SyscallN(dwmGetWindowAttribute,
 		intArg(a),
 		intArg(b),
 		uintptr(rectArg(c, r)),

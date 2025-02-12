@@ -8,23 +8,24 @@ package builtin
 import (
 	"fmt"
 	"sync/atomic"
+	"syscall"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/queue"
-	"golang.org/x/sys/windows"
 )
 
+const timerInterval = 10 // milliseconds //???
+
 func init() {
-	trace.SetupConsole = func() {
-		if windows.GetCurrentThreadId() == uiThreadId {
-			goc.SetupConsole()
-		} else {
-			dqMustPut(builtinVal("SetupConsole",
-				func() Value { goc.SetupConsole(); return nil }, "()"))
-		}
-	}
+	// a Windows timer so it will get called
+	// even if a Windows message loop is running e.g. in MessageBox
+	// althoug timers are the lowest priority,
+	// so it will only be called when there are no other messages to process.
+	timerFn := syscall.NewCallback(func(a, b, c, d uintptr) uintptr {
+		runDefer()
+		return 0
+	})
+	syscall.SyscallN(setTimer, 0, 0, timerInterval, timerFn)
 }
 
 var deferQueue = queue.New[dqitem](32, 64)
