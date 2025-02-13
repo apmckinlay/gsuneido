@@ -12,10 +12,26 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
+
+func TestThrow(t *testing.T) {
+	f := compile.Constant(`function () {
+        for ..100000
+               try 
+                    throw 'test'
+                catch (e)
+                    {}
+	}`)
+	var th Thread
+	th.Call(f)
+	heap := builtin.HeapSys()
+	fmt.Println(trace.Number(heap))
+	assert.That(heap < 32_000_000)
+}
 
 func TestInRange(t *testing.T) {
 	options.StrictCompare = true

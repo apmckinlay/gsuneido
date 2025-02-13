@@ -246,6 +246,12 @@ func (th *Thread) locals(i int) *SuObject {
 	}
 	for i, v := range fr.locals.v {
 		if v != nil && fr.fn != nil && i < len(fr.fn.Names) {
+			if se, ok := v.(*SuExcept); ok {
+				// only capture exception string to avoid chaining
+				// the string is probably all we'd look at anyway
+				// type assertion to concrete type should be fast
+				v = se.SuStr
+			}
 			locals.Set(SuStr(fr.fn.Names[i]), v)
 		}
 	}
