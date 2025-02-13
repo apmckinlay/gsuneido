@@ -48,7 +48,8 @@ port: # a Windows version without the Windows stuff
 	
 all: git-status build amd arm
 	@mkdir -p out
-	cp gsuneido.exe gsport.exe gs_linux_amd64 gs_linux_arm64 out
+	cp gsuneido.exe gsport.exe out
+	mv gs_linux_amd64 gs_linux_arm64 out
 
 # NOTE: requires test e.g. from msys
 git-status:
