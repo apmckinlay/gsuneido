@@ -141,7 +141,7 @@ HRESULT STDMETHODCALLTYPE CSuneidoAPP::Start(
 	USES_CONVERSION;
 	const char* url = W2CA(szUrl);
 	buf_t result = suneidoAPP((char*) url);
-	str = result.buf;
+	str = result.data;
 	len = result.size;
 	pos = 0;
 

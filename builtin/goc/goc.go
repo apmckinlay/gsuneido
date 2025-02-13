@@ -102,9 +102,9 @@ func Release(iunk uintptr) int {
 
 //export SuneidoAPP
 func SuneidoAPP(buf *C.buf_t) {
-	url := C.GoString(buf.buf)
+	url := C.GoString(buf.data)
 	result := SunAPP(url)
-	buf.buf = C.CString(result) // WARNING: allocates
+	buf.data = C.CString(result) // WARNING: allocates
 	buf.size = C.int(len(result))
 }
 

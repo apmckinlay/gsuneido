@@ -80,7 +80,7 @@ public:
                 args->put_Response(response);
                 response->Release();
             } else {
-                IStream* stream = SHCreateMemStream((BYTE*)buf.buf, (ULONG)(buf.size));
+                IStream* stream = SHCreateMemStream((BYTE*)buf.data, (ULONG)(buf.size));
                 if (stream) {
                     std::wstring header = buildContentTypeHeader(decoded) + L"Content-Length: " + std::to_wstring(buf.size);
 
@@ -94,7 +94,7 @@ public:
             }
             
             delete[] decoded;
-            delete buf.buf;
+            delete buf.data;
             environment->Release();
             webview2_2->Release();
         }

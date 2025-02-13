@@ -225,11 +225,11 @@ uintptr createLexer(uintptr name) {
 buf_t suneidoAPP(char* url) {
 	buf_t buf;
 	if (GetCurrentThreadId() != main_threadid) {
-		buf.buf = url;
+		buf.data = url;
 		SendMessageA((HWND) helperHwnd, sunappMsg, 0, (LPARAM) &buf);
 		return buf;
 	}
-	buf.buf = url;
+	buf.data = url;
 	SuneidoAPP(&buf);
 	return buf;
 }

@@ -25,8 +25,8 @@ long invoke(uintptr idisp, uintptr name, uintptr flags, uintptr args, uintptr re
 long release(uintptr iunk);
 
 typedef struct {
-	char* buf;
+	char* data;
 	int size;
 } buf_t;
 
-// deps last modified 2025-02-11 21:59:08 UTC
+// deps last modified 2025-02-13 04:11:31 UTC
