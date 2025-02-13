@@ -33,7 +33,7 @@ func (th *Thread) invoke(fn *SuFunc, this Value) Value {
 // run is needed in addition to interp
 // because we can only recover panic on the way out of a function
 // so if the exception is caught we have to re-enter interp
-// Called by Thread.Invoke and SuClosure.Call
+// Called by Thread.Invoke (above) and SuClosure.Call
 func (th *Thread) run(frame Frame) Value {
 	if th.fp >= len(th.frames) {
 		panic("function call overflow")
@@ -49,7 +49,7 @@ func (th *Thread) run(frame Frame) Value {
 	fp := th.fp
 	if th.fp > th.fpMax {
 		th.fpMax = th.fp // track high water mark
-	} else if th.fpMax > th.fp {
+	} else if th.fp < th.fpMax {
 		// clear the frames up to the high water mark
 		for i := th.fp; i < th.fpMax; i++ {
 			th.frames[i] = Frame{}
@@ -58,7 +58,7 @@ func (th *Thread) run(frame Frame) Value {
 	}
 	if th.sp > th.spMax {
 		th.spMax = th.sp
-	} else if th.spMax > th.sp {
+	} else if th.sp < th.spMax {
 		// clear the value stack to high water mark
 		// and following non-nil (expression temporaries)
 		for i := th.sp; i < th.spMax || (i < maxStack && th.stack[i] != nil); i++ {
