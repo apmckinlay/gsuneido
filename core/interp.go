@@ -13,7 +13,6 @@ var Interrupt func() bool // injected
 
 const opInterval = 4001 // ???
 var opCount int = opInterval
-var InRunUI = false // no synchronization since only accessed by main thread
 
 var BlockBreak = BuiltinSuExcept("block:break")
 var BlockContinue = BuiltinSuExcept("block:continue")
@@ -173,7 +172,7 @@ loop:
 		// fmt.Println("stack:", t.sp, t.stack[max(0, t.sp-3):t.sp])
 		// fmt.Println(Disasm1(fr.fn, fr.ip))
 		if wingui { // const so should be compiled away
-			if th == MainThread && !InRunUI {
+			if th == MainThread {
 				opCount--
 				if opCount <= 0 {
 					opCount = opInterval // reset counter
