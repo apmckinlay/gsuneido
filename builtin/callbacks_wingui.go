@@ -20,7 +20,9 @@ import (
 
 const ncb2s = 32
 const ncb3s = 32
-const ncb4s = 1024
+const ncb4s = 512
+
+// var ncbs = []int{ncb2s, ncb3s, ncb4s}
 
 // wndProcCb is the single C side callback shared by WndProc's
 var wndProcCb = syscall.NewCallback(wndProcCall)
@@ -45,11 +47,10 @@ func clock() uint32 {
 }
 
 type callback struct {
+	// gocb is from syscall.NewCallback
+	gocb uintptr
 	// fn is the current Suneido function for the callback
 	fn Value
-	// used is set to true when the slot is first used
-	// and stays set from then on.
-	used bool
 	// active is set to true when the callback is allocated
 	// and set to false when it's cleared
 	active bool
@@ -166,9 +167,9 @@ func NewCallback(fn Value, nargs int) uintptr {
 	j := -1
 	for i := range callbacks {
 		cb := &callbacks[i]
-		if !cb.used {
+		if cb.gocb == 0 {
 			if j == -1 {
-				cb.used = true
+				cb.gocb = newGoCallback(nargs, i)
 				j = i
 			}
 			break
@@ -184,14 +185,14 @@ func NewCallback(fn Value, nargs int) uintptr {
 	if j == -1 {
 		// fmt.Println("Last 10 callbacks, clock ", clock)
 		// for _, c := range callbacks[ncbs[nargs-2]-10:] {
-		// 	fmt.Println(c.fn, "keepTill", c.keepTill)
+		// 	fmt.Println(c.active, c.keepTill, c.fn)
 		// }
-		Fatal("too many callbacks")
+		Fatal("too many callbacks", nargs-2)
 	}
 	cb := &callbacks[j]
 	cb.fn = fn
 	cb.active = true
-	return newGoCallback(nargs, j)
+	return cb.gocb
 }
 
 // cbeq is identity equality, except for bound methods
@@ -213,7 +214,7 @@ func clearCallback(fn Value) bool {
 	for _, c := range cbs {
 		for i := range c {
 			cb := &c[i]
-			if !cb.used {
+			if cb.gocb == 0 {
 				break
 			}
 			if cbeq(fn, cb.fn) {
@@ -250,7 +251,7 @@ func Callbacks() Value {
 	ob := &SuObject{}
 	for _, c := range cbs {
 		for _, cb := range c {
-			if !cb.used {
+			if cb.gocb == 0 {
 				break
 			}
 			if cb.active {
@@ -265,7 +266,7 @@ func CallbacksCount() int {
 	n := 0
 	for _, c := range cbs {
 		for _, cb := range c {
-			if !cb.used {
+			if cb.gocb == 0 {
 				break
 			}
 			if cb.active {
