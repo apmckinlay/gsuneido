@@ -24,10 +24,10 @@ const ncb4s = 512
 
 // var ncbs = []int{ncb2s, ncb3s, ncb4s}
 
-// wndProcCb is the single C side callback shared by WndProc's
+// wndProcCb is the single callback shared by WndProc's
 var wndProcCb = syscall.NewCallback(wndProcCall)
 
-// hwndToCb maps hwnd's to Suneido callbacks
+// hwndToCb maps hwnd's to Suneido callbacks for wndProcCall
 var hwndToCb = map[uintptr]Value{}
 
 // WndProcCallback is used by SetWindowProc

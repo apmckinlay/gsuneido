@@ -17,7 +17,7 @@ import (
 )
 
 // NOTE: We want these functions to be available on secondary threads.
-// Therefore we can't use goc.Syscall or heap.
+// Therefore we can't use heap.
 
 // zstr returns an SuStr from up to the first zero byte in buf,
 // or all of buf if there is no zero byte.

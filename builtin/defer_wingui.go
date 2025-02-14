@@ -17,9 +17,9 @@ import (
 const timerInterval = 10 // milliseconds //???
 
 func init() {
-	// a Windows timer so it will get called
-	// even if a Windows message loop is running e.g. in MessageBox
-	// althoug timers are the lowest priority,
+	// a Windows timer so it will get called on the main ui thread
+	// and even if a Windows message loop is running e.g. in MessageBox
+	// although timers are the lowest priority,
 	// so it will only be called when there are no other messages to process.
 	timerFn := syscall.NewCallback(func(a, b, c, d uintptr) uintptr {
 		runDefer()
