@@ -7,8 +7,8 @@ package builtin
 
 import (
 	"syscall"
+	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -19,15 +19,14 @@ var regOpenKeyEx = advapi32.MustFindProc("RegOpenKeyExA").Addr()
 var _ = builtin(RegOpenKeyEx, "(hKey, lpSubKey, ulOptions, samDesired, phkResult)")
 
 func RegOpenKeyEx(a, b, c, d, e Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(uintptrSize)
+	var result uintptr
 	rtn, _, _ := syscall.SyscallN(regOpenKeyEx,
 		intArg(a),
-		uintptr(stringArg(b)),
+		uintptr(unsafe.Pointer(zstrArg(b))),
 		intArg(c),
 		intArg(d),
-		uintptr(p))
-	e.Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p)))) // phkResult
+		uintptr(unsafe.Pointer(&result)))
+	e.Put(nil, SuStr("x"), IntVal(int(result)))
 	return intRet(rtn)
 }
 
@@ -47,19 +46,18 @@ var _ = builtin(RegCreateKeyEx, "(hKey, lpSubKey, reserved/*unused*/, lpClass, "
 	"dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition)")
 
 func RegCreateKeyEx(_ *Thread, a []Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(uintptrSize)
+	var result uintptr
 	rtn, _, _ := syscall.SyscallN(regCreateKeyEx,
 		intArg(a[0]),
-		uintptr(stringArg(a[1])),
+		uintptr(unsafe.Pointer(zstrArg(a[1]))),
 		0, // Reserved - must be 0
-		uintptr(stringArg(a[3])),
+		uintptr(unsafe.Pointer(zstrArg(a[3]))),
 		intArg(a[4]),
 		intArg(a[5]),
 		0, // lpSecurityAttributes - always null
-		uintptr(p),
+		uintptr(unsafe.Pointer(&result)),
 		0) // lpdwDisposition - always null
-	a[7].Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p)))) // phkResult
+	a[7].Put(nil, SuStr("x"), IntVal(int(result)))
 	return intRet(rtn)
 }
 
@@ -69,18 +67,16 @@ var _ = builtin(RegQueryValueEx, "(hKey, lpValueName, lpReserved/*unused*/, "+
 	"lpType/*unused*/, lpData, lpcbData/*unused*/)")
 
 func RegQueryValueEx(a, b, c, d, e, f Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	pe := heap.Alloc(int32Size)
-	pf := heap.Alloc(int32Size)
-	*(*int32)(pf) = int32(int32Size) // to match int32 data
+	var data int32
+	cbData := int32(int32Size)
 	rtn, _, _ := syscall.SyscallN(regQueryValueEx,
 		intArg(a),
-		uintptr(stringArg(b)),
-		0,           // lpReserved - must be 0
-		0,           // lpType - NULL
-		uintptr(pe), // lpData
-		uintptr(pf)) // lpcbData
-	e.Put(nil, SuStr("x"), IntVal(int(*(*int32)(pe)))) // data
+		uintptr(unsafe.Pointer(zstrArg(b))),
+		0, // lpReserved - must be 0
+		0, // lpType - NULL
+		uintptr(unsafe.Pointer(&data)),
+		uintptr(unsafe.Pointer(&cbData)))
+	e.Put(nil, SuStr("x"), IntVal(int(data)))
 	return intRet(rtn)
 }
 
@@ -92,15 +88,13 @@ var _ = builtin(RegSetValueEx, "(hKey, lpValueName, reserved/*unused*/, "+
 	"dwType/*unused*/, lpData, cbData/*unused*/)")
 
 func RegSetValueEx(a, b, c, d, e, f Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	pe := heap.Alloc(int32Size)
-	*(*int32)(pe) = getInt32(e, "x")
+	data := getInt32(e, "x")
 	rtn, _, _ := syscall.SyscallN(regSetValueEx,
 		intArg(a),
-		uintptr(stringArg(b)),
-		0,           // reserved - must be 0
-		REG_DWORD,   // dwType
-		uintptr(pe), // lpData
-		int32Size)   // cbData
+		uintptr(unsafe.Pointer(zstrArg(b))),
+		0,         // reserved - must be 0
+		REG_DWORD, // dwType
+		uintptr(unsafe.Pointer(&data)),
+		int32Size) // cbData
 	return intRet(rtn)
 }

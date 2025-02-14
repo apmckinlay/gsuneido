@@ -210,6 +210,19 @@ func getStrZbs(ob Value, mem string, dst []byte) {
 	dst[len(src)] = 0
 }
 
+func zstrArg(v Value) *byte {
+	// NOTE: don't change this to return uintptr
+	// uintptr(unsafe.Pointer(x)) must be in the actual SyscallN arguments
+	// Then it will be kept alive until the syscall returns.
+	if v.Equal(Zero) {
+		return nil
+	}
+	s := ToStr(v)
+	buf := make([]byte, len(s)+1)
+	copy(buf, s)
+	return &buf[0]
+}
+
 // rect -------------------------------------------------------------
 
 func rectArg(ob Value, r unsafe.Pointer) unsafe.Pointer {
