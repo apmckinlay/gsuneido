@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/queue"
@@ -111,44 +112,13 @@ func Delay(th *Thread, args []Value) Value {
 	if th != MainThread {
 		panic("Delay can only be called from the main GUI thread")
 	}
+	delay := ToInt(args[0])
 	const minDelay = 100 // ms
-	if ToInt(args[0]) < minDelay {
+	if delay < minDelay {
 		panic(fmt.Sprint("Delay minimum is ", minDelay, " (ms)"))
 	}
-	tf := &timerFn{callback: args[1]}
-	tf.timerid = SetTimer(Zero, Zero, args[0], tf)
-	if tf.timerid == Zero {
-		panic("Delay SetTimer failed")
-	}
-	return &killer{kill: func() { tf.kill() }}
-}
-
-func (tf *timerFn) kill() bool {
-	if tf.timerid == Zero {
-		return false
-	}
-	tid := tf.timerid
-	tf.timerid = Zero
-	KillTimer(Zero, tid)
-	clearCallback(tf)
-	return true
-}
-
-type timerFn struct {
-	ValueBase[*timerFn]
-	timerid  Value
-	callback Value
-}
-
-var _ Value = (*timerFn)(nil)
-
-func (tf *timerFn) Equal(other any) bool {
-	return tf == other
-}
-
-func (tf *timerFn) Call(th *Thread, this Value, _ *ArgSpec) Value {
-	if tf.kill() {
-		tf.callback.Call(th, this, &ArgSpec0)
-	}
-	return nil
+	fn := args[1]
+	timer := time.AfterFunc(time.Duration(delay)*time.Millisecond,
+		func() { dqMustPut(fn) })
+	return &killer{kill: func() { timer.Stop() }}
 }
