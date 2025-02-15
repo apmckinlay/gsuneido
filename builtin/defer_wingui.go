@@ -61,7 +61,8 @@ func dqRemove(id int) bool {
 	return deferQueue.Remove(func(it dqitem) bool { return it.id == id })
 }
 
-// runDefer runs all the pending deferred functions
+// runDefer runs all the pending deferred functions.
+// It is called by a timer on the main UI thread.
 func runDefer() {
 	state := MainThread.GetState()
 	defer func() {

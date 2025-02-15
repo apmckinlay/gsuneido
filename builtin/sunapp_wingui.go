@@ -11,7 +11,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-// sunAPP is called by goside.go <- interact <- cside.c <- sunapp.cpp
+// sunAPP is called by goside.go <- cside.c <- sunapp.cpp
+// cside.c ensures it is always called on the main UI thread.
 func sunAPP(url string) (result string) {
 	state := MainThread.GetState()
 	defer func() {

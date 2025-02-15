@@ -25,7 +25,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tr"
 )
 
-// MainThread is injected by gsuneido.go to use for debugging
+// MainThread is injected by gsuneido.go
 var MainThread *Thread
 
 // See interp.go and args.go for the rest of the Thread methods
