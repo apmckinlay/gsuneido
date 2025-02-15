@@ -964,7 +964,7 @@ const WM_USER = 0x400
 var setTimer = user32.MustFindProc("SetTimer").Addr()
 var _ = builtin(SetTimer, "(hwnd, id, ms, f)")
 
-func SetTimer(a, b, c, d Value) Value {
+func SetTimer(th *Thread, args []Value) Value {
 	if options.TimersDisabled {
 		return Zero
 	}
@@ -975,10 +975,10 @@ func SetTimer(a, b, c, d Value) Value {
 		log.Println("WARNING: SetTimer: over", warnTimers)
 	}
 	rtn, _, _ := syscall.SyscallN(setTimer,
-		intArg(a),
-		intArg(b),
-		intArg(c),
-		NewCallback(d, 4))
+		intArg(args[0]),
+		intArg(args[1]),
+		intArg(args[2]),
+		NewCallback(th, args[3], 4))
 	if rtn != 0 {
 		nTimer++
 	}
@@ -1036,19 +1036,20 @@ func SetWindowLongPtr(a, b, c Value) Value {
 // dll User32:SetWindowProc(pointer hwnd, long offset, WNDPROC proc) pointer
 var _ = builtin(SetWindowProc, "(hwnd, offset, proc)")
 
-func SetWindowProc(a, b, c Value) Value {
-	hwnd := intArg(a)
+func SetWindowProc(th *Thread, args []Value) Value {
+	hwnd := intArg(args[0])
 	var cb uintptr
 	var fn Value
-	if c.Type() == types.Number {
-		cb = uintptr(ToInt(c))
+	proc := args[2]
+	if proc.Type() == types.Number {
+		cb = uintptr(ToInt(proc))
 	} else {
 		fn = hwndToCb[hwnd] // save the old one in case we're overwriting
-		cb = WndProcCallback(hwnd, c)
+		cb = WndProcCallback(th, hwnd, proc)
 	}
 	rtn, _, _ := syscall.SyscallN(setWindowLongPtr,
 		hwnd,
-		intArg(b),
+		intArg(args[1]),
 		cb)
 	if rtn == wndProcCb && fn != nil { // if overwriting
 		return fn // return the actual previous Suneido callback
@@ -2021,11 +2022,11 @@ func GetCursorPos(a Value) Value {
 var enumThreadWindows = user32.MustFindProc("EnumThreadWindows").Addr()
 var _ = builtin(EnumThreadWindows, "(dwThreadId, lpfn, lParam)")
 
-func EnumThreadWindows(a, b, c Value) Value {
+func EnumThreadWindows(th *Thread, args []Value) Value {
 	rtn, _, _ := syscall.SyscallN(enumThreadWindows,
-		intArg(a),
-		NewCallback(b, 2),
-		intArg(c))
+		intArg(args[0]),
+		NewCallback(th, args[1], 2),
+		intArg(args[2]))
 	return boolRet(rtn)
 }
 
@@ -2034,11 +2035,11 @@ func EnumThreadWindows(a, b, c Value) Value {
 var enumChildWindows = user32.MustFindProc("EnumChildWindows").Addr()
 var _ = builtin(EnumChildWindowsApi, "(hwnd, lpEnumProc, lParam)")
 
-func EnumChildWindowsApi(a, b, c Value) Value {
+func EnumChildWindowsApi(th *Thread, args []Value) Value {
 	rtn, _, _ := syscall.SyscallN(enumChildWindows,
-		intArg(a),
-		NewCallback(b, 2),
-		intArg(c))
+		intArg(args[0]),
+		NewCallback(th, args[1], 2),
+		intArg(args[2]))
 	return boolRet(rtn)
 }
 
@@ -2092,12 +2093,12 @@ func TrackPopupMenu(a, b, c, d, e, f, g Value) Value {
 var setWindowsHookEx = user32.MustFindProc("SetWindowsHookExA").Addr()
 var _ = builtin(SetWindowsHookEx, "(idHook, lpfn, hMod, dwThreadId)")
 
-func SetWindowsHookEx(a, b, c, d Value) Value {
+func SetWindowsHookEx(th *Thread, args []Value) Value {
 	rtn, _, _ := syscall.SyscallN(setWindowsHookEx,
-		intArg(a),
-		NewCallback(b, 3),
-		intArg(c),
-		intArg(d))
+		intArg(args[0]),
+		NewCallback(th, args[1], 3),
+		intArg(args[2]),
+		intArg(args[3]))
 	return intRet(rtn)
 }
 

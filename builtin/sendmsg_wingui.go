@@ -261,18 +261,18 @@ func SendMessageTreeItem(a, b, c, d Value) Value {
 
 var _ = builtin(SendMessageTreeSort, "(hwnd, msg, wParam, tvitem)")
 
-func SendMessageTreeSort(a, b, c, d Value) Value {
+func SendMessageTreeSort(th *Thread, args []Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	p := heap.Alloc(nTVSortCB)
 	*(*stTVSortCB)(p) = stTVSortCB{
-		hParent:     getUintptr(d, "hParent"),
-		lpfnCompare: getCallback(d, "lpfnCompare", 3),
-		lParam:      getUintptr(d, "lParam"),
+		hParent:     getUintptr(args[3], "hParent"),
+		lpfnCompare: getCallback(th, args[3], "lpfnCompare", 3),
+		lParam:      getUintptr(args[3], "lParam"),
 	}
 	rtn, _, _ := syscall.SyscallN(sendMessage,
-		intArg(a),
-		intArg(b),
-		intArg(c),
+		intArg(args[0]),
+		intArg(args[1]),
+		intArg(args[2]),
 		uintptr(p))
 	return boolRet(rtn)
 }

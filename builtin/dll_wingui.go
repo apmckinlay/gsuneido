@@ -320,10 +320,10 @@ func getUintptr(ob Value, mem string) uintptr {
 	return uintptr(getInt(ob, mem))
 }
 
-func getCallback(ob Value, mem string, nargs int) uintptr {
+func getCallback(th *Thread, ob Value, mem string, nargs int) uintptr {
 	fn := ob.Get(nil, SuStr(mem))
 	if fn == nil {
 		return 0
 	}
-	return NewCallback(fn, nargs)
+	return NewCallback(th, fn, nargs)
 }

@@ -65,11 +65,11 @@ func dqRemove(id int) bool {
 // It is called by a timer on the main UI thread.
 func runDefer() {
 	state := MainThread.GetState()
+	defer MainThread.RestoreState(state)
 	defer func() {
 		if e := recover(); e != nil {
-			handler(e, state)
+			handler(MainThread, e)
 		}
-		MainThread.RestoreState(state)
 	}()
 	// Only run the ones currently in the queue, not the ones added by these.
 	// Otherwise chaining runs continuously, blocking the GUI

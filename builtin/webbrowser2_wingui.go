@@ -43,10 +43,15 @@ func (*suWebBrowser2) SetConcurrent() {
 
 var _ = builtin(WebBrowser2, "(hwnd, dllPath, userDataFolder, cb)")
 
-func WebBrowser2(a, b, s, cb Value) Value {
+func WebBrowser2(th *Thread, args []Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	iunk := heap.Alloc(int64Size)
-	rtn := goc.WebBrowser2(webview2_create, intArg(a), uintptr(iunk), uintptr(stringArg(b)), uintptr(stringArg(s)), NewCallback(cb, 4))
+	rtn := goc.WebBrowser2(webview2_create, 
+		intArg(args[0]), 
+		uintptr(iunk), 
+		uintptr(stringArg(args[1])), 
+		uintptr(stringArg(args[2])), 
+		NewCallback(th, args[3], 4))
 	if rtn != 0 {
 		return intRet(rtn)
 	}

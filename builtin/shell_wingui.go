@@ -180,18 +180,19 @@ const MAX_PATH = 260
 var sHBrowseForFolder = shell32.MustFindProc("SHBrowseForFolderA").Addr()
 var _ = builtin(SHBrowseForFolder, "(lpbi)")
 
-func SHBrowseForFolder(a Value) Value {
+func SHBrowseForFolder(th *Thread, args []Value) Value {
+	bi := args[0]
 	defer heap.FreeTo(heap.CurSize())
 	p := heap.Alloc(nBrowseInfo)
 	*(*stBrowseInfo)(p) = stBrowseInfo{
-		hwndOwner:      getUintptr(a, "hwndOwner"),
-		pidlRoot:       getUintptr(a, "pidlRoot"),
+		hwndOwner:      getUintptr(bi, "hwndOwner"),
+		pidlRoot:       getUintptr(bi, "pidlRoot"),
 		pszDisplayName: nil,
-		lpszTitle:      getStr(a, "lpszTitle"),
-		ulFlags:        getInt32(a, "ulFlags"),
-		lpfn:           getCallback(a, "lpfn", 4),
-		lParam:         getUintptr(a, "lParam"),
-		iImage:         getInt32(a, "iImage"),
+		lpszTitle:      getStr(bi, "lpszTitle"),
+		ulFlags:        getInt32(bi, "ulFlags"),
+		lpfn:           getCallback(th, bi, "lpfn", 4),
+		lParam:         getUintptr(bi, "lParam"),
+		iImage:         getInt32(bi, "iImage"),
 	}
 	rtn, _, _ := syscall.SyscallN(sHBrowseForFolder,
 		uintptr(p))

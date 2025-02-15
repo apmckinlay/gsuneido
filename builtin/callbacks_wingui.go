@@ -31,12 +31,17 @@ var wndProcCb = syscall.NewCallback(wndProcCall)
 var hwndToCb = map[uintptr]Value{}
 
 // WndProcCallback is used by SetWindowProc
-func WndProcCallback(hwnd uintptr, fn Value) uintptr {
+func WndProcCallback(th *Thread, hwnd uintptr, fn Value) uintptr {
+	if th != MainThread {
+		panic("WndProc callback can only be used from the main GUI thread")
+	}
 	hwndToCb[hwnd] = fn
 	return wndProcCb
 }
 
-const delay = 10
+// delay is the number of milliseconds to wait after ClearCallback
+// before reusing a callback slot
+const delay = 10 // ???
 
 var startTime = time.Now()
 
@@ -51,6 +56,9 @@ type callback struct {
 	gocb uintptr
 	// fn is the current Suneido function for the callback
 	fn Value
+	// th is the Thread that created the callback.
+	// It is used to execute the callback.
+	th *Thread
 	// active is set to true when the callback is allocated
 	// and set to false when it's cleared
 	active bool
@@ -65,24 +73,28 @@ var cb4s [ncb4s]callback
 
 var cbs = [3][]callback{cb2s[:], cb3s[:], cb4s[:]}
 
+// newGoCallback creates a Go callback for a callback slot
 func newGoCallback(nargs, i int) uintptr {
 	switch nargs {
 	case 2:
+		cb := &cb2s[i]
 		return syscall.NewCallback(func(a, b uintptr) uintptr {
-			return cb2s[i].callv(
+			return cb.callv(
 				IntVal(int(a)),
 				IntVal(int(b)))
 		})
 	case 3:
+		cb := &cb3s[i]
 		return syscall.NewCallback(func(a, b, c uintptr) uintptr {
-			return cb3s[i].callv(
+			return cb.callv(
 				IntVal(int(a)),
 				IntVal(int(b)),
 				IntVal(int(c)))
 		})
 	case 4:
+		cb := &cb4s[i]
 		return syscall.NewCallback(func(a, b, c, d uintptr) uintptr {
-			return cb4s[i].callv(
+			return cb.callv(
 				IntVal(int(a)),
 				IntVal(int(b)),
 				IntVal(int(c)),
@@ -94,7 +106,7 @@ func newGoCallback(nargs, i int) uintptr {
 
 func wndProcCall(a, b, c, d uintptr) uintptr {
 	if fn, ok := hwndToCb[a]; ok {
-		return call(fn,
+		return call(MainThread, fn,
 			IntVal(int(a)),
 			IntVal(int(b)),
 			IntVal(int(c)),
@@ -104,27 +116,36 @@ func wndProcCall(a, b, c, d uintptr) uintptr {
 	return 0
 }
 
+// callv is the start of callback execution.
+// The Go callbacks are closures that call this.
+// NOTE: there is no locking since we assume it is called in the same thread
+// as the callback was created in.
 func (cb *callback) callv(args ...Value) uintptr {
 	if !cb.active && cb.keepTill < clock() {
 		log.Println("ERROR: callback to inactive", cb.fn,
 			"keepTill", cb.keepTill, "clock", clock())
 	}
-	return call(cb.fn, args...)
+	return call(cb.th, cb.fn, args...)
 }
 
-func call(fn Value, args ...Value) uintptr {
-	heapSize := heap.CurSize()
-	state := MainThread.GetState()
+func call(th *Thread, fn Value, args ...Value) uintptr {
+	if th == MainThread {
+		heapSize := heap.CurSize()
+		defer func() {
+			if heap.CurSize() != heapSize {
+				Fatal("callback: heapSize", heapSize, "=>", heap.CurSize(),
+					"in", fn, args)
+			}
+		}()
+	}
+	state := th.GetState()
+	defer th.RestoreState(state)
 	defer func() {
 		if e := recover(); e != nil {
-			handler(e, state)
-		}
-		if heap.CurSize() != heapSize {
-			Fatal("callback: heapSize", heapSize, "=>", heap.CurSize(),
-				"in", fn, args)
+			handler(th, e)
 		}
 	}()
-	x := MainThread.Call(fn, args...)
+	x := th.Call(fn, args...)
 	if x == nil || x == False {
 		return 0
 	}
@@ -134,29 +155,29 @@ func call(fn Value, args ...Value) uintptr {
 	return uintptr(ToInt(x))
 }
 
-func handler(e any, state ThreadState) {
-	if MainThread.InHandler {
-		LogUncaught(MainThread, "Handler", e)
+// handler is also used by runDefer
+func handler(th *Thread, e any) {
+	if th.InHandler {
+		LogUncaught(th, "Handler", e)
 		Alert("Error in Handler:", e)
 		return
 	}
-	MainThread.InHandler = true
+	th.InHandler = true
 	defer func() {
-		MainThread.InHandler = false
-		MainThread.RestoreState(state)
+		th.InHandler = false
 		if e2 := recover(); e2 != nil {
-			LogUncaught(MainThread, "Handler", e2)
+			LogUncaught(th, "Handler", e2)
 			Alert("Error in Handler:", e2, "\ncaused by", e)
 		}
 	}()
-	se := ToSuExcept(MainThread, e)
-	handler := Global.GetName(MainThread, "Handler")
-	MainThread.Call(handler, se, Zero, se.Callstack)
+	se := ToSuExcept(th, e)
+	handler := Global.GetName(th, "Handler")
+	th.Call(handler, se, Zero, se.Callstack)
 }
 
 var cblock sync.Mutex
 
-func NewCallback(fn Value, nargs int) uintptr {
+func NewCallback(th *Thread, fn Value, nargs int) uintptr {
 	if fn.Type() == types.Number {
 		return uintptr(ToInt(fn))
 	}
@@ -191,6 +212,7 @@ func NewCallback(fn Value, nargs int) uintptr {
 	}
 	cb := &callbacks[j]
 	cb.fn = fn
+	cb.th = th
 	cb.active = true
 	return cb.gocb
 }
@@ -248,6 +270,8 @@ func clearCallback(fn Value) bool {
 var _ = builtin(Callbacks, "()")
 
 func Callbacks() Value {
+	cblock.Lock()
+	defer cblock.Unlock()
 	ob := &SuObject{}
 	for _, c := range cbs {
 		for _, cb := range c {
@@ -263,6 +287,8 @@ func Callbacks() Value {
 }
 
 func CallbacksCount() int {
+	cblock.Lock()
+	defer cblock.Unlock()
 	n := 0
 	for _, c := range cbs {
 		for _, cb := range c {
