@@ -69,16 +69,6 @@ func (m *Meta) GetRoInfo(table string) *Info {
 	return nil
 }
 
-//lint:ignore U1000 for debugging
-func copyInfo(ti *Info) *Info {
-	cp := *ti
-	cp.Indexes = slc.Clone(cp.Indexes)
-	for i, ov := range cp.Indexes {
-		cp.Indexes[i] = ov.Copy()
-	}
-	return &cp
-}
-
 func (m *Meta) GetRwInfo(table string) *Info {
 	if pti, ok := m.difInfo[table]; ok {
 		return pti // already have mutable

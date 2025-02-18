@@ -493,13 +493,6 @@ func (cg *cgen) forInStmt(node *ast.ForIn) {
 	cg.emit(op.Pop)
 }
 
-func (cg *cgen) emitForIn(name string, labels *Labels) {
-	i := cg.name(name)
-	adr := len(cg.code)
-	cg.emit(op.ForIn, byte(labels.brk>>8), byte(labels.brk), byte(i))
-	labels.brk = adr
-}
-
 var fldr ast.Folder
 var minusOne = &ast.Constant{Val: MinusOne}
 

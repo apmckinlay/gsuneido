@@ -436,14 +436,6 @@ func (jb *joinBase) projectRow1(th *Thread, row Row) []string {
 	return key
 }
 
-func (jb *joinBase) projectRow2(th *Thread, row Row) []string {
-	key := make([]string, len(jb.by))
-	for i, col := range jb.by {
-		key[i] = row.GetRawVal(jb.source2.Header(), col, th, jb.st)
-	}
-	return key
-}
-
 func rowstr(hdr *Header, row Row) string {
 	if row == nil {
 		return "nil"
