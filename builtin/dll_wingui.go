@@ -10,11 +10,21 @@ import (
 	"log"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"golang.org/x/sys/windows"
 )
+
+// ...Arg - convert from Suneido Value to native
+//			e.g. intArg, zstrArg
+// ...Ret - converts from native to a Suneido Value
+//			e.g. intRet, int32Ret,
+// to...  - converts a Suneido object to a native struct
+//			e.g. toPoint, toRect
+// from... - updates a Suneido object from a native struct
+//			e.g. fromPoint, fromRect
+// get... - gets a member from a Suneido Object and converts it to native
+//			e.g. getBool, getInt
 
 // MustLoadDLL is like windows.MustLoadDLL but uses log.Fatalln instead of panic
 func MustLoadDLL(name string) *mydll {
@@ -42,8 +52,6 @@ type HANDLE = uintptr
 type BOOL = int32
 
 const int32Size = unsafe.Sizeof(int32(0))
-const int64Size = unsafe.Sizeof(int64(0))
-const uintptrSize = unsafe.Sizeof(uintptr(0))
 
 const uintptrMinusOne = ^uintptr(0) // -1
 
@@ -114,50 +122,31 @@ func getInt16(ob Value, mem string) int16 {
 
 // string -----------------------------------------------------------
 
-// getStr returns a nul terminated heap copy of a string member.
-// Callers should defer heap.Free
-func getStr(ob Value, mem string) *byte {
+// see also zstrArg in sys_windows.go
+
+// getZstr returns a nul terminated copy of a string member.
+func getZstr(ob Value, mem string) *byte {
 	x := ob.Get(nil, SuStr(mem))
 	if x == nil || x.Equal(Zero) || x.Equal(False) {
 		return nil
 	}
-	return (*byte)(stringArg(x))
+	s := ToStr(x)
+	buf := make([]byte, len(s)+1)
+	copy(buf, s)
+	return &buf[0]
 }
 
-// stringArg returns a nul terminated heap copy of a string.
-// Callers should defer heap.Free
-func stringArg(v Value) unsafe.Pointer {
-	if v.Equal(Zero) {
-		return nil
+// bufZstr converts a byte slice containing a nul terminated string to SuStr.
+func bufZstr(buf []byte) SuStr {
+	if i := bytes.IndexByte(buf, 0); i >= 0 {
+		buf = buf[:i]
 	}
-	return heap.CopyStr(ToStr(v))
+	return SuStr(string(buf))
 }
 
-// bufToPtr copies data to an unsafe.Pointer
-// WARNING: p must point to at least len(s) bytes
-func bufToPtr(s string, p unsafe.Pointer) {
-	for i := range len(s) {
-		*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(i))) = s[i]
-	}
-}
-
-// strToPtr copies a nul terminated string to an unsafe.Pointer
-// WARNING: p must point to at least len(s)+1 bytes
-func strToPtr(s string, p unsafe.Pointer) {
-	for i := range len(s) {
-		*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(i))) = s[i]
-	}
-	*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(len(s)))) = 0
-}
-
-// bsStrZ copies a nul terminated string from a byte slice
-func bsStrZ(buf []byte) Value {
-	return SuStr(string(buf[:bytes.IndexByte(buf, 0)]))
-}
-
-// bufStrZ copies a nul terminated string from an unsafe.Pointer.
+// ptrZstr copies a nul terminated string from an unsafe.Pointer.
 // If nul is not found, then the entire length is returned.
-func bufStrZ(p unsafe.Pointer, n uintptr) Value {
+func ptrZstr(p unsafe.Pointer, n uintptr) Value {
 	if p == nil || n == 0 {
 		return False
 	}
@@ -167,28 +156,11 @@ func bufStrZ(p unsafe.Pointer, n uintptr) Value {
 			break
 		}
 	}
-	return bufStrN(p, i)
+	return ptrNstr(p, i)
 }
 
-// bufStrZ2 copies a *double* nul terminated string from a heap buffer.
-// It includes the nuls in the result.
-// If nuls are not found, then the entire length is returned.
-func bufStrZ2(p unsafe.Pointer, n uintptr) Value {
-	if p == nil || n == 0 {
-		return EmptyStr
-	}
-	i := uintptr(2)
-	for ; i < n; i++ {
-		if *(*byte)(unsafe.Pointer(uintptr(p) + i - 2)) == 0 &&
-			*(*byte)(unsafe.Pointer(uintptr(p) + i - 1)) == 0 {
-			break
-		}
-	}
-	return bufStrN(p, i)
-}
-
-// bufStrN copies a string of a given length from an unsafe.Pointer
-func bufStrN(p unsafe.Pointer, n uintptr) Value {
+// ptrNstr copies a string of a given length from an unsafe.Pointer
+func ptrNstr(p unsafe.Pointer, n uintptr) Value {
 	if p == nil || n == 0 {
 		return EmptyStr
 	}
@@ -199,43 +171,25 @@ func bufStrN(p unsafe.Pointer, n uintptr) Value {
 	return SuStr(hacks.BStoS(buf))
 }
 
-// getStrZbs copies the string into the byte slice and adds a nul terminator.
+// getZstrBs copies the string into the byte slice and adds a nul terminator.
 // If the string is too long, the excess is ignored
-func getStrZbs(ob Value, mem string, dst []byte) {
+func getZstrBs(ob Value, mem string, dst []byte) {
 	src := ToStr(ob.Get(nil, SuStr(mem)))
 	if len(src) > len(dst)-1 {
 		src = src[:len(dst)-1]
 	}
 	copy(dst, src)
-	dst[len(src)] = 0
-}
-
-func zstrArg(v Value) *byte {
-	// NOTE: don't change this to return uintptr
-	// uintptr(unsafe.Pointer(x)) must be in the actual SyscallN arguments
-	// Then it will be kept alive until the syscall returns.
-	if v.Equal(Zero) {
-		return nil
-	}
-	s := ToStr(v)
-	buf := make([]byte, len(s)+1)
-	copy(buf, s)
-	return &buf[0]
+	dst[min(len(src), len(dst)-1)] = 0
 }
 
 // rect -------------------------------------------------------------
 
-func rectArg(ob Value, r unsafe.Pointer) unsafe.Pointer {
-	//TODO if r is nil, alloc it
+// toRect converts an object to *stRect
+func toRect(ob Value) *stRect {
 	if ob.Equal(Zero) {
 		return nil
 	}
-	*(*stRect)(r) = obToRect(ob)
-	return r
-}
-
-func obToRect(ob Value) stRect {
-	return stRect{
+	return &stRect{
 		left:   getInt32(ob, "left"),
 		top:    getInt32(ob, "top"),
 		right:  getInt32(ob, "right"),
@@ -251,14 +205,11 @@ func getRect(ob Value, mem string) stRect {
 	if x == nil {
 		return stRect{}
 	}
-	return obToRect(x)
+	return *toRect(x)
 }
 
-func urectToOb(p unsafe.Pointer, ob Value) Value {
-	return rectToOb((*stRect)(p), ob)
-}
-
-func rectToOb(r *stRect, ob Value) Value {
+// fromRect updates an object from a *stRect
+func fromRect(r *stRect, ob Value) Value {
 	if ob == nil {
 		ob = &SuObject{}
 	} else if ob.Equal(Zero) {
@@ -273,21 +224,7 @@ func rectToOb(r *stRect, ob Value) Value {
 
 // point ------------------------------------------------------------
 
-func obToPoint(ob Value) stPoint {
-	if ob.Equal(Zero) {
-		return stPoint{}
-	}
-	return stPoint{
-		x: getInt32(ob, "x"),
-		y: getInt32(ob, "y"),
-	}
-}
-
-func upointToOb(p unsafe.Pointer, ob Value) Value {
-	return pointToOb((*stPoint)(p), ob)
-}
-
-func pointToOb(pt *stPoint, ob Value) Value {
+func fromPoint(pt *stPoint, ob Value) Value {
 	if ob == nil {
 		ob = &SuObject{}
 	}
@@ -301,17 +238,17 @@ func getPoint(ob Value, mem string) stPoint {
 		return stPoint{}
 	}
 	x := ob.Get(nil, SuStr(mem))
-	if x == nil {
+	if x == nil || x.Equal(Zero) {
 		return stPoint{}
 	}
-	return obToPoint(x)
+	return *toPoint(x)
 }
 
-func pointArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
-	pt := (*stPoint)(p)
-	pt.x = getInt32(ob, "x")
-	pt.y = getInt32(ob, "y")
-	return p
+func toPoint(ob Value) *stPoint {
+	return &stPoint{
+		x: getInt32(ob, "x"),
+		y: getInt32(ob, "y"),
+	}
 }
 
 //-------------------------------------------------------------------

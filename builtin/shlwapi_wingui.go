@@ -7,8 +7,8 @@ package builtin
 
 import (
 	"syscall"
+	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -19,13 +19,11 @@ var shCreateStreamOnFile = shlwapi.MustFindProc("SHCreateStreamOnFileA").Addr()
 var _ = builtin(SHCreateStreamOnFile, "(pszFile, grfMode, ppstm)")
 
 func SHCreateStreamOnFile(a, b, c Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(uintptrSize)
+	var p uintptr
 	rtn, _, _ := syscall.SyscallN(shCreateStreamOnFile,
-		uintptr(stringArg(a)),
+		uintptr(zstrArg(a)),
 		intArg(b),
-		uintptr(p))
-	pstm := *(*uintptr)(p)
-	c.Put(nil, SuStr("x"), IntVal(int(pstm)))
+		uintptr(unsafe.Pointer(&p)))
+	c.Put(nil, SuStr("x"), IntVal(int(p)))
 	return intRet(rtn)
 }

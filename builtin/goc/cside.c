@@ -8,7 +8,7 @@ int Scintilla_RegisterClasses(void* hInstance);
 
 typedef unsigned int uint32;
 long traccel(uintptr ob, uintptr msg);
-uintptr CreateLexer(const char* name);
+uintptr CreateLexer(char* name);
 
 #undef UNICODE
 #undef _UNICODE
@@ -217,8 +217,8 @@ int run() {
 	return exitcode;
 }
 
-uintptr createLexer(uintptr name) {
-	return CreateLexer((const char*) name);
+uintptr createLexer(char* name) {
+	return CreateLexer(name);
 }
 
 // suneidoAPP is called by sunapp.cpp

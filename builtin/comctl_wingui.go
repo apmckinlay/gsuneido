@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -19,14 +18,12 @@ var initCommonControlsEx = comctl32.MustFindProc("InitCommonControlsEx").Addr()
 var _ = builtin(InitCommonControlsEx, "(picce)")
 
 func InitCommonControlsEx(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nInitCommonControlsEx)
-	*(*stInitCommonControlsEx)(p) = stInitCommonControlsEx{
+	p := &stInitCommonControlsEx{
 		dwSize: uint32(nInitCommonControlsEx),
-		dwICC:  int32(getInt(a, "dwICC")),
+		dwICC:  getInt32(a, "dwICC"),
 	}
 	rtn, _, _ := syscall.SyscallN(initCommonControlsEx,
-		uintptr(p))
+		uintptr(unsafe.Pointer(p)))
 	return boolRet(rtn)
 }
 
@@ -177,12 +174,10 @@ var drawStatusText = comctl32.MustFindProc("DrawStatusTextA").Addr()
 var _ = builtin(DrawStatusText, "(himlTrack, iTrack, dxHotspot, dyHotspot)")
 
 func DrawStatusText(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	r := heap.Alloc(nRect)
 	syscall.SyscallN(drawStatusText,
 		intArg(a),
-		uintptr(rectArg(b, r)),
-		uintptr(stringArg(c)),
+		uintptr(unsafe.Pointer(toRect(b))),
+		uintptr(zstrArg(c)),
 		intArg(d))
 	return nil
 }
@@ -193,17 +188,15 @@ var imageList_GetImageInfo = comctl32.MustFindProc("ImageList_GetImageInfo").Add
 var _ = builtin(ImageList_GetImageInfo, "(himl, imageindex, pImageInfo)")
 
 func ImageList_GetImageInfo(a, b, c Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nImageInfo)
+	var ii stImageInfo
 	rtn, _, _ := syscall.SyscallN(imageList_GetImageInfo,
 		intArg(a),
 		intArg(b),
-		uintptr(p))
-	ii := *(*stImageInfo)(p)
+		uintptr(unsafe.Pointer(&ii)))
 	c.Put(nil, SuStr("hbmImage"), IntVal(int(ii.hbmImage)))
 	c.Put(nil, SuStr("hbmMask"), IntVal(int(ii.hbmMask)))
 	c.Put(nil, SuStr("rcImage"),
-		rectToOb(&ii.rcImage, c.Get(nil, SuStr("rcImage"))))
+		fromRect(&ii.rcImage, c.Get(nil, SuStr("rcImage"))))
 	return boolRet(rtn)
 }
 

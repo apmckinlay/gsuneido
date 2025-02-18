@@ -11,6 +11,20 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// zstrArg returns a nul terminated copy of a string as unsafe.Pointer
+func zstrArg(v Value) unsafe.Pointer {
+	// NOTE: don't change this to return uintptr
+	// Conversion from pointer to uintptr must be in the SyscallN argument.
+	// Then it will be kept alive until the syscall returns.
+	if v.Equal(Zero) {
+		return nil
+	}
+	s := ToStr(v)
+	buf := make([]byte, len(s)+1)
+	copy(buf, s)
+	return unsafe.Pointer(&buf[0])
+}
+
 var kernel32 = windows.MustLoadDLL("kernel32.dll")
 
 var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
@@ -18,10 +32,9 @@ var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
 var _ = builtin(GetDiskFreeSpace, "(dir = '.')")
 
 func GetDiskFreeSpace(arg Value) Value {
-	dir := zbuf(arg)
 	var n int64
 	rtn, _, e := syscall.SyscallN(getDiskFreeSpaceEx,
-		uintptr(unsafe.Pointer(&dir[0])),
+		uintptr(zstrArg(arg)),
 		uintptr(unsafe.Pointer(&n)),
 		0,
 		0)
@@ -29,15 +42,6 @@ func GetDiskFreeSpace(arg Value) Value {
 		panic("GetDiskFreeSpace: " + e.Error())
 	}
 	return Int64Val(n)
-}
-
-// zbuf returns a zero terminated byte slice copy of ToStr(v)
-func zbuf(v Value) []byte {
-	s := ToStr(v)
-	buf := make([]byte, len(s)+1)
-	copy(buf, s)
-	buf[len(s)] = 0
-	return buf
 }
 
 type stMemoryStatusEx struct {
@@ -52,25 +56,22 @@ const nMemoryStatusEx = unsafe.Sizeof(stMemoryStatusEx{})
 var globalMemoryStatusEx = kernel32.MustFindProc("GlobalMemoryStatusEx").Addr()
 
 func systemMemory() uint64 {
-	buf := make([]byte, nMemoryStatusEx)
-	(*stMemoryStatusEx)(unsafe.Pointer(&buf[0])).dwLength = uint32(nMemoryStatusEx)
+	mse := stMemoryStatusEx{dwLength: uint32(nMemoryStatusEx)}
 	rtn, _, e := syscall.SyscallN(globalMemoryStatusEx,
-		uintptr(unsafe.Pointer(&buf[0])))
+		uintptr(unsafe.Pointer(&mse)))
 	if rtn == 0 {
 		panic("SystemMemory: " + e.Error())
 	}
-	return (*stMemoryStatusEx)(unsafe.Pointer(&buf[0])).ullTotalPhys
+	return mse.ullTotalPhys
 }
 
 var copyFile = kernel32.MustFindProc("CopyFileA").Addr()
 var _ = builtin(CopyFile, "(from, to, failIfExists)")
 
 func CopyFile(th *Thread, args []Value) Value {
-	from := zbuf(args[0])
-	to := zbuf(args[1])
 	rtn, _, e := syscall.SyscallN(copyFile,
-		uintptr(unsafe.Pointer(&from[0])),
-		uintptr(unsafe.Pointer(&to[0])),
+		uintptr(zstrArg(args[0])),
+		uintptr(zstrArg(args[1])),
 		boolArg(args[2]))
 	if rtn == 0 {
 		th.ReturnThrow = true
@@ -99,17 +100,17 @@ var setFileAttributesA = kernel32.MustFindProc("SetFileAttributesA").Addr()
 const access_denied = 5
 
 func deleteFile(filename string) error {
-	file := zbuf(SuStr(filename))
+	file := zstrArg(SuStr(filename))
 	rtn, _, e := syscall.SyscallN(deleteFileA,
-		uintptr(unsafe.Pointer(&file[0])))
+		uintptr(file))
 	if rtn == 0 && e == access_denied {
 		// retry after removing the read-only attribute
 		r, _, _ := syscall.SyscallN(setFileAttributesA,
-			uintptr(unsafe.Pointer(&file[0])),
+			uintptr(file),
 			windows.FILE_ATTRIBUTE_NORMAL)
 		if r != 0 {
 			rtn, _, e = syscall.SyscallN(deleteFileA,
-				uintptr(unsafe.Pointer(&file[0])))
+				uintptr(file))
 		}
 	}
 	if rtn == 0 {

@@ -8,12 +8,12 @@ package builtin
 import (
 	"fmt"
 	"math"
+	"runtime"
 	"syscall"
 	"unicode/utf16"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -37,8 +37,7 @@ func COMobject(arg Value) Value {
 		return &suCOMObject{ptr: ptr}
 	}
 	if s, ok := arg.ToStr(); ok {
-		defer heap.FreeTo(heap.CurSize())
-		idisp := goc.CreateInstance(uintptr(heap.CopyStr(s)))
+		idisp := goc.CreateInstance(s)
 		if idisp == 0 {
 			return False
 		}
@@ -149,21 +148,22 @@ func CallMethod(idisp uintptr, name string, args []Value) Value {
 }
 
 func invoke(idisp uintptr, name string, flags uintptr, args ...Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	pargs := convertArgs(args)
-	params := heap.Alloc(nDispParams)
-	dp := (*stDispParams)(params)
-	dp.cArgs = uint32(len(args))
-	dp.rgvarg = uintptr(pargs)
-	var result unsafe.Pointer
+	// we need to pin because of the pointer inside stDispParams
+	// and for strings inside args
+	pinner := &runtime.Pinner{}
+	defer pinner.Unpin()
+
+	dp := &stDispParams{
+		cArgs:  uint32(len(args)),
+		rgvarg: convertArgs(args, pinner),
+	}
+	pinner.Pin(dp.rgvarg)
 	if flags == DISPATCH_PROPERTYPUT {
 		dp.cNamedArgs = 1
-		dp.rgdispidNamedArgs = uintptr(unsafe.Pointer(&DISPID_PROPERTYPUT))
-	} else {
-		result = heap.Alloc(nVariant)
+		dp.rgdispidNamedArgs = &DISPID_PROPERTYPUT
 	}
-	hr := goc.Invoke(idisp, uintptr(heap.CopyStr(name)), flags, uintptr(params),
-		uintptr(result))
+	var result stVariant
+	hr := goc.Invoke(idisp, name, flags, unsafe.Pointer(dp), unsafe.Pointer(&result))
 	if hr < 0 {
 		panic(fmt.Sprintf("COMobject %s failed %s %x",
 			flagnames[flags], name, uint32(hr)))
@@ -171,22 +171,23 @@ func invoke(idisp uintptr, name string, flags uintptr, args ...Value) Value {
 	if flags == DISPATCH_PROPERTYPUT {
 		return nil
 	}
-	return variantToSu((*stVariant)(result))
+	return variantToSu(&result)
 }
 
-func convertArgs(args []Value) unsafe.Pointer {
-	pargs := heap.Alloc(nVariant * uintptr(len(args)))
-	p := pargs
-	for i := len(args) - 1; i >= 0; i-- {
-		suToVariant(args[i], (*stVariant)(p))
-		p = unsafe.Pointer(uintptr(p) + nVariant)
+func convertArgs(args []Value, pinner *runtime.Pinner) *stVariant {
+	if len(args) == 0 {
+		return nil
 	}
-	return pargs
+	pargs := make([]stVariant, len(args))
+	for i := range pargs {
+		suToVariant(args[len(args)-i-1], &pargs[i], pinner) // NOTE: reverse order
+	}
+	return &pargs[0]
 }
 
 var DISPID_PROPERTYPUT int32 = -3
 
-func suToVariant(x Value, v *stVariant) {
+func suToVariant(x Value, v *stVariant, pinner *runtime.Pinner) {
 	if x == True {
 		v.vt = VT_BOOL
 		v.val = -1
@@ -202,13 +203,16 @@ func suToVariant(x Value, v *stVariant) {
 		v.val = int64(n)
 	} else if _, ok := x.ToStr(); ok {
 		v.vt = VT_BSTR
-		v.val = int64(uintptr(stringArg(x))) // C side converts
+		s := zstrArg(x)
+		pinner.Pin(s)
+		v.val = int64(uintptr(s)) // C side converts
 	} else if sco, ok := x.(*suCOMObject); ok {
 		if sco.idisp {
 			v.vt = VT_DISPATCH
 		} else {
 			v.vt = VT_UNKNOWN
 		}
+		pinner.Pin(sco.ptr)
 		v.val = int64(sco.ptr)
 	} else {
 		panic("COMobject can't convert " + ErrType(x))
@@ -216,8 +220,8 @@ func suToVariant(x Value, v *stVariant) {
 }
 
 type stDispParams struct {
-	rgvarg            uintptr
-	rgdispidNamedArgs uintptr
+	rgvarg            *stVariant
+	rgdispidNamedArgs *int32
 	cArgs             uint32
 	cNamedArgs        uint32
 }

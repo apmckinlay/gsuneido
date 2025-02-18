@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/options"
@@ -129,15 +128,6 @@ func (cb *callback) callv(args ...Value) uintptr {
 }
 
 func call(th *Thread, fn Value, args ...Value) uintptr {
-	if th == MainThread {
-		heapSize := heap.CurSize()
-		defer func() {
-			if heap.CurSize() != heapSize {
-				Fatal("callback: heapSize", heapSize, "=>", heap.CurSize(),
-					"in", fn, args)
-			}
-		}()
-	}
 	state := th.GetState()
 	defer th.RestoreState(state)
 	defer func() {

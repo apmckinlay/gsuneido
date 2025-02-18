@@ -7,8 +7,8 @@ package builtin
 
 import (
 	"syscall"
+	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -21,13 +21,12 @@ var _ = builtin(DwmGetWindowAttributeRect,
 	"(hwnd, dwAttribute, pvAttribute, cbAttribute)")
 
 func DwmGetWindowAttributeRect(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	r := heap.Alloc(nRect)
+	r := toRect(c)
 	rtn, _, _ := syscall.SyscallN(dwmGetWindowAttribute,
 		intArg(a),
 		intArg(b),
-		uintptr(rectArg(c, r)),
+		uintptr(unsafe.Pointer(r)),
 		intArg(d))
-	urectToOb(r, c)
+	fromRect(r, c)
 	return intRet(rtn)
 }

@@ -32,6 +32,8 @@ gsuneido:
 	@$(CSIDE)
 	@rm -f gsuneido.exe
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)"
+	
+# export GOEXPERIMENT=cgocheck2 ; 
 
 race:
 ifdef PATHEXT

@@ -6,8 +6,9 @@
 package builtin
 
 import (
+	"unsafe"
+
 	"github.com/apmckinlay/gsuneido/builtin/goc"
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -44,20 +45,17 @@ func (*suWebBrowser2) SetConcurrent() {
 var _ = builtin(WebBrowser2, "(hwnd, dllPath, userDataFolder, cb)")
 
 func WebBrowser2(th *Thread, args []Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	iunk := heap.Alloc(int64Size)
-	rtn := goc.WebBrowser2(webview2_create, 
-		intArg(args[0]), 
-		uintptr(iunk), 
-		uintptr(stringArg(args[1])), 
-		uintptr(stringArg(args[2])), 
+	var iunk uintptr
+	rtn := goc.WebView2_Create(
+		intArg(args[0]),
+		unsafe.Pointer(&iunk),
+		ToStr(args[1]),
+		ToStr(args[2]),
 		NewCallback(th, args[3], 4))
 	if rtn != 0 {
 		return intRet(rtn)
 	}
-	iOleObject := *(*uintptr)(iunk)
-	swb := &suWebBrowser2{iOleObject: iOleObject}
-	return swb
+	return &suWebBrowser2{iOleObject: iunk}
 }
 
 var suWebBrowser2Methods = methods("web2")
@@ -66,7 +64,7 @@ var _ = method(web2_Release, "()")
 
 func web2_Release(this Value) Value {
 	wb := this.(*suWebBrowser2)
-	rtn := goc.WebBrowser2(webview2_close, wb.iOleObject, 0, 0, 0, 0)
+	rtn := goc.WebView2_Close(wb.iOleObject)
 	return intRet(rtn)
 }
 
@@ -76,65 +74,59 @@ func web2_Resize(this Value, _w Value, _h Value) Value {
 	wb := this.(*suWebBrowser2)
 	w := ToInt(_w)
 	h := ToInt(_h)
-	rtn := goc.WebBrowser2(webview2_resize, wb.iOleObject, uintptr(w), uintptr(h), 0, 0)
+	rtn := goc.WebView2_Resize(wb.iOleObject, uintptr(w), uintptr(h))
 	return intRet(rtn)
 }
 
 var _ = method(web2_Navigate, "(s)")
 
 func web2_Navigate(this Value, s Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	wb := this.(*suWebBrowser2)
-	rtn := goc.WebBrowser2(webview2_navigate, wb.iOleObject, uintptr(stringArg(s)), 0, 0, 0)
+	rtn := goc.WebView2_Navigate(wb.iOleObject, ToStr(s))
 	return intRet(rtn)
 }
 
 var _ = method(web2_NavigateToString, "(s)")
 
 func web2_NavigateToString(this Value, s Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	wb := this.(*suWebBrowser2)
-	rtn := goc.WebBrowser2(webview2_navigate_to_string, wb.iOleObject, uintptr(stringArg(s)), 0, 0, 0)
+	rtn := goc.WebView2_NavigateToString(wb.iOleObject, ToStr(s))
 	return intRet(rtn)
 }
 
 var _ = method(web2_ExecuteScript, "(script)")
 
 func web2_ExecuteScript(this Value, script Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	wb := this.(*suWebBrowser2)
-	rtn := goc.WebBrowser2(webview2_execute_script, wb.iOleObject, uintptr(stringArg(script)), 0, 0, 0)
+	rtn := goc.WebView2_ExecuteScript(wb.iOleObject, ToStr(script))
 	return intRet(rtn)
 }
 
 var _ = method(web2_GetSource, "()")
 
 func web2_GetSource(this Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	wb := this.(*suWebBrowser2)
-	buf := heap.Alloc(MAX_PATH)
-	rtn := goc.WebBrowser2(webview2_get_source, wb.iOleObject, uintptr(buf), 0, 0, 0)
+	buf := make([]byte, MAX_PATH)
+	rtn := goc.WebView2_GetSource(wb.iOleObject, &buf[0])
 	if rtn != 0 {
 		return EmptyStr
 	}
-	return SuStr(heap.GetStrZ(buf, MAX_PATH))
+	return bufZstr(buf)
 }
 
 var _ = method(web2_Print, "()")
 
 func web2_Print(this Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	wb := this.(*suWebBrowser2)
-	rtn := goc.WebBrowser2(webview2_print, wb.iOleObject, 0, 0, 0, 0)
+	rtn := goc.WebView2_Print(wb.iOleObject)
 	return intRet(rtn)
 }
 
 var _ = method(web2_SetFocus, "()")
 
 func web2_SetFocus(this Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	wb := this.(*suWebBrowser2)
-	rtn := goc.WebBrowser2(webview2_set_focus, wb.iOleObject, 0, 0, 0, 0)
+	rtn := goc.WebView2_SetFocus(wb.iOleObject)
 	return intRet(rtn)
 }
 

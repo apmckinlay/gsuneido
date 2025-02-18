@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -68,10 +67,7 @@ var createFontIndirect = gdi32.MustFindProc("CreateFontIndirectA").Addr()
 var _ = builtin(CreateFontIndirect, "(logfont)")
 
 func CreateFontIndirect(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nLogFont)
-	f := (*stLogFont)(p)
-	*f = stLogFont{
+	lf := stLogFont{
 		lfHeight:         getInt32(a, "lfHeight"),
 		lfWidth:          getInt32(a, "lfWidth"),
 		lfEscapement:     getInt32(a, "lfEscapement"),
@@ -86,9 +82,9 @@ func CreateFontIndirect(a Value) Value {
 		lfQuality:        byte(getInt(a, "lfQuality")),
 		lfPitchAndFamily: byte(getInt(a, "lfPitchAndFamily")),
 	}
-	getStrZbs(a, "lfFaceName", f.lfFaceName[:])
+	getZstrBs(a, "lfFaceName", lf.lfFaceName[:])
 	rtn, _, _ := syscall.SyscallN(createFontIndirect,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&lf)))
 	return intRet(rtn)
 }
 
@@ -98,16 +94,15 @@ var addFontMemResourceEx = gdi32.MustFindProc("AddFontMemResourceEx").Addr()
 var _ = builtin(AddFontMemResourceEx, "(pFileView, cjSize, pvResrved, pNumFonts)")
 
 func AddFontMemResourceEx(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	pFileView := ToStr(a)
 	cjSize := ToInt(b)
-	pNumFonts := heap.Alloc(int32Size)
+	var numFonts int32
 	rtn, _, _ := syscall.SyscallN(addFontMemResourceEx,
-		uintptr(heap.Copy(pFileView, cjSize)),
+		uintptr(unsafe.Pointer(unsafe.StringData(pFileView))),
 		uintptr(cjSize),
 		0,
-		uintptr(pNumFonts))
-	d.Put(nil, SuStr("x"), IntVal(int(*(*int32)(pNumFonts))))
+		uintptr(unsafe.Pointer(&numFonts)))
+	d.Put(nil, SuStr("x"), IntVal(int(numFonts)))
 	return intRet(rtn)
 }
 
@@ -116,12 +111,10 @@ var getTextMetrics = gdi32.MustFindProc("GetTextMetricsA").Addr()
 var _ = builtin(GetTextMetrics, "(hdc, tm)")
 
 func GetTextMetrics(a, b Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nTextMetric)
+	var tm stTextMetric
 	rtn, _, _ := syscall.SyscallN(getTextMetrics,
 		intArg(a),
-		uintptr(p))
-	tm := (*stTextMetric)(p)
+		uintptr(unsafe.Pointer(&tm)))
 	b.Put(nil, SuStr("Height"), IntVal(int(tm.Height)))
 	b.Put(nil, SuStr("Ascent"), IntVal(int(tm.Ascent)))
 	b.Put(nil, SuStr("Descent"), IntVal(int(tm.Descent)))
@@ -231,14 +224,13 @@ var getTextExtentPoint32 = gdi32.MustFindProc("GetTextExtentPoint32A").Addr()
 var _ = builtin(GetTextExtentPoint32, "(hdc, text, len, p)")
 
 func GetTextExtentPoint32(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	pt := heap.Alloc(nPoint)
+	var pt stPoint
 	rtn, _, _ := syscall.SyscallN(getTextExtentPoint32,
 		intArg(a),
-		uintptr(stringArg(b)),
+		uintptr(unsafe.Pointer(unsafe.StringData(ToStr(b)))),
 		uintptr(len(ToStr(b))),
-		uintptr(pt))
-	upointToOb(pt, d)
+		uintptr(unsafe.Pointer(&pt)))
+	fromPoint(&pt, d)
 	return boolRet(rtn)
 }
 
@@ -246,14 +238,13 @@ var getTextFace = gdi32.MustFindProc("GetTextFaceA").Addr()
 var _ = builtin(GetTextFace, "(hdc)")
 
 func GetTextFace(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	const bufsize = 512
-	p := heap.Alloc(bufsize)
+	buf := make([]byte, bufsize)
 	n, _, _ := syscall.SyscallN(getTextFace,
 		intArg(a),
 		bufsize,
-		uintptr(p))
-	return SuStr(heap.GetStrN(p, int(n)))
+		uintptr(unsafe.Pointer(&buf[0])))
+	return SuStr(string(buf[:n]))
 }
 
 // dll long Gdi32:SetBkMode(pointer hdc, long mode)
@@ -304,13 +295,12 @@ var getClipBox = gdi32.MustFindProc("GetClipBox").Addr()
 var _ = builtin(GetClipBox, "(hdc, rect)")
 
 func GetClipBox(a, b Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	r := heap.Alloc(nRect)
+	r := toRect(b)
 	rtn, _, _ := syscall.SyscallN(getClipBox,
 		intArg(a),
-		uintptr(rectArg(b, r)),
+		uintptr(unsafe.Pointer(r)),
 		0)
-	urectToOb(r, b)
+	fromRect(r, b)
 	return intRet(rtn)
 }
 
@@ -429,11 +419,10 @@ var createDC = gdi32.MustFindProc("CreateDCA").Addr()
 var _ = builtin(CreateDC, "(driver, device, output, devmode)")
 
 func CreateDC(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(createDC,
-		uintptr(stringArg(a)),
-		uintptr(stringArg(b)),
-		uintptr(stringArg(c)),
+		uintptr(zstrArg(a)),
+		uintptr(zstrArg(b)),
+		uintptr(zstrArg(c)),
 		intArg(d))
 	return intRet(rtn)
 }
@@ -513,9 +502,8 @@ var getEnhMetaFile = gdi32.MustFindProc("GetEnhMetaFileA").Addr()
 var _ = builtin(GetEnhMetaFile, "(filename)")
 
 func GetEnhMetaFile(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(getEnhMetaFile,
-		uintptr(stringArg(a)))
+		uintptr(zstrArg(a)))
 	return intRet(rtn)
 }
 
@@ -560,7 +548,6 @@ var polygon = gdi32.MustFindProc("Polygon").Addr()
 var _ = builtin(Polygon, "(hdc, points, npoints = false)")
 
 func Polygon(a, b, c Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	ob := ToContainer(b)
 	var n int
 	if c == False {
@@ -568,14 +555,13 @@ func Polygon(a, b, c Value) Value {
 	} else {
 		n = ToInt(c)
 	}
-	p := heap.Alloc(uintptr(n) * nPoint)
+	p := make([]stPoint, n)
 	for i := range min(n, ob.ListSize()) {
-		*(*stPoint)(unsafe.Pointer(uintptr(p) + uintptr(i)*nPoint)) =
-			obToPoint(ob.ListGet(i))
+		p[i] = *toPoint(ob.ListGet(i))
 	}
 	rtn, _, _ := syscall.SyscallN(polygon,
 		intArg(a),
-		uintptr(p),
+		uintptr(unsafe.Pointer(unsafe.SliceData(p))),
 		intArg(c))
 	return boolRet(rtn)
 }
@@ -639,10 +625,9 @@ var setEnhMetaFileBits = gdi32.MustFindProc("SetEnhMetaFileBits").Addr()
 var _ = builtin(SetEnhMetaFileBits, "(cbBuffer, lpData)")
 
 func SetEnhMetaFileBits(a, b Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(setEnhMetaFileBits,
 		intArg(a),
-		uintptr(stringArg(b)))
+		uintptr(unsafe.Pointer(unsafe.StringData(ToStr(b)))))
 	return intRet(rtn)
 }
 
@@ -695,12 +680,11 @@ var textOut = gdi32.MustFindProc("TextOutA").Addr()
 var _ = builtin(TextOut, "(hdc, x, y, text, n)")
 
 func TextOut(a, b, c, d, e Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(textOut,
 		intArg(a),
 		intArg(b),
 		intArg(c),
-		uintptr(stringArg(d)),
+		uintptr(unsafe.Pointer(unsafe.StringData(ToStr(d)))),
 		intArg(e))
 	return boolRet(rtn)
 }
@@ -732,13 +716,11 @@ var createEnhMetaFile = gdi32.MustFindProc("CreateEnhMetaFileA").Addr()
 var _ = builtin(CreateEnhMetaFile, "(hdcRef, filename, rect, desc)")
 
 func CreateEnhMetaFile(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	r := heap.Alloc(nRect)
 	rtn, _, _ := syscall.SyscallN(createEnhMetaFile,
 		intArg(a),
-		uintptr(stringArg(b)),
-		uintptr(rectArg(c, r)),
-		uintptr(stringArg(d)))
+		uintptr(zstrArg(b)),
+		uintptr(unsafe.Pointer(toRect(c))),
+		uintptr(zstrArg(d)))
 	return intRet(rtn)
 }
 
@@ -751,7 +733,6 @@ var createFont = gdi32.MustFindProc("CreateFontA").Addr()
 var _ = builtin(CreateFont, "(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)")
 
 func CreateFont(_ *Thread, a []Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(createFont,
 		intArg(a[0]),
 		intArg(a[1]),
@@ -766,7 +747,7 @@ func CreateFont(_ *Thread, a []Value) Value {
 		intArg(a[10]),
 		intArg(a[11]),
 		intArg(a[12]),
-		uintptr(stringArg(a[13])))
+		uintptr(zstrArg(a[13])))
 	return intRet(rtn)
 }
 
@@ -777,16 +758,14 @@ var _ = builtin(ExtTextOut,
 	"(hdc, x, y, fuOptions, lprc, lpString, cbCount, lpDx/*unused*/)")
 
 func ExtTextOut(_ *Thread, a []Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	r := heap.Alloc(nRect)
 	assert.That(a[7].Equal(Zero))
 	rtn, _, _ := syscall.SyscallN(extTextOut,
 		intArg(a[0]),
 		intArg(a[1]),
 		intArg(a[2]),
 		intArg(a[3]),
-		uintptr(rectArg(a[4], r)),
-		uintptr(stringArg(a[5])),
+		uintptr(unsafe.Pointer(toRect(a[4]))),
+		uintptr(unsafe.Pointer(unsafe.StringData(ToStr(a[5])))),
 		intArg(a[6]),
 		0)
 	return boolRet(rtn)
@@ -811,9 +790,7 @@ var _ = builtin(ExtCreatePen, "(dwPenStyle, dwWidth, brush, "+
 	"dwStyleCount/*unused*/, lpStyle/*unused*/)")
 
 func ExtCreatePen(a, b, c, d, e Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nLogBrush)
-	*(*stLogBrush)(p) = stLogBrush{
+	lb := stLogBrush{
 		lbStyle: getInt32(c, "lbStyle"),
 		lbColor: getInt32(c, "lbColor"),
 		lbHatch: getUintptr(c, "lbHatch"),
@@ -821,7 +798,7 @@ func ExtCreatePen(a, b, c, d, e Value) Value {
 	rtn, _, _ := syscall.SyscallN(extCreatePen,
 		intArg(a),
 		intArg(b),
-		uintptr(p),
+		uintptr(unsafe.Pointer(&lb)),
 		0,
 		0)
 	return intRet(rtn)
@@ -842,10 +819,8 @@ var _ = builtin(GetGlyphOutline, "(hdc, uChar, uFormat, lpgm, "+
 	"cbBuffer/*unused*/, lpvBuffer/*unused*/, lpmat2)")
 
 func GetGlyphOutline(a, b, c, d, e, f, g Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p1 := heap.Alloc(nGlyphMetrics)
-	p2 := heap.Alloc(nMat2)
-	*(*stMat2)(p2) = stMat2{
+	var gm stGlyphMetrics
+	m2 := stMat2{
 		eM11: stFixed{
 			fract: getInt16(g.Get(nil, SuStr("eM11")), "fract"),
 			value: getInt16(g.Get(nil, SuStr("eM11")), "value")},
@@ -863,15 +838,14 @@ func GetGlyphOutline(a, b, c, d, e, f, g Value) Value {
 		intArg(a),
 		intArg(b),
 		intArg(c),
-		uintptr(p1),
+		uintptr(unsafe.Pointer(&gm)),
 		0,
 		0,
-		uintptr(p2))
-	gm := *(*stGlyphMetrics)(p1)
+		uintptr(unsafe.Pointer(&m2)))
 	d.Put(nil, SuStr("gmBlackBoxX"), IntVal(int(gm.gmBlackBoxX)))
 	d.Put(nil, SuStr("gmBlackBoxY"), IntVal(int(gm.gmBlackBoxY)))
 	d.Put(nil, SuStr("gmptGlyphOrigin"),
-		pointToOb(&gm.gmptGlyphOrigin, d.Get(nil, SuStr("gmptGlyphOrigin"))))
+		fromPoint(&gm.gmptGlyphOrigin, d.Get(nil, SuStr("gmptGlyphOrigin"))))
 	d.Put(nil, SuStr("gmCellIncX"), IntVal(int(gm.gmCellIncX)))
 	d.Put(nil, SuStr("gmCellIncY"), IntVal(int(gm.gmCellIncY)))
 	return intRet(rtn)
@@ -906,18 +880,16 @@ var startDoc = gdi32.MustFindProc("StartDocA").Addr()
 var _ = builtin(StartDoc, "(hdc, di)")
 
 func StartDoc(a, b Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nDocInfo)
-	*(*stDocInfo)(p) = stDocInfo{
+	di := stDocInfo{
 		cbSize:       uint32(nDocInfo),
-		lpszDocName:  getStr(b, "lpszDocName"),
-		lpszOutput:   getStr(b, "lpszOutput"),
-		lpszDatatype: getStr(b, "lpszDatatype"),
+		lpszDocName:  getZstr(b, "lpszDocName"),
+		lpszOutput:   getZstr(b, "lpszOutput"),
+		lpszDatatype: getZstr(b, "lpszDatatype"),
 		fwType:       getInt32(b, "fwType"),
 	}
 	rtn, _, _ := syscall.SyscallN(startDoc,
 		intArg(a),
-		uintptr(p))
+		uintptr(unsafe.Pointer(&di)))
 	return intRet(rtn)
 }
 
@@ -937,15 +909,14 @@ var setWindowExtEx = gdi32.MustFindProc("SetWindowExtEx").Addr()
 var _ = builtin(SetWindowExtEx, "(hdc, x, y, p)")
 
 func SetWindowExtEx(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	pt := heap.Alloc(nPoint)
+	var pt stPoint
 	rtn, _, _ := syscall.SyscallN(setWindowExtEx,
 		intArg(a),
 		intArg(b),
 		intArg(c),
-		uintptr(pt))
+		uintptr(unsafe.Pointer(&pt)))
 	if !d.Equal(Zero) {
-		upointToOb(pt, d)
+		fromPoint(&pt, d)
 	}
 	return boolRet(rtn)
 }
@@ -955,15 +926,14 @@ var setViewportOrgEx = gdi32.MustFindProc("SetViewportOrgEx").Addr()
 var _ = builtin(SetViewportOrgEx, "(hdc, x, y, p)")
 
 func SetViewportOrgEx(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	pt := heap.Alloc(nPoint)
+	var pt stPoint
 	rtn, _, _ := syscall.SyscallN(setViewportOrgEx,
 		intArg(a),
 		intArg(b),
 		intArg(c),
-		uintptr(pt))
+		uintptr(unsafe.Pointer(&pt)))
 	if !d.Equal(Zero) {
-		upointToOb(pt, d)
+		fromPoint(&pt, d)
 	}
 	return boolRet(rtn)
 }
@@ -973,15 +943,14 @@ var setViewportExtEx = gdi32.MustFindProc("SetViewportExtEx").Addr()
 var _ = builtin(SetViewportExtEx, "(hdc, x, y, p)")
 
 func SetViewportExtEx(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	pt := heap.Alloc(nPoint)
+	var pt stPoint
 	rtn, _, _ := syscall.SyscallN(setViewportExtEx,
 		intArg(a),
 		intArg(b),
 		intArg(c),
-		uintptr(pt))
+		uintptr(unsafe.Pointer(&pt)))
 	if !d.Equal(Zero) {
-		upointToOb(pt, d)
+		fromPoint(&pt, d)
 	}
 	return boolRet(rtn)
 }
@@ -991,12 +960,10 @@ var playEnhMetaFile = gdi32.MustFindProc("PlayEnhMetaFile").Addr()
 var _ = builtin(PlayEnhMetaFile, "(hdc, hemf, rect)")
 
 func PlayEnhMetaFile(a, b, c Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	r := heap.Alloc(nRect)
 	rtn, _, _ := syscall.SyscallN(playEnhMetaFile,
 		intArg(a),
 		intArg(b),
-		uintptr(rectArg(c, r)))
+		uintptr(unsafe.Pointer(toRect(c))))
 	return boolRet(rtn)
 }
 
@@ -1005,18 +972,14 @@ var moveToEx = gdi32.MustFindProc("MoveToEx").Addr()
 var _ = builtin(MoveToEx, "(hdc, x, y, p)")
 
 func MoveToEx(a, b, c, d Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	var pt unsafe.Pointer
-	if !d.Equal(Zero) {
-		pt = heap.Alloc(nPoint)
-	}
+	var pt stPoint
 	rtn, _, _ := syscall.SyscallN(moveToEx,
 		intArg(a),
 		intArg(b),
 		intArg(c),
-		uintptr(pt))
-	if pt != nil {
-		upointToOb(pt, d)
+		uintptr(unsafe.Pointer(&pt)))
+	if d != Zero {
+		fromPoint(&pt, d)
 	}
 	return boolRet(rtn)
 }
@@ -1027,13 +990,11 @@ var getObject = gdi32.MustFindProc("GetObjectA").Addr()
 var _ = builtin(GetObjectBrush, "(h)")
 
 func GetObjectBrush(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nLogBrush)
-	lb := (*stLogBrush)(p)
+	var lb stLogBrush
 	rtn, _, _ := syscall.SyscallN(getObject,
 		intArg(a),
 		nLogBrush,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&lb)))
 	if rtn != nLogBrush {
 		return False
 	}
@@ -1047,13 +1008,11 @@ func GetObjectBrush(a Value) Value {
 var _ = builtin(GetObjectBitmap, "(h)")
 
 func GetObjectBitmap(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nBitMap)
-	bm := (*stBitMap)(p)
+	var bm stBitMap
 	rtn, _, _ := syscall.SyscallN(getObject,
 		intArg(a),
 		nBitMap,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&bm)))
 	if rtn != nBitMap {
 		return False
 	}
@@ -1100,18 +1059,15 @@ var _ = builtin(GetDIBits,
 	"(hdc, hbmp, uStartScan, cScanLines, lpvBits, lpbi, uUsage)")
 
 func GetDIBits(a, b, c, d, e, f, g Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nBitMapInfoHeader)
 	hdr := f.Get(nil, SuStr("bmiHeader"))
-	bmih := (*stBitMapInfoHeader)(p)
-	*bmih = obToBMIH(hdr)
+	bmih := toBitMapInfoHeader(hdr)
 	rtn, _, _ := syscall.SyscallN(getDIBits,
 		intArg(a),
 		intArg(b),
 		intArg(c),
 		intArg(d),
 		intArg(e),
-		uintptr(p),
+		uintptr(unsafe.Pointer(&bmih)),
 		intArg(g))
 	hdr.Put(nil, SuStr("biSizeImage"), IntVal(int(bmih.biSizeImage)))
 	hdr.Put(nil, SuStr("biXPelsPerMeter"), IntVal(int(bmih.biXPelsPerMeter)))

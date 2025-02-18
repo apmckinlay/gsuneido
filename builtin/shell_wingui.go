@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
 var shell32 = MustLoadDLL("shell32.dll")
@@ -32,15 +32,14 @@ var shGetPathFromIDList = shell32.MustFindProc("SHGetPathFromIDListA").Addr()
 var _ = builtin(SHGetPathFromIDList, "(pidl)")
 
 func SHGetPathFromIDList(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	buf := heap.Alloc(MAX_PATH)
+	var buf [MAX_PATH]byte
 	rtn, _, _ := syscall.SyscallN(shGetPathFromIDList,
 		intArg(a),
-		uintptr(buf))
+		uintptr(unsafe.Pointer(&buf)))
 	if rtn == 0 {
 		return EmptyStr
 	}
-	return SuStr(heap.GetStrZ(buf, MAX_PATH))
+	return bufZstr(buf[:])
 }
 
 // dll long Shell32:DragQueryFile(
@@ -55,14 +54,13 @@ func DragQueryFile(a, b Value) Value {
 		intArg(b),
 		0,
 		0)
-	defer heap.FreeTo(heap.CurSize())
-	buf := heap.Alloc(n + 1)
+	buf := make([]byte, n+1)
 	syscall.SyscallN(dragQueryFile,
 		intArg(a),
 		intArg(b),
-		uintptr(buf),
+		uintptr(unsafe.Pointer(&buf[0])),
 		n+1)
-	return SuStr(heap.GetStrN(buf, int(n)))
+	return SuStr(hacks.BStoS(buf[:n]))
 }
 
 var _ = builtin(DragQueryFileCount, "(hDrop)")
@@ -81,10 +79,7 @@ var shell_NotifyIcon = shell32.MustFindProc("Shell_NotifyIconA").Addr()
 var _ = builtin(Shell_NotifyIcon, "(dwMessage, lpdata)")
 
 func Shell_NotifyIcon(a, b Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nNotifyIconData)
-	nid := (*stNotifyIconData)(p)
-	*nid = stNotifyIconData{
+	nid := stNotifyIconData{
 		cbSize:               uint32(nNotifyIconData),
 		hWnd:                 getUintptr(b, "hWnd"),
 		uID:                  getInt32(b, "uID"),
@@ -96,12 +91,12 @@ func Shell_NotifyIcon(a, b Value) Value {
 		uTimeoutVersionUnion: getUint32(b, "uTimeoutVersionUnion"),
 		dwInfoFlags:          getInt32(b, "dwInfoFlags"),
 	}
-	getStrZbs(b, "szTip", nid.szTip[:])
-	getStrZbs(b, "szInfo", nid.szInfo[:])
-	getStrZbs(b, "szInfoTitle", nid.szInfoTitle[:])
+	getZstrBs(b, "szTip", nid.szTip[:])
+	getZstrBs(b, "szInfo", nid.szInfo[:])
+	getZstrBs(b, "szInfoTitle", nid.szInfoTitle[:])
 	rtn, _, _ := syscall.SyscallN(shell_NotifyIcon,
 		intArg(a),
-		uintptr(p))
+		uintptr(unsafe.Pointer(&nid)))
 	return boolRet(rtn)
 }
 
@@ -130,27 +125,25 @@ var shellExecuteEx = shell32.MustFindProc("ShellExecuteExA").Addr()
 var _ = builtin(ShellExecuteEx, "(lpExecInfo)")
 
 func ShellExecuteEx(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nShellExecuteInfo)
-	*(*stShellExecuteInfo)(p) = stShellExecuteInfo{
+	sei := stShellExecuteInfo{
 		cbSize:       int32(nShellExecuteInfo),
 		fMask:        getInt32(a, "fMask"),
 		hwnd:         getUintptr(a, "hwnd"),
-		lpVerb:       getStr(a, "lpVerb"),
-		lpFile:       getStr(a, "lpFile"),
-		lpDirectory:  getStr(a, "lpDirectory"),
-		lpParameters: getStr(a, "lpParameters"),
+		lpVerb:       getZstr(a, "lpVerb"),
+		lpFile:       getZstr(a, "lpFile"),
+		lpDirectory:  getZstr(a, "lpDirectory"),
+		lpParameters: getZstr(a, "lpParameters"),
 		nShow:        getInt32(a, "nShow"),
 		hInstApp:     getUintptr(a, "hInstApp"),
 		lpIDList:     getUintptr(a, "lpIDList"),
-		lpClass:      getStr(a, "lpClass"),
+		lpClass:      getZstr(a, "lpClass"),
 		hkeyClass:    getUintptr(a, "hkeyClass"),
 		dwHotKey:     getInt32(a, "dwHotKey"),
 		hIcon:        getUintptr(a, "hIcon"),
 		hProcess:     getUintptr(a, "hProcess"),
 	}
 	rtn, _, _ := syscall.SyscallN(shellExecuteEx,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&sei)))
 	return boolRet(rtn)
 }
 
@@ -181,21 +174,19 @@ var sHBrowseForFolder = shell32.MustFindProc("SHBrowseForFolderA").Addr()
 var _ = builtin(SHBrowseForFolder, "(lpbi)")
 
 func SHBrowseForFolder(th *Thread, args []Value) Value {
-	bi := args[0]
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nBrowseInfo)
-	*(*stBrowseInfo)(p) = stBrowseInfo{
-		hwndOwner:      getUintptr(bi, "hwndOwner"),
-		pidlRoot:       getUintptr(bi, "pidlRoot"),
+	b := args[0]
+	bi := stBrowseInfo{
+		hwndOwner:      getUintptr(b, "hwndOwner"),
+		pidlRoot:       getUintptr(b, "pidlRoot"),
 		pszDisplayName: nil,
-		lpszTitle:      getStr(bi, "lpszTitle"),
-		ulFlags:        getInt32(bi, "ulFlags"),
-		lpfn:           getCallback(th, bi, "lpfn", 4),
-		lParam:         getUintptr(bi, "lParam"),
-		iImage:         getInt32(bi, "iImage"),
+		lpszTitle:      getZstr(b, "lpszTitle"),
+		ulFlags:        getInt32(b, "ulFlags"),
+		lpfn:           getCallback(th, b, "lpfn", 4),
+		lParam:         getUintptr(b, "lParam"),
+		iImage:         getInt32(b, "iImage"),
 	}
 	rtn, _, _ := syscall.SyscallN(sHBrowseForFolder,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&bi)))
 	return intRet(rtn)
 }
 
@@ -224,9 +215,10 @@ func ErrlogDir() string {
 		CSIDL_APPDATA|CSIDL_FLAG_CREATE,
 		0,
 		0,
-		uintptr(unsafe.Pointer(&buf[0])))
-	if rtn != 0 {
+		uintptr(unsafe.Pointer(&buf)))
+	i := bytes.IndexByte(buf[:], 0)
+	if rtn != 0 || i == -1 {
 		return "" // failed
 	}
-	return string(buf[:bytes.IndexByte(buf[:], 0)]) + `\`
+	return string(buf[:i]) + `\`
 }

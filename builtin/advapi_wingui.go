@@ -22,7 +22,7 @@ func RegOpenKeyEx(a, b, c, d, e Value) Value {
 	var result uintptr
 	rtn, _, _ := syscall.SyscallN(regOpenKeyEx,
 		intArg(a),
-		uintptr(unsafe.Pointer(zstrArg(b))),
+		uintptr(zstrArg(b)),
 		intArg(c),
 		intArg(d),
 		uintptr(unsafe.Pointer(&result)))
@@ -49,9 +49,9 @@ func RegCreateKeyEx(_ *Thread, a []Value) Value {
 	var result uintptr
 	rtn, _, _ := syscall.SyscallN(regCreateKeyEx,
 		intArg(a[0]),
-		uintptr(unsafe.Pointer(zstrArg(a[1]))),
+		uintptr(zstrArg(a[1])),
 		0, // Reserved - must be 0
-		uintptr(unsafe.Pointer(zstrArg(a[3]))),
+		uintptr(zstrArg(a[3])),
 		intArg(a[4]),
 		intArg(a[5]),
 		0, // lpSecurityAttributes - always null
@@ -71,7 +71,7 @@ func RegQueryValueEx(a, b, c, d, e, f Value) Value {
 	cbData := int32(int32Size)
 	rtn, _, _ := syscall.SyscallN(regQueryValueEx,
 		intArg(a),
-		uintptr(unsafe.Pointer(zstrArg(b))),
+		uintptr(zstrArg(b)),
 		0, // lpReserved - must be 0
 		0, // lpType - NULL
 		uintptr(unsafe.Pointer(&data)),
@@ -91,7 +91,7 @@ func RegSetValueEx(a, b, c, d, e, f Value) Value {
 	data := getInt32(e, "x")
 	rtn, _, _ := syscall.SyscallN(regSetValueEx,
 		intArg(a),
-		uintptr(unsafe.Pointer(zstrArg(b))),
+		uintptr(zstrArg(b)),
 		0,         // reserved - must be 0
 		REG_DWORD, // dwType
 		uintptr(unsafe.Pointer(&data)),

@@ -6,11 +6,11 @@
 package builtin
 
 import (
+	"bytes"
 	"syscall"
+	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sys/windows"
 )
@@ -53,15 +53,17 @@ func pcm_Version() Value {
 	if pcmsrv.Load() != nil {
 		return False
 	}
-	defer heap.FreeTo(heap.CurSize())
+	which := []byte("ProductVersion\x00")
 	const buflen = 200
-	buf := heap.Alloc(buflen)
+	buf := make([]byte, buflen)
 	syscall.SyscallN(pcmsAbout.Addr(),
-		uintptr(heap.CopyStr("ProductVersion")),
-		uintptr(buf),
+		uintptr(unsafe.Pointer(&which[0])),
+		uintptr(unsafe.Pointer(&buf[0])),
 		buflen)
-	s := heap.GetStrZ(buf, int(buflen))
-	return SuStr(str.BeforeFirst(s, "."))
+	if i := bytes.IndexAny(buf, ".\x00"); i >= 0 {
+		buf = buf[:i]
+	}
+	return SuStr(string(buf))
 }
 
 // dll long pcmsrv32:PCMSAddStop(long tripId, [in] string stop)
@@ -69,10 +71,9 @@ var pcmsAddStop = pcmsrv.NewProc("PCMSAddStop")
 var _ = staticMethod(pcm_PCMAddStop, "(tripId, stop)")
 
 func pcm_PCMAddStop(a, b Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(pcmsAddStop.Addr(),
 		intArg(a),
-		uintptr(stringArg(b)))
+		uintptr(zstrArg(b)))
 	return int32Ret(rtn)
 }
 
@@ -91,11 +92,10 @@ var pcmsCalcTrip = pcmsrv.NewProc("PCMSCalcTrip")
 var _ = staticMethod(pcm_PCMCalcTrip, "(tripId, orig, dest)")
 
 func pcm_PCMCalcTrip(a, b, c Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(pcmsCalcTrip.Addr(),
 		intArg(a),
-		uintptr(stringArg(b)),
-		uintptr(stringArg(c)))
+		uintptr(zstrArg(b)),
+		uintptr(zstrArg(c)))
 	return int32Ret(rtn)
 }
 
@@ -126,15 +126,14 @@ var pcmsGetMatch = pcmsrv.NewProc("PCMSGetMatch")
 var _ = staticMethod(pcm_GetMatch, "(tripId, i)")
 
 func pcm_GetMatch(a, b Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	const buflen = 200
-	buf := heap.Alloc(buflen)
+	buf := make([]byte, buflen)
 	syscall.SyscallN(pcmsGetMatch.Addr(),
 		intArg(a),
 		intArg(b),
-		uintptr(buf),
+		uintptr(unsafe.Pointer(&buf[0])),
 		buflen)
-	return SuStr(heap.GetStrZ(buf, int(buflen)))
+	return bufZstr(buf)
 }
 
 // dll long pcmsrv32:PCMSGetRpt(long tripId, long rpt, string buffer, long bufLen)
@@ -154,14 +153,13 @@ func pcm_GetRpt(a, b Value) Value {
 	if size <= 0 {
 		return False
 	}
-	defer heap.FreeTo(heap.CurSize())
-	buf := heap.Alloc(size)
+	buf := make([]byte, size)
 	syscall.SyscallN(pcmsGetRpt.Addr(),
 		intArg(a),
 		intArg(b),
-		uintptr(buf),
+		uintptr(unsafe.Pointer(&buf[0])),
 		size)
-	return SuStr(heap.GetStrZ(buf, int(size)))
+	return bufZstr(buf)
 }
 
 // dll long pcmsrv32:PCMSNewTrip(long serverId)
@@ -232,10 +230,9 @@ var pcmsLookup = pcmsrv.NewProc("PCMSLookup")
 var _ = staticMethod(pcm_PCMLookup, "(tripId, placeName, easyMatch)")
 
 func pcm_PCMLookup(a, b, c Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(pcmsLookup.Addr(),
 		intArg(a),
-		uintptr(stringArg(b)),
+		uintptr(zstrArg(b)),
 		intArg(c))
 	return int32Ret(rtn)
 }

@@ -6,10 +6,10 @@
 package builtin
 
 import (
+	"bytes"
 	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -29,10 +29,7 @@ var printDlg = comdlg32.MustFindProc("PrintDlgA").Addr()
 var _ = builtin(PrintDlg, "(printdlg)")
 
 func PrintDlg(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nPrintDlg)
-	pd := (*stPrintDlg)(p)
-	*pd = stPrintDlg{
+	pd := stPrintDlg{
 		lStructSize:         uint32(nPrintDlg),
 		hwndOwner:           getUintptr(a, "hwndOwner"),
 		hDevMode:            getUintptr(a, "hDevMode"),
@@ -46,13 +43,13 @@ func PrintDlg(a Value) Value {
 		nCopies:             getInt16(a, "nCopies"),
 		hInstance:           getUintptr(a, "hInstance"),
 		lCustData:           getUintptr(a, "lCustData"),
-		lpPrintTemplateName: getStr(a, "lpPrintTemplateName"),
-		lpSetupTemplateName: getStr(a, "lpSetupTemplateName"),
+		lpPrintTemplateName: getZstr(a, "lpPrintTemplateName"),
+		lpSetupTemplateName: getZstr(a, "lpSetupTemplateName"),
 		hPrintTemplate:      getUintptr(a, "hPrintTemplate"),
 		hSetupTemplate:      getUintptr(a, "hSetupTemplate"),
 	}
 	rtn, _, _ := syscall.SyscallN(printDlg,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&pd)))
 	a.Put(nil, SuStr("hwndOwner"), IntVal(int(pd.hwndOwner)))
 	a.Put(nil, SuStr("hDevMode"), IntVal(int(pd.hDevMode)))
 	a.Put(nil, SuStr("hDevNames"), IntVal(int(pd.hDevNames)))
@@ -99,10 +96,7 @@ var pageSetupDlg = comdlg32.MustFindProc("PageSetupDlgA").Addr()
 var _ = builtin(PageSetupDlg, "(pagesetupdlg)")
 
 func PageSetupDlg(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nPageSetupDlg)
-	psd := (*stPageSetupDlg)(p)
-	*psd = stPageSetupDlg{
+	psd := stPageSetupDlg{
 		lStructSize:             uint32(nPageSetupDlg),
 		ptPaperSize:             getPoint(a, "ptPaperSize"),
 		rtMinMargin:             getRect(a, "rtMinMargin"),
@@ -115,21 +109,21 @@ func PageSetupDlg(a Value) Value {
 		lCustData:               getUintptr(a, "lCustData"),
 		lpfnPageSetupHook:       0,
 		lpfnPagePaintHook:       0,
-		lpPageSetupTemplateName: getStr(a, "lpPageSetupTemplateName"),
+		lpPageSetupTemplateName: getZstr(a, "lpPageSetupTemplateName"),
 		hPageSetupTemplate:      getUintptr(a, "hPageSetupTemplate"),
 	}
 	rtn, _, _ := syscall.SyscallN(pageSetupDlg,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&psd)))
 	a.Put(nil, SuStr("hwndOwner"), IntVal(int(psd.hwndOwner)))
 	a.Put(nil, SuStr("hDevMode"), IntVal(int(psd.hDevMode)))
 	a.Put(nil, SuStr("hDevNames"), IntVal(int(psd.hDevNames)))
 	a.Put(nil, SuStr("Flags"), IntVal(int(psd.Flags)))
 	a.Put(nil, SuStr("ptPaperSize"),
-		pointToOb(&psd.ptPaperSize, a.Get(nil, SuStr("ptPaperSize"))))
+		fromPoint(&psd.ptPaperSize, a.Get(nil, SuStr("ptPaperSize"))))
 	a.Put(nil, SuStr("rtMinMargin"),
-		rectToOb(&psd.rtMinMargin, a.Get(nil, SuStr("rtMinMargin"))))
+		fromRect(&psd.rtMinMargin, a.Get(nil, SuStr("rtMinMargin"))))
 	a.Put(nil, SuStr("rtMargin"),
-		rectToOb(&psd.rtMargin, a.Get(nil, SuStr("rtMargin"))))
+		fromRect(&psd.rtMargin, a.Get(nil, SuStr("rtMargin"))))
 	a.Put(nil, SuStr("hInstance"), IntVal(int(psd.hInstance)))
 	a.Put(nil, SuStr("lCustData"), IntVal(int(psd.lCustData)))
 	a.Put(nil, SuStr("lpfnPageSetupHook"), IntVal(int(psd.lpfnPageSetupHook)))
@@ -162,12 +156,11 @@ var getSaveFileName = comdlg32.MustFindProc("GetSaveFileNameA").Addr()
 var _ = builtin(GetSaveFileName, "(a)")
 
 func GetSaveFileName(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p, buf, bufsize := buildOPENFILENAME(a)
+	ofn, buf := buildOPENFILENAME(a)
 	rtn, _, _ := syscall.SyscallN(getSaveFileName,
-		uintptr(p))
+		uintptr(unsafe.Pointer(ofn)))
 	if rtn != 0 {
-		a.Put(nil, SuStr("file"), SuStr(heap.GetStrZ(buf, bufsize)))
+		a.Put(nil, SuStr("file"), bufZstr(buf))
 	}
 	return boolRet(rtn)
 }
@@ -177,33 +170,35 @@ var getOpenFileName = comdlg32.MustFindProc("GetOpenFileNameA").Addr()
 var _ = builtin(GetOpenFileName, "(a)")
 
 func GetOpenFileName(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p, buf, bufsize := buildOPENFILENAME(a)
+	ofn, buf := buildOPENFILENAME(a)
 	rtn, _, _ := syscall.SyscallN(getOpenFileName,
-		uintptr(p))
+		uintptr(unsafe.Pointer(ofn)))
 	if rtn != 0 {
-		a.Put(nil, SuStr("file"), bufStrZ2(buf, uintptr(bufsize)))
+		i := bytes.Index(buf, []byte{0, 0}) // double nul terminated
+		if i == -1 {
+			i = len(buf) - 2
+		}
+		a.Put(nil, SuStr("file"), SuStr(string(buf[:i+2])))
 	}
 	return boolRet(rtn)
 }
 
-func buildOPENFILENAME(a Value) (p unsafe.Pointer, buf unsafe.Pointer, bufsize int) {
-	bufsize = getInt(a, "maxFile")
-	file := ToStr(a.Get(nil, SuStr("file")))
-	buf = heap.Copy(file, bufsize)
-	p = heap.Alloc(nOpenFileName)
-	*(*stOpenFileName)(p) = stOpenFileName{
+func buildOPENFILENAME(a Value) (*stOpenFileName, []byte) {
+	bufsize := getInt(a, "maxFile")
+	buf := make([]byte, bufsize)
+	copy(buf, ToStr(a.Get(nil, SuStr("file"))))
+	ofn := &stOpenFileName{
 		structSize: int32(nOpenFileName),
 		hwndOwner:  getUintptr(a, "hwndOwner"),
-		file:       (*byte)(buf),
+		file:       &buf[0],
 		maxFile:    int32(bufsize),
-		filter:     getStr(a, "filter"),
+		filter:     getZstr(a, "filter"),
 		flags:      getInt32(a, "flags"),
-		defExt:     getStr(a, "defExt"),
-		initialDir: getStr(a, "initialDir"),
-		title:      getStr(a, "title"),
+		defExt:     getZstr(a, "defExt"),
+		initialDir: getZstr(a, "initialDir"),
+		title:      getZstr(a, "title"),
 	}
-	return
+	return ofn, buf
 }
 
 type stOpenFileName struct {
@@ -239,8 +234,7 @@ var chooseColor = comdlg32.MustFindProc("ChooseColorA").Addr()
 var _ = builtin(ChooseColor, "(x)")
 
 func ChooseColor(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	custColors := (*CustColors)(heap.Alloc(nCustColors * int32Size))
+	var custColors CustColors
 	ccs := a.Get(nil, SuStr("custColors"))
 	if ccs != nil {
 		for i := range nCustColors {
@@ -249,25 +243,23 @@ func ChooseColor(a Value) Value {
 			}
 		}
 	}
-	p := heap.Alloc(nChooseColor)
-	cc := (*stChooseColor)(p)
-	*cc = stChooseColor{
+	cc := stChooseColor{
 		size:         int32(nChooseColor),
 		owner:        getUintptr(a, "owner"),
 		instance:     getUintptr(a, "instance"),
 		rgbResult:    getInt32(a, "rgbResult"),
-		custColors:   custColors,
+		custColors:   &custColors,
 		flags:        getInt32(a, "flags"),
 		custData:     getUintptr(a, "custData"),
 		hook:         getUintptr(a, "hook"),
-		templateName: getStr(a, "templateName"),
+		templateName: getZstr(a, "templateName"),
 	}
 	rtn, _, _ := syscall.SyscallN(chooseColor,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&cc)))
 	a.Put(nil, SuStr("rgbResult"), IntVal(int(cc.rgbResult)))
 	a.Put(nil, SuStr("flags"), IntVal(int(cc.flags)))
 	if ccs != nil {
-		for i := range nCustColors {
+		for i := range custColors {
 			ccs.Put(nil, SuInt(i), IntVal(int(custColors[i])))
 		}
 	}
@@ -297,10 +289,8 @@ var chooseFont = comdlg32.MustFindProc("ChooseFontA").Addr()
 var _ = builtin(ChooseFont, "(cf)")
 
 func ChooseFont(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	lf := (*stLogFont)(heap.Alloc(nLogFont))
 	lfob := a.Get(nil, SuStr("lpLogFont"))
-	*lf = stLogFont{
+	lf := stLogFont{
 		lfHeight:         getInt32(lfob, "lfHeight"),
 		lfWidth:          getInt32(lfob, "lfWidth"),
 		lfEscapement:     getInt32(lfob, "lfEscapement"),
@@ -315,27 +305,26 @@ func ChooseFont(a Value) Value {
 		lfQuality:        byte(getInt(lfob, "lfQuality")),
 		lfPitchAndFamily: byte(getInt(lfob, "lfPitchAndFamily")),
 	}
-	getStrZbs(lfob, "lfFaceName", lf.lfFaceName[:])
-	p := heap.Alloc(nChooseFont)
-	*(*stChooseFont)(p) = stChooseFont{
+	getZstrBs(lfob, "lfFaceName", lf.lfFaceName[:])
+	cf := stChooseFont{
 		lStructSize:    uint32(nChooseFont),
 		hwndOwner:      getUintptr(a, "hwndOwner"),
 		hDC:            getUintptr(a, "hDC"),
-		lpLogFont:      lf,
+		lpLogFont:      &lf,
 		iPointSize:     getInt32(a, "iPointSize"),
 		Flags:          getInt32(a, "Flags"),
 		rgbColors:      getInt32(a, "rgbColors"),
 		lCustData:      getUintptr(a, "lCustData"),
 		lpfnHook:       getUintptr(a, "lpfnHook"),
-		lpTemplateName: getStr(a, "lpTemplateName"),
+		lpTemplateName: getZstr(a, "lpTemplateName"),
 		hInstance:      getUintptr(a, "hInstance"),
-		lpszStyle:      getStr(a, "lpszStyle"),
+		lpszStyle:      getZstr(a, "lpszStyle"),
 		nFontType:      getInt16(a, "nFontType"),
 		nSizeMin:       getInt32(a, "nSizeMin"),
 		nSizeMax:       getInt32(a, "nSizeMax"),
 	}
 	rtn, _, _ := syscall.SyscallN(chooseFont,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&cf)))
 	lfob.Put(nil, SuStr("lfHeight"), IntVal(int(lf.lfHeight)))
 	lfob.Put(nil, SuStr("lfWidth"), IntVal(int(lf.lfWidth)))
 	lfob.Put(nil, SuStr("lfEscapement"), IntVal(int(lf.lfEscapement)))
@@ -350,7 +339,7 @@ func ChooseFont(a Value) Value {
 	lfob.Put(nil, SuStr("lfQuality"), IntVal(int(lf.lfQuality)))
 	lfob.Put(nil, SuStr("lfPitchAndFamily"), IntVal(int(lf.lfPitchAndFamily)))
 	lfob.Put(nil, SuStr("lfPitchAndFamily"), IntVal(int(lf.lfPitchAndFamily)))
-	lfob.Put(nil, SuStr("lfFaceName"), bsStrZ(lf.lfFaceName[:]))
+	lfob.Put(nil, SuStr("lfFaceName"), bufZstr(lf.lfFaceName[:]))
 	return boolRet(rtn)
 }
 
@@ -381,10 +370,7 @@ var printDlgEx = comdlg32.MustFindProc("PrintDlgExA").Addr()
 var _ = builtin(PrintDlgEx, "(printdlgex)")
 
 func PrintDlgEx(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(nPrintDlgEx)
-	pd := (*stPrintDlgEx)(p)
-	*pd = stPrintDlgEx{
+	pd := stPrintDlgEx{
 		lStructSize:         int32(nPrintDlgEx),
 		hwndOwner:           getUintptr(a, "hwndOwner"),
 		hDevMode:            getUintptr(a, "hDevMode"),
@@ -397,15 +383,14 @@ func PrintDlgEx(a Value) Value {
 		nMaxPage:            getInt32(a, "nMaxPage"),
 		nCopies:             getInt32(a, "nCopies"),
 		hInstance:           getUintptr(a, "hInstance"),
-		lpPrintTemplateName: getStr(a, "lpPrintTemplateName"),
+		lpPrintTemplateName: getZstr(a, "lpPrintTemplateName"),
 		nStartPage:          getInt32(a, "nStartPage"),
 		dwResultAction:      getInt32(a, "dwResultAction"),
 	}
 	prob := a.Get(nil, SuStr("lpPageRanges"))
 	var pr *stPrintPageRange
 	if prob != nil {
-		pr = (*stPrintPageRange)(heap.Alloc(nPrintPageRange))
-		*pr = stPrintPageRange{
+		pr = &stPrintPageRange{
 			nFromPage: getInt32(prob, "nFromPage"),
 			nToPage:   getInt32(prob, "nToPage"),
 		}
@@ -414,7 +399,7 @@ func PrintDlgEx(a Value) Value {
 		pd.nMaxPageRanges = 1
 	}
 	rtn, _, _ := syscall.SyscallN(printDlgEx,
-		uintptr(p))
+		uintptr(unsafe.Pointer(&pd)))
 	a.Put(nil, SuStr("hwndOwner"), IntVal(int(pd.hwndOwner)))
 	a.Put(nil, SuStr("hDevMode"), IntVal(int(pd.hDevMode)))
 	a.Put(nil, SuStr("hDevNames"), IntVal(int(pd.hDevNames)))

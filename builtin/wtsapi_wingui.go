@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -34,17 +33,14 @@ const WTS_ClientProtocolType = 16
 const WTS_SessionId = 4
 
 func WTS_GetClientProtocolType() int {
-	defer heap.FreeTo(heap.CurSize())
-	pbuf := heap.Alloc(uintptrSize)
-	psize := heap.Alloc(int32Size)
+	var buf uintptr
+	var size int32
 	rtn, _, _ := syscall.SyscallN(wtsQuerySessionInformation,
 		WTS_CURRENT_SERVER_HANDLE,
 		WTS_CURRENT_SESSION,
 		WTS_ClientProtocolType,
-		uintptr(pbuf),
-		uintptr(psize))
-	buf := *(*uintptr)(pbuf)
-	size := *(*int32)(psize)
+		uintptr(unsafe.Pointer(&buf)),
+		uintptr(unsafe.Pointer(&size)))
 	if rtn == 0 || size != 2 || buf == 0 {
 		return 0
 	}
@@ -59,17 +55,14 @@ func WTS_GetSessionId() Value {
 	if WTS_GetClientProtocolType() == 0 {
 		return Zero
 	}
-	defer heap.FreeTo(heap.CurSize())
-	pbuf := heap.Alloc(uintptrSize)
-	psize := heap.Alloc(int32Size)
+	var buf uintptr
+	var size int32
 	rtn, _, _ := syscall.SyscallN(wtsQuerySessionInformation,
 		WTS_CURRENT_SERVER_HANDLE,
 		WTS_CURRENT_SESSION,
 		WTS_SessionId,
-		uintptr(pbuf),
-		uintptr(psize))
-	buf := *(*uintptr)(pbuf)
-	size := *(*int32)(psize)
+		uintptr(unsafe.Pointer(&buf)),
+		uintptr(unsafe.Pointer(&size)))
 	if rtn == 0 || size != 4 || buf == 0 {
 		return Zero
 	}

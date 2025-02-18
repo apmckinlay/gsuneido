@@ -7,14 +7,12 @@ package builtin
 
 import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
 var _ = builtin(CreateLexer, "(name)")
 
 func CreateLexer(a Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	rtn := goc.CreateLexer(uintptr(heap.CopyStr(ToStr(a))))
+	rtn := goc.CreateLexer(zstrArg(a))
 	return intRet(rtn)
 }

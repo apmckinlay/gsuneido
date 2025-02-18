@@ -7,8 +7,8 @@ package builtin
 
 import (
 	"syscall"
+	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -21,16 +21,13 @@ var _ = builtin(DrawThemeBackground,
 	"(hTheme, hdc, iPartId, iStateId, pRect, pClipRect)")
 
 func DrawThemeBackground(a, b, c, d, e, f Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	r1 := heap.Alloc(nRect)
-	r2 := heap.Alloc(nRect)
 	rtn, _, _ := syscall.SyscallN(drawThemeBackground,
 		intArg(a),
 		intArg(b),
 		intArg(c),
 		intArg(d),
-		uintptr(rectArg(e, r1)),
-		uintptr(rectArg(f, r2)))
+		uintptr(unsafe.Pointer(toRect(e))),
+		uintptr(unsafe.Pointer(toRect(f))))
 	return intRet(rtn)
 }
 
@@ -42,18 +39,16 @@ var _ = builtin(DrawThemeText, "(hTheme, hdc, iPartId, iStateId, pszText, "+
 	"iCharCount, dwTextFlags, dwTextFlags2, pRect)")
 
 func DrawThemeText(_ *Thread, a []Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	r := heap.Alloc(nRect)
 	rtn, _, _ := syscall.SyscallN(drawThemeText,
 		intArg(a[0]),
 		intArg(a[1]),
 		intArg(a[2]),
 		intArg(a[3]),
-		uintptr(stringArg(a[4])),
+		uintptr(zstrArg(a[4])),
 		intArg(a[5]),
 		intArg(a[6]),
 		intArg(a[7]),
-		uintptr(rectArg(a[8], r)))
+		uintptr(unsafe.Pointer(toRect(a[8]))))
 	return intRet(rtn)
 }
 
@@ -62,11 +57,10 @@ var setWindowTheme = uxtheme.MustFindProc("SetWindowTheme").Addr()
 var _ = builtin(SetWindowTheme, "(hwnd, appname, idlist)")
 
 func SetWindowTheme(a, b, c Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(setWindowTheme,
 		intArg(a),
-		uintptr(stringArg(b)),
-		uintptr(stringArg(c)))
+		uintptr(zstrArg(b)),
+		uintptr(zstrArg(c)))
 	return intRet(rtn)
 }
 
@@ -117,10 +111,9 @@ var openThemeData = uxtheme.MustFindProc("OpenThemeData").Addr()
 var _ = builtin(OpenThemeData, "(hwnd, pszClassList)")
 
 func OpenThemeData(a, b Value) Value {
-	defer heap.FreeTo(heap.CurSize())
 	rtn, _, _ := syscall.SyscallN(openThemeData,
 		intArg(a),
-		uintptr(stringArg(b)))
+		uintptr(zstrArg(b)))
 	return intRet(rtn)
 }
 
@@ -130,11 +123,9 @@ var drawThemeParentBackground = uxtheme.MustFindProc("DrawThemeParentBackground"
 var _ = builtin(DrawThemeParentBackground, "(hwnd, hdc, prc)")
 
 func DrawThemeParentBackground(a, b, c Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	r := heap.Alloc(nRect)
 	rtn, _, _ := syscall.SyscallN(drawThemeParentBackground,
 		intArg(a),
 		intArg(b),
-		uintptr(rectArg(c, r)))
+		uintptr(unsafe.Pointer(toRect(c))))
 	return intRet(rtn)
 }

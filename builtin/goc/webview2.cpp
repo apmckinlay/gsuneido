@@ -110,6 +110,8 @@ long ExecuteScript(MyBrowserObject* pBrowserObject, const char* script) {
     return result;
 }
 
+#define MAX_PATH 260
+
 long GetSource(MyBrowserObject* pBrowserObject, char* dst) {
     if (pBrowserObject->controller == 0) {
         return NOT_READY;
@@ -119,7 +121,7 @@ long GetSource(MyBrowserObject* pBrowserObject, char* dst) {
     if (SUCCEEDED(result)) {
         char* converted = ConvertWcharToChar(uri);
         CoTaskMemFree(uri);
-        strcpy(dst, converted);
+        strncpy(dst, converted, MAX_PATH);
         delete[] converted;
     }
     return result;
@@ -174,3 +176,40 @@ long WebView2(uintptr op, uintptr arg1, uintptr arg2, uintptr arg3, uintptr arg4
     return INVALID_OP;
 }
 
+long WebView2_Create(uintptr hwnd, void* pBrowserObject, char* dllPath, 
+    char* userDataFolder, uintptr cb) {
+    return CreateWebView2((HWND)hwnd, (MyBrowserObject**)pBrowserObject, 
+        dllPath, userDataFolder, cb);
+}
+
+long WebView2_Resize(uintptr pBrowserObject, long w, long h) {
+    return Resize((MyBrowserObject*)pBrowserObject, w, h);
+}
+
+long WebView2_Navigate(uintptr pBrowserObject, char* s) {
+    return Navigate((MyBrowserObject*)pBrowserObject, s);
+}
+
+long WebView2_NavigateToString(uintptr pBrowserObject, char* s) {
+    return NavigateToString((MyBrowserObject*)pBrowserObject, s);
+}
+
+long WebView2_ExecuteScript(uintptr pBrowserObject, char* script) {
+    return ExecuteScript((MyBrowserObject*)pBrowserObject, script);
+}
+
+long WebView2_GetSource(uintptr pBrowserObject, char* dst) {
+    return GetSource((MyBrowserObject*)pBrowserObject, dst);
+}
+
+long WebView2_Print(uintptr pBrowserObject) {
+    return DoPrint((MyBrowserObject*)pBrowserObject);
+}
+
+long WebView2_SetFocus(uintptr pBrowserObject) {
+    return SetFocus((MyBrowserObject*)pBrowserObject);
+}
+
+long WebView2_Close(uintptr pBrowserObject) {
+    return Close((MyBrowserObject*)pBrowserObject);
+}

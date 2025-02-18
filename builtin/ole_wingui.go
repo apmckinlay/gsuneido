@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -23,13 +22,12 @@ var createStreamOnHGlobal = ole32.MustFindProc("CreateStreamOnHGlobal").Addr()
 var _ = builtin(CreateStreamOnHGlobal, "(hGlobal, fDeleteOnRelease, ppstm)")
 
 func CreateStreamOnHGlobal(a, b, c Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(uintptrSize)
+	var x uintptr
 	rtn, _, _ := syscall.SyscallN(createStreamOnHGlobal,
 		intArg(a),
 		boolArg(b),
-		uintptr(p))
-	c.Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p))))
+		uintptr(unsafe.Pointer(&x)))
+	c.Put(nil, SuStr("x"), IntVal(int(x)))
 	return intRet(rtn)
 }
 
@@ -45,11 +43,8 @@ var oleLoadPicture = oleaut32.MustFindProc("OleLoadPicture").Addr()
 var _ = builtin(OleLoadPicture, "(lpstream, lSize, fRunmode, riid, lplpvobj)")
 
 func OleLoadPicture(a, b, c, d, e Value) Value {
-	defer heap.FreeTo(heap.CurSize())
-	p := heap.Alloc(uintptrSize)
-	g := heap.Alloc(nGUID)
-	guid := (*GUID)(g)
-	*guid = GUID{
+	var p uintptr
+	guid := &GUID{
 		Data1: getInt32(d, "Data1"),
 		Data2: int16(getInt(d, "Data2")),
 		Data3: int16(getInt(d, "Data3")),
@@ -62,9 +57,9 @@ func OleLoadPicture(a, b, c, d, e Value) Value {
 		intArg(a),
 		intArg(b),
 		boolArg(c),
-		uintptr(g),
-		uintptr(p))
-	e.Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p))))
+		uintptr(unsafe.Pointer(guid)),
+		uintptr(unsafe.Pointer(&p)))
+	e.Put(nil, SuStr("x"), IntVal(int(p)))
 	return intRet(rtn)
 }
 

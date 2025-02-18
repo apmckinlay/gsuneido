@@ -28,8 +28,7 @@ uintptr queryIDispatch(uintptr iunk) {
 	return (uintptr) idisp;
 }
 
-uintptr createInstance(uintptr pid) {
-	char* progid = (char*) pid;
+uintptr createInstance(char* progid) {
 	CLSID clsid;
 	int n = MultiByteToWideChar(CP_ACP, 0, progid, -1, NULL, 0);
 	LPWSTR wprogid = (LPWSTR) _alloca(n * 2);
@@ -83,7 +82,7 @@ static long invoke2(IDispatch* idisp, char* name, WORD flags,
 }
 
 long invoke(
-	uintptr idisp, uintptr name, uintptr flags, uintptr args, uintptr result) {
-	return invoke2((IDispatch*) idisp, (char*) name, (WORD) flags,
-		(DISPPARAMS*) args, (VARIANT*) result);
+	uintptr idisp, char* name, uintptr flags, void* params, void* result) {
+	return invoke2((IDispatch*) idisp, name, (WORD) flags,
+		(DISPPARAMS*) params, (VARIANT*) result);
 }
