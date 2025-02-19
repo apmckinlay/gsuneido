@@ -588,8 +588,7 @@ func valstr(th *Thread, buf *limitBuf, v Value, inProgress vstack) {
 }
 
 func Unquoted(k Value) string {
-	if ss, ok := k.(SuStr); ok {
-		s := string(ss)
+	if s, ok := k.ToStr(); ok {
 		// want true/false to be quoted to avoid ambiguity
 		if (s != "true" && s != "false") && lexer.IsIdentifier(s) {
 			return s
