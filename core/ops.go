@@ -192,7 +192,7 @@ func OpCat(th *Thread, x, y Value) Value {
 }
 
 func cat2(xs, ys string) Value {
-	const LARGE = 256
+	const LARGE = 256 // ??? exact value not critical
 
 	if len(xs)+len(ys) < LARGE {
 		return SuStr(xs + ys)

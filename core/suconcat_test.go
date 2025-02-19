@@ -47,3 +47,21 @@ func TestSuConcat_Equals(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkSuConcat_build(b *testing.B) {
+	for b.Loop() {
+		var s Value = NewSuConcat()
+		for range 100_000 {
+			s = s.(SuConcat).Add("x")
+		}
+	}
+}
+
+func BenchmarkString_build(b *testing.B) {
+	for b.Loop() {
+		s := ""
+		for range 100_000 {
+			s += "x"
+		}
+	}
+}
