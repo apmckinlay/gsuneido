@@ -145,6 +145,9 @@ func (c SuConcat) Equal(other any) bool {
 	if c2, ok := other.(SuConcat); ok {
 		return c.n == c2.n && bytes.Equal(c.buf.bs[:c.n], c2.buf.bs[:c.n])
 	}
+	if se, ok := other.(*SuExcept); ok {
+        return c.toStr() == string(se.SuStr)
+    }
 	return false
 }
 
