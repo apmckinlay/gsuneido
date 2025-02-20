@@ -4,8 +4,6 @@
 #include <shlwapi.h>
 
 extern "C" buf_t suneidoAPP(char* s);
-LPCWSTR suneidoPrefix = L"suneido:";
-size_t suneidoPrefixSize = 8;
 
 class MyCustomSchemeHandler : public ICoreWebView2WebResourceRequestedEventHandler {
 public:

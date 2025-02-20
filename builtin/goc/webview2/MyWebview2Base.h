@@ -6,6 +6,9 @@ extern "C" {
 #include "../cside.h"
 }
 
+const LPCWSTR suneidoPrefix = L"suneido:";
+const size_t suneidoPrefixSize = 8;
+
 enum CALLBACK_TYPE {
     ON_READY,
     ON_LOADED,
@@ -120,6 +123,11 @@ public:
             delete this;
         }
         return result;
+    }
+
+    long Close() {
+        onCallBackFn = nullptr;
+        return Release();
     }
 
 private:

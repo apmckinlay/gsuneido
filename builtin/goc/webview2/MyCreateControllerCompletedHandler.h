@@ -3,6 +3,7 @@
 #include "MyDOMContentLoadedEventHandler.h"
 #include "MyAcceleratorKeyPressedHandler.h"
 #include "MyCustomSchemeHandler.h"
+#include "MyNewWindowRequestedhandler.h"
 
 // Define the ICoreWebView2CreateCoreWebView2ControllerCompletedHandler callback class
 class MyCreateControllerCompletedHandler : public ICoreWebView2CreateCoreWebView2ControllerCompletedHandler {
@@ -138,6 +139,8 @@ public:
             settings->put_IsStatusBarEnabled(FALSE);
             settings->Release();
         }
+
+        webview2->add_NewWindowRequested(new MyNewWindowRequestedHandler(), &token);
 
         pBrowserObject->SetController(controller);
         pBrowserObject->SetWebView2(webview2);

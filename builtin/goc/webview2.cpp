@@ -62,7 +62,7 @@ long CreateWebView2(HWND hwnd, MyBrowserObject** pBrowserObject, const char* dll
 }
 
 long Close(MyBrowserObject* pBrowserObject) {
-    return pBrowserObject->Release();
+    return pBrowserObject->Close();
 }
 
 long Resize(MyBrowserObject* pBrowserObject, long w, long h) {
