@@ -98,7 +98,10 @@ func Disasm(fn *SuFunc, out outfn) {
 func disasm(nest int, fn *SuFunc, out outfn) {
 	d := &dasm{fn: fn, out: out, nest: nest}
 	for d.i < len(fn.Code) {
-		d.next()
+		nestedfn := d.next()
+		if nestedfn != nil && nestedfn.SrcBase > 0 {
+			disasm(d.nest+1, nestedfn, d.out) // recursive
+		}
 	}
 }
 
@@ -118,7 +121,7 @@ type dasm struct {
 	nest int
 }
 
-func (d *dasm) next() {
+func (d *dasm) next() *SuFunc {
 	fetchUint8 := func() uint8 {
 		d.i++
 		return d.fn.Code[d.i-1]
@@ -212,9 +215,7 @@ func (d *dasm) next() {
 		srcLim = nestedfn.SrcBase
 	}
 	d.out(d.fn, d.nest, ip, s, srcLim)
-	if nestedfn != nil && nestedfn.SrcBase > 0 {
-		disasm(d.nest+1, nestedfn, d.out) // recursive
-	}
+	return nestedfn
 }
 
 func DisasmRaw(code string, fn func(i int)) {
