@@ -127,8 +127,20 @@ func (ck *Check) statement(
 			ck.CheckResult(stmt.Position(), "ERROR: useless expression")
 		}
 	case *ast.Return:
-		init, _ = ck.expr(stmt.E, init)
+		for _, e := range stmt.Exprs {
+			init, _ = ck.expr(e, init)
+		}
 		exit = true
+	case *ast.MultiAssign:
+		for _, e := range stmt.Lhs {
+			id := e.(*ast.Ident)
+			if id.Name != "unused" {
+				init = ck.initVar(init, id.Name, int(id.Pos))
+			} else {
+	            init, _ = ck.expr(e, init)
+			}
+		}
+		init, _ = ck.expr(stmt.Rhs, init)
 	case *ast.Throw:
 		init, _ = ck.expr(stmt.E, init)
 		exit = true

@@ -109,7 +109,16 @@ func (b *bloks) statement(stmt Statement, vars strset) {
 		if b.cur != nil {
 			b.cur.hasRet = true
 		}
-		b.expr(stmt.E, vars)
+		for _, expr := range stmt.Exprs {
+			b.expr(expr, vars)
+		}
+	case *MultiAssign:
+		// see expr Binary Eq
+		for _, expr := range stmt.Lhs {
+			id := expr.(*Ident)
+			vars[id.Name] = yes
+		}
+		b.expr(stmt.Rhs, vars)
 	case *Throw:
 		b.expr(stmt.E, vars)
 	case *TryCatch:

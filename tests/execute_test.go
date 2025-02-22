@@ -33,6 +33,17 @@ func TestThrow(t *testing.T) {
 	assert.That(heap < 32_000_000)
 }
 
+func TestMulti(t *testing.T) {
+	f := compile.Constant(`function () {
+		z = Type(0)
+	    f = function() { return 12,34 }
+		a,b = f()
+		return a is 12 and b is 34
+	}`)
+	var th Thread
+	assert.This(th.Call(f)).Is(True)
+}
+
 func TestInRange(t *testing.T) {
 	options.StrictCompare = true
 	defer func() {

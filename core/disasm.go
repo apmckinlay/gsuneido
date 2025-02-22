@@ -209,6 +209,9 @@ func (d *dasm) next() *SuFunc {
 		endTok := tokens.Token(fetchUint8())
 		end := d.fn.Values[fetchUint8()]
 		s += fmt.Sprint(" ", orgTok, " ", org, " ", endTok, " ", end)
+	case op.ReturnMulti, op.PushReturn:
+		n := fetchUint8()
+		s += fmt.Sprint(" ", n)
 	}
 	srcLim := math.MaxInt
 	if nestedfn != nil && nestedfn.SrcBase > 0 {
@@ -224,7 +227,8 @@ func DisasmRaw(code string, fn func(i int)) {
 		switch op.Opcode(code[i]) {
 		case op.Value, op.Closure, op.Load, op.Store, op.Dyload,
 			op.GetPut, op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk,
-			op.CallMethDiscard, op.CallMethNoNil, op.CallMethNilOk:
+			op.CallMethDiscard, op.CallMethNoNil, op.CallMethNilOk,
+			op.ReturnMulti, op.PushReturn:
 			i++
 		case op.Int, op.LoadStore, op.Global, op.Super,
 			op.Jump, op.JumpTrue, op.JumpFalse, op.JumpIs, op.JumpIsnt,

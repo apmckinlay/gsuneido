@@ -169,7 +169,7 @@ func (th *Thread) interp(catchJump, catchSp *int) (ret Value) {
 
 loop:
 	for fr.ip < len(code) {
-		// fmt.Println("stack:", t.sp, t.stack[max(0, t.sp-3):t.sp])
+		// fmt.Println("stack:", th.sp, th.stack[:th.sp])
 		// fmt.Println(Disasm1(fr.fn, fr.ip))
 		if wingui { // const so should be compiled away
 			if th == MainThread {
@@ -494,6 +494,24 @@ loop:
 		case op.ReturnThrow:
 			th.ReturnThrow = true
 			break loop
+		case op.ReturnMulti:
+			th.ReturnMulti = th.ReturnMulti[:0]
+			n := fetchUint8()
+			for range n {
+				th.ReturnMulti = append(th.ReturnMulti, th.Pop())
+			}
+			th.Pop() // discard the normal nil return value
+		case op.PushReturn:
+			n := fetchUint8()
+			rm := th.ReturnMulti
+			th.ReturnMulti = th.ReturnMulti[:0]
+			if n != len(rm) {
+				panic("argument mismatch")
+			}
+			for i := range n {
+				th.Push(rm[i])
+			}
+			clear(th.ReturnMulti[:cap(th.ReturnMulti)])
 		case op.Try:
 			*catchJump = fr.ip + fetchInt16()
 			*catchSp = th.sp

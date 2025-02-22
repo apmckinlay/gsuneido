@@ -424,11 +424,33 @@ func (a *Case) Get(_ *Thread, m Value) Value {
 }
 
 func (a *Return) Get(_ *Thread, m Value) Value {
+	if r := get(a, m); r != nil {
+		return r
+	}
 	switch m {
 	case SuStr("type"):
 		return SuStr("Return")
 	case SuStr("expr"):
-		return nilToFalse(a.E)
+		if len(a.Exprs) == 0 {
+			return False
+		}
+		if len(a.Exprs) > 1 {
+			panic("return.expr does not handle multiple expressions")
+		}
+		return a.Exprs[0].(Value)
+	}
+	return stmtGet(a, m)
+}
+
+func (a *MultiAssign) Get(_ *Thread, m Value) Value {
+	if r := get(a, m); r != nil {
+		return r
+	}
+	switch m {
+	case SuStr("type"):
+		return SuStr("MultiAssign")
+	case SuStr("rhs"):
+		return a.Rhs.(Value)
 	}
 	return stmtGet(a, m)
 }

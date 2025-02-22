@@ -59,6 +59,8 @@ func TestCodegen(t *testing.T) {
 
 	test("a is b", "Load a, Load b, Is")
 	test("a = b", "Load b, Store a")
+	test("a,b = f()",
+		"Load f, CallFuncNilOk (), PushReturn 2, Store a, Pop, Store b, Pop")
 	test("_dyn = 123", "Int 123, Store _dyn")
 	test("a = b = c", "Load c, Store b, Store a")
 	test("a = b; not a", "Load b, Store a, Pop, Load a, Not")
@@ -90,6 +92,8 @@ func TestCodegen(t *testing.T) {
 
 	test("return throw 123; 123", "Int 123, ReturnThrow, Int 123")
 	test("return throw 123", "Int 123, ReturnThrow")
+
+	test("return 1, 2, 3", "One, Int 2, Int 3, ReturnMulti 3")
 
 	test("throw 'fubar'", "Value 'fubar', Throw")
 
@@ -131,6 +135,14 @@ func TestCodegen(t *testing.T) {
 	test("new c", "Load c, Value '*new*', CallMethNilOk ()")
 	test("new c()", "Load c, Value '*new*', CallMethNilOk ()")
 	test("new c(1)", "Load c, One, Value '*new*', CallMethNilOk (?)")
+
+	xtest := func(src, expected string) {
+		t.Helper()
+		classNum.Store(0)
+		ast := parseFunction("function () {\n" + src + "\n}")
+		assert.This(func() { codegen("", "", ast, nil) }).Panics(expected)
+	}
+	xtest("b = { return 1, 2, 3}", "not allowed")
 }
 
 func TestCodegenSuper(t *testing.T) {

@@ -6,6 +6,7 @@ package builtin
 import (
 	"encoding/hex"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
@@ -124,6 +125,10 @@ func string_Eval2(th *Thread, this Value, args []Value) Value {
 	ob := &SuObject{}
 	if result := compile.EvalString(th, ToStr(this)); result != nil {
 		ob.Add(result)
+	} else if len(th.ReturnMulti) > 1 {
+		for _, val := range slices.Backward(th.ReturnMulti) {
+			ob.Add(val)
+		}
 	}
 	return ob
 }

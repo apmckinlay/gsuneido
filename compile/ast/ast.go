@@ -710,7 +710,7 @@ func (a *If) Children(fn func(Node) Node) {
 }
 
 type Return struct {
-	E Expr
+	Exprs []Expr
 	stmtNodeT
 	ReturnThrow bool
 }
@@ -720,14 +720,18 @@ func (a *Return) String() string {
 	if a.ReturnThrow {
 		s = "ReturnThrow("
 	}
-	if a.E != nil {
-		s += a.E.String()
+	sep := ""
+	for _, e := range a.Exprs {
+		s += sep + e.String()
+		sep = " "
 	}
 	return s + ")"
 }
 
 func (a *Return) Children(fn func(Node) Node) {
-	childExpr(fn, &a.E)
+	for i := range a.Exprs {
+		childExpr(fn, &a.Exprs[i])
+	}
 }
 
 type Throw struct {
@@ -915,6 +919,27 @@ func (a *ExprStmt) String() string {
 
 func (a *ExprStmt) Children(fn func(Node) Node) {
 	childExpr(fn, &a.E)
+}
+
+type MultiAssign struct {
+	stmtNodeT
+	Lhs []Expr
+	Rhs Expr
+}
+
+func (a *MultiAssign) String() string {
+	s := "MultiAssign("
+    for _, e := range a.Lhs {
+        s += e.Echo() + " "
+    }
+	return s + a.Rhs.String() + ")"
+}
+
+func (a *MultiAssign) Children(fn func(Node) Node) {
+    for i := range a.Lhs {
+        childExpr(fn, &a.Lhs[i])
+    }
+    childExpr(fn, &a.Rhs)
 }
 
 type Switch struct {

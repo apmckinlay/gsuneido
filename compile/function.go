@@ -208,8 +208,65 @@ func (p *Parser) statement() (result ast.Statement) {
 		p.Next()
 		return p.semi(&ast.Continue{})
 	default:
-		return &ast.ExprStmt{E: p.trailingExpr()}
+		exprs := p.exprList()
+		if len(exprs) == 1 {
+			return &ast.ExprStmt{E: exprs[0]}
+		}
+		last := exprs[len(exprs)-1]
+		bin, ok := last.(*ast.Binary)
+		if !ok || bin.Tok != tok.Eq {
+			p.Error()
+		}
+		exprs[len(exprs)-1] = bin.Lhs
+		if !p.areLocals(exprs) {
+			p.Error()
+		}
+		if _, ok = bin.Rhs.(*ast.Call); !ok {
+			p.Error()
+		}
+		for _, expr := range exprs {
+			p.final[expr.(*ast.Ident).Name] = disqualified
+		}
+		return &ast.MultiAssign{Lhs: exprs, Rhs: bin.Rhs}
 	}
+}
+
+// exprList gets a comma-separated list of expressions.
+// It is similar to trailingExpr
+func (p *Parser) exprList() []ast.Expr {
+	exprs := make([]Expr, 0, 1)
+	for {
+		expr := p.Expression()
+		exprs = append(exprs, expr)
+		switch p.Token {
+		case tok.Comma:
+			p.Next()
+			continue
+		case tok.Semicolon:
+			p.Next()
+			return exprs
+		case tok.RCurly, tok.Return, tok.If, tok.Else, tok.Switch, tok.Forever,
+			tok.While, tok.Do, tok.For, tok.Throw, tok.Try, tok.Catch,
+			tok.Break, tok.Continue, tok.Case, tok.Default:
+			return exprs
+		default:
+			if !p.newline {
+				p.Error()
+			}
+			return exprs
+		}
+	}
+}
+
+// areLocals checks if all expressions in the list are local variables
+func (p *Parser) areLocals(exprs []ast.Expr) bool {
+	for _, expr := range exprs {
+		if id, ok := expr.(*ast.Ident); !ok ||
+			!isLocal(id.Name) || id.Name == "this" || id.Name == "super" {
+			return false
+		}
+	}
+	return true
 }
 
 // trailingExpr gives a syntax error for two expressions side by side
@@ -458,9 +515,34 @@ func (p *Parser) returnStmt() *ast.Return {
 	}
 	returnThrow := false
 	if p.MatchIf(tok.Throw) {
-		returnThrow = true
+		return &ast.Return{Exprs: []Expr{p.trailingExpr()}, ReturnThrow: true}
 	}
-	return &ast.Return{E: p.trailingExpr(), ReturnThrow: returnThrow}
+	exprs := p.returnExprs()
+	return &ast.Return{Exprs: exprs, ReturnThrow: returnThrow}
+}
+
+func (p *Parser) returnExprs() []ast.Expr {
+	exprs := make([]Expr, 0, 1)
+	for {
+		exprs = append(exprs, p.Expression())
+		switch p.Token {
+		case tok.Comma:
+			p.Next()
+			continue
+		case tok.Semicolon:
+			p.Next()
+			return exprs
+		case tok.RCurly, tok.Return, tok.If, tok.Else, tok.Switch, tok.Forever,
+			tok.While, tok.Do, tok.For, tok.Throw, tok.Try, tok.Catch,
+			tok.Break, tok.Continue, tok.Case, tok.Default:
+			return exprs
+		default:
+			if p.newline {
+				return exprs
+			}
+			p.Error()
+		}
+	}
 }
 
 func (p *Parser) tryStmt() *ast.TryCatch {

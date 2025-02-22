@@ -311,6 +311,8 @@ func (cg *cgen) statement(node ast.Statement, labels *Labels, lastStmt bool) {
 		cg.continueStmt(labels)
 	case *ast.ExprStmt:
 		cg.exprStmt(node.E, lastStmt)
+	case *ast.MultiAssign:
+		cg.multiAssign(node)
 	default:
 		panic("unexpected statement type " + fmt.Sprintf("%T", node))
 	}
@@ -323,8 +325,20 @@ func (cg *cgen) statements(stmts []ast.Statement, labels *Labels) {
 }
 
 func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
-	expr := node.E
-	if expr != nil {
+	if len(node.Exprs) > 1 {
+		if cg.isBlock {
+			panic("multiple return values not allowed from a block")
+		}
+		assert.That(!node.ReturnThrow)
+		for _, e := range node.Exprs {
+			cg.expr2(e, callNoNil)
+		}
+		cg.emit(op.ReturnMulti, byte(len(node.Exprs)))
+		return
+	}
+	var expr ast.Expr
+	if len(node.Exprs) == 1 {
+		expr = node.Exprs[0]
 		cg.expr2(expr, callNilOk)
 	}
 	if cg.isBlock {
@@ -556,6 +570,19 @@ func (cg *cgen) exprStmt(expr ast.Expr, lastStmt bool) {
 				cg.emit(op.Pop)
 			}
 		}
+	}
+}
+
+func (cg *cgen) multiAssign(node *ast.MultiAssign) {
+	refs := make([]int, len(node.Lhs))
+	for i, expr := range node.Lhs {
+		refs[i] = cg.lvalue(expr)
+	}
+	cg.call(node.Rhs.(*ast.Call), callNilOk)
+	cg.emit(op.PushReturn, byte(len(refs)))
+	for _, ref := range refs {
+		cg.store(ref)
+		cg.emit(op.Pop)
 	}
 }
 

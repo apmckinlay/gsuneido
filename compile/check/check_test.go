@@ -45,6 +45,8 @@ func TestCheckVars(t *testing.T) {
 	test("function (a) { if a { b=1 } else {b=2 } }", "a b", "a")
 	test("function (a,b) { a < b }", "a b", "a b")
 	test("function () { while (false isnt x = Next()) { } }", "x", "")
+	test("function () { return a, b, c }", "", "a b c")
+	test("function () { a, b, c = f(d, e) }", "a b c", "d e f")
 }
 
 func TestCheckResults(t *testing.T) {

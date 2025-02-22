@@ -250,6 +250,7 @@ func TestParseStatements(t *testing.T) {
 		assert.T(t).This(s).Like(expected)
 	}
 	test("x=123;;", "Binary(Eq x 123)\n{}")
+	test("a, b, c = f()", "MultiAssign(a b c Call(f))")
 
 	// return
 	test("return", "Return()")
@@ -258,6 +259,7 @@ func TestParseStatements(t *testing.T) {
 	test("return; 123", "Return()\n123")
 	test("return a + \n b", "Return(Nary(Add a b))")
 	test("return \n while b \n c", "Return()\nWhile(b c)")
+	test("return 1, 2, 3", "Return(1 2 3)")
 
 	test("return throw 123", "ReturnThrow(123)")
 
@@ -349,4 +351,5 @@ func TestParseStatements(t *testing.T) {
 	xtest("return 1+2 3+4", "syntax error")
 	xtest("throw 1+2 3+4", "syntax error")
 	xtest("return throw", "syntax error")
+	xtest("return throw 1, 2, 3", "syntax error")
 }

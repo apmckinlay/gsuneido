@@ -80,7 +80,20 @@ func (f *fold) children(node Node) {
 		f.values = save
 		return
 	case *Return:
-		f.childExpr(&node.E)
+		for i := range node.Exprs {
+			f.childExpr(&node.Exprs[i])
+		}
+		f.values = save
+		return
+	case *MultiAssign:
+		for i := range node.Lhs {
+			id := node.Lhs[i].(*Ident)
+			if id.Name != "unused" {
+				f.lvalue = id.Name
+			}
+			f.childExpr(&node.Lhs[i])
+		}
+		f.childExpr(&node.Rhs)
 		f.values = save
 		return
 	case *Throw:
