@@ -348,9 +348,11 @@ Because Go can only recover from (catch) a panic on the way out of a function, w
 
 cSuneido had a general purpose DLL interface. The DLL functions, structs, and callbacks were defined in Suneido code. (primarily in stdlib)
 
-gSuneido takes a different approach. The DLL functions, structs, and callbacks are built-in (implemented in Go) and cannot be defined in Suneido code. This was partly to avoid writing the general purpose facility, although in the end it was probably more work to write them all in Go. The other reason was that the cSuneido approach is inherently dangerous. If a definition is wrong you can easily corrupt memory or crash.
+gSuneido takes a different approach. The DLL functions, structs, and callbacks are built-in (implemented in Go) and cannot be defined in Suneido code. This was partly to avoid writing the general purpose facility, although in the end it was probably more work to write them all in Go. The other reason is that the cSuneido approach is inherently dangerous. If a definition is wrong you can easily corrupt memory or crash.
 
-Originally this was written using syscall.SysCall but this turned out to be unstable (see [here](https://thesoftwarelife.blogspot.com/2019/10/gsuneido-roller-coaster.html) and [here](https://thesoftwarelife.blogspot.com/2020/01/recurring-nightmares.html)), probably related to Go's garbage collection, escape analysis, and moving/growing stacks. There were also questions related to threading. cSuneido only ever had a single real thread that everything ran on, so there were no threading issues. (See [Concurrency](#concurrency)) Go not only uses multiple threads but also runs multiple goroutines on a single thread. Each thread in Windows has its own event queue and message loop. The simplest approach is to use one UI thread. gSuneido isolates the DLL calls and the message loop etc. in a single thread created by cgo outside of Go.
+The message loop could be written in Suneido, or in Go, or in C. To minimize the transitions between Go and C, it is implemented in C.
+
+The interface to the Windows web browser component is also written in C/C++. Originally this was the Internet Explorer component, and later the Edge component.
 
 ## COM
 
