@@ -466,10 +466,13 @@ func (lxr *Lexer) identifier(start int) Item {
 	if lxr.peek() != ':' || val == "default" || val == "true" || val == "false" {
 		token, val = lxr.keyword(val)
 	}
+	if val == "_" {
+		val = "unused"
+	}
 	return Item{Text: val, Pos: int32(start), Token: token}
 }
 
-// keyword returns the token for a string it is a keyword
+// keyword returns the token for a string if it is a keyword
 // otherwise Identifier and a copy of the string
 func keyword(s string) (tok.Token, string) {
 	switch len(s) {
