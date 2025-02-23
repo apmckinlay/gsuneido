@@ -11,6 +11,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
+	"github.com/apmckinlay/gsuneido/util/intern"
 )
 
 // globals generally follows the usual style that public methods lock
@@ -331,6 +332,7 @@ func (typeGlobal) UnloadAll() {
 	clear(g.noDef)
 	LibraryOverrides.ClearOriginals()
 	LibsList.Store(nil)
+	intern.Clear()
 }
 
 // LibsList is used by libload

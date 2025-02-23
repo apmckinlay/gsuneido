@@ -3,7 +3,10 @@
 
 package builtin
 
-import . "github.com/apmckinlay/gsuneido/core"
+import (
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/intern"
+)
 
 var _ = builtin(Libraries, "()")
 
@@ -57,3 +60,9 @@ func LibraryOverrideClear() Value {
 	LibraryOverrides.Clear()
 	return nil
 }
+
+var _ = AddInfo("intern.count", intern.Count)
+
+var _ = AddInfo("intern.bytes", intern.Bytes)
+
+var _ = AddInfo("intern.recent", intern.Recent)

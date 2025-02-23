@@ -13,13 +13,15 @@ import (
 func TestKeywords(t *testing.T) {
 	test := func(id string, expected tok.Token) {
 		t.Helper()
-		tok, val := keyword(id)
-		assert.T(t).This(tok).Is(expected)
-		assert.T(t).This(val).Is(id)
+		token, value := keyword(id)
+		assert.T(t).This(token).Is(expected)
+		if token != tok.Nil {
+			assert.T(t).This(value).Is(id)
+		}
 	}
 	test("return", tok.Return)
 	test("forever", tok.Forever)
-	test("foo", tok.Identifier)
+	test("foo", tok.Nil)
 }
 
 func TestLexer(t *testing.T) {
