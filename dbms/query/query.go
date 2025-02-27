@@ -278,10 +278,6 @@ func (*queryBase) Updateable() string {
 	return ""
 }
 
-func (q *queryBase) tGet() uint64 {
-	return q.tget
-}
-
 func (q *queryBase) Metrics() *metrics {
 	return &q.metrics
 }
@@ -960,15 +956,14 @@ func CalcSelf(q0 Query) { // recursive
 	}
 }
 
-//lint:ignore U1000 for debugging
-func unpack(packed []string) []Value {
-	vals := make([]Value, len(packed))
-	for i, p := range packed {
-		if p == ixkey.Max {
-			vals[i] = SuStr("<max>")
-		} else {
-			vals[i] = Unpack(p)
-		}
-	}
-	return vals
-}
+// func unpack(packed []string) []Value {
+// 	vals := make([]Value, len(packed))
+// 	for i, p := range packed {
+// 		if p == ixkey.Max {
+// 			vals[i] = SuStr("<max>")
+// 		} else {
+// 			vals[i] = Unpack(p)
+// 		}
+// 	}
+// 	return vals
+// }

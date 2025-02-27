@@ -4,9 +4,6 @@
 package query
 
 import (
-	"fmt"
-	"strings"
-
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
@@ -434,22 +431,6 @@ func (jb *joinBase) projectRow1(th *Thread, row Row) []string {
 		key[i] = row.GetRawVal(jb.source1.Header(), col, th, jb.st)
 	}
 	return key
-}
-
-func rowstr(hdr *Header, row Row) string {
-	if row == nil {
-		return "nil"
-	}
-	var sb strings.Builder
-	sep := ""
-	for _, col := range hdr.Columns {
-		val := row.GetVal(hdr, col, nil, nil)
-		if val != EmptyStr {
-			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
-			sep = " "
-		}
-	}
-	return sb.String()
 }
 
 func (jn *Join) Select(cols, vals []string) {

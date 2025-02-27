@@ -631,14 +631,13 @@ func (d *dummy) Delete(key string) {
 	panic("key not found")
 }
 
-//lint:ignore U1000 for debugging
-func (d *dummy) print() {
-	fmt.Println("+ + +")
-	for _, k := range d.keys {
-		fmt.Println(k)
-	}
-	fmt.Println("+ + +")
-}
+// func (d *dummy) print() {
+// 	fmt.Println("+ + +")
+// 	for _, k := range d.keys {
+// 		fmt.Println(k)
+// 	}
+// 	fmt.Println("+ + +")
+// }
 
 type dumIter struct {
 	d   *dummy

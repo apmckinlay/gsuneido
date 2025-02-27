@@ -4,7 +4,6 @@
 package btree
 
 import (
-	"fmt"
 	"sort"
 	"testing"
 
@@ -208,45 +207,43 @@ func TestToChunk(t *testing.T) {
 
 //-------------------------------------------------------------------
 
-//lint:ignore U1000 for debugging
-func (it *Iterator) printStack() {
-	for i := 0; i <= it.bt.treeLevels; i++ {
-		it.printLevel(i)
-	}
-}
+// func (it *Iterator) printStack() {
+// 	for i := 0; i <= it.bt.treeLevels; i++ {
+// 		it.printLevel(i)
+// 	}
+// }
 
-//lint:ignore U1000 for debugging
-func (it *Iterator) printLevel(i int) {
-	if ni, ok := it.stack[i].(*nodeIter); ok {
-		fmt.Print(i, " | ")
-		ni2 := ni.node.iter()
-		for ni2.next() {
-			if ni2.pos == ni.pos {
-				fmt.Print("(")
-			}
-			if i == 0 {
-				fmt.Print(it.bt.getLeafKey(ni2.offset), " ")
-			} else if len(ni2.known) == 0 {
-				fmt.Print("'' ")
-			} else {
-				fmt.Print(string(ni2.known), " ")
-			}
-		}
-		if ni.pos >= ni2.pos {
-			fmt.Print("(")
-		}
-	} else {
-		fmt.Print(i, " + ")
-		ci := it.stack[i].(*chunkIter)
-		for j, s := range ci.c {
-			if j == ci.i {
-				fmt.Print("(")
-			}
-			fmt.Print(s.key, " ")
-		}
-		if ci.i >= len(ci.c) {
-			fmt.Print("(")
-		}
-	}
-	fmt.Println()
-}
+// func (it *Iterator) printLevel(i int) {
+// 	if ni, ok := it.stack[i].(*nodeIter); ok {
+// 		fmt.Print(i, " | ")
+// 		ni2 := ni.node.iter()
+// 		for ni2.next() {
+// 			if ni2.pos == ni.pos {
+// 				fmt.Print("(")
+// 			}
+// 			if i == 0 {
+// 				fmt.Print(it.bt.getLeafKey(ni2.offset), " ")
+// 			} else if len(ni2.known) == 0 {
+// 				fmt.Print("'' ")
+// 			} else {
+// 				fmt.Print(string(ni2.known), " ")
+// 			}
+// 		}
+// 		if ni.pos >= ni2.pos {
+// 			fmt.Print("(")
+// 		}
+// 	} else {
+// 		fmt.Print(i, " + ")
+// 		ci := it.stack[i].(*chunkIter)
+// 		for j, s := range ci.c {
+// 			if j == ci.i {
+// 				fmt.Print("(")
+// 			}
+// 			fmt.Print(s.key, " ")
+// 		}
+// 		if ci.i >= len(ci.c) {
+// 			fmt.Print("(")
+// 		}
+// 	}
+// 	fmt.Println()
+// }

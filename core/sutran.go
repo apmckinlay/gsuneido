@@ -7,7 +7,6 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 )
 
-//lint:ignore U1000 incorrect
 type suTransaction struct{}
 
 // SuTran is a database transaction

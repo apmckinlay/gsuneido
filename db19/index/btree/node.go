@@ -397,12 +397,11 @@ func (it *nodeIter) fLen() int {
 
 //-------------------------------------------------------------------
 
-//lint:ignore U1000 for debugging
-func (nd node) stats() {
-	n := nd.check(nil)
-	avg := float32(len(nd)-7*n) / float32(n)
-	print("n", n, "len", len(nd), "avg", avg)
-}
+// func (nd node) stats() {
+// 	n := nd.check(nil)
+// 	avg := float32(len(nd)-7*n) / float32(n)
+// 	print("n", n, "len", len(nd), "avg", avg)
+// }
 
 func (nd node) check(get func(uint64) string) int {
 	n := 0
@@ -449,15 +448,14 @@ func (nd node) printLeafNode(get func(uint64) string) {
 	}
 }
 
-//lint:ignore U1000 for debugging
-func (nd node) printTreeNode() {
-	it := nd.iter()
-	for it.next() {
-		offset := it.offset
-		print(strconv.Itoa(it.pos)+": {", offset, it.npre, it.diff, "}",
-			it.known)
-	}
-}
+// func (nd node) printTreeNode() {
+// 	it := nd.iter()
+// 	for it.next() {
+// 		offset := it.offset
+// 		print(strconv.Itoa(it.pos)+": {", offset, it.npre, it.diff, "}",
+// 			it.known)
+// 	}
+// }
 
 // print does fmt.Println
 // after converting []byte to string and empty strings to single quoted

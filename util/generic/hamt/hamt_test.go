@@ -4,11 +4,9 @@
 package hamt
 
 import (
-	"fmt"
 	"math/rand"
 	"sort"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -188,38 +186,36 @@ func TestDeleteInsertBug(*testing.T) {
 	check(ht)
 }
 
-//lint:ignore U1000 for debugging
-func print(ht FooHamt) {
-	print1(0, ht.root)
-}
+// func print(ht FooHamt) {
+// 	print1(0, ht.root)
+// }
 
-//lint:ignore U1000 for debugging
-func print1(depth int, nd *FooNode) {
-	indent := strings.Repeat("    ", depth)
+// func print1(depth int, nd *FooNode) {
+// 	indent := strings.Repeat("    ", depth)
 
-	if depth > 6 {
-		fmt.Print(indent + "overflow")
-		for i := range nd.vals {
-			fmt.Printf(" %#x", nd.vals[i].key)
-		}
-		fmt.Println()
-		return
-	}
+// 	if depth > 6 {
+// 		fmt.Print(indent + "overflow")
+// 		for i := range nd.vals {
+// 			fmt.Printf(" %#x", nd.vals[i].key)
+// 		}
+// 		fmt.Println()
+// 		return
+// 	}
 
-	if nd.bmVal != 0 {
-		fmt.Printf(indent+"vals %032b ", nd.bmVal)
-		for i := range nd.vals {
-			fmt.Printf("%#x ", nd.vals[i].key)
-		}
-		fmt.Println()
-	}
-	if nd.bmPtr != 0 {
-		fmt.Printf(indent+"ptrs %032b\n", nd.bmPtr)
-		for _, p := range nd.ptrs {
-			print1(depth+1, p)
-		}
-	}
-}
+// 	if nd.bmVal != 0 {
+// 		fmt.Printf(indent+"vals %032b ", nd.bmVal)
+// 		for i := range nd.vals {
+// 			fmt.Printf("%#x ", nd.vals[i].key)
+// 		}
+// 		fmt.Println()
+// 	}
+// 	if nd.bmPtr != 0 {
+// 		fmt.Printf(indent+"ptrs %032b\n", nd.bmPtr)
+// 		for _, p := range nd.ptrs {
+// 			print1(depth+1, p)
+// 		}
+// 	}
+// }
 
 func check(ht FooHamt) {
 	keys := make(map[int]bool)

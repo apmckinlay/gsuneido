@@ -437,13 +437,11 @@ func TestIxbufSearch(t *testing.T) {
 
 //-------------------------------------------------------------------
 
-//lint:ignore U1000 for debugging
-func (ib *ixbuf) stats() {
-	fmt.Println("size", ib.size, "chunks", len(ib.chunks),
-		"avg size", int(ib.size)/len(ib.chunks), "goal", goal(ib.size)*2/3)
-}
+// func (ib *ixbuf) stats() {
+// 	fmt.Println("size", ib.size, "chunks", len(ib.chunks),
+// 		"avg size", int(ib.size)/len(ib.chunks), "goal", goal(ib.size)*2/3)
+// }
 
-//lint:ignore U1000 for debugging
 func (ib *ixbuf) check() {
 	n := 0
 	prev := ""
@@ -460,17 +458,16 @@ func (ib *ixbuf) check() {
 	assert.This(ib.size).Is(n)
 }
 
-//lint:ignore U1000 for debugging
-func chunkstr(c chunk) string {
-	switch len(c) {
-	case 0:
-		return "empty"
-	case 1:
-		return fmt.Sprint(c[0].key)
-	default:
-		return fmt.Sprint(c[0].key, " -> ", c.lastKey(), " (", len(c), ")")
-	}
-}
+// func chunkstr(c chunk) string {
+// 	switch len(c) {
+// 	case 0:
+// 		return "empty"
+// 	case 1:
+// 		return fmt.Sprint(c[0].key)
+// 	default:
+// 		return fmt.Sprint(c[0].key, " -> ", c.lastKey(), " (", len(c), ")")
+// 	}
+// }
 
 // func TestCombine(t *testing.T) {
 // 	Combine(123 | Delete, 456 | Update)
