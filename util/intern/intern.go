@@ -93,7 +93,7 @@ func Bytes() int {
 func Clear() {
 	lock.Lock()
 	defer lock.Unlock()
-	htbl = shmap.Map[entry, struct{}, helper]{}
+	htbl.Clear()
 	chunks = []*chunkType{{}}
 	next = 0
 
