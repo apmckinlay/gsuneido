@@ -61,15 +61,13 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 		if c, ok := expr.(*ast.Constant); ok {
 			c.Packed = Pack(c.Val.(Packable))
 		}
-		if Suneido.Get(nil, SuStr("ExtendForward")) == True {
-			if id, ok := expr.(*ast.Ident); ok && !e.header.HasField(id.Name) {
-				assert.That(id.Name != e.cols[i])
-				if e.fwd == nil {
-					e.fwd = make(map[int]string)
-				}
-				e.fwd[i] = string(rune(PackForward)) + id.Name
-				// fmt.Println("Extend: forward", e.cols[i], "=", id)
+		if id, ok := expr.(*ast.Ident); ok && !e.header.HasField(id.Name) {
+			assert.That(id.Name != e.cols[i])
+			if e.fwd == nil {
+				e.fwd = make(map[int]string)
 			}
+			e.fwd[i] = string(rune(PackForward)) + id.Name
+			// fmt.Println("Extend: forward", e.cols[i], "=", id)
 		}
 	}
 	return e
