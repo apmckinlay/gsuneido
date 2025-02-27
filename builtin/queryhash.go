@@ -9,9 +9,9 @@ import (
 	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/shmap"
 )
 
 var _ = builtin(QueryHash, "(query, details=false)")
@@ -36,7 +36,7 @@ func QueryHash(th *Thread, args []Value) Value {
 	eqfn := func(x, y rowHash) bool {
 		return x.hash == y.hash && equalRow(x.row, y.row, qh.hdr, qh.fields)
 	}
-	rows := hmap.NewHmapFuncs[rowHash, struct{}](hfn, eqfn)
+	rows := shmap.NewMapFuncs[rowHash, struct{}](hfn, eqfn)
 
 	for row, _ := q.Get(th, Next); row != nil; row, _ = q.Get(th, Next) {
 		rh := rowHash{row: row, hash: qh.Row(row)}

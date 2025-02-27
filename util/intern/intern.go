@@ -10,14 +10,14 @@ import (
 	"sync"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/shmap"
 )
 
 const chunkSize = 64 * 1024 // 64 kb to match int16 offset
 
 var (
-	htbl hmap.Hmap[entry, struct{}, helper]
+	htbl shmap.Map[entry, struct{}, helper]
 	// chunks holds the actual strings
 	chunks []*chunkType = []*chunkType{{}}
 	// next offset in current chunk
@@ -93,7 +93,7 @@ func Bytes() int {
 func Clear() {
 	lock.Lock()
 	defer lock.Unlock()
-	htbl = hmap.Hmap[entry, struct{}, helper]{}
+	htbl = shmap.Map[entry, struct{}, helper]{}
 	chunks = []*chunkType{{}}
 	next = 0
 

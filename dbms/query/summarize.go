@@ -11,9 +11,9 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/shmap"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
@@ -427,7 +427,7 @@ func (su *Summarize) buildMap() []mapPair {
 		return x.hash == y.hash &&
 			equalCols(x.row, y.row, hdr, su.by, su.th, su.st)
 	}
-	sumMap := hmap.NewHmapFuncs[rowHash, []sumOp](hfn, eqfn)
+	sumMap := shmap.NewMapFuncs[rowHash, []sumOp](hfn, eqfn)
 	warned := false
 	for {
 		row := su.source.Get(su.th, Next)
@@ -435,8 +435,8 @@ func (su *Summarize) buildMap() []mapPair {
 			break
 		}
 		rh := rowHash{hash: hashCols(row, hdr, su.by, su.th, su.st), row: row}
-		sums := sumMap.Get(rh)
-		if sums == nil {
+		sums, ok := sumMap.Get(rh)
+		if !ok {
 			sums = su.newSums()
 			sumMap.Put(rh, sums)
 			if !warned && sumMap.Size() > mapWarn {
@@ -453,7 +453,7 @@ func (su *Summarize) buildMap() []mapPair {
 	i := 0
 	list := make([]mapPair, sumMap.Size())
 	iter := sumMap.Iter()
-	for rh, ops := iter(); rh.row != nil; rh, ops = iter() {
+	for rh, ops, ok := iter(); ok; rh, ops, ok = iter() {
 		list[i] = mapPair{row: rh.row, ops: ops}
 		i++
 	}

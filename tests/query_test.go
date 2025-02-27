@@ -17,10 +17,10 @@ import (
 	. "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/exit"
-	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/shmap"
 )
 
 func TestQuery(t *testing.T) {
@@ -203,7 +203,7 @@ func BenchmarkProject_Hmap(b *testing.B) {
 			equalCols(x.row, y.row, hdr, cols, nil, nil)
 	}
 	for range b.N {
-		results := hmap.NewHmapFuncs[T, struct{}](hfn, eqfn)
+		results := shmap.NewMapFuncs[T, struct{}](hfn, eqfn)
 		for _, row := range data {
 			hn++
 			t := T{row: row, hash: hashCols(row, hdr, cols, nil, nil)}

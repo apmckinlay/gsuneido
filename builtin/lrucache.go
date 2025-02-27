@@ -8,7 +8,6 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
-	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type suLruCacheGlobal struct {
@@ -203,8 +202,8 @@ func newLruCache(req int) *lruCache {
 }
 
 func (lc *lruCache) Get(key Value) Value {
-	v := lc.hm.Get(key)
-	if v == nil {
+	v, ok := lc.hm.Get(key)
+	if !ok {
 		// not in cache
 		lc.misses++
 		return nil
@@ -252,23 +251,6 @@ func (lc *lruCache) Reset() {
 	lc.entries = lc.entries[:0]
 	lc.hits = 0
 	lc.misses = 0
-}
-
-// check is used by the test
-func (lc *lruCache) check() {
-	for _, ei := range lc.lru {
-		e := lc.entries[ei]
-		x := lc.hm.Get(e.key)
-		assert.That(x != nil)
-		xi, _ := x.ToInt()
-		assert.That(xi == int(ei))
-	}
-	for ei, e := range lc.entries {
-		x := lc.hm.Get(e.key)
-		assert.That(x != nil)
-		xi, _ := x.ToInt()
-		assert.That(xi == int(ei))
-	}
 }
 
 // func (lc *lruCache) print() {

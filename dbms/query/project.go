@@ -11,10 +11,10 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/shmap"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
@@ -37,7 +37,7 @@ type Project struct {
 	th            *Thread
 }
 
-type mapType = hmap.Hmap[rowHash, struct{}, hmap.Funcs[rowHash]]
+type mapType = shmap.Map[rowHash, struct{}, shmap.Funcs[rowHash]]
 
 type projectApproach struct {
 	index []string
@@ -540,7 +540,7 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 				return x.hash == y.hash &&
 					equalCols(x.row, y.row, p.source.Header(), p.columns, p.th, p.st)
 			}
-			p.results = hmap.NewHmapFuncs[rowHash, struct{}](hfn, eqfn)
+			p.results = shmap.NewMapFuncs[rowHash, struct{}](hfn, eqfn)
 		}
 		if dir == Prev && !p.indexed {
 			p.buildMap(th)

@@ -148,7 +148,7 @@ func xdeObject(x *SuObject, stack *[]Value) (todo []Value, listSize, namedSize i
 	expand(stack, namedSize+listSize+namedSize)
 	i := start
 	iter := x.named.Iter()
-	for k, v := iter(); k != nil; k, v = iter() {
+	for k, v, ok := iter(); ok; k, v, ok = iter() {
 		(*stack)[i] = v
 		// temporarily store the member
 		// where ydeObject will replace it with its value

@@ -16,9 +16,9 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/pack"
+	"github.com/apmckinlay/gsuneido/util/shmap"
 	"github.com/apmckinlay/gsuneido/util/varint"
 )
 
@@ -30,7 +30,7 @@ The convention is that public methods should lock (if concurrent)
 and private methods should not lock
 */
 
-type HmapValue = hmap.Hmap[Value, Value, hmap.Meth[Value]]
+type HmapValue = shmap.Map[Value, Value, shmap.Meth[Value]]
 
 // EmptyObject is a readonly empty SuObject
 var EmptyObject = &SuObject{readonly: true}
@@ -186,7 +186,7 @@ func (ob *SuObject) HasKey(key Value) bool {
 }
 func (ob *SuObject) hasKey(key Value) bool {
 	i, ok := key.IfInt()
-	return (ok && 0 <= i && i < len(ob.list)) || ob.named.Get(key) != nil
+	return (ok && 0 <= i && i < len(ob.list)) || ob.named.Has(key)
 }
 
 // ListGet returns a value from the list, panics if index out of range
@@ -199,7 +199,8 @@ func (ob *SuObject) ListGet(i int) Value {
 
 // namedGet returns a named member or nil if it doesn't exist.
 func (ob *SuObject) namedGet(key Value) Value {
-	return ob.named.Get(key)
+	v, _ := ob.named.Get(key)
+	return v
 }
 
 // Put adds or updates the given key and value
@@ -229,7 +230,7 @@ func (ob *SuObject) GetPut(_ *Thread, m, v Value,
 }
 
 func MemberNotFound(m Value) {
-	//FIXME remove "uninitialized" after transitionF
+	//FIXME remove "uninitialized" after transition
 	panic("uninitialized member not found: " + m.String())
 }
 
@@ -293,7 +294,8 @@ func (ob *SuObject) delete(key Value) bool {
 		ob.listDelete(i)
 		return true
 	}
-	return ob.named.Del(key) != nil
+	_, ok := ob.named.Del(key)
+	return ok
 }
 
 func (ob *SuObject) listDelete(i int) Value {
@@ -323,7 +325,8 @@ func (ob *SuObject) erase(key Value) bool {
 		ob.list = ob.list[:i]
 		return true
 	}
-	return ob.named.Del(key) != nil
+	_, ok := ob.named.Del(key)
+	return ok
 }
 
 func (ob *SuObject) PopFirst() Value {
@@ -501,8 +504,8 @@ func (ob *SuObject) mustBeMutable() {
 
 func (ob *SuObject) migrate() {
 	for {
-		x := ob.named.Del(IntVal(len(ob.list)))
-		if x == nil {
+		x, ok := ob.named.Del(IntVal(len(ob.list)))
+		if !ok {
 			break
 		}
 		ob.list = append(ob.list, x)
@@ -661,8 +664,8 @@ func (ob *SuObject) Hash() uint64 {
 	if 0 < ob.named.Size() && ob.named.Size() <= 4 {
 		iter := ob.named.Iter()
 		for {
-			k, v := iter()
-			if k == nil {
+			k, v, ok := iter()
+			if !ok {
 				break
 			}
 			hash = 31*hash + k.Hash2()
@@ -789,7 +792,7 @@ func (ob *SuObject) Find(val Value) Value {
 		}
 	}
 	named := ob.named.Iter()
-	for k, v := named(); k != nil; k, v = named() {
+	for k, v, ok := named(); ok; k, v, ok = named() {
 		if v.Equal(val) {
 			return k
 		}
@@ -815,8 +818,8 @@ func (ob *SuObject) ArgsIter() func() (Value, Value) {
 		if i < len(ob.list) {
 			return nil, ob.list[i]
 		}
-		key, val := named()
-		if key == nil {
+		key, val, ok := named()
+		if !ok {
 			return nil, nil
 		}
 		return key, val
@@ -855,8 +858,8 @@ func (ob *SuObject) iter2(list, named bool) func() (Value, Value) {
 				defer ob.RUnlock()
 			}
 			ob.versionCheck(version)
-			key, val := namedIter()
-			if key == nil {
+			key, val, ok := namedIter()
+			if !ok {
 				return nil, nil
 			}
 			return key, val
@@ -873,8 +876,8 @@ func (ob *SuObject) iter2(list, named bool) func() (Value, Value) {
 			next++
 			return IntVal(i), ob.list[i]
 		}
-		key, val := namedIter()
-		if key == nil {
+		key, val, ok := namedIter()
+		if !ok {
 			return nil, nil
 		}
 		return key, val
@@ -1015,7 +1018,7 @@ func (ob *SuObject) SetChildConc() {
 		ob.list[i].SetConcurrent()
 	}
 	iter := ob.named.Iter()
-	for k, v := iter(); k != nil; k, v = iter() {
+	for k, v, ok := iter(); ok; k, v, ok = iter() {
 		k.SetConcurrent()
 		v.SetConcurrent()
 	}
@@ -1141,7 +1144,7 @@ func (ob *SuObject) PackSize2(hash *uint64, stack packStack) int {
 	}
 	ps += varint.Len(uint64(ob.named.Size()))
 	iter := ob.named.Iter()
-	for k, v := iter(); k != nil; k, v = iter() {
+	for k, v, ok := iter(); ok; k, v, ok = iter() {
 		ps += packSize(k, hash, stack) + packSize(v, hash, stack)
 	}
 	return ps
@@ -1174,7 +1177,7 @@ func (ob *SuObject) pack(hash *uint64, buf *pack.Encoder, tag byte) {
 	}
 	buf.VarUint(uint64(ob.named.Size()))
 	iter := ob.named.Iter()
-	for k, v := iter(); k != nil; k, v = iter() {
+	for k, v, ok := iter(); ok; k, v, ok = iter() {
 		packValue(k, hash, buf)
 		packValue(v, hash, buf)
 	}

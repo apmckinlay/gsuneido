@@ -24,6 +24,8 @@ func TestKeywords(t *testing.T) {
 	test("foo", tok.Nil)
 }
 
+var S string
+
 func TestLexer(t *testing.T) {
 	assert := assert.T(t).This
 	first := func(src string, text string, token tok.Token) {
