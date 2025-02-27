@@ -15,162 +15,162 @@ func queryKeyword(s string) (tok.Token, string) {
 	switch len(s) {
 	case 2:
 		if s == "by" {
-			return tok.By, s
+			return tok.By, "by"
 		}
 		if s == "in" {
-			return tok.In, s
+			return tok.In, "in"
 		}
 		if s == "is" {
-			return tok.Is, s
+			return tok.Is, "is"
 		}
 		if s == "or" {
-			return tok.Or, s
+			return tok.Or, "or"
 		}
 		if s == "to" {
-			return tok.To, s
+			return tok.To, "to"
 		}
 	case 3:
 		if s == "and" {
-			return tok.And, s
+			return tok.And, "and"
 		}
 		if s == "key" {
-			return tok.Key, s
+			return tok.Key, "key"
 		}
 		if s == "set" {
-			return tok.Set, s
+			return tok.Set, "set"
 		}
 		if s == "max" {
-			return tok.Max, s
+			return tok.Max, "max"
 		}
 		if s == "min" {
-			return tok.Min, s
+			return tok.Min, "min"
 		}
 		if s == "not" {
-			return tok.Not, s
+			return tok.Not, "not"
 		}
 	case 4:
 		if s == "drop" {
-			return tok.Drop, s
+			return tok.Drop, "drop"
 		}
 		if s == "into" {
-			return tok.Into, s
+			return tok.Into, "into"
 		}
 		if s == "isnt" {
-			return tok.Isnt, s
+			return tok.Isnt, "isnt"
 		}
 		if s == "join" {
-			return tok.Join, s
+			return tok.Join, "join"
 		}
 		if s == "list" {
-			return tok.List, s
+			return tok.List, "list"
 		}
 		if s == "sort" {
-			return tok.Sort, s
+			return tok.Sort, "sort"
 		}
 		if s == "true" {
-			return tok.True, s
+			return tok.True, "true"
 		}
 		if s == "view" {
-			return tok.View, s
+			return tok.View, "view"
 		}
 	case 5:
 		if s == "alter" {
-			return tok.Alter, s
+			return tok.Alter, "alter"
 		}
 		if s == "total" {
-			return tok.Total, s
+			return tok.Total, "total"
 		}
 		if s == "class" {
-			return tok.Class, s
+			return tok.Class, "class"
 		}
 		if s == "count" {
-			return tok.Count, s
+			return tok.Count, "count"
 		}
 		if s == "false" {
-			return tok.False, s
+			return tok.False, "false"
 		}
 		if s == "index" {
-			return tok.Index, s
+			return tok.Index, "index"
 		}
 		if s == "minus" {
-			return tok.Minus, s
+			return tok.Minus, "minus"
 		}
 		if s == "sview" {
-			return tok.Sview, s
+			return tok.Sview, "sview"
 		}
 		if s == "union" {
-			return tok.Union, s
+			return tok.Union, "union"
 		}
 		if s == "times" {
-			return tok.Times, s
+			return tok.Times, "times"
 		}
 		if s == "where" {
-			return tok.Where, s
+			return tok.Where, "where"
 		}
 	case 6:
 		if s == "create" {
-			return tok.Create, s
+			return tok.Create, "create"
 		}
 		if s == "delete" {
-			return tok.Delete, s
+			return tok.Delete, "delete"
 		}
 		if s == "ensure" {
-			return tok.Ensure, s
+			return tok.Ensure, "ensure"
 		}
 		if s == "insert" {
-			return tok.Insert, s
+			return tok.Insert, "insert"
 		}
 		if s == "extend" {
-			return tok.Extend, s
+			return tok.Extend, "extend"
 		}
 		if s == "remove" {
-			return tok.Remove, s
+			return tok.Remove, "remove"
 		}
 		if s == "rename" {
-			return tok.Rename, s
+			return tok.Rename, "rename"
 		}
 		if s == "unique" {
-			return tok.Unique, s
+			return tok.Unique, "unique"
 		}
 		if s == "update" {
-			return tok.Update, s
+			return tok.Update, "update"
 		}
 	case 7:
 		if s == "average" {
-			return tok.Average, s
+			return tok.Average, "average"
 		}
 		if s == "cascade" {
-			return tok.Cascade, s
+			return tok.Cascade, "cascade"
 		}
 		if s == "destroy" {
-			return tok.Drop, s
+			return tok.Drop, "destroy"
 		}
 		if s == "history" {
-			return tok.History, s
+			return tok.History, "history"
 		}
 		if s == "project" {
-			return tok.Project, s
+			return tok.Project, "project"
 		}
 		if s == "reverse" {
-			return tok.Reverse, s
+			return tok.Reverse, "reverse"
 		}
 	case 8:
 		if s == "function" {
-			return tok.Function, s
+			return tok.Function, "function"
 		}
 		if s == "leftjoin" {
-			return tok.Leftjoin, s
+			return tok.Leftjoin, "leftjoin"
 		}
 	case 9:
 		if s == "intersect" {
-			return tok.Intersect, s
+			return tok.Intersect, "intersect"
 		}
 		if s == "summarize" {
-			return tok.Summarize, s
+			return tok.Summarize, "summarize"
 		}
 		if s == "tempindex" {
-			return tok.TempIndex, s
+			return tok.TempIndex, "tempindex"
 		}
 	}
-	return tok.Identifier, s
+	return tok.Nil, ""
 }
