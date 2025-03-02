@@ -19,7 +19,7 @@ func String(s string) uint64 {
 	return maphash.String(seed, s)
 }
 
-// FullString uses maphash.FullString to hash all of s
+// FullString uses maphash.String to hash all of s
 func FullString(s string) uint64 {
 	return maphash.String(seed, s)
 }
