@@ -87,7 +87,11 @@ func NewQueryHasher(hdr *Header) *queryHasher {
 func (qh *queryHasher) Row(row Row) uint64 {
 	hash := uint64(17)
 	for _, fld := range qh.fields {
-		hash = hash*31 + hashPacked(row.GetRaw(qh.hdr, fld))
+		s := row.GetRaw(qh.hdr, fld)
+		if len(s) > 0 && s[0] == PackForward {
+			s = ""
+		}
+		hash = hash*31 + hashPacked(s)
 	}
 	//TODO order sensitive if sorted
 	qh.hash += hash // '+' to ignore order
@@ -96,7 +100,7 @@ func (qh *queryHasher) Row(row Row) uint64 {
 }
 
 func hashPacked(p string) uint64 {
-	if len(p) > 0 && p[0] >= PackObject {
+	if len(p) > 0 && (p[0] == PackObject || p[0] == PackRecord) {
 		return hashObject(p)
 	}
 	return hash.FullString(p)

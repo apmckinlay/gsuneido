@@ -99,7 +99,7 @@ func hashRow(hdr *Header, fields []string, row Row) uint64 {
 var ecma = crc64.MakeTable(crc64.ECMA)
 
 func hashPacked(p string) uint64 {
-	if len(p) > 0 && p[0] >= PackObject {
+	if len(p) > 0 && (p[0] == PackObject || p[0] == PackRecord) {
 		return hashObject(p)
 	}
 	return crc64.Checksum(hacks.Stobs(p), ecma)
