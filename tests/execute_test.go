@@ -175,9 +175,9 @@ func TestBuiltinString(t *testing.T) {
 }
 
 // func TestTmp(t *testing.T) {
-// 	args := []string{`f = function (b){ c={}; b() }; f({ return 123 }); 456`, `123`}
+// 	args := []string{`Suneido.a = 0; --Suneido.a`, `-1`}
 // 	strq := []bool{}
-// 	if ! pt_execute(args, strq) {
+// 	if ! ptExecute(args, strq) {
 // 		t.Fail()
 // 	}
 // }

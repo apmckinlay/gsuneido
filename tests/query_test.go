@@ -206,7 +206,7 @@ func BenchmarkProject_Hmap(b *testing.B) {
 		for _, row := range data {
 			hn++
 			t := T{row: row, hash: hashCols(row, hdr, cols, nil, nil)}
-			results.GetPut(t, struct{}{})
+			results.GetInit(t)
 		}
 	}
 	fmt.Println("rows", len(data), "hn", hn, "en", en)

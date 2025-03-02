@@ -40,7 +40,7 @@ func QueryHash(th *Thread, args []Value) Value {
 
 	for row, _ := q.Get(th, Next); row != nil; row, _ = q.Get(th, Next) {
 		rh := rowHash{row: row, hash: qh.Row(row)}
-		if _, _, exists := rows.GetPut(rh, struct{}{}); exists {
+		if _, exists := rows.GetInit(rh); exists {
 			panic("QueryHash: duplicate row")
 		}
 	}

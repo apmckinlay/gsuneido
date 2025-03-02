@@ -289,3 +289,15 @@ func TestSuObjectCopyOnWrite(t *testing.T) {
 	assert.This(y.String()).Is("#(123, abc: 456)")
 	assert.False(slc.Same(x.list, y.list))
 }
+
+func BenchmarkGetPut(b *testing.B) {
+	x := &SuObject{}
+	for _, m := range []string{"a", "b", "c", "d", "e", "f", "g", "h"} {
+		x.Set(SuStr(m), SuInt(123))
+	}
+	for b.Loop() {
+		x.GetPut(nil, SuStr("a"), One, F, false)
+	}
+}
+
+var F = OpAdd

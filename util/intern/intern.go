@@ -57,7 +57,7 @@ func String(s string) string {
 	lock.Lock()
 	defer lock.Unlock()
 	e := add(s)
-	k, _, exists := htbl.GetPut(e, struct{}{})
+	k, exists := htbl.GetInit(e)
 	if !exists {
 		return e.str()
 	}

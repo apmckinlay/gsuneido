@@ -596,7 +596,7 @@ func (p *Project) buildMap(th *Thread) {
 func (p *Project) addResult(th *Thread, row Row) (Row, bool) {
 	rh := rowHash{row: row,
 		hash: hashCols(row, p.source.Header(), p.columns, th, p.st)}
-	k, _, existed := p.results.GetPut(rh, struct{}{})
+	k, existed := p.results.GetInit(rh)
 	if existed {
 		return k.row, true
 	} else {
