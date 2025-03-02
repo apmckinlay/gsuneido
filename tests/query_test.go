@@ -6,7 +6,6 @@ package tests
 import (
 	"fmt"
 	"hash/crc64"
-	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -72,21 +71,21 @@ func TestQuery(t *testing.T) {
 	exit.RunFuncs()
 }
 
-func row2str(hdr *Header, row Row) string {
-	if row == nil {
-		return "nil"
-	}
-	var sb strings.Builder
-	sep := ""
-	for _, col := range hdr.Columns {
-		val := row.GetVal(hdr, col, nil, nil)
-		if val != EmptyStr {
-			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
-			sep = " "
-		}
-	}
-	return sb.String()
-}
+// func row2str(hdr *Header, row Row) string {
+// 	if row == nil {
+// 		return "nil"
+// 	}
+// 	var sb strings.Builder
+// 	sep := ""
+// 	for _, col := range hdr.Columns {
+// 		val := row.GetVal(hdr, col, nil, nil)
+// 		if val != EmptyStr {
+// 			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
+// 			sep = " "
+// 		}
+// 	}
+// 	return sb.String()
+// }
 
 func hashRow(hdr *Header, fields []string, row Row) uint64 {
 	hash := uint64(0)
