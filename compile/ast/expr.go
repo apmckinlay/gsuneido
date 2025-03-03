@@ -139,7 +139,8 @@ func (a *Binary) Eval(c *Context) Value {
 
 func (a *Binary) rawEval(c *Context) Value {
 	name := a.Lhs.(*Ident).Name
-	lhs := c.Row.GetRaw(c.Hdr, name)
+	// need GetRawVal to handle PackForward
+	lhs := c.Row.GetRawVal(c.Hdr, name, c.Th, c.Tran)
 	rhs := a.Rhs.(*Constant).Packed
 	switch a.Tok {
 	case tok.Is:

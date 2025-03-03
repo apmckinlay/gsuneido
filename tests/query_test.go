@@ -257,7 +257,7 @@ func TestSimple(t *testing.T) {
 	MakeSuTran = func(QueryTran) *SuTran {
 		return nil
 	}
-	s := `(((cus extend r0 union cus) join ivc) join aln) union (((ivc where ik is '7' project ik,i2,i3,ck leftjoin cus) union (cus join (ivc where ik is '7'))) join (aln where ik is '7'))`
+	s := `cus extend r0 extend x1 = r0 where x1 is ""`
 	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())
@@ -268,5 +268,6 @@ func TestSimple(t *testing.T) {
 	fmt.Println("----------------")
 	q := ParseQuery(s, tran, nil)
 	th := &Thread{}
-	q.Simple(th)
+	rows := q.Simple(th)
+	assert.This(len(rows)).Is(10)
 }
