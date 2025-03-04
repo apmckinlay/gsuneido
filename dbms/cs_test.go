@@ -29,10 +29,10 @@ func TestClientServer(*testing.T) {
 	p2.Write(hello())
 	c := NewDbmsClient(p2)
 	ses := c.NewSession()
-	ses.Get(nil, "tables", core.Next)
+	ses.Get(nil, "tables sort table", core.Next)
 
 	ses2 := c.NewSession()
-	ses2.Get(nil, "tables", core.Prev)
+	ses2.Get(nil, "tables sort table", core.Prev)
 	ses2.Close()
 
 	time.Sleep(25 * time.Millisecond)

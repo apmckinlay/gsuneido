@@ -163,6 +163,12 @@ func get(th *Thread, tran qry.QueryTran, query string, dir Dir) (Row, *Header, s
 	defer th.Suneido.Store(th.Suneido.Load())
 	th.Suneido.Store(nil) // use main Suneido object
 	q := qry.ParseQuery(query, tran, th.Sviews())
+	if dir != Only &&
+		!strings.Contains(query, "CHECKQUERY SUPPRESS: SORT REQUIRED") {
+		if _, ok := q.(*qry.Sort); !ok {
+			panic("query first/last require sort")
+		}
+	}
 	q, fixcost, varcost := qry.Setup1(q, qry.ReadMode, tran)
 	qry.Warnings(query, q)
 	if trace.Query.On() {
