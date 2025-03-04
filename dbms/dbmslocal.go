@@ -184,10 +184,15 @@ func get(th *Thread, tran qry.QueryTran, query string, dir Dir) (Row, *Header, s
 	if row == nil {
 		return nil, nil, ""
 	}
-	if only && q.Get(th, dir) != nil {
+	if only && !single(q) && q.Get(th, dir) != nil {
 		panic("Query1 not unique: " + query)
 	}
 	return row, q.Header(), q.Updateable()
+}
+
+func single(q qry.Query) bool {
+	keys := q.Keys()
+	return len(keys) == 1 && len(keys[0]) == 0
 }
 
 func (dbms *DbmsLocal) Info() Value {
