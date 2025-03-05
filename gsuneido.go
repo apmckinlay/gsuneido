@@ -53,7 +53,9 @@ var help = `options:
 var dbmsLocal *dbms.DbmsLocal
 var mainThread Thread
 var sviews Sviews
+
 var errlog = "error.log"
+var _ = AddInfo("windows.errlog", &errlog)
 
 func main() {
 	options.BuiltDate = builtDate
