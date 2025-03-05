@@ -281,6 +281,7 @@ func ck(err error) {
 // when the server was not connected.
 func clientErrorLog() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
+	mainThread.Dbms() // so we can get session id
 	sid := mainThread.SessionId("") + " "
 	log.SetPrefix(sid)
 
