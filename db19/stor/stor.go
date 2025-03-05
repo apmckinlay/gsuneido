@@ -268,7 +268,7 @@ func (s *Stor) flushWait() {
 		exit.Progress("    store flushed")
 		return
 	case <-time.After(5 * time.Second):
-		log.Println("ERROR: stor: FlushWait timed out")
+		log.Println("stor: FlushWait timed out")
 		return
 	}
 }
