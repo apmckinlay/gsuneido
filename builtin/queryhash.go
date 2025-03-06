@@ -59,6 +59,7 @@ func equalRow(x, y Row, hdr *Header, cols []string) bool {
 //-------------------------------------------------------------------
 
 type queryHasher struct {
+	thread   Thread
 	hdr      *Header
 	fields   []string
 	ncols    int
@@ -87,10 +88,7 @@ func NewQueryHasher(hdr *Header) *queryHasher {
 func (qh *queryHasher) Row(row Row) uint64 {
 	hash := uint64(17)
 	for _, fld := range qh.fields {
-		s := row.GetRaw(qh.hdr, fld)
-		if len(s) > 0 && s[0] == PackForward {
-			s = ""
-		}
+		s := row.GetRawVal(qh.hdr, fld, &qh.thread, nil)
 		hash = hash*31 + hashPacked(s)
 	}
 	//TODO order sensitive if sorted

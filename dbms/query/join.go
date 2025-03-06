@@ -735,7 +735,9 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 func (lj *LeftJoin) filter2(row2 Row) bool {
 	// fmt.Println(lj.strategy(), "filter", lj.sel2cols, unpack(lj.sel2vals))
 	for i, col := range lj.sel2cols {
-		if row2.GetRaw(lj.source2.Header(), col) != lj.sel2vals[i] {
+		x := row2.GetRaw(lj.source2.Header(), col)
+		assert.That(len(x) == 0 || x[0] != PackForward)
+		if x != lj.sel2vals[i] {
 			return false
 		}
 	}

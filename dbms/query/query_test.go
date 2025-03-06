@@ -477,3 +477,18 @@ func (q *TestQop) Select(cols, vals []string) {
 func (q *TestQop) fastSingle() bool { // override Nothing
 	return false
 }
+
+func TestExtendForwardBug(t *testing.T) {
+	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
+	if err != nil {
+		panic(err.Error())
+	}
+	MakeSuTran = func(qt QueryTran) *SuTran {
+		return nil
+	}
+	tran := db.NewReadTran()
+	q := ParseQuery(`((ivc join (bln where b1 is "")) leftjoin ((cus union (cus extend r1)) extend b1 = r1))`, tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	for row := q.Get(nil, Next); row != nil; row = q.Get(nil, Next) {
+	}
+}

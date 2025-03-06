@@ -240,7 +240,7 @@ func (e *Extend) Get(th *Thread, dir Dir) Row {
 			return row
 		}
 		rec := e.extendRow(th, row)
-		if e.filter(rec) {
+		if e.filter(rec, th, row) {
 			e.ngets++
 			return append(row, DbRec{Record: rec})
 		}
@@ -274,11 +274,15 @@ func (e *Extend) extendRow(th *Thread, row Row) Record {
 	return rb.Trim().Build()
 }
 
-func (e *Extend) filter(rec Record) bool {
+func (e *Extend) filter(rec Record, th *Thread, row Row) bool {
 	for i, col := range e.selCols {
 		j := slices.Index(e.physical, col)
-		assert.That(j != -1)
+		assert.Msg(col).That(j != -1)
 		x := rec.GetRaw(j)
+		if len(x) > 0 && x[0] == PackForward {
+			row = append(row, DbRec{Record: rec})
+			x = row.GetRawVal(e.header, col, th, e.ctx.Tran)
+		}
 		if x != e.selVals[i] {
 			return false
 		}
@@ -322,7 +326,7 @@ func (e *Extend) Lookup(th *Thread, cols, vals []string) Row {
 		return row
 	}
 	rec := e.extendRow(th, row)
-	if !e.filter(rec) {
+	if !e.filter(rec, th, row) {
 		return nil
 	}
 	return append(row, DbRec{Record: rec})
