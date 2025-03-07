@@ -248,8 +248,7 @@ func (ob *SuObject) getPtr(key Value) *Value {
 }
 
 func MemberNotFound(m Value) {
-	//FIXME remove "uninitialized" after transition
-	panic("uninitialized member not found: " + m.String())
+	panic("member not found: " + m.String())
 }
 
 // Set implements Put, doesn't require thread.
