@@ -83,41 +83,6 @@ class MyString {
         LPWSTR s = nullptr;
 };
 
-char hexToChar(const char* hex) {
-    char ch = 0;
-    for (int i = 0; i < 2; ++i) {
-        ch *= 16;
-        if (hex[i] >= '0' && hex[i] <= '9') {
-            ch += hex[i] - '0';
-        } else if (hex[i] >= 'A' && hex[i] <= 'F') {
-            ch += hex[i] - 'A' + 10;
-        } else if (hex[i] >= 'a' && hex[i] <= 'f') {
-            ch += hex[i] - 'a' + 10;
-        }
-    }
-    return ch;
-}
-
-void decodeURI(const char* src, char* dest) {
-    while (*src) {
-        if (*src == '#') {
-            break;
-        } else if (*src == '%') {
-            if (*(src + 1) && *(src + 2)) {
-                *dest = hexToChar(src + 1);
-                src += 2;
-            }
-        } else if (*src == '+') {
-            *dest = ' ';  // Convert '+' to space
-        } else {
-            *dest = *src;  // Copy normal character
-        }
-        ++src;
-        ++dest;
-    }
-    *dest = '\0';  // Null-terminate the output string
-}
-
 // Mapping of file extensions to MIME types
 std::map<std::string, std::wstring> mimeMap = {
     {".html", L"text/html"},

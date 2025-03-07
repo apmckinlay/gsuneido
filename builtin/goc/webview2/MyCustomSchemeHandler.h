@@ -65,10 +65,7 @@ public:
             }
 
             char *converted = ConvertWcharToChar(uri);
-            char *decoded = new char[strlen(converted) + 1];
-            decodeURI(converted, decoded);
-            delete[] converted;
-            buf_t buf = suneidoAPP(decoded);
+            buf_t buf = suneidoAPP(converted);
 
             if (buf.size == 0) {
                 // Create a response
@@ -80,7 +77,7 @@ public:
             } else {
                 IStream* stream = SHCreateMemStream((BYTE*)buf.data, (ULONG)(buf.size));
                 if (stream) {
-                    std::wstring header = buildContentTypeHeader(decoded) + L"Content-Length: " + std::to_wstring(buf.size);
+                    std::wstring header = buildContentTypeHeader(converted) + L"Content-Length: " + std::to_wstring(buf.size);
 
                     // Create a response
                     ICoreWebView2WebResourceResponse* response = nullptr;
@@ -91,7 +88,7 @@ public:
                 }
             }
             
-            delete[] decoded;
+            delete[] converted;
             delete buf.data;
             environment->Release();
             webview2_2->Release();
