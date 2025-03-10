@@ -119,7 +119,13 @@ func Delay(th *Thread, args []Value) Value {
 		panic(fmt.Sprint("Delay minimum is ", minDelay, " (ms)"))
 	}
 	fn := args[1]
+	id := -1
 	timer := time.AfterFunc(time.Duration(delay)*time.Millisecond,
-		func() { dqMustPut(fn) })
-	return &killer{kill: func() { timer.Stop() }}
+		func() { id = dqMustPut(fn) })
+	return &killer{kill: func() {
+		timer.Stop()
+		if id >= 0 {
+			dqRemove(id)
+		}
+	}}
 }
