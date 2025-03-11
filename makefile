@@ -12,7 +12,7 @@ ifdef PATHEXT
 	BUILD = build -buildvcs=true -trimpath
 	OUTPUT = gsuneido.exe gsuneido.com gsport.exe
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
-	PORTABLE = export CGO_ENABLED=0 ; $(GO) $(BUILD) -o gsport.exe \
+	PORTABLE = export CGO_ENABLED=0 ; $(GO) $(BUILD) -v -o gsport.exe \
 		-ldflags "$(LDFLAGS)" -tags portable
 	CSIDE = $(GO) run cmd/deps/deps.go
 endif
