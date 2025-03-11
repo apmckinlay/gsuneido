@@ -13,6 +13,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -38,6 +39,9 @@ func (a *Constant) Columns() []string {
 }
 
 func (a *Ident) Eval(c *Context) Value {
+	if ascii.IsUpper(a.Name[0]) && !slices.Contains(c.Hdr.Columns, a.Name) {
+		return Global.GetName(c.Th, a.Name)
+	}
 	return c.Row.GetVal(c.Hdr, a.Name, c.Th, c.Tran)
 }
 
@@ -488,8 +492,6 @@ func (a *Call) Eval(c *Context) Value {
 	var fn Value
 	var this Value
 	switch f := a.Fn.(type) {
-	case *Ident:
-		fn = Global.GetName(c.Th, f.Name)
 	case *Mem:
 		this = f.E.Eval(c)
 		meth := f.M.Eval(c)
