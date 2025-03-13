@@ -39,7 +39,8 @@ race:
 ifdef PATHEXT
 	@$(CSIDE)
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)" -race -o race/
-	$(PORTABLE) -race -o race/gsport.exe
+	$(GO) $(BUILD) -v -o gsport.exe \
+		-ldflags "$(LDFLAGS)" -tags portable -race -o race/gsport.exe
 else
 	$(GO) $(BUILD) -v -ldflags "$(LDFLAGS)" -race -o race/$(OUTPUT)
 endif
