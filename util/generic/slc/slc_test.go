@@ -128,3 +128,16 @@ func TestClone(t *testing.T) {
 	x = slices.Clone(emptyList)
 	assert(unsafe.SliceData(x) == unsafe.SliceData(nilList)) // bad for GC
 }
+
+func TestWithoutFn(t *testing.T) {
+	list := []int{}
+	assert.T(t).That(Same(WithoutFn(list, func(n int) bool { return n == 5 }), list))
+	list = []int{1, 2, 3, 2, 4}
+	assert.T(t).That(Same(WithoutFn(list, func(n int) bool { return n == 5 }), list))
+	assert.T(t).This(WithoutFn(list, func(n int) bool { return n == 1 })).
+		Is([]int{2, 3, 2, 4})
+	assert.T(t).This(WithoutFn(list, func(n int) bool { return n == 2 })).
+		Is([]int{1, 3, 4})
+	assert.T(t).This(WithoutFn(list, func(n int) bool { return n == 4 })).
+		Is([]int{1, 2, 3, 2})
+}

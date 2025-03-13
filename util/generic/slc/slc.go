@@ -4,7 +4,10 @@
 // Package slc contains additions to the standard slices package
 package slc
 
-import "cmp"
+import (
+	"cmp"
+	"unsafe"
+)
 
 func LastIndex[E comparable](list []E, e E) int {
 	for i := len(list) - 1; i >= 0; i-- {
@@ -59,17 +62,24 @@ func Without[S ~[]E, E comparable](list S, str E) S {
 	return dest
 }
 
-// WithoutFn returns a new slice
-// omitting any values where fn returns true,
+// WithoutFn returns a slice omitting any values where fn returns true,
 // maintaining the existing order.
+// If there are no changes, it returns the original slice.
 func WithoutFn[S ~[]E, E any](list S, fn func(E) bool) S {
-	dest := make(S, 0, len(list))
-	for _, s := range list {
-		if !fn(s) {
-			dest = append(dest, s)
+	result := list
+	same := true
+	for i, s := range list {
+		if fn(s) {
+			if same {
+				result = make(S, 0, len(list))
+				result = append(result, list[:i]...)
+				same = false
+			}
+		} else if !same {
+			result = append(result, s)
 		}
 	}
-	return dest
+	return result
 }
 
 // Replace1 returns a new list with occurrences of from replaced by to
@@ -87,7 +97,8 @@ func Replace1[S ~[]E, E comparable](list S, from, to E) S {
 
 // Same returns true if x and y are the same slice
 func Same[E any](x, y []E) bool {
-	return len(x) > 0 && len(y) > 0 && len(x) == len(y) && &x[0] == &y[0]
+	return len(x) == len(y) &&
+		unsafe.SliceData(x) == unsafe.SliceData(y)
 }
 
 func Reverse[S ~[]E, E any](x S) S {
