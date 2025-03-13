@@ -136,8 +136,6 @@ func (ck *Check) statement(
 			id := e.(*ast.Ident)
 			if id.Name != "unused" {
 				init = ck.initVar(init, id.Name, int(id.Pos))
-			} else {
-	            init, _ = ck.expr(e, init)
 			}
 		}
 		init, _ = ck.expr(stmt.Rhs, init)
