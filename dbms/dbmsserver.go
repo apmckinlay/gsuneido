@@ -19,6 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/mux"
+	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
@@ -212,8 +213,8 @@ func (ss *serverSession) request() {
 	}
 	cmd := cmds[icmd]
 	cmd(ss)
-	assert.That(ss.Remaining() == 0) // should consume entire message
-	if icmd != commands.EndSession {
+	if icmd != commands.Get && icmd != commands.EndSession {
+		assert.That(ss.Remaining() == 0) // should consume entire message
 		ss.EndMsg()
 	}
 }
@@ -489,23 +490,71 @@ func cmdFinal(ss *serverSession) {
 }
 
 func cmdGet(ss *serverSession) {
-	tbl, hdr, row := ss.getQorTC()
-	ss.rowResult(tbl, hdr, false, row)
-}
-
-func (ss *serverSession) getQorTC() (tbl string, hdr *Header, row Row) {
 	dir := ss.getDir()
 	t, _ := ss.getTran()
-	if t == nil {
+	th := ss.thread
+	if t == nil { // query
 		q := ss.getQuery()
-		hdr = q.Header()
-		row, tbl = q.Get(ss.thread, dir)
-	} else {
+		ql := q.(*queryLocal)
+		ra := &ql.ra
+		row, tbl, gotRow := ra.fetch()
+		if gotRow && dir == Prev { // switched direction
+			ra.disable = true // prevent further read-aheads
+			q.Get(th, Prev)   // undo the read-ahead
+			gotRow = false
+		}
+		if !gotRow {
+			row, tbl = q.Get(th, dir)
+		}
+		hdr := q.Header()
+		ss.rowResult(tbl, hdr, false, row)
+		if dir == Next && row != nil && !ra.disable && ql.mode == qry.ReadMode {
+			ra.wg.Add(1)
+			defer ra.wg.Done()
+			ra.pending.Store(true)
+			// need to inc wg and set pending before EndMsg
+			// because another request can arrive right after EndMsg
+			ss.EndMsg() 
+			ra.row, ra.tbl = q.Get(th, Next) // the actual read-ahead
+		} else {
+			ss.EndMsg()
+		}
+	} else { // cursor
 		c := ss.getCursor()
-		hdr = c.Header()
-		row, tbl = c.Get(ss.thread, t, dir)
+		hdr := c.Header()
+		row, tbl := c.Get(th, t, dir)
+		ss.rowResult(tbl, hdr, false, row)
+		ss.EndMsg()
 	}
-	return
+}
+
+type readAhead struct {
+	pending atomic.Bool    // true if read-ahead was triggered
+	disable bool           // set if dir reverses to prevent further read-ahead
+	wg      sync.WaitGroup // used to wait for read-ahead to complete
+	dir     Dir            // the direction of the read-ahead
+	row     Row            // the result of the read-ahead
+	tbl     string
+}
+
+func (ra *readAhead) fetch() (row Row, tbl string, gotRow bool) {
+	if !ra.pending.Load() {
+		return
+	}
+	ra.wg.Wait()
+	row, tbl = ra.row, ra.tbl
+	ra.row, ra.tbl = nil, ""
+	ra.pending.Store(false)
+	return row, tbl, true
+}
+
+func finishReadAhead(qc IQueryCursor) {
+	if ql, ok := qc.(*queryLocal); ok {
+		if ql.ra.pending.Load() {
+			// wait for it to finish, but don't consume it
+			ql.ra.wg.Wait()
+		}
+	}
 }
 
 func (ss *serverSession) getDir() Dir {
@@ -618,6 +667,7 @@ func (ss *serverSession) getQorC() (qc IQueryCursor) {
 	if qc == nil {
 		ss.error("dbms server: query/cursor not found")
 	}
+	finishReadAhead(qc)
 	return qc
 }
 
@@ -741,6 +791,9 @@ func cmdReadCount(ss *serverSession) {
 
 func cmdRewind(ss *serverSession) {
 	qc := ss.getQorC()
+	if ql, ok := qc.(*queryLocal); ok {
+		ql.ra.fetch() // need to consume read ahead
+	}
 	qc.Rewind()
 	ss.PutBool(true)
 }

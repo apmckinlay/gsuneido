@@ -87,7 +87,7 @@ func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
 	tran := dbms.db.NewReadTran()
 	q, fixcost, varcost := buildQuery(query, tran, sv, qry.CursorMode)
 	trace.Query.Println("cursor", fixcost+varcost, "-", query)
-	return cursorLocal{queryLocal{
+	return &cursorLocal{queryLocal{
 		Query: q, cost: fixcost + varcost, mode: qry.CursorMode}}
 }
 
@@ -429,7 +429,7 @@ func (t ReadTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, str
 func (t ReadTranLocal) Query(query string, sv *Sviews) IQuery {
 	q, fixcost, varcost := buildQuery(query, t.ReadTran, sv, qry.ReadMode)
 	trace.Query.Println(fixcost+varcost, "-", query)
-	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.ReadMode}
+	return &queryLocal{Query: q, cost: fixcost + varcost, mode: qry.ReadMode}
 }
 
 func (t ReadTranLocal) Action(*Thread, string) int {
@@ -449,7 +449,7 @@ func (t UpdateTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, s
 func (t UpdateTranLocal) Query(query string, sv *Sviews) IQuery {
 	q, fixcost, varcost := buildQuery(query, t.UpdateTran, sv, qry.UpdateMode)
 	trace.Query.Println("update", fixcost+varcost, "-", query)
-	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.UpdateMode}
+	return &queryLocal{Query: q, cost: fixcost + varcost, mode: qry.UpdateMode}
 }
 
 func (t UpdateTranLocal) Action(th *Thread, action string) int {
@@ -474,9 +474,11 @@ type queryLocal struct {
 	keys []string // cache
 	cost qry.Cost
 	mode qry.Mode
+	
+	ra readAhead // handled by dbms server cmdGet
 }
 
-func (q queryLocal) Keys() []string {
+func (q *queryLocal) Keys() []string {
 	if q.keys == nil {
 		keys := q.Query.Keys()
 		list := make([]string, len(keys))
@@ -488,7 +490,7 @@ func (q queryLocal) Keys() []string {
 	return q.keys
 }
 
-func (q queryLocal) Strategy(formatted bool) string {
+func (q *queryLocal) Strategy(formatted bool) string {
 	var strategy string
 	if formatted {
 		strategy = qry.Strategy(q.Query) + "\n"
@@ -500,11 +502,11 @@ func (q queryLocal) Strategy(formatted bool) string {
 		"[nrecs~ ", n, " cost~ ", q.cost, " ", q.mode, "]")
 }
 
-func (q queryLocal) Order() []string {
+func (q *queryLocal) Order() []string {
 	return q.Query.Order()
 }
 
-func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
+func (q *queryLocal) Get(th *Thread, dir Dir) (Row, string) {
 	defer th.Suneido.Store(th.Suneido.Load())
 	th.Suneido.Store(nil) // use main Suneido object
 	row := q.Query.Get(th, dir)
@@ -515,12 +517,12 @@ func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
 	return row, q.Query.Updateable()
 }
 
-func (q queryLocal) Tree() Value {
+func (q *queryLocal) Tree() Value {
 	qry.CalcSelf(q.Query)
 	return qry.NewSuQueryNode(q.Query)
 }
 
-func (q queryLocal) Close() {
+func (q *queryLocal) Close() {
 }
 
 // cursorLocal
@@ -529,7 +531,7 @@ type cursorLocal struct {
 	queryLocal
 }
 
-func (q cursorLocal) Get(th *Thread, t ITran, dir Dir) (Row, string) {
+func (q *cursorLocal) Get(th *Thread, t ITran, dir Dir) (Row, string) {
 	q.Query.SetTran(t.(qry.QueryTran))
 	return q.queryLocal.Get(th, dir)
 }
