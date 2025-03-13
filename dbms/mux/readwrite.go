@@ -75,6 +75,8 @@ func (wb *WriteBuf) Write1(data byte) *WriteBuf {
 	return wb
 }
 
+// EndMsg signals the end of a multipart message.
+// WARNING: another request can be received right after EndMsg.
 func (wb *WriteBuf) EndMsg() {
 	wb.flush(true)
 }

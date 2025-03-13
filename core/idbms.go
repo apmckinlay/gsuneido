@@ -96,7 +96,6 @@ type IDbms interface {
 }
 
 // ITran is the interface to a dbms transaction,
-// either local (not implemented yet) or TranClient.
 type ITran interface {
 	String() string
 
