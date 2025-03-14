@@ -12,6 +12,7 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/queue"
 )
 
@@ -93,6 +94,7 @@ func Defer(th *Thread, args []Value) Value {
 	if th != MainThread {
 		panic("Defer can only be used from the main GUI thread")
 	}
+	trace.Defer.Println("Defer", args[0])
 	id := dqMustPut(args[0]) // can't block because MainThread is the consumer
 	return &killer{kill: func() { dqRemove(id) }}
 }
@@ -103,6 +105,7 @@ func RunOnGui(th *Thread, args []Value) Value {
 	if th == MainThread {
 		panic("RunOnGui can only be used from other threads")
 	}
+	trace.Defer.Println("RunOnGui", args[0])
 	id := dqPut(args[0]) // blocks if queue is full
 	return &killer{kill: func() { dqRemove(id) }}
 }
@@ -121,7 +124,10 @@ func Delay(th *Thread, args []Value) Value {
 	fn := args[1]
 	id := -1
 	timer := time.AfterFunc(time.Duration(delay)*time.Millisecond,
-		func() { id = dqMustPut(fn) })
+		func() {
+			trace.Defer.Println("Delay", fn)
+			id = dqMustPut(fn)
+		})
 	return &killer{kill: func() {
 		timer.Stop()
 		if id >= 0 {

@@ -51,6 +51,8 @@ const (
 
 	JoinOpt // used
 	Dbms    // used
+
+	Defer
 )
 
 func (w what) String() string {
@@ -75,6 +77,7 @@ func (w what) String() string {
 		Globals:      "GLOBAL ",
 		JoinOpt:      "JOINOPT ",
 		Dbms:         "DBMS ",
+		Defer:        "DEFER ",
 	}[w]
 }
 
