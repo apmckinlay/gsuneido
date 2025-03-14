@@ -277,9 +277,8 @@ func (e *Extend) extendRow(th *Thread, row Row) Record {
 func (e *Extend) filter(rec Record, th *Thread, row Row) bool {
 	for i, col := range e.selCols {
 		j := slices.Index(e.physical, col)
-		assert.Msg(col).That(j != -1)
 		x := rec.GetRaw(j)
-		if len(x) > 0 && x[0] == PackForward {
+		if j < 0 || (len(x) > 0 && x[0] == PackForward) {
 			row = append(row, DbRec{Record: rec})
 			x = row.GetRawVal(e.header, col, th, e.ctx.Tran)
 		}

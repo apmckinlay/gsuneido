@@ -81,6 +81,15 @@ func TestExtendRuleBug(t *testing.T) {
 		Is("ik=3 ck=1 i3=2 c4=2")
 }
 
+func TestExtendRuleBug2(t *testing.T) {
+	db := heapDb()
+	db.adm("create cus (ck, c4) key(ck)")
+	db.act("insert { ck: 1, c4: 2  } into cus")
+	assert.This(queryAll(db.Database,
+		`(((cus extend r0, a3 = c4) union (cus union cus)) where r0 is "")`)).
+		Is("ck=1 c4=2 | ck=1 c4=2 a3=2")
+}
+
 func BenchmarkExtend(b *testing.B) {
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	q := ParseQuery("table extend z=1, aa=a, y=2, bb=b, x=3, cc=c", testTran{}, nil)
