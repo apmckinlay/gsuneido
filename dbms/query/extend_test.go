@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -102,5 +104,23 @@ func BenchmarkExtend(b *testing.B) {
 	row := []DbRec{{Record: rb.Build()}}
 	for range b.N {
 		e.extendRow(nil, row)
+	}
+}
+
+func TestExtendForwardBug(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
+	if err != nil {
+		panic(err.Error())
+	}
+	MakeSuTran = func(qt QueryTran) *SuTran {
+		return nil
+	}
+	tran := db.NewReadTran()
+	q := ParseQuery(`((ivc join (bln where b1 is "")) leftjoin ((cus union (cus extend r1)) extend b1 = r1))`, tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	for row := q.Get(nil, Next); row != nil; row = q.Get(nil, Next) {
 	}
 }
