@@ -5,6 +5,8 @@ package dbms
 
 import (
 	"net"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -36,4 +38,27 @@ func TestClientServer(*testing.T) {
 	ses2.Close()
 
 	time.Sleep(25 * time.Millisecond)
+}
+
+var A atomic.Bool
+var M sync.Mutex
+
+func BenchmarkOne(b *testing.B) {
+	for b.Loop() {
+		func() {
+			if A.Load() {
+				M.Lock()
+				defer M.Unlock()
+			}
+		}()
+	}
+}
+
+func BenchmarkTwo(b *testing.B) {
+	for b.Loop() {
+		func() {
+			M.Lock()
+			defer M.Unlock()
+		}()
+	}
 }

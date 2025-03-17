@@ -204,8 +204,7 @@ type rowAt struct {
 }
 
 func NewHeader(fields [][]string, columns []string) *Header {
-	return &Header{Fields: fields, Columns: columns,
-		cache: make(map[string]rowAt)}
+	return &Header{Fields: fields, Columns: columns}
 }
 
 func SimpleHeader(fields []string) *Header {
@@ -260,6 +259,9 @@ func (hdr *Header) find(fld string) (rowAt, bool) {
 	if at, ok := hdr.cache[fld]; ok {
 		return at, at != missing
 	}
+	if hdr.cache == nil {
+		hdr.cache = make(map[string]rowAt)
+    }
 	for reci, fields := range hdr.Fields {
 		if fldi := slices.Index(fields, fld); fldi >= 0 {
 			at := rowAt{Reci: int16(reci), Fldi: int16(fldi)}
