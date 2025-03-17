@@ -89,7 +89,7 @@ var conflictSpans = []span{{org: sideMax, end: sideMin}}
 var isntqqSpans = []span{{org: side{val: "", inc: true}, end: sideMax}}
 
 func binarySpan(bin *ast.Binary) (string, []span) {
-	// TOTO make LT, GT, GTE match the language
+	// TODO make LT, GT, GTE match the language
 	// currently they are consistent with previous behavior
 	// Changing them will require application code changes.
 	col := bin.Lhs.(*ast.Ident).Name
