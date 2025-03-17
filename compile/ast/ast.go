@@ -929,17 +929,17 @@ type MultiAssign struct {
 
 func (a *MultiAssign) String() string {
 	s := "MultiAssign("
-    for _, e := range a.Lhs {
-        s += e.Echo() + " "
-    }
+	for _, e := range a.Lhs {
+		s += e.Echo() + " "
+	}
 	return s + a.Rhs.String() + ")"
 }
 
 func (a *MultiAssign) Children(fn func(Node) Node) {
-    for i := range a.Lhs {
-        childExpr(fn, &a.Lhs[i])
-    }
-    childExpr(fn, &a.Rhs)
+	for i := range a.Lhs {
+		childExpr(fn, &a.Lhs[i])
+	}
+	childExpr(fn, &a.Rhs)
 }
 
 type Switch struct {
