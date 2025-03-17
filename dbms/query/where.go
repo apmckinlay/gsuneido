@@ -831,11 +831,12 @@ func (w *Where) slow() bool {
 }
 
 func (w *Where) Simple(th *Thread) []Row {
+	ast.Unraw(w.expr)
 	w.ctx.Hdr = w.header
 	rows := w.source.Simple(th)
 	dst := 0
 	for _, row := range rows {
-		if w.filter(nil, row) {
+		if w.filter(th, row) {
 			rows[dst] = row
 			dst++
 		}

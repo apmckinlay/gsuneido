@@ -92,6 +92,24 @@ func TestExtendRuleBug2(t *testing.T) {
 		Is("ck=1 c4=2 | ck=1 c4=2 a3=2")
 }
 
+func TestExtendRuleWhereRaw(t *testing.T) {
+	db := heapDb()
+	db.adm("create cus (ck, c4) key(ck)")
+	db.act("insert { ck: 1, c4: 2  } into cus")
+	assert.T(t).This(queryAll(db.Database,
+		`cus extend r, x = r where x is ""`)).
+		Is("ck=1 c4=2")
+	assert.T(t).This(queryAll(db.Database,
+		`cus extend r, x = r where x in ("", "5")`)).
+		Is("ck=1 c4=2")
+	assert.T(t).This(queryAll(db.Database,
+		`cus extend r, x = r where x >= "" and x < "5"`)).
+		Is("ck=1 c4=2")
+	assert.T(t).This(queryAll(db.Database,
+		`cus extend r, x = r where String?(x)`)).
+		Is("ck=1 c4=2")
+}
+
 func BenchmarkExtend(b *testing.B) {
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	q := ParseQuery("table extend z=1, aa=a, y=2, bb=b, x=3, cc=c", testTran{}, nil)

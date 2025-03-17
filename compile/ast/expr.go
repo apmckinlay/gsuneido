@@ -19,6 +19,24 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+// Unraw is use by Where Simple to not evaluate raw
+func Unraw(expr Node) Node {
+	switch e := expr.(type) {
+	case *Constant:
+		e.Packed = ""
+	case *In:
+		e.Packed = nil
+	case *Binary:
+		e.evalRaw = false
+	case *InRange:
+		e.evalRaw = false
+	case *Call:
+		e.evalRaw = false
+	}
+	expr.Children(Unraw)
+	return expr
+}
+
 // Note: Stored fields ignore rules.
 // This seems "wrong" but it matches what jSuneido does.
 // Normally this isn't an issue because the stored field has a value.
@@ -204,8 +222,7 @@ func (a *Binary) Columns() []string {
 }
 
 func (a *Trinary) Eval(c *Context) Value {
-	cond := a.Cond.Eval(c)
-	if cond == True {
+	if ToBool(a.Cond.Eval(c)) {
 		return a.T.Eval(c)
 	}
 	return a.F.Eval(c)
@@ -372,13 +389,9 @@ func (a *In) CouldEvalRaw() bool {
 func (a *In) Eval(c *Context) Value {
 	if a.Packed != nil {
 		id := a.E.(*Ident)
-		e := c.Row.GetRaw(c.Hdr, id.Name)
-		for _, p := range a.Packed {
-			if e == p {
-				return True
-			}
-		}
-		return False
+		// need GetRawVal to handle PackForward
+		e := c.Row.GetRawVal(c.Hdr, id.Name, c.Th, c.Tran)
+		return SuBool(slices.Contains(a.Packed, e))
 	}
 	x := a.E.Eval(c)
 	for _, e := range a.Exprs {
@@ -424,7 +437,8 @@ func (a *InRange) CanEvalRaw(flds []string) bool {
 func (a *InRange) Eval(c *Context) Value {
 	if a.evalRaw {
 		id := a.E.(*Ident)
-		x := c.Row.GetRaw(c.Hdr, id.Name)
+		// need GetRawVal to handle PackForward
+		x := c.Row.GetRawVal(c.Hdr, id.Name, c.Th, c.Tran)
 		org := a.Org.(*Constant).Packed
 		if (a.OrgTok == tok.Gt && !(x > org)) || !(x >= org) {
 			return False
@@ -472,7 +486,8 @@ func (a *Call) Eval(c *Context) Value {
 	if a.evalRaw {
 		fn := a.Fn.(*Ident).Name
 		id := a.Args[0].E.(*Ident).Name
-		x := c.Row.GetRaw(c.Hdr, id)
+		// need GetRawVal to handle PackForward
+		x := c.Row.GetRawVal(c.Hdr, id, c.Th, c.Tran)
 		result := false
 		switch fn {
 		case "Number?":
@@ -481,6 +496,8 @@ func (a *Call) Eval(c *Context) Value {
 			result = x == "" || x[0] == PackString
 		case "Date?":
 			result = len(x) > 0 && x[0] == PackDate
+		default:
+			assert.ShouldNotReachHere()
 		}
 		return SuBool(result)
 	}
