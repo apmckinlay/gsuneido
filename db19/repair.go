@@ -37,7 +37,7 @@ func Repair(dbfile string, err error) (string, error) {
 		return "", err
 	}
 	msg := fmt.Sprint("good state ", trace.Number(off+uint64(stateLen)), " ",
-		time.UnixMilli(state.Asof).Format(dtfmt), 
+		time.UnixMilli(state.Asof).Format(dtfmt),
 		" truncated ", trace.Number(truncated))
 	return msg, nil
 }
@@ -57,18 +57,20 @@ func (r *repair) search() (int, uint64, *DbState) {
 	var state *DbState
 	scnr := newScanner(r.store)
 	defer scnr.close()
+	var offsets []uint64
 	// search backwards for a good state
 	// in increasing jumps to reduce the number of states checked
 	for skip := 1; ; skip *= 2 {
-		off := scnr.get(i)
-		if off == 0 {
-			i = len(scnr.offsets) - 1
+		var done bool
+		offsets, done = scnr.getUpTo(i)
+		if done {
+			i = len(offsets) - 1
 			if i == prev {
 				return 0, 0, nil // no more states
 			}
-			off = scnr.offsets[i]
 			last = true
 		}
+		off := offsets[i]
 		if state = r.check(i, off); state != nil {
 			fmt.Println("+", i, "good")
 			good = i
@@ -92,7 +94,7 @@ func (r *repair) search() (int, uint64, *DbState) {
 	hi := good
 	for lo < hi-1 {
 		mid := lo + (hi-lo)/2
-		off := scnr.offsets[mid]
+		off := offsets[mid]
 		if s := r.check(mid, off); s != nil {
 			fmt.Println("-", mid, "good")
 			hi = mid
@@ -102,7 +104,7 @@ func (r *repair) search() (int, uint64, *DbState) {
 			lo = mid
 		}
 	}
-	return hi, scnr.offsets[hi], state
+	return hi, offsets[hi], state
 }
 
 func (r *repair) check(i int, off uint64) (state *DbState) {
@@ -212,16 +214,16 @@ func newScanner(store *stor.Stor) *scanner {
 	return &s
 }
 
-func (s *scanner) get(i int) uint64 {
+func (s *scanner) getUpTo(i int) ([]uint64, bool) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	for len(s.offsets) <= i {
 		if atomic.LoadUint32(&s.done) == 1 {
-			return 0
+			return s.offsets, true
 		}
 		s.cond.Wait()
 	}
-	return s.offsets[i]
+	return s.offsets, false
 }
 
 func (s *scanner) scanner(store *stor.Stor) {
@@ -267,11 +269,11 @@ func PrintStates(dbfile string, check bool) {
 	ec := &errCorrupt{}
 	scnr := newScanner(store)
 	for i := 0; ; i++ {
-		off := scnr.get(i)
-		if off == 0 {
+		offsets, done := scnr.getUpTo(i)
+		if done {
 			break
 		}
-		state := getState(store, off)
+		state := getState(store, offsets[i])
 		if state == nil {
 			fmt.Println(i, "read state failed")
 			continue
@@ -284,7 +286,7 @@ func PrintStates(dbfile string, check bool) {
 				msg = ec.Error()
 			}
 		}
-		fmt.Println(i, trace.Number(off), time.UnixMilli(state.Asof).Format(dtfmt), msg)
+		fmt.Println(i, trace.Number(offsets[i]), time.UnixMilli(state.Asof).Format(dtfmt), msg)
 	}
 	scnr.close()
 }

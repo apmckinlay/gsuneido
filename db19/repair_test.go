@@ -147,10 +147,10 @@ func TestScanner(t *testing.T) {
 
 	scnr := newScanner(store)
 	for i := 0; ; i++ {
-		off := scnr.get(i)
-		if off == 0 {
+		offsets, done := scnr.getUpTo(i)
+		if done {
 			break
 		}
-		fmt.Println(i, off)
+		fmt.Println(i, offsets[i])
 	}
 }
