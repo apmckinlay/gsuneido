@@ -147,78 +147,80 @@ var aFolder Folder
 // It replaces identifiers in an expression with expressions.
 // It does not modify the original expression.
 // If any replacements are done, it returns a new expression.
-func replaceExpr(expr Expr, from []string, to []Expr) Expr {
+func replaceExpr(expr Expr, from []string, to []Expr, clone bool) Expr {
 	if expr == nil {
 		return nil
 	}
 	switch e := expr.(type) {
 	case *Constant:
+		// Constant is not dependent on context so no need to clone
 		return expr
 	case *Ident:
 		// this is the actual replace
 		// the other cases are just traversal and path copying
 		if i := slc.LastIndex(from, e.Name); i != -1 {
-			if i > 0 {
-				return replaceExpr(to[i], from[:i], to[:i])
-			}
-			return to[i]
+			// need to clone regardless of changes
+			return replaceExpr(to[i], from[:i], to[:i], true)
 		}
 		return expr
 	case *Unary:
-		newExpr := replaceExpr(e.E, from, to)
-		if newExpr == expr {
+		newExpr := replaceExpr(e.E, from, to, clone)
+		if newExpr == expr && !clone {
 			return expr
 		}
 		return aFolder.Unary(e.Tok, newExpr)
 	case *Binary:
-		lhs := replaceExpr(e.Lhs, from, to)
-		rhs := replaceExpr(e.Rhs, from, to)
-		if lhs == e.Lhs && rhs == e.Rhs && !e.CouldEvalRaw() {
+		lhs := replaceExpr(e.Lhs, from, to, clone)
+		rhs := replaceExpr(e.Rhs, from, to, clone)
+		if lhs == e.Lhs && rhs == e.Rhs && !clone {
 			return expr
 		}
 		// if it could be evaluated raw then we need to make a copy
 		return aFolder.Binary(lhs, e.Tok, rhs)
 	case *Mem:
-		e2 := replaceExpr(e.E, from, to)
-		m := replaceExpr(e.M, from, to)
+		e2 := replaceExpr(e.E, from, to, clone)
+		m := replaceExpr(e.M, from, to, clone)
 		if e2 == e.E && m == e.M {
 			return expr
 		}
 		return &Mem{E: e2, M: m}
 	case *Trinary:
-		cond := replaceExpr(e.Cond, from, to)
-		t := replaceExpr(e.T, from, to)
-		f := replaceExpr(e.F, from, to)
-		if cond == e.Cond && t == e.T && f == e.F {
+		cond := replaceExpr(e.Cond, from, to, clone)
+		t := replaceExpr(e.T, from, to, clone)
+		f := replaceExpr(e.F, from, to, clone)
+		if cond == e.Cond && t == e.T && f == e.F && !clone {
 			return expr
 		}
 		return aFolder.Trinary(cond, t, f)
 	case *RangeTo:
-		cond := replaceExpr(e.E, from, to)
-		f := replaceExpr(e.From, from, to)
-		t := replaceExpr(e.To, from, to)
+		cond := replaceExpr(e.E, from, to, clone)
+		f := replaceExpr(e.From, from, to, clone)
+		t := replaceExpr(e.To, from, to, clone)
 		if cond == e.E && f == e.From && t == e.To {
 			return expr
 		}
 		return &RangeTo{E: cond, From: f, To: t}
 	case *RangeLen:
-		cond := replaceExpr(e.E, from, to)
-		f := replaceExpr(e.From, from, to)
-		n := replaceExpr(e.Len, from, to)
+		cond := replaceExpr(e.E, from, to, clone)
+		f := replaceExpr(e.From, from, to, clone)
+		n := replaceExpr(e.Len, from, to, clone)
 		if cond == e.E && f == e.From && n == e.Len {
 			return expr
 		}
 		return &RangeLen{E: cond, From: f, Len: n}
 	case *Nary:
-		exprs := replaceExprs(e.Exprs, from, to)
-		if exprs == nil {
+		exprs := replaceExprs(e.Exprs, from, to, clone)
+		if exprs == nil && !clone {
 			return expr
+		}
+		if exprs == nil {
+			exprs = e.Exprs
 		}
 		return aFolder.Nary(e.Tok, exprs)
 	case *Call:
-		fn := replaceExpr(e.Fn, from, to)
-		args := replaceArgs(e.Args, from, to)
-		if fn == e.Fn && args == nil {
+		fn := replaceExpr(e.Fn, from, to, clone)
+		args := replaceArgs(e.Args, from, to, clone)
+		if fn == e.Fn && args == nil && !clone {
 			return expr
 		}
 		if args == nil {
@@ -226,9 +228,9 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		}
 		return aFolder.Call(fn, args, 0)
 	case *In:
-		e2 := replaceExpr(e.E, from, to)
-		exprs := replaceExprs(e.Exprs, from, to)
-		if e2 == e.E && exprs == nil && !e.CouldEvalRaw() {
+		e2 := replaceExpr(e.E, from, to, clone)
+		exprs := replaceExprs(e.Exprs, from, to, clone)
+		if e2 == e.E && exprs == nil && !clone {
 			return expr
 		}
 		if exprs == nil {
@@ -237,8 +239,8 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		// if it could be evaluated raw then we need to make a copy
 		return aFolder.In(e2, exprs)
 	case *InRange:
-		e2 := replaceExpr(e.E, from, to)
-		if e2 == e.E && !e.CouldEvalRaw() {
+		e2 := replaceExpr(e.E, from, to, clone)
+		if e2 == e.E && !clone {
 			return expr
 		}
 		return aFolder.Nary(tok.And, []Expr{
@@ -251,10 +253,10 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 
 // replaceExprs returns nil if nothing was replaced,
 // otherwise it returns a modified copy of the expression list
-func replaceExprs(exprs []Expr, from []string, to []Expr) []Expr {
+func replaceExprs(exprs []Expr, from []string, to []Expr, clone bool) []Expr {
 	var newExprs []Expr
 	for i, e := range exprs {
-		e2 := replaceExpr(e, from, to)
+		e2 := replaceExpr(e, from, to, clone)
 		if e2 != e {
 			if newExprs == nil {
 				newExprs = make([]Expr, len(exprs))
@@ -268,10 +270,10 @@ func replaceExprs(exprs []Expr, from []string, to []Expr) []Expr {
 	return newExprs
 }
 
-func replaceArgs(args []Arg, from []string, to []Expr) []Arg {
+func replaceArgs(args []Arg, from []string, to []Expr, clone bool) []Arg {
 	var newArgs []Arg
 	for i, a := range args {
-		e2 := replaceExpr(a.E, from, to)
+		e2 := replaceExpr(a.E, from, to, clone)
 		if e2 != a.E {
 			if newArgs == nil {
 				newArgs = make([]Arg, len(args))

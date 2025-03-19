@@ -12,6 +12,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 )
 
 /*
@@ -38,6 +39,7 @@ type side struct {
 
 // perField returns the spans for each field, or nil if there is a conflict.
 // It is called by NewWhere. The result is later used by perIndex.
+// It depends on CanEvalRaw already being done.
 func perField(exprs []ast.Expr, fields []string) (map[string][]span, bool) {
 	exprMore := false
 	result := make(map[string][]span)
@@ -57,27 +59,24 @@ func perField(exprs []ast.Expr, fields []string) (map[string][]span, bool) {
 
 // exprToSpans returns the spans for an expression, or nil if not indexable
 func exprToSpans(expr ast.Expr, fields []string) (string, []span) {
-	if !expr.CanEvalRaw(fields) {
-		return "", nil
-	}
 	switch expr := expr.(type) {
 	case *ast.Binary:
-		return binarySpan(expr)
+		return binarySpan(expr, fields)
 	case *ast.InRange:
-		return rangeSpan(expr)
+		return rangeSpan(expr, fields)
 	case *ast.In:
-		return inSpan(expr)
+		return inSpan(expr, fields)
 	case *ast.Nary:
 		if expr.Tok == tok.Or {
 			return orSpan(expr, fields)
 		}
 	case *ast.Call:
-		return typeSpan(expr)
-		// TODO unary e.g. not Number?(x)
+		return typeSpan(expr, fields)
 	case *ast.Unary:
+		// TODO unary not
 		if expr.Tok == tok.LParen {
-            return exprToSpans(expr.E, fields)
-        }
+			return exprToSpans(expr.E, fields)
+		}
 	}
 	return "", nil
 }
@@ -88,12 +87,17 @@ var sideMax = side{val: ixkey.Max}
 var conflictSpans = []span{{org: sideMax, end: sideMin}}
 var isntqqSpans = []span{{org: side{val: "", inc: true}, end: sideMax}}
 
-func binarySpan(bin *ast.Binary) (string, []span) {
-	// TODO make LT, GT, GTE match the language
-	// currently they are consistent with previous behavior
-	// Changing them will require application code changes.
-	col := bin.Lhs.(*ast.Ident).Name
-	val := bin.Rhs.(*ast.Constant).Packed
+func binarySpan(bin *ast.Binary, flds []string) (string, []span) {
+	// depends on folder putting field on the left and constant on the right
+	col, ok := ast.IsField(bin.Lhs, flds)
+	if !ok {
+		return "", nil
+	}
+	c, ok := bin.Rhs.(*ast.Constant)
+	if !ok {
+		return "", nil
+	}
+	val := c.Packed
 	switch bin.Tok {
 	case tok.Lt:
 		if val == "" {
@@ -125,20 +129,40 @@ func valSpan(val string) span {
 	return span{org: side{val: val}, end: side{val: val, inc: true}}
 }
 
-func rangeSpan(r *ast.InRange) (string, []span) {
-	return r.E.(*ast.Ident).Name, []span{{
-		org: side{val: r.Org.(*ast.Constant).Packed, inc: r.OrgTok == tok.Gt},
-		end: side{val: r.End.(*ast.Constant).Packed, inc: r.EndTok == tok.Lte}}}
+func rangeSpan(r *ast.InRange, flds []string) (string, []span) {
+	fld, ok := ast.IsField(r.E, flds)
+	if !ok {
+		return "", nil
+	}
+	org, ok := r.Org.(*ast.Constant)
+	if !ok {
+		return "", nil
+	}
+	end, ok := r.End.(*ast.Constant)
+	if !ok {
+		return "", nil
+	}
+	return fld, []span{{
+		org: side{val: org.Packed, inc: r.OrgTok == tok.Gt},
+		end: side{val: end.Packed, inc: r.EndTok == tok.Lte}}}
 }
 
-func inSpan(in *ast.In) (string, []span) {
-	spans := make([]span, 0, len(in.Packed))
-	for _, v := range in.Packed {
-		spans = append(spans,
-			span{org: side{val: v}, end: side{val: v, inc: true}})
+func inSpan(in *ast.In, flds []string) (string, []span) {
+	fld, ok := ast.IsField(in.E, flds)
+	if !ok {
+		return "", nil
+	}
+	spans := make([]span, 0, len(in.Exprs))
+	for _, e := range in.Exprs {
+		c, ok := e.(*ast.Constant)
+		if !ok {
+			return "", nil
+		}
+		spans = set.AddUnique(spans,
+			span{org: side{val: c.Packed}, end: side{val: c.Packed, inc: true}})
 	}
 	sortByOrg(spans)
-	return in.E.(*ast.Ident).Name, spans
+	return fld, spans
 }
 
 var numSpan = []span{{
@@ -152,9 +176,15 @@ var strSpan = []span{
 	{org: side{val: string(rune(PackString))},
 		end: side{val: string(rune(PackString + 1))}}}
 
-func typeSpan(call *ast.Call) (string, []span) {
+func typeSpan(call *ast.Call, flds []string) (string, []span) {
+	if !call.RawEval {
+		return "", nil
+	}
 	fn := call.Fn.(*ast.Ident)
-	id := call.Args[0].E.(*ast.Ident).Name
+	id, ok := ast.IsField(call.Args[0].E, flds)
+	if !ok {
+		return "", nil
+	}
 	switch fn.Name {
 	case "Number?":
 		return id, numSpan

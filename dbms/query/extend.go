@@ -258,8 +258,8 @@ func (e *Extend) extendRow(th *Thread, row Row) Record {
 		if expr != nil {
 			if c, ok := expr.(*ast.Constant); ok {
 				rb.AddRaw(c.Packed)
-			} else if ast.IsColumn(expr, e.srcFlds) {
-				fld := expr.(*ast.Ident).Name
+			} else if f, ok := ast.IsField(expr, e.srcFlds); ok {
+				fld := f
 				rb.AddRaw(row.GetRawVal(e.header, fld, e.ctx.Th, e.ctx.Tran))
 			} else if f, ok := e.fwd[i]; ok {
 				rb.AddRaw(f)

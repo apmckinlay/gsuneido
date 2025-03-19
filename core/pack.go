@@ -70,8 +70,8 @@ var boolTrue = True.(SuBool)
 var boolFalse = False.(SuBool)
 var zeroNum = Zero.(*smi)
 
-var packedTrue = string([]byte{PackTrue})
-var packedFalse = string([]byte{PackFalse})
+var PackedTrue = string([]byte{PackTrue})
+var PackedFalse = string([]byte{PackFalse})
 var packedZero = string([]byte{PackPlus})
 
 // Pack is a convenience function that packs a single Packable.
@@ -83,9 +83,9 @@ func Pack(x Packable) string {
 	case emptyStr:
 		return ""
 	case boolTrue:
-		return packedTrue
+		return PackedTrue
 	case boolFalse:
-		return packedFalse
+		return PackedFalse
 	case zeroNum:
 		return packedZero
 	}
@@ -170,4 +170,21 @@ func PackedOrd(s string) Ord {
 		return ordObject
 	}
 	panic("unknown")
+}
+
+func PackBool(b bool) string {
+	if b {
+		return PackedTrue
+	}
+	return PackedFalse
+}
+
+func UnpackBool(s string) Value {
+	if s == PackedTrue {
+		return True
+    }
+	if s == PackedFalse {
+		return False
+	}
+	panic("can't convert to boolean")
 }

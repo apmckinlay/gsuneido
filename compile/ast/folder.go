@@ -41,7 +41,7 @@ func (f Folder) foldUnary(u *Unary) Expr {
 		if b, ok := f.unwrap(u.E).(*Binary); ok {
 			if inverse, ok := inverseBinary[b.Tok]; ok {
 				return f.Binary(b.Lhs, inverse, b.Rhs)
-            }
+			}
 		}
 	}
 	return u
@@ -55,13 +55,13 @@ func (Folder) unwrap(e Expr) Expr {
 }
 
 var inverseBinary = map[tok.Token]tok.Token{
-	tok.Is:   tok.Isnt,
-	tok.Isnt: tok.Is,
-	tok.Lt:   tok.Gte,
-	tok.Lte:  tok.Gt,
-	tok.Gt:   tok.Lte,
-	tok.Gte:  tok.Lt,
-	tok.Match: tok.MatchNot,
+	tok.Is:       tok.Isnt,
+	tok.Isnt:     tok.Is,
+	tok.Lt:       tok.Gte,
+	tok.Lte:      tok.Gt,
+	tok.Gt:       tok.Lte,
+	tok.Gte:      tok.Lt,
+	tok.Match:    tok.MatchNot,
 	tok.MatchNot: tok.Match,
 }
 
@@ -72,7 +72,7 @@ func (f Folder) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
 func (f Folder) foldBinary(b *Binary) Expr {
 	lhs, lconst := b.Lhs.(*Constant)
 	rhs, rconst := b.Rhs.(*Constant)
-	if lconst && !rconst && b.rawOp() {
+	if lconst && !rconst && b.RawOp() {
 		// canonicalize to simplify foldRange and Binary CanEvalRaw
 		b.Lhs, b.Rhs = b.Rhs, b.Lhs
 		b.Tok = reverseBinary[b.Tok]
@@ -300,6 +300,16 @@ func sameRangeExpr(a, b Expr) bool {
 	bm := b.(*Mem)
 	return am.E.(*Ident).Name == bm.E.(*Ident).Name &&
 		am.M.(*Constant).Val.Equal(bm.M.(*Constant).Val)
+}
+
+func isConstant(e Expr) bool {
+	_, ok := e.(*Constant)
+	return ok
+}
+
+func isIdent(e Expr) bool {
+	_, ok := e.(*Ident)
+	return ok
 }
 
 //-------------------------------------------------------------------

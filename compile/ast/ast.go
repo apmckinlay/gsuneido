@@ -25,6 +25,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -80,10 +81,11 @@ type Expr interface {
 	Echo() string
 	// Eval, CanEvalRaw, and Columns are used by queries
 	Eval(*Context) Value
-	// CanEvalRaw returns true if Eval doesn't need to unpack the values.
-	// and it sets the Expr so future Eval's will (or will not) be raw.
+	EvalRaw(*Context) string
+	// CanEvalRaw sets the Expr so future Eval's will (or will not) be raw.
 	// It must be called before calling Eval.
-	// It is primarily for Where comparisons.
+	// It is primarily for Where expressions.
+	// CanEvalRaw should call CanEvalRaw on all its children.
 	CanEvalRaw(flds []string) bool
 	Columns() []string
 }
@@ -93,8 +95,16 @@ type exprNodeT struct {
 
 func (*exprNodeT) exprNode() {}
 
-func (en *exprNodeT) CanEvalRaw([]string) bool {
+func (en *exprNodeT) CanEvalRaw(flds []string) bool {
+	en.Children(func(node Node) Node {
+		node.(Expr).CanEvalRaw(flds)
+		return node
+	})
 	return false
+}
+
+func (*exprNodeT) EvalRaw(*Context) string {
+	panic(assert.ShouldNotReachHere())
 }
 
 func (en *exprNodeT) Echo() string {
@@ -176,7 +186,8 @@ type Unary struct {
 	exprNodeT
 	E Expr
 	TwoPos
-	Tok tok.Token
+	Tok     tok.Token
+	evalRaw bool
 }
 
 func (a *Unary) String() string {
@@ -257,9 +268,10 @@ func (a *Binary) Children(fn func(Node) Node) {
 type Trinary struct {
 	exprNodeT
 	noPos
-	Cond Expr
-	T    Expr
-	F    Expr
+	Cond    Expr
+	T       Expr
+	F       Expr
+	evalRaw bool
 }
 
 func (a *Trinary) String() string {
@@ -280,8 +292,9 @@ func (a *Trinary) Children(fn func(Node) Node) {
 type Nary struct {
 	exprNodeT
 	noPos
-	Exprs []Expr
-	Tok   tok.Token
+	Exprs   []Expr
+	Tok     tok.Token
+	evalRaw bool
 }
 
 func (a *Nary) String() string {
@@ -393,10 +406,9 @@ func (a *Mem) Children(fn func(Node) Node) {
 type In struct {
 	exprNodeT
 	noPos
-	E     Expr
-	Exprs []Expr
-	// Packed is set by CanEvalRaw
-	Packed []string
+	E       Expr
+	Exprs   []Expr
+	evalRaw bool
 }
 
 func (a *In) String() string {
@@ -465,7 +477,7 @@ type Call struct {
 	Fn      Expr
 	Args    []Arg
 	End     int32
-	evalRaw bool
+	RawEval bool
 }
 
 func (a *Call) String() string {

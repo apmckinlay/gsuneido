@@ -95,6 +95,7 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	}
 	if !w.conflict {
 		fields := w.source.Header().Physical()
+		w.expr.CanEvalRaw(fields)
 		w.colSels, w.exprMore = perField(w.expr.Exprs, fields)
 		// fmt.Println("colSels", w.colSels)
 		w.conflict = (w.colSels == nil)
@@ -309,7 +310,7 @@ func (w *Where) Transform() Query {
 			if q.needRule(e.Columns()) {
 				after = append(after, e)
 			} else {
-				before = append(before, replaceExpr(e, q.cols, q.exprs))
+				before = append(before, replaceExpr(e, q.cols, q.exprs, false))
 			}
 		}
 		if before == nil { // no split
@@ -441,10 +442,10 @@ func (w *Where) lookup1() (string, Value) {
 }
 
 func (w *Where) leftJoinToJoin(lj *LeftJoin) bool {
-	cols := lj.source2.Header().GetFields()
-	cols = set.Difference(cols, lj.by)
+	flds := lj.source2.Header().GetFields()
+	flds = set.Difference(flds, lj.by)
 	for _, e := range w.expr.Exprs {
-		if set.Subset(cols, e.Columns()) && ast.CantBeEmpty(e, cols) {
+		if set.Subset(flds, e.Columns()) && !ast.CanBeEmpty(e) {
 			return true
 		}
 	}
@@ -455,7 +456,7 @@ func (w *Where) project(q Query) *ast.Nary {
 	srcCols := q.Columns()
 	exprCols := w.expr.Columns()
 	missing := set.Difference(exprCols, srcCols)
-	expr := replaceExpr(w.expr, missing, nEmpty(len(missing)))
+	expr := replaceExpr(w.expr, missing, nEmpty(len(missing)), false)
 	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
 	}
@@ -486,7 +487,7 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 		}
 		if set.Subset(cols2, (e.Columns())) {
 			if used {
-				e = replaceExpr(e, nil, nil) // copy Binary/In CouldEvalRaw
+				e = replaceExpr(e, nil, nil, true) // clone
 			}
 			exprs2 = append(exprs2, e)
 			used = true

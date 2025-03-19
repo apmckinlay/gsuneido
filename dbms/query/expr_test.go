@@ -23,7 +23,7 @@ func TestExprEval(t *testing.T) {
 	}()
 	th := &Thread{}
 	row, hdr := mkrow()
-	raw := false
+	var raw bool
 	test := func(src string, expected string) {
 		t.Helper()
 		p := NewQueryParser(src, nil, nil)
@@ -45,8 +45,7 @@ func TestExprEval(t *testing.T) {
 			expr.Eval(&ast.Context{Th: th, Row: row, Hdr: hdr})
 		}).Panics(expected)
 	}
-	// not raw
-	test("123", "123")
+	raw = false
 	test("x + 2", "6")
 	test("1 + y", "6")
 	test("x + y", "9")
@@ -55,21 +54,22 @@ func TestExprEval(t *testing.T) {
 	test("(x >> 1) + (y << 1)", "12")
 	test("1 + x * y / 10", "3")
 	test("x + y is y + x", "true")
-	test("x < y and y > x", "true")
 	test("x > y and z", "false")
 	test("x < y or z", "true")
 	test("s $ t", `"foobar"`)
-	test("s is t", "false")
 	test("t[1::1]", "'a'")
 	test("z > 0 and z < 10", "false")
 	test("z >= '' and z < 'z'", "true")
 	xtest("x + y < 'foo'", "StrictCompare")
 
 	raw = true
+	test("123", "123")
 	test("x in (3, 4, 5)", "true")
 	test("t in (3, 4, 5)", "false")
 	test("x < 9", "true")
 	test("9 > x", "true")
+	test("x < y and y > x", "true")
+	test("s is t", "false")
 	test("s is 'foo'", "true")
 	test("123 is x", "false")
 	// range
@@ -168,29 +168,36 @@ func TestExprRename(t *testing.T) {
 
 func TestExprReplace(t *testing.T) {
 	cols := []string{"x", "y", "z"}
-	expr := NewQueryParser("5", nil, nil).Expression()
-	exprs := []ast.Expr{expr, expr, expr}
+	expr1 := NewQueryParser("5", nil, nil).Expression().(*ast.Constant) // x
+	expr2 := NewQueryParser("x + 6", nil, nil).Expression().(*ast.Nary) // y
+	expr3 := NewQueryParser("F(y)", nil, nil).Expression().(*ast.Call)  // z
+	exprs := []ast.Expr{expr1, expr2, expr3}
 	test := func(src string, expected string) {
 		t.Helper()
 		p := NewQueryParser(src, nil, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
-		result := replaceExpr(expr, cols, exprs)
+		result := replaceExpr(expr, cols, exprs, false)
+		e2, e3 := *expr2, *expr3
+		*expr2, *expr3 = ast.Nary{}, ast.Call{}
 		assert.T(t).Msg(src).This(result.Echo()).Is(expected)
-		result = replaceExpr(expr, cols, exprs)
+		*expr2, *expr3 = e2, e3
+		result = replaceExpr(expr, cols, exprs, false)
 		assert.T(t).Msg(src).This(result.Echo()).Is(expected)
 	}
 	test("a is x", "a is 5")
 	test("x is a", "a is 5") // reversed
 	test("x is 6", "false")  // folded
-	test("'=' $ x", `"=5"`)
+	test("'+' $ x", `"+5"`)
 	test("1 + x", `6`)
-	test("x + y + z", `15`)
+	test("y", "11")
+	test("z", "F(11)")
+	test("x + y + z", `16 + F(11)`)
 
 	// extend y = x, z = y where a is z => where a is x
 	cols = []string{"y", "z"}
-	expr = NewQueryParser("x", nil, nil).Expression()
-	expr2 := NewQueryParser("y", nil, nil).Expression()
-	exprs = []ast.Expr{expr, expr2}
+	e1 := NewQueryParser("x", nil, nil).Expression()
+	e2 := NewQueryParser("y", nil, nil).Expression()
+	exprs = []ast.Expr{e1, e2}
 	test("a is z", "a is x")
 }

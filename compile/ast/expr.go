@@ -19,19 +19,25 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-// Unraw is use by Where Simple to not evaluate raw
+// Unraw is use by Where Simple to *not* evaluate raw
 func Unraw(expr Node) Node {
 	switch e := expr.(type) {
 	case *Constant:
 		e.Packed = ""
 	case *In:
-		e.Packed = nil
+		e.evalRaw = false
+	case *Unary:
+		e.evalRaw = false
 	case *Binary:
 		e.evalRaw = false
 	case *InRange:
 		e.evalRaw = false
-	case *Call:
+	case *Trinary:
 		e.evalRaw = false
+	case *Nary:
+		e.evalRaw = false
+	case *Call:
+		e.RawEval = false
 	}
 	expr.Children(Unraw)
 	return expr
@@ -48,12 +54,45 @@ type Context struct {
 	Row  Row
 }
 
+// Constant ---------------------------------------------------------
+
+func (a *Constant) CanEvalRaw([]string) bool {
+	a.Packed = Pack(a.Val.(Packable))
+	return true
+}
+
+func (a *Constant) EvalRaw(*Context) string {
+	return a.Packed
+}
+
 func (a *Constant) Eval(*Context) Value {
 	return a.Val
 }
 
 func (a *Constant) Columns() []string {
 	return []string{}
+}
+
+// Ident ------------------------------------------------------------
+
+func (a *Ident) CanEvalRaw(flds []string) bool {
+	return slices.Contains(flds, a.Name) ||
+		(strings.HasSuffix(a.Name, "_lower!") &&
+			slices.Contains(flds, strings.TrimSuffix(a.Name, "_lower!")))
+}
+
+func IsField(e Expr, cols []string) (string, bool) {
+	if id, ok := e.(*Ident); ok && (slices.Contains(cols, id.Name) ||
+		(strings.HasSuffix(id.Name, "_lower!") &&
+			slices.Contains(cols, strings.TrimSuffix(id.Name, "_lower!")))) {
+		return id.Name, true
+	}
+	return "", false
+}
+
+func (a *Ident) EvalRaw(c *Context) string {
+	// need GetRawVal to handle PackForward
+	return c.Row.GetRawVal(c.Hdr, a.Name, c.Th, c.Tran)
 }
 
 func (a *Ident) Eval(c *Context) Value {
@@ -70,14 +109,29 @@ func (a *Ident) Columns() []string {
 	return []string{a.Name}
 }
 
+// Unary ------------------------------------------------------------
+
 func (a *Unary) CanEvalRaw(flds []string) bool {
-	if a.Tok == tok.LParen {
-		return a.E.CanEvalRaw(flds)
+	a.evalRaw = a.E.CanEvalRaw(flds) &&
+		(a.Tok == tok.Not || a.Tok == tok.LParen)
+	return a.evalRaw
+}
+
+func (a *Unary) EvalRaw(c *Context) string {
+	x := a.E.EvalRaw(c)
+	if a.Tok == tok.Not {
+		return PackBool(UnpackBool(x) == False)
 	}
-	return false
+	if a.Tok == tok.LParen {
+		return x
+	}
+	panic(assert.ShouldNotReachHere())
 }
 
 func (a *Unary) Eval(c *Context) Value {
+	if a.evalRaw {
+		return Unpack(a.EvalRaw(c))
+	}
 	return a.eval(a.E.Eval(c))
 }
 
@@ -88,7 +142,6 @@ func (a *Unary) eval(val Value) Value {
 	case tok.Sub:
 		return OpUnaryMinus(val)
 	case tok.Not:
-		// TODO eval raw e.g. not Number?(x)
 		return OpNot(val)
 	case tok.BitNot:
 		return OpBitNot(val)
@@ -104,27 +157,15 @@ func (a *Unary) Columns() []string {
 
 // Binary -----------------------------------------------------------
 
-// CouldEvalRaw is used by replaceExpr to know when to copy
-func (a *Binary) CouldEvalRaw() bool {
-	// depends on folder putting constant on the right
-	return a.rawOp() && isIdent(a.Lhs) && isConstant(a.Rhs)
-}
-
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
 // It sets evalRaw and Packed which are used later by Eval.
 func (a *Binary) CanEvalRaw(flds []string) bool {
 	// depends on folder putting constant on the right
-	if a.rawOp() && IsColumn(a.Lhs, flds) && isConstant(a.Rhs) {
-		a.evalRaw = true
-		c := a.Rhs.(*Constant)
-		c.Packed = Pack(c.Val.(Packable))
-		return true
-	}
-	a.evalRaw = false
-	return false
+	a.evalRaw = a.RawOp() && a.Lhs.CanEvalRaw(flds) && a.Rhs.CanEvalRaw(flds)
+	return a.evalRaw
 }
 
-func (a *Binary) rawOp() bool {
+func (a *Binary) RawOp() bool {
 	switch a.Tok {
 	case tok.Is, tok.Isnt, tok.Lt, tok.Lte, tok.Gt, tok.Gte:
 		return true
@@ -132,51 +173,29 @@ func (a *Binary) rawOp() bool {
 	return false
 }
 
-// IsColumn handles _lower!
-func IsColumn(e Expr, cols []string) bool {
-	if id, ok := e.(*Ident); ok && (slices.Contains(cols, id.Name) ||
-		(strings.HasSuffix(id.Name, "_lower!") &&
-			slices.Contains(cols, strings.TrimSuffix(id.Name, "_lower!")))) {
-		return true
-	}
-	return false
-}
-
-func isConstant(e Expr) bool {
-	_, ok := e.(*Constant)
-	return ok
-}
-
-func isIdent(e Expr) bool {
-	_, ok := e.(*Ident)
-	return ok
-}
-
 func (a *Binary) Eval(c *Context) Value {
 	if a.evalRaw {
-		return a.rawEval(c)
+		return UnpackBool(a.EvalRaw(c))
 	}
 	return a.eval(c.Th, a.Lhs.Eval(c), a.Rhs.Eval(c))
 }
 
-func (a *Binary) rawEval(c *Context) Value {
-	name := a.Lhs.(*Ident).Name
-	// need GetRawVal to handle PackForward
-	lhs := c.Row.GetRawVal(c.Hdr, name, c.Th, c.Tran)
-	rhs := a.Rhs.(*Constant).Packed
+func (a *Binary) EvalRaw(c *Context) string {
+	lhs := a.Lhs.EvalRaw(c)
+	rhs := a.Rhs.EvalRaw(c)
 	switch a.Tok {
 	case tok.Is:
-		return SuBool(lhs == rhs)
+		return PackBool(lhs == rhs)
 	case tok.Isnt:
-		return SuBool(lhs != rhs)
+		return PackBool(lhs != rhs)
 	case tok.Lt:
-		return SuBool(packedCmp(lhs, rhs) < 0)
+		return PackBool(packedCmp(lhs, rhs) < 0)
 	case tok.Lte:
-		return SuBool(packedCmp(lhs, rhs) <= 0)
+		return PackBool(packedCmp(lhs, rhs) <= 0)
 	case tok.Gt:
-		return SuBool(packedCmp(lhs, rhs) > 0)
+		return PackBool(packedCmp(lhs, rhs) > 0)
 	case tok.Gte:
-		return SuBool(packedCmp(lhs, rhs) >= 0)
+		return PackBool(packedCmp(lhs, rhs) >= 0)
 	}
 	panic(assert.ShouldNotReachHere())
 }
@@ -221,7 +240,27 @@ func (a *Binary) Columns() []string {
 	return set.Union(a.Lhs.Columns(), a.Rhs.Columns())
 }
 
+// Trinary ----------------------------------------------------------
+
+func (a *Trinary) CanEvalRaw(flds []string) bool {
+	c := a.Cond.CanEvalRaw(flds)
+	t := a.T.CanEvalRaw(flds)
+	f := a.F.CanEvalRaw(flds)
+	a.evalRaw = c && t && f
+	return a.evalRaw
+}
+
+func (a *Trinary) EvalRaw(c *Context) string {
+	if UnpackBool(a.Cond.EvalRaw(c)) == True {
+		return a.T.EvalRaw(c)
+	}
+	return a.F.EvalRaw(c)
+}
+
 func (a *Trinary) Eval(c *Context) Value {
+	if a.evalRaw {
+		return Unpack(a.EvalRaw(c))
+	}
 	if ToBool(a.Cond.Eval(c)) {
 		return a.T.Eval(c)
 	}
@@ -236,17 +275,42 @@ func (a *Trinary) Columns() []string {
 // Nary -------------------------------------------------------------
 
 func (a *Nary) CanEvalRaw(flds []string) bool {
+	a.evalRaw = false
 	if a.Tok == tok.Or || a.Tok == tok.And {
+		a.evalRaw = true
 		for _, e := range a.Exprs {
-			if e.CanEvalRaw(flds) {
-				return true
+			if !e.CanEvalRaw(flds) {
+				a.evalRaw = false // don't break, call on all exprs
 			}
 		}
 	}
-	return false
+	return a.evalRaw
+}
+
+func (a *Nary) EvalRaw(c *Context) string {
+	if a.Tok == tok.Or {
+		for _, e := range a.Exprs {
+			if UnpackBool(e.EvalRaw(c)) == True {
+				return PackedTrue
+			}
+		}
+		return PackedFalse
+	}
+	if a.Tok == tok.And {
+		for _, e := range a.Exprs {
+			if UnpackBool(e.EvalRaw(c)) == False {
+				return PackedFalse
+			}
+		}
+		return PackedTrue
+	}
+	panic(assert.ShouldNotReachHere())
 }
 
 func (a *Nary) Eval(c *Context) Value {
+	if a.evalRaw {
+		return UnpackBool(a.EvalRaw(c))
+	}
 	exprs := a.Exprs
 	switch a.Tok {
 	case tok.Add: // includes Sub
@@ -313,7 +377,7 @@ func (a *Nary) Columns() []string {
 	return cols
 }
 
-// Range ------------------------------------------------------------
+// RangeTo ----------------------------------------------------------
 
 func (a *RangeTo) Eval(c *Context) Value {
 	e := a.E.Eval(c)
@@ -332,6 +396,8 @@ func (a *RangeTo) Columns() []string {
 	}
 	return cols
 }
+
+// RangeLen ---------------------------------------------------------
 
 func (a *RangeLen) Eval(c *Context) Value {
 	e := a.E.Eval(c)
@@ -354,44 +420,32 @@ func evalOr(e Expr, c *Context, v Value) Value {
 
 // In ---------------------------------------------------------------
 
-// CanEvalRaw returns true if Eval doesn't need to unpack the values.
-// It sets Packed which is later used by Eval.
 func (a *In) CanEvalRaw(flds []string) bool {
-	a.Packed = nil
-	if !IsColumn(a.E, flds) {
-		return false
-	}
-	packed := make([]string, 0, len(a.Exprs))
-	for _, e := range a.Exprs {
-		c, ok := e.(*Constant)
-		if !ok {
-			return false
+	a.evalRaw = false
+	if a.E.CanEvalRaw(flds) {
+		a.evalRaw = true
+		for _, e := range a.Exprs {
+			if !e.CanEvalRaw(flds) {
+				a.evalRaw = false
+			}
 		}
-		packed = set.AddUnique(packed, Pack(c.Val.(Packable)))
 	}
-	a.Packed = packed
-	return true
+	return a.evalRaw
 }
 
-// CouldEvalRaw is used by replaceExpr to know when to copy
-func (a *In) CouldEvalRaw() bool {
-	if !isIdent(a.E) {
-		return false
-	}
+func (a *In) EvalRaw(c *Context) string {
+	x := a.E.EvalRaw(c)
 	for _, e := range a.Exprs {
-		if !isConstant(e) {
-			return false
+		if x == e.EvalRaw(c) {
+			return PackedTrue
 		}
 	}
-	return true
+	return PackedFalse
 }
 
 func (a *In) Eval(c *Context) Value {
-	if a.Packed != nil {
-		id := a.E.(*Ident)
-		// need GetRawVal to handle PackForward
-		e := c.Row.GetRawVal(c.Hdr, id.Name, c.Th, c.Tran)
-		return SuBool(slices.Contains(a.Packed, e))
+	if a.evalRaw {
+		return UnpackBool(a.EvalRaw(c))
 	}
 	x := a.E.Eval(c)
 	for _, e := range a.Exprs {
@@ -413,41 +467,30 @@ func (a *In) Columns() []string {
 
 // InRange ---------------------------------------------------------------
 
-// CouldEvalRaw is used by replaceExpr to know when to copy
-func (a *InRange) CouldEvalRaw() bool {
-	return isIdent(a.E)
-}
-
-// CanEvalRaw returns true if Eval doesn't need to unpack the values.
-// It sets Packed which is later used by Eval.
 func (a *InRange) CanEvalRaw(flds []string) bool {
 	// InRange already ensures valid operators and constants
-	if !IsColumn(a.E, flds) {
-		a.evalRaw = false
-		return false
+	a.evalRaw = a.E.CanEvalRaw(flds)
+	a.Org.CanEvalRaw(flds)
+	a.End.CanEvalRaw(flds)
+	return a.evalRaw
+}
+
+func (a *InRange) EvalRaw(c *Context) string {
+	x := a.E.EvalRaw(c)
+	org := a.Org.EvalRaw(c)
+	if (a.OrgTok == tok.Gt && !(x > org)) || !(x >= org) {
+		return PackedFalse
 	}
-	a.evalRaw = true
-	c := a.Org.(*Constant)
-	c.Packed = Pack(c.Val.(Packable))
-	c = a.End.(*Constant)
-	c.Packed = Pack(c.Val.(Packable))
-	return true
+	end := a.End.EvalRaw(c)
+	if (a.EndTok == tok.Lt && !(x < end)) || !(x <= end) {
+		return PackedFalse
+	}
+	return PackedTrue
 }
 
 func (a *InRange) Eval(c *Context) Value {
 	if a.evalRaw {
-		id := a.E.(*Ident)
-		// need GetRawVal to handle PackForward
-		x := c.Row.GetRawVal(c.Hdr, id.Name, c.Th, c.Tran)
-		org := a.Org.(*Constant).Packed
-		if (a.OrgTok == tok.Gt && !(x > org)) || !(x >= org) {
-			return False
-		}
-		end := a.End.(*Constant).Packed
-		if (a.EndTok == tok.Lt && !(x < end)) || !(x <= end) {
-			return False
-		}
-		return True
+		return UnpackBool(a.EvalRaw(c))
 	}
 	return OpInRange(a.E.Eval(c), a.OrgTok, a.Org.Eval(c), a.EndTok, a.End.Eval(c))
 }
@@ -459,7 +502,7 @@ func (a *InRange) Columns() []string {
 	return cols
 }
 
-// ------------------------------------------------------------------
+// Mem --------------------------------------------------------------
 
 func (a *Mem) Eval(c *Context) Value {
 	e := a.E.Eval(c)
@@ -475,31 +518,37 @@ func (a *Mem) Columns() []string {
 	return set.Union(a.E.Columns(), a.M.Columns())
 }
 
+// Call -------------------------------------------------------------
+
 func (a *Call) CanEvalRaw(flds []string) bool {
 	fn, ok := a.Fn.(*Ident)
-	a.evalRaw = ok && len(a.Args) == 1 && IsColumn(a.Args[0].E, flds) &&
+	a.RawEval = ok && len(a.Args) == 1 && a.Args[0].E.CanEvalRaw(flds) &&
 		(fn.Name == "Number?" || fn.Name == "String?" || fn.Name == "Date?")
-	return a.evalRaw
+	for i := 1; i < len(a.Args); i++ {
+		a.Args[i].E.CanEvalRaw(flds)
+	}
+	return a.RawEval
+}
+
+func (a *Call) EvalRaw(c *Context) string {
+	x := a.Args[0].E.EvalRaw(c)
+	result := false
+	switch a.Fn.(*Ident).Name {
+	case "Number?":
+		result = len(x) > 0 && (x[0] == PackMinus || x[0] == PackPlus)
+	case "String?":
+		result = x == "" || x[0] == PackString
+	case "Date?":
+		result = len(x) > 0 && x[0] == PackDate
+	default:
+		assert.ShouldNotReachHere()
+	}
+	return PackBool(result)
 }
 
 func (a *Call) Eval(c *Context) Value {
-	if a.evalRaw {
-		fn := a.Fn.(*Ident).Name
-		id := a.Args[0].E.(*Ident).Name
-		// need GetRawVal to handle PackForward
-		x := c.Row.GetRawVal(c.Hdr, id, c.Th, c.Tran)
-		result := false
-		switch fn {
-		case "Number?":
-			result = len(x) > 0 && (x[0] == PackMinus || x[0] == PackPlus)
-		case "String?":
-			result = x == "" || x[0] == PackString
-		case "Date?":
-			result = len(x) > 0 && x[0] == PackDate
-		default:
-			assert.ShouldNotReachHere()
-		}
-		return SuBool(result)
+	if a.RawEval {
+		return UnpackBool(a.EvalRaw(c))
 	}
 	as := argspec(a.Args) //TODO cache
 	args := make([]Value, len(a.Args))
@@ -556,6 +605,8 @@ func (a *Call) Columns() []string {
 	return cols
 }
 
+// Block ------------------------------------------------------------
+
 func (a *Block) Eval(*Context) Value {
 	panic("queries do not support blocks")
 }
@@ -564,37 +615,47 @@ func (a *Block) Columns() []string {
 	panic("queries do not support blocks")
 }
 
-func CantBeEmpty(e Expr, cols []string) bool {
-	if !e.CanEvalRaw(cols) {
-		return false
-	}
+//-------------------------------------------------------------------
+
+// CanBeEmpty returns true if the expression could match an empty string.
+// It is conservative and handles both raw where "" is less than everything,
+// and values where "" is between numbers and strings.
+func CanBeEmpty(e Expr) bool {
 	switch e := e.(type) {
 	case *Binary:
-		c := e.Rhs.(*Constant)
+		if _, ok := e.Lhs.(*Ident); !ok {
+			return true
+		}
+		c, ok := e.Rhs.(*Constant)
+		if !ok {
+			return true
+		}
 		switch e.Tok {
 		case tok.Is:
-			return c.Val != EmptyStr
-		case tok.Isnt:
 			return c.Val == EmptyStr
+		case tok.Isnt:
+			return c.Val != EmptyStr
 		case tok.Lt:
-			return c.Val.Compare(EmptyStr) <= 0
+			return c.Val != EmptyStr
 		case tok.Lte:
-			return c.Val.Compare(EmptyStr) < 0
+			return true
 		case tok.Gt:
-			return c.Val.Compare(EmptyStr) >= 0
+			return c.Val.Compare(EmptyStr) < 0
 		case tok.Gte:
-			return c.Val.Compare(EmptyStr) > 0
+			return c.Val.Compare(EmptyStr) <= 0
 		default:
-			return false
+			return true
 		}
 	case *In:
-		for _, p := range e.Packed {
-			if p == "" {
-				return false
+		if _, ok := e.E.(*Ident); !ok {
+			return true
+		}
+		for _, e := range e.Exprs {
+			if c, ok := e.(*Constant); !ok || c.Val == EmptyStr {
+				return true
 			}
 		}
-		return true
-	default:
 		return false
 	}
+	return true
 }
