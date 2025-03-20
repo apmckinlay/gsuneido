@@ -4,6 +4,8 @@
 package core
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
@@ -24,7 +26,7 @@ type SuClosure struct {
 var _ Value = (*SuClosure)(nil)
 
 func (b *SuClosure) String() string {
-	return "/* closure */"
+	return strings.Replace(b.SuFunc.String(), "block */", "closure */", 1)
 }
 
 func (b *SuClosure) Equal(other any) bool {
