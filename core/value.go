@@ -109,12 +109,14 @@ const (
 	OrdOther
 )
 
+const OrdStr = ordStr
+
 func Order(x Value) Ord {
 	t := x.Type()
 	if t <= types.Object {
 		return Ord(t)
 	} else if t == types.Except {
-		return ordStr
+		return OrdStr
 	} else if t == types.Record {
 		return ordObject
 	}

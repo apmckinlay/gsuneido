@@ -60,7 +60,7 @@ func TestExprEval(t *testing.T) {
 	test("t[1::1]", "'a'")
 	test("z > 0 and z < 10", "false")
 	test("z >= '' and z < 'z'", "true")
-	xtest("x + y < 'foo'", "StrictCompare")
+	xtest("x + y < ''", "StrictCompare")
 
 	raw = true
 	test("123", "123")
@@ -76,20 +76,19 @@ func TestExprEval(t *testing.T) {
 	test("x > 0 and 9 > x", "true")
 	test("100 < x and x < 200", "false")
 	test("0 < s and s < 10", "false") // wrong type
-	xtest("s > 10", "StrictCompare")
+	xtest("x > ''", "StrictCompare")
 }
 
 func mkrow() (Row, *Header) {
 	rb := RecordBuilder{}
-	rb.Add(SuInt(4))
-	rb.Add(SuInt(5))
-	rb.Add(SuStr("foo"))
-	rb.Add(SuStr("bar"))
+	rb.Add(SuInt(4))     // x
+	rb.Add(SuInt(5))     // y
+	rb.Add(SuStr("foo")) // s
+	rb.Add(SuStr("bar")) // t
 	rec := rb.Build()
 	dbrec := DbRec{Record: rec}
 	row := Row{dbrec}
-	flds := []string{"x", "y", "s", "t"}
-	hdr := NewHeader([][]string{flds}, flds)
+	hdr := SimpleHeader([]string{"x", "y", "s", "t"})
 	return row, hdr
 }
 

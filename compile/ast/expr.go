@@ -202,8 +202,11 @@ func (a *Binary) EvalRaw(c *Context) string {
 
 func packedCmp(x, y string) int {
 	cmp := strings.Compare(x, y)
-	if cmp != 0 && options.StrictCompareDb && PackedOrd(x) != PackedOrd(y) {
-		panic(fmt.Sprint("StrictCompareDb: ", Unpack(x), " <=> ", Unpack(y)))
+	if cmp != 0 && options.StrictCompareDb &&
+		((x == "" && PackedOrd(y) < OrdStr) ||
+			(y == "" && PackedOrd(x) < OrdStr)) {
+		panic(fmt.Sprint("StrictCompareDb: ", PackedOrd(x), " ", Unpack(x),
+			" <=> ", PackedOrd(y), " ", Unpack(y)))
 	}
 	return cmp
 }
@@ -219,13 +222,13 @@ func (a *Binary) eval(th *Thread, lhs, rhs Value) Value {
 	case tok.MatchNot:
 		return OpMatch(th, lhs, rhs).Not()
 	case tok.Lt:
-		return OpLt(lhs, rhs)
+		return Value(SuBool(strictCompare(lhs, rhs) < 0))
 	case tok.Lte:
-		return OpLte(lhs, rhs)
+		return Value(SuBool(strictCompare(lhs, rhs) <= 0))
 	case tok.Gt:
-		return OpGt(lhs, rhs)
+		return Value(SuBool(strictCompare(lhs, rhs) > 0))
 	case tok.Gte:
-		return OpGte(lhs, rhs)
+		return Value(SuBool(strictCompare(lhs, rhs) >= 0))
 	case tok.Mod:
 		return OpMod(lhs, rhs)
 	case tok.LShift:
@@ -234,6 +237,16 @@ func (a *Binary) eval(th *Thread, lhs, rhs Value) Value {
 		return OpRightShift(lhs, rhs)
 	}
 	panic(assert.ShouldNotReachHere())
+}
+
+func strictCompare(x Value, y Value) int {
+	cmp := x.Compare(y)
+	if (cmp&3) == 2 && options.StrictCompareDb &&
+		((x == EmptyStr && Order(y) < OrdStr) ||
+			(y == EmptyStr && Order(x) < OrdStr)) {
+		panic(fmt.Sprint("StrictCompareDb: ", x, " <=> ", y))
+	}
+	return cmp
 }
 
 func (a *Binary) Columns() []string {
