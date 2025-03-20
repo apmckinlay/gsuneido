@@ -106,7 +106,7 @@ const (
 	ordStr      // SuStr, SuConcat, SuExcept
 	ordDate
 	ordObject
-	OrdOther
+	ordOther
 )
 
 const OrdStr = ordStr
@@ -120,7 +120,7 @@ func Order(x Value) Ord {
 	} else if t == types.Record {
 		return ordObject
 	}
-	return OrdOther
+	return ordOther
 }
 
 func (o Ord) String() string {
