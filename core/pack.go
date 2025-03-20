@@ -182,7 +182,7 @@ func PackBool(b bool) string {
 func UnpackBool(s string) Value {
 	if s == PackedTrue {
 		return True
-    }
+	}
 	if s == PackedFalse {
 		return False
 	}

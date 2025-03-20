@@ -185,7 +185,7 @@ func (ss SuStr) Get(_ *Thread, key Value) Value {
 // strGet is used by SuStr and SuConcat .Get
 func strGet(s string, key Value) Value {
 	i, ok := key.IfInt()
-	if ! ok {
+	if !ok {
 		return nil
 	}
 	n := len(s)
