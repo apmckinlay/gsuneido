@@ -438,6 +438,8 @@ func (a *Return) Get(_ *Thread, m Value) Value {
 			panic("return.expr does not handle multiple expressions")
 		}
 		return a.Exprs[0].(Value)
+	case SuStr("throw"):
+		return SuBool(a.ReturnThrow)
 	}
 	return stmtGet(a, m)
 }
