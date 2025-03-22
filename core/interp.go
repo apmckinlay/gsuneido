@@ -506,7 +506,7 @@ loop:
 			rm := th.ReturnMulti
 			th.ReturnMulti = th.ReturnMulti[:0]
 			if n != len(rm) {
-				panic("argument mismatch")
+				panic("multiple return/assign mismatch")
 			}
 			for i := range n {
 				th.Push(rm[i])

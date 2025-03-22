@@ -40,7 +40,8 @@ const (
 	MaxInt
 	// EmptyStr pushes EmptyStr ("")
 	EmptyStr
-	// PushReturn <uint8> pushes multiple return values onto the stack
+	// PushReturn <uint8> pushes multiple return values onto the stack.
+	// It is used by multiple assignment.
 	PushReturn
 
 	// load and store -----------------------------------------------
@@ -231,7 +232,8 @@ const (
 	ReturnNil
 	// ReturnThrow, forces caller to check value
 	ReturnThrow
-	// ReturnMulti <uint8> returns multiple values from the stack
+	// ReturnMulti <uint8> returns multiple values from the stack.
+	// It is used by multiple return.
 	ReturnMulti
 
 	// blocks -------------------------------------------------------
