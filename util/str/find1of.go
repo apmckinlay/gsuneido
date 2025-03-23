@@ -11,9 +11,9 @@ func Find1of(s, chars string) int {
 	if len(chars) == 0 {
 		return -1
 	}
-	b := makeBits(chars)
+	b := MakeSet(chars)
 	for i := range len(s) {
-		if b.contains(s[i]) {
+		if b.Contains(s[i]) {
 			return i
 		}
 	}
@@ -24,23 +24,26 @@ func FindLast1of(s, chars string) int {
 	if len(chars) == 0 {
 		return -1
 	}
-	b := makeBits(chars)
+	b := MakeSet(chars)
 	for i := len(s) - 1; i >= 0; i-- {
-		if b.contains(s[i]) {
+		if b.Contains(s[i]) {
 			return i
 		}
 	}
 	return -1
 }
 
-type bits [4]uint64
+type Set [4]uint64
 
-func (b bits) contains(c byte) bool {
+func (b Set) Contains(c byte) bool {
 	return b[c/64]&(1<<(c%64)) != 0
 }
 
-func makeBits(chars string) bits {
-	var b bits
+func MakeSet(chars string) Set {
+	var b Set
+	if len(chars) == 0 {
+		return b // Return an empty set for an empty string
+	}
 	negated := chars[0] == '^'
 	if negated {
 		chars = chars[1:]

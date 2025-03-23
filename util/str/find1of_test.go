@@ -42,7 +42,7 @@ func TestFind1of(t *testing.T) {
 func FuzzFind1of(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s, chars string) {
 		if len(chars) > 0 {
-			makeBits(chars)
+			MakeSet(chars)
 		}
 		Find1of(s, chars)
 		FindLast1of(s, chars)
@@ -52,7 +52,7 @@ func FuzzFind1of(f *testing.F) {
 func TestMakeBits(t *testing.T) {
 	test := func(chars string, expected string) {
 		t.Helper()
-		assert.T(t).This(makeBits(chars).String()).Is(expected)
+		assert.T(t).This(MakeSet(chars).String()).Is(expected)
 	}
 	test("x", "x")
 	test("xyz", "xyz")
@@ -66,7 +66,7 @@ func TestMakeBits(t *testing.T) {
 	test("^z-a", "!")
 }
 
-func (b bits) String() string {
+func (b Set) String() string {
 	var s string
 	for i := range b {
 		for j := range 64 {
@@ -87,4 +87,58 @@ func (b bits) String() string {
 		return s
 	}
 	return t
+}
+
+func TestSetContains(t *testing.T) {
+	assert := assert.T(t)
+
+	// Test with a simple set
+	set := MakeSet("abc")
+	assert.True(set.Contains('a'))
+	assert.True(set.Contains('b'))
+	assert.True(set.Contains('c'))
+	assert.False(set.Contains('d'))
+	assert.False(set.Contains('x'))
+
+	// Test with a range
+	set = MakeSet("a-z")
+	for c := 'a'; c <= 'z'; c++ {
+		assert.True(set.Contains(byte(c)))
+	}
+	assert.False(set.Contains('A'))
+	assert.False(set.Contains('0'))
+
+	// Test with a negated set
+	set = MakeSet("^abc")
+	assert.False(set.Contains('a'))
+	assert.False(set.Contains('b'))
+	assert.False(set.Contains('c'))
+	assert.True(set.Contains('d'))
+	assert.True(set.Contains('x'))
+
+	// Test with a mix of individual characters and ranges
+	set = MakeSet("a-c0-9x")
+	assert.True(set.Contains('a'))
+	assert.True(set.Contains('b'))
+	assert.True(set.Contains('c'))
+	assert.True(set.Contains('0'))
+	assert.True(set.Contains('5'))
+	assert.True(set.Contains('9'))
+	assert.True(set.Contains('x'))
+	assert.False(set.Contains('d'))
+	assert.False(set.Contains('y'))
+
+	// Test edge cases
+	set = MakeSet("")
+	assert.False(set.Contains('a'))
+
+	// Test single character set
+	set = MakeSet("a")
+	assert.True(set.Contains('a'))
+	assert.False(set.Contains('b'))
+
+	set = MakeSet("\x00\xff")
+	assert.True(set.Contains(0))
+	assert.True(set.Contains(255))
+	assert.False(set.Contains(128))
 }
