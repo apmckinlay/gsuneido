@@ -46,6 +46,12 @@ func ftsearch_Load(data Value) Value {
 	return newSuFtsIndex(ftsearch.Unpack(ToStr(data)))
 }
 
+func newSuFtsIndex(idx *ftsearch.Index) *suFtsIndex {
+	var si suFtsIndex
+	si.idx.Store(idx)
+	return &si
+}
+
 var _ = staticMethod(ftsearch_Members, "()")
 
 func ftsearch_Members() Value {
@@ -54,10 +60,19 @@ func ftsearch_Members() Value {
 
 var ftsearch_members = methodList(ftsearchMethods)
 
-func newSuFtsIndex(idx *ftsearch.Index) *suFtsIndex {
-	var si suFtsIndex
-	si.idx.Store(idx)
-	return &si
+var _ = staticMethod(ftsearch_Tokens, "(text)")
+
+func ftsearch_Tokens(text Value) Value {
+	in := ftsearch.NewInput(ToStr(text))
+	var tokens []Value
+	for {
+		token := in.Next()
+		if token == "" {
+			break
+		}
+		tokens = append(tokens, SuStr(token))
+	}
+	return SuObjectOf(tokens...)
 }
 
 //-------------------------------------------------------------------

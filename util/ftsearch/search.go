@@ -2,7 +2,7 @@
 // Governed by the MIT license found in the LICENSE file.
 
 /*
-Package search implements a simple full text search like Lucene.
+Package ftsearch implements a simple full text search like Lucene.
 
 Terminology:
 - document e.g. a page in the help or wiki
@@ -15,7 +15,7 @@ func (ix *Index) Search(query string) []DocScore {
 		return nil
 	}
 	ts := make([]*term, 0, 8)
-	input := newInput(query)
+	input := NewInput(query)
 	for term := input.Next(); term != ""; term = input.Next() {
 		if trm, ok := ix.terms[term]; ok {
 			ts = append(ts, trm)

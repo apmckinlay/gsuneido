@@ -147,7 +147,7 @@ func (ix *Index) String() string {
 }
 
 func (ix *Index) WordInfo(s string) string {
-	input := newInput(s)
+	input := NewInput(s)
 	var sb strings.Builder
 	for term := input.Next(); term != ""; term = input.Next() {
 		if t, ok := ix.terms[term]; ok {

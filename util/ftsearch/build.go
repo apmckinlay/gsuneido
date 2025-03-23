@@ -37,7 +37,7 @@ func (b *Builder) Add(id int, title, text string) {
 
 func (b *Builder) add(id int, s string, n int) int {
 	nterms := 0
-	input := newInput(s)
+	input := NewInput(s)
 	for word := input.Next(); word != ""; word = input.Next() {
 		trm, ok := b.terms[word]
 		if !ok {
@@ -66,7 +66,7 @@ func (b *Builder) Delete(id int, title, text string) {
 
 func (b *Builder) delete(id int, s string, n int) int {
 	nterms := 0
-	input := newInput(s)
+	input := NewInput(s)
 	for word := input.Next(); word != ""; word = input.Next() {
 		trm, ok := b.terms[word]
 		assert.That(ok)

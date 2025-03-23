@@ -13,8 +13,8 @@ type input struct {
 	pos  int
 }
 
-func newInput(text string) *input {
-	return &input{text, 0}
+func NewInput(text string) *input {
+	return &input{text: text}
 }
 
 const maxWordLength = 32

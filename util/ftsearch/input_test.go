@@ -10,7 +10,7 @@ import (
 )
 
 func TestTokens(t *testing.T) {
-	tzr := newInput("Now is (the) 1 time for 123accumulations.")
+	tzr := NewInput("Now is (the) 1 time for 123accumulations.")
 	var toks []string
 	for tok := tzr.Next(); tok != ""; tok = tzr.Next() {
 		toks = append(toks, tok)
