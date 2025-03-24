@@ -5,39 +5,64 @@ package ftsearch
 
 import (
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/str"
 	snowballeng "github.com/kljensen/snowball/english"
 )
 
 type input struct {
-	text string
-	pos  int
+	text   string
+	pos    int
+	litpos int
 }
 
 func NewInput(text string) *input {
 	return &input{text: text}
 }
 
+const minWordLength = 2
 const maxWordLength = 32
 const maxNumberLength = 16
 
+var alphanum = str.MakeSet("a-zA-Z0-9")
+var special = str.MakeSet("-_&")
+
 func (src *input) Next() string {
 	for {
-		// skip non-letter
-		for src.pos < len(src.text) && !ascii.IsLetter(src.text[src.pos]) &&
-			!ascii.IsDigit(src.text[src.pos]) {
+		// skip non-alphanumeric
+		for src.pos < len(src.text) && !alphanum.Contains(src.text[src.pos]) {
 			src.pos++
 		}
 		if src.pos >= len(src.text) {
 			return ""
 		}
 		pos := src.pos
+		if src.pos >= src.litpos {
+			i := pos
+			var let, num, spec int
+			for i < len(src.text) {
+				if ascii.IsLetter(src.text[i]) {
+					let = 1
+				} else if ascii.IsDigit(src.text[i]) {
+					num = 1
+				} else if special.Contains(src.text[i]) {
+					spec = 1
+				} else {
+					break
+				}
+				i++
+			}
+			if let+num+spec > 1 && i-pos > 1 {
+				src.litpos = i + 1
+				return str.ToLower(src.text[pos:i])
+			}
+		}
 		if ascii.IsLetter(src.text[src.pos]) {
 			for src.pos < len(src.text) && ascii.IsLetter(src.text[src.pos]) {
 				src.pos++
 			}
 			tok := src.text[pos:src.pos]
-			if len(tok) > 1 && len(tok) < maxWordLength {
-				if _, ok := stopWords[tok]; !ok {
+			if len(tok) >= minWordLength && len(tok) < maxWordLength {
+				if _, ok := stopWords[str.ToLower(tok)]; !ok {
 					return snowballeng.Stem(tok, true)
 				}
 			}
@@ -46,7 +71,7 @@ func (src *input) Next() string {
 				src.pos++
 			}
 			tok := src.text[pos:src.pos]
-			if len(tok) >= 2 && len(tok) < maxNumberLength {
+			if len(tok) >= minWordLength && len(tok) < maxNumberLength {
 				return tok
 			}
 		}
