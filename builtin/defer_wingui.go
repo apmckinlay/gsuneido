@@ -93,9 +93,6 @@ var _ = AddInfo("windows.nDefer", deferQueue.Size)
 var _ = builtin(Defer, "(block)")
 
 func Defer(th *Thread, args []Value) Value {
-	if th != MainThread {
-		panic("Defer can only be used from the main GUI thread")
-	}
 	trace.Defer.Println("Defer", args[0])
 	id := dqMustPut(args[0]) // can't block because MainThread is the consumer
 	return &killer{kill: func() { dqRemove(id) }}
