@@ -39,12 +39,14 @@ type dqitem struct {
 
 var dqid atomic.Int32
 
+// dqPut blocks if the queue is full
 func dqPut(fn Value) int {
 	id := int(dqid.Add(1))
 	deferQueue.Put(dqitem{id: id, fn: fn})
 	return id
 }
 
+// dqMustPut panics if the queue is full
 func dqMustPut(fn Value) int {
 	id := int(dqid.Add(1))
 	deferQueue.MustPut(dqitem{id: id, fn: fn})
