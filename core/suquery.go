@@ -137,15 +137,13 @@ func (q *SuQuery) GetRec(th *Thread, dir Dir) Value {
 	if dir == q.eof {
 		return False
 	}
-	// get header before row to avoid blocking on read-ahead
-	hdr := q.iqc.Header() 
 	row, table := q.iqc.(IQuery).Get(th, dir)
 	if row == nil {
 		q.eof = dir
 		return False
 	}
 	q.eof = 0
-	return SuRecordFromRow(row, hdr, table, q.tran)
+	return SuRecordFromRow(row, q.iqc.Header(), table, q.tran)
 }
 
 func (q *SuQuery) Output(th *Thread, ob Container) {

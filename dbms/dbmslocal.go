@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 	"sync/atomic"
 
 	"slices"
@@ -88,8 +87,8 @@ func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
 	tran := dbms.db.NewReadTran()
 	q, fixcost, varcost := buildQuery(query, tran, sv, qry.CursorMode)
 	trace.Query.Println("cursor", fixcost+varcost, "-", query)
-	return &cursorLocal{qcLocal{
-		q: q, cost: fixcost + varcost, mode: qry.CursorMode}}
+	return cursorLocal{queryLocal{
+		Query: q, cost: fixcost + varcost, mode: qry.CursorMode}}
 }
 
 func buildQuery(query string, tran qry.QueryTran, sv *Sviews,
@@ -430,7 +429,7 @@ func (t ReadTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, str
 func (t ReadTranLocal) Query(query string, sv *Sviews) IQuery {
 	q, fixcost, varcost := buildQuery(query, t.ReadTran, sv, qry.ReadMode)
 	trace.Query.Println(fixcost+varcost, "-", query)
-	return &queryLocal{qcLocal: qcLocal{q: q, cost: fixcost + varcost, mode: qry.ReadMode}}
+	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.ReadMode}
 }
 
 func (t ReadTranLocal) Action(*Thread, string) int {
@@ -450,7 +449,7 @@ func (t UpdateTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, s
 func (t UpdateTranLocal) Query(query string, sv *Sviews) IQuery {
 	q, fixcost, varcost := buildQuery(query, t.UpdateTran, sv, qry.UpdateMode)
 	trace.Query.Println("update", fixcost+varcost, "-", query)
-	return &queryLocal{qcLocal: qcLocal{q: q, cost: fixcost + varcost, mode: qry.UpdateMode}}
+	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.UpdateMode}
 }
 
 func (t UpdateTranLocal) Action(th *Thread, action string) int {
@@ -467,19 +466,19 @@ func (t UpdateTranLocal) Update(th *Thread, table string, oldoff uint64, newrec 
 	return t.UpdateTran.Update(th, table, oldoff, newrec)
 }
 
-// qcLocal - common base for queryLocal and cursorLocal
+// queryLocal
 
-type qcLocal struct {
+type queryLocal struct {
 	// Query is embedded so most methods are "inherited" directly
-	q    qry.Query
+	qry.Query
 	keys []string // cache
 	cost qry.Cost
 	mode qry.Mode
 }
 
-func (q *qcLocal) Keys() []string {
+func (q queryLocal) Keys() []string {
 	if q.keys == nil {
-		keys := q.q.Keys()
+		keys := q.Query.Keys()
 		list := make([]string, len(keys))
 		for i, k := range keys {
 			list[i] = str.Join(",", k)
@@ -489,178 +488,48 @@ func (q *qcLocal) Keys() []string {
 	return q.keys
 }
 
-func (q *qcLocal) Strategy(formatted bool) string {
+func (q queryLocal) Strategy(formatted bool) string {
 	var strategy string
 	if formatted {
-		strategy = qry.Strategy(q.q) + "\n"
+		strategy = qry.Strategy(q.Query) + "\n"
 	} else {
-		strategy = qry.String(q.q) + " "
+		strategy = qry.String(q.Query) + " "
 	}
-	n, _ := q.q.Nrows()
+	n, _ := q.Nrows()
 	return fmt.Sprint(strategy,
 		"[nrecs~ ", n, " cost~ ", q.cost, " ", q.mode, "]")
 }
 
-func (q *qcLocal) Get(th *Thread, dir Dir) (Row, string) {
-	defer th.Suneido.Store(th.Suneido.Swap(nil)) // use main Suneido object
-	row := q.q.Get(th, dir)
+func (q queryLocal) Order() []string {
+	return q.Query.Order()
+}
+
+func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
+	defer th.Suneido.Store(th.Suneido.Load())
+	th.Suneido.Store(nil) // use main Suneido object
+	row := q.Query.Get(th, dir)
 	if row == nil {
-		q.q.Rewind() // required for SuQuery to stick at eof unidirectionally
+		// this is required for SuQuery to stick at eof unidirectionally
+		q.Query.Rewind()
 	}
-	return row, q.q.Updateable()
+	return row, q.Query.Updateable()
 }
 
-func (q *qcLocal) Tree() Value {
-	qry.CalcSelf(q.q)
-	return qry.NewSuQueryNode(q.q)
+func (q queryLocal) Tree() Value {
+	qry.CalcSelf(q.Query)
+	return qry.NewSuQueryNode(q.Query)
 }
 
-func (q *qcLocal) Close() {
+func (q queryLocal) Close() {
 }
 
 // cursorLocal
 
 type cursorLocal struct {
-	qcLocal
+	queryLocal
 }
 
-func (q *cursorLocal) Get(th *Thread, t ITran, dir Dir) (Row, string) {
-	q.q.SetTran(t.(qry.QueryTran))
-	return q.qcLocal.Get(th, dir)
-}
-
-func (q *cursorLocal) Rewind() {
-	q.q.Rewind()
-}
-
-func (q *cursorLocal) Header() *Header {
-	return q.q.Header()
-}
-
-func (q *cursorLocal) Order() []string {
-	return q.q.Order()
-}
-
-// queryLocal
-
-type queryLocal struct {
-	qcLocal
-	ra readAhead
-}
-
-func (q *queryLocal) Rewind() {
-	if q.ra.pending.Load() {
-		q.ra.mutex.Lock()
-		defer q.ra.mutex.Unlock()
-	}
-	q.ra.fetch() // need to consume read ahead
-	q.q.Rewind()
-}
-
-func (q *queryLocal) Header() *Header {
-	if q.ra.pending.Load() {
-		q.ra.mutex.Lock()
-		defer q.ra.mutex.Unlock()
-	}
-	return q.q.Header().Dup()
-}
-func (q *queryLocal) Keys() []string {
-	if q.ra.pending.Load() {
-		q.ra.mutex.Lock()
-		defer q.ra.mutex.Unlock()
-	}
-	return q.qcLocal.Keys()
-}
-
-func (q *queryLocal) Order() []string {
-	if q.ra.pending.Load() {
-		q.ra.mutex.Lock()
-		defer q.ra.mutex.Unlock()
-	}
-	return q.q.Order()
-}
-func (q *queryLocal) Strategy(formatted bool) string {
-	if q.ra.pending.Load() {
-		q.ra.mutex.Lock()
-		defer q.ra.mutex.Unlock()
-	}
-	return q.qcLocal.Strategy(formatted)
-}
-
-func (q *queryLocal) Output(th *Thread, rec Record) {
-	q.q.Output(th, rec)
-}
-
-func (q *queryLocal) Tree() Value {
-	if q.ra.pending.Load() {
-		q.ra.mutex.Lock()
-		defer q.ra.mutex.Unlock()
-	}
-	return q.qcLocal.Tree()
-}
-
-var readAheads atomic.Int32
-var _ = AddInfo("database.readAheads", &readAheads)
-
-func (q *queryLocal) Get(th *Thread, dir Dir) (Row, string) {
-	ra := &q.ra
-	ra.mutex.Lock()
-	unlock := true
-	defer func() {
-		if unlock {
-			ra.mutex.Unlock()
-		}
-	}()
-	row, tbl, gotRow := ra.fetch()
-	if gotRow && dir == Prev { // switched direction
-		ra.disable = true  // prevent further read-aheads
-		q.qcLocal.Get(th, Prev) // undo the read-ahead
-		gotRow = false
-	}
-	if gotRow {
-		readAheads.Add(1)
-	} else {
-		row, tbl = q.qcLocal.Get(th, dir)
-	}
-	if dir == Next && row != nil && !ra.disable && q.mode == qry.ReadMode {
-		ra.pending.Store(true)
-		unlock = false
-		go func() {
-			defer ra.mutex.Unlock()
-			th := getPoolThread()
-			defer threadPool.Put(th)
-			ra.row, ra.tbl = q.qcLocal.Get(th, Next) // the actual read-ahead
-		}()
-	}
-	return row, tbl
-}
-
-var threadPool sync.Pool
-
-func getPoolThread() *Thread {
-	if t := threadPool.Get(); t != nil {
-		th := t.(*Thread)
-		*th = Thread{} // clear the thread
-		return th
-	}
-	return &Thread{}
-}
-
-type readAhead struct {
-	pending atomic.Bool // true if read-ahead was triggered
-	disable bool        // set if dir reverses to prevent further read-ahead
-	mutex   sync.Mutex
-	row     Row // the result of the read-ahead
-	tbl     string
-}
-
-// fetch WARNING does not lock
-func (ra *readAhead) fetch() (row Row, tbl string, gotRow bool) {
-	if !ra.pending.Load() {
-		return
-	}
-	row, tbl = ra.row, ra.tbl
-	ra.row, ra.tbl = nil, ""
-	ra.pending.Store(false)
-	return row, tbl, true
+func (q cursorLocal) Get(th *Thread, t ITran, dir Dir) (Row, string) {
+	q.Query.SetTran(t.(qry.QueryTran))
+	return q.queryLocal.Get(th, dir)
 }
