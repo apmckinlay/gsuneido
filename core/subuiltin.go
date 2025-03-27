@@ -211,7 +211,7 @@ func (b *SuBuiltinMethod3) Call(th *Thread, this Value, as *ArgSpec) Value {
 // SuBuiltinMethodRaw is a builtin function with no massage
 type SuBuiltinMethodRaw struct {
 	Fn func(th *Thread, as *ArgSpec, this Value, args []Value) Value
-	ParamSpec
+	BuiltinParams
 }
 
 var _ Value = (*SuBuiltinMethodRaw)(nil)

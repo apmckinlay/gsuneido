@@ -19,7 +19,8 @@ import (
 func init() {
 	ss := &SuClass{Lib: "builtin", Name: "SocketServer", MemBase: NewMemBase()}
 	ss.Data["CallClass"] = &SuBuiltinMethodRaw{Fn: ssCallClass,
-		ParamSpec: params("(name = nil, port = nil, exit = false)")}
+		BuiltinParams: BuiltinParams{
+			ParamSpec: params("(name = nil, port = nil, exit = false)")}}
 	Global.Builtin("SocketServer", ss)
 }
 

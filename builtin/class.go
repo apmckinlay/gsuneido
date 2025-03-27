@@ -13,7 +13,8 @@ var _ = exportMethods(&ClassMethods, "class")
 
 func init() {
 	ClassMethods["*new*"] =
-		&SuBuiltinMethodRaw{Fn: class_new, ParamSpec: params("(@args)")}
+		&SuBuiltinMethodRaw{Fn: class_new, 
+			BuiltinParams: BuiltinParams{ParamSpec: params("(@args)")}}
 }
 
 func class_new(th *Thread, as *ArgSpec, this Value, args []Value) Value {
