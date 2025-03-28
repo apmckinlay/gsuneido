@@ -175,3 +175,14 @@ func BenchmarkLoadStore3(b *testing.B) {
 		r = OpSub(x, y)
 	}
 }
+
+func BenchmarkInterp(b *testing.B) {
+	code := []byte{byte(op.Int), 0, 3, byte(op.Int), 0, 5, byte(op.Add),
+		byte(op.Return)}
+	fn := &SuFunc{Code: string(code)}
+	var th Thread
+	for b.Loop() {
+		th.invoke(fn, nil)
+        th.sp = 0
+	}
+}

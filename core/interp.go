@@ -18,7 +18,7 @@ var BlockBreak = BuiltinSuExcept("block:break")
 var BlockContinue = BuiltinSuExcept("block:continue")
 var BlockReturn = BuiltinSuExcept("block return")
 
-// invoke sets up a frame to Run a compiled Suneido function
+// invoke sets up a frame to run a compiled Suneido function
 // The stack must already be in the form required by the function (massaged)
 // WARNING: invoke does not pop the stack, the caller is responsible for that
 func (th *Thread) invoke(fn *SuFunc, this Value) Value {
@@ -26,23 +26,29 @@ func (th *Thread) invoke(fn *SuFunc, this Value) Value {
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		th.Push(nil)
 	}
-	return th.run(Frame{fn: fn, this: this,
-		locals: locals{v: th.stack[th.sp-int(fn.Nlocals) : th.sp]}})
+	if th.fp >= len(th.frames) {
+		panic("function call overflow")
+	}
+	fr := &th.frames[th.fp]
+	fr.fn = fn
+	fr.this = this
+	fr.blockParent = nil
+	fr.locals = locals{v: th.stack[th.sp-int(fn.Nlocals) : th.sp]}
+	fr.ip = 0
+	return th.run()
 }
 
 // run is needed in addition to interp
 // because we can only recover panic on the way out of a function
 // so if the exception is caught we have to re-enter interp
-// Called by Thread.Invoke (above) and SuClosure.Call
-func (th *Thread) run(frame Frame) Value {
-	if th.fp >= len(th.frames) {
-		panic("function call overflow")
-	}
-	if th.profile.enabled {
-		th.profile.calls[frame.fn]++
-	}
-	th.frames[th.fp] = frame
+// Called by Thread.invoke (above) and SuClosure.Call
+func (th *Thread) run() Value {
+	fr := &th.frames[th.fp]
+	fr.ip = 0
 	th.fp++
+	if th.profile.enabled {
+		th.profile.calls[fr.fn]++
+	}
 	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	// fmt.Println(strings.Repeat("    ", t.fp) + "run:", t.frames[t.fp].fn)
 	sp := th.sp
@@ -67,10 +73,10 @@ func (th *Thread) run(frame Frame) Value {
 		th.spMax = th.sp
 	}
 
-	catchJump := 0
-	catchSp := -1
 	for {
-		result := th.interp(&catchJump, &catchSp)
+		fr.catchJump = 0
+		fr.catchSp = -1
+		result := th.interp()
 		if result == nil {
 			// fmt.Println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 			th.fp = fp - 1
@@ -80,12 +86,9 @@ func (th *Thread) run(frame Frame) Value {
 			return th.Top()
 		}
 		// try block threw
-		th.sp = catchSp
+		th.sp = fr.catchSp
 		th.fp = fp
-		fr := &th.frames[th.fp-1]
-		fr.ip = catchJump
-		catchJump = 0 // no longer catching
-		catchSp = -1
+		fr.ip = fr.catchJump
 		th.Push(result) // SuExcept
 		// loop and re-enter interp
 	}
@@ -94,7 +97,7 @@ func (th *Thread) run(frame Frame) Value {
 // interp is the main interpreter loop
 // It normally returns nil, with the return value (if any) on the stack
 // Returns *SuExcept if there was an exception/panic
-func (th *Thread) interp(catchJump, catchSp *int) (ret Value) {
+func (th *Thread) interp() (ret Value) {
 	fr := &th.frames[th.fp-1]
 	code := fr.fn.Code
 	super := 0
@@ -147,7 +150,7 @@ func (th *Thread) interp(catchJump, catchSp *int) (ret Value) {
 			}
 		}
 		// this is an optimization to avoid unnecessary recover/repanic
-		if *catchJump == 0 && th.blockReturnFrame == nil {
+		if fr.catchJump == 0 && th.blockReturnFrame == nil {
 			return // this frame isn't catching
 		}
 		e := recover()
@@ -160,7 +163,7 @@ func (th *Thread) interp(catchJump, catchSp *int) (ret Value) {
 			}
 			return // normal return
 		}
-		if *catchJump == 0 {
+		if fr.catchJump == 0 {
 			panic(e) // not catching
 		}
 		// return value (ret) tells run we're catching
@@ -513,12 +516,12 @@ loop:
 			}
 			clear(th.ReturnMulti[:cap(th.ReturnMulti)])
 		case op.Try:
-			*catchJump = fr.ip + fetchInt16()
-			*catchSp = th.sp
+			fr.catchJump = fr.ip + fetchInt16()
+			fr.catchSp = th.sp
 			catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
 		case op.Catch:
 			fr.ip += fetchInt16()
-			*catchJump = 0 // no longer catching
+			fr.catchJump = 0 // no longer catching
 		case op.Throw:
 			panic(th.Pop())
 		case op.Closure:

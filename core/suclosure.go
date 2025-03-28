@@ -53,8 +53,15 @@ func (b *SuClosure) Call(th *Thread, this Value, as *ArgSpec) Value {
 	if this == nil {
 		this = b.this
 	}
-	return th.run(Frame{fn: bf, this: this, blockParent: b.parent,
-		locals: locals{v: v, onHeap: true}})
+	if th.fp >= len(th.frames) {
+		panic("function call overflow")
+	}
+	fr := &th.frames[th.fp]
+	fr.fn = bf
+	fr.this = this
+	fr.blockParent = b.parent
+	fr.locals = locals{v: v, onHeap: true}
+	return th.run()
 }
 
 func (*SuClosure) Type() types.Type {
