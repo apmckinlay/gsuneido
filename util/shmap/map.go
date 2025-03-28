@@ -101,12 +101,22 @@ func (m *Map[K, V, H]) Has(key K) bool {
 	return ok
 }
 
+// Get returns the value and true if the key exists
+// otherwise it returns the zero value and false.
+func (m *Map[K, V, H]) Get(k K) (v V, ok bool) {
+	pv := m.get(k)
+	if pv == nil {
+		return
+	}
+	return *pv, true
+}
+
 // Get does a normal search,
 // stopping when the key is found or after a group with an empty slot.
-func (m *Map[K, V, H]) Get(k K) (v V, ok bool) {
+func (m *Map[K, V, H]) get(k K) (v *V) {
 	// nGets++
 	if m.count == 0 {
-		return
+		return nil
 	}
 	h2, seq := m.search(k)
 	for ; ; seq = seq.next() {
@@ -116,12 +126,12 @@ func (m *Map[K, V, H]) Get(k K) (v V, ok bool) {
 		for b != 0 {
 			i := b.first()
 			if m.help.Equal(k, grp.keys[i]) {
-				return grp.vals[i], true
+				return &grp.vals[i]
 			}
 			b = b.dropFirst()
 		}
 		if anyEmpty(grp.control) {
-			return
+			return nil
 		}
 	}
 }
@@ -228,6 +238,7 @@ func (m *Map[K, V, H]) Del(k K) (V, bool) {
 
 //-------------------------------------------------------------------
 
+// Put adds or updates a key-value entry in the map.
 func (m *Map[K, V, H]) Put(k K, v V) {
 	m.put(k, v, true)
 }
@@ -236,24 +247,14 @@ func (m *Map[K, V, H]) Put(k K, v V) {
 // It returns the (original existing) key and whether it existed.
 func (m *Map[K, V, H]) GetInit(k K) (K, bool) {
 	var zero V
-	k2, _, existed := m.put(k, zero, false)
-	return k2, existed
-}
-
-// GetPtr creates a new entry in the map (with zero value) if it doesn't exist,
-// It returns a pointer to the value in the map.
-// WARNING: This pointer is only guaranteed valid until the map is next modified.
-func (m *Map[K, V, H]) GetPtr(k K) *V {
-	var zero V
-	_, pv, _ := m.put(k, zero, false)
-	return pv
+	return m.put(k, zero, false)
 }
 
 // put does a normal search, stopping probing at a group with an empty slot.
 // If the key is found, and update is true it updates the value.
 // Else if a deleted slot is found during the search, it stores there.
 // Else it fills in the empty slot.
-func (m *Map[K, V, H]) put(k K, v V, update bool) (k2 K, v2 *V, existed bool) {
+func (m *Map[K, V, H]) put(k K, v V, update bool) (k2 K, existed bool) {
 	// nPuts++
 	if len(m.groups) == 0 {
 		m.init()
@@ -288,7 +289,7 @@ outer:
 					if update {
 						grp.vals[i] = v
 					}
-					return grp.keys[i], &grp.vals[i], true // found it
+					return grp.keys[i], true // found it
 				}
 				b = b.dropFirst()
 			}
@@ -312,7 +313,7 @@ outer:
 				grp.vals[ie] = v
 				grp.control |= uint64(h2|0x80) << (ie * 8)
 				m.count++
-				return k, &grp.vals[ie], false
+				return k, false
 			}
 			if probes++; probes > len(m.groups) {
 				panic("too many probes")

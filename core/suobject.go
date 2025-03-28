@@ -134,6 +134,10 @@ func (ob *SuObject) Get(_ *Thread, key Value) Value {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
+	return ob.get(key)
+}
+
+func (ob *SuObject) get(key Value) Value {
 	if val := ob.getIfPresent(key); val != nil {
 		return val
 	}
@@ -206,34 +210,16 @@ func (ob *SuObject) GetPut(_ *Thread, m, v Value,
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	defer ob.endMutate(ob.startMutate())
-	p := ob.getPtr(m)
-	orig := *p
+	orig := ob.get(m)
 	if orig == nil {
-		if ob.defval != nil {
-			// GetPut is only used for math
-			// so we don't have to worry about copying object defaults
-			orig = ob.defval
-		} else {
-			MemberNotFound(m)
-		}
+		MemberNotFound(m)
 	}
-	*p = op(orig, v)
+	v = op(orig, v)
+	ob.set(m, v)
 	if retOrig {
 		return orig
 	}
-	return *p
-}
-func (ob *SuObject) getPtr(key Value) *Value {
-	if i, ok := key.IfInt(); ok {
-		if i == len(ob.list) {
-			ob.add(nil)
-			return &ob.list[i]
-		} else if 0 <= i && i < len(ob.list) {
-			return &ob.list[i]
-		}
-	}
-	return ob.named.GetPtr(key)
+	return v
 }
 
 func MemberNotFound(m Value) {
