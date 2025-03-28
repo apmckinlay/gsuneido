@@ -4,16 +4,16 @@
 package db19
 
 import (
-	"os"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestDatabaseDropTable(t *testing.T) {
-	db := createDb()
+	db := CreateDb(stor.HeapStor(16 * 1024))
+	createTbl(db)
 	db.CheckerSync()
-	defer func() { db.Close(); os.Remove("tmp.db") }()
 	assert.T(t).That(db.Drop("nonexistent") != nil)
 	assert.T(t).That(db.Drop("mytable") == nil)
 	assert.T(t).That(db.Drop("mytable") != nil)
