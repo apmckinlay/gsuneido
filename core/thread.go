@@ -95,6 +95,8 @@ type thread1 struct {
 
 	// ReturnMulti is used by op.ReturnMulti and op.PushReturn
 	ReturnMulti []Value
+	
+	super int
 }
 
 // thread2 is the non-reset-able part of Thread

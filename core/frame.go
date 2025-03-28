@@ -24,6 +24,10 @@ type Frame struct {
 
 	// ip is the current index into the Function's code
 	ip int
+
+	catchJump int
+	catchSp   int
+	catchPat  string
 }
 
 type locals struct {
