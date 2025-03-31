@@ -13,27 +13,24 @@ import (
 
 var _ = builtin(Query1, "(@args)")
 
-func Query1(th *Thread, as *ArgSpec, args []Value) Value {
-	return queryOne(th, as, args, Only)
+func Query1(th *Thread, args []Value) Value {
+	return queryOne(th, args[0], Only)
 }
 
 var _ = builtin(QueryFirst, "(@args)")
 
-func QueryFirst(th *Thread, as *ArgSpec, args []Value) Value {
-	return queryOne(th, as, args, Next)
+func QueryFirst(th *Thread, args []Value) Value {
+	return queryOne(th, args[0], Next)
 }
 
 var _ = builtin(QueryLast, "(@args)")
 
-func QueryLast(th *Thread, as *ArgSpec, args []Value) Value {
-	return queryOne(th, as, args, Prev)
+func QueryLast(th *Thread, args []Value) Value {
+	return queryOne(th, args[0], Prev)
 }
 
-var queryParams = params("(query)")
-
-func queryOne(th *Thread, as *ArgSpec, args []Value, dir Dir) Value {
-	query, _ := extractQuery(th, &queryParams, as, args)
-	row, hdr, table := th.Dbms().Get(th, query, dir)
+func queryOne(th *Thread, args Value, dir Dir) Value {
+	row, hdr, table := th.Dbms().Get(th, args, dir)
 	if hdr == nil {
 		return False
 	}

@@ -20,6 +20,7 @@ import (
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -153,15 +154,23 @@ func (dbms *DbmsLocal) Final() int {
 
 // Get implements QueryFirst, QueryLast, Query1
 func (dbms *DbmsLocal) Get(
-	th *Thread, query string, dir Dir) (Row, *Header, string) {
+	th *Thread, query Value, dir Dir) (Row, *Header, string) {
 	tran := dbms.db.NewReadTran()
 	defer tran.Complete()
 	return get(th, tran, query, dir)
 }
 
-func get(th *Thread, tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
+func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string) {
 	defer th.Suneido.Store(th.Suneido.Load())
 	th.Suneido.Store(nil) // use main Suneido object
+
+	ob := args.(*SuObject)
+	query := getQuery(ob)
+	if row, hdr, tbl := fastGet(th, tran, query, ob, dir); row != nil {
+		return row, hdr, tbl
+	}
+	query += getWhere(ob)
+
 	q := qry.ParseQuery(query, tran, th.Sviews())
 	if dir != Only &&
 		!strings.Contains(query, "CHECKQUERY SUPPRESS: SORT REQUIRED") {
@@ -188,6 +197,82 @@ func get(th *Thread, tran qry.QueryTran, query string, dir Dir) (Row, *Header, s
 		panic("Query1 not unique: " + query)
 	}
 	return row, q.Header(), q.Updateable()
+}
+
+func getQuery(ob *SuObject) string {
+	if ob.ListSize() >= 1 {
+		return ToStr(ob.ListGet(0))
+	} else if q := ob.NamedGet(SuStr("query")); q != nil {
+		return ToStr(q)
+	}
+	return ""
+}
+
+func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir) (Row, *Header, string) {
+	if dir != Only {
+		return nil, nil, ""
+	}
+	if strings.Contains(query, " ") || tran.GetInfo(query) == nil {
+		return nil, nil, ""
+	}
+	table, ok := qry.NewTable(tran, query).(*qry.Table)
+	if !ok {
+		return nil, nil, ""
+	}
+	flds := make([]string, 0, ob.NamedSize())
+	vals := make([]Value, 0, ob.NamedSize())
+	iter := ob.Iter2(false, true)
+	for k, v := iter(); v != nil; k, v = iter() {
+		field := ToStr(k)
+		if field == "query" {
+			continue
+		}
+		flds = append(flds, field)
+		vals = append(vals, v)
+	}
+	key := findKey(table, flds)
+	if key == nil {
+		return nil, nil, ""
+	}
+	if len(key) == 0 {
+		row := table.Get(th, Next)
+		return row, table.Header(), query
+	}
+	table.SetIndex(key)
+	packed := make([]string, len(vals))
+	for i, v := range vals {
+		packed[i] = Pack(v.(Packable))
+	}
+	row := table.Lookup(th, flds, packed)
+	return row, table.Header(), query
+}
+
+func findKey(table qry.Query, flds []string) []string {
+	for _, key := range table.Keys() {
+		if set.Equal(flds, key) {
+			return key
+		}
+	}
+	return nil
+}
+
+func getWhere(ob *SuObject) string {
+	var sb strings.Builder
+	sep := "\nwhere "
+	iter := ob.Iter2(false, true)
+	for k, v := iter(); v != nil; k, v = iter() {
+		field := ToStr(k)
+		if field == "query" {
+			continue
+		}
+		sb.WriteString(sep)
+		sep = "\nand "
+		sb.WriteString(field)
+		sb.WriteString(" is ")
+		sb.WriteString(v.String())
+	}
+
+	return sb.String()
 }
 
 func single(q qry.Query) bool {
@@ -422,7 +507,7 @@ type ReadTranLocal struct {
 	*db19.ReadTran
 }
 
-func (t ReadTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, string) {
+func (t ReadTranLocal) Get(th *Thread, query Value, dir Dir) (Row, *Header, string) {
 	return get(th, t.ReadTran, query, dir)
 }
 
@@ -442,7 +527,7 @@ type UpdateTranLocal struct {
 	*db19.UpdateTran
 }
 
-func (t UpdateTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, string) {
+func (t UpdateTranLocal) Get(th *Thread, query Value, dir Dir) (Row, *Header, string) {
 	return get(th, t.UpdateTran, query, dir)
 }
 

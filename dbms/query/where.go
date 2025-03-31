@@ -617,7 +617,7 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 	if app != nil {
 		wapp := app.(whereApproach)
 		idx := wapp.index
-		w.tbl.setIndex(idx)
+		w.tbl.SetIndex(idx)
 		w.idxSel = w.getIdxSel(idx)
 		w.tbl.setCost(frac*w.idxSel.frac, 0, wapp.cost)
 		w.idxSelPos = -1

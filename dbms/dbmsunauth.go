@@ -67,7 +67,7 @@ func (du *DbmsUnauth) Final() int {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Get(*Thread, string, Dir) (Row, *Header, string) {
+func (du *DbmsUnauth) Get(*Thread, Value, Dir) (Row, *Header, string) {
 	panic(notauth)
 }
 

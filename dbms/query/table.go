@@ -162,10 +162,10 @@ func (tbl *Table) indexFor(order []string) int {
 }
 
 func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) {
-	tbl.setIndex(approach.(tableApproach).index)
+	tbl.SetIndex(approach.(tableApproach).index)
 }
 
-func (tbl *Table) setIndex(index []string) {
+func (tbl *Table) SetIndex(index []string) {
 	if tbl.singleton {
 		index = tbl.allKeys[0]
 	}

@@ -85,6 +85,8 @@ func tran_Query(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 
 var _ = method(tran_QueryDo, "(@args)")
 
+var queryParams = params("(query)")
+
 func tran_QueryDo(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	query, _ := extractQuery(th, &queryParams, as, args)
 	return IntVal(this.(*SuTran).Action(th, query))
@@ -92,20 +94,20 @@ func tran_QueryDo(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 
 var _ = method(tran_Query1, "(@args)")
 
-func tran_Query1(th *Thread, as *ArgSpec, this Value, args []Value) Value {
-	return tranQueryOne(th, this.(*SuTran), as, args, Only)
+func tran_Query1(th *Thread, this Value, args []Value) Value {
+	return tranQueryOne(th, this.(*SuTran), args[0], Only)
 }
 
 var _ = method(tran_QueryFirst, "(@args)")
 
-func tran_QueryFirst(th *Thread, as *ArgSpec, this Value, args []Value) Value {
-	return tranQueryOne(th, this.(*SuTran), as, args, Next)
+func tran_QueryFirst(th *Thread, this Value, args []Value) Value {
+	return tranQueryOne(th, this.(*SuTran), args[0], Next)
 }
 
 var _ = method(tran_QueryLast, "(@args)")
 
-func tran_QueryLast(th *Thread, as *ArgSpec, this Value, args []Value) Value {
-	return tranQueryOne(th, this.(*SuTran), as, args, Prev)
+func tran_QueryLast(th *Thread, this Value, args []Value) Value {
+	return tranQueryOne(th, this.(*SuTran), args[0], Prev)
 }
 
 var _ = method(tran_ReadCount, "()")
@@ -139,9 +141,8 @@ func tran_Asof(this, arg Value) Value {
 	return this.(*SuTran).Asof(arg)
 }
 
-func tranQueryOne(th *Thread, st *SuTran, as *ArgSpec, args []Value, dir Dir) Value {
-	query, _ := extractQuery(th, &queryParams, as, args)
-	row, hdr, table := st.GetRow(th, query, dir)
+func tranQueryOne(th *Thread, st *SuTran, args Value, dir Dir) Value {
+	row, hdr, table := st.GetRow(th, args, dir)
 	if row == nil {
 		return False
 	}

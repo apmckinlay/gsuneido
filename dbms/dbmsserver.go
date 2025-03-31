@@ -589,8 +589,8 @@ func cmdGetOne(ss *serverSession) {
 		ss.error("dbms server: expected + - 1")
 	}
 	tran, _ := ss.getTran()
-	query := ss.GetStr()
-	var g func(*Thread, string, Dir) (Row, *Header, string)
+	query := ss.GetVal()
+	var g func(*Thread, Value, Dir) (Row, *Header, string)
 	if tran == nil {
 		g = ss.sc.dbms.Get
 	} else {

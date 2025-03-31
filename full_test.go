@@ -2,12 +2,13 @@
 
 package main
 
-// import (
-// 	"testing"
+import (
+	"testing"
 
-// 	. "github.com/apmckinlay/gsuneido/core"
-// 	"github.com/apmckinlay/gsuneido/options"
-// )
+	qry "github.com/apmckinlay/gsuneido/dbms/query"
+
+	. "github.com/apmckinlay/gsuneido/core"
+)
 
 // func TestFull(t *testing.T) {
 // 	options.BuiltDate = builtDate
@@ -35,3 +36,32 @@ package main
 // 		Use("Test_lib")
 // 		TestRunner.Run(libs: #(etalib))`)
 // }
+
+func BenchmarkSlow(b *testing.B) {
+	openDbms()
+	defer db.CloseKeepMapped()
+	MainThread = &mainThread
+	qry.MakeSuTran = func(qry.QueryTran) *SuTran {
+		return nil
+	}
+	args := &SuObject{}
+	args.Add(SuStr("stdlib where num = 2"))
+	for b.Loop() {
+		dbmsLocal.Get(MainThread, args, Only)
+	}
+}
+
+func BenchmarkFast(b *testing.B) {
+	openDbms()
+	defer db.CloseKeepMapped()
+	MainThread = &mainThread
+	qry.MakeSuTran = func(qry.QueryTran) *SuTran {
+		return nil
+	}
+	args := &SuObject{}
+	args.Add(SuStr("stdlib"))
+	args.Set(SuStr("num"), SuInt(2))
+	for b.Loop() {
+		dbmsLocal.Get(MainThread, args, Only)
+	}
+}

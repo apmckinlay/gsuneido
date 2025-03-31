@@ -39,7 +39,7 @@ type IDbms interface {
 
 	// Get returns a single record, for Query1 (dir = One),
 	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
-	Get(th *Thread, query string, dir Dir) (Row, *Header, string)
+	Get(th *Thread, query Value, dir Dir) (Row, *Header, string)
 
 	// Info returns an object containing database information
 	Info() Value
@@ -111,7 +111,7 @@ type ITran interface {
 
 	// Get returns a single record, for Query1 (dir = One),
 	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
-	Get(th *Thread, query string, dir Dir) (Row, *Header, string)
+	Get(th *Thread, query Value, dir Dir) (Row, *Header, string)
 
 	// Query starts a query
 	Query(query string, sv *Sviews) IQuery

@@ -115,12 +115,12 @@ func (ms *muxSession) Final() int {
 	return ms.GetInt()
 }
 
-func (ms *muxSession) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
+func (ms *muxSession) Get(_ *Thread, query Value, dir Dir) (Row, *Header, string) {
 	return ms.get(0, query, dir)
 }
 
-func (ms *muxSession) get(tn int, query string, dir Dir) (Row, *Header, string) {
-	ms.PutCmd(commands.GetOne).PutByte(byte(dir)).PutInt(tn).PutStr(query)
+func (ms *muxSession) get(tn int, query Value, dir Dir) (Row, *Header, string) {
+	ms.PutCmd(commands.GetOne).PutByte(byte(dir)).PutInt(tn).PutVal(query)
 	ms.Request()
 	if !ms.GetBool() {
 		return nil, nil, ""
@@ -303,7 +303,7 @@ func (tc *muxTran) Delete(_ *Thread, table string, off uint64) {
 	tc.Request()
 }
 
-func (tc *muxTran) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
+func (tc *muxTran) Get(_ *Thread, query Value, dir Dir) (Row, *Header, string) {
 	return tc.get(tc.tn, query, dir)
 }
 

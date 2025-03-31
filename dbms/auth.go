@@ -77,7 +77,8 @@ func getPassHash(th *Thread, user string) (result string) {
 		dbms = u.dbms
 	}
 	query := "users where user = " + SuStr(user).String() // handle quotes
-	row, hdr, _ := dbms.Get(th, query, Only)
+	args := SuObjectOf(SuStr(query))
+	row, hdr, _ := dbms.Get(th, args, Only)
 	if row == nil {
 		return ""
 	}

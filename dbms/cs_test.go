@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/core"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/mux"
@@ -31,10 +31,11 @@ func TestClientServer(*testing.T) {
 	p2.Write(hello())
 	c := NewDbmsClient(p2)
 	ses := c.NewSession()
-	ses.Get(nil, "tables sort table", core.Next)
+	args := SuObjectOf(SuStr("tables sort table"))
+	ses.Get(nil, args, Next)
 
 	ses2 := c.NewSession()
-	ses2.Get(nil, "tables sort table", core.Prev)
+	ses2.Get(nil, args, Prev)
 	ses2.Close()
 
 	time.Sleep(25 * time.Millisecond)
