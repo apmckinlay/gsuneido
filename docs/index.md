@@ -344,6 +344,8 @@ A standard loop containing a giant switch with one case per op code.
 
 Because Go can only recover from (catch) a panic on the way out of a function, we need another wrapper function that reenters the interpreter if the exception is caught.
 
+In March 2025 I tried restructuring the interpreter as separate functions instead of the giant switch. But this turned out to be slower. The experiment was saved as a branch in git. 
+
 # Windows Interface
 
 cSuneido had a general purpose DLL interface. The DLL functions, structs, and callbacks were defined in Suneido code. (primarily in stdlib)
@@ -376,9 +378,7 @@ Mutable Value's have a concurrent flag. When the concurrent flag is false, no lo
 
 Deep equal and compare are structured to only lock one object at a time to avoid deadlock. This means the result is undefined if there are concurrent modifications. The locking is just to prevent data race errors or corruption.
 
-Since the Go mutex is **not** reentrant, to avoid deadlock a method that locks must **not** call another method that locks. The coding convention is that public (capitalized) methods lock, and private (uncapitalized) methods do not. However, this is not followed 100%. Locking public methods must not call other locking public methods. This means there is often a public method that locks, and a private method that does the work.
-
-Synchronized is a global reentrant mutex. Only one thread can be inside Synchronized at a time. Different Synchronized blocks are not independent.
+Since the Go mutex is **not** reentrant, to avoid deadlock a method that locks must **not** call another method that locks. The coding convention is that public exported (capitalized) methods lock, and private (uncapitalized) methods do not. However, this is not followed 100%. Locking public methods must not call other locking public methods. This means there is often a public method that locks, and a private method that does the work.
 
 # Database
 
