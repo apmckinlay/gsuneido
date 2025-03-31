@@ -110,6 +110,14 @@ func tran_QueryLast(th *Thread, this Value, args []Value) Value {
 	return tranQueryOne(th, this.(*SuTran), args[0], Prev)
 }
 
+func tranQueryOne(th *Thread, st *SuTran, args Value, dir Dir) Value {
+	row, hdr, table := st.GetRow(th, args, dir)
+	if row == nil {
+		return False
+	}
+	return SuRecordFromRow(row, hdr, table, st)
+}
+
 var _ = method(tran_ReadCount, "()")
 
 func tran_ReadCount(this Value) Value {
@@ -139,14 +147,6 @@ var _ = method(tran_Asof, "(asof = false)")
 
 func tran_Asof(this, arg Value) Value {
 	return this.(*SuTran).Asof(arg)
-}
-
-func tranQueryOne(th *Thread, st *SuTran, args Value, dir Dir) Value {
-	row, hdr, table := st.GetRow(th, args, dir)
-	if row == nil {
-		return False
-	}
-	return SuRecordFromRow(row, hdr, table, st)
 }
 
 var requestRegex = regex.Compile(`(?i)\A(insert|delete|update)\>`)
