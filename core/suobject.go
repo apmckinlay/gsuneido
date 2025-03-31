@@ -167,7 +167,7 @@ func (ob *SuObject) getIfPresent(key Value) Value {
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		return ob.list[i]
 	}
-	return ob.namedGet(key)
+	return ob.NamedGet(key)
 }
 
 // HasKey returns true if the object contains the given key (not value)
@@ -190,8 +190,8 @@ func (ob *SuObject) ListGet(i int) Value {
 	return ob.list[i]
 }
 
-// namedGet returns a named member or nil if it doesn't exist.
-func (ob *SuObject) namedGet(key Value) Value {
+// NamedGet returns a named member or nil if it doesn't exist.
+func (ob *SuObject) NamedGet(key Value) Value {
 	v, _ := ob.named.Get(key)
 	return v
 }
@@ -908,7 +908,7 @@ func (ob *SuObject) ToRecord(th *Thread, hdr *Header) Record {
 			ts = th.Timestamp()
 			rb.Add(ts)
 		} else {
-			x := ob.namedGet(SuStr(f))
+			x := ob.NamedGet(SuStr(f))
 			if x == nil {
 				rb.AddRaw("")
 			} else {

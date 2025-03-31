@@ -188,7 +188,7 @@ func ydeObject(y *SuObject, stack *[]Value, listSize, namedSize int) (todo []Val
 	start := n - namedSize
 	for i := range namedSize {
 		p := &(*stack)[start+i]
-		*p = y.namedGet(*p)
+		*p = y.NamedGet(*p)
 	}
 	*stack = append(*stack, y.list...)
 	return (*stack)[start:], true
