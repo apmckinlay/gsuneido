@@ -3,6 +3,7 @@
 
 package core
 
+
 // IDbms is the interface to the dbms package.
 // The two implementations, DbmsLocal and DbmsClient, are in the dbms package
 type IDbms interface {
@@ -137,6 +138,8 @@ type ITran interface {
 	Num() int
 }
 
+//go:generate stringer -type=Dir
+
 type Dir byte
 
 const (
@@ -154,10 +157,6 @@ func (dir Dir) Reverse() Dir {
 		return Next
 	}
 	return dir
-}
-
-func (dir Dir) String() string {
-	return map[Dir]string{Only: "Only", Next: "Next", Prev: "Prev"}[dir]
 }
 
 // IQuery is the interface to a database query, either local or client
