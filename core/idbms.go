@@ -140,9 +140,10 @@ type ITran interface {
 type Dir byte
 
 const (
-	Only Dir = '1'
-	Next Dir = '+'
-	Prev Dir = '-'
+	Only Dir = '1' // Query1
+	Next Dir = '+' // QueryFirst
+	Prev Dir = '-' // QueryLast
+	Any  Dir = '@' // QueryExists?
 )
 
 func (dir Dir) Reverse() Dir {

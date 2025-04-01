@@ -37,6 +37,13 @@ func queryOne(th *Thread, args Value, dir Dir) Value {
 	return SuRecordFromRow(row, hdr, table, nil) // no transaction
 }
 
+var _ = builtin(QueryExistsQ, "(@args)")
+
+func QueryExistsQ(th *Thread, args []Value) Value {
+	row, _, _ := th.Dbms().Get(th, args[0], Any)
+	return SuBool(row != nil)
+}
+
 // extractQuery does queryWhere then Args and returns the query and the args.
 // NOTE: the base query must be the first argument
 func extractQuery(

@@ -118,6 +118,13 @@ func tranQueryOne(th *Thread, st *SuTran, args Value, dir Dir) Value {
 	return SuRecordFromRow(row, hdr, table, st)
 }
 
+var _ = method(tran_QueryExistsQ, "(@args)")
+
+func tran_QueryExistsQ(th *Thread, this Value, args []Value) Value {
+	row, _, _ := this.(*SuTran).GetRow(th, args[0], Any)
+	return SuBool(row != nil)
+}
+
 var _ = method(tran_ReadCount, "()")
 
 func tran_ReadCount(this Value) Value {

@@ -172,32 +172,39 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	query += getWhere(ob)
 
 	q := qry.ParseQuery(query, tran, th.Sviews())
-	if dir != Only &&
-		!strings.Contains(query, "CHECKQUERY SUPPRESS: SORT REQUIRED") {
-		if _, ok := q.(*qry.Sort); !ok {
-			panic("query first/last require sort")
+	qs, sorted := q.(*qry.Sort)
+	if dir == Only || dir == Any {
+		if sorted {
+			q = qs.Source() // remove sort
 		}
+	} else if !sorted &&
+		!strings.Contains(query, "CHECKQUERY SUPPRESS: SORT REQUIRED") {
+		panic("QueryFirst and QueryLast require sort")
 	}
+
 	q, fixcost, varcost := qry.Setup1(q, qry.ReadMode, tran)
 	qry.Warnings(query, q)
 	if trace.Query.On() {
-		d := map[Dir]string{Only: "one", Next: "first", Prev: "last"}[dir]
+		d := map[Dir]string{Only: "one", Next: "first", Prev: "last", Any: "any"}[dir]
 		trace.Query.Println(d, fixcost+varcost, "-", query)
 	}
-	only := false
-	if dir == Only {
-		only = true
-		dir = Next
+	d := dir
+	if dir == Only || dir == Any {
+		d = Next
 	}
-	row := q.Get(th, dir)
+	row := q.Get(th, d)
 	if row == nil {
 		return nil, nil, ""
+	} else if dir == Any {
+		return exists, nil, ""
 	}
-	if only && !single(q) && q.Get(th, dir) != nil {
+	if dir == Only && !single(q) && q.Get(th, Next) != nil {
 		panic("Query1 not unique: " + query)
 	}
 	return row, q.Header(), q.Updateable()
 }
+
+var exists Row = []DbRec{{Record: "x"}}
 
 func getQuery(ob *SuObject) string {
 	if ob.ListSize() >= 1 {
