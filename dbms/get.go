@@ -4,13 +4,21 @@
 package dbms
 
 import (
+	"fmt"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/core/trace"
+	qry "github.com/apmckinlay/gsuneido/dbms/query"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 )
+
+// var total, fast int
+
+// var _ = exit.Add("get", func() {
+// 	fmt.Println("total", total, "fast", fast)
+// })
 
 func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string) {
 	defer th.Suneido.Store(th.Suneido.Load())
@@ -18,10 +26,14 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 
 	ob := args.(*SuObject)
 	query := getQuery(ob)
-	if row, hdr, tbl := fastGet(th, tran, query, ob, dir); row != nil {
-		return row, hdr, tbl
+	// total++
+	if row, hdr := fastGet(th, tran, query, ob, dir); hdr != nil {
+		// fast++
+		return row, hdr, query
 	}
-	query += getWhere(ob)
+	if where := getWhere(ob); where != "" {
+		query = "(" + query + "\n) " + where
+	}
 
 	q := qry.ParseQuery(query, tran, th.Sviews())
 	qs, sorted := q.(*qry.Sort)
@@ -67,16 +79,17 @@ func getQuery(ob *SuObject) string {
 	return ""
 }
 
-func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir) (Row, *Header, string) {
-	if dir != Only {
-		return nil, nil, ""
+// fastGet returns a nil Header to indicate it was not applicable
+func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir) (Row, *Header) {
+	if dir == Next || dir == Prev {
+		return nil, nil
 	}
 	if strings.Contains(query, " ") || tran.GetInfo(query) == nil {
-		return nil, nil, ""
+		return nil, nil
 	}
 	table, ok := qry.NewTable(tran, query).(*qry.Table)
 	if !ok {
-		return nil, nil, ""
+		return nil, nil
 	}
 	flds := make([]string, 0, ob.NamedSize())
 	vals := make([]Value, 0, ob.NamedSize())
@@ -89,25 +102,30 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 		flds = append(flds, field)
 		vals = append(vals, v)
 	}
-	key := findKey(table, flds)
-	if key == nil {
-		return nil, nil, ""
+	if dir == Only {
+		return getLookup(th, table, flds, vals)
 	}
-	if len(key) == 0 {
-		row := table.Get(th, Next)
-		return row, table.Header(), query
+	if dir == Any {
+		return getExists(th, table, flds, vals)
 	}
-	table.SetIndex(key)
-	packed := make([]string, len(vals))
-	for i, v := range vals {
-		packed[i] = Pack(v.(Packable))
-	}
-	row := table.Lookup(th, flds, packed)
-	return row, table.Header(), query
+	panic(assert.ShouldNotReachHere())
 }
 
-func findKey(table qry.Query, flds []string) []string {
-	for _, key := range table.Keys() {
+func getLookup(th *Thread, table *qry.Table, flds []string, vals []Value) (Row, *Header) {
+	key := findKey(table.Keys(), flds)
+	if key == nil {
+		return nil, nil
+	}
+	if len(key) == 0 {
+		return table.Get(th, Next), table.Header()
+	}
+	table.SetIndex(key)
+	return table.Lookup(th, flds, packVals(vals)), table.Header()
+}
+
+// findKey finds the first key in table that is the same set as flds
+func findKey(keys [][]string, flds []string) []string {
+	for _, key := range keys {
 		if set.Equal(flds, key) {
 			return key
 		}
@@ -115,9 +133,42 @@ func findKey(table qry.Query, flds []string) []string {
 	return nil
 }
 
+func packVals(vals []Value) []string {
+	packed := make([]string, len(vals))
+	for i, v := range vals {
+		packed[i] = Pack(v.(Packable))
+	}
+	return packed
+}
+
+func getExists(th *Thread, table *qry.Table, flds []string, vals []Value) (Row, *Header) {
+	idx := findIndex(table.Indexes(), flds)
+	if idx == nil {
+		return nil, nil
+	}
+	table.SetIndex(idx)
+	if len(flds) > 0 {
+		table.Select(flds, packVals(vals))
+	}
+	if table.Get(th, Next) == nil {
+		return nil, table.Header()
+	}
+	return exists, table.Header()
+}
+
+// findIndex finds the first index in table that has flds (any order) as a prefix
+func findIndex(indexes [][]string, flds []string) []string {
+	for _, idx := range indexes {
+		if len(idx) >= len(flds) && set.Equal(flds, idx[:len(flds)]) {
+			return idx
+		}
+	}
+	return nil
+}
+
 func getWhere(ob *SuObject) string {
 	var sb strings.Builder
-	sep := "\nwhere "
+	sep := "where "
 	iter := ob.Iter2(false, true)
 	for k, v := iter(); v != nil; k, v = iter() {
 		field := ToStr(k)

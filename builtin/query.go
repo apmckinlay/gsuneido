@@ -31,7 +31,7 @@ func QueryLast(th *Thread, args []Value) Value {
 
 func queryOne(th *Thread, args Value, dir Dir) Value {
 	row, hdr, table := th.Dbms().Get(th, args, dir)
-	if hdr == nil {
+	if row == nil {
 		return False
 	}
 	return SuRecordFromRow(row, hdr, table, nil) // no transaction
