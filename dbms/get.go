@@ -4,7 +4,7 @@
 package dbms
 
 import (
-	"fmt"
+	"slices"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -142,28 +142,73 @@ func packVals(vals []Value) []string {
 }
 
 func getExists(th *Thread, table *qry.Table, flds []string, vals []Value) (Row, *Header) {
-	idx := findIndex(table.Indexes(), flds)
+	idx, idxlen := findIndex(table.Indexes(), flds)
 	if idx == nil {
 		return nil, nil
 	}
 	table.SetIndex(idx)
-	if len(flds) > 0 {
-		table.Select(flds, packVals(vals))
-	}
-	if table.Get(th, Next) == nil {
-		return nil, table.Header()
-	}
-	return exists, table.Header()
-}
 
-// findIndex finds the first index in table that has flds (any order) as a prefix
-func findIndex(indexes [][]string, flds []string) []string {
-	for _, idx := range indexes {
-		if len(idx) >= len(flds) && set.Equal(flds, idx[:len(flds)]) {
-			return idx
+	// Split fields and values into those that match the index and those that don't
+	idxFlds := make([]string, 0, idxlen)
+	idxVals := make([]string, 0, idxlen)
+	remainFlds := make([]string, 0, len(flds)-idxlen)
+	remainVals := make([]string, 0, len(vals)-idxlen)
+
+	// Collect the fields and values that match the index prefix
+	for i, fld := range flds {
+		val := Pack(vals[i].(Packable))
+		if slices.Contains(idx[:idxlen], fld) {
+			idxFlds = append(idxFlds, fld)
+			idxVals = append(idxVals, val)
+		} else {
+			remainFlds = append(remainFlds, fld)
+			remainVals = append(remainVals, val)
 		}
 	}
-	return nil
+
+	// Apply the index-based selection
+	if len(idxFlds) > 0 {
+		table.Select(idxFlds, idxVals)
+	}
+
+	// Apply additional filtering for remaining fields
+	hdr := table.Header()
+outer:
+	for {
+		row := table.Get(th, Next)
+		if row == nil {
+			break
+		}
+		for i, fld := range remainFlds {
+			if row.GetRaw(hdr, fld) != remainVals[i] {
+				continue outer // row does not match the additional filter
+			}
+		}
+		return exists, hdr
+	}
+
+	return nil, hdr
+}
+
+// findIndex finds the index that has the most flds 
+// (in any order) as a prefix
+func findIndex(indexes [][]string, flds []string) ([]string, int) {
+	var best []string
+	bestLen := 0
+	for _, idx := range indexes {
+		prefixLen := 0
+		for _, field := range idx {
+			if !slices.Contains(flds, field) {
+				break
+			}
+			prefixLen++
+		}
+		if prefixLen > 0 && prefixLen > bestLen {
+			best = idx
+			bestLen = prefixLen
+		}
+	}
+	return best, bestLen
 }
 
 func getWhere(ob *SuObject) string {
