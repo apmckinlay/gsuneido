@@ -62,16 +62,14 @@ func TestLruCache_concurrent(t *testing.T) {
 func (lc *lruCache) check() {
 	for _, ei := range lc.lru {
 		e := lc.entries[ei]
-		x, _ := lc.hm.Get(e.key)
-		assert.That(x != nil)
-		xi, _ := x.ToInt()
-		assert.That(xi == int(ei))
+		xi, ok := lc.hm.Get(e.key)
+		assert.That(ok)
+		assert.That(xi == ei)
 	}
 	for ei, e := range lc.entries {
-		x, _ := lc.hm.Get(e.key)
-		assert.That(x != nil)
-		xi, _ := x.ToInt()
-		assert.That(xi == int(ei))
+		xi, ok := lc.hm.Get(e.key)
+		assert.That(ok)
+		assert.This(xi).Is(ei)
 	}
 }
 

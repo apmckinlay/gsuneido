@@ -8,6 +8,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
+	"github.com/apmckinlay/gsuneido/util/shmap"
 )
 
 type suLruCacheGlobal struct {
@@ -175,7 +176,7 @@ func (*suLruCache) Lookup(_ *Thread, method string) Value {
 type lruCache struct {
 	lru     []uint8 // uint8 means max size of 256
 	entries []entry
-	hm      HmapValue
+	hm      shmap.Map[Value, uint8, shmap.Meth[Value]]
 	size    int
 	hits    int
 	misses  int
@@ -202,7 +203,7 @@ func newLruCache(req int) *lruCache {
 }
 
 func (lc *lruCache) Get(key Value) Value {
-	v, ok := lc.hm.Get(key)
+	ei, ok := lc.hm.Get(key)
 	if !ok {
 		// not in cache
 		lc.misses++
@@ -210,7 +211,6 @@ func (lc *lruCache) Get(key Value) Value {
 	}
 	// in cache
 	lc.hits++
-	ei, _ := v.ToInt()
 	li := bytes.IndexByte(lc.lru, uint8(ei))
 	if li < lc.size-lc.size/8 {
 		// move to the newest (the end)
@@ -233,7 +233,7 @@ func (lc *lruCache) Put(key, val Value) {
 		copy(lc.lru, lc.lru[1:])
 		lc.lru[lc.size-1] = uint8(ei)
 	}
-	lc.hm.Put(key, SuInt(ei))
+	lc.hm.Put(key, uint8(ei))
 }
 
 func (lc *lruCache) GetPut(key Value, getfn func(key Value) Value) Value {
@@ -248,6 +248,7 @@ func (lc *lruCache) GetPut(key Value, getfn func(key Value) Value) Value {
 func (lc *lruCache) Reset() {
 	lc.hm.Clear()
 	lc.lru = lc.lru[:0]
+	clear(lc.entries)
 	lc.entries = lc.entries[:0]
 	lc.hits = 0
 	lc.misses = 0
