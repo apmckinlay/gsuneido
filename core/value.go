@@ -307,8 +307,7 @@ func PackValue(v Value) string {
 // PackSize returns the pack size of the value if it is Packable, else it panics
 func PackSize(v Value) int {
 	if p, ok := v.(Packable); ok {
-		hash := uint64(17)
-		return p.PackSize(&hash)
+		return p.PackSize(newPacking(0))
 	}
 	panic("can't pack " + ErrType(v))
 }

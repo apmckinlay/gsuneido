@@ -8,7 +8,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuBool is a boolean Value
@@ -123,18 +122,14 @@ func (SuBool) SetConcurrent() {
 
 var _ Packable = SuBool(true)
 
-func (SuBool) PackSize(*uint64) int {
+func (SuBool) PackSize(*packing) int {
 	return 1
 }
 
-func (SuBool) PackSize2(*uint64, packStack) int {
-	return 1
-}
-
-func (b SuBool) Pack(_ *uint64, buf *pack.Encoder) {
+func (b SuBool) Pack(pk *packing) {
 	if b {
-		buf.Put1(PackTrue)
+		pk.Put1(PackTrue)
 	} else {
-		buf.Put1(PackFalse)
+		pk.Put1(PackFalse)
 	}
 }

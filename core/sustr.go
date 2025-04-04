@@ -12,7 +12,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
-	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuStr is a string Value
@@ -291,20 +290,16 @@ func (SuStr) SetConcurrent() {
 
 var _ Packable = SuStr("")
 
-func (ss SuStr) PackSize(*uint64) int {
+func (ss SuStr) PackSize(*packing) int {
 	if ss == "" {
 		return 0
 	}
 	return 1 + len(ss)
 }
 
-func (ss SuStr) PackSize2(*uint64, packStack) int {
-	return ss.PackSize(nil)
-}
-
-func (ss SuStr) Pack(_ *uint64, buf *pack.Encoder) {
+func (ss SuStr) Pack(pk *packing) {
 	if ss != "" {
-		buf.Put1(PackString).PutStr(string(ss))
+		pk.Put1(PackString).PutStr(string(ss))
 	}
 }
 

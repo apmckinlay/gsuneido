@@ -1115,77 +1115,77 @@ func (ob *SuObject) BinarySearch2(th *Thread, value, lt Value) int {
 
 var _ Packable = (*SuObject)(nil)
 
-func (ob *SuObject) PackSize(hash *uint64) int {
-	return ob.PackSize2(hash, newPackStack())
-}
-
-func (ob *SuObject) PackSize2(hash *uint64, stack packStack) int {
+func (ob *SuObject) PackSize(pk *packing) int {
+	if pk.stack == nil {
+		pk.stack = newPackStack()
+	}
 	// must check stack before locking to avoid recursive deadlock
-	stack.push(ob)
+	pk.stack.push(ob)
+	defer pk.stack.pop()
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
-	*hash = *hash*31 + uint64(ob.clock)
+	pk.hash = pk.hash*31 + uint64(ob.clock)
 	if ob.size() == 0 {
 		return 1 // just tag
 	}
 	ps := 1 // tag
 	ps += varint.Len(uint64(len(ob.list)))
 	for _, v := range ob.list {
-		ps += packSize(v, hash, stack)
+		ps += packSize(v, pk)
 	}
 	ps += varint.Len(uint64(ob.named.Size()))
 	iter := ob.named.Iter()
 	for k, v, ok := iter(); ok; k, v, ok = iter() {
-		ps += packSize(k, hash, stack) + packSize(v, hash, stack)
+		ps += packSize(k, pk) + packSize(v, pk)
 	}
 	return ps
 }
 
-func packSize(x Value, hash *uint64, stack packStack) int {
+func packSize(x Value, pk *packing) int {
 	if p, ok := x.(Packable); ok {
-		n := p.PackSize2(hash, stack)
+		n := p.PackSize(pk)
 		return varint.Len(uint64(n)) + n
 	}
 	panic("can't pack " + ErrType(x))
 }
 
-func (ob *SuObject) Pack(hash *uint64, buf *pack.Encoder) {
+func (ob *SuObject) Pack(pk *packing) {
+	ob.Pack2(pk, PackObject)
+}
+
+func (ob *SuObject) Pack2(pk *packing, tag byte) {
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
-	ob.pack(hash, buf, PackObject)
-}
-
-func (ob *SuObject) pack(hash *uint64, buf *pack.Encoder, tag byte) {
-	*hash = *hash*31 + uint64(ob.clock)
-	buf.Put1(tag)
+	pk.hash = pk.hash*31 + uint64(ob.clock)
+	pk.Put1(tag)
 	if ob.size() == 0 {
 		return
 	}
-	buf.VarUint(uint64(len(ob.list)))
+	pk.VarUint(uint64(len(ob.list)))
 	for _, v := range ob.list {
-		packValue(v, hash, buf)
+		packValue(v, pk)
 	}
-	buf.VarUint(uint64(ob.named.Size()))
+	pk.VarUint(uint64(ob.named.Size()))
 	iter := ob.named.Iter()
 	for k, v, ok := iter(); ok; k, v, ok = iter() {
-		packValue(k, hash, buf)
-		packValue(v, hash, buf)
+		packValue(k, pk)
+		packValue(v, pk)
 	}
 }
 
-func packValue(x Value, hash *uint64, buf *pack.Encoder) {
-	buf0 := *buf
-	buf.Put1(0) // 99% of the time we only need one byte for the size
-	x.(Packable).Pack(hash, buf)
-	n := len(buf.Buffer()) - len(buf0.Buffer()) - 1
+func packValue(x Value, pk *packing) {
+	enc := pk.Encoder
+	pk.Put1(0) // 99% of the time we only need one byte for the size
+	x.(Packable).Pack(pk)
+	n := len(pk.Buffer()) - len(enc.Buffer()) - 1
 	varlen := varint.Len(uint64(n))
 	if varlen > 1 {
 		// move what we just packed to make room for larger varint
-		buf.Move(n, varlen-1)
+		pk.Move(n, varlen-1)
 	}
-	buf0.VarUint(uint64(n))
+	enc.VarUint(uint64(n))
 }
 
 func UnpackObject(s string) *SuObject {

@@ -39,14 +39,14 @@ func (e *Encoder) Put(b []byte) *Encoder {
 	return e
 }
 
-// Put1 appends one or more bytes (or a byte slice)
+// Put1 appends one byte
 func (e *Encoder) Put1(b byte) *Encoder {
 	e.buf = e.buf[:len(e.buf)+1]
 	e.buf[len(e.buf)-1] = b
 	return e
 }
 
-// Put2 appends one or more bytes (or a byte slice)
+// Put2 appends two bytes
 func (e *Encoder) Put2(a, b byte) *Encoder {
 	e.buf = e.buf[:len(e.buf)+2]
 	e.buf[len(e.buf)-2] = a
@@ -54,7 +54,7 @@ func (e *Encoder) Put2(a, b byte) *Encoder {
 	return e
 }
 
-// Put4 appends one or more bytes (or a byte slice)
+// Put4 appends four bytes
 func (e *Encoder) Put4(a, b, c, d byte) *Encoder {
 	e.buf = e.buf[:len(e.buf)+4]
 	e.buf[len(e.buf)-4] = a
@@ -64,7 +64,7 @@ func (e *Encoder) Put4(a, b, c, d byte) *Encoder {
 	return e
 }
 
-// PutStr appends the contents of a string
+// PutStr appends a string
 func (e *Encoder) PutStr(s string) *Encoder {
 	e.buf = e.buf[:len(e.buf)+len(s)]
 	copy(e.buf[len(e.buf)-len(s):], s)
@@ -77,4 +77,9 @@ func (e *Encoder) Move(nbytes, shift int) {
 	e.buf = e.buf[:n+shift]
 	n -= nbytes
 	copy(e.buf[n+shift:], e.buf[n:])
+}
+
+// Len returns the number of accumulated bytes
+func (e *Encoder) Len() int {
+    return len(e.buf)
 }

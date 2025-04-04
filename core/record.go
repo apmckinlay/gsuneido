@@ -6,8 +6,6 @@ package core
 import (
 	"fmt"
 	"strings"
-
-	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 /*
@@ -195,16 +193,12 @@ type Packed string
 
 var _ Packable = (*Packed)(nil)
 
-func (p Packed) Pack(_ *uint64, buf *pack.Encoder) {
-	buf.PutStr(string(p))
-}
-
-func (p Packed) PackSize(*uint64) int {
+func (p Packed) PackSize(*packing) int {
 	return len(p)
 }
 
-func (p Packed) PackSize2(*uint64, packStack) int {
-	return len(p)
+func (p Packed) Pack(pk *packing) {
+	pk.PutStr(string(p))
 }
 
 // Trim removes trailing empty fields
@@ -222,8 +216,7 @@ func (b *RecordBuilder) Trim() *RecordBuilder {
 const maxRecordLen = 1_000_000
 
 func (b *RecordBuilder) Build() Record {
-	hash := uint64(17)
-	var stack packStack
+	pk := newPacking(0)
 	if len(b.vals) > MaxValues {
 		panic("too many values for record")
 	}
@@ -232,16 +225,16 @@ func (b *RecordBuilder) Build() Record {
 	}
 	sizes := make([]int, len(b.vals))
 	for i, v := range b.vals {
-		sizes[i] = v.PackSize2(&hash, stack)
+		sizes[i] = v.PackSize(pk)
 	}
 	length := b.recSize(sizes)
 	if length > maxRecordLen {
 		panic(fmt.Sprintf("record too large (%d > %d)", length, maxRecordLen))
 	}
-	buf := pack.NewEncoder(length)
-	b.build(&hash, buf, length, sizes)
+	pk = newPacking(length)
+	b.build(pk, length, sizes)
 	//assert.That(len(buf.String()) == length)
-	return Record(buf.String())
+	return Record(pk.String())
 }
 
 func (b *RecordBuilder) recSize(sizes []int) int {
@@ -268,42 +261,42 @@ func tblength(nfields, datasize int) int {
 	return hdrlen + 4*(1+nfields) + datasize
 }
 
-func (b *RecordBuilder) build(hash *uint64, dst *pack.Encoder, length int, sizes []int) {
-	b.buildHeader(dst, length, sizes)
+func (b *RecordBuilder) build(pk *packing, length int, sizes []int) {
+	b.buildHeader(pk, length, sizes)
 	nfields := len(b.vals)
 	for i := nfields - 1; i >= 0; i-- {
-		b.vals[i].Pack(hash, dst)
+		b.vals[i].Pack(pk)
 	}
 }
 
-func (b *RecordBuilder) buildHeader(dst *pack.Encoder, length int, sizes []int) {
+func (b *RecordBuilder) buildHeader(pk *packing, length int, sizes []int) {
 	mode := mode(length)
 	nfields := len(b.vals)
-	dst.Uint16(uint16(mode<<14 | nfields))
-	b.buildOffsets(dst, length, sizes)
+	pk.Uint16(uint16(mode<<14 | nfields))
+	b.buildOffsets(pk, length, sizes)
 }
 
-func (b *RecordBuilder) buildOffsets(dst *pack.Encoder, length int, sizes []int) {
+func (b *RecordBuilder) buildOffsets(pk *packing, length int, sizes []int) {
 	nfields := len(b.vals)
 	offset := length
 	switch mode(length) {
 	case type8:
-		dst.Put1(byte(offset))
+		pk.Put1(byte(offset))
 		for i := range nfields {
 			offset -= sizes[i]
-			dst.Put1(byte(offset))
+			pk.Put1(byte(offset))
 		}
 	case type16:
-		dst.Uint16(uint16(offset))
+		pk.Uint16(uint16(offset))
 		for i := range nfields {
 			offset -= sizes[i]
-			dst.Uint16(uint16(offset))
+			pk.Uint16(uint16(offset))
 		}
 	case type32:
-		dst.Uint32(uint32(offset))
+		pk.Uint32(uint32(offset))
 		for i := range nfields {
 			offset -= sizes[i]
-			dst.Uint32(uint32(offset))
+			pk.Uint32(uint32(offset))
 		}
 	}
 }

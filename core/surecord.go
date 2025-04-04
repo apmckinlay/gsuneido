@@ -16,7 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/list"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -947,16 +946,12 @@ func (*SuRecord) Lookup(th *Thread, method string) Value {
 
 var _ Packable = (*SuRecord)(nil)
 
-func (r *SuRecord) PackSize(hash *uint64) int {
-	return r.ToObject().PackSize(hash)
+func (r *SuRecord) PackSize(pk *packing) int {
+	return r.ToObject().PackSize(pk)
 }
 
-func (r *SuRecord) PackSize2(hash *uint64, stack packStack) int {
-	return r.ToObject().PackSize2(hash, stack)
-}
-
-func (r *SuRecord) Pack(hash *uint64, buf *pack.Encoder) {
-	r.ToObject().pack(hash, buf, PackRecord)
+func (r *SuRecord) Pack(pk *packing) {
+	r.ToObject().Pack2(pk, PackRecord)
 }
 
 func UnpackRecord(s string) *SuRecord {

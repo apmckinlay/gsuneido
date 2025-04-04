@@ -13,7 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
-	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuConcat is a Value used to optimize string concatenation
@@ -176,19 +175,15 @@ func (SuConcat) Lookup(th *Thread, method string) Value {
 
 var _ Packable = SuConcat{}
 
-func (c SuConcat) PackSize(*uint64) int {
+func (c SuConcat) PackSize(*packing) int {
 	if c.n == 0 {
 		return 0
 	}
 	return 1 + c.n
 }
 
-func (c SuConcat) PackSize2(*uint64, packStack) int {
-	return c.PackSize(nil)
-}
-
-func (c SuConcat) Pack(_ *uint64, buf *pack.Encoder) {
+func (c SuConcat) Pack(pk *packing) {
 	if c.n > 0 {
-		buf.Put1(PackString).Put(c.buf.bs[:c.n])
+		pk.Put1(PackString).Put(c.buf.bs[:c.n])
 	}
 }

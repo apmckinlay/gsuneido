@@ -17,7 +17,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 type smi byte
@@ -168,14 +167,10 @@ func (*smi) SetConcurrent() {
 
 var _ Packable = SuInt(0)
 
-func (si *smi) PackSize(*uint64) int {
+func (si *smi) PackSize(*packing) int {
 	return SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.PackSize(nil)
 }
 
-func (si *smi) PackSize2(*uint64, packStack) int {
-	return si.PackSize(nil)
-}
-
-func (si *smi) Pack(hash *uint64, buf *pack.Encoder) {
-	SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.Pack(hash, buf)
+func (si *smi) Pack(pk *packing) {
+	SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.Pack(pk)
 }

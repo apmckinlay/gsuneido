@@ -17,12 +17,20 @@ import (
 // and because PackSize does nesting limit check
 type Packable interface {
 	// PackSize returns the size (in bytes) of the packed value.
-	// object/record set hash to detect nested changes.
-	PackSize(hash *uint64) int
-	// PackSize2 is used by object/record to handle nesting
-	PackSize2(hash *uint64, stack packStack) int
-	// Pack appends the value to the Encoder
-	Pack(hash *uint64, buf *pack.Encoder)
+	// object/record update hash to detect nested changes.
+	PackSize(*packing) int
+	// Pack appends the value to the Encoder in packing
+	Pack(*packing)
+}
+
+type packing struct {
+	pack.Encoder
+	hash  uint64
+	stack packStack
+}
+
+func newPacking(size int) *packing {
+	return &packing{Encoder: *pack.NewEncoder(size), hash: 17}
 }
 
 // Packed values start with one of the following type tags,
@@ -63,6 +71,12 @@ func (ps *packStack) push(x Value) {
 	*ps = append(*ps, x)
 }
 
+func (ps *packStack) pop() {
+	(*ps)[len(*ps)-1] = nil
+	*ps = (*ps)[:len(*ps)-1]
+}
+	
+
 // Note: no pop required because of passing slice by value
 
 var emptyStr = EmptyStr.(SuStr)
@@ -89,19 +103,15 @@ func Pack(x Packable) string {
 	case zeroNum:
 		return packedZero
 	}
-	return Pack2(x).String()
-}
 
-func Pack2(x Packable) *pack.Encoder {
-	hash1 := uint64(17)
-	size := x.PackSize(&hash1)
-	buf := pack.NewEncoder(size)
-	hash2 := uint64(17)
-	x.Pack(&hash2, buf)
-	if hash1 != hash2 || len(buf.Buffer()) != size {
+	pk1 := newPacking(0)
+	size := x.PackSize(pk1)
+	pk2 := newPacking(size)
+	x.Pack(pk2)
+	if pk1.hash != pk2.hash || size != pk2.Len() {
 		panic("object modified during packing")
 	}
-	return buf
+	return pk2.String()
 }
 
 // Unpack returns the decoded value

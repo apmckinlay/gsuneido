@@ -34,18 +34,14 @@ func (d SuTimestamp) Hash() uint64 {
 
 // packing
 
-func (SuTimestamp) PackSize(*uint64) int {
+func (SuTimestamp) PackSize(*packing) int {
 	return 10
 }
 
-func (SuTimestamp) PackSize2(*uint64, packStack) int {
-	return 10
-}
-
-func (d SuTimestamp) Pack(h *uint64, buf *pack.Encoder) {
+func (d SuTimestamp) Pack(pk *packing) {
 	assert.That(d.extra != 0)
-	d.SuDate.Pack(h, buf)
-	buf.Put1(d.extra)
+	d.SuDate.Pack(pk)
+	pk.Put1(d.extra)
 }
 
 func UnpackTimestamp(sd SuDate, d *pack.Decoder) SuTimestamp {

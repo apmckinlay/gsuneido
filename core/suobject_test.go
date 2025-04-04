@@ -204,10 +204,9 @@ func TestSuObjectSlice(t *testing.T) {
 func TestSuObjectPackValue(t *testing.T) {
 	test := func(v1 Value) {
 		t.Helper()
-		enc := pack.NewEncoder(50)
-		var hash uint64
-		packValue(v1, &hash, enc)
-		s := enc.String()
+		pk := newPacking(50)
+		packValue(v1, pk)
+		s := pk.String()
 		dec := pack.NewDecoder(s)
 		v2 := unpackValue(dec)
 		assert.T(t).This(v2).Is(v1)
@@ -248,18 +247,18 @@ func TestSuObjectPack2(t *testing.T) {
 func TestSuObjectPack3(t *testing.T) {
 	ob := &SuObject{}
 	ob.Add(One)
-	var hash1, hash2 uint64
-	size := ob.PackSize(&hash1)
+	pk1 := newPacking(0)
+	size := ob.PackSize(pk1)
 	ob.DeleteAll()
-	buf := pack.NewEncoder(size)
-	ob.Pack(&hash2, buf)
-	assert.T(t).This(hash1).Isnt(hash2)
-	assert.T(t).This(size).Isnt(len(buf.Buffer()))
+	pk2 := newPacking(size)
+	ob.Pack(pk2)
+	assert.T(t).This(pk1.hash).Isnt(pk2.hash)
+	assert.T(t).This(size).Isnt(pk2.Len())
 
-	size = ob.PackSize(&hash1)
+	size = ob.PackSize(pk1)
 	ob.Add(One)
-	buf = pack.NewEncoder(size)
-	assert.T(t).This(func() { ob.Pack(&hash2, buf) }).Panics("index out of range")
+	pk2 = newPacking(size)
+	assert.T(t).This(func() { ob.Pack(pk2) }).Panics("index out of range")
 }
 
 func TestSuObjectCompare(t *testing.T) {

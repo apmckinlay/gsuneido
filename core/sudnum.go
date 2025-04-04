@@ -8,7 +8,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuDnum wraps a Dnum and implements Value and Packable
@@ -108,7 +107,7 @@ const E6 = uint64(1e6)
 const E4 = uint64(1e4)
 const E2 = uint64(1e2)
 
-func (dn SuDnum) PackSize(*uint64) int {
+func (dn SuDnum) PackSize(*packing) int {
 	if dn.Sign() == 0 {
 		return 1 // just tag
 	}
@@ -148,68 +147,64 @@ func (dn SuDnum) PackSize(*uint64) int {
 	return 10
 }
 
-func (dn SuDnum) PackSize2(*uint64, packStack) int {
-	return dn.PackSize(nil)
-}
-
-func (dn SuDnum) Pack(_ *uint64, buf *pack.Encoder) {
+func (dn SuDnum) Pack(pk *packing) {
 	xor := byte(0)
 	if dn.Sign() < 0 {
 		xor = 0xff
-		buf.Put1(PackMinus)
+		pk.Put1(PackMinus)
 	} else {
-		buf.Put1(PackPlus)
+		pk.Put1(PackPlus)
 	}
 	if dn.Sign() == 0 {
 		return
 	}
 	if dn.IsInf() {
-		buf.Put2(^xor, ^xor)
+		pk.Put2(^xor, ^xor)
 		return
 	}
 
 	// exponent
-	buf.Put1(byte(dn.Exp()) ^ 0x80 ^ xor)
+	pk.Put1(byte(dn.Exp()) ^ 0x80 ^ xor)
 
 	// coefficient
 	coef := dn.Coef()
 	// unrolled, partly because div/mod by constant can be faster
-	buf.Put1(byte(coef/E14) ^ xor)
+	pk.Put1(byte(coef/E14) ^ xor)
 	coef %= E14
 	if coef == 0 {
 		return
 	}
-	buf.Put1(byte(coef/E12) ^ xor)
+	pk.Put1(byte(coef/E12) ^ xor)
 	coef %= E12
 	if coef == 0 {
 		return
 	}
-	buf.Put1(byte(coef/E10) ^ xor)
+	pk.Put1(byte(coef/E10) ^ xor)
 	coef %= E10
 	if coef == 0 {
 		return
 	}
-	buf.Put1(byte(coef/E8) ^ xor)
+	pk.Put1(byte(coef/E8) ^ xor)
 	coef %= E8
 	if coef == 0 {
 		return
 	}
-	buf.Put1(byte(coef/E6) ^ xor)
+	pk.Put1(byte(coef/E6) ^ xor)
 	coef %= E6
 	if coef == 0 {
 		return
 	}
-	buf.Put1(byte(coef/E4) ^ xor)
+	pk.Put1(byte(coef/E4) ^ xor)
 	coef %= E4
 	if coef == 0 {
 		return
 	}
-	buf.Put1(byte(coef/E2) ^ xor)
+	pk.Put1(byte(coef/E2) ^ xor)
 	coef %= E2
 	if coef == 0 {
 		return
 	}
-	buf.Put1(byte(coef) ^ xor)
+	pk.Put1(byte(coef) ^ xor)
 }
 
 func UnpackNumber(s string) Value {

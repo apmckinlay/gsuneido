@@ -6,7 +6,6 @@ package core
 import (
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuSequence wraps an Iter and instantiates it lazily
@@ -207,14 +206,10 @@ func (seq *SuSequence) SetConcurrent() {
 
 var _ Packable = (*SuSequence)(nil)
 
-func (seq *SuSequence) PackSize(hash *uint64) int {
-	return seq.instantiate().PackSize(hash)
+func (seq *SuSequence) PackSize(pk *packing) int {
+	return seq.instantiate().PackSize(pk)
 }
 
-func (seq *SuSequence) Pack(hash *uint64, buf *pack.Encoder) {
-	seq.instantiate().Pack(hash, buf)
-}
-
-func (seq *SuSequence) PackSize2(hash *uint64, stack packStack) int {
-	return seq.instantiate().PackSize2(hash, stack)
+func (seq *SuSequence) Pack(pk *packing) {
+	seq.instantiate().Pack(pk)
 }
