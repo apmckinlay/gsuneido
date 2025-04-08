@@ -25,8 +25,10 @@ type Packable interface {
 
 type packing struct {
 	pack.Encoder
-	hash  uint64
-	stack packStack
+	hash     uint64
+	stack    packStack
+	cache    packCache
+	packSize int // packSize is used by SuObject PackSize
 }
 
 func newPacking(size int) *packing {
@@ -47,6 +49,8 @@ const (
 	PackObject
 	PackRecord
 	PackForward // for query extend
+	packObject2 // for new deduplication
+	packRecord2 // for new deduplication
 )
 
 type packStack []Value
@@ -75,9 +79,6 @@ func (ps *packStack) pop() {
 	(*ps)[len(*ps)-1] = nil
 	*ps = (*ps)[:len(*ps)-1]
 }
-	
-
-// Note: no pop required because of passing slice by value
 
 var emptyStr = EmptyStr.(SuStr)
 var boolTrue = True.(SuBool)
@@ -93,6 +94,13 @@ var packedZero = string([]byte{PackPlus})
 // WARNING: It's possible to get a buffer overflow if a mutable value
 // (e.g. object) is modified between/during PackSize and Pack.
 func Pack(x Packable) string {
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		fmt.Println("error Pack:", x)
+	// 		panic(r)
+	// 	}
+	// }()
+
 	switch x {
 	case emptyStr:
 		return ""
@@ -108,6 +116,12 @@ func Pack(x Packable) string {
 	size := x.PackSize(pk1)
 	pk2 := newPacking(size)
 	x.Pack(pk2)
+	// if pk1.hash != pk2.hash {
+	// 	fmt.Println("hash mismatch")
+	// }
+	// if size != pk2.Len() {
+	// 	fmt.Println("size", size, "!=", pk2.Len())
+	// }
 	if pk1.hash != pk2.hash || size != pk2.Len() {
 		panic("object modified during packing")
 	}
@@ -127,15 +141,39 @@ func Unpack(s string) Value {
 	case PackString:
 		return SuStr(s[1:])
 	case PackDate:
-		return UnpackDate(s)
+		return UnpackDate(pack.MakeDecoder(s))
 	case PackPlus, PackMinus:
 		return UnpackNumber(s)
-	case PackObject:
-		return UnpackObject(s)
-	case PackRecord:
-		return UnpackRecord(s)
+	case PackObject, packObject2:
+		return UnpackObject(pack.MakeDecoder(s))
+	case PackRecord, packRecord2:
+		return UnpackRecord(pack.MakeDecoder(s))
 	default:
 		panic("invalid pack tag " + strconv.Itoa(int(s[0])))
+	}
+}
+
+func unpack(d pack.Decoder) Value {
+	if d.Remaining() == 0 {
+		return EmptyStr
+	}
+	switch d.Peek() {
+	case PackFalse:
+		return False
+	case PackTrue:
+		return True
+	case PackString:
+		return SuStr(d.Rest()[1:])
+	case PackDate:
+		return UnpackDate(d)
+	case PackPlus, PackMinus:
+		return UnpackNumber(d.Rest())
+	case PackObject, packObject2:
+		return UnpackObject(d)
+	case PackRecord, packRecord2:
+		return UnpackRecord(d)
+	default:
+		panic("invalid pack tag " + strconv.Itoa(int(d.Peek())))
 	}
 }
 

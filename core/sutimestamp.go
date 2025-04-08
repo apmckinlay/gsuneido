@@ -44,7 +44,7 @@ func (d SuTimestamp) Pack(pk *packing) {
 	pk.Put1(d.extra)
 }
 
-func UnpackTimestamp(sd SuDate, d *pack.Decoder) SuTimestamp {
+func UnpackTimestamp(sd SuDate, d pack.Decoder) SuTimestamp {
 	extra := d.Get1()
 	assert.That(extra != 0)
 	return SuTimestamp{SuDate: sd, extra: extra}

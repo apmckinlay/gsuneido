@@ -120,6 +120,13 @@ func suneido_RuntimeError() Value {
 	return Nil[123]
 }
 
+var _ = staticMethod(suneido_PackDedup, "(bool)")
+
+func suneido_PackDedup(x Value) Value {
+	options.PackV2 = ToBool(x)
+	return nil
+}
+
 var _ = staticMethod(suneido_StrictCompare, "(bool)")
 
 func suneido_StrictCompare(x Value) Value {

@@ -39,6 +39,9 @@ var (
 	StrictCompareDb = false
 )
 
+// PackV2 controls whether to deduplicate packed data.
+var PackV2 = false
+
 // CmdLine is the remaining command line arguments
 var CmdLine string
 

@@ -65,6 +65,7 @@ func TestDateLiteral(t *testing.T) {
 
 func TestDatePack(t *testing.T) {
 	pack := func(s string) {
+		t.Helper()
 		d := DateFromLiteral(s)
 		buf := Pack(d)
 		assert.T(t).This(buf[0]).Is(byte(PackDate))

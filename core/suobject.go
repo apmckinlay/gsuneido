@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"fmt"
 	"log"
+	"math"
 	"slices"
 	"sort"
 	"strings"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/core/types"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/pack"
@@ -1115,6 +1117,8 @@ func (ob *SuObject) BinarySearch2(th *Thread, value, lt Value) int {
 
 var _ Packable = (*SuObject)(nil)
 
+const minBackRef = 4 // back ref size
+
 func (ob *SuObject) PackSize(pk *packing) int {
 	if pk.stack == nil {
 		pk.stack = newPackStack()
@@ -1126,24 +1130,56 @@ func (ob *SuObject) PackSize(pk *packing) int {
 		defer ob.RUnlock()
 	}
 	pk.hash = pk.hash*31 + uint64(ob.clock)
-	if ob.size() == 0 {
+	if ob.size() == 0 && !options.PackV2 {
 		return 1 // just tag
 	}
+	orig := pk.packSize
 	ps := 1 // tag
 	ps += varint.Len(uint64(len(ob.list)))
 	for _, v := range ob.list {
+		pk.packSize = orig + ps
 		ps += packSize(v, pk)
 	}
 	ps += varint.Len(uint64(ob.named.Size()))
 	iter := ob.named.Iter()
 	for k, v, ok := iter(); ok; k, v, ok = iter() {
-		ps += packSize(k, pk) + packSize(v, pk)
+		pk.packSize = orig + ps
+		if len(pk.stack) > 1 && options.PackV2 {
+			if offset, ok := pk.cache.Get(k); ok &&
+				pk.packSize+ps-offset < math.MaxUint16 {
+				// back reference
+				// fmt.Println("backref", k)
+				ps += 3 // backRef + uint16 offset
+			} else {
+				n := packSize(k, pk)
+				if n >= minBackRef {
+					pk.cache.Put(k, pk.packSize+ps)
+				}
+				ps += n
+			}
+		} else {
+			ps += packSize(k, pk)
+		}
+		pk.packSize = orig + ps
+		ps += packSize(v, pk)
 	}
+	pk.packSize = orig + ps
 	return ps
 }
 
 func packSize(x Value, pk *packing) int {
-	if p, ok := x.(Packable); ok {
+	// fmt.Println("packSize", pk.packSize, x)
+	if options.PackV2 {
+		switch x := x.(type) {
+		case *SuObject:
+			return x.PackSize(pk)
+		case *SuRecord:
+			return x.PackSize(pk)
+		case Packable:
+			n := x.PackSize(pk)
+			return varint.Len(2+uint64(n)) + n
+		}
+	} else if p, ok := x.(Packable); ok {
 		n := p.PackSize(pk)
 		return varint.Len(uint64(n)) + n
 	}
@@ -1155,12 +1191,25 @@ func (ob *SuObject) Pack(pk *packing) {
 }
 
 func (ob *SuObject) Pack2(pk *packing, tag byte) {
+	if pk.stack == nil {
+		pk.stack = newPackStack()
+	}
+	// must check stack before locking to avoid recursive deadlock
+	pk.stack.push(ob)
+	defer pk.stack.pop()
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
 	pk.hash = pk.hash*31 + uint64(ob.clock)
+	if options.PackV2 {
+		if tag == PackObject {
+			tag = packObject2
+		} else if tag == PackRecord {
+			tag = packRecord2
+		}
+	}
 	pk.Put1(tag)
-	if ob.size() == 0 {
+	if ob.size() == 0 && !options.PackV2 {
 		return
 	}
 	pk.VarUint(uint64(len(ob.list)))
@@ -1170,50 +1219,115 @@ func (ob *SuObject) Pack2(pk *packing, tag byte) {
 	pk.VarUint(uint64(ob.named.Size()))
 	iter := ob.named.Iter()
 	for k, v, ok := iter(); ok; k, v, ok = iter() {
-		packValue(k, pk)
+		if len(pk.stack) > 1 && options.PackV2 {
+			if offset, ok := pk.cache.Get(k); ok &&
+				pk.Len()-offset < math.MaxUint16 {
+				// back reference
+				// fmt.Println("backref", k)
+				pk.Put1(backRef)
+				pk.Uint16(uint16(pk.Len() - offset))
+			} else {
+				offset = pk.Len()
+				n := packValue(k, pk)
+				if n >= minBackRef {
+					pk.cache.Put(k, offset)
+				}
+			}
+		} else {
+			packValue(k, pk)
+		}
 		packValue(v, pk)
 	}
 }
 
-func packValue(x Value, pk *packing) {
-	enc := pk.Encoder
-	pk.Put1(0) // 99% of the time we only need one byte for the size
-	x.(Packable).Pack(pk)
-	n := len(pk.Buffer()) - len(enc.Buffer()) - 1
-	varlen := varint.Len(uint64(n))
-	if varlen > 1 {
-		// move what we just packed to make room for larger varint
-		pk.Move(n, varlen-1)
+const dedupObject = 0
+const dedupRecord = 1
+const backRef = 2
+const sizeAdjust = 3
+
+func packValue(x Value, pk *packing) int {
+	// fmt.Println("packValue", pk.Len(), x)
+	if options.PackV2 {
+		switch x := x.(type) {
+		case *SuObject:
+			x.Pack2(pk, dedupObject)
+		case *SuRecord:
+			x.ToObject().Pack2(pk, dedupRecord)
+		case Packable:
+			n := x.PackSize(pk)
+			pk.VarUint(uint64(n) + sizeAdjust)
+			x.Pack(pk)
+			return n
+		}
+		return 0
+	} else {
+		enc := pk.Encoder
+		pk.Put1(0) // 99% of the time we only need one byte for the size
+		x.(Packable).Pack(pk)
+		n := len(pk.Buffer()) - len(enc.Buffer()) - 1
+		varlen := varint.Len(uint64(n))
+		if varlen > 1 {
+			// move what we just packed to make room for larger varint
+			pk.Move(n, varlen-1)
+		}
+		enc.VarUint(uint64(n))
+		return n
 	}
-	enc.VarUint(uint64(n))
 }
 
-func UnpackObject(s string) *SuObject {
-	return unpackObject(s, &SuObject{})
+func UnpackObject(d pack.Decoder) *SuObject {
+	return unpackObject(d, &SuObject{})
 }
 
-func unpackObject(s string, ob *SuObject) *SuObject {
-	if len(s) <= 1 {
+func unpackObject(d pack.Decoder, ob *SuObject) *SuObject {
+	tag := d.Get1()
+	dedup := tag == packObject2 || tag == packRecord2
+	return unpackObject2(&d, ob, dedup)
+}
+
+func unpackObject2(d *pack.Decoder, ob *SuObject, dedup bool) *SuObject {
+	if d.Remaining() == 0 {
 		return ob
 	}
-	buf := pack.NewDecoder(s[1:])
-	n := int(buf.VarUint())
+	n := int(d.VarUint())
 	ob.list = make([]Value, n)
 	for i := range n {
-		ob.list[i] = unpackValue(buf)
+		ob.list[i] = unpackValue(d, dedup)
 	}
-	n = int(buf.VarUint())
+	n = int(d.VarUint())
 	for range n {
-		k := unpackValue(buf)
-		v := unpackValue(buf)
+		k := unpackValue(d, dedup)
+		v := unpackValue(d, dedup)
 		ob.named.Put(k, v)
 	}
 	return ob
 }
 
-func unpackValue(buf *pack.Decoder) Value {
-	size := int(buf.VarUint())
-	return Unpack(buf.Get(size))
+func unpackValue(d *pack.Decoder, dedup bool) (r Value) {
+	// defer func(pos int) {
+	// 	fmt.Println("unpackValue", pos, r)
+	// }(d.Pos())
+	size := int(d.VarUint())
+	if dedup {
+		switch size {
+		case dedupObject:
+			return unpackObject2(d, &SuObject{}, true)
+		case dedupRecord:
+			r := NewSuRecord()
+			unpackObject2(d, &r.ob, true)
+			return r
+		case backRef:
+			// fmt.Println("backref")
+			s := d.Get(2)
+			offset := int(s[0])<<8 | int(s[1]) + 2
+			prev := d.Prev(offset)
+			return unpackValue(&prev, true)
+		}
+		size -= sizeAdjust
+	}
+	v := unpack(d.Slice(size))
+	d.Skip(size)
+	return v
 }
 
 //-------------------------------------------------------------------

@@ -16,8 +16,8 @@ func (e *Encoder) Uint16(n uint16) *Encoder {
 }
 
 func (d *Decoder) Uint16() uint16 {
-	n := uint16(d.s[0])<<8 | uint16(d.s[1])
-	d.s = d.s[2:]
+	n := uint16(d.s[d.i])<<8 | uint16(d.s[d.i+1])
+	d.i += 2
 	return n
 }
 
@@ -27,8 +27,9 @@ func (e *Encoder) Int32(n int) *Encoder {
 }
 
 func (d *Decoder) Int32() int {
-	n := int32(d.s[0]^0x80)<<24 | int32(d.s[1])<<16 | int32(d.s[2])<<8 | int32(d.s[3])
-	d.s = d.s[4:]
+	n := int32(d.s[d.i]^0x80)<<24 | int32(d.s[d.i+1])<<16 |
+		int32(d.s[d.i+2])<<8 | int32(d.s[d.i+3])
+	d.i += 4
 	return int(n)
 }
 
@@ -37,8 +38,9 @@ func (e *Encoder) Uint32(n uint32) *Encoder {
 }
 
 func (d *Decoder) Uint32() uint32 {
-	n := uint32(d.s[0])<<24 | uint32(d.s[1])<<16 | uint32(d.s[2])<<8 | uint32(d.s[3])
-	d.s = d.s[4:]
+	n := uint32(d.s[d.i])<<24 | uint32(d.s[d.i+1])<<16 |
+		uint32(d.s[d.i+2])<<8 | uint32(d.s[d.i+3])
+	d.i += 4
 	return n
 }
 
@@ -50,8 +52,8 @@ func (e *Encoder) VarUint(n uint64) *Encoder {
 }
 
 func (d *Decoder) VarUint() uint64 {
-	n, bytes := binary.Uvarint([]byte(d.s))
+	n, bytes := binary.Uvarint([]byte(d.s[d.i:]))
 	assert.That(bytes > 0)
-	d.s = d.s[bytes:]
+	d.i += bytes
 	return n
 }

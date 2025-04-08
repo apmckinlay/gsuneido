@@ -7,24 +7,49 @@ package pack
 // It is somewhat similar to strings.Reader
 type Decoder struct {
 	s string
+	i int
 }
 
-func NewDecoder(s string) *Decoder {
-	return &Decoder{s}
+func MakeDecoder(s string) Decoder {
+	return Decoder{s: s}
+}
+
+func (d Decoder) Peek() byte {
+	return d.s[d.i]
+}
+
+func (d *Decoder) Skip(n int) {
+	d.i += n
 }
 
 func (d *Decoder) Get1() byte {
-	c := d.s[0]
-	d.s = d.s[1:]
+	c := d.s[d.i]
+	d.i++
 	return c
 }
 
 func (d *Decoder) Get(n int) string {
-	s := d.s[:n]
-	d.s = d.s[n:]
+	s := d.s[d.i : d.i+n]
+	d.i += n
 	return s
 }
 
-func (d *Decoder) Remaining() int {
-	return len(d.s)
+func (d Decoder) Remaining() int {
+	return len(d.s) - d.i
+}
+
+func (d Decoder) Rest() string {
+	return d.s[d.i:]
+}
+
+func (d Decoder) Slice(n int) Decoder {
+	return Decoder{s: d.s[:d.i+n], i: d.i}
+}
+
+func (d *Decoder) Prev(offset int) Decoder {
+	return Decoder{s: d.s, i: d.i - offset}
+}
+
+func (d *Decoder) Pos() int {
+	return d.i
 }

@@ -4,8 +4,10 @@
 package core
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -110,3 +112,59 @@ func BenchmarkPack(b *testing.B) {
 }
 
 var bench string
+
+func TestPackPrev(t *testing.T) {
+	defer func() { options.PackV2 = false }()
+	test := func(x Value) int {
+		t.Helper()
+		// fmt.Println("\ntest", x)
+		// n := PackSize(x)
+		// fmt.Println("PackSize:", n)
+		s := PackValue(x)
+		fmt.Println("size:", len(s))
+		// fmt.Printf("packed: %d %x\n", len(s), s)
+		y := Unpack(s)
+		assert.T(t).This(y).Is(x)
+		return len(s)
+	}
+	for _, options.PackV2 = range []bool{false, true} {
+		test(True)
+		test(False)
+		test(Zero)
+		test(One)
+		test(IntVal(12345678))
+		test(SuStr("hello world"))
+		test(&SuObject{})
+		test(&SuRecord{})
+
+		ob := &SuObject{}
+		ob.Add(False)
+		test(ob)
+		ob.Add(True)
+		test(ob)
+		ob.Set(SuStr("hello"), SuInt(0x11))
+		test(ob)
+		ob.Set(SuStr("world"), SuInt(0x22))
+		test(ob)
+
+		x := &SuObject{}
+		x.Set(SuStr("val"), SuInt(0x11))
+		y := &SuObject{}
+		y.Set(SuStr("val"), SuInt(0x22))
+		data := &SuObject{}
+		// data.Set(SuStr("x"), x)
+		// data.Set(SuStr("y"), y)
+		data.Add(x)
+		data.Add(y)
+		test(data)
+
+		inner := &SuObject{}
+		inner.Set(SuStr("abracadabra"), SuInt(123))
+		outer := &SuObject{}
+		for range 6000 {
+			outer.Add(inner)
+		}
+		n := test(outer)
+		assert.That(n > 64*1024)
+	}
+}
