@@ -202,14 +202,14 @@ func TestSuObjectSlice(t *testing.T) {
 }
 
 func TestSuObjectPackValue(t *testing.T) {
-	test := func(v1 Value) {
+	test := func(x Value) {
 		t.Helper()
 		pk := newPacking(50)
-		packValue(v1, pk)
+		packValue(x, pk)
 		s := pk.String()
-		dec := pack.NewDecoder(s)
-		v2 := unpackValue(dec)
-		assert.T(t).This(v2).Is(v1)
+		dec := pack.MakeDecoder(s)
+		y := unpackValue(&dec)
+		assert.T(t).This(y).Is(x)
 	}
 	test(SuInt(123))
 	test(SuStr("hello"))
@@ -258,7 +258,7 @@ func TestSuObjectPack3(t *testing.T) {
 	size = ob.PackSize(pk1)
 	ob.Add(One)
 	pk2 = newPacking(size)
-	assert.T(t).This(func() { ob.Pack(pk2) }).Panics("index out of range")
+	assert.T(t).This(func() { ob.Pack(pk2) }).Panics("out of range")
 }
 
 func TestSuObjectCompare(t *testing.T) {

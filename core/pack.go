@@ -27,10 +27,11 @@ type packing struct {
 	pack.Encoder
 	hash  uint64
 	stack packStack
+	v2    bool
 }
 
 func newPacking(size int) *packing {
-	return &packing{Encoder: *pack.NewEncoder(size), hash: 17}
+	return &packing{Encoder: *pack.NewEncoder(size)}
 }
 
 // Packed values start with one of the following type tags,
@@ -75,9 +76,6 @@ func (ps *packStack) pop() {
 	(*ps)[len(*ps)-1] = nil
 	*ps = (*ps)[:len(*ps)-1]
 }
-	
-
-// Note: no pop required because of passing slice by value
 
 var emptyStr = EmptyStr.(SuStr)
 var boolTrue = True.(SuBool)
@@ -93,6 +91,10 @@ var packedZero = string([]byte{PackPlus})
 // WARNING: It's possible to get a buffer overflow if a mutable value
 // (e.g. object) is modified between/during PackSize and Pack.
 func Pack(x Packable) string {
+	return packv(x, false)
+}
+
+func packv(x Packable, v2 bool) string {
 	switch x {
 	case emptyStr:
 		return ""
@@ -104,14 +106,16 @@ func Pack(x Packable) string {
 		return packedZero
 	}
 
-	pk1 := newPacking(0)
-	size := x.PackSize(pk1)
-	pk2 := newPacking(size)
-	x.Pack(pk2)
-	if pk1.hash != pk2.hash || size != pk2.Len() {
+	pk := &packing{v2: v2}
+	size := x.PackSize(pk)
+	hash := pk.hash
+	*pk = *newPacking(size)
+	pk.v2 = v2
+	x.Pack(pk)
+	if hash != pk.hash || size != pk.Len() {
 		panic("object modified during packing")
 	}
-	return pk2.String()
+	return pk.String()
 }
 
 // Unpack returns the decoded value
@@ -127,15 +131,39 @@ func Unpack(s string) Value {
 	case PackString:
 		return SuStr(s[1:])
 	case PackDate:
-		return UnpackDate(s)
+		return UnpackDate(pack.MakeDecoder(s))
 	case PackPlus, PackMinus:
 		return UnpackNumber(s)
 	case PackObject:
-		return UnpackObject(s)
+		return UnpackObject(pack.MakeDecoder(s))
 	case PackRecord:
-		return UnpackRecord(s)
+		return UnpackRecord(pack.MakeDecoder(s))
 	default:
 		panic("invalid pack tag " + strconv.Itoa(int(s[0])))
+	}
+}
+
+func unpack(d pack.Decoder) Value {
+	if d.Remaining() == 0 {
+		return EmptyStr
+	}
+	switch d.Peek() {
+	case PackFalse:
+		return False
+	case PackTrue:
+		return True
+	case PackString:
+		return SuStr(d.Remainder()[1:])
+	case PackDate:
+		return UnpackDate(d)
+	case PackPlus, PackMinus:
+		return UnpackNumber(d.Remainder())
+	case PackObject:
+		return UnpackObject(d)
+	case PackRecord:
+		return UnpackRecord(d)
+	default:
+		panic("invalid pack tag " + strconv.Itoa(int(d.Peek())))
 	}
 }
 

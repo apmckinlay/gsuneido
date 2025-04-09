@@ -1113,6 +1113,10 @@ func (ob *SuObject) BinarySearch2(th *Thread, value, lt Value) int {
 
 // Packable ---------------------------------------------------------
 
+// v2 is a slightly different format to allow for streaming
+// nested non-empty objects/records have a dummy size of 2
+// Note: the v2 format is currently not used by default
+
 var _ Packable = (*SuObject)(nil)
 
 func (ob *SuObject) PackSize(pk *packing) int {
@@ -1143,7 +1147,17 @@ func (ob *SuObject) PackSize(pk *packing) int {
 }
 
 func packSize(x Value, pk *packing) int {
-	if p, ok := x.(Packable); ok {
+	if pk.v2 {
+		switch x := x.(type) {
+		case *SuObject:
+			return 1 + x.PackSize(pk) // size is always 1 byte
+		case *SuRecord:
+			return 1 + x.PackSize(pk) // size is always 1 byte
+		case Packable:
+			n := x.PackSize(pk)
+			return varint.Len(2+uint64(n)) + n
+		}
+	} else if p, ok := x.(Packable); ok {
 		n := p.PackSize(pk)
 		return varint.Len(uint64(n)) + n
 	}
@@ -1155,6 +1169,12 @@ func (ob *SuObject) Pack(pk *packing) {
 }
 
 func (ob *SuObject) Pack2(pk *packing, tag byte) {
+	if pk.stack == nil {
+		pk.stack = newPackStack()
+	}
+	// must check stack before locking to avoid recursive deadlock
+	pk.stack.push(ob)
+	defer pk.stack.pop()
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
@@ -1175,45 +1195,82 @@ func (ob *SuObject) Pack2(pk *packing, tag byte) {
 	}
 }
 
+const dummyObjectSize = 2
+
 func packValue(x Value, pk *packing) {
-	enc := pk.Encoder
-	pk.Put1(0) // 99% of the time we only need one byte for the size
-	x.(Packable).Pack(pk)
-	n := len(pk.Buffer()) - len(enc.Buffer()) - 1
-	varlen := varint.Len(uint64(n))
-	if varlen > 1 {
-		// move what we just packed to make room for larger varint
-		pk.Move(n, varlen-1)
+	if pk.v2 {
+		switch x := x.(type) {
+		case *SuObject:
+			if x.size() == 0 {
+				pk.Put1(1)
+			} else {
+				pk.Put1(dummyObjectSize)
+			}
+			x.Pack(pk)
+		case *SuRecord:
+			if x.ob.size() == 0 {
+				pk.Put1(1)
+			} else {
+				pk.Put1(dummyObjectSize)
+			}
+			x.Pack(pk)
+		case Packable:
+			n := x.PackSize(pk) // scalar, so fast
+			pk.VarUint(uint64(n))
+			x.Pack(pk)
+		default:
+			assert.ShouldNotReachHere()
+		}
+	} else {
+		enc := pk.Encoder
+		pk.Put1(0) // 99% of the time we only need one byte for the size
+		x.(Packable).Pack(pk)
+		n := len(pk.Buffer()) - len(enc.Buffer()) - 1
+		varlen := varint.Len(uint64(n))
+		if varlen > 1 {
+			// move what we just packed to make room for larger varint
+			pk.Move(n, varlen-1)
+		}
+		enc.VarUint(uint64(n))
 	}
-	enc.VarUint(uint64(n))
 }
 
-func UnpackObject(s string) *SuObject {
-	return unpackObject(s, &SuObject{})
+func UnpackObject(d pack.Decoder) *SuObject {
+	return unpackObject(&d, &SuObject{})
 }
 
-func unpackObject(s string, ob *SuObject) *SuObject {
-	if len(s) <= 1 {
+func unpackObject(d *pack.Decoder, ob *SuObject) *SuObject {
+	d.Skip(1)
+	if d.Remaining() == 0 {
 		return ob
 	}
-	buf := pack.NewDecoder(s[1:])
-	n := int(buf.VarUint())
+	n := int(d.VarUint())
 	ob.list = make([]Value, n)
 	for i := range n {
-		ob.list[i] = unpackValue(buf)
+		ob.list[i] = unpackValue(d)
 	}
-	n = int(buf.VarUint())
+	n = int(d.VarUint())
 	for range n {
-		k := unpackValue(buf)
-		v := unpackValue(buf)
+		k := unpackValue(d)
+		v := unpackValue(d)
 		ob.named.Put(k, v)
 	}
 	return ob
 }
 
-func unpackValue(buf *pack.Decoder) Value {
-	size := int(buf.VarUint())
-	return Unpack(buf.Get(size))
+func unpackValue(d *pack.Decoder) (r Value) {
+	size := int(d.VarUint())
+	if size == dummyObjectSize { // v2
+		if d.Peek() == PackObject {
+			return unpackObject(d, &SuObject{}) // no slice
+		} else if d.Peek() == PackRecord {
+			r := NewSuRecord()
+			unpackObject(d, &r.ob)
+			return r
+		}
+		// fallthrough
+	}
+	return unpack(d.Slice(size))
 }
 
 //-------------------------------------------------------------------

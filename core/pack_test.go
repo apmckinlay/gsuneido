@@ -110,3 +110,63 @@ func BenchmarkPack(b *testing.B) {
 }
 
 var bench string
+
+func TestPackV2(t *testing.T) {
+	var v2 bool
+	test := func(x Value) int {
+		t.Helper()
+		// fmt.Println("\ntest", x)
+		// n := PackSize(x)
+		// fmt.Println("PackSize:", n)
+		s := packv(x.(Packable), v2)
+		// fmt.Println("size:", len(s))
+		// fmt.Printf("packed: %d %x\n", len(s), s)
+		y := Unpack(s)
+		assert.T(t).This(y).Is(x)
+		return len(s)
+	}
+	for _, v2 = range []bool{false, true} {
+		test(True)
+		test(False)
+		test(Zero)
+		test(One)
+		test(IntVal(12345678))
+		test(SuStr("hello world"))
+		test(&SuObject{})
+		test(NewSuRecord())
+
+		ob := &SuObject{}
+		ob.Add(False)
+		test(ob)
+		ob.Add(True)
+		test(ob)
+		ob.Set(SuStr("hello"), SuInt(0x11))
+		test(ob)
+		ob.Set(SuStr("world"), SuInt(0x22))
+		test(ob)
+
+		x := &SuObject{}
+		x.Set(SuStr("val"), SuInt(0x11))
+		y := &SuObject{}
+		y.Set(SuStr("val"), SuInt(0x22))
+		data := &SuObject{}
+		// data.Set(SuStr("x"), x)
+		// data.Set(SuStr("y"), y)
+		data.Add(x)
+		data.Add(y)
+		test(data)
+
+		small := &SuObject{}
+		small.Set(SuStr("abracadabra"), SuInt(123))
+		large := &SuObject{}
+		for range 6000 {
+			large.Add(small)
+		}
+		n := test(large)
+		assert.That(n > 64*1024)
+		
+		outer := &SuObject{}
+		outer.Add(large)
+		test(outer)
+	}
+}

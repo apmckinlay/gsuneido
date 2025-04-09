@@ -9,8 +9,16 @@ type Decoder struct {
 	s string
 }
 
-func NewDecoder(s string) *Decoder {
-	return &Decoder{s}
+func MakeDecoder(s string) Decoder {
+	return Decoder{s: s}
+}
+
+func (d Decoder) Peek() byte {
+	return d.s[0]
+}
+
+func (d *Decoder) Skip(n int) {
+	d.s = d.s[n:]
 }
 
 func (d *Decoder) Get1() byte {
@@ -27,4 +35,14 @@ func (d *Decoder) Get(n int) string {
 
 func (d *Decoder) Remaining() int {
 	return len(d.s)
+}
+
+func (d Decoder) Remainder() string {
+	return d.s
+}
+
+func (d *Decoder) Slice(n int) Decoder {
+	d2 := Decoder{s: d.s[:n]}
+	d.s = d.s[n:]
+	return d2
 }

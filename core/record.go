@@ -216,7 +216,7 @@ func (b *RecordBuilder) Trim() *RecordBuilder {
 const maxRecordLen = 1_000_000
 
 func (b *RecordBuilder) Build() Record {
-	pk := newPacking(0)
+	pk := &packing{}
 	if len(b.vals) > MaxValues {
 		panic("too many values for record")
 	}
@@ -231,7 +231,7 @@ func (b *RecordBuilder) Build() Record {
 	if length > maxRecordLen {
 		panic(fmt.Sprintf("record too large (%d > %d)", length, maxRecordLen))
 	}
-	pk = newPacking(length)
+	*pk = *newPacking(length)
 	b.build(pk, length, sizes)
 	//assert.That(len(buf.String()) == length)
 	return Record(pk.String())

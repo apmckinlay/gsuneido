@@ -16,6 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/list"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -954,9 +955,9 @@ func (r *SuRecord) Pack(pk *packing) {
 	r.ToObject().Pack2(pk, PackRecord)
 }
 
-func UnpackRecord(s string) *SuRecord {
+func UnpackRecord(d pack.Decoder) *SuRecord {
 	r := NewSuRecord()
-	unpackObject(s, &r.ob)
+	unpackObject(&d, &r.ob)
 	return r
 }
 

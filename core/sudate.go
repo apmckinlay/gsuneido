@@ -782,8 +782,8 @@ func (d SuDate) Pack(pk *packing) {
 }
 
 // UnpackDate unpacks a date from the supplied byte slice
-func UnpackDate(s string) Value {
-	d := pack.NewDecoder(s[1:])
+func UnpackDate(d pack.Decoder) Value {
+	d.Skip(1)
 	date := d.Uint32()
 	time := d.Uint32()
 	sd := SuDate{date: date, time: time}
