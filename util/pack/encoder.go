@@ -3,7 +3,11 @@
 
 package pack
 
-import "github.com/apmckinlay/gsuneido/util/hacks"
+import (
+	"encoding/binary"
+
+	"github.com/apmckinlay/gsuneido/util/hacks"
+)
 
 // Encoder is used to build a (usually binary) string.
 // Encoder values should not be copied.
@@ -81,5 +85,22 @@ func (e *Encoder) Move(nbytes, shift int) {
 
 // Len returns the number of accumulated bytes
 func (e *Encoder) Len() int {
-    return len(e.buf)
+	return len(e.buf)
+}
+
+// Big endian (most significant byte first)
+
+func (e *Encoder) Uint16(n uint16) *Encoder {
+	return e.Put2(byte(n>>8), byte(n))
+}
+
+func (e *Encoder) Uint32(n uint32) *Encoder {
+	return e.Put4(byte(n>>24), byte(n>>16), byte(n>>8), byte(n))
+}
+
+func (e *Encoder) VarUint(n uint64) *Encoder {
+	prevlen := len(e.buf)
+	bytes := binary.PutUvarint(e.buf[prevlen:cap(e.buf)], n)
+	e.buf = e.buf[:prevlen+bytes]
+	return e
 }

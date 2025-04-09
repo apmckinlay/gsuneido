@@ -63,19 +63,6 @@ func TestDecoder(t *testing.T) {
 	testVarUInt(math.MaxUint32)
 	testVarUInt(math.MaxUint64)
 
-	testInt32 := func(n int) {
-		t.Helper()
-		e := NewEncoder(8)
-		e.Int32(n)
-		d := MakeDecoder(e.String())
-		assert(d.Int32()).Is(n)
-	}
-	testInt32(0)
-	testInt32(1)
-	testInt32(-1)
-	testInt32(math.MaxInt32)
-	testInt32(math.MinInt32)
-
 	testUint16 := func(n uint16) {
 		t.Helper()
 		e := NewEncoder(4)

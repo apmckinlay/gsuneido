@@ -38,12 +38,6 @@ func TestPack(t *testing.T) {
 		d = MakeDecoder(e.String())
 		assert(d.Uint32()).Is(n)
 	}
-	for _, n := range []int{0, 1, -1, 12345678, -12345678, math.MaxInt32, math.MinInt32} {
-		e = NewEncoder(32)
-		e.Int32(n)
-		d = MakeDecoder(e.String())
-		assert(d.Int32()).Is(n)
-	}
 	for _, n := range []uint64{0, 1, 222, 22222, 12345678, math.MaxInt32} {
 		e = NewEncoder(32)
 		e.VarUint(n)
