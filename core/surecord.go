@@ -957,7 +957,7 @@ func (r *SuRecord) Pack(pk *packing) {
 
 func UnpackRecord(d pack.Decoder) *SuRecord {
 	r := NewSuRecord()
-	unpackObject(&d, &r.ob)
+	unpackObject(d, &r.ob)
 	return r
 }
 

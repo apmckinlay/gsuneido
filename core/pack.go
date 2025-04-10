@@ -4,6 +4,7 @@
 package core
 
 import (
+	"io"
 	"strconv"
 	"strings"
 
@@ -31,7 +32,7 @@ type packing struct {
 }
 
 func newPacking(size int) *packing {
-	return &packing{Encoder: *pack.NewEncoder(size)}
+	return &packing{Encoder: pack.NewEncoder(size)}
 }
 
 // Packed values start with one of the following type tags,
@@ -118,6 +119,21 @@ func packv(x Packable, v2 bool) string {
 	return pk.String()
 }
 
+func PackTo(v Value, w io.Writer) error {
+	p, ok := v.(Packable)
+	if !ok {
+		panic("can't pack " + ErrType(v))
+	}
+	pk := &packing{Encoder: pack.NewEncoder2(w), v2: true}
+	p.Pack(pk)
+	return pk.Flush()
+}
+
+func UnpackFrom(r io.Reader) Value {
+	d := pack.NewDecoder2(r)
+    return unpack(d)
+}
+
 // Unpack returns the decoded value
 func Unpack(s string) Value {
 	if len(s) == 0 {
@@ -131,20 +147,21 @@ func Unpack(s string) Value {
 	case PackString:
 		return SuStr(s[1:])
 	case PackDate:
-		return UnpackDate(pack.MakeDecoder(s))
+		return UnpackDate(pack.NewDecoder(s))
 	case PackPlus, PackMinus:
 		return UnpackNumber(s)
 	case PackObject:
-		return UnpackObject(pack.MakeDecoder(s))
+		return UnpackObject(pack.NewDecoder(s))
 	case PackRecord:
-		return UnpackRecord(pack.MakeDecoder(s))
+		return UnpackRecord(pack.NewDecoder(s))
 	default:
 		panic("invalid pack tag " + strconv.Itoa(int(s[0])))
 	}
 }
 
+// Unpack returns the decoded value
 func unpack(d pack.Decoder) Value {
-	if d.Remaining() == 0 {
+	if !d.Remaining() {
 		return EmptyStr
 	}
 	switch d.Peek() {
@@ -153,15 +170,39 @@ func unpack(d pack.Decoder) Value {
 	case PackTrue:
 		return True
 	case PackString:
-		return SuStr(d.Remainder()[1:])
+		d.Skip(1)
+		return SuStr(d.Remainder())
 	case PackDate:
 		return UnpackDate(d)
 	case PackPlus, PackMinus:
-		return UnpackNumber(d.Remainder())
+		return UnpackNumber(d.TempRemainder())
 	case PackObject:
 		return UnpackObject(d)
 	case PackRecord:
 		return UnpackRecord(d)
+	default:
+		panic("invalid pack tag " + strconv.Itoa(int(d.Peek())))
+	}
+}
+
+func unpackLen(d pack.Decoder, n int) Value {
+	if n <= 0 {
+		return EmptyStr
+	}
+	switch d.Peek() {
+	case PackFalse:
+		d.Skip(1)
+		return False
+	case PackTrue:
+		d.Skip(1)
+		return True
+	case PackString:
+		d.Skip(1)
+		return SuStr(d.Get(n-1))
+	case PackDate:
+		return UnpackDate(pack.NewDecoder(d.TempStr(n)))
+	case PackPlus, PackMinus:
+		return UnpackNumber(d.TempStr(n))
 	default:
 		panic("invalid pack tag " + strconv.Itoa(int(d.Peek())))
 	}

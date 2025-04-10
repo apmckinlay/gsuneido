@@ -4,6 +4,11 @@
 package core
 
 import (
+	"bufio"
+	"compress/zlib"
+	"fmt"
+	rand "math/rand/v2"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -111,6 +116,12 @@ func BenchmarkPack(b *testing.B) {
 
 var bench string
 
+func TestPackBug(t *testing.T) {
+	s := "\x06\x01\x01\x07\x00\n\x0b\x04tax_regnum\x0b\x04R891821639\x13\x04tax_effective_date\t\x05\x00\x0f\x8cR\x00\x00\x00\x00\x0b\x04tax_status\x07\x04active\r\x04tax_payable?\x01\x01\t\x04tax_code\x04\x04GST\t\x04tax_desc\x17\x04Goods and Services Tax\x0b\x04tax_agency\x13\x04Federal Government\t\x04tax_rate\x03\x03\x81F\x12\x04tax_print_regnum?\x01\x01\x07\x04tax_TS\n\x05\x00\x0f\xd2|\x04\x00\xa7\xe3\x90\x00"
+	x := Unpack(s)
+	fmt.Println(x)
+}
+
 func TestPackV2(t *testing.T) {
 	var v2 bool
 	test := func(x Value) int {
@@ -164,9 +175,59 @@ func TestPackV2(t *testing.T) {
 		}
 		n := test(large)
 		assert.That(n > 64*1024)
-		
+
 		outer := &SuObject{}
 		outer.Add(large)
 		test(outer)
+
+	}
+}
+
+func TestPackTo(t *testing.T) {
+	rec := NewSuRecord()
+	rec.Set(SuStr("tax_regnum"), SuStr("R891821639"))
+	rec.Set(SuStr("tax_effective_date"), DateFromLiteral("#19900218"))
+	rec.Set(SuStr("tax_status"), SuStr("active"))
+	rec.Set(SuStr("tax_payable?"), True)
+	rec.Set(SuStr("tax_code"), SuStr("GST"))
+	rec.Set(SuStr("tax_agency:"), SuStr("Federal Government"))
+	rec.Set(SuStr("tax_rate"), IntVal(7))
+	rec.Set(SuStr("tax_print_regnum?"), True)
+	rec.Set(SuStr("tax_TS"), Now())
+	list := SuObjectOf(rec)
+	var dst strings.Builder
+	// w := zlib.NewWriter(&dst)
+	err := PackTo(list, &dst)
+	if err != nil {
+		panic("Pack: " + err.Error())
+	}
+	// w.Flush()
+	fmt.Println(SuStr(dst.String()))
+}
+
+func BenchmarkZlib(b *testing.B) {
+	buf := strings.Builder{}
+	w := zlib.NewWriter(&buf)
+	for b.Loop() {
+		w.Write([]byte{byte(rand.IntN(256))})
+	}
+}
+
+func BenchmarkZlib2(b *testing.B) {
+	buf := strings.Builder{}
+	w := bufio.NewWriter(zlib.NewWriter(&buf))
+	for b.Loop() {
+		w.Write([]byte{byte(rand.IntN(256)), byte(rand.IntN(256)), byte(rand.IntN(256)), byte(rand.IntN(256))})
+	}
+}
+
+func BenchmarkZlib3(b *testing.B) {
+	buf := strings.Builder{}
+	w := bufio.NewWriter(zlib.NewWriter(&buf))
+	for b.Loop() {
+		w.WriteByte(byte(rand.IntN(256)))
+		w.WriteByte(byte(rand.IntN(256)))
+		w.WriteByte(byte(rand.IntN(256)))
+		w.WriteByte(byte(rand.IntN(256)))
 	}
 }

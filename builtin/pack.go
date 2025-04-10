@@ -4,6 +4,10 @@
 package builtin
 
 import (
+	"compress/zlib"
+	"fmt"
+	"strings"
+
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -13,19 +17,38 @@ func packSize(arg Value) Value {
 	return IntVal(PackSize(arg))
 }
 
-var _ = builtin(pack, "(value)")
+var _ = builtin(pack, "(value, zip=false)")
 
-func pack(arg Value) Value {
-	return SuStr(PackValue(arg))
+func pack(arg, zip Value) Value {
+	if !ToBool(zip) {
+		return SuStr(PackValue(arg))
+	}
+	var dst strings.Builder
+	w := zlib.NewWriter(&dst)
+	if err := PackTo(arg, w); err != nil {
+		panic("Pack: " + err.Error())
+	}
+	if err := w.Close(); err != nil {
+		panic("Pack: " + err.Error())
+	}
+	return SuStr(dst.String())
 }
 
-var _ = builtin(unpack, "(string)")
+var _ = builtin(unpack, "(string, zip=false)")
 
-func unpack(arg Value) Value {
+func unpack(arg, zip Value) Value {
 	defer func() {
 		if e := recover(); e != nil {
-			panic("Unpack: not a valid packed value")
+			panic("Unpack: " + fmt.Sprint(e))
 		}
 	}()
-	return Unpack(ToStr(arg))
+	if !ToBool(zip) {
+		return Unpack(ToStr(arg))
+	}
+	src := strings.NewReader(ToStr(arg))
+	r, err := zlib.NewReader(src)
+	if err != nil {
+		panic(err)
+	}
+	return UnpackFrom(r)
 }

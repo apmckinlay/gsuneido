@@ -1208,7 +1208,7 @@ func packValue(x Value, pk *packing) {
 			}
 			x.Pack(pk)
 		case *SuRecord:
-			if x.ob.size() == 0 {
+			if x.ToObject().size() == 0 {
 				pk.Put1(1)
 			} else {
 				pk.Put1(dummyObjectSize)
@@ -1222,7 +1222,7 @@ func packValue(x Value, pk *packing) {
 			assert.ShouldNotReachHere()
 		}
 	} else {
-		enc := pk.Encoder
+		enc := pk.Encoder.Dup()
 		pk.Put1(0) // 99% of the time we only need one byte for the size
 		x.(Packable).Pack(pk)
 		n := len(pk.Buffer()) - len(enc.Buffer()) - 1
@@ -1236,12 +1236,12 @@ func packValue(x Value, pk *packing) {
 }
 
 func UnpackObject(d pack.Decoder) *SuObject {
-	return unpackObject(&d, &SuObject{})
+	return unpackObject(d, &SuObject{})
 }
 
-func unpackObject(d *pack.Decoder, ob *SuObject) *SuObject {
+func unpackObject(d pack.Decoder, ob *SuObject) *SuObject {
 	d.Skip(1)
-	if d.Remaining() == 0 {
+	if !d.Remaining() {
 		return ob
 	}
 	n := int(d.VarUint())
@@ -1258,19 +1258,22 @@ func unpackObject(d *pack.Decoder, ob *SuObject) *SuObject {
 	return ob
 }
 
-func unpackValue(d *pack.Decoder) (r Value) {
+func unpackValue(d pack.Decoder) (r Value) {
 	size := int(d.VarUint())
 	if size == dummyObjectSize { // v2
 		if d.Peek() == PackObject {
-			return unpackObject(d, &SuObject{}) // no slice
+			return unpackObject(d, &SuObject{})
 		} else if d.Peek() == PackRecord {
 			r := NewSuRecord()
 			unpackObject(d, &r.ob)
 			return r
 		}
-		// fallthrough
 	}
-	return unpack(d.Slice(size))
+	if d2 := d.Slice(size); d2 != nil {
+		return unpack(d2)
+	} else {
+		return unpackLen(d, size)
+	}
 }
 
 //-------------------------------------------------------------------

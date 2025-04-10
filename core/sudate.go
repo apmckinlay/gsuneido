@@ -787,7 +787,7 @@ func UnpackDate(d pack.Decoder) Value {
 	date := d.Uint32()
 	time := d.Uint32()
 	sd := SuDate{date: date, time: time}
-	if d.Remaining() > 0 {
+	if d.Remaining() {
 		return UnpackTimestamp(sd, d)
 	}
 	return sd

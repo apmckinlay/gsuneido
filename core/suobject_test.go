@@ -207,8 +207,8 @@ func TestSuObjectPackValue(t *testing.T) {
 		pk := newPacking(50)
 		packValue(x, pk)
 		s := pk.String()
-		dec := pack.MakeDecoder(s)
-		y := unpackValue(&dec)
+		dec := pack.NewDecoder(s)
+		y := unpackValue(dec)
 		assert.T(t).This(y).Is(x)
 	}
 	test(SuInt(123))
