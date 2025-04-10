@@ -89,19 +89,16 @@ func Pack(x Packable) string {
 	case zeroNum:
 		return packedZero
 	}
-	return Pack2(x).String()
-}
-
-func Pack2(x Packable) *pack.Encoder {
 	hash1 := uint64(17)
 	size := x.PackSize(&hash1)
+	CheckStringSize("Pack", size)
 	buf := pack.NewEncoder(size)
 	hash2 := uint64(17)
 	x.Pack(&hash2, buf)
 	if hash1 != hash2 || len(buf.Buffer()) != size {
 		panic("object modified during packing")
 	}
-	return buf
+	return buf.String()
 }
 
 // Unpack returns the decoded value
