@@ -51,13 +51,19 @@ func extractQuery(
 	where := queryWhere(as, args)
 	args = th.Args(ps, as)
 	query := AsStr(args[0])
-	return query + where, args
+	if where != "" {
+		// need the newline in case the query ends with //comment
+		query = query + "\n" + where
+	}
+	return query, args
 }
 
-// queryWhere builds a string of where's for the named arguments
+// queryWhere builds a where and sort for the named arguments
 // (except for 'block')
+// It should be equivalent to dbms getWhere.
 func queryWhere(as *ArgSpec, args []Value) string {
 	var sb strings.Builder
+	sort := ""
 	sep := "\nwhere "
 	iter := NewArgsIter(as, args)
 	for k, v := iter(); v != nil; k, v = iter() {
@@ -65,7 +71,10 @@ func queryWhere(as *ArgSpec, args []Value) string {
 			continue
 		}
 		field := ToStr(k)
-		if field == "query" || (field == "block" && !stringable(v)) {
+		if field == "sort" {
+			sort = " sort " + ToStr(v)
+			continue
+		} else if field == "query" || (field == "block" && !stringable(v)) {
 			continue
 		}
 		sb.WriteString(sep)
@@ -74,6 +83,7 @@ func queryWhere(as *ArgSpec, args []Value) string {
 		sb.WriteString(" is ")
 		sb.WriteString(v.String())
 	}
+	sb.WriteString(sort)
 	return sb.String()
 }
 

@@ -32,7 +32,8 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 		return row, hdr, query
 	}
 	if where := getWhere(ob); where != "" {
-		query = "(" + query + "\n) " + where
+		// need the newline in case the query ends with //comment
+		query += "\n" + where
 	}
 
 	q := qry.ParseQuery(query, tran, th.Sviews())
@@ -190,7 +191,7 @@ outer:
 	return nil, hdr
 }
 
-// findIndex finds the index that has the most flds 
+// findIndex finds the index that has the most flds
 // (in any order) as a prefix
 func findIndex(indexes [][]string, flds []string) ([]string, int) {
 	var best []string
@@ -211,13 +212,19 @@ func findIndex(indexes [][]string, flds []string) ([]string, int) {
 	return best, bestLen
 }
 
+// getWhere builds a where and sort for the named arguments.
+// It should be eqivalent to builtin queryWhere
 func getWhere(ob *SuObject) string {
 	var sb strings.Builder
+	sort := ""
 	sep := "where "
 	iter := ob.Iter2(false, true)
 	for k, v := iter(); v != nil; k, v = iter() {
 		field := ToStr(k)
 		if field == "query" {
+			continue
+		} else if field == "sort" {
+			sort = " sort " + ToStr(v)
 			continue
 		}
 		sb.WriteString(sep)
@@ -226,7 +233,7 @@ func getWhere(ob *SuObject) string {
 		sb.WriteString(" is ")
 		sb.WriteString(v.String())
 	}
-
+	sb.WriteString(sort)
 	return sb.String()
 }
 
