@@ -52,7 +52,7 @@ func TestLength(t *testing.T) {
 }
 
 func BenchmarkRecordBuilder(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		b := RecordBuilder{}
 		for range 10 {
 			b.Add(SuStr("hello"))
@@ -63,23 +63,23 @@ func BenchmarkRecordBuilder(b *testing.B) {
 }
 
 func TestTruncate(t *testing.T) {
-    b := RecordBuilder{}
+	b := RecordBuilder{}
 	r := b.Build()
 	assert.That(r == "\x00")
 	r2 := r.Truncate(99)
 	assert.That(r2 == r)
 	r2 = r.Truncate(0)
 	assert.That(r2 == r)
-	
-    b.Add(SuInt(123))
-    b.Add(SuStr("hello world"))
+
+	b.Add(SuInt(123))
+	b.Add(SuStr("hello world"))
 	b.Add(SuBool(true))
 	r = b.Build()
 	r2 = r.Truncate(99)
 	assert.That(r2 == r)
 	r2 = r.Truncate(2)
 	assert.This(r2.String()).Is(`{123, "hello world"}`)
-	
+
 	b.Add(SuStr(""))
 	b.Add(SuStr(""))
 	r = b.Build()

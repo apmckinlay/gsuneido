@@ -362,7 +362,7 @@ func Test_Format(t *testing.T) {
 // benchmarks (for 1000 operations) ---------------------------------
 /*
 func BenchmarkAdd(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		for i := 1; i < len(nums); i++ {
 			Add(nums[i-1], nums[i])
 		}
@@ -370,7 +370,7 @@ func BenchmarkAdd(b *testing.B) {
 }
 
 func BenchmarkMul(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		for i := 1; i < len(nums); i++ {
 			Mul(nums[i-1], nums[i])
 		}
@@ -378,7 +378,7 @@ func BenchmarkMul(b *testing.B) {
 }
 
 func BenchmarkDiv(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		for i := 1; i < len(nums); i++ {
 			Div(nums[i-1], nums[i])
 		}
@@ -397,7 +397,7 @@ func init() {
 var Bff Dnum
 
 func BenchmarkFromFloat(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		Bff = FromFloat(123456e-99)
 	}
 }

@@ -66,7 +66,7 @@ func TestMap(t *testing.T) {
 var X []int
 
 func BenchmarkClipAppend(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		for n := range 10 {
 			X = nil
 			for j := range n {
@@ -77,7 +77,7 @@ func BenchmarkClipAppend(b *testing.B) {
 }
 
 func BenchmarkCloneAppend(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		for n := range 10 {
 			X = nil
 			for j := range n {
@@ -88,7 +88,7 @@ func BenchmarkCloneAppend(b *testing.B) {
 }
 
 func BenchmarkNewAppend(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		for n := range 10 {
 			X = nil
 			for j := range n {
@@ -102,7 +102,7 @@ func BenchmarkNewAppend(b *testing.B) {
 }
 
 func BenchmarkWith(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		for n := range 10 {
 			X = nil
 			for j := range n {

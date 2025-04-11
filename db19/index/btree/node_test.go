@@ -470,7 +470,7 @@ func BenchmarkNode(b *testing.B) {
 	}
 	ND = nd
 
-	for range b.N {
+	for b.Loop() {
 		iter := nd.iter()
 		for iter.next() {
 			S1 = iter.known

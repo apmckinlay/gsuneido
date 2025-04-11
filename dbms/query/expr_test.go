@@ -97,7 +97,7 @@ func BenchmarkEval(b *testing.B) {
 	p := NewQueryParser("x is 123.456", nil, nil)
 	expr := p.Expression()
 	ctx := &ast.Context{Row: row, Hdr: hdr}
-	for range b.N {
+	for b.Loop() {
 		expr.Eval(ctx)
 	}
 }
@@ -108,7 +108,7 @@ func BenchmarkEval_raw(b *testing.B) {
 	expr := p.Expression()
 	assert.That(expr.CanEvalRaw(hdr.Columns))
 	ctx := &ast.Context{Row: row, Hdr: hdr}
-	for range b.N {
+	for b.Loop() {
 		expr.Eval(ctx)
 	}
 }

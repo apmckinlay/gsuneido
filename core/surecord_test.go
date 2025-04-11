@@ -151,7 +151,7 @@ func TestSuRecord_validRule(t *testing.T) {
 func BenchmarkSuRecord(b *testing.B) {
 	th := &Thread{}
 	var rec SuRecord
-	for range b.N {
+	for b.Loop() {
 		rec = SuRecord{}
 		rec.Get(th, SuStr("foo"))
 	}

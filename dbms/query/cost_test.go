@@ -43,7 +43,7 @@ func BenchmarkTempindex(b *testing.B) {
 			q, _, _ = Setup(q, ReadMode, tran)
 			ti := q.(*Sort).source.(*TempIndex)
 			b.Run(tbl, func(b *testing.B) {
-				for range b.N {
+				for b.Loop() {
 					q.Rewind()
 					ti.iter = nil // force rebuilding index
 					ti.source.Rewind()
@@ -78,7 +78,7 @@ func BenchmarkLookup(b *testing.B) {
 			q, _, _ = Setup(q, ReadMode, tran)
 			b.Run(tbl, func(b *testing.B) {
 				successful := 0
-				for range b.N {
+				for b.Loop() {
 					r := rand.Intn(nrecs * 2)
 					vals := []string{Pack(IntVal(r))}
 					if q.Lookup(th, cols, vals) != nil {
@@ -108,7 +108,7 @@ func BenchmarkCosting(b *testing.B) {
 			q := ParseQuery(tbl, tran, nil)
 			q, _, _ = Setup(q, ReadMode, tran)
 			b.Run(tbl, func(b *testing.B) {
-				for range b.N {
+				for b.Loop() {
 					q.Rewind()
 					n := 0
 					for {

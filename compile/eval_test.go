@@ -34,7 +34,7 @@ func TestIsGlobal(t *testing.T) {
 func BenchmarkNumberPatRegexp(b *testing.B) {
 	numPat := regexp.MustCompile(`^[A-Z][_a-zA-Z0-9]*?[!?]?$`)
 	big := strings.Repeat("x", 1000)
-	for range b.N {
+	for b.Loop() {
 		numPat.MatchString("X")
 		numPat.MatchString("Foobar")
 		numPat.MatchString("foobar")
@@ -45,7 +45,7 @@ func BenchmarkNumberPatRegexp(b *testing.B) {
 func BenchmarkNumberPatRegex(b *testing.B) {
 	numPat := regex.Compile(`\A[A-Z][_a-zA-Z0-9]*?[!?]?\Z`)
 	big := strings.Repeat("x", 1000)
-	for range b.N {
+	for b.Loop() {
 		numPat.Matches("X")
 		numPat.Matches("Foobar")
 		numPat.Matches("foobar")

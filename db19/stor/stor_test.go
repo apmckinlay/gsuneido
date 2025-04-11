@@ -196,7 +196,7 @@ func BenchmarkFlush(b *testing.B) {
 		os.Remove("stor.tmp")
 	}()
 	var flushing atomic.Bool
-	for range b.N {
+	for b.Loop() {
 		off, buf := s.Alloc(1)
 		slc.Fill(buf, 123)
 		if flushing.CompareAndSwap(false, true) {

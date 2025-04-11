@@ -56,7 +56,7 @@ func BenchmarkInsert(b *testing.B) {
 		keys[i] = r()
 	}
 
-	for range b.N {
+	for b.Loop() {
 		Ib = &ixbuf{}
 		for j := range nkeys {
 			Ib.Insert(keys[j], uint64(j))
@@ -243,11 +243,9 @@ func BenchmarkMerge(b *testing.B) {
 	}
 	x := gen(1000)
 	y := gen(1)
-	b.Run("bench", func(b *testing.B) {
-		for range b.N {
-			Ib = Merge(x, y)
-		}
-	})
+	for b.Loop() {
+		Ib = Merge(x, y)
+	}
 }
 
 func TestGoal(t *testing.T) {

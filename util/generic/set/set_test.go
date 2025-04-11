@@ -65,7 +65,7 @@ func BenchmarkEqual(b *testing.B) {
 	x := randList(n)
 	y := append([]string{}, x...)
 	x[n-1] = "~" // differ at the end
-	for range b.N {
+	for b.Loop() {
 		BM = Equal(x, y)
 	}
 }

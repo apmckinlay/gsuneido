@@ -279,7 +279,7 @@ const nitems = 4 * blockSize // number of blocks must be power of 2 for merging
 var G int
 
 func BenchmarkSimple(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		slice := mksimple()
 		G = slice[0]
 	}
@@ -312,7 +312,7 @@ func (p uint64Slice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 //-------------------------------------------------------------------
 
 func BenchmarkChunked(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		list := mkchunked()
 		G = list.blocks[0][0]
 	}
@@ -351,7 +351,7 @@ func ckblocks(blocks []*block[int]) {
 //-------------------------------------------------------------------
 
 func BenchmarkMerged(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		list := mkmerged()
 		G = list.blocks[0][0]
 	}
@@ -373,7 +373,7 @@ func mkmerged() *merged {
 //-------------------------------------------------------------------
 
 func BenchmarkConc(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		list := mkconc()
 		G = list.blocks[0][0]
 	}

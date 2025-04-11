@@ -65,7 +65,7 @@ func BenchmarkForInSeq(b *testing.B) {
 		    {}
 	}`)
 	var th Thread
-	for range b.N {
+	for b.Loop() {
 		th.Call(f)
 	}
 }
@@ -76,7 +76,7 @@ func BenchmarkForInCounted(b *testing.B) {
 		    {}
 	}`)
 	var th Thread
-	for range b.N {
+	for b.Loop() {
 		th.Call(f)
 	}
 }
@@ -87,7 +87,7 @@ func BenchmarkForClassic(b *testing.B) {
 		    {}
 	}`)
 	var th Thread
-	for range b.N {
+	for b.Loop() {
 		th.Call(f)
 	}
 }
@@ -128,7 +128,7 @@ func BenchmarkCat(b *testing.B) {
 				s $= "abc"
 			}`).(*SuFunc)
 	var th Thread
-	for range b.N {
+	for b.Loop() {
 		th.Call(f)
 	}
 }
@@ -143,7 +143,7 @@ func BenchmarkJoin(b *testing.B) {
 			ob.Join()
 			}`).(*SuFunc)
 	var th Thread
-	for range b.N {
+	for b.Loop() {
 		th.Call(f)
 	}
 }
@@ -156,7 +156,7 @@ func BenchmarkBase(b *testing.B) {
 				;
 			}`).(*SuFunc)
 	var th Thread
-	for range b.N {
+	for b.Loop() {
 		th.Call(f)
 	}
 }
@@ -379,7 +379,7 @@ func BenchmarkInterp(b *testing.B) {
 	}`
 	fn := compile.Constant(src).(*SuFunc)
 	var th Thread
-	for range b.N {
+	for b.Loop() {
 		result := th.Call(fn)
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result " + result.String())
@@ -392,7 +392,7 @@ func BenchmarkCall(b *testing.B) {
 	as := &ArgSpec1
 	th := &Thread{}
 	th.Push(SuInt(123))
-	for range b.N {
+	for b.Loop() {
 		f.Call(th, nil, as)
 	}
 }

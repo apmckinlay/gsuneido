@@ -54,7 +54,7 @@ func TestCatchMatch(t *testing.T) {
 
 func BenchmarkJit(b *testing.B) {
 	th := &Thread{}
-	for range b.N {
+	for b.Loop() {
 		th.Reset()
 		result := jitfn(th)
 		if !result.Equal(SuInt(4950)) {
@@ -80,7 +80,7 @@ func jitfn(th *Thread) Value {
 }
 
 func BenchmarkTranspile(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		result := transpilefn()
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result")
@@ -102,7 +102,7 @@ func transpilefn() Value {
 }
 
 func BenchmarkSpecialize(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		result := specialized()
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result")
@@ -171,7 +171,7 @@ func BenchmarkLoadStore2(b *testing.B) {
 func BenchmarkLoadStore3(b *testing.B) {
 	x := One
 	y := MinusOne
-	for range b.N {
+	for b.Loop() {
 		r = OpSub(x, y)
 	}
 }
@@ -183,6 +183,6 @@ func BenchmarkInterp(b *testing.B) {
 	var th Thread
 	for b.Loop() {
 		th.invoke(fn, nil)
-        th.sp = 0
+		th.sp = 0
 	}
 }

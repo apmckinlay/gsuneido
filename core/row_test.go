@@ -24,7 +24,7 @@ func TestGetRaw(*testing.T) {
 func BenchmarkRow_GetRawVal(b *testing.B) {
 	var row Row
 	hdr := SimpleHeader([]string{"foo", "bar"})
-	for range b.N {
+	for b.Loop() {
 		row.GetRawVal(hdr, "baz", nil, nil)
 	}
 }

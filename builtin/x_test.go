@@ -152,7 +152,7 @@ func TestNumberQ(t *testing.T) {
 func BenchmarkNumberPatRegexp(b *testing.B) {
 	numPat := regexp.MustCompile(`^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d\d?)?$`)
 	big := strings.Repeat("1", 80) + "x"
-	for range b.N {
+	for b.Loop() {
 		numPat.MatchString("0")
 		numPat.MatchString("123.45")
 		numPat.MatchString("+123.45")
@@ -163,7 +163,7 @@ func BenchmarkNumberPatRegexp(b *testing.B) {
 func BenchmarkNumberPatRegex(b *testing.B) {
 	numPat := regex.Compile(`\A[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d\d?)?\Z`)
 	big := strings.Repeat("1", 80) + "x"
-	for range b.N {
+	for b.Loop() {
 		numPat.Matches("0")
 		numPat.Matches("123.45")
 		numPat.Matches("+123.45")

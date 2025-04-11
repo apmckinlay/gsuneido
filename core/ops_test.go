@@ -33,7 +33,7 @@ var abc = SuStr("abc")
 var G Value
 
 func BenchmarkCat(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		s := EmptyStr
 		for range 10000 {
 			s = OpCat(nil, s, abc)
@@ -43,7 +43,7 @@ func BenchmarkCat(b *testing.B) {
 }
 
 func BenchmarkJoin(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		ob := &SuObject{}
 		for range 10000 {
 			ob.Add(abc)

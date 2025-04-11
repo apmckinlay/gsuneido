@@ -31,7 +31,7 @@ func TestBitSet(t *testing.T) {
 var bs BitSet
 
 func BenchmarkBitSet(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		bs = BitSet{}
 		for range 10 {
 			bs.Add(int16(rand.Intn(100)))

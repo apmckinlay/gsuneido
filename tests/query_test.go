@@ -160,7 +160,7 @@ func BenchmarkProject_Old(b *testing.B) {
 	}
 	hdr := q.Header()
 	cols := []string{"gltran_currency", "gltran_date", "glacct_num"}
-	for range b.N {
+	for b.Loop() {
 		results := make(map[string]Row)
 		for _, row := range data {
 			key := ixkey.Make(row, hdr, cols, nil, nil)
@@ -201,7 +201,7 @@ func BenchmarkProject_Hmap(b *testing.B) {
 		return x.hash == y.hash &&
 			equalCols(x.row, y.row, hdr, cols, nil, nil)
 	}
-	for range b.N {
+	for b.Loop() {
 		results := shmap.NewMapFuncs[T, struct{}](hfn, eqfn)
 		for _, row := range data {
 			hn++

@@ -21,20 +21,20 @@ func init() {
 }
 
 func BenchmarkAdler32(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		Sum += adler32.Checksum(Data)
 	}
 }
 
 func BenchmarkCrc32IEEE(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		Sum += crc32.Checksum(Data, crc32.IEEETable)
 	}
 }
 
 func BenchmarkCrc32Cast(b *testing.B) {
 	table := crc32.MakeTable(crc32.Castagnoli)
-	for range b.N {
+	for b.Loop() {
 		Sum += crc32.Checksum(Data, table)
 	}
 }

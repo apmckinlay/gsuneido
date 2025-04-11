@@ -106,14 +106,14 @@ var M Value
 
 func BenchmarkSuStr(b *testing.B) {
 	s := "x"
-	for range b.N {
+	for b.Loop() {
 		M = SuStr(s)
 	}
 }
 
 func BenchmarkSuStr1(b *testing.B) {
 	s := "x"
-	for range b.N {
+	for b.Loop() {
 		M = SuStr1(s)
 	}
 }

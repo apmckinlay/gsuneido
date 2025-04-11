@@ -175,7 +175,7 @@ func TestToUpper(t *testing.T) {
 var S string
 
 func BenchmarkToLower(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		S = ToLower("foo Bar")
 	}
 }
