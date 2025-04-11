@@ -29,13 +29,12 @@ func NewSuSequence(it Iter) *SuSequence {
 }
 
 func (seq *SuSequence) Iter() Iter {
-	iter := seq.getIter()
-	return iter.Dup() // may lock
+	return seq.getIter().Dup() // may lock
 }
 
 func (seq *SuSequence) Iter2(list, named bool) iter2 {
 	assert.That(list && named)
-	iter := seq.getIter()
+	iter := seq.getIter().Dup()
 	i := -1
 	return func() (Value, Value) {
 		v := iter.Next()
