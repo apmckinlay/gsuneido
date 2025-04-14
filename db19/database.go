@@ -182,10 +182,6 @@ func (db *Database) AddNewTable(ts *meta.Schema, ti *meta.Info) {
 // If the table already exists it is replaced.
 func (db *Database) OverwriteTable(ts *meta.Schema, ti *meta.Info) {
 	db.UpdateState(func(state *DbState) {
-		tsCur := state.Meta.GetRoSchema(ts.Table)
-		if tsCur != nil && tsCur.HasFkeyToHere() {
-			panic("can't overwrite table that foreign keys point to")
-		}
 		state.Meta = state.Meta.Put(ts, ti)
 	})
 }

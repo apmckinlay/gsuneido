@@ -27,18 +27,17 @@ import (
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/errs"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/system"
 )
 
 type slBuilder = sortlist.Builder[uint64]
 
 type loadJob struct {
-	db     *Database
-	list   *slBuilder
-	schema string
-	nrecs  int
-	size   int64
+	db    *Database
+	list  *slBuilder
+	ts    *meta.Schema
+	nrecs int
+	size  int64
 }
 
 // LoadDatabase imports a dumped database from a file using a worker pool.
@@ -68,12 +67,11 @@ func LoadDatabase(from, dbfile, privateKey, passphrase string) (
 			var job *loadJob
 			defer func() {
 				if e := recover(); e != nil {
-					table := str.BeforeFirst(job.schema, " ")
-					errVal.Store(fmt.Errorf("error loading %s: %v", table, e))
+					errVal.Store(fmt.Errorf("error loading %s: %v", job.ts.Table, e))
 				}
 			}()
 			for job = range channel {
-				loadTable2(job.db, job.schema, job.nrecs, job.size, job.list, false)
+				loadTable2(job.db, job.ts, job.nrecs, job.size, job.list, false)
 			}
 		}()
 	}
@@ -85,12 +83,14 @@ func LoadDatabase(from, dbfile, privateKey, passphrase string) (
 		if schema == "" {
 			break
 		}
+		sch := query.NewAdminParser(schema).Schema()
+		ts := &meta.Schema{Schema: sch}
 		nrecs, size, list := loadTable1(db, r, schema)
 		if strings.HasPrefix(schema, "views ") {
 			nViews = nrecs
 			nTables--
 		} else {
-			channel <- &loadJob{db: db, schema: schema,
+			channel <- &loadJob{db: db, ts: ts,
 				nrecs: nrecs, size: size, list: list}
 		}
 	}
@@ -154,9 +154,10 @@ func loadDbTable(table, from, privateKey, passphrase string,
 	}()
 	f, r := loadOpen(from, privateKey, passphrase)
 	defer f.Close()
-	schem := table + " " + readLinePrefixed(r, "====== ")
-	nrecs, size, list := loadTable1(db, r, schem)
-	loadTable2(db, schem, nrecs, size, list, true)
+	schema := table + " " + readLinePrefixed(r, "====== ")
+	ts := tableSchema(db, schema)
+	nrecs, size, list := loadTable1(db, r, schema)
+	loadTable2(db, ts, nrecs, size, list, true)
 	return nrecs, nil
 }
 
@@ -193,6 +194,19 @@ func decryptor(privateKey, passphrase string, src io.Reader) io.Reader {
 	return decryptor
 }
 
+func tableSchema(db *Database, schem string) *meta.Schema {
+	sch := query.NewAdminParser(schem).Schema()
+	ts := &meta.Schema{Schema: sch}
+	tsCur := db.GetState().Meta.GetRoSchema(ts.Table)
+	if tsCur != nil && tsCur.HasFkeyToHere() {
+		panic("can't overwrite table that foreign keys point to")
+	}
+	if ts.HasFkey() {
+		panic("can't load single table with foreign keys")
+	}
+	return ts
+}
+
 // loadTable1 reads the data
 func loadTable1(db *Database, r *bufio.Reader, schema string) (
 	nrows int, size int64, list *sortlist.Builder[uint64]) {
@@ -210,16 +224,11 @@ func loadTable1(db *Database, r *bufio.Reader, schema string) (
 
 // loadTable2 builds the indexes.
 // It is multi-threaded when loading an entire database
-func loadTable2(db *Database, schema string,
+func loadTable2(db *Database, ts *meta.Schema,
 	nrows int, size int64, list *slBuilder, overwrite bool) {
-	sch := query.NewAdminParser(schema).Schema()
-	ts := &meta.Schema{Schema: sch}
 	indexes := buildIndexes(ts, list, db.Store, nrows)
-	ti := meta.NewInfo(sch.Table, indexes, nrows, size)
+	ti := meta.NewInfo(ts.Table, indexes, nrows, size)
 	if overwrite {
-		if ts.HasFkey() {
-			panic("can't load single table with foreign keys")
-		}
 		db.OverwriteTable(ts, ti)
 	} else {
 		db.AddNewTable(ts, ti)
