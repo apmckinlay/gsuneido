@@ -104,20 +104,12 @@ func (m *Map[K, V, H]) Has(key K) bool {
 // Get returns the value and true if the key exists
 // otherwise it returns the zero value and false.
 func (m *Map[K, V, H]) Get(k K) (v V, ok bool) {
-	pv := m.get(k)
-	if pv == nil {
-		return
-	}
-	return *pv, true
-}
-
-// Get does a normal search,
-// stopping when the key is found or after a group with an empty slot.
-func (m *Map[K, V, H]) get(k K) (v *V) {
 	// nGets++
 	if m.count == 0 {
-		return nil
+		return
 	}
+	// Get does a normal search,
+	// stopping when the key is found or after a group with an empty slot.
 	h2, seq := m.search(k)
 	for ; ; seq = seq.next() {
 		// nGetProbes++
@@ -126,12 +118,12 @@ func (m *Map[K, V, H]) get(k K) (v *V) {
 		for b != 0 {
 			i := b.first()
 			if m.help.Equal(k, grp.keys[i]) {
-				return &grp.vals[i]
+				return grp.vals[i], true
 			}
 			b = b.dropFirst()
 		}
 		if anyEmpty(grp.control) {
-			return nil
+			return
 		}
 	}
 }
