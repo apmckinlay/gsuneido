@@ -4,7 +4,8 @@
 package builtin
 
 import (
-	"math/rand"
+	"fmt"
+	rand "math/rand/v2"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -36,7 +37,7 @@ func TestLruCache(t *testing.T) {
 
 	lc = newLruCache(size)
 	for range 10000 {
-		n := IntVal(rand.Intn(size + 5))
+		n := IntVal(rand.IntN(size + 5))
 		n2 := lc.GetPut(n, get)
 		assert.This(n2).Is(n)
 	}
@@ -88,3 +89,14 @@ func (lc *lruCache) check() {
 // 		fmt.Println(k, x)
 // 	}
 // }
+
+func BenchmarkLruCache(b *testing.B) {
+	const size = 223
+	lc := newLruCache(size)
+	r := rand.New(rand.NewPCG(123, 456))
+	get := func(key Value) Value { return key }
+	for b.Loop() {
+		lc.GetPut(IntVal(r.IntN(400)), get)
+	}
+	fmt.Println(lc.hits * 100 / (lc.hits + lc.misses))
+}
