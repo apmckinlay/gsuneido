@@ -15,9 +15,11 @@ import (
 
 func TestUnique(t *testing.T) {
 	assert.This(unsafe.Sizeof(entry{})).Is(uintptr(4))
-	ck := func(s string) {
+	ck := func(s string) string {
 		t.Helper()
-		assert.T(t).This(String(s)).Is(s)
+		s2 := String(s)
+		assert.T(t).This(s2).Is(s)
+		return s2
 	}
 	assert.T(t).This(Count()).Is(0)
 	assert.T(t).This(Bytes()).Is(0)
@@ -50,4 +52,14 @@ func TestUnique(t *testing.T) {
 		assert.T(t).This(Count()).Is(n)
 		assert.T(t).This(Bytes()).Is(n * 16)
 	}
+
+	s := strings.Repeat("x", 255)
+	s1 := ck(s)
+	s2 := ck(s)
+	assert.T(t).That(unsafe.StringData(s1) == unsafe.StringData(s2))
+
+	s = strings.Repeat("x", 256)
+	s1 = ck(s)
+	s2 = ck(s)
+	assert.T(t).That(unsafe.StringData(s1) != unsafe.StringData(s2))
 }

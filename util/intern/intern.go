@@ -51,7 +51,7 @@ func (helper) Equal(e1, e2 entry) bool {
 // If the string doesn't exist yet, it is added.
 // Strings longer than 256 bytes are just cloned every time, not stored.
 func String(s string) string {
-	if len(s) > 256 {
+	if len(s) >= 256 {
 		return strings.Clone(s)
 	}
 	lock.Lock()
