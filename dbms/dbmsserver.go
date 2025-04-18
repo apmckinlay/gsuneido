@@ -585,8 +585,10 @@ func cmdGetOne(ss *serverSession) {
 		dir = Prev
 	case '1':
 		dir = Only
+	case '@':
+		dir = Any
 	default:
-		ss.error("dbms server: expected + - 1")
+		ss.error("dbms server: expected + - 1 @")
 	}
 	tran, _ := ss.getTran()
 	query := ss.GetVal()

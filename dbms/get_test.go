@@ -57,3 +57,7 @@ func TestFindIndex(t *testing.T) {
 	test([][]string{{"a", "b", "c", "d"}},
 		[]string{"c", "a", "d"}, []string{"a", "b", "c", "d"}, 1)
 }
+
+func TestExists(t *testing.T) {
+	rowToRecord(existsRow, existsHdr)
+}

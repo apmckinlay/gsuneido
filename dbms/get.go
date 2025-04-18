@@ -61,7 +61,7 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	if row == nil {
 		return nil, nil, ""
 	} else if dir == Any {
-		return exists, nil, ""
+		return existsRow, existsHdr, ""
 	}
 	if dir == Only && !single(q) && q.Get(th, Next) != nil {
 		panic("Query1 not unique: " + query)
@@ -69,7 +69,8 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	return row, q.Header(), q.Updateable()
 }
 
-var exists Row = []DbRec{{Record: "x"}}
+var existsRow Row = []DbRec{{Record: "x"}}
+var existsHdr = SimpleHeader([]string{"x"})
 
 func getQuery(ob *SuObject) string {
 	if ob.ListSize() >= 1 {
@@ -185,7 +186,7 @@ outer:
 				continue outer // row does not match the additional filter
 			}
 		}
-		return exists, hdr
+		return existsRow, existsHdr
 	}
 
 	return nil, hdr
