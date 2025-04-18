@@ -105,24 +105,32 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 		vals = append(vals, v)
 	}
 	if dir == Only {
-		return getLookup(th, table, flds, vals)
+		return getLookup(th, tran, table, flds, vals)
 	}
 	if dir == Any {
-		return getExists(th, table, flds, vals)
+		return getExists(th, tran, table, flds, vals)
 	}
 	panic(assert.ShouldNotReachHere())
 }
 
-func getLookup(th *Thread, table *qry.Table, flds []string, vals []Value) (Row, *Header) {
+func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, vals []Value) (Row, *Header) {
 	key := findKey(table.Keys(), flds)
-	if key == nil {
-		return nil, nil
+	if key != nil {
+		if len(key) == 0 {
+			return table.Get(th, Next), table.Header()
+		}
+		table.SetIndex(key)
+		return table.Lookup(th, flds, packVals(vals)), table.Header()
 	}
-	if len(key) == 0 {
-		return table.Get(th, Next), table.Header()
+	getfn := getIndex(th, tran, table, flds, vals)
+	row, hdr := getfn()
+	if row != nil {
+		if r2, _ := getfn(); r2 != nil {
+			panic("Query1 not unique")
+		}
+		
 	}
-	table.SetIndex(key)
-	return table.Lookup(th, flds, packVals(vals)), table.Header()
+	return row, hdr
 }
 
 // findKey finds the first key in table that is the same set as flds
@@ -143,10 +151,19 @@ func packVals(vals []Value) []string {
 	return packed
 }
 
-func getExists(th *Thread, table *qry.Table, flds []string, vals []Value) (Row, *Header) {
+func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, vals []Value) (Row, *Header) {
+	getfn := getIndex(th, tran, table, flds, vals)
+	row, hdr := getfn()
+	if row != nil {
+		return existsRow, existsHdr
+	}
+	return row, hdr
+}
+
+func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, vals []Value) func() (Row, *Header) {
 	idx, idxlen := findIndex(table.Indexes(), flds)
 	if idx == nil {
-		return nil, nil
+		return func() (Row, *Header) { return nil, nil }
 	}
 	table.SetIndex(idx)
 
@@ -168,28 +185,27 @@ func getExists(th *Thread, table *qry.Table, flds []string, vals []Value) (Row, 
 		}
 	}
 
-	// Apply the index-based selection
 	if len(idxFlds) > 0 {
 		table.Select(idxFlds, idxVals)
 	}
-
-	// Apply additional filtering for remaining fields
+	st := qry.MakeSuTran(tran)
 	hdr := table.Header()
-outer:
-	for {
-		row := table.Get(th, Next)
-		if row == nil {
-			break
-		}
-		for i, fld := range remainFlds {
-			if row.GetRaw(hdr, fld) != remainVals[i] {
-				continue outer // row does not match the additional filter
+	return func() (Row, *Header) {
+	outer:
+		for {
+			row := table.Get(th, Next)
+			if row == nil {
+				break
 			}
+			for i, fld := range remainFlds {
+				if row.GetRawVal(hdr, fld, th, st) != remainVals[i] {
+					continue outer // row does not match the additional filter
+				}
+			}
+			return row, hdr
 		}
-		return existsRow, existsHdr
+		return nil, hdr
 	}
-
-	return nil, hdr
 }
 
 // findIndex finds the index that has the most flds
