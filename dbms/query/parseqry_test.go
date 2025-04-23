@@ -26,6 +26,8 @@ func TestParseQuery(t *testing.T) {
 	test("table")
 	test("table sort a")
 	test("table sort reverse a, b")
+	test("table sort a where b where c",
+		"table where b where c sort a")
 	test("table project a")
 	test("table project a, b, c")
 	test("table rename a to aa")

@@ -50,6 +50,9 @@ func (p *queryParser) sort() Query {
 	if p.MatchIf(tok.Sort) {
 		reverse := p.MatchIf(tok.Reverse)
 		cols := p.commaList()
+		for p.MatchIf(tok.Where) {
+			q = p.where(q)
+		}
 		q = NewSort(q, reverse, cols)
 	}
 	return q
