@@ -13,7 +13,7 @@ const (
 	Nil Token = iota
 	Eof
 	Error
-	Identifier
+	Identifier // use IsIdent to include keywords
 	Number
 	String
 	// Symbol is a #identifier string
