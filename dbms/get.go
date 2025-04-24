@@ -26,12 +26,15 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 
 	ob := args.(*SuObject)
 	query := getQuery(ob)
+	if dir == Only || dir == Any {
+		query = qry.StripSort(query)
+	}
 	// total++
 	if row, hdr := fastGet(th, tran, query, ob, dir); hdr != nil {
 		// fast++
 		return row, hdr, query
 	}
-	if where := getWhere(ob); where != "" {
+	if where := getWhere(ob, dir); where != "" {
 		// need the newline in case the query ends with //comment
 		query += "\n" + where
 	}
@@ -86,10 +89,11 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 	if dir == Next || dir == Prev {
 		return nil, nil
 	}
-	if strings.Contains(query, " ") || tran.GetInfo(query) == nil {
+	table := qry.JustTable(query)
+	if table == "" || tran.GetInfo(table) == nil { // could be a view
 		return nil, nil
 	}
-	table, ok := qry.NewTable(tran, query).(*qry.Table)
+	tbl, ok := qry.NewTable(tran, table).(*qry.Table)
 	if !ok {
 		return nil, nil
 	}
@@ -98,17 +102,17 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 	iter := ob.Iter2(false, true)
 	for k, v := iter(); v != nil; k, v = iter() {
 		field := ToStr(k)
-		if field == "query" {
+		if field == "query" || field == "sort" {
 			continue
 		}
 		flds = append(flds, field)
 		vals = append(vals, v)
 	}
 	if dir == Only {
-		return getLookup(th, tran, table, flds, vals)
+		return getLookup(th, tran, tbl, flds, vals)
 	}
 	if dir == Any {
-		return getExists(th, tran, table, flds, vals)
+		return getExists(th, tran, tbl, flds, vals)
 	}
 	panic(assert.ShouldNotReachHere())
 }
@@ -128,7 +132,6 @@ func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, 
 		if r2, _ := getfn(); r2 != nil {
 			panic("Query1 not unique")
 		}
-		
 	}
 	return row, hdr
 }
@@ -231,7 +234,7 @@ func findIndex(indexes [][]string, flds []string) ([]string, int) {
 
 // getWhere builds a where and sort for the named arguments.
 // It should be eqivalent to builtin queryWhere
-func getWhere(ob *SuObject) string {
+func getWhere(ob *SuObject, dir Dir) string {
 	var sb strings.Builder
 	sort := ""
 	sep := "where "
@@ -241,7 +244,9 @@ func getWhere(ob *SuObject) string {
 		if field == "query" {
 			continue
 		} else if field == "sort" {
-			sort = " sort " + ToStr(v)
+			if dir == Next || dir == Prev {
+				sort = " sort " + ToStr(v)
+			}
 			continue
 		}
 		sb.WriteString(sep)

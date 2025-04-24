@@ -37,9 +37,14 @@ func (lxr *Lexer) Source() string {
 	return lxr.src
 }
 
-// Position will be out of sync if using Ahead
 func (lxr *Lexer) Position() int {
+	assert.That(len(lxr.ahead) == 0)
 	return lxr.si
+}
+
+func (lxr *Lexer) SetPos(pos int) {
+	lxr.si = pos
+	lxr.ahead = nil
 }
 
 // Item is the return value from Lexer.Next
@@ -64,6 +69,19 @@ func (lxr *Lexer) Next() Item {
 		return item
 	}
 	return lxr.next()
+}
+
+// NextSkip returns the next token, skipping whitespace, newline, and comment
+func (lxr *Lexer) NextSkip() Item {
+	for {
+		item := lxr.Next()
+		switch item.Token {
+		case tok.Whitespace, tok.Newline, tok.Comment:
+			//continue
+		default:
+			return item
+		}
+	}
 }
 
 // Ahead provides lookahead, 0 is the next item

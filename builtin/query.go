@@ -9,6 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/dbms"
+	qry "github.com/apmckinlay/gsuneido/dbms/query"
 )
 
 var _ = builtin(Query1, "(@args)")
@@ -172,4 +173,44 @@ func formatQuery(th *Thread, args []Value) Value {
 		return SuStr(dbms.FormatQuery(ToStr(args[0])))
 	}
 	return th.Dbms().Exec(th, SuObjectOf(SuStr("FormatQuery"), args[0]))
+}
+
+//-------------------------------------------------------------------
+
+type suQueryStatic struct {
+	staticClass[suQueryStatic]
+}
+
+func init() {
+	Global.Builtin("Query", &suQueryStatic{})
+}
+
+func (*suQueryStatic) String() string {
+	return "Query /* builtin class */"
+}
+
+func (q *suQueryStatic) Equal(other any) bool {
+	return q == other
+}
+
+var gnQuerys = Global.Num("Querys")
+
+func (*suQueryStatic) Lookup(th *Thread, method string) Value {
+	return Lookup(th, queryStaticMethods, gnQuerys, method)
+}
+
+var queryStaticMethods = methods("sqs")
+
+var _ = staticMethod(sqs_StripSort, "(query)")
+
+func sqs_StripSort(arg Value) Value {
+	query := ToStr(arg)
+	return SuStr(qry.StripSort(query))
+}
+
+var _ = staticMethod(sqs_GetSort, "(query)")
+
+func sqs_GetSort(arg Value) Value {
+	query := ToStr(arg)
+	return SuStr(qry.GetSort(query))
 }
