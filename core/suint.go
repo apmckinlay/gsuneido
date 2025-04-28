@@ -109,8 +109,10 @@ func (*smi) RangeLen(int, int) Value {
 	panic("number does not support range")
 }
 
+const phi64 = 0x9e3779b97f4a7c15
+
 func (si *smi) Hash() uint64 {
-	return uint64(si.toInt())
+	return uint64(si.toInt()) * phi64
 }
 
 func (si *smi) Hash2() uint64 {

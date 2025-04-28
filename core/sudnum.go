@@ -43,7 +43,8 @@ func (dn SuDnum) String() string {
 
 func (dn SuDnum) Hash() uint64 {
 	if n, ok := dn.ToInt64(); ok && MinSuInt <= n && n <= MaxSuInt {
-		return uint64(n) // for compatibility with SuInt
+		// must give the same hash as SuInt
+		return uint64(n) * phi64
 	}
 	return dn.Dnum.Hash()
 }

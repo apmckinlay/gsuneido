@@ -698,9 +698,11 @@ func Div(x, y Dnum) Dnum {
 	return New(sign, coef, int(x.exp)-int(y.exp))
 }
 
+const phi64 = 0x9e3779b97f4a7c15
+
 // Hash returns a hash value for a Dnum
 func (dn Dnum) Hash() uint64 {
-	return dn.coef ^ uint64(dn.sign)<<16 ^ uint64(dn.exp)<<8
+	return (dn.coef ^ uint64(dn.sign)<<16 ^ uint64(dn.exp)<<8) * phi64
 }
 
 // Format converts a number to a string with a specified format
