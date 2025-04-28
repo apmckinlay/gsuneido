@@ -34,8 +34,8 @@ type checker interface {
 var _ checker = (*check.Check)(nil)
 
 type maker interface {
-	mkObject() container
-	mkRecord() container
+	mkObject(empty bool) container
+	mkRecord(empty bool) container
 	mkRecOrOb(container) container
 	mkClass(base string) container
 	mkConcat([]string) core.Value

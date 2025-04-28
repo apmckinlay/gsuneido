@@ -24,10 +24,16 @@ type cgMaker struct{}
 
 var _ maker = (*cgMaker)(nil)
 
-func (cgMaker) mkObject() container {
+func (cgMaker) mkObject(empty bool) container {
+	if empty {
+		return EmptyObject
+	}
 	return &SuObject{}
 }
-func (cgMaker) mkRecord() container {
+func (cgMaker) mkRecord(empty bool) container {
+	if empty {
+        return EmptyRecord
+    }
 	return NewSuRecord()
 }
 func (cgMaker) mkRecOrOb(rec container) container {
@@ -79,10 +85,10 @@ type astMaker struct{}
 
 var _ maker = (*astMaker)(nil)
 
-func (astMaker) mkObject() container {
+func (astMaker) mkObject(bool) container {
 	return &astContainer{which: "Object"}
 }
-func (astMaker) mkRecord() container {
+func (astMaker) mkRecord(bool) container {
 	return &astContainer{which: "Record"}
 }
 func (astMaker) mkRecOrOb(rec container) container {

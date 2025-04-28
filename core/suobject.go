@@ -16,6 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/shmap"
@@ -33,7 +34,12 @@ and private methods should not lock
 type HmapValue = shmap.Map[Value, Value, shmap.Meth[Value]]
 
 // EmptyObject is a readonly empty SuObject
-var EmptyObject = &SuObject{readonly: true}
+var EmptyObject = func() *SuObject {
+	ob := &SuObject{readonly: true}
+	ob.concurrent = true
+	return ob
+}()
+var _ = exit.Add("EmptyObject", func() { assert.That(EmptyObject.Size() == 0) })
 
 // SuObject is a Suneido object
 // i.e. a container with both list and named members.

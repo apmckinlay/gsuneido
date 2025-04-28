@@ -14,12 +14,20 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/list"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+var EmptyRecord = func() *SuRecord {
+	r := &SuRecord{ob: SuObject{readonly: true, defval: EmptyStr}}
+	r.ob.concurrent = true
+	return r
+}()
+var _ = exit.Add("EmptyRecord", func() { assert.That(EmptyRecord.ob.Size() == 0) })
 
 // SuRecord is an SuObject with observers and rules and a default value of "".
 // Uses the lock from SuObject.

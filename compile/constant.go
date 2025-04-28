@@ -161,11 +161,18 @@ const noBase = -1
 func (p *Parser) object() Value {
 	close := closing[p.Token]
 	p.Next()
+	if p.MatchIf(close) {
+		if close == tok.RParen {
+			return p.mkObject(true).(Value)
+		} else {
+			return p.mkRecord(true).(Value)
+		}
+	}
 	var ob container
 	if close == tok.RParen {
-		ob = p.mkObject()
+		ob = p.mkObject(false)
 	} else {
-		ob = p.mkRecord()
+		ob = p.mkRecord(false)
 	}
 	p.memberList(ob, close, noBase)
 	if close == tok.RBracket {
