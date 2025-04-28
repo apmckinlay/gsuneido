@@ -278,12 +278,12 @@ func Test_Sub(t *testing.T) {
 
 func Test_Mul(t *testing.T) {
 	mul := func(x, y, expected string) {
+		mul2 := func(x, y, z Dnum) {
+			assert.T(t).Msg(x, " * ", y).This(Mul(x, y)).Is(z)
+		}
 		xn := FromStr(x)
 		yn := FromStr(y)
 		zn := FromStr(expected)
-		mul2 := func(x, y, zn Dnum) {
-			assert.T(t).Msg(xn, " * ", yn).This(Mul(xn, yn)).Is(zn)
-		}
 		mul2(xn, yn, zn)
 		mul2(yn, xn, zn)
 	}
