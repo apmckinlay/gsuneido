@@ -194,8 +194,12 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, v
 	st := qry.MakeSuTran(tran)
 	hdr := table.Header()
 	return func() (Row, *Header) {
+		n := 0
 	outer:
 		for {
+			if n++; n == 100 {
+				Warning("Query1/First/Last/Exists? slow query")
+			}
 			row := table.Get(th, Next)
 			if row == nil {
 				break
