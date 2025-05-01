@@ -66,7 +66,9 @@ func (p *Parser) constant() Value {
 		return p.number()
 	case tok.Sub:
 		p.Next()
-		return OpUnaryMinus(p.number())
+		s := p.Text
+		p.Match(tok.Number)
+		return NumFromString("-" + s)
 	case tok.LParen, tok.LCurly, tok.LBracket:
 		return p.object()
 	case tok.Hash:

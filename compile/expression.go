@@ -242,8 +242,17 @@ func (p *Parser) atom() (result ast.Expr) {
 		return p.block()
 	case tok.LBracket:
 		return p.record()
-	case tok.Add, tok.Sub, tok.Not, tok.BitNot:
+	case tok.Add, tok.Not, tok.BitNot:
 		p.Next()
+		return p.Unary(token, p.pcExpr(precedence[tok.LParen]))
+	case tok.Sub:
+		p.Next()
+		if p.Token == tok.Number {
+			// need this to handle -int64min
+			s := p.Text
+			p.Next()
+			return p.Constant(NumFromString("-" + s))
+		}
 		return p.Unary(token, p.pcExpr(precedence[tok.LParen]))
 	case tok.Inc, tok.Dec: // prefix
 		p.Next()
