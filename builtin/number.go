@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
@@ -16,6 +17,9 @@ var _ = builtin(Number, "(value)")
 
 func Number(th *Thread, args []Value) Value {
 	val := args[0]
+	if val.Type() == types.Number {
+		return val
+	}
 	if s, ok := val.ToStr(); ok {
 		s := strings.TrimSpace(s)
 		if s == "" {
@@ -24,12 +28,6 @@ func Number(th *Thread, args []Value) Value {
 		s = strings.ReplaceAll(s, ",", "")
 		s = strings.ReplaceAll(s, "_", "")
 		return numFromString(s)
-	}
-	if _, ok := val.(SuDnum); ok {
-		return val
-	}
-	if n, ok := SuIntToInt(val); ok {
-		return IntVal(n)
 	}
 	if val == False {
 		return Zero
