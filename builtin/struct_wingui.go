@@ -187,7 +187,7 @@ func (typ *suMinMaxInfo) updateStruct(ob Value, p unsafe.Pointer) {
 type stNMHdr struct {
 	hwndFrom uintptr
 	idFrom   uintptr
-	code     int32
+	code     uint32
 	_        [4]byte // padding
 }
 
