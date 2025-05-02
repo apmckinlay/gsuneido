@@ -56,8 +56,8 @@ const int32Size = unsafe.Sizeof(int32(0))
 const uintptrMinusOne = ^uintptr(0) // -1
 
 func truncToInt(x Value) int {
-	// seems like rounding would make more sense but cSuneido truncates
-	if dn, ok := x.ToDnum(); ok {
+	if dn, ok := x.(SuDnum); ok {
+		// seems like rounding would make more sense but cSuneido truncates
 		if n, ok := dn.Trunc().ToInt(); ok {
 			return n
 		}
