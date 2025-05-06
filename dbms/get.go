@@ -198,7 +198,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, v
 	outer:
 		for {
 			if n++; n == 100 {
-				Warning("Query1/First/Last/Exists? slow query")
+				Warning("Query1/Exists? slow query on", table)
 			}
 			row := table.Get(th, Next)
 			if row == nil {
