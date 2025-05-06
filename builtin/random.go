@@ -24,7 +24,7 @@ func init() {
 func Random(th *Thread, args []Value) Value {
 	initRand(th)
 	if args[0] == False {
-		return Int64Val(th.Rand.Int64N(1_0000_0000_0000_0000)) // dnum range
+		return Int64Val(th.Rand.Int64())
 	}
 	limit := IfInt(args[0])
 	return IntVal(th.Rand.IntN(limit))

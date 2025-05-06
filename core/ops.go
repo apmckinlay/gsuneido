@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -83,8 +84,8 @@ func OpAdd(x Value, y Value) Value {
 }
 
 func OpAdd1(x Value) Value {
-	if si, ok := x.(*smi); ok {
-		return IntVal(si.toInt() + 1)
+	if n, ok := SuIntToInt(x); ok {
+		return IntVal(n + 1)
 	}
 	return SuDnum{Dnum: dnum.Add(ToDnum(x), dnum.One)}
 }
@@ -123,12 +124,12 @@ func OpMod(x Value, y Value) Value {
 }
 
 func OpLeftShift(x Value, y Value) Value {
-	result := int32(ToInt(x)) << ToInt(y)
-	return IntVal(int(result))
+	result := ToInt(x) << ToInt(y)
+	return IntVal(result)
 }
 
 func OpRightShift(x Value, y Value) Value {
-	result := uint32(ToInt(x)) >> ToInt(y)
+	result := uint(ToInt(x)) >> ToInt(y)
 	return IntVal(int(result))
 }
 
@@ -169,15 +170,21 @@ func OpBool(x Value) bool {
 }
 
 func OpUnaryPlus(x Value) Value {
-	if _, ok := x.(*smi); ok {
+	if x.Type() == types.Number {
 		return x
 	}
-	return SuDnum{Dnum: ToDnum(x)}
+	if x == EmptyStr || x == False {
+		return Zero
+	}
+	panic("can't convert " + ErrType(x) + " to number")
 }
 
 func OpUnaryMinus(x Value) Value {
 	if xi, ok := SuIntToInt(x); ok {
 		return IntVal(-xi)
+	}
+	if x == EmptyStr || x == False {
+		return Zero
 	}
 	return SuDnum{Dnum: ToDnum(x).Neg()}
 }

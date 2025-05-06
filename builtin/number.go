@@ -88,7 +88,7 @@ var _ = method(num_Hex, "()")
 
 func num_Hex(this Value) Value {
 	n := ToInt(this)
-	return SuStr(strconv.FormatUint(uint64(uint32(n)), 16))
+	return SuStr(strconv.FormatUint(uint64(n), 16))
 }
 
 var _ = method(num_Round, "(number)")

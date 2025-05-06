@@ -217,20 +217,35 @@ func UnpackNumber(s string) Value {
 	if len(s) <= 1 {
 		return Zero
 	}
-	var sign = int8(+1)
+	sign := int8(+1)
+	xor := byte(0)
 	if s[0] == PackMinus {
 		sign = -1
-	}
-	xor := byte(0)
-	if sign < 0 {
 		xor = 0xff
 	}
 	if s[2] == ^xor {
 		return SuDnum{Dnum: dnum.Inf(sign)}
 	}
+	exp := int8(s[1] ^ 0x80 ^ xor)
 
-	exp := s[1] ^ 0x80 ^ xor
+	if intable(s, exp, xor) {
+		return unpackInt(s, sign, exp, xor)
+	}
+	return SuDnum{Dnum: unpackDnum(s, sign, exp, xor)}
+}
 
+func intable(s string, exp int8, xor byte) bool {
+	if exp < 0 || 19 < exp {
+		return false
+	}
+	e := int8(2*(len(s)-2) - 1)
+	if exp < e || (exp == e && (s[len(s)-1]^xor)%10 != 0) {
+		return false // has a fractional part
+	}
+	return PackedMinInt64 <= s && s <= PackedMaxInt64
+}
+
+func unpackDnum(s string, sign, exp int8, xor byte) dnum.Dnum {
 	coef := uint64(0)
 	switch len(s) {
 	case 10:
@@ -259,9 +274,5 @@ func UnpackNumber(s string) Value {
 	default:
 		panic("invalid packed number length")
 	}
-	dn := dnum.Raw(sign, coef, int(exp))
-	if n, ok := dn.ToInt(); ok && int(int16(n)) == n {
-		return SuInt(n)
-	}
-	return SuDnum{Dnum: dn}
+	return dnum.Raw(sign, coef, int(exp))
 }

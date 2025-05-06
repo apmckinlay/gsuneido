@@ -895,7 +895,7 @@ func (cg *cgen) emitValue(val Value) {
 		cg.emit(op.MinusOne)
 	} else if val == EmptyStr {
 		cg.emit(op.EmptyStr)
-	} else if i, ok := SuIntToInt(val); ok {
+	} else if i, ok := SuIntToInt(val); ok && math.MinInt16 < i && i <= math.MaxInt16 {
 		cg.emitInt16(op.Int, i)
 	} else {
 		cg.emitUint8(op.Value, cg.value(val))

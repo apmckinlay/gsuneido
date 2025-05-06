@@ -151,10 +151,10 @@ func TestIntVal(t *testing.T) {
 	test(-123, "smi")
 	test(math.MaxInt16, "smi")
 	test(math.MinInt16, "smi")
-	test(math.MaxInt16+1, "SuDnum")
-	test(math.MinInt16-1, "SuDnum")
-	test(math.MaxInt32, "SuDnum")
-	test(math.MinInt32, "SuDnum")
+	test(math.MaxInt16+1, "SuInt64")
+	test(math.MinInt16-1, "SuInt64")
+	test(math.MaxInt32, "SuInt64")
+	test(math.MinInt32, "SuInt64")
 }
 
 func TestStringEquals(t *testing.T) {

@@ -43,14 +43,6 @@ func SuInt(n int) *smi {
 	return &smispace[offset] // will panic if out of range
 }
 
-// SuIntToInt converts to int if its argument is *smi
-func SuIntToInt(x any) (int, bool) {
-	if si, ok := x.(*smi); ok {
-		return si.toInt(), true
-	}
-	return 0, false
-}
-
 func (si *smi) toInt() int {
 	p := unsafe.Pointer(si)
 	offset := int(uintptr(p) - smibase)
@@ -120,11 +112,13 @@ func (si *smi) Hash2() uint64 {
 }
 
 func (si *smi) Equal(other any) bool {
-	if i2, ok := other.(*smi); ok {
-		return si == i2
-	} else if dn, ok := other.(SuDnum); ok {
-		dn2, _ := si.ToDnum()
-		return 0 == dnum.Compare(dn2, dn.Dnum)
+	if i2, ok := SuIntToInt(other); ok {
+		return si.toInt() == i2
+	}
+	if dn, ok := other.(SuDnum); ok {
+		if i2, ok := dn.IfInt(); ok {
+			return si.toInt() == i2
+		}
 	}
 	return false
 }
@@ -137,8 +131,8 @@ func (si *smi) Compare(other Value) int {
 	if cmp := cmp.Compare(ordNum, Order(other)); cmp != 0 {
 		return cmp * 2
 	}
-	if y, ok := other.(*smi); ok {
-		return cmp.Compare(si.toInt(), y.toInt())
+	if i2, ok := SuIntToInt(other); ok {
+		return cmp.Compare(si.toInt(), i2)
 	}
 	dn, _ := si.ToDnum()
 	return dnum.Compare(dn, ToDnum(other))
@@ -153,11 +147,15 @@ var IntMethods Methods
 
 var anSuDnum = SuDnum{}
 
-func (*smi) Lookup(th *Thread, method string) Value {
+func intLookup(th *Thread, method string) Value {
 	if m := IntMethods[method]; m != nil {
 		return m
 	}
 	return anSuDnum.Lookup(th, method)
+}
+
+func (*smi) Lookup(th *Thread, method string) Value {
+	return intLookup(th, method)
 }
 
 func (*smi) SetConcurrent() {

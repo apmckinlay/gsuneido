@@ -6,7 +6,6 @@ package core
 import (
 	"log"
 	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/apmckinlay/gsuneido/core/types"
@@ -132,15 +131,24 @@ var NilVal Value
 // NumFromString converts a string to an SuInt or SuDnum.
 // It will panic for invalid input.
 func NumFromString(s string) Value {
-	if strings.HasPrefix(s, "0x") {
-		if n, err := strconv.ParseUint(s, 0, 32); err == nil {
-			return IntVal(int(int32(n)))
-		}
+	base := 10
+	if isHex(s) {
+		base = 0
 	}
-	if n, err := strconv.ParseInt(s, 10, 32); err == nil {
+	if n, err := strconv.ParseInt(s, base, 64); err == nil {
 		return IntVal(int(n))
 	}
 	return SuDnum{Dnum: dnum.FromStr(s)}
+}
+
+func isHex(s string) bool {
+	if len(s) < 3 {
+		return false
+	}
+	if s[0] == '-' {
+		s = s[1:]
+	}
+	return len(s) > 2 && s[1] != '0' && s[1] == 'x'
 }
 
 type Showable interface {
@@ -216,6 +224,18 @@ func IfInt(x Value) int {
 		return i
 	}
 	panic("can't convert " + ErrType(x) + " to integer")
+}
+
+// SuIntToInt converts to int if its argument is *smi or SuInt64.
+// It is used by Equal methods.
+func SuIntToInt(x any) (int, bool) {
+	if si, ok := x.(*smi); ok {
+		return si.toInt(), true
+	}
+	if si, ok := x.(SuInt64); ok {
+		return int(si.int64), true
+	}
+	return 0, false
 }
 
 // ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum.
@@ -323,7 +343,7 @@ func IntVal(n int) PackableValue {
 	if MinSuInt <= n && n <= MaxSuInt {
 		return SuInt(n)
 	}
-	return SuDnum{Dnum: dnum.FromInt(int64(n))}
+	return SuInt64{int64: int64(n)}
 }
 
 // Int64Val returns an SuInt if it fits, else a SuDnum
@@ -331,7 +351,7 @@ func Int64Val(n int64) PackableValue {
 	if MinSuInt < n && n < MaxSuInt {
 		return SuInt(int(n))
 	}
-	return SuDnum{Dnum: dnum.FromInt(n)}
+	return SuInt64{int64: int64(n)}
 }
 
 // MayLock can be embedded to provide locking.

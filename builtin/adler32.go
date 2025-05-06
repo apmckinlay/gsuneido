@@ -62,5 +62,5 @@ func adler32_Value(this Value) Value {
 }
 
 func (h suAdler32) value() Value {
-	return IntVal(int(int32(h.hash.Sum32())))
+	return IntVal(int(h.hash.Sum32()))
 }
