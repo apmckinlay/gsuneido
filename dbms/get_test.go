@@ -56,6 +56,22 @@ func TestFindIndex(t *testing.T) {
 	// Test fields subset in different order
 	test([][]string{{"a", "b", "c", "d"}},
 		[]string{"c", "a", "d"}, []string{"a", "b", "c", "d"}, 1)
+
+	// Test tied
+	test([][]string{{"a", "b"}, {"c", "b"}, {"a", "c"}},
+		[]string{"a", "b", "c"}, nil, 2)
+
+	// Test tied and longer
+	test([][]string{{"a", "b"}, {"c", "b"}, {"a", "c"}, {"a", "b", "c"}},
+		[]string{"a", "b", "c"}, []string{"a", "b", "c"}, 3)
+
+	// Test longer and tied
+	test([][]string{{"a", "b"}, {"a", "b", "c"}, {"c", "b"}, {"a", "c"}},
+		[]string{"a", "b", "c"}, []string{"a", "b", "c"}, 3)
+
+	// Test tied
+	test([][]string{{"a", "b"}, {"a", "b", "c"}, {"c", "b"}, {"a", "c", "b"}},
+		[]string{"a", "b", "c"}, nil, 3)
 }
 
 func TestExists(t *testing.T) {

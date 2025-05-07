@@ -228,9 +228,15 @@ func findIndex(indexes [][]string, flds []string) ([]string, int) {
 			}
 			prefixLen++
 		}
-		if prefixLen > 0 && prefixLen > bestLen {
-			best = idx
-			bestLen = prefixLen
+		if prefixLen > 0 {
+			if prefixLen > bestLen {
+				best = idx
+				bestLen = prefixLen
+			} else if prefixLen == bestLen {
+				// two indexes with the same prefixLen - don't pick either
+				// will need something longer to succeed
+				best = nil
+			}
 		}
 	}
 	return best, bestLen
