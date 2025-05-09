@@ -173,11 +173,11 @@ func Repeat[E any](x E, n int) []E {
 
 // MapFn returns a new slice
 // with each element the result of calling fn on the original element.
-func MapFn[S ~[]E, E any](list S, fn func(E) E) S {
+func MapFn[E1, E2 any](list []E1, fn func(E1) E2) []E2 {
 	if list == nil {
 		return nil
 	}
-	dest := make(S, len(list))
+	dest := make([]E2, len(list))
 	for i, s := range list {
 		dest[i] = fn(s)
 	}
