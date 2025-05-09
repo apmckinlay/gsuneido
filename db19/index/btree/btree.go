@@ -364,7 +364,7 @@ func Read(st *stor.Stor, r *stor.Reader) *btree {
 // RangeFrac returns the fraction of the btree (0 to 1) in the range org to end
 func (bt *btree) RangeFrac(org, end string, nrecs int) float64 {
 	if bt.empty() || nrecs == 0 {
-		// don't know if table is empty or if there are records are in the ixbufs
+		// don't know if table is empty or if there are records in the ixbufs
 		// fraction is between 0 and 1 so just return half
 		return .5
 	}
