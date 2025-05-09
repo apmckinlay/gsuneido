@@ -12,13 +12,8 @@ import (
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
-
-// var total, fast int
-
-// var _ = exit.Add("get", func() {
-// 	fmt.Println("total", total, "fast", fast)
-// })
 
 func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string) {
 	defer th.Suneido.Store(th.Suneido.Load())
@@ -28,17 +23,14 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	query := getQuery(ob)
 	if dir == Only || dir == Any {
 		query = qry.StripSort(query)
-	}
-	// total++
-	if row, hdr := fastGet(th, tran, query, ob, dir); hdr != nil {
-		// fast++
-		return row, hdr, query
+		if row, hdr := fastGet(th, tran, query, ob, dir); hdr != nil {
+			return row, hdr, query
+		}
 	}
 	if where := getWhere(ob, dir); where != "" {
-		// need the newline in case the query ends with //comment
+		// need a newline in case the query ends with //comment
 		query += "\n" + where
 	}
-
 	q := qry.ParseQuery(query, tran, th.Sviews())
 	qs, sorted := q.(*qry.Sort)
 	if dir == Only || dir == Any {
@@ -86,9 +78,6 @@ func getQuery(ob *SuObject) string {
 
 // fastGet returns a nil Header to indicate it was not applicable
 func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir) (Row, *Header) {
-	if dir == Next || dir == Prev {
-		return nil, nil
-	}
 	table := qry.JustTable(query)
 	if table == "" || tran.GetInfo(table) == nil { // could be a view
 		return nil, nil
@@ -108,94 +97,84 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 		flds = append(flds, field)
 		vals = append(vals, v)
 	}
+	packed := slc.MapFn(vals,
+		func(v Value) string { return Pack(v.(Packable)) })
 	if dir == Only {
-		return getLookup(th, tran, tbl, flds, vals)
+		return getLookup(th, tran, tbl, flds, packed)
 	}
 	if dir == Any {
-		return getExists(th, tran, tbl, flds, vals)
+		return getExists(th, tran, tbl, flds, packed)
 	}
 	panic(assert.ShouldNotReachHere())
 }
 
-func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, vals []Value) (Row, *Header) {
-	key := findKey(table.Keys(), flds)
-	if key != nil {
-		if len(key) == 0 {
-			return table.Get(th, Next), table.Header()
-		}
-		table.SetIndex(key)
-		return table.Lookup(th, flds, packVals(vals)), table.Header()
+func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string) (Row, *Header) {
+	single, getfn := getIndex(th, tran, table, flds, vals)
+	if getfn == nil {
+		return nil, nil
 	}
-	getfn := getIndex(th, tran, table, flds, vals)
-	row, hdr := getfn()
-	if row != nil {
-		if r2, _ := getfn(); r2 != nil {
+	row := getfn()
+	if row != nil && !single {
+		if r2 := getfn(); r2 != nil {
 			panic("Query1 not unique")
 		}
 	}
-	return row, hdr
+	return row, table.Header()
 }
 
-// findKey finds the first key in table that is the same set as flds
-func findKey(keys [][]string, flds []string) []string {
-	for _, key := range keys {
-		if set.Equal(flds, key) {
-			return key
-		}
+func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string) (row Row, hdr *Header) {
+	_, getfn := getIndex(th, tran, table, flds, vals)
+	if getfn == nil {
+		return nil, nil
 	}
-	return nil
-}
-
-func packVals(vals []Value) []string {
-	packed := make([]string, len(vals))
-	for i, v := range vals {
-		packed[i] = Pack(v.(Packable))
-	}
-	return packed
-}
-
-func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, vals []Value) (Row, *Header) {
-	getfn := getIndex(th, tran, table, flds, vals)
-	row, hdr := getfn()
+	row = getfn()
 	if row != nil {
 		return existsRow, existsHdr
 	}
-	return row, hdr
+	return nil, existsHdr
 }
 
-func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, vals []Value) func() (Row, *Header) {
-	idx, idxlen := findIndex(table.Indexes(), flds)
-	if idx == nil {
-		return func() (Row, *Header) { return nil, nil }
-	}
-	table.SetIndex(idx)
-
-	// Split fields and values into those that match the index and those that don't
-	idxFlds := make([]string, 0, idxlen)
-	idxVals := make([]string, 0, idxlen)
-	remainFlds := make([]string, 0, len(flds)-idxlen)
-	remainVals := make([]string, 0, len(vals)-idxlen)
-
-	// Collect the fields and values that match the index prefix
-	for i, fld := range flds {
-		val := Pack(vals[i].(Packable))
-		if slices.Contains(idx[:idxlen], fld) {
-			idxFlds = append(idxFlds, fld)
-			idxVals = append(idxVals, val)
-		} else {
-			remainFlds = append(remainFlds, fld)
-			remainVals = append(remainVals, val)
-		}
-	}
-
-	if len(idxFlds) > 0 {
-		table.Select(idxFlds, idxVals)
-	}
+func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
+	flds, vals []string) (single bool, getfn func() Row) {
 	st := qry.MakeSuTran(tran)
 	hdr := table.Header()
-	return func() (Row, *Header) {
+	filter := func(row Row) Row {
+		if row != nil {
+			for i, fld := range flds {
+				if row.GetRawVal(hdr, fld, th, st) != vals[i] {
+					return nil
+				}
+			}
+		}
+		return row
+	}
+	if table.Single() {
+		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "empty key")
+		return true, func() Row {
+			return filter(table.Get(th, Next))
+		}
+	}
+	if len(flds) == 0 {
+		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "no filter")
+		return false, func() Row {
+			return table.Get(th, Next)
+		}
+	}
+	if key := findKey(table.Keys(), flds); key != nil {
+		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "key", key)
+		table.SetIndex(key)
+		return true, func() Row {
+			return filter(table.Lookup(th, flds, vals))
+		}
+	}
+	idx := chooseIndex(table, flds, vals)
+	if idx == nil {
+		return
+	}
+	table.SetIndex(idx)
+	table.Select(flds, vals)
+	return false, func() Row {
 		n := 0
-	outer:
 		for {
 			if n++; n == 100 {
 				Warning("Query1/Exists? slow query on", table)
@@ -204,42 +183,66 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table, flds []string, v
 			if row == nil {
 				break
 			}
-			for i, fld := range remainFlds {
-				if row.GetRawVal(hdr, fld, th, st) != remainVals[i] {
-					continue outer // row does not match the additional filter
-				}
+			if nil == filter(row) {
+				continue
 			}
-			return row, hdr
+			return row
 		}
-		return nil, hdr
+		return nil
 	}
 }
 
-// findIndex finds the index that has the most flds
-// (in any order) as a prefix
-func findIndex(indexes [][]string, flds []string) ([]string, int) {
-	var best []string
-	bestLen := 0
-	for _, idx := range indexes {
-		prefixLen := 0
-		for _, field := range idx {
-			if !slices.Contains(flds, field) {
-				break
-			}
-			prefixLen++
-		}
-		if prefixLen > 0 {
-			if prefixLen > bestLen {
-				best = idx
-				bestLen = prefixLen
-			} else if prefixLen == bestLen {
-				// two indexes with the same prefixLen - don't pick either
-				// will need something longer to succeed
-				best = nil
-			}
+func findKey(keys [][]string, flds []string) []string {
+	for _, key := range keys {
+		if set.Subset(flds, key) {
+			return key
 		}
 	}
-	return best, bestLen
+	return nil
+}
+
+func chooseIndex(table *qry.Table, flds, vals []string) []string {
+	if idx := onlyUsableIndex(table.Indexes(), flds); idx != nil {
+		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "only", idx)
+		return idx
+	}
+	return bestIndexFrac(table, flds, vals)
+}
+
+func onlyUsableIndex(indexes [][]string, flds []string) []string {
+	var onlyIdx []string
+	for _, idx := range indexes {
+		if hasPrefix(idx, flds) {
+			if onlyIdx != nil {
+				return nil // multiple usable indexes
+			}
+			onlyIdx = idx
+		}
+	}
+	return onlyIdx
+}
+
+func bestIndexFrac(table *qry.Table, flds, vals []string) []string {
+	var bestIdx []string
+	bestFrac := 1.0
+	for _, idx := range table.Indexes() {
+		if !hasPrefix(idx, flds) {
+			continue
+		}
+		frac := table.RangeFrac(idx, flds, vals)
+		if frac < bestFrac {
+			bestIdx = idx
+			bestFrac = frac
+		}
+	}
+	if bestIdx != nil {
+		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "best", bestIdx)
+	}
+	return bestIdx
+}
+
+func hasPrefix(idx []string, flds []string) bool {
+	return slices.Contains(flds, idx[0])
 }
 
 // getWhere builds a where and sort for the named arguments.

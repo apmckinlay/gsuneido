@@ -67,6 +67,10 @@ func (tbl *Table) String() string {
 	return tbl.name + "^" + str.Join("(,)", tbl.index)
 }
 
+func (tbl *Table) Name() string {
+	return tbl.name
+}
+
 func (tbl *Table) SetTran(t QueryTran) {
 	tbl.tran = t
 	tbl.schema = t.GetSchema(tbl.name)
@@ -361,4 +365,16 @@ func (tbl *Table) Simple(*Thread) []Row {
 		assert.Msg("too large for simple").That(len(rows) < maxSimple)
 	}
 	return rows
+}
+
+func (tbl *Table) Single() bool {
+	return tbl.fast1.Get()
+}
+
+func (tbl *Table) RangeFrac(index, cols, vals []string) float64 {
+	iIndex := slc.IndexFn(tbl.indexes, index, slices.Equal)
+	encode := len(index) > 1 ||
+		!slc.ContainsFn(tbl.allKeys, index, set.Equal[string])
+	org, end := selKeys(encode, index, cols, vals)
+	return tbl.tran.RangeFrac(tbl.name, iIndex, org, end)
 }
