@@ -14,7 +14,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-func TestFull(t *testing.T) {
+func TestFastGet(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
@@ -29,37 +29,39 @@ func TestFull(t *testing.T) {
 		Database('create tmp (a, b, c, d, e) key(a) index(b) index(c) index(d)')
 		for i in ..1000
 			QueryOutput(#tmp, [a: i, b: i % 64, c: i % 16, d: i % 4])`)
-	db.Persist() // push to btrees so frac works
-	
+
 	test := func(s string, expected bool) {
-		fmt.Println("===", s)
+		t.Helper()
+		fmt.Println(s)
 		result := compile.EvalString(MainThread, s)
 		fmt.Println("=>", result != False)
 		assert.T(t).Msg(s).This(result != False).Is(expected)
 	}
 	test2 := func(s string, expected bool) {
+		t.Helper()
 		for _, which := range []string{"Query1", "QueryExists?"} {
 			test(which+"("+s+")", expected)
 		}
 	}
 	trace.QueryOpt.Set()
-	test2("#company", true)                            // single
-	test2("#company, company_state_prov: 'ON'", true)  // single + filter
-	test2("#company, company_state_prov: 'X'", false)  // single + filter
-	test2("#taxes, tax_code: 'PST'", true)             // only index
-	test2("#taxes, tax_code: 'X'", false)              // only index
-	test("QueryExists?(#taxes)", true)                 // no filter
-	test2("#stdlib, num: 2", true)                     // key
-	test2("#stdlib, num: 2, name: 'X'", false)         // key + filter
-	test2("#stdlib, num: 2, name: 'Beep'", true)       // key + filter
-	test("QueryExists?(#stdlib)", true)                // no filter
-	test("QueryExists?(#stdlib, name: 'Alert')", true) // only index
+	test2("#company", true)                                        // no filter
+	test2("#company, company_state_prov: 'ON'", true)              // empty key
+	test2("#company, company_state_prov: 'X'", false)              // empty key
+	test2("#taxes, tax_code: 'PST'", true)                         // just index
+	test2("#taxes, tax_code: 'X'", false)                          // just index
+	test("QueryExists?(#taxes)", true)                             // no filter
+	test2("#stdlib, num: 2", true)                                 // key
+	test2("#stdlib, num: 2, name: 'X'", false)                     // key + filter
+	test2("#stdlib, num: 2, name: 'Beep'", true)                   // key + filter
+	test("QueryExists?(#stdlib)", true)                            // no filter
+	test("QueryExists?(#stdlib, name: 'Alert')", true)             // just index
+	test("QueryExists?(#stdlib, name: 'Alert', text: 'X')", false) // only index
 
 	test("QueryExists?(#tmp)", true)                         // no filter
-	test("QueryExists?(#tmp, b: 59)", true)                  // only index
+	test("QueryExists?(#tmp, b: 59)", true)                  // just index
 	test("QueryExists?(#tmp, a: 123)", true)                 // key
-	test("QueryExists?(#tmp, b: 59, c: 11, d: 3)", true)     // best frac = b
-	test("QueryExists?(#tmp, b: 59, c: 11, d: 9999)", false) // best frac = d
+	test("QueryExists?(#tmp, b: 59, c: 11, d: 3)", true)     // multi = b
+	test("QueryExists?(#tmp, b: 59, c: 11, d: 9999)", false) // multi = d
 }
 
 func BenchmarkSlow(b *testing.B) {

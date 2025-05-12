@@ -44,15 +44,19 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 
 	q, fixcost, varcost := qry.Setup1(q, qry.ReadMode, tran)
 	qry.Warnings(query, q)
-	if trace.Query.On() {
-		d := map[Dir]string{Only: "one", Next: "first", Prev: "last", Any: "any"}[dir]
-		trace.Query.Println(d, fixcost+varcost, "-", query)
-	}
+	trace.Query.Println(dir, fixcost+varcost, "-", query)
 	d := dir
 	if dir == Only || dir == Any {
 		d = Next
 	}
 	row := q.Get(th, d)
+	if dir == Only || dir == Any {
+		if w, ok := q.(*qry.Where); ok && w.Slow() &&
+			!(strings.HasPrefix(query, "columns") ||
+				strings.HasPrefix(query, "indexes")) {
+			Warning(dir, "slow:", query)
+		}
+	}
 	if row == nil {
 		return nil, nil, ""
 	} else if dir == Any {
@@ -100,16 +104,16 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 	packed := slc.MapFn(vals,
 		func(v Value) string { return Pack(v.(Packable)) })
 	if dir == Only {
-		return getLookup(th, tran, tbl, flds, packed)
+		return getLookup(th, tran, tbl, flds, packed, dir)
 	}
 	if dir == Any {
-		return getExists(th, tran, tbl, flds, packed)
+		return getExists(th, tran, tbl, flds, packed, dir)
 	}
 	panic(assert.ShouldNotReachHere())
 }
 
-func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string) (Row, *Header) {
-	single, getfn := getIndex(th, tran, table, flds, vals)
+func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string, dir Dir) (Row, *Header) {
+	single, getfn := getIndex(th, tran, table, flds, vals, dir)
 	if getfn == nil {
 		return nil, nil
 	}
@@ -122,8 +126,8 @@ func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []st
 	return row, table.Header()
 }
 
-func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string) (row Row, hdr *Header) {
-	_, getfn := getIndex(th, tran, table, flds, vals)
+func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string, dir Dir) (row Row, hdr *Header) {
+	_, getfn := getIndex(th, tran, table, flds, vals, dir)
 	if getfn == nil {
 		return nil, nil
 	}
@@ -135,7 +139,7 @@ func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []st
 }
 
 func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
-	flds, vals []string) (single bool, getfn func() Row) {
+	flds, vals []string, dir Dir) (single bool, getfn func() Row) {
 	st := qry.MakeSuTran(tran)
 	hdr := table.Header()
 	filter := func(row Row) Row {
@@ -148,47 +152,83 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		}
 		return row
 	}
-	if table.Single() {
-		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "empty key")
-		return true, func() Row {
-			return filter(table.Get(th, Next))
-		}
-	}
 	if len(flds) == 0 {
-		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "no filter")
+		trace.QueryOpt.Println(dir, table.Name(), "no filter")
 		return false, func() Row {
 			return table.Get(th, Next)
 		}
 	}
+	if table.Single() {
+		trace.QueryOpt.Println(dir, table.Name(), "empty key")
+		return true, func() Row {
+			return filter(table.Get(th, Next))
+		}
+	}
 	if key := findKey(table.Keys(), flds); key != nil {
-		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "key", key)
+		trace.QueryOpt.Println(dir, table.Name(), "key", key)
 		table.SetIndex(key)
 		return true, func() Row {
 			return filter(table.Lookup(th, flds, vals))
 		}
 	}
-	idx := chooseIndex(table, flds, vals)
-	if idx == nil {
+	if idx := findAll(table.Indexes(), flds); idx != nil {
+		trace.QueryOpt.Println(dir, table.Name(), "just", idx)
+		table.SetIndex(idx)
+		table.Select(flds, vals)
+		return false, func() Row {
+			return table.Get(th, Next)
+		}
+	}
+	indexes := usableIndexes(table.Indexes(), flds)
+	if len(indexes) == 0 {
 		return
 	}
-	table.SetIndex(idx)
-	table.Select(flds, vals)
-	return false, func() Row {
-		n := 0
-		for {
-			if n++; n == 100 {
-				Warning("Query1/Exists? slow query on", table)
+	if len(indexes) == 1 {
+		trace.QueryOpt.Println(dir, table.Name(), "only", indexes[0])
+		table.SetIndex(indexes[0])
+		table.Select(flds, vals)
+		return false, func() Row {
+			for n := 0; ; n++ {
+				row := table.Get(th, Next)
+				if row == nil || nil != filter(row) {
+					if n > 100 {
+						Warning(dir, "slow", n, table)
+					}
+					return row
+				}
 			}
-			row := table.Get(th, Next)
-			if row == nil {
-				break
-			}
-			if nil == filter(row) {
-				continue
-			}
-			return row
 		}
-		return nil
+	}
+	tables := make([]*qry.Table, len(indexes))
+	for i, idx := range indexes {
+		tbl := *table // copy
+		tables[i] = &tbl
+		tables[i].SetIndex(idx)
+		tables[i].Select(flds, vals)
+	}
+	return false, func() Row {
+		// iterate the indexes in parallel
+		for n := 0; ; n++ {
+			for _, tbl := range tables {
+				if tbl == nil {
+					continue
+				}
+				row := tbl.Get(th, Next)
+				if row == nil || nil != filter(row) {
+					// clear the other tables so next get is from this one
+					for j := range tables {
+						if tables[j] != tbl {
+							tables[j] = nil
+						}
+					}
+					trace.QueryOpt.Println(dir, "multi", tbl)
+					if n > 100 {
+						Warning(dir, "slow", n, tbl)
+					}
+					return row
+				}
+			}
+		}
 	}
 }
 
@@ -201,44 +241,24 @@ func findKey(keys [][]string, flds []string) []string {
 	return nil
 }
 
-func chooseIndex(table *qry.Table, flds, vals []string) []string {
-	if idx := onlyUsableIndex(table.Indexes(), flds); idx != nil {
-		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "only", idx)
-		return idx
+// findAll returns the first index that contains all the fields
+func findAll(indexes [][]string, flds []string) []string {
+	for _, idx := range indexes {
+		if len(idx) >= len(flds) && set.Equal(idx[:len(flds)], flds) {
+			return idx
+		}
 	}
-	return bestIndexFrac(table, flds, vals)
+	return nil
 }
 
-func onlyUsableIndex(indexes [][]string, flds []string) []string {
-	var onlyIdx []string
+func usableIndexes(indexes [][]string, flds []string) [][]string {
+	var usable [][]string
 	for _, idx := range indexes {
 		if hasPrefix(idx, flds) {
-			if onlyIdx != nil {
-				return nil // multiple usable indexes
-			}
-			onlyIdx = idx
+			usable = append(usable, idx)
 		}
 	}
-	return onlyIdx
-}
-
-func bestIndexFrac(table *qry.Table, flds, vals []string) []string {
-	var bestIdx []string
-	bestFrac := 1.0
-	for _, idx := range table.Indexes() {
-		if !hasPrefix(idx, flds) {
-			continue
-		}
-		frac := table.RangeFrac(idx, flds, vals)
-		if frac < bestFrac {
-			bestIdx = idx
-			bestFrac = frac
-		}
-	}
-	if bestIdx != nil {
-		trace.QueryOpt.Println("Query1/Exists?", table.Name(), "best", bestIdx)
-	}
-	return bestIdx
+	return usable
 }
 
 func hasPrefix(idx []string, flds []string) bool {

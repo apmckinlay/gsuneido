@@ -138,8 +138,6 @@ type ITran interface {
 	Num() int
 }
 
-//go:generate stringer -type=Dir
-
 type Dir byte
 
 const (
@@ -148,6 +146,20 @@ const (
 	Prev Dir = '-' // QueryLast
 	Any  Dir = '@' // QueryExists?
 )
+
+func (dir Dir) String() string {
+	switch {
+    case dir == Next:
+        return "QueryFirst"
+    case dir == Prev:
+        return "QueryLast"
+    case dir == Only:
+        return "Query1"
+    case dir == Any:
+        return "QueryExists?"
+    }
+    return ""
+}
 
 func (dir Dir) Reverse() Dir {
 	switch dir {

@@ -58,7 +58,7 @@ const EntrySize = 10
 // It is used by Table.lookupCost
 const TreeHeight = 3
 
-var Fanout = MaxNodeSize / EntrySize // estimate
+var Fanout = MaxNodeSize / EntrySize // estimate ~100
 
 // GetLeafKey is used to get the key for a data offset.
 // It is a dependency that must be injected

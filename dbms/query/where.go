@@ -123,7 +123,7 @@ func (w *Where) String() string {
 	if len(w.expr.Exprs) > 0 {
 		s += " " + w.expr.Echo()
 	}
-	if w.slow() {
+	if w.Slow() {
 		s += fmt.Sprintf(" /*SLOW %d->%d*/", w.nIn, w.nOut)
 	}
 	return s
@@ -820,14 +820,14 @@ func singletonFilter(
 }
 
 func (w *Where) slowQueries() {
-	if w.slow() && trace.SlowQuery.On() {
+	if w.Slow() && trace.SlowQuery.On() {
 		trace.SlowQuery.Println(w.nIn, "->", w.nOut)
 		trace.Println(strategy(w, 1))
 		w.nIn = 0
 		w.nOut = 0
 	}
 }
-func (w *Where) slow() bool {
+func (w *Where) Slow() bool {
 	return w.nIn > 100 && w.nIn > w.nOut*100
 }
 
