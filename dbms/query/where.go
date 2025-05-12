@@ -660,6 +660,7 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 	for {
 		if w.idxSelPos != -1 && w.curPtrng.isRange() {
 			if row := w.tbl.Get(th, dir); row != nil {
+				w.nIn++
 				return row
 			}
 		}
