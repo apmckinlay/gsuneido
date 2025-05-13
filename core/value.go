@@ -131,24 +131,19 @@ var NilVal Value
 // NumFromString converts a string to an SuInt or SuDnum.
 // It will panic for invalid input.
 func NumFromString(s string) Value {
+	if len(s) > 2 && s[0] == '0' && s[1] == 'x' {
+		if n, err := strconv.ParseUint(s, 0, 64); err == nil {
+			return IntVal(int(n))
+		}
+	}
 	base := 10
-	if isHex(s) {
+	if len(s) > 3 && s[0] == '-' && s[1] == '0' && s[2] == 'x' {
 		base = 0
 	}
 	if n, err := strconv.ParseInt(s, base, 64); err == nil {
 		return IntVal(int(n))
 	}
 	return SuDnum{Dnum: dnum.FromStr(s)}
-}
-
-func isHex(s string) bool {
-	if len(s) < 3 {
-		return false
-	}
-	if s[0] == '-' {
-		s = s[1:]
-	}
-	return len(s) > 2 && s[1] != '0' && s[1] == 'x'
 }
 
 type Showable interface {
