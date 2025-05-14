@@ -29,7 +29,7 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 			return row, hdr, query
 		}
 	}
-	if where := getWhere(ob, dir); where != "" {
+	if where := getWhere(ob); where != "" {
 		// need a newline in case the query ends with //comment
 		query += "\n" + where
 	}
@@ -267,21 +267,15 @@ func hasPrefix(idx []string, flds []string) bool {
 	return slices.Contains(flds, idx[0])
 }
 
-// getWhere builds a where and sort for the named arguments.
+// getWhere builds a where for the named arguments.
 // It should be eqivalent to builtin queryWhere
-func getWhere(ob *SuObject, dir Dir) string {
+func getWhere(ob *SuObject) string {
 	var sb strings.Builder
-	sort := ""
 	sep := "where "
 	iter := ob.Iter2(false, true)
 	for k, v := iter(); v != nil; k, v = iter() {
 		field := ToStr(k)
 		if field == "query" {
-			continue
-		} else if field == "sort" {
-			if dir == Next || dir == Prev {
-				sort = " sort " + ToStr(v)
-			}
 			continue
 		}
 		sb.WriteString(sep)
@@ -290,7 +284,6 @@ func getWhere(ob *SuObject, dir Dir) string {
 		sb.WriteString(" is ")
 		sb.WriteString(v.String())
 	}
-	sb.WriteString(sort)
 	return sb.String()
 }
 
