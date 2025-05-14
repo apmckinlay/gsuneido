@@ -178,6 +178,7 @@ func (tbl *Table) SetIndex(index []string) {
 	assert.Msg("setIndex", tbl.name, index).That(tbl.iIndex >= 0)
 	tbl.indexEncode = len(tbl.index) > 1 ||
 		!slc.ContainsFn(tbl.allKeys, tbl.index, set.Equal[string])
+	IdxUse(tbl.name, tbl.index)
 }
 
 func (tbl *Table) lookupCost() Cost {

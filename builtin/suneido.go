@@ -174,3 +174,14 @@ func suneido_Members(this Value, all Value) Value {
 	}
 	return SuObjectOf(mems...)
 }
+
+var _ = staticMethod(suneido_IndexUse, "()")
+
+func suneido_IndexUse() Value {
+	iu := qry.PullIdxUse()
+	ob := &SuObject{}
+	for k, v := range iu {
+		ob.Set(SuStr(k), IntVal(v))
+	}
+	return ob
+}
