@@ -15,6 +15,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
+const slow = 100
+
 func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string) {
 	defer th.Suneido.Store(th.Suneido.Load())
 	th.Suneido.Store(nil) // use main Suneido object
@@ -51,10 +53,10 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	}
 	row := q.Get(th, d)
 	if dir == Only || dir == Any {
-		if w, ok := q.(*qry.Where); ok && w.Slow() &&
+		if w, ok := q.(*qry.Where); ok && w.InCount() > slow &&
 			!(strings.HasPrefix(query, "columns") ||
 				strings.HasPrefix(query, "indexes")) {
-			Warning(dir, "slow:", query)
+			Warning(dir, "slow:", w.InCount(), query)
 		}
 	}
 	if row == nil {
@@ -191,8 +193,8 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 			for n := 0; ; n++ {
 				row := table.Get(th, Next)
 				if row == nil || nil != filter(row) {
-					if n > 100 {
-						Warning(dir, "slow", n, table)
+					if n > slow {
+						Warning(dir, "slow:", n, table)
 					}
 					return row
 				}
@@ -222,8 +224,8 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 						}
 					}
 					trace.QueryOpt.Println(dir, "multi", tbl)
-					if n > 100 {
-						Warning(dir, "slow", n, tbl)
+					if n > slow {
+						Warning(dir, "slow:", n, tbl)
 					}
 					return row
 				}
