@@ -82,8 +82,9 @@ func testIterRange(it iterator.T) {
 	test(it.Prev, 9999, -1)
 
 	for range 10000 {
-		org := 1000 + rand.Intn(4499)
-		end := 9999 - rand.Intn(4499)
+		// org and end must be at least 10 apart
+		org := 1000 + rand.Intn(4490)
+		end := 9999 - rand.Intn(4490)
 		it.Range(Range{Org: itoa(org), End: itoa(end)})
 		test(it.Next, org, +1)
 		it.Rewind()
