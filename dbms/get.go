@@ -208,6 +208,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		tables[i].SetIndex(idx)
 		tables[i].Select(flds, vals)
 	}
+	var prevRow Row
 	return false, func() Row {
 		// iterate the indexes in parallel
 		for n := 0; ; n++ {
@@ -216,17 +217,13 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 					continue
 				}
 				row := tbl.Get(th, Next)
-				if row == nil || nil != filter(row) {
-					// clear the other tables so next get is from this one
-					for j := range tables {
-						if tables[j] != tbl {
-							tables[j] = nil
-						}
-					}
+				if row == nil ||
+					(!row.SameAs(prevRow) && nil != filter(row)) {
 					trace.QueryOpt.Println(dir, "multi", tbl)
 					if n > slow {
 						Warning(dir, "slow:", n, tbl)
 					}
+					prevRow = row
 					return row
 				}
 			}
