@@ -569,17 +569,7 @@ func libload(th *Thread, name string) (result Value, e any) {
 	return result, nil
 }
 
-var winErr = regex.Compile("gSuneido does not implement (dll|struct|callback)")
-
 func llcompile(lib, name, src string, prevDef Value) Value {
-	defer func() {
-		if e := recover(); e != nil {
-			es := fmt.Sprint(e)
-			if !winErr.Matches(es) {
-				panic(e)
-			}
-		}
-	}()
 	// want to pass the name from the start (rather than adding after)
 	// so it propagates to nested Named values
 	return compile.NamedConstant(lib, name, src, prevDef)
