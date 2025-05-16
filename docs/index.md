@@ -140,13 +140,13 @@ See also [Bit Twiddling (Dnum)](https://thesoftwarelife.blogspot.com/2018/03/bit
 
 ### Integers
 
-See core/suint.go
+See core/suint.go and core/suint64.go
 
-Although Suneido only has one kind of number (decimal floating point), for performance integers are internally handled separately.
+Although Suneido does not expose different kinds of numbers, for performance integers are internally handled separately.
 
 In earlier versions of Go, integers were automatically stored within interfaces - perfect for Suneido - but this was removed so the garbage collector would not have to deal with non-pointer values.
 
-At first glance, it appears Go can't support immediate (non-heap) integers in interfaces but it turns out it is possible.
+At first glance, it appears Go can no longer support immediate (non-heap) integers in interfaces but it turns out it is possible.
 
 The way to work within Go’s type safety is to use pointers into a large array of bytes. If we make the array 64 kB then we can handle 16 bit integers. We don't actually store anything in the array and we don't initialize it, so it doesn't take up any physical memory. So a small immediate integer type can be created with:
 
@@ -166,6 +166,16 @@ To get the integer back out of the pointer we have to use the unsafe package, bu
 Because they are pointers, they can be stored in Go interfaces (like Value) without allocation, unlike the Go integer types.
 
 See also [Go Interfaces and Immediate Integers](https://thesoftwarelife.blogspot.com/2017/09/go-interfaces-and-immediate-integers.html)
+
+#### 64 bit Integers
+
+Before 2025-05-09 full 64 bit integers were not supported. Integers outside the 16 bit SuInt range were stored in SuDnum which only handles roughly 53 bits. Some integer operations were limited to 32 bits for historical reasons. The Win32 interface uses integers for pointers but this was ok because Windows does not use the full 64 address range.
+
+SuInt64 was added to hold full 64 bit values. IntVal was extended to return either an SuInt or an SuInt64 depending on the value. SuIntToInt does the reverse. 
+
+Integer arithmetic does not overflow to SuDnum
+
+e.g. `0x7fff_ffff_ffff_ffff * 10 => -10`
 
 ## Strings
 
