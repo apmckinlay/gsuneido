@@ -1,7 +1,7 @@
 - [Introduction](#introduction)
 - [Overview](#overview)
 - [Source Code Layout](#source-code-layout)
-- [Tests \& Benchmarks](#tests--benchmarks)
+- [Tests and Benchmarks](#tests-and-benchmarks)
 - [Portable Tests](#portable-tests)
 - [Language](#language)
 	- [Values](#values)
@@ -17,7 +17,7 @@
 	- [Classes](#classes)
 		- [Private Class Members](#private-class-members)
 		- [Getters](#getters)
-	- [Functions \& Methods](#functions--methods)
+	- [Functions and Methods](#functions-and-methods)
 		- [Arguments](#arguments)
 		- [Parameters](#parameters)
 		- [Passing Arguments to Parameters](#passing-arguments-to-parameters)
@@ -25,13 +25,17 @@
 - [Compiler](#compiler)
 	- [Byte Code](#byte-code)
 	- [Interpreter](#interpreter)
+- [Libraries](#libraries)
+	- [Library Tags](#library-tags)
+	- [Implementation](#implementation)
 - [Windows Interface](#windows-interface)
 	- [COM](#com)
 	- [SuneidoAPP](#suneidoapp)
 - [Concurrency](#concurrency)
 - [Database](#database)
 	- [Storage](#storage)
-	- [Shutdown \& Startup](#shutdown--startup)
+	- [Shutdown and Startup](#shutdown-and-startup)
+	- [Database File Structure](#database-file-structure)
 	- [Repair](#repair)
 	- [Packing](#packing)
 		- [Objects](#objects-1)
@@ -345,6 +349,40 @@ A standard loop containing a giant switch with one case per op code.
 Because Go can only recover from (catch) a panic on the way out of a function, we need another wrapper function that reenters the interpreter if the exception is caught.
 
 In March 2025 I tried restructuring the interpreter as separate functions instead of the giant switch. But this turned out to be slower. The experiment was saved as a branch in git. 
+
+# Libraries
+
+Source code is stored in "library" tables in the database. 
+
+Multiple libraries can be in use at a give time. **stdlib** is always in use. Additional libraries are specified with Use and Unuse.
+
+Each record defines a global (capitalized) name. 
+
+Libraries are "layered". If two libraries were in use, stdlib and mylib, and both libraries defined Foo, the later definition in mylib would override (replace) the definition in stdlib.
+
+In addition, if the overriding definition is a function or a class it can reference the previous definition with `_Name` , in this example, with `_Foo`
+
+## Library Tags
+
+Library tags were added 2025-05-15 to help with two issues.
+
+The first issue is "trial" code (aka feature flags). Previously we implemented this by having a "trial" library. If the library was used on a system then the trial code would be active. This works reasonably well but has limitations.
+
+The second issue is suneido.js UI code. Again we used a separate library for this code. However, we sometimes use suneido.js and the Windows gui on the same system. To handle this there was a special case for "webgui" libraries that would ignore them on a Windows UI client. 
+
+The combination of these two features was problematic. We ended up with four libraries:
+
+​	stdlib, webgui, trial, trial_webgui
+
+Library tags were added to handle this better. Instead of multiple libraries you can add "tag" suffixes to library record names e.g. Foo__trial and Foo_webgui
+
+The advantage of tags is that the overriding is specific to a library. So if a name is defined in multiple libraries, we can override a specific library record whereas with library layering we can only override the name as a whole.
+
+## Implementation
+
+Library definitions are loaded on demand. Definitions are requested from globals. If the name is not loaded, it calls LibLoad which calls dbms.LibGet. If client-server, LibGet is sent from the client to the server. The server returns a list of definitions from the libraries and tags in use. LibLoad then compiles the definitions and the result is cached in globals.
+
+When a client is running the Windows UI and should not see the suneido.js webgui tagged definitions, it can define its own library tags separate from the main one on the server. This list of tags can exclude the webgui tags. LibGet will still return the webgui definitions based on it's library tags, but LibLoad on the client will ignore them based on its library tags.
 
 # Windows Interface
 

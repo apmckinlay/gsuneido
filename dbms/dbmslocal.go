@@ -184,6 +184,10 @@ func (dbms *DbmsLocal) Load(table, from, privateKey, passphrase string) int {
 	return n
 }
 
+// LibGet returns a list of strings.
+// The strings are in pairs - "<lib>:<name>[__tag]", "definition".
+// The order is significant - first by Libraries() and then by LibraryTags.
+// Later definitions can override or inherit from earlier ones.
 func (dbms *DbmsLocal) LibGet(name string) []string {
 	defer func() {
 		if e := recover(); e != nil {
@@ -196,17 +200,17 @@ func (dbms *DbmsLocal) LibGet(name string) []string {
 	rt := dbms.db.NewReadTran()
 	libs := dbms.libraries.Load()
 	for _, lib := range libs {
-		s := dbms.LibGet1(rt, lib, name)
-		if s != "" {
-			results = append(results, lib, string(s))
-		}
+		defs := dbms.LibGet1(rt, lib, name)
+		results = append(results, defs...)
 	}
 	return results
 }
 
 var libKey = []string{"name", "group"} // const
 
-func (dbms *DbmsLocal) LibGet1(rt *db19.ReadTran, lib, name string) string {
+// LibGet1 returns the definition(s) for the given library and name.
+// There may be multiple due to tags.
+func (dbms *DbmsLocal) LibGet1(rt *db19.ReadTran, lib, name string) []string {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("libGet", lib, name, e)
@@ -215,22 +219,27 @@ func (dbms *DbmsLocal) LibGet1(rt *db19.ReadTran, lib, name string) string {
 	ix := rt.GetIndex(lib, libKey)
 	if ix == nil {
 		dbms.liblog(lib)
-		return ""
+		return nil
 	}
 	fld := rt.ColToFld(lib, "text")
 	if fld == -1 {
 		dbms.liblog(lib)
-		return ""
+		return nil
 	}
+	defs := make([]string, 0, len(options.LibraryTags))
 	var rb ixkey.Encoder
-	rb.Add(Pack(SuStr(name)))
-	rb.Add(Pack(SuInt(-1)))
-	key := rb.String()
-	off := ix.Lookup(key)
-	if off == 0 {
-		return "" // not found
+	for _, tag := range options.LibraryTags {
+		nametag := name + tag
+		rb.Add(Pack(SuStr(nametag)))
+		rb.Add(Pack(SuInt(-1)))
+		key := rb.String()
+		off := ix.Lookup(key)
+		if off != 0 {
+			defs = append(defs,
+				lib+":"+nametag, rt.GetRecord(off).GetStr(fld))
+		}
 	}
-	return rt.GetRecord(off).GetStr(fld)
+	return defs
 }
 
 func (dbms *DbmsLocal) liblog(lib string) {

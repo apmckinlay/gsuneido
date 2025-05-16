@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/metrics"
+	"slices"
 	"strings"
 	"time"
 
@@ -24,10 +25,10 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/system"
 	// sync "github.com/sasha-s/go-deadlock"
 )
@@ -545,11 +546,13 @@ func libload(th *Thread, name string) (result Value, e any) {
 	ovLib, ovText := LibraryOverrides.Get(name)
 	i := 0
 	for _, lib := range libs {
+		// iterate over lib rather than defs to handle LibraryOverrides
 		var src string
-		if slc.StartsWith(defs[i:], lib) {
+		if i < len(defs) && str.BeforeFirst(defs[i], ":") == lib {
 			src = defs[i+1]
 			i += 2
 		}
+		//TODO remove this after switching to tags
 		if mode == "gui" && strings.HasSuffix(lib, "webgui") {
 			continue
 		}
@@ -558,6 +561,23 @@ func libload(th *Thread, name string) (result Value, e any) {
 		}
 		if src != "" {
 			result = llcompile(lib, name, src, result)
+		}
+		// above will handle untagged defs, now handle tagged defs
+		for i < len(defs) && str.BeforeFirst(defs[i], ":") == lib {
+			tagname := str.AfterFirst(defs[i], ":")
+			src = defs[i+1]
+			i += 2
+			if lib == ovLib {
+				continue
+			}
+			assert.That(str.BeforeFirst(tagname, "__") == name)
+			tag := tagname[len(name):]
+			// this can only be false when running as a client
+			// with different LibraryTags from the server
+			if len(options.LibraryTags) == 1 ||
+				slices.Contains(options.LibraryTags[1:], tag) {
+				result = llcompile(lib, name, src, result)
+			}
 		}
 	}
 	if ovLib == "" && ovText != "" {

@@ -141,7 +141,11 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 
 func serverVersionMismatch(dbms *DbmsLocal, conn net.Conn) {
 	rt := dbms.db.NewReadTran()
-	s := dbms.LibGet1(rt, "stdlib", "VersionMismatch")
+	def := dbms.LibGet1(rt, "stdlib", "VersionMismatch")
+	if len(def) != 2 {
+		Fatal("VersionMismatch must have a single definition")
+	}
+	s := def[1]
 	n := len(s)
 	conn.Write([]byte{byte(n >> 8), byte(n)})
 	io.WriteString(conn, s)

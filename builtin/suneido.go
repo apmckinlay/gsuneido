@@ -4,6 +4,7 @@
 package builtin
 
 import (
+	"fmt"
 	"runtime/metrics"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -185,3 +186,20 @@ func suneido_IndexUse() Value {
 	}
 	return ob
 }
+
+var _ = staticMethod(suneido_LibraryTags, "(@args)")
+
+func suneido_LibraryTags(args Value) Value {
+	ob := args.(*SuObject)
+	tags := make([]string, 1+ob.ListSize())
+	tags[0] = "" // untagged
+	for i := range tags[1:] {
+		tags[i+1] = "__" + ToStr(ob.ListGet(i))
+	}
+	options.LibraryTags = tags
+	Global.UnloadAll() // same as Use/Unuse
+	return nil
+}
+
+var _ = AddInfo("library.tags",
+	func() string { return fmt.Sprintf("%#v", options.LibraryTags)[8:] })

@@ -62,6 +62,11 @@ func init() {
 // Coverage controls whether Cover op codes are added by codegen.
 var Coverage atomic.Bool
 
+// LibraryTags are used by LibGet and libload
+// It should always have a first entry of "" for untagged names.
+// Additional tags should include the "__" prefix.
+var LibraryTags = []string{""}
+
 var Nworkers = func() int {
 	return min(8, max(1, runtime.NumCPU()-1)) // ???
 }()
