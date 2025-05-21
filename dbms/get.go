@@ -15,7 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
-const slow = 100
+var slow = map[Dir]int{Only: 100, Any: 500}
 
 func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string) {
 	defer th.Suneido.Store(th.Suneido.Load())
@@ -53,7 +53,7 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	}
 	row := q.Get(th, d)
 	if dir == Only || dir == Any {
-		if w, ok := q.(*qry.Where); ok && w.InCount() > slow &&
+		if w, ok := q.(*qry.Where); ok && w.InCount() > slow[dir] &&
 			!(strings.HasPrefix(query, "columns") ||
 				strings.HasPrefix(query, "indexes")) {
 			Warning(dir, "slow:", w.InCount(), query)
@@ -193,7 +193,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 			for n := 0; ; n++ {
 				row := table.Get(th, Next)
 				if row == nil || nil != filter(row) {
-					if n > slow {
+					if n > slow[dir] {
 						Warning(dir, "slow:", n, table)
 					}
 					return row
@@ -220,7 +220,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 				if row == nil ||
 					(!row.SameAs(prevRow) && nil != filter(row)) {
 					trace.QueryOpt.Println(dir, "multi", tbl)
-					if n > slow {
+					if n > slow[dir] {
 						Warning(dir, "slow:", n, tbl)
 					}
 					prevRow = row
