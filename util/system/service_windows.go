@@ -70,7 +70,7 @@ func runService(name string) {
 	}
 	err := windows.StartServiceCtrlDispatcher(&t[0])
 	if err != nil {
-		log.Println("runService", err)
+		log.Println("ERROR: runService", err)
 	}
 }
 
@@ -124,6 +124,6 @@ func updateStatus(state, accept uint32) {
 	ss.WaitHint = 10_000 // 10 seconds
 	err := windows.SetServiceStatus(serviceHandle, &ss)
 	if err != nil {
-		log.Println("updateStatus", err)
+		log.Println("ERROR: updateStatus", err)
 	}
 }

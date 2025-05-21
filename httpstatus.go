@@ -44,7 +44,7 @@ func startHttpStatus() {
 		httpServer = &http.Server{Addr: addr}
 		err := httpServer.ListenAndServe()
 		if err != http.ErrServerClosed {
-			log.Println("Server Monitor:", err)
+			log.Println("ERROR: Server Monitor:", err)
 		}
 	}()
 }

@@ -58,10 +58,10 @@ func (ms *mmapStor) Get(chunk int) []byte {
 func (ms *mmapStor) Flush(chunk []byte) {
 	ptr := uintptr(unsafe.Pointer(unsafe.SliceData(chunk)))
 	if err := syscall.FlushViewOfFile(ptr, 0); err != nil {
-		log.Println("FlushViewOfFile:", err)
+		log.Println("ERROR: FlushViewOfFile:", err)
 	}
 	if err := syscall.FlushFileBuffers(syscall.Handle(ms.file.Fd())); err != nil {
-		log.Println("FlushFileBuffers:", err)
+		log.Println("ERROR: FlushFileBuffers:", err)
 	}
 }
 

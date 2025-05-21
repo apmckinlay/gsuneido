@@ -62,7 +62,7 @@ func (ws *Workers) worker(t task) {
 	th := core.NewThread(nil)
 	defer func() {
 		if e := recover(); e != nil {
-			log.Println("worker panic:", e)
+			log.Println("ERROR: worker panic:", e)
 			dbg.PrintStack()
 			if se, ok := e.(*core.SuExcept); ok {
 				core.PrintStack(se.Callstack)
