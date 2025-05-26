@@ -4,6 +4,7 @@
 package dbms
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -11,15 +12,29 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/lrucache"
 )
 
 var slow = map[Dir]int{Only: 100, Any: 500}
 
-func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string) {
+type getTran interface {
+	qry.QueryTran
+	Num() int
+}
+
+func get(th *Thread, tran getTran, args Value, dir Dir, cache bool) (row Row, hdr *Header, table string) {
 	defer th.Suneido.Store(th.Suneido.Load())
 	th.Suneido.Store(nil) // use main Suneido object
+
+	if cache {
+		if row, hdr, table := cacheGet(tran, args, dir); row != nil {
+			return row, hdr, table
+		}
+		defer cacheSet(tran, args, dir, row, hdr, table)
+	}
 
 	ob := args.(*SuObject)
 	query := getQuery(ob)
@@ -51,7 +66,7 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	if dir == Only || dir == Any {
 		d = Next
 	}
-	row := q.Get(th, d)
+	row = q.Get(th, d)
 	if dir == Only || dir == Any {
 		if w, ok := q.(*qry.Where); ok && w.InCount() > slow[dir] &&
 			!(strings.HasPrefix(query, "columns") ||
@@ -83,7 +98,7 @@ func getQuery(ob *SuObject) string {
 }
 
 // fastGet returns a nil Header to indicate it was not applicable
-func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir) (Row, *Header) {
+func fastGet(th *Thread, tran getTran, query string, ob *SuObject, dir Dir) (Row, *Header) {
 	table := qry.JustTable(query)
 	if table == "" || tran.GetInfo(table) == nil { // could be a view
 		return nil, nil
@@ -114,7 +129,7 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 	panic(assert.ShouldNotReachHere())
 }
 
-func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string, dir Dir) (Row, *Header) {
+func getLookup(th *Thread, tran getTran, table *qry.Table, flds, vals []string, dir Dir) (Row, *Header) {
 	single, getfn := getIndex(th, tran, table, flds, vals, dir)
 	if getfn == nil {
 		return nil, nil
@@ -128,7 +143,7 @@ func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []st
 	return row, table.Header()
 }
 
-func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string, dir Dir) (row Row, hdr *Header) {
+func getExists(th *Thread, tran getTran, table *qry.Table, flds, vals []string, dir Dir) (row Row, hdr *Header) {
 	_, getfn := getIndex(th, tran, table, flds, vals, dir)
 	if getfn == nil {
 		return nil, nil
@@ -140,7 +155,7 @@ func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []st
 	return nil, existsHdr
 }
 
-func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
+func getIndex(th *Thread, tran getTran, table *qry.Table,
 	flds, vals []string, dir Dir) (single bool, getfn func() Row) {
 	st := qry.MakeSuTran(tran)
 	hdr := table.Header()
@@ -288,3 +303,55 @@ func single(q qry.Query) bool {
 	keys := q.Keys()
 	return len(keys) == 1 && len(keys[0]) == 0
 }
+
+//-------------------------------------------------------------------
+
+var cache = lrucache.New[cacheKey, cacheValue](256)
+
+func cacheSet(tran getTran, args Value, dir Dir, row Row, hdr *Header, table string) {
+	key := cacheKey{tran: tran, args: args, dir: dir}
+	val := cacheValue{row: row, hdr: hdr, table: table}
+	cache.Put(key, val)
+}
+
+func cacheGet(tran getTran, args Value, dir Dir) (row Row, hdr *Header, table string) {
+	key := cacheKey{tran: tran, args: args, dir: dir}
+	val, ok := cache.Get(key)
+	if !ok {
+		return
+	}
+	return val.row, val.hdr, val.table
+}
+
+type cacheValue struct {
+	row   Row
+	hdr   *Header
+	table string
+}
+
+type cacheKey struct {
+	tran getTran
+	args Value
+	dir  Dir
+}
+
+func (k cacheKey) Hash() uint64 {
+	h := uint64(k.tran.Num())
+	h = h*31 + k.args.Hash()
+	h = h*31 + uint64(k.dir)
+	return h
+}
+
+func (k cacheKey) Equal(other any) bool {
+	if o, ok := other.(cacheKey); ok {
+		return k.tran.Num() == o.tran.Num() &&
+			k.args.Equal(o.args) &&
+			k.dir == o.dir
+	}
+	return false
+}
+
+var _ = exit.Add("get cache", func() {
+	hits, misses := cache.Stats()
+	fmt.Println("hits", hits, "misses", misses, "%", hits*100/(hits+misses))
+})

@@ -156,7 +156,7 @@ func (dbms *DbmsLocal) Get(
 	th *Thread, query Value, dir Dir) (Row, *Header, string) {
 	tran := dbms.db.NewReadTran()
 	defer tran.Complete()
-	return get(th, tran, query, dir)
+	return get(th, tran, query, dir, false)
 }
 
 func (dbms *DbmsLocal) Info() Value {
@@ -396,7 +396,7 @@ type ReadTranLocal struct {
 }
 
 func (t ReadTranLocal) Get(th *Thread, query Value, dir Dir) (Row, *Header, string) {
-	return get(th, t.ReadTran, query, dir)
+	return get(th, t.ReadTran, query, dir, true)
 }
 
 func (t ReadTranLocal) Query(query string, sv *Sviews) IQuery {
@@ -416,7 +416,7 @@ type UpdateTranLocal struct {
 }
 
 func (t UpdateTranLocal) Get(th *Thread, query Value, dir Dir) (Row, *Header, string) {
-	return get(th, t.UpdateTran, query, dir)
+	return get(th, t.UpdateTran, query, dir, false)
 }
 
 func (t UpdateTranLocal) Query(query string, sv *Sviews) IQuery {
