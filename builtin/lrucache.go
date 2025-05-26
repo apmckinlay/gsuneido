@@ -4,11 +4,9 @@
 package builtin
 
 import (
-	"bytes"
-
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
-	"github.com/apmckinlay/gsuneido/util/shmap"
+	"github.com/apmckinlay/gsuneido/util/lrucache"
 )
 
 type suLruCacheGlobal struct {
@@ -104,9 +102,8 @@ var _ = method(lru_GetMissRate, "()")
 
 func lru_GetMissRate(this Value) Value {
 	slc := this.(*suLruCache)
-	misses := IntVal(slc.Lc.misses)
-	gets := IntVal(slc.Lc.hits + slc.Lc.misses)
-	return OpDiv(misses, gets)
+	hits, misses := slc.Lc.Stats()
+	return OpDiv(IntVal(misses), IntVal(hits+misses))
 }
 
 //-------------------------------------------------------------------
@@ -114,20 +111,21 @@ func lru_GetMissRate(this Value) Value {
 type suLruCache struct {
 	ValueBase[*suLruCache]
 	Fn Value
-	Lc lruCache
+	Lc lrucache.Cache[Value, Value]
 	MayLock
 	okForResetAll bool
 }
 
 func newSuLruCache(size int, fn Value, okForResetAll bool) *suLruCache {
-	return &suLruCache{Lc: *newLruCache(size), Fn: fn, okForResetAll: okForResetAll}
+	return &suLruCache{Lc: *lrucache.New[Value, Value](size), Fn: fn, okForResetAll: okForResetAll}
 }
 
 func (slc *suLruCache) Fetch(key Value) Value {
 	if slc.Lock() {
 		defer slc.Unlock()
 	}
-	return slc.Lc.Get(key)
+	v, _ := slc.Lc.Get(key)
+	return v
 }
 
 func (slc *suLruCache) Insert(key, val Value) {
@@ -160,112 +158,13 @@ func (slc *suLruCache) Equal(other any) bool {
 
 func (slc *suLruCache) SetConcurrent() {
 	if slc.SetConc() {
-		for _, e := range slc.Lc.entries {
-			e.key.SetConcurrent()
-			e.val.SetConcurrent()
-		}
+		for k, v := range slc.Lc.Entries() {
+			k.SetConcurrent()
+            v.SetConcurrent()
+        }
 	}
 }
 
 func (*suLruCache) Lookup(_ *Thread, method string) Value {
 	return suLruCacheMethods[method]
 }
-
-//-------------------------------------------------------------------
-
-type lruCache struct {
-	lru     []uint8 // uint8 means max size of 256
-	entries []entry
-	hm      shmap.Map[Value, uint8, shmap.Meth[Value]]
-	size    int
-	hits    int
-	misses  int
-}
-
-type entry struct {
-	key Value
-	val Value
-}
-
-func newLruCache(req int) *lruCache {
-	var sizes = []int{6, 13, 27, 55, 111, 223} // 7/8 of ^2
-	size := 223                                // max
-	for _, n := range sizes {
-		if req <= n {
-			size = n
-			break
-		}
-	}
-	return &lruCache{size: size,
-		lru:     make([]uint8, 0, size),
-		entries: make([]entry, 0, size),
-	}
-}
-
-func (lc *lruCache) Get(key Value) Value {
-	ei, ok := lc.hm.Get(key)
-	if !ok {
-		// not in cache
-		lc.misses++
-		return nil
-	}
-	// in cache
-	lc.hits++
-	li := bytes.IndexByte(lc.lru, uint8(ei))
-	if li < lc.size-lc.size/8 {
-		// move to the newest (the end)
-		copy(lc.lru[li:], lc.lru[li+1:])
-		lc.lru[len(lc.lru)-1] = uint8(ei)
-	}
-	return lc.entries[ei].val
-}
-
-func (lc *lruCache) Put(key, val Value) {
-	ei := len(lc.entries)
-	if ei < lc.size {
-		lc.entries = append(lc.entries, entry{key: key, val: val})
-		lc.lru = append(lc.lru, uint8(ei))
-	} else { // full
-		// replace oldest entry lru[0]
-		ei = int(lc.lru[0])
-		lc.hm.Del(lc.entries[ei].key)
-		lc.entries[ei] = entry{key: key, val: val}
-		copy(lc.lru, lc.lru[1:])
-		lc.lru[lc.size-1] = uint8(ei)
-	}
-	lc.hm.Put(key, uint8(ei))
-}
-
-func (lc *lruCache) GetPut(key Value, getfn func(key Value) Value) Value {
-	val := lc.Get(key)
-	if val == nil {
-		val = getfn(key)
-		lc.Put(key, val)
-	}
-	return val
-}
-
-func (lc *lruCache) Reset() {
-	lc.hm.Clear()
-	lc.lru = lc.lru[:0]
-	clear(lc.entries)
-	lc.entries = lc.entries[:0]
-	lc.hits = 0
-	lc.misses = 0
-}
-
-// func (lc *lruCache) print() {
-// 	fmt.Println("lru")
-// 	for li, ei := range lc.lru {
-// 		fmt.Println(li, ei)
-// 	}
-// 	fmt.Println("entries")
-// 	for ei, e := range lc.entries {
-// 		fmt.Println(ei, e.key, e.val)
-// 	}
-// 	fmt.Println("hmap")
-// 	it := lc.hm.Iter()
-// 	for k, x := it(); k != nil; k, x = it() {
-// 		fmt.Println(k, x)
-// 	}
-// }
