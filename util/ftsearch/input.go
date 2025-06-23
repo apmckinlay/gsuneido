@@ -53,7 +53,9 @@ func (src *input) Next() string {
 			}
 			if let+num+spec > 1 && i-pos > 1 {
 				src.litpos = i + 1
-				return str.ToLower(src.text[pos:i])
+				if i-pos <= maxWordLength {
+					return str.ToLower(src.text[pos:i])
+				}
 			}
 		}
 		if ascii.IsLetter(src.text[src.pos]) {

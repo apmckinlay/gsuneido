@@ -82,6 +82,7 @@ func packUint32(buf []byte, n int) []byte {
 }
 
 func packString(buf []byte, s string) []byte {
+	assert.Msg(s).That(len(s) <= math.MaxUint8)
 	buf = append(buf, byte(len(s)))
 	return append(buf, s...)
 }

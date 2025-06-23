@@ -4,6 +4,7 @@
 package ftsearch
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -25,4 +26,9 @@ func TestTokens(t *testing.T) {
 	assert.That(e == len(expected))
 
 	assert.This(NewInput("T4A").Next()).Is("t4a")
+
+	in := NewInput("foo " + strings.Repeat("a-5", 99) + " bar")
+	assert.This(in.Next()).Is("foo")
+	assert.This(in.Next()).Is("bar")
+	assert.This(in.Next()).Is("")
 }
