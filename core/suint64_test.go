@@ -6,7 +6,7 @@ package core
 import (
 	"fmt"
 	"math"
-	rand "math/rand/v2"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"

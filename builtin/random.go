@@ -5,7 +5,7 @@ package builtin
 
 import (
 	crypto "crypto/rand"
-	rand "math/rand/v2"
+	"math/rand/v2"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/hacks"

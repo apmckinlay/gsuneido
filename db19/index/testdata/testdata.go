@@ -4,7 +4,7 @@
 package testdata
 
 import (
-	rand "math/rand/v2"
+	"math/rand/v2"
 	"sort"
 	"strings"
 

@@ -4,7 +4,7 @@
 package system
 
 import (
-	rand "math/rand/v2"
+	"math/rand/v2"
 	"time"
 )
 

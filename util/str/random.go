@@ -1,7 +1,7 @@
 package str
 
 import (
-	rand "math/rand/v2"
+	"math/rand/v2"
 	"strings"
 )
 

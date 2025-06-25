@@ -5,7 +5,7 @@ package db19
 
 import (
 	"fmt"
-	rand "math/rand/v2"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/stor"

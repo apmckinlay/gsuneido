@@ -8,7 +8,7 @@ import (
 	"io"
 	"log"
 	"math"
-	rand "math/rand/v2"
+	"math/rand/v2"
 	"os"
 	"strconv"
 	"sync"
