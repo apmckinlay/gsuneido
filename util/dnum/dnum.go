@@ -70,7 +70,8 @@ var pow10 = [...]uint64{
 	1000000000000000,
 	10000000000000000,
 	100000000000000000,
-	1000000000000000000}
+	1000000000000000000,
+	10000000000000000000}
 
 var halfpow10 = [...]uint64{
 	0,
@@ -637,14 +638,14 @@ func align(x, y *Dnum) bool {
 		*x, *y = *y, *x // swap
 	}
 	yshift := ilog10(y.coef)
-	e := int(x.exp - y.exp)
+	// e := int(x.exp - y.exp)
+	e := int(x.exp) - int(y.exp)
 	if e > yshift {
 		return false
 	}
-	yshift = e
-	check(0 <= yshift && yshift <= 20)
-	y.coef = (y.coef + halfpow10[yshift]) / pow10[yshift]
-	check(int(y.exp)+yshift == int(x.exp))
+	check(0 <= e && e < 20)
+	y.coef = (y.coef + halfpow10[e]) / pow10[e]
+	check(int(y.exp)+e == int(x.exp))
 	return true
 }
 

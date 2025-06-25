@@ -6,6 +6,7 @@ package dnum
 import (
 	"fmt"
 	"math"
+	// "math/rand/v2"
 	"testing"
 	"unsafe"
 
@@ -244,6 +245,7 @@ func Test_Add(t *testing.T) {
 	// exceeds alignment
 	add("123", "1e-99", "123")
 	add("1e-99", "123", "123")
+	add("1e-128", "1", "1")
 }
 
 func Test_Sub(t *testing.T) {
@@ -503,3 +505,34 @@ func Test_ToUint(t *testing.T) {
 	test("18446744073709551615", "18446744073709551615") // max uint64
 }
 */
+
+func FuzzAdd(f *testing.F) {
+	f.Fuzz(func(t *testing.T, xcoef uint64, xexp int8, xsign bool,
+		ycoef uint64, yexp int8, ysign bool) {
+		xn := mknum(xcoef, xexp, xsign)
+		yn := mknum(ycoef, yexp, ysign)
+		result := Add(xn, yn)
+		result2 := Add(yn, xn)
+		assert.T(t).Msg(xn, "+", yn).This(result).Is(result2)
+	})
+}
+
+func mknum(coef uint64, exp int8, neg bool) Dnum {
+	sign := int8(signPos)
+	if neg {
+		sign = signNeg
+	}
+	coef = coef%(coefMax-coefMin) + coefMin
+	assert.That(coefMin <= coef && coef <= coefMax)
+	return Dnum{coef: coef, exp: exp, sign: sign}
+}
+
+// func TestMknum(t *testing.T) {
+// 	for range 100 {
+// 		coef := rand.Uint64()
+// 		exp := int8(rand.Int32() & 0xff)
+// 		neg := rand.IntN(2) == 0
+// 		n := mknum(coef, exp, neg)
+// 		fmt.Println(n)
+// 	}
+// }
