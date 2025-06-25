@@ -638,7 +638,6 @@ func align(x, y *Dnum) bool {
 		*x, *y = *y, *x // swap
 	}
 	yshift := ilog10(y.coef)
-	// e := int(x.exp - y.exp)
 	e := int(x.exp) - int(y.exp)
 	if e > yshift {
 		return false
