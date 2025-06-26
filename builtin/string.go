@@ -538,6 +538,9 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) string
 		// use Go strings.Replace if literal
 		if p, ok := pat.Literal(); ok {
 			if r, ok := regex.LiteralRep(rep); ok {
+				if p == r { // No change needed if replacement is same as pattern
+					return s
+				}
 				return strings.Replace(s, p, r, count)
 			}
 		}
@@ -547,33 +550,45 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) string
 	nreps := 0
 	var buf strings.Builder
 	for cap := range pat.All(s) {
-		if buf.Cap() == 0 {
-			buf.Grow(len(s)) // ???
-		}
-		CheckStringSize("Replace", buf.Len())
 		pos, end := cap[0], cap[1]
-		buf.WriteString(s[from:pos])
+
+		// Get the replacement text
+		var r string
 		if reparg == nil {
-			t := regex.Replacement(s, rep, cap)
-			buf.WriteString(t)
+			r = regex.Replacement(s, rep, cap)
 		} else {
-			r := s[pos:end]
+			r = s[pos:end]
 			v := th.Call(reparg, SuStr1(r))
 			if v != nil {
 				r = AsStr(v)
 			}
+		}
+
+		if from == 0 { // no changes to original string yet
+			if r != s[pos:end] {
+				// initialize buffer only when we know we need to make changes
+				buf.Grow(len(s)) // ???
+				buf.WriteString(s[from:pos])
+				from = int(end)
+				buf.WriteString(r)
+			}
+		} else {
+			// if we've already started making changes, continue appending
+			buf.WriteString(s[from:pos])
+			from = int(end)
 			buf.WriteString(r)
 		}
-		from = int(end)
+
 		nreps++
 		if nreps >= count {
 			break
 		}
 	}
-	if nreps == 0 {
-		// avoid copy if no replacements
-		return s
+
+	if from == 0 {
+		return s // no changes
 	}
+
 	if from < len(s) {
 		buf.WriteString(s[from:])
 	}
