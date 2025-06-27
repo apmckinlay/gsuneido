@@ -4,12 +4,20 @@
 package core
 
 import (
+	"sync"
+
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	op "github.com/apmckinlay/gsuneido/core/opcodes"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
 var Interrupt func() bool // injected
+
+var (
+	opSequences = make(map[[3]op.Opcode]int64)
+	opSeqMutex  sync.Mutex
+	opSeqCount  int64
+)
 
 const opInterval = 4001 // ???
 var opCount int = opInterval
@@ -102,7 +110,7 @@ func (th *Thread) interp() (ret Value) {
 	code := fr.fn.Code
 	super := 0
 	catchPat := ""
-	var oc op.Opcode
+	var prevPrevOc, prevOc, oc op.Opcode
 
 	fetchUint8 := func() int {
 		fr.ip++
@@ -185,8 +193,20 @@ loop:
 				}
 			}
 		}
+		prevPrevOc = prevOc // shift opcodes
+		prevOc = oc
 		oc = op.Opcode(code[fr.ip])
 		fr.ip++
+
+		// Track three-operation sequence (skip for first two opcodes)
+		if prevPrevOc != 0 && prevOc != 0 {
+			key := [3]op.Opcode{prevPrevOc, prevOc, oc}
+			opSeqMutex.Lock()
+			opSequences[key]++
+			opSeqCount++
+			opSeqMutex.Unlock()
+		}
+
 		switch oc {
 		case op.Pop:
 			th.Pop()
