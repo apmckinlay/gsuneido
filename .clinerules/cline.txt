@@ -1,0 +1,2 @@
+Use "make test" to run all the Go tests
+Use "make port" to make the command line version gsport.exe
