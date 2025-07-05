@@ -134,6 +134,15 @@ func (d *dasm) next() *SuFunc {
 		d.i += 2
 		return int(uint16(d.fn.Code[d.i-2])<<8 + uint16(d.fn.Code[d.i-1]))
 	}
+	formatArgSpec := func(ai uint8) string {
+		result := " "
+		if int(ai) < len(StdArgSpecs) {
+			result += StdArgSpecs[ai].String()[7:]
+		} else {
+			result += d.fn.ArgSpecs[int(ai)-len(StdArgSpecs)].String()[7:]
+		}
+		return result
+	}
 
 	ip := d.i
 	oc := op.Opcode(d.fn.Code[ip])
@@ -154,6 +163,20 @@ func (d *dasm) next() *SuFunc {
 		f := d.fn.Values[fetchUint8()].(*SuFunc)
 		nestedfn = f
 	case op.Load, op.Store, op.Dyload:
+		idx := fetchUint8()
+		s += " " + d.fn.Names[idx]
+	case op.LoadValue:
+		localIdx := fetchUint8()
+		valueIdx := fetchUint8()
+		s += " " + d.fn.Names[localIdx] + fmt.Sprintf(" %v", d.fn.Values[valueIdx])
+	case op.LoadLoad:
+		idx1 := fetchUint8()
+		idx2 := fetchUint8()
+		s += " " + d.fn.Names[idx1] + " " + d.fn.Names[idx2]
+	case op.ValueGet, op.ThisValue, op.GetValue:
+		valueIdx := fetchUint8()
+		s += fmt.Sprintf(" %v", d.fn.Values[valueIdx])
+	case op.StorePop, op.ThisLoad, op.PopLoad:
 		idx := fetchUint8()
 		s += " " + d.fn.Names[idx]
 	case op.LoadStore:
@@ -194,15 +217,18 @@ func (d *dasm) next() *SuFunc {
 		j := fetchInt16()
 		v := d.fn.Values[fetchUint8()]
 		s += fmt.Sprintf(" %d %v", d.i+j-1, v)
-	case op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk,
-		op.CallMethDiscard, op.CallMethNoNil, op.CallMethNilOk:
-		ai := int(fetchUint8())
-		s += " "
-		if ai < len(StdArgSpecs) {
-			s += StdArgSpecs[ai].String()[7:]
-		} else {
-			s += d.fn.ArgSpecs[ai-len(StdArgSpecs)].String()[7:]
-		}
+	case op.GlobalCallFuncNoNil:
+		gn := fetchUint16()
+		s += " " + Global.Name(gn)
+		fallthrough
+	case op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk:
+		s += formatArgSpec(fetchUint8())
+	case op.ValueCallMethNoNil:
+		valueIdx := fetchUint8()
+		s += fmt.Sprintf(" %v", d.fn.Values[valueIdx])
+		fallthrough
+	case op.CallMethDiscard, op.CallMethNoNil, op.CallMethNilOk:
+		s += formatArgSpec(fetchUint8())
 	case op.InRange:
 		orgTok := tokens.Token(fetchUint8())
 		org := d.fn.Values[fetchUint8()]
@@ -228,13 +254,15 @@ func DisasmRaw(code string, fn func(i int)) {
 		case op.Value, op.Closure, op.Load, op.Store, op.Dyload,
 			op.GetPut, op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk,
 			op.CallMethDiscard, op.CallMethNoNil, op.CallMethNilOk,
-			op.ReturnMulti, op.PushReturn:
+			op.ReturnMulti, op.PushReturn, op.ValueGet, op.ThisValue, op.GetValue,
+			op.StorePop, op.ThisLoad, op.PopLoad:
 			i++
 		case op.Int, op.LoadStore, op.Global, op.Super,
 			op.Jump, op.JumpTrue, op.JumpFalse, op.JumpIs, op.JumpIsnt,
-			op.And, op.Or, op.QMark, op.In, op.Catch:
+			op.And, op.Or, op.QMark, op.In, op.Catch, op.LoadValue, op.LoadLoad,
+			op.ValueCallMethNoNil:
 			i += 2
-		case op.ForIn, op.Try:
+		case op.ForIn, op.Try, op.GlobalCallFuncNoNil:
 			i += 3
 		case op.ForIn2:
 			i += 4

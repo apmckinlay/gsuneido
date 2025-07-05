@@ -72,16 +72,13 @@ func TestDisasm(t *testing.T) {
 		}`,
 		`20: a = x
 			    0: Load x
-			    2: Store a
-			    4: Pop
+			    2: StorePop a
 	    28: b = y
-			    5: Load y
-			    7: Store b
-			    9: Pop
+			    4: Load y
+			    6: StorePop b
 	    36: return a + b
-			   10: Load a
-			   12: Load b
-			   14: Add`)
+			    8: LoadLoad a b
+			   11: Add`)
 
 	test(`function (x) {
 		if x
@@ -116,11 +113,10 @@ func TestDisasm(t *testing.T) {
 	    24: return x
 			    4: Load x
 			    6: Return
-			    7: Catch 16
+			    7: Catch 15
 	    35: catch(e)
-			   10: Store e
-			   12: Pop
+			   10: StorePop e
 	    47: return e
-			   13: Load e
-			   15: Return`)
+			   12: Load e
+			   14: Return`)
 }

@@ -248,4 +248,27 @@ const (
 	BlockReturn
 	// BlockReturnNil pushes nil and then does BlockReturn
 	BlockReturnNil
+	
+	// combination op codes -----------------------------------------
+
+	// LoadValue <uint8> <uint8>
+	LoadValue
+	// ValueCallMethNoNil <uint8> <uint8>
+	ValueCallMethNoNil
+	// ValueGet <uint8>
+	ValueGet
+	// LoadLoad <uint8> <uint8>
+	LoadLoad
+	// ThisValue <uint8>
+	ThisValue
+	// StorePop <uint8>
+	StorePop
+	// ThisLoad <uint8>
+	ThisLoad
+	// GetValue <uint8>
+	GetValue
+	// PopLoad <uint8>
+	PopLoad
+	// GlobalCallFuncNoNil <uint16> <uint8>
+	GlobalCallFuncNoNil
 )

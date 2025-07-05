@@ -38,45 +38,45 @@ func TestCodegen(t *testing.T) {
 	test("this", "This")
 
 	test("-a", "Load a, UnaryMinus")
-	test("a + b", "Load a, Load b, Add")
-	test("a - b", "Load a, Load b, Sub")
-	test("a + b + c", "Load a, Load b, Add, Load c, Add")
-	test("a + b - c", "Load a, Load b, Add, Load c, Sub")
-	test("a - b - c", "Load a, Load b, Sub, Load c, Sub")
+	test("a + b", "LoadLoad a b, Add")
+	test("a - b", "LoadLoad a b, Sub")
+	test("a + b + c", "LoadLoad a b, Add, Load c, Add")
+	test("a + b - c", "LoadLoad a b, Add, Load c, Sub")
+	test("a - b - c", "LoadLoad a b, Sub, Load c, Sub")
 
-	test("a * b", "Load a, Load b, Mul")
-	test("a / b", "Load a, Load b, Div")
-	test("a * b * c", "Load a, Load b, Mul, Load c, Mul")
-	test("a * b / c", "Load a, Load b, Mul, Load c, Div")
-	test("a / b / c", "Load a, Load b, Load c, Mul, Div")
-	test("a * b / c / d", "Load a, Load b, Mul, Load c, Load d, Mul, Div")
+	test("a * b", "LoadLoad a b, Mul")
+	test("a / b", "LoadLoad a b, Div")
+	test("a * b * c", "LoadLoad a b, Mul, Load c, Mul")
+	test("a * b / c", "LoadLoad a b, Mul, Load c, Div")
+	test("a / b / c", "LoadLoad a b, Load c, Mul, Div")
+	test("a * b / c / d", "LoadLoad a b, Mul, LoadLoad c d, Mul, Div")
 	test("1 / a", "One, Load a, Div")
 
-	test("a % b", "Load a, Load b, Mod")
-	test("a % b % c", "Load a, Load b, Mod, Load c, Mod")
+	test("a % b", "LoadLoad a b, Mod")
+	test("a % b % c", "LoadLoad a b, Mod, Load c, Mod")
 
-	test("a | b | c", "Load a, Load b, BitOr, Load c, BitOr")
+	test("a | b | c", "LoadLoad a b, BitOr, Load c, BitOr")
 
-	test("a is b", "Load a, Load b, Is")
+	test("a is b", "LoadLoad a b, Is")
 	test("a = b", "Load b, Store a")
 	test("a,b = f()",
-		"Load f, CallFuncNilOk (), PushReturn 2, Store a, Pop, Store b, Pop")
+		"Load f, CallFuncNilOk (), PushReturn 2, StorePop a, StorePop b")
 	test("_dyn = 123", "Int 123, Store _dyn")
 	test("a = b = c", "Load c, Store b, Store a")
-	test("a = b; not a", "Load b, Store a, Pop, Load a, Not")
+	test("a = b; not a", "Load b, StorePop a, Load a, Not")
 	test("n += 5", "Int 5, LoadStore n AddEq")
 	test("n /= 5", "Int 5, LoadStore n DivEq")
-	test("s =~ '^a'", "Load s, Value regex, Match")
+	test("s =~ '^a'", "LoadValue s regex, Match")
 	test("++n", "One, LoadStore n AddEq")
 	test("n--", "One, LoadStore n SubEq retOrig")
-	test("a.b", "Load a, Value 'b', Get")
+	test("a.b", "LoadValue a 'b', Get")
 	test("a[2]", "Load a, Int 2, Get")
-	test("a.b = 123", "Load a, Value 'b', Int 123, Put")
+	test("a.b = 123", "LoadValue a 'b', Int 123, Put")
 	test("a[2] = false", "Load a, Int 2, False, Put")
-	test("a.b += 5", "Load a, Value 'b', Int 5, GetPut AddEq")
-	test("a[b] -= 5", "Load a, Load b, Int 5, GetPut SubEq")
-	test("++a.b", "Load a, Value 'b', One, GetPut AddEq")
-	test("a[b]--", "Load a, Load b, One, GetPut SubEq retOrig")
+	test("a.b += 5", "LoadValue a 'b', Int 5, GetPut AddEq")
+	test("a[b] -= 5", "LoadLoad a b, Int 5, GetPut SubEq")
+	test("++a.b", "LoadValue a 'b', One, GetPut AddEq")
+	test("a[b]--", "LoadLoad a b, One, GetPut SubEq retOrig")
 	test("a[..]", "Load a, Zero, MaxInt, RangeTo")
 	test("a[..3]", "Load a, Zero, Int 3, RangeTo")
 	test("a[2..]", "Load a, Int 2, MaxInt, RangeTo")
@@ -86,6 +86,12 @@ func TestCodegen(t *testing.T) {
 	test("a[2::]", "Load a, Int 2, MaxInt, RangeLen")
 	test("a[2::3]", "Load a, Int 2, Int 3, RangeLen")
 	test("0 < a and a < 5", "Load a, InRange Gt 0 Lt 5")
+	test("A['b']", "Global A, ValueGet 'b'")
+	test("this[a]", "ThisLoad a, Get")
+	test("f(a.b, 'c')",
+		"LoadValue a 'b', GetValue 'c', Load f, CallFuncNilOk (?, ?)")
+	test("a; b", "Load a, PopLoad b")
+	test("a = F()", "GlobalCallFuncNoNil F (), Store a")
 
 	test("return", "")
 	test("return 123", "Int 123")
@@ -101,14 +107,14 @@ func TestCodegen(t *testing.T) {
 	test("(f())", "Load f, CallFuncNilOk ()")
 	test("f(); f()", "Load f, CallFuncDiscard (), Load f, CallFuncNilOk ()")
 	test("F()", "Global F, CallFuncNilOk ()")
-	test("f(a, b)", "Load a, Load b, Load f, CallFuncNilOk (?, ?)")
+	test("f(a, b)", "LoadLoad a b, Load f, CallFuncNilOk (?, ?)")
 	test("f(1,2,3,4)", "One, Int 2, Int 3, Int 4, Load f, CallFuncNilOk (?, ?, ?, ?)")
 	test("f(1,2,3,4,5)", "One, Int 2, Int 3, Int 4, Int 5, Load f, CallFuncNilOk (?, ?, ?, ?, ?)")
-	test("f(a, b, c:, d: 0)", "Load a, Load b, True, Zero, Load f, CallFuncNilOk (?, ?, c:, d:)")
-	test("f(@args)", "Load args, Load f, CallFuncNilOk (@)")
-	test("f(@+1args)", "Load args, Load f, CallFuncNilOk (@+1)")
-	test("f(a: a)", "Load a, Load f, CallFuncNilOk (a:)")
-	test("f(:a)", "Load a, Load f, CallFuncNilOk (a:)")
+	test("f(a, b, c:, d: 0)", "LoadLoad a b, True, Zero, Load f, CallFuncNilOk (?, ?, c:, d:)")
+	test("f(@args)", "LoadLoad args f, CallFuncNilOk (@)")
+	test("f(@+1args)", "LoadLoad args f, CallFuncNilOk (@+1)")
+	test("f(a: a)", "LoadLoad a f, CallFuncNilOk (a:)")
+	test("f(:a)", "LoadLoad a f, CallFuncNilOk (a:)")
 	test("f(12, 34: 56, false:)",
 		"Int 12, Int 56, True, Load f, CallFuncNilOk (?, 34:, false:)")
 	test("f(1,a:2); f(3,a:4)",
@@ -117,23 +123,23 @@ func TestCodegen(t *testing.T) {
 	test("[a: 2, :b]", "Int 2, Load b, Global Record, CallFuncNilOk (a:, b:)")
 	test("[1, a: 2, :b]", "One, Int 2, Load b, Global Object, CallFuncNilOk (?, a:, b:)")
 
-	test("char.Size()", "Load char, Value 'Size', CallMethNilOk ()")
+	test("char.Size()", "LoadValue char 'Size', CallMethNilOk ()")
 	test("a.f(123)", "Load a, Int 123, Value 'f', CallMethNilOk (?)")
 	test("a.f(1,2,3)", "Load a, One, Int 2, Int 3, Value 'f', CallMethNilOk (?, ?, ?)")
 	test("a.f(1,2,3,4)", "Load a, One, Int 2, Int 3, Int 4, Value 'f', CallMethNilOk (?, ?, ?, ?)")
 	test("a.f(x:)", "Load a, True, Value 'f', CallMethNilOk (x:)")
 	test("a[b](123)", "Load a, Int 123, Load b, CallMethNilOk (?)")
-	test("a[b $ c](123)", "Load a, Int 123, Load b, Load c, Cat, CallMethNilOk (?)")
+	test("a[b $ c](123)", "Load a, Int 123, LoadLoad b c, Cat, CallMethNilOk (?)")
 	test("a().Add(123)", "Load a, CallFuncNoNil (), Int 123, Value 'Add', CallMethNilOk (?)")
 	test("a().Add(123).Size()",
-		"Load a, CallFuncNoNil (), Int 123, Value 'Add', CallMethNoNil (?), Value 'Size', CallMethNilOk ()")
+		"Load a, CallFuncNoNil (), Int 123, ValueCallMethNoNil 'Add' (?), Value 'Size', CallMethNilOk ()")
 	test("a.b(1).c(2)",
-		"Load a, One, Value 'b', CallMethNoNil (?), Int 2, Value 'c', CallMethNilOk (?)")
+		"Load a, One, ValueCallMethNoNil 'b' (?), Int 2, Value 'c', CallMethNilOk (?)")
 
 	test("function () { }", "Value /* function */")
 
-	test("new c", "Load c, Value '*new*', CallMethNilOk ()")
-	test("new c()", "Load c, Value '*new*', CallMethNilOk ()")
+	test("new c", "LoadValue c '*new*', CallMethNilOk ()")
+	test("new c()", "LoadValue c '*new*', CallMethNilOk ()")
 	test("new c(1)", "Load c, One, Value '*new*', CallMethNilOk (?)")
 
 	xtest := func(src, expected string) {
@@ -159,8 +165,8 @@ func TestCodegenSuper(t *testing.T) {
 		// 	t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
 		// }
 	}
-	test("New(){}", "This, Value 'New', Super Foo, CallMethNilOk ()")
-	test("New(){ F() }", "This, Value 'New', Super Foo, CallMethDiscard (), "+
+	test("New(){}", "ThisValue 'New', Super Foo, CallMethNilOk ()")
+	test("New(){ F() }", "ThisValue 'New', Super Foo, CallMethDiscard (), "+
 		"Global F, CallFuncNilOk ()")
 
 	// Super(...) => Super.New(...)
@@ -218,11 +224,10 @@ func TestControl(t *testing.T) {
 		0: Try 12 'y'
         4: Global F
         7: CallFuncDiscard ()
-        9: Catch 20
-        12: Store x
-        14: Pop
-        15: Global G
-        18: CallFuncDiscard ()`)
+        9: Catch 19
+        12: StorePop x
+        14: Global G
+        17: CallFuncDiscard ()`)
 
 	test("a and b", `
 		0: Load a
@@ -242,13 +247,11 @@ func TestControl(t *testing.T) {
 		10: Load c
 		12: Bool`)
 	test("a is b or c < d", `
-		0: Load a
-        2: Load b
-        4: Is
-        5: Or 13
-        8: Load c
-        10: Load d
-        12: Lt`) // no Bool needed
+		0: LoadLoad a b
+        3: Is
+        4: Or 11
+        7: LoadLoad c d
+        10: Lt`) // no Bool needed
 
 	test("a ? b : c", `
 		0: Load a
@@ -379,15 +382,14 @@ func TestControl(t *testing.T) {
         9: JumpIsnt 18
         12: Load b
         14: Pop
-        15: Jump 34
+        15: Jump 33
         18: Int 3
         21: JumpIsnt 30
         24: Load c
         26: Pop
-        27: Jump 34
-        30: Pop
-        31: Load d
-        33: Pop`)
+        27: Jump 33
+        30: PopLoad d
+        32: Pop`)
 	test("switch a { case 1,2,3: b default: }", `
 		0: Load a
         2: One
@@ -453,36 +455,34 @@ func TestControl(t *testing.T) {
 
 	test("for (i = 0; i < 9; ++i) body", `
 		0: Zero
-		1: Store i
-		3: Pop
-		4: Jump 15
-		7: Load body
-		9: Pop
-		10: One
-		11: LoadStore i AddEq
-		14: Pop
-		15: Load i
-		17: Int 9
-		20: Lt
-		21: JumpTrue 7`)
+		1: StorePop i
+		3: Jump 14
+		6: Load body
+		8: Pop
+		9: One
+		10: LoadStore i AddEq
+		13: Pop
+		14: Load i
+		16: Int 9
+		19: Lt
+		20: JumpTrue 6`)
 
 	test("for (i = 0; i < 9; ++i) { a; continue; b }", `
 		0: Zero
-		1: Store i
-		3: Pop
-		4: Jump 21
-		7: Load a
-		9: Pop
-		10: Jump 16
-		13: Load b
-		15: Pop
-		16: One
-		17: LoadStore i AddEq
-		20: Pop
-		21: Load i
-		23: Int 9
-		26: Lt
-		27: JumpTrue 7`)
+		1: StorePop i
+		3: Jump 20
+		6: Load a
+		8: Pop
+		9: Jump 15
+		12: Load b
+		14: Pop
+		15: One
+		16: LoadStore i AddEq
+		19: Pop
+		20: Load i
+		22: Int 9
+		25: Lt
+		26: JumpTrue 6`)
 
 	test(`for (x in y) { a; break; b; continue; c }`, `
 		0: Load y
@@ -517,13 +517,12 @@ func TestControl(t *testing.T) {
 	test("for m,v in ob \n Print(m, v)", `
 		0: Load ob
 		2: Iter2
-		3: Jump 15
-		6: Load m
-		8: Load v
-		10: Global Print
-		13: CallFuncDiscard (?, ?)
-		15: ForIn2 m v 6
-		20: Pop`)
+		3: Jump 14
+		6: LoadLoad m v
+		9: Global Print
+		12: CallFuncDiscard (?, ?)
+		14: ForIn2 m v 6
+		19: Pop`)
 
 	test(`for ..10 { a; break; b; continue; c }`, `
 		0: Int 10
@@ -571,7 +570,7 @@ func TestBlock(t *testing.T) {
 
 	assert(block.ParamSpec.Params()).Is("(a)")
 
-	assert(disasm(fn)).Is("Closure, {Load a, Load x, Add, Store b}")
+	assert(disasm(fn)).Is("Closure, {LoadLoad a x, Add, Store b}")
 }
 
 // parseFunction parses a function and returns an AST for it

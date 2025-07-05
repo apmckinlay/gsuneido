@@ -41,6 +41,28 @@ type cgen struct {
 	firstStatement bool
 	cover          bool
 	coverEmit      bool
+	prevOp         op.Opcode
+}
+
+type opcodeCombo struct {
+	firstArgs int // Number of argument bytes for the first opcode
+	first     op.Opcode
+	second    op.Opcode
+	combined  op.Opcode
+}
+
+var opcodeCombinations = []opcodeCombo{
+	// in order of frequency, highest first
+	{1, op.Load, op.Value, op.LoadValue},
+	{1, op.Value, op.CallMethNoNil, op.ValueCallMethNoNil},
+	{1, op.Value, op.Get, op.ValueGet},
+	{1, op.Load, op.Load, op.LoadLoad},
+	{0, op.This, op.Value, op.ThisValue},
+	{1, op.Store, op.Pop, op.StorePop},
+	{0, op.This, op.Load, op.ThisLoad},
+	{0, op.Get, op.Value, op.GetValue},
+	{0, op.Pop, op.Load, op.PopLoad},
+	{2, op.Global, op.CallFuncNoNil, op.GlobalCallFuncNoNil},
 }
 
 type calltype int
@@ -1069,11 +1091,28 @@ func (cg *cgen) block(b *ast.Block) {
 // emit is used to append an op code
 func (cg *cgen) emit(oc op.Opcode, b ...byte) {
 	cg.emitCover()
+
+	if op.Nop < cg.prevOp && cg.prevOp <= op.This {
+		for _, combo := range opcodeCombinations {
+			if oc == combo.second && cg.prevOp == combo.first {
+				// Replace the first opcode with the combined opcode
+				opcodePos := len(cg.code) - 1 - combo.firstArgs
+				cg.code[opcodePos] = byte(combo.combined)
+				// Append the second opcode's operand(s)
+				cg.code = append(cg.code, b...)
+				cg.prevOp = op.Nop
+				return
+			}
+		}
+	}
+	cg.prevOp = oc
+
 	cg.code = append(append(cg.code, byte(oc)), b...)
 }
 
 func (cg *cgen) emitCover() {
 	if cg.coverEmit {
+		cg.prevOp = op.Nop
 		cg.code = append(cg.code, byte(op.Cover))
 		cg.coverEmit = false
 	}
@@ -1110,10 +1149,12 @@ func (cg *cgen) emitBwdJump(op op.Opcode, label int) {
 }
 
 func (cg *cgen) label() int {
+	cg.prevOp = op.Nop
 	return len(cg.code)
 }
 
 func (cg *cgen) placeLabel(i int) {
+	cg.prevOp = op.Nop
 	var adr, next int
 	for ; i >= 0; i = next {
 		next = int(cg.target(i))
