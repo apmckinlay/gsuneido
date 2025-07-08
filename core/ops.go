@@ -17,6 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
@@ -235,6 +236,37 @@ func catToStr(th *Thread, v Value) string {
 		return d.ToString(th)
 	}
 	return AsStr(v)
+}
+
+func OpCatN(th *Thread, count int) Value {
+	values := th.stack[th.sp-count : th.sp]
+	totalLen := 0
+	var firstExcept *SuExcept
+	for i, v := range values {
+		if firstExcept == nil {
+			if xe, ok := v.(*SuExcept); ok {
+				firstExcept = xe
+			}
+		}
+		if ss, ok := v.(SuStr); ok {
+			totalLen += len(ss)
+		} else {
+			ss = SuStr(catToStr(th, v))
+			values[i] = ss
+			totalLen += len(ss)
+		}
+	}
+	result := make([]byte, totalLen)
+	pos := 0
+	for _, v := range values {
+		pos += copy(result[pos:], string(v.(SuStr)))
+	}
+	th.sp -= count // pop
+	resultStr := SuStr(hacks.BStoS(result))
+	if firstExcept != nil {
+		return &SuExcept{SuStr: resultStr, Callstack: firstExcept.Callstack}
+	}
+	return resultStr
 }
 
 func OpMatch(th *Thread, x Value, y Value) SuBool {

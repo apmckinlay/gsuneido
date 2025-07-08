@@ -196,9 +196,9 @@ func BenchmarkLoadValue(b *testing.B) {
 	fn := &SuFunc{
 		Code: string(code),
 		ParamSpec: ParamSpec{
-			Values: []Value{SuStr("test")}, // Value at index 0
-			Names:  []string{"x"},          // Local var name at index 0
-			Nparams: 1,                     // Treat as parameter so it gets initialized
+			Values:  []Value{SuStr("test")}, // Value at index 0
+			Names:   []string{"x"},          // Local var name at index 0
+			Nparams: 1,                      // Treat as parameter so it gets initialized
 		},
 		Nlocals: 1,
 	}
@@ -213,16 +213,16 @@ func BenchmarkLoadValue(b *testing.B) {
 func BenchmarkLoadValueUnoptimized(b *testing.B) {
 	// Separate Load + Value ops - what LoadValue optimizes
 	code := []byte{
-		byte(op.Load), 0,  // Load local var at index 0
+		byte(op.Load), 0, // Load local var at index 0
 		byte(op.Value), 0, // Value constant at index 0
 		byte(op.Return),
 	}
 	fn := &SuFunc{
 		Code: string(code),
 		ParamSpec: ParamSpec{
-			Values: []Value{SuStr("test")}, // Value at index 0
-			Names:  []string{"x"},          // Local var name at index 0
-			Nparams: 1,                     // Treat as parameter so it gets initialized
+			Values:  []Value{SuStr("test")}, // Value at index 0
+			Names:   []string{"x"},          // Local var name at index 0
+			Nparams: 1,                      // Treat as parameter so it gets initialized
 		},
 		Nlocals: 1,
 	}
@@ -231,5 +231,56 @@ func BenchmarkLoadValueUnoptimized(b *testing.B) {
 	for b.Loop() {
 		th.invoke(fn, nil)
 		th.sp = 1 // Reset to just the parameter
+	}
+}
+
+func BenchmarkCatChained(b *testing.B) {
+	code := []byte{
+		byte(op.Value), 0,
+		byte(op.Value), 1,
+		byte(op.Cat),
+		byte(op.Value), 2,
+		byte(op.Cat),
+		byte(op.Return),
+	}
+	fn := &SuFunc{
+		Code: string(code),
+		ParamSpec: ParamSpec{
+			Values: []Value{
+				SuStr("hello"),
+				SuStr(" "),
+				SuStr("world"),
+			},
+		},
+	}
+	var th Thread
+	for b.Loop() {
+		th.invoke(fn, nil)
+		th.sp = 0
+	}
+}
+
+func BenchmarkCatN(b *testing.B) {
+	code := []byte{
+		byte(op.Value), 0,
+		byte(op.Value), 1,
+		byte(op.Value), 2,
+		byte(op.CatN), 3,
+		byte(op.Return),
+	}
+	fn := &SuFunc{
+		Code: string(code),
+		ParamSpec: ParamSpec{
+			Values: []Value{
+				SuStr("hello"),
+				SuStr(" "),
+				SuStr("world"),
+			},
+		},
+	}
+	var th Thread
+	for b.Loop() {
+		th.invoke(fn, nil)
+		th.sp = 0
 	}
 }

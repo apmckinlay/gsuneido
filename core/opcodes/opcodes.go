@@ -96,6 +96,8 @@ const (
 	Sub
 	// Cat replaces the top two values with x $ y (strings)
 	Cat
+	// CatN <uint8> replaces the top N values with their concatenation
+	CatN
 	// Mul replaces the top two values with x * y
 	Mul
 	// Div replaces the top two values with x / y

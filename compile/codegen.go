@@ -804,7 +804,12 @@ func (cg *cgen) nary(node *ast.Nary) {
 		cg.andorExpr(node)
 	} else if node.Tok == tok.Mul {
 		cg.muldivExpr(node)
-	} else { // Add, Sub, Cat, BitOr, BitAnd, BitXor
+	} else if node.Tok == tok.Cat && len(node.Exprs) >= 3 {
+		for _, e := range node.Exprs {
+			cg.expr(e)
+		}
+		cg.emitUint8(op.CatN, len(node.Exprs))
+	} else { // Add, Sub, Cat (binary), BitOr, BitAnd, BitXor
 		o := tok2op[node.Tok]
 		cg.expr(node.Exprs[0])
 		for _, e := range node.Exprs[1:] {

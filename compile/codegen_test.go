@@ -57,6 +57,14 @@ func TestCodegen(t *testing.T) {
 
 	test("a | b | c", "LoadLoad a b, BitOr, Load c, BitOr")
 
+	test("a $ b", "LoadLoad a b, Cat")
+	test("a $ b $ c", "LoadLoad a b, Load c, CatN 3")
+	test("a $ b $ c $ d", "LoadLoad a b, LoadLoad c d, CatN 4")
+	test("a $ b $ c $ d $ e", "LoadLoad a b, LoadLoad c d, Load e, CatN 5")
+	test("'hello' $ ' ' $ 'world'", "Value 'hello world'") // constant folding
+	test("a $ 'sep' $ b $ 'sep' $ c", "LoadValue a 'sep', LoadValue b 'sep', Load c, CatN 5")
+	test("x $ y $ z $ w $ v $ u", "LoadLoad x y, LoadLoad z w, LoadLoad v u, CatN 6")
+
 	test("a is b", "LoadLoad a b, Is")
 	test("a = b", "Load b, Store a")
 	test("a,b = f()",

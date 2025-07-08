@@ -69,3 +69,21 @@ func join(this Value, arg Value) Value {
 	}
 	return SuStr(sb.String())
 }
+
+func TestOpCatN(t *testing.T) {
+	test := func(values ...string) {
+		t.Helper()
+		th := &Thread{}
+		expected := ""
+		for _, v := range values {
+			th.Push(SuStr(v))
+			expected += v
+		}
+		result := OpCatN(th, len(values))
+		assert.T(t).This(result).Is(SuStr(expected))
+	}
+	test("hello", " ", "world")
+	test("a", "b", "c", "d")
+	test("x", "", "y", "", "z")
+	test("a", "b", "c", "d", "e", "f")
+}
