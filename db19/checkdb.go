@@ -252,7 +252,7 @@ func (tcs *tableCheckers) sendWork() {
 		select {
 		case tcs.work <- ts.Table:
 		case <-tcs.stop: // stop is closed if a worker gets an error
-			break
+			return
 		}
 	}
 }
