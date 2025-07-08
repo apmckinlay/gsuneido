@@ -4,8 +4,10 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 	"sync/atomic"
 
@@ -14,6 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/list"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -760,7 +763,7 @@ func (r *SuRecord) catchRule(th *Thread, rule Value, key string) Value {
 		th.rules.pop()
 		if e := recover(); e != nil {
 			log.Println("ERROR: in rule for", key, e)
-			WrapPanic(e, "rule for "+key)
+			WrapPanic(th, e, "rule for "+key)
 		}
 	}()
 	r.Unlock() // can't hold lock while calling rule
@@ -768,12 +771,17 @@ func (r *SuRecord) catchRule(th *Thread, rule Value, key string) Value {
 	return th.CallThis(rule, r)
 }
 
-func WrapPanic(e any, suffix string) {
+func WrapPanic(th *Thread, e any, suffix string) {
 	switch e := e.(type) {
 	case *SuExcept:
 		s := string(e.SuStr) + " (" + suffix + ")"
 		panic(&SuExcept{SuStr: SuStr(s), Callstack: e.Callstack})
 	case error:
+		var perr runtime.Error
+		if errors.As(e, &perr) {
+			dbg.PrintStack()
+			th.PrintStack()
+		}
 		panic(fmt.Errorf("%w (%s)", e, suffix))
 	case Value:
 		panic(ToStrOrString(e) + " (" + suffix + ")")

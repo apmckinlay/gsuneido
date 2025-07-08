@@ -67,7 +67,7 @@ func (t *triggers) call2(th *Thread, tran *SuTran, table string,
 	}
 	defer func() {
 		if e := recover(); e != nil {
-			WrapPanic(e, name)
+			WrapPanic(th, e, name)
 		}
 	}()
 	th.Call(fn, tran, oldrec, newrec)
