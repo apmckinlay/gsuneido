@@ -452,12 +452,13 @@ func ParseDate(s string, order string) SuDate {
 			c = get(s, si)
 			if size == 6 || size == 8 {
 				dig := digits{next, 0}
-				if size == 6 {
+				switch size {
+				case 6:
 					// date with no separators with yy
 					tok(dig.get(2))
 					tok(dig.get(2))
 					tok(dig.get(2))
-				} else if size == 8 {
+				case 8:
 					// date with no separators with yyyy
 					for i := range 3 {
 						if syspat[i] == 'y' {
@@ -530,13 +531,14 @@ func ParseDate(s string, order string) SuDate {
 		var t int
 		for t = 0; t < len(p) && t < ntokens; t++ {
 			var part minmax
-			if p[t] == 'y' {
+			switch p[t] {
+			case 'y':
 				part = mmYear
-			} else if p[t] == 'm' {
+			case 'm':
 				part = mmMonth
-			} else if p[t] == 'd' {
+			case 'd':
 				part = mmDay
-			} else {
+			default:
 				assert.ShouldNotReachHere()
 			}
 			if (typ[t] != mmUnknown && typ[t] != part) ||
@@ -557,13 +559,14 @@ func ParseDate(s string, order string) SuDate {
 	if pat < len(datePatterns) {
 		// use match
 		for t := range len(p) {
-			if p[t] == 'y' {
+			switch p[t] {
+			case 'y':
 				year = tokens[t]
-			} else if p[t] == 'm' {
+			case 'm':
 				month = tokens[t]
-			} else if p[t] == 'd' {
+			case 'd':
 				day = tokens[t]
-			} else {
+			default:
 				assert.ShouldNotReachHere()
 			}
 		}

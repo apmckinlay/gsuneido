@@ -4,7 +4,6 @@
 package db19
 
 import (
-	"fmt"
 	"log"
 	"time"
 
@@ -216,7 +215,7 @@ func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo
 }
 
 func (ck *CheckCo) Stop() {
-	exit.Progress(fmt.Sprint("  checker stopping "))
+	exit.Progress("  checker stopping")
 	// send nil rather than closing
 	// so other threads don't get "send on closed channel"
 	ck.c <- nil

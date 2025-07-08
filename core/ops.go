@@ -150,9 +150,10 @@ func OpBitNot(x Value) Value {
 }
 
 func OpNot(x Value) Value {
-	if x == True {
+	switch x {
+	case True:
 		return False
-	} else if x == False {
+	case False:
 		return True
 	}
 	panic("not requires boolean")

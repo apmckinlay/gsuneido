@@ -42,7 +42,7 @@ func (m *SuMethod) Call(th *Thread, _ Value, as *ArgSpec) Value {
 // Lookup is used for .Params or .Disasm
 func (m *SuMethod) Lookup(th *Thread, method string) Value {
 	if f := m.fn.Lookup(th, method); f != nil {
-		return &methodForce{SuMethod{fn: f.(Value), this: m.fn}}
+		return &methodForce{SuMethod{fn: f, this: m.fn}}
 	}
 	return nil
 }
