@@ -274,8 +274,15 @@ func (db *Database) Ensure(sch *schema.Schema) {
 	}
 	// buildIndexes is potentially slow (if there's a lot of data)
 	// so we don't want to do it inside RunExclusive/UpdateState
+	db.AddExclusive(sch.Table)
+	defer func() {
+		if e := recover(); e != nil {
+			db.EndExclusive(sch.Table)
+			panic(e)
+		}
+	}()
 	ovs := db.buildIndexes(sch.Table, sch.Columns, newIdxs)
-	db.RunExclusive(sch.Table, func() {
+	db.RunEndExclusive(sch.Table, func() {
 		db.UpdateState(func(state *DbState) {
 			_, meta := state.Meta.Ensure(sch, db.Store) // final run
 			// now meta and table info are copies
