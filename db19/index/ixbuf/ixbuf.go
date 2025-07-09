@@ -276,16 +276,16 @@ func OffString(off uint64) string {
 }
 
 const (
-	add_update    = 0b_00_01 //lint:ignore ST1003 for clarity
-	add_delete    = 0b_00_10 //lint:ignore ST1003 for clarity
-	update_update = 0b_01_01 //lint:ignore ST1003 for clarity
-	update_delete = 0b_01_10 //lint:ignore ST1003 for clarity
-	delete_add    = 0b_10_00 //lint:ignore ST1003 for clarity
+	add_update    = 0b_00_01
+	add_delete    = 0b_00_10
+	update_update = 0b_01_01
+	update_delete = 0b_01_10
+	delete_add    = 0b_10_00
 	// INVALID:
-	// add_add			= 0b00_00
-	// delete_delete	= 0b10_10
-	// delete_update	= 0b10_01
-	// update_add		= 0b01_00
+	delete_delete = 0b10_10
+	delete_update = 0b10_01
+	// add_add    = 0b00_00
+	// update_add = 0b01_00
 )
 
 func Combine(off1, off2 uint64) uint64 {
@@ -301,6 +301,10 @@ func Combine(off1, off2 uint64) uint64 {
 		return off2
 	case delete_add:
 		return off2 | Update
+	case delete_delete:
+		panic("record delete after delete")
+	case delete_update:
+		panic("record update after delete")
 	default:
 		log.Printf("ERROR: ixbuf invalid Combine %b %s %s\n",
 			ops, OffString(off1), OffString(off2))
