@@ -45,6 +45,7 @@ type globals struct {
 	noDef    map[string]struct{} // used by FindName
 	names    []string
 	values   []Value
+	cleared  bool // tracks if UnloadAll has been called with no updates since
 	lock     sync.RWMutex
 }
 
@@ -240,6 +241,7 @@ func (typeGlobal) SetNoDef(name string) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 	g.noDef[name] = struct{}{} // prevent multiple LibLoads
+	g.cleared = false
 }
 
 // Libload requires dependency injection
@@ -327,12 +329,16 @@ func (typeGlobal) unload(name string) {
 func (typeGlobal) UnloadAll() {
 	g.lock.Lock()
 	defer g.lock.Unlock()
+	if g.cleared {
+		return // already cleared, no need to clear again
+	}
 	clear(g.values)
 	clear(g.errors)
 	clear(g.noDef)
 	LibraryOverrides.ClearOriginals()
 	LibsList.Store(nil)
 	intern.Clear()
+	g.cleared = true
 }
 
 // LibsList is used by libload
@@ -342,18 +348,21 @@ func (typeGlobal) SetName(name string, val Value) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 	g.values[Global.num(name)] = val
+	g.cleared = false
 }
 
 func (typeGlobal) Set(gn Gnum, val Value) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 	g.values[gn] = val
+	g.cleared = false
 }
 
 func (typeGlobal) SetErr(gn Gnum, e any) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 	g.errors[gn] = e
+	g.cleared = false
 }
 
 // Overload is used by compile to handle overload inheritance (_Name).
