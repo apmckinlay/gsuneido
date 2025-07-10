@@ -12,7 +12,6 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
-	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -922,9 +921,6 @@ var setTimer = user32.MustFindProc("SetTimer").Addr()
 var _ = builtin(SetTimer, "(hwnd, id, ms, f)")
 
 func SetTimer(th *Thread, args []Value) Value {
-	if options.TimersDisabled {
-		return Zero
-	}
 	if nTimer > warnTimers {
 		if nTimer > maxTimers {
 			logPanic("ERROR: SetTimer: over", maxTimers)
@@ -954,9 +950,6 @@ var killTimer = user32.MustFindProc("KillTimer").Addr()
 var _ = builtin(KillTimer, "(hwnd, id)")
 
 func KillTimer(a, b Value) Value {
-	if options.TimersDisabled {
-		return False
-	}
 	rtn, _, _ := syscall.SyscallN(killTimer,
 		intArg(a),
 		intArg(b))

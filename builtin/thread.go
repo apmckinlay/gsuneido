@@ -9,7 +9,6 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -52,9 +51,6 @@ func (ts *threadList) count() int {
 }
 
 func threadCallClass(th *Thread, args []Value) Value {
-	if options.ThreadDisabled {
-		return nil
-	}
 	fn := args[0]
 	fn.SetConcurrent()
 	t2 := NewThread(th)

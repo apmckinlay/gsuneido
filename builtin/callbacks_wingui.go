@@ -13,7 +13,6 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
-	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -231,10 +230,6 @@ func clearCallback(fn Value) bool {
 			}
 			if cbeq(fn, cb.fn) {
 				if cb.active {
-					if !options.ClearCallbackDisabled {
-						cb.active = false
-						cb.keepTill = clock() + delay
-					}
 					// keep the fn in case it gets called soon after clear
 					// keep the go callback to reuse
 					return true

@@ -461,7 +461,6 @@ func repl() {
 		built += " - client"
 	}
 	prompt(built)
-	showOptions()
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit")
 	r := bufio.NewReader(os.Stdin)
 	for {
@@ -490,18 +489,6 @@ func isTerminal(f *os.File) bool {
 	mode := fm.Mode()
 	return mode&os.ModeDevice == os.ModeDevice &&
 		mode&os.ModeCharDevice == os.ModeCharDevice
-}
-
-func showOptions() {
-	if options.ThreadDisabled {
-		prompt("- Thread disabled")
-	}
-	if options.TimersDisabled {
-		prompt("- Timers disabled")
-	}
-	if options.ClearCallbackDisabled {
-		prompt("- ClearCallback disabled")
-	}
 }
 
 func eval(src string) {

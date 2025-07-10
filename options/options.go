@@ -42,13 +42,6 @@ var (
 // CmdLine is the remaining command line arguments
 var CmdLine string
 
-// debugging options
-const (
-	ThreadDisabled        = false
-	TimersDisabled        = false
-	ClearCallbackDisabled = false
-)
-
 var (
 	AllWarningsThrow = regex.Compile("")
 	NoWarningsThrow  = regex.Compile(`\A\Z`)
