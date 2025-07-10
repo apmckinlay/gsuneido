@@ -42,7 +42,7 @@ func record_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if as.Nargs != 0 {
 		return ob_Delete(th, as, this, args)
 	}
-	trace.Dbms.Println("Record Drop", this)
+	trace.Dbms.Println("Record Delete", this)
 	this.(*SuRecord).DbDelete(th)
 	return nil
 }
