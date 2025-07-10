@@ -93,6 +93,9 @@ func dirEntries(dir string, justfiles, details bool) iter.Seq[Value] {
 					if details {
 						info, err := ent.Info()
 						if err != nil {
+							if errors.Is(err, os.ErrNotExist) {
+								continue
+							}
 							logPanic("ERROR: Dir:", err)
 						}
 						ob := &SuObject{}
