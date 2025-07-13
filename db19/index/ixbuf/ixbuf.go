@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
@@ -67,7 +68,7 @@ func goal(n int32) int {
 
 // Insert adds an element. It mutates and is NOT thread-safe.
 // off can have the update or delete bit set.
-func (ib *ixbuf) Insert(key string, off uint64) {
+func (ib *ixbuf) Insert(key string, off uint64) (oldoff uint64) {
 	ib.modCount++
 	if len(ib.chunks) == 0 {
 		ib.size++
@@ -83,7 +84,7 @@ func (ib *ixbuf) Insert(key string, off uint64) {
 	if i < len(c) && c[i].key == key {
 		// already exists, combine
 		slot := &c[i]
-		slot.off = Combine(slot.off, off) // handles update/delete
+		slot.off, oldoff = Combine(slot.off, off) // handles update/delete
 		if slot.off == 0 {
 			ib.remove(ci, i)
 		}
@@ -115,6 +116,7 @@ func (ib *ixbuf) Insert(key string, off uint64) {
 		copy(ib.chunks[ci+1:], ib.chunks[ci:])
 		ib.chunks[ci] = right
 	}
+	return
 }
 
 func (ib *ixbuf) remove(ci int, i int) {
@@ -166,8 +168,8 @@ func search(c chunk, key string) int {
 }
 
 // Update combines if the key exists, otherwise it adds an update entry
-func (ib *ixbuf) Update(key string, off uint64) {
-	ib.Insert(key, off|Update)
+func (ib *ixbuf) Update(key string, off uint64) uint64 {
+	return ib.Insert(key, off|Update)
 }
 
 // Delete combines if the key exists, otherwise it adds a delete tombstone.
@@ -257,20 +259,22 @@ func (m *merge) merge() *ixbuf {
 const Update = 1 << 62
 const Delete = 1 << 63
 
+const mask = 0xffffffffff
+
 // OffString is for debugging
 func OffString(off uint64) string {
-	s := fmt.Sprintf("%d", off&0xffffffffff)
-	off &^= 0xffffffffff
-	if off&Update != 0 {
-		s = "update " + s
-		off &^= Update
+	s := trace.Number(off & mask)
+	op := off &^ mask
+	if op&Update != 0 {
+		s = "update:" + s
+		op &^= Update
 	}
-	if off&Delete != 0 {
-		s = "delete " + s
-		off &^= Delete
+	if op&Delete != 0 {
+		s = "delete:" + s
+		op &^= Delete
 	}
-	if off != 0 {
-		s += fmt.Sprintf("BAD BITS %x", off>>40)
+	if op != 0 {
+		s += fmt.Sprintf("BAD BITS %x", op>>40)
 	}
 	return s
 }
@@ -288,29 +292,37 @@ const (
 	// update_add = 0b01_00
 )
 
-func Combine(off1, off2 uint64) uint64 {
+func Combine(off1, off2 uint64) (result uint64, oldoff uint64) {
 	ops := off1>>60 | off2>>62
 	switch ops {
 	case add_update:
-		return off2 &^ Update // => add
+		result = off2 & mask // => add
 	case add_delete:
-		return 0 // => should be removed
-	case update_update, update_delete:
+		result = 0 // => should be removed
+	case update_update:
+		result = off2
+		oldoff = off1 & mask
+		// oldoff is so tran.Update can detect update,update of same record
+	case update_delete:
 		// update_delete needs to keep delete (not return 0)
 		// because the add is in another layer
-		return off2
+		if off1&mask != off2&mask {
+			panic("update & delete on same record")
+		}
+		result = off2
 	case delete_add:
-		return off2 | Update
+		result = off2 | Update
 	case delete_delete:
-		panic("record delete after delete")
+		panic("delete & delete on same record")
 	case delete_update:
-		panic("record update after delete")
+		panic("delete & update on same record")
 	default:
 		log.Printf("ERROR: ixbuf invalid Combine %b %s %s\n",
 			ops, OffString(off1), OffString(off2))
 		dbg.PrintStack()
 		panic("ixbuf invalid Combine")
 	}
+	return
 }
 
 func (m *merge) outputSlot(s2 slot) {
@@ -318,7 +330,7 @@ func (m *merge) outputSlot(s2 slot) {
 	if last >= 0 {
 		s1 := &m.buf[last]
 		if s2.key == s1.key {
-			s1.off = Combine(s1.off, s2.off)
+			s1.off, _ = Combine(s1.off, s2.off)
 			if s1.off == 0 {
 				m.buf = m.buf[:last]
 			}

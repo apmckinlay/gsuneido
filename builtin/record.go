@@ -42,16 +42,18 @@ func record_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if as.Nargs != 0 {
 		return ob_Delete(th, as, this, args)
 	}
-	trace.Dbms.Println("Record Delete", this)
-	this.(*SuRecord).DbDelete(th)
+	surec := this.(*SuRecord)
+	trace.Dbms.Println("Record Delete", surec.Table(), surec)
+	surec.DbDelete(th)
 	return nil
 }
 
 var _ = method(record_Drop, "()")
 
 func record_Drop(th *Thread, as *ArgSpec, this Value, args []Value) Value {
-	trace.Dbms.Println("Record Drop", this)
-	this.(*SuRecord).DbDelete(th)
+	surec := this.(*SuRecord)
+	trace.Dbms.Println("Record Drop", surec.Table(), surec)
+	surec.DbDelete(th)
 	return nil
 }
 
@@ -116,7 +118,8 @@ func record_Transaction(this Value) Value {
 var _ = method(record_Update, "(record = false)")
 
 func record_Update(th *Thread, this Value, args []Value) Value {
-	trace.Dbms.Println("Record Update", this)
-	this.(*SuRecord).DbUpdate(th, args[0])
+	surec := this.(*SuRecord)
+	trace.Dbms.Println("Record Update", surec.Table(), surec)
+	surec.DbUpdate(th, args[0])
 	return nil
 }

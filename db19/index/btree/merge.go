@@ -27,7 +27,7 @@ type state struct {
 	path []merge
 }
 
-// MergeAndSave combines a btree and an iter.
+// MergeAndSave combines a btree and an ixbuf iter.
 // It is immutable persistent, returning a new btree
 // that usually shares some of the structure of the original btree.
 // Modified nodes are written to storage.

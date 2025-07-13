@@ -983,6 +983,10 @@ func UnpackRecord(s string) *SuRecord {
 
 // database
 
+func (r *SuRecord) Table() string {
+	return r.table
+}
+
 func (r *SuRecord) DbDelete(th *Thread) {
 	if r.Lock() {
 		defer r.Unlock()

@@ -229,3 +229,69 @@ func TestGetIndexI2(t *testing.T) {
 
 	db.MustCheck()
 }
+
+func TestUpdateUpdateSameBug(t *testing.T) {
+	db := CreateDb(stor.HeapStor(8192))
+	StartConcur(db, 50*time.Millisecond)
+	createTbl(db)
+
+	// Insert initial record with known size and get its offset
+	ut := db.NewUpdateTran()
+	initialRec := mkrec("short", "data") // small record
+	ut.Output(nil, "mytable", initialRec)
+	ut.Commit()
+
+	ut = db.NewUpdateTran()
+
+	ts := ut.getSchema("mytable")
+	key := ts.Indexes[0].Ixspec.Key(initialRec)
+	dbRec := ut.Lookup("mytable", 0, key)
+	if dbRec == nil {
+		t.Fatal("Failed to find inserted record")
+	}
+	recordOffset := dbRec.Off
+	
+	// first update
+	firstUpdateRec := mkrec("short", "much_longer_data_string_here")
+	ut.Update(nil, "mytable", recordOffset, firstUpdateRec)
+
+	// second update using the original offset
+	secondUpdateRec := mkrec("short", "medium_data")
+	assert.This(func() {
+		ut.Update(nil, "mytable", recordOffset, secondUpdateRec)
+	}).Panics("update & update on same record")
+	
+	db.MustCheck()
+}
+
+func TestUpdateDeleteSameBug(t *testing.T) {
+	db := CreateDb(stor.HeapStor(8192))
+	StartConcur(db, 50*time.Millisecond)
+	createTbl(db)
+
+	ut := db.NewUpdateTran()
+	initialRec := mkrec("delete", "data") // small record
+	ut.Output(nil, "mytable", initialRec)
+	ut.Commit()
+
+	ut = db.NewUpdateTran()
+	
+	ts := ut.getSchema("mytable")
+	key := ts.Indexes[0].Ixspec.Key(initialRec)
+	dbRec := ut.Lookup("mytable", 0, key)
+	if dbRec == nil {
+		t.Fatal("Failed to find inserted record")
+	}
+	recordOffset := dbRec.Off
+
+	// first update
+	updateRec := mkrec("delete", "update")
+	ut.Update(nil, "mytable", recordOffset, updateRec)
+
+	// then delete using the original offset
+	assert.This(func() {
+	ut.Delete(nil, "mytable", recordOffset)
+	}).Panics("update & delete on same record")
+
+	db.MustCheck()
+}

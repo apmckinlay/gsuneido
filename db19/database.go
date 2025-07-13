@@ -163,6 +163,7 @@ func (db *Database) readTail() string {
 
 // CheckerSync is for tests.
 // It assigns a synchronous transaction checker to the database.
+// WARNING: CheckerSync does NOT call tran.commit so LayeredOnto is NOT done.
 func (db *Database) CheckerSync() {
 	db.ck = NewCheck(db)
 }

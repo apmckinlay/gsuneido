@@ -190,7 +190,7 @@ outer:
 				keyMin = key
 				offMin = off
 			} else if key == keyMin {
-				off = ixbuf.Combine(offMin, off)
+				off, _ = ixbuf.Combine(offMin, off)
 				if off == 0 || off&ixbuf.Delete != 0 {
 					oi.ifKey(i, key, iterator.T.Next)
 					// delete so skip
@@ -287,7 +287,7 @@ outer:
 				keyMax = key
 				offMax = off
 			} else if key == keyMax {
-				off = ixbuf.Combine(offMax, off)
+				off, _ = ixbuf.Combine(offMax, off)
 				if off == 0 || off&ixbuf.Delete != 0 {
 					oi.ifKey(i, key, iterator.T.Prev)
 					// delete so skip

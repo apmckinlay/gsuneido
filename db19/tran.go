@@ -12,6 +12,7 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
@@ -300,6 +301,7 @@ func (t *UpdateTran) Output(th *core.Thread, table string, rec core.Record) {
 	if t.db.corrupted.Load() {
 		return // prevent appending to database
 	}
+	trace.Dbms.Println("tran Output", table)
 	t.write()
 	ts := t.getSchema(table)
 	ti := t.tran.GetInfo(table) // readonly
@@ -394,6 +396,7 @@ func (t *ReadTran) fkeyOutputExists(table string, iIndex int, key string) bool {
 }
 
 func (t *UpdateTran) Delete(th *core.Thread, table string, off uint64) {
+	trace.Dbms.Println("tran Delete", table, off)
 	t.write()
 	ts := t.getSchema(table)
 	rec := t.GetRecord(off)
@@ -573,7 +576,10 @@ func (t *UpdateTran) update(th *core.Thread, table string, oldoff uint64, newrec
 		for i := range ts.Indexes {
 			ix := ti.Indexes[i]
 			if oldkeys[i] == newkeys[i] {
-				ix.Update(oldkeys[i], newoff)
+				prevoff := ix.Update(oldkeys[i], newoff)
+				if prevoff != 0 && prevoff != oldoff {
+					panic("update & update on same record")
+				}
 			} else {
 				ix.Delete(oldkeys[i], oldoff)
 				ix.Insert(newkeys[i], newoff)
