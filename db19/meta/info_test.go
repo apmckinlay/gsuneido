@@ -45,7 +45,7 @@ func TestInfo(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, hamt.All)
 
-	ic := hamt.ReadChain[string](st, off, ReadInfo)
+	ic := hamt.ReadChain(st, off, ReadInfo)
 	assert.This(ic.Ages[0]).Is(ic.MustGet("one").lastMod)
 	tbl = ic.Hamt
 	x, _ := tbl.Get("one")
@@ -66,7 +66,7 @@ func TestInfo2(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Freeze().Write(st, 0, hamt.All)
 
-	tbl = hamt.ReadChain[string](st, off, ReadInfo).Hamt
+	tbl = hamt.ReadChain(st, off, ReadInfo).Hamt
 	for i, s := range data {
 		ti, _ := tbl.Get(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)
