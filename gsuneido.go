@@ -557,7 +557,7 @@ func libload(th *Thread, name string) (result Value, e any) {
 			if lib == ovLib {
 				continue
 			}
-			assert.That(str.BeforeFirst(tagname, "__") == name)
+			assert.That(str.BeforeLast(tagname, "__") == name)
 			tag := tagname[len(name):]
 			// this can only be false when running as a client
 			// with different LibraryTags from the server
