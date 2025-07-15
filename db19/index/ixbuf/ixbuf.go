@@ -19,6 +19,11 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
+const Update = 1 << 62
+const Delete = 1 << 63
+
+const mask = 0xffffffffff
+
 type T = ixbuf
 
 type ixbuf struct {
@@ -179,6 +184,54 @@ func (ib *ixbuf) Delete(key string, off uint64) {
 
 //-------------------------------------------------------------------
 
+const (
+	add_update    = 0b_00_01
+	add_delete    = 0b_00_10
+	update_update = 0b_01_01
+	update_delete = 0b_01_10
+	delete_add    = 0b_10_00
+	// INVALID:
+	delete_delete = 0b10_10
+	delete_update = 0b10_01
+	// add_add    = 0b00_00
+	// update_add = 0b01_00
+)
+
+func Combine(off1, off2 uint64) (result uint64, oldoff uint64) {
+	ops := off1>>60 | off2>>62
+	switch ops {
+	case add_update:
+		result = off2 & mask // => add
+	case add_delete:
+		result = 0 // => should be removed
+	case update_update:
+		result = off2
+		oldoff = off1 & mask
+		// oldoff is so tran.Update can detect update,update of same record
+	case update_delete:
+		// update_delete needs to keep delete (not return 0)
+		// because the add is in another layer
+		if off1&mask != off2&mask {
+			panic("update & delete on same record")
+		}
+		result = off2
+	case delete_add:
+		result = off2 | Update
+	case delete_delete:
+		panic("delete & delete on same record")
+	case delete_update:
+		panic("delete & update on same record")
+	default:
+		log.Printf("ERROR: ixbuf invalid Combine %b %s %s\n",
+			ops, OffString(off1), OffString(off2))
+		dbg.PrintStack()
+		panic("ixbuf invalid Combine")
+	}
+	return
+}
+
+//-------------------------------------------------------------------
+
 // Merge combines several ixbuf's into a new one.
 // It does not modify its inputs so it is thread-safe
 // as long as the inputs don't change.
@@ -234,6 +287,7 @@ func (m *merge) merge() *ixbuf {
 				key = key2
 			}
 		}
+		// i now has the minimum key
 		if !passthru || !m.passthru(in, i) {
 			m.outputSlot(in[i][0])
 			if len(in[i]) > 1 {
@@ -254,75 +308,6 @@ func (m *merge) merge() *ixbuf {
 		passthru = true
 	}
 	return m.result()
-}
-
-const Update = 1 << 62
-const Delete = 1 << 63
-
-const mask = 0xffffffffff
-
-// OffString is for debugging
-func OffString(off uint64) string {
-	s := trace.Number(off & mask)
-	op := off &^ mask
-	if op&Update != 0 {
-		s = "update:" + s
-		op &^= Update
-	}
-	if op&Delete != 0 {
-		s = "delete:" + s
-		op &^= Delete
-	}
-	if op != 0 {
-		s += fmt.Sprintf("BAD BITS %x", op>>40)
-	}
-	return s
-}
-
-const (
-	add_update    = 0b_00_01
-	add_delete    = 0b_00_10
-	update_update = 0b_01_01
-	update_delete = 0b_01_10
-	delete_add    = 0b_10_00
-	// INVALID:
-	delete_delete = 0b10_10
-	delete_update = 0b10_01
-	// add_add    = 0b00_00
-	// update_add = 0b01_00
-)
-
-func Combine(off1, off2 uint64) (result uint64, oldoff uint64) {
-	ops := off1>>60 | off2>>62
-	switch ops {
-	case add_update:
-		result = off2 & mask // => add
-	case add_delete:
-		result = 0 // => should be removed
-	case update_update:
-		result = off2
-		oldoff = off1 & mask
-		// oldoff is so tran.Update can detect update,update of same record
-	case update_delete:
-		// update_delete needs to keep delete (not return 0)
-		// because the add is in another layer
-		if off1&mask != off2&mask {
-			panic("update & delete on same record")
-		}
-		result = off2
-	case delete_add:
-		result = off2 | Update
-	case delete_delete:
-		panic("delete & delete on same record")
-	case delete_update:
-		panic("delete & update on same record")
-	default:
-		log.Printf("ERROR: ixbuf invalid Combine %b %s %s\n",
-			ops, OffString(off1), OffString(off2))
-		dbg.PrintStack()
-		panic("ixbuf invalid Combine")
-	}
-	return
 }
 
 func (m *merge) outputSlot(s2 slot) {
@@ -591,4 +576,22 @@ func (c chunk) print() {
 		}
 		fmt.Printf("%q %d %s\n", s.key, off, d)
 	}
+}
+
+// OffString is for debugging
+func OffString(off uint64) string {
+	s := trace.Number(off & mask)
+	op := off &^ mask
+	if op&Update != 0 {
+		s = "update:" + s
+		op &^= Update
+	}
+	if op&Delete != 0 {
+		s = "delete:" + s
+		op &^= Delete
+	}
+	if op != 0 {
+		s += fmt.Sprintf("BAD BITS %x", op>>40)
+	}
+	return s
 }
