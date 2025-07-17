@@ -140,7 +140,7 @@ func TestMergeBug(*testing.T) {
 }
 
 func TestMergeRandom(*testing.T) {
-	n := 10_000
+	n := 100_000
 	if testing.Short() {
 		n = 1000
 	}
@@ -194,6 +194,64 @@ func TestMergeRandom(*testing.T) {
 func (c chunk) Len() int           { return len(c) }
 func (c chunk) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 func (c chunk) Less(i, j int) bool { return c[i].key < c[j].key }
+
+func TestMergeMore(t *testing.T) {
+	const n = 10
+	keys := make([]string, n)
+	adrs := make([]uint64, n)
+	nextadr := 1
+	loops := 1000000
+	if testing.Short() {
+		loops = 10000
+	}
+
+	gen := func() *ixbuf {
+		size := rand.Intn(10)
+		ib := &ixbuf{}
+		for range size {
+			i := rand.Intn(n)
+			if keys[i] == "" { // insert
+				keys[i] = strconv.Itoa(i)
+				adrs[i] = uint64(nextadr)
+				nextadr++
+				ib.Insert(keys[i], adrs[i])
+			} else if rand.Intn(2) == 0 { // update
+				adrs[i] = uint64(nextadr)
+				nextadr++
+				ib.Update(keys[i], adrs[i])
+			} else { // delete
+				ib.Delete(keys[i], adrs[i])
+				keys[i] = ""
+				adrs[i] = 0
+			}
+		}
+		return ib
+	}
+	for range loops {
+		nextadr = 1
+		clear(keys)
+		clear(adrs)
+		a := gen()
+		b := gen()
+		c := gen()
+		d := gen()
+		ib := Merge(a, b, c, d)
+		iter := ib.Iter()
+		i := 0
+		for {
+			key, adr, ok := iter()
+			if !ok {
+				break
+			}
+			for i < n && keys[i] == "" {
+				i++
+			}
+			assert.This(key).Is(keys[i])
+			assert.This(adr).Is(adrs[i])
+			i++
+		}
+	}
+}
 
 func TestMergeUneven(*testing.T) {
 	r := str.UniqueRandom(4, 8)

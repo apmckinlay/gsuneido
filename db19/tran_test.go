@@ -335,3 +335,64 @@ func TestRangesBug(t *testing.T) {
 
 	db.MustCheck()
 }
+
+func TestCursorDeleteBehavior(t *testing.T) {
+	db := CreateDb(stor.HeapStor(8192))
+	StartConcur(db, 50*time.Millisecond)
+
+	// Create table with key column k
+	db.Create(&schema.Schema{
+		Table:   "testtable",
+		Columns: []string{"k"},
+		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"k"}}},
+	})
+
+	// Insert records with k values 0-5
+	ut := db.NewUpdateTran()
+	for i := 0; i < 6; i++ {
+		ut.Output(nil, "testtable", mkrec(strconv.Itoa(i)))
+	}
+	ut.Commit()
+
+	// Create iterator (cursor equivalent)
+	iter := index.NewOverIter("testtable", 0)
+
+	// Helper function equivalent to next() closure
+	next := func() int {
+		rt := db.NewReadTran()
+		iter.Next(rt)
+		if iter.Eof() {
+			return -1
+		}
+		_, off := iter.Cur()
+		rec := rt.GetRecord(off)
+		kStr := rec.GetStr(0)
+		kInt, _ := strconv.Atoi(kStr)
+		return kInt
+	}
+
+	// Test sequence: next() should return 0, 1, 2
+	assert.T(t).Msg("first next").This(next()).Is(0)
+	assert.T(t).Msg("second next").This(next()).Is(1)
+	assert.T(t).Msg("third next").This(next()).Is(2)
+
+	// Go back one record using Prev
+	ut = db.NewUpdateTran()
+	iter.Prev(ut)
+	if !iter.Eof() {
+		_, off := iter.Cur()
+		rec := ut.GetRecord(off)
+		kStr := rec.GetStr(0)
+		kInt, _ := strconv.Atoi(kStr)
+		assert.T(t).Msg("prev result").This(kInt).Is(1)
+
+		// Delete the record (k=1)
+		ut.Delete(nil, "testtable", off)
+	}
+	ut.Commit()
+
+	// Continue with next() - should get 2 (skipping deleted record 1)
+	assert.T(t).Msg("next after delete").This(next()).Is(2)
+
+	db.MustCheck()
+}

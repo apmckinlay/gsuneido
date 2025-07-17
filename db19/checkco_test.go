@@ -88,7 +88,14 @@ func randAction(ck Checker, t *CkTran) {
 	nIndexes := 4
 	table := randTable()
 	if rand.Intn(3) == 1 {
-		ck.Update(t, table, uint64(1+rand.Intn(2000)), randKeys(), randKeys())
+		// Always do a read before update to make the test realistic
+		index := rand.Intn(nIndexes)
+		oldKeys := randKeys()
+		// Make the read range match the key that will be updated
+		from := oldKeys[index]
+		to := from + "\x00" // range that includes the key
+		ck.Read(t, table, index, from, to)
+		ck.Update(t, table, uint64(1+rand.Intn(2000)), oldKeys, randKeys())
 	} else {
 		index := rand.Intn(nIndexes)
 		from, to := randRange()
@@ -103,7 +110,7 @@ func randTable() string {
 }
 
 func randKeys() []string {
-	nIndexes := 3
+	nIndexes := 4
 	keys := make([]string, nIndexes)
 	for i := range keys {
 		keys[i] = strconv.Itoa(rand.Intn(10000))

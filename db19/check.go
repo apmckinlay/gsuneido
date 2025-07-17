@@ -15,6 +15,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ranges"
 )
 
+// Check is single threaded.
+// Concurrent access is handled by checkco.go and concur.go
+
 /*
 Reads are tracked as Ranges on specific indexes (ckreads).
 Output and Deletes are tracked as Set's of key values for each index (ckwrites).
@@ -358,7 +361,7 @@ func (ck *Check) saveOutput(t *CkTran, table string, keys []string) bool {
 }
 
 // Delete adds a delete action.
-// Outputs only need to be checked against outstanding reads.
+// Deletes only need to be checked against outstanding reads.
 // The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
 func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool {
 	traceln("T", t.start, "delete", table, "off", off, "keys", keys)
@@ -373,6 +376,14 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 		ck.abort(t.start, "conflict with exclusive ("+table+")")
 		return false
 	}
+
+	// verify that this record is tracked in the reads
+	// NOTE: only for debugging, too much overhead for production
+	// if !ck.hasRead(t, table, keys) {
+	// 	ck.abort(t.start, "delete of unread record in "+table)
+	// 	return false
+	// }
+
 	// check against overlapping transactions
 	if ts, ok := ck.bytable[table]; ok {
 		for _, ta := range ts {
@@ -398,6 +409,24 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 	}
 	return true
 }
+
+// hasRead checks if any of the given keys have been read by the transaction
+// func (ck *Check) hasRead(t *CkTran, table string, keys []string) bool {
+// 	ts, ok := ck.bytable[table]
+// 	if !ok {
+// 		return false // no actions on this table
+// 	}	
+// 	ta, ok := ts[t.start]
+// 	if !ok {
+// 		return false // no actions for this transaction on this table
+// 	}
+// 	for i, key := range keys {
+// 		if ta.reads.contains(i, key) {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
 
 func (ck *Check) saveDelete(t *CkTran, table string, off uint64, keys []string) bool {
 	ta := ck.getActs(t, table)

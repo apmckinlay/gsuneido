@@ -56,17 +56,17 @@ func TestCheckActions(t *testing.T) {
 	script(t, "1o1 2o2 1a 2c")
 	script(t, "1o1 2o2 1a 2a")
 	// conflict
-	script(t, "1d1 2D1 1c")
+	script(t, "1r11 1d1 2r11 2D1 1c")
 	script(t, "1o1 1a 2o1 2c")
-	script(t, "1d4 1d5 2d3 2D5")
+	script(t, "1r44 1r55 1d4 1d5 2r33 2d3 2D5")
 	script(t, "1r55 1o5 2r55 2O8")
 	script(t, "1r55 1o5 1c 2r55 2O8")
 	script(t, "1r55 2r55 2o8 1O5")
-	script(t, "1r57 1o9 2D6")
+	script(t, "1r57 1o9 2r66 2D6")
 	// conflict with ended
-	script(t, "1d1 1c 2D1")
-	script(t, "2d1 2c 1D1 1C")
-	script(t, "1r3 2d3 2c 2D3")
+	script(t, "1r11 1d1 1c 2r11 2D1")
+	script(t, "2r11 2d1 2c 1r11 1D1 1C")
+	script(t, "1r3 2r33 2d3 2c 2D3")
 
 	// reads
 	script(t, "1o4 1r68 2o3 2r77 2R35")
@@ -217,8 +217,14 @@ func BenchmarkCheck(b *testing.B) {
 				case 1:
 					ck.Output(ct, table, makeKeys())
 				case 2:
+					// Do a read before delete to make it realistic
+					deleteKeys := makeKeys()
+					index := rand.Intn(nindexes)
+					from := deleteKeys[index]
+					to := from + "\x00"
+					ck.Read(ct, table, index, from, to)
 					offset := uint64(rand.Intn(keyRange)) + 1 // not zero
-					ck.Delete(ct, table, offset, makeKeys())
+					ck.Delete(ct, table, offset, deleteKeys)
 				}
 			}
 		}

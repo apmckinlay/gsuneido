@@ -18,7 +18,6 @@ type Range = iterator.Range
 //
 // OverIter also tracks read ranges for transaction conflict checking.
 type OverIter struct {
-	tran    oiTran
 	overlay *Overlay
 	rng     Range
 	table   string
@@ -88,26 +87,25 @@ func (oi *OverIter) Next(t oiTran) {
 	if oi.state == eof {
 		return // stick at eof
 	}
+	
+	prevKey := oi.curKey
+	
 	modified := oi.update(t)
 	if oi.state == rewound {
 		oi.all(iterT.Next)
 		oi.state = front
+		prevKey = oi.rng.Org
 	} else {
 		oi.modNext(modified)
 	}
-	lastState := oi.state
 	oi.curIter, oi.curKey, oi.curOff = oi.minIter()
 	if oi.curIter == -1 {
 		oi.state = eof
+		t.Read(oi.table, oi.iIndex, prevKey, oi.rng.End)
+	} else {
+		t.Read(oi.table, oi.iIndex, prevKey, oi.curKey)
 	}
 	oi.lastDir = next
-	if lastState == front {
-		if oi.state == eof {
-			oi.tran.Read(oi.table, oi.iIndex, oi.rng.Org, oi.rng.End)
-		} else {
-			oi.tran.Read(oi.table, oi.iIndex, oi.rng.Org, oi.curKey)
-		}
-	}
 }
 
 func (oi *OverIter) update(t oiTran) bool {
@@ -115,7 +113,6 @@ func (oi *OverIter) update(t oiTran) bool {
 	if ov == oi.overlay {
 		return false
 	}
-	oi.tran = t
 	oi.newIters(ov)
 	return true
 }
@@ -225,26 +222,25 @@ func (oi *OverIter) Prev(t oiTran) {
 	if oi.state == eof {
 		return // stick at eof
 	}
+	
+	prevKey := oi.curKey
+	
 	modified := oi.update(t)
 	if oi.state == rewound {
 		oi.all(iterT.Prev)
 		oi.state = back
+		prevKey = oi.rng.End
 	} else {
 		oi.modPrev(modified)
 	}
-	lastState := oi.state
 	oi.curIter, oi.curKey, oi.curOff = oi.maxIter()
 	if oi.curIter == -1 {
 		oi.state = eof
+		t.Read(oi.table, oi.iIndex, oi.rng.Org, prevKey)
+	} else {
+		t.Read(oi.table, oi.iIndex, oi.curKey, prevKey)
 	}
 	oi.lastDir = prev
-	if lastState == back {
-		if oi.state == eof {
-			oi.tran.Read(oi.table, oi.iIndex, oi.rng.Org, oi.rng.End)
-		} else {
-			oi.tran.Read(oi.table, oi.iIndex, oi.curKey, oi.rng.End)
-		}
-	}
 }
 
 func (oi *OverIter) modPrev(modified bool) {
