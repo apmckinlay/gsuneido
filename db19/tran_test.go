@@ -30,7 +30,7 @@ func TestConcurrent(t *testing.T) {
 	db := createDb()
 	StartConcur(db, 50*time.Millisecond)
 	var nclients = 8
-	var ntrans = 4000
+	var ntrans = 40000
 	if testing.Short() {
 		nclients = 4
 		ntrans = 100
@@ -250,7 +250,7 @@ func TestUpdateUpdateSameBug(t *testing.T) {
 		t.Fatal("Failed to find inserted record")
 	}
 	recordOffset := dbRec.Off
-	
+
 	// first update
 	firstUpdateRec := mkrec("short", "much_longer_data_string_here")
 	ut.Update(nil, "mytable", recordOffset, firstUpdateRec)
@@ -260,7 +260,7 @@ func TestUpdateUpdateSameBug(t *testing.T) {
 	assert.This(func() {
 		ut.Update(nil, "mytable", recordOffset, secondUpdateRec)
 	}).Panics("update & update on same record")
-	
+
 	db.MustCheck()
 }
 
@@ -275,7 +275,7 @@ func TestUpdateDeleteSameBug(t *testing.T) {
 	ut.Commit()
 
 	ut = db.NewUpdateTran()
-	
+
 	ts := ut.getSchema("mytable")
 	key := ts.Indexes[0].Ixspec.Key(initialRec)
 	dbRec := ut.Lookup("mytable", 0, key)
@@ -290,8 +290,48 @@ func TestUpdateDeleteSameBug(t *testing.T) {
 
 	// then delete using the original offset
 	assert.This(func() {
-	ut.Delete(nil, "mytable", recordOffset)
+		ut.Delete(nil, "mytable", recordOffset)
 	}).Panics("update & delete on same record")
+
+	db.MustCheck()
+}
+
+func TestRangesBug(t *testing.T) {
+	db := CreateDb(stor.HeapStor(8192))
+	StartConcur(db, 50*time.Millisecond)
+
+	db.Create(&schema.Schema{
+		Table:   "tmp",
+		Columns: []string{"a", "b"},
+		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"a"}}},
+	})
+
+	ut := db.NewUpdateTran()
+	ut.Output(nil, "tmp", mkrec("1", "2"))
+	ut.Output(nil, "tmp", mkrec("", "3"))
+	ut.Commit()
+
+	t1 := db.NewUpdateTran()
+	t2 := db.NewUpdateTran()
+
+	// read record where a = ""
+	ts := t1.getSchema("tmp")
+	emptyKey := ts.Indexes[0].Ixspec.Key(mkrec("", ""))
+	dbRec := t1.Lookup("tmp", 0, emptyKey)
+	assert.T(t).That(dbRec != nil)
+
+	// update tmp where a = 1 set a = 11
+	oneKey := ts.Indexes[0].Ixspec.Key(mkrec("1", ""))
+	dbRec1 := t1.Lookup("tmp", 0, oneKey)
+	assert.T(t).That(dbRec1 != nil)
+	t1.Update(nil, "tmp", dbRec1.Off, mkrec("11", "2"))
+
+	// update tmp where a = "" set a = 9
+	dbRec2 := t2.Lookup("tmp", 0, emptyKey)
+	assert.T(t).That(dbRec2 != nil)
+	t2.Update(nil, "tmp", dbRec2.Off, mkrec("9", "3"))
+
+	assert.This(func() { t1.Commit(); t2.Commit() }).Panics("conflicted")
 
 	db.MustCheck()
 }

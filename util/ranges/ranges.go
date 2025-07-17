@@ -76,9 +76,10 @@ func (rs *Ranges) Insert(from, to string) int {
 
 	li := leaf.insert(from, to)
 	inc := 1
-	if li == existing {
+	switch li {
+	case existing:
 		return Existed // from,to is already contained in an existing range
-	} else if li == overflow {
+	case overflow:
 		return Full
 	}
 
@@ -195,7 +196,8 @@ func (ls *leafSlot) contains(from, to string) bool {
 
 func (leaf *leafNode) insert(from, to string) int {
 	i := leaf.searchBinary(from)
-	if leaf.slots[i].contains(from, to) ||
+	if (i < leaf.size && leaf.slots[i].contains(from, to)) ||
+	//if (leaf.slots[i].contains(from, to)) ||
 		(i > 0 && leaf.slots[i-1].contains(from, to)) {
 		return existing
 	}
