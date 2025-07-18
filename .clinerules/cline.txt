@@ -1,6 +1,21 @@
+Suneido is an integrated language and database.
+gSuneido is the Go implementation of Suneido.
+
+The Suneido language is dynamically typed.
+The syntax is similar to C or Java i.e. using curly braces.
+Suneido code is stored in library tables in the database.
+It is compiled to byte code and the byte code is interpreted.
+
+The database is append-only.
+It uses multi-version concurrency control.
+It has a relational algrebra query language.
+
+Suneido can operate either standalone or client-server.
+
 Use "make test" to run all the Go tests
 Use "make port" to make the command line version gsport.exe
 Do not overwrite gsuneido.exe
 Do not use: go build
 When running benchmarks use -benchmem
-Do not add excessive obvious comments
+Do not add excessive comments
+Changes should follow the style of the existing code.
