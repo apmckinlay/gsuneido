@@ -101,7 +101,7 @@ static LRESULT CALLBACK message_hook(int code, WPARAM wParam, LPARAM lParam) {
 	return CallNextHookEx(hook, code, wParam, lParam);
 }
 
-int message_loop(uintptr hdlg) {
+int message_loop(uintptr hdlg) { // hdlg is 0 for main message loop
 	MSG msg;
 	for (;;) {
 		ticks = 0; // stop timer
@@ -149,7 +149,7 @@ static BOOL CALLBACK destroy_func(HWND hwnd, LPARAM lParam) {
 }
 
 static void destroy_windows() {
-	EnumWindows(destroy_func, (LPARAM) NULL);
+	EnumThreadWindows(main_threadid, destroy_func, 0);
 }
 
 uintptr helperHwnd = 0; // set by setupHelper
