@@ -49,10 +49,17 @@ var maxNarrow = dnum.FromInt(MaxSuInt)
 
 var _ = exportMethods(&NumMethods, "num")
 
+var _ = method(num_Binary, "()")
+
+func num_Binary(this Value) Value {
+	n := ToInt(this)
+	return SuStr(strconv.FormatUint(uint64(n), 2))
+}
+
 var _ = method(num_Chr, "()")
 
 func num_Chr(this Value) Value {
-	return SuStr1s[ToInt(this) & 0xff]
+	return SuStr1s[ToInt(this)&0xff]
 }
 
 var _ = method(num_Int, "()")
