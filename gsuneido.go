@@ -564,7 +564,7 @@ func libload(th *Thread, name string) (result Value, e any) {
 			// with different LibraryTags from the server
 			if options.LibraryTags == nil ||
 				slices.Contains(options.LibraryTags[1:], tag) {
-				result = llcompile(lib, name, src, result)
+				result = llcompile(lib+tag, name, src, result)
 			}
 		}
 	}
