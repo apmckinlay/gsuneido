@@ -232,6 +232,8 @@ func clearCallback(fn Value) bool {
 				if cb.active {
 					// keep the fn in case it gets called soon after clear
 					// keep the go callback to reuse
+					cb.active = false
+					cb.keepTill = clock() + delay
 					return true
 				}
 				foundInactive = true
