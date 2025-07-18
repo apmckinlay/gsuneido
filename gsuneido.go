@@ -176,6 +176,7 @@ func main() {
 			startHttpStatus()
 		}
 		dbms.VersionMismatch = versionMismatch
+		options.LibraryTags = nil
 	case "printstates":
 		db19.PrintStates("suneido.db", false)
 		os.Exit(0)
@@ -561,7 +562,7 @@ func libload(th *Thread, name string) (result Value, e any) {
 			tag := tagname[len(name):]
 			// this can only be false when running as a client
 			// with different LibraryTags from the server
-			if len(options.LibraryTags) == 1 ||
+			if options.LibraryTags == nil ||
 				slices.Contains(options.LibraryTags[1:], tag) {
 				result = llcompile(lib, name, src, result)
 			}
