@@ -28,8 +28,6 @@ import (
 type tran struct {
 	db   *Database
 	meta *meta.Meta
-	asof int64
-	off  uint64
 }
 
 // GetInfo returns read-only Info for the table or nil if not found
@@ -83,7 +81,9 @@ func (t *tran) GetStore() *stor.Stor {
 
 type ReadTran struct {
 	tran
-	num int
+	num  int
+	asof int64
+	off  uint64
 }
 
 var nextReadTran atomic.Int32
@@ -248,6 +248,10 @@ func (t *UpdateTran) ReadCount() int {
 
 func (t *UpdateTran) WriteCount() int {
 	return t.writeCount
+}
+
+func (t *UpdateTran) Asof(asof int64) int64 {
+	panic("Asof cannot be used on update transactions")
 }
 
 // Complete returns "" on success, otherwise an error
