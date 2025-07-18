@@ -89,8 +89,8 @@ func (ov *Overlay) Insert(key string, off uint64) {
 
 // Delete either deletes the key/offset from the mutable ixbuf.T
 // or inserts a tombstone into the mutable ixbuf.T.
-func (ov *Overlay) Delete(key string, off uint64) {
-	ov.mut.Delete(key, off)
+func (ov *Overlay) Delete(key string, off uint64) uint64 {
+	return ov.mut.Delete(key, off)
 }
 
 func (ov *Overlay) Update(key string, off uint64) uint64 {

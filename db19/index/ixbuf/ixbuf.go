@@ -178,8 +178,8 @@ func (ib *ixbuf) Update(key string, off uint64) uint64 {
 }
 
 // Delete combines if the key exists, otherwise it adds a delete tombstone.
-func (ib *ixbuf) Delete(key string, off uint64) {
-	ib.Insert(key, off|Delete)
+func (ib *ixbuf) Delete(key string, off uint64) uint64 {
+	return ib.Insert(key, off|Delete)
 }
 
 //-------------------------------------------------------------------
@@ -211,10 +211,9 @@ func Combine(off1, off2 uint64) (result uint64, oldoff uint64) {
 	case update_delete:
 		// update_delete needs to keep delete (not return 0)
 		// because the add is in another layer
-		if off1&mask != off2&mask {
-			panic("update & delete on same record")
-		}
 		result = off2
+		oldoff = off1 & mask
+		// oldoff is so tran.Delete can detect update,delete of same record
 	case delete_add:
 		result = off2 | Update
 	case delete_delete:
@@ -551,6 +550,8 @@ func (it *Iterator) SeekAll(key string) {
 	it.state = within
 }
 
+//-------------------------------------------------------------------
+
 func (ib *ixbuf) Print() {
 	fmt.Println("<<<------------------------")
 	for i, c := range ib.chunks {
@@ -564,17 +565,7 @@ func (ib *ixbuf) Print() {
 
 func (c chunk) print() {
 	for _, s := range c {
-		off := s.off
-		d := ""
-		if (off & Delete) == Delete {
-			off &^= Delete
-			d = "d"
-		}
-		if (off & Update) == Update {
-			off &^= Update
-			d += "u"
-		}
-		fmt.Printf("%q %d %s\n", s.key, off, d)
+		fmt.Printf("%s %q\n", OffString(s.off), s.key)
 	}
 }
 
@@ -594,4 +585,8 @@ func OffString(off uint64) string {
 		s += fmt.Sprintf("BAD BITS %x", op>>40)
 	}
 	return s
+}
+
+func (s slot) String() string {
+	return fmt.Sprintf("{%s, %q}", OffString(s.off), s.key)
 }

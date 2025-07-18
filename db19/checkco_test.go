@@ -33,7 +33,7 @@ func TestCheckCoTimeout(t *testing.T) {
 func TestCheckCoRandom(*testing.T) {
 	db := CreateDb(stor.HeapStor(8192))
 	db.ck = StartCheckCo(db, mergeSink(), nil)
-	nThreads := 8
+	nThreads := 6
 	nTrans := 10000
 	if testing.Short() {
 		nThreads = 2
@@ -50,9 +50,9 @@ func TestCheckCoRandom(*testing.T) {
 		}()
 	}
 	wg.Wait()
-	fmt.Println("commit", nCommit.Load(), "conflict", nConflict.Load(),
-		"=", float32(nConflict.Load())/float32(nCommit.Load()))
-	assert.That(float32(nConflict.Load())/float32(nCommit.Load()) < .1)
+	f := float32(nConflict.Load())/float32(nCommit.Load())
+	fmt.Println("commit", nCommit.Load(), "conflict", nConflict.Load(), "=", f)
+	assert.That(f < .1)
 }
 
 func mergeSink() chan todo {

@@ -396,3 +396,47 @@ func TestCursorDeleteBehavior(t *testing.T) {
 
 	db.MustCheck()
 }
+
+func TestCombineBug(t *testing.T) {
+	db := CreateDb(stor.HeapStor(8192))
+	StartConcur(db, 50*time.Millisecond)
+
+	db.Create(&schema.Schema{
+		Table:   "testtable",
+		Columns: []string{"k"},
+		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"k"}}},
+	})
+	
+	
+	ut := db.NewUpdateTran()
+	ut.Output(nil, "testtable", mkrec("2"))
+	ts := ut.getSchema("testtable")
+	key := ts.Indexes[0].Ixspec.Key(mkrec("2"))
+	ut.Commit()
+	db.Persist()
+	
+	// Delete the record in a separate transaction
+	ut = db.NewUpdateTran()
+	dbRec := ut.Lookup("testtable", 0, key)
+	ut.Delete(nil, "testtable", dbRec.Off)
+	ut.Commit()
+	
+	// Re-output the record in a separate transaction
+	ut = db.NewUpdateTran()
+	ut.Output(nil, "testtable", mkrec("2"))
+	ut.Commit()
+	
+	// All in one transaction, delete, re-output, delete
+	ut = db.NewUpdateTran()
+	// First delete
+	dbRec = ut.Lookup("testtable", 0, key)
+	ut.Delete(nil, "testtable", dbRec.Off)
+	// Re-output the same record
+	ut.Output(nil, "testtable", mkrec("2"))
+	// Look up the newly output record and delete it again
+	dbRec2 := ut.Lookup("testtable", 0, key)
+	ut.Delete(nil, "testtable", dbRec2.Off)
+	ut.Commit()
+
+	db.MustCheck()
+}

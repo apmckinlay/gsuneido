@@ -420,8 +420,11 @@ func (t *UpdateTran) Delete(th *core.Thread, table string, off uint64) {
 			t.fkeyDeleteCascade(th, ts, i, keys[i])
 		}
 		for i := range ts.Indexes {
-			ti.Indexes[i].Delete(keys[i], off)
-		}
+			prevoff := ti.Indexes[i].Delete(keys[i], off)
+			if prevoff != 0 && prevoff != off {
+				panic("update & delete on same record")
+			}
+	}
 		assert.Msg("Delete Nrows").That(ti.Nrows > 0)
 		ti.Nrows--
 		assert.Msg("Delete Size").That(ti.Size >= n)
