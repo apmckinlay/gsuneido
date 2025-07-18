@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"slices"
 
@@ -184,7 +185,12 @@ func (t *ReadTran) Asof(asof int64) int64 {
 	case 1:
 		state = NextState(t.db.Store, t.off)
 	default:
-		state = StateAsof(t.db.Store, asof)
+		if asof >= time.Now().UnixMilli() {
+			// Future date - return current state without caching
+			state = t.db.GetState()
+		} else {
+			state = StateAsof(t.db.Store, asof)
+		}
 	}
 	if state == nil {
 		return 0
