@@ -1,0 +1,16 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Display</h3>
+
+<pre>(value, quotes = 0) => string</pre>
+
+<p>Returns a string version of any value.
+Where reasonable, the resulting string can be evaluated to get an equal value back. However, Display is intended for human use; it is NOT intended as a way of converting data to and from strings.</p>
+
+<p>The quotes argument can be:</p>
+<p>
+0 = default behavior - single-quotes for single characters, double-quotes unless single or back-quotes would require less escaping<br />
+1 = single-quotes<br />
+2 = double-quotes
+</p>
+
+<p>All non-printable characters will be escaped, including tab (\t), return (\r), and linefeed (\n).</p>

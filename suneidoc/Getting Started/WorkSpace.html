@@ -1,0 +1,43 @@
+<h2>WorkSpace</h2>
+
+<p>When you first start up Suneido you'll see the WorkSpace.  This is the
+starting point for the Suneido IDE (Integrated Development Environment).
+From here you can write and execute Suneido code 
+and launch other Suneido tools such as LibraryView and QueryView.
+</p>
+
+<img src="../res/workspace.png" />
+
+<p>One use of the WorkSpace is to execute chunks of code.  Type the following
+into the WorkSpace:</p>
+<pre>123 + 456</pre>
+
+<p>You can execute this by pressing F9, or by choosing Run from the Edit menu.
+The result (579) will show up in the Output pane at the bottom of the
+WorkSpace.</p>
+
+<p>You can execute multiple statements as well as single expressions. Try:</p>
+<pre>for (i = 0; i &lt; 5; ++i)
+     Print(i);</pre>
+
+<p>Print displays its output in the output pane, so you'll see 0 to 4
+displayed.  You can clear the output pane by choosing Clear Output on the Edit
+menu.</p>
+
+<p><b>Note:</b> Suneido is case sensitive, for example, the above code must use "Print", not "print".</p>
+
+<p><b>Note:</b> If you have more than one thing entered on the WorkSpace then
+you need to select (highlight) the portion of code you want to execute before
+pressing F9 or choosing Run.  (If there is no specific selection, F9/Run will
+automatically select the non-blank lines around the insertion point.)</p>
+
+<p><b id="FindByExpression">Find by expression</b></p>
+<p>You can use Find > Find by expression to search Suneido expressions (like function calls), seamlessly accounting for line breaks, comments and quotes. You can also utilize a signle-letter wildcard to match any expression and efficiently navigate complex code structures. For example, the search pattern "<b>Fn(a)</b>" can match any Fn calls with single argument, such as "<b>Fn(1)</b>" or "<b>Fn(1 + 1)</b>".</p>
+
+<p>Moreover, this feature introduces enhanced flexibility to argument comparision.</p>
+<ul>
+<li>The order of named arguments is not sensitive. For example, code "<b>Fn(arg2: 2, arg1: 1)</b>" matches the pattern "<b>Fn(arg1: a, arg2: b)</b>"</li>
+<li>Named and unnamed argments can be interchanged. For example, code "<b>Fn(arg: 1)</b>" matches both "<b>Fn(a)</b>" and "<b>Fn(arg: a)</b>", but not "<b>Fn(arg1: a)</b>". Similarly, "<b>Fn(1)</b>" matches "<b>Fn(arg: a)</b>" and "<b>Fn(a)</b>"</li>
+<li>Extra named arguments in the code call are ignored. For example, code "<b>Fn(arg1: 1, arg2: 2)</b>" matches the pattern "<b>Fn(arg1: a)</b>"</li>
+<li>For additional examples, please refer to <b>stdlib:AstSearch_Test</b></li>
+</ul>

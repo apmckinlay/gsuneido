@@ -1,0 +1,53 @@
+<h3>Memoize</h3>
+
+<p>Abstract base class for caching the results of a function.</p>
+
+<p>Derived classes must define Func and may optionally define Init and CacheSize (default 100).</p>
+
+<p>For example, a recursive fibonacci function can be improved by caching results. (In practice an iterative version would be better.)</p>
+<pre>
+Fibonacci
+
+function(n)
+    {
+    return (n &lt;= 1) ? n : (Fibonacci(n - 1) + Fibonacci(n - 2))
+    }
+</pre>
+
+<p>On my machine this version takes 3 seconds to calculate Fibonacci(32) whereas the following version takes about 1.5 ms.</p>
+
+<pre>
+Memoize
+    {
+    CacheSize: 4
+    Func(n)
+        {
+        return (n &lt;= 1) ? n : Fibonacci(n - 1) + Fibonacci(n - 2)
+        }
+    }
+</pre>
+
+<p>Memoize creates an <a href="LruCache.html">LruCache</a> to cache the result and stores it in the global Suneido object.</p>
+
+<p>If Func() argument(s) size are too big, you can specify HasArgs? member to be true on the derived classes, so <a href="LruCache.html">LruCache</a> will hash argument to save memory</p>
+
+<p>Memoize also defines a ResetCache method that will reset the associated LruCache.</p>
+
+<p>See also:
+<a href="Compose.html">Compose</a>,
+<a href="Curry.html">Curry</a>,
+<a href="MemoizeSingle.html">MemoizeSingle</a>,
+<a href="Object/object.Any?.html">object.Any?</a>,
+<a href="Object/object.Drop.html">object.Drop</a>,
+<a href="Object/object.Every?.html">object.Every?</a>,
+<a href="Object/object.Filter.html">object.Filter</a>,
+<a href="Object/object.FlatMap.html">object.FlatMap</a>,
+<a href="Object/object.Fold.html">object.Fold</a>,
+<a href="Object/object.Map.html">object.Map</a>,
+<a href="Object/object.Map!.html">object.Map!</a>,
+<a href="Object/object.Map2.html">object.Map2</a>,
+<a href="Object/object.Nth.html">object.Nth</a>,
+object.PrevSeq,
+<a href="Object/object.Reduce.html">object.Reduce</a>,
+<a href="Object/object.Take.html">object.Take</a>,
+<a href="Object/object.Zip.html">object.Zip</a><p>

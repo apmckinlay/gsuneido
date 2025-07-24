@@ -1,0 +1,15 @@
+<h3>ensure</h3>
+
+<pre>
+<b>ensure</b> <i>table </i>( <i>columns </i>)
+    <b>key</b> (<i>columns</i>) 
+    <b>index</b> [ <b>unique</b> ] (<i>columns</i>) [ <b>in</b> table [ ( columns ) ] ]
+</pre>
+
+<p>Ensure that the specified table has at least the specified characteristics. (It may have more.)
+</p>
+
+<p>For example:</p>
+<pre>
+ensure mytable (name, salary) key(name)
+</pre>

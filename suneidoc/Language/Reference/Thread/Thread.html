@@ -1,0 +1,29 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Thread</h3>
+
+<pre>(callable, name = false)</pre>
+
+<p>Thread creates a new thread to run the specified function or class. Thread returns immediately, without waiting for the new thread.</p>
+
+<p>If a name is supplied it has the same effect as doing <a href="Thread.Name.html">Thread.Name</a>.</p>
+
+<p>For example:</p>
+
+<pre>
+f = function ()
+    {
+    for (i = 0; i &lt; 10; ++i)
+        {
+        Beep()
+        for (j = 0; j &lt; 1000000; ++j)
+            {} // delay
+        }
+    }
+Thread(f)
+</pre>
+
+<p>This will beep 10 times, while allowing you to continue to work.</p>
+
+<p><a href="../SocketServer.html">SocketServer</a> creates threads for each accepted connection.</p>
+
+<p><b>Note</b>: Code run by Thread should not access the Windows GUI. i.e. it should not get or set anything to do with windows or controls. A Thread can use <a href="../RunOnGui.html">RunOnGui</a> to run code on the main thread to update the GUI.</p>

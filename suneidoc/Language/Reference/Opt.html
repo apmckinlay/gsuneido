@@ -1,0 +1,19 @@
+<h3>Opt</h3>
+
+<pre>(@strings)</pre>
+
+<p>If any of the strings are "", the result is "". Otherwise the result is simply the concatenation of the strings (with no separator).</p>
+
+<p>This is useful for adding "optional" (thus the name "Opt") strings with separators or delimiters. For example:</p>
+
+<pre>Opt("(", area, ") ") $ phone</pre>
+
+<p>If area is "" this will just be "phone", otherwise it will be "(area) phone"</p>
+
+<p>Or, to add an optional salutation:</p>
+
+<pre>Opt(salutation, " ") $ name</pre>
+
+<p>See also:
+<a href="Object/object.Join.html">object.Join</a>
+</p>

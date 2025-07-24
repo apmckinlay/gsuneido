@@ -1,0 +1,38 @@
+<h3>Scheduler</h3>
+
+<pre>(source = 'schedtasks', sourceName = 'scheduler')</pre>
+
+<p>Run functions at scheduled times.</p>
+
+<p>source is either a table name (which will be passed to SchedTable, or a function that returns a list of tasks with: (sched_when:, sched_func:, sched_args:)</p>
+
+<p>For example:</p>
+
+<pre>
+tasks = function ()
+    {
+    return #((sched_when: 'every 1 minute', 
+        sched_func: 'Print', sched_args: "'hello'"))
+    }
+Scheduler(tasks)
+</pre>
+
+<p>The Scheduler sleeps for minute between checking if tasks are due.</p>
+
+<p>The tasks function is re-run each time, so the tasks can be updated while the Scheduler is running.</p> 
+
+<p>Currently supports:</p>
+
+<ul>
+<li>SchedEvery e.g. "every 5 minutes"</li>
+
+<li>SchedAt e.g.  "at 19:00" or "at 8:00 skip weekends"</li>
+
+<li>SchedOn e.g. "on Wed at 15:00"<br />
+Adds day of week to SchedAt</li>
+
+<li>SchedMonthlyOn e.g. "on EndMonth at 23:00" or "on 5 at 7:00"<br />
+Adds day of month to SchedAt</li>
+</ul>
+
+<p>To stop a Scheduler e.g. if it's running in a <a href="Thread.html">Thread</a>, call SchedExit()</p>

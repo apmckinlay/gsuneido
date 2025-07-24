@@ -1,0 +1,40 @@
+<h3>Implicit Dynamic Parameters</h3>
+
+<p>Parameters that start with an underscore can receive an implicit value from <a href="../Names/Dynamic Variables.html">Dynamic Variables</a>.</p>
+
+<p>For example:</p>
+
+<pre>f = function (_context) { doSomthingWith(context) }</pre>
+
+<p>Within the function, the name is used without the underscore. If you wrote _name within the function body you would be referring to the dynamic variable, not the parameter.</p>
+
+<p>context can be passed as a normal argument:</p>
+
+<pre>
+f(myContext)
+f(context: myContext)
+</pre>
+
+<p>Or it can receive context via a dynamic variable:</p>
+
+<pre>
+_context = myContext
+...
+f()
+</pre>
+
+<p>The dynamic variable does not need to be set in the same function as the call, it can be set in anywhere in the sequence of calls leading here.</p>
+
+<p>Default values can still be supplied. The default value is only used if no argument is passed and no dynamic variable is found.</p>
+<pre>
+f = function (_p = 0) { return p }
+f()
+    => 0
+f(123)
+    => 123
+_p = 456
+f()
+    => 456
+f(123)
+    => 123
+</pre>

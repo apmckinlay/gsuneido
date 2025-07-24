@@ -1,0 +1,17 @@
+<h4>PopClient</h4>
+
+<pre>(pop_server, user, pass, timeout = 60)</pre>
+
+<p>Starts a POP session with the given server and authenticates using the  user and password given.  If there is an error during this process the connection is closed.  The timeout argument should be in seconds and defaults to 60 seconds.  This is the amount of time the <a href="../SocketClient/SocketClient.html">SocketClient</a> will wait for a response from the server before timing out.  If the timeout is exceeded, an exception will be thrown. This timeout does not apply to the initial establishment of the socket connection.</p>
+
+<p>For example:</p>
+<pre>
+pc = PopClient("mail.com", "andrew", "password")
+for (i = 1; false isnt msg = pc.GetMessage(i); ++i)
+    Print(msg)
+pc.Close()
+</pre>
+
+<p>See also: 
+<a href="../SmtpClient/SmtpClient.html">SmtpClient</a>
+</p>

@@ -1,0 +1,36 @@
+<h3>SmtpServer</h3>
+
+<pre>(name = "SMTP Server", port = 25, exit = false)</pre>
+
+<p>This is a <a href="SocketServer.html">SocketServer</a> that implements a simple SMTP server.</p>
+
+<p>If exit is true, then closing the server window will exit from Suneido. This is necessary if the SmtpServer is the only thing running in this instance of Suneido.</p>
+
+<p><b>Note:</b> SmtpServer is an abstract base class - to use it you must derive a concrete class that defines:</p>
+
+<dl class="code">
+<dt>Recipient?(rcpt)</dt>
+<dd>Return true if rcpt is valid, false otherwise.  
+There is a default definition that simply returns true.</dd>
+<dt>Send(from, to, msg)</dt>
+<dd>Process messages e.g. store them in a message table or forward them somewhere.</dd>
+</dl>
+
+<p>For example:</p>
+<pre>
+MySmtpServer
+
+SmtpServer
+    {
+    Send(from, to, msg)
+        {
+        Database("ensure messages (when, from, to, msg) key(when)");
+        t = Transaction(update:);
+        q = t.Query("messages");
+        q.Output(Record(when: Timestamp(), from: from, to: to, msg: msg));
+        t.Complete();
+        }
+    }
+</pre>
+
+<p>See also: <a href="Pop3Server.html">Pop3Server</a></p>

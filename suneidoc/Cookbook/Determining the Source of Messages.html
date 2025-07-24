@@ -1,0 +1,73 @@
+<h2>Determining the Source of Messages</h2>
+
+<p><b>Category:</b> User Interface</p>
+
+<p><b>Problem</b></p>
+
+<p>You have several controls that send the same message. When your controller receives the message, how do you determine which of the controls sent it?</p>
+
+<p><b>Ingredients</b></p>
+
+<p><a href="../User Interfaces/Reference/Controller.html">Controller</a>, 
+<a href="../User Interfaces/Reference/FieldControl.html">FieldControl</a>, 
+<a href="../User Interfaces/Reference/Alert.html">Alert</a></p>
+
+<p><b>Recipe</b></p>
+
+<p>Enter this in a library (e.g. mylib) as My_Controller:</p>
+
+<pre>
+Controller
+    {
+    Controls: (Vert
+        (Field name: one)
+        (Field name: two))
+    New()
+        {
+        .one = .Vert.one
+        }
+    NewValue(value, source)
+        {
+        if (source is .one)
+            {
+            Alert('one changed')
+            .one.Dirty?(false)
+            }
+        }
+    }
+</pre>
+
+<p>You can then run it directly from Library View or from the WorkSpace with:</p>
+
+<pre>
+My_Controller()
+</pre>
+
+<p>or:</p>
+
+<pre>
+Window(My_Controller)
+</pre>
+
+<p><b>Discussion</b></p>
+
+<p>In this example, we define a controller with two Field controls. Field controls send a <b>NewValue</b> message when they lose the focus and are <i>dirty</i> (i.e. the user has changed their
+contents).</p>
+
+<p>Messages include an optional final "source" argument which is a reference to the control that sent the message. We can use this source argument to determine which of the controls sent the message.
+In this example, if the source is the field named "one" then we give an Alert.</p>
+
+<p><b>Note:</b> The receiver of a NewValue message is responsible for clearing the dirty state of the control.</p>
+
+<p>Although we could just compare the source to .Vert.one directly, instead we follow the standard practice of obtaining a reference to the control in the New. The advantage of this is that if you
+change the view layout, you only have to change the <i>path</i> to the control in one place (in New) instead of throughout your code.</p>
+
+<p>Notice that in order to refer to the fields individually, we had to give them <i>names</i>. Controls have default names, but when you have multiple controls of the same type it is usually
+necessary to specify different names.</p>
+
+<p><b>Note:</b> Because the source argument is passed as a named argument (so that it is optional on the receiver) it must be called "source". You cannot use a different name.</p>
+
+<p><b>See Also</b></p>
+
+<p><a href="Responding to a Button.html">Responding to a Button</a>, 
+<a href="Using RecordControl.html">Using RecordControl</a></p>

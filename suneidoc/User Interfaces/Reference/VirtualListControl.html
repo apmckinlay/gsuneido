@@ -1,0 +1,101 @@
+<div style="float:right"><span class="toplinks">
+<a href="VirtualListControl/Methods.html">Methods</a>
+</span></div>
+<h3>VirtualListControl</h3>
+
+<pre>
+(query = false, columns = #(), columnsSaveName = false, headerSelectPrompt = false, 
+menu = false, startLast = false, headerMenu = false, readonly = false, filterBy = false,
+hideCustomColumns? = false, mandatoryFields = #(), enableMultiSelect = false,
+checkBoxColumn = false, lockFields = #(), disableSelectFilter = false, sortSaveName = false, 
+enableExpand = false, thinBorder = false, protectField = false, validField = false, 
+title = false, option = false, historyFields = false, titleLeftCtrl = false, nextNum = false,
+excludeSelectFields = #(), loadAll? = false, extraFmts = false, hdrCornerCtrl = false, 
+expandExcludeFields = #(), addons = #(), keyField = false, stickyFields = false, 
+enableUserDefaultSelect = false, stretchColumn = false, filtersOnTop = false, select = #(),
+.saveQuery = false)
+</pre>
+
+<p>Displays records from a query in list format and allows records to be added, modified and deleted.</p>
+
+<p>Automatically reads records based on the screen size and scrolling, so it can handle very large queries</p>
+
+<p>If there are too many rows read (>1000), the list discards old records to save memory</p>
+
+<p>Standalone list saves record per row, and only allows editing one row at a time.</p>
+
+<p>Scroll bar:</p> 
+<ul>
+<li>Moving and holding the thumb button scrolls the list up and down, the scrolling speed depends on the distance the scroll thumb is moved</li>
+<li>The scroll thumb will be on the top/bottom, when the list view is at first/last of query, other wise it will be in the middle, the thumb button does not indicate scrolling position</li>
+<li>Use the magnifier button to specify a selection on the query</li>
+</ul>
+
+<p>For example, to create a simple VirtualList on the tables table</p>
+<pre>
+VirtualListControl("tables")
+</pre>
+
+<p>Would display:</p>
+<img src="../../res/virtual_list.png" />
+
+<p>The <b>query</b> argument is used to specify the query that the records will be taken from. </p>
+
+<p>Use the <b>columns</b> argument to specify which columns are to be displayed in the list.  This should be passed as an object containing field names from the query.</p>
+
+<p>The <b>columnsSaveName</b> parameter is used for cases where the list does not have an initial query and there is no title to save the columns widths and order under. The column information will be saved under this name.</p>
+
+<p>The <b>headerSelectPrompt</b> argument determines whether to use SelectPrompt on the header columns or not</p>
+
+<p>If <b>startLast</b> is true the list starts scrolled to the bottom/end</p>
+
+<p>Use <b>menu</b> and <b>headerMenu</b> arguments to specify context menu options</p>
+
+<p>If <b>readonly</b> is true, the list will always be protected and grayed out</p> 
+
+<p>Use the <b>filterBy</b> argument to specify filter option on the top of list</p>
+
+<p>If <b>hideCustomColumns</b> is true, the list does not added custom columns automatically on the list</p>
+
+<p>Use <b>mandatoryFields</b> argument to specify mandatory fields on the list, and they cannot be removed from selected columns</p>
+
+<p>If <b>enableMultiSelect</b> is true, user can select multiple lines</p>
+
+<p>Specify <b>checkBoxColumn</b> argument, so user can check lines by single clicking on checkbox column, you can use <b>list.GetCheckedRecords()</b> to get all checked records.</p>
+
+<p>If <b>disableSelectFilter</b> is true, there is will be no select button (magnifier) at bottom of scroll bar</p>
+
+<p>Use the <b>sortSaveName</b> argument to specify a name for saving column sort info, it saves the last two columns being sorted on the list, the info is saved in the <b>biz_user_settings</b> table</p>
+
+<p>If <b>enableExpand</b> is true, there will be a bar on the left of the list, it shows expand/collapse button when moving mouse over a row, and when user clicks the expand button, the list sends "VirtualList_Expand" message for expanding layout</p>
+
+<p>If the <b>thinBorder</b> is true, the list will use a thin border instead of the default 3D sunken edge</p>
+
+<p>The <b>title</b> argument is displayed in a large font just above the list header</p>
+
+<p>Specify the <b>option</b> argument so the list shows the same row context menu as Access > Current</p>
+
+<p>Use the <b>titleLeftCtrl</b> argument to show extra controls on the left of title</p>
+
+<p>The <b>stickyFields</b> argument is specified as an object containing names of fields that are to be sticky. When you enter new records, sticky fields will default to the value you entered on the last new record.</p>
+
+<p>If <b>loadAll?</b> is true, the list will read all records into memory, sorting columns will be also done in the memory like BrowseControl</p>
+
+<p>If <b>stretchColumn</b> is true, the list will automatically resize the last column to fill the window; you can also specify a column as default stretching column</p>
+
+<p>If <b>enableUserDefaultSelect</b> is true, user can use Save as Default option from Select > Presets</p>
+
+<p>If <b>filtersOnTop</b> is true, click on the magnifier symbol (located at the top of the screen beside the title bar) to show/hide the <b>Select</b> option. The Select button will turn <b>red</b> if you change the conditions and the magnifier symbol will turn <b>green</b> once the new conditions are applied; use the <b>Presets</b> button to set up a Select with a specific set of options and save it to use again at another time. Choose <b>Save As Default</b> if these are the options you normally use</p>
+
+<p>If <b>saveQuery</b> argument is specified, the <b>query</b> argument can be a readonly query, like view, join query, summarize, etc. The list will use the <b>saveQuery</b> to create, modify, or delete records</p>
+
+<p>For more information on <b>linkField</b>, <b>headerFields</b>, and <b>dataMember</b>, parameters, please refer to <a href="BrowseControl.html">BrowseControl</a>.</p>
+
+<p>For more information on <b>validField</b>, <b>protectField</b>, <b>option</b>, <b>select</b>, and <b>historyFields</b> parameters, please refer to <a href="AccessControl.html">AccessControl</a>.</p>
+
+<p>See also:
+<a href="../../Tools/Access.html">Tools/Access</a>,
+<a href="../../Tools/Browse.html">Tools/Browse</a>,
+<a href="ExplorerListViewControl.html">ExplorerListViewControl</a>,
+<a href="ListViewControl.html">ListViewControl</a>
+</p>

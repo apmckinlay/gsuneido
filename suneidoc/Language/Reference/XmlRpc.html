@@ -1,0 +1,37 @@
+<h3>XmlRpc</h3>
+
+<p>A simple implementation of XML-RPC.</p>
+
+<p>CallClass is the "server" portion. HTTP messages to HttpServer with a URL of XmlRpc will be processed here. Exceptions are returned as XML-RPC "faults". XML-RPC values are converted to Suneido values as follows</p>
+<table>
+<tr><td style="width:10em"><b>XML-RPC</b></td><td><b>Suneido</b></td></tr>
+<tr><td>boolean</td><td>boolean</td></tr>
+<tr><td>int</td><td>number</td></tr>
+<tr><td>double</td><td>number</td></tr>
+<tr><td>string</td><td>string</td></tr>
+<tr><td>struct</td><td>object</td></tr>
+<tr><td>array</td><td>object</td></tr>
+<tr><td>dates</td><td>not implemented yet</td></tr>
+<tr><td>base64</td><td>not implemented yet</td></tr>
+</table>
+
+<p>Call is the "client" portion. Use it to make an XmlRpc call, for example:</p>
+<pre>
+XmlRpc.Call('xmlrpc.usefulinc.com/demo/server.php', 'examples.getStateName', 41)
+</pre>
+
+<p>The first argument is the URL, the second is the method name. Any additional arguments are passed to the method. Fault result cause an exception to be thrown. Suneido values are converted as follows:</p>
+<table>
+<tr><td><b>Suneido</b></td><td><b>XML-RPC</b></td></tr>
+<tr><td style="width:20em">boolean</td><td>boolean</td></tr>
+<tr><td>numbers that are integers</td><td>int</td></tr>
+<tr><td>other numbers</td><td>double</td></tr>
+<tr><td>string</td><td>string</td></tr>
+<tr><td>objects with named members</td><td>struct</td></tr>
+<tr><td>objects with only un-named members</td><td>array</td></tr>
+<tr><td>dates</td><td>not implemented yet</td></tr>
+</table>
+
+<p>Calls are implemented using <a href="HttpPost.html">HttpPost</a>.</p>
+
+<p>Encodes and decodes &amp;amp; &amp;lt; &amp;gt; &amp;quot; character entities.</p>

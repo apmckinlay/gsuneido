@@ -1,0 +1,34 @@
+<h3>RackEcho</h3>
+
+<p>A simple <a href="RackServer.html">RackServer</a> app that returns its environment with one member per line.</p>
+
+<p>For example:</p>
+
+<pre>RackServer(app: RackEcho)</pre>
+
+<p>Produces a web page like:</p>
+<pre>
+host: "127.0.0.1"
+dnt: "1"
+accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+remote_user: "127.0.0.1"
+method: "GET"
+version: 1.1
+upgrade_insecure_requests: "1"
+queryvalues: #()
+body: ""
+query: ""
+request: "GET /echo HTTP/1.1"
+path: "/echo"
+accept_encoding: "gzip, deflate, sdch"
+user_agent: "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36"
+connection: "keep-alive"
+accept_language: "en-US,en;q=0.8"
+</pre>
+
+<p>See also:
+<a href="RackServer.html">RackServer</a>,
+<a href="RackRouter.html">RackRouter</a>,
+<a href="RackContentType.html">RackContentType</a>,
+<a href="RackLog.html">RackLog</a>,
+<a href="RackDebug.html">RackDebug</a><p>

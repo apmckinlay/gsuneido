@@ -1,0 +1,42 @@
+<h3>Xml</h3>
+
+<pre>(tag, content = false [, attribute: value ...]) => string</pre>
+
+<p>Create XML (or XHTML or HTML) strings.</p>
+
+<p>If there is no content, an <i>empty element</i> is returned e.g. &lt;tag /></p>
+
+<p>For example:</p>
+<pre>
+Xml("br")
+    => &lt;br />'
+
+Xml("p", "hello world")
+    => '&lt;p>hello world&lt;/p>'
+
+Xml("p", "hello world", font: "serif", size: 10)
+    => '&lt;p font="serif" size="10">hello world&lt;/p>'
+</pre>
+
+<p>Calls to Xml can be nested:</p>
+<pre>
+Xml('b', Xml('i', "hello"))
+    => '&lt;b>&lt;i>hello&lt;/i>&lt/b>'
+</pre>
+
+<p>Use a tag starting with "?" for processing instructions:</p>
+<pre>
+Xml("?works" data: "test.wks")
+    => '<?works data="test.wks"?>'
+</pre>
+
+<p>Use a tag of "!--" for comments:</p>
+<pre>
+Xml("!--", "this is a comment")
+    => "<!--this is a comment-->"
+</pre>
+
+<p>Note: Xml does <u>not</u> encode &amp; &lt; &gt; &quot; as character entities.</p>
+
+<p>See also:
+<a href="../../Cookbook/Using Xml to Create XML and XHTML.html">Using Xml to Create XML and XHTML</a></p>

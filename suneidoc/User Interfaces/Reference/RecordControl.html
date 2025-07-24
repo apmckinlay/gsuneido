@@ -1,0 +1,68 @@
+<div style="float:right"><span class="toplinks">
+<a href="RecordControl/Methods.html">Methods</a>
+</span></div>
+<h3>RecordControl</h3>
+
+<pre>(control)</pre>
+
+<p>A PassthruController that tracks the contents of its controls in a record.</p>
+
+<p>RecordControl's default name is "Data".</p>
+
+<p>A RecordControl "mirrors" the contents of the controls it contains. Changing the values in the RecordControl will update the contents the controls. Similarly, when the contents of the controls are changed (by the user) the values in the RecordControl will be updated.</p>
+
+<p>RecordControl is used by <a href="Access1Control.html">Access1Control</a> and <a href="AccessControl.html">AccessControl</a>.</p>
+
+<p>Most stdlib data entry controls are designed to work with RecordControl.</p>
+
+<p>For example:</p>
+<pre>
+Window(Controller
+    {
+    Controls: 
+        #(Record
+            (Vert
+                (Field name: city)
+                (Field name: country)
+                Skip
+                (Horz
+                    (Button Canada) Skip
+                    (Button Home) Skip
+                    (Button City) Skip
+                    (Button Inspect) Skip
+                    (Button Protect))))
+    On_Canada()
+        {
+        .Data.SetField('country', 'Canada')
+        }
+    On_Home()
+        {
+        .Data.Set(#{city: 'Saskatoon', country: 'Canada'})
+        }
+    On_City()
+        {
+        Alert(.Data.GetField('city'))
+        }
+    On_Inspect()
+        {
+        Inspect(.Data.Get())
+        }
+    On_Protect()
+        {
+        control = .Data.GetControl('city')
+        control.SetReadOnly(not control.GetReadOnly())
+        }
+    })
+</pre>
+
+<p>If you are writing your own control, here are the requirements for working with RecordControl:</p>
+<ul>
+<li><code>.Send(#Data)</code> in <code>New</code></li>
+<li><code>.Send(#NoData)</code> in <code>Destroy</code></li>
+<li><code>.Send(#NewValue, value)</code> when the user changes the value (commonly when the control loses the focus)</li>
+<li>a <code>Get()</code> method that returns the value of the control</li>
+<li>a <code>Set(value)</code> method that sets the control to the value (and sets dirty to false)</li>
+<li>a <code>Dirty?(state = "")</code> method that returns whether the user has changed the value</li>
+<li>a <code>Valid?()</code> method that returns whether the current value of the control is "valid"</li>
+<li>optionally, a <code>SetValid(valid?)</code> method that sets whether the control is valid, (commonly used to color the control red)</li>
+</ul>

@@ -1,0 +1,24 @@
+<h3>Paths</h3>
+
+<p>Utility methods for dealing with paths.</p>
+
+<p>In general it is better to use forward slashes (/) for paths rather than back slashes (\) since back slashes are the escape character and you need to double or triple them which can get confusing. Almost all API calls will accept forward slashes.</p>
+
+<dl class="code">
+<dt>Basename(path) => string</dt>
+<dd>Return the part after the last slash or colon.</dd>
+<dt>Combine(base, path) => path</dt>
+<dd>Removes trailing slash from base, and leading slash from path, and joins with forward slash.</dd>
+<dt>ParentOf(path) => path</dt>
+<dd>The part up to the last slash or colon. The result will not have a trailing slash. If there is no slash or colon it will return "."</dd>
+<dt>ToAbsolute(currentPath, relativePath) => path</dt>
+<dd>Combines a base path and a relative path, handling "." and ".." prefixes on the relative path.</dd>
+<dt>ToLocal(path) => path</dt>
+<dd>On Windows this calls ToWindows, otherwise it calls ToUnix.</dd>
+<dt>ToUnix(path) => path</dt>
+<dd>Converts back slashes to forward slashes.</dd>
+<dt>ToWindows(path) => path</dt>
+<dd>Converts forward slashes to back slashes.</dd> 
+</dl>
+
+<p>See also: <a href="Url.html">Url</a></p>

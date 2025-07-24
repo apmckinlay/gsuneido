@@ -1,0 +1,32 @@
+<h3>BorderControl</h3>
+<pre>(control, border)</pre>
+
+<p>Creates a layout for <b>control</b> and adds <b>border</b> around it.</p>
+
+<p>The <b>control</b> is a Control object, and the <b>border</b> is the border width.  If <b>border</b> is not specified, then the border width defaults to 10 pixels wide.</p>
+
+<p>For example:</p>
+<pre>
+Window(
+    Controller
+        {
+        Xstretch: 0
+        Ystretch: 0
+        New()
+            {  super(.layout()) }
+        layout()
+            { return #(Vert
+                (Border 
+                    ( Form
+                        ( id group: 0 ) (amount group: 1 ) nl
+                        ( control group: 0 ) nl
+                        ( field group: 0 ) ( cost group: 1 )
+                    ), border: 20
+                ))
+            }
+        }
+    )
+</pre>
+
+<p>Would display something like:</p>
+<img src="../../res/bordercontrol.png" />

@@ -1,0 +1,65 @@
+<div style="float:right"><span class="toplinks">
+<a href="Control/Methods.html">Methods</a>
+</span></div>
+<h3>ChooseListControl</h3>
+
+<pre>(list = false, width = 10, mandatory = false, allowOther = false, 
+    set = false, selectFirst = false, listField = false, splitValue = ',',
+    listSeparator = ' - ', status = '', otherListOptions = #(), font = "",
+    trim = true, size = "", bgndcolor = "", textcolor = "")</pre>
+
+<p>This is a single-line edit field with an arrow button on the right side.  After an item has been selected from the drop-down list, the edit field will be filled in with the value chosen. The value can also be typed directly into the field.  If you haven't specified allowOther (see below) then you only have to enter enough of a prefix of a value to uniquely identify it.</p>
+
+<p>The list to be selected from can be specified using an object for the <b>list</b> parameter, or a <b>listField</b> can be specified (see below).</p>
+
+<p>For example:</p>
+
+<pre>ChooseListControl(#(1, 'two', 3, 'four', 5, 'Six', 7, 'Eight', 9, 'Zero'))</pre>
+
+<p>Would display:</p>
+
+<img src="../../res/ChooseListControl1.gif" />
+
+<p>And when you clicked on the button, you would get:</p>
+
+<img src="../../res/ChooseListControl2.gif" />
+
+<p>If the list contains items that consist of a value, a " - ", and a description, only the value (the part before the " - ") will be displayed when one is selected from the list.</p>
+
+<p>For example:</p>
+
+<pre>ChooseListControl(list: #('1 - one', '2 - two', '3 - three', '4 - four'))</pre>
+
+<p>Would display a selected value like this:</p>
+
+<img src="../../res/ChooseListControl3.gif" />
+
+<p><b>listField</b> can be used to specify that the list should be taken from another field. Normally this will be a rule rather than an actual field. For example, to get the list  from the "arcus_numlist" field you'd specify:</p>
+
+<pre>ChooseListControl(listField: 'arcus_numlist')</pre>
+
+<p>and then specify a rule for this field like:</p>
+
+<pre>
+Rule_arcus_numlist
+function ()
+    {
+    return "1, two, 3, four, 5, Six, 7, Eight, 9, Zero"
+    }
+</pre>
+
+<p>The list can be returned as a list object or as comma separated string.</p>
+
+<p><b>Note:</b> listField will only work if the ChooseList is inside a Controller that will respond to a GetField message. Normally this will be a <a href="RecordControl/RecordControl.html">RecordControl</a>. <a href="AccessControl/AccessControl.html">AccessControl</a> automatically uses a RecordControl.</p>
+
+<p>The <b>width</b> parameter is used to specify the width of the field.</p>
+
+<p>If the <b>mandatory</b> parameter is true, the field can not be left empty by the user.</p>
+
+<p>If the <b>allowOther</b> parameter is true, the user may type in a value that does not exist in the list, otherwise, values that do not exist in the list are considered invalid.</p>
+
+<p>The <b>set</b> parameter may be used to set an initial value.</p>
+
+<p>If the <b>selectFirst</b> parameter is true, the field will initially be set to the first value in the list.</p>
+
+<p>Note: This Control can be used as an alternative to <a href="ComboBoxControl.html">ComboBoxControl</a>.</p>

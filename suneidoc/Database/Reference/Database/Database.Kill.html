@@ -1,0 +1,22 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>Database.Kill</h4>
+
+<pre>(session_id) => number</pre>
+
+<p>Kills any sessions with the specified session_id. Returns the number of sessions killed.</p>
+
+<p>For example:</p>
+
+<pre>
+Database.Kill("192.168.1.143")
+    => 1
+</pre>
+
+<p>This is useful if Database.Connections shows a connection but that machine is not running a client. (This can happen if the client is not closed properly.)</p>
+
+<p>This only works client-server. When running standalone it will always return 0.</p>
+
+<p>See also:
+<a href="Database.Connections.html">Database.Connections</a>,
+<a href="Database.SessionId.html">Database.SessionId</a>
+</p>

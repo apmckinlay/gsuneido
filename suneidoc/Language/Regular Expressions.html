@@ -1,0 +1,272 @@
+<h2>Regular Expressions</h2>
+
+<p>Regular expressions are used for the =~ and !~ 
+<a href="Expressions/Comparison.html">comparison operators</a>,
+and also for
+<a href="Reference/String/string.Match.html">string.Match</a>,
+<a href="Reference/String/string.Extract.html">string.Extract</a> and
+<a href="Reference/String/string.Replace.html">string.Replace</a>.
+</p>
+
+<h3>Matching Ordinary Text</h3> 
+
+<p>The simplest aspect of <i>regular expressions</i> is matching ordinary text.  For example:</p>
+<pre>
+"now is the time" =~ "the" 
+    => true
+</pre>
+
+<p>Notice that with the <code>=~</code> operator, 
+the right hand <i>pattern</i> string only has to be contained in the left hand text string.
+The pattern does not have to match the entire string.</p>
+
+<p>The <code>!~</code> operator is similar to  <code>!=</code>
+giving false when the pattern matches, and true when it doesn't.</p>
+
+<h3>Start and End of Line</h3>
+
+<p><code>^</code> (caret) and <code>$</code> (dollar) 
+allow you to match the beginning and end, respectively,
+of a line of text.</p>
+
+<p>For example, <code>"^The"</code> will match "The" at the beginning of a line.
+Similarly, <code>"it$"</code> matches "it" at the end of a line.</p>
+
+<p>Note: The caret and dollar match <i>positions</i> rather than actual text characters.
+</p>
+
+<p>Use both caret at the beginning and dollar at the end
+if you want to match an entire line.
+For example:</p>
+<pre>
+"now is the time" =~ "the time" => true
+"now is the time" =~ "^the time$" => false
+"the time" =~ "^the time$" => true
+</pre>
+
+<p>Suneido matches caret either at the start of a string
+or after a newline.  
+Similarly, dollar matches either at the end of a string
+or before a newline (or return).
+If you specifically want to match the beginning or end of the entire string,
+regardless of newlines, use \A and \Z.
+</p>
+
+<p>Note: To turn off the special meaning of a regular expression character,
+preceed it with a backslash.
+For example, use <code>\^</code> to match a literal caret.</p>
+
+<h3>Character Classes</h3>
+
+<p>The <code>[</code>...<code>]</code> construct, called a <i>character class</i>,
+lets you list several characters that are allowed at that point.
+For example, to match <code>"the"</code> or <code>"The"</code>
+you could use <code>"[tT]he"</code>.</p>
+
+<p>A character class can contain any number of characters.
+For example, <code>[aeiou]</code> would match a vowel.</p>
+
+<p>Within a character class, a <code>'-'</code> (dash) can be used to specify a range of characters.
+For example, <code>[0-9]</code> for a digit,
+or <code>[a-z]</code> for a lower case letter.
+You can use more than one range in a character class,
+for example, <code>[a-zA-Z]</code> for an upper or lower case letter,
+or <code>[0-9a-fA-F]</code> for a hexadecimal digit.
+Ranges can be combined with individual characters
+as in <code>[a-zA-Z_.!?]</code>.</p>
+
+<p>A dash is only special within a character class 
+and not the first or last character in a character class.
+For example, <code>[-z]</code> matches a literal dash or a 'z'.</p>
+
+<p>A <i>negated</i> character class matches any character that is <i>not</i> listed.
+It is written like <code>[^</code>...<code>]</code>.
+For example, to find a 'q' followed by any character <i>except</i> a 'u' you could use
+<code>"q[^u]"</code>.</p>
+
+<p>The only characters that are special within a character class are:</p>
+<table>
+<tr><td><code>^</code></td><td>at the beginning to specify a negated character class</td></tr>
+<tr><td><code>-</code></td><td>between two characters to specify a range</td></tr>
+<tr><td><code>]</code></td><td>to mark the end of the character class</td></tr>
+<tr><td><code>\w \W \d \D \s \S</code></td><td valign="bottom">character class shortcuts (see below)</td></tr>
+<tr><td><code>[:...:]</code></td><td>posix character class shortcuts (see below)</td></tr>
+</table>
+
+<p>To include a literal ']' in a character class, make it the first character,
+for example <code>[][]</code> will match an opening or closing square bracket,
+and <code>[^][]</code> will match any character 
+<i>except</i> an opening or closing square bracket.</p>
+
+<p>Note: A character class containing any single character 
+(except for '^')
+matches that character literally.
+This means you can "turn off" the special meaning of a character
+by enclosing it in square brackets.</p>
+
+<h3>Character Class Shortcuts</h3>
+
+<p>The following shortcuts can be used in place of their equivalent character classes:</p>
+<table width="50%">
+<tr><td width="10%"><code>\d</code></td><td><code>[0-9]</code></td><td>digit</td></tr>
+<tr><td><code>\D</code></td><td><code>[^0-9]</code></td><td>non-digit</td></tr>
+<tr><td><code>\s</code></td><td><code>[\x09-\x0d\x20]</code></td><td>whitespace</td></tr>
+<tr><td><code>\S</code></td><td><code>[^\x09-\x0d\x20]</code></td><td>non-whitespace</td></tr>
+<tr><td><code>\w</code></td><td><code>[a-zA-Z0-9_]</code></td><td>part of word</td></tr>
+<tr><td><code>\W</code></td><td><code>[^a-zA-Z0-9_]</code></td><td>non-word character</td></tr>
+</table>
+
+<p>For example, you could use <code>"\d\d\d\d\d"</code> to match a five digit zipcode
+(rather than <nobr><code>"[0-9][0-9][0-9][0-9][0-9]"</code></nobr>).</p>
+
+<p><code>\s</code> includes linefeed and return.
+(And <code>\S</code> excludes them.)</p>
+
+<h3>Posix Character Classes</h3>
+
+<table width="100%">
+<tr><td width="15%"><code>[:alnum:]</code></td><td>letters and digits</td></tr>
+<tr><td><code>[:alpha:]</code></td><td>letters (a-zA-Z)</td></tr>
+<tr><td><code>[:blank:]</code></td><td>space or tab only</td></tr>
+<tr><td><code>[:cntrl:]</code></td><td>control characters</td></tr>
+<tr><td><code>[:digit:]</code></td><td>decimal digits (0-9)</td></tr>
+<tr><td><code>[:graph:]</code></td><td>printing characters, excluding space</td></tr>
+<tr><td><code>[:lower:]</code></td><td>lower case letters (a-z)</td></tr>
+<tr><td><code>[:print:]</code></td><td>printing characters, including space</td></tr>
+<tr><td><code>[:punct:]</code></td><td>printing characters, excluding letters (a-zA-Z) and digits (0-9)</td></tr>
+<tr><td><code>[:space:]</code></td><td>whitespace</td></tr>
+<tr><td><code>[:upper:]</code></td><td>uppercase letters (A-Z)</td></tr>
+<tr><td><code>[:xdigit:]</code></td><td>hexadecimal digits (0-9a-fA-F)</td></tr>
+</table>
+
+<p>Unlike the character class shortcuts, posix character classes can only be used <b>within</b> a character class. For example:</p>
+<pre>
+"a2" =~ "[[:digit:]]"
+    => true
+</pre>
+
+<h3>Matching Any Character - Dot</h3>
+
+<p>A '.' or <i>dot</i> will match any single character, 
+except for a newline, return, or nul.</p>
+
+<p>For example, to match dates like "01/02/03" or "01-02-03",
+you could use <code>"\d\d.\d\d.\d\d"</code>.
+(Although in practice this might be too general; for example, it would match "12345678".)</p>
+
+<p>Note: dot is equivalent to <code>[^\r\n\x00]</code>.</p>
+
+<h3>Matching One of Several Choices - Alternation</h3>
+
+<p>The '<code>|</code>' character allows you to match one of several alternatives.
+For example, we could match either "first" or "second" using
+<code>"first|second"</code>.
+To <i>constrain</i> the alternation, use parenthesis, as in
+<code>"(first|second) place"</code>,
+which would match either "first place" or "second place".</p>
+
+<p>Be careful when using alternation with caret and dollars
+(and other similar matching).
+For example, in <code>"^From|To"</code> the alternatives are
+<code>"^From"</code> and <code>"To"</code>.
+Usually what you want is <code>"^(From|To)"</code>
+so the caret is not just part of the first alternative</p>
+
+<p>Note: Alternation will match the <i>first</i> alternative
+that allows the entire match to succeed.
+This is not necessarily the longest match. 
+For example:</p>
+<pre>
+"the category is basic".Extract("cat|category")  =>  "cat"
+"the category is basic".Extract("category|cat")  =>  "category"
+</pre>
+
+<h3>Optional and Repeated Items - Quantifiers</h3>
+
+<p>The '<code>?</code>' character means the preceding item is <i>optional</i>.
+For example, in <code>"Jul<b>y?</b>"</code> the 'y' is optional,
+so it will match either "Jul" or "July".</p>
+
+<p>To make multiple characters optional you can apply the question mark to 
+a parenthesized group.  
+For example: <code>"1(st)?"</code> will match either "1" or "1st".</p>
+
+<p>Similar to the question mark,
+'<code>+</code>' (<i>plus</i>) means "one or more of the preceding item" and
+'<code>*</code>' (<i>star</i>) means "optional or one or more of the preceding item".
+Both plus and star try to match as many times as possible,
+while still allowing anything afterwards to match.
+Like the question mark, plus and star apply to either
+the preceding character, or the preceding parenthesized group.</p>
+
+<p>For example, <code>"hello.*world"</code> will match  "hello" followed by "world"
+with anything (or nothing) in between.
+(Since dot doesn't match newlines, the "hello" and the "world" would have to be on the same line.)</p>
+
+<p>Or, <code>"[0-9]+"</code> will match one or more digits.</p>
+
+<p>When using patterns like <code>".*"</code> remember that 
+it will match as much as possible.  For example:</p>
+<pre>
+"&lt;one> &lt;two>".Extract("&lt;.*>")  =>  "&lt;one> &lt;two>"
+</pre>
+
+<p>One way around this is to use something like:</p>
+<pre>
+"&lt;one> &lt;two>".Extract("&lt;[^>]*>")  =>  "&lt;one>"
+</pre>
+
+<p>However, this won't work for more than a single character.
+A better solution is to use the "non-greedy" versions.
+Normally, <code>?</code>, <code>*</code>, and <code>+</code> are "greedy",
+meaning they match as much as possible.  
+Following them with a question mark, 
+<code>??</code>, <code>*?</code>, and <code>+?</code>
+makes them "non-greedy", 
+meaning they match as little as possible.
+For example:</p>
+<pre>
+"&lt;one> &lt;two>".Extract("&lt;.*?>")  =>  "&lt;one>"
+</pre>
+
+<p>Since dot (<code>.</code>) does not match newlines,
+if you want your match to span multiple lines you have to use something like
+<code>[^\000]*</code> where <code>[^\000]</code> means any character except NUL (0).</p>
+
+<h3>Ignore Case</h3>
+
+<p>You can specify that case should be ignored ('a' will match 'A' and vice versa) by the sequence <code>(?i)</code> (ignore case). You can turn this off with <code>(?-i)</code>.</p>
+
+<p>Note: As of 2014-12-18 ignore case only applies to a-zA-Z (not extended ascii).</p>
+
+<h3>Word Boundaries</h3>
+
+<p>Just like <code>^</code> and <code>$</code> match the beginning and end of lines, 
+<code>\&lt;</code> and <code>\&gt;</code> match the beginning and end of <i>words</i>.
+For example: <code>"\&lt;cat\&gt;"</code> would match "cat"
+but not "scat" or "catalog".</p>
+
+<p>"Start of word" and "end of word" are simply positions 
+where a sequence of "word" characters (alphanumeric or underline <code>[a-zA-Z0-9_]</code>) 
+begins or ends.</p>
+
+<h3>Backreferences</h3>
+
+<p>not supported</p>
+
+<h3>Escapes for Special Characters</h3>
+
+<p>When Suneido compiles string literals, it converts <i>escape</i> sequences.</p>
+
+<table>
+<tr><td width="20%"><code>\t</code></td><td>tab</td></tr>
+<tr><td><code>\n</code></td><td>newline (linefeed)</td></tr>
+<tr><td><code>\r</code></td><td>carriage return</td></tr>
+<tr><td><code>\0</code></td><td>nul (zero) character</td></tr>
+<tr><td><code>\xhh</code></td><td>an 'x' followed by a two digit hexadecimal number e.g. <code>\x0a</code> or <code>\x0A</code></td></tr>
+<tr><td><code>\"</code></td><td>a literal double quote</td></tr>
+</table>
+
+<h3>Literal Matching</h3>
+
+<p>The special sequence <code>(?q)</code> will turn off the meaning of the special characters described above. The only special sequence recognized is <code>(?-q)</code> which turns on the meaning of special characters.</p>

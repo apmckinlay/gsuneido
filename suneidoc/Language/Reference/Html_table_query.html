@@ -1,0 +1,29 @@
+<h3>Html_table_query</h3>
+
+<pre>(query) => string</pre>
+
+<p>Generate an HTML table from a query.</p>
+
+<p>On the query, use <i>project</i> to select and order the columns,
+and <i>sort</i> to order the rows.</p>
+
+<p>For example:</p>
+<pre>
+Html_table_query('tables where table &lt; 10')
+</pre>
+
+<p>will return an HTML string that produces:</p>
+<table border="1" cellpadding="3"><tr><th>table#</th><th>tablename</th><th>nextfield</th><th>nrows</th><th>totalsize</th></tr>
+<tr><td valign="top">2</td><td valign="top">tables</td><td valign="top">5</td><td valign="top">51</td><td valign="top">2864</td></tr>
+<tr><td valign="top">4</td><td valign="top">columns</td><td valign="top">3</td><td valign="top">159</td><td valign="top">3381</td></tr>
+<tr><td valign="top">6</td><td valign="top">indexes</td><td valign="top">9</td><td valign="top">76</td><td valign="top">4672</td></tr>
+<tr><td valign="top">8</td><td valign="top">triggers</td><td valign="top">3</td><td valign="top">0</td><td valign="top">100</td></tr>
+</table border="1" cellpadding="3">
+
+<p>The column headings will use the heading from the <i>data dictionary</i>
+Field_ definitions when available.</p>
+
+<p>See also:
+<a href="Html_table.html">Html_table</a>,
+<a href="Xml.html">Xml</a>
+</p>

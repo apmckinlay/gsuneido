@@ -1,0 +1,79 @@
+<h3>SparklineControl</h3>
+
+<pre>
+(data = #(), valField = '', width = 128, height = 64, 
+    inside = 8, thick = 2, pointLineRatio = 1.2,
+    rectangle = true, middleLine = false, allPoints = false,
+    firstPoint = false, lastPoint = true, lines = true,
+    minPoint = false, maxPoint = false, normalRange = false, 
+    borderOnPoints = false, circlePoints = false)
+</pre>
+
+<p>Create a control used to draw a Sparkline graph inside a window. Sparklines are small but useful graphic charts which describes the trend of a value.</p>
+
+<p>The <b>data</b> argument can be:
+<li>an object with values from which you want to draw a Sparkline graph. For example: <code>#(2, 5, 9, 14, 12, 7, 9, 30)</code>
+</li>
+<li>a query from which you want to take the values for the graph. In this case you have to use <b>valField</b> argument to give the name of a field with the values for the graph.</li>
+</p>
+
+<p>The <b>width</b> argument is the width, in pixel, of the graph.</p>
+
+<p>The <b>height</b> argument is the height, in pixel, of the graph.</p>
+
+<p>With the <b>inside</b> argument you can specify a border frame, in pixel, inside the rectangle of the graph area.</p>
+
+<p>With the <b>thick</b> argument you can specify the line tickness in the graph.</p>
+
+<p>With <b>pointLineRatio</b> you can specify then ratio between the point thickness and the line thickness.</p>
+
+<p>If <b>rectangle</b> is false, the rectangle around the graph area will not be drawn.</p>
+
+<p>If <b>middleLine</b> is true, a reference line will be drawn in the center of the graph.</p>
+
+<p>If <b>allPoints</b> is true, you will see all the points in the graph.</p>
+
+<p>If <b>firstPoint</b> is true, you will see the first point in the graph.</p>
+
+<p>If <b>lastPoint</b> is true, you will see the last point (a red point) in the graph.</p>
+
+<p>If <b>lines</b> is false, you will not see the lines between the points in the graph.</p>
+
+<p>If <b>minPoint</b> is true, you will see the minimum value (a green point) in the graph.</p>
+
+<p>If <b>maxPoint</b> is true, you will see the maximum value (a light green point) in the graph.</p>
+
+<p><b>normalRange</b> should be an object holding the range (minimum and maximum) of normal values for the graph. For the normal range there will be a gray bar in the graph. Points inside this gray bar represent desiderable values.</p>
+
+<p>If <b>borderOnPoints</b> is true, you will see a black border around the points.</p>
+
+<p>If <b>circlePoints</b> is true, you will see round points instead of square points.</p>
+
+<p>For example:</p>
+<pre>
+Window(
+    #(Vert
+        (Sparkline 
+            (10, 8, 12, 2, 4, 7, 9, 18, 12, 13, 16, 23, 23) 
+            allPoints: true
+            )
+        (Sparkline 
+            (10, 8, 12, 2, 4, 7, 9, 18, 12, 13, 16, 23, 23) 
+            normalRange: (10, 15)
+            )
+        (Sparkline 
+            (10, 8, 12, 2, 4, 7, 9, 18, 12, 13, 16, 23, 23)
+            circlePoints: true, pointLineRatio: 2
+            minPoint: true, maxPoint: true, 
+            middleLine: true, borderOnPoints: true
+            )
+        )
+    )
+</pre>
+
+<p>Would display:</p>
+<img src="../../res/sparkline.png" />
+
+<p>See also:
+<a href="BulletGraphControl.html">BulletGraphControl</a>
+</p>

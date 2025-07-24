@@ -1,0 +1,22 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>class.Synchronized</h4>
+
+<pre>(block) => value</pre>
+
+<p>.Synchronized locks the current class's internal mutex, runs the block, and then unlocks the mutex. It returns whatever the block returns. It will timeout and throw an exception if it is unable to obtain the lock within 10 seconds.</p>
+
+<p>For more information see the documentation for <a href="../Mutex.html">Mutex</a>. .Synchronized is equivalent to Mutex except that you do not need to create or store the mutex yourself.</p>
+
+<p><b>Note</b>: .Synchronized is <u>not</u> reentrant. If code calls .Synchronized while in .Synchronized (in the same class) it will deadlock (and then timeout).</p>
+
+<p><b>Note</b>: .Synchronized cannot be used in nested classes. (Because of the way it locates the class for the currently executing function.)</p>
+
+<p><b>WARNING</b>: Concurrency is hard. Only use it if the benefits are substantial. Never take it lightly.</p> 
+
+<p>See also:
+<a href="../Channel.html">Channel</a>,
+<a href="../Mutex.html">Mutex</a>,
+<a href="../Object/object.CompareAndSet.html">object.CompareAndSet</a>,
+<a href="../Synchronized.html">Synchronized</a>,
+<a href="../Thread.html">Thread</a>,
+<a href="../WaitGroup.html">WaitGroup</a><p>

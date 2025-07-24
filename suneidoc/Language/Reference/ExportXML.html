@@ -1,0 +1,45 @@
+<h3>ExportXML</h3>
+
+<pre>(from_query, to_file = false, header = true)</pre>
+
+<p>Derived from <a href="Export.html">Export</a></p>
+
+<p>Class for exporting information as an <em>eXtensible Markup Language </em>textfile.</p>
+
+<p>For example:</p>
+
+<pre>ExportXML('tables', 'tables.txt')</pre>
+
+<p>Will take the information out of the tables table and output it to the tables.txt file in a format similar to this:</p>
+<pre>
+&lt;?xml version="1.0"?>
+&lt;!--  suneido xml export  -->
+&lt;!DOCTYPE table [
+&lt;!ELEMENT table (record*)>
+&lt;!ELEMENT record (table?, tablename?, nextfield?, nrows?, totalsize?)>
+&lt;!ELEMENT table (#PCDATA)>
+&lt;!ATTLIST table type CDATA #REQUIRED>
+&lt;!ELEMENT tablename (#PCDATA)>
+&lt;!ATTLIST tablename type CDATA #REQUIRED>
+&lt;!ELEMENT nextfield (#PCDATA)>
+&lt;!ATTLIST nextfield type CDATA #REQUIRED>
+&lt;!ELEMENT nrows (#PCDATA)>
+&lt;!ATTLIST nrows type CDATA #REQUIRED>
+&lt;!ELEMENT totalsize (#PCDATA)>
+&lt;!ATTLIST totalsize type CDATA #REQUIRED>
+]>
+&lt;table>
+&lt;record>
+&lt;table type="number">2&lt;/table>
+&lt;tablename type="string">tables&lt;/tablename>
+&lt;nextfield type="number">5&lt;/nextfield>
+&lt;nrows type="number">47&lt;/nrows>
+&lt;totalsize type="number">4821&lt;/totalsize>
+&lt;/record>
+...
+&lt;/table>
+</pre>
+
+<p>Specifying the header: produces an infile Document Type Definition.</p>
+
+<p>See also: <a href="ImportXML.html">ImportXML</a></p>

@@ -1,0 +1,19 @@
+<h4>object.MergeUnion</h4>
+
+<pre>(object) => this</pre>
+
+<p>Adds un-named values from the object passed in that do not exist in this.</p>
+
+<p><b>Note:</b> this modifies the object it is applied to, it does not create a new object.</p>
+
+<p>For example:</p>
+<pre>
+ob = Object(3, 4)
+Object(1, 2, 3).MergeUnion(ob)
+    => #(1, 2, 3, 4)
+</pre>
+
+<p>See also:
+<a href="object.Merge.html">object.Merge</a>,
+<a href="object.MergeNew.html">object.MergeNew</a>
+</p>

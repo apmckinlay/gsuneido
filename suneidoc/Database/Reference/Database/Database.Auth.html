@@ -1,0 +1,16 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Database.Auth</h3>
+
+<pre>(data) => true or false</pre>
+
+Returns true and authorizes the client-server database connection if data is:
+
+<ul>
+<li>a valid token (from <a href="Database.Token.html">Database.Token</a> and not used yet)</li>
+
+<li>user $ '\x00' $ Sha1(nonce $ Md5(user $ password)) where nonce is from <a href="Database.Nonce.html">Database.Nonce</a> and user and <a href="../../../Language/Reference/Md5.html">Md5</a> passhash exist in the users table</li>
+</ul>
+
+<p>Clients start up not authorized to access the database contents. Attempted access will throw "not authorized". Libraries can still be Use'd and code executed from them.</p>
+
+<p>A client can be authorized using Database.Auth. If using a token it will need to be obtained using <a href="Database.Token.html">Database.Token</a> from a different, already authorized client (or the server). Otherwise a user can supply a user name and password to be verified against the users table.</p>

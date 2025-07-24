@@ -1,0 +1,10 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Exit</h3>
+
+<pre>( status = 0 )</pre>
+
+<p>Close all open windows and exit from Suneido with the specified exit status.</p>
+
+<p><b>Warning:</b> Do not just use PostQuitMessage because this will not close open windows properly.</p>
+
+<p><b>Note</b>: If <b>status</b> is true, then Exit does an immediate forced exit. This should only be used for special cases such as handling WM_ENDSESSION.</p>

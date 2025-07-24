@@ -1,0 +1,22 @@
+<h4>object.MembersIf</h4>
+
+<pre>(callable) => object</pre>
+
+<p>Returns a list of member names of an object for which callable returns True.
+</p>
+
+<p>callable is called with the member name as its single argument.</p>
+
+<p>callable can be anything that can be called, e.g. block, function, class, or instance.</p>
+
+<p>For example:</p>
+<pre>
+#(one: 11, two: 22, three: 33).MembersIf({|m| m =~ 't'})  => #("two", "three")
+</pre>
+
+<p><b>Note:</b> Named members are not searched in any particular order.</p>
+
+<p>See also:
+<a href="object.Members.html">object.Members</a>,
+<a href="object.FindIf.html">object.FindIf</a>
+</p>

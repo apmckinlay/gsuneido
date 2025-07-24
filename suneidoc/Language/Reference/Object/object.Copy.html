@@ -1,0 +1,10 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Copy</h4>
+
+<pre>() => object</pre>
+
+<p>Returns a copy of the object. </p>
+
+<p><b>Note:</b> This is a <i>shallow</i> copy i.e. if any members are themselves objects, they are not copied.</p>
+
+<p>Copy is lazy and uses copy-on-write. i.e. Copy does not immediately copy the data. The copy and the original will both point to the same data. If any of the copies is modified, the data is copied then. This is an optimization to avoid unnecessary copying.</p>

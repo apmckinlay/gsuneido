@@ -1,0 +1,10 @@
+<h3>QueryDo</h3>
+
+<pre>(request [, field: value ...])</pre>
+
+<p>Executes the insert, update, and delete request using <a href="Transaction/transaction.QueryDo.html">transaction.QueryDo</a> in a standalone <a href="RetryTransaction.html">RetryTransaction</a>.</p>
+
+<p>For example:</p>
+<pre>
+QueryDo("delete customers where sales &lt; 100")
+</pre>

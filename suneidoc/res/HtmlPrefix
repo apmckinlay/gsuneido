@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="x-ua-compatible" content="IE=edge" >
+<style type="text/css" media="screen,print">
+body { background-color: white; font-family: Arial,sans-serif; max-width: 60em; }
+h1,h2,h3,h4,h5,h6 { margin-bottom: 6pt; }
+p,li,ul { margin-top: 0; margin-bottom: 6pt; }
+pre { margin-left: 30px; margin-top: 0; margin-bottom: 6pt; }
+table pre { margin: 0; }
+dt { font-weight: bold; }
+dl.code dt { font-size: 90%; }
+pre, code, dl.code dt { font-family: Consolas, monospace; }
+dd { margin-bottom: 6pt; margin-left: 30px; } /* same margin as pre */
+table { margin-bottom: 6pt; }
+img { margin-bottom: 6pt; }
+a:hover { background-color: lightgrey; }
+span.deprecated { color: red; font-size: 80%; font-weight: bold; font-variant: small-caps; }
+span.builtin { color: green; font-size: 80%; font-weight: bold; font-variant: small-caps; }
+span.new { color: white; background-color: green; font-size: 80%; font-weight: bold; font-variant: small-caps; padding-left: 3px; padding-right: 4px; }
+span.stdlib { color: green; font-size: 80%; font-weight: bold; }
+span.toplinks { font-size: 80%; }
+</style>
+
+<style type="text/css" media="screen">
+.ss { height: 150px; float: right; }
+.showhide { display: none; }
+</style>
+
+<style type="text/css" media="print">
+body { font-family: Georgia,'Times New Roman',Times,serif; }
+h1,h2,h3,h4,h5,h6 { font-family: Verdana,Arial,Helvetica,sans-serif; }
+h1,h2 { page-break-before: always; }
+h1,h2,h3,h4,h5,h6 { page-break-after: avoid; }
+.ss { width: 6in; margin-top: 6px; }
+.showhide { display: inline; visibility: visible; }
+</style>
+
+<script language="JavaScript">
+function screenshot(index)
+    {
+    if (document.getElementById("ss" + index).style.height == "auto")
+        {
+        document.getElementById("ss" + index).style.styleFloat = "right"
+        document.getElementById("ss" + index).style.height = "150px"
+        }
+    else
+        {
+        document.getElementById("ss" + index).style.styleFloat = "none"
+        document.getElementById("ss" + index).style.height ="auto"
+        }
+    }
+function showhide(item)
+    {
+    element = document.getElementById(item)
+    if (element.style.visibility == "visible")
+        {
+        element.style.visibility="hidden";
+        element.style.display="none";
+        }
+    else
+        {
+        element.style.visibility="visible";
+        element.style.display="inline";
+        }
+    }
+</script>
+</head>
+<body>

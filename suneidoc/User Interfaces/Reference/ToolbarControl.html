@@ -1,0 +1,73 @@
+<h3>ToolbarControl</h3>
+
+<pre>(button, ...)</pre>
+
+<p>Creates a row of icon buttons.</p>
+
+<p>Buttons can be specified with just a string (e.g. "Copy") or as an object where the first un-named value is the name of the button. e.g. #("Copy", drop:). The object form is used to pass additional options:</p>
+
+<dl>
+<dt>drop:</dt>
+<dd>true/false. In addition to receiving the standard click event, setting this attribute to receive the "Drop_"+command event when the button is right clicked. You can handle this event and display a popup menu.</dd>
+</dl>
+
+<p>"" inserts a separator (vertical bar).</p>
+
+<p>">" inserts Fill e.g. to place the following buttons at the right hand end of the tool bar. This will also make the tool bar stretchable.</p>
+
+<p>Toolbar uses .Window.Commands to get the shortcut, tooltip and icon information.</p>
+
+<p>The icon can be one of the pre-defined Suneido font icons (see IconFont.icons) or any .emf files in imagebook. If not specified, the default icon name is the command in lowercase.</p>
+
+<p>Normally a toolbar is placed at the top of the window, for example:</p>
+<pre>
+Controls: (Vert
+    (Toolbar Cut Copy Paste)
+    ...
+    StatusBar)
+</pre>
+
+<p>You also have to specify the commands:</p>
+<pre>
+Commands:
+    (
+    (Cut,   "Ctrl+X")
+    (Copy,  "Ctrl+C")
+    (Paste, "Ctrl+V")
+    )
+</pre>
+
+<p>See: User Interfaces - <a href="../Commands.html">Commands</a></p>
+
+<p>Example:</p>
+
+<pre>
+Controller
+    {
+    Title: 'test ToolBar'
+    Commands: (
+        (Cut "Ctrl+X")
+        (Copy ,"Ctrl+C")
+        (Paste ,"Ctrl+V")
+        (Parent_Folder, "Ctrl+F", "This is a test", "folder") // "folder" is the icon name
+        (vsplit))
+
+    Controls: (Vert
+        (Skip 3)
+        (Horz
+            (Toolbar (Cut, drop:), Copy, Paste, "", Parent_Folder, ">", vsplit)
+            (Vert (EtchedLine before: 0 after: 0) Field))
+        (Skip 3)
+        (Statusbar))
+
+    On_Parent_Folder()
+        {
+        .Vert.Status.Set('On_Parent_Folder')
+        }
+
+    Drop_Cut(@unused)
+        {
+        .Vert.Status.Set('Drop_Cut')
+        }
+    }()
+</pre>

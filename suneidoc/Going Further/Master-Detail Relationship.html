@@ -1,0 +1,88 @@
+<h2>Master-Detail Relationship</h2>
+
+<p><b>Note:</b> This section requires an understanding of the previous "Getting Started" sections.</p>
+
+<p>Master-Detail relationships are very common in applications. An example of this type of relationship is an invoice with a header and line items.  The following example will lead you through creating a simple invoice entry screen as well as reports for printing the invoices.</p>
+
+<p>First we need to create the tables, go to QueryView and run the following (each "create" statement must be run separately):</p>
+
+<pre>
+create invoice (customer, invoice, invoice_number) key(invoice)
+
+create invoicelines (invoice, line_num, price, product, qty)
+    index(invoice) in invoice cascade
+    key(line_num)
+</pre>
+
+<p>Note that the invoice column's value will be a Timestamp to ensure uniqueness, but the user can enter their own number in the invoice_number field. The invoicelines table also has a Timestamp rule to ensure uniqueness on the line_num field.</p>
+
+<p>The following are the necessary rules and datadict entries to ensure columns are treated as the correct data type (string is the default) as well as to specify field prompts. In the following definitions, the first line is the name of the definition (type this in the tree view on the left side in Library View). These definitions should be placed in mylib or some library other than stdlib.  If you have any problems with the following definitions, you can load in the supplied mylib and use it, it contains all of the following definitions.</p>
+
+<pre>
+<b>Rule_invoice</b>
+function ()
+    {
+    return Timestamp();
+    } 
+
+<b>Field_invoice</b>
+Field_num
+    {
+    }
+ 
+<b>Rule_line_num</b>
+function ()
+    {
+    return Timestamp();
+    } 
+
+<b>Field_line_num</b>
+Field_num
+    {
+    } 
+
+<b>Field_invoice_number</b>
+Field_string
+    {
+    Prompt: "Invoice"
+    } 
+
+<b>Rule_total_price</b>
+function()
+    {
+    return Number(.qty) * Number(.price)
+    } 
+
+<b>Field_total_price</b>
+Field_dollars
+    {
+    Prompt: "Total Price"
+    }
+</pre>
+
+<p>Now we can define the screen for entering invoices:</p>
+
+<pre>
+<b>My_EnterInvoices</b>
+Controller
+    {
+    Controls:
+        (Access
+            title: "Enter Invoices"
+            invoice
+            (Vert
+                (Horz invoice_number Skip customer)
+                (Skip)
+                (Browse
+                    "invoicelines",
+                    columns: (product, qty, price, total_price)
+                    linkField: invoice,
+                    name: "invoice")
+            )
+        )
+    }
+</pre>
+
+<p>The main things to note about the above definition are the arguments to the BrowseControl.  We need to specify the linkField so that the Browse knows which field from its query we are linking on.  The name argument to the Browse must be the key from the header table.  Browse then uses the key value from this field to look up the correct line items that have the same value in the linkField.</p>
+
+<p>For an example of printing invoices, see the <a href="Creating a Form Report.html">Creating a Form Report</a> section.</p>

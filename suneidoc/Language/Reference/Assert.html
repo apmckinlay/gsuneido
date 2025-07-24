@@ -1,0 +1,86 @@
+<h3>Assert</h3>
+
+<pre>
+(condition, msg = "")
+(expression <i>matcher</i>: value, msg = "")
+</pre>
+
+<p>If the condition is true, Assert does nothing. If the condition is false, Assert throws an exception of "Assert FAILED: " $ description.</p>
+
+<p>The second form of Assert uses "matchers" to make the error messages more readable.</p>
+
+<p>For example:</p>
+
+<pre>Assert(x is 123)</pre>
+
+<p>can be written as:</p>
+
+<pre>Assert(x is: 123)</pre>
+
+<p>with the advantage that if it fails the error will be: "expected 123 but it was ..." instead of just "assertion failed"</p>
+
+<p>The msg argument can be used to add a message to the exception to help identify where it came from.</p> 
+
+<p><b>Note:</b> With new style matcher Assert's the msg argument must be named.</p>
+
+<pre>Assert(x is: 123, msg: "count to three")</pre>
+
+<p>If the expression is a block, then it will be executed with Catch. This is useful for catching exceptions:</p>
+
+<pre>Assert({ Object().x } throws: "member not found")</pre>
+
+<p>The matchers include:</p>
+
+<dl class="code">
+<dt>is: value</dt>
+<dd></dd>
+<dt>isnt: value</dt>
+<dd></dd>
+<dt>matches: value</dt>
+<dd>Regular expression match.</dd>
+<dt>has: value</dt>
+<dd>Checks if a string or object .Has?(value) returns true</dd>
+<dt>hasnt: value</dt>
+<dd>Checks if a string or object .Has?(value) returns false.</dd>
+<dt>hasMember: value</dt>
+<dd>Checks if an object .Member?(value) returns true</dd>
+<dt>hasntMember: value</dt>
+<dd>Checks if an object .Member?(value) returns false</dd>
+<dt>hasAssoc: #(member: value)</dt>
+<dd>Checks if an object contains the specified association</dd>
+<dt>like: string</dt>
+<dd>Trim's leading and trailing whitespace, normalizes line endings by removing '\r', and converts sequences of spaces or tabs to single spaces before comparing.</dd>
+<dt>startsWith: string</dt>
+<dd></dd>
+<dt>endsWith: string</dt>
+<dd></dd>
+<dt>lessThan: value</dt>
+<dd></dd>
+<dt>lessThanOrEqualTo: value</dt>
+<dd></dd>
+<dt>greaterThan: value</dt>
+<dd></dd>
+<dt>lessThanOrEqualTo: value</dt>
+<dd></dd>
+<dt>greaterThanOrEqualTo: value</dt>
+<dd></dd>
+<dt>between: #(a, b)</dt>
+<dd>Confirms that the supplied number is between a and b (<em>i.e.</em> <code>a &lt;= x and x &lt;= b</code>).</dd>
+<dt>closeTo: #(value, decimalPlaces)</dt>
+<dd>Confirms that the supplied number, when rounded to <code>decimalPlaces</code> decimal places, is equal to a benchmark <code>value</code> also rounded to <code>decimalPlaces</code> decimal places.</dd>
+<dt>greaterThanOrEqualTo: value</dt>
+<dd></dd>
+<dt>isNumber: value</dt>
+<dd></dd>
+<dt>isString: value</dt>
+<dd></dd>
+<dt>isObject: value</dt>
+<dd></dd>
+<dt>isType: type</dt>
+<dd>Checks that Type(value) is type</dd>
+<dt>throws: string</dt>
+<dd>Confirms that the supplied block throws an exception that contains (.Has?) the given string. For more complex exception checking, use <a href="Catch.html">Catch</a>.<br />
+e.g. <code>Assert({ [].Max() } throws: "empty")</code></dd>
+</dl>
+
+<p>Another advantage to matchers is that you can write your own. This can make the asserts simpler and easier to read. A class named Matcher_... will be automatically recognized as a matcher. Matchers define Match, Expected, and Actual methods. Look at the existing matchers in stdlib for examples. Matchers are also used by <a href="Mock.html">Mock</a></p>

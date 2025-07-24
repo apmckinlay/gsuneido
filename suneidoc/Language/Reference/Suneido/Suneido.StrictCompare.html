@@ -1,0 +1,22 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>Suneido.StrictCompare</h4>
+
+<pre>(boolean)</pre>
+
+<p>StrictCompare starts as false. If StrictCompare is set to true, then comparisons (&lt;, &lt;=, &gt;, &gt;=) between different types will throw an exception.</p>
+
+<p>The reason for this is that comparisons between types are ambiguous. You might write &gt; 0 for positive numbers, but it also unintentionally includes e.g. dates. If it's intended for positive numbers, x &gt; 0 can be rewritten as: Number?(x) and x &gt; 0 (or use <a href="../Positive?.html">Positive?</a>)</p>
+
+<p><a href="../By.html">By</a>, <a href="../Gt.html">Gt</a>, <a href="../Min.html">Min</a>, <a href="../Object/object.Min.html">object.Min</a>, <a href="../Object/object.MinWith.html">object.MinWith</a>, <a href="../Max.html">Max</a>, <a href="../Object/object.Max.html">object.Max</a>, <a href="../Object/object.MaxWith.html">object.MaxWith</a>, <a href="../Object/object.Sort!.html">object.Sort!</a> are exempt from Suneido.StrictCompare</p>
+
+<p>The goal is to eventually make StrictCompare always enabled.</p>
+
+<p>See also:
+<a href="../Cmp.html">Cmp</a>,
+<a href="../Gt.html">Gt</a>,
+<a href="../Min.html">Min</a>,
+<a href="../Max.html">Max</a>,
+<a href="../Object/object.Min.html">object.Min</a>,
+<a href="../Object/object.MinWith.html">object.MinWith</a>,
+<a href="../Object/object.Max.html">object.Max</a>,
+<a href="../Object/object.MaxWith.html">object.MaxWith</a><p>

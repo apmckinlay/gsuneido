@@ -1,0 +1,55 @@
+<div style="float:right">
+    <span class="toplinks">
+        <a href="MultiViewControl/Messages.html">Messages</a>
+    </span>
+</div>
+<h3>MultiViewControl</h3>
+
+<pre>
+New(.args, .accessArgs, .listArgs, .accessGoTo? = false, defaultMode = 0)
+</pre>
+
+<p>Creates a control used to navigate and modify data either in form or list screen, user can use the Flip button on the top left to switch</p>
+
+<p>The control is a combination of <a href="AccessControl.html">AccessControl</a> and <a href="VirtualListControl.html">VirtualListControl</a></p>
+
+<p>The <b>args</b> are the common arguments shared between AccessControl and VirtualListControl</p>
+
+<p>The <b>accessArgs</b> are used to initiate the inside AccessControl, please refer to the <a href="AccessControl.html">AccessControl</a> documentation for detailed information</p>
+
+<p>The <b>listArgs</b> are used to initiate the inside VirtualListControl, please refer to the <a href="VirtualListControl.html">VirtualListControl</a> documentation for detailed information</p>
+
+<p>The control remembers the view mode last time used, the default view mode is form sceen, you can specify <b>defaultMode</b> as 1 to be using list mode</p> 
+<p>If the screen is access from AccessGoTo, the screen is forced to be form mode, and it does not modify the last view mode for the current screen.</p>
+
+<p>For example:</p>
+<pre>
+Database('ensure sales (id, name, desc, amount, cost) key (id)')
+
+Window(#('MultiView',
+    args: #(
+        'sales',
+        title: 'Sales',
+        option: 'Sales',
+        startLast:,
+        protectField: 'sales_protect',
+        excludeSelectFields: #(cost)),
+    accessArgs: #(
+        1: #(Vert, #(Form
+            (id, group: 0), (name, group: 1) nl, 
+            (desc, group: 0) (amount, group: 1))
+            #Customizable), 
+        locate: #(keys: (id) columns: (id, name))),
+    listArgs: #(
+        columns: #(id, name, desc, amount),
+        headerSelectPrompt:,
+        enableExpand:,
+        defaultColumns: #(id, name),
+        filtersOnTop:)
+    )
+)
+</pre>
+
+<p>See also:
+<a href="AccessControl.html">AccessControl</a>, <a href="VirtualListControl.html">VirtualListControl</a>
+</p>

@@ -1,0 +1,19 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>Database.Transactions</h4>
+
+<pre>() => object</pre>
+
+<p>Returns a list of the outstanding <b>update</b> transactions.</p>
+
+<p>Note: This list should be empty when nothing is running.</p>
+
+<p>For example:</p>
+<pre>
+Transaction(update:)
+	{|unused|
+	Database.Transactions()
+	}
+=> #(123)
+</pre>
+
+<p>If the database has been locked after detecting corruption, then Database.Transactions will return #(0)</p>

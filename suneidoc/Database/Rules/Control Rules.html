@@ -1,0 +1,22 @@
+<h3>Control Rules</h3>
+
+<p>Rules can be used to send messages to controls (within a RecordControl) 
+by using a special naming convention.  
+For example, to have a rule determine whether a 'name' field is protected or not:</p>
+
+<pre>
+Rule_name__protect
+function ()
+    { return .id is ""; }
+</pre>
+
+<p><b>Note:</b> There must be <b>two</b> underscores between the field name and the method name.  
+The method name is capitalized before being called.</p>
+
+<p>In general, a rule called:</p>
+<pre>   "Rule_" $ fieldname $ "__" $ method</pre>
+<p>will translate to:</p>
+<pre>   control[Method](value)</pre>
+
+<p>Note: For this to work, the control must support the method.
+Currently, FieldControl supports "valid" and "protect" methods.</p>

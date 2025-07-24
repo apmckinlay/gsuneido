@@ -1,0 +1,17 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Pack</h3>
+
+<pre>(value) => string</pre>
+
+<p>Converts the value to a binary string in the same way that values are stored in the database.</p>
+
+<p>Note: Not all types of values can be Pack'ed (stored in the database).</p>
+
+<p><b>Warning:</b> Packing an object does not retain:</p>
+<ul>
+<li>default value (<a href="Object/object.Set_default.html">object.Set_default</a>)</li>
+<li>read-only status (<a href="Object/object.Set_readonly.html">object.Set_readonly</a>).</li>
+<li><a href="../../Database/Rules.html">Rules</a> dependencies</li>
+</ul>
+
+<p>See also: <a href="PackSize.html">PackSize</a>, <a href="Unpack.html">Unpack</a></p>

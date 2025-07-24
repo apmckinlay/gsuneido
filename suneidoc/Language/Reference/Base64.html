@@ -1,0 +1,21 @@
+<h3>Base64</h3>
+
+<pre>.Encode(string) => base64_string</pre>
+
+<pre>.Decode(base64_string) => string</pre>
+
+<p>Returns the encoded or decoded string.</p>
+
+<p>For example:</p>
+<pre>
+Base64.Encode("hello") => "aGVsbG8="
+
+Base64.Decode("aGVsbG8=") => "hello"
+</pre>
+
+<p><b>Note</b>: Also available as <a href="String/string.Base64Encode.html">string.Base64Encode</a> and <a href="String/string.Base64Decode.html">string.Base64Decode</a></p>
+
+<p>See also:
+<a href="http://www.faqs.org/rfcs/rfc2045.html" target="_blank">
+RFC2045 MIME Part One: Format of Internet Message Bodies</a>
+</p>

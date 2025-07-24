@@ -1,0 +1,16 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Timestamp</h3>
+
+<pre>() => date</pre>
+
+<p>Returns a unique timestamp.  i.e. Timestamp will never return the same value twice.</p>
+
+<p>This is useful for system generated table keys.</p>
+
+<p>In client/server mode, Timestamp comes from the server to ensure unique values across multiple clients.</p>
+
+<p><b>Warning:</b> Timestamp uses the system time,
+so if the system time is set back this may result in duplicate values.</p>
+
+<p><b>As Of April 2023</b>: using a new extended format so Timestamp can generate more than 1000 timestamps per second without the time getting ahead.  Since more are available, the server now returns batches of timestamps instead of just one at a time. This reduces the number of requests to the server. Batches are only valid for 1 second to keep the time in sync.</p>
+<p><b>NOTE:</b> Because of the batching, timestamps from different clients and the server may be slightly out of order when within the same second.</p>

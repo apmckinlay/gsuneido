@@ -1,0 +1,63 @@
+<h2>Test If a Value is One of a List</h2>
+
+<p><b>Category:</b> Coding</p>
+
+<p><b>Problem</b></p>
+
+<p>You need to check if a value is one of several different choices.</p>
+
+<p><b>Ingredients</b></p>
+
+<p><a href="../Language/Statements/if.html">if</a>, 
+<a href="../Language/Regular Expressions.html">Regular Expressions</a>, 
+<a href="../Language/Reference/Object/object.Has?.html">object.Has?</a>, 
+<a href="../Language/Reference/Object/object.Member?.html">object.Member?</a>, 
+<a href="../Language/Statements/switch.html">switch</a></p>
+
+<p><b>Recipe</b></p>
+
+<p>The most obvious solution is to simply use <b>if</b> and <b>or</b>, for example:</p>
+
+<pre id="code">
+if (value is 'red' or value is 'green' or value is 'blue')
+</pre>
+
+<p>However, if you have more than a few choices, or if you need to do this test several times, it soon becomes awkward.</p>
+
+<p>Another option is to use regular expressions:</p>
+
+<pre id="code">
+if (value =~ "^(red|green|blue)$")
+</pre>
+
+<p>The ^(...)$ ensure that you are matching the entire string, not just a portion.</p>
+
+<p>This option will only work for strings. For other types of values, you can use an object to contain the list:</p>
+
+<pre id="code">
+if (#('red', 'green', 'blue').Has?(value))
+</pre>
+
+<p>For simple values (e.g. strings, numbers, dates), it's faster to make the values the members (keys) of the object:</p>
+
+<pre id="code">
+if (#('red':, 'green':, 'blue':).Member?(value))
+</pre>
+
+<p>This is faster because it takes advantage of the hash lookup that object use to find members. Notice that we didn't supply any values for the members - the default value is <b>true</b>.</p>
+
+<p>Another option is to use a <b>switch</b>:</p>
+
+<pre id="code">
+switch (value)
+    {
+case 'red', 'green', 'blue':
+    ...
+    }
+</pre>
+
+<p>This is usually not the best choice unless you need to test for several different cases.</p>
+
+<p><b>Discussion</b></p>
+
+<p>For a small number of string values I would use a regular expression. My next choice for simple values would be .Member?. Otherwise, the most general solution is to use .Has?.</p>

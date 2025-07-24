@@ -1,0 +1,30 @@
+<h3>EnsureDirectories</h3>
+
+<pre>EnsureDirectories(path)</pre>
+
+<p>Creates all subdirectories in a path recursively. This is equivalent to the Unix <code>mkdir -p</code> command or Go's <code>os.MkdirAll</code> function.</p>
+
+<p>Unlike <a href="EnsureDir.htm">EnsureDir</a> which creates only a single directory, EnsureDirectories will create all necessary parent directories in the specified path.</p>
+
+<p>Path can be a regular path or UNC path (starting with <code>//</code>). If the path doesn't end with <code>/</code>, the last segment is assumed to be a filename.</p>
+
+<p>For example:</p>
+<pre>
+EnsureDirectories('c:/folder1/folder2/folder3')
+// Creates: c:/folder1, c:/folder1/folder2
+
+EnsureDirectories('c:/folder1/folder2/')
+// Creates: c:/folder1, c:/folder1/folder2
+
+EnsureDirectories('//server/share/folder/')
+// Creates: //server/share, //server/share/folder
+</pre>
+
+<p>See also:
+<a href="CopyFile.html">CopyFile</a>,
+<a href="CreateDir.html">CreateDir</a>,
+<a href="DeleteDir.html">DeleteDir</a>,
+<a href="DeleteFile.html">DeleteFile</a>,
+<a href="DeleteFiles.html">DeleteFiles</a>,
+<a href="EnsureDir.html">EnsureDir</a>,
+<a href="MoveFile.html">MoveFile</a><p>

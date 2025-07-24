@@ -1,0 +1,27 @@
+<h4>report.GetParamsWhere</h4>
+
+<pre>(field, ...) => string</pre>
+
+<p>Calls <a href="../GetParamsWhere.html">GetParamsWhere</a>, passing .Params as the data.</p>
+
+<p>For example:</p>
+<pre>
+...
+Params:
+    #(Form
+        (ParamsSelect firstname)
+        (ParamsSelect lastname))
+QueryFormat
+    {
+    Query()
+        {
+        return 'mycontacts' $ _report.GetParamsWhere('firstname, lastname')
+        }
+...
+</pre>
+
+<p>
+See also:
+<a href="../Params.html">Params</a>,
+<a href="../../../Going Further/Report Parameters.html">Going Further - Report Parameters</a>
+</p>

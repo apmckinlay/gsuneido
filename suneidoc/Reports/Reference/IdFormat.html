@@ -1,0 +1,33 @@
+<h3>IdFormat</h3>
+
+<pre>(data = false, w = false, width = false, justify = "left",
+    font = false, query = "", numField = "", nameField = false,
+    abbrevField = false, abbrev = false)</pre>
+
+<p>Prints the name or abbreviation for an id value.</p>  
+
+<p>The <b>query</b> argument should be the query that the id value comes from.</p>
+
+<p><b>numField</b> should be the field from the <b>query</b> that contains the 
+id value.</p>
+
+<p>The <b>nameField</b> argument is used when the "_num, _name, _abbrev" naming convention is not being used.</p>
+
+<p>If <b>abbrev</b> is true then the abbreviation field for the id will be printed instead of the name field.</p>
+
+<p>The <b>abbrevField</b> argument is used to specify an abbreviation field in the query to match values against if abbrev is true.</p>
+
+<p>NOTE: IdFormat assumes that the "_num, _name, _abbrev" naming convention is used for field names in the supplied <b>query</b> if no values are passed in as the nameField or abbrevField. For more information on this naming convention, see <a href="../../User Interfaces/Reference/IdControl.html">IdControl.</a></p>
+
+<p>Example:</p>
+<p>If you are printing customer_num on invoices, and you want the name of the 
+customer to be printed, the format specification should look like:</p>
+
+<pre>   #(Id customers numField: "customer_num")</pre>
+
+<p>This example assumes there is a customers table set up with a customer_num 
+field and a customer_name field.</p>
+
+<p>See also: 
+<a href="../../User Interfaces/Reference/IdControl.html">IdControl</a>
+</p>

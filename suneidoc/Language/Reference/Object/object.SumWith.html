@@ -1,0 +1,18 @@
+<h4>object.SumWith</h4>
+
+<pre>
+(block) => number
+</pre>
+
+<p>Totals the results of the block applied to each value in the object.</p>
+
+<p>For example:</p>
+<pre>
+data = #(
+    (name: 'Fred', count: 456)
+    (name: 'Joe', count: 123))
+data.SumWith{ it.count }
+    => 579
+</pre>
+
+<p>See also: <a href="object.Sum.html">object.Sum</a></p>

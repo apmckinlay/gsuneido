@@ -1,0 +1,14 @@
+<h3>Asup</h3>
+
+<pre>(string) => string</pre>
+
+<p>Replaces embedded expressions with their value.</p>
+
+<p>For example:</p>
+<pre>
+s = "Hello &lt;$ Suneido.User $&gt;"
+Asup(s)
+    => "Hello default"
+</pre>
+
+<p>Note: Asup does not handle $&gt; within the expressions (e.g. in a quoted string)</p>

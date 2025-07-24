@@ -1,0 +1,16 @@
+<h3><a href="../Rss2">Rss2</a> - Methods</h3>
+
+<dl class="code">
+<dt>Channel</dt>
+<dd>Accepts named arguments of: title, link, description, language, copyright, managingEditor, webMaster, pubDate, lastBuildDate, category, generator, docs, cloud, ttl, image, rating, textinput, skipDays, skipHours. title, link and description are required.</dd>
+<dt>Image</dt>
+<dd>Accepts named arguments of: url, title, link, width, height. url, title, and link are required.</dd>
+<dt>TextInput</dt>
+<dd>Requires named arguments of: title, description, name, and link.</dd>
+<dt>AddItem</dt>
+<dd>Accepts named arguments of: title, link, description, author, category, comments, enclosure, guid, pubDate, source. Either title or description is required.</dd>
+<dt>ToString() => string</dt>
+<dd>Returns the XML as a string.</dd>
+</dl>
+
+<p>A feed can only have a single Channel, Image, and TextInput but can have multiple items. Image and TextInput are optional.</p>

@@ -1,0 +1,21 @@
+<h4>object.ListToMembers</h4>
+
+<pre>(@names) => object</pre>
+
+<p>Converts a list of values to an object with those values as the member "names".</p>
+
+<p>This can be useful because object.Member?() is faster than object.Has?()</p>
+
+<p>For example:</p>
+<pre>
+["one", "two", "three"].ListToMembers()
+    => [one:, two:, three:]
+</pre>
+
+<p>See also:
+<a href="../NameArgs.html">NameArgs</a>,
+<a href="object.Extract.html">object.Extract</a>,
+<a href="object.ListToNamed.html">object.ListToNamed</a>,
+<a href="object.Project.html">object.Project</a>,
+<a href="object.ProjectValues.html">object.ProjectValues</a>,
+object.Slice<p>

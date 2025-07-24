@@ -1,0 +1,26 @@
+<h3>WithQuery</h3>
+
+<pre>
+(@args)
+</pre>
+
+<p>Does:</p>
+<pre>
+Transaction(read:)
+    { |t|
+    return t.Query(@args)
+    }
+</pre>
+
+<p>For example:</p>
+<pre>
+WithQuery('tables')
+    { |q|
+    first = q.Next()
+    second = q.Next()
+    }
+</pre>
+
+<p>See also:
+<a href="Transaction/transaction.Query.html">transaction.Query</a>
+</p>

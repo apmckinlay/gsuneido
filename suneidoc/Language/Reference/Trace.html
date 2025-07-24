@@ -1,0 +1,42 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Trace</h3>
+<pre>
+(string) or (number, block)
+</pre>
+
+<p>Trace(string) outputs the string.</p>
+
+<p>A numeric argument turns tracing on or off.  Trace(0) turns tracing off.  One or more of the following values or'ed together can be used to enable tracing:</p>
+
+<dl class="code">
+<dt>TRACE.CONSOLE</dt>
+    <dd>Send trace output to a console window on Windows GUI (gsuneido.exe) or to stdout otherwise. (WARNING: Don't close the trace window - this will terminate Suneido.)</dd>
+
+<dt>TRACE.LOGFILE</dt>
+    <dd>Send trace output trace.log text file in the current directory.</dd>
+
+<dt>TRACE.CLIENTSERVER</dt>
+    <dd>Trace requests and responses between client and server. Only works if you are running client-server, not standalone.</dd>
+
+<dt>TRACE.DBMS</dt>
+    <dd>Traces certain dbms related activity.</dd>
+
+<dt>TRACE.QUERIES</dt>
+    <dd>Trace database queries.</dd>
+
+<dt>TRACE.QUERYOPT</dt>
+    <dd>Trace top level database query optimization.</dd>
+
+<dt>TRACE.JOINOPT</dt>
+    <dd>Trace join query optimization.</dd>
+
+<dt>TRACE.RECORDS - gSuneido only</dt>
+    <dd>Trace rules and observers. Can be helpful to debug rule issues.</dd>
+
+<dt>TRACE.SLOWQUERIES</dt>
+    <dd>Trace database queries that read more than 100 records per result record. (e.g. due to non-indexed where's)</dd>
+</dl>
+
+<p>If you don't specify either CONSOLE or LOGFILE (trace.log) then output will go to both.</p>
+
+<p>The block form is recommended to ensure that tracing is turned off.</p>

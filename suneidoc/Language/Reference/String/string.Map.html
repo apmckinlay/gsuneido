@@ -1,0 +1,11 @@
+<h4>string.Map</h4>
+
+<pre>(block) => string</pre>
+
+<p>Calls block(c) for each character in the string and returns the results concatenated together.</p>
+
+<p>For example:</p>
+<pre>
+"Hello World".Map({|c| c is 'l' ? 'L' : c})
+    => "HeLLo WorLd"
+</pre>

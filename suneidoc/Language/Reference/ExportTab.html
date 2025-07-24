@@ -1,0 +1,26 @@
+<h3>ExportTab</h3>
+
+<pre>(from_query, to_file = false, header = true)</pre>
+
+<P>Derived from <a href="Export.html">Export</a></P>
+
+<p>Class for exporting information as a <em>Tab Delimited</em> textfile.</p>
+
+<p>For example:</p>
+
+<PRE>ExportTab('tables', 'tables.txt', header:) </PRE>
+
+<p>Will take the information out of the tables table and output it to the 
+tables.txt file in a format similar to this:</p>
+
+<PRE>
+table   tablename   nextfield   nrows   totalsize
+2   tables  5   45  4688
+4   columns 3   145 3020
+6   indexes 9   65  2842
+8   triggers    3   0   100
+</PRE>
+
+<P>Specifying header: produces the initial line with the field names.</P>
+
+<p>See also: <a href="ImportTab.html">ImportTab</a></p>

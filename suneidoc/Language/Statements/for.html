@@ -1,0 +1,88 @@
+<h3>for</h3>
+
+<p>There are several forms of the <b>for</b> statement.</p>
+
+<h4>for i in from..to</h4>
+
+<p>Simple counted loops that increment by one.</p>
+<pre>for i in <i>from</i>..<i>to</i></pre>
+
+<p>Is equivalent to:</p>
+<pre>for (i = <i>from</i>; i &lt; <i>to</i>; ++i)</pre>
+
+<p><i>from</i> may be omitted if it is 0</p>
+<pre>for i in ..<i>to</i></pre>
+
+<p>To just do a loop a certain number of times, without a variable, use:</p>
+<pre>for ..<i>to</i></pre>
+
+<p>Note: Unlike the classic form, the limit expression (<i>to</i>) is only evaluated once, not once per loop.</p>
+
+<p>Note: Unlike the classic form, modifying the loop variable will <b>not</b> affect the iteration.</p>
+
+<h4>for x in y</h4>
+
+<p>To loop through the values of any <i>iterable</i> object.</p>
+<pre>
+for <i>variable</i> in <i>expression</i>
+    <i>statement</i>
+</pre>
+
+<p>This form is equivalent to:</p>
+<pre>
+iter = <i>expression</i>.Iter()
+while (iter isnt <i>variable</i> = iter.Next())
+    <i>statement</i>
+</pre>
+
+<p>Note: If members are added or removed during iteration, an "object modified during iteration" exception will be thrown. This can usually be "fixed" by making a copy of the members, for example:</p>
+<pre>
+for m in ob.Members().Copy()
+    if ...
+        ob.Delete(m)
+</pre>
+
+<p>The expression must evaluate to an object that supports .Iter() which must return an iterator that has a .Next() method that returns the iterator itself when it reaches the end.</p>
+
+<h4>for m,v in ob</h4>
+
+<p>With objects, records, classes, or instances you can use:</p>
+<pre>
+for <i>var1</i>, <i>var2</i> in x
+</pre>
+<p>where var1 will be the index or member name and var2 will be the value.</p>
+<p>This is "snapshot" iteration. i.e. it will not "see" changes made during iteration. It is not necessary to use .Copy()</p>
+
+<h4>for (init; cond; inc)</h4>
+
+<p>The "classic" form is similar to C/C++/Java.</p>
+<pre>
+for ( <i>expressions1</i> ; <i>logical-expression</i> ; <i>expressions2</i> )
+    <i>statement</i>
+</pre>
+
+<p>Executes <i>expressions1</i> once, and then repeatedly executes the <i>statement</i> followed by <i>expressions2</i> as long as the <i>logical-expression</i> is true. The <i>statement</i> and <i>expressions2</i> will not be executed at all if the <i>logical-expression</i> is initially false.</p>
+
+<p>This form is equivalent to:</p>
+<pre>
+<i>expressions1</i>
+while ( <i>logical-expression</i> )
+    {
+    <i>statement</i>
+    <i>expressions2</i> 
+    }
+</pre>
+
+<p><i>expressions1</i> and <i>expressions2</i> can consist of zero or more comma separated expressions</p>
+
+<p>For example:</p>
+<pre>
+for (i = 0; i &lt; 10; ++i)
+    Print(i)
+</pre>
+
+<p>If the <i>logical-expression</i> is omitted, it is taken as true, presumably with some other provision for ending the loop.</p>
+
+<p>Note: If logical-expression evaluates to something other than true or false, an exception will result: "conditionals require true or false".</p>
+
+<p>See also: <a href="forever.html">forever</a></p>

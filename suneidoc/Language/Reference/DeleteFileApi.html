@@ -1,0 +1,23 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>DeleteFileApi</h3>
+
+<pre>(filename) => true or error</pre>
+
+<p>Delete a file. Normally it's better to use <a href="DeleteFile.html">DeleteFile</a> which retries.</p>
+
+<p><b>Note</b>: On Windows, if the delete fails with "access denied" it will try to remove the read-only attribute (by setting the attributes to "normal") and then retry the delete. In the rare case that the second delete fails, this could leave the file existing but with the attributes changed.</p>
+
+<p>If the file does not exist, it returns "DeleteFileApi: &lt;filename&gt; does not exist" 
+(Note: the position of the colon changed as of BuiltDate 20241218)</p>
+
+<p>Returns true or an error string. It is return throw i.e. if you do not use the return value and the result is not true, it will throw the error.</p>
+
+<p>See also:
+<a href="CopyFile.html">CopyFile</a>,
+<a href="CreateDir.html">CreateDir</a>,
+<a href="EnsureDirectories.html">EnsureDirectories</a>,
+<a href="DeleteDir.html">DeleteDir</a>,
+<a href="DeleteFile.html">DeleteFile</a>,
+<a href="DeleteFiles.html">DeleteFiles</a>,
+<a href="EnsureDir.html">EnsureDir</a>,
+<a href="MoveFile.html">MoveFile</a><p>

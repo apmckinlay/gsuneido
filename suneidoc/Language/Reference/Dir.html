@@ -1,0 +1,30 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Dir</h3>
+
+<pre>(path = "*.*", files = false, details = false, block = false) => object</pre>
+
+<p>Dir returns a list of file and sub-directory names matching a given path specification.
+Sub-directory names are identified by a trailing "/".</p>
+
+<p>If <b>files</b> is true, sub-directories are omitted from the list.</p>
+
+<p>If <b>details</b> is true, each entry in the directory is returned as an object containing the name, the date the file was last written to, and the size in bytes. For directories, the name will end with '/'.</p>
+
+<p>For example:</p>
+<pre>
+Dir("c:/suneido/*.*")
+
+=>  #("building.txt", "installing.txt", "mybook.su", "mycontacts.su", "mylib.su", 
+    "release010912.txt", "SciLexer.dll", "source/", "suneido.db", "suneido.exe", 
+    "translatelanguage.su",)
+</pre>
+
+<p>If you specify a block it will be called for each file instead of returning a list. The block can use break and continue as in other loops. For example:</p>
+<pre>
+Dir() { Print(it) }
+</pre>
+
+<p>See also:
+<a href="DirExists?.html">DirExists?</a>,
+<a href="FileExists?.html">FileExists?</a>
+</p>

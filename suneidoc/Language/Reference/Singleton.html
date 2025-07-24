@@ -1,0 +1,31 @@
+<h3>Singleton</h3>
+
+<p>An abstract class used to derive "singleton" classes (classes that support a single instance.</p>
+
+<p>For example:</p>
+
+<pre>
+<b>Logger</b>
+
+Singleton
+    {
+    New()
+        { .log = Object() }
+    Append(msg)
+        { .log.Add(msg) }
+    Log()
+        { return .log }
+    }
+</pre>
+
+<p>Singleton's are accessed via CallClass, for example:</p>
+
+<pre>Logger().Append("hello world")</pre>
+
+<p>Singleton provides a Reset method that destroys the instance so it will be recreated the next time it is used.</p>
+
+<pre>Logger().Reset()</pre>
+
+<p><b>Note:</b> Singleton does not stop you from creating multiple instances.</p>
+
+<p>See also: <a href="../../Cookbook/Implementing the Singleton Pattern.html">Implementing the Singleton Pattern</a> and <a href="../../Appendix/Idioms/CallClass for Singleton.html">CallClass for Singleton</a></p>

@@ -1,0 +1,19 @@
+<h3>view</h3>
+
+<pre><b>view</b> <i>viewname</i> = <i>query</i></pre>
+
+<p>Define a view.</p>
+
+<p>For example:</p>
+
+<pre>view active_staff = staff where status = "active"</pre>
+
+<p>or:</p>
+
+<pre>view all_staff = active_staff union old_staff</pre>
+
+<p>A view name may be used just like a table name in queries.</p>
+
+<p>Use <a href="../Requests/drop.html">drop</a> to un-define a view.</p>
+
+<p>See also: <a href="../Requests/sview.html">sview</a></p>

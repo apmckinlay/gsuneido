@@ -1,0 +1,70 @@
+<h2>Running Client Server</h2>
+
+<p>Okay, you've built this great application and now everyone in the office wants shared access to it.  No problem.  Up till now you've been running Suneido "locally" with the same instance of the executable acting as both database server and user interface client.  But Suneido can also run client-server with one instance of the executable acting as the database server, and multiple other instances, on other computers, acting as clients.</p>
+
+<p>The first step is to create a text file called "server.go" containing:</p>
+<pre>Use("mylib");</pre>
+
+<p><b>Note:</b> In client-server mode, it is the server that determines the set of libraries in use.</p>
+
+<p>You can now start up Suneido in server mode with:</p>
+<pre>suneido -server server.go</pre>
+
+<p><b>Note:</b> In practice you'd probably create a shortcut for starting the server.</p>
+
+<p>To start up a client on the same machine run:</p>
+
+<pre>suneido -client 127.0.0.1 myset</pre>
+
+<p>where 127.0.0.1 is the special IP address for the current machine. This copy of Suneido will access all its data from the server via TCP/IP. i.e. this copy doesn't use a database file.</p>
+
+<p>To start a client on another machine you will need to know the IP address of your server.  You can get this by running (on the server):</p>
+
+<pre>ipconfig</pre>
+
+<p>For example, if your server's IP address was 192.168.1.130 then to access it from another computer you would run:</p>
+
+<pre>suneido -client 192.168.1.130 myset</pre>
+
+<p>Again, in practice you would probably create a shortcut for your users to run this command.  And to avoid having to copy suneido.exe to all your client machines, you could put it in a shared location like \\server\shared and then run:</p>
+
+<pre>\\server\shared\suneido -client 192.168.1.130 myset</pre>
+
+<p>This also means that you only have to update one copy of the executable when there is a new version.</p>
+
+<p>By default Suneido uses TCP/IP port 3147.  If necessary you can specify a
+different port on both the server and clients:</p>
+
+<pre>suneido -port 1234 -server server.go</pre>
+
+<pre>suneido -port 1234 -client 192.168.1.130 myset</pre>
+
+<p>You'll also need to use a different port if you want to run more than one Suneido server on the same computer.  (Each server on a given computer needs its own port.)</p>
+
+<p>The one drawback with this is that there will only be one persistent state. For example, if one user maximizes his window, then everyone will get maximized windows. This usually isn't what you want. In order to have a different persistent state for each user, it's necessary for users to <i>login</i> to identify themselves. Here's a simple Login:</p>
+<pre>
+function (set)
+    {
+    if (false is user = Ask('Name', 'Login'))
+        Exit()
+    else
+        {
+        Suneido.User = Suneido.User_Loaded = user
+        PersistentWindow.Load(set)
+        }
+    }
+</pre>
+
+<p>Then you can run (from the command line or a shortcut:</p>
+
+<pre>suneido Login("myset")</pre>
+
+<p>or as a client:</p>
+
+<pre>suneido -client 192.168.1.130 Login("myset")</pre>
+
+<p><b>Note:</b> This Login function is very simple. Other applications might require a more sophisticated login with, for example, user validation, passwords, and <a href="../Database/Reference/Database/Database.Auth.html">Database.Auth</a>.</p>
+
+<p><b>Note:</b> The server will automatically disconnect clients that are inactive (make no requests) for two hours.</p>
+
+<p>In production you would probably want to run your server as a Windows service. See <a href="../Introduction/Running as a Service.html">Running as a Service</a></p>

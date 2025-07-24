@@ -1,0 +1,17 @@
+<h3>rect.IntoWindowsRect</h3>
+
+<pre>( object ) => object</pre>
+
+<p>Copies the position and size of the current rectangle into a pre-existing Windows RECT structure, <b>object</b>, and returns a reference to <b>object</b>.</p>
+
+<p>For example:</p>
+<pre>
+rect = Rect(50, 100, 10, 20)
+winrc = rect.ToWindowsRect()
+    => #(left: 50, top: 100, right: 60, bottom: 120)
+rect.Set(x: 0, y: -5, h: 10)
+rect.IntoWindowsRect(winrc)
+    => #(left: 0, top: -5, right: 10, bottom: 5)
+</pre>
+
+<p>See also: <a href="rect.ToWindowsRect.html">rect.ToWindowsRect</a>, <a href="Rect.FromWindowsRect.html">Rect.FromWindowsRect</a></p>

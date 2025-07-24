@@ -1,0 +1,61 @@
+<h3>ImportXML</h3>
+
+<pre>(from_file, to_query, fields = false, header = true)</pre>
+
+<p>Derived from <a href="Import.html">Import</a></p>
+
+<p>Class for importing information from an <i>eXtensible Markup Language</i> textfile.</p>
+
+<p>For example:</p>
+<PRE>ExportXML('tables', 'tables.xml')
+Database( "CREATE importTablesTest ( table , tablename , nextfield , nrows , totalsize ) 
+    KEY( table )" )
+ImportXML('tables.xml', 'importTablesTest')</PRE>
+
+<p>Will take the information from the tables.xml file and output it to the importTablesTest,
+which will look similar to this:</p>
+
+<table border=1>
+<TR>
+    <TH>table</TH>
+    <TH>tablename</TH>
+    <TH>nextfield</TH>
+    <TH>nrows</TH>
+    <TH>totalsize</TH>
+</TR>
+<TR>
+    <TD>2</TD>
+    <TD>"tables"</TD>
+    <TD>5</TD>
+    <TD>45</TD>
+    <TD>4726</TD>
+</TR>
+<TR>
+    <TD>4</TD>
+    <TD>"columns"</TD>
+    <TD>3</TD>
+    <TD>145</TD>
+    <TD>3020</TD>
+</TR>
+<TR>
+    <TD>6</TD>
+    <TD>"indexes"</TD>
+    <TD>9</TD>
+    <TD>65</TD>
+    <TD>2842</TD>
+</TR>
+<TR>
+    <TD>8</TD>
+    <TD>"triggers"</TD>
+    <TD>3</TD>
+    <TD>0</TD>
+    <TD>100</TD>
+</TR>
+</table>
+
+<p>Note: This function can only handle XML files 
+that are in the same format as those produced by  
+<a href="ExportXML.html">ExportXML</a>.  
+Any DTD is ignored.</p>
+
+<p>See also: <a href="ExportXML.html">ExportXML</a></p>

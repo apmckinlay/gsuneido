@@ -1,0 +1,68 @@
+<h3>Import</h3>
+
+<pre>(from_file, to_query, fields = false, header = true)</pre>
+
+<p>Abstract base class for <i>importing</i></p>
+<ul>
+    <li>handles opening and closing the textfile</li>
+    <li>iterates through the file</li>
+    <li>returns the number of records imported</li>
+</ul>
+
+<p>Classes derived from Import must implement:</p>
+<dl>
+<dt>Import1(line) => record</dt>
+<dd>Converts the line to a record.</dd>
+</dl>
+
+<p>Classes derived from Import have the option to implement:</p>
+<dl>
+<dt>Before()</dt>
+<dd>Inputs information that appears at the beginning of the file.</dd>
+</dl>
+
+<dl>
+<dt>Header()</dt>
+<dd>Inputs information that appears at the beginning of the file.</dd>
+</dl>
+
+<p>Import provides:</p>
+<dl>
+<dt>from_file</dt>
+<dd>The file you are importing data from.</dd>
+
+<dt>to_query</dt>
+<dd>The table you are importing the data to.</dd>
+
+<dt>Tf</dt>
+<dd>The open file.</dd>
+
+<dt>Fields</dt> 
+<dd>The field names from file.  Defaults to false.</dd>
+
+<dt>Header?</dt>
+<dd>Whether to input the header.  Defaults to true.</dd>
+
+<dt>Import()</dt>
+<dd>Calls the Header() function if needed.</dd>
+<dd>Passes each line from the file to the Import1() function.</dd>
+<dd>Passes each record to the Output() function.</dd>
+
+<dt>Getline() => string</dt>
+<dd>Returns the next line in the file.</dd>
+
+<dt>Output(x)</dt>
+<dd>Starts a new transaction every 100 records.</dd>
+<dd>Outputs the record to the table.</dd>
+
+<dt>Close()</dt>
+<dd>Completes any transactions that need to be.</dd>
+<dd>Closes the file.</dd>
+</dl>
+
+<p>See also:
+<a href="ImportCSV.html">ImportCSV</a>,
+<a href="ImportTab.html">ImportTab</a>,
+<a href="ImportXML.html">ImportXML</a>,
+<a href="Export.html">Export</a>
+</p>

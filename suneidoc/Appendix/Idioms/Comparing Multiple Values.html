@@ -1,0 +1,22 @@
+<h3>Comparing Multiple Values</h3>
+
+<p>For example, a comparison function to sort by two fields is tricky:</p>
+
+<pre>return x.age is y.age ? x.name &lt; y.name : x.age &lt; y.age</pre>
+
+<p>and it gets more complicated the more fields you want to sort by.</p>
+
+<p>Suneido compares lists of values, so the easier way to write this is:</p>
+
+<pre>return [x.age, x.name] &lt; [y.age, y.name]</pre>
+
+<p>This is easy to extend to additional fields.</p>
+
+<p>You can also use <a href="../../Language/Reference/Object/object.ProjectValues.html">object.ProjectValues</a></p>
+
+<pre>return x.ProjectValues(fields) &lt; y.ProjectValues(fields)</pre>
+
+<p>If fields was #(age, name) this would be equivalent to the other versions.</p>
+
+<p>See also: <a href="../../Language/Reference/Object/object.Sort!.html">object.Sort!</a>,
+<a href="../../Language/Reference/By.html">By</a></p>

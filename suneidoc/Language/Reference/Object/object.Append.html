@@ -1,0 +1,20 @@
+<h4>object.Append</h4>
+
+<pre>
+(object) => this
+</pre>
+
+<p>Adds the contents of the other object to this object. <a href="object.Add.html">object.Add</a> is used for un-named values. Named values are simply set. For example:
+</p>
+
+<pre>
+Object(1, 2, a: 3, b: 4).Append(#(9, b: 5, c: 6))
+    => Object(1, 2, 9, a: 3, b: 5, c: 6)
+</pre>
+
+<p>Note: Append modifies the object it is applied to, it does not create a new object.</p>
+
+<p>For sequences, use <a href="../Concat.html">Concat</a></p>
+
+<p>See also: 
+<a href="object.Merge.html">object.Merge</a></p>

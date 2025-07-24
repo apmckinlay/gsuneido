@@ -1,0 +1,15 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Bloom</h3>
+<pre>(n, p) => bloom</pre>
+
+<p>Creates a <a href="https://en.wikipedia.org/wiki/Bloom_filter">Bloom filter</a> for an estimated n values with a probability p of false positives. For example, if p is .01 there is a 1/100 chance of false positives. The size of the Bloom filter will increase with larger n or smaller p. The entire size if allocated when the Bloom filter is created.</p>
+
+<p>Methods:</p>
+<dl class="code">
+<dt>Add(value)</dt>
+<dd>Adds a value.</dd>
+<dt>Test(value) => true or false</dt>
+<dd>Returns false if the value has definitely not been added and true if it has <b>probably</b> been added.</dd>
+<dt>Size() => bytes</dt>
+<dd>Returns the number of bytes used by the Bloom filter.</dd>
+</dl>

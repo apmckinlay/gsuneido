@@ -1,0 +1,66 @@
+<h2>Client-Server Protocol</h2>
+
+<p>Suneido client-server communication is via a straightforward, mostly text-based protocol.</p>
+
+<p>Note: Commands (e.g. admin) may be given in upper or lower case.</p>
+
+<p><b>libraries</b> =&gt; (<i>name</i> ...)</p>
+<p style="margin-left:50px">Returns a list of libraries in use on the server.</p>
+
+<p><b>libget</b> <i>name</i> =&gt; L# # ... \r\n <i>text</i> ...</p>
+<p style="margin-left:50px">Returns the definition(s) of a name from the libraries in use.</p>
+
+<p><b>admin</b> <i>admin-request =&gt; OK</i></p>
+
+<p style="margin-left:50px">e.g. create, ensure, alter, drop</p>
+
+<p><b>cursor</b> <i>query =&gt; C#</i></p>
+<p style="margin-left:50px">Returns a cursor# for the query.</p>
+
+<p><b>transaction</b> update | read =&gt; T#</p>
+<p style="margin-left:50px">Returns a transaction#.</p>
+
+<p><b>tranlist</b> =&gt; (# ...)</p>
+<p style="margin-left:50px">Return a list of outstanding transactions.</p>
+
+<p><b>query</b> T# <i>query</i> =&gt; Q#</p>
+<p style="margin-left:50px">Returns a query# for the query.</p>
+
+<p><b>get</b> +|- Q# | T# C#</p>
+
+<p><b>rewind</b> Q# | C#</p>
+
+<p><b>output</b> ( Q# | T# C# ) R# \r\n <i>record</i> =&gt; OK</p>
+
+<p><b>update</b> ( Q# | T# C# ) (field ...) K# R# \r\n <i>key record</i> =&gt; OK</p>
+
+<p><b>header</b> C | Q# =&gt; schema</p>
+
+<p><b>order</b> C | Q# =&gt; (field ...)</p>
+
+<p><b>keys</b> T# C | Q# =&gt; (field ...)</p>
+
+<p><b>close</b> C# =&gt; OK</p>
+
+<p><b>request </b>T# <i>request =&gt; # of records</i></p>
+<p style="margin-left:50px">e.g. insert, update, delete</p>
+
+<p><b>explain</b> Q# =&gt; <i>explanation</i></p>
+
+<p><b>commit</b> T#</p>
+
+<p><b>abort</b> T#</p>
+
+<p><b>timestamp</b> =&gt; a unique timestamp</p>
+
+<p><b>dump</b> <i>tablename</i></p>
+
+<p><b>copy</b></p>
+
+<p><b>run</b> <i>code</i> =&gt; <i>value</i></p>
+
+<p><b>text</b> =&gt; OK</p>
+<p style="margin-left:50px">Enter text mode.</p>
+
+<p><b>binary</b> =&gt; OK</p>
+<p style="margin-left:50px">Enter binary mode.</p>

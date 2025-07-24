@@ -1,0 +1,54 @@
+<h3>IdControl</h3>
+
+<pre>
+(query, field, columns = false, fillin = false, from = false,
+    mandatory = false, allowOther = false, whereField = false, width = 10, 
+    readonly = false, noClear = false, restrictions = false, nameField = false, 
+    abbrevField = false, access = false, prefixColumn = false, keys = false,
+    restrictionsValid = true, filterOnEmpty = true, invalidRestrictions = false)
+</pre>
+
+<p>This is a single-line edit field with a list button on the right side. This 
+control is used to provide a lookup for a value that exists in another table. 
+For example, IdControl could be used for the customer field on invoices and it 
+would provide a lookup on the customers table.</p>
+
+<p><b>nameField</b> and <b>abbrevField</b> are used to specify the fields from the query that are to be used as the display name and abbreviation matching.  If an abbreviation field is used, then only the abbreviation needs to be entered into the field and the name will be displayed. Also, if a prefix of either the name or abbreviation is entered and it is enough to uniquely identify the record, then the control will fill in all necessary fields from the record and that is all that must be entered.</p>
+
+<p>NOTE: Although the nameField and abbrevField can be specified, it is recommended that a naming scheme be followed when naming these types of fields.  The field specified in the <b>field</b> argument should end in "_num".  The nameField and abbrevField field names should end in "_name" and "_abbrev" respectively.  This way the <b>nameField</b> and <b>abbrevField</b> arguments do not need to be specified because the control will use the above naming scheme to figure them out. Also, the IdFormat can then be used for the field.</p>
+
+<p>The <b>restrictionsValid</b> parameter is used to distinguish whether or not values that are in the original query, but are omitted from the list because of restrictions, are still valid if the user manually enters them.</p>
+
+<p>The <b>filterOnEmpty</b> argument is used to specify whether a query where the whereField's value is "" will return all the records in the table as if there was no where or only the records where the whereField's value is "". 
+</p>
+
+<p><b>invalidRestrictions</b> is used when you have restrictions on the query that are to be considered invalid by the control if the user types a value for a restricted record.</p>
+
+<p>If the query needs to be restricted based on a field's value in the current record, then that field can be specified as the <b>whereField</b> argument. For example, you might have a contact lookup where you only want contacts for the current customer that is associated with the record. In this case the <b>whereField</b> would be the customer field. The field name from the current record must match the field name in the query. If this is not the case, then a rename can be done on the query to make the field names match.</p>
+
+<p><b>whereFieldKey</b> should be set to true if the <b>whereField</b> restriction is needed to make the lookup on the record unique.</p>
+
+<p>To set up a simple lookup on invoices for the customer_num field, the customer_num field should have the following control specification: </p>
+
+<pre>#(Id "customers" field: "customer_num")</pre>
+
+<p>To fillin the customer's address on the invoice:</p>
+
+<pre>#(Id "customers" field: "customer_num" fillin: (customer_address))</pre>
+
+<p>If the address field names don't match (customers table has customer_address1):</p>
+
+<pre>#(Id "customers" field: "customer_num"
+    fillin: (customer_address) from: (customer_address1))</pre>
+
+<p>To only display customer name and address in the lookup list:</p>
+
+<pre>#(Id "customers" field: "customer_num" columns: (customer_name customer_address1))</pre>
+
+<p>For more information on the parameters, please refer to 
+<a href="KeyControl.html">KeyControl</a>
+</p>
+
+<p>See also:
+<a href="../../Reports/Reference/IdFormat.html">IdFormat</a>
+</p>

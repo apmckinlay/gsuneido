@@ -1,0 +1,25 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>file.Close</h4>
+
+<p>Close a file object.</p>
+
+<p>File's should always be closed when you have finished using them.</p>
+
+<p><b>Note:</b> You cannot rename or delete a file while it is open.</p>
+
+<p>For example:</p>
+<pre>
+f = File("tmp", "w")
+f.Writeline("hello world")
+f.Close()
+</pre>
+
+<p><b>Note:</b> It's often safer to use the block form of File 
+to ensure the file gets closed even if there are exceptions.
+For example:</p>
+<pre>
+File("tmp", "w")
+    { |f|
+    f.Writeline("hello world")
+    }
+</pre>

@@ -1,0 +1,11 @@
+<h4>transaction.ReadCount</h4>
+
+<pre>() => number</pre>
+
+<p>Returns the number of "reads" that have been performed in the transaction. This is useful for debugging issues where you are exceeding the limits and getting a "too many reads" exception.</p>
+
+<p>A "read" is defined as accessing a range of an index. The limit is 10,000 reads on any one index.</p> 
+
+<p>ReadCount returns the total reads for all indexes, therefore it may report a number greater than 10,000.</p>
+
+<p>See also: <a href="transaction.WriteCount.html">transaction.WriteCount</a></p>

@@ -1,0 +1,50 @@
+<div style="float:right"><span class="toplinks">
+<a href="PersistentWindow/Methods.html">Methods</a>
+</span></div>
+<h3>PersistentWindow</h3>
+
+<pre>(control = false, master? = false, stateobject = #(), 
+    newset = false, exitOnClose = false)</pre>
+
+<p>PersistentWindow is used to create a window that needs to save and restore 
+its state each time it is run.  The control is responsible for setting and 
+retrieving its state via SetState and GetState methods. The top level window 
+saves its size and position. PersistentWindow can also be used to create an 
+application's window which can be run separately from the IDE.
+</p>
+
+<p>The first argument, <b>control</b>, is the control specification.  This is 
+specified the same way <a href="Window.html">Window</a>
+'s control argument is specified.</p>
+
+<p>If <b>master?</b> is true, then the resulting window will be the master 
+window for the current instance of suneido.exe, which means closing this window 
+will close suneido.exe (and all other windows belonging to that instance of suneido.exe).</p>
+
+<p><b>stateobject</b> contains the necessary information to restore the window
+to its previous state.  It is not necessary to include this argument when creating
+a persistent window the first time, it gets used by PersistentWindow when it loads
+a previously defined persistent window set (it creates instances of itself when 
+loading a persistent window set).</p>
+
+<p><b>newset</b> is used to create a new persistent window set.  This is 
+useful for setting up an application window.  This argument should be a 
+string representing the name of the new set.  Windows created with this 
+option are always master windows, see master? argument above.</p>
+
+<p>For example, to create a persistent set that just loads the Suneido 
+help, run the following from the workspace: </p>
+
+<pre>PersistentWindow(#(Book suneidoc), newset: "help")</pre>
+
+<p>This will close all of your current IDE windows and create the persistent
+window.  Closing this window will close suneido.exe.  You can then run this help
+window from the command line:</p>
+
+<pre>suneido help</pre>
+
+<p>This same approach can be used to set up shortcuts for running a Suneido application.</p>
+
+<p>See also: 
+<a href="Window.html">Window</a>
+</p>

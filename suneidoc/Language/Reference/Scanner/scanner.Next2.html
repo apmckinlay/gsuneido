@@ -1,0 +1,20 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>scanner.Next2</h4>
+
+<pre>() => string or scanner</pre>
+
+<p>Returns the type of the next token from the scanner, one of:</p>
+
+<pre>#ERROR
+#IDENTIFIER
+#NUMBER
+#STRING
+#WHITESPACE
+#COMMENT
+#NEWLINE // whitespace containing one or more newlines</pre>
+
+<p>or "" (empty string) if none of the above (e.g. an operator)</p>
+
+<p>Returns the scanner itself if no more tokens.</p>
+
+<p>Next2 is intended to eventually replace Next. It is more efficient because it doesn't need to return the text.</p>

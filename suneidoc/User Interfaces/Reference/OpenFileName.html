@@ -1,0 +1,27 @@
+<h3>OpenFileName</h3>
+
+<pre>(filter = "", hwnd = false, flags = false, multi = false, 
+    title = "Open", file = "", initialDir = "")</pre>
+
+<p>Opens the standard Windows Open file dialog.</p>
+
+<dl class="code">
+<dt>filter</dt>
+<dd>allows filtering the file names displayed in the dialog, the default filter is <code>"All Files (*.*)\000*.*\000"</code></dd>
+<dt>flags</dt>
+<dd>sets the Windows Open file dialog options, the default is <code>OFN.FILEMUSTEXIST | OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR</code></dd>
+<dt>multi</dt>
+<dd>If set to true, the user is allowed to select multiple files.</dd>
+<dt>title</dt>
+<dd>will display in the dialog title</dd> 
+<dt>file</dt>
+<dd>a file name</dd> 
+<dt>initialDir</dt> 
+<dd>a directory path to select as default opening the dialog</dd>
+</dl>
+
+<p>Used by <a href="OpenFileControl.html">OpenFileControl</a>.</p>
+
+<p>See also:
+<a href="SaveFileName">SaveFileName</a>
+</p>

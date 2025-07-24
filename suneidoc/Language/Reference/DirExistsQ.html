@@ -1,0 +1,20 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>DirExists?</h3>
+
+<pre>(dirname) => true or false</pre>
+
+<p>Returns true if the specified directory exists, false if the directory does not exist. Throws an exception for an invalid path.</p>
+
+<p>For example:</p>
+<pre>
+DirExists?("c:/suneido")
+    => true
+
+DirExists?("//nonexistent/temp")
+   => throws DirExists?: CreateFile //nonexistent/temp: The network name cannot be found.
+</pre>
+
+<p>See also:
+<a href="Dir.html">Dir</a>,
+<a href="FileExists?.html">FileExists?</a>
+</p>

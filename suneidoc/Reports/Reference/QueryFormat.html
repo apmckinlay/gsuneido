@@ -1,0 +1,144 @@
+<h3>QueryFormat</h3>
+
+<p>QueryFormat's are specified by the following members:</p>
+<table width="100%">
+<tr><td><b>Member</b></td> <td><b>Type</b></td> <td><b>Default</b></td></tr>
+<tr><td><code>Query</code></td> <td>string</td> <td>none - must be supplied</td></tr>
+<tr><td><code>Before</code></td> <td>format or false</td> <td>false</td></tr>
+<tr><td><code>Before_</code></td> <td>format or false</td> <td>false</td></tr>
+<tr><td><code>Before_<i>field</i></code></td> <td>format or false</td> <td>false</td></tr>
+<tr><td><code>BeforeOutput</code></td> <td>format or false</td> <td>false</td></tr>
+<tr><td><code>Output</code></td> <td>format or false</td> <td>Row with Query columns</td></tr>
+<tr><td><code>OutputFormat</code></td> <td>format or false</td> <td>Output</td></tr>
+<tr><td><code>AfterOutput</code></td><td>format or false</td> <td>false</td></tr>
+<tr><td><code>After_</code></td><td>format or false</td> <td>false</td></tr>
+<tr><td><code>After_<i>field</i></code></td><td>format or false</td> <td>false</td></tr>
+<tr><td><code>AfterAll</code></td> <td>format or false</td> <td>false</td></tr>
+<tr><td><code>After</code></td> <td>format or false</td> <td>false</td></tr>
+<tr><td><code>Header</code></td> <td>format or false</td> <td>Output.Header</td></tr>
+<tr><td><code>Total</code></td> <td>object</td> <td><code>#()</code></td></tr>
+<tr><td><code>Count</code></td> <td>object</td> <td><code>#()</code></td></tr>
+</table>
+
+<p>These members may either be data members or methods returning the required data.
+The only required member is Query, all other members are optional.</p>
+
+<p>QueryFormat New copies its arguments into members (capitalized), so simple formats (with just data members) can be written without deriving a sub-class. For example:</p>
+<pre>
+Params(#(Query Query: 'tables'))
+</pre>
+
+<p>If there is an initial un-named argument, it is assumed to be the query, so the previous example can be shortened to:</p>
+<pre>
+Params(#(Query 'tables'))
+</pre>
+
+<p>If you need to specify methods for some of the members, derive a sub-class from QueryFormat.  For example:</p>
+<pre>
+Params(
+    QueryFormat
+        {
+        Sort: 'sort tablename'
+        Query()
+            {
+            return "tables " $ .Sort
+            }
+        }
+    )
+</pre>
+
+<p>Arguments can be passed as members to derived formats. For example:</p>
+<pre>
+sort = "sort tablename"
+Params(
+    Object(
+        QueryFormat
+            {
+            Query()
+                {
+                return "tables " $ .Sort
+                }
+            }
+        Sort: sort
+        )
+    )
+</pre>
+
+<h4>Output</h4>
+
+<p>Each row of the query result is generated using the Output format. Output defaults to a RowFormat with all the columns from the Query. So to specify the columns, you can either supply your own Output:</p>
+<pre>
+Params(#(Query 'tables', Output: (Row table, nrows)))
+</pre>
+
+<p>or add a project to the query:</p>
+<pre>
+Params(#(Query 'tables project table, nrows'))
+</pre>
+
+<p>Note: When Output is a method, it is only called <b>once</b> during setup; it is not called for each row.</p>
+
+<p>Formats starting with an underscore, are forwarded to the Output. (e.g. _output sent to Row.Output).</p>
+
+<h4>OutputFormat</h4>
+
+<p>Specify OutputFormat instead of Output if you want to get column headings and use _output, but you do <b>not</b> want to generate the default output rows.</p>
+
+<h4>Before's and After's</h4>
+
+<p><code>Before</code>, <code>After</code>, <code>BeforeOutput</code>, <code>AfterOutput</code>, <code>Before</code>_<i>field</i> and <code>After</code>_<i>field</i> are optional. They can be either formats, or methods that return formats or false. If they are methods they can accept an optional "data" argument. Before's and After's are grouped in a Vert with the row that triggered them, so they will not be split across a page break.</p>
+
+<p><code>Before</code>_<i>field</i> and <code>After</code>_<i>field</i> are only called if they are contained in the sort order of the query. Before's are called in the same order as the sort, and After's are called in the reverse order. For example, if the query sort order was <code>state, city</code> then the starting sequence would be:</p>
+<pre>
+Before
+Before_state
+Before_city
+</pre>
+
+<p>and the ending sequence would be:</p>
+<pre>
+After_city
+After_state
+After
+</pre>
+
+<p>Before's and After's are not called if the query is empty. If you want to produce some output even if the query is empty you can use the <code>AfterAll</code> method.</p>
+
+<h4>Header</h4>
+
+<p><code>Query</code>'s Header simply delegates to the output format's <code>Header</code>, for <code>Row</code> this is the column headings (implemented via <code>ColHeadsFormat</code>).</p>
+
+<h4>Total and Count</h4>
+
+<p>Fields specified by <code>Total</code> and <code>Count</code> will be automatically totalled/counted. Totals are in the data object as "total_" $ field, e.g. "total_sales".  Counts are in the data object as "count_" $ field, e.g. "count_sales". Totaling/counting is done for each grouping determined by the query sort order. For example, if the sort order was <code>state, city</code> then in After_state the totals/counts would be for the state, in After_city the totals/counts would be for the city, and in After the totals/count would be for all the rows.</p>
+
+<p>For example:</p>
+<pre>
+Params(#(Query
+    Query: 'indexes sort table'
+    Total: ('nnodes')
+    After_table: (_output nnodes: (Total total_nnodes))
+    After: (_output nnodes: (Total total_nnodes))
+    ))
+</pre>
+
+<p>If you specify an object containing a pair of field names instead of just single field names, the first field name is taken as the field name of the amount, and the second is taken as the field name of the currency, and a <a href="../../Language/Reference/MoneyBag.html">MoneyBag</a> is used to maintain the total.</p>
+<pre>
+Params(QueryFormat 
+    {
+    Query: 'transactions' 
+    Total: ((amount, currency)),
+    Output: ('Row', 'date', 'amount', 'currency')
+    After(data)
+        {
+        fmt = Object('Vert', 'Hline')
+        amounts = data.total_amount.Amounts()
+        for (cur in amounts.Members())
+            fmt.Add(Object('Row', 'date', 'amount', 'currency',
+                data: Record(currency: cur, amount: amounts[cur])))
+        return fmt
+        }
+    })
+</pre>
+
+<p>Notice that we had to sub-class QueryFormat in order to define After as a method.</p>

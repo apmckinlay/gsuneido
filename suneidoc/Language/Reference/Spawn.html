@@ -1,0 +1,40 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Spawn</h3>
+
+<pre>(mode, command, @arguments) => number</pre>
+
+<p>Create and execute a new process. </p>
+
+<dl>
+<dt>mode</dt>
+<dd>
+<table>
+<tr><td width="15%">P.WAIT</td>
+    <td>Suspends calling thread until execution of new process is complete.</td></tr>
+<tr><td>P.NOWAIT</td>
+    <td>Continues to execute calling process concurrently with new process.</td></tr>
+</table>
+</dd>
+
+<dt>command</dt>
+<dd>Specifies the file to execute.</dd>
+
+<dt>arguments</dt>
+<dd>Zero or more string arguments to be passed to the command. Separate command line arguments should be separate function arguments, do not combine multiple command line arguments into one string.</dd>
+</dl>
+
+<p>For example:</p>
+<pre>
+Spawn(P.NOWAIT, "notepad", "tmp.txt")
+</pre>
+
+<p>The return value from a synchronous Spawn (P.WAIT) is the exit status of the process (0 usually means the process terminated normally). The return value from an asynchronous Spawn (P.NOWAIT) is the process id (or -1 if it fails to start the process).</p>
+
+<p>For P.WAIT, if the return value is not 0 (zero) it is <a href="../Statements/return.html">return-throw</a>, i.e. if the result is not used it will throw an exception. (as of BuiltDate 2025-01-16)</p>
+
+<p><b>Note:</b> On Windows, if you use Spawn to run a console program (rather than a gui program) it will open a console window. If you don't want this, use <a href="RunPiped.html">RunPiped</a></p>
+
+<p>See also:
+<a href="System.html">System</a>, 
+<a href="RunPiped.html">RunPiped</a>
+</p>

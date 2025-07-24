@@ -1,0 +1,14 @@
+<h3>Point.FromWindowsPoint</h3>
+
+<pre>( object ) => point</pre>
+
+<p>Constructs and returns a point whose position is equivalent to the given Windows POINT structure. This method is "static" in the sense that it is called on the class Point, not an instance of the class.</p>
+
+<p>For example:</p>
+<pre>
+winpt = #(x: 1, y: 1)
+Point.FromWindowsPoint(winpt)
+    => Point(1, 1)
+</pre>
+
+<p>See also: <a href="point.ToWindowsPoint.html">point.ToWindowsPoint</a>, <a href="../Rect/Rect.FromWindowsRect.html">rect.FromWindowsRect</a></p>

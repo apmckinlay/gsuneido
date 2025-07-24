@@ -1,0 +1,16 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Database.Load</h3>
+
+<pre>(tablename, fromfile = "", privateKey = "", passphrase = "") => number</pre>
+
+<p>Loads a table into the current database. If <b>fromfile</b> is "" (or omitted) it defaults to "table.su". If client-server, this happens on the server.</p>
+
+<p>If <b>privateKey</b> and <b>passphrase</b> are supplied, the file is decrypted as it is loaded, equivalent to <a href="../../../Language/Reference/OpenPGP.html">OpenPGP</a>.PublicDecrypt.</p>
+
+<p>Equivalent to the <code>-load</code> <a href="../../../Introduction/Command Line Options.html">command line option</a></p>
+
+<p>Dump files are created with the <code>-dump</code> <a href="../../../Introduction/Command Line Options.html">command line option</a> or with <a href="Database.Dump.html">Database.Dump</a></p>
+
+<p><b>Warning</b>: If you load a library table that is currently in use you should call <a href="../../../Language/Reference/Unload.html">Unload</a>() after loading.</p>
+
+Note: Unlike Database.Dump, Database.Load cannot be used to load an entire database. Use the <code>-load</code> <a href="../../../Introduction/Command Line Options.html">command line option</a>.

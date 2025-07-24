@@ -1,0 +1,62 @@
+<h3>extend</h3>
+
+<p><i>query</i> <b>extend</b> <i>column</i> [ = <i>expression</i> ] [ , ... ]</p>
+
+<p>The result of extend is a table with all the columns from the input plus the specified new columns and with all the rows from the input with values in the new columns calculated by evaluating the expressions (or rules) on each row.</p>
+
+<p>Expressions are evaluated left to right, and any extended fields they depend on must come first. For example, <code>extend a = 1, b = 2 * a</code> is ok, but <code>extend b = 2 * a, a = 1</code> is illegal.</p>
+
+<p>If no expression is given, the value can be calculated by a rule named: <code>Rule_ $ <i>column</i></code></p>
+
+<table border="0" width="100%">
+  <tr>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td align="center" bgcolor="#C0C0C0">tablename</td>
+          <td align="center" bgcolor="#C0C0C0">nrows</td>
+          <td align="center" bgcolor="#C0C0C0">totalsize</td>
+        </tr>
+        <tr>
+          <td>one</td>
+          <td>100</td>
+      <td>5000</td>
+        </tr>
+        <tr>
+          <td>two</td>
+          <td>2</td>
+      <td>700</td>
+        </tr>
+      </table>
+    </td>
+    <td align="center">
+      extend rowsize = totalsize / nrows</td>
+    <td align="center">
+      =
+    </td>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td align="center" bgcolor="#C0C0C0">tablename</td>
+          <td align="center" bgcolor="#C0C0C0">nrows</td>
+          <td align="center" bgcolor="#C0C0C0">totalsize</td>
+          <td align="center" bgcolor="#C0C0C0">rowsize</td>
+        </tr>
+        <tr>
+          <td>one</td>
+          <td>100</td>
+          <td>5000</td>
+          <td>50</td>
+        </tr>
+        <tr>
+          <td>two</td>
+          <td>2</td>
+          <td>700</td>
+          <td>350</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<p><b>Note:</b> If you project away fields required by an extend rule, the rule may not work properly. For more information see <a href="project.html">project</a></p>

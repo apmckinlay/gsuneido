@@ -1,0 +1,34 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>string.Match</h4>
+
+<pre>(pattern, pos = false, prev = false) => Object(Object(i, n), ...</pre>
+
+<p>Returns information about the parts of the string matched by the pattern, or false if there is no match.</p>
+
+<p>If <b>prev</b> is true it searches in reverse.</p>
+
+<p><b>pos</b> can be specified to start the search somewhere other than the ends of the string.</p>
+
+<p>The result object will contain one sub-object for the entire match, plus additional sub-objects for any parenthesized sub-patterns.</p>
+
+<p>For example:</p>
+<pre>
+"hello world".Match("w(..)ld") => #((6,5),(7,2))
+"hello world".Match("o", prev:) => #((7,1))
+</pre>
+
+<p>See also:
+<a href="../../Regular Expressions.html">Regular Expressions</a>,
+<a href="string.Extract.html">string.Extract</a>,
+<a href="string.Replace.html">string.Replace</a>
+</p>
+
+<p>See also:
+<a href="string.FindLast.html">string.FindLast</a>,
+<a href="string.Find1of.html">string.Find1of</a>,
+<a href="string.FindLast1of.html">string.FindLast1of</a>,
+<a href="string.FindRx.html">string.FindRx</a>,
+<a href="string.FindRxLast.html">string.FindRxLast</a>,
+<a href="string.ForEachMatch.html">string.ForEachMatch</a>,
+<a href="string.ForEach1of.html">string.ForEach1of</a>,
+<a href="string.Has?.html">string.Has?</a><p>

@@ -1,0 +1,61 @@
+<h3><a href="../XmlBuilder">XmlBuilder</a> - Methods</h3>
+
+<dl class="code">
+<dt>_(string) => this</dt>
+<dd>Adds the string to the output. Useful for mixed content:</dd>
+<pre>
+XmlBuilder(indent: 4).div
+    {
+    .h1("Heading")
+    ._("stuff")
+    .p("paragraph")
+    }
+=>  &lt;div>
+        &lt;h1>Heading&lt;/h1>
+        stuff
+        &lt;p>paragraph&lt;/p>
+    &lt;/div>
+</pre>
+
+<dt>Comment(string) => this</dt>
+<dd>Adds a comment to the output:</dd>
+<pre>
+XmlBuilder().Comment("hello world")
+    => "&lt;!-- hello world -->"
+</pre>
+
+<dt>Declare(@args) => this</dt>
+<dd>If no arguments are supplied a standard XHTML declaration is added:</dd>
+<pre>
+XmlBuilder().Declare()
+    =>  &lt;!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+            "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+</pre>
+<dd>Otherwise, the first argument is the tag name and any remaining arguments are added. String arguments are quoted, symbol arguments are not. For example, this would produce the default:</dd>
+<pre>
+XmlBuilder().Declare('DOCTYPE', #html, #PUBLIC,
+    "-//W3C//DTD XHTML 1.0 Transitional//EN",
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd")
+</pre>
+
+<dt>Instruct(instruction, attribute: value ...) => this</dt>
+<dd>The first un-named argument is the instruction. The default is "xml", in which case the attribute defaults are version: "1.0" and encoding: "US-ASCII". Named arguments are taken as attributes. Attribute values are XmlEntityEncode'd</dd>
+<pre>
+XmlBuilder().Instruct()
+    => "&lt;?xml encoding="US-ASCII" version="1.0">"
+
+XmlBuilder().Instruct('XML', version: '1.1', encoding: 'UTF-8'
+    => "&lt;?XML encoding="UTF-8" version="1.1">"
+</pre>
+
+<dt>Default(@args)</dt>
+<dd>This is the method called when you call xmlBuilder.tag It can be called directly if the tag is not a valid method name. For example:</dd>
+<pre>
+XmlBuilder().Default("SOAP:Encoding") { "..." }
+    => "&lt;SOAP:Encoding>...&lt;/SOAP:Encoding>"
+</pre>
+<dd>The first un-named argument is the tag. If there is a block argument, it is called (with object.Eval2). If the block returns a value (other than this) it will be added to the output. If there is no block a second un-named argument is taken as the text content. </dd>
+
+<dt>ToString() => string</dt>
+<dd>Returns the output string.</dd>
+</dl>

@@ -1,0 +1,29 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Eval</h4>
+
+<pre>( fn, @args ) => value</pre>
+
+<p>Calls fn with the supplied arguments as if it were a method of this object. 
+i.e. with <i>this</i> set to this object. Applicable to objects, records, classes, and instances.</p>
+
+<p>Returns whatever the function returns.</p>
+
+<p>fn can be anything callable: block, function, class, or instance.</p>
+
+<p>Eval is required because a normal function call does not propogate <i>this</i>.
+i.e. A called standalone function normally does <b>not</b> have access to instance variables.
+</p>
+
+<p>For example:</p>
+<pre>
+context = Object(Name: "Fred");
+fn = function () { return .Name; };
+context.Eval(fn);
+=> "Fred"
+</pre>
+
+<p><b>Note:</b> Eval does not provide access to private members since these are class specific.</p>
+
+<p>If the first argument to Eval is a <a href="../../../Appendix/Glossary/Method.html">Method</a> the instance or class it is bound to will be ignored.</p>
+
+<p>See also: <a href="object.Eval2.html">object.Eval2</a></p>

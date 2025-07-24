@@ -1,0 +1,24 @@
+<h4>string.ForEachMatch</h4>
+
+<pre>(regex, block)</pre>
+
+<p>Calls the block for each non-overlapping match in the string. Passes the result of <a href="string.Match.html">string.Match</a> to the block</p>
+
+<p>For example:</p>
+<pre>
+"ab cab abc def".ForEachMatch("ab") {|m| Print(m) }
+
+=>  #(#(0, 2))
+    #(#(4, 2))
+    #(#(7, 2))
+</pre>
+
+<p>See also:
+<a href="string.FindLast.html">string.FindLast</a>,
+<a href="string.Find1of.html">string.Find1of</a>,
+<a href="string.FindLast1of.html">string.FindLast1of</a>,
+<a href="string.FindRx.html">string.FindRx</a>,
+<a href="string.FindRxLast.html">string.FindRxLast</a>,
+<a href="string.ForEach1of.html">string.ForEach1of</a>,
+<a href="string.Has?.html">string.Has?</a>,
+<a href="string.Match.html">string.Match</a><p>

@@ -1,0 +1,27 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>transaction.QueryFirst</h4>
+
+<pre>(query [, field: value ...]) => record</pre>
+
+<p>Fetches the first record from the given query. Returns false if the query does not contain any records.</p>
+
+<p>Named arguments (field: value) add a where to the query. For example:</p>
+
+<pre>('tables', tablename: value)</pre>
+
+<p>is equivalent to:</p>
+
+<pre>('tables where tablename = ' $ Display(value)</pre>
+
+<p><b>Note</b>: The query must have a sort, otherwise first/last are undefined.</p>
+
+<p>See also:
+<a href="../Query1.html">Query1</a>,
+<a href="../QueryEmpty?.html">QueryEmpty?</a>,
+<a href="../QueryExists?.html">QueryExists?</a>,
+<a href="../QueryFirst.html">QueryFirst</a>,
+<a href="../QueryLast.html">QueryLast</a>,
+<a href="transaction.Query1.html">transaction.Query1</a>,
+<a href="transaction.QueryEmpty?.html">transaction.QueryEmpty?</a>,
+<a href="transaction.QueryExists?.html">transaction.QueryExists?</a>,
+<a href="transaction.QueryLast.html">transaction.QueryLast</a><p>

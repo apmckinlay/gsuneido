@@ -1,0 +1,46 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Set_default</h4>
+
+<pre>
+() => this // remove default value
+(value) => this // set default value
+</pre>
+
+<p>Set the default value returned for non-existent members. (Without a default, attempts to access non-existent members will cause an exception.)</p>
+
+<p>Calling Set_default with no argument removes any default value.</p>
+
+<p>For example:</p>
+<pre>
+ob = Object()
+ob.name
+    => ERROR: member not found: "name"
+
+ob = Object().Set_default("")
+ob.name
+    => ""
+
+ob = Object().Set_default() // remove default
+ob.name
+    => ERROR: member not found: "name"
+</pre>
+
+<p>When you want to sum values, it is often useful to set the default to 0 
+so you don't have to check whether the type has been encountered.  
+For example:</p>
+<pre>
+sums = Object().Set_default(0)
+QueryApply("payments")
+    { |x|
+    sums[x.type] += x.amount
+    }
+</pre>
+
+<p><b>Note:</b> If the default value is an object, then it will be copied and assigned to the member. (Otherwise, an access that returns a default value will<b> not</b> create the member.) This is useful, for example, when you need to sum values based on more than one "dimension":</p>
+<pre>
+sums = Object().Set_default(Object().Set_default(0))
+QueryApply("payments")
+    { |x|
+    sums[x.type1][x.type2] += x.amount
+    }
+</pre>

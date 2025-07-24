@@ -1,0 +1,59 @@
+<h3>ImportCSV</h3>
+
+<pre>(from_file, to_query, fields = false, header = true)</pre>
+
+<P>Derived from <a href="Import.html">Import</a></P>
+
+<p>Class for importing information from a <em>Comma Separated Value</em> textfile.</p>
+
+<p>For example:</p>
+<pre>
+ExportCSV('tables', 'tables.txt')
+Database( "CREATE importTablesTest ( table , tablename , nextfield , nrows , totalsize ) 
+    KEY( table )" )
+ImportCSV('tables.txt', 'importTablesTest')
+</pre>
+
+<p>Will take the information from the tables.txt file and output it to the importTablesTest table, 
+which will look similar to this: </p>
+<table border=1>
+<TR>
+    <TH>table</TH>
+    <TH>tablename</TH>
+    <TH>nextfield</TH>
+    <TH>nrows</TH>
+    <TH>totalsize</TH>
+</TR>
+<TR>
+    <TD>2</TD>
+    <TD>"tables"</TD>
+    <TD>5</TD>
+    <TD>45</TD>
+    <TD>4688</TD>
+</TR>
+<TR>
+    <TD>4</TD>
+    <TD>"columns"</TD>
+    <TD>3</TD>
+    <TD>145</TD>
+    <TD>3020</TD>
+</TR>
+<TR>
+    <TD>6</TD>
+    <TD>"indexes"</TD>
+    <TD>9</TD>
+    <TD>65</TD>
+    <TD>2842</TD>
+</TR>
+<TR>
+    <TD>8</TD>
+    <TD>"triggers"</TD>
+    <TD>3</TD>
+    <TD>0</TD>
+    <TD>100</TD>
+</TR>
+</table>
+
+<p><b>Note:</b> If header is set to false, the fields must be passed in.</p>
+
+<p>See also: <a href="ExportCSV.html">ExportCSV</a></p>

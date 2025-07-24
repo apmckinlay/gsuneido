@@ -1,0 +1,58 @@
+<div style="float:right"><span class="toplinks">
+<a href="TrackBarControl/Example.html">Example</a>
+<a href="TrackBarControl/Methods.html">Methods</a>
+</span></div>
+<h3>TrackBarControl</h3>
+
+<pre>(vert = false, noticks = false, tickmarks = 'BOTTOM', 
+    enableselrange = false, fixedlength = true, nothumb = false, 
+    slidetip = true, style = 0, range = false, start = 0, 
+    ticfreq = false, tip = "")</pre>
+
+<p>A trackbar is a control that contains a slider and tick marks. The user can move the slider, using either the mouse or the direction keys. The slider in a trackbar moves in increments that are specified when creating.</p>
+
+<dl class="code">
+<dt>vert</dt>
+<dd>Determine the orientation of the trackbar. If false the trackbar is oriented horizontally, if true it is oriented vertical</dd>
+
+<dt>noticks</dt>
+<dd>To create a trackbar that does not display tick marks</dd>
+
+<dt>tickmarks</dt>
+<dd>True to display tick marks. For horizontal trackbars, you can specify "BOTTOM" or "TOP". For vertical trackbars, you can specify "RIGHT" or "LEFT".  ("BOTTOM" and "RIGHT" are the default settings.) For tick marks on both sides, specify "BOTH".</dd>
+
+<dt>enableselrange</dt>
+<dd>To display a selection range. When a trackbar has this style, the tick marks at the starting and ending positions of a selection range are displayed as triangles (instead of vertical dashes) and the selection range is highlighted</dd>
+
+<dt>fixedlength</dt>
+<dd>If true the length of the slider remains the same even if the selection range changes</dd>
+
+<dt>nothumb</dt> 
+<dd>true does not include the slider.</dd>
+
+<dt>slidetip</dt>
+<dd>true to display, clicking on the slide, a tip with the value of the current tick</dd>
+
+<dt>style</dt>
+<dd>to add a particular style</dd>
+
+<dt>range</dt> 
+<dd>false or an object to set the min and max range. Default is #(0,100)</dd>
+
+<dt>start</dt>
+<dd>false or a number to set an optional initial position of the slider</dd>
+
+<dt>ticfreq</dt>
+<dd>false or an object to set the interval frequency for tick marks. Ex. #(5,0)</dd>
+
+<dt>tip</dt>
+<dd>to display a tip text for the control</dd>
+</dl>
+
+<p>For example:</p>
+
+<pre>TrackBarControl(ticfreq: #(10,1), xmin: 100)</pre>
+
+<p>will produce something like:</p>
+
+<img src="../../res/trackBarControl.png" />

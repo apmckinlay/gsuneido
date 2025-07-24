@@ -1,0 +1,66 @@
+<div style="float:right"><span class="toplinks">
+<a href="ExplorerControl/Methods.html">Methods</a>
+</span></div>
+<h3>ExplorerControl</h3>
+
+<pre>( treemodel, view )</pre>
+
+<p>Creates a HorzSplitControl with a TreeViewControl in the left hand pane and the view control in the right hand pane.
+</p>
+
+<p>The treemodel must have the following methods:</p>
+
+<dl class="code">
+<dt>Children( num ) => list</dt>
+<dd>The object must be a list of objects containing name, num, and group.</dd>
+
+<dt>Children?( num ) => true or false</dt>
+<dd></dd>
+
+<dt>Container?( num ) => true or false</dt>
+<dd></dd>
+
+<dt>DeleteItem( num )</dt>
+<dd></dd>
+
+<dt>Get( num ) => object</dt>
+<dd></dd>
+
+<dt>NewItem( object )</dt>
+<dd></dd>
+
+<dt>Nextnum() => number</dt>
+<dd></dd>
+
+<dt>Static?( num ) => true or false</dt>
+<dd></dd>
+
+<dt>Update( object )</dt>
+<dd></dd>
+</dl>
+
+<p>The view must have the following methods:</p>
+
+<dl class="code">
+<dt>Get() => object</dt>
+<dd></dd>
+
+<dt>Set(object)</dt>
+<dd></dd>
+
+<dt>GetState()</dt>
+<dd>For persistence.</dd>
+
+<dt>SetState(stateobject)</dt>
+<dd>For persistence.</dd>
+
+<dt>Dirty?() => true or false</dt>
+<dd></dd>
+
+<dt>SetReadOnly(readonly = true)</dt>
+<dd></dd>
+</dl>
+
+<p>See also:
+<a href="ExplorerAdapterControl.html">ExplorerAdapter</a>
+</p>

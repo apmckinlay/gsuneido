@@ -1,0 +1,33 @@
+<h3>Rlog</h3>
+
+<pre>Rlog(name, s, multi_line = false)</pre>
+
+<p>Writes to rotating log files, by default one per day, keeping the last 10.</p>
+
+<p>The log file name is made from name $ number $ ".log". The number depends on the date.</p>
+
+<p>Log entries are prefixed by the date and time.</p>
+
+<p>Within the message %m is replaced with <a href="MemoryArena.html">MemoryArena</a>() and %s by <a href="../../Database/Reference/Database/Database.SessionId.html">Database.SessionId</a>()</p>
+
+<p>For example:</p>
+
+<pre>Rlog("app", "%m start up")</pre>
+
+<p>would write to e.g. "app3.log"</p>
+
+<pre>20160103.120037556 47321088 startup</pre>
+
+The multi_line option is intended for multi-line messages. For example:
+
+<pre>Rlog("app", "hello\nworld", multi_line:)</pre>
+
+<p>would write:</p>
+
+<pre>
+20160103.120336868 -+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+hello
+world
+</pre>
+
+<p>Logging is done via <a href="ServerEval.html">ServerEval</a>() which means the file will normally be written to the same directory as suneido.db</p>

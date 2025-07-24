@@ -1,0 +1,19 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>record.Copy</h4>
+
+<pre>() => record</pre>
+
+<p>Returns a copy of the record, including rule dependencies.</p>
+
+<p><b>Note:</b></p>
+<ul>
+<li>You can't call <a href="record.Update.html">record.Update</a> or <a href="record.Delete.html">record.Delete</a> on a copy of a record.</li>
+
+<li>This does not copy observers.</li>
+
+<li>This is a <i>shallow</i> copy i.e. if any members are themselves objects, they are not copied - they will just be references to the same objects.</li>
+
+<li><a href="record.New?.html">record.New?</a> status is maintained</li>
+</ul>
+
+<p>See also: <a href="../../../Language/Reference/Object/object.Copy.html">object.Copy</a></p>

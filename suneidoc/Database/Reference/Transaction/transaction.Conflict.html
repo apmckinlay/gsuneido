@@ -1,0 +1,12 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>transaction.Conflict</h4>
+
+<pre>() => string</pre>
+
+<p>Returns a string describing the source of a transaction conflict.</p>
+
+<p>For example:</p>
+<pre>
+if not tran.Complete()
+    Alert(tran.Conflict())
+</pre>

@@ -1,0 +1,49 @@
+<div style="float:right"><span class="toplinks">
+<a href="XmlParser/Methods">Methods</a>
+</span></div>
+<h3>XmlParser</h3>
+<pre>(text) => xmlNode</pre>
+
+<p>Uses the SAX style <a href="XmlReader.html">XmlReader</a> to parse the text into a tree of <a href="XmlNode.html">XmlNode</a>'s which then allow access to the contents.</p>
+
+<p>For example:</p>
+<pre>
+text = '&lt;html>
+    &lt;head>
+    &lt;title>Test&lt;/title>
+    &lt;/head>
+    &lt;body>
+    &lt;img src="pic.jpg" align="right" />
+    &lt;p>some stuff&lt;/p>
+    &lt;p>some &lt;b>more&lt;/b> stuff&lt;/p>
+    &lt;/body>
+    &lt;/html>'
+xml = XmlParser(text)
+
+xml.Name()
+    => "html"
+
+xml.head.title.Text()
+    => "Test"
+
+xml.body.p
+    =>  &lt;p>
+            some stuff
+        &lt;/p>
+        &lt;p>
+            some 
+            &lt;b>
+                more
+            &lt;/b>
+             stuff
+        &lt;/p>
+
+xml.body.p[1].Text()
+    => "some more stuff"
+    
+xml.body.img[0].Attributes()
+    => #(align: "right", src: "pic.jpg")
+
+xml.body.img[0]._align
+    => "right"
+</pre>

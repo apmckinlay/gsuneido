@@ -1,0 +1,32 @@
+<h3>Contributions</h3>
+
+<pre>(name) => object</pre>
+
+<p>Builds a list of contributions from the libraries in use i.e. <a href="Libraries.html">Libraries</a>()</p>
+
+<p>Scans the libraries for records with names starting with the library name (capitalized), followed by an underscore and then the specified name.</p>
+
+<p>For example:</p>
+<pre>
+in onelib:
+<b>Onelib_foobar</b>
+123
+
+in twolib:
+<b>Twolib_foobar</b>
+456
+
+Contributions("foobar")
+    => #(123, 456)
+</pre>
+
+<p>The record name must match the name of the library that contains it. e.g. Onelib_foobar will only be found in onelib.</p>
+
+<p>The library records can define any valid value e.g. numbers, strings, objects, functions, classes</p>
+
+<p>See also:
+<a href="GetContributions.html">GetContributions</a>,
+<a href="LastContribution.html">LastContribution</a>,
+<a href="OptContribution.html">OptContribution</a>,
+<a href="SoleContribution.html">SoleContribution</a>,
+<a href="Plugins.html">Plugins</a><p>

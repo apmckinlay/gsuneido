@@ -1,0 +1,23 @@
+<h4>string.ReplaceSubstr</h4>
+
+<pre>(start, length, replacement) => string</pre>
+
+<p>Returns a new string, with the substring starting at the specified position (zero based) 
+and of the specified length replaced with the specified replacement argument.
+The replacement string can be a different length than the substring it is replacing
+(including zero length).</p>
+
+<p>For example:</p>
+<pre>
+"hello there world".ReplaceSubstr(6, 5, "wonderful")
+	=> "hello wonderful world"
+
+"hello world".ReplaceSubstr(6, 0, "cruel ")
+	=> "hello cruel world"
+</pre>
+
+<p>Note: The original string is not modified.</p>
+
+<p>See also:
+<a href="string.Replace.html">string.Replace</a>
+</p>

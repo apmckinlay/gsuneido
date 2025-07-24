@@ -1,0 +1,108 @@
+<h2>A Simple Dynamic Server Proxy</h2>
+
+<p><b>Category:</b> Coding</p>
+
+<p><b>Ingredients</b></p>
+<ul>
+<li>the special Default method</li>
+<li>the built-in Display function</li>
+<li>string.ServerEval</li>
+</ul>
+
+<p><b>Problem</b></p>
+
+<p>You want to interface with a remote object or class without having to write a custom "proxy" class.</p>
+
+<p><b>Recipe</b></p>
+
+<p>We can use the special Default method to redirect calls to a remote object using ServerEval.</p>
+
+<pre>
+<i>ServerEvalProxy</i>
+
+class
+    {
+    New(remote)
+        {
+        .remote = remote
+        }
+    Default(@args)
+        {
+        call = .remote $ '.' $ args[0] $ Display(args[1..])[1..]
+        return call.ServerEval()
+        }
+    }
+</pre>
+
+<p>The "remote" argument is the class or object on the server.</p>
+
+<p>Display is used to convert the arguments to a string. Slice is used to skip the first argument (the name of the method called). Substr(1) is used to skip the leading '#' that Display will include.</p>
+
+<p>A nice thing about ServerEval is that it will work even when you're running standalone, without a server. In this case it will be equivalent to Eval.</p>
+
+<p>Note: Using Display with ServerEval will only handle arguments that can safely be converted to strings and back. Fortunately, this includes the most common types such as numbers, strings, dates, and objects containing such types.</p>
+
+<p>You can create a local proxy with:</p>
+
+<pre>proxy = ServerEvalProxy("MyServerObject")</pre>
+
+<p>If you want a global proxy, you can derive a class, see the example below.</p>
+
+<p><b>Unit Test</b></p>
+
+<p>Here is a unit test for ServerEvalProxy:</p>
+
+<pre>
+<i>ServerEvalProxy_Test</i>
+
+Test
+    {
+    Test_main()
+        {
+        proxy = ServerEvalProxy("ServerEvalProxy_Test")
+        Assert(proxy.A() is: 123)
+        Assert(proxy.B(20, "th century ", #20000101) is: "20th century 2000-1-1")
+        }
+    A()
+        { return 123 }
+    B(number, string, date)
+        { return number $ string $ date.Format('yyyy-M-d') }
+    }
+</pre>
+    
+<p>This uses the "self shunt" testing pattern where the testing class itself is used as an object in the test. Since we need a global class,  using self shunt saves us from having to define a separate library record.</p>
+
+<p><b>Example</b></p>
+
+<p>I developed this code for use with a lock manager for pessimistic locking in AccessControl. AccessControl calls it like:</p>
+
+<pre>LockManager.Lock(key)</pre>
+
+<p>LockManager is defined as:</p>
+
+<pre>
+ServerEvalProxy
+    {
+    New()
+        { super("LockManagerImpl()") }
+    }
+</pre>
+    
+<p>LockManagerImpl contains the actual lock manager implementation and runs on the server (when running client-server). It uses CallClass to implement the Singleton pattern:</p>
+
+<pre>
+CallClass()
+    {
+    if not Suneido.Member?("LockManager")
+        Suneido.LockManager = new this
+    return Suneido.LockManager
+    }
+</pre>
+
+<p><b>See Also</b></p>
+
+<p>Design Patterns by Gamma, Helm, Johnson, Vlissides includes the Proxy and Singleton patterns.</p>
+
+<p>Head First Design Patterns by Freeman & Freeman covers these patterns in a more "friendly" style.</p>
+
+<p>Test Driven Development by Kent Beck includes the Self Shunt testing pattern.</p>

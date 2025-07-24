@@ -1,0 +1,52 @@
+<h2>Getting Selected Rows from a Browse</h2>
+
+<p><b>Category:</b> User Interface</p>
+
+<p><b>Problem:</b></p>
+
+<p>How to retrieve the selected row(s) from a BrowseControl</p>
+
+<p><b>Ingredients:</b></p>
+
+<p>BrowseControl</p>
+
+<p><b>Recipe:</b></p>
+
+<p>To get the selected row(s)</p>
+<pre>
+sel = browse.GetSelection() // this returns an object containing the indexes of the selected rows
+</pre>
+
+<p>To get the data in a selected row</p>
+<pre>
+row = sel[0] // this will be the index of the first row selected if there are multiple rows selected
+data = browse.GetRow(row) // data will contain all the values from all the fields on that row
+</pre>
+
+<b>Example:</b>
+<pre>
+Controller
+    {
+    Controls: #(Vert
+        (Browse 'tables')
+        (Button 'Get Record'))
+    On_Get_Record()
+        {
+        browse = .Vert.Browse
+        selected = browse.GetSelection()
+        if selected.Empty?()
+            {
+            Alert('You have not selected a row')
+            return
+            }
+        if selected.Size() > 1
+            {
+            Alert('You can only select one row')
+            return
+            }
+        index = selected[0]
+        rec = browse.GetRow(index)
+        Alert('You have selected table ' $ Display(rec.tablename))
+        }
+    }
+</pre>

@@ -1,0 +1,19 @@
+<h3>Sequence</h3>
+
+<p>A sequence is a virtual list that wraps an iterator.</p>
+
+<p>Several built-in methods return sequences - <a href="../Reference/Object/object.Values.html">object.Values</a>, <a href="../Reference/Object/object.Members.html">object.Members</a>, <a href="../Reference/Object/object.Assocs.html">object.Assocs</a>, and <a href="../Reference/Seq.html">Seq</a> and the <a href="../Reference/Sequence.html">Sequence</a> function can be used to create a sequence from a user defined iterator.</p>
+
+<p>Additional, user defined methods can be added by defining a class called "Sequences" which should inherit from "Objects". The main use is to provide sequence specific overrides to Objects methods that do not force instantiation.</p>
+
+<p>Sequences have built-in Size and Join methods that avoid instantiating the sequence.</p>
+
+<p>Sequences can be iterated over (e.g. with for-in) without instantiating an actual list.</p> 
+
+<p>For example, something like:</p>
+
+<pre>list.Filter(...).Map(...).Join()</pre>
+
+<p>will "stream" the values and will not create any intermediate list objects.</p>
+
+<p>However, if any built-in Object methods are used on the sequence then the list will be instantiated.</p>

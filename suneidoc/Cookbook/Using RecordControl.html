@@ -1,0 +1,83 @@
+<h2>Using RecordControl</h2>
+
+<p><b>Category:</b> User Interface</p>
+
+<p><b>Problem</b></p>
+
+<p>You want to work with a number of data controls.</p>
+
+<p><b>Ingredients</b></p>
+
+<p><a href="../User Interfaces/Reference/RecordControl.html">RecordControl</a>, 
+<a href="../User Interfaces/Reference/Controller.html">Controller</a>, 
+<a href="../User Interfaces/Reference/FieldControl.html">FieldControl</a>, 
+<a href="../User Interfaces/Reference/ButtonControl.html">ButtonControl</a>, 
+<a href="../Language/Reference/Inspect.html">Inspect</a>, 
+<a href="../User Interfaces/Reference/Alert.html">Alert</a></p>
+
+<p><b>Recipe</b></p>
+
+<p>Enter this in a library (e.g. mylib) as My_RecordControl:</p>
+
+<pre>
+Controller
+    {
+    Controls:
+        #(Record
+            (Vert
+                (Field name: city)
+                (Field name: country)
+                Skip
+                (Horz
+                    (Button Canada) Skip
+                    (Button Home) Skip
+                    (Button City) Skip
+                    (Button Inspect) Skip
+                    (Button Protect))))
+    On_Canada()
+        {
+        .Data.SetField('country', 'Canada')
+        }
+    On_Home()
+        {
+        .Data.Set(#{city: 'Saskatoon', country: 'Canada'})
+        }
+    On_City()
+        {
+        Alert(.Data.GetField('city'))
+        }
+    On_Inspect()
+        {
+        Inspect(.Data.Get())
+        }
+    On_Protect()
+        {
+        control = .Data.GetControl('city')
+        control.SetReadOnly(not control.GetReadOnly())
+        }
+    }
+</pre>
+
+<p>You can then run it directly from Library View or from the WorkSpace with:</p>
+
+<pre>
+My_RecordControl()
+</pre>
+
+<p>or:</p>
+
+<pre>
+Window(My_RecordControl)
+</pre>
+
+<p>Note that in On_Home where we call set we must pass a record (using #{...} or Record(...)) rather than an object (using #(...) or Object(...)).</p>
+
+<p><b>Discussion</b></p>
+
+<p>A RecordControl is a PassthruController that tracks the contents of its controls in a record. RecordControl's default name is "Data" which is why we refer to it as ".Data". A RecordControl "mirrors" the contents of the controls it contains. Changing the values in the RecordControl (using Set or SetField) will update the contents the controls. Similarly, when the contents of the controls are changed (by the user) the values in the RecordControl will be updated (and can be retrieved with Get or GetField). You can also use GetControl to get a reference to a control by name, which is often more convenient than referencing controls by "path" like .Vert.city</p>
+
+<p>RecordControl "wraps" a single top-level control so you must use something like a Vert or Horz or Form to contain multiple controls.</p>
+
+<p><b>See Also</b></p>
+
+<p><a href="Responding to a Button.html">Responding to a Button</a></p>

@@ -1,0 +1,26 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.BinarySearch</h4>
+
+<pre>(value, block = less_than) => number</pre>
+
+<p>Returns the <i>first</i> position where the comparison returns false. i.e. the first position in a sorted list where the value could be inserted and maintain the sort order.</p>
+
+<p>For example:</p>
+<pre>
+#(1, 2, 2, 3).BinarySearch(2)
+    => 1
+</pre>
+
+<p>A comparison function can be supplied. This is normally required when the values being sorted are objects or records. The comparison function is called with two values and would normally return true if the first value is less than the second. The comparison function can be anything callable e.g. a block, function, or method.</p>
+
+<p>BinarySearch with a comparison of less-than is equivalent to lower bound. With a comparison of less-than-or-equal-to it is equivalent to upper bound.</p>
+
+<p>For example:</p>
+<pre>
+#(1, 2, 2, 3).BinarySearch(2, {|x,y| x &lt;= y})
+    => 3
+</pre>
+
+<p><b>Note</b>: The object must be ordered with respect to the comparison function e.g. with <a href="object.Sort!.html">object.Sort!</a></p>
+
+<p>See also: <a href="object.BinarySearch.html">object.BinarySearch</a></p>

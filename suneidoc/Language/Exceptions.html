@@ -1,0 +1,88 @@
+<h2>Exceptions</h2>
+
+<pre>
+<b>try</b>
+    <i>statement1</i>
+[ <b>catch</b> [ ( variable [ , pattern ] ) ]
+    <i>statement2</i> ]
+
+<b>throw</b> <i>string</i>
+</pre>
+
+<p>Within the <b>try</b> statement and any functions called by it (directly or indirectly), a throw will cause an immediate transfer of control to the most recent <b>catch</b> statement whose prefix matches the exception.  If no prefix is specified, the catch will match all exceptions.</p>
+
+<p><b>NOTE</b>: try-catch will not work properly if nested within the same function.</p>
+
+<p><b>throw</b> may be used within the <b>catch</b> statement to pass the exception to the next catch.</p>
+
+<p>Note: Suneido also generates exceptions internally for things like uninitialized variables and syntax errors.</p>
+
+<p>An uncaught exception will call a user defined Handler function, passing it the call stack as a list of objects, each containing fn (as returned by <a href="Reference/Frame.html">Frame</a>) and locals (as returned by <a href="Reference/Locals.html">Locals</a>). The Handler in stdlib will open a DebuggerControl showing the function calls leading up to the exception if Suneido.User is 'default', otherwise it will log the error with SuneidoLog and call AlertError to display "Program Error" to the user.</p>
+
+<p>If a <b>variable</b> name is specified in the catch it will be set to the exception. For example:</p>
+
+<pre>
+try
+    throw "oops"
+catch (e)
+    Print(caught: e)
+
+=> caught: oops
+</pre>
+
+<p>A <b>catch</b> with a <b>pattern</b> string will catch any exception that starts with that pattern (has it as a prefix). If the pattern starts with a "*" it will match anywhere in the exception. Multiple patterns may be specified by separating them with "|". For example:</p>
+
+<pre>try
+    MyFunc()
+catch (e, "*error|*failure")
+    ...</pre>
+
+<p>This would catch exceptions that contained "error" or "failure". Any other exceptions would not be caught.</p>
+
+<p>Note: The catch pattern must be a literal string - it cannot be a variable or expression.</p>
+
+<p>The value passed to <b>catch</b> is a special exception type. It can be used as a normal string, but it also has two extra methods:</p> 
+<dl>
+<dt>exception.Callstack()</dt>
+<dd>Returns the call stack (as a list of objects, with fn the function/block/method and locals, an object with members for each local variable) at the point of the exception. This is useful when logging exceptions. For example:</dd>
+<pre>try
+    MyFunc()
+catch (e)
+    Log(e, e.Callstack())</pre>
+<dd>You can also use DebuggerControl to view the callstack information since it is in the same format as the call stack passed to Handler. For example:</dd>
+<pre>DebuggerControl(e, e.Callstack(), 0)</pre>
+
+<dt>exception.As(string) <span class="deprecated">Deprecated</span></dt>
+<dd>Returns a new exception value with the specified string, but keeping the call stack information. This is useful when catching and re-throwing an exception. For example:</dd>
+<pre>try
+    MyFunc()
+catch (e)
+    throw e.As("error in MyFunc: " $ e)
+</pre>
+</dl>
+
+<p><b>Note</b>: Concatenation preserves exception information eliminating the need for most uses of As.</p>
+
+<p>Note: Within <a href="Blocks.html">blocks</a>, break and continue throw "block:break" and "block:continue". If you are writing a loop type function that accepts a block, you can implement break and continue by catching and handling these exceptions. For example:</p>
+<pre>
+while ...
+    try
+        block(x)
+    catch (e, "block:")
+        if e is "block:break"
+            break
+        // else block:continue ... so continue
+</pre>
+
+<p><b>WARNING</b>: Currently Suneido does <u>not</u> handle nested try-catch within a single function/method. i.e. the following example will <u>not</u> catch the exception.</p>
+<pre>
+try
+    try
+        throw "should be caught"
+    catch (unused, 'something else')
+        {}
+catch
+    {}
+</pre>
+
+<p>It is ok to nest separate functions/methods that each have try-catch so one workaround is to extract the inner try-catch into its own function/method.</p>

@@ -1,0 +1,18 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>string.Eval2</h4>
+
+<pre>() => object</pre>
+
+<p>Evaluates the string as Suneido code and returns an object containing the result. If there is no result (e.g. a return with no value) then the result object will be empty.</p>
+
+<p>For example:</p>
+<pre>
+"123 + 456".Eval2() => #(579)
+
+"return".Eval2() => #()
+</pre>
+
+<p>See also:
+<a href="string.Eval.html">string.Eval</a>,
+<a href="string.ServerEval.html">string.ServerEval</a>
+</p>

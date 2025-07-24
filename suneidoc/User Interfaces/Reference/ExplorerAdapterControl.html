@@ -1,0 +1,18 @@
+<h3>ExplorerAdapterControl</h3>
+
+<pre>( control, field )</pre>
+
+<p>Adapts a single-field control, whose Get and Set work with single values, to be used as with Explorer, that requires Get and Set to work with objects.
+</p>
+
+<pre>
+Set(object) => control.Set(object[field])
+
+Get() => Object(field: control.Get())
+</pre>
+
+<p>Forwards Dirty? to the control.</p>
+
+<p>An example of the
+<a href="../../Appendix/Patterns/Adapter.html">Adapter</a>
+pattern.</p>

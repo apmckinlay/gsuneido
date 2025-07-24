@@ -1,0 +1,32 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Sort!</h4>
+
+<pre>
+(less_function = <a href="../Lt.html">Lt</a>) => this
+</pre>
+
+<p>Sorts the <i>list</i> members of the object (consecutive members starting at 0).  
+It has no effect on named members.</p>
+
+<p>For example:</p>
+<pre>
+Object(23, 76, 34, 98, 56).Sort!() => #(23, 34, 56, 76, 98)
+</pre>
+
+<p>A comparison function can be supplied. This is normally required when the values being sorted are objects or records. The comparison function is called with two values and should return true if the first value is less than the second (not if they are equal) and false otherwise. The comparison function can be anything callable e.g. a block, function, or method. For example:</p>
+<pre>
+list = Object(#(3, "Three"), #(1, "One"), #(2, "Two"))
+list.Sort!({ |x,y| x[0] &lt; y[0] })
+    => Object(#(1, "One"), #(2, "Two"), #(3, "Three"))
+</pre>
+
+<p>To sort in reverse order, pass <a href="../Gt.html">Gt</a> as the comparison function.</p>
+
+<p>Sort! is a stable sort so it will maintain the order of <i>equal</i> items.</p>
+
+<p><b>Note:</b> Sort! modifies the object it is applied to, it does not create a new object.</p>
+
+<p>See also:
+<a href="../By.html">By</a>,
+<a href="object.Sorted?.html">object.Sorted?</a>,
+<a href="object.SortWith!.html">object.SortWith!</a><p>

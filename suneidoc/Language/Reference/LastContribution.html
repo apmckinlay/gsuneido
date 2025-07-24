@@ -1,0 +1,16 @@
+<h3>LastContribution</h3>
+
+<pre>(name) => value</pre>
+
+<p>Gets <a href="Contributions.html">Contributions</a>(). Throws an exception if there are no contributions. Returns the last contribution (in <a href="Libraries.html">Libraries</a>() order).</p>
+
+<p>For example, if the libraries in use are stdlib, onelib, and twolib (in that order) and onelib contains Onelib_foobar and twolib contains Twolib_foobar, then LastContribution("foobar") will return the value of Two_foobar.</p>
+
+<p>Useful when code requires an externally defined service. It can provide a default implementation in it's own library, which can then be overridden if desired.</p>
+
+<p>See also:
+<a href="Contributions.html">Contributions</a>,
+<a href="GetContributions.html">GetContributions</a>,
+<a href="OptContribution.html">OptContribution</a>,
+<a href="SoleContribution.html">SoleContribution</a>,
+<a href="Plugins.html">Plugins</a><p>

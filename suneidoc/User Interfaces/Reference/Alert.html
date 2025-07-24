@@ -1,0 +1,25 @@
+<h3>Alert</h3>
+
+<pre>(message, title = "ALERT", hwnd = 0, flags = 0)</pre>
+
+<p>Creates a MessageBox, and displays the <b>message</b> passed in. See MSDN for more information on MessageBox.</p>
+
+<p>If necessary <b>message</b> will be converted to a string using <a href="../../Language/Reference/Display.html">Display</a>.</p>
+
+<p><b>message</b> and <b>title</b> will be translated using <a href="../../Language/Reference/TranslateLanguage.html">TranslateLanguage</a>.</p>
+
+<p>MB.TASKMODAL will be added to the flags.</p>
+
+<h4>Returns</h4>
+<p>If the dialog box could not be shown 0 is returned. Otherwise the return value depends on the button pressed; 1 for OK, 2 for Cancel,3 for Abort, 4 for Retry, 5 for Ignore, 6 for Yes, 7 for No, 10 for Try Again and 11 for Continue. Pressing the Close button at the right upper corner of the title bar will return 2 (as for Cancel) except when only one button OK is present (when the flag is 0) when the return value will be 1.</p> 
+
+<p>For example:</p>
+<pre>
+Alert('How are you?', 'Hello', flags: MB.ICONQUESTION)
+</pre>
+
+<p>would display</p>
+
+<img src="../../res/alert.png" />
+
+<p><b>Note:</b> Alert can be redirected by setting Suneido.Alert to a function that takes the same arguments as MessageBox.</p>

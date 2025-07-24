@@ -1,0 +1,33 @@
+<h2>Introduction</h2>
+
+<p>Reports layout is done using the "Boxes and Stretch" pattern .
+</p>
+
+<p>Reports are normally run through Params.  The basic usage is:
+</p>
+
+<pre>Params( item, ... )</pre>
+
+<p>An item may be a printable format like Text, a container like Vert or Horz, or a generator like Query.
+</p>
+
+<p>A very simple report would be:
+</p>
+
+<pre>Params( #( Text, "Hello world!" ) )</pre>
+
+<p>which would simply print "Hello world!" at the top left of the page.
+</p>
+
+<p>If a title is provided, a default page header including the date and time and the page number will be produced:
+</p>
+
+<pre>Params( #( Text, "Hello world!" ), title: "Test" )</pre>
+
+<p>or you can provide your own format for the page header:
+</p>
+
+<pre>Params( #( Text, "Hello world!" ), header: #( Text, "Test" ) )</pre>
+
+<p>Note: Titles have been omitted from the following examples to keep them short.
+</p>

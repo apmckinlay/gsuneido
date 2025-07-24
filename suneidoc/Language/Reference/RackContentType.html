@@ -1,0 +1,25 @@
+<h3>RackContentType</h3>
+
+<p>Middleware for <a href="RackServer.html">RackServer</a>.</p>
+
+<p>Supplies default Content_Type for paths based on MimeTypes, for example:</p>
+
+<table style="margin-left: 2em;">
+<tr><td style="width: 3em;">js</td><td>application/javascript</td></tr>
+<tr><td>html</td><td>text/html</td></tr>
+<tr><td>css</td><td>text/css</td></tr>
+<tr><td>ico</td><td>image/x-icon</td></tr>
+</table>
+
+<p>Middleware is specified with the RackServer with argument, e.g.</p>
+
+<pre>RackServer(app: MyApp, with: [RackContentType])</pre>
+
+<p><b>Note:</b> To override RackContentType you must supply Content_Type, not Content-Type</p>
+
+<p>See also:
+<a href="RackServer.html">RackServer</a>,
+<a href="RackRouter.html">RackRouter</a>,
+<a href="RackLog.html">RackLog</a>,
+<a href="RackEcho.html">RackEcho</a>,
+<a href="RackDebug.html">RackDebug</a><p>

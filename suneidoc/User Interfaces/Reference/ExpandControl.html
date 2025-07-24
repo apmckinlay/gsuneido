@@ -1,0 +1,32 @@
+<h3>ExpandControl</h3>
+
+<pre>(label, control, open = false, leftAlign = false)</pre>
+
+<p>Provides a pane that expands and contracts showing or hiding its child control.</p>
+
+<p>The label is used as the tab caption. When the button is clicked the ExpandControl will switch between Expanded and contracted.</p>
+
+<p>When the ExpandControl is closed it Send's NeedSummary which can be used at the controller to provide a "Summary" of the data just hidden. If the controller does not respond to NeedSummary the control can have a MakeSummary method.</p>
+
+<p>When you have multiple ExpandControl's NeedSummary can use a source parameter and check source.Label</p>
+
+<h4>Methods</h4>
+<dl class="code">
+<dt>Expand()</dt><dd>Expands a closed ExpandTab.</dd>
+<dt>Contract()</dt><dd>Contract a closed ExpandTab.</dd>
+</dl>
+
+<h4>Examples</h4>
+
+<pre>
+Window(#(Border (Expand 'Home Address' Address) ystretch: 1))
+</pre>
+
+<img src="../../res/expandcontrol1.png" />
+<img src="../../res/expandcontrol2.png" />
+
+<p>Note: Address has a MakeSummary method.</p>
+
+<p>See also:
+<a href="AccordionControl.html">AccordionControl</a>
+</p>

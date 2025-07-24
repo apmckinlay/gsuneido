@@ -1,0 +1,10 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>CoverageEnable</h3>
+
+<pre>(true or false)</pre>
+
+<p>Once coverage is enabled, any code compiled after this will include Cover instructions at the start of each statement. This adds some overhead to performance, in the range of 5 to 10% so it is not a good idea to enable this in production.</p>
+
+<p>Coverage will not be actually tracked until <a href="Function/function.StartCoverage.html">function.StartCoverage</a> or <a href="Class/class.StartCoverage.html">class.StartCoverage</a> are called on particular functions.</p>
+
+<p>Note: If the code was compiled prior to enabling coverage, you will need to force it to be recompiled using <a href="Unload.html">Unload</a></p>

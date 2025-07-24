@@ -1,0 +1,22 @@
+<div style="float:right"><span class="toplinks">
+<a href="TreeModel/Methods.html">Methods</a>
+</span></div>
+<h3>TreeModel</h3>
+
+<pre>(table)</pre>
+
+<p>An ExplorerControl model.</p>
+
+<p>Accesses a tree stored in a database table.  
+The table must have the following specification (presumably with additional fields for data):
+</p>
+
+<pre>(num, parent, group, name, ...) key (num) index (parent)</pre>
+
+<p>Each record is assigned a unique number (starting at 1).  
+In the table group = -1 for leaf items, group == parent for groups.  
+</p>
+
+<p>A key of name,group can be used to ensure unique item names overall, 
+and unique group names within groups.
+</p>

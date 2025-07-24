@@ -1,0 +1,29 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Add</h4>
+
+<pre>
+(value ...) => this
+(value ... at: position) => this
+</pre>
+
+<p>Add values to an object. If no position is specified, the values are added to the end of the un-named members. For example:</p>
+
+<pre>Object(12, 34).Add(56, 78) => Object(12, 34, 56, 78)</pre>
+
+<p>If the position is <i>within </i>the un-named members, the values are <i>inserted </i>there.</p>
+
+<pre>Object(12, 78).Add(34, 56, at: 1) => Object(12, 34, 56, 78)</pre>
+
+<p>If the position is an integer, but is not within the un-named members, the values will be added at consecutive positions.  Note: it is possible for this to overwrite existing members.</p>
+
+<pre>Object().Add(12, 34, 56, at: 10) => Object(10: 12, 11: 34, 12: 56)</pre>
+
+<p>If the position is a member name, then only a single value may be specified and Add simply sets that member to the value.</p>
+
+<pre>Object().Add(123, at: 'num') => Object(num: 123)</pre>
+
+<p><b>Note:</b> Add modifies the object it is applied to, it does not create a new object.</p>
+
+<p><b>Note:</b> Add is optimized for x.Add(@y) where x and y have no named members.</p>
+
+<p>See also: <a href="object.AddTo.html">object.AddTo</a></p>

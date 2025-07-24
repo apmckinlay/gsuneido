@@ -1,0 +1,34 @@
+<h4>object.Reduce</h4>
+
+<pre>(block)</pre>
+
+<p>Apply a function of two arguments cumulatively to the values in a list, from left to right, reducing the sequence to a single value. Similar to <a href="object.Fold.html">object.Fold</a> with the first element as the initial value.</p>
+
+<p><b>Note</b>: The list must have at least one value. If a list has a single value, that value will be the result.</p>
+
+<p>For example: (although in practice you would use <a href="object.Sum.html">object.Sum</a>)</p>
+<pre>
+#(1,2,3,4,5).Reduce({|x,y| x + y }) 
+    => 15
+</pre>
+
+<p>i.e. ((((1 + 2) + 3) + 4) + 5)</p>
+
+<p>See also:
+<a href="../Compose.html">Compose</a>,
+<a href="../Curry.html">Curry</a>,
+<a href="../Memoize.html">Memoize</a>,
+<a href="../MemoizeSingle.html">MemoizeSingle</a>,
+<a href="object.Any?.html">object.Any?</a>,
+<a href="object.Drop.html">object.Drop</a>,
+<a href="object.Every?.html">object.Every?</a>,
+<a href="object.Filter.html">object.Filter</a>,
+<a href="object.FlatMap.html">object.FlatMap</a>,
+<a href="object.Fold.html">object.Fold</a>,
+<a href="object.Map.html">object.Map</a>,
+<a href="object.Map!.html">object.Map!</a>,
+<a href="object.Map2.html">object.Map2</a>,
+<a href="object.Nth.html">object.Nth</a>,
+object.PrevSeq,
+<a href="object.Take.html">object.Take</a>,
+<a href="object.Zip.html">object.Zip</a><p>

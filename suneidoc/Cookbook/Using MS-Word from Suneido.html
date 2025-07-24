@@ -1,0 +1,256 @@
+<h2>Using MS-Word from Suneido</h2>
+<p>by Claudio Mascioni</p>
+
+<p><b>Category:</b> Coding</p>
+
+<p><b>Problem</b></p>
+
+<p>Write and read to/from a Microsoft Word document from Suneido. (Tested with Microsoft Word 97 on Win98)</p>
+
+<p><b>Ingredients</b></p>
+
+<p>COMobject</p>
+
+<p><b>Recipe</b></p>
+
+<pre>
+// ---------------------------------------------------
+// open a document in a MSWord window
+
+word = COMobject("Word.Application")
+word.WindowState = 0  //0=default 1=maximize 2=minimize
+word.Visible = true   // true  = display the MSWord window
+              // false = hide the MSWord window
+
+doc = word.Documents.Open("c:\\test.doc")
+doc.Release()
+word.Release()
+
+// ---------------------------------------------------
+// open a document in a MSWord window and print it
+
+word = COMobject("Word.Application")
+word.WindowState = 0  
+word.Visible = true   
+doc = word.Documents.Open("c:\\test.doc")
+doc.PrintOut()     // to print the document           
+doc.Release()
+word.Release()
+
+// ---------------------------------------------------
+// to write in a new Word document and to change the font
+
+word = COMobject("Word.Application")
+word.Visible = true
+doc = word.Documents.Add()
+word.Selection.Font.Name = 'Times New Roman';
+word.Selection.Font.Size = 18;
+word.Selection.Font.Bold = true;
+word.Selection.Font.Italic = true;
+word.Selection.TypeText("Hello ")
+word.Selection.Font.Name = 'Arial';
+word.Selection.Font.Size = 12;
+word.Selection.Font.Bold = false;
+word.Selection.TypeText("from ")
+word.Selection.Font.Name = 'Times New Roman';
+word.Selection.Font.Size = 14;
+word.Selection.Font.Bold = true;
+word.Selection.Font.Underline = true;
+word.Selection.TypeText("Suneido!")
+doc.Release()
+word.Release()
+
+// ---------------------------------------------------
+// replace words in a MSWord document
+
+word = COMobject("Word.Application")
+word.Visible = true
+doc = word.Documents.Open("c:\\test.doc")
+//
+// thanks to Björn Lietz-Spendig
+word.Selection.Find.Execute("@CUSTOMERCODE@",False,True,False,False,False,True,1,False,"CUSTXYZ",2)
+//
+doc.Release()
+word.Release()
+
+// ---------------------------------------------------
+// write in a new Word document and save the new file
+
+word = COMobject("Word.Application")
+word.Visible = true
+doc = word.Documents.Add()
+range = doc.Range(0,0)     // set position in the document
+range.InsertBefore("Hello from Suneido!")
+// or may use range.InsertAfter("Hello from Suneido!")
+doc.SaveAs("c:\\test.doc")
+word.Documents.Close()  // close the document
+range.Release()
+doc.Release()
+word.Release()
+
+// ---------------------------------------------------
+// to create a table in MSWord and write in its cells
+
+word = COMobject("Word.Application")
+word.Visible = true
+doc = word.Documents.Add()
+
+wtable = doc.Tables.Add(word.Selection.Range, 3, 3); // columns, rows
+//
+wtable.Cell(1, 2).Range.Font.Name = 'Times New Roman';
+wtable.Cell(1, 2).Range.Font.Size = 18;
+wtable.Cell(1, 2).Range.Bold = true;
+wtable.Cell(1, 2).Range.Font.Italic = true;
+wtable.Cell(2, 1).Range.ParagraphFormat.Alignment = 1 // 0= left, 1=center, 2=rigth
+wtable.Cell(1, 2).Range.Text = 'row1-col2' // row, column
+//
+wtable.Cell(2, 1).Range.Font.Name = 'Arial';
+wtable.Cell(2, 1).Range.Font.Size = 12;
+wtable.Cell(2, 1).Range.Bold = false;
+wtable.Cell(2, 1).Range.ParagraphFormat.Alignment = 2
+wtable.Cell(2, 1).Range.Text = 'row2-col1'
+//
+wtable.Cell(3, 3).Range.Font.Name = 'Times New Roman';
+wtable.Cell(3, 3).Range.Font.Size = 14;
+wtable.Cell(3, 3).Range.Bold = true;
+wtable.Cell(3, 3).Range.Font.Underline = true;
+wtable.Cell(2, 1).Range.ParagraphFormat.Alignment = 0
+wtable.Cell(3, 3).Range.Text = 'row3-col3'
+//
+wtable.Release()
+doc.Release()
+word.Release()
+
+// ---------------------------------------------------
+// others font properties
+
+Range.Font.Emboss = true
+Range.Font.Engrave = true
+Range.Font.Kerning = true
+Range.Font.Shadow = true
+Range.Font.StrikeThrough = true
+Range.Font.Subscript = true
+Range.Font.Superscript = true
+Range.Font.Color:= wdColorBlue;
+
+// ---------------------------------------------------
+// to read values from a MSWOrd table
+
+word = COMobject("Word.Application")
+word.Visible = true
+doc = word.Documents.Open("c:\\test.doc")
+wtable = word.ActiveDocument.Tables.Item(1); // 1 = first table, may be more then one table
+//
+// get dimensions of table if are needed for a loop
+tCols = wtable.Rows.Count;
+tRows = wtable.Columns.Count;
+//
+cellText = wtable.Cell(1, 2).Range.Text;  // Cell(x,x) start from 1,1
+//
+// Remove Tabs and linebreaks from cellText value
+// "\x0D" ctrl M - CR,  "\x07" ctrl G - Bell
+cellValue = cellText.Tr("\x0D").Tr("\x07")
+//
+Print(Display(cellValue))
+//
+wtable.Release()
+doc.Release()
+word.Release()
+
+// ---------------------------------------------------
+// document page setup
+
+doc.PageSetup.LeftMargin = 100   // in points
+doc.PageSetup.RightMargin = 200
+doc.PageSetup.TopMargin = 300
+doc.PageSetup.BottomMargin = 300
+
+// ---------------------------------------------------
+// change MSWord document Properties
+
+word = COMobject("Word.Application")
+word.Visible = true
+doc = word.Documents.Open("c:\\test.doc")
+//
+word.ActiveDocument.BuiltInDocumentProperties(0x00000001).Value = 'Doc Title';
+word.ActiveDocument.BuiltInDocumentProperties(0x00000002).Value = 'Doc Subject';
+word.ActiveDocument.BuiltInDocumentProperties(0x00000003).Value = 'Doc Author';
+word.ActiveDocument.BuiltInDocumentProperties(0x00000005).Value = 'Doc Comments';
+//
+doc.Release()
+word.Release()
+</pre>
+
+<p>Some BuiltInDocumentProperties:</p>
+
+<pre>
+wd_Title = 0x00000001
+wd_Subject = 0x00000002
+wd_Author = 0x00000003
+wd_Keywords = 0x00000004
+wd_Comments = 0x00000005
+wd_Template = 0x00000006
+wd_LastAuthor = 0x00000007
+wd_Revision = 0x00000008
+wd_AppName = 0x00000009
+wd_TimeLastPrinted = 0x0000000A
+wd_TimeCreated = 0x0000000B
+wd_TimeLastSaved = 0x0000000C
+wd_VBATotalEdit = 0x0000000D
+wd_Pages = 0x0000000E
+wd_Words = 0x0000000F
+wd_Characters = 0x00000010
+wd_Security = 0x00000011
+wd_Category = 0x00000012
+wd_Format = 0x00000013
+wd_Manager = 0x00000014
+wd_Company = 0x00000015
+wd_Bytes = 0x00000016
+wd_Lines = 0x00000017
+wd_Paras = 0x00000018
+wd_Slides = 0x00000019
+wd_Notes = 0x0000001A
+wd_HiddenSlides = 0x0000001B
+wd_MMClips = 0x0000001C
+wd_HyperlinkBase = 0x0000001D
+wd_CharsWSpaces = 0x0000001E
+
+// ---------------------------------------------------
+// to get the language of installed MSWord
+
+word = COMobject("Word.Application")
+word.Visible = true
+doc = word.Documents.Open("c:\\test.doc")
+Print(Display(word.System.Country)); // get the language code, i.e. 39 italy
+doc.Release()
+word.Release()
+</pre>
+
+<p>I think that some of the returned values are these:</p>
+
+<pre>
+id_USA = 1
+id_Canada = 2
+id_LatinAmerica = 3
+id_wdNetherlands = 31
+id_France = 33
+id_Spain = 34
+id_Italy = 39
+id_UK = 44
+id_Denmark = 45
+id_Sweden = 46
+id_Norway = 47
+id_Germany = 49
+id_Peru = 51
+id_Mexico = 52
+id_Argentina = 54
+id_Brazil = 55
+id_Chile = 56
+id_Venezuela = 58
+id_Iceland = 354
+id_Finland = 358
+</pre>
+
+<p><b>See Also</b></p>
+
+<a href="http://www.microsoft.com/officedev/articles/Opg/intro/intro.htm" target="_blank">Microsoft Office 97 - Visual Basic Programmer's Guide</a>

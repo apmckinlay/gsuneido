@@ -1,0 +1,46 @@
+<h3>String</h3>
+
+<p>Strings literals can be written with double or single quotes.  Within one kind of quote it is ok to include the other kind.</p>
+
+<p>Backquotes (`) can be used when you do <u>not</u> want backslashes (\) to have special meaning. This is useful for regular expressions and Windows file paths so you don't have to double the backslashes.</p>
+
+<p><b>Note:</b> Unlike many languages, Suneido allows multi-line strings.</p>
+
+<p>If a string is also a valid identifier it can be written as #name. This is commonly used when passing a member name e.g. ob.GetDefault(#mem, 0) or a method name e.g. ob.Map(#Trim)</p>
+
+<p>The <code>$</code> and <code>$=</code> operators are used to concatenate strings.</p>
+
+<p>Additional user defined methods can be added by defining methods in a class called "Strings". (The stdlib standard library already includes a Strings class.)</p>
+
+<p>Strings may include:</p>
+
+<ul>
+<li>\xhh for hex character values, where h is 0-9, a-f, or A-F</li>
+
+<li>\t for tab, \n for newline, \r for carriage return</li>
+
+<li>\' for single quote, \" for double quote</li>
+
+<li>\0 for a nul (zero) character</li>
+
+<li>\\ for a literal backslash</li>
+</ul>
+
+<p>For example:</p>
+
+<pre>
+"" // empty string'
+
+' " '
+
+"\""
+
+"1\tIntroduction\n"
+
+'a multi-line
+string'
+
+`c:\tmp\notes`
+</pre>
+
+<p>See also: <a href="../Expressions/String.html">Expressions - String</a></p>

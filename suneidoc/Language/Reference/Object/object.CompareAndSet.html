@@ -1,0 +1,34 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.CompareAndSet</h4>
+
+<pre>(member, newval [, oldval]) => true or false</pre>
+
+<p>CompareAndSet is an atomic equivalent of:</p>
+
+<pre>
+if ob[member] is oldval
+	{
+	ob[member] = newval
+	return true
+	}
+else
+	return false
+</pre>
+
+<p>If oldval is not specified then the member must not exist.</p>
+
+<p>A common use is to ensure something is done a single time across multiple threads. Multiple threads can run this and CompareAndSet will only succeed on one of them. (Assuming Suneido.done is initialized to false.</p>
+<pre>
+if Suneido.CompareAndSet(#done, false, true)
+	something() // will only be done once
+</pre>
+
+<p>NOTE: CompareAndSet is only needed when there are multiple threads.</p>
+
+<p>See also:
+<a href="../Channel.html">Channel</a>,
+<a href="../Mutex.html">Mutex</a>,
+<a href="../Synchronized.html">Synchronized</a>,
+<a href="../Class/class.Synchronized.html">class.Synchronized</a>,
+<a href="../Thread.html">Thread</a>,
+<a href="../WaitGroup.html">WaitGroup</a><p>

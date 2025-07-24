@@ -1,0 +1,17 @@
+<h3>QueryColumns</h3>
+
+<pre>(query, useCache = false) => list</pre>
+
+<p>Returns a list of columns for the query. If a table does not exist it returns an empty object.</p>
+
+<p>If useCache is true then results are cached for 60 seconds.</P>
+
+<p>For example:</p>
+<pre>
+QueryColumns("tables join columns")
+    => #("table", "tablename", "nextfield", "nrows", "totalsize", "column", "field")
+</pre>
+
+<p>See also:
+<a href="Query/query.Columns.html">query.Columns</a>
+</p>

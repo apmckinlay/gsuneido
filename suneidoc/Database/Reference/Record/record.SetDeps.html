@@ -1,0 +1,36 @@
+<h4>record.SetDeps</h4>
+
+<pre>(member, deps)</pre>
+
+<p>Sets the dependencies for the specified member (field) to the comma separated list.</p>
+
+<p><b>Note</b>: SetDeps adds to any existing dependencies.</p>
+
+<p>For example, if you had a Rule_sum:</p>
+<pre>
+function ()
+    {
+    return .a + .b
+    }
+</pre>
+
+<p>Then:</p>
+<pre>
+r = Record(a: 2, b: 3, sum: 5)
+r.a = 4
+r.sum
+    => 5
+</pre>
+
+<p>Since sum was set manually, there were no dependencies, and so modifying a did not cause sum to be updated.</p>
+
+<p>But with SetDeps, it works properly:</p>
+<pre>
+r = Record(a: 2, b: 3, sum: 5)
+r.SetDeps("sum", "a,b")
+r.a = 4
+r.sum
+    => 7
+</pre>
+
+<p>See also: <a href="record.GetDeps.html">record.GetDeps</a></p>

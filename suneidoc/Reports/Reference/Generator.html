@@ -1,0 +1,19 @@
+<h3>Generator</h3>
+
+<p>Abstract base class for generator formats. Defines <code>Generator?()</code> to return true.</p>
+
+<p>Derived classes define:</p>
+
+<dl class="code">
+<dt>Header( ) => format or false</dt>
+<dd>Returns a format item that will be printed at the beginning of the generated output, and also at the top of each additional page of generated output. Can return false if no header is desired. The default definition returns false.</dd>
+
+<dt>Next( ) => format or false</dt>
+<dd>Returns the next format item or false if all output has been generated.</dd>
+
+<dt>More()</dt>
+<dd>Instead of supplying a Next function, generators can supply a More function that calls .Output (Generator.Output) to place items in the output queue. Note: If a call to More does not produce any output, this is taken as the end of generation.</dd>
+
+<dt>Output(format)</dt>
+<dd>Used by More() to place format items in the output queue. These items will be produced by the generator in the order they are output. (i.e. first in first out).</dd>
+</dl>

@@ -1,0 +1,29 @@
+<h3><a href="../Control.html">Control</a> - Methods</h3>
+
+<dl class="code">
+<dt>AlertError(title, message)</dt>
+<dd>Does:</dd>
+<pre>Alert(message, title, .Window.Hwnd, MB.ICONERROR)</pre>
+
+<dt>AlertInfo(title, message)</dt>
+<dd>Does:</dd>
+<pre>Alert(message, title, .Window.Hwnd, MB.ICONINFORMATION)</pre>
+
+<dt>AlertWarn(title, message)</dt>
+<dd>Does:</dd>
+<pre>Alert(message, title, .Window.Hwnd, MB.ICONWARNING)</pre>
+
+<dt>Construct(object or @object)</dt>
+<dd>Creates an instance of a control, normally accessed as .Construct.<br />
+If the name of the control starts with a lower case letter, it is assumed to be a field name and the control is looked up in the data dictionary and merged with the supplied arguments.  Otherwise, "Control" is appended onto the name.  Then Construct is used to create the instance.<br />
+Automatically copies the following members to the new instance as public members (capitalized) in Control.New (i.e. prior to the control's New):
+<pre>xmin, ymin, top, xstretch, ystretch, name</pre>
+If the constructed control has a name, then the control is assigned to a member of its parent. This allows the parent to access its controls by name.</dd>
+
+<dt>FindControl(name)</dt>
+<dd>Returns a reference to the named control or false if not found. Uses .Children() to search the "tree" of controls. Custom containers must implement Children if you want FindControl to be able to find their child controls. Most controls have a default name: (e.g. ButtonControl's default name is "Button") but you will need to override these with unique names to use FindControl. Note: When you include a field by name (i.e. to use the control from its Field_ definition) then the field name will be automatically added to the control.</dd>
+
+<dt>Send(message [, argument ...])</dt>
+<dd>Send a message to a control's controller. Automatically  adds a <i>source</i> argument to the message.</dd>
+
+</dl>

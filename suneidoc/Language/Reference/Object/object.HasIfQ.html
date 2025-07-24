@@ -1,0 +1,24 @@
+<h4>object.HasIf?</h4>
+
+<pre>(block) => true or false</pre>
+
+<p>Returns true if the object contains a <i>value</i> for which the block returns true, false if not.</p>
+
+<p>For example:</p>
+<pre>
+#(123, "abc", name: "Fred", age: 23).HasIf?({ String?(it) and it.Capitalized?() }) 
+    => true
+</pre>
+
+<p><b>Note</b>: object.HasIf? is identical to <a href="object.Any?.html">object.Any?</a></p>
+
+<p>See also:
+<a href="object.Any?.html">object.Any?</a>,
+<a href="object.Every?.html">object.Every?</a>,
+<a href="object.Find.html">object.Find</a>,
+<a href="object.FindAll.html">object.FindAll</a>,
+<a href="object.FindAllIf.html">object.FindAllIf</a>,
+<a href="object.FindIf.html">object.FindIf</a>,
+<a href="object.FindLastIf.html">object.FindLastIf</a>,
+<a href="object.FindOne.html">object.FindOne</a>,
+<a href="object.Has?.html">object.Has?</a><p>

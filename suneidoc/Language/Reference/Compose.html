@@ -1,0 +1,36 @@
+<h3>Compose</h3>
+
+<pre>(func, func ...) => callable</pre>
+
+<p>Compose is a convenience function to avoid the deep nesting of parenthesis from nested calls.</p>
+
+<p>For example:</p>
+
+<pre>f = Compose(a, b, c)</pre>
+
+<p>is equivalent to:</p>
+
+<pre>f = function (@args) { c(b(a(@args))) }</pre>
+
+<p>Notice that the functions are passed in the order they will be applied (i.e. inside out) in the same way you would write a *nix pipeline a | b | c</p>
+
+<p>Note: The returned value is actually a block.</p>
+
+<p>See also:
+<a href="Curry.html">Curry</a>,
+<a href="Memoize.html">Memoize</a>,
+<a href="MemoizeSingle.html">MemoizeSingle</a>,
+<a href="Object/object.Any?.html">object.Any?</a>,
+<a href="Object/object.Drop.html">object.Drop</a>,
+<a href="Object/object.Every?.html">object.Every?</a>,
+<a href="Object/object.Filter.html">object.Filter</a>,
+<a href="Object/object.FlatMap.html">object.FlatMap</a>,
+<a href="Object/object.Fold.html">object.Fold</a>,
+<a href="Object/object.Map.html">object.Map</a>,
+<a href="Object/object.Map!.html">object.Map!</a>,
+<a href="Object/object.Map2.html">object.Map2</a>,
+<a href="Object/object.Nth.html">object.Nth</a>,
+object.PrevSeq,
+<a href="Object/object.Reduce.html">object.Reduce</a>,
+<a href="Object/object.Take.html">object.Take</a>,
+<a href="Object/object.Zip.html">object.Zip</a><p>

@@ -1,0 +1,16 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Member?</h4>
+
+<pre>(member) => true or false</pre>
+
+<p>Returns true if the member exists, false otherwise.
+</p>
+
+<p>For example:</p>
+<pre>
+#(12, 34, a: 56, b: 78).Member?(1) => true
+#(12, 34, a: 56, b: 78).Member?(2) => false
+#(12, 34, a: 56, b: 78).Member?(56) => false
+#(12, 34, a: 56, b: 78).Member?("a") => true
+#(12, 34, a: 56, b: 78).Member?("c") => false
+</pre>

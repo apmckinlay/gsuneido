@@ -1,0 +1,32 @@
+<h3>NumberControl</h3>
+
+<pre>(mask = "-###,###,###", readonly = false, rangefrom = false, rangeto = false,
+    width = false, set = false)</pre>
+
+<p>Derived from
+<a href="FieldControl.html">FieldControl</a>
+.</p>
+
+<dl>
+<dt>mask</dt>
+<dd>Used to format the number for display.  Default is -###,###,### </dd>
+
+<dt>readonly</dt>
+<dd>If true the control will initially be disabled.</dd>
+
+<dt>rangefrom, rangeto</dt>
+<dd>The valid range of values</dd>
+
+<dt>width</dt>
+<dd>Specifies the width of the control in digits.</dd>
+
+<dt>set</dt>
+<dd>An initial value for the control.</dd>
+</dl>
+
+<p><b>Note:</b> The width of the control is the maximum of the mask size and the width parameter.</p>
+
+<p>For example:</p>
+<pre>
+Window(#(Number mask '####', rangefrom: 1900, rangeto: 2010))
+</pre>

@@ -1,0 +1,25 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Assocs</h4>
+
+<pre>() => sequence</pre>
+
+<p>Returns a sequence of objects each containing a member name and a value.</p>
+
+<p>For example:</p>
+<pre>
+ob = #(12, 34, a: 56, b: 78)
+ob.Assocs()
+    => #(#(0, 12), #(1, 34), #(#b, 78), #(#a, 56))
+</pre>
+
+<p><b>Note:</b> The named members are in no particular order since objects are implemented as hash tables.</p>
+
+<p>The returned sequence is initially "virtual", i.e. it is simply an iterator over the original data. If you only iterate over the sequence (e.g. using a for-in loop) then an object containing all the values is never instantiated. However, if you access the sequence in most other ways (e.g. call a built-in object method on it) then a list will be created with the values from the sequence and that list is what will be used for any future operations. See also: <a href="../../Basic Data Types/Sequence.html">Basic Data Types > Sequence</a></p>
+
+<p>Note: When testing on the WorkSpace, the variable display will trigger instantiation of any sequences in local variables.</p>
+
+<p><b>Warning</b>: Since the sequence just iterates over the original object, you can get "object modified during iteration" errors. This can be avoided by forcing a copy of the sequence with .Copy()</p>
+
+<p>See also:
+<a href="object.Members.html">object.Members</a>,
+<a href="object.Values.html">object.Values</a><p>

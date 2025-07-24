@@ -1,0 +1,20 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Unique!</h4>
+<pre>() => this</pre>
+
+<p>Deletes <i>adjacent</i> duplicates from the <i>list</i> members of the object (consecutive members starting at 0).</p>
+
+<p>Note: To eliminate <i>all</i> duplicates use <a href="object.Sort!.html">object.Sort!</a> first.</p>
+
+<p>For example:</p>
+<pre>
+Object(1, 2, 2, 3, 2).Unique!()
+    => #(1, 2, 3, 2)
+
+Object(2, 2, 2).Unique!()
+    => #(2)
+</pre>
+
+<p>See also:
+<a href="object.UniqueValues.html">object.UniqueValues</a>
+</p>

@@ -1,0 +1,34 @@
+<h3>EditControl</h3>
+
+<pre>( mandatory = false, readonly = false, style = 0 )</pre>
+
+<p>Creates a Windows "edit" control.  The style argument is added to the style argument to CreateWindow.
+</p>
+
+<p>If <b>mandatory</b> is true, the EditControl can not be left empty by the user.</p>
+
+<p>If <b>readonly</b> is true, the field appears greyed out and the user can not enter any data into the field.</p>
+
+<p>EditControl supports Get and Set for DataControl and Dirty? for ExplorerControl.  It also handles cut, copy, paste, and undo commands.  Below is a list of its methods.
+</p>
+
+<pre>
+    On_Cut()
+    On_Copy()
+    On_Paste()
+    On_Undo()
+    EN_KILLFOCUS()
+    Get()
+    Set(value)
+    Valid?() 
+    SelectAll()
+    Dirty?(dirty = "")
+    SetReadOnly(readOnly)
+    GetReadOnly()
+    Destroy()
+</pre>
+
+<p>See also: 
+<a href="FieldControl.html">FieldControl</a>, 
+<a href="EditorControl.html">EditorControl</a>
+</p>

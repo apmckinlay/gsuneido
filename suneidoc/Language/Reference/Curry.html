@@ -1,0 +1,38 @@
+<h3>Curry</h3>
+
+<pre>(func, arg ...) => callable</pre>
+
+<p><b>Note</b>: In almost all cases it is simpler and more efficient to use a block.</p>
+
+<p>Returns a new function with the initial arguments "bound" to the supplied ones.</p>
+
+<p>Technically, this is not "currying" it is binding some of the arguments, which is something currying allows.</p>
+
+<p>For example:</p>
+
+<pre>add1 = Curry(Add, 1)</pre> 
+
+<p>is equivalent to:</p>
+
+<pre>add1 = function (x) { return Add(1, x) }</pre>
+
+<p>Note: The returned value is actually a class instance with a Call method.</p>
+
+<p>See also:
+<a href="Compose.html">Compose</a>,
+<a href="Memoize.html">Memoize</a>,
+<a href="MemoizeSingle.html">MemoizeSingle</a>,
+<a href="Object/object.Any?.html">object.Any?</a>,
+<a href="Object/object.Drop.html">object.Drop</a>,
+<a href="Object/object.Every?.html">object.Every?</a>,
+<a href="Object/object.Filter.html">object.Filter</a>,
+<a href="Object/object.FlatMap.html">object.FlatMap</a>,
+<a href="Object/object.Fold.html">object.Fold</a>,
+<a href="Object/object.Map.html">object.Map</a>,
+<a href="Object/object.Map!.html">object.Map!</a>,
+<a href="Object/object.Map2.html">object.Map2</a>,
+<a href="Object/object.Nth.html">object.Nth</a>,
+object.PrevSeq,
+<a href="Object/object.Reduce.html">object.Reduce</a>,
+<a href="Object/object.Take.html">object.Take</a>,
+<a href="Object/object.Zip.html">object.Zip</a><p>

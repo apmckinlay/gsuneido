@@ -1,0 +1,127 @@
+<h2>Blocks</h2>
+
+<p>A block is a section of code within a function. It can be called like a function, and can have parameters and accept arguments like a function. But blocks can share local variables with the containing function like a closure.</p>
+
+<p>Blocks can be used to create user defined control structures or as anonymous functions.</p>
+
+<p>Blocks are values. This means they can be assigned to variables, passed to other functions, etc.</p>
+
+<p>Blocks are written as:</p>
+<pre>
+{ ... }
+{|x, y| ... }
+{|@args| ... }
+</pre>
+
+<p>Commas between parameters are optional. Blocks have the same parameters as functions and methods except they do not currently allow default values.</p>
+
+<p>Block parameters are independent from local variables with the same names in the containing function. i.e. If you have a block parameter called "x", the block will not be able to access "x" in the containing function, and any changes the block makes to its "x" will not affect "x" outside the block. These block parameters will appear in the debugger preceded by an underscore.</p>
+
+<p>The "value" of a block is the value of its last statement. On the other hand, an actual "return" will return from the function containing the block.</p>
+
+<p>For example:</p>
+<pre>
+for_each = function (ob, block)
+    {
+    for (x in ob)
+        block(x)
+    }
+
+sum = 0
+for_each(#(1, 2, 3, 4), {|x| sum += x; })
+Print(sum)
+    => 10
+</pre>
+
+<p>A block immediately following a function call is interpreted as another argument. So the above example could also be written as:</p>
+<pre>
+for_each(#(1, 2, 3, 4))
+    {|x| sum += x; };
+</pre>
+
+<p>A block following the argument parenthesis will be passed as <code>block: block</code>. This means the parameter that receives it <u>must</u> be called "block".</p>
+
+<p>Empty argument parenthesis may be omitted in most cases, for example these are all equivalent:</p>
+<pre>
+10.Times({ F() })
+10.Times() { F() }
+10.Times { F() }
+</pre>
+
+<p>Another shortcut is that if a block has no parameters and it refers to a variable called "it" or "_" then a parameter will be automatically added to the block. For example:</p>
+
+<pre>
+#(12, 34, 56).Each { Print(it) }
+=>  12
+    34
+    56
+
+#(1, 2, 3).Map { _ * 2 }
+=>  #(2, 4, 6)
+</pre>
+
+<p>The exception is that <code>Name { ... }</code> is treated as <code>class : Name { ... }</code> rather than <code>Name({ ... })</code></p>
+
+<p>One of the powerful aspects of blocks is that they can outlive the function call that created them. For example:</p>
+<pre>
+make_counter = function (next)
+    { return { next++ } }
+counter = make_counter(10)
+Print(counter())
+Print(counter())
+Print(counter())
+    =>  10
+        11
+        12
+</pre>
+
+<p>Within a block, <code>break</code> does <code>throw "block:break"</code> and <code>continue</code> does <code>throw "block:continue"</code>. This allows user defined looping control structures to handle them. For example, here is the transaction.QueryApply method:</p>
+<pre>
+QueryApply(query, block, dir = 'Next')
+    {
+    .Query(query)
+        { |q|
+        while (false isnt x = q[dir]())
+            try
+                block(x)
+            catch (ex, "block:")
+                if ex is "block:break"
+                    break
+                // else block:continue ... so continue
+        }
+    }
+</pre>
+
+<p><b>Note:</b> If block:break and block:continue exceptions are not caught and break or continue are used you will get an error.</p>
+
+<p>While a block looks similar to a function, blocks have to be constructed. For example:</p>
+
+<pre>b = { ... }</pre>
+
+<p>is actually implemented more like:</p>
+
+<pre>b = make_block(...)</pre>
+
+<p>i.e. an instance of a block must be constructed at runtime to associate it with the current environment (parent local variables).</p>
+
+<p>Whereas:</p>
+
+<pre>f = function () { ... }</pre>
+
+<p>does not need to create an instance, there is just one function value, created at compile time.</p>
+
+<p>Note: Suneido optimize blocks that do not reference parent local variables to be just regular functions, not closures.</p>
+
+<p><b>Warning:</b> if a closure becomes concurrent (by being stored in a concurrent object) it becomes "detached" from its original context and any changes will not affect its origin. For example:</p>
+
+<pre>
+x = 1
+b = { x++ }
+b() // modifies x
+Print(x)
+	=> 2
+Suneido.b = b // this makes the block concurrent
+b() // does not modify the original x
+Print(x)
+	=> 2
+</pre>

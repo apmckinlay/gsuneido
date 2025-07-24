@@ -1,0 +1,14 @@
+<h3>range.Plus</h3>
+
+<pre>( range ) => Range</pre>
+
+<p>where <b>range</b> is a Range type.</p>
+
+<p>Returns a new Range which has its <i>low</i> set to the smallest <i>low</i> values of the current range and the <b>range</b> passed in, and its <i>high</i> set to the highest <i>high</i> values of the current range and the <b>range</b> passed in.</p>
+
+<p>For example:</p>
+
+<pre>
+Range(2, 7).Plus(Range(3, 10)) => Range(2, 10)
+Range(2, 7).Plus(Range(1, 5)) => Range(1, 7)
+</pre>

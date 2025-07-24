@@ -1,0 +1,9 @@
+<h4>CanvasItem</h4>
+
+<pre>( )</pre>
+
+<p>Abstract base class for other canvas items.</p>
+
+<p>Canvas items normally have a <b>New</b> method that accepts the information required to draw the item.  All canvas items must implement a <b>Paint</b> method that is passed hdc - a handle to the device context.  If necessary, a <b>Destroy</b> method can be defined to free any resources.  CanvasItem defines an empty default Destroy method.</p>
+
+<p>Note: It is not strictly necessary for canvas items to derive from CanvasItem, as long as they have Paint and Destroy methods.</p>

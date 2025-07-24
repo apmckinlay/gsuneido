@@ -1,0 +1,17 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>Database.Final</h4>
+
+<pre>() => number</pre>
+
+<p>Returns the number of update transactions waiting to be finalized. If there are no outstanding transactions, this will be zero.</p>
+
+<p>This is internal information primarily for debugging purposes.</p>
+
+<p>Note: When client-server, this value comes from the server.</p>
+
+<p>For example:</p>
+
+<pre>
+Database.Final()
+    => 0
+</pre>

@@ -1,0 +1,33 @@
+<h3><a href="../MimeBase">MimeBase</a> - Methods</h3>
+
+<dl class="code">
+<dt>Content_Transfer_Encoding(value) => this</dt>
+<dt>To(string) => this</dt>
+<dt>From(string) => this</dt>
+<dt>Date(date = Date()) => this</dt>
+<dt>Subject(string) => this</dt>
+<dt>Message_ID( [ string ] ) => this</dt>
+<dd>The above methods set the corresponding header field. Date and Message_ID have default values.</dd>
+<dt>SetPayload(string) => this</dt>
+<dd></dd> 
+<dt>AddHeader(name, string, [extra: string]) => this</dt>
+<dd>For example: <code>AddHeader("Content-Disposition", "attachment")</code><br />
+to get: <code>Content-Disposition: attachment</code><br />
+or: <code>AddHeader("Content-Disposition", "attachment", filename: "test.txt")</code><br />
+to get: <code>Content-Disposition: attachment; filename="test.txt"</code>
+</dd> 
+<dt>AddExtra(extra: string) => this</dt>
+<dd>For example: <code>AddExtra("Content-Type", charset: "us-ascii")</code><br />
+would result in <code>Content-Type: text/plain; charset="us-ascii"</code></dd> 
+<dt>Base64() => this</dt>
+<dd>Sets the encoding to Base64 and adds Content-Transfer-Encoding: base64</dd>
+<dt>ToSring() => string</dt>
+<dd>Returns the resulting message as a string.</dd> 
+</dl>
+
+<p>Most of the methods return this so they can be "strung" together as in:</p>
+<pre>
+MimeBase("application", "octet-stream").
+    AddHeader("Content-Disposition", "attachment", filename: "test.txt").
+    SetPayload("second part").Base64().ToString()
+</pre>

@@ -1,0 +1,43 @@
+<h3>MemoizeSingle</h3>
+
+<p>Abstract base class for caching the results of a function with no arguments.</p>
+
+<p>Derived classes must define Func.</p>
+
+<p>For example, LibraryTables is defined with MemoizeSingle since it is potentially slow to derive.</p>
+<pre>
+MemoizeSingle
+    {
+    Func()
+        {
+        query = 'columns
+                    summarize table, list column
+                    where HasLibraryColumns?(list_column)
+                join tables'
+        return QueryList(query, 'tablename')
+        }
+    }
+</pre>
+
+<p>The cached result is stored in the global Suneido object.</p>
+
+<p>MemoizeSingle also defines a ResetCache method that will reset the associated cached value, and a ClearAll method that will the will reset all MemoizeSingle (ResetCaches uses this)</p>
+
+<p>See also:
+<a href="Compose.html">Compose</a>,
+<a href="Curry.html">Curry</a>,
+<a href="Memoize.html">Memoize</a>,
+<a href="Object/object.Any?.html">object.Any?</a>,
+<a href="Object/object.Drop.html">object.Drop</a>,
+<a href="Object/object.Every?.html">object.Every?</a>,
+<a href="Object/object.Filter.html">object.Filter</a>,
+<a href="Object/object.FlatMap.html">object.FlatMap</a>,
+<a href="Object/object.Fold.html">object.Fold</a>,
+<a href="Object/object.Map.html">object.Map</a>,
+<a href="Object/object.Map!.html">object.Map!</a>,
+<a href="Object/object.Map2.html">object.Map2</a>,
+<a href="Object/object.Nth.html">object.Nth</a>,
+object.PrevSeq,
+<a href="Object/object.Reduce.html">object.Reduce</a>,
+<a href="Object/object.Take.html">object.Take</a>,
+<a href="Object/object.Zip.html">object.Zip</a><p>

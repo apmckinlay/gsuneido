@@ -1,0 +1,26 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>record.Update</h4>
+<pre>() or (object)</pre>
+
+<p>Normal usage is to read a record, modify it, and then call its Update method to save the changes. For example:</p>
+<pre>
+Transaction(update:)
+    { |t|
+    x = t.Query1(...)
+    x.abc = ...
+    x.Update()
+    }
+</pre>
+
+<p>If a record is passed in, it is used as the source of the new data (instead of the record you call Update on). This is useful when you read a record in one transaction, and then want to re-read it and update it in another transaction. For example:</p>
+<pre>
+x = Query1(...)
+...
+Transaction(update:)
+    { |t|
+    y = t.Query1(...)
+    y.Update(x)
+    }
+</pre>
+
+<p>However, be aware this could overwrite another user's changes in a multi-user situation.</p>

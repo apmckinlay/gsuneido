@@ -1,0 +1,47 @@
+<h3><a href="../VirtualListControl.html">VirtualListControl</a> - Methods</h3>
+
+<dl>
+<dt>ClearHighlight()</dt>
+<dd>Clears all highlight color</dd>
+
+<dt>ClearSelect()</dt>
+<dd>Clears all selections</dd>
+        
+<dt>GetColums() => object</dt>
+<dd>Returns an object containing all columns in the list.</dd>
+
+<dt>GetLoadedData() => object</dt>
+<dd>Returns an object containing all data loaded into memory.</dd>
+
+<dt>GetSelectedRecord() => record</dt>
+<dd>Returns the selected row, or false if a single row is not selected.</dd>
+
+<dt>GetSelectedRecords() => object</dt>
+<dd>Returns a list of the selected rows, or false if no row is selected.</dd>
+
+<dt>GetField(field) => value</dt>
+<dd>Returns the value of the specified field of the selected row.<br />
+<b>Note:</b> When you call this method, you must ensure there is a single row currently selected, otherwise an exception will be thrown.</dd>
+
+<dt>GetQuery() => string</dt>
+<dd>Returns the current query.</dd>
+
+<dt>HighlightValues(member, values, color)</dt>
+<dd>Highlights any row where the specified member of the row object contains a value in the specified values.</dd>
+
+<dt>Save()</dt>
+<dd>Force saving the current record. (The standalone list saves automatically.)</dd>
+
+<dt>Seek(field, prefix)</dt>
+<dd>Jumps to the first record containing the prefix in the specified field in the query</dd>
+
+<dt>SetColumns(columns)</dt>
+<dd>Sets the specified columns</dd>
+
+<dt>SetField(field, value, invalidate = false)</dt>
+<dd>Sets the specified field of the current row to the value.<br />
+<b>Note:</b> When you call this method, you must ensure there is a single row currently selected, otherwise an exception will be thrown.</dd>
+
+<dt>SetQuery(query, columns = false, filters = false)</dt>
+<dd>Reloads the records in the list from the specified query.</dd>
+</dl>

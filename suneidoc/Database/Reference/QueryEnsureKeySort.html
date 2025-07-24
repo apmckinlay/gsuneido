@@ -1,0 +1,15 @@
+<h3>QueryEnsureKeySort</h3>
+
+<pre>(query) => query</pre>
+
+<p>Returns the query with the key <i>sort</i> added (if there isn't one).</p>
+
+<p>If the query already has a sort but it's not a key, it will throw an exception.</p>
+
+<p>For example:</p>
+<pre>
+QueryEnsureKeySort("tables")
+    => "tables sort table"
+</pre>
+
+<p>Used by <a href="QueryApply.html">QueryApply</a> and <a href="QueryApplyMulti.html">QueryApplyMulti</a>.</p>

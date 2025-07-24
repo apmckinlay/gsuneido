@@ -1,0 +1,32 @@
+<h3>Construction</h3>
+
+<p>Controls are created using Control.Construct.  Control.New sets the following members:
+</p>
+
+<dt>.Window</dt>
+<dd>The top level <a href="../Reference/Window.html">Window</a> or <a href="../Reference/Dialog.html">Dialog</a>.</dd>
+
+<dt>.Parent</dt>
+<dd>The containing Suneido control.</dd>
+
+<dt>.HwndCtrl</dt>
+<dd>The containing Win32 window.</dd>
+
+<p>Note: .HwndCtrl and .Parent are not necessarily the same control.
+</p>
+
+<p>After creating the control, Construct will automatically set some of it's members from the control specification:</p>
+
+<p>xmin => Xmin</p>
+
+<p>ymin => Ymin</p>
+
+<p>xstretch => Xstretch</p>
+
+<p>ystretch => Ystretch</p>
+
+<p>name => Name</p>
+
+<p>This is a shortcut so controls don't all have to handle these arguments.  However, since this isn't done till after the control is created, the members will not be available during New.  If these members are required by New, then it must handle them as arguments.</p>
+
+<p>After all the controls are contructed, <b>Startup</b> is called on each control, top down. This is useful to perform setup that can not be done in New because construction is not complete at that point.</p>

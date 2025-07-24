@@ -1,0 +1,52 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>File</h4>
+
+<pre>
+(filename, mode = "r") => file
+(filename, mode = "r") {|file| ... }
+</pre>
+
+<p>Create a file object for accessing a file.</p>
+
+<p>File is based on the standard stream io functions 
+(e.g. fopen, fclose, fflush, fread, fwrite, fseek, ftell).</p>
+
+<p>The <i>mode</i> specifies the type of access for the file:</p>
+
+<dl class="code">
+<dt><b>"r"</b></dt>
+<dd>Open a file for reading. 
+If the file does not exist or cannot be opened, an exception will be thrown:
+"File: can't open '<i>filename</i>' for r".</dd>
+
+<dt><b>"w"</b></dt>
+<dd>Create an empty file for writing. 
+If the file exists, its contents are destroyed.</dd>
+
+<dt><b>"a"</b></dt>
+<dd>Open a file for writing at the end of the file (appending); 
+creates the file if it doesn’t exist.</dd>
+</dl>
+
+<p>When a file is opened with <code>"a"</code>, 
+all write operations occur at the end of the file.
+This means existing data cannot be overwritten.
+Seek is not allowed.</p>
+
+<p>It's normally safer to use the block form of File 
+to ensure the file gets closed even if there are exceptions.</p>
+
+<p>For example, to process a file 1000 bytes at a time:</p>
+<pre>
+File(source)
+	{|src|
+	File(destination, "w")
+		{|dst|
+		while false isnt s = src.Read(1000)
+			{
+			s2 = Process(s)
+			dst.Write(s2)
+			}
+		}
+	}
+</pre>

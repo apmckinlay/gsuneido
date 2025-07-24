@@ -1,0 +1,118 @@
+<h3>where (restriction/selection)</h3>
+
+<p><i>query</i> <b>where</b> <i>expression</i></p>
+
+<p>The result of where is a table with the same columns as the input
+but with just the rows where the expression is true.</p>
+
+<table border="0" width="100%">
+  <tr>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">date</td>
+          <td width="33%" align="center" bgcolor="#C0C0C0">part</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">abc</td>
+          <td width="34%">5</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">def</td>
+          <td width="34%">10</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">abc</td>
+          <td width="34%">1</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">ghi</td>
+          <td width="34%">20</td>
+        </tr>
+      </table>
+    </td>
+    <td align="center">
+      where part = &quot;abc&quot;</td>
+    <td align="center">
+      =</td>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">date</td>
+          <td width="33%" align="center" bgcolor="#C0C0C0">part</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">abc</td>
+          <td width="34%">5</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">abc</td>
+          <td width="34%">1</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<table border="0" width="100%">
+  <tr>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">date</td>
+          <td width="33%" align="center" bgcolor="#C0C0C0">part</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">abc</td>
+          <td width="34%">5</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">def</td>
+          <td width="34%">10</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">abc</td>
+          <td width="34%">1</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">ghi</td>
+          <td width="34%">20</td>
+        </tr>
+      </table>
+    </td>
+    <td align="center">
+      where quantity &gt; 10 and<br />
+      date = #20000902</td>
+    <td align="center">
+      =</td>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">date</td>
+          <td width="33%" align="center" bgcolor="#C0C0C0">part</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">ghi</td>
+          <td width="34%">20</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<p>Note: Query expressions do not support the full language expression syntax. In particular, calling member functions is not supported, only simple global functions. You can usually work around this by defining global helper functions to make any necessary method calls.</p>

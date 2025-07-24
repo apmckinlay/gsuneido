@@ -1,0 +1,18 @@
+<h3>transaction.QueryMin</h3>
+
+<pre>(query, field, default = false) => value</pre>
+
+<p>Returns the minimum value of the field in the query, or the supplied default if there are no records in the query.</p>
+
+<p>For example:</p>
+<pre>
+t.QueryMin("tables", "table")
+    => 0
+</pre>
+
+<p>See also:
+<a href="../QueryMin.html">QueryMin</a>,
+<a href="transaction.QueryMax.html">transaction.QueryMax</a>,
+<a href="transaction.QueryCount.html">transaction.QueryCount</a>,
+<a href="transaction.QueryTotal.html">transaction.QueryTotal</a>
+</p>

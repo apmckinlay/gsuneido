@@ -1,0 +1,25 @@
+<div style="float:right"><span class="toplinks">
+<a href="UOMControl/Methods.html">Methods</a>
+</span></div>
+<h3>UOMControl</h3>
+
+<pre>(numctrl, uomctrl, readonly = false, div = '')</pre>
+
+<p>where <b>numctrl</b> is usually a <a href="NumberControl.html">NumberControl</a> type, and <b>uomctrl</b> is usually a <a href="ChooseListControl.html">ChooseListControl</a> or a <a href="KeyControl.html">KeyControl</a> type.</p>
+
+<p>This control takes in two controls and lays them out in a horizontal row where <b>numctrl</b> is on the right and <b>uomctrl</b> is on the left (with div between them).</p>
+
+<p>For example:</p>
+<pre>
+Window(#(UOM (Number mask: '#########.##')
+    (ChooseList #('liters', 'gallons'))))
+</pre>
+
+<p>would display</p>
+<img src="../../res/uomControl.gif" />
+
+<p>User can enter a value into the field on the left and select a unit of measure (uom) by clicking the down arrow button on the right.</p>
+
+<p>The value of a UOMControl (e.g. what Get returns) is:</p>
+<pre>
+numctrl.Get() $ ' ' $ uomctrl.Get()</pre>

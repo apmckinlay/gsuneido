@@ -1,0 +1,42 @@
+<h2>Transactions</h2>
+
+<p>Access to the database occurs within "transactions".
+A transaction performs a series of reads and writes "atomically"
+i.e. as if they were done all at once.
+Suneido transactions are "serializable",
+meaning that concurrent transactions behave
+as if they were done sequentially,
+even though they may actually be interleaved.
+This means Suneido provides "full" transactions isolation.</p>
+
+<p>Transactions see a "snapshot" of the database as of their start time.
+Modifications are not visible to other transactions
+until the modifying transaction is completed.</p>
+
+<p>Transactions can be aborted using transaction.Rollback().
+All changes to the database done by the transaction will be undone.
+No other transaction will have seen the updates since the transaction wasn't completed.</p>
+
+<p>If an update transaction conflicts with another transaction,
+Complete will fail and will Rollback the transaction.
+An example of a conflict would be two transactions updating or deleting the same record.
+It is up to the application to handle transactions that fail,
+for example, by re-trying them.</p>
+
+<p>In general, update transactions should be brief to minimize the chance of conflicts.
+It is okay for read-only transactions to last longer
+but it is still a good idea to complete them as soon as you're done with them.
+This is because Suneido must maintain information for each open transaction
+in order to provide the "virtual snapshots" of the database.</p>
+
+<p><b>Note:</b> Update transactions are not designed for an unlimited number of operations.
+Performance will suffer if too many operations (outputs or updates) are done
+within a single transaction.
+For example, adding large numbers of records (e.g. importing)
+should not be done all in one transaction.
+Since there is also a certain amount of overhead on each transaction,
+the best compromise is to use multiple transactions,
+performing a reasonable number (e.g. 100) of operations
+within each transaction. 
+This is the approach used by Suneido's copy and load facilities.
+</p>

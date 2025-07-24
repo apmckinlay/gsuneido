@@ -1,0 +1,20 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>FileExists?</h3>
+
+<pre>(filename) => true or false</pre>
+
+<p>Returns true if the specified filename exists, false otherwise if the file does not exist.Throws an exception for an invalid path.</p>
+
+<p>For example:</p>
+<pre>
+FileExists?("c:/suneido/suneido.db")
+    => true
+
+FileExists?("//nonexistent/temp/file.txt")
+   => throws FileExists?: CreateFile //nonexistent/temp/file.txt: The network name cannot be found.
+</pre>
+
+<p>See also:
+<a href="Dir.html">Dir</a>,
+<a href="DirExists?.html">DirExists?</a>
+</p>

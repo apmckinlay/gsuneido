@@ -1,0 +1,29 @@
+<h3>QueryList</h3>
+
+<pre>(query, field) => object</pre>
+
+<p>Returns a list of values found in the specified field from the query.</p>
+
+<p>QueryList removes any sort, appends "summarize list", and then executes the query.</p>
+
+<p><b>Warning:</b> The list is accumulated in memory so there are limits to its size.</p>
+
+<p>For example:</p>
+<pre>
+QueryList("columns where table = 1", "column")
+    => #("nextfield", "nrows", "table", "tablename", "totalsize")
+</pre>
+
+<p>See also:
+<a href="Transaction/transaction.QueryList.html">transaction.QueryList</a>,
+<a href="QueryCount.html">QueryCount</a>,
+<a href="QueryMax.html">QueryMax</a>,
+<a href="QueryMean.html">QueryMean</a>,
+<a href="QueryMeanDev.html">QueryMeanDev</a>,
+<a href="QueryMedian.html">QueryMedian</a>,
+<a href="QueryMin.html">QueryMin</a>,
+<a href="QueryMode.html">QueryMode</a>,
+<a href="QueryRange.html">QueryRange</a>,
+<a href="QueryStdDev.html">QueryStdDev</a>,
+<a href="QueryTotal.html">QueryTotal</a>
+</p>

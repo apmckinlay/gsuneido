@@ -1,0 +1,8 @@
+<h3>ModalWindow</h3>
+
+<pre>(control, title = false, border = 5, closeButton? = true,
+        onDestroy = false, keep_size = true, useDefaultSize = false)</pre>
+
+<p>A <a href="Window.html">Window</a> that disables its parent while it's open. This is similar to <a href="Dialog.html">Dialog</a> except that ModalWindow does not run a nested message loop, so it is non-blocking. This means it can't "return" a result like a Dialog.</p>
+
+<p>It automatically centers itself on its parent, and it automatically saves and restores its size (if stretchable).</p>

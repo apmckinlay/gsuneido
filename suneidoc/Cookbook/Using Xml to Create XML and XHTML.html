@@ -1,0 +1,96 @@
+<h2>Using Xml to Create XML and XHTML</h2>
+
+<p><b>Category:</b> Coding</p>
+
+<p><b>Problem</b></p>
+
+<p>You need to create HTML (or XML or XHTML) strings.</p>
+
+<p><b>Ingredients</b></p>
+
+<p><a href="../Language/Reference/Xml.html">Xml</a> function, string concatenation, blocks, <a href="../Database/Reference/QueryAccum.html">QueryAccum</a></p>
+
+<p><b>Recipe</b></p>
+
+<p>The Xml function in stdlib provides a simple yet flexible way to generate XML.</p>
+
+<p>The simplest form is a tag with no content:</p>
+
+<pre>
+Xml("br")
+
+    =&gt; "&lt;br /&gt;"
+</pre>
+
+<p>The next step up is wrapping a string with tags:</p>
+
+<pre>
+Xml("em", "hello")
+
+    =&gt; "&lt;em&gt;hello&lt;/em&gt;"
+</pre>
+
+<p>You can also add attributes:</p>
+
+<pre>
+Xml("td", "hello world", valign: "top", bgcolor: "red")
+
+    =&gt; '&lt;td valign="top" bgcolor="red"&gt;hello world&lt;/td&gt;'
+</pre>
+
+<p>Attributes can be used for inline CSS styles:</p>
+
+<pre>
+Xml("span", "hello world", style: "color: red; font-size: 20pt;")
+
+    =&gt; '&lt;span style="color: red; font-size: 20pt"&gt;hello world&lt;/span&gt;'
+</pre>
+
+<p>Calls to Xml can of course be nested and concatenated:</p>
+
+<pre>
+Xml("table",
+    Xml("tr", Xml("td", "top left") $ Xml("td", "top right")) $ "\n" $
+    Xml("tr", Xml("td", "bottom left") $ Xml("td", "bottom right")),
+    border: 1)
+
+    =&gt; '&lt;table border="1"&gt;&lt;tr&gt;&lt;td&gt;top left&lt;/td&gt;&lt;td&gt;top right&lt;/td&gt;&lt;/tr&gt;
+       &lt;tr&gt;&lt;td&gt;bottom left&lt;/td&gt;&lt;td&gt;bottom right&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;'
+</pre>
+
+<p>Notice that the attributes must follow the content. This is because in Suneido function calls un-named arguments (i.e. the content) must come before named arguments.</p>
+
+<p>Xml will also accept a <i>block</i> as the content. This allows you, for example, to wrap tag(s) around content produced by a loop.</p>
+
+<pre>
+Xml("table")
+    {
+    Xml('tr', Xml('td', "Table") $ Xml('td', "Size")) $ "\n" $
+    QueryAccum("tables", "")
+        { |s, x|
+        s $ Xml('tr', Xml('td', x.tablename) $ Xml('td', x.totalsize)) $ "\n"
+        }
+    }
+</pre>
+
+<p>Notice the addition of newlines in the last two examples. Although this is not strictly necessary, it makes the resulting XML much more human readable.</p>
+
+<p><b>Discussion</b></p>
+
+<p>Using Xml instead of straight string manipulation has a number of advantages:</p>
+
+<ul>
+<li>you don't have to type so many angle brackets!</li>
+
+<li>it automatically generates matching end tags, avoiding missing or mismatched tags</li>
+
+<li>empty elements (with no content) automatically generate the closing slash required by XML and XHTML (e.g. &lt;br /&gt;</li>
+
+<li>all attribute values are quoted as required by XML and XHTML</li>
+
+<li>the code is more <i>readable</i></li>
+</ul>
+
+<p><b>See Also</b></p>
+
+<p><a href="Building a Large String a Piece at a Time.html">Building a Large String a Piece at a Time</a></p>

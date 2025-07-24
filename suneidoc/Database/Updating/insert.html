@@ -1,0 +1,15 @@
+<h3>insert</h3>
+
+<p>Used to insert a record into a query:</p>
+
+<pre><b>insert</b> { <i>column</i>: <i>value </i>[ , ... ] } <b>into</b> <i>query</i></pre>
+
+<p>For example:</p>
+<pre>insert { name: "Joe", salary: 37500 } into employees</pre>
+
+<p>Or to insert records from a query into an existing table:</p>
+
+<pre><b>insert</b> <i>query</i> <b>into</b> <i>table</i></pre>
+
+<p>For example:</p>
+<pre>insert sales where city = "Fargo" into fargo_sales</pre>

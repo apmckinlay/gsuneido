@@ -1,0 +1,25 @@
+<h4>record.GetDeps</h4>
+
+<pre>(member) => string</pre>
+
+<p>Returns a string containing a comma separated list of the dependencies for a given member ("" if there are none).</p>
+
+<p>For example, if you had a Rule_sum:</p>
+<pre>
+function ()
+    {
+    return .a + .b
+    }
+</pre>
+
+<p>Then you would get:</p>
+<pre>
+r = Record(a: 123, b: 456)
+r.sum
+r.GetDeps("sum")
+    => "a,b"
+</pre>
+
+<p>record.GetDeps returns the same list that would be saved if the dependencies were stored in an "_deps" field.</p>
+
+<p>See also: <a href="record.SetDeps.html">record.SetDeps</a></p>

@@ -1,0 +1,28 @@
+<h3>QueryApply1</h3>
+
+<pre>
+(query, block)
+(query) { |x| ... }
+</pre>
+
+<p>Calls the block for one record from the query in a standalone update transaction.</p>
+
+<p>For example:</p>
+<pre>
+QueryApply1("mytable where mykey is 3")
+    { |x| 
+    x.name = x.name.CapitalizeWords()
+    x.Update()
+    }
+</pre>
+
+<p>This is equivalent to:</p>
+<pre>
+t = Transaction(update:)
+x = t.Query1("mytable")
+x.name = x.name.CapitalizeWords()
+x.Update()
+t.Complete()
+</pre>
+
+<p>See also: <a href="QueryApply.html">QueryApply</a></p>

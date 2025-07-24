@@ -1,0 +1,24 @@
+<h3>CallClass for Singleton</h3>
+
+<pre>
+<b>MySingleton</b>
+
+class
+    {
+    CallClass()
+        {
+        if not Suneido.Member?("MySingleton")
+            Suneido.MySingleton = new MySingleton
+        return Suneido.MySingleton
+        }
+    ...
+    }
+</pre>
+
+<p>Then, to access the singleton you use MySingleton() e.g. MySingleton().Func()</p>
+
+<p>A normal method could be used instead of CallClass e.g. Instance, but this makes using it more awkward e.g. MySingleton.Instance().Func()</p>
+
+<p>It is conventional to use the same name for the class as the Suneido member. Often a short name makes using it nicer. But, as with all global names, try to pick a name that is not likely to clash with other people's names.</p>
+
+<p>Used by <a href="../../Language/Reference/Plugins.html">Plugins</a>.</p>

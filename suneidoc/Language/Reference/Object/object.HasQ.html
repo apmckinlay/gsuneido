@@ -1,0 +1,25 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Has?</h4>
+
+<pre>(value) => true or false</pre>
+
+<p>Returns true if the object contains the specified value, false if not.</p>
+
+<p>For example:</p>
+<pre>
+#(123, "abc", name: "Fred", age: 23).Has?("Fred") => true
+#(123, "abc", name: "Fred", age: 23).Has?(123) => true
+#(123, "abc", name: "Fred", age: 23).Has?(3) => false
+#(123, "abc", name: "Fred", age: 23).Has?("name") => false
+</pre>
+
+<p>See also:
+<a href="object.Any?.html">object.Any?</a>,
+<a href="object.Every?.html">object.Every?</a>,
+<a href="object.Find.html">object.Find</a>,
+<a href="object.FindAll.html">object.FindAll</a>,
+<a href="object.FindAllIf.html">object.FindAllIf</a>,
+<a href="object.FindIf.html">object.FindIf</a>,
+<a href="object.FindLastIf.html">object.FindLastIf</a>,
+<a href="object.FindOne.html">object.FindOne</a>,
+<a href="object.HasIf?.html">object.HasIf?</a><p>

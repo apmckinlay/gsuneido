@@ -1,0 +1,70 @@
+<h3>Export</h3>
+
+<pre>(from_query, to_file = false, fields = false, header = true)</pre>
+
+<p>Abstract base class for <i>exporting</i></p>
+
+<ul>
+    <li>defaults the text file name to the table name</li>
+    <li>handles opening and closing the textfile</li>
+    <li>iterates through the query</li>
+    <li>returns the number of records exported</li>
+</ul>
+
+<p>Classes derived from Export must implement:</p>
+<dl>
+<dt>Export1(x)</dt>
+<dd>Outputs the information from the record passed in, to the file.</dd>
+</dl>
+
+<p>Classes derived from Export have the option to implement:</p>
+<dl>
+<dt>Ext</dt>
+<dd>Sets a default file extension to use.</dd>
+
+<dt>Before()</dt>
+<dd>Outputs information that must appear at the beginning of the file.</dd>
+
+<dt>Header()</dt>
+<dd>Outputs information to the file that must appear first in the file or indicates that a Document Type Definition is also to be exported.</dd>
+
+<dt>After()</dt>
+<dd>Outputs information that must appear at the end of the file.</dd>
+</dl>
+
+<p>Export provides:</p>
+<dl>
+<dt>From_query</dt>
+<dd>The query or table you are exporting data from.</dd>
+
+<dt>To_file</dt>
+<dd>The file you are exporting the data to.  Defaults to the From_query with the Ext.</dd>
+
+<dt>Tf</dt>
+<dd>The open file.</dd>
+
+<dt>Fields</dt> 
+<dd>The field names from the query or table.  Defaults to the column names from the query or table.</dd>
+
+<dt>Header?</dt>
+<dd>Whether to output the header.  Defaults to true.</dd>
+
+<dt>Export()</dt>
+<dd>Calls the Header() function if requested.</dd>
+<dd>Passes each record from the query or table to the Export1() function.</dd>
+<dd>Calls the Footer() function.</dd>
+<dd>Returns the number of records exported</dd>
+
+<dt>Putline(line)</dt>
+<dd>Writes the line to the file</dd>
+
+<dt>Close()</dt>
+<dd>Closes the file.</dd>
+</dl>
+
+<p>See also: 
+<a href="ExportCSV.html">ExportCSV</a>,
+<a href="ExportTab.html">ExportTab</a>,
+<a href="ExportXML.html">ExportXML</a>,
+<a href="Import.html">Import</a>
+</p>

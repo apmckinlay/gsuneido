@@ -1,0 +1,16 @@
+<h3>rect.ToWindowsRect</h3>
+
+<pre>( ) => object</pre>
+
+<p>Returns an object compatible with the Windows RECT structure.</p>
+
+<p>For example:</p>
+<pre>
+rect = Rect(50, 100, 10, 20)
+rect.ToWindowsRect()
+    => #(left: 50, top: 100, right: 60, bottom: 120)
+</pre>
+
+<p><strong>Note:</strong> This method was formerly called "<code>GetWindowsRect</code>" and has been renamed.</p>
+
+<p>See also: <a href="Rect.FromWindowsRect.html">Rect.FromWindowsRect</a>, <a href="rect.IntoWindowsRect.html">rect.IntoWindowsRect</a>, <a href="../Point/point.ToWindowsPoint.html">point.ToWindowsPoint</a></p>

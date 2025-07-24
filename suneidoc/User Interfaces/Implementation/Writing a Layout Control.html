@@ -1,0 +1,44 @@
+<h3>Writing a Layout Control</h3>
+
+<p>For example, here is a control that will center a non-stretchable control within a stretchable area:</p>
+
+<pre>
+<b>MyCenterControl</b>
+
+Container
+    {
+    Xstretch: 1
+    Ystretch: 1
+    New(control)
+        {
+        .ctrl = .Construct(control)
+        .Xmin = .ctrl.Xmin
+        .Ymin = .ctrl.Ymin
+        }
+    Resize(x, y, w, h)
+        {
+        xs = w - .ctrl.Xmin
+        ys = h - .ctrl.Ymin
+        .ctrl.Resize(x + xs / 2, y + ys / 2, .ctrl.Xmin, .ctrl.Ymin)
+        }
+    GetChildren()
+        {
+        return Object(.ctrl)
+        }
+    }
+</pre>
+
+<p>Which could be used like:</p>
+
+<pre>Window(#(MyCenter (Static Hello)))</pre>
+
+<p>Note:</p>
+<ul>
+<li>inherit from <a href="../Reference/Container.html">Container</a></li>
+
+<li>construct child control(s)</li>
+
+<li>set Xmin and Ymin</li>
+
+<li>implement GetChildren (required by Container)</li>
+</ul>

@@ -1,0 +1,75 @@
+<h2>Using LruCache</h2>
+
+<p><b>Category:</b> Coding</p>
+
+<p><b>Problem</b></p>
+
+<p>Your code is doing duplicate calculations or database queries that are slowing it down.</p>
+
+<p><b>Ingredients</b></p>
+
+<p>LruCache</p>
+
+<p><b>Recipe</b></p>
+
+<p>For example, if we wanted to total up transactions with a discount based on the customer:</p>
+
+<pre>
+total = 0
+QueryApply('transactions')
+    { |x|
+    discount = Query1('customers where id = ' $ Display(x.id)).discount
+    total += x.amount - x.amount * discount
+    }
+</pre>
+
+<p>If there are a lot of transactions for only a small number of customers, this code is going to spend a lot of time looking up the same customer dicount over and over. We could speed it up a lot by saving the customer discounts in memory. But potentially, there could be too many customers to want to keep them all in memory.</p>
+
+<p>LruCache implements a fixed size "cache". When the cache is full and it needs to make room for a new value, it throws out the least recently used value (LRU).</p>
+
+<p>The first step is to extract the function (or block) that you want to cache:</p>
+
+<pre>
+get_discount = function (id)
+    { return Query1('customers where id = ' $ Display(id)).discount }
+total = 0
+QueryApply('transactions')
+    { |x|
+    total += x.amount - x.amount * get_discount(x.id)
+    }
+</pre>
+
+<p>Now we can easily introduce LruCache:</p>
+
+<pre>
+get_discount = function (id)
+    { return Query1('customers where id = ' $ Display(id)).discount }
+discounts = LruCache(get_discount, 100)
+total = 0
+QueryApply('transactions')
+    { |x|
+    total += x.amount - x.amount * discounts.Get(x.id)
+    }
+</pre>
+
+<p>That's all there is to it. If the transactions involve less than 100 customers, all their discounts will be kept in memory. If there are more than 100 customers, the LruCache will keep the last 100.</p>
+
+<p>If you want to see the difference, run Trace(TRACE.QUERY) and then run the code with and without LruCache.</p>
+
+<p>If you want to test this code you'll need the tables. You can create them from QueryView with:</p>
+
+<pre>
+create customers (id, discount) key(id)
+
+create transactions (t, id, amount) key(t) index(id) in customers
+</pre>
+
+<p>You can then enter some test data with IDE > Access a Query or Browse a Query.</p>
+
+<p><b>Tip</b></p>
+
+<p>If you want to find examples of where LruCache is used, a good way is to go to LruCache in LibraryView. You can do this using Find in Folders in LibraryView, or you can type LruCache on the WorkSpace and the hit F12 (or right click and choose Go To Definition). Once you're on the LruCache record in LibraryView, click on the L on the toolbar (or choose Tools > Show Locations). This will show you where LruCache is defined (useful if it's defined in several libraries) and where it's used. You can then choose one to go to it in LibraryView.</p>
+
+<p><b>Warning</b></p>
+
+<p>Premature optimization is a common mistake. Write the code as simply as possible. Time it on realistic data (not just a few test items). If it's too slow, then think about optimizing. And after making what you think is an improvement - time it again. You may find your wonderful idea doesn't help, in which case, go back to the simple version.</p>

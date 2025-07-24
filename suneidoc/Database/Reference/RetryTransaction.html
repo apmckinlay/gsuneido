@@ -1,0 +1,24 @@
+<h3>RetryTransaction</h3>
+
+<pre>
+(block)
+() { |t| ... }
+</pre>
+
+<p>Executes the block in an update transaction. If the transaction fails to commit, the block is executed again (in a new transaction). After 10 tries it throws "RetryTransaction: too many retries".</p>
+
+<p><b>Warning</b>: Beware of side effects from the block. e.g. If the block sends an email, multiple emails could end up getting sent.</p>
+
+<p>For example:</p>
+<pre>
+RetryTransaction()
+    { |t|
+    x = t.Query1('nextnumber')
+    n = x.number++
+    x.Update()
+    }
+</pre>
+
+<p>See also:
+<a href="../../Language/Reference/Retry.html">Retry</a>
+</p>

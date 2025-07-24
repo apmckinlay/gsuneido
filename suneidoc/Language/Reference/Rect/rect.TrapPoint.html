@@ -1,0 +1,20 @@
+<h3>rect.TrapPoint</h3>
+
+<pre>( p ) => q </pre>
+
+<p>where <b>p</b> and <b>q</b> are instances of Point.</p>
+
+<p>If the current rectangle contains the point <b>p</b>, returns <b>p</b>. Otherwise, returns a new point <b>q</b> which is the closest point to <b>p</b> that is contained within the current rectangle.</p>
+
+<p>For example:</p>
+<pre>
+rect = Rect(50, 100, 10, 20)
+p = Point(55, 115)
+rect.TrapPoint(p)
+    => p
+p.SetX(45)
+rect.TrapPoint(p)
+    => Point(50, 115)
+</pre>
+
+<p>See also: <a href="rect.ContainsPoint?.html">rect.ContainsPoint?</a></p>

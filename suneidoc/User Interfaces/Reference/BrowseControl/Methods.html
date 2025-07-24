@@ -1,0 +1,45 @@
+<h3><a href="../BrowseControl.html">BrowseControl</a> - Methods</h3>
+
+<dl class="code">
+<dt>AddRecord(rec, idx = false)</dt>
+<dd>Adds the record specified by <b>rec</b> at the position <b>idx</b>.If idx is not specified the record will be added as the last record in the browse. Set <b>browseForceAdd</b> to true in <b>rec</b> to force the browse to add the record. This is useful sometimes when adding records from the application code.</dd>
+
+<dt>Get() => object()</dt>
+<dd>Returns an object containing nested objects (data) in the browse.</dd>
+
+<dt>GetColums() => object()</dt>
+<dd>Returns an object containing all columns in the browse.</dd>
+
+<dt>GetCurrentRecord() => record</dt>
+<dd>Returns the current row, or false if a single row is not selected.</dd>
+
+<dt>GetField(field) => value</dt>
+<dd>Returns the value of the specified field of the current row.<br />
+<b>Note:</b> When you call this method, you must ensure there is a single row currently selected, otherwise an exception will be thrown.</dd>
+
+<dt>GetProtectField() => string</dt>
+<dd>Returns the name of the protected field.</dd>
+
+<dt>GetQuery() => string</dt>
+<dd>Returns the current query.</dd>
+
+<dt>GetStickyFields() => object</dt>
+<dd>Returns an object containing names of sticky fields.</dd>
+
+<dt>Save()</dt>
+<dd>Saves the current record in the browse.</dd>
+
+<dt>SaveColumns()</dt>
+<dd>Saves the orders and sizes for columns in the browse by user.</dd>
+
+<dt>Set(value)</dt>
+<dd>Set data in browse to value.</dd>
+
+<dt>SetField(field, value, idx = current_row, invalidate = false)</dt>
+<dd>Sets the specified field of the current row to the value.<br />
+<b>Note:</b> When you call this method without specifying an idx, you must ensure there is a single row currently selected, otherwise an exception will be thrown.</dd>
+
+<dt>SetQuery(query, columns = false, header_data = false, t = false,
+        max_records = false, max_records_msg = '')</dt>
+<dd>Reloads the records in the browse from the specified query. If t is a valid transaction, it will be used to read the records. Use max_records and max_records_msg to limit the number of records loaded by the browse, if the number of records read exceeds the number specified in max_records, it will stop loading at max_records and display the msg from max_records_msg to the user.</dd>
+</dl>

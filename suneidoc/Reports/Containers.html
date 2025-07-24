@@ -1,0 +1,99 @@
+<h2>Containers</h2>
+
+<p>The two basic methods of laying out multiple formats are Horz and Vert.  Horz arranges the items one beside the other horizontally, whereas Vert arranges the items one below the other vertically.
+</p>
+
+<p>The items supplied as arguments to Params are automatically placed into a Vert, so:
+</p>
+
+<pre>Params(#(Text, "Hello world!"), #(Text, "Goodbye."))</pre>
+
+<p>will print "Goodbye." immediately below "Hello world!".  In addition to the normal Vert behavior, Report will automatically start a new page if the next item will not fit on the page.  You can also force a new page with a "pg" item.  For example,
+</p>
+
+<pre>Params(#(Text "Hello"), 'pg', #(Text "Goodbye"))</pre>
+
+<p>To place items side by side, use an Horz.  For example:
+</p>
+
+<pre>Params(#(Horz, (Text, "Hello"), (Text, "goodbye")))</pre>
+
+<p>Horz aligns text vertically on it's baseline, rather than just the top or bottom of the text, for example:
+</p>
+
+<p>align <font size="7">align</font>
+</p>
+
+<p>Horz's and Vert's can be nested, for example:
+</p>
+
+<pre>#( Horz ( Vert (Text one) (Text two) ) ( Vert (Text three) (Text four) ) )</pre>
+
+<p>to produce:
+</p>
+
+<pre>
+onethree
+twofour
+</pre>
+
+<p>Horz's and Vert's also allow you to override their default positioning of each item immediately following the last.  For example:
+</p>
+
+<pre>
+Params( #( Text "0,0" ),
+    #( Horz ( Text "1,1" x: 1 ) y: 1 ),
+    #( Horz ( Text "2,2" x: 2 ) y: 2 ) )
+</pre>
+
+<p>would produce:
+</p>
+
+<pre>
+0,0
+
+
+
+          1,1
+
+
+
+                    2,2
+</pre>
+
+
+<p>You can only set the x position for items within Horz's and the y position for items within Vert's.  If the specified position is smaller than the default position, it is ignored.  Positions are in inches and are relative to their container (not to the page).
+</p>
+
+<p>Horz and Vert can also distribute data to their items.  If a data value is supplied it will be passed on to each of the format items.  If a format item has a "field" member, then the value of that field from the data object will be passed to the format rather than the entire data object.  For example:
+</p>
+
+<pre>#( Horz ( Text field: name ) data: ( name: "joe" ) )</pre>
+
+<p>is equivalent to:
+</p>
+
+<pre>#( Horz ( Text "joe" ) )</pre>
+
+<p>Using a field name instead of a format will look up that field's format, 
+so you can write, for example:
+</p>
+
+<pre>#( Horz name age, data: ( name: "Joe", age: 23 ) )</pre>
+
+<p>A quick and easy way to output several fields is to use the Hfields and Vfields formats 
+which output fields along with their prompts from the data dictionary.  For example:
+</p>
+
+<pre>#( Vfields name, age, data: ( name: "Joe", age: 23 ) )</pre>
+
+<p>would produce
+</p>
+
+<pre>
+Name: Joe
+ Age: 23
+</pre>
+
+<p>These features are most useful in conjunction with
+<a href="Reference/QueryFormat.html">QueryFormat</a>.</p>

@@ -1,0 +1,100 @@
+<h2>Language Translation</h2>
+
+<p>Since the July 12, 2001 release, Suneido has had support for language translation in the user interface. The implementation is based on contributions from Roberto Artigas Jr. who also contributed the first translation data for Spanish. Since then we have added Italian (thanks to Valerio Muzi), French (thanks to Jennie Hill and Jean-Luc Chervais), Russian (thanks to DeusTech), German (thanks to Stefan Schmiedl), Czech (thanks to Tomas Polak), Norwegian (thanks to Arne Christian Riis), Dutch (thanks to Cor de Jong and Jos Schaars), Vietnamese (thanks to Kim Dong), Hungarian (thanks to Mark Gabor), Portugese (thanks to Mateus Vendramini), and Bulgarian (thanks to Mal Malakov).</p>
+
+<p>Most user interface elements are translated, including: buttons,
+checkboxes, context menus, group boxes, menus, static text, status bar,
+tooltips, and window and dialog titles. The translation data that we have so
+far is aimed at translating the development environment (IDE), although the
+mechanism is usable for applications as well.</p>
+
+<p><strong>Note</strong>:</p>
+<ul>
+  <li>The documentation has <strong>not</strong> been translated and this
+    probably isn't a big priority until the documentation stabilizes,
+    although if someone wants to start tackling it they are welcome to.</li>
+  <li>There hasn't been a lot of testing with alternate character sets. Let
+    us know about any issues in this area.</li>
+  <li>Internal messages in the executable (i.e. in the C++ code) are
+    <strong>not</strong> translated yet.</li>
+  <li>Everything is still using 8 bit characters - no Unicode support yet.</li>
+</ul>
+
+<p>For example, here is the WorkSpace in Spanish:</p>
+
+<p><img src="../res/spanishworkspace.png" /></p>
+
+<p>and the Find dialog in Italian:</p>
+
+<p><img src="../res/italianfind.png" /></p>
+
+<p>The translation is controlled by the "Language" member of the global
+"Suneido" object (i.e. Suneido.Language). This is initially set to English
+(i.e. no translation) in Init (in stdlib). You can set it from the WorkSpace
+by running, for example:</p>
+<pre>    Suneido.Language = #(name: &quot;spanish&quot;, charset: &quot;DEFAULT&quot;)</pre>
+
+<p>or:</p>
+<pre>    Suneido.Language = #(name: &quot;russian&quot;, charset: &quot;CYRILLIC&quot;)</pre>
+
+<p>charset must be one of the names in CHARSET (stdlib Win32 &gt; Gdi32 &gt;
+Defines).</p>
+
+<p>This will not change any existing windows, but from then on, any new
+windows (or dialogs) should be translated.</p>
+
+<p>You can switch back to English from the WorkSpace by running:</p>
+<pre>    Suneido.Language = #(name: &quot;english&quot;, charset: &quot;DEFAULT&quot;)</pre>
+
+<p>If you want to change the default language for your database, modify Init
+in stdlib (using Library View) to set the appropriate language. Next time you
+start Suneido it should default to the appropriate language.</p>
+
+<p><img src="../res/libview_init.png" /></p>
+
+<p>To edit the translation data, use Browse a Query from the IDE menu (the table name is translatelanguage):</p>
+
+<p>You should see something like:</p>
+
+<p><img src="../res/browse_translate.png" /></p>
+
+<p>Double click or press F2 to edit a field and TAB to move to the next
+field. Use the INSERT and DELETE keys to insert and delete records. You can
+drag the headings to rearrange the columns.</p>
+
+<p><b>Note:</b> Currently, Browse does not save any of your changes until you
+close the Browse window.&nbsp; If you are doing extensive editing, you should
+probably close and re-open the browse occasionally to ensure your work is
+saved.&nbsp; Otherwise, if you crash for any reason, you'll lose your changes.</p>
+
+<p>To add a new language, for example Swedish, close the Browse if it's open,
+and from QueryView run:</p>
+<pre>    alter translatelanguage create (trlang_swedish)</pre>
+
+<p>When translating, a trailing "..." is removed before lookup, and added
+back to the translation. There shouldn't be any "..." in the
+translationlanguage table. Also, if&nbsp; the string contains
+any ampersands (&amp;), then they are removed before the lookup.&nbsp; After the lookup if the original string did
+not contain "&amp;" then they will be removed from the translation. This means that the English entries should not contain "&amp;", but
+the translations should where applicable (if used on a menu).</p>
+
+<p>To contribute minor changes of a few records, just list the changes in an
+email.
+For larger changes (e.g. a new language) please dump the updated
+translatelanguage table from the command line:</p>
+<pre>    suneido -dump translatelanguage</pre>
+
+<p>and send translatelanguage.su to us at <a href="mailto:info@suneido.com">info@suneido.com</a>.</p>
+
+<p><b>Note:</b> Please make sure you start with the most recent
+version of translatelanguage to minimize any merging problems.</p>
+
+<p>If you want to incorporate translation into your own code, the main
+interface is the <a href="../Language/Reference/TranslateLanguage.html">TranslateLanguage</a> function. It takes a single argument, the
+word or phrase to be translated, and returns the translation, or the original
+string if no translation is found. For example:</p>
+<pre>    title = TranslateLanguage(title)</pre>
+
+<p>TranslateLanguage calls GetLanguage() to get the current language.
+GetLanguage currently just returns the value of Suneido.Language.
+TranslateLanguage handles "..." and ampersands (&amp;) as described above.</p>

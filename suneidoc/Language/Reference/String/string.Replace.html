@@ -1,0 +1,67 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>string.Replace</h4>
+
+<pre>(pattern, replacement, count = <i>all</i>) => string</pre>
+
+<p>Creates a new string with <i>pattern</i> replaced with <i>replacement</i>.  
+The default is to replace all occurrences of the pattern, 
+but a count can be specified to do only a certain number of replacements (e.g. only 1).
+The replacement can be either a string or a callable value (e.g. a block or function)
+that returns a string.</p>
+
+<p>For example:</p>
+<pre>
+"hello world".Replace("o", "O") => "hellO wOrld"
+"hello world".Replace("o", "O", 1) => "hellO world"
+</pre>
+
+<p>The replacement string can contain special character sequences that are expanded as follows:</p>
+<table>
+<tr><td width="15%"><code>&amp;</code> or <code>\0</code></td><td>the string that was matched by the pattern</td></tr>
+<tr><td valign="top"><code>\1, \2, </code> ...</td>
+    <td>the portion of the string that was matched by the nth parenthesized part of the regular expression,
+        counting opening parentheses from the left</td></tr>
+<tr><td><code>\u</code></td><td>convert the single following character to upper case</td></tr>
+<tr><td><code>\l</code></td><td>convert the single following character to lower case</td></tr>
+<tr><td><code>\U</code></td><td>convert all the following characters to upper case (until \E)</td></tr>
+<tr><td><code>\L</code></td><td>convert all the following characters to lower case (until \E)</td></tr>
+<tr><td><code>\E</code></td><td>end <code>\U</code> or <code>\L</code></td></tr>
+<tr><td><code>\\</code></td><td>a literal '\' (backslash)</td></tr>
+</table>
+
+<p>For example:</p>
+<pre>
+"Hello World".Replace("(\w+) (\w+)", "\L\2 \U\1")  =>  "world HELLO"
+"hello world".Replace("\w+", "\u&")  =>  "Hello World"
+</pre>
+
+<p>If the replacement string starts with <code>\=</code>
+this turns off the special meaning of the characters described above.</p>
+
+<p>If the replacement is a callable value, 
+it is passed the matched portion of the string
+and returns the replacement string.
+It is called once for each match.
+For example:</p>
+<pre>
+"abc".Replace('.', { |s| s.Upper() } )
+    => "ABC"
+</pre>
+
+<p>If the replacement callable value does not return anything,
+then no replacement is done.
+This can be useful for the side-effects.
+For example:</p>
+<pre>
+"hello world".Replace('[a-z]+') { |s| Print(s) }
+    hello
+    world
+    => "hello world"
+</pre>
+
+<p>See also:
+<a href="../../Regular Expressions.html">Regular Expressions</a>,
+<a href="string.Extract.html">string.Extract</a>,
+<a href="string.Match.html">string.Match</a>,
+<a href="string.Tr.html">string.Tr</a>
+</p>

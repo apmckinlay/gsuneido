@@ -1,0 +1,29 @@
+<h3>MoneyBagTotal</h3>
+
+<pre>
+(append_function, currency_column, total_format = "Total", 
+    <i>column</i>: moneybag ...)
+</pre>
+
+<p>Calls the specified append_function to add _output format specifications to the report to print the totals from the moneybags in the specified columns.  One currency will be printed per line.  Normally used in After methods of a QueryFormat.</p>
+
+<p>For example:</p>
+
+<pre>
+Total: ( (revenue, currency), (expense, currency) )
+After_account(data)
+    {
+    MoneyBagTotalFormat(.Method('Append'), 'currency',
+        revenue: data.total_revenue, expenses: data.total_expenses)
+    }
+After(data)
+    {
+    MoneyBagTotalFormat(.Method('Append'), 'currency', 'GrandTotal',
+        revenue: data.total_revenue, expenses: data.total_expenses)
+    }
+</pre>
+
+<p>See also:
+<a href="../../Language/Reference/MoneyBag.html">MoneyBag</a>,
+<a href="QueryFormat.html">QueryFormat</a>
+</p>

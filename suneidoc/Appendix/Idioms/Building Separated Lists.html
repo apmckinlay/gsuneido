@@ -1,0 +1,23 @@
+<h3>Building Separated Lists</h3>
+
+<p>A common task is to create a string listing several items with separators between them. It's often easier to add the separator after every item, and then at the end, remove the trailing one.</p>
+
+<pre>
+s = "";
+for (x in list)
+    s $= Fn(x) $ ","
+s = s[..-1]
+</pre>
+
+<p>An alternative is to build an object and then use Join.</p>
+
+<pre>
+ob = Object()
+for (x in list)
+    ob.Add(Fn(x))
+s = ob.Join(',')
+</pre>
+
+<p>Or, for this example, it's even simpler with <a href="../../Language/Reference/Object/object.Map.html">object.Map</a>:</p>
+
+<pre>s = list.Map(Fn).Join(',')</pre>

@@ -1,0 +1,26 @@
+<h3>ChooseDatesControl</h3>
+
+<pre>
+(mandatory = false, protectBeforeField = "")
+</pre>
+
+<p>Uses <a href="ChooseField.html">ChooseField</a> to display a <a href="FieldControl.html">FieldControl</a> with a choose button on the right side. The button will bring up a <a href="MonthCalDatesDialog.html">MonthCalDatesDialog</a>  displaying a calendar where the user can select dates.</p>
+
+<dl>
+<dt>mandatory</dt>
+<dd>Used to force the user to enter a value in the field.  The field will be marked as invalid if it is left empty and mandatory is set to true.  Default is false.</dd>
+
+<dt>protectBeforeField</dt>
+<dd>Used to prevent the user from selecting any date that is previous to the date returned by the protectBeforeField.  If no date is returned, the user may select any date.  Default is "".</dd>
+</dl>
+
+<p>For example:</p>
+<pre>
+Window(#(ChooseDates))
+</pre>
+
+<p>Would display:</p>
+<img src="../../res/ChooseDatesControl.png" />
+
+<p>and clicking on the "..." button would display:</p> 
+<img src="../../res/MonthCalDates.png" />

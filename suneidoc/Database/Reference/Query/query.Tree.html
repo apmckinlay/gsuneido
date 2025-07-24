@@ -1,0 +1,57 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>query.Tree</h4>
+
+<pre>() => tree</pre>
+
+<p>query.Tree returns a query tree. The tree is for the optimized query (i.e. the strategy) so it may be rearranged. If you want the tree for the original query use <a href="../../../Language/Reference/Suneido/Suneido.ParseQuery.html">Suneido.ParseQuery</a></p>
+
+<p>Tree nodes have "properties". For example:</p>
+<pre>
+q = Suneido.ParseQuery("tables join columns")
+q.type
+=> "join"
+</pre>
+
+<p>All nodes have the following properties:</p>
+<dl class="code">
+<dt>type</dt>
+<dd>The type of node: table, extend, rename, project, summarize, where, view, sort, join, leftjoin, times, union, minus, intersect. Optimizing may introduce other types of nodes: nothing, projectnone, tablelookup, tempindex</dd>
+<dt>nchild</dt>
+<dd>The number of children this node has - 0, 1, or 2. If nchild is 1 the node will have a "source" property. If nchild is 2 the node will have "source1" and "source2" properties. These source properties will be sub-tree nodes.</dd>
+<dt>string</dt>
+<dd>Returns a query string for just this operation node.</dd>
+<dt>String</dt>
+<dd>Returns a query string for the sub-tree starting at this node.</dd>
+</dl>
+
+<p>If the query has been optimized, string and String will give the strategy.</p>
+
+<p>Nodes with a type of "table" and "view" have:</p>
+<dl class="code">
+<dt>name</dt>
+<dd>The table or view name.</dd>
+</dl>
+
+<p>The following properties will only be available once the query has been optimized (e.g. from <a href="../Transaction/transaction.Query.html">transaction.Query</a> or <a href="../WithQuery.html">WithQuery</a>):</p>
+<dl class="code">
+<dt>nrows</dt>
+<dd>The estimated number of rows that will be produced by this operation node.</dd>
+<dt>pop</dt>
+<dd>The "population" that nrows will be drawn from.</dd>
+<dt>fast1</dt>
+<dd>true if the operation node will produce at most a single row e.g. key() in a fast (i.e. indexed) way.</dd>
+<dt>frac</dt>
+<dd>The estimated fraction of nrows that will be read.</dd>
+<dt>fixcost</dt>
+<dd>The fixed cost for this operation node, regardless of how many rows are read. e.g. the cost of building a temp index.</dd>
+<dt>varcost</dt>
+<dd>The variable cost for this operation node, incorporating frac.</dd>
+</dl>
+
+<p>The following properties will only be available if the query has been executed:</p>
+<dl class="code">
+<dt>tget</dt>
+<dd>The TSC count for this sub-tree.</dd>
+<dt>tgetself</dt>
+<dd>The TSC count for just just this operation node, after subtracting the count from child nodes.</dd>
+</dl>

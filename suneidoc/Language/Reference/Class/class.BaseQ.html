@@ -1,0 +1,35 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>class.Base?</h4>
+
+<pre>(class) => true or false</pre>
+
+<p>Returns true if the class or instance is derived from the specified class (possibly indirectly), false if not.</p>
+
+<p>For example:</p>
+<pre>
+HorzControl.Base?(Group) 
+    => true
+
+Stack().Base?(Stack) 
+    => true
+</pre>
+
+<p>A class will return true for itself:</p>
+<pre>
+Stack.Base?(Stack)
+    => true
+</pre>
+
+<p><b>Note:</b> The following sequence of events can be confusing:</p>
+<ol style="margin-top: 0;">
+<li><code>x = new MyClass</code></li>
+<li><code>x.Base?(MyClass) => true</code></li>
+<li><code>Unload("MyClass")</code></li>
+<li><code>x.Base?(MyClass) => <u>false</u></code></li>
+</ol>
+
+<p>You normally are not Unload'ing yourself, but editing the record in Library View or using or unusing libraries will have the same effect.</p>
+
+<p>The reason for this is that the instance of the class (stored in x above) remains linked to the old version of MyClass, but you are doing the test with the new version.</p>
+
+<p>See also: <a href="class.Base.html">class.Base</a></p>

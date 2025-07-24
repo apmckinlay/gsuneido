@@ -1,0 +1,39 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>string.Compile</h4>
+
+<pre>(object = false) => value</pre>
+
+<p>Compiles the string, which must be a constant (e.g. number, function, class). Preferable to <a href="string.Eval.html">string.Eval</a> because it does not execute arbitrary code.</p>
+
+<p>For example:</p>
+<pre>
+"function () { }".Compile()
+    => /* function */
+</pre>
+
+<p>If an object is supplied as an argument then the offsets of "warnings" (e.g. uninitialized variables) are added to it. This is used by CheckCode which is used by <a href="../../../Tools/LibraryView.html">LibraryView</a> to show mistakes.</p>
+
+<p><b>Note</b>: Compile may be slower when asking for warnings (by supplying an object argument) because it may load library records as part of determining whether global names are defined.</p> 
+
+<p>Errors and warnings will be added to the object as positions in the source string. Warnings will be negative, errors will be positive. Currently, the following are detected:</p>
+<ul>
+<li>local variable used but not initialized (error)</li>
+
+<li>local variable initialized (including as function parameter) but not used (warning)</li>
+
+<li>reference to an undefined global name (error)</li> 
+
+<li>_Name where Name is defined (warning - may be invalid in context)<br />
+(_Name where Name is undefined will throw an exception from Compile)</li>
+</ul>
+
+<p>Only the starting position is given. To get the length or the text, you can use <a href="../Scanner.html">Scanner</a></p>
+<pre>
+scanner = Scanner(source[pos ..])
+scanner.Next()
+text = scanner.Text()
+</pre>
+
+<p>See also:
+<a href="string.Eval.html">string.Eval</a>
+</p>

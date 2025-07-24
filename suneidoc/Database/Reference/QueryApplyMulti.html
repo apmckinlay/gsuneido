@@ -1,0 +1,29 @@
+<h3>QueryApplyMulti</h3>
+
+<pre>
+(query, block, update)
+(query, update) { |x| ... }
+</pre>
+
+<p>One of three related functions to iterate through a query and process each record.</p>
+
+<p>Normal usage is like:</p>
+
+<pre>QueryApply/Multi/Each(query)
+    { |x|
+    ...
+    }
+</pre>
+
+<dl>
+<dt><a href="QueryApply.html">QueryApply</a></dt>
+<dd>Use for read-only or for updating less than 10,000 records. Uses a single update transaction so it is atomic.</dd> 
+
+<dt><a href="QueryApplyMulti.html">QueryApplyMulti</a></dt>
+<dd>Use for updating more than 10,000 records. Uses a separate update transaction for every 100 records.</dd>
+
+<dt><a href="QueryApplyEach.html">QueryApplyEach</a></dt>
+<dd>Use when there is a large amount of processing for each record. The query is iterated in a read-only transaction and each record is processed in its own RetryTransaction.</dd>
+</dl>
+
+<p>QueryApplyMulti is not necessary for read-only i.e. update should normally be true. The reason for the update argument is so you can use the same code for both read-only and update purposes.</p>

@@ -1,0 +1,97 @@
+<h3>join (natural join)</h3>
+
+<p><i>query</i> <b>join</b> [ by (<i>fields</i>) ] <i>query</i></p>
+
+<p>The result of join is a table with all the columns from the input queries (without duplicates) and with the set of rows formed by combining each pair of rows with equal common columns. The input queries must have at least one column in common.</p>
+
+<p>Notice that join does not output rows from the first table that do not have a matching row in the second table. If you need this, use <a href="leftjoin.html">leftjoin</a> (left outer join).</p>
+
+<table border="0" width="100%">
+  <tr>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="50%" align="center" bgcolor="#C0C0C0">table</td>
+          <td width="50%" align="center" bgcolor="#C0C0C0">tablename</td>
+        </tr>
+        <tr>
+          <td width="50%">17</td>
+          <td width="50%">suppliers</td>
+        </tr>
+        <tr>
+          <td width="50%">18</td>
+          <td width="50%">empty</td>
+        </tr>
+        <tr>
+          <td width="50%">19</td>
+          <td width="50%">parts</td>
+        </tr>
+      </table>
+    </td>
+    <td align="center">
+      join</td>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="50%" align="center" bgcolor="#C0C0C0">table</td>
+          <td width="50%" align="center" bgcolor="#C0C0C0">column</td>
+        </tr>
+        <tr>
+          <td width="50%">17</td>
+          <td width="50%">name</td>
+        </tr>
+        <tr>
+          <td width="50%">17</td>
+          <td width="50%">city</td>
+        </tr>
+        <tr>
+          <td width="50%">19</td>
+          <td width="50%">item</td>
+        </tr>
+        <tr>
+          <td width="50%">19</td>
+          <td width="50%">cost</td>
+        </tr>
+      </table>
+    </td>
+    <td align="center">
+      =</td>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="50%" align="center" bgcolor="#C0C0C0">table</td>
+          <td width="50%" align="center" bgcolor="#C0C0C0">tablename</td>
+          <td width="50%" align="center" bgcolor="#C0C0C0">column</td>
+        </tr>
+        <tr>
+          <td width="50%">17</td>
+          <td width="50%">suppliers</td>
+          <td width="50%">name</td>
+        </tr>
+        <tr>
+          <td width="50%">17</td>
+          <td width="50%">suppliers</td>
+          <td width="50%">city</td>
+        </tr>
+        <tr>
+          <td width="50%">19</td>
+          <td width="50%">parts</td>
+          <td width="50%">item</td>
+        </tr>
+        <tr>
+          <td width="50%">19</td>
+          <td width="50%">parts</td>
+          <td width="50%">cost</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<p>To control which fields to join on, use <a href="rename.html">rename</a>, <a href="project.html">project</a>, or <a href="remove.html">remove</a>. For example, if your orders table had a shipper1 and a shipper2 and you wanted to join by shipper1 with the shippers table (which has a shipper column):</p>
+
+<pre>orders rename shipper1 to shipper join shippers</pre>
+
+<p>Note: <b>by (<i>fields</i>)</b> is only an assertion, it does not alter which fields to join on. It only checks that the fields that the join uses are what you expect. If they differ an exception will be thrown. This is useful to ensure that the join does not change as the schema changes (e.g. you add fields).</p>
+
+<p><b>Note:</b> Only one-to-one joins are updatable.</p>

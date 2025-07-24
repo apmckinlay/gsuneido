@@ -1,0 +1,161 @@
+<div style="float:right">
+<span class="toplinks">
+<a href="Mock/Methods.html">Methods</a>
+</span>
+</div>
+<h3>Mock</h3>
+
+<pre>(cls = false) => mock</pre>
+
+<p>Creates a "mock" object that will accept any method calls. Used for tests.</p>
+
+<pre>
+mock = Mock()
+mock.AnyMethod()
+</pre>
+
+<h4>Verifying Behaviour with mock.Verify</h4>
+
+<pre>
+mock = Mock()
+mock.Func(123, "xyz")
+mock.Verify.Func(123, "xyz")
+</pre>
+
+<p>Where "Func" is any method name.</p>
+
+<p>If you verify a call and it was not invoked, then an exception will be thrown (and presumably the test will fail).</p>
+
+<p>You can also verify that a call was <u>not</u> made with <code>mock.Verify.Never().Func(...)</code> (see below)</p>
+
+<h4>Stubbing with mock.When</h4>
+
+<p>By default, calling a method on a mock has no return value. You can specify a call to do the following things using <b>mock.When</b></p>
+<p>return a value:</p>
+<pre>mock.When.Func(123).Return("xyz")</pre>
+<p>call through when being invoked:</p>
+<pre>mock.When.Func(-123).CallThrough()</pre>
+<p>excute a block:</p>
+<pre>mock.When.Func(-123).Do({ /* block */ })</pre>
+<p>throw an exception:</p>
+<pre>mock.When.Func(-123).Throw("must be positive")</pre>
+
+<p>If the class name is passed into the Mock constructor, you can stub private methods without prefixing them with the class name.</p>
+<pre>
+mock = Mock(<b>MyClass</b>)
+mock.When.<b>func</b>().Return(123) // instead of mock.When.MyClass_func().Return(123)
+</pre>
+
+<p>You can also specify multiple return values for consecutive calls.</p>
+<pre>
+mock = Mock()
+mock.When.NextNumber().Return(0, 1, 2)
+mock.NextNumber()
+    => 0
+mock.NextNumber()
+    => 1
+mock.NextNumber()
+    => 2
+mock.NextNumber()
+    => 2 // additional calls return last value
+</pre>
+
+<h4>Argument Matching</h4>
+
+<p>When you say <code>mock.Verify.Func(123, "xyz")</code> or <code>mock.When.Func(123, "xyz")</code> it will only apply when Func is called with those exact arguments.</p>
+
+<p><b>NOTE:</b> Mutable arguments are stored in Mock by references. Arguments passed are compared using the equals (is) method by default</p>
+
+<p>If you want to match any number of arguments (including none) with any values, you can use <code>mock.Verify.Func([anyArgs:])</code> or <code>mock.When.Func([anyArgs:])</code></p>
+
+<p>To specify that one of the arguments may have any value, use <code>[any:]</code> as the argument.</p>
+
+<p>It is also possible to use any of the Hamcrest style matchers used by <a href="Assert.html">Assert</a>. For readability, anyNumber, anyString, and anyObject are available that simply inherit from isNumber, isString, and isObject.</p>
+
+<pre>
+mock.When.Method('value1', [like: 'value']).CallThrough()
+
+mock.Verify.Method('value1', [startsWith: 'value'])
+</pre>
+
+<h4>Verifying Number of Calls</h4>
+
+<p>By default, <code>mock.Verify.Func()</code> checks that the call was made exactly once.</p>
+
+<p>You can also use:</p>
+
+<dl class="code">
+<dt>mock.Verify.Never().Func()</dt>
+<dd>Verify that the call was <i>not</i> made.</dd>
+
+<dt>mock.Verify.Times(n).Func()</dt>
+<dd>Verify that the call was made exactly n times.</dd>
+
+<dt>mock.Verify.AtLeast(n).Func()</dt>
+<dd>Verify that the call was made n or <i>more</i> times.</dd>
+
+<dt>mock.Verify.AtMost(n).Func()</dt>
+<dd>Verify that the call was made n or <i>less</i> times.</dd>
+</dl>
+
+<p>If the class is passed into the Mock constructor, you can verify private methods without prefixing them with the class name.</p>
+
+<h4>Testing a Method that Calls Other Methods</h4>
+
+<p>For example, you want to test this:</p>
+<pre>
+class
+    {
+    ...
+    Method1()
+        {
+        if .Method2()
+            .Method3()
+        }
+    ...
+    }
+</pre>
+<p>You can use <a href="Object/object.Eval.html">object.Eval</a> to call the method to be tested in the context of the mock.</p>
+<pre>
+mock = Mock()
+mock.When.Method2().Return(true)
+mock.Eval(MyClass.Method1)
+mock.Verify.Method3()
+
+mock = Mock()
+mock.When.Method2().Return(false)
+mock.Eval(MyClass.Method1)
+mock.Verify.Never().Method3()
+</pre>
+
+<p>Or, you can stub CallThrough() on a method and then call it in the context of the mock, the class needs to be passed into the Mock constructor</p>
+<pre>
+mock = Mock(MyClass)
+mock.When.Method2().Return(true)
+mock.When.Method1().CallThrough()
+MyClass.Method1()
+mock.Verify.Method3()
+</pre>
+
+<p>If you pass the class when constructing the mock, then you can reference private methods directly:</p>
+<pre>
+mock = Mock(<b>MyClass</b>)
+mock.When.<b>method2</b>().Return(false)
+mock.When.<b>method1</b>().CallThrough()
+mock.<b>method1</b>()
+mock.Verify.method3()
+</pre>
+
+<p>Otherwise, you will need to prefix them with the class name. For example:</p>
+<pre>
+mock = Mock()
+mock.When.MyClass_method2().Return(false)
+mock.Eval(MyClass.MyClass_method1)
+</pre>
+
+<p><b>NOTE:</b> If the class is passed into Mock object, all value members are copied to the mock object automatically.</p>
+
+<h4>See Also</h4>
+<p><a href="MockObject.html">MockObject</a>,
+<a href="FakeObject.html">FakeObject</a>,
+<a href="https://suneido.com/from-the-couch-12-mockito-for-suneido/">From the Couch 12 - Mockito for Suneido</a> (on the web site)</p>

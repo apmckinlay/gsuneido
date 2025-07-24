@@ -1,0 +1,18 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Database.Dump</h3>
+
+<pre>
+(tablename = "", filename = "", publicKey = "")
+</pre>
+
+<p>Dumps the entire database or the specified table to a file. If client-server, this happens on the server.</p>
+
+<p>If tablename is "" (or omitted) the entire database is dumped.</p>
+
+<p>If filename is "" (or omitted) it defaults to database.su or tablename.su</p>
+
+<p>If publicKey is supplied, the output of dump is encrypted, equivalent to <a href="../../../Language/Reference/OpenPGP.html">OpenPGP</a>.PublicEncrypt</p>
+
+<p>Equivalent to the <code>-dump</code> <a href="../../../Introduction/Command Line Options.html">command line option</a></p>
+
+<p>Dump'ed files are intended to be loaded with the <code>-load</code> <a href="../../../Introduction/Command Line Options.html">command line option</a> or with <a href="Database.Load.html">Database.Load</a></p>

@@ -1,0 +1,26 @@
+<h4>object.ProjectValues</h4>
+
+<pre>(members) => object</pre>
+
+<p>Returns a new object listing the values of the specified members.</p>
+
+<p>The members may be passed as an object or as individual arguments.</p>
+
+<p>For example:</p>
+<pre>
+#(a: 12, b: 34, c: 56, d: 78).ProjectValues(#(b, c)) => #(34, 56)
+
+#(a: 12, b: 34, c: 56, d: 78).ProjectValues(#b, #c) => #(34, 56)
+
+#(12, 34, 56, 78, 90).ProjectValues(#(0, 2, 4)) => #(12, 56, 90)
+</pre>
+
+<p><b>Note:</b> ProjectValues will throw an error if the object does not contain all the specified members.</p>
+
+<p>See also:
+<a href="../NameArgs.html">NameArgs</a>,
+<a href="object.Extract.html">object.Extract</a>,
+<a href="object.ListToMembers.html">object.ListToMembers</a>,
+<a href="object.ListToNamed.html">object.ListToNamed</a>,
+<a href="object.Project.html">object.Project</a>,
+object.Slice<p>

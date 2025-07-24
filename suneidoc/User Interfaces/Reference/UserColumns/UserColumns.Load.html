@@ -1,0 +1,28 @@
+<h4>UserColumns.Load</h4>
+
+<pre>(columns, title, list, reset = false, deletecol = false)</pre>
+
+<dl class="code">
+<dt>columns</dt>
+<dd>The default list of columns.</dd>
+<dt>title</dt>
+<dd>Should be unique, the settings will be saved under this name.</dd>
+<dt>list</dt>
+<dd>A reference to the list control.</dd>
+</dl>
+
+<p>Can be used with other list controls that support:</p>
+<dl class="code">
+<dt>list.SetColumns(columns, reset = false)</dt>
+<dd>reset is only required if you call Load with reset</dd>
+<dt>list.SetColWidth(i, width)</dt>
+</dl>
+
+<p>Normally called from New, for example:</p>
+<pre>
+New(...)
+    {
+    ...
+    UserColumns.Load(.columns, .Title, .list)
+    }
+</pre>

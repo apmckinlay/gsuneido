@@ -1,0 +1,16 @@
+<h3>By</h3>
+
+<pre>(@fields)</pre>
+
+<p>Returns a block that can be used as the comparison function for <a href="Object/object.Sort!.html">object.Sort!</a> to sort a list of objects or records by one or more fields. For example:</p>
+<pre>
+list = [[name: 'Fred', age: 23], [name: 'Andy', age: 45]]
+list.Sort!(By(#age, #name))
+
+=> [[name: "Fred", age: 23], [name: "Andy", age: 45]]
+</pre>
+
+<p>See also:
+<a href="Object/object.Sort!.html">object.Sort!</a>,
+<a href="Object/object.Sorted?.html">object.Sorted?</a>,
+<a href="Object/object.SortWith!.html">object.SortWith!</a><p>

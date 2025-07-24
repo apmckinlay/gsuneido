@@ -1,0 +1,22 @@
+<h4>object.SortWith!</h4>
+
+<pre>
+(callable) => this
+</pre>
+
+<p>Does:</p>
+
+<pre>.Sort!({|x,y| fn(x) &lt; fn(y) })</pre>
+
+<p>For example:</p>
+
+<pre>
+['a','B','c','D'].SortWith!(#Lower)
+
+    => ["a", "B", "c", "D"]
+</pre>
+
+<p>See also:
+<a href="../By.html">By</a>,
+<a href="object.Sort!.html">object.Sort!</a>,
+<a href="object.Sorted?.html">object.Sorted?</a><p>

@@ -1,0 +1,28 @@
+<h3>BrowseImageName</h3>
+
+<pre>(title = "", filter = "", file= false, showimage= true, opendirmsg = "")</pre>
+
+<p>Open a dialog window to can select an image file and display a preview of the selected image. Can also open another dialog window to change the current directory.</p>
+
+<p>Returns the selected image file path or false if Cancel button is chosen.</p>
+
+<dl class="code">
+<dt>title</dt>
+<dd>will display the contained text in the dialog title</dd> 
+<dt>filter</dt>
+<dd>Allows filtering the images files displayed in the dialog. The default filter is:  "bmp, gif, jpg, jpe, jpeg, ico, emf, wmf, tif, tiff, png, pdf". e.g. to set a filter to only JPEG images, set the string to "jpg, jpeg" (the space between is important)</dd>
+<dt>file</dt>
+<dd>may contain: 
+    1) false: to select the computer resources item in open directory dialog window  
+    2) true: to select the current directory in open directory dialog window  
+    3) text path: to select the passed directory path in open directory dialog window
+    The text path may be:
+    a) a full file path and a file name 
+    b) a full file path to select a directory 
+    c) a file name
+    d) nothing</dd> 
+<dt>showimage</dt>
+<dd>true/false to display or not, the image in the dialog</dd>
+<dt>opendirmsg</dt>
+<dd>a message displayed in the open directory dialog window, not the title dialog window</dd>
+</dl>

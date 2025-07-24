@@ -1,0 +1,39 @@
+<h2>Rules</h2>
+
+<ul>
+<li>You can define <i>rules</i> for fields by defining functions called Rule_<i>fieldname</i> or by explicitly associating a rule with a field using <a href="Reference/Record/record.AttachRule.html">record.AttachRule</a></li>
+
+<li>When you access a field that the record does <u>not</u> contain, 
+if there is a rule it will be called.</li>
+
+<li>If the rule returns a value, it will be stored in that field of the record.</li>
+
+<li>When rules are executed, Suneido automatically tracks their <i>dependencies</i>
+on other fields they access. This includes any fields accessed by functions called by the rule.</li>
+
+<li>Dependencies can also be set manually using <a href="Reference/Record/record.SetDeps.html">record.SetDeps</a> (and retrieved with <a href="Reference/Record/record.GetDeps.html">record.GetDeps</a>)</li>
+
+<li>If a dependency is changed, then the rule field is <i>invalidated</i>.
+This means that the next time the field is accessed, the rule will be executed again.</li>
+
+<li>Dependencies can be stored in the database (by creating a field called <i>fieldname</i>_deps)
+so that when old records are manipulated,
+rules will be triggered just as on new records. 
+See: <a href="Rules/Stored Dependencies.html">Stored Dependencies</a></li>
+
+<li>Invalidations also trigger
+<a href="Reference/Record/record.Observer.html">record.Observer</a>
+- this is used to update the user interface when records change.</li>
+
+<li>Rules should not have <i>side effects</i> i.e. they should not modify any other fields.</li>
+
+<li>Rules can be evaluated on record constants #{...} but will be slower because they cannot cache results.</li>
+</ul>
+
+<p>Rules can be used without actually storing the values:
+<a href="Rules/Derived Columns.html">Derived Columns</a>,
+or calculated columns can be stored in the database:
+<a href="Rules/Stored Rules.html">Stored Rules</a></p>
+
+<p>Rules can also be used to adjust controls:
+<a href="Rules/Control Rules.html">Control Rules</a></p>

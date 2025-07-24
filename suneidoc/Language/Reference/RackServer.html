@@ -1,0 +1,87 @@
+<h3>RackServer</h3>
+
+<pre>(name = "Rack Server", port = 80, exit = false, app, with = #())</pre>
+
+<p>An HTTP <a href="SocketServer.html">SocketServer</a> based on <a href="http://rack.rubyforge.org/doc/SPEC.html">Ruby Rack</a> and <a href="http://www.python.org/dev/peps/pep-3333">Python WSGI</a> designs. RackServer is recommended over the older <a href="HttpServer.html">HttpServer</a>. RackServer supports HTTP 1.1 persistent connections whereas HttpServer does not.</p>
+
+<p>If an exception is thrown it will be logged with SuneidoLog and a '500 Internal Server Error' will be returned. Socket related exceptions are not logged.</p>
+
+<p>RackServer currently does not support streaming input or output. Because it reads the entire request body into memory it will return '413 Request Entity Too Large' if the request Content-Length is too large.</p>
+
+<h4>Application</h4>
+
+<p>The supplied app is called with (env: env) which contains:</p>
+
+<dl class="code">
+<dt>remote_user</dt>
+<dd>From <a href="SocketServer/socketServer.RemoteUser.html">socketServer.RemoteUser</a>()</dd>
+<dt>request</dt>
+<dd>The complete request line</dd>
+<dt>method</dt>
+<dd>The method from the request in upper case e.g. "GET"</dd>
+<dt>path</dt>
+<dd>The portion of the URI before a question mark ('?')</dd>
+<dt>query</dt>
+<dd>The portion of the URI after a question mark ('?')</dd>
+<dt>queryvalues</dt>
+<dd>The query string converted to an object using <a href="UrlDecodeValues.html">UrlDecodeValues</a></dd>
+<dt>version</dt>
+<dd>The HTTP version from the request line as a number, e.g. 1.1</dd>
+<dt>body</dt>
+<dd>The content of the request</dd>
+</dl>
+
+<p>plus the headers from the request as intepreted by InetMesg.HeaderValues.</p>
+
+<p>The app should return an object with three members - the response code, an object containing response headers, and a content string. The response header members will be translated from underscores to dashes so that e.g. you can write <code>#(Content_Type: 'text/html')</code> instead of <code>#('Content-Type': 'text/html')</code></p>
+
+<p>As a shortcut, returning just a string will default to a response code of "200 OK" and no extra headers.</p>
+
+<p>Returning an object with two members will be taken as the response code and the content, with no extra headers.</p>
+
+<p>The simplest app is a function returning a string, for example:</p>
+
+<pre>function () { return "hello world" }</pre>
+
+<p>which is equivalent to:</p>
+
+<pre>function (env/*unused*/) { return #("200 OK", (), "hello world") }</pre>
+
+<p>Note: Since this simple app does not look at the request, it will return the same result for any method or url.</p>
+
+<p>Run it with:</p>
+<pre>RackServer(app: function () { return "hello world" })</pre>
+
+<p>Note: the app argument must be named since we are not passing the name, port and exit arguments.</p>
+
+<h4>Middleware</h4>
+
+<p>Middleware can be specified using the "with" parameter. For example:</p>
+
+<pre>RackServer(app: MyApp, with: [RackContentType, RackLog])</pre>
+
+<p>The middleware will be applied in the order listed, in this example RackLog would be executed last (outermost).</p>
+
+<p>The simplest "do nothing" middleware is:</p>
+<pre>
+class
+    {
+    New(.app)
+        { }
+    Call(env)
+        {
+        return (.app)(env: env)
+        }
+    }
+</pre>
+
+<p>A middleware component can do things before or after the app that it wraps. It can alter the request environment before passing it to the app, or it can alter the response returned by the app. It also has the option of handling the request itself and not calling the app that it wraps at all.</p>
+
+<p>Middleware that wants to standardize a result can call RackServer.ResultOb(result) which handles the result shortcuts and returns a standard three member object.</p>
+
+<p>See also:
+<a href="RackRouter.html">RackRouter</a>,
+<a href="RackContentType.html">RackContentType</a>,
+<a href="RackLog.html">RackLog</a>,
+<a href="RackEcho.html">RackEcho</a>,
+<a href="RackDebug.html">RackDebug</a><p>

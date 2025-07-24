@@ -1,0 +1,34 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>string.Find1of</h4>
+
+<pre>(chars, pos = 0) => number</pre>
+
+<p>Returns the first position greater than or equal to <b>pos</b> where a character from <b>chars</b> is found, or Size() if not found.</p>
+
+<p><b>chars</b> is a list of characters.</p> 
+
+<p>If the first character is '^' then the set of characters will be negated. 
+i.e. it will match everything except those characters. A literal '^' can be included as long as it is not the first character. e.g. "abc^"</p>
+
+<p>A range of characters can be abbreviated with '-'.
+For example 'a-zA-Z'. 
+A literal '-' can be included as the first or last character e.g. "-+*/" or "*/+="</p>
+
+<p>Note: negation and ranges were added 2024-10-25</p>
+
+<p>For example:</p>
+<pre>
+"this is a test".Find1of("si") => 2
+</pre>
+
+<p>See also: <a href="string.Has1of?.html">string.Has1of?</a></p>
+
+<p>See also:
+<a href="string.FindLast.html">string.FindLast</a>,
+<a href="string.FindLast1of.html">string.FindLast1of</a>,
+<a href="string.FindRx.html">string.FindRx</a>,
+<a href="string.FindRxLast.html">string.FindRxLast</a>,
+<a href="string.ForEachMatch.html">string.ForEachMatch</a>,
+<a href="string.ForEach1of.html">string.ForEach1of</a>,
+<a href="string.Has?.html">string.Has?</a>,
+<a href="string.Match.html">string.Match</a><p>

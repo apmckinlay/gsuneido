@@ -1,0 +1,46 @@
+<h3><a href="../Hwnd.html">Hwnd</a> - Methods</h3>
+
+<dl class="code">
+<dt>AddHwnd(hwnd)</dt>
+<dd>Adds the hwnd to .WndProc.HwndMap. This is normally done automatically by Hwnd.CreateWindow.</dd>
+
+<dt>CreateWindow(className, windowName, style, exStyle=0, x=0, y=0, w=0, h=0, id=0)</dt>
+<dd>Calls CreateWindowEx, assigns the result to .Hwnd, and enters it in .WndProc.HwndMap.</dd>
+
+<dt>FixedFont()</dt>
+<dd>Sets the current font to the ANSI_FIXED_FONT stock object.</dd>
+
+<dt>GetFont() => hfont</dt>
+<dd>Returns the handle for the current font, or 0 (zero) if no font has been specified.</dd>
+
+<dt>Mapcmd(command_name) => command_number</dt>
+<dd>Calls <a href="../Window/window.Mapcmd.html">.Window.Mapcmd</a></dd>
+
+<dt>PostMessage(msg, wParam = 0, lParam = 0) => result</dt>
+<dd>Equivalent to:
+<pre>PostMessage(.Hwnd, msg, wParam, lParam)</pre></dd>
+
+<dt>Repaint(erase = true)</dt>
+<dd>Specifies that the control needs to be redrawn on the screen. The actual redraw will occur when the next WM_PAINT message is sent.<br />
+Equivalent to:
+<pre>InvalidateRect(.Hwnd, NULL, erase)</pre>
+See also: MSDN documentation for InvalidateRect</dd>
+
+<dt>SendMessage(msg, wParam = 0, lParam = 0) => result</dt>
+<dd>Equivalent to:
+<pre>SendMessage(.Hwnd, msg, wParam, lParam)</pre></dd>
+
+<dt>SetFont(font = "", size = "", weight = "", text = "", underline = false)</dt>
+<dd>If <i>font, size, weight</i>, and <i>underline</i> all have default values, the font will be set to Suneido.logfont<br />
+<i>size</i> is in points or can be relative by passing a string starting with + or -, e.g. "+3".<br />
+<i>weight</i> is in the range 0 to 1000. 400 is normal, 700 is bold. 0 or "" will use the default weight.<br />
+If the font cannot be constructed, SetFont will use the default gui font stock object.<br />
+If <i>text</i> is supplied, .Xmin, .Ymin, and .Top are set based on it.</dd>
+
+<dt>Update() => result</dt>
+<dd>Causes any pending screen updates to be done.<br />
+Equivalent to:
+<pre>UpdateWindow(.Hwnd)</pre>
+See also: MSDN documentation for UpdateWindow</dd>
+
+</dl>

@@ -1,0 +1,68 @@
+<h3>Writing a Controller</h3>
+
+<p>A <a href="../Reference/Controller.html">Controller</a> wraps a control (or group of controls) in order to manage them and receive messages they Send.</p>
+
+<pre>
+<b>MyEditorControl</b>
+
+Controller
+    {
+    Title: "Simple Editor"
+    New()
+        {
+        e = .Vert.Editor
+        .Redir('On_Undo', e)
+        .Redir('On_Redo', e)
+        .Redir('On_Cut', e)
+        .Redir('On_Copy', e)
+        .Redir('On_Paste', e)
+        .status = .Vert.Status
+        }
+    Controls:
+        (Vert
+            (Toolbar Cut Copy Paste "" Undo Redo)
+            Scintilla
+            Statusbar)
+    Commands:
+        (
+        (Undo,              "Ctrl+Z",   "Undo the last action")
+        (Redo,              "Ctrl+Y",   "Redo the last action")
+        (Cut,               "Ctrl+X",   "Cut the selected text to the clipboard")
+        (Copy,              "Ctrl+C",   "Copy the selected text to the clipboard")
+        (Paste,             "Ctrl+V",   "Insert the contents of the clipboard")
+        )
+    Menu:
+        (
+        ("&File",
+            "&Close")
+        ("&Edit",
+            "&Undo", "&Redo", "",
+            "Cu&t", "&Copy", "&Paste")
+        )
+    Status(status)
+        {
+        .status.Set(status)
+        }
+    }
+</pre>
+
+<p>Note:</p>
+<ul>
+<li>inherit from Controller</li>
+
+<li>specify a Title *</li>
+
+<li>optionally redirect commands (menu or toolbar) to controls</li>
+
+<li>specify the control(s)</li>
+
+<li>define commands (menu or toolbar)</li>
+
+<li>define a menu if you want one *</li>
+
+<li>handle messages that controls Send e.g. Status from Scintilla</li>
+</ul>
+
+<p>* Title and Menu will only be used if this is the top level control in a Window or Dialog</p>
+
+<p>Note: Any messages that the Controller does not handle are dropped. If you want unhandled messages to propagate to another Controller that contains this one, use <a href="../Reference/PassthruController.html">PassthruController</a> instead.</p>

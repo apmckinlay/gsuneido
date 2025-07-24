@@ -1,0 +1,59 @@
+<h3>Use Member Parameters for Controls</h3>
+
+<p>When a user interface is fixed, you can write something like:</p>
+<pre>
+Controller
+    {
+    Controls: (...)
+</pre>
+
+<p>Or if you need to build the layout in code:</p>
+<pre>
+Controller
+    {
+    Controls()
+        {
+        return ...
+        }
+</pre>
+
+<p>When a user interface layout depends on arguments, one way to handle it is:</p>
+<pre>
+Controller
+    {
+    New(a, b, c)
+        {
+        super(.controls(a, b, c))
+        }
+    controls(a, b, c)
+        {
+        return Object( ... )
+        }
+</pre>
+
+<p>This works but it is somewhat verbose and you have to repeat the arguments multiple times. This can be simplified with member parameters.</p>
+<pre>
+Controller
+    {
+    New(.a, .b, .c)
+        {
+        }
+    Controls()
+        {
+        // can use .a, .b, and .c here
+        return ...
+        }
+</pre>
+
+<p>You still need to have a <code>New</code> since it must accept the arguments, but it can be empty. (An implicit <a href="../../Language/Classes/super.html">super</a> call will be generated.)</p>
+
+<p>Note: You could not use this approach prior to member parameters because an explicit super call must be the first line of New.</p>
+<pre style="color: red;">
+    New(a, b, c)
+        {
+        .a = a
+        .b = b
+        .c = c
+        super() // INVALID BECAUSE NOT FIRST STATEMENT
+        }
+</pre>

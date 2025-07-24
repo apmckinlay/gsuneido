@@ -1,0 +1,28 @@
+<h3>Overview</h3>
+
+<p>Suneido includes the same basic statements as C, C++, or Java, with some minor additions (forever) and some minor differences (switch).</p>
+
+<p>Wherever a statement is expected, you can use a <i>compound statement</i> i.e. zero or more statements enclosed in curly braces.</p>
+<pre>
+{
+<i>statements</i>
+}
+</pre>
+
+<p>Unlike C or C++, semicolons are only required in order to put multiple statements on a line. For example:</p>
+<pre>
+x = 5 ; y = 6
+</pre>
+
+<p>Unlike C, C++, or Java, parenthesis are not required around the expressions of control statements if they are terminated with a newline. For example:</p>
+<pre>
+if x is false
+    return false
+</pre>
+
+<p>However, parenthesis are required around a C style "for":</p>
+<pre>
+for (i = 0; i &lt; 10; ++i)
+</pre>
+
+<p>Omitting parenthesis can lead to ambiguities - see <a href="../Whitespace.html">Whitespace</a>.</p>

@@ -1,0 +1,14 @@
+<h3>Writing Wrapper Controls</h3>
+
+<p>A "wrapper" control is a Suneido control that "wraps" a Windows control. Some examples of wrapper controls are: <a href="../Reference/ButtonControl.html">ButtonControl</a>, <a href="../Reference/StaticControl.html">StaticControl</a>, and <a href="../Reference/EditControl.html">EditControl</a>.</p>
+
+<p>Wrapper controls normally derive from either Hwnd or WndProc if they need to respond to WM_ window messages.</p>
+
+<h4>Guidelines</h4>
+<ul>
+<li>Write methods for each SendMessage. Name these messages based on the Windows API message constant. e.g. the method for EM_REPLACESEL would be called ReplaceSel.</li>
+
+<li>Keep the wrapper "thin". If you want to add behavior consider doing it in a derived class. For example, EditControl is the basic wrapper with FieldControl and EditorControl adding additional functionality</li>
+</ul>
+
+<p>See also: <a href="Writing a Hwnd Control.html">Writing a Hwnd Control</a>, <a href="Writing a WndProc Control.html">Writing a WndProc Control</a>.</p>

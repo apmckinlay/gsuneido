@@ -1,0 +1,62 @@
+<h2>Responding to a Button</h2>
+
+<p><b>Category:</b> User Interface</p>
+
+<p><b>Problem</b></p>
+
+<p>You want to do something when the user clicks on a button.</p>
+
+<p><b>Ingredients</b></p>
+
+<p><a href="../User Interfaces/Reference/ButtonControl.html">ButtonControl</a>, 
+<a href="../User Interfaces/Reference/Controller.html">Controller</a>, 
+<a href="../User Interfaces/Reference/FieldControl.html">FieldControl</a>, 
+<a href="../User Interfaces/Reference/StaticControl.html">StaticControl</a>, 
+<a href="../User Interfaces/Reference/Alert.html">Alert</a></p>
+
+<p><b>Recipe</b></p>
+
+<p>Enter this in a library (e.g. mylib) as My_Button:</p>
+
+<pre>
+Controller
+    {
+    Controls:
+        (Vert
+            (Static 'Enter your name')
+            Field
+            (Button Hello)
+            )
+    On_Hello()
+        {
+        Alert("Hello " $ .Vert.Field.Get())
+        }
+    }
+</pre>
+
+<p>You can then run it directly from Library View or from the WorkSpace with:</p>
+
+<pre>
+My_Button()
+</pre>
+
+<p>or:</p>
+
+<pre>
+Window(My_Button)
+</pre>
+
+<p>Controls like Button use .Send to send "messages" to their Controller. To handle/respond to these messages you have to create a Controller and within it, define a method corresponding to the
+message that the control is Send'ing. In this case, ButtonControl sends a message of "On_" $ button-name and our button is called "Hello" so our method is "On_Hello". In this example, the On_Hello
+method simply displays an Alert - but it could, of course, do other things.</p>
+
+<p><b>Discussion</b></p>
+
+<p>The example code also demonstrates one way to access the contents of a field control - a better alternative if you have a lot of fields is to use a RecordControl.</p>
+
+<p>If you only want your controller to catch some messages and to pass the rest on to any containing controller, use PassthruController instead of Controller.</p>
+
+<p><b>See Also</b></p>
+
+<p><a href="Using RecordControl.html">Using RecordControl</a>, 
+<a href="Determining the Source of Messages.html">Determining the Source of Messages</a></p>

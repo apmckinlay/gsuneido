@@ -1,0 +1,39 @@
+<h3><a href="../TabsControl.html">TabsControl</a> - Methods</h3>
+
+<dl class="code">
+<dt>ConstructTab(i)</dt>
+<dd>Creates the control for the tab at position <i>i</i>.  The control is not visible until the tab is selected. If the tab's control has already been constructed, ConstructTab does nothing.</dd>
+
+<dt>Constructed?(i)</dt>
+<dd>Returns true if the tab's control is constructed, false otherwise.</dd>
+
+<dt>GetControl(i = false)</dt>
+<dd>Returns the control for the tab at position <i>i</i>.  If i is false, then the control for the currently selected tab is returned.</dd>
+
+<dt>GetSelected()</dt>
+<dd>Returns the index of the selected tab (starting at 0).</dd>
+
+<dt>Select(i)</dt>
+<dd>Makes the current tab the tab at index <i>i</i> and displays its contents.</dd>
+
+<dt>DestroyTab(i)</dt>
+<dd>&nbsp;</dd>
+
+<dt>SetEnabled(bool)</dt>
+<dd>enable/disable tabs</dd>
+
+<dt>SetReadOnly(bool)</dt>
+<dd>if true the controls in the tab are readonly</dd>
+
+<dt>SetVisible(bool)</dt>
+<dd>if false the tabs are not visible</dd>
+
+<dt>GetTabCount()</dt>
+<dd>get the number of tabs in the TabsControl</dd>
+
+<dt>SetImageList(images)</dt>
+<dd>set the image list</dd>
+
+<dt>SetImage(i, img)</dt>
+<dd>set an image in a tab</dd>
+</dl>

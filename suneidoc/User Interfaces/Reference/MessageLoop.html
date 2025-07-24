@@ -1,0 +1,31 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>MessageLoop</h3>
+
+<pre>(hdlg)</pre>
+
+<p>This is Suneido's built-in message loop. The main message loop is run automatically at startup. MessageLoop is normally only used by Dialog.</p>
+
+<p><b>hdlg</b> must be supplied.</p>
+
+<p>The main processing is:</p>
+
+<pre>
+if (hdlg && GetWindowLong(hdlg, GWL_USERDATA) == 1)
+    return ;
+HWND window = GetAncestor(msg.hwnd, GA_ROOT);
+if (HACCEL haccel = (HACCEL) GetWindowLong(window, GWL_USERDATA))
+    if (TranslateAccelerator(window, haccel, &msg))
+        continue ;
+if (IsDialogMessage(window, &msg))
+    continue ;
+TranslateMessage(&msg);
+DispatchMessage(&msg);
+</pre>
+
+<p>To set the accelerators for the dialog use:</p>
+<pre>SetWindowLong(hdlg, GWL.USERDATA, haccels)</pre>
+
+<p>To end the dialog use:</p>
+<pre>PostMessage(.Hwnd, WM.NULL, END_MESSAGE_LOOP, END_MESSAGE_LOOP)</pre>
+
+<p><b>Note</b>: This is handled automatically by <a href="Dialog.html">Dialog</a></p>

@@ -1,0 +1,11 @@
+<h4>popclient.Top</h4>
+
+<pre>(i, nlines) => string or false</pre>
+
+<p>Returns the message header and the number of lines of the message body specified by nlines for the message at index i.  If there is an error from the server, then false is returned.</p>
+
+<p>For example, to get just the header of the first message:</p>
+<pre>popclient.Top(1, 0);</pre>
+
+<p>To get the header and the first five lines of the body:</p>
+<pre>popclient.Top(1, 5);</pre>

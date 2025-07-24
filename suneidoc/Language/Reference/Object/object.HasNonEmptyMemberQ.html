@@ -1,0 +1,12 @@
+<h4>object.HasNonEmptyMember?</h4>
+
+<pre>(members) => true or false</pre>
+
+<p>Returns true if the object has one of the given members and it is non-empty.</p>
+
+<p>For example:</p>
+<pre>
+x = #(a: 1, b: 2, c: 3, b: 4)
+x.HasNonEmptyMember?(#(c, d))
+=> true
+</pre>

@@ -1,0 +1,17 @@
+<h4>number.Int?</h4>
+
+<pre>() => number</pre>
+
+<p>Returns true if the number is an integer, and false if it has a fractional component.</p>
+
+<p>For example:</p>
+<pre>
+n = 123
+n.Int?()
+    => true
+n += 0.456
+n.Int?()
+    => false
+n.Int().Int?()
+    => true
+</pre>

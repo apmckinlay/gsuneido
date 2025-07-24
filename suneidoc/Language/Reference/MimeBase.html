@@ -1,0 +1,26 @@
+<div style="float:right"><span class="toplinks">
+<a href="MimeBase/Methods">Methods</a>
+</span></div>
+<h3>MimeBase</h3>
+<pre>(maintype = "text", subtype = "plain")</pre>
+
+<p>Basic support for generating MIME messages.</p>
+
+<p>MimeText and MimeMultiPart are derived (inherit) from MimeBase.</p>
+
+<p>For example:</p>
+<pre>
+MimeBase("application", "octet-stream").
+    AddHeader("Content-Disposition", "attachment", filename: "test.txt").
+    SetPayload("second part").Base64().ToString()
+</pre>
+
+<p>would produce:</p>
+<pre>
+Content-Type: application/octet-stream
+MIME-Version: 1.0
+Content-Disposition: attachment; filename="test.txt"
+Content-Transfer-Encoding: base64
+
+c2Vjb25kIHBhcnQ=
+</pre>

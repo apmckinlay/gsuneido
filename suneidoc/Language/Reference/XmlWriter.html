@@ -1,0 +1,24 @@
+<h3>XmlWriter</h3>
+
+<p>An <a href="XmlReader.html">XmlReader</a> content handler that builds an XML string from the callbacks.</p>
+
+<p>Empty elements, e.g. StartElement("br"), EndElement("br") with no characters between are converted to a single tag e.g. "&lt;br /></p>
+
+<p>The resulting string is retrieved with the GetText method.</p>
+
+<p>For example:</p>
+<pre>
+xr = new XmlReader
+xw = new XmlWriter
+xr.SetContentHandler(xw)
+xr.Parse('&lt;p>Hello &lt;font size="3">new&lt;/font> world&lt;/p>')
+return xw.GetText()
+
+=> '&lt;p>Hello &lt;font size="3">new&lt;/font> world&lt;/p>'
+</pre>
+
+<p>Encodes &amp;amp; &amp;lt; &amp;gt; &amp;quot; character entities.</p>
+
+<p>Note: Currently, no newlines or indenting are added - the result is one long line.</p>
+
+<p>See also: <a href="Xml.html">Xml</a></p>

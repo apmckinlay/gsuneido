@@ -1,0 +1,180 @@
+<h3>summarize</h3>
+
+<p><i>query</i> <b>summarize</b> [ <i>by-columns</i>, ] [ <i>column</i> = ] <i>function column</i> [ , ... ]</p>
+
+<p>The result of summarize is a table with the specified columns with one row for each value of the by-columns. The allowable functions are: max, min, total, average, count, and list. If a name is not specified for a calculated column, the function name plus the original column name will be used.</p>
+
+<p><b>Note:</b> If there are no rows in the input, there will be no output rows.</p>
+
+<table border="0" width="100%">
+  <tr>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">date</td>
+          <td width="33%" align="center" bgcolor="#C0C0C0">part</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">abc</td>
+          <td width="34%">5</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">def</td>
+          <td width="34%">10</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">abc</td>
+          <td width="34%">1</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">ghi</td>
+          <td width="34%">20</td>
+        </tr>
+      </table>
+    </td>
+    <td align="center">
+      summarize date, <br />
+      count, total quantity</td>
+    <td align="center">
+      =</td>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">date</td>
+          <td width="33%" align="center" bgcolor="#C0C0C0">count</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">total_quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">2</td>
+          <td width="34%">15</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">2</td>
+          <td width="34%">21</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<table border="0" width="100%">
+  <tr>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">date</td>
+          <td width="33%" align="center" bgcolor="#C0C0C0">part</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">abc</td>
+          <td width="34%">5</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">def</td>
+          <td width="34%">10</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">abc</td>
+          <td width="34%">1</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">ghi</td>
+          <td width="34%">20</td>
+        </tr>
+      </table>
+    </td>
+    <td align="center">
+      summarize part, <br />total quantity</td>
+    <td align="center">
+      =</td>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">part</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">total_quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">abc</td>
+          <td width="34%">6</td>
+        </tr>
+        <tr>
+          <td width="33%">def</td>
+          <td width="34%">10</td>
+        </tr>
+        <tr>
+          <td width="33%">ghi</td>
+          <td width="34%">20</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+&nbsp;
+<table border="0" width="100%">
+  <tr>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">date</td>
+          <td width="33%" align="center" bgcolor="#C0C0C0">part</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">abc</td>
+          <td width="34%">5</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/01</td>
+          <td width="33%">def</td>
+          <td width="34%">10</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">abc</td>
+          <td width="34%">1</td>
+        </tr>
+        <tr>
+          <td width="33%">00/09/02</td>
+          <td width="33%">ghi</td>
+          <td width="34%">20</td>
+        </tr>
+      </table>
+    </td>
+    <td align="center">
+      summarize count,<br />
+      total quantity</td>
+    <td align="center">
+      =</td>
+    <td>
+      <table border="1" width="100%">
+        <tr>
+          <td width="33%" align="center" bgcolor="#C0C0C0">count</td>
+          <td width="34%" align="center" bgcolor="#C0C0C0">total_quantity</td>
+        </tr>
+        <tr>
+          <td width="33%">4</td>
+          <td width="34%">36</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<p>As a useful special case, when you get the overall minimum or maximum of a key field, you also get the associated record. For example:</p> 
+<pre>
+Query1('tables summarize min table')
+    => [min_table: 1, tablename: "tables", table: 1]
+</pre>

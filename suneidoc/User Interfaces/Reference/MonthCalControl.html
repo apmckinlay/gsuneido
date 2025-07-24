@@ -1,0 +1,25 @@
+<h3>MonthCalControl</h3>
+
+<pre>(date = '', daystate = false)</pre>
+
+<p>Uses the Windows MonthCal common control to display a calendar from which the user can select a date.</p>
+
+<img src="../../res/monthcal.png" />
+
+<p>Methods:</p>
+<dl>
+<dt>SetDayState(state)</dt>
+<dd>Sets the day states for all months that are currently visible within a month calendar control. state is a list of integers, one per month, with one bit per day.</dd>
+</dl>
+
+<p>Send's the following:</p>
+<dl>
+<dt>DateSelectChange(date)</dt>
+<dd>When a date is selected (i.e. MCN_SELECT)</dd>
+
+<dt>MonthCalSelChange(date)</dt>
+<dd>When anything is changed (i.e. MCN_SELCHANGE)</dd>
+
+<dt>GetDayState(start_date, num_days) => list</dt>
+<dd>This is called if daystate is true. It should return a list of integers, one per month, with one bit per day.</dd>
+</dl>

@@ -1,0 +1,18 @@
+<div style="float:right"><span class="toplinks">
+<a href="ProgressBarControl/Methods.html">Methods</a>
+</span></div>
+<h3>ProgressBarControl</h3>
+
+<pre>(style)</pre>
+
+<p>ProgressBarControl is a simple wrapper for the Windows Progress Bar control.  A style parameter can be specified to add to the default WS.VISIBLE style. Two progress bar styles that can be applied are PBS.SMOOTH and PBS.VERTICAL.</p>
+
+<p>Here's a very simple example:</p>
+<pre>
+pb = ProgressBarControl().Ctrl
+for (i = 0; i &lt; 9; ++i)
+    {
+    pb.StepIt()
+    Sleep(100)
+    }
+</pre>

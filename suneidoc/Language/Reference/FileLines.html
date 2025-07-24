@@ -1,0 +1,25 @@
+<h3>FileLines</h3>
+
+<pre>(file, block)</pre>
+
+<p>FileLines opens the file and passes a sequence of lines to the block.</p>
+
+<p>For example:</p>
+<pre>
+FileLines(file)
+	{ it.Filter(...).Map(...) }
+</pre>
+
+<p>This is somewhat equivalent to GetFile(file).Lines() except FileLines does not read the entire file into memory, it only reads a line at a time.</p>
+
+<p>See also:
+<a href="Drop.html">Drop</a>,
+<a href="Filter.html">Filter</a>,
+<a href="Nof.html">Nof</a>,
+<a href="Grep.html">Grep</a>,
+<a href="Map.html">Map</a>,
+<a href="Map2.html">Map2</a>,
+<a href="Seq.html">Seq</a>,
+<a href="Sequence.html">Sequence</a>,
+<a href="String/string.Lines.html">string.Lines</a>,
+<a href="Take.html">Take</a><p>

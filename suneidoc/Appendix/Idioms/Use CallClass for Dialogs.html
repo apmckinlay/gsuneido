@@ -1,0 +1,22 @@
+<h3>Use CallClass for Dialogs</h3>
+
+<p>Rather than put the <a href="../../User Interfaces/Reference/Dialog.html">Dialog</a> call in the application code, possibly duplicated multiple times, put the Dialog code in the <a href="../../Language/Classes/CallClass.html">CallClass</a> of the <a href="../../User Interfaces/Reference/Controller.html">Controller</a>.</p> 
+
+<p>For example:</p>
+<pre>
+Controller
+    {
+    CallClass(...)
+        {
+        return Dialog(0, Object(this, ...))
+        }
+    New(...)
+        {
+        ...
+        }
+    ...
+</pre>
+
+<p>This is especially useful when the Dialog call is more complex, e.g. using styles or sizes.</p>
+
+<p><b>Note</b>: This approach can also be used for <a href="../../User Interfaces/Reference/Window.html">Window</a> as well as Dialog</p>

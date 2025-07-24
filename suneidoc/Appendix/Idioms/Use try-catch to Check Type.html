@@ -1,0 +1,21 @@
+<h3>Use try-catch to Check Type</h3>
+
+<p>Instead of, for example, using Object? or String? to check the type of a value, just attempt the operation.</p>
+
+<p>For example:</p>
+<pre>
+Indexable?
+
+function (x)
+    {
+    try
+        x[0]
+    catch (err)
+        return err is "member not found: 0" ? true : false
+    return true
+    }
+</pre>
+
+<p><b>Note</b>: In some cases, as in this one, you may have to use the exception to determine the result.</p>
+
+<p>In Python this idiom is known as <i>Easier to Ask Forgiveness than Permission</i> (EAFP), as opposed to <i>Look Before You Leap</i> (LBYL).</p>

@@ -1,0 +1,25 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>object.Size</h4>
+
+<pre>() or (list:) or (named:) => number</pre>
+
+<p>Returns the number of members in the object, or if list: is specified, the number of un-named members in the object i.e. the initial list.</p>
+
+<p>For example:</p>
+<pre>
+#().Size() => 0
+#(123, "abc", name: "Fred", age: 25).Size() => 4
+#(123, "abc", name: "Fred", age: 25).Size(list:) => 2
+#(123, "abc", name: "Fred", age: 25).Size(named:) => 2
+</pre>
+
+<p><b>Note:</b> The list: members are the consecutive integer members starting at zero. If a number is "missing" then subsequent numbers will go into the named: members. For example:</p>
+<pre>
+ob = Object(11, 22, 33, 44)
+ob.Size(list:)
+    => 4
+ob.Erase(2)
+    => #(11, 22, 3: 44)
+ob.Size(list:)
+    => 2
+</pre>

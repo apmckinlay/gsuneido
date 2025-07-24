@@ -1,0 +1,35 @@
+<h2>Version Control</h2>
+
+<img id="ss1" class="ss"
+		title="Click to expand/shrink"
+		src="../res/svc.png"
+		onClick="screenshot(1)" />
+
+<p>To access Suneido's builtin <b>Version Control</b>, click the <b>V</b> in the <b>WorkSpace</b> toolbar. Before using the <b>Version Control</b>, you will need to fill the required settings. To do this open <b>Version Control</b> and select <b>File > Settings</b>, or click the <b>Gear</b> icon in the top right corner. The <b>Version Control</b> can be setup in two ways:</p>
+
+<b><p><div class="hidelinks" onClick="showhide('standalone')">Standalone <font face="Wingdings">Ú</font></div></p></b>
+<div id="standalone" class="showhide">
+to run as <b>Standalone</b>, simply check off the <b>standalone</b> box. Any changes you then send through <b>Version Control</b> will be stored in master tables in the local database. This will allow you to track the history of your changes without need for a separate Suneido instance.
+</div>
+
+<b><p><div class="hidelinks" onClick="showhide('clientServer')">Client-Server <font face="Wingdings">Ú</font></div></p></b>
+<div id="clientServer" class="showhide">
+to run with a Client-Server, you will first need to start up a separate copy of Suneido. Once you have done this, you will need to setup authorized users.
+This is to protect your code base. Once you have the desired users set up, simply fill the <b>Server</b>, <b>Login</b> and <b>Password</b> fields accordingly.
+<br/><br/>
+If the connection is successful, the <b>Gear</b> and <b>Lock</b> icon should be dark gray. Additionally, the Lock icon should have a checkmark in it.
+Clicking the <b>Lock</b> icon will display the status of your connection. If there is an issue, the icon will have an <b>X</b> in the center and potentially be red (depends on the error).
+</div>
+
+<h3>Features</h3>
+<ul>
+<li><b>Conflict resolution.</b> Conflict detected between the local record and the master record will be displayed giving the opportunity to merge and review the conflict</li>
+
+<li><b>Database integrity checking.</b> By using the <b>Compare</b> button, you can verify a local table state against its master table. Any discrepancy will be displayed here. You can correct these discrepancies by overwriting the local record with the master record. To <b>Overwrite</b> a discrepancy, simply select the desired items in the Compare list. Then <b>right-click > Overwrite</b>.</li>
+
+<li><b>Status / Setting Icons.</b> You can access your <b>Version Control</b> settings at any time via the Gear icon in the top right corner. Additionally, if you wish to see the status of your connection (or any potential error messages) you can click the Lock icon.</li>
+
+<li><b>Export</b>. This button will export all selected items in the Local list to one file. This file can be imported into the Library View or Book Edit controls.</li>
+
+<li><b>Restore Items / Lines</b>. By right-clicking a Local item, you can restore the record to its original state. Additionally, you can restore specific lines by right-clicking in the local record display and select <b>Overwrite Highlighted Lines</b> </li>
+</ul>

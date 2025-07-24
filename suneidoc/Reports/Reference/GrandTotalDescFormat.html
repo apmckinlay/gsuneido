@@ -1,0 +1,14 @@
+<h3>GrandTotalDescFormat</h3>
+
+<pre>(item, skip = .16)</pre>
+
+<p>GrandTotalDescFormat is derived from <a href="GrandTotalFormat">GrandTotalFormat</a>. It displays and justifies the <b>item</b> to the right.</p>
+
+<p>For example: </p>
+<pre>
+(Query
+    (_output 
+        desc: (GrandTotalDesc (Text 'Grand Total') ), 
+        amount: (GrandTotal grandtotal_amount) )
+    )
+</pre>

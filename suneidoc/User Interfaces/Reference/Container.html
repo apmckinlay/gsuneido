@@ -1,0 +1,37 @@
+<h3>Container</h3>
+
+<p>Abstract base class for <em>containers</em>
+i.e. controls that contain other controls.</p>
+
+<p>Controls derived from Container must implement:</p>
+<dl>
+<dt>GetChildren() => object</dt>
+<dd>Return a list of the container's child controls.</dd>
+</dl>
+
+<p>Has default methods for:</p>
+<dl>
+<dt>Broadcast(method, args...)</dt>
+<dd>Calls the method with the supplied arguments on each child control.</dd>
+
+<dt>SetEnabled(enabled)</dt>
+<dd>Broadcasts SetEnabled.</dd>
+
+<dt>GetEnabled()</dt>
+<dd>Returns True if all child controls are enabled, False otherwise.</dd>
+
+<dt>SetVisible(visible)</dt>
+<dd>Broadcasts SetVisible.</dd>
+
+<dt>SetReadOnly(readOnly)</dt>
+<dd>Broadcasts SetReadOnly.</dd>
+
+<dt>GetReadOnly()</dt>
+<dd>Returns True if all child controls are read-only, False otherwise.</dd>
+
+<dt>HasFocus?()</dt>
+<dd>Returns True is any child control has the focus, False otherwise.</dd>
+
+<dt>Destroy()</dt>
+<dd>Calls Destroy on all the child controls.</dd>
+</dl>

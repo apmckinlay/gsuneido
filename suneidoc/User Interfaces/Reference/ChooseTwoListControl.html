@@ -1,0 +1,16 @@
+<h3>ChooseTwoListControl</h3>
+
+<pre>(list = #(), title = "", mandatory = false, width = 20, listField = false)</pre>
+
+<p>Similar to FieldControl, but has a choose button on the right side. The button will bring up a TwoListControl in a dialog. The list argument is passed to the <a href="TwoListControl.html">TwoListControl</a> to be used as the selection list on the right side. Choosing OK from the dialog will fill in the selection into the field. Cancelling from the dialog will not modify the fields contents.</p>
+
+<p>For example:</p>
+<pre>
+Window(#(ChooseTwoList (1,2,3,4,5,6,7,8,9,0)))
+</pre>
+
+<p>Would display:</p>
+<img src="../../res/ChooseTwo1.gif" />
+
+<p>and clicking on the "..." button would display:</p> 
+<img src="../../res/twolist.png" />

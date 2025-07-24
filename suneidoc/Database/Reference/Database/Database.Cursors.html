@@ -1,0 +1,14 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>Database.Cursors</h4>
+
+<pre>() => number</pre>
+
+<p>Returns the number of open cursors for the current thread.</p>
+
+<p><b>Note:</b> This only works client-server. It will always return 0 when running standalone.</p>
+
+<p>For example:</p>
+<pre>
+Database.Cursors()
+    => 0
+</pre>

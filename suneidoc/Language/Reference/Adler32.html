@@ -1,0 +1,29 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h3>Adler32</h3>
+
+<pre>
+(string) => number
+() => instance
+</pre>
+
+<p>If called with a string it simply returns the Adler32 checksum of the string.</p>
+
+<p>For example:</p>
+<pre>
+Adler32("hello world")
+    => 436929629
+</pre>
+
+<p>To accumulate a checksum incrementally, you can create an instance and update it. For example:</p>
+
+<pre>
+cksum = Adler32()
+cksum.Update("hello ")
+cksum.Update("world")
+cksum.Value()
+    => 436929629
+</pre>
+
+<p>See also:
+<a href="Md5.html">Md5</a>,
+<a href="Sha1.html">Sha1</a><p>

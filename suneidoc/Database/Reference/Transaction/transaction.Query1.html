@@ -1,0 +1,25 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>transaction.Query1</h4>
+
+<pre>(query [, field: value ...]) => record</pre>
+
+<p>Returns the single record from the given query. Returns false if the query does not contain any records. Throws an exception if there is more than one record.</p>
+
+<p>Named arguments (field: value) add a where to the query. For example:</p>
+
+<pre>('tables', tablename: value)</pre>
+
+<p>is equivalent to:</p>
+
+<pre>('tables where tablename = ' $ Display(value)</pre>
+
+<p>See also:
+<a href="../Query1.html">Query1</a>,
+<a href="../QueryEmpty?.html">QueryEmpty?</a>,
+<a href="../QueryExists?.html">QueryExists?</a>,
+<a href="../QueryFirst.html">QueryFirst</a>,
+<a href="../QueryLast.html">QueryLast</a>,
+<a href="transaction.QueryEmpty?.html">transaction.QueryEmpty?</a>,
+<a href="transaction.QueryExists?.html">transaction.QueryExists?</a>,
+<a href="transaction.QueryFirst.html">transaction.QueryFirst</a>,
+<a href="transaction.QueryLast.html">transaction.QueryLast</a><p>

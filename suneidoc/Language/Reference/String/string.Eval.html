@@ -1,0 +1,21 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>string.Eval</h4>
+
+<pre>() => value</pre>
+
+<p>Evaluates the string as Suneido code.</p>
+
+<p>For example:</p>
+<pre>
+"123 + 456".Eval() => 579
+</pre>
+
+<p><b>Note:</b> If the code does not return anything (e.g. a return with no value) then "" will be returned. This is not the same behavior as ServerEval, string.ServerEval, or <a href="../Object/object.Eval.html">object.Eval</a></p>
+
+<p><b>WARNING:</b> Eval is a <b>potential security risk</b>, especially when the string is coming from the user or some other external source. For example, the string could be 'System("del *.*")'. Wherever possible, use Global, string.Compile, or <a href="string.SafeEval.html">string.SafeEval</a> instead</p>
+
+<p>See also:
+<a href="string.Eval2.html">string.Eval2</a>,
+<a href="../ServerEval.html">ServerEval</a>,
+<a href="string.ServerEval.html">string.ServerEval</a>,
+</p>

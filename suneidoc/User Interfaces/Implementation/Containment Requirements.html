@@ -1,0 +1,31 @@
+<h3>Containment Requirements</h3>
+
+<p>In order to be placed in the standard containers, controls must support the following: (Most controls should support containment.)</p>
+
+<h4>Members</h4>
+
+<table>
+<tr><td width="20%">Xmin</td><td>the minimum width of the control</td></tr>
+
+<tr><td>Xstretch</td><td>how much the width of the control can be stretched 
+(0 for no stretch)</td></tr>
+
+<tr><td>Ymin</td><td>the minimum height of the control</td></tr>
+
+<tr><td>Ystretch</td><td>how much the height of the control can be stretched 
+(0 for no stretch)</td></tr>
+</table>
+
+<p>The stretch values of the controls in a container are summed 
+and any excess room in the container is distributed between the controls proportionally.
+</p>
+
+<h4>Methods</h4>
+
+<pre>
+Resize(x, y, w, h)
+Update()
+Destroy()
+</pre>
+
+<p>Note: The base Control class contains default definitions.</p>

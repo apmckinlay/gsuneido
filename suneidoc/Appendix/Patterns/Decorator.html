@@ -1,0 +1,18 @@
+<h3>Decorator</h3>
+
+<p>Add extra features to objects dynamically without modifying their class or using inheritance. Also known as <i>wrappers</i>. Decorators are more flexible than inheritance:</p>
+<ul>
+<li>you can attach multiple decorators to the same object, whereas you can only inherit from one class</li>
+
+<li>decorators are attached at run time, not just when you write the code</li>
+</ul>
+
+<p>Decorator is similar to Composite since a decorator has the same interface as the object it wraps. But the purpose of decorators is to add features, whereas Composite is designed to structure groups of objects.</p>
+
+<p>Uses:</p>
+<ul>
+<li>ListViewModelCached is a decorator that wraps ListViewModel 
+and adds caching using LruCache</li>
+</ul>
+
+<p>See Design Patterns by Gamma, Helm, Johnson, Vlissides.</p>

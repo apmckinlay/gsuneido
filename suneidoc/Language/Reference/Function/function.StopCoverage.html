@@ -1,0 +1,16 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>function.StopCoverage</h4>
+
+<pre>() => object</pre>
+
+<p>StopCoverage stops collecting coverage information and returns the accumulated results (since <a href="function.StartCoverage.html">function.StartCoverage</a> was called).</p>
+
+<p>The returned object will have source code positions as the member names. The value for each will either be a count if counting, or else true/false. There will be an entry for each tracked statement, even if it's zero or false.</p>
+
+<p>Note: Constant propagation may mean that some statements do not generate any code and therefore are never tracked or executed. For example:</p>
+<pre>
+greet = "hello"
+return greet
+</pre>
+
+<p>will be compiled as: <code>return "hello"</code> and <code>greet = "hello"</code> will never be executed.</p>

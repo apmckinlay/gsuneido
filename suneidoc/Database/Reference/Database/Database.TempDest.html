@@ -1,0 +1,15 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>Database.TempDest</h4>
+
+<pre>() => number</pre>
+
+<p>Returns the current amount of temporary index space in use. If all queries are closed properly, this should be zero.</p>
+
+<p>Note: When client-server, this value comes from the server.</p>
+
+<p>For example:</p>
+
+<pre>
+Database.TempDest()
+    => 0
+</pre>

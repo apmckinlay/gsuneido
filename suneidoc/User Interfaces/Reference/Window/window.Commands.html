@@ -1,0 +1,35 @@
+<h4>window.Commands</h4>
+
+<pre>( ) => object</pre>
+
+<p>Returns an object containing information about the commands.  This information is taken from the Commands member of the Window's control.  For example:
+</p>
+
+<pre>
+Controller
+    {
+    Commands:(
+        (Users_Manual, "F1", "Open the Suneido Help", Help)
+          ...
+</pre>
+
+<p>would become:
+</p>
+
+<pre>
+Window.Commands() =>
+    Object(
+        Suneido_Help: Object(
+            accel: "F1",
+            help: "Open the Suneido Help",
+            bitmap: "Help"
+            id: 123)
+</pre>
+
+<p>Where the id is the numeric id assigned by Mapcmd.</p>
+
+<p>This information is used by Window and also by the ToolbarControl.</p>
+
+<p>See also:
+<a href="../../Commands.html">User Interfaces - Commands</a>
+</p>

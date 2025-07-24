@@ -1,0 +1,9 @@
+<h3>EncryptControl</h3>
+
+<p>A FieldControl that uses string.Xor to "encrypt" the stored value.</p>
+
+<p>The key comes from EncryptControlKey. The stdlib version simply returns "encrypt" but you can override this in your own library.</p>
+
+<p><b>Note:</b> This is <u>not</u> strong security, but at least it means that the data is not stored in clear text in the database and therefore will not be found by simply scanning the database file.</p>
+
+<p>See also: <a href="../../Reports/Reference/EncryptFormat.html">EncryptFormat</a></p>

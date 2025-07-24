@@ -1,0 +1,19 @@
+<h3>Chaining Method Calls</h3>
+
+<pre>
+object.
+    method1(...).
+    method2(...).
+    method3(...)
+</pre>
+
+<p>Note: The period must be at the end of the line so that Suneido knows the line is continued.</p>
+
+<p>For example:</p>
+
+<pre>
+    where = ShortestKey(query).
+        Split(',').
+        Map!({|f| f $ ' = ' $ Display(record[fld]) }).
+        Join(' and ')
+</pre>

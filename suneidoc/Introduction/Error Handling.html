@@ -1,0 +1,11 @@
+<h2>Error Handling</h2>
+
+<p>Suneido uses C++ exception handling to catch most errors.</p>
+
+<p>_set_se_translator is used to translate Windows structured exceptions (such as access violations) to C++ exceptions.</p>
+
+<p>Because of the difficulty in handling stack overflows, these are caught by SetUnhandledExceptionFilter which does the minimum possible to log the error and exit. Running out of heap space is handled similarly, again because it is difficult to do much once you run out of memory. No messages are given to the user in these cases.</p>
+
+<p>Fatal errors are normally logged to "error.log" in the current directory (normally the same directory where suneido.db is).</p>
+
+<p>If a fatal error occurs on a client (when running client-server) Suneido logs the error to c:\suneido.err (on the assumption that this is local and will be usable even if the network is not functioning). Next time the client starts up, if it finds a c:\suneido.err file, it sends the contents to error.log on the server and then removes it. This may delay the error getting to the server log, but it helps ensure the error won't be lost.</p>

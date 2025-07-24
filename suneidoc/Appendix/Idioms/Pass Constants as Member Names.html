@@ -1,0 +1,26 @@
+<h3>Pass Constants as Member Names</h3>
+
+<p>Constants are commonly defined in groups in objects. Most of the Windows constants are defined this way. For example, button control states are defined in an object called BST:</p>
+<pre>
+#(
+UNCHECKED:      0x0000
+CHECKED:        0x0001
+INDETERMINATE:  0x0002
+PUSHED:         0x0004
+FOCUS:          0x0008
+)
+</pre>
+
+<p>At first glance it seems simplest just to pass the constant values e.g. BST.CHECKED to functions or methods. However, it's often preferable to pass the member name instead. Because something like BST.CHECKED is an expression, not a constant, it cannot be used as a default parameter value.</p>
+
+<pre>function (state = BST.CHECKED) // ILLEGAL!</pre>
+
+<p>But if you pass member names instead, then you can write:</p>
+
+<pre>function (state = "CHECKED") // OKAY</pre>
+
+<p>Another advantage is that if you pass an invalid member name the error will be detected when the function/method does:</p>
+
+<pre>BST[state]</pre>
+
+<p>If you just pass numeric constants, there is no equivalent detection of bad values.</p>

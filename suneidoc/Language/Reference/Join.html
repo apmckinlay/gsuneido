@@ -1,0 +1,24 @@
+<h3>Join</h3>
+
+<pre>(separator, value ...) => string</pre>
+
+<p>Concatenates the values with the separator between them.</p> 
+
+<p>Empty values ("") are ignored and do not cause extra separators.</p>
+
+<p>This is equivalent to:</p>
+<pre>Object(value ...).Remove("").Join(separator)</pre>
+
+<p>For example:</p>
+
+<pre>
+a = "one"
+b = ""
+c = "two"
+Join(", ", a, b, c)
+    => "one, two"
+</pre>
+
+See also:
+<a href="Opt.html">Opt</a>,
+<a href="Object/object.Join.html">object.Join</a>

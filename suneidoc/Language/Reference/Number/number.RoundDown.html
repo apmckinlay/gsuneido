@@ -1,0 +1,32 @@
+<div style="float:right"><span class="builtin">Builtin</span></div>
+<h4>number.RoundDown</h4>
+
+<pre>(number) => number</pre>
+
+<p>Returns this number rounded down to the specified number of decimal places.</p>
+
+<p>(-x).RoundDown(d) is equivalent to -(x.RoundDown(d))</p>
+
+<p>For example:</p>
+<pre>
+n = 123.98673
+n.RoundDown(3) => 123.986
+n.RoundDown(1) => 123.9
+n.RoundDown(0) => 123
+</pre>
+
+<p>Negative numbers of decimal places will round to that power of 10. For example:</p>
+<pre>
+n = 7654
+n.RoundDown(-1) => 7650
+n.RoundDown(-2) => 7600
+</pre>
+
+<p>See also:
+<a href="number.Round.html">number.Round</a>,
+<a href="number.RoundUp.html">number.RoundUp</a>,
+<a href="number.RoundToNearest.html">number.RoundToNearest</a>,
+<a href="number.RoundToPrecision.html">number.RoundToPrecision</a>,
+<a href="number.Ceiling.html">number.Ceiling</a>,
+<a href="number.Floor.html">number.Floor</a>,
+<a href="number.Int.html">number.Int</a><p>
