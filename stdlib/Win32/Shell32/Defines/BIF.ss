@@ -1,0 +1,11 @@
+// Copyright (C) 2004 Suneido Software Corp. All rights reserved worldwide.
+#(
+STATUSTEXT: 		0x0004
+EDITBOX: 			0x0010
+NEWDIALOGSTYLE: 	0x0020
+USENEWUI: 			0x0040
+SHAREABLE:			0x0100
+
+RETURNONLYFSDIRS:  	1
+DONTGOBELOWDOMAIN:  2
+)

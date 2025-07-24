@@ -1,0 +1,25 @@
+// Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
+#(
+SCROLLOPPOSITE:      0x0001
+BOTTOM:              0x0002
+RIGHT:               0x0002
+MULTISELECT:         0x0004
+FLATBUTTONS:         0x0008
+FORCEICONLEFT:       0x0010
+FORCELABELLEFT:      0x0020
+HOTTRACK:            0x0040
+VERTICAL:            0x0080
+TABS:                0x0000
+BUTTONS:             0x0100
+SINGLELINE:          0x0000
+MULTILINE:           0x0200
+RIGHTJUSTIFY:        0x0000
+FIXEDWIDTH:          0x0400
+RAGGEDRIGHT:         0x0800
+FOCUSONBUTTONDOWN:   0x1000
+OWNERDRAWFIXED:      0x2000
+TOOLTIPS:            0x4000
+FOCUSNEVER:          0x8000
+EX_FLATSEPARATORS:   0x00000001
+EX_REGISTERDROP:     0x00000002
+)

@@ -1,0 +1,10 @@
+// Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
+#(
+UPDOWN:				0x0001
+SHOWNONE:			0x0002
+SHORTDATEFORMAT:	0x0000
+LONGDATEFORMAT:		0x0004
+TIMEFORMAT:         0x0009
+APPCANPARSE:		0x0010
+RIGHTALIGN:			0x0020
+)

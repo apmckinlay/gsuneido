@@ -1,0 +1,12 @@
+// Copyright (C) 2007 Suneido Software Corp. All rights reserved worldwide.
+#(
+NOWHERE:			1
+ONITEMICON:			2
+ONITEMLABEL:		4
+ONITEMSTATEICON:	8
+ONITEM:				14 // ONITEMICON | ONITEMLABEL | ONITEMSTATEICON
+ABOVE:				8
+BELOW:				16
+TORIGHT:			32
+TOLEFT:				64
+)

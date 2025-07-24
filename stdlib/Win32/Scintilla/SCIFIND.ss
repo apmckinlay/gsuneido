@@ -1,0 +1,10 @@
+// Copyright (C) 2020 Suneido Software Corp. All rights reserved worldwide.
+#(
+NONE: 		0x0
+WHOLEWORD:	0x2
+MATCHCASE:	0x4
+WORDSTART:	0x00100000
+REGEXP:		0x00200000
+POSIX:		0x00400000
+CXX11REGEX:	0x00800000
+)

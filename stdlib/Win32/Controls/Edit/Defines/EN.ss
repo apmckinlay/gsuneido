@@ -1,0 +1,28 @@
+// Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
+// Edit Control nofications
+#(
+SETFOCUS:         0x0100
+KILLFOCUS:        0x0200
+CHANGE:           0x0300
+UPDATE:           0x0400
+ERRSPACE:         0x0500
+MAXTEXT:          0x0501
+HSCROLL:          0x0601
+VSCROLL:          0x0602
+// richedit
+MSGFILTER:			0x0700
+REQUESTRESIZE:		0x0701
+SELCHANGE:			0x0702
+DROPFILES:			0x0703
+PROTECTED:			0x0704
+CORRECTTEXT:		0x0705
+STOPNOUNDO:			0x0706
+IMECHANGE:			0x0707
+SAVECLIPBOARD:		0x0708
+OLEOPFAILED:		0x0709
+OBJECTPOSITIONS:	0x070a
+LINK:				0x070b
+DRAGDROPDONE:		0x070c
+ALIGN_LTR:			0x0710
+ALIGN_RTL:			0x0711
+)

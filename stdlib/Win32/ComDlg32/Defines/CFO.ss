@@ -1,0 +1,32 @@
+// Copyright (C) 2004 Suneido Software Corp. All rights reserved worldwide.
+// ChooseFont (CF is already used for Clipboard Formats
+#(
+SCREENFONTS:             0x00000001
+PRINTERFONTS:            0x00000002
+BOTH:                    0x00000003 // CF_SCREENFONTS | CF_PRINTERFONTS
+SHOWHELP:                0x00000004
+ENABLEHOOK:              0x00000008
+ENABLETEMPLATE:          0x00000010
+ENABLETEMPLATEHANDLE:    0x00000020
+INITTOLOGFONTSTRUCT:     0x00000040
+USESTYLE:                0x00000080
+EFFECTS:                 0x00000100
+APPLY:                   0x00000200
+ANSIONLY:                0x00000400
+SCRIPTSONLY:             0x00000400 // CF_ANSIONLY
+NOVECTORFONTS:           0x00000800
+NOOEMFONTS:              0x00000800 // CF_NOVECTORFONTS
+NOSIMULATIONS:           0x00001000
+LIMITSIZE:               0x00002000
+FIXEDPITCHONLY:          0x00004000
+WYSIWYG:                 0x00008000 // must also have CF_SCREENFONTS & CF_PRINTERFONTS
+FORCEFONTEXIST:          0x00010000
+SCALABLEONLY:            0x00020000
+TTONLY:                  0x00040000
+NOFACESEL:               0x00080000
+NOSTYLESEL:              0x00100000
+NOSIZESEL:               0x00200000
+SELECTSCRIPT:            0x00400000
+NOSCRIPTSEL:             0x00800000
+NOVERTFONTS:             0x01000000
+)

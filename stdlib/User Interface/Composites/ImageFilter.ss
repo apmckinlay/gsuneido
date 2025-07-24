@@ -1,0 +1,2 @@
+// Copyright (C) 2003 Suneido Software Corp. All rights reserved worldwide.
+"Image Files (*.bmp;*.gif;*.jpg;*.jpe;*.jpeg;*.ico;*.emf;*.wmf)\x00*.bmp;*.gif;*.jpg;*.jpe;*.jpeg;*.ico;*.emf;*.wmf\x00All Files (*.*)\x00*.*"

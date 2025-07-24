@@ -1,0 +1,28 @@
+// Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.
+ScintillaAddonsControl
+	{
+	IDE:,
+	Addon_auto_complete_code:,
+	Addon_auto_delimit:,
+	Addon_auto_indent:,
+	Addon_indent_guides:,
+	Addon_brace_match:,
+	Addon_calltips:,
+	Addon_check_ascii:,
+	Addon_comment:,
+	Addon_go_to_definition:,
+	Addon_go_to_line:,
+	Addon_highlight_cursor_line:,
+	Addon_highlight_occurrences:,
+	Addon_suneido_style:,
+	Addon_show_line_numbers:,
+	Addon_show_whitespace:,
+	Addon_unwrap:,
+	Addon_multiple_selection:,
+	Addon_move_lines:,
+	Addon_show_references:,
+	Addon_inspect:,
+	Addon_flag:,
+	Addon_scroll_zoom:,
+	Addon_wrap:
+	}

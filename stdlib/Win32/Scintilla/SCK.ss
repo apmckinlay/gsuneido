@@ -1,0 +1,23 @@
+// Copyright (C) 2001 Suneido Software Corp. All rights reserved worldwide.
+#(
+DOWN:		300
+UP:			301
+LEFT:		302
+RIGHT:		303
+HOME:		304
+END:		305
+PRIOR:		306
+NEXT:		307
+DELETE:		308
+INSERT:		309
+ESCAPE:		7
+BACK:		8
+TAB:		9
+RETURN:		13
+ADD:		310
+SUBTRACT:	311
+DIVIDE:		312
+WIN:		313
+RWIN:		314
+MENU:		315
+)

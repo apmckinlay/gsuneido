@@ -1,0 +1,16 @@
+// Copyright (C) 2006 Suneido Software Corp. All rights reserved worldwide.
+#(
+HORZ: 0
+VERT: 2
+AUTOTICKS: 1
+BOTTOM: 0
+TOP: 4
+RIGHT: 0
+LEFT: 4
+BOTH: 8
+ENABLESELRANGE: 32
+FIXEDLENGTH: 64
+NOTHUMB: 128
+NOTICKS: 16
+TOOLTIPS: 256
+)

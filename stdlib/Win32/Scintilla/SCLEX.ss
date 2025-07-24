@@ -1,0 +1,31 @@
+// Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
+#(
+CONTAINER:	0
+NULL:		1
+PYTHON:		2
+CPP:		3
+HTML:		4
+XML:		5
+PERL:		6
+SQL:		7
+VB:			8
+PROPERTIES:	9
+ERRORLIST:	10
+MAKEFILE:	11
+BATCH:		12
+XCODE:		13
+LATEX:		14
+LUA:		15
+DIFF:		16
+CONF:		17
+PASCAL:		18
+AVE:		19
+ADA:		20
+LISP:		21
+RUBY:		22
+EIFFEL:		23
+EIFFELKW:	24
+CSS:		38
+RAKU: 		131
+AUTOMATIC:	1000
+)
