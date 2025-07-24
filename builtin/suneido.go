@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"runtime/metrics"
+	"slices"
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/tokens"
@@ -190,17 +191,21 @@ var _ = staticMethod(suneido_LibraryTags, "(@args)")
 
 func suneido_LibraryTags(args Value) Value {
 	ob := args.(*SuObject)
+	var newTags []string
+	
 	if ob.ListSize() == 0 && options.Action == "client" {
-		options.LibraryTags = nil
+		newTags = nil
 	} else {
-		tags := make([]string, 1+ob.ListSize())
-		tags[0] = "" // untagged
-		for i := range tags[1:] {
-			tags[i+1] = "__" + ToStr(ob.ListGet(i))
+		newTags = make([]string, 1+ob.ListSize())
+		newTags[0] = "" // untagged
+		for i := range newTags[1:] {
+			newTags[i+1] = "__" + ToStr(ob.ListGet(i))
 		}
-		options.LibraryTags = tags
 	}
-	Global.UnloadAll() // same as Use/Unuse
+	if !slices.Equal(options.LibraryTags, newTags) {
+		options.LibraryTags = newTags
+		Global.UnloadAll() // same as Use/Unuse
+	}
 	return nil
 }
 
