@@ -167,41 +167,41 @@ func TestOverIterReads(*testing.T) {
 	t := &testTran{getIndex: func() *Overlay {
 		return &Overlay{bt: bt, layers: []*ixbuf.T{ib}}
 	}}
-	
+
 	it := NewOverIter("", 0)
-	
+
 	// Test incremental read tracking
 	assert.This(t.reads.String()).Is("")
-	
+
 	// First Next() reads from range start to "0"
 	it.Next(t)
 	assert.This(t.reads.String()).Is("->0")
-	
+
 	// Second Next() reads from "0" to "1", merges to "->1"
 	it.Next(t)
 	assert.This(t.reads.String()).Is("->1")
-	
+
 	// Prev() reads from "1" to "0", already covered by existing range
 	it.Prev(t)
 	assert.This(t.reads.String()).Is("->1")
-	
+
 	// Prev() reads from "0" to range start, already covered
 	it.Prev(t)
 	assert.That(it.Eof())
 	assert.This(t.reads.String()).Is("->1")
-	
+
 	// Reset and test Prev from rewind
 	t.reads = ranges.Ranges{}
 	it.Rewind()
-	
+
 	// First Prev() from rewind reads from "9" to range end
 	it.Prev(t)
 	assert.This(t.reads.String()).Is("9->\xff\xff\xff\xff\xff\xff\xff\xff")
-	
+
 	// Second Prev() reads from "8" to "9", merges to "8->end"
 	it.Prev(t)
 	assert.This(t.reads.String()).Is("8->\xff\xff\xff\xff\xff\xff\xff\xff")
-	
+
 	// Test full forward iteration - should read entire range incrementally
 	t.reads = ranges.Ranges{}
 	for it.Rewind(); !it.Eof(); it.Next(t) {
@@ -224,51 +224,51 @@ func TestOverIterReadsWithRange(*testing.T) {
 	t := &testTran{getIndex: func() *Overlay {
 		return &Overlay{bt: bt, layers: []*ixbuf.T{ib}}
 	}}
-	
+
 	it := NewOverIter("", 0)
 	// Set explicit range from "2" to "7"
 	it.Range(Range{Org: "2", End: "7"})
-	
+
 	// Test incremental read tracking with explicit range
 	assert.This(t.reads.String()).Is("")
-	
+
 	// First Next() reads from range start "2" to "2"
 	it.Next(t)
 	assert.This(t.reads.String()).Is("2->2")
-	
+
 	// Second Next() reads from "2" to "3", merges to "2->3"
 	it.Next(t)
 	assert.This(t.reads.String()).Is("2->3")
-	
+
 	// Third Next() reads from "3" to "4", merges to "2->4"
 	it.Next(t)
 	assert.This(t.reads.String()).Is("2->4")
-	
+
 	// Prev() reads from "4" to "3", already covered
 	it.Prev(t)
 	assert.This(t.reads.String()).Is("2->4")
-	
+
 	// Prev() reads from "3" to "2", already covered
 	it.Prev(t)
 	assert.This(t.reads.String()).Is("2->4")
-	
+
 	// Prev() reads from "2" to range start "2", hits EOF
 	it.Prev(t)
 	assert.That(it.Eof())
 	assert.This(t.reads.String()).Is("2->4")
-	
+
 	// Reset and test Prev from rewind with explicit range
 	t.reads = ranges.Ranges{}
 	it.Rewind()
-	
+
 	// First Prev() from rewind reads from "6" to range end "7"
 	it.Prev(t)
 	assert.This(t.reads.String()).Is("6->7")
-	
+
 	// Second Prev() reads from "5" to "6", merges to "5->7"
 	it.Prev(t)
 	assert.This(t.reads.String()).Is("5->7")
-	
+
 	// Test full forward iteration within explicit range
 	t.reads = ranges.Ranges{}
 	for it.Rewind(); !it.Eof(); it.Next(t) {

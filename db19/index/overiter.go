@@ -87,9 +87,9 @@ func (oi *OverIter) Next(t oiTran) {
 	if oi.state == eof {
 		return // stick at eof
 	}
-	
+
 	prevKey := oi.curKey
-	
+
 	modified := oi.update(t)
 	if oi.state == rewound {
 		oi.all(iterT.Next)
@@ -222,9 +222,9 @@ func (oi *OverIter) Prev(t oiTran) {
 	if oi.state == eof {
 		return // stick at eof
 	}
-	
+
 	prevKey := oi.curKey
-	
+
 	modified := oi.update(t)
 	if oi.state == rewound {
 		oi.all(iterT.Prev)
