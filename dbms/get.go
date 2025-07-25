@@ -15,7 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
-var slow = map[Dir]int{Only: 100, Any: 500}
+var slow = map[Dir]int{Only: 100, Any: 2000}
 
 func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string) {
 	defer th.Suneido.Store(th.Suneido.Load())
