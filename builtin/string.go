@@ -546,7 +546,7 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) string
 		}
 	}
 
-	from := 0
+	from := -1
 	nreps := 0
 	var buf strings.Builder
 	for cap := range pat.All(s) {
@@ -564,11 +564,11 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) string
 			}
 		}
 
-		if from == 0 { // no changes to original string yet
+		if from == -1 { // no changes to original string yet
 			if r != s[pos:end] {
 				// initialize buffer only when we know we need to make changes
 				buf.Grow(len(s)) // ???
-				buf.WriteString(s[from:pos])
+				buf.WriteString(s[0:pos])
 				from = int(end)
 				buf.WriteString(r)
 			}
@@ -585,7 +585,7 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) string
 		}
 	}
 
-	if from == 0 {
+	if from == -1 {
 		return s // no changes
 	}
 
