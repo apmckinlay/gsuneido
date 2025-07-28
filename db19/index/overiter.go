@@ -27,8 +27,6 @@ type OverIter struct {
 	iters  []iterT
 	iIndex int
 	curOff uint64
-	// curIter is the iterator containing the current item = iters[curIter]
-	curIter int
 	state
 	lastDir dir
 }
@@ -98,12 +96,13 @@ func (oi *OverIter) Next(t oiTran) {
 	} else {
 		oi.modNext(modified)
 	}
-	oi.curIter, oi.curKey, oi.curOff = oi.minIter()
-	if oi.curIter == -1 {
+	var found bool
+	found, oi.curKey, oi.curOff = oi.minIter()
+	if found {
+		t.Read(oi.table, oi.iIndex, prevKey, oi.curKey)
+	} else {
 		oi.state = eof
 		t.Read(oi.table, oi.iIndex, prevKey, oi.rng.End)
-	} else {
-		t.Read(oi.table, oi.iIndex, prevKey, oi.curKey)
 	}
 	oi.lastDir = next
 }
@@ -170,7 +169,7 @@ func atKey(it iterator.T, key string) bool {
 }
 
 // minIter finds the the minimum current key
-func (oi *OverIter) minIter() (int, string, uint64) {
+func (oi *OverIter) minIter() (bool, string, uint64) {
 	// NOTE: keep this code in sync with maxIter
 outer:
 	for {
@@ -199,7 +198,7 @@ outer:
 				offMin = off
 			}
 		}
-		return itMin, keyMin, offMin &^ ixbuf.Update
+		return itMin != -1, keyMin, offMin &^ ixbuf.Update
 	}
 }
 
@@ -233,12 +232,13 @@ func (oi *OverIter) Prev(t oiTran) {
 	} else {
 		oi.modPrev(modified)
 	}
-	oi.curIter, oi.curKey, oi.curOff = oi.maxIter()
-	if oi.curIter == -1 {
+	var found bool
+	found, oi.curKey, oi.curOff = oi.maxIter()
+	if found {
+		t.Read(oi.table, oi.iIndex, oi.curKey, prevKey)
+	} else {
 		oi.state = eof
 		t.Read(oi.table, oi.iIndex, oi.rng.Org, prevKey)
-	} else {
-		t.Read(oi.table, oi.iIndex, oi.curKey, prevKey)
 	}
 	oi.lastDir = prev
 }
@@ -266,7 +266,7 @@ func (oi *OverIter) modPrev(modified bool) {
 }
 
 // maxIter finds the maximum current key
-func (oi *OverIter) maxIter() (int, string, uint64) {
+func (oi *OverIter) maxIter() (bool, string, uint64) {
 	// NOTE: keep this code in sync with minIter
 outer:
 	for {
@@ -295,14 +295,13 @@ outer:
 				offMax = off
 			}
 		}
-		return itMax, keyMax, offMax &^ ixbuf.Update
+		return itMax != -1, keyMax, offMax &^ ixbuf.Update
 	}
 }
 
 func (oi *OverIter) Rewind() {
 	oi.all(iterT.Rewind)
 	oi.state = rewound
-	oi.curIter = -1
 	oi.curKey = ""
 	oi.curOff = 0
 }
