@@ -25,7 +25,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/options"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -176,6 +175,7 @@ func main() {
 			startHttpStatus()
 		}
 		dbms.VersionMismatch = versionMismatch
+		// deliberately nil to tell libload to rely on the server
 		options.LibraryTags = nil
 	case "printstates":
 		db19.PrintStates("suneido.db", false)
@@ -525,54 +525,31 @@ func libload(th *Thread, name string) (result Value, e any) {
 			result = nil
 		}
 	}()
-	libs := LibsList.Load()
-	if libs == nil {
-		libs = th.Dbms().Libraries()
-		LibsList.Store(libs)
-	}
 	defs := th.Dbms().LibGet(name)
-	ovLib, ovText := LibraryOverrides.Get(name)
-	i := 0
-	for _, lib := range libs {
-		// iterate over lib rather than defs to handle LibraryOverrides
-		var src string
-		if i < len(defs) && str.BeforeFirst(defs[i], ":") == lib {
-			src = defs[i+1]
-			i += 2
-		}
+	ovLib, ovSrc := LibraryOverrides.Get(name)
+	for i := 0; i < len(defs); i += 2 {
+		libtag := defs[i]
+		lib := str.BeforeLast(libtag, "__")
+		tag := libtag[len(lib):]
+		src := defs[i+1]
 		//TODO remove this after switching to tags
 		if mode == "gui" && strings.HasSuffix(lib, "webgui") {
 			continue
 		}
 		if lib == ovLib {
-			src = ovText
+			src = ovSrc
+			ovSrc = "" // only compile once
+		}
+		if options.LibraryTags != nil &&
+			!slices.Contains(options.LibraryTags, tag) {
+			continue
 		}
 		if src != "" {
-			result = llcompile(lib, name, src, result)
-		}
-		// above will handle untagged defs, now handle tagged defs
-		for i < len(defs) && str.BeforeFirst(defs[i], ":") == lib {
-			tagname := str.AfterFirst(defs[i], ":")
-			src = defs[i+1]
-			i += 2
-			if lib == ovLib {
-				continue
-			}
-			assert.That(str.BeforeLast(tagname, "__") == name)
-			tag := tagname[len(name):]
-			// this can only be false when running as a client
-			// with different LibraryTags from the server
-			if options.LibraryTags == nil ||
-				slices.Contains(options.LibraryTags[1:], tag) {
-				result = llcompile(lib+tag, name, src, result)
-			}
+			result = llcompile(libtag, name, src, result)
 		}
 	}
-	if ovLib == "" && ovText != "" {
-		result = llcompile("", name, ovText, result)
-	}
-	if i < len(defs) {
-		Fatal("libraries changed without unload", "("+defs[i]+")")
+	if ovLib == "" && ovSrc != "" {
+		result = llcompile("", name, ovSrc, result)
 	}
 	return result, nil
 }

@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/intern"
 )
 
@@ -336,13 +335,9 @@ func (typeGlobal) UnloadAll() {
 	clear(g.errors)
 	clear(g.noDef)
 	LibraryOverrides.ClearOriginals()
-	LibsList.Store(nil)
 	intern.Clear()
 	g.cleared = true
 }
-
-// LibsList is used by libload
-var LibsList atomics.Value[[]string]
 
 func (typeGlobal) SetName(name string, val Value) {
 	g.lock.Lock()

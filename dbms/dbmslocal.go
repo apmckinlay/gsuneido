@@ -188,6 +188,7 @@ func (dbms *DbmsLocal) Load(table, from, privateKey, passphrase string) int {
 // The strings are in pairs - "<lib>:<name>[__tag]", "definition".
 // The order is significant - first by Libraries() and then by LibraryTags.
 // Later definitions can override or inherit from earlier ones.
+// NOTE: libload depends on every library being in the results.
 func (dbms *DbmsLocal) LibGet(name string) []string {
 	defer func() {
 		if e := recover(); e != nil {
@@ -196,37 +197,37 @@ func (dbms *DbmsLocal) LibGet(name string) []string {
 		}
 	}()
 
-	results := make([]string, 0, 2)
+	defs := make([]string, 0, 4)
 	rt := dbms.db.NewReadTran()
 	libs := dbms.libraries.Load()
 	for _, lib := range libs {
-		defs := dbms.LibGet1(rt, lib, name)
-		results = append(results, defs...)
+		defs = dbms.LibGet1(rt, lib, name, defs)
 	}
-	return results
+	return defs
 }
 
 var libKey = []string{"name", "group"} // const
 
 // LibGet1 returns the definition(s) for the given library and name.
 // There may be multiple due to tags.
-func (dbms *DbmsLocal) LibGet1(rt *db19.ReadTran, lib, name string) []string {
+func (dbms *DbmsLocal) LibGet1(rt *db19.ReadTran, lib, name string, defs []string) []string {
+	var tag string
 	defer func() {
 		if e := recover(); e != nil {
-			log.Println("libGet", lib, name, e)
+			log.Println("libGet", lib, name, tag, e)
 		}
 	}()
 	ix := rt.GetIndex(lib, libKey)
 	if ix == nil {
 		dbms.liblog(lib)
-		return nil
+		return append(defs, lib, "")
 	}
 	fld := rt.ColToFld(lib, "text")
 	if fld == -1 {
 		dbms.liblog(lib)
-		return nil
+		return append(defs, lib, "")
 	}
-	defs := make([]string, 0, len(options.LibraryTags))
+	found := false
 	var rb ixkey.Encoder
 	for _, tag := range options.LibraryTags {
 		nametag := name + tag
@@ -235,9 +236,12 @@ func (dbms *DbmsLocal) LibGet1(rt *db19.ReadTran, lib, name string) []string {
 		key := rb.String()
 		off := ix.Lookup(key)
 		if off != 0 {
-			defs = append(defs,
-				lib+":"+nametag, rt.GetRecord(off).GetStr(fld))
+			defs = append(defs, lib+tag, rt.GetRecord(off).GetStr(fld))
+			found = true
 		}
+	}
+	if !found {
+		defs = append(defs, lib, "")
 	}
 	return defs
 }
