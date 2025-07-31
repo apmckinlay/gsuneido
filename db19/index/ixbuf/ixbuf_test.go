@@ -4,7 +4,6 @@
 package ixbuf
 
 import (
-	"fmt"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -21,11 +20,11 @@ func TestInsert(t *testing.T) {
 	const nkeys = 16000
 	ib := &ixbuf{}
 	for i := range nkeys {
-		ib.Insert(r(), uint64(i))
+		ib.Insert(r(), uint64(i+1))
 	}
 	assert.T(t).This(ib.size).Is(nkeys)
 	// ib.stats()
-	ib.check()
+	ib.Check()
 }
 
 func TestBig(t *testing.T) {
@@ -39,13 +38,13 @@ func TestBig(t *testing.T) {
 	for range n {
 		ib := &ixbuf{}
 		for i := range m {
-			ib.Insert(r(), uint64(i))
+			ib.Insert(r(), uint64(i+1))
 		}
 		big = Merge(big, ib)
 	}
 	assert.T(t).This(big.size).Is(n * m)
 	// big.stats()
-	big.check()
+	big.Check()
 }
 
 func BenchmarkInsert(b *testing.B) {
@@ -83,16 +82,16 @@ func TestMerge(t *testing.T) {
 	assert(ib.size).Is(2)
 	assert(len(ib.chunks)).Is(1)
 	// x.print()
-	ib.check()
+	ib.Check()
 
 	c := &ixbuf{}
 	for i := range 25 {
-		c.Insert(strconv.Itoa(i), uint64(i))
+		c.Insert(strconv.Itoa(i), uint64(i+1))
 	}
 	ib = Merge(b, c, a)
 	assert(ib.size).Is(a.size + b.size + c.size)
 	// x.print()
-	ib.check()
+	ib.Check()
 
 	a.Insert("c", 3)
 	b.Insert("d", 4)
@@ -100,7 +99,7 @@ func TestMerge(t *testing.T) {
 	// x.print()
 	assert(ib.size).Is(4)
 	assert(len(ib.chunks)).Is(1)
-	ib.check()
+	ib.Check()
 
 	r := str.UniqueRandom(4, 8)
 	gen := func(nkeys int) *ixbuf {
@@ -109,7 +108,7 @@ func TestMerge(t *testing.T) {
 			t.Insert(r(), 1)
 		}
 		// t.print()
-		t.check()
+		t.Check()
 		return t
 	}
 	a = gen(1000)
@@ -118,10 +117,10 @@ func TestMerge(t *testing.T) {
 	ib = Merge(a, b, c)
 	// x.print()
 	assert(ib.size).Is(a.size + b.size + c.size)
-	ib.check()
-	a.check()
-	b.check()
-	c.check()
+	ib.Check()
+	a.Check()
+	b.Check()
+	c.Check()
 }
 
 func TestMergeBug(*testing.T) {
@@ -136,7 +135,7 @@ func TestMergeBug(*testing.T) {
 	c.Insert("f", 1)
 	x := Merge(a, b, c)
 	// x.print()
-	x.check()
+	x.Check()
 }
 
 func TestMergeRandom(*testing.T) {
@@ -277,17 +276,7 @@ func TestMergeUpdate(t *testing.T) {
 	b.Update("b", 22)
 	b.Delete("c", 3)
 	x := Merge(a, b)
-	assert.T(t).This(x.String()).Is("3, a 1, b 22, d 4")
-}
-
-func (ib *ixbuf) String() string {
-	var sb strings.Builder
-	fmt.Fprint(&sb, ib.size)
-	iter := ib.Iter()
-	for k, o, ok := iter(); ok; k, o, ok = iter() {
-		fmt.Fprint(&sb, ", ", k, " ", o)
-	}
-	return sb.String()
+	assert.T(t).This(x.String()).Is("a+1 b+22 d+4")
 }
 
 func BenchmarkMerge(b *testing.B) {
@@ -323,7 +312,7 @@ func TestDelete(t *testing.T) {
 	r = str.UniqueRandom(4, 8, 12345)
 	for range nkeys {
 		ib.Delete(r(), 1)
-		ib.check()
+		ib.Check()
 	}
 	assert.T(t).This(len(ib.chunks)).Is(0)
 }
@@ -392,23 +381,23 @@ func TestIterator(t *testing.T) {
 	testNext(eof)
 	testPrev(eof)
 
-	for i := range 10 {
+	for i := 1; i < 10; i++ {
 		ib.Insert(strconv.Itoa(i), uint64(i))
 	}
 	it.Rewind()
-	for i := range 10 {
+	for i := 1; i < 10; i++ {
 		testNext(i)
 	}
 	testNext(eof)
 
 	it.Rewind()
-	for i := 9; i >= 0; i-- {
+	for i := 9; i >= 1; i-- {
 		testPrev(i)
 	}
 	testPrev(eof)
 
 	it.Rewind()
-	testNext(0)
+	testNext(1)
 	testPrev(eof) // stick at eof
 	testPrev(eof)
 	testNext(eof)
@@ -497,22 +486,6 @@ func TestIxbufSearch(t *testing.T) {
 // 	fmt.Println("size", ib.size, "chunks", len(ib.chunks),
 // 		"avg size", int(ib.size)/len(ib.chunks), "goal", goal(ib.size)*2/3)
 // }
-
-func (ib *ixbuf) check() {
-	n := 0
-	prev := ""
-	for _, c := range ib.chunks {
-		assert.That(len(c) > 0)
-		for _, s := range c {
-			if s.key <= prev {
-				panic("out of order " + prev + " " + s.key)
-			}
-			prev = s.key
-			n++
-		}
-	}
-	assert.This(ib.size).Is(n)
-}
 
 // func chunkstr(c chunk) string {
 // 	switch len(c) {

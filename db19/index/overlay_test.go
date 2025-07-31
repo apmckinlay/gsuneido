@@ -136,7 +136,7 @@ func TestOverlayMerge(t *testing.T) {
 			key := randKey()
 			off := uint64(len(data))
 			data = append(data, key)
-			mut.Insert(key, off)
+			mut.Insert(key, off+1)
 		}
 		return mut
 	}

@@ -210,7 +210,7 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	w.WriteString(schema + "\n")
 	info := state.Meta.GetRoInfo(table)
 	sum := uint64(0)
-	nrows := info.Indexes[0].Check(func(off uint64) {
+	nrows := info.Indexes[0].CheckBtree(func(off uint64) {
 		sum += off                       // addition so order doesn't matter
 		rec := OffToRecCk(db.Store, off) // verify data checksums
 		if hasdel {

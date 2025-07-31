@@ -9,8 +9,10 @@
 package ixbuf
 
 import (
+	"cmp"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
@@ -22,7 +24,7 @@ import (
 const Update = 1 << 62
 const Delete = 1 << 63
 
-const mask = 0xffffffffff
+const Mask = 0xffffffffff
 
 type T = ixbuf
 
@@ -31,6 +33,7 @@ type ixbuf struct {
 	size   int32
 	// modCount is used by Iterator to detect modifications.
 	// No locking since ixbuf is thread contained when mutable.
+	// Incremented by Insert and Clear.
 	modCount int32
 }
 
@@ -74,6 +77,9 @@ func goal(n int32) int {
 // Insert adds an element. It mutates and is NOT thread-safe.
 // off can have the update or delete bit set.
 func (ib *ixbuf) Insert(key string, off uint64) (oldoff uint64) {
+	if off == 0 {
+		panic("ixbuf Insert: offset cannot be zero")
+	}
 	ib.modCount++
 	if len(ib.chunks) == 0 {
 		ib.size++
@@ -200,29 +206,28 @@ const (
 func Combine(off1, off2 uint64) (result uint64, oldoff uint64) {
 	ops := off1>>60 | off2>>62
 	switch ops {
-	case add_update:
-		result = off2 & mask // => add
-	case add_delete:
+	case add_update: // => add
+		result = off2 & Mask
+	case add_delete: // => <nil>
 		result = 0 // => should be removed
-	case update_update:
+	case update_update: // => update
 		result = off2
-		oldoff = off1 & mask
+		oldoff = off1 & Mask
 		// oldoff is so tran.Update can detect update,update of same record
-	case update_delete:
+	case update_delete: // => delete
 		// update_delete needs to keep delete (not return 0)
 		// because the add is in another layer
 		result = off2
-		oldoff = off1 & mask
+		oldoff = off1 & Mask
 		// oldoff is so tran.Delete can detect update,delete of same record
-	case delete_add:
+	case delete_add: // => update
 		result = off2 | Update
 	case delete_delete:
 		panic("delete & delete on same record")
 	case delete_update:
 		panic("delete & update on same record")
 	default:
-		log.Printf("ERROR: ixbuf invalid Combine %b %s %s\n",
-			ops, OffString(off1), OffString(off2))
+		log.Println("ERROR: ixbuf invalid Combine", OffString(off1), OffString(off2))
 		dbg.PrintStack()
 		panic("ixbuf invalid Combine")
 	}
@@ -437,7 +442,7 @@ type Iterator struct {
 	// ci, i, and c point to the current slot = ib.chunks[ci][i]
 	ci       int
 	i        int
-	modCount int32
+	modCount int32 // gets updated by Seek(All)
 	state
 }
 
@@ -472,6 +477,10 @@ func (it *Iterator) Modified() bool {
 func (it *Iterator) Cur() (string, uint64) {
 	assert.Msg("Cur when not within").That(it.state == within)
 	return it.cur.key, it.cur.off
+}
+
+func (it *Iterator) HasCur() bool {
+	return it.state == within
 }
 
 func (it *Iterator) Next() {
@@ -552,6 +561,19 @@ func (it *Iterator) SeekAll(key string) {
 
 //-------------------------------------------------------------------
 
+func (ib *ixbuf) String() string {
+	var sb strings.Builder
+	sep := ""
+	for _, c := range ib.chunks {
+		for _, s := range c {
+			sb.WriteString(sep)
+			sep = " "
+			sb.WriteString(s.String())
+		}
+	}
+	return sb.String()
+}
+
 func (ib *ixbuf) Print() {
 	fmt.Println("<<<------------------------")
 	for i, c := range ib.chunks {
@@ -565,28 +587,46 @@ func (ib *ixbuf) Print() {
 
 func (c chunk) print() {
 	for _, s := range c {
-		fmt.Printf("%s %q\n", OffString(s.off), s.key)
+		fmt.Print(" " + s.String())
 	}
 }
 
 // OffString is for debugging
 func OffString(off uint64) string {
-	s := trace.Number(off & mask)
-	op := off &^ mask
-	if op&Update != 0 {
-		s = "update:" + s
-		op &^= Update
+	var s string
+	switch off &^ Mask {
+	case 0:
+		s = "+"
+	case Update:
+		s = "="
+	case Delete:
+		s = "-"
+	default:
+		s += fmt.Sprintf("BAD BITS %b", off>>60)
 	}
-	if op&Delete != 0 {
-		s = "delete:" + s
-		op &^= Delete
-	}
-	if op != 0 {
-		s += fmt.Sprintf("BAD BITS %x", op>>40)
-	}
-	return s
+	return s + trace.Number(off&Mask)
 }
 
 func (s slot) String() string {
-	return fmt.Sprintf("{%s, %q}", OffString(s.off), s.key)
+	return s.key + OffString(s.off)
+}
+
+// Check verifies that the keys are in order and there are no duplicates
+func (ib *ixbuf) Check() {
+	n := 0
+	prev := ""
+	for _, c := range ib.chunks {
+		assert.That(len(c) > 0)
+		for _, s := range c {
+			switch cmp.Compare(prev, s.key) {
+			case 0:
+				panic("ixbuf: invalid duplicate key: " + prev)
+			case 1:
+				panic("ixbuf: out of order " + prev + " " + s.key)
+			}
+			prev = s.key
+			n++
+		}
+	}
+	assert.This(ib.size).Is(n)
 }

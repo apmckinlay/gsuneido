@@ -51,6 +51,10 @@ func (it *Iterator) Cur() (string, uint64) {
 	return it.curKey, it.curOff
 }
 
+func (it *Iterator) HasCur() bool {
+	return it.state == within
+}
+
 func (it *Iterator) Rewind() {
 	it.state = rewound
 }

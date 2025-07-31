@@ -119,7 +119,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
 	var off2 uint64
 	var dstbuf []byte
-	nrows := info.Indexes[0].Check(func(off uint64) {
+	nrows := info.Indexes[0].CheckBtree(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		buf := src.Store.Data(off)
 		n := core.RecLen(buf)

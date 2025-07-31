@@ -33,7 +33,6 @@ func (t *testTran) Read(_ string, _ int, from, to string) {
 }
 
 func TestOverIter(t *testing.T) {
-	assert := assert.T(t)
 	from := func(args ...int) *ixbuf.T {
 		ib := &ixbuf.T{}
 		for _, n := range args {
@@ -41,7 +40,7 @@ func TestOverIter(t *testing.T) {
 		}
 		return ib
 	}
-	even := from(0, 2, 4, 6, 8)
+	even := from(2, 4, 6, 8)
 	odd := from(1, 3, 5, 7, 9)
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	it := NewOverIter("", 0)
@@ -67,7 +66,7 @@ func TestOverIter(t *testing.T) {
 	tran := newTran()
 	testNext := func(expected int) { it.Next(tran); t.Helper(); test(expected) }
 	testPrev := func(expected int) { it.Prev(tran); t.Helper(); test(expected) }
-	for i := range 10 {
+	for i := 1; i < 10; i++ {
 		testNext(i)
 		if i == 5 {
 			tran = newTran()
@@ -76,7 +75,7 @@ func TestOverIter(t *testing.T) {
 	testNext(-1)
 
 	it.Rewind()
-	for i := 9; i >= 0; i-- {
+	for i := 9; i > 0; i-- {
 		testPrev(i)
 		if i == 5 {
 			tran = newTran()
@@ -85,7 +84,7 @@ func TestOverIter(t *testing.T) {
 	testPrev(-1)
 
 	it.Rewind()
-	testNext(0)
+	testNext(1)
 	testPrev(-1) // stick at eof
 	testPrev(-1)
 	testNext(-1)
@@ -99,7 +98,6 @@ func TestOverIter(t *testing.T) {
 	testPrev(8)
 
 	it.Rewind()
-	testNext(0)
 	testNext(1)
 	even.Insert("11", 11)
 	tran = newTran()
@@ -142,13 +140,6 @@ func TestOverIterDeletePrevBug(*testing.T) {
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{}, mut: ib}
 	t := &testTran{getIndex: func() *Overlay { return ov }}
 
-	// it := NewOverIter("", 0)
-	// it.Prev(t)
-	// assert.That(!it.Eof())
-	// key, off := it.Cur()
-	// assert.This(key).Is("9")
-	// assert.This(off).Is(9)
-
 	ov.Delete("9", 9)
 	it := NewOverIter("", 0)
 	it.Prev(t)
@@ -161,7 +152,7 @@ func TestOverIterDeletePrevBug(*testing.T) {
 func TestOverIterReads(*testing.T) {
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	ib := &ixbuf.T{}
-	for i := range 10 {
+	for i := 1; i < 10; i++ {
 		ib.Insert(strconv.Itoa(i), uint64(i))
 	}
 	t := &testTran{getIndex: func() *Overlay {
@@ -173,22 +164,22 @@ func TestOverIterReads(*testing.T) {
 	// Test incremental read tracking
 	assert.This(t.reads.String()).Is("")
 
-	// First Next() reads from range start to "0"
-	it.Next(t)
-	assert.This(t.reads.String()).Is("->0")
-
-	// Second Next() reads from "0" to "1", merges to "->1"
+	// First Next() reads from range start to "1"
 	it.Next(t)
 	assert.This(t.reads.String()).Is("->1")
 
-	// Prev() reads from "1" to "0", already covered by existing range
+	// Second Next() reads from "1" to "2", merges to "->2"
+	it.Next(t)
+	assert.This(t.reads.String()).Is("->2")
+
+	// Prev() reads from "2" to "1", already covered by existing range
 	it.Prev(t)
-	assert.This(t.reads.String()).Is("->1")
+	assert.This(t.reads.String()).Is("->2")
 
-	// Prev() reads from "0" to range start, already covered
+	// Prev() reads from "1" to range start, already covered
 	it.Prev(t)
 	assert.That(it.Eof())
-	assert.This(t.reads.String()).Is("->1")
+	assert.This(t.reads.String()).Is("->2")
 
 	// Reset and test Prev from rewind
 	t.reads = ranges.Ranges{}
@@ -218,7 +209,7 @@ func TestOverIterReads(*testing.T) {
 func TestOverIterReadsWithRange(*testing.T) {
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	ib := &ixbuf.T{}
-	for i := range 10 {
+	for i := 1; i < 10; i++ {
 		ib.Insert(strconv.Itoa(i), uint64(i))
 	}
 	t := &testTran{getIndex: func() *Overlay {
@@ -348,7 +339,6 @@ func TestOverIterRandom(*testing.T) {
 	gen := make(dat)
 	data := new(dummy)
 	it := &dumIter{d: data}
-	which := map[string]int{}
 	keyoff := map[string]uint64{}
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	ibs := []*ixbuf.T{{}, {}, {}}
@@ -374,7 +364,7 @@ func TestOverIterRandom(*testing.T) {
 			oi.Rewind()
 			for oi.Next(tran); !oi.Eof(); oi.Next(tran) {
 				key, _ := oi.Cur()
-				traceln(oi.curIter, key)
+				traceln(key)
 			}
 			traceln("===== dumb")
 			it.Rewind()
@@ -399,20 +389,17 @@ func TestOverIterRandom(*testing.T) {
 				// insert
 				key := gen.randKey()
 				data.Insert(key)
-				w := rand.Intn(len(ibs))
-				ibs[w].Insert(key, uint64(n))
-				which[key] = w
+				ibs[2].Insert(key, uint64(n))
 				keyoff[key] = uint64(n)
-				traceln("insert", w, key, "len", data.Len())
+				traceln("insert", key, "len", data.Len())
 			} else {
 				// delete
 				j := rand.Intn(data.Len())
 				key := data.Get(j)
-				w := which[key]
-				traceln("delete", w, key, "len", data.Len()-1)
+				traceln("delete", key, "len", data.Len()-1)
 				data.Delete(key)
 				gen.delete(key)
-				ibs[w].Delete(key, keyoff[key])
+				ibs[2].Delete(key, keyoff[key])
 				keyoff[key] = 0
 			}
 		case 1: // rewind
@@ -421,15 +408,22 @@ func TestOverIterRandom(*testing.T) {
 			oi.Rewind()
 		case 2:
 			traceln("invalidate")
-			tran = &testTran{getIndex: func() *Overlay { return ov }}
+			tmp := *ov
+			ov = &tmp
 		case 3, 4: // next
 			it.Next()
 			oi.Next(tran)
+			if !oi.Eof() {
+				oi.Cur()
+			}
 			trace("next ")
 			check()
 		case 5, 6: // prev
 			it.Prev()
 			oi.Prev(tran)
+			if !oi.Eof() {
+				oi.Cur()
+			}
 			trace("prev ")
 			check()
 		}
@@ -439,6 +433,9 @@ func TestOverIterRandom(*testing.T) {
 		}
 		assert.This(size).Is(data.Len())
 	}
+	// for _, ib := range ibs {
+	// 	fmt.Println(">>>", ib.Len())
+	// }
 }
 
 func TestOverIterRandom2(t *testing.T) {
@@ -585,7 +582,6 @@ func TestOverIterBug(*testing.T) {
 	layers[3].Insert("z", 2|ixbuf.Delete)
 	layers[3].Insert("a", 1|ixbuf.Delete)
 	ov = &Overlay{bt: bt, layers: layers}
-	tran = &testTran{getIndex: func() *Overlay { return ov }}
 
 	it = NewOverIter("", 0)
 	it.Prev(tran)
@@ -654,6 +650,267 @@ func TestOverIterBug4(*testing.T) {
 	assert.This(off).Is(2)
 	it.Next(tran)
 	assert.That(it.Eof())
+}
+
+func TestOverIterInvalidCombine(t *testing.T) {
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	layers := make([]*ixbuf.T, 3)
+	for i := range layers {
+		layers[i] = &ixbuf.T{}
+	}
+	layers[0].Insert("k0", 2)
+	layers[0].Insert("k1", 1)
+	layers[1].Insert("k1", 1|ixbuf.Delete)
+	layers[1].Insert("k2", 3)
+	layers[2].Insert("k0", 5|ixbuf.Update)
+	layers[2].Insert("k1", 4)
+
+	ov := &Overlay{bt: bt, layers: layers}
+	// fmt.Println(ov)
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+
+	oi := NewOverIter("", 0)
+	oi.Range(Range{Org: "k2", End: "k2z"})
+
+	oi.Next(tran)
+
+	// trigger OverIter modified
+	tmp2 := *ov
+	ov = &tmp2
+
+	oi.Prev(tran) // => invalid Combine add,add +1 +4
+}
+
+func TestOverIterCurDeletedBug(t *testing.T) {
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	layers := make([]*ixbuf.T, 3)
+	for i := range layers {
+		layers[i] = &ixbuf.T{}
+	}
+	layers[0].Insert("k2", 2)
+	layers[0].Insert("k4", 1)
+	layers[1].Insert("k3", 3)
+	layers[1].Insert("k4", 1|ixbuf.Delete)
+	layers[2].Insert("k1", 4)
+	layers[2].Insert("k2", 2|ixbuf.Delete)
+
+	ov := &Overlay{bt: bt, layers: layers}
+	// fmt.Println(ov)
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+
+	oi := NewOverIter("", 0)
+	oi.Range(Range{Org: "k2", End: "k4"})
+
+	oi.Prev(tran)
+	if !oi.Eof() {
+		oi.Cur()
+	}
+		
+	// trigger OverIter modified
+	tmp2 := *ov
+	ov = &tmp2
+
+	// try to trigger the OverIter Cur deleted bug
+	oi.Prev(tran)
+	if !oi.Eof() {
+		oi.Cur()
+	}
+}
+
+func TestOverIterRandom3(t *testing.T) {
+	// NOTE: this is just a smoke test, it does not check the data at all
+	n := 400_000
+	if testing.Short() {
+		n = 10_000
+	}
+	var ops []string
+	var ov *Overlay
+	var keys []string
+	var keyOffsets map[string]uint64
+	_ = keyOffsets
+	var nextOffset uint64
+	var oi *OverIter
+	var i int
+	seed := rand.Int63()
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("seed", seed, "loop", i)
+			fmt.Println(ops)
+			fmt.Println(ov)
+			panic(r)
+		}
+	}()
+	localRand := rand.New(rand.NewSource(seed))
+	for i = range n {
+		ops = ops[:0]
+		ov, keys, keyOffsets, nextOffset = generateRandomLayers(localRand)
+		oi = NewOverIter("", 0)
+		tran := &testTran{getIndex: func() *Overlay { return ov }}
+		for range 100 {
+			oi.Check()
+			switch localRand.Intn(6) {
+			case 0:
+				ops = append(ops, "next")
+				oi.Next(tran)
+				if !oi.Eof() {
+					oi.Cur()
+				}
+			case 1:
+				ops = append(ops, "prev")
+				oi.Prev(tran)
+				if !oi.Eof() {
+					oi.Cur()
+				}
+			case 2:
+				ops = append(ops, "rewind")
+				oi.Rewind()
+			case 3:
+				_ = nextOffset
+				topLayer := ov.layers[len(ov.layers)-1]
+				mod := randomModifyLayer(topLayer, keys, keyOffsets, &nextOffset, localRand)
+				ops = append(ops, "modify "+mod)
+				ov.Check()
+			case 4: // start a new transaction
+				if localRand.Intn(3) == 0 {
+					// Simulate concurrent modification: generate completely new overlay
+					// This tests OverIter's update detection when overlay structure changes
+					ov, keys, keyOffsets, nextOffset = generateRandomLayers(localRand)
+					ops = append(ops, "newtran+")
+				} else {
+					// Normal case: just start new transaction with same overlay
+					tmp := *ov
+					ov = &tmp
+					ops = append(ops, "newtran-")
+				}
+			case 5: // test Range functionality with new iterator
+				oi = createRandomRangedIterator(keys, localRand)
+				ops = append(ops, "range"+oi.rng.String())
+			}
+		}
+	}
+}
+
+func generateRandomLayers(localRand *rand.Rand) (*Overlay, []string, map[string]uint64, uint64) {
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+
+	nlayers := localRand.Intn(7) + 2
+	layers := make([]*ixbuf.T, nlayers)
+	for i := range layers {
+		layers[i] = &ixbuf.T{}
+	}
+
+	keys := []string{"k0", "k1", "k2", "k3", "k4", "k5", "k6", "k7"}
+	nkeys := localRand.Intn(len(keys)-1) + 1
+	keyOffsets := make(map[string]uint64) // track key offset, 0 if non-existent
+	nextOffset := uint64(1)
+
+	for _, layer := range layers {
+		nmods := localRand.Intn(5)
+		for range nmods {
+			randomModifyLayer(layer, keys[:nkeys], keyOffsets, &nextOffset, localRand)
+		}
+	}
+
+	ov := &Overlay{bt: bt, layers: layers}
+	ov.Check()
+	return ov, keys[:nkeys], keyOffsets, nextOffset
+}
+
+func randomModifyLayer(layer *ixbuf.T, keys []string, keyOffsets map[string]uint64, nextOffset *uint64, localRand *rand.Rand) string {
+	key := keys[localRand.Intn(len(keys))]
+	if keyOffsets[key] == 0 {
+		// Key doesn't exist - can only do a plain add (no flags)
+		layer.Insert(key, *nextOffset)
+		keyOffsets[key] = *nextOffset
+		*nextOffset++
+		return key + "+" + strconv.Itoa(int(*nextOffset-1))
+	} else {
+		// key exists
+		if localRand.Intn(2) == 1 {
+			layer.Insert(key, *nextOffset|ixbuf.Update)
+			keyOffsets[key] = *nextOffset
+			*nextOffset++
+			return key + "=" + strconv.Itoa(int(*nextOffset-1))
+		} else {
+			layer.Insert(key, keyOffsets[key]|ixbuf.Delete)
+			off := keyOffsets[key]
+			keyOffsets[key] = 0 // key no longer exists
+			return key + "-" + strconv.Itoa(int(off))
+		}
+	}
+}
+
+func createRandomRangedIterator(keys []string, localRand *rand.Rand) *OverIter {
+	it := NewOverIter("", 0)
+	switch localRand.Intn(4) {
+	case 0:
+		// Full range (default)
+		return it
+	case 1:
+		// Range with two different keys
+		i := localRand.Intn(len(keys))
+		j := localRand.Intn(len(keys))
+		if i == j {
+			j = (j + 1) % len(keys)
+		}
+		x, y := keys[i], keys[j]
+		it.Range(Range{Org: min(x, y), End: max(x, y)})
+	case 2:
+		// Range with single key as both start and end
+		key := keys[localRand.Intn(len(keys))]
+		it.Range(Range{Org: key, End: key})
+	case 3:
+		// Range with key prefixes or variations
+		key := keys[localRand.Intn(len(keys))]
+		it.Range(Range{Org: key, End: key + "z"})
+	}
+	return it
+}
+
+func TestCheckOverlay(t *testing.T) {
+	assert := assert.T(t)
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+
+	// Test valid overlay
+	layer1 := &ixbuf.T{}
+	layer1.Insert("a", 1)
+	layer1.Insert("b", 2)
+
+	layer2 := &ixbuf.T{}
+	layer2.Update("a", 3) // valid update
+	layer2.Insert("c", 4)
+
+	layer3 := &ixbuf.T{}
+	layer3.Delete("b", 2) // valid delete with correct offset
+
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer1, layer2, layer3}}
+
+	// Should not panic
+	ov.Check()
+
+	// Test invalid overlay - update without add
+	// Create two layers: first has no "x", second tries to update "x"
+	baseLayer := &ixbuf.T{}
+	baseLayer.Insert("a", 1) // some other key
+
+	invalidLayer := &ixbuf.T{}
+	invalidLayer.Insert("x", 99|ixbuf.Update) // manually create update without prior add
+
+	invalidOv := &Overlay{bt: bt, layers: []*ixbuf.T{baseLayer, invalidLayer}}
+	assert.This(func() { invalidOv.Check() }).
+		Panics("update of non-existent key")
+
+	// Test invalid delete offset
+	invalidDeleteLayer1 := &ixbuf.T{}
+	invalidDeleteLayer1.Insert("d", 5)
+
+	invalidDeleteLayer2 := &ixbuf.T{}
+	invalidDeleteLayer2.Insert("d", 4|ixbuf.Delete) // wrong offset for delete
+
+	invalidDeleteOv := &Overlay{bt: bt, layers: []*ixbuf.T{invalidDeleteLayer1, invalidDeleteLayer2}}
+
+	assert.This(func() { invalidDeleteOv.Check() }).
+		Panics("delete offset mismatch")
 }
 
 //-------------------------------------------------------------------

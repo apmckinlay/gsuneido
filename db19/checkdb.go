@@ -117,7 +117,7 @@ func checkFirstIndex(state *DbState, ixcols []string,
 	sum := uint64(0)
 	size := int64(0)
 	ix.CheckMerged()
-	nrows := ix.Check(func(off uint64) {
+	nrows := ix.CheckBtree(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		buf := state.store.Data(off)
 		n := core.RecLen(buf)
@@ -135,7 +135,7 @@ func CheckOtherIndex(ixcols []string, ix *index.Overlay, nrows int, sumPrev uint
 	}()
 	ix.CheckMerged()
 	sum := uint64(0)
-	nr := ix.Check(func(off uint64) {
+	nr := ix.CheckBtree(func(off uint64) {
 		sum += off // addition so order doesn't matter
 	})
 	if nr != nrows {

@@ -3,7 +3,11 @@
 
 package iterator
 
-import "github.com/apmckinlay/gsuneido/db19/index/ixkey"
+import (
+	"fmt"
+
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+)
 
 // T is the interface for a Suneido style iterator
 // implemented by btree and ixbuf
@@ -19,6 +23,8 @@ type T interface {
 	// Cur returns the current key & offset
 	// as of the most recent Next, Prev, or Seek
 	Cur() (key string, off uint64)
+	
+	HasCur() bool
 
 	// Next advances to the first key > cur
 	Next()
@@ -52,3 +58,10 @@ type Range struct {
 }
 
 var All = Range{Org: ixkey.Min, End: ixkey.Max}
+
+func (r Range) String() string {
+	if r.Org == ixkey.Min && r.End == ixkey.Max {
+		return "{all}"
+	}
+	return fmt.Sprintf("%s=>%s", r.Org, r.End)
+}

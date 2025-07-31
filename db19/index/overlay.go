@@ -5,6 +5,7 @@ package index
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
@@ -16,12 +17,13 @@ import (
 
 // Overlay is the composite in-memory representation of an index
 type Overlay struct {
-	// bt is the stored base btree
+	// bt is the stored base btree (immutable)
 	bt *btree.T
 	// mut is the per transaction mutable top ixbuf.T, nil if read-only
 	mut *ixbuf.T
-	// layers is a base ixbuf of merged but not persisted changes,
-	// plus ixbuf's from completed but un-merged transactions
+	// layers is: (immutable)
+	// - a base ixbuf of merged but not persisted changes,
+	// - plus ixbuf's from completed but un-merged transactions
 	layers []*ixbuf.T
 }
 
@@ -127,9 +129,9 @@ func (ov *Overlay) RangeFrac(org, end string, nrecs int) float64 {
 	return ov.bt.RangeFrac(org, end, nrecs)
 }
 
-// Check applies a function to each entry in the btree.
+// CheckBtree applies a function to each entry in the btree.
 // WARNING: it ignores other layers.
-func (ov *Overlay) Check(fn func(uint64)) int {
+func (ov *Overlay) CheckBtree(fn func(uint64)) int {
 	n, _, _ := ov.bt.Check(fn)
 	return n
 }
@@ -236,5 +238,76 @@ func (ov *Overlay) Print() {
 	if ov.mut != nil {
 		fmt.Println("mut")
 		ov.mut.Print()
+	}
+}
+
+// String returns a string representation of the overlay
+// WITHOUT the btree
+func (ov *Overlay) String() string {
+	var sb strings.Builder
+	for i, ixb := range ov.layers {
+		fmt.Fprintln(&sb, "layer", i, ":", ixb)
+	}
+	if ov.mut != nil {
+		sb.WriteString("mut: ")
+		sb.WriteString(ov.mut.String())
+		ov.mut.Print()
+	}
+	return sb.String()
+}
+
+// checkOverlay verifies an Overlay by:
+// - using ixbuf.Check to check the ixbuf layers
+// - checking that layer entries for each key are in sequence: add, possible updates, possible delete
+func (ov *Overlay) Check() map[string]uint64 {
+	// Check each ixbuf layer individually
+	for _, layer := range ov.layers {
+		layer.Check()
+	}
+	if ov.mut != nil {
+		ov.mut.Check()
+	}
+
+	// Track current offset for each key (0 = doesn't exist)
+	keyOffsets := make(map[string]uint64)
+
+	// Process layers in order: layers[0] to layers[n], then mut
+	for layerIdx, layer := range ov.layers {
+		checkLayer(layer, layerIdx, keyOffsets)
+	}
+	if ov.mut != nil {
+		checkLayer(ov.mut, len(ov.layers), keyOffsets)
+	}
+	return keyOffsets
+}
+
+func checkLayer(layer *ixbuf.T, layerIdx int, keyOffsets map[string]uint64) {
+	iter := layer.Iter()
+	for {
+		key, off, ok := iter()
+		if !ok {
+			break
+		}
+		actualOffset := off & ixbuf.Mask
+		currentOffset := keyOffsets[key]
+		if off&ixbuf.Delete != 0 {
+			if currentOffset == 0 {
+				panic(fmt.Sprintf("delete of non-existent key %q in layer %d", key, layerIdx))
+			}
+			if actualOffset < currentOffset {
+				panic(fmt.Sprintf("delete offset mismatch for key %q in layer %d: expected >= %d, got %d", key, layerIdx, currentOffset, actualOffset))
+			}
+			keyOffsets[key] = 0
+		} else if off&ixbuf.Update != 0 {
+			if currentOffset == 0 {
+				panic(fmt.Sprintf("update of non-existent key %q in layer %d", key, layerIdx))
+			}
+			keyOffsets[key] = actualOffset
+		} else {
+			if currentOffset != 0 {
+				panic(fmt.Sprintf("add of existing key %q in layer %d", key, layerIdx))
+			}
+			keyOffsets[key] = actualOffset
+		}
 	}
 }

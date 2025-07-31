@@ -4,9 +4,10 @@
 package index
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
-	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type iterT = iterator.T
@@ -40,6 +41,21 @@ const (
 	eof
 )
 
+func (s state) String() string {
+	switch s {
+	case rewound:
+		return "rewound"
+	case front:
+		return "front"
+	case back:
+		return "back"
+	case eof:
+		return "eof"
+	default:
+		panic("unknown state")
+	}
+}
+
 type dir int8
 
 const (
@@ -60,9 +76,20 @@ func (oi *OverIter) Eof() bool {
 	return oi.state == eof
 }
 
+func (oi *OverIter) HasCur() bool {
+	return oi.state != eof && oi.state != rewound
+}
+
 func (oi *OverIter) Cur() (string, uint64) {
-	assert.Msg("OverIter Cur eof").That(oi.state != eof && oi.state != rewound)
-	assert.Msg("OverIter Cur deleted").That(oi.curOff&ixbuf.Delete == 0)
+	if oi.state == eof {
+		panic("OverIter Cur eof")
+	}
+	if oi.state == rewound {
+		panic("OverIter Cur rewound")
+	}
+	if oi.curOff&ixbuf.Delete != 0 {
+		panic("OverIter Cur deleted")
+	}
 	return oi.curKey, oi.curOff
 }
 
@@ -72,10 +99,6 @@ func (oi *OverIter) Range(rng Range) {
 	for _, it := range oi.iters {
 		it.Range(rng)
 	}
-}
-
-func (oi *OverIter) Print() {
-	oi.overlay.Print()
 }
 
 // Next -------------------------------------------------------------
@@ -140,7 +163,10 @@ func (oi *OverIter) all(fn func(it iterT)) {
 
 func (oi *OverIter) modNext(modified bool) {
 	// NOTE: keep this code in sync with modPrev
-	for _, it := range oi.iters {
+	for i, it := range oi.iters {
+		if it.Modified() && i != len(oi.iters)-1 {
+			panic("OverIter modNext modified not last")
+		}
 		if modified || it.Modified() {
 			it.Seek(oi.curKey)
 			if !it.Eof() {
@@ -171,44 +197,43 @@ func atKey(it iterator.T, key string) bool {
 // minIter finds the the minimum current key
 func (oi *OverIter) minIter() (bool, string, uint64) {
 	// NOTE: keep this code in sync with maxIter
-outer:
 	for {
-		itMin := -1
 		var keyMin string
-		var offMin uint64
-		for i, it := range oi.iters {
+		var result uint64
+		found := false
+
+		// find minimum key and its most recent operation
+		for _, it := range oi.iters {
 			if it.Eof() {
 				continue
 			}
 			key, off := it.Cur()
-			if itMin == -1 || key < keyMin {
-				itMin = i
+			if !found || key < keyMin { // new minimum found
 				keyMin = key
-				offMin = off
-			} else if key == keyMin {
-				off, _ = ixbuf.Combine(offMin, off)
-				if off == 0 || off&ixbuf.Delete != 0 {
-					oi.ifKey(i, key, iterator.T.Next)
-					// delete so skip
-					// may not be the final minimum, but still need to skip
-					it.Next()
-					continue outer // restart
+				found = true
+			}
+			if key == keyMin { // track the most recent operation for keyMin
+				if off&ixbuf.Delete != 0 {
+					result = 0
+				} else {
+					result = off
 				}
-				itMin = i
-				offMin = off
 			}
 		}
-		return itMin != -1, keyMin, offMin &^ ixbuf.Update
-	}
-}
+		if !found {
+			return false, "", 0
+		}
+		if result != 0 {
+			return true, keyMin, result &^ ixbuf.Update
+		}
 
-func (oi *OverIter) ifKey(i int, key string, fn func(iterator.T)) {
-	for j := range i {
-		itj := oi.iters[j]
-		if !itj.Eof() {
-			k, _ := itj.Cur()
-			if k == key {
-				fn(itj)
+		// Skip this key - advance all iterators that have it
+		for _, it := range oi.iters {
+			if !it.Eof() {
+				key, _ := it.Cur()
+				if key == keyMin {
+					it.Next()
+				}
 			}
 		}
 	}
@@ -245,10 +270,19 @@ func (oi *OverIter) Prev(t oiTran) {
 
 func (oi *OverIter) modPrev(modified bool) {
 	// NOTE: keep this code in sync with modNext
-	for _, it := range oi.iters {
+	for i, it := range oi.iters {
+		if it.Modified() && i != len(oi.iters)-1 {
+			panic("OverIter modPrev modified not last")
+		}
 		if modified || it.Modified() {
-			it.SeekAll(oi.curKey)
-			if !it.Eof() {
+			it.Seek(oi.curKey) // finds first key >= curKey
+			// Seek is upper bound but Prev needs lower bound
+			if it.Eof() {
+				// Seek hit EOF, all keys < curKey
+				// For reverse iteration, position at the last key
+				it.Rewind()
+				it.Prev() // go to last key in range
+			} else {
 				key, _ := it.Cur()
 				if key >= oi.curKey {
 					it.Prev()
@@ -268,34 +302,45 @@ func (oi *OverIter) modPrev(modified bool) {
 // maxIter finds the maximum current key
 func (oi *OverIter) maxIter() (bool, string, uint64) {
 	// NOTE: keep this code in sync with minIter
-outer:
 	for {
-		itMax := -1
 		var keyMax string
-		var offMax uint64
-		for i, it := range oi.iters {
+		var result uint64
+		found := false
+
+		// find maximum key and its most recent operation
+		for _, it := range oi.iters {
 			if it.Eof() {
 				continue
 			}
 			key, off := it.Cur()
-			if itMax == -1 || key > keyMax {
-				itMax = i
+			if !found || key > keyMax { // new maximum found
 				keyMax = key
-				offMax = off
-			} else if key == keyMax {
-				off, _ = ixbuf.Combine(offMax, off)
-				if off == 0 || off&ixbuf.Delete != 0 {
-					oi.ifKey(i, key, iterator.T.Prev)
-					// delete so skip
-					// may not be the final minimum, but still need to skip
-					it.Prev()
-					continue outer
+				found = true
+			}
+			if key == keyMax { // track the most recent operation for keyMax
+				if off&ixbuf.Delete != 0 {
+					result = 0
+				} else {
+					result = off
 				}
-				itMax = i
-				offMax = off
 			}
 		}
-		return itMax != -1, keyMax, offMax &^ ixbuf.Update
+		if !found {
+			return false, "", 0
+		}
+		if result != 0 {
+			return true, keyMax, result &^ ixbuf.Update
+		}
+
+		// Skip this key - advance all iterators that have it
+		for _, it := range oi.iters {
+			if !it.Eof() {
+				key, _ := it.Cur()
+				if key == keyMax {
+					it.Prev()
+				}
+			}
+		}
 	}
 }
 
@@ -304,4 +349,48 @@ func (oi *OverIter) Rewind() {
 	oi.state = rewound
 	oi.curKey = ""
 	oi.curOff = 0
+}
+
+func (oi *OverIter) String() string {
+	var sb strings.Builder
+	sb.WriteString("OverIter ")
+	sb.WriteString(oi.state.String())
+	sb.WriteString(" ")
+	sb.WriteString(oi.curKey)
+	sb.WriteString(ixbuf.OffString(oi.curOff))
+	sb.WriteString(" :")
+	for _, it := range oi.iters {
+		if it.Eof() {
+			sb.WriteString(" eof")
+		} else {
+			key, off := it.Cur()
+			sb.WriteString(" ")
+			sb.WriteString(key)
+			sb.WriteString(ixbuf.OffString(off))
+		}
+	}
+	return sb.String()
+}
+
+func (oi *OverIter) Check() {
+	if !oi.HasCur() {
+		return
+	}
+	curKey, curOff := oi.Cur()
+	off := uint64(0)
+	for _, it := range oi.iters {
+		if it.HasCur() {
+			itkey, itoff := it.Cur()
+			if itkey == curKey {
+				if off == 0 {
+					off = itoff
+				} else {
+					off, _ = ixbuf.Combine(off, itoff)
+				}
+			}
+		}
+	}
+	if off != curOff {
+		panic("OverIter Check: offset mismatch")
+	}
 }
