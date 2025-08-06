@@ -336,6 +336,7 @@ func (ck *Check) output(t *CkTran, table string, keys, oldkeys []string) bool {
 						if ck.abort1of(t, ta.tran, "output", "read", table) {
 							return false // this transaction got aborted
 						}
+						break
 					}
 				}
 			}
@@ -398,6 +399,7 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 						if ck.abort1of(t, ta.tran, "delete", "read", table) {
 							return false // this transaction got aborted
 						}
+						break
 					}
 				}
 			}
@@ -415,7 +417,7 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 // 	ts, ok := ck.bytable[table]
 // 	if !ok {
 // 		return false // no actions on this table
-// 	}	
+// 	}
 // 	ta, ok := ts[t.start]
 // 	if !ok {
 // 		return false // no actions for this transaction on this table
