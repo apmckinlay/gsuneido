@@ -15,6 +15,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ranges"
 )
 
+// Check implements optimistic concurrency control for db19.
+// It verifies that a sequence of reads and writes are serializable.
 // Check is single threaded.
 // Concurrent access is handled by checkco.go and concur.go
 
@@ -287,18 +289,48 @@ func (cr ckreads) contains(index int, key string) bool {
 // Update adds a delete of oldoff/oldkeys and an output of newkeys.
 func (ck *Check) Update(t *CkTran,
 	table string, oldoff uint64, oldkeys, newkeys []string) bool {
-	return ck.Delete(t, table, oldoff, oldkeys) &&
-		ck.output(t, table, newkeys, oldkeys)
-}
+	traceln("T", t.start, "update", table, "oldoff", oldoff, "oldkeys", oldkeys, "newkeys", newkeys)
 
-// Output adds an output action.
-// Outputs only need to be checked against outstanding reads.
-// The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
-func (ck *Check) Output(t *CkTran, table string, keys []string) bool {
 	if !ck.gotUpdate(t) {
 		return false
 	}
-	return ck.output(t, table, keys, nil)
+	if _, ok := ck.actvTran[t.start]; !ok {
+		return false // it's gone, presumably aborted
+	}
+	assert.That(!t.ended())
+	if t.start < ck.exclusive[table] {
+		ck.abort(t.start, "conflict with exclusive ("+table+")")
+		return false
+	}
+
+	if ts, ok := ck.bytable[table]; ok {
+	nextTran:
+		for _, ta := range ts {
+			if ta.tran != t && overlap(t, ta.tran) && !ta.tran.ended() {
+				// Check delete conflicts (oldkeys vs reads)
+				for i, key := range oldkeys {
+					if ta.reads.contains(i, key) {
+						if ck.abort1of(t, ta.tran, "delete", "read", table) {
+							return false // this transaction got aborted
+						}
+						continue nextTran
+					}
+				}
+				// Check output conflicts (newkeys vs reads, only if key changed)
+				for i, key := range newkeys {
+					if key != oldkeys[i] && ta.reads.contains(i, key) {
+						if ck.abort1of(t, ta.tran, "update", "read", table) {
+							return false // this transaction got aborted
+						}
+						continue nextTran
+					}
+				}
+			}
+		}
+	}
+	ta := ck.getActs(t, table)
+	return ck.saveDelete(t, ta, oldoff, oldkeys) &&
+		ck.saveOutput(t, ta, newkeys)
 }
 
 // gotUpdate returns false if it aborts the transaction
@@ -313,10 +345,14 @@ func (ck *Check) gotUpdate(t *CkTran) bool {
 	return true
 }
 
-// output adds an output action.
-// oldkeys is used by Update so we can tell if the key changed.
-func (ck *Check) output(t *CkTran, table string, keys, oldkeys []string) bool {
+// Output adds an output action.
+// Outputs only need to be checked against outstanding reads.
+// The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
+func (ck *Check) Output(t *CkTran, table string, keys []string) bool {
 	traceln("T", t.start, "output", table, "keys", keys)
+	if !ck.gotUpdate(t) {
+		return false
+	}
 	if _, ok := ck.actvTran[t.start]; !ok {
 		return false // it's gone, presumably aborted
 	}
@@ -330,8 +366,7 @@ func (ck *Check) output(t *CkTran, table string, keys, oldkeys []string) bool {
 		for _, ta := range ts {
 			if ta.tran != t && overlap(t, ta.tran) && !ta.tran.ended() {
 				for i, key := range keys {
-					if (oldkeys == nil || key != oldkeys[i]) &&
-						ta.reads.contains(i, key) {
+					if ta.reads.contains(i, key) {
 						if ck.abort1of(t, ta.tran, "output", "read", table) {
 							return false // this transaction got aborted
 						}
@@ -341,18 +376,15 @@ func (ck *Check) output(t *CkTran, table string, keys, oldkeys []string) bool {
 			}
 		}
 	}
-	if !ck.saveOutput(t, table, keys) {
-		ck.abort(t.start,
-			"too many writes (output, update, or delete) in one transaction")
-	}
-	return true
+	ta := ck.getActs(t, table)
+	return ck.saveOutput(t, ta, keys)
 }
 
-func (ck *Check) saveOutput(t *CkTran, table string, keys []string) bool {
-	ta := ck.getActs(t, table)
+func (ck *Check) saveOutput(t *CkTran, ta *actions, keys []string) bool {
 	for i, key := range keys {
 		outs := ta.outputs.with(i, key)
 		if outs == nil {
+			ck.abort(t.start, "too many writes (output, update, or delete) in one transaction")
 			return false
 		}
 		ta.outputs = outs
@@ -399,11 +431,8 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 			}
 		}
 	}
-	if !ck.saveDelete(t, table, off, keys) {
-		ck.abort(t.start,
-			"too many writes (output, update, or delete) in one transaction")
-	}
-	return true
+	ta := ck.getActs(t, table)
+	return ck.saveDelete(t, ta, off, keys)
 }
 
 // hasRead checks if any of the given keys have been read by the transaction
@@ -424,12 +453,12 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 // 	return false
 // }
 
-func (ck *Check) saveDelete(t *CkTran, table string, off uint64, keys []string) bool {
+func (ck *Check) saveDelete(t *CkTran, ta *actions, off uint64, keys []string) bool {
 	assert.That(off != 0)
-	ta := ck.getActs(t, table)
 	for i, key := range keys {
 		dels := ta.deletes.with(i, key)
 		if dels == nil {
+			ck.abort(t.start, "too many writes (output, update, or delete) in one transaction")
 			return false
 		}
 		ta.deletes = dels
