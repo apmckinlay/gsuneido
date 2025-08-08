@@ -21,18 +21,18 @@ import (
 /*
 Reads are tracked as Ranges on specific indexes (ckreads).
 Output and Deletes are tracked as Set's of key values for each index (ckwrites).
-Deletes are also tracked by offset which is used when checking delete vs delete.
 
 |        | committed                 ||| outstanding            |||
 |        | read      | output | delete | read   | output | delete |
 | ------ | --------- | ------ | ------ | ------ | ------ | ------ |
 | read   | no (1)(3) | check  | check  | no (1) | check  | check  |
 | output | no (3)    | no (2) | no (2) | check  | no (2) | no (2) |
-| delete | no (3)    | no (2) | check  | check  | no (2) | check  |
+| delete | no (3)    | no (2) | no (4) | check  | no (2) | no (4) |
 
-1.  reads never conflict with reads
-2.  outputs never conflict with other outputs or deletes
-3.  don't need to check committed reads
+1. reads never conflict with reads
+2. outputs never conflict with other outputs or deletes
+3. don't need to check committed reads
+4. delete-delete conflicts never happen because read-write is caught first
 */
 
 // MaxTrans is the maximum number of outstanding/overlapping update transactions
@@ -102,7 +102,6 @@ type actions struct {
 	tran    *CkTran
 	outputs ckwrites
 	deletes ckwrites
-	deloffs map[uint64]struct{}
 	reads   ckreads
 }
 
@@ -388,14 +387,9 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 	// check against overlapping transactions
 	if ts, ok := ck.bytable[table]; ok {
 		for _, ta := range ts {
-			if ta.tran != t && overlap(t, ta.tran) {
-				if _, ok := ta.deloffs[off]; ok {
-					if ck.abort1of(t, ta.tran, "delete", "delete", table) {
-						return false // this transaction got aborted
-					}
-				}
+			if ta.tran != t && overlap(t, ta.tran) && !ta.tran.ended() {
 				for i, key := range keys {
-					if !ta.tran.ended() && ta.reads.contains(i, key) {
+					if ta.reads.contains(i, key) {
 						if ck.abort1of(t, ta.tran, "delete", "read", table) {
 							return false // this transaction got aborted
 						}
@@ -431,12 +425,8 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 // }
 
 func (ck *Check) saveDelete(t *CkTran, table string, off uint64, keys []string) bool {
-	ta := ck.getActs(t, table)
-	if ta.deloffs == nil {
-		ta.deloffs = make(map[uint64]struct{})
-	}
 	assert.That(off != 0)
-	ta.deloffs[off] = struct{}{}
+	ta := ck.getActs(t, table)
 	for i, key := range keys {
 		dels := ta.deletes.with(i, key)
 		if dels == nil {
@@ -620,12 +610,11 @@ func (ck *Check) cleanEnded() {
 	}
 }
 
-// removeByTable is called by abort and cleanEnded to removeByTable from bytable.
+// removeByTable is called by abort and cleanEnded to remove from bytable.
 // Note: the caller must still delete from actvTran or cmtdTran.
 func (ck *Check) removeByTable(t *CkTran) {
 	for _, table := range t.tables {
-		ts := ck.bytable[table]
-		delete(ts, t.start)
+		delete(ck.bytable[table], t.start)
 		// keep ck.bytable[table] even if empty
 	}
 }

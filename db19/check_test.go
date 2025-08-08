@@ -4,11 +4,14 @@
 package db19
 
 import (
-	"math/rand"
+	"fmt"
+	"math/rand/v2"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/interleave"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -18,11 +21,11 @@ func TestCheckStartStop(t *testing.T) {
 	var trans [ntrans]*UpdateTran
 	const ntimes = 5000
 	for range ntimes {
-		j := rand.Intn(ntrans)
+		j := rand.IntN(ntrans)
 		if trans[j] == nil {
 			trans[j] = &UpdateTran{ct: ck.StartTran()}
 		} else {
-			if rand.Intn(2) == 1 {
+			if rand.IntN(2) == 1 {
 				ck.Commit(trans[j])
 			} else {
 				ck.Abort(trans[j].ct, "")
@@ -191,7 +194,7 @@ func BenchmarkCheck(b *testing.B) {
 	keys := make([]string, nindexes)
 	makeKeys := func() []string {
 		for i := range nindexes {
-			keys[i] = strconv.Itoa(rand.Intn(9999))
+			keys[i] = strconv.Itoa(rand.IntN(9999))
 		}
 		return keys
 	}
@@ -205,28 +208,147 @@ func BenchmarkCheck(b *testing.B) {
 		}
 		ct := ck.StartTran()
 		for range ntables {
-			table := tables[rand.Intn(len(tables))]
+			table := tables[rand.IntN(len(tables))]
 			for range nacts {
-				switch rand.Intn(3) {
+				switch rand.IntN(3) {
 				case 0:
-					index := rand.Intn(nindexes)
-					n := rand.Intn(keyRange)
+					index := rand.IntN(nindexes)
+					n := rand.IntN(keyRange)
 					from := strconv.Itoa(n)
-					to := strconv.Itoa(n + rand.Intn(99))
+					to := strconv.Itoa(n + rand.IntN(99))
 					ck.Read(ct, table, index, from, to)
 				case 1:
 					ck.Output(ct, table, makeKeys())
 				case 2:
 					// Do a read before delete to make it realistic
 					deleteKeys := makeKeys()
-					index := rand.Intn(nindexes)
+					index := rand.IntN(nindexes)
 					from := deleteKeys[index]
 					to := from + "\x00"
 					ck.Read(ct, table, index, from, to)
-					offset := uint64(rand.Intn(keyRange)) + 1 // not zero
+					offset := uint64(rand.IntN(keyRange)) + 1 // not zero
 					ck.Delete(ct, table, offset, deleteKeys)
 				}
 			}
 		}
 	}
+}
+
+func TestCheckExhaustive(t *testing.T) {
+	checkerAbortT1 = true
+	defer func() { checkerAbortT1 = false }()
+	acts1 := [][]string{
+		{"1ra", "1oa", "1c"},
+		{"1ra", "1ob", "1c"},
+		{"1ra", "1da", "1c"},
+		{"1ra", "1db", "1c"},
+		{"1oa", "1ra", "1c"},
+		{"1ob", "1ra", "1c"},
+		{"1da", "1ra", "1c"},
+		{"1db", "1ra", "1c"}}
+	acts2 := [][]string{
+		{"2ra", "2oa", "2c"},
+		{"2ra", "2ob", "2c"},
+		{"2ra", "2da", "2c"},
+		{"2ra", "2db", "2c"},
+		{"2oa", "2ra", "2c"},
+		{"2ob", "2ra", "2c"},
+		{"2da", "2ra", "2c"},
+		{"2db", "2ra", "2c"}}
+	var ok, abort int
+	for j, act1 := range acts1 {
+		for _, act2 := range acts2[j:] {
+			for seq := range interleave.All(act1, act2) {
+				if doseq(t, seq) {
+					ok++
+				} else {
+					abort++
+				}
+			}
+		}
+	}
+	fmt.Println("ok:", ok, "abort:", abort)
+}
+
+func TestDoseq(t *testing.T) {
+	doseq(t, strings.Split("2ra 2db 2c 1ra 1oa 1c", " "))
+}
+
+func doseq(t *testing.T, seq []string) bool {
+	t.Helper()
+	ck := NewCheck(&Database{})
+	ts := []*UpdateTran{{ct: ck.StartTran()}, {ct: ck.StartTran()}}
+	var result bool
+	var failure string
+	for _, s := range seq {
+		t := ts[s[0]-'1']
+		switch s[1] {
+		case 'o':
+			result = ck.Read(t.ct, "mytable", 0, s[2:3], s[2:3]) &&
+				ck.Output(t.ct, "mytable", []string{s[2:3]})
+		case 'd':
+			off := uint64(s[2] - '0')
+			result = ck.Read(t.ct, "mytable", 0, s[2:3], s[2:3]) &&
+				ck.Delete(t.ct, "mytable", off, []string{s[2:3]})
+		case 'r':
+			result = ck.Read(t.ct, "mytable", 0, s[2:3], s[2:3])
+		case 'c':
+			result = ck.Commit(t)
+		default:
+			assert.ShouldNotReachHere()
+		}
+		if !result {
+			failure = "t" + s[0:1] + ": " + t.ct.failure.Load()
+			break
+		}
+	}
+	expected := verify(seq)
+	if result != expected {
+		fmt.Println(seq, "got", result, "expected", expected)
+		if !result {
+			fmt.Println(failure)
+		}
+		// } else {
+		// 	fmt.Println(seq, result)
+		t.FailNow()
+	}
+	return result
+}
+
+func verify(seq []string) bool {
+	type lockt struct {
+		t     byte
+		r     byte
+		write bool
+	}
+	var locks []lockt
+	result := true
+	lock := func(t, r byte, write bool) {
+		for _, l := range locks {
+			if l.r == r && l.t != t {
+				if write || l.write {
+					result = false
+				}
+			}
+		}
+		locks = append(locks, lockt{t, r, write})
+	}
+	for _, s := range seq {
+		t := s[0]
+		switch s[1] {
+		case 'r':
+			lock(t, s[2], false)
+		case 'd', 'o':
+			lock(t, s[2], true)
+		case 'c':
+			for i, l := range locks {
+				if l.t == t && !l.write {
+					locks[i] = lockt{}
+				}
+			}
+		default:
+			assert.ShouldNotReachHere()
+		}
+	}
+	return result
 }
