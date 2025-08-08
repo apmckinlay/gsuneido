@@ -555,7 +555,7 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 	if ut.ct.hasUpdates {
 		assert.That(ut.ct.readConflict == "")
 		ck.cmtdTran[tn] = t
-		tw = ck.tablesWritten(t)
+		tw = ck.commitByTable(t)
 	} else {
 		traceln(t, "commit with no updates")
 		ck.removeByTable(t)
@@ -564,13 +564,16 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 	return tw
 }
 
-func (ck *Check) tablesWritten(t *CkTran) []string {
+// commitByTable returns tables written by a transaction.
+// It also clears the reads.
+func (ck *Check) commitByTable(t *CkTran) []string {
 	tw := make([]string, 0, 8) // ???
 	for _, table := range t.tables {
 		ta := ck.bytable[table][t.start]
 		if ta.outputs != nil || ta.deletes != nil {
 			tw = append(tw, table)
 		}
+		ta.reads = nil // not needed once committed
 	}
 	return tw
 }
