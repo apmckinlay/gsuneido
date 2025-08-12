@@ -923,7 +923,8 @@ var _ = builtin(SetTimer, "(hwnd, id, ms, f)")
 func SetTimer(th *Thread, args []Value) Value {
 	if nTimer > warnTimers {
 		if nTimer > maxTimers {
-			logPanic("ERROR: SetTimer: over", maxTimers)
+			log.Println("ERROR: SetTimer: over", maxTimers)
+			panic("SetTimer: too many timers")
 		}
 		log.Println("WARNING: SetTimer: over", warnTimers)
 	}
