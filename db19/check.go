@@ -169,7 +169,7 @@ func (ck *Check) AddExclusive(table string) bool {
 	if ts, ok := ck.bytable[table]; ok {
 		for _, ta := range ts {
 			if ta.outputs != nil || ta.deletes != nil {
-				ck.abort(ta.tran.start, "preempted by exclusive ("+table+")")
+				ck.Abort(ta.tran, "preempted by exclusive ("+table+")")
 			}
 		}
 	}
@@ -217,7 +217,7 @@ func (ck *Check) RunEndExclusive(table string, fn func()) (err any) {
 // Read adds a read action.
 // Will conflict if another transaction has a write within the range.
 func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool {
-	traceln("T", t.start, "read", table, "index", index, "from", from, "to", to)
+	traceln(t, "read", table, "index", index, "from", from, "to", to)
 	if t.readConflict != "" {
 		// once we have a conflict, we don't need to check any more reads
 		// either it will be read-only (no conflicts) or it will abort
@@ -241,7 +241,7 @@ func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool 
 		}
 	}
 	if !ck.saveRead(t, table, index, from, to) {
-		ck.abort(t.start, "too many reads in one update transaction")
+		ck.Abort(t, "too many reads in one update transaction")
 	}
 	return true
 }
@@ -250,6 +250,7 @@ func (ck *Check) saveRead(t *CkTran, table string, index int, from, to string) b
 	ta := ck.getActs(t, table)
 	reads, inc := ta.reads.with(index, from, to)
 	if t.readCount += inc; t.readCount >= readMax {
+		ck.Abort(t, "too many reads in one update transaction")
 		return false
 	}
 	ta.reads = reads
@@ -289,7 +290,7 @@ func (cr ckreads) contains(index int, key string) bool {
 // Update adds a delete of oldoff/oldkeys and an output of newkeys.
 func (ck *Check) Update(t *CkTran,
 	table string, oldoff uint64, oldkeys, newkeys []string) bool {
-	traceln("T", t.start, "update", table, "oldoff", oldoff, "oldkeys", oldkeys, "newkeys", newkeys)
+	traceln(t, "update", table, "oldoff", oldoff, "oldkeys", oldkeys, "newkeys", newkeys)
 
 	if !ck.gotUpdate(t) {
 		return false
@@ -299,7 +300,7 @@ func (ck *Check) Update(t *CkTran,
 	}
 	assert.That(!t.ended())
 	if t.start < ck.exclusive[table] {
-		ck.abort(t.start, "conflict with exclusive ("+table+")")
+		ck.Abort(t, "conflict with exclusive ("+table+")")
 		return false
 	}
 
@@ -337,7 +338,7 @@ func (ck *Check) Update(t *CkTran,
 func (ck *Check) gotUpdate(t *CkTran) bool {
 	if !t.hasUpdates {
 		if t.readConflict != "" {
-			ck.abort(t.start, t.readConflict)
+			ck.Abort(t, t.readConflict)
 			return false
 		}
 		t.hasUpdates = true
@@ -349,7 +350,7 @@ func (ck *Check) gotUpdate(t *CkTran) bool {
 // Outputs only need to be checked against outstanding reads.
 // The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
 func (ck *Check) Output(t *CkTran, table string, keys []string) bool {
-	traceln("T", t.start, "output", table, "keys", keys)
+	traceln(t, "output", table, "keys", keys)
 	if !ck.gotUpdate(t) {
 		return false
 	}
@@ -358,7 +359,7 @@ func (ck *Check) Output(t *CkTran, table string, keys []string) bool {
 	}
 	assert.That(!t.ended())
 	if t.start < ck.exclusive[table] {
-		ck.abort(t.start, "conflict with exclusive ("+table+")")
+		ck.Abort(t, "conflict with exclusive ("+table+")")
 		return false
 	}
 	// check against overlapping transactions
@@ -384,7 +385,7 @@ func (ck *Check) saveOutput(t *CkTran, ta *actions, keys []string) bool {
 	for i, key := range keys {
 		outs := ta.outputs.with(i, key)
 		if outs == nil {
-			ck.abort(t.start, "too many writes (output, update, or delete) in one transaction")
+			ck.Abort(t, "too many writes (output, update, or delete) in one transaction")
 			return false
 		}
 		ta.outputs = outs
@@ -396,7 +397,7 @@ func (ck *Check) saveOutput(t *CkTran, ta *actions, keys []string) bool {
 // Deletes only need to be checked against outstanding reads.
 // The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
 func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool {
-	traceln("T", t.start, "delete", table, "off", off, "keys", keys)
+	traceln(t, "delete", table, "off", off, "keys", keys)
 	if !ck.gotUpdate(t) {
 		return false
 	}
@@ -405,7 +406,7 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 	}
 	assert.That(!t.ended())
 	if t.start < ck.exclusive[table] {
-		ck.abort(t.start, "conflict with exclusive ("+table+")")
+		ck.Abort(t, "conflict with exclusive ("+table+")")
 		return false
 	}
 
@@ -458,7 +459,7 @@ func (ck *Check) saveDelete(t *CkTran, ta *actions, off uint64, keys []string) b
 	for i, key := range keys {
 		dels := ta.deletes.with(i, key)
 		if dels == nil {
-			ck.abort(t.start, "too many writes (output, update, or delete) in one transaction")
+			ck.Abort(t, "too many writes (output, update, or delete) in one transaction")
 			return false
 		}
 		ta.deletes = dels
@@ -500,7 +501,7 @@ var checkerAbortT1 = false
 // If t2 is committed, abort t1, otherwise choose randomly.
 // It returns true if t1 is aborted, false otherwise.
 func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2, table string) bool {
-	traceln("conflict with", t2)
+	traceln("abort1of", t1, t2)
 	if !t1.hasUpdates {
 		t1.readConflict = act1 + " in this transaction conflicted with " +
 			act2 + " in another transaction (" + table + ")"
@@ -514,11 +515,11 @@ func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2, table string) bool {
 		return false // t1 not aborted
 	}
 	if t2.ended() || checkerAbortT1 || rand.IntN(2) == 1 {
-		ck.abort(t1.start, act1+" in this transaction conflicted with "+
+		ck.Abort(t1, act1+" in this transaction conflicted with "+
 			act2+" in another transaction ("+table+")")
 		return true
 	}
-	ck.abort(t2.start, act2+" in this transaction conflicted with "+
+	ck.Abort(t2, act2+" in this transaction conflicted with "+
 		act1+" in another transaction ("+table+")")
 	return false
 }
@@ -564,13 +565,13 @@ func (ck *Check) Commit(ut *UpdateTran) bool {
 }
 
 func (ck *Check) commit(ut *UpdateTran) []string {
+	traceln("commit", ut)
 	tw := []string{} // not nil
 	if ck.db.IsCorrupted() {
 		ck.Abort(ut.ct, "database is locked")
 		return tw // not nil/failure
 	}
 	tn := ut.ct.start
-	traceln("commit", tn)
 	t, ok := ck.actvTran[tn]
 	if !ok {
 		return nil // it's gone, presumably aborted
@@ -617,6 +618,7 @@ func overlap(t1, t2 *CkTran) bool {
 // that finished before the earliest outstanding start time.
 // It is called by commit and abort.
 func (ck *Check) cleanEnded() {
+	traceln("cleanEnded")
 	// find oldest start of non-ended (would be faster with a heap)
 	if ck.oldest == math.MaxInt {
 		for _, t := range ck.actvTran {
@@ -625,20 +627,20 @@ func (ck *Check) cleanEnded() {
 				ck.oldest = t.start
 			}
 		}
-		traceln("OLDEST", ck.oldest)
+		traceln("oldest", ck.oldest)
 	}
 	// remove any ended transactions older than this
 	for tn, t := range ck.cmtdTran {
 		// assert.That(t.ended())
 		if t.end < ck.oldest {
-			traceln("REMOVE", tn, "->", t.end)
+			traceln("remove", t, "end", t.end)
 			ck.removeByTable(t)
 			delete(ck.cmtdTran, tn)
 		}
 	}
 	for table, end := range ck.exclusive {
 		if end < ck.oldest {
-			traceln("REMOVE exclusive", table, end)
+			traceln("remove exclusive", table, end)
 			delete(ck.exclusive, table)
 		}
 	}
@@ -661,7 +663,6 @@ var MaxAge = 20
 // to abort transactions older than MaxAge.
 func (ck *Check) tick() {
 	ck.clock++
-	// traceln("tick", ck.clock)
 	for tn, t := range ck.actvTran {
 		if ck.clock-t.birth >= MaxAge {
 			traceln("abort", tn, "age", ck.clock-t.birth)
