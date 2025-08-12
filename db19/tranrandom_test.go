@@ -29,7 +29,7 @@ import (
 func TestRandomConcurrentTransactions(t *testing.T) {
 	const numTransactions = 500_000
 	const numRecords = 9000
-	const numThreads = 4
+	const numThreads = 16
 
 	if testing.Short() {
 		t.Skip("skipping random concurrent transaction test in short mode")

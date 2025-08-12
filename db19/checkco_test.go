@@ -27,7 +27,7 @@ func TestCheckCoTimeout(t *testing.T) {
 	assert.T(t).False(tran.Failed())
 	time.Sleep(2 * time.Second)
 	assert.T(t).True(tran.Failed())
-	close(ck.c)
+	ck.pq.Put(stopPriority, 0, nil)
 }
 
 func TestCheckCoRandom(*testing.T) {

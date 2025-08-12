@@ -330,6 +330,10 @@ func TestRangesBug(t *testing.T) {
 	dbRec2 := t2.Lookup("tmp", 0, emptyKey)
 	assert.T(t).That(dbRec2 != nil)
 	t2.Update(nil, "tmp", dbRec2.Off, mkrec("9", "3"))
+	
+	// wait till pending actions are done, with a low priority blocking request
+	db.ck.Transactions()
+	db.ck.Transactions()
 
 	assert.This(func() { t1.Commit(); t2.Commit() }).Panics("conflicted")
 
@@ -406,26 +410,25 @@ func TestCombineBug(t *testing.T) {
 		Columns: []string{"k"},
 		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"k"}}},
 	})
-	
-	
+
 	ut := db.NewUpdateTran()
 	ut.Output(nil, "testtable", mkrec("2"))
 	ts := ut.getSchema("testtable")
 	key := ts.Indexes[0].Ixspec.Key(mkrec("2"))
 	ut.Commit()
 	db.Persist()
-	
+
 	// Delete the record in a separate transaction
 	ut = db.NewUpdateTran()
 	dbRec := ut.Lookup("testtable", 0, key)
 	ut.Delete(nil, "testtable", dbRec.Off)
 	ut.Commit()
-	
+
 	// Re-output the record in a separate transaction
 	ut = db.NewUpdateTran()
 	ut.Output(nil, "testtable", mkrec("2"))
 	ut.Commit()
-	
+
 	// All in one transaction, delete, re-output, delete
 	ut = db.NewUpdateTran()
 	// First delete

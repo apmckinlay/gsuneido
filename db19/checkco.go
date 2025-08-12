@@ -9,11 +9,12 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
+	"github.com/apmckinlay/gsuneido/util/queue"
 )
 
 // CheckCo is the concurrent, channel based interface to Check
 type CheckCo struct {
-	c       chan any
+	pq      *queue.PriorityQueue
 	allDone chan void
 }
 
@@ -98,9 +99,19 @@ type ckFinal struct {
 	ret chan int
 }
 
+type ckTick struct{}
+
+// Priority levels
+const (
+	stopPriority   = 0 // stop signal - lowest priority
+	lowPriority    = 1 // start, admin, query operations
+	mediumPriority = 2 // read, write operations
+	highPriority   = 3 // commit, abort
+)
+
 func (ck *CheckCo) StartTran() *CkTran {
 	ret := make(chan *CkTran, 1)
-	ck.c <- &ckStart{ret: ret}
+	ck.pq.Put(lowPriority, 0, &ckStart{ret: ret})
 	return <-ret
 }
 
@@ -108,7 +119,7 @@ func (ck *CheckCo) Read(t *CkTran, table string, index int, from, to string) boo
 	if t.Failed() {
 		return false
 	}
-	ck.c <- &ckRead{t: t, table: table, index: index, from: from, to: to}
+	ck.pq.Put(mediumPriority, t.start, &ckRead{t: t, table: table, index: index, from: from, to: to})
 	return true
 }
 
@@ -116,7 +127,7 @@ func (ck *CheckCo) Output(t *CkTran, table string, keys []string) bool {
 	if t.Failed() {
 		return false
 	}
-	ck.c <- &ckOutput{t: t, table: table, keys: keys}
+	ck.pq.Put(mediumPriority, t.start, &ckOutput{t: t, table: table, keys: keys})
 	return true
 }
 
@@ -124,7 +135,7 @@ func (ck *CheckCo) Delete(t *CkTran, table string, off uint64, keys []string) bo
 	if t.Failed() {
 		return false
 	}
-	ck.c <- &ckDelete{t: t, table: table, off: off, keys: keys}
+	ck.pq.Put(mediumPriority, t.start, &ckDelete{t: t, table: table, off: off, keys: keys})
 	return true
 }
 
@@ -132,8 +143,8 @@ func (ck *CheckCo) Update(t *CkTran, table string, oldoff uint64, oldkeys, newke
 	if t.Failed() {
 		return false
 	}
-	ck.c <- &ckUpdate{t: t, table: table,
-		oldoff: oldoff, oldkeys: oldkeys, newkeys: newkeys}
+	ck.pq.Put(mediumPriority, t.start, &ckUpdate{t: t, table: table,
+		oldoff: oldoff, oldkeys: oldkeys, newkeys: newkeys})
 	return true
 }
 
@@ -142,7 +153,7 @@ func (ck *CheckCo) ReadCount(t *CkTran) int {
 		return -1
 	}
 	ret := make(chan int)
-	ck.c <- &ckCounts{t: t, ret: ret}
+	ck.pq.Put(lowPriority, t.start, &ckCounts{t: t, ret: ret})
 	return <-ret
 }
 
@@ -151,55 +162,55 @@ func (ck *CheckCo) Commit(ut *UpdateTran) bool {
 		return false
 	}
 	ret := make(chan bool, 1)
-	ck.c <- &ckCommit{t: ut, ret: ret}
+	ck.pq.Put(highPriority, ut.ct.start, &ckCommit{t: ut, ret: ret})
 	return <-ret
 }
 
 func (ck *CheckCo) Abort(t *CkTran, reason string) bool {
-	ck.c <- &ckAbort{t: t, reason: reason}
+	ck.pq.Put(highPriority, t.start, &ckAbort{t: t, reason: reason})
 	return true
 }
 
 // AddExclusive is used by load table and add index
 func (ck *CheckCo) AddExclusive(table string) bool {
 	ret := make(chan bool, 1)
-	ck.c <- &ckAddExcl{table: table, ret: ret}
+	ck.pq.Put(mediumPriority, 0, &ckAddExcl{table: table, ret: ret})
 	return <-ret
 }
 
 func (ck *CheckCo) EndExclusive(table string) {
 	ret := make(chan struct{}, 1)
-	ck.c <- &ckEndExcl{table: table, ret: ret}
+	ck.pq.Put(highPriority, 0, &ckEndExcl{table: table, ret: ret})
 	<-ret
 }
 
 func (ck *CheckCo) RunEndExclusive(table string, fn func()) any {
 	ret := make(chan any, 1)
-	ck.c <- &ckRunEndExcl{ckRunExcl{table: table, fn: fn, ret: ret}}
+	ck.pq.Put(mediumPriority, 0, &ckRunEndExcl{ckRunExcl{table: table, fn: fn, ret: ret}})
 	return <-ret
 }
 
 func (ck *CheckCo) RunExclusive(table string, fn func()) any {
 	ret := make(chan any, 1)
-	ck.c <- &ckRunExcl{table: table, fn: fn, ret: ret}
+	ck.pq.Put(mediumPriority, 0, &ckRunExcl{table: table, fn: fn, ret: ret})
 	return <-ret
 }
 
 func (ck *CheckCo) Persist() *DbState {
 	ret := make(chan *DbState, 1)
-	ck.c <- &ckPersist{ret: ret}
+	ck.pq.Put(lowPriority, 0, &ckPersist{ret: ret})
 	return <-ret
 }
 
 func (ck *CheckCo) Transactions() []int {
 	ret := make(chan []int, 1)
-	ck.c <- &ckTrans{ret: ret}
+	ck.pq.Put(lowPriority, 0, &ckTrans{ret: ret})
 	return <-ret
 }
 
 func (ck *CheckCo) Final() int {
 	ret := make(chan int, 1)
-	ck.c <- &ckFinal{ret: ret}
+	ck.pq.Put(lowPriority, 0, &ckFinal{ret: ret})
 	return <-ret
 }
 
@@ -209,42 +220,50 @@ const ckchanSize = 4 // ???
 
 func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo {
 	ck := NewCheck(db)
-	c := make(chan any, ckchanSize)
-	go checker(ck, c, mergeChan)
-	return &CheckCo{c: c, allDone: allDone}
+	pq := queue.NewPriorityQueue()
+	stopTicker := make(chan struct{})
+	go tickGenerator(pq, stopTicker)
+	go checker(ck, pq, mergeChan, stopTicker)
+	return &CheckCo{pq: pq, allDone: allDone}
 }
 
 func (ck *CheckCo) Stop() {
 	exit.Progress("  checker stopping")
 	// send nil rather than closing
 	// so other threads don't get "send on closed channel"
-	ck.c <- nil
-	<-ck.allDone // wait
+	ck.pq.Put(stopPriority, 0, nil)
+	<-ck.allDone // wait until closed by concur.go merger
 	exit.Progress("  checker stopped")
 }
 
-func checker(ck *Check, c chan any, mergeChan chan todo) {
+func tickGenerator(pq *queue.PriorityQueue, stop chan struct{}) {
+	for {
+		select {
+		case <-stop:
+			return
+		case <-time.After(time.Second):
+			pq.Put(lowPriority, 0, &ckTick{})
+		}
+	}
+}
+
+func checker(ck *Check, pq *queue.PriorityQueue, mergeChan chan todo, stopTicker chan struct{}) {
 	defer func() {
 		if e := recover(); e != nil {
 			dbg.PrintStack()
 			log.Fatalln("FATAL: in checker:", e)
 		}
+		close(stopTicker)
 	}()
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
 	for {
-		select {
-		case msg := <-c:
-			if msg == nil { // Stop sends nil
-				if mergeChan != nil { // no channel when testing
-					close(mergeChan)
-				}
-				return
+		msg := pq.Get()
+		if msg == nil { // Stop sends nil
+			if mergeChan != nil { // no channel when testing
+				close(mergeChan)
 			}
-			ck.dispatch(msg, mergeChan)
-		case <-ticker.C:
-			ck.tick()
+			return
 		}
+		ck.dispatch(msg, mergeChan)
 	}
 }
 
@@ -301,6 +320,8 @@ func (ck *Check) dispatch(msg any, mergeChan chan todo) {
 		msg.ret <- ck.Transactions()
 	case *ckFinal:
 		msg.ret <- ck.Final()
+	case *ckTick:
+		ck.tick()
 	default:
 		panic("checker unknown message type")
 	}
