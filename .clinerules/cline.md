@@ -31,6 +31,7 @@ IMPORTANT: Write tests to reproduce errors BEFORE fixing them.
 - `go test -benchmem -bench=BenchmarkName ./package` - run benchmark
 - do not change directories to run tests
 - `make clean` - Remove built files and clean cache
+- when using go test, specify a timeout e.g. `go test -timeout 10s ./package`
 
 ## Architecture & Structure
 - **Core packages**: `core/` (values, types), `builtin/` (built-in functions), `compile/` (parser, codegen), 'util' (miscellaneous utility functions)
