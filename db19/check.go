@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand/v2"
 	"strconv"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
@@ -77,6 +78,8 @@ type Check struct {
 	oldest int
 	// clock is used to abort long transactions
 	clock int
+	// outstanding is len(actvTran) + len(cmtdTran), used by CheckCo
+	outstanding atomic.Int32
 }
 
 type CkTran struct {
@@ -149,11 +152,16 @@ func (ck *Check) StartTran() *CkTran {
 	}
 	t := &CkTran{start: start, end: math.MaxInt, birth: ck.clock, state: state}
 	ck.actvTran[start] = t
+	ck.updateOutstanding()
 	return t
 }
 
 func (ck *Check) count() int {
 	return len(ck.actvTran) + len(ck.cmtdTran)
+}
+
+func (ck *Check) updateOutstanding() {
+	ck.outstanding.Store(int32(ck.count()))
 }
 
 func (ck *Check) next() int {
@@ -542,7 +550,7 @@ func (ck *Check) abort(tn int, reason string) bool {
 	traceln("abort", tn)
 	t, ok := ck.actvTran[tn]
 	if !ok {
-		return false
+		return false // it's gone, presumably aborted
 	}
 	if reason == "" {
 		reason = "abort"
@@ -554,6 +562,7 @@ func (ck *Check) abort(tn int, reason string) bool {
 		ck.oldest = math.MaxInt // need to find the new oldest
 		ck.cleanEnded()
 	}
+	ck.updateOutstanding()
 	return true
 }
 
@@ -593,6 +602,7 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 	if ck.oldest == math.MaxInt {
 		ck.cleanEnded()
 	}
+	ck.updateOutstanding()
 	return tw
 }
 
@@ -644,6 +654,7 @@ func (ck *Check) cleanEnded() {
 			delete(ck.exclusive, table)
 		}
 	}
+	ck.updateOutstanding()
 }
 
 // removeByTable is called by abort and cleanEnded to remove from bytable.
