@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/fs"
 	"iter"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,7 +29,7 @@ func dir(th *Thread, args []Value) Value {
 		ob := &SuObject{}
 		for entry := range dirEntries(path, justfiles, details) {
 			if ob.Size() >= maxDir {
-				logPanic("ERROR: Dir: too many files")
+				panic("Dir: too many files")
 			}
 			ob.Add(entry)
 		}
@@ -64,7 +63,7 @@ func dirEntries(dir string, justfiles, details bool) iter.Seq[Value] {
 		f, err := os.Open(dir)
 		if err != nil {
 			if !errors.Is(err, fs.ErrNotExist) {
-				logPanic("ERROR: Dir:", err)
+				panic(fmt.Sprint("Dir: ", err))
 			}
 			return
 		}
@@ -78,7 +77,7 @@ func dirEntries(dir string, justfiles, details bool) iter.Seq[Value] {
 			list, err := f.ReadDir(100)
 			if err != nil {
 				if err != io.EOF {
-					logPanic("ERROR: Dir:", err)
+					panic(fmt.Sprint("Dir: ", err))
 				}
 				break
 			}
@@ -96,7 +95,7 @@ func dirEntries(dir string, justfiles, details bool) iter.Seq[Value] {
 							if errors.Is(err, os.ErrNotExist) {
 								continue
 							}
-							logPanic("ERROR: Dir:", err)
+							panic(fmt.Sprint("Dir: ", err))
 						}
 						ob := &SuObject{}
 						ob.Set(SuStr("name"), entry)
@@ -131,11 +130,4 @@ func newMatcher(pat string) matcher {
 	return func(name string) bool {
 		return strings.HasPrefix(name, before) && strings.HasSuffix(name, after)
 	}
-}
-
-func logPanic(args ...any) {
-	// log should include ERROR, panic should not
-	s := fmt.Sprintln(args...)
-	log.Println(s)
-	panic(strings.TrimPrefix(s, "ERROR: "))
 }
