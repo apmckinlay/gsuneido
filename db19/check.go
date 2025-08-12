@@ -549,10 +549,10 @@ func (ck *Check) abort(tn int, reason string) bool {
 	t.failure.Store(reason)
 	ck.removeByTable(t)
 	delete(ck.actvTran, tn)
-	if tn == ck.oldest {
+	if tn == ck.oldest || ck.oldest == math.MaxInt {
 		ck.oldest = math.MaxInt // need to find the new oldest
+		ck.cleanEnded()
 	}
-	ck.cleanEnded()
 	return true
 }
 
@@ -589,7 +589,9 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 		traceln(t, "commit with no updates")
 		ck.removeByTable(t)
 	}
-	ck.cleanEnded()
+	if ck.oldest == math.MaxInt {
+		ck.cleanEnded()
+	}
 	return tw
 }
 
