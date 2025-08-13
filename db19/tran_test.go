@@ -143,15 +143,6 @@ func ck(err error) {
 		panic(err.Error())
 	}
 }
-func TestTooMany(*testing.T) {
-	db := CreateDb(stor.HeapStor(8192))
-	db.CheckerSync()
-	for range MaxTrans {
-		assert.That(nil != db.NewUpdateTran())
-	}
-	assert.That(nil == db.NewUpdateTran())
-}
-
 func TestExclusive(*testing.T) {
 	db := CreateDb(stor.HeapStor(8192))
 	db.CheckerSync()

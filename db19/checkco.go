@@ -4,18 +4,24 @@
 package db19
 
 import (
+	"context"
 	"log"
+	"sync/atomic"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/queue"
+	"golang.org/x/time/rate"
 )
 
 // CheckCo is the concurrent, channel based interface to Check
 type CheckCo struct {
-	pq      *queue.PriorityQueue
-	allDone chan void
+	pq           *queue.PriorityQueue
+	allDone      chan void
+	checker      *Check        // reference to access outstanding count
+	rateLimiter  *rate.Limiter // for rate limiting (thread-safe)
+	lastLoggedAt atomic.Int32  // atomic for concurrent logging
 }
 
 // message types
@@ -109,10 +115,43 @@ const (
 	highPriority   = 3 // commit, abort
 )
 
+var bgndCtx = context.Background()
+
 func (ck *CheckCo) StartTran() *CkTran {
+	outstanding := int(ck.checker.outstanding.Load())
+
+	// log on multiples of 100
+	lastLog := ck.lastLoggedAt.Load()
+	nextLog := lastLog + 100
+	if outstanding >= 200 && outstanding >= int(nextLog) {
+		if ck.lastLoggedAt.CompareAndSwap(lastLog, nextLog) {
+			log.Println("outstanding transactions exceeded", nextLog,
+				"limiting rate")
+		}
+	}
+
+	ck.rateLimiter.SetLimit(rateForOutstanding(outstanding))
+	ck.rateLimiter.Wait(bgndCtx)
+
 	ret := make(chan *CkTran, 1)
 	ck.pq.Put(lowPriority, 0, &ckStart{ret: ret})
 	return <-ret
+}
+
+// rateForOutstanding returns the desired rate limit based solely on the
+// outstanding transaction count. It is a pure calculation with no side effects.
+// - < 200  => Inf (no limit)
+// - 200..499 => linearly decreases from 100/sec at 200 to ~1/sec at 499
+// - >= 500 => 1/sec
+func rateForOutstanding(outstanding int) rate.Limit {
+	if outstanding >= 500 {
+		return 1
+	}
+	if outstanding >= 200 {
+		// Linear interpolation: 100/sec at 200, ~1/sec at 499
+		return rate.Limit(100.0 - float64(outstanding-200)*99.0/299.0)
+	}
+	return rate.Inf
 }
 
 func (ck *CheckCo) Read(t *CkTran, table string, index int, from, to string) bool {
@@ -216,15 +255,18 @@ func (ck *CheckCo) Final() int {
 
 //-------------------------------------------------------------------
 
-const ckchanSize = 4 // ???
-
 func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo {
 	ck := NewCheck(db)
 	pq := queue.NewPriorityQueue()
 	stopTicker := make(chan struct{})
 	go tickGenerator(pq, stopTicker)
 	go checker(ck, pq, mergeChan, stopTicker)
-	return &CheckCo{pq: pq, allDone: allDone}
+	return &CheckCo{
+		pq:          pq,
+		allDone:     allDone,
+		checker:     ck,
+		rateLimiter: rate.NewLimiter(rate.Inf, 1),
+	}
 }
 
 func (ck *CheckCo) Stop() {

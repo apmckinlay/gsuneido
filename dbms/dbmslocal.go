@@ -298,11 +298,8 @@ func (*DbmsLocal) Token() string {
 
 func (dbms *DbmsLocal) Transaction(update bool) ITran {
 	if update {
-		if t := dbms.db.NewUpdateTran(); t != nil {
-			return &UpdateTranLocal{UpdateTran: t}
-		}
-		panic(fmt.Sprintf("too many overlapping update transactions (%d)",
-			db19.MaxTrans))
+		t := dbms.db.NewUpdateTran()
+		return &UpdateTranLocal{UpdateTran: t}
 	}
 	return &ReadTranLocal{ReadTran: dbms.db.NewReadTran()}
 }

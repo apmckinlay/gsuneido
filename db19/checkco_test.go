@@ -5,6 +5,7 @@ package db19
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"golang.org/x/time/rate"
 )
 
 func TestCheckCoTimeout(t *testing.T) {
@@ -50,7 +52,7 @@ func TestCheckCoRandom(*testing.T) {
 		}()
 	}
 	wg.Wait()
-	f := float32(nConflict.Load())/float32(nCommit.Load())
+	f := float32(nConflict.Load()) / float32(nCommit.Load())
 	fmt.Println("commit", nCommit.Load(), "conflict", nConflict.Load(), "=", f)
 	assert.That(f < .1)
 }
@@ -122,4 +124,43 @@ func randRange() (string, string) {
 	from := rand.Intn(10000)
 	to := from + rand.Intn(10)
 	return strconv.Itoa(from), strconv.Itoa(to)
+}
+
+func TestRateForOutstanding(t *testing.T) {
+	// Below threshold => Inf
+	if r := rateForOutstanding(0); r != rate.Inf {
+		t.Fatalf("expected Inf for 0, got %v", r)
+	}
+	if r := rateForOutstanding(199); r != rate.Inf {
+		t.Fatalf("expected Inf for 199, got %v", r)
+	}
+
+	// At 200 => 100/sec
+	if r := rateForOutstanding(200); !almostEqual(float64(r), 100.0) {
+		t.Fatalf("expected 100 for 200, got %v", r)
+	}
+
+	// Midpoint ~ (200+499)/2 => around ~50.5/sec
+	mid := (200 + 499) / 2 // 349
+	expectedMid := 100.0 - float64(mid-200)*99.0/299.0
+	if r := rateForOutstanding(mid); !almostEqual(float64(r), expectedMid) {
+		t.Fatalf("expected %v for %v, got %v", expectedMid, mid, r)
+	}
+
+	// At 499 => ~1/sec
+	if r := rateForOutstanding(499); !almostEqual(float64(r), 1.0) {
+		t.Fatalf("expected ~1 for 499, got %v", r)
+	}
+
+	// At/above 500 => 1/sec
+	if r := rateForOutstanding(500); !almostEqual(float64(r), 1.0) {
+		t.Fatalf("expected 1 for 500, got %v", r)
+	}
+	if r := rateForOutstanding(1000); !almostEqual(float64(r), 1.0) {
+		t.Fatalf("expected 1 for 1000, got %v", r)
+	}
+}
+
+func almostEqual(a, b float64) bool {
+	return math.Abs(a-b) < 1e-6
 }

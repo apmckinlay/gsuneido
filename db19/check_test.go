@@ -41,14 +41,6 @@ func TestCheckStartStop(t *testing.T) {
 	assert.T(t).This(ck.count()).Is(0)
 }
 
-func TestCheckLimit(t *testing.T) {
-	ck := NewCheck(nil)
-	for range MaxTrans {
-		assert.T(t).That(ck.StartTran() != nil)
-	}
-	assert.T(t).That(ck.StartTran() == nil)
-}
-
 func TestCheckActions(t *testing.T) {
 	checkerAbortT1 = true
 	defer func() { checkerAbortT1 = false }()

@@ -38,9 +38,6 @@ Output and Deletes are tracked as Set's of key values for each index (ckwrites).
 4. delete-delete conflicts never happen because read-write is caught first
 */
 
-// MaxTrans is the maximum number of outstanding/overlapping update transactions
-const MaxTrans = 500 // ???
-
 // Set needs to be an ordered set so that reads can check for a range
 type Set = ordset.Set
 
@@ -135,16 +132,7 @@ func (ck *Check) Run(fn func() error) error {
 	return fn()
 }
 
-var logAt = 100
-
 func (ck *Check) StartTran() *CkTran {
-	if ck.count() > logAt {
-		log.Println("outstanding transactions reached", logAt)
-		logAt += 100
-	}
-	if ck.count() >= MaxTrans {
-		return nil
-	}
 	start := ck.next()
 	var state *DbState
 	if ck.db != nil {

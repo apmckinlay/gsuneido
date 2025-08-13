@@ -182,6 +182,10 @@ func performRandomTransaction(db *Database, testData *RandomTestData) (success b
 	}
 	assert.This(sum).Is(0)
 
+	// long transactions to increase outstanding
+	// if rand.IntN(1001) == 55 {
+	// 	time.Sleep(time.Duration(rand.IntN(10)) * time.Second)
+	// }
 	if ut.Complete() != "" {
 		return false // aborted
 	}
