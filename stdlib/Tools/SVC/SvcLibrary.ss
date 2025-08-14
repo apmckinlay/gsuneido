@@ -247,7 +247,7 @@ class
 			not CodeTags.Matches(rec.text)
 			return ""
 		try
-			Global(LibraryTags.RemoveTagsFromName(name))
+			Global(LibraryTags.RemoveTagFromName(name))
 		catch (err)
 			{
 			if err.Prefix?("can't find")

@@ -40,7 +40,8 @@ ScintillaComponent
 	OnKeyDown(cm, event)
 		{
 		pressed = Object(
-			control: event.ctrlKey, shift: event.shiftKey, alt: event.altKey)
+			control: event.ctrlKey, shift: event.shiftKey,
+			alt: event.GetDefault(#altKey, false))
 		if event.key is "Enter"
 			.Event(#Enter_Pressed, :pressed)
 		if event.key is "Backspace"

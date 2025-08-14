@@ -18,6 +18,7 @@ class
 			catch (err)
 				{
 				errs $= x.path $ '/' $ x.name $ '\t' $ err $ '\n'
+				errs $= FormatCallStack(err.Callstack(), levels: 10) $ '\n'
 				SujsAdapter.CallOnRenderBackend(#CancelAllReserved)
 				}
 			}

@@ -155,4 +155,13 @@ class
 		table = QueryGetTable(query, nothrow:)
 		return title $ ' ~ ' $ table
 		}
+
+	AddRemoveCustomFields(custom_fields, columns)
+		{
+		for c in custom_fields
+			if Customizable.DeletedField?(c)
+				columns.Remove(c)
+			else
+				columns.AddUnique(c)
+		}
 	}

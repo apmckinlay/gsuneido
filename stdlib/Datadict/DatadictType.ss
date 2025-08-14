@@ -3,9 +3,10 @@ function (fieldname)
 	{
 	dd = Datadict(fieldname)
 	baseTypes = Object(number: Field_number, string: Field_string,
-		date: Field_date, boolean: Field_boolean, image: Field_image)
+		date: Field_date, boolean: Field_boolean, image: Field_image, info: Field_info)
 
-	for type in baseTypes.Members()
+	// sort because info needs to be checked before string (info field is base of both)
+	for type in baseTypes.Members().Sort!()
 		if dd.Base?(baseTypes[type])
 			return type
 	return 'string'

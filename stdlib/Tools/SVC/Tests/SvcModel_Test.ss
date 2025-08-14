@@ -108,46 +108,56 @@ SvcTests
 
 	Test_GetPrevDefinition()
 		{
-		spy = .SpyOn(SvcModel.SvcModel_libraries).Return(libs = .makeLibraries())
-		model = .SvcModel(lib = .MakeLibrary())
+		testName = .TempName()
+		libs = .makeLibraries(testName)
+
+		model = .SvcModel(lib = .MakeLibrary(), libraries: libs, trialTags: #(trial))
 
 		// If the record is in stdlib, we return prior to the SvcModel.libraries loop
-		Assert(model.GetPrevDefinition('TestRecord', 'stdlib') is: false)
-		Assert(spy.CallLogs() isSize: 0)
+		Assert(model.GetPrevDefinition(testName, 'stdlib') is: false)
+
 		// The first library returned by SvcModel.libraries is essentially stdlib
 		// as a result, there can be no previous definitions
-		Assert(model.GetPrevDefinition('TestRecord', libs[0]) is: false)
-		Assert(spy.CallLogs() isSize: 1)
+		Assert(model.GetPrevDefinition(testName, libs[0]) is: false)
 		// All other libraries should successfully return the record from
 		// the first library, (our mock stdlib)
 		for lib in libs[1 ..]
 			{
-			rec = model.GetPrevDefinition('TestRecord', lib)
+			rec = model.GetPrevDefinition(testName, lib)
 			Assert(rec.table is: libs[0])
-			Assert(rec.name is: 'TestRecord')
+			Assert(rec.name is: testName)
 			Assert(rec.text is: 'this is record: 0')
 			Assert(rec hasMember: 'path')
 			}
-		Assert(spy.CallLogs() isSize: 5)
 
 		// Will not find a previous definition as this record does not exist
 		Assert(model.GetPrevDefinition(name = .TempName(), 'stdlib') is: false)
-		Assert(spy.CallLogs() isSize: 5)
 		for lib in libs
 			Assert(model.GetPrevDefinition(name, lib) is: false)
-		Assert(spy.CallLogs() isSize: 10)
+
+		rec = model.GetPrevDefinition(testName $ '__trial', libs[2])
+		Assert(rec.table is: libs[2])
+		Assert(rec.name is: testName)
+		Assert(rec.text is: 'this is record: 2')
+			Assert(rec hasMember: 'path')
+
+		rec = model.GetPrevDefinition(testName $ '__trial', libs[4])
+		Assert(rec.table is: libs[4])
+		Assert(rec.name is: testName)
+		Assert(rec.text is: 'this is record: 4')
+			Assert(rec hasMember: 'path')
 		}
 
 	// Purposely avoiding standard libraries. GetPrevDefinition calls SvcLibrary
 	// on each library returned by SvcModel.libraries(). SvcLibrary runs an ensure
 	// which will add several columns to the specified table.
 	// This will cause SystemChanges.CompareState to fail.
-	makeLibraries()
+	makeLibraries(testName)
 		{
 		libs = Object()
 		for i in .. 5
 			{
-			lib = .MakeLibrary([name: 'TestRecord', text: 'this is record: ' $ i])
+			lib = .MakeLibrary([name: testName, text: 'this is record: ' $ i])
 			libs.Add(lib)
 			Assert(SvcTable.SvcColumns.Intersects?(QueryColumns(lib)) is: false)
 			}

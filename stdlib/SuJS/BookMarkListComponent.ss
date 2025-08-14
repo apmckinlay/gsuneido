@@ -73,7 +73,7 @@ Component
 		{
 		if event.button isnt 0 or event.target is mark.colorPicker
 			return
-		.EventWithOverlay(#Click, mark.path)
+		.RunWhenNotFrozen({ .EventWithOverlay(#Click, mark.path) })
 		}
 
 	colorInput(event, mark)

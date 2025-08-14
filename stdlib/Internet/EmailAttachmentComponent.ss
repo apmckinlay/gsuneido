@@ -283,6 +283,9 @@ HtmlDivComponent
 		.CloseOverlay()
 		newData = data.Copy()
 		newData.Delete('listAttachments')
+		newData.Delete('mergeableFiles')
+		newData.Delete('preSignedAtttachments')
+		newData.Delete('historyLinks')
 		if newData.GetDefault('emailSent', false)
 			return
 		data.emailSent = true

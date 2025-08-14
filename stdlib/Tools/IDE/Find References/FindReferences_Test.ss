@@ -78,41 +78,53 @@ Test
 				{
 				Fn() { Fake1() }
 				}'
-		unusedLib = .MakeLibrary([name: 'RefTest1', text: '#(UN USED library)'],
+		unusedLib = .MakeLibrary(
+			[name: 'RefTest1', text: '#(UN USED library)'],
 			[name: 'RefTest4_Test', text: foundClass],
 			[name: 'RefTest3', text: foundClass])
-		otherLib = .MakeLibrary([name: 'RefTest2', text: '#(not a real class)'])
-
-		recsToBuild = Object()
-		recsToBuild.Add([name: 'Fake1', text: notFoundClass])
-		recsToBuild.Add([name: 'NotARealRecord', text: notFoundClass])
-		recsToBuild.Add([name: 'AFakeRecord', text: foundClass])
-		recsToBuild.Add([name: 'OneMoreFakeRecord', text: foundClass])
-		recsToBuild.Add([name: 'Fake1_Test', text: foundClass])
-		.MakeLibraryRecord(@recsToBuild)
+		otherLib = .MakeLibrary(
+			[name: 'RefTest2', text: '#(not a real class)'])
+		.MakeLibraryRecord(
+			[name: 'Update_20250101_Fake', text: foundClass],
+			[name: 'Fake1', text: notFoundClass],
+			[name: 'NotARealRecord', text: notFoundClass],
+			[name: 'AFakeRecord', text: foundClass],
+			[name: 'OneMoreFakeRecord', text: foundClass],
+			[name: 'Fake1_Test', text: foundClass])
 
 		basename = FindReferences.FindReferences_basename('Fake1')
 		list = Object()
-		fn(Object('Test_lib', unusedLib), #('Test_lib'), 'Fake1', basename, list, false)
-		Assert(list.Size() is: 5)
-		Assert(list[0].Location is: 'AFakeRecord')
-		Assert(list[1].Location is: 'Fake1_Test')
-		Assert(list[2].Location is: 'OneMoreFakeRecord')
-		Assert(list[3].Location is: 'RefTest3')
-		Assert(list[4].Location is: 'RefTest4_Test')
+		fn(['Test_lib', unusedLib], #('Test_lib'), 'Fake1', basename, list, false, false)
+		Assert(list.Map({ it.Location }) is: #(
+			AFakeRecord,
+			Fake1_Test,
+			OneMoreFakeRecord,
+			Update_20250101_Fake,
+			RefTest3,
+			RefTest4_Test))
 
 		Assert(list[0].Table is: 'Test_lib')
-		Assert(list[3].Table is: "(" $ unusedLib $ ")")
+		Assert(list[4].Table is: "(" $ unusedLib $ ")")
 
 		list = Object()
-		fn(Object('Test_lib', unusedLib), #('Test_lib'), 'Fake1', basename, list, true)
-		Assert(list.Size() is: 3)
-		Assert(list[0].Location is: 'AFakeRecord')
-		Assert(list[1].Location is: 'OneMoreFakeRecord')
-		Assert(list[2].Location is: 'RefTest3')
+		fn(['Test_lib', unusedLib], #('Test_lib'), 'Fake1', basename, list, true, false)
+		Assert(list.Map({ it.Location }) is: #(
+			AFakeRecord,
+			OneMoreFakeRecord,
+			Update_20250101_Fake,
+			RefTest3))
+
+		list = Object()
+		fn(['Test_lib', unusedLib], #('Test_lib'), 'Fake1', basename, list, false, true)
+		Assert(list.Map({ it.Location }) is: #(
+			AFakeRecord,
+			Fake1_Test,
+			OneMoreFakeRecord,
+			RefTest3,
+			RefTest4_Test))
 
 		list = Object()
 		fn(Object(otherLib), Object(otherLib), 'Fake1', basename, list, false)
-		Assert(list.Size() is: 0)
+		Assert(list is: #())
 		}
 	}

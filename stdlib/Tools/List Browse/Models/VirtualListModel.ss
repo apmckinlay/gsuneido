@@ -97,8 +97,13 @@ class
 		{
 		.data = Object()
 		.Offset = 0
-		.columns = QueryColumns(.query)
+		.RefreshColumns()
 		.AllRead? = false
+		}
+
+	RefreshColumns()
+		{
+		.columns = QueryColumns(.query)
 		}
 
 	setupCursors()
@@ -513,7 +518,7 @@ class
 		if stopLoadAll
 			return false
 		queryNoSort = QueryStripSort(.query)
-		sort = QueryGetSort(.query, keepReverse:)
+		sort = QueryGetSort(.query)
 		if .loadAll?
 			{
 			.loadAll(queryNoSort, sort, visibleRows)

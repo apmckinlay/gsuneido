@@ -52,7 +52,7 @@ class
 				' and name < ' $ Display(name $ '_z') $ project,
 				group: -1)
 				{ |x|
-				if name is LibraryTags.RemoveTagsFromName(x.name)
+				if name is LibraryTags.RemoveTagFromName(x.name)
 					block(x)
 				}
 		}
@@ -71,7 +71,7 @@ class
 	FindItems(name, exact = false)
 		{
 		if not exact
-			name = LibraryTags.RemoveTagsFromName(name)
+			name = LibraryTags.RemoveTagFromName(name)
 
 		list = Object(name)
 		if .addProtectDefinitions?(name, exact)

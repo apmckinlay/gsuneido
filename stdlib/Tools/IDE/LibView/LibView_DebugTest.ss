@@ -3,7 +3,7 @@ function (libview, lib, name)
 	{
 	if not RunAssociatedTests.RunTest?(lib, name)
 		return
-	name = LibraryTags.RemoveTagsFromName(name)
+	name = LibraryTags.RemoveTagFromName(name)
 	libview.Save()
 	libview.Editor.SendToAddons('On_BeforeAllTests')
 	CodeState.RunCurrentCode(lib, name)

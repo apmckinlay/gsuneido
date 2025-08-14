@@ -527,7 +527,7 @@ CommandParent
 			.beep()
 			// need to check if table is empty without select
 			// in this case, we don't want to give the message
-			if .select is true and .model.TableNotEmpty?()
+			if .select is true and not .model.TableEmpty?() and .firstRead? is true
 				{
 				if 'deleted' isnt .CheckDeleted(quiet:)
 					.noRecordFound(dir)
@@ -540,6 +540,7 @@ CommandParent
 			}
 		else
 			{
+			.firstRead? = false
 			.setdata(x)
 			.set_position_button_state(firstlast)
 			}
@@ -554,7 +555,15 @@ CommandParent
 			? 'first'
 			: (dir is 'Next' ? 'last' : '?')
 		.set_position_button_state(position)
-		.AlertInfo(.title, 'No records match the current select.')
+		.Select_vals.Each({ it.check = false })
+		Alert('No records found that ' $
+			'match the current select.\r\n\r\nSelection has been reset.',
+			.title, flags: MB.ICONINFORMATION)
+		.SetWhere("")
+		.Defer(uniqueID: 'reopen_select_dialog') // need the orig select to close first
+			{
+			.On_Select()
+			}
 		}
 	recordDeleted()
 		{
@@ -604,6 +613,7 @@ CommandParent
 			if x isnt false and x[field] is value
 				{
 				.setdata(x)
+				.firstRead? = false
 				return
 				}
 			else if .invalidLocate?(value)
@@ -900,6 +910,7 @@ CommandParent
 		BookLog('Access Select End')
 		}
 
+	firstRead?: false
 	SetWhere(where, quiet = false, hwnd = false, extraMsg = '') // called by Select
 		{
 		if hwnd is false
@@ -908,12 +919,13 @@ CommandParent
 		.Defer(.set_select_button_state, uniqueID: 'select_button_state')
 
 		preQuery = .GetQuery()
-		ret = .model.AddWhere(where)
+		ret = .model.AddMoreToQuery(where)
 		if preQuery isnt .GetQuery()
 			.types.ClearStickyFieldValues()
 		.SetDefaultStatus()
 		if String?(ret) and not quiet
 			Alert(ret $ extraMsg, title: 'Select', :hwnd, flags: MB.ICONINFORMATION)
+		.firstRead? = true
 		return ret is true
 		}
 	ModifyWhere(where, hwnd)
@@ -924,7 +936,13 @@ CommandParent
 			.select = false
 			.Select_vals.Each({ it.check = false })
 			}
+		.firstRead? = true
 		.AccessGoto(@k)
+		if .firstRead? is true // no records matched
+			{
+			.noRecordFound('?')
+			return
+			}
 		// so that the Select... button will give up it's blue rectangle correctly when
 		// closing the select dialog
 		.Defer(uniqueID: 'select_button_state')

@@ -91,7 +91,7 @@ class
 		Alert("Can't create WebView.
 
 You may need to restart your computer.", "Error")
-		ProgrammerError(msg, params)
+		ProgrammerError(msg, params, caughtMsg: 'user alerted')
 		}
 
 	getter_retries()

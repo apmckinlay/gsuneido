@@ -5,8 +5,8 @@ Test
 		{
 		Assert(QueryGetSort('reverse where reverse = 1 sort reverse one')
 			is: 'reverse one')
-		Assert(QueryGetSort('reverse where reverse = 1 sort \t reverse one, two, three',
-			keepReverse:) is: 'reverse one,two,three')
+		Assert(QueryGetSort('reverse where reverse = 1 sort \t reverse one, two, three')
+			is: 'reverse one,two,three')
 		Assert(QueryGetSort('table sort reverseField, two')
 			is: 'reverseField,two')
 		Assert(QueryGetSort('table sort table') is: 'table')

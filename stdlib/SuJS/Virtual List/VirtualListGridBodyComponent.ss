@@ -836,14 +836,14 @@ ListBodyBaseComponent
 
 	dragging: false
 	focused: false
+	DistanceToShowSwitchBtn: 100
 	mousemove(event)
 		{
 		if .expandDiv is false
 			return
 		rect = SuRender.GetClientRect(.scrollContainerEl)
 		cusorX = event.clientX - rect.left
-		width = rect.width
-		show? = cusorX / width < .25/*=show switch button*/
+		show? = cusorX < .DistanceToShowSwitchBtn
 		if show? isnt .showSwitch
 			{
 			for item in .expandButtons

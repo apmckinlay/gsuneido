@@ -27,8 +27,8 @@ PassthruController
 	controls(buttons?, text = '')
 		{
 		controls = Object('Vert',
-			Object('ListView', menu: false, ystretch: 1, stretch_to_fill: /*desktop*/,
-				stretch: /*suneido.js*/, noHeader: /*suneido.js*/))
+			Object('ListView', menu: false, ystretch: 1, stretch:,
+				noHeader: /*suneido.js*/))
 		if text isnt ''
 			controls.Add(#(Skip 3), Object('Static' text))
 		if buttons?
@@ -116,8 +116,6 @@ PassthruController
 		}
 	On_Cancel()
 		{
-		if .name isnt ''
-			UserColumns.Save(.name, .listview)
 		.Window.Result(.value)
 		}
 	SetMenu(menu)
@@ -144,8 +142,6 @@ PassthruController
 		}
 	OK()
 		{
-		if .name isnt ''
-			UserColumns.Save(.name, .listview)
 		return .GetChecked().Join(',')
 		}
 	SelectChanged(olditem, newitem) // pass on from ListView

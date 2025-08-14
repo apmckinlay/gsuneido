@@ -67,17 +67,25 @@ Test
 
 	svcModel: SvcModel
 		{
-		New(.testParent)
+		New(.testParent, .libraries, .trialTags)
 			{ }
 		SvcModel_initSvc()
 			{
 			settings = .SvcModel_settings
 			return .testParent.Svc(settings.server, settings.local?)
 			}
+		SvcModel_libraries()
+			{
+			return .libraries
+			}
+		SvcModel_getTrialTags()
+			{
+			return .trialTags
+			}
 		}
-	SvcModel(table)
+	SvcModel(table, libraries = #(), trialTags = #())
 		{
-		model = new .svcModel(this)
+		model = new .svcModel(this, libraries, trialTags)
 		model.SetSettings([server: false, local?:])
 		model.SetTable(table)
 		return model

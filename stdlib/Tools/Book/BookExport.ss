@@ -50,7 +50,7 @@ class
 				EnsureDir(.dir $ .sanitize(path))
 				first = false
 				}
-			name = x.path $ "/" $ x.name
+			name = Paths.Combine(x.path, x.name)
 			filename = .dir $ .sanitize(name) $ ".htm"
 
 			nav = .nav(x, name)
@@ -175,7 +175,9 @@ class
 		EnsureDir(.dir $ "/res")
 		QueryApply(.book $ " where path =~ '^/res\>' and path !~ '/[.]'")
 			{|x|
-			PutFile(.dir $ x.path $ "/" $ x.name, x.text)
+			path = Paths.Combine(.dir $ x.path, x.name)
+			EnsureDirectories(path)
+			PutFile(path, x.text)
 			}
 		}
 	}

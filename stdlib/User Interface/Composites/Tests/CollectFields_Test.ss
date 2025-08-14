@@ -142,14 +142,19 @@ Test
 				Prompt: "Config Columns"
 				}` ])
 		layout = Object('Tabs',
+			#(Vert, sulog_session_id),
 			Object(#Form,
 				#(sulog_timestamp, group: 0),
 				#(sulog_message, group: 1)
-				#(Button 'Hello World') #nl
-				field, Tab: 'Setting'
-				))
+				#(Button 'Hello World'), #nl,
+				field, Tab: 'Setting'),
+			#(Form, (sulog_need_to_send?, group: 0), Tab: 'Other'))
 		fields = CollectFields(layout, path?:)
 
+		// Header Field:
+		Assert(fields
+			has: #((type: "Field", section: "Session Id", name: "sulog_session_id")))
+		// Setting Tab
 		Assert(fields has: #((type: "Tab", section: "Setting")))
 		Assert(fields has: #((type: "Tab", section: "Setting"),
 			(name: "sulog_timestamp", type: "Field", section: "Timestamp")))
@@ -157,13 +162,22 @@ Test
 			(name: "sulog_message", type: "Field", section: "Message")))
 		Assert(fields has: #((type: "Tab", section: "Setting"),
 			(name: "Hello_World", type: "Button", section: "Hello World")))
-
 		Assert(fields has: Object(Object(type: "Tab", section: "Setting"),
 			Object(name: field, type: "Field", section: "Config Columns")))
-
 		Assert(fields has: Object(Object(type: "Tab", section: "Setting"),
 			Object(name: field, type: "ResetButton", section: "Config Columns > Reset")))
+		// Other Tab
+		Assert(fields has: #((type: "Tab", section: "Other")))
+		Assert(fields has: #((section: "Other", type: "Tab"),
+			(section: "Need to Send?", type: "Field", name: "sulog_need_to_send?")))
+		// All fields
+		Assert(fields isSize: 9)
 
-		Assert(fields isSize: 6)
+		// Test: CollectFields.FindTab
+		Assert(CollectFields.FindTab(.TempName(), fields) is: false) // Not in layout
+		Assert(CollectFields.FindTab('sulog_session_id', fields) is: false) // Header
+		Assert(CollectFields.FindTab('sulog_need_to_send?', fields) is: 'Other')
+		Assert(CollectFields.FindTab('sulog_timestamp', fields) is: 'Setting')
+		Assert(CollectFields.FindTab(field, fields) is: 'Setting')
 		}
 	}

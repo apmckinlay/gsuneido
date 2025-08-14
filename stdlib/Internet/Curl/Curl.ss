@@ -290,6 +290,13 @@ class
 			' -Q "RNFR ' $ oldName $ '" -Q "RNTO ' $ newName $ '"')
 		return result.Prefix?('curl: ') ? result : ''
 		}
+RenSFTP(oldName, newName)
+	{
+	Assert(.protocol.Has?('sftp'))
+	result = .runCommand(' ' $ .server $
+		' -Q "rename ' $ oldName $ ' ' $ newName $ '"')
+	return result.Prefix?('curl: ') ? result : ''
+	}
 
 	Dir(path = '*.*', details = false, caseSense = false, regExp = '',
 		listOnly = true)

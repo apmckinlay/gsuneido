@@ -17,10 +17,13 @@ Controller
 	New(.name)
 		{
 		settings = UserSettings.Get(.settings_key,
-			#(exclude_tests: false, exclude_libs: ''), user: 'default')
+			#(exclude_tests: false, exclude_updates: false, exclude_libs: ''),
+			user: 'default')
 		.exclude_tests_ctrl = .FindControl('exclude_tests_chk')
+		.exclude_updates_ctrl = .FindControl('exclude_updates_chk')
 		.exclude_libs_ctrl = .FindControl('exclude_libs_list')
 		.exclude_tests_ctrl.Set(settings.exclude_tests)
+		.exclude_updates_ctrl.Set(settings.GetDefault(#exclude_updates, false))
 		.exclude_libs_ctrl.Set(settings.exclude_libs)
 		.currentExcludeLibs = settings.exclude_libs
 		.load()
@@ -42,8 +45,11 @@ Controller
 				#(Skip, 6),
 				#(Static, "double-click to go to definition"),
 				#Fill,
-				#('CheckBox', "Exclude Tests", name: 'exclude_tests_chk'), 'Skip',
-				#(Static, 'Exclude Libraries: '),
+				#(Static, "Exclude:")
+				#Skip
+				#('CheckBox', "Tests", name: 'exclude_tests_chk'), 'Skip',
+				#('CheckBox', "Updates", name: 'exclude_updates_chk'), 'Skip',
+				#(Static, 'Libraries: '),
 				['ChooseTwoList', libsList, "Exclude Libraries",
 					name: 'exclude_libs_list', noSort:],
 				'Skip', 'RefreshButton']]
@@ -55,8 +61,9 @@ Controller
 		.list.Redir('Scintilla_KillFocus', this)
 		.list.Redir('Scintilla_SetFocus', this)
 		excludeTests = .exclude_tests_ctrl.Get()
+		excludeUpdates = .exclude_updates_ctrl.Get()
 		excludeLibs = .exclude_libs_ctrl.GetSelectedList()
-		refs = FindReferences(.name, :excludeTests, :excludeLibs)
+		refs = FindReferences(.name, :excludeTests, :excludeUpdates, :excludeLibs)
 		.basename = refs.basename
 		.list.SetQuery('views where view_name is ""', .cols) // fake query
 		for i in refs.list.Members()
@@ -75,7 +82,7 @@ Controller
 		{
 		if source is .exclude_libs_ctrl and .exclude_libs_ctrl.Valid?() and
 			.currentExcludeLibs isnt value or
-			source is .exclude_tests_ctrl
+			source is .exclude_tests_ctrl or source is .exclude_updates_ctrl
 			{
 			.currentExcludeLibs = value
 			.load()

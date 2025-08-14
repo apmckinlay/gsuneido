@@ -90,6 +90,11 @@ Component
 		.body.HeaderChanged()
 		}
 
+	UpdateStretchColumn(stretchColumn)
+		{
+		.header.SetStetchCol(stretchColumn)
+		}
+
 	keyMap: false
 	keydownOverlayId: false
 	keydown(event)

@@ -56,6 +56,9 @@ Test
 
 		args[0] = '15:bob'
 		Assert(ChooseTimeControl.ValidData?(@args) is: false)
+
+		args[0] = '01:37.5'
+		Assert(ChooseTimeControl.ValidData?(@args) is: false)
 		}
 
 	Test_SplitTime()
@@ -88,6 +91,7 @@ Test
 		Assert(splitTime('Fr:15') is: false)
 		Assert(splitTime('15:ed') is: false)
 		Assert(splitTime('15:ed am') is: false)
+		Assert(splitTime('01:37.5') is: false)
 		}
 
 	Test_timecontrolSplitTime()

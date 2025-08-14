@@ -119,7 +119,7 @@ class
 		catch (unused, "*cannot find|*no such")
 			{
 			dir = ServerPath().Dir() $ '/' $ file.BeforeLast('/') $ "/"
-			CreateDirectories(dir)
+			EnsureDirectories(dir)
 			AddFile(file, .formatMessage(Date(), s, multi_line), limit: .FileSizeLimit)
 			}
 		}

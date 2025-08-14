@@ -66,12 +66,14 @@ Test
 			text: `class { Name: ` $ table1 $ ` }`])
 		fld5 = .MakeCustomField(table1, 'Text, single line', 'TEST FIELD5').field
 		.MakeCustomField(table1, 'Text, single line', 'TEST FIELDUNMATCHEDTYPE').field
+		.MakeCustomField(table1, 'Text, single line', 'TEST FIELDUNMATCHEDTYPE2').field
 
 		table2 = .MakeTable('(key, field) key(key)')
 		.MakeLibraryRecord([name: "Table_" $ table2,
 			text: `class { Name: ` $ table2 $ ` }`])
 		fld7 = .MakeCustomField(table2, 'Text, single line', 'TEST FIELD5').field
-		.MakeCustomField(table2, 'Dollar', 'TEST FIELDUNMATCHEDTYPE').field
+		.MakeCustomField(table2, 'Dollar', 'TEST FIELDUNMATCHEDTYPE')
+		.MakeCustomField(table2, 'Info', 'TEST FIELDUNMATCHEDTYPE2')
 
 		map = CustomizableMap(table1, table2)
 		// shouldn't have TEST FIELD6, because the type doesn't match

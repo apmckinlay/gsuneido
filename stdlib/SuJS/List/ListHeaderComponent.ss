@@ -151,7 +151,11 @@ Component
 
 	setWidth(header, width, stretch?)
 		{
-		header.SetStyle('width', stretch? ? '100%' : width $ 'px')
+		header.SetStyle('width', stretch?
+			? '100%'
+			: String?(width) and width.Prefix?('calc')
+				? width
+				: width $ 'px')
 		header.SetStyle('display', width is 0 ? 'none' : '')
 		}
 
@@ -163,6 +167,8 @@ Component
 			return .headCols.Size() - 1
 		return .headCols.FindIf({ it.field is .stretch })
 		}
+
+	SetStetchCol(.stretch) { }
 
 	addSplitter(header, i, stretchCol)
 		{

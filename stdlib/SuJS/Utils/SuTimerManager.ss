@@ -4,9 +4,9 @@ class
 	New()
 		{
 		.timerId = 1
+		.mutex = Mutex()
 		.timers = Object()
 		.delayQueue = Object()
-		.delayToCancel = Object()
 		}
 
 	ReserveId()
@@ -21,7 +21,7 @@ class
 		if id is false
 			id = .timerId++
 		if ms is 0 and forceOnBrowser isnt true
-			.delayQueue.Add(Object(:id, :cb))
+			.addDelay(:id, :cb)
 		else
 			{
 			.timers[id] = cb
@@ -31,22 +31,47 @@ class
 			// to avoid extra unnecessary events
 			if Instance?(cb) and cb.Base?(DelayBase)
 				args.once? = true
-			.delayQueue.Add(Object(:id, action: Object(false, #SuSetTimer, args)))
+			.addDelay(:id, action: Object(false, #SuSetTimer, args))
 			}
 		return id
 		}
 
 	KillTimer(id)
 		{
+		removed? = .removeDelayById(id)
 		if .timers.Member?(id)
 			{
 			.timers.Delete(id)
-			.delayQueue.Add(Object(:id,
-				action: Object(false, #SuKillTimer, Object(id, id))))
+			if not removed?
+				.addDelay(:id, action: Object(false, #SuKillTimer, Object(id, id)))
 			}
-		else
-			.delayToCancel[id] = true
 		return true
+		}
+
+	addDelay(@delay)
+		{
+		.mutex.Do({ .delayQueue.Add(delay) })
+		}
+
+	removeDelayById(id)
+		{
+		removed? = false
+		.mutex.Do()
+			{
+			.delayQueue.RemoveIf()
+				{
+				find? = it.id is id
+				if find?
+					removed? = true
+				find?
+				}
+			}
+		return removed?
+		}
+
+	popDelay()
+		{
+		return .mutex.Do({ .delayQueue.PopFirst() })
 		}
 
 	Timeout(id)
@@ -57,16 +82,13 @@ class
 
 	FlushDelays()
 		{
-		while not Same?(.delayQueue, item = .delayQueue.PopFirst())
+		while not Same?(.delayQueue, item = .popDelay())
 			{
-			if .delayToCancel.Member?(item.id)
-				continue
 			if item.Member?(#cb)
 				(item.cb)(0, 0, item.id, 0)
 			else
 				.recordAction(item.action)
 			}
-		.delayToCancel = Object()
 		}
 
 	recordAction(action)

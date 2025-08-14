@@ -158,7 +158,7 @@ class
 		if .name is false
 			return false
 
-		pureName = LibraryTags.RemoveTagsFromName(.name)
+		pureName = LibraryTags.RemoveTagFromName(.name)
 		if token[1..] isnt pureName
 			return false
 
@@ -289,7 +289,7 @@ class
 		(`false is Query(1|First|Last)\(`,		'use QueryEmpty?', 				warning:)
 		(`\<ResourceCounts\(`,					'use Suneido.Info',				warning:)
 		(`[^.]\<Sleep\(`,						'use Thread.Sleep')
-		(`\<CreateDirectory\(`,					'use CreateDir')
+		(`\<CreateDir\(`,						'use EnsureDir',				warning:)
 		(`\.ServerEval\(`,						'use ServerEval(...)')
 		(`{ *(([A-Z]\w*)?[.])?[A-Z][a-zA-Z0-9_?!]*\(it\) *}`,
 												'unnecessary block',			warning:)

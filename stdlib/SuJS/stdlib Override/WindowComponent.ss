@@ -177,14 +177,15 @@ WindowBaseComponent
 
 		.Window = .Controller = this
 		.HwndMap = SuUI.HtmlElMap(this) // Element map
-		.AnchorEl = CreateElement(.AnchorElement, .ParentEl,
-			className: "su-window-anchor")
+		.AnchorEl = .setupEl(CreateElement(.AnchorElement, .ParentEl,
+			className: "su-window-anchor"))
 		if style is 0
 			style = WS.OVERLAPPEDWINDOW
-		.containerEl = CreateElement('div', .AnchorEl, className: "su-window-container")
+		.containerEl = .setupEl(CreateElement('div', .AnchorEl,
+			className: "su-window-container"))
 		.setupHeader(title, style)
 		.setupMenubar(menubar)
-		.El = CreateElement('div', .containerEl)
+		.El = .setupEl(CreateElement('div', .containerEl))
 		.SetStyles(Object('padding': border $ 'px', 'box-sizing': 'border-box'))
 
 
@@ -197,6 +198,13 @@ WindowBaseComponent
 		.RegisterActiveWindow()
 
 		DoStartup(.Ctrl)
+		}
+
+	setupEl(el)
+		{
+		el.Control(this)
+		el.Window(this)
+		return el
 		}
 
 	Startup()
@@ -701,8 +709,23 @@ WindowBaseComponent
 		oldWindowRect = .windowRect
 		.restore() // force window into viewport
 		.updateWindowRect()
-		if oldWindowRect isnt .windowRect
+		if .windowRectChanged?(oldWindowRect, .windowRect)
 			.syncWindowPlacement()
+		}
+
+	// Due to the border width difference with DPI scale > 100%,
+	// the real window size could have a small difference from the set size even if
+	// users don't move/resize the window. Allow 2px diff to avoid unnecessary saves
+	windowRectChanged?(old, cur)
+		{
+		for m in #(left, right, top, bottom, width, height)
+			{
+			oldValue = old.GetDefault(m, -999/*=an impossible number*/)
+			curValue = cur.GetDefault(m, -999/*=an impossible number*/)
+			if ((oldValue - curValue).Abs() > 2)
+				return true
+			}
+		return false
 		}
 
 	Destroy()

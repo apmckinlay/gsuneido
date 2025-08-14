@@ -153,11 +153,12 @@ CommandParent
 		}
 	ApplySelects()
 		{
-		.view.SelectControl_Changed()
 		sf = .GetSelectFields()
 		where = SelectRepeatControl.BuildWhere(sf, .Select_vals)
 		whereStr = sf.Joins(where.joinflds) $ where.where
-		return .SetWhere(whereStr, quiet:)
+		result = .SetWhere(whereStr, quiet:)
+		.view.SelectControl_Changed()
+		return result
 		}
 
 	Refresh()

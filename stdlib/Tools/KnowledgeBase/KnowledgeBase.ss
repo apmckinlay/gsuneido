@@ -33,7 +33,7 @@ class
 			return 0
 
 		vdb = new VectorDB(info.index_name, info.vectorDB_api)
-		openAI = new OpenAI(info.openAI_api)
+		openAI = new OpenAI_Embeddings(info.openAI_api)
 
 		c = 0
 		outputs = Object()
@@ -102,6 +102,8 @@ class
 					extra += .handleLongContent(outputs, openAI, vdb)
 					retry = outputs.NotEmpty?()
 					}
+				else if e.Lower().Has?("bad gateway")
+					continue
 				else
 					SuneidoLog('ERRATIC: KnowledgeBase.Update - ' $ e,
 						params: outputs.Map({ it.id }), calls:)
@@ -171,7 +173,7 @@ class
 			return #()
 
 		vdb = new VectorDB(info.index_name, info.vectorDB_api)
-		openAI = new OpenAI(info.openAI_api)
+		openAI = new OpenAI_Embeddings(info.openAI_api)
 		try
 			vector = openAI.Embeddings(q)[0]
 		catch (e)

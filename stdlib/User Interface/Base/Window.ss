@@ -394,10 +394,12 @@ WindowBase
 			saveName $= .title
 		return saveName
 		}
+	orig_info: false
 	restoreWindowPlacement()
 		{
 		if false is info = KeyListViewInfo.Get(.windowPlacementSaveName)
 			return false
+		.orig_info = info.window_info.Copy()
 		if info.window_info.showCmd is SW.SHOWMINIMIZED
 			info.window_info.showCmd = SW.SHOWNORMAL
 		req = .RequiredWindowSize()
@@ -446,7 +448,8 @@ WindowBase
 			return
 		GetWindowPlacement(.Window.Hwnd,
 			place = Object(length: WINDOWPLACEMENT.Size()))
-		KeyListViewInfo.Save(.windowPlacementSaveName, place)
+		if place isnt .orig_info
+			KeyListViewInfo.Save(.windowPlacementSaveName, place)
 		}
 
 	GetWindowTitle()

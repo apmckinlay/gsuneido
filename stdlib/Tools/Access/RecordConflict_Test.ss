@@ -4,8 +4,9 @@ Test
 	Test_main()
 		{
 		Assert(RecordConflict?(
-			[a: 'a', a_TS: Timestamp()],
-			[a: 'b', a_TS: Timestamp()] #(a, a_TS), 0, quiet?:))
+			[a: 'a', a_TS: Timestamp(), bizuser_user_modified: 'a'],
+			[a: 'b', a_TS: Timestamp(), bizuser_user_modified: 'b'],
+			#(a, a_TS), 0, quiet?:))
 
 		t = Timestamp()
 		Assert(RecordConflict?(
@@ -39,7 +40,7 @@ Test
 		Assert(func(cur, prev, #(name)) is: '')
 		Assert(func(cur, prev, #(name, age)) is: 'age changed from 24 to 25\n')
 		prev.name = 'george'
-		Assert(func(cur, prev, #(name, age)) is: 'Name changed from "george" to "bob"\n' $
-			'age changed from 24 to 25\n')
+		Assert(func(cur, prev, #(name, age))
+			is: 'Name changed from "george" to "bob"\nage changed from 24 to 25\n')
 		}
 	}

@@ -1,6 +1,8 @@
 // Copyright (C) 2010 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
+	DeviceErr: 'device is not currently connected|device not ready|permission denied' $
+		'|unauthenticated guest access'
 	IsDrive?(path)
 		{
 		return path =~ '^[A-Za-z]:'

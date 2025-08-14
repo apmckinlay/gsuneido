@@ -32,7 +32,7 @@ Controller
 		(Static ' These notes are attached to the screen in general, ' $
 			'NOT to a particular record. ')
 		(Skip 4)
-		(Editor, size: 11)
+		(ScintillaAddonsEditor, fontSize: 11)
 		(Border (Horz
 			(Static '') Fill Skip
 			(LinkButton 'Browse All Notes') Skip

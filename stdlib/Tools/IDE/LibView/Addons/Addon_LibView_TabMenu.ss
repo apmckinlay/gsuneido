@@ -59,7 +59,7 @@ LibViewAddon
 
 	TabMenu_GoToAssociatedTest(tabData)
 		{
-		name = LibraryTags.RemoveTagsFromName(tabData.name.Tr('?'))
+		name = LibraryTags.RemoveTagFromName(tabData.name.Tr('?'))
 		items = Object(name $ 'Test', name $ '_Test')
 		libs = Libraries()
 		list = #()

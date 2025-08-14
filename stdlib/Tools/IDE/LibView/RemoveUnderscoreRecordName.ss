@@ -6,7 +6,7 @@ function (recordName, code, w = false)
 	type = LibRecordType(code)
 	if type not in ('class', 'function')
 		return code
-	name = LibraryTags.RemoveTagsFromName(recordName)
+	name = LibraryTags.RemoveTagFromName(recordName)
 	pat = '\<(?q)_' $ name $ '(?-q)\>'
 	if code.Size() > uname_pos = code.FindRx(pat)
 		{

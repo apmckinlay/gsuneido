@@ -22,7 +22,7 @@ class
 		EnsureDir('temp')
 		ts = Display(Timestamp())[1..]
 		saveName = Paths.Combine(Paths.Combine('temp', ts), fileName)
-		CreateDirectories(saveName)
+		EnsureDirectories(saveName)
 		try
 			File(saveName, 'w')
 				{ |f|

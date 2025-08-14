@@ -1,5 +1,4 @@
 // Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
-// needs to be WndProc instead of Hwnd for ListViewHeader
 WndProc
 	{
 	Name: "Header"
@@ -8,8 +7,6 @@ WndProc
 	New(@args)
 		{
 		.batchProcessing = true
-		if .Name is 'ListViewHeader'
-			return
 
 		style = args.GetDefault('style', 0)
 		.headerSelectPrompt = args.GetDefault('headerSelectPrompt', false)

@@ -48,7 +48,7 @@ Controller
 
 	getSort(query, renamed)
 		{
-		sort = QueryGetSort(query, keepReverse:)
+		sort = QueryGetSort(query)
 		reverseStr = ''
 		if sort isnt ''
 			{

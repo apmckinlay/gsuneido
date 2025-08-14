@@ -38,6 +38,8 @@ class
 				prev_val: prev[ts_col], cur_val: cur[ts_col])
 			if cur.Member?('bizuser_user_modified')
 				params.bizuser_user_modified = cur.bizuser_user_modified
+			if prev.Member?('bizuser_user_modified')
+				params.prev_bizuser_user_modified = prev.bizuser_user_modified
 			.recordChanged(hwnd, params, :quiet?)
 			return true
 			}

@@ -24,6 +24,8 @@ Test
 
 	Test_suppressions()
 		{
+		LibrarySuppressions.ResetCache() // so it sees new test data
+		.AddTeardown(LibrarySuppressions.ResetCache)
 		.MakeLibraryRecord(
 			[name: 'Test_CheckLibrary_HasSuppressed',
 				text: "function () { First_NonExistingFn() }"],

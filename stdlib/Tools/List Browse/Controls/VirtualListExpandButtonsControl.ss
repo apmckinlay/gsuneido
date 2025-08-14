@@ -50,7 +50,8 @@ PassthruController
 		if .switchBtn isnt false
 			{
 			.switchBtn.SetSize(rowHeight, rowHeight)
-			if curLeft < .25  /* = to show swith form button */
+			if curLeft < ScaleWithDpiFactor(
+				VirtualListGridBodyComponent.DistanceToShowSwitchBtn)
 				width += rowHeight
 			}
 		.Resize(0, row_num * rowHeight + headerYmin, width, rowHeight)

@@ -60,7 +60,8 @@ Memoize
 		if c.GetDefault('noUpdates', false) and recordName.Prefix?('Update_')
 			return true
 
-		if c.GetDefault('noTests', false) and recordName.Suffix?('Test')
+		if c.GetDefault('noTests', false) and
+			LibraryTags.RemoveTagFromName(recordName).Suffix?('Test')
 			return true
 
 		return false

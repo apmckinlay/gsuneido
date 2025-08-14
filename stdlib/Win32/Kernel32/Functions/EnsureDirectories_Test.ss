@@ -15,8 +15,8 @@ Test
 		{
 		for ..2
 			{
-			cds = new CreateDirectories
-				{ CreateDirectories_ensureDir(dir) { .Log.Add(dir) } }
+			cds = new EnsureDirectories
+				{ EnsureDirectories_ensureDir(dir) { .Log.Add(dir) } }
 			cds.Log = []
 			cds.CallClass(path)
 			Assert(cds.Log is: expected)

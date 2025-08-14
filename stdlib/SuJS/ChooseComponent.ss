@@ -45,7 +45,7 @@ HtmlDivComponent
 			return
 
 		if event.key in (#ArrowUp, #ArrowDown) or
-			event.key is 'z' and event.altKey is true
+			event.key is 'z' and event.GetDefault(#altKey, false) is true
 			.button.CLICK()
 		else if event.key is #Enter
 			{

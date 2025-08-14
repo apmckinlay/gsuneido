@@ -147,17 +147,11 @@ class
 		return .keyquery
 		}
 
-	AddWhere(where)
+	AddMoreToQuery(where)
 		{
-		query = QueryAddWhere(.base_query, where)
+		query = QueryAddMore(.base_query, where)
 		if where.Has?('leftjoin by') and not .base_query.Has?('/* tableHint: ')
 			query = `/* tableHint: ` $ QueryGetTable(.base_query) $ ` */ ` $ query
-		try
-			if QueryEmpty?(query)
-				return 'No Records Found'
-		catch (err, '*regex')
-			return "Invalid matcher - " $
-				err.AfterFirst('regex: ').BeforeFirst('(from server)')
 		.SetQuery(query)
 		return true
 		}
@@ -251,6 +245,11 @@ class
 		table = QueryGetTable(.query, nothrow:)
 		return .keyquery isnt false and table isnt "" and
 			not QueryEmpty?(table) and QueryEmpty?(.query)
+		}
+	TableEmpty?()
+		{
+		table = QueryGetTable(.query, nothrow:)
+		return .keyquery is false or table is "" or QueryEmpty?(table)
 		}
 
 	GetTableName()

@@ -30,12 +30,16 @@ class
 	init()
 		{
 		.hashes = Object().Set_default(Object())
+		.trialTags = LastContribution('Svc_TrialTags').Members()
 		}
 
 	process(lib)
 		{
 		QueryApply(lib $ " where name !~ 'Test$'", group: -1)
 			{|x|
+			tag = LibraryTags.GetTagFromName(x.name)
+			if .trialTags.Any?({ tag.Suffix?('_' $ it) })
+				continue
 			.process1(lib, x)
 			}
 		}

@@ -1,6 +1,7 @@
 // Copyright (C) 2010 Suneido Software Corp. All rights reserved worldwide.
 EnhancedButtonControl
 	{
+	ComponentName: 'RepeatButtonComponent'
 	New(command, .image, book = 'imagebook', tip = "")
 		{
 		super(:command, :image, :book, :tip, imageColor: 0x737373,

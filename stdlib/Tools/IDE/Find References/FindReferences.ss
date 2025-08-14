@@ -3,9 +3,10 @@
 // uses: Gotofind, FindReferencesPos
 class
 	{
-	CallClass(orig_name, referencesOnly = false, excludeTests = false, excludeLibs = #())
+	CallClass(orig_name, referencesOnly = false,
+		excludeTests = false, excludeUpdates = false, excludeLibs = #())
 		{
-		orig_name = LibraryTags.RemoveTagsFromName(orig_name)
+		orig_name = LibraryTags.RemoveTagFromName(orig_name)
 		libs = LibraryTables()
 		used = Libraries().Intersect(libs) // handle LibraryTables overridden
 		libs = used.MergeUnion(libs) // put used first
@@ -16,7 +17,7 @@ class
 		if list.NotEmpty?()
 			list.Add(Object())
 		basename = .basename(orig_name)
-		.references(libs, used, orig_name, basename, list, excludeTests)
+		.references(libs, used, orig_name, basename, list, excludeTests, excludeUpdates)
 		.book_references(basename, list)
 		return Object(:list, :basename)
 		}
@@ -36,9 +37,14 @@ class
 		}
 
 	max_refs: 50
-	references(libs, used, orig_name, base_name, list, exclude_tests = false)
+	references(libs, used, orig_name, base_name, list,
+		excludeTests = false, excludeUpdates = false)
 		{
-		exclude_str = exclude_tests ? ' and not name.Suffix?("Test") ' : ''
+		exclude_str = ""
+		if excludeTests
+			exclude_str $= ' and not name.Suffix?("Test") '
+		if excludeUpdates
+			exclude_str $= ' and not name.Prefix?("Update_20") '
 		for lib in libs
 			QueryApply(.referencesQuery(lib, orig_name, base_name, exclude_str))
 				{|x|

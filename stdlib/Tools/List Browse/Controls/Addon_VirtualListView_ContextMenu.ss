@@ -58,7 +58,10 @@ Addon_VirtualListViewBase
 		if 0 is subTitle = .Send('VirtualList_GetSubTitle')
 			subTitle = ''
 		if .Model.ColModel.Customize(.Parent, .Model.GetQuery(), :subTitle)
-			.Send('BookRefresh')
+			{
+			.Repaint(keepPos?:)
+			.Model.RefreshColumns()
+			}
 		}
 
 	On_Context_Customize_Expand()

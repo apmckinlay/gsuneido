@@ -1,9 +1,9 @@
 // Copyright (C) 2025 Suneido Software Corp. All rights reserved worldwide.
 Test
 	{
-	Test_RemoveTagsFromName()
+	Test_RemoveTagFromName()
 		{
-		fn = LibraryTags.RemoveTagsFromName
+		fn = LibraryTags.RemoveTagFromName
 		Assert(fn('') is: '')
 		Assert(fn('Abc') is: 'Abc')
 		Assert(fn('Abc__foo') is: 'Abc')
@@ -51,5 +51,24 @@ Test
 		Assert(fn(#('')) is: #())
 		Assert(fn(#('', '__foo')) is: #('foo'))
 		Assert(fn(#('', '__foo', '__bar')) is: #('foo', 'bar'))
+		}
+
+	Test_SetTrialTag()
+		{
+		fn = LibraryTags.SetTrialTag
+		Assert(fn('', '', #()) is: '')
+		Assert(fn('Foo', '', #()) is: 'Foo')
+		Assert(fn('Foo__webgui', '', #()) is: 'Foo__webgui')
+
+		trials = #(trial, alpha)
+		Assert(fn('Foo__trial', '', trials) is: 'Foo')
+		Assert(fn('Foo__webgui_trial', '', trials) is: 'Foo__webgui')
+
+		Assert(fn('Foo', 'alpha', trials) is: 'Foo__alpha')
+		Assert(fn('Foo__trial', 'alpha', trials) is: 'Foo__alpha')
+		Assert(fn('Foo__alpha', 'alpha', trials) is: 'Foo__alpha')
+		Assert(fn('Foo__webgui', 'alpha', trials) is: 'Foo__webgui_alpha')
+		Assert(fn('Foo__webgui_alpha', 'alpha', trials) is: 'Foo__webgui_alpha')
+		Assert(fn('Foo__webgui_trial', 'alpha', trials) is: 'Foo__webgui_alpha')
 		}
 	}

@@ -638,32 +638,6 @@ Controller
 		if ((false isnt cur = .GetSelectedRecord()) and cur is rec)
 			return
 
-if rec.Empty?()
-	{
-	LogErrors('debug 34775')
-		{
-		params = .model.ExpandModel.VirtualListExpandModel_expandedRows.Map()
-			{
-			ob = Object()
-			ob.match? = Same?(it.layout.ctrl, ctrl)
-			ob.UniqueId = it.layout.ctrl.GetDefault(#UniqueId, false)
-			ob.Merge(it.rec)
-			ob
-			}
-		params.inRecycledExpands? = .model.ExpandModel.
-			VirtualListExpandModel_recycledExpands.HasIf?()
-			{
-			.model.ExpandModel.VirtualListExpandModel_findRecordControl(source,
-				it.GetControl())
-			}
-		params.source = source
-		params.ctrl = ctrl
-		params.cur = cur
-		SuneidoLog('ERROR: (CAUGHT) VirtualListViewControl.Field_SetFocus got empty rec',
-			calls:, :params,
-			caughtMsg: 'additional logging to track down errors 34775')
-			}
-	}
 		.grid.SelectRecord(rec)
 		}
 	SelectRecordByFocus(curFocus)

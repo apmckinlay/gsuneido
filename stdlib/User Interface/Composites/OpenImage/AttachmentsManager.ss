@@ -151,7 +151,12 @@ class
 		{
 		if '' isnt bucket = AttachmentS3Bucket()
 			return AmazonS3.FileExist?(bucket, FormatAttachmentPath(file))
-		return FileExists?(file)
+
+		// Assume file exists even if error is thrown (attachments_cleanup_queue handles
+		// cleaning it up later if there is a file access issue)
+		result = true
+		try	result = FileExists?(file)
+		return result
 		}
 
 	ProcessQueue(restore? = false)

@@ -121,7 +121,14 @@ check(ob)
 
 	OnConnectionError(e, wsHandler)
 		{
-		return SuSessionManager.OnConnectionError(e, wsHandler)
+		try
+			return SuSessionManager.OnConnectionError(e, wsHandler)
+		catch (e)
+			{
+			SuneidoLog('ERRATIC: (CAUGHT) - JsWebSocketServer.OnConnectionError - ' $ e,
+				caughtMsg: 'Session will be terminated')
+			return true // stop
+			}
 		}
 
 	BeforeDisconnect()

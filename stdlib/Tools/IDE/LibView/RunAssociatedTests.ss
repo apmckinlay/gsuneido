@@ -13,7 +13,7 @@ class
 		tests = [].Set_default([])
 		for path in paths
 			{
-			name = LibraryTags.RemoveTagsFromName(path.AfterLast('/').Tr('?'))
+			name = LibraryTags.RemoveTagFromName(path.AfterLast('/').Tr('?'))
 			if name.Suffix?('Test')
 				tests.AddUnique(name)
 			else

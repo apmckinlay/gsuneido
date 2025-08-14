@@ -4,7 +4,7 @@ function (table, dateField, date = false, monthsToKeep = 3, outputToFile? = fals
 	if outputToFile?
 		{
 		logPath = 'logs/purgeTable/' $ table $ '/'
-		CreateDirectories('./' $ logPath)
+		EnsureDirectories('./' $ logPath)
 		Save10(logPath $ table $ ".su")
 		Database.Dump(table)
 		MoveFile(table $ ".su", logPath $ table $ ".su.1")

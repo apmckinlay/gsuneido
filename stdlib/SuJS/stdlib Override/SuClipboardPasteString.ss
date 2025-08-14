@@ -3,7 +3,7 @@ function (component, pasteCallable)
 	{
 	try
 		SuUI.GetCurrentWindow().navigator.clipboard.ReadText().Then({ |s|
-			if component.HasFocus?()
+			if component.HasFocus?() and component.GetReadOnly() isnt true
 				pasteCallable(s)
 			})
 	catch (unused, 'method not found: Clipboard.ReadText')

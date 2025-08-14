@@ -581,6 +581,7 @@ WndProc
 
 	keep_size: false
 	window_info: false
+	orig_window_info: false
 	restoreKeepSize(parentHwnd, title, ctrlspec, keep_size)
 		{
 		if keep_size is false
@@ -592,6 +593,7 @@ WndProc
 			false is info = KeyListViewInfo.Get(.keep_size)
 			return false
 		.window_info = info.window_info
+		.orig_window_info = info.window_info.Copy()
 		if not .window_info.Member?(#w)
 			return false
 
@@ -640,7 +642,8 @@ WndProc
 		window_info = .window_info is false ? Object() : .window_info
 		window_info.w = r.right - r.left
 		window_info.h = r.bottom - r.top
-		KeyListViewInfo.Save(.keep_size, window_info)
+		if .orig_window_info isnt window_info
+			KeyListViewInfo.Save(.keep_size, window_info)
 		}
 
 	On_Cancel()

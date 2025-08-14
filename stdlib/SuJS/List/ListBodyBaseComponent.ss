@@ -91,7 +91,7 @@ Component
 			cell.data.Blank?()
 			el.SetAttribute('data-tip', '')
 		else
-			el.SetAttribute('data-tip', cell.GetDefault(#tip, cell.data))
+			el.SetAttribute('data-tip', XmlEntityDecode(cell.GetDefault(#tip, cell.data)))
 		}
 
 	CreateCellElement(parent, cell, col, className)

@@ -261,4 +261,36 @@ world') is: false)											// newline
 		Assert(mock.EnsureTrailingSlash(`/this/is/a/path`) is: `/this/is/a/path/`)
 		Assert(mock.EnsureTrailingSlash(`/this/is/a/path/`) is: `/this/is/a/path/`)
 		}
+
+	Test_Volume()
+		{
+
+		}
+
+	Test_AbsToRel()
+		{
+		Assert(Paths.AbsToRel("/a/b", "/a/b/c") is: "c")
+		Assert(Paths.AbsToRel("/a/b", "/a/b") is: ".")
+		Assert(Paths.AbsToRel("/a/b", "/a/c") is: "../c")
+		Assert(Paths.AbsToRel("/a/b", "/b/c") is: "../../b/c")
+		Assert(Paths.AbsToRel("/", "/") is: ".")
+		Assert(Paths.AbsToRel("/", "/a") is: "a")
+		Assert(Paths.AbsToRel("/a", "/") is: "..")
+		Assert(Paths.AbsToRel("/a/b/c", "/a/b/c/d/e") is: "d/e")
+		Assert(Paths.AbsToRel("/a/b/c/d", "/a/b") is: "../..")
+		Assert(Paths.AbsToRel("/a/b/c", "/a/d/e") is: "../../d/e")
+		Assert(Paths.AbsToRel("/x/y/z", "/p/q/r") is: "../../../p/q/r")
+		Assert(Paths.AbsToRel("/home/user", "/home/user/documents/file.txt")
+			is: "documents/file.txt")
+		Assert(Paths.AbsToRel("/var/log", "/etc/config") is: "../../etc/config")
+		Assert(Paths.AbsToRel("/a/b/c/d/e", "/a/b/f/g") is: "../../../f/g")
+
+		// Test cases for paths ending with "/"
+		Assert(Paths.AbsToRel("/a/b/", "/a/b/c") is: "c")
+		Assert(Paths.AbsToRel("/a/b", "/a/b/c/") is: "c")
+		Assert(Paths.AbsToRel("/a/b/", "/a/b/c/") is: "c")
+		Assert(Paths.AbsToRel("/a/b/", "/a/b/") is: ".")
+		Assert(Paths.AbsToRel("/a/b/", "/a/c/") is: "../c")
+		Assert(Paths.AbsToRel("/home/user/", "/home/user/documents/") is: "documents")
+		}
 	}

@@ -56,15 +56,15 @@ Test
 		{
 		// 1 day per log
 		Assert(Rlog.Rlog_createNewFile?("20070101.123456780", 0) is: false)
-		Assert(Rlog.Rlog_createNewFile?("20070101.123456780", 1) is: true)
+		Assert(Rlog.Rlog_createNewFile?("20070101.123456780", 1))
 
 		cl = Rlog { DaysPerLog: 7 }
 		Assert(cl.Rlog_createNewFile?("20070101.123456780", 0) is: false)
 		Assert(cl.Rlog_createNewFile?("20070107.123456780", 0) is: false)
-		Assert(cl.Rlog_createNewFile?("20070101.123456780", 1) is: true)
-		Assert(cl.Rlog_createNewFile?("20070107.123456780", 1) is: true)
+		Assert(cl.Rlog_createNewFile?("20070101.123456780", 1))
+		Assert(cl.Rlog_createNewFile?("20070107.123456780", 1))
 		Assert(cl.Rlog_createNewFile?("20070108.123456780", 1) is: false)
-		Assert(cl.Rlog_createNewFile?("garbage", 0) is: true)
+		Assert(cl.Rlog_createNewFile?("garbage", 0))
 		}
 
 	Test_firstPossibleRotationDate()

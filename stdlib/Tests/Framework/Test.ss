@@ -188,7 +188,7 @@ print(@args)
 			QueryOutput(table, r)
 		return table
 		}
-	teardown_tables()
+	teardown_tables(_testname = "")
 		{
 		libs = Libraries()
 		resetCache? = false
@@ -200,7 +200,7 @@ print(@args)
 				{
 				resetCache? = true
 				ServerEval('Unuse', x.table)
-.print(_testname, "teardown_tables")
+.print(testname, "teardown_tables")
 				}
 			try
 				Database("drop " $ x.table)

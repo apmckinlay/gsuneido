@@ -546,12 +546,11 @@ WndProc
 		if row_num is false
 			row_num = .GetRows(pt.y)
 		ScreenToClient(.Hwnd, pt)
-		curLeft = pt.x / .GetClientRect().GetWidth()
 		rec = .model.GetRecord(row_num)
 		invalid = rec is false or rec.vl_expand? is true
 		expanded = rec isnt false and .model.ExpandModel isnt false and
 			.model.ExpandModel.GetExpandedControl(rec) isnt false
-		.Send('VirtualListGrid_MouseMove', row_num, expanded, invalid, :curLeft)
+		.Send('VirtualListGrid_MouseMove', row_num, expanded, invalid, curLeft: pt.x)
 		}
 
 	TTN_SHOW(lParam)

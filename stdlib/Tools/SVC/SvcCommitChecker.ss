@@ -362,7 +362,7 @@ class
 		{
 		if type isnt '-' or lib is 'Contrib'
 			return false
-		name = LibraryTags.RemoveTagsFromName(name)
+		name = LibraryTags.RemoveTagFromName(name)
 		if not name.GlobalName?()
 			return false
 		if not Uninit?(name)

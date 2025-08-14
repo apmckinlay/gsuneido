@@ -15,7 +15,8 @@ EditComponent
 	onKeyDown(event)
 		{
 		pressed = Object(
-			control: event.ctrlKey, shift: event.shiftKey, alt: event.altKey)
+			control: event.ctrlKey, shift: event.shiftKey,
+			alt: event.GetDefault(#altKey, false))
 		EditorKeyDownComponentHandler(this, event, pressed)
 		}
 	}

@@ -4,7 +4,8 @@ class
 	CallClass(ip = false, port = false)
 		{
 		if true isnt result = .testHttpServer(ip, port)
-			SuneidoLog("ERRATIC: TestHttpServer - " $ result)
+			SuneidoLog("ERRATIC: (CAUGHT) TestHttpServer - " $ result,
+				caughtMsg: 'unexpected response or error is treated as failed HTTP test')
 		return result
 		}
 

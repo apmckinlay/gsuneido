@@ -15,6 +15,7 @@ WndProc
 		.initToolTips()
 		}
 
+	calcClass: false
 	initDefaults(tabs)
 		{
 		// Initialize generic instance members
@@ -887,7 +888,8 @@ WndProc
 		{
 		.brushes.Each(DeleteObject)
 		.brushes.Delete(all:)
-		.calcClass.Destroy()
+		if .calcClass isnt false
+			.calcClass.Destroy()
 		if .tabButton isnt false
 			.tabButton.Destroy()
 		.extraControl.Destroy()

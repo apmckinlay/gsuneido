@@ -157,6 +157,8 @@ Controller
 			.list.DeleteItem(.list.GetCurSel())
 			.c.DeleteField(field)
 			.markFieldsChanged()
+			if Object?(.browse_custom_fields)
+				.browse_custom_fields.Add(field)
 			}
 		}
 

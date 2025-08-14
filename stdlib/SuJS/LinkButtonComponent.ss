@@ -13,12 +13,12 @@ StaticComponent
 
 	click(event/*unused*/)
 		{
-		.Event('CLICK')
+		.RunWhenNotFrozen({ .EventWithOverlay('CLICK') })
 		}
 
 	keydown(event)
 		{
 		if event.key is " "
-			.Event('CLICK')
+			.RunWhenNotFrozen({ .EventWithOverlay('CLICK') })
 		}
 	}

@@ -32,6 +32,7 @@ Component
 		LoadCssStyles('su-loader.css', .styles)
 		.CreateElement('div', className: 'su-loader-container')
 		.loader = CreateElement('div', .El, className: 'su-loader')
+		SuUI.GetCurrentWindow().Eval(.initFileCount())
 
 		if .s3?
 			{
@@ -160,7 +161,9 @@ window.downloadFile = function(filename, content) {
 		// check for invalid files
 		if not .validateFiles?(files)
 			return
-		for i in ..files.length
+
+		.fileCount = files.length
+		for i in ...fileCount
 			{
 			file = files.Item(i)
 			msgEl = CreateElement('div', .El)
@@ -204,6 +207,18 @@ window.downloadFile = function(filename, content) {
 				Url.BuildQuery([file.name, token: SuRender().GetToken()]))
 		}
 
+	initFileCount()
+		{
+		return `window.getFileCount = function () {
+					window.fileCount = (window.fileCount || 0) + 1;
+					return window.fileCount
+				}
+
+				window.clearFileCount = function () {
+					window.fileCount = 0;
+				}`
+		}
+
 	sendFile(file, msgEl, url, method = 'POST')
 		{
 		xhr = SuUI.MakeWebObject('XMLHttpRequest')
@@ -223,19 +238,22 @@ window.downloadFile = function(filename, content) {
 					{
 					.updateMsg(msgEl, 'success', color: 'green')
 					.getSaveName(method, url, file, xhr)
-					if .uploadTasks.Every?({ it.Member?(#saveName) })
-						{
-						saveNames = Object()
-						for task in .uploadTasks
-							saveNames.Add(task.saveName)
-						.Event(#UploadFinished, saveNames)
-						}
 					}
 				else if xhr.status is HttpResponseCodes.BadRequest
-					.updateMsg(msgEl, xhr.response, color: 'red')
+					.updateMsg(msgEl, xhr.response, color: 'red', file: file.name)
 				// 0: cors preflight request failed, like permission or credential expired
 				else if xhr.status is 0
-					.updateMsg(msgEl, 'upload failed', color: 'red')
+					.updateMsg(msgEl, 'upload failed', color: 'red', file: file.name)
+
+				if SuUI.GetCurrentWindow().GetFileCount() is .fileCount
+					{
+					SuUI.GetCurrentWindow().ClearFileCount()
+					results = .uploadTasks.Values().Filter({
+						it.Member?('saveName') }).Map({ it.saveName })
+
+					if not results.Empty?()
+						.Event(#UploadFinished, results)
+					}
 				}
 			})
 		xhr.Open(method, url)
@@ -266,9 +284,11 @@ window.downloadFile = function(filename, content) {
 			.signedUpload(file, msgEl)
 		}
 
-	signedUpload(file, msgEl)
+	signedUpload(file, msgEl, uploadFile = '')
 		{
 		suXhr = SuUI.MakeWebObject('XMLHttpRequest')
+		if not uploadFile.Blank?()
+			.uploadTasks[uploadFile] = Object([xhr: suXhr])
 		suXhr.open('POST', "/upload" $
 			Url.BuildQuery([file.name, token: SuRender().GetToken(), s3:]))
 		suXhr.AddEventListener('readystatechange', { |event/*unused*/|
@@ -285,7 +305,6 @@ window.downloadFile = function(filename, content) {
 
 	rotateAndSend(file, msgEl)
 		{
-		.uploadTasks[file.name] = Object()
 		uploadFn = .signedUpload
 		file.ArrayBuffer().Then({|arrayBuffer|
 			sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
@@ -307,14 +326,16 @@ window.downloadFile = function(filename, content) {
 							}
 						else
 							resultFile = file
-						uploadFn(resultFile, msgEl)
+						uploadFn(resultFile, msgEl, file.name)
 						})
 					}
 				else
-					uploadFn(file, msgEl)
+					{
+					uploadFn(file, msgEl, file.name)
+					}
 				}).Catch(
 					{|unused|
-					uploadFn(file, msgEl)
+					uploadFn(file, msgEl, file.name)
 					})
 			})
 		}
@@ -332,7 +353,7 @@ window.downloadFile = function(filename, content) {
 		return n.Round(2) $ ' pb'
 		}
 
-	updateMsg(el, msg, color = 'black')
+	updateMsg(el, msg, color = 'black', file = '')
 		{
 		if .El is false
 			return
@@ -342,13 +363,19 @@ window.downloadFile = function(filename, content) {
 		if color is 'red'
 			{
 			.loader.SetStyle('display', 'none')
-			.abort()
+			.abort(file)
 			}
 		}
 
 	uploadTasks: #()
-	abort()
+	abort(file = '')
 		{
+		if not file.Blank?()
+			{
+			.uploadTasks[file][0].xhr.Abort()
+			return
+			}
+
 		for task in .uploadTasks
 			if not task.Member?(#saveName)
 				{

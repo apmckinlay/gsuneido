@@ -194,14 +194,16 @@ class
 
 	snapshotTimeoutTesterFolder(timeoutFolder)
 		{
-		newDir = timeoutFolder $ '_' $ String(Date()).Tr('#.')
-		EnsureDir(newDir)
+		failedDir = timeoutFolder $ '_failedbak'
+		if DirExists?(failedDir)
+			DeleteDir(failedDir)
+		EnsureDir(failedDir)
 		try
-			failed = MirrorDir('../' $ timeoutFolder, newDir)
+			failed = MirrorDir('../' $ timeoutFolder, failedDir)
 		catch (err)
 			failed = Object(err)
 		return '\r\nThe ' $ timeoutFolder $ ' is copied to ' $
-			GetCurrentDirectory() $ '/' $ newDir $
+			GetCurrentDirectory() $ '/' $ failedDir $
 			Opt(', (Except ', failed.Join(','), ')')
 		}
 
@@ -469,6 +471,8 @@ class
 			checksumOb = .collectChecksums()
 			for file in Dir(.exportDir $ '/*')
 				{
+				if not TableExists?(file)
+					LibTreeModel.Create(file)
 				LibIO.Import(.exportDir $ '/' $ file, file, useSVCDates:)
 				.deleteFile(ExeDir() $ '/' $ .exportDir $ '/' $ file)
 				}

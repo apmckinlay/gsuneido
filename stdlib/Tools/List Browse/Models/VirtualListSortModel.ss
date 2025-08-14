@@ -6,7 +6,7 @@ class
 	New(query, .sf, .sortSaveName = false, .loadAll? = false,
 		.disableCheckSortLimit? = false)
 		{
-		sort = QueryGetSort(query, keepReverse:)
+		sort = QueryGetSort(query)
 		.origSort = sort
 		.initSortOb(sort)
 
@@ -147,7 +147,7 @@ class
 
 	UsingDefaultSort?(query)
 		{
-		return .origSort is QueryGetSort(query, keepReverse:)
+		return .origSort is QueryGetSort(query)
 		}
 
 	SetSort(displayCol, dataCol = false)

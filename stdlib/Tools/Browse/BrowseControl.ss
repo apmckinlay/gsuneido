@@ -1251,7 +1251,8 @@ PassthruController
 			UserColumns.AddCustomFields(.GetColumnsSaveName(), .list, custom_fields,
 				.getOriginalCols(), .getAvailableCols(), deletecol: )
 
-			.setting_columns(.columns.Append(custom_fields))
+			ListCustomize.AddRemoveCustomFields(custom_fields, .columns)
+			.setting_columns(.columns)
 			UserColumns.Load(.columns, .GetColumnsSaveName(), .list, deletecol:,
 				load_visible?:)
 			}

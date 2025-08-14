@@ -1301,11 +1301,12 @@ Controller
 		if report.Member?('name')
 			{
 			reportname = .devmode_reportname(report)
+			devmode_save_name = .devmode_save_name()
 			RetryTransaction()
 				{|t|
 				t.QueryDo('delete ' $ .devmode_query(reportname))
 				x.report = reportname
-				x.computer = .devmode_save_name()
+				x.computer = devmode_save_name
 				t.QueryOutput('devmode', x)
 				}
 			}

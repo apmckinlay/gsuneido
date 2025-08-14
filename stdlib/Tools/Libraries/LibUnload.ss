@@ -5,13 +5,19 @@ class
 	{
 	CallClass(name)
 		{
-//		name = LibraryTags.RemoveTagsFromName(name)
 		Unload(name)
 		if Sys.Client?()
 			ServerEval('LibUnload', name)
 		if Suneido.Member?('LibUnload_observers')
 			for observer in Suneido.LibUnload_observers.Copy()
 				observer(name)
+		try
+			{
+			if name isnt pureName = LibraryTags.RemoveTagFromName(name)
+				this(pureName)
+			}
+		catch (e)
+			Print('LibUnload - ' $ e)
 		}
 	AddObserver(key, observer)
 		{

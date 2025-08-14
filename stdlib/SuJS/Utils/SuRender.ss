@@ -373,8 +373,8 @@ class
 			event.StopPropagation()
 			}
 
-		if false is cmd = .ActiveWindow.GetAccelCmd(event.ctrlKey, event.altKey,
-			event.shiftKey, event.key)
+		if false is cmd = .ActiveWindow.GetAccelCmd(event.ctrlKey,
+			event.GetDefault(#altKey,false), event.shiftKey, event.key)
 			return
 		preventDefault? = not (event.ctrlKey is true and event.key is 'c')
 		if preventDefault?

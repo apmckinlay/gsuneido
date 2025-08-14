@@ -169,6 +169,33 @@ class
 
 	GetPrevDefinition(name, curTable)
 		{
+		if false isnt rec = .getTagOverloaded(name, curTable)
+			return rec
+
+		return .getLibOverloaded(name, curTable)
+		}
+
+	getTagOverloaded(name, curTable)
+		{
+		overloaded = LibraryTags.SetTrialTag(name, '', .getTrialTags())
+		if overloaded isnt name
+			{
+			if false isnt rec = SvcTable(curTable).Get(overloaded)
+				{
+				rec.table = curTable
+				return rec
+				}
+			}
+		return false
+		}
+
+	getTrialTags()
+		{
+		return LastContribution('Svc_TrialTags').Members()
+		}
+
+	getLibOverloaded(name, curTable)
+		{
 		if curTable is 'stdlib'
 			return false
 		svcTable = SvcTable(curTable)
@@ -183,7 +210,10 @@ class
 				return false
 			svcTable = SvcTable(lib)
 			if false isnt rec = svcTable.Get(name)
-				return rec.Merge([table: lib])
+				{
+				rec.table = lib
+				return rec
+				}
 			}
 		return false
 		}

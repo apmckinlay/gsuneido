@@ -33,15 +33,9 @@ Test
 		Assert(model.SetKeyQuery(rec)
 			sameText: 'stdlib remove num where name is "Test_num" where group is -1')
 
-		Assert(model.AddWhere('where name is "record not exist"')
-			is: 'No Records Found')
-		Assert(model.AddWhere('where name =~ "(invalid"')
-			startsWith: "Invalid matcher - ")
-		Assert(model.AddWhere('where name.Has?("Init")'))
-		Assert(model.GetQuery()
-			sameText: BuiltDate() < #20250422
-				? 'stdlib remove num where name.Has?("Init") sort name'
-				: 'stdlib remove num sort name where name.Has?("Init")')
+		Assert(model.AddMoreToQuery('where name.Has?("Init")'))
+		Assert(model.GetQuery()	sameText:
+			'stdlib remove num where name.Has?("Init") sort name')
 
 		rec = model.LookupRecord('name', 'SuneidoLog')
 		Assert(rec.name is: 'SuneidoLog')

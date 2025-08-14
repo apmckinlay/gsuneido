@@ -110,11 +110,17 @@ HtmlContainer
 			else // control
 				{
 				ymin = Max(ymin, c.Ymin)
-				if .endofline?(i) and c.Xstretch > 0 and .Xstretch > 0
+				if .Stretch?(i, c)
 					c.formStretch? = true
 				}
 		lineheights.Add(ymin)
 		return lineheights
+		}
+
+	// override by GridComponent
+	Stretch?(i, c)
+		{
+		return .endofline?(i) and c.Xstretch > 0 and .Xstretch > 0
 		}
 
 	endofline?(i)
@@ -163,7 +169,7 @@ HtmlContainer
 				for c in div.children
 					rowXmin += c.Xmin
 
-				div.el.SetStyle('grid-column', .calcGridColumn(i, gns, offset))
+				div.el.SetStyle('grid-column', .CalcGridColumn(i, gns, offset))
 				if gns[i] is -1
 					div.el.SetStyle('z-index', '1')
 				}
@@ -186,7 +192,8 @@ HtmlContainer
 		return 0
 		}
 
-	calcGridColumn(i, gns, offset)
+	// override by GridComponent
+	CalcGridColumn(i, gns, offset)
 		{
 		next = i + 1 >= gns.Size()
 			? .maxGroup + 2 + offset

@@ -846,12 +846,12 @@ class
 			// TODO: read the length property from stream object directly,
 			// TODO: need to handle when the length property is pointing to another object
 			try
-				return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\r\n'))
-			catch
-				try
-					return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\n'))
-				catch // when stream ends with \n\r
-					return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\r'))
+				return SuUI.GetCurrentWindow().PakoInflate(str.RemoveSuffix('\r\n'))
+			try
+				return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\n'))
+			try // when stream ends with \n\r
+				return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\r'))
+			return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\r\n'))
 			}
 		return Zlib.Uncompress(str)
 		}

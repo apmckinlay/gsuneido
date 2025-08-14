@@ -181,4 +181,19 @@ class
 			args.fieldName = args.GetDefault('name', '')
 		return args
 		}
+
+	FindTab(field, collectedFields) // Relies on path?:
+		{
+		for ob in collectedFields
+			{
+			if ob.Size() is 1
+				{
+				if ob[0].type is 'Field' and ob[0].GetDefault('name', '') is field
+					return false // Field is on the header, not a tab
+				}
+			else if ob[1].GetDefault('name', '') is field
+				return ob[0].section
+			}
+		return false
+		}
 	}

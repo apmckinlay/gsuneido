@@ -46,11 +46,14 @@ class
 		{
 		return .ftp.Ren(:oldName, :newName)
 		}
+RenSFTP(oldName, newName)
+	{
+	return .ftp.RenSFTP(:oldName, :newName)
+	}
 
 	Dir(path = "*.*", files = false, details = false, caseSense = false,
 		regExp = '', listOnly = true)
 		{
 		return .ftp.Dir(:path, :files, :details, :caseSense, :regExp, :listOnly)
 		}
-
 	}

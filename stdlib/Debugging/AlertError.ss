@@ -10,7 +10,8 @@ Controller
 			msg = "An unexpected problem has occurred."
 			if not log_rec.Empty?()
 				{
-				ToolDialog(hwnd, Object(this, msg, log_rec), closeButton?: false)
+				ToolDialog(hwnd, Object(this, msg, log_rec), closeButton?: false,
+					keep_size: false)
 				return
 				}
 			}

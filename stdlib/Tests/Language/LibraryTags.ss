@@ -2,26 +2,34 @@
 class
 	{
 	excludes: ('__protect', '__valid')
-
-	// To remove
-	RemoveTagsFromName(name)
-		{
-		return .RemoveTagFromName(name)
-		}
-
 	RemoveTagFromName(name)
 		{
-		return name.RemoveSuffix(.GetTagFromName(name))
+		return .split(name).name
 		}
 
 	GetTagFromName(name)
 		{
+		return .split(name).tag
+		}
+
+	split(name)
+		{
 		if false isnt pos = name.FindLast('__')
 			{
 			if not .excludes.Has?(name[pos..])
-				return name[pos..]
+				return Object(name: name[..pos], tag: name[pos..])
 			}
-		return ''
+		return Object(:name, tag: '')
+		}
+
+	// to remove trial tags, set trial to ''
+	SetTrialTag(name, trial, trialTags)
+		{
+		split = .split(name)
+		tags = split.tag.RemovePrefix('__').Split('_').Remove(@trialTags)
+		if trial isnt ''
+			tags.Add(trial)
+		return split.name $ Opt('__', tags.Join('_'))
 		}
 
 	AddMode(mode, onlyClient? = false)

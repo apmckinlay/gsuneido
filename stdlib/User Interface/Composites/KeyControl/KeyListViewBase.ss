@@ -178,6 +178,7 @@ Controller
 
 	savedQuery?: false
 	extended: #()
+	orig_locateBy: false
 	initializeLayoutVariables(query, keys, prefixColumn, columns, saveInfoName, prefix)
 		{
 		// have to do substr so key on locateby doesn't get too long. Also, some
@@ -194,6 +195,8 @@ Controller
 			.info = KeyListViewInfo.Get(.save_query)
 			.savedQuery? = .info isnt false
 			}
+		if Object?(.info) and .info.Member?('window_info') and Object?(.info.window_info)
+			.orig_locateBy = .info.window_info.GetDefault('locateby_key', false)
 
 		query_columns = QueryColumns(query)
 		keys = .initializeKeys(keys, query, query_columns)
@@ -454,9 +457,16 @@ Controller
 
 	saveLocateByKey()
 		{
-		locateby_key = .prefixBy.Get() isnt "" and .prefixBy.Valid?()
-			? .field_from_prompt(.prefixBy.Get())
+		prefixByVal = .prefixBy.Get()
+		locateby_key = prefixByVal isnt "" and .prefixBy.Valid?()
+			? .field_from_prompt(prefixByVal)
 			: false
+		if locateby_key isnt .orig_locateBy
+			.save(locateby_key)
+		}
+
+	save(locateby_key)
+		{
 		name = .saveInfoName is '' ? .save_query : .saveInfoName
 		window_info = Object() // KeyListCheckboxView does not save size info
 		if false isnt savedInfo = KeyListViewInfo.Get(name)

@@ -12,9 +12,19 @@ class
 		{
 		if .windows?()
 			// remove volume e.g. c: or \\server\share
-			path = path.Replace(`\A(.:|[/\\][/\\].+?[/\\][^/\\]+)`)
+			path = .RemoveVolume(path)
 		pos = path.FindLast1of(`\/`)
 		return pos is false ? path : path[pos + 1 ..]
+		}
+
+	volume_regex: `\A([a-zA-Z]:|[/\\][/\\].+?[/\\][^/\\]+|)`
+	Volume(path)
+		{
+		return path.Extract(.volume_regex, 0)
+		}
+	RemoveVolume(path)
+		{
+		return path.Replace(.volume_regex)
 		}
 
 	windows?() // Extracted so we can safely override it in the tests
@@ -179,5 +189,33 @@ class
 		if path is '' and noSlashWhenEmpty
 			return ''
 		return path.RightTrim(`\/`) $ `/`
+		}
+
+	AbsToRel(from, to)
+		{
+		fromParts = Paths.ToStd(from).RemovePrefix("/").Split('/')
+		toParts = Paths.ToStd(to).RemovePrefix("/").Split('/')
+
+		// Find common prefix length
+		common = 0
+		while common < fromParts.Size() and common < toParts.Size() and
+			fromParts[common] is toParts[common]
+			++common
+
+		// If paths are identical, return "."
+		if common is fromParts.Size() and common is toParts.Size()
+			return "."
+
+		result = Object()
+
+		// Add ".." for each remaining directory in from path
+		for (i = common; i < fromParts.Size(); ++i)
+			result.Add("..")
+
+		// Add remaining directories from to path
+		for (i = common; i < toParts.Size(); ++i)
+			result.Add(toParts[i])
+
+		return result.Join("/")
 		}
 	}

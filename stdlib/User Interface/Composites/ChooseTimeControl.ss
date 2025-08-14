@@ -188,6 +188,8 @@ ChooseField
 		if not minute.Number?()
 			return false
 		minute = Number(minute)
+		if not minute.Int?()
+			return false
 		return Object(:hour, :minute)
 		}
 
