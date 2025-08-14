@@ -115,9 +115,12 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 			t := p.exprPos(expr, pos, p.EndPos)
 			p.Match(tok.Colon)
 			pos = p.Pos
-			expr = p.Expression()
+			expr = p.pcExpr(prec)
 			f := p.exprPos(expr, pos, p.EndPos)
 			e = p.Trinary(e, t, f)
+		case token == tok.Pipe:
+			rhs := p.pcExpr(prec + 1) // +1 for left associative
+			e = p.Call(rhs, []ast.Arg{{E: e}}, 0)
 		case token == tok.LParen: // function call
 			e = p.Call(e, p.arguments(token), p.EndPos)
 		case tok.AssocStart < token && token < tok.AssocEnd:
@@ -322,47 +325,48 @@ func (p *Parser) noName() func() {
 }
 
 var precedence = [tok.Ntokens]int8{
-	tok.QMark:    2,
-	tok.Or:       3,
-	tok.And:      4,
-	tok.In:       5,
-	tok.Not:      5, // not in
-	tok.BitOr:    6,
-	tok.BitXor:   7,
-	tok.BitAnd:   8,
-	tok.Is:       9,
-	tok.Isnt:     9,
-	tok.Match:    9,
-	tok.MatchNot: 9,
-	tok.Lt:       10,
-	tok.Lte:      10,
-	tok.Gt:       10,
-	tok.Gte:      10,
-	tok.LShift:   11,
-	tok.RShift:   11,
-	tok.Cat:      12,
-	tok.Add:      12,
-	tok.Sub:      12,
-	tok.Mul:      13,
-	tok.Div:      13,
-	tok.Mod:      13,
-	tok.Inc:      14,
-	tok.Dec:      14,
-	tok.LParen:   15,
-	tok.Dot:      16,
-	tok.LBracket: 16,
-	tok.Eq:       16,
-	tok.AddEq:    16,
-	tok.SubEq:    16,
-	tok.CatEq:    16,
-	tok.MulEq:    16,
-	tok.DivEq:    16,
-	tok.ModEq:    16,
-	tok.LShiftEq: 16,
-	tok.RShiftEq: 16,
-	tok.BitOrEq:  16,
-	tok.BitAndEq: 16,
-	tok.BitXorEq: 16,
+	tok.Pipe:     2,
+	tok.QMark:    3,
+	tok.Or:       4,
+	tok.And:      5,
+	tok.In:       6,
+	tok.Not:      6, // not in
+	tok.BitOr:    7,
+	tok.BitXor:   8,
+	tok.BitAnd:   9,
+	tok.Is:       10,
+	tok.Isnt:     10,
+	tok.Match:    10,
+	tok.MatchNot: 10,
+	tok.Lt:       11,
+	tok.Lte:      11,
+	tok.Gt:       11,
+	tok.Gte:      11,
+	tok.LShift:   12,
+	tok.RShift:   12,
+	tok.Cat:      13,
+	tok.Add:      13,
+	tok.Sub:      13,
+	tok.Mul:      14,
+	tok.Div:      14,
+	tok.Mod:      14,
+	tok.Inc:      15,
+	tok.Dec:      15,
+	tok.LParen:   16,
+	tok.Dot:      17,
+	tok.LBracket: 17,
+	tok.Eq:       17,
+	tok.AddEq:    17,
+	tok.SubEq:    17,
+	tok.CatEq:    17,
+	tok.MulEq:    17,
+	tok.DivEq:    17,
+	tok.ModEq:    17,
+	tok.LShiftEq: 17,
+	tok.RShiftEq: 17,
+	tok.BitOrEq:  17,
+	tok.BitAndEq: 17,
+	tok.BitXorEq: 17,
 }
 
 func (p *Parser) arguments(opening tok.Token) []ast.Arg {

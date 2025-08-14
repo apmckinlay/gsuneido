@@ -204,6 +204,9 @@ func (lxr *Lexer) next() Item {
 		}
 		return it(tok.Gt)
 	case '|':
+		if lxr.match('>') {
+			return it(tok.Pipe)
+		}
 		if lxr.match('=') {
 			return it(tok.BitOrEq)
 		}

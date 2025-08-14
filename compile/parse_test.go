@@ -210,6 +210,14 @@ func TestParseExpression(t *testing.T) {
 
 	test("[:a]", "Call(Record a:a)")
 
+	// Pipe operator
+	test("x |> f", "Call(f x)")
+	test("x |> f |> g", "Call(g Call(f x))")
+	test("a |> b |> c |> d", "Call(d Call(c Call(b a)))")
+	test("a |> Print", "Call(Print a)")
+	// precendence
+	test("a + b |> f", "Call(f Nary(Add a b))")
+	test("a ? b : c |> f", "Call(f Trinary(a b c))")
 }
 
 func TestParseParams(t *testing.T) {

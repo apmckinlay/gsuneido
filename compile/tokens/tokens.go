@@ -66,6 +66,7 @@ const (
 	Mod
 	LShift
 	RShift
+	Pipe
 	IncDecStart
 	Inc
 	PostInc
