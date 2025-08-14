@@ -1,6 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+// Package lrucache provides a small generic LRU cache for <=256 entries.
 package lrucache
 
 import (
@@ -10,6 +11,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/shmap"
 )
 
+// Cache is a fixed-capacity least-recently-used cache 
+// keyed by types that have Hash and Equal methods.
 type Cache[K keyT, V any] struct {
 	lru     []uint8 // uint8 means max size of 256
 	entries []entry[K, V]
@@ -29,6 +32,7 @@ type keyT interface {
 	Equal(other any) bool
 }
 
+// New returns a cache sized to the nearest supported capacity >= `req`.
 func New[K keyT, V any](req int) *Cache[K, V] {
 	var sizes = []int{6, 13, 27, 55, 111, 223} // 7/8 of ^2
 	size := 223                                // max
@@ -44,6 +48,7 @@ func New[K keyT, V any](req int) *Cache[K, V] {
 	}
 }
 
+// Get returns the cached value for `key`, marking it as most recently used.
 func (lc *Cache[K, V]) Get(key K) (val V, ok bool) {
 	ei, ok := lc.hm.Get(key)
 	if !ok {
@@ -62,6 +67,7 @@ func (lc *Cache[K, V]) Get(key K) (val V, ok bool) {
 	return lc.entries[ei].val, true
 }
 
+// Put sets `key` to `val`, evicting the least-recently-used entry if full.
 func (lc *Cache[K, V]) Put(key K, val V) {
 	ei := len(lc.entries)
 	if ei < lc.size {
@@ -78,6 +84,7 @@ func (lc *Cache[K, V]) Put(key K, val V) {
 	lc.hm.Put(key, uint8(ei))
 }
 
+// GetPut gets `key` or computes it with `getfn` on a miss and caches the result.
 func (lc *Cache[K, V]) GetPut(key K, getfn func(key K) V) V {
 	val, ok := lc.Get(key)
 	if !ok {
@@ -87,6 +94,7 @@ func (lc *Cache[K, V]) GetPut(key K, getfn func(key K) V) V {
 	return val
 }
 
+// Entries returns an iterator over current entries.
 func (lc *Cache[K, V]) Entries() iter.Seq2[K, V] {
 	return func(yield func(key K, val V) bool) {
 		for _, e := range lc.entries {
@@ -97,10 +105,12 @@ func (lc *Cache[K, V]) Entries() iter.Seq2[K, V] {
 	}
 }
 
+// Stats returns cumulative hit/miss counts since creation or last Reset.
 func (lc *Cache[K, V]) Stats() (hits, misses int) {
 	return lc.hits, lc.misses
 }
 
+// Reset clears the cache and statistics.
 func (lc *Cache[K, V]) Reset() {
 	lc.hm.Clear()
 	lc.lru = lc.lru[:0]
