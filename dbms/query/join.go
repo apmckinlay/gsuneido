@@ -41,6 +41,7 @@ type joinBase struct {
 	prevFixed2 []Fixed
 	row1       Row
 	row2       Row // nil when we need a new row1
+	lookupRow  Row
 	joinLike
 	joinType
 	optimized bool
@@ -395,6 +396,7 @@ func (jb *joinBase) Rewind() {
 func (jb *joinBase) rewind() {
 	jb.row1 = nil
 	jb.row2 = nil
+	jb.lookupRow = nil
 }
 
 func (jn *Join) Get(th *Thread, dir Dir) Row {
@@ -403,7 +405,12 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 		if jn.row2 == nil && !jn.nextRow1(th, dir) {
 			return nil
 		}
-		jn.row2 = jn.source2.Get(th, dir)
+		if jn.joinType == one_one || jn.joinType == n_one {
+			jn.row2 = jn.lookupRow
+			jn.lookupRow = nil
+		} else {
+			jn.row2 = jn.source2.Get(th, dir)
+		}
 		if jn.row2 != nil {
 			// assert.That(jn.equalBy(th, jn.st, jn.row1, jn.row2))
 			jn.ngets++
@@ -421,7 +428,11 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	// assert.That(set.Disjoint(jn.by, jn.sel2cols))
 	sel2cols := append(jn.sel2cols, jn.by...)
 	sel2vals := append(jn.sel2vals, jn.projectRow1(th, jn.row1)...)
-	jn.source2.Select(sel2cols, sel2vals)
+	if jn.joinType == one_one || jn.joinType == n_one {
+		jn.lookupRow = jn.source2.Lookup(th, sel2cols, sel2vals)
+	} else {
+		jn.source2.Select(sel2cols, sel2vals)
+	}
 	return true
 }
 
@@ -473,12 +484,12 @@ func (jl *joinLike) splitSelect(cols, vals []string) (
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	// fmt.Println(jn.strategy(), "Lookup", cols, unpack(vals))
 	jn.nlooks++
-	defer jn.Select(nil, nil)
 	sel1cols, sel1vals, sel2cols, sel2vals := jn.splitSelect(cols, vals)
 	if jn.lookupFallback(sel1cols) {
 		// log.Println("INFO Join Lookup fallback to Select & Get")
 		jn.rewind()
 		jn.source1.Select(sel1cols, sel1vals)
+		defer jn.Select(nil, nil)
 		jn.sel2cols, jn.sel2vals = sel2cols, sel2vals
 		x := jn.Get(th, Next)
 		// if x != nil { // verify unique
@@ -490,10 +501,16 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	if row1 == nil {
 		return nil
 	}
+	var row2 Row
 	sel2cols = append(sel2cols, jn.by...)
 	sel2vals = append(sel2vals, jn.projectRow1(th, row1)...)
-	jn.source2.Select(sel2cols, sel2vals)
-	row2 := jn.source2.Get(th, Next)
+	if jn.joinType == one_one || jn.joinType == n_one {
+		row2 = jn.source2.Lookup(th, sel2cols, sel2vals)
+	} else {
+		jn.source2.Select(sel2cols, sel2vals)
+		defer jn.Select(nil, nil)
+		row2 = jn.source2.Get(th, Next)
+	}
 	if row2 == nil {
 		return nil
 	}
