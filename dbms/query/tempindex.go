@@ -139,7 +139,7 @@ func (ti *TempIndex) makeKey(cols, vals []string, full bool) []string {
 
 func (ti *TempIndex) matches(row Row, key []string) bool {
 	for i, col := range ti.order {
-		x := row.GetRawVal(ti.header, col, nil, ti.st)
+		x := row.GetRawVal(ti.header, col, ti.th, ti.st)
 		y := key[i]
 		if x != y {
 			return false
