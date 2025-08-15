@@ -13,10 +13,11 @@ import (
 
 // Compatible is shared by Intersect, Minus, and Union
 type Compatible struct {
-	st       *SuTran
-	disjoint string
-	allCols  []string
-	keyIndex []string
+	st          *SuTran
+	disjoint    string
+	allCols     []string
+	keyIndex    []string
+	lookupCache 
 	Query2
 }
 
@@ -62,6 +63,7 @@ func (c *Compatible) String(s string) string {
 
 func (c *Compatible) SetTran(t QueryTran) {
 	c.st = MakeSuTran(t)
+	c.lookupCache.Reset()
 }
 
 // source2Has returns true if a row from source exists in source2.
@@ -74,7 +76,7 @@ func (c *Compatible) source2Has(th *Thread, row Row) bool {
 	for i, col := range c.keyIndex {
 		vals[i] = row.GetRawVal(c.source1.Header(), col, th, c.st)
 	}
-	row2 := c.source2.Lookup(th, c.keyIndex, vals)
+	row2 := c.lookupCache.Lookup(th, c.source2, c.keyIndex, vals, c.st)
 	return row2 != nil && c.equal(th, row, row2)
 }
 

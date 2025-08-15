@@ -5,7 +5,6 @@ package query
 
 import (
 	"slices"
-	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -13,8 +12,6 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"github.com/apmckinlay/gsuneido/util/hash"
-	"github.com/apmckinlay/gsuneido/util/lrucache"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
@@ -36,18 +33,16 @@ type joinLike struct {
 
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
-	qt            QueryTran
-	st            *SuTran
-	lookup        *lookupInfo
-	cache         *lrucache.Cache[lookupKey, Row]
-	cacheDisabled bool // flag to bypass cache when hit rate is too low
-	cacheOpCount  int  // operation counter for periodic evaluation
-	by            []string
-	prevFixed1    []Fixed
-	prevFixed2    []Fixed
-	row1          Row
-	row2          Row // nil when we need a new row1
-	lookupRow     Row
+	qt          QueryTran
+	st          *SuTran
+	lookup      *lookupInfo
+	lookupCache
+	by          []string
+	prevFixed1  []Fixed
+	prevFixed2  []Fixed
+	row1        Row
+	row2        Row // nil when we need a new row1
+	lookupRow   Row
 	joinLike
 	joinType
 	optimized bool
@@ -180,10 +175,7 @@ func (jb *joinBase) String(op string) string {
 func (jb *joinBase) SetTran(qt QueryTran) {
 	jb.qt = qt
 	jb.st = MakeSuTran(qt)
-	if jb.cache != nil {
-		jb.cache.Reset()
-	}
-	jb.cacheOpCount = 0
+	jb.lookupCache.Reset()
 }
 
 func (jl *joinLike) getHeader() *Header {
@@ -447,41 +439,9 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 }
 
 func (jb *joinBase) cachedLookup(th *Thread, cols, vals []string) Row {
-	if !jb.cacheDisabled && (jb.st == nil || !jb.st.Updatable()) {
-		if jb.cache == nil {
-			jb.cache = lrucache.New[lookupKey, Row](100)
-		}
-		jb.cacheOpCount++
-		if jb.cacheOpCount%joinCacheCheckInterval == 0 {
-			jb.evaluateCachePerformance()
-			if jb.cacheDisabled {
-				goto bypass
-			}
-		}
-
-		key := lookupKey{cols: cols, vals: vals}
-		joinCacheProbes.Add(1)
-		return jb.cache.GetPut(key, func(k lookupKey) Row {
-			joinCacheMisses.Add(1)
-			return jb.source2.Lookup(th, k.cols, k.vals)
-		})
-	}
-bypass:
-	return jb.source2.Lookup(th, cols, vals)
+	return jb.lookupCache.Lookup(th, jb.source2, cols, vals, jb.st)
 }
 
-// evaluateCachePerformance checks cache hit rate and disables cache if performance is poor
-func (jb *joinBase) evaluateCachePerformance() {
-	hits, misses := jb.cache.Stats()
-	total := hits + misses
-	if total > 0 {
-		hitRate := float64(hits) / float64(total)
-		if hitRate < joinCacheMinHitRate {
-			jb.cacheDisabled = true
-			jb.cache = nil
-		}
-	}
-}
 
 func (jb *joinBase) projectRow1(th *Thread, row Row) []string {
 	key := make([]string, len(jb.by))
@@ -866,41 +826,3 @@ func (lj *LeftJoin) Simple(th *Thread) []Row {
 	}
 	return rows
 }
-
-// joinCache --------------------------------------------------------
-
-type lookupKey struct {
-	cols []string
-	vals []string
-}
-
-func (lk lookupKey) Hash() uint64 {
-	h := uint64(0)
-	for _, col := range lk.cols {
-		h = h*131 + hash.String(col)
-	}
-	for _, val := range lk.vals {
-		h = h*131 + hash.String(val)
-	}
-	return h
-}
-
-func (lk lookupKey) Equal(other any) bool {
-	if o, ok := other.(lookupKey); ok {
-		return slices.Equal(lk.cols, o.cols) && slices.Equal(lk.vals, o.vals)
-	}
-	return false
-}
-
-var (
-	joinCacheProbes atomic.Int64
-	joinCacheMisses atomic.Int64
-)
-
-var _ = AddInfo("query.join.cacheProbes", &joinCacheProbes)
-var _ = AddInfo("query.join.cacheMisses", &joinCacheMisses)
-
-const (
-	joinCacheMinHitRate    = 0.25 // ???
-	joinCacheCheckInterval = 256  // ???
-)
