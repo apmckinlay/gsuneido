@@ -5,6 +5,7 @@ package query
 
 import (
 	"slices"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -12,6 +13,8 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/lrucache"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
@@ -36,6 +39,7 @@ type joinBase struct {
 	qt         QueryTran
 	st         *SuTran
 	lookup     *lookupInfo
+	cache      *lrucache.Cache[lookupKey, Row]
 	by         []string
 	prevFixed1 []Fixed
 	prevFixed2 []Fixed
@@ -174,6 +178,7 @@ func (jb *joinBase) String(op string) string {
 func (jb *joinBase) SetTran(qt QueryTran) {
 	jb.qt = qt
 	jb.st = MakeSuTran(qt)
+	jb.cache.Reset()
 }
 
 func (jl *joinLike) getHeader() *Header {
@@ -429,11 +434,28 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	sel2cols := append(jn.sel2cols, jn.by...)
 	sel2vals := append(jn.sel2vals, jn.projectRow1(th, jn.row1)...)
 	if jn.joinType == one_one || jn.joinType == n_one {
-		jn.lookupRow = jn.source2.Lookup(th, sel2cols, sel2vals)
+		jn.lookupRow = jn.cachedLookup(th, sel2cols, sel2vals)
 	} else {
 		jn.source2.Select(sel2cols, sel2vals)
 	}
 	return true
+}
+
+func (jb *joinBase) cachedLookup(th *Thread, cols, vals []string) Row {
+	if jb.st == nil || !jb.st.Updatable() {
+		// Read-only transaction: use cache
+		if jb.cache == nil {
+			jb.cache = lrucache.New[lookupKey, Row](100)
+		}
+		key := lookupKey{cols: cols, vals: vals}
+		joinCacheProbes.Add(1)
+		return jb.cache.GetPut(key, func(k lookupKey) Row {
+			joinCacheMisses.Add(1)
+			return jb.source2.Lookup(th, k.cols, k.vals)
+		})
+	}
+	// Updatable transaction: bypass cache
+	return jb.source2.Lookup(th, cols, vals)
 }
 
 func (jb *joinBase) projectRow1(th *Thread, row Row) []string {
@@ -505,7 +527,7 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	sel2cols = append(sel2cols, jn.by...)
 	sel2vals = append(sel2vals, jn.projectRow1(th, row1)...)
 	if jn.joinType == one_one || jn.joinType == n_one {
-		row2 = jn.source2.Lookup(th, sel2cols, sel2vals)
+		row2 = jn.cachedLookup(th, sel2cols, sel2vals)
 	} else {
 		jn.source2.Select(sel2cols, sel2vals)
 		defer jn.Select(nil, nil)
@@ -819,3 +841,36 @@ func (lj *LeftJoin) Simple(th *Thread) []Row {
 	}
 	return rows
 }
+
+// joinCache --------------------------------------------------------
+
+type lookupKey struct {
+	cols []string
+	vals []string
+}
+
+func (lk lookupKey) Hash() uint64 {
+	h := uint64(0)
+	for _, col := range lk.cols {
+		h = h*131 + hash.String(col)
+	}
+	for _, val := range lk.vals {
+		h = h*131 + hash.String(val)
+	}
+	return h
+}
+
+func (lk lookupKey) Equal(other any) bool {
+	if o, ok := other.(lookupKey); ok {
+		return slices.Equal(lk.cols, o.cols) && slices.Equal(lk.vals, o.vals)
+	}
+	return false
+}
+
+var (
+	joinCacheProbes atomic.Int64
+	joinCacheMisses atomic.Int64
+)
+
+var _ = AddInfo("query.join.cacheProbes", &joinCacheProbes)
+var _ = AddInfo("query.join.cacheMisses", &joinCacheMisses)
