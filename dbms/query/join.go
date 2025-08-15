@@ -36,16 +36,18 @@ type joinLike struct {
 
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
-	qt         QueryTran
-	st         *SuTran
-	lookup     *lookupInfo
-	cache      *lrucache.Cache[lookupKey, Row]
-	by         []string
-	prevFixed1 []Fixed
-	prevFixed2 []Fixed
-	row1       Row
-	row2       Row // nil when we need a new row1
-	lookupRow  Row
+	qt            QueryTran
+	st            *SuTran
+	lookup        *lookupInfo
+	cache         *lrucache.Cache[lookupKey, Row]
+	cacheDisabled bool // flag to bypass cache when hit rate is too low
+	cacheOpCount  int  // operation counter for periodic evaluation
+	by            []string
+	prevFixed1    []Fixed
+	prevFixed2    []Fixed
+	row1          Row
+	row2          Row // nil when we need a new row1
+	lookupRow     Row
 	joinLike
 	joinType
 	optimized bool
@@ -178,7 +180,10 @@ func (jb *joinBase) String(op string) string {
 func (jb *joinBase) SetTran(qt QueryTran) {
 	jb.qt = qt
 	jb.st = MakeSuTran(qt)
-	jb.cache.Reset()
+	if jb.cache != nil {
+		jb.cache.Reset()
+	}
+	jb.cacheOpCount = 0
 }
 
 func (jl *joinLike) getHeader() *Header {
@@ -442,11 +447,18 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 }
 
 func (jb *joinBase) cachedLookup(th *Thread, cols, vals []string) Row {
-	if jb.st == nil || !jb.st.Updatable() {
-		// Read-only transaction: use cache
+	if !jb.cacheDisabled && (jb.st == nil || !jb.st.Updatable()) {
 		if jb.cache == nil {
 			jb.cache = lrucache.New[lookupKey, Row](100)
 		}
+		jb.cacheOpCount++
+		if jb.cacheOpCount%joinCacheCheckInterval == 0 {
+			jb.evaluateCachePerformance()
+			if jb.cacheDisabled {
+				goto bypass
+			}
+		}
+
 		key := lookupKey{cols: cols, vals: vals}
 		joinCacheProbes.Add(1)
 		return jb.cache.GetPut(key, func(k lookupKey) Row {
@@ -454,8 +466,21 @@ func (jb *joinBase) cachedLookup(th *Thread, cols, vals []string) Row {
 			return jb.source2.Lookup(th, k.cols, k.vals)
 		})
 	}
-	// Updatable transaction: bypass cache
+bypass:
 	return jb.source2.Lookup(th, cols, vals)
+}
+
+// evaluateCachePerformance checks cache hit rate and disables cache if performance is poor
+func (jb *joinBase) evaluateCachePerformance() {
+	hits, misses := jb.cache.Stats()
+	total := hits + misses
+	if total > 0 {
+		hitRate := float64(hits) / float64(total)
+		if hitRate < joinCacheMinHitRate {
+			jb.cacheDisabled = true
+			jb.cache = nil
+		}
+	}
 }
 
 func (jb *joinBase) projectRow1(th *Thread, row Row) []string {
@@ -874,3 +899,8 @@ var (
 
 var _ = AddInfo("query.join.cacheProbes", &joinCacheProbes)
 var _ = AddInfo("query.join.cacheMisses", &joinCacheMisses)
+
+const (
+	joinCacheMinHitRate    = 0.25 // ???
+	joinCacheCheckInterval = 256  // ???
+)
