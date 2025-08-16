@@ -317,6 +317,9 @@ func trim(end string) string {
 
 func selOrg(encode bool, dstCols, srcCols, vals []string, full bool) string {
 	if !encode {
+		if len(dstCols) == 0 {
+			return ""
+		}
 		assert.That(len(dstCols) == 1)
 		return selGet(dstCols[0], srcCols, vals)
 	}

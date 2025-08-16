@@ -5,6 +5,7 @@ package query
 
 import (
 	"slices"
+	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -17,11 +18,19 @@ type Compatible struct {
 	disjoint    string
 	allCols     []string
 	keyIndex    []string
-	lookupCache 
+	lookupCache
 	Query2
 }
 
 // newCompatible sets disjoint
+var (
+	compatCacheProbes atomic.Int64
+	compatCacheMisses atomic.Int64
+)
+
+var _ = AddInfo("query.compatible.cacheProbes", &compatCacheProbes)
+var _ = AddInfo("query.compatible.cacheMisses", &compatCacheMisses)
+
 func newCompatible(src1, src2 Query) *Compatible {
 	c := &Compatible{}
 	c.source1, c.source2 = src1, src2
@@ -51,6 +60,7 @@ func newCompatible(src1, src2 Query) *Compatible {
 		}
 	}
 done:
+	c.lookupCache.SetCounters(&compatCacheProbes, &compatCacheMisses)
 	return c
 }
 

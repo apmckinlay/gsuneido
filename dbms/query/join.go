@@ -5,6 +5,7 @@ package query
 
 import (
 	"slices"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -33,16 +34,16 @@ type joinLike struct {
 
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
-	qt          QueryTran
-	st          *SuTran
-	lookup      *lookupInfo
+	qt     QueryTran
+	st     *SuTran
+	lookup *lookupInfo
 	lookupCache
-	by          []string
-	prevFixed1  []Fixed
-	prevFixed2  []Fixed
-	row1        Row
-	row2        Row // nil when we need a new row1
-	lookupRow   Row
+	by         []string
+	prevFixed1 []Fixed
+	prevFixed2 []Fixed
+	row1       Row
+	row2       Row // nil when we need a new row1
+	lookupRow  Row
 	joinLike
 	joinType
 	optimized bool
@@ -92,6 +93,18 @@ func (jt joinType) String() string {
 	}
 }
 
+var (
+	joinCacheProbes     atomic.Int64
+	joinCacheMisses     atomic.Int64
+	leftJoinCacheProbes atomic.Int64
+	leftJoinCacheMisses atomic.Int64
+)
+
+var _ = AddInfo("query.join.cacheProbes", &joinCacheProbes)
+var _ = AddInfo("query.join.cacheMisses", &joinCacheMisses)
+var _ = AddInfo("query.leftjoin.cacheProbes", &leftJoinCacheProbes)
+var _ = AddInfo("query.leftjoin.cacheMisses", &leftJoinCacheMisses)
+
 func NewJoin(src1, src2 Query, by []string, t QueryTran) Query {
 	return newJoin(src1, src2, by, t, nil, nil)
 }
@@ -126,6 +139,7 @@ func newJoinBase(src1, src2 Query, by []string, t QueryTran,
 		panic("join: by does not match common columns")
 	}
 	jb := joinBase{qt: t, st: MakeSuTran(t), joinLike: newJoinLike(src1, src2), prevFixed1: prevFixed1, prevFixed2: prevFixed2}
+	jb.lookupCache.SetCounters(&joinCacheProbes, &joinCacheMisses)
 	jb.by = by
 	k1 := hasKey(by, src1.Keys(), src1.Fixed())
 	k2 := hasKey(by, src2.Keys(), src2.Fixed())
@@ -442,7 +456,6 @@ func (jb *joinBase) cachedLookup(th *Thread, cols, vals []string) Row {
 	return jb.lookupCache.Lookup(th, jb.source2, cols, vals, jb.st)
 }
 
-
 func (jb *joinBase) projectRow1(th *Thread, row Row) []string {
 	key := make([]string, len(jb.by))
 	for i, col := range jb.by {
@@ -586,6 +599,7 @@ func newLeftJoin(src1, src2 Query, by []string, t QueryTran,
 	prevFixed1, prevFixed2 []Fixed) *LeftJoin {
 	lj := &LeftJoin{joinBase: newJoinBase(src1, src2, by, t,
 		prevFixed1, prevFixed2)}
+	lj.lookupCache.SetCounters(&leftJoinCacheProbes, &leftJoinCacheMisses)
 	lj.keys = lj.getKeys()
 	lj.indexes = lj.source1.Indexes()
 	lj.fixed = lj.getFixed()
@@ -735,10 +749,19 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			if lj.row1 == nil {
 				return nil
 			}
-			lj.source2.Select(lj.by, lj.projectRow1(th, lj.row1))
+			if lj.joinType == one_one || lj.joinType == n_one {
+				lj.lookupRow = lj.cachedLookup(th, lj.by, lj.projectRow1(th, lj.row1))
+			} else {
+				lj.source2.Select(lj.by, lj.projectRow1(th, lj.row1))
+			}
 			row1out = false
 		}
-		lj.row2 = lj.source2.Get(th, dir)
+		if lj.joinType == one_one || lj.joinType == n_one {
+			lj.row2 = lj.lookupRow
+			lj.lookupRow = nil
+		} else {
+			lj.row2 = lj.source2.Get(th, dir)
+		}
 		// fmt.Println(lj.strategy(), "row2", lj.row2)
 		if !row1out || lj.row2 != nil {
 			row1out = true // regardless of filter
@@ -794,8 +817,13 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	if row1 == nil {
 		return nil
 	}
-	lj.source2.Select(lj.by, lj.projectRow1(th, row1))
-	row2 := lj.source2.Get(th, Next)
+	var row2 Row
+	if lj.joinType == one_one || lj.joinType == n_one {
+		row2 = lj.cachedLookup(th, lj.by, lj.projectRow1(th, row1))
+	} else {
+		lj.source2.Select(lj.by, lj.projectRow1(th, row1))
+		row2 = lj.source2.Get(th, Next)
+	}
 	if row2 == nil {
 		row2 = lj.empty2
 	} else {
