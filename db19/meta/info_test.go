@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
@@ -16,25 +17,25 @@ import (
 func TestInfo(t *testing.T) {
 	assert := assert.T(t)
 	one := &Info{
-		Table:   "one",
-		Nrows:   100,
+		Table:      "one",
+		Nrows:      100,
 		BtreeNrows: 100,
-		Size:    1000,
-		BtreeSize: 1000,
-		Deltas: []Delta{{}},
-		lastMod: -1,
-		Indexes: []*index.Overlay{index.OverlayStub()},
+		Size:       1000,
+		BtreeSize:  1000,
+		Deltas:     []Delta{{}},
+		lastMod:    -1,
+		Indexes:    []*index.Overlay{index.OverlayStub()},
 	}
 	assert.That(!one.IsTomb())
 	two := &Info{
-		Table:   "two",
-		Nrows:   200,
+		Table:      "two",
+		Nrows:      200,
 		BtreeNrows: 200,
-		Size:    2000,
-		BtreeSize: 2000,
-		Deltas: []Delta{{}},
-		lastMod: -1,
-		Indexes: []*index.Overlay{index.OverlayStub()},
+		Size:       2000,
+		BtreeSize:  2000,
+		Deltas:     []Delta{{}},
+		lastMod:    -1,
+		Indexes:    []*index.Overlay{index.OverlayStub()},
 	}
 	tbl := InfoHamt{}.Mutable()
 	tbl.Put(one)
@@ -42,7 +43,7 @@ func TestInfo(t *testing.T) {
 	tbl = tbl.Freeze()
 
 	st := stor.HeapStor(8192)
-	st.Alloc(1) // avoid offset 0
+	btree.PutEmptyNode(st) // OverlayStub has a btree root offset of 0
 	off := tbl.Write(st, 0, hamt.All)
 
 	ic := hamt.ReadChain(st, off, ReadInfo)
@@ -63,7 +64,7 @@ func TestInfo2(t *testing.T) {
 	const n = 1000
 	data := mkdata(tbl, n)
 	st := stor.HeapStor(32 * 1024)
-	st.Alloc(1) // avoid offset 0
+	btree.PutEmptyNode(st)
 	off := tbl.Freeze().Write(st, 0, hamt.All)
 
 	tbl = hamt.ReadChain(st, off, ReadInfo).Hamt

@@ -13,6 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
@@ -37,6 +38,8 @@ type btree struct {
 	treeLevels int
 	// root is the offset of the root node
 	root uint64
+	// rootUnode is an uncompressed copy for faster access
+	rootUnode unode
 }
 
 func (bt *btree) Cksum() uint32 {
@@ -66,12 +69,13 @@ var GetLeafKey func(st *stor.Stor, is *ixkey.Spec, off uint64) string
 
 func CreateBtree(st *stor.Stor, is *ixkey.Spec) *btree {
 	rootNode := node{}
-	root := rootNode.putNode(st)
-	return &btree{root: root, stor: st, ixspec: is}
+	rootOff := rootNode.putNode(st)
+	return &btree{root: rootOff, stor: st, ixspec: is}
 }
 
 func OpenBtree(st *stor.Stor, root uint64, treeLevels int) *btree {
-	return &btree{root: root, treeLevels: treeLevels, stor: st}
+	ru := readNode(st, root).toUnode()
+	return &btree{root: root, treeLevels: treeLevels, stor: st, rootUnode: ru}
 }
 
 func (bt *btree) GetIxspec() *ixkey.Spec {
@@ -92,8 +96,8 @@ func (bt *btree) getLeafKey(off uint64) string {
 
 // Lookup returns the offset for a key, or 0 if not found.
 func (bt *btree) Lookup(key string) uint64 {
-	off := bt.root
-	for i := 0; i <= bt.treeLevels; i++ {
+	off := bt.rootUnode.search(key)
+	for range bt.treeLevels {
 		nd := bt.getNode(off)
 		off = nd.search(key)
 	}
@@ -121,6 +125,13 @@ func (nd node) putNode(st *stor.Stor) uint64 {
 	// 	buf[3 + rand.Intn(len(nd))] = byte(rand.Intn(256))
 	// }
 	return off
+}
+
+// PutEmptyNode is for tests
+func PutEmptyNode(st *stor.Stor) {
+	var nd node
+	off := nd.putNode(st)
+	assert.That(off == 0)
 }
 
 // getNode returns the node for a given offset
@@ -390,8 +401,7 @@ func (bt *btree) empty() bool {
 	if bt.treeLevels > 0 {
 		return false
 	}
-	root := bt.getNode(bt.root)
-	return len(root) == 0
+	return len(bt.rootUnode) == 0
 }
 
 func (bt *btree) fracPos(key string) float64 {

@@ -705,7 +705,7 @@ func TestOverIterCurDeletedBug(t *testing.T) {
 	if !oi.Eof() {
 		oi.Cur()
 	}
-		
+
 	// trigger OverIter modified
 	tmp2 := *ov
 	ov = &tmp2

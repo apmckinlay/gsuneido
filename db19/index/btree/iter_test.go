@@ -5,6 +5,7 @@ package btree
 
 import (
 	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -177,7 +178,7 @@ func TestIterator(*testing.T) {
 	assert.That(it.Eof())
 }
 
-func TestToChunk(t *testing.T) {
+func TestToUnodeIter(t *testing.T) {
 	assert := assert.T(t).This
 	data := []string{"ant", "cat", "dog"}
 	b := nodeBuilder{}
@@ -189,20 +190,86 @@ func TestToChunk(t *testing.T) {
 
 	bt := &btree{}
 	it := nd.iter()
-	ci := it.toChunk(bt, true).(*chunkIter) // leaf
-	ci.next()
-	assert(ci.i).Is(0)
-	assert(ci.c).Is(chunk{{key: "ant", off: 1}, {key: "cat", off: 2},
-		{key: "dog", off: 3}})
-	ci = it.toChunk(bt, false).(*chunkIter) // tree
-	assert(ci.c).Is(chunk{{key: "", off: 1}, {key: "c", off: 2},
+	ci := it.toUnodeIter(bt).(*unodeIter) // tree
+	assert(ci.u).Is(unode{{key: "", off: 1}, {key: "c", off: 2},
 		{key: "d", off: 3}})
 
 	it.next()
 	it.next()
 	assert(it.offset).Is(2)
-	ci = it.toChunk(bt, false).(*chunkIter)
+	ci = it.toUnodeIter(bt).(*unodeIter)
 	assert(ci.off()).Is(2)
+}
+
+// SeekAll
+
+// buildTree builds a simple one-level btree with keys "1".."n"
+// and offsets equal to the integer value.
+func buildTree(n int) *btree {
+	b := Builder(stor.HeapStor(8192))
+	for i := 1; i <= n; i++ {
+		k := strconv.Itoa(i)
+		assert.That(b.Add(k, uint64(i)))
+	}
+	bt := b.Finish()
+	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, off uint64) string {
+		return strconv.Itoa(int(off))
+	}
+	return bt
+}
+
+// SeekAll should position on the last item when searching ixkey.Max.
+// This is essential to allow Prev() from rewind to begin from the end.
+func TestSeekAllMaxPositionsAtLast(t *testing.T) {
+	bt := buildTree(9)
+	it := bt.Iterator()
+
+	// rootU should be initialized for non-empty trees built via Builder.Finish
+	assert.That(len(bt.rootUnode) > 0)
+
+	it.SeekAll(ixkey.Max)
+	assert.That(!it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is("9")
+	assert.This(off).Is(uint64(9))
+}
+
+// SeekAll on an exact key should position on that key (not the next).
+func TestSeekAllExactKey(t *testing.T) {
+	bt := buildTree(9)
+	it := bt.Iterator()
+
+	it.SeekAll("5")
+	assert.That(!it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is("5")
+	assert.This(off).Is(uint64(5))
+}
+
+// SeekAll on a key between existing keys should land on the next greater key.
+// e.g., between "5" and "6" should position to "6".
+func TestSeekAllBetweenKeysGoesToNextGreater(t *testing.T) {
+	bt := buildTree(9)
+	it := bt.Iterator()
+
+	it.SeekAll("5~") // between 5 and 6 (since "~" > "5" and < "6")
+	assert.That(!it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is("6")
+	assert.This(off).Is(uint64(6))
+}
+
+// SeekAll on a key larger than the maximum (but not ixkey.Max) should remain at last.
+// This aligns with SeekAll semantics to avoid setting EOF so Prev() can step back.
+func TestSeekAllAboveMaxStaysAtLast(t *testing.T) {
+	bt := buildTree(9)
+	it := bt.Iterator()
+
+	it.SeekAll("9zzzz") // greater than the last key
+	assert.That(!it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is("9")
+	assert.This(off).Is(uint64(9))
 }
 
 //-------------------------------------------------------------------
@@ -234,14 +301,14 @@ func TestToChunk(t *testing.T) {
 // 		}
 // 	} else {
 // 		fmt.Print(i, " + ")
-// 		ci := it.stack[i].(*chunkIter)
-// 		for j, s := range ci.c {
+// 		ci := it.stack[i].(*unodeIter)
+// 		for j, s := range ci.u {
 // 			if j == ci.i {
 // 				fmt.Print("(")
 // 			}
 // 			fmt.Print(s.key, " ")
 // 		}
-// 		if ci.i >= len(ci.c) {
+// 		if ci.i >= len(ci.u) {
 // 			fmt.Print("(")
 // 		}
 // 	}

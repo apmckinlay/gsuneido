@@ -172,6 +172,9 @@ func (st *state) ascend() {
 			off = newRoot.putNode(bt.stor)
 			st.push(off, newRoot, "")
 			bt.treeLevels++
+			bt.rootUnode = newRoot.toUnode()
+		} else {
+			bt.rootUnode = m.node.toUnode()
 		}
 		bt.root = off
 	}

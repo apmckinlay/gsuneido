@@ -395,6 +395,10 @@ func (it *nodeIter) fLen() int {
 	return fLen(it.npre, it.diff)
 }
 
+func (it *nodeIter) rewind() {
+	*it = nodeIter{node: it.node, pos: -7, known: it.known[:0]}
+}
+
 //-------------------------------------------------------------------
 
 // func (nd node) stats() {

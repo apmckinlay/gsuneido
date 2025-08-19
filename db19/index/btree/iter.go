@@ -140,7 +140,7 @@ func (it *Iterator) Prev() {
 
 func (it *Iterator) prev() {
 	for {
-		it.stack[0] = it.stack[0].toChunk(it.bt, true)
+		it.stack[0] = it.stack[0].toUnodeIter(it.bt)
 		if it.stack[0].prev() {
 			it.curOff = it.stack[0].off()
 			it.curKey = it.bt.getLeafKey(it.curOff)
@@ -158,7 +158,7 @@ func (it *Iterator) prevLeaf() bool {
 	var nodeOff uint64
 	// go up the tree as necessary
 	for ; i <= bt.treeLevels; i++ {
-		it.stack[i] = it.stack[i].toChunk(it.bt, i == 0)
+		it.stack[i] = it.stack[i].toUnodeIter(it.bt)
 		if it.stack[i].prev() {
 			nodeOff = it.stack[i].off()
 			break
@@ -170,7 +170,7 @@ func (it *Iterator) prevLeaf() bool {
 	// then descend back down
 	for {
 		i--
-		it.stack[i] = bt.getNode(nodeOff).iter().toChunk(bt, i == 0)
+		it.stack[i] = bt.getNode(nodeOff).iter().toUnodeIter(bt)
 		if i == 0 {
 			return true
 		}
@@ -188,16 +188,15 @@ func (it *Iterator) Seek(key string) {
 
 func (it *Iterator) SeekAll(key string) {
 	bt := it.bt
-	off := bt.root
-	nd := bt.getNode(off)
-	if len(nd) == 0 {
+	var off uint64
+	if len(bt.rootUnode) == 0 {
 		it.state = eof
 		return
 	}
 	rightEdge := true
 	it.state = within
+	ni := iNodeIter(bt.rootUnode.seek(key))
 	for i := bt.treeLevels; ; i-- {
-		ni := nd.seek(key)
 		rightEdge = rightEdge && ni.eof()
 		it.stack[i] = ni
 		off = it.stack[i].off()
@@ -211,7 +210,7 @@ func (it *Iterator) SeekAll(key string) {
 			it.curKey = k
 			return
 		}
-		nd = bt.getNode(off)
+		ni = bt.getNode(off).seek(key)
 	}
 }
 
@@ -242,8 +241,8 @@ type iNodeIter interface {
 	prev() bool
 	// off returns the current offset
 	off() uint64
-	// toChunk converts nodeIter to chunkIter to allow Prev
-	toChunk(bt *btree, leaf bool) iNodeIter
+	// toUnodeIter converts nodeIter to unodeIter to allow Prev
+	toUnodeIter(bt *btree) iNodeIter
 	// eof returns true if on the last slot
 	eof() bool
 }
@@ -256,60 +255,17 @@ func (it *nodeIter) prev() bool {
 	panic(assert.ShouldNotReachHere())
 }
 
-// toChunk converts a nodeIter to a chunkIter to allow prev
-func (it *nodeIter) toChunk(bt *btree, leaf bool) iNodeIter {
+// toUnodeIter converts a nodeIter to a unodeIter to allow prev
+func (it *nodeIter) toUnodeIter(bt *btree) iNodeIter {
 	nd := it.node
-	var c chunk
+	var u unode
 	i := -1
-	var key string
 	it2 := nd.iter()
 	for it2.next() {
 		if it2.pos == it.pos {
-			i = len(c)
+			i = len(u)
 		}
-		if leaf {
-			key = bt.getLeafKey(it2.offset)
-		} else {
-			key = string(it2.known)
-		}
-		c = append(c, slot{key: key, off: it2.offset})
+		u = append(u, slot{key: string(it2.known), off: it2.offset})
 	}
-	return &chunkIter{c: c, i: i}
-}
-
-type chunk []slot
-
-type slot struct {
-	key string
-	off uint64
-}
-
-type chunkIter struct {
-	c chunk
-	i int
-}
-
-func (ci *chunkIter) eof() bool {
-	return ci.i+1 >= len(ci.c)
-}
-
-func (ci *chunkIter) next() bool {
-	ci.i++
-	return ci.i < len(ci.c)
-}
-
-func (ci *chunkIter) prev() bool {
-	if ci.i == -1 {
-		ci.i = len(ci.c)
-	}
-	ci.i--
-	return ci.i >= 0
-}
-
-func (ci *chunkIter) off() uint64 {
-	return ci.c[ci.i].off
-}
-
-func (ci *chunkIter) toChunk(*btree, bool) iNodeIter {
-	return ci
+	return &unodeIter{u: u, i: i}
 }

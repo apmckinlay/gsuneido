@@ -459,22 +459,31 @@ func TestNodeInsertDelete(*testing.T) {
 }
 
 var S1 []byte
-var S2 []byte
-var ND node
+var S2 string
 
-func BenchmarkNode(b *testing.B) {
+func BenchmarkNodeIter(b *testing.B) {
 	get := func(i uint64) string { return words[i] }
 	var nd node
 	for i, d := range words {
 		nd = nd.update(d, uint64(i), get)
 	}
-	ND = nd
-
 	for b.Loop() {
 		iter := nd.iter()
 		for iter.next() {
 			S1 = iter.known
-			S2 = iter.diff
+		}
+	}
+}
+
+func BenchmarkUnodeIter(b *testing.B) {
+	var u unode
+	for i, w := range words {
+		u = append(u, slot{key: w, off: uint64(i)})
+	}
+	for b.Loop() {
+		ui := &unodeIter{u: u, i: -1}
+		for ui.next() {
+			S2 = u[ui.i].key
 		}
 	}
 }
