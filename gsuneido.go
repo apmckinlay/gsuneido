@@ -58,6 +58,21 @@ var errlog = "error.log"
 var _ = AddInfo("windows.errlog", &errlog)
 
 func main() {
+	/* view with: go tool pprof -http :8888 cpu.prof
+	f, err := os.Create("cpu.prof")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err = pprof.StartCPUProfile(f); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("STARTED")
+	exit.Add("pprof", func() {
+		pprof.StopCPUProfile()
+		f.Close()
+		fmt.Println("STOPPED")
+	}) */
+
 	options.BuiltDate = builtDate
 	options.Mode = mode
 	options.Parse(getargs())
