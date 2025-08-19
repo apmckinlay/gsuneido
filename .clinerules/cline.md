@@ -45,8 +45,10 @@ IMPORTANT: Write tests to reproduce errors BEFORE fixing them.
 - **Error handling**: Use `panic` for programming errors
 - **Types**: Dynamic typing in Suneido, strict typing in Go implementation
 - **Tests**: 
-  - Use custom `assert.T(t)` helpers e.g. `assert.T(t).This(x).Is(y)`
-  - test helper function (not data driven)
+  - Use custom `assert.T(t)` helpers 
+  - e.g. `assert.T(t).This(x).Is(y)` or `assert.T(t).That(condition)`
+  - test helper function (NOT data/table driven)
+- **Benchmarks**: use new style `for b.Loop()` when applicable
 
 Use gsport REPL to run Suneido code.
 Remember to "make port" before using it.
