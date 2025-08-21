@@ -585,6 +585,7 @@ loop:
 				th.ReturnMulti = append(th.ReturnMulti, th.Pop())
 			}
 			th.Pop() // discard the normal nil return value
+			break loop
 		case op.PushReturn:
 			n := fetchUint8()
 			rm := th.ReturnMulti
