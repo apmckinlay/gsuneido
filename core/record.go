@@ -24,8 +24,9 @@ An empty Record is a single zero byte.
 First two bytes are the type and the count of values, high two bits are the type
 followed by the total length (uint8, uint16, or uint32)
 followed by the offsets of the fields (uint8, uint16, or uint32)
-followed by the contents of the fields
-integers are stored big endian (most significant first)
+followed by the contents of the fields.
+Fields are stored in reverse order, last one first.
+Integers are stored big endian (most significant first).
 */
 type Record string
 
