@@ -102,7 +102,7 @@ func addone(key, prev, known string, embedLen int) (npre int, diff string, known
 		fmt.Printf("OUT OF ORDER: prev %q key %q\n", prev, key)
 	}
 	assert.That(key > prev)
-	npre = commonPrefixLen(prev, key)
+	npre = str.CommonPrefixLen(prev, key)
 	if npre > maxVarint {
 		panic("key common prefix too long")
 	}
@@ -117,22 +117,6 @@ func addone(key, prev, known string, embedLen int) (npre int, diff string, known
 	assert.That(len(diff) > 0)
 	knownNew = str.Subn(key, 0, npre+embedLen)
 	return
-}
-
-func commonPrefixLen(s, t string) int {
-	for i := 0; ; i++ {
-		if i >= len(s) || i >= len(t) || s[i] != t[i] {
-			return i
-		}
-	}
-}
-
-func commonSlicePrefixLen(s, t []byte) int {
-	for i := 0; ; i++ {
-		if i >= len(s) || i >= len(t) || s[i] != t[i] {
-			return i
-		}
-	}
 }
 
 // search returns the offset of the entry that could match the key
@@ -298,8 +282,8 @@ func (nd node) delete(offset uint64) (node, bool) {
 	}
 	if it.next() {
 		// adjust the following entry
-		npre := commonSlicePrefixLen(calced, it.known)
-		ndif := commonSlicePrefixLen(prev, it.known)
+		npre := slc.CommonPrefixLen(calced, it.known)
+		ndif := slc.CommonPrefixLen(prev, it.known)
 		diff := string(it.known[ndif:])
 		// print("3 prev", string(prev), "calced", calced, "pos", it.pos, "known", string(it.known))
 		// print("npre", npre, "n", n, "diff", diff)
@@ -419,7 +403,7 @@ func (nd node) check(get func(uint64) string) int {
 		}
 		if get != nil {
 			key := get(it.offset)
-			npre := commonPrefixLen(keyPrev, key)
+			npre := str.CommonPrefixLen(keyPrev, key)
 			if npre > len(known) {
 				panic("insufficient known: prev key " + keyPrev +
 					", key " + key + ", known" + known)

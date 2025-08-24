@@ -223,3 +223,12 @@ func Clone[E any](list []E) []E {
 	copy(dup, list)
 	return dup
 }
+
+// CommonPrefixLen returns the length of the common prefix of two slices
+func CommonPrefixLen[E comparable](s, t []E) int {
+	for i := 0; ; i++ {
+		if i >= len(s) || i >= len(t) || s[i] != t[i] {
+			return i
+		}
+	}
+}
