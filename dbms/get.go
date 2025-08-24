@@ -54,7 +54,7 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	row := q.Get(th, d)
 	if dir == Only || dir == Any {
 		if w, ok := q.(*qry.Where); ok && w.InCount() > slow[dir] &&
-			!(strings.HasPrefix(query, "columns ") ||
+			!(strings.HasPrefix(query, "columns") ||
 				strings.HasPrefix(query, "indexes") ||
 				strings.HasPrefix(query, "views")) {
 			Warning(dir, "slow:", w.InCount(), query)
