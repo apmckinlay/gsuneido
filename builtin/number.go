@@ -180,6 +180,13 @@ func num_Log(this Value) Value {
 	return fromFloat(math.Log(f))
 }
 
+var _ = method(num_Log2, "()")
+
+func num_Log2(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Log2(f))
+}
+
 var _ = method(num_Log10, "()")
 
 func num_Log10(this Value) Value {
