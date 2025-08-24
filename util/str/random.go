@@ -7,8 +7,6 @@ import (
 
 // WARNING: not thread safe
 
-var rnd = rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
-
 const alpha = "abcdefghijklmnopqrstuvwxyz"
 
 func Random(min, max int) string {
