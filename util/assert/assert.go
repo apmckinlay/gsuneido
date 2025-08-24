@@ -276,7 +276,7 @@ func show(x any) string {
 	}
 	s1 := fmt.Sprintf("%v", x)
 	s2 := fmt.Sprintf("%#v", x)
-	if s1[0] == '[' {
+	if s1 != "" && s1[0] == '[' {
 		return s2
 	}
 	if s1 == s2 {
