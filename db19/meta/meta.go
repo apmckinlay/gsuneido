@@ -792,8 +792,8 @@ func (m *Meta) Write(store *stor.Stor) (schemaOff uint64, infoOff uint64) {
 
 func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 	m := Meta{
-		schema: hamt.ReadChain[string](store, offSchema, ReadSchema),
-		info:   hamt.ReadChain[string](store, offInfo, ReadInfo)}
+		schema: hamt.ReadChain(store, offSchema, ReadSchema),
+		info:   hamt.ReadChain(store, offInfo, ReadInfo)}
 	// copy Ixspec to Info from Schema (constructed by ReadSchema)
 	// Ok to modify since it's not in use yet.
 	for ti := range m.info.All() {

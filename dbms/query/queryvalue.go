@@ -34,10 +34,6 @@ func (n SuQueryNode) Get(_ *Thread, key Value) Value {
 	return n.q.ValueGet(key)
 }
 
-type strategyable interface {
-	Strategy() string
-}
-
 func qryBase(q Query, key Value) Value {
 	switch key {
 	case SuStr("string"):

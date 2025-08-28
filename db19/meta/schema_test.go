@@ -42,7 +42,7 @@ func TestSchema(t *testing.T) {
 		assert(ts.Indexes[0].Columns).Msg("indexes").Is([]string{"one"})
 	}
 
-	sc := hamt.ReadChain[string](st, off, ReadSchema)
+	sc := hamt.ReadChain(st, off, ReadSchema)
 	assert.T(t).This(sc.Ages[0]).Is(sc.MustGet(data[0]).lastMod)
 	for i, table := range data {
 		test(i, table, sc.MustGet(table))
