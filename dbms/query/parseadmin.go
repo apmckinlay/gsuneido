@@ -173,8 +173,8 @@ func (p *adminParser) index() *Index {
 	}
 	ixcols := p.indexColumns()
 	ix := &Index{Columns: ixcols, Mode: mode}
-	ix.Fk.Table, ix.Fk.Columns, ix.Fk.Mode = p.foreignKey()
-	if ix.Fk.Columns == nil {
+	ix.Fk = p.foreignKey()
+	if ix.Fk.Table != "" && ix.Fk.Columns == nil {
 		ix.Fk.Columns = ixcols
 	}
 	return ix
@@ -208,27 +208,28 @@ func (p *adminParser) indexColumns() []string {
 	return ixcols
 }
 
-func (p *adminParser) foreignKey() (table string, columns []string, mode byte) {
+func (p *adminParser) foreignKey() (fk schema.Fkey) {
 	if !p.MatchIf(tok.In) {
 		return
 	}
-	table = p.MatchIdent()
+	fk.Table = p.MatchIdent()
 	if p.MatchIf(tok.LParen) {
 		for p.Token != tok.RParen {
-			columns = append(columns, p.Text)
+			fk.Columns = append(fk.Columns, p.Text)
 			p.MatchIdent()
 			p.MatchIf(tok.Comma)
 		}
 		p.Next()
 	}
-	mode = schema.Block
+	fk.Mode = schema.Block
 	if p.MatchIf(tok.Cascade) {
-		mode = schema.Cascade
+		fk.Mode = schema.Cascade
 		if p.MatchIf(tok.Update) {
-			mode = schema.CascadeUpdates
+			fk.Mode = schema.CascadeUpdates
 		}
 	}
-	return table, columns, mode
+	fk.IIndex = -1 // to ensure it gets set later
+	return fk
 }
 
 func (p *adminParser) view() Admin {

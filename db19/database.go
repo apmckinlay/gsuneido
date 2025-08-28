@@ -383,6 +383,10 @@ func (db *Database) buildIndexes(table string,
 	for i := range newIdxs {
 		ix := &newIdxs[i]
 		fk := &ix.Fk
+		if fk.Table != "" {
+			fks := rt.getSchema(fk.Table)
+			fk.IIndex = fks.IIndex(fk.Columns)
+		}
 		list.Sort(MakeLess(db.Store, &ix.Ixspec))
 		bldr := btree.Builder(db.Store)
 		iter := list.Iter()
@@ -484,7 +488,7 @@ func (db *Database) AlterCreate(sch *schema.Schema) {
 		}
 	}()
 	// buildIndexes is potentially slow (if there's a lot of data)
-	// so we don't want to do it inside RunExclusive/UpdateState
+	// so we don't want to do it inside UpdateState
 	ovs := db.buildIndexes(sch.Table, sch.Columns, sch.Indexes)
 	db.RunEndExclusive(sch.Table, func() {
 		db.UpdateState(func(state *DbState) {

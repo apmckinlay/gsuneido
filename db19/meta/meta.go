@@ -152,6 +152,7 @@ func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
 	if _, ok := m.info.Get(ti.Table); !ok {
 		ti.created = m.info.Clock
 	}
+	m.setFkeyIIndex(ts)
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)
@@ -230,6 +231,7 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta
 	if ti.Nrows == 0 {
 		newIdxs = nil
 	}
+	m.setFkeyIIndex(ts)
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)
@@ -252,6 +254,7 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 	tiNew := *ti // copy
 	tiNew.Table = to
 
+	m.setFkeyIIndex(&tsNew)
 	mu := newMetaUpdate(m)
 	mu.putSchema(m.newSchemaTomb(from))
 	mu.putSchema(&tsNew)
@@ -330,6 +333,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 		ix.BestKey = replace(ix.BestKey, from, to)
 	}
 	// ixspecs are ok since they are field indexes, not names
+	m.setFkeyIIndex(&tsNew)
 	mu := newMetaUpdate(m)
 	mu.putSchema(&tsNew)
 	m.dropFkeys(mu, &ts.Schema)
@@ -380,6 +384,7 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 	createColumns(ts, ac.Columns)
 	createDerived(ts, ac.Derived)
 	createIndexes(ts, ti, ac.Indexes, store)
+	m.setFkeyIIndex(ts)
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)
@@ -441,7 +446,25 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	}
 }
 
+func (m *Meta) setFkeyIIndex(ts *Schema) {
+	idxs := ts.Indexes
+	for i := range idxs {
+		fk := &idxs[i].Fk
+		if fk.Table != "" {
+			var target *Schema
+			if fk.Table == ts.Table {
+				target = ts
+			} else {
+				target = m.GetRoSchema(fk.Table)
+			}
+			j := target.IIndex(fk.Columns)
+			fk.IIndex = j
+		}
+	}
+}
+
 func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
+	// sets FkToHere in target
 	idxs := ac.Indexes
 	for i := range idxs {
 		fk := &idxs[i].Fk
@@ -469,7 +492,6 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 						ac.Table + " -> " + fk.Table + str.Join("(,)", fkCols))
 				}
 				found = true
-				fk.IIndex = j
 				ix.FkToHere = slc.With(ix.FkToHere,
 					Fkey{Table: ac.Table,
 						Columns: idxs[i].Columns, IIndex: tsi, Mode: fk.Mode})

@@ -319,30 +319,32 @@ func TestFkey(t *testing.T) {
 		}
 	}
 
-	doAdmin(db, "create hdr (a,b) key(a)")
-	schemas["hdr"] = "hdr (a,b) key(a)"
+	doAdmin(db, "create hdr (a,b) index(b) key(a)")
+	schemas["hdr"] = "hdr (a,b) index(b) key(a)"
 	check()
 
 	doAdmin(db, "create lin (c,d) key(c) index(d) in hdr(a)")
 	schemas["lin"] = "lin (c,d) key(c) index(d) in hdr(a)"
-	schemas["hdr"] = "hdr (a,b) key(a) from lin(d)"
+	schemas["hdr"] = "hdr (a,b) index(b) key(a) from lin(d)"
 	check()
 
 	doAdmin(db, "create two (e,a) key(e) index(a) in hdr")
 	schemas["two"] = "two (e,a) key(e) index(a) in hdr"
-	schemas["hdr"] = "hdr (a,b) key(a) from lin(d) from two(a)"
+	schemas["hdr"] = "hdr (a,b) index(b) key(a) from lin(d) from two(a)"
 	check()
 
 	doAdmin(db, "alter two create (f) index(f) in hdr(a)")
 	schemas["two"] = "two (e,a,f) key(e) index(a) in hdr index(f) in hdr(a)"
-	schemas["hdr"] = "hdr (a,b) key(a) from lin(d) from two(a) from two(f)"
+	schemas["hdr"] = "hdr (a,b) index(b) key(a) from lin(d) from two(a) from two(f)"
 	check()
 
 	doAdmin(db, "alter two drop index(a)")
 	schemas["two"] = "two (e,a,f) key(e) index(f) in hdr(a)"
-	schemas["hdr"] = "hdr (a,b) key(a) from lin(d) from two(f)"
+	schemas["hdr"] = "hdr (a,b) index(b) key(a) from lin(d) from two(f)"
 	check()
 
+	doAdmin(db, "alter hdr drop index(b)")
+	schemas["hdr"] = "hdr (a,b) key(a) from lin(d) from two(f)"
 	assert.T(t).This(func() { doAdmin(db, "alter hdr drop key(a)") }).
 		Panics("can't drop index used by foreign keys")
 

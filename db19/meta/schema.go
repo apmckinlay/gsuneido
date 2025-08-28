@@ -69,6 +69,10 @@ func (ts *Schema) Write(w *stor.Writer) {
 	w.PutStrs(ts.Derived)
 	w.Put1(len(ts.Indexes))
 	for _, ix := range ts.Indexes {
+		if ix.Fk.Table == "" {
+			// TEMPORARY - old bug filled in Columns when it shouldn't
+			ix.Fk.Columns = nil
+		}
 		if ix.Mode == 'k' {
 			w.Put1(int(ix.Mode)).PutStrs(ix.Columns)
 		} else {
@@ -101,6 +105,10 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 					Table:   r.GetStr(),
 					Mode:    byte(r.Get1()),
 					Columns: r.GetStrs()},
+			}
+			if ts.Indexes[i].Fk.Table == "" {
+				// TEMPORARY - old bug filled in Columns when it shouldn't
+				ts.Indexes[i].Fk.Columns = nil
 			}
 		}
 		ts.Ixspecs(0)
