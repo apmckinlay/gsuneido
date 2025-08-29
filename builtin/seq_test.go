@@ -51,8 +51,7 @@ func TestConcurrentSequence(t *testing.T) {
 	var wg sync.WaitGroup
 	const nthreads = 6
 	for range nthreads {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			n := rand.Intn(size)
 			for i := range n {
 				sq.Infinite()
@@ -63,8 +62,7 @@ func TestConcurrentSequence(t *testing.T) {
 				}
 			}
 			assert.That(sq.Instantiated())
-			wg.Done()
-		}()
+		})
 	}
 	wg.Wait()
 }

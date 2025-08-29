@@ -43,11 +43,9 @@ func TestRandomConcurrentTransactions(t *testing.T) {
 	start := time.Now()
 	var wg sync.WaitGroup
 	for range numThreads {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			runRandomTransactions(db, testData, numTransactions)
-		}()
+		})
 	}
 	wg.Wait()
 

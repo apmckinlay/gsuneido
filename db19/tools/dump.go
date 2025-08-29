@@ -276,9 +276,8 @@ func newIndexCheckers() *indexCheckers {
 	ics := indexCheckers{work: make(chan indexCheck, 32), // ???
 		stop: make(chan void)}
 	nw := options.Nworkers
-	ics.wg.Add(nw)
 	for range nw {
-		go ics.worker()
+		ics.wg.Go(ics.worker)
 	}
 	return &ics
 }
@@ -321,7 +320,6 @@ func (ics *indexCheckers) worker() {
 			ics.err.Store(fmt.Errorf("%s: %v", table, e))
 			ics.once.Do(func() { close(ics.stop) }) // notify main thread
 		}
-		ics.wg.Done()
 	}()
 	for ic := range ics.work {
 		table = ic.table

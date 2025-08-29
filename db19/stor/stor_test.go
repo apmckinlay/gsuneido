@@ -135,15 +135,13 @@ func TestStress(*testing.T) {
 		panic(err.Error())
 	}
 	for range nThreads {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			r := rand.New(rand.NewSource(time.Now().UnixNano()))
 			for range nIterations {
 				n := r.Intn(allocSize) + 1
 				s.Alloc(n)
 			}
-			wg.Done()
-		}()
+		})
 	}
 	wg.Wait()
 }

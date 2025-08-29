@@ -136,25 +136,21 @@ func TestPriorityQueueConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Start single consumer
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		for consumed.Load() < totalItems {
 			pq.Get()
 			consumed.Add(1)
 		}
-	}()
+	})
 
 	// Start multiple producers
-	for i := 0; i < nproducers; i++ {
-		wg.Add(1)
-		go func(producerID int) {
-			defer wg.Done()
-			for j := 0; j < nitemsperproducer; j++ {
-				pq.Put(j%3, producerID, j)
+	for i := range nproducers {
+		wg.Go(func() {
+			for j := range nitemsperproducer {
+				pq.Put(j%3, i, j)
 				produced.Add(1)
 			}
-		}(i)
+		})
 	}
 
 	wg.Wait()

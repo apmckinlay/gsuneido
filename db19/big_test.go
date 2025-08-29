@@ -51,11 +51,10 @@ func TestBig(t *testing.T) {
 	start := 0
 	var wg sync.WaitGroup
 	for range nthreads {
-		wg.Add(1)
-		go func(start int) {
+		start := start // for closure capture
+		wg.Go(func() {
 			createData(db, tables, start, count)
-			wg.Done()
-		}(start)
+		})
 		start += count
 	}
 	wg.Wait()

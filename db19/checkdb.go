@@ -229,9 +229,8 @@ func newTableCheckers(state *DbState, fn func(*tableCheckers, string)) *tableChe
 		stop:  make(chan void),
 	}
 	nw := options.Nworkers // more doesn't seem to help
-	tcs.wg.Add(nw)
 	for range nw {
-		go tcs.worker()
+		tcs.wg.Go(tcs.worker)
 	}
 	return &tcs
 }
@@ -263,7 +262,6 @@ func (tcs *tableCheckers) worker() {
 		if e := recover(); e != nil {
 			tcs.error(e, table)
 		}
-		tcs.wg.Done()
 	}()
 	for table = range tcs.work {
 		tcs.fn(tcs, table)

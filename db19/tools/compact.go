@@ -66,13 +66,11 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 	var wg sync.WaitGroup
 	channel := make(chan compactJob)
 	for range options.Nworkers {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			for job := range channel {
 				compactTable(job.state, job.src, job.ts, job.dst)
 			}
-			wg.Done()
-		}()
+		})
 	}
 	for _, sc := range schemas {
 		channel <- compactJob{state: state, src: src, ts: sc.sc, dst: dst}

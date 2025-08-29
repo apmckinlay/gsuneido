@@ -44,11 +44,9 @@ func TestMux(t *testing.T) {
 			data := session.read()
 			assert.This(string(data)).Is(str.ToUpper(a + b))
 		}
-		wg.Done()
 	}
 	for range nthreads {
-		wg.Add(1)
-		go clientThread()
+		wg.Go(clientThread)
 	}
 	wg.Wait()
 	assert.T(t).This(n.Load()).Is(nmsgs * nthreads)

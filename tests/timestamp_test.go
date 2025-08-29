@@ -26,8 +26,7 @@ func TestTimestamp(t *testing.T) {
 	var prev Value = SuDate{}
 	var wg sync.WaitGroup
 	for range 8 {
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			var th core.Thread
 			th.SetDbms(&dbms.DbmsLocal{})
 			var ts Value
@@ -46,8 +45,7 @@ func TestTimestamp(t *testing.T) {
 				fmt.Println(ts)
 				time.Sleep(time.Millisecond * time.Duration(rand.Intn(200)))
 			}
-			wg.Done()
-		}()
+		})
 	}
 	wg.Wait()
 }

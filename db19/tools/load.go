@@ -61,9 +61,7 @@ func LoadDatabase(from, dbfile, privateKey, passphrase string) (
 	var wg sync.WaitGroup
 	channel := make(chan *loadJob)
 	for range options.Nworkers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			var job *loadJob
 			defer func() {
 				if e := recover(); e != nil {
@@ -73,7 +71,7 @@ func LoadDatabase(from, dbfile, privateKey, passphrase string) (
 			for job = range channel {
 				loadTable2(job.db, job.ts, job.nrecs, job.size, job.list, false)
 			}
-		}()
+		})
 	}
 
 	// load the tables

@@ -209,8 +209,7 @@ type scanner struct {
 func newScanner(store *stor.Stor) *scanner {
 	var s scanner
 	s.cond.L = &s.lock
-	s.wg.Add(1)
-	go s.scanner(store)
+	s.wg.Go(func()  { s.scanner(store) })
 	return &s
 }
 
@@ -244,7 +243,6 @@ func (s *scanner) scanner(store *stor.Stor) {
 	}
 	s.stop()
 	s.cond.Signal()
-	s.wg.Done()
 }
 
 func (s *scanner) stop() {

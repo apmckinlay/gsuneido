@@ -43,15 +43,13 @@ var _ = method(wg_Thread, "(block, name = false)")
 
 func wg_Thread(th *Thread, this Value, args []Value) Value {
 	wg := this.(*suWaitGroup)
-	wg.wg.Add(1)
 	fn := args[0]
 	fn.SetConcurrent()
 	t2 := NewThread(th)
 	thread_Name(t2, args[1:])
 	threads.add(t2)
-	go func() {
+	wg.wg.Go(func() {
 		defer func() {
-			wg.wg.Done()
 			t2.Close()
 			threads.remove(t2.Num)
 			if e := recover(); e != nil {
@@ -59,7 +57,7 @@ func wg_Thread(th *Thread, this Value, args []Value) Value {
 			}
 		}()
 		t2.Call(fn)
-	}()
+	})
 	return nil
 }
 

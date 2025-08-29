@@ -43,13 +43,11 @@ func TestCheckCoRandom(*testing.T) {
 	}
 	var wg sync.WaitGroup
 	for range nThreads {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range nTrans {
 				randTran(db)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	f := float32(nConflict.Load()) / float32(nCommit.Load())

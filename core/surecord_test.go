@@ -82,7 +82,6 @@ func TestSuRecord_Concurrency(t *testing.T) {
 	var wg sync.WaitGroup
 	run := func() {
 		th := &Thread{}
-		defer wg.Done()
 		for range nActions {
 			switch rand.Intn(12) {
 			case 0:
@@ -127,8 +126,7 @@ func TestSuRecord_Concurrency(t *testing.T) {
 		}
 	}
 	for range nThreads {
-		wg.Add(1)
-		go run()
+		wg.Go(run)
 	}
 	wg.Wait()
 }

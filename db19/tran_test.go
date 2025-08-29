@@ -37,15 +37,13 @@ func TestConcurrent(t *testing.T) {
 	}
 	var wg sync.WaitGroup
 	for range nclients {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range ntrans {
 				ut := output1(db)
 				ut.Commit()
 				// time.Sleep(time.Duration(rand.Intn(900)) * time.Microsecond)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	db.ck.Stop()
