@@ -49,10 +49,10 @@ endif
 port: # a Windows version without the Windows stuff
 	$(PORTABLE)
 	
-all: git-status build amd arm
-	@mkdir -p out
-	cp gsuneido.exe gsport.exe out
-	mv gs_linux_amd64 gs_linux_arm64 out
+deploy: git-status build amd arm
+	@mkdir -p deploy
+	cp gsuneido.exe gsport.exe deploy
+	mv gs_linux_amd64 gs_linux_arm64 deploy
 
 # NOTE: requires test e.g. from msys
 git-status:
@@ -93,7 +93,7 @@ release:
 	./gsuneido -dump suneidoc
 	./gsuneido -dump imagebook
 	-mkdir release
-	cp stdlib.su suneidoc.su imagebook.su release
+	mv stdlib.su suneidoc.su imagebook.su release
 	cd release && \
 	  rm suneido.db ; \
 	  ../gsuneido -load stdlib && \
@@ -112,7 +112,7 @@ help:
 	@echo "    build arm linux executable"
 	@echo "amd"
 	@echo "    build amd linux executable"
-	@echo "all"
+	@echo "deploy"
 	@echo "    build current OS, arm, and amd executables"
 	@echo "test"
 	@echo "    run tests"
@@ -120,4 +120,4 @@ help:
 	@echo "    remove built files"
 
 .PHONY : build gsuneido port test generate clean zap race racetest release \
-    help arm amd all git-status
+    help arm amd deploy git-status
