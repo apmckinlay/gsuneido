@@ -22,7 +22,6 @@ type idxSel struct {
 	index     []string
 	ptrngs    []pointRange
 	frac      float64
-	fracRange float64
 	nfields   int
 	encoded   bool
 }
@@ -77,7 +76,7 @@ func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 	}
 	for i := range idxSels {
 		is := &idxSels[i]
-		is.frac, is.fracRange = w.idxFrac(is.index, is.ptrngs)
+		is.frac = w.idxFrac(is.index, is.ptrngs)
 	}
 	return idxSels
 }
@@ -191,30 +190,29 @@ func (x side) valRaw() string {
 	return x.val
 }
 
-func (w *Where) idxFrac(idx []string, ptrngs []pointRange) (float64, float64) {
+func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 	iIndex := slc.IndexFn(w.tbl.indexes, idx, slices.Equal)
 	if iIndex < 0 {
 		panic("index not found")
 	}
-	var frac, fracRange float64
+	var frac float64
 	npoints := 0
-	nrows1, _ := w.tbl.Nrows()
+	nrows, _ := w.tbl.Nrows()
 	for _, pr := range ptrngs {
 		if pr.isPoint() {
 			npoints++
 		} else { // range
-			fracRange += w.t.RangeFrac(w.tbl.name, iIndex, pr.org, pr.end)
+			frac += w.t.RangeFrac(w.tbl.name, iIndex, pr.org, pr.end)
 		}
 	}
-	frac = fracRange
-	if nrows1 > 0 {
-		frac += .5 * float64(npoints) / float64(nrows1) // ??? estimate 1/2 exist
+	if nrows > 0 {
+		frac += .5 * float64(npoints) / float64(nrows) // ??? estimate 1/2 exist
 	}
 	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
 	if frac > 1 {
 		frac = 1
 	}
-	return frac, fracRange
+	return frac
 }
 
 // idxSel -----------------------------------------------------------

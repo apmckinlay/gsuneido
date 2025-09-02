@@ -323,3 +323,25 @@ func TestWhere_fixed(t *testing.T) {
 	test("a in (1,2,3) and a in (2,3,4)", "[a=(2,3)]")
 	test("a in (1,2) and a in (3,4)", "[]")
 }
+
+func TestWhere_indexes(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	test := func(schema, where, colSels, idxSels string) {
+		const table = "twi"
+		t.Helper()
+		db.adm("create " + table + " " + schema)
+		defer db.adm("drop " + table)
+		tran := db.NewReadTran()
+		w := ParseQuery(table + " where " + where, tran, nil).(*Where)
+		actual := "conflict"
+		if !w.conflict {
+			actual = fmt.Sprint(w.colSels)[3:]
+		}
+		assert.T(t).This(actual).Is(colSels)
+		
+		w.optInit()
+		assert.T(t).This(fmt.Sprint(w.idxSels)).Is(idxSels)
+	}
+	test("(a,b,c) key(a)", "a = 1", "[a:[1]]", "[a: 1]")
+}

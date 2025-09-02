@@ -589,7 +589,7 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, []string) {
 			if is := w.getIdxSel(idx); is != nil {
 				varcost := w.source.lookupCost() * len(is.ptrngs)
 				tblFixCost, tblVarCost, _ :=
-					w.tbl.optimize(CursorMode, idx, frac*is.fracRange)
+					w.tbl.optimize(CursorMode, idx, frac*is.frac)
 				assert.That(tblFixCost == 0)
 				varcost += tblVarCost
 				best.update(idx, 0, varcost)
