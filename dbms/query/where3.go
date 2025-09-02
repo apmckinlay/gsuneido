@@ -64,12 +64,20 @@ func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 					}
 				}
 			}
-			frac, fracRange := w.idxFrac(idx, comp)
-			idxSel := idxSel{index: idx, nfields: len(idxSpans),
-				ptrngs: comp, frac: frac, fracRange: fracRange, encoded: encode}
-			w.singleton = w.singleton || idxSel.singleton()
-			idxSels = append(idxSels, idxSel)
+			isel := idxSel{index: idx, nfields: len(idxSpans),
+				ptrngs: comp, encoded: encode}
+			single := isel.singleton()
+			w.singleton = w.singleton || single
+			if single {
+				idxSels = append(idxSels[:0], isel)
+				break
+			}
+			idxSels = append(idxSels, isel)
 		}
+	}
+	for i := range idxSels {
+		is := &idxSels[i]
+		is.frac, is.fracRange = w.idxFrac(is.index, is.ptrngs)
 	}
 	return idxSels
 }

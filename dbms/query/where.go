@@ -524,7 +524,7 @@ func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cos
 		// fmt.Println("Where opt CONFLICT")
 		return 0, 0, nil
 	}
-	assert.That(!w.singleton || index == nil)
+	assert.That(!w.singleton || index == nil) // ensured by Optimize
 	// we always have the option of just filtering (no specific index use)
 	filterFixCost, filterVarCost := Optimize(w.source, mode, index, frac)
 	if w.tbl == nil || w.tbl.singleton {

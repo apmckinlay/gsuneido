@@ -223,6 +223,9 @@ func TestOptimize(t *testing.T) {
 
 	test("inven extend x = 0, c = item[1..] where c > 0",
 		"inven^(item) where item[1..] > 0 extend x = 0, c = item[1..]")
+		
+	test("comp2 where a = 1 and b = 2 and c = 3",
+		"comp2^(a,b,c) where*1 a is 1 and b is 2 and c is 3")
 
 	mode = CursorMode
 	test("(trans union trans) join (inven union inven)",

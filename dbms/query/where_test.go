@@ -134,7 +134,7 @@ func TestWhere_explodeIndexSpans(t *testing.T) {
 }
 
 func TestWhere_perIndex(t *testing.T) {
-	table := "comp"
+	table := ""
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery(table+" where "+query, testTran{}, nil).(*Where)
@@ -143,6 +143,8 @@ func TestWhere_perIndex(t *testing.T) {
 		idxSels := w.perIndex(pf)
 		assert.T(t).This(fmt.Sprint(idxSels)).Is("[" + expected + "]")
 	}
+		
+	table = "comp" // key(a,b,c)
 	test("a is 1", "a,b,c: 1..1,<max> = 0.1")
 	test("a is 1 and b is 2", "a,b,c: 1,2..1,2,<max> = 0.01")
 	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3 = 0.0005")
@@ -160,6 +162,9 @@ func TestWhere_perIndex(t *testing.T) {
 	table = "table"
 	test("a >= ''", "a: ''..<max> = 1")
 	// test("a >= ''", "a: '' | '\\x00'..<max> = 1.005")
+	
+	table = "comp2"
+	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3")
 }
 
 type wtestTran struct {

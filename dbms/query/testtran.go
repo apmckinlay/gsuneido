@@ -58,6 +58,9 @@ var testSchemas = map[string]*Schema{
 		Indexes: []Index{{Mode: 'k', Columns: []string{"a", "b", "c"}}}},
 	"withdeps": {Columns: []string{"a", "b", "b_deps", "c", "c_deps"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"a"}}}},
+	"comp2": {Columns: []string{"a", "b", "c"}, Indexes: []Index{
+		{Mode: 'i', Columns: []string{"b"}},
+		{Mode: 'k', Columns: []string{"a", "b", "c"}}}},
 }
 
 func (testTran) GetSchema(table string) *Schema {
@@ -71,6 +74,7 @@ var testInfo = map[string]*meta.Info{
 	"trans":   {Nrows: 200000, Size: 100000},
 	"hist2":   {Nrows: 1000, Size: 100000},
 	"comp":    {Nrows: 1000, Size: 100000},
+	"comp2":   {Nrows: 0, Size: 0},
 }
 
 func (testTran) GetInfo(table string) *meta.Info {
