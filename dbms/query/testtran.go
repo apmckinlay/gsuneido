@@ -28,7 +28,7 @@ var testSchemas = map[string]*Schema{
 		{Mode: 'k', Columns: []string{"supplier"}},
 		{Mode: 'i', Columns: []string{"city"}}}},
 	"hist": {Columns: []string{"date", "item", "id", "cost"}, Indexes: []Index{
-		{Mode: 'i', Columns: []string{"date"}},
+		{Mode: 'i', Columns: []string{"item"}},
 		{Mode: 'k', Columns: []string{"date", "item", "id"}}}},
 	"hist2": {Columns: []string{"date", "item", "id", "cost"}, Indexes: []Index{
 		{Mode: 'i', Columns: []string{"id"}},

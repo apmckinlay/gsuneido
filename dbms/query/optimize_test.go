@@ -40,7 +40,7 @@ func TestOptimize(t *testing.T) {
 	test("table sort c",
 		"table^(a) tempindex(c)")
 	test("hist where date is 5",
-		"hist^(date) where date is 5") // not where*1
+		"hist^(date,item,id) where date is 5") // not where*1
 	test("comp where a=1 sort c, a, b",
 		"comp^(a,b,c) where a is 1 tempindex(c,b)")
 	test("comp where a=1 and b=2 and c=3 sort c, a, b",
@@ -88,14 +88,14 @@ func TestOptimize(t *testing.T) {
 		"table^(a) extend x = 1")
 
 	test("hist intersect hist2",
-		"hist^(date) intersect(date) hist2^(date)")
+		"hist^(item) intersect(date) hist2^(date)")
 	test("hist2 intersect hist",
-		"hist^(date) intersect(date) hist2^(date)")
+		"hist^(item) intersect(date) hist2^(date)")
 
 	test("hist union hist2",
-		"hist^(date) union-lookup(date) hist2^(date)")
+		"hist^(item) union-lookup(date) hist2^(date)")
 	test("hist2 union hist",
-		"hist^(date) union-lookup(date) hist2^(date)")
+		"hist^(item) union-lookup(date) hist2^(date)")
 	test("hist union hist sort date",
 		"hist^(date,item,id) union-merge(date,item,id) hist^(date,item,id)")
 	test("table union table",
@@ -152,11 +152,11 @@ func TestOptimize(t *testing.T) {
 		"supplier^(city) summarize-idx max city")
 	// hints
 	test("hist summarize id, total cost",
-		"hist^(date) summarize-map id, total cost")
+		"hist^(item) summarize-map id, total cost")
 	test("hist summarize/*small*/ id, total cost",
-		"hist^(date) summarize-map id, total cost")
+		"hist^(item) summarize-map id, total cost")
 	test("hist summarize/*large*/ id, total cost",
-		"hist^(date) tempindex(id) summarize-seq id, total cost")
+		"hist^(item) tempindex(id) summarize-seq id, total cost")
 	test("trans summarize id, count",
 		"trans^(date,item,id) tempindex(id) summarize-seq id, count")
 	test("trans summarize/*large*/ id, count",
@@ -172,9 +172,9 @@ func TestOptimize(t *testing.T) {
 		"nothing")
 
 	test("hist join customer",
-		"hist^(date) join n:1 by(id) customer^(id)")
+		"hist^(item) join n:1 by(id) customer^(id)")
 	test("customer join hist",
-		"hist^(date) join n:1 by(id) customer^(id)")
+		"hist^(item) join n:1 by(id) customer^(id)")
 	test("trans join inven",
 		"inven^(item) join 1:n by(item) trans^(item)")
 	test("task join co",
