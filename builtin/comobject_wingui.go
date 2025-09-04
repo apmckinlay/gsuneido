@@ -204,8 +204,8 @@ func suToVariant(x Value, v *stVariant, pinner *runtime.Pinner) {
 	} else if _, ok := x.ToStr(); ok {
 		v.vt = VT_BSTR
 		s := zstrArg(x)
-		pinner.Pin(s)
-		v.val = int64(uintptr(s)) // C side converts
+		pinner.Pin(unsafe.Pointer(s))
+		v.val = int64(uintptr(unsafe.Pointer(s))) // C side converts
 	} else if sco, ok := x.(*suCOMObject); ok {
 		if sco.idisp {
 			v.vt = VT_DISPATCH

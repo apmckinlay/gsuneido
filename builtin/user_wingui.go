@@ -239,8 +239,8 @@ var _ = builtin(MessageBox, "(hwnd, text, caption, flags)")
 func MessageBox(a, b, c, d Value) Value {
 	rtn, _, _ := syscall.SyscallN(messageBox,
 		intArg(a),
-		uintptr(zstrArg(b)),
-		uintptr(zstrArg(c)),
+		uintptr(unsafe.Pointer(zstrArg(b))),
+		uintptr(unsafe.Pointer(zstrArg(c))),
 		intArg(d))
 	return intRet(rtn)
 }
@@ -289,7 +289,7 @@ func AppendMenu(a, b, c, d Value) Value {
 		intArg(a),
 		intArg(b),
 		intArg(c),
-		uintptr(zstrArg(d)))
+		uintptr(unsafe.Pointer(zstrArg(d))))
 	return boolRet(rtn)
 }
 
@@ -313,8 +313,8 @@ var _ = builtin(CreateWindowEx,
 func CreateWindowEx(_ *Thread, a []Value) Value {
 	rtn, _, _ := syscall.SyscallN(createWindowEx,
 		intArg(a[0]),
-		uintptr(zstrArg(a[1])),
-		uintptr(zstrArg(a[2])),
+		uintptr(unsafe.Pointer(zstrArg(a[1]))),
+		uintptr(unsafe.Pointer(zstrArg(a[2]))),
 		intArg(a[3]),
 		intArg(a[4]),
 		intArg(a[5]),
@@ -413,7 +413,7 @@ var _ = builtin(CreateAcceleratorTable, "(lpaccel, cEntries)")
 
 func CreateAcceleratorTable(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(createAcceleratorTable,
-		uintptr(zstrArg(a)),
+		uintptr(unsafe.Pointer(zstrArg(a))),
 		intArg(b))
 	return intRet(rtn)
 }
@@ -461,7 +461,7 @@ func DrawText(a, b, c, d, e Value) Value {
 	r := toRect(d)
 	rtn, _, _ := syscall.SyscallN(drawText,
 		intArg(a),
-		uintptr(zstrArg(b)),
+		uintptr(unsafe.Pointer(zstrArg(b))),
 		intArg(c),
 		uintptr(unsafe.Pointer(r)),
 		intArg(e))
@@ -889,7 +889,7 @@ var _ = builtin(RegisterClipboardFormat, "(lpszFormat)")
 
 func RegisterClipboardFormat(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(registerClipboardFormat,
-		uintptr(zstrArg(a)))
+		uintptr(unsafe.Pointer(zstrArg(a))))
 	return intRet(rtn)
 }
 
@@ -1051,7 +1051,7 @@ var _ = builtin(SetWindowText, "(hwnd, lpwndpl)")
 func SetWindowText(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(setWindowText,
 		intArg(a),
-		uintptr(zstrArg(b)))
+		uintptr(unsafe.Pointer(zstrArg(b))))
 	return boolRet(rtn)
 }
 
@@ -1372,8 +1372,8 @@ var _ = builtin(FindWindow, "(c, n)")
 
 func FindWindow(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(findWindow,
-		uintptr(zstrArg(a)),
-		uintptr(zstrArg(b)))
+		uintptr(unsafe.Pointer(zstrArg(a))),
+		uintptr(unsafe.Pointer(zstrArg(b))))
 	return intRet(rtn)
 }
 
@@ -1398,7 +1398,7 @@ var _ = builtin(GetClipboardFormatName, "(format, lpszFormatName, cchMaxCount)")
 func GetClipboardFormatName(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(getClipboardFormatName,
 		intArg(a),
-		uintptr(zstrArg(b)),
+		uintptr(unsafe.Pointer(zstrArg(b))),
 		intArg(c))
 	return intRet(rtn)
 }
@@ -1707,7 +1707,7 @@ var _ = builtin(SetProp, "(hwnd, name, value)")
 func SetProp(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(setProp,
 		intArg(a),
-		uintptr(zstrArg(b)),
+		uintptr(unsafe.Pointer(zstrArg(b))),
 		intArg(c))
 	return boolRet(rtn)
 }
@@ -1796,7 +1796,7 @@ func DrawTextEx(a, b, c, d, e, f Value) Value {
 	r := toRect(d)
 	rtn, _, _ := syscall.SyscallN(drawTextEx,
 		intArg(a),
-		uintptr(zstrArg(b)),
+		uintptr(unsafe.Pointer(zstrArg(b))),
 		intArg(c),
 		uintptr(unsafe.Pointer(r)),
 		intArg(e),
@@ -2086,7 +2086,7 @@ var _ = builtin(LoadImage,
 func LoadImage(a, b, c, d, e, f Value) Value {
 	rtn, _, _ := syscall.SyscallN(loadImage,
 		intArg(a),
-		uintptr(zstrArg(b)), // doesn't handle resource id
+		uintptr(unsafe.Pointer(zstrArg(b))), // doesn't handle resource id
 		intArg(c),
 		intArg(d),
 		intArg(e),

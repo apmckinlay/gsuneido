@@ -420,9 +420,9 @@ var _ = builtin(CreateDC, "(driver, device, output, devmode)")
 
 func CreateDC(a, b, c, d Value) Value {
 	rtn, _, _ := syscall.SyscallN(createDC,
-		uintptr(zstrArg(a)),
-		uintptr(zstrArg(b)),
-		uintptr(zstrArg(c)),
+		uintptr(unsafe.Pointer(zstrArg(a))),
+		uintptr(unsafe.Pointer(zstrArg(b))),
+		uintptr(unsafe.Pointer(zstrArg(c))),
 		intArg(d))
 	return intRet(rtn)
 }
@@ -503,7 +503,7 @@ var _ = builtin(GetEnhMetaFile, "(filename)")
 
 func GetEnhMetaFile(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(getEnhMetaFile,
-		uintptr(zstrArg(a)))
+		uintptr(unsafe.Pointer(zstrArg(a))))
 	return intRet(rtn)
 }
 
@@ -718,9 +718,9 @@ var _ = builtin(CreateEnhMetaFile, "(hdcRef, filename, rect, desc)")
 func CreateEnhMetaFile(a, b, c, d Value) Value {
 	rtn, _, _ := syscall.SyscallN(createEnhMetaFile,
 		intArg(a),
-		uintptr(zstrArg(b)),
+		uintptr(unsafe.Pointer(zstrArg(b))),
 		uintptr(unsafe.Pointer(toRect(c))),
-		uintptr(zstrArg(d)))
+		uintptr(unsafe.Pointer(zstrArg(d))))
 	return intRet(rtn)
 }
 
@@ -747,7 +747,7 @@ func CreateFont(_ *Thread, a []Value) Value {
 		intArg(a[10]),
 		intArg(a[11]),
 		intArg(a[12]),
-		uintptr(zstrArg(a[13])))
+		uintptr(unsafe.Pointer(zstrArg(a[13]))))
 	return intRet(rtn)
 }
 

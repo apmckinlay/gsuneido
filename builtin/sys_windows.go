@@ -12,7 +12,7 @@ import (
 )
 
 // zstrArg returns a nul terminated copy of a string as unsafe.Pointer
-func zstrArg(v Value) unsafe.Pointer {
+func zstrArg(v Value) *byte {
 	// NOTE: don't change this to return uintptr
 	// Conversion from pointer to uintptr must be in the SyscallN argument.
 	// Then it will be kept alive until the syscall returns.
@@ -22,7 +22,7 @@ func zstrArg(v Value) unsafe.Pointer {
 	s := ToStr(v)
 	buf := make([]byte, len(s)+1)
 	copy(buf, s)
-	return unsafe.Pointer(&buf[0])
+	return &buf[0]
 }
 
 var kernel32 = windows.MustLoadDLL("kernel32.dll")
@@ -34,7 +34,7 @@ var _ = builtin(GetDiskFreeSpace, "(dir = '.')")
 func GetDiskFreeSpace(arg Value) Value {
 	var n int64
 	rtn, _, e := syscall.SyscallN(getDiskFreeSpaceEx,
-		uintptr(zstrArg(arg)),
+		uintptr(unsafe.Pointer(zstrArg(arg))),
 		uintptr(unsafe.Pointer(&n)),
 		0,
 		0)
@@ -70,8 +70,8 @@ var _ = builtin(CopyFile, "(from, to, failIfExists)")
 
 func CopyFile(th *Thread, args []Value) Value {
 	rtn, _, e := syscall.SyscallN(copyFile,
-		uintptr(zstrArg(args[0])),
-		uintptr(zstrArg(args[1])),
+		uintptr(unsafe.Pointer(zstrArg(args[0]))),
+		uintptr(unsafe.Pointer(zstrArg(args[1]))),
 		boolArg(args[2]))
 	if rtn == 0 {
 		th.ReturnThrow = true
@@ -102,15 +102,15 @@ const access_denied = 5
 func deleteFile(filename string) error {
 	file := zstrArg(SuStr(filename))
 	rtn, _, e := syscall.SyscallN(deleteFileA,
-		uintptr(file))
+		uintptr(unsafe.Pointer(file)))
 	if rtn == 0 && e == access_denied {
 		// retry after removing the read-only attribute
 		r, _, _ := syscall.SyscallN(setFileAttributesA,
-			uintptr(file),
+			uintptr(unsafe.Pointer(file)),
 			windows.FILE_ATTRIBUTE_NORMAL)
 		if r != 0 {
 			rtn, _, e = syscall.SyscallN(deleteFileA,
-				uintptr(file))
+				uintptr(unsafe.Pointer(file)))
 		}
 	}
 	if rtn == 0 {

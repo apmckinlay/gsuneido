@@ -36,7 +36,7 @@ func SendMessageText(a, b, c, d Value) Value {
 		intArg(a),
 		intArg(b),
 		intArg(c),
-		uintptr(zstrArg(d)))
+		uintptr(unsafe.Pointer(zstrArg(d))))
 	return intRet(rtn)
 }
 

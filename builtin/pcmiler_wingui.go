@@ -73,7 +73,7 @@ var _ = staticMethod(pcm_PCMAddStop, "(tripId, stop)")
 func pcm_PCMAddStop(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsAddStop.Addr(),
 		intArg(a),
-		uintptr(zstrArg(b)))
+		uintptr(unsafe.Pointer(zstrArg(b))))
 	return int32Ret(rtn)
 }
 
@@ -94,8 +94,8 @@ var _ = staticMethod(pcm_PCMCalcTrip, "(tripId, orig, dest)")
 func pcm_PCMCalcTrip(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsCalcTrip.Addr(),
 		intArg(a),
-		uintptr(zstrArg(b)),
-		uintptr(zstrArg(c)))
+		uintptr(unsafe.Pointer(zstrArg(b))),
+		uintptr(unsafe.Pointer(zstrArg(c))))
 	return int32Ret(rtn)
 }
 
@@ -232,7 +232,7 @@ var _ = staticMethod(pcm_PCMLookup, "(tripId, placeName, easyMatch)")
 func pcm_PCMLookup(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsLookup.Addr(),
 		intArg(a),
-		uintptr(zstrArg(b)),
+		uintptr(unsafe.Pointer(zstrArg(b))),
 		intArg(c))
 	return int32Ret(rtn)
 }

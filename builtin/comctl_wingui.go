@@ -177,7 +177,7 @@ func DrawStatusText(a, b, c, d Value) Value {
 	syscall.SyscallN(drawStatusText,
 		intArg(a),
 		uintptr(unsafe.Pointer(toRect(b))),
-		uintptr(zstrArg(c)),
+		uintptr(unsafe.Pointer(zstrArg(c))),
 		intArg(d))
 	return nil
 }

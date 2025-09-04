@@ -21,7 +21,7 @@ var _ = builtin(SHCreateStreamOnFile, "(pszFile, grfMode, ppstm)")
 func SHCreateStreamOnFile(a, b, c Value) Value {
 	var p uintptr
 	rtn, _, _ := syscall.SyscallN(shCreateStreamOnFile,
-		uintptr(zstrArg(a)),
+		uintptr(unsafe.Pointer(zstrArg(a))),
 		intArg(b),
 		uintptr(unsafe.Pointer(&p)))
 	c.Put(nil, SuStr("x"), IntVal(int(p)))

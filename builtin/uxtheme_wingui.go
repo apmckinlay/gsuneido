@@ -44,7 +44,7 @@ func DrawThemeText(_ *Thread, a []Value) Value {
 		intArg(a[1]),
 		intArg(a[2]),
 		intArg(a[3]),
-		uintptr(zstrArg(a[4])),
+		uintptr(unsafe.Pointer(zstrArg(a[4]))),
 		intArg(a[5]),
 		intArg(a[6]),
 		intArg(a[7]),
@@ -59,8 +59,8 @@ var _ = builtin(SetWindowTheme, "(hwnd, appname, idlist)")
 func SetWindowTheme(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(setWindowTheme,
 		intArg(a),
-		uintptr(zstrArg(b)),
-		uintptr(zstrArg(c)))
+		uintptr(unsafe.Pointer(zstrArg(b))),
+		uintptr(unsafe.Pointer(zstrArg(c))))
 	return intRet(rtn)
 }
 
@@ -113,7 +113,7 @@ var _ = builtin(OpenThemeData, "(hwnd, pszClassList)")
 func OpenThemeData(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(openThemeData,
 		intArg(a),
-		uintptr(zstrArg(b)))
+		uintptr(unsafe.Pointer(zstrArg(b))))
 	return intRet(rtn)
 }
 

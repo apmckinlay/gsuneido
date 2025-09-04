@@ -63,7 +63,7 @@ var _ = builtin(GetProcAddress, "(hModule, procName)")
 func GetProcAddress(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(getProcAddress,
 		intArg(a),
-		uintptr(zstrArg(b)))
+		uintptr(unsafe.Pointer(zstrArg(b))))
 	return intRet(rtn)
 }
 
@@ -292,7 +292,7 @@ var _ = builtin(LoadLibrary, "(library)")
 
 func LoadLibrary(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(loadLibrary,
-		uintptr(zstrArg(a)))
+		uintptr(unsafe.Pointer(zstrArg(a))))
 	return intRet(rtn)
 }
 
@@ -313,7 +313,7 @@ var _ = builtin(SetCurrentDirectory, "(lpPathName)")
 
 func SetCurrentDirectory(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(setCurrentDirectory,
-		uintptr(zstrArg(a)))
+		uintptr(unsafe.Pointer(zstrArg(a))))
 	return boolRet(rtn)
 }
 
@@ -328,7 +328,7 @@ var _ = builtin(CreateFile, "(lpFileName, dwDesiredAccess, dwShareMode, "+
 
 func CreateFile(a, b, c, d, e, f, g Value) Value {
 	rtn, _, _ := syscall.SyscallN(createFile,
-		uintptr(zstrArg(a)),
+		uintptr(unsafe.Pointer(zstrArg(a))),
 		intArg(b),
 		intArg(c),
 		intArg(d),
@@ -390,7 +390,7 @@ func GetVolumeName(a Value) Value {
 	const bufsize = 255
 	buf := make([]byte, bufsize+1)
 	rtn, _, _ := syscall.SyscallN(getVolumeInformation,
-		uintptr(zstrArg(a)),
+		uintptr(unsafe.Pointer(zstrArg(a))),
 		uintptr(unsafe.Pointer(&buf[0])),
 		uintptr(bufsize),
 		0,
