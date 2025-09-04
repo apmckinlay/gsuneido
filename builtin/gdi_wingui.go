@@ -34,8 +34,6 @@ type stLogFont struct {
 	lfFaceName       [LF_FACESIZE]byte
 }
 
-const nLogFont = unsafe.Sizeof(stLogFont{})
-
 type stTextMetric struct {
 	Height           int32
 	Ascent           int32
@@ -59,8 +57,6 @@ type stTextMetric struct {
 	CharSet          byte
 	_                [3]byte // padding
 }
-
-const nTextMetric = unsafe.Sizeof(stTextMetric{})
 
 // dll Gdi32:CreateFontIndirect(LOGFONT* lf) gdiobj
 var createFontIndirect = gdi32.MustFindProc("CreateFontIndirectA").Addr()
@@ -859,8 +855,6 @@ type stGlyphMetrics struct {
 	gmCellIncY      int16
 }
 
-const nGlyphMetrics = unsafe.Sizeof(stGlyphMetrics{})
-
 type stFixed struct {
 	fract int16
 	value int16
@@ -872,8 +866,6 @@ type stMat2 struct {
 	eM21 stFixed
 	eM22 stFixed
 }
-
-const nMat2 = unsafe.Sizeof(stMat2{})
 
 // dll long Gdi32:StartDoc(pointer hdc, DOCINFO* di)
 var startDoc = gdi32.MustFindProc("StartDocA").Addr()

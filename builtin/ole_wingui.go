@@ -69,5 +69,3 @@ type GUID struct {
 	Data3 int16
 	Data4 [8]byte
 }
-
-const nGUID = unsafe.Sizeof(GUID{})

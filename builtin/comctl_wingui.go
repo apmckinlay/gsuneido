@@ -223,5 +223,3 @@ type stImageInfo struct {
 	Unused2  int32
 	rcImage  stRect
 }
-
-const nImageInfo = unsafe.Sizeof(stImageInfo{})

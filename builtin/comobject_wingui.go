@@ -133,8 +133,6 @@ type stVariant struct {
 	_   [8]byte
 }
 
-const nVariant = unsafe.Sizeof(stVariant{})
-
 func GetProperty(idisp uintptr, name string) Value {
 	return invoke(idisp, name, DISPATCH_PROPERTYGET)
 }
@@ -225,8 +223,6 @@ type stDispParams struct {
 	cArgs             uint32
 	cNamedArgs        uint32
 }
-
-const nDispParams = unsafe.Sizeof(stDispParams{})
 
 const (
 	VT_EMPTY    = 0

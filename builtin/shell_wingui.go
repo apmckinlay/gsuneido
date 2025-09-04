@@ -202,8 +202,6 @@ type stBrowseInfo struct {
 	_              [4]byte // padding
 }
 
-const nBrowseInfo = unsafe.Sizeof(stBrowseInfo{})
-
 var shGetFolderPath = shell32.MustFindProc("SHGetFolderPathA").Addr()
 
 func ErrlogDir() string {

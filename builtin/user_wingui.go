@@ -34,8 +34,6 @@ type stPaintStruct struct {
 	_           [4]byte // padding
 }
 
-const nPaintStruct = unsafe.Sizeof(stPaintStruct{})
-
 type stMonitorInfo struct {
 	cbSize    uint32
 	rcMonitor stRect
@@ -61,8 +59,6 @@ type stPoint struct {
 	x int32
 	y int32
 }
-
-const nPoint = unsafe.Sizeof(stPoint{})
 
 type stWindowPlacement struct {
 	length           uint32
@@ -105,8 +101,6 @@ type stWndClass struct {
 	className  *byte
 }
 
-const nWndClass = unsafe.Sizeof(stWndClass{})
-
 type stCharRange struct {
 	cpMin int32
 	cpMax int32
@@ -117,8 +111,6 @@ type stTextRange struct {
 	lpstrText *byte
 }
 
-const nTextRange = unsafe.Sizeof(stTextRange{})
-
 type stMsg struct {
 	hwnd    HANDLE
 	message uint32
@@ -128,8 +120,6 @@ type stMsg struct {
 	pt      stPoint
 	_       [4]byte // padding
 }
-
-const nMsg = unsafe.Sizeof(stMsg{})
 
 type stToolInfo struct {
 	cbSize     uint32
@@ -179,23 +169,17 @@ type stTVItemEx struct {
 	iReserved      int32
 }
 
-const nTVItemEx = unsafe.Sizeof(stTVItemEx{})
-
 type stTVInsertStruct struct {
 	hParent      HANDLE
 	hInsertAfter HANDLE
 	item         stTVItemEx
 }
 
-const nTVInsertStruct = unsafe.Sizeof(stTVInsertStruct{})
-
 type stTVSortCB struct {
 	hParent     HANDLE
 	lpfnCompare uintptr
 	lParam      HANDLE
 }
-
-const nTVSortCB = unsafe.Sizeof(stTVSortCB{})
 
 //-------------------------------------------------------------------
 

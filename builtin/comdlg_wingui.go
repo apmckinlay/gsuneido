@@ -452,5 +452,3 @@ type stPrintPageRange struct {
 	nFromPage int32
 	nToPage   int32
 }
-
-const nPrintPageRange = unsafe.Sizeof(stPrintPageRange{})

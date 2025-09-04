@@ -133,8 +133,6 @@ type stTCItem struct {
 	_           [4]byte // padding
 }
 
-const nTCItem = unsafe.Sizeof(stTCItem{})
-
 var _ = builtin(SendMessageTextRange, "(hwnd, msg, cpMin, cpMax, each = 1)")
 
 func SendMessageTextRange(a, b, c, d, e Value) Value {
@@ -411,8 +409,6 @@ type stHdItem struct {
 	_          [4]byte // padding
 }
 
-const nHdItem = unsafe.Sizeof(stHdItem{})
-
 var _ = builtin(SendMessageHDHITTESTINFO, "(hwnd, msg, wParam, lParam)")
 
 func SendMessageHDHITTESTINFO(a, b, c, d Value) Value {
@@ -437,8 +433,6 @@ type stHdHitTestInfo struct {
 	flags int32
 	iItem int32
 }
-
-const nHdHitTestInfo = unsafe.Sizeof(stHdHitTestInfo{})
 
 var _ = builtin(SendMessageTreeHitTest, "(hwnd, msg, wParam, lParam)")
 
@@ -465,8 +459,6 @@ type stTVHitTestInfo struct {
 	iItem HANDLE
 }
 
-const nTVHitTestInfo = unsafe.Sizeof(stTVHitTestInfo{})
-
 var _ = builtin(SendMessageTabHitTest, "(hwnd, msg, wParam, lParam)")
 
 func SendMessageTabHitTest(a, b, c, d Value) Value {
@@ -488,8 +480,6 @@ type stTCHitTestInfo struct {
 	pt    stPoint
 	flags int32
 }
-
-const nTCHitTestInfo = unsafe.Sizeof(stTCHitTestInfo{})
 
 var _ = builtin(SendMessageListColumn, "(hwnd, msg, wParam, lParam)")
 
@@ -529,8 +519,6 @@ type stLVColumn struct {
 	cxIdeal    int32
 	_          [4]byte // padding
 }
-
-const nLVColumn = unsafe.Sizeof(stLVColumn{})
 
 var _ = builtin(SendMessageListItem, "(hwnd, msg, wParam, lParam)")
 
@@ -605,8 +593,6 @@ type stLVItem struct {
 	_          [4]byte // padding
 }
 
-const nLVItem = unsafe.Sizeof(stLVItem{})
-
 var _ = builtin(SendMessageListColumnOrder, "(hwnd, msg, wParam, lParam)")
 
 func SendMessageListColumnOrder(a, b, c, d Value) Value {
@@ -660,8 +646,6 @@ type stLVHitTestInfo struct {
 	iSubItem int32
 	iGroup   int32
 }
-
-const nLVHitTestInfo = unsafe.Sizeof(stLVHitTestInfo{})
 
 var _ = builtin(SendMessageSystemTime, "(hwnd, msg, wParam, lParam)")
 
@@ -733,8 +717,6 @@ type SystemTimeRange struct {
 	min stSystemTime
 	max stSystemTime
 }
-
-const nSystemTimeRange = unsafe.Sizeof(SystemTimeRange{})
 
 var _ = builtin(SendMessageEDITBALLOONTIP, "(hwnd, msg, wParam, lParam)")
 
