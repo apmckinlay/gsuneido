@@ -151,7 +151,7 @@ func (dbms *DbmsLocal) Final() int {
 	return dbms.db.Final()
 }
 
-// Get handles QueryFirst, QueryLast, Query1, QueryExists?
+// Get handles QueryFirst, QueryLast, Query1, QueryEmpty?
 func (dbms *DbmsLocal) Get(
 	th *Thread, query Value, dir Dir) (Row, *Header, string) {
 	tran := dbms.db.NewReadTran()
