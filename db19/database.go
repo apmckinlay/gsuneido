@@ -616,7 +616,6 @@ func (db *Database) IsCorrupted() bool {
 	return db.corrupted.Load()
 }
 
-// Close closes the database store, writing the current size to the start.
 func (db *Database) Close() {
 	db.close(true)
 }

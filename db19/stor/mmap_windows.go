@@ -73,9 +73,11 @@ func (ms *mmapStor) close(size int64, unmap bool) {
 	// a file mapping object, the system holds the corresponding file open
 	// until the last view of the file is unmapped.
 	if unmap {
+		exit.Progress("    unmapping")
 		for _, ptr := range ms.ptrs {
 			syscall.UnmapViewOfFile(ptr)
 		}
+		exit.Progress("    unmapped")
 	}
 	ms.file.Truncate(size) // may not work if not unmap
 	exit.Progress("    file unlocking")
