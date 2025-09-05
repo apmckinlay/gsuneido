@@ -135,10 +135,10 @@ class
 						: 0
 					.readNewLog(initialSize, newSize, path)
 					if not ServerSuneido.Get('csDevPrint', Object()).Empty?()
-						RunOnGui(Suneido.DevServerLog)
+						Defer(Suneido.DevServerLog)
 					}
 				if ServerSuneido.Get('SafeShutdown', false)
-					RunOnGui(Exit)
+					Defer(Exit)
 				}
 			catch(err)
 				{

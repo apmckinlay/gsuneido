@@ -8,5 +8,4 @@ function (rec)
 		Update(rec.lib_current_text.Trim()).
 		Update(String(rec.lib_committed)).
 		Value() & 0xffffffff /*= 32 bits */
-			// need mask to be compatible with BuiltDate > 2025-05-09
 	}

@@ -141,8 +141,6 @@ Test
 		test(2147483647, "7fffffff")
 		test(2147483647.0, "7fffffff")
 		test(0x80000000, "80000000")
-		if BuiltDate() < #20250430
-			return
 		test(-1, "ffffffffffffffff")
 		test(-1.0, "ffffffffffffffff")
 		}

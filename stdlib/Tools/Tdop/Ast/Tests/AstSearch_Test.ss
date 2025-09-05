@@ -317,9 +317,6 @@ Test
 
 	Test_MultiAssign()
 		{
-		if BuiltDate() < #20250227
-			return
-
 		target = `function ()
 			{
 			v1, v2 = TestFn()

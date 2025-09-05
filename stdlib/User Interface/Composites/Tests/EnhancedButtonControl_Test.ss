@@ -9,6 +9,7 @@ Test
 		.mock.Top = 5
 		.mock.When.EnhancedButtonControl_updateSize([anyArgs:]).CallThrough()
 		.mock.When.CalcWidth([anyArgs:]).Return(100)
+		.mock.EnhancedButtonControl_imagePadding = 0
 		}
 	Test_calcSizeNoImage()
 		{

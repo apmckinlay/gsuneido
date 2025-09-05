@@ -25,9 +25,9 @@ PassthruController
 		.columnsSaveName = '', .buttonBar = false, .headerSelectPrompt = false,
 		.mandatoryFields = #(), stretch = false, .alwaysReadOnly = false, name = false,
 		extra = false, hideContents = false, .noSaveOnDestroy = false,
-		.loadRecordNotification = false, .addons = #())
+		.loadRecordNotification = false, .addons = #(), limitSize? = false)
 		{
-		super(.createControls(statusBar, stretch, extra))
+		super(.createControls(statusBar, stretch, extra, limitSize?))
 		.addons = .addons.Copy().Append(GetContributions('FormatContextMenuItems'))
 		.Addons = AddonManager(this, .addons)
 		// REFACTOR: move this into .addons
@@ -122,14 +122,16 @@ PassthruController
 		.list.SetMultiSelect(true)
 		return columns
 		}
-	createControls(statusBar, stretch, extra)
+	createControls(statusBar, stretch, extra, limitSize?)
 		{
 		Assert(String?(.title) or (.title is false))
-		Assert(Boolean?(statusBar))
+		Assert(limitSize? ? statusBar is true : Boolean?(statusBar))
 
 		list = Object(stretch is true ? "ListStretch" : "List", defWidth: false,
 			noShading: .noShading, noHeaderButtons: .noHeaderButtons,
-			headerSelectPrompt: .headerSelectPrompt)
+			headerSelectPrompt: .headerSelectPrompt,
+			limitHandler: limitSize? ? .listLimitHandler : false
+			)
 		if statusBar or .title isnt false
 			{
 			controls = Object("Vert")
@@ -232,7 +234,7 @@ PassthruController
 	setListDataAndProperties(columns, data, header_data)
 		{
 		.SetColumns(columns)
-		.list.Set(data)
+		.list.Set(data, continueWhenLimitReached?:)
 		.SetHeaderData(header_data isnt false ? header_data: .headerData)
 		.setRecordCustomDeps()
 		.Send('DoWithoutDirty')
@@ -1163,6 +1165,20 @@ PassthruController
 			row = row - 1
 		return .list.GetRow(row).Browse_NewRecord is true
 		}
+
+	listLimitHandler(msg)
+		{
+		// need a defer to avoid the message from been overidden
+		// by the broadcast .SetValid
+		.Defer(uniqueID: #listLimitWarning)
+			{
+			if .statusBar is false
+				return
+			.statusBar.Set(msg)
+			.statusBar.SetWarning()
+			}
+		}
+
 	mandatoryColMinWidth: 50
 	Header_TrackMinWidth(col)
 		{

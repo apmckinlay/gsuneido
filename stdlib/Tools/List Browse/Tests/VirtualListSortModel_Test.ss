@@ -488,8 +488,6 @@ VirtualListModelTests
 
 	Test_StripSort()
 		{
-		if BuiltDate() > #20250422
-			return
 		q = `/* tableHint: ` $ .table $ ` */ ` $ .table $
 			` where a isnt "" ` $
 			`/* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/ ` $
@@ -499,10 +497,10 @@ VirtualListModelTests
 		result = VirtualListSortModel.StripSort(q $ sort)
 		Assert(result
 			is: `/* tableHint: ` $ .table $ ` */ ` $ .table $
-			` where a isnt "" ` $
+			` where a isnt "" /* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/ ` $
 			`leftjoin by(vl_sort_test_num) ` $
-			`(` $ .masterTable $ ` rename vl_sort_test_name to vl_sort_test_name_ren) ` $
-			`/* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/`, msg: 'join false')
+			`(` $ .masterTable $ ` rename vl_sort_test_name to vl_sort_test_name_ren)`,
+			msg: 'join false')
 
 		cl = VirtualListSortModel { VirtualListSortModel_join?: true }
 		result = cl.StripSort(q)

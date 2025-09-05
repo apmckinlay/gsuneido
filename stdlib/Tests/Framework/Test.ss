@@ -422,6 +422,23 @@ print(@args)
 		return [:field, :prompt]
 		}
 
+	// NOTE: "name" should be generated via .TempName, or TempTableName
+	// 	IE: .MakeTable > return table > table = .TempTableName()
+	MakeCustomLayout(name, tab, layout = '', custom? = false, hidden? = '',
+		table_name = '', user = '', customKey = '')
+		{
+		destroyCustomizable? = not TableExists?('customizable')
+		Customizable(name)
+		QueryOutput('customizable',
+			[:name, :tab, :layout, :custom?, :hidden?, :table_name, :user, :customKey])
+		.AddTeardown({
+			if destroyCustomizable?
+				Database('destroy customizable')
+			else
+				QueryDo('delete customizable where name is ' $ Display(name))
+			})
+		}
+
 	MakeCustomizeField(tableName, field, formula = '', key = false, selectFields = false,
 		extrafields = #())
 		{

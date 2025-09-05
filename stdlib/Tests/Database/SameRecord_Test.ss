@@ -3,8 +3,6 @@ Test
 	{
 	Test_one()
 		{
-		if BuiltDate() < #20250713
-			return
 		table = .MakeTable("(a,b) key(a)", [a: 1, b: 2])
 		test =
 			{|first, second|

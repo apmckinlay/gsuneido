@@ -261,7 +261,8 @@ Component
 		if imageEl is false
 			return
 
-		size = ((.Ymin - 2) * (1 - .imagePadding)).Floor()
+		imagePadding = Object?(.imagePadding) ? .imagePadding.h : .imagePadding
+		size = ((.Ymin - 2) * (1 - imagePadding)).Floor()
 		if imageEl.tagName is 'IMG'
 			imageEl.SetStyle('height', size $ 'px')
 		imageEl.SetStyle('font-size', size $ 'px')

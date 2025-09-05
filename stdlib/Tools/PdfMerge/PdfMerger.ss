@@ -602,7 +602,7 @@ class
 		if s.Has?('ObjStm')
 			try
 				pdfOb.objs.Append(.convertStream(s,
-					reader.FileRead(f, obj.streamStart, obj.streamEnd)))
+					reader.FileRead(f, obj.streamStart, obj.streamEnd), objs))
 			catch (e)
 				throw .securedPdf?(e, objs, trailers)
 					? 'Secured pdf'
@@ -808,7 +808,7 @@ class
 			}
 		}
 
-	convertStream(segment, stream)
+	convertStream(segment, stream, objs)
 		{
 		start = segment.Match("/Type[" $ .ws $ "]*/ObjStm")[0][0]
 		headerStart = segment.FindLast('<<', start)
@@ -819,7 +819,7 @@ class
 		// pdf format is stream begins after first \n after keyword stream
 		// Zlib.Uncompress only handles "/Filter /FlateDecode"
 		stream = header.Has?('/Filter')
-			? .unzip(stream.AfterFirst("\n"))	// don't need to trim
+			? .unzip(stream.AfterFirst("\n"), header, objs)	// don't need to trim
 			: stream.AfterFirst("\n").RemoveSuffix("\n")
 		indexes = stream[.. first].Tr(.ws, " ").Split(" ").Map(Number)
 		indexes.Add(0) // Unused, just a placeholder
@@ -838,15 +838,29 @@ class
 		return objects
 		}
 
-	unzip(str)
+	unzip(str, header, objs)
 		{
 		if .afterMergedAsync isnt false
 			{
-			// Pako is sensitive on the last new line characters
-			// TODO: read the length property from stream object directly,
-			// TODO: need to handle when the length property is pointing to another object
+			// pdf file could have length obj embeded in the stream,
+			// which makes the length not reachable when unzipping
+			try
+				{
+				len = .getStreamLength(header, objs)
+				Assert(len isnt: 0)
+				return SuUI.GetCurrentWindow().PakoInflate(str[..len])
+				}
+			catch (err)
+				{
+				SuRender().Event(false, 'SuneidoLog',
+					Object('INFO: cannot get stream length, fall back to string trimming',
+						params: [:header, :err]))
+				}
+
 			try
 				return SuUI.GetCurrentWindow().PakoInflate(str.RemoveSuffix('\r\n'))
+			try
+				return SuUI.GetCurrentWindow().PakoInflate(str.RemoveSuffix('\n'))
 			try
 				return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\n'))
 			try // when stream ends with \n\r
@@ -854,6 +868,19 @@ class
 			return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\r\n'))
 			}
 		return Zlib.Uncompress(str)
+		}
+
+	getStreamLength(header, objs)
+		{
+		if 0 isnt len = Number(header.Extract("/Length[" $ .ws $ "]+([0-9]+)(/|$)"))
+			return len
+		// handles when length points to another object
+		if 0 is lenObjNum = Number(header.Extract(
+			"/Length[" $ .ws $ "]+([0-9]+)[" $ .ws $ "]+"))
+			throw 'invalid length object'
+		if 0 > lenObjIdx = .findObj(lenObjNum, objs)
+			throw 'cannot find length object ' $ String(lenObjNum)
+		return Number(objs[lenObjIdx].head.AfterFirst('obj').BeforeLast('endobj').Trim())
 		}
 
 	handleLinearized(pdfOb)
@@ -894,16 +921,22 @@ class
 			Extract("/Pages[" $ .ws $ "]+([0-9]+[" $ .ws $ "]+0[" $ .ws $ "]+R)")
 		pagesObjNum = pdfOb.pages.Extract('^[0-9]+')
 
-		for (i = pdfOb.objs.Size() - 1; i >= 0; i--)
-			if pdfOb.objs[i].head =~ '^[' $ .ws $ ']' $ pagesObjNum $
-				'[' $ .ws $ ']+0[' $ .ws $ ']+obj'
-				break
+		i = .findObj(pagesObjNum, pdfOb.objs)
 		if i < 0
 			throw 'PDFMerger - cannot find the start of page tree object'
 		pdfOb.pagesPos = i
 
 		pdfOb.pageCount =
 			Number(pdfOb.objs[i].head.Extract("/Count[" $ .ws $ "]+([0-9]+)"))
+		}
+
+	findObj(objNum, objs)
+		{
+		for (i = objs.Size() - 1; i >= 0; i--)
+			if objs[i].head =~ '^[' $ .ws $ ']' $ objNum $
+				'[' $ .ws $ ']+0[' $ .ws $ ']+obj'
+				break
+		return i
 		}
 
 	/* getSuneidoFormatKids
@@ -1213,5 +1246,14 @@ class
 			return
 		for f in .cleanupFiles
 			DeleteFile(f)
+		}
+
+	ValidPdf?(file)
+		{
+		File(file, 'r')
+			{|f|
+			return .isValidPdf(new PdfReader(), f)
+			}
+		return false
 		}
 	}

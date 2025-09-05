@@ -93,6 +93,7 @@ class
 	Semantic(search)
 		{
 		results = ""
+		search = Type(search) isnt 'String' ? String(search) : search
 		if not search.Blank?() and KnowledgeBase.Available?()
 			results = KnowledgeBase.Query(search, #('Wiki'), n: 20).
 				Map({ .format1(it.link.AfterFirst('Wiki?')) }).Join()

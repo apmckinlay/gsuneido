@@ -74,16 +74,19 @@ Controller
 			libs = Libraries().Append(UnusedStandardLibraries())
 			for lib in libs
 				{
-				data.Append(QueryAll(lib $ '
-					rename lib_modified to modified,
-						lib_committed to committed
-					extend lib = ' $ Display(lib) $ ',
-						svc_checked = false,
-						tag = LibraryTags.GetTagFromName(name)' $ Opt('
-					where ', .trialTags.Members().Map(
-						{ 'tag.Suffix?(' $ Display('_' $ it) $ ')' }).Join(' or ')) $ '
-					where group is -1
-					project name, group, lib, modified, committed, svc_checked'))
+				try
+					data.Append(QueryAll(lib $ '
+						rename lib_modified to modified,
+							lib_committed to committed
+						extend lib = ' $ Display(lib) $ ',
+							svc_checked = false,
+							tag = LibraryTags.GetTagFromName(name)' $ Opt('
+						where ', .trialTags.Members().
+							Map({ 'tag.Suffix?(' $ Display('_' $ it) $ ')' }).
+							Join(' or ')) $ '
+						where group is -1
+						project name, group, lib, modified, committed, svc_checked'))
+				catch (unused, 'nonexistent table|*nonexistent column') { }
 				}
 			.list.Set(data.Map(.formatRec))
 			}

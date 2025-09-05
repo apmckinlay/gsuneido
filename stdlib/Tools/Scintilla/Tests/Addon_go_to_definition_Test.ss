@@ -150,8 +150,6 @@ Test
 
 	Test_gotoMethod?()
 		{
-		if BuiltDate() < #20250218
-			return
 		.MakeLibraryRecord([name: 'Addon_go_to_definition_FakeTest',
 			text: `class
 				{

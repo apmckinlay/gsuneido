@@ -4,6 +4,6 @@ function (block)
 	Thread()
 		{
 		p = Thread.Profile({ reps = Timer.Secs(secs: 1, :block).reps })
-		RunOnGui({ ProfileResults(p, reps) })
+		Defer({ ProfileResults(p, reps) })
 		}
 	}

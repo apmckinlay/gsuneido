@@ -34,9 +34,6 @@ class
 
 	AddMode(mode, onlyClient? = false)
 		{
-		if BuiltDate() < #20250516
-			return
-
 		modes = Suneido.GetInit(#LibraryTags_Modes, Object)
 		modes.AddUnique(mode)
 		.Reset(:onlyClient?)
@@ -44,9 +41,6 @@ class
 
 	Reset(onlyClient? = false)
 		{
-		if BuiltDate() < #20250516
-			return
-
 		if Client?() and not onlyClient?
 			ServerEval('LibraryTags.Reset')
 
@@ -89,13 +83,10 @@ class
 
 	GetTagsInUse()
 		{
-		if BuiltDate() < #20250516
-			return #('')
-
 		return Suneido.Info('library.tags').SafeEval()
 		}
 
-	GetRecord(name, lib)
+	GetRecord(name, lib, exclude = false)
 		{
 		// #() means the client is using the server's tags
 		if #() is curTags = .GetTagsInUse()
@@ -103,6 +94,8 @@ class
 
 		for (i = curTags.Size() - 1; i >= 0; i--)
 			{
+			if exclude isnt false and curTags[i].Has?(exclude)
+				continue
 			if false isnt rec = Query1(lib, group: -1, name: name $ curTags[i])
 				return rec
 			}

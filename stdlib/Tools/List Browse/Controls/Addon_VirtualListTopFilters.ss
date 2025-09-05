@@ -123,6 +123,13 @@ Addon_VirtualListViewBase
 		view.AfterTopFilter("close")
 		}
 
+	On_Count()
+		{
+		if false is .Select_Apply()
+			return
+		AccessControl.GetCount(.GetTitle(), .GetQuery())
+		}
+
 	Select_Apply()
 		{
 		if false is .Send('VirtualList_ApplySelect?')

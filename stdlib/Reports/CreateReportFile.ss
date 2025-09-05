@@ -101,7 +101,7 @@ class
 		menuParams = rpt.Menu_params_fields()
 		missing = menuParams.Difference(paramFields)
 		for m in missing
-			params.Add(#(operation: "") at: m $ "_param")
+			params.Add(#(operation: "", value: '', value2: '') at: m $ "_param")
 
 		remainingParams = paramFields.Difference(fields)
 		if not remainingParams.Empty?()

@@ -4,27 +4,29 @@ Controller
 	Xmin: 750
 	Ymin: 475 // within a few pixels of previous min. height
 	CallClass(ctrl, name = '', okbutton = false, defaultButton = '',
-		noUserDefaultSelects? = false)
+		noUserDefaultSelects? = false, setSelectVals = false)
 		{
 		ToolDialog(0,
-			Object(this, ctrl, name, :okbutton, :defaultButton, :noUserDefaultSelects?),
+			Object(this, ctrl, name, :okbutton, :defaultButton, :noUserDefaultSelects?,
+				:setSelectVals),
 				closeButton?: false, keep_size: 'Select~' $ name)
 		}
 
 	Title: "Select"
 	New(access, .name, okbutton = false, defaultButton = '',
-		noUserDefaultSelects? = false)
+		noUserDefaultSelects? = false, setSelectVals = false)
 		{
-		super(.layout(access, okbutton, defaultButton, noUserDefaultSelects?))
+		super(.layout(access, okbutton, defaultButton, noUserDefaultSelects?,
+			setSelectVals))
 		.select2 = .Vert.SelectRepeat
 		}
-	layout(access, okbutton, defaultButton, noUserDefaultSelects?)
+	layout(access, okbutton, defaultButton, noUserDefaultSelects?, setSelectVals)
 		{
 		.DefaultButton = defaultButton
 		.access = access
 
 		.sf = access.GetSelectFields()
-		selects = access.Select_vals
+		selects = setSelectVals is false ? access.Select_vals : setSelectVals
 		.remove_invalid_selects(selects)
 
 		return Object('Vert',
@@ -40,11 +42,21 @@ Controller
 			not it.Member?('condition_field') or not .sf.Fields.Has?(it.condition_field)
 			}
 		}
+
+	CountBtnTip: 'Show the number of records matching the current Select'
 	buttons(@list)
 		{
 		ob = Object('HorzEven', 'Skip')
+
+		if not list.Has?('Select') // KeyListView
+			list.Add("Count")
+		tip = ''
 		for button in list.Add("Uncheck All", "Cancel")
-			ob.Add(Object('Button', button), 'Skip')
+			{
+			if button is 'Count'
+				tip = .CountBtnTip
+			ob.Add(Object('Button', button, :tip), 'Skip')
+			}
 		return ob
 		}
 
@@ -113,5 +125,12 @@ Controller
 	On_Cancel()
 		{
 		.Window.Result("")
+		}
+
+	On_Count()
+		{
+		if (false is .set_query())
+			return
+		.access.On_Count()
 		}
 	}

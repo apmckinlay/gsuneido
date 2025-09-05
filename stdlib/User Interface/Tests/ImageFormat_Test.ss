@@ -29,4 +29,16 @@ Test
 		Assert(mock.imageSizeOb('diffValue') is: Object(width: 1, height: 1))
 		Assert(mock.ImageFormat_validImageSize? is: false)
 		}
+
+	Test_dataString()
+		{
+		c = ImageFormat
+			{
+			ImageFormat_data: 'test2.file'
+			}
+		fn = c.ImageFormat_dataString
+		Assert(fn('', textOnly?:) endsWith: 'test2.file')
+		Assert(fn('\xfc\xff', textOnly?:) is: '\xfc\xff')
+		Assert(fn('test.file', textOnly?:) endsWith: 'test.file')
+		}
 	}

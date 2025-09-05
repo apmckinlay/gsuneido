@@ -1,7 +1,6 @@
 // Copyright (C) 2025 Suneido Software Corp. All rights reserved worldwide.
 // NOTE: this is deliberately not named _Test
 // because we don't want it running when you run the tests
-// BuiltDate > 20250520
 Test
 	{
 	Setup()

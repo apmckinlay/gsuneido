@@ -396,8 +396,6 @@ Test
 
 	Test_AssignOp()
 		{
-		if BuiltDate() < #20250328
-			return
 		ob = Object()
 		Assert({ ob.n += 5 } throws: "member not found")
 		Assert(ob isSize: 0)
@@ -406,8 +404,6 @@ Test
 		}
 	Test_for_m_v()
 		{
-		if BuiltDate() < #20250411
-			return
 		x = Seq(3).Map({ it })
 		ob = Object()
 		for m, v in x

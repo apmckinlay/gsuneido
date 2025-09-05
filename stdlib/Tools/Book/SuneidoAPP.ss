@@ -28,8 +28,7 @@ class
 
 	decode(url)
 		{
-		if BuiltDate() >= #20250307
-			url = url.BeforeFirst('#')
+		url = url.BeforeFirst('#')
 		if false is pos = url.FindLast('?')
 			pos = url.Size()
 		return Url.Decode(url[..pos]) $ url[pos..]

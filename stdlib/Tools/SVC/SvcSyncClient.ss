@@ -59,8 +59,7 @@ class
 			range.here.Add(i)
 			cksum.Update(.checksums[i].Hex())
 			}
-		return range.cksum is (cksum.Value() & 0xffffffff) /*=
-			need mask to be compatible with BuiltDate > 2025-05-09 */
+		return range.cksum is (cksum.Value() & 0xffffffff) /*= 32 bits */
 		}
 
 	results(r, results)

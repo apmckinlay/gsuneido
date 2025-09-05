@@ -60,7 +60,15 @@ class
 		if not address.Has?('<')
 			return address
 		displayName = address.BeforeLast('<').Tr(';:<>"\',')
-		return displayName $ '<' $ address.AfterLast('<')
+		return .encode(displayName) $ '<' $ address.AfterLast('<')
+		}
+
+	encode(display)
+		{
+		if display =~ '^[\x20-\x7f]*$'
+			return display
+		display = display.Trim().ToUtf8()
+		return '=?UTF-8?B?' $ Base64.Encode(display).RightTrim('=') $ '?='
 		}
 
 	CreateMime(subject, message, filename, attachFileName)

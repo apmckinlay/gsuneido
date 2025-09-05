@@ -194,7 +194,7 @@ FieldControl
 		{
 		// Only adjust the time if it is not a static method call and it is not from Set
 		// because otherwise the date value should be exactly what is wanted
-		if .Member?(#Hwnd) and not fromSet
+		if not fromSet
 			{
 			// if user types a date without time,
 			// default the time to 12 PM (same as choosing from calendar)
@@ -206,7 +206,7 @@ FieldControl
 
 	timeEntered?()
 		{
-		text = GetWindowText(.Hwnd)
+		text = super.Get()
 		if text.Has?(':') or text.Lower().Has?('am') or text.Lower().Has?('pm')
 			return true
 		return false

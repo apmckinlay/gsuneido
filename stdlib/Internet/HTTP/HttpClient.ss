@@ -44,7 +44,7 @@ class
 		header.Host = a.host $ Opt(':', a.GetDefault(#port, ''))
 		header.Connection = 'close'
 
-		send = bufferedSend	? .sendFile : HttpSend
+		send = bufferedSend and content isnt '' ? .sendFile : HttpSend
 		send(sc, method $ " " $ a.GetDefault(#path, '/') $ " HTTP/1.1", header, content)
 		}
 	sendFile(sc, start, header, file)

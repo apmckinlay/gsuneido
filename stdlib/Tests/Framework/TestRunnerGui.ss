@@ -414,7 +414,7 @@ Controller
 				}
 			if debuggingOptions.compareSnaps?
 				.snapshotCompare(debuggingOptions, compare?:)
-			RunOnGui({ .guiTests(:data, :guiTests, :observer, :runTestRunner, :before) })
+			Defer({ .guiTests(:data, :guiTests, :observer, :runTestRunner, :before) })
 			}
 		.Delay(100, .updateUi, uniqueID: 'updateUi') /*= 1/10 sec */
 		return
@@ -450,9 +450,9 @@ Controller
 
 	timeTestEvent(msg, block)
 		{
-		RunOnGui({ .displayTestEventInfo(msg, '\r\n') })
+		Defer({ .displayTestEventInfo(msg, '\r\n') })
 		t = Timer(block)
-		RunOnGui({ .displayTestEventInfo('duration: ' $ t $ ' (secs)', ', ') })
+		Defer({ .displayTestEventInfo('duration: ' $ t $ ' (secs)', ', ') })
 		}
 
 	displayTestEventInfo(msg, separator = '')

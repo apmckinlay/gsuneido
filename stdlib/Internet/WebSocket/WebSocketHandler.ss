@@ -160,7 +160,7 @@ GetLevel()
 		decoded = StringXor(encoded, mask)
 
 		if opcode is 0x0 // continuation frame
-			return decoded
+			return fin? ? decoded : decoded $ .receive()
 
 		body = fin? ? decoded : decoded $ .receive()
 		return Object(type: .typeMap[opcode], :body)

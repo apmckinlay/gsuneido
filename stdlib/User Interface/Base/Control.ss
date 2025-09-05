@@ -347,8 +347,7 @@ class /*abstract*/
 		}
 	Defer(block, uniqueID = false)
 		{
-		fn = BuiltDate() > #20250327 or Sys.MainThread?() ? Defer : RunOnGui
-		return .delayed(fn, block, 0, uniqueID)
+		return .delayed(Defer, block, 0, uniqueID)
 		}
 	delayed(fn, block, delay, uniqueID)
 		{

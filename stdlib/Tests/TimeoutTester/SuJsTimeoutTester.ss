@@ -1,6 +1,7 @@
 // Copyright (C) 2025 Suneido Software Corp. All rights reserved worldwide.
 SuJsTester
 	{
+	LogFileName: 'timeout'
 	CallClass(name, user, title = false)
 		{
 		.Start(Url.Encode('SuJsTimeoutTester', [:name, :user]), id: name, :title,
@@ -26,10 +27,10 @@ SuJsTester
 		Thread.Name(sessionName)
 		Database.SessionId(sessionName)
 
-		.log("Client started for " $ type $ ' as ' $ Suneido.User)
+		.Log("Client started for " $ type $ ' as ' $ Suneido.User)
 		PersistentWindow.Load(timeoutTester.set)
 		TimeoutClient.OpenScreen(timeoutTester.name, timeoutTester)
-		.log("attempting to add client for " $ type $ ' as ' $ Suneido.User)
+		.Log("attempting to add client for " $ type $ ' as ' $ Suneido.User)
 		ServerEval('TimeoutTester.AddStartedClient', name)
 
 		SuRenderBackend().RegisterBeforeDisconnectFn({ ServerSuneido.Set(name, true) })
@@ -44,10 +45,5 @@ SuJsTester
 			}
 		Delay(4.MinutesInMs() /*=should have timed out*/,
 			{ SuRenderBackend().DumpStatus(name $ ' not timeout after 4 mins') })
-		}
-
-	log(s)
-		{
-		Rlog('timeout', s $ '\r\n')
 		}
 	}

@@ -27,6 +27,8 @@ Contributions:
 		target: IdeActions)
 	(UI, action, menu: IDE, name: "&TestRunner",
 		target: function (@unused) { TestRunnerGui() })
+	(UI, action, menu: IDE, name: "Trial &Wizard",
+		target: function (@unused) { SvcTrialWizard() })
 	(UI, action, menu: IDE, name: "&Version Control",
 		target: function (@unused) { SvcControl() })
 	(UI, action, menu: IDE, name: "Show/Hide Override",

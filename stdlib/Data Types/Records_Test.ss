@@ -20,16 +20,10 @@ Test
 		}
 	test_queries(r)
 		{
-		if BuiltDate() < #20250414
-			args = #("stdlib where name = 'Records_Test'")
-		else
-			args = #(stdlib, name: Records_Test)
+		args = #(stdlib, name: Records_Test)
 		for m in #(Query1, QueryEmpty?)
 			Assert(r[m](@args) is: Global(m)(@args))
-		if BuiltDate() < #20250423
-			args = #("stdlib where name = 'Records_Test' sort num")
-		else
-			args = #("stdlib sort num", name: Records_Test)
+		args = #("stdlib sort num", name: Records_Test)
 		for m in #(QueryFirst, QueryLast)
 			Assert(r[m](@args) is: Global(m)(@args))
 		}

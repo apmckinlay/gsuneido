@@ -237,4 +237,25 @@ Test
 				}
 			}
 		}
+	Test_bug_20250828()
+		{
+		if BuiltDate() < #20250828
+			return
+
+		master = .MakeTable("(x, id) index(x) key(id)", [x: 1, id: 2])
+
+		tran = .MakeTable("(k, id) key(k) index(id) in " $ master $ "(id)",
+			[k: 123, id: 2])
+		schema = Schema(tran).Tr(" \r\n", " ").Trim()
+		Assert(schema is: tran $ " (id, k) key (k) " $
+			"index (id) in " $ master)
+		Database("rename " $ tran $ " to " $ .TempTableName())
+
+		tran = .MakeTable("(k, id) key(k)", [k: 123, id: 2])
+		Database("ensure " $ tran $ " index(id) in " $ master $ "(id)")
+
+		tran = .MakeTable("(k, id) key(k)", [k: 123, id: 2])
+		Database("alter " $ tran $ " create index(id) in " $ master $ "(id)")
+		Database("alter " $ tran $ " rename id to xx")
+		}
 	}

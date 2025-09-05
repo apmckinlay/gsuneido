@@ -91,7 +91,7 @@ Singleton
 
 	queryRec(lib, name)
 		{
-		return LibraryTags.GetRecord(name, lib)
+		return LibraryTags.GetRecord(name, lib, exclude: 'webgui')
 		}
 
 	Add(lib, name)

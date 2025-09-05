@@ -174,6 +174,11 @@ Test
 		Assert(callLogs[3] is: #(folder: `testFolder\subFolder\`))
 		Assert(callLogs isSize: 4)
 		mock.Verify.Times(2).createDir?(`testFolder\subFolder\`)
+
+		mock.When.s3Bucket().Return('test')
+		Assert(mock.ensureCopyFolder(true, 'testFolder') is: `testFolder\subFolder\`)
+		Assert(callLogs isSize: 4)
+		mock.Verify.Times(2).createDir?(`testFolder\subFolder\`) // not being called
 		}
 
 	Test_GetCopyToFilename()

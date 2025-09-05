@@ -307,7 +307,7 @@ class
 		{
 		if local_list.Member?('Hwnd') and
 			local_list.CompareAndSet(#Repainter, false, true) // temp set to true
-			local_list.Repainter = RunOnGui({
+			local_list.Repainter = Defer({
 				if local_list.Member?('Hwnd')
 					local_list.Repaint()
 				local_list.Repainter = false

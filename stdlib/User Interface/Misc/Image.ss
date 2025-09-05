@@ -46,7 +46,6 @@ class
 		}
 
 	picObject: false
-	rectPtr:   false
 
 	New(dataOrFilename)
 		{
@@ -73,13 +72,6 @@ class
 
 		.picObject = COMobject(pppic.x)
 		Assert(.picObject.Dispatch?())
-		try
-			.allocPointer()
-		catch (x)
-			{
-			.picObject.Release()
-			throw x
-			}
 		}
 
 	ValidImageExtension: #(bmp, gif, jpg, jpe, jpeg, ico, emf, wmf, tif, tiff, png)
@@ -195,19 +187,8 @@ class
 		if false is .picObject
 			throw "Image: already closed"
 		}
-	allocPointer()
-		{
-		hHeap = GetProcessHeap()
-		if NULL is hHeap
-			throw "Image: can't get process heap"
-		rectPtr = HeapAlloc(hHeap, 0, RECT.Size())
-		if NULL is rectPtr
-			throw "Image: can't allocate scratch space"
-		.rectPtr = rectPtr
-		}
 	draw(hdc, rc, hmSize)
 		{
-		CopyMemory(.rectPtr, RECT(rc.ToWindowsRect()), RECT.Size())
 		try
 			.picObject.Render(
 				hdc,
@@ -328,8 +309,5 @@ class
 		{
 		.picObject.Release()
 		.Delete('picObject')
-		hHeap = GetProcessHeap()
-		HeapFree(hHeap, 0, .rectPtr)
-		.Delete('rectPtr')
 		}
 	}

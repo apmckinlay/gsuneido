@@ -2,7 +2,7 @@
 PassthruController
 	{
 	Name: 'ReportLayoutDesign'
-	New(.rptName)
+	New(.rptName, .ctrlName = false)
 		{
 		super(.layout())
 		}
@@ -24,7 +24,7 @@ PassthruController
 				Object(width: 10, font: #(weight: 'bold'), color: CLR.Highlight)),
 			keyField: 'rptdesign_num_new',
 			stretchColumn:,
-			name: .Name $ .rptName,
+			name: (.ctrlName isnt false ? .ctrlName : .Name $ .rptName),
 			preventCustomExpand?:
 			)
 		}
@@ -39,7 +39,9 @@ PassthruController
 						tip: 'switch between list and form view (Alt+A)', alignTop:),
 					#Skip,
 					#(Heading3, '', name: 'titleText'))
-				format
+				format,
+				Object('Static', '', color: CLR.ErrorColor, weight: 'bold',
+					name: 'validMsg')
 			)
 		}
 
@@ -58,6 +60,7 @@ PassthruController
 			super(Object('Record', layout))
 			.Send(#Data)
 			.Data.SetProtectField(protectField)
+			.Data.AddObserver(.RecordChange)
 			}
 
 		Get()
@@ -70,6 +73,11 @@ PassthruController
 			if value is ''
 				value = []
 			.Data.Set(value.DeepCopy())
+			}
+
+		RecordChange(member/*unused*/)
+			{
+			.Send('ReportLayoutDesign_SetValidFieldMsg', .Data.Get())
 			}
 
 		Record_NewValue(@unused)
@@ -138,7 +146,22 @@ PassthruController
 		if false isnt ctrl = .FindControl('titleText')
 			ctrl.Set(rec.rptdesign_name)
 
+		.ReportLayoutDesign_SetValidFieldMsg(rec)
 		return true
+		}
+	ReportLayoutDesign_SetValidFieldMsg(rec)
+		{
+		validfield = ReportLayoutDesign.GetValidField(.rptName)
+		if validfield isnt false
+			{
+			if rec.Member?('rptdesign_layout') // from the list view
+				rec = rec.Copy()
+			else
+				rec = Record(rptdesign_layout: rec.Copy()) // from the form view
+			msg = rec[validfield]
+			if false isnt ctrl = .FindControl('validMsg')
+				ctrl.Set(msg)
+			}
 		}
 
 	usedOnSchedReport?(t, oldrec)

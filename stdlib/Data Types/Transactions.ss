@@ -145,12 +145,6 @@ class
 
 	QueryEmpty?(@args)
 		{
-		if BuiltDate() < #20250424
-			{
-			args[0] = QueryStripSort(args[0]) $
-				" /* CHECKQUERY SUPPRESS: SORT REQUIRED */"
-			return false is .QueryFirst(@args)
-			}
 		return not .QueryExists?(@args)
 		}
 

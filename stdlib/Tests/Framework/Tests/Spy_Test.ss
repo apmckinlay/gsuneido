@@ -37,6 +37,8 @@ Test
 		.MakeLibraryRecord([name: "SpyTest_1", text: .src1])
 		.MakeLibraryRecord([name: "SpyTest_2", text: .src2])
 		.MakeLibraryRecord([name: "SpyTest_3?", text: .src3])
+		.MakeLibraryRecord([name: "SpyTest_4", text: .src3])
+		.MakeLibraryRecord([name: "SpyTest_4__trial", text: .src3])
 		}
 
 	Test_SpyOnFunction()
@@ -115,6 +117,17 @@ Test
 		Assert(spy2.Lib is: "Test_lib")
 		Assert(spy2.Method?)
 		Assert(spy2.Params is: '()')
+
+		spy3 = fakeSpy(Global("SpyTest_4"))
+		target = LibraryTags.GetTagsInUse().Has?('__trial')
+			? "SpyTest_4.CallClass /* Test_lib__trial method */"
+			: "SpyTest_4.CallClass /* Test_lib method */"
+		Assert(Display(spy3.Target) is: target)
+		Assert(spy3.Name is: "SpyTest_4")
+		Assert(spy3.Paths is: #("CallClass"))
+		Assert(spy3.Lib is: "Test_lib")
+		Assert(spy3.Method?)
+		Assert(spy3.Params is: '()')
 		}
 
 	Test_CallClass()

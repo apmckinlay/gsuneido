@@ -59,8 +59,10 @@ Component
 
 	OnBlur(event)
 		{
+		if SuRender().Overlay.Status is #Opening
+			return
 		super.OnBlur()
-		if event.target isnt .El or SuRender().Overlay.Status is #Opening
+		if event.target isnt .El
 			return
 
 		id = false
@@ -70,7 +72,7 @@ Component
 				focusEl = event.relatedTarget
 				id = focusEl.Control().UniqueId
 				}
-		.Event(#KILLFOCUS, wParam: id)
+		.EventWithFreeze(#KILLFOCUS, wParam: id)
 		}
 
 	init()

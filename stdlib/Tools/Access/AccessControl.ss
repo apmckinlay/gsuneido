@@ -555,14 +555,14 @@ CommandParent
 			? 'first'
 			: (dir is 'Next' ? 'last' : '?')
 		.set_position_button_state(position)
+		selected = .Select_vals.DeepCopy()
 		.Select_vals.Each({ it.check = false })
-		Alert('No records found that ' $
-			'match the current select.\r\n\r\nSelection has been reset.',
+		Alert('No records found that match the current select',
 			.title, flags: MB.ICONINFORMATION)
 		.SetWhere("")
 		.Defer(uniqueID: 'reopen_select_dialog') // need the orig select to close first
 			{
-			.On_Select()
+			.On_Select(selected)
 			}
 		}
 	recordDeleted()
@@ -898,7 +898,7 @@ CommandParent
 		if .select_button isnt false
 			.select_button.Pushed?(.select)
 		}
-	On_Select()
+	On_Select(setSelectVals = false)
 		{
 		if not .Save()
 			return
@@ -906,7 +906,7 @@ CommandParent
 		.set_select_button_state()
 		SelectControl(
 			this, .selectMgr.Name(), defaultButton: .start_last? ? 'Last' : 'First'
-			noUserDefaultSelects?: .accessGoTo)
+			noUserDefaultSelects?: .accessGoTo, :setSelectVals)
 		BookLog('Access Select End')
 		}
 
@@ -1458,6 +1458,23 @@ CommandParent
 	OverrideSelectManager?()
 		{
 		return false
+		}
+
+	On_Count()
+		{
+		if false isnt q = .GetQuery()
+			.GetCount(.title, q)
+		}
+
+	GetCount(title, query)
+		{
+		count = ''
+		Working('Getting Count...')
+			{
+			count = QueryCount(query)
+			}
+		if '' isnt count
+			.AlertInfo(title, "Count: " $ count)
 		}
 
 	On_Global(option)

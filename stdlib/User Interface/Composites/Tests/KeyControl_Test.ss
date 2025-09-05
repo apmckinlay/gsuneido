@@ -23,29 +23,20 @@ Test
 		// just restrictions
 		restrictions = "testfield1 is 'testval1' and testfield2 is 'testval2'"
 		Assert(idClass.Key_BuildQuery(query, restrictions, invalidRestrictions)
-			sameText: BuiltDate() < #20250422
-				? "test_query where testfield1 is 'testval1' and
-					testfield2 is 'testval2' sort testsortfield"
-				: "test_query sort testsortfield
+			sameText: "test_query sort testsortfield
 					where testfield1 is 'testval1' and testfield2 is 'testval2'")
 
 		// both restrictions and invalidRestrictions
 		invalidRestrictions = "testfield3 is 'testval3'"
 		Assert(idClass.Key_BuildQuery(query, restrictions, invalidRestrictions)
-			sameText: BuiltDate() < #20250422
-				? "test_query where testfield1 is 'testval1' and
-					testfield2 is 'testval2' where testfield3 is 'testval3'
-					sort testsortfield"
-				: "test_query sort testsortfield
+			sameText: "test_query sort testsortfield
 					where testfield1 is 'testval1' and testfield2 is 'testval2'
 					where testfield3 is 'testval3'")
 
 		// just invalidRestrictions
 		restrictions = false
 		Assert(idClass.Key_BuildQuery(query, restrictions, invalidRestrictions)
-			sameText: BuiltDate() < #20250422
-				? "test_query where testfield3 is 'testval3' sort testsortfield"
-				: "test_query sort testsortfield where testfield3 is 'testval3'")
+			sameText: "test_query sort testsortfield where testfield3 is 'testval3'")
 
 		// just optionalRestrictions (ChooseDate)
 		.MakeLibraryRecord([name: 'Field_test_field'
@@ -56,10 +47,7 @@ Test
 				}`])
 		optRestrictions = #(test_field)
 		Assert(idClass.Key_BuildQuery(query, false, false, :optRestrictions)
-			sameText: BuiltDate() < #20250422
-				? 'test_query  where (test_field is "" or test_field >= ' $
-					Display(Date().NoTime()) $ ') sort testsortfield'
-				: 'test_query sort testsortfield where (test_field is "" or
+			sameText: 'test_query sort testsortfield where (test_field is "" or
 					test_field >= ' $ Display(Date().NoTime()) $ ')')
 
 		// just optionalRestrictions (ChooseList)
@@ -71,18 +59,12 @@ Test
 				}`])
 		optRestrictions = #(test_field2)
 		Assert(idClass.Key_BuildQuery(query, false, false, :optRestrictions)
-			sameText: BuiltDate() < #20250422
-				? 'test_query where test_field2 is "active" sort testsortfield'
-				: 'test_query sort testsortfield where test_field2 is "active"')
+			sameText: 'test_query sort testsortfield where test_field2 is "active"')
 
 		// both optionalRestrictions
 		optRestrictions = #(test_field, test_field2)
 		Assert(idClass.Key_BuildQuery(query, false, false, :optRestrictions)
-			sameText: BuiltDate() < #20250422
-				? 'test_query where (test_field is "" or test_field >= ' $
-					Display(Date().NoTime()) $
-					')  where test_field2 is "active" sort testsortfield'
-				: 'test_query sort testsortfield where (test_field is "" or
+			sameText: 'test_query sort testsortfield where (test_field is "" or
 					test_field >= ' $ Display(Date().NoTime()) $ ')
 					where test_field2 is "active"')
 
@@ -91,13 +73,7 @@ Test
 		restrictions = 'testfield1 is "testval1" and testfield2 is "testval2"'
 		Assert(idClass.Key_BuildQuery(query, restrictions, invalidRestrictions,
 			:optRestrictions)
-			sameText: BuiltDate() < #20250422
-				? 'test_query  where testfield1 is "testval1" and ' $
-					'testfield2 is "testval2"  where testfield3 is "testval3"  ' $
-					'where (test_field is "" or test_field >= ' $
-					Display(Date().NoTime()) $
-					')  where test_field2 is "active" sort testsortfield'
-				: 'test_query sort testsortfield where testfield1 is "testval1" and
+			sameText: 'test_query sort testsortfield where testfield1 is "testval1" and
 					testfield2 is "testval2" where testfield3 is "testval3"
 					where (test_field is "" or
 					test_field >= ' $ Display(Date().NoTime()) $ ')

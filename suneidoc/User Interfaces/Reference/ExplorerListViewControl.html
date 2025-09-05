@@ -63,28 +63,6 @@ ExplorerListViewControl(
 <p>Note: Since the example is using a system table,
 you won't be able to modify the information.</p>
 
-<p>We can also use ExplorerVirtualListView, which is almost exactly the same,
-except that the query argument must be specified.
-This uses a virtual listview which does not load all the data into memory
-and is more suited to dealing with large amounts of data.</p>
-
-<pre>
-ExplorerVirtualListViewControl(
-    #("ExplorerListModel", "tables" ("table") (table tablename)),
-    #(Form
-        (Button 'New') (Button 'Delete') nl nl
-        (table group:0) nl
-        (tablename group:0) nl
-        (nextfield group:0) nl
-        (nrows group:0) nl
-        (totalsize group:0)
-        )
-    query: "tables"
-    columns: #(table tablename)
-    title: "Tables"
-    )
-</pre>
-
 <p>For more information on stickyFields, validField, and protectField parameters, please refer to <a href="AccessControl.html">AccessControl</a>.</p>
 
 <p>See also:

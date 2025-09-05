@@ -3,14 +3,23 @@ class
 	{
 	CallClass(env)
 		{
-		if JsSessionToken.Validate(env) is false
-			return Object('401', [], 'Your session is invalid or expired')
+		if .invalidToken?(env)
+			return Object('Unauthorized', [], 'Your session is invalid or expired')
+
+		if not env.queryvalues.Member?(0)
+			return ['BadRequest', [], 'Invalid request, missing file name']
 
 		filename = Base64.Decode(env.queryvalues[0]).Xor(EncryptControlKey())
 		preview? = env.queryvalues.GetDefault('preview', false)
 		saveName = env.queryvalues.GetDefault('saveName', false)
 		.Download(env, filename, preview?, saveName)
 		}
+
+	invalidToken?(env)
+		{
+		return JsSessionToken.Validate(env) is false
+		}
+
 	Download(env, filename, preview? = false, saveName = false)
 		{
 		// Todo: only allow downloading from files in temp or attachment or UserData (for Videos)

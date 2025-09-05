@@ -53,12 +53,13 @@ class
 		if '' isnt bucket = AttachmentS3Bucket()
 			{
 			region = AmazonS3.GetBucketLocationCached(bucket)
-			if not AmazonS3.FileExist?(bucket, file)
-				return AmazonS3.PutFile(
-					bucket, file, FormatAttachmentPath(fileTo), :region)
+			s3FileFrom = FormatAttachmentPath(file)
+			s3FileTo = FormatAttachmentPath(fileTo)
+			if file.Prefix?(GetAppTempPath()) or
+				not AmazonS3.FileExist?(bucket, s3FileFrom)
+				return AmazonS3.PutFile(bucket, file, s3FileTo, :region)
 			else
-				return AmazonS3.CopyFile(
-					bucket, file, bucket, FormatAttachmentPath(fileTo))
+				return AmazonS3.CopyFile(bucket, s3FileFrom, bucket, s3FileTo)
 			}
 
 		return CopyFile(file, fileTo, true)

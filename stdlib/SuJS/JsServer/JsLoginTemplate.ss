@@ -203,7 +203,7 @@
 					<div class="checkboxlabel-container" style="margin-bottom: 10px;">
 						<input type="checkbox" id="newuser" name="newreset"
 								onclick="togglePasswordEnabled()">
-						<label>New User or Password Reset</label>
+						<label for="newuser">New User or Password Reset</label>
 					</div>
 					<input type="text" id="user" name="user" size="20"
 						autocomplete="su-do-not-autofill">

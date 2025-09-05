@@ -1094,4 +1094,15 @@ class
 
 		return false
 		}
+
+	TabCustomized?(tab)
+		{
+		if not TableExists?(.savein)
+			return false
+
+		tab = Query1(.savein, :tab, name: .name)
+		return tab isnt false
+			? tab.layout isnt '' and tab.hidden? isnt true
+			: false
+		}
 	}

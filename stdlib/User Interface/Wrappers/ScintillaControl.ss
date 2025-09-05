@@ -660,8 +660,9 @@ calls = FormatCallStack(calls, levels: 20).
 		{ .CUT() }
 	On_Copy()
 		{
-		s = .GetSelText()
-		if s.Size() is 0
+		.COPY()
+		s = ClipboardReadString()
+		if not String?(s) or s.Size() is 0
 			return
 		s = s.Tr('\r').Replace('\n', '\r\n')
 		ClipboardWriteString(s)

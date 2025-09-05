@@ -55,7 +55,7 @@ class
 		note = display.AfterFirst(`/* `).BeforeFirst(` */`)
 		.Name = name.BeforeFirst('.')
 		.Paths = name.Split('.')[1..]
-		.Lib = note.BeforeLast(' ')
+		.Lib = LibraryTags.RemoveTagFromName(note.BeforeLast(' '))
 		.Method? = note.Suffix?('method')
 		.Params = .Target.Params()
 		if Type(.origTarget) is 'Class'
@@ -66,7 +66,7 @@ class
 				.Name = origName
 				display = Display(.origTarget)
 				note = display.AfterFirst(`/* `).BeforeFirst(` */`)
-				.Lib = note.BeforeFirst(' ')
+				.Lib = LibraryTags.RemoveTagFromName(note.BeforeFirst(' '))
 				}
 			}
 		}

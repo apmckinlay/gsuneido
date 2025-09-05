@@ -5,7 +5,7 @@ Test
 		{
 		mock = Mock(LibLocateList)
 		mock.When.getNames([anyArgs:]).Return([])
-		mock.When.getNames(1, 'stdlib').Return([#Aaa_Bb_Cc, #Abc, #Abc_Test])
+		mock.When.getNames(1, 'stdlib').Return([#Aaa_Bb_Cc, #ABC, #Abc, #Abc_Test])
 		mock.When.getNames(2, 'test_not_in_used_lib').Return([#Abc])
 		mock.When.forceRun?().Return(false)
 		mock.When.getList([anyArgs:]).CallThrough()
@@ -27,14 +27,16 @@ Test
 			prevPadding = expectedPadding
 
 			msg = 'Libs: ' $ extraLibs $ ', Padding: ' $ expectedPadding
-			Assert(m(info, 'ab', justName:) is: #(Aaa_Bb_Cc, Abc, Abc_Test), :msg)
+			Assert(m(info, 'ab', justName:) is: #(Aaa_Bb_Cc, ABC, Abc, Abc_Test), :msg)
 			Assert(m(info, 'at', justName:) is: #(Abc_Test), :msg)
 			Assert(m(info, 'am', justName:) is: #(), :msg)
 			// exact match should be in the front
-			Assert(m(info, 'abc', justName:) is: #(Abc, Aaa_Bb_Cc, Abc_Test), :msg)
+			Assert(m(info, 'ABC', justName:) is: #(ABC, Abc, Aaa_Bb_Cc, Abc_Test), :msg)
+			Assert(m(info, 'Abc', justName:) is: #(Abc, ABC, Aaa_Bb_Cc, Abc_Test), :msg)
 			// exact match should be in the front
-			Assert(m(info, 'abc')
-				is: #('Abc - stdlib',
+			Assert(m(info, 'ABC')
+				is: #('ABC - stdlib',
+					'Abc - stdlib',
 					'Abc - (test_not_in_used_lib)',
 					'Aaa_Bb_Cc - stdlib',
 					'Abc_Test - stdlib'), :msg)

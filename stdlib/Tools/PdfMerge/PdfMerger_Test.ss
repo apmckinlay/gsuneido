@@ -438,7 +438,7 @@ PdfTest
 			Zlib.Compress("39 0 <</ProcSet[/PDF/ImageC]/XObject<</Im0 37 0 R>>>>")
 		expected = "\n39 0 obj\n<</ProcSet[/PDF/ImageC]/XObject<</Im0 37 0 R" $
 			">>>>\nendobj\n"
-		Assert(method(data, stream) is: Object(Object(head: expected, tail:'')))
+		Assert(method(data, stream, #()) is: Object(Object(head: expected, tail:'')))
 
 		// object with long property text
 		data = "\n36 0 obj\r<</Filter/FlateDecode/First 5/Length 60/N 1/Type/ObjStm>>" $
@@ -831,5 +831,31 @@ stream") is: false)
 /ColorSpace 10 0 R
 >>`
 		Assert(fun(header) is: '10 0 r')
+		}
+
+	Test_getStreamLength()
+		{
+		fn = PdfMerger.PdfMerger_getStreamLength
+		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length 152/` $
+			`Matrix[0.24 0 0 -0.24 18 -223.56]/PaintType 2/PatternType 1/` $
+			`Resources<</ProcSet[/PDF /ImageB]>>/TilingType 1/Type/` $
+			`Pattern/XStep 16/YStep 16`
+		Assert(fn(header, #()) is: 152)
+
+		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length 152`
+		Assert(fn(header, #()) is: 152)
+
+		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length hello/Pattern/XStep 16`
+		Assert({ fn(header, #()) } throws: 'invalid length object')
+
+		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length 152 0 R`
+		Assert(fn(header, Object(Object(head: '\n152 0 obj\n333\nendobj'))) is: 333)
+
+		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length 152 0 R/Pattern/XStep 16`
+		Assert(fn(header, Object(Object(head: '\n152 0 obj\n333\nendobj'))) is: 333)
+
+		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length 152 0 R/Pattern/XStep 16`
+		Assert({ fn(header, Object(Object(head: '\n1 0 obj\n333\nendobj'))) }
+			throws: 'cannot find length object 152')
 		}
 	}

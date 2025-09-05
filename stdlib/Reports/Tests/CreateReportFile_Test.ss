@@ -27,6 +27,7 @@ Test
 		rpt.When.Menu_params_fields().Return(#('a','b', 'newField'))
 		params = Object(a_param:, b_param:)
 		checkReportOptions(rpt, params)
-		Assert(params is: #(newField_param: #(operation: ""), a_param:, b_param:))
+		Assert(params is: #(newField_param: #(operation: "", value: "", value2: ""),
+			a_param:, b_param:))
 		}
 	}

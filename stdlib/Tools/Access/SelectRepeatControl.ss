@@ -57,6 +57,8 @@ Controller
 				mouseEffect:, weight: 'bold', pad: 40,
 				name: 'loadButton', xstretch: 0), name: 'buttons')
 		buttons.Add(#(Skip, small:))
+		buttons.Add(Object('Button', 'Count', tip: SelectControl.CountBtnTip))
+		buttons.Add(#(Skip, small:))
 		buttons.Add(Object('Presets', .option, .title, :initial, xstretch: 0
 			extraMenu: #('', 'Open Select Window'), alignHorz:))
 		buttons.Add('Fill')
@@ -80,6 +82,13 @@ Controller
 		if source.Parent.Name is 'buttons' and args[0].Prefix?('On_')
 			.Controller.Send(@args)
 		return 0
+		}
+
+	On_Count()
+		{
+		if not .valid?()
+			return
+		.Send('On_Count')
 		}
 
 	On_Select()

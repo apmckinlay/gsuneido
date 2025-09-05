@@ -307,6 +307,8 @@ Controller
 		if subfolder is ''
 			return copyto
 		copyfolder = copyto $ subfolder
+		if '' isnt .s3Bucket()
+			return copyfolder
 		if String?(exists? = CheckDirExists(copyfolder))
 			return Object(msg: exists?)
 

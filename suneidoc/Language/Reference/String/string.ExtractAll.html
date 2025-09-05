@@ -9,7 +9,7 @@ or false if the string doesn't match the pattern.
 
 <p>For example:</p>
 <pre>
-"hello world".Extract("(h.*?)\s(w.*?)") => #("hello world", "hello", "world")
+"hello world".ExtractAll("(h.*)\s(w.*)") => #("hello world", "hello", "world")
 </pre>
 
 <p><b>Note:</b> '+' and '*' in regular expressions

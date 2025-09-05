@@ -118,6 +118,11 @@ You may need to restart your computer.", "Error")
 			}
 		}
 
+	OnLoad(block, id = false)
+		{
+		.doAfterLoaded(block, id)
+		}
+
 	loaded?: false
 	onLoaded()
 		{

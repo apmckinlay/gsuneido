@@ -113,7 +113,13 @@ ButtonControl
 		{
 		.ih = h
 		.iy = 0
-		.iw = .imageObj is false ? 0 : (.ih * .imageW / .imageH).Round(0)
+
+		imagePaddingW = Object?(.imagePadding) ? .imagePadding.w : .imagePadding
+		imagePaddingH = Object?(.imagePadding) ? .imagePadding.h : .imagePadding
+		.iw = .imageObj is false
+			? 0
+			: (.ih * .imageW / .imageH *
+				(1 - imagePaddingH * 2) / (1 - imagePaddingW * 2)).Round(0)
 		ixFactor = .7
 		txFactor = .4
 		if w isnt 0 and .iw > w
@@ -252,8 +258,10 @@ ButtonControl
 		offset = .mouseEffect and pressed and .text is false
 			? -ScaleWithDpiFactor(.imageOffSet)
 			: 0
-		paddingW = (.iw * .imagePadding).Round(0)
-		paddingH = (.ih * .imagePadding).Round(0)
+		imagePaddingW = Object?(.imagePadding) ? .imagePadding.w : .imagePadding
+		imagePaddingH = Object?(.imagePadding) ? .imagePadding.h : .imagePadding
+		paddingW = (.iw * imagePaddingW).Round(0)
+		paddingH = (.ih * imagePaddingH).Round(0)
 
 		hrgn = CreateRectRgn(rect.left + 2, rect.top + 2, rect.right - 2, rect.bottom - 2)
 		SelectClipRgn(hdc, hrgn)

@@ -46,7 +46,7 @@ class
 			}
 
 		if msg.messages
-			RunOnGui({ PubSub.Publish('messengerMessages') })
+			Defer({ PubSub.Publish('messengerMessages') })
 		Thread(.thread)
 		}
 
@@ -74,16 +74,16 @@ class
 	publishMessengerEvents(msg)
 		{
 		if msg.setRead
-			RunOnGui({ PubSub.Publish('messengerMessages', setRead:, notify: false) })
+			Defer({ PubSub.Publish('messengerMessages', setRead:, notify: false) })
 		else if msg.messages
 			{
 			if msg.notify
-				RunOnGui({ PubSub.Publish('messengerMessages') })
+				Defer({ PubSub.Publish('messengerMessages') })
 			else if not msg.notify
-				RunOnGui({ PubSub.Publish('messengerMessages', notify: false) })
+				Defer({ PubSub.Publish('messengerMessages', notify: false) })
 			}
 		if msg.contacts and Suneido.Member?('IM_Window')
-			RunOnGui({ PubSub.Publish('messengerContacts') })
+			Defer({ PubSub.Publish('messengerContacts') })
 		}
 
 	// .Request can be called from the UI thread
@@ -128,7 +128,7 @@ class
 	ensureOnGui(block)
 		{
 		if not Sys.MainThread?()
-			RunOnGui(block)
+			Defer(block)
 		else
 			block()
 		}

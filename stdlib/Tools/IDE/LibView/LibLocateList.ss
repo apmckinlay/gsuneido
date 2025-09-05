@@ -159,7 +159,8 @@ class
 	getMatches(info, prefix, max_matches = 30, justName = false)
 		{
 		list = info.list
-		prefix = prefix.Tr('_').Lower()
+		prefixOrig = prefix.Tr('_')
+		prefix = prefixOrig.Lower()
 		from = list.BinarySearch(prefix)
 		to = Min(from + max_matches, list.BinarySearch(prefix.RightTrim() $ '~'))
 		// convert e.g. 'name=Name:03' to 'Name - lib' or 'Name - (lib)'
@@ -171,22 +172,30 @@ class
 		else
 			matches.Unique!().Map!({ it.Replace('%\d+$',
 				{ ' - ' $ .indexToLib(info.libs, Number(it[1..])) }) })
-		return .moveExactMatchesFront(matches, prefix)
+		return .moveExactMatchesFront(matches, prefix, prefixOrig)
 		}
 
-	moveExactMatchesFront(matches, prefix)
+	moveExactMatchesFront(matchList, prefix, prefixOrig)
 		{
-		exactMatches = Object()
-		nonExactMatches = Object()
-		for x in matches
+		exactMatch = false
+		matches = Object()
+		nonMatches = Object()
+		for x in matchList
 			{
+			if x.BeforeFirst(' - ') is prefixOrig
+				{
+				exactMatch = x
+				continue
+				}
+
 			xLower = x.Lower().Tr('_')
 			if xLower.Prefix?(prefix $ ' - ') or xLower is prefix
-				exactMatches.Add(x)
+				matches.Add(x)
 			else
-				nonExactMatches.Add(x)
+				nonMatches.Add(x)
 			}
-		return exactMatches.Append(nonExactMatches)
+		matches.Append(nonMatches)
+		return exactMatch is false ? matches : matches.Add(exactMatch, at: 0)
 		}
 
 	indexToLib(libs, i)

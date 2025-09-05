@@ -101,7 +101,7 @@ Format
 			.stretch = true
 
 		origData = OpenImageWithLabelsControl.SplitFullPath(data)
-		data = .dataString(data)
+		data = .dataString(data, :textOnly?)
 		if data is '' // no image to print
 			return
 
@@ -111,15 +111,17 @@ Format
 			wrap.Print(x, y, w, h)
 			}
 		}
-	dataString(data)
+
+	dataString(data, textOnly? = false)
 		{
 		if not String?(data) or data is ""
 			data = .data
-
-		return Paths.IsValid?(data)
-			? FileStorage.GetAccessibleFilePath(
-				OpenImageWithLabelsControl.SplitFullPath(data))
-			: data
+		if not Paths.IsValid?(data)
+			return data
+		fullPath = OpenImageWithLabelsControl.SplitFullPath(data)
+		return textOnly?
+			? fullPath
+			: FileStorage.GetAccessibleFilePath(fullPath)
 		}
 	print(x, y, w, h, data, origData = false)
 		{

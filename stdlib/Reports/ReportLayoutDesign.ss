@@ -16,11 +16,11 @@ class
 		return GetContributions('ReportLayoutDesign').Member?(rptName)
 		}
 
-	CustomizationTab(rptName, embedded = false)
+	CustomizationTab(rptName, embedded = false, ctrlName = false)
 		{
 		if not .Customizable?(rptName)
 			throw rptName $ ' is not set up to be customizable'
-		layout = Object(#ReportLayoutDesign, rptName)
+		layout = Object(#ReportLayoutDesign, rptName, ctrlName)
 		if not embedded
 			layout.Tab = .tab(rptName)
 		return layout

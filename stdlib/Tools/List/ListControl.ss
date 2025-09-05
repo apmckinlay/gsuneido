@@ -28,6 +28,7 @@ WndProc
 	rowOffset:		0
 	horzOffset:		0
 	markColWidth:	0
+	maxLines: 		3000
 
 	New(columns = false, data = false, .defWidth = 100, .noShading = false,
 		noDragDrop = false, highlightColor = 0x00FF9957, noHeaderButtons = false,
@@ -35,7 +36,7 @@ WndProc
 		.resetColumns = false, .customizeColumns = false,
 		.alwaysHighlightSelected = false, .indicateHovered = false,
 		.columnsSaveName = false, .checkBoxColumn = false, .sortSaveHandler = false,
-		.trackValid = false)
+		.trackValid = false, .limitHandler = false)
 		{
 		Assert((Integer?(defWidth) and (defWidth > -1)) or (defWidth is false))
 		.origColumns = columns isnt false ? columns : Object()
@@ -104,21 +105,28 @@ WndProc
 		{
 		return .data
 		}
-	Set(data)
+	Set(data, continueWhenLimitReached? = false) // add overrideLimit here (?)
 		{
 		if .data is data
 			return
 		.data = Object()
 		.rowOffset = 0
 		.focused = false
-		.AddRows(data)
+		.AddRows(data, :continueWhenLimitReached?)
 		.select(0, true, false, false)
 		}
-	AddRows(data)
+	AddRows(data, continueWhenLimitReached? = false)
 		{
 		Assert(Object?(data) and not data.HasNamed?(), "data must be a list")
+		limitReached? = false
 		for (dataRow in data)
 			{
+			if not limitReached? and .reachLimit?() is true
+				{
+				limitReached? = true // only check and warn once
+				if continueWhenLimitReached? isnt true
+					break
+				}
 			.checkRow(dataRow)
 			.data.Add(dataRow.Set_default(""))
 			}
@@ -127,6 +135,17 @@ WndProc
 		.setSortIndicator(false)
 		.Repaint()
 		}
+
+	reachLimit?()
+		{
+		if .limitHandler isnt false and .data.Size() >= .maxLines
+			{
+			(.limitHandler)('Load limit of ' $ .maxLines $ ' reached.')
+			return true
+			}
+		return false
+		}
+
 	FindRowIdx(field, value)
 		{
 		return .data.FindIf({ it[field] is value })
@@ -161,12 +180,18 @@ WndProc
 		}
 	CheckAndInsertRow(row, newRecord, useDefaultsIfEmpty? = false)
 		{
-		if false is .Send("List_WantNewRow", prevRow: .focused,
+		if false is .wantNewRow(prevRow: .focused,
 			record: newRecord, :useDefaultsIfEmpty?)
 			return false;			// not allowed by parent
 		.InsertRow(row, newRecord)
 		.Send("List_NewRowAdded", row, record: newRecord)
 		return .data[row]
+		}
+	wantNewRow(prevRow, record, useDefaultsIfEmpty? = false)
+		{
+		if .reachLimit?()
+			return false
+		return .Send("List_WantNewRow", :prevRow, :record, :useDefaultsIfEmpty?)
 		}
 	GetNumRows()
 		{
@@ -889,7 +914,7 @@ WndProc
 			{
 			row = .GetNumRows()
 			newRow = Record()
-			if false is .Send("List_WantNewRow", prevRow: row - 1, record: newRow)
+			if false is .wantNewRow(prevRow: row - 1, record: newRow)
 				return true
 			.AddRow(newRow)
 			.Send("List_NewRowAdded", row, record: newRow)
@@ -1947,7 +1972,7 @@ WndProc
 				prevRow = .focused
 				}
 			newRow = Record()
-			if false isnt .Send("List_WantNewRow", :prevRow, record: newRow)
+			if false isnt .wantNewRow(:prevRow, record: newRow)
 				{ // parent didn't disallow
 				.InsertRow(insertAt, newRow)
 				.Send("List_NewRowAdded", insertAt, record: newRow)

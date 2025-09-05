@@ -44,9 +44,12 @@ class
 
 			if not Sys.Client?()
 				{
-				result $= "Check Views"
+				count = QueryCount('views')
+				result $= "Check Views (" $ count $ ")"
 				if "" is s = CheckViews()
+					{
 					result $= " - OKAY\n"
+					}
 				else
 					result $= " - FAILURES:\n" $ s $ "\n"
 				}

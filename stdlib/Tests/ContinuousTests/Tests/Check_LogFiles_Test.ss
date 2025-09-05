@@ -219,6 +219,11 @@ Test
 			`registry_win.h:57:GetProtoFromRegistryValue Opening registry key ` $
 			`Software\Google\DriveFS\Share failed with 0x2`
 		Assert(fn(testErr), msg: 'suppress GetProtoFromRegistryValue')
+
+		// not needed after BuiltDate 2025-08-21
+		testErr = `(continuous_tests) 2025/08/21 09:00:06 WARNING: Query1 slow: 120 views
+where view_name is "test_query"`
+		Assert(fn(testErr), msg: 'suppress views slow query')
 		}
 
 	Test_skipRegexes()

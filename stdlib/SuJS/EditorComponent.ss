@@ -6,10 +6,12 @@ EditComponent
 	Ystretch: 1
 	DefaultHeight: 4
 	Hasfocus?:	false
+	textLimit: 30000
 	New(@args)
 		{
 		super(@args)
 		.El.AddEventListener('keydown', .onKeyDown)
+		.El.SetAttribute(#maxlength, .textLimit)
 		}
 
 	onKeyDown(event)

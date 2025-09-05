@@ -24,8 +24,8 @@ class
 			for (j = 0; j < n; ++j, ++i)
 				cksum.Update(checksums[i].Hex())
 			to = names.GetDefault(i, '~') // exclusive
-			ranges.Add(Object(from: start, :to, :n, cksum: cksum.Value() & 0xffffffff /*=
-				need mask to be compatible with BuiltDate > 2025-05-09 */))
+			ranges.Add(Object(from: start, :to, :n,
+				cksum: cksum.Value() & 0xffffffff /*= 32 bits */))
 			}
 		return ranges
 		}
