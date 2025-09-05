@@ -48,14 +48,11 @@ func TestBig(t *testing.T) {
 	StartConcur(db, persistInterval)
 	fmt.Println("create data")
 	count := nrows / nthreads
-	start := 0
 	var wg sync.WaitGroup
-	for range nthreads {
-		start := start // for closure capture
+	for i := range nthreads {
 		wg.Go(func() {
-			createData(db, tables, start, count)
+			createData(db, tables, i*count, count)
 		})
-		start += count
 	}
 	wg.Wait()
 	fmt.Println("finished", ntrans.Load(), "transactions", db.Store.Size(), "bytes")
