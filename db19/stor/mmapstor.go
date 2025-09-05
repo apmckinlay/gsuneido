@@ -88,11 +88,6 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 	return ms, nil
 }
 
-// Write writes directly to the file, not via memory map
-func (ms *mmapStor) Write(off uint64, data []byte) {
-	ms.file.WriteAt(data, int64(off))
-}
-
 func (ms *mmapStor) Close(size int64, unmap bool) {
 	ms.close(size, unmap)
 }

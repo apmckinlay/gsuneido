@@ -27,7 +27,6 @@ func Repair(dbfile string, err error) (string, error) {
 	}
 	defer store.Close(true)
 	r := repair{dbfile: dbfile, store: store, ec: ec}
-	r.oldver = bufHasPrefix(store.Data(0), magicPrev)
 	_, off, state := r.search()
 	if off == 0 {
 		return "", errors.New("repair failed - no valid states found")
@@ -44,7 +43,6 @@ func Repair(dbfile string, err error) (string, error) {
 
 type repair struct {
 	dbfile string
-	oldver bool
 	store  *stor.Stor
 	ec     *errCorrupt
 }
@@ -145,9 +143,7 @@ func (r *repair) fix(off uint64) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if !r.oldver {
-		size += tailSize
-	}
+	size += tailSize
 	return storeSize - size, system.RenameBak(tmpfile, r.dbfile)
 }
 
@@ -157,14 +153,8 @@ func (r *repair) fixHead(size uint64) error {
 		return err
 	}
 	defer f.Close()
-	if r.oldver {
-		buf := make([]byte, stor.SmallOffsetLen)
-		stor.WriteSmallOffset(buf, size)
-		_, err = f.WriteAt(buf, int64(len(magic)))
-	} else { // new version
-		// add or overwrite shutdown marker
-		_, err = f.WriteAt([]byte(shutdown), int64(size))
-	}
+	// add or overwrite shutdown marker
+	_, err = f.WriteAt([]byte(shutdown), int64(size))
 	return err
 }
 
@@ -184,13 +174,7 @@ func (r *repair) copySize(size uint64) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if r.oldver {
-		buf := make([]byte, stor.SmallOffsetLen)
-		stor.WriteSmallOffset(buf, size)
-		_, err = dst.WriteAt(buf, int64(len(magic)))
-	} else { // new version
-		_, err = dst.Write([]byte(shutdown))
-	}
+	_, err = dst.Write([]byte(shutdown))
 	return tmpfile, err
 }
 

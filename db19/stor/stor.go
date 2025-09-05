@@ -213,18 +213,6 @@ func (s *Stor) LastOffset(off uint64, str string, stop *uint32) uint64 {
 	return 0
 }
 
-type writable interface {
-	Write(off uint64, data []byte)
-}
-
-func (s *Stor) Write(off uint64, data []byte) {
-	if w, ok := s.impl.(writable); ok {
-		w.Write(off, data)
-	} else {
-		copy(s.Data(off), data) // for testing with heap stor
-	}
-}
-
 // Flush writes change to disk in the background.
 // It is called by persist (e.g. once per minute).
 func (s *Stor) FlushTo(offset uint64) {
@@ -273,7 +261,7 @@ func (s *Stor) flushWait() {
 	}
 }
 
-func (s *Stor) Close(unmap bool, callback ...func(uint64)) {
+func (s *Stor) Close(unmap bool) {
 	exit.Progress("  stor closing")
 	var size uint64
 	if _, ok := s.impl.(*heapStor); ok {
@@ -282,9 +270,6 @@ func (s *Stor) Close(unmap bool, callback ...func(uint64)) {
 		size = s.size.Swap(closedSize)
 	}
 	if size < closedSize {
-		for _, f := range callback {
-			f(size)
-		}
 		s.flushWait()
 		s.impl.Close(int64(size), unmap)
 	}

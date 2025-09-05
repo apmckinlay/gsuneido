@@ -21,7 +21,6 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
-	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
@@ -47,11 +46,9 @@ type Database struct {
 
 	closed    atomic.Bool
 	corrupted atomic.Bool
-	oldver    bool
 }
 
 const magic = "gsndo003"
-const magicPrev = "gsndo002"
 const magicBase = "gsndo"
 const tailSize = 8 // len(shutdown/corrupt)
 const shutdown = "\x2b\xc1\x85\x63\x8d\x71\x65\x6d"
@@ -110,30 +107,17 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 	if !bufHasPrefix(buf, magicBase) {
 		core.Fatal("not a valid database file")
 	}
-
-	if bufHasPrefix(buf, magicPrev) {
-		db.oldver = true
-	} else if !bufHasPrefix(buf, magic) {
+	if !bufHasPrefix(buf, magic) {
 		core.Fatal("invalid database version")
 	}
 	var size uint64
-	if db.oldver {
-		size = stor.ReadSmallOffset(buf[len(magic):])
-		if size == 0 {
-			return nil, errors.New("corruption previously detected")
-		}
-		if size != store.Size() {
-			return nil, errors.New("bad size, not shut down properly?")
-		}
-	} else {
-		switch db.readTail() {
-		case shutdown:
-			size = store.Size() - tailSize
-		case corrupt:
-			return nil, errors.New("corruption previously detected")
-		default:
-			return nil, errors.New("not shut down properly?")
-		}
+	switch db.readTail() {
+	case shutdown:
+		size = store.Size() - tailSize
+	case corrupt:
+		return nil, errors.New("corruption previously detected")
+	default:
+		return nil, errors.New("not shut down properly?")
 	}
 
 	defer func() {
@@ -587,27 +571,14 @@ func (db *Database) Corrupt() {
 	}
 	log.Println("ERROR: database corruption detected")
 	options.DbStatus.Store("corrupted")
-	if db.oldver {
-		buf := make([]byte, stor.SmallOffsetLen) // zero
-		if db.mode != stor.Read {
-			db.Store.Write(uint64(len(magic)), buf)
-		} else {
-			if f, err := os.OpenFile(db.filename, os.O_RDWR, 0); err == nil {
-				defer f.Close()
-				f.Seek(int64(len(magic)), 0)
-				f.Write(buf)
-			}
-		}
-	} else { // new version
-		if db.mode != stor.Read {
-			_, buf := db.Store.Alloc(tailSize)
-			copy(buf, corrupt)
-		} else {
-			if f, err := os.OpenFile(db.filename, os.O_RDWR, 0); err == nil {
-				defer f.Close()
-				f.Seek(-tailSize, io.SeekEnd)
-				f.WriteString(corrupt)
-			}
+	if db.mode != stor.Read {
+		_, buf := db.Store.Alloc(tailSize)
+		copy(buf, corrupt)
+	} else {
+		if f, err := os.OpenFile(db.filename, os.O_RDWR, 0); err == nil {
+			defer f.Close()
+			f.Seek(-tailSize, io.SeekEnd)
+			f.WriteString(corrupt)
 		}
 	}
 }
@@ -629,15 +600,11 @@ func (db *Database) close(unmap bool) {
 	if db.ck != nil {
 		db.ck.Stop() // writes final state
 	}
-	if db.oldver {
-		db.Store.Close(unmap, db.writeSize)
-	} else {
-		if db.mode != stor.Read && !db.IsCorrupted() && db.readTail() != shutdown {
-			_, buf := db.Store.Alloc(tailSize)
-			copy(buf, shutdown)
-		}
-		db.Store.Close(unmap)
+	if db.mode != stor.Read && !db.IsCorrupted() && db.readTail() != shutdown {
+		_, buf := db.Store.Alloc(tailSize)
+		copy(buf, shutdown)
 	}
+	db.Store.Close(unmap)
 }
 
 // PersistClose is for tests when no checker
@@ -649,18 +616,6 @@ func (db *Database) PersistClose() {
 
 func (db *Database) Closed() bool {
 	return db.closed.Load()
-}
-
-func (db *Database) writeSize(size uint64) {
-	if db.mode == stor.Read || db.IsCorrupted() {
-		return
-	}
-	// need to use Write because all but last chunk are read-only
-	exit.Progress("    size writing")
-	buf := make([]byte, stor.SmallOffsetLen)
-	stor.WriteSmallOffset(buf, size)
-	db.Store.Write(uint64(len(magic)), buf)
-	exit.Progress("    size written")
 }
 
 func (db *Database) HaveUsers() bool {
