@@ -42,6 +42,8 @@ var (
 // CmdLine is the remaining command line arguments
 var CmdLine string
 
+var ErrorLog = "error.log"
+
 var (
 	AllWarningsThrow = regex.Compile("")
 	NoWarningsThrow  = regex.Compile(`\A\Z`)

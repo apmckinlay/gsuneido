@@ -54,8 +54,7 @@ var dbmsLocal *dbms.DbmsLocal
 var mainThread Thread
 var sviews Sviews
 
-var errlog = "error.log"
-var _ = AddInfo("windows.errlog", &errlog)
+var _ = AddInfo("windows.errlog", &options.ErrorLog)
 
 func main() {
 	/* view with: go tool pprof -http :8888 cpu.prof
@@ -77,7 +76,7 @@ func main() {
 	options.Mode = mode
 	options.Parse(getargs())
 	if options.Action == "client" {
-		errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
+		options.ErrorLog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
 	Exit = exit.Exit
 	if mode == "gui" {
@@ -220,7 +219,8 @@ func main() {
 			return client.NewSession()
 		}
 		if mode == "gui" {
-			clientErrorLog()
+			log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
+			sendErrorLog(mainThread.Dbms(), mainThread.SessionId(""))
 		}
 	} else {
 		openDbms()
@@ -261,7 +261,7 @@ func getargs() []string {
 }
 
 func redirect() {
-	if err := system.Redirect(errlog); err != nil {
+	if err := system.Redirect(options.ErrorLog); err != nil {
 		Fatal("Redirect failed:", err)
 	}
 }
@@ -293,42 +293,12 @@ func ck(err error) {
 	}
 }
 
-// clientErrorLog sends the client's error log to the server.
-// This is to record errors that occurred on the client
-// when the server was not connected.
-func clientErrorLog() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
-	mainThread.Dbms() // so we can get session id
-	sid := mainThread.SessionId("") + " "
-	log.SetPrefix(sid)
-
-	f, err := os.Open(errlog)
-	if err != nil {
-		return
-	}
-	dbms := mainThread.Dbms()
+func sendErrorLog(d IDbms, sessionId string) {
 	defer func() {
-		f.Close()
-		os.Truncate(errlog, 0) // can't remove since open as stderr
-		if e := recover(); e != nil {
-			dbms.Log("send previous errors: " + fmt.Sprint(e))
-		}
+		recover() // ignore errors, in particular "not authorized"
 	}()
-	// send errors to server
-	in := bufio.NewScanner(f)
-	in.Buffer(nil, 1024)
-	nlines := 0
-	for in.Scan() {
-		s := "PREV: " + in.Text()
-		if !strings.Contains(s, sid) {
-			s = sid + s
-		}
-		dbms.Log(s)
-		if nlines++; nlines > 1000 {
-			dbms.Log("PREV: too many errors")
-			break
-		}
-	}
+	d.Cursors() // test whether authorized
+	dbms.SendErrorLog(d, sessionId)
 }
 
 // runServer does not return

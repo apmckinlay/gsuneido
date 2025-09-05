@@ -4,7 +4,10 @@
 package dbms
 
 import (
+	"bufio"
+	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 
@@ -14,6 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/mux"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -47,17 +51,53 @@ func (ms *muxSession) Admin(admin string, _ *Sviews) {
 	ms.Request()
 }
 
-func (ms *muxSession) Auth(_ *Thread, s string) bool {
-	return ms.auth(s)
-}
-
-func (ms *muxSession) auth(s string) bool {
+func (ms *muxSession) Auth(th *Thread, s string) bool {
 	if s == "" {
 		return false
 	}
 	ms.PutCmd(commands.Auth).PutStr(s)
 	ms.Request()
-	return ms.GetBool()
+	if ms.GetBool() {
+		if options.Mode == "gui" {
+			SendErrorLog(ms, th.SessionId(""))
+		}
+		return true
+	}
+	return false
+}
+
+// SendErrorLog sends the client's error log to the server.
+// This is to record errors that occurred on the client
+// when the server was not connected.
+func SendErrorLog(dbms IDbms, sid string) {
+	f, err := os.Open(options.ErrorLog)
+	if err != nil {
+		return
+	}
+	defer func() {
+		// can't remove error log since open as stderr
+		if err := f.Truncate(0); err != nil {
+			dbms.Log("can't clear error log: " + fmt.Sprint(err))
+		}
+		f.Close()
+		if e := recover(); e != nil {
+			dbms.Log("send previous errors: " + fmt.Sprint(e))
+		}
+	}()
+	in := bufio.NewScanner(f)
+	in.Buffer(nil, 1024)
+	nlines := 0
+	for in.Scan() {
+		s := "PREV: " + in.Text()
+		if !strings.Contains(s, sid) {
+			s = sid + " " + s
+		}
+		dbms.Log(s)
+		if nlines++; nlines > 100 {
+			dbms.Log("PREV: too many errors")
+			break
+		}
+	}
 }
 
 func (ms *muxSession) Check() string {

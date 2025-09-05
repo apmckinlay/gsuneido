@@ -92,7 +92,7 @@ func (du *DbmsUnauth) Load(string) int {
 }
 
 func (du *DbmsUnauth) Log(s string) {
-	du.dbms.Log(s)
+	panic(notauth)
 }
 
 func (du *DbmsUnauth) Nonce(th *Thread) string {
