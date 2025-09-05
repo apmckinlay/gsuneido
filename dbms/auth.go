@@ -38,7 +38,7 @@ func Token() string {
 	s := hacks.BStoS(buf)
 	tokensLock.Lock()
 	defer tokensLock.Unlock()
-	tokens[s] = true
+	tokens[s] = false // not old
 	return s
 }
 
@@ -47,7 +47,7 @@ func Token() string {
 func AuthToken(s string) bool {
 	tokensLock.Lock()
 	defer tokensLock.Unlock()
-	if tokens[s] {
+	if _, ok := tokens[s]; ok {
 		delete(tokens, s)
 		return true
 	}
@@ -84,4 +84,16 @@ func getPassHash(th *Thread, user string) (result string) {
 	}
 	hash := Unpack(row.GetRaw(hdr, "passhash"))
 	return string(hash.(SuStr))
+}
+
+func expireTokens() {
+	tokensLock.Lock()
+	defer tokensLock.Unlock()
+	for token, old := range tokens {
+		if old {
+			delete(tokens, token)
+		} else {
+			tokens[token] = true // mark it as old
+		}
+	}
 }

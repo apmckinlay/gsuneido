@@ -94,6 +94,7 @@ func idleTimeout() {
 	for {
 		time.Sleep(idleCheckInterval)
 		idleCheck()
+		expireTokens()
 	}
 }
 
