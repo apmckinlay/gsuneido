@@ -7,11 +7,14 @@ package builtin
 
 import (
 	"bytes"
+	"fmt"
 	"log"
+	"slices"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"golang.org/x/exp/constraints"
 	"golang.org/x/sys/windows"
 )
 
@@ -146,17 +149,18 @@ func bufZstr(buf []byte) SuStr {
 
 // ptrZstr copies a nul terminated string from an unsafe.Pointer.
 // If nul is not found, then the entire length is returned.
-func ptrZstr(p unsafe.Pointer, n uintptr) Value {
+func ptrZstr(p unsafe.Pointer, n int) Value {
 	if p == nil || n == 0 {
 		return False
 	}
-	i := uintptr(0)
-	for ; i < n; i++ {
-		if *(*byte)(unsafe.Pointer(uintptr(p) + i)) == 0 {
-			break
-		}
+	srcSlice := unsafe.Slice((*byte)(p), n)
+	i := slices.Index(srcSlice, 0)
+	if i == -1 {
+		i = n // No null terminator found, use entire length
 	}
-	return ptrNstr(p, i)
+	buf := make([]byte, i)
+	copy(buf, srcSlice[:i])
+	return SuStr(hacks.BStoS(buf))
 }
 
 // ptrNstr copies a string of a given length from an unsafe.Pointer
@@ -165,9 +169,8 @@ func ptrNstr(p unsafe.Pointer, n uintptr) Value {
 		return EmptyStr
 	}
 	buf := make([]byte, n)
-	for i := uintptr(0); i < n; i++ {
-		buf[i] = *(*byte)(unsafe.Pointer(uintptr(p) + i))
-	}
+	srcSlice := unsafe.Slice((*byte)(p), n)
+	copy(buf, srcSlice)
 	return SuStr(hacks.BStoS(buf))
 }
 
@@ -263,4 +266,11 @@ func getCallback(th *Thread, ob Value, mem string, nargs int) uintptr {
 		return 0
 	}
 	return NewCallback(th, fn, nargs)
+}
+
+func toptr[T constraints.Integer](x T) unsafe.Pointer {
+	if ((uintptr)(x) < 0x10000) || ((uintptr)(x) > 0x00007FFFFFFFFFFF) {
+		panic(fmt.Sprintf("invalid pointer value %x", x))
+	}
+	return unsafe.Pointer(uintptr(x))
 }

@@ -282,13 +282,9 @@ func bstrToString(v *stVariant) string {
 		return ""
 	}
 	p := uintptr(v.val)
-	length := SysStringLen(p)
-	a := make([]uint16, length)
-	for i := range int(length) {
-		a[i] = *(*uint16)(unsafe.Pointer(p))
-		p += 2
-	}
-	return string(utf16.Decode(a))
+	n := SysStringLen(p)
+	src := unsafe.Slice((*uint16)(unsafe.Pointer(p)), n)
+	return string(utf16.Decode(src))
 }
 
 var variantClear = oleaut32.MustFindProc("VariantClear").Addr()

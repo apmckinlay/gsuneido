@@ -13,7 +13,7 @@ import (
 
 // zstrArg returns a nul terminated copy of a string as unsafe.Pointer
 func zstrArg(v Value) *byte {
-	// NOTE: don't change this to return uintptr
+	// NOTE: don't change this to return uintptr or unsafe.Pointer
 	// Conversion from pointer to uintptr must be in the SyscallN argument.
 	// Then it will be kept alive until the syscall returns.
 	if v.Equal(Zero) {

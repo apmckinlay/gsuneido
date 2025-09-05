@@ -12,6 +12,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
 type suStructGlobal struct {
@@ -112,10 +113,7 @@ func StructModify(th *Thread, args []Value) Value {
 	if !ok {
 		panic("StructModify invalid type " + ErrType(args[0]))
 	}
-	p := unsafe.Pointer(uintptr(ToInt(args[1])))
-	if p == nil {
-		panic("StructModify: address can't be zero")
-	}
+	p := toptr(ToInt(args[1]))
 	ob := typ.fromStruct(p)
 	th.Call(args[2], ob) // call the block, which modifies ob
 	typ.updateStruct(ob, p)
@@ -198,7 +196,7 @@ func NMHDR(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	nmh := (*stNMHdr)(unsafe.Pointer(uintptr(adr)))
+	nmh := (*stNMHdr)(toptr(adr))
 	return fromNMHdr(nmh)
 }
 
@@ -224,12 +222,12 @@ func NMTVDISPINFO(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	di := (*stNMTVDispInfo)(unsafe.Pointer(uintptr(adr)))
+	di := (*stNMTVDispInfo)(toptr(adr))
 	ob := fromNMHdr(&di.nmhdr)
 	ob.Put(nil, SuStr("nmhdr"), fromNMHdr(&di.nmhdr))
 	tvi := fromTVItem(&di.item)
-	tvi.Put(nil, SuStr("pszText"),
-		ptrZstr(unsafe.Pointer(di.item.pszText), 1024))
+	pszText := toptr(uintptr(unsafe.Pointer(di.item.pszText)))
+	tvi.Put(nil, SuStr("pszText"), ptrZstr(pszText, 1024))
 	ob.Put(nil, SuStr("item"), tvi)
 	return ob
 }
@@ -290,7 +288,7 @@ func fromNMTVDispInfo(_ *Thread, args []Value) Value {
 		return False
 	}
 	var x *suNMTVDISPINFO
-	return x.fromStruct(unsafe.Pointer(uintptr(adr)))
+	return x.fromStruct(toptr(adr))
 }
 
 //-------------------------------------------------------------------
@@ -348,7 +346,7 @@ func NMHEADER(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	x := (*stNMHeader)(unsafe.Pointer(uintptr(adr)))
+	x := (*stNMHeader)(toptr(adr))
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("hdr"), fromNMHdr(&x.hdr))
 	ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))
@@ -379,7 +377,7 @@ func NMTREEVIEW(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	x := (*stNMTreeView)(unsafe.Pointer(uintptr(adr)))
+	x := (*stNMTreeView)(toptr(adr))
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("hdr"), fromNMHdr(&x.hdr))
 	ob.Put(nil, SuStr("action"), IntVal(int(x.action)))
@@ -404,7 +402,7 @@ func NMTVKEYDOWN(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	x := (*stNMTVKeyDown)(unsafe.Pointer(uintptr(adr)))
+	x := (*stNMTVKeyDown)(toptr(adr))
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("hdr"), fromNMHdr(&x.hdr))
 	ob.Put(nil, SuStr("wVKey"), IntVal(int(x.wVKey)))
@@ -442,6 +440,8 @@ type stAccel struct {
 	cmd   int16
 }
 
+const nAccel = unsafe.Sizeof(stAccel{})
+
 func accel(_ *Thread, args []Value) Value {
 	arg := args[0]
 	if a, ok := arg.ToInt(); ok {
@@ -449,7 +449,7 @@ func accel(_ *Thread, args []Value) Value {
 		if a == 0 {
 			return False
 		}
-		ac := (*stAccel)(unsafe.Pointer(uintptr(a)))
+		ac := (*stAccel)(toptr(a))
 		ob := &SuObject{}
 		ob.Put(nil, SuStr("fVirt"), IntVal(int(ac.fVirt)))
 		ob.Put(nil, SuStr("pad"), IntVal(int(ac.pad)))
@@ -464,7 +464,9 @@ func accel(_ *Thread, args []Value) Value {
 		key:   int16(getInt(arg, "key")),
 		cmd:   int16(getInt(arg, "cmd")),
 	}
-	return ptrNstr(unsafe.Pointer(&ac), unsafe.Sizeof(ac))
+	buf := make([]byte, nAccel)
+	copy(buf, (*(*[nAccel]byte)(unsafe.Pointer(&ac)))[:])
+	return SuStr(hacks.BStoS(buf))
 }
 
 //-------------------------------------------------------------------
@@ -501,7 +503,7 @@ func SCNotification(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	scn := (*stSCNotification)(unsafe.Pointer(uintptr(adr)))
+	scn := (*stSCNotification)(toptr(adr))
 	return fromSCNotification(scn)
 }
 
@@ -512,9 +514,9 @@ func SCNotificationText(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	scn := (*stSCNotification)(unsafe.Pointer(uintptr(adr)))
+	scn := (*stSCNotification)(toptr(adr))
 	ob := fromSCNotification(scn)
-	ob.Put(nil, SuStr("text"), ptrZstr(unsafe.Pointer(scn.text), 1024))
+	ob.Put(nil, SuStr("text"), ptrZstr(toptr(scn.text), 1024))
 	return ob
 }
 
@@ -563,7 +565,7 @@ func DRAWITEMSTRUCT(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	dis := (*stDrawItemStruct)(unsafe.Pointer(uintptr(adr)))
+	dis := (*stDrawItemStruct)(toptr(adr))
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("CtlType"), IntVal(int(dis.CtlType)))
 	ob.Put(nil, SuStr("CtlID"), IntVal(int(dis.CtlID)))
@@ -586,7 +588,7 @@ func MSG(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	msg := (*stMsg)(unsafe.Pointer(uintptr(adr)))
+	msg := (*stMsg)(toptr(adr))
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("hwnd"), IntVal(int(msg.hwnd)))
 	ob.Put(nil, SuStr("message"), IntVal(int(msg.message)))
@@ -606,7 +608,7 @@ func CWPRETSTRUCT(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	x := (*stCWPRetStruct)(unsafe.Pointer(uintptr(adr)))
+	x := (*stCWPRetStruct)(toptr(adr))
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("lResult"), IntVal(int(x.lResult)))
 	ob.Put(nil, SuStr("lParam"), IntVal(int(x.lParam)))
@@ -633,7 +635,7 @@ func NMLVDISPINFO(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	x := (*stNMLVDispInfo)(unsafe.Pointer(uintptr(adr)))
+	x := (*stNMLVDispInfo)(toptr(adr))
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("hdr"), fromNMHdr(&x.hdr))
 	item := &SuObject{}
@@ -666,7 +668,7 @@ func NMLISTVIEW(a Value) Value {
 	if adr == 0 {
 		return False
 	}
-	x := (*stNMListView)(unsafe.Pointer(uintptr(adr)))
+	x := (*stNMListView)(toptr(adr))
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("hdr"), fromNMHdr(&x.hdr))
 	ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))

@@ -131,9 +131,8 @@ func GlobalAllocData(a Value) Value {
 		p := globallock(handle)
 		assert.That(p != nil)
 		defer globalunlock(handle)
-		for i := range len(s) {
-			*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(i))) = s[i]
-		}
+		dstSlice := unsafe.Slice((*byte)(p), len(s))
+		copy(dstSlice, s)
 	}
 	return intRet(handle) // caller must GlobalFree
 }
@@ -147,10 +146,9 @@ func GlobalAllocString(a Value) Value {
 	p := globallock(handle)
 	assert.That(p != nil)
 	defer globalunlock(handle)
-	for i := range len(s) {
-		*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(i))) = s[i]
-	}
-	*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(len(s)))) = 0
+	dst := unsafe.Slice((*byte)(p), len(s)+1)
+	copy(dst, s)
+	dst[len(s)] = 0
 	return intRet(handle) // caller must GlobalFree
 }
 
@@ -226,12 +224,11 @@ func MulDiv(a, b, c Value) Value {
 var _ = builtin(CopyMemory, "(destination, source, length)")
 
 func CopyMemory(a, b, c Value) Value {
-	dst := uintptr(ToInt(a))
+	dst := toptr(ToInt(a))
 	src := ToStr(b)
 	n := ToInt(c)
-	for i := range n {
-		*(*byte)(unsafe.Pointer(dst + uintptr(i))) = src[i]
-	}
+	dstSlice := unsafe.Slice((*byte)(dst), n)
+	copy(dstSlice, src[:n])
 	return nil
 }
 
@@ -359,7 +356,7 @@ var _ = builtin(WriteFilePtr, "(hFile, lpBuffer, nNumberOfBytesToWrite, "+
 	"lpNumberOfBytesWritten, lpOverlapped/*unused*/)")
 
 func WriteFilePtr(a, b, c, d, e Value) Value {
-	buf := unsafe.Pointer(uintptr(ToInt(b)))
+	buf := toptr(ToInt(b))
 	return writefile(a, buf, c, d)
 }
 
