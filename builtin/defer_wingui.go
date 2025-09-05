@@ -98,17 +98,6 @@ func Defer(th *Thread, args []Value) Value {
 	return &killer{kill: func() { dqRemove(id) }}
 }
 
-var _ = builtin(RunOnGui, "(block)")
-
-func RunOnGui(th *Thread, args []Value) Value {
-	if th == MainThread {
-		panic("RunOnGui can only be used from other threads")
-	}
-	trace.Defer.Println("RunOnGui", args[0])
-	id := dqPut(args[0]) // blocks if queue is full
-	return &killer{kill: func() { dqRemove(id) }}
-}
-
 var _ = builtin(Delay, "(delayMs, block)")
 
 func Delay(th *Thread, args []Value) Value {
