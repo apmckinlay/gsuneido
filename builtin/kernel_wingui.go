@@ -67,15 +67,6 @@ func GetProcAddress(a, b Value) Value {
 	return intRet(rtn)
 }
 
-// dll Kernel32:GetProcessHeap() pointer
-var getProcessHeap = kernel32.MustFindProc("GetProcessHeap").Addr()
-var _ = builtin(GetProcessHeap, "()")
-
-func GetProcessHeap() Value {
-	rtn, _, _ := syscall.SyscallN(getProcessHeap)
-	return intRet(rtn)
-}
-
 // Global -----------------------------------------------------------
 
 // dll Kernel32:GlobalAlloc(long flags, long size) pointer
@@ -191,45 +182,10 @@ func GlobalFree(a Value) Value {
 
 //-------------------------------------------------------------------
 
-// dll Kernel32:HeapAlloc(pointer hHeap, long dwFlags, long dwBytes) pointer
-var heapAlloc = kernel32.MustFindProc("HeapAlloc").Addr()
-var _ = builtin(HeapAlloc, "(hHeap, dwFlags, dwBytes)")
-
-func HeapAlloc(a, b, c Value) Value {
-	rtn, _, _ := syscall.SyscallN(heapAlloc,
-		intArg(a),
-		intArg(b),
-		intArg(c))
-	return intRet(rtn)
-}
-
-// dll Kernel32:HeapFree(pointer hHeap, long dwFlags, pointer lpMem) bool
-var heapFree = kernel32.MustFindProc("HeapFree").Addr()
-var _ = builtin(HeapFree, "(hHeap, dwFlags, lpMem)")
-
-func HeapFree(a, b, c Value) Value {
-	rtn, _, _ := syscall.SyscallN(heapFree,
-		intArg(a),
-		intArg(b),
-		intArg(c))
-	return boolRet(rtn)
-}
-
 var _ = builtin(MulDiv, "(x, y, z)")
 
 func MulDiv(a, b, c Value) Value {
 	return IntVal(int(int64(ToInt(a)) * int64(ToInt(b)) / int64(ToInt(c))))
-}
-
-var _ = builtin(CopyMemory, "(destination, source, length)")
-
-func CopyMemory(a, b, c Value) Value {
-	dst := toptr(ToInt(a))
-	src := ToStr(b)
-	n := ToInt(c)
-	dstSlice := unsafe.Slice((*byte)(dst), n)
-	copy(dstSlice, src[:n])
-	return nil
 }
 
 // dll bool Kernel32:CloseHandle(pointer handle)
