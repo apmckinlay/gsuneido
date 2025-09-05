@@ -226,7 +226,7 @@ func NMTVDISPINFO(a Value) Value {
 	ob := fromNMHdr(&di.nmhdr)
 	ob.Put(nil, SuStr("nmhdr"), fromNMHdr(&di.nmhdr))
 	tvi := fromTVItem(&di.item)
-	pszText := toptr(uintptr(unsafe.Pointer(di.item.pszText)))
+	pszText := unsafe.Pointer(di.item.pszText)
 	tvi.Put(nil, SuStr("pszText"), ptrZstr(pszText, 1024))
 	ob.Put(nil, SuStr("item"), tvi)
 	return ob
