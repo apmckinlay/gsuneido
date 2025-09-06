@@ -43,8 +43,9 @@ type serverConn struct {
 	sessions   map[uint32]*serverSession // the sessions on this connection
 	remoteAddr string
 	Sviews
-	idleCount    int        // guarded by serverConnsLock
-	sessionsLock sync.Mutex // guards sessions
+	idleCount    int          // guarded by serverConnsLock
+	sessionsLock sync.Mutex   // guards sessions
+	logSize      atomic.Int32 // cumulative size of logged data in bytes
 	// id is primarily used as a key to store the set of connections in a map
 	id uint32
 }
@@ -685,8 +686,26 @@ func cmdLibraries(ss *serverSession) {
 
 func cmdLog(ss *serverSession) {
 	s := ss.GetStr()
-	ss.sc.dbms.Log(s)
-	ss.PutBool(true)
+	if msg := ss.sc.limitLog(s); msg != "" {
+		ss.sc.dbms.Log(msg)
+	}
+	ss.PutBool(true) // return true regardless
+}
+
+const logLimit = 10 * 1024 // ???
+
+// limitLog limits log size per connection.
+// Returns the message to log, or empty string if ignored.
+func (sc *serverConn) limitLog(s string) string {
+	logBytes := int32(len(s) + 1) // +1 for newline added by log.Println
+	newSize := sc.logSize.Add(logBytes)
+	if newSize <= logLimit {
+		return s
+	} else if newSize-logBytes <= logLimit {
+		// First time over limit - log warning exactly once
+		return "log size limit exceeded (10KB), ignoring further logs"
+	}
+	return ""
 }
 
 func cmdNonce(ss *serverSession) {
