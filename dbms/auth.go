@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha1"
-	"io"
 	"sync"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -67,10 +66,9 @@ func AuthUser(th *Thread, s, nonce string) bool {
 		return false
 	}
 	user := str.BeforeFirst(s, "\x00")
-	hash := sha1.New() // TODO replace with stronger hash method
 	passhash := getPassHash(th, user)
-	io.WriteString(hash, nonce+passhash)
-	t := user + "\x00" + string(hash.Sum(nil))
+	hash := sha1.Sum([]byte(nonce + passhash)) //TODO upgrade sha1
+	t := user + "\x00" + string(hash[:])
 	return s == t
 }
 
@@ -84,8 +82,8 @@ func getPassHash(th *Thread, user string) (result string) {
 	if u, ok := dbms.(*DbmsUnauth); ok {
 		dbms = u.dbms
 	}
-	query := "users where user = " + SuStr(user).String() // handle quotes
-	args := SuObjectOf(SuStr(query))
+	args := SuObjectOf(SuStr("users"))
+	args.Set(SuStr("user"), SuStr(user))
 	row, hdr, _ := dbms.Get(th, args, Only)
 	if row == nil {
 		return ""
