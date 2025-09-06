@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"bufio"
+	"context"
 	"io"
 	"log"
 	"net"
@@ -14,6 +15,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"golang.org/x/time/rate"
 )
 
 func init() {
@@ -103,7 +105,11 @@ var _ = AddInfo("server.nSocketServer", &nSocketServer)
 var nSocketServerConn atomic.Int32
 var _ = AddInfo("server.nSocketServerConn", &nSocketServerConn)
 
-const ssmax = 500 // for all SocketServer's
+var socketServerLimiter = rate.NewLimiter(rate.Limit(64), 8) // ???
+var socketServerContext = context.Background()
+
+// ssmax is the maximum number of connections allowed for all SocketServer's
+const ssmax = 500 // ???
 
 func (sm *suServerMaster) listen(th *Thread, name string, port int) {
 	nSocketServer.Add(1)
@@ -117,6 +123,7 @@ func (sm *suServerMaster) listen(th *Thread, name string, port int) {
 	}
 	defer ln.Close()
 	for {
+		socketServerLimiter.Wait(socketServerContext)
 		conn, err := ln.Accept()
 		if err != nil {
 			if strings.Contains(err.Error(), "use of closed network connection") {
