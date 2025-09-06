@@ -4,6 +4,8 @@
 package builtin
 
 import (
+	"sync"
+
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -88,32 +90,22 @@ var _ = method(base_Synchronized, "(block)")
 
 func base_Synchronized(th *Thread, this Value, args []Value) Value {
 	name := th.ClassName()
-	var c *SuClass
-	if instance, ok := this.(*SuInstance); ok {
-		c = instance.FindParent(name) // to handle Unload
-	} else if x, ok := this.(*SuClass); ok && x.Name == name {
-		c = x
-	} else {
-		x := Global.GetName(th, name)
-		if y, ok := x.(*SuClass); ok {
-			c = y
-		}
+	assert.That(name != "")
+	mutVal, ok := classMutexes.Load(name)
+	if !ok {
+		// multiple threads could get here (race) but only one will store
+		mutVal, _ = classMutexes.LoadOrStore(name, MakeMutexT())
 	}
-	if c == nil {
-		panic("Synchronized: can't get code class " + name)
-	}
-	mut := c.Mut.Load()
-	if mut == nil {
-		// multiple threads could get here (race) but only one will succeed
-		m := MakeMutexT()
-		c.Mut.CompareAndSwap(nil, &m)
-		mut = c.Mut.Load()
-		assert.That(mut != nil)
-	}
+	mut := mutVal.(MutexT)
 	mut.Lock()
 	defer mut.Unlock()
 	return th.Call(args[0])
 }
+
+// classMutexes holds mutexes for synchronized access by class name.
+// This map only grows, never shrinks.
+// The assumption is that Synchronized is not heavily used.
+var classMutexes sync.Map
 
 // base skips the first
 func base(th *Thread, x Value, fn func(Value, *MemBase) Value) Value {

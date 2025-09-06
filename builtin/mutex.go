@@ -4,6 +4,8 @@
 package builtin
 
 import (
+	"time"
+
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -43,4 +45,31 @@ func (*suMutex) Lookup(_ *Thread, method string) Value {
 
 func (*suMutex) SetConcurrent() {
 	// ok for concurrent use
+}
+
+// MutexT is a mutex implementation with a timeout.
+// The primary use of the timeout is to prevent deadlocks.
+type MutexT chan struct{}
+
+func MakeMutexT() MutexT {
+	return make(chan struct{}, 1)
+}
+
+func (mt MutexT) Lock() {
+	const timeout = 10 * time.Second // ???
+	select {
+	case mt <- struct{}{}:
+		// lock acquired
+	case <-time.After(timeout):
+		panic("lock timeout")
+	}
+}
+
+func (mt MutexT) Unlock() {
+	select {
+	case <-mt:
+		// lock released
+	default:
+		panic("unlock failed")
+	}
 }
