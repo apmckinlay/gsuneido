@@ -4,6 +4,7 @@
 package dbms
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha1"
 	"io"
@@ -12,6 +13,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"golang.org/x/time/rate"
 )
 
 const nonceSize = 8
@@ -19,6 +21,10 @@ const tokenSize = 16
 
 var tokens = make(map[string]bool)
 var tokensLock sync.Mutex
+
+// authLimiter limits the rate of authentication attempts
+var authLimiter = rate.NewLimiter(rate.Limit(4), 1) // ???
+var authContext = context.Background()
 
 func Nonce() string {
 	buf := make([]byte, nonceSize)
@@ -45,6 +51,7 @@ func Token() string {
 // AuthToken verifies that the given token is valid.
 // It is used by dbms.Auth
 func AuthToken(s string) bool {
+	authLimiter.Wait(authContext)
 	tokensLock.Lock()
 	defer tokensLock.Unlock()
 	if _, ok := tokens[s]; ok {
@@ -55,11 +62,12 @@ func AuthToken(s string) bool {
 }
 
 func AuthUser(th *Thread, s, nonce string) bool {
+	authLimiter.Wait(authContext)
 	if nonce == "" {
 		return false
 	}
 	user := str.BeforeFirst(s, "\x00")
-	hash := sha1.New()
+	hash := sha1.New() // TODO replace with stronger hash method
 	passhash := getPassHash(th, user)
 	io.WriteString(hash, nonce+passhash)
 	t := user + "\x00" + string(hash.Sum(nil))

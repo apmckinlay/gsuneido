@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"golang.org/x/time/rate"
 )
 
 func TestToken(*testing.T) {
@@ -46,4 +47,29 @@ func TestAuthUser(*testing.T) {
 	io.WriteString(hash, nonce+passhash)
 	s := user + "\x00" + string(hash.Sum(nil))
 	assert.True(AuthUser(&Thread{}, s, nonce))
+}
+
+func TestAuthRateLimit(t *testing.T) {
+	originalLimiter := authLimiter
+	defer func() { authLimiter = originalLimiter }()
+	
+	// Set a restrictive rate limiter for testing: 1 request per 100ms with burst of 1
+	authLimiter = rate.NewLimiter(rate.Every(100*time.Millisecond), 1)
+	
+	token1 := Token()
+	token2 := Token()
+	
+	// First attempt should succeed quickly (within burst limit)
+	start := time.Now()
+	assert.T(t).That(AuthToken(token1))
+	duration1 := time.Since(start)
+	
+	// Second attempt should be rate limited and take at least 100ms
+	start = time.Now()
+	assert.T(t).That(AuthToken(token2))
+	duration2 := time.Since(start)
+	
+	// Verify first call was fast (< 50ms) and second was delayed (>= 90ms)
+	assert.T(t).That(duration1 < 50*time.Millisecond)
+	assert.T(t).That(duration2 >= 90*time.Millisecond)
 }
