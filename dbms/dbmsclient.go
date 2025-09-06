@@ -86,17 +86,19 @@ func SendErrorLog(dbms IDbms, sid string) {
 	}()
 	in := bufio.NewScanner(f)
 	in.Buffer(nil, 1024)
-	nlines := 0
+	totalBytes := 0
+	const maxBytes = 5 * 1024 // ???
 	for in.Scan() {
 		s := "PREV: " + in.Text()
 		if !strings.Contains(s, sid) {
 			s = sid + " " + s
 		}
-		dbms.Log(s)
-		if nlines++; nlines > 100 {
+		totalBytes += len(s) + 1 // +1 for newline
+		if totalBytes > maxBytes {
 			dbms.Log("PREV: too many errors")
 			break
 		}
+		dbms.Log(s)
 	}
 }
 
