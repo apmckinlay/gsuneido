@@ -77,7 +77,7 @@ func Server(dbms *DbmsLocal) {
 	if err != nil {
 		Fatal(err)
 	}
-	go idleTimeout()
+	go background()
 	limiter := rate.NewLimiter(rate.Limit(32), 8)
 	context := context.Background()
 	for {
@@ -91,15 +91,15 @@ func Server(dbms *DbmsLocal) {
 	}
 }
 
-func idleTimeout() {
+func background() {
 	for {
-		time.Sleep(idleCheckInterval)
+		time.Sleep(backgroundInterval)
 		idleCheck()
 		expireTokens()
 	}
 }
 
-const idleCheckInterval = time.Minute
+const backgroundInterval = time.Minute
 
 func idleCheck() {
 	serverConnsLock.Lock()
@@ -378,8 +378,9 @@ func cmdAuth(ss *serverSession) {
 }
 
 func (ss *serverSession) auth(s string) bool {
-	if AuthUser(ss.thread, s, ss.nonce) {
-		ss.nonce = ""
+	nonce := ss.nonce
+	ss.nonce = ""
+	if AuthUser(ss.thread, s, nonce) {
 		return true
 	}
 	return AuthToken(s)
