@@ -46,6 +46,8 @@ type serverConn struct {
 	idleCount    int          // guarded by serverConnsLock
 	sessionsLock sync.Mutex   // guards sessions
 	logSize      atomic.Int32 // cumulative size of logged data in bytes
+	nonce        string       // for authentication, shared across sessions
+	nonceOld     bool         // for two-phase expiration like tokens
 	// id is primarily used as a key to store the set of connections in a map
 	id uint32
 }
@@ -62,7 +64,6 @@ type serverSession struct {
 	tranQueries   map[int]intSet // transaction id => query ids
 	queryTrans    map[int]int    // query id => transaction id
 	sessionId     atomics.String
-	nonce         string
 	mux.ReadBuf
 	// id is primarily used as a key to store the set of sessions in a map
 	id uint32
@@ -96,6 +97,7 @@ func background() {
 		time.Sleep(backgroundInterval)
 		idleCheck()
 		expireTokens()
+		expireNonces()
 	}
 }
 
@@ -109,6 +111,19 @@ func idleCheck() {
 		if sc.idleCount > options.TimeoutMinutes {
 			sc.serverLog("closing idle connection")
 			sc.close()
+		}
+	}
+}
+
+func expireNonces() {
+	serverConnsLock.Lock()
+	defer serverConnsLock.Unlock()
+	for _, sc := range serverConns {
+		if sc.nonceOld {
+			sc.nonce = ""
+			sc.nonceOld = false
+		} else if sc.nonce != "" {
+			sc.nonceOld = true
 		}
 	}
 }
@@ -378,8 +393,9 @@ func cmdAuth(ss *serverSession) {
 }
 
 func (ss *serverSession) auth(s string) bool {
-	nonce := ss.nonce
-	ss.nonce = ""
+	nonce := ss.sc.nonce
+	ss.sc.nonce = ""
+	ss.sc.nonceOld = false
 	if AuthUser(ss.thread, s, nonce) {
 		return true
 	}
@@ -710,8 +726,9 @@ func (sc *serverConn) limitLog(s string) string {
 }
 
 func cmdNonce(ss *serverSession) {
-	ss.nonce = Nonce()
-	ss.PutBool(true).PutStr_(ss.nonce)
+	ss.sc.nonce = Nonce()
+	ss.sc.nonceOld = false
+	ss.PutBool(true).PutStr_(ss.sc.nonce)
 }
 
 func cmdOrder(ss *serverSession) {

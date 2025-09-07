@@ -79,3 +79,81 @@ func TestLogWithLimitEmpty(t *testing.T) {
 	assert.This(result).Is("hello")
 	assert.This(sc.logSize.Load()).Is(int32(7)) // 1 + (5 + 1) = 7
 }
+
+// nonces
+
+func TestNonceExpiration(t *testing.T) {
+	// Mock the serverConns for testing
+	originalConns := serverConns
+	defer func() { serverConns = originalConns }()
+	
+	serverConns = make(map[uint32]*serverConn)
+	
+	// Test multiple connections with different nonce states
+	sc1 := &serverConn{id: 1, nonce: "fresh-nonce", nonceOld: false}
+	sc2 := &serverConn{id: 2, nonce: "", nonceOld: false} // no nonce
+	sc3 := &serverConn{id: 3, nonce: "old-nonce", nonceOld: true} // old nonce
+	
+	serverConns[1] = sc1
+	serverConns[2] = sc2
+	serverConns[3] = sc3
+	
+	// Single expiry cycle should handle all states correctly
+	expireNonces()
+	
+	// Fresh nonce should be marked as old
+	assert.T(t).This(sc1.nonce).Is("fresh-nonce")
+	assert.T(t).This(sc1.nonceOld).Is(true)
+	
+	// No nonce should remain unchanged
+	assert.T(t).This(sc2.nonce).Is("")
+	assert.T(t).This(sc2.nonceOld).Is(false)
+	
+	// Old nonce should be deleted
+	assert.T(t).This(sc3.nonce).Is("")
+	assert.T(t).This(sc3.nonceOld).Is(false)
+}
+
+func TestNonceConsumption(t *testing.T) {
+	// Test that auth clears nonce and resets nonceOld
+	sc := &serverConn{nonce: "test-nonce", nonceOld: true}
+	ss := &serverSession{sc: sc}
+	
+	// Mock successful auth
+	nonce := ss.sc.nonce
+	ss.sc.nonce = ""
+	ss.sc.nonceOld = false
+	
+	assert.T(t).This(nonce).Is("test-nonce")
+	assert.T(t).This(ss.sc.nonce).Is("")
+	assert.T(t).This(ss.sc.nonceOld).Is(false)
+}
+
+func TestNonceExpirationLifecycle(t *testing.T) {
+	// Test complete nonce lifecycle: fresh → old → deleted
+	originalConns := serverConns
+	defer func() { serverConns = originalConns }()
+	
+	serverConns = make(map[uint32]*serverConn)
+	sc := &serverConn{id: 1, nonce: "test-nonce", nonceOld: false}
+	serverConns[1] = sc
+	
+	// Initial state: fresh nonce
+	assert.T(t).This(sc.nonce).Is("test-nonce")
+	assert.T(t).This(sc.nonceOld).Is(false)
+	
+	// After 1 minute: nonce marked as old
+	expireNonces()
+	assert.T(t).This(sc.nonce).Is("test-nonce")
+	assert.T(t).This(sc.nonceOld).Is(true)
+	
+	// After 2 minutes: nonce deleted
+	expireNonces() 
+	assert.T(t).This(sc.nonce).Is("")
+	assert.T(t).This(sc.nonceOld).Is(false)
+	
+	// After 3 minutes: no change (no nonce to process)
+	expireNonces()
+	assert.T(t).This(sc.nonce).Is("")
+	assert.T(t).This(sc.nonceOld).Is(false)
+}
