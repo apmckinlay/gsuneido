@@ -32,6 +32,9 @@ type Check struct {
 	resultPos []int
 	// pos is used to store the position of the current statement
 	pos int
+	// firstReturnCount tracks the number of return values from the first return
+	// -1 means no return statement has been seen yet
+	firstReturnCount int
 }
 
 // New returns a Check instance
@@ -48,8 +51,9 @@ func (ck *Check) CheckFunc(f *ast.Function) {
 func (ck *Check) CheckFunc2(f *ast.Function) set {
 	ck.AllInit = make(map[string]int)
 	ck.AllUsed = make(map[string]struct{})
+	ck.firstReturnCount = -1
 	var init set = make([]string, 0, 8)
-	init = ck.check(f, init)
+	init = ck.check(f, init, false)
 	ck.process(f.Params, init)
 	return init
 }
@@ -70,10 +74,39 @@ func (ck *Check) CheckResults() []string {
 
 //-------------------------------------------------------------------
 
-func (ck *Check) check(f *ast.Function, init set) set {
+func (ck *Check) check(f *ast.Function, init set, isBlock bool) set {
 	init = ck.params(f.Params, init)
-	init, _ = ck.statements(f.Body, init, true)
+	init, exit := ck.statements(f.Body, init, true)
+	ck.checkImplicitReturn(isBlock, exit, f)
 	return init
+}
+
+func (ck *Check) checkImplicitReturn(isBlock bool, exit bool, f *ast.Function) {
+	// Check implicit return only for regular functions, not blocks
+	// Implicit returns are the only returns from a block
+	if !isBlock && !exit && len(f.Body) > 0 {
+		// Determine implicit return count based on last statement
+		var implicitReturnCount int
+		lastStmt := f.Body[len(f.Body)-1]
+		if _, ok := lastStmt.(*ast.ExprStmt); ok {
+			implicitReturnCount = 1 // last statement is expression
+		} else {
+			implicitReturnCount = 0 // last statement is not expression
+		}
+		// Check consistency with explicit returns
+		// Ignore firstReturnCount = 0 and implicitReturnCount = 1
+		// because this is relatively common
+		if ck.firstReturnCount > 0 && ck.firstReturnCount != implicitReturnCount {
+			// Use the position of the end of the function for the error
+			var pos int
+			if len(f.Body) > 0 {
+				pos = lastStmt.GetEnd()
+			} else {
+				pos = int(f.Pos2) // end of function
+			}
+			ck.CheckResult(pos, "WARNING: inconsistent number of return values")
+		}
+	}
 }
 
 func (ck *Check) params(params []ast.Param, init set) set {
@@ -129,6 +162,16 @@ func (ck *Check) statement(
 	case *ast.Return:
 		for _, e := range stmt.Exprs {
 			init, _ = ck.expr(e, init)
+		}
+		// Check return value consistency
+		// Skip checking for "return fn(...)" since function calls can return variable numbers of values
+		if !ck.isReturnCall(stmt) {
+			returnCount := len(stmt.Exprs)
+			if ck.firstReturnCount == -1 {
+				ck.firstReturnCount = returnCount
+			} else if ck.firstReturnCount != returnCount {
+				ck.CheckResult(stmt.Position(), "WARNING: inconsistent number of return values")
+			}
 		}
 		exit = true
 	case *ast.MultiAssign:
@@ -277,6 +320,16 @@ func (*Check) isReturn(stmt ast.Statement) bool {
 	return ok
 }
 
+func (*Check) isReturnCall(stmt *ast.Return) bool {
+	// Check if this is "return fn(...)" - a single function call
+	// Function calls can return variable numbers of values, so we skip consistency checking
+	if len(stmt.Exprs) == 1 {
+		_, ok := stmt.Exprs[0].(*ast.Call)
+		return ok
+	}
+	return false
+}
+
 func (*Check) exprStmt(stmt ast.Statement) (expr ast.Expr, ok bool) {
 	if cmpd, ok := stmt.(*ast.Compound); ok && len(cmpd.Body) == 1 {
 		stmt = cmpd.Body[0]
@@ -394,7 +447,7 @@ func (ck *Check) block(b *ast.Block, init set) set {
 	// they may be called elsewhere or not at all
 	// but too many spurious warnings otherwise
 	before := init
-	after := ck.check(&b.Function, init)
+	after := ck.check(&b.Function, init, true)
 	// remove params from init
 	init = append(before, after[len(before)+nUsedParams:]...)
 

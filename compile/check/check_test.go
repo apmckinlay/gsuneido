@@ -203,7 +203,7 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: useless expression @14")
 	test("function () { class{}; return }",
 		"ERROR: useless expression @14")
-	test("function (f) { if (f()) return \n 123 \n return 456 }",
+	test("function (f) { if (f()) return \n 'unused' \n f() }",
 		"ERROR: useless expression @33")
 	test("function (x) { try x+0 catch x=0 }")
 
