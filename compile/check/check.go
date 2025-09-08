@@ -143,17 +143,21 @@ func (ck *Check) statement(
 		init, _ = ck.expr(stmt.E, init)
 		exit = true
 	case *ast.TryCatch:
+		var exit1 bool
 		if expr, ok := ck.exprStmt(stmt.Try); ok {
 			// allow useless expression as try statement
 			init, _ = ck.expr(expr, init)
 		} else {
-			init, _ = ck.statement(stmt.Try, init, false)
+			init, exit1 = ck.statement(stmt.Try, init, false)
 		}
 		if stmt.CatchVar.Name != "" && stmt.CatchVar.Name != "unused" &&
 			!stmt.CatchVarUnused {
 			init = ck.initVar(init, stmt.CatchVar.Name, int(stmt.CatchVar.Pos))
 		}
-		ck.statement(stmt.Catch, init, false)
+		_, exit2 := ck.statement(stmt.Catch, init, false)
+		if exit1 && exit2 {
+			exit = true
+		}
 	case *ast.While:
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
 		ck.statement(stmt.Body, initTrue, false)
