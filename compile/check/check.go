@@ -112,10 +112,11 @@ func (ck *Check) checkImplicitReturn(isBlock bool, exit bool, f *ast.Function) {
 func (ck *Check) params(params []ast.Param, init set) set {
 	for _, p := range params {
 		name := p.Name.Name
-		if name[0] == '.' {
+		switch name[0] {
+		case '.':
 			name = str.UnCapitalize(name[1:])
 			ck.AllUsed[name] = struct{}{}
-		} else if name[0] == '@' || name[0] == '_' {
+		case '@', '_':
 			name = name[1:]
 		}
 		if !p.Unused {

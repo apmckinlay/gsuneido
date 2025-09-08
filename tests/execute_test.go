@@ -357,9 +357,10 @@ func ptComparePacked(args []string, _ []bool) bool {
 }
 
 func constant(s string) Value {
-	if s == "inf" {
+	switch s {
+	case "inf":
 		return Inf
-	} else if s == "-inf" {
+	case "-inf":
 		return NegInf
 	}
 	return compile.Constant(s)
