@@ -79,7 +79,7 @@ func Server(dbms *DbmsLocal) {
 		Fatal(err)
 	}
 	go background()
-	limiter := rate.NewLimiter(rate.Limit(32), 8)
+	limiter := rate.NewLimiter(rate.Limit(8), 4)
 	context := context.Background()
 	for {
 		limiter.Wait(context)
