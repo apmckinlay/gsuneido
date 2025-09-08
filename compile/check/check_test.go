@@ -249,4 +249,14 @@ func TestCheckResults(t *testing.T) {
 		+1) }`, "ERROR: missing comma @24")
 	test(`function (f, x) { f(x
 		-1) }`, "ERROR: missing comma @24")
+
+	// forever loops and for loops with no condition
+	test("function (f) { forever { f() } f() }",
+		"ERROR: unreachable code @31")
+	test("function (f) { forever { if f() break; f() } f() }")
+	test("function (f) { for (i = 0; ; i++) f(); f() }",
+		"ERROR: unreachable code @39")
+	test("function (f) { for (i = 0; ; i++) { if i > 10 break; f() } f() }")
+	test("function (f) { forever { for (j = 0; j < 5; j++) { if j > 2 break } f() } f() }",
+		"ERROR: unreachable code @74")
 }

@@ -164,6 +164,10 @@ func (ck *Check) statement(
 		init = initFalse
 	case *ast.Forever:
 		init, _ = ck.statement(stmt.Body, init, false)
+		// Forever loop exits only if there are no break statements
+		if !ck.hasBreak(stmt.Body) {
+			exit = true
+		}
 	case *ast.DoWhile:
 		init, _ = ck.statement(stmt.Body, init, false)
 		init, _ = ck.expr(stmt.Cond, init)
@@ -233,6 +237,9 @@ func (ck *Check) statement(
 			ck.expr(expr, afterBody)
 		}
 		init = initFalse
+		if stmt.Cond == nil && !ck.hasBreak(stmt.Body) {
+			exit = true
+		}
 	case *ast.Break, *ast.Continue:
 		exit = true
 	default:
@@ -440,6 +447,47 @@ func (ck *Check) usedVar(init set, id string, pos int) set {
 	}
 	ck.AllUsed[id] = struct{}{}
 	return init
+}
+
+// hasBreak checks if a statement contains any break statements
+// that are not nested inside other loops.
+func (ck *Check) hasBreak(stmt ast.Statement) bool {
+	if stmt == nil {
+		return false
+	}
+	switch stmt := stmt.(type) {
+	case *ast.Break:
+		return true
+	case *ast.Compound:
+		for _, s := range stmt.Body {
+			if ck.hasBreak(s) {
+				return true
+			}
+		}
+	case *ast.If:
+		return ck.hasBreak(stmt.Then) || ck.hasBreak(stmt.Else)
+	case *ast.TryCatch:
+		return ck.hasBreak(stmt.Try) || ck.hasBreak(stmt.Catch)
+	case *ast.Switch:
+		for _, c := range stmt.Cases {
+			for _, s := range c.Body {
+				if ck.hasBreak(s) {
+					return true
+				}
+			}
+		}
+		if stmt.Default != nil {
+			for _, s := range stmt.Default {
+				if ck.hasBreak(s) {
+					return true
+				}
+			}
+		}
+	// Don't recurse into nested loops - breaks in nested loops don't affect the outer loop
+	case *ast.For, *ast.Forever, *ast.While, *ast.DoWhile, *ast.ForIn:
+		return false
+	}
+	return false
 }
 
 //-------------------------------------------------------------------
