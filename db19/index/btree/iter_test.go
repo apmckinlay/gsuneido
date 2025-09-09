@@ -190,15 +190,20 @@ func TestToUnodeIter(t *testing.T) {
 
 	bt := &btree{}
 	it := nd.iter()
-	ci := it.toUnodeIter(bt).(*unodeIter) // tree
-	assert(ci.u).Is(unode{{key: "", off: 1}, {key: "c", off: 2},
+	ui := it.toUnodeIter(bt).(*unodeIter) // tree
+	assert(ui.u).Is(unode{{key: "", off: 1}, {key: "c", off: 2},
 		{key: "d", off: 3}})
 
 	it.next()
 	it.next()
 	assert(it.offset).Is(2)
-	ci = it.toUnodeIter(bt).(*unodeIter)
-	assert(ci.off()).Is(2)
+	ui = it.toUnodeIter(bt).(*unodeIter)
+	assert(ui.off()).Is(2)
+	
+	it = nd.iter()
+	ui = it.toUnodeIter(bt).(*unodeIter)
+	assert(ui.prev()).Is(true)
+	assert(ui.off()).Is(3)
 }
 
 // SeekAll
