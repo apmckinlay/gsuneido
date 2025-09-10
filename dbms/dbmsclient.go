@@ -75,8 +75,8 @@ func SendErrorLog(dbms IDbms, sid string) {
 		return
 	}
 	defer func() {
-		// can't remove error log since open as stderr
-		if err := f.Truncate(0); err != nil {
+		// can't remove error log since it's open as stderr
+		if err := os.Truncate(options.ErrorLog, 0); err != nil {
 			dbms.Log("can't clear error log: " + fmt.Sprint(err))
 		}
 		f.Close()
