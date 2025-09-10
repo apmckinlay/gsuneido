@@ -259,6 +259,15 @@ func Cut(s string, sep byte) (before, after string) {
 	return s, ""
 }
 
+// CommonPrefix returns the common prefix of two strings
+func CommonPrefix(s, t string) string {
+	for i := 0; ; i++ {
+		if i >= len(s) || i >= len(t) || s[i] != t[i] {
+			return s[:i]
+		}
+	}
+}
+
 // CommonPrefixLen returns the length of the common prefix of two strings
 func CommonPrefixLen(s, t string) int {
 	for i := 0; ; i++ {
