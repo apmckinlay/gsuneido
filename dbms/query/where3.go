@@ -19,11 +19,11 @@ import (
 
 // idxSel is the pointRanges for a single index.
 type idxSel struct {
-	index     []string
-	ptrngs    []pointRange
-	frac      float64
-	nfields   int
-	encoded   bool
+	index   []string
+	ptrngs  []pointRange
+	frac    float64
+	nfields int
+	encoded bool
 }
 
 // pointRange holds either a range or a single key (in org with end = "")
@@ -65,9 +65,8 @@ func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 			}
 			isel := idxSel{index: idx, nfields: len(idxSpans),
 				ptrngs: comp, encoded: encode}
-			single := isel.singleton()
-			w.singleton = w.singleton || single
-			if single {
+			if isel.singleton() {
+				w.singleton = true
 				idxSels = append(idxSels[:0], isel)
 				break
 			}
