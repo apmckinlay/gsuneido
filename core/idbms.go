@@ -144,7 +144,7 @@ const (
 	Only Dir = '1' // Query1
 	Next Dir = '+' // QueryFirst
 	Prev Dir = '-' // QueryLast
-	Any  Dir = '@' // QueryExists?
+	Any  Dir = '@' // QueryEmpty?
 )
 
 func (dir Dir) String() string {
@@ -156,7 +156,7 @@ func (dir Dir) String() string {
     case dir == Only:
         return "Query1"
     case dir == Any:
-        return "QueryExists?"
+        return "QueryEmpty"
     }
     return ""
 }
