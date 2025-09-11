@@ -863,6 +863,8 @@ func (b *optmod) result() [][]string {
 
 // ------------------------------------------------------------------
 
+// String prints the full query, including child sources
+// whereas query.String only shows that operation
 func String(q Query) string {
 	switch qi := q.(type) {
 	case q2i:
