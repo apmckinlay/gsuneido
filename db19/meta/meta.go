@@ -144,15 +144,15 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	return &cp
 }
 
-// PutNew sets created so drop knows it doesn't need a tombstone
+// PutNew is called by Database create which is called by Create and Ensure.
 func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
+	// set created so drop knows it doesn't need a tombstone
 	if _, ok := m.schema.Get(ts.Table); !ok {
 		ts.created = m.schema.Clock
 	}
 	if _, ok := m.info.Get(ti.Table); !ok {
 		ti.created = m.info.Clock
 	}
-	m.setFkeyIIndex(ts)
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)
@@ -492,6 +492,11 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 						ac.Table + " -> " + fk.Table + str.Join("(,)", fkCols))
 				}
 				found = true
+				fk.IIndex = j
+				if target.Table == ts.Table {
+					// recursive foreign key to same table
+					target.Indexes[tsi].Fk.IIndex = j
+				}
 				ix.FkToHere = slc.With(ix.FkToHere,
 					Fkey{Table: ac.Table,
 						Columns: idxs[i].Columns, IIndex: tsi, Mode: fk.Mode})
