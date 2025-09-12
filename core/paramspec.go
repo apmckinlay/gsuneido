@@ -68,9 +68,11 @@ const (
 )
 
 var ParamSpec0 = ParamSpec{Nparams: 0, Signature: ^Sig0}
-var ParamSpec1 = ParamSpec{Nparams: 1, Signature: ^Sig1, Flags: []Flag{0}}
+var ParamSpec1 = ParamSpec{Nparams: 1, Signature: ^Sig1, Flags: []Flag{0},
+	Names: []string{"value"}}
 
-var ParamSpecAt = ParamSpec{Nparams: 1, Flags: []Flag{AtParam}}
+var ParamSpecAt = ParamSpec{Nparams: 1, Flags: []Flag{AtParam},
+	Names: []string{"arg"}}
 
 var ParamSpecOptionalBlock = ParamSpec{Nparams: 1, Ndefaults: 1,
 	Flags: []Flag{0}, Names: []string{"block"}, Values: []Value{False}}
