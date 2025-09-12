@@ -143,7 +143,7 @@ func TestWhere_perIndex(t *testing.T) {
 		idxSels := w.perIndex(pf)
 		assert.T(t).This(fmt.Sprint(idxSels)).Is("[" + expected + "]")
 	}
-		
+
 	table = "comp" // key(a,b,c)
 	test("a is 1", "a,b,c: 1..1,<max> = 0.1")
 	test("a is 1 and b is 2", "a,b,c: 1,2..1,2,<max> = 0.01")
@@ -162,7 +162,7 @@ func TestWhere_perIndex(t *testing.T) {
 	table = "table"
 	test("a >= ''", "a: ''..<max> = 1")
 	// test("a >= ''", "a: '' | '\\x00'..<max> = 1.005")
-	
+
 	table = "comp2"
 	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3")
 }
@@ -333,13 +333,13 @@ func TestWhere_indexes(t *testing.T) {
 		db.adm("create " + table + " " + schema)
 		defer db.adm("drop " + table)
 		tran := db.NewReadTran()
-		w := ParseQuery(table + " where " + where, tran, nil).(*Where)
+		w := ParseQuery(table+" where "+where, tran, nil).(*Where)
 		actual := "conflict"
 		if !w.conflict {
 			actual = fmt.Sprint(w.colSels)[3:]
 		}
 		assert.T(t).This(actual).Is(colSels)
-		
+
 		w.optInit()
 		assert.T(t).This(fmt.Sprint(w.idxSels)).Is(idxSels)
 	}
