@@ -18,9 +18,9 @@ func LastIndex[E comparable](list []E, e E) int {
 	return -1
 }
 
-func IndexFn[E any](list []E, e E, eq func(E, E) bool) int {
-	for i, e2 := range list {
-		if eq(e2, e) {
+func IndexFn[E, E2 any](list []E, e2 E2, eq func(E, E2) bool) int {
+	for i, e := range list {
+		if eq(e, e2) {
 			return i
 		}
 	}
