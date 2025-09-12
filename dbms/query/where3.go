@@ -13,7 +13,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -190,10 +189,7 @@ func (x side) valRaw() string {
 }
 
 func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
-	iIndex := slc.IndexFn(w.tbl.indexes, idx, slices.Equal)
-	if iIndex < 0 {
-		panic("index not found")
-	}
+	iIndex := w.tbl.indexi(idx)
 	var frac float64
 	npoints := 0
 	nrows, _ := w.tbl.Nrows()

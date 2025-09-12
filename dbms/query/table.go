@@ -93,7 +93,8 @@ func (tbl *Table) SetTran(t QueryTran) {
 
 	idxs := make([][]string, 0, len(tbl.schema.Indexes))
 	keys := make([][]string, 0, 1)
-	for _, ix := range tbl.schema.Indexes {
+	for i := range tbl.schema.Indexes {
+		ix := &tbl.schema.Indexes[i]
 		idxs = append(idxs, ix.Columns)
 		if ix.Mode == 'k' {
 			keys = append(keys, ix.Columns)
@@ -141,7 +142,7 @@ func (tbl *Table) SingleTable() bool {
 
 func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, any) {
 	if index == nil {
-		index = tbl.schema.Indexes[0].Columns
+		index = tbl.indexes[0]
 	} else if !tbl.singleton {
 		i := tbl.indexFor(index)
 		if i < 0 {
@@ -174,11 +175,17 @@ func (tbl *Table) SetIndex(index []string) {
 		index = tbl.allKeys[0]
 	}
 	tbl.index = index
-	tbl.iIndex = slc.IndexFn(tbl.indexes, tbl.index, slices.Equal)
-	assert.Msg("setIndex", tbl.name, index).That(tbl.iIndex >= 0)
+	tbl.iIndex = tbl.indexi(index)
 	tbl.indexEncode = len(tbl.index) > 1 ||
 		!slc.ContainsFn(tbl.allKeys, tbl.index, set.Equal[string])
 	IdxUse(tbl.name, tbl.index)
+}
+
+func (tbl *Table) indexi(index []string) int {
+	// WARNING: assumes tbl.indexes is parallel to schema.Indexes
+	i := slc.IndexFn(tbl.indexes, index, slices.Equal)
+	assert.Msg("index not found", tbl.name, index).That(i >= 0)
+	return i
 }
 
 func (tbl *Table) lookupCost() Cost {
@@ -376,7 +383,7 @@ func (tbl *Table) Single() bool {
 }
 
 func (tbl *Table) RangeFrac(index, cols, vals []string) float64 {
-	iIndex := slc.IndexFn(tbl.indexes, index, slices.Equal)
+	iIndex := tbl.indexi(index)
 	encode := len(index) > 1 ||
 		!slc.ContainsFn(tbl.allKeys, index, set.Equal[string])
 	org, end := selKeys(encode, index, cols, vals)
