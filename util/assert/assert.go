@@ -364,7 +364,9 @@ func (a assert) fail(args ...any) {
 		args = append(append(args, "msg: "), a.msg...)
 	}
 	s := fmt.Sprintln(args...)
-	dbg.PrintStack()
+	if a.t == nil {
+		dbg.PrintStack()
+	}
 
 	if a.t != nil {
 		a.t.Error("\n" + s)
