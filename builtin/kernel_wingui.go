@@ -11,7 +11,6 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/sys/windows"
 )
 
@@ -125,21 +124,6 @@ func GlobalAllocData(a Value) Value {
 		dstSlice := unsafe.Slice((*byte)(p), len(s))
 		copy(dstSlice, s)
 	}
-	return intRet(handle) // caller must GlobalFree
-}
-
-var _ = builtin(GlobalAllocString, "(s)")
-
-func GlobalAllocString(a Value) Value {
-	s := ToStr(a)
-	s = str.BeforeFirst(s, "\x00")
-	handle := globalalloc(GMEM_MOVEABLE, uintptr(len(s))+1)
-	p := globallock(handle)
-	assert.That(p != nil)
-	defer globalunlock(handle)
-	dst := unsafe.Slice((*byte)(p), len(s)+1)
-	copy(dst, s)
-	dst[len(s)] = 0
 	return intRet(handle) // caller must GlobalFree
 }
 
