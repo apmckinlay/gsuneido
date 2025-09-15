@@ -383,7 +383,7 @@ func (db *Database) buildIndexes(table string,
 			}
 			// check foreign key
 			if fk.Table != "" {
-				k := ix.Ixspec.Trunc(len(ix.Columns)).Key(rec)
+				k := ix.Ixspec.Trunc(len(fk.Columns)).Key(rec)
 				if k != "" && !rt.fkeyOutputExists(fk.Table, fk.IIndex, k) {
 					panic("cannot build index: blocked by foreign key: " +
 						fk.Table + " " + ix.String())

@@ -14,6 +14,7 @@ package ixkey
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -223,6 +224,11 @@ func (spec *Spec) Compare(r1, r2 Record) int {
 // n must be less than len(fields). Fields2 is dropped.
 func (spec *Spec) Trunc(n int) *Spec {
 	return &Spec{Fields: spec.Fields[:n]}
+}
+
+func (spec *Spec) Equal(other *Spec) bool {
+	return slices.Equal(spec.Fields, other.Fields) &&
+		slices.Equal(spec.Fields2, other.Fields2)
 }
 
 // Decode is for tests and debugging

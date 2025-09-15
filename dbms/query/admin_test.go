@@ -291,7 +291,7 @@ func TestView(t *testing.T) {
 func TestFkey(t *testing.T) {
 	store := stor.HeapStor(8192)
 	db := db19.CreateDb(store)
-	db.CheckerSync()
+	db19.StartConcur(db, 50*time.Millisecond)
 
 	schemas := map[string]string{}
 	check := func() {
@@ -388,6 +388,15 @@ func TestFkey(t *testing.T) {
 	doAdmin(db, "alter line create index(d) in head(b)")
 	schemas["line"] = "line (c,d) key(c) index(d) in head(b)"
 	schemas["head"] = "head (a,b) key(a) key(b) from line(d)"
+	check()
+	
+	doAdmin(db, "create less (a) key(a)")
+	act(db, "insert { a: 1 } into less")
+	doAdmin(db, "create more (k, a, b) key(k)")
+	act(db, "insert { k: 0, a: 1, b: 2 } into more")
+	doAdmin(db, "alter more create index(a, b) in less(a)")
+	schemas["more"] = "more (k,a,b) key(k) index(a,b) in less(a)"
+	schemas["less"] = "less (a) key(a) from more(a,b)"
 	check()
 
 	db.MustCheck()

@@ -37,7 +37,8 @@ func TestKeys(t *testing.T) {
 	test("(bcd where b is 1) union (bcd where b is 2)", "b")
 }
 
-func TestForeignKeys(*testing.T) {
+func TestForeignKeys(t *testing.T) {
+	//	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
@@ -48,97 +49,97 @@ func TestForeignKeys(*testing.T) {
 		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
+	test := func(key, index string) {
+		t.Helper()
+		// note that lin fields are different column names
+		// and in a different order relative to the indexes
+		doAdmin(db, "create hdr (a,b) key("+key+")")
+		defer doAdmin(db, "drop hdr")
+		act("insert { a: '1\x00', b: 2 } into hdr")
+		act("insert { a: '3\x00', b: 4 } into hdr")
+		doAdmin(db, "create lin (f,e,d) key(e) "+index+" in hdr("+key+")")
+		defer doAdmin(db, "drop lin")
 
-	doAdmin(db, "create hdr1 (a,b) key(a)")
-	act("insert { a: 1, b: 2 } into hdr1")
-	act("insert { a: 3, b: 4 } into hdr1")
-	doAdmin(db, "create lin1 (a,c) key(c) index(a) in hdr1")
-	act("insert { a: 1, c: 5 } into lin1")
+		// output (lin) block
+		assert.This(func() { act("insert { d: 9, e: 9 } into lin") }).
+			Panics("blocked by foreign key")
 
-	assert.This(func() { act("delete hdr1 where a = 1") }).
-		Panics("blocked by foreign key")
-	act("delete hdr1 where a = 3") // no lin1 so ok
+		// output (lin) NO block
+		act("insert { d: '1\x00', e: 2, f: 5 } into lin")
 
-	assert.This(func() { act("insert { a: 9, c: 6 } into lin1") }).
-		Panics("blocked by foreign key")
-	act("insert { a: '', c: 6 } into lin1") // '' allowed
+		// update (lin) block
+		assert.This(func() { act("update lin set d = 9") }).
+			Panics("blocked by foreign key")
 
-	act("insert { a: '', b: 22 } into hdr1")
-	act("delete hdr1 where a = ''")
+		// update (lin) NO block
+		act("update lin set d = '3\x00', e = 4")
 
-	assert.This(func() { act("update lin1 set a = 9") }).
-		Panics("blocked by foreign key")
-	assert.This(func() { act("update hdr1 set a = 9") }).
-		Panics("blocked by foreign key")
-	act("update lin1 where a = 1 set a = ''") // '' allowed
+		// delete (hdr) block
+		assert.This(func() { act("delete hdr where a = '3\x00' and b = 4") }).
+			Panics("blocked by foreign key")
 
-	doAdmin(db, "create hdr2 (m) key(m)")
-	act("insert { m: 1 } into hdr2")
-	doAdmin(db, "create lin2 (m, d) key(d) index(m) in hdr2 cascade")
-	act("insert { m: 1, d: 10 } into lin2")
-	act("insert { m: 1, d: 11 } into lin2")
-	act("insert { m: 1, d: 12 } into lin2")
-	assert.This(db.GetState().Meta.GetRoInfo("lin2").Nrows).Is(3)
-	act("delete hdr2") // cascade delete
-	assert.This(db.GetState().Meta.GetRoInfo("lin2").Nrows).Is(0)
+		// delete (hdr) NO block
+		act("delete hdr where a = '1\x00' and b = 2")
 
-	doAdmin(db, "create hdr3 (m) key(m)")
-	act("insert { m: 1 } into hdr3")
-	doAdmin(db, "create lin3 (d, m) key(d) index(m) in hdr3 cascade")
-	act("insert { m: 1, d: 10 } into lin3")
-	act("insert { m: 1, d: 11 } into lin3")
-	act("insert { m: 1, d: 12 } into lin3")
-	assert.This(queryAll(db, "lin3")).
-		Is("d=10 m=1 | d=11 m=1 | d=12 m=1")
-	act("update hdr3 set m = 2") // cascade update
-	assert.This(queryAll(db, "lin3")).
-		Is("d=10 m=2 | d=11 m=2 | d=12 m=2")
+		doAdmin(db, "drop lin")
+		doAdmin(db, "create lin (f,e,d) key(e) "+index+" in hdr("+key+") cascade")
+		act("insert { d: '3\x00', e: 4, f: 5 } into lin")
+		
+		// update (hdr) cascade
+		act("update hdr set a = 33, b = 44")
+		assert.This(queryAll(db, "hdr")).Is("a=33 b=44")
+		data := queryAll(db, "lin")
+		assert.Msg(data).That(strings.Contains(data, "d=33"))
 
-	doAdmin(db, "create hdr4 (a) key(a)")
-	doAdmin(db, "create lin4 (b,a) key(b)")
-	act("insert { b: 1, a: 1 } into lin4")
-	assert.This(func() { doAdmin(db, "alter lin4 create index(a) in hdr4") }).
-		Panics("blocked by foreign key")
-	act("insert { b: 2, a: 1 } into lin4")
-	assert.This(func() { doAdmin(db, "alter lin4 create key(a)") }).
-		Panics("duplicate")
-
-	doAdmin(db, "ensure hdr5 (a, b, c) key(a)")
-	doAdmin(db, "ensure lin5 (a, d, e) key(e) index(a) in hdr5 cascade")
-	act("insert { a: 'a1', b: 'b1', c: 'c1'  } into hdr5")
-	act("insert { a: 'a1', d: 'd1', e: 'e1' } into lin5")
-	act("delete hdr5 where a is 'a1'")
-	assert.This(queryAll(db, "lin5")).Is("")
-
-	// requires encode
-	doAdmin(db, "create hdr6 (a, b, c) key(a)")
-	doAdmin(db, "create lin6 (a, d, e) key(e) index(a) in hdr6 cascade")
-	act("insert { a: #20211110.132155918, b: 'b1', c: 'c1'  } into hdr6")
-	act("insert { a: #20211110.132155918, d: 'd1', e: 'e1' } into lin6")
-	act("update hdr6 where a is #20211110.132155918 set a = #20211110.132155919")
-	act("delete hdr6 where a is #20211110.132155919")
-	assert.This(queryAll(db, "lin6")).Is("")
-
-	// requires rangeEnd in fkeyDeleteCascade
-	doAdmin(db, "ensure hdr7 (a, b, c) key(a,b)")
-	doAdmin(db, "ensure lin7 (a, b, d, e) key(e) index(a,b) in hdr7 cascade")
-	act("insert { a: 'a1', c: 'c1'  } into hdr7")
-	act("insert { a: 'a1', b: 'b2', c: 'c2'  } into hdr7")
-	act("insert { a: 'a1', d: 'd1', e: 'e1' } into lin7")
-	act("insert { a: 'a1', b: 'b2', d: 'd2', e: 'e2' } into lin7")
-	act("delete hdr7 where a is 'a1' and b is ''")
-	assert.This(queryAll(db, "lin7")).Is("a=a1 b=b2 d=d2 e=e2")
-
-	// requires rangeEnd in fkeyUpdateCascade
-	doAdmin(db, "ensure hdr8 (a, b, c) key(a,b)")
-	doAdmin(db, "ensure lin8 (a, b, d, e) key(e) index(a,b) in hdr8 cascade")
-	act("insert { a: 'a1', c: 'c1'  } into hdr8")
-	act("insert { a: 'a1', b: 'b2', c: 'c2'  } into hdr8")
-	act("insert { a: 'a1', d: 'd1', e: 'e1' } into lin8")
-	act("insert { a: 'a1', b: 'b2', d: 'd2', e: 'e2' } into lin8")
-	act("update hdr8 where a is 'a1' and b is '' set a = 'a0'")
-	assert.This(queryAll(db, "lin8")).Is("a=a0 d=d1 e=e1 | a=a1 b=b2 d=d2 e=e2")
+		// delete (hdr) cascade
+		act("delete hdr")
+		assert.This(queryAll(db, "lin")).Is("")
+	}
+	test("a", "key(d)")
+	test("a", "index(d)")
+	test("a", "index(d,e)")
+	test("a,b", "index(d,e)")
+	test("a,b", "index(d,e,f)")
 	db.MustCheck()
+}
+
+func TestForeignKeyDeleteBlock(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(nil, ut, act)
+		assert.This(n).Is(1)
+	}
+	doAdmin(db, "create hdr (a, b, c) key(a)")
+	doAdmin(db, "create lin (d, e, f) key(e) index(d) in hdr(a)")
+	act("insert { a: '\x00', b: 'b1', c: 'c1'  } into hdr")
+	act("insert { d: '\x00', e: 'e1', f: 'f1' } into lin")
+	assert.This(func() { act("delete hdr where a = '\x00'") }).
+		Panics("blocked by foreign key")
+}
+
+func TestForeignKeyDeleteCascade(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(nil, ut, act)
+		assert.This(n).Is(1)
+	}
+	doAdmin(db, "create hdr (a, b, c) key(a)")
+	doAdmin(db, "create lin (d, e, f) key(e) index(d,f) in hdr(a) cascade")
+	act("insert { a: '\x00', b: 'b1', c: 'c1'  } into hdr")
+	act("insert { d: '\x00', e: 'e1', f: 'f1' } into lin")
+	act("delete hdr where a is '\x00'")
+	// cascade should delete lin
+	assert.T(t).This(queryAll(db, "lin")).Is("")
 }
 
 func queryAll(db *db19.Database, query string) string {
