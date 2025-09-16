@@ -1,0 +1,253 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
+package btree
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
+
+func TestLeafNode_builder(t *testing.T) {
+	assert := assert.This
+
+	// Test single key
+	b := &leafBuilder{}
+	b.add("hello", 255)
+	nd := b.finish()
+	assert(nd.nkeys()).Is(1)
+	assert(nd.offset(0)).Is(255)
+	assert(nd.key(0)).Is("hello")
+	assert(string(nd.prefix())).Is("")
+	assert(nd.String()).Is("leaf{hello 255}")
+
+	// Test multiple keys with offsets
+	keys := []string{"apple", "banana", "cherry"}
+	offsets := []uint64{100, 200, 300}
+	b.reset()
+	for i, key := range keys {
+		b.add(key, offsets[i])
+	}
+	nd = b.finish()
+	assert(nd.nkeys()).Is(3)
+	assert(string(nd.prefix())).Is("")
+
+	// Verify keys are stored correctly
+	for i, expected := range keys {
+		assert(nd.key(i)).Is(expected)
+	}
+
+	// Test maximum keys (255 limit)
+	b.reset()
+	for i := range 255 {
+		b.add(fmt.Sprintf("key%03d", i), uint64(1000+i))
+	}
+	nd = b.finish()
+	assert(nd.nkeys()).Is(255)
+	assert(string(nd.prefix())).Is("key")
+
+	// Verify first and last keys
+	assert(nd.key(0)).Is("key000")
+	assert(nd.key(254)).Is("key254")
+
+	// Test panic on too many keys
+	b.reset()
+	for i := range 256 {
+		b.add(fmt.Sprintf("key%03d", i), 123)
+	}
+	assert(func() { b.finish() }).Panics("too many keys")
+}
+
+func TestLeafPrefix(t *testing.T) {
+	nd := makeLeaf("hello", 12, "helloa", 34, "hellfire", 56, "help", 78)
+	assert.This(string(nd.prefix())).Is("hel")
+	assert.This(nd.String()).Is("leaf{|hel| lo 12 loa 34 lfire 56 p 78}")
+	assert.This(nd.key(0)).Is("hello")
+	assert.This(nd.key(1)).Is("helloa")
+	assert.This(nd.key(2)).Is("hellfire")
+	assert.This(nd.key(3)).Is("help")
+}
+
+func TestLeafSearchEdgeCases(t *testing.T) {
+	assert := assert.This
+
+	// Test search with prefix compression
+	nd := makeLeaf("prefix001", 1001, "prefix002", 1002, 
+		"prefix005", 1005, "prefix010", 1010)
+
+	// Test exact matches
+	assert(nd.search("prefix001")).Is(1001)
+	assert(nd.search("prefix002")).Is(1002)
+	assert(nd.search("prefix005")).Is(1005)
+	assert(nd.search("prefix010")).Is(1010)
+
+	// Test key smaller than prefix
+	assert(nd.search("pre")).Is(0) // not found
+
+	// Test key larger than prefix but not matching any entry
+	assert(nd.search("prefix003")).Is(0) // not found
+	assert(nd.search("prefix006")).Is(0) // not found
+
+	// Test key larger than all entries
+	assert(nd.search("prefix999")).Is(0) // not found
+
+	// Test key with different prefix
+	assert(nd.search("other")).Is(0) // not found
+	assert(nd.search("aaa")).Is(0)   // not found
+
+	// Test no prefix compression
+	nd2 := makeLeaf("apple", 100, "banana", 200, "cherry", 300)
+
+	assert(nd2.search("apple")).Is(100)
+	assert(nd2.search("banana")).Is(200)
+	assert(nd2.search("cherry")).Is(300)
+	assert(nd2.search("aaa")).Is(0)   // not found
+	assert(nd2.search("bear")).Is(0)  // not found
+	assert(nd2.search("zebra")).Is(0) // not found
+
+	// Test single key node
+	nd3 := makeLeaf("single", 999)
+
+	assert(nd3.search("single")).Is(999)
+	assert(nd3.search("aaa")).Is(0) // not found
+	assert(nd3.search("zzz")).Is(0) // not found
+}
+
+// makeLeaf takes offsets separated by keys
+//
+// e.g. makeLeaf("apple", 200, "banana", 300, "cherry", 400)
+func makeLeaf(args ...any) leafNode {
+	if len(args) == 0 {
+		return leafNode{}
+	}
+	var b leafBuilder
+	for i := 0; i < len(args)-1; i += 2 {
+		b.add(args[i].(string), uint64(args[i+1].(int)))
+	}
+	return b.finish()
+}
+
+func BenchmarkLeafSearch(b *testing.B) {
+	// Test with prefix compression (6-char prefix + 4-char suffix)
+	b.Run("Prefix", func(b *testing.B) {
+		builder := &leafBuilder{}
+		// Create 75 keys with 6-char prefix + 4-char suffix
+		for i := range 75 {
+			key := fmt.Sprintf("prefix%04d", i) // 10 chars total
+			builder.add(key, uint64(1000+i))
+		}
+		nd := builder.finish()
+
+		// Search for keys at different positions
+		searchKeys := []string{
+			// "aaa",
+			"prefix0000", // first key
+			"prefix0037", // middle key
+			"prefix0074", // last key
+			"prefix0050", // another middle key
+			// "zzz",
+		}
+
+		for b.Loop() {
+			for _, key := range searchKeys {
+				_ = nd.search(key)
+			}
+		}
+	})
+
+	// Test with no prefix compression (diverse 10-char keys)
+	b.Run("NoPrefix", func(b *testing.B) {
+		builder := &leafBuilder{}
+		// Create 75 diverse keys with no common prefix
+		keys := make([]string, 75)
+		for i := range 75 {
+			// Generate diverse 10-character keys
+			key := fmt.Sprintf("%c%c%c%c%c%05d",
+				'a'+byte(i%26),
+				'b'+byte((i*7)%26),
+				'c'+byte((i*13)%26),
+				'd'+byte((i*19)%26),
+				'e'+byte((i*23)%26),
+				i)
+			keys[i] = key
+			builder.add(key, uint64(2000+i))
+		}
+		nd := builder.finish()
+
+		// Search for keys at different positions
+		searchKeys := []string{
+			keys[0],  // first key
+			keys[37], // middle key
+			keys[74], // last key
+			keys[50], // another middle key
+		}
+
+		for b.Loop() {
+			for _, key := range searchKeys {
+				_ = nd.search(key)
+			}
+		}
+	})
+}
+
+/*
+func TestLeafNodeInsert(t *testing.T) {
+	assert := assert.T(t).This
+	var nd leafNode
+
+	// Test inserting into empty leaf node
+	nd = nd.insert("hello", 123)
+	assert(nd.String()).Is("leaf{hello:123}")
+
+	// Test inserting at the beginning (smaller key)
+	nd = nd.insert("apple", 100)
+	assert(nd.String()).Is("leaf{apple:100, hello:123}")
+
+	// Test inserting in the middle
+	nd = nd.insert("banana", 200)
+	assert(nd.String()).Is("leaf{apple:100, banana:200, hello:123}")
+
+	// Test inserting at the end (larger key)
+	nd = nd.insert("zebra", 300)
+	assert(nd.String()).Is("leaf{apple:100, banana:200, hello:123, zebra:300}")
+
+	// Test inserting duplicate key (should fail)
+	assert(func() { nd = nd.insert("banana", 250) }).Panics("duplicate key")
+}
+
+func TestLeafNodeInsertWithPrefixCompression(t *testing.T) {
+	assert := assert.This
+
+	// Test inserting keys that will benefit from prefix compression
+	var nd leafNode
+	nd = nd.insert("prefix1", 1)
+	nd = nd.insert("prefix2", 2)
+	nd = nd.insert("prefix3", 3)
+
+	assert(nd.String()).Is("leaf{prefix1:1, prefix2:2, prefix3:3}")
+
+	it := nd.iter()
+	expectedKeys := []string{"prefix1", "prefix2", "prefix3"}
+	expectedOffsets := []uint64{1, 2, 3}
+	for i, expectedKey := range expectedKeys {
+		assert(it.next()).Is(true)
+		assert(string(it.key)).Is(expectedKey)
+		assert(it.off).Is(expectedOffsets[i])
+	}
+	assert(!it.next()).Is(true)
+
+	// Test inserting a key that breaks the prefix pattern
+	nd = nd.insert("different", 4)
+	it = nd.iter()
+	expectedKeys = []string{"different", "prefix1", "prefix2", "prefix3"}
+	expectedOffsets = []uint64{4, 1, 2, 3}
+	for i, expectedKey := range expectedKeys {
+		assert(it.next()).Is(true)
+		assert(it.key).Is([]byte(expectedKey))
+		assert(it.off).Is(expectedOffsets[i])
+	}
+	assert(!it.next()).Is(true)
+}
+*/

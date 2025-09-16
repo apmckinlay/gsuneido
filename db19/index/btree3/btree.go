@@ -1,0 +1,99 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
+/*
+db19/index/btree3 is a new, optimized btree implementation.
+It is incomplete and not used yet.
+
+Two things create or modify btrees:
+- bulk in-order loading from load or compact (Builder)
+- add, update, and delete from an ixbuf (MergeAndSave)
+*/
+package btree
+
+import (
+	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
+
+// MaxNodeSize is the maximum node size in bytes, split if larger.
+// var rather than const because it is overridden by tests.
+var MaxNodeSize = 1024
+
+const MinFanout = 4
+
+// EntrySize is the estimated average entry size
+const EntrySize = 10
+
+// TreeHeight is the estimated average tree height.
+// It is used by Table.lookupCost
+const TreeHeight = 3
+
+var Fanout = MaxNodeSize / EntrySize // estimate ~100
+
+type btree struct {
+	stor       *stor.Stor
+	root       uint64
+	treeLevels int
+}
+
+// Lookup returns the offset for a key, or 0 if not found.
+func (bt *btree) Lookup(key string) uint64 {
+	off := bt.root
+	for range bt.treeLevels {
+		nd := bt.getTree(off)
+		off = nd.search(key)
+	}
+	nd := bt.getLeaf(off)
+	return nd.search(key)
+}
+
+func (bt *btree) getTree(off uint64) treeNode {
+	return readTree(bt.stor, off)
+}
+
+func (bt *btree) getLeaf(off uint64) leafNode {
+	return readLeaf(bt.stor, off)
+}
+
+// Check verifies that the keys are in order and returns the number of keys.
+// If the supplied function is not nil, it is applied to each leaf offset.
+func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
+	var prev []byte // updated by leaf
+	var check1 func(int, uint64)
+	check1 = func(depth int, offset uint64) {
+		nnodes++
+		if depth < bt.treeLevels {
+			// tree
+			nd := readTree(bt.stor, offset)
+			size = len(nd)
+			for i := 0; i < nd.nkeys(); i++ {
+				sep := nd.key(i)
+				assert.That(string(sep) > string(prev))
+				check1(depth+1, nd.offset(i)) // RECURSE
+			}
+			check1(depth+1, nd.offset(nd.nkeys())) // RECURSE
+		} else {
+			// leaf
+			nd := readLeaf(bt.stor, offset)
+			k := nd.key(0)
+			assert.That(k > string(prev))
+			size = len(nd)
+			var prevSuffix []byte
+			first := true
+			for it := nd.iter(); it.next(); count++ {
+				k := it.suffix()
+				if !first {
+					assert.That(string(k) > string(prevSuffix))
+				}
+				first = false
+				prevSuffix = k
+				fn(it.offset())
+			}
+			prev = append(append((prev)[:0], nd.prefix()...),
+				nd.suffix(nd.nkeys()-1)...)
+		}
+	}
+	check1(0, bt.root)
+	return
+}
