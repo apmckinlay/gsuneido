@@ -587,6 +587,7 @@ loop:
 			th.Pop() // discard the normal nil return value
 			break loop
 		case op.PushReturn:
+			th.Pop() // discard the normal nil return value
 			n := fetchUint8()
 			rm := th.ReturnMulti
 			th.ReturnMulti = th.ReturnMulti[:0]

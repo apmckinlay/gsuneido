@@ -35,12 +35,24 @@ func TestThrow(t *testing.T) {
 
 func TestMulti(t *testing.T) {
 	f := compile.Constant(`function () {
-		z = Type(0)
 	    f = function() { return 12,34 }
 		a,b = f()
 		return a is 12 and b is 34
 	}`)
 	var th Thread
+	assert.This(th.Call(f)).Is(True)
+	
+	f = compile.Constant(`function () {
+		fn = function (unused) 
+			{
+			return 12, 34
+			}
+		for foo in Object(1)
+			{
+			a, b = fn(foo)
+			}
+		return a is 12 and b is 34
+	}`)
 	assert.This(th.Call(f)).Is(True)
 }
 
