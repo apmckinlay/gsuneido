@@ -192,6 +192,115 @@ func BenchmarkLeafSearch(b *testing.B) {
 	})
 }
 
+func TestLeafNode_seek(t *testing.T) {
+	assert := assert.T(t).This
+
+	// Test single key node
+	nd := makeLeaf("hello", 200)
+	
+	// Key smaller than existing key - should return iterator with i=-1
+	it := nd.seek("apple")
+	assert(it.i).Is(0)
+	
+	// Exact match - should position at key index
+	it = nd.seek("hello")
+	assert(it.i).Is(0)
+	
+	// Key larger than existing key
+	it = nd.seek("zebra")
+	assert(it.i).Is(1)
+
+	// Test multiple keys without prefix compression
+	nd = makeLeaf("apple", 100, "banana", 200, "cherry", 300, "date", 400)
+	
+	// Test exact matches at different positions
+	it = nd.seek("apple")
+	assert(it.i).Is(0)
+	
+	it = nd.seek("banana")
+	assert(it.i).Is(1)
+	
+	it = nd.seek("cherry")
+	assert(it.i).Is(2)
+	
+	it = nd.seek("date")
+	assert(it.i).Is(3)
+	
+	// Test keys between existing keys - should find last key <= search key
+	it = nd.seek("avocado") // between "apple" and "banana"
+	assert(it.i).Is(1)
+	
+	it = nd.seek("blueberry") // between "banana" and "cherry"
+	assert(it.i).Is(2)
+	
+	it = nd.seek("coconut") // between "cherry" and "date"
+	assert(it.i).Is(3)
+	
+	// Test key smaller than all keys
+	it = nd.seek("aaa")
+	assert(it.i).Is(0)
+	
+	// Test key larger than all keys
+	it = nd.seek("zebra")
+	assert(it.i).Is(4)
+	
+	// Test with prefix compression
+	nd = makeLeaf("prefix001", 1001, "prefix002", 1002, "prefix005", 1005, "prefix010", 1010)
+	
+	// Test exact matches with prefix
+	it = nd.seek("prefix001")
+	assert(it.i).Is(0)
+	
+	it = nd.seek("prefix002")
+	assert(it.i).Is(1)
+	
+	it = nd.seek("prefix005")
+	assert(it.i).Is(2)
+	
+	it = nd.seek("prefix010")
+	assert(it.i).Is(3)
+	
+	// Test key smaller than prefix
+	it = nd.seek("pre")
+	assert(it.i).Is(0)
+	
+	it = nd.seek("aaa")
+	assert(it.i).Is(0)
+	
+	// Test key between prefix entries
+	it = nd.seek("prefix003") // between "prefix002" and "prefix005"
+	assert(it.i).Is(2)
+	
+	it = nd.seek("prefix006") // between "prefix005" and "prefix010"
+	assert(it.i).Is(3)
+	
+	// Test key larger than prefix but not matching entries
+	it = nd.seek("prefix999")
+	assert(it.i).Is(4)
+	
+	// Test key with different prefix but lexicographically >= prefix
+	it = nd.seek("zzz")
+	assert(it.i).Is(4) // all entries are < "zzz"
+	
+	// Test iterator navigation from seek position
+	nd = makeLeaf("apple", 100, "banana", 200, "cherry", 300)
+	it = nd.seek("banana")
+	assert(it.i).Is(1)
+	
+	// Test next/prev from seek position
+	assert(it.next()).Is(true)
+	assert(it.i).Is(2)
+	
+	assert(it.prev()).Is(true)
+	assert(it.i).Is(1)
+	
+	// Test seek to position -1 and then next
+	it = nd.seek("aaa")
+	assert(it.i).Is(0)
+	assert(it.next()).Is(true)
+	assert(it.i).Is(1)
+}
+
 /*
 func TestLeafNodeInsert(t *testing.T) {
 	assert := assert.T(t).This

@@ -100,19 +100,48 @@ func (nd leafNode) search(key string) uint64 {
 	}
 	// key starts with prefix, binary search for suffix
 	keySuffix := key[prefixLen:]
-	low, high := 0, nd.nkeys()-1
-	for low <= high {
-		mid := (low + high) / 2
+	lo, hi := 0, nd.nkeys()-1
+	for lo <= hi {
+		mid := (lo + hi) / 2
 		midSuffix := string(nd.suffix(mid))
 		if midSuffix < keySuffix {
-			low = mid + 1
+			lo = mid + 1
 		} else if midSuffix > keySuffix {
-			high = mid - 1
+			hi = mid - 1
 		} else {
 			return nd.offset(mid) // found
 		}
 	}
 	return 0 // not found
+}
+
+// seek returns a leafIter positioned at the first key >= key
+func (nd leafNode) seek(key string) *leafIter {
+	prefix := nd.prefix()
+	prefixLen := len(prefix)
+	if prefixLen > 0 {
+		prefixStr := string(prefix)
+		if key < prefixStr {
+			// key is less than prefix, no entries <= key
+			return &leafIter{nd: nd, i: 0}
+		} else if !strings.HasPrefix(key, prefixStr) {
+			// key doesn't start with prefix but key >= prefix,
+			// so all entries are < key
+			return &leafIter{nd: nd, i: nd.nkeys()}
+		}
+	}
+	// key starts with prefix (or no prefix), binary search for suffix
+	keySuffix := key[prefixLen:]
+	lo, hi := 0, nd.nkeys()
+	for lo < hi {
+		mid := (lo + hi) / 2
+		if string(nd.suffix(mid)) < keySuffix {
+			lo = mid + 1
+		} else {
+			hi = mid
+		}
+	}
+	return &leafIter{nd: nd, i: lo}
 }
 
 // write writes a leaf node to storage
@@ -159,30 +188,40 @@ func (nd leafNode) String() string {
 
 // ------------------------------------------------------------------
 
+// leafIter iterates over a leaf node.
 type leafIter struct {
 	nd leafNode
 	i  int
 }
 
-// iter returns an iterator over the offsets (not the separators)
+// iter starts at -1 so next goes to the first entry
 func (nd leafNode) iter() *leafIter {
 	return &leafIter{nd: nd, i: -1}
 }
 
+// next moves to the next entry.
+// It returns false if there are no more entries.
 func (it *leafIter) next() bool {
-	if it.i+1 >= it.nd.nkeys() {
+	if it.i >= it.nd.nkeys() {
 		return false
 	}
 	it.i++
-	return true
+	return it.i < it.nd.nkeys()
 }
 
+// prev moves to the previous entry.
+// It returns false if there are no more entries.
 func (it *leafIter) prev() bool {
-	if it.i <= 0 {
+	if it.i < 0 {
 		return false
 	}
 	it.i--
-	return true
+	return it.i >= 0
+}
+
+// eof returns true if past the beginning or end
+func (it *leafIter) eof() bool {
+	return it.i < 0 || it.i >= it.nd.nkeys()
 }
 
 func (it *leafIter) key(buf []byte) []byte {
@@ -206,10 +245,6 @@ type leafBuilder struct {
 	prefix    string
 }
 
-func (b *leafBuilder) empty() bool {
-	return len(b.keys) == 0
-}
-
 func (b *leafBuilder) add(key string, offset uint64) {
 	if len(b.keys) == 0 {
 		b.prefix = key
@@ -227,6 +262,10 @@ func (b *leafBuilder) size() int {
 	prelen := len(b.prefix)
 	fieldsLen := b.fieldsLen - n*prelen
 	return 4 + 7*n + prelen + fieldsLen
+}
+
+func (b *leafBuilder) nkeys() int {
+	return len(b.keys)
 }
 
 func (b *leafBuilder) finish() leafNode {
@@ -261,6 +300,7 @@ func (b *leafBuilder) finish() leafNode {
 	return leafNode(result)
 }
 
+// reset clears the builder, keeping its capacity to save allocation
 func (b *leafBuilder) reset() {
 	b.keys = b.keys[:0]
 	b.offsets = b.offsets[:0]

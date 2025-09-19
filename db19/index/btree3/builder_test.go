@@ -14,12 +14,16 @@ import (
 )
 
 func TestBuilderSmall(t *testing.T) {
-	var buf []byte
+	bt := Builder(stor.HeapStor(256)).Finish()
+	bt.Check(nil)
+	
 	const from = 100
 	for to := 101; to < 199; to++ {
 		st := stor.HeapStor(64 * 1024)
 		b := Builder(st)
-		b.splitSize = 40
+		b.shouldSplit = func(nd splitable) bool {
+			return nd.nkeys() > 3 //nd.size() > 40
+		}
 		for i := from; i < to; i++ {
 			assert.That(b.Add(strconv.Itoa(i), uint64(i)))
 		}
@@ -39,12 +43,13 @@ func TestBuilderSmall(t *testing.T) {
 		// Iterator
 		it := bt.Iterator()
 		for i := from; i < to; i++ {
-			assert.That(it.Next())
-			buf = it.Key(buf)
-			assert.That(string(buf) == strconv.Itoa(i))
-			assert.This(it.Off()).Is(uint64(i))
+			it.Next()
+			assert.That(!it.Eof())
+			assert.That(string(it.Key()) == strconv.Itoa(i))
+			assert.This(it.Offset()).Is(uint64(i))
 		}
-		assert.That(!it.Next())
+		it.Next()
+		assert.That(it.Eof())
 
 		// Lookup
 		for i := from; i < to; i++ {
@@ -57,7 +62,6 @@ func TestBuilderBig(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping big test")
 	}
-	var buf []byte
 	const from = 1_000_000
 	const to = 10_000_000
 	st := stor.HeapStor(64 * 1024)
@@ -79,12 +83,13 @@ func TestBuilderBig(t *testing.T) {
 	// Iterator
 	it := bt.Iterator()
 	for i := from; i < to; i++ {
-		assert.That(it.Next())
-		buf = it.Key(buf)
-		assert.That(string(buf) == strconv.Itoa(i))
-		assert.This(it.Off()).Is(uint64(i))
+		it.Next()
+		assert.That(!it.Eof())
+	assert.That(string(it.Key()) == strconv.Itoa(i))
+		assert.This(it.Offset()).Is(uint64(i))
 	}
-	assert.That(!it.Next())
+	it.Next()
+	assert.That(it.Eof())
 
 	// Lookup
 	for i := from; i < to; i++ {
@@ -104,7 +109,7 @@ func (bt *btree) print1(depth int, offset uint64) {
 		fmt.Println(offset, "->", nd)
 		for i := 0; i < nd.nkeys(); i++ {
 			bt.print1(depth+1, nd.offset(i)) // RECURSE
-			fmt.Println(strings.Repeat(" .", depth), string(nd.key(i)))
+			fmt.Println(strings.Repeat(" .", depth), "<" + string(nd.key(i)) + ">")
 		}
 		bt.print1(depth+1, nd.offset(nd.nkeys())) // RECURSE
 	} else {

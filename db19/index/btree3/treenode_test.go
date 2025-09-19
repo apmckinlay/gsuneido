@@ -100,6 +100,88 @@ func makeTree(args ...any) treeNode {
 	return b.finish(uint64(args[len(args)-1].(int)))
 }
 
+func TestTreeNode_seek(t *testing.T) {
+	assert := assert.T(t).This
+
+	// Test single key tree node
+	nd := makeTree(100, "hello", 200)
+	
+	// Key smaller than existing key - should return iterator with i=-1
+	it := nd.seek("apple")
+	assert(it.i).Is(0)
+	
+	// Exact match - should position at key index
+	it = nd.seek("hello")
+	assert(it.i).Is(1)
+	
+	// Key larger than existing key - should position at last key
+	it = nd.seek("zebra")
+	assert(it.i).Is(1)
+
+	// Test multiple keys
+	nd = makeTree(11, "apple", 22, "banana", 33, "cherry", 44, "date", 55)
+	
+	// Test exact matches at different positions
+	it = nd.seek("apple")
+	assert(it.i).Is(1)
+	
+	it = nd.seek("banana")
+	assert(it.i).Is(2)
+	
+	it = nd.seek("cherry")
+	assert(it.i).Is(3)
+	
+	it = nd.seek("date")
+	assert(it.i).Is(4)
+	
+	// Test keys between existing keys - should find last key <= search key
+	it = nd.seek("avocado") // between "apple" and "banana"
+	assert(it.i).Is(1)
+	
+	it = nd.seek("blueberry") // between "banana" and "cherry"
+	assert(it.i).Is(2)
+	
+	it = nd.seek("coconut") // between "cherry" and "date"
+	assert(it.i).Is(3)
+	
+	// Test key smaller than all keys
+	it = nd.seek("aaa")
+	assert(it.i).Is(0)
+	
+	// Test key larger than all keys
+	it = nd.seek("zebra")
+	assert(it.i).Is(4)
+	
+	// Test iterator navigation from seek position
+	it = nd.seek("banana")
+	assert(it.i).Is(2)
+	assert(it.next()).Is(true)
+	assert(it.i).Is(3)
+	
+	assert(it.prev()).Is(true)
+	assert(it.i).Is(2)
+	
+	// Test seek with prefix-like keys
+	nd2 := makeTree(100, "test", 200, "testing", 300, "tests", 400)
+	
+	it = nd2.seek("test")
+	assert(it.i).Is(1)
+	
+	it = nd2.seek("testing")
+	assert(it.i).Is(2)
+	
+	it = nd2.seek("tests")
+	assert(it.i).Is(3)
+	
+	// Test with key between "test" and "testing"
+	it = nd2.seek("testg")
+	assert(it.i).Is(1)
+	
+	// Test with key between "testing" and "tests"
+	it = nd2.seek("testj")
+	assert(it.i).Is(2)
+}
+
 // func TestTreeNode_insert(t *testing.T) {
 // 	assert := assert.T(t).This
 

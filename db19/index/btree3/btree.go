@@ -8,6 +8,14 @@ It is incomplete and not used yet.
 Two things create or modify btrees:
 - bulk in-order loading from load or compact (Builder)
 - add, update, and delete from an ixbuf (MergeAndSave)
+
+A btree consists of two kinds of nodes: leafNode and treeNode.
+There are treeLevels of treeNodes.
+The root is a leafNode if treeLevels == 0, otherwise it is a treeNode.
+
+leafNode and treeNode have the same basic representations.
+leafNode has prefix compression.
+treeNode has an extra offset since the fields are separators.
 */
 package btree
 
@@ -18,9 +26,8 @@ import (
 
 // MaxNodeSize is the maximum node size in bytes, split if larger.
 // var rather than const because it is overridden by tests.
-var MaxNodeSize = 1024
-
-const MinFanout = 4
+const minSplit = 1024 // ???
+const maxSplit = 8192 // ???
 
 // EntrySize is the estimated average entry size
 const EntrySize = 10
@@ -29,7 +36,8 @@ const EntrySize = 10
 // It is used by Table.lookupCost
 const TreeHeight = 3
 
-var Fanout = MaxNodeSize / EntrySize // estimate ~100
+// Fanout is the estimated average number of children per node.
+const fanout = 100
 
 type btree struct {
 	stor       *stor.Stor
@@ -66,6 +74,7 @@ func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 		if depth < bt.treeLevels {
 			// tree
 			nd := readTree(bt.stor, offset)
+			assert.That(nd.nkeys() >= 1)
 			size = len(nd)
 			for i := 0; i < nd.nkeys(); i++ {
 				sep := nd.key(i)
@@ -76,6 +85,10 @@ func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 		} else {
 			// leaf
 			nd := readLeaf(bt.stor, offset)
+			if nd.nkeys() == 0 {
+				assert.That(bt.treeLevels == 0)
+				return
+			}
 			k := nd.key(0)
 			assert.That(k > string(prev))
 			size = len(nd)

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
@@ -24,13 +25,17 @@ The node size and final offset can be treated as an additional array element.
 
 offsets are stored most significant byte first.
 
-There are count fields, and count + 1 record offsets.
+There are nkeys fields, and noffs = nkeys + 1 record offsets.
 */
 
 type treeNode []byte
 
 func (nd treeNode) nkeys() int {
 	return int(nd[0])
+}
+
+func (nd treeNode) noffs() int {
+	return int(nd[0]) + 1
 }
 
 // size returns the length of a treeNode
@@ -62,17 +67,29 @@ func (nd treeNode) offset(i int) uint64 {
 // search returns the offset of the first entry that is >= key
 func (nd treeNode) search(key string) uint64 {
 	// binary search
-	low, high := 0, nd.nkeys()-1
-	for low <= high {
-		mid := (low + high) / 2
-		midKey := nd.key(mid)
-		if string(midKey) <= key {
-			low = mid + 1
+	lo, hi := 0, nd.nkeys()-1
+	for lo <= hi {
+		mid := (lo + hi) / 2
+		if string(nd.key(mid)) <= key {
+			lo = mid + 1
 		} else {
-			high = mid - 1
+			hi = mid - 1
 		}
 	}
-	return nd.offset(low)
+	return nd.offset(lo)
+}
+
+func (nd treeNode) seek(key string) *treeIter {
+	lo, hi := 0, nd.nkeys()-1
+	for lo <= hi {
+		mid := (lo + hi) / 2
+		if string(nd.key(mid)) <= key {
+			lo = mid + 1
+		} else {
+			hi = mid - 1
+		}
+	}
+	return &treeIter{nd: nd, i: lo}
 }
 
 // write writes a tree node to storage
@@ -127,19 +144,19 @@ func (nd treeNode) iter() *treeIter {
 }
 
 func (it *treeIter) next() bool {
-	if it.i+1 > it.nd.nkeys() {
+	if it.i >= it.nd.noffs() {
 		return false
 	}
 	it.i++
-	return true
+	return it.i < it.nd.noffs()
 }
 
 func (it *treeIter) prev() bool {
-	if it.i <= 0 {
+	if it.i < 0 {
 		return false
 	}
 	it.i--
-	return true
+	return it.i >= 0
 }
 
 func (it *treeIter) off() uint64 {
@@ -164,8 +181,27 @@ func (b *treeBuilder) size() int {
 	return b.entrySize + 8
 }
 
+func (b *treeBuilder) nkeys() int {
+	return len(b.keys)
+}
+
+// finish adds a final offset and then builds the tree node
 func (b *treeBuilder) finish(offset uint64) treeNode {
 	b.offsets = append(b.offsets, offset)
+	return b.build()
+}
+
+// finishPop removes the final key and builds the tree node
+func (b *treeBuilder) finishPop() (treeNode, string) {
+	key := b.keys[len(b.keys)-1]
+	b.keys = b.keys[:len(b.keys)-1]
+	return b.build(), key
+}
+
+func (b *treeBuilder) build() treeNode {
+	assert.That(len(b.keys) >= 1)
+	assert.That(len(b.keys) + 1 == len(b.offsets))
+	
 	b.keys = append(b.keys, "")
 	n := len(b.keys)
 	if n > 256 {
@@ -196,6 +232,7 @@ func (b *treeBuilder) finish(offset uint64) treeNode {
 	return treeNode(result)
 }
 
+// reset clears the builder, keeping its capacity to save allocation
 func (b *treeBuilder) reset() {
 	b.keys = b.keys[:0]
 	b.offsets = b.offsets[:0]
