@@ -210,6 +210,20 @@ func sqs_GetSort(arg Value) Value {
 	return SuStr(qry.GetSort(query))
 }
 
+var _ = staticMethod(sqs_Parse, "(parse)")
+
+func sqs_Parse(th *Thread, args []Value) Value {
+	dbms, ok := th.Dbms().(*dbms.DbmsLocal)
+	if !ok {
+		panic("Query.Parsep requires a local database")
+	}
+	t := dbms.Transaction(false)
+	defer t.Complete()
+	query := ToStr(args[0])
+	q := qry.JustParse(t.(qry.QueryTran), query)
+	return qry.NewSuQueryNode(q)
+}
+
 var _ = staticMethod(sqs_Strategy1, "(@args)")
 
 func sqs_Strategy1(th *Thread, args []Value) Value {

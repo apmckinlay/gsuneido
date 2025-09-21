@@ -10,7 +10,6 @@ import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/dbms"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -45,20 +44,6 @@ func suneido_Parse(th *Thread, args []Value) Value {
 		p.Error("did not parse all input")
 	}
 	return ast
-}
-
-var _ = staticMethod(suneido_ParseQuery, "(query)")
-
-func suneido_ParseQuery(th *Thread, args []Value) Value {
-	dbms, ok := th.Dbms().(*dbms.DbmsLocal)
-	if !ok {
-		panic("Suneido.ParseQuery requires a local database")
-	}
-	t := dbms.Transaction(false)
-	defer t.Complete()
-	query := ToStr(args[0])
-	q := qry.JustParse(t.(qry.QueryTran), query)
-	return qry.NewSuQueryNode(q)
 }
 
 var _ = staticMethod(suneido_Regex, "(pattern)")
@@ -192,7 +177,7 @@ var _ = staticMethod(suneido_LibraryTags, "(@args)")
 func suneido_LibraryTags(args Value) Value {
 	ob := args.(*SuObject)
 	var newTags []string
-	
+
 	if ob.ListSize() == 0 && options.Action == "client" {
 		newTags = nil
 	} else {
