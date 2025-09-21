@@ -225,6 +225,8 @@ func (q *Where) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("where")
+	case SuStr("expr"):
+		return q.expr
 	}
 	return query1(q, key)
 }
