@@ -921,6 +921,13 @@ func strategy(q Query, indent int) string { // recursive
 	}
 	cost += "} "
 	switch q := q.(type) {
+	case *Sort:
+		if q.String() == "" {
+			return strategy(q.Source(), indent)
+		} else {
+			return strategy(q.Source(), indent) + "\n" +
+				in + cost + q.String()
+		}
 	case q2i:
 		return strategy(q.Source(), indent+1) + "\n" +
 			in + cost + q.String() + "\n" +

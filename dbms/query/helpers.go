@@ -55,6 +55,7 @@ func matchSort(lxr *lexer.Lexer) (ok bool, pos int) {
 	}
 }
 
+// GetSort returns the sort (if present) or else ""
 func GetSort(query string) string {
 	if !strings.Contains(query, "sort") {
 		return ""

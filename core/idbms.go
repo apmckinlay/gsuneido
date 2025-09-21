@@ -3,7 +3,6 @@
 
 package core
 
-
 // IDbms is the interface to the dbms package.
 // The two implementations, DbmsLocal and DbmsClient, are in the dbms package
 type IDbms interface {
@@ -141,24 +140,27 @@ type ITran interface {
 type Dir byte
 
 const (
-	Only Dir = '1' // Query1
-	Next Dir = '+' // QueryFirst
-	Prev Dir = '-' // QueryLast
-	Any  Dir = '@' // QueryEmpty?
+	Only  Dir = '1' // Query1
+	Next  Dir = '+' // QueryFirst
+	Prev  Dir = '-' // QueryLast
+	Any   Dir = '@' // QueryEmpty?
+	Strat Dir = '?' // QueryStrategy1
 )
 
 func (dir Dir) String() string {
 	switch {
-    case dir == Next:
-        return "QueryFirst"
-    case dir == Prev:
-        return "QueryLast"
-    case dir == Only:
-        return "Query1"
-    case dir == Any:
-        return "QueryEmpty"
-    }
-    return ""
+	case dir == Next:
+		return "QueryFirst"
+	case dir == Prev:
+		return "QueryLast"
+	case dir == Only:
+		return "Query1"
+	case dir == Any:
+		return "QueryEmpty"
+	case dir == Strat:
+		return "QueryStrategy1"
+	}
+	return ""
 }
 
 func (dir Dir) Reverse() Dir {

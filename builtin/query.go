@@ -209,3 +209,10 @@ func sqs_GetSort(arg Value) Value {
 	query := ToStr(arg)
 	return SuStr(qry.GetSort(query))
 }
+
+var _ = staticMethod(sqs_Strategy1, "(@args)")
+
+func sqs_Strategy1(th *Thread, args []Value) Value {
+	_, _, s := th.Dbms().Get(th, args[0], Strat)
+	return SuStr(s)
+}
