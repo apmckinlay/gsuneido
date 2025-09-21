@@ -174,6 +174,9 @@ func (p *Parser) statement() (result ast.Statement) {
 		}
 		return &ast.Compound{Body: []ast.Statement{}}
 	case tok.LCurly:
+		if p.Lxr.AheadSkip(0).Token == tok.BitOr { // block
+			return &ast.ExprStmt{E: p.Expression()}
+		}
 		return &ast.Compound{Body: p.compound()}
 	case tok.Return:
 		p.Next()
