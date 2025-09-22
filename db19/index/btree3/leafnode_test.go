@@ -78,41 +78,41 @@ func TestLeafSearchEdgeCases(t *testing.T) {
 		"prefix005", 1005, "prefix010", 1010)
 
 	// Test exact matches
-	assert(nd.search("prefix001")).Is(1001)
-	assert(nd.search("prefix002")).Is(1002)
-	assert(nd.search("prefix005")).Is(1005)
-	assert(nd.search("prefix010")).Is(1010)
+	assert(nd.search("prefix001")).Is(0)
+	assert(nd.search("prefix002")).Is(1)
+	assert(nd.search("prefix005")).Is(2)
+	assert(nd.search("prefix010")).Is(3)
 
 	// Test key smaller than prefix
-	assert(nd.search("pre")).Is(0) // not found
+	assert(nd.search("pre")).Is(-1) // not found
 
 	// Test key larger than prefix but not matching any entry
-	assert(nd.search("prefix003")).Is(0) // not found
-	assert(nd.search("prefix006")).Is(0) // not found
+	assert(nd.search("prefix003")).Is(-1) // not found
+	assert(nd.search("prefix006")).Is(-1) // not found
 
 	// Test key larger than all entries
-	assert(nd.search("prefix999")).Is(0) // not found
+	assert(nd.search("prefix999")).Is(-1) // not found
 
 	// Test key with different prefix
-	assert(nd.search("other")).Is(0) // not found
-	assert(nd.search("aaa")).Is(0)   // not found
+	assert(nd.search("other")).Is(-1) // not found
+	assert(nd.search("aaa")).Is(-1)   // not found
 
 	// Test no prefix compression
 	nd2 := makeLeaf("apple", 100, "banana", 200, "cherry", 300)
 
-	assert(nd2.search("apple")).Is(100)
-	assert(nd2.search("banana")).Is(200)
-	assert(nd2.search("cherry")).Is(300)
-	assert(nd2.search("aaa")).Is(0)   // not found
-	assert(nd2.search("bear")).Is(0)  // not found
-	assert(nd2.search("zebra")).Is(0) // not found
+	assert(nd2.search("apple")).Is(0)
+	assert(nd2.search("banana")).Is(1)
+	assert(nd2.search("cherry")).Is(2)
+	assert(nd2.search("aaa")).Is(-1)   // not found
+	assert(nd2.search("bear")).Is(-1)  // not found
+	assert(nd2.search("zebra")).Is(-1) // not found
 
 	// Test single key node
 	nd3 := makeLeaf("single", 999)
 
-	assert(nd3.search("single")).Is(999)
-	assert(nd3.search("aaa")).Is(0) // not found
-	assert(nd3.search("zzz")).Is(0) // not found
+	assert(nd3.search("single")).Is(0)
+	assert(nd3.search("aaa")).Is(-1) // not found
+	assert(nd3.search("zzz")).Is(-1) // not found
 }
 
 // makeLeaf takes offsets separated by keys

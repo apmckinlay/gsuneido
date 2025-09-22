@@ -53,7 +53,11 @@ func (bt *btree) Lookup(key string) uint64 {
 		off = nd.search(key)
 	}
 	nd := bt.getLeaf(off)
-	return nd.search(key)
+	i := nd.search(key)
+	if i == -1 {
+		return 0 // not found
+	}
+	return nd.offset(i)
 }
 
 func (bt *btree) getTree(off uint64) treeNode {

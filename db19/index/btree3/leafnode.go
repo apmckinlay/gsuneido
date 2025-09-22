@@ -87,15 +87,15 @@ func (nd leafNode) prefix() []byte {
 	return nd[pos:end]
 }
 
-// search returns the offset of key, or 0 if not found
-func (nd leafNode) search(key string) uint64 {
+// search returns the index or -1 if not found
+func (nd leafNode) search(key string) int {
 	// NOTE: search should not do any allocation
 	prefix := nd.prefix()
 	prefixLen := len(prefix)
 	if prefixLen > 0 {
 		prefixStr := string(prefix)
 		if key < prefixStr || !strings.HasPrefix(key, prefixStr) {
-			return 0
+			return -1 // not found
 		}
 	}
 	// key starts with prefix, binary search for suffix
@@ -109,10 +109,10 @@ func (nd leafNode) search(key string) uint64 {
 		} else if midSuffix > keySuffix {
 			hi = mid - 1
 		} else {
-			return nd.offset(mid) // found
+			return mid // found
 		}
 	}
-	return 0 // not found
+	return -1 // not found
 }
 
 // seek returns a leafIter positioned at the first key >= key
@@ -310,8 +310,20 @@ func (b *leafBuilder) reset() {
 
 // ------------------------------------------------------------------
 
+// modify modifies a node, inserting, updating, or deleting an entry
+// based on the tag on the offset
+// func (nd leafNode) modify(key string, off uint64) leafNode {
+// 	if off&ixbuf.Update != 0 {
+// 		return nd.update(key, off)
+// 	}
+// 	if off&ixbuf.Delete != 0 {
+// 		return nd.delete(key)
+// 	}
+// 	return nd.insert(key, off)
+// }
+
 // insert inserts an entry, maintaining order
-// func (nd leafNode) insert(key string, off uint64) leafNode {
+// func (nd leafNode) insert(key string, newoff uint64) leafNode {
 // 	pos, prev, found := nd.search(key)
 // 	if string(found) == key {
 // 		panic("duplicate key")
