@@ -124,6 +124,9 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 	case Strat:
 		hdr = &Header{} // non-nil to indicate fast mode
 		_, strarg, _ = getIndex(th, tran, tbl, flds, packed, dir)
+		if strarg == "" {
+			return nil, nil, ""
+		}
 		return existsRow, existsHdr, strarg
 	case Only:
 		row, hdr = getLookup(th, tran, tbl, flds, packed, dir)
