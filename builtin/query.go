@@ -215,7 +215,7 @@ var _ = staticMethod(sqs_Parse, "(parse)")
 func sqs_Parse(th *Thread, args []Value) Value {
 	dbms, ok := th.Dbms().(*dbms.DbmsLocal)
 	if !ok {
-		panic("Query.Parsep requires a local database")
+		panic("Query.Parse requires a local database")
 	}
 	t := dbms.Transaction(false)
 	defer t.Complete()
