@@ -55,7 +55,7 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	qry.Warnings(query, q)
 	if dir == Strat {
 		n, _ := q.Nrows()
-		return nil, nil, fmt.Sprint(qry.Strategy(q), "\n",
+		return existsRow, existsHdr, fmt.Sprint(qry.Strategy(q), "\n",
 			"[nrecs~ ", trace.Number(n),
 			" cost~ ", trace.Number(fixcost+varcost), "]")
 	}
@@ -124,7 +124,7 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 	case Strat:
 		hdr = &Header{} // non-nil to indicate fast mode
 		_, strarg, _ = getIndex(th, tran, tbl, flds, packed, dir)
-		return
+		return existsRow, existsHdr, strarg
 	case Only:
 		row, hdr = getLookup(th, tran, tbl, flds, packed, dir)
 		return

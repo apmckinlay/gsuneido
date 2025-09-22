@@ -610,6 +610,8 @@ func cmdGetOne(ss *serverSession) {
 		dir = Only
 	case '@':
 		dir = Any
+	case '?':
+		dir = Strat
 	default:
 		ss.error("dbms server: expected + - 1 @")
 	}
