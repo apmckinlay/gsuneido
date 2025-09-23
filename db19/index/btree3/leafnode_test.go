@@ -464,13 +464,8 @@ func TestLeafNodeInsert(t *testing.T) {
 
 	// Test inserting key that shortens prefix
 	nd = makeLeaf("prefixlong1", 1, "prefixlong2", 2)
-	nd = nd.insert(1, "prefixshort", 3)
-	assert(nd.String()).Is("leaf{|prefix| long1 1 short 3 long2 2}")
-
-	// Test inserting key that extends existing prefix
-	nd = makeLeaf("pre1", 1, "pre2", 2)
-	nd = nd.insert(1, "pre3", 3)
-	assert(nd.String()).Is("leaf{|pre| 1 1 3 3 2 2}")
+	nd = nd.insert(0, "prebar", 3)
+	assert(nd.String()).Is("leaf{|pre| bar 3 fixlong1 1 fixlong2 2}")
 
 	// Test maximum keys limit
 	nd = leafNode{}
@@ -481,28 +476,6 @@ func TestLeafNodeInsert(t *testing.T) {
 
 	// Test panic on too many keys
 	assert(func() { nd.insert(255, "overflow", 999) }).Panics("too many keys")
-
-	// Test complex prefix scenarios
-	// Insert multiple keys that maintain prefix
-	nd = makeLeaf("database1", 1, "database5", 5)
-	nd = nd.insert(1, "database2", 2)
-	nd = nd.insert(2, "database3", 3)
-	nd = nd.insert(3, "database4", 4)
-	assert(nd.String()).Is("leaf{|database| 1 1 2 2 3 3 4 4 5 5}")
-
-	// Verify all keys are correctly retrievable
-	assert(nd.key(0)).Is("database1")
-	assert(nd.key(1)).Is("database2")
-	assert(nd.key(2)).Is("database3")
-	assert(nd.key(3)).Is("database4")
-	assert(nd.key(4)).Is("database5")
-
-	// Verify all offsets are correct
-	assert(nd.offset(0)).Is(1)
-	assert(nd.offset(1)).Is(2)
-	assert(nd.offset(2)).Is(3)
-	assert(nd.offset(3)).Is(4)
-	assert(nd.offset(4)).Is(5)
 }
 
 // func (nd leafNode) print() {

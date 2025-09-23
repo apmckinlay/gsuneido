@@ -344,7 +344,7 @@ func (nd leafNode) insert(i int, key string, newoff uint64) leafNode {
 
 	// If the new key doesn't start with the current prefix, use leafBuilder
 	prefix := nd.prefix()
-	if n > 0 && !str.HasPrefix(key, prefix) {
+	if (i == 0 || i == n) && !str.HasPrefix(key, prefix) {
 		var b leafBuilder
 		for j := range i {
 			b.add(nd.key(j), nd.offset(j))
@@ -364,7 +364,7 @@ func (nd leafNode) insert(i int, key string, newoff uint64) leafNode {
 	// Calculate where field data will be inserted (before any shifts)
 	oldOffsetArrayEnd := 2 + n*7 + 2
 	fieldInsertPos := oldOffsetArrayEnd + len(prefix)
-	for j := 0; j < i; j++ {
+	for j := range i {
 		fieldInsertPos += len(nd.suffix(j))
 	}
 
