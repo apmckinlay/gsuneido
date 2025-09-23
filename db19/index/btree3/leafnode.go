@@ -95,11 +95,10 @@ func (nd leafNode) search(key string) (int, bool) {
 	prefix := nd.prefix()
 	prefixLen := len(prefix)
 	if prefixLen > 0 {
-		prefixStr := string(prefix)
-		if key < prefixStr {
+		if key < string(prefix) {
 			return 0, false // key would be before all entries
 		}
-		if !strings.HasPrefix(key, prefixStr) {
+		if !str.HasPrefix(key, prefix) {
 			return nd.nkeys(), false // key would be after all entries
 		}
 	}
@@ -125,11 +124,10 @@ func (nd leafNode) seek(key string) *leafIter {
 	prefix := nd.prefix()
 	prefixLen := len(prefix)
 	if prefixLen > 0 {
-		prefixStr := string(prefix)
-		if key < prefixStr {
+		if key < string(prefix) {
 			// key is less than prefix, no entries <= key
 			return &leafIter{nd: nd, i: 0}
-		} else if !strings.HasPrefix(key, prefixStr) {
+		} else if !str.HasPrefix(key, prefix) {
 			// key doesn't start with prefix but key >= prefix,
 			// so all entries are < key
 			return &leafIter{nd: nd, i: nd.nkeys()}
@@ -346,7 +344,7 @@ func (nd leafNode) insert(i int, key string, newoff uint64) leafNode {
 
 	// If the new key doesn't start with the current prefix, use leafBuilder
 	prefix := nd.prefix()
-	if n > 0 && !strings.HasPrefix(key, string(prefix)) {
+	if n > 0 && !str.HasPrefix(key, prefix) {
 		var b leafBuilder
 		for j := range i {
 			b.add(nd.key(j), nd.offset(j))

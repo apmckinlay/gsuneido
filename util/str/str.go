@@ -276,3 +276,17 @@ func CommonPrefixLen(s, t string) int {
 		}
 	}
 }
+
+// HasPrefix is like the Go strings.HasPrefix
+// but it allows mixing string and []byte to avoid conversion allocation
+func HasPrefix[T1, T2 ~string|~[]byte](s1 T1, s2 T2) bool {
+	if len(s1) < len(s2) {
+		return false
+	}
+	for i := range len(s2) {
+		if s1[i] != s2[i] {
+			return false
+		}
+	}
+	return true
+}
