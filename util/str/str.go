@@ -283,6 +283,7 @@ func HasPrefix[T1, T2 ~string|~[]byte](s1 T1, s2 T2) bool {
 	if len(s1) < len(s2) {
 		return false
 	}
+	// this benchmarks faster than using string ==
 	for i := range len(s2) {
 		if s1[i] != s2[i] {
 			return false
