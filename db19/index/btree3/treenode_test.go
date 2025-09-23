@@ -105,115 +105,166 @@ func TestTreeNode_seek(t *testing.T) {
 
 	// Test single key tree node
 	nd := makeTree(100, "hello", 200)
-	
+
 	// Key smaller than existing key - should return iterator with i=-1
 	it := nd.seek("apple")
 	assert(it.i).Is(0)
-	
+
 	// Exact match - should position at key index
 	it = nd.seek("hello")
 	assert(it.i).Is(1)
-	
+
 	// Key larger than existing key - should position at last key
 	it = nd.seek("zebra")
 	assert(it.i).Is(1)
 
 	// Test multiple keys
 	nd = makeTree(11, "apple", 22, "banana", 33, "cherry", 44, "date", 55)
-	
+
 	// Test exact matches at different positions
 	it = nd.seek("apple")
 	assert(it.i).Is(1)
-	
+
 	it = nd.seek("banana")
 	assert(it.i).Is(2)
-	
+
 	it = nd.seek("cherry")
 	assert(it.i).Is(3)
-	
+
 	it = nd.seek("date")
 	assert(it.i).Is(4)
-	
+
 	// Test keys between existing keys - should find last key <= search key
 	it = nd.seek("avocado") // between "apple" and "banana"
 	assert(it.i).Is(1)
-	
+
 	it = nd.seek("blueberry") // between "banana" and "cherry"
 	assert(it.i).Is(2)
-	
+
 	it = nd.seek("coconut") // between "cherry" and "date"
 	assert(it.i).Is(3)
-	
+
 	// Test key smaller than all keys
 	it = nd.seek("aaa")
 	assert(it.i).Is(0)
-	
+
 	// Test key larger than all keys
 	it = nd.seek("zebra")
 	assert(it.i).Is(4)
-	
+
 	// Test iterator navigation from seek position
 	it = nd.seek("banana")
 	assert(it.i).Is(2)
 	assert(it.next()).Is(true)
 	assert(it.i).Is(3)
-	
+
 	assert(it.prev()).Is(true)
 	assert(it.i).Is(2)
-	
+
 	// Test seek with prefix-like keys
 	nd2 := makeTree(100, "test", 200, "testing", 300, "tests", 400)
-	
+
 	it = nd2.seek("test")
 	assert(it.i).Is(1)
-	
+
 	it = nd2.seek("testing")
 	assert(it.i).Is(2)
-	
+
 	it = nd2.seek("tests")
 	assert(it.i).Is(3)
-	
+
 	// Test with key between "test" and "testing"
 	it = nd2.seek("testg")
 	assert(it.i).Is(1)
-	
+
 	// Test with key between "testing" and "tests"
 	it = nd2.seek("testj")
 	assert(it.i).Is(2)
 }
 
-// func TestTreeNode_insert(t *testing.T) {
-// 	assert := assert.T(t).This
+func TestTreeNode_insert(t *testing.T) {
+	assert := assert.T(t).This
 
-// 	nd := makeTree(123, "hello", 999)
-// 	assert(nd.String()).Is("tree{123 hello 999}")
+	// Test inserting into empty node
+	var nd treeNode
+	nd = nd.insert(0, "key1", 100)
+	assert(nd.String()).Is("tree{100 <key1> 0}")
 
-// 	// Test inserting at beginning
-// 	nd = nd.insert("apple", 456)
-// 	assert(nd.String()).Is("tree{456 apple 123 hello 999}")
+	// Test inserting at beginning
+	nd = nd.insert(0, "aaa", 50)
+	assert(nd.String()).Is("tree{50 <aaa> 100 <key1> 0}")
 
-// 	// Test inserting in middle
-// 	nd = nd.insert("banana", 789)
-// 	assert(nd.String()).Is("tree{456 apple 789 banana 123 hello 999}")
+	// Test inserting at end
+	nd = nd.insert(2, "zzz", 200)
+	assert(nd.String()).Is("tree{50 <aaa> 100 <key1> 200 <zzz> 0}")
 
-// 	// Test inserting at end
-// 	nd = nd.insert("zebra", 888)
-// 	assert(nd.String()).Is("tree{456 apple 789 banana 123 hello 888 zebra 999}")
+	// Test inserting in middle
+	nd = nd.insert(1, "middle", 75)
+	assert(nd.String()).Is("tree{50 <aaa> 75 <middle> 100 <key1> 200 <zzz> 0}")
 
-// 	// Test inserting duplicate (should panic)
-// 	assert(func() { nd.insert("banana", 000) }).Panics("duplicate key")
+	// Test inserting into single key node
+	nd = makeTree(123, "hello", 456)
+	// Insert at beginning
+	nd = nd.insert(0, "apple", 111)
+	assert(nd.String()).Is("tree{111 <apple> 123 <hello> 456}")
 
-// 	// Test with makeTree for comparison
-// 	nd2 := makeTree(456, "apple", 789, "banana", 123, "hello", 999, "zebra", 1000)
-// 	assert(nd.String()).Is(nd2.String())
+	// Insert at end
+	nd = makeTree(123, "hello", 456)
+	nd = nd.insert(1, "zebra", 999)
+	assert(nd.String()).Is("tree{123 <hello> 999 <zebra> 456}")
+}
 
-// 	// Test search functionality after inserts
-// 	assert(nd.search("apple")).Is(1)
-// 	assert(nd.search("banana")).Is(2)
-// 	assert(nd.search("hello")).Is(3)
-// 	assert(nd.search("zebra")).Is(4)
-// 	assert(nd.search("aaa")).Is(0)
-// 	assert(nd.search("cat")).Is(1)
-// 	assert(nd.search("fox")).Is(2)
-// 	assert(nd.search("zebraa")).Is(4)
-// }
+func TestTreeNode_update(t *testing.T) {
+	assert := assert.T(t).This
+
+	// Test updating single key node
+	nd := makeTree(123, "hello", 456)
+	nd = nd.update(0, 999)
+	assert(nd.String()).Is("tree{999 <hello> 456}")
+
+	// Test updating without modification to structure
+	nd = makeTree(100, "apple", 200, "banana", 300, "cherry", 400)
+
+	// Update first entry
+	nd = nd.update(0, 150)
+	assert(nd.String()).Is("tree{150 <apple> 200 <banana> 300 <cherry> 400}")
+
+	// Update middle entry
+	nd = makeTree(100, "apple", 200, "banana", 300, "cherry", 400)
+	nd = nd.update(1, 250)
+	assert(nd.String()).Is("tree{100 <apple> 250 <banana> 300 <cherry> 400}")
+
+	// Update last entry
+	nd = makeTree(100, "apple", 200, "banana", 300, "cherry", 400)
+	nd = nd.update(2, 350)
+	assert(nd.String()).Is("tree{100 <apple> 200 <banana> 350 <cherry> 400}")
+}
+
+func TestTreeNode_delete(t *testing.T) {
+	assert := assert.T(t).This
+
+	// Test deleting from a single-key node
+	nd := makeTree(123, "hello", 456)
+	result := nd.delete(0)
+	assert(len(result)).Is(0) // empty node
+
+	// Test deleting first
+	nd = makeTree(100, "apple", 200, "banana", 300, "cherry", 400)
+	nd = nd.delete(0) // delete "apple"
+	assert(nd.String()).Is("tree{200 <banana> 300 <cherry> 400}")
+
+	// Test deleting from middle
+	nd = makeTree(100, "apple", 200, "banana", 300, "cherry", 400)
+	nd = nd.delete(1) // delete "banana"
+	assert(nd.String()).Is("tree{100 <apple> 300 <cherry> 400}")
+
+	// Test deleting from end
+	nd = makeTree(100, "apple", 200, "banana", 300, "cherry", 400)
+	nd = nd.delete(2) // delete "cherry"
+	assert(nd.String()).Is("tree{100 <apple> 200 <banana> 400}")
+
+	// Test deleting down to single key
+	nd = makeTree(100, "apple", 200, "banana", 300)
+	nd = nd.delete(0) // delete "apple"
+	assert(nd.String()).Is("tree{200 <banana> 300}")
+}
