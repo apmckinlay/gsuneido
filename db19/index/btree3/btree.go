@@ -53,8 +53,8 @@ func (bt *btree) Lookup(key string) uint64 {
 		off = nd.search(key)
 	}
 	nd := bt.getLeaf(off)
-	i := nd.search(key)
-	if i == -1 {
+	i, found := nd.search(key)
+	if !found {
 		return 0 // not found
 	}
 	return nd.offset(i)

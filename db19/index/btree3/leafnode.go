@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -87,15 +88,19 @@ func (nd leafNode) prefix() []byte {
 	return nd[pos:end]
 }
 
-// search returns the index or -1 if not found
-func (nd leafNode) search(key string) int {
+// search returns the position and whether the key was found
+// if the key isn't found, the returned position is where it would be
+func (nd leafNode) search(key string) (int, bool) {
 	// NOTE: search should not do any allocation
 	prefix := nd.prefix()
 	prefixLen := len(prefix)
 	if prefixLen > 0 {
 		prefixStr := string(prefix)
-		if key < prefixStr || !strings.HasPrefix(key, prefixStr) {
-			return -1 // not found
+		if key < prefixStr {
+			return 0, false // key would be before all entries
+		}
+		if !strings.HasPrefix(key, prefixStr) {
+			return nd.nkeys(), false // key would be after all entries
 		}
 	}
 	// key starts with prefix, binary search for suffix
@@ -109,10 +114,10 @@ func (nd leafNode) search(key string) int {
 		} else if midSuffix > keySuffix {
 			hi = mid - 1
 		} else {
-			return mid // found
+			return mid, true // found
 		}
 	}
-	return -1 // not found
+	return lo, false // not found, lo is where it would be inserted
 }
 
 // seek returns a leafIter positioned at the first key >= key
@@ -313,29 +318,189 @@ func (b *leafBuilder) reset() {
 // modify modifies a node, inserting, updating, or deleting an entry
 // based on the tag on the offset
 // func (nd leafNode) modify(key string, off uint64) leafNode {
+// 	i, found := nd.search(key)
 // 	if off&ixbuf.Update != 0 {
-// 		return nd.update(key, off)
+// 		assert.That(found)
+// 		return nd.update(i, off&ixbuf.Mask)
 // 	}
 // 	if off&ixbuf.Delete != 0 {
-// 		return nd.delete(key)
+// 		assert.That(found)
+// 		return nd.delete(i)
 // 	}
-// 	return nd.insert(key, off)
+// 	return nd.insert(i, key, off&ixbuf.Mask)
 // }
 
 // insert inserts an entry, maintaining order
-// func (nd leafNode) insert(key string, newoff uint64) leafNode {
-// 	pos, prev, found := nd.search(key)
-// 	if string(found) == key {
-// 		panic("duplicate key")
-// 	}
-// 	n := leafEntryLen(prev, key)
-// 	nd = slc.Grow(nd, n)
+func (nd leafNode) insert(i int, key string, newoff uint64) leafNode {
+	// Handle empty node case
+	if len(nd) == 0 {
+		var b leafBuilder
+		b.add(key, newoff)
+		return b.finish()
+	}
 
-// 	copy(nd[pos+n:], nd[pos:])
-// 	gap := nd[pos : pos : pos+n]
-// 	assert.That(unsafe.SliceData(nd[pos:]) == unsafe.SliceData(gap))
-// 	result := gap.add(prev, key, off)
-// 	assert.That(unsafe.SliceData(gap) == unsafe.SliceData(result))
+	n := nd.nkeys()
+	if n == 255 {
+		panic("too many keys for leaf node")
+	}
 
-// 	return nd
-// }
+	// If the new key doesn't start with the current prefix, use leafBuilder
+	prefix := nd.prefix()
+	if n > 0 && !strings.HasPrefix(key, string(prefix)) {
+		var b leafBuilder
+		for j := range i {
+			b.add(nd.key(j), nd.offset(j))
+		}
+		b.add(key, newoff)
+		for j := i; j < n; j++ {
+			b.add(nd.key(j), nd.offset(j))
+		}
+		return b.finish()
+	}
+
+	// Prefix won't change, proceed with in-place insertion
+	keySuffix := key[len(prefix):]
+	fieldLen := len(keySuffix)
+	oldSize := nd.size()
+
+	// Calculate where field data will be inserted (before any shifts)
+	oldOffsetArrayEnd := 2 + n*7 + 2
+	fieldInsertPos := oldOffsetArrayEnd + len(prefix)
+	for j := 0; j < i; j++ {
+		fieldInsertPos += len(nd.suffix(j))
+	}
+
+	// Calculate total size increase: 7 bytes for offset entry + field data length
+	sizeIncrease := 7 + fieldLen
+	newSize := oldSize + sizeIncrease
+
+	// Grow the slice to accommodate the new data
+	nd = slc.Grow(nd, sizeIncrease)
+
+	// Update count
+	nd[0] = byte(n + 1)
+
+	// REVERSE ORDER OPERATIONS (work backwards to avoid overwriting data):
+
+	// 1. First move field data that comes AFTER the insertion point
+	if i < n {
+		// Source: field data after insertion point in old layout
+		srcStart := fieldInsertPos
+		srcEnd := oldSize
+		// Destination: same data after making room for both offset entry and new field data
+		dstStart := fieldInsertPos + 7 + fieldLen
+		copy(nd[dstStart:], nd[srcStart:srcEnd])
+	}
+
+	// 2. Move offset array entries at position i and later PLUS prefix and field data before insertion point
+	// These are physically contiguous in memory
+	entryInsertPos := 2 + i*7
+	copy(nd[entryInsertPos+7:], nd[entryInsertPos:fieldInsertPos])
+
+	// 3. Insert the new field data in its correct position (adjusted for offset array growth)
+	newFieldPos := fieldInsertPos + 7
+	copy(nd[newFieldPos:], keySuffix)
+
+	// 4. Insert the new offset entry
+	nd[entryInsertPos] = byte(newFieldPos >> 8)
+	nd[entryInsertPos+1] = byte(newFieldPos)
+	nd[entryInsertPos+2] = byte(newoff >> 32)
+	nd[entryInsertPos+3] = byte(newoff >> 24)
+	nd[entryInsertPos+4] = byte(newoff >> 16)
+	nd[entryInsertPos+5] = byte(newoff >> 8)
+	nd[entryInsertPos+6] = byte(newoff)
+
+	// 5. Update field positions in all offset entries
+	for j := 0; j < n+1; j++ {
+		if j == i {
+			continue // already set above
+		}
+		pos := 2 + j*7
+		oldFieldPos := int(uint16(nd[pos])<<8 | uint16(nd[pos+1]))
+
+		// All field positions need to account for offset array growth (+7)
+		newFieldPos := oldFieldPos + 7
+
+		// Field positions after insertion point also need to account for new field data
+		if j > i {
+			newFieldPos += fieldLen
+		}
+
+		nd[pos] = byte(newFieldPos >> 8)
+		nd[pos+1] = byte(newFieldPos)
+	}
+
+	// 6. Update the end offset
+	endPos := 2 + (n+1)*7
+	nd[endPos] = byte(newSize >> 8)
+	nd[endPos+1] = byte(newSize)
+
+	return nd[:newSize]
+}
+
+// update modifies the offset for a key, in place
+func (nd leafNode) update(i int, off uint64) leafNode {
+	pos := 2 + i*7 + 2 // skip to the 5-byte offset field
+	nd[pos] = byte(off >> 32)
+	nd[pos+1] = byte(off >> 24)
+	nd[pos+2] = byte(off >> 16)
+	nd[pos+3] = byte(off >> 8)
+	nd[pos+4] = byte(off)
+	return nd
+}
+
+func (nd leafNode) delete(i int) leafNode {
+	n := nd.nkeys()
+	if n == 1 {
+		return nd[:0] // Deleting the only key results in an empty node
+	}
+	oldSize := nd.size()
+
+	// Get the field positions for the entry to delete
+	base := 2 + i*7
+	fieldStart := int(uint16(nd[base])<<8 | uint16(nd[base+1]))
+	fieldEnd := int(uint16(nd[base+7])<<8 | uint16(nd[base+8]))
+	fieldLen := fieldEnd - fieldStart
+
+	nd[0] = byte(n - 1) // Update count
+
+	// shift the middle section
+	entryStart := base
+	entryEnd := base + 7
+	copy(nd[entryStart:], nd[entryEnd:fieldStart])
+
+	// Update field positions in all remaining entries
+	// All field positions need to be reduced by 7 (removed offset entry)
+	// Plus, entries after the deleted field need reduction by fieldLen
+	for j := 0; j < n-1; j++ {
+		pos := 2 + j*7
+		oldFieldPos := int(uint16(nd[pos])<<8 | uint16(nd[pos+1]))
+		newFieldPos := oldFieldPos - 7 // account for removed offset entry
+		if j >= i {
+			// This entry was after the deleted field
+			newFieldPos -= fieldLen
+		}
+		nd[pos] = byte(newFieldPos >> 8)
+		nd[pos+1] = byte(newFieldPos)
+	}
+
+	// Update the end offset (now at position 2 + (n-1)*7)
+	endPos := 2 + (n-1)*7
+	newSize := oldSize - 7 - fieldLen
+	nd[endPos] = byte(newSize >> 8)
+	nd[endPos+1] = byte(newSize)
+
+	// shift the field data after the deleted field
+	copy(nd[fieldStart-7:], nd[fieldEnd:])
+
+	// Handle special case: going from 2 keys to 1 key
+	// Need to clear prefix and adjust field position
+	if n-1 == 1 {
+		nd[1] = 0  // clear prefix length
+		nd[2] = 0  // field position high byte
+		nd[3] = 11 // field position low byte (4 + 1*7)
+	}
+
+	// Return the truncated slice
+	return nd[:newSize]
+}
