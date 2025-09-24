@@ -28,7 +28,7 @@ func TestBuild(t *testing.T) {
 	assert.T(t).This(trm.ndocsWithTerm).Is(2)
 	assert.T(t).This(len(idx.terms)).Is(11)
 
-	test := func(words ...string) func(any) {
+	test := func(words ...string) func(...any) {
 		t.Helper()
 		avgtermsPerDoc := idx.ntermsTotal / idx.ndocsTotal
 		ts := make([]*term, 0, len(words))

@@ -134,40 +134,70 @@ func (a assert) That(cond bool) {
 
 // This sets a value to be compared e.g. with Is or Like
 func This(v any) value {
-	return value{value: v}
+	return value{values: []any{v}}
 }
 
-// This sets a value to be compared e.g. with Is or Like.
-// It is usually the actual value and Is gives the expected.
-func (a assert) This(v any) value {
-	return value{assert: a, value: v}
+// This sets values to be compared e.g. with Is or Like.
+// It is usually the actual values and Is gives the expected values.
+// When multiple values are provided, Is should provide the same number of expected values.
+func (a assert) This(v ...any) value {
+	return value{assert: a, values: v}
 }
 
 type value struct {
-	value  any
+	values []any
 	assert assert
 }
 
-// Is gives an error if the given expected value is not the same
-// as the actual value supplied to This.
+// Is gives an error if the given expected values are not the same
+// as the actual values supplied to This.
 // Accepts as equivalent: different nils and different int types.
 // Compares floats via string forms.
 // Uses an Equal method if available on the expected value.
 // Finally, uses reflect.DeepEqual.
-func (v value) Is(expected any) {
-	if !Is(v.value, expected) {
+// When multiple values are provided, the number of expected values must match.
+func (v value) Is(expected ...any) {
+	if len(expected) != len(v.values) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
 		}
-		v.assert.fail("expected: ", show(expected),
-			"\nactual: ", show(v.value))
+		v.assert.fail(fmt.Sprintf("expected %d values, got %d", len(v.values), len(expected)))
+		return
+	}
+
+	for i, actual := range v.values {
+		if !Is(actual, expected[i]) {
+			if v.assert.t != nil {
+				v.assert.t.Helper()
+			}
+			var parts []string
+			for j, val := range v.values {
+				status := "✓"
+				if j == i {
+					status = "✗"
+				}
+				parts = append(parts, fmt.Sprintf("%s %s", status, show(val)))
+			}
+			v.assert.fail("expected: ", show(expected[i]),
+				"\nactual: ", show(actual),
+				"\nall values: [", strings.Join(parts, ", "), "]")
+			return
+		}
 	}
 }
 
 // Isnt gives an error if the given expected value is the same
 // as the actual value supplied to This.
+// Only works with single values.
 func (v value) Isnt(expected any) {
-	if Is(v.value, expected) {
+	if len(v.values) != 1 {
+		if v.assert.t != nil {
+			v.assert.t.Helper()
+		}
+		v.assert.fail("Isnt only works with single values, got", len(v.values))
+		return
+	}
+	if Is(v.values[0], expected) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
 		}
@@ -288,9 +318,17 @@ func show(x any) string {
 // Like compares strings with whitespace standardized.
 // Leading and trailing whitespace is removed,
 // runs of whitespace are converted to a single space.
+// Only works with single values.
 func (v value) Like(expected any) {
+	if len(v.values) != 1 {
+		if v.assert.t != nil {
+			v.assert.t.Helper()
+		}
+		v.assert.fail("Like only works with single values, got", len(v.values))
+		return
+	}
 	exp := expected.(string)
-	val := v.value.(string)
+	val := v.values[0].(string)
 	if !like(exp, val) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
@@ -320,8 +358,16 @@ var trailingSpace = regexp.MustCompile("(?m)[ \t]+$")
 var whitespace = regexp.MustCompile("[ \t]+")
 
 // Panics checks if a function panics
+// Only works with single values.
 func (v value) Panics(expected string) {
-	e := Catch(v.value.(func()))
+	if len(v.values) != 1 {
+		if v.assert.t != nil {
+			v.assert.t.Helper()
+		}
+		v.assert.fail("Panics only works with single values, got", len(v.values))
+		return
+	}
+	e := Catch(v.values[0].(func()))
 	if e == nil {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
