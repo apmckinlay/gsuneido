@@ -170,17 +170,9 @@ func (v value) Is(expected ...any) {
 			if v.assert.t != nil {
 				v.assert.t.Helper()
 			}
-			var parts []string
-			for j, val := range v.values {
-				status := "✓"
-				if j == i {
-					status = "✗"
-				}
-				parts = append(parts, fmt.Sprintf("%s %s", status, show(val)))
-			}
-			v.assert.fail("expected: ", show(expected[i]),
-				"\nactual: ", show(actual),
-				"\nall values: [", strings.Join(parts, ", "), "]")
+			v.assert.fail(
+				"expected: ", show(expected[i]),
+				"\nactual: ", show(actual))
 			return
 		}
 	}
