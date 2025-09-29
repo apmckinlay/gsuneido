@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
@@ -30,6 +32,8 @@ offsets are stored most significant byte first.
 */
 
 type leafNode []byte
+
+const emptyLeaf = "\x00\x00\x00\x04" // string so const
 
 func (nd leafNode) nkeys() int {
 	return int(nd[0])
@@ -145,6 +149,24 @@ func (nd leafNode) seek(key string) *leafIter {
 		}
 	}
 	return &leafIter{nd: nd, i: lo}
+}
+
+func (nd leafNode) modify(key string, off uint64) leafNode {
+	i, found := nd.search(key)
+	trace("update search", key, offstr(off), "=>", i, found)
+	trace(nd)
+	if off&ixbuf.Update != 0 {
+		assert.That(found)
+		nd = nd.update(i, off&ixbuf.Mask)
+	} else if off&ixbuf.Delete != 0 {
+		assert.That(found)
+		nd = nd.delete(i)
+	} else {
+		assert.That(!found)
+		nd = nd.insert(i, key, off&ixbuf.Mask)
+	}
+	trace("after update", nd)
+	return nd
 }
 
 // write writes a leaf node to storage
@@ -313,21 +335,6 @@ func (b *leafBuilder) reset() {
 
 // ------------------------------------------------------------------
 
-// modify modifies a node, inserting, updating, or deleting an entry
-// based on the tag on the offset
-// func (nd leafNode) modify(key string, off uint64) leafNode {
-// 	i, found := nd.search(key)
-// 	if off&ixbuf.Update != 0 {
-// 		assert.That(found)
-// 		return nd.update(i, off&ixbuf.Mask)
-// 	}
-// 	if off&ixbuf.Delete != 0 {
-// 		assert.That(found)
-// 		return nd.delete(i)
-// 	}
-// 	return nd.insert(i, key, off&ixbuf.Mask)
-// }
-
 // insert inserts an entry, maintaining order
 func (nd leafNode) insert(i int, key string, newoff uint64) leafNode {
 	// Handle empty node case
@@ -450,7 +457,7 @@ func (nd leafNode) update(i int, off uint64) leafNode {
 func (nd leafNode) delete(i int) leafNode {
 	n := nd.nkeys()
 	if n == 1 {
-		return nd[:0] // Deleting the only key results in an empty node
+		return append(nd[:0], emptyLeaf...)
 	}
 	oldSize := nd.size()
 

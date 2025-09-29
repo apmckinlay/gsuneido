@@ -215,12 +215,12 @@ func (it *Iterator) seek(key string) {
 		off = it.tree[i].off()
 	}
 	leaf := bt.getLeaf(off)
-	it.leaf = leaf.seek(key)
 	if leaf.nkeys() == 0 {
 		assert.That(bt.treeLevels == 0) // only root can be empty
 		it.state = eof
 		return
 	}
+	it.leaf = leaf.seek(key)
 	if it.leaf.eof() {
 		it.prev()
 	}

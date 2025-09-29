@@ -12,11 +12,16 @@ import (
 
 func TestLeafNode_builder(t *testing.T) {
 	assert := assert.This
+	
+	// empty
+	b := &leafBuilder{}
+	nd := b.finish()
+	assert(fmt.Sprintf("%x", string(nd))).Is("00000004")
 
 	// Test single key
-	b := &leafBuilder{}
+	b = &leafBuilder{}
 	b.add("hello", 255)
-	nd := b.finish()
+	nd = b.finish()
 	assert(nd.nkeys()).Is(1)
 	assert(nd.offset(0)).Is(255)
 	assert(nd.key(0)).Is("hello")
@@ -317,7 +322,7 @@ func TestLeafNodeDelete(t *testing.T) {
 	assert(nd.nkeys()).Is(1)
 
 	result := nd.delete(0)
-	assert(len(result)).Is(0) // empty node
+	assert(result.nkeys()).Is(0) // empty node
 
 	// WITHOUT PREFIX
 	// Test deleting first

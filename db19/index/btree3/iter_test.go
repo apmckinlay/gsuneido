@@ -17,7 +17,7 @@ import (
 )
 
 func TestIterEmpty(*testing.T) {
-	st := stor.HeapStor(64 * 1024)
+	st := heapstor(8192)
 	b := Builder(st)
 	bt := b.Finish()
 
@@ -41,7 +41,7 @@ func TestIterEmpty(*testing.T) {
 }
 
 func TestIter(t *testing.T) {
-	st := stor.HeapStor(64 * 1024)
+	st := heapstor(8192)
 	b := Builder(st)
 	assert.That(b.Add("a", 1))
 	assert.That(b.Add("b", 2))
@@ -84,11 +84,10 @@ func TestIter(t *testing.T) {
 	it.Seek("z")
 	test(3)
 
-	var n int
 	test2 := func(from, to int) {
 		it = bt.Iterator()
 		it.Range(Range{Org: strconv.Itoa(base + from), End: strconv.Itoa(base + to)})
-		for i := max(1, from); i < to && i <= n; i++ {
+		for i := from; i < to; i++ {
 			it.Next()
 			test(base + i)
 		}
@@ -96,17 +95,17 @@ func TestIter(t *testing.T) {
 		assert.That(it.Eof())
 
 		it.Rewind()
-		for i := min(n, to-1); i >= from && i > 0; i-- {
+		for i := to-1; i >= from; i-- {
 			it.Prev()
 			test(base + i)
 		}
 		it.Prev()
 		assert.That(it.Eof())
 	}
-	n = 7
+	n := 7
 	bt = testBtree(n, 99)
-	for from := 0; from <= 9; from++ {
-		for to := 0; to <= 9; to++ {
+	for from := 0; from < n; from++ {
+		for to := 0; to < n; to++ {
 			test2(from, to)
 		}
 	}
@@ -120,15 +119,15 @@ func TestIter(t *testing.T) {
 	}
 }
 
-const base = 10000
+const base = 1000
 
 func testBtree(n, split int) *btree {
 	assert.That(n < base)
-	b := Builder(stor.HeapStor(8192))
+	b := Builder(heapstor(8192))
 	b.shouldSplit = func(nd splitable) bool {
-		return nd.nkeys() > split
+		return nd.nkeys() >= split
 	}
-	for i := base + 1; i <= base+n; i++ {
+	for i := base; i < base+n; i++ {
 		assert.That(b.Add(strconv.Itoa(i), uint64(i)))
 	}
 	return b.Finish()

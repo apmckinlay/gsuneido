@@ -31,12 +31,18 @@ There are nkeys fields, and noffs = nkeys + 1 record offsets.
 
 type treeNode []byte
 
+const emptyTree = "\x00\x00\x03"
+
 func (nd treeNode) nkeys() int {
 	return int(nd[0])
 }
 
 func (nd treeNode) noffs() int {
-	return int(nd[0]) + 1
+	n := nd.nkeys()
+	if n == 0 && nd.size() == 3 {
+		return 0
+	}
+	return n + 1
 }
 
 // size returns the length of a treeNode
@@ -65,8 +71,8 @@ func (nd treeNode) offset(i int) uint64 {
 		uint64(nd[pos+4])
 }
 
-// search returns the offset of the first entry that is >= key
-func (nd treeNode) search(key string) uint64 {
+// search returns the position and offset of the first entry that is >= key
+func (nd treeNode) search(key string) (int, uint64) {
 	// binary search
 	lo, hi := 0, nd.nkeys()-1
 	for lo <= hi {
@@ -77,7 +83,7 @@ func (nd treeNode) search(key string) uint64 {
 			hi = mid - 1
 		}
 	}
-	return nd.offset(lo)
+	return lo, nd.offset(lo)
 }
 
 func (nd treeNode) seek(key string) *treeIter {
@@ -126,8 +132,10 @@ func (nd treeNode) String() string {
 		sb.WriteString(" ")
 		sb.WriteString("<" + string(nd.key(i)) + ">")
 	}
-	sb.WriteString(" ")
-	sb.WriteString(strconv.FormatUint(nd.offset(n), 10))
+	if nd.noffs() > 0 {
+		sb.WriteString(" ")
+		sb.WriteString(strconv.FormatUint(nd.offset(n), 10))
+	}
 	sb.WriteString("}")
 	return sb.String()
 }
@@ -192,15 +200,7 @@ func (b *treeBuilder) finish(offset uint64) treeNode {
 	return b.build()
 }
 
-// finishPop removes the final key and builds the tree node
-func (b *treeBuilder) finishPop() (treeNode, string) {
-	key := b.keys[len(b.keys)-1]
-	b.keys = b.keys[:len(b.keys)-1]
-	return b.build(), key
-}
-
 func (b *treeBuilder) build() treeNode {
-	assert.That(len(b.keys) >= 1)
 	assert.That(len(b.keys)+1 == len(b.offsets))
 
 	b.keys = append(b.keys, "")
@@ -243,7 +243,7 @@ func (b *treeBuilder) reset() {
 // ------------------------------------------------------------------
 
 // insert inserts an entry, maintaining order
-func (nd treeNode) insert(i int, key string, newoff uint64) treeNode {
+func (nd treeNode) insert(i int, newoff uint64, key string) treeNode {
 	// Handle empty node case
 	if len(nd) == 0 {
 		var b treeBuilder
@@ -255,6 +255,8 @@ func (nd treeNode) insert(i int, key string, newoff uint64) treeNode {
 	if n == 255 {
 		panic("too many keys for tree node")
 	}
+	
+	i = min(i, n)
 
 	fieldLen := len(key)
 	oldSize := nd.size()
@@ -335,22 +337,32 @@ func (nd treeNode) insert(i int, key string, newoff uint64) treeNode {
 }
 
 // update modifies the offset for a key, in place
-func (nd treeNode) update(i int, off uint64) treeNode {
-	pos := 1 + i*7 + 2 // skip to the 5-byte offset field
+func (nd treeNode) update(i int, off uint64) {
+	assert.That(i < nd.noffs())
+	pos := 1 + i*7 + 2 
 	nd[pos] = byte(off >> 32)
 	nd[pos+1] = byte(off >> 24)
 	nd[pos+2] = byte(off >> 16)
 	nd[pos+3] = byte(off >> 8)
 	nd[pos+4] = byte(off)
-	return nd
 }
 
+// delete needs to return the updated treeNode because the size will change
+// even though it alters in place and does not allocate
+// and always returns the same memory it was given
 func (nd treeNode) delete(i int) treeNode {
-	n := nd.nkeys()
-	if n == 1 {
-		return nd[:0] // Deleting the only key results in an empty node
+	newNkeys := nd.nkeys() - 1
+	if newNkeys == -1 {
+		return append(nd[:0], emptyTree...)
 	}
 	oldSize := nd.size()
+	
+	// handle deleting the final offset
+	// which deletes the last key and moves its offset to the final position
+	if i == nd.nkeys() {
+		nd.update(i, nd.offset(i-1))
+		i--
+	}
 
 	// Get the field positions for the entry to delete
 	base := 1 + i*7
@@ -358,7 +370,7 @@ func (nd treeNode) delete(i int) treeNode {
 	fieldEnd := int(uint16(nd[base+7])<<8 | uint16(nd[base+8]))
 	fieldLen := fieldEnd - fieldStart
 
-	nd[0] = byte(n - 1) // Update count
+	nd[0] = byte(newNkeys) // Update count
 
 	// shift the middle section
 	entryStart := base
@@ -368,7 +380,7 @@ func (nd treeNode) delete(i int) treeNode {
 	// Update field positions in all remaining entries
 	// All field positions need to be reduced by 7 (removed offset entry)
 	// Plus, entries after the deleted field need reduction by fieldLen
-	for j := 0; j < n-1; j++ {
+	for j := 0; j < newNkeys; j++ {
 		pos := 1 + j*7
 		oldFieldPos := int(uint16(nd[pos])<<8 | uint16(nd[pos+1]))
 		newFieldPos := oldFieldPos - 7 // account for removed offset entry
@@ -381,7 +393,7 @@ func (nd treeNode) delete(i int) treeNode {
 	}
 
 	// Update the end offset (now at position 1 + (n-1)*7)
-	endPos := 1 + (n-1)*7
+	endPos := 1 + (newNkeys)*7
 	newSize := oldSize - 7 - fieldLen
 	nd[endPos] = byte(newSize >> 8)
 	nd[endPos+1] = byte(newSize)

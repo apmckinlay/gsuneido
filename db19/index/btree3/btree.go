@@ -3,7 +3,7 @@
 
 /*
 db19/index/btree3 is a new, optimized btree implementation.
-It is incomplete and not used yet.
+It is not used yet.
 
 Two things create or modify btrees:
 - bulk in-order loading from load or compact (Builder)
@@ -40,9 +40,10 @@ const TreeHeight = 3
 const fanout = 100
 
 type btree struct {
-	stor       *stor.Stor
-	root       uint64
-	treeLevels int
+	stor        *stor.Stor
+	root        uint64
+	treeLevels  int
+	shouldSplit func(splitable) bool
 }
 
 // Lookup returns the offset for a key, or 0 if not found.
@@ -50,7 +51,7 @@ func (bt *btree) Lookup(key string) uint64 {
 	off := bt.root
 	for range bt.treeLevels {
 		nd := bt.getTree(off)
-		off = nd.search(key)
+		_, off = nd.search(key)
 	}
 	nd := bt.getLeaf(off)
 	i, found := nd.search(key)
@@ -78,7 +79,11 @@ func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 		if depth < bt.treeLevels {
 			// tree
 			nd := readTree(bt.stor, offset)
-			assert.That(nd.nkeys() >= 1)
+			if depth == 0 {
+				assert.That(nd.nkeys() >= 1)
+			} else {
+				assert.That(nd.noffs() >= 1)
+			}
 			size = len(nd)
 			for i := 0; i < nd.nkeys(); i++ {
 				sep := nd.key(i)
@@ -105,7 +110,9 @@ func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 				}
 				first = false
 				prevSuffix = k
-				fn(it.offset())
+				if fn != nil {
+					fn(it.offset())
+				}
 			}
 			prev = append(append((prev)[:0], nd.prefix()...),
 				nd.suffix(nd.nkeys()-1)...)
