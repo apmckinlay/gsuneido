@@ -109,15 +109,15 @@ func (ti *Info) Cksum() uint32 {
 
 func (ti *Info) Check() {
 	for i := range ti.Indexes {
-		assert.This(ti.Indexes[i].Nlayers()).Is(len(ti.Deltas))
+		assert.That(ti.Indexes[i].Nlayers() == len(ti.Deltas))
 	}
 	sum := Delta{Nrows: ti.BtreeNrows, Size: ti.BtreeSize}
 	for _, d := range ti.Deltas {
 		sum.Nrows += d.Nrows
 		sum.Size += d.Size
 	}
-	assert.Msg("Nrows").This(sum.Nrows).Is(ti.Nrows)
-	assert.Msg("Size").This(sum.Size).Is(ti.Size)
+	assert.That(sum.Nrows == ti.Nrows)
+	assert.That(sum.Size == ti.Size)
 }
 
 //-------------------------------------------------------------------

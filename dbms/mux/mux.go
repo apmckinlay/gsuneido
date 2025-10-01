@@ -162,7 +162,7 @@ func (c *conn) reader(handler func(uint32, []byte)) {
 			c.err.Store(err.Error())
 			break
 		}
-		assert.This(n).Is(HeaderSize)
+		assert.That(n == HeaderSize)
 		size := int(binary.BigEndian.Uint32(hdr))
 		sessionId := binary.BigEndian.Uint32(hdr[4:])
 		buf := partial[sessionId] // nil (empty buf) if not found
@@ -177,7 +177,7 @@ func (c *conn) reader(handler func(uint32, []byte)) {
 			c.err.Store(err.Error())
 			break
 		}
-		assert.This(n).Is(size)
+		assert.That(n == size)
 		if hdr[8] == 0 {
 			partial[sessionId] = buf
 		} else if hdr[8] == 1 {

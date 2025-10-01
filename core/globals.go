@@ -64,7 +64,7 @@ const GnSuneido = 1
 var Suneido *SuneidoObject
 
 var _ = func() int { // needs to be var, init() is run later
-	assert.This(Global.Num("Suneido")).Is(GnSuneido)
+	assert.That(Global.Num("Suneido") == GnSuneido)
 	Suneido = new(SuneidoObject)
 	Suneido.SetConcurrent()
 	Global.Set(GnSuneido, Suneido)

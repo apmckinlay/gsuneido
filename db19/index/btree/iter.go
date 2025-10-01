@@ -47,7 +47,7 @@ func (it *Iterator) Eof() bool {
 }
 
 func (it *Iterator) Cur() (string, uint64) {
-	assert.Msg("Cur when not within").That(it.state == within)
+	assert.That(it.state == within)
 	return it.curKey, it.curOff
 }
 

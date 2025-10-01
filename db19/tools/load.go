@@ -306,7 +306,7 @@ func buildIndexes(ts *meta.Schema, list *slBuilder, store *stor.Stor,
 		}
 		bt.SetIxspec(&ix.Ixspec)
 		ov[i] = index.OverlayFor(bt)
-		assert.This(n).Is(nrecs)
+		assert.That(n == nrecs)
 		trace("size", store.Size()-before)
 	}
 	return ov

@@ -84,7 +84,7 @@ type tree interface {
 
 func (d *dat) Check(t tree) {
 	for _, key := range d.Keys {
-		assert.Msg(key).This(t.Lookup(key)).Is(d.K2o[key])
+		assert.That(t.Lookup(key) == d.K2o[key])
 	}
 }
 
@@ -94,10 +94,9 @@ func (d *dat) CheckIter(it iterator.T) {
 	it.Rewind()
 	for it.Next(); !it.Eof(); it.Next() {
 		k, o := it.Cur()
-		assert.Msg("expect prefix of " + d.Keys[i] + " got " + k).
-			That(strings.HasPrefix(d.Keys[i], k))
-		assert.This(d.O2k[o]).Is(d.Keys[i])
+		assert.That(strings.HasPrefix(d.Keys[i], k))
+		assert.That(d.O2k[o] == d.Keys[i])
 		i++
 	}
-	assert.This(i).Is(len(d.Keys))
+	assert.That(i == len(d.Keys))
 }

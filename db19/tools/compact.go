@@ -138,7 +138,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 		size += int64(n)
 	})
 	list.Finish()
-	assert.This(nrows).Is(info.Nrows)
+	assert.That(nrows == info.Nrows)
 	for i := 1; i < len(info.Indexes); i++ {
 		CheckOtherIndex(ts.Indexes[i].Columns, info.Indexes[i], nrows, sum)
 	}

@@ -435,9 +435,9 @@ func (t *UpdateTran) Delete(th *core.Thread, table string, off uint64) {
 				panic("update & delete on same record")
 			}
 		}
-		assert.Msg("Delete Nrows").That(ti.Nrows > 0)
+		assert.That(ti.Nrows > 0)
 		ti.Nrows--
-		assert.Msg("Delete Size").That(ti.Size >= n)
+		assert.That(ti.Size >= n)
 		ti.Size -= n
 	}()
 	t.db.CallTrigger(th, t, table, rec, "")
@@ -575,7 +575,7 @@ func (t *UpdateTran) update(th *core.Thread, table string, oldoff uint64, newrec
 	t.ck(t.db.ck.Update(t.ct, table, oldoff, oldkeys, newkeys))
 	ti = t.getRwInfo(table)
 	d := int64(len(newrec)) - int64(len(oldrec))
-	assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
+	assert.That(int64(ti.Size)+d > 0)
 	ti.Size = ti.Size + d
 	func() {
 		defer func() {

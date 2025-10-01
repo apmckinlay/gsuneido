@@ -391,7 +391,7 @@ func optimize(q Query, mode Mode, index []string, frac float64) (
 		return fixcost, varcost, app
 	}
 	fixcost, varcost, app := optTempIndex(q, mode, index, frac)
-	assert.Msg("negative cost").That(fixcost >= 0 && varcost >= 0)
+	assert.That(fixcost >= 0 && varcost >= 0)
 	q.cacheAdd(index, frac, fixcost, varcost, app)
 	return fixcost, varcost, app
 }
@@ -592,7 +592,7 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 	if fixcost == -1 {
 		panic("SetApproach: not found in cache")
 	}
-	assert.Msg("negative cost").That(fixcost >= 0 && varcost >= 0)
+	assert.That(fixcost >= 0 && varcost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
 		q.Metrics().setCost(1, app.srcfixcost, app.srcvarcost)
 		q.setApproach(app.srcindex, 1, app.srcapp, tran)

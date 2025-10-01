@@ -184,7 +184,7 @@ func (tbl *Table) SetIndex(index []string) {
 func (tbl *Table) indexi(index []string) int {
 	// WARNING: assumes tbl.indexes is parallel to schema.Indexes
 	i := slc.IndexFn(tbl.indexes, index, slices.Equal)
-	assert.Msg("index not found", tbl.name, index).That(i >= 0)
+	assert.That(i >= 0)
 	return i
 }
 
@@ -293,7 +293,7 @@ func selKeys(encode bool, dstCols, srcCols, vals []string) (string, string) {
 
 func selGet(col string, cols, vals []string) string {
 	i := slices.Index(cols, col)
-	assert.Msg("selGet", col, "NOT IN", cols).That(i != -1)
+	assert.That(i != -1)
 	return vals[i]
 }
 
@@ -308,7 +308,7 @@ func selEnd(dstCols, srcCols, vals []string) string {
 		enc.Add(vals[i])
 		data = true
 	}
-	assert.Msg("selEnd no data").That(data)
+	assert.That(data)
 	enc.Add(ixkey.Max)
 	return enc.String()
 }
@@ -343,7 +343,7 @@ func selOrg(encode bool, dstCols, srcCols, vals []string, full bool) string {
 		enc.Add(vals[i])
 		data = true
 	}
-	assert.Msg("selOrg no data").That(data)
+	assert.That(data)
 	return enc.String()
 }
 
@@ -373,7 +373,7 @@ func (tbl *Table) Simple(*Thread) []Row {
 		rec := tbl.tran.GetRecord(off)
 		row := Row{DbRec{Record: rec, Off: off}}
 		rows = append(rows, row)
-		assert.Msg("too large for simple").That(len(rows) < maxSimple)
+		assert.That(len(rows) < maxSimple)
 	}
 	return rows
 }

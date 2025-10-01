@@ -209,7 +209,7 @@ func (st *state) push(off uint64, nd node, limit string) {
 func (st *state) updateLeaf(key string, off uint64) {
 	m := st.last()
 	if m.limit != "" {
-		assert.Msg("key > limit").That(key < m.limit)
+		assert.That(key < m.limit)
 	}
 	m.updateNode(key, off, st.bt.getLeafKey)
 	if shouldSplit(m.node, m.node.Size()) {

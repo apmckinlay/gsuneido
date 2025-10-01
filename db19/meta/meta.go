@@ -875,9 +875,9 @@ func linkFkeys(m *Meta) {
 
 func (m *Meta) CheckAllMerged() {
 	for ti := range m.info.All() {
-		assert.This(len(ti.Deltas)).Is(1)
-		assert.This(ti.Deltas[0].Nrows).Is(0)
-		assert.This(ti.BtreeNrows).Is(ti.Nrows)
+		assert.That(len(ti.Deltas) == 1)
+		assert.That(ti.Deltas[0].Nrows == 0)
+		assert.That(ti.BtreeNrows == ti.Nrows)
 		for _, ov := range ti.Indexes {
 			ov.CheckMerged()
 		}

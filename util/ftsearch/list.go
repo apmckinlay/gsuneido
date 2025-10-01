@@ -28,13 +28,13 @@ func (t *term) toList() {
 			j++
 		}
 	}
-	assert.This(j).Is(t.ndocsWithTerm)
+	assert.That(j == t.ndocsWithTerm)
 	t.termCountPerDoc = list{docIds: docIds, counts: counts}
 }
 
 func (t *term) toArray() {
 	lst := t.termCountPerDoc.(list)
-	assert.This(len(lst.docIds)).Is(t.ndocsWithTerm)
+	assert.That(len(lst.docIds) == t.ndocsWithTerm)
 	a := array{}
 	for i, id := range lst.docIds {
 		a.add(int(id), int(lst.counts[i]))

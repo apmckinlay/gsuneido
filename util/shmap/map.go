@@ -294,7 +294,7 @@ outer:
 					grp.control &= ^(0xff << (ie * 8)) // set to empty
 				} else {
 					if m.growthLeft < 1 {
-						assert.Msg("already grown").That(!grown)
+						assert.That(!grown)
 						grown = true
 						m.grow()
 						continue outer

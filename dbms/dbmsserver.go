@@ -901,6 +901,5 @@ var cmds = []command{ // order must match commmands.go
 }
 
 func init() {
-	assert.Msg("dbmsserver cmds").
-		That(cmds[commands.Asof] != nil && cmds[commands.Asof+1] == nil)
+	assert.That(cmds[commands.Asof] != nil && cmds[commands.Asof+1] == nil)
 }

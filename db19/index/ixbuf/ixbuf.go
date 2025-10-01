@@ -475,7 +475,7 @@ func (it *Iterator) Modified() bool {
 }
 
 func (it *Iterator) Cur() (string, uint64) {
-	assert.Msg("Cur when not within").That(it.state == within)
+	assert.That(it.state == within)
 	return it.cur.key, it.cur.off
 }
 
@@ -628,5 +628,5 @@ func (ib *ixbuf) Check() {
 			n++
 		}
 	}
-	assert.This(ib.size).Is(n)
+	assert.That(int(ib.size) == n)
 }
