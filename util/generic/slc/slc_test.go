@@ -141,3 +141,73 @@ func TestWithoutFn(t *testing.T) {
 	assert.T(t).This(WithoutFn(list, func(n int) bool { return n == 4 })).
 		Is([]int{1, 2, 3, 2})
 }
+
+func TestGrow(t *testing.T) {
+	assert := assert.T(t)
+
+	// Test with n <= 0
+	list := []int{1, 2, 3}
+	result := Grow(list, 0)
+	assert.This(len(result)).Is(len(list))
+	assert.That(Same(result, list))
+
+	result = Grow(list, -5)
+	assert.This(len(result)).Is(len(list))
+	assert.That(Same(result, list))
+
+	// Test with nil slice
+	var nilList []int
+	result = Grow(nilList, 3)
+	assert.This(len(result)).Is(3)
+	assert.This(cap(result)).Is(3)
+	// New elements should be zero-initialized
+	for i := range result {
+		assert.This(result[i]).Is(0)
+	}
+
+	// Test growing when capacity is sufficient
+	list = make([]int, 3, 10)
+	list[0], list[1], list[2] = 1, 2, 3
+	result = Grow(list, 5)
+	assert.This(len(result)).Is(8)
+	assert.This(result[:3]).Is([]int{1, 2, 3})
+	assert.That(Same(result[:3], list))
+	// IMPORTANT: New elements should be zero-initialized
+	for i := 3; i < len(result); i++ {
+		assert.This(result[i]).Is(0)
+	}
+
+	// Test growing when capacity is insufficient
+	list = make([]int, 3, 5)
+	list[0], list[1], list[2] = 1, 2, 3
+	result = Grow(list, 5)
+	assert.This(len(result)).Is(8)
+	assert.This(cap(result) >= 8)
+	assert.This(result[:3]).Is([]int{1, 2, 3})
+	assert.That(!Same(result[:3], list)) // Should be reallocated
+	// New elements should be zero-initialized
+	for i := 3; i < len(result); i++ {
+		assert.This(result[i]).Is(0)
+	}
+
+	// Test with empty slice
+	emptyList := []int{}
+	result = Grow(emptyList, 3)
+	assert.This(len(result)).Is(3)
+	assert.This(cap(result)).Is(3)
+	for i := range result {
+		assert.This(result[i]).Is(0)
+	}
+
+	// Test grow, use, shrink, grow again
+	list = Grow([]int{}, 5)
+	for i := range list {
+		list[i] = i + 100 // Fill with non-zero data
+	}
+	list = list[:0]            // Shrink to length 0 (but capacity remains)
+	result = Grow(list, 3)     // Grow again - should zero-initialize!
+	assert.This(len(result)).Is(3)
+	for i := range result {
+		assert.This(result[i]).Is(0) // These MUST be zero, not the old 100-104 values
+	}
+}

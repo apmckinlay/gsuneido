@@ -121,7 +121,7 @@ func Fill[E any](data []E, value E) {
 
 // Grow grows the buffer to guarantee space for n more elements.
 // NOTE: Unlike x/exp/slices.Grow it extends the length, as well as the capacity
-// Using append and make like x/exp/slices.Grow assuming that is optimized.
+// Using append and make like slices.Grow assuming that is optimized.
 func Grow[S ~[]E, E any](s S, n int) S {
 	if n <= 0 {
 		return s
