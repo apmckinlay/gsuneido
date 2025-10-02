@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestLeafNode_builder(t *testing.T) {
 	assert := assert.This
-	
+
 	// empty
 	b := &leafBuilder{}
 	nd := b.finish()
@@ -481,6 +482,164 @@ func TestLeafNodeInsert(t *testing.T) {
 
 	// Test panic on too many keys
 	assert(func() { nd.insert(255, "overflow", 999) }).Panics("too many keys")
+}
+
+func TestLeafNode_split(t *testing.T) {
+	test := func(keys []string, offsets []uint64) {
+		// Build a leaf node
+		var b leafBuilder
+		for i, key := range keys {
+			b.add(key, offsets[i])
+		}
+		original := b.finish()
+
+		// Create storage
+		st := stor.HeapStor(8192)
+
+		// Split the node
+		leftOff, rightOff, splitKey := original.splitTo(st)
+
+		// Read the split nodes back
+		left := readLeaf(st, leftOff)
+		right := readLeaf(st, rightOff)
+
+		// Verify split key is a valid separator
+		// It should be >= last key of left and < first key of right
+		splitPos := len(keys) / 2
+		if splitPos > 0 {
+			assert.T(t).That(keys[splitPos-1] < splitKey)
+		}
+		assert.T(t).That(splitKey <= keys[splitPos])
+
+		// Verify key counts
+		assert.T(t).This(left.nkeys()).Is(splitPos)
+		assert.T(t).This(right.nkeys()).Is(len(keys) - splitPos)
+
+		// Verify prefix is preserved in both nodes
+		originalPrefix := string(original.prefix())
+		assert.T(t).This(string(left.prefix())).Is(originalPrefix)
+		assert.T(t).This(string(right.prefix())).Is(originalPrefix)
+
+		// Verify all keys and offsets in left node
+		for i := 0; i < left.nkeys(); i++ {
+			assert.T(t).This(left.key(i)).Is(keys[i])
+			assert.T(t).This(left.offset(i)).Is(offsets[i])
+		}
+
+		// Verify all keys and offsets in right node
+		for i := 0; i < right.nkeys(); i++ {
+			assert.T(t).This(right.key(i)).Is(keys[splitPos+i])
+			assert.T(t).This(right.offset(i)).Is(offsets[splitPos+i])
+		}
+
+		// Verify ordering
+		for i := 0; i < left.nkeys()-1; i++ {
+			assert.T(t).That(left.key(i) < left.key(i+1))
+		}
+		for i := 0; i < right.nkeys()-1; i++ {
+			assert.T(t).That(right.key(i) < right.key(i+1))
+		}
+		if left.nkeys() > 0 && right.nkeys() > 0 {
+			assert.T(t).That(left.key(left.nkeys()-1) < right.key(0))
+		}
+	}
+
+	// Test with common prefix
+	t.Run("with prefix", func(t *testing.T) {
+		keys := []string{
+			"prefix_a",
+			"prefix_b",
+			"prefix_c",
+			"prefix_d",
+			"prefix_e",
+			"prefix_f",
+			"prefix_g",
+			"prefix_h",
+		}
+		offsets := []uint64{100, 200, 300, 400, 500, 600, 700, 800}
+		test(keys, offsets)
+	})
+
+	// Test without prefix
+	t.Run("without prefix", func(t *testing.T) {
+		keys := []string{
+			"apple",
+			"banana",
+			"cherry",
+			"date",
+			"elderberry",
+			"fig",
+		}
+		offsets := []uint64{10, 20, 30, 40, 50, 60}
+		test(keys, offsets)
+	})
+
+	// Test with partial prefix
+	t.Run("partial prefix", func(t *testing.T) {
+		keys := []string{
+			"common_a1",
+			"common_a2",
+			"common_b1",
+			"common_b2",
+			"common_c1",
+			"common_c2",
+		}
+		offsets := []uint64{111, 222, 333, 444, 555, 666}
+		test(keys, offsets)
+	})
+
+	// Test with large number of keys
+	t.Run("many keys", func(t *testing.T) {
+		keys := make([]string, 100)
+		offsets := make([]uint64, 100)
+		for i := range keys {
+			keys[i] = fmt.Sprintf("key%03d", i)
+			offsets[i] = uint64(i * 10)
+		}
+		test(keys, offsets)
+	})
+
+	// Test with minimal keys (2)
+	t.Run("minimal", func(t *testing.T) {
+		keys := []string{"key1", "key2"}
+		offsets := []uint64{1, 2}
+		test(keys, offsets)
+	})
+
+	// Test structure is valid after split
+	t.Run("structure validation", func(t *testing.T) {
+		var b leafBuilder
+		b.add("same_prefix_001", 1)
+		b.add("same_prefix_002", 2)
+		b.add("same_prefix_003", 3)
+		b.add("same_prefix_004", 4)
+		original := b.finish()
+
+		st := stor.HeapStor(8192)
+
+		leftOff, rightOff, _ := original.splitTo(st)
+		left := readLeaf(st, leftOff)
+		right := readLeaf(st, rightOff)
+
+		// Verify structure is valid
+		assert.T(t).This(left.size()).Is(len(left))
+		assert.T(t).This(right.size()).Is(len(right))
+
+		// Verify we can iterate over both nodes
+		leftIt := left.iter()
+		count := 0
+		for leftIt.next() {
+			count++
+		}
+		assert.T(t).This(count).Is(2)
+
+		rightIt := right.iter()
+		count = 0
+		for rightIt.next() {
+			count++
+		}
+		assert.T(t).This(count).Is(2)
+	})
 }
 
 // func (nd leafNode) print() {

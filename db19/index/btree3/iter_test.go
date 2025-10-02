@@ -95,7 +95,7 @@ func TestIter(t *testing.T) {
 		assert.That(it.Eof())
 
 		it.Rewind()
-		for i := to-1; i >= from; i-- {
+		for i := to - 1; i >= from; i-- {
 			it.Prev()
 			test(base + i)
 		}
@@ -298,7 +298,7 @@ func TestSeekExactKey(t *testing.T) {
 	bt := buildTree(9)
 	it := bt.Iterator()
 
-	it.seek("5")
+	it.Seek("5")
 	assert.That(!it.Eof())
 	key, off := it.Cur()
 	assert.This(key).Is("5")
@@ -311,7 +311,7 @@ func TestSeekBetweenKeysGoesToNextGreater(t *testing.T) {
 	bt := buildTree(9)
 	it := bt.Iterator()
 
-	it.seek("5~") // between 5 and 6 (since "~" > "5" and < "6")
+	it.Seek("5~") // between 5 and 6 (since "~" > "5" and < "6")
 	assert.That(!it.Eof())
 	key, off := it.Cur()
 	assert.This(key).Is("6")
@@ -323,7 +323,7 @@ func TestSeekAllAboveMaxStaysAtLast(t *testing.T) {
 	bt := buildTree(9)
 	it := bt.Iterator()
 
-	it.seek("9zzzz") // greater than the last key
+	it.Seek("9zzzz") // greater than the last key
 	assert.That(!it.Eof())
 	key, off := it.Cur()
 	assert.This(key).Is("9")
@@ -551,8 +551,76 @@ func padKey(i, width int) string {
 
 func (it *Iterator) print() {
 	fmt.Println("Iterator:")
-	for i := 0; i < len(it.tree) && it.tree[i] != nil; i++ {
+	for i := 0; i < len(it.tree) && len(it.tree[i].nd) > 0; i++ {
 		fmt.Println(strconv.Itoa(it.tree[i].i), it.tree[i].nd.String())
 	}
 	fmt.Println(strconv.Itoa(it.leaf.i), it.leaf.nd.String())
+}
+
+func TestGte(t *testing.T) {
+	test := func(prefix, suffix, target string, expected bool) {
+		t.Helper()
+		result := gte([]byte(prefix), []byte(suffix), target)
+		assert.T(t).Msg(fmt.Sprintf("gte(%q, %q, %q)", prefix, suffix, target)).
+			This(result).Is(expected)
+	}
+
+	// Equality cases - should return true
+	test("abc", "", "abc", true)
+	test("", "abc", "abc", true)
+	test("ab", "c", "abc", true)
+	test("a", "bc", "abc", true)
+
+	// Greater than cases - should return true
+	test("abd", "", "abc", true)
+	test("", "abd", "abc", true)
+	test("ab", "d", "abc", true)
+	test("a", "bd", "abc", true)
+	test("abc", "d", "abc", true) // longer than target
+	test("abcd", "", "abc", true) // longer in prefix
+	test("", "abcd", "abc", true) // longer in suffix
+
+	// Less than cases - should return false
+	test("abb", "", "abc", false)
+	test("", "abb", "abc", false)
+	test("ab", "b", "abc", false)
+	test("a", "bb", "abc", false)
+	test("ab", "", "abc", false) // shorter than target
+	test("", "ab", "abc", false) // shorter in suffix
+
+	// Empty value cases
+	test("", "", "", true)    // all empty
+	test("a", "", "", true)   // empty target, non-empty prefix
+	test("", "a", "", true)   // empty target, non-empty suffix
+	test("", "", "a", false)  // empty prefix+suffix, non-empty target
+	test("abc", "", "", true) // empty target
+	test("", "abc", "", true) // empty target with suffix
+
+	// Byte-level comparison edge cases
+	test("a\x00", "", "a", true)     // null byte makes it greater
+	test("", "a\x00", "a", true)     // null byte in suffix
+	test("a", "\x00", "a", true)     // boundary between prefix and suffix
+	test("a\xff", "", "a\x00", true) // high byte value
+	test("", "a\xff", "a\x00", true) // high byte in suffix
+
+	// Boundary cases at prefix/suffix split
+	test("he", "llo", "hello", true)
+	test("hel", "lo", "hello", true)
+	test("hell", "o", "hello", true)
+	test("he", "llo", "help", false)
+	test("hel", "lo", "help", false)
+
+	// Single character comparisons
+	test("a", "", "a", true)
+	test("", "a", "a", true)
+	test("b", "", "a", true)
+	test("", "b", "a", true)
+	test("a", "", "b", false)
+	test("", "a", "b", false)
+
+	// Length variation edge cases
+	test("abc", "def", "abcde", true) // equal at compared length, longer total
+	test("abc", "de", "abcde", true)  // equal at compared length, same total
+	test("abc", "d", "abcde", false)  // equal at compared length, shorter total
+	test("abc", "", "abcdef", false)  // prefix matches but too short
 }

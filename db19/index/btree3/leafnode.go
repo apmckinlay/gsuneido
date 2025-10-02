@@ -124,17 +124,17 @@ func (nd leafNode) search(key string) (int, bool) {
 }
 
 // seek returns a leafIter positioned at the first key >= key
-func (nd leafNode) seek(key string) *leafIter {
+func (nd leafNode) seek(key string) leafIter {
 	prefix := nd.prefix()
 	prefixLen := len(prefix)
 	if prefixLen > 0 {
 		if key < string(prefix) {
 			// key is less than prefix, no entries <= key
-			return &leafIter{nd: nd, i: 0}
+			return leafIter{nd: nd, i: 0}
 		} else if !str.HasPrefix(key, prefix) {
 			// key doesn't start with prefix but key >= prefix,
 			// so all entries are < key
-			return &leafIter{nd: nd, i: nd.nkeys()}
+			return leafIter{nd: nd, i: nd.nkeys()}
 		}
 	}
 	// key starts with prefix (or no prefix), binary search for suffix
@@ -148,13 +148,13 @@ func (nd leafNode) seek(key string) *leafIter {
 			hi = mid
 		}
 	}
-	return &leafIter{nd: nd, i: lo}
+	return leafIter{nd: nd, i: lo}
 }
 
 func (nd leafNode) modify(key string, off uint64) leafNode {
 	i, found := nd.search(key)
-	trace("update search", key, offstr(off), "=>", i, found)
-	trace(nd)
+	_ = t && trace("update search", key, offstr(off), "=>", i, found)
+	_ = t && trace(nd)
 	if off&ixbuf.Update != 0 {
 		assert.That(found)
 		nd = nd.update(i, off&ixbuf.Mask)
@@ -165,7 +165,7 @@ func (nd leafNode) modify(key string, off uint64) leafNode {
 		assert.That(!found)
 		nd = nd.insert(i, key, off&ixbuf.Mask)
 	}
-	trace("after update", nd)
+	_ = t && trace("after update", nd)
 	return nd
 }
 
@@ -179,6 +179,109 @@ func (nd leafNode) write(st *stor.Stor) uint64 {
 	copy(buf, nd)
 	cksum.Update(buf)
 	return off
+}
+
+// splitTo splits a leaf node into two nodes, writing them directly to storage.
+// It keeps the same prefix for both nodes, avoiding string allocations.
+// Returns the storage offsets of the left and right nodes, and the splitTo key.
+func (nd leafNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey string) {
+	nkeys := nd.nkeys()
+	splitPos := nkeys / 2
+
+	// Keep the same prefix for both nodes
+	prefix := nd.prefix()
+	prefixLen := len(prefix)
+
+	// Calculate minimal separator like builder.sep, but using suffixes
+	// to avoid allocating full keys since they share the same prefix
+	prevSuffix := nd.suffix(splitPos - 1)
+	nextSuffix := nd.suffix(splitPos)
+	cp := str.CommonPrefixLen(string(prevSuffix), string(nextSuffix))
+	// splitKey = prefix + nextSuffix[:cp+1]
+	splitKey = cat(prefix, nextSuffix[:cp+1])
+
+	leftSize := 4 + splitPos*7 + prefixLen
+	for i := 0; i < splitPos; i++ {
+		leftSize += len(nd.suffix(i))
+	}
+
+	rightCount := nkeys - splitPos
+	rightSize := 4 + rightCount*7 + prefixLen
+	for i := splitPos; i < nkeys; i++ {
+		rightSize += len(nd.suffix(i))
+	}
+
+	// Allocate storage for both nodes
+	leftOff, leftBuf := st.Alloc(leftSize + cksum.Len)
+	rightOff, rightBuf := st.Alloc(rightSize + cksum.Len)
+
+	// Build left node
+	leftBuf[0] = byte(splitPos)
+	leftBuf[1] = byte(prefixLen)
+
+	fieldPos := 4 + splitPos*7 + prefixLen
+	pos := 2
+	for i := 0; i < splitPos; i++ {
+		off := nd.offset(i)
+		leftBuf[pos] = byte(fieldPos >> 8)
+		leftBuf[pos+1] = byte(fieldPos)
+		leftBuf[pos+2] = byte(off >> 32)
+		leftBuf[pos+3] = byte(off >> 24)
+		leftBuf[pos+4] = byte(off >> 16)
+		leftBuf[pos+5] = byte(off >> 8)
+		leftBuf[pos+6] = byte(off)
+		pos += 7
+		fieldPos += len(nd.suffix(i))
+	}
+	leftBuf[pos] = byte(fieldPos >> 8)
+	leftBuf[pos+1] = byte(fieldPos)
+	pos += 2
+
+	copy(leftBuf[pos:], prefix)
+	pos += prefixLen
+
+	for i := 0; i < splitPos; i++ {
+		suffix := nd.suffix(i)
+		copy(leftBuf[pos:], suffix)
+		pos += len(suffix)
+	}
+
+	cksum.Update(leftBuf)
+
+	// Build right node
+	rightBuf[0] = byte(rightCount)
+	rightBuf[1] = byte(prefixLen)
+
+	fieldPos = 4 + rightCount*7 + prefixLen
+	pos = 2
+	for i := splitPos; i < nkeys; i++ {
+		off := nd.offset(i)
+		rightBuf[pos] = byte(fieldPos >> 8)
+		rightBuf[pos+1] = byte(fieldPos)
+		rightBuf[pos+2] = byte(off >> 32)
+		rightBuf[pos+3] = byte(off >> 24)
+		rightBuf[pos+4] = byte(off >> 16)
+		rightBuf[pos+5] = byte(off >> 8)
+		rightBuf[pos+6] = byte(off)
+		pos += 7
+		fieldPos += len(nd.suffix(i))
+	}
+	rightBuf[pos] = byte(fieldPos >> 8)
+	rightBuf[pos+1] = byte(fieldPos)
+	pos += 2
+
+	copy(rightBuf[pos:], prefix)
+	pos += prefixLen
+
+	for i := splitPos; i < nkeys; i++ {
+		suffix := nd.suffix(i)
+		copy(rightBuf[pos:], suffix)
+		pos += len(suffix)
+	}
+
+	cksum.Update(rightBuf)
+
+	return leftOff, rightOff, splitKey
 }
 
 // readLeaf reads a leaf node from storage
@@ -220,8 +323,8 @@ type leafIter struct {
 }
 
 // iter starts at -1 so next goes to the first entry
-func (nd leafNode) iter() *leafIter {
-	return &leafIter{nd: nd, i: -1}
+func (nd leafNode) iter() leafIter {
+	return leafIter{nd: nd, i: -1}
 }
 
 // next moves to the next entry.
@@ -251,6 +354,10 @@ func (it *leafIter) eof() bool {
 
 func (it *leafIter) key(buf []byte) []byte {
 	return append(append(buf[:0], it.nd.prefix()...), it.nd.suffix(it.i)...)
+}
+
+func (it *leafIter) prefix() []byte {
+	return it.nd.prefix()
 }
 
 func (it *leafIter) suffix() []byte {
@@ -293,7 +400,9 @@ func (b *leafBuilder) nkeys() int {
 	return len(b.keys)
 }
 
-func (b *leafBuilder) finish() leafNode {
+// finishInto builds the leaf node directly into the provided buffer
+// buf must be large enough (at least b.size() bytes)
+func (b *leafBuilder) finishInto(buf []byte) leafNode {
 	n := len(b.keys)
 	if n > 255 {
 		panic("too many keys for leaf node")
@@ -301,28 +410,52 @@ func (b *leafBuilder) finish() leafNode {
 	if n == 1 {
 		b.prefix = ""
 	}
-	nodeSize := b.size()
 	prelen := len(b.prefix)
-	result := make([]byte, 0, nodeSize)
-	result = append(result, byte(n), byte(prelen))
+
+	buf[0] = byte(n)
+	buf[1] = byte(prelen)
+
 	fieldPos := 4 + n*7 + prelen // position where field data starts
+	pos := 2
 	for i, off := range b.offsets {
-		result = append(result,
-			byte(fieldPos>>8),
-			byte(fieldPos),
-			byte(off>>32),
-			byte(off>>24),
-			byte(off>>16),
-			byte(off>>8),
-			byte(off))
+		buf[pos] = byte(fieldPos >> 8)
+		buf[pos+1] = byte(fieldPos)
+		buf[pos+2] = byte(off >> 32)
+		buf[pos+3] = byte(off >> 24)
+		buf[pos+4] = byte(off >> 16)
+		buf[pos+5] = byte(off >> 8)
+		buf[pos+6] = byte(off)
+		pos += 7
 		fieldPos += len(b.keys[i]) - prelen
 	}
-	result = append(result, byte(fieldPos>>8), byte(fieldPos))
-	result = append(result, b.prefix...)
+	buf[pos] = byte(fieldPos >> 8)
+	buf[pos+1] = byte(fieldPos)
+	pos += 2
+
+	copy(buf[pos:], b.prefix)
+	pos += prelen
+
 	for _, key := range b.keys {
-		result = append(result, key[prelen:]...)
+		copy(buf[pos:], key[prelen:])
+		pos += len(key) - prelen
 	}
-	return leafNode(result)
+
+	return leafNode(buf[:pos])
+}
+
+func (b *leafBuilder) finish() leafNode {
+	size := b.size()
+	buf := make([]byte, size)
+	return b.finishInto(buf)
+}
+
+// finishTo builds the leaf node and writes it to storage
+func (b *leafBuilder) finishTo(st *stor.Stor) uint64 {
+	size := b.size()
+	off, buf := st.Alloc(size + cksum.Len)
+	b.finishInto(buf[:size])
+	cksum.Update(buf)
+	return off
 }
 
 // reset clears the builder, keeping its capacity to save allocation

@@ -12,11 +12,11 @@ import (
 
 func TestTreeNode_builder(t *testing.T) {
 	assert := assert.T(t).This
-	
+
 	nd := treeNode(emptyTree)
 	assert(nd.nkeys()).Is(0)
 	assert(nd.noffs()).Is(0)
-	
+
 	builder := &treeBuilder{}
 	nd = builder.finish(123)
 	assert(nd.nkeys()).Is(0)
@@ -85,7 +85,7 @@ func TestTreeNode_search(t *testing.T) {
 	// Test multiple keys
 	nd = makeTree(11, "apple", 22, "banana", 33, "cherry", 44, "date", 55)
 	assert(nd.nkeys()).Is(4)
-	
+
 	assert(nd.search("aaa")).Is(0, 11)
 	assert(nd.search("apple")).Is(1, 22)
 	assert(nd.search("ban")).Is(1, 22)
@@ -241,7 +241,7 @@ func TestTreeNode_delete(t *testing.T) {
 	// Test deleting from a single-key node
 	nd := makeTree(123, "hello", 456)
 	nd.delete(0)
-	assert(nd.String()).Is("tree{ 456}") 
+	assert(nd.String()).Is("tree{ 456}")
 
 	// Test deleting first
 	nd = makeTree(100, "apple", 200, "banana", 300, "cherry", 400)
@@ -267,6 +267,95 @@ func TestTreeNode_delete(t *testing.T) {
 	nd = makeTree(100, "apple", 200, "banana", 300)
 	nd = nd.delete(0) // delete "apple"
 	assert(nd.String()).Is("tree{200 <banana> 300}")
+}
+
+func TestTreeNode_splitInto(t *testing.T) {
+	assert := assert.T(t).This
+	st := heapstor(8192)
+
+	// Test splitting a tree node with 5 keys (split at position 2)
+	// Keys: "apple", "banana", "cherry", "date", "elderberry"
+	// Offsets: 100, 200, 300, 400, 500, 600 (final)
+	nd := makeTree(100, "apple", 200, "banana", 300, "cherry", 400, "date", 500, "elderberry", 600)
+	assert(nd.nkeys()).Is(5)
+	assert(nd.String()).Is("tree{100 <apple> 200 <banana> 300 <cherry> 400 <date> 500 <elderberry> 600}")
+
+	leftOff, rightOff, splitKey := nd.splitTo(st)
+
+	// Verify the split key is the FULL key at split position (NOT shortened)
+	// With 5 keys, split position is 5/2 = 2, so splitKey should be "cherry"
+	assert(splitKey).Is("cherry")
+
+	// Read back the split nodes from storage
+	left := readTree(st, leftOff)
+	right := readTree(st, rightOff)
+
+	// Left node should have keys 0 and 1 ("apple", "banana")
+	// with offsets 100, 200, and final offset 300 (from split position)
+	assert(left.nkeys()).Is(2)
+	assert(left.String()).Is("tree{100 <apple> 200 <banana> 300}")
+	assert(string(left.key(0))).Is("apple")
+	assert(string(left.key(1))).Is("banana")
+	assert(left.offset(0)).Is(100)
+	assert(left.offset(1)).Is(200)
+	assert(left.offset(2)).Is(300) // final offset from split position
+
+	// Right node should have keys 3 and 4 ("date", "elderberry")
+	// with offsets 400, 500, and final offset 600
+	assert(right.nkeys()).Is(2)
+	assert(right.String()).Is("tree{400 <date> 500 <elderberry> 600}")
+	assert(string(right.key(0))).Is("date")
+	assert(string(right.key(1))).Is("elderberry")
+	assert(right.offset(0)).Is(400)
+	assert(right.offset(1)).Is(500)
+	assert(right.offset(2)).Is(600) // final offset
+
+	// Test splitting with different number of keys
+	// 3 keys: split at position 1
+	nd = makeTree(10, "a", 20, "b", 30, "c", 40)
+	leftOff, rightOff, splitKey = nd.splitTo(st)
+	assert(splitKey).Is("b")
+
+	left = readTree(st, leftOff)
+	right = readTree(st, rightOff)
+
+	assert(left.nkeys()).Is(1)
+	assert(left.String()).Is("tree{10 <a> 20}")
+
+	assert(right.nkeys()).Is(1)
+	assert(right.String()).Is("tree{30 <c> 40}")
+
+	// Test splitting with 7 keys: split at position 3
+	nd = makeTree(1, "a", 2, "b", 3, "c", 4, "d", 5, "e", 6, "f", 7, "g", 8)
+	leftOff, rightOff, splitKey = nd.splitTo(st)
+	assert(splitKey).Is("d")
+
+	left = readTree(st, leftOff)
+	right = readTree(st, rightOff)
+
+	assert(left.nkeys()).Is(3)
+	assert(left.String()).Is("tree{1 <a> 2 <b> 3 <c> 4}")
+
+	assert(right.nkeys()).Is(3)
+	assert(right.String()).Is("tree{5 <e> 6 <f> 7 <g> 8}")
+
+	// Verify that split key is NOT shortened (different from leafNode.splitInto)
+	// Test with keys that have common prefixes
+	nd = makeTree(100, "test", 200, "testing", 300, "testings", 400, "tests", 500)
+	leftOff, rightOff, splitKey = nd.splitTo(st)
+
+	// Split position is 4/2 = 2, so splitKey should be full "testings", NOT shortened
+	assert(splitKey).Is("testings")
+
+	left = readTree(st, leftOff)
+	right = readTree(st, rightOff)
+
+	assert(left.nkeys()).Is(2)
+	assert(string(left.key(0))).Is("test")
+	assert(string(left.key(1))).Is("testing")
+
+	assert(right.nkeys()).Is(1)
+	assert(string(right.key(0))).Is("tests")
 }
 
 // makeTree takes offsets separated by keys

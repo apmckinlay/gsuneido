@@ -329,17 +329,18 @@ func TestMergeSplitLeaf(t *testing.T) {
 	assert.This(originalLeaf.nkeys()).Is(5)
 	assert.This(originalLeaf.String()).Is("leaf{apple 1 banana 2 cherry 3 date 4 elderberry 5}")
 
-	// Create a state with the leaf node for testing split
-	lm := leafMerge{
-		leaf:     originalLeaf,
-		modified: true, // Mark as modified so split will work
-	}
+	// Call split directly on the leaf node
+	st := heapstor(8192)
+	leftOff, rightOff, splitKey := originalLeaf.splitTo(st)
 
-	// Call splitLeaf
-	left, right, splitKey := lm.split()
+	// Verify the split key is a valid separator
+	// It should be >= last key of left and < first key of right
+	assert.That(splitKey >= "banana")
+	assert.That(splitKey <= "cherry")
 
-	// Verify the split key is correct (should be the first key of the right node)
-	assert.This(splitKey).Is("cherry")
+	// Read back the split nodes
+	left := readLeaf(st, leftOff)
+	right := readLeaf(st, rightOff)
 
 	// Verify left node contains first half of entries
 	assert.This(left.nkeys()).Is(2)
@@ -359,13 +360,13 @@ func TestMergeSplitTree(t *testing.T) {
 	originalTree := b.finish(400)
 	assert.This(originalTree.String()).Is("tree{100 <apple> 200 <banana> 300 <cherry> 400}")
 
-	tm := &treeMerge{
-		tree:     originalTree,
-		modified: true,
-	}
-	left, right, splitKey := tm.split()
+	st := heapstor(8192)
+	leftOff, rightOff, splitKey := originalTree.splitTo(st)
 
 	assert.This(splitKey).Is("banana")
+
+	left := readTree(st, leftOff)
+	right := readTree(st, rightOff)
 	assert.This(left.String()).Is("tree{100 <apple> 200}")
 	assert.This(right.String()).Is("tree{300 <cherry> 400}")
 }

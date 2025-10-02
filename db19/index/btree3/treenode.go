@@ -86,7 +86,7 @@ func (nd treeNode) search(key string) (int, uint64) {
 	return lo, nd.offset(lo)
 }
 
-func (nd treeNode) seek(key string) *treeIter {
+func (nd treeNode) seek(key string) treeIter {
 	lo, hi := 0, nd.nkeys()-1
 	for lo <= hi {
 		mid := (lo + hi) / 2
@@ -96,7 +96,7 @@ func (nd treeNode) seek(key string) *treeIter {
 			hi = mid - 1
 		}
 	}
-	return &treeIter{nd: nd, i: lo}
+	return treeIter{nd: nd, i: lo}
 }
 
 // write writes a tree node to storage
@@ -109,6 +109,107 @@ func (nd treeNode) write(st *stor.Stor) uint64 {
 	copy(buf, nd)
 	cksum.Update(buf)
 	return off
+}
+
+// splitTo splits a tree node into two nodes, writing them directly to storage.
+// Returns the storage offsets of the left and right nodes, and the split key.
+// Unlike leafNode.splitTo, this does NOT shorten the split key.
+func (nd treeNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey string) {
+	nkeys := nd.nkeys()
+	splitPos := nkeys / 2
+
+	// The split key is the key at the split position (NOT shortened)
+	splitKey = string(nd.key(splitPos))
+
+	// Calculate sizes for both nodes
+	leftSize := 1 + splitPos*7 + 2 + 5 // count + offsets + size + final offset
+	for i := 0; i < splitPos; i++ {
+		leftSize += len(nd.key(i))
+	}
+
+	rightCount := nkeys - splitPos - 1
+	rightSize := 1 + rightCount*7 + 2 + 5 // count + offsets + size + final offset
+	for i := splitPos + 1; i < nkeys; i++ {
+		rightSize += len(nd.key(i))
+	}
+
+	// Allocate storage for both nodes
+	leftOff, leftBuf := st.Alloc(leftSize + cksum.Len)
+	rightOff, rightBuf := st.Alloc(rightSize + cksum.Len)
+
+	// Build left node
+	leftBuf[0] = byte(splitPos)
+
+	fieldPos := 1 + splitPos*7 + 2 + 5
+	pos := 1
+	for i := 0; i < splitPos; i++ {
+		off := nd.offset(i)
+		leftBuf[pos] = byte(fieldPos >> 8)
+		leftBuf[pos+1] = byte(fieldPos)
+		leftBuf[pos+2] = byte(off >> 32)
+		leftBuf[pos+3] = byte(off >> 24)
+		leftBuf[pos+4] = byte(off >> 16)
+		leftBuf[pos+5] = byte(off >> 8)
+		leftBuf[pos+6] = byte(off)
+		pos += 7
+		fieldPos += len(nd.key(i))
+	}
+	// Add final offset for left node (offset at splitPos)
+	leftBuf[pos] = byte(fieldPos >> 8)
+	leftBuf[pos+1] = byte(fieldPos)
+	finalOff := nd.offset(splitPos)
+	leftBuf[pos+2] = byte(finalOff >> 32)
+	leftBuf[pos+3] = byte(finalOff >> 24)
+	leftBuf[pos+4] = byte(finalOff >> 16)
+	leftBuf[pos+5] = byte(finalOff >> 8)
+	leftBuf[pos+6] = byte(finalOff)
+	pos += 7
+
+	for i := 0; i < splitPos; i++ {
+		key := nd.key(i)
+		copy(leftBuf[pos:], key)
+		pos += len(key)
+	}
+
+	cksum.Update(leftBuf)
+
+	// Build right node
+	rightBuf[0] = byte(rightCount)
+
+	fieldPos = 1 + rightCount*7 + 2 + 5
+	pos = 1
+	for i := splitPos + 1; i < nkeys; i++ {
+		off := nd.offset(i)
+		rightBuf[pos] = byte(fieldPos >> 8)
+		rightBuf[pos+1] = byte(fieldPos)
+		rightBuf[pos+2] = byte(off >> 32)
+		rightBuf[pos+3] = byte(off >> 24)
+		rightBuf[pos+4] = byte(off >> 16)
+		rightBuf[pos+5] = byte(off >> 8)
+		rightBuf[pos+6] = byte(off)
+		pos += 7
+		fieldPos += len(nd.key(i))
+	}
+	// Add final offset for right node (offset at nkeys)
+	rightBuf[pos] = byte(fieldPos >> 8)
+	rightBuf[pos+1] = byte(fieldPos)
+	finalOff = nd.offset(nkeys)
+	rightBuf[pos+2] = byte(finalOff >> 32)
+	rightBuf[pos+3] = byte(finalOff >> 24)
+	rightBuf[pos+4] = byte(finalOff >> 16)
+	rightBuf[pos+5] = byte(finalOff >> 8)
+	rightBuf[pos+6] = byte(finalOff)
+	pos += 7
+
+	for i := splitPos + 1; i < nkeys; i++ {
+		key := nd.key(i)
+		copy(rightBuf[pos:], key)
+		pos += len(key)
+	}
+
+	cksum.Update(rightBuf)
+
+	return leftOff, rightOff, splitKey
 }
 
 // readTree reads a leaf node from storage
@@ -148,8 +249,8 @@ type treeIter struct {
 }
 
 // iter returns an iterator over the offsets (not the separators)
-func (nd treeNode) iter() *treeIter {
-	return &treeIter{nd: nd, i: -1}
+func (nd treeNode) iter() treeIter {
+	return treeIter{nd: nd, i: -1}
 }
 
 func (it *treeIter) next() bool {
@@ -194,43 +295,63 @@ func (b *treeBuilder) nkeys() int {
 	return len(b.keys)
 }
 
-// finish adds a final offset and then builds the tree node
-func (b *treeBuilder) finish(offset uint64) treeNode {
-	b.offsets = append(b.offsets, offset)
-	return b.build()
-}
-
-func (b *treeBuilder) build() treeNode {
-	assert.That(len(b.keys)+1 == len(b.offsets))
-
-	b.keys = append(b.keys, "")
+// finishInto builds the tree node directly into the provided buffer with a final offset
+// buf must be large enough (at least b.size() bytes)
+func (b *treeBuilder) finishInto(buf []byte, offset uint64) treeNode {
 	n := len(b.keys)
-	if n > 256 {
+	if n > 255 {
 		panic("too many keys for tree node")
 	}
-	totalKeyLen := 0
-	for _, key := range b.keys {
-		totalKeyLen += len(key)
-	}
-	nodeSize := 1 + n*7 + totalKeyLen
-	result := make([]byte, 0, nodeSize)
-	result = append(result, byte(n-1))
-	fieldPos := 1 + n*7 // position where field data starts
+
+	buf[0] = byte(n)
+
+	fieldPos := 1 + (n+1)*7 // position where field data starts
+	pos := 1
+
 	for i, off := range b.offsets {
-		result = append(result,
-			byte(fieldPos>>8),
-			byte(fieldPos),
-			byte(off>>32),
-			byte(off>>24),
-			byte(off>>16),
-			byte(off>>8),
-			byte(off))
+		buf[pos] = byte(fieldPos >> 8)
+		buf[pos+1] = byte(fieldPos)
+		buf[pos+2] = byte(off >> 32)
+		buf[pos+3] = byte(off >> 24)
+		buf[pos+4] = byte(off >> 16)
+		buf[pos+5] = byte(off >> 8)
+		buf[pos+6] = byte(off)
+		pos += 7
 		fieldPos += len(b.keys[i])
 	}
+
+	// Add final offset
+	buf[pos] = byte(fieldPos >> 8)
+	buf[pos+1] = byte(fieldPos)
+	buf[pos+2] = byte(offset >> 32)
+	buf[pos+3] = byte(offset >> 24)
+	buf[pos+4] = byte(offset >> 16)
+	buf[pos+5] = byte(offset >> 8)
+	buf[pos+6] = byte(offset)
+	pos += 7
+
 	for _, key := range b.keys {
-		result = append(result, key...)
+		copy(buf[pos:], key)
+		pos += len(key)
 	}
-	return treeNode(result)
+
+	return treeNode(buf[:pos])
+}
+
+// finish adds a final offset and then builds the tree node
+func (b *treeBuilder) finish(offset uint64) treeNode {
+	size := b.size()
+	buf := make([]byte, size)
+	return b.finishInto(buf, offset)
+}
+
+// finishTo builds the tree node with a final offset and writes it to storage
+func (b *treeBuilder) finishTo(st *stor.Stor, offset uint64) uint64 {
+	size := b.size()
+	off, buf := st.Alloc(size + cksum.Len)
+	b.finishInto(buf[:size], offset)
+	cksum.Update(buf)
+	return off
 }
 
 // reset clears the builder, keeping its capacity to save allocation
@@ -255,7 +376,7 @@ func (nd treeNode) insert(i int, newoff uint64, key string) treeNode {
 	if n == 255 {
 		panic("too many keys for tree node")
 	}
-	
+
 	i = min(i, n)
 
 	fieldLen := len(key)
@@ -339,7 +460,7 @@ func (nd treeNode) insert(i int, newoff uint64, key string) treeNode {
 // update modifies the offset for a key, in place
 func (nd treeNode) update(i int, off uint64) {
 	assert.That(i < nd.noffs())
-	pos := 1 + i*7 + 2 
+	pos := 1 + i*7 + 2
 	nd[pos] = byte(off >> 32)
 	nd[pos+1] = byte(off >> 24)
 	nd[pos+2] = byte(off >> 16)
@@ -356,7 +477,7 @@ func (nd treeNode) delete(i int) treeNode {
 		return append(nd[:0], emptyTree...)
 	}
 	oldSize := nd.size()
-	
+
 	// handle deleting the final offset
 	// which deletes the last key and moves its offset to the final position
 	if i == nd.nkeys() {

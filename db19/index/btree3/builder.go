@@ -51,8 +51,7 @@ func (b *builder) Add(key string, off uint64) bool {
 
 func (b *builder) addLeaf(key string, off uint64) {
 	if b.shouldSplit(&b.leaf) {
-		nd := b.leaf.finish()
-		off2 := nd.write(b.stor)
+		off2 := b.leaf.finishTo(b.stor)
 		sep := b.sep(b.prev, key)
 		b.addTree(0, off2, sep)
 		b.leaf.reset() // reuse the memory
@@ -66,8 +65,7 @@ func (b *builder) addTree(ti int, off uint64, sep string) {
 	}
 	tree := b.tree[ti]
 	if b.shouldSplit(tree) {
-		nd := tree.finish(off)
-		off2 := nd.write(b.stor)
+		off2 := tree.finishTo(b.stor, off)
 		b.addTree(ti+1, off2, sep) // RECURSE
 		tree.reset()               // reuse the memory
 	} else {
@@ -81,11 +79,10 @@ func (b *builder) sep(prev, key string) string {
 }
 
 func (b *builder) Finish() *btree {
-	nd := b.leaf.finish()
-	off := nd.write(b.stor)
+	off := b.leaf.finishTo(b.stor)
+
 	for i := range b.tree {
-		nd := b.tree[i].finish(off)
-		off = nd.write(b.stor)
+		off = b.tree[i].finishTo(b.stor, off)
 	}
 	return &btree{stor: b.stor, root: off, treeLevels: len(b.tree), shouldSplit: b.shouldSplit}
 }

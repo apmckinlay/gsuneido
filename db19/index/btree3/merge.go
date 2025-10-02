@@ -42,8 +42,12 @@ type state struct {
 	leaf leafMerge   // current leaf node
 }
 
-func trace(args ...any) {
-	// fmt.Println(args...)
+// t should be used like: _ = t && trace(...)
+const t = false
+
+func trace(args ...any) bool {
+	fmt.Println(args...)
+	return true
 }
 
 /*
@@ -73,20 +77,21 @@ and removing empty nodes by updating their parent(s).
 func (bt *btree) MergeAndSave(iter ixbuf.Iter) *btree {
 	bt2 := *bt // copy
 	st := state{bt: &bt2}
+	st.tree = make([]treeMerge, 0, maxLevels)
 	for {
 		key, off, ok := iter()
 		if !ok {
 			break
 		}
 		st.Print()
-		trace("MERGE", key, offstr(off))
+		_ = t && trace("MERGE", key, offstr(off))
 		st.advanceTo(key)
 		st.Print()
 		st.check()
 		st.updateLeaf(key, off)
 		st.check()
 	}
-	trace("flush")
+	_ = t && trace("flush")
 	for st.haveLeaf() || len(st.tree) > 0 {
 		st.ascend()
 	}
@@ -96,12 +101,12 @@ func (bt *btree) MergeAndSave(iter ixbuf.Iter) *btree {
 // advanceTo traverses the tree to the leaf containing key
 // ascending and then descending as necessary.
 func (st *state) advanceTo(key string) {
-	trace("advanceTo", key)
+	_ = t && trace("advanceTo", key)
 	bt := st.bt
 	// if already on correct leaf, avoid tree traversal
 	// this optimizes dense updates
 	if len(st.tree) == bt.treeLevels && st.haveLeaf() && st.leaf.contains(key) {
-		trace("advance: already on correct node")
+		_ = t && trace("advance: already on correct node")
 		return
 	}
 	// ascend the tree only as far as necessary
@@ -115,7 +120,7 @@ func (st *state) advanceTo(key string) {
 // by removing the last leaf or tree from state
 // saving it if it was modified.
 func (st *state) ascend() {
-	trace("ascend")
+	_ = t && trace("ascend")
 	var off uint64
 	if st.haveLeaf() {
 		// leaf
@@ -125,7 +130,7 @@ func (st *state) ascend() {
 			return
 		}
 		off = lm.leaf.write(st.bt.stor)
-		trace("write", lm.leaf, "=>", off)
+		_ = t && trace("write", lm.leaf, "=>", off)
 	} else {
 		// tree
 		tm := &st.tree[len(st.tree)-1]
@@ -134,7 +139,7 @@ func (st *state) ascend() {
 			return
 		}
 		off = tm.tree.write(st.bt.stor)
-		trace("write", tm.tree, "=>", off)
+		_ = t && trace("write", tm.tree, "=>", off)
 	}
 	st.updateParent(off)
 }
@@ -156,13 +161,13 @@ func (st *state) lastContains(key string) bool {
 func (st *state) updateParent(off uint64) {
 	if len(st.tree) == 0 {
 		st.bt.root = off
-		trace("set root", off)
+		_ = t && trace("set root", off)
 	} else {
 		tm := &st.tree[len(st.tree)-1]
 		tm.makeMutable()
-		trace("update tree set", tm.pos, "to", off)
+		_ = t && trace("update tree set", tm.pos, "to", off)
 		tm.tree.update(tm.pos, off)
-		trace("=>", tm.tree)
+		_ = t && trace("=>", tm.tree)
 	}
 }
 
@@ -170,7 +175,7 @@ func (st *state) updateParent(off uint64) {
 // It starts with a partial path after ascend
 // and extends it fully to the leaf.
 func (st *state) descendToLeaf(key string) {
-	trace("descendToLeaf", key)
+	_ = t && trace("descendToLeaf", key)
 	bt := st.bt
 	for len(st.tree) < bt.treeLevels {
 		var off uint64
@@ -218,11 +223,11 @@ func (st *state) haveLeaf() bool {
 //-------------------------------------------------------------------
 
 func (st *state) updateLeaf(key string, off uint64) {
-	trace("updateLeaf", key, offstr(off))
+	_ = t && trace("updateLeaf", key, offstr(off))
 	assert.That(st.leaf.limit == "" || key < st.leaf.limit)
 	st.leaf.makeMutable()
 	st.leaf.leaf = st.leaf.leaf.modify(key, off)
-	trace("=>", st.leaf.leaf)
+	_ = t && trace("=>", st.leaf.leaf)
 
 	if st.leaf.leaf.nkeys() == 0 {
 		st.dropLeaf()
@@ -234,7 +239,7 @@ func (st *state) updateLeaf(key string, off uint64) {
 }
 
 func (st *state) dropLeaf() {
-	trace("dropLeaf")
+	_ = t && trace("dropLeaf")
 	assert.That(len(st.tree) == st.bt.treeLevels)
 	st.leaf = leafMerge{} // clear leaf
 	// propagate the delete up the tree
@@ -249,10 +254,10 @@ func (st *state) dropLeaf() {
 	for len(st.tree) > 0 {
 		i := len(st.tree) - 1
 		tm := &st.tree[i]
-		trace("before delete", tm.pos, tm.tree)
+		_ = t && trace("before delete", tm.pos, tm.tree)
 		tm.makeMutable()
 		tm.tree = tm.tree.delete(tm.pos)
-		trace("delete", tm.pos, "=>", tm.tree)
+		_ = t && trace("delete", tm.pos, "=>", tm.tree)
 		if tm.pos >= tm.tree.noffs() {
 			tm.pos = tm.tree.noffs() - 1
 		}
@@ -279,7 +284,7 @@ func (st *state) dropLeaf() {
 		if tm.tree.noffs() > 1 {
 			break
 		}
-		trace("single child root")
+		_ = t && trace("single child root")
 		st.bt.root = tm.tree.offset(0)
 		st.tree = slices.Delete(st.tree, 0, 1)
 		st.bt.treeLevels--
@@ -287,7 +292,7 @@ func (st *state) dropLeaf() {
 }
 
 func (st *state) setBtreeEmpty() {
-	trace("set btree empty")
+	_ = t && trace("set btree empty")
 	st.bt.treeLevels = 0
 	st.tree = st.tree[:0]
 	rootLeaf := leafNode(emptyLeaf)
@@ -296,30 +301,25 @@ func (st *state) setBtreeEmpty() {
 }
 
 func (st *state) split() {
-	leftLeaf, rightLeaf, splitKey := st.leaf.split()
-	leftOff := leftLeaf.write(st.bt.stor)
-	trace("write left", leftLeaf, "=>", leftOff)
-	rightOff := rightLeaf.write(st.bt.stor)
-	trace("write right", rightLeaf, "=>", rightOff)
+	leftOff, rightOff, splitKey := st.leaf.leaf.splitTo(st.bt.stor)
+	_ = t && trace("write left leaf =>", leftOff)
+	_ = t && trace("write right leaf =>", rightOff)
 	st.leaf = leafMerge{} // clear leaf
-	var leftTree, rightTree treeNode
 	// propagate insert up the tree
 	for len(st.tree) > 0 {
 		i := len(st.tree) - 1
 		tm := &st.tree[i]
 		tm.makeMutable()
-		trace("before update", tm.tree)
+		_ = t && trace("before update", tm.tree)
 		tm.tree.update(tm.pos, rightOff)
 		tm.tree = tm.tree.insert(tm.pos, leftOff, splitKey)
-		trace("after update", tm.tree)
+		_ = t && trace("after update", tm.tree)
 		if !st.bt.shouldSplit(tm.tree) {
 			return
 		}
-		leftTree, rightTree, splitKey = tm.split()
-		leftOff = leftTree.write(st.bt.stor)
-		trace("write left", leftTree, "=>", leftOff)
-		rightOff = rightTree.write(st.bt.stor)
-		trace("write right", rightTree, "=>", rightOff)
+		leftOff, rightOff, splitKey = tm.tree.splitTo(st.bt.stor)
+		_ = t && trace("write left tree =>", leftOff)
+		_ = t && trace("write right tree =>", rightOff)
 		st.tree = st.tree[:i]
 	}
 	// new root
@@ -328,61 +328,8 @@ func (st *state) split() {
 	newRoot := b.finish(rightOff)
 	st.bt.treeLevels++
 	st.bt.root = newRoot.write(st.bt.stor)
-	trace("write new root", newRoot, "=>", st.bt.root)
+	_ = t && trace("write new root", newRoot, "=>", st.bt.root)
 	st.tree = append(st.tree, treeMerge{off: st.bt.root, tree: newRoot})
-}
-
-func (lm *leafMerge) split() (left, right leafNode, splitKey string) {
-	nd := lm.leaf
-	nkeys := nd.nkeys()
-	splitPos := nkeys / 2
-
-	// The split key is the key at the split position
-	splitKey = nd.key(splitPos)
-
-	// Use leafBuilder to reconstruct nodes
-	var leftBuilder, rightBuilder leafBuilder
-
-	for i := 0; i < splitPos; i++ {
-		leftBuilder.add(nd.key(i), nd.offset(i))
-	}
-	left = leftBuilder.finish()
-
-	for i := splitPos; i < nkeys; i++ {
-		rightBuilder.add(nd.key(i), nd.offset(i))
-	}
-	right = rightBuilder.finish()
-
-	trace("split leaf at", splitKey)
-	// trace("    orig:", nd)
-	// trace("    left:", left)
-	// trace("    right:", right)
-	return
-}
-
-func (tm *treeMerge) split() (left, right treeNode, splitKey string) {
-	nd := tm.tree
-	nkeys := nd.nkeys()
-	splitPos := nkeys / 2
-
-	// The split key is the key at the split position
-	splitKey = string(nd.key(splitPos))
-
-	// Use treeBuilder to reconstruct nodes
-	var leftBuilder, rightBuilder treeBuilder
-
-	for i := 0; i < splitPos; i++ {
-		leftBuilder.add(nd.offset(i), string(nd.key(i)))
-	}
-	left = leftBuilder.finish(nd.offset(splitPos))
-
-	for i := splitPos + 1; i < nkeys; i++ {
-		rightBuilder.add(nd.offset(i), string(nd.key(i)))
-	}
-	right = rightBuilder.finish(nd.offset(nkeys))
-
-	trace("split tree at", splitKey)
-	return
 }
 
 //-------------------------------------------------------------------
@@ -396,9 +343,12 @@ func (lm *leafMerge) contains(key string) bool {
 }
 
 func (lm *leafMerge) makeMutable() {
-	// clone the node when we start modifying
+	// copy the node when we start modifying
 	if !lm.modified {
-		lm.leaf = slc.Clone(lm.leaf)
+		size := len(lm.leaf)
+		m := make(leafNode, size, size*6/5) // allow 20% for growth
+		copy(m, lm.leaf)
+		lm.leaf = m
 		lm.modified = true
 	}
 }
@@ -453,27 +403,15 @@ func (tm treeMerge) String() string {
 }
 
 func (st *state) Print() {
-	trace("state root", st.bt.root, "treeLevels:", st.bt.treeLevels)
-	for i, tm := range st.tree {
-		trace("   ", i, ":", &tm)
-		trace("       ", tm.tree.String())
-	}
-	if st.haveLeaf() {
-		trace("    leaf:", &st.leaf)
-		trace("       ", st.leaf.leaf.String())
-	}
-}
-
-func (st *state) print() {
-	fmt.Println("state root", st.bt.root, "treeLevels:", st.bt.treeLevels)
-	for i, tm := range st.tree {
-		fmt.Println("   ", i, ":", &tm)
-		fmt.Println("       ", tm.tree.String())
-	}
-	if st.haveLeaf() {
-		fmt.Println("    leaf:", &st.leaf)
-		fmt.Println("       ", st.leaf.leaf.String())
-	}
+	// _ = t && trace("state root", st.bt.root, "treeLevels:", st.bt.treeLevels)
+	// for i, tm := range st.tree {
+	// 	_ = t && trace("   ", i, ":", &tm)
+	// 	_ = t && trace("       ", tm.tree.String())
+	// }
+	// if st.haveLeaf() {
+	// 	_ = t && trace("    leaf:", &st.leaf)
+	// 	_ = t && trace("       ", st.leaf.leaf.String())
+	// }
 }
 
 func (st *state) check() {

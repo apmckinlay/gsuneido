@@ -10,12 +10,13 @@ import (
 
 // Iterator traverses a range of a btree.
 type Iterator struct {
-	bt    *btree
-	rng   Range
-	tree  [maxLevels]*treeIter // tree[0] is root
-	leaf  *leafIter
-	state iterState
-	buf   []byte
+	bt      *btree
+	rng     Range
+	tree    [maxLevels]treeIter // tree[0] is root
+	leaf    leafIter
+	state   iterState
+	buf     []byte
+	noRange bool // true if rng is iterator.All, bypasses checkRange
 }
 
 const maxLevels = 8
@@ -31,7 +32,7 @@ const (
 )
 
 func (bt *btree) Iterator() *Iterator {
-	return &Iterator{bt: bt, state: rewound, rng: iterator.All}
+	return &Iterator{bt: bt, state: rewound, rng: iterator.All, noRange: true}
 }
 
 // Key returns the current key or nil.
@@ -40,7 +41,8 @@ func (it *Iterator) Key() []byte {
 	if it.state != within {
 		return nil
 	}
-	return it.leaf.key(it.buf)
+	it.buf = it.leaf.key(it.buf)
+	return it.buf
 }
 
 // Offset returns the current offset or 0.
@@ -81,6 +83,7 @@ func (it *Iterator) Rewind() {
 // Range sets the range and rewinds the iterator
 func (it *Iterator) Range(rng Range) {
 	it.rng = rng
+	it.noRange = (rng == iterator.All)
 	it.Rewind()
 }
 
@@ -91,12 +94,13 @@ func (it *Iterator) Next() {
 	switch it.state {
 	case rewound:
 		it.seek(it.rng.Org)
+		it.checkRange() // need to check both bounds after seek
 	case within:
 		it.next()
+		it.checkRangeEnd() // only need to check end when moving forward
 	case eof: // stick at eof
 		return
 	}
-	it.checkRange()
 }
 
 func (it *Iterator) next() {
@@ -147,12 +151,13 @@ func (it *Iterator) Prev() {
 		if string(it.Key()) >= it.rng.End {
 			it.prev()
 		}
+		it.checkRange() // need to check both bounds after seek
 	case within:
 		it.prev()
+		it.checkRangeOrg() // only need to check org when moving backward
 	case eof: // stick at eof
 		return
 	}
-	it.checkRange()
 }
 
 func (it *Iterator) prev() {
@@ -230,11 +235,77 @@ func (it *Iterator) seek(key string) {
 // checkRange changes state from within to eof
 // if the current key is outside the range
 func (it *Iterator) checkRange() {
-	if it.state != within {
+	if it.noRange || it.state != within {
 		return
 	}
-	curKey := string(it.Key())
-	if curKey < it.rng.Org || it.rng.End <= curKey {
+	prefix := it.leaf.prefix()
+	suffix := it.leaf.suffix()
+	if gte(prefix, suffix, it.rng.End) || !gte(prefix, suffix, it.rng.Org) {
 		it.state = eof
 	}
+}
+
+// checkRangeEnd changes state from within to eof
+// if the current key is >= rng.End (used for Next)
+func (it *Iterator) checkRangeEnd() {
+	if it.noRange || it.state != within {
+		return
+	}
+	prefix := it.leaf.prefix()
+	suffix := it.leaf.suffix()
+	if gte(prefix, suffix, it.rng.End) {
+		it.state = eof
+	}
+}
+
+// checkRangeOrg changes state from within to eof
+// if the current key is < rng.Org (used for Prev)
+func (it *Iterator) checkRangeOrg() {
+	if it.noRange || it.state != within {
+		return
+	}
+	prefix := it.leaf.prefix()
+	suffix := it.leaf.suffix()
+	if !gte(prefix, suffix, it.rng.Org) {
+		it.state = eof
+	}
+}
+
+// gte returns true if prefix+suffix >= target
+// without concatenating prefix and suffix
+func gte(prefix, suffix []byte, bound string) bool {
+	plen := len(prefix)
+	slen := len(suffix)
+	tlen := len(bound)
+
+	// Compare the prefix portion first
+	cmpLen := min(tlen, plen)
+	for i := 0; i < cmpLen; i++ {
+		if prefix[i] < bound[i] {
+			return false
+		}
+		if prefix[i] > bound[i] {
+			return true
+		}
+	}
+
+	// If bound is entirely within prefix length, check if we have more data
+	if tlen <= plen {
+		return plen+slen >= tlen
+	}
+
+	// Compare the suffix portion
+	boundOffset := plen
+	remainingBound := tlen - plen
+	cmpLen = min(remainingBound, slen)
+	for i := 0; i < cmpLen; i++ {
+		if suffix[i] < bound[boundOffset+i] {
+			return false
+		}
+		if suffix[i] > bound[boundOffset+i] {
+			return true
+		}
+	}
+
+	return plen+slen >= tlen
 }
