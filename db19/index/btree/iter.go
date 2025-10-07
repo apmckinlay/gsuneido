@@ -4,7 +4,7 @@
 package btree
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -21,12 +21,12 @@ type Iterator struct {
 	state  iterState
 }
 
-type Range = iterator.Range
+type Range = iface.Range
 
-var _ iterator.T = (*Iterator)(nil)
+var _ iface.Iter = (*Iterator)(nil)
 
-func (bt *btree) Iterator() *Iterator {
-	return &Iterator{bt: bt, state: rewound, rng: iterator.All}
+func (bt *btree) Iterator() iface.Iter {
+	return &Iterator{bt: bt, state: rewound, rng: iface.All}
 }
 
 type iterState byte
@@ -49,6 +49,16 @@ func (it *Iterator) Eof() bool {
 func (it *Iterator) Cur() (string, uint64) {
 	assert.That(it.state == within)
 	return it.curKey, it.curOff
+}
+
+func (it *Iterator) Key() string {
+	assert.That(it.state == within)
+	return it.curKey
+}
+
+func (it *Iterator) Offset() uint64 {
+	assert.That(it.state == within)
+	return it.curOff
 }
 
 func (it *Iterator) HasCur() bool {

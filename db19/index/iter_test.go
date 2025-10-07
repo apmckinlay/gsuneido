@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
-	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -46,7 +46,7 @@ func TestIterRange(*testing.T) {
 	testIterRange(bt.Iterator())
 }
 
-func testIterEmpty(it iterator.T) {
+func testIterEmpty(it iface.Iter) {
 	it.Rewind()
 	it.Next()
 	assert.That(it.Eof())
@@ -60,7 +60,7 @@ func testIterEmpty(it iterator.T) {
 	assert.That(it.Eof())
 }
 
-func testIterRange(it iterator.T) {
+func testIterRange(it iface.Iter) {
 	test := func(fn func(), expected, delta int) {
 		for range 10 {
 			fn()

@@ -11,6 +11,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	btree3 "github.com/apmckinlay/gsuneido/db19/index/btree3"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -441,7 +443,12 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	n := len(ti.Indexes)
 	ti.Indexes = slices.Clip(ti.Indexes) // copy on write
 	for i := range idxs {
-		bt := btree.CreateBtree(store, &ts.Indexes[n+i].Ixspec)
+		var bt iface.Btree
+		if store.OldVer {
+			bt = btree.CreateBtree(store, &ts.Indexes[n+i].Ixspec)
+		} else {
+			bt = btree3.CreateBtree(store, nil)
+		}
 		ti.Indexes = append(ti.Indexes, index.OverlayFor(bt))
 	}
 }

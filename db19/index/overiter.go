@@ -6,13 +6,13 @@ package index
 import (
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 )
 
-type iterT = iterator.T
+type iterT = iface.Iter
 
-type Range = iterator.Range
+type Range = iface.Range
 
 // OverIter is a Suneido style iterator
 // that merges several other Suneido style iterators.
@@ -69,7 +69,7 @@ type oiTran interface {
 }
 
 func NewOverIter(table string, iIndex int) *OverIter {
-	return &OverIter{table: table, iIndex: iIndex, rng: iterator.All}
+	return &OverIter{table: table, iIndex: iIndex, rng: iface.All}
 }
 
 func (oi *OverIter) Eof() bool {
@@ -186,7 +186,7 @@ func (oi *OverIter) modNext(modified bool) {
 	}
 }
 
-func atKey(it iterator.T, key string) bool {
+func atKey(it iface.Iter, key string) bool {
 	if it.Eof() {
 		return false
 	}

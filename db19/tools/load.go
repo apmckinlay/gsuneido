@@ -18,7 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	btree3 "github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/query"
@@ -290,11 +290,12 @@ func buildIndexes(ts *meta.Schema, list *slBuilder, store *stor.Stor,
 			list.Sort(MakeLess(store, &ix.Ixspec))
 		}
 		before := store.Size()
-		bldr := btree.Builder(store)
+		// only used by load and compact, so hard wired to new btree version
+		bldr := btree3.Builder(store)
 		iter := list.Iter()
 		n := 0
 		for off := iter(); off != 0; off = iter() {
-			if !bldr.Add(btree.GetLeafKey(store, &ix.Ixspec, off), off) {
+			if !bldr.Add(IndexKey(store, &ix.Ixspec, off), off) {
 				panic("cannot build index: duplicate value: " +
 					ts.Table + " " + ix.String())
 			}

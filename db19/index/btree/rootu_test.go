@@ -22,7 +22,7 @@ func buildTree2(n int) *btree {
 			panic("failed to add key " + k)
 		}
 	}
-	bt := b.Finish()
+	bt := b.Finish().(*btree)
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, off uint64) string {
 		return strconv.Itoa(int(off))
 	}
@@ -55,6 +55,6 @@ func TestRootUInitializedSingleEntry(t *testing.T) {
 
 func TestRootUEmptyForCreateBtree(t *testing.T) {
 	// CreateBtree builds an empty tree (single empty root node)
-	bt := CreateBtree(stor.HeapStor(8192), nil)
+	bt := CreateBtree(stor.HeapStor(8192), nil).(*btree)
 	assert.That(len(bt.rootUnode) == 0)
 }

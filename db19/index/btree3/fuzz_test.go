@@ -17,14 +17,14 @@ const keyBase = 1000
 // createTestBtree creates a btree with the specified number of keys
 func createTestBtree(treeSize int) *btree {
 	bldr := Builder(heapstor(8192))
-	bldr.shouldSplit = func(nd splitable) bool {
-		return nd.nkeys() > 3 // Small split threshold for testing
+	bldr.shouldSplit = func(nd node) bool {
+		return nd.noffs() >= 4 // Small split threshold for testing
 	}
-	for i := 0; i < treeSize; i++ {
+	for i := range treeSize {
 		key := strconv.Itoa(keyBase + i)
 		assert.That(bldr.Add(key, uint64(keyBase+i)))
 	}
-	bt := bldr.Finish()
+	bt := bldr.Finish().(*btree)
 	bt.Check(nil)
 	return bt
 }
@@ -48,13 +48,13 @@ func FuzzRandomUpdateBatches(f *testing.F) {
 		// Track expected offsets for each key
 		expectedOffsets := make(map[string]uint64)
 		baseKey := 1000
-		for i := 0; i < treeSize; i++ {
+		for i := range treeSize {
 			key := strconv.Itoa(baseKey + i)
 			expectedOffsets[key] = uint64(baseKey + i)
 		}
 
 		// Do 100 MergeAndSave operations with random batches of updates
-		for merge := 0; merge < 100; merge++ {
+		for range 100 {
 			ib := &ixbuf.T{}
 
 			// Insert updates until we reach the desired batch size
@@ -71,7 +71,7 @@ func FuzzRandomUpdateBatches(f *testing.F) {
 				ib.Update(key, newOffset)
 			}
 
-			bt = bt.MergeAndSave(ib.Iter())
+			bt = bt.MergeAndSave(ib.Iter()).(*btree)
 			// bt.print()
 			bt.Check(nil)
 		}
@@ -114,8 +114,8 @@ func FuzzRandomInsertBatches(f *testing.F) {
 
 		// Start with empty btree
 		bt := Builder(heapstor(8192)).Finish()
-		bt.shouldSplit = func(nd splitable) bool {
-			return nd.nkeys() >= 4 // Small split threshold for testing
+		bt.(*btree).shouldSplit = func(nd node) bool {
+			return nd.noffs() >= 4 // Small split threshold for testing
 		}
 
 		// Generate shuffled unique keys
@@ -137,7 +137,7 @@ func FuzzRandomInsertBatches(f *testing.F) {
 				ib.Insert(key, offset)
 			}
 
-			bt = bt.MergeAndSave(ib.Iter())
+			bt = bt.MergeAndSave(ib.Iter()).(*btree)
 			bt.Check(nil)
 			i += batchSize
 		}
@@ -197,7 +197,7 @@ func FuzzRandomDeleteBatches(f *testing.F) {
 				// fmt.Println("-" + key)
 				ib.Insert(key, ixbuf.Delete|uint64(keyNum))
 			}
-			bt = bt.MergeAndSave(ib.Iter())
+			bt = bt.MergeAndSave(ib.Iter()).(*btree)
 			// bt.print()
 			bt.Check(nil)
 

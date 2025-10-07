@@ -6,6 +6,7 @@ package btree
 import (
 	"log"
 
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 )
 
@@ -73,7 +74,7 @@ func shouldSplit(nd node, nodeCount int) bool {
 	return false
 }
 
-func (b *builder) Finish() *btree {
+func (b *builder) Finish() iface.Btree {
 	var key string
 	var off uint64
 	for li := range len(b.levels) {

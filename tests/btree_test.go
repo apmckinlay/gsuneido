@@ -15,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
@@ -170,7 +171,7 @@ func BenchmarkBtreeMergeAdd(b *testing.B) {
 	for b.Loop() {
 		batchSize := rng.IntN(100) + 1
 		for range batchSize {
-			keyNum := shuffleBits32(i)
+			keyNum := bits.Shuffle32(i)
 			key := strconv.Itoa(int(keyNum))
 			x.Insert(key, uint64(keyNum)+1) // +1 to avoid 0
 			i++
@@ -196,7 +197,7 @@ func BenchmarkBtreeMergeAdd3(b *testing.B) {
 		for range batchSize {
 			// shuffle the bits to randomize the order
 			// and interleave to get some dense updates
-			keyNum := interleave3(int(shuffleBits32(i>>3)), int(i&7))
+			keyNum := interleave3(int(bits.Shuffle32(i>>3)), int(i&7))
 			key := strconv.Itoa(int(keyNum))
 			x.Insert(key, uint64(keyNum)+1) // +1 to avoid 0
 			i++
@@ -228,7 +229,7 @@ func BenchmarkBtreeMergeMix(b *testing.B) {
 	ib := &ixbuf.T{}
 
 	for range 1000 {
-		keyNum := interleave3(int(shuffleBits32(i>>3)), int(i&7))
+		keyNum := interleave3(int(bits.Shuffle32(i>>3)), int(i&7))
 		key := strconv.Itoa(int(keyNum))
 		ib.Insert(key, uint64(keyNum)+1) // +1 to avoid 0
 		i++
@@ -236,26 +237,26 @@ func BenchmarkBtreeMergeMix(b *testing.B) {
 	bt = bt.MergeAndSave(ib.Iter())
 
 	u := uint32(500) // update counter, start 500 behind insert
-	d := uint32(0) // delete counter, start 1000 behind insert
+	d := uint32(0)   // delete counter, start 1000 behind insert
 	for b.Loop() {
 		ib.Clear()
 		n := rng.IntN(30) + 1
-		for range n+1 { // 1 extra insert to gradually grow btree
+		for range n + 1 { // 1 extra insert to gradually grow btree
 			// shuffle the bits to randomize the order
 			// and interleave to get some dense updates
-			keyNum := interleave3(int(shuffleBits32(i>>3)), int(i&7))
+			keyNum := interleave3(int(bits.Shuffle32(i>>3)), int(i&7))
 			key := strconv.Itoa(int(keyNum))
 			ib.Insert(key, uint64(keyNum)+1) // +1 to avoid 0
 			i++
 		}
 		for range n {
-			keyNum := interleave3(int(shuffleBits32(u>>3)), int(u&7))
+			keyNum := interleave3(int(bits.Shuffle32(u>>3)), int(u&7))
 			key := strconv.Itoa(int(keyNum))
 			ib.Update(key, uint64(keyNum)+1) // +1 to avoid 0
 			u++
 		}
 		for range n {
-			keyNum := interleave3(int(shuffleBits32(d>>3)), int(d&7))
+			keyNum := interleave3(int(bits.Shuffle32(d>>3)), int(d&7))
 			key := strconv.Itoa(int(keyNum))
 			ib.Delete(key, uint64(keyNum)+1) // +1 to avoid 0
 			d++
@@ -275,7 +276,7 @@ func BenchmarkBtreeMergeMix3(b *testing.B) {
 	ib := &ixbuf.T{}
 
 	for range 1000 {
-		keyNum := interleave3(int(shuffleBits32(i>>3)), int(i&7))
+		keyNum := interleave3(int(bits.Shuffle32(i>>3)), int(i&7))
 		key := strconv.Itoa(int(keyNum))
 		ib.Insert(key, uint64(keyNum)+1) // +1 to avoid 0
 		i++
@@ -283,26 +284,26 @@ func BenchmarkBtreeMergeMix3(b *testing.B) {
 	bt = bt.MergeAndSave(ib.Iter())
 
 	u := uint32(500) // update counter, start 500 behind insert
-	d := uint32(0) // delete counter, start 1000 behind insert
+	d := uint32(0)   // delete counter, start 1000 behind insert
 	for b.Loop() {
 		ib.Clear()
 		n := rng.IntN(30) + 1
-		for range n+1 { // 1 extra insert to gradually grow btree
+		for range n + 1 { // 1 extra insert to gradually grow btree
 			// shuffle the bits to randomize the order
 			// and interleave to get some dense updates
-			keyNum := interleave3(int(shuffleBits32(i>>3)), int(i&7))
+			keyNum := interleave3(int(bits.Shuffle32(i>>3)), int(i&7))
 			key := strconv.Itoa(int(keyNum))
 			ib.Insert(key, uint64(keyNum)+1) // +1 to avoid 0
 			i++
 		}
 		for range n {
-			keyNum := interleave3(int(shuffleBits32(u>>3)), int(u&7))
+			keyNum := interleave3(int(bits.Shuffle32(u>>3)), int(u&7))
 			key := strconv.Itoa(int(keyNum))
 			ib.Update(key, uint64(keyNum)+1) // +1 to avoid 0
 			u++
 		}
 		for range n {
-			keyNum := interleave3(int(shuffleBits32(d>>3)), int(d&7))
+			keyNum := interleave3(int(bits.Shuffle32(d>>3)), int(d&7))
 			key := strconv.Itoa(int(keyNum))
 			ib.Delete(key, uint64(keyNum)+1) // +1 to avoid 0
 			d++
@@ -310,20 +311,6 @@ func BenchmarkBtreeMergeMix3(b *testing.B) {
 		bt = bt.MergeAndSave(ib.Iter())
 	}
 	fmt.Println(i, st.Size())
-}
-
-func shuffleBits32(n uint32) uint32 {
-	// 1. Add a large, odd constant to break the fixed point at 0.
-	// 0x9e3779b9 is derived from the golden ratio and is a common choice.
-	n += 0x9e3779b9
-
-	// 2. Perform the 32-bit mixing.
-	n ^= n >> 16
-	n *= 0x85ebca6b
-	n ^= n >> 13
-	n *= 0xc2b2ae35
-	n ^= n >> 16
-	return n
 }
 
 // interleave3 interleaves the bottom 3 bits of b into n.

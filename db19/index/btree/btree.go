@@ -11,11 +11,14 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
+
+var _ iface.Btree = (*btree)(nil)
 
 type T = btree
 
@@ -67,15 +70,19 @@ var Fanout = MaxNodeSize / EntrySize // estimate ~100
 // It is a dependency that must be injected
 var GetLeafKey func(st *stor.Stor, is *ixkey.Spec, off uint64) string
 
-func CreateBtree(st *stor.Stor, is *ixkey.Spec) *btree {
+func CreateBtree(st *stor.Stor, is *ixkey.Spec) iface.Btree {
 	rootNode := node{}
 	rootOff := rootNode.putNode(st)
 	return &btree{root: rootOff, stor: st, ixspec: is}
 }
 
-func OpenBtree(st *stor.Stor, root uint64, treeLevels int) *btree {
+func OpenBtree(st *stor.Stor, root uint64, treeLevels int) iface.Btree {
 	ru := readNode(st, root).toUnode()
 	return &btree{root: root, treeLevels: treeLevels, stor: st, rootUnode: ru}
+}
+
+func (bt *btree) SetSplit(ndsize int) {
+	panic("not implemented")
 }
 
 func (bt *btree) GetIxspec() *ixkey.Spec {
@@ -356,15 +363,11 @@ func (bt *btree) nodeSizes(depth int, offset uint64) int {
 
 //-------------------------------------------------------------------
 
-func (bt *btree) StorSize() int {
-	return 5 + 1
-}
-
 func (bt *btree) Write(w *stor.Writer) {
 	w.Put5(int64(bt.root)).Put1(bt.treeLevels)
 }
 
-func Read(st *stor.Stor, r *stor.Reader) *btree {
+func Read(st *stor.Stor, r *stor.Reader) iface.Btree {
 	root := uint64(r.Get5())
 	treeLevels := r.Get1()
 	return OpenBtree(st, root, treeLevels)

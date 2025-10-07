@@ -26,6 +26,7 @@ func Repair(dbfile string, err error) (string, error) {
 		return "", err
 	}
 	defer store.Close(true)
+	version(store)
 	r := repair{dbfile: dbfile, store: store, ec: ec}
 	_, off, state := r.search()
 	if off == 0 {
@@ -247,6 +248,7 @@ func PrintStates(dbfile string, check bool) {
 		return
 	}
 	defer store.Close(false)
+	version(store)
 
 	ec := &errCorrupt{}
 	scnr := newScanner(store)

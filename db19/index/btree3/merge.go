@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -74,7 +75,7 @@ For an update farther away, we go up the tree as needed
 We also need to handle splitting full leaf nodes and updating their parent(s)
 and removing empty nodes by updating their parent(s).
 */
-func (bt *btree) MergeAndSave(iter ixbuf.Iter) *btree {
+func (bt *btree) MergeAndSave(iter iface.IterFn) iface.Btree {
 	bt2 := *bt // copy
 	st := state{bt: &bt2}
 	st.tree = make([]treeMerge, 0, maxLevels)
@@ -193,12 +194,12 @@ func (st *state) descendToLeaf(key string) {
 			}
 		}
 		st.tree = append(st.tree, treeMerge{
-			off: off, tree: bt.getTree(off), limit: limit, pos: -1,
+			off: off, tree: bt.readTree(off), limit: limit, pos: -1,
 		})
 	}
 	// get the leaf
 	if bt.treeLevels == 0 {
-		st.setLeaf(bt.root, bt.getLeaf(bt.root), "")
+		st.setLeaf(bt.root, bt.readLeaf(bt.root), "")
 	} else {
 		tm := &st.tree[len(st.tree)-1]
 		pos, off := tm.tree.search(key)
@@ -210,7 +211,7 @@ func (st *state) descendToLeaf(key string) {
 		if limit == "" {
 			limit = tm.limit
 		}
-		st.setLeaf(off, bt.getLeaf(off), limit)
+		st.setLeaf(off, bt.readLeaf(off), limit)
 	}
 	// path now goes from root to the leaf containing key
 	assert.That(st.lastContains(key))
@@ -278,7 +279,7 @@ func (st *state) dropLeaf() {
 	for st.bt.treeLevels > 0 {
 		if len(st.tree) == 0 {
 			st.tree = append(st.tree,
-				treeMerge{off: st.bt.root, tree: st.bt.getTree(st.bt.root)})
+				treeMerge{off: st.bt.root, tree: st.bt.readTree(st.bt.root)})
 		}
 		tm := &st.tree[0] // root
 		if tm.tree.noffs() > 1 {

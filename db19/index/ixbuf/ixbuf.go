@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core/trace"
-	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -399,10 +399,8 @@ func (ib *ixbuf) Lookup(key string) uint64 {
 
 //-------------------------------------------------------------------
 
-type Iter = func() (key string, off uint64, ok bool)
-
 // Iter is used with btree.MergeAndSave
-func (ib *ixbuf) Iter() Iter {
+func (ib *ixbuf) Iter() iface.IterFn {
 	if ib.size == 0 {
 		return func() (string, uint64, bool) {
 			return "", 0, false
@@ -428,7 +426,7 @@ func (ib *ixbuf) Iter() Iter {
 
 //-------------------------------------------------------------------
 
-type Range = iterator.Range
+type Range = iface.Range
 
 // Iterator is a Suneido style iterator for an ixbuf.
 type Iterator struct {
@@ -446,7 +444,7 @@ type Iterator struct {
 	state
 }
 
-var _ iterator.T = (*Iterator)(nil)
+var _ iface.Iter = (*Iterator)(nil)
 
 type state byte
 
@@ -456,9 +454,9 @@ const (
 	eof
 )
 
-func (ib *ixbuf) Iterator() *Iterator {
+func (ib *ixbuf) Iterator() iface.Iter {
 	return &Iterator{ib: ib, modCount: ib.modCount, state: rewound,
-		rng: iterator.All}
+		rng: iface.All}
 }
 
 func (it *Iterator) Range(rng Range) {
@@ -477,6 +475,14 @@ func (it *Iterator) Modified() bool {
 func (it *Iterator) Cur() (string, uint64) {
 	assert.That(it.state == within)
 	return it.cur.key, it.cur.off
+}
+
+func (it *Iterator) Key() string {
+	return it.cur.key
+}
+
+func (it *Iterator) Offset() uint64 {
+	return it.cur.off
 }
 
 func (it *Iterator) HasCur() bool {

@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package iterator
+package iface
 
 import (
 	"fmt"
@@ -9,9 +9,9 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 )
 
-// T is the interface for a Suneido style iterator
+// Iter is the interface for a Suneido style iterator
 // implemented by btree and ixbuf
-type T interface {
+type Iter interface {
 	// Eof returns true if the index is empty,
 	// Next hit the end, or Prev hit the beginning
 	Eof() bool
@@ -24,6 +24,9 @@ type T interface {
 	// as of the most recent Next, Prev, or Seek
 	Cur() (key string, off uint64)
 	
+	Key() string
+	Offset() uint64
+
 	HasCur() bool
 
 	// Next advances to the first key > cur

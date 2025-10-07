@@ -39,6 +39,10 @@ func (nd leafNode) nkeys() int {
 	return int(nd[0])
 }
 
+func (nd leafNode) noffs() int {
+	return nd.nkeys()
+}
+
 // size returns the length of a treeNode
 func (nd leafNode) size() int {
 	count := nd.nkeys()
@@ -287,7 +291,7 @@ func (nd leafNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 // readLeaf reads a leaf node from storage
 func readLeaf(st *stor.Stor, off uint64) leafNode {
 	node := leafNode(st.Data(off))
-	return node[:node.size()]
+	return node[:node.size()] //TODO don't trim
 }
 
 func (nd leafNode) String() string {
@@ -396,8 +400,8 @@ func (b *leafBuilder) size() int {
 	return 4 + 7*n + prelen + fieldsLen
 }
 
-func (b *leafBuilder) nkeys() int {
-	return len(b.keys)
+func (b *leafBuilder) noffs() int {
+	return len(b.offsets)
 }
 
 // finishInto builds the leaf node directly into the provided buffer

@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -124,17 +124,17 @@ const base = 1000
 func testBtree(n, split int) *btree {
 	assert.That(n < base)
 	b := Builder(heapstor(8192))
-	b.shouldSplit = func(nd splitable) bool {
-		return nd.nkeys() >= split
+	b.shouldSplit = func(nd node) bool {
+		return nd.noffs() >= split
 	}
 	for i := base; i < base+n; i++ {
 		assert.That(b.Add(strconv.Itoa(i), uint64(i)))
 	}
-	return b.Finish()
+	return b.Finish().(*btree)
 }
 
 func TestIterator(t *testing.T) {
-	const n = 10
+	const n = 1000
 	var data [n]string
 	randKey := str.UniqueRandomOf(4, 6, "abcde")
 	for i := range n {
@@ -142,24 +142,29 @@ func TestIterator(t *testing.T) {
 	}
 	sort.Strings(data[:])
 	b := Builder(stor.HeapStor(8192))
-	// b.shouldSplit = func (nd splitable) bool {
-	// 	return nd.size() > 64
-	// }
+	b.shouldSplit = func(nd node) bool {
+		return nd.noffs() >= 8
+	}
 	for i, k := range data {
 		assert.That(b.Add(k, uint64(i+1))) // +1 to avoid zero
 	}
-	bt := b.Finish()
+	bt := b.Finish().(*btree)
 
-	// bt.print()
+	// bt.Print()
 
-	var it *Iterator
+	var it iface.Iter
 	test := func(i int) {
 		t.Helper()
 		assert.Msg("eof ", i).That(!it.Eof())
-		key, off := it.Cur()
-		assert.This(off - 1).Is(i)
-		assert.This(key).Is(data[i])
+		assert.This(it.Offset() - 1).Is(i)
+		assert.This(it.Key()).Is(data[i])
 	}
+
+	// it = bt.Iterator()
+	// k := data[7] + "Z"
+	// it.Seek(k)
+	// fmt.Println(7, k, "=>", it.Key(), it.Offset())
+	// t.SkipNow()
 
 	// test Iterator Next
 	it = bt.Iterator()
@@ -183,6 +188,7 @@ func TestIterator(t *testing.T) {
 	for i, k := range data {
 		k += "0" // increment to nonexistent
 		it.Seek(k)
+		// fmt.Println(i, k, "=>", it.Key(), it.Offset())
 		if i+1 < len(data) {
 			test(i + 1)
 		} else {
@@ -289,8 +295,7 @@ func buildTree(n int) *btree {
 		k := strconv.Itoa(i)
 		assert.That(b.Add(k, uint64(i)))
 	}
-	bt := b.Finish()
-	return bt
+	return b.Finish().(*btree)
 }
 
 // seek on an exact key should position on that key (not the next).
@@ -347,7 +352,7 @@ func TestIteratorBasic(t *testing.T) {
 		assert.T(t).That(!it.Eof())
 
 		key := string(it.Key())
-		expected := strconv.Itoa(i)
+		expected := fmt.Sprintf("%04d", i)
 		assert.T(t).This(key).Is(expected)
 		assert.T(t).This(it.Offset()).Is(uint64(i))
 
@@ -367,10 +372,10 @@ func TestIteratorRange(t *testing.T) {
 	it := bt.Iterator()
 
 	// Test range [20, 30)
-	rng := iterator.Range{Org: "20", End: "30"}
+	rng := iface.Range{Org: "0020", End: "0030"}
 	it.Range(rng)
 
-	expectedKeys := []string{"20", "21", "22", "23", "24", "25", "26", "27", "28", "29"}
+	expectedKeys := []string{"0020", "0021", "0022", "0023", "0024", "0025", "0026", "0027", "0028", "0029"}
 
 	i := 0
 	for it.Next(); !it.Eof(); it.Next() {
@@ -388,12 +393,12 @@ func TestIteratorRangeEdgeCases(t *testing.T) {
 	it := bt.Iterator()
 
 	// Test range with no matching keys [150, 200)
-	it.Range(iterator.Range{Org: "150", End: "200"})
+	it.Range(iface.Range{Org: "150", End: "200"})
 	it.Next()
 	assert.T(t).That(it.Eof())
 
 	// Test range starting before first key [000, 005)
-	it.Range(iterator.Range{Org: "000", End: "005"})
+	it.Range(iface.Range{Org: "000", End: "005"})
 	expected := []string{"000", "001", "002", "003", "004"}
 	i := 0
 	for it.Next(); !it.Eof(); it.Next() {
@@ -410,7 +415,7 @@ func TestIteratorPrev(t *testing.T) {
 	it := bt.Iterator()
 
 	// Start from end and go backwards
-	it.Range(iterator.All)
+	it.Range(iface.All)
 
 	keys := make([]string, 0, 10)
 
@@ -441,23 +446,23 @@ func TestIteratorSeek(t *testing.T) {
 	it := bt.Iterator()
 
 	// Test seek to exact key
-	it.Seek("50")
+	it.Seek("0050")
 	assert.T(t).That(it.HasCur())
 	key := string(it.Key())
-	assert.T(t).This(key).Is("50")
+	assert.T(t).This(key).Is("0050")
 	assert.T(t).This(it.Offset()).Is(uint64(50))
 
 	// Test seek to non-existent key (should find next one)
-	it.seek("55.5") // between 55 and 56
+	it.SeekAll("0055a") // between 55 and 56
 	assert.T(t).That(it.HasCur())
 	key = string(it.Key())
-	assert.T(t).This(key).Is("56")
+	assert.T(t).This(key).Is("0056")
 
 	// Test seek past end
-	it.seek("999")
+	it.SeekAll("9999")
 	assert.T(t).That(it.HasCur())
 	key = string(it.Key())
-	assert.T(t).This(key).Is("99")
+	assert.T(t).This(key).Is("0099")
 }
 
 func TestIteratorSeekWithRange(t *testing.T) {
@@ -465,13 +470,13 @@ func TestIteratorSeekWithRange(t *testing.T) {
 	it := bt.Iterator()
 
 	// Set range [20, 30)
-	it.Range(iterator.Range{Org: "20", End: "30"})
+	it.Range(iface.Range{Org: "0020", End: "0030"})
 
 	// Seek within range
-	it.Seek("25")
+	it.Seek("0025")
 	assert.T(t).That(it.HasCur())
 	key := string(it.Key())
-	assert.T(t).This(key).Is("25")
+	assert.T(t).This(key).Is("0025")
 
 	// Seek outside range (should set EOF)
 	it.Seek("50")
@@ -482,7 +487,7 @@ func TestIteratorSeekWithRange(t *testing.T) {
 	it.Seek("10")
 	if it.HasCur() {
 		key = string(it.Key())
-		assert.T(t).That(key >= "20") // should be at or after range start
+		assert.T(t).That(key >= "0020") // should be at or after range start
 	}
 }
 
@@ -504,7 +509,7 @@ func TestIteratorRewind(t *testing.T) {
 	// Should start from beginning again
 	it.Next()
 	key := string(it.Key())
-	assert.T(t).This(key).Is("0")
+	assert.T(t).This(key).Is("0000")
 }
 
 func TestIteratorEmptyTree(t *testing.T) {
@@ -522,22 +527,22 @@ func TestIteratorEmptyTree(t *testing.T) {
 func buildTestTree(n int) *btree {
 	st := stor.HeapStor(64 * 1024)
 	b := Builder(st)
-	for i := 0; i < n; i++ {
-		key := strconv.Itoa(i)
+	for i := range n {
+		key := fmt.Sprintf("%04d", i)
 		assert.That(b.Add(key, uint64(i)))
 	}
-	return b.Finish()
+	return b.Finish().(*btree)
 }
 
 // buildPaddedTree creates a btree with zero-padded keys "000" to "n-1" (padded) and offsets 0 to n-1
 func buildPaddedTree(n int) *btree {
 	st := stor.HeapStor(64 * 1024)
 	b := Builder(st)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		key := padKey(i, 3) // pad to 3 digits
 		assert.That(b.Add(key, uint64(i)))
 	}
-	return b.Finish()
+	return b.Finish().(*btree)
 }
 
 // padKey pads an integer to a string of the specified width with leading zeros
@@ -549,7 +554,7 @@ func padKey(i, width int) string {
 	return s
 }
 
-func (it *Iterator) print() {
+func (it *Iterator) Print() {
 	fmt.Println("Iterator:")
 	for i := 0; i < len(it.tree) && len(it.tree[i].nd) > 0; i++ {
 		fmt.Println(strconv.Itoa(it.tree[i].i), it.tree[i].nd.String())

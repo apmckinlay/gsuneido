@@ -46,7 +46,7 @@ func TestMergeDeleteAll(*testing.T) {
 	iter.Next()
 	assert.That(iter.Eof())
 
-	assert.Msg("treeLevels").This(out.treeLevels).Is(0)
+	assert.Msg("treeLevels").This(out.TreeLevels()).Is(0)
 }
 
 func TestMergeAndSave(*testing.T) {

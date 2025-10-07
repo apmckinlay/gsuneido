@@ -4,7 +4,7 @@
 package btree
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -19,9 +19,11 @@ type Iterator struct {
 	noRange bool // true if rng is iterator.All, bypasses checkRange
 }
 
+// var _ iface.Iter = (*Iterator)(nil)
+
 const maxLevels = 8
 
-type Range = iterator.Range
+type Range = iface.Range
 
 type iterState byte
 
@@ -31,18 +33,26 @@ const (
 	eof
 )
 
-func (bt *btree) Iterator() *Iterator {
-	return &Iterator{bt: bt, state: rewound, rng: iterator.All, noRange: true}
+func (bt *btree) Iterator() iface.Iter {
+	return &Iterator{bt: bt, state: rewound, rng: iface.All, noRange: true}
 }
 
 // Key returns the current key or nil.
 // It returns an internal buffer which must be copied to be retained.
-func (it *Iterator) Key() []byte {
+func (it *Iterator) Keybs() []byte {
 	if it.state != within {
 		return nil
 	}
 	it.buf = it.leaf.key(it.buf)
 	return it.buf
+}
+
+// Key returns the current key or an empty string. It allocates.
+func (it *Iterator) Key() string {
+	if it.state != within {
+		return ""
+	}
+	return string(it.leaf.key(it.buf))
 }
 
 // Offset returns the current offset or 0.
@@ -63,10 +73,7 @@ func (it *Iterator) Modified() bool {
 
 // Cur returns the current key and offset. It allocates the key.
 func (it *Iterator) Cur() (string, uint64) {
-	if it.state != within {
-		return "", 0
-	}
-	return string(it.Key()), it.Offset()
+	return it.Key(), it.Offset()
 }
 
 // HasCur returns true if the iterator has a current item
@@ -83,7 +90,7 @@ func (it *Iterator) Rewind() {
 // Range sets the range and rewinds the iterator
 func (it *Iterator) Range(rng Range) {
 	it.rng = rng
-	it.noRange = (rng == iterator.All)
+	it.noRange = (rng == iface.All)
 	it.Rewind()
 }
 
@@ -93,7 +100,7 @@ func (it *Iterator) Range(rng Range) {
 func (it *Iterator) Next() {
 	switch it.state {
 	case rewound:
-		it.seek(it.rng.Org)
+		it.SeekAll(it.rng.Org)
 		it.checkRange() // need to check both bounds after seek
 	case within:
 		it.next()
@@ -121,7 +128,7 @@ func (it *Iterator) nextLeaf() bool {
 	// go up the tree until we can advance
 	for ; i >= 0; i-- {
 		if it.tree[i].next() {
-			nodeOff = it.tree[i].off()
+			nodeOff = it.tree[i].offset()
 			break
 		} // else end of tree node, keep going up
 	}
@@ -130,11 +137,11 @@ func (it *Iterator) nextLeaf() bool {
 	}
 	// then descend back down
 	for i++; i < bt.treeLevels; i++ {
-		it.tree[i] = bt.getTree(nodeOff).iter()
+		it.tree[i] = bt.readTree(nodeOff).iter()
 		assert.That(it.tree[i].next())
-		nodeOff = it.tree[i].off()
+		nodeOff = it.tree[i].offset()
 	}
-	it.leaf = bt.getLeaf(nodeOff).iter()
+	it.leaf = bt.readLeaf(nodeOff).iter()
 	return true
 }
 
@@ -144,7 +151,7 @@ func (it *Iterator) nextLeaf() bool {
 func (it *Iterator) Prev() {
 	switch it.state {
 	case rewound:
-		it.seek(it.rng.End)
+		it.SeekAll(it.rng.End)
 		if it.Eof() {
 			return // empty tree
 		}
@@ -179,7 +186,7 @@ func (it *Iterator) prevLeaf() bool {
 	// go up the tree until we can go back
 	for ; i >= 0; i-- {
 		if it.tree[i].prev() {
-			nodeOff = it.tree[i].off()
+			nodeOff = it.tree[i].offset()
 			break
 		} // else beginning of tree node, keep going up
 	}
@@ -188,11 +195,11 @@ func (it *Iterator) prevLeaf() bool {
 	}
 	// then descend back down to rightmost
 	for i++; i < bt.treeLevels; i++ {
-		it.tree[i] = bt.getTree(nodeOff).iter()
+		it.tree[i] = bt.readTree(nodeOff).iter()
 		it.tree[i].i = it.tree[i].nd.noffs() - 1 // position at end
-		nodeOff = it.tree[i].off()
+		nodeOff = it.tree[i].offset()
 	}
-	it.leaf = bt.getLeaf(nodeOff).iter()
+	it.leaf = bt.readLeaf(nodeOff).iter()
 	it.leaf.i = it.leaf.nd.nkeys() // position at end
 	return true
 }
@@ -202,24 +209,26 @@ func (it *Iterator) prevLeaf() bool {
 // Seek moves the iterator to the first position >= key.
 // If the key is outside the current range, eof will be set.
 func (it *Iterator) Seek(key string) {
-	it.seek(key)
+	it.SeekAll(key)
 	it.checkRange()
 }
 
-// seek moves the iterator to the first position >= key.
+// SeekAll moves the iterator to the first position >= key.
 // If the key is larger than the largest key,
 // it will be positioned at the largest key.
 // The state will be set to within
 // unless the btree is empty in which case it will be set to eof.
 // It does *not* apply the current range.
-func (it *Iterator) seek(key string) {
+func (it *Iterator) SeekAll(key string) {
 	bt := it.bt
 	off := bt.root
+	rightEdge := true
 	for i := range bt.treeLevels {
-		it.tree[i] = bt.getTree(off).seek(key)
-		off = it.tree[i].off()
+		it.tree[i] = bt.readTree(off).seek(key)
+		off = it.tree[i].offset()
+		rightEdge = rightEdge && it.tree[i].i >= it.tree[i].nd.nkeys()
 	}
-	leaf := bt.getLeaf(off)
+	leaf := bt.readLeaf(off)
 	if leaf.nkeys() == 0 {
 		assert.That(bt.treeLevels == 0) // only root can be empty
 		it.state = eof
@@ -227,7 +236,11 @@ func (it *Iterator) seek(key string) {
 	}
 	it.leaf = leaf.seek(key)
 	if it.leaf.eof() {
-		it.prev()
+		if rightEdge {
+			it.prev()
+		} else {
+			it.next()
+		}
 	}
 	it.state = within
 }

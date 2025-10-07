@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -88,7 +88,7 @@ func (d *dat) Check(t tree) {
 	}
 }
 
-func (d *dat) CheckIter(it iterator.T) {
+func (d *dat) CheckIter(it iface.Iter) {
 	sort.Strings(d.Keys)
 	i := 0
 	it.Rewind()

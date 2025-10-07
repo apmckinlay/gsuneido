@@ -423,7 +423,7 @@ func TestIterRange(t *testing.T) {
 	for _, d := range data {
 		ib.Insert(d, 1)
 	}
-	it := ib.Iterator()
+	it := ib.Iterator().(*Iterator)
 	test := func(fn func(), expected string) {
 		fn()
 		assert.That(it.state == within)

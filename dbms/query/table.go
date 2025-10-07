@@ -9,7 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -264,11 +264,11 @@ func (tbl *Table) Select(cols, vals []string) {
 	tbl.nsels++
 	if tbl.singleton {
 		tbl.selcols, tbl.selvals = cols, vals
-		tbl.ensureIter().Range(iterator.All)
+		tbl.ensureIter().Range(iface.All)
 		return
 	}
 	if cols == nil && vals == nil { // clear select
-		tbl.ensureIter().Range(iterator.All)
+		tbl.ensureIter().Range(iface.All)
 		return
 	}
 	assert.That(!selConflict(tbl.header.Columns, cols, vals))

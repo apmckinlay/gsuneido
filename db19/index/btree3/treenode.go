@@ -215,7 +215,7 @@ func (nd treeNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 // readTree reads a leaf node from storage
 func readTree(st *stor.Stor, off uint64) treeNode {
 	node := treeNode(st.Data(off))
-	return node[:node.size()]
+	return node[:node.size()] //TODO don't trim
 }
 
 func (nd treeNode) String() string {
@@ -269,7 +269,7 @@ func (it *treeIter) prev() bool {
 	return it.i >= 0
 }
 
-func (it *treeIter) off() uint64 {
+func (it *treeIter) offset() uint64 {
 	return it.nd.offset(it.i)
 }
 
@@ -291,8 +291,8 @@ func (b *treeBuilder) size() int {
 	return b.entrySize + 8
 }
 
-func (b *treeBuilder) nkeys() int {
-	return len(b.keys)
+func (b *treeBuilder) noffs() int {
+	return len(b.keys) + 1
 }
 
 // finishInto builds the tree node directly into the provided buffer with a final offset

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
@@ -43,7 +43,7 @@ func TestInfo(t *testing.T) {
 	tbl = tbl.Freeze()
 
 	st := stor.HeapStor(8192)
-	btree.PutEmptyNode(st) // OverlayStub has a btree root offset of 0
+	btree.CreateBtree(st, nil) // OverlayStub has a btree root offset of 0
 	off := tbl.Write(st, 0, hamt.All)
 
 	ic := hamt.ReadChain(st, off, ReadInfo)
@@ -64,7 +64,7 @@ func TestInfo2(t *testing.T) {
 	const n = 1000
 	data := mkdata(tbl, n)
 	st := stor.HeapStor(32 * 1024)
-	btree.PutEmptyNode(st)
+	btree.CreateBtree(st, nil) // OverlayStub has a btree root offset of 0
 	off := tbl.Freeze().Write(st, 0, hamt.All)
 
 	tbl = hamt.ReadChain(st, off, ReadInfo).Hamt

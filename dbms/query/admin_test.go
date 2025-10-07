@@ -20,7 +20,9 @@ func doAdmin(db *db19.Database, cmd string) {
 }
 
 func createTestDb() *db19.Database {
-	db := db19.CreateDb(stor.HeapStor(8192))
+	st := stor.HeapStor(8192)
+	st.Alloc(1)
+	db := db19.CreateDb(st)
 	db19.StartConcur(db, 50*time.Millisecond)
 	doAdmin(db, "create tmp "+tmpschema)
 	return db

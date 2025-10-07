@@ -55,8 +55,8 @@ func TestIterator(*testing.T) {
 	it := bt.Iterator()
 	test := func(i int) {
 		assert.Msg("eof ", i).That(!it.Eof())
-		assert.This(it.curOff - 1).Is(i)
-		assert.This(it.curKey).Is(data[i])
+		assert.This(it.Offset() - 1).Is(i)
+		assert.This(it.Key()).Is(data[i])
 	}
 
 	// test Iterator Next
@@ -199,7 +199,7 @@ func TestToUnodeIter(t *testing.T) {
 	assert(it.offset).Is(2)
 	ui = it.toUnodeIter(bt).(*unodeIter)
 	assert(ui.off()).Is(2)
-	
+
 	it = nd.iter()
 	ui = it.toUnodeIter(bt).(*unodeIter)
 	assert(ui.prev()).Is(true)
@@ -216,7 +216,7 @@ func buildTree(n int) *btree {
 		k := strconv.Itoa(i)
 		assert.That(b.Add(k, uint64(i)))
 	}
-	bt := b.Finish()
+	bt := b.Finish().(*btree)
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, off uint64) string {
 		return strconv.Itoa(int(off))
 	}

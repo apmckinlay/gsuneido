@@ -14,6 +14,8 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	btree3 "github.com/apmckinlay/gsuneido/db19/index/btree3"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -24,6 +26,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // Note: there are also Database methods in
@@ -48,7 +51,8 @@ type Database struct {
 	corrupted atomic.Bool
 }
 
-const magic = "gsndo003"
+const magic = "gsndo004"
+const magicPrev = "gsndo003"
 const magicBase = "gsndo"
 const tailSize = 8 // len(shutdown/corrupt)
 const shutdown = "\x2b\xc1\x85\x63\x8d\x71\x65\x6d"
@@ -102,14 +106,8 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 			store.Close(true)
 		}
 	}()
+	version(store)
 	db = &Database{Store: store, mode: mode}
-	buf := store.Data(0)
-	if !bufHasPrefix(buf, magicBase) {
-		core.Fatal("not a valid database file")
-	}
-	if !bufHasPrefix(buf, magic) {
-		core.Fatal("invalid database version")
-	}
 	var size uint64
 	switch db.readTail() {
 	case shutdown:
@@ -134,6 +132,21 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 		}
 	}
 	return db, nil
+}
+
+// version checks the version of the database and sets store.OldVer
+func version(store *stor.Stor) {
+	buf := store.Data(0)
+	if !bufHasPrefix(buf, magicBase) {
+		core.Fatal("not a valid database file")
+	}
+	if bufHasPrefix(buf, magicPrev) {
+		store.OldVer = true
+	} else {
+		if !bufHasPrefix(buf, magic) {
+			core.Fatal("invalid database version")
+		}
+	}
 }
 
 func bufHasPrefix(buf []byte, prefix string) bool {
@@ -223,10 +236,26 @@ func (db *Database) create(state *DbState, schema *schema.Schema) {
 func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 	ov := make([]*index.Overlay, len(idxs))
 	for i := range ov {
-		bt := btree.CreateBtree(db.Store, &idxs[i].Ixspec)
+		bt := db.CreateBtree(&idxs[i].Ixspec)
 		ov[i] = index.OverlayFor(bt)
 	}
 	return ov
+}
+
+func (db *Database) CreateBtree(is *ixkey.Spec) iface.Btree {
+	if db.Store.OldVer {
+		return btree.CreateBtree(db.Store, is)
+	} else {
+		return btree3.CreateBtree(db.Store, is)
+	}
+}
+
+func (db *Database) BtreeBuilder() iface.BtreeBuilder {
+	if db.Store.OldVer {
+		return btree.Builder(db.Store)
+	} else {
+		return btree3.Builder(db.Store)
+	}
 }
 
 func (db *Database) Ensure(sch *schema.Schema) {
@@ -353,6 +382,13 @@ func (db *Database) buildIndexes(table string,
 	ts := *rt.meta.GetRoSchema(table) // copy
 	ts.Columns = set.Union(ts.Columns, newCols)
 	schema.CheckIndexes(ts.Table, ts.Columns, newIdxs)
+	for i := range newIdxs {
+		if ts.FindIndex(newIdxs[i].Columns) != nil {
+			panic("duplicate index: " +
+				str.Join("(,)", newIdxs[i].Columns) + " in " + ts.Table)
+		}
+	}
+
 	nold := len(ts.Indexes)
 	ts.Indexes = append(ts.Indexes, newIdxs...)
 	newIdxs = ts.SetupNewIndexes(nold)
@@ -372,7 +408,7 @@ func (db *Database) buildIndexes(table string,
 			fk.IIndex = fks.IIndex(fk.Columns)
 		}
 		list.Sort(MakeLess(db.Store, &ix.Ixspec))
-		bldr := btree.Builder(db.Store)
+		bldr := db.BtreeBuilder()
 		iter := list.Iter()
 		for off := iter(); off != 0; off = iter() {
 			rec := OffToRec(db.Store, off)
@@ -627,11 +663,11 @@ func (db *Database) HaveUsers() bool {
 //-------------------------------------------------------------------
 
 func init() {
-	btree.GetLeafKey = getLeafKey
+	btree.GetLeafKey = IndexKey // old btree
 }
 
-func getLeafKey(store *stor.Stor, is *ixkey.Spec, off uint64) string {
-	return is.Key(OffToRec(store, off))
+func IndexKey(store *stor.Stor, is *ixkey.Spec, recoff uint64) string {
+	return is.Key(OffToRec(store, recoff))
 }
 
 func OffToRec(store *stor.Stor, off uint64) core.Record {

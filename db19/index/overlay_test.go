@@ -6,12 +6,11 @@ package index
 import (
 	"math/rand"
 	"sort"
-	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/index/testdata"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -20,9 +19,8 @@ import (
 
 func TestOverlay(*testing.T) {
 	var data []string
-	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
-	btree.MaxNodeSize = 64
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt.SetSplit(64)
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{u}, mut: mut}
@@ -86,12 +84,12 @@ func checkIter(data []string, ov *Overlay) {
 
 func TestOverlayBug(*testing.T) {
 	d := testdata.New()
-	btree.GetLeafKey = d.GetLeafKey
-	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
-	btree.MaxNodeSize = 64
 	const n = 100
 
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	st := stor.HeapStor(8192)
+	st.Alloc(1)
+	bt := btree.CreateBtree(st, nil)
+	bt.SetSplit(64)
 	ov := &Overlay{bt: bt}
 	checkOver(d, ov)
 
@@ -99,7 +97,7 @@ func TestOverlayBug(*testing.T) {
 	insertTestData(d, n, u)
 	ov.layers = []*ixbuf.T{u}
 	checkOver(d, ov)
-
+	
 	ov.bt = ov.bt.MergeAndSave(u.Iter())
 	ov.layers[0] = &ixbuf.T{}
 	checkOver(d, ov)
@@ -118,8 +116,7 @@ func checkOver(d *testdata.T, ov *Overlay) {
 	it := NewOverIter("", 0)
 	for it.Next(t); !it.Eof(); it.Next(t) {
 		k, o := it.Cur()
-		assert.Msg("expect prefix of " + d.Keys[i] + " got " + k).
-			That(strings.HasPrefix(d.Keys[i], k))
+		assert.This(k).Is(d.Keys[i])
 		assert.This(d.O2k[o]).Is(d.Keys[i])
 		i++
 	}
@@ -141,12 +138,8 @@ func TestOverlayMerge(t *testing.T) {
 		return mut
 	}
 	mut := randIxbuf()
-	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-		return data[i]
-	}
-	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
-	btree.MaxNodeSize = 64
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt.SetSplit(64)
 	bi := &ixbuf.T{}
 	ov := Overlay{bt: bt, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
@@ -175,16 +168,14 @@ func checkData(t *testing.T, bi *ixbuf.T, data []string) {
 
 func TestOverlayLookup(*testing.T) {
 	dat := testdata.New()
-	btree.GetLeafKey = dat.GetLeafKey
-	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
-	btree.MaxNodeSize = 128
 	store := stor.HeapStor(8192)
-	randBtree := func(nkeys int) *btree.T {
+	randBtree := func(nkeys int) iface.Btree {
 		for range nkeys {
 			dat.Gen()
 		}
 		sort.Strings(dat.Keys)
 		b := btree.Builder(store)
+		b.SetSplit(64)
 		for _, k := range dat.Keys {
 			assert.That(b.Add(k, dat.K2o[k]))
 		}

@@ -4,6 +4,7 @@
 package btree
 
 import (
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -16,10 +17,10 @@ import (
 type builder struct {
 	stor        *stor.Stor
 	leaf        leafBuilder
-	tree        []*treeBuilder       // root is last (since tree grows up)
-	shouldSplit func(splitable) bool // overridden for tests
-	cur         string
+	tree        []*treeBuilder  // root is last (since tree grows up)
+	shouldSplit func(node) bool // overridden by tests
 	prev        string
+	havePrev    bool
 }
 
 func Builder(st *stor.Stor) *builder {
@@ -27,25 +28,31 @@ func Builder(st *stor.Stor) *builder {
 }
 
 // shouldSplit decides whether to split a leaf node
-func shouldSplit(nd splitable) bool {
+func shouldSplit(nd node) bool {
 	size := nd.size()
 	return size >= minSplit &&
-		(nd.nkeys() > fanout || size > maxSplit)
+		(nd.noffs() > splitSize || size > maxSplit)
 }
 
-type splitable interface {
-	size() int
-	nkeys() int
+func (b *builder) SetSplit(split int) {
+	b.shouldSplit = func(nd node) bool {
+		return nd.size() > split
+	}
 }
 
 // Add returns false for duplicate keys and panics for out of order
 func (b *builder) Add(key string, off uint64) bool {
-	if b.leaf.nkeys() == 0 && key == b.prev {
-		return false // duplicate
+	if b.havePrev {
+		if key == b.prev {
+			return false // duplicate
+		}
+		if key < b.prev {
+			panic("btree builder: keys out of order")
+		}
 	}
-	b.cur = key
 	b.addLeaf(key, off)
 	b.prev = key
+	b.havePrev = true
 	return true
 }
 
@@ -78,7 +85,7 @@ func (b *builder) sep(prev, key string) string {
 	return key[:cp+1]
 }
 
-func (b *builder) Finish() *btree {
+func (b *builder) Finish() iface.Btree {
 	off := b.leaf.finishTo(b.stor)
 
 	for i := range b.tree {

@@ -79,7 +79,7 @@ func TestBuilder(t *testing.T) {
 	assert.That(bldr.Add("1001xxxx", 1001))
 	assert.That(bldr.Add("1002xxxx", 1002))
 	assert.That(bldr.Add("1003xxxx", 1003))
-	bt := bldr.Finish()
+	bt := bldr.Finish().(*btree)
 	nd := bt.getNode(bt.root)
 	assert.T(t).This(nodeKnowns(nd)).Is([]string{"", "1001", "1002", "1003"})
 }
@@ -101,8 +101,8 @@ func TestBtreeMergeAndSave(t *testing.T) {
 	x.Insert("1001xxxx", 1001)
 	x.Insert("1002xxxx", 1002)
 	x.Insert("1003xxxx", 1003)
-	bt := CreateBtree(stor.HeapStor(8192), nil)
-	bt = bt.MergeAndSave(x.Iter())
+	bt := CreateBtree(stor.HeapStor(8192), nil).(*btree)
+	bt = bt.MergeAndSave(x.Iter()).(*btree)
 	nd := bt.getNode(bt.root)
 	assert.T(t).This(nodeKnowns(nd)).Is([]string{"", "1001", "1002", "1003"})
 }
@@ -125,7 +125,7 @@ func TestBtreeFracPos(t *testing.T) {
 			assert.That(b.Add(key(i), 1))
 		}
 		//		assert.That(len(b.levels[len(b.levels)-1].nb.node) > 190)
-		bt = b.Finish()
+		bt = b.Finish().(*btree)
 	}
 	test := func(key string, expected float64) {
 		t.Helper()

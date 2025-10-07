@@ -10,9 +10,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ranges"
@@ -128,9 +127,6 @@ func TestOverIter(t *testing.T) {
 }
 
 func TestOverIterDeletePrevBug(*testing.T) {
-	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-		return strconv.Itoa(int(i))
-	}
 	bldr := btree.Builder(stor.HeapStor(8192))
 	for i := 1; i <= 9; i++ {
 		assert.That(bldr.Add(strconv.Itoa(i), uint64(i)))
@@ -277,9 +273,8 @@ func TestOverIterReadsWithRange(*testing.T) {
 
 func TestOverIterCombine(*testing.T) {
 	var data []string
-	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
-	btree.MaxNodeSize = 64
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt.SetSplit(64)
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{u}, mut: mut}
@@ -597,9 +592,6 @@ func TestOverIterBug2(*testing.T) {
 	layers[0].Insert("1111", 1111|ixbuf.Delete)
 	layers[0].Insert("2222", 2222|ixbuf.Delete)
 	ov := &Overlay{bt: bt, layers: layers}
-	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-		return strconv.Itoa(int(i))
-	}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
 	it := NewOverIter("", 0)
 	it.Next(tran)
@@ -613,9 +605,6 @@ func TestOverIterBug3(*testing.T) {
 	layers := []*ixbuf.T{{}}
 	layers[0].Insert("1111", 1111|ixbuf.Delete)
 	ov := &Overlay{bt: bt, layers: layers}
-	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-		return strconv.Itoa(int(i))
-	}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
 
 	it := NewOverIter("", 0)
@@ -638,9 +627,6 @@ func TestOverIterBug4(*testing.T) {
 	layers[0].Update("1", 2)
 	// layers[0].Print()
 	ov := &Overlay{bt: bt, layers: layers}
-	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-		return strconv.Itoa(int(i))
-	}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
 	it := NewOverIter("", 0)
 	it.Prev(tran)

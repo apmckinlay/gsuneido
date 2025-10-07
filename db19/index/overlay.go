@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	btree1 "github.com/apmckinlay/gsuneido/db19/index/btree"
+	btree3 "github.com/apmckinlay/gsuneido/db19/index/btree3"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -18,7 +20,7 @@ import (
 // Overlay is the composite in-memory representation of an index
 type Overlay struct {
 	// bt is the stored base btree (immutable)
-	bt *btree.T
+	bt iface.Btree
 	// mut is the per transaction mutable top ixbuf.T, nil if read-only
 	mut *ixbuf.T
 	// layers is: (immutable)
@@ -31,22 +33,23 @@ func (ov *Overlay) Cksum() uint32 {
 	return ov.bt.Cksum()
 }
 
+// NewOverlay is only used by big_test.go
 func NewOverlay(store *stor.Stor, is *ixkey.Spec) *Overlay {
 	assert.That(is != nil)
-	return &Overlay{bt: btree.CreateBtree(store, is),
+	return &Overlay{bt: btree3.CreateBtree(store, is),
 		layers: []*ixbuf.T{{}}} // single base layer
 }
 
 // OverlayStub is for tests
 func OverlayStub() *Overlay {
-	return &Overlay{bt: &btree.T{}}
+	return &Overlay{bt: &btree3.T{}}
 }
 
-func OverlayFor(bt *btree.T) *Overlay {
+func OverlayFor(bt iface.Btree) *Overlay {
 	return &Overlay{bt: bt, layers: []*ixbuf.T{{}}} // single base layer
 }
 
-func OverlayForN(bt *btree.T, nlayers int) *Overlay {
+func OverlayForN(bt iface.Btree, nlayers int) *Overlay {
 	layers := make([]*ixbuf.T, nlayers)
 	for i := range layers {
 		layers[i] = &ixbuf.T{}
@@ -74,10 +77,6 @@ func (ov *Overlay) Copy() *Overlay {
 	layers := slc.Clone(ov.layers)
 	assert.That(len(layers) >= 1)
 	return &Overlay{bt: ov.bt, layers: layers}
-}
-
-func (ov *Overlay) GetIxspec() *ixkey.Spec {
-	return ov.bt.GetIxspec()
 }
 
 func (ov *Overlay) SetIxspec(is *ixkey.Spec) {
@@ -140,10 +139,6 @@ func (ov *Overlay) QuickCheck() {
 	ov.bt.QuickCheck()
 }
 
-func (ov *Overlay) Stats() btree.Stats {
-	return ov.bt.Stats()
-}
-
 // Modified is used by info.Persist.
 // It only looks at the base ixbuf (layer[0])
 // which accumulates changes between persists
@@ -155,7 +150,7 @@ func (ov *Overlay) Modified() bool {
 //-------------------------------------------------------------------
 
 func (ov *Overlay) StorSize() int {
-	return ov.bt.StorSize()
+	return 6 // 5 for root offset, 1 for tree levels
 }
 
 func (ov *Overlay) Write(w *stor.Writer) {
@@ -164,7 +159,13 @@ func (ov *Overlay) Write(w *stor.Writer) {
 
 // ReadOverlay reads an Overlay from storage BUT without ixspec
 func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
-	return &Overlay{bt: btree.Read(st, r), layers: []*ixbuf.T{{}}}
+	var bt iface.Btree
+	if st.OldVer {
+		bt = btree1.Read(st, r)
+	} else {
+		bt = btree3.Read(st, r)
+	}
+	return &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
 }
 
 //-------------------------------------------------------------------
@@ -202,18 +203,16 @@ func (ov *Overlay) WithMerged(mr MergeResult, nmerged int) *Overlay {
 
 //-------------------------------------------------------------------
 
-type SaveResult = *btree.T
-
 // Save updates the stored btree with the base ixbuf
 // and returns the new btree to later pass to WithSaved
-func (ov *Overlay) Save() SaveResult {
+func (ov *Overlay) Save() iface.Btree {
 	assert.That(ov.mut == nil)
 	return ov.bt.MergeAndSave(ov.layers[0].Iter())
 }
 
 // WithSaved returns a new Overlay,
 // combining the current state (ov) with the updated btree (in ov2)
-func (ov *Overlay) WithSaved(bt SaveResult) *Overlay {
+func (ov *Overlay) WithSaved(bt iface.Btree) *Overlay {
 	layers := make([]*ixbuf.T, len(ov.layers))
 	layers[0] = &ixbuf.T{} // new empty base ixbuf
 	copy(layers[1:], ov.layers[1:])
@@ -228,18 +227,18 @@ func (ov *Overlay) CheckMerged() {
 	}
 }
 
-func (ov *Overlay) Print() {
-	fmt.Println("btree")
-	ov.bt.Print()
-	for i, ixb := range ov.layers {
-		fmt.Println("layer", i)
-		ixb.Print()
-	}
-	if ov.mut != nil {
-		fmt.Println("mut")
-		ov.mut.Print()
-	}
-}
+// func (ov *Overlay) Print() {
+// 	fmt.Println("btree")
+// 	ov.bt.Print()
+// 	for i, ixb := range ov.layers {
+// 		fmt.Println("layer", i)
+// 		ixb.Print()
+// 	}
+// 	if ov.mut != nil {
+// 		fmt.Println("mut")
+// 		ov.mut.Print()
+// 	}
+// }
 
 // String returns a string representation of the overlay
 // WITHOUT the btree

@@ -67,6 +67,9 @@ type Stor struct {
 	// in a way that we can check without blocking (in FlushTo for persist)
 	// or wait with a timeout (in flushWait for Close)
 	flushChan chan struct{}
+	
+	// OldVer is set by database for the old btree version
+	OldVer bool
 }
 
 // closedSize needs to allow room to be incremented.

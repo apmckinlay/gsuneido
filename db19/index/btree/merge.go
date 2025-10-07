@@ -6,6 +6,7 @@ package btree
 import (
 	"strconv"
 
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -33,7 +34,7 @@ type state struct {
 // Modified nodes are written to storage.
 // It path copies.
 // Normally iter will be small relative to the btree.
-func (bt *btree) MergeAndSave(iter ixbuf.Iter) *btree {
+func (bt *btree) MergeAndSave(iter iface.IterFn) iface.Btree {
 	bt2 := *bt // copy
 	st := state{bt: &bt2}
 	for {

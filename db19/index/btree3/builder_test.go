@@ -4,25 +4,32 @@
 package btree
 
 import (
-	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+func TestBuilderErrors(t *testing.T) {
+	b := Builder(stor.HeapStor(256))
+	assert.That(b.Add("", 1))
+	assert.That(!b.Add("", 2))
+	assert.That(b.Add("x", 1))
+	assert.That(!b.Add("x", 2))
+	assert.This(func() { b.Add("a", 2) }).Panics("out of order")
+}
+
 func TestBuilderSmall(t *testing.T) {
 	bt := Builder(stor.HeapStor(256)).Finish()
 	bt.Check(nil)
-	
+
 	const from = 100
 	for to := 101; to < 199; to++ {
 		st := stor.HeapStor(64 * 1024)
 		b := Builder(st)
-		b.shouldSplit = func(nd splitable) bool {
-			return nd.nkeys() >= 4
+		b.shouldSplit = func(nd node) bool {
+			return nd.noffs() >= 4
 		}
 		for i := from; i < to; i++ {
 			assert.That(b.Add(strconv.Itoa(i), uint64(i)))
@@ -44,7 +51,7 @@ func TestBuilderSmall(t *testing.T) {
 		for i := from; i < to; i++ {
 			it.Next()
 			assert.That(!it.Eof())
-			assert.That(string(it.Key()) == strconv.Itoa(i))
+			assert.This(it.Key()).Is(strconv.Itoa(i))
 			assert.This(it.Offset()).Is(uint64(i))
 		}
 		it.Next()
@@ -84,7 +91,7 @@ func TestBuilderBig(t *testing.T) {
 	for i := from; i < to; i++ {
 		it.Next()
 		assert.That(!it.Eof())
-	assert.That(string(it.Key()) == strconv.Itoa(i))
+		assert.This(it.Key()).Is(strconv.Itoa(i))
 		assert.This(it.Offset()).Is(uint64(i))
 	}
 	it.Next()
@@ -93,28 +100,5 @@ func TestBuilderBig(t *testing.T) {
 	// Lookup
 	for i := from; i < to; i++ {
 		assert.This(bt.Lookup(strconv.Itoa(i))).Is(uint64(i))
-	}
-}
-
-// ------------------------------------------------------------------
-
-func (bt *btree) print() {
-	fmt.Println("-----------------------------")
-	bt.print1(0, bt.root)
-}
-
-func (bt *btree) print1(depth int, offset uint64) {
-	indent := strings.Repeat(" .", depth)
-	if depth < bt.treeLevels {
-		nd := readTree(bt.stor, offset)
-		fmt.Println(indent, offset, "->", nd)
-		for i := 0; i < nd.nkeys(); i++ {
-			bt.print1(depth+1, nd.offset(i)) // RECURSE
-			fmt.Println(indent, "<" + string(nd.key(i)) + ">")
-		}
-		bt.print1(depth+1, nd.offset(nd.nkeys())) // RECURSE
-	} else {
-		nd := readLeaf(bt.stor, offset)
-		fmt.Println(indent, offset, "->", nd)
 	}
 }
