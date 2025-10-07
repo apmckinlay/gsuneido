@@ -58,13 +58,19 @@ deploy: git-status build amd arm
 git-status:
 	@test -z "$(shell git status --porcelain)"
 		
-arm: # linux
+linux_arm: # linux
 	export CGO_ENABLED=0 GOARCH=arm64 GOOS=linux ; $(GO) build -buildvcs=true \
 		-trimpath -o gs_linux_arm64 -v -ldflags "$(LDFLAGS)"
 
-amd: # linux
+linux_amd: # linux
 	export CGO_ENABLED=0 GOARCH=amd64 GOOS=linux ; $(GO) build -buildvcs=true \
 		-trimpath -o gs_linux_amd64 -v -ldflags "$(LDFLAGS)"
+		
+windows_arm:
+	CGO_ENABLED=1 GOARCH=arm64 GOOS=windows \
+		CC=/Users/andrew/apps/llvm-mingw/bin/arm64ec-w64-mingw32-clang++ ; \
+		$(GO) build -buildvcs=true \
+			-trimpath -o gs_windows_arm64 -v -ldflags "$(LDFLAGS)"
 
 test:
 	export CGO_ENABLED=0 ; $(GO) test -short -vet=off -tags portable -timeout 30s ./...
@@ -120,4 +126,4 @@ help:
 	@echo "    remove built files"
 
 .PHONY : build gsuneido port test generate clean zap race racetest release \
-    help arm amd deploy git-status
+    help linux_arm linux_amd windows_arm deploy git-status

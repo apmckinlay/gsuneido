@@ -18,9 +18,9 @@ en_US.*
 *.prof
 gsrace
 gsport
-gs_darwin_amd64
-gs_linux_amd64
-gs_linux_arm64
+gs_darwin_*
+gs_linux_*
+gs_windows_*
 suneido.dbc
 suneido.dbi
 suneido.dbd
