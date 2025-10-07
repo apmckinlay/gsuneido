@@ -291,7 +291,7 @@ func (nd leafNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 // readLeaf reads a leaf node from storage
 func readLeaf(st *stor.Stor, off uint64) leafNode {
 	node := leafNode(st.Data(off))
-	return node[:node.size()] //TODO don't trim
+	return node[:node.size()]
 }
 
 func (nd leafNode) String() string {

@@ -215,7 +215,7 @@ func (nd treeNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 // readTree reads a leaf node from storage
 func readTree(st *stor.Stor, off uint64) treeNode {
 	node := treeNode(st.Data(off))
-	return node[:node.size()] //TODO don't trim
+	return node[:node.size()]
 }
 
 func (nd treeNode) String() string {
