@@ -170,7 +170,7 @@ func (oi *OverIter) modNext(modified bool) {
 		if modified || it.Modified() {
 			it.Seek(oi.curKey)
 			if !it.Eof() {
-				key, _ := it.Cur()
+				key := it.Key()
 				if key <= oi.curKey {
 					it.Next()
 				}
@@ -190,8 +190,7 @@ func atKey(it iface.Iter, key string) bool {
 	if it.Eof() {
 		return false
 	}
-	itkey, _ := it.Cur()
-	return itkey == key
+	return it.Key() == key
 }
 
 // minIter finds the the minimum current key
@@ -229,11 +228,8 @@ func (oi *OverIter) minIter() (bool, string, uint64) {
 
 		// Skip this key - advance all iterators that have it
 		for _, it := range oi.iters {
-			if !it.Eof() {
-				key, _ := it.Cur()
-				if key == keyMin {
-					it.Next()
-				}
+			if !it.Eof() && it.Key() == keyMin {
+				it.Next()
 			}
 		}
 	}
@@ -283,8 +279,7 @@ func (oi *OverIter) modPrev(modified bool) {
 				it.Rewind()
 				it.Prev() // go to last key in range
 			} else {
-				key, _ := it.Cur()
-				if key >= oi.curKey {
+				if it.Key() >= oi.curKey {
 					it.Prev()
 				}
 			}
@@ -334,11 +329,8 @@ func (oi *OverIter) maxIter() (bool, string, uint64) {
 
 		// Skip this key - advance all iterators that have it
 		for _, it := range oi.iters {
-			if !it.Eof() {
-				key, _ := it.Cur()
-				if key == keyMax {
-					it.Prev()
-				}
+			if !it.Eof() && it.Key() == keyMax {
+				it.Prev()
 			}
 		}
 	}
