@@ -17,58 +17,72 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+// caps is the level capacities with k = 200, c = 2/3
+var caps = []int{200, 133, 89, 59, 40, 26, 18, 12, 8, 5, 3}
+
+//{3, 5, 8, 12, 18, 26, 40, 59, 89, 133, 200}
+
 // Sketch accumulates a stream of values
 type Sketch[T cmp.Ordered] struct {
-	k      int // overridden by tests
 	count  int
-	levels [][]T // level 0 is the input level, weight 1
+	levels [][]T // last level is the input level, weight 1, level[0] is caps[0]
 }
 
 // New creates a new Sketch with the default k value.
 func New[T cmp.Ordered]() *Sketch[T] {
 	sk := &Sketch[T]{
-		k:      200,
 		levels: make([][]T, 1, 20),
 	}
-	sk.levels[0] = make([]T, 0, sk.k+1)
+	sk.levels[0] = make([]T, 0, caps[0]*3/2)
 	return sk
 }
 
 // Insert adds a new value to the sketch, compacting levels as necessary.
 func (sk *Sketch[T]) Insert(value T) {
 	sk.count++
-	sk.levels[0] = append(sk.levels[0], value)
-	for h := 0; h < len(sk.levels) && len(sk.levels[h]) > sk.k; h++ {
+	h := len(sk.levels) - 1
+	sk.levels[h] = append(sk.levels[h], value)
+	for ; h >= 0 && len(sk.levels[h]) > caps[h]; h-- {
 		// may need to compact a given level several times
 		// if the length is more than twice the capacity (from promotion)
-		for len(sk.levels[h]) > sk.k {
+		for len(sk.levels[h]) > caps[h] {
 			sk.compact(h)
 		}
-	}
-	// invariant - all levels are <= k
-	for h := range sk.levels {
-		assert.That(len(sk.levels[h]) <= sk.k)
 	}
 }
 
 func (sk *Sketch[T]) compact(h int) {
 	src := sk.levels[h]
 	slices.Sort(src)
-	sk.ensureLevel(h + 1)
-	dst := sk.levels[h+1]
+	if h-1 < 0 {
+		// increase the weight of all the existing levels
+		for h := range sk.levels {
+			sk.compactInPlace(h)
+		}
+		sk.levels = append(sk.levels,
+			make([]T, 0, caps[len(sk.levels)]*3/2))
+		return
+	}
+	dst := sk.levels[h-1]
 
 	which := rand.IntN(2)
 	for i := 1; i < len(src); i += 2 {
 		dst = append(dst, src[i-which])
 	}
 	sk.levels[h] = src[:0]
-	sk.levels[h+1] = dst
+	sk.levels[h-1] = dst
 }
 
-func (sk *Sketch[T]) ensureLevel(h int) {
-	for len(sk.levels) <= h {
-		sk.levels = append(sk.levels, make([]T, 0, sk.k))
+func (sk *Sketch[T]) compactInPlace(h int) {
+	src := sk.levels[h]
+	slices.Sort(src)
+	write := 0
+	which := rand.IntN(2)
+	for i := 1; i < len(src); i += 2 {
+		src[write] = src[i-which]
+		write++
 	}
+	sk.levels[h] = src[:write]
 }
 
 // Count returns the number of values inserted into the sketch.
@@ -93,11 +107,12 @@ func (sk *Sketch[T]) Query(q float64) T {
 	}
 
 	var items []weightedItem
-	for h := 0; h < len(sk.levels); h++ {
-		weight := weight(h)
+	weight := 1
+	for h := len(sk.levels) - 1; h >= 0; h-- {
 		for _, value := range sk.levels[h] {
 			items = append(items, weightedItem{value, weight})
 		}
+		weight *= 2
 	}
 	assert.That(len(items) > 0)
 
@@ -124,10 +139,4 @@ func (sk *Sketch[T]) Query(q float64) T {
 
 	// If we get here, return the last item
 	return items[len(items)-1].value
-}
-
-// weight returns the weight of items at the given level
-func weight(h int) int {
-	// Each level up represents 2x more items due to compaction
-	return 1 << uint(h)
 }
