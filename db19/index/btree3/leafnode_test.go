@@ -5,6 +5,7 @@ package btree
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -639,6 +640,131 @@ func TestLeafNode_split(t *testing.T) {
 			count++
 		}
 		assert.T(t).This(count).Is(2)
+	})
+}
+
+func TestLargePrefixes(t *testing.T) {
+	// Test prefixes larger than 255 bytes to reveal the bug
+	t.Run("prefix_over_255", func(t *testing.T) {
+		// Create keys with 300 byte prefix
+		prefix300 := strings.Repeat("p", 300)
+		keys := []string{
+			prefix300 + "a",
+			prefix300 + "b",
+			prefix300 + "c",
+		}
+
+		var b leafBuilder
+		for i, key := range keys {
+			b.add(key, uint64(i+1))
+		}
+
+		// Debug: check prefix calculation before finishing
+		fmt.Printf("Builder prefix length before finish: %d\n", len(b.prefix))
+		fmt.Printf("Builder prefix: %s...\n", b.prefix[:min(20, len(b.prefix))]+"...")
+
+		nd := b.finish()
+
+		// After fix: prefix should be capped at 255 bytes
+		storedPrefix := nd.prefix()
+		fmt.Printf("Expected prefix length: 255 (capped), got: %d\n", len(storedPrefix))
+		fmt.Printf("Expected prefix: %s...\n", prefix300[:20]+"...")
+		fmt.Printf("Stored prefix: %s...\n", string(storedPrefix[:min(20, len(storedPrefix))])+"...")
+
+		// After fix: prefix should be capped at 255 bytes
+		assert.T(t).This(len(storedPrefix)).Is(255) // Should now work correctly
+
+		// Test that search still works with capped prefix
+		searchKey := prefix300 + "b"
+		pos, found := nd.search(searchKey)
+		fmt.Printf("Search for key starting with 300-char prefix: found=%v, pos=%d\n", found, pos)
+
+		// Search should still work because the first 255 chars match
+		assert.T(t).That(found) // Should now find the key
+	})
+
+	// Test exactly 255 byte prefix (boundary case)
+	t.Run("prefix_exactly_255", func(t *testing.T) {
+		prefix255 := strings.Repeat("x", 255)
+		keys := []string{
+			prefix255 + "1",
+			prefix255 + "2",
+		}
+
+		var b leafBuilder
+		for i, key := range keys {
+			b.add(key, uint64(i+1))
+		}
+
+		nd := b.finish()
+		storedPrefix := nd.prefix()
+
+		// Should work exactly at 255
+		assert.T(t).This(len(storedPrefix)).Is(255)
+		assert.T(t).This(string(storedPrefix)).Is(prefix255)
+
+		// Search should work
+		pos, found := nd.search(prefix255 + "1")
+		assert.T(t).That(found)
+		assert.T(t).This(pos).Is(0)
+	})
+
+	// Test much larger prefixes
+	t.Run("prefix_1000", func(t *testing.T) {
+		prefix1000 := strings.Repeat("z", 1000)
+		keys := []string{
+			prefix1000 + "a",
+			prefix1000 + "b",
+		}
+
+		var b leafBuilder
+		for i, key := range keys {
+			b.add(key, uint64(i+1))
+		}
+
+		nd := b.finish()
+		storedPrefix := nd.prefix()
+
+		// Should still be capped at 255
+		assert.T(t).This(len(storedPrefix)).Is(255)
+		assert.T(t).This(string(storedPrefix)).Is(strings.Repeat("z", 255))
+
+		// Search should still work
+		pos, found := nd.search(prefix1000 + "b")
+		assert.T(t).That(found)
+		assert.T(t).This(pos).Is(1)
+	})
+
+	// Test empty prefix
+	t.Run("empty_prefix", func(t *testing.T) {
+		keys := []string{"apple", "banana", "cherry"}
+
+		var b leafBuilder
+		for i, key := range keys {
+			b.add(key, uint64(i+1))
+		}
+
+		nd := b.finish()
+		storedPrefix := nd.prefix()
+
+		// Should be empty
+		assert.T(t).This(len(storedPrefix)).Is(0)
+		assert.T(t).This(storedPrefix).Is(nil)
+	})
+
+	// Test single key (should clear prefix)
+	t.Run("single_key", func(t *testing.T) {
+		longKey := strings.Repeat("a", 300) + "suffix"
+
+		var b leafBuilder
+		b.add(longKey, 123)
+
+		nd := b.finish()
+		storedPrefix := nd.prefix()
+
+		// Single key should have no prefix
+		assert.T(t).This(len(storedPrefix)).Is(0)
+		assert.T(t).This(storedPrefix).Is(nil)
 	})
 }
 

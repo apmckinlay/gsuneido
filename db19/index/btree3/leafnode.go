@@ -395,7 +395,7 @@ func (b *leafBuilder) add(key string, offset uint64) {
 // size returns the size the leaf node would be if finished now
 func (b *leafBuilder) size() int {
 	n := len(b.keys)
-	prelen := len(b.prefix)
+	prelen := min(255, len(b.prefix))
 	fieldsLen := b.fieldsLen - n*prelen
 	return 4 + 7*n + prelen + fieldsLen
 }
@@ -413,6 +413,11 @@ func (b *leafBuilder) finishInto(buf []byte) leafNode {
 	}
 	if n == 1 {
 		b.prefix = ""
+	}
+
+	// Cap prefix length at 255 bytes before calculating field positions
+	if len(b.prefix) > 255 {
+		b.prefix = b.prefix[:255]
 	}
 	prelen := len(b.prefix)
 
