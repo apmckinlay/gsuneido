@@ -70,12 +70,13 @@ func SplitCommand(s string) []string {
 		if s == "" {
 			return args
 		}
-		delim := byte(' ')
+		var i int
 		if s[0] == '"' {
-			delim = '"'
 			s = s[1:]
+			i = strings.IndexByte(s, '"')
+		} else {
+			i = strings.IndexAny(s, " \t")
 		}
-		i := strings.IndexByte(s, delim)
 		if i == -1 {
 			return append(args, s)
 		}
