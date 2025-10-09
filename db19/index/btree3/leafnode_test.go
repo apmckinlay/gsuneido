@@ -5,6 +5,7 @@ package btree
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -65,6 +66,13 @@ func TestLeafNode_builder(t *testing.T) {
 		b.add(fmt.Sprintf("key%03d", i), 123)
 	}
 	assert(func() { b.finish() }).Panics("too many keys")
+
+	large := strings.Repeat("x", 1000)
+	b.reset()
+	for i := range 10 {
+		b.add(strconv.Itoa(i)+large, 123)
+	}
+	assert(func() { b.finish() }).Panics("btree node too large")
 }
 
 func TestLeafPrefix(t *testing.T) {
@@ -476,7 +484,7 @@ func TestLeafNodeInsert(t *testing.T) {
 
 	// Test maximum keys limit
 	nd = leafNode{}
-	for i := 0; i < 255; i++ {
+	for i := range 255 {
 		nd = nd.insert(i, fmt.Sprintf("key%03d", i), uint64(i))
 	}
 	assert(nd.nkeys()).Is(255)

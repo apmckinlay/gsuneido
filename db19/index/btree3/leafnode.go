@@ -4,7 +4,6 @@
 package btree
 
 import (
-	"log"
 	"strconv"
 	"strings"
 
@@ -176,8 +175,8 @@ func (nd leafNode) modify(key string, off uint64) leafNode {
 // write writes a leaf node to storage
 func (nd leafNode) write(st *stor.Stor) uint64 {
 	n := len(nd)
-	if n > 8192 {
-		log.Println("ERROR: btree node too large")
+	if n > maxNodeSize {
+		panic("btree node too large")
 	}
 	off, buf := st.Alloc(n + cksum.Len)
 	copy(buf, nd)
@@ -201,7 +200,6 @@ func (nd leafNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 	prevSuffix := nd.suffix(splitPos - 1)
 	nextSuffix := nd.suffix(splitPos)
 	cp := str.CommonPrefixLen(string(prevSuffix), string(nextSuffix))
-	// splitKey = prefix + nextSuffix[:cp+1]
 	splitKey = cat(prefix, nextSuffix[:cp+1])
 
 	leftSize := 4 + splitPos*7 + prefixLen
@@ -454,6 +452,9 @@ func (b *leafBuilder) finishInto(buf []byte) leafNode {
 
 func (b *leafBuilder) finish() leafNode {
 	size := b.size()
+	if size > maxNodeSize {
+		panic("btree node too large")
+	}
 	buf := make([]byte, size)
 	return b.finishInto(buf)
 }
@@ -461,6 +462,9 @@ func (b *leafBuilder) finish() leafNode {
 // finishTo builds the leaf node and writes it to storage
 func (b *leafBuilder) finishTo(st *stor.Stor) uint64 {
 	size := b.size()
+	if size > maxNodeSize {
+		panic("btree node too large")
+	}
 	off, buf := st.Alloc(size + cksum.Len)
 	b.finishInto(buf[:size])
 	cksum.Update(buf)

@@ -438,6 +438,45 @@ func TestMergeInsert(t *testing.T) {
 	}
 }
 
+func TestMergeInsertLargeKeys1(t *testing.T) {
+	bt := Builder(heapstor(64 * 1024)).Finish().(*btree) // Create empty btree
+	bt.shouldSplit = func(nd node) bool {
+		return nd.noffs() > 6 || nd.size() > maxNodeSize
+	}
+	large := strings.Repeat("a", 2500)
+	for i := 100; i < 200; i++ {
+		ib := &ixbuf.T{}
+		ib.Insert(large+strconv.Itoa(i), uint64(i))
+		bt = bt.MergeAndSave(ib.Iter()).(*btree)
+	}
+	count, _, _ := bt.Check(nil)
+	assert.This(count).Is(100)
+}
+
+func TestMergeInsertLargeKeys2(t *testing.T) {
+	bt := Builder(heapstor(64 * 1024)).Finish().(*btree) // Create empty btree
+	bt.shouldSplit = func(nd node) bool {
+		return nd.noffs() > 6 || nd.size() > maxNodeSize
+	}
+	large := strings.Repeat("a", 7000)
+	for i := 100; i < 200; i++ {
+		ib := &ixbuf.T{}
+		ib.Insert(large+strconv.Itoa(i), uint64(i))
+		bt = bt.MergeAndSave(ib.Iter()).(*btree)
+	}
+	count, _, _ := bt.Check(nil)
+	assert.This(count).Is(100)
+}
+
+func TestMergeInsertLargeKeys3(t *testing.T) {
+	bt := Builder(heapstor(64 * 1024)).Finish() // Create empty btree
+	large := strings.Repeat("a", 9999)
+	ib := &ixbuf.T{}
+	ib.Insert(large, 123)
+	assert.This(func() { bt.MergeAndSave(ib.Iter()) }).
+		Panics("btree key too large")
+}
+
 //-------------------------------------------------------------------
 
 func TestMergeMix(*testing.T) {

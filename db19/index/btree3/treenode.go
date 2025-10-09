@@ -4,7 +4,6 @@
 package btree
 
 import (
-	"log"
 	"strconv"
 	"strings"
 
@@ -102,8 +101,8 @@ func (nd treeNode) seek(key string) treeIter {
 // write writes a tree node to storage
 func (nd treeNode) write(st *stor.Stor) uint64 {
 	n := len(nd)
-	if n > 8192 {
-		log.Println("ERROR: btree node too large")
+	if n > maxNodeSize {
+		panic("btree node too large")
 	}
 	off, buf := st.Alloc(n + cksum.Len)
 	copy(buf, nd)
@@ -341,6 +340,9 @@ func (b *treeBuilder) finishInto(buf []byte, offset uint64) treeNode {
 // finish adds a final offset and then builds the tree node
 func (b *treeBuilder) finish(offset uint64) treeNode {
 	size := b.size()
+	if size > maxNodeSize {
+		panic("btree node too large")
+	}
 	buf := make([]byte, size)
 	return b.finishInto(buf, offset)
 }
@@ -348,6 +350,9 @@ func (b *treeBuilder) finish(offset uint64) treeNode {
 // finishTo builds the tree node with a final offset and writes it to storage
 func (b *treeBuilder) finishTo(st *stor.Stor, offset uint64) uint64 {
 	size := b.size()
+	if size > maxNodeSize {
+		panic("btree node too large")
+	}
 	off, buf := st.Alloc(size + cksum.Len)
 	b.finishInto(buf[:size], offset)
 	cksum.Update(buf)
@@ -392,6 +397,7 @@ func (nd treeNode) insert(i int, newoff uint64, key string) treeNode {
 	// Calculate total size increase: 7 bytes for offset entry + field data length
 	sizeIncrease := 7 + fieldLen
 	newSize := oldSize + sizeIncrease
+	// Allow temporary exceeding of maxNodeSize - will be handled by split logic
 
 	// Grow the slice to accommodate the new data
 	nd = slc.Grow(nd, sizeIncrease)

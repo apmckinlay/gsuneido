@@ -27,11 +27,11 @@ func Builder(st *stor.Stor) *builder {
 	return &builder{stor: st, shouldSplit: shouldSplit}
 }
 
-// shouldSplit decides whether to split a leaf node
+// shouldSplit decides whether to split a node
 func shouldSplit(nd node) bool {
 	size := nd.size()
 	return size >= minSplit &&
-		(nd.noffs() > splitSize || size > maxSplit)
+		(nd.noffs() > splitSize || size > maxNodeSize)
 }
 
 func (b *builder) SetSplit(split int) {
@@ -57,7 +57,8 @@ func (b *builder) Add(key string, off uint64) bool {
 }
 
 func (b *builder) addLeaf(key string, off uint64) {
-	if b.shouldSplit(&b.leaf) {
+	newSize := b.leaf.size() + len(key) + 7
+	if b.shouldSplit(&b.leaf) || newSize > maxNodeSize {
 		off2 := b.leaf.finishTo(b.stor)
 		sep := b.sep(b.prev, key)
 		b.addTree(0, off2, sep)
@@ -71,7 +72,8 @@ func (b *builder) addTree(ti int, off uint64, sep string) {
 		b.tree = append(b.tree, &treeBuilder{}) // new root
 	}
 	tree := b.tree[ti]
-	if b.shouldSplit(tree) {
+	newSize := tree.size() + len(sep) + 7
+	if b.shouldSplit(tree) || newSize > maxNodeSize {
 		off2 := tree.finishTo(b.stor, off)
 		b.addTree(ti+1, off2, sep) // RECURSE
 		tree.reset()               // reuse the memory

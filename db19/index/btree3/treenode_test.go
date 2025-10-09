@@ -5,6 +5,8 @@ package btree
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -70,6 +72,13 @@ func TestTreeNode_builder(t *testing.T) {
 		builder.add(123, fmt.Sprintf("key%03d", i))
 	}
 	assert(func() { builder.finish(123) }).Panics("too many keys")
+
+	large := strings.Repeat("x", 1000)
+	builder = &treeBuilder{}
+	for i := range 10 {
+		builder.add(123, strconv.Itoa(i)+large)
+	}
+	assert(func() { builder.finish(123) }).Panics("btree node too large")
 }
 
 func TestTreeNode_search(t *testing.T) {

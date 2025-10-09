@@ -84,6 +84,10 @@ func (bt *btree) MergeAndSave(iter iface.IterFn) iface.Btree {
 		if !ok {
 			break
 		}
+		// if key is larger than maxNodeSize, it can never fit
+		if len(key) > maxNodeSize {
+			panic("btree key too large")
+		}
 		st.Print()
 		_ = t && trace("MERGE", key, offstr(off))
 		st.advanceTo(key)

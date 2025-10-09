@@ -4,7 +4,9 @@
 package btree
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -101,4 +103,42 @@ func TestBuilderBig(t *testing.T) {
 	for i := from; i < to; i++ {
 		assert.This(bt.Lookup(strconv.Itoa(i))).Is(uint64(i))
 	}
+}
+
+func TestBuilderLargeKeys1(t *testing.T) {
+	st := stor.HeapStor(64 * 1024)
+	large := strings.Repeat("a", 1500)
+	b := Builder(st)
+	b.shouldSplit = func(nd node) bool { return nd.noffs() > 6 }
+	for i := range 99 {
+		b.Add(fmt.Sprintf("%02d", i)+large, uint64(i))
+	}
+	bt := b.Finish()
+	bt.Check(nil)
+}
+
+func TestBuilderLargeKeys2(t *testing.T) {
+	st := stor.HeapStor(64 * 1024)
+	large := strings.Repeat("a", 1500)
+	b := Builder(st)
+	b.shouldSplit = func(nd node) bool { return nd.noffs() > 6 }
+	for i := range 99 {
+		b.Add(large+fmt.Sprintf("%02d", i), uint64(i))
+	}
+	bt := b.Finish()
+	bt.Check(nil)
+}
+
+func TestBuilderLargeKeys3(t *testing.T) {
+	st := stor.HeapStor(64 * 1024)
+	large := strings.Repeat("a", 5000)
+	b := Builder(st)
+	b.shouldSplit = func(nd node) bool { return nd.noffs() > 6 }
+	for i := 0; i < 99; i += 3 {
+		b.Add(fmt.Sprintf("%02d", i), uint64(i))
+		b.Add(fmt.Sprintf("%02d", i+1)+large, uint64(i+1))
+		b.Add(fmt.Sprintf("%02d", i+2), uint64(i+2))
+	}
+	bt := b.Finish()
+	bt.Check(nil)
 }

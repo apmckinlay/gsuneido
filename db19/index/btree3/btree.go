@@ -33,11 +33,9 @@ import (
 
 var _ iface.Btree = (*btree)(nil)
 
-// MaxNodeSize is the maximum node size in bytes, split if larger.
-// var rather than const because it is overridden by tests.
-const minSplit = 1024 // ???
-const maxSplit = 8192 // ???
-const splitSize = 100 // ???
+const splitSize = 100    // ???
+const minSplit = 1024    // ???
+const maxNodeSize = 8192 // ???
 
 // avgFanout is the estimated average number of children per node
 const avgFanout = splitSize * 95 / 100 // ???
@@ -131,7 +129,7 @@ func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 			} else {
 				assert.That(nd.noffs() >= 1)
 			}
-			size = len(nd)
+			size += len(nd)
 			for i := 0; i < nd.nkeys(); i++ {
 				sep := nd.key(i)
 				assert.That(string(sep) > string(prev))
@@ -147,7 +145,7 @@ func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 			}
 			k := nd.key(0)
 			assert.That(count == 0 || k > string(prev))
-			size = len(nd)
+			size += len(nd)
 			var prevSuffix []byte
 			first := true
 			for it := nd.iter(); it.next(); count++ {
