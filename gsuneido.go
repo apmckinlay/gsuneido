@@ -158,7 +158,7 @@ func main() {
 		newSize /= 1024 * 1024
 		Alert("compacted", nTables, "tables", nViews, "views",
 			"in", time.Since(t).Round(time.Millisecond),
-			oldSize, "-", (oldSize - newSize), "=", newSize, "mb")
+			oldSize, "-", (int(oldSize) - int(newSize)), "=", newSize, "mb")
 		os.Exit(0)
 	case "check":
 		t := time.Now()
