@@ -1,10 +1,10 @@
 #undef UNICODE
 
-#include "webview2\MyWebView2Base.h"
-#include "webview2\helpers.h"
-#include "webview2\MyCoreWebView2CustomSchemeRegistration.h"
-#include "webview2\MyCoreWebView2EnvironmentOptions.h"
-#include "webview2\MyCreateEnvironmentCompletedHandler.h"
+#include "webview2/MyWebView2Base.h"
+#include "webview2/helpers.h"
+#include "webview2/MyCoreWebView2CustomSchemeRegistration.h"
+#include "webview2/MyCoreWebView2EnvironmentOptions.h"
+#include "webview2/MyCreateEnvironmentCompletedHandler.h"
 
 // Define the function pointer type for CreateWebViewEnvironmentWithOptionsInternal
 typedef HRESULT (STDMETHODCALLTYPE *CreateWebViewEnvironmentWithOptionsInternalFunc)(
