@@ -277,10 +277,16 @@ func (lxr *Lexer) next() Item {
 		return it(tok.Dot)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return lxr.number(start)
+	case '_':
+		if IsDigit(lxr.peek()) {
+			return Item{Pos: int32(start), Token: tok.Error, 
+				Text: "invalid identifier or number"}
+		}
+		return lxr.identifier(start)
 	default:
 		if IsSpace(c) {
 			return lxr.whitespace(start, c)
-		} else if IsLetter(c) || c == '_' {
+		} else if IsLetter(c) {
 			return lxr.identifier(start)
 		}
 	}
@@ -498,6 +504,17 @@ func (lxr *Lexer) identifier(start int) Item {
 	return Item{Text: val, Pos: int32(start), Token: token}
 }
 
+func (lxr *Lexer) matchIdentTail() {
+	lxr.matchWhile(isIdentChar)
+	if !lxr.match('?') {
+		lxr.match('!')
+	}
+}
+
+func isIdentChar(r byte) bool {
+	return r == '_' || IsLetter(r) || IsDigit(r)
+}
+
 // keyword returns the token for a string if it is a keyword
 // otherwise Identifier and a copy of the string
 func keyword(s string) (tok.Token, string) {
@@ -595,17 +612,6 @@ func keyword(s string) (tok.Token, string) {
 		}
 	}
 	return tok.Nil, ""
-}
-
-func (lxr *Lexer) matchIdentTail() {
-	lxr.matchWhile(isIdentChar)
-	if !lxr.match('?') {
-		lxr.match('!')
-	}
-}
-
-func isIdentChar(r byte) bool {
-	return r == '_' || IsLetter(r) || IsDigit(r)
 }
 
 const eof = 0
