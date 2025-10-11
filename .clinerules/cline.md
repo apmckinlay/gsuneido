@@ -20,18 +20,16 @@ Only add comments when they provide information that is not clear from the code.
 
 Changes should follow the style of the existing code.
 
-IMPORTANT: Write tests to reproduce errors BEFORE fixing them.
-
 ## Build & Test Commands
-- make is preferred over `go build`
+- `make` is preferred over `go build`
 - `make port` - Build command-line gsport.exe only
-- `make test` - Run Go tests with `-short` flag
+- `make test` - Run Go tests 
 - `go test -run TestFunction ./package` - Run specific test function
 - `go test ./package` - Run tests in specific package
 - `go test -benchmem -bench=BenchmarkName ./package` - run benchmark
 - do not change directories to run tests
-- `make clean` - Remove built files and clean cache
 - when using go test, specify a timeout e.g. `go test -timeout 10s ./package`
+- avoid table driven tests, use a test helper function instead
 
 ## Architecture & Structure
 - **Core packages**: `core/` (values, types), `builtin/` (built-in functions), `compile/` (parser, codegen), 'util' (miscellaneous utility functions)
