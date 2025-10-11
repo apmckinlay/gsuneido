@@ -232,3 +232,15 @@ func CommonPrefixLen[E comparable](s, t []E) int {
 		}
 	}
 }
+
+// HasDup returns true if the slice contains any duplicate values
+func HasDup[E comparable](list []E) bool {
+	for i := 0; i < len(list); i++ {
+		for j := i + 1; j < len(list); j++ {
+			if list[i] == list[j] {
+				return true
+			}
+		}
+	}
+	return false
+}

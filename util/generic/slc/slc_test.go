@@ -211,3 +211,30 @@ func TestGrow(t *testing.T) {
 		assert.This(result[i]).Is(0) // These MUST be zero, not the old 100-104 values
 	}
 }
+
+func TestHasDup(t *testing.T) {
+	test := func(list []int, expected bool) {
+		t.Helper()
+		assert.T(t).This(HasDup(list)).Is(expected)
+	}
+	test([]int{}, false)
+	test([]int{1}, false)
+	test([]int{1, 2, 3}, false)
+	test([]int{1, 2, 3, 4, 5}, false)
+	test([]int{1, 1}, true)
+	test([]int{1, 2, 1}, true)
+	test([]int{1, 2, 3, 2}, true)
+	test([]int{1, 2, 3, 4, 1}, true)
+	test([]int{1, 2, 3, 4, 5, 3}, true)
+
+	testStr := func(list []string, expected bool) {
+		t.Helper()
+		assert.T(t).This(HasDup(list)).Is(expected)
+	}
+	testStr([]string{}, false)
+	testStr([]string{"a"}, false)
+	testStr([]string{"a", "b", "c"}, false)
+	testStr([]string{"a", "a"}, true)
+	testStr([]string{"a", "b", "a"}, true)
+	testStr([]string{"a", "b", "c", "b"}, true)
+}
