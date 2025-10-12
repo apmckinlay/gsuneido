@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -69,9 +70,10 @@ func (ts *Schema) Write(w *stor.Writer) {
 	w.PutStrs(ts.Derived)
 	w.Put1(len(ts.Indexes))
 	for _, ix := range ts.Indexes {
-		if ix.Fk.Table == "" {
+		if ix.Fk.Table == "" && len(ix.Fk.Columns) != 0 {
 			// TEMPORARY - old bug filled in Columns when it shouldn't
 			ix.Fk.Columns = nil
+			fmt.Println("Write Schema: Fk.Table empty but Fk.Columns:", ix.Fk.Columns)
 		}
 		if ix.Mode == 'k' {
 			w.Put1(int(ix.Mode)).PutStrs(ix.Columns)
@@ -106,9 +108,10 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 					Mode:    byte(r.Get1()),
 					Columns: r.GetStrs()},
 			}
-			if ts.Indexes[i].Fk.Table == "" {
+			if ts.Indexes[i].Fk.Table == "" && len(ts.Indexes[i].Fk.Columns) != 0 {
 				// TEMPORARY - old bug filled in Columns when it shouldn't
 				ts.Indexes[i].Fk.Columns = nil
+				fmt.Println("ReadSchema: Fk.Table empty but Fk.Columns:", ts.Indexes[i].Fk.Columns)
 			}
 		}
 		ts.Ixspecs(0)

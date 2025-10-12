@@ -110,6 +110,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 			core.Fatal(ts.Table+":", e)
 		}
 	}()
+	ts.Check(state.Meta.GetRoSchema)
 	hasdel := ts.HasDeleted()
 	info := state.Meta.GetRoInfo(ts.Table)
 	sum := uint64(0)

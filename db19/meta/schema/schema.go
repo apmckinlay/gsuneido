@@ -11,6 +11,9 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -47,8 +50,8 @@ type Index struct {
 
 type Fkey struct {
 	Table   string
-	Columns []string
-	IIndex  int
+	Columns []string // columns in Table
+	IIndex  int      // index in Table
 	Mode    byte
 }
 
@@ -167,13 +170,32 @@ func (ix *Index) Equal(iy *Index) bool {
 }
 
 func (sc *Schema) Check() {
-	sc.checkLower()
+	sc.checkColumns()
+	sc.checkDerived()
 	sc.checkForKey()
 	CheckIndexes(sc.Table, sc.Columns, sc.Indexes)
 }
 
-func (sc *Schema) checkLower() {
+func (sc *Schema) checkColumns() {
+	n := len(sc.Columns)
+	for i := 0; i < n; i++ {
+		assert.That(sc.Columns[i] != "")
+		if sc.Columns[i] != "-" {
+			for j := i + 1; j < n; j++ {
+				if sc.Columns[i] == sc.Columns[j] {
+					panic("duplicate column in " + sc.Table)
+				}
+			}
+		}
+	}
+}
+
+func (sc *Schema) checkDerived() {
+	if slc.HasDup(sc.Derived) {
+		panic("duplicate derived column in " + sc.Table)
+	}
 	for _, col := range sc.Derived {
+		assert.That(ascii.IsUpper(col[0]) || strings.HasSuffix(col, "_lower!"))
 		if strings.HasSuffix(col, "_lower!") &&
 			!slices.Contains(sc.Columns, strings.TrimSuffix(col, "_lower!")) {
 			panic("_lower! nonexistent column: " +

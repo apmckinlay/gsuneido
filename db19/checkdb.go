@@ -78,6 +78,8 @@ func checkTable(tcs *tableCheckers, table string) {
 	if info == nil {
 		panic("info missing for " + table)
 	}
+	sc.Check(tcs.state.Meta.GetRoSchema)
+
 	ifirst := 0
 	if table == tcs.firstTable && tcs.firstIndex != nil {
 		for i, ix := range sc.Indexes {

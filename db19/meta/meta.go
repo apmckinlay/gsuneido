@@ -162,6 +162,10 @@ func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
 	return mu.freeze()
 }
 
+//-------------------------------------------------------------------
+
+// metaUpdate is used to accumulate changes before finalizing them.
+// schema and info are initialized lazily to mutable "copies" from meta
 type metaUpdate struct {
 	meta   *Meta      // original
 	schema SchemaHamt // mutable
@@ -172,9 +176,15 @@ func newMetaUpdate(m *Meta) *metaUpdate {
 	return &metaUpdate{meta: m}
 }
 
+// getSchema returns a mutable copy of the schema for the given table,
+// either from the metaUpdate or falling back to the original Meta
 func (mu *metaUpdate) getSchema(table string) *Schema {
-	if ti, ok := mu.schema.Get(table); ok {
-		cp := *ti // copy
+	if mu.schema == (SchemaHamt{}) {
+		mu.schema = mu.meta.schema.Mutable()
+	}
+	if ts, ok := mu.schema.Get(table); ok {
+		cp := *ts // copy
+		cp.Indexes = slc.Clone(cp.Indexes)
 		return &cp
 	}
 	return nil
@@ -197,7 +207,9 @@ func (mu *metaUpdate) putInfo(ti *Info) {
 	mu.info.Put(ti)
 }
 
+// freeze creates a new Meta with the accumulated changes
 func (mu *metaUpdate) freeze() *Meta {
+	mu.validate()
 	cp := *mu.meta
 	if mu.schema != (SchemaHamt{}) {
 		cp.schema.Hamt = mu.schema.Freeze()
@@ -206,6 +218,66 @@ func (mu *metaUpdate) freeze() *Meta {
 		cp.info.Hamt = mu.info.Freeze()
 	}
 	return &cp
+}
+
+func (mu *metaUpdate) validate() {
+	// Validate each schema that was modified
+	if mu.schema == (SchemaHamt{}) {
+		return
+	}
+	mu.schema.All()(func(ts *Schema) bool {
+		if !ts.isTable() {
+			return true
+		}
+		ts.Check(mu.getSchema)
+		return true
+	})
+}
+
+//-------------------------------------------------------------------
+
+// Check performs full schema validation including duplicate checks and foreign key validation
+func (ts *Schema) Check(getTable func(string) *Schema) {
+	ts.Schema.Check()
+	checkForeignKeys(getTable, &ts.Schema)
+}
+
+func checkForeignKeys(getTable func(string) *Schema, ts *schema.Schema) {
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
+		if ix.Fk.Table == "" {
+			continue
+		}
+		fkCols := ix.Fk.Columns
+		target := getTable(ix.Fk.Table)
+		if target == nil {
+			panic("foreign key references nonexistent table: " +
+				ts.Table + " " + str.Join("(,)", ix.Columns) +
+				" -> " + ix.Fk.Table)
+		}
+		found := false
+		for j := range target.Indexes {
+			if slices.Equal(fkCols, target.Indexes[j].Columns) {
+				if target.Indexes[j].Mode != 'k' {
+					panic("foreign key must point to key: " +
+						ts.Table + " " + str.Join("(,)", ix.Columns) +
+						" -> " + ix.Fk.Table + " " + str.Join("(,)", fkCols))
+				}
+				if ix.Fk.IIndex != j {
+					panic("foreign key IIndex mismatch: " +
+						ts.Table + " " + str.Join("(,)", ix.Columns) +
+						" -> " + ix.Fk.Table + " " + str.Join("(,)", fkCols))
+				}
+				found = true
+				break
+			}
+		}
+		if !found {
+			panic("foreign key references nonexistent index: " +
+				ts.Table + " " + str.Join("(,)", ix.Columns) +
+				" -> " + ix.Fk.Table + " " + str.Join("(,)", fkCols))
+		}
+	}
 }
 
 // admin schema changes ---------------------------------------------
@@ -325,21 +397,31 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	tsNew.Columns = replaceUnique(ts.Columns, from, to)
 	tsNew.Derived = replace(ts.Derived, from, to)
 	tsNew.Indexes = slc.Clone(ts.Indexes)
+	var affectedIdxs []int
 	for i := range tsNew.Indexes {
 		ix := &tsNew.Indexes[i]
 		cols := replace(ix.Columns, from, to)
-		if !slc.Same(cols, ix.Columns) && tsNew.FindIndex(cols) != nil {
-			panic("rename causes duplicate index: " + str.Join("(,)", cols))
+		if !slc.Same(cols, ix.Columns) {
+			affectedIdxs = append(affectedIdxs, i)
+			if tsNew.FindIndex(cols) != nil {
+				panic("rename causes duplicate index: " + str.Join("(,)", cols))
+			}
 		}
 		ix.Columns = cols
 		ix.BestKey = replace(ix.BestKey, from, to)
+		// Update Fk.Columns for recursive foreign keys (table references itself)
+		// because Fk.Columns contains target column names which are in this table
+		if len(ix.Fk.Columns) > 0 && ix.Fk.Table == table {
+			ix.Fk.Columns = replace(ix.Fk.Columns, from, to)
+		}
 	}
 	// ixspecs are ok since they are field indexes, not names
-	m.setFkeyIIndex(&tsNew)
+	// Fkey IIndex are ok since renaming doesn't change them
 	mu := newMetaUpdate(m)
 	mu.putSchema(&tsNew)
-	m.dropFkeys(mu, &ts.Schema)
-	m.createFkeys(mu, &tsNew.Schema, &tsNew.Schema)
+	for _, i := range affectedIdxs {
+		m.renameFkey(mu, &tsNew.Schema, i)
+	}
 	return mu.freeze()
 }
 
@@ -379,6 +461,48 @@ func replace(list, from, to []string) []string {
 		}
 	}
 	return list
+}
+
+/*
+renameFkey updates foreign key column references for a single index when columns are renamed.
+It updates Fk.Columns in tables that point to the renamed table
+and updates FkToHere entries in tables that this table points to.
+For example:
+
+	one key(a) // fktohere two(x)
+	two index(x) in one(a)
+
+Renaming one(a) or two(x) both require updates to both tables
+*/
+func (m *Meta) renameFkey(mu *metaUpdate, ts *schema.Schema, i int) {
+	ix := &ts.Indexes[i]
+
+	// update FkToHere entry in target table
+	if ix.Fk.Table != "" {
+		target := mu.getSchema(ix.Fk.Table)
+		// update FkToHere entry in target table
+		targetIdx := &target.Indexes[ix.Fk.IIndex]
+		targetIdx.FkToHere = slc.Clone(targetIdx.FkToHere)
+		found := false
+		for j := range targetIdx.FkToHere {
+			fk := &targetIdx.FkToHere[j]
+			if fk.Table == ts.Table && fk.IIndex == i {
+				fk.Columns = ix.Columns
+				found = true
+			}
+		}
+		assert.That(found)
+		mu.putSchema(target)
+	}
+
+	// update Fk.Columns in tables that reference this one
+	for j := range ix.FkToHere {
+		fk := &ix.FkToHere[j]
+		refTable := mu.getSchema(fk.Table)
+		refIdx := &refTable.Indexes[fk.IIndex]
+		refIdx.Fk.Columns = ix.Columns
+		mu.putSchema(refTable)
+	}
 }
 
 func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
@@ -490,7 +614,6 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 				ac.Table + " -> " + fk.Table)
 		}
 		found := false
-		target.Indexes = slc.Clone(target.Indexes)
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
 			if slices.Equal(fkCols, ix.Columns) {
@@ -570,7 +693,6 @@ func updateFkeysIIndex(mu *metaUpdate, sch *schema.Schema) {
 
 func updateOtherFkToHere(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 	ts := mu.getSchema(fk.Table)
-	ts.Indexes = slc.Clone(ts.Indexes)
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
 		for j := range ix.FkToHere {
@@ -586,7 +708,6 @@ func updateOtherFkToHere(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 
 func updateOtherFk(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 	ts := mu.getSchema(fk.Table)
-	ts.Indexes = slc.Clone(ts.Indexes)
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
 		if ix.Fk.Table == table && slices.Equal(ix.Columns, fk.Columns) {
@@ -727,13 +848,11 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 		if len(fkCols) == 0 {
 			fkCols = idx.Columns
 		}
-		t, ok := mu.schema.Get(fk.Table)
-		if !ok {
+		target := mu.getSchema(fk.Table)
+		if target == nil {
 			log.Println("foreign key: can't find", fk.Table, "(from "+drop.Table+")")
 			continue
 		}
-		target := *t // copy
-		target.Indexes = slc.Clone(target.Indexes)
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
 			if slices.Equal(fkCols, ix.Columns) {
@@ -748,7 +867,7 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 				ix.FkToHere = fkToHere
 			}
 		}
-		mu.putSchema(&target)
+		mu.putSchema(target)
 	}
 }
 
@@ -853,26 +972,35 @@ func linkFkeys(m *Meta) {
 		}
 		for i := range s.Indexes {
 			fk := &s.Indexes[i].Fk
-			if fk.Table != "" {
-				fkCols := fk.Columns
-				if len(fkCols) == 0 {
-					fkCols = s.Indexes[i].Columns
+			if fk.Table == "" {
+				continue
+			}
+			fkCols := fk.Columns
+			if len(fkCols) == 0 {
+				fkCols = s.Indexes[i].Columns
+			}
+			// ok to modify actual schema because it's not shared yet
+			target, ok := m.schema.Get(fk.Table)
+			if !ok {
+				log.Println("foreign key: can't find", fk.Table, "(from "+s.Table+")")
+				continue
+			}
+			found := false
+			for j := range target.Indexes {
+				ix := &target.Indexes[j]
+				if slices.Equal(fkCols, ix.Columns) {
+					fk.IIndex = j
+					ix.FkToHere = append(ix.FkToHere,
+						Fkey{Table: s.Table, Mode: fk.Mode,
+							Columns: s.Indexes[i].Columns, IIndex: i})
+					found = true
+					break
 				}
-				// ok to modify actual schema because it's not shared yet
-				target, ok := m.schema.Get(fk.Table)
-				if !ok {
-					log.Println("foreign key: can't find", fk.Table, "(from "+s.Table+")")
-					continue
-				}
-				for j := range target.Indexes {
-					ix := &target.Indexes[j]
-					if slices.Equal(fkCols, ix.Columns) {
-						fk.IIndex = j
-						ix.FkToHere = append(ix.FkToHere,
-							Fkey{Table: s.Table, Mode: fk.Mode,
-								Columns: s.Indexes[i].Columns, IIndex: i})
-					}
-				}
+			}
+			if !found {
+				log.Println("ERROR: foreign key references nonexistent index:",
+					s.Table, str.Join("(,)", s.Indexes[i].Columns),
+					"->", fk.Table, str.Join("(,)", fkCols))
 			}
 		}
 	}

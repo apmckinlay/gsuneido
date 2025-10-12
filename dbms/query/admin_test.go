@@ -372,6 +372,17 @@ func TestFkey(t *testing.T) {
 	schemas["lin"] = "lin (c,d) key(c) from newfour(hh) index(d) in hdr(a)"
 	check()
 
+	// Test ALTER RENAME with foreign key reference
+	doAdmin(db, "create targ (col) key(col)")
+	doAdmin(db, "create ref (col,key) key(key) index(col) in targ")
+	schemas["targ"] = "targ (col) key(col) from ref(col)"
+	schemas["ref"] = "ref (col,key) key(key) index(col) in targ"
+	check()
+	doAdmin(db, "alter targ rename col to newcol")
+	schemas["targ"] = "targ (newcol) key(newcol) from ref(col)"
+	schemas["ref"] = "ref (col,key) key(key) index(col) in targ(newcol)"
+	check()
+
 	assert.T(t).This(func() { doAdmin(db, "drop hdr") }).
 		Panics("can't drop table used by foreign keys")
 
@@ -379,10 +390,17 @@ func TestFkey(t *testing.T) {
 	doAdmin(db, "create recur (a,b) key(a) index(b) in recur(a)")
 	schemas["recur"] = "recur (a,b) key(a) from recur(b) index(b) in recur(a)"
 	check()
+	doAdmin(db, "alter recur rename b to bb")
+	schemas["recur"] = "recur (a,bb) key(a) from recur(bb) index(bb) in recur(a)"
+	check()
+	doAdmin(db, "alter recur rename a to aa")
+	schemas["recur"] = "recur (aa,bb) key(aa) from recur(bb) index(bb) in recur(aa)"
+	check()
 	doAdmin(db, "drop recur") // has FkToHere, but only to itself
 	delete(schemas, "recur")
 	check()
 
+	// more foreign keys
 	doAdmin(db, "create head (a,b) key(a) key(b)")
 	schemas["head"] = "head (a,b) key(a) key(b)"
 	check()
@@ -399,6 +417,37 @@ func TestFkey(t *testing.T) {
 	doAdmin(db, "alter more create index(a, b) in less(a)")
 	schemas["more"] = "more (k,a,b) key(k) index(a,b) in less(a)"
 	schemas["less"] = "less (a) key(a) from more(a,b)"
+	check()
+
+	doAdmin(db, "create master (x, id) index(x) key(id)")
+	act(db, "insert { x: 1, id: 2 } into master")	
+	doAdmin(db, "create tran (k, id) key(k) index(id) in master(id)")
+	act(db, "insert { k: 123, id: 2 } into tran")
+	schemas["master"] = "master (x,id) index(x) key(id) from tran(id)"
+	schemas["tran"] = "tran (k,id) key(k) index(id) in master"
+	check()
+		
+	doAdmin(db, "rename tran to tran2")
+	schemas["tran2"] = "tran2 (k,id) key(k) index(id) in master"
+	delete(schemas, "tran")
+	schemas["master"] = "master (x,id) index(x) key(id) from tran2(id)"
+	check()
+	
+	doAdmin(db, "create tran3 (k, id) key(k)")
+	act(db, "insert { k: 123, id: 2 } into tran3")
+	doAdmin(db, "ensure tran3 index(id) in master(id)")
+	schemas["tran3"] = "tran3 (k,id) key(k) index(id) in master"
+	schemas["master"] = "master (x,id) index(x) key(id) " + 
+		"from tran2(id) from tran3(id)"
+	check()
+
+	doAdmin(db, "create tran4 (k, id) key(k)")
+	act(db, "insert { k: 123, id: 2 } into tran4")
+	doAdmin(db, "alter tran4 create index(id) in master(id)")
+	doAdmin(db, "alter tran4 rename id to xx")
+	schemas["tran4"] = "tran4 (k,xx) key(k) index(xx) in master(id)"
+	schemas["master"] = "master (x,id) index(x) key(id) " + 
+		"from tran2(id) from tran3(id) from tran4(xx)"
 	check()
 
 	db.MustCheck()

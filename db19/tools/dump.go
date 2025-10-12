@@ -202,6 +202,7 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	if sc == nil {
 		return -1
 	}
+	sc.Check(state.Meta.GetRoSchema)
 	hasdel := sc.HasDeleted()
 	schema := sc.DumpString()
 	if !multi {
