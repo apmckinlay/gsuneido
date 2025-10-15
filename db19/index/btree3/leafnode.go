@@ -7,9 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
@@ -152,24 +150,6 @@ func (nd leafNode) seek(key string) leafIter {
 		}
 	}
 	return leafIter{nd: nd, i: lo}
-}
-
-func (nd leafNode) modify(key string, off uint64) leafNode {
-	i, found := nd.search(key)
-	_ = t && trace("update search", key, offstr(off), "=>", i, found)
-	_ = t && trace(nd)
-	if off&ixbuf.Update != 0 {
-		assert.That(found)
-		nd = nd.update(i, off&ixbuf.Mask)
-	} else if off&ixbuf.Delete != 0 {
-		assert.That(found)
-		nd = nd.delete(i)
-	} else {
-		assert.That(!found)
-		nd = nd.insert(i, key, off&ixbuf.Mask)
-	}
-	_ = t && trace("after update", nd)
-	return nd
 }
 
 // write writes a leaf node to storage
@@ -400,6 +380,10 @@ func (b *leafBuilder) size() int {
 
 func (b *leafBuilder) noffs() int {
 	return len(b.offsets)
+}
+
+func (b *leafBuilder) offset(i int) uint64 {
+	return b.offsets[i]
 }
 
 // finishInto builds the leaf node directly into the provided buffer

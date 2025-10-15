@@ -38,9 +38,10 @@ type treeMerge struct {
 // state stores a path through the tree
 // so dense updates don't have to do a full lookup for each
 type state struct {
-	bt   *btree
-	tree []treeMerge // path through tree, tree[0] is root, len(tree) == treeLevels
-	leaf leafMerge   // current leaf node
+	bt    *btree
+	tree  []treeMerge // path through tree, tree[0] is root, len(tree) == treeLevels
+	leaf  leafMerge   // current leaf node
+	count int         // tracks additions/deletions
 }
 
 // t should be used like: _ = t && trace(...)
@@ -100,6 +101,7 @@ func (bt *btree) MergeAndSave(iter iface.IterFn) iface.Btree {
 	for st.haveLeaf() || len(st.tree) > 0 {
 		st.ascend()
 	}
+	st.bt.count = bt.count + st.count
 	return st.bt
 }
 
@@ -231,7 +233,7 @@ func (st *state) updateLeaf(key string, off uint64) {
 	_ = t && trace("updateLeaf", key, offstr(off))
 	assert.That(st.leaf.limit == "" || key < st.leaf.limit)
 	st.leaf.makeMutable()
-	st.leaf.leaf = st.leaf.leaf.modify(key, off)
+	st.leaf.leaf = st.modify(st.leaf.leaf, key, off)
 	_ = t && trace("=>", st.leaf.leaf)
 
 	if st.leaf.leaf.nkeys() == 0 {
@@ -241,6 +243,29 @@ func (st *state) updateLeaf(key string, off uint64) {
 		st.split()
 		st.Print()
 	}
+}
+
+func (st *state) modify(nd leafNode, key string, off uint64) leafNode {
+	i, found := nd.search(key)
+	_ = t && trace("update search", key, offstr(off), "=>", i, found)
+	_ = t && trace(nd)
+	switch off & (ixbuf.Update | ixbuf.Delete) {
+	case ixbuf.Update:
+		assert.That(found)
+		nd = nd.update(i, off&ixbuf.Mask)
+	case ixbuf.Delete:
+		assert.That(found)
+		nd = nd.delete(i)
+		st.count--
+	case ixbuf.Insert:
+		assert.That(!found)
+		nd = nd.insert(i, key, off&ixbuf.Mask)
+		st.count++
+	default:
+		panic("invalid ixbuf flag")
+	}
+	_ = t && trace("after update", nd)
+	return nd
 }
 
 func (st *state) dropLeaf() {

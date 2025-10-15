@@ -23,6 +23,7 @@ import (
 
 const Update = 1 << 62
 const Delete = 1 << 63
+const Insert = 0
 
 const Mask = 0xffffffffff
 

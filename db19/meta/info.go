@@ -86,7 +86,7 @@ func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
 	if ni := r.Get1(); ni > 0 {
 		indexes = make([]*index.Overlay, ni)
 		for i := range ni {
-			indexes[i] = index.ReadOverlay(st, r)
+			indexes[i] = index.ReadOverlay(st, r, nrows)
 		}
 	}
 	return NewInfo(table, indexes, nrows, size)

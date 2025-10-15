@@ -294,6 +294,10 @@ func (b *treeBuilder) noffs() int {
 	return len(b.keys) + 1
 }
 
+func (b *treeBuilder) offset(i int) uint64 {
+	return b.offsets[i]
+}
+
 // finishInto builds the tree node directly into the provided buffer with a final offset
 // buf must be large enough (at least b.size() bytes)
 func (b *treeBuilder) finishInto(buf []byte, offset uint64) treeNode {

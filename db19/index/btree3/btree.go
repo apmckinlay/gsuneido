@@ -2,18 +2,24 @@
 // Governed by the MIT license found in the LICENSE file.
 
 /*
-db19/index/btree3 is a new, optimized btree implementation.
-It is not used yet.
+Package btree is a btree implementation.
+Technically it is a B+ tree since only the leaf nodes point to the data.
+Builder produces btrees where the righthand edge may be as small as one child.
+Deletes applied by MergeAndSave do not combine siblings
+and may also produce nodes as small as one child (but empty nodes are removed)
+The root may be as small as two children.
 
+btree is treated as immutable.
 Two things create or modify btrees:
 - bulk in-order loading from load or compact (Builder)
-- add, update, and delete from an ixbuf (MergeAndSave)
+- batch add, update, and delete from an ixbuf (MergeAndSave)
 
 A btree consists of two kinds of nodes: leafNode and treeNode.
 There are treeLevels of treeNodes.
 The root is a leafNode if treeLevels == 0, otherwise it is a treeNode.
 
-leafNode and treeNode have the same basic representations.
+leafNode and treeNode have the same basic representations
+but for performance have separate implementations.
 leafNode has prefix compression.
 treeNode has an extra offset since the fields are separators.
 */
@@ -33,22 +39,21 @@ import (
 
 var _ iface.Btree = (*btree)(nil)
 
-const splitSize = 100    // ???
+const splitCount = 100   // ???
 const minSplit = 1024    // ???
 const maxNodeSize = 8192 // ???
-
-// avgFanout is the estimated average number of children per node
-const avgFanout = splitSize * 95 / 100 // ???
 
 // TreeHeight is the estimated average tree height.
 // It is used by Table.lookupCost
 const TreeHeight = 3 // = 10,000 to 1,000,000 keys with fanout of 100
 
 type btree struct {
-	stor        *stor.Stor
-	root        uint64
-	treeLevels  int
-	shouldSplit func(node) bool
+	stor       *stor.Stor
+	root       uint64
+	treeLevels int
+	// count is used by RangeFrac, set by Read, Builder, and MergeAndSave
+	count       int
+	shouldSplit func(node) bool // overridden by tests
 }
 
 type T = btree
@@ -57,9 +62,9 @@ func CreateBtree(st *stor.Stor, _ *ixkey.Spec) iface.Btree {
 	return Builder(st).Finish()
 }
 
-func OpenBtree(st *stor.Stor, root uint64, treeLevels int) iface.Btree {
+func OpenBtree(st *stor.Stor, root uint64, treeLevels int, nrows int) iface.Btree {
 	return &btree{stor: st, root: root, treeLevels: treeLevels,
-		shouldSplit: shouldSplit}
+		count: nrows, shouldSplit: shouldSplit}
 }
 
 // SetSplit is for tests
@@ -85,10 +90,10 @@ func (bt *btree) Write(w *stor.Writer) {
 	w.Put5(int64(bt.root)).Put1(bt.treeLevels)
 }
 
-func Read(st *stor.Stor, r *stor.Reader) iface.Btree {
+func Read(st *stor.Stor, r *stor.Reader, nrows int) iface.Btree {
 	root := uint64(r.Get5())
 	treeLevels := r.Get1()
-	return OpenBtree(st, root, treeLevels)
+	return OpenBtree(st, root, treeLevels, nrows)
 }
 
 // Lookup returns the offset for a key, or 0 if not found.
@@ -113,6 +118,8 @@ func (bt *btree) readTree(off uint64) treeNode {
 func (bt *btree) readLeaf(off uint64) leafNode {
 	return readLeaf(bt.stor, off)
 }
+
+//-------------------------------------------------------------------
 
 // Check verifies that the keys are in order and returns the number of keys.
 // If the supplied function is not nil, it is applied to each leaf offset.
@@ -164,6 +171,7 @@ func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 		}
 	}
 	check1(0, bt.root)
+	assert.That(count == bt.count)
 	return
 }
 
@@ -212,90 +220,12 @@ func (bt *btree) readTreeCk(offset uint64) treeNode {
 	return nd
 }
 
-func (bt *btree) RangeFrac(org, end string, nrecs int) float64 {
-	if bt.empty() || nrecs == 0 {
-		// don't know if table is empty or if there are records in the ixbufs
-		// fraction is between 0 and 1 so just return half
-		return .5
-	}
-
-	// count the records (up to iterLimit) to get an exact result
-	const iterLimit = 100 // ???
-	it := bt.Iterator()
-	it.Range(Range{Org: org, End: end})
-	n := 0
-	for it.Next(); n < iterLimit; it.Next() {
-		if it.Eof() {
-			return float64(n) / float64(nrecs)
-		}
-		n++
-	}
-	minResult := iterLimit / float64(nrecs)
-
-	frac := bt.fracPos(end) - bt.fracPos(org)
-	return max(frac, minResult)
-}
-
-func (bt *btree) empty() bool {
-	if bt.treeLevels > 0 {
-		return false
-	}
-	nd := bt.readLeaf(bt.root)
-	return nd.nkeys() == 0
-}
-
-const smallRoot = 8  // ???
-const largeRoot = 50 // ???
-
-func (bt *btree) fracPos(key string) float64 {
-	_ = t && trace("=== fracPos", key)
-	if key == ixkey.Min {
-		return 0
-	}
-	if key == ixkey.Max {
-		return 1
-	}
-	root := bt.readNode(0, bt.root)
-	n := root.noffs()
-	i, off := search(root, key)
-	if bt.treeLevels == 0 || n >= largeRoot {
-		// only use the root node
-		return float64(i) / float64(n)
-	} else if n > smallRoot {
-		// read the search node
-		nd := bt.readNode(1, off)
-		j, _ := search(nd, key)
-		m := nd.noffs()
-		// get the size of the rightmost node (unless it's the search node j,m)
-		last := avgFanout
-		if j < n-1 {
-			rn := bt.readNode(1, root.(treeNode).offset(n-1))
-			last = rn.noffs()
-		}
-		levelSize := (n-2)*avgFanout + m + last
-		levelPos := i*avgFanout + j
-		return float64(levelPos) / float64(levelSize)
-	} else { // n <= smallRoot
-		// read the whole level
-		var ni, m, j int
-		for it := root.(treeNode).iter(); it.next(); ni++ {
-			node := bt.readNode(1, it.offset())
-			no := node.noffs()
-			m += no
-			if ni < i {
-				j += no
-			} else if ni == i {
-				k, _ := search(node, key)
-				j += k
-			}
-		}
-		return float64(j) / float64(m)
-	}
-}
+//-------------------------------------------------------------------
 
 type node interface {
 	noffs() int
 	size() int
+	offset(i int) uint64
 }
 
 func search[T node](nd T, key string) (int, uint64) {
@@ -309,11 +239,75 @@ func search[T node](nd T, key string) (int, uint64) {
 	panic("unreachable")
 }
 
+// readNode reads a node at the given level and offset, level 0 is the root
 func (bt *btree) readNode(level int, off uint64) node {
 	if level < bt.treeLevels {
 		return bt.readTree(off)
 	}
 	return bt.readLeaf(off)
+}
+
+// ------------------------------------------------------------------
+
+type Stats struct {
+	Levels  int
+	Count   int
+	Size    int
+	AvgSize int
+	Nleaf   int
+	Ntree   int
+	LeafFan int
+	TreeFan int
+	RootFan int
+}
+
+func (bt *btree) Stats() (stats Stats) {
+	stats.Levels = bt.treeLevels + 1
+	bt.stats(0, bt.root, &stats)
+	stats.AvgSize = stats.Size / (1 + stats.Ntree + stats.Nleaf)
+	if stats.Nleaf > 0 {
+		stats.LeafFan /= stats.Nleaf
+	}
+	if stats.Ntree > 0 {
+		stats.TreeFan /= stats.Ntree
+	}
+	return
+}
+
+func (bt *btree) stats(depth int, offset uint64, stats *Stats) {
+	nd := bt.readNode(depth, offset)
+	stats.Size += nd.size()
+	n := nd.noffs()
+	if depth == 0 {
+		stats.RootFan = n
+	} else if depth < bt.treeLevels {
+		stats.Ntree++
+		stats.TreeFan += n
+	} else {
+		stats.Nleaf++
+		stats.LeafFan += n
+	}
+	for i := range n {
+		offset := nd.offset(i)
+		if depth < bt.treeLevels { // tree
+			bt.stats(depth+1, offset, stats) // RECURSE
+		} else { // leaf
+			stats.Count++
+		}
+	}
+}
+
+func (stats Stats) String() string {
+	return fmt.Sprint(
+		"lv ", stats.Levels,
+		" n ", stats.Count,
+		" sz ", stats.Size,
+		" as ", stats.AvgSize,
+		" tn ", stats.Ntree,
+		" ln ", stats.Nleaf,
+		" lf ", stats.LeafFan,
+		" tf ", stats.TreeFan,
+		" rf ", stats.RootFan)
 }
 
 // ------------------------------------------------------------------

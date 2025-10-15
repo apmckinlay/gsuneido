@@ -158,12 +158,12 @@ func (ov *Overlay) Write(w *stor.Writer) {
 }
 
 // ReadOverlay reads an Overlay from storage BUT without ixspec
-func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
+func ReadOverlay(st *stor.Stor, r *stor.Reader, nrows int) *Overlay {
 	var bt iface.Btree
 	if st.OldVer {
 		bt = btree1.Read(st, r)
 	} else {
-		bt = btree3.Read(st, r)
+		bt = btree3.Read(st, r, nrows)
 	}
 	return &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
 }

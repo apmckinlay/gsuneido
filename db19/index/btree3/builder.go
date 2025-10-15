@@ -21,6 +21,7 @@ type builder struct {
 	shouldSplit func(node) bool // overridden by tests
 	prev        string
 	havePrev    bool
+	count       int
 }
 
 func Builder(st *stor.Stor) *builder {
@@ -31,7 +32,7 @@ func Builder(st *stor.Stor) *builder {
 func shouldSplit(nd node) bool {
 	size := nd.size()
 	return size >= minSplit &&
-		(nd.noffs() > splitSize || size > maxNodeSize)
+		(nd.noffs() > splitCount || size > maxNodeSize)
 }
 
 func (b *builder) SetSplit(split int) {
@@ -53,6 +54,7 @@ func (b *builder) Add(key string, off uint64) bool {
 	b.addLeaf(key, off)
 	b.prev = key
 	b.havePrev = true
+	b.count++
 	return true
 }
 
@@ -93,5 +95,5 @@ func (b *builder) Finish() iface.Btree {
 	for i := range b.tree {
 		off = b.tree[i].finishTo(b.stor, off)
 	}
-	return &btree{stor: b.stor, root: off, treeLevels: len(b.tree), shouldSplit: b.shouldSplit}
+	return &btree{stor: b.stor, root: off, treeLevels: len(b.tree), shouldSplit: b.shouldSplit, count: b.count}
 }
