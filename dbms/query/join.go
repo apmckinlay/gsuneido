@@ -76,6 +76,10 @@ const (
 	n_n                         //lint:ignore ST1003 for clarity
 )
 
+func (jt joinType) toOne() bool {
+	return jt == one_one || jt == n_one
+}
+
 func (jt joinType) String() string {
 	switch jt {
 	case 0:
@@ -263,9 +267,9 @@ func copyFixed(fromFixed, toFixed []Fixed, to Query, by []string, t QueryTran) Q
 var joinRev = 0 // tests can set to impossible to prevent reverse
 
 func (jn *Join) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	fwd := joinopt(jn.source1, jn.source2, jn.Nrows,
+	fwd := joinopt(jn.source1, jn.source2, jn.Nrows, jn.joinType,
 		mode, index, frac, jn.by, jn.fixed)
-	rev := joinopt(jn.source2, jn.source1, jn.Nrows,
+	rev := joinopt(jn.source2, jn.source1, jn.Nrows, jn.joinType.reverse(),
 		mode, index, frac, jn.by, jn.fixed)
 	rev.fixcost += outOfOrder + joinRev
 	if trace.JoinOpt.On() {
@@ -308,7 +312,7 @@ type joinCost struct {
 	varcost Cost
 }
 
-func joinopt(src1, src2 Query, nrows func() (int, int),
+func joinopt(src1, src2 Query, nrows func() (int, int), jt joinType,
 	mode Mode, index []string, frac float64, by []string, fixed []Fixed) joinCost {
 	// always have to read all of source 1
 	fixcost1, varcost1, index := optOrdered(src1, mode, index, frac, fixed)
@@ -319,7 +323,12 @@ func joinopt(src1, src2 Query, nrows func() (int, int),
 	nrows2, _ := src2.Nrows()
 	read2, _ := nrows()
 	frac2 := float64(read2) * frac / float64(max(1, nrows2))
-	best2 := bestGrouped(src2, mode, nil, frac2, by)
+	var best2 bestIndex
+	if jt.toOne() {
+		best2 = bestGroupedKey(src2, mode, frac2, by)
+	} else {
+		best2 = bestGrouped(src2, mode, nil, frac2, by)
+	}
 	if best2.index == nil {
 		return joinCost{fixcost: impossible}
 	}
@@ -421,7 +430,7 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 		if jn.row2 == nil && !jn.nextRow1(th, dir) {
 			return nil
 		}
-		if jn.joinType == one_one || jn.joinType == n_one {
+		if jn.joinType.toOne() {
 			jn.row2 = jn.lookupRow
 			jn.lookupRow = nil
 		} else {
@@ -444,7 +453,7 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	// assert.That(set.Disjoint(jn.by, jn.sel2cols))
 	sel2cols := append(jn.sel2cols, jn.by...)
 	sel2vals := append(jn.sel2vals, jn.projectRow1(th, jn.row1)...)
-	if jn.joinType == one_one || jn.joinType == n_one {
+	if jn.joinType.toOne() {
 		jn.lookupRow = jn.cachedLookup(th, sel2cols, sel2vals)
 	} else {
 		jn.source2.Select(sel2cols, sel2vals)
@@ -524,7 +533,7 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	var row2 Row
 	sel2cols = append(sel2cols, jn.by...)
 	sel2vals = append(sel2vals, jn.projectRow1(th, row1)...)
-	if jn.joinType == one_one || jn.joinType == n_one {
+	if jn.joinType.toOne() {
 		row2 = jn.cachedLookup(th, sel2cols, sel2vals)
 	} else {
 		jn.source2.Select(sel2cols, sel2vals)
@@ -604,8 +613,7 @@ func newLeftJoin(src1, src2 Query, by []string, t QueryTran,
 	lj.indexes = lj.source1.Indexes()
 	lj.fixed = lj.getFixed()
 	lj.setNrows(lj.getNrows())
-	lj.fast1.Set(src1.fastSingle() &&
-		(lj.joinType == one_one || lj.joinType == n_one || src2.fastSingle()))
+	lj.fast1.Set(src1.fastSingle() && (lj.joinType.toOne() || src2.fastSingle()))
 	return lj
 }
 
@@ -687,7 +695,7 @@ func fixedConflict(fixed1, fixed2 []Fixed) bool {
 }
 
 func (lj *LeftJoin) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	jc := joinopt(lj.source1, lj.source2, lj.Nrows,
+	jc := joinopt(lj.source1, lj.source2, lj.Nrows, lj.joinType,
 		mode, index, frac, lj.by, lj.fixed)
 	return jc.fixcost, jc.varcost,
 		&joinApproach{index1: jc.index1, index2: jc.index2, frac2: jc.frac2}
@@ -749,14 +757,14 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			if lj.row1 == nil {
 				return nil
 			}
-			if lj.joinType == one_one || lj.joinType == n_one {
+			if lj.joinType.toOne() {
 				lj.lookupRow = lj.cachedLookup(th, lj.by, lj.projectRow1(th, lj.row1))
 			} else {
 				lj.source2.Select(lj.by, lj.projectRow1(th, lj.row1))
 			}
 			row1out = false
 		}
-		if lj.joinType == one_one || lj.joinType == n_one {
+		if lj.joinType.toOne() {
 			lj.row2 = lj.lookupRow
 			lj.lookupRow = nil
 		} else {
@@ -818,7 +826,7 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 		return nil
 	}
 	var row2 Row
-	if lj.joinType == one_one || lj.joinType == n_one {
+	if lj.joinType.toOne() {
 		row2 = lj.cachedLookup(th, lj.by, lj.projectRow1(th, row1))
 	} else {
 		lj.source2.Select(lj.by, lj.projectRow1(th, row1))

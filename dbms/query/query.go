@@ -734,6 +734,25 @@ func bestGrouped(source Query, mode Mode, index []string, frac float64, cols []s
 	} else {
 		indexes = [][]string{index}
 	}
+	best := bestGrouped2(source, mode, indexes, frac, cols)
+	if index == nil {
+		fixcost, varcost := Optimize(source, mode, cols, frac)
+		best.update(cols, fixcost, varcost)
+	}
+	return best
+}
+
+// bestGroupedKey finds the best key with cols as a prefix
+// taking fixed into consideration.
+// It is used by Join.
+func bestGroupedKey(source Query, mode Mode, frac float64, cols []string) bestIndex {
+	best := bestGrouped2(source, mode, source.Keys(), frac, cols)
+	fixcost, varcost := Optimize(source, mode, cols, frac)
+	best.update(cols, fixcost, varcost)
+	return best
+}
+
+func bestGrouped2(source Query, mode Mode, indexes [][]string, frac float64, cols []string) bestIndex {
 	fixed := source.Fixed()
 	nColsUnfixed := countUnfixed(cols, fixed)
 	best := newBestIndex()
@@ -742,10 +761,6 @@ func bestGrouped(source Query, mode Mode, index []string, frac float64, cols []s
 			fixcost, varcost := Optimize(source, mode, idx, frac)
 			best.update(idx, fixcost, varcost)
 		}
-	}
-	if index == nil {
-		fixcost, varcost := Optimize(source, mode, cols, frac)
-		best.update(cols, fixcost, varcost)
 	}
 	return best
 }
