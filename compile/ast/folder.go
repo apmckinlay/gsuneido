@@ -4,6 +4,8 @@
 package ast
 
 import (
+	"slices"
+
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -152,20 +154,20 @@ func (f Folder) foldNary(n *Nary) Expr {
 	}
 	switch n.Tok {
 	case tok.Add: // includes Sub
-		exprs = commutative(exprs, OpAdd, nil, Zero)
+		exprs = commutative(n, OpAdd, nil, Zero)
 	case tok.Mul: // includes Div
 		exprs = f.foldMul(exprs)
 	case tok.BitOr:
-		exprs = commutative(exprs, OpBitOr, allones, Zero)
+		exprs = commutative(n, OpBitOr, allones, Zero)
 	case tok.BitAnd:
-		exprs = commutative(exprs, OpBitAnd, Zero, allones)
+		exprs = commutative(n, OpBitAnd, Zero, allones)
 	case tok.BitXor:
-		exprs = commutative(exprs, OpBitXor, nil, Zero)
+		exprs = commutative(n, OpBitXor, nil, Zero)
 	case tok.Or:
-		exprs = commutative(exprs, or, True, False)
+		exprs = commutative(n, or, True, False)
 		exprs = foldOrToIn(exprs)
 	case tok.And:
-		exprs = commutative(exprs, and, False, True)
+		exprs = commutative(n, and, False, True)
 		exprs = foldRanges(exprs)
 	case tok.Cat:
 		exprs = foldCat(exprs)
@@ -191,11 +193,18 @@ type bopfn func(Value, Value) Value
 
 // commutative folds constants in a list of expressions
 // zero is a short circuit value e.g. false for and
-func commutative(exprs []Expr, bop bopfn, zero, identity Value) []Expr {
+func commutative(nary *Nary, bop bopfn, zero, identity Value) []Expr {
+	exprs := nary.Exprs
 	first := -1
 	dst := 0
-	for _, e := range exprs {
-		if c, ok := e.(*Constant); !ok {
+	for src := 0; src < len(exprs); src++ {
+		e := exprs[src]
+		if n2, ok := nestedNary(e, nary.Tok); ok {
+			// flatten nested nary (may help query Where)
+			exprs = slices.Insert(exprs, dst, n2.Exprs...)
+			src += len(n2.Exprs)
+			dst += len(n2.Exprs)
+		} else if c, ok := e.(*Constant); !ok {
 			exprs[dst] = e
 			dst++
 		} else {
@@ -228,6 +237,15 @@ func commutative(exprs []Expr, bop bopfn, zero, identity Value) []Expr {
 		dst++
 	}
 	return exprs[:dst]
+}
+
+func nestedNary(e Expr, t tok.Token) (*Nary, bool) {
+	if u, ok := e.(*Unary); ok && u.Tok == tok.LParen {
+		if n, ok := u.E.(*Nary); ok && n.Tok == t {
+			return n, true
+		}
+	}
+	return nil, false
 }
 
 // InRange ----------------------------------------------------------

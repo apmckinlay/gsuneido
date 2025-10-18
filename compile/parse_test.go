@@ -130,6 +130,7 @@ func TestParseExpression(t *testing.T) {
 	test("a or b", "Nary(Or a b)")
 	test("a or b or c", "Nary(Or a b c)")
 	test("(a or b) and c", "Nary(And Unary(LParen Nary(Or a b)) c)")
+	test("a or (b or c)", "Nary(Or a b c)")
 
 	test("a ? b : c", "Trinary(a b c)")
 	test("a \n ? b \n : c", "Trinary(a b c)")

@@ -179,6 +179,12 @@ func TestPropFold(t *testing.T) {
 		"Nary(And Binary(Gt x 0) Binary(Lt Mem(this 'x') 10))")
 	test(".x > 0 and x < 10",
 		"Nary(And Binary(Gt Mem(this 'x') 0) Binary(Lt x 10))")
+		
+	// flatten nested nary
+	test("a + (b + c) + d", "Nary(Add a b c d)")
+	test("(a + b) + c", "Nary(Add a b c)")
+	test("a or (b or c)", "Nary(Or a b c)")
+	test("(a and b) and c", "Nary(And a b c)")
 
 	// if
 	test("if (true) T() else F()",
