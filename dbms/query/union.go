@@ -326,7 +326,7 @@ func (u *Union) optLookup(src1, src2 Query, mode Mode, frac float64) (Cost, Cost
 	best := newBestIndex()
 	fixcost1, varcost1 := Optimize(src1, mode, nil, frac)
 	nrows1, _ := src1.Nrows()
-	for _, key := range src2.Keys() { // FIXME same as compatible bestKey2
+	for _, key := range src2.Keys() { // FIXME same as compatible bestLookupKey
 		fixcost2, varcost2 :=
 			LookupCost(src2, mode, key, int(float64(nrows1)*frac))
 		best.update(key, fixcost2, varcost2)
