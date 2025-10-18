@@ -138,7 +138,9 @@ var _ = staticMethod(suneido_Info, "(name = false)")
 
 func suneido_Info(x Value) Value {
 	if x == False {
-		return SuObjectOfStrs(InfoList())
+		list := InfoList()
+		slices.Sort(list)
+		return SuObjectOfStrs(list)
 	}
 	return InfoStr(ToStr(x))
 }
