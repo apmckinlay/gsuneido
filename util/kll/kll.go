@@ -5,8 +5,6 @@
 // It give approximate quantile estimates from a stream of values.
 // See: Optimal Quantile Approximation in Streams
 // https://arxiv.org/pdf/1603.05346
-//
-// This first version makes all levels the same size (k).
 package kll
 
 import (
@@ -20,19 +18,17 @@ import (
 // caps is the level capacities with k = 200, c = 2/3
 var caps = []int{200, 133, 89, 59, 40, 26, 18, 12, 8, 5, 3}
 
-//{3, 5, 8, 12, 18, 26, 40, 59, 89, 133, 200}
-
 // Sketch accumulates a stream of values
 type Sketch[T cmp.Ordered] struct {
-	count  int
-	levels [][]T // last level is the input level, weight 1, level[0] is caps[0]
+	count       int
+	levels      [][]T // last level is the input level, weight 1, level[0] is caps[0]
+	sampleEvery int   // power of 2
+	sampleAt    int
 }
 
 // New creates a new Sketch with the default k value.
 func New[T cmp.Ordered]() *Sketch[T] {
-	sk := &Sketch[T]{
-		levels: make([][]T, 1, 20),
-	}
+	sk := &Sketch[T]{levels: make([][]T, 1, 20), sampleEvery: 1}
 	sk.levels[0] = make([]T, 0, caps[0]*3/2)
 	return sk
 }
@@ -40,6 +36,9 @@ func New[T cmp.Ordered]() *Sketch[T] {
 // Insert adds a new value to the sketch, compacting levels as necessary.
 func (sk *Sketch[T]) Insert(value T) {
 	sk.count++
+	if !sk.sample() {
+		return
+	}
 	h := len(sk.levels) - 1
 	sk.levels[h] = append(sk.levels[h], value)
 	for ; h >= 0 && len(sk.levels[h]) > caps[h]; h-- {
@@ -51,6 +50,20 @@ func (sk *Sketch[T]) Insert(value T) {
 	}
 }
 
+// sample returns true for a random one of sampleEvery values
+func (sk *Sketch[T]) sample() bool {
+	if sk.sampleEvery == 1 {
+		// not sampling
+		return true
+	}
+	blockIndex := sk.count & (sk.sampleEvery - 1)
+	if blockIndex == 1 {
+		// first of group
+		sk.sampleAt = rand.IntN(sk.sampleEvery)
+	}
+	return blockIndex == sk.sampleAt
+}
+
 func (sk *Sketch[T]) compact(h int) {
 	src := sk.levels[h]
 	slices.Sort(src)
@@ -59,8 +72,14 @@ func (sk *Sketch[T]) compact(h int) {
 		for h := range sk.levels {
 			sk.compactInPlace(h)
 		}
-		sk.levels = append(sk.levels,
-			make([]T, 0, caps[len(sk.levels)]*3/2))
+		if len(sk.levels) >= len(caps) {
+			// reached the end of caps, start doubling sampleEvery
+			// i.e. all the min size 2 levels are handled by sampling
+			sk.sampleEvery *= 2
+		} else {
+			// allow 50% extra for overflow before compacting
+			sk.levels = append(sk.levels, make([]T, 0, caps[len(sk.levels)]*3/2))
+		}
 		return
 	}
 	dst := sk.levels[h-1]
@@ -107,7 +126,7 @@ func (sk *Sketch[T]) Query(q float64) T {
 	}
 
 	var items []weightedItem
-	weight := 1
+	weight := sk.sampleEvery
 	for h := len(sk.levels) - 1; h >= 0; h-- {
 		for _, value := range sk.levels[h] {
 			items = append(items, weightedItem{value, weight})
