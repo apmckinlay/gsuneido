@@ -1,101 +1,98 @@
+# The native non-gui version is pure Go.
+# It should build with just Go on Windows, Linux, and Mac.
+# The windows amd64 gui version is built with mingw-w64 on the path
+# The windows arm64 gui version is built with llvm-mingw on Mac.
+# It is NOT fully functional.
+# The windows amd64 gui version will run on Arm Windows with emulation.
+
 # requires sh on path (e.g. from msys)
 BUILT=$(shell date "+%b %-d %Y %R")
 
-GO = go
 GOOS = $(shell go env GOOS)
 GOARCH = $(shell go env GOARCH)
-OUTPUT = gs_$(GOOS)_$(GOARCH)
-BUILD = build -buildvcs=true -trimpath -o $(OUTPUT)
 LDFLAGS = -s -w -X 'main.builtDate=$(BUILT)'
+BUILD = build -v -buildvcs=true -trimpath
+
+EXE =
 ifdef PATHEXT
-	# Windows stuff
-	BUILD = build -buildvcs=true -trimpath
-	OUTPUT = gsuneido.exe gsuneido.com gsport.exe
-	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
-	PORTABLE = export CGO_ENABLED=0 ; $(GO) $(BUILD) -v -o gsport.exe \
-		-ldflags "$(LDFLAGS)" -tags portable
-	CSIDE = $(GO) run cmd/deps/deps.go
+EXE = .exe
 endif
 
+# build compiles the native non-gui version
 build:
-	@$(CSIDE)
-	@$(GO) version
-	@rm -f $(OUTPUT)
-ifdef PATHEXT
-	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)"
-	$(PORTABLE)
-else
-	export CGO_ENABLED=0 ; $(GO) $(BUILD) -v -ldflags "$(LDFLAGS)"
-endif
+	@go version
+	CGO_ENABLED=0 \
+	go $(BUILD) -o gs_$(GOOS)_$(GOARCH)$(EXE) \
+	  -ldflags "$(LDFLAGS)" 
 
-gsuneido:
-	@$(CSIDE)
-	@rm -f gsuneido.exe
-	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)"
+define BUILD_BINARY
+	$(eval GO_VARS := $(subst _, ,$*))
+	$(eval GOOS := $(word 1,$(GO_VARS)))
+	$(eval GOARCH := $(word 2,$(GO_VARS)))
+	CGO_ENABLED=0 \
+	GOARCH=$(GOARCH) GOOS=$(GOOS) \
+	go $(BUILD) -o $@ -ldflags "$(LDFLAGS)"
+endef
+
+gs_%: FORCE
+	$(call BUILD_BINARY)
+
+gs_%.exe: FORCE
+	$(call BUILD_BINARY)
+
+WINGUI = -X main.mode=gui -H windowsgui
 	
-# export GOEXPERIMENT=cgocheck2 ; 
+gs_windows_amd64_gui.exe: FORCE gsuneido_windows_amd64.syso
+	@go version
+	go run cmd/deps/deps.go
+	CGO_ENABLED=1 \
+	go $(BUILD) -tags gui -ldflags "$(LDFLAGS) $(WINGUI)" -o $@
 
-race:
-ifdef PATHEXT
-	@$(CSIDE)
-	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)" -race -o race/
-	$(GO) $(BUILD) -v -o gsport.exe \
-		-ldflags "$(LDFLAGS)" -tags portable -race -o race/gsport.exe
-else
-	$(GO) $(BUILD) -v -ldflags "$(LDFLAGS)" -race -o race/$(OUTPUT)
-endif
+gsuneido_windows_amd64.syso : res/suneido.rc res/suneido.manifest
+	windres -F pe-x86-64 -o gsuneido_windows_amd64.syso res/suneido.rc
 
-
-port: # a Windows version without the Windows stuff
-	$(PORTABLE)
+both: build gs_windows_amd64_gui.exe
 	
-deploy: git-status build amd arm
+deploy: git-status windows_amd64.exe windows_amd64_gui gs_linux_arm64 gs_linux_amd64
 	@mkdir -p deploy
-	cp gsuneido.exe gsport.exe deploy
+	cp gs_windows_amd64.exe deploy\gsport.exe
+	cp gs_windows_arm64_gui.exe deploy\gsuneido.exe
 	mv gs_linux_amd64 gs_linux_arm64 deploy
 
 # NOTE: requires test e.g. from msys
 git-status:
 	@test -z "$(shell git status --porcelain)"
-		
-linux_arm: # linux
-	export CGO_ENABLED=0 GOARCH=arm64 GOOS=linux ; $(GO) build -buildvcs=true \
-		-trimpath -o gs_linux_arm64 -v -ldflags "$(LDFLAGS)"
-
-linux_amd: # linux
-	export CGO_ENABLED=0 GOARCH=amd64 GOOS=linux ; $(GO) build -buildvcs=true \
-		-trimpath -o gs_linux_amd64 -v -ldflags "$(LDFLAGS)"
-		
-windows_arm:
-	CGO_ENABLED=1 \
-	GOARCH=arm64 GOOS=windows \
-	CC=/Users/andrew/apps/llvm-mingw/bin/aarch64-w64-mingw32-clang \
-	CXX=/Users/andrew/apps/llvm-mingw/bin/aarch64-w64-mingw32-clang++ \
-	CGO_CXXFLAGS="-Wno-inconsistent-missing-override" \
-	$(GO) build -buildvcs=true \
-		-trimpath -o gs_windows_arm64.exe -v -ldflags "$(LDFLAGS)"
 
 test:
-	export CGO_ENABLED=0 ; $(GO) test -short -vet=off -tags portable -timeout 30s ./...
+	CGO_ENABLED=0 \
+	go test -short -vet=off -timeout 30s ./...
 
 racetest:
-	$(GO) test -race -short -count=1 ./...
+	go test -race -short -count=1 ./...
 
 zap:
-	$(GO) build -ldflags "-s -w" ./cmd/zap
+	go build -ldflags "-s -w" ./cmd/zap
 
 generate:
-	$(GO) generate -x ./...
+	go generate -x ./...
 
 clean:
-	rm -f $(OUTPUT)
-	$(GO) clean -cache -testcache
+	go clean -cache -testcache
 
-# need 64 bit windres e.g. from mingw64
-# if this fails with: 'c:\Program' is not recognized
-# copy the command line and run it manually
-gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
-	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
+# for cross compiling on Arm Mac for Arm Windows
+LLVM_MINGW = /Users/andrew/apps/llvm-mingw/bin/aarch64-w64-mingw32
+
+gs_windows_arm64_gui.exe: FORCE gsuneido_windows_arm64.syso
+	CGO_ENABLED=1 \
+	GOARCH=arm64 GOOS=windows \
+	CC=$(LLVM_MINGW)-clang \
+	CXX=$(LLVM_MINGW)-clang++ \
+	CGO_CXXFLAGS=-Wno-inconsistent-missing-override \
+	go $(BUILD) -tags gui -o gs_windows_arm64_gui.exe \
+	  -ldflags "$(LDFLAGS) $(WINGUI)"
+
+gsuneido_windows_arm64.syso : res/suneido.rc res/suneido.manifest
+	$(LLVM_MINGW)-windres -o gsuneido_windows_arm64.syso res/suneido.rc
 
 release:
 	./gsuneido -dump stdlib
@@ -112,21 +109,16 @@ release:
 help:
 	@echo "make [target]"
 	@echo "build"
-	@echo "    build for current OS"
-	@echo "gsuneido"
-	@echo "    build gsuneido executable"
-	@echo "port"
-	@echo "    build windows gsport"
-	@echo "arm"
-	@echo "    build arm linux executable"
-	@echo "amd"
-	@echo "    build amd linux executable"
+	@echo "    compile a native non-gui version"
+	@echo "gs_<GOOS>_<GOARCH>[.exe]"
+	@echo "    compile windows/linux/darwin amd64/arm64 version"
 	@echo "deploy"
-	@echo "    build current OS, arm, and amd executables"
+	@echo "    build and copy to deploy directory"
+	@echo "    windows_amd64.exe windows_amd64_gui gs_linux_arm64 gs_linux_amd64"
 	@echo "test"
 	@echo "    run tests"
 	@echo "clean"
 	@echo "    remove built files"
 
-.PHONY : build gsuneido port test generate clean zap race racetest release \
-    help linux_arm linux_amd windows_arm deploy git-status
+.PHONY : build test generate clean zap race racetest release \
+    help deploy git-status FORCE

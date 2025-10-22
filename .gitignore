@@ -28,4 +28,3 @@ suneido.dbd
 *.zip
 *.ss
 !stdlib/**/*.ss
-*.a
