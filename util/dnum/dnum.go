@@ -21,7 +21,7 @@ import (
 	"strings"
 )
 
-// Dnum is a decimal floating point number
+// Dnum is an @immutable decimal floating point number
 type Dnum struct {
 	coef uint64
 	sign int8
@@ -51,7 +51,10 @@ var (
 	NegInf = Dnum{1, signNegInf, 0}
 )
 
-var pow10 = [...]uint64{
+// @immutable
+type constants [20]uint64
+
+var pow10 = constants{
 	1,
 	10,
 	100,
@@ -71,9 +74,9 @@ var pow10 = [...]uint64{
 	10000000000000000,
 	100000000000000000,
 	1000000000000000000,
-	10000000000000000000}
+}
 
-var halfpow10 = [...]uint64{
+var halfpow10 = constants{
 	0,
 	5,
 	50,
@@ -535,8 +538,8 @@ func (dn Dnum) Round(r int, mode RoundingMode) Dnum {
 	if r <= -digitsMax {
 		return Zero
 	}
-	n := New(dn.sign, dn.coef, int(dn.exp)+r) // multiply by 10^r
-	n = n.integer(mode)
+	n := New(dn.sign, dn.coef, int(dn.exp)+r). // multiply by 10^r
+							integer(mode)
 	if n.sign == signPos || n.sign == signNeg { // i.e. not zero or inf
 		return New(n.sign, n.coef, int(n.exp)-r)
 	}
@@ -610,42 +613,38 @@ func Add(x, y Dnum) Dnum {
 	case y.IsInf():
 		return y
 	}
-	if !align(&x, &y) {
+	if x.exp < y.exp {
+		return add(y, x)
+	}
+	return add(x, y)
+}
+
+func add(x, y Dnum) Dnum {
+	ycoef, ok := align(&x, &y)
+	if !ok {
 		return x
 	}
-	if x.sign != y.sign {
-		return usub(x, y)
+	if x.sign == y.sign {
+		return New(x.sign, x.coef+ycoef, int(x.exp))
 	}
-	return uadd(x, y)
-}
-
-func uadd(x, y Dnum) Dnum {
-	return New(x.sign, x.coef+y.coef, int(x.exp))
-}
-
-func usub(x, y Dnum) Dnum {
-	if x.coef < y.coef {
-		return New(-x.sign, y.coef-x.coef, int(x.exp))
+	if x.coef < ycoef {
+		return New(-x.sign, ycoef-x.coef, int(x.exp))
 	}
-	return New(x.sign, x.coef-y.coef, int(x.exp))
+	return New(x.sign, x.coef-ycoef, int(x.exp))
 }
 
-func align(x, y *Dnum) bool {
+func align(x, y *Dnum) (uint64, bool) {
 	if x.exp == y.exp {
-		return true
-	}
-	if x.exp < y.exp {
-		*x, *y = *y, *x // swap
+		return y.coef, true
 	}
 	yshift := ilog10(y.coef)
 	e := int(x.exp) - int(y.exp)
 	if e > yshift {
-		return false
+		return 0, false
 	}
 	check(0 <= e && e < 20)
-	y.coef = (y.coef + halfpow10[e]) / pow10[e]
 	check(int(y.exp)+e == int(x.exp))
-	return true
+	return (y.coef + halfpow10[e]) / pow10[e], true
 }
 
 const e7 = 10000000
@@ -710,7 +709,6 @@ func (dn Dnum) Format(mask string) string {
 	if dn.IsInf() {
 		return "#"
 	}
-	n := dn
 	before := 0
 	after := 0
 	intpart := true
@@ -726,10 +724,10 @@ func (dn Dnum) Format(mask string) string {
 			}
 		}
 	}
-	if before+after == 0 || n.Exp() > before {
+	if before+after == 0 || dn.Exp() > before {
 		return "#" // too big to fit in mask
 	}
-	n = n.Round(after, HalfUp)
+	n := dn.Round(after, HalfUp)
 	e := n.Exp()
 	var digits []byte
 	if n.IsZero() && after == 0 {

@@ -15,7 +15,7 @@ import (
 )
 
 func Test_size(t *testing.T) {
-	// due to allignment and padding, size is 16 bytes instead of 10
+	// due to alignment and padding, size is 16 bytes instead of 10
 	assert.T(t).This(int(unsafe.Sizeof(Dnum{}))).Is(16)
 	var a [10]Dnum
 	assert.T(t).This(int(unsafe.Sizeof(a))).Is(160)
@@ -396,11 +396,9 @@ func init() {
 }
 */
 
-var Bff Dnum
-
 func BenchmarkFromFloat(b *testing.B) {
 	for b.Loop() {
-		Bff = FromFloat(123456e-99)
+		FromFloat(123456e-99)
 	}
 }
 
