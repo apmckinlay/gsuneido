@@ -191,7 +191,7 @@ func (pu PersistUpdate) Table() string {
 	return pu.table
 }
 
-func (mu PersistUpdate) Apply1(ti *Info) {
+func (pu PersistUpdate) Apply1(ti *Info) {
 	ti.BtreeNrows += ti.Deltas[0].Nrows
 	assert.That(ti.BtreeNrows >= 0)
 	ti.BtreeSize += ti.Deltas[0].Size

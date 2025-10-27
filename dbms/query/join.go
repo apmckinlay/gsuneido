@@ -34,18 +34,18 @@ type joinLike struct {
 
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
-	qt     QueryTran
-	st     *SuTran
-	lookup *lookupInfo
-	lookupCache
-	by         []string
-	prevFixed1 []Fixed
-	prevFixed2 []Fixed
-	row1       Row
-	row2       Row // nil when we need a new row1
-	lookupRow  Row
+	qt          QueryTran
+	st          *SuTran
+	lookup      *lookupInfo
+	lookupCache lookupCache
+	by          []string
+	prevFixed1  []Fixed
+	prevFixed2  []Fixed
+	row1        Row
+	row2        Row // nil when we need a new row1
+	lookupRow   Row
 	joinLike
-	joinType
+	joinType  joinType
 	optimized bool
 }
 
@@ -776,7 +776,7 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			row2 := lj.row2
 			if row2 == nil {
 				row2 = lj.empty2
-			} else {
+				// } else {
 				// assert.That(lj.equalBy(th, lj.st, lj.row1, row2))
 			}
 			if lj.filter2(row2) {
@@ -834,7 +834,7 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	}
 	if row2 == nil {
 		row2 = lj.empty2
-	} else {
+		// } else {
 		// assert.That(lj.equalBy(th, lj.st, row1, row2))
 	}
 	if !lj.filter2(row2) {

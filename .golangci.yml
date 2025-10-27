@@ -1,20 +1,53 @@
+version: "2"
 linters:
   enable:
-    - revive
     - misspell
+    - revive
+    - staticcheck
+    - immutablecheck
   disable:
     - errcheck
-
-linters-settings:
-  revive:
-    rules:
-      - name: dot-imports
-        disabled: true
-      - name: var-naming
-        disabled: true
-	misspell:
-	  ignore-words:
-		  - strat
-	govet:
-	  disable:
-		  - unsafeptr
+  settings:
+    govet:
+      disable:
+        - unsafeptr
+    misspell:
+      ignore-rules:
+        - strat
+    revive:
+      rules:
+        - name: dot-imports
+          disabled: true
+        - name: var-naming
+          disabled: true
+    staticcheck:
+      checks:
+        - "all"
+        - "-ST1001" # dot import
+        - "-ST1003" # naming
+        - "-ST1005" # error strings
+        - "-ST1017" # condition order
+        - "-QF1001" # De Morgan's law
+        - "-QF1008" # could remove embedded field from selector
+    custom:
+      immutablecheck:
+        type: "module"
+        description: Immutable type mutation checker (pls-dont-go)
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

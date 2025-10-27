@@ -201,7 +201,8 @@ func (m *Map[K, V, H]) Del(k K) (V, bool) {
 		for i := range groupSize {
 			c := uint8(ctrls)
 			ctrls >>= 8
-			if c == h2|0x80 {
+			switch c {
+			case h2 | 0x80:
 				if m.help.Equal(k, grp.keys[i]) {
 					// found, delete it
 					ae := anyEmpty(grp.control)
@@ -218,7 +219,7 @@ func (m *Map[K, V, H]) Del(k K) (V, bool) {
 					m.count--
 					return v, true
 				}
-			} else if c == empty {
+			case empty:
 				hasEmpty = true
 			}
 		}

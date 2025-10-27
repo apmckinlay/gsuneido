@@ -162,14 +162,14 @@ func (co *compiler) literalPrefix() (prefix []byte, allLiteral bool) {
 		case opSave:
 			allLiteral = false
 			i++
-		default:
-			return prefix, false
 		case opStrEnd:
 			if i != len(co.prog)-2 { // immediately before final opDoneSave1
 				return prefix, false
 			}
 		case opDoneSave1:
 			return prefix, allLiteral
+		default:
+			return prefix, false
 		}
 	}
 	return prefix, false

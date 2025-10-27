@@ -107,10 +107,10 @@ func (r *repair) search() (int, uint64, *DbState) {
 }
 
 func (r *repair) check(i int, off uint64) (state *DbState) {
-	if i < 3 {
-		// 	r.ec = &errCorrupt{err: "injected error"}
-		// 	return nil
-	}
+	// if i < 3 {
+	// 	r.ec = &errCorrupt{err: "injected error"}
+	// 	return nil
+	// }
 	state = getState(r.store, off)
 	if state == nil {
 		r.ec = &errCorrupt{err: "ReadState failed"}
@@ -194,7 +194,7 @@ type scanner struct {
 func newScanner(store *stor.Stor) *scanner {
 	var s scanner
 	s.cond.L = &s.lock
-	s.wg.Go(func()  { s.scanner(store) })
+	s.wg.Go(func() { s.scanner(store) })
 	return &s
 }
 

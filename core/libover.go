@@ -48,7 +48,7 @@ func (lo *libraryOverrides) Put(lib, name, text string) {
 func (lo *libraryOverrides) Get(name string) (string, string) {
 	lo.lock.Lock()
 	defer lo.lock.Unlock()
-	ov, _ := lo.overrides[name]
+	ov := lo.overrides[name]
 	return ov.lib, ov.text
 }
 

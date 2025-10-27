@@ -177,7 +177,6 @@ func unpackInt(s string, sign, exp int8, xor byte) Value {
 	}
 
 	d := s[i] ^ xor
-	i++
 	if exp == last {
 		u = u*10 + uint64(d)/10
 	} else {

@@ -50,7 +50,7 @@ func Entab(s string) string {
 		// find the indent
 		col := 0
 		for ; i < n; i++ {
-			if s[i] == ' ' {
+			if s[i] == ' ' { //nolint
 				col++
 			} else if s[i] == '\t' {
 				for col++; (col % TabWidth) != 0; col++ {

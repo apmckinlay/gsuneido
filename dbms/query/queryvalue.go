@@ -75,90 +75,90 @@ func qryBase(q Query, key Value) Value {
 	return nil
 }
 
-func (q *Table) ValueGet(key Value) Value {
+func (tbl *Table) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("table")
 	case SuStr("name"):
-		return SuStr(q.name)
+		return SuStr(tbl.name)
 	}
-	return qryBase(q, key)
+	return qryBase(tbl, key)
 }
 
-func (q *Tables) ValueGet(key Value) Value {
+func (ts *Tables) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("table")
 	case SuStr("name"):
 		return SuStr("tables")
 	}
-	return qryBase(q, key)
+	return qryBase(ts, key)
 }
 
-func (q *TablesLookup) ValueGet(key Value) Value {
+func (tl *TablesLookup) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("tablelookup")
 	case SuStr("name"):
-		return SuStr(q.table)
+		return SuStr(tl.table)
 	}
-	return qryBase(q, key)
+	return qryBase(tl, key)
 }
 
-func (q *Columns) ValueGet(key Value) Value {
+func (cs *Columns) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("table")
 	case SuStr("name"):
 		return SuStr("columns")
 	}
-	return qryBase(q, key)
+	return qryBase(cs, key)
 }
 
-func (q *Indexes) ValueGet(key Value) Value {
+func (is *Indexes) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("table")
 	case SuStr("name"):
 		return SuStr("indexes")
 	}
-	return qryBase(q, key)
+	return qryBase(is, key)
 }
 
-func (q *Views) ValueGet(key Value) Value {
+func (vs *Views) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("table")
 	case SuStr("name"):
 		return SuStr("views")
 	}
-	return qryBase(q, key)
+	return qryBase(vs, key)
 }
 
-func (q *History) ValueGet(key Value) Value {
+func (his *History) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("table")
 	case SuStr("name"):
 		return SuStr("history")
 	}
-	return qryBase(q, key)
+	return qryBase(his, key)
 }
 
-func (q *Nothing) ValueGet(key Value) Value {
+func (no *Nothing) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("nothing")
 	}
-	return qryBase(q, key)
+	return qryBase(no, key)
 }
 
-func (q *ProjectNone) ValueGet(key Value) Value {
+func (pn *ProjectNone) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("projectNone")
 	}
-	return qryBase(q, key)
+	return qryBase(pn, key)
 }
 
 //-------------------------------------------------------------------
@@ -173,72 +173,72 @@ func query1(q Query, key Value) Value {
 	return qryBase(q, key)
 }
 
-func (q *Extend) ValueGet(key Value) Value {
+func (e *Extend) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("extend")
 	}
-	return query1(q, key)
+	return query1(e, key)
 }
 
-func (q *Project) ValueGet(key Value) Value {
+func (p *Project) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("project")
 	}
-	return query1(q, key)
+	return query1(p, key)
 }
 
-func (q *Rename) ValueGet(key Value) Value {
+func (r *Rename) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("rename")
 	}
-	return query1(q, key)
+	return query1(r, key)
 }
 
-func (q *Sort) ValueGet(key Value) Value {
+func (sort *Sort) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("sort")
 	}
-	return query1(q, key)
+	return query1(sort, key)
 }
 
-func (q *Summarize) ValueGet(key Value) Value {
+func (su *Summarize) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("summarize")
 	}
-	return query1(q, key)
+	return query1(su, key)
 }
 
-func (q *TempIndex) ValueGet(key Value) Value {
+func (ti *TempIndex) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("tempindex")
 	}
-	return query1(q, key)
+	return query1(ti, key)
 }
 
-func (q *Where) ValueGet(key Value) Value {
+func (w *Where) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("where")
 	case SuStr("expr"):
-		return q.expr
+		return w.expr
 	}
-	return query1(q, key)
+	return query1(w, key)
 }
 
-func (q *View) ValueGet(key Value) Value {
+func (v *View) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("view")
 	case SuStr("name"):
-		return SuStr(q.name)
+		return SuStr(v.name)
 	}
-	return query1(q, key)
+	return query1(v, key)
 }
 
 //-------------------------------------------------------------------
@@ -257,50 +257,50 @@ func query2(q Query, key Value) Value {
 	return qryBase(q, key)
 }
 
-func (q *Union) ValueGet(key Value) Value {
+func (u *Union) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("union")
 	}
-	return query2(q, key)
+	return query2(u, key)
 }
 
-func (q *Intersect) ValueGet(key Value) Value {
+func (it *Intersect) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("intersect")
 	}
-	return query2(q, key)
+	return query2(it, key)
 }
 
-func (q *Minus) ValueGet(key Value) Value {
+func (m *Minus) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("minus")
 	}
-	return query2(q, key)
+	return query2(m, key)
 }
 
-func (q *Times) ValueGet(key Value) Value {
+func (t *Times) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("times")
 	}
-	return query2(q, key)
+	return query2(t, key)
 }
 
-func (q *Join) ValueGet(key Value) Value {
+func (jn *Join) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("join")
 	}
-	return query2(q, key)
+	return query2(jn, key)
 }
 
-func (q *LeftJoin) ValueGet(key Value) Value {
+func (lj *LeftJoin) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):
 		return SuStr("leftjoin")
 	}
-	return query2(q, key)
+	return query2(lj, key)
 }

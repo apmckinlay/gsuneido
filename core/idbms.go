@@ -148,16 +148,16 @@ const (
 )
 
 func (dir Dir) String() string {
-	switch {
-	case dir == Next:
+	switch  dir{
+	case Next:
 		return "QueryFirst"
-	case dir == Prev:
+	case Prev:
 		return "QueryLast"
-	case dir == Only:
+	case Only:
 		return "Query1"
-	case dir == Any:
+	case Any:
 		return "QueryEmpty"
-	case dir == Strat:
+	case Strat:
 		return "QueryStrategy1"
 	}
 	return ""

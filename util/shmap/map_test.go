@@ -311,11 +311,12 @@ func (m *Map[K, V, H]) check() {
 		for i := range groupSize {
 			c := uint8(ctrls)
 			ctrls >>= 8
-			if c == deleted {
+			switch c {
+			case deleted:
 				deletes++
-			} else if c == empty {
+			case empty:
 				hasEmpty = true
-			} else {
+			default:
 				entries++
 				k := grp.keys[i]
 				h := m.help.Hash(k)

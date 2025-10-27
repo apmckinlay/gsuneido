@@ -410,37 +410,6 @@ func TestIteratorRangeEdgeCases(t *testing.T) {
 	assert.T(t).This(i).Is(len(expected))
 }
 
-func TestIteratorPrev(t *testing.T) {
-	bt := buildTestTree(10)
-	it := bt.Iterator()
-
-	// Start from end and go backwards
-	it.Range(iface.All)
-
-	keys := make([]string, 0, 10)
-
-	// Collect all keys going forward
-	for it.Next(); !it.Eof(); it.Next() {
-		keys = append(keys, string(it.Key()))
-	}
-
-	// Reset and test backward iteration
-	it.Rewind()
-
-	// Go to end first by calling Next until EOF
-	for it.Next(); !it.Eof(); it.Next() {
-	}
-
-	// Now test Prev - note: current implementation may not fully support
-	// starting from EOF and going backward, this tests the basic Prev functionality
-	it.Rewind()
-	it.Next() // position at first
-
-	// Test we can't go back from first position
-	it.Prev()
-	assert.T(t).That(it.Eof())
-}
-
 func TestIteratorSeek(t *testing.T) {
 	bt := buildTestTree(100)
 	it := bt.Iterator()

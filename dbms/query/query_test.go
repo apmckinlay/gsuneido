@@ -401,7 +401,7 @@ func BenchmarkNoOptMod(b *testing.B) {
 	orig := [][]string{{"a"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}}
 	for b.Loop() {
 		result = make([][]string, len(orig))
-		for _, o := range orig { //nolint:gosimple
+		for _, o := range orig { //nolint
 			result = append(result, o)
 		}
 	}

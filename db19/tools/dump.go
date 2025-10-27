@@ -145,7 +145,7 @@ func dumpDbTable(db *Database, table string, w WriterPlus) int {
 }
 
 func dumpOpen(to, publicKey string) (*os.File, WriterPlus, error) {
-	to = strings.Replace(to, `\`, `/`, -1)
+	to = strings.ReplaceAll(to, `\`, `/`)
 	dir := path.Dir(to)
 	f, err := os.CreateTemp(dir, "gs*.tmp")
 	if err != nil {
@@ -192,7 +192,7 @@ func (w writerPlus) WriteByte(b byte) error {
 }
 
 func (w writerPlus) Flush() error {
-	return w.WriteCloser.Close()
+	return w.Close()
 }
 
 func dumpTable2(db *Database, state *DbState, table string, multi bool,

@@ -18,7 +18,7 @@ type Compatible struct {
 	disjoint    string
 	allCols     []string
 	keyIndex    []string
-	lookupCache
+	lookupCache lookupCache
 	Query2
 }
 

@@ -84,9 +84,10 @@ func closure(x *blok) {
 func (b *bloks) params(params []Param, vars strset) {
 	for _, p := range params {
 		name := p.Name.Name
-		if name[0] == '.' {
+		switch name[0] {
+		case '.':
 			name = str.UnCapitalize(name[1:])
-		} else if name[0] == '@' || name[0] == '_' {
+		case '@', '_':
 			name = name[1:]
 		}
 		vars[name] = yes

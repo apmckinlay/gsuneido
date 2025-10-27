@@ -216,7 +216,7 @@ func TestParseExpression(t *testing.T) {
 	test("x |> f |> g", "Call(g Call(f x))")
 	test("a |> b |> c |> d", "Call(d Call(c Call(b a)))")
 	test("a |> Print", "Call(Print a)")
-	// precendence
+	// precedence
 	test("a + b |> f", "Call(f Nary(Add a b))")
 	test("a ? b : c |> f", "Call(f Trinary(a b c))")
 }

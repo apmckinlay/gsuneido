@@ -87,7 +87,7 @@ func boolArg(arg Value) uintptr {
 	return 0
 }
 
-func boolRet(rtn uintptr) Value {
+func boolRet(rtn uintptr) Value { //nolint
 	if rtn == 0 {
 		return False
 	}

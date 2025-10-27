@@ -150,7 +150,7 @@ func Number(n any) string {
 	if n, ok := n.(int); ok && n >= impossible {
 		return "impossible"
 	}
-	return strings.Replace(printer.Sprintf("%d", n), ",", "_", -1)
+	return strings.ReplaceAll(printer.Sprintf("%d", n), ",", "_")
 }
 
 func (w what) On() bool {

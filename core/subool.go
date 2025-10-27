@@ -22,7 +22,7 @@ type SuBool bool
 var _ Value = (*SuBool)(nil)
 
 func (b SuBool) ToInt() (int, bool) {
-	return 0, b == false //nolint:gosimple
+	return 0, b == false //nolint
 }
 
 func (b SuBool) IfInt() (int, bool) {
@@ -30,7 +30,7 @@ func (b SuBool) IfInt() (int, bool) {
 }
 
 func (b SuBool) ToDnum() (dnum.Dnum, bool) {
-	return dnum.Zero, b == false //nolint:gosimple
+	return dnum.Zero, b == false //nolint
 }
 
 func (SuBool) ToContainer() (Container, bool) {

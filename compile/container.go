@@ -32,8 +32,8 @@ func (cgMaker) mkObject(empty bool) container {
 }
 func (cgMaker) mkRecord(empty bool) container {
 	if empty {
-        return EmptyRecord
-    }
+		return EmptyRecord
+	}
 	return NewSuRecord()
 }
 func (cgMaker) mkRecOrOb(rec container) container {
@@ -163,9 +163,10 @@ var _ Value = (*astContainer)(nil)
 
 func (c *astContainer) String() string {
 	style := []string{"#(", ", ", ")"}
-	if c.which == "Record" {
+	switch c.which {
+	case "Record":
 		style = []string{"#{", ", ", "}"}
-	} else if c.which == "Class" {
+	case "Class":
 		style = []string{c.base + " {\n", "\n", "\n}"}
 	}
 	var sb strings.Builder

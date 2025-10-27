@@ -428,7 +428,7 @@ func (ck *Check) block(b *ast.Block, init set) set {
 	allInit := map[string]int{}
 	allUsed := map[string]struct{}{}
 	nUsedParams := 0
-	for _, p := range b.Function.Params {
+	for _, p := range b.Params {
 		id := p.Name.ParamName()
 		if !p.Unused {
 			nUsedParams++
@@ -453,7 +453,7 @@ func (ck *Check) block(b *ast.Block, init set) set {
 	init = append(before, after[len(before)+nUsedParams:]...)
 
 	// detect unused params
-	for _, p := range b.Function.Params {
+	for _, p := range b.Params {
 		if !p.Unused {
 			id := p.Name.ParamName()
 			if _, ok := ck.AllUsed[id]; !ok {
@@ -464,7 +464,7 @@ func (ck *Check) block(b *ast.Block, init set) set {
 	}
 
 	// remove params
-	for _, p := range b.Function.Params {
+	for _, p := range b.Params {
 		id := p.Name.ParamName()
 		delete(ck.AllInit, id)
 		delete(ck.AllUsed, id)

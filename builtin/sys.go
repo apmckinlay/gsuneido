@@ -55,7 +55,7 @@ func GetTempFileName(path, prefix Value) Value {
 	}
 	filename := f.Name()
 	f.Close()
-	filename = strings.Replace(filename, `\`, `/`, -1)
+	filename = strings.ReplaceAll(filename, `\`, `/`)
 	return SuStr(filename)
 }
 

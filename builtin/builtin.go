@@ -116,7 +116,7 @@ func method(f any, p string) any {
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}
 	case func(th *Thread, as *ArgSpec, this Value, args []Value) Value:
 		// params are just for documentation
-		meths[name] = &SuBuiltinMethodRaw{Fn: f, 
+		meths[name] = &SuBuiltinMethodRaw{Fn: f,
 			BuiltinParams: BuiltinParams{ParamSpec: params(p)}}
 	default:
 		Fatal("invalid builtin function", name)

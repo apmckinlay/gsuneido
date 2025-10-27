@@ -240,7 +240,7 @@ func (ob *SuInstance) CompareAndSet(key, newval, oldval Value) bool {
 		defer ob.Unlock()
 	}
 	// only looks at instance itself, not parent classes
-	if x, _ := ob.Data[ToStr(key)]; x == oldval { // intentionally ==
+	if x := ob.Data[ToStr(key)]; x == oldval { // intentionally ==
 		ob.put(key, newval)
 		return true
 	}

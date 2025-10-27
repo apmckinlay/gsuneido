@@ -155,7 +155,7 @@ func tblname(nrecs, rsize int) string {
 func mkschema(nrecs, rsize int) string {
 	name := tblname(nrecs, rsize)
 	s := " (_a, _b, _c, _d, _e, _f, _g, _h, _i, _j) key(_a)"
-	s = name + strings.Replace(s, "_", name+"_", -1)
+	s = name + strings.ReplaceAll(s, "_", name+"_")
 	return s
 }
 

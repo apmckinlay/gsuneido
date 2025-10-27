@@ -92,7 +92,7 @@ func TestSample(t *testing.T) {
 	test(8)
 }
 
-func (sk *Sketch[T]) print() {
+func (sk *Sketch[T]) Print() {
 	fmt.Println("Sketch count:", sk.count, "levels:", len(sk.levels))
 	for h, level := range sk.levels {
 		fmt.Println("  level", h, "capacity:", caps[h],

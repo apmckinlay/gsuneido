@@ -178,7 +178,7 @@ func (c *conn) reader(handler func(uint32, []byte)) {
 			break
 		}
 		assert.That(n == size)
-		if hdr[8] == 0 {
+		if hdr[8] == 0 { //nolint
 			partial[sessionId] = buf
 		} else if hdr[8] == 1 {
 			delete(partial, sessionId)

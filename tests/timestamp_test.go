@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/dbms"
@@ -27,7 +26,7 @@ func TestTimestamp(t *testing.T) {
 	var wg sync.WaitGroup
 	for range 8 {
 		wg.Go(func() {
-			var th core.Thread
+			var th Thread
 			th.SetDbms(&dbms.DbmsLocal{})
 			var ts Value
 			for range 100 {

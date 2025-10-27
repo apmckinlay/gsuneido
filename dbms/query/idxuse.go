@@ -64,7 +64,7 @@ func idxUseWrite(iu map[string]int) {
 	defer f.Close()
 	w := bufio.NewWriter(f)
 	for k, v := range iu {
-		w.WriteString(fmt.Sprintf("%d\t%s\n", v, k))
+		fmt.Fprintf(w, "%d\t%s\n", v, k)
 	}
 	if err := w.Flush(); err != nil {
 		log.Println("ERROR: writing idxuse:", err)

@@ -122,7 +122,6 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 		func(v Value) string { return Pack(v.(Packable)) })
 	switch dir {
 	case Strat:
-		hdr = &Header{} // non-nil to indicate fast mode
 		_, strarg, _ = getIndex(th, tran, tbl, flds, packed, dir)
 		if strarg == "" {
 			return nil, nil, ""

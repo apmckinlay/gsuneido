@@ -63,8 +63,6 @@ func TestRandomConcurrentTransactions(t *testing.T) {
 	db.MustCheck()
 }
 
-var nreadonly, nabort1of int
-
 func TestRandomSingleThreadTransactions(t *testing.T) {
 	const numRecords = 10
 

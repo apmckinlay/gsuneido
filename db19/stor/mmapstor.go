@@ -32,9 +32,10 @@ const mmapChunkSize = 64 * 1024 * 1024 // 64 mb
 func MmapStor(filename string, mode Mode) (*Stor, error) {
 	var perm os.FileMode
 	flags := os.O_RDONLY
-	if mode == Update {
+	switch mode {
+	case Update:
 		flags = os.O_RDWR
-	} else if mode == Create {
+	case Create:
 		perm = 0666
 		flags = os.O_CREATE | os.O_TRUNC | os.O_RDWR
 	}
