@@ -11,7 +11,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// zstrArg returns a nul terminated copy of a string as unsafe.Pointer
+// zstrArg returns a nul terminated copy of a string as *byte
 func zstrArg(v Value) *byte {
 	// NOTE: don't change this to return uintptr or unsafe.Pointer
 	// Conversion from pointer to uintptr must be in the SyscallN argument.
