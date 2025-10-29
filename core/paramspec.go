@@ -133,7 +133,7 @@ type eqps interface{ equalParamSpec(*ParamSpec) bool }
 
 func (ps *ParamSpec) Compare(other Value) int {
 	if cmp := cmp.Compare(ordOther, Order(other)); cmp != 0 {
-		return cmp
+		return cmp * 2
 	}
 	return 0 // ???
 }

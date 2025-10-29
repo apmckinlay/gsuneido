@@ -98,7 +98,7 @@ func (ValueBase[E]) Hash2() uint64 {
 }
 
 func (ValueBase[E]) Compare(Value) int {
-	panic(typeName[E]() + " compare not implemented")
+	panic(typeName[E]() + " not comparable")
 }
 
 func (ValueBase[E]) Call(*Thread, Value, *ArgSpec) Value {
