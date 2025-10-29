@@ -435,7 +435,7 @@ var _ = Global.Builtin("ACCEL",
 
 type stAccel struct {
 	fVirt byte
-	pad   byte
+	_     byte
 	key   int16
 	cmd   int16
 }
@@ -452,7 +452,6 @@ func accel(_ *Thread, args []Value) Value {
 		ac := (*stAccel)(toptr(a))
 		ob := &SuObject{}
 		ob.Put(nil, SuStr("fVirt"), IntVal(int(ac.fVirt)))
-		ob.Put(nil, SuStr("pad"), IntVal(int(ac.pad)))
 		ob.Put(nil, SuStr("key"), IntVal(int(ac.key)))
 		ob.Put(nil, SuStr("cmd"), IntVal(int(ac.cmd)))
 		return ob
@@ -460,7 +459,6 @@ func accel(_ *Thread, args []Value) Value {
 	// else ob => string
 	ac := stAccel{
 		fVirt: byte(getInt(arg, "fVirt")),
-		pad:   byte(getInt(arg, "pad")),
 		key:   int16(getInt(arg, "key")),
 		cmd:   int16(getInt(arg, "cmd")),
 	}

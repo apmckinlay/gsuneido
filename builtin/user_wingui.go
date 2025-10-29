@@ -393,12 +393,36 @@ func CallWindowProc(th *Thread, a []Value) Value {
 
 // dll User32:CreateAcceleratorTable([in] string lpaccel, long cEntries) pointer
 var createAcceleratorTable = user32.MustFindProc("CreateAcceleratorTableA").Addr()
-var _ = builtin(CreateAcceleratorTable, "(lpaccel, cEntries)")
+var _ = builtin(CreateAcceleratorTable, "(accels, unused = 0)")
 
-func CreateAcceleratorTable(a, b Value) Value {
-	rtn, _, _ := syscall.SyscallN(createAcceleratorTable,
-		uintptr(unsafe.Pointer(zstrArg(a))),
-		intArg(b))
+func CreateAcceleratorTable(a, _ Value) Value {
+	var accels []stAccel
+	if s, ok := a.ToStr(); ok { // DEPRECATED
+		assert.That(len(s)%int(nAccel) == 0)
+		n := len(s) / int(nAccel)
+		assert.That(n != 0)
+		accels = make([]stAccel, n)
+		copy(unsafe.Slice((*byte)(unsafe.Pointer(&accels[0])), len(s)), s)
+	} else if ob, ok := a.ToContainer(); ok {
+		n := ob.ListSize()
+		accels = make([]stAccel, n)
+		for i := range n {
+			x := ob.ListGet(i)
+			accels[i] = stAccel{
+				fVirt: byte(getInt(x, "fVirt")),
+				key:   int16(getInt(x, "key")),
+				cmd:   int16(getInt(x, "cmd")),
+			}
+		}
+	} else {
+		panic("CreateAcceleratorTable: invalid argument")
+	}
+	rtn, _, err := syscall.SyscallN(createAcceleratorTable,
+		uintptr(unsafe.Pointer(&accels[0])),
+		uintptr(len(accels)))
+	if rtn == 0 || err != 0 {
+		log.Println("CreateAcceleratorTable GetLastError:", err)
+	}
 	return intRet(rtn)
 }
 
