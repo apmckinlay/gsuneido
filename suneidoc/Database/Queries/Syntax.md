@@ -1,0 +1,25 @@
+### Syntax
+
+*request* =
+<pre>
+query
+query <b>sort</b> [ <b>reverse</b> ] column [ , ... ]
+</pre>
+
+*query* =
+<pre>
+table
+history(table)
+query <b>where</b> expression
+query <b>project</b> columns
+query <b>remove</b> columns
+query <b>join</b> query
+query <b>times</b> query
+query <b>union</b> query
+query <b>intersect</b> query
+query <b>minus</b> query
+query <b>rename</b> column <b>to</b> column [ , ... ]
+query <b>extend</b> column [ <b>=</b> expression ] [ , ... ]
+query <b>summarize</b> columns, [ column <b>=</b> ] function column [ , ... ]
+( query )
+</pre>

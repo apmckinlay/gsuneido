@@ -1,0 +1,53 @@
+## Foreign Keys
+
+A foreign key consists of one or more columns in one table that uniquely identify a row in another table, 
+i.e. are a key in the other table.
+
+Foreign keys are specified on indexes or keys.  For example:
+
+``` suneido
+index (customer_id) in customers
+```
+
+If the column names are different in the target table they can be specified:
+
+``` suneido
+index (customer_id) in customers (id)
+```
+
+Rows in the source table must have a matching row in the target table.
+
+Adding a row to the source table will fail if the target table does not have a matching row.  
+Likewise, updating a source row will fail if the new row does not have a matching target.
+
+**Note:** Empty foreign keys are allowed even if the target table does not have a matching row.
+
+Adding a foreign key will fail if the source rows do not have matching rows in the target table.
+
+A foreign key also places restrictions on the target table.  
+Removing or updating a target row will fail if there are matching source rows.  
+
+Alternately, if cascade is specified, e.g.
+
+``` suneido
+index (customer_id) in customers (id) cascade
+```
+
+then removing or updating a target row will remove or update matching source rows.
+
+Cascade can be limited to updates, e.g.
+
+``` suneido
+index (customer_id) in customers (id) cascade update
+```
+
+Cascade would normally be used when the source rows *belong *to target rows.  
+For example, invoice and their line items, where if you delete the invoice you also want to delete the line items, 
+and if you update the invoice number, you also want to update it on the line items.
+
+Cascading updates but not deletes can be used where you want the source rows 
+to stay associated with the target rows through updates, but you don't want to automatically delete.  
+For example, customers and a transaction history, 
+where if you change the customer id you want to update it on the transactions, 
+but you don't want to allow deleting a customer if there is history.  
+(You'd have to delete the history before you could delete the customer.)

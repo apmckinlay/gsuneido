@@ -1,0 +1,73 @@
+## Introduction
+
+User interfaces in Suneido are constructed from *controls*. Controls are responsible for drawing themselves so windows do not have a "paint" method and they are responsible for responding to input from the user. This is similar to the way Windows dialogs work. However, the layout of controls is done using [Boxes and Stretch](<../Appendix/Patterns/Boxes and Stretch.md>) rather than using a dialog editor.
+
+Suneido controls include standard Windows controls such as buttons and combo boxes, 
+common controls such as ListView and TreeView, as well as custom Suneido controls.
+New controls can easily be written, either based on existing Windows controls, or from scratch.
+
+Unlike Windows controls, Suneido controls are fully *encapsulated*. Windows notifications which would normally be sent to parent windows are reflected back to the controls. All output from controls is done by sending messages to controllers. This encapsulation makes it easier to combine controls since they do not interfere with each other. Keeping controllers separate from the visual controls also simplifies the system and allows more reuse.
+
+Here is a very simple Window with a single Static control that displays "Hello world!"
+
+``` suneido
+Window(#(Static, "Hello world!"))
+```
+
+Multiple controls can be included using Vert and Horz:
+
+``` suneido
+Window(#(Vert
+    (Static "Hello world!")
+    (Horz (Button "OK") (Button "Cancel"))
+    ))
+```
+
+More complicated user interfaces use *Controllers *to handle interaction with the user.
+
+``` suneido
+Window(Controller
+    {
+    Title: "Simple Editor"
+    Commands:
+        (
+        (Cut,       "Ctrl+X",   "Cut the selected text to the clipboard")
+        (Copy,      "Ctrl+C",   "Copy the selected text to the clipboard")
+        (Paste,     "Ctrl+V",   "Insert the contents of the clipboard")
+        )
+    Menu:
+        (
+        ("&Edit",
+            "Cu&t", "&Copy", "&Paste")
+        )
+    Controls:
+        (Vert
+            (Toolbar, Cut, Copy, Paste)
+            Editor)
+    })
+```
+
+Note:
+
+-	text to go in the window's title bar is defined with Title:
+-	commands must be defined, with their accelerator keys and status bar explanations, before being used on menus or toolbars
+-	the editor automatically stretches to fill the window, initially as well as when the window is resized
+
+
+Here is a layout (non-functional) for a debugger window:
+
+``` suneido
+#(VertSplit
+    (Tabs
+        (Explorer (LibTreeModel) (Scintilla) Tab: Source)
+        (Editor Tab: Output)
+        ystretch: 3)
+    (HorzSplit
+        (ListBox,
+            "x       123",
+            "n       456",
+            "list    (1, 2, 3)")
+        (ListBox, "one", "two", "three", "four")
+        )
+    )
+```

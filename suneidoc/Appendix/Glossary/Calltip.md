@@ -1,0 +1,3 @@
+### Calltip
+
+A small pop-up window showing the parameters that is automatically displayed while you are typing the arguments to a function.

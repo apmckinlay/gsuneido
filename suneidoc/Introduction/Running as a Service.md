@@ -1,0 +1,21 @@
+## Running as a Service
+
+If you are running a production server on Windows, you probably want to run it as a Windows "service". That way it will keep running even if you log off on the server. You can also set it to start automatically when the server boots up. And it will shut down properly when the server is shut down. Suneido automatically detects when it is running as a service.
+
+You can use the Windows sc command to manage services. For example:
+
+``` suneido
+sc create myservice binpath= "c:/suneido/gsport.exe -s server.go"
+
+sc start myservice
+
+sc stop myservice
+
+sc delete myservice
+```
+
+You can set other options either with sc command line options, or by accessing the service properties through Windows.
+
+It is best to use the "portable" exe which does not include any Windows UI code.
+
+When running as a service the current directory is set to the exe directory and stdout and stderr are appended to error.log

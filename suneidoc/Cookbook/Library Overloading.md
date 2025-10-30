@@ -1,0 +1,62 @@
+## Library Overloading
+
+**Category:** Coding
+
+**Problem**
+
+You want to modify the behavior of some code *without modifying the code in the original library*.
+
+**Ingredients**
+
+library overloading, inheritance, reference *previous* definition
+
+**Recipe**
+
+The object-oriented solution is to use inheritance - derive a new class from the existing one and then override one or more methods. For functions, you would simply define a new function that might call the original. These approaches can, of course, be used in Suneido.
+
+However, this approach means the modified class or function has a different name than the original. Which often means you have to change everywhere that it's used. Since the uses are often within the original library that you don't want to modify, this isn't so good.
+
+Suneido has two features that allow a better solution:
+
+**library overloading** simply means libraries used "later" can redefine things used in "earlier" libraries. So instead of giving the modified version a new name, you can give it the same name. This means you don't have to change all the uses - a big advantage. Of course, when you use this feature, it becomes important to use the libraries in the correct order.
+
+However, now that you've redefined the original name, how do you "reuse" the existing definition? (e.g. to inherit from it or call it) For this Suneido lets you **reference the *previous* definition** by preceding the name with an underscore. For example you might redefine Func as:
+
+``` suneido
+function (args)
+    {
+    ... // add some pre-processing
+    result = _Func(args)
+    ... // add some post-processing
+    return result
+    }
+```
+
+Or you might redefine MyClass to inherit from the original as follows:
+
+``` suneido
+_MyClass // inherit from the "previous" definition of MyClass
+    {
+    Color: 'green' // redefine a member
+    New(args)
+        {
+        super(args)
+        ... // extra initialization
+        }
+    Meth(args)
+        {
+        ... // add some pre-processing
+        result = super.Meth(args)
+        ... // add some post-processing
+        return result
+        }
+    }
+```
+
+**Discussion**
+
+This kind of modification isn't always as easy as it might seem from the above. Perhaps you only want to do part of what the original function does. Or maybe you need access to private members of the original class. The temptation in these situations is to simply copy the original definition to your library and then modify it. The problem with this approach is that your code is now totally disconnected from the original. If a new version of the original library comes out, at the best you won't get improvements, at the worst your code won't work anymore. The less code you "copy" the better. You want to make the minimum change that will satisfy your requirements.
+
+Sometimes, the best solution requires re-factoring the original library. You might split a function into several pieces, or add accessor methods for private members of a class. Of course, you're probably thinking that modifying the original was exactly what we were trying to avoid! The difference is that refactoring doesn't change the original behavior, just its implementation. So if the original library came from someone else, you could send them your refactoring changes to incorporate into future releases, without fear of breaking anything (assuming you did the refactoring correctly). Or in some cases, the original library might be your own, that you didn't want to modify because other applications or customers are using it. In this case, again there is no problem incorporating the refactoring.
+
+See also: [Libraries](<../Language/Libraries.md>)

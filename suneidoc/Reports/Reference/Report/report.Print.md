@@ -1,0 +1,5 @@
+#### report.Print
+
+``` suneido
+( dc )
+```

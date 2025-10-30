@@ -1,0 +1,50 @@
+### [TrackBarControl](<../TrackBarControl.md>) - Example
+
+``` suneido
+Window(Controller
+    {
+    Title: 'test trackbar'
+    Xstretch:0
+    New()
+        {
+         .Vert.Trb1.SetRange(1,80)
+         .Vert.Trb1.SetTic(5)
+         .Vert.Trb1.SetTicFreq(5,1)
+         .Vert.Trb1.SetSel(11,20)
+        }
+    Commands:
+        ((Exit,"Ctrl+X"))
+    Controls:
+        (Vert
+            Skip
+            (TrackBar name: 'Trb1', tip:'TrackBar 1', xmin:200, start:50)
+            (Skip 3)
+            (Static name: 'St1' xstretch:1 justify:"CENTER")
+            Skip
+            (Horz Fill (TrackBar name: 'Trb2', tickmarks: 'TOP', tip: 'TrackBar 2', ticfreq: #(10,0)) Fill)
+            (Static name: 'St2' xstretch: 1 justify: "CENTER")
+            Skip
+            (Horz name: 'Hz3'
+            Skip
+                (TrackBar name: 'Trb3' vert:, tickmarks: 'LEFT', ymin:50)
+                (Skip 20)
+                (TrackBar name: 'Trb4' vert:, tickmarks: 'BOTH', 
+                    start: 50, ticfreq: #(10,1), xmin: 120, ymin:50)
+                (Skip 20)
+                (TrackBar name: 'Trb5' vert:, ticfreq: #(25,1),
+                    start: 100, xmin: 140, ymin:50)
+            )
+            Skip
+        )
+    Startup()
+        { .Window.Center() }
+    NewValue(value, source)
+        {
+        if (source.Name is 'Trb1') 
+            .Vert.St1.Set('selected '$value)
+        if (source.Name is 'Trb2')
+            .Vert.St2.Set('selected '$value)
+        }
+    }
+)
+```

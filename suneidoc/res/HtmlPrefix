@@ -8,11 +8,24 @@ p,li,ul { margin-top: 0; margin-bottom: 6pt; }
 pre { margin-left: 30px; margin-top: 0; margin-bottom: 6pt; }
 table pre { margin: 0; }
 dt { font-weight: bold; }
-dl.code dt { font-size: 90%; }
+dl.code dt, dt code { font-size: 90%; }
 pre, code, dl.code dt { font-family: Consolas, monospace; }
 dd { margin-bottom: 6pt; margin-left: 30px; } /* same margin as pre */
 table { margin-bottom: 6pt; }
+tr { vertical-align: top; }
+div.table-full-width {
+	table { width: 100%; }
+}
+div.table-half-width {
+	table { width: 50%; }
+}
+div.table-style {
+	table { border: 1px solid black; }
+	th { border: 1px solid black; background-color: #c0c0c0; }
+	td { border: 1px solid black; }
+}
 img { margin-bottom: 6pt; }
+dt img { margin-bottom: 0px; vertical-align: bottom; }
 a:hover { background-color: lightgrey; }
 span.deprecated { color: red; font-size: 80%; font-weight: bold; font-variant: small-caps; }
 span.builtin { color: green; font-size: 80%; font-weight: bold; font-variant: small-caps; }
@@ -40,12 +53,12 @@ function screenshot(index)
     {
     if (document.getElementById("ss" + index).style.height == "auto")
         {
-        document.getElementById("ss" + index).style.styleFloat = "right"
+        document.getElementById("ss" + index).style.float = "right"
         document.getElementById("ss" + index).style.height = "150px"
         }
     else
         {
-        document.getElementById("ss" + index).style.styleFloat = "none"
+        document.getElementById("ss" + index).style.float = "none"
         document.getElementById("ss" + index).style.height ="auto"
         }
     }

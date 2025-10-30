@@ -1,0 +1,18 @@
+### Using Window.ResizeToMin
+
+``` suneido
+Controller
+    {
+    Xmin: 300
+    Ymin: 200
+    Xstretch: 1
+    Ystretch: 1
+    New()
+        {
+        .Window.ResizeToMin()
+        }
+    ...
+    }
+```
+
+Normally, a window with xstretch and ystretch will initially open at the default window size (based on your screen resolution). If you want it to open at its minimum size (xmin and ymin), yet still be stretchable, use Window.ResizeToMin.

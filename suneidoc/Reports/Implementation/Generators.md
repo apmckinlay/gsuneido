@@ -1,0 +1,17 @@
+### Generators
+
+Generators are formats that produce a sequence of output items.
+They are used when it's not practical to compose all the items into a container.
+For example, the Query format is a generator 
+because it wouldn't be possible to read all the results of a query at once.
+
+Generators are identified by a Generator?( ) method that returns True.
+They have a Next method that returns items 
+and signals the end of the items by return False.
+They can also have a Header method 
+that returns an item that will be placed at the start of each page (or False for no Header).  
+
+Generators can be nested.
+For example, `Library `is actually both an output format and a generator.
+Query generates a Library format for each record 
+and Library generates a Code format for each line of source code.

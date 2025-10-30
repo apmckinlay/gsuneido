@@ -1,0 +1,7 @@
+#### popclient.List
+
+``` suneido
+(i = false) => string or false
+```
+
+If i is a message number a one-line response is returned which includes the message index and size in octets. If i is false then there will be a multi-line return value with one line for each message.  The information displayed for each message is the index of the message and the size in octets.  If the server returns an error for any reason, then false is returned.
