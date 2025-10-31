@@ -17,7 +17,7 @@ import (
 
 type Extend struct {
 	t        QueryTran
-	ctx      ast.Context
+	ctx      ast.RowContext
 	cols     []string
 	exprs    []ast.Expr
 	exprCols []string // columns used in exprs

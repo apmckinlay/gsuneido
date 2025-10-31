@@ -30,6 +30,7 @@ type Schema struct {
 type Index struct {
 	Ixspec  ixkey.Spec
 	Columns []string
+	Fields  []string // Fields includes BestKey for non-unique indexes
 	// BestKey is the key used to make indexes ('i' and 'u') unique.
 	// A key used as BestKey must not be dropped.
 	// BestKey must be persisted (unlike Primary and ConstainsKey)

@@ -6,6 +6,7 @@ package query
 import (
 	"fmt"
 	"math"
+	"math/bits"
 
 	"slices"
 
@@ -14,6 +15,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -37,7 +39,7 @@ type Where struct {
 	// selOrg and selEnd are set by Select
 	selOrg string
 	selEnd string
-	ctx    ast.Context
+	rowCtx ast.RowContext
 
 	selectCols []string
 	selectVals []string
@@ -61,6 +63,9 @@ type Where struct {
 	exprMore bool
 	optInited
 	optimized bool
+
+	ixCtx  ixContext
+	ixExpr ast.Expr
 }
 
 type optInited byte
@@ -72,8 +77,9 @@ const (
 )
 
 type whereApproach struct {
-	index []string
-	cost  Cost
+	index  []string
+	cost   Cost
+	idxSel bool
 }
 
 func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
@@ -106,7 +112,7 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 func (w *Where) SetTran(t QueryTran) {
 	w.t = t
 	w.source.SetTran(t)
-	w.ctx.Tran = nil
+	w.rowCtx.Tran = nil
 }
 
 func (w *Where) String() string {
@@ -532,14 +538,14 @@ func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cos
 		return filterFixCost, filterVarCost, nil
 	}
 	// where on table
-	cost, idx := w.bestIndex(index, frac)
-	if cost >= impossible {
+	cost, app := w.bestIndex(index, frac)
+	if app == nil {
 		// only use the filter if there are no possible idxSel
 		// fmt.Println("Where opt", index, frac, "= filter", filterFixCost, filterVarCost)
 		return filterFixCost, filterVarCost, nil
 	}
 	// fmt.Println("Where opt", index, frac, "= ", idx, cost)
-	return 0, cost, whereApproach{index: idx, cost: cost}
+	return 0, cost, app
 }
 
 // exprFalse checks if any expressions folded to false
@@ -582,21 +588,38 @@ func (w *Where) optInit() {
 
 // bestIndex returns the best (lowest cost) index with an idxSel
 // that satisfies the required order (or impossible)
-func (w *Where) bestIndex(order []string, frac float64) (Cost, []string) {
-	best := newBestIndex()
+func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
+	if w.singleton {
+		cost := w.source.lookupCost()
+		return cost, &whereApproach{index: w.idxSels[0].index, 
+			cost: cost, idxSel: true}
+	}
+	
+	bestSelect := newBestIndex()
+	bestFilter := newBestIndex()
 	for _, idx := range w.source.Indexes() {
 		if ordered(idx, order, w.fixed) {
 			if is := w.getIdxSel(idx); is != nil {
-				varcost := w.source.lookupCost() * len(is.ptrngs)
-				tblFixCost, tblVarCost, _ :=
-					w.tbl.optimize(CursorMode, idx, frac*is.frac)
-				assert.That(tblFixCost == 0)
-				varcost += tblVarCost
-				best.update(idx, 0, varcost)
+				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac*is.frac)
+				assert.That(fixCost == 0)
+				varCost += w.source.lookupCost() * len(is.ptrngs)
+				bestSelect.update(idx, 0, varCost)
+			} else if ncols := w.indexFilter(idx); ncols > 0 {
+				// unknown selectivity so estimate .6 ^ ncols
+				f := math.Pow(.6, float64(ncols)) // ???
+				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac*f)
+				assert.That(fixCost == 0)
+				bestFilter.update(idx, 0, varCost)
 			}
 		}
 	}
-	return best.varcost, best.index
+	if min(bestSelect.varcost, bestFilter.varcost) >= impossible {
+		return impossible, nil
+	}
+	if bestSelect.varcost < bestFilter.varcost {
+		return bestSelect.varcost, &whereApproach{index: bestSelect.index, cost: bestSelect.varcost, idxSel: true}
+	}
+	return bestFilter.varcost, &whereApproach{index: bestFilter.index, cost: bestFilter.varcost, idxSel: false}
 }
 
 func (w *Where) getIdxSel(index []string) *idxSel {
@@ -609,23 +632,67 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 	return nil
 }
 
+// indexFilter returns the number of index columns
+// that a portion of the expr can filter.
+// Bitset limits size of index to 64 columns
+// which is ok since indexes are generally just a few columns.
+func (w *Where) indexFilter(index []string) int {
+	fields := w.tbl.IndexCols(index)
+	var used uint
+outer:
+	for _, e := range w.expr.Exprs {
+		ecols := e.Columns()
+		var u uint
+		for _, col := range ecols {
+			i := slices.Index(fields, col)
+			if i < 0 {
+				continue outer
+			}
+			u |= 1 << i
+		}
+		used |= u
+	}
+	return bits.OnesCount(used)
+}
+
 func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTran) {
 	w.optimized = true
 	if w.conflict {
 		return
 	}
-	if app != nil {
-		wapp := app.(whereApproach)
-		idx := wapp.index
-		w.tbl.SetIndex(idx)
-		w.idxSel = w.getIdxSel(idx)
-		w.tbl.setCost(frac*w.idxSel.frac, 0, wapp.cost)
-		w.idxSelPos = -1
-	} else { // filter
+	if app == nil { // filter
 		w.source = SetApproach(w.source, index, frac, tran)
+	} else {
+		app := app.(*whereApproach)
+		idx := app.index
+		w.tbl.SetIndex(idx)
+		if app.idxSel {
+			w.idxSel = w.getIdxSel(idx)
+			w.tbl.setCost(frac*w.idxSel.frac, 0, app.cost)
+			w.idxSelPos = -1
+		} else {
+			w.ixCtx.cols = w.tbl.IndexCols(idx)
+			w.ixExpr = w.exprsFor(w.ixCtx.cols)
+			w.tbl.setCost(frac, 0, app.cost)		
+		}
 	}
 	w.header = w.source.Header()
-	w.ctx.Hdr = w.header
+	w.rowCtx.Hdr = w.header
+}
+
+func (w *Where) exprsFor(cols []string) ast.Expr {
+	var exprs []ast.Expr
+	for _, e := range w.expr.Exprs {
+		if set.Subset(cols, e.Columns()) {
+			exprs = append(exprs, e)
+		}
+	}
+	if len(exprs) == 0 {
+		return nil
+	} else if len(exprs) == 1 {
+		return exprs[0]
+	}
+	return &ast.Nary{Tok: tok.And, Exprs: exprs}
 }
 
 // execution --------------------------------------------------------
@@ -655,11 +722,17 @@ func (w *Where) Get(th *Thread, dir Dir) Row {
 func (w *Where) get(th *Thread, dir Dir) Row {
 	if w.idxSel == nil {
 		w.nIn++
-		return w.source.Get(th, dir)
+		if w.tbl == nil {
+			return w.source.Get(th, dir)
+		} else {
+			w.ixCtx.th = th
+			return w.tbl.GetFilter(dir, w.ixFilter)
+		}
 	}
 	for {
 		if w.idxSelPos != -1 && w.curPtrng.isRange() {
-			if row := w.tbl.Get(th, dir); row != nil {
+			w.ixCtx.th = th
+			if row := w.tbl.GetFilter(dir, w.ixFilter); row != nil {
 				w.nIn++
 				return row
 			}
@@ -678,6 +751,14 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 	}
 }
 
+func (w *Where) ixFilter(key string) bool {
+	if w.ixExpr == nil {
+		return true
+	}
+	w.ixCtx.key = key
+	return w.ixExpr.Eval(&w.ixCtx) == True
+}
+
 func (w *Where) filter(th *Thread, row Row) bool {
 	if row == nil {
 		return true
@@ -686,13 +767,13 @@ func (w *Where) filter(th *Thread, row Row) bool {
 		!singletonFilter(w.header, row, w.selectCols, w.selectVals) {
 		return false
 	}
-	if w.ctx.Tran == nil {
-		w.ctx.Tran = MakeSuTran(w.t)
+	if w.rowCtx.Tran == nil {
+		w.rowCtx.Tran = MakeSuTran(w.t)
 	}
-	w.ctx.Th = th
-	w.ctx.Row = row
-	defer func() { w.ctx.Th, w.ctx.Row = nil, nil }()
-	return w.expr.Eval(&w.ctx) == True
+	w.rowCtx.Th = th
+	w.rowCtx.Row = row
+	defer func() { w.rowCtx.Th, w.rowCtx.Row = nil, nil }()
+	return w.expr.Eval(&w.rowCtx) == True
 }
 
 func (w *Where) advance(dir Dir) bool {
@@ -838,7 +919,7 @@ func (w *Where) InCount() int {
 
 func (w *Where) Simple(th *Thread) []Row {
 	ast.Unraw(w.expr)
-	w.ctx.Hdr = w.header
+	w.rowCtx.Hdr = w.header
 	rows := w.source.Simple(th)
 	dst := 0
 	for _, row := range rows {
@@ -848,4 +929,30 @@ func (w *Where) Simple(th *Thread) []Row {
 		}
 	}
 	return rows[:dst]
+}
+
+//-------------------------------------------------------------------
+
+type ixContext struct {
+	th   *Thread
+	key  string
+	cols []string
+}
+
+func (c *ixContext) GetVal(id string) Value {
+	if ascii.IsUpper(id[0]) {
+		return Global.GetName(c.Thread(), id)
+	}
+	return Unpack(c.GetRaw(id))
+}
+
+func (c *ixContext) GetRaw(id string) string {
+	if len(c.cols) == 1 {
+		return c.key
+	}
+	return ixkey.Decode1(c.key, slices.Index(c.cols, id))
+}
+
+func (c *ixContext) Thread() *Thread {
+	return c.th
 }

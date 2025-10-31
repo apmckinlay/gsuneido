@@ -10,16 +10,15 @@ import (
 
 // Iterator traverses a range of a btree.
 type Iterator struct {
-	bt      *btree
-	rng     Range
-	tree    [maxLevels]treeIter // tree[0] is root
-	leaf    leafIter
-	state   iterState
-	buf     []byte
-	noRange bool // true if rng is iterator.All, bypasses checkRange
+	bt        *btree
+	rng       Range
+	tree      [maxLevels]treeIter // tree[0] is root
+	leaf      leafIter
+	state     iterState
+	noRange   bool // true if rng is iterator.All, bypasses checkRange
+	curKeySet bool
+	curKey    string
 }
-
-// var _ iface.Iter = (*Iterator)(nil)
 
 const maxLevels = 8
 
@@ -37,22 +36,16 @@ func (bt *btree) Iterator() iface.Iter {
 	return &Iterator{bt: bt, state: rewound, rng: iface.All, noRange: true}
 }
 
-// Key returns the current key or nil.
-// It returns an internal buffer which must be copied to be retained.
-func (it *Iterator) Keybs() []byte {
-	if it.state != within {
-		return nil
-	}
-	it.buf = it.leaf.key(it.buf)
-	return it.buf
-}
-
 // Key returns the current key or an empty string. It allocates.
 func (it *Iterator) Key() string {
 	if it.state != within {
 		return ""
 	}
-	return string(it.leaf.key(it.buf))
+	if !it.curKeySet {
+		it.curKey = it.leaf.key()
+		it.curKeySet = true
+	}
+	return it.curKey
 }
 
 // Offset returns the current offset or 0.
@@ -85,6 +78,7 @@ func (it *Iterator) HasCur() bool {
 // and Prev goes to the last key in the range
 func (it *Iterator) Rewind() {
 	it.state = rewound
+	it.curKeySet = false
 }
 
 // Range sets the range and rewinds the iterator
@@ -98,6 +92,7 @@ func (it *Iterator) Range(rng Range) {
 
 // Next advances the iterator to the next key in the range or sets eof.
 func (it *Iterator) Next() {
+	it.curKeySet = false
 	switch it.state {
 	case rewound:
 		it.SeekAll(it.rng.Org)
@@ -149,13 +144,14 @@ func (it *Iterator) nextLeaf() bool {
 
 // Prev moves the iterator to the previous key in the range or sets eof.
 func (it *Iterator) Prev() {
+	it.curKeySet = false
 	switch it.state {
 	case rewound:
 		it.SeekAll(it.rng.End)
 		if it.Eof() {
 			return // empty tree
 		}
-		if string(it.Key()) >= it.rng.End {
+		if it.leaf.key() >= it.rng.End {
 			it.prev()
 		}
 		it.checkRange() // need to check both bounds after seek
@@ -220,6 +216,7 @@ func (it *Iterator) Seek(key string) {
 // unless the btree is empty in which case it will be set to eof.
 // It does *not* apply the current range.
 func (it *Iterator) SeekAll(key string) {
+	it.curKeySet = false
 	bt := it.bt
 	off := bt.root
 	rightEdge := true

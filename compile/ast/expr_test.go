@@ -11,7 +11,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
 
-	"github.com/apmckinlay/gsuneido/compile/tokens"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -93,7 +92,7 @@ func BenchmarkEvalRaw(b *testing.B) {
 	}
 }
 
-func benchSetup() (Expr, *Context) {
+func benchSetup() (Expr, *RowContext) {
 	// a > b and a < c
 	e1 := &Binary{Tok: tok.Gt, Lhs: &Ident{Name: "a"}, Rhs: &Ident{Name: "b"}}
 	e2 := &Binary{Tok: tok.Lt, Lhs: &Ident{Name: "a"}, Rhs: &Ident{Name: "c"}}
@@ -103,7 +102,7 @@ func benchSetup() (Expr, *Context) {
 		Add(SuDnum{Dnum: dnum.FromFloat(45.6)}). // b
 		Add(SuDnum{Dnum: dnum.FromFloat(78.9)}). // c
 		Build()
-	ctx := &Context{
+	ctx := &RowContext{
 		Th:  &Thread{},
 		Hdr: SimpleHeader(testFlds),
 		Row: []DbRec{{Record: rec}},
@@ -135,7 +134,7 @@ func TestExpr_CanEvalRaw(t *testing.T) {
 	test(u)
 
 	b := &Binary{Lhs: i, Rhs: c}
-	for _, t := range []tokens.Token{tok.Is, tok.Isnt,
+	for _, t := range []tok.Token{tok.Is, tok.Isnt,
 		tok.Lt, tok.Lte, tok.Gt, tok.Gte} {
 		b.Tok = t
 		test(b)
@@ -191,7 +190,7 @@ func TestRawExpr(t *testing.T) {
 		Add(SuStr("foo")).  // e
 		Add(SuStr("bar")).  // f
 		Build()
-	ctx := &Context{
+	ctx := &RowContext{
 		Th:  &Thread{},
 		Hdr: SimpleHeader(testFlds),
 		Row: []DbRec{{Record: rec}},
@@ -237,11 +236,11 @@ func genRawExpr(d int) (e Expr) {
 		}
 		return &Unary{Tok: tok.LParen, E: genRawExpr(d)}
 	case 3:
-		t := []tokens.Token{tok.Is, tok.Isnt,
+		t := []tok.Token{tok.Is, tok.Isnt,
 			tok.Lt, tok.Lte, tok.Gt, tok.Gte}[rand.Intn(6)]
 		return &Binary{Lhs: genRawExpr(d), Tok: t, Rhs: genRawExpr(d)}
 	case 4:
-		t := []tokens.Token{tok.And, tok.Or}[rand.Intn(2)]
+		t := []tok.Token{tok.And, tok.Or}[rand.Intn(2)]
 		var exprs []Expr
 		for range 2 + rand.Intn(3) {
 			exprs = append(exprs, genRawBoolExpr(d))
@@ -283,11 +282,11 @@ func genRawBoolExpr(d int) (e Expr) {
 		}
 		return &Unary{Tok: tok.LParen, E: genRawBoolExpr(d)}
 	case 3:
-		t := []tokens.Token{tok.Is, tok.Isnt,
+		t := []tok.Token{tok.Is, tok.Isnt,
 			tok.Lt, tok.Lte, tok.Gt, tok.Gte}[rand.Intn(6)]
 		return &Binary{Lhs: genRawExpr(d), Tok: t, Rhs: genRawExpr(d)}
 	case 4:
-		t := []tokens.Token{tok.And, tok.Or}[rand.Intn(2)]
+		t := []tok.Token{tok.And, tok.Or}[rand.Intn(2)]
 		var exprs []Expr
 		for range 2 + rand.Intn(3) {
 			exprs = append(exprs, genRawBoolExpr(d))

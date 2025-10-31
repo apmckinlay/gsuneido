@@ -100,7 +100,7 @@ func (a *updateAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	}
 	hdr := q.Header()
 	tran := MakeSuTran(ut)
-	ctx := ast.Context{Th: th, Tran: tran, Hdr: hdr}
+	ctx := ast.RowContext{Th: th, Tran: tran, Hdr: hdr}
 	n := 0
 	prev := uint64(0)
 	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {

@@ -31,7 +31,7 @@ func TestExprEval(t *testing.T) {
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		// fmt.Println(expr)
 		assert.This(expr.CanEvalRaw(hdr.Physical())).Is(raw)
-		result := expr.Eval(&ast.Context{Th: th, Row: row, Hdr: hdr})
+		result := expr.Eval(&ast.RowContext{Th: th, Row: row, Hdr: hdr})
 		assert.T(t).Msg(src).This(result.String()).Is(expected)
 	}
 	xtest := func(src string, expected string) {
@@ -42,7 +42,7 @@ func TestExprEval(t *testing.T) {
 		// fmt.Println(expr)
 		assert.This(expr.CanEvalRaw(hdr.Columns)).Is(raw)
 		assert.This(func() {
-			expr.Eval(&ast.Context{Th: th, Row: row, Hdr: hdr})
+			expr.Eval(&ast.RowContext{Th: th, Row: row, Hdr: hdr})
 		}).Panics(expected)
 	}
 	raw = false
@@ -96,7 +96,7 @@ func BenchmarkEval(b *testing.B) {
 	row, hdr := mkrow()
 	p := NewQueryParser("x is 123.456", nil, nil)
 	expr := p.Expression()
-	ctx := &ast.Context{Row: row, Hdr: hdr}
+	ctx := &ast.RowContext{Row: row, Hdr: hdr}
 	for b.Loop() {
 		expr.Eval(ctx)
 	}
@@ -107,7 +107,7 @@ func BenchmarkEval_raw(b *testing.B) {
 	p := NewQueryParser("x is 123.456", nil, nil)
 	expr := p.Expression()
 	assert.That(expr.CanEvalRaw(hdr.Columns))
-	ctx := &ast.Context{Row: row, Hdr: hdr}
+	ctx := &ast.RowContext{Row: row, Hdr: hdr}
 	for b.Loop() {
 		expr.Eval(ctx)
 	}

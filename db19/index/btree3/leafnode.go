@@ -334,8 +334,9 @@ func (it *leafIter) eof() bool {
 	return it.i < 0 || it.i >= it.nd.nkeys()
 }
 
-func (it *leafIter) key(buf []byte) []byte {
-	return append(append(buf[:0], it.nd.prefix()...), it.nd.suffix(it.i)...)
+// key returns the current key, it allocates
+func (it *leafIter) key() string {
+	return it.nd.key(it.i)
 }
 
 func (it *leafIter) prefix() []byte {

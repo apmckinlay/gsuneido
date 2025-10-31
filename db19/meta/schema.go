@@ -133,10 +133,11 @@ func (ts *Schema) Ixspecs(nold int) {
 			ix.Ixspec.Fields2 = ts.colsToFlds(cols)
 			fallthrough
 		case 'k':
+			ix.Fields = ix.Columns
 			ix.Ixspec.Fields = ts.colsToFlds(ix.Columns)
 		case 'i':
-			cols := slc.With(ix.Columns, difference(ix.BestKey, ix.Columns)...)
-			ix.Ixspec.Fields = ts.colsToFlds(cols)
+			ix.Fields = slc.With(ix.Columns, difference(ix.BestKey, ix.Columns)...)
+			ix.Ixspec.Fields = ts.colsToFlds(ix.Fields)
 		default:
 			panic("Ixspecs invalid mode")
 		}

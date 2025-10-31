@@ -955,6 +955,34 @@ func strategy(q Query, indent int) string { // recursive
 	}
 }
 
+// Strategy2 is like Strategy but without the cost/size estimates
+// so it is more stable for tests
+func Strategy2(q Query) string {
+	return strategy2(q, 0)
+}
+
+func strategy2(q Query, indent int) string { // recursive
+	in := strings.Repeat(indent1, indent)
+	switch q := q.(type) {
+	case *Sort:
+		if q.String() == "" {
+			return strategy2(q.Source(), indent)
+		} else {
+			return strategy2(q.Source(), indent) + "\n" +
+				in + q.String()
+		}
+	case q2i:
+		return strategy2(q.Source(), indent+1) + "\n" +
+			in + q.String() + "\n" +
+			strategy2(q.Source2(), indent+1)
+	case q1i:
+		return strategy2(q.Source(), indent) + "\n" + 
+			in + q.String()
+	default:
+		return in + q.String()
+	}
+}
+
 func CalcSelf(q0 Query) { // recursive
 	m := q0.Metrics()
 	if m.tgetself != 0 {

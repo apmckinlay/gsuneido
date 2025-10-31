@@ -58,16 +58,16 @@ func TestJoin_SelectFixedBug(t *testing.T) {
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
-	assert.This(Strategy(q)).Like(`
-			{1_000 0+250_000} cus^(c3,ck)
-			{500/1_000 0+250_000} where ck is ""
-			{500/1_000 0+250_000} extend bk = c3
-		{1/1_000 0+1_126_125} join n:1 by(ck,bk)
-				{0.500x 1_000 0+125_500} bln^(ik,bk)
-				{500/1_000 0+125_500} where ik is 4
-			{1/1_000 0+376_125} join n:1 by(ik)
-				{0.001x 1_000 0+625} ivc^(ik)
-				{1/1_000 0+625} where*1 ik is 4 and ck is ""`)
+	assert.This(Strategy2(q)).Like(`
+			cus^(c3,ck)
+			where ck is ""
+			extend bk = c3
+		join n:1 by(ck,bk)
+				bln^(ik,bk)
+				where ik is 4
+			join n:1 by(ik)
+				ivc^(ik)
+				where*1 ik is 4 and ck is ""`)
 	assert.This(queryAll2(q)).Is("")
 }
 

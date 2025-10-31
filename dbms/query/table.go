@@ -181,6 +181,11 @@ func (tbl *Table) SetIndex(index []string) {
 	IdxUse(tbl.name, tbl.index)
 }
 
+func (tbl *Table) IndexCols(index []string) []string {
+	iIndex := tbl.indexi(index)
+	return tbl.schema.Indexes[iIndex].Fields
+}
+
 func (tbl *Table) indexi(index []string) int {
 	// WARNING: assumes tbl.indexes is parallel to schema.Indexes
 	i := slc.IndexFn(tbl.indexes, index, slices.Equal)
@@ -240,24 +245,33 @@ func (tbl *Table) Rewind() {
 }
 
 func (tbl *Table) Get(_ *Thread, dir Dir) Row {
+	return tbl.GetFilter(dir, nil)
+}
+
+func (tbl *Table) GetFilter(dir Dir, filter func(key string) bool) Row {
 	defer func(t uint64) { tbl.tget += tsc.Read() - t }(tsc.Read())
 	tbl.ensureIter()
-	if dir == Prev {
-		tbl.iter.Prev(tbl.tran)
-	} else {
-		tbl.iter.Next(tbl.tran)
+	for {
+		if dir == Prev {
+			tbl.iter.Prev(tbl.tran)
+		} else {
+			tbl.iter.Next(tbl.tran)
+		}
+		if tbl.iter.Eof() {
+			return nil
+		}
+		key, off := tbl.iter.Cur()
+		if filter != nil && !filter(key) {
+			continue
+		}
+		rec := tbl.tran.GetRecord(off)
+		row := Row{DbRec{Record: rec, Off: off}}
+		if tbl.singleton && !singletonFilter(tbl.header, row, tbl.selcols, tbl.selvals) {
+			return nil
+		}
+		tbl.ngets++
+		return row
 	}
-	if tbl.iter.Eof() {
-		return nil
-	}
-	_, off := tbl.iter.Cur()
-	rec := tbl.tran.GetRecord(off)
-	row := Row{DbRec{Record: rec, Off: off}}
-	if tbl.singleton && !singletonFilter(tbl.header, row, tbl.selcols, tbl.selvals) {
-		return nil
-	}
-	tbl.ngets++
-	return row
 }
 
 func (tbl *Table) Select(cols, vals []string) {

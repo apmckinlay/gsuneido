@@ -478,13 +478,13 @@ func TestQueryGet(t *testing.T) {
 		300	970103	'e'	'pencil'	1`)
 	test("(co where tnum = 100 remove signed) union "+
 		"(co where tnum = 100 remove signed)",
-		"co^(tnum) where*1 tnum is 100 project-copy tnum union-lookup() "+
+		"co^(tnum) where*1 tnum is 100 project-copy tnum union-merge() "+
 			"(co^(tnum) where*1 tnum is 100 project-copy tnum)",
 		`tnum
         100`)
 	test("(co where tnum = 100 remove tnum) union "+
 		"(co where tnum = 100 remove tnum)",
-		"co^(tnum) where*1 tnum is 100 project-copy signed union-lookup() "+
+		"co^(tnum) where*1 tnum is 100 project-copy signed union-merge() "+
 			"(co^(tnum) where*1 tnum is 100 project-copy signed)",
 		`signed
         990101`)
@@ -508,7 +508,7 @@ func TestQueryGet(t *testing.T) {
 	test(`((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))
 		union
 		((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))`,
-		"(co^(tnum) where*1 tnum is 104 project-copy signed union-lookup() (co^(tnum) where*1 tnum is 106 project-copy signed)) union-lookup(signed) (co^(tnum) where*1 tnum is 104 project-copy signed union-merge(signed) (co^(tnum) where*1 tnum is 106 project-copy signed))",
+		"(co^(tnum) where*1 tnum is 104 project-copy signed union-merge(signed) (co^(tnum) where*1 tnum is 106 project-copy signed)) union-merge(signed) (co^(tnum) where*1 tnum is 104 project-copy signed union-merge(signed) (co^(tnum) where*1 tnum is 106 project-copy signed))",
 		`signed
         990103
         990104`)

@@ -164,6 +164,47 @@ func TestDecode(t *testing.T) {
 	assert.T(t).This(Decode(s)).Is([]string{"\x00\x01", "\x01\x00"})
 }
 
+func TestDecode1(t *testing.T) {
+	test := func(comp string, i int, expected string) {
+		assert.T(t).This(Decode1(comp, i)).Is(expected)
+	}
+
+	// Empty string
+	test("", 0, "")
+	test("", 1, "")
+
+	// Negative index
+	test("foo", -1, "")
+	test("foo\x00\x00bar", -1, "")
+
+	// Single field
+	test("foo", 0, "foo")
+	test("foo", 1, "")
+
+	// Multiple fields
+	test("foo\x00\x00bar", 0, "foo")
+	test("foo\x00\x00bar", 1, "bar")
+	test("foo\x00\x00bar", 2, "")
+
+	// Three fields
+	test("a\x00\x00b\x00\x00c", 0, "a")
+	test("a\x00\x00b\x00\x00c", 1, "b")
+	test("a\x00\x00b\x00\x00c", 2, "c")
+	test("a\x00\x00b\x00\x00c", 3, "")
+
+	// Empty fields
+	test("\x00\x00b\x00\x00", 0, "")
+	test("\x00\x00b\x00\x00", 1, "b")
+	test("\x00\x00b\x00\x00", 2, "")
+
+	// Escaped zero bytes
+	test("a\x00\x01b", 0, "a\x00b")
+	test("a\x00\x01b\x00\x00c", 0, "a\x00b")
+	test("a\x00\x01b\x00\x00c", 1, "c")
+	test("\x00\x01\x00\x00\x00\x01", 0, "\x00")
+	test("\x00\x01\x00\x00\x00\x01", 1, "\x00")
+}
+
 func TestHasPrefix(t *testing.T) {
 	assert.T(t).True(HasPrefix("foo", "foo"))
 	assert.T(t).False(HasPrefix("foo", "f"))

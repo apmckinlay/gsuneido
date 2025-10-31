@@ -185,7 +185,7 @@ func TestWhere_consistent(t *testing.T) {
 	test := func(lhs int, op string, rhs int) {
 		t.Helper()
 		rec := new(RecordBuilder).Add(vals[lhs].(Packable)).Build()
-		c := &ast.Context{Hdr: hdr, Row: []DbRec{{Record: rec}}}
+		c := &ast.RowContext{Hdr: hdr, Row: []DbRec{{Record: rec}}}
 		query := "table where a " + op + " " + strs[rhs]
 		w := ParseQuery(query, wtestTran{}, nil).(*Where)
 		w.optInit()
@@ -344,4 +344,36 @@ func TestWhere_indexes(t *testing.T) {
 		assert.T(t).This(fmt.Sprint(w.idxSels)).Is(idxSels)
 	}
 	test("(a,b,c) key(a)", "a = 1", "[a:[1]]", "[a: 1]")
+}
+
+func TestWhere_ixfilter(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c,d) key(a) index(b,c)")
+	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
+	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
+	db.act("insert { a: 7, b: 5, c: 8, d: 9 } into table")
+	db.act("insert { a: 9, b: 0, c: 3, d: 4 } into table")
+	tran := db.NewReadTran()
+	q := ParseQuery("table where c=8", tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	assert.This(Strategy2(q)).Like(`
+		table^(b,c)
+		where c is 8`)
+}
+
+func TestWhere_bug(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c,d) key(a,b,c) index(b)")
+	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
+	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
+	db.act("insert { a: 7, b: 5, c: 8, d: 9 } into table")
+	db.act("insert { a: 9, b: 0, c: 3, d: 4 } into table")
+	tran := db.NewReadTran()
+	q := ParseQuery("table where a=1 and b=2 and c=3", tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	assert.This(Strategy2(q)).Like(`
+		table^(a,b,c)
+		where*1 a is 1 and b is 2 and c is 3`)
 }

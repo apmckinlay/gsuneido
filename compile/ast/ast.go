@@ -80,8 +80,8 @@ type Expr interface {
 	exprNode()
 	Echo() string
 	// Eval, CanEvalRaw, and Columns are used by queries
-	Eval(*Context) Value
-	EvalRaw(*Context) string
+	Eval(Context) Value
+	EvalRaw(Context) string
 	// CanEvalRaw sets the Expr so future Eval's will (or will not) be raw.
 	// It must be called before calling Eval.
 	// It is primarily for Where expressions.
@@ -103,7 +103,7 @@ func (en *exprNodeT) CanEvalRaw(flds []string) bool {
 	return false
 }
 
-func (*exprNodeT) EvalRaw(*Context) string {
+func (*exprNodeT) EvalRaw(Context) string {
 	panic(assert.ShouldNotReachHere())
 }
 
@@ -128,9 +128,10 @@ func (a *Ident) Echo() string {
 
 func (a *Ident) ParamName() string {
 	name := a.Name
-	if name[0] == '.' {
+	switch name[0] {
+	case '.':
 		name = str.UnCapitalize(name[1:])
-	} else if name[0] == '@' || name[0] == '_' {
+	case '@', '_':
 		name = name[1:]
 	}
 	return name

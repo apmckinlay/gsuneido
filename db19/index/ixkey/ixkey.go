@@ -244,6 +244,30 @@ func Decode(comp string) []string {
 	return result
 }
 
+// Decode1 is like Decode but returns only the i'th substring
+func Decode1(comp string, i int) string {
+	if comp == "" || i < 0 {
+		return ""
+	}
+	// Find the i'th separator without splitting
+	pos := 0
+	sepLen := len(Sep)
+	for field := 0; field < i; field++ {
+		sepPos := strings.Index(comp[pos:], Sep)
+		if sepPos == -1 {
+			return "" // not enough fields
+		}
+		pos += sepPos + sepLen
+	}
+	// Find the end of the i'th field (next separator or end of string)
+	nextSepPos := strings.Index(comp[pos:], Sep)
+	if nextSepPos == -1 {
+		nextSepPos = len(comp) - pos
+	}
+	field := comp[pos : pos+nextSepPos]
+	return strings.ReplaceAll(field, "\x00\x01", "\x00")
+}
+
 func DecodeValues(comp string) []Value {
 	if comp == "" {
 		return nil

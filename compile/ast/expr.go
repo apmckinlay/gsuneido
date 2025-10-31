@@ -47,11 +47,32 @@ func Unraw(expr Node) Node {
 // This seems "wrong" but it matches what jSuneido does.
 // Normally this isn't an issue because the stored field has a value.
 
-type Context struct {
+type Context interface {
+	GetVal(id string) Value
+	GetRaw(id string) string
+	Thread() *Thread
+}
+
+type RowContext struct {
 	Th   *Thread
 	Tran *SuTran
 	Hdr  *Header
 	Row  Row
+}
+
+func (c *RowContext) GetVal(id string) Value {
+	if ascii.IsUpper(id[0]) && !slices.Contains(c.Hdr.Columns, id) {
+		return Global.GetName(c.Thread(), id)
+	}
+	return c.Row.GetVal(c.Hdr, id, c.Th, c.Tran)
+}
+
+func (c *RowContext) GetRaw(id string) string {
+	return c.Row.GetRawVal(c.Hdr, id, c.Th, c.Tran)
+}
+
+func (c *RowContext) Thread() *Thread {
+	return c.Th
 }
 
 // Constant ---------------------------------------------------------
@@ -61,11 +82,11 @@ func (a *Constant) CanEvalRaw([]string) bool {
 	return true
 }
 
-func (a *Constant) EvalRaw(*Context) string {
+func (a *Constant) EvalRaw(Context) string {
 	return a.Packed
 }
 
-func (a *Constant) Eval(*Context) Value {
+func (a *Constant) Eval(Context) Value {
 	return a.Val
 }
 
@@ -90,16 +111,13 @@ func IsField(e Expr, cols []string) (string, bool) {
 	return "", false
 }
 
-func (a *Ident) EvalRaw(c *Context) string {
+func (a *Ident) EvalRaw(c Context) string {
 	// need GetRawVal to handle PackForward
-	return c.Row.GetRawVal(c.Hdr, a.Name, c.Th, c.Tran)
+	return c.GetRaw(a.Name)
 }
 
-func (a *Ident) Eval(c *Context) Value {
-	if ascii.IsUpper(a.Name[0]) && !slices.Contains(c.Hdr.Columns, a.Name) {
-		return Global.GetName(c.Th, a.Name)
-	}
-	return c.Row.GetVal(c.Hdr, a.Name, c.Th, c.Tran)
+func (a *Ident) Eval(c Context) Value {
+	return c.GetVal(a.Name)
 }
 
 func (a *Ident) Columns() []string {
@@ -117,7 +135,7 @@ func (a *Unary) CanEvalRaw(flds []string) bool {
 	return a.evalRaw
 }
 
-func (a *Unary) EvalRaw(c *Context) string {
+func (a *Unary) EvalRaw(c Context) string {
 	x := a.E.EvalRaw(c)
 	if a.Tok == tok.Not {
 		return PackBool(UnpackBool(x) == False)
@@ -128,7 +146,7 @@ func (a *Unary) EvalRaw(c *Context) string {
 	panic(assert.ShouldNotReachHere())
 }
 
-func (a *Unary) Eval(c *Context) Value {
+func (a *Unary) Eval(c Context) Value {
 	if a.evalRaw {
 		return Unpack(a.EvalRaw(c))
 	}
@@ -173,14 +191,14 @@ func (a *Binary) RawOp() bool {
 	return false
 }
 
-func (a *Binary) Eval(c *Context) Value {
+func (a *Binary) Eval(c Context) Value {
 	if a.evalRaw {
 		return UnpackBool(a.EvalRaw(c))
 	}
-	return a.eval(c.Th, a.Lhs.Eval(c), a.Rhs.Eval(c))
+	return a.eval(c.Thread(), a.Lhs.Eval(c), a.Rhs.Eval(c))
 }
 
-func (a *Binary) EvalRaw(c *Context) string {
+func (a *Binary) EvalRaw(c Context) string {
 	lhs := a.Lhs.EvalRaw(c)
 	rhs := a.Rhs.EvalRaw(c)
 	switch a.Tok {
@@ -263,14 +281,14 @@ func (a *Trinary) CanEvalRaw(flds []string) bool {
 	return a.evalRaw
 }
 
-func (a *Trinary) EvalRaw(c *Context) string {
+func (a *Trinary) EvalRaw(c Context) string {
 	if UnpackBool(a.Cond.EvalRaw(c)) == True {
 		return a.T.EvalRaw(c)
 	}
 	return a.F.EvalRaw(c)
 }
 
-func (a *Trinary) Eval(c *Context) Value {
+func (a *Trinary) Eval(c Context) Value {
 	if a.evalRaw {
 		return Unpack(a.EvalRaw(c))
 	}
@@ -300,7 +318,7 @@ func (a *Nary) CanEvalRaw(flds []string) bool {
 	return a.evalRaw
 }
 
-func (a *Nary) EvalRaw(c *Context) string {
+func (a *Nary) EvalRaw(c Context) string {
 	if a.Tok == tok.Or {
 		for _, e := range a.Exprs {
 			if UnpackBool(e.EvalRaw(c)) == True {
@@ -320,7 +338,7 @@ func (a *Nary) EvalRaw(c *Context) string {
 	panic(assert.ShouldNotReachHere())
 }
 
-func (a *Nary) Eval(c *Context) Value {
+func (a *Nary) Eval(c Context) Value {
 	if a.evalRaw {
 		return UnpackBool(a.EvalRaw(c))
 	}
@@ -350,7 +368,7 @@ func opCat(x, y Value) Value {
 	return OpCat(nil, x, y)
 }
 
-func nary(exprs []Expr, c *Context,
+func nary(exprs []Expr, c Context,
 	op func(Value, Value) Value, zero Value) Value {
 	result := exprs[0].Eval(c)
 	for _, e := range exprs[1:] {
@@ -362,7 +380,7 @@ func nary(exprs []Expr, c *Context,
 	return result
 }
 
-func muldiv(exprs []Expr, c *Context) Value {
+func muldiv(exprs []Expr, c Context) Value {
 	var divs []Expr
 	result := exprs[0].Eval(c)
 	for _, e := range exprs[1:] {
@@ -392,7 +410,7 @@ func (a *Nary) Columns() []string {
 
 // RangeTo ----------------------------------------------------------
 
-func (a *RangeTo) Eval(c *Context) Value {
+func (a *RangeTo) Eval(c Context) Value {
 	e := a.E.Eval(c)
 	from := evalOr(a.From, c, Zero)
 	to := evalOr(a.To, c, MaxInt)
@@ -412,7 +430,7 @@ func (a *RangeTo) Columns() []string {
 
 // RangeLen ---------------------------------------------------------
 
-func (a *RangeLen) Eval(c *Context) Value {
+func (a *RangeLen) Eval(c Context) Value {
 	e := a.E.Eval(c)
 	from := evalOr(a.From, c, Zero)
 	n := evalOr(a.Len, c, MaxInt)
@@ -424,7 +442,7 @@ func (a *RangeLen) Columns() []string {
 		set.Union(a.From.Columns(), a.Len.Columns()))
 }
 
-func evalOr(e Expr, c *Context, v Value) Value {
+func evalOr(e Expr, c Context, v Value) Value {
 	if e == nil {
 		return v
 	}
@@ -446,7 +464,7 @@ func (a *In) CanEvalRaw(flds []string) bool {
 	return a.evalRaw
 }
 
-func (a *In) EvalRaw(c *Context) string {
+func (a *In) EvalRaw(c Context) string {
 	x := a.E.EvalRaw(c)
 	for _, e := range a.Exprs {
 		if x == e.EvalRaw(c) {
@@ -456,7 +474,7 @@ func (a *In) EvalRaw(c *Context) string {
 	return PackedFalse
 }
 
-func (a *In) Eval(c *Context) Value {
+func (a *In) Eval(c Context) Value {
 	if a.evalRaw {
 		return UnpackBool(a.EvalRaw(c))
 	}
@@ -488,7 +506,7 @@ func (a *InRange) CanEvalRaw(flds []string) bool {
 	return a.evalRaw
 }
 
-func (a *InRange) EvalRaw(c *Context) string {
+func (a *InRange) EvalRaw(c Context) string {
 	x := a.E.EvalRaw(c)
 	org := a.Org.EvalRaw(c)
 	if (a.OrgTok == tok.Gt && !(x > org)) || !(x >= org) {
@@ -501,7 +519,7 @@ func (a *InRange) EvalRaw(c *Context) string {
 	return PackedTrue
 }
 
-func (a *InRange) Eval(c *Context) Value {
+func (a *InRange) Eval(c Context) Value {
 	if a.evalRaw {
 		return UnpackBool(a.EvalRaw(c))
 	}
@@ -517,7 +535,7 @@ func (a *InRange) Columns() []string {
 
 // Mem --------------------------------------------------------------
 
-func (a *Mem) Eval(c *Context) Value {
+func (a *Mem) Eval(c Context) Value {
 	e := a.E.Eval(c)
 	m := a.M.Eval(c)
 	result := e.Get(nil, m)
@@ -543,7 +561,7 @@ func (a *Call) CanEvalRaw(flds []string) bool {
 	return a.RawEval
 }
 
-func (a *Call) EvalRaw(c *Context) string {
+func (a *Call) EvalRaw(c Context) string {
 	x := a.Args[0].E.EvalRaw(c)
 	result := false
 	switch a.Fn.(*Ident).Name {
@@ -559,7 +577,7 @@ func (a *Call) EvalRaw(c *Context) string {
 	return PackBool(result)
 }
 
-func (a *Call) Eval(c *Context) Value {
+func (a *Call) Eval(c Context) Value {
 	if a.RawEval {
 		return UnpackBool(a.EvalRaw(c))
 	}
@@ -574,11 +592,11 @@ func (a *Call) Eval(c *Context) Value {
 	case *Mem:
 		this = f.E.Eval(c)
 		meth := f.M.Eval(c)
-		fn = c.Th.Lookup(this, ToStr(meth))
+		fn = c.Thread().Lookup(this, ToStr(meth))
 	default:
 		fn = a.Fn.Eval(c)
 	}
-	return c.Th.PushCall(fn, this, as, args...)
+	return c.Thread().PushCall(fn, this, as, args...)
 }
 
 func argspec(args []Arg) *ArgSpec {
@@ -620,7 +638,7 @@ func (a *Call) Columns() []string {
 
 // Block ------------------------------------------------------------
 
-func (a *Block) Eval(*Context) Value {
+func (a *Block) Eval(Context) Value {
 	panic("queries do not support blocks")
 }
 
