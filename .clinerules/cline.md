@@ -25,10 +25,11 @@ Changes should follow the style of the existing code.
 - `make port` - Build command-line gsport.exe only
 - `make test` - Run Go tests 
 - `go test -run TestFunction ./package` - Run specific test function
-- `go test ./package` - Run tests in specific package
+- `go test -short -timeout 30s ./package` - Run tests in specific package
 - `go test -benchmem -bench=BenchmarkName ./package` - run benchmark
 - do not change directories to run tests
 - when using go test, specify a timeout e.g. `go test -timeout 10s ./package`
+- when running tests for a complete package use `-short`
 - avoid table driven tests, use a test helper function instead
 
 ## Architecture & Structure
