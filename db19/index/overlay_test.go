@@ -97,7 +97,7 @@ func TestOverlayBug(*testing.T) {
 	insertTestData(d, n, u)
 	ov.layers = []*ixbuf.T{u}
 	checkOver(d, ov)
-	
+
 	ov.bt = ov.bt.MergeAndSave(u.Iter())
 	ov.layers[0] = &ixbuf.T{}
 	checkOver(d, ov)

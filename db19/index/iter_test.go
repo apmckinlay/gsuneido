@@ -8,10 +8,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -40,9 +39,6 @@ func TestIterRange(*testing.T) {
 		assert.That(bldr.Add(key, uint64(i)))
 	}
 	bt := bldr.Finish()
-	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-		return itoa(int(i))
-	}
 	testIterRange(bt.Iterator())
 }
 

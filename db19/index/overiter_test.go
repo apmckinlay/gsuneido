@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index/btree3"
+	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -1026,4 +1026,59 @@ func (it *dumIter) Prev() {
 		}
 	}
 	it.state = eof
+}
+
+// BenchmarkOverIterSingle benchmarks iteration when singleIter optimization applies
+// i.e., when there are no layers and mut is empty (read-only transactions)
+func BenchmarkOverIterSingle(b *testing.B) {
+	const nrecs = 1000
+	bldr := btree.Builder(stor.HeapStor(8192))
+	for i := 1; i <= nrecs; i++ {
+		// Zero-pad to ensure lexicographic order matches numeric order
+		key := strconv.Itoa(i*10 + 100000) // e.g., "100010", "100020", etc.
+		bldr.Add(key, uint64(i))
+	}
+	bt := bldr.Finish()
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{{}}} // single empty layer, no mut
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+
+	b.Run("Next single", func(b *testing.B) {
+		for b.Loop() {
+			it := NewOverIter("", 0)
+			for it.Next(tran); !it.Eof(); it.Next(tran) {
+			}
+			assert.That(it.singleIter)
+		}
+	})
+
+	b.Run("Prev single", func(b *testing.B) {
+		for b.Loop() {
+			it := NewOverIter("", 0)
+			for it.Prev(tran); !it.Eof(); it.Prev(tran) {
+			}
+			assert.That(it.singleIter)
+		}
+	})
+
+	b.Run("Next merge", func(b *testing.B) {
+		for b.Loop() {
+			it := NewOverIter("", 0)
+			it.update(tran)       // sets singleIter = true
+			it.singleIter = false // force unoptimized path
+			for it.Next(tran); !it.Eof(); it.Next(tran) {
+			}
+			assert.That(!it.singleIter)
+		}
+	})
+
+	b.Run("Prev merge", func(b *testing.B) {
+		for b.Loop() {
+			it := NewOverIter("", 0)
+			it.update(tran)       // sets singleIter = true
+			it.singleIter = false // force unoptimized path
+			for it.Prev(tran); !it.Eof(); it.Prev(tran) {
+			}
+			assert.That(!it.singleIter)
+		}
+	})
 }

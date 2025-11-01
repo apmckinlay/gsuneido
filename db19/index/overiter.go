@@ -30,6 +30,8 @@ type OverIter struct {
 	curOff uint64
 	state
 	lastDir dir
+	// singleIter is true when only the btree iterator is needed (no layers/mut)
+	singleIter bool
 }
 
 type state byte
@@ -135,6 +137,10 @@ func (oi *OverIter) update(t oiTran) bool {
 	if ov == oi.overlay {
 		return false
 	}
+	// Optimization: if no layers and no mut, only need btree iterator
+	// (almost 3/4 of the time for application tests, about 10% faster)
+	oi.singleIter = (ov.mut == nil || ov.mut.Len() == 0) &&
+		(len(ov.layers) == 0 || (len(ov.layers) == 1 && ov.layers[0].Len() == 0))
 	oi.newIters(ov)
 	return true
 }
@@ -196,6 +202,15 @@ func atKey(it iface.Iter, key string) bool {
 // minIter finds the the minimum current key
 func (oi *OverIter) minIter() (bool, string, uint64) {
 	// NOTE: keep this code in sync with maxIter
+	if oi.singleIter {
+		// Fast path: only btree iterator, no merge needed
+		it := oi.iters[0]
+		if it.Eof() {
+			return false, "", 0
+		}
+		key, off := it.Cur()
+		return true, key, off
+	}
 	for {
 		var keyMin string
 		var result uint64
@@ -297,6 +312,15 @@ func (oi *OverIter) modPrev(modified bool) {
 // maxIter finds the maximum current key
 func (oi *OverIter) maxIter() (bool, string, uint64) {
 	// NOTE: keep this code in sync with minIter
+	if oi.singleIter {
+		// Fast path: only btree iterator, no merge needed
+		it := oi.iters[0]
+		if it.Eof() {
+			return false, "", 0
+		}
+		key, off := it.Cur()
+		return true, key, off
+	}
 	for {
 		var keyMax string
 		var result uint64
