@@ -205,7 +205,8 @@ func TestOverIterReads(*testing.T) {
 func TestOverIterReadsWithRange(*testing.T) {
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	ib := &ixbuf.T{}
-	for i := 1; i < 10; i++ {
+	// Put odd numbers in the data (1 to 9)
+	for i := 1; i < 10; i += 2 {
 		ib.Insert(strconv.Itoa(i), uint64(i))
 	}
 	t := &testTran{getIndex: func() *Overlay {
@@ -213,62 +214,66 @@ func TestOverIterReadsWithRange(*testing.T) {
 	}}
 
 	it := NewOverIter("", 0)
-	// Set explicit range from "2" to "7"
-	it.Range(Range{Org: "2", End: "7"})
+	// Make the range even numbers within the data (2 to 8)
+	it.Range(Range{Org: "2", End: "8"})
 
 	// Test incremental read tracking with explicit range
 	assert.This(t.reads.String()).Is("")
 
-	// First Next() reads from range start "2" to "2"
-	it.Next(t)
-	assert.This(t.reads.String()).Is("2->2")
-
-	// Second Next() reads from "2" to "3", merges to "2->3"
+	// First Next() reads from range start "2" to "3" (first odd number)
 	it.Next(t)
 	assert.This(t.reads.String()).Is("2->3")
 
-	// Third Next() reads from "3" to "4", merges to "2->4"
+	// Second Next() reads from "3" to "5", merges to "2->5"
 	it.Next(t)
-	assert.This(t.reads.String()).Is("2->4")
+	assert.This(t.reads.String()).Is("2->5")
 
-	// Prev() reads from "4" to "3", already covered
+	// Third Next() reads from "5" to "7", merges to "2->7"
+	it.Next(t)
+	assert.This(t.reads.String()).Is("2->7")
+
+	// Prev() reads from "7" to "5", already covered
 	it.Prev(t)
-	assert.This(t.reads.String()).Is("2->4")
+	assert.This(t.reads.String()).Is("2->7")
 
-	// Prev() reads from "3" to "2", already covered
+	// Prev() reads from "5" to "3", already covered
 	it.Prev(t)
-	assert.This(t.reads.String()).Is("2->4")
+	assert.This(t.reads.String()).Is("2->7")
 
-	// Prev() reads from "2" to range start "2", hits EOF
+	// Prev() reads from "3" to range start "2", hits EOF
 	it.Prev(t)
 	assert.That(it.Eof())
-	assert.This(t.reads.String()).Is("2->4")
+	assert.This(t.reads.String()).Is("2->7")
 
 	// Reset and test Prev from rewind with explicit range
 	t.reads = ranges.Ranges{}
 	it.Rewind()
 
-	// First Prev() from rewind reads from "6" to range end "7"
+	// First Prev() from rewind reads from "7" to range end "8"
 	it.Prev(t)
-	assert.This(t.reads.String()).Is("6->7")
+	assert.This(t.reads.String()).Is("7->8")
 
-	// Second Prev() reads from "5" to "6", merges to "5->7"
+	// Second Prev() reads from "5" to "7", merges to "5->8"
 	it.Prev(t)
-	assert.This(t.reads.String()).Is("5->7")
+	assert.This(t.reads.String()).Is("5->8")
+
+	// Third Prev() reads from "3" to "5", merges to "3->8"
+	it.Prev(t)
+	assert.This(t.reads.String()).Is("3->8")
 
 	// Test full forward iteration within explicit range
 	t.reads = ranges.Ranges{}
 	for it.Rewind(); !it.Eof(); it.Next(t) {
 	}
 	// Should read from range start to range end
-	assert.This(t.reads.String()).Is("2->7")
+	assert.This(t.reads.String()).Is("2->8")
 
 	// Test full backward iteration within explicit range
 	t.reads = ranges.Ranges{}
 	for it.Rewind(); !it.Eof(); it.Prev(t) {
 	}
 	// Should read from range start to range end
-	assert.This(t.reads.String()).Is("2->7")
+	assert.This(t.reads.String()).Is("2->8")
 }
 
 func TestOverIterCombine(*testing.T) {
