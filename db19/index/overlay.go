@@ -18,6 +18,7 @@ import (
 )
 
 // Overlay is the composite in-memory representation of an index
+// @immutable
 type Overlay struct {
 	// bt is the stored base btree (immutable)
 	bt iface.Btree
@@ -176,9 +177,9 @@ func ReadOverlay(st *stor.Stor, r *stor.Reader, nrows int) *Overlay {
 // so it will be out of date.
 // The checker ensures that the updates are independent.
 func (ov *Overlay) UpdateWith(latest *Overlay) {
-	ov.bt = latest.bt
-	ov.layers = slc.With(latest.layers, ov.mut)
-	ov.mut = nil
+	ov.bt = latest.bt                           // @allow-mutate
+	ov.layers = slc.With(latest.layers, ov.mut) // @allow-mutate
+	ov.mut = nil                                // @allow-mutate
 	assert.That(len(ov.layers) >= 2)
 }
 

@@ -95,11 +95,10 @@ func TestOverlayBug(*testing.T) {
 
 	u := &ixbuf.T{}
 	insertTestData(d, n, u)
-	ov.layers = []*ixbuf.T{u}
+	ov = &Overlay{bt: bt, layers: []*ixbuf.T{u}}
 	checkOver(d, ov)
 
-	ov.bt = ov.bt.MergeAndSave(u.Iter())
-	ov.layers[0] = &ixbuf.T{}
+	ov = &Overlay{bt: bt.MergeAndSave(u.Iter()), layers: []*ixbuf.T{}}
 	checkOver(d, ov)
 }
 
@@ -141,12 +140,12 @@ func TestOverlayMerge(t *testing.T) {
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	bt.SetSplit(64)
 	bi := &ixbuf.T{}
-	ov := Overlay{bt: bt, layers: []*ixbuf.T{bi, mut}}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
 	checkData(t, bi, data)
 
 	mut = randIxbuf()
-	ov = Overlay{bt: bt, layers: []*ixbuf.T{bi, mut}}
+	ov = &Overlay{bt: bt, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
 	checkData(t, bi, data)
 }
