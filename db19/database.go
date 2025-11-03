@@ -393,12 +393,14 @@ func (db *Database) buildIndexes(table string,
 	ts.Indexes = append(ts.Indexes, newIdxs...)
 	newIdxs = ts.SetupNewIndexes(nold)
 	nlayers := ti.Indexes[0].Nlayers()
-	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
+	list := sortlist.NewSorting(func(x uint64) bool { return x == 0 },
+		MakeLess(db.Store, &newIdxs[0].Ixspec))
 	iter := rt.IndexIter(table, 0) // read first index (preexisting)
 	for iter.Next(rt); !iter.Eof(); iter.Next(rt) {
 		off := iter.CurOff()
 		list.Add(off)
 	}
+	list.Finish()
 	ovs := make([]*index.Overlay, len(newIdxs))
 	for i := range newIdxs {
 		ix := &newIdxs[i]
@@ -407,7 +409,9 @@ func (db *Database) buildIndexes(table string,
 			fks := rt.getSchema(fk.Table)
 			fk.IIndex = fks.IIndex(fk.Columns)
 		}
-		list.Sort(MakeLess(db.Store, &ix.Ixspec))
+		if i != 0 {
+			list.Sort(MakeLess(db.Store, &ix.Ixspec))
+		}
 		bldr := db.BtreeBuilder()
 		iter := list.Iter()
 		for off := iter(); off != 0; off = iter() {
