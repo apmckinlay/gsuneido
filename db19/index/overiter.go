@@ -68,6 +68,7 @@ const (
 type oiTran interface {
 	GetIndexI(table string, iIndex int) *Overlay
 	Read(table string, iIndex int, from, to string)
+	Num() int
 }
 
 func NewOverIter(table string, iIndex int) *OverIter {
@@ -83,6 +84,16 @@ func (oi *OverIter) HasCur() bool {
 }
 
 func (oi *OverIter) Cur() (string, uint64) {
+	oi.checkHasCur()
+	return oi.curKey, oi.curOff
+}
+
+func (oi *OverIter) CurOff() uint64 {
+	oi.checkHasCur()
+	return oi.curOff
+}
+
+func (oi *OverIter) checkHasCur() {
 	if oi.state == eof {
 		panic("OverIter Cur eof")
 	}
@@ -92,7 +103,6 @@ func (oi *OverIter) Cur() (string, uint64) {
 	if oi.curOff&ixbuf.Delete != 0 {
 		panic("OverIter Cur deleted")
 	}
-	return oi.curKey, oi.curOff
 }
 
 func (oi *OverIter) Range(rng Range) {

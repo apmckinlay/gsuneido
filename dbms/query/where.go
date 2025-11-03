@@ -591,10 +591,10 @@ func (w *Where) optInit() {
 func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
 	if w.singleton {
 		cost := w.source.lookupCost()
-		return cost, &whereApproach{index: w.idxSels[0].index, 
+		return cost, &whereApproach{index: w.idxSels[0].index,
 			cost: cost, idxSel: true}
 	}
-	
+
 	bestSelect := newBestIndex()
 	bestFilter := newBestIndex()
 	for _, idx := range w.source.Indexes() {
@@ -673,7 +673,7 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 		} else {
 			w.ixCtx.cols = w.tbl.IndexCols(idx)
 			w.ixExpr = w.exprsFor(w.ixCtx.cols)
-			w.tbl.setCost(frac, 0, app.cost)		
+			w.tbl.setCost(frac, 0, app.cost)
 		}
 	}
 	w.header = w.source.Header()
@@ -725,14 +725,12 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 		if w.tbl == nil {
 			return w.source.Get(th, dir)
 		} else {
-			w.ixCtx.th = th
-			return w.tbl.GetFilter(dir, w.ixFilter)
+			return w.getFilter(th, dir)
 		}
 	}
 	for {
 		if w.idxSelPos != -1 && w.curPtrng.isRange() {
-			w.ixCtx.th = th
-			if row := w.tbl.GetFilter(dir, w.ixFilter); row != nil {
+			if row := w.getFilter(th, dir); row != nil {
 				w.nIn++
 				return row
 			}
@@ -751,12 +749,15 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 	}
 }
 
-func (w *Where) ixFilter(key string) bool {
+func (w *Where) getFilter(th *Thread, dir Dir) Row {
 	if w.ixExpr == nil {
-		return true
+		return w.tbl.GetFilter(dir, nil)
 	}
-	w.ixCtx.key = key
-	return w.ixExpr.Eval(&w.ixCtx) == True
+	w.ixCtx.th = th
+	return w.tbl.GetFilter(dir, func(key string) bool {
+		w.ixCtx.key = key
+		return w.ixExpr.Eval(&w.ixCtx) == True
+	})
 }
 
 func (w *Where) filter(th *Thread, row Row) bool {

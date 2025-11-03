@@ -31,6 +31,10 @@ func (t *testTran) Read(_ string, _ int, from, to string) {
 	t.reads.Insert(from, to)
 }
 
+func (t *testTran) Num() int {
+	return 0
+}
+
 func TestOverIter(t *testing.T) {
 	from := func(args ...int) *ixbuf.T {
 		ib := &ixbuf.T{}

@@ -150,6 +150,21 @@ func (t *ReadTran) Lookup(table string, iIndex int, key string) *core.DbRec {
 	return &core.DbRec{Off: off, Record: t.GetRecord(off)}
 }
 
+// IndexIterator returns a SimpleIter 
+// for read-only transactions with a single btree (no layers).
+// Otherwise, it returns OverIter.
+func (t *ReadTran) IndexIter(table string, iIndex int) index.IndexIter {
+	ti := t.meta.GetRoInfo(table)
+	if ti == nil {
+		panic("nonexistent table: " + table)
+	}
+	ov := ti.Indexes[iIndex]
+	if si := index.NewSimpleIter(t, ov); si != nil {
+		return si
+	}
+	return index.NewOverIter(table, iIndex)
+}
+
 func (t *ReadTran) Read(string, int, string, string) {
 	// Read transactions don't need to track reads.
 	// See UpdateTran Read.
@@ -291,6 +306,11 @@ func (t *UpdateTran) num() int {
 func (t *UpdateTran) Lookup(table string, iIndex int, key string) *core.DbRec {
 	t.Read(table, iIndex, key, key)
 	return t.ReadTran.Lookup(table, iIndex, key)
+}
+
+// IndexIter on UpdateTran always returns an OverIter
+func (t *UpdateTran) IndexIter(table string, iIndex int) index.IndexIter {
+	return index.NewOverIter(table, iIndex)
 }
 
 // Read adds a transaction read event to the checker
@@ -470,9 +490,14 @@ func (t *UpdateTran) fkeyDeleteBlock(ts *meta.Schema, i int, key string) {
 }
 
 func (t *UpdateTran) fkeyDeleteExists(fkth *schema.Fkey, key string, kn int) bool {
+	end := rangeEnd(key, kn)
 	iter := index.NewOverIter(fkth.Table, fkth.IIndex)
-	iter.Range(index.Range{Org: key, End: rangeEnd(key, kn)})
-	iter.Next(t)
+	iter.Range(index.Range{Org: key, End: end})
+	iter.Next(fkeyTran{t})
+	if !iter.Eof() {
+		end, _ = iter.Cur()
+	}
+	t.Read(fkth.Table, fkth.IIndex, key, end)
 	return !iter.Eof()
 }
 
@@ -515,9 +540,9 @@ func (t *UpdateTran) fkeyDeleteCascade(th *core.Thread, ts *meta.Schema, i int, 
 		fkth := &fkToHere[j]
 		if fkth.Mode&schema.CascadeDeletes != 0 {
 			iter := t.cascadeRange(fkth, encoded, key, len(ix.Columns))
-			for iter.Next(t); !iter.Eof(); iter.Next(t) {
-				_, off := iter.Cur()
-				t.Delete(th, fkth.Table, off)
+			ft := fkeyTran{t}
+			for iter.Next(ft); !iter.Eof(); iter.Next(ft) {
+				t.Delete(th, fkth.Table, iter.CurOff())
 			}
 		}
 	}
@@ -528,9 +553,18 @@ func (t *UpdateTran) cascadeRange(fk *schema.Fkey, encoded bool, key string, kn 
 	if !encoded && fkis.Encodes() {
 		key = ixkey.Encode(key)
 	}
+	end := rangeEnd(key, kn)
+	t.Read(fk.Table, fk.IIndex, key, end)
 	iter := index.NewOverIter(fk.Table, fk.IIndex)
-	iter.Range(index.Range{Org: key, End: rangeEnd(key, kn)})
+	iter.Range(index.Range{Org: key, End: end})
 	return iter
+}
+
+type fkeyTran struct {
+	*UpdateTran
+}
+
+func (fkeyTran) Read(string, int, string, string) {
 }
 
 func (t *UpdateTran) Update(th *core.Thread, table string, oldoff uint64, newrec core.Record) uint64 {
@@ -620,8 +654,9 @@ func (t *UpdateTran) fkeyUpdateCascade(th *core.Thread, ts *meta.Schema, i int,
 		ts2 := t.GetSchema(fkth.Table)
 		ixcols2 := fkth.Columns
 		iter := t.cascadeRange(fkth, encoded, key, len(ixcols))
-		for iter.Next(t); !iter.Eof(); iter.Next(t) {
-			_, off := iter.Cur()
+		ft := fkeyTran{t}
+		for iter.Next(ft); !iter.Eof(); iter.Next(ft) {
+			off := iter.CurOff()
 			oldrec := t.GetRecord(off)
 			rb := core.RecordBuilder{}
 			for i, col2 := range ts2.Columns {

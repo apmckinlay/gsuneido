@@ -41,7 +41,7 @@ func NewTable(t QueryTran, name string) Query {
 
 type Table struct {
 	tran    QueryTran
-	iter    *index.OverIter
+	iter    index.IndexIter
 	info    *meta.Info
 	schema  *Schema
 	name    string
@@ -54,6 +54,7 @@ type Table struct {
 	iIndex      int
 	singleton   bool
 	indexEncode bool
+	cursorMode  bool
 }
 
 type tableApproach struct {
@@ -260,9 +261,15 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string) bool) Row {
 		if tbl.iter.Eof() {
 			return nil
 		}
-		key, off := tbl.iter.Cur()
-		if filter != nil && !filter(key) {
-			continue
+		var off uint64
+		if filter != nil {
+			key, o := tbl.iter.Cur()
+			if !filter(key) {
+				continue
+			}
+			off = o
+		} else {
+			off = tbl.iter.CurOff()
 		}
 		rec := tbl.tran.GetRecord(off)
 		row := Row{DbRec{Record: rec, Off: off}}
@@ -365,9 +372,13 @@ func (tbl *Table) SelectRaw(org, end string) {
 	tbl.ensureIter().Range(index.Range{Org: org, End: end})
 }
 
-func (tbl *Table) ensureIter() *index.OverIter {
+func (tbl *Table) ensureIter() index.IndexIter {
 	if tbl.iter == nil {
-		tbl.iter = index.NewOverIter(tbl.name, tbl.iIndex)
+		if tbl.cursorMode {
+			tbl.iter = index.NewOverIter(tbl.name, tbl.iIndex)
+		} else {
+			tbl.iter = tbl.tran.IndexIter(tbl.name, tbl.iIndex)
+		}
 	}
 	return tbl.iter
 }
@@ -383,7 +394,7 @@ func (tbl *Table) Simple(*Thread) []Row {
 		if tbl.iter.Eof() {
 			break
 		}
-		_, off := tbl.iter.Cur()
+		off := tbl.iter.CurOff()
 		rec := tbl.tran.GetRecord(off)
 		row := Row{DbRec{Record: rec, Off: off}}
 		rows = append(rows, row)

@@ -322,6 +322,8 @@ type QueryTran interface {
 	GetRecord(off uint64) Record
 	MakeLess(is *ixkey.Spec) func(x, y uint64) bool
 	Read(string, int, string, string)
+	IndexIter(table string, iIndex int) index.IndexIter
+	Num() int
 }
 
 // Setup prepares a parsed query for execution.
@@ -348,6 +350,9 @@ func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
 		panic("invalid query: " + String(q))
 	}
 	q = SetApproach(q, nil, frac, t)
+	if mode == CursorMode {
+		setCursorMode(q)
+	}
 	return q, fixcost, varcost
 }
 
@@ -976,7 +981,7 @@ func strategy2(q Query, indent int) string { // recursive
 			in + q.String() + "\n" +
 			strategy2(q.Source2(), indent+1)
 	case q1i:
-		return strategy2(q.Source(), indent) + "\n" + 
+		return strategy2(q.Source(), indent) + "\n" +
 			in + q.String()
 	default:
 		return in + q.String()
@@ -1005,6 +1010,18 @@ func CalcSelf(q0 Query) { // recursive
 	default:
 		m.tgetself = q0.Metrics().tget
 		m.costself = q0.Metrics().fixcost + q0.Metrics().varcost
+	}
+}
+
+func setCursorMode(q Query) {
+	switch q := q.(type) {
+	case q2i:
+		setCursorMode(q.Source())
+		setCursorMode(q.Source2())
+	case q1i:
+		setCursorMode(q.Source())
+	case *Table:
+		q.cursorMode = true
 	}
 }
 

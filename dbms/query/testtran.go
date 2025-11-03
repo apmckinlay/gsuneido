@@ -17,6 +17,8 @@ import (
 // See also: sizeTran
 type testTran struct{}
 
+var _ QueryTran = (*testTran)(nil)
+
 var testSchemas = map[string]*Schema{
 	"table": {Columns: []string{"a", "b", "c"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"a"}}}},
@@ -198,4 +200,12 @@ func (t testTran) MakeLess(*ixkey.Spec) func(x, y uint64) bool {
 }
 
 func (t testTran) Read(string, int, string, string) {
+}
+
+func (t testTran) IndexIter(string, int) index.IndexIter {
+	panic("unimplemented")
+}
+
+func (t testTran) Num() int {
+	return 0
 }
