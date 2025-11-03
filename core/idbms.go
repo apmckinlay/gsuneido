@@ -156,7 +156,7 @@ func (dir Dir) String() string {
 	case Only:
 		return "Query1"
 	case Any:
-		return "QueryEmpty"
+		return "QueryEmpty?"
 	case Strat:
 		return "QueryStrategy1"
 	}

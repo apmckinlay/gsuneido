@@ -218,7 +218,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 				row := table.Get(th, Next)
 				if row == nil || nil != filter(row) {
 					if n > slow[dir] {
-						Warning(dir, "slow:", n, table)
+						Warning(dir, "slow:", n, table, formatFieldsVals(flds, vals))
 					}
 					return row
 				}
@@ -247,7 +247,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 					(!row.SameAs(prevRow) && nil != filter(row)) {
 					trace.QueryOpt.Println(dir, "multi", tbl)
 					if n > slow[dir] {
-						Warning(dir, "slow:", n, tbl)
+						Warning(dir, "slow:", n, tbl, formatFieldsVals(flds, vals))
 					}
 					prevRow = row
 					return row
@@ -306,6 +306,19 @@ func getWhere(ob *SuObject) string {
 		sb.WriteString(field)
 		sb.WriteString(" is ")
 		sb.WriteString(v.String())
+	}
+	return sb.String()
+}
+
+func formatFieldsVals(flds, vals []string) string {
+	var sb strings.Builder
+	for i, fld := range flds {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(fld)
+		sb.WriteString(": ")
+		sb.WriteString(Unpack(vals[i]).String())
 	}
 	return sb.String()
 }
