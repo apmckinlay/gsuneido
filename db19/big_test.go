@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -91,8 +92,8 @@ func createTables() []string {
 			cols[j] = randCol()
 		}
 		nidxs := fromHash(table, maxidxs)
-		idxSchema := make([]schema.Index, nidxs)
-		idxInfo := make([]*index.Overlay, nidxs)
+		var idxSchema []schema.Index
+		var idxInfo []*index.Overlay
 		for j := range nidxs {
 			var idxcols []string
 			var mode byte
@@ -100,19 +101,23 @@ func createTables() []string {
 				idxcols = []string{cols[0]}
 				mode = 'k'
 			} else {
-				nidxcols := fromHash(table, (maxidxcols))
-				idxcols := make([]string, nidxcols)
+				nidxcols := fromHash(table, maxidxcols)
+				idxcols = make([]string, nidxcols)
 				for k := range nidxcols {
 					f := fromHash(table, ncols) - 1
 					idxcols[k] = cols[f]
 				}
 				mode = 'i'
+				if isdup(idxcols, idxSchema) {
+					continue
+				}
 			}
-			idxSchema[j] = schema.Index{Columns: idxcols, Mode: mode}
-			idxInfo[j] = index.NewOverlay(db.Store, &ixkey.Spec{})
-			idxInfo[j].Save()
+			idxSchema = append(idxSchema, schema.Index{Columns: idxcols, Mode: mode})
+			ov := index.NewOverlay(db.Store, &ixkey.Spec{})
+			idxInfo = append(idxInfo, ov)
 		}
 		schema := schema.Schema{Table: table, Columns: cols, Indexes: idxSchema}
+		schema.Check()
 		ts := &meta.Schema{Schema: schema}
 		ts.SetBestKeys(0)
 		ti := &meta.Info{Table: table, Indexes: idxInfo}
@@ -122,9 +127,18 @@ func createTables() []string {
 	return tables
 }
 
+func isdup(cols []string, idxSchema []schema.Index) bool {
+	for _, ix := range idxSchema {
+		if slices.Equal(ix.Columns, cols) {
+			return true
+		}
+	}
+	return false
+}
+
 var ntrans atomic.Int32
 
-var data = core.SuStr(str.Random(1024, 1024))
+var data = core.SuStr(str.Random(512, 512))
 
 func createData(db *Database, tables []string, i, n int) {
 	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
