@@ -35,6 +35,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
 var _ iface.Btree = (*btree)(nil)
@@ -123,7 +124,8 @@ func (bt *btree) readLeaf(off uint64) leafNode {
 
 // Check verifies that the keys are in order and returns the number of keys.
 // If the supplied function is not nil, it is applied to each leaf offset.
-func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
+// WARNING: the key string references a reused byte slice - don't hold it
+func (bt *btree) Check(fn any) (count, size, nnodes int) {
 	var prev []byte // updated by leaf
 	var check1 func(int, uint64)
 	check1 = func(depth int, offset uint64) {
@@ -156,14 +158,21 @@ func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 			var prevSuffix []byte
 			first := true
 			for it := nd.iter(); it.next(); count++ {
-				k := it.suffix()
+				suffix := it.suffix()
 				if !first {
-					assert.That(string(k) > string(prevSuffix))
+					assert.That(string(suffix) > string(prevSuffix))
 				}
 				first = false
-				prevSuffix = k
-				if fn != nil {
+				prevSuffix = suffix
+				switch fn := fn.(type) {
+				case func():
+					fn()
+				case func(uint64):
 					fn(it.offset())
+				case func(string, uint64):
+					prev = append(append((prev)[:0], nd.prefix()...), suffix...)
+					fn(hacks.BStoS(prev), it.offset())
+				default:
 				}
 			}
 			prev = append(append((prev)[:0], nd.prefix()...),

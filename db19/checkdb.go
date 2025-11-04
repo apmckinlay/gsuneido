@@ -12,9 +12,12 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -82,63 +85,95 @@ func checkTable(tcs *tableCheckers, table string) {
 
 	ifirst := 0
 	if table == tcs.firstTable && tcs.firstIndex != nil {
-		for i, ix := range sc.Indexes {
-			if slices.Equal(ix.Columns, tcs.firstIndex) {
+		for i := range sc.Indexes {
+			if slices.Equal(sc.Indexes[i].Columns, tcs.firstIndex) {
 				ifirst = i
 			}
 		}
 	}
-	ixcols := sc.Indexes[ifirst].Columns
-	nrows, size, sum := checkFirstIndex(tcs.state, ixcols, info.Indexes[ifirst])
+	ix := &sc.Indexes[ifirst]
+	nrows, size, sum := checkFirstIndex(tcs.state.store, ix, info.Indexes[ifirst])
 	if nrows != info.Nrows {
-		panic(&errCorrupt{ixcols: ixcols,
+		panic(&errCorrupt{ixcols: ix.Columns,
 			err: fmt.Sprint("count ", nrows, " should equal info ", info.Nrows)})
 	}
 	if size != info.Size {
-		panic(&errCorrupt{ixcols: ixcols,
+		panic(&errCorrupt{ixcols: ix.Columns,
 			err: fmt.Sprint("size ", size, " should equal info ", info.Size)})
 	}
-	for i, ix := range sc.Indexes {
+	for i := range sc.Indexes {
 		if i == ifirst {
 			continue
 		}
 		if tcs.err.Load() != nil {
 			break
 		}
-		CheckOtherIndex(ix.Columns, info.Indexes[i], nrows, sum)
+		CheckOtherIndex(tcs.state.store, &sc.Indexes[i], info.Indexes[i], nrows, sum)
 	}
 }
 
-func checkFirstIndex(state *DbState, ixcols []string,
-	ix *index.Overlay) (int, int64, uint64) {
+func checkFirstIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay) (int, int64, uint64) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(&errCorrupt{err: e, ixcols: ixcols})
+			panic(&errCorrupt{err: e, ixcols: ix.Columns})
 		}
 	}()
 	sum := uint64(0)
 	size := int64(0)
-	ix.CheckMerged()
-	nrows := ix.CheckBtree(func(off uint64) {
+	var buf []byte
+	var n int
+	ov.CheckMerged()
+	base := func(off uint64) {
 		sum += off // addition so order doesn't matter
-		buf := state.store.Data(off)
-		n := core.RecLen(buf)
+		buf = st.Data(off)
+		n = core.RecLen(buf)
 		cksum.MustCheck(buf[:n+cksum.Len])
 		size += int64(n)
-	})
+	}
+	var ck any = base
+	if options.FullCheck {
+		ck = func(key string, off uint64) {
+			base(off)
+			rec := core.Record(hacks.BStoS(buf[:n]))
+			checkRecord(rec)
+			checkKey(ix.Ixspec, key, rec)
+		}
+	}
+	nrows := ov.CheckBtree(ck)
 	return nrows, size, sum
 }
 
-func CheckOtherIndex(ixcols []string, ix *index.Overlay, nrows int, sumPrev uint64) {
+func checkRecord(r core.Record) {
+	for i := 0; i < r.Count(); i++ {
+		r.GetVal(i)
+	}
+}
+
+func checkKey(ixspec ixkey.Spec, key string, rec core.Record) {
+	// theoretically, we could check this field by field
+	// without building (allocating) the record key
+	key2 := ixspec.Key(rec)
+	if key != key2 {
+		panic("key mismatch")
+	}
+}
+
+func CheckOtherIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, nrows int, sumPrev uint64) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic(&errCorrupt{err: e, ixcols: ixcols})
+			panic(&errCorrupt{err: e, ixcols: ix.Columns})
 		}
 	}()
-	ix.CheckMerged()
+	ov.CheckMerged()
 	sum := uint64(0)
-	nr := ix.CheckBtree(func(off uint64) {
+	nr := ov.CheckBtree(func(key string, off uint64) {
 		sum += off // addition so order doesn't matter
+		if options.FullCheck {
+			buf := st.Data(off)
+			n := core.RecLen(buf)
+			rec := core.Record(hacks.BStoS(buf[:n]))
+			checkKey(ix.Ixspec, key, rec)
+		}
 	})
 	if nr != nrows {
 		panic(fmt.Sprint("count ", nr, " should equal info ", nrows))

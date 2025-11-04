@@ -21,6 +21,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -225,7 +226,7 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 		panic(fmt.Sprintln("dump", table, sc.Indexes[0].Columns,
 			"count", nrows, "should equal info", info.Nrows))
 	}
-	ics.checkOtherIndexes(sc, info, nrows, sum) // concurrent
+	ics.checkOtherIndexes(db.Store, sc, info, nrows, sum) // concurrent
 	return nrows
 }
 
@@ -295,19 +296,21 @@ type indexCheckers struct {
 }
 
 type indexCheck struct {
-	table  string
-	ixcols []string
-	index  *index.Overlay
-	count  int
-	sum    uint64
+	st    *stor.Stor
+	table string
+	ix    *schema.Index
+	ov    *index.Overlay
+	count int
+	sum   uint64
 }
 
-func (ics *indexCheckers) checkOtherIndexes(sc *meta.Schema, info *meta.Info,
-	count int, sum uint64) {
+func (ics *indexCheckers) checkOtherIndexes(st *stor.Stor, sc *meta.Schema,
+	info *meta.Info, count int, sum uint64) {
 	for i := 1; i < len(info.Indexes); i++ {
 		select {
-		case ics.work <- indexCheck{table: info.Table, ixcols: sc.Indexes[0].Columns,
-			index: info.Indexes[i], count: count, sum: sum}:
+		case ics.work <- indexCheck{st: st, 
+			table: info.Table, ix: &sc.Indexes[0],
+			ov: info.Indexes[i], count: count, sum: sum}:
 		case <-ics.stop:
 			panic("") // overridden by finish
 		}
@@ -324,7 +327,7 @@ func (ics *indexCheckers) worker() {
 	}()
 	for ic := range ics.work {
 		table = ic.table
-		CheckOtherIndex(ic.ixcols, ic.index, ic.count, ic.sum)
+		CheckOtherIndex(ic.st, ic.ix, ic.ov, ic.count, ic.sum)
 	}
 }
 

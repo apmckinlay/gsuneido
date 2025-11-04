@@ -198,13 +198,12 @@ func (bt *btree) quickCheck1(depth int, offset uint64, recent int64) {
 
 // Check verifies that the keys are in order and returns the number of keys.
 // If the supplied function is not nil, it is applied to each leaf offset.
-func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
+func (bt *btree) Check(fn any) (count, size, nnodes int) {
 	key := ""
 	return bt.check1(0, bt.root, &key, fn)
 }
 
-func (bt *btree) check1(depth int, offset uint64, key *string,
-	fn func(uint64)) (count, size, nnodes int) {
+func (bt *btree) check1(depth int, offset uint64, key *string, fn any) (count, size, nnodes int) {
 	nd := bt.getNodeCk(offset, true)
 	if len(nd) == 0 && (bt.treeLevels > 0 || depth > 0) {
 		panic("empty node in non-empty btree")
@@ -226,10 +225,14 @@ func (bt *btree) check1(depth int, offset uint64, key *string,
 		} else {
 			// leaf
 			count++
-			if fn != nil {
-				fn(off)
-			}
 			itkey := bt.getLeafKey(off)
+			switch fn := fn.(type) {
+			case func(uint64):
+				fn(off)
+			case func(string, uint64):
+				fn(itkey, off)
+			default:
+			}
 			if !strings.HasPrefix(itkey, string(it.known)) {
 				// fmt.Printf("known %q index %q\nvalues %v\n",
 				// 	string(it.known), itkey, ixkey.DecodeValues(itkey))

@@ -141,7 +141,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	list.Finish()
 	assert.That(nrows == info.Nrows)
 	for i := 1; i < len(info.Indexes); i++ {
-		CheckOtherIndex(ts.Indexes[i].Columns, info.Indexes[i], nrows, sum)
+		CheckOtherIndex(src.Store, &ts.Indexes[i], info.Indexes[i], nrows, sum)
 	}
 	if hasdel {
 		ts.Columns = slc.Without(ts.Columns, "-")

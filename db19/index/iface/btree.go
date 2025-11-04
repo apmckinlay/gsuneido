@@ -14,7 +14,7 @@ type Btree interface {
 	TreeLevels() int
 	Lookup(key string) uint64
 	QuickCheck()
-	Check(func(uint64)) (count, size, nnodes int)
+	Check(fn any) (count, size, nnodes int)
 	Write(*stor.Writer)
 	RangeFrac(org, end string, nrecs int) float64
 	Iterator() Iter
