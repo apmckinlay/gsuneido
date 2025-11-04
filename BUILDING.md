@@ -25,4 +25,20 @@ To run the [portable tests](https://github.com/apmckinlay/suneido_tests) (shared
 
 I try to fix warnings but depending on what checker you use, you may get some.
 
-My normal development environment is [Visual Studio Code](https://code.visualstudio.com/) with the [Go extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.Go) using gopls.
+My normal development environment is [Visual Studio Code](https://code.visualstudio.com/) with the [Go extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.Go).
+
+Building liblexilla.a and libscintilla.a
+----------------------------------------
+
+mingw-w64 works to build these, following their instructions
+
+To build a smaller version of liblexilla with specific lexers:
+(as of lexilla 5.4.5)
+- remove the unneeded lexers from the lexers directory
+- the ones used by stdlib are:
+  - LexCPP.cxx (for JavaScript)
+  - LexCSS.cxx
+  - LexHTML.cxx
+  - LexMarkdown.cxx
+- from the scripts directory, run: python LexillaGen.py 
+- rebuild (if you built with the full set, you need to run make clean first)
