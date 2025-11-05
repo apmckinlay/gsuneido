@@ -111,6 +111,7 @@ func (r *repair) check(i int, off uint64) (state *DbState) {
 	// 	r.ec = &errCorrupt{err: "injected error"}
 	// 	return nil
 	// }
+	_ = i
 	state = getState(r.store, off)
 	if state == nil {
 		r.ec = &errCorrupt{err: "ReadState failed"}
