@@ -166,15 +166,20 @@ func CheckOtherIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, nrows i
 	}()
 	ov.CheckMerged()
 	sum := uint64(0)
-	nr := ov.CheckBtree(func(key string, off uint64) {
+	ov.CheckMerged()
+	var ck any = func(off uint64) {
 		sum += off // addition so order doesn't matter
-		if options.FullCheck {
+	}
+	if options.FullCheck {
+		ck = func(key string, off uint64) {
+			sum += off
 			buf := st.Data(off)
 			n := core.RecLen(buf)
 			rec := core.Record(hacks.BStoS(buf[:n]))
 			checkKey(ix.Ixspec, key, rec)
 		}
-	})
+	}
+	nr := ov.CheckBtree(ck)
 	if nr != nrows {
 		panic(fmt.Sprint("count ", nr, " should equal info ", nrows))
 	}
