@@ -25,26 +25,26 @@ import (
 
 // QuickCheck is the default partial checking done at start up.
 func (db *Database) QuickCheck() *errCorrupt {
-	return checkState(db.GetState(), quickCheckTable, "", nil)
+	return checkState(db.GetState(), checkTableQuick, "", nil)
 }
 
-func quickCheckTable(tcs *tableCheckers, table string) {
+func checkTableQuick(tcs *tableCheckers, table string) {
 	info := tcs.state.Meta.GetRoInfo(table)
 	for _, ix := range info.Indexes {
 		ix.QuickCheck()
 	}
 }
 
-// full check -------------------------------------------------------
+// base & full check -------------------------------------------------------
 
 // CheckDatabase is called by -check and -repair
-func CheckDatabase(dbfile string) error {
+func CheckDatabase(dbfile string, full bool) error {
 	db, err := OpenDb(dbfile, stor.Read, false)
 	if err != nil {
 		return errCorruptWrap(err)
 	}
 	defer db.Close()
-	if ec := checkState(db.GetState(), checkTable, "", nil); ec != nil {
+	if ec := checkState(db.GetState(), checkfn(full), "", nil); ec != nil {
 		db.Corrupt()
 		return ec
 	}
@@ -52,21 +52,38 @@ func CheckDatabase(dbfile string) error {
 }
 
 // Check is called by the builtin Database.Check()
-func (db *Database) Check() (ec error) {
+func (db *Database) Check(full bool) error {
 	state := db.Persist()
-	if ec := checkState(state, checkTable, "", nil); ec != nil {
+	if ec := checkState(state, checkfn(full), "", nil); ec != nil {
 		db.Corrupt()
+		return ec
 	}
-	return ec
+	return nil
 }
 
+func checkfn(full bool) func(*tableCheckers, string) {
+	if full {
+		return checkTableFull
+	}
+	return checkTable
+}
+
+// MustCheck is used by tests
 func (db *Database) MustCheck() {
-	if err := db.Check(); err != nil {
+	if err := db.Check(false); err != nil {
 		panic(err)
 	}
 }
 
+func checkTableFull(tcs *tableCheckers, table string) {
+	checkTable2(tcs, table, true)
+}
+
 func checkTable(tcs *tableCheckers, table string) {
+	checkTable2(tcs, table, false)
+}
+
+func checkTable2(tcs *tableCheckers, table string, full bool) {
 	defer func() {
 		if e := recover(); e != nil {
 			if ec, ok := e.(*errCorrupt); ok {
@@ -92,7 +109,7 @@ func checkTable(tcs *tableCheckers, table string) {
 		}
 	}
 	ix := &sc.Indexes[ifirst]
-	nrows, size, sum := checkFirstIndex(tcs.state.store, ix, info.Indexes[ifirst])
+	nrows, size, sum := checkFirstIndex(tcs.state.store, ix, info.Indexes[ifirst], full)
 	if nrows != info.Nrows {
 		panic(&errCorrupt{ixcols: ix.Columns,
 			err: fmt.Sprint("count ", nrows, " should equal info ", info.Nrows)})
@@ -108,11 +125,11 @@ func checkTable(tcs *tableCheckers, table string) {
 		if tcs.err.Load() != nil {
 			break
 		}
-		CheckOtherIndex(tcs.state.store, &sc.Indexes[i], info.Indexes[i], nrows, sum)
+		CheckOtherIndex(tcs.state.store, &sc.Indexes[i], info.Indexes[i], nrows, sum, full)
 	}
 }
 
-func checkFirstIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay) (int, int64, uint64) {
+func checkFirstIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, full bool) (int, int64, uint64) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic(&errCorrupt{err: e, ixcols: ix.Columns})
@@ -131,7 +148,7 @@ func checkFirstIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay) (int, i
 		size += int64(n)
 	}
 	var ck any = base
-	if options.FullCheck {
+	if full {
 		ck = func(key string, off uint64) {
 			base(off)
 			rec := core.Record(hacks.BStoS(buf[:n]))
@@ -158,7 +175,8 @@ func checkKey(ixspec ixkey.Spec, key string, rec core.Record) {
 	}
 }
 
-func CheckOtherIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, nrows int, sumPrev uint64) {
+func CheckOtherIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, 
+	nrows int, sumPrev uint64, full bool) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic(&errCorrupt{err: e, ixcols: ix.Columns})
@@ -170,7 +188,7 @@ func CheckOtherIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, nrows i
 	var ck any = func(off uint64) {
 		sum += off // addition so order doesn't matter
 	}
-	if options.FullCheck {
+	if full {
 		ck = func(key string, off uint64) {
 			sum += off
 			buf := st.Data(off)
@@ -244,7 +262,7 @@ func errCorruptWrap(e any) *errCorrupt {
 // checkState runs fn for all tables in state using a worker pool.
 // fn is either quickCheckTable (for startup) or checkTable (for check & repair).
 func checkState(state *DbState, fn func(*tableCheckers, string),
-	firstTable string, firstIndex []string) (ec *errCorrupt) {
+	firstTable string, firstIndex []string) *errCorrupt {
 	tcs := newTableCheckers(state, fn)
 	tcs.firstTable = firstTable
 	tcs.firstIndex = firstIndex

@@ -410,7 +410,8 @@ func cmdAsof(ss *serverSession) {
 }
 
 func cmdCheck(ss *serverSession) {
-	s := ss.sc.dbms.Check()
+	full := ss.GetBool()
+	s := ss.sc.dbms.Check(full)
 	ss.PutBool(true).PutStr(s)
 }
 

@@ -14,7 +14,7 @@ type IDbms interface {
 
 	// Check checks the database like -check
 	// It returns "" or an error message.
-	Check() string
+	Check(full bool) string
 
 	// Close ends a dbms connection
 	Close()

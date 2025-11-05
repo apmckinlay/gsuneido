@@ -102,8 +102,8 @@ func SendErrorLog(dbms IDbms, sid string) {
 	}
 }
 
-func (ms *muxSession) Check() string {
-	ms.PutCmd(commands.Check)
+func (ms *muxSession) Check(full bool) string {
+	ms.PutCmd(commands.Check).PutBool(full)
 	ms.Request()
 	return ms.GetStr()
 }

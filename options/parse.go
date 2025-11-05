@@ -24,8 +24,7 @@ loop:
 		case match(&args, "-check"):
 			setAction("check")
 		case match(&args, "-fullcheck"):
-			setAction("check")
-			FullCheck = true
+			setAction("fullcheck")
 		case match(&args, "-client"), match(&args, "-c"):
 			setAction("client")
 			Arg = "127.0.0.1"

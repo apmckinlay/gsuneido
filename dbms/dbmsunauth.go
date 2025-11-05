@@ -27,7 +27,7 @@ func (du *DbmsUnauth) Auth(th *Thread, data string) bool {
 	return du.dbms.Auth(th, data)
 }
 
-func (du *DbmsUnauth) Check() string {
+func (du *DbmsUnauth) Check(bool) string {
 	panic(notauth)
 }
 

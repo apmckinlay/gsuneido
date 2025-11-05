@@ -57,7 +57,7 @@ func TestConcurrent(t *testing.T) {
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 
 	db.Close()
-	ck(CheckDatabase("tmp.db"))
+	ck(CheckDatabase("tmp.db", true))
 	os.Remove("tmp.db")
 }
 
@@ -98,7 +98,7 @@ func TestTran(t *testing.T) {
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 	db.Close()
-	ck(CheckDatabase("tmp.db"))
+	ck(CheckDatabase("tmp.db", true))
 	os.Remove("tmp.db")
 }
 

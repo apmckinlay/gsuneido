@@ -160,14 +160,14 @@ func main() {
 			"in", time.Since(t).Round(time.Millisecond),
 			oldSize, "-", (int(oldSize) - int(newSize)), "=", newSize, "mb")
 		os.Exit(0)
-	case "check":
+	case "check", "fullcheck":
 		t := time.Now()
-		ck(db19.CheckDatabase("suneido.db"))
+		ck(db19.CheckDatabase("suneido.db", options.Action == "fullcheck"))
 		Alert("checked database in", time.Since(t).Round(time.Millisecond))
 		os.Exit(0)
 	case "repair":
 		t := time.Now()
-		err := db19.CheckDatabase("suneido.db")
+		err := db19.CheckDatabase("suneido.db", false)
 		if err == nil {
 			Alert("database ok")
 		} else {

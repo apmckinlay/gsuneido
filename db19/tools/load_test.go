@@ -29,7 +29,7 @@ func TestLoadTable(*testing.T) {
 	n, err := LoadTable("tmp", "tmp.db")
 	ck(err)
 	fmt.Println("loaded", n, "records in", time.Since(t).Round(time.Millisecond))
-	ck(CheckDatabase("tmp.db"))
+	ck(CheckDatabase("tmp.db", true))
 }
 
 func TestLoadDbTable(*testing.T) {
@@ -52,7 +52,7 @@ func TestLoadDbTable(*testing.T) {
 	fmt.Println("loaded", n, "records in", time.Since(t).Round(time.Millisecond))
 
 	db.Close()
-	ck(CheckDatabase("tmp.db"))
+	ck(CheckDatabase("tmp.db", true))
 }
 
 func TestLoadDatabase(*testing.T) {
@@ -65,7 +65,7 @@ func TestLoadDatabase(*testing.T) {
 	ck(err)
 	fmt.Println("loaded", nTables, "tables", nViews, "views in",
 		time.Since(t).Round(time.Millisecond))
-	ck(CheckDatabase("tmp.db"))
+	ck(CheckDatabase("tmp.db", true))
 }
 
 func TestLoadFkey(*testing.T) {

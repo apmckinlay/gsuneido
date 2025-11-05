@@ -327,7 +327,7 @@ func (ics *indexCheckers) worker() {
 	}()
 	for ic := range ics.work {
 		table = ic.table
-		CheckOtherIndex(ic.st, ic.ix, ic.ov, ic.count, ic.sum)
+		CheckOtherIndex(ic.st, ic.ix, ic.ov, ic.count, ic.sum, false)
 	}
 }
 

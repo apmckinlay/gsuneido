@@ -69,8 +69,8 @@ func auth(th *Thread, s string) bool {
 	return AuthToken(s)
 }
 
-func (dbms *DbmsLocal) Check() string {
-	if err := dbms.db.Check(); err != nil {
+func (dbms *DbmsLocal) Check(full bool) string {
+	if err := dbms.db.Check(full); err != nil {
 		return err.Error()
 	}
 	return ""

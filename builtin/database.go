@@ -36,7 +36,13 @@ func db_Auth(th *Thread, args []Value) Value {
 var _ = staticMethod(db_Check, "()")
 
 func db_Check(th *Thread, args []Value) Value {
-	return SuStr(th.Dbms().Check())
+	return SuStr(th.Dbms().Check(false))
+}
+
+var _ = staticMethod(db_FullCheck, "()")
+
+func db_FullCheck(th *Thread, args []Value) Value {
+	return SuStr(th.Dbms().Check(true))
 }
 
 var _ = staticMethod(db_Connections, "()")

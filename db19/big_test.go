@@ -73,7 +73,7 @@ func TestBig(t *testing.T) {
 	db.MustCheck()
 
 	db.Close()
-	ck(CheckDatabase(dbfile))
+	ck(CheckDatabase(dbfile, true))
 	PrintStates(dbfile, true)
 }
 
