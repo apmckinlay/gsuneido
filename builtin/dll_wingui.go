@@ -272,5 +272,5 @@ func toptr[T constraints.Integer](x T) unsafe.Pointer {
 	if ((uintptr)(x) < 0x10000) || ((uintptr)(x) > 0x00007FFFFFFFFFFF) {
 		panic(fmt.Sprintf("invalid pointer value %x", x))
 	}
-	return unsafe.Pointer(uintptr(x))
+	return unsafe.Pointer(uintptr(x)) //nolint
 }

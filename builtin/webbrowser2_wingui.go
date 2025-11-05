@@ -12,19 +12,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-// must match webview2_ops in webview2.cpp
-const (
-	webview2_create = iota
-	webview2_close
-	webview2_resize
-	webview2_navigate
-	webview2_navigate_to_string
-	webview2_execute_script
-	webview2_get_source
-	webview2_print
-	webview2_set_focus
-)
-
 type suWebBrowser2 struct {
 	ValueBase[*suWebBrowser2]
 	iOleObject uintptr

@@ -51,7 +51,7 @@ func (ms *mmapStor) Get(chunk int) []byte {
 	}
 	syscall.CloseHandle(fm)
 	ms.ptrs = append(ms.ptrs, ptr)
-	p := (*byte)(unsafe.Pointer(ptr))
+	p := (*byte)(unsafe.Pointer(ptr)) //nolint
 	return unsafe.Slice(p, mmapChunkSize)
 }
 

@@ -50,9 +50,9 @@ func dir(th *Thread, args []Value) Value {
 	return nil
 }
 
-func dirEntries(dir string, justfiles, details bool) iter.Seq[Value] {
+func dirEntries(path string, justfiles, details bool) iter.Seq[Value] {
 	return func(yield func(Value) bool) {
-		dir, pat := filepath.Split(dir)
+		dir, pat := filepath.Split(path)
 		if dir == "" {
 			dir = "."
 		}

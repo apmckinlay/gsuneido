@@ -256,7 +256,7 @@ func (ov *Overlay) String() string {
 	return sb.String()
 }
 
-// checkOverlay verifies an Overlay by:
+// Check verifies an Overlay by:
 // - using ixbuf.Check to check the ixbuf layers
 // - checking that layer entries for each key are in sequence: add, possible updates, possible delete
 func (ov *Overlay) Check() map[string]uint64 {

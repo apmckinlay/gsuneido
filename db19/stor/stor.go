@@ -216,7 +216,7 @@ func (s *Stor) LastOffset(off uint64, str string, stop *uint32) uint64 {
 	return 0
 }
 
-// Flush writes change to disk in the background.
+// FlushTo writes change to disk in the background.
 // It is called by persist (e.g. once per minute).
 func (s *Stor) FlushTo(offset uint64) {
 	chunk := s.offsetToChunk(offset)

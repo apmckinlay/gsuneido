@@ -7,7 +7,6 @@ package builtin
 
 import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
-	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/core"
 	"golang.org/x/sys/windows"
 )
@@ -15,7 +14,7 @@ import (
 func init() {
 	uiThreadId = windows.GetCurrentThreadId()
 	goc.SunAPP = sunAPP
-	core.Interrupt = goc.Interrupt
+	Interrupt = goc.Interrupt
 }
 
 var uiThreadId uint32

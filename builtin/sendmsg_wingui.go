@@ -6,6 +6,7 @@
 package builtin
 
 import (
+	"runtime"
 	"syscall"
 	"unsafe"
 
@@ -335,27 +336,31 @@ func SendMessageMSG(a, b, c, d Value) Value {
 var _ = builtin(SendMessageHditem, "(hwnd, msg, wParam, lParam)")
 
 func SendMessageHditem(a, b, c, d Value) Value {
-	n := getInt32(d, "cchTextMax")
-	var pszText *byte
-	var buf []byte
-	pszText = getZstr(d, "pszText")
-	if pszText != nil {
-		s := ToStr(d.Get(nil, SuStr("pszText")))
-		n = int32(len(s))
-	} else if n > 0 {
-		buf = make([]byte, n)
-		pszText = &buf[0]
+	pszTextGiven := d.Get(nil, SuStr("pszText")) != nil
+	cchTextMaxGiven := d.Get(nil, SuStr("cchTextMax")) != nil
+	if pszTextGiven && cchTextMaxGiven {
+		panic("SendMessageHditem: pszText and cchTextMax cannot be used together")
 	}
 	hdi := toHdItem(d)
-	hdi.pszText = pszText
+	cchTextMax := getInt32(d, "cchTextMax")
+	if cchTextMaxGiven {
+		buf := make([]byte, cchTextMax)
+		hdi.pszText = &buf[0]
+	}
+	if pszTextGiven {
+		hdi.pszText = getZstr(d, "pszText")
+	}
 	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(&hdi)))
 	fromHdItem(&hdi, d)
-	if buf != nil {
-		d.Put(nil, SuStr("pszText"), bufZstr(buf))
+	if cchTextMaxGiven {
+		d.Put(nil, SuStr("pszText"),
+			ptrZstr(unsafe.Pointer(hdi.pszText), int(cchTextMax)))
+		ToContainer(d).Delete(nil, SuStr("cchTextMax"))
+		runtime.KeepAlive(hdi.pszText)
 	}
 	return intRet(rtn)
 }

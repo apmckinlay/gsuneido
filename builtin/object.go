@@ -329,7 +329,7 @@ func putAt(th *Thread, ob Container, at Value, iter ArgsIter) {
 	if k != nil || v == nil {
 		return
 	}
-	if k, v := iter(); k == nil && v != nil {
+	if k2, v2 := iter(); k2 == nil && v2 != nil {
 		panic("can only Add multiple values to un-named or numeric positions")
 	}
 	ob.Put(th, at, v)

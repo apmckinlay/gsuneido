@@ -87,7 +87,7 @@ var globalLock = kernel32.MustFindProc("GlobalLock").Addr()
 
 func globallock(handle HANDLE) unsafe.Pointer {
 	rtn, _, _ := syscall.SyscallN(globalLock, handle)
-	return unsafe.Pointer(rtn)
+	return unsafe.Pointer(rtn) //nolint
 }
 
 var _ = builtin(GlobalLock, "(hMem)")

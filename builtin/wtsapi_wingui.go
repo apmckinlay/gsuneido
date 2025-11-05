@@ -44,7 +44,7 @@ func WTS_GetClientProtocolType() int {
 	if rtn == 0 || size != 2 || buf == 0 {
 		return 0
 	}
-	data := *(*int16)(unsafe.Pointer(buf))
+	data := *(*int16)(toptr(buf))
 	WTSFreeMemory(buf)
 	return int(data)
 }
@@ -66,7 +66,7 @@ func WTS_GetSessionId() Value {
 	if rtn == 0 || size != 4 || buf == 0 {
 		return Zero
 	}
-	data := *(*int32)(unsafe.Pointer(buf))
+	data := *(*int32)(toptr(buf))
 	WTSFreeMemory(buf)
 	return IntVal(int(data))
 }

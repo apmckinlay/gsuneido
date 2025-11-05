@@ -283,7 +283,7 @@ func bstrToString(v *stVariant) string {
 	}
 	p := uintptr(v.val)
 	n := SysStringLen(p)
-	src := unsafe.Slice((*uint16)(unsafe.Pointer(p)), n)
+	src := unsafe.Slice((*uint16)(toptr(p)), n) //nolint
 	return string(utf16.Decode(src))
 }
 

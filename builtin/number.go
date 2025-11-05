@@ -21,7 +21,7 @@ func Number(th *Thread, args []Value) Value {
 		return val
 	}
 	if s, ok := val.ToStr(); ok {
-		s := strings.TrimSpace(s)
+		s = strings.TrimSpace(s)
 		if s == "" {
 			return Zero
 		}

@@ -12,8 +12,8 @@ import (
 
 type suChannel struct {
 	ValueBase[suChannel]
-	concurrent bool
 	ch         chan Value
+	concurrent bool
 }
 
 var sc_timeout = 10 * time.Second

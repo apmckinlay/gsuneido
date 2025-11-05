@@ -1,28 +1,26 @@
 version: "2"
+run:
+  build-tags:
+    - "gui"
 linters:
   enable:
     - misspell
-    - revive
     - staticcheck
+    - govet
     - immutablecheck
   disable:
     - errcheck
   settings:
     govet:
-      disable:
+      enable:
         - unsafeptr
     misspell:
       ignore-rules:
         - strat
-    revive:
-      rules:
-        - name: dot-imports
-          disabled: true
-        - name: var-naming
-          disabled: true
     staticcheck:
       checks:
         - "all"
+        - "-ST1000" # package comment
         - "-ST1001" # dot import
         - "-ST1003" # naming
         - "-ST1005" # error strings
@@ -35,19 +33,6 @@ linters:
         description: Immutable type mutation checker (pls-dont-go)
   exclusions:
     generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 formatters:
   exclusions:
     generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
