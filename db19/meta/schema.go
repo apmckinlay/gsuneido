@@ -111,7 +111,6 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 			if ts.Indexes[i].Fk.Table == "" && len(ts.Indexes[i].Fk.Columns) != 0 {
 				// TEMPORARY - old bug filled in Columns when it shouldn't
 				ts.Indexes[i].Fk.Columns = nil
-				fmt.Println("ReadSchema: Fk.Table empty but Fk.Columns:", ts.Indexes[i].Fk.Columns)
 			}
 		}
 		ts.Ixspecs(0)

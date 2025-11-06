@@ -170,12 +170,11 @@ func (bt *btree) Check(fn any) (count, size, nnodes int) {
 				case func(uint64):
 					fn(it.offset())
 				case func(string, uint64):
-					prev = append(append((prev)[:0], nd.prefix()...), suffix...)
+					prev = append(append(prev[:0], nd.prefix()...), suffix...)
 					fn(hacks.BStoS(prev), it.offset())
-				default:
 				}
 			}
-			prev = append(append((prev)[:0], nd.prefix()...),
+			prev = append(append(prev[:0], nd.prefix()...),
 				nd.suffix(nd.nkeys()-1)...)
 		}
 	}
