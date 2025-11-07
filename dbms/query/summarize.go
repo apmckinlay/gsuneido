@@ -99,7 +99,7 @@ func defaultColName(op, on string) string {
 	return op + "_" + on
 }
 
-// Len, Less, Swap implement sort.Interface
+// Len / Less / Swap implement sort.Interface
 func (su *Summarize) Len() int {
 	return len(su.cols)
 }
