@@ -261,7 +261,7 @@ func (hdr *Header) find(fld string) (rowAt, bool) {
 	}
 	if hdr.cache == nil {
 		hdr.cache = make(map[string]rowAt)
-    }
+	}
 	for reci, fields := range hdr.Fields {
 		if fldi := slices.Index(fields, fld); fldi >= 0 {
 			at := rowAt{Reci: int16(reci), Fldi: int16(fldi)}
