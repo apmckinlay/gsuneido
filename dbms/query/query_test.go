@@ -478,3 +478,30 @@ func (q *TestQop) Select(cols, vals []string) {
 func (q *TestQop) fastSingle() bool { // override Nothing
 	return false
 }
+
+func TestTimesLookup(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	doAdmin(db, "create tmp1 (a, b) key (a)")
+	act(db, "insert { a: 1, b: 2 } into tmp1")
+	act(db, "insert { a: 3, b: 4 } into tmp1")
+	doAdmin(db, "create tmp2 (x, y) key (x)")
+	act(db, "insert { x: 5, y: 6 } into tmp2")
+	act(db, "insert { x: 7, y: 8 } into tmp2")
+	
+	tran := db.NewReadTran()
+	q := ParseQuery("tmp1 times tmp2", tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	cols := []string{"a", "x"}
+	test := func(a, x int, expected string) {
+		vals := []string{Pack(SuInt(a)), Pack(SuInt(x))}
+		row := q.Lookup(nil, cols, vals)
+		assert.T(t).This(fmt.Sprint(row)).Is(expected)
+	}
+	test(3, 7, "[{3, 4} {7, 8}]")
+	test(1, 5, "[{1, 2} {5, 6}]")
+	test(3, 5, "[{3, 4} {5, 6}]")
+	test(1, 7, "[{1, 2} {7, 8}]")
+}
