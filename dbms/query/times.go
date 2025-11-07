@@ -125,6 +125,9 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 		}
 		t.source2.Rewind()
 		row2 = t.source2.Get(th, dir)
+		if row2 == nil {
+			return nil
+		}
 	}
 	t.ngets++
 	return JoinRows(t.row1, row2)
