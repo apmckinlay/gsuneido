@@ -187,8 +187,6 @@ static int setupHelper() {
 	return TRUE;
 }
 
-int sunapp_register_classes();
-
 #include <stdio.h>
 
 static LONG WINAPI filter(EXCEPTION_POINTERS* p_info) {
@@ -202,7 +200,6 @@ static LONG WINAPI filter(EXCEPTION_POINTERS* p_info) {
 void setup() {
 	Scintilla_RegisterClasses(GetModuleHandle(NULL));
 	OleInitialize(NULL);
-	sunapp_register_classes();
 	RegisterHotKey(0, CTRL_BREAK_ID, MOD_CONTROL, VK_CANCEL);
 	main_threadid = GetCurrentThreadId();
 	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
@@ -221,7 +218,7 @@ uintptr createLexer(char* name) {
 	return CreateLexer(name);
 }
 
-// suneidoAPP is called by sunapp.cpp
+// suneidoAPP is called by webview2
 buf_t suneidoAPP(char* url) {
 	buf_t buf;
 	if (GetCurrentThreadId() != main_threadid) {

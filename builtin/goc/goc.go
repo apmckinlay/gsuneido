@@ -113,17 +113,6 @@ func SuneidoAPP(buf *C.buf_t) {
 	buf.size = C.int(len(result))
 }
 
-func EmbedBrowserObject(hwnd uintptr) (ret, iunk, ptr uintptr) {
-	ret = uintptr(C.EmbedBrowserObject(C.uintptr(hwnd),
-		unsafe.Pointer(&iunk),
-		unsafe.Pointer(&ptr)))
-	return
-}
-
-func UnEmbedBrowserObject(iunk, ptr uintptr) {
-	C.UnEmbedBrowserObject(C.uintptr(iunk), C.uintptr(ptr))
-}
-
 func WebView2_Create(hwnd uintptr, pBrowserObject unsafe.Pointer, dllPath string,
 	userDataFolder string, cb uintptr) uintptr {
 	return uintptr(C.WebView2_Create(C.uintptr(hwnd), pBrowserObject,

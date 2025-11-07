@@ -13,9 +13,6 @@ void fatal(char* msg);
 int message_loop(uintptr hdlg);
 uintptr createLexer(char* name);
 
-long EmbedBrowserObject(uintptr hwnd, void* pBrowserObject, void* pPtr);
-void UnEmbedBrowserObject(uintptr browserObject, uintptr ptr);
-
 uintptr queryIDispatch(uintptr iunk);
 uintptr createInstance(char* progid);
 long invoke(uintptr idisp, char* name, uintptr flags, void* args, void* result);
@@ -37,4 +34,4 @@ long WebView2_Print(uintptr pBrowserObject);
 long WebView2_SetFocus(uintptr pBrowserObject);
 long WebView2_Close(uintptr pBrowserObject);
 
-// deps last modified 2025-10-21 19:52:53 UTC
+// deps last modified 2025-11-07 18:57:55 UTC
