@@ -656,7 +656,7 @@ func GetWindowText(hwnd Value) Value {
 		intArg(hwnd),
 		uintptr(unsafe.Pointer(&buf[0])),
 		n+1)
-	return SuStr(string(buf[:n]))
+	return bufZstr(buf[:n])
 }
 
 // dll bool User32:HideCaret(pointer hWnd)
