@@ -82,6 +82,8 @@ clean:
 # for cross compiling on Arm Mac for Arm Windows
 LLVM_MINGW = /Users/andrew/apps/llvm-mingw/bin/aarch64-w64-mingw32
 
+gui: gs_windows_amd64_gui.exe
+
 gs_windows_arm64_gui.exe: FORCE gsuneido_windows_arm64.syso
 	CGO_ENABLED=1 \
 	GOARCH=arm64 GOOS=windows \
@@ -121,4 +123,4 @@ help:
 	@echo "    remove built files"
 
 .PHONY : build test generate clean zap race racetest release \
-    help deploy git-status FORCE
+    help deploy git-status gui FORCE
