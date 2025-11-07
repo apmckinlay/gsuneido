@@ -143,6 +143,7 @@ func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
 	// could use source1.Lookup like (Left)Join
 	// but Times isn't used much
 	t.nlooks++
+	t.Rewind()
 	t.select1(cols, vals)
 	if len(t.sel2cols) > 0 {
 		t.source2.Select(t.sel2cols, t.sel2vals)
