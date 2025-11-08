@@ -4,8 +4,8 @@
 # The windows arm64 gui version is built with llvm-mingw on Mac.
 # It is NOT fully functional.
 # The windows amd64 gui version will run on Arm Windows with emulation.
+# requires sh (and date and rm) on path (e.g. from msys2)
 
-# requires sh on path (e.g. from msys)
 BUILT=$(shell date "+%b %-d %Y %R")
 
 GOOS = $(shell go env GOOS)
@@ -51,7 +51,9 @@ gs_windows_amd64_gui.exe: FORCE gsuneido_windows_amd64.syso
 gsuneido_windows_amd64.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows_amd64.syso res/suneido.rc
 
-both: build gs_windows_amd64_gui.exe
+gui: gs_windows_amd64_gui.exe
+
+both: build gui
 	
 deploy: git-status windows_amd64.exe windows_amd64_gui gs_linux_arm64 gs_linux_amd64
 	@mkdir -p deploy
@@ -81,8 +83,6 @@ clean:
 
 # for cross compiling on Arm Mac for Arm Windows
 LLVM_MINGW = /Users/andrew/apps/llvm-mingw/bin/aarch64-w64-mingw32
-
-gui: gs_windows_amd64_gui.exe
 
 gs_windows_arm64_gui.exe: FORCE gsuneido_windows_arm64.syso
 	CGO_ENABLED=1 \
@@ -123,4 +123,4 @@ help:
 	@echo "    remove built files"
 
 .PHONY : build test generate clean zap race racetest release \
-    help deploy git-status gui FORCE
+    help deploy git-status both gui FORCE
