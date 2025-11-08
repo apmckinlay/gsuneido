@@ -16,10 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-var noSplit = func(nd node) bool {
-	return false
-}
-
 func heapstor(chunksize int) *stor.Stor {
 	st := stor.HeapStor(chunksize)
 	st.Alloc(1) // avoid offset 0
@@ -30,7 +26,6 @@ func heapstor(chunksize int) *stor.Stor {
 
 func TestMergeUpdate(t *testing.T) {
 	bt := createTestBtree(10)
-	bt.shouldSplit = noSplit
 	// bt.print()
 
 	bt = testUpdate(bt, "1000", 9999)
@@ -65,9 +60,6 @@ func testUpdate(bt *btree, key string, off uint64) *btree {
 func TestMergeRootLeaf(t *testing.T) {
 	// Create a simple btree with initial entries (single root leaf node)
 	bldr := Builder(heapstor(8192))
-	bldr.shouldSplit = func(nd node) bool {
-		return false // Never split to ensure single root leaf node
-	}
 	assert.That(bldr.Add("apple", 1))
 	assert.That(bldr.Add("cherry", 3))
 	bt := bldr.Finish().(*btree)
@@ -110,19 +102,17 @@ func (bt *btree) String() string {
 func TestMergeOneTreeLevel(t *testing.T) {
 	// Create a btree with one tree level (tree root with two leaf nodes)
 	bldr := Builder(heapstor(8192))
-	bldr.shouldSplit = func(nd node) bool {
-		return nd.noffs() >= 2
-	}
+	defer SetSplit(SetSplit(2))
 
 	// Add entries to create tree structure: root -> [leaf1, leaf2]
 	assert.That(bldr.Add("apple", 1))
 	assert.That(bldr.Add("banana", 2)) // This should trigger split
 	assert.That(bldr.Add("cherry", 3)) // This goes to new leaf
 	bt := bldr.Finish().(*btree)
-	bt.shouldSplit = noSplit
 	assert.This(bt.treeLevels).Is(1)
 	assert.This(bt.String()).Is("apple 1 banana 2 cherry 3")
 
+	splitCount = 999
 	var ib *ixbuf.T
 	test := func(expected string) {
 		bt = bt.MergeAndSave(ib.Iter()).(*btree)
@@ -234,9 +224,7 @@ func TestMergeDelete(t *testing.T) {
 
 func TestMergeDeleteLast(t *testing.T) {
 	bldr := Builder(heapstor(8192))
-	bldr.shouldSplit = func(nd node) bool {
-		return nd.noffs() >= 3 // Small split threshold to trigger split easily
-	}
+	defer SetSplit(SetSplit(3))
 	for i := 1000; i <= 1009; i++ {
 		assert.That(bldr.Add(strconv.Itoa(i), uint64(i)))
 	}
@@ -372,12 +360,10 @@ func TestMergeSplitTree(t *testing.T) {
 }
 
 func TestMergeInsert(t *testing.T) {
+	defer SetSplit(SetSplit(4))
 	rng := rand.New(rand.NewPCG(123, 456))
 	empty := func() *btree {
 		bt := Builder(heapstor(8192)).Finish().(*btree) // Create empty btree
-		bt.shouldSplit = func(nd node) bool {
-			return nd.noffs() >= 4 // Small split threshold for testing
-		}
 		return bt
 	}
 	var bt *btree
@@ -440,9 +426,7 @@ func TestMergeInsert(t *testing.T) {
 
 func TestMergeInsertLargeKeys1(t *testing.T) {
 	bt := Builder(heapstor(64 * 1024)).Finish().(*btree) // Create empty btree
-	bt.shouldSplit = func(nd node) bool {
-		return nd.noffs() > 6 || nd.size() > maxNodeSize
-	}
+	defer SetSplit(SetSplit(6))
 	large := strings.Repeat("a", 2500)
 	for i := 100; i < 200; i++ {
 		ib := &ixbuf.T{}
@@ -455,9 +439,7 @@ func TestMergeInsertLargeKeys1(t *testing.T) {
 
 func TestMergeInsertLargeKeys2(t *testing.T) {
 	bt := Builder(heapstor(64 * 1024)).Finish().(*btree) // Create empty btree
-	bt.shouldSplit = func(nd node) bool {
-		return nd.noffs() > 6 || nd.size() > maxNodeSize
-	}
+	defer SetSplit(SetSplit(6))
 	large := strings.Repeat("a", 7000)
 	for i := 100; i < 200; i++ {
 		ib := &ixbuf.T{}
@@ -492,9 +474,7 @@ func TestMergeMix(*testing.T) {
 	d := testdata.New()
 
 	bt := Builder(heapstor(8192)).Finish().(*btree) // Create empty btree
-	bt.shouldSplit = func(nd node) bool {
-		return nd.noffs() >= split // Small split threshold for testing
-	}
+	defer SetSplit(SetSplit(split))
 
 	for range nMerges {
 		_ = t && trace("---")

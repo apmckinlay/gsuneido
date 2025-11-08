@@ -23,6 +23,7 @@ func TestBuilderErrors(t *testing.T) {
 }
 
 func TestBuilderSmall(t *testing.T) {
+	defer SetSplit(SetSplit(4))
 	bt := Builder(stor.HeapStor(256)).Finish()
 	bt.Check(nil)
 
@@ -30,14 +31,11 @@ func TestBuilderSmall(t *testing.T) {
 	for to := 101; to < 199; to++ {
 		st := stor.HeapStor(64 * 1024)
 		b := Builder(st)
-		b.shouldSplit = func(nd node) bool {
-			return nd.noffs() >= 4
-		}
 		for i := from; i < to; i++ {
 			assert.That(b.Add(strconv.Itoa(i), uint64(i)))
 		}
 		bt := b.Finish()
-		// bt.print()
+		// bt.(*btree).Print()
 
 		// Check
 		i := from
@@ -109,7 +107,6 @@ func TestBuilderLargeKeys1(t *testing.T) {
 	st := stor.HeapStor(64 * 1024)
 	large := strings.Repeat("a", 1500)
 	b := Builder(st)
-	b.shouldSplit = func(nd node) bool { return nd.noffs() > 6 }
 	for i := range 99 {
 		b.Add(fmt.Sprintf("%02d", i)+large, uint64(i))
 	}
@@ -121,7 +118,6 @@ func TestBuilderLargeKeys2(t *testing.T) {
 	st := stor.HeapStor(64 * 1024)
 	large := strings.Repeat("a", 1500)
 	b := Builder(st)
-	b.shouldSplit = func(nd node) bool { return nd.noffs() > 6 }
 	for i := range 99 {
 		b.Add(large+fmt.Sprintf("%02d", i), uint64(i))
 	}
@@ -133,7 +129,6 @@ func TestBuilderLargeKeys3(t *testing.T) {
 	st := stor.HeapStor(64 * 1024)
 	large := strings.Repeat("a", 5000)
 	b := Builder(st)
-	b.shouldSplit = func(nd node) bool { return nd.noffs() > 6 }
 	for i := 0; i < 99; i += 3 {
 		b.Add(fmt.Sprintf("%02d", i), uint64(i))
 		b.Add(fmt.Sprintf("%02d", i+1)+large, uint64(i+1))

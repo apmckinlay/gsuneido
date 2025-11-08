@@ -20,7 +20,7 @@ import (
 func TestOverlay(*testing.T) {
 	var data []string
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
-	bt.SetSplit(64)
+	defer btree.SetSplit(btree.SetSplit(5))
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{u}, mut: mut}
@@ -88,8 +88,8 @@ func TestOverlayBug(*testing.T) {
 
 	st := stor.HeapStor(8192)
 	st.Alloc(1)
+	defer btree.SetSplit(btree.SetSplit(5))
 	bt := btree.CreateBtree(st, nil)
-	bt.SetSplit(64)
 	ov := &Overlay{bt: bt}
 	checkOver(d, ov)
 
@@ -137,8 +137,8 @@ func TestOverlayMerge(t *testing.T) {
 		return mut
 	}
 	mut := randIxbuf()
+	defer btree.SetSplit(btree.SetSplit(5))
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
-	bt.SetSplit(64)
 	bi := &ixbuf.T{}
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
@@ -168,13 +168,13 @@ func checkData(t *testing.T, bi *ixbuf.T, data []string) {
 func TestOverlayLookup(*testing.T) {
 	dat := testdata.New()
 	store := stor.HeapStor(8192)
+	defer btree.SetSplit(btree.SetSplit(5))
 	randBtree := func(nkeys int) iface.Btree {
 		for range nkeys {
 			dat.Gen()
 		}
 		sort.Strings(dat.Keys)
 		b := btree.Builder(store)
-		b.SetSplit(64)
 		for _, k := range dat.Keys {
 			assert.That(b.Add(k, dat.K2o[k]))
 		}

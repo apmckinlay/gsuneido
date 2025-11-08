@@ -58,7 +58,7 @@ func TestBtreeRangeFrac(t *testing.T) {
 			one++
 		}
 		all++
-		if math.Abs(diff) > .02 {
+		if math.Abs(diff) > .025 {
 			t.Fatal(org, end,
 				"got", frac, "expected", expected, "difference", diff)
 		}

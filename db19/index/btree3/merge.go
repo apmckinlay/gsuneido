@@ -239,7 +239,7 @@ func (st *state) updateLeaf(key string, off uint64) {
 	if st.leaf.leaf.nkeys() == 0 {
 		st.dropLeaf()
 		st.Print()
-	} else if st.bt.shouldSplit(st.leaf.leaf) {
+	} else if shouldSplit(st.leaf.leaf) {
 		st.split()
 		st.Print()
 	}
@@ -344,7 +344,7 @@ func (st *state) split() {
 		tm.tree.update(tm.pos, rightOff)
 		tm.tree = tm.tree.insert(tm.pos, leftOff, splitKey)
 		_ = t && trace("after update", tm.tree)
-		if !st.bt.shouldSplit(tm.tree) {
+		if !shouldSplit(tm.tree) {
 			return
 		}
 		leftOff, rightOff, splitKey = tm.tree.splitTo(st.bt.stor)
@@ -360,6 +360,10 @@ func (st *state) split() {
 	st.bt.root = newRoot.write(st.bt.stor)
 	_ = t && trace("write new root", newRoot, "=>", st.bt.root)
 	st.tree = append(st.tree, treeMerge{off: st.bt.root, tree: newRoot})
+}
+
+func shouldSplit(nd node) bool {
+	return nd.noffs() > splitCount || nd.size() > maxNodeSize
 }
 
 //-------------------------------------------------------------------

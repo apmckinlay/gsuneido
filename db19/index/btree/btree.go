@@ -81,10 +81,6 @@ func OpenBtree(st *stor.Stor, root uint64, treeLevels int) iface.Btree {
 	return &btree{root: root, treeLevels: treeLevels, stor: st, rootUnode: ru}
 }
 
-func (bt *btree) SetSplit(ndsize int) {
-	panic("not implemented")
-}
-
 func (bt *btree) GetIxspec() *ixkey.Spec {
 	return bt.ixspec
 }

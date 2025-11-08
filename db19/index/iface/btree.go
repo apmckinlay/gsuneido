@@ -19,7 +19,6 @@ type Btree interface {
 	RangeFrac(org, end string, nrecs int) float64
 	Iterator() Iter
 	MergeAndSave(iter IterFn) Btree
-	SetSplit(ndsize int)
 }
 
 type BtreeBuilder interface {

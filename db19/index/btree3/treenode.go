@@ -102,7 +102,7 @@ func (nd treeNode) seek(key string) treeIter {
 func (nd treeNode) write(st *stor.Stor) uint64 {
 	n := len(nd)
 	if n > maxNodeSize {
-		panic("btree node too large")
+		panic("btree treeNode too large (write)")
 	}
 	off, buf := st.Alloc(n + cksum.Len)
 	copy(buf, nd)
@@ -345,7 +345,7 @@ func (b *treeBuilder) finishInto(buf []byte, offset uint64) treeNode {
 func (b *treeBuilder) finish(offset uint64) treeNode {
 	size := b.size()
 	if size > maxNodeSize {
-		panic("btree node too large")
+		panic("btree treeNode too large (finish)")
 	}
 	buf := make([]byte, size)
 	return b.finishInto(buf, offset)
@@ -355,7 +355,7 @@ func (b *treeBuilder) finish(offset uint64) treeNode {
 func (b *treeBuilder) finishTo(st *stor.Stor, offset uint64) uint64 {
 	size := b.size()
 	if size > maxNodeSize {
-		panic("btree node too large")
+		panic("btree treeNode too large (finishTo)")
 	}
 	off, buf := st.Alloc(size + cksum.Len)
 	b.finishInto(buf[:size], offset)

@@ -156,7 +156,7 @@ func (nd leafNode) seek(key string) leafIter {
 func (nd leafNode) write(st *stor.Stor) uint64 {
 	n := len(nd)
 	if n > maxNodeSize {
-		panic("btree node too large")
+		panic("btree leafNode too large (write)")
 	}
 	off, buf := st.Alloc(n + cksum.Len)
 	copy(buf, nd)
@@ -361,7 +361,8 @@ type leafBuilder struct {
 }
 
 func (b *leafBuilder) add(key string, offset uint64) {
-	if len(b.keys) == 0 {
+	n := len(b.keys)
+	if n == 0 {
 		b.prefix = key
 	} else {
 		b.prefix = str.CommonPrefix(b.prefix, key)
@@ -369,6 +370,33 @@ func (b *leafBuilder) add(key string, offset uint64) {
 	b.keys = append(b.keys, key)
 	b.offsets = append(b.offsets, offset)
 	b.fieldsLen += len(key)
+}
+
+var fieldsLimit = maxNodeSize - splitCount*7
+
+func (b *leafBuilder) tryAdd(key string, offset uint64) bool {
+	n := len(b.keys) + 1
+	if n > splitCount {
+		return false
+	}
+	fieldsLen := b.fieldsLen + len(key)
+	if fieldsLen > fieldsLimit {
+		prefix := str.CommonPrefix(b.prefix, key)
+		prelen := min(255, len(prefix))
+		size := 4 + 7*n + prelen + fieldsLen - n*prelen
+		if size > maxNodeSize {
+			return false
+		}
+	}
+	if n == 1 {
+		b.prefix = key
+	} else {
+		b.prefix = str.CommonPrefix(b.prefix, key)
+	}
+	b.keys = append(b.keys, key)
+	b.offsets = append(b.offsets, offset)
+	b.fieldsLen += len(key)
+	return true
 }
 
 // size returns the size the leaf node would be if finished now
@@ -394,15 +422,15 @@ func (b *leafBuilder) finishInto(buf []byte) leafNode {
 	if n > 255 {
 		panic("too many keys for leaf node")
 	}
-	if n == 1 {
-		b.prefix = ""
-	}
 
-	// Cap prefix length at 255 bytes before calculating field positions
-	if len(b.prefix) > 255 {
-		b.prefix = b.prefix[:255]
-	}
+	// Single key gets no prefix
 	prelen := len(b.prefix)
+	if n == 1 {
+		prelen = 0
+	} else if prelen > 255 {
+		// Cap prefix length at 255 bytes
+		prelen = 255
+	}
 
 	buf[0] = byte(n)
 	buf[1] = byte(prelen)
@@ -424,7 +452,7 @@ func (b *leafBuilder) finishInto(buf []byte) leafNode {
 	buf[pos+1] = byte(fieldPos)
 	pos += 2
 
-	copy(buf[pos:], b.prefix)
+	copy(buf[pos:], b.prefix[:prelen])
 	pos += prelen
 
 	for _, key := range b.keys {
@@ -438,7 +466,7 @@ func (b *leafBuilder) finishInto(buf []byte) leafNode {
 func (b *leafBuilder) finish() leafNode {
 	size := b.size()
 	if size > maxNodeSize {
-		panic("btree node too large")
+		panic("btree leafNode too large (finish)")
 	}
 	buf := make([]byte, size)
 	return b.finishInto(buf)
@@ -448,7 +476,7 @@ func (b *leafBuilder) finish() leafNode {
 func (b *leafBuilder) finishTo(st *stor.Stor) uint64 {
 	size := b.size()
 	if size > maxNodeSize {
-		panic("btree node too large")
+		panic("btree leafNode too large (finishTo)")
 	}
 	off, buf := st.Alloc(size + cksum.Len)
 	b.finishInto(buf[:size])

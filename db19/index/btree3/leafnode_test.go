@@ -18,18 +18,31 @@ func TestLeafNode_builder(t *testing.T) {
 
 	// empty
 	b := &leafBuilder{}
+	assert(b.size()).Is(4)
 	nd := b.finish()
+	assert(nd.size()).Is(4)
 	assert(fmt.Sprintf("%x", string(nd))).Is("00000004")
 
 	// Test single key
 	b = &leafBuilder{}
 	b.add("hello", 255)
+	assert(b.size()).Is(16)
 	nd = b.finish()
 	assert(nd.nkeys()).Is(1)
 	assert(nd.offset(0)).Is(255)
 	assert(nd.key(0)).Is("hello")
 	assert(string(nd.prefix())).Is("")
 	assert(nd.String()).Is("leaf{hello 255}")
+	assert(nd.size()).Is(16)
+	
+	b = &leafBuilder{}
+	b.add("100", 100)
+	assert(b.size()).Is(14)
+	b.add("101", 101)
+	assert(b.size()).Is(22)
+	nd = b.finish()
+	assert(len(nd)).Is(22)
+	assert(nd.size()).Is(22)
 
 	// Test multiple keys with offsets
 	keys := []string{"apple", "banana", "cherry"}
@@ -49,6 +62,7 @@ func TestLeafNode_builder(t *testing.T) {
 
 	// Test maximum keys (255 limit)
 	b.reset()
+	assert(b.size()).Is(4)
 	for i := range 255 {
 		b.add(fmt.Sprintf("key%03d", i), uint64(1000+i))
 	}
@@ -72,7 +86,7 @@ func TestLeafNode_builder(t *testing.T) {
 	for i := range 10 {
 		b.add(strconv.Itoa(i)+large, 123)
 	}
-	assert(func() { b.finish() }).Panics("btree node too large")
+	assert(func() { b.finish() }).Panics("too large")
 }
 
 func TestLeafPrefix(t *testing.T) {

@@ -40,8 +40,7 @@ import (
 
 var _ iface.Btree = (*btree)(nil)
 
-const splitCount = 100   // ???
-const minSplit = 1024    // ???
+var splitCount = 100     // ??? // overridden by tests
 const maxNodeSize = 8192 // ???
 
 // TreeHeight is the estimated average tree height.
@@ -53,8 +52,7 @@ type btree struct {
 	root       uint64
 	treeLevels int
 	// count is used by RangeFrac, set by Read, Builder, and MergeAndSave
-	count       int
-	shouldSplit func(node) bool // overridden by tests
+	count int
 }
 
 type T = btree
@@ -65,14 +63,14 @@ func CreateBtree(st *stor.Stor, _ *ixkey.Spec) iface.Btree {
 
 func OpenBtree(st *stor.Stor, root uint64, treeLevels int, nrows int) iface.Btree {
 	return &btree{stor: st, root: root, treeLevels: treeLevels,
-		count: nrows, shouldSplit: shouldSplit}
+		count: nrows}
 }
 
-// SetSplit is for tests
-func (bt *btree) SetSplit(ndsize int) {
-	bt.shouldSplit = func(nd node) bool {
-		return nd.size() >= ndsize
-	}
+// SetSplit sets splitCount for tests, usage: defer SetSplit(SetSplit(5))
+func SetSplit(split int) int {
+	prev := splitCount
+	splitCount = split
+	return prev
 }
 
 func (bt *btree) Cksum() uint32 {

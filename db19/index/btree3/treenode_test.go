@@ -78,7 +78,7 @@ func TestTreeNode_builder(t *testing.T) {
 	for i := range 10 {
 		builder.add(123, strconv.Itoa(i)+large)
 	}
-	assert(func() { builder.finish(123) }).Panics("btree node too large")
+	assert(func() { builder.finish(123) }).Panics("too large")
 }
 
 func TestTreeNode_search(t *testing.T) {

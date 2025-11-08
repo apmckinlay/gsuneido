@@ -17,9 +17,7 @@ const keyBase = 1000
 // createTestBtree creates a btree with the specified number of keys
 func createTestBtree(treeSize int) *btree {
 	bldr := Builder(heapstor(8192))
-	bldr.shouldSplit = func(nd node) bool {
-		return nd.noffs() >= 4 // Small split threshold for testing
-	}
+	defer SetSplit(SetSplit(4))
 	for i := range treeSize {
 		key := strconv.Itoa(keyBase + i)
 		assert.That(bldr.Add(key, uint64(keyBase+i)))
@@ -43,7 +41,6 @@ func FuzzRandomUpdateBatches(f *testing.F) {
 		rng := rand.New(rand.NewPCG(seed, seed))
 
 		bt := createTestBtree(treeSize)
-		bt.shouldSplit = noSplit
 
 		// Track expected offsets for each key
 		expectedOffsets := make(map[string]uint64)
@@ -100,6 +97,7 @@ func FuzzRandomInsertBatches(f *testing.F) {
 	f.Add(uint64(123), uint8(50), uint8(10))
 	f.Add(uint64(789), uint8(100), uint8(15))
 
+	defer SetSplit(SetSplit(4))
 	f.Fuzz(func(t *testing.T, seed uint64, totalKeys, maxBatchSize uint8) {
 		// Ensure reasonable bounds
 		totalSize := int(totalKeys) + 1   // 1-256 keys
@@ -114,9 +112,6 @@ func FuzzRandomInsertBatches(f *testing.F) {
 
 		// Start with empty btree
 		bt := Builder(heapstor(8192)).Finish()
-		bt.(*btree).shouldSplit = func(nd node) bool {
-			return nd.noffs() >= 4 // Small split threshold for testing
-		}
 
 		// Generate shuffled unique keys
 		perm := rng.Perm(totalSize)

@@ -283,7 +283,7 @@ func TestOverIterReadsWithRange(*testing.T) {
 func TestOverIterCombine(*testing.T) {
 	var data []string
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
-	bt.SetSplit(64)
+	defer btree.SetSplit(btree.SetSplit(5))
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{u}, mut: mut}

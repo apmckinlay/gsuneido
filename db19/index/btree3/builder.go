@@ -18,27 +18,13 @@ type builder struct {
 	stor        *stor.Stor
 	leaf        leafBuilder
 	tree        []*treeBuilder  // root is last (since tree grows up)
-	shouldSplit func(node) bool // overridden by tests
 	prev        string
 	havePrev    bool
 	count       int
 }
 
 func Builder(st *stor.Stor) *builder {
-	return &builder{stor: st, shouldSplit: shouldSplit}
-}
-
-// shouldSplit decides whether to split a node
-func shouldSplit(nd node) bool {
-	size := nd.size()
-	return size >= minSplit &&
-		(nd.noffs() > splitCount || size > maxNodeSize)
-}
-
-func (b *builder) SetSplit(split int) {
-	b.shouldSplit = func(nd node) bool {
-		return nd.size() > split
-	}
+	return &builder{stor: st}
 }
 
 // Add returns false for duplicate keys and panics for out of order
@@ -59,14 +45,13 @@ func (b *builder) Add(key string, off uint64) bool {
 }
 
 func (b *builder) addLeaf(key string, off uint64) {
-	newSize := b.leaf.size() + len(key) + 7
-	if b.shouldSplit(&b.leaf) || newSize > maxNodeSize {
+	if !b.leaf.tryAdd(key, off) {
 		off2 := b.leaf.finishTo(b.stor)
 		sep := b.sep(b.prev, key)
 		b.addTree(0, off2, sep)
-		b.leaf.reset() // reuse the memory
+		b.leaf.reset()       // reuse
+		b.leaf.add(key, off) // Will always succeed on empty builder
 	}
-	b.leaf.add(key, off)
 }
 
 func (b *builder) addTree(ti int, off uint64, sep string) {
@@ -75,7 +60,7 @@ func (b *builder) addTree(ti int, off uint64, sep string) {
 	}
 	tree := b.tree[ti]
 	newSize := tree.size() + len(sep) + 7
-	if b.shouldSplit(tree) || newSize > maxNodeSize {
+	if tree.noffs() >= splitCount || newSize > maxNodeSize {
 		off2 := tree.finishTo(b.stor, off)
 		b.addTree(ti+1, off2, sep) // RECURSE
 		tree.reset()               // reuse the memory
@@ -95,5 +80,5 @@ func (b *builder) Finish() iface.Btree {
 	for i := range b.tree {
 		off = b.tree[i].finishTo(b.stor, off)
 	}
-	return &btree{stor: b.stor, root: off, treeLevels: len(b.tree), shouldSplit: b.shouldSplit, count: b.count}
+	return &btree{stor: b.stor, root: off, treeLevels: len(b.tree), count: b.count}
 }

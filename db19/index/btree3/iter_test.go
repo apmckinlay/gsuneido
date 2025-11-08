@@ -124,9 +124,7 @@ const base = 1000
 func testBtree(n, split int) *btree {
 	assert.That(n < base)
 	b := Builder(heapstor(8192))
-	b.shouldSplit = func(nd node) bool {
-		return nd.noffs() >= split
-	}
+	defer SetSplit(SetSplit(split))
 	for i := base; i < base+n; i++ {
 		assert.That(b.Add(strconv.Itoa(i), uint64(i)))
 	}
@@ -142,9 +140,7 @@ func TestIterator(t *testing.T) {
 	}
 	sort.Strings(data[:])
 	b := Builder(stor.HeapStor(8192))
-	b.shouldSplit = func(nd node) bool {
-		return nd.noffs() >= 8
-	}
+	defer SetSplit(SetSplit(8))
 	for i, k := range data {
 		assert.That(b.Add(k, uint64(i+1))) // +1 to avoid zero
 	}
