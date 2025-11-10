@@ -55,10 +55,11 @@ gui: gs_windows_amd64_gui.exe
 
 both: build gui
 	
-deploy: git-status windows_amd64.exe windows_amd64_gui gs_linux_arm64 gs_linux_amd64
+deploy: git-status gs_windows_amd64.exe gs_windows_amd64_gui.exe \
+	gs_linux_arm64 gs_linux_amd64
 	@mkdir -p deploy
 	cp gs_windows_amd64.exe deploy\gsport.exe
-	cp gs_windows_arm64_gui.exe deploy\gsuneido.exe
+	cp gs_windows_amd64_gui.exe deploy\gsuneido.exe
 	mv gs_linux_amd64 gs_linux_arm64 deploy
 
 # NOTE: requires test e.g. from msys
