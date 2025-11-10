@@ -6,6 +6,7 @@ package query
 import (
 	"fmt"
 	"log"
+	"slices"
 	"sort"
 	"strings"
 
@@ -25,9 +26,11 @@ type Summarize struct {
 	st  *SuTran
 	by  []string
 	// cols, ops, and ons are parallel
-	cols []string
-	ops  []string
-	ons  []string
+	cols    []string
+	ops     []string
+	ons     []string
+	selCols []string
+	selVals []string
 	summarizeApproach
 	wholeRow bool
 	rewound  bool
@@ -320,11 +323,16 @@ func (su *Summarize) Rewind() {
 func (su *Summarize) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { su.tget += tsc.Read() - t }(tsc.Read())
 	defer func() { su.rewound = false }()
-	row := su.get(th, su, dir)
-	if row != nil {
-		su.ngets++
+	for {
+		row := su.get(th, su, dir)
+		if row == nil {
+			return nil
+		}
+		if su.filter(row, th) {
+			su.ngets++
+			return row
+		}
 	}
-	return row
 }
 
 func getTbl(_ *Thread, su *Summarize, _ Dir) Row {
@@ -563,8 +571,39 @@ func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 
 func (su *Summarize) Select(cols, vals []string) {
 	su.nsels++
-	su.source.Select(cols, vals)
+	su.selCols, su.selVals = nil, nil
+	if cols == nil && vals == nil {
+		su.source.Select(nil, nil) // clear select
+		su.rewound = true
+		return
+	}
+	su.source.Select(su.splitSelect(cols, vals))
 	su.rewound = true
+}
+
+func (su *Summarize) splitSelect(cols, vals []string) ([]string, []string) {
+	var sucols, suvals, srccols, srcvals []string
+	for i, col := range cols {
+		if slices.Contains(su.cols, col) {
+			sucols = append(sucols, col)
+			suvals = append(suvals, vals[i])
+		} else {
+			srccols = append(srccols, col)
+			srcvals = append(srcvals, vals[i])
+		}
+	}
+	su.selCols, su.selVals = sucols, suvals
+	return srccols, srcvals
+}
+
+func (su *Summarize) filter(row Row, th *Thread) bool {
+	for i, col := range su.selCols {
+		x := row.GetRawVal(su.header, col, th, su.st)
+		if x != su.selVals[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func (*Summarize) Simple(*Thread) []Row {
