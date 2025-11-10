@@ -4,5 +4,4 @@
 *.md text eol=lf
 *.bat text eol=crlf
 
-docs/ linguist-generated
-stdlib/ linguist-generated
+*.ss linguist-generated
