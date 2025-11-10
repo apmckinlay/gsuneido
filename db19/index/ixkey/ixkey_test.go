@@ -243,3 +243,66 @@ func TestMaxEntry(t *testing.T) {
 		Make(row, hdr, cols, nil, nil)
 	}).Panics("index entry too large")
 }
+
+func TestTruncFunc(t *testing.T) {
+	testTruncFunc := func(spec1, spec2 Spec, comp, expected string) {
+		truncFunc := TruncFunc(spec1, spec2)
+		assert.T(t).This(truncFunc(comp)).Is(expected)
+	}
+
+	// single to single
+	testTruncFunc(
+		Spec{Fields: []int{0}},
+		Spec{Fields: []int{0}},
+		"foo",
+		"foo")
+
+	// multi to single
+	testTruncFunc(
+		Spec{Fields: []int{0, 1, 2}},
+		Spec{Fields: []int{0}},
+		"a\x00\x00b\x00\x00c",
+		"a")
+
+	// multi to single with escaped zeros
+	testTruncFunc(
+		Spec{Fields: []int{0, 1, 2}},
+		Spec{Fields: []int{0}},
+		"a\x00\x01b\x00\x00c\x00\x00d",
+		"a\x00b")
+
+	// multi to multi same length
+	testTruncFunc(
+		Spec{Fields: []int{0, 1, 2}},
+		Spec{Fields: []int{0, 1, 2}},
+		"a\x00\x00b\x00\x00c",
+		"a\x00\x00b\x00\x00c")
+
+	// multi to multi fewer fields (3 to 2)
+	testTruncFunc(
+		Spec{Fields: []int{0, 1, 2}},
+		Spec{Fields: []int{0, 1}},
+		"a\x00\x00b\x00\x00c",
+		"a\x00\x00b")
+
+	// multi to multi fewer fields (4 to 2)
+	testTruncFunc(
+		Spec{Fields: []int{0, 1, 2, 3}},
+		Spec{Fields: []int{0, 1}},
+		"a\x00\x00b\x00\x00c\x00\x00d",
+		"a\x00\x00b")
+
+	// with empty fields
+	testTruncFunc(
+		Spec{Fields: []int{0, 1, 2, 3}},
+		Spec{Fields: []int{0, 1}},
+		"\x00\x00b\x00\x00c\x00\x00d",
+		"\x00\x00b")
+
+	// with escaped zeros in multiple fields
+	testTruncFunc(
+		Spec{Fields: []int{0, 1, 2, 3}},
+		Spec{Fields: []int{0, 1}},
+		"a\x00\x01x\x00\x00b\x00\x01y\x00\x00c\x00\x00d",
+		"a\x00\x01x\x00\x00b\x00\x01y")
+}

@@ -285,6 +285,25 @@ func DecodeValues(comp string) []Value {
 	return result
 }
 
+// String displays a packed key.
+// It assumes if there are no separators that it is not encoded
+// which is usually, but not always, correct.
+func String(comp string) string {
+	var sb strings.Builder
+	parts := strings.Split(comp, Sep)
+	if len(parts) == 1 {
+		return Unpack(parts[0]).String()
+	}
+	sep := ""
+	for _, s := range parts {
+		sb.WriteString(sep)
+		sep = ","
+		decoded := strings.ReplaceAll(s, "\x00\x01", "\x00")
+		sb.WriteString(Unpack(decoded).String())
+	}
+	return sb.String()
+}
+
 // HasPrefix is prefix by field.
 // i.e. the prefix must be followed by a field separator (or at the end)
 func HasPrefix(s, prefix string) bool {
@@ -305,4 +324,45 @@ func Make(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) string {
 		enc.Add(row.GetRawVal(hdr, col, th, st))
 	}
 	return enc.String()
+}
+
+// TruncFunc returns a specialized function
+// that converts a key from spec1 to spec2
+// i.e. possibly removing fields, possibly decoding
+// - spec1 length >= spec2 length
+// - comp may not be missing empty trailing fields
+func TruncFunc(spec1, spec2 Spec) func(string) string {
+	// Single field to single field - both don't encode
+	if !spec1.Encodes() && !spec2.Encodes() {
+		return func(s string) string { return s }
+	}
+
+	// Multi-field to single field - decode first field
+	if !spec2.Encodes() {
+		return func(s string) string { return Decode1(s, 0) }
+	}
+
+	// Both multi-field with same number of fields
+	if len(spec1.Fields) == len(spec2.Fields) {
+		return func(s string) string { return s }
+	}
+
+	// Multi-field to multi-field with fewer fields
+	n := len(spec2.Fields)
+	const sepLen = len(Sep)
+	return func(comp string) string {
+		pos := 0
+		for i := 0; i < n-1; i++ {
+			sepPos := strings.Index(comp[pos:], Sep)
+			if sepPos == -1 {
+				return comp
+			}
+			pos += sepPos + sepLen
+		}
+		nextSep := strings.Index(comp[pos:], Sep)
+		if nextSep == -1 {
+			return comp
+		}
+		return comp[:pos+nextSep]
+	}
 }

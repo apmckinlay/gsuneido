@@ -136,6 +136,10 @@ func (ov *Overlay) CheckBtree(fn any) int {
 	return n
 }
 
+func (ov *Overlay) BtreeIter() iface.Iter {
+	return ov.bt.Iterator()
+}
+
 func (ov *Overlay) QuickCheck() {
 	ov.bt.QuickCheck()
 }

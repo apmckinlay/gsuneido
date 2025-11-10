@@ -105,6 +105,17 @@ func checkTable2(tcs *tableCheckers, table string, full bool) {
 		for i := range sc.Indexes {
 			if slices.Equal(sc.Indexes[i].Columns, tcs.firstIndex) {
 				ifirst = i
+				break
+			}
+		}
+	} else {
+		// pick a first index that is not a foreign key
+		// since fullcheck only checks foreign keys in ChecKOtherIndex
+		for i := range sc.Indexes {
+			ix := &sc.Indexes[i]
+			if ix.Fk.Table == "" {
+				ifirst = i
+				break
 			}
 		}
 	}
@@ -125,7 +136,7 @@ func checkTable2(tcs *tableCheckers, table string, full bool) {
 		if tcs.err.Load() != nil {
 			break
 		}
-		CheckOtherIndex(tcs.state.store, &sc.Indexes[i], info.Indexes[i], nrows, sum, full)
+		CheckOtherIndex(tcs.state.store, &sc.Indexes[i], info.Indexes[i], nrows, sum, full, tcs.state)
 	}
 }
 
@@ -175,8 +186,8 @@ func checkKey(ixspec ixkey.Spec, key string, rec core.Record) {
 	}
 }
 
-func CheckOtherIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, 
-	nrows int, sumPrev uint64, full bool) {
+func CheckOtherIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay,
+	nrows int, sumPrev uint64, full bool, state *DbState) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic(&errCorrupt{err: e, ixcols: ix.Columns})
@@ -189,12 +200,39 @@ func CheckOtherIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay,
 		sum += off // addition so order doesn't matter
 	}
 	if full {
+		checkFkey := func(string) {}
+		if ix.Fk.Table != "" {
+			fkTable := ix.Fk.Table
+			fkSchema := state.Meta.GetRoSchema(fkTable)
+			fkSpec := fkSchema.Indexes[ix.Fk.IIndex].Ixspec
+			fkInfo := state.Meta.GetRoInfo(fkTable)
+			if fkInfo == nil {
+				panic(fmt.Sprint("foreign key table not found: ", fkTable))
+			}
+			fkOverlay := fkInfo.Indexes[ix.Fk.IIndex]
+			fkIter := fkOverlay.BtreeIter()
+			fkIter.Next()
+			trunc := ixkey.TruncFunc(ix.Ixspec, fkSpec)
+			checkFkey = func(key string) {
+				fkey := trunc(key)
+				if fkey == "" {
+					return
+				}
+				for !fkIter.Eof() && fkIter.Key() < fkey {
+					fkIter.Next()
+				}
+				if fkIter.Eof() || fkIter.Key() != fkey {
+					panic("foreign key not found " + ixkey.String(fkey))
+				}
+			}
+		}
 		ck = func(key string, off uint64) {
 			sum += off
 			buf := st.Data(off)
 			n := core.RecLen(buf)
 			rec := core.Record(hacks.BStoS(buf[:n]))
 			checkKey(ix.Ixspec, key, rec)
+			checkFkey(key)
 		}
 	}
 	nr := ov.CheckBtree(ck)
