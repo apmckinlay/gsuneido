@@ -9,6 +9,9 @@ package roaring
 import (
 	"slices"
 	"sync"
+	"unsafe"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // Bitmap is a roaring bitmap.
@@ -70,20 +73,25 @@ func (b *Bitmap) Add(x uint64) {
 			}
 		}
 		// convert to bitmap
-		newBlk := b.alloc()
+		newBlk := alloc()
 		for _, v := range cont.data {
 			addBit(newBlk, v)
 		}
 		addBit(newBlk, val)
 		cont.bitmap = true
-		blocks.Put(cont.data) //nolint allocates, but only 24 bytes, not 8192
+		free(cont.data)
 		cont.data = newBlk
 	}
 }
 
-func (b *Bitmap) alloc() []uint16 {
-	if blk := blocks.Get(); blk != nil {
-		return blk.([]uint16)
+func free(blk []uint16) {
+	assert.That(cap(blk) == 4096)
+	blocks.Put(unsafe.SliceData(blk)) // to avoid interface allocation
+}
+
+func alloc() []uint16 {
+	if p := blocks.Get(); p != nil {
+		return unsafe.Slice(p.(*uint16), 4096)
 	}
 	return make([]uint16, 4096)
 }
