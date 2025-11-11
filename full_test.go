@@ -1,3 +1,4 @@
+// Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
 package main
@@ -13,6 +14,28 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 )
+
+func TestFuzzBug(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	Libload = libload // dependency injection
+	mainThread.Name = "main"
+	mainThread.SetSviews(&sviews)
+	MainThread = &mainThread
+	openDbms()
+	defer db.CloseKeepMapped()
+
+	result := compile.EvalString(MainThread, `
+		QueryFuzz.MakeTables(7616220806)
+		QueryHash("
+			bln
+		leftjoin /*MANY TO MANY*/ by(ik)
+				((ivc where ck isnt '3')
+			union /*NOT DISJOINT*/
+				ivc)", details:)`)
+	fmt.Println(result)
+}
 
 func TestFastGet(t *testing.T) {
 	if testing.Short() {

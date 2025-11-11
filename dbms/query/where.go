@@ -662,6 +662,7 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 	}
 	if app == nil { // filter
 		w.source = SetApproach(w.source, index, frac, tran)
+		w.tbl, _ = w.source.(*Table) // SetApproach may insert TempIndex
 	} else {
 		app := app.(*whereApproach)
 		idx := app.index
@@ -810,7 +811,7 @@ func (w *Where) Rewind() {
 }
 
 func (w *Where) Select(cols, vals []string) {
-	// fmt.Println("Where", w.tbl.name, "Select", cols, unpack(vals))
+	// fmt.Println("Where Select", cols, unpack(vals))
 	w.nsels++
 	w.Rewind()
 	w.selOrg, w.selEnd = "", ""
