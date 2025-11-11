@@ -34,4 +34,4 @@ long WebView2_Print(uintptr pBrowserObject);
 long WebView2_SetFocus(uintptr pBrowserObject);
 long WebView2_Close(uintptr pBrowserObject);
 
-// deps last modified 2025-11-07 18:57:55 UTC
+// deps last modified 2025-11-10 20:11:00 UTC
