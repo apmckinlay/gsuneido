@@ -357,8 +357,7 @@ func SendMessageHditem(a, b, c, d Value) Value {
 		uintptr(unsafe.Pointer(&hdi)))
 	fromHdItem(&hdi, d)
 	if cchTextMaxGiven {
-		d.Put(nil, SuStr("pszText"),
-			ptrZstr(unsafe.Pointer(hdi.pszText), int(cchTextMax)))
+		d.Put(nil, SuStr("pszText"), ptrZstr(hdi.pszText, int(cchTextMax)))
 		ToContainer(d).Delete(nil, SuStr("cchTextMax"))
 		runtime.KeepAlive(hdi.pszText)
 	}

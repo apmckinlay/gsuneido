@@ -85,9 +85,9 @@ func GlobalAlloc(a, b Value) Value {
 // dll Kernel32:GlobalLock(pointer handle) pointer
 var globalLock = kernel32.MustFindProc("GlobalLock").Addr()
 
-func globallock(handle HANDLE) unsafe.Pointer {
+func globallock(handle HANDLE) uintptr {
 	rtn, _, _ := syscall.SyscallN(globalLock, handle)
-	return unsafe.Pointer(rtn) //nolint
+	return rtn
 }
 
 var _ = builtin(GlobalLock, "(hMem)")
@@ -116,12 +116,13 @@ var _ = builtin(GlobalAllocData, "(s)")
 
 func GlobalAllocData(a Value) Value {
 	s := ToStr(a)
-	handle := globalalloc(GMEM_MOVEABLE, uintptr(len(s)))
-	if len(s) > 0 {
+	n := len(s)
+	handle := globalalloc(GMEM_MOVEABLE, uintptr(n))
+	if n > 0 {
 		p := globallock(handle)
-		assert.That(p != nil)
+		assert.That(p != 0)
 		defer globalunlock(handle)
-		dstSlice := unsafe.Slice((*byte)(p), len(s))
+		dstSlice := unsafe.Slice((*byte)(unsafe.Pointer(p)), n) //nolint
 		copy(dstSlice, s)
 	}
 	return intRet(handle) // caller must GlobalFree
@@ -136,9 +137,10 @@ func GlobalData(a Value) Value {
 		return EmptyStr
 	}
 	p := globallock(hm)
-	assert.That(p != nil)
+	assert.That(p != 0)
 	defer globalunlock(hm)
-	return ptrNstr(p, n)
+	buf := unsafe.Slice((*byte)(unsafe.Pointer(p)), n) //nolint
+	return SuStr(string(buf))
 }
 
 // dll Kernel32:GlobalUnlock(pointer handle) bool

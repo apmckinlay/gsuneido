@@ -13,7 +13,6 @@ import (
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/hacks"
 	"golang.org/x/exp/constraints"
 	"golang.org/x/sys/windows"
 )
@@ -147,31 +146,17 @@ func bufZstr(buf []byte) SuStr {
 	return SuStr(string(buf))
 }
 
-// ptrZstr copies a nul terminated string from an unsafe.Pointer.
+// ptrZstr copies a nul terminated string from *byte.
 // If nul is not found, then the entire length is returned.
-func ptrZstr(p unsafe.Pointer, n int) Value {
+func ptrZstr(p *byte, n int) Value {
 	if p == nil || n == 0 {
 		return False
 	}
-	srcSlice := unsafe.Slice((*byte)(p), n)
-	i := slices.Index(srcSlice, 0)
-	if i == -1 {
-		i = n // No null terminator found, use entire length
+	src := unsafe.Slice(p, n)
+	if i := slices.Index(src, 0); i >= 0 {
+		src = src[:i]
 	}
-	buf := make([]byte, i)
-	copy(buf, srcSlice[:i])
-	return SuStr(hacks.BStoS(buf))
-}
-
-// ptrNstr copies a string of a given length from an unsafe.Pointer
-func ptrNstr(p unsafe.Pointer, n uintptr) Value {
-	if p == nil || n == 0 {
-		return EmptyStr
-	}
-	buf := make([]byte, n)
-	srcSlice := unsafe.Slice((*byte)(p), n)
-	copy(buf, srcSlice)
-	return SuStr(hacks.BStoS(buf))
+	return SuStr(string(src))
 }
 
 // getZstrBs copies the string into the byte slice and adds a nul terminator.

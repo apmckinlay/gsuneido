@@ -142,7 +142,8 @@ func (*suRect) updateStruct(ob Value, p unsafe.Pointer) {
 
 func rect(_ *Thread, args []Value) Value {
 	r := toRect(args[0])
-	return ptrNstr(unsafe.Pointer(r), nRect)
+	buf := unsafe.Slice((*byte)(unsafe.Pointer(r)), nRect)
+	return SuStr(hacks.BStoS(buf))
 }
 
 //-------------------------------------------------------------------
@@ -226,8 +227,7 @@ func NMTVDISPINFO(a Value) Value {
 	ob := fromNMHdr(&di.nmhdr)
 	ob.Put(nil, SuStr("nmhdr"), fromNMHdr(&di.nmhdr))
 	tvi := fromTVItem(&di.item)
-	pszText := unsafe.Pointer(di.item.pszText)
-	tvi.Put(nil, SuStr("pszText"), ptrZstr(pszText, 1024))
+	tvi.Put(nil, SuStr("pszText"), ptrZstr(di.item.pszText, 1024))
 	ob.Put(nil, SuStr("item"), tvi)
 	return ob
 }
@@ -475,7 +475,7 @@ type stSCNotification struct {
 	ch                   int32
 	modifiers            int32
 	modificationType     int32
-	text                 uintptr
+	text                 *byte
 	length               int
 	linesAdded           int
 	message              int32
@@ -514,7 +514,7 @@ func SCNotificationText(a Value) Value {
 	}
 	scn := (*stSCNotification)(toptr(adr))
 	ob := fromSCNotification(scn)
-	ob.Put(nil, SuStr("text"), ptrZstr(toptr(scn.text), 1024))
+	ob.Put(nil, SuStr("text"), ptrZstr(scn.text, 1024))
 	return ob
 }
 
@@ -759,11 +759,12 @@ var _ = Global.Builtin("BITMAPINFOHEADER",
 
 func bmih(_ *Thread, args []Value) Value {
 	bmih := toBitMapInfoHeader(args[0])
-	return ptrNstr(unsafe.Pointer(&bmih), nBitMapInfoHeader)
+	buf := unsafe.Slice((*byte)(unsafe.Pointer(bmih)), nBitMapInfoHeader)
+	return SuStr(hacks.BStoS(buf))
 }
 
-func toBitMapInfoHeader(hdr Value) stBitMapInfoHeader {
-	return stBitMapInfoHeader{
+func toBitMapInfoHeader(hdr Value) *stBitMapInfoHeader {
+	return &stBitMapInfoHeader{
 		biSize:          int32(nBitMapInfoHeader),
 		biWidth:         getInt32(hdr, "biWidth"),
 		biHeight:        getInt32(hdr, "biHeight"),
