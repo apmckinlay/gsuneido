@@ -15,7 +15,7 @@ type writer interface {
 }
 
 // CopyTo copies from src to to, up to nbytes or until src eof.
-// Called by CopyTo in file, socket, and runpiped.
+// Called by CopyTo in file, socket, pipe, and runpiped.
 func CopyTo(th *Thread, src io.Reader, to, nbytes Value) Value {
 	tow, ok := to.(writer)
 	if !ok {
@@ -29,9 +29,9 @@ func CopyTo(th *Thread, src io.Reader, to, nbytes Value) Value {
 		if n < 0 {
 			panic("CopyTo: nbytes cannot be negative")
 		}
-		src = io.LimitReader(src, int64(n))
+		src = io.LimitReader(src, n)
 	}
-	nw, err := dst.(io.ReaderFrom).ReadFrom(src)
+	nw, err := io.Copy(dst, src)
 	if err != nil {
 		panic("CopyTo: " + err.Error())
 	}
