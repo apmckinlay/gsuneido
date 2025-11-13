@@ -496,6 +496,10 @@ func eval(src string) {
 	result := mainThread.Call(fn)
 	if result != nil {
 		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
+	} else if len(mainThread.ReturnMulti) > 0 {
+		for i := len(mainThread.ReturnMulti) -1; i >= 0; i-- {
+			fmt.Println(WithType(mainThread.ReturnMulti[i]))
+		}
 	}
 }
 
