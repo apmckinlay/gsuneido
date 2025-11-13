@@ -23,11 +23,12 @@ func WaitGroup() Value {
 
 var suWaitGroupMethods = methods("wg")
 
-var _ = method(wg_Add, "()")
+var _ = method(wg_Add, "(inc = 1)")
 
-func wg_Add(this Value) Value {
+func wg_Add(this Value, a Value) Value {
 	wg := this.(*suWaitGroup)
-	wg.wg.Add(1)
+	inc := ToInt(a)
+	wg.wg.Add(inc)
 	return nil
 }
 
