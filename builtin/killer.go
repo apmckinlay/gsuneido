@@ -5,6 +5,7 @@ package builtin
 
 import . "github.com/apmckinlay/gsuneido/core"
 
+// killer is used by Defer, Delay, and SocketServer
 type killer struct {
 	ValueBase[*killer]
 	kill func()
