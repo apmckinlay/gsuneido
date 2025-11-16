@@ -37,15 +37,9 @@ func HttpClient2(th *Thread, args []Value) Value {
 	req, err := http.NewRequestWithContext(ctx, method, url, rdr)
 	hck(err)
 	req.Header.Set("User-Agent", "Suneido")
-	hdr := ToContainer(args[3])
-	f := hdr.Iter2(false, true)
-	for k, v := f(); k != nil; k, v = f() {
-		key := strings.ReplaceAll(ToStr(k), "_", "-")
-		if str.EqualCI(key, "Content-Length") {
-			req.ContentLength = int64(ToInt(v))
-		} else {
-			req.Header.Set(key, AsStr(v))
-		}
+	cl := addHeader(req.Header, args[3])
+	if cl != -1 {
+		req.ContentLength = cl
 	}
 
 	resp, err := http.DefaultClient.Do(req)
@@ -57,18 +51,31 @@ func HttpClient2(th *Thread, args []Value) Value {
 	} else {
 		body, err := io.ReadAll(resp.Body)
 		hck(err)
-		ob := &SuObject{}
-		ob.Set(SuStr("content"), SuStr(hacks.BStoS(body)))
-		ob.Set(SuStr("header"), SuStr(headerString(resp)))
-		return ob
+		return &suHttpResponse{resp: resp, body: hacks.BStoS(body)}
 	}
 }
 
-func headerString(resp *http.Response) string {
-	var sb strings.Builder
-	fmt.Fprintln(&sb, resp.Proto, resp.Status)
-	resp.Header.Write(&sb)
-	return sb.String()
+func addHeader(header http.Header, h Value) (contentLength int64) {
+	contentLength = -1
+	if hdr, ok := h.ToContainer(); ok {
+		it := hdr.Iter2(false, true)
+		for k, v := it(); k != nil; k, v = it() {
+			key := strings.ReplaceAll(ToStr(k), "_", "-")
+			if str.EqualCI(key, "Content-Length") {
+				contentLength = int64(ToInt(v))
+			}
+			if vals, ok := v.ToContainer(); ok {
+				list := make([]string, vals.ListSize())
+				for i := 0; i < vals.ListSize(); i++ {
+					list[i] = AsStr(vals.ListGet(i))
+				}
+				header[key] = list
+			} else {
+				header[key] = []string{AsStr(v)}
+			}
+		}
+	}
+	return
 }
 
 func hck(err error) {
@@ -105,6 +112,7 @@ func (r *reader) Read(buf []byte) (n int, err error) {
 type suHttpResponse struct {
 	ValueBase[suHttpResponse]
 	resp *http.Response
+	body string
 }
 
 var _ Value = (*suHttpResponse)(nil)
@@ -121,19 +129,33 @@ func (hr *suHttpResponse) SetConcurrent() {
 	// safe
 }
 
+func (hr *suHttpResponse) Get(_ *Thread, k Value) Value {
+	key := ToStr(k)
+	switch key {
+	case "status":
+		return IntVal(hr.resp.StatusCode)
+	case "proto":
+		return SuStr(hr.resp.Proto)
+	case "header": // DEPRECATED
+		var sb strings.Builder
+		fmt.Fprintln(&sb, hr.resp.Proto, hr.resp.Status)
+		hr.resp.Header.Write(&sb)
+		return SuStr(sb.String())
+	case "content", "body":
+		return SuStr(hr.body)
+	default:
+		key = strings.ReplaceAll(key, "_", "-")
+		v := hr.resp.Header[key]
+		if len(v) == 1 {
+			return SuStr(v[0])
+		} else if len(v) > 1 {
+			return SuObjectOfStrs(v)
+		}
+	}
+	return EmptyStr
+}
+
 var suHttpResponseMethods = methods("resp")
-
-var _ = method(resp_Header, "()")
-
-func resp_Header(this Value) Value {
-	return SuStr(headerString(this.(*suHttpResponse).resp))
-}
-
-var _ = method(resp_Status, "()")
-
-func resp_Status(this Value) Value {
-	return IntVal(this.(*suHttpResponse).resp.StatusCode)
-}
 
 var _ = method(resp_Read, "(n)")
 
