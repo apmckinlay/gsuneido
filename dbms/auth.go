@@ -91,15 +91,3 @@ func getPassHash(th *Thread, user string) (result string) {
 	hash := Unpack(row.GetRaw(hdr, "passhash"))
 	return string(hash.(SuStr))
 }
-
-func expireTokens() {
-	tokensLock.Lock()
-	defer tokensLock.Unlock()
-	for token, old := range tokens {
-		if old {
-			delete(tokens, token)
-		} else {
-			tokens[token] = true // mark it as old
-		}
-	}
-}

@@ -5,6 +5,9 @@ package dbms
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	_ "embed"
 	"io"
 	"net"
 	"net/http"
@@ -15,10 +18,22 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
+//go:embed server.crt
+var ServerCert []byte
+
 var VersionMismatch func(string) // injected by gsuneido.go
 
 func ConnectClient(addr string, port string) net.Conn {
-	conn, err := net.Dial("tcp", addr+":"+port)
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(ServerCert)
+	if !ok {
+		cantConnect("Failed to append embedded cert to pool")
+	}
+	config := &tls.Config{
+		RootCAs:    caCertPool,
+		ServerName: "localhost", // Must match CN or SAN
+	}
+	conn, err := tls.Dial("tcp", addr+":"+port, config)
 	if err != nil {
 		checkServerStatus(addr, port)
 		cantConnect(err.Error())

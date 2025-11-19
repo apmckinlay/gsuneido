@@ -5,6 +5,8 @@ package builtin
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +14,7 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -43,6 +46,59 @@ func HttpClient2(th *Thread, args []Value) Value {
 	}
 
 	resp, err := http.DefaultClient.Do(req)
+	hck(err)
+	defer resp.Body.Close()
+	if block := args[5]; block != False {
+		th.Call(block, &suHttpResponse{resp: resp})
+		return nil
+	} else {
+		body, err := io.ReadAll(resp.Body)
+		hck(err)
+		return &suHttpResponse{resp: resp, body: hacks.BStoS(body)}
+	}
+}
+
+var _ = builtin(HttpsClient, `(method, url, 
+	content = '', header = #(), timeout = 60, block = false)`)
+
+// HttpsClient makes an HTTPS request embedded cert
+func HttpsClient(th *Thread, args []Value) Value {
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(dbms.ServerCert)
+	if !ok {
+		panic("Failed to append embedded cert to pool")
+	}
+	config := &tls.Config{
+		RootCAs:    caCertPool,
+		ServerName: "localhost", // Must match CN or SAN
+	}
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: config,
+		},
+	}
+	method := ToStr(args[0])
+	url := ToStr(args[1])
+	var rdr io.Reader
+	if isFunction(args[2]) {
+		rdr = &reader{th: th, fn: args[2]}
+	} else if content := ToStr(args[2]); content != "" {
+		rdr = strings.NewReader(content)
+	}
+
+	to := time.Duration(ToInt(args[4])) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), to)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, method, url, rdr)
+	hck(err)
+	req.Header.Set("User-Agent", "Suneido")
+	cl := addHeader(req.Header, args[3])
+	if cl != -1 {
+		req.ContentLength = cl
+	}
+
+	resp, err := client.Do(req)
 	hck(err)
 	defer resp.Body.Close()
 	if block := args[5]; block != False {

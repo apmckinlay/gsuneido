@@ -1,10 +1,14 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+//go:build !gui
+
 package dbms
 
 import (
 	"context"
+	"crypto/tls"
+	_ "embed"
 	"fmt"
 	"io"
 	"log"
@@ -71,10 +75,20 @@ type serverSession struct {
 
 type intSet map[int]struct{}
 
+//go:embed server.key
+var ServerKey []byte
+
 // Server listens and accepts connections. It never returns.
 func Server(dbms *DbmsLocal) {
 	workers = mux.NewWorkers(doRequest)
-	l, err := net.Listen("tcp", ":"+options.Port)
+	cert, err := tls.X509KeyPair(ServerCert, ServerKey)
+	if err != nil {
+		Fatal("Failed to load embedded key pair:", err)
+	}
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+	l, err := tls.Listen("tcp", ":"+options.Port, config)
 	if err != nil {
 		Fatal(err)
 	}
@@ -111,6 +125,18 @@ func idleCheck() {
 		if sc.idleCount > options.TimeoutMinutes {
 			sc.serverLog("closing idle connection")
 			sc.close()
+		}
+	}
+}
+
+func expireTokens() {
+	tokensLock.Lock()
+	defer tokensLock.Unlock()
+	for token, old := range tokens {
+		if old {
+			delete(tokens, token)
+		} else {
+			tokens[token] = true // mark it as old
 		}
 	}
 }
@@ -555,49 +581,6 @@ func (ss *serverSession) rowResult(tbl string, hdr *Header, sendHdr bool, row Ro
 		ss.PutStr(tbl)
 		ss.PutRec(rec)
 	}
-}
-
-func rowToRecord(row Row, hdr *Header) (rec Record, fields []string) {
-	if len(row) == 1 {
-		assert.That(len(hdr.Fields) == 1)
-		return maybeSqueeze(row[0].Record, hdr)
-	}
-	var rb RecordBuilder
-	fields = hdr.GetFields()
-	for _, fld := range fields {
-		if fld == "-" {
-			rb.AddRaw("")
-		} else {
-			rb.AddRaw(row.GetRaw(hdr, fld))
-		}
-	}
-	return rb.Trim().Build(), fields
-}
-
-func maybeSqueeze(rec Record, hdr *Header) (Record, []string) {
-	fields := hdr.Fields[0]
-	const small = 16 * 1024 // ???
-	if len(rec) < small || !hdr.HasDeleted() {
-		return rec, fields
-	}
-	savings := 0
-	for i, fld := range fields {
-		if fld == "-" {
-			savings += len(rec.GetRaw(i))
-		}
-	}
-	if savings < len(rec)/3 { // ???
-		return rec, fields
-	}
-	var rb RecordBuilder
-	for i, fld := range fields {
-		if fld == "-" {
-			rb.AddRaw("")
-		} else {
-			rb.AddRaw(rec.GetRaw(i))
-		}
-	}
-	return rb.Trim().Build(), fields
 }
 
 func cmdGetOne(ss *serverSession) {

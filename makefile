@@ -96,6 +96,11 @@ gs_windows_arm64_gui.exe: FORCE gsuneido_windows_arm64.syso
 
 gsuneido_windows_arm64.syso : res/suneido.rc res/suneido.manifest
 	$(LLVM_MINGW)-windres -o gsuneido_windows_arm64.syso res/suneido.rc
+	
+tlskey :
+	openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+		-keyout dbms/server.key -out dbms/server.crt -subj "/CN=internal-api" \
+		-addext "subjectAltName = DNS:localhost,IP:127.0.0.1"
 
 release:
 	./gsuneido -dump stdlib
@@ -113,8 +118,14 @@ help:
 	@echo "make [target]"
 	@echo "build"
 	@echo "    compile a native non-gui version"
+	@echo "gui"
+	@echo "    compile a native Windows gui version"
+	@echo "both"
+	@echo "    both non-gui and gui (Windows)"
 	@echo "gs_<GOOS>_<GOARCH>[.exe]"
 	@echo "    compile windows/linux/darwin amd64/arm64 version"
+	@echo "tlskey"
+	@echo "    generate a new TLS key pair"
 	@echo "deploy"
 	@echo "    build and copy to deploy directory"
 	@echo "    windows_amd64.exe windows_amd64_gui gs_linux_arm64 gs_linux_amd64"
@@ -124,4 +135,4 @@ help:
 	@echo "    remove built files"
 
 .PHONY : build test generate clean zap race racetest release \
-    help deploy git-status both gui FORCE
+    help deploy git-status both gui tlskey FORCE

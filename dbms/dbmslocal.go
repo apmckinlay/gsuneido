@@ -19,6 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -77,10 +78,7 @@ func (dbms *DbmsLocal) Check(full bool) string {
 }
 
 func (*DbmsLocal) Connections() Value {
-	if options.Action == "server" {
-		return connections()
-	}
-	return &SuObject{}
+	panic("Connections is only available client-server")
 }
 
 func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
@@ -167,10 +165,7 @@ func (dbms *DbmsLocal) Info() Value {
 }
 
 func (*DbmsLocal) Kill(addr string) int {
-	if options.Action == "server" {
-		return kill(addr)
-	}
-	return 0
+	panic("Kill is only available client-server")
 }
 
 func (dbms *DbmsLocal) Load(table, from, privateKey, passphrase string) int {
@@ -472,7 +467,7 @@ func (q queryLocal) Strategy(formatted bool) string {
 		sep = " "
 	}
 	n, _ := q.Nrows()
-	return fmt.Sprint(strategy, sep, "[nrecs~ ", trace.Number(n), 
+	return fmt.Sprint(strategy, sep, "[nrecs~ ", trace.Number(n),
 		" cost~ ", trace.Number(q.cost), " ", q.mode, "]")
 }
 
@@ -508,4 +503,47 @@ type cursorLocal struct {
 func (q cursorLocal) Get(th *Thread, t ITran, dir Dir) (Row, string) {
 	q.Query.SetTran(t.(qry.QueryTran))
 	return q.queryLocal.Get(th, dir)
+}
+
+func rowToRecord(row Row, hdr *Header) (rec Record, fields []string) {
+	if len(row) == 1 {
+		assert.That(len(hdr.Fields) == 1)
+		return maybeSqueeze(row[0].Record, hdr)
+	}
+	var rb RecordBuilder
+	fields = hdr.GetFields()
+	for _, fld := range fields {
+		if fld == "-" {
+			rb.AddRaw("")
+		} else {
+			rb.AddRaw(row.GetRaw(hdr, fld))
+		}
+	}
+	return rb.Trim().Build(), fields
+}
+
+func maybeSqueeze(rec Record, hdr *Header) (Record, []string) {
+	fields := hdr.Fields[0]
+	const small = 16 * 1024 // ???
+	if len(rec) < small || !hdr.HasDeleted() {
+		return rec, fields
+	}
+	savings := 0
+	for i, fld := range fields {
+		if fld == "-" {
+			savings += len(rec.GetRaw(i))
+		}
+	}
+	if savings < len(rec)/3 { // ???
+		return rec, fields
+	}
+	var rb RecordBuilder
+	for i, fld := range fields {
+		if fld == "-" {
+			rb.AddRaw("")
+		} else {
+			rb.AddRaw(rec.GetRaw(i))
+		}
+	}
+	return rb.Trim().Build(), fields
 }
