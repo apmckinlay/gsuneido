@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -15,8 +16,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
-
-//TODO hijack for web socket
 
 var _ = builtin(HttpServer, `(port, app, stop = false)`)
 
@@ -205,6 +204,22 @@ func httpEnv_Write(this Value, a Value) Value {
 	}
 	e.done = true
 	return nil
+}
+
+var _ = method(httpEnv_Hijack, "()")
+
+func httpEnv_Hijack(this Value) Value {
+	e := this.(*suHttpEnv)
+	hj, ok := e.rw.(http.Hijacker)
+	if !ok {
+		panic("HttpServer cannot Hijack")
+	}
+	conn, bufrw, err := hj.Hijack()
+	if err != nil {
+		panic("HttpServer Hijack failed: " + err.Error())
+	}
+	conn.SetDeadline(noDeadline)
+	return &suSocketClient{conn: conn.(*net.TCPConn), rdr: bufrw.Reader, timeout: 0}
 }
 
 //-------------------------------------------------------------------
