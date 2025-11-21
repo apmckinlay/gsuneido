@@ -7,11 +7,11 @@ require (
 	github.com/ProtonMail/gopenpgp/v2 v2.9.0
 	github.com/google/uuid v1.6.0
 	github.com/kljensen/snowball v0.10.0
-	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b
-	golang.org/x/sys v0.35.0
-	golang.org/x/text v0.28.0
-	golang.org/x/time v0.12.0
-	golang.org/x/crypto v0.41.0
+	golang.org/x/crypto v0.45.0
+	golang.org/x/exp v0.0.0-20251113190631-e25ba8c21ef6
+	golang.org/x/sys v0.38.0
+	golang.org/x/text v0.31.0
+	golang.org/x/time v0.14.0
 )
 
 require (
