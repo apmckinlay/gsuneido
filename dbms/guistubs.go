@@ -5,7 +5,10 @@
 
 package dbms
 
-import "github.com/apmckinlay/gsuneido/util/assert"
+import (
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
 
 func Server(dbms *DbmsLocal) {
 	assert.ShouldNotReachHere()
@@ -17,4 +20,8 @@ func StopServer() {
 
 func Conns() string {
 	panic(assert.ShouldNotReachHere())
+}
+
+func connections() *SuObject {
+	return &SuObject{}
 }

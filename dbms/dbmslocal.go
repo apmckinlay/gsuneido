@@ -78,7 +78,7 @@ func (dbms *DbmsLocal) Check(full bool) string {
 }
 
 func (*DbmsLocal) Connections() Value {
-	panic("Connections is only available client-server")
+	return connections()
 }
 
 func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
