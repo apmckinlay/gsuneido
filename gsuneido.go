@@ -303,7 +303,6 @@ func sendErrorLog(d IDbms, sessionId string) {
 
 // runServer does not return
 func runServer() {
-	log.Println("starting server")
 	openDbms()
 	startHttpStatus()
 	run("Init()")
@@ -317,23 +316,16 @@ func stopServer() {
 	exit.Progress("server stopping")
 	httpServer.Close()
 	dbms.StopServer()
-	heap := builtin.HeapSys()
-	log.Println("server stopped, heap:", heap/(1024*1024), "mb,",
-		"in use:", heapInUse()/(1024*1024), "mb,",
-		"goroutines:", runtime.NumGoroutine())
 	exit.Progress("server stopped")
-}
-
-func heapInUse() uint64 {
-	sample := make([]metrics.Sample, 1)
-	sample[0].Name = "/gc/heap/live:bytes"
-	metrics.Read(sample)
-	return sample[0].Value.Uint64()
 }
 
 var db *db19.Database
 
 func openDbms() {
+	startstop := mode != "gui" && !isTerminal(os.Stderr)
+	if startstop {
+		log.Println("start")
+	}
 	var err error
 	db, err = db19.OpenDatabase("suneido.db")
 	if errors.Is(err, fs.ErrNotExist) {
@@ -366,10 +358,23 @@ func openDbms() {
 	GetDbms = getDbms
 	exit.Add("close database", func() {
 		exit.Progress("database closing")
-		db.CloseKeepMapped()
+		db.CloseKeepMapped() // keep mapped to avoid errors during shutdown
 		exit.Progress("database closed")
-	}) // keep mapped to avoid errors during shutdown
+		if startstop {
+			heap := builtin.HeapSys()
+			log.Println("stop, heap:", heap/(1024*1024), "mb,",
+				"in use:", heapInUse()/(1024*1024), "mb,",
+				"goroutines:", runtime.NumGoroutine())
+		}
+	})
 	// go checkState()
+}
+
+func heapInUse() uint64 {
+	sample := make([]metrics.Sample, 1)
+	sample[0].Name = "/gc/heap/live:bytes"
+	metrics.Read(sample)
+	return sample[0].Value.Uint64()
 }
 
 func runCommandLine() {
@@ -432,10 +437,11 @@ var prompt = func(s string) { fmt.Fprintln(os.Stderr, s) }
 
 func repl() {
 	builtin.InheritHandles = true
+	defer log.SetFlags(log.Flags())
 	log.SetFlags(log.Ltime)
 	log.SetPrefix("")
 
-	if !isTerminal(os.Stdin) || !isTerminal(os.Stdout) {
+	if !isTerminal(os.Stderr) {
 		prompt = func(string) {}
 	}
 
@@ -468,13 +474,8 @@ func repl() {
 }
 
 func isTerminal(f *os.File) bool {
-	fm, err := f.Stat()
-	if err != nil {
-		return true // ???
-	}
-	mode := fm.Mode()
-	return mode&os.ModeDevice == os.ModeDevice &&
-		mode&os.ModeCharDevice == os.ModeCharDevice
+	info, err := f.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice == os.ModeCharDevice
 }
 
 func eval(src string) {
@@ -497,7 +498,7 @@ func eval(src string) {
 	if result != nil {
 		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
 	} else if len(mainThread.ReturnMulti) > 0 {
-		for i := len(mainThread.ReturnMulti) -1; i >= 0; i-- {
+		for i := len(mainThread.ReturnMulti) - 1; i >= 0; i-- {
 			fmt.Println(WithType(mainThread.ReturnMulti[i]))
 		}
 	}
