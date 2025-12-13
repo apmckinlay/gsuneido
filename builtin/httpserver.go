@@ -122,7 +122,7 @@ func (e *suHttpEnv) Get(_ *Thread, k Value) Value {
 			e.body = sb.String()
 		}
 		return SuStr(e.body)
-	case "socket": // termporary backwards compatible with RackServer
+	case "socket": // temporary backwards compatible with RackServer
 		return e // not really the socket, but handles Read, Write, and CopyTo
 	default:
 		key = strings.ReplaceAll(key, "_", "-")
