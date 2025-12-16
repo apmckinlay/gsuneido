@@ -54,6 +54,9 @@ func TestLookupCacheOperationCounter(t *testing.T) {
 // that may also exercise Join/LeftJoin/Compatible in the same run.
 
 func TestLookupCacheCounters(t *testing.T) {
+	if !useLookup {
+		return
+	}
 	db := testDb()
 	defer db.Close()
 
@@ -86,6 +89,9 @@ func TestLookupCacheCounters(t *testing.T) {
 }
 
 func TestLeftJoinCacheCounters(t *testing.T) {
+	if !useLookup {
+		return
+	}
 	db := testDb()
 	defer db.Close()
 
