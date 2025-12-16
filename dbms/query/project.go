@@ -176,9 +176,9 @@ func (p *Project) SetTran(t QueryTran) {
 // projectKeys is also used by Summarize
 func projectKeys(keys [][]string, cols []string) [][]string {
 	var keys2 [][]string
-	for _, ix := range keys {
-		if set.Subset(cols, ix) {
-			keys2 = append(keys2, ix)
+	for _, k := range keys {
+		if set.Subset(cols, k) {
+			keys2 = append(keys2, k)
 		}
 	}
 	if len(keys2) == 0 {
