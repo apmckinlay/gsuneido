@@ -1059,7 +1059,7 @@ func GetDIBits(a, b, c, d, e, f, g Value) Value {
 		intArg(c),
 		intArg(d),
 		intArg(e),
-		uintptr(unsafe.Pointer(&bmih)),
+		uintptr(unsafe.Pointer(bmih)),
 		intArg(g))
 	hdr.Put(nil, SuStr("biSizeImage"), IntVal(int(bmih.biSizeImage)))
 	hdr.Put(nil, SuStr("biXPelsPerMeter"), IntVal(int(bmih.biXPelsPerMeter)))
