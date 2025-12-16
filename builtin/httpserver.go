@@ -15,6 +15,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 var _ = builtin(HttpServer, `(port, app, stop = false)`)
@@ -124,6 +125,9 @@ func (e *suHttpEnv) Get(_ *Thread, k Value) Value {
 		return SuStr(e.body)
 	case "socket": // temporary backwards compatible with RackServer
 		return e // not really the socket, but handles Read, Write, and CopyTo
+	case "remote_user":
+		addr := e.rq.RemoteAddr
+		return SuStr(str.BeforeLast(addr, ":"))
 	default:
 		key = strings.ReplaceAll(key, "_", "-")
 		v := e.rq.Header[key]
