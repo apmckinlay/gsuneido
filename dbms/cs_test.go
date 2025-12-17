@@ -6,6 +6,7 @@
 package dbms
 
 import (
+	"crypto/tls"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -27,11 +28,27 @@ func TestClientServer(*testing.T) {
 	dbmsLocal := NewDbmsLocal(db)
 	p1, p2 := net.Pipe()
 	workers = mux.NewWorkers(doRequest)
-	go newServerConn(dbmsLocal, p1)
+	cert, err := tls.X509KeyPair(ServerCert, ServerKey)
+	if err != nil {
+		panic(err)
+	}
+	serverConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+	}
+	go newServerConn(dbmsLocal, p1, serverConfig)
+	// Exchange hello over plain connection
 	errmsg := checkHello(p2)
 	assert.This(errmsg).Is("")
 	p2.Write(hello())
-	c := NewDbmsClient(p2)
+	// Upgrade client side to TLS
+	clientConfig := &tls.Config{
+		InsecureSkipVerify: true, // For testing with self-signed cert
+	}
+	tlsConn := tls.Client(p2, clientConfig)
+	if err := tlsConn.Handshake(); err != nil {
+		panic(err)
+	}
+	c := NewDbmsClient(tlsConn)
 	ses := c.NewSession()
 	args := SuObjectOf(SuStr("tables sort table"))
 	ses.Get(nil, args, Next)

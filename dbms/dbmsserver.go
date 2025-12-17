@@ -88,7 +88,8 @@ func Server(dbms *DbmsLocal) {
 	config := &tls.Config{
 		Certificates: []tls.Certificate{cert},
 	}
-	l, err := tls.Listen("tcp", ":"+options.Port, config)
+	// Listen for plain TCP connection to handle version mismatch
+	l, err := net.Listen("tcp", ":"+options.Port)
 	if err != nil {
 		Fatal(err)
 	}
@@ -102,7 +103,7 @@ func Server(dbms *DbmsLocal) {
 			Fatal("DbmsServer:", err)
 		}
 		// start a new goroutine to avoid blocking
-		go newServerConn(dbms, conn)
+		go newServerConn(dbms, conn, config)
 	}
 }
 
@@ -159,7 +160,7 @@ func (sc *serverConn) serverLog(args ...any) {
 	log.Println(args...)
 }
 
-func newServerConn(dbms *DbmsLocal, conn net.Conn) {
+func newServerConn(dbms *DbmsLocal, conn net.Conn, config *tls.Config) {
 	trace.ClientServer.Println("server connection")
 	conn.Write(hello())
 	if errmsg := checkHello(conn); errmsg != "" {
@@ -169,9 +170,16 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 		conn.Close()
 		return
 	}
-	addr := str.BeforeLast(conn.RemoteAddr().String(), ":") // strip port
-	msc := mux.NewServerConn(conn)
-	sc := &serverConn{dbms: dbms, id: msc.Id(), conn: conn, remoteAddr: addr,
+	// Upgrade to TLS after successful hello
+	tlsConn := tls.Server(conn, config)
+	if err := tlsConn.Handshake(); err != nil {
+		log.Println("ERROR: dbms server: TLS handshake failed:", err)
+		conn.Close()
+		return
+	}
+	addr := str.BeforeLast(tlsConn.RemoteAddr().String(), ":") // strip port
+	msc := mux.NewServerConn(tlsConn)
+	sc := &serverConn{dbms: dbms, id: msc.Id(), conn: tlsConn, remoteAddr: addr,
 		sessions: make(map[uint32]*serverSession)}
 	if dbms.db.HaveUsers() {
 		sc.dbms = &DbmsUnauth{dbms: dbms}

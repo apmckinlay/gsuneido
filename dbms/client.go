@@ -24,16 +24,8 @@ var ServerCert []byte
 var VersionMismatch func(string) // injected by gsuneido.go
 
 func ConnectClient(addr string, port string) net.Conn {
-	caCertPool := x509.NewCertPool()
-	ok := caCertPool.AppendCertsFromPEM(ServerCert)
-	if !ok {
-		cantConnect("Failed to append embedded cert to pool")
-	}
-	config := &tls.Config{
-		RootCAs:    caCertPool,
-		ServerName: "localhost", // Must match CN or SAN
-	}
-	conn, err := tls.Dial("tcp", addr+":"+port, config)
+	// Start with plain TCP connection to handle version mismatch
+	conn, err := net.Dial("tcp", addr+":"+port)
 	if err != nil {
 		checkServerStatus(addr, port)
 		cantConnect(err.Error())
@@ -46,7 +38,21 @@ func ConnectClient(addr string, port string) net.Conn {
 		}
 		cantConnect(errmsg)
 	}
-	return conn
+	// Upgrade to TLS after successful hello
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(ServerCert)
+	if !ok {
+		cantConnect("Failed to append embedded cert to pool")
+	}
+	config := &tls.Config{
+		RootCAs:    caCertPool,
+		ServerName: "localhost", // Must match CN or SAN
+	}
+	tlsConn := tls.Client(conn, config)
+	if err := tlsConn.Handshake(); err != nil {
+		cantConnect("TLS handshake failed: " + err.Error())
+	}
+	return tlsConn
 }
 
 func clientVersionMismatch(conn net.Conn) {
