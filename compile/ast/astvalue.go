@@ -4,6 +4,8 @@
 package ast
 
 import (
+	"strings"
+
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
 )
@@ -155,6 +157,24 @@ func (a *RangeLen) Get(_ *Thread, m Value) Value {
 		return nilToFalse(a.From)
 	case SuStr("len"):
 		return nilToFalse(a.Len)
+	}
+	return falsePos(a, m)
+}
+
+func (a *InRange) Get(_ *Thread, m Value) Value {
+	switch m {
+	case SuStr("type"):
+		return SuStr("InRange")
+	case SuStr("expr"):
+		return a.E.(Value)
+	case SuStr("from"):
+		return nilToFalse(a.Org)
+	case SuStr("to"):
+		return nilToFalse(a.End)
+	case SuStr("fromToken"):
+		return SuStr(strings.TrimSpace(tokEcho[a.OrgTok]))
+	case SuStr("toToken"):
+		return SuStr(strings.TrimSpace(tokEcho[a.EndTok]))
 	}
 	return falsePos(a, m)
 }
