@@ -5,6 +5,7 @@ package query
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -166,9 +167,11 @@ func row2str(hdr *Header, row Row) string {
 	if row == nil {
 		return "nil"
 	}
+	cols := slices.Clone(hdr.Columns)
+	slices.Sort(cols)
 	var sb strings.Builder
 	sep := ""
-	for _, col := range hdr.Columns {
+	for _, col := range cols {
 		val := row.GetVal(hdr, col, nil, nil)
 		if val != EmptyStr {
 			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
@@ -276,7 +279,7 @@ func TestWhereSelectBug(t *testing.T) {
 	act("insert {d: '1', a: '5', b: '7'} into t1")
 	query := "t1 join t2 where d is '1' and b < 'z'"
 	assert.T(t).This(queryAll(db, query)).
-		Is("d=1 a=3 b=7 | d=1 a=5 b=7 | d=1 a=2 b=8 | d=1 a=4 b=8")
+		Is("a=3 b=7 d=1 | a=5 b=7 d=1 | a=2 b=8 d=1 | a=4 b=8 d=1")
 
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery("t1 where d is '1' and b < 'z'", tran, nil)

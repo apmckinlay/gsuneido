@@ -80,7 +80,7 @@ func TestExtendRuleBug(t *testing.T) {
 	db.act("insert { ck: 1, ik: 3, i3: 2 } into ivc")
 	assert.This(queryAll(db.Database,
 		"(cus where ck is 1 extend r1, i3 = c4) join by(ck,i3) ivc")).
-		Is("ik=3 ck=1 i3=2 c4=2")
+		Is("c4=2 ck=1 i3=2 ik=3")
 }
 
 func TestExtendRuleBug2(t *testing.T) {
@@ -89,7 +89,7 @@ func TestExtendRuleBug2(t *testing.T) {
 	db.act("insert { ck: 1, c4: 2  } into cus")
 	assert.This(queryAll(db.Database,
 		`(((cus extend r0, a3 = c4) union (cus union cus)) where r0 is "")`)).
-		Is("ck=1 c4=2 | ck=1 c4=2 a3=2")
+		Is("c4=2 ck=1 | a3=2 c4=2 ck=1")
 }
 
 func TestExtendRuleWhereRaw(t *testing.T) {
@@ -98,16 +98,16 @@ func TestExtendRuleWhereRaw(t *testing.T) {
 	db.act("insert { ck: 1, c4: 2  } into cus")
 	assert.T(t).This(queryAll(db.Database,
 		`cus extend r, x = r where x is ""`)).
-		Is("ck=1 c4=2")
+		Is("c4=2 ck=1")
 	assert.T(t).This(queryAll(db.Database,
 		`cus extend r, x = r where x in ("", "5")`)).
-		Is("ck=1 c4=2")
+		Is("c4=2 ck=1")
 	assert.T(t).This(queryAll(db.Database,
 		`cus extend r, x = r where x >= "" and x < "5"`)).
-		Is("ck=1 c4=2")
+		Is("c4=2 ck=1")
 	assert.T(t).This(queryAll(db.Database,
 		`cus extend r, x = r where String?(x)`)).
-		Is("ck=1 c4=2")
+		Is("c4=2 ck=1")
 }
 
 func BenchmarkExtend(b *testing.B) {
