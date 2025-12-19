@@ -95,9 +95,9 @@ type Query interface {
 	// Where returns []string{} not nil for singleton. (slc.Empty)
 	Indexes() [][]string
 
-	// Keys returns sets of fields that are unique keys.
+	// Keys returns sets of fields that are unique primary keys.
 	// On a table this will be the key indexes, but on other operations
-	// this is logical, there may not necessarily be an index.
+	// this is logical, there may not be a physical index.
 	Keys() [][]string
 
 	// Nrows returns n the number of expected result rows from the query,
@@ -150,7 +150,8 @@ type Query interface {
 
 	// optimize determines the minimum cost strategy based on estimates.
 	//
-	// index is what is required for order or lookup
+	// index is what is required for ordering, grouping, or lookup.
+	// NOTE: there is no way to specify which of these is required.
 	//
 	// frac is the estimated fraction of the rows that will be read.
 	// It affects the variable cost.
