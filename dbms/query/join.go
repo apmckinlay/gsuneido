@@ -80,7 +80,7 @@ func (jt joinType) toOne() bool {
 	return jt == one_one || jt == n_one
 }
 
-const useLookup = false
+const useLookup = true
 
 func (jt joinType) String() string {
 	switch jt {

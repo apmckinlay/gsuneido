@@ -210,21 +210,13 @@ func (tbl *Table) lookupCost() Cost {
 
 // execution --------------------------------------------------------
 
-func (tbl *Table) Lookup(_ *Thread, cols, vals []string) Row {
-	assert.That(tbl.hasKey(cols))
+func (tbl *Table) Lookup(_ *Thread, cols, vals []string) (row Row) {
+	fields := tbl.schema.Indexes[tbl.iIndex].Fields
+	assert.That(set.Subset(cols, fields))
 	assert.That(!selConflict(tbl.header.Columns, cols, vals))
 	tbl.nlooks++
-	key := selOrg(tbl.indexEncode, tbl.index, cols, vals, true)
+	key := selOrg(tbl.indexEncode, fields, cols, vals, true)
 	return tbl.lookup(key)
-}
-
-func (tbl *Table) hasKey(cols []string) bool {
-	for _, key := range tbl.keys {
-		if set.Subset(cols, key) {
-			return true
-		}
-	}
-	return false
 }
 
 func (tbl *Table) lookup(key string) Row {

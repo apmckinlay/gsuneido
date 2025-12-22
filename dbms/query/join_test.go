@@ -102,6 +102,21 @@ func setupIndex(q Query, mode Mode, index []string, tran QueryTran) Query {
 	return q
 }
 
+func TestJoin_LookupBug(t *testing.T) {
+	db := heapDb()
+	db.adm("create tmp1 (a) key(a)")
+	db.act("insert { a: 1 } into tmp1")
+	db.adm("create tmp2 (a,b) index(a) in tmp1 key(a,b)")
+	db.act("insert { a: 1, b: 2 } into tmp2")
+	query := `
+			tmp1
+		leftjoin by(a) // leftjoin to prevent reversal
+			(tmp2
+			where b is 2
+			project a)`
+	assert.This(queryAll(db.Database, query)).Is("a=1")
+}
+
 // func rowstr(hdr *Header, row Row) string {
 // 	if row == nil {
 // 		return "nil"
