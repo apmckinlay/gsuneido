@@ -4,6 +4,7 @@
 package query
 
 import (
+	"slices"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -66,7 +67,11 @@ var testSchemas = map[string]*Schema{
 }
 
 func (testTran) GetSchema(table string) *Schema {
-	return testSchemas[table]
+	if schema := testSchemas[table]; schema != nil {
+		setFields(schema)
+		return schema
+	}
+	return nil
 }
 
 var testInfo = map[string]*meta.Info{
@@ -102,10 +107,39 @@ func (testTran) GetAllSchema() []*meta.Schema {
 	schemas := make([]*meta.Schema, 0, len(testSchemas))
 	for table, schema := range testSchemas {
 		schema.Table = table
+		setFields(schema)
 		schemas = append(schemas,
 			&meta.Schema{Schema: *schema})
 	}
 	return schemas
+}
+
+func setFields(schema *Schema) {
+	if len(schema.Indexes) > 0 && schema.Indexes[0].Fields != nil {
+		return // already set
+	}
+	var bestKey []string
+	for i := range schema.Indexes {
+		if schema.Indexes[i].Mode == 'k' {
+			if len(bestKey) == 0 ||
+				len(schema.Indexes[i].Columns) < len(bestKey) {
+				bestKey = schema.Indexes[i].Columns
+			}
+		}
+	}
+	for i := range schema.Indexes {
+		ix := &schema.Indexes[i]
+		if ix.Mode == 'k' {
+			ix.Fields = ix.Columns
+		} else {
+			ix.Fields = slices.Clone(ix.Columns)
+			for _, col := range bestKey {
+				if !slices.Contains(ix.Columns, col) {
+					ix.Fields = append(ix.Fields, col)
+				}
+			}
+		}
+	}
 }
 
 func (testTran) GetAllViews() []string {
