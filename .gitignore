@@ -30,3 +30,4 @@ suneido.dbd
 !stdlib/**/*.ss
 server.crt
 server.key
+*.in
