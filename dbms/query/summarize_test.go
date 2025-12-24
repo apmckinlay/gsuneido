@@ -53,3 +53,19 @@ func TestSummarizeSelectFilter(t *testing.T) {
 	row = q.Get(nil, Next)
 	assert.T(t).This(row).Is(nil)
 }
+
+func TestSummarize_Keys(t *testing.T) {
+	srckeys := [][]string{{"a", "b"}, {"c"}}
+	keys := projectKeys(srckeys, []string{"x", "y"})
+	assert.T(t).This(keys).Is([][]string{{"x", "y"}})
+	keys = projectKeys(srckeys, []string{})
+	assert.T(t).This(keys).Is([][]string{{}})
+}
+
+func TestSummarize_Indexes(t *testing.T) {
+	srcidxs := [][]string{{"a", "b"}, {"c"}}
+	idxs := projectIndexes(srcidxs, []string{"x", "y"})
+	assert.T(t).This(idxs).Is(nil)
+	idxs = projectIndexes(srcidxs, []string{})
+	assert.T(t).This(idxs).Is(nil)
+}
