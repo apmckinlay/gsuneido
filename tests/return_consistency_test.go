@@ -27,6 +27,9 @@ func TestReturnConsistency(t *testing.T) {
 	test("function (a) { if a \n return \n else \n return }")
 	test("function (a) { if a \n return 1, 2 \n else \n return 3, 4 }")
 
+	// unknown number of return values from function call
+	test("function (a) { if a \n return \n return Date() }")
+	
 	// Inconsistent explicit returns - should fail
 	test("function (a) { if a \n return \n else \n return 1 }",
 		"WARNING: inconsistent number of return values @38")
