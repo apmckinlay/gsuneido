@@ -29,8 +29,8 @@ import (
 type Where struct {
 	t       QueryTran
 	colSels map[string][]span // from NewWhere, result of perField
-	// tbl will be set if the source is a Table, nil otherwise
-	tbl *Table
+	// tbl will be set if the source is a table, nil otherwise
+	tbl whereTable
 	// idxSel is for the chosen index
 	idxSel *idxSel
 	expr   *ast.Nary // And
@@ -66,6 +66,26 @@ type Where struct {
 
 	ixCtx  ixContext
 	ixExpr ast.Expr
+}
+
+// whereTable is the additional functionality that Where needs from a Table.
+// It is deliberately separate from *Table so it can be replaced for testing.
+type whereTable interface {
+	// optimization
+	optimize(mode Mode, index []string, frac float64) (Cost, Cost, any)
+	IndexCols(index []string) []string
+	SetIndex(index []string)
+	schemaIndexes() []Index
+	indexi(index []string) int
+	Name() string
+	isSingleton() bool
+	setCost(frac float64, fixcost, varcost Cost)
+
+	// execution
+	SelectRaw(org, end string)
+	lookup(key string) Row
+	GetFilter(dir Dir, filter func(key string) bool) Row
+	Nrows() (int, int)
 }
 
 type optInited byte
@@ -533,7 +553,7 @@ func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cos
 	assert.That(!w.singleton || index == nil) // ensured by Optimize
 	// we always have the option of just filtering (no specific index use)
 	filterFixCost, filterVarCost := Optimize(w.source, mode, index, frac)
-	if w.tbl == nil || w.tbl.singleton {
+	if w.tbl == nil || w.tbl.isSingleton() {
 		// fmt.Println("Where opt", index, frac, "= filter", filterFixCost, filterVarCost)
 		return filterFixCost, filterVarCost, nil
 	}
@@ -565,7 +585,7 @@ func (w *Where) optInit() {
 	}
 	assert.That(w.optInited == optInitNo)
 	w.optInited = optInitInProgress
-	w.tbl, _ = w.source.(*Table)
+	w.tbl, _ = w.source.(whereTable)
 	if !w.conflict && w.tbl != nil {
 		w.idxSels = w.perIndex(w.colSels)
 		// fmt.Println("idxSels", w.idxSels)
@@ -662,7 +682,7 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 	}
 	if app == nil { // filter
 		w.source = SetApproach(w.source, index, frac, tran)
-		w.tbl, _ = w.source.(*Table) // SetApproach may insert TempIndex
+		w.tbl, _ = w.source.(whereTable) // SetApproach may insert TempIndex
 	} else {
 		app := app.(*whereApproach)
 		idx := app.index

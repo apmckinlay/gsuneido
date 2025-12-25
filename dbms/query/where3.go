@@ -37,7 +37,7 @@ type pointRange struct {
 // Its output is used by Nrows, bestIndex, and finally Get
 func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 	idxSels := make([]idxSel, 0, 4)
-	indexes := w.tbl.schema.Indexes
+	indexes := w.tbl.schemaIndexes()
 	for i := range indexes {
 		schix := &indexes[i]
 		idx := schix.Columns
@@ -197,7 +197,7 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 		if pr.isPoint() {
 			npoints++
 		} else { // range
-			frac += w.t.RangeFrac(w.tbl.name, iIndex, pr.org, pr.end)
+			frac += w.t.RangeFrac(w.tbl.Name(), iIndex, pr.org, pr.end)
 		}
 	}
 	if nrows > 0 {
