@@ -35,7 +35,7 @@ func QueryAltHash(th *Thread, args []Value) Value {
 	details := ToBool(args[1])
 	t := th.Dbms().Transaction(false).(*dbms.ReadTranLocal).ReadTran
 	q := qry.ParseQuery(query, t, nil)
-	qh := NewQueryHasher(q.Header())
+	qh := qry.NewQueryHasher(q.Header())
 	rows := q.Simple(th)
 	for _, row := range rows {
 		qh.Row(row)
