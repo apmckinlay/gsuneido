@@ -33,6 +33,7 @@ type Project struct {
 	indexed       bool
 	warned        bool
 	derivedWarned bool
+	prevDir       Dir
 	derived       int
 	th            *Thread
 }
@@ -461,8 +462,14 @@ func projectFields(fs []string, pcols []string) []string {
 }
 
 func (p *Project) Rewind() {
-	p.rewound = true
 	p.source.Rewind()
+	p.rewind()
+}
+
+func (p *Project) rewind() {
+	p.rewound = true
+	p.curRow = nil
+	p.prevRow = nil
 }
 
 func (p *Project) Get(th *Thread, dir Dir) Row {
@@ -486,14 +493,18 @@ func (p *Project) Get(th *Thread, dir Dir) Row {
 
 func (p *Project) getSeq(th *Thread, dir Dir) Row {
 	if dir == Next {
+		p.prevDir = dir
 		// output the first of each group
 		// i.e. skip over rows the same as previous output
 		for {
 			row := p.source.Get(th, dir)
 			if row == nil {
+				p.prevRow = p.curRow
+				p.curRow = nil
 				return nil
 			}
-			if p.rewound || !p.header.EqualRows(row, p.curRow, th, p.st) {
+			if p.rewound || p.curRow == nil ||
+				!p.header.EqualRows(row, p.curRow, th, p.st) {
 				p.rewound = false
 				p.prevRow = p.curRow
 				p.curRow = row
@@ -504,12 +515,14 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// output the last of each group
 		// i.e. output when next record is different
 		// (to get the same records as NEXT)
-		if p.rewound {
+		if p.rewound || (p.prevRow == nil && p.prevDir == Next) {
 			p.prevRow = p.source.Get(th, dir)
+			p.rewound = false
 		}
-		p.rewound = false
+		p.prevDir = dir
 		for {
 			if p.prevRow == nil {
+				p.curRow = nil
 				return nil
 			}
 			row := p.prevRow
@@ -627,7 +640,7 @@ func (p *Project) Select(cols, vals []string) {
 	if p.strat == projMap {
 		p.indexed = false
 	}
-	p.rewound = true
+	p.rewind()
 }
 
 func (p *Project) Lookup(th *Thread, cols, vals []string) Row {
