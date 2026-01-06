@@ -174,6 +174,7 @@ type Query interface {
 	// Simple is simple, alternate execution method for testing.
 	// It should normally be used after just parsing,
 	// without transform or optimize.
+	// The result may be modified - do not return internal data
 	Simple(th *Thread) []Row
 
 	// ValueGet is for Suneido.ParseQuery and queryvalue.go
