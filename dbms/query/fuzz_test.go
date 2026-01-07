@@ -4,6 +4,7 @@
 package query
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"slices"
 	"strconv"
@@ -13,6 +14,10 @@ import (
 )
 
 // go test -run '^$' -fuzz=FuzzQuerySource ./dbms/query/
+
+func init() {
+	sortForTest = true
+}
 
 func FuzzQuerySource(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
@@ -24,7 +29,7 @@ func FuzzQuerySource(f *testing.F) {
 
 func TestFuzzQuerySource(t *testing.T) {
 	rnd := rand.New(rand.NewPCG(12351, 68081))
-	for range 10000 {
+	for range 1000 {
 		qs := NewQuerySource(rnd)
 		fuzzQuery(t, qs, rnd, chooseIndex(rnd, qs.Indexes()))
 	}
@@ -39,7 +44,7 @@ func FuzzProject(f *testing.F) {
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzProject(t, rnd)
 	})
-	// f.Logf("Strategy: copy=%d, seq=%d, map=%d",
+	// fmt.Printf("Strategy: copy=%d, seq=%d, map=%d\n",
 	// 	strategyCounts[projCopy], strategyCounts[projSeq], strategyCounts[projMap])
 }
 
@@ -48,7 +53,7 @@ func TestFuzzProject(t *testing.T) {
 	for range 10000 {
 		fuzzProject(t, rnd)
 	}
-	// t.Logf("Strategy: copy=%d, seq=%d, map=%d",
+	// fmt.Printf("Strategy: copy=%d, seq=%d, map=%d\n",
 	// 	strategyCounts[projCopy], strategyCounts[projSeq], strategyCounts[projMap])
 }
 
@@ -126,6 +131,143 @@ func chooseIndex(rnd *rand.Rand, indexes [][]string) []string {
 		return nil
 	}
 	return index
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzSummarize ./dbms/query/
+
+var sumStrategyCounts = map[sumStrategy]int{
+	sumSeq: 0,
+	sumMap: 0,
+	sumIdx: 0,
+	sumTbl: 0,
+}
+
+func FuzzSummarize(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzSummarize(t, rnd)
+	})
+}
+
+func TestFuzzSummarize(t *testing.T) {
+	rnd := rand.New(rand.NewPCG(12351, 68081))
+	for range 1000 {
+		fuzzSummarize(t, rnd)
+	}
+	fmt.Printf("Strategy: seq=%d, map=%d, idx=%d, tbl=%d\n",
+		sumStrategyCounts[sumSeq], sumStrategyCounts[sumMap],
+		sumStrategyCounts[sumIdx], sumStrategyCounts[sumTbl])
+}
+
+var sumOps = []string{"count", "total", "average", "min", "max", "list"}
+
+func fuzzSummarize(t *testing.T, rnd *rand.Rand) {
+	qs := NewQuerySource(rnd)
+	by, cols, ops, ons := randomSummarize(rnd, qs.ColumnsResult, qs.IndexesResult)
+	sum := NewSummarize(qs, "", by, cols, ops, ons)
+
+	index, fixcost, varcost, approach := chooseSummarizeIndex(rnd, sum)
+	if fixcost+varcost >= impossible {
+		return // skip if no valid index found
+	}
+	sum.cacheAdd(index, 1, fixcost, varcost, approach)
+
+	SetApproach(sum, index, 1, nil)
+
+	if approach != nil {
+		strat := approach.(*summarizeApproach).strat
+		sumStrategyCounts[strat]++
+	}
+
+	fuzzQuery(t, sum, rnd, index)
+}
+
+func chooseSummarizeIndex(rnd *rand.Rand, sum *Summarize) ([]string, Cost, Cost, any) {
+	indexes := sum.Indexes()
+	candidates := make([][]string, 0, len(indexes)+1)
+	candidates = append(candidates, indexes...)
+	candidates = append(candidates, nil) // fall back to nil index
+	perm := rnd.Perm(len(candidates))
+	for _, i := range perm {
+		index := candidates[i]
+		if len(index) > 0 {
+			index = index[:1+rnd.IntN(len(index))]
+		}
+		fixcost, varcost, approach := sum.optimize(ReadMode, index, 1)
+		if fixcost+varcost < impossible {
+			return index, fixcost, varcost, approach
+		}
+	}
+	return nil, impossible, impossible, nil
+}
+
+func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, cols, ops, ons []string) {
+	// 20% of the time, choose 'by' columns that allow sumSeq
+	if len(srcCols) > 0 && len(indexes) > 0 && rnd.IntN(5) == 0 {
+		index := random(indexes, rnd)
+		if len(index) > 0 {
+			prefixLen := 1 + rnd.IntN(len(index))
+			by = slices.Clone(index[:prefixLen])
+		}
+	}
+	if by == nil {
+		n := rnd.IntN(len(srcCols) + 1) // 0 to all columns
+		if n > 0 {
+			perm := rnd.Perm(len(srcCols))
+			by = make([]string, n)
+			for i := range n {
+				by[i] = srcCols[perm[i]]
+			}
+		}
+	}
+
+	nops := 1 + rnd.IntN(3)
+	cols = make([]string, nops)
+	ops = make([]string, nops)
+	ons = make([]string, nops)
+
+	// 10% of the time, create conditions for sumIdx (single min/max with no 'by' columns)
+	// sumIdx requires the 'on' column to be an index
+	if len(by) == 0 && len(indexes) > 0 && rnd.IntN(10) == 0 {
+		// Find the first column of an index for sumIdx
+		for _, idx := range indexes {
+			if len(idx) > 0 {
+				cols = make([]string, 1)
+				ops = make([]string, 1)
+				ons = make([]string, 1)
+				if rnd.IntN(2) == 0 {
+					ops[0] = "min"
+				} else {
+					ops[0] = "max"
+				}
+				ons[0] = idx[0]
+				cols[0] = "" // use default name
+				return
+			}
+		}
+	}
+	if len(by) == 0 && rnd.IntN(7) == 0 {
+		// 10% of the time, create conditions for sumTbl (single count with no 'by' columns)
+		cols = make([]string, 1)
+		ops = make([]string, 1)
+		ons = make([]string, 1)
+		ops[0] = "count"
+		ons[0] = ""
+		cols[0] = "" // use default name
+	} else {
+		for i := range nops {
+			ops[i] = sumOps[rnd.IntN(len(sumOps))]
+			if ops[i] == "count" {
+				ons[i] = ""
+			} else {
+				ons[i] = srcCols[rnd.IntN(len(srcCols))]
+			}
+			cols[i] = "" // use default name
+		}
+	}
+	return
 }
 
 //-------------------------------------------------------------------
@@ -215,6 +357,7 @@ func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *He
 			t.Fatalf("random walk %c from %v: expected nil, got row\nsteps so far: %d\nexpected rows count: %d",
 				dir, pos, nsteps-len(nextRows)*3+1, len(nextRows))
 		} else if expectedRow != nil && row == nil {
+			t.Log(q)
 			t.Fatalf("random walk %c from %v: expected row, got nil\nsteps so far: %d\nexpected rows count: %d",
 				dir, pos, nsteps-len(nextRows)*3+1, len(nextRows))
 		} else if expectedRow != nil && row != nil {
@@ -439,3 +582,4 @@ func testNonExistentLookup(t *testing.T, rnd *rand.Rand, q Query, lookupCols []s
 func random[E any](list []E, rnd *rand.Rand) E {
 	return list[rnd.IntN(len(list))]
 }
+

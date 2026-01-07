@@ -122,6 +122,12 @@ func (tbl *Table) Nrows() (int, int) {
 	return tbl.info.Nrows, tbl.info.Nrows
 }
 
+// nrowsExact returns the exact number of rows in the table.
+// This method is used to identify Table types for sumTbl strategy.
+func (tbl *Table) nrowsExact() int {
+	return tbl.info.Nrows
+}
+
 func (tbl *Table) getRowSize() int {
 	if tbl.info.Nrows == 0 {
 		return 0

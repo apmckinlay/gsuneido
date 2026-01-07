@@ -237,11 +237,15 @@ func randomIndexes(rnd *rand.Rand, columns []string, n int) [][]string {
 	return result
 }
 
-func (qs *QuerySource) optimize(_ Mode, index []string, _ float64) (Cost, Cost, any) {
+func (qs *QuerySource) optimize(_ Mode, index []string, frac float64) (Cost, Cost, any) {
 	if !qs.validIndex(index) {
 		return impossible, impossible, nil
 	}
-	return 123, 123, nil
+	varcost := Cost(float64(10000) * frac)
+	if varcost < 1 {
+		varcost = 1
+	}
+	return 0, varcost, nil
 }
 
 func (qs *QuerySource) setApproach(index []string, _ float64, _ any, _ QueryTran) {
@@ -270,6 +274,12 @@ func (qs *QuerySource) validIndex(index []string) bool {
 	return slices.ContainsFunc(qs.IndexesResult, func(ix []string) bool {
 		return slc.HasPrefix(ix, index)
 	})
+}
+
+// nrowsExact returns the exact number of rows in the QuerySource.
+// This method implements the tableForSumTbl interface to enable sumTbl strategy testing.
+func (qs *QuerySource) nrowsExact() int {
+	return qs.NrowsN
 }
 
 // Rewind resets the position so Next gets first or Prev gets last.

@@ -37,6 +37,7 @@ type Summarize struct {
 	unique   bool
 	hint     sumHint
 	th       *Thread
+	done     bool // for getTbl and getIdx: true if we've returned the result
 }
 
 type summarizeApproach struct {
@@ -48,6 +49,16 @@ type summarizeApproach struct {
 type sumStrategy int
 
 type sumHint string
+
+// sortForTest controls whether to sort for deterministic results in tests.
+// Set to true in test files.
+var sortForTest bool
+
+// tableForSumTbl defines the interface needed for sumTbl strategy.
+// This allows testing with QuerySource without requiring actual Table types.
+type tableForSumTbl interface {
+	nrowsExact() int
+}
 
 const (
 	sumSmall sumHint = "small"
@@ -214,7 +225,8 @@ func (su *Summarize) Transform() Query {
 }
 
 func (su *Summarize) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	if _, ok := su.source.(*Table); ok &&
+	// Check if source implements tableForSumTbl interface for sumTbl strategy
+	if _, ok := su.source.(tableForSumTbl); ok &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
 		Optimize(su.source, mode, nil, 0)
 		return 0, 1, &summarizeApproach{strat: sumTbl}
@@ -231,7 +243,7 @@ func (su *Summarize) optimize(mode Mode, index []string, frac float64) (Cost, Co
 
 func (su *Summarize) seqCost(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	if len(su.by) == 0 {
-		frac = min(1, frac)
+		frac = 1 // must read all source rows to compute the aggregate
 	}
 	approach := &summarizeApproach{strat: sumSeq, frac: frac}
 	if len(su.by) == 0 || hasKey(su.by, su.source.Keys(), su.source.Fixed()) {
@@ -335,25 +347,30 @@ func (su *Summarize) Get(th *Thread, dir Dir) Row {
 	}
 }
 
-func getTbl(_ *Thread, su *Summarize, _ Dir) Row {
-	if !su.rewound {
+func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
+	if !su.rewound && su.done {
+		su.done = false
 		return nil
 	}
-	tbl := su.source.(*Table)
+
+	tbl := su.source.(tableForSumTbl)
 	var rb RecordBuilder
-	nr, _ := tbl.Nrows()
+	nr := tbl.nrowsExact()
 	rb.Add(IntVal(nr))
+	su.done = true
 	return Row{DbRec{Record: rb.Build()}}
 }
 
 func getIdx(th *Thread, su *Summarize, _ Dir) Row {
-	if !su.rewound {
+	if !su.rewound && su.done {
+		su.done = false
 		return nil
 	}
 	dir := Prev // max
 	if str.EqualCI(su.ops[0], "min") {
 		dir = Next
 	}
+	su.source.Rewind()
 	row := su.source.Get(th, dir)
 	if row == nil {
 		return nil
@@ -361,6 +378,7 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	var rb RecordBuilder
 	rb.AddRaw(row.GetRawVal(su.source.Header(), su.ons[0], th, su.st))
 	rec := rb.Build()
+	su.done = true
 	if su.wholeRow {
 		return append(row, DbRec{Record: rec})
 	}
@@ -465,6 +483,18 @@ func (su *Summarize) buildMap() []mapPair {
 		list[i] = mapPair{row: rh.row, ops: ops}
 		i++
 	}
+	if sortForTest {
+		sort.Slice(list, func(i, j int) bool {
+			for _, col := range su.by {
+				xi := list[i].row.GetRawVal(hdr, col, su.th, su.st)
+				xj := list[j].row.GetRawVal(hdr, col, su.th, su.st)
+				if xi != xj {
+					return xi < xj
+				}
+			}
+			return false
+		})
+	}
 	return list
 }
 
@@ -479,6 +509,7 @@ type sumSeqT struct {
 
 func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 	if su.rewound {
+		su.rewound = false // clear before source.Get (filter loop might call getSeq again)
 		t.sums = su.newSums()
 		t.curDir = dir
 		t.curRow = nil
@@ -487,19 +518,28 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 
 	// if direction changes, have to skip over previous result
 	if dir != t.curDir {
-		if t.nextRow == nil {
+		returnedNil := t.curRow == nil // did previous call return nil?
+		if returnedNil {
+			// previous call returned nil, just get first row in new direction
 			su.source.Rewind()
-		}
-		for {
 			t.nextRow = su.source.Get(th, dir)
-			if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
-				break
+		} else {
+			// skip over previous group
+			if t.nextRow == nil {
+				su.source.Rewind()
+			}
+			for {
+				t.nextRow = su.source.Get(th, dir)
+				if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
+					break
+				}
 			}
 		}
 		t.curDir = dir
 	}
 
 	if t.nextRow == nil {
+		t.curRow = nil // mark that we're returning nil
 		return nil
 	}
 	t.curRow = t.nextRow
@@ -606,8 +646,48 @@ func (su *Summarize) filter(row Row, th *Thread) bool {
 	return true
 }
 
-func (*Summarize) Simple(*Thread) []Row {
-	panic("Simple not implemented for summarize")
+func (su *Summarize) Simple(th *Thread) []Row {
+	// Handle sumTbl strategy specially - just return the count
+	if su.strat == sumTbl {
+		var rb RecordBuilder
+		tbl := su.source.(tableForSumTbl)
+		nr := tbl.nrowsExact()
+		rb.Add(IntVal(nr))
+		return []Row{{DbRec{Record: rb.Build()}}}
+	}
+
+	srcRows := su.source.Simple(th)
+	if len(srcRows) == 0 {
+		return nil
+	}
+	hdr := su.source.Header()
+	type group struct {
+		row  Row
+		sums []sumOp
+	}
+	groups := make(map[string]*group)
+	for _, row := range srcRows {
+		key := ""
+		for _, col := range su.by {
+			key += row.GetRaw(hdr, col) + "\x00"
+		}
+		g, ok := groups[key]
+		if !ok {
+			g = &group{row: row, sums: su.newSums()}
+			groups[key] = g
+		}
+		su.addToSums(g.sums, row, th, nil)
+	}
+	if len(groups) == 0 && len(su.by) == 0 {
+		groups[""] = &group{sums: su.newSums()}
+	}
+	result := make([]Row, 0, len(groups))
+	for _, g := range groups {
+		// Use seqRow to ensure consistent behavior between Simple and Get methods
+		row := su.seqRow(th, g.row, g.sums)
+		result = append(result, row)
+	}
+	return result
 }
 
 // operations -------------------------------------------------------
@@ -744,7 +824,7 @@ func (sum sumList) result() (Value, Row) {
 		list[i] = Unpack(raw)
 		i++
 	}
-	if len(list) <= 3 { // for tests
+	if sortForTest || len(list) <= 3 { // for tests
 		sort.Slice(list,
 			func(i, j int) bool { return list[i].Compare(list[j]) < 0 })
 	}
