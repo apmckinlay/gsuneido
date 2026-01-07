@@ -172,3 +172,7 @@ func (m *QueryMock) Metrics() *metrics {
 	}
 	panic("QueryMock.Metrics not implemented")
 }
+
+func (*QueryMock) knowExactNrows() bool {
+	return false
+}

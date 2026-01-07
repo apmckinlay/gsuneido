@@ -43,6 +43,10 @@ func (*ProjectNone) Nrows() (int, int) {
 	return 1, 1
 }
 
+func (*ProjectNone) knowExactNrows() bool {
+	return true
+}
+
 func (*ProjectNone) rowSize() int {
 	return 0
 }

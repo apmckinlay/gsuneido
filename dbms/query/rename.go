@@ -202,3 +202,7 @@ func (r *Rename) Lookup(th *Thread, cols, vals []string) Row {
 func (r *Rename) Simple(th *Thread) []Row {
 	return r.source.Simple(th)
 }
+
+func (r *Rename) knowExactNrows() bool {
+	return r.source.knowExactNrows()
+}

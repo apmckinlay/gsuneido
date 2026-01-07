@@ -133,6 +133,8 @@ type Query interface {
 	// It is used by Where, Join, and LeftJoin.
 	// To clear the select, use Select(nil, nil)
 	// Select should rewind.
+	// It is only valid to call Select for the index chosen by optimize/setApproach.
+	// If index is nil, then Select should not be called.
 	Select(cols, vals []string)
 
 	Header() *Header
@@ -182,6 +184,10 @@ type Query interface {
 	ValueGet(key Value) Value
 
 	Metrics() *metrics
+
+	// knowExactNrows returns true if Nrows returns an exact count.
+	// Used by Summarize for sumTbl strategy.
+	knowExactNrows() bool
 }
 
 // queryBase is embedded by almost all Query types
@@ -282,6 +288,10 @@ func (*queryBase) Updateable() string {
 
 func (q *queryBase) Metrics() *metrics {
 	return &q.metrics
+}
+
+func (*queryBase) knowExactNrows() bool {
+	return false
 }
 
 // Mode is the transaction context - cursor, read, or update.

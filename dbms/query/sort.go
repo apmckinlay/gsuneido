@@ -62,6 +62,10 @@ func (*Sort) Indexes() [][]string {
 	panic(assert.ShouldNotReachHere())
 }
 
+func (sort *Sort) knowExactNrows() bool {
+	return sort.source.knowExactNrows()
+}
+
 func (sort *Sort) Transform() Query {
 	src := sort.source.Transform()
 	if _, ok := src.(*Nothing); ok {

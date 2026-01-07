@@ -54,12 +54,6 @@ type sumHint string
 // Set to true in test files.
 var sortForTest bool
 
-// tableForSumTbl defines the interface needed for sumTbl strategy.
-// This allows testing with QuerySource without requiring actual Table types.
-type tableForSumTbl interface {
-	nrowsExact() int
-}
-
 const (
 	sumSmall sumHint = "small"
 	sumLarge sumHint = "large"
@@ -225,8 +219,7 @@ func (su *Summarize) Transform() Query {
 }
 
 func (su *Summarize) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	// Check if source implements tableForSumTbl interface for sumTbl strategy
-	if _, ok := su.source.(tableForSumTbl); ok &&
+	if su.source.knowExactNrows() &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
 		Optimize(su.source, mode, nil, 0)
 		return 0, 1, &summarizeApproach{strat: sumTbl}
@@ -352,10 +345,8 @@ func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
 		su.done = false
 		return nil
 	}
-
-	tbl := su.source.(tableForSumTbl)
 	var rb RecordBuilder
-	nr := tbl.nrowsExact()
+	nr, _ := su.source.Nrows()
 	rb.Add(IntVal(nr))
 	su.done = true
 	return Row{DbRec{Record: rb.Build()}}
@@ -650,8 +641,7 @@ func (su *Summarize) Simple(th *Thread) []Row {
 	// Handle sumTbl strategy specially - just return the count
 	if su.strat == sumTbl {
 		var rb RecordBuilder
-		tbl := su.source.(tableForSumTbl)
-		nr := tbl.nrowsExact()
+		nr, _ := su.source.Nrows()
 		rb.Add(IntVal(nr))
 		return []Row{{DbRec{Record: rb.Build()}}}
 	}

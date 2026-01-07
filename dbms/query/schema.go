@@ -90,6 +90,10 @@ func (*schemaTable) fastSingle() bool {
 	return false
 }
 
+func (*schemaTable) knowExactNrows() bool {
+	return true
+}
+
 func (*schemaTable) Simple(*Thread) []Row {
 	panic("Simple not implemented for schema tables")
 }

@@ -582,4 +582,3 @@ func testNonExistentLookup(t *testing.T, rnd *rand.Rand, q Query, lookupCols []s
 func random[E any](list []E, rnd *rand.Rand) E {
 	return list[rnd.IntN(len(list))]
 }
-

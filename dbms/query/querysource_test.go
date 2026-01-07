@@ -276,10 +276,8 @@ func (qs *QuerySource) validIndex(index []string) bool {
 	})
 }
 
-// nrowsExact returns the exact number of rows in the QuerySource.
-// This method implements the tableForSumTbl interface to enable sumTbl strategy testing.
-func (qs *QuerySource) nrowsExact() int {
-	return qs.NrowsN
+func (qs *QuerySource) knowExactNrows() bool {
+	return true
 }
 
 // Rewind resets the position so Next gets first or Prev gets last.

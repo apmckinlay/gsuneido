@@ -389,3 +389,7 @@ func (it multiIter) get() Row {
 	}
 	return it.iter.Cur()
 }
+
+func (ti *TempIndex) knowExactNrows() bool {
+	return ti.source.knowExactNrows()
+}

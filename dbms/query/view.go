@@ -34,6 +34,10 @@ func NewView(name string, src Query) *View {
 	return v
 }
 
+func (v *View) knowExactNrows() bool {
+	return v.source.knowExactNrows()
+}
+
 func (v *View) Transform() Query {
 	panic(assert.ShouldNotReachHere())
 }

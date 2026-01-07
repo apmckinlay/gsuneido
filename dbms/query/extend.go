@@ -363,3 +363,7 @@ func (e *Extend) Simple(th *Thread) []Row {
 	}
 	return rows
 }
+
+func (e *Extend) knowExactNrows() bool {
+	return e.source.knowExactNrows()
+}
