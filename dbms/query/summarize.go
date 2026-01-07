@@ -19,6 +19,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
+// NOTE: Summarize should return 0 rows if the source has 0 rows.
+
 type Summarize struct {
 	Query1
 	t   QueryTran
@@ -345,10 +347,13 @@ func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
 		su.done = false
 		return nil
 	}
-	var rb RecordBuilder
-	nr, _ := su.source.Nrows()
-	rb.Add(IntVal(nr))
 	su.done = true
+	nr, _ := su.source.Nrows()
+	if nr == 0 {
+		return nil
+	}
+	var rb RecordBuilder
+	rb.Add(IntVal(nr))
 	return Row{DbRec{Record: rb.Build()}}
 }
 
@@ -638,14 +643,6 @@ func (su *Summarize) filter(row Row, th *Thread) bool {
 }
 
 func (su *Summarize) Simple(th *Thread) []Row {
-	// Handle sumTbl strategy specially - just return the count
-	if su.strat == sumTbl {
-		var rb RecordBuilder
-		nr, _ := su.source.Nrows()
-		rb.Add(IntVal(nr))
-		return []Row{{DbRec{Record: rb.Build()}}}
-	}
-
 	srcRows := su.source.Simple(th)
 	if len(srcRows) == 0 {
 		return nil
@@ -667,9 +664,6 @@ func (su *Summarize) Simple(th *Thread) []Row {
 			groups[key] = g
 		}
 		su.addToSums(g.sums, row, th, nil)
-	}
-	if len(groups) == 0 && len(su.by) == 0 {
-		groups[""] = &group{sums: su.newSums()}
 	}
 	result := make([]Row, 0, len(groups))
 	for _, g := range groups {
