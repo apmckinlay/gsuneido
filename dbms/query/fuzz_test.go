@@ -322,6 +322,10 @@ func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *He
 	if !rowSetsEqual(nextRows, qh, hdr) {
 		t.Fatalf("Next iteration returned %d rows, expected %d", len(nextRows), qh.nrows)
 	}
+
+	// Run deterministic cursor pattern checks before random walk
+	testCursorPatterns(t, q, hdr, nextRows)
+
 	data := NewDataSource(nextRows)
 
 	// Redo the Select after getAllRows to reset indexed state for projMap
@@ -387,6 +391,124 @@ func getAllRows(q Query, dir Dir) []Row {
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+// testCursorPatterns runs deterministic cursor navigation patterns.
+// These are run before the random walk because failures are clearer -
+// they test specific edge cases with known expected behavior.
+func testCursorPatterns(t *testing.T, q Query, hdr *Header, nextRows []Row) {
+	t.Helper()
+	n := len(nextRows)
+
+	check := func(name string, row, expected Row) {
+		t.Helper()
+		if expected == nil && row != nil {
+			t.Fatalf("%s: expected nil, got row", name)
+		} else if expected != nil && row == nil {
+			t.Fatalf("%s: expected row, got nil", name)
+		} else if expected != nil && row != nil {
+			if !hdr.EqualRows(row, expected, nil, nil) {
+				t.Fatalf("%s: row mismatch", name)
+			}
+		}
+	}
+
+	// Pattern 1: Rewind, Next, Prev - after first Next, Prev should return nil
+	q.Rewind()
+	row := q.Get(nil, Next) // first row or nil if empty
+	if n > 0 {
+		check("Next,Prev: N", row, nextRows[0])
+	} else {
+		check("Next,Prev: N (empty)", row, nil)
+	}
+	row = q.Get(nil, Prev) // should be nil - nothing before first
+	check("Next,Prev: P", row, nil)
+
+	// Pattern 2: Rewind, Prev, Next - Prev from rewind goes to last, then Next should be nil
+	if n > 0 {
+		q.Rewind()
+		row = q.Get(nil, Prev) // last row
+		check("Prev,Next: P", row, nextRows[n-1])
+		row = q.Get(nil, Next) // should be nil - nothing after last
+		check("Prev,Next: N", row, nil)
+	}
+
+	// Pattern 3: Rewind, Prev, Prev, Next, Next
+	if n >= 2 {
+		q.Rewind()
+		row = q.Get(nil, Prev) // last row (n-1)
+		check("PPNN: P1", row, nextRows[n-1])
+		row = q.Get(nil, Prev) // second to last (n-2)
+		check("PPNN: P2", row, nextRows[n-2])
+		row = q.Get(nil, Next) // back to last (n-1)
+		check("PPNN: N1", row, nextRows[n-1])
+		row = q.Get(nil, Next) // should be nil
+		check("PPNN: N2", row, nil)
+	}
+
+	// Pattern 4: Rewind, Next, Next, Prev, Prev
+	if n >= 2 {
+		q.Rewind()
+		row = q.Get(nil, Next) // first row (0)
+		check("NNPP: N1", row, nextRows[0])
+		row = q.Get(nil, Next) // second row (1)
+		check("NNPP: N2", row, nextRows[1])
+		row = q.Get(nil, Prev) // back to first (0)
+		check("NNPP: P1", row, nextRows[0])
+		row = q.Get(nil, Prev) // should be nil
+		check("NNPP: P2", row, nil)
+	}
+
+	// Pattern 5: Next to end, past end (nil), then Prev
+	if n > 0 {
+		q.Rewind()
+		for i := 0; i < n; i++ {
+			row = q.Get(nil, Next)
+			check("ToEnd: N"+strconv.Itoa(i), row, nextRows[i])
+		}
+		row = q.Get(nil, Next) // past end
+		check("ToEnd: N-past", row, nil)
+		row = q.Get(nil, Prev) // should return last row
+		check("ToEnd: P", row, nextRows[n-1])
+	}
+
+	// Pattern 6: Prev to beginning, past beginning (nil), then Next
+	if n > 0 {
+		q.Rewind()
+		for i := n - 1; i >= 0; i-- {
+			row = q.Get(nil, Prev)
+			check("ToBegin: P"+strconv.Itoa(n-1-i), row, nextRows[i])
+		}
+		row = q.Get(nil, Prev) // past beginning
+		check("ToBegin: P-past", row, nil)
+		row = q.Get(nil, Next) // should return first row
+		check("ToBegin: N", row, nextRows[0])
+	}
+
+	// Pattern 7: Rewind, Next, Prev, Next - should get first row twice
+	if n > 0 {
+		q.Rewind()
+		row = q.Get(nil, Next) // first
+		check("NPN: N1", row, nextRows[0])
+		row = q.Get(nil, Prev) // nil
+		check("NPN: P", row, nil)
+		row = q.Get(nil, Next) // first again
+		check("NPN: N2", row, nextRows[0])
+	}
+
+	// Pattern 8: Rewind, Prev, Next, Prev - should get last row twice
+	if n > 0 {
+		q.Rewind()
+		row = q.Get(nil, Prev) // last
+		check("PNP: P1", row, nextRows[n-1])
+		row = q.Get(nil, Next) // nil
+		check("PNP: N", row, nil)
+		row = q.Get(nil, Prev) // last again
+		check("PNP: P2", row, nextRows[n-1])
+	}
+
+	// Reset for subsequent tests
+	q.Rewind()
 }
 
 func rowSetsEqual(a []Row, qh *QueryHash, hdr *Header) bool {
