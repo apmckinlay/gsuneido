@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
@@ -17,6 +18,7 @@ import (
 
 func init() {
 	sortForTest = true
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 }
 
 func FuzzQuerySource(f *testing.F) {
@@ -333,6 +335,73 @@ func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, 
 		}
 	}
 	return
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzExtend ./dbms/query/
+
+func FuzzExtend(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzExtend(t, rnd)
+	})
+}
+
+func TestFuzzExtend(t *testing.T) {
+	rnd := rand.New(rand.NewPCG(12351, 68081))
+	for range 1000 {
+		fuzzExtend(t, rnd)
+	}
+}
+
+func fuzzExtend(t *testing.T, rnd *rand.Rand) {
+	qs := NewQuerySource(rnd)
+	cols, exprs := randomExtend(rnd, qs.ColumnsResult)
+	ext := NewExtend(qs, cols, exprs)
+
+	index := chooseIndex(rnd, ext.Indexes())
+	fixcost, varcost, approach := ext.optimize(ReadMode, index, 1)
+	if fixcost+varcost >= impossible {
+		t.Fatal("impossible")
+	}
+	ext.cacheAdd(index, 1, fixcost, varcost, approach)
+
+	SetApproach(ext, index, 1, nil)
+
+	fuzzQuery(t, ext, rnd, index)
+}
+
+func randomExtend(rnd *rand.Rand, srcCols []string) (cols []string, exprs []ast.Expr) {
+	if len(srcCols) == 0 {
+		return nil, nil
+	}
+
+	// Keep this simple: we are fuzzing cursor behavior and query plumbing,
+	// not expression evaluation.
+	n := rnd.IntN(min(3, len(srcCols)) + 1) // 0-3 (or fewer if few cols)
+	if n == 0 {
+		return nil, nil
+	}
+
+	cols = make([]string, n)
+	exprs = make([]ast.Expr, n)
+	for i := range n {
+		// unique new column name, not in source and not duplicate within extend
+		for {
+			c := "x" + strconv.Itoa(rnd.IntN(1000))
+			if !slices.Contains(srcCols, c) && !slices.Contains(cols[:i], c) {
+				cols[i] = c
+				break
+			}
+		}
+		if rnd.IntN(2) == 0 {
+			exprs[i] = &ast.Constant{Val: IntVal(rnd.IntN(1000))}
+		} else {
+			exprs[i] = &ast.Ident{Name: srcCols[rnd.IntN(len(srcCols))]}
+		}
+	}
+	return cols, exprs
 }
 
 //-------------------------------------------------------------------
@@ -672,7 +741,9 @@ func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index, cols []str
 
 func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header, index []string, cols []string, q Query) {
 	for range 10 {
-		var srcRow = Row{DbRec{Record: Record("\x00")}}
+		// If there are no rows, use a dummy row sized to match hdr.Fields.
+		// This avoids panics when hdr.Fields references derived records (e.g. Extend).
+		srcRow := make(Row, len(hdr.Fields))
 		if len(allRows) > 0 {
 			srcRow = allRows[rnd.IntN(len(allRows))]
 		}
