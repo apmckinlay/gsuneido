@@ -123,14 +123,79 @@ func chooseIndex(rnd *rand.Rand, indexes [][]string) []string {
 	}
 	index := random(indexes, rnd)
 	if len(index) == 0 {
-		// Empty index - return nil
 		return nil
 	}
-	index = index[:rnd.IntN(len(index))]
-	if len(index) == 0 {
+	n := rnd.IntN(len(index))
+	if n == 0 {
 		return nil
 	}
-	return index
+	return index[:n]
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzRename ./dbms/query/
+
+func FuzzRename(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzRename(t, rnd)
+	})
+}
+
+func TestFuzzRename(t *testing.T) {
+	rnd := rand.New(rand.NewPCG(12351, 68081))
+	for range 1000 {
+		fuzzRename(t, rnd)
+	}
+}
+
+func fuzzRename(t *testing.T, rnd *rand.Rand) {
+	qs := NewQuerySource(rnd)
+	from, to := randomRename(rnd, qs.ColumnsResult)
+	ren := NewRename(qs, from, to)
+
+	index := chooseIndex(rnd, ren.Indexes())
+	fixcost, varcost, approach := ren.optimize(ReadMode, index, 1)
+	if fixcost+varcost >= impossible {
+		t.Fatal("impossible")
+	}
+	ren.cacheAdd(index, 1, fixcost, varcost, approach)
+
+	SetApproach(ren, index, 1, nil)
+
+	fuzzQuery(t, ren, rnd, index)
+}
+
+func randomRename(rnd *rand.Rand, srcCols []string) (from, to []string) {
+	if len(srcCols) == 0 {
+		return nil, nil
+	}
+
+	// Determine how many columns to rename (1 to 3)
+	n := 1 + rnd.IntN(min(3, len(srcCols)))
+
+	// Choose random columns to rename
+	perm := rnd.Perm(len(srcCols))
+	from = make([]string, n)
+	for i := range n {
+		from[i] = srcCols[perm[i]]
+	}
+
+	// Generate new names for the columns
+	to = make([]string, n)
+	for i := range n {
+		// Generate a unique new name that doesn't conflict with existing columns
+		for {
+			newName := "renamed_" + strconv.Itoa(rnd.IntN(1000))
+			if !slices.Contains(srcCols, newName) && !slices.Contains(to[:i], newName) {
+				to[i] = newName
+				break
+			}
+		}
+	}
+
+	return from, to
 }
 
 //-------------------------------------------------------------------
@@ -577,14 +642,19 @@ func selMatch(hdr *Header, row Row, selCols, selVals []string) bool {
 
 // indexSelectCriteria picks a random prefix of the index for select criteria.
 func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index, cols []string, nonexist bool) ([]string, []string) {
-
 	selCols := slices.Clone(index)
 	n := 1 + rnd.IntN(len(selCols))
 	selCols = selCols[:n]
+	// Add extra columns, but avoid duplicates
 	perm := rnd.Perm(len(cols))
-	selCols = append(selCols, cols[perm[0]])
-	if len(cols) > 1 {
-		selCols = append(selCols, cols[perm[1]])
+	for _, i := range perm {
+		col := cols[i]
+		if !slices.Contains(selCols, col) {
+			selCols = append(selCols, col)
+			if len(selCols) >= n+2 {
+				break
+			}
+		}
 	}
 	rnd.Shuffle(len(selCols), func(i, j int) {
 		selCols[i], selCols[j] = selCols[j], selCols[i]
@@ -627,10 +697,16 @@ func testRandomLookups(t *testing.T, rnd *rand.Rand, q Query, index, cols []stri
 	}
 
 	lookupCols := slices.Clone(index)
+	// Add extra columns, but avoid duplicates
 	perm := rnd.Perm(len(cols))
-	lookupCols = append(lookupCols, cols[perm[0]])
-	if len(cols) > 1 {
-		lookupCols = append(lookupCols, cols[perm[1]])
+	for _, i := range perm {
+		col := cols[i]
+		if !slices.Contains(lookupCols, col) {
+			lookupCols = append(lookupCols, col)
+			if len(lookupCols) >= len(index)+2 {
+				break
+			}
+		}
 	}
 	rnd.Shuffle(len(lookupCols), func(i, j int) {
 		lookupCols[i], lookupCols[j] = lookupCols[j], lookupCols[i]
