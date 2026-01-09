@@ -407,10 +407,6 @@ func (tbl *Table) Simple(*Thread) []Row {
 	return rows
 }
 
-func (tbl *Table) Single() bool {
-	return tbl.fast1.Get()
-}
-
 func (tbl *Table) RangeFrac(index, cols, vals []string) float64 {
 	iIndex := tbl.indexi(index)
 	encode := len(index) > 1 ||
