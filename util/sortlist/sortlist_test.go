@@ -228,18 +228,22 @@ func TestIter(t *testing.T) {
 		testNext(i)
 	}
 	testNext(eof)
+	it.Prev()
+	test(10) // Should be at last element
 
+	// Continue with original test
 	it.Rewind()
 	for i := 10; i >= 1; i-- {
 		testPrev(i)
 	}
 	testPrev(eof)
+	it.Next()
+	test(1) // Should be at first element
 
 	it.Rewind()
 	testNext(1)
-	testPrev(eof) // stick at eof
 	testPrev(eof)
-	testNext(eof)
+	testNext(1)
 
 	it.Rewind()
 	testPrev(10)

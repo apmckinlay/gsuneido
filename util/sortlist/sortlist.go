@@ -326,8 +326,10 @@ type iterLess[T any] func(x T, key []string) bool
 type state int
 
 const (
-	rewound state = 1
-	eof     state = 2
+	rewound state = iota
+	eofNext  // hit EOF going forward with Next
+	eofPrev  // hit EOF going backward with Prev
+	within
 )
 
 // Iter returns an iterator for the list.
@@ -346,14 +348,18 @@ func (it *Iter[T]) Next() {
 	switch it.state {
 	case rewound:
 		it.i = 0
-		it.state = 0
-	case eof:
-		// stick
+		it.state = within
+	case eofNext:
+		// stick - already at end from Next
+	case eofPrev:
+		// If we hit EOF going backward, going forward should take us to first element
+		it.i = 0
+		it.state = within
 	default:
 		it.i++
 	}
 	if it.i >= it.size {
-		it.state = eof
+		it.state = eofNext
 	}
 }
 
@@ -361,23 +367,28 @@ func (it *Iter[T]) Prev() {
 	switch it.state {
 	case rewound:
 		it.i = it.size - 1
-		it.state = 0
-	case eof:
+		it.state = within
+	case eofNext:
+		// If we hit EOF going forward, going backward should take us to last element
+		it.i = it.size - 1
+		it.state = within
+	case eofPrev:
+		// If we hit EOF going backward, stay there
 		// stick
 	default:
 		it.i--
 	}
 	if it.i < 0 {
-		it.state = eof
+		it.state = eofPrev
 	}
 }
 
 func (it *Iter[T]) Eof() bool {
-	return it.state == eof
+	return it.state == eofNext || it.state == eofPrev
 }
 
 func (it *Iter[T]) Cur() T {
-	assert.That(it.state == 0)
+	assert.That(it.state == within)
 	return it.blocks[it.i/blockSize][it.i%blockSize]
 }
 
@@ -396,11 +407,11 @@ func (it *Iter[T]) Seek(key []string) {
 		}
 	}
 	if first >= it.size {
-		it.state = eof
+		it.state = eofNext
 		it.i = -1
 	} else {
 		it.i = first
-		it.state = 0
+		it.state = within
 	}
 }
 
