@@ -44,56 +44,50 @@ func TestForeignKeys(t *testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act)
-		assert.This(n).Is(1)
-	}
 	test := func(key, index string) {
 		t.Helper()
 		// note that lin fields are different column names
 		// and in a different order relative to the indexes
 		doAdmin(db, "create hdr (a,b) key("+key+")")
 		defer doAdmin(db, "drop hdr")
-		act("insert { a: '1\x00', b: 2 } into hdr")
-		act("insert { a: '3\x00', b: 4 } into hdr")
+		act(db, "insert { a: '1\x00', b: 2 } into hdr")
+		act(db, "insert { a: '3\x00', b: 4 } into hdr")
 		doAdmin(db, "create lin (f,e,d) key(e) "+index+" in hdr("+key+")")
 		defer doAdmin(db, "drop lin")
 
 		// output (lin) block
-		assert.This(func() { act("insert { d: 9, e: 9 } into lin") }).
+		assert.This(func() { act(db, "insert { d: 9, e: 9 } into lin") }).
 			Panics("blocked by foreign key")
 
 		// output (lin) NO block
-		act("insert { d: '1\x00', e: 2, f: 5 } into lin")
+		act(db, "insert { d: '1\x00', e: 2, f: 5 } into lin")
 
 		// update (lin) block
-		assert.This(func() { act("update lin set d = 9") }).
+		assert.This(func() { act(db, "update lin set d = 9") }).
 			Panics("blocked by foreign key")
 
 		// update (lin) NO block
-		act("update lin set d = '3\x00', e = 4")
+		act(db, "update lin set d = '3\x00', e = 4")
 
 		// delete (hdr) block
-		assert.This(func() { act("delete hdr where a = '3\x00' and b = 4") }).
+		assert.This(func() { act(db, "delete hdr where a = '3\x00' and b = 4") }).
 			Panics("blocked by foreign key")
 
 		// delete (hdr) NO block
-		act("delete hdr where a = '1\x00' and b = 2")
+		act(db, "delete hdr where a = '1\x00' and b = 2")
 
 		doAdmin(db, "drop lin")
 		doAdmin(db, "create lin (f,e,d) key(e) "+index+" in hdr("+key+") cascade")
-		act("insert { d: '3\x00', e: 4, f: 5 } into lin")
-		
+		act(db, "insert { d: '3\x00', e: 4, f: 5 } into lin")
+
 		// update (hdr) cascade
-		act("update hdr set a = 33, b = 44")
+		act(db, "update hdr set a = 33, b = 44")
 		assert.This(queryAll(db, "hdr")).Is("a=33 b=44")
 		data := queryAll(db, "lin")
 		assert.Msg(data).That(strings.Contains(data, "d=33"))
 
 		// delete (hdr) cascade
-		act("delete hdr")
+		act(db, "delete hdr")
 		assert.This(queryAll(db, "lin")).Is("")
 	}
 	test("a", "key(d)")
@@ -109,17 +103,11 @@ func TestForeignKeyDeleteBlock(t *testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act)
-		assert.This(n).Is(1)
-	}
 	doAdmin(db, "create hdr (a, b, c) key(a)")
 	doAdmin(db, "create lin (d, e, f) key(e) index(d) in hdr(a)")
-	act("insert { a: '\x00', b: 'b1', c: 'c1'  } into hdr")
-	act("insert { d: '\x00', e: 'e1', f: 'f1' } into lin")
-	assert.This(func() { act("delete hdr where a = '\x00'") }).
+	act(db, "insert { a: '\x00', b: 'b1', c: 'c1'  } into hdr")
+	act(db, "insert { d: '\x00', e: 'e1', f: 'f1' } into lin")
+	assert.This(func() { act(db, "delete hdr where a = '\x00'") }).
 		Panics("blocked by foreign key")
 }
 
@@ -128,17 +116,11 @@ func TestForeignKeyDeleteCascade(t *testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act)
-		assert.This(n).Is(1)
-	}
 	doAdmin(db, "create hdr (a, b, c) key(a)")
 	doAdmin(db, "create lin (d, e, f) key(e) index(d,f) in hdr(a) cascade")
-	act("insert { a: '\x00', b: 'b1', c: 'c1'  } into hdr")
-	act("insert { d: '\x00', e: 'e1', f: 'f1' } into lin")
-	act("delete hdr where a is '\x00'")
+	act(db, "insert { a: '\x00', b: 'b1', c: 'c1'  } into hdr")
+	act(db, "insert { d: '\x00', e: 'e1', f: 'f1' } into lin")
+	act(db, "delete hdr where a is '\x00'")
 	// cascade should delete lin
 	assert.T(t).This(queryAll(db, "lin")).Is("")
 }
@@ -209,14 +191,8 @@ func TestQueryBug(*testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act)
-		assert.This(n).Is(1)
-	}
 	doAdmin(db, "create tmp (a,b) key(a)")
-	act("insert { a: 1 } into tmp")
+	act(db, "insert { a: 1 } into tmp")
 	assert.This(queryAll(db, "tmp where b > 0")).Is("")
 	// inconsistent with the language, but how it has worked historically
 }
@@ -241,22 +217,16 @@ func TestDuplicateKey(*testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act)
-		assert.This(n).Is(1)
-	}
 	doAdmin(db, "create tmp (k,u,i) key(k) index unique(u) index(i)")
-	act("insert { k: 1, u: 2, i: 3 } into tmp")
-	act("insert { k: 11, u: 22, i: 3 } into tmp")
-	assert.This(func() { act("insert { k: 11, u: 0, i: 0 } into tmp") }).
+	act(db, "insert { k: 1, u: 2, i: 3 } into tmp")
+	act(db, "insert { k: 11, u: 22, i: 3 } into tmp")
+	assert.This(func() { act(db, "insert { k: 11, u: 0, i: 0 } into tmp") }).
 		Panics("duplicate key")
-	assert.This(func() { act("insert { k: 0, u: 22, i: 0 } into tmp") }).
+	assert.This(func() { act(db, "insert { k: 0, u: 22, i: 0 } into tmp") }).
 		Panics("duplicate key")
-	act("insert { k: 111, u: 222, i: 3 } into tmp")
-	act("insert { k: 1111, u: '' } into tmp")
-	act("insert { k: 11111, u: '' } into tmp")
+	act(db, "insert { k: 111, u: 222, i: 3 } into tmp")
+	act(db, "insert { k: 1111, u: '' } into tmp")
+	act(db, "insert { k: 11111, u: '' } into tmp")
 }
 
 func TestWhereSelectBug(t *testing.T) {
@@ -264,19 +234,13 @@ func TestWhereSelectBug(t *testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act)
-		assert.This(n).Is(1)
-	}
 	doAdmin(db, "create t2 (d) key (d)")
 	doAdmin(db, "create t1 (a, b, d) key(a) index(b) index(d)")
-	act("insert {d: '1'} into t2")
-	act("insert {d: '1', a: '2', b: '8'} into t1")
-	act("insert {d: '1', a: '3', b: '7'} into t1")
-	act("insert {d: '1', a: '4', b: '8'} into t1")
-	act("insert {d: '1', a: '5', b: '7'} into t1")
+	act(db, "insert {d: '1'} into t2")
+	act(db, "insert {d: '1', a: '2', b: '8'} into t1")
+	act(db, "insert {d: '1', a: '3', b: '7'} into t1")
+	act(db, "insert {d: '1', a: '4', b: '8'} into t1")
+	act(db, "insert {d: '1', a: '5', b: '7'} into t1")
 	query := "t1 join t2 where d is '1' and b < 'z'"
 	assert.T(t).This(queryAll(db, query)).
 		Is("a=3 b=7 d=1 | a=5 b=7 d=1 | a=2 b=8 d=1 | a=4 b=8 d=1")
@@ -299,16 +263,10 @@ func TestJoinBug(t *testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act)
-		assert.This(n).Is(1)
-	}
 	doAdmin(db, "create t1 (a) key(a)")
 	doAdmin(db, "create t2 (a, b) key(a,b)")
-	act("insert {a: '1'} into t1")
-	act("insert {a: '1', b: '2'} into t2")
+	act(db, "insert {a: '1'} into t1")
+	act(db, "insert {a: '1', b: '2'} into t2")
 	assert.T(t).This(queryAll(db, "t1 join t2")).Is("a=1 b=2")
 }
 
@@ -317,16 +275,10 @@ func TestSelectOnSingleton(t *testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act)
-		assert.This(n).Is(1)
-	}
 	doAdmin(db, "create t1 (a) key(a)")
 	doAdmin(db, "create t2 (a, b) key()")
-	act("insert {a: '1'} into t1")
-	act("insert {a: '1', b: '2'} into t2")
+	act(db, "insert {a: '1'} into t1")
+	act(db, "insert {a: '1', b: '2'} into t2")
 	assert.T(t).This(queryAll(db, "t1 leftjoin t2")).Is("a=1 b=2")
 }
 
@@ -336,15 +288,9 @@ func TestSingleton(t *testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act)
-		assert.This(n).Is(1)
-	}
 	doAdmin(db, "create tmp (a,b) key(a) key(b)")
-	act("insert { a: 1, b: 2 } into tmp")
-	act("insert { a: 3, b: 4 } into tmp")
+	act(db, "insert { a: 1, b: 2 } into tmp")
+	act(db, "insert { a: 3, b: 4 } into tmp")
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery("tmp where a = 3", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
@@ -493,7 +439,7 @@ func TestTimesLookup(t *testing.T) {
 	doAdmin(db, "create tmp2 (x, y) key (x)")
 	act(db, "insert { x: 5, y: 6 } into tmp2")
 	act(db, "insert { x: 7, y: 8 } into tmp2")
-	
+
 	tran := db.NewReadTran()
 	q := ParseQuery("tmp1 times tmp2", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
