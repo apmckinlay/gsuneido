@@ -115,7 +115,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 	tbl.indexes = idxs
 	tbl.allKeys = keys
 	tbl.keys = withoutDupsOrSupersets(keys)
-	tbl.fast1.Set(len(tbl.keys) == 1 && len(tbl.keys[0]) == 0)
+	tbl.fast1.Set(isEmptyKey(tbl.keys))
 }
 
 func (tbl *Table) Nrows() (int, int) {

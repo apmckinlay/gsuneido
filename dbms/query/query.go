@@ -893,6 +893,10 @@ func (b *optmod) result() [][]string {
 	return slices.Clip(b.mod)
 }
 
+func isEmptyKey(indexes [][]string) bool {
+	return len(indexes) == 1 && len(indexes[0]) == 0
+}
+
 // ------------------------------------------------------------------
 
 // String prints the full query, including child sources

@@ -249,7 +249,7 @@ func (u *Union) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 }
 
 func handlesIndex(keys [][]string, index []string) bool {
-	if len(keys) == 1 && len(keys[0]) == 0 {
+	if isEmptyKey(keys) {
 		return true // singleton
 	}
 	return slc.ContainsFn(keys, index, set.Equal[string])
