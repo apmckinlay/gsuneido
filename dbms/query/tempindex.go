@@ -70,10 +70,6 @@ func (*TempIndex) setApproach([]string, float64, any, QueryTran) {
 	assert.ShouldNotReachHere()
 }
 
-func (*TempIndex) Simple(*Thread) []Row {
-	panic(assert.ShouldNotReachHere())
-}
-
 // execution --------------------------------------------------------
 
 func (ti *TempIndex) Rewind() {
@@ -392,4 +388,22 @@ func (it multiIter) get() Row {
 
 func (ti *TempIndex) knowExactNrows() bool {
 	return ti.source.knowExactNrows()
+}
+
+func (ti *TempIndex) Simple(th *Thread) []Row {
+	rows := ti.source.Simple(th)
+	slices.SortFunc(rows, func(a, b Row) int {
+		for _, col := range ti.order {
+			x := a.GetRawVal(ti.header, col, th, ti.st)
+			y := b.GetRawVal(ti.header, col, th, ti.st)
+			if x < y {
+				return -1
+			}
+			if x > y {
+				return 1
+			}
+		}
+		return 0
+	})
+	return rows
 }
