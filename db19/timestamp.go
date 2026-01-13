@@ -15,7 +15,7 @@ import (
 var timestamp SuDate
 var tsLock sync.Mutex
 
-// StartTimestamp is called by gsuneido.go openDbms
+// StartTimestamps is called by gsuneido.go openDbms
 func StartTimestamps() {
 	// start timestamp ahead one second
 	// to avoid overlap if it restarts in less than a second.

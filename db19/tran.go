@@ -150,7 +150,7 @@ func (t *ReadTran) Lookup(table string, iIndex int, key string) *core.DbRec {
 	return &core.DbRec{Off: off, Record: t.GetRecord(off)}
 }
 
-// IndexIterator returns a SimpleIter 
+// IndexIter returns a SimpleIter 
 // for read-only transactions with a single btree (no layers).
 // Otherwise, it returns OverIter.
 func (t *ReadTran) IndexIter(table string, iIndex int) index.IndexIter {
