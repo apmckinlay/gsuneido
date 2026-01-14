@@ -244,3 +244,23 @@ func HasDup[E comparable](list []E) bool {
 	}
 	return false
 }
+
+// Partition rearranges based on a partition function
+func Partition(n int, pivot func(int) bool, swap func(int, int)) int {
+	i := 0
+	j := n - 1
+	for {
+		for i < n && pivot(i) {
+			i++
+		}
+		for j >= 0 && !pivot(j) {
+			j--
+		}
+		if i >= j {
+			return i // Returns the boundary index
+		}
+		swap(i, j)
+		i++
+		j--
+	}
+}

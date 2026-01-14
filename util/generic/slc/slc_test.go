@@ -238,3 +238,46 @@ func TestHasDup(t *testing.T) {
 	testStr([]string{"a", "b", "a"}, true)
 	testStr([]string{"a", "b", "c", "b"}, true)
 }
+
+func TestPartition(t *testing.T) {
+	// Test empty
+	data := []int{}
+	pivot := func(i int) bool { return data[i] < 5 }
+	swap := func(i, j int) { data[i], data[j] = data[j], data[i] }
+	i := Partition(0, pivot, swap)
+	assert.T(t).This(i).Is(0)
+
+	// Test all true
+	data = []int{1, 2, 3}
+	pivot = func(i int) bool { return data[i] < 5 }
+	swap = func(i, j int) { data[i], data[j] = data[j], data[i] }
+	i = Partition(3, pivot, swap)
+	assert.T(t).This(i).Is(3)
+	assert.T(t).This(data).Is([]int{1, 2, 3})
+
+	// Test all false
+	data = []int{6, 7, 8}
+	pivot = func(i int) bool { return data[i] < 5 }
+	swap = func(i, j int) { data[i], data[j] = data[j], data[i] }
+	i = Partition(3, pivot, swap)
+	assert.T(t).This(i).Is(0)
+	assert.T(t).This(data).Is([]int{6, 7, 8})
+
+	// Test mixed
+	data = []int{3, 6, 1, 8, 4}
+	pivot = func(i int) bool { return data[i] < 5 }
+	swap = func(i, j int) { data[i], data[j] = data[j], data[i] }
+	i = Partition(5, pivot, swap)
+	assert.T(t).This(i).Is(3)
+	// Check that left are <5, right >=5
+	for j := 0; j < i; j++ {
+		if data[j] >= 5 {
+			t.Errorf("data[%d]=%d should be <5", j, data[j])
+		}
+	}
+	for j := i; j < 5; j++ {
+		if data[j] < 5 {
+			t.Errorf("data[%d]=%d should be >=5", j, data[j])
+		}
+	}
+}
