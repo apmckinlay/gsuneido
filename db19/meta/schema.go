@@ -119,7 +119,6 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 }
 
 // Ixspecs sets up the ixspecs for a table's indexes.
-// In most cases newIdxs will be ts.Indexes.
 func (ts *Schema) Ixspecs(nold int) {
 	ts.setPrimary()
 	ts.setContainsKey()
