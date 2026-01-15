@@ -97,7 +97,7 @@ func TestPropFold(t *testing.T) {
 	test("return 1,2,3",
 		"Return(1 2 3)") // no change
 	test("x = 2; return 1, x, 3",
-        "2 \n Return(1 2 3)")
+		"2 \n Return(1 2 3)")
 	test("x = 5; F(x)",
 		"5 \n Call(F 5)") // propagate
 	test("x = 5; F(-x)",
@@ -179,7 +179,7 @@ func TestPropFold(t *testing.T) {
 		"Nary(And Binary(Gt x 0) Binary(Lt Mem(this 'x') 10))")
 	test(".x > 0 and x < 10",
 		"Nary(And Binary(Gt Mem(this 'x') 0) Binary(Lt x 10))")
-		
+
 	// flatten nested nary
 	test("a + (b + c) + d", "Nary(Add a b c d)")
 	test("(a + b) + c", "Nary(Add a b c)")
@@ -285,4 +285,19 @@ func TestPropFold(t *testing.T) {
 		'baz'`, "'foobarbaz'")
 
 	test("a in ()", "false")
+
+	// foldCall - Number?, String?, Date?
+	test("Number?(123)", "true")
+	test("Number?('hello')", "false")
+	test("Number?(#20010101)", "false")
+	test("String?('hello')", "true")
+	test("String?(123)", "false")
+	test("String?(#20010101)", "false")
+	test("Date?(#20010101)", "true")
+	test("Date?(123)", "false")
+	test("Date?('hello')", "false")
+	test("Number?(x)", "Call(Number? x)") // not constant
+	test("x = 5; Number?(x)", "5 \n true")
+	test("x = 'hi'; Number?(x)", "'hi' \n false")
+	test("x = 'hi'; String?(x)", "'hi' \n true")
 }

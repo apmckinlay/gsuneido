@@ -8,11 +8,16 @@ import (
 
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // PropFold traverses an AST and does constant propagation and folding,
-// modifying the AST
+// modifying the AST.
+// Propagation is done on the way down the tree (top down).
+// Folding is (mostly) done on the way up the tree (bottom up).
+// Modifications are done by the update function of node.Children.
+// https://thesoftwarelife.blogspot.com/2020/04/constant-propogation-and-folding.html
 func PropFold(fn *Function) *Function {
 	// Final variables (set once, not modified) are determined during parse
 	propfold(fn, fn.Final)
@@ -192,8 +197,34 @@ func (f *fold) fold(node Node) Node { // NOT recursive
 		return f.foldNary(node)
 	case *If:
 		return f.ifStmt(node)
+	case *Call:
+		return f.foldCall(node)
 	}
 	// TODO switch
+	return node
+}
+
+func (f *fold) foldCall(node *Call) Node {
+	// if calling Number?, String?, or Date?
+	// and the single argument is a constant
+	// evaluate it
+	if id, ok := node.Fn.(*Ident); ok && len(node.Args) == 1 {
+		if arg, ok := node.Args[0].E.(*Constant); ok && node.Args[0].Name == nil {
+			var result Value
+			switch id.Name {
+			case "Number?":
+				result = SuBool(arg.Val.Type() == types.Number)
+			case "String?":
+				t := arg.Val.Type()
+				result = SuBool(t == types.String || t == types.Except)
+			case "Date?":
+				result = SuBool(arg.Val.Type() == types.Date)
+			}
+			if result != nil {
+				return &Constant{Val: result}
+			}
+		}
+	}
 	return node
 }
 
