@@ -41,7 +41,7 @@ func TestMulti(t *testing.T) {
 	}`)
 	var th Thread
 	assert.This(th.Call(f)).Is(True)
-	
+
 	f = compile.Constant(`function () {
 		fn = function (unused) 
 			{
