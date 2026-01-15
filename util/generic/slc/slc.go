@@ -245,7 +245,7 @@ func HasDup[E comparable](list []E) bool {
 	return false
 }
 
-// Partition rearranges based on a partition function
+// Partition rearranges based on a pivot function
 func Partition(n int, pivot func(int) bool, swap func(int, int)) int {
 	i := 0
 	j := n - 1
