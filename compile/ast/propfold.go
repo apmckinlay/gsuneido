@@ -12,6 +12,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+var trueConst = &Constant{Val: True}
+var falseConst = &Constant{Val: False}
+
 // PropFold traverses an AST and does constant propagation and folding,
 // modifying the AST.
 // Propagation is done on the way down the tree (top down).
@@ -148,13 +151,40 @@ func (f *fold) children(node Node) {
 			}
 		}
 	case *Nary:
-		// discard assigned values from right hand side of And/Or
-		// since they are only conditionally executed
-		if node.Tok == tok.And || node.Tok == tok.Or {
+		// We short circuit here rather than in folder to do it top-down
+		// because bottom up evaluations could cause StrictCompare errors.
+		// We discard assigned f.values from right hand side of And/Or
+		// since they are only conditionally executed.
+		switch node.Tok {
+		case tok.And:
 			f.childExpr(&node.Exprs[0])
 			save = f.values
+			isFalse := false
 			for i := 1; i < len(node.Exprs); i++ {
-				f.childExpr(&node.Exprs[i])
+				if c, ok := node.Exprs[i-1].(*Constant); ok && c.Val == False {
+					isFalse = true
+				}
+				if isFalse {
+					node.Exprs[i] = falseConst
+				} else {
+					f.childExpr(&node.Exprs[i])
+				}
+			}
+			f.values = save
+			return
+		case tok.Or:
+			f.childExpr(&node.Exprs[0])
+			save = f.values
+			isTrue := false
+			for i := 1; i < len(node.Exprs); i++ {
+				if c, ok := node.Exprs[i-1].(*Constant); ok && c.Val == True {
+					isTrue = true
+				}
+				if isTrue {
+					node.Exprs[i] = trueConst
+				} else {
+					f.childExpr(&node.Exprs[i])
+				}
 			}
 			f.values = save
 			return

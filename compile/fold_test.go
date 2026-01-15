@@ -11,6 +11,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -300,4 +301,23 @@ func TestPropFold(t *testing.T) {
 	test("x = 5; Number?(x)", "5 \n true")
 	test("x = 'hi'; Number?(x)", "'hi' \n false")
 	test("x = 'hi'; String?(x)", "'hi' \n true")
+
+	// short circuit preventing StrictCompare errors
+	options.StrictCompare = true
+	options.StrictCompareDb = true
+	defer func() {
+		options.StrictCompare = false
+		options.StrictCompareDb = false
+	}()
+	test("x = 3; Number?(x) and x < 5", "3 \n true")
+	test("x = ''; Number?(x) and x > 5", "'' \n false")
+	test("x = 'x'; String?(x) and x =~ 'y'", "'x' \n false")
+	test("x = 'y'; String?(x) and x =~ 'y'", "'y' \n true")
+	test("x = 5; String?(x) and x =~ 'y'", "5 \n false")
+	// or - short circuit when type check returns true
+	test("x = 3; not Number?(x) or x < 5", "3 \n true")
+	test("x = ''; not String?(x) or x =~ 'y'", "'' \n false")
+	test("x = 'y'; not String?(x) or x =~ 'y'", "'y' \n true")
+	test("x = 5; not Number?(x) or x < 10", "5 \n true")
+	test("x = 'hi'; not Number?(x) or x < 10", "'hi' \n true")
 }
