@@ -9,7 +9,6 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
@@ -51,6 +50,7 @@ func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	ti.rowSiz.Set(src.rowSize())
 	ti.singleTbl.Set(src.SingleTable())
 	ti.fast1.Set(src.fastSingle())
+	ti.indexes = [][]string{order}
 	return &ti
 }
 
@@ -58,16 +58,20 @@ func (ti *TempIndex) String() string {
 	return "tempindex" + str.Join("(,)", ti.order)
 }
 
-func (*TempIndex) Indexes() [][]string {
-	panic(assert.ShouldNotReachHere())
-}
-
 func (ti *TempIndex) Transform() Query {
 	return ti
 }
 
-func (*TempIndex) setApproach([]string, float64, any, QueryTran) {
-	assert.ShouldNotReachHere()
+// optimize is only used by fuzz_test.go
+func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
+	Cost, Cost, any) {
+	fixcost, varcost := Optimize(ti.source, mode, nil, frac)
+	return fixcost, varcost, nil
+}
+
+// setApproach is only used by fuzz_test.go
+func (ti *TempIndex) setApproach(index []string, frac float64, app any, tran QueryTran) {
+	ti.source.setApproach(nil, frac, app, tran)
 }
 
 // execution --------------------------------------------------------

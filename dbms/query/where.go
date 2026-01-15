@@ -66,6 +66,8 @@ type Where struct {
 
 	ixCtx  ixContext
 	ixExpr ast.Expr
+
+	srcIndex []string
 }
 
 // whereTable is the additional functionality that Where needs from a Table.
@@ -683,10 +685,12 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 	if app == nil { // filter
 		w.source = SetApproach(w.source, index, frac, tran)
 		w.tbl, _ = w.source.(whereTable) // SetApproach may insert TempIndex
+		w.srcIndex = index
 	} else {
 		app := app.(*whereApproach)
 		idx := app.index
 		w.tbl.SetIndex(idx)
+		w.srcIndex = idx
 		if app.idxSel {
 			w.idxSel = w.getIdxSel(idx)
 			w.tbl.setCost(frac*w.idxSel.frac, 0, app.cost)
@@ -903,12 +907,51 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 		}
 		return row
 	}
-	cols, vals = w.addFixed(cols, vals)
-	row := w.source.Lookup(th, cols, vals)
+	cols = slices.Clip(cols)
+	vals = slices.Clip(vals)
+	indexFields := w.srcIndex
+	if w.tbl != nil {
+		indexFields = w.tbl.IndexCols(w.srcIndex)
+	}
+	for _, fix := range w.fixed {
+		if fix.single() && slices.Contains(indexFields, fix.col) &&
+			!slices.Contains(cols, fix.col) {
+			cols = append(cols, fix.col)
+			vals = append(vals, fix.values[0])
+		}
+	}
+	icols, ivals, ocols, _ := Split(cols, vals, indexFields)
+	for _, col := range ocols {
+		assert.That(isFixed(w.fixed, col))
+	}
+	
+	row := w.source.Lookup(th, icols, ivals)
 	if !w.filter(th, row) {
 		row = nil
 	}
 	return row
+}
+
+func Split(flds, vals, index []string) (iflds, ivals, oflds, ovals []string) {
+	pivot := func(i int) bool {
+		return slices.Contains(index, flds[i])
+	}
+	swap := func(i, j int) {
+		flds[i], flds[j] = flds[j], flds[i]
+		vals[i], vals[j] = vals[j], vals[i]
+	}
+	i := slc.Partition(len(flds), pivot, swap)
+	iflds, ivals = flds[:i], vals[:i]
+	oflds, ovals = flds[i:], vals[i:]
+	if len(iflds) == 0 {
+		iflds = nil
+		ivals = nil
+	}
+	if len(oflds) == 0 {
+		oflds = nil
+		ovals = nil
+	}
+	return
 }
 
 func singletonFilter(

@@ -282,6 +282,31 @@ func TestSelectOnSingleton(t *testing.T) {
 	assert.T(t).This(queryAll(db, "t1 leftjoin t2")).Is("a=1 b=2")
 }
 
+func TestLookupOnSingleton(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	doAdmin(db, "create tmp (a,b,c) key()")
+	tbl := NewTable(db.NewReadTran(), "tmp")
+	hdr := tbl.Header()
+	
+	row := tbl.Lookup(nil, []string{"a", "b"}, 
+		[]string{Pack(IntVal(1)), Pack(IntVal(2))})
+	assert.T(t).This(row).Is(nil)
+	
+	act(db, "insert {a: 1, b: 2, c: 3} into tmp")
+	tbl = NewTable(db.NewReadTran(), "tmp")
+	// existent row
+	row = tbl.Lookup(nil, []string{"a", "b"}, 
+		[]string{Pack(IntVal(1)), Pack(IntVal(2))})
+	assert.T(t).This(row2str(hdr, row)).Is("a=1 b=2 c=3")
+	// nonexistent row
+	row = tbl.Lookup(nil, []string{"a", "b"},
+		[]string{Pack(IntVal(3)), Pack(IntVal(4))})
+	assert.T(t).This(row).Is(nil)
+}
+
 func TestSingleton(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
@@ -453,4 +478,46 @@ func TestTimesLookup(t *testing.T) {
 	test(1, 5, "[{1, 2} {5, 6}]")
 	test(3, 5, "[{3, 4} {5, 6}]")
 	test(1, 7, "[{1, 2} {7, 8}]")
+}
+
+// TestLookupOnUniqueIndexWithEmptyFields tests that lookup on a unique index
+// works correctly when the index fields are empty. For unique indexes,
+// when Fields values are empty, Fields2 (from BestKey) is added to make
+// the key unique. This test verifies that Lookup handles this case.
+func TestLookupOnUniqueIndexWithEmptyFields(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	
+	// Create a table with a unique index on column 'u'.
+	// When 'u' is empty, the key needs Fields2 (from key(k)) to be unique.
+	doAdmin(db, "create tmp (k, u, data) key(k) index unique(u)")
+	
+	// Insert records where 'u' is empty - these should be allowed because
+	// the key(k) columns make them unique even though 'u' is the same (empty)
+	act(db, "insert { k: 1, u: '', data: 'first' } into tmp")
+	act(db, "insert { k: 2, u: '', data: 'second' } into tmp")
+	// Also insert a record with non-empty u
+	act(db, "insert { k: 3, u: 'x', data: 'third' } into tmp")
+	
+	tran := db.NewReadTran()
+	tbl := NewTable(tran, "tmp").(*Table)
+	tbl.SetIndex([]string{"u"}) // Use the unique index on 'u'
+	hdr := tbl.Header()
+	
+	// Test 1: Lookup by non-empty unique index value should work
+	row := tbl.Lookup(nil, []string{"u"}, []string{Pack(SuStr("x"))})
+	assert.T(t).Msg("lookup u='x'").This(row2str(hdr, row)).Is("data=third k=3 u=x")
+	
+	// Test 2: Lookup by empty unique index value - this is the problematic case.
+	// There are two records with u='', so to get a unique lookup,
+	// the lookup needs to include the Fields2 columns (k) as well.
+	row = tbl.Lookup(nil, []string{"u", "k"},
+		[]string{Pack(SuStr("")), Pack(SuInt(1))})
+	assert.T(t).Msg("lookup u='', k=1").This(row2str(hdr, row)).Is("data=first k=1")
+	
+	row = tbl.Lookup(nil, []string{"u", "k"},
+		[]string{Pack(SuStr("")), Pack(SuInt(2))})
+	assert.T(t).Msg("lookup u='', k=2").This(row2str(hdr, row)).Is("data=second k=2")
 }

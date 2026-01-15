@@ -4,7 +4,6 @@
 package query
 
 import (
-	"fmt"
 	"math/rand/v2"
 	"slices"
 	"strconv"
@@ -14,27 +13,66 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-// go test -run '^$' -fuzz=FuzzQuerySource ./dbms/query/
-
 func init() {
 	sortForTest = true
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 }
 
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzRandom ./dbms/query/
+
+func FuzzRandom(f *testing.F) {
+	f.Add(uint64(123), uint64(456))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzRandom(t, rnd)
+	})
+}
+
+func TestFuzzRandom(t *testing.T) {
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzRandom(t, rnd)
+	}
+}
+
+func fuzzRandom(t *testing.T, rnd *rand.Rand) {
+	fuzzers := []func(*testing.T, *rand.Rand){
+		fuzzQuerySource,
+		fuzzTempIndex,
+		fuzzRename,
+		fuzzExtend,
+		fuzzProject,
+		fuzzSummarize,
+	}
+	f := random(fuzzers, rnd)
+	f(t, rnd)
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzQuerySource ./dbms/query/
+
 func FuzzQuerySource(f *testing.F) {
 	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		qs := NewQuerySource(rnd)
-		fuzzQuery(t, qs, rnd, chooseIndex(rnd, qs.Indexes()))
+		fuzzQuerySource(t, rnd)
 	})
 }
 
 func TestFuzzQuerySource(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(12351, 68081))
 	for range 1000 {
-		qs := NewQuerySource(rnd)
-		fuzzQuery(t, qs, rnd, chooseIndex(rnd, qs.Indexes()))
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzQuerySource(t, rnd)
 	}
+}
+
+func fuzzQuerySource(t *testing.T, rnd *rand.Rand) {
+	qs := NewQuerySource(rnd)
+	index := chooseIndex(rnd, qs)
+	qs.setApproach(index, 1, nil, nil)
+	fuzzQuery(t, qs, rnd, index)
 }
 
 //-------------------------------------------------------------------
@@ -51,48 +89,19 @@ func FuzzProject(f *testing.F) {
 }
 
 func TestFuzzProject(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(12351, 68081))
-	for range 10000 {
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzProject(t, rnd)
 	}
-	// fmt.Printf("Strategy: copy=%d, seq=%d, map=%d\n",
-	// 	strategyCounts[projCopy], strategyCounts[projSeq], strategyCounts[projMap])
 }
-
-var (
-	strategyCounts = map[projectStrategy]int{
-		projCopy: 0,
-		projSeq:  0,
-		projMap:  0,
-	}
-	uniqueCount = 0
-)
 
 func fuzzProject(t *testing.T, rnd *rand.Rand) {
 	qs := NewQuerySource(rnd)
 	projCols := randomProjectCols(rnd, qs.ColumnsResult, qs.IndexesResult)
-	proj := NewProject(qs, projCols)
-
-	index := chooseIndex(rnd, proj.Indexes())
-	// CursorMode to prevent temp indexes
-	fixcost, varcost, approach := proj.optimize(ReadMode, index, 1)
-	if fixcost+varcost >= impossible {
-		t.Fatal("impossible")
-	}
-	proj.cacheAdd(index, 1, fixcost, varcost, approach)
-
-	SetApproach(proj, index, 1, nil)
-
-	if approach != nil {
-		strat := approach.(*projectApproach).strat
-		strategyCounts[strat]++
-
-		if proj.unique {
-			uniqueCount++
-		}
-	}
-
-	fuzzQuery(t, proj, rnd, index)
+	q := NewProject(qs, projCols)
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
 }
 
 func randomProjectCols(rnd *rand.Rand, srcCols []string, indexes [][]string) []string {
@@ -119,7 +128,22 @@ func randomProjectCols(rnd *rand.Rand, srcCols []string, indexes [][]string) []s
 	return cols
 }
 
-func chooseIndex(rnd *rand.Rand, indexes [][]string) []string {
+func chooseIndex(rnd *rand.Rand, source Query) []string {
+	if isEmptyKey(source.Keys()) {
+		// choose random columns
+		cols := source.Header().Columns
+		if len(cols) == 0 {
+			return nil
+		}
+		n := 1 + rnd.IntN(len(cols)) // 1 to all columns
+		perm := rnd.Perm(len(cols))
+		randomCols := make([]string, n)
+		for i := range n {
+			randomCols[i] = cols[perm[i]]
+		}
+		return randomCols
+	}
+	indexes := source.Indexes()
 	if len(indexes) == 0 {
 		return nil
 	}
@@ -146,8 +170,9 @@ func FuzzRename(f *testing.F) {
 }
 
 func TestFuzzRename(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(12351, 68081))
 	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzRename(t, rnd)
 	}
 }
@@ -155,18 +180,9 @@ func TestFuzzRename(t *testing.T) {
 func fuzzRename(t *testing.T, rnd *rand.Rand) {
 	qs := NewQuerySource(rnd)
 	from, to := randomRename(rnd, qs.ColumnsResult)
-	ren := NewRename(qs, from, to)
-
-	index := chooseIndex(rnd, ren.Indexes())
-	fixcost, varcost, approach := ren.optimize(ReadMode, index, 1)
-	if fixcost+varcost >= impossible {
-		t.Fatal("impossible")
-	}
-	ren.cacheAdd(index, 1, fixcost, varcost, approach)
-
-	SetApproach(ren, index, 1, nil)
-
-	fuzzQuery(t, ren, rnd, index)
+	q := NewRename(qs, from, to)
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
 }
 
 func randomRename(rnd *rand.Rand, srcCols []string) (from, to []string) {
@@ -203,13 +219,6 @@ func randomRename(rnd *rand.Rand, srcCols []string) (from, to []string) {
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzSummarize ./dbms/query/
 
-var sumStrategyCounts = map[sumStrategy]int{
-	sumSeq: 0,
-	sumMap: 0,
-	sumIdx: 0,
-	sumTbl: 0,
-}
-
 func FuzzSummarize(f *testing.F) {
 	f.Add(uint64(122), uint64(334))
 	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
@@ -219,13 +228,14 @@ func FuzzSummarize(f *testing.F) {
 }
 
 func TestFuzzSummarize(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(12351, 68081))
+	rnd := rand.New(rand.NewPCG(1091395294133611146, 8719992948325563695))
+	fuzzSummarize(t, rnd)
 	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		// fmt.Printf("%d, %d\n", seed1, seed2)
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzSummarize(t, rnd)
 	}
-	fmt.Printf("Strategy: seq=%d, map=%d, idx=%d, tbl=%d\n",
-		sumStrategyCounts[sumSeq], sumStrategyCounts[sumMap],
-		sumStrategyCounts[sumIdx], sumStrategyCounts[sumTbl])
 }
 
 var sumOps = []string{"count", "total", "average", "min", "max", "list"}
@@ -233,41 +243,9 @@ var sumOps = []string{"count", "total", "average", "min", "max", "list"}
 func fuzzSummarize(t *testing.T, rnd *rand.Rand) {
 	qs := NewQuerySource(rnd)
 	by, cols, ops, ons := randomSummarize(rnd, qs.ColumnsResult, qs.IndexesResult)
-	sum := NewSummarize(qs, "", by, cols, ops, ons)
-
-	index, fixcost, varcost, approach := chooseSummarizeIndex(rnd, sum)
-	if fixcost+varcost >= impossible {
-		return // skip if no valid index found
-	}
-	sum.cacheAdd(index, 1, fixcost, varcost, approach)
-
-	SetApproach(sum, index, 1, nil)
-
-	if approach != nil {
-		strat := approach.(*summarizeApproach).strat
-		sumStrategyCounts[strat]++
-	}
-
-	fuzzQuery(t, sum, rnd, index)
-}
-
-func chooseSummarizeIndex(rnd *rand.Rand, sum *Summarize) ([]string, Cost, Cost, any) {
-	indexes := sum.Indexes()
-	candidates := make([][]string, 0, len(indexes)+1)
-	candidates = append(candidates, indexes...)
-	candidates = append(candidates, nil) // fall back to nil index
-	perm := rnd.Perm(len(candidates))
-	for _, i := range perm {
-		index := candidates[i]
-		if len(index) > 0 {
-			index = index[:1+rnd.IntN(len(index))]
-		}
-		fixcost, varcost, approach := sum.optimize(ReadMode, index, 1)
-		if fixcost+varcost < impossible {
-			return index, fixcost, varcost, approach
-		}
-	}
-	return nil, impossible, impossible, nil
+	q := NewSummarize(qs, "", by, cols, ops, ons)
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
 }
 
 func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, cols, ops, ons []string) {
@@ -325,11 +303,11 @@ func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, 
 		cols[0] = "" // use default name
 	} else {
 		for i := range nops {
-			ops[i] = sumOps[rnd.IntN(len(sumOps))]
+			ops[i] = random(sumOps, rnd)
 			if ops[i] == "count" {
 				ons[i] = ""
 			} else {
-				ons[i] = srcCols[rnd.IntN(len(srcCols))]
+				ons[i] = random(srcCols, rnd)
 			}
 			cols[i] = "" // use default name
 		}
@@ -349,8 +327,9 @@ func FuzzExtend(f *testing.F) {
 }
 
 func TestFuzzExtend(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(12351, 68081))
 	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzExtend(t, rnd)
 	}
 }
@@ -360,16 +339,15 @@ func fuzzExtend(t *testing.T, rnd *rand.Rand) {
 	cols, exprs := randomExtend(rnd, qs.ColumnsResult)
 	ext := NewExtend(qs, cols, exprs)
 
-	index := chooseIndex(rnd, ext.Indexes())
-	fixcost, varcost, approach := ext.optimize(ReadMode, index, 1)
+	index := chooseIndex(rnd, ext)
+	fixcost, varcost := Optimize(ext, ReadMode, index, 1)
 	if fixcost+varcost >= impossible {
 		t.Fatal("impossible")
 	}
-	ext.cacheAdd(index, 1, fixcost, varcost, approach)
 
-	SetApproach(ext, index, 1, nil)
+	q := SetApproach(ext, index, 1, nil)
 
-	fuzzQuery(t, ext, rnd, index)
+	fuzzQuery(t, q, rnd, index)
 }
 
 func randomExtend(rnd *rand.Rand, srcCols []string) (cols []string, exprs []ast.Expr) {
@@ -398,16 +376,66 @@ func randomExtend(rnd *rand.Rand, srcCols []string) (cols []string, exprs []ast.
 		if rnd.IntN(2) == 0 {
 			exprs[i] = &ast.Constant{Val: IntVal(rnd.IntN(1000))}
 		} else {
-			exprs[i] = &ast.Ident{Name: srcCols[rnd.IntN(len(srcCols))]}
+			exprs[i] = &ast.Ident{Name: random(srcCols, rnd)}
 		}
 	}
 	return cols, exprs
 }
 
 //-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzTempIndex ./dbms/query/
+
+func FuzzTempIndex(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzTempIndex(t, rnd)
+	})
+}
+
+func TestFuzzTempIndex(t *testing.T) {
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzTempIndex(t, rnd)
+	}
+}
+
+func fuzzTempIndex(t *testing.T, rnd *rand.Rand) {
+	qs := NewQuerySource(rnd)
+	if len(qs.ColumnsResult) == 0 {
+		return
+	}
+	order := randomOrder(rnd, qs.ColumnsResult)
+	if len(order) == 0 {
+		return
+	}
+	ti := NewTempIndex(qs, order, nil)
+	fuzzQuery(t, ti, rnd, order)
+}
+
+func randomOrder(rnd *rand.Rand, cols []string) []string {
+	n := 1 + rnd.IntN(min(3, len(cols)))
+	perm := rnd.Perm(len(cols))
+	order := make([]string, n)
+	for i := range n {
+		order[i] = cols[perm[i]]
+	}
+	return order
+}
+
+//-------------------------------------------------------------------
 
 func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand, index []string) {
 	t.Helper()
+	fixcost, varcost := Optimize(q, ReadMode, index, 1)
+	if fixcost+varcost >= impossible {
+		t.Fatal("impossible")
+	}
+	q = SetApproach(q, index, 1, nil)
+	// fmt.Println(format(0, q, 0))
+	// fmt.Println("index", index)
+
 	hdr := q.Header()
 	cols := hdr.Columns
 	expected := q.Simple(nil)
@@ -486,7 +514,7 @@ func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *He
 		case dsAtEnd:
 			dir = Prev
 		default: // rewound or with -> random dir
-			dir = []Dir{Next, Prev}[rnd.IntN(2)]
+			dir = random([]Dir{Next, Prev}, rnd)
 		}
 		expectedRow := data.get(dir)
 		row := q.Get(nil, dir)
@@ -683,13 +711,14 @@ func testExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header
 		return
 	}
 	for range 10 {
-		srcRow := allRows[rnd.IntN(len(allRows))]
+		srcRow := random(allRows, rnd)
 		selCols, selVals := indexSelectCriteria(rnd, srcRow, hdr, index, cols, false)
 		q.Select(selCols, selVals)
 
+		// Select only filters by index columns, not extra columns
 		qh := NewQueryHasher(hdr)
 		for _, row := range allRows {
-			if selMatch(hdr, row, selCols, selVals) {
+			if selMatchIndex(hdr, row, selCols, selVals, index) {
 				qh.Row(row)
 			}
 		}
@@ -700,8 +729,15 @@ func testExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header
 	}
 }
 
-func selMatch(hdr *Header, row Row, selCols, selVals []string) bool {
-	for i, col := range selCols {
+// selMatchIndex checks only the index columns, not extra columns.
+// It iterates the index in order and stops at the first missing column,
+// matching the behavior of selKeys/TempIndex.makeKey.
+func selMatchIndex(hdr *Header, row Row, selCols, selVals, index []string) bool {
+	for _, col := range index {
+		i := slices.Index(selCols, col)
+		if i == -1 {
+			break // stop at first missing column (matches selKeys behavior)
+		}
 		if row.GetRaw(hdr, col) != selVals[i] {
 			return false
 		}
@@ -711,20 +747,20 @@ func selMatch(hdr *Header, row Row, selCols, selVals []string) bool {
 
 // indexSelectCriteria picks a random prefix of the index for select criteria.
 func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index, cols []string, nonexist bool) ([]string, []string) {
-	selCols := slices.Clone(index)
-	n := 1 + rnd.IntN(len(selCols))
-	selCols = selCols[:n]
+	n := 1 + rnd.IntN(len(index))
+	selCols := slices.Clone(index[:n])
+	_ = cols
 	// Add extra columns, but avoid duplicates
-	perm := rnd.Perm(len(cols))
-	for _, i := range perm {
-		col := cols[i]
-		if !slices.Contains(selCols, col) {
-			selCols = append(selCols, col)
-			if len(selCols) >= n+2 {
-				break
-			}
-		}
-	}
+	// perm := rnd.Perm(len(cols))
+	// for _, i := range perm {
+	// 	col := cols[i]
+	// 	if !slices.Contains(selCols, col) {
+	// 		selCols = append(selCols, col)
+	// 		if len(selCols) >= n+2 {
+	// 			break
+	// 		}
+	// 	}
+	// }
 	rnd.Shuffle(len(selCols), func(i, j int) {
 		selCols[i], selCols[j] = selCols[j], selCols[i]
 	})
@@ -734,7 +770,10 @@ func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index, cols []str
 		selVals[i] = row.GetRaw(hdr, col)
 	}
 	if nonexist {
-		selVals[rnd.IntN(len(selVals))] = "nonexistent"
+		// Must set nonexistent on an index column, not an extra column
+		col := index[rnd.IntN(n)]
+		i := slices.Index(selCols, col)
+		selVals[i] = "nonexistent"
 	}
 	return selCols, selVals
 }
@@ -745,7 +784,7 @@ func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Hea
 		// This avoids panics when hdr.Fields references derived records (e.g. Extend).
 		srcRow := make(Row, len(hdr.Fields))
 		if len(allRows) > 0 {
-			srcRow = allRows[rnd.IntN(len(allRows))]
+			srcRow = random(allRows, rnd)
 		}
 		selCols, selVals := indexSelectCriteria(rnd, srcRow, hdr, index, cols, true)
 		q.Select(selCols, selVals)
@@ -794,7 +833,7 @@ func testExistentLookup(t *testing.T, allRows []Row, rnd *rand.Rand, lookupCols 
 	}
 	hdr := q.Header()
 	for range min(10, len(allRows)) {
-		srcRow := allRows[rnd.IntN(len(allRows))]
+		srcRow := random(allRows, rnd)
 
 		lookupVals := make([]string, len(lookupCols))
 		for i, col := range lookupCols {

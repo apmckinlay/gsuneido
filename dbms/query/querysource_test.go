@@ -180,6 +180,7 @@ func NewQuerySource(rnd *rand.Rand) *QuerySource {
 	qs.NrowsP = nrows
 	qs.MetricsResult = &metrics{}
 	qs.FixedResult = []Fixed{}
+	qs.FastSingleResult = useEmptyKey
 	return qs
 }
 
@@ -271,6 +272,11 @@ func (qs *QuerySource) setApproach(index []string, _ float64, _ any, _ QueryTran
 }
 
 func (qs *QuerySource) validIndex(index []string) bool {
+	// If source has empty key, accept any index
+	if isEmptyKey(qs.KeysResult) {
+		return true
+	}
+	// Normal case: check if index is a prefix of any existing index
 	return slices.ContainsFunc(qs.IndexesResult, func(ix []string) bool {
 		return slc.HasPrefix(ix, index)
 	})
@@ -340,11 +346,33 @@ func (qs *QuerySource) Get(_ *Thread, dir Dir) Row {
 }
 
 // matches checks if a row matches the current Select criteria.
+// It only checks the index prefix columns (stopping at first missing column),
+// matching the behavior of Table and TempIndex.
 func (qs *QuerySource) matches(row Row) bool {
 	if qs.selCols == nil {
 		return true
 	}
-	for i, col := range qs.selCols {
+	
+	// Check if source has empty keys (singleton)
+	hasEmptyKey := false
+	for _, key := range qs.KeysResult {
+		if len(key) == 0 {
+			hasEmptyKey = true
+			break
+		}
+	}
+	
+	if hasEmptyKey {
+		// Use singletonFilter for empty key case
+		return singletonFilter(qs.HeaderResult, row, qs.selCols, qs.selVals)
+	}
+	
+	// Normal case: check index prefix columns
+	for _, col := range qs.index {
+		i := slices.Index(qs.selCols, col)
+		if i == -1 {
+			break // stop at first missing column
+		}
 		raw := row.GetRaw(qs.HeaderResult, col)
 		if raw != qs.selVals[i] {
 			return false

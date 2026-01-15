@@ -6,7 +6,6 @@ package query
 import (
 	"fmt"
 	"log"
-	"slices"
 	"sort"
 	"strings"
 
@@ -347,6 +346,7 @@ func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
 		su.done = false
 		return nil
 	}
+	su.rewound = false
 	su.done = true
 	nr, _ := su.source.Nrows()
 	if nr == 0 {
@@ -362,6 +362,7 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 		su.done = false
 		return nil
 	}
+	su.rewound = false
 	dir := Prev // max
 	if str.EqualCI(su.ops[0], "min") {
 		dir = Next
@@ -607,29 +608,10 @@ func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 
 func (su *Summarize) Select(cols, vals []string) {
 	su.nsels++
-	su.selCols, su.selVals = nil, nil
-	if cols == nil && vals == nil {
-		su.source.Select(nil, nil) // clear select
-		su.rewound = true
-		return
-	}
-	su.source.Select(su.splitSelect(cols, vals))
+	icols, ivals, ocols, ovals := Split(cols, vals, su.index)
+	su.selCols, su.selVals = ocols, ovals
+	su.source.Select(icols, ivals)
 	su.rewound = true
-}
-
-func (su *Summarize) splitSelect(cols, vals []string) ([]string, []string) {
-	var sucols, suvals, srccols, srcvals []string
-	for i, col := range cols {
-		if slices.Contains(su.cols, col) {
-			sucols = append(sucols, col)
-			suvals = append(suvals, vals[i])
-		} else {
-			srccols = append(srccols, col)
-			srcvals = append(srcvals, vals[i])
-		}
-	}
-	su.selCols, su.selVals = sucols, suvals
-	return srccols, srcvals
 }
 
 func (su *Summarize) filter(row Row, th *Thread) bool {

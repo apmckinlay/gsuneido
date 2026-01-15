@@ -194,6 +194,10 @@ func (tbl *Table) SetIndex(index []string) {
 	IdxUse(tbl.name, tbl.index)
 }
 
+// IndexCols returns the columns available in index entried.
+// i.e. on non-unique indexes it includes the key fields added for uniqueness
+// WARNING: for unique indexes, these columns are NOT sufficient for lookup
+// because they exclude the key fields added when the index fields are empty
 func (tbl *Table) IndexCols(index []string) []string {
 	iIndex := tbl.indexi(index)
 	return tbl.schema.Indexes[iIndex].Fields
@@ -223,11 +227,29 @@ func (tbl *Table) lookupCost() Cost {
 // execution --------------------------------------------------------
 
 func (tbl *Table) Lookup(_ *Thread, cols, vals []string) (row Row) {
-	fields := tbl.schema.Indexes[tbl.iIndex].Fields
-	assert.That(set.Subset(cols, fields))
 	assert.That(!selConflict(tbl.header.Columns, cols, vals))
 	tbl.nlooks++
-	key := selOrg(tbl.indexEncode, fields, cols, vals, true)
+	if tbl.singleton {
+		// For singleton tables (empty key), any columns are acceptable
+		// Singleton tables have at most one row, so we can use GetFilter
+		// which already handles singleton filtering
+		tbl.selcols, tbl.selvals = cols, vals
+		tbl.ensureIter()
+		tbl.Rewind()
+		return tbl.GetFilter(Next, nil)
+	}
+	// For non-singleton tables, the lookup columns must match the index.
+	ix := &tbl.schema.Indexes[tbl.iIndex]
+	key := selOrg(tbl.indexEncode, ix.Fields, cols, vals, true)
+	if len(ix.Ixspec.Fields2) > 0 && key == "" {
+		// For unique indexes, if all index field values are empty,
+		// Fields2 (from BestKey) is added to make the key unique
+		fullFields := set.Union(ix.Fields, ix.BestKey)
+		assert.That(set.Equal(fullFields, cols))
+		key = selOrg(true, fullFields, cols, vals, true)
+	} else {
+		assert.That(set.Equal(ix.Fields, cols))
+	}
 	return tbl.lookup(key)
 }
 

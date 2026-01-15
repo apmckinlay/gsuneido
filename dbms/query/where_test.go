@@ -6,6 +6,7 @@ package query
 import (
 	"fmt"
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
@@ -376,4 +377,67 @@ func TestWhere_bug(t *testing.T) {
 	assert.This(Strategy2(q)).Like(`
 		table^(a,b,c)
 		where*1 a is 1 and b is 2 and c is 3`)
+}
+
+func TestSplit(t *testing.T) {
+	// Test empty
+	flds := []string{}
+	vals := []string{}
+	index := []string{"a"}
+	iflds, ivals, oflds, ovals := Split(flds, vals, index)
+	assert.T(t).This(iflds).Is(nil)
+	assert.T(t).This(ivals).Is(nil)
+	assert.T(t).This(oflds).Is(nil)
+	assert.T(t).This(ovals).Is(nil)
+
+	// Test all in index
+	flds = []string{"a", "b"}
+	vals = []string{"1", "2"}
+	index = []string{"a", "b"}
+	iflds, ivals, oflds, ovals = Split(flds, vals, index)
+	assert.T(t).This(iflds).Is([]string{"a", "b"})
+	assert.T(t).This(ivals).Is([]string{"1", "2"})
+	assert.T(t).This(oflds).Is(nil)
+	assert.T(t).This(ovals).Is(nil)
+
+	// Test none in index
+	flds = []string{"c", "d"}
+	vals = []string{"3", "4"}
+	index = []string{"a", "b"}
+	iflds, ivals, oflds, ovals = Split(flds, vals, index)
+	assert.T(t).This(iflds).Is(nil)
+	assert.T(t).This(ivals).Is(nil)
+	assert.T(t).This(oflds).Is([]string{"c", "d"})
+	assert.T(t).This(ovals).Is([]string{"3", "4"})
+
+	// Test mixed
+	flds = []string{"a", "c", "b", "d"}
+	vals = []string{"1", "3", "2", "4"}
+	index = []string{"a", "b"}
+	iflds, ivals, oflds, ovals = Split(flds, vals, index)
+	// iflds should contain "a" and "b", in some order, ivals accordingly
+	// oflds "c" and "d"
+	assert.T(t).This(len(iflds)).Is(2)
+	assert.T(t).This(len(ivals)).Is(2)
+	assert.T(t).This(len(oflds)).Is(2)
+	assert.T(t).This(len(ovals)).Is(2)
+	// Check that iflds are in index
+	for _, f := range iflds {
+		if !slices.Contains(index, f) {
+			t.Errorf("iflds contains %s not in index", f)
+		}
+	}
+	for _, f := range oflds {
+		if slices.Contains(index, f) {
+			t.Errorf("oflds contains %s which is in index", f)
+		}
+	}
+	// Check vals match flds order
+	expected := map[string]string{"a": "1", "b": "2", "c": "3", "d": "4"}
+	for i, f := range iflds {
+		assert.T(t).This(ivals[i]).Is(expected[f])
+	}
+	for i, f := range oflds {
+		assert.T(t).This(ovals[i]).Is(expected[f])
+	}
 }

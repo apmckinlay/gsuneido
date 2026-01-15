@@ -168,10 +168,10 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 	getfn func() Row) {
 	st := qry.MakeSuTran(tran)
 	hdr := table.Header()
-	filter := func(row Row) Row {
+	filter := func(oflds, ovals []string, row Row) Row {
 		if row != nil {
-			for i, fld := range flds {
-				if row.GetRawVal(hdr, fld, th, st) != vals[i] {
+			for i, fld := range oflds {
+				if row.GetRawVal(hdr, fld, th, st) != ovals[i] {
 					return nil
 				}
 			}
@@ -191,8 +191,9 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		table.SetIndex(key)
 		strat = "key: " + table.String()
 		trace.QueryOpt.Println(dir, strat)
+		iflds, ivals, oflds, ovals := qry.Split(flds, vals, key)
 		return true, strat, func() Row {
-			return filter(table.Lookup(th, flds, vals))
+			return filter(oflds, ovals, table.Lookup(th, iflds, ivals))
 		}
 	}
 	if idx := findAll(table.Indexes(), flds); idx != nil {
@@ -216,7 +217,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		return false, strat, func() Row {
 			for n := 0; ; n++ {
 				row := table.Get(th, Next)
-				if row == nil || nil != filter(row) {
+				if row == nil || nil != filter(flds, vals, row) {
 					if n > slow[dir] {
 						Warning(dir, "slow:", n, table, formatFieldsVals(flds, vals))
 					}
@@ -244,7 +245,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 				}
 				row := tbl.Get(th, Next)
 				if row == nil ||
-					(!row.SameAs(prevRow) && nil != filter(row)) {
+					(!row.SameAs(prevRow) && nil != filter(flds, vals, row)) {
 					trace.QueryOpt.Println(dir, "multi", tbl)
 					if n > slow[dir] {
 						Warning(dir, "slow:", n, tbl, formatFieldsVals(flds, vals))

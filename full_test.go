@@ -5,6 +5,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -15,10 +17,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-func TestFuzzBug(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
+func TestQueryBug(t *testing.T) {
+	TestOnlyIndividually(t)
 	Libload = libload // dependency injection
 	mainThread.Name = "main"
 	mainThread.SetSviews(&sviews)
@@ -26,21 +26,24 @@ func TestFuzzBug(t *testing.T) {
 	openDbms()
 	defer db.CloseKeepMapped()
 
-	result := compile.EvalString(MainThread, `
-		QueryFuzz.MakeTables(7616220806)
-		QueryHash("
-			bln
-		leftjoin /*MANY TO MANY*/ by(ik)
-				((ivc where ck isnt '3')
-			union /*NOT DISJOINT*/
-				ivc)", details:)`)
-	fmt.Println(result)
+	query := `
+		(ap_checklines where apivc_invoice is "12567" 
+		join by(apchk_num) 
+		(ap_checks where bizpartner_num is #20260113.104240513110 
+			and apchk_void? isnt true 
+			and apchk_type is "CK" 
+		rename 
+			etaequipstmt_name to etaequipstmt_name_hdr, 
+			etaequipstmt_date to etaequipstmt_date_hdr, 
+			etaequip_num to etaequip_num_hdr
+		)) 
+		summarize max apchk_date, total apchklin_amount_paid`
+	args := SuObjectOf(SuStr(query))
+	dbmsLocal.Get(MainThread, args, Only)
 }
 
 func TestFastGet(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
+	TestOnlyIndividually(t)
 	Libload = libload // dependency injection
 	mainThread.Name = "main"
 	mainThread.SetSviews(&sviews)
@@ -113,4 +116,14 @@ func BenchmarkFast(b *testing.B) {
 	for b.Loop() {
 		dbmsLocal.Get(MainThread, args, Only)
 	}
+}
+
+func TestOnlyIndividually(t *testing.T) {
+	for _, arg := range os.Args {
+		if strings.Contains(arg, "-test.run") &&
+			!strings.Contains(arg, "|") {
+			return
+		}
+	}
+	t.SkipNow()
 }
