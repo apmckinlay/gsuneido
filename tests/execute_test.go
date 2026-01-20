@@ -426,3 +426,14 @@ func TestCoverage(t *testing.T) {
 	assert.T(t).This(cover).
 		Is(compile.Constant("#(17: 1, 25: 1, 53: 10, 62: 1)").(*SuObject))
 }
+
+func TestSuClassDefaultGet(t *testing.T) {
+	f := compile.Constant(`function() {
+		c = class {
+			Default() { return 123 }
+		}
+		c.X
+	}`)
+	th := &Thread{}
+	assert.This(th.Call(f).String()).Is("Default(X /* method */")
+}

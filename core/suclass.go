@@ -213,6 +213,10 @@ func (*defaultAdapter) SetConcurrent() {
 	// immutable so ok
 }
 
+func (d *defaultAdapter) String() string {
+	return "Default(" + d.method + " /* method */"
+}
+
 func (d *defaultAdapter) Call(th *Thread, this Value, as *ArgSpec) Value {
 	method := SuStr(d.method)
 	if as.Each >= EACH0 {
