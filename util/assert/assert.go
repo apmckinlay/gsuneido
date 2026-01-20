@@ -399,7 +399,7 @@ func (a assert) fail(args ...any) {
 		a.t.Helper()
 	}
 	if len(a.msg) > 0 {
-		args = append(append(args, "msg: "), a.msg...)
+		args = append(append(args, "\nmsg: "), a.msg...)
 	}
 	s := fmt.Sprintln(args...)
 	if a.t == nil {
