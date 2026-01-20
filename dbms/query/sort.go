@@ -16,13 +16,9 @@ import (
 
 type Sort struct {
 	order []string
-	sortApproach
 	Query1
 	reverse bool
-}
-
-type sortApproach struct {
-	index []string
+	optimized bool
 }
 
 func NewSort(src Query, reverse bool, order []string) *Sort {
@@ -48,7 +44,7 @@ func (sort *Sort) String() string {
 	if sort.reverse {
 		r = "reverse"
 	}
-	if sort.index != nil { // optimized
+	if sort.optimized {
 		return r
 	}
 	return "sort " + str.Opt(r, " ") + str.Join(", ", sort.order)
@@ -81,30 +77,13 @@ func (sort *Sort) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 	assert.That(index == nil)
 	src := sort.source
 	fixcost, varcost := Optimize(src, mode, sort.order, frac) // adds temp index if needed
-	best := bestOrdered(src, sort.order, mode, frac, sort.fixed)
-	if fixcost+varcost < best.fixcost+best.varcost {
-		return fixcost, varcost, sortApproach{index: sort.order}
-	}
-	return best.fixcost, best.varcost, sortApproach{index: best.index}
+	return fixcost, varcost, nil
 }
 
-// bestOrdered returns the best index that supplies the required order
-// taking fixed into consideration.
-func bestOrdered(q Query, order []string, mode Mode, frac float64, fixed []Fixed) bestIndex {
-	best := newBestIndex()
-	for _, ix := range q.Indexes() {
-		if ordered(ix, order, fixed) {
-			fixcost, varcost := Optimize(q, mode, ix, frac)
-			best.update(ix, fixcost, varcost)
-		}
-	}
-	return best
-}
-
-func (sort *Sort) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
-	sort.sortApproach = approach.(sortApproach)
-	sort.source = SetApproach(sort.source, sort.index, frac, tran)
+func (sort *Sort) setApproach(_ []string, frac float64, _ any, tran QueryTran) {
+	sort.source = SetApproach(sort.source, sort.order, frac, tran)
 	sort.header = sort.source.Header()
+	sort.optimized = true
 }
 
 // execution --------------------------------------------------------

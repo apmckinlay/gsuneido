@@ -611,37 +611,49 @@ func (w *Where) optInit() {
 // bestIndex returns the best (lowest cost) index with an idxSel
 // that satisfies the required order (or impossible)
 func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
+	// fmt.Println("bestIndex", w.tbl.Name(), order, frac, "---------------")
 	if w.singleton {
 		cost := w.source.lookupCost()
 		return cost, &whereApproach{index: w.idxSels[0].index,
 			cost: cost, idxSel: true}
 	}
 
-	bestSelect := newBestIndex()
-	bestFilter := newBestIndex()
+	best := newBestIndex()
+	bestIdxSel := false
 	for _, idx := range w.source.Indexes() {
 		if ordered(idx, order, w.fixed) {
 			if is := w.getIdxSel(idx); is != nil {
 				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac*is.frac)
 				assert.That(fixCost == 0)
 				varCost += w.source.lookupCost() * len(is.ptrngs)
-				bestSelect.update(idx, 0, varCost)
+				// fmt.Println("where idxSel", idx, is.frac, frac, "=", varCost)
+				if best.update(idx, 0, varCost) {
+					bestIdxSel = true
+				}
 			} else if ncols := w.indexFilter(idx); ncols > 0 {
 				// unknown selectivity so estimate .6 ^ ncols
 				f := math.Pow(.6, float64(ncols)) // ???
 				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac*f)
+				// fmt.Println("where indexFilter", idx, f, frac, "=", varCost)
 				assert.That(fixCost == 0)
-				bestFilter.update(idx, 0, varCost)
+				if best.update(idx, 0, varCost) {
+					bestIdxSel = false
+				}
+			} else {
+				// index satisfies order but no idxSel or filter
+				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac)
+				// fmt.Println("where order", idx, 1, "=", varCost)
+				assert.That(fixCost == 0)
+				if best.update(idx, 0, varCost) {
+					bestIdxSel = false
+				}
 			}
 		}
 	}
-	if min(bestSelect.varcost, bestFilter.varcost) >= impossible {
-		return impossible, nil
+	if best.varcost < impossible {
+		return best.varcost, &whereApproach{index: best.index, cost: best.varcost, idxSel: bestIdxSel}
 	}
-	if bestSelect.varcost < bestFilter.varcost {
-		return bestSelect.varcost, &whereApproach{index: bestSelect.index, cost: bestSelect.varcost, idxSel: true}
-	}
-	return bestFilter.varcost, &whereApproach{index: bestFilter.index, cost: bestFilter.varcost, idxSel: false}
+	return impossible, nil
 }
 
 func (w *Where) getIdxSel(index []string) *idxSel {

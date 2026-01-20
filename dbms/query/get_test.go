@@ -98,7 +98,7 @@ func TestQueryGet(t *testing.T) {
 
 		q, _, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(String(q), `"`, "'")
-		assert.T(t).This(qs).Is(strategy)
+		assert.T(t).Msg(query).This(qs).Is(strategy)
 		assert.T(t).Msg("forward:", query).This(get(q, Next, hasSort)).Like(expected)
 		assert.T(t).Msg("reverse:", query).This(get(q, Prev, hasSort)).Like(expected)
 
@@ -110,6 +110,13 @@ func TestQueryGet(t *testing.T) {
 			assert.T(t).Msg("simple:", query).This(simple).Like(expected)
 		}
 	}
+
+	// trace.Set(int(trace.QueryOpt))
+	// test("(trans minus trans) where item = 0",
+	// 	"trans^(item) where item is 0 minus(date,item,id) "+
+	// 		"(trans^(date,item,id) where item is 0)",
+	// 	`cost	date	id	item`)
+	// t.SkipNow()
 
 	test("indexes project table, columns, key",
 		"indexes project-copy table, columns, key",

@@ -360,6 +360,19 @@ func optOrdered(q Query, mode Mode, index []string, frac float64, fixed []Fixed)
 	return fixcost, varcost, index
 }
 
+// bestOrdered returns the best index that supplies the required order
+// taking fixed into consideration.
+func bestOrdered(q Query, order []string, mode Mode, frac float64, fixed []Fixed) bestIndex {
+	best := newBestIndex()
+	for _, ix := range q.Indexes() {
+		if ordered(ix, order, fixed) {
+			fixcost, varcost := Optimize(q, mode, ix, frac)
+			best.update(ix, fixcost, varcost)
+		}
+	}
+	return best
+}
+
 func (jn *Join) setApproach(index []string, frac float64, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
 	if ap.reverse {

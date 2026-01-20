@@ -37,6 +37,8 @@ func TestOptimize(t *testing.T) {
 		"table^(a)")
 	test("trans sort date",
 		"trans^(date,item,id)")
+	test("table where b is 5 sort a, b",
+		"table^(a) where b is 5")
 	test("table sort c",
 		"table^(a) tempindex(c)")
 	test("hist where date is 5",

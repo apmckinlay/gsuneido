@@ -129,6 +129,7 @@ func queryAll(db *db19.Database, query string) string {
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
+	// fmt.Println(format(0, q, 0))
 	return queryAll2(q)
 }
 
@@ -229,33 +230,23 @@ func TestDuplicateKey(*testing.T) {
 	act(db, "insert { k: 11111, u: '' } into tmp")
 }
 
-func TestWhereSelectBug(t *testing.T) {
+func TestWhereLowerIndex(t *testing.T) {
 	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	doAdmin(db, "create t2 (d) key (d)")
-	doAdmin(db, "create t1 (a, b, d) key(a) index(b) index(d)")
-	act(db, "insert {d: '1'} into t2")
-	act(db, "insert {d: '1', a: '2', b: '8'} into t1")
-	act(db, "insert {d: '1', a: '3', b: '7'} into t1")
-	act(db, "insert {d: '1', a: '4', b: '8'} into t1")
-	act(db, "insert {d: '1', a: '5', b: '7'} into t1")
-	query := "t1 join t2 where d is '1' and b < 'z'"
-	assert.T(t).This(queryAll(db, query)).
-		Is("a=3 b=7 d=1 | a=5 b=7 d=1 | a=2 b=8 d=1 | a=4 b=8 d=1")
-
-	tran := sizeTran{db.NewReadTran()}
-	q := ParseQuery("t1 where d is '1' and b < 'z'", tran, nil)
-	idx := []string{"d"}
-	q = q.Transform()
-	_, _, app := q.optimize(ReadMode, idx, 1)
-	q.setApproach(idx, 1, app, tran)
-	assert.T(t).This(String(q)).Is("t1^(b) where d is '1' and b < 'z'")
-	vals := []string{Pack(SuStr("1"))}
-	q.Select(idx, vals)
-	assert.T(t).This(queryAll2(q)).
-		Is("a=3 b=7 d=1 | a=5 b=7 d=1 | a=2 b=8 d=1 | a=4 b=8 d=1")
+	doAdmin(db, "create t1 (a, b, b_lower!) key(a) index(b_lower!)")
+	act(db, "insert {a: '2', b: '8'} into t1")
+	act(db, "insert {a: '3', b: '7'} into t1")
+	act(db, "insert {a: '4', b: '8'} into t1")
+	act(db, "insert {a: '5', b: '7'} into t1")
+	act(db, "insert {a: '6', b: '7'} into t1")
+	act(db, "insert {a: '7', b: '7'} into t1")
+	db.Persist()
+	rt := db.NewReadTran()
+	q := ParseQuery("t1 where b_lower! = '8'", rt, nil)
+	q, _, _ = Setup(q, ReadMode, rt)
+	assert.T(t).This(String(q)).Is("t1^(b_lower!) where b_lower! is '8'")
 }
 
 func TestJoinBug(t *testing.T) {
@@ -520,4 +511,39 @@ func TestLookupOnUniqueIndexWithEmptyFields(t *testing.T) {
 	row = tbl.Lookup(nil, []string{"u", "k"},
 		[]string{Pack(SuStr("")), Pack(SuInt(2))})
 	assert.T(t).Msg("lookup u='', k=2").This(row2str(hdr, row)).Is("data=second k=2")
+}
+
+func TestSummarizeWhere(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	doAdmin(db, "create tmp (a, b) key(a) key(b)")
+	for i := range 1000 {
+		t := db.NewUpdateTran()
+		var rb RecordBuilder
+		rb.Add(IntVal(i))
+		rb.Add(IntVal(i))
+		t.Output(nil, "tmp", rb.Build())
+		t.Commit()
+	}
+	db.Persist() // flush to btree so RangeFrac works
+	strategy := func(query string) string {
+		rt := db.NewReadTran()
+		q := ParseQuery(query, rt, nil)
+		q, _, _ = Setup(q, ReadMode, rt)
+		return String(q)
+	}
+	assert.T(t).This(strategy("tmp summarize max a")).
+		Is("tmp^(a) summarize-idx* max a")
+	assert.T(t).This(strategy("tmp summarize max b")).
+		Is("tmp^(b) summarize-idx* max b")
+
+	// a > 2 is not selective, so it's better to use the index for summarize
+	assert.T(t).This(strategy("tmp where a > 2 summarize max b")).
+		Is("tmp^(b) where a > 2 summarize-idx* max b")
+
+	// a < 2 is selective, so it's better to use the index for where
+	assert.T(t).This(strategy("tmp where a < 2 summarize max b")).
+		Is("tmp^(a) where a < 2 summarize-seq* max b")
 }

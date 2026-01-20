@@ -201,17 +201,18 @@ func (u *Union) getFixed() []Fixed {
 func (u *Union) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	// if there is a required index, use Merge
 	if index != nil {
-		// if not disjoint then index must also be a key
-		if u.disjoint == "" &&
-			(!handlesIndex(u.source1.Keys(), index) ||
-				!handlesIndex(u.source2.Keys(), index)) {
+		idx1, idx2, bestKey, fixcost, varcost := u.bestMergeIndexes(index, mode, frac)
+		if fixcost >= impossible {
 			return impossible, impossible, nil
 		}
-		fixcost1, varcost1 := Optimize(u.source1, mode, index, frac)
-		fixcost2, varcost2 := Optimize(u.source2, mode, index, frac)
-		approach := &unionApproach{keyIndex: index, strat: unionMerge,
-			idx1: index, idx2: index}
-		return fixcost1 + fixcost2, varcost1 + varcost2, approach
+		keyIndex := bestKey
+		if keyIndex == nil {
+			// for singletons, use the required order as the keyIndex
+			keyIndex = index
+		}
+		approach := &unionApproach{keyIndex: keyIndex, strat: unionMerge,
+			idx1: idx1, idx2: idx2}
+		return fixcost, varcost, approach
 	}
 	// else no required index
 	if u.disjoint != "" {
@@ -248,11 +249,132 @@ func (u *Union) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 	return fixcost, varcost, approach
 }
 
-func handlesIndex(keys [][]string, index []string) bool {
-	if isEmptyKey(keys) {
-		return true // singleton
+// bestMergeIndexes finds the pair of indexes from source1 and source2 that have
+// the lowest cost for a merge operation with the required order.
+// For each source1 index that is prefixed by the required order and contains a
+// source1 key, and for each source2 index that is prefixed by the required
+// order and contains a source2 key with the key fields in the same order,
+// the pair is a candidate. Returns the pair with the lowest cost.
+// Empty keys (singletons) are handled specially:
+// - If both sources have empty keys, order is not needed
+// - If only one source has an empty key, we need a key index on the other
+func (u *Union) bestMergeIndexes(order []string, mode Mode, frac float64) (
+	idx1, idx2 []string, bestKey []string, fixcost, varcost Cost) {
+	fixcost = impossible
+	varcost = impossible
+	indexes1 := u.source1.Indexes()
+	keys1 := u.source1.Keys()
+	indexes2 := u.source2.Indexes()
+	keys2 := u.source2.Keys()
+	emptyKey1 := isEmptyKey(keys1)
+	emptyKey2 := isEmptyKey(keys2)
+	if emptyKey1 && emptyKey2 {
+		// both sources have empty keys, don't need order for Optimize
+		fc1, vc1 := Optimize(u.source1, mode, nil, frac)
+		fc2, vc2 := Optimize(u.source2, mode, nil, frac)
+		return nil, nil, nil, fc1 + fc2, vc1 + vc2
 	}
-	return slc.ContainsFn(keys, index, set.Equal[string])
+	if emptyKey1 {
+		// only source1 has empty key, need index on source2 that includes a key
+		idx2, bestKey, fixcost, varcost =
+			bestMergeIndex(u.source1, u.source2, indexes2, keys2, order, mode, frac)
+		return
+	}
+	if emptyKey2 {
+		// only source2 has empty key, need index on source1 that includes a key
+		idx1, bestKey, fixcost, varcost =
+			bestMergeIndex(u.source2, u.source1, indexes1, keys1, order, mode, frac)
+		return
+	}
+	// neither source has empty key, use original logic
+	for _, index1 := range indexes1 {
+		if !slc.HasPrefix(index1, order) {
+			continue
+		}
+		key1 := indexContainsKey(index1, keys1)
+		if key1 == nil {
+			continue
+		}
+		keyOrder := keyFieldOrder(index1, key1)
+		for _, index2 := range indexes2 {
+			if !slc.HasPrefix(index2, order) {
+				continue
+			}
+			key2 := indexContainsKey(index2, keys2)
+			if key2 == nil {
+				continue
+			}
+			if !sameKeyFieldOrder(index2, key2, keyOrder) {
+				continue
+			}
+			// candidate pair found, get cost
+			fc1, vc1 := Optimize(u.source1, mode, index1, frac)
+			fc2, vc2 := Optimize(u.source2, mode, index2, frac)
+			if fc1+vc1+fc2+vc2 < fixcost+varcost {
+				idx1 = index1
+				idx2 = index2
+				bestKey = key1
+				fixcost = fc1 + fc2
+				varcost = vc1 + vc2
+			}
+		}
+	}
+	return
+}
+
+// bestMergeIndex finds the best index on src2 that includes a key,
+func bestMergeIndex(src1, src2 Query, indexes2, keys2 [][]string,
+	order []string, mode Mode, frac float64) (
+	idx []string, bestKey []string, fixcost, varcost Cost) {
+	fixcost = impossible
+	varcost = impossible
+	fc1, vc1 := Optimize(src1, mode, nil, frac)
+	for _, index2 := range indexes2 {
+		if !slc.HasPrefix(index2, order) {
+			continue
+		}
+		key2 := indexContainsKey(index2, keys2)
+		if key2 == nil {
+			continue
+		}
+		fc2, vc2 := Optimize(src2, mode, index2, frac)
+		if fc1+vc1+fc2+vc2 < fixcost+varcost {
+			idx = index2
+			bestKey = key2
+			fixcost = fc1 + fc2
+			varcost = vc1 + vc2
+		}
+	}
+	return
+}
+
+// indexContainsKey returns a key from keys if the index contains all fields
+// of that key, otherwise nil.
+func indexContainsKey(index []string, keys [][]string) []string {
+	for _, key := range keys {
+		if set.Subset(index, key) {
+			return key
+		}
+	}
+	return nil
+}
+
+// keyFieldOrder returns the order of the key fields as they appear in the index.
+func keyFieldOrder(index, key []string) []string {
+	result := make([]string, 0, len(key))
+	for _, col := range index {
+		if slices.Contains(key, col) {
+			result = append(result, col)
+		}
+	}
+	return result
+}
+
+// sameKeyFieldOrder returns true if the key fields appear in the same order
+// in the index as in keyOrder.
+func sameKeyFieldOrder(index, key []string, keyOrder []string) bool {
+	order := keyFieldOrder(index, key)
+	return slices.Equal(order, keyOrder)
 }
 
 func (*Union) optMerge(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, any) {

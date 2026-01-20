@@ -103,3 +103,191 @@ func TestUnion_removeNonexistentEmpty(t *testing.T) {
 		[]string{"a", "c", "x"}, []string{"1", "2", "3"})
 	test([]string{"x", "y"}, []string{"", ""}, nil, nil)
 }
+
+func TestBestMergeIndexes(t *testing.T) {
+	test := func(order []string, idx1, idx2, keys1, keys2 [][]string,
+		expIdx1, expIdx2, expKey []string, expImpossible bool) {
+		t.Helper()
+		src1 := &QueryMock{
+			ColumnsResult: []string{"a", "b", "c", "d", "e", "f"},
+			IndexesResult: idx1,
+			KeysResult:    keys1,
+			FixedResult:   []Fixed{},
+			MetricsResult: &metrics{},
+		}
+		src2 := &QueryMock{
+			ColumnsResult: []string{"a", "b", "c", "d", "x", "y"},
+			IndexesResult: idx2,
+			KeysResult:    keys2,
+			FixedResult:   []Fixed{},
+			MetricsResult: &metrics{},
+		}
+		u := &Union{}
+		u.source1 = src1
+		u.source2 = src2
+
+		resIdx1, resIdx2, resKey, fixcost, _ := u.bestMergeIndexes(order, ReadMode, 1.0)
+		assert.T(t).This(resIdx1).Is(expIdx1)
+		assert.T(t).This(resIdx2).Is(expIdx2)
+		assert.T(t).This(resKey).Is(expKey)
+		if expImpossible {
+			assert.T(t).That(fixcost == impossible)
+		}
+	}
+
+	// nil order
+	test(nil,
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		[]string{"a", "b"},
+		[]string{"a", "b"},
+		[]string{"a", "b"},
+		false)
+
+	// simple case with keys and order equal
+	test([]string{"a", "b"},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		[]string{"a", "b"},
+		[]string{"a", "b"},
+		[]string{"a", "b"},
+		false)
+
+	// example from spec:
+	// required order(c,b)
+	// source1 key(a,c,b) index(c,b,a)
+	// source2 key(b,a,c) index(c,b,d,a)
+	test([]string{"c", "b"},
+		[][]string{{"c", "b", "a"}},
+		[][]string{{"c", "b", "d", "a"}},
+		[][]string{{"a", "c", "b"}},
+		[][]string{{"b", "a", "c"}},
+		[]string{"c", "b", "a"},
+		[]string{"c", "b", "d", "a"},
+		[]string{"a", "c", "b"},
+		false)
+
+	test(nil,
+		[][]string{{"c", "b", "a"}},
+		[][]string{{"c", "b", "d", "a"}},
+		[][]string{{"a", "c", "b"}},
+		[][]string{{"b", "a", "c"}},
+		[]string{"c", "b", "a"},
+		[]string{"c", "b", "d", "a"},
+		[]string{"a", "c", "b"},
+		false)
+
+	// no matching indexes
+	test([]string{"c", "b"},
+		[][]string{{"x", "y"}},
+		[][]string{{"c", "b", "d"}},
+		[][]string{{"x", "y"}},
+		[][]string{{"c", "b"}},
+		nil,
+		nil,
+		nil,
+		true)
+
+	// both sources have empty keys - don't need order
+	emptyKey := [][]string{{}}
+	test([]string{"x"},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		emptyKey,
+		emptyKey,
+		nil,
+		nil,
+		nil,
+		false)
+
+	// only source1 has empty key - need index on source2 that includes a key
+	test([]string{"a"},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		emptyKey,
+		[][]string{{"a", "b"}},
+		nil,
+		[]string{"a", "b"},
+		[]string{"a", "b"},
+		false)
+
+	// only source2 has empty key - need index on source1 that includes a key
+	test([]string{"a"},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		emptyKey,
+		[]string{"a", "b"},
+		nil,
+		[]string{"a", "b"},
+		false)
+}
+
+func TestIndexContainsKey(t *testing.T) {
+	assert := assert.T(t)
+
+	// Empty keys list
+	assert.This(indexContainsKey([]string{"a", "b"}, nil)).Is(nil)
+
+	// Index contains key
+	assert.This(indexContainsKey(
+		[]string{"a", "b", "c"},
+		[][]string{{"a", "b"}},
+	)).Is([]string{"a", "b"})
+
+	// Index doesn't contain key
+	assert.This(indexContainsKey(
+		[]string{"a", "b"},
+		[][]string{{"a", "b", "c"}},
+	)).Is(nil)
+
+	// Multiple keys, first match returned
+	assert.This(indexContainsKey(
+		[]string{"a", "b", "c"},
+		[][]string{{"d", "e"}, {"a", "c"}},
+	)).Is([]string{"a", "c"})
+}
+
+func TestKeyFieldOrder(t *testing.T) {
+	assert := assert.T(t)
+
+	// Basic case
+	assert.This(keyFieldOrder(
+		[]string{"c", "b", "a"},
+		[]string{"a", "c", "b"},
+	)).Is([]string{"c", "b", "a"})
+
+	// Key fields in different order in index
+	assert.This(keyFieldOrder(
+		[]string{"a", "x", "b"},
+		[]string{"a", "b"},
+	)).Is([]string{"a", "b"})
+
+	// Empty key
+	assert.This(keyFieldOrder(
+		[]string{"a", "b"},
+		[]string{},
+	)).Is([]string{})
+}
+
+func TestSameKeyFieldOrder(t *testing.T) {
+	assert := assert.T(t)
+
+	// Same order
+	assert.That(sameKeyFieldOrder(
+		[]string{"c", "b", "d", "a"},
+		[]string{"b", "a", "c"},
+		[]string{"c", "b", "a"},
+	))
+
+	// Different order
+	assert.That(!sameKeyFieldOrder(
+		[]string{"a", "b", "c"},
+		[]string{"a", "b", "c"},
+		[]string{"c", "b", "a"},
+	))
+}

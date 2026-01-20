@@ -486,6 +486,7 @@ func optTI(best *bestTI, q Query, mode Mode, index []string, frac float64,
 		best.srcapp = srcapp
 		best.fixcost = fixcost
 		best.varcost = varcost
+		// fmt.Println("optTI", index, fixcost + varcost)
 	}
 }
 
@@ -509,11 +510,13 @@ func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 // which is true for simple cases like a table
 // but not for more complex queries.
 func tempIndexBest(q Query, index []string) []string {
+	// fmt.Println("tempIndexBest", index, q)
 	fixed := q.Fixed()
 	var bestIndex []string
 	var bestOn int
 	for _, ix := range q.Indexes() {
 		on := orderedn(ix, index, fixed)
+		// fmt.Println("\torderedn", ix, index, fixed, "=>", on)
 		if on > 0 && on < len(index) && on > bestOn {
 			bestOn = on
 			bestIndex = ix
@@ -722,10 +725,13 @@ func newBestIndex() bestIndex {
 	return bestIndex{fixcost: impossible, varcost: impossible}
 }
 
-func (bi *bestIndex) update(index []string, fixcost, varcost Cost) {
+// update returns true if the new values are the lowest cost so far
+func (bi *bestIndex) update(index []string, fixcost, varcost Cost) bool {
 	if fixcost+varcost < bi.fixcost+bi.varcost {
 		*bi = bestIndex{index: index, fixcost: fixcost, varcost: varcost}
+		return true
 	}
+	return false
 }
 
 func (bi *bestIndex) cost() int {
