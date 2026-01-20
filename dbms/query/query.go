@@ -157,7 +157,7 @@ type Query interface {
 	//
 	// frac is the estimated fraction of the rows that will be read.
 	// It affects the variable cost.
-	// frac = 0 means only Lookup, else frac < 1 means Select
+	// frac = 0 means only Lookup, else frac < 1 means Select or first/last
 	//
 	// varcost should already incorporate frac
 	optimize(mode Mode, index []string, frac float64) (

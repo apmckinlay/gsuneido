@@ -62,6 +62,7 @@ func (ov *Overlay) Nlayers() int {
 	return len(ov.layers)
 }
 
+// BtreeLevels includes leaf level as well as tree levels
 func (ov *Overlay) BtreeLevels() int {
 	return ov.bt.TreeLevels() + 1
 }
