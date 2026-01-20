@@ -631,11 +631,15 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
 					bestIdxSel = true
 				}
 			} else if ncols := w.indexFilter(idx); ncols > 0 {
+				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac)
+				assert.That(fixCost == 0)
 				// unknown selectivity so estimate .6 ^ ncols
 				f := math.Pow(.6, float64(ncols)) // ???
-				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac*f)
+				// the selectivity only affects how much of the data we read
+				// we still have to read all the index we're filtering.
+				const dataFrac = .8 // ??? guess of data vs index read cost
+				varCost = int(float64(varCost) * (1 - f*dataFrac))
 				// fmt.Println("where indexFilter", idx, f, frac, "=", varCost)
-				assert.That(fixCost == 0)
 				if best.update(idx, 0, varCost) {
 					bestIdxSel = false
 				}
