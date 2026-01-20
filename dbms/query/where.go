@@ -924,7 +924,7 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 	for _, col := range ocols {
 		assert.That(isFixed(w.fixed, col))
 	}
-	
+
 	row := w.source.Lookup(th, icols, ivals)
 	if !w.filter(th, row) {
 		row = nil
