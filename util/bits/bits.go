@@ -17,25 +17,29 @@ func TrailingOnes(x int) int {
 }
 
 func Shuffle32(n uint32) uint32 {
-	// Add a large, odd constant to break the fixed point at 0.
-	// 0x9e3779b9 is derived from the golden ratio and is a common choice.
-	n += 0x9e3779b9
-	n ^= n >> 16
-	n *= 0x85ebca6b
-	n ^= n >> 13
-	n *= 0xc2b2ae35
-	n ^= n >> 16
+	// Linear Congruential Generator (LCG) with full period for 32-bit values.
+	// For modulus m = 2^32, full period requires:
+	// - multiplier a ≡ 1 (mod 4)
+	// - increment c is odd
+	// These parameters ensure a single cycle of length 2^32.
+	const (
+		a = 0x9e3779b9 // 2654435769, satisfies a ≡ 1 (mod 4)
+		c = 0x9e3779b9 // 2654435769, odd
+	)
+	n = n*a + c
 	return n
 }
 
 func Shuffle16(n uint16) uint16 {
-	// Add a constant to the initial state to move it away from 0.
-	// This can be any number, but a large one is good practice.
-	n += 0xda79
-	n ^= n >> 7
-	n *= 0x6955
-	n ^= n >> 9
-	n *= 0xde59
-	n ^= n >> 8
+	// Linear Congruential Generator (LCG) with full period for 16-bit values.
+	// For modulus m = 2^16, full period requires:
+	// - multiplier a ≡ 1 (mod 4)
+	// - increment c is odd
+	// These parameters ensure a single cycle of length 65536.
+	const (
+		a = 0x9e35  // 40501, satisfies a ≡ 1 (mod 4)
+		c = 0x9e37  // 40503, odd
+	)
+	n = n*a + c
 	return n
 }

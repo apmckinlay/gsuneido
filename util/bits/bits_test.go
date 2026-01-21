@@ -21,28 +21,48 @@ func TestNextPow2(t *testing.T) {
 }
 
 func TestShuffle16(t *testing.T) {
-	assert := assert.T(t).This
-	sum1 := 0
-	sum2 := 0
-	for i := 0; i <= math.MaxUint16; i++ {
-		sum1 += i
-		sum2 += int(Shuffle16(uint16(i)))
+	// Cycle through all 2^16 values starting from 0
+	// This verifies that Shuffle16 visits each value exactly once
+	start := uint16(0)
+	curr := start
+	length := 0
+	for {
+		curr = Shuffle16(curr)
+		length++
+		if curr == start {
+			break
+		}
+		if length > math.MaxUint16 {
+			t.Errorf("Cycle too long: length=%d", length)
+			return
+		}
 	}
-	assert(sum1).Is((math.MaxUint16 * (math.MaxUint16 + 1)) / 2)
-	assert(sum1).Is(sum2)
+	if length != 1<<16 {
+		t.Errorf("Expected cycle length %d, got %d", 1<<16, length)
+	}
 }
 
 func TestShuffle32(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping long test")
 	}
-	assert := assert.T(t).This
-	sum1 := 0
-	sum2 := 0
-	for i := 0; i <= math.MaxUint32; i++ {
-		sum1 += i
-		sum2 += int(Shuffle32(uint32(i)))
+	// Cycle through all 2^32 values starting from 0
+	// This verifies that Shuffle32 visits each value exactly once
+	start := uint32(0)
+	curr := start
+	length := 0
+	for {
+		curr = Shuffle32(curr)
+		length++
+		if curr == start {
+			break
+		}
+		if length > math.MaxUint32 {
+			t.Errorf("Cycle too long: length=%d", length)
+			return
+		}
 	}
-	assert(sum1).Is((math.MaxUint32 * (math.MaxUint32 + 1)) / 2)
-	assert(sum1).Is(sum2)
+	if length != 1<<32 {
+		t.Errorf("Expected cycle length %d, got %d", 1<<32, length)
+	}
 }
