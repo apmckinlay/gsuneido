@@ -181,6 +181,8 @@ func NewQuerySource(rnd *rand.Rand) *QuerySource {
 	qs.MetricsResult = &metrics{}
 	qs.FixedResult = []Fixed{}
 	qs.FastSingleResult = useEmptyKey
+	qs.LookupLevels = 2 // ???
+	qs.KnowExactNrowsResult = true
 	return qs
 }
 

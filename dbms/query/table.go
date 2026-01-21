@@ -221,6 +221,10 @@ func (tbl *Table) lookupCost() Cost {
 		levels = tbl.info.Indexes[0].BtreeLevels()
 		//TODO should be the actual index but we don't have it
 	}
+	return lookupCost(levels)
+}
+
+func lookupCost(levels int) Cost {
 	return levels*800 - 300 // empirical
 }
 

@@ -27,11 +27,12 @@ type QueryMock struct {
 		Fixcost, Varcost Cost
 		Approach         any
 	}
-	LookupCostResult Cost
-	FastSingleResult bool
-	SimpleResult     []Row
-	ValueGetResult   Value
-	MetricsResult    *metrics
+	LookupLevels         int
+	FastSingleResult     bool
+	SimpleResult         []Row
+	ValueGetResult       Value
+	MetricsResult        *metrics
+	KnowExactNrowsResult bool
 }
 
 var _ Query = (*QueryMock)(nil)
@@ -145,7 +146,10 @@ func (*QueryMock) setApproach([]string, float64, any, QueryTran) {
 }
 
 func (m *QueryMock) lookupCost() Cost {
-	return m.LookupCostResult
+	if m.LookupLevels != 0 {
+		return lookupCost(m.LookupLevels)
+	}
+	panic("QueryMock.LookupCost LookupLevels not defined")
 }
 
 func (m *QueryMock) fastSingle() bool {
@@ -173,6 +177,6 @@ func (m *QueryMock) Metrics() *metrics {
 	panic("QueryMock.Metrics not implemented")
 }
 
-func (*QueryMock) knowExactNrows() bool {
-	return false
+func (m *QueryMock) knowExactNrows() bool {
+	return m.KnowExactNrowsResult
 }
