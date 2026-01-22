@@ -5,7 +5,7 @@ package ints
 
 func Abs[T int | int8 | int16 | int32 | int64](x T) T {
 	if x < 0 {
-        return -x
-    }
-    return x
+		return -x
+	}
+	return x
 }

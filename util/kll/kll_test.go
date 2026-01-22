@@ -10,7 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
-	"github.com/apmckinlay/gsuneido/util/generic/ints"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 func TestInsertLevel0(t *testing.T) {

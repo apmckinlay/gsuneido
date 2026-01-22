@@ -9,7 +9,7 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/generic/ints"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 var timestamp SuDate
