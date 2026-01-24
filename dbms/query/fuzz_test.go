@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
@@ -49,6 +50,7 @@ func fuzzRandom(t *testing.T, rnd *rand.Rand) {
 		fuzzMinus,
 		fuzzIntersect,
 		fuzzUnion,
+		fuzzTimes,
 	}
 	f := random(fuzzers, rnd)
 	f(t, rnd)
@@ -524,6 +526,76 @@ func splitShare[E any](rnd *rand.Rand, s []E) ([]E, []E) {
 		a, b = b, a
 	}
 	return slices.Clip(s[:b]), slices.Clip(s[a:])
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzTimes ./dbms/query/
+
+func FuzzTimes(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzTimes(t, rnd)
+	})
+}
+
+func TestFuzzTimes(t *testing.T) {
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzTimes(t, rnd)
+	}
+}
+
+func fuzzTimes(t *testing.T, rnd *rand.Rand) {
+	qs1, qs2 := NewDisjointQS(rnd)
+	q := NewTimes(qs1, qs2)
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
+}
+
+func NewDisjointQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
+	qs1 := NewQuerySource(rnd)
+	if len(qs1.rows) > 20 {
+		qs1.rows = qs1.rows[:20]
+		qs1.NrowsN = len(qs1.rows)
+		qs1.NrowsP = len(qs1.rows)
+	}
+
+	qs2 := NewQuerySource(rnd)
+	if len(qs2.rows) > 20 {
+		qs2.rows = qs2.rows[:20]
+		qs2.NrowsN = len(qs2.rows)
+		qs2.NrowsP = len(qs2.rows)
+	}
+
+	renameQS(qs2, "d")
+	return qs1, qs2
+}
+
+func renameQS(qs *QuerySource, prefix string) {
+	rename := func(cols []string) []string {
+		newCols := make([]string, len(cols))
+		for i, col := range cols {
+			newCols[i] = strings.Replace(col, "c", prefix, 1)
+		}
+		return newCols
+	}
+
+	qs.ColumnsResult = rename(qs.ColumnsResult)
+	qs.HeaderResult = SimpleHeader(qs.ColumnsResult)
+
+	newKeys := make([][]string, len(qs.KeysResult))
+	for i, k := range qs.KeysResult {
+		newKeys[i] = rename(k)
+	}
+	qs.KeysResult = newKeys
+
+	newIndexes := make([][]string, len(qs.IndexesResult))
+	for i, idx := range qs.IndexesResult {
+		newIndexes[i] = rename(idx)
+	}
+	qs.IndexesResult = newIndexes
 }
 
 //-------------------------------------------------------------------

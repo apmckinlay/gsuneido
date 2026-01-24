@@ -118,6 +118,12 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 			return nil
 		}
 	}
+	if row2 != nil && t.row1 == nil {
+		t.row1 = t.source1.Get(th, dir)
+		if t.row1 == nil {
+			return nil
+		}
+	}
 	if row2 == nil {
 		t.row1 = t.source1.Get(th, dir)
 		if t.row1 == nil {
