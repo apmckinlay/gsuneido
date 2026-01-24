@@ -13,6 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 )
 
 func init() {
@@ -378,7 +379,7 @@ func TestFuzzMinus(t *testing.T) {
 }
 
 func fuzzMinus(t *testing.T, rnd *rand.Rand) {
-	qs1, qs2 := NewCompatibleQS(rnd)
+	qs1, qs2 := newCompatibleQS(rnd)
 	// fmt.Printf("minus %d %d = ", len(qs1.rows), len(qs2.rows))
 	q := NewMinus(qs1, qs2)
 	index := chooseIndex(rnd, q)
@@ -405,7 +406,7 @@ func TestFuzzIntersect(t *testing.T) {
 }
 
 func fuzzIntersect(t *testing.T, rnd *rand.Rand) {
-	qs1, qs2 := NewCompatibleQS(rnd)
+	qs1, qs2 := newCompatibleQS(rnd)
 	// fmt.Print("intersect ", len(qs1.rows), " ", len(qs2.rows), " = ")
 	q := NewIntersect(qs1, qs2)
 	index := chooseIndex(rnd, q)
@@ -447,7 +448,7 @@ func TestFuzzUnion(t *testing.T) {
 }
 
 func fuzzUnion(t *testing.T, rnd *rand.Rand) {
-	qs1, qs2 := NewCompatibleQS(rnd)
+	qs1, qs2 := newCompatibleQS(rnd)
 	q := NewUnion(qs1, qs2)
 	index := chooseIndex(rnd, q)
 	fuzzQuery(t, q, rnd, index)
@@ -455,7 +456,8 @@ func fuzzUnion(t *testing.T, rnd *rand.Rand) {
 
 //-------------------------------------------------------------------
 
-func NewCompatibleQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
+// newCompatibleQS creates QuerySources for Union, Intersect, Minus
+func newCompatibleQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
 	qs := newQuerySource(rnd, 199, 5, 5)
 	// temporarily remove keys from indexes (restore them after changes)
 	qs.IndexesResult = qs.IndexesResult[:len(qs.KeysResult)]
@@ -618,51 +620,23 @@ func TestFuzzExtend(t *testing.T) {
 }
 
 func fuzzExtend(t *testing.T, rnd *rand.Rand) {
-	qs := NewQuerySource(rnd)
-	cols, exprs := randomExtend(rnd, qs.ColumnsResult)
-	ext := NewExtend(qs, cols, exprs)
-
-	index := chooseIndex(rnd, ext)
-	fixcost, varcost := Optimize(ext, ReadMode, index, 1)
-	if fixcost+varcost >= impossible {
-		t.Fatal("impossible")
-	}
-
-	q := SetApproach(ext, index, 1, nil)
-
-	fuzzQuery(t, q, rnd, index)
-}
-
-func randomExtend(rnd *rand.Rand, srcCols []string) (cols []string, exprs []ast.Expr) {
-	if len(srcCols) == 0 {
-		return nil, nil
-	}
-
 	// Keep this simple: we are fuzzing cursor behavior and query plumbing,
 	// not expression evaluation.
-	n := rnd.IntN(min(3, len(srcCols)) + 1) // 0-3 (or fewer if few cols)
-	if n == 0 {
-		return nil, nil
-	}
-
-	cols = make([]string, n)
-	exprs = make([]ast.Expr, n)
+	qs := NewQuerySource(rnd)
+	n := 1 + rnd.IntN(5)
+	cols := make([]string, n)
+	exprs := make([]ast.Expr, n)
 	for i := range n {
-		// unique new column name, not in source and not duplicate within extend
-		for {
-			c := "x" + strconv.Itoa(rnd.IntN(1000))
-			if !slices.Contains(srcCols, c) && !slices.Contains(cols[:i], c) {
-				cols[i] = c
-				break
-			}
-		}
+		cols[i] = "x" + strconv.Itoa(i)
 		if rnd.IntN(2) == 0 {
 			exprs[i] = &ast.Constant{Val: IntVal(rnd.IntN(1000))}
 		} else {
-			exprs[i] = &ast.Ident{Name: random(srcCols, rnd)}
+			exprs[i] = &ast.Ident{Name: random(qs.ColumnsResult, rnd)}
 		}
 	}
-	return cols, exprs
+	q := NewExtend(qs, cols, exprs)
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
 }
 
 //-------------------------------------------------------------------
@@ -686,25 +660,12 @@ func TestFuzzTempIndex(t *testing.T) {
 
 func fuzzTempIndex(t *testing.T, rnd *rand.Rand) {
 	qs := NewQuerySource(rnd)
-	if len(qs.ColumnsResult) == 0 {
-		return
-	}
-	order := randomOrder(rnd, qs.ColumnsResult)
-	if len(order) == 0 {
-		return
-	}
+	cols := qs.ColumnsResult
+	n := 1 + rnd.IntN(min(3, len(cols)))
+	order := set.RandPerm(rnd, cols, n)
+
 	ti := NewTempIndex(qs, order, nil)
 	fuzzQuery(t, ti, rnd, order)
-}
-
-func randomOrder(rnd *rand.Rand, cols []string) []string {
-	n := 1 + rnd.IntN(min(3, len(cols)))
-	perm := rnd.Perm(len(cols))
-	order := make([]string, n)
-	for i := range n {
-		order[i] = cols[perm[i]]
-	}
-	return order
 }
 
 //-------------------------------------------------------------------
