@@ -5,6 +5,7 @@ package bits
 
 import (
 	"math"
+	"math/rand/v2"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -64,5 +65,55 @@ func TestShuffle32(t *testing.T) {
 	}
 	if length != 1<<32 {
 		t.Errorf("Expected cycle length %d, got %d", 1<<32, length)
+	}
+}
+
+func TestMix(t *testing.T) {
+	for range 100 {
+		b := rand.IntN(64)
+		x := rand.Uint64N(1 << b)
+		y := Mix(x, b)
+		assert.T(t).That(y < 1<<b)
+	}
+	for _, b := range []int{3, 7, 17, 23} {
+		n := uint64(1 << b)
+		sum1 := uint64(0)
+		sum2 := uint64(0)
+		for i := range n {
+			sum1 += i * i
+			x := Mix(i, b)
+			sum2 += x * x
+		}
+		assert.Msg(b, n).This(sum2).Is(sum1)
+	}
+}
+
+func TestCycle(t *testing.T) {
+	for range 100 {
+		rangeLimit := rand.Uint64()
+		x := rand.Uint64N(rangeLimit)
+		y := Cycle(x, rangeLimit)
+		assert.T(t).That(y < rangeLimit)
+	}
+	for range 100 {
+		rangeLimit := rand.Uint64N(100_000)
+		sum1 := uint64(0)
+		sum2 := uint64(0)
+		for i := range rangeLimit {
+			sum1 += i * i
+			x := Cycle(i, rangeLimit)
+			assert.T(t).That(x < rangeLimit)
+			sum2 += x * x
+		}
+		assert.Msg(rangeLimit).This(sum2).Is(sum1)
+	}
+}
+
+func TestGen(t *testing.T) {
+	rnd := rand.New(rand.NewPCG(1, 1))
+	g := NewGen(rnd, 1000)
+	for range 100 {
+		x := g.Next()
+		assert.T(t).That(x < 1000)
 	}
 }
