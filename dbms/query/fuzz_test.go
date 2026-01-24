@@ -45,6 +45,9 @@ func fuzzRandom(t *testing.T, rnd *rand.Rand) {
 		fuzzExtend,
 		fuzzProject,
 		fuzzSummarize,
+		fuzzMinus,
+		fuzzIntersect,
+		fuzzUnion,
 	}
 	f := random(fuzzers, rnd)
 	f(t, rnd)
@@ -316,6 +319,165 @@ func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, 
 }
 
 //-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzMinus ./dbms/query/
+
+func FuzzMinus(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzMinus(t, rnd)
+	})
+}
+
+func TestFuzzMinus(t *testing.T) {
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzMinus(t, rnd)
+	}
+}
+
+func fuzzMinus(t *testing.T, rnd *rand.Rand) {
+	qs1, qs2 := NewCompatibleQS(rnd)
+	// fmt.Printf("minus %d %d = ", len(qs1.rows), len(qs2.rows))
+	q := NewMinus(qs1, qs2)
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzIntersect ./dbms/query/
+
+func FuzzIntersect(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzIntersect(t, rnd)
+	})
+}
+
+func TestFuzzIntersect(t *testing.T) {
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzIntersect(t, rnd)
+	}
+}
+
+func fuzzIntersect(t *testing.T, rnd *rand.Rand) {
+	qs1, qs2 := NewCompatibleQS(rnd)
+	// fmt.Print("intersect ", len(qs1.rows), " ", len(qs2.rows), " = ")
+	q := NewIntersect(qs1, qs2)
+	index := chooseIndex(rnd, q)
+	fixcost, varcost := Optimize(q, ReadMode, index, 1)
+	if fixcost+varcost >= impossible {
+		return
+	}
+	fuzzQuery(t, q, rnd, index)
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzUnion ./dbms/query/
+
+func FuzzUnion(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzUnion(t, rnd)
+	})
+}
+
+func TestFuzzUnion(t *testing.T) {
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzUnion(t, rnd)
+	}
+}
+
+func fuzzUnion(t *testing.T, rnd *rand.Rand) {
+	qs1, qs2 := NewCompatibleQS(rnd)
+	q := NewUnion(qs1, qs2)
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
+}
+
+//-------------------------------------------------------------------
+
+func NewCompatibleQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
+	qs := newQuerySource(rnd, 199, 5, 5)
+	// temporarily remove keys from indexes (restore them after changes)
+	qs.IndexesResult = qs.IndexesResult[:len(qs.KeysResult)]
+	qs1 := *qs
+	qs2 := *qs
+
+	qs1.rows, qs2.rows = splitShare(rnd, qs.rows)
+	qs2.rows = slices.Clone(qs2.rows) // so they don't share
+	if len(qs1.rows) > 100 {
+		qs1.rows = qs1.rows[:100]
+	}
+	qs1.NrowsN = len(qs1.rows)
+	qs1.NrowsP = len(qs1.rows)
+	if len(qs2.rows) > 100 {
+		qs2.rows = qs2.rows[:100]
+	}
+	qs2.NrowsN = len(qs2.rows)
+	qs2.NrowsP = len(qs2.rows)
+
+	qs1.IndexesResult, qs2.IndexesResult = splitShare(rnd, qs.IndexesResult)
+
+	qs1.KeysResult, qs2.KeysResult = splitShare(rnd, qs.KeysResult)
+	// ensure at least one key in each
+	if len(qs1.KeysResult) == 0 {
+		qs1.KeysResult = append(qs1.KeysResult, random(qs.KeysResult, rnd))
+	}
+	if len(qs2.KeysResult) == 0 {
+		qs2.KeysResult = append(qs2.KeysResult, random(qs.KeysResult, rnd))
+	}
+
+	// keep the original columns on both to ensure indexes are valid
+	// and add some new ones
+	qs1.ColumnsResult = slices.Clip(qs.ColumnsResult)
+	i := len(qs.ColumnsResult)
+	for range rnd.IntN(7) {
+		col := "c" + strconv.Itoa(i)
+		qs1.ColumnsResult = append(qs1.ColumnsResult, col)
+		i++
+	}
+	qs1.HeaderResult = SimpleHeader(qs1.ColumnsResult)
+
+	qs2.ColumnsResult = slices.Clip(qs.ColumnsResult)
+	i = len(qs.ColumnsResult)
+	for range rnd.IntN(7) {
+		col := "c" + strconv.Itoa(i)
+		qs2.ColumnsResult = append(qs2.ColumnsResult, col)
+		i++
+	}
+	qs2.HeaderResult = SimpleHeader(qs2.ColumnsResult)
+
+	// add the keys back to the indexes
+	qs1.IndexesResult = append(qs1.IndexesResult, qs1.KeysResult...)
+	qs2.IndexesResult = append(qs2.IndexesResult, qs2.KeysResult...)
+
+	return &qs1, &qs2
+}
+
+// splitShare splits a slice into three parts and returns two slices
+// one contains part 1 and 2, the other contains part 2 and 3
+func splitShare[E any](rnd *rand.Rand, s []E) ([]E, []E) {
+	n := len(s)
+	if n < 3 {
+		return s, s
+	}
+	a := rnd.IntN(n + 1)
+	b := rnd.IntN(n + 1)
+	if a > b {
+		a, b = b, a
+	}
+	return slices.Clip(s[:b]), slices.Clip(s[a:])
+}
+
+//-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzExtend ./dbms/query/
 
 func FuzzExtend(f *testing.F) {
@@ -427,10 +589,9 @@ func randomOrder(rnd *rand.Rand, cols []string) []string {
 //-------------------------------------------------------------------
 
 func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand, index []string) {
-	t.Helper()
 	fixcost, varcost := Optimize(q, ReadMode, index, 1)
 	if fixcost+varcost >= impossible {
-		t.Fatal("impossible")
+		t.Fatal("impossible\n", format(0, q, 0))
 	}
 	q = SetApproach(q, index, 1, nil)
 	// fmt.Println(format(0, q, 0))
@@ -439,6 +600,7 @@ func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand, index []string) {
 	hdr := q.Header()
 	cols := hdr.Columns
 	expected := q.Simple(nil)
+	// fmt.Println(len(expected))
 
 	verifyNoDuplicates(t, expected, hdr, cols)
 
@@ -455,7 +617,6 @@ func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand, index []string) {
 }
 
 func verifyNoDuplicates(t *testing.T, rows []Row, hdr *Header, cols []string) {
-	t.Helper()
 	seen := make(map[string]bool)
 	for _, row := range rows {
 		key := rowKey(row, hdr, cols)
@@ -476,8 +637,6 @@ func rowKey(row Row, hdr *Header, cols []string) string {
 
 func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *Header,
 	selCols, selVals []string) {
-	t.Helper()
-
 	// Get all rows using Next first to establish correct iteration order
 	q.Rewind()
 	nextRows := getAllRows(q, Next)
@@ -559,7 +718,6 @@ func getAllRows(q Query, dir Dir) []Row {
 // These are run before the random walk because failures are clearer -
 // they test specific edge cases with known expected behavior.
 func testCursorPatterns(t *testing.T, q Query, hdr *Header, nextRows []Row) {
-	t.Helper()
 	n := len(nextRows)
 
 	check := func(name string, row, expected Row) {
@@ -889,4 +1047,78 @@ func testNonExistentLookup(t *testing.T, rnd *rand.Rand, q Query, lookupCols []s
 
 func random[E any](list []E, rnd *rand.Rand) E {
 	return list[rnd.IntN(len(list))]
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzSplitShare ./dbms/query/
+
+func FuzzSplitShare(f *testing.F) {
+	f.Add(uint64(123), uint64(456))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzSplitShare(t, rnd)
+	})
+}
+
+func TestFuzzSplitShare(t *testing.T) {
+	stats := struct {
+		part1Empty int
+		part2Empty int
+		part3Empty int
+		total      int
+	}{}
+
+	for range 10000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		part1Empty, part2Empty, part3Empty := fuzzSplitShare(t, rnd)
+		stats.total++
+		if part1Empty {
+			stats.part1Empty++
+		}
+		if part2Empty {
+			stats.part2Empty++
+		}
+		if part3Empty {
+			stats.part3Empty++
+		}
+	}
+
+	t.Logf("splitShare stats (n=%d): part1 empty=%d (%.1f%%), part2 empty=%d (%.1f%%), part3 empty=%d (%.1f%%)",
+		stats.total,
+		stats.part1Empty, float64(stats.part1Empty)/float64(stats.total)*100,
+		stats.part2Empty, float64(stats.part2Empty)/float64(stats.total)*100,
+		stats.part3Empty, float64(stats.part3Empty)/float64(stats.total)*100)
+
+	if stats.part1Empty == 0 {
+		t.Error("part1 was never empty")
+	}
+	if stats.part2Empty == 0 {
+		t.Error("part2 was never empty")
+	}
+	if stats.part3Empty == 0 {
+		t.Error("part3 was never empty")
+	}
+}
+
+func fuzzSplitShare(t *testing.T, rnd *rand.Rand) (part1Empty, part2Empty, part3Empty bool) {
+	t.Helper()
+
+	n := rnd.IntN(101)
+	s := make([]int, n)
+	for i := range s {
+		s[i] = i
+	}
+
+	result1, result2 := splitShare(rnd, s)
+
+	len1 := len(result1)
+	len2 := len(result2)
+
+	part2len := (len1 + len2) - n
+	part2Empty = part2len == 0
+	part1Empty = len2 == n
+	part3Empty = len1 == n
+
+	return
 }
