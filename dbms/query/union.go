@@ -691,7 +691,6 @@ func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
 
 func (u *Union) Simple(th *Thread) []Row {
 	// rows1 + rows2 not in rows1
-	cols := u.Columns()
 	empty1 := make(Row, len(u.source1.Header().Fields))
 	empty2 := make(Row, len(u.source2.Header().Fields))
 	rows1 := u.source1.Simple(th)
@@ -700,8 +699,7 @@ func (u *Union) Simple(th *Thread) []Row {
 outer:
 	for _, row2 := range rows2 {
 		for _, row1 := range rows1 {
-			if EqualRows(u.source1.Header(), row1, u.source2.Header(), row2,
-				cols, th, nil) {
+			if u.equal(th, row1, row2) {
 				continue outer
 			}
 		}
