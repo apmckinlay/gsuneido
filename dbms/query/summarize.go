@@ -8,6 +8,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -17,6 +18,18 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
+
+var (
+	sumSeqCount atomic.Int64
+	sumMapCount atomic.Int64
+	sumIdxCount atomic.Int64
+	sumTblCount atomic.Int64
+)
+
+var _ = AddInfo("query.summarize.seq", &sumSeqCount)
+var _ = AddInfo("query.summarize.map", &sumMapCount)
+var _ = AddInfo("query.summarize.idx", &sumIdxCount)
+var _ = AddInfo("query.summarize.tbl", &sumTblCount)
 
 // NOTE: Summarize should return 0 rows if the source has 0 rows.
 
@@ -285,13 +298,17 @@ func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran Qu
 	su.summarizeApproach = *approach.(*summarizeApproach)
 	switch su.strat {
 	case sumTbl:
+		sumTblCount.Add(1)
 		su.get = getTbl
 	case sumIdx:
+		sumIdxCount.Add(1)
 		su.get = getIdx
 	case sumMap:
+		sumMapCount.Add(1)
 		t := sumMapT{}
 		su.get = t.getMap
 	case sumSeq:
+		sumSeqCount.Add(1)
 		t := sumSeqT{}
 		su.get = t.getSeq
 	default:

@@ -4,6 +4,7 @@
 package query
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"slices"
 	"strconv"
@@ -92,10 +93,26 @@ func FuzzProject(f *testing.F) {
 }
 
 func TestFuzzProject(t *testing.T) {
+	startCopy := projCopyCount.Load()
+	startSeq := projSeqCount.Load()
+	startMap := projMapCount.Load()
 	for range 1000 {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzProject(t, rnd)
+	}
+	deltaCopy := projCopyCount.Load() - startCopy
+	deltaSeq := projSeqCount.Load() - startSeq
+	deltaMap := projMapCount.Load() - startMap
+	fmt.Printf("Project strategies: copy=%d seq=%d map=%d\n", deltaCopy, deltaSeq, deltaMap)
+	if deltaCopy == 0 {
+		t.Error("projCopy strategy not used")
+	}
+	if deltaSeq == 0 {
+		t.Error("projSeq strategy not used")
+	}
+	if deltaMap == 0 {
+		t.Error("projMap strategy not used")
 	}
 }
 
@@ -231,6 +248,10 @@ func FuzzSummarize(f *testing.F) {
 }
 
 func TestFuzzSummarize(t *testing.T) {
+	startSeq := sumSeqCount.Load()
+	startMap := sumMapCount.Load()
+	startIdx := sumIdxCount.Load()
+	startTbl := sumTblCount.Load()
 	rnd := rand.New(rand.NewPCG(1091395294133611146, 8719992948325563695))
 	fuzzSummarize(t, rnd)
 	for range 1000 {
@@ -238,6 +259,23 @@ func TestFuzzSummarize(t *testing.T) {
 		// fmt.Printf("%d, %d\n", seed1, seed2)
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzSummarize(t, rnd)
+	}
+	deltaSeq := sumSeqCount.Load() - startSeq
+	deltaMap := sumMapCount.Load() - startMap
+	deltaIdx := sumIdxCount.Load() - startIdx
+	deltaTbl := sumTblCount.Load() - startTbl
+	fmt.Printf("Summarize strategies: seq=%d map=%d idx=%d tbl=%d\n", deltaSeq, deltaMap, deltaIdx, deltaTbl)
+	if deltaSeq == 0 {
+		t.Error("sumSeq strategy not used")
+	}
+	if deltaMap == 0 {
+		t.Error("sumMap strategy not used")
+	}
+	if deltaIdx == 0 {
+		t.Error("sumIdx strategy not used")
+	}
+	if deltaTbl == 0 {
+		t.Error("sumTbl strategy not used")
 	}
 }
 
@@ -388,10 +426,21 @@ func FuzzUnion(f *testing.F) {
 }
 
 func TestFuzzUnion(t *testing.T) {
+	startMerge := unionMergeCount.Load()
+	startLookup := unionLookupCount.Load()
 	for range 1000 {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzUnion(t, rnd)
+	}
+	deltaMerge := unionMergeCount.Load() - startMerge
+	deltaLookup := unionLookupCount.Load() - startLookup
+	fmt.Printf("Union strategies: merge=%d lookup=%d\n", deltaMerge, deltaLookup)
+	if deltaMerge == 0 {
+		t.Error("unionMerge strategy not used")
+	}
+	if deltaLookup == 0 {
+		t.Error("unionLookup strategy not used")
 	}
 }
 
@@ -1084,8 +1133,7 @@ func TestFuzzSplitShare(t *testing.T) {
 		}
 	}
 
-	t.Logf("splitShare stats (n=%d): part1 empty=%d (%.1f%%), part2 empty=%d (%.1f%%), part3 empty=%d (%.1f%%)",
-		stats.total,
+	fmt.Printf("splitShare stats: empty1=%d (%.1f%%), empty2=%d (%.1f%%), empty3=%d (%.1f%%)\n",
 		stats.part1Empty, float64(stats.part1Empty)/float64(stats.total)*100,
 		stats.part2Empty, float64(stats.part2Empty)/float64(stats.total)*100,
 		stats.part3Empty, float64(stats.part3Empty)/float64(stats.total)*100)

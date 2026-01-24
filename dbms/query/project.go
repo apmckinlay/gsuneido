@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"slices"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
@@ -18,6 +19,16 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
+
+var (
+	projCopyCount atomic.Int64
+	projSeqCount  atomic.Int64
+	projMapCount  atomic.Int64
+)
+
+var _ = AddInfo("query.project.copy", &projCopyCount)
+var _ = AddInfo("query.project.seq", &projSeqCount)
+var _ = AddInfo("query.project.map", &projMapCount)
 
 type Project struct {
 	results *mapType
@@ -443,6 +454,14 @@ func (p *Project) mapCost(mode Mode, index []string, frac float64) (Cost, Cost) 
 
 func (p *Project) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
 	p.projectApproach = *approach.(*projectApproach)
+	switch p.strat {
+	case projCopy:
+		projCopyCount.Add(1)
+	case projSeq:
+		projSeqCount.Add(1)
+	case projMap:
+		projMapCount.Add(1)
+	}
 	p.source = SetApproach(p.source, p.index, frac, tran)
 	p.header = p.getHeader()
 }

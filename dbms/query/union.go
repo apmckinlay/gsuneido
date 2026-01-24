@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"slices"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
@@ -15,6 +16,14 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
+
+var (
+	unionMergeCount  atomic.Int64
+	unionLookupCount atomic.Int64
+)
+
+var _ = AddInfo("query.union.merge", &unionMergeCount)
+var _ = AddInfo("query.union.lookup", &unionLookupCount)
 
 type Union struct {
 	src2get   func(*Thread, Dir) Row
@@ -467,6 +476,11 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 	u.strat = app.strat
 	if app.strat == 0 {
 		u.strat = unionLookup
+	}
+	if u.strat == unionMerge {
+		unionMergeCount.Add(1)
+	} else {
+		unionLookupCount.Add(1)
 	}
 	u.keyIndex = app.keyIndex
 	if app.reverse {
