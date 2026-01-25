@@ -107,6 +107,7 @@ type buildQS struct {
 	maxRows     int
 	maxKeys     int
 	maxIndexes  int
+	prefix      string
 	columns     []string
 	colIndex    map[string]int
 	emptyKey    bool
@@ -117,12 +118,24 @@ type buildQS struct {
 	x           uint16
 }
 
-func NewQuerySource(rnd *rand.Rand) *QuerySource {
-	return newQuerySource(rnd, 101, 3, 3)
+func newQS() *buildQS {
+	return &buildQS{maxRows: 101, maxKeys: 3, maxIndexes: 3, prefix: "c"}
 }
 
-func newQuerySource(rnd *rand.Rand, maxRows, maxKeys, maxIndexes int) *QuerySource {
-	b := buildQS{rnd: rnd, maxRows: maxRows, maxKeys: maxKeys, maxIndexes: maxIndexes}
+func (b *buildQS) Sizes(maxRows, maxKeys, maxIndexes int) *buildQS {
+	b.maxRows = maxRows
+	b.maxKeys = maxKeys
+	b.maxIndexes = maxIndexes
+	return b
+}
+
+func (b *buildQS) Prefix(prefix string) *buildQS {
+	b.prefix = prefix
+	return b
+}
+
+func (b *buildQS) Build(rnd *rand.Rand) *QuerySource {
+	b.rnd = rnd
 	b.makeColumns()
 	b.makeKeys()
 	b.makeIndexes()
@@ -143,6 +156,10 @@ func newQuerySource(rnd *rand.Rand, maxRows, maxKeys, maxIndexes int) *QuerySour
 	qs.LookupLevels = 2 // ???
 	qs.KnowExactNrowsResult = true
 	return qs
+}
+
+func NewQuerySource(rnd *rand.Rand) *QuerySource {
+	return newQS().Build(rnd)
 }
 
 func (qs *QuerySource) String() string {
@@ -168,7 +185,7 @@ func (b *buildQS) makeColumns() {
 	b.colIndex = make(map[string]int, ncols)
 	b.cardinality = make(map[string]int, ncols)
 	for i := range ncols {
-		col := "c" + strconv.Itoa(i)
+		col := b.prefix + strconv.Itoa(i)
 		b.columns[i] = col
 		b.colIndex[col] = i
 		b.cardinality[col] = 1 + b.rnd.IntN(1009)
@@ -210,7 +227,7 @@ func (b *buildQS) makeIndexes() {
 	b.indexes = make([][]string, 0, len(b.keys)+nindexes)
 	b.indexes = append(b.indexes, b.keys...) // keys are indexes
 	maxcols := min(nindexes, len(b.columns))
-	for ncols := 1; ncols < maxcols; ncols++  {
+	for ncols := 1; ncols < maxcols; ncols++ {
 		idx := set.RandPerm(b.rnd, b.columns, ncols)
 		if !slices.ContainsFunc(b.indexes,
 			func(x []string) bool { return slices.Equal(x, idx) }) {

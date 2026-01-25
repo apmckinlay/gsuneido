@@ -8,7 +8,6 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
@@ -458,7 +457,7 @@ func fuzzUnion(t *testing.T, rnd *rand.Rand) {
 
 // newCompatibleQS creates QuerySources for Union, Intersect, Minus
 func newCompatibleQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
-	qs := newQuerySource(rnd, 199, 5, 5)
+	qs := newQS().Sizes(199, 5, 5).Build(rnd)
 	// temporarily remove keys from indexes (restore them after changes)
 	qs.IndexesResult = qs.IndexesResult[:len(qs.KeysResult)]
 	qs1 := *qs
@@ -564,40 +563,14 @@ func NewDisjointQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
 		qs1.NrowsP = len(qs1.rows)
 	}
 
-	qs2 := NewQuerySource(rnd)
+	qs2 := newQS().Prefix("d").Build(rnd)
 	if len(qs2.rows) > 20 {
 		qs2.rows = qs2.rows[:20]
 		qs2.NrowsN = len(qs2.rows)
 		qs2.NrowsP = len(qs2.rows)
 	}
 
-	renameQS(qs2, "d")
 	return qs1, qs2
-}
-
-func renameQS(qs *QuerySource, prefix string) {
-	rename := func(cols []string) []string {
-		newCols := make([]string, len(cols))
-		for i, col := range cols {
-			newCols[i] = strings.Replace(col, "c", prefix, 1)
-		}
-		return newCols
-	}
-
-	qs.ColumnsResult = rename(qs.ColumnsResult)
-	qs.HeaderResult = SimpleHeader(qs.ColumnsResult)
-
-	newKeys := make([][]string, len(qs.KeysResult))
-	for i, k := range qs.KeysResult {
-		newKeys[i] = rename(k)
-	}
-	qs.KeysResult = newKeys
-
-	newIndexes := make([][]string, len(qs.IndexesResult))
-	for i, idx := range qs.IndexesResult {
-		newIndexes[i] = rename(idx)
-	}
-	qs.IndexesResult = newIndexes
 }
 
 //-------------------------------------------------------------------
