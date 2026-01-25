@@ -254,6 +254,8 @@ func TestFuzzSummarize(t *testing.T) {
 	startMap := sumMapCount.Load()
 	startIdx := sumIdxCount.Load()
 	startTbl := sumTblCount.Load()
+	startUnique := sumUniqueCount.Load()
+	startWholeRow := sumWholeRowCount.Load()
 	rnd := rand.New(rand.NewPCG(1091395294133611146, 8719992948325563695))
 	fuzzSummarize(t, rnd)
 	for range 1000 {
@@ -266,7 +268,10 @@ func TestFuzzSummarize(t *testing.T) {
 	deltaMap := sumMapCount.Load() - startMap
 	deltaIdx := sumIdxCount.Load() - startIdx
 	deltaTbl := sumTblCount.Load() - startTbl
-	fmt.Printf("Summarize strategies: seq=%d map=%d idx=%d tbl=%d\n", deltaSeq, deltaMap, deltaIdx, deltaTbl)
+	deltaUnique := sumUniqueCount.Load() - startUnique
+	deltaWholeRow := sumWholeRowCount.Load() - startWholeRow
+	fmt.Printf("Summarize strategies: seq=%d map=%d idx=%d tbl=%d unique=%d wholerow=%d\n",
+		deltaSeq, deltaMap, deltaIdx, deltaTbl, deltaUnique, deltaWholeRow)
 	if deltaSeq == 0 {
 		t.Error("sumSeq strategy not used")
 	}
@@ -278,6 +283,12 @@ func TestFuzzSummarize(t *testing.T) {
 	}
 	if deltaTbl == 0 {
 		t.Error("sumTbl strategy not used")
+	}
+	if deltaUnique == 0 {
+		t.Error("sumUnique variation not used")
+	}
+	if deltaWholeRow == 0 {
+		t.Error("sumWholeRow variation not used")
 	}
 }
 
@@ -430,6 +441,7 @@ func FuzzUnion(f *testing.F) {
 func TestFuzzUnion(t *testing.T) {
 	startMerge := unionMergeCount.Load()
 	startLookup := unionLookupCount.Load()
+	startDisjoint := unionDisjointCount.Load()
 	for range 1000 {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
@@ -437,12 +449,20 @@ func TestFuzzUnion(t *testing.T) {
 	}
 	deltaMerge := unionMergeCount.Load() - startMerge
 	deltaLookup := unionLookupCount.Load() - startLookup
-	fmt.Printf("Union strategies: merge=%d lookup=%d\n", deltaMerge, deltaLookup)
+	deltaDisjoint := unionDisjointCount.Load() - startDisjoint
+	fmt.Printf("Union strategies: merge=%d lookup=%d disjoint=%d\n", deltaMerge, deltaLookup, deltaDisjoint)
 	if deltaMerge == 0 {
 		t.Error("unionMerge strategy not used")
 	}
 	if deltaLookup == 0 {
 		t.Error("unionLookup strategy not used")
+	}
+	// TODO requires Fixed
+	// if deltaDisjoint == 0 {
+	// 	t.Error("unionDisjoint variation not used")
+	// }
+	if deltaMerge+deltaLookup-deltaDisjoint == 0 {
+		t.Error("union non-disjoint variation not used")
 	}
 }
 

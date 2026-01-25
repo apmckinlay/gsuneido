@@ -18,12 +18,14 @@ import (
 )
 
 var (
-	unionMergeCount  atomic.Int64
-	unionLookupCount atomic.Int64
+	unionMergeCount    atomic.Int64
+	unionLookupCount   atomic.Int64
+	unionDisjointCount atomic.Int64
 )
 
 var _ = AddInfo("query.union.merge", &unionMergeCount)
 var _ = AddInfo("query.union.lookup", &unionLookupCount)
+var _ = AddInfo("query.union.disjoint", &unionDisjointCount)
 
 type Union struct {
 	src2get   func(*Thread, Dir) Row
@@ -472,6 +474,9 @@ func (u *Union) optLookup(src1, src2 Query, mode Mode, frac float64) (Cost, Cost
 }
 
 func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
+	if u.disjoint != "" {
+		unionDisjointCount.Add(1)
+	}
 	app := approach.(*unionApproach)
 	u.strat = app.strat
 	if app.strat == 0 {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
+	"sync/atomic"
 
 	"slices"
 
@@ -22,6 +23,12 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
+
+var (
+	whereSingletonCount atomic.Int64
+)
+
+var _ = AddInfo("query.where.singleton", &whereSingletonCount)
 
 // NOTE: Where source and expr should NOT be modified,
 // instead, construct a new one with NewWhere
@@ -695,6 +702,9 @@ outer:
 
 func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTran) {
 	w.optimized = true
+	if w.singleton {
+		whereSingletonCount.Add(1)
+	}
 	if w.conflict {
 		return
 	}

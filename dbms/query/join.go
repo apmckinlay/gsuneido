@@ -111,6 +111,26 @@ var _ = AddInfo("query.join.cacheMisses", &joinCacheMisses)
 var _ = AddInfo("query.leftjoin.cacheProbes", &leftJoinCacheProbes)
 var _ = AddInfo("query.leftjoin.cacheMisses", &leftJoinCacheMisses)
 
+var (
+	join11Count     atomic.Int64
+	join1nCount     atomic.Int64
+	joinn1Count     atomic.Int64
+	joinnnCount     atomic.Int64
+	leftJoin11Count atomic.Int64
+	leftJoin1nCount atomic.Int64
+	leftJoinn1Count atomic.Int64
+	leftJoinnnCount atomic.Int64
+)
+
+var _ = AddInfo("query.join.11", &join11Count)
+var _ = AddInfo("query.join.1n", &join1nCount)
+var _ = AddInfo("query.join.n1", &joinn1Count)
+var _ = AddInfo("query.join.nn", &joinnnCount)
+var _ = AddInfo("query.leftjoin.11", &leftJoin11Count)
+var _ = AddInfo("query.leftjoin.1n", &leftJoin1nCount)
+var _ = AddInfo("query.leftjoin.n1", &leftJoinn1Count)
+var _ = AddInfo("query.leftjoin.nn", &leftJoinnnCount)
+
 func NewJoin(src1, src2 Query, by []string, t QueryTran) Query {
 	return newJoin(src1, src2, by, t, nil, nil)
 }
@@ -378,6 +398,16 @@ func (jn *Join) setApproach(index []string, frac float64, approach any, tran Que
 	if ap.reverse {
 		jn.source1, jn.source2 = jn.source2, jn.source1
 		jn.joinType = jn.joinType.reverse()
+	}
+	switch jn.joinType {
+	case one_one:
+		join11Count.Add(1)
+	case one_n:
+		join1nCount.Add(1)
+	case n_one:
+		joinn1Count.Add(1)
+	case n_n:
+		joinnnCount.Add(1)
 	}
 	jn.source1 = SetApproach(jn.source1, ap.index1, frac, tran)
 	jn.source2 = SetApproach(jn.source2, ap.index2, ap.frac2, tran)
@@ -718,6 +748,16 @@ func (lj *LeftJoin) optimize(mode Mode, index []string, frac float64) (Cost, Cos
 
 func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
+	switch lj.joinType {
+	case one_one:
+		leftJoin11Count.Add(1)
+	case one_n:
+		leftJoin1nCount.Add(1)
+	case n_one:
+		leftJoinn1Count.Add(1)
+	case n_n:
+		leftJoinnnCount.Add(1)
+	}
 	lj.source1 = SetApproach(lj.source1, ap.index1, frac, tran)
 	lj.source2 = SetApproach(lj.source2, ap.index2, ap.frac2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))

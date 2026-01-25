@@ -20,16 +20,20 @@ import (
 )
 
 var (
-	sumSeqCount atomic.Int64
-	sumMapCount atomic.Int64
-	sumIdxCount atomic.Int64
-	sumTblCount atomic.Int64
+	sumSeqCount      atomic.Int64
+	sumMapCount      atomic.Int64
+	sumIdxCount      atomic.Int64
+	sumTblCount      atomic.Int64
+	sumUniqueCount   atomic.Int64
+	sumWholeRowCount atomic.Int64
 )
 
 var _ = AddInfo("query.summarize.seq", &sumSeqCount)
 var _ = AddInfo("query.summarize.map", &sumMapCount)
 var _ = AddInfo("query.summarize.idx", &sumIdxCount)
 var _ = AddInfo("query.summarize.tbl", &sumTblCount)
+var _ = AddInfo("query.summarize.unique", &sumUniqueCount)
+var _ = AddInfo("query.summarize.wholerow", &sumWholeRowCount)
 
 // NOTE: Summarize should return 0 rows if the source has 0 rows.
 
@@ -295,6 +299,12 @@ func (su *Summarize) mapCost(mode Mode, index []string, _ float64) (Cost, Cost, 
 }
 
 func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
+	if su.unique {
+		sumUniqueCount.Add(1)
+	}
+	if su.wholeRow {
+		sumWholeRowCount.Add(1)
+	}
 	su.summarizeApproach = *approach.(*summarizeApproach)
 	switch su.strat {
 	case sumTbl:
