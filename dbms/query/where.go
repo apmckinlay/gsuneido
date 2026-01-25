@@ -780,7 +780,8 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 		}
 	}
 	for {
-		if w.idxSelPos != -1 && w.curPtrng.isRange() {
+		if w.idxSelPos != -1 && w.idxSelPos < len(w.idxSel.ptrngs) &&
+			w.curPtrng.isRange() {
 			if row := w.getFilter(th, dir); row != nil {
 				w.nIn++
 				return row

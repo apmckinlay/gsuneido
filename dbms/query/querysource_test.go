@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -100,6 +101,8 @@ type QuerySource struct {
 	dataSource
 	selCols []string
 	selVals []string
+	rawOrg  string
+	rawEnd  string
 }
 
 type buildQS struct {
@@ -354,6 +357,21 @@ func (qs *QuerySource) Get(_ *Thread, dir Dir) Row {
 // It only checks the index prefix columns (stopping at first missing column),
 // matching the behavior of Table and TempIndex.
 func (qs *QuerySource) matches(row Row) bool {
+	if qs.rawOrg != "" || qs.rawEnd != "" {
+		var enc ixkey.Encoder
+		for _, col := range qs.index {
+			val := row.GetRaw(qs.HeaderResult, col)
+			enc.Add(val)
+		}
+		key := enc.String()
+		if qs.rawOrg != "" && key < qs.rawOrg {
+			return false
+		}
+		if qs.rawEnd != "" && key >= qs.rawEnd {
+			return false
+		}
+	}
+
 	if qs.selCols == nil {
 		return true
 	}
@@ -498,4 +516,138 @@ func checkSorted(t *testing.T, qs *QuerySource, index []string) {
 			t.Fatalf("rows not sorted by %v at position %d", index, i)
 		}
 	}
+}
+
+//-------------------------------------------------------------------
+
+// QuerySourceWT is a QuerySource that implements the whereTable interface.
+type QuerySourceWT struct {
+	QuerySource
+}
+
+func (qs *QuerySourceWT) IndexCols(index []string) []string {
+	return index
+}
+
+func (qs *QuerySourceWT) SetIndex(index []string) {
+	qs.setApproach(index, 0, nil, nil)
+}
+
+func (qs *QuerySourceWT) schemaIndexes() []Index {
+	idxs := make([]Index, 0, len(qs.IndexesResult))
+	for _, ix := range qs.IndexesResult {
+		mode := 'i'
+		for _, k := range qs.KeysResult {
+			if slices.Equal(ix, k) {
+				mode = 'k'
+				break
+			}
+		}
+		idxs = append(idxs, Index{Columns: ix, Mode: byte(mode)})
+	}
+	return idxs
+}
+
+func (qs *QuerySourceWT) indexi(index []string) int {
+	for i, ix := range qs.IndexesResult {
+		if slices.Equal(ix, index) {
+			return i
+		}
+	}
+	return -1
+}
+
+func (qs *QuerySourceWT) Name() string {
+	return "QuerySourceWT"
+}
+
+func (qs *QuerySourceWT) isSingleton() bool {
+	return qs.FastSingleResult
+}
+
+func (qs *QuerySourceWT) setCost(frac float64, fixcost, varcost Cost) {
+}
+
+func (qs *QuerySourceWT) SelectRaw(org, end string) {
+	qs.rawOrg = org
+	qs.rawEnd = end
+	qs.Rewind()
+}
+
+func (qs *QuerySourceWT) lookup(key string) Row {
+	for _, row := range qs.rows {
+		if qs.getKey(row, qs.index) == key {
+			return row
+		}
+	}
+	return nil
+}
+
+func (qs *QuerySourceWT) GetFilter(dir Dir, filter func(key string) bool) Row {
+	for {
+		row := qs.Get(nil, dir)
+		if row == nil || filter == nil || filter(qs.getKey(row, qs.index)) {
+			return row
+		}
+	}
+}
+
+func (qs *QuerySourceWT) getKey(row Row, index []string) string {
+	var enc ixkey.Encoder
+	for _, col := range index {
+		val := row.GetRaw(qs.HeaderResult, col)
+		enc.Add(val)
+	}
+	return enc.String()
+}
+
+func (qs *QuerySourceWT) RangeFrac(iIndex int, org, end string) float64 {
+	if len(qs.rows) == 0 {
+		return 0
+	}
+	idx := qs.IndexesResult[iIndex]
+	n := 0
+	for _, row := range qs.rows {
+		key := qs.getKey(row, idx)
+		if org <= key && key < end {
+			n++
+		}
+	}
+	return float64(n) / float64(len(qs.rows))
+}
+
+func TestRangeFrac(t *testing.T) {
+	cols := []string{"a"}
+
+	// Create rows with values "0", "1", "2", "3", "4"
+	rows := make([]Row, 5)
+	for i := range 5 {
+		rb := RecordBuilder{}
+		rb.Add(SuStr(strconv.Itoa(i)))
+		rows[i] = Row{DbRec{Record: rb.Build()}}
+	}
+
+	qs := &QuerySourceWT{}
+	qs.rows = rows
+	qs.HeaderResult =  SimpleHeader(cols)
+	qs.IndexesResult = [][]string{cols}
+
+	enc := func(s string) string {
+		var e ixkey.Encoder
+		e.Add(Pack(SuStr(s)))
+		return e.String()
+	}
+
+	test := func(org, end string, expected float64) {
+		t.Helper()
+		f := qs.RangeFrac(0, org, end)
+		assert.T(t).This(f).Is(expected)
+	}
+
+	test(enc("1"), enc("3"), 0.4)
+	test(enc("0"), enc("5"), 1.0)
+	test(enc("2"), enc("2"), 0.0)
+	test(enc("0"), enc("1"), 0.2)
+	test(ixkey.Min, ixkey.Max, 1.0)
+	test(enc("8"), enc("9"), 0.0)
 }

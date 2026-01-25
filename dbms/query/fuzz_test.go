@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 )
@@ -44,6 +45,7 @@ func fuzzRandom(t *testing.T, rnd *rand.Rand) {
 		fuzzQuerySource,
 		fuzzTempIndex,
 		fuzzRename,
+		fuzzWhere,
 		fuzzExtend,
 		fuzzProject,
 		fuzzSummarize,
@@ -591,6 +593,112 @@ func NewDisjointQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
 	}
 
 	return qs1, qs2
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzWhere ./dbms/query/
+
+func FuzzWhere(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzWhere(t, rnd)
+	})
+}
+
+func TestFuzzWhere(t *testing.T) {
+	startSingleton := whereSingletonCount.Load()
+
+	// var seed1, seed2 uint64 = 4831758938493130992, 14464190560507516918
+	// rnd := rand.New(rand.NewPCG(seed1, seed2))
+	// fuzzWhere(t, rnd)
+
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		// fmt.Printf("%d, %d\n", seed1, seed2)
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzWhere(t, rnd)
+	}
+	deltaSingleton := whereSingletonCount.Load() - startSingleton
+	fmt.Printf("Where strategies: singleton=%d\n", deltaSingleton)
+}
+
+func fuzzWhere(t *testing.T, rnd *rand.Rand) {
+	qs := NewQuerySource(rnd)
+	expr := randomWhereExpr(rnd, qs.ColumnsResult, qs.KeysResult)
+	q := Query(qs)
+	tran := QueryTran(&testTran{})
+	if rnd.IntN(5) != 3 {
+		qswt := &QuerySourceWT{QuerySource: *qs}
+		tran = &fuzzTran{qswt: qswt}
+		q = qswt
+	}
+	q = NewWhere(q, expr, tran)
+	defer func() {
+		if t.Failed() {
+			fmt.Println("query:", format(0, q, 0))
+		}
+	}()
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
+}
+
+type fuzzTran struct {
+	testTran
+	qswt *QuerySourceWT
+}
+
+func (t fuzzTran) RangeFrac(_ string, iIndex int, org, end string) float64 {
+	return t.qswt.RangeFrac(iIndex, org, end)
+}
+
+func randomWhereExpr(rnd *rand.Rand, cols []string, keys [][]string) ast.Expr {
+	if len(keys) > 0 && rnd.IntN(10) == 0 {
+		key := random(keys, rnd)
+		if len(key) > 0 {
+			exprs := make([]ast.Expr, len(key))
+			for i, col := range key {
+				val := IntVal(rnd.IntN(10))
+				exprs[i] = &ast.Binary{Tok: tok.Is, Lhs: &ast.Ident{Name: col}, Rhs: &ast.Constant{Val: val}}
+			}
+			if len(exprs) == 1 {
+				return exprs[0]
+			}
+			return &ast.Nary{Tok: tok.And, Exprs: exprs}
+		}
+	}
+
+	if len(cols) == 0 {
+		return &ast.Constant{Val: True}
+	}
+	n := 1 + rnd.IntN(3)
+	exprs := make([]ast.Expr, n)
+	for i := range n {
+		col := random(cols, rnd)
+		val := IntVal(rnd.IntN(10)) // small range to ensure some matches
+		switch rnd.IntN(5) {
+		case 0:
+			exprs[i] = &ast.Binary{Tok: tok.Is, Lhs: &ast.Ident{Name: col}, Rhs: &ast.Constant{Val: val}}
+		case 1:
+			exprs[i] = &ast.Binary{Tok: tok.Lt, Lhs: &ast.Ident{Name: col}, Rhs: &ast.Constant{Val: val}}
+		case 2:
+			exprs[i] = &ast.Binary{Tok: tok.Gt, Lhs: &ast.Ident{Name: col}, Rhs: &ast.Constant{Val: val}}
+		case 3:
+			nvals := 1 + rnd.IntN(3)
+			vals := make([]ast.Expr, nvals)
+			for j := range nvals {
+				vals[j] = &ast.Constant{Val: IntVal(rnd.IntN(10))}
+			}
+			exprs[i] = &ast.In{E: &ast.Ident{Name: col}, Exprs: vals}
+		case 4:
+			s := strconv.Itoa(rnd.IntN(10))
+			exprs[i] = &ast.Binary{Tok: tok.Match, Lhs: &ast.Ident{Name: col}, Rhs: &ast.Constant{Val: SuStr(s)}}
+		}
+	}
+	if n == 1 {
+		return exprs[0]
+	}
+	return &ast.Nary{Tok: tok.And, Exprs: exprs}
 }
 
 //-------------------------------------------------------------------
