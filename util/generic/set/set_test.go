@@ -185,3 +185,23 @@ func (input list) is(expected ...string) {
 		assert.This(Unique(input)).Is(list(expected))
 	}
 }
+
+func TestReplaceAll(t *testing.T) {
+	assert := assert.T(t).This
+	test := func(x ...int) func(...int) func(...int) func(...int) {
+		return func(from ...int) func(...int) func(...int) {
+			return func(to ...int) func(...int) {
+				return func(expected ...int) {
+					assert(ReplaceAll(x, from, to)).Is(expected)
+				}
+			}
+		}
+	}
+	test()()()()
+	test(1)()()(1)
+	test(1, 2, 3, 4)()()(1, 2, 3, 4)
+	test(1, 2, 3, 4)(0)(9)(1, 2, 3, 4)
+	test(1, 2, 3, 4)(0, 7)(9, 8)(1, 2, 3, 4)
+	test(1, 2, 3, 4, 5, 6)(3)(7)(1, 2, 7, 4, 5, 6)
+	test(1, 2, 3, 4, 5, 6)(2, 5)(5, 2)(1, 5, 3, 4, 2, 6)
+}

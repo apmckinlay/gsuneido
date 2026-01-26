@@ -235,3 +235,24 @@ func Unique[E comparable, S ~[]E](x S) S {
 	}
 	return z
 }
+
+// ReplaceAll replaces values in `from` with corresponding values in `to`.
+// Only one replacement is made for each value in `from`
+// since x is assumed to be a set (no duplicates).
+// `from` and `to` must be the same length.
+// It returns a new list with replacements made.
+// NOTE: If there are no replacements it returns the *original* list.
+func ReplaceAll[E comparable](x, from, to []E) []E {
+	cloned := false
+	result := x
+	for i := range from {
+		if j := slices.Index(x, from[i]); j != -1 {
+			if !cloned {
+				result = slc.Clone(x)
+				cloned = true
+			}
+			result[j] = to[i]
+		}
+	}
+	return result
+}
