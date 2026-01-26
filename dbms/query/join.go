@@ -104,14 +104,6 @@ var (
 	joinCacheMisses     atomic.Int64
 	leftJoinCacheProbes atomic.Int64
 	leftJoinCacheMisses atomic.Int64
-)
-
-var _ = AddInfo("query.join.cacheProbes", &joinCacheProbes)
-var _ = AddInfo("query.join.cacheMisses", &joinCacheMisses)
-var _ = AddInfo("query.leftjoin.cacheProbes", &leftJoinCacheProbes)
-var _ = AddInfo("query.leftjoin.cacheMisses", &leftJoinCacheMisses)
-
-var (
 	join11Count     atomic.Int64
 	join1nCount     atomic.Int64
 	joinn1Count     atomic.Int64
@@ -122,6 +114,10 @@ var (
 	leftJoinnnCount atomic.Int64
 )
 
+var _ = AddInfo("query.join.cacheProbes", &joinCacheProbes)
+var _ = AddInfo("query.join.cacheMisses", &joinCacheMisses)
+var _ = AddInfo("query.leftjoin.cacheProbes", &leftJoinCacheProbes)
+var _ = AddInfo("query.leftjoin.cacheMisses", &leftJoinCacheMisses)
 var _ = AddInfo("query.join.11", &join11Count)
 var _ = AddInfo("query.join.1n", &join1nCount)
 var _ = AddInfo("query.join.n1", &joinn1Count)
