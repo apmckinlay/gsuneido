@@ -629,7 +629,7 @@ func TestRangeFrac(t *testing.T) {
 
 	qs := &QuerySourceWT{}
 	qs.rows = rows
-	qs.HeaderResult =  SimpleHeader(cols)
+	qs.HeaderResult = SimpleHeader(cols)
 	qs.IndexesResult = [][]string{cols}
 
 	enc := func(s string) string {
