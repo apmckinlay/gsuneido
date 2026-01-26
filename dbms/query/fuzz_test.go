@@ -33,11 +33,13 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandom(t *testing.T) {
+	start := tempIndexCount.Load()
 	for range 1000 {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzRandom(t, rnd)
 	}
+	fmt.Println("tempIndexCount", tempIndexCount.Load()-start)
 }
 
 func fuzzRandom(t *testing.T, rnd *rand.Rand) {

@@ -40,6 +40,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"sync/atomic"
 
 	"slices"
 
@@ -599,6 +600,9 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) (
 	return fixcost, lookupCost
 }
 
+var tempIndexCount atomic.Int64
+var _ = AddInfo("query.tempindex", &tempIndexCount)
+
 // SetApproach finalizes the chosen approach.
 // It also adds temp indexes where required.
 func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
@@ -618,6 +622,7 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 		q.setApproach(app.srcindex, 1, app.srcapp, tran)
 		ti := NewTempIndex(q, app.index, tran)
 		ti.setCost(frac, fixcost, varcost)
+		tempIndexCount.Add(1)
 		return ti
 	}
 	q.Metrics().setCost(frac, fixcost, varcost)
