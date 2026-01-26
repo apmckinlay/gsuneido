@@ -501,6 +501,15 @@ func newCompatibleQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
 	qs1.IndexesResult, qs2.IndexesResult = splitShare(rnd, qs.IndexesResult)
 
 	qs1.KeysResult, qs2.KeysResult = splitShare(rnd, qs.KeysResult)
+
+	// 10% of the time, force empty keys
+	switch rnd.IntN(19) {
+	case 7:
+		makeEmptyKey(rnd, &qs1)
+	case 11:
+		makeEmptyKey(rnd, &qs2)
+	}
+
 	// ensure at least one key in each
 	if len(qs1.KeysResult) == 0 {
 		qs1.KeysResult = append(qs1.KeysResult, random(qs.KeysResult, rnd))
@@ -549,6 +558,22 @@ func splitShare[E any](rnd *rand.Rand, s []E) ([]E, []E) {
 		a, b = b, a
 	}
 	return slices.Clip(s[:b]), slices.Clip(s[a:])
+}
+
+func makeEmptyKey(rnd *rand.Rand, qs *QuerySource) {
+	qs.KeysResult = [][]string{{}}
+	qs.IndexesResult = [][]string{{}}
+	qs.FastSingleResult = true
+	if len(qs.rows) > 1 {
+		qs.rows = qs.rows[:1]
+		if rnd.IntN(2) == 1 {
+			qs.rows = []Row{}
+		}
+	} else {
+		qs.rows = []Row{}
+	}
+	qs.NrowsN = len(qs.rows)
+	qs.NrowsP = len(qs.rows)
 }
 
 //-------------------------------------------------------------------
