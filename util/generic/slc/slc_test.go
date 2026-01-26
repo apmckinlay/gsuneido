@@ -204,8 +204,8 @@ func TestGrow(t *testing.T) {
 	for i := range list {
 		list[i] = i + 100 // Fill with non-zero data
 	}
-	list = list[:0]            // Shrink to length 0 (but capacity remains)
-	result = Grow(list, 3)     // Grow again - should zero-initialize!
+	list = list[:0]        // Shrink to length 0 (but capacity remains)
+	result = Grow(list, 3) // Grow again - should zero-initialize!
 	assert.This(len(result)).Is(3)
 	for i := range result {
 		assert.This(result[i]).Is(0) // These MUST be zero, not the old 100-104 values
