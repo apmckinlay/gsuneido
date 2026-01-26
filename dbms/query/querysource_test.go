@@ -411,6 +411,7 @@ func (qs *QuerySource) Select(cols, vals []string) {
 		assert.That(!selConflict(qs.ColumnsResult, cols, vals))
 		assert.That(selPrefix(qs.index, cols))
 	}
+	qs.rawOrg, qs.rawEnd = "", ""
 	qs.selCols = cols
 	qs.selVals = vals
 	qs.Rewind()

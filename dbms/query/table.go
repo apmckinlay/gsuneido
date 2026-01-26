@@ -238,7 +238,7 @@ func (tbl *Table) Lookup(_ *Thread, cols, vals []string) (row Row) {
 		// Singleton tables have at most one row, so we can use GetFilter
 		// which already handles singleton filtering
 		tbl.selcols, tbl.selvals = cols, vals
-		tbl.ensureIter()
+		tbl.ensureIter().Range(iface.All)
 		tbl.Rewind()
 		return tbl.GetFilter(Next, nil)
 	}
