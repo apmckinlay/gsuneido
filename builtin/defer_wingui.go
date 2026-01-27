@@ -87,6 +87,10 @@ var _ = builtin(Defer, "(block)")
 
 func Defer(th *Thread, args []Value) Value {
 	trace.Defer.Println("Defer", args[0])
+	if th != MainThread {
+		// because it will be executed on the main thread
+		args[0].SetConcurrent() 
+	}
 	id := dqMustPut(args[0]) // can't block because MainThread is the consumer
 	return &killer{kill: func() { dqRemove(id) }}
 }
