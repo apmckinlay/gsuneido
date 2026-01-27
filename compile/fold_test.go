@@ -320,4 +320,12 @@ func TestPropFold(t *testing.T) {
 	test("x = 'y'; not String?(x) or x =~ 'y'", "'y' \n true")
 	test("x = 5; not Number?(x) or x < 10", "5 \n true")
 	test("x = 'hi'; not Number?(x) or x < 10", "'hi' \n true")
+
+	test("a = 123; a", "123 \n 123")
+	test("b = { a = 123 }; a", "Binary(Eq b Block( \n Binary(Eq a 123))) \n a")
+	test("a = 123; b = { a = 456 }; a",
+		`Binary(Eq a 123)
+        Binary(Eq b Block(
+        	Binary(Eq a 456)))
+        a`)
 }

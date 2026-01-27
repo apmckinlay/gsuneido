@@ -500,7 +500,17 @@ func (p *Parser) block() *ast.Block {
 	pos := p.Pos
 	p.Match(tok.LCurly)
 	params := p.blockParams()
+
+	final := p.final
+	p.final = make(map[string]uint8)
+
 	body := p.statements()
+
+	for k := range p.final {
+		final[k] = disqualified
+	}
+	p.final = final
+
 	p.Match(tok.RCurly)
 	if p.itUsed && len(params) == 0 {
 		params = append(params, mkParam("it", pos, pos, false, nil))
