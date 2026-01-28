@@ -104,14 +104,14 @@ var (
 	joinCacheMisses     atomic.Int64
 	leftJoinCacheProbes atomic.Int64
 	leftJoinCacheMisses atomic.Int64
-	join11Count     atomic.Int64
-	join1nCount     atomic.Int64
-	joinn1Count     atomic.Int64
-	joinnnCount     atomic.Int64
-	leftJoin11Count atomic.Int64
-	leftJoin1nCount atomic.Int64
-	leftJoinn1Count atomic.Int64
-	leftJoinnnCount atomic.Int64
+	join11Count         atomic.Int64
+	join1nCount         atomic.Int64
+	joinn1Count         atomic.Int64
+	joinnnCount         atomic.Int64
+	leftJoin11Count     atomic.Int64
+	leftJoin1nCount     atomic.Int64
+	leftJoinn1Count     atomic.Int64
+	leftJoinnnCount     atomic.Int64
 )
 
 var _ = AddInfo("query.join.cacheProbes", &joinCacheProbes)
