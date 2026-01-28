@@ -19,6 +19,7 @@ type SuClosure struct {
 	locals []Value // if concurrent, then read-only
 	*SuFunc
 	concurrent bool
+	thread     *Thread
 }
 
 // Value interface
@@ -37,7 +38,7 @@ func (b *SuClosure) Call(th *Thread, this Value, as *ArgSpec) Value {
 	bf := b.SuFunc
 
 	v := b.locals
-	if b.concurrent {
+	if th != b.thread {
 		// make a mutable copy of the locals for the frame
 		v = slc.Clone(b.locals)
 	}
@@ -61,6 +62,16 @@ func (b *SuClosure) Call(th *Thread, this Value, as *ArgSpec) Value {
 	fr.this = this
 	fr.blockParent = b.parent
 	fr.locals = locals{v: v, onHeap: true}
+	if th != b.thread {
+		defer func() {
+			for i := range v {
+				if (i < int(b.Offset) || i > int(b.Offset+b.Nparams)) &&
+					v[i] != b.locals[i] {
+					panic("closure changes from other thread")
+				}
+			}
+		}()
+	}
 	return th.run()
 }
 

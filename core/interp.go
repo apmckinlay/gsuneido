@@ -615,7 +615,7 @@ loop:
 				parent = fr.blockParent
 			}
 			block := &SuClosure{SuFunc: fn, locals: fr.locals.v, this: fr.this,
-				parent: parent}
+				parent: parent, thread: th}
 			th.Push(block)
 		case op.BlockBreak:
 			panic(BlockBreak)
