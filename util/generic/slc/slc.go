@@ -6,6 +6,7 @@ package slc
 
 import (
 	"cmp"
+	"math/rand/v2"
 	"unsafe"
 )
 
@@ -263,4 +264,10 @@ func Partition(n int, pivot func(int) bool, swap func(int, int)) int {
 		i++
 		j--
 	}
+}
+
+func Shuffle[E any](rnd *rand.Rand, list []E) {
+	rnd.Shuffle(len(list), func(i, j int) {
+		list[i], list[j] = list[j], list[i]
+	})
 }

@@ -4,6 +4,7 @@
 package slc
 
 import (
+	"math/rand/v2"
 	"slices"
 	"strings"
 	"testing"
@@ -280,4 +281,15 @@ func TestPartition(t *testing.T) {
 			t.Errorf("data[%d]=%d should be >=5", j, data[j])
 		}
 	}
+}
+
+func TestShuffle(t *testing.T) {
+	// Use a fixed seed for reproducibility
+	rnd := rand.New(rand.NewPCG(42, 1234))
+	list := []int{1, 2, 3, 4, 5}
+	Shuffle(rnd, list)
+	assert.T(t).This(list).Isnt([]int{1, 2, 3, 4, 5})
+	// Verify all elements are still present
+	slices.Sort(list)
+	assert.T(t).This(list).Is([]int{1, 2, 3, 4, 5})
 }
