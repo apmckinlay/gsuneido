@@ -528,6 +528,8 @@ func cmdEndSession(ss *serverSession) {
 }
 
 func cmdErase(ss *serverSession) {
+	defer ss.thread.Suneido.Store(ss.thread.Suneido.Load())
+	ss.thread.Suneido.Store(nil) // use main Suneido object
 	tran, _ := ss.getTran()
 	table := ss.GetStr()
 	off := uint64(ss.GetInt64())
@@ -731,6 +733,8 @@ func cmdOrder(ss *serverSession) {
 }
 
 func cmdOutput(ss *serverSession) {
+	defer ss.thread.Suneido.Store(ss.thread.Suneido.Load())
+	ss.thread.Suneido.Store(nil) // use main Suneido object
 	q := ss.getQuery()
 	rec := ss.GetRec()
 	q.Output(ss.thread, rec)
