@@ -219,6 +219,9 @@ func (jl *joinLike) getHeader() *Header {
 }
 
 func (jn *Join) getIndexes() [][]string {
+	if joinRev == impossible { // for tests
+		return jn.source1.Indexes()
+	}
 	// can really only provide source.indexes() but optimize may swap.
 	// optimize will return impossible for source2 indexes.
 	return set.UnionFn(jn.source1.Indexes(), jn.source2.Indexes(), slices.Equal)

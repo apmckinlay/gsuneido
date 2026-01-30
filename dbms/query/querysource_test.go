@@ -117,12 +117,16 @@ type buildQS struct {
 	keys        [][]string
 	indexes     [][]string
 	cardinality map[string]int
-	rows        []Row
-	x           uint16
+	data        [][]string
+	noEmptyKey  bool
 }
 
-func newQS() *buildQS {
-	return &buildQS{maxRows: 101, maxKeys: 3, maxIndexes: 3, prefix: "c"}
+func NewQuerySource(rnd *rand.Rand) *QuerySource {
+	return newQS(rnd).Build()
+}
+
+func newQS(rnd *rand.Rand) *buildQS {
+	return &buildQS{rnd: rnd, maxRows: 101, maxKeys: 3, maxIndexes: 3, prefix: "c"}
 }
 
 func (b *buildQS) Sizes(maxRows, maxKeys, maxIndexes int) *buildQS {
@@ -137,18 +141,32 @@ func (b *buildQS) Prefix(prefix string) *buildQS {
 	return b
 }
 
-func (b *buildQS) Build(rnd *rand.Rand) *QuerySource {
-	b.rnd = rnd
+func (b *buildQS) NoEmptyKey() *buildQS {
+	b.noEmptyKey = true
+	return b
+}
+
+func (b *buildQS) Build() *QuerySource {
+	b.construct()
+	return b.finish()
+}
+
+func (b *buildQS) construct() *buildQS {
 	b.makeColumns()
 	b.makeKeys()
 	b.makeIndexes()
-	b.makeRows()
-	nrows := len(b.rows) // actual number of rows generated
+	b.makeData()
+	return b
+}
+
+func (b *buildQS) finish() *QuerySource {
+	nrows := len(b.data)
 	qs := &QuerySource{}
-	qs.rows = b.rows
+	qs.rows = b.makeRows()
 	qs.pos = dsRewound
 	qs.HeaderResult = SimpleHeader(b.columns)
 	qs.ColumnsResult = b.columns
+	assert.That(isEmptyKey(b.keys) == isEmptyKey(b.indexes))
 	qs.IndexesResult = b.indexes
 	qs.KeysResult = b.keys
 	qs.NrowsN = nrows
@@ -159,27 +177,6 @@ func (b *buildQS) Build(rnd *rand.Rand) *QuerySource {
 	qs.LookupLevels = 2 // ???
 	qs.KnowExactNrowsResult = true
 	return qs
-}
-
-func NewQuerySource(rnd *rand.Rand) *QuerySource {
-	return newQS().Build(rnd)
-}
-
-func (qs *QuerySource) String() string {
-	var sb strings.Builder
-	sb.WriteString("QuerySource ")
-	sb.WriteString(str.Join("(,)", qs.ColumnsResult))
-	for _, k := range qs.KeysResult {
-		sb.WriteString(" key(")
-		sb.WriteString(str.Join(",", k))
-		sb.WriteString(")")
-	}
-	for _, i := range qs.IndexesResult {
-		sb.WriteString(" index(")
-		sb.WriteString(str.Join(",", i))
-		sb.WriteString(")")
-	}
-	return sb.String()
 }
 
 func (b *buildQS) makeColumns() {
@@ -196,7 +193,7 @@ func (b *buildQS) makeColumns() {
 }
 
 func (b *buildQS) makeKeys() {
-	if b.rnd.IntN(11) == 5 {
+	if !b.noEmptyKey && b.rnd.IntN(11) == 5 {
 		b.emptyKey = true
 		b.keys = [][]string{{}}
 		b.indexes = [][]string{{}}
@@ -239,45 +236,57 @@ func (b *buildQS) makeIndexes() {
 	}
 }
 
-func (b *buildQS) makeRows() {
+func (b *buildQS) makeRows() []Row {
+	rows := make([]Row, len(b.data))
+	for i, vals := range b.data {
+		rows[i] = Row{DbRec{Record: b.dataToRecord(vals), Off: uint64(i)}}
+	}
+	return rows
+}
+
+func (b *buildQS) makeData() {
 	var nrows int
 	if b.emptyKey {
 		nrows = b.rnd.IntN(1) // 0 or 1
 	} else {
 		nrows = b.rnd.IntN(b.maxRows)
 	}
-	b.rows = make([]Row, nrows)
-	b.x = uint16(b.rnd.Int())
-	for i := range nrows {
-		b.rows[i] = Row{DbRec{Record: b.makeRow(), Off: uint64(i)}}
-	}
+	b.data = b.makeRowsData(nrows)
 }
 
-func (b *buildQS) makeRow() Record {
-	vals := make([]string, len(b.columns))
-	// generate data for all the columns
-	for i, col := range b.columns {
-		vals[i] = col + "_" + strconv.Itoa(b.rnd.IntN(b.cardinality[col]))
-	}
-	// overwrite with unique values for keys
-	for _, key := range b.keys {
-		n := b.x
-		b.x = bits.Shuffle16(b.x) // shuffle ensures unique key values
-		for i, col := range key {
-			// split n (a unique value) over the columns of the key
-			var v uint16
-			if i < len(key)-1 {
-				// 4 bits = 0 - 15 gives chance of duplicates
-				v = n & 0b1111
-				n >>= 4
-			} else {
-				// last column gets the rest
-				v = n
-			}
-			vals[b.colIndex[col]] = col + "_" + strconv.Itoa(int(v))
-			// fmt.Printf("Key %v Col %s n=%d v=%d\n", key, col, n, v)
+func (b *buildQS) makeRowsData(nrows int) [][]string {
+	x := uint16(b.rnd.Int())
+	data := make([][]string, nrows)
+	for i := range nrows {
+		vals := make([]string, len(b.columns))
+		// generate data for all the columns
+		for j, col := range b.columns {
+			vals[j] = col + "_" + strconv.Itoa(b.rnd.IntN(b.cardinality[col]))
 		}
+		// overwrite with unique values for keys
+		for _, key := range b.keys {
+			n := x
+			x = bits.Shuffle16(x) // shuffle ensures unique key values
+			for k, col := range key {
+				// split n (a unique value) over the columns of the key
+				var v uint16
+				if k < len(key)-1 {
+					// 4 bits = 0 - 15 gives chance of duplicates
+					v = n & 0b1111
+					n >>= 4
+				} else {
+					// last column gets the rest
+					v = n
+				}
+				vals[b.colIndex[col]] = col + "_" + strconv.Itoa(int(v))
+			}
+		}
+		data[i] = vals
 	}
+	return data
+}
+
+func (b *buildQS) dataToRecord(vals []string) Record {
 	var rb RecordBuilder
 	for _, val := range vals {
 		rb.Add(SuStr(val))
@@ -286,6 +295,23 @@ func (b *buildQS) makeRow() Record {
 }
 
 //-------------------------------------------------------------------
+
+func (qs *QuerySource) String() string {
+	var sb strings.Builder
+	sb.WriteString("QuerySource ")
+	sb.WriteString(str.Join("(,)", qs.ColumnsResult))
+	for _, k := range qs.KeysResult {
+		sb.WriteString(" key(")
+		sb.WriteString(str.Join(",", k))
+		sb.WriteString(")")
+	}
+	for _, i := range qs.IndexesResult {
+		sb.WriteString(" index(")
+		sb.WriteString(str.Join(",", i))
+		sb.WriteString(")")
+	}
+	return sb.String()
+}
 
 func (qs *QuerySource) optimize(_ Mode, index []string, frac float64) (Cost, Cost, any) {
 	if !qs.validIndex(index) {

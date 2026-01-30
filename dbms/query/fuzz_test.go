@@ -13,7 +13,10 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 func init() {
@@ -55,6 +58,8 @@ func fuzzRandom(t *testing.T, rnd *rand.Rand) {
 		fuzzIntersect,
 		fuzzUnion,
 		fuzzTimes,
+		fuzzJoin,
+		fuzzLeftJoin,
 	}
 	f := random(fuzzers, rnd)
 	f(t, rnd)
@@ -161,7 +166,7 @@ func chooseIndex(rnd *rand.Rand, source Query) []string {
 		if len(cols) == 0 {
 			return nil
 		}
-		n := 1 + rnd.IntN(len(cols)) // 1 to all columns
+		n := 1 + rnd.IntN(min(3, len(cols)))
 		perm := rnd.Perm(len(cols))
 		randomCols := make([]string, n)
 		for i := range n {
@@ -177,7 +182,7 @@ func chooseIndex(rnd *rand.Rand, source Query) []string {
 	if len(index) == 0 {
 		return nil
 	}
-	n := rnd.IntN(len(index))
+	n := 1 + rnd.IntN(len(index))
 	if n == 0 {
 		return nil
 	}
@@ -481,7 +486,7 @@ func fuzzUnion(t *testing.T, rnd *rand.Rand) {
 
 // newCompatibleQS creates QuerySources for Union, Intersect, Minus
 func newCompatibleQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
-	qs := newQS().Sizes(199, 5, 5).Build(rnd)
+	qs := newQS(rnd).Sizes(199, 5, 5).Build()
 	// temporarily remove keys from indexes (restore them after changes)
 	qs.IndexesResult = qs.IndexesResult[:len(qs.KeysResult)]
 	qs1 := *qs
@@ -612,7 +617,7 @@ func NewDisjointQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
 		qs1.NrowsP = len(qs1.rows)
 	}
 
-	qs2 := newQS().Prefix("d").Build(rnd)
+	qs2 := newQS(rnd).Prefix("d").Build()
 	if len(qs2.rows) > 20 {
 		qs2.rows = qs2.rows[:20]
 		qs2.NrowsN = len(qs2.rows)
@@ -620,6 +625,214 @@ func NewDisjointQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
 	}
 
 	return qs1, qs2
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzLeft ./dbms/query/
+
+func FuzzJoin(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzJoin(t, rnd)
+	})
+}
+
+func TestFuzzJoin(t *testing.T) {
+	startTICount := tempIndexCount.Load()
+	start11Count := join11Count.Load()
+	start1nCount := join1nCount.Load()
+	startn1Count := joinn1Count.Load()
+	startnnCount := joinnnCount.Load()
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzJoin(t, rnd)
+	}
+	fmt.Println("11:", join11Count.Load()-start11Count)
+	fmt.Println("1n:", join1nCount.Load()-start1nCount)
+	fmt.Println("n1:", joinn1Count.Load()-startn1Count)
+	fmt.Println("nn:", joinnnCount.Load()-startnnCount)
+	assert.T(t).This(join11Count.Load() - start11Count).Isnt(0)
+	assert.T(t).This(join1nCount.Load() - start1nCount).Isnt(0)
+	assert.T(t).This(joinn1Count.Load() - startn1Count).Isnt(0)
+	assert.T(t).This(joinnnCount.Load() - startnnCount).Isnt(0)
+
+	fmt.Println("fuzzCount", fuzzCount, "noResults", noResults)
+	fmt.Println("tempIndexCount", tempIndexCount.Load()-startTICount)
+}
+
+func fuzzJoin(t *testing.T, rnd *rand.Rand) {
+	defer func(jr int) { joinRev = jr }(joinRev)
+	joinRev = impossible
+	defer func(ti int) { ticostAdj = ti }(ticostAdj)
+	ticostAdj = 9999999
+
+	qs1, qs2, to := newFuzzJoin(rnd)
+	q := NewJoin(qs1, qs2, to, &testTran{})
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
+}
+
+func newFuzzJoin(rnd *rand.Rand) (Query, Query, []string) {
+	b1 := newQS(rnd).NoEmptyKey().construct()
+	b2 := newQS(rnd).NoEmptyKey().Prefix("d").construct()
+	var by []string
+	switch rnd.IntN(4) {
+	case 0: // 1:1
+		b1nc := len(b1.columns)
+		key := joinBy(rnd, b1, b2)
+		by = key
+		addKey(rnd, b1, key)
+		// join data on b2
+		perm := rnd.Perm(len(b1.data))
+		for i := range b2.data {
+			if len(perm) == 0 || rnd.IntN(2) == 0 {
+				for range key {
+					b2.data[i] = append(b2.data[i], "J"+strconv.Itoa(i))
+				}
+			} else {
+				row := b1.data[perm[0]]
+				perm = perm[1:]
+				b2.data[i] = append(b2.data[i], row[b1nc:]...)
+			}
+		}
+		b2.keys = append(b2.keys, key)
+		b2.indexes = append(b2.indexes, key)
+	case 1, 2: // 1:n or n:1
+		if len(b1.data) < len(b2.data) {
+			b1, b2 = b2, b1
+		}
+		b1nc := len(b1.columns)
+		by = joinBy(rnd, b1, b2)
+		addKey(rnd, b1, by)
+
+		span := calcSpan(len(by), b1, b2)
+		for i := range b2.data {
+			if rnd.IntN(2) == 0 || len(b1.data) == 0 {
+				for range by {
+					b2.data[i] = append(b2.data[i], "j"+strconv.Itoa(span))
+				}
+			} else {
+				row := random(b1.data, rnd)
+				b2.data[i] = append(b2.data[i], row[b1nc:]...)
+			}
+		}
+		b2.indexes = append(b2.indexes, by)
+		if rnd.IntN(2) == 1 {
+			b1, b2 = b2, b1
+		}
+	case 3: // n:n
+		by = joinBy(rnd, b1, b2)
+		ncols := len(by)
+		span := calcSpan(ncols, b1, b2)
+		for i := range b1.data {
+			for range ncols {
+				b1.data[i] = append(b1.data[i], "j"+strconv.Itoa(rnd.IntN(span)))
+			}
+		}
+		for i := range b2.data {
+			for range ncols {
+				b2.data[i] = append(b2.data[i], "j"+strconv.Itoa(rnd.IntN(span)))
+			}
+		}
+		b1.indexes = append(b1.indexes, by)
+		b2.indexes = append(b2.indexes, by)
+	}
+	return b1.finish(), b2.finish(), by
+}
+
+func calcSpan(ncols int, b1, b2 *buildQS) int {
+	switch ncols {
+	case 1:
+		return len(b1.data) + len(b2.data)
+	case 2:
+		return 15
+	case 3:
+		return 7
+	default:
+		panic(assert.ShouldNotReachHere())
+	}
+}
+
+// joinBy adds join columns to both sources
+func joinBy(rnd *rand.Rand, b1 *buildQS, b2 *buildQS) []string {
+	ncols := 1 + rnd.IntN(3)
+	cols := make([]string, ncols)
+	for i := range cols {
+		cols[i] = "j" + strconv.Itoa(i)
+	}
+	b1.columns = append(b1.columns, cols...)
+	b2.columns = append(b2.columns, cols...)
+	return cols
+}
+
+// addKey adds unique key data to a source, and creates a key index
+func addKey(rnd *rand.Rand, b *buildQS, key []string) {
+	x := uint16(rnd.Int())
+	for i := range b.data {
+		x = bits.Shuffle16(x) // shuffle ensures unique key values
+		n := x
+		for k := range key {
+			// split n (a unique value) over the columns of the key
+			var v uint16
+			if k < len(key)-1 {
+				// 4 bits = 0 - 15 gives chance of duplicates
+				v = n & 0b1111
+				n >>= 4
+			} else {
+				// last column gets the rest
+				v = n
+			}
+			b.data[i] = append(b.data[i], "j"+strconv.Itoa(int(v)))
+		}
+	}
+	b.keys = append(b.keys, key)
+	b.indexes = append(b.indexes, key)
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzLeftJoin ./dbms/query/
+
+func FuzzLeftJoin(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzLeftJoin(t, rnd)
+	})
+}
+
+func TestFuzzLeftJoin(t *testing.T) {
+	startTICount := tempIndexCount.Load()
+	start11Count := leftJoin11Count.Load()
+	start1nCount := leftJoin1nCount.Load()
+	startn1Count := leftJoinn1Count.Load()
+	startnnCount := leftJoinnnCount.Load()
+	for range 1000 {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzLeftJoin(t, rnd)
+	}
+	fmt.Println("11:", leftJoin11Count.Load()-start11Count)
+	fmt.Println("1n:", leftJoin1nCount.Load()-start1nCount)
+	fmt.Println("n1:", leftJoinn1Count.Load()-startn1Count)
+	fmt.Println("nn:", leftJoinnnCount.Load()-startnnCount)
+	assert.T(t).This(leftJoin11Count.Load() - start11Count).Isnt(0)
+	assert.T(t).This(leftJoin1nCount.Load() - start1nCount).Isnt(0)
+	assert.T(t).This(leftJoinn1Count.Load() - startn1Count).Isnt(0)
+	assert.T(t).This(leftJoinnnCount.Load() - startnnCount).Isnt(0)
+	fmt.Println("fuzzCount", fuzzCount, "noResults", noResults)
+	fmt.Println("tempIndexCount", tempIndexCount.Load()-startTICount)
+}
+
+func fuzzLeftJoin(t *testing.T, rnd *rand.Rand) {
+	defer func(ti int) { ticostAdj = ti }(ticostAdj)
+	ticostAdj = 9999999
+
+	qs1, qs2, to := newFuzzJoin(rnd)
+	q := NewLeftJoin(qs1, qs2, to, &testTran{})
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
 }
 
 //-------------------------------------------------------------------
@@ -636,9 +849,10 @@ func FuzzWhere(f *testing.F) {
 func TestFuzzWhere(t *testing.T) {
 	startSingleton := whereSingletonCount.Load()
 
-	// var seed1, seed2 uint64 = 4831758938493130992, 14464190560507516918
+	// var seed1, seed2 uint64 = 6136001711508103013, 8138898432833308271
 	// rnd := rand.New(rand.NewPCG(seed1, seed2))
 	// fuzzWhere(t, rnd)
+	// t.SkipNow()
 
 	for range 1000 {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
@@ -787,7 +1001,7 @@ func TestFuzzTempIndex(t *testing.T) {
 }
 
 func fuzzTempIndex(t *testing.T, rnd *rand.Rand) {
-	qs := NewQuerySource(rnd)
+	qs := newQS(rnd).NoEmptyKey().Build()
 	cols := qs.ColumnsResult
 	n := 1 + rnd.IntN(min(3, len(cols)))
 	order := set.RandPerm(rnd, cols, n)
@@ -798,8 +1012,12 @@ func fuzzTempIndex(t *testing.T, rnd *rand.Rand) {
 
 //-------------------------------------------------------------------
 
+var fuzzCount = 0
+var noResults = 0
+
 func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand, index []string) {
 	fixcost, varcost := Optimize(q, ReadMode, index, 1)
+	fuzzCount++
 	if fixcost+varcost >= impossible {
 		t.Fatal("impossible\n", format(0, q, 0))
 	}
@@ -811,6 +1029,9 @@ func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand, index []string) {
 	cols := hdr.Columns
 	expected := q.Simple(nil)
 	// fmt.Println(len(expected))
+	if len(expected) == 0 {
+		noResults++
+	}
 
 	verifyNoDuplicates(t, expected, hdr, cols)
 
@@ -821,7 +1042,7 @@ func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand, index []string) {
 	testRandomGet(t, rnd, q, qh, hdr, nil, nil)
 
 	if len(index) != 0 {
-		testRandomSelects(t, rnd, q, index, cols, expected)
+		testRandomSelects(t, rnd, q, index, expected)
 		testRandomLookups(t, rnd, q, index, cols, expected)
 	}
 }
@@ -1067,20 +1288,20 @@ func rowsEqual(a, b Row, hdr *Header, cols []string) bool {
 
 //-------------------------------------------------------------------
 
-func testRandomSelects(t *testing.T, rnd *rand.Rand, q Query, index, cols []string, allRows []Row) {
+func testRandomSelects(t *testing.T, rnd *rand.Rand, q Query, index []string, allRows []Row) {
 	t.Helper()
 	hdr := q.Header()
-	testExistentSelect(t, allRows, rnd, hdr, index, cols, q)
-	testNonExistentSelect(t, allRows, rnd, hdr, index, cols, q)
+	testExistentSelect(t, allRows, rnd, hdr, index, q)
+	testNonExistentSelect(t, allRows, rnd, hdr, index, q)
 }
 
-func testExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header, index []string, cols []string, q Query) {
+func testExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header, index []string, q Query) {
 	if len(allRows) == 0 {
 		return
 	}
 	for range 10 {
 		srcRow := random(allRows, rnd)
-		selCols, selVals := indexSelectCriteria(rnd, srcRow, hdr, index, cols, false)
+		selCols, selVals := indexSelectCriteria(rnd, srcRow, hdr, index, false)
 		q.Select(selCols, selVals)
 
 		// Select only filters by index columns, not extra columns
@@ -1114,21 +1335,9 @@ func selMatchIndex(hdr *Header, row Row, selCols, selVals, index []string) bool 
 }
 
 // indexSelectCriteria picks a random prefix of the index for select criteria.
-func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index, cols []string, nonexist bool) ([]string, []string) {
+func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index []string, nonexist bool) ([]string, []string) {
 	n := 1 + rnd.IntN(len(index))
 	selCols := slices.Clone(index[:n])
-	_ = cols
-	// Add extra columns, but avoid duplicates
-	// perm := rnd.Perm(len(cols))
-	// for _, i := range perm {
-	// 	col := cols[i]
-	// 	if !slices.Contains(selCols, col) {
-	// 		selCols = append(selCols, col)
-	// 		if len(selCols) >= n+2 {
-	// 			break
-	// 		}
-	// 	}
-	// }
 	rnd.Shuffle(len(selCols), func(i, j int) {
 		selCols[i], selCols[j] = selCols[j], selCols[i]
 	})
@@ -1146,7 +1355,7 @@ func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index, cols []str
 	return selCols, selVals
 }
 
-func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header, index []string, cols []string, q Query) {
+func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header, index []string, q Query) {
 	for range 10 {
 		// If there are no rows, use a dummy row sized to match hdr.Fields.
 		// This avoids panics when hdr.Fields references derived records (e.g. Extend).
@@ -1154,7 +1363,7 @@ func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Hea
 		if len(allRows) > 0 {
 			srcRow = random(allRows, rnd)
 		}
-		selCols, selVals := indexSelectCriteria(rnd, srcRow, hdr, index, cols, true)
+		selCols, selVals := indexSelectCriteria(rnd, srcRow, hdr, index, true)
 		q.Select(selCols, selVals)
 		if q.Get(nil, Next) != nil {
 			t.Fatal("non-existent select returned a row")
@@ -1166,32 +1375,48 @@ func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Hea
 //-------------------------------------------------------------------
 
 func testRandomLookups(t *testing.T, rnd *rand.Rand, q Query, index, cols []string, allRows []Row) {
-	t.Helper()
 
-	// Only test lookups if the index is one of the query's keys
-	if !slices.ContainsFunc(q.Keys(),
-		func(k []string) bool { return slices.Equal(k, index) }) {
+	// Only test lookups if the index contains one of the query's keys
+	if !canLookup(q.Keys(), q.Fixed(), index) {
 		return
 	}
 
 	lookupCols := slices.Clone(index)
-	// Add extra columns, but avoid duplicates
-	perm := rnd.Perm(len(cols))
-	for _, i := range perm {
-		col := cols[i]
-		if !slices.Contains(lookupCols, col) {
-			lookupCols = append(lookupCols, col)
-			if len(lookupCols) >= len(index)+2 {
-				break
-			}
-		}
-	}
-	rnd.Shuffle(len(lookupCols), func(i, j int) {
-		lookupCols[i], lookupCols[j] = lookupCols[j], lookupCols[i]
-	})
+	slc.Shuffle(rnd, lookupCols)
 
 	testExistentLookup(t, allRows, rnd, lookupCols, q, cols)
 	testNonExistentLookup(t, rnd, q, lookupCols)
+}
+
+// canLookup checks if a lookup with the given index is valid.
+// The index columns must form a key (or be a subset of a key with
+// remaining key columns being fixed).
+func canLookup(keys [][]string, fixed []Fixed, index []string) bool {
+	for _, key := range keys {
+		// Check if index is subset of key+fixed (no extra columns)
+		subset := true
+		for _, col := range index {
+			if !slices.Contains(key, col) && !isSingleFixed(fixed, col) {
+				subset = false
+				break
+			}
+		}
+
+		if subset {
+			// Check if key is subset of index+fixed (complete key)
+			superset := true
+			for _, col := range key {
+				if !slices.Contains(index, col) && !isSingleFixed(fixed, col) {
+					superset = false
+					break
+				}
+			}
+			if superset {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func testExistentLookup(t *testing.T, allRows []Row, rnd *rand.Rand, lookupCols []string, q Query, cols []string) {
@@ -1330,4 +1555,36 @@ func fuzzSplitShare(t *testing.T, rnd *rand.Rand) (part1Empty, part2Empty, part3
 	part3Empty = len1 == n
 
 	return
+}
+
+func TestCanLookup(t *testing.T) {
+	// Case 1: Index is subset of key (should be false, currently true)
+	keys := [][]string{{"a", "b"}}
+	fixed := []Fixed{}
+	index := []string{"a"}
+	assert.T(t).This(canLookup(keys, fixed, index)).Is(false)
+
+	// Case 2: Index contains complete key but has extra column (should be false due to Where.Lookup restriction)
+	keys = [][]string{{"a"}}
+	fixed = []Fixed{}
+	index = []string{"a", "b"}
+	assert.T(t).This(canLookup(keys, fixed, index)).Is(false)
+
+	// Case 3: Index matches key exactly (should be true)
+	keys = [][]string{{"a", "b"}}
+	fixed = []Fixed{}
+	index = []string{"b", "a"}
+	assert.T(t).This(canLookup(keys, fixed, index)).Is(true)
+
+	// Case 4: Key part is fixed (should be true)
+	keys = [][]string{{"a", "b"}}
+	fixed = []Fixed{{col: "b", values: []string{"1"}}}
+	index = []string{"a"}
+	assert.T(t).This(canLookup(keys, fixed, index)).Is(true)
+
+	// Case 5: Key part is fixed (should be true)
+	keys = [][]string{{"a"}}
+	fixed = []Fixed{{col: "b", values: []string{"1"}}}
+	index = []string{"a", "b"}
+	assert.T(t).This(canLookup(keys, fixed, index)).Is(true)
 }

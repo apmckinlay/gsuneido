@@ -491,10 +491,12 @@ func optTI(best *bestTI, q Query, mode Mode, index []string, frac float64,
 	}
 }
 
+var ticostAdj = 0 // for tests, to discourage temp indexes
+
 func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 	factor int) (Cost, Cost) {
-	fixcost := srccost + 1000   // ???
-	fixcost += 100 * len(index) // prefer fewer fields
+	fixcost := srccost + ticostAdj + 1000 // ???
+	fixcost += 100 * len(index)           // prefer fewer fields
 	if nrows > 0 {
 		fnrows := float64(nrows)
 		fixcost += factor * Cost(fnrows*math.Log(fnrows)) // empirical
