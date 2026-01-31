@@ -20,8 +20,7 @@ import (
 var slow = map[Dir]int{Only: 100, Any: 2000}
 
 func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string) {
-	defer th.Suneido.Store(th.Suneido.Load())
-	th.Suneido.Store(nil) // use main Suneido object
+	defer UseMainSuneido(th)()
 
 	// for dir == Strat
 	// if the query has a sort, assume QueryFirst or QueryLast

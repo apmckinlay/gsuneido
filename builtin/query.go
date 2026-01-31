@@ -88,6 +88,8 @@ func stringable(v Value) bool {
 	return ok
 }
 
+//-------------------------------------------------------------------
+
 var _ = exportMethods(&QueryMethods, "query")
 
 var _ = method(query_Close, "()")
