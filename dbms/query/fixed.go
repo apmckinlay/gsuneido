@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/set"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 type Fixed struct {

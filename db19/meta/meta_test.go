@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
-	"github.com/apmckinlay/gsuneido/util/generic/hamt"
+	"github.com/apmckinlay/gsuneido/util/hamt"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 

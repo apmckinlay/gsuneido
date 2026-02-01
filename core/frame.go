@@ -3,7 +3,7 @@
 
 package core
 
-import "github.com/apmckinlay/gsuneido/util/generic/slc"
+import "github.com/apmckinlay/gsuneido/util/slc"
 
 // Frame is the context for a function/method/block invocation.
 type Frame struct {

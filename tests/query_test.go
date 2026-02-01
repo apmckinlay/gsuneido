@@ -16,10 +16,10 @@ import (
 	. "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/exit"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/shmap"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 func TestQuery(t *testing.T) {

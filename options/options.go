@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/apmckinlay/gsuneido/util/generic/atomics"
+	"github.com/apmckinlay/gsuneido/util/atomics"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 

@@ -15,7 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 

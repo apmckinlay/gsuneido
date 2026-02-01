@@ -18,7 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 const Update = 1 << 62

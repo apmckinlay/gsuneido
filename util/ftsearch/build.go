@@ -7,7 +7,7 @@ import (
 	"math"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 // Builder is an index using array for counts.

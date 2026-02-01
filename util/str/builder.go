@@ -6,8 +6,8 @@
 package str
 
 import (
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 // Builder is a simplified version strings.Builder

@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 

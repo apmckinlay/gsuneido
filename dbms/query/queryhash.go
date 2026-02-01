@@ -9,8 +9,8 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 type QueryHash struct {

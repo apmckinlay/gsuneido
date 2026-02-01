@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core/types"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 // SuClosure is an instance of a closure block

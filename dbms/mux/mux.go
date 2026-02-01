@@ -14,8 +14,8 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/atomics"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/atomics"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 const HeaderSize = 4 + 4 + 1 /* size + id + final */

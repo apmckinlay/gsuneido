@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/ptest"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 func TestPlay(t *testing.T) {

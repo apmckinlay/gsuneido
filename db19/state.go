@@ -13,8 +13,8 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/cache"
 	"github.com/apmckinlay/gsuneido/util/cksum"
-	"github.com/apmckinlay/gsuneido/util/generic/cache"
 )
 
 type DbState struct {

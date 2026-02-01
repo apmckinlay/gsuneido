@@ -9,7 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 // merge is one node on the current path.

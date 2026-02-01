@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/atomics"
+	"github.com/apmckinlay/gsuneido/util/atomics"
 	"github.com/apmckinlay/gsuneido/util/ordset"
 	"github.com/apmckinlay/gsuneido/util/ranges"
 )

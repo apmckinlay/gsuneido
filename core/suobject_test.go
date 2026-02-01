@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/pack"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 func TestSuObject(t *testing.T) {

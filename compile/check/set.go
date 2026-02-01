@@ -3,7 +3,7 @@
 
 package check
 
-import "github.com/apmckinlay/gsuneido/util/generic/slc"
+import "github.com/apmckinlay/gsuneido/util/slc"
 
 // set is a specialized set of strings in a slice.
 // By only ever appending, we make it an immutable data structure.

@@ -3,7 +3,7 @@
 
 package regex
 
-import "github.com/apmckinlay/gsuneido/util/generic/slc"
+import "github.com/apmckinlay/gsuneido/util/slc"
 
 // BitSet is a set of int16 stored in bits.
 // Zero value is ready to use.

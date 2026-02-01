@@ -12,7 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	. "github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/cksum"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 type Item[K comparable] interface {

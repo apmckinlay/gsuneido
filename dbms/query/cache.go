@@ -7,7 +7,7 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 // cache is a very simple cache for query costs

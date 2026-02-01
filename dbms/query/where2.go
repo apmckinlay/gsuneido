@@ -12,7 +12,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/set"
 )
 
 /*

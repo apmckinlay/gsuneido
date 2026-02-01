@@ -10,8 +10,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/set"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 // Folder implements constant folding for expressions.

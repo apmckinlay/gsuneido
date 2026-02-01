@@ -12,7 +12,7 @@ package set
 import (
 	"slices"
 
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 // AddUnique appends s unless it is already in the set

@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/util/atomics"
 	"github.com/apmckinlay/gsuneido/util/dbg"
-	"github.com/apmckinlay/gsuneido/util/generic/atomics"
 )
 
 const Timeout = 10 * time.Second

@@ -11,7 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 // leafMerge represents the current leaf node in the merge operation.

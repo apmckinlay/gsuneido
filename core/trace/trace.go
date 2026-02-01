@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/apmckinlay/gsuneido/util/generic/atomics"
+	"github.com/apmckinlay/gsuneido/util/atomics"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )

@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 func TestAlloc(t *testing.T) {
