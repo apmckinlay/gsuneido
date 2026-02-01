@@ -33,6 +33,12 @@ gSuneido is the Go implementation of the Suneido integrated language and databas
 - **IMPORTANT** run Go tests with `-short`
 - **IMPORTANT** run Go tests with `-timeout=30s`
 
+## Tooling
+- **gopls MCP**: Use the `gopls` MCP server tools to navigate, understand, and verify the Go codebase.
+  - Use `go_workspace` to understand the workspace structure.
+  - Use `go_search` and `go_symbol_references` for navigation.
+  - Use `go_diagnostics` to check for errors after edits.
+
 ## Code Style & Conventions
 - **Naming**: Suneido values prefixed with `Su` (SuObject, SuStr, SuInt, etc.)
 - **License**: MIT license header required
