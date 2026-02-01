@@ -1,42 +1,36 @@
-Suneido is an integrated language and database.
-gSuneido is the Go implementation of Suneido.
+# gSuneido Project Context
 
-The Suneido language is dynamically typed.
-The syntax is similar to C or Java i.e. using curly braces.
-Suneido code is stored in library tables in the database.
-It is compiled to byte code and the byte code is interpreted.
+gSuneido is the Go implementation of the Suneido integrated language and database.
 
-The database is immutable append-only.
-It uses multi-version concurrency control.
-It has a relational algebra query language.
+**Language Reference**: For syntax and semantics, strictly refer to @.kilocode/skills/suneido-language/SKILL.md
+**Suneido Code**: Stored in library tables (database), compiled to bytecode, and interpreted. Suneido standard library code can be found in `.ss` files under the `stdlib/` directory
+**Database**: Immutable append-only with MVCC and relational algebra query language.
 
-Suneido can operate either standalone or client-server.
+## Critical Rules
+- **IMPORTANT**: Do not overwrite or delete `gsuneido.exe` or `suneido.db`.
+- **Comments**: Minimal comments. Only explain *why*, not *what*.
 
-Do not overwrite gsuneido.exe or suneido.db
+## Architecture & Key Files
+- **Entry Point**: `cmd/gsuneido/` (Main executable)
+- **Core** (`core/`):
+  - `interp.go`: Main interpreter loop.
+  - `value.go`: `Value` interface definition.
+  - `builtin/`: Built-in Suneido functions.
+  - `compile/`: Parser and code generation.
+- **Database**:
+  - `db19/`: Append-only database engine (MVCC).
+  - `dbms/`: Database server and query engine (`dbms.go`).
+- **Suneido Source**: `.ss` files.
+- **Data**: `suneido.db` (Database)
 
-Do not add excessive comments.
-A comment on almost every line of code is excessive.
-Only add comments when they provide information that is not clear from the code.
+## Building
+- use `make` to build the project (**not** `go build`)
 
-Changes should follow the style of the existing code.
-
-IMPORTANT: Write tests to reproduce errors BEFORE fixing them.
-
-## Build & Test Commands
-- make is preferred over `go build`
-- `make port` - Build command-line gsport.exe only
-- `make test` - Run Go tests with `-short` flag
-- `go test -run TestFunction ./package` - Run specific test function
-- `go test ./package` - Run tests in specific package
-- `go test -benchmem -bench=BenchmarkName ./package` - run benchmark
-- do not change directories to run tests
-- `make clean` - Remove built files and clean cache
-
-## Architecture & Structure
-- **Core packages**: `core/` (values, types), `builtin/` (built-in functions), `compile/` (parser, codegen), 'util' (miscellaneous utility functions)
-- **Database**: `db19/` (append-only DB with MVCC), `dbms/` (query engine, client-server)
-- **Suneido code**: `.ss` files contain Suneido source
-- **Database files**: `suneido.db` is the actual database, `.su` files are dumped database tables
+## Testing
+- use `make test` to run all the tests for the project
+- **IMPORTANT** Do not change directories with cd to run tests
+- **IMPORTANT** run Go tests with `-short`
+- **IMPORTANT** run Go tests with `-timeout=30s`
 
 ## Code Style & Conventions
 - **Naming**: Suneido values prefixed with `Su` (SuObject, SuStr, SuInt, etc.)
@@ -45,9 +39,4 @@ IMPORTANT: Write tests to reproduce errors BEFORE fixing them.
 - **Types**: Dynamic typing in Suneido, strict typing in Go implementation
 - **Tests**: 
   - Use custom `assert.T(t)` helpers e.g. `assert.T(t).This(x).Is(y)`
-  - test helper function (not data driven)
-
-Use gsport REPL to run Suneido code.
-Remember to "make port" before using it.
-
-When working with Suneido code refer to @suneido.md
+  - use a test helper function like other tests (**not** data driven)

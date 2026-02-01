@@ -1,5 +1,9 @@
-Summary of Suneido Language
-===========================
+---
+name: suneido-language
+description: Reference for Suneido language syntax and semantics
+---
+
+# Summary of Suneido Language
 
 For more detailed information see the documentation in the suneidoc folder.
 The standard library source code is in the stdlib folder.
@@ -18,6 +22,7 @@ Expressions:
 - unnamed members start at 0 e.g. `#(a,b,c)[0] is 'a'`
 - it can have named and/or unnamed members e.g. `Object(1, 2, a: 3, b: 4)`
 - #(...) is an immutable object constant
+- Object(...) or Record(...) are mutable
 - use ob.Add(...) to append to the unnamed members
 
 anonymous function: `function(parameters) { ... }`
@@ -57,7 +62,7 @@ class : Base
 - classes are immutable
 - `: Base` is optional
 - capitalized members are public, uncapitalized are private
-- `class : Base` can be abbreviated to just "Base"
+- `class : Base` can be abbreviated to just `Base`
 - classes can have a `CallClass` method
 - there is a default `CallClass` that creates an instance
 - classes can have a `Call` method to make instances callable

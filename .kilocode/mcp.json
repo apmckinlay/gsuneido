@@ -1,0 +1,1 @@
+{"mcpServers":{"gopls-native":{"command":"/home/apm/go/bin/gopls","args":["mcp"],"env":{"PATH":"/home/YOUR_USER/go/bin:/usr/local/bin:/usr/bin:/bin"},"alwaysAllow":["go_search","go_workspace","go_diagnostics","go_file_context","go_package_api","go_vulncheck","go_symbol_references"]}}}
