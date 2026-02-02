@@ -59,21 +59,25 @@ ListBodyBaseComponent
 		.updateDataCell(row, .header.ToWebColIndex(col), newCell)
 		}
 
-	updateDataCell(row, col, newCell)
+	updateDataCell(row, col, newCell, field = false)
 		{
 		el = .getCellEl(row, col).firstChild
 		.SetCellValue(el, newCell)
-		.data[row][.header.GetField(col)] = newCell
+		if field is false
+			field = .header.GetField(col)
+		.data[row][field] = newCell
 		}
 
 	UpdateData(row, record)
 		{
+		old = .data[row]
 		.data[row] = record
 		if .header.HasMarkCol?()
 			.updateMarkCol(row, record)
 		.header.ForEachHeadCol()
 			{ |col, field|
-			.updateDataCell(row, col, record[field])
+			if old[field] isnt record[field]
+				.updateDataCell(row, col, record[field], :field)
 			}
 		}
 
@@ -199,22 +203,8 @@ ListBodyBaseComponent
 		.SetStyles(Object('line-height': .GetRowHeight() $ 'px'), row)
 		.SetCellAttributes(row, y: rowIdx, type: 'data-row')
 
-		td = CreateElement('td', row)
-		.SetCellAttributes(td, x: 0, type: 'mark-cell')
-
-		.header.ForEachHeadCol()
-			{ |col, field, width|
-			cell = rec[field]
-			td = CreateElement('td', row)
-			.CreateCellElement(td, cell, col, 'su-listbody-cell')
-			if width is 0
-				td.SetStyle('display', 'none')
-			}
-		// empty col for filling remaining space
-		el = CreateElement('td', row)
-		// invisible character to take vertical space when the row is empty
-		el.innerHTML = '&#8205;'
-		.SetCellAttributes(el, x: .header.GetColsNum(), type: 'empty-cell')
+		row.innerHTML = .BuildRowContent(rec, .header, 'su-listbody-cell')
+		.AddTipListener(row, 'su-listbody-cell')
 		.rows[rowIdx] = row
 		}
 
@@ -286,6 +276,18 @@ ListBodyBaseComponent
 	freeze: false
 	mouseup(event)
 		{
+		.commitListMoveRow()
+		.StopMouseTracking()
+		.handleMouseEvent(event, 'LBUTTONUP')
+		// Freeze to avoid sending the duplicate the mousedown and mouseup events
+		// when double clicking. Somehow, dblclick doesn't fire when double clicking
+		// the rect type cell without this.
+		.freeze = true
+		SuDelayed(100/*=cooldown*/, .releaseFreeze)
+		}
+
+	commitListMoveRow()
+		{
 		if .dragging is true
 			{
 			.tbody.classList.Remove('su-list-dragging')
@@ -294,13 +296,6 @@ ListBodyBaseComponent
 			}
 		.mousedown? = false
 		.origFocused = .focused = .dragging = false
-		.StopMouseTracking()
-		.handleMouseEvent(event, 'LBUTTONUP')
-		// Freeze to avoid sending the duplicate the mousedown and mouseup events
-		// when double clicking. Somehow, dblclick doesn't fire when double clicking
-		// the rect type cell without this.
-		.freeze = true
-		SuDelayed(100/*=cooldown*/, .releaseFreeze)
 		}
 
 	releaseFreeze()
@@ -360,9 +355,14 @@ ListBodyBaseComponent
 		return row
 		}
 
+	KillFocus()
+		{
+		.commitListMoveRow()
+		}
+
 	SelectRow(row)
 		{
-		Assert(.data hasMember: row, msg: 'sujslib:ListBodyComponent.SelectRow')
+		Assert(.data hasMember: row, msg: 'ListBodyComponent.SelectRow')
 		.rows[row].SetAttribute('data-selected', 'true')
 		.SetStyles(Object(
 			'background-color': .selectColor,
@@ -371,7 +371,7 @@ ListBodyBaseComponent
 
 	DeSelectRow(row)
 		{
-		Assert(.data hasMember: row, msg: 'sujslib:ListBodyComponent.DeSelectRow')
+		Assert(.data hasMember: row, msg: 'ListBodyComponent.DeSelectRow')
 		.rows[row].SetAttribute('data-selected', 'false')
 		.SetStyles(Object(
 			'background-color': .getHighlight(row),
@@ -380,7 +380,7 @@ ListBodyBaseComponent
 
 	AddHighlightRow(row, color)
 		{
-		Assert(.data hasMember: row, msg: 'sujslib:ListBodyComponent.AddHighlightRow')
+		Assert(.data hasMember: row, msg: 'ListBodyComponent.AddHighlightRow')
 		.rows[row].SetAttribute('data-highlight', color = ToCssColor(color))
 		if not .selected?(row)
 			{
@@ -390,7 +390,7 @@ ListBodyBaseComponent
 
 	RemoveHighlightRow(row)
 		{
-		Assert(.data hasMember: row, msg: 'sujslib:ListBodyComponent.RemoveHightlighRow')
+		Assert(.data hasMember: row, msg: 'ListBodyComponent.RemoveHightlighRow')
 		.rows[row].SetAttribute('data-highlight', '')
 		if not .selected?(row)
 			.rows[row].SetStyle('background-color', '')
@@ -417,7 +417,7 @@ ListBodyBaseComponent
 
 	ScrollRowToView(row)
 		{
-		Assert(.rows hasMember: row, msg: 'sujslib:ListBodyComponent.ScrollRowToView')
+		Assert(.rows hasMember: row, msg: 'ListBodyComponent.ScrollRowToView')
 		headerHeight = .header.GetOffsetHeight()
 		rowHeight = .rows[row].offsetHeight
 		rowOffsetTop = .rows[row].offsetTop

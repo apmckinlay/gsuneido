@@ -27,7 +27,7 @@ Controller
 		layout = Object('Tabs')
 		readonly = AccessPermissions(Customizable.PermissionOption()) isnt true
 
-		if .addCustomScreenLayout(browse_custom_fields, tabs)
+		if .customizeScreen?(browse_custom_fields, allowCustomTabs, tabs)
 			layout.Add(Object('CustomizeScreen', customizable,
 				browse_custom_fields, tabs, readonly,
 				Tab: browse? ? 'Create/Edit Custom Column' : 'Customize Screen',
@@ -45,18 +45,13 @@ Controller
 			layout)
 		}
 
-	addCustomScreenLayout(browse_custom_fields, tabs)
+	customizeScreen?(browse_custom_fields, allowCustomTabs, tabs)
 		{
-		if browse_custom_fields isnt false
+		if browse_custom_fields isnt false or allowCustomTabs
 			return true
-
-		if tabs isnt false and Object?(tabs)
-			{
-			customTab = tabs.GetDefault('custom_tabs', false)
-			if customTab isnt false and customTab.NotEmpty?()
-				return true
-			}
-		return false
+		return Object?(tabs)
+			? tabs.GetDefault('custom_tabs', #()).NotEmpty?()
+			: false
 		}
 
 	build_title(key, sub_title)

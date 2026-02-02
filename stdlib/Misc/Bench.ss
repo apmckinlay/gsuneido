@@ -5,5 +5,6 @@ function (block)
 	r = Timer.Secs(:block, secs: 5)
 	ma = MemoryAlloc() - ma
 	a = Max(0, (ma / r.reps).Round(0) - 16) /*= overhead is roughly 16 bytes */
-	return Timer.Format(r) $ ", " $ ReadableSize(a) $ " allocation"
+	a /= r.reps
+	return Timer.Format(r) $ ", " $ ReadableSize(a) $ " alloc/rep"
 	}

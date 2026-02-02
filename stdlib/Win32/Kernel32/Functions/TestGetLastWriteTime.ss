@@ -3,7 +3,7 @@ Test
 	{
 	Test_main()
 		{
-		Assert(GetLastWriteTime('doest exist') is: false)
+		Assert(GetLastWriteTime('doesnt_exist') is: false)
 
 		startDate = Date().NoTime()
 		testFile = .MakeFile('test')

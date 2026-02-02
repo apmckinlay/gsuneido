@@ -17,53 +17,64 @@ Md_ContainerBlock
 			}
 		}
 
-	Continue(line)
+	Continue(line, start)
 		{
-		if false isnt line2 = .matchListMarker(line)
-			return line2
+		line2, start = .matchListMarker(line, start)
+		if false isnt line2
+			return line2, start
 
 		if false isnt listItem = .NextOpenBlock()
 			{
-			if listItem.Continue(line) isnt false
-				return line
+			result, unused = listItem.Continue(line, start)
+			if result isnt false
+				return line, start
 			}
 
-		return false
+		return false, start
 		}
 
-	matchListMarker(line)
+	matchListMarker(line, start)
 		{
-		if false is n = .IgnoreLeadingSpaces(line)
-			return false
+		if false is n = .IgnoreLeadingSpaces(line, start)
+			return false, start
 
-		if .Type is 'ul' and line[n::1] is .marker and
-			Md_ThematicBreak.Match(line, container: this) is false
-			return line
+		if .Type is 'ul' and .matchMarker?(line, start+n) and
+			Md_ThematicBreak.Match(line, start, container: this) is false
+			return line, start
 
 		if .Type is 'ol'
 			{
-			c = .CountLeadingChar(line[n..], '0-9')
-			if c >= 1 and c <= 9/*=max length*/ and line[n+c::1] is .marker
-				return line
+			c = .CountLeadingChar(line, start+n, '0-9')
+			if c >= 1 and c <= 9/*=max length*/ and .matchMarker?(line, start+n+c)
+				return line, start
 			}
 
-		return false
+		return false, start
+		}
+
+	matchMarker?(line, start)
+		{
+		return line[start::1] is .marker and line[start+1::1] in ('', ' ', '\t')
+		}
+
+	HasEndingBlankLine?()
+		{
+		return .Children.Last().HasEndingBlankLine?()
 		}
 
 	Loose?: false
 	Close()
 		{
-		prevItemEndWithBlankLine? = false
+		super.Close()
+		prevItemHasEndingBlankLine? = false
 		.ForEachBlockItem()
 			{ |listItem|
-			if listItem.Loose? is true or prevItemEndWithBlankLine? is true
+			if listItem.Loose? is true or prevItemHasEndingBlankLine? is true
 				{
 				.Loose? = true
 				break
 				}
-			if listItem.HasEndBlankLine? is true
-				prevItemEndWithBlankLine? = true
+			prevItemHasEndingBlankLine? = listItem.HasEndingBlankLine?()
 			}
-		super.Close()
 		}
 	}

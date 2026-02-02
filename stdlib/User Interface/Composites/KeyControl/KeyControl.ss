@@ -267,10 +267,7 @@ ChooseField
 		}
 	ValidData?(@args)
 		{
-		ctrlName = .FieldControl
-		if not .FieldControl.Suffix?('Control')
-			ctrlName $= 'Control'
-		return Global(ctrlName).ValidData?(@args)
+		return GetControlClass.FromControlName(.FieldControl).ValidData?(@args)
 		}
 	// Helper method so customizable can use fillin logic
 	FillinRecord(control, field, rec, fillincustom = false)
@@ -299,9 +296,7 @@ ChooseField
 	IsKeyControl?(field)
 		{
 		control = Datadict(field).Control
-		ctrlName = not control[0].Suffix?('Control')
-			? control[0] $ 'Control'
-			: control[0]
-		return control[0] is 'Key' or Global(ctrlName).Base?(KeyControl)
+		return control[0] is 'Key' or
+			GetControlClass.FromControl(control).Base?(KeyControl)
 		}
 	}

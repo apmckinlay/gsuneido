@@ -316,8 +316,14 @@ class
 			return false
 
 		ob = text.SplitOnFirst('{')
-		ob[1] = '\tInternal: true\n\t' $ ob[1].Trim()
+		ob[1] = '\tInternal: true\n\tLastDelete: ' $ .setDeleteDate() $ '\n\t' $
+			ob[1].Trim()
 		return ob[0] $ '{\n' $ ob[1]
+		}
+
+	setDeleteDate()
+		{
+		return Display(Timestamp())
 		}
 
 	unloadField(field)
@@ -823,7 +829,7 @@ class
 		{
 		custFields = Object()
 		for field in Customizable.CustomFields(table)
-			if false is Query1('customizable_fields
+			if QueryEmpty?('customizable_fields
 				where custfield_readonly is true or custfield_hidden is true',
 				:custfield_name, custfield_field: field)
 				custFields.Add(field)
@@ -962,11 +968,7 @@ class
 	SetDefaultValue(x, custom)
 		{
 		dd = Datadict(x.custfield_field)
-		control = dd.Control[0]
-
-		if not control.Suffix?('Control')
-			control $= 'Control'
-		ctrl = Global(control)
+		ctrl = GetControlClass.FromControl(dd.Control)
 		if ctrl.Method?('CustomizableSetDefaultValue') and
 			true is ctrl.CustomizableSetDefaultValue(x, custom, dd)
 				return
@@ -1037,6 +1039,11 @@ class
 				Suneido[cache_name].Delete(key)
 		}
 
+	ResetServerCustomizedCache(key)
+		{
+		ServerEval('Customizable.ResetCustomizedCache', key)
+		}
+
 	ResetAllCache()
 		{
 		Suneido.Delete(@.cache_list)
@@ -1100,7 +1107,7 @@ class
 		if not TableExists?(.savein)
 			return false
 
-		tab = Query1(.savein, :tab, name: .name)
+		tab = Query1(.savein, :tab, name: .name, user: '', customKey: '')
 		return tab isnt false
 			? tab.layout isnt '' and tab.hidden? isnt true
 			: false

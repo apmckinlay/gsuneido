@@ -2,26 +2,35 @@
 Md_Code
 	{
 	requiredSpaces: 4
-	Match(line)
+	Match(line, start)
 		{
-		if .CountLeadingChar(line, ' ') >= .requiredSpaces
-			return new this(line[.requiredSpaces..])
+		if .CountLeadingChar(line, start, ' ') >= .requiredSpaces
+			return new this(line[start+.requiredSpaces..])
 		return false
 		}
 
-	Continue(line)
+	Continue(line, start)
 		{
-		if .BlankLine?(line)
-			return line[.requiredSpaces..]
+		if .BlankLine?(line, start)
+			return line, start+.requiredSpaces
 
-		if .CountLeadingChar(line, ' ') >= .requiredSpaces
-			return line[.requiredSpaces..]
+		if .CountLeadingChar(line, start, ' ') >= .requiredSpaces
+			return line, start+.requiredSpaces
 
-		return false
+		return false, start
+		}
+
+	lastLineIsBlank?: false
+	HasEndingBlankLine?()
+		{
+		return .lastLineIsBlank?
 		}
 
 	Close()
 		{
+		if .Codes.Size() > 0 and .BlankLine?(.Codes.Last(), 0)
+			.lastLineIsBlank? = true
+
 		if false is start = .Codes.FindIf(.NotBlankLine?)
 			.Codes = Object()
 		else

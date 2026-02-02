@@ -33,6 +33,7 @@ NOTE: CompareAndSet is only needed when there are multiple threads.
 See also:
 [Channel](<../Channel.md>),
 [Mutex](<../Mutex.md>),
+[Pipe](<../Pipe.md>),
 [Synchronized](<../Synchronized.md>),
 [class.Synchronized](<../Class/class.Synchronized.md>),
 [Thread](<../Thread.md>),

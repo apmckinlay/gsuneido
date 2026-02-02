@@ -382,10 +382,10 @@ Test
 		}
 	Test_DynamicName?()
 		{
-		Assert("_x".DynamicName?() is: true)
-		Assert("_xyz".DynamicName?() is: true)
-		Assert("_xyz?".DynamicName?() is: true)
-		Assert("_xyz!".DynamicName?() is: true)
+		Assert("_x".DynamicName?())
+		Assert("_xyz".DynamicName?())
+		Assert("_xyz?".DynamicName?())
+		Assert("_xyz!".DynamicName?())
 		Assert("x".DynamicName?() is: false)
 		Assert("xyz".DynamicName?() is: false)
 		Assert("Xyz".DynamicName?() is: false)
@@ -419,7 +419,7 @@ Test
 		// SuJsWebTest Excluded
 		Assert(''.SafeEval() is: '')
 		Assert('123456789.987654321'.SafeEval() is: 123456789.987654321)
-		Assert('true'.SafeEval() is: true)
+		Assert('true'.SafeEval())
 		Assert('false'.SafeEval() is: false)
 		Assert('#20110101'.SafeEval() is: #20110101)
 		Assert('#20110101.112233444'.SafeEval() is: #20110101.112233444)
@@ -474,15 +474,15 @@ Test
 		Assert("foo".Has1of?("abc") is: false)
 		for s in #(axy, xay, xya)
 			for c in #(abc, bac, bca)
-				Assert(s.Has1of?(c) is: true)
+				Assert(s.Has1of?(c))
 		}
 	Test_In?()
 		{
-		Assert('b'.In?('abc') is: true)
+		Assert('b'.In?('abc'))
 		Assert('x'.In?('abc') is: false)
-		Assert('two'.In?('one two three') is: true)
+		Assert('two'.In?('one two three'))
 		Assert('Two'.In?('one two three') is: false)
-		Assert('a'.In?(#(a, b, c)) is: true)
+		Assert('a'.In?(#(a, b, c)))
 		Assert('x'.In?(#(a, b, c)) is: false)
 		}
 	Test_UniqueChars()

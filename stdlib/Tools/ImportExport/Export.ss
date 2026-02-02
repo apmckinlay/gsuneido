@@ -156,6 +156,8 @@ class
 		if Function?(query)
 			query = query()
 		table = query.BeforeFirst(' ')
+		if table.Suffix?('/*')
+			table = query.AfterFirst('*/ ').BeforeFirst(' ')
 		if not dd.Control.Member?('field') or
 			(false is Query1Cached('tables', :table) and
 			false is Query1Cached('views', view_name: table))

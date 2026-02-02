@@ -5,14 +5,20 @@ Component
 	Xstretch: 0
 	Ystretch: 0
 	styles: `
-		.su-contextmenu-list {
-			background-color: white;
+		.su-contextmenu-container {
 			position: fixed;
+			overflow-y: auto;
 			border: 1px solid black;
 			border-spacing: 0px;
 			border-radius: 0.3em;
-			user-select: none;
 			box-shadow: 3px 3px 3px grey;
+		}
+		.su-contextmenu-list {
+			background-color: white;
+			table-layout: fixed;
+			user-select: none;
+			border: none;
+			border-spacing: 0;
 		}
 		.su-contextmenu-list hr {
 			margin-block-start: 0px;
@@ -40,15 +46,24 @@ Component
 
 		.outstandingExpands = Object()
 		.outstandingExpandId = 0
-
-		.CreateElement('table', className: 'su-contextmenu-list')
+		.CreateElement('div', className: 'su-contextmenu-container')
 		.buildMenu(.menu, .El, left, top, rcExclude, buttonRect)
-		.menus = Object(Object(submenu: menu, selected: false))
+		.menus = Object(Object(submenu: menu, submenuEl: .El, selected: false))
 		.keydownCB = SuUI.GetCurrentDocument().AddEventListener('keydown', .keydown)
+		.StartMouseTracking(.mouseup, .mousemove)
 		}
 
-	buildMenu(menu, container, left = false, top = false, rcExclude = 0, buttonRect = #())
+	mouseup(@unused) { }
+
+	ignoreMouseEnter?: false
+	mousemove(@unused)
 		{
+		.ignoreMouseEnter? = false
+		}
+
+	buildMenu(menu, wrapper, left = false, top = false, rcExclude = 0, buttonRect = #())
+		{
+		container = CreateElement('table', wrapper, className: 'su-contextmenu-list')
 		for item in menu
 			{
 			if item is ''
@@ -80,11 +95,21 @@ Component
 			item.el.AddEventListener('click', .listenerFactory(.mouseclick, item))
 			}
 
-		PlaceElement(container, left, top, rcExclude, buttonRect)
+		PlaceElement(wrapper, left, top, rcExclude, buttonRect)
+		windowRect = SuRender.GetClientRect()
+		wrapperRect = SuRender.GetClientRect(wrapper)
+		if wrapperRect.bottom > windowRect.bottom
+			wrapper.SetStyle(#height, (windowRect.bottom - 2) $ 'px')
 		}
 
 	mouseenter(item)
 		{
+		if .ignoreMouseEnter?
+			{
+			.ignoreMouseEnter? = false
+			return
+			}
+
 		.removeMenusUntil(item)
 		.addSelect(item)
 		.expandMenu(item)
@@ -117,8 +142,8 @@ Component
 			if .loadingDynamicMenu(item, selectFirst?)
 				return
 			r = SuRender.GetClientRect(item.el)
-			item.submenuEl = CreateElement('table', .ParentEl,
-				className: 'su-contextmenu-list')
+			item.submenuEl = CreateElement('div', .ParentEl,
+				className: 'su-contextmenu-container')
 			.buildMenu(item.submenu, item.submenuEl, r.right, r.top,
 				Object(top: -9999, bottom: 9999, left: r.left, right: r.right), r)
 			}
@@ -223,7 +248,27 @@ Component
 			{
 			next = (next + offset + menu.submenu.Size()) % menu.submenu.Size()
 			}
+		.ensureItemInView(menu.submenuEl, menu.submenu[next].el)
 		.addSelect(menu.submenu[next])
+		}
+
+	ensureItemInView(container, item)
+		{
+		rowHeight = item.clientHeight
+		rowOffsetTop = item.offsetTop
+		scrollTop = container.scrollTop
+		scrollHeight = container.clientHeight
+
+		if scrollTop > rowOffsetTop
+			{
+			container.scrollTop = rowOffsetTop
+			.ignoreMouseEnter? = true
+			}
+		else if scrollTop + scrollHeight < rowOffsetTop + rowHeight
+			{
+			container.scrollTop = rowOffsetTop + rowHeight - scrollHeight
+			.ignoreMouseEnter? = true
+			}
 		}
 
 	fold()

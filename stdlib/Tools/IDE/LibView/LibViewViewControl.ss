@@ -2,6 +2,11 @@
 CodeViewControl
 	{
 	Name: LibViewView
+	New(data, readonly = false)
+		{
+		super(:data, addons: .Addons(), :readonly)
+		}
+
 	addons: #(
 		Addon_status: #(addon: Addon_editor_status), // Replacing base status bar
 		Addon_libview_todo:,
@@ -27,9 +32,13 @@ CodeViewControl
 		Addon_inspect:,
 		Addon_annotation:,
 		Addon_coverage:)
-	New(data, readonly = false)
+	Addons()
 		{
-		super(:data, addons: .addons, :readonly)
+		addons = .addons.Copy()
+		if addons.GetDefault('Addon_check_code', false) isnt false and
+			addons.GetDefault('Addon_libview_todo', false) isnt false
+			addons.Addon_libview_todo = #(init_qctext: 'Checking Code...')
+		return addons
 		}
 
 	InitialSet(data)

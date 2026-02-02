@@ -25,8 +25,9 @@ WndProc
 		{
 		return .numRows
 		}
-	SetMaxRowHeight(height, scaled? = false)
+	SetMaxRowHeight(that, method, scaled? = false)
 		{
+		height = (that[method])()
 		.maxRowHeight = scaled? ? height : ScaleWithDpiFactor(height)
 		.Repaint()
 		}

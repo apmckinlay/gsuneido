@@ -259,10 +259,6 @@ class
 
 	ForeignKeyUsage(record)
 		{
-		func = false
-		try func = Global((QueryGetTable(.query) $ "_show_fk_usage").Capitalize())
-		if not Function?(func)
-			return ""
-		return record.Eval(func)
+		return RecordForeignKeyUsage(.query, record)
 		}
 	}

@@ -154,7 +154,8 @@ class
 
 	dynamicControl?(ctrlOb, collect, path)
 		{
-		ctrl = ctrlOb[0]
+		// false indicates a non control Object (IE: control arguments)
+		ctrl = ctrlOb.GetDefault(0, false)
 		if not String?(ctrl) or not ctrl.Capitalized?() or
 			false isnt ctrl.Match('[[:space:]]')
 			return false

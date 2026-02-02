@@ -55,7 +55,7 @@ Addon_VirtualListViewBase
 		if .Model.ExpandModel is false
 			return
 
-		c = OptContribution('VirtualListView', class {})
+		c = VirtualListViewExtra
 		if c.Member?('VirtualListGrid_AfterExpand')
 			return c.VirtualListGrid_AfterExpand(rec, ctrl, :expand, view: .Parent)
 
@@ -94,11 +94,6 @@ Addon_VirtualListViewBase
 	VirtualListGrid_Tab()
 		{
 		.Send('VirtualList_Tab')
-		}
-
-	VirtualListGrid_AllowNextRowWithoutSave()
-		{
-		return .Send('VirtualList_AllowNextRowWithoutSave')
 		}
 
 	VirtualListGrid_Escape()

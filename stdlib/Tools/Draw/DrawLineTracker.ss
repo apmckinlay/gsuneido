@@ -1,11 +1,7 @@
 // Copyright (C) 2002 Suneido Software Corp. All rights reserved worldwide.
 DrawTracker
 	{
-	New(hwnd, item)
-		{
-		.hwnd = hwnd
-		.item = item
-		}
+	New(.hwnd, .item) { }
 	x1: false
 	MouseDown(x, y)
 		{
@@ -16,7 +12,7 @@ DrawTracker
 	MouseMove(x, y)
 		{
 		hdc = GetDC(.hwnd)
-		if (.x1 isnt false)
+		if .x1 isnt false
 			.line(hdc) // erase previous line
 		.x1 = x
 		.y1 = y
@@ -27,7 +23,7 @@ DrawTracker
 		{
 		ReleaseCapture()
 		item = false
-		if (.x1 isnt false)
+		if .x1 isnt false
 			{
 			hdc = GetDC(.hwnd)
 			.line(hdc) // erase previous line

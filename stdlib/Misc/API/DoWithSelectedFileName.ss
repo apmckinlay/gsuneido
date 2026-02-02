@@ -18,9 +18,6 @@ class
 		if not Sys.SuneidoJs?()
 			return
 
-		SujsAdapter.CallOnRenderBackend('RecordAction', false, 'SuDownloadFile',
-			[target: Base64.Encode(Paths.Basename(tempFileName).
-			Xor(EncryptControlKey())),
-			saveName: selectedFileName])
+		JsDownload.Trigger(Paths.Basename(tempFileName), selectedFileName)
 		}
 	}

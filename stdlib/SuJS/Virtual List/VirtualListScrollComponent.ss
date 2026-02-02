@@ -7,11 +7,12 @@ HtmlDivComponent
 	Xmin: 		50
 	Ymin: 		10
 
+	hdrCornerCtrl: false
 	New(control, bar, hdrCornerCtrl = false)
 		{
 		super(control)
 		.El.SetStyle('position', 'relative')
-		.Construct(bar)
+		.bar = .Construct(bar)
 		if hdrCornerCtrl isnt false
 			{
 			buttonHeight = SuRender().GetTextMetrics(.El, 'M').height
@@ -27,5 +28,13 @@ HtmlDivComponent
 				'padding': '2px 1px 2px 1px',
 				'z-index': '3'])
 			}
+		}
+
+	Destroy()
+		{
+		.bar.Destroy()
+		if .hdrCornerCtrl isnt false
+			.hdrCornerCtrl.Destroy()
+		super.Destroy()
 		}
 	}

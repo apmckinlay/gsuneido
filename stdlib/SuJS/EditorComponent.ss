@@ -6,18 +6,18 @@ EditComponent
 	Ystretch: 1
 	DefaultHeight: 4
 	Hasfocus?:	false
-	textLimit: 30000
 	New(@args)
 		{
 		super(@args)
 		.El.AddEventListener('keydown', .onKeyDown)
-		.El.SetAttribute(#maxlength, .textLimit)
+		.El.SetAttribute(#maxlength, EditorTextLimit)
 		}
 
 	onKeyDown(event)
 		{
 		pressed = Object(
-			control: event.ctrlKey, shift: event.shiftKey,
+			control: event.GetDefault(#ctrlKey, false),
+			shift: event.GetDefault(#shiftKey, false),
 			alt: event.GetDefault(#altKey, false))
 		EditorKeyDownComponentHandler(this, event, pressed)
 		}

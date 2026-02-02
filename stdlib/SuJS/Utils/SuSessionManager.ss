@@ -10,11 +10,11 @@ class
 		return ob
 		}
 
-	Open(connectid, token, wsHandler, reconnect = false)
+	Open(connectid, token, wsHandler, reconnect, env)
 		{
 		waitResumeTimeout = .setTimeout(wsHandler)
 		if reconnect is 'true'
-			return .handlerReconnect(connectid, token, wsHandler, waitResumeTimeout)
+			return .handlerReconnect(connectid, token, wsHandler, waitResumeTimeout, env)
 
 		tokens = Suneido.GetDefault(#SuLoginTokens, #())
 		info = tokens.Extract(token, false)
@@ -42,8 +42,11 @@ class
 		return 180/*=3 minutes (a longer period so that the socket can timeout)*/
 		}
 
-	handlerReconnect(connectid, token, wsHandler, waitResumeTimeout)
+	handlerReconnect(connectid, token, wsHandler, waitResumeTimeout, env)
 		{
+		if JsSessionToken.Validate(env) is false
+			return 'Invalid connection'
+
 		time = Date().StdShortDateTimeSec()
 		id = '(reconnect ' $ time $ ')'
 		.setThreadName(id)
@@ -71,6 +74,16 @@ class
 			return 'Reconnect expired'
 			}
 		socket.ManualClose()
+
+		try
+			{
+			cookie = env.GetDefault('cookie', '')
+			len = cookie.Size()
+			i = cookie.Find(token)
+			cookie = cookie[i::50/*=len*/]
+			BookLog('SuSessionManager.handlerReconnect success',
+				params: Object(t: token, :cookie, :len), systemLog:)
+			}
 		return 'close'
 		}
 
@@ -140,6 +153,8 @@ class
 					SuMessageFormatter.Type.CONNECTED, arg1: reconnect.connectid)))
 				.setThreadName(Thread.Name().RemoveSuffix('(waiting for reconnect)'))
 				SuSessionLog().Error(e, reconnected?:)
+				try BookLog('SuSessionManager.OnConnectionError',
+					params: [t: token, key: SuRenderBackend().Key], systemLog:)
 				return false
 				}
 			if count++ > 300/*=wait 5 mins*/

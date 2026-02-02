@@ -29,6 +29,15 @@ Test
 			'Please enter another File Name.')
 
 		ctrlMock.When.Get().Return('testFile.txt')
+
+		// resulting path over 255 chars should result in warning message
+		classMock.When.getCopyToFilename([anyArgs:]).Return('a'.Repeat(260))
+		Assert(classMock.OK() is: false)
+		classMock.Verify.AlertInfo('Invalid file name',
+			'Destination path is too long. Please choose a shorter file name')
+
+		// back to valid file path
+		classMock.When.getCopyToFilename([anyArgs:]).Return('unused for this test')
 		Assert(classMock.OK())
 
 		ctrlMock.When.Get().Return('testFile')

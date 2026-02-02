@@ -13,6 +13,7 @@ class
 	// extracted for testing
 	getFile(filename, limit = false)
 		{
+		filename = FileStorage.GetAccessibleFilePath(filename)
 		return GetFile(filename, limit)
 		}
 

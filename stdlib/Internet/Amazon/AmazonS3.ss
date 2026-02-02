@@ -190,17 +190,82 @@ AmazonAWS
 
 	Dir(bucket, dir, details = false)
 		{
+		dir = .formatDirPath(dir)
 		region = AmazonS3.GetBucketLocationCached(bucket)
 		if not details
-			return AmazonS3.ListBucketFiles(bucket, dir, :region)
+			return .mimicExeDir(
+				dir, AmazonS3.ListBucketFiles(bucket, dir, :region), details)
 
-		list = AmazonS3.ListBucketContents(bucket, dir, :region)
-		return list.Map!({
-			it.name = it.key
-			it.date = it.last_modified
-			it.size = Number(it.size.Tr(' bytes'))
-			it
+		return .mimicExeDir(
+			dir, AmazonS3.ListBucketContents(bucket, dir, :region), details)
+		}
+
+	formatDirPath(dir)
+		{
+		dir = Paths.ToStd(dir)
+		Assert(not dir.Suffix?('/'), msg: 'only accept *, *.* or file listing')
+		dir = dir.Replace('(?q)/*.*(?-q)$', '/').Replace('(?q)/*(?-q)$', '/')
+		Assert(dir hasnt: '*', msg: 'wildcards are not handled')
+		Assert(dir hasnt: '?', msg: 'wildcards are not handled')
+		return dir
+		}
+
+	// Match the result of Dir call in the same format we would get from the Exe
+	mimicExeDir(dir, fileList, details)
+		{
+		if dir isnt '' and not dir.Suffix?('/')
+			return .dirOne(dir, fileList, details)
+
+		if not details
+			return fileList.Map(
+				{
+				path = it.RemovePrefix(dir)
+				if path.Has?('/')
+					path = path.BeforeFirst('/') $ '/'
+				path
+				}).UniqueValues().Remove('')
+
+		formattedfileList = Object()
+		for f in fileList
+			{
+			f.key = f.key.RemovePrefix(dir)
+			if f.key.Has?('/')
+				{
+				f.key = f.key.BeforeFirst('/') $ '/'
+				if false is f1 = formattedfileList.FindOne({ it.name is f.key })
+					formattedfileList.Add(.formatDirOb(f, size: 0))
+				else
+					f1.date = Min(f1.date, f.last_modified)
+				}
+			else
+				formattedfileList.Add(.formatDirOb(f))
+			}
+		return formattedfileList.RemoveIf({ it.name is "" })
+		}
+
+	dirOne(file, fileList, details)
+		{
+		if not details
+			return fileList.Filter({ it is file }).Map!(.dirFileName)
+
+		return fileList.Filter({ it.key is file }).
+			Map!({
+				it.key = .dirFileName(it.key)
+				.formatDirOb(it)
 			})
+		}
+
+	dirFileName(file)
+		{
+		return file.Has?('/') ? file.AfterFirst('/') : file
+		}
+
+	formatDirOb(f, size = false)
+		{
+		return Object(
+			name: f.key,
+			date: f.last_modified,
+			size: size is false ? Number(f.size.Tr(' bytes')) : size)
 		}
 
 	ListBucketFiles(bucket, prefix = '', region = false)
@@ -271,9 +336,10 @@ AmazonAWS
 		return .makeRequest('GET', ['cors': '1'], '/' $ bucket, :region)
 		}
 
-	PutBucketVersioning(bucket)
+	PutBucketVersioning(bucket, region = false)
 		{
-		region = .GetBucketLocationCached(bucket)
+		if region is false
+			region = .GetBucketLocationCached(bucket)
 		content = `<VersioningConfiguration ` $
 			`xmlns="http://s3.amazonaws.com/doc/2006-03-01/">` $
 			`<Status>Enabled</Status>` $
@@ -296,9 +362,10 @@ AmazonAWS
 		`<NoncurrentDays>14</NoncurrentDays>` $
 		`</NoncurrentVersionExpiration>` $
 		`</Rule>`
-	PutBucketLifecycleConfig(bucket, rules = false)
+	PutBucketLifecycleConfig(bucket, rules = false, region = false)
 		{
-		region = .GetBucketLocationCached(bucket)
+		if region is false
+			region = .GetBucketLocationCached(bucket)
 		rules = rules is false ? .lifeCycleRule : rules
 		content = `<LifeCycleConfiguration>` $
 			rules $ `</LifeCycleConfiguration>`
@@ -311,6 +378,20 @@ AmazonAWS
 		{
 		region = .GetBucketLocationCached(bucket)
 		return .makeRequest('GET', ['lifecycle': '1'], '/' $ bucket, :region)
+		}
+
+	PutBucketPolicy(bucket, region, policy)
+		{
+		if region is false
+			region = .GetBucketLocationCached(bucket)
+		return '' is .makeRequest('PUT', ['policy': '1'], '/' $ bucket,
+			content: policy, :region, expectedResponse: '204')
+		}
+
+	GetBucketPolicy(bucket)
+		{
+		region = .GetBucketLocationCached(bucket)
+		return .makeRequest('GET', ['policy': '1'], '/' $ bucket, :region)
 		}
 
 	CreateFolder(bucket, folder)
@@ -385,7 +466,8 @@ AmazonAWS
 	ObjectMetaData(bucket, filename, versionId = '')
 		{
 		filename = Url.EncodePreservePath(filename)
-		return .makeRequest('HEAD', [:versionId], '/' $ bucket $ '/'$ filename)
+		return .makeRequest('HEAD', [:versionId], '/' $ bucket $ '/'$ filename,
+			fullResponse?:).header
 		}
 
 	CheckObjectTagging(bucket, key, versionId)
@@ -519,6 +601,44 @@ AmazonAWS
 			: "Deleting files from Amazon S3 failed:\n\n\t" $ failed.Join(', ')
 		}
 
+	deleteFileLimit: 1000
+	DeleteFiles2(bucket, files)
+		{
+		failed = Object()
+		for (i = 0; i < files.Size(); i = i + .deleteFileLimit)
+			.deleteFiles(bucket, files[i :: .deleteFileLimit], failed)
+
+		return failed.Empty?()
+			? ''
+			: 'Deleting files from Amazon S3 failed:\n\n\t' $ failed.Join(', ')
+		}
+
+	deleteFiles(bucket, files, failed)
+		{
+		content = .xmlHeader.Replace('PLACEHOLDER', 'Delete')
+		for file in files
+			{
+			Assert(file isnt: '')
+			Assert(file isString: true)
+			content $= `<Object><Key>` $ file $ `</Key></Object>`
+			}
+		content $= '</Delete>'
+
+		region = .GetBucketLocationCached(bucket)
+		extraHeaders = Object('Content-MD5': Base64.Encode(Md5(content)))
+		if false is res = .makeRequest('POST', ['delete': '1'], '/' $ bucket, :content,
+			:region, :extraHeaders)
+			{
+			failed.Append(files)
+			return
+			}
+
+		res = XmlParser(res)
+		for child in res.Children()
+			if child.Name() is 'error'
+				failed.Add(child['key'].Text())
+		}
+
 	// extrated for tests
 	throttleRetry(block)
 		{
@@ -567,9 +687,10 @@ AmazonAWS
 		// can't be sure what "secure" data might be in msg or detail so don't log.
 		if secureLogging
 			return
-		EnsureDir('logs')
-		AddFile('logs/amazonS3.log', Display(Date())[1..] $ ', ' $
-			action $ ' > ' $ msg $ Opt('\r\n', detail.Trim()) $ '\r\n\r\n')
+
+		path = GetContributions('LogPaths').GetDefault('amazonS3', 'logs/amazonS3log')
+		log = action $ ' > ' $ msg $ Opt('\r\n', detail.Trim()) $ '\r\n'
+		.Log(path, log)
 		}
 
 	exceptionInsteadOfLog?()

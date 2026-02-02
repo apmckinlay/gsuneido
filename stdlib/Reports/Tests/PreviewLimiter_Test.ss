@@ -35,25 +35,25 @@ Test
 		ins.PreviewLimiter_disabledWindows.Add(444)
 		// test adding to one below limit
 		ins.Add(111)
-		Assert(ins.BeforeOpen() is: true)
+		Assert(ins.BeforeOpen())
 		Assert(ins.PreviewLimiter_queue is: #(111))
 		Assert(ins.PreviewLimiter_destroyed is: #())
 		ins.Add(222)
-		Assert(ins.BeforeOpen() is: true)
+		Assert(ins.BeforeOpen())
 		Assert(ins.PreviewLimiter_queue is: #(111, 222))
 		Assert(ins.PreviewLimiter_destroyed is: #())
 		ins.Add(111)
-		Assert(ins.BeforeOpen() is: true)
+		Assert(ins.BeforeOpen())
 		Assert(ins.PreviewLimiter_queue is: #(222, 111))
 		Assert(ins.PreviewLimiter_destroyed is: #())
 
 		// test adding to the limit
 		ins.Add(444)
-		Assert(ins.BeforeOpen() is: true)
+		Assert(ins.BeforeOpen())
 		Assert(ins.PreviewLimiter_destroyed is: #(222))
 		Assert(ins.PreviewLimiter_queue is: #(111, 444))
 		ins.Add(111)
-		Assert(ins.BeforeOpen() is: true)
+		Assert(ins.BeforeOpen())
 		Assert(ins.PreviewLimiter_destroyed is: #(222))
 		Assert(ins.PreviewLimiter_queue is: #(444, 111))
 		ins.Add(333)
@@ -67,13 +67,13 @@ Test
 
 		// test deleting a disabled window
 		ins.Remove(444)
-		Assert(ins.BeforeOpen() is: true)
+		Assert(ins.BeforeOpen())
 		Assert(ins.PreviewLimiter_destroyed is: #(222, 444))
 		Assert(ins.PreviewLimiter_queue is: #(111, 333))
 
 		// test adding one more window
 		ins.Add(555)
-		Assert(ins.BeforeOpen() is: true)
+		Assert(ins.BeforeOpen())
 		Assert(ins.PreviewLimiter_destroyed is: #(222, 444, 111))
 		Assert(ins.PreviewLimiter_queue is: #(333, 555))
 		}

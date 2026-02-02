@@ -67,7 +67,7 @@ Test
 				}
 			}
 		c = new test_class(table)
-		c.SetTable(table)
+		c.SetTable('/* tableHint: */ ' $ table)
 
 		r = Record(a: 1, b: 2, c: 3)
 

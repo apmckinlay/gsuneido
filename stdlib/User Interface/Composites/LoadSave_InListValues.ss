@@ -14,8 +14,7 @@ class
 		{
 		if false is name =  (.save_dialog)(hwnd, fieldSaveName)
 			return
-		if not QueryEmpty?('params
-			where report is ' $ Display("InlistValues - " $ name))
+		if not QueryEmpty?('params', report: "InlistValues - " $ name)
 			QueryDo('update params
 				where report is ' $ Display("InlistValues - " $ name) $
 				' set params = ' $ Display(values) $

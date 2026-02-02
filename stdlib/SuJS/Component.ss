@@ -493,6 +493,14 @@ class
 		.SetStyles(Object(width: w $ 'px', height: h $ 'px'))
 		}
 
+	GetDimension()
+		{
+		if .El is false
+			return #(scrollWidth: 0, scrollHeight: 0, clientWidth: 0, clientHeight: 0)
+		return Object(scrollWidth: .El.scrollWidth, scrollHeight: .El.scrollHeight,
+			clientWidth: .El.clientWidth, clientHeight: .El.clientHeight)
+		}
+
 	mouseTracking?: false
 	StartMouseTracking(mouseupCB, mousemoveCB = false)
 		{

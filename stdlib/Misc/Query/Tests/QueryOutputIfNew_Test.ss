@@ -7,12 +7,12 @@ Test
 			rec = [a: 1, b: 2, c: 3, d: 4])
 		Assert(QueryOutputIfNew(table, rec) is: false)
 		rec = [a: 1, b: 22, c: 3, d: 4]
-		Assert(QueryOutputIfNew(table, rec) is: true)
+		Assert(QueryOutputIfNew(table, rec))
 		}
 	Test_empty_key()
 		{
 		table = .MakeTable("(a,b,c) key()")
-		Assert(QueryOutputIfNew(table, []) is: true)
+		Assert(QueryOutputIfNew(table, []))
 		Assert(QueryOutputIfNew(table, []) is: false)
 		}
 	}

@@ -7,47 +7,45 @@ Md_Code
 		}
 
 	requiredSymbolN: 3
-	Match(line)
+	Match(line, start)
 		{
-		if false is indentN = .IgnoreLeadingSpaces(line)
+		if false is indentN = .IgnoreLeadingSpaces(line, start)
 			return false
 
-		line = line[indentN..]
 		symbol = false
-		if .requiredSymbolN <= symbolN = .CountLeadingChar(line, '`')
+		if .requiredSymbolN <= symbolN = .CountLeadingChar(line, start+indentN, '`')
 			symbol = '`'
-		else if .requiredSymbolN <= symbolN = .CountLeadingChar(line, '~')
+		else if .requiredSymbolN <= symbolN = .CountLeadingChar(line, start+indentN, '~')
 			symbol = '~'
 		else
 			return false
 
-		info = line[symbolN..].Trim()
+		info = line[start+indentN+symbolN..].Trim()
 		if symbol is '`' and info.Has?('`')
 			return false
 
 		return new this(info, indentN, symbol, symbolN)
 		}
 
-	Continue(line)
+	Continue(line, start)
 		{
-		if false isnt n = .IgnoreLeadingSpaces(line)
+		if false isnt n = .IgnoreLeadingSpaces(line, start)
 			{
-			if .symbolN <= m = .CountLeadingChar(line[n..], .symbol)
+			if .symbolN <= m = .CountLeadingChar(line, start+n, .symbol)
 				{
-				if .BlankLine?(line[n+m..])
+				if .BlankLine?(line, start+n+m)
 					.Close()
 				}
 			}
-		return line
+		return line, start
 		}
 
-	Add(line)
+	Add(line, start)
 		{
 		if .Closed?
 			return
 
-		n = .CountLeadingChar(line, ' ')
-		line = line[Min(.indentN, n)..]
-		super.Add(line)
+		n = .CountLeadingChar(line, start, ' ')
+		super.Add(line, start+Min(.indentN, n))
 		}
 	}

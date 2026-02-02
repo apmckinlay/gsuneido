@@ -506,11 +506,6 @@ Controller
 		return false
 		}
 
-	VirtualList_AllowNextRowWithoutSave()
-		{
-		return true
-		}
-
 	VirtualList_AllowMove(rec)
 		{
 		return false isnt .Send('LineItem_AllowMove', :rec)

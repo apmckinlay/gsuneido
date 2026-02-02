@@ -14,6 +14,6 @@ ChooseDateControl
 
 	DisplayValues(control /*unused*/, vals)
 		{
-		return vals.Map({ DateControl.FormatValue(it, showTime:) })
+		return vals.Map({ DateControl.FormatValue(it, showTime:, fromSet:) })
 		}
 	}

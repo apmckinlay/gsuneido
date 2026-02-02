@@ -117,6 +117,9 @@ PassthruController
 		if .id
 			.ops_org = Object(emptyValue, "equals", "not equal to", "empty",
 				"not empty", "in list", "not in list")
+		else if control.GetDefault(#forImage?, false) is true
+			.ops_org = Object(emptyValue, "empty", "not empty",
+				"contains", "does not contain")
 		else if control[0] is 'ChooseDates'
 			.ops_org = Object(emptyValue, "equals", "not equal to", "empty", "not empty",
 				"contains", "does not contain")
@@ -148,10 +151,7 @@ PassthruController
 		control.mandatory = true
 		.control = control
 		control.readonly = false
-		ctrlName = not control[0].Suffix?('Control')
-			? control[0] $ 'Control'
-			: control[0]
-		if control[0] is 'Key' or Global(ctrlName).Base?(KeyControl)
+		if control[0] is 'Key' or GetControlClass.FromControl(control).Base?(KeyControl)
 			{
 			control.filterOnEmpty = false
 			control.saveInfoName = field
@@ -203,6 +203,9 @@ PassthruController
 		// Editor is overkill for params anyway
 		if control[0] in ("Editor", "ScintillaAddonsEditor", "CourierEditor")
 			control = Object('Field', width: 30, xstretch: 1)
+		else if control[0] in ('OpenImageWithLabels', 'OpenImage')
+			control = Object('Field', forImage?:, width: 30, xstretch: 1)
+
 		if control[0] is 'RadioButtons'
 			control = .convertRadioButtonsToChooseList(control)
 		if control[0].Has?('Static')

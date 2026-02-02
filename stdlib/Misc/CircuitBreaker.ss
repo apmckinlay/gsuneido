@@ -39,8 +39,19 @@ class
 		if service.Has?('@')
 			service = service.BeforeFirst('@')
 		allCircuitBreaks = GetContributions(#CircuitBreakerConfig)
-		config = allCircuitBreaks.GetDefault(service, #()).Copy()
-		return config
+		config = allCircuitBreaks.GetDefault(service, #())
+		if config.Empty?()
+			{
+			for fn in Contributions('CircuitBreakerConfigOverride')
+				{
+				config = fn(service)
+				if Object?(config) and not config.Empty?()
+					break
+				}
+			if not Object?(config)
+				config = #()
+			}
+		return config.Copy()
 		}
 
 	GetConfig()

@@ -9,6 +9,11 @@ function (x1, y1)
 				name: 'file')))
 	if image is false or image.file is ''
 		return false
+	if false is FileExists?(image.file)
+		{
+		Alert("The file selected cannot be found")
+		return false
+		}
 	if false is image.file.AfterLast('.').Lower() in ('jpg', 'jpe', 'jpeg')
 		{
 		Alert("File format must be JPEG (ie. .jpg, .jpe, .jpeg)")

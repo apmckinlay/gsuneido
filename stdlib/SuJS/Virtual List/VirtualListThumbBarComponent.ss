@@ -61,6 +61,8 @@ Component
 
 	mousemove(event)
 		{
+		if .Destroyed?()
+			return
 		rect = SuRender.GetClientRect(.ParentEl)
 		cursorX = event.clientX - rect.left
 		width = rect.width

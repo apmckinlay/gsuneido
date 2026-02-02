@@ -56,6 +56,32 @@ class
 			})
 		}
 
+	EncodeWithFormat(value, level = 0, indent = '\t')
+		{
+		return Object?(value)
+			? (value.HasNamed?()
+				? .encodeObjectWithFormat(value, level, indent)
+				: .encodeArrayWithFormat(value, level, indent))
+			: .encodeValue(value)
+		}
+
+	encodeArrayWithFormat(ob, level = 0, indent = '\t')
+		{
+		return '[' $
+			ob.Map({ '\n' $ indent.Repeat(level+1) $
+				.EncodeWithFormat(it, level+1, indent) }).Join(',') $ '\n' $
+			indent.Repeat(level) $ ']'
+		}
+
+	encodeObjectWithFormat(ob, level = 0, indent = '\t')
+		{
+		s = '{'
+		for m in ob.Members().Sort!()
+			s $= '\n' $ indent.Repeat(level+1) $ .encodeString(m) $ ': ' $
+				.EncodeWithFormat(ob[m], level+1, indent) $ ','
+		return s[..-1] $ '\n' $ indent.Repeat(level) $ '}'
+		}
+
 	//====================================================================================
 
 	errMsg: 'Invalid Json format'

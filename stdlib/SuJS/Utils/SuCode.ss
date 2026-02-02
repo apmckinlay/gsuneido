@@ -10,7 +10,7 @@ Singleton
 
 	Getter_Libraries()
 		{
-		libs = Libraries().Reverse!().Filter({ not it.Suffix?(#webgui) })
+		libs = Libraries().Reverse!()
 		if Instance?(this)
 			.Libraries = libs
 		return libs

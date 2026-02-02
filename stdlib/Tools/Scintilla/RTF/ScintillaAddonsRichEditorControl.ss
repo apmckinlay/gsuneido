@@ -1,5 +1,5 @@
 // Copyright (C) 2012 Suneido Software Corp. All rights reserved worldwide.
-ScintillaAddonsControl
+ScintillaAddonsEditorBaseControl
 	{
 	undoStyleBuffer: false
 	redoStyleBuffer: false
@@ -9,6 +9,7 @@ ScintillaAddonsControl
 	New(@args)
 		{
 		super(@.processArgs(args))
+		.textLimit = args.GetDefault('textLimit', false)
 		.SetWordChars(.wordChars)
 		// setting the lexer to use CONTAINER (instead of the default NULL)
 		// ensures that the SCN_STYLENEEDED message gets sent.
@@ -19,8 +20,6 @@ ScintillaAddonsControl
 		.SetModEventMask(.GetModEventMask() | SC.MOD_CONTAINER | SC.MOD_BEFOREDELETE)
 		.undoStyleBuffer = Stack()
 		.redoStyleBuffer = Stack()
-		if .readonly = args.GetDefault(#readonly, false)
-			.setBackground(GetSysColor(COLOR.BTNFACE))
 		}
 
 	processArgs(args)
@@ -280,26 +279,11 @@ ScintillaAddonsControl
 		.Send('ToggleFontButton', 'strikeout', .strikeout_state)
 		}
 
-	Hasfocus?: false
-	HasFocus?()
+	SetBackground(bgnd)
 		{
-		return .Hasfocus? or super.HasFocus?()
-		}
-
-	SetReadOnly(readOnly)
-		{
-		if .readonly
-			return
-		super.SetReadOnly(readOnly)
-		.setBackground(readOnly is true ? GetSysColor(COLOR.BTNFACE) : 0xffffff)
-		}
-
-	setBackground(bgnd)
-		{
-		.StyleSetBack(0, bgnd)
+		super.SetBackground(bgnd)
 		for style in SCIRT.Members()
 			.StyleSetBack(SCIRT[style], bgnd)
-		.StyleSetBack(SC.STYLE_DEFAULT, bgnd)
 		}
 
 	bold_state: false
@@ -637,5 +621,15 @@ ScintillaAddonsControl
 		{
 		return (((modType & SC.PERFORMED_UNDO) is SC.PERFORMED_UNDO) and
 			((modType & SC.MOD_INSERTTEXT) is SC.MOD_INSERTTEXT))
+		}
+
+	Valid?()
+		{
+		return ScintillaEditorValid(.Get(), .textLimit)
+		}
+
+	ValidData?(@args)
+		{
+		return ScintillaEditorValid(args[0], args.GetDefault('textLimit', false))
 		}
 	}

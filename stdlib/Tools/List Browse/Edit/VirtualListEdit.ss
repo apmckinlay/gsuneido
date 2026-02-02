@@ -119,6 +119,7 @@ class
 	ListEditWindow_Commit(col /*unused*/, row /*unused*/, dir, data, valid?,
 		unvalidated_val = '', readonly = false, dirty? = false)
 		{
+		.parent.Controller.Send('VirtualList_PreCommitCellValue', .rec)
 		.Editing = false
 		.editor = false
 		if dirty? and not readonly and .valueChanged?(valid?, unvalidated_val, data)
@@ -215,13 +216,9 @@ class
 		}
 	rowChanged(rowChange)
 		{
-		if false is .parent.Send(
-			'VirtualListGrid_SaveRecord', .parent.GetSelectedRecord())
-			{
-			if true is .parent.Send('VirtualListGrid_AllowNextRowWithoutSave')
-				return .moveNextRow?(rowChange)
+		if .model.AutoSave? is true and false is
+			.parent.Send('VirtualListGrid_SaveRecord', .parent.GetSelectedRecord())
 			return false
-			}
 		return .moveNextRow?(rowChange)
 		}
 	moveNextRow?(rowChange)

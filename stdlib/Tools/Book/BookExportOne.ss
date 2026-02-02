@@ -38,9 +38,12 @@ class
 		QueryApply(.book $ " where path = " $ Display(path) $
 			" sort order, name")
 			{|x|
+			_table = .book // needed by Asup
+			_path = x.path
+			_name = x.name
 			name = x.path $ "/" $ x.name
-			if (x.text.Prefix?('<'))
-				.f.Writeline(Asup(.imageLinks(x.text)))
+			if BookContent.Match(.book, x.text)
+				.f.Writeline(Asup(.imageLinks(BookContent.ToHtml(.book, x.text))))
 			else if x.path !~ "^/res\>" and x.text.Eval().Prefix?('<') // needs Eval
 				.f.Writeline(Asup(.imageLinks(x.text.Eval()))) // needs Eval
 			.process(name) // do children (if any)

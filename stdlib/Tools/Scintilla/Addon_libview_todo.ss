@@ -9,8 +9,9 @@ CodeViewAddon
 	Addon_RedirMethods()
 		{ return #(CheckCode_QualityChanged) }
 
+	Init_qctext: ''
 	InitialSet()
-		{ .set('') }
+		{ .set(.Init_qctext) }
 
 	prevQcText: ''
 	set(qcText)

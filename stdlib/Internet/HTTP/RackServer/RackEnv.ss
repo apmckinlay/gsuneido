@@ -17,17 +17,6 @@ class
 			}
 		}
 
-	ReadBody(block, chunkSize = 1024)
-		{
-		toRead = this.GetDefault('content_length', 0)
-		while toRead > 0
-			{
-			next = Min(toRead, chunkSize)
-			block(this['socket'].Read(next))
-			toRead -= next
-			}
-		}
-
 	// for test
 	Build(@args)
 		{

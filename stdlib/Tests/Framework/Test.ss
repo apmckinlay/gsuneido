@@ -1,10 +1,6 @@
 // Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-print(@args)
-{
-//Print(@args)
-}
 	CallClass(quiet = false, timeEachMethod? = false)
 		{
 		name = Display(this).BeforeFirst(' ')
@@ -188,7 +184,7 @@ print(@args)
 			QueryOutput(table, r)
 		return table
 		}
-	teardown_tables(_testname = "")
+	teardown_tables()
 		{
 		libs = Libraries()
 		resetCache? = false
@@ -200,7 +196,6 @@ print(@args)
 				{
 				resetCache? = true
 				ServerEval('Unuse', x.table)
-.print(testname, "teardown_tables")
 				}
 			try
 				Database("drop " $ x.table)
@@ -231,19 +226,14 @@ print(@args)
 	TestLibName()
 		{ return .testlib }
 
-	EnsureLibrary(lib, _testname = "")
+	EnsureLibrary(lib)
 		{
 		if not TableExists?(lib)
 			.makeLibrary(lib)
 		if ServerEval('Use', lib)
-			{
-.print(testname, "EnsureLibrary 1", lib)
-//StackTrace()
 			Unload()
-			}
 		else if lib is .testlib and Libraries().Last() isnt lib
 			{
-.print(testname, "EnsureLibrary 2", lib)
 			ServerEval('Unuse', lib)
 			ServerEval('Use', lib)
 			Unload()
@@ -402,7 +392,6 @@ print(@args)
 			Database('alter ' $ tableName $ ' drop (' $ field $ ')')
 			if unuseConfiglib?
 				{
-.print(_testname, "MakeCustomField")
 				ServerEval('Unuse', 'configlib')
 				Unload()
 				}
@@ -539,6 +528,8 @@ print(@args)
 
 	WatchTable(table)
 		{
+		// The WatchTable('suneidolog') is now supported by GetSuneidoLog()
+		Assert(table isnt 'suneidolog')
 		watchMember = 'TestWatchTable_' $ table $ .TempName()
 		ServerSuneido.Set(watchMember, Object())
 		.AddTeardown({.teardownWatchTable(table, watchMember) })
@@ -548,6 +539,12 @@ print(@args)
 		ServerEval("LibraryOverride", .testlib, trigger, code)
 		return watchMember
 		}
+
+	GetSuneidoLog()
+		{
+		return ServerSuneido.Get('TestRunningLogs', #())
+		}
+
 	teardownWatchTable(table, watchMember)
 		{
 		recs = ServerSuneido.Get(watchMember, Object())
@@ -661,6 +658,7 @@ print(@args)
 				(.teardownsAfterEachMethod[i])()
 			}
 		.teardownsAfterEachMethod = Object()
+		ServerSuneido.DeleteMember('TestRunningLogs')
 		}
 	AddTeardown(@args)
 		{
@@ -701,25 +699,8 @@ print(@args)
 		}
 	cleanUp()
 		{
-		if not .suneidolog_exists?
-			{
-			if TableExists?('suneidolog')
-				Database('destroy suneidolog')
-			}
-		else
-			{
-			for l in ServerSuneido.Get('TestRunningLogs', #())
-				{
-				QueryApply1('suneidolog', sulog_timestamp: l)
-					{ |rec|
-					if rec.sulog_message.Prefix?('ERROR') and
-						not rec.sulog_message.Has?('CAUGHT') and
-						not Database.SessionId().Has?("continuous_tests")
-						Print(rec)
-					rec.Delete()
-					}
-				}
-			ServerSuneido.DeleteMember('TestRunningLogs')
-			}
+		if not .suneidolog_exists? and TableExists?('suneidolog')
+			Database('destroy suneidolog')
+		ServerSuneido.DeleteMember('TestRunningLogs')
 		}
 	}

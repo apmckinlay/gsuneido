@@ -17,7 +17,8 @@ class
 		err = errMsg.Has?('<Message>')
 			? errMsg.AfterFirst('<Message>').BeforeFirst('</Message>')
 			: errMsg
-		.AddToLog(logType $ classId $ ': ' $ msg $ ' - ' $ err, :caughtMsg)
+		.AddToLog(logType $ classId $ ': ' $ msg $ ' - ' $ err, classId, :caughtMsg)
+		.updateLogCount(classId)
 		}
 
 	errorMatched?(errMsg, errorOb)
@@ -32,9 +33,7 @@ class
 	CalcNumberOfConnectionErrs(classId, errorOb, errMsg)
 		{
 		if .errorMatched?(errMsg, errorOb)
-			return QueryCount('suneidolog where
-				sulog_timestamp > ' $ Display(Date().Plus(hours: -24)) $
-				' and sulog_message =~ ' $ Display(classId))
+			return ServerSuneido.Get(.idPrefix $ classId, #(0))[0]
 		else
 			return 0
 		}
@@ -42,5 +41,26 @@ class
 	AddToLog(msg, caughtMsg = '')
 		{
 		SuneidoLog(msg, :caughtMsg)
+		}
+
+	idPrefix: 'ConnectionHandler-'
+	updateLogCount(classId)
+		{
+		id = .idPrefix $ classId
+		.resetIfNeeded(id)
+		log = ServerSuneido.Get(id)
+		ServerSuneido.Set(id, Object(log[0] + 1, createdAt: log.createdAt))
+		}
+
+	resetIfNeeded(id)
+		{
+		if not ServerSuneido.HasMember?(id) or .getCountDuration(id) > 24 /*=hours*/
+			ServerSuneido.Set(id, Object(0, createdAt: Date()))
+		}
+
+	getCountDuration(id)
+		{
+		return Date().MinusHours(ServerSuneido.Get(id, #()).GetDefault('createdAt',
+			Date()))
 		}
 	}

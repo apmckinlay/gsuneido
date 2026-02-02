@@ -26,13 +26,6 @@ Test
 		svcTable.Output([name: #one, parent: 1])
 		svcTable.Output([name: #two, parent: 1])
 		svcTable.Output([name: #nested_folder, parent: 1, group: 1])
-		svcTable.Output([name: #Test_SuppressedRecord, parent: 0, group: -1,
-			text: `function () { /*Do nothing*/ }`])
-		svcTable.Output([
-			name: table.Capitalize() $ #_CheckLibrarySuppressions,
-			parent: 0,
-			group: -1,
-			text: `#(Test_SuppressedRecord)`])
 
 		svcLib = svcLibrary(table)
 		f = {|name, type| svcLib.CheckRecord(name, type) }
@@ -58,9 +51,6 @@ Test
 		rec.name = 'wrongName'
 		rec.text = 'if true {i =5 }; Print(i)'
 		Assert(f(rec, '') is: #('invalid fizz'))
-
-		rec.name = 'Test_SuppressedRecord'
-		Assert(f(rec, '') is: #('suppressed'))
 		}
 
 	Test_checkName()

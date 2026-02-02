@@ -125,9 +125,10 @@ Addon_VirtualListViewBase
 
 	On_Count()
 		{
-		if false is .Select_Apply()
-			return
-		AccessControl.GetCount(.GetTitle(), .GetQuery())
+		if .Filtersontop is false or
+			(.topFilters isnt false and .Select_Apply()) or
+			(.Filtersontop and .topFilters is false)
+			AccessControl.GetCount(.GetTitle(), .GetQuery())
 		}
 
 	Select_Apply()

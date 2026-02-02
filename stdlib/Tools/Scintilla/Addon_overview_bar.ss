@@ -34,7 +34,7 @@ CodeViewAddon
 		for ovbar in .ovbars
 			{
 			ovbar.SetNumRows(.GetLineCount())
-			ovbar.SetMaxRowHeight(.TextHeight(), scaled?:)
+			ovbar.SetMaxRowHeight(.Parent, #TextHeight, scaled?:)
 			}
 		}
 

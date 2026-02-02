@@ -9,7 +9,6 @@ EditControl
 	DefaultHeight: 4
 	Hasfocus?:	false
 
-	textLimit: 30000 // the default Edit Control text limit
 	New(style = 0, .readonly = false, .font = "", .size = "", .zoom = false,
 		mandatory = false, set = "", height =  false, .tabthrough = false,
 		hidden = false, tabover = false, width = false, weight = false,
@@ -27,7 +26,7 @@ EditControl
 		.AddContextMenuItem("Print...\tCtrl+P", .On_Print)
 		if .zoom is false
 			.AddContextMenuItem("Zoom...\tF6", .On_Zoom)
-		.SendMessage(EM.SETLIMITTEXT, .textLimit, 0)
+		.SendMessage(EM.SETLIMITTEXT, EditorTextLimit, 0)
 		}
 
 	tabthrough: false
@@ -106,7 +105,7 @@ EditControl
 	findNextPrev(prev = false)
 		{
 		if .findreplacedata.find.Blank?()
-			return
+			return false
 		from = .GetSel()[prev ? 0 : 1]
 		if false is match = Find.DoFind(super.Get(), from, .findreplacedata, :prev)
 			return false
@@ -129,13 +128,13 @@ EditControl
 	Set(value)
 		{
 		value = String(value)
-		value = value.Replace("\n", "\r\n")
-		if value.Size() > .textLimit
+		if value.Size() > EditorTextLimit
 			{
 			ProgrammerError('EditorControl Set value is over limit',
 				params: Object(size: value.Size(), name: .Name))
-			value = value[::.textLimit - 3/*=size of '...'*/] $ '...'
+			value = value[::EditorTextLimit - 3/*=size of '...'*/] $ '...'
 			}
+		value = value.Replace("\n", "\r\n")
 		SetWindowText(.Hwnd, value)
 		.Dirty?(false)
 		}

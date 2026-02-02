@@ -47,7 +47,9 @@ class
 		Func(bucket, file)
 			{
 			// temp files will be cleaned up by scheduled task
-			tmp = GetAppTempFullFileName() $ '.' $ file.AfterLast('.')
+			tmpPath = Paths.Combine(GetAppTempPath(), String(Timestamp()).Tr('#.'))
+			EnsureDir(tmpPath)
+			tmp = Paths.Combine(tmpPath, Paths.Basename(file))
 			region = AmazonS3.GetBucketLocationCached(bucket)
 			AmazonS3.GetFile(bucket, file, tmp, :region)
 			return tmp
@@ -67,17 +69,44 @@ class
 		return res
 		}
 
-	SaveFile(localFile)
+	SaveFile(file, dest = false)
 		{
 		if '' is bucket = AttachmentS3Bucket()
-			return OpenImageSelect.ResultFile(localFile, useSubFolder:)
+			return dest is false
+				? OpenImageSelect.ResultFile(file, useSubFolder:)
+				: true is CopyFile(file, dest, false)
+					? dest
+					: false
 
-		copyfolder = OpenImageSelect.SubFolder()
-		fileBasename = Paths.Basename(localFile)
-		dest = OpenImageSelect.GetCopyToFilename(copyfolder, fileBasename)
-		region = AmazonS3.GetBucketLocationCached(bucket)
-		if true is AmazonS3.PutFile(bucket, localFile, dest, :region)
-			return dest
-		return false
+		if dest is false
+			{
+			copyfolder = OpenImageSelect.SubFolder()
+			fileBasename = Paths.Basename(file)
+			dest = OpenImageSelect.GetCopyToFilename(copyfolder, fileBasename)
+			}
+
+		dest = FormatAttachmentPath(dest)
+		if false is s3Info = .s3?(file) // file is local
+			{
+			region = AmazonS3.GetBucketLocationCached(bucket)
+			if true is AmazonS3.PutFile(bucket, file, dest, :region)
+				return dest
+			return false
+			}
+		else // file is already on s3
+			{
+			if true is AmazonS3.CopyFile(bucket, s3Info.file, bucket, dest)
+				return dest
+			return false
+			}
+		}
+
+	Dir(path, files = false, details = false)
+		{
+		if false is s3Info = .s3?(path)
+			return Dir(path, :files, :details)
+
+		s3Path = FormatAttachmentPath(path)
+		return AmazonS3.Dir(s3Info.bucket, s3Path, :details)
 		}
 	}

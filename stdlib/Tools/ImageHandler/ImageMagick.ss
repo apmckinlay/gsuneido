@@ -259,8 +259,13 @@ class
 
 	runWithErrorChecking(block)
 		{
-		errPattern = '(?i)(Access is denied|The user name or password is incorrect|' $
-			'Please try again later)'
+		handledErrors = #(
+			'Access is denied'
+			'The user name or password is incorrect'
+			'Please try again later'
+			'This program is blocked by group policy'
+			)
+		errPattern = '(?i)(' $ handledErrors.Join('|') $ ')'
 		try
 			{
 			res = block()
@@ -279,7 +284,8 @@ class
 				msg = 'There was a problem accessing ImageMagick \r\n\r\n' $
 					'Please contact your system administrator'
 				Alert(msg, title: 'Access Denied', flags: MB.ICONERROR)
-				SuneidoLog('ERROR: (CAUGHT) ' $ err, caughtMsg: 'Alerted user', call:)
+				SuneidoLog('ERROR: (CAUGHT) ImageMagickAccessError:' $ err,
+					caughtMsg: 'Alerted user to contact their system administrator')
 				return errRes
 				}
 			throw err

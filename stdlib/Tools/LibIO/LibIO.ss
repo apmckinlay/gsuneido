@@ -24,7 +24,7 @@ class
 			}
 		}
 
-	exportBookRec(rec, lib/*unused*/, path)
+	exportBookRec(rec, lib, path)
 		{
 		header = rec.name $ '\r\n'
 
@@ -38,18 +38,18 @@ class
 		if path =~ "^/res\>"
 			rec.text = Base64.EncodeLines(rec.text) $ '\r\n'
 
-		info = .add_book_recinfo(rec)
+		info = .add_book_recinfo(rec, lib)
 		return header $ rec.text $ info $ '\r\n'
 		}
 
-	add_book_recinfo(rec)
+	add_book_recinfo(rec, lib)
 		{
 		if rec.lib_modified is '' and rec.lib_committed is ''
 			return ''
 		info =  ' lib_modified: ' $ String(rec.lib_modified) $
 			', lib_committed: ' $ String(rec.lib_committed)
 
-		return rec.text.Prefix?('<')
+		return BookContent.Match(lib, rec.text)
 			? '<!--' $ info $ '-->'
 			: '//' $ info
 		}

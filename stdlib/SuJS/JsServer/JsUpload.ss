@@ -26,11 +26,16 @@ class
 		try
 			File(saveName, 'w')
 				{ |f|
-				env.socket.CopyTo(f, env.GetDefault(#content_length, false))
+				len = env.GetDefault(#content_length, false)
+				n = env.socket.CopyTo(f, len)
+				if len isnt false
+					Assert(len is: n, msg: 'content length not match')
 				}
 		catch (e)
 			{
 			SuneidoLog('INFO: JsUpload: ' $ e, params: [:fileName, :saveName])
+			// prevent reusing the issue socket
+			env.connection = 'close'
 			return #('BadRequest', 'Upload file failed')
 			}
 		return saveName

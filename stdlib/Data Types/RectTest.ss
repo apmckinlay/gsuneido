@@ -140,7 +140,7 @@ Test
 				{
 				if rc1 is rc2
 					{
-					Assert(rc1.Overlaps?(rc2) is: true)
+					Assert(rc1.Overlaps?(rc2))
 					}
 				else
 					{

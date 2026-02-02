@@ -26,19 +26,11 @@ class
 			: data.screenshot_file
 		jpg = screenshotName.Replace('png$', 'jpg')
 
-		Spawn(P.WAIT, 'imagemagick_convert', bmp, '-quality', '100', jpg)
-		Spawn(P.WAIT, 'imagemagick_convert', jpg,
-			'-quality', '75',
-			'-quantize', 'RGB',
-			'-define', 'png:bit-depth=8',
-			'-define', 'png:compression-filter=4',
-			'-define', 'png:compression-level=9',
-			'-define', 'png:compression-strategy=1',
-			'-define', 'png:include-chunk=none',
-			'-strip',
-			screenshotName)
-		Spawn(P.WAIT, 'pngquant.exe', '--force', '--speed', '1', '--quality', '80',
-			'--output', screenshotName, screenshotName)
+		magick = OptContribution('ImageMagickApp', { 'magick' })()
+		Spawn(P.WAIT, magick, bmp, '-strip',
+			'-dither', 'FloydSteinberg', // Dithering method
+			'-colors', '256', // Reduce to 8-bit palette (similar to pngquant)
+			'-depth', '8', '-define', 'png:compression-level=9', screenshotName)
 
 		table = Suneido.CurrentBook $ 'Help'
 		if data.screenshot_name isnt ''

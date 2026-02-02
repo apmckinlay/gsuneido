@@ -3,7 +3,7 @@ class
 	{
 	Init(wsHandler, token, key)
 		{
-		Suneido.SuRenderBackend = new this(wsHandler, token)
+		Suneido.SuRenderBackend = new this(wsHandler, token, key)
 		JsSessionToken.Register(token, key)
 		}
 
@@ -20,7 +20,7 @@ class
 
 	InErrorHandler: false
 	pageVisible?: false
-	New(.WSHandler, .Token)
+	New(.WSHandler, .Token, .Key)
 		{
 		.controls = Object()
 		.status = Object().Set_default(false)
@@ -58,8 +58,8 @@ class
 			for event in events
 				s $= EventRecorder.Format(event) $ '\r\n'
 
-			path = GetContributions('LogPaths').sujslog
-			Rlog(path, s, multi_line:)
+			if false isnt path = GetContributions('LogPaths').GetDefault(#sujslog, false)
+				Rlog(path, s, multi_line:)
 			}
 		catch (e)
 			SuneidoLog('ERROR: (CAUGHT) SuRenderBackend.DumpStatus - ' $ e,

@@ -909,22 +909,23 @@ VirtualListModelTests
 	Test_ValidateRow()
 		{
 		mock = Mock(VirtualListModel)
+		mock.When.ValidateRow([anyArgs:]).CallThrough()
 		mock.VirtualListModel_data = []
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, 0) is: false)
+		Assert(mock.ValidateRow(0) is: false)
 
 		mock.VirtualListModel_data = [0, 1, 2, 3, 4, 5]
 		mock.VirtualListModel_curTop = Object(Pos: 0)
 		mock.VirtualListModel_curBottom = Object(Pos: 6)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, -1) is: false)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, 0) is: 0)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, 3) is: 3)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, 5) is: 5)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, 6) is: false)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, -1, true) is: 0)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, 0, true) is: 0)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, 3, true) is: 3)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, 5, true) is: 5)
-		Assert(mock.Eval(VirtualListModel.VirtualListModel_validateRow, 6, true) is: 5)
+		Assert(mock.ValidateRow(-1) is: false)
+		Assert(mock.ValidateRow(0) is: 0)
+		Assert(mock.ValidateRow(3) is: 3)
+		Assert(mock.ValidateRow(5) is: 5)
+		Assert(mock.ValidateRow(6) is: false)
+		Assert(mock.ValidateRow(-1, true) is: 0)
+		Assert(mock.ValidateRow(0, true) is: 0)
+		Assert(mock.ValidateRow(3, true) is: 3)
+		Assert(mock.ValidateRow(5, true) is: 5)
+		Assert(mock.ValidateRow(6, true) is: 5)
 		}
 
 	Test_recPos()

@@ -156,8 +156,8 @@ Test
 		Assert(#().HasNonEmptyMember?(fields) is: false)
 		Assert(#(c: 1).HasNonEmptyMember?(fields) is: false)
 		Assert(#(b: '').HasNonEmptyMember?(fields) is: false)
-		Assert([a: '', b: 1].HasNonEmptyMember?(fields) is: true)
-		Assert(#(a: '', b: 1).HasNonEmptyMember?(fields) is: true)
+		Assert([a: '', b: 1].HasNonEmptyMember?(fields))
+		Assert(#(a: '', b: 1).HasNonEmptyMember?(fields))
 		}
 	Test_Project()
 		{
@@ -291,8 +291,8 @@ Test
 	Test_BinarySearch?()
 		{
 		ob = #(1, 2, 3)
-		Assert(ob.BinarySearch?(2) 		is: true)
-		Assert(ob.BinarySearch?(3) 		is: true)
+		Assert(ob.BinarySearch?(2))
+		Assert(ob.BinarySearch?(3))
 		Assert(ob.BinarySearch?(1.5) 	is: false)
 		Assert(ob.BinarySearch?(4) 		is: false)
 		}

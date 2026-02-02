@@ -25,22 +25,30 @@ Controller
 
 	Controls()
 		{
+		.contentType = BookContent.Type(.table)
+		toolbar = Object("Toolbar"
+			"New_Item", "Delete_Item" "",
+			"Undo", "Redo", "", "Cut", "Copy", "Paste", "",
+			"Refresh", "Run", "",
+			"Find", "",
+			"Find_in_Folders", "Find_Next_in_Folders", "Find_Previous_in_Folders",
+			"")
+		if .contentType is #html
+			toolbar.Add("H1", "H2", "H3", "H4", "P", "LI", "DT", "DD", "PRE", "")
+		toolbar.Add("Bold", "Italic", "Underline", "Code", "Link", "Add_Image_Tag",
+			"Goto", ""
+			"Find_References_to_Current", "Version_History")
+		extraAddons = .contentType is #html
+			? #()
+			: #(Addon_html_edit: false, Addon_md_edit:, Addon_html: false, Addon_md:)
 		return Object('Vert',
 			Object('Horz'
-				#(Toolbar
-					New_Item Delete_Item "",
-					Undo, Redo, "", Cut, Copy, Paste, "",
-					Refresh, Run, "",
-					Find, "",
-					Find_in_Folders Find_Next_in_Folders Find_Previous_in_Folders, "",
-					H1, H2, H3, H4, P, LI, DT, DD, PRE, "",
-					Bold, Italic, Underline, Code, Link, Add_Image_Tag, Goto, ""
-					Find_References_to_Current, Version_History)
+				toolbar,
 				Object("BookEditLocate", .table) #(Skip small:)),
 			#(EtchedLine before: 0),
 			Object('ExplorerMulti',
 				Object('BookEditModel', .table),
-				Object('BookEditSplit'),
+				Object('BookEditSplit', :extraAddons),
 				treeArgs: [inorder:]),
 			ystretch: 1)
 		}
@@ -63,7 +71,7 @@ Controller
 	editorRedirs: #(On_Find, On_Find_Next, On_Find_Previous, On_Replace,
 		On_Go_To_Definition, On_Link, On_Add_Paragraph_Tags, On_H1, On_H2,
 		On_H3, On_H4, On_P, On_LI, On_DT, On_DD, On_PRE, On_Bold, On_Italic,
-		On_Underline, On_Code)
+		On_Underline, On_Code, On_Add_Image_Tag)
 	SetRedirs()
 		{
 		.viewRedirs.Each({ .Redir(it, .View) })
@@ -148,9 +156,9 @@ Controller
 		(Find_References_to_Current, 	"Ctrl+R",		"Find References to Current", R)
 		)
 
-	Menu:
-		(
-		("&File",
+	Menu()
+		{
+		file = #("&File",
 			"&New Item", "&Delete Item", "",
 			"Import Ima&ge...", "Export Image...", "",
 			"Export &Single Html File...", "Export &Multiple Html Files...", "",
@@ -158,23 +166,25 @@ Controller
 			"&Build How To Index", "Build Ftsearch Index", "",
 			"&Close"
 			)
-		("&Edit",
+		edit = #("&Edit",
 			"&Undo", "&Redo", "", "Cu&t", "&Copy", "&Paste", "&Delete", "",
 			"&Find...", "Find &Next", "Find &Previous", "R&eplace...", "",
 			"Find &in Folders", "Find Next in Folders", "Find Previous in Folders", "",
 			"&Insert File..."
 			)
-		("F&ormat"
-			"H&1", "H&2", "H&3", "H&4", "&P", "LI", "D&T", "D&D", "P&RE", "",
-			"&Bold", "&Italic", "&Underline", "&Code", "&Link", "Add Image Tag", "",
-			"&Add Paragraph Tags",
-			)
-		("&Tools"
+		format = Object("F&ormat")
+		if .contentType is #html
+			format.Add("H&1", "H&2", "H&3", "H&4", "&P", "LI", "D&T", "D&D", "P&RE", "")
+		format.Add("&Bold", "&Italic", "&Underline", "&Code", "&Link", "Add Image Tag")
+		if .contentType is #html
+			format.Add("", "&Add Paragraph Tags")
+		tools = #("&Tools"
 			"Refresh", "",
 			"Set &Order...", "Unorder Children", "&Renumber Children", "",
 			"Run", "Open Book"
 			)
-		)
+		return Object(file, edit, format, tools)
+		}
 
 	On_Context_New()
 		{ .Explorer.On_New_Folder() }
@@ -206,14 +216,6 @@ Controller
 		if '' isnt (filename = OpenFileName(title: 'Insert File')) and
 			false isnt (text = GetFile(filename))
 			.Editor.Paste(text)
-		}
-
-	On_Add_Image_Tag()
-		{
-		if .Editor is false
-			return
-		text = .Editor.GetSelText()
-		.Editor.Paste("<img src=\"suneido:/" $ .table $ '/res/' $ text $ '" />')
 		}
 
 	On_Set_Order()
@@ -350,7 +352,10 @@ Controller
 		{ .Explorer.On_Save() }
 
 	Inactivate()
-		{ .Explorer.Inactivate() }
+		{
+		if not .Destroyed?()
+			.Explorer.Inactivate()
+		}
 
 	Goto(address)
 		{ .Explorer.GotoPath("Help" $ ((address =~ "^/") ? "" : "/") $ address) }

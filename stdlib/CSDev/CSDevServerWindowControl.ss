@@ -65,7 +65,7 @@ Controller
 		menuBar.Add(
 			Object('MenuButton' 'Tools', tools),
 			#Fill, #(Button Clear),
-			#Fill, #(MenuButton Close #(Close, 'Close and Compact',
+			#Fill, #(MenuButton Close #(Close, 'Close and Compact', 'Restart',
 				'Regenerate Dev Files'))
 			)
 		return menuBar
@@ -89,6 +89,8 @@ Controller
 			{
 		case 'Close and Compact':
 			.closeAndCompact()
+		case 'Restart':
+			IDESwitchMode(standalone: false, defaultPort: ServerPort())
 		case 'Regenerate Dev Files':
 			.closeAndRegen()
 		default:
@@ -108,11 +110,11 @@ Controller
 		{
 		serverPostRun = Object('set errormsg=""')
 		// sleep to ensure server is shut down
-		serverPostRun.Add('sleep 5')
+		serverPostRun.Add('timeout /T 5 /NOBREAK > NUL')
 		if .serverPostRunExtra isnt false
 			serverPostRun.Add(@.serverPostRunExtra)
 		serverPostRun.Add(':final', 'exit',
-			':error', 'echo %errormsg%')
+			':error', 'echo %errormsg%', 'del ' $ .serverPostRunfile)
 		PutFile(.serverPostRunfile, serverPostRun.Join('\r\n'))
 		SystemNoWait(.serverPostRunfile)
 		}
@@ -145,7 +147,7 @@ Controller
 
 	closeAndRegen()
 		{
-		GDevCreateFiles()
+		IDESwitchMode.CreateFiles(ServerPort())
 		.close()
 		}
 
@@ -160,12 +162,11 @@ Controller
 		{
 		if .libs isnt curLibs = Libraries()
 			{
-			diff = curLibs.Difference(.libs)
 			.libs = curLibs
 			Unload()
 			ResetCaches()
 			LibraryTags.Reset()
-			ServerEval('CSDevServerWindow.DoExtraSetups', diff)
+			ServerEval('CSDevServerWindow.DoExtraSetups')
 			}
 		}
 	killTimer()

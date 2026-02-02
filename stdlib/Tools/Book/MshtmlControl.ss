@@ -5,11 +5,10 @@ Container
 	Xstretch:	1
 	Ystretch:	1
 
-	New(.text = '', .allowReadOnly = false, style = false)
+	New(.text = '', .allowReadOnly = false, .style = false)
 		{
 		.ctrl = .Construct(Object('WebBrowser', .convertValue(text)))
-		if style isnt false
-			.setStyle(style)
+		.setStyle()
 		.Send('Data')
 		}
 
@@ -37,9 +36,10 @@ Container
 			}
 		}
 
-	setStyle(style)
+	setStyle()
 		{
-		.ctrl.SetCssStyle(style)
+		if .style isnt false
+			.ctrl.SetCssStyle(.style)
 		}
 	x: false
 	Set(.text)
@@ -47,7 +47,10 @@ Container
 		// frequent setting could cause html not displaying
 		.Defer({
 			if not .Destroyed?()
+				{
 				.ctrl.Load(.convertValue(text))
+				.setStyle()
+				}
 			}, uniqueID: .Name)
 		}
 	Get()

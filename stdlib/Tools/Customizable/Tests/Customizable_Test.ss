@@ -221,14 +221,24 @@ Test
 
 	Test_DeleteField_setInternal()
 		{
-		fn = Customizable.Customizable_setInternal
+		cl = Customizable
+			{
+			Customizable_setDeleteDate()
+				{
+				return _date
+				}
+			}
+
+		_date = Display(Date())
+		fn = cl.Customizable_setInternal
 
 		text = "Field_num { ExcludeSelect: true }"
-		Assert(fn(text) is: 'Field_num {\n\tInternal: true\n\tExcludeSelect: true }')
+		Assert(fn(text) is: 'Field_num {\n\tInternal: true\n\tLastDelete: ' $ _date $
+			'\n\t' $ 'ExcludeSelect: true }')
 
 		text = "Field_num\n\t{\n\tExcludeSelect: true\n\t}"
-		Assert(fn(text) is:
-			'Field_num\n\t{\n\tInternal: true\n\tExcludeSelect: true\n\t}')
+		Assert(fn(text) is: 'Field_num\n\t{\n\tInternal: true\n\tLastDelete: ' $ _date $
+			'\n\t' $ 'ExcludeSelect: true\n\t}')
 
 		text = "Field_num\n\t{\n\tInternal: true\n\tPrompt: 'Test'\n\t}"
 		Assert(fn(text) is: false)

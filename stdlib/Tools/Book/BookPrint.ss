@@ -58,9 +58,10 @@ class
 		{
 		_name = x.name
 		_path = x.path
-		text = Asup(x.text)
-		if not text.Prefix?('<')
-			text = text.Eval() // needs Eval
+		text = BookContent.Match(.book, x.text)
+			? BookContent.ToHtml(.book, x.text)
+			: x.text.Eval() // needs Eval
+		text = Asup(text)
 		.f.Writeline(HtmlWrap.Embed(text))
 		}
 	}

@@ -62,7 +62,6 @@ class
 
 		// for TranslateLanguage Cache
 		Suneido.CacheLanguage = ""
-		Suneido.pdc = NULL
 		}
 
 	localeSettings()

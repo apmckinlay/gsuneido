@@ -14,7 +14,16 @@ Test
 			[name: 'Field_test_field_b',
 				text: 'Field_number { Prompt: "Test Field B" }'],
 			[name: 'Field_test_field_c',
-				text: 'Field_number { Prompt: "Test Field C" }'])
+				text: 'Field_number { Prompt: "Test Field C" }'],
+			[name: 'Field_test_field_key_num',
+				text: 'Field_num { Prompt: "Key" }'],
+			[name: 'Field_test_field_key_name',
+				text: 'Field_num { Prompt: "Key Name" }'],
+			[name: 'Field_test_field_key_abbrev',
+				text: 'Field_num { Prompt: "Key Abbrev" }'],
+			[name: 'Field_test_field_bogus_name',
+				text: 'Field_string { Prompt: "Not Associated to num field" }'])
+		.fieldAndPrompt = .MakeCustomField(.tranTable, 'Text, single line', .TempName())
 		.selectFields = SelectFields(QueryColumns(.tranTable), joins: false)
 		}
 
@@ -22,10 +31,21 @@ Test
 		'FormulaNeg(Object(type: "NUMBER", value: .test_field_b)))'
 	code2: 'FormulaCat(Object(type: "NUMBER", value: 12),' $
 		'Object(type: "STRING", value: " Dollars\r\n Amount"))'
-	code3: 'FormulaRate(FormulaIf({FormulaGt(Object(type: "NUMBER", value: .test_field_a),' $
+	code3: 'FormulaRate(FormulaIf({FormulaGt(' $
+		'Object(type: "NUMBER", value: .test_field_a),' $
 		'Object(type: "NUMBER", value: .test_field_b))},' $
-		'{Object(type: "NUMBER", value: .test_field_c)},{Object(type: "NUMBER", value: 1)}),' $
+		'{Object(type: "NUMBER", value: .test_field_c)},' $
+		'{Object(type: "NUMBER", value: 1)}),' $
 		'Object(type: "STRING", value: "unit"))'
+	code4: 'FormulaIf({Object(type: "BOOLEAN", value: true)},' $
+		'{Object(type: "STRING", value: .calc2025Formula)},' $
+		'{Object(type: "BOOLEAN", value: false)})'
+	code5()
+		{
+		return 'FormulaIf({Object(type: "BOOLEAN", value: true)},' $
+			'{Object(type: "STRING", value: .' $ .fieldAndPrompt.field $ ')},' $
+			'{Object(type: "BOOLEAN", value: false)})'
+		}
 	code(code, field)
 		{
 		return 'function()
@@ -83,6 +103,14 @@ Test
 			expected: #(err: 'Formula: Cannot use the reserved keyword is'))
 		.testTranslate('and', 'test_field',
 			expected: #(err: 'Formula: Cannot use the reserved keyword and'))
+
+		// test ensuring field exists
+		.testTranslate('IF(true, ThisIsGarbageField, false)', 'ThisFormulaFails',
+			expected: #(err: 'Formula: Cannot find: ThisIsGarbageField'))
+		.testTranslate('IF(true, calc2025Formula, false)', 'calc2025OtherFormula',
+			expected: .code(.code4, 'calc2025OtherFormula'))
+		.testTranslate('IF(true, ' $ .fieldAndPrompt.prompt $ ', false)',
+			'calc2025Formula', expected: .code(.code5(), 'calc2025Formula'))
 
 		.testTranslate('true', 'test_field',
 			expected: #(err: 'Formula: Test Field cannot assign <Boolean> to <Number>'))
@@ -209,5 +237,20 @@ Test
 		Assert(valid has: "custom_test")
 		Assert(valid hasnt: "custom_test2")
 		Assert(valid hasnt: "custom_test_readonly")
+		}
+
+	Test_fromSelectFieldsSplittingNameAbbrev()
+		{
+		func = CustomizeField.CustomizeField_fromSelectFieldsSplittingNameAbbrev
+		Assert(func('test_fake_field') is: false)
+		Assert(func('test_fake_num_field') is: false)
+		Assert(func('test_fake_name_field') is: false)
+		Assert(func('test_fake_abbrev_field') is: false)
+		Assert(func('firstname') is: false)
+		// nums are checked prior to this function
+		Assert(func('test_field_key_num') is: false)
+		Assert(func('test_field_key_name'))
+		Assert(func('test_field_key_abbrev'))
+		Assert(func('test_field_bogus_name') is: false) // No associated num for this
 		}
 	}

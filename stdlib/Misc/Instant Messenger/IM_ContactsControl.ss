@@ -29,7 +29,7 @@ Controller
 	columnsHistory: ("im_to", "im_status")
 	Controls()
 		{
-		.contactsImpl = SoleContribution('IM_ContactsImplementation')
+		.contactsImpl = LastContribution('IM_ContactsImplementation')
 		contactcolumns = .columnsContact.Copy()
 		if .contactsImpl.Member?('extraCols')
 			contactcolumns.MergeUnion(.contactsImpl.extraCols)

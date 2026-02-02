@@ -46,10 +46,10 @@ class
 		{
 		return .ftp.Ren(:oldName, :newName)
 		}
-RenSFTP(oldName, newName)
-	{
-	return .ftp.RenSFTP(:oldName, :newName)
-	}
+	RenSFTP(oldName, newName)
+		{
+		return .ftp.RenSFTP(:oldName, :newName)
+		}
 
 	Dir(path = "*.*", files = false, details = false, caseSense = false,
 		regExp = '', listOnly = true)

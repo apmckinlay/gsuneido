@@ -17,9 +17,7 @@ class
 
 	checkMessagesForSubscription(userName,messages)
 		{
-		subscriptionsForUser = Query1('user_settings',
-			key:'IM_SubscribedChannels' user: userName)
-
+		subs = UserSettingsCached().Get('IM_SubscribedChannels', #(), userName)
 		userMessages = messages.GetDefault(userName, #()).Copy()
 		for message in userMessages
 			{ // Checking for contact messages
@@ -28,12 +26,8 @@ class
 				{
 				return true
 				}
-			if subscriptionsForUser isnt false and
-				subscriptionsForUser.value.Has?(Date(message.GetDefault(
-					#imchannel_num, false)))
-				{
+			if subs.Has?(Date(message.GetDefault(#imchannel_num, false)))
 				return true
-				}
 			}
 		return false
 		}

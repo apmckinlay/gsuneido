@@ -9,6 +9,11 @@ ScintillaAddonsControl
 	New(@args)
 		{
 		super(@.processArgs(args))
+		.init()
+		}
+
+	init()
+		{
 		.markers = Object(
 			add: .MarkerIdx(level: .addLevel)
 			remove: .MarkerIdx(level: .removeLevel)

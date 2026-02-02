@@ -1,11 +1,11 @@
 // Copyright (C) 2024 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	CallClass(ob1, ob2)
+	CallClass(ob1, ob2, title1 = 'first', title2 = 'second')
 		{
 		s1 = .format(ob1)
 		s2 = .format(ob2)
-		Diff2Control('DiffObjects', s1, s2, 'first', 'second')
+		Diff2Control('DiffObjects', s1, s2, title1, title2)
 		}
 
 	format(ob, indent = 0)

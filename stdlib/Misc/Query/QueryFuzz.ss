@@ -10,6 +10,20 @@ class
 		)
 	sizes: (c: 10, i: 100, a: 500, b: 1000)
 
+	Test(secs = 5)
+		{
+		seed = .MakeTables()
+		results = .Multi(secs)
+		if results.errors is #()
+			Print("QueryFuzz " $ results.count $ " ok")
+		else
+			{
+			Print(:seed)
+			results.errors.Each(Print)
+			throw "QueryFuzz " $ results.errors.Size() $ " errors"
+			}
+		}
+
 	TestCorpus()
 		{
 		// TODO multi-thread

@@ -25,6 +25,7 @@ Test
 		mock.LocateControl_customizeQueryCols = false
 		mock.LocateControl_query = "biz_partners"
 		mock.LocateControl_keys = #(Abbrev: bizpartner_abbrev)
+		mock.LocateControl_startLast = false
 
 		// single key
 		layout = mock.Eval(LocateControl.LocateControl_layout, false, #(), #(), false,

@@ -20,7 +20,7 @@ class
 		}
 	setTimer()
 		{
-		.timer = Delay(60.SecondsInMs(), .timerFunc)
+		.timer = Delay(1.MinutesInMs(), .timerFunc)
 		}
 	Stop()
 		{

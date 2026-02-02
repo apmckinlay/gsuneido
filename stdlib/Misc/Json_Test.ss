@@ -9,27 +9,37 @@ Test
 		(.5, '0.5')
 		(-.5, '-0.5')
 		('foo bar', '"foo bar"')
-		((), '[]')
-		((1, 2, 3), '[1,2,3]')
-		((1, 2, (3, 4)), '[1,2,[3,4]]')
-		((a: 1, b: '\\'), '{"a":1,"b":"\\\\"}')
-		((a: 1, b: '"'), '{"a":1,"b":"\\""}')
-		((a: 1, b: '~!@#$%^&*()_+?:{}[]|,.'), '{"a":1,"b":"~!@#$%^&*()_+?:{}[]|,."}')
-		((b: 'abc'), '{"b":"abc"}')
-		((a: 1, b: 'abc'), '{"a":1,"b":"abc"}')
-		((a: 0.850817, b: 'abc'), '{"a":0.850817,"b":"abc"}')
-		((a: true, b: 'abc'), '{"a":true,"b":"abc"}')
-		((a: false, b: 'abc'), '{"a":false,"b":"abc"}')
-		((a: 1, b: #(c: 33, d: 'dddd')), '{"a":1,"b":{"c":33,"d":"dddd"}}')
-		((a: 1, b: #('abc': 222, 'efg': '2009')), '{"a":1,"b":{"abc":222,"efg":"2009"}}')
+		((), '[]', '[\n]')
+		((1, 2, 3), '[1,2,3]', '[\n 1,\n 2,\n 3\n]')
+		((1, 2, (3, 4)), '[1,2,[3,4]]', '[\n 1,\n 2,\n [\n  3,\n  4\n ]\n]')
+		((a: 1, b: '\\'), '{"a":1,"b":"\\\\"}', '{\n "a": 1,\n "b": "\\\\"\n}')
+		((a: 1, b: '"'), '{"a":1,"b":"\\""}', '{\n "a": 1,\n "b": "\\""\n}')
+		((a: 1, b: '~!@#$%^&*()_+?:{}[]|,.'), '{"a":1,"b":"~!@#$%^&*()_+?:{}[]|,."}',
+			'{\n "a": 1,\n "b": "~!@#$%^&*()_+?:{}[]|,."\n}')
+		((b: 'abc'), '{"b":"abc"}', '{\n "b": "abc"\n}')
+		((a: 1, b: 'abc'), '{"a":1,"b":"abc"}', '{\n "a": 1,\n "b": "abc"\n}')
+		((a: 0.850817, b: 'abc'), '{"a":0.850817,"b":"abc"}',
+			'{\n "a": 0.850817,\n "b": "abc"\n}')
+		((a: true, b: 'abc'), '{"a":true,"b":"abc"}', '{\n "a": true,\n "b": "abc"\n}')
+		((a: false, b: 'abc'), '{"a":false,"b":"abc"}',
+			'{\n "a": false,\n "b": "abc"\n}')
+		((a: 1, b: #(c: 33, d: 'dddd')), '{"a":1,"b":{"c":33,"d":"dddd"}}',
+			'{\n "a": 1,\n "b": {\n  "c": 33,\n  "d": "dddd"\n }\n}')
+		((a: 1, b: #('abc': 222, 'efg': '2009')), '{"a":1,"b":{"abc":222,"efg":"2009"}}',
+			'{\n "a": 1,\n "b": {\n  "abc": 222,\n  "efg": "2009"\n }\n}')
 		((a: 'Test with multiple lines and tabs:\r\n' $
 				'line 1\r\n\r\n\tline 2 with tab\r\nline 3', b: 'hello world'),
 			'{"a":"Test with multiple lines and tabs:' $
 				'\\r\\nline 1\\r\\n\\r\\n\\t' $
-				'line 2 with tab\\r\\nline 3","b":"hello world"}')
-		(#('string{}[]', #( a: 1)), '["string{}[]",{"a":1}]')
+				'line 2 with tab\\r\\nline 3","b":"hello world"}',
+			'{\n "a": "Test with multiple lines and tabs:' $
+				'\\r\\nline 1\\r\\n\\r\\n\\t' $
+				'line 2 with tab\\r\\nline 3",\n "b": "hello world"\n}')
+		(#('string{}[]', #( a: 1)), '["string{}[]",{"a":1}]',
+			'[\n "string{}[]",\n {\n  "a": 1\n }\n]')
 		((a: .5, b: -.5, c: 1.5, d: 0, e: -1.5),
-			'{"a":0.5,"b":-0.5,"c":1.5,"d":0,"e":-1.5}')
+			'{"a":0.5,"b":-0.5,"c":1.5,"d":0,"e":-1.5}',
+			'{\n "a": 0.5,\n "b": -0.5,\n "c": 1.5,\n "d": 0,\n "e": -1.5\n}')
 		("hello", '"hello"')
 		(123, '123')
 		(true, 'true')
@@ -39,6 +49,15 @@ Test
 		{
 		for c in .cases
 			Assert(Json.Encode(c[0]) is: c[1])
+		}
+
+	Test_EncodeWithFormat()
+		{
+		for c in .cases
+			{
+			Assert(Json.EncodeWithFormat(c[0], indent: ' ') is: c.GetDefault(2, c[1]))
+			Assert(Json.Decode(Json.EncodeWithFormat(c[0], indent: ' ')) is: c[0])
+			}
 		}
 
 	Test_Decode()

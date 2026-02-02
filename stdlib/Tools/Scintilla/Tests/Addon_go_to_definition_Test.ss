@@ -235,7 +235,11 @@ Test
 			GotoLine: 		{ |unused| }
 			Defer: 			{ |unused| }
 			SetFocus:		{ }
-			Send:			{ |@args| args[0] is #CurrentTable ? #Test_lib : send? }
+			Send:			{ |@args| args[0] is #CurrentTable
+				? #Test_lib
+				: args[0] is #CurrentName
+					? "Addon_go_to_definition_FakeTest_Child"
+					: send? }
 			)
 		}
 	}

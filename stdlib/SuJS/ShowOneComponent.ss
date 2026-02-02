@@ -30,4 +30,9 @@ HtmlContainer
 		.Ystretch = ctrl.Ystretch
 		.SetMinSize()
 		}
+
+	GetChildren()
+		{
+		return .ctrls
+		}
 	}

@@ -24,7 +24,7 @@ class
 			return howtos
 		linktags = .linktags(howtos, side?, '<p class="howto">', '</p>')
 		howtosidestart = '<div class="howto" onClick="showhide(\'howtolinks\')">' $
-			'<p>How Do I...? <font face="Wingdings">Ú</font></p></div>\r\n' $
+			'<p>How Do I...?&nbsp;' $ HelpArrow('down') $ '</p></div>\r\n' $
 			'<div id="howtolinks" class="showhide">'
 		return .formatOb(howtos, side?, howtosidestart, '<ul class="howto">',
 			'</div>', '</ul>', linktags.open, linktags.close)
@@ -68,7 +68,7 @@ class
 		linktags = .linktags(trouble, side?, '<p class="troubleshooting">', '</p>')
 		troublesidestart = '<div class="troubleshooting" ' $
 			'onClick="showhide(\'troublelinks\')">' $
-			'<p>Troubleshooting <font face="Wingdings">Ú</font></p></div>\r\n' $
+			'<p>Troubleshooting&nbsp;' $ HelpArrow('down') $ '</p></div>\r\n' $
 			'<div id="troublelinks" class="showhide">'
 		return .formatOb(trouble, side?, troublesidestart,
 			'<ul class="troubleshooting">', '</div>', '</ul>',

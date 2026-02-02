@@ -6,7 +6,7 @@ PassthruController
 		{
 		super(.makeControls(form, query, columns, title, columnsSaveName))
 		.form = .FindControl('Form')
-		.list = .FindControl('VirtualList')
+		.list = .FindControl('listFormVirtualList')
 		.form.SetReadOnly(true)
 		.Defer(.load_last_entry)
 		}
@@ -23,7 +23,8 @@ PassthruController
 		return	Object('Vert',
 				Object('VertSplit',
 					Object('VirtualList', :query, :columns, startLast:,	:columnsSaveName,
-						preventCustomExpand?:, filtersOnTop:, :title),
+						preventCustomExpand?:, filtersOnTop:, :title,
+						name: 'listFormVirtualList'),
 					Object('Scroll', f),
 					splitSaveName: columnsSaveName))
 		}
@@ -38,9 +39,10 @@ PassthruController
 		return .query
 		}
 
-	VirtualList_ItemSelected(x)
+	VirtualList_ItemSelected(x, source)
 		{
-		.form.Set(x)
+		if source.Name is 'listFormVirtualList'
+			.form.Set(x)
 		}
 
 	VirtualList_SetWhere()

@@ -13,9 +13,6 @@ SuBookSendEmail
 		to = .FormatAddressesForSend(to)
 
 		mimeMultiBuffered? = mime.Base?(MimeMultiBuffered)
-		if mimeMultiBuffered?
-			_bufferedSend = true
-
 		if .stopSending?(hwnd, to, mime, mimeMultiBuffered?, quiet?)
 			return false
 
@@ -145,8 +142,14 @@ SuBookSendEmail
 		{
 		try
 			{
-			mimeString = String?(mime) ? mime : mime.ToString()
-			if true is result = .forwardSendMsg(ip, from, to, mimeString)
+			sendFile? = false
+			mimeString = mime
+			if not String?(mime)
+				{
+				sendFile? = mime.Base?(MimeMultiBuffered)
+				mimeString = mime.ToString()
+				}
+			if true is result = .forwardSendMsg(ip, from, to, mimeString, sendFile?)
 				return true
 			else if .InvalidEmailAddressResult?(result) or result =~ '^200 '
 				return result
@@ -187,9 +190,9 @@ SuBookSendEmail
 		{
 		return FileExists?(filePath)
 		}
-	forwardSendMsg(ip, from, to, mimeStr)
+	forwardSendMsg(ip, from, to, mimeStr, sendFile?)
 		{
-		return ForwardSendMsg(ip, from, to, mimeStr)
+		return ForwardSendMsg(ip, from, to, mimeStr, sendFile?)
 		}
 
 	AlertErrorMessage(error_msg, hwnd)

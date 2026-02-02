@@ -329,8 +329,7 @@ MultiTreeViewControl
 	buildInsertRecord(hItem, itemOb, table)
 		{
 		rec = itemOb.Set_default('').Copy()
-		if itemOb.table isnt table
-			rec.lib_committed = ''
+		rec.lib_committed = ''
 		rec.parent = .GetParam(hItem)
 		rec.path = .Path(hItem).AfterFirst(table $ '/')
 		rec.lib_modified = Date()

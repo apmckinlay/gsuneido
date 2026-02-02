@@ -43,14 +43,4 @@ Test
 
 		QueryOutput(tbl, [a: 2, b: 123]) // non-string
 		}
-
-	Test_lower!()
-		{
-		tbl = .MakeTable('(a, b, b_lower!, c) key(a) index(b_lower!)',
-			[a: 1, b: 'helloworld'.Repeat(10)])
-		Assert(QueryStrategy(tbl) is: tbl $ "^(a)")
-		Assert(QueryStrategy(tbl $ " sort b_lower!") is: tbl $ "^(b_lower!)")
-		Assert(QueryStrategy(tbl $ " where b_lower! = 5")
-			hasPrefix: tbl $ "^(b_lower!)")
-		}
 	}

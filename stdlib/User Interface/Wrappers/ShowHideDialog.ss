@@ -28,7 +28,7 @@ Controller
 			))
 	On_Apply()
 		{
-		switch (.Data.Get().RadioButtons)
+		switch .Data.Get().RadioButtons
 			{
 		case 'Show' :	Suneido.ShowAll = true
 		case 'Hide' :	Suneido.ShowAll = false

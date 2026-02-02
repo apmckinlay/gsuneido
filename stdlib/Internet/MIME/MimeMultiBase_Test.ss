@@ -12,7 +12,7 @@ Test
 		tmpFile = .MakeFile('hello world')
 		valid(tmpFile)
 
-		.SpyOn(Email_CreateMIME.MaxSizeInMb).Return(0.00001) // 10 bytes
+		.SpyOn(EmailMimeMaxSizeInMb).Return(0.00001) // 10 bytes
 
 		Assert({ valid('abc.txt', fileContent: 'hello.world')	}
 			throws: `MimeMulti: AttachFile: file size`)

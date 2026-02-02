@@ -91,6 +91,8 @@ class
 		{
 		SuUI.GetCurrentDocument().body.style.SetProperty(
 			'--su-color-buttonface', ToCssColor(CLR.ButtonFace))
+		SuUI.GetCurrentDocument().body.style.SetProperty(
+			'background-color', 'darkgray')
 		.SetWindowHeaderColor()
 
 		userAgent = (SuUI.GetCurrentWindow())['navigator']['userAgent']
@@ -373,10 +375,12 @@ class
 			event.StopPropagation()
 			}
 
-		if false is cmd = .ActiveWindow.GetAccelCmd(event.ctrlKey,
-			event.GetDefault(#altKey,false), event.shiftKey, event.key)
+		ctrlKey = event.GetDefault(#ctrlKey, false)
+		altKey = event.GetDefault(#altKey, false)
+		shiftKey = event.GetDefault(#shiftKey, false)
+		if false is cmd = .ActiveWindow.GetAccelCmd(ctrlKey, altKey, shiftKey, event.key)
 			return
-		preventDefault? = not (event.ctrlKey is true and event.key is 'c')
+		preventDefault? = not (ctrlKey is true and event.key is 'c')
 		if preventDefault?
 			{
 			event.PreventDefault()
@@ -695,18 +699,39 @@ class
 				try
 					method = .components[id][action.action]
 				if method is false
-					.Event(false, 'SuneidoLog', Object(
-						'ERROR: (CAUGHT) action ' $ action.action $
-							' not found in the component',
-						params: [action: Display(action),
-							component: Display(.components[id]),
-							componentId: .components[id].UniqueId,
-							componentMems: .components[id].Members()],
-						caughtMsg: 'for debug 36105'))
+					.debug36105(action, id, action.uniqueId)
 				else
 					method(@action.args)
 				}
 			}
+		}
+
+	debug36105(action, id, uniqueId)
+		{
+		nearbys = Object()
+		for (i = -5; i <= 5/*=upper*/; i++)
+			{
+			if .components.Member?(Display(uniqueId + i))
+				nearbys.Add(Display(.components[Display(uniqueId + i)]) $
+					' - ' $ (uniqueId + i))
+			}
+
+		all = Object()
+		for m in .components.Members()
+			all[Number(m)] = Display(.components[m])
+
+		try
+			componentMax = .components.Members().MaxWith(Number)
+		catch (e)
+			componentMax = e
+		params = [
+			component: Display(.components[id]),
+			componentId: .components[id].UniqueId,
+			componentSize: .components.Size(),
+			:componentMax,
+			componentNearbys: nearbys]
+
+		.Event(false, 'Debug36105', Object(action, params, all))
 		}
 
 	canvas: false
@@ -745,6 +770,21 @@ class
 			bottom: boundingRect.bottom,
 			width: boundingRect.right - boundingRect.left,
 			height: boundingRect.bottom - boundingRect.top)
+		}
+
+	scrollbarWidth: false
+	GetScrollbarWidth()
+		{
+		if .scrollbarWidth isnt false
+			return .scrollbarWidth
+
+		outer = CreateElement('div', parent: SuUI.GetCurrentDocument().body)
+		outer.SetStyle('visibility', 'hidden')
+		outer.SetStyle('overflow', 'scroll')
+		inner = CreateElement('div', parent: outer)
+		.scrollbarWidth = outer.offsetWidth - inner.offsetWidth
+		outer.Remove()
+		return .scrollbarWidth
 		}
 
 	hDrop: 0

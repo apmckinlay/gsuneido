@@ -21,20 +21,4 @@ Test
 		Assert(f("// BuiltDate > 20010203") is: false)
 		Assert(f("// BuiltDate > 20990203"))
 		}
-
-	Test_suppressions()
-		{
-		LibrarySuppressions.ResetCache() // so it sees new test data
-		.AddTeardown(LibrarySuppressions.ResetCache)
-		.MakeLibraryRecord(
-			[name: 'Test_CheckLibrary_HasSuppressed',
-				text: "function () { First_NonExistingFn() }"],
-			[name: 'Test_CheckLibrary_NotSuppressed',
-				text: "function () { Second_NonExistingFn() }"],
-			[name:  'Test_lib_CheckLibrarySuppressions',
-				text: `#(Test_CheckLibrary_HasSuppressed)`])
-		ck = CheckLibrary("Test_lib")
-		Assert(ck has: 'Test_lib:Test_CheckLibrary_NotSuppressed')
-		Assert(ck hasnt: 'Test_CheckLibrary_HasSuppressed')
-		}
 	}

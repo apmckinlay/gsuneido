@@ -1,39 +1,39 @@
 // Copyright (C) 2019 Suneido Software Corp. All rights reserved worldwide.
 PageBaseCheck
 	{
-	CallClass(book)
+	CallClass(book, dir = 'rpt')
 		{
 		QueryApply(book $ " where path.Has?('Reporter Reports') and
 			name isnt 'Reporter'")
 			{ |x|
-			.CheckReport(x.text.SafeEval(), x.name)
+			.CheckReport(x.text.SafeEval(), x.name, dir)
 			}
 
 		QueryApply(book $ " where path.Has?('Reporter Forms') and
 			name isnt 'Reporter Form'")
 			{ |x|
-			.CheckReport(x.text.SafeEval(), x.name)
+			.CheckReport(x.text.SafeEval(), x.name, dir)
 			}
 
 		.ForeachBookOption(book)
 			{ |rptClass, name|
-			.CheckReport(rptClass, name)
+			.CheckReport(rptClass, name, dir)
 			}
 		}
 
-	CheckReport(rptClass, name)
+	CheckReport(rptClass, name, dir = 'rpt')
 		{
+		EnsureDir(dir)
 		.runReport(rptClass, name)
 			{ |paramsCtrl|
 			.testPreview(paramsCtrl)
 
-			Params.SetNullPdc()
 			paramsCtrl.PrintReport()
 
-			paramsCtrl.SavePDF('rpt/' $ name $ '.pdf')
+			paramsCtrl.SavePDF(Paths.Combine(dir, name $ '.pdf'))
 
 			if false isnt paramsCtrl.FindControl('Export')
-				paramsCtrl.SaveCSV('rpt/' $ name $ '.csv')
+				paramsCtrl.SaveCSV(Paths.Combine(dir, name $ '.csv'))
 			}
 		}
 
@@ -66,11 +66,7 @@ PageBaseCheck
 			paramsCtrl = rptWnd.Ctrl
 			if not paramsCtrl.Base?(ParamsControl)
 				return
-
-			EnsureDir('rpt')
-
 			block(paramsCtrl)
-
 			rptWnd = rptWnd.Destroy()
 			}, {
 			(setup.teardown)()

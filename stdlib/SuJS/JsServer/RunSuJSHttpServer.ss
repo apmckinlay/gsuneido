@@ -20,6 +20,6 @@ class
 
 		RackServer(app: RackRouter(SuJsRackRoutes().Append(extraRoutes)),
 			with: [RackResponseHeaders, RackContentType],
-			:port, name: 'SuJS Server')
+			:port)
 		}
 	}

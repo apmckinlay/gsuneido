@@ -35,7 +35,7 @@ CodeViewAddon
 		_path = name.BeforeLast('/')
 		_name = name.AfterLast('/')
 		text = .text(table, name)
-		if not text.Prefix?('<')
+		if not BookContent.Match(table, text)
 			try
 				{
 				x = text.Eval() // needs Eval

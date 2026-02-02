@@ -28,7 +28,7 @@ Test
 			#((0, 11, "ERROR: can't find: NonExistent")))
 		('hello',
 			#((0, 5, "ERROR: used but not initialized: hello")))
-		('if (true) return function () { }', #())
+		('if (true) return function () { } else return false', #())
 		('[y: 3]', #())
 		('#((Horz) Fill)', #())
 		('Alert(x: 123)', #())
@@ -36,7 +36,7 @@ Test
 			#((7, 1, "ERROR: used but not initialized: x")))
 		('x = 1; x', #())
 		('for x in #() \n x()', #())
-		('try Date()\ncatch(x) return x', #())
+		('try Date()\ncatch(x) return x \n return false', #())
 		('y = y = 1 + y; y',
 			#((12, 1, "ERROR: used but not initialized: y")))
 		)

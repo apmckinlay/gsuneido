@@ -8,12 +8,15 @@ Test
 		Assert(fn('Abc') is: 'Abc')
 		Assert(fn('Abc__foo') is: 'Abc')
 		Assert(fn('Abc__bar') is: 'Abc')
+		Assert(fn('Abc_Test__bar') is: 'Abc_Test')
 		Assert(fn('Abc__bar__foo') is: 'Abc__bar')
 		Assert(fn('Abc__foo__bar') is: 'Abc__foo')
 
 		Assert(fn('Abc__protect') is: 'Abc__protect')
 		Assert(fn('Abc__protect__foo') is: 'Abc__protect')
+		Assert(fn('Abc__protect__foo_Test') is: 'Abc__protect')
 		Assert(fn('Abc__foo__protect') is: 'Abc__foo__protect')
+		Assert(fn('Abc__foo__protect_Test') is: 'Abc__foo__protect_Test')
 		}
 
 	Test_GetTagFromName()
@@ -23,17 +26,20 @@ Test
 		Assert(fn('Abc') is: '')
 		Assert(fn('Abc__foo') is: '__foo')
 		Assert(fn('Abc__bar') is: '__bar')
+		Assert(fn('Abc_Test__bar') is: '__bar')
 		Assert(fn('Abc__bar__foo') is: '__foo')
 		Assert(fn('Abc__foo__bar') is: '__bar')
 
 		Assert(fn('Abc__protect') is: '')
 		Assert(fn('Abc__protect__foo') is: '__foo')
+		Assert(fn('Abc__protect__foo_Test') is: '__foo_Test')
 		Assert(fn('Abc__foo__protect') is: '')
+		Assert(fn('Abc__foo__protect_Test') is: '')
 		}
 
-	Test_buildTags()
+	Test_BuildTags()
 		{
-		fn = LibraryTags.LibraryTags_buildTags
+		fn = LibraryTags.BuildTags
 		Assert(fn(#(), #()) is: #())
 		Assert(fn(#(alpha), #()) is: #(alpha))
 		Assert(fn(#(alpha_samples, alpha), #()) is: #(alpha_samples, alpha))

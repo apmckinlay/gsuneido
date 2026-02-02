@@ -24,9 +24,9 @@ Overall, **where** is looking for "x and y and z" where the parts like x are lik
 
 where can use indexes with:
 
--	>, >=, <, <=
+-	 <, <=, >, >=
 -	"is" and "in" e.g. k in (1,2,3) where k is a key will do three lookups
--	"isnt" is treated as a range e.g. "a isnt 1" is treated as "a &lt 1 and a > 1"
+-	"isnt" is treated as a range e.g. "a isnt 1" is treated as "a < 1 and a > 1"
 -	"x is 1 or x is 2 or x is 3" is treated as x in (1,2,3)
 -	[Date?](<../Language/Reference/Date?.md>), 
 	[Number?](<../Language/Reference/Number?.md>), and 

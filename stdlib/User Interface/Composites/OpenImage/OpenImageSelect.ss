@@ -140,8 +140,8 @@ Controller
 			{
 			// filename with unicode could be changed to ascii through win32 api,
 			// which can cause file not accessible
-			.AlertWarn(.Title, "Cannot attach file, it may be empty, or not accessible," $
-				"\r\nor the file name may include non-standard characters.")
+			.AlertWarn(.Title, "The file cannot be attached.\r\nIt may be empty, " $
+				"not accessible, or the file name may include non-standard characters.")
 			return false
 			}
 		return true
@@ -204,6 +204,9 @@ Controller
 			return .alert(copyfolder.msg, quiet?)
 		rotated = .autoRotateIfNeeded(file)
 		result = .retryCopy(copyfolder, fileBasename, copyto, rotated, fromBucket)
+		if String?(result)
+			return .alert(result, quiet?)
+
 		if result.copy is false
 			return .alert(.copyFileWarning(file, result.dest), quiet?)
 
@@ -220,6 +223,8 @@ Controller
 	retryCopy(copyfolder, fileBasename, copyto, file, fromBucket = '')
 		{
 		dest = .GetCopyToFilename(copyfolder, fileBasename)
+		if dest.Size() > CheckFileName.MaxAllowedFileNameChars
+			return "The destination file path is too long: " $ dest
 		if copyto is ""
 			return Object(copy: false, :dest)
 
@@ -231,9 +236,7 @@ Controller
 					fromBucket, file, bucket, FormatAttachmentPath(dest))
 				return Object(:copy, :dest)
 				}
-
-			region = AmazonS3.GetBucketLocationCached(bucket)
-			copy = AmazonS3.PutFile(bucket, file, FormatAttachmentPath(dest), :region)
+			copy = FileStorage.SaveFile(file, dest) isnt false
 			if dest.Prefix?(GetAppTempPath())
 				.deleteFile?(dest)
 			return Object(:copy, :dest)

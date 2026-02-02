@@ -14,14 +14,17 @@ PageBaseCheck
 			}
 		if checkTransaction?
 			checks.Add([name: 'transaction', countFn: { Database.Transactions().Size() }])
+		beforeOption = Suneido.GetDefault(#CurrentBookOption, "")
 		Suneido.CheckingBook = true
 		Finally(
 			{
 			errs = .ForeachBookOption(book)
 				{ |ctrl, name|
+				Suneido.CurrentBookOption = name
 				.checkWindow(ctrl, name, checkTmpFiles, msgs, checks)
 				}
 			}, { Suneido.Delete(#CheckingBook) })
+		Suneido.CurrentBookOption = beforeOption
 		return Opt(errs, '\r\n') $ msgs.Values().Map({ it.Join('\r\n') }).Join('\r\n')
 		}
 

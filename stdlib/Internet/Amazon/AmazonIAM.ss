@@ -2,20 +2,21 @@
 // only handles create_credentials (GetFederationToken)
 class
 	{
-	RequestCredentials(user, accessKey/*unused*/ = '', secretKey/*unused*/ = '')
+	RequestCredentials(user, accessKey/*unused*/ = '', secretKey/*unused*/ = '',
+		tags = #())
 		{
-		response = .RequestCredentialsRaw(user)
+		response = .RequestCredentialsRaw(user, tags)
 		if response is ''
 			return false
 		return .extractCredentials(response)
 		}
 
-	RequestCredentialsRaw(user)
+	RequestCredentialsRaw(user, tags = #())
 		{
 		if user.Blank?()
 			throw 'AmazonIAM: user must not be empty'
 
-		requestOb = .BuildRequest(user)
+		requestOb = .BuildRequest(user, :tags)
 		if not Object?(requestOb)
 			return ''
 		try
@@ -27,9 +28,9 @@ class
 			}
 		}
 
-	BuildRequest(user, actions = false)
+	BuildRequest(user, actions = false, tags = #())
 		{
-		messageRec = .buildMessageRec(user, actions)
+		messageRec = .buildMessageRec(user, actions, tags)
 		params = AmazonAWS.UrlEncodeValues(messageRec)
 
 		if AmazonAWS.CredentialErrMsg is header = AmazonV4Signing(this, 'POST',
@@ -91,7 +92,7 @@ class
 		return credentials
 		}
 
-	buildMessageRec(user, actions = false)
+	buildMessageRec(user, actions = false, tags = #())
 		{
 		if actions is false
 			actions = .defaultActions(user)
@@ -102,14 +103,21 @@ class
 			Policy: Json.Encode(
 				[Version: '2012-10-17'
 					Statement: [Object(Effect: 'Allow', Action: actions, Resource: '*')]
-				])
+				]),
 			]
+		i = 1
+		for key in tags.Members()
+			{
+			rec['Tags.member.' $ i $ '.Key'] = key
+			rec['Tags.member.' $ i $ '.Value'] = tags[key]
+			i++
+			}
 		return rec
 		}
 
 	defaultActions(user)
 		{
-		actions = ['s3:*', 'sqs:*', 'ses:*', 'dynamodb:*', 'cloudwatch:*', 'guardduty:*']
+		actions = ['s3:GetBucketLocation', 'sqs:*', 'ses:*']
 		func = OptContribution('AdditionalIAMPolicy',
 			function (@unused)  { })
 		func(user, actions)

@@ -18,7 +18,6 @@ Test
 			case 'c' : xw.Characters(x[1])
 			case 'e' : xw.EndElement(x[1])
 			case 'a' : xw.AddElement(x[1], x[2], x[3])
-			default : throw 'bad data'
 				}
 		Assert(xw.GetText() is: string)
 		}

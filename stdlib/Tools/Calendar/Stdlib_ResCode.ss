@@ -1,2 +1,2 @@
 // Copyright (C) 2024 Suneido Software Corp. All rights reserved worldwide.
-#('calendar1_release.css', 'calendar1_7.css', 'calendar1_9_9.js')
+#('calendar1_release.css', 'calendar1_7.css', 'calendar1_9_9.js', 'overtype_min_2_1_1.js')

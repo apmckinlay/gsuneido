@@ -29,7 +29,6 @@ Some possible configurations:
 -	One thread sending to a channel and multiple threads receiving i.e. fan out
 -	Multiple threads sending to a channel and one thread receiving i.e. fan in
 
-
 Channel is a thin wrapper around a Go channel with the addition of blocking timeouts. For more information see the Go documentation. For example: [Go Concurrency Patterns: Pipelines and cancellation](<https://go.dev/blog/pipelines>)
 
 **WARNING**: Concurrency is hard. Only use it if the benefits are substantial. Never take it lightly.
@@ -38,6 +37,7 @@ Channel is a thin wrapper around a Go channel with the addition of blocking time
 See also:
 [Mutex](<Mutex.md>),
 [object.CompareAndSet](<Object/object.CompareAndSet.md>),
+[Pipe](<Pipe.md>),
 [Synchronized](<Synchronized.md>),
 [class.Synchronized](<Class/class.Synchronized.md>),
 [Thread](<Thread.md>),

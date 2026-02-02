@@ -24,7 +24,7 @@ class
 			return true
 		file = .buildPath(path, .file())
 		result = false
-		if .writeFile(file, s = 'test')
+		if .WriteFile(file, s = 'test')
 			{
 			if GetFile(file) is s
 				result = true
@@ -51,7 +51,7 @@ class
 		}
 
 	table: checked_directories
-	writeFile(file, s)
+	WriteFile(file, s)
 		{
 		try
 			{

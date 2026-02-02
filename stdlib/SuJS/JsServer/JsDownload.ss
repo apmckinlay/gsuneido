@@ -25,6 +25,10 @@ class
 		// Todo: only allow downloading from files in temp or attachment or UserData (for Videos)
 		temp? = Paths.Basename(filename) is filename
 		dest = temp? ? Paths.Combine('temp', filename) : filename
+
+		if temp?
+			.DeleteTask(filename)
+
 		if not FileExists?(dest)
 			return Object('404 Not Found', Object(), 'not found')
 		headers = .buildHeaders(filename, preview?, saveName)
@@ -52,5 +56,73 @@ class
 			headers['Content_Type'] = type
 			}
 		return headers
+		}
+
+	Trigger(filename, saveName)
+		{
+		// filename must be a file in temp
+		Assert(Paths.Basename(filename) is filename)
+
+		.AddTask(Suneido.User, filename, saveName)
+		SuRenderBackend().RecordAction(false, 'SuDownloadFile', [
+			target: Base64.Encode(filename.Xor(EncryptControlKey())),
+			:saveName])
+		}
+
+	AddTask(user, filename, saveName)
+		{
+		if Sys.Client?()
+			ServerEval('JsDownload.AddTask', user, filename, saveName)
+
+		.ensureTasks()
+		Suneido.SuJsDownloadTasks[user][filename] = Object(t: Date(), :saveName)
+		}
+
+	DeleteTask(filename)
+		{
+		if Sys.Client?()
+			ServerEval('JsDownload.DeleteTask', filename)
+
+		.ensureTasks()
+		for user in Suneido.SuJsDownloadTasks.Members().Copy()
+			Suneido.SuJsDownloadTasks[user].Delete(filename)
+		}
+
+	ensureTasks()
+		{
+		if not Suneido.Member?(#SuJsDownloadTasks)
+			Suneido.SuJsDownloadTasks = Object().Set_default(Object())
+		}
+
+	CheckTask(user)
+		{
+		Assert(not Sys.Client?())
+
+		.ensureTasks()
+		result = Object()
+		before = Date().Minus(seconds: 30)
+		defVal = Object(t: Date.End())
+		for filename in Suneido.SuJsDownloadTasks[user].Members().Copy()
+			{
+			ob = Suneido.SuJsDownloadTasks[user].GetDefault(filename, defVal)
+			if ob.t < before
+				result[filename] = ob
+			}
+		return result
+		}
+
+	// in thread
+	WarnIfOutstanding(result)
+		{
+		if not Sys.SuneidoJs?()
+			return
+
+		if false isnt alert = Suneido.GetDefault(#JsDownloadAlertWindow, false)
+			Defer({
+				if not alert.Destroyed?()
+					alert.Ctrl.Update(result)
+				})
+		else if result.NotEmpty?()
+			Defer({ JsDownloadAlertControl(result) })
 		}
 	}

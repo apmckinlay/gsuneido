@@ -30,8 +30,8 @@ Controller
 			"&Undo", "&Redo", "", "Cu&t", "&Copy", "&Paste", "&Delete" ""
 			"&Find...", "Find &Next", "Find &Previous", "R&eplace...")
 		("&Query",
-			"&Run", "&Strategy", "&Profile", "&Keys", "Schema", "&Count", "&Hash",
-			"&Format", "Show Format")
+			"&Run", "&Strategy", "Strategy1", "&Profile", "&Keys", "Schema", "&Count",
+			"&Hash", "&Format", "Show Format")
 		)
 	Controls()
 		{
@@ -98,7 +98,8 @@ Controller
 		(Select_Line,	"F3",		"Extend select up one line")
 		(New_Query_View, "", 		"Open a new QueryView", 'hsplit')
 		(Run,			"F9",		"Execute the current selection", '!')
-		(Strategy, 		"Shift+F9",	"Show how the query will be executed", '?')
+		(Strategy, 		"Shift+F9",	"Strategy (Ctrl for Strategy1)", '?')
+		(Strategy1,		"Ctrl+F9",	"Show the strategy for Query1/Empty?/First/Last")
 		(Profile,       "",         "Run QueryProfiler", 'P')
 		(Schema, 		"Ctrl+S",	"Show Schema View or query columns", 'S')
 		(Keys,			"",			"Show the keys for the selected query", 'K')
@@ -239,10 +240,21 @@ Controller
 		}
 	On_Strategy()
 		{
+		.strategy(KeyPressed?(VK.CONTROL))
+		}
+	On_Strategy1()
+		{
+		.strategy(true)
+		}
+	strategy(one)
+		{
 		if "" is s = .getRunText()
 			return
 		q_or_c = .q_or_c.Get()
-		.switchTo([QueryStrategyViewer, s, :q_or_c])
+		.setstatus_valid(one
+			? "Strategy1 (Query1/Empty?/First/Last)"
+			: "Strategy")
+		.switchTo([QueryStrategyViewer, s, :q_or_c, :one])
 		}
 	On_Profile()
 		{

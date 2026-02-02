@@ -7,40 +7,132 @@ Md_Base
 		.raws = [line]
 		}
 
-	Continue(line, checkingContinuationText? = false)
+	Continue(line, start, checkingContinuationText? = false)
 		{
-		if .BlankLine?(line)
-			return false
+		if .BlankLine?(line, start)
+			return false, start
 		if Md_ContainerBlock.MatchParagraphInteruptableBlockItem(
-			line, :checkingContinuationText?) isnt false
-			return false
-		return line
+			line, start, :checkingContinuationText?) isnt false
+			return false, start
+		return line, start
 		}
 
-	IsContinuationText?(line)
+	IsContinuationText?(line, start)
 		{
-		return false isnt .Continue(line, checkingContinuationText?:)
+		result, start = .Continue(line, start, checkingContinuationText?:)
+		return false isnt result
 		}
 
-	Add(line, lazyContinuation? = false)
+	Add(line, start, lazyContinuation? = false, container = false, _mdAddons = #())
 		{
-		if not lazyContinuation? and .IsSetextHeadingUnderline?(line)
+		if not lazyContinuation?
 			{
-			.HeadingLevel = line.Has?('=') ? 1 : 2
-			.Close()
+			if .IsSetextHeadingUnderline?(line, start)
+				{
+				s = .raws.Join('\n')
+				while false isnt def = .matchLinkReferenceDefinition(s)
+					s = s[def.end..]
+
+				if not s.Blank?()
+					{
+					.HeadingLevel = line.Has?('=') ? 1 : 2
+					.Close()
+					return
+					}
+				}
+			// addon could modify .raws
+			else if mdAddons.Any?({ it.MatchInParagraph(line, start, container, .raws) })
+				return
 			}
+
+		.raws.Add(line[start..])
+		}
+
+	IsSetextHeadingUnderline?(line, start)
+		{
+		return false isnt .IgnoreLeadingSpaces(line, start) and
+			line[start..].Trim() =~ '^(=+|-+)$'
+		}
+
+	matchLinkReferenceDefinition(s)
+		{
+		// start should be false with limit: false
+		start = .IgnoreLeadingSpaces(s, 0, limit: false)
+		if false is result = Md_Helper.MatchLinkLabel(s, start)
+			return false
+
+		label = result.s
+		p = result.end
+		if s[p::1] isnt ':'
+			return false
+
+		if false is destOb = .matchLinkDest(s, p+1)
+			return false
+		dest = destOb.s
+
+		altEnd = .altEnd(s, destOb)
+		end = titleStart = Md_Helper.MatchSpaces(s, destOb.end, optional?:)
+		title = ''
+		if false isnt titleOb = Md_Helper.MatchLinkTitle(s, titleStart)
+			{
+			title = titleOb.s
+			end = titleOb.end
+			}
+
+		if title isnt '' and destOb.end is titleStart // no spaces between dest and title
+			return false
+
+		return .buildDef(s, end, altEnd, label, dest, title)
+		}
+
+	matchLinkDest(s, start)
+		{
+		p = Md_Helper.MatchSpaces(s, start, optional?:)
+		if false is destOb = Md_Helper.MatchLinkDestination(s, p)
+			return false
+		if destOb.s is '' and destOb.GetDefault(#inBracket?, false) isnt true
+			return false
+		return destOb
+		}
+
+	altEnd(s, destOb)
+		{
+		for (i = destOb.end; i < s.Size(); i++)
+			{
+			if s[i] in (' ', '\t')
+				continue
+			if s[i] is '\n'
+				return i+1
+			break
+			}
+		return false
+		}
+
+	buildDef(s, end, altEnd, label, dest, title = '')
+		{
+		newline = s.Find('\n', end)
+		prevNewline = s.FindLast('\n', end)
+
+		if s[end..newline].Blank?()
+			return Object(:label, :dest, :title, end: newline+1)
+		else if prevNewline isnt false and s[prevNewline..end].Blank?()
+			return Object(:label, :dest, :title, end: prevNewline+1)
+		else if altEnd isnt false
+			return Object(:label, :dest, title: '', end: altEnd)
 		else
-			.raws.Add(line)
+			return false
 		}
 
-	IsSetextHeadingUnderline?(line)
+	Close(_document)
 		{
-		return false isnt .IgnoreLeadingSpaces(line) and line.Trim() =~ '^(=+|-+)$'
-		}
+		s = .raws.Join('\n')
+		while false isnt def = .matchLinkReferenceDefinition(s)
+			{
+			document.AddLinkDefs(@def)
+			s = s[def.end..]
+			}
 
-	Close()
-		{
-		.Inline = .raws.Join('\n')
+		.Inline = s
 		super.Close()
 		}
 	}

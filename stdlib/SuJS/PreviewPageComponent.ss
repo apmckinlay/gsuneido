@@ -34,7 +34,7 @@ Component
 			.Event('InvalidPG', pg)
 			return
 			}
-		Assert(.pages hasMember: pg, msg: 'sujslib:PreviewPageComponent.DisplayPage')
+		Assert(.pages hasMember: pg, msg: 'PreviewPageComponent.DisplayPage')
 		page = .pages[.pg = pg]
 		driver = SvgDriver(.svg, page.dimens)
 		.updateSize(page.dimens.width, page.dimens.height)

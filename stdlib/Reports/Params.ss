@@ -100,22 +100,15 @@ Controller
 				report[0][0] is ReporterCanvasFormat))
 		}
 
-	reporterForm?(report)
-		{
-		return report[0][0] in ('ReporterCanvasFormat', ReporterCanvasFormat)
-		}
-
 	export?(report)
 		{
 		if not report.Member?(0)
 			return false
 
-		if .reporter?(report)
-			return not .reporterForm?(report)
-
 		rpt = .getReportFormat(report)
-		return Class?(rpt) and rpt.Member?('Export') and rpt.Export
+		return Class?(rpt) and rpt.Member?('Export') and rpt.Export isnt false
 		}
+
 	getReportFormat(report)
 		{
 		rpt = report[0]
@@ -229,15 +222,28 @@ Controller
 		.SetExtraParamsData(report.paramsdata)
 		.add_print_lines(report.paramsdata)
 
-		if false is .verifyDevMode(report)
+		if false is pdc = .verifyDevMode(report)
 			return false
 
 		if true is .addFilterIfSlowQuery(report)
+			{
+			.deleteDC(pdc)
 			return false
+			}
 		if report.GetDefault('pageCountOnly', false)
-			return .previewForPageCount(report)
-		w = .runPreview(report)
+			return .previewForPageCount(report, pdc)
+		w = .runPreview(report, pdc)
 		return w // is this used? could be either dialog result or a Window ???
+		}
+
+	OverrideReport?(report)
+		{
+		return Object?(.report) and not .fromPreview?(report)
+		}
+
+	fromPreview?(report)
+		{
+		return report.GetDefault('from_preview', false) is true
 		}
 
 	setPreviewParams(report)
@@ -258,23 +264,24 @@ Controller
 		.report.pageCountOnly = false
 		}
 
-	previewForPageCount(report)
+	previewForPageCount(report, pdc)
 		{
-		w = .buildPreviewWindowForPageCount(report)
+		w = .buildPreviewWindowForPageCount(report, pdc)
 		previewCtrl = w.Ctrl
 		previewCtrl.On_Last()
 		pages = previewCtrl.GetNumPages()
 		DestroyWindow(previewCtrl.Window.Hwnd)
+		.deleteDC(pdc)
 		return pages
 		}
 
-	buildPreviewWindowForPageCount(report)
+	buildPreviewWindowForPageCount(report, pdc)
 		{
-		return Window(Object(PreviewControl, report, this, extraButtons: .PreviewButtons),
-			show: false)
+		return Window(Object(PreviewControl, report, this,
+			extraButtons: .PreviewButtons, :pdc), show: false)
 		}
 
-	runPreview(report)
+	runPreview(report, pdc)
 		{
 		extraButtons = .export?(report)
 			? .PreviewButtons.Copy().AddUnique(#Export)
@@ -285,18 +292,39 @@ Controller
 			keep_size = 'Print Preview Dialog'
 			if report.Member?('PreviewParams') and report.Member?('name')
 				keep_size $= ' - ' $ report.name
-			w = ModalWindow(Object("Preview", report, this, :extraButtons),
+			w = ModalWindow(Object("Preview", report, this, :extraButtons, :pdc),
 				:keep_size, useDefaultSize:,
-				onDestroy: .onDestroyModalPreview)
+				onDestroy: {
+					.onDestroyModalPreview()
+					.deleteDC(pdc)
+				})
 			}
 		else
 			{
-			w = Window(Object(PreviewControl, report, this, :extraButtons),
-				keep_placement:, useDefaultSize:, onDestroy: .checkNoPage,
-				excludeModalWindow: .closeDialog?() ? .Window : false)
+			w = Window(Object(PreviewControl, report, this, :extraButtons, :pdc),
+				keep_placement:, useDefaultSize:,
+				excludeModalWindow: .closeDialog?() ? .Window : false,
+				onDestroy: {
+					.checkNoPage()
+					.deleteDC(pdc)
+				})
 			.closeDialog()
 			}
 		return w
+		}
+
+	previewArgs: #(title, name, devmode_name, header, footer, paramsdata, printParams,
+		noPageRange, pageRange, minBorder, margins, previewDialog, onDestroy,
+		EmailAttachments)
+	PreviewReport(report)
+		{
+		previewReport = Object(report[0]) // Report Format
+		for member in .previewArgs
+			if report.Member?(member)
+				previewReport[member] = Object?(report[member])
+					? report[member].DeepCopy()
+					: report[member]
+		return previewReport
 		}
 
 	addFilterIfSlowQuery(report)
@@ -422,15 +450,15 @@ Controller
 			if false is hdm = .useDefaultPrinter(x, hwnd)
 				return false
 			}
-		if not .update_pdc(hdm, x, report, fromPreview?:)
+		if false is pdc = .update_pdc(hdm, x, report, fromPreview?:)
 			{
 			hdm = .useDefaultPrinter(x, hwnd)
-			if hdm is false or not .update_pdc(hdm, x, report)
+			if hdm is false or false is pdc = .update_pdc(hdm, x, report)
 				return false
 			}
 		if (hdm isnt 0)
 			GlobalFree(hdm)
-		return true
+		return pdc
 		}
 	globalAllocData(str)
 		{
@@ -486,15 +514,23 @@ Controller
 			return
 
 		params_window = .hwnd(report)
-		if false is .preparePrinter(params_window, report)
+		if false is pdc = .preparePrinter(params_window, report)
 			return
 
 		// print to pdf printer driver does not block params window
 		// if the params's parent window has hWndParent
 		EnableWindow(params_window, false)
-		Finally({ .PrintReport(report) },
-			{ EnableWindow(params_window, true) })
+		Finally({ .PrintReport(report, pdc) },
+			{
+			EnableWindow(params_window, true)
+			.deleteDC(pdc)
+			})
 		.CloseDialog(report)
+		}
+
+	deleteDC(pdc)
+		{
+		DeleteDC(pdc)
 		}
 
 	GetParamsControl(ctrlName)
@@ -513,14 +549,14 @@ Controller
 			return false
 		x.devmode = GlobalData(pd.hDevMode)
 		x.devnames = GlobalData(pd.hDevNames)
-		ok = .update_pdc(pd.hDevMode, x, report)
+		pdc = .update_pdc(pd.hDevMode, x, report)
 		.free(pd)
-		if not ok
+		if pdc is false
 			return false
 		if PD.PAGENUMS is (pd.Flags & PD.PAGENUMS)
 			report.pageRange = Object(from: pd.lpPageRanges.nFromPage,
 				to: pd.lpPageRanges.nToPage)
-		return true
+		return pdc
 		}
 
 	openPrintDlg(pd, report)
@@ -600,15 +636,43 @@ Controller
 		if Object?(.report)
 			report = .report
 
+		if '' isnt msg = .validExport(report)
+			{
+			.AlertWarn('Export', msg)
+			return
+			}
+
 		if false is filename = Dialog.DoWithWindowsDisabled(
 			{ .getSaveFileName(report, 'csv') }, .hwnd(report))
 			return
 
-		if true isnt msg = CatchFileAccessErrors(filename, { .SaveCSV(filename, report) })
-			.AlertInfo("Export", msg)
+		result = false
+		if true isnt msg = CatchFileAccessErrors(filename,
+			{ result = .SaveCSV(filename, report) })
+			.AlertInfo('Export', msg)
+
+		if result isnt true
+			return
 
 		.afterSaveFile(report, 'csv', filename)
 		.CloseDialog(report)
+		}
+
+	// NOTE: validExport assumes that if the Export button is present,
+	// then our preliminary requirements have been met.
+	//		IE: getReportFormat returns a class
+	validExport(report)
+		{
+		export = .getReportFormat(report).GetDefault('Export', false)
+		if not Function?(export)
+			return export isnt true
+				? 'Export is not supported for this report'
+				: ''
+
+		if not report.GetDefault('from_preview', false)
+			.checkAndResetParams(report)
+
+		return (export)(report.paramsdata)
 		}
 
 	SaveCSV(filename, report = false) // also called by ReportCheck
@@ -621,15 +685,15 @@ Controller
 		report.paramsdata.ReportDestination = 'csv'
 		.SetExtraParamsData(report.paramsdata)
 		if not fromPreview? and true is .addFilterIfSlowQuery(report)
-			return ReportStatus.SUCCESS
-		Report(@report).ExportCSV(filename)
+			return false
+		return Report(@report).ExportCSV(filename) is ReportStatus.SUCCESS
 		}
 
-	PrintReport(report = false)
+	PrintReport(report = false, pdc = 0)
 		{
 		if report is false
 			report = .report
-		Report(@report).Print(Suneido.pdc)
+		Report(@report).Print(pdc)
 		}
 
 	RunWithNoOutput(@report)
@@ -1319,10 +1383,7 @@ Controller
 
 		try
 			{
-			if (Suneido.Member?("pdc"))
-				DeleteDC(Suneido.pdc)
-
-			if 0 is Suneido.pdc = .createDC(x.devnames, hdm)
+			if 0 is pdc = .createDC(x.devnames, hdm)
 				{
 				if not fromPreview?
 					.invalidPrinterError()
@@ -1335,7 +1396,7 @@ Controller
 				.invalidPrinterError()
 			return false
 			}
-		return true
+		return pdc
 		}
 	invalidPrinterError()
 		{
@@ -1354,12 +1415,6 @@ Controller
 	devmode_reportname(report)
 		{
 		return report.Member?('devmode_name') ? report.devmode_name : report.name
-		}
-	SetNullPdc()
-		{
-		if Suneido.Member?("pdc")
-			DeleteDC(Suneido.pdc)
-		Suneido.pdc = NULL
 		}
 	Destroy()
 		{

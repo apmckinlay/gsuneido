@@ -37,15 +37,13 @@ class
 		catch (e)
 			completion([content: "ERROR " $ e])
 		}
-	request(sc, method, a, content, header, _bufferedSend = false)
+	request(sc, method, a, content, header)
 		{
 		header = header.Copy()
 		header['User-Agent'] = 'Suneido'
 		header.Host = a.host $ Opt(':', a.GetDefault(#port, ''))
 		header.Connection = 'close'
-
-		send = bufferedSend and content isnt '' ? .sendFile : HttpSend
-		send(sc, method $ " " $ a.GetDefault(#path, '/') $ " HTTP/1.1", header, content)
+		HttpSend(sc, method $ " " $ a.GetDefault(#path, '/') $ " HTTP/1.1", header, content)
 		}
 	sendFile(sc, start, header, file)
 		{

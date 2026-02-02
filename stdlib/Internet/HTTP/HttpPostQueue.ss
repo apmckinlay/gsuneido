@@ -49,7 +49,7 @@ class
 
 	httpPost(rec) // overridden by test
 		{
-		return Http.Post('http://' $ rec.address, rec.contents, header: rec.header)
+		return Https.Post('https://' $ rec.address, rec.contents, header: rec.header)
 		}
 
 	removeFromQueue(record)

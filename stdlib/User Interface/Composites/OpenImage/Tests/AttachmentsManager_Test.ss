@@ -8,11 +8,11 @@ Test
 		mock.ProcessQueue()
 		Assert(.getAttachments(mock) is: #())
 		mock.Verify.Times(5).AttachmentsManager_deleteFile([anyArgs:])
-		mock.Verify.AttachmentsManager_deleteFile('123', [fakeNum: '111'], 'attach')
-		mock.Verify.AttachmentsManager_deleteFile('abc', [fakeNum: '111'], 'attach')
-		mock.Verify.AttachmentsManager_deleteFile('222', [fakeNum: '111'], 'attach')
-		mock.Verify.AttachmentsManager_deleteFile('456', [fakeNum: 'key'], 'custom1')
-		mock.Verify.AttachmentsManager_deleteFile('789', [], 'custom2')
+		mock.Verify.AttachmentsManager_deleteFile('123', .rec1, 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('abc', .rec1, 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('222', .rec1, 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('456', .rec2, 'custom1')
+		mock.Verify.AttachmentsManager_deleteFile('789', .rec3, 'custom2')
 
 		mock.Verify.Times(5).AttachmentsManager_logAction([anyArgs:])
 		mock.Verify.AttachmentsManager_logAction('123', [fakeNum: '111'],
@@ -29,11 +29,11 @@ Test
 		mock.ProcessQueue(restore?:)
 		Assert(.getAttachments(mock) is: #())
 		mock.Verify.Times(5).AttachmentsManager_deleteFile([anyArgs:])
-		mock.Verify.AttachmentsManager_deleteFile('333', [fakeNum: '111'], 'attach')
-		mock.Verify.AttachmentsManager_deleteFile('222', [fakeNum: '111'], 'attach')
-		mock.Verify.AttachmentsManager_deleteFile('abc', [fakeNum: '111'], 'attach')
-		mock.Verify.AttachmentsManager_deleteFile('def', [fakeNum: 'key'], 'custom1')
-		mock.Verify.AttachmentsManager_deleteFile('ghi', [], 'custom2')
+		mock.Verify.AttachmentsManager_deleteFile('333', .rec1, 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('222', .rec1, 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('abc', .rec1, 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('def', .rec2, 'custom1')
+		mock.Verify.AttachmentsManager_deleteFile('ghi', .rec3, 'custom2')
 
 		mock.Verify.Never().AttachmentsManager_logAction([anyArgs:])
 		}
@@ -42,59 +42,56 @@ Test
 		{
 		// restoring 1 file
 		mock = .setupMock()
-		mock.RestoreOneByKey([fakeNum: 'key'])
-		Assert(.getAttachments(mock) is:
-			#((new_file: 'abc', old_file: '123', nums: [fakeNum: '111'],
+		mock.RestoreOneByKey(.rec2)
+		Assert(.getAttachments(mock) is: Object(
+			Object(new_file: 'abc', old_file: '123', rec: .rec1,
 				fieldName: 'attach', action: 'rename'),
-			(new_file: '222', old_file: 'abc', nums: [fakeNum: '111'],
+			Object(new_file: '222', old_file: 'abc', rec: .rec1,
 				fieldName: 'attach', action: 'rename'),
-			(new_file: '333', old_file: '222', nums: [fakeNum: '111'],
+			Object(new_file: '333', old_file: '222', rec: .rec1,
 				fieldName: 'attach', action: 'rename'),
-			(new_file: 'ghi', old_file: '789', nums: [], fieldName: 'custom2',
-				action: 'replace')))
+			Object(new_file: 'ghi', old_file: '789', rec: .rec3,
+				fieldName: 'custom2', action: 'replace')))
 		mock.Verify.Times(1).AttachmentsManager_deleteFile([anyArgs:])
-		mock.Verify.AttachmentsManager_deleteFile('def', [fakeNum: 'key'], 'custom1')
+		mock.Verify.AttachmentsManager_deleteFile('def', .rec2, 'custom1')
 		mock.Verify.Never().AttachmentsManager_logAction([anyArgs:])
 
 		// restoring 1 file afer several changes
 		mock = .setupMock()
-		mock.RestoreOneByKey([fakeNum: '111'])
-		Assert(.getAttachments(mock) is:
-			#((new_file: 'def', old_file: '456', nums: [fakeNum: 'key'],
+		mock.RestoreOneByKey(.rec1)
+		Assert(.getAttachments(mock) is: Object(
+			Object(new_file: 'def', old_file: '456', rec: .rec2,
 				fieldName: 'custom1', action: 'replace'),
-			(new_file: 'ghi', old_file: '789', nums: [], fieldName: 'custom2',
-				action: 'replace')))
+			Object(new_file: 'ghi', old_file: '789', rec: .rec3,
+				fieldName: 'custom2', action: 'replace')))
 		mock.Verify.Times(3).AttachmentsManager_deleteFile([anyArgs:])
-		mock.Verify.AttachmentsManager_deleteFile('333', [fakeNum: '111'], 'attach')
-		mock.Verify.AttachmentsManager_deleteFile('222', [fakeNum: '111'], 'attach')
-		mock.Verify.AttachmentsManager_deleteFile('abc', [fakeNum: '111'], 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('333', .rec1, 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('222', .rec1, 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('abc', .rec1, 'attach')
 		mock.Verify.Never().AttachmentsManager_logAction([anyArgs:])
 
 		// restoring using composite key
 		mock = .setupMock(skipFill?:)
 		mock.AttachmentsManager_keyFields = #(fakeName, fakeDate)
 		mock.QueueDeleteFile('abc', '123',
-			[fakeName: 'test', fakeDate: '202404', attach: ''], 'attach', 'rename')
-		mock.QueueDeleteFile('456', 'abc',
-			[fakeName: 'test', fakeDate: '202404', attach: ''], 'attach', 'rename')
+			rec4 = [fakeName: 'test', fakeDate: '202404', attach: ''], 'attach', 'rename')
+		mock.QueueDeleteFile('456', 'abc', rec4, 'attach', 'rename')
 		mock.QueueDeleteFile('aaa', 'bbb',
-			[fakeName: 'test', fakeDate: '202405', attach: ''], 'attach', 'rename')
-		Assert(.getAttachments(mock) is: #(
-			(new_file: 'abc', old_file: '123',  action: 'rename',
-				nums: [fakeName: 'test', fakeDate: '202404'], fieldName: 'attach'),
-			(new_file: '456', old_file: 'abc', action: 'rename',
-				nums: [fakeName: 'test', fakeDate: '202404'], fieldName: 'attach'),
-			(new_file: 'aaa', old_file: 'bbb', action: 'rename',
-				nums: [fakeName: 'test', fakeDate: '202405'], fieldName: 'attach')))
-		mock.RestoreOneByKey([fakeName: 'test', fakeDate: '202404'])
-		Assert(.getAttachments(mock) is: #(
-			(new_file: 'aaa', old_file: 'bbb', action: 'rename',
-				nums: [fakeName: 'test', fakeDate: '202405'], fieldName: 'attach')))
+			rec5 = [fakeName: 'test', fakeDate: '202405', attach: ''], 'attach', 'rename')
+		Assert(.getAttachments(mock) is: Object(
+			Object(new_file: 'abc', old_file: '123',  action: 'rename',
+				rec: rec4, fieldName: 'attach'),
+			Object(new_file: '456', old_file: 'abc', action: 'rename',
+				rec: rec4, fieldName: 'attach'),
+			Object(new_file: 'aaa', old_file: 'bbb', action: 'rename',
+				rec: rec5, fieldName: 'attach')))
+		mock.RestoreOneByKey(rec4)
+		Assert(.getAttachments(mock) is: Object(
+			Object(new_file: 'aaa', old_file: 'bbb', action: 'rename',
+				rec: rec5, fieldName: 'attach')))
 		mock.Verify.Times(2).AttachmentsManager_deleteFile([anyArgs:])
-		mock.Verify.AttachmentsManager_deleteFile('abc',
-			[fakeName: 'test', fakeDate: '202404'], 'attach')
-		mock.Verify.AttachmentsManager_deleteFile('456',
-			[fakeName: 'test', fakeDate: '202404'], 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('abc', rec4, 'attach')
+		mock.Verify.AttachmentsManager_deleteFile('456', rec4, 'attach')
 		mock.Verify.Never().AttachmentsManager_logAction([anyArgs:])
 		}
 
@@ -111,9 +108,9 @@ Test
 
 		rec = [fake_attachments: #([attachment0: `202401\file.txt`]), fakeNum: '123']
 		mock.handleStdAttachments(rec)
-		Assert(.getAttachments(mock) equalsSet: #((new_file: '',
-			old_file: `\\PC\Attachments/202401/file.txt`, nums: [fakeNum: '123'],
-			fieldName: 'fake_attachments', action: 'record delete')))
+		Assert(.getAttachments(mock) equalsSet: Object(
+			Object(new_file: '', old_file: `\\PC\Attachments/202401/file.txt`, :rec,
+				fieldName: 'fake_attachments', action: 'record delete')))
 		mock.ProcessQueue()
 		Assert(.getAttachments(mock) is: #())
 
@@ -124,17 +121,18 @@ Test
 			[attachment2: `202402\file.txt` $ delimiter $ 'label1, label2',
 				attachment3: delimiter $ 'label3'])]
 		mock.handleStdAttachments(rec)
-		Assert(.getAttachments(mock) equalsSet: #((new_file: '',
-				old_file: `\\PC\Attachments/202401/foo.txt`, nums: [fakeNum: '456'],
+		Assert(.getAttachments(mock) equalsSet: Object(
+			Object(new_file: '',
+				old_file: `\\PC\Attachments/202401/foo.txt`, :rec,
 				fieldName: 'fake_attachments', action: 'record delete'),
-			(new_file: '',
-				old_file: `\\PC\Attachments/202401/bar.txt`, nums: [fakeNum: '456'],
+			Object(new_file: '',
+				old_file: `\\PC\Attachments/202401/bar.txt`, :rec,
 				fieldName: 'fake_attachments', action: 'record delete'),
-			(new_file: '',
-				old_file: `\\PC\Attachments/202402/helloworld.txt`,nums: [fakeNum: '456'],
+			Object(new_file: '',
+				old_file: `\\PC\Attachments/202402/helloworld.txt`, :rec,
 				fieldName: 'fake_attachments', action: 'record delete'),
-			(new_file: '',
-				old_file: `\\PC\Attachments/202402/file.txt`, nums: [fakeNum: '456'],
+			Object(new_file: '',
+				old_file: `\\PC\Attachments/202402/file.txt`, :rec,
 				fieldName: 'fake_attachments', action: 'record delete')))
 		mock.ProcessQueue()
 		Assert(.getAttachments(mock) is: #())
@@ -157,9 +155,10 @@ Test
 
 		rec = [fake_attachments: #([attachment0: `202401/file.txt`]), fakeNum: '123']
 		mock.handleStdAttachments(rec)
-		Assert(.getAttachments(mock) equalsSet: #((new_file: '',
-			old_file: `/PC/Attachments/202401/file.txt`, nums: [fakeNum: '123'],
-			fieldName: 'fake_attachments', action: 'record delete')))
+		Assert(.getAttachments(mock) equalsSet: Object(
+			Object(new_file: '',
+				old_file: `/PC/Attachments/202401/file.txt`, :rec,
+				fieldName: 'fake_attachments', action: 'record delete')))
 		mock.ProcessQueue()
 		Assert(.getAttachments(mock) is: #())
 
@@ -170,17 +169,18 @@ Test
 			[attachment2: `202402/file.txt` $ delimiter $ 'label1, label2',
 				attachment3: delimiter $ 'label3'])]
 		mock.handleStdAttachments(rec)
-		Assert(.getAttachments(mock) equalsSet: #((new_file: '',
-				old_file: `/PC/Attachments/202401/foo.txt`, nums: [fakeNum: '456'],
+		Assert(.getAttachments(mock) equalsSet: Object(
+			Object(new_file: '',
+				old_file: `/PC/Attachments/202401/foo.txt`, :rec,
 				fieldName: 'fake_attachments', action: 'record delete'),
-			(new_file: '',
-				old_file: `/PC/Attachments/202401/bar.txt`, nums: [fakeNum: '456'],
+			Object(new_file: '',
+				old_file: `/PC/Attachments/202401/bar.txt`, :rec,
 				fieldName: 'fake_attachments', action: 'record delete'),
-			(new_file: '',
-				old_file: `/PC/Attachments/202402/helloworld.txt`,nums: [fakeNum: '456'],
+			Object(new_file: '',
+				old_file: `/PC/Attachments/202402/helloworld.txt`, :rec,
 				fieldName: 'fake_attachments', action: 'record delete'),
-			(new_file: '',
-				old_file: `/PC/Attachments/202402/file.txt`, nums: [fakeNum: '456'],
+			Object(new_file: '',
+				old_file: `/PC/Attachments/202402/file.txt`, :rec,
 				fieldName: 'fake_attachments', action: 'record delete')))
 		mock.ProcessQueue()
 		Assert(.getAttachments(mock) is: #())
@@ -207,18 +207,20 @@ Test
 		rec = [custom_999999: `202401\file.txt`, fakeNum: '123',
 			custom_999995: `202402\file2.txt`]
 		mock.handleCustomAttachments(rec)
-		Assert(.getAttachments(mock) equalsSet: #((new_file: '',
-			old_file: `\\PC\Attachments/202401/file.txt`, nums: [fakeNum: '123'],
-			fieldName: 'custom_999999', action: 'record delete')))
+		Assert(.getAttachments(mock) equalsSet: Object(
+			Object(new_file: '',
+				old_file: `\\PC\Attachments/202401/file.txt`, :rec,
+				fieldName: 'custom_999999', action: 'record delete')))
 		mock.ProcessQueue()
 		Assert(.getAttachments(mock) is: #())
 
 		rec = [custom_999999: `202401\helloWorld.txt` $
 			OpenImageWithLabelsControl.LabelDelimiter $ 'label1, label2', fakeNum: '123']
 		mock.handleCustomAttachments(rec)
-		Assert(.getAttachments(mock) equalsSet: #((new_file: '',
-			old_file: `\\PC\Attachments/202401/helloWorld.txt`, nums: [fakeNum: '123'],
-			fieldName: 'custom_999999', action: 'record delete')))
+		Assert(.getAttachments(mock) equalsSet: Object(
+			Object(new_file: '',
+				old_file: `\\PC\Attachments/202401/helloWorld.txt`, :rec,
+				fieldName: 'custom_999999', action: 'record delete')))
 		mock.ProcessQueue()
 		Assert(.getAttachments(mock) is: #())
 		}
@@ -240,8 +242,8 @@ Test
 		rec = [custom_999999: `202401/file.txt`, fakeNum: '123',
 			custom_999995: `202402/file2.txt`]
 		mock.handleCustomAttachments(rec)
-		Assert(.getAttachments(mock) equalsSet: #((new_file: '',
-			old_file: `/PC/Attachments/202401/file.txt`, nums: [fakeNum: '123'],
+		Assert(.getAttachments(mock) equalsSet: Object(
+			Object(new_file: '', old_file: `/PC/Attachments/202401/file.txt`, :rec,
 			fieldName: 'custom_999999', action: 'record delete')))
 		mock.ProcessQueue()
 		Assert(.getAttachments(mock) is: #())
@@ -249,9 +251,9 @@ Test
 		rec = [custom_999999: `202401/helloWorld.txt` $
 			OpenImageWithLabelsControl.LabelDelimiter $ 'label1, label2', fakeNum: '123']
 		mock.handleCustomAttachments(rec)
-		Assert(.getAttachments(mock) equalsSet: #((new_file: '',
-			old_file: `/PC/Attachments/202401/helloWorld.txt`, nums: [fakeNum: '123'],
-			fieldName: 'custom_999999', action: 'record delete')))
+		Assert(.getAttachments(mock) equalsSet: Object(
+			Object(new_file: '', old_file: `/PC/Attachments/202401/helloWorld.txt`,
+			:rec, fieldName: 'custom_999999', action: 'record delete')))
 		mock.ProcessQueue()
 		Assert(.getAttachments(mock) is: #())
 		}
@@ -278,25 +280,25 @@ Test
 
 	fillMock(mock)
 		{
-		mock.QueueDeleteFile('abc', '123', [fakeNum: '111', attach: ''],
-			'attach', 'rename')
-		mock.QueueDeleteFile('222', 'abc', [fakeNum: '111', attach: ''],
-			'attach', 'rename')
-		mock.QueueDeleteFile('333', '222', [fakeNum: '111', attach: ''],
-			'attach', 'rename')
-		mock.QueueDeleteFile('def', '456', [fakeNum: 'key'], 'custom1', 'replace')
-		mock.QueueDeleteFile('ghi', '789', Record(), 'custom2', 'replace')
-		Assert(.getAttachments(mock) is: #(
-			(new_file: 'abc', old_file: '123', nums: [fakeNum: '111'],
+		.rec1 = [fakeNum: '111', attach: '']
+		.rec2 = [fakeNum: 'key']
+		.rec3 = Record()
+		mock.QueueDeleteFile('abc', '123', .rec1, 'attach', 'rename')
+		mock.QueueDeleteFile('222', 'abc', .rec1, 'attach', 'rename')
+		mock.QueueDeleteFile('333', '222', .rec1, 'attach', 'rename')
+		mock.QueueDeleteFile('def', '456', .rec2, 'custom1', 'replace')
+		mock.QueueDeleteFile('ghi', '789', .rec3, 'custom2', 'replace')
+		Assert(.getAttachments(mock) is: Object(
+			Object(new_file: 'abc', old_file: '123', rec: .rec1,
 				fieldName: 'attach', action: 'rename'),
-			(new_file: '222', old_file: 'abc', nums: [fakeNum: '111'],
+			Object(new_file: '222', old_file: 'abc', rec: .rec1,
 				fieldName: 'attach', action: 'rename'),
-			(new_file: '333', old_file: '222', nums: [fakeNum: '111'],
+			Object(new_file: '333', old_file: '222', rec: .rec1,
 				fieldName: 'attach', action: 'rename'),
-			(new_file: 'def', old_file: '456', nums: [fakeNum: 'key'],
+			Object(new_file: 'def', old_file: '456', rec: .rec2,
 				fieldName: 'custom1', action: 'replace'),
-			(new_file: 'ghi', old_file: '789', nums: [], fieldName: 'custom2',
-				action: 'replace')))
+			Object(new_file: 'ghi', old_file: '789', rec: .rec3,
+				fieldName: 'custom2', action: 'replace')))
 		}
 
 	getAttachments(mock)
@@ -320,9 +322,9 @@ Test
 		action = 'action'
 		new_file = `202404\new_file`
 		old_file = `202404\old_file`
-		Assert(c.QueueDeleteFile(new_file, '', [], fieldName, action))
+		Assert(c.QueueDeleteFile(new_file, '', rec = [], fieldName, action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, old_file: '', nums: [], :fieldName, :action]))
+			is: Object([:new_file, old_file: '', :rec, :fieldName, :action]))
 
 		c = AttachmentsManager
 			{
@@ -339,9 +341,10 @@ Test
 			AttachmentsManager_findCreationNumField() { return false }
 			}
 		c = new c('query', #('key_field'))
-		Assert(c.QueueDeleteFile(new_file, old_file, [], 'test_attachments', action))
+		Assert(c.QueueDeleteFile(new_file, old_file, rec = [],
+			'test_attachments', action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, old_file: '', nums: [], :fieldName, :action]))
+			is: Object([:new_file, old_file: '', :rec, :fieldName, :action]))
 
 		cl = AttachmentsManager
 			{
@@ -363,59 +366,59 @@ Test
 			}
 		c = new cl('query', #('key_field'))
 		// no attachment in the record
-		Assert(c.QueueDeleteFile(new_file, old_file, [], fieldName, action))
+		Assert(c.QueueDeleteFile(new_file, old_file, rec = [], fieldName, action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, :old_file, nums: [], :fieldName, :action]))
+			is: Object([:new_file, :old_file, :rec, :fieldName, :action]))
 
 		c = new cl('query', #('key_field'))
 		// custom attachment should not have this issue
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: 'new_file'],
+		Assert(c.QueueDeleteFile(new_file, old_file, rec = [test_attachments: 'new_file'],
 			fieldName, action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, :old_file, nums: [], :fieldName, :action]))
+			is: Object([:new_file, :old_file, :rec, :fieldName, :action]))
 
 		c = new cl('query', #('key_field'))
 		// no attachment in the record
 		old_file = 'c:/sub_folder/202404/old_file'
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: [
-			[attachment0: 'sub_folder/new_file']
-			]], 'test_attachments', action))
+		Assert(c.QueueDeleteFile(new_file, old_file,
+			rec = [test_attachments: [[attachment0: 'sub_folder/new_file']]],
+			'test_attachments', action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, :old_file, nums: [], :fieldName, :action]))
+			is: Object([:new_file, :old_file, :rec, :fieldName, :action]))
 
 		c = new cl('query', #('key_field'))
 		old_file = 'c:/sub_folder/old_file'
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: [
-			[attachment0: 'sub_folder/new_file']
-			]], 'test_attachments', action))
+		Assert(c.QueueDeleteFile(new_file, old_file,
+			rec = [test_attachments: [[attachment0: 'sub_folder/new_file']]],
+			'test_attachments', action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, old_file: '', nums: [], :fieldName, :action]))
+			is: Object([:new_file, old_file: '', :rec, :fieldName, :action]))
 
 		c = new cl('query', #('key_field'))
 		old_file = OpenImageWithLabelsControl.SplitFullPath('202404/old_file')
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: [
-			[attachment0: '202404/old_file']
-			]], 'test_attachments', action))
+		Assert(c.QueueDeleteFile(new_file, old_file,
+			rec = [test_attachments: [[attachment0: '202404/old_file']]],
+			'test_attachments', action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, old_file: '', nums: [], :fieldName, :action]))
+			is: Object([:new_file, old_file: '', :rec, :fieldName, :action]))
 
 		c = new cl('query', #('key_field'))
 		old_file = 'c:/sub_folder/202404/old_file'
-		Assert(c.QueueDeleteFile('', old_file, [test_attachments: [
-			[attachment0: '202404/old_file']
-			]], 'test_attachments', AttachmentsManager.RecordDeleteAction))
+		Assert(c.QueueDeleteFile('', old_file,
+			rec = [test_attachments: [[attachment0: '202404/old_file']]],
+			'test_attachments', AttachmentsManager.RecordDeleteAction))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([new_file: '', :old_file, nums: [], :fieldName,
+			is: Object([new_file: '', :old_file, :rec, :fieldName,
 				action: AttachmentsManager.RecordDeleteAction]))
 
 		// case insensitive on windows
 		c = new cl('query', #('key_field'))
 		old_file = OpenImageWithLabelsControl.SplitFullPath(`202404\OLD_FILE`)
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: [
-			[attachment0: '202404/old_file']
-			]], 'test_attachments', action))
+		Assert(c.QueueDeleteFile(new_file, old_file,
+			rec = [test_attachments: [[attachment0: '202404/old_file']]],
+			'test_attachments', action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, old_file: '', nums: [], :fieldName, :action]))
+			is: Object([:new_file, old_file: '', :rec, :fieldName, :action]))
 
 		cl = AttachmentsManager
 			{
@@ -437,20 +440,20 @@ Test
 			}
 		c = new cl('query', #('key_field'))
 		old_file = OpenImageWithLabelsControl.SplitFullPath('202404/old_file')
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: [
-			[attachment0: '202404/old_file']
-			]], 'test_attachments', action))
+		Assert(c.QueueDeleteFile(new_file, old_file,
+			rec = [test_attachments: [[attachment0: '202404/old_file']]],
+			'test_attachments', action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, old_file: '', nums: [], :fieldName, :action]))
+			is: Object([:new_file, old_file: '', :rec, :fieldName, :action]))
 
 		c = new cl('query', #('key_field'))
 		// case sensitive on non-windows
 		old_file = `c:\sub_folder\202404\OLD_FILE`
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: [
-			[attachment0: '202404/old_file']
-			]], 'test_attachments', action))
+		Assert(c.QueueDeleteFile(new_file, old_file,
+			rec = [test_attachments: [[attachment0: '202404/old_file']]],
+			'test_attachments', action))
 		Assert(c.AttachmentsManager_oldAttachments
-			is: Object([:new_file, :old_file, nums: [], :fieldName, :action]))
+			is: Object([:new_file, :old_file, :rec, :fieldName, :action]))
 		}
 
 	Test_oldFileNotLinkCopy()
@@ -497,11 +500,11 @@ Test
 		c.AttachmentsManager_oldAttachments = Object()
 		old_file = `\\share\att\OldAttachments\myPdf.pdf`
 		new_file = `\\share\att\202403\myPdf2.pdf`
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: [
-			[attachment0: '202403\myPdf2.pdf']
-			]], 'test_attachments', 'replace'))
+		Assert(c.QueueDeleteFile(new_file, old_file,
+			rec = [test_attachments: [[attachment0: '202403\myPdf2.pdf']]],
+			'test_attachments', 'replace'))
 		Assert(c.AttachmentsManager_oldAttachments is:
-			Object([:new_file, old_file: '', nums: [], :fieldName, action: 'replace']))
+			Object([:new_file, old_file: '', :rec, :fieldName, action: 'replace']))
 
 		// file is in protected "old attachments" folder - carried over from
 		// pre normally copy and link activity - file renamed, can still new file for
@@ -509,35 +512,36 @@ Test
 		c.AttachmentsManager_oldAttachments = Object()
 		old_file = `\\share\att\OldAttachments\myPdf.pdf`
 		new_file = `\\share\att\OldAttachments\renamed.pdf`
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: [
-			[attachment0: 'OldAttachments\renamed.pdf']
-			]], 'test_attachments', 'rename'))
+		Assert(c.QueueDeleteFile(new_file, old_file,
+			rec = [test_attachments: [[attachment0: 'OldAttachments\renamed.pdf']]],
+			'test_attachments', 'rename'))
 		Assert(c.AttachmentsManager_oldAttachments is:
-			Object([:new_file, old_file: '', nums: [], :fieldName, action: 'rename']))
+			Object([:new_file, old_file: '', :rec, :fieldName, action: 'rename']))
 
 		// file is managed by normally link copy settings, in standard location
 		c.AttachmentsManager_oldAttachments = Object()
 		old_file = `\\share\att\202403\myPdf.pdf`
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: []],
+		Assert(c.QueueDeleteFile(new_file, old_file, rec = [test_attachments: []],
 			'test_attachments', 'replace'))
 		Assert(c.AttachmentsManager_oldAttachments is:
-			Object([:new_file, :old_file, nums: [], :fieldName, action: 'replace']))
+			Object([:new_file, :old_file, :rec, :fieldName, action: 'replace']))
 
 		// file is NOT managed by normally link copy settings,
 		// reflects sample companies demo data
 		c.AttachmentsManager_oldAttachments = Object()
 		old_file = `\\share\att\myPdf.pdf`
-		Assert(c.QueueDeleteFile(new_file, old_file, [test_attachments: []],
+		Assert(c.QueueDeleteFile(new_file, old_file, rec = [test_attachments: []],
 			'test_attachments', 'replace'))
 		Assert(c.AttachmentsManager_oldAttachments is:
-			Object([:new_file, old_file: '', nums: [], :fieldName, action: 'replace']))
+			Object([:new_file, old_file: '', :rec, :fieldName, action: 'replace']))
 
 		// file is managed by normally link copy settings, in standard location
 		c.AttachmentsManager_oldAttachments = Object()
 		old_file = `\\share\att\202403\myPdf.pdf`
-		Assert(c.QueueDeleteFile(new_file, old_file, [], 'test_attachments', 'replace'))
+		Assert(c.QueueDeleteFile(new_file, old_file, rec = [],
+			'test_attachments', 'replace'))
 		Assert(c.AttachmentsManager_oldAttachments is:
-			Object([:new_file, :old_file, nums: [], :fieldName, action: 'replace']))
+			Object([:new_file, :old_file, :rec, :fieldName, action: 'replace']))
 		}
 
 	Test_findCreationNumField()

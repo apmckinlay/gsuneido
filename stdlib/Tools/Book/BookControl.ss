@@ -671,7 +671,8 @@ Controller
 			return
 
 		bookedit_rec = Query1(.book, num: .current.num)
-		html_page? = bookedit_rec.text =~ '^<|^Biz_Menu|^BookMenuPage|^GetBookPage'
+		html_page? = bookedit_rec.text =~ '^Biz_Menu|^BookMenuPage|^GetBookPage' or
+			BookContent.Match(.book, bookedit_rec.text)
 		if .Title is TranslateLanguage("User's Manual")
 			{
 			.gotoFromUserManual(bookedit_rec, html_page?)

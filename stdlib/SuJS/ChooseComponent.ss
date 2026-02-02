@@ -35,6 +35,8 @@ HtmlDivComponent
 		.Xmin = .field.Xmin + .button.Xmin
 		.Ymin = .field.Ymin
 		.SetMinSize()
+		if .field.Base?(EditorComponent)
+			.SetStyles(#('align-self': 'stretch'))
 		}
 
 	Initialize(@unused) { }
@@ -49,7 +51,7 @@ HtmlDivComponent
 			.button.CLICK()
 		else if event.key is #Enter
 			{
-			.field.Event('KEYDOWN', VK.RETURN)
+			.RunWhenNotFrozen({ .field.EventWithFreeze('KEYDOWN', VK.RETURN) })
 			return
 			}
 		else if event.key is #Escape

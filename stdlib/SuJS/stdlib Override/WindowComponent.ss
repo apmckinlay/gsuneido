@@ -198,6 +198,9 @@ WindowBaseComponent
 		.RegisterActiveWindow()
 
 		DoStartup(.Ctrl)
+
+		// To ensure the active status again
+		.Event(#DoActivate)
 		}
 
 	setupEl(el)

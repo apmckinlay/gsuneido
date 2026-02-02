@@ -216,4 +216,157 @@ Test
 			return .extend = ' extend some_field'
 			}
 		}
+
+	Test_OverrideReport?()
+		{
+		mock = Mock(Params)
+		mock.When.OverrideReport?([anyArgs:]).CallThrough()
+
+		report = Object()
+		Assert(mock.OverrideReport?(report) is: false)
+
+		mock.Params_report = Object()
+		Assert(mock.OverrideReport?(report))
+
+		report.from_preview = true
+		Assert(mock.OverrideReport?(report) is: false)
+
+		report.from_preview = false
+		Assert(mock.OverrideReport?(report))
+		}
+
+	Test_previewReport()
+		{
+		m = Params.PreviewReport
+
+		report = Object('Format')
+		result = m(report)
+		Assert(result members: #(0))
+		Assert(result[0] is: 'Format')
+
+		report = Object(
+			// vvvv Included with the returned object vvvv
+			'Format',
+			name: 'Test Report',
+			// vvvvv Not copied into returned object vvvvv
+			showLogo?: false,
+			allowSchedule:,
+			pageCount:)
+		result = m(report)
+		Assert(result members: #(0, name))
+		Assert(result[0] is: 'Format')
+		Assert(result.name is: 'Test Report')
+
+		report = Object(
+			// vvvv Included with the returned object vvvv
+			'Format',
+			name: 'Test Report',
+			devmode_name: 'devmode',
+			header: 'Header Text',
+			footer: 'Footer Text',
+			paramsdata: Object(filter: Object()),
+			printParams: Object(),
+			noPageRange: false,
+			pageRange: #(from: 0, to: 10),
+			minBorder: #(left: .25, right: .25, top: .25, bottom: .25),
+			margins: Object(left: .2, right: .2, top: .2, bottom: .2),
+			previewDialog:,
+			onDestroy: destroyFunc = function () { },
+			EmailAttachments: Object(),
+			// vvvvv Not copied into returned object vvvvv
+			showLogo?: false,
+			HelpOption: '/ETAHelp/Path',
+			scroll:,
+			wait:,
+			disableFieldProtectRules:,
+			allowSchedule:,
+			Params: Object(/* controls */),
+			ReprintFormat: 'ReprintFormat',
+			pageCount:)
+		result = m(report)
+		Assert(result
+			members: #(0, EmailAttachments, devmode_name, footer, header, margins,
+				minBorder, name, noPageRange, onDestroy, pageRange, paramsdata,
+				previewDialog, printParams))
+		Assert(result[0] is: 'Format')
+		Assert(result.EmailAttachments is: #())
+		Assert(result.devmode_name is: 'devmode')
+		Assert(result.footer is: 'Footer Text')
+		Assert(result.header is: 'Header Text')
+		Assert(result.margins is: #(left: .2, right: .2, top: .2, bottom: .2))
+		Assert(result.minBorder is: #(left: .25, right: .25, top: .25, bottom: .25))
+		Assert(result.name is: 'Test Report')
+		Assert(result.noPageRange is: false)
+		Assert(result.onDestroy is: destroyFunc)
+		Assert(result.pageRange is: #(from: 0, to: 10))
+		Assert(result.paramsdata is: Object(filter: Object()))
+		Assert(result.previewDialog)
+		Assert(result.printParams is: Object())
+
+		// Spot checking DeepCopy on Object members.
+		// previewReport modified, original report remains as is
+		result.printParams.testDeepCopy = true
+		Assert(report.printParams is: #())
+
+		result.pageRange.from = 1
+		result.pageRange.to = 11
+		Assert(report.pageRange.from is: 0)
+		Assert(report.pageRange.to is: 10)
+
+		// Original report object modified
+		report.margins.left = report.margins.right = .1
+		Assert(result.margins is: #(left: .2, right: .2, top: .2, bottom: .2))
+
+		report.paramsdata.extra = 'modified'
+		Assert(result.paramsdata is: Object(filter: Object()))
+		}
+
+	Test_validExport()
+		{
+		mock = Mock(Params)
+		mock.When.validExport([anyArgs:]).CallThrough()
+
+		// Theoretically, this scenario should be impossible.
+		// Unless someone creates a format class which doesn't inherit from stdlib:Format
+		// .Export should always be present.
+		report = Object(Object('Format'))
+		mock.When.getReportFormat([anyArgs:]).Return(class { })
+		Assert(mock.validExport(report) is: 'Export is not supported for this report')
+		Assert(report hasntMember: 'paramsdata')
+
+		// Theoretically, this scenario should also be impossible.
+		// This would require the Export button to be present,
+		// while the associated format does not actually support exporting.
+		mock.When.getReportFormat([anyArgs:]).Return(class { Export: false })
+		Assert(mock.validExport(report) is: 'Export is not supported for this report')
+		Assert(report hasntMember: 'paramsdata')
+
+		mock.When.getReportFormat([anyArgs:]).Return(class { Export: })
+		Assert(mock.validExport(report) is: '')
+		Assert(report hasntMember: 'paramsdata')
+
+		cl = class
+			{
+			Export(paramsdata)
+				{
+				return not paramsdata.GetDefault('allow?', false)
+					? 'Export is prohibited'
+					: ''
+				}
+			}
+		mock.When.getReportFormat([anyArgs:]).Return(cl)
+		Assert(mock.validExport(report) is: 'Export is prohibited')
+		mock.Verify.checkAndResetParams([anyArgs:])
+		Assert(report hasMember: 'paramsdata')
+
+		report.paramsdata.allow? = false
+		report.from_preview = true
+		Assert(mock.validExport(report) is: 'Export is prohibited')
+		mock.Verify.checkAndResetParams([anyArgs:])
+
+		report.paramsdata.allow? = true
+		report.from_preview = false
+		Assert(mock.validExport(report) is: '')
+		mock.Verify.Times(2).checkAndResetParams([anyArgs:])
+		}
 	}

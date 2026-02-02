@@ -131,17 +131,16 @@ TwoListDlgControl
 	handleColumnResize(listCtrl, available_cols, cols_size, newList)
 		{
 		diff_cols = available_cols.Values().Sort!().Difference(newList.Sort!())
-		cols_list = listCtrl.GetColumns()
 		protectedColumns = .getProtectedColumns(listCtrl)
-		for (i = 0; i < cols_list.Size(); ++i)
+		for i, col in listCtrl.GetColumns()
 			{
-			width = not protectedColumns.Has?(cols_list[i]) and
-				(not available_cols.Member?(cols_list[i]) or
-					diff_cols.Has?(available_cols[cols_list[i]]))
+			width = not protectedColumns.Has?(col) and
+				(not available_cols.Member?(col) or
+					diff_cols.Has?(available_cols[col]))
 				? 0
-				: not cols_size.Member?(cols_list[i]) or cols_size[cols_list[i]] is 0
+				: not cols_size.Member?(col) or cols_size[col] is 0
 					? false
-					: cols_size[cols_list[i]]
+					: cols_size[col]
 			listCtrl.SetColWidth(i, width)
 			}
 		listCtrl.Repaint()
@@ -166,7 +165,7 @@ TwoListDlgControl
 			.available_cols.Members(), deletecol:)
 
 		.result_ctrl.Set(' Default Columns Saved!')
-		.result_ctrl.SetColor(0x007f00)
+		.result_ctrl.SetColor(CLR.DARKGREEN)
 		.result_ctrl.SetFont(weight: FW.BOLD)
 		}
 	NewValue(data /*unused*/)
@@ -174,7 +173,7 @@ TwoListDlgControl
 		if .result_ctrl isnt false
 			{
 			.result_ctrl.Set(' (for all users)')
-			.result_ctrl.SetColor(0x000000)
+			.result_ctrl.SetColor(CLR.BLACK)
 			.result_ctrl.SetFont(weight: FW.NORMAL)
 			}
 		}

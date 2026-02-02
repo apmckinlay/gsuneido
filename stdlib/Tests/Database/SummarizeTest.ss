@@ -48,7 +48,7 @@ Test
 	Test_fixed()
 		{
 		table = .MakeTable("(a,b,c,d) key(a,b) index(a) index(b)")
-		for i in .. 10
+		for i in .. 100
 			QueryOutput(table, Record(a: i.Even?(), b: i))
 		query = table $ ' where a = true summarize b, min d sort b'
 		Assert(QueryStrategy(query) has: table $ '^(a,b)')

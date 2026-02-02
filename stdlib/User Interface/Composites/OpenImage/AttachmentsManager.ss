@@ -43,8 +43,7 @@ class
 			old_file = ''
 		if old_file is '' and new_file is ''
 			return true
-		nums = rec.Project(.keyFields)
-		.oldAttachments.Add(Object(:new_file, :old_file, :nums, :fieldName, :action))
+		.oldAttachments.Add(Object(:new_file, :old_file, :rec, :fieldName, :action))
 		return true
 		}
 
@@ -172,20 +171,21 @@ class
 			{
 			file = restore? ? fileOb.new_file : fileOb.old_file
 			if fileOb.action isnt ''
-				.logAction(file, fileOb.nums, fileOb.fieldName, fileOb.action)
-			.deleteFile(file, fileOb.nums, fileOb.fieldName)
+				.logAction(file, fileOb.rec.Project(.keyFields),
+					fileOb.fieldName, fileOb.action)
+			.deleteFile(file, fileOb.rec, fileOb.fieldName)
 			}
 		.oldAttachments = Object()
 		}
 
-	deleteFile(file, keys, fieldName)
+	deleteFile(file, rec, fieldName)
 		{
 		if file is ''
 			return
 		if '' isnt bucket = AttachmentS3Bucket()
 			{
 			if not AmazonS3.DeleteFile(bucket, FormatAttachmentPath(file))
-				.addToDeleteQueue(file, keys, fieldName)
+				.addToDeleteQueue(file, rec, fieldName)
 			return
 			}
 		// using DeleteFileApi to avoid retries on locked files
@@ -193,13 +193,13 @@ class
 		// have a long delay while system attempts to delete
 		// failed deletes will be re-tried later by CleanupAttachments contribution
 		if String?(result = DeleteFileApi(file)) and not result.Has?('does not exist')
-			.addToDeleteQueue(file, keys, fieldName)
+			.addToDeleteQueue(file, rec, fieldName)
 		}
 
-	addToDeleteQueue(file, keys, fieldName)
+	addToDeleteQueue(file, rec, fieldName)
 		{
 		failed = OptContribution('CleanupAttachments', .deleteFailed)
-		failed(file, .query, .keyFields, keys, fieldName)
+		failed(file, .query, .keyFields, rec.Project(.keyFields), fieldName)
 		}
 
 	logAction(file, key, fieldName, action)
@@ -218,14 +218,13 @@ class
 	// handles restore for a single record in a browse
 	RestoreOneByKey(rec)
 		{
-		keys = rec.Project(.keyFields)
-		results = .oldAttachments.FindAllIf({ it.nums is keys })
+		results = .oldAttachments.FindAllIf(find = { Same?(it.rec, rec) })
 		for idx in results
 			{
 			ob = .oldAttachments[idx]
-			.deleteFile(ob.new_file, keys, ob.fieldName)
+			.deleteFile(ob.new_file, rec, ob.fieldName)
 			}
-		.oldAttachments.RemoveIf({ it.nums is keys })
+		.oldAttachments.RemoveIf(find)
 		}
 
 	QueueDeleteRecordFiles(rec)

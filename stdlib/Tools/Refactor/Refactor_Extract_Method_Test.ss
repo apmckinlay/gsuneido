@@ -8,8 +8,7 @@ Test
 		Assert(r.Msg is: 'Please select the code you want to extract into a method')
 
 		text = "class { F() { if (x is false) return false }"
-		Assert(r.Init(Record(select: Object(cpMin: 0, cpMax: text.Size()), :text))
-			is: true)
+		Assert(r.Init(Record(select: Object(cpMin: 0, cpMax: text.Size()), :text)))
 		Assert(r.Msg has: 'selection contains')
 
 		text = "function () { stuff }"
@@ -21,8 +20,7 @@ Test
 		{
 		r = new .test_refactor
 		text = "class { Fred() { } }"
-		Assert(r.Init(data = Record(select: Object(cpMin: 0, cpMax: 1), :text))
-			is: true)
+		Assert(r.Init(data = Record(select: Object(cpMin: 0, cpMax: 1), :text)))
 
 		data.method_name = ''
 		Assert(r.Errors(data) is: "Invalid method name")

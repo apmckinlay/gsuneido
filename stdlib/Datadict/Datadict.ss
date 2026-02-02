@@ -175,12 +175,15 @@ class
 
 	recentlyDeletedCustomField?(tag, field)
 		{
-		return #(Internal, ExcludeSelect).Has?(tag) and
-			Customizable.CustomField?(field, includeDeleted:) and
-			false isnt TableExists?('suneidolog') and
-			not QueryEmpty?('suneidolog where sulog_message is ' $
-				Display(Customizable.DeletedCustomFieldMessage(field)) $
-				' and sulog_timestamp > ' $ Display(Date().Minus(days: 1)))
+		if not #(Internal, ExcludeSelect).Has?(tag) or
+			not Customizable.CustomField?(field, includeDeleted:)
+			return false
+
+		lastDelete = Datadict(field, #(LastDelete)).GetDefault('LastDelete', false)
+		if lastDelete is false
+			return false
+
+		return lastDelete > Date().Minus(days: 1)
 		}
 
 	PromptOrHeading(field, excludeTags = #(Internal), logAsError = true)

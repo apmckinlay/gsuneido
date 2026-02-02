@@ -40,9 +40,11 @@ class
 
 	ModelIsReset?()
 		{
-		data = .model.GetLoadedData()
 		if .loadedTop is false or .loadedBottom is false
 			return false
+		data = .model.GetLoadedData()
+		if data.Empty?()
+			return true
 		members = data.Members().Sort!()
 		return .loadedTop isnt members.First() or .loadedBottom isnt members.Last()
 		}
@@ -101,10 +103,10 @@ class
 	EnsureRow(row)
 		{
 		if row is VirtualListGridBodyComponent.FillRowY
-			return false
+			return
 
 		if row >= .loadedTop and row <= .loadedBottom
-			return false
+			return
 
 		offset = row < .loadedTop
 			? row - .model.Offset

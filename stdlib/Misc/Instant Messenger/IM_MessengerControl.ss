@@ -31,9 +31,8 @@ Controller
 		IM_MessengerManager.EnsureTables()
 
 		.conversation_tabs = .FindControl('conversation_tabs')
-		.channTab = .FindControl("selection_tabs")
+		.selection_tabs = .FindControl('selection_tabs')
 		.contacts = .FindControl('Contacts')
-		.channels = .FindControl("Channels")
 		.warning = .FindControl('im_warnUser')
 		.warning.SetColor(CLR.RED)
 
@@ -46,7 +45,7 @@ Controller
 
 	Controls()
 		{
-		contactsImpl = SoleContribution('IM_ContactsImplementation')
+		contactsImpl = LastContribution('IM_ContactsImplementation')
 		return Object('HorzSplit'
 			Object('Vert'
 				Object('IM_MessengerTabs'
@@ -59,7 +58,6 @@ Controller
 			Object('Tabs'
 				#(IM_Contacts, name: "Contacts", Tab: 'Contacts'),
 				#(IM_Channels, name: "Channels", Tab: 'Channels'),
-				constructAll:,
 				extraControl: contactsImpl.GetDefault('extraTop', false),
 				name: 'selection_tabs'
 				)
@@ -138,12 +136,9 @@ Controller
 					SafeEval()
 				if sysMsg.token is 'a0cb03a6f32a2448'
 					{
-					if false isnt channels = .FindControl('Channels')
-						{
-						channels.ReloadAndUpdateVirtualList()
-						if sysMsg.type is 'channel_changed'
-							channelChanged? = true
-						}
+					.reloadChannels()
+					if sysMsg.type is 'channel_changed'
+						channelChanged? = true
 					}
 				}
 			}
@@ -152,12 +147,29 @@ Controller
 		return messages
 		}
 
+	reloadChannels(channelNums = false)
+		{
+		if .channels isnt false
+			.channels.Reload(channelNums)
+		}
+
+	getter_channels()
+		{
+		if false is channels = .FindControl('Channels')
+			return false
+		return .channels = channels
+		}
+
 	handleMessages(messages, _fromStartup = false)
 		{
 		originalFocus = GetFocus()
 		.setLastGet()
 		.UpdateContactHistory()
-		flashWindow? = .processMessages(messages)
+		selectUser, reloadChannelNums, flashWindow? = .processMessages(messages)
+		if false isnt selectUser
+			.select(selectUser)
+		if reloadChannelNums.NotEmpty?()
+			.reloadChannels(reloadChannelNums)
 		SetFocus(originalFocus)
 		if flashWindow? and not super.HasFocus?() and not fromStartup
 			FlashWindowEx(Object(cbSize: FLASHWINFO.Size(), hwnd: .Window.Hwnd,
@@ -176,16 +188,11 @@ Controller
 
 	processMessages(messages)
 		{
-		atleastOneMessage = false
-		flashWindow? = false
-		curUser = .conversation_tabs.TabGetSelectedName()
-		isTyping? = .conversation_tabs.IsTyping?()
-		lastUser = false
-
+		flashWindow? = lastUser = selectUser = false
+		reloadChannelNums = Object()
 		for message in messages
 			{
 			.convertMessage(message)
-			atleastOneMessage = true
 			isChannel? = message.imchannel_num isnt ''
 			user = .userFromMessage(message, isChannel?)
 
@@ -196,18 +203,21 @@ Controller
 				flashWindow? = true
 				lastUser = user
 				}
-			else
-				flashWindow? = .updateChannelNotificationButton(message) or flashWindow?
+			else if .updateChannelNotify(message)
+				{
+				reloadChannelNums.Add(message.imchannel_num)
+				flashWindow? = true
+				}
 			}
 
-		.sendReadAllSystemMessage(atleastOneMessage)
+		if messages.NotEmpty?()
+			IM_MessengerManager.
+				OutputMessage(Suneido.User, IM_SendNewMessage.AllReadSystemMessage)
 
-		if isTyping? is true
-			.select(curUser)
-		else if lastUser isnt false
-			.select(lastUser)
-
-		return flashWindow?
+		selectUser = .conversation_tabs.IsTyping?()
+			? .conversation_tabs.TabGetSelectedName()
+			: lastUser
+		return selectUser, reloadChannelNums, flashWindow?
 		}
 
 	convertMessage(message)
@@ -242,31 +252,17 @@ Controller
 		return .conversation_tabs.ChannelOpen?(num) // Not a subscribed channel but open
 		}
 
-	updateChannelNotificationButton(message)
+	updateChannelNotify(message)
 		{
-		if .hasUserMention(message.im_message)
-			{
-			.channels.SetNotificationButtonAsMentioned(message.imchannel_num)
-			.channTab.Select(1)
-			return true
-			}
-		else
-			{
-			.channels.SetNotificationButtonAsUnread(message.imchannel_num)
-			return false
-			}
+		if mentioned? = .hasUserMention(message.im_message)
+			.selection_tabs.Select(1)
+		notify? = IM_ChannelsControl.SetNotify(message.imchannel_num, :mentioned?)
+		return notify? or mentioned?
 		}
 
 	hasUserMention(msg)
 		{
 		return msg.Has?('@everyone') or msg.Has?('@' $ Suneido.User)
-		}
-
-	sendReadAllSystemMessage(atleastOneMessage)
-		{
-		if atleastOneMessage
-			IM_MessengerManager.OutputMessage(Suneido.User,
-				IM_SendNewMessage.AllReadSystemMessage)
 		}
 
 	select(user)
@@ -307,16 +303,20 @@ Controller
 
 	Context_subUnsub(paramObj)
 		{
-		subStatus = paramObj.subStatus
-		subscribedChannels = UserSettings.Get('IM_SubscribedChannels', def: Object())
+		cachedSubscriptions = UserSettingsCached().Get('IM_SubscribedChannels')
+		subscribedChannels = Object?(cachedSubscriptions)
+			? cachedSubscriptions.Copy() // Cached Objects are static
+			: Object()
 
+		subStatus = paramObj.subStatus
 		if subStatus is 'subscribe'
 			subscribedChannels.AddUnique(paramObj.rec.imchannel_num)
 		else if subStatus is 'unsubscribe'
 			subscribedChannels.Remove(paramObj.rec.imchannel_num)
 
-		UserSettings.Put('IM_SubscribedChannels', subscribedChannels)
-		.channels.ReloadAndUpdateVirtualList()
+		UserSettingsCached().Put('IM_SubscribedChannels', subscribedChannels,
+			resetServer?:)
+		.reloadChannels()
 		}
 
 	Destroy()

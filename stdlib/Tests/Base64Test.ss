@@ -23,9 +23,13 @@ Test
 			}
 		Assert(Base64.Decode("YQ") is: "a")
 
-		Assert(Base64.EncodeLines('x'.Repeat(100))
+		Assert(Base64.EncodeLines('x'.Repeat(100), linelen: 70)
 			is: "eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eH
 h4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==
 ")
+
+Assert(Base64.EncodeLines('x'.Repeat(100))
+			is: "eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eH"$
+			"h4\r\neHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==\r\n")
 		}
 	}

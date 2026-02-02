@@ -145,6 +145,7 @@ class
 			if '' is function? = .tokenIsFunction?(token, nest, function?)
 				return ''
 			}
+		return ''
 		}
 
 	tokenIsFunction?(token, nest, function?)
@@ -447,38 +448,50 @@ class
 			}
 		return false
 		}
-	FindBaseMethod(lib, text, method_name)
+	FindBaseMethod(lib, name, text, method_name)
 		{
-		x = Object(:lib, :text)
+		x = Object(:lib, :name, :text)
+		webgui? = LibraryTags.GetTagFromName(name).Has?('__webgui')
 		while false isnt base = .SuperClass(x.text)
 			{
-			if false is (x = .find_base(x.lib, base)) or
+			if false is (x = .find_base(x.lib, x.name, base, webgui?)) or
 				not .Class?(text)
 				break
 			if false isnt .FindMethod(x.text, method_name)
-				return Object(lib: x.lib, name: base)
+				return Object(lib: x.lib, name: x.name)
 			}
 		return false
 		}
-	find_base(lib, name)
+	find_base(lib, name, base, webgui?)
 		{
 		libs = .libraries()
-		if not lib.Suffix?('webgui')
-			libs.RemoveIf({ it.Suffix?('webgui') })
-		if name.Prefix?('_')
+		if base.Prefix?('_')
 			{
-			name = name[1..]
+			base = base[1..]
+			if name.Has?('__webgui')
+				{
+				x = .getRecord(lib, base)
+				return x isnt false ? Object(:lib, name: x.name, text: x.text) : false
+				}
 			libs = libs[.. libs.Find(lib)]
 			}
+		tags = LibraryTags.BuildTags(.trials(), webgui? ? [#webgui] : #()).
+			Map({ '__' $ it }).
+			Add('', at: 0)
 		for lib in libs.Reverse!()
-			if false isnt x = .getRecord(lib, name)
-				return Object(:lib, text: x.text)
+			if false isnt x = .getRecord(lib, base, :tags)
+				{
+				return Object(:lib, name: x.name, text: x.text)
+				}
 		return false
 		}
-	getRecord(lib, name)
+	trials()
 		{
-		return Query1(lib $
-			' where group = -1 and name = ' $ Display(name))
+		return LastContribution(#LibraryTags_Trials)
+		}
+	getRecord(lib, name, tags = #(''))
+		{
+		return LibraryTags.GetRecord(name, lib, :tags)
 		}
 	libraries()
 		{

@@ -8,6 +8,8 @@ class
 	WithoutSpecial(list, ignoreDefault = false)
 		{
 		ignoreList = Object("^[(].*[)]$", "^127.0.0.1", ':Thread-[0-9]+$')
+		if SuneidoJSEnabled?()
+			ignoreList.Add('.+?@\d+?:[^:]+$')
 		if ignoreDefault
 			ignoreList.MergeUnion(GetContributions('UserConnections_IgnoreList'))
 		return list.Copy().RemoveIf({|c| c =~ ignoreList.Join('|') or not c.Has?('@') })

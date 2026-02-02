@@ -13,6 +13,7 @@ Controller
 		.model = new SvcModel()
 		.model.SetSettings(SvcSettings.Get())
 		.list = .FindControl('localList')
+		.list.SetReadOnly(true, grayOut: false)
 		.data = .FindControl('Data')
 		.tag = .FindControl('tag')
 		.data.SetField('option', 'Start')
@@ -33,7 +34,7 @@ Controller
 			#Skip
 			#(List columns: #(svc_checked, svc_lib, svc_type, svc_date,
 				svc_local_date, svc_name),
-				noShading:,	name: 'localList', defWidth: false,
+				noShading:,	name: 'localList', defWidth: false, resetColumns:,
 				columnsSaveName: 'svc_local', stretchColumn: 'svc_name',
 				checkBoxColumn: 'svc_checked'))
 		}
@@ -57,38 +58,46 @@ Controller
 		if .trialTags.Empty?()
 			return
 
+		data = Object()
+		.tag.Set('')
 		if option is 'Start'
-			{
-			.tag.SetReadOnly(false)
-			.model.SetTable('svc_all_changes')
-			for rec in .model.LocalChanges
-				{
-				rec.svc_checked = false
-				.list.AddRow(.formatRec(rec))
-				}
-			}
+			.loadForStart(data)
 		else if option is 'End'
+			.loadForEnd(data)
+		.list.Set(data.Map(.formatRec))
+		}
+
+	loadForStart(data)
+		{
+		.model.SetTable('svc_all_changes')
+		for rec in .model.LocalChanges
 			{
-			.tag.SetReadOnly(true)
-			data = Object()
-			libs = Libraries().Append(UnusedStandardLibraries())
-			for lib in libs
-				{
-				try
-					data.Append(QueryAll(lib $ '
-						rename lib_modified to modified,
-							lib_committed to committed
-						extend lib = ' $ Display(lib) $ ',
-							svc_checked = false,
-							tag = LibraryTags.GetTagFromName(name)' $ Opt('
-						where ', .trialTags.Members().
-							Map({ 'tag.Suffix?(' $ Display('_' $ it) $ ')' }).
-							Join(' or ')) $ '
-						where group is -1
-						project name, group, lib, modified, committed, svc_checked'))
-				catch (unused, 'nonexistent table|*nonexistent column') { }
-				}
-			.list.Set(data.Map(.formatRec))
+			if rec.type is '-' or
+				.trialTags.Member?(LibraryTags.GetTagFromName(rec.name)[2..])
+				continue
+			rec.svc_checked = false
+			data.Add(rec)
+			}
+		}
+
+	loadForEnd(data)
+		{
+		libs = Libraries().Append(UnusedStandardLibraries())
+		for lib in libs
+			{
+			try
+				data.Append(QueryAll(lib $ '
+					rename lib_modified to modified,
+						lib_committed to committed
+					extend lib = ' $ Display(lib) $ ',
+						svc_checked = false,
+						tag = LibraryTags.GetTagFromName(name)' $ Opt('
+					where ', .trialTags.Members().
+						Map({ 'tag.Suffix?(' $ Display('_' $ it) $ ')' }).
+						Join(' or ')) $ '
+					where group is -1
+					project name, group, lib, modified, committed, svc_checked'))
+			catch (unused, 'nonexistent table|*nonexistent column') { }
 			}
 		}
 
@@ -137,19 +146,35 @@ Controller
 		srcRec = svcTable.Get(select.svc_name, :t)
 		destName = LibraryTags.SetTrialTag(select.svc_name, tag, .trialTags.Members())
 
-		svcTable.Output([
-			name: destName,
-			parent: srcRec.parent,
-			text: srcRec.text,
-			lib_invalid_text: srcRec.lib_invalid_text
-			], :t)
+		if false isnt svcTable.Get(destName, :t, deleted:)
+			svcTable.Restore(destName, :t)
+
+		if false is destRec = svcTable.Get(destName, :t)
+			svcTable.Output([
+				name: destName,
+				parent: srcRec.parent,
+				text: srcRec.text,
+				lib_invalid_text: srcRec.lib_invalid_text
+				], :t)
+		else
+			{
+			destRec.lib_invalid_text = srcRec.lib_invalid_text
+			svcTable.Update(destRec, newText: srcRec.text, :t)
+			}
 		svcTable.Restore(select.svc_name, :t)
 		}
 
-	renameAndDelete(select, svcTable, t)
+	renameAndDelete(select, svcTable, t, tag)
 		{
 		srcRec = svcTable.Get(select.svc_name, :t)
-		destName = LibraryTags.SetTrialTag(select.svc_name, '', .trialTags.Members())
+		destName = LibraryTags.SetTrialTag(select.svc_name, tag, .trialTags.Members())
+
+		if destName is select.svc_name
+			return
+
+		if false isnt svcTable.Get(destName, :t, deleted:)
+			svcTable.Restore(destName, :t)
+
 		if false is destRec = svcTable.Get(destName, :t)
 			svcTable.Rename(srcRec, destName, :t)
 		else

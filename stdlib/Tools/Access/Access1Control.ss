@@ -13,6 +13,7 @@ AccessBase
 		.get_plugins()
 		.lock = AccessLock(this, false)
 		.load_record()
+		.attachmentsManager = AttachmentsManager(.query, Object())
 		}
 	Commands:
 		(
@@ -114,6 +115,7 @@ AccessBase
 		if .nextnumControl isnt false
 			.nextnumControl.RestoreNextNumber()
 		.Send("Access1_Restore")
+		.attachmentsManager.ProcessQueue(restore?:)
 		}
 	load_record()
 		{
@@ -260,6 +262,7 @@ AccessBase
 		.Data.Dirty?(false)
 		.Send('Access1AfterSaving')
 		.new_record? = false
+		.attachmentsManager.ProcessQueue()
 		return true
 		}
 	save()
@@ -296,6 +299,11 @@ AccessBase
 		{
 		.query_columns = QueryColumns(query)
 		.load_record()
+		}
+	QueueDeleteAttachmentFile(newFile, oldFile, name, action)
+		{
+		return .attachmentsManager.QueueDeleteFile(
+			newFile, oldFile, .GetData(), name, action)
 		}
 	Destroy()
 		{

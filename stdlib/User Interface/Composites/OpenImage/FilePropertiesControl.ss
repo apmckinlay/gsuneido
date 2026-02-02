@@ -29,7 +29,7 @@ Controller
 
 	Dir(fullPath)
 		{
-		Dir(fullPath, files:, details:)
+		return FileStorage.Dir(fullPath, files:, details:)
 		}
 
 	propertiesLayout(details)

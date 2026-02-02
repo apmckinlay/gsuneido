@@ -21,6 +21,7 @@ See also:
 [Channel](<../Channel.md>),
 [Mutex](<../Mutex.md>),
 [object.CompareAndSet](<../Object/object.CompareAndSet.md>),
+[Pipe](<../Pipe.md>),
 [Synchronized](<../Synchronized.md>),
 [Thread](<../Thread.md>),
 [WaitGroup](<../WaitGroup.md>)

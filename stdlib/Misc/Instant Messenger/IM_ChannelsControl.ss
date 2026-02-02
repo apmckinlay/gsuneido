@@ -11,8 +11,6 @@ Controller
 
 	Controls()
 		{
-		.subscriptionStatus = .getSubscriptionStatus()
-
 		return Object('Vert'
 			Object('VirtualList',
 				'im_channels
@@ -40,26 +38,46 @@ Controller
 
 	BeforeRecord(rec)
 		{
-		allUnreadChannels = UserSettings.Get('IM_UnreadChannels')
-		unreadMentionsList = UserSettings.Get('IM_MentionedChannels')
-		if .subscriptionStatus.value.Has?(rec.imchannel_num)
-			rec.imchannel_joinedStatus = true
+		.beforeRecord(rec, UserSettingsCached().Get('IM_SubscribedChannels'))
+		}
 
-		if allUnreadChannels isnt false and allUnreadChannels.Has?(rec.imchannel_num)
+	beforeRecord(rec, cachedSubscriptions)
+		{
+		if Object?(cachedSubscriptions)
+			rec.imchannel_joinedStatus = cachedSubscriptions.Has?(rec.imchannel_num)
+
+		if .getUserSettingOb('IM_MentionedChannels').Has?(rec.imchannel_num)
+			rec.imchannel_notification = CLR.orange // orange button takes priority
+		else if .getUserSettingOb('IM_UnreadChannels').Has?(rec.imchannel_num)
 			rec.imchannel_notification = CLR.GREEN
 
-		if unreadMentionsList isnt false and unreadMentionsList.Has?(rec.imchannel_num)
-			rec.imchannel_notification = CLR.orange // orange button takes priority
+		last = .getLastActivity(rec.imchannel_num)
+		rec.imchannel_lastActivity = last isnt false
+			? Display(Timestamp().MinusDays(last.im_num).Round(0)) $ ' day(s) ago'
+			: 'No Activity'
+		}
 
-		rec.imchannel_lastActivity = .getTimeSinceLastActivity(rec.imchannel_num)
+	getUserSettingOb(key)
+		{
+		return Object?(setting = UserSettings.Get(key))
+			? setting
+			: Object()
+		}
+
+	getLastActivity(channel_num)
+		{
+		return QueryLast('im_history
+			where imchannel_num is ' $ Display(channel_num) $
+			' sort im_num')
 		}
 
 	VirtualList_DoubleClick(rec, col /*unused*/, source)
 		{
 		if source is .listChannels
-			if .listChannels.Empty?() isnt true and rec isnt false
+			if .listChannels.NotEmpty?() and rec isnt false
 				{
-				.SetNotificationButtonAsRead(rec.imchannel_num)
+				.SetNotify(rec.imchannel_num, read?:)
+				.listChannels.ReloadRecord(rec)
 				.Send('OpenChannel', rec)
 				}
 		return true
@@ -81,16 +99,13 @@ Controller
 		{
 		if false is args.GetDefault('rec', false)
 			return
-		else
-			{
-			num_param = String(args.rec.imchannel_num)
-			update_query = "update im_channels where imchannel_num is " $ num_param $
-				" set imchannel_status = 'inactive'"
-			QueryDo(update_query)
-			.listChannels.Refresh()
-			.Send("CloseTab",args.rec)
-			IM_MessengerManager.SendSystemMessage(.maintMsg)
-			}
+		num_param = String(args.rec.imchannel_num)
+		update_query = "update im_channels where imchannel_num is " $ num_param $
+			" set imchannel_status = 'inactive'"
+		QueryDo(update_query)
+		.listChannels.Refresh()
+		.Send("CloseTab",args.rec)
+		IM_MessengerManager.SendSystemMessage(.maintMsg)
 		}
 
 	On_Context_Notifications_Subscribe(@args)
@@ -128,93 +143,34 @@ Controller
 		IM_MessengerManager.SendSystemMessage(.maintMsg)
 		}
 
-	ReloadAndUpdateVirtualList()
+	Reload(channelNums = false)
 		{
-		.subscriptionStatus = .getSubscriptionStatus()
-		.listChannels.Refresh()
+		if channelNums is false
+			.listChannels.Refresh()
+		else
+			for channel in .listChannels.GetLoadedData()
+				if channelNums.Has?(channel.imchannel_num)
+					.listChannels.ReloadRecord(channel)
 		}
 
-	getSubscriptionStatus()
+	SetNotify(imchannel_num, read? = false, mentioned? = false)
 		{
-		res = Query1('user_settings where user is ' $
-			Display(Suneido.User) $ ' and key is "IM_SubscribedChannels"')
-		return res isnt false ? res : [value: #()]
-		}
-
-	getTimeSinceLastActivity(channel_num) // Returns formatted string of last activity
-		{
-		now = Timestamp()
-		last = .getLastActivity(channel_num)
-		diff = last isnt false ?
-				Display(now.MinusDays(last.im_num).Round(0)) $ ' day(s) ago' :
-				'No Activity'
-
-		return diff
-		}
-
-	getLastActivity(channel_num)
-		{
-		return QueryLast('im_history
-			where imchannel_num is ' $ Display(channel_num) $
-			' sort im_num')
-		}
-
-	colorOrange: 42495
-	SetNotificationButtonAsUnread(imchannel_num)
-		{
-		if false is unreadChannelsList = UserSettings.Get('IM_UnreadChannels')
-			unreadChannelsList = Object()
-
-		unreadChannelsList.AddUnique(imchannel_num)
-		UserSettings.Put('IM_UnreadChannels',unreadChannelsList)
-		if #() isnt data = .listChannels.GetLoadedData()
+		unreadChannelsList = .getUserSettingOb('IM_UnreadChannels')
+		unreadMentionsList = .getUserSettingOb('IM_MentionedChannels')
+		unreadChannels = unreadChannelsList.Size()
+		unreadMentions = unreadMentionsList.Size()
+		if read?
 			{
-			if false isnt rec = data.FindOne({ it.imchannel_num is imchannel_num })
-				{
-				if rec.imchannel_notification isnt .colorOrange
-					{
-					rec.imchannel_notification = CLR.GREEN
-					.listChannels.GetGrid().RepaintRecord(rec)
-					}
-				}
-			}
-		}
-
-	SetNotificationButtonAsRead(imchannel_num)
-		{
-		unreadChannelsList = Object()
-		unreadMentionsList = Object()
-
-		if false isnt unreadChannelsList = UserSettings.Get('IM_UnreadChannels')
 			unreadChannelsList.Remove(imchannel_num)
-		if false isnt unreadMentionsList = UserSettings.Get('IM_MentionedChannels')
 			unreadMentionsList.Remove(imchannel_num)
-
-		UserSettings.Put('IM_UnreadChannels',unreadChannelsList)
-		UserSettings.Put('IM_MentionedChannels',unreadMentionsList)
-		data = .listChannels.GetLoadedData()
-		if false isnt rec = data.FindOne({ it.imchannel_num is imchannel_num })
-			{
-			rec.imchannel_notification = CLR.LIGHTGRAY
-			.listChannels.GetGrid().RepaintRecord(rec)
 			}
-		}
-
-	SetNotificationButtonAsMentioned(imchannel_num)
-		{
-		if false is unreadChannelsList = UserSettings.Get('IM_MentionedChannels')
-			unreadChannelsList = Object()
-
-		unreadChannelsList.AddUnique(imchannel_num)
-		UserSettings.Put('IM_MentionedChannels',unreadChannelsList)
-
-		if #() isnt data = .listChannels.GetLoadedData()
-			{
-			if false isnt rec = data.FindOne({ it.imchannel_num is imchannel_num })
-				{
-				rec.imchannel_notification = CLR.orange
-				.listChannels.GetGrid().RepaintRecord(rec)
-				}
-			}
+		else if mentioned?
+			unreadMentionsList.AddUnique(imchannel_num)
+		else
+			unreadChannelsList.AddUnique(imchannel_num)
+		UserSettings.Put('IM_UnreadChannels', unreadChannelsList)
+		UserSettings.Put('IM_MentionedChannels', unreadMentionsList)
+		return unreadChannels < unreadChannelsList.Size() or
+			unreadMentions < unreadMentionsList.Size()
 		}
 	}

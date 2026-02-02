@@ -14,7 +14,7 @@ Test
 			Thread(function()
 				{
 				Assert(Concurrent?(Suneido.ConcurrencyTest))
-				for unused in .. ConcurrencyTest.Reps
+				for .. ConcurrencyTest.Reps
 					Suneido.ConcurrencyTest.Add(1)
 				++Suneido.ConcurrencyTest.done
 				})
@@ -79,21 +79,6 @@ Test
 			Thread.Sleep(sleep) // wait for threads to finish
 		Assert(ob.done is: .threads)
 		Assert(ob.n is: .threads * .Reps)
-		}
-	Test_closure_final()
-		{
-		log = Object()
-		x = 5
-		b = { x++; log.Add(x) }
-		Thread(b)
-		Thread(b)
-		Assert(Concurrent?(b))
-		Assert(Concurrent?(log))
-		for (sleep = 1; sleep < 1000 and log.Size() isnt 2; sleep *= 2)
-			Thread.Sleep(sleep) // wait for threads to finish
-		Assert(log is: #(6, 6))
-		Assert(x is: 5)
-		// the closure becomes frozen/disconnected at x = 5 when it becomes concurrent
 		}
 	Test_exception_callstack_bug()
 		{

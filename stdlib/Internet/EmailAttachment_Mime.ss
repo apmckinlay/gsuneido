@@ -45,7 +45,7 @@ class
 				result.sizeError? = true
 				break
 				}
-			if result.total > Email_CreateMIME.MaxSizeInMb().Mb()
+			if result.total > EmailMimeMaxSizeInMb().Mb()
 				{
 				result.quit? = true
 				break
@@ -67,7 +67,7 @@ class
 		if filename.Lower().Suffix?('pdf')
 			{
 			result = PdfMerger(Object(filename), newFileName, compress:,
-					maxCompressedFileSizeInMb: Email_CreateMIME.MaxSizeInMb())
+					maxCompressedFileSizeInMb: EmailMimeMaxSizeInMb())
 
 			if result.Empty?()
 				compressedFile = newFileName
@@ -77,7 +77,7 @@ class
 
 			return compressedFile
 			}
-
+		filename = FileStorage.GetAccessibleFilePath(filename)
 		if true is ImageHandler.Compress(filename, newFileName)
 			compressedFile = newFileName
 		else
@@ -127,7 +127,10 @@ class
 			{
 			if Object?(sendError)
 				sendError.AddUnique('Can not access file or path: ' $ file)
-			SuneidoLog('INFO: ' $ e, calls:)
+			prefix = OptContribution('Hosted?', function() { return false })()
+				? 'ERROR: (CAUGHT) '
+				: 'INFO: '
+			SuneidoLog(prefix $ e, calls:)
 			return 'Can not access file or path: ' $ file
 			}
 		if fs in (0, false)
@@ -186,22 +189,7 @@ class
 			url: AmazonS3.PresignUrl(bucket, tmpName, method: 'PUT'))
 		if .merge_pdf?
 			preSignedAttachments.Add(.tmpFileUrl(.filename, Paths.Basename(.filename)))
-		for attachment in data.GetDefault('attachments', #())
-			{
-			attachmentPath = attachment.RemovePrefix('(APPEND) ')
-			if not attachment.Prefix?('(APPEND) ')
-				{
-				tmpName = .tmpName(attachment)
-				historyLinks[Paths.Basename(attachment)] = Object(:tmpName,
-					url: AmazonS3.PresignUrl(bucket, tmpName, method: 'PUT'))
-				}
-			if .fromLocal?(attachmentPath)
-				preSignedAttachments.Add(
-					.tmpFileUrl(attachmentPath, Paths.Basename(attachmentPath)))
-			else
-				preSignedAttachments.Add(AmazonS3.PresignUrl(bucket, FormatAttachmentPath(
-					attachment.RemovePrefix('(APPEND) ')), download?:))
-			}
+		.collectPresignedUrls(data, historyLinks, bucket, preSignedAttachments)
 		data.preSignedAtttachments = preSignedAttachments
 		data.historyLinks = historyLinks
 		data.merge_pdf? = .merge_pdf?
@@ -213,6 +201,10 @@ class
 			data.mergedPdfLink = AmazonS3.PresignUrl(bucket, tmpFileName, method: 'PUT')
 			}
 
+		if Object?(mergeableFiles)
+			mergeableFiles = mergeableFiles.Map(Paths.ToStd)
+		if Object?(unMergeableFiles)
+			unMergeableFiles = unMergeableFiles.Map(Paths.ToStd)
 		data.mergeableFiles = mergeableFiles
 		if data.GetDefault('mergeOnly?', false)
 			{
@@ -222,6 +214,33 @@ class
 			}
 		else
 			.send(data, unMergeableFiles, file)
+		}
+
+	collectPresignedUrls(data, historyLinks, bucket, preSignedAttachments)
+		{
+		for m in data.GetDefault('attachments', #()).Members()
+			{
+			data.attachments[m] = Paths.ToStd(data.attachments[m])
+			attachment = data.attachments[m]
+			if not attachment.Prefix?('(APPEND) ')
+				{
+				tmpName = .tmpName(attachment)
+				historyLinks[Paths.Basename(attachment)] = Object(:tmpName,
+					url: .preSignedUrl(bucket, tmpName, method: 'PUT'))
+				}
+			attachmentPath = attachment.RemovePrefix('(APPEND) ')
+			if .fromLocal?(attachmentPath)
+				preSignedAttachments.Add(
+					.tmpFileUrl(attachmentPath, Paths.Basename(attachmentPath)))
+			else
+				preSignedAttachments.Add(.preSignedUrl(bucket, FormatAttachmentPath(
+					attachment.RemovePrefix('(APPEND) ')), download?:))
+			}
+		}
+
+	preSignedUrl(@args)
+		{
+		AmazonS3.PresignUrl(@args)
 		}
 
 	fromLocal?(filename)
@@ -257,7 +276,12 @@ class
 	tmpFileUrl(filename, attachFileName)
 		{
 		return 'download' $ Url.BuildQuery(Object(Base64.Encode(
-			filename.Xor(EncryptControlKey())), token: SuRenderBackend().Token)) $
+			filename.Xor(EncryptControlKey())), token: .token())) $
 			'&' $ Url.EncodeValues(Object(saveName: attachFileName))
+		}
+
+	token()
+		{
+		return SuRenderBackend().Token
 		}
 	}

@@ -25,8 +25,7 @@ HorzComponent
 		// this is to align the label and multi-line editors properly
 		// html textarea is a block and doesn't work with baseline alignment properly
 		// so we need to set the label's line-height
-		if children[0].Name is 'Static' and
-			(children[2].Base?(EditComponent) or children[2].Base?(ScintillaComponent))
+		if children[0].Name is 'Static' and children[0].Get().LineCount() is 1
 			children[0].El.SetStyle('line-height',
 				(children[0].Ymin + 8/*=padding*/) $ 'px')
 		}

@@ -203,7 +203,7 @@ Controller
 	resize_ovbar()
 		{
 		.ovbar.SetNumRows(.list.GetNumRows())
-		.ovbar.SetMaxRowHeight(.list.GetRowHeight())
+		.ovbar.SetMaxRowHeight(.list, #GetRowHeight)
 		}
 	reset_statusbar()
 		{
@@ -227,13 +227,8 @@ Controller
 			}
 
 		if libs is ""
-			{
 			.libs.Set('(All)')
-			.libs.Update()
-			.set_lib('(All)')
-			}
-		.ovbar.ClearMarks()
-		.ovbar.Update()
+		.On_Refresh() // refresh list to handle switching libraries, new or removed tests
 		.runAll = true
 		.clearDate = Date()
 		.run_testlist(.list.Get().Members())
@@ -248,25 +243,19 @@ Controller
 	checkLibraries(libs)
 		{
 		invalids = Object()
-		suppressed = Object()
 		for lib in libs
-			{
 			invalids.Merge(CodeState.InvalidRecs(lib))
-			suppressed.MergeUnion(LibrarySuppressions(lib).Map({ lib $ ':' $ it }))
-			}
-		return .continueRun?(invalids, suppressed)
+		return .continueRun?(invalids)
 		}
 
-	continueRun?(invalids, suppressed)
+	continueRun?(invalids)
 		{
 		invalidStr = .flaggedStr('Found records with syntax errors', invalids)
-		suppressedStr = .flaggedStr('Found suppressed records', suppressed)
-		if invalidStr is '' and suppressedStr is ''
+		if invalidStr is ''
 			return true
 		sep = '\r\n\r\n'
 		return YesNo(
 			Opt(invalidStr, 'Running tests now may result in a false positive.', sep) $
-			Opt(suppressedStr, 'Suppressed records could result in test failures.', sep) $
 			'Continue?',
 			.Title, .Window.Hwnd, MB.ICONWARNING)
 		}

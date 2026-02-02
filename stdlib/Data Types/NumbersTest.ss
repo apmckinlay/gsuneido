@@ -102,17 +102,17 @@ Test
 		}
 	Test_EvenOdd()
 		{
-		Assert(0.Even?() is: true)
+		Assert(0.Even?())
 		Assert(0.Odd?() is: false)
-		Assert(1.Odd?() is: true)
+		Assert(1.Odd?())
 		Assert(1.Even?() is: false)
-		Assert(123.Odd?() is: true)
+		Assert(123.Odd?())
 		Assert(123.Even?() is: false)
-		Assert(1234.Even?() is: true)
+		Assert(1234.Even?())
 		Assert(1234.Odd?() is: false)
-		Assert((-1).Odd?() is: true)
+		Assert((-1).Odd?())
 		Assert((-2).Odd?() is: false)
-		Assert((-2).Even?() is: true)
+		Assert((-2).Even?())
 		Assert((-3).Even?() is: false)
 		}
 	Test_Ceiling()

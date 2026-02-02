@@ -92,4 +92,60 @@ Test
 			is: 'getLatestExe failed - #("gsuneido.exe")')
 		Assert(_versionMismatchAlert[1].appName is: 'gsuneido')
 		}
+
+	Test_verifyLockFile()
+		{
+		cl = VersionMismatch
+			{
+			VersionMismatch_getFile(filename /*unused*/)
+				{
+				return _lock
+				}
+			VersionMismatch_putFile(filename, str)
+				{
+				_newlock.filename = filename
+				_newlock.str = str
+				}
+			}
+		verifyLockFile = cl.VersionMismatch_verifyLockFile
+		_newlock = Object()
+		_lock = false
+		Assert(verifyLockFile([exeName: 'axon.exe']))
+		Assert(_newlock.filename is: 'axon.exe.lock')
+		Assert(Date(_newlock.str) isDate:)
+
+		_newlock = Object()
+		_lock = ''
+		Assert(verifyLockFile([exeName: 'axon.exe']))
+		Assert(_newlock.filename is: 'axon.exe.lock')
+		Assert(Date(_newlock.str) isDate:)
+
+		_newlock = Object()
+		_lock = 'invalid'
+		Assert(verifyLockFile([exeName: 'axon.exe']))
+		Assert(_newlock.filename is: 'axon.exe.lock')
+		Assert(Date(_newlock.str) isDate:)
+
+		_newlock = Object()
+		_lock = '#20000101'
+		Assert(verifyLockFile([exeName: 'axon.exe']))
+		Assert(_newlock.filename is: 'axon.exe.lock')
+		Assert(Date(_newlock.str) isDate:)
+
+		_newlock = Object()
+		_lock = String(Date().Plus(seconds: -4))
+		Assert(verifyLockFile([exeName: 'axon.exe']))
+		Assert(_newlock.filename is: 'axon.exe.lock')
+		Assert(Date(_newlock.str) isDate:)
+
+		_newlock = Object()
+		_lock = String(Date().Plus(seconds: -2))
+		Assert(verifyLockFile([exeName: 'axon.exe']) is: false)
+		Assert(_newlock is: #())
+
+		_newlock = Object()
+		_lock = String(Date())
+		Assert(verifyLockFile([exeName: 'axon.exe']) is: false)
+		Assert(_newlock is: #())
+		}
 	}

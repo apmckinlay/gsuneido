@@ -7,12 +7,12 @@ Test
 		// contrast against grey
 		Assert(b(#(255, 255, 255)) is: false) 	//white
 		Assert(b(#(128, 128, 128)) is: false) 	//grey
-		Assert(b(#(127, 127, 127)) is: true)
-		Assert(b(#(1, 1, 1)) is: true)
-		Assert(b(#(0, 0, 0)) is: true)			//black
-		Assert(b(#(100, 183, 100)) is: true)
+		Assert(b(#(127, 127, 127)))
+		Assert(b(#(1, 1, 1)))
+		Assert(b(#(0, 0, 0)))					//black
+		Assert(b(#(100, 183, 100)))
 		Assert(b(#(100, 184, 100)) is: false)
-		Assert(b(#(0, 229, 0)) is: true)
+		Assert(b(#(0, 229, 0)))
 		Assert(b(#(0, 231, 0)) is: false) 		//bright green
 		}
 	Test_GetContrast()

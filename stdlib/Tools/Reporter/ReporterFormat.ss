@@ -1,6 +1,7 @@
 // Copyright (C) 2004 Suneido Software Corp. All rights reserved worldwide.
 QueryFormat
 	{
+	Export: true
 	field_to_page_break_on: false
 	pageHeader: false
 	sectionHeader: false

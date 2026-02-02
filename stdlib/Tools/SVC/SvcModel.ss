@@ -201,11 +201,8 @@ class
 		svcTable = SvcTable(curTable)
 		if svcTable.Type isnt 'lib'
 			return false
-		webgui? = curTable.Suffix?('webgui')
 		for lib in .libraries()
 			{
-			if webgui? and not lib.Suffix?('webgui')
-				continue
 			if lib is curTable
 				return false
 			svcTable = SvcTable(lib)

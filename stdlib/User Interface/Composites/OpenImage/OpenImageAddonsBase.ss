@@ -257,8 +257,9 @@ Controller
 			return
 		name = .fieldName()
 		if .Send('QueueDeleteAttachmentFile', newFile, oldFile, name, action) is 0
-			SuneidoLog("INFO: QueueDeleteAttachmentFile not implemented",
-				params: Object(:newFile, :oldFile, :name), calls:)
+			ProgrammerError('QueueDeleteAttachmentFile not implemented',
+				params: Object(:newFile, :oldFile, :name),
+				caughtMsg: 'attachments may not be cleaned up')
 		}
 
 	fieldName()

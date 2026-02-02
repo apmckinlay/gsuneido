@@ -93,6 +93,10 @@ class
 			}
 		return uniqueTypes
 		}
+	GetUniqueTypes(pw)
+		{
+		return .getUniqueTypes(pw)
+		}
 
 	prefixLength: 5
 	pwnedPassword?(pw)

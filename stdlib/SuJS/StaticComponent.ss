@@ -144,6 +144,7 @@ Component
 
 	SelectAll()
 		{
+		SuClearFocus()
 		range = SuUI.GetCurrentDocument().createRange()
 		range.SelectNodeContents(.El)
 		selection = SuUI.GetCurrentWindow().GetSelection()

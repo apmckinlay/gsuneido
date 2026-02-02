@@ -26,7 +26,8 @@ IM_MessengerTabBase
 		{
 		return  '<html>' $ .CssStyle() $ '<body>' $
 			'<center> <br><br> <h1> Welcome to Instant Messenger! </h1>'  $
-			'Please double click on a user to start conversation'  $ '</body></html>'
+			'Please double click on a user to start conversation</center>' $
+			BookContextMenu() $ '</body></html>'
 		}
 
 	AutoLoadHistory?()

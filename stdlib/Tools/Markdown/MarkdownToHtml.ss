@@ -1,73 +1,41 @@
 // Copyright (C) 2025 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	CallClass(md, noIndent? = false)
+	CallClass(md, noIndent? = false, addons = #())
 		{
-		parsed = String?(md) ? MarkdownParser(md) : md
-		return .Convert(parsed, :noIndent?)
+		_mdAddons = .initAddons(addons)
+		for addon in _mdAddons
+			if addon.Method?(#PreParse)
+				md = (addon.PreParse)(md)
+
+		parsed = String?(md) ? MarkdownParser(md, :addons) : md
+		html = .Convert(parsed, :noIndent?)
+
+		for addon in _mdAddons
+			if addon.Method?(#AfterHtml)
+				html = (addon.AfterHtml)(html)
+		return html
 		}
 
-	writer: class
+	initAddons(addons)
 		{
-		New(.noIndent? = false)
-			{
-			}
-		indent: 0
-		s: ''
-		DoWithIndent(block)
-			{
-			if .noIndent? is false
-				.indent++
-			block()
-			if .noIndent? is false
-				.indent--
-			}
-
-		Add(tag, s)
-			{
-			if s is false
-				{
-				.s $= '\n' $ '\t'.Repeat(.indent) $ '<' $ tag $ ' />'
-				return
-				}
-
-			.s $= '\n' $ '\t'.Repeat(.indent) $ '<' $ tag $ '>' $ s $ '</' $ tag $ '>'
-			}
-
-		AddPure(s)
-			{
-			.s $= s
-			}
-
-		AddWithBlock(tag, block, attr = #(), noNewline? = false)
-			{
-			attr = attr.Map2({ |m, v| m $ '="' $ v $ '"' }).Join(' ')
-			newline = noNewline? ? '' : '\n'
-			.s $= '\n' $ '\t'.Repeat(.indent) $ '<' $ tag $ Opt(' ', attr) $ '>'
-			.DoWithIndent(block)
-			.s $= newline $ '\t'.Repeat(.indent) $ '</' $ tag $ '>'
-			}
-
-		Suffix?(suffix)
-			{
-			return .s.Suffix?(suffix)
-			}
-
-		Get()
-			{
-			return .s.RemovePrefix('\n') $ '\n'
-			}
+		res = Object()
+		for addon in addons
+			res.Add(Construct(addon))
+		return res
 		}
 
 	Convert(parsed, noIndent? = false)
 		{
-		writer = new .writer(:noIndent?)
+		writer = new Md_HtmlWriter(:noIndent?)
 		.convertContainer(writer, parsed)
 		return writer.Get()
 		}
 
-	convertContainer(writer, container, tight? = false)
+	convertContainer(writer, container, tight? = false, _mdAddons = #())
 		{
+		for addon in mdAddons
+			addon.PreprocessContainer(container)
 		container.ForEachBlockItem()
 			{ |item|
 			.convertItem(writer, item, :tight?)
@@ -76,24 +44,20 @@ class
 
 	convertItem(writer, item, tight? = false)
 		{
+		if .callAddons(Object(writer, item), #ConvertToHtml)
+			return
 		switch
 			{
 		case item.Base?(Md_ATXheadings):
-			writer.Add('h' $ item.Level, .convertInline(item.ParsedInline))
+			writer.Add('h' $ item.Level, .ConvertInline(item.ParsedInline))
 		case item.Base?(Md_Code):
 			writer.Add('pre',
 				'<code' $ Opt(' class="language-', item.Info.BeforeFirst(' '), '"') $
-					'>' $ Opt(.encode(item.Codes.Join('\n')), '\n') $ '</code>')
+					'>' $ Opt(.Encode(item.Codes.Join('\n')), '\n') $ '</code>')
 		case item.Base?(Md_Html):
 			writer.AddPure('\n' $ item.Html)
 		case item.Base?(Md_Paragraph):
-			if item.HeadingLevel isnt false
-				writer.Add('h' $ item.HeadingLevel, .convertInline(item.ParsedInline))
-			else if tight?
-				writer.AddPure((writer.Suffix?('<li>') ? '' : '\n') $
-					.convertInline(item.ParsedInline))
-			else
-				writer.Add('p', .convertInline(item.ParsedInline))
+			.convertParagraph(writer, item, tight?)
 		case item.Base?(Md_ThematicBreak):
 			writer.Add('hr', false)
 		case item.Base?(Md_BlockQuote):
@@ -115,6 +79,19 @@ class
 			}
 		}
 
+	convertParagraph(writer, item, tight?)
+		{
+		if item.Inline.Blank?()
+			Nothing()
+		else if item.HeadingLevel isnt false
+			writer.Add('h' $ item.HeadingLevel, .ConvertInline(item.ParsedInline))
+		else if tight?
+			writer.AddPure((writer.Suffix?('<li>') ? '' : '\n') $
+				.ConvertInline(item.ParsedInline))
+		else
+			writer.Add('p', .ConvertInline(item.ParsedInline))
+		}
+
 	noNewline?(tight?, container)
 		{
 		last = false
@@ -125,28 +102,64 @@ class
 		return last is false or tight? is true and last.Base?(Md_Paragraph)
 		}
 
-	convertInline(parsedInline)
+	callAddons(args, call, _mdAddons = #())
+		{
+		for addon in mdAddons
+			if addon.Method?(call) and (addon[call])(@args) is true
+				return true
+		return false
+		}
+
+	ConvertInline(parsedInline)
 		{
 		s = ''
 		for item in parsedInline
 			{
+			if .callAddons(Object(item), #PreInline)
+				continue
 			switch (item[0])
 				{
 			case #text:
-				s $= .encode(item[1])
+				if item.Member?(#codepoints)
+					s $= item[1] // entity or numeric characters
+				else
+					s $= .Encode(item[1])
 			case #code:
-				s $= '<code>' $ .encode(item[1]) $ '</code>'
+				s $= '<code>' $ .Encode(item[1]) $ '</code>'
 			case #html:
 				s $= item[1]
 			case #link:
-				s $= '<a href="' $ Url.Encode(item.href).Replace('&', '\&amp;') $ '">' $
-					.encode(item[1]) $ '</a>'
+				s $= '<a href="' $ .EncodeURL(item.href) $ '"' $
+					Opt(' title="', .Encode(item.GetDefault(#title, '')), '"') $ '>' $
+					.ConvertInline(item[1]) $ '</a>'
+			case #image:
+				s $= '<img src="' $ .EncodeURL(item.href) $
+					'" alt="' $ .convertInlineToText(item[1]) $ '"' $
+					Opt(' title="', .Encode(item.GetDefault(#title, '')), '"') $ ' />'
+			case #linkbreak:
+				s $= item.hard? ? '<br />\n' : '\n'
+			case #emph:
+				tag = item.strong? ? 'strong' : 'em'
+				s $= '<' $ tag $ '>' $ .ConvertInline(item[1]) $ '</' $ tag $ '>'
 				}
 			}
 		return s
 		}
 
-	encode(s)
+	convertInlineToText(parsedInline)
+		{
+		s = ''
+		for item in parsedInline
+			{
+			if item[0] in (#link, #image, #emph)
+				s $= .convertInlineToText(item[1])
+			else if item[0] isnt #html
+				s $= .Encode(item[1])
+			}
+		return s
+		}
+
+	Encode(s)
 		{
 		// &apos; are not necessary
 		return s.
@@ -154,5 +167,14 @@ class
 			Replace('<', '\&lt;').
 			Replace('>', '\&gt;').
 			Replace('"', '\&quot;')
+		}
+
+	EncodeURL(s)
+		{
+		return Url.Encode(s).
+			Replace('&', '\&amp;').
+			Replace('+', '%20').
+			Replace('%28', '(').
+			Replace('%29', ')')
 		}
 	}

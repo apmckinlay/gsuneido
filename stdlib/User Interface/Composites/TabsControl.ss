@@ -22,12 +22,9 @@ PassthruController
 		{
 		super(false)
 		.controls = .controlArgs(args)
-		// DEPRECATING: constructAll argument is to be removed under: 33977
-		.constructAll = args.GetDefault(#constructAll, false)
 		.destroyOnSwitch = args.GetDefault(#destroyOnSwitch, false)
 		.border = args.GetDefault(#border, 5 /*= default border size*/)
-
-		.Send('Tabs_BeforeConstruct', .controls)
+		.addCustomTabs(.controls, .customizable? = args.GetDefault(#customizable?, false))
 
 		.Construct(.tabControl(.controls, args))
 
@@ -47,6 +44,23 @@ PassthruController
 			if not x.Member?(#Hide?) or x.Hide? isnt true
 				controls.Add(x)
 		return controls
+		}
+
+	addCustomTabs(controls, customizable?)
+		{
+		if not customizable?
+			return
+
+		if false is cl = OptContribution('CustomTabPermissions', false)
+			return
+
+		if not String?(tableName = .Send('GetCustomizableName'))
+			tableName = .Send('GetTableName')
+
+		cl.WithPermissableTabs(tableName)
+			{|tab|
+			controls.Add(Object('Customizable', Tab: tab, tabName: tab))
+			}
 		}
 
 	customizableTabs: false
@@ -90,16 +104,9 @@ PassthruController
 		return orientation
 		}
 
-	/* REFERENCE TEMPORARY: 34130/34131
-	As the AccessControl removes placeholder tabs, we need to ensure the TabsControl
-	limits its scope to its own tabs. Otherwise, a parent TabsControl may
-	inadvertently add a nested TabsControl "Custom" placeholder tab (which would later
-	be removed by AccessControl).
-	*/
 	collectCustomizableTabs(control, parentTab)
 		{
-		if not Object?(control) or
-			control.GetDefault(0, false) is 'Tabs' // TEMPORARY: 34130/34131
+		if not Object?(control)
 			return
 		if control.Has?('Customizable')
 			.customizableTabs.Add(control.GetDefault('tabName', parentTab))
@@ -111,7 +118,7 @@ PassthruController
 		{
 		for (i = args.Size(list:) - 1; i >= 0; --i)
 			{
-			if i is startTab or .constructAll
+			if i is startTab
 				{
 				.construct(i)
 				.ctrls[i].SetVisible(i is startTab)
@@ -332,18 +339,6 @@ PassthruController
 		.resize(.x, .y, .w + adjW, .h + adjH)
 		}
 
-	// DEPRECATING: ConstructAllTabs is to be removed or made private under: 33976
-	ConstructAllTabs()
-		{
-		for (i= 0 ; i < .GetAllTabCount(); i++)
-			{
-			.ConstructTab(i)
-			if .ctrls[i] isnt false and
-				false isnt (subtabs = .ctrls[i].FindControl('Tabs'))
-				subtabs.ConstructAllTabs()
-			}
-		}
-
 	ConstructTab(i)
 		// WARNING: this does NOT fill in RecordControl data (use Select)
 		{
@@ -557,7 +552,8 @@ PassthruController
 	SetEnabled(enabled)
 		{
 		Assert(Boolean?(enabled))
-		.ctrl.SetEnabled(enabled)
+		if .ctrl isnt false
+			.ctrl.SetEnabled(enabled)
 		.Tab.SetEnabled(enabled)
 		}
 
@@ -573,16 +569,6 @@ PassthruController
 			}
 		.readonly = readonly
 		super.SetReadOnly(readonly)
-		}
-
-	SetVisible(visible)
-		{
-		Assert(Boolean?(visible))
-		.ctrl.SetVisible(visible)
-		.Tab.SetVisible(visible)
-		// do NOT call super.SetVisible
-		// because with constructAll
-		// it makes all tabs visible simultaneously!
 		}
 
 	TabControl_SelChanging(source)
@@ -626,8 +612,6 @@ PassthruController
 
 	access_before_setdata()
 		{
-		if .constructAll
-			return
 		// Destroy all BUT the active tab
 		inactiveTabs = Seq(.GetTabCount()).Remove(.GetSelected())
 		for tab in inactiveTabs
@@ -636,6 +620,11 @@ PassthruController
 				.ctrls[tab].Destroy()
 				.ctrls[tab] = false
 				}
+		}
+
+	Getter_Customizable?()
+		{
+		return .customizable?
 		}
 
 	GetControl(i = false)

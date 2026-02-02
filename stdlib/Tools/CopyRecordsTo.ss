@@ -64,7 +64,7 @@ class
 
 	checkIfOverloaded(srcLib, srcNames, dstLib)
 		{
-		libs = .libraries().Remove(dstLib).RemoveIf({ it.Suffix?('webgui') })
+		libs = .libraries().Remove(dstLib)
 		for lib in Contributions('CopyToOverloadCheck')
 			libs.Remove(lib)
 		// srcLib is dstLib or srcLib is not in use

@@ -144,7 +144,7 @@ Test
 					{
 					return class
 						{
-						PromptToField(prompt)
+						PromptToField(prompt /*unused*/)
 							{
 							return "not_a_summary_func_field"
 							}

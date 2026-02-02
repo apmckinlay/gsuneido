@@ -38,7 +38,7 @@ WndProc
 				expandInfo = Object(availableFields: false, defaultLayout: '')
 			if 0 is customKey = .Send('GetAccessCustomKey')
 				customKey = ''
-			table = QueryGetTable(.model.GetBaseQuery(), orview:)
+			table = .model.GetTableName()
 			c = Customizable(table, defaultLayout: expandInfo.defaultLayout,
 				user: Suneido.User, :customKey)
 			.enableExpand = c.LayoutExists?(CustomizeExpandControl.LayoutName)

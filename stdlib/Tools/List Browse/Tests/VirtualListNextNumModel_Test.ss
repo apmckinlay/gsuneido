@@ -18,7 +18,7 @@ Test
 		rec = []
 		nextNum.ReserveNextNum(rec, dataTable)
 
-		Assert(rec.usingNextNum? is: true)
+		Assert(rec.usingNextNum?)
 		Assert(rec.numField is: 100)
 		Assert(Query1(numTable, nextNum: 100).getnextnum_reserved_till
 			is: date.Plus(seconds: GetNextNum.ReserveSeconds))

@@ -4,17 +4,17 @@ Controller
 	Xmin: 750
 	Ymin: 475 // within a few pixels of previous min. height
 	CallClass(ctrl, name = '', okbutton = false, defaultButton = '',
-		noUserDefaultSelects? = false, setSelectVals = false)
+		noUserDefaultSelects? = false, setSelectVals = false, hideCount = false)
 		{
 		ToolDialog(0,
 			Object(this, ctrl, name, :okbutton, :defaultButton, :noUserDefaultSelects?,
-				:setSelectVals),
+				:setSelectVals, :hideCount),
 				closeButton?: false, keep_size: 'Select~' $ name)
 		}
 
 	Title: "Select"
 	New(access, .name, okbutton = false, defaultButton = '',
-		noUserDefaultSelects? = false, setSelectVals = false)
+		noUserDefaultSelects? = false, setSelectVals = false, .hideCount = false)
 		{
 		super(.layout(access, okbutton, defaultButton, noUserDefaultSelects?,
 			setSelectVals))
@@ -47,9 +47,8 @@ Controller
 	buttons(@list)
 		{
 		ob = Object('HorzEven', 'Skip')
-
-		if not list.Has?('Select') // KeyListView
-			list.Add("Count")
+		if not .hideCount
+			list.Add('Count')
 		tip = ''
 		for button in list.Add("Uncheck All", "Cancel")
 			{
@@ -86,7 +85,7 @@ Controller
 		{
 		if false is where = .where()
 			return false
-		.access.ModifyWhere(where, hwnd: .Window.Hwnd)
+		.access.ModifyWhere(where)
 		.closeDialog()
 		}
 
@@ -101,7 +100,7 @@ Controller
 		{
 		if false is where = .where()
 			return false
-		return .access.SetWhere(where, hwnd: .Window.Hwnd)
+		return .access.SetWhere(where)
 		}
 	where()
 		{

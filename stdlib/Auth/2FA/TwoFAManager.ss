@@ -107,9 +107,10 @@ class
 		SuneidoLog('TwoFAManager: ERROR - ' $ msg, calls:, :params)
 		}
 
-	SendEmail(otp, from, to, recipient)
+	SendEmail(otp, from, to, recipient, type = 'code')
 		{
-		email = LastContribution('TwoFAEmailMessage')
+		if false is email = GetContributions('TwoFAEmailMessage').GetDefault(type, false)
+			return false
 		msg = email.message.
 			Replace('<recipient>', recipient).
 			Replace('<otp>', otp)
@@ -118,7 +119,6 @@ class
 
 	IsAuthEmail?(subject)
 		{
-		email = LastContribution('TwoFAEmailMessage')
-		return subject is email.subject
+		return GetContributions('TwoFAEmailMessage').Any?({ it.subject is subject })
 		}
 	}

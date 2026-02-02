@@ -886,6 +886,12 @@ WndProc
 
 	Destroy()
 		{
+if .Destroyed?()
+	{
+	calls = GetCallStack(limit: 99)
+	calls = FormatCallStack(calls, levels: 99)
+	SuneidoLog('INFO: 36376 Already Destroyed Extra Logging: ', :calls)
+	}
 		.brushes.Each(DeleteObject)
 		.brushes.Delete(all:)
 		if .calcClass isnt false

@@ -218,11 +218,10 @@ Test
 		// gracefully when it does happen
 		m = GetParamsWhere.GetParamsWhere_buildRestrictions
 		build_callable = false
-		watch = .WatchTable('suneidolog')
 
 		data = [some_field: 0]
 		Assert(m(#('some_field'), data, false, build_callable) is: Object())
-		calls = .GetWatchTable(watch)
+		calls = .GetSuneidoLog()
 		Assert(calls isSize: 1)
 		Assert(calls[0].sulog_message has: 'invalid param data')
 		}

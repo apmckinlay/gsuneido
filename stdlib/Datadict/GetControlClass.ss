@@ -22,6 +22,11 @@ class
 		if not String?(control)
 			return false
 
+		return .FromControlName(control)
+		}
+
+	FromControlName(control)
+		{
 		if not control.Suffix?('Control')
 			control $= 'Control'
 		try

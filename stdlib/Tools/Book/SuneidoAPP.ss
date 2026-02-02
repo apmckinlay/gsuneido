@@ -128,7 +128,7 @@ class
 		_table = rec.table
 		_path = rec.path
 		_name = rec.name
-		return rec.text.Prefix?("<")
+		return BookContent.Match(rec.table, rec.text)
 			? HtmlWrap(rec.text, rec.table, :embed?)
 			: .programPage(rec.text, rec.table, rec.path, rec.name)
 		}

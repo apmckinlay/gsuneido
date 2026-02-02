@@ -9,12 +9,11 @@ class
 		}
 	InternalRun(library)
 		{
-		sups = LibrarySuppressions(library)
 		results = ""
 		// should be .GlobalName() but want to include e.g. Name?__protect
 		QueryApply(library $ ' where name =~ `\A[[:upper:]]\w*[!?]?\w*\Z`', group: -1)
 			{|x|
-			if not CodeTags.Matches(x.lib_current_text) or sups.Has?(x.name)
+			if not CodeTags.Matches(x.lib_current_text)
 				continue
 			results $= .check1(library, x)
 			if results.Size() > 4000 /*= max size */

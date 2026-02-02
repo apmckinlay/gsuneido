@@ -34,6 +34,11 @@ ScintillaAddon
 		if (result is false)
 			return
 
+		.AddLink(table, result, text)
+		}
+
+	AddLink(table, result, text)
+		{
 		pos = .GetSelect()
 		tag = '<a href="' $ '/' $ table $ result.path $ "/" $ result.name $ '">'
 		namepos = result.name.Find(text)
@@ -164,5 +169,12 @@ ScintillaAddon
 		.SetSelect(pos.cpMin - tag1, (pos.cpMax - pos.cpMin) + tag2 + tag1)
 		.Paste(text $ trailing_whitespace)
 		.SetSelect(pos.cpMin + offset - tag1, pos.cpMax - pos.cpMin)
+		}
+
+	On_Add_Image_Tag()
+		{
+		text = .GetSelText()
+		table = .Send('CurrentTable')
+		.Paste("<img src=\"suneido:/" $ table $ '/res/' $ text $ '" />')
 		}
 	}

@@ -3,39 +3,39 @@ Test
 	{
 	Test_ValidData()
 		{
-		Assert(UOMControl.ValidData?('') is: true)
+		Assert(UOMControl.ValidData?(''))
 		Assert(UOMControl.ValidData?(' lbs') is: false)
 		Assert(UOMControl.ValidData?(5) is: false)
-		Assert(UOMControl.ValidData?(5, uom_optional:) is: true)
-		Assert(UOMControl.ValidData?('5 lbs') is: true)
+		Assert(UOMControl.ValidData?(5, uom_optional:))
+		Assert(UOMControl.ValidData?('5 lbs'))
 		Assert(UOMControl.ValidData?('5') is: false)
 		}
 
 	Test_validCheck()
 		{
-		Assert(UOMControl.UOMControl_validCheck?("", true, false) is: true)
+		Assert(UOMControl.UOMControl_validCheck?("", true, false))
 		Assert(UOMControl.UOMControl_validCheck?(" ", true, false) is: false)
 		Assert(UOMControl.UOMControl_validCheck?("5", true, false) is: false)
 		Assert(UOMControl.UOMControl_validCheck?("lbs", true, false) is: false)
-		Assert(UOMControl.UOMControl_validCheck?("5 lbs", true, false) is: true)
+		Assert(UOMControl.UOMControl_validCheck?("5 lbs", true, false))
 
-		Assert(UOMControl.UOMControl_validCheck?("", false, true) is: true)
-		Assert(UOMControl.UOMControl_validCheck?(" ", false, true) is: true)
-		Assert(UOMControl.UOMControl_validCheck?("5", false, true) is: true)
-		Assert(UOMControl.UOMControl_validCheck?("lbs", false, true) is: true)
-		Assert(UOMControl.UOMControl_validCheck?("5 lbs", false, true) is: true)
+		Assert(UOMControl.UOMControl_validCheck?("", false, true))
+		Assert(UOMControl.UOMControl_validCheck?(" ", false, true))
+		Assert(UOMControl.UOMControl_validCheck?("5", false, true))
+		Assert(UOMControl.UOMControl_validCheck?("lbs", false, true))
+		Assert(UOMControl.UOMControl_validCheck?("5 lbs", false, true))
 
-		Assert(UOMControl.UOMControl_validCheck?("", true, true) is: true)
+		Assert(UOMControl.UOMControl_validCheck?("", true, true))
 		Assert(UOMControl.UOMControl_validCheck?(" ", true, true) is: false)
-		Assert(UOMControl.UOMControl_validCheck?("5", true, true) is: true)
+		Assert(UOMControl.UOMControl_validCheck?("5", true, true))
 		Assert(UOMControl.UOMControl_validCheck?("lbs", true, true) is: false)
-		Assert(UOMControl.UOMControl_validCheck?("5 lbs", true, true) is: true)
+		Assert(UOMControl.UOMControl_validCheck?("5 lbs", true, true))
 
-		Assert(UOMControl.UOMControl_validCheck?("", false, false) is: true)
+		Assert(UOMControl.UOMControl_validCheck?("", false, false))
 		Assert(UOMControl.UOMControl_validCheck?(" ", false, false) is: false)
 		Assert(UOMControl.UOMControl_validCheck?("5", false, false) is: false)
 		Assert(UOMControl.UOMControl_validCheck?("lbs", false, false) is: false)
-		Assert(UOMControl.UOMControl_validCheck?("5 lbs", false, false) is: true)
+		Assert(UOMControl.UOMControl_validCheck?("5 lbs", false, false))
 		}
 
 	Test_Get()

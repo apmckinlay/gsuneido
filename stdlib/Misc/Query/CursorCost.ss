@@ -8,7 +8,7 @@ Memoize
 			Cursor(query) {|c| s = c.Strategy() }
 		catch (unused, "invalid query")
 			return Object(nrecs: 0, cost: .impossible)
-		x = s.ExtractAll(`nrecs~ (\d+) cost~ (\d+)`)
+		x = s.ExtractAll(`nrecs~ ([_0-9]+) cost~ ([_0-9]+)`)
 		return Object(nrecs: Number(x[1]), cost: Number(x[2]))
 		}
 	impossible: 999999999999

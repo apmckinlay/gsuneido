@@ -37,8 +37,48 @@ Test
 			ImageFormat_data: 'test2.file'
 			}
 		fn = c.ImageFormat_dataString
-		Assert(fn('', textOnly?:) endsWith: 'test2.file')
-		Assert(fn('\xfc\xff', textOnly?:) is: '\xfc\xff')
-		Assert(fn('test.file', textOnly?:) endsWith: 'test.file')
+		data, textOnly? = fn('')
+		Assert(data endsWith: 'test2.file')
+		Assert(textOnly?)
+
+		data, textOnly? = fn('test.file')
+		Assert(data endsWith: 'test.file')
+		Assert(textOnly?)
+
+		data, textOnly? = fn('\xfc\xff')
+		Assert(data is: '\xfc\xff')
+		Assert(textOnly? is: false)
+
+		c = ImageFormat
+			{
+			ImageFormat_data: ''
+			}
+		fn = c.ImageFormat_dataString
+		data, textOnly? = fn('')
+		Assert(data is: '')
+		Assert(textOnly?)
+
+		fn = c.ImageFormat_dataString
+		data, textOnly? = fn('test.file')
+		Assert(data endsWith: 'test.file')
+		Assert(textOnly?)
+
+		fn = c.ImageFormat_dataString
+		data, textOnly? = fn('test.pdf')
+		Assert(data endsWith: 'test.pdf')
+		Assert(textOnly?)
+
+		fn = c.ImageFormat_dataString
+		data, textOnly? = fn('test.pdf Axon Label: test')
+		Assert(data endsWith: 'test.pdf')
+		Assert(textOnly?)
+
+		data, textOnly? = fn(GetAppTempPath() $ 'test.jpg')
+		Assert(data endsWith: 'test.jpg')
+		Assert(textOnly?)
+
+		data, textOnly? = fn(GetAppTempPath() $ 'test.jpg Axon Label: test')
+		Assert(data endsWith: 'test.jpg')
+		Assert(textOnly?)
 		}
 	}

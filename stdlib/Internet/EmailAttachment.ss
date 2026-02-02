@@ -169,7 +169,7 @@ Controller
 		{
 		maxSizeInMb = maxSizeInMb isnt false
 			? maxSizeInMb
-			: Email_CreateMIME.MaxSizeInMb()
+			: EmailMimeMaxSizeInMb()
 		checkAttachments = attachments.Copy()
 		if true isnt result = .checkFileName(checkAttachments)
 			return result
@@ -194,7 +194,7 @@ Controller
 		{
 		maxSize = maxSizeInMb isnt false
 			? maxSizeInMb.Mb()
-			: Email_CreateMIME.MaxSizeInMb().Mb()
+			: EmailMimeMaxSizeInMb().Mb()
 
 		// check size of all attachments before loading/ email is written
 		totalSize = 0
@@ -411,7 +411,8 @@ Controller
 	EmailAsLinks(x, filename, attachFileName, hwnd, quiet? = false)
 		{
 		attachHandler = .getAttachmentHandler()
-		msg = attachHandler(x, filename, attachFileName, hwnd, quiet?)
+		if false is msg = attachHandler(x, filename, attachFileName, hwnd, quiet?)
+			return
 		BookSendEmail(hwnd, x.email_from, x.to, msg,
 			pdfNames: Record(orig: filename, rename: attachFileName,
 				extraAttach: x.attachments))

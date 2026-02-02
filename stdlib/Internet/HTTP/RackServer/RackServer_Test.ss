@@ -115,21 +115,20 @@ Test
 
 	Test_error()
 		{
-		suwatch = .WatchTable('suneidolog')
 		fn = RackServer.RackServer_error
 
 		stage = ''
 		env = #()
 		e = 'socket client error'
 		fn(stage, e, env)
-		Assert(.GetWatchTable(suwatch) is: #(), msg: 'socket error no log')
+		Assert(.GetSuneidoLog() is: #(), msg: 'socket error no log')
 
 		e = 'ERROR: CopyTo: readfrom tcp ' $
 			'192.168.172.15:8080->192.168.172.109:60616: write tcp ' $
 			'192.168.172.15:8080->192.168.172.109:60616: wsasend: An established ' $
 			'connection was aborted by the software in your host machine.'
 		fn(stage, e, env)
-		Assert(.GetWatchTable(suwatch) is: #(), msg: 'copy to readfrom no log')
+		Assert(.GetSuneidoLog() is: #(), msg: 'copy to readfrom no log')
 
 		// also test with CopyTo errors without ERROR prefix as it may not be present
 		e = 'CopyTo: readfrom tcp ' $
@@ -137,20 +136,20 @@ Test
 			'192.168.172.15:8080->192.168.172.109:60616: wsasend: An established ' $
 			'connection was aborted by the software in your host machine.'
 		fn(stage, e, env)
-		Assert(.GetWatchTable(suwatch) is: #(), msg: 'copy to readfrom no log')
+		Assert(.GetSuneidoLog() is: #(), msg: 'copy to readfrom no log')
 
 		e = 'ERROR: CopyTo: read 20241210233059: sendfile: broken pipe'
 		fn(stage, e, env)
-		Assert(.GetWatchTable(suwatch) is: #(), msg: 'copy to sendfile no log')
+		Assert(.GetSuneidoLog() is: #(), msg: 'copy to sendfile no log')
 
 		e = HttpRequest.BadRequest
 		fn(stage, e, env)
-		Assert(.GetWatchTable(suwatch) is: #(), msg: 'bad request no log')
+		Assert(.GetSuneidoLog() is: #(), msg: 'bad request no log')
 
 		stage = 'in App'
 		e = 'a different error'
 		fn(stage, e, env)
-		recs = .GetWatchTable(suwatch)
+		recs = .GetSuneidoLog()
 		Assert(recs[0].sulog_message is: 'ERROR: (CAUGHT) RackServer: in App: ' $ e)
 		}
 

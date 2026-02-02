@@ -107,11 +107,21 @@ class
 			Adler32(rec.text) is Adler32(savedRec.text)
 		}
 
-	DeleteItem(name = false, path = false)
+	DeleteItem(name = false, path = false, num = false)
 		{
+		.deleteItems(:name, :path, :num)
+		.ClearCache()
+		}
+
+	deleteItems(name = false, path = false, num = false)
+		{
+		for child in .Children(num)
+			{
+			childPath = Paths.Combine(.table, child.path, child.name)
+			.deleteItems(name: child.name, path: childPath, num: child.num)
+			}
 		path = Opt('/', path.RemovePrefix(.table $ '/').BeforeLast('/' $ name))
 		.svcTable.StageDelete(.svcTable.MakeName([:path, :name]))
-		.ClearCache()
 		}
 
 	Children(parent)

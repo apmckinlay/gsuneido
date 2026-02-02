@@ -91,17 +91,16 @@ Test
 			BookSendEmail_fileExists?(unused) { return false }
 			}
 		func = cl.BookSendEmail_fileMissingError
-		watch = .WatchTable('suneidolog')
 
 		// fileMissingError gets called from a failed try/catch, should never be ''
 		func('')
-		calls = .GetWatchTable(watch)
+		calls = .GetSuneidoLog()
 		Assert(calls[0].sulog_message
 			is: 'ERROR: Failed to attach folder does not exist: ')
 
 		errorString = `can't open 'C:/thisFolderDoesNotExist/Invoice1.pdf'  in mode 'r'`
 		func(errorString)
-		calls = .GetWatchTable(watch)
+		calls = .GetSuneidoLog()
 		Assert(calls[1].sulog_message is: 'ERROR: Failed to attach folder does ' $
 			`not exist: C:/thisFolderDoesNotExist/`)
 
@@ -110,7 +109,7 @@ Test
 
 		errorString = `can't open '\\sharefolder\eta\Invoice1.pdf' in mode 'r'`
 		func(errorString)
-		calls = .GetWatchTable(watch)
+		calls = .GetSuneidoLog()
 		Assert(calls[2].sulog_message
 			is: 'ERROR: Failed to attach Invoice1.pdf, it does not exist')
 
@@ -119,7 +118,7 @@ Test
 		func = cl.BookSendEmail_fileMissingError
 		errorString = `can't open '\\sharefolder\eta\Invoice1.pdf' in mode 'r'`
 		cl.BookSendEmail_fileMissingError(errorString)
-		calls = .GetWatchTable(watch)
+		calls = .GetSuneidoLog()
 		Assert(calls[3].sulog_message
 			is: 'ERROR: Failed to attach Invoice1.pdf, it exists, ' $
 				'but was being held open and cannot attach')

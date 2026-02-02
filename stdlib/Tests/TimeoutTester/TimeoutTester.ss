@@ -10,15 +10,17 @@ class
 		{
 		ServerSuneido.Set('TimeoutTester_exeType', exeType)
 		startTime = Timestamp()
-		types = GetContributions('TimeoutTesterTypes')
+		types = GetContributions('TimeoutTesterTypes').Shuffle!()
 		.startClients(types, exeType)
 
 		// Minimize all windows to avoid restarting the AccessLoopAddonManager timeout.
 		// When an active window is closed, Windows can sometimes activate other windows.
 		// This can cause AccessLoopAddonManager to restart its timeout timer
+		SuneidoLog('INFO: before minimize windows')
 		if '' isnt res = RunPipedOutput('powershell ' $
 			'(New-Object -ComObject Shell.Application).MinimizeAll()')
 			SuneidoLog('INFO: minimize all windows failed - ' $ res)
+		SuneidoLog('INFO: after minimize windows')
 
 		// ^--- Before Timeout ---^
 		.sleepForMinutes(minutes)
@@ -37,6 +39,9 @@ class
 		i = 0
 		.forTimeoutTestTypes(types, exeType)
 			{ |name, user, web?|
+			try DeleteFile('./' $ name $ '/trace.log')
+			catch (err)
+				.log('cannot delete trace log for ' $ Display(name) $ ': ' $ Display(err))
 			expectedClients.Add(name)
 			clientPort = .clientPort(i++)
 			expectedClientPorts.Add(clientPort)

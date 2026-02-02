@@ -172,7 +172,6 @@ class
 			before = SystemChanges.GetState()
 			for name in tests
 				{
-_testname = name
 				.run(name, Construct(name), observer)
 				if quit_on_failure and observer.HasError?()
 					break

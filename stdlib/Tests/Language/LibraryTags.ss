@@ -1,7 +1,7 @@
 // Copyright (C) 2025 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	excludes: ('__protect', '__valid')
+	excludes: ('__protect', '__protect_Test', '__valid', '__valid_Test')
 	RemoveTagFromName(name)
 		{
 		return .split(name).name
@@ -44,14 +44,14 @@ class
 		if Client?() and not onlyClient?
 			ServerEval('LibraryTags.Reset')
 
-		trials = OptContribution(#LibraryTags_Trials, #())
+		trials = LastContribution(#LibraryTags_Trials)
 		modes = Suneido.GetDefault(#LibraryTags_Modes, #())
-		tags = .buildTags(trials, modes)
+		tags = .BuildTags(trials, modes)
 		if .ConvertTagInfo(.GetTagsInUse()) isnt tags
 			Suneido.LibraryTags(@tags)
 		}
 
-	buildTags(trials, modes)
+	BuildTags(trials, modes)
 		{
 		tags = Object()
 		modes = Object('').Append(modes)
@@ -86,17 +86,20 @@ class
 		return Suneido.Info('library.tags').SafeEval()
 		}
 
-	GetRecord(name, lib, exclude = false)
+	GetRecord(name, lib, tags = false, exclude = false)
 		{
-		// #() means the client is using the server's tags
-		if #() is curTags = .GetTagsInUse()
-			curTags = ServerEval(LibraryTags.GetTagsInUse)
-
-		for (i = curTags.Size() - 1; i >= 0; i--)
+		if tags is false
 			{
-			if exclude isnt false and curTags[i].Has?(exclude)
+			// #() means the client is using the server's tags
+			if #() is tags = .GetTagsInUse()
+				tags = ServerEval(LibraryTags.GetTagsInUse)
+			}
+
+		for (i = tags.Size() - 1; i >= 0; i--)
+			{
+			if exclude isnt false and tags[i].Has?(exclude)
 				continue
-			if false isnt rec = Query1(lib, group: -1, name: name $ curTags[i])
+			if false isnt rec = Query1(lib, group: -1, name: name $ tags[i])
 				return rec
 			}
 		return false

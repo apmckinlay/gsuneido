@@ -4,9 +4,9 @@ class
 	CallClass()
 		{
 		Suneido.RunningHttpServer = true
-		RackServer(app: RackRouter(.Routes()),
-			with: [RackResponseHeaders, RackContentType],
-			port: HttpPort())
+		with = [RackResponseHeaders, RackContentType].MergeUnion(
+			GetContributions('RackWithExtra'))
+		RackServer(app: RackRouter(.Routes()), :with, port: HttpPort())
 		}
 
 	Routes()

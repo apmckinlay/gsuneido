@@ -107,14 +107,14 @@ Controller
 		}
 	get_map_choice()
 		{
-		choice = UserSettings.Get(.map_save_settings_key())
+		choice = UserSettingsCached().Get(.map_save_settings_key())
 		if choice isnt false and .menu.Has?(choice)
 			.which = .orig_which = .menu.Find(choice)
 		}
 	save_map_choice()
 		{
 		if .which isnt .orig_which
-			UserSettings.Put(.map_save_settings_key(), .menu[.which])
+			UserSettingsCached().Put(.map_save_settings_key(), .menu[.which])
 		}
 	MappingOption()
 		{

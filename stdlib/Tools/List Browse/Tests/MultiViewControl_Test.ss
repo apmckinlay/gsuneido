@@ -13,11 +13,11 @@ Test
 		Assert(m.Eval(fn, fromNew?: false) is: false)
 
 		m.MultiViewControl_newRecordsSinceFlip = true
-		Assert(m.Eval(fn, fromNew?: false) is: true)
+		Assert(m.Eval(fn, fromNew?: false))
 
 		m.MultiViewControl_newRecordsSinceFlip = false
 		m.MultiViewControl_prevSelVal = [[something:]]
-		Assert(m.Eval(fn, fromNew?: false) is: true)
+		Assert(m.Eval(fn, fromNew?: false))
 		}
 
 	Test_getGoToField()

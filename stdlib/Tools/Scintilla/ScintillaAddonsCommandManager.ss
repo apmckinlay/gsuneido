@@ -42,13 +42,18 @@ class
 	BuildCommandOb(key, pressed = false)
 		{
 		commandOb = Object(String(key))
-		if KeyPressed?(VK.SHIFT, :pressed)
+		if .keyPressed?(VK.SHIFT, :pressed)
 			commandOb.Add('Shift')
-		if KeyPressed?(VK.CONTROL, :pressed)
+		if .keyPressed?(VK.CONTROL, :pressed)
 			commandOb.Add('Ctrl')
-		if KeyPressed?(VK.MENU, :pressed)
+		if .keyPressed?(VK.MENU, :pressed)
 			commandOb.Add('Alt')
 		return .formatCommandOb(commandOb)
+		}
+
+	keyPressed?(key, pressed)
+		{
+		return KeyPressed?(key, :pressed)
 		}
 
 	GetCommands()

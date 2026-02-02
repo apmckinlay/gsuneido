@@ -64,11 +64,7 @@ class
 
 	protectFromControlDef(dict, protect, rec)
 		{
-		control = dict.Control[0]
-		if not control.Suffix?('Control')
-			control $= 'Control'
-
-		ctrlClass = Global(control)
+		ctrlClass = GetControlClass.FromControl(dict.Control)
 		params = ctrlClass.Member?('CustomizableOptions')
 			? ctrlClass.CustomizableOptions.Join(',')
 			: ctrlClass.New.Params()

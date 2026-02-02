@@ -3,13 +3,10 @@
 ChooseField
 	{
 	Name: CommaList
-	New(mandatory = false, max_items = false, numeric? = false, noFieldEdit? = false,
-		protectLineFunc = false)
+	New(mandatory = false, .max_items = false, .numeric? = false, noFieldEdit? = false,
+		.protectLineFunc = false)
 		{
 		super(Object('Field', readonly: noFieldEdit?), :mandatory)
-		.max_items = max_items
-		.numeric? = numeric?
-		.protectLineFunc = protectLineFunc
 		}
 
 	Getter_DialogControl()

@@ -109,9 +109,10 @@ Test
 		{
 		mock = Mock()
 		mock.Addons = Mock()
+		addon = mock.BrowseControl_addon = Mock()
 		fn = BrowseControl.BrowseControl_handleUpdatedItems
 		data = Object(
-			[type: 'oldrec'],
+			[type: 'updatedRec'],
 			[type: 'newRec', Browse_NewRecord:],
 			[type: 'dirtyNewRec', Browse_NewRecord:, Browse_RecordDirty:],
 			[type: 'deletedRec', listrow_deleted:])
@@ -119,7 +120,7 @@ Test
 		deletes = Object()
 		oldrecs = Object(MockObject(
 			Object(
-				#(#Update, [type: 'oldrec']),
+				#(#Update, [type: 'updatedRec']),
 				#(#Final))
 			))
 		mock.Eval(fn, data, outputs, deletes, oldrecs)
@@ -130,6 +131,7 @@ Test
 			is: Object(1))
 		oldrecs[0].Final() // ensure MockObject was called
 
+		addon.Verify.Times(1).UpdateHistory([type: 'updatedRec'], false)
 		Assert(mock.BrowseControl_nextSaveRec is: [type: 'deletedRec', listrow_deleted:])
 		}
 

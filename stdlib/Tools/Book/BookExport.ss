@@ -26,9 +26,10 @@ class
 		}
 	html(text)
 		{
-		if text.Prefix?('<')
-			return text
-		text = text.Eval() // needs to use Eval
+		if not BookContent.Match(.book, text)
+			text = text.Eval() // needs to use Eval
+		else
+			text = BookContent.ToHtml(.book, text)
 		if text.Prefix?('<')
 			return text
 		return false

@@ -5,17 +5,18 @@ Test
 		{
 		c1 = Channel()
 		c2 = Channel()
-		Thread()
-			{
-			sum = 0
-			while c1 isnt x = c1.Recv()
-				sum += x
-			c2.Send(sum)
-			}
+		Thread(Curry(.sum, c1, c2))
 		for i in ..10
 			c1.Send(i)
 		c1.Close()
 		result = c2.Recv()
 		Assert(result is: 45)
+		}
+	sum(c1, c2)
+		{
+		sum = 0
+		while c1 isnt x = c1.Recv()
+			sum += x
+		c2.Send(sum)
 		}
 	}

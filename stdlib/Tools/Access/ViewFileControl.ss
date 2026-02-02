@@ -88,7 +88,8 @@ Controller
 
 	GetDirList(dir, details = false, filter = '')
 		{
-		dirs = ServerEval('Dir', Paths.Combine(dir, '*'), :details, files: details)
+		dirs = ServerEval('FileStorage.Dir',
+			Paths.Combine(dir, '*'), :details, files: details)
 		return details
 			? dirs
 			: dirs.RemoveIf({ not it.Suffix?(`/`) or it !~ filter })

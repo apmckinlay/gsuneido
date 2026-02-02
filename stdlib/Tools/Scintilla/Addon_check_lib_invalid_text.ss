@@ -14,7 +14,7 @@ ScintillaAddon
 	alert?: false
 	Set()
 		{
-		if .alert?
+		if .alert? or .Destroyed?()
 			return
 		.alert? = true
 		table = .Parent.Controller.Table

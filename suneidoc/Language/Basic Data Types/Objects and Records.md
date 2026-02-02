@@ -1,37 +1,32 @@
-### Objects and Records
+### Objects
 
-Objects are Suneido's general-purpose containers. They can be used as arrays, lists, records. Objects are also used to represent instances of classes.
+Objects are Suneido's general-purpose containers. They can be used as arrays, lists, or hash maps.
 
-Objects only support `is`, `isnt`, `<`, `<=`, `>`, `>=`, subscript `[]`, and member (.) operations.
+Records are object with the addition of [rules](<../../Database/Rules.md>) and [observers](<../../Database/Reference/Record/record.Observer.md>).
 
-Objects are equal if they have the same values and members. Comparisons `<`, `<=`, `>`, `>=`
+Objects only support `is`, `isnt`, `<`, `<=`, `>`, `>=`, subscript `[]`, and member `.` operations.
+
+Objects are equal if they have the same values and members. 
+
+`<`, `<=`, `>`, `>=` compare the list (unnamed) values.
 
 Additional, user defined methods can be added in a class called "Objects" (or "Records").
 
 Object constants can be written as follows:
 
 object-constant:
-<pre>   # ( <i>members</i> )</pre>
+-	`#(` members `)`
 
 list-member:
-
-``` suneido
-    constant
-```
+-	constant
 
 named-members:
-
-``` suneido
-    name: constant
-```
+-    name: constant
 
 name:
-
-``` suneido
-    identifier
-    number
-    string
-```
+-    identifier
+-    number
+-    string
 
 For example:
 

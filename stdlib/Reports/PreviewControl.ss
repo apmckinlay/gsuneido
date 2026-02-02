@@ -13,7 +13,7 @@ Controller
 		("Zoom Out",	"Ctrl+Subtract", 	tip: "Ctrl+Minus")
 		)
 
-	New(.report, .params = false, extraButtons = #(Print, PDF))
+	New(.report, .params = false, extraButtons = #(Print, PDF), .pdc = 0)
 		{
 		super(.controls(extraButtons))
 		.vbox = .Vert.Scroll.Center.PreviewPage
@@ -75,7 +75,7 @@ Controller
 		return Object("Vert",
 			Object('Scroll',
 				Object('Center',
-					Object('PreviewPage', .report, .getScale()),
+					Object('PreviewPage', .report, .getScale(), pdc: .pdc),
 					border: 20)),
 			#(Skip medium:),
 			buttonLayout,

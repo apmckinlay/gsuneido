@@ -44,4 +44,42 @@ Test
 			Object(#(fileName: "C:/Local/Temp/1.pdf",
 				attachFileName: 'C:/Local/Temp/1.pdf'))))
 		}
+
+	Test_collectPresignedUrls()
+		{
+		if AttachmentS3Bucket() is ''
+			return
+		cl = EmailAttachment_Mime
+			{
+			EmailAttachment_Mime_preSignedUrl(@args)
+				{
+				return 's3://' $ args[1]
+				}
+			EmailAttachment_Mime_token()
+				{
+				return 'token'
+				}
+			}
+		fn = cl.EmailAttachment_Mime_collectPresignedUrls
+		fn([], history = Object(), 'bucket', preUrls = Object())
+		Assert(history is: #())
+		Assert(preUrls is: #())
+
+		data = [attachments: Object('linkedattachments\202104/test.pdf',
+			'202104/test2.pdf', `(APPEND) 202104\test3.pdf`, `(APPEND) temp/test4.pdf`)]
+		fn(data, history = Object(), 'bucket', preUrls = Object())
+		Assert(data.attachments is: Object('linkedattachments/202104/test.pdf',
+			'202104/test2.pdf', '(APPEND) 202104/test3.pdf', `(APPEND) temp/test4.pdf`))
+
+		curYearMonth = Date().Format('yyyyMM')
+		Assert(history["test.pdf"].tmpName startsWith: curYearMonth $ "/test")
+		Assert(history["test.pdf"].url startsWith: "s3://" $ curYearMonth $ "/test")
+		Assert(history["test2.pdf"].tmpName startsWith: curYearMonth $ "/test2")
+		Assert(history["test2.pdf"].url startsWith: "s3://" $ curYearMonth $ "/test2")
+
+		Assert(preUrls[0] is: "s3://linkedattachments/202104/test.pdf")
+		Assert(preUrls[1] is: "s3://202104/test2.pdf")
+		Assert(preUrls[2] is: "s3://202104/test3.pdf")
+		Assert(preUrls[3] matches: "download?.*&token=token&saveName=test4.pdf")
+		}
 	}

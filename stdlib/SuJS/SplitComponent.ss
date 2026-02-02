@@ -21,8 +21,7 @@ GroupComponent
 
 		.SetStyles(#('position': 'relative'))
 		ctrls = .GetChildren()
-		.left = ctrls[0]
-		.right = ctrls[2]
+		.n = .initSplit(.left = ctrls[0], .right = ctrls[2], .Dir)
 		if SuUI.GetCurrentWindow().
 			GetComputedStyle(.left.El).
 			GetPropertyValue('overflow') isnt 'auto'
@@ -36,6 +35,29 @@ GroupComponent
 	LoadCssStyles()
 		{
 		LoadCssStyles('split.css', .styles)
+		}
+
+	initSplit(left, right, dir)
+		{
+		leftStretch = .ctrlStretch(left, stretch = dir is #vert ? #Ystretch : #Xstretch)
+		rightStretch = .ctrlStretch(right, stretch)
+		if leftStretch is rightStretch
+			return #(.5, .5)
+		if leftStretch is 0
+			return #(0, 1)
+		if rightStretch is 0
+			return #(1, 0)
+		totalStretch = leftStretch + rightStretch
+		return Object(leftStretch / totalStretch, rightStretch / totalStretch)
+		}
+
+	// Convert: "[Xstretch|Ystretch]: false" to 0 to simplify code logic
+	// 	IE: leftStretch is rightStretch == (false, 0), (0, 0), (false, false), (n, n)
+	ctrlStretch(ctrl, stretch)
+		{
+		return Number?(ctrl[stretch])
+			? ctrl[stretch]
+			: 0
 		}
 
 	getter_splitterSize()
@@ -55,7 +77,6 @@ GroupComponent
 		.right.El.SetStyle(style, '1px')
 		}
 
-	n: #(.5, .5)
 	GetSplit()
 		{
 		return .n

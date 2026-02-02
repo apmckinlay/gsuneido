@@ -6,14 +6,14 @@ Md_Base
 		{
 		}
 
-	Match(line, container = false, checkingContinuationText? = false)
+	Match(line, start, container = false, checkingContinuationText? = false)
 		{
 		if container is false and not checkingContinuationText? and
-			Md_Paragraph.IsSetextHeadingUnderline?(line)
+			Md_Paragraph.IsSetextHeadingUnderline?(line, start)
 			return false
-		if false is n = .IgnoreLeadingSpaces(line)
+		if false is n = .IgnoreLeadingSpaces(line, start)
 			return false
-		sub = line[n..].Tr(' \t')
+		sub = line[start+n..].Tr(' \t')
 		if sub =~ `^(\-\-\-+|___+|\*\*\*+)$`
 			return new this()
 		return false

@@ -21,5 +21,11 @@ Contributions:
 			{ return ServerEval('CustomizableOnServer.GetChangesOnServer') },
 		clientfunc: function (result)
 			{ Customizable.HandleChangesOnClient(result) })
+
+	(Events, eventfunction, name: 'CheckJsDownloadTasks',
+		serverfunc: function (user)
+			{ return JsDownload.CheckTask(user) },
+		clientfunc: function (result)
+			{ JsDownload.WarnIfOutstanding(result) })
 	)
 )

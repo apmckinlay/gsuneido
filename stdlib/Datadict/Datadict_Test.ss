@@ -217,122 +217,125 @@ Test
 
 	Test_Prompt()
 		{
-		sulog = .WatchTable('suneidolog')
 		cl = Datadict { Datadict_programmerError(msg) { SuneidoLog(msg) } }
 		Assert(cl.Prompt(.ddNoPrompt) is: .ddNoPrompt)
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no Prompt for: " $ .ddNoPrompt)
-		Assert(.GetWatchTable(sulog) isSize: 1)
+		Assert(.GetSuneidoLog() isSize: 1)
 
 		Assert(cl.Prompt(.ddEmptyPrompt) is: '')
-		Assert(.GetWatchTable(sulog) isSize: 1)
+		Assert(.GetSuneidoLog() isSize: 1)
 
 		Assert(cl.Prompt(.ddWithPrompt) is: "DD Prompt")
-		Assert(.GetWatchTable(sulog) isSize: 1)
+		Assert(.GetSuneidoLog() isSize: 1)
 
 		Assert(cl.Prompt(.ddInternal) is: "DD Internal")
-		Assert(.GetWatchTable(sulog) isSize: 2)
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog() isSize: 2)
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: .ddInternal $ ' should have been excluded due to tag: Internal')
 
 		Assert(cl.Prompt(.ddInternalCustom) is: "DD Custom Internal")
-		Assert(.GetWatchTable(sulog) isSize: 3)
-		Assert(.GetWatchTable(sulog).Last().sulog_message is: .ddInternalCustom $
+		Assert(.GetSuneidoLog() isSize: 3)
+		Assert(.GetSuneidoLog().Last().sulog_message is: .ddInternalCustom $
 			' should have been excluded due to tag: Internal')
 
 		// should not log if custom field was deleted in last day
 		ddInternalDeletedMsg = Customizable.DeletedCustomFieldMessage(.ddInternalCustom)
 		SuneidoLog(ddInternalDeletedMsg)
 
-		Assert(cl.Prompt(.ddInternalCustom) is: "DD Custom Internal")
-		Assert(.GetWatchTable(sulog) isSize: 4)
+		QueryApply1('Test_lib', name: 'Field_' $ .ddInternalCustom)
+			{ |x|
+			if false is newtext = Customizable.Customizable_setInternal(x.text)
+				return
+			x.text = newtext
+			x.Update()
+			}
 
-		QueryDo('update suneidolog where sulog_message is ' $
-			Display(ddInternalDeletedMsg) $ ' set sulog_timestamp = #20200101')
 		Assert(cl.Prompt(.ddInternalCustom) is: "DD Custom Internal")
-		Assert(.GetWatchTable(sulog) isSize: 5)
+		Assert(.GetSuneidoLog() isSize: 4)
+
+		Assert(cl.Prompt(.ddInternalCustom) is: "DD Custom Internal")
+		Assert(.GetSuneidoLog() isSize: 5)
 		}
 
 	// SelectPrompt Priority:
 	// SelectPrompt > Prompt > Heading
 	Test_SelectPrompt()
 		{
-		sulog = .WatchTable('suneidolog')
 		cl = Datadict { Datadict_programmerError(msg) { SuneidoLog(msg) } }
 
 		// Datadicts with just Prompts
 		Assert(cl.SelectPrompt(.ddNoPrompt) is: .ddNoPrompt)
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no SelectPrompt for: " $ .ddNoPrompt)
 
 		Assert(cl.SelectPrompt(.ddEmptyPrompt) is: .ddEmptyPrompt)
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no SelectPrompt for: " $ .ddEmptyPrompt)
-		Assert(.GetWatchTable(sulog) isSize: 2)
+		Assert(.GetSuneidoLog() isSize: 2)
 
 		Assert(cl.SelectPrompt(.ddWithPrompt) is: "DD Prompt")
-		Assert(.GetWatchTable(sulog) isSize: 2)
+		Assert(.GetSuneidoLog() isSize: 2)
 
 		// Datadicts with SelectPrompts. SelectPrompt "" will use "" but report error.
 		Assert(cl.SelectPrompt(.ddAllEmpty) is: "")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no SelectPrompt for: " $ .ddAllEmpty)
-		Assert(.GetWatchTable(sulog) isSize: 3)
+		Assert(.GetSuneidoLog() isSize: 3)
 
 		Assert(cl.SelectPrompt(.ddWithAll) is: "DD SelectPrompt")
-		Assert(.GetWatchTable(sulog) isSize: 3)
+		Assert(.GetSuneidoLog() isSize: 3)
 
 		// Datadicts with only Heading
 		// uses empty SelectPrompt rather than the heading
 		Assert(cl.SelectPrompt(.ddOnlyHeading1) is: "")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no SelectPrompt for: " $ .ddOnlyHeading1)
 		Assert(cl.SelectPrompt(.ddOnlyHeading2) is: "DD Only Heading2")
 
 		Assert(cl.SelectPrompt(.ddInternal) is: "DD Internal")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: .ddInternal $ ' should have been excluded due to tag: Internal')
-		Assert(.GetWatchTable(sulog) isSize: 5)
+		Assert(.GetSuneidoLog() isSize: 5)
 
 		Assert(cl.SelectPrompt(.ddExcludeSelect) is:
 			"DD ExcludeSelect SelectPrompt")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: .ddExcludeSelect $ ' should have been excluded due to tag: ExcludeSelect')
-		Assert(.GetWatchTable(sulog) isSize: 6)
+		Assert(.GetSuneidoLog() isSize: 6)
 		}
 
 	// Heading Priority:
 	// Heading > Prompt
 	Test_Heading()
 		{
-		sulog = .WatchTable('suneidolog')
 		cl = Datadict { Datadict_programmerError(msg) { SuneidoLog(msg) } }
 
 		// Datadicts with just Prompts
 		Assert(cl.Heading(.ddNoPrompt) is: .ddNoPrompt)
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no Heading for: " $ .ddNoPrompt)
-		Assert(.GetWatchTable(sulog) isSize: 1)
+		Assert(.GetSuneidoLog() isSize: 1)
 
 		Assert(cl.Heading('Fred') is: 'Fred')
 		Assert(cl.Heading('4Fred') is: '4Fred')
-		Assert(.GetWatchTable(sulog) isSize: 1) // Capital letter words treated as valid
+		Assert(.GetSuneidoLog() isSize: 1) // Capital letter words treated as valid
 
 		// Will use a prompt or heading explicitly set to "", but will log error
 		Assert(cl.Heading(.ddEmptyPrompt) is: "")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no Heading for: " $ .ddEmptyPrompt)
 		Assert(cl.Heading(.ddAllEmpty) is: "")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no Heading for: " $ .ddAllEmpty)
-		Assert(.GetWatchTable(sulog) isSize: 3)
+		Assert(.GetSuneidoLog() isSize: 3)
 
 		Assert(cl.Heading(.ddOnlyHeading1) is: "DD Only Heading1")
 		Assert(cl.Heading(.ddOnlyHeading2) is: "DD Only Heading2")
-		Assert(.GetWatchTable(sulog) isSize: 3)
+		Assert(.GetSuneidoLog() isSize: 3)
 
 		Assert(cl.Heading(.ddInternal) is: "DD Internal")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: .ddInternal $ ' should have been excluded due to tag: Internal')
 		}
 
@@ -340,61 +343,59 @@ Test
 	// Prompt > Heading > SelectPrompt
 	Test_PromptOrHeading()
 		{
-		sulog = .WatchTable('suneidolog')
 		cl = Datadict { Datadict_programmerError(msg) { SuneidoLog(msg) } }
 
 		// Datadicts with just Prompts
 		Assert(cl.PromptOrHeading(.ddNoPrompt) is: .ddNoPrompt)
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no PromptOrHeading for: " $ .ddNoPrompt)
 
 		// Will NOT use a prompt or heading explicitly set to "", but log error
 		Assert(cl.PromptOrHeading(.ddEmptyPrompt) is: .ddEmptyPrompt)
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no PromptOrHeading for: " $ .ddEmptyPrompt)
 		Assert(cl.PromptOrHeading(.ddAllEmpty) is: "")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no PromptOrHeading for: " $ .ddAllEmpty)
-		Assert(.GetWatchTable(sulog) isSize: 3)
+		Assert(.GetSuneidoLog() isSize: 3)
 
 		Assert(cl.PromptOrHeading(.ddOnlyHeading1) is: "DD Only Heading1")
 		Assert(cl.PromptOrHeading(.ddOnlyHeading2) is: "DD Only Heading2")
-		Assert(.GetWatchTable(sulog) isSize: 3)
+		Assert(.GetSuneidoLog() isSize: 3)
 
 		Assert(cl.PromptOrHeading(.ddWithOnlySelectPrompt) is:
 			"DD Only SelectPrompt")
 
-		Assert(.GetWatchTable(sulog) isSize: 3)
+		Assert(.GetSuneidoLog() isSize: 3)
 		Assert(cl.PromptOrHeading(.ddInternal) is: "DD Internal")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: .ddInternal $ ' should have been excluded due to tag: Internal')
 		}
 
 	Test_GetFieldPrompt()
 		{
-		sulog = .WatchTable('suneidolog')
 		cl = Datadict { Datadict_programmerError(msg) { SuneidoLog(msg) } }
 
 		Assert(cl.GetFieldPrompt(.ddNoPrompt) is: .ddNoPrompt)
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: "no SelectPrompt for: " $ .ddNoPrompt)
-		Assert(.GetWatchTable(sulog) isSize: 1)
+		Assert(.GetSuneidoLog() isSize: 1)
 
 		Assert(cl.GetFieldPrompt(.ddWithSelectPrompt) is: "DD SelectPrompt")
-		Assert(.GetWatchTable(sulog) isSize: 1)
+		Assert(.GetSuneidoLog() isSize: 1)
 
 		Assert(cl.GetFieldPrompt(.ddInternal) is: "DD Internal")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: .ddInternal $ ' should have been excluded due to tag: Internal')
-		Assert(.GetWatchTable(sulog) isSize: 2)
+		Assert(.GetSuneidoLog() isSize: 2)
 
 		Assert(cl.GetFieldPrompt(.ddExcludeSelect)
 			is: "DD ExcludeSelect SelectPrompt")
-		Assert(.GetWatchTable(sulog) isSize: 2)
+		Assert(.GetSuneidoLog() isSize: 2)
 
 		Assert(cl.GetFieldPrompt(.ddExcludeSelect, excludeTags: #(ExcludeSelect))
 			is: "DD ExcludeSelect SelectPrompt")
-		Assert(.GetWatchTable(sulog).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: .ddExcludeSelect $ ' should have been excluded due to tag: ExcludeSelect')
 		}
 
@@ -494,7 +495,6 @@ Test
 
 	Teardown()
 		{
-		QueryDo('delete suneidolog where sulog_timestamp is #20200101')
 		super.Teardown()
 		}
 	}

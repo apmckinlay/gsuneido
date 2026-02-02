@@ -3,12 +3,12 @@ Test
 	{
 	Test_global()
 		{
-		Assert(Uninit?('NonExistenT') is: true)
+		Assert(Uninit?('NonExistenT'))
 		Assert(Uninit?('Uninit?') is: false)
 		}
 	Test_dynamic()
 		{
-		Assert(Uninit?('_nonExistenT') is: true)
+		Assert(Uninit?('_nonExistenT'))
 		_nonExistenT = 123
 		Assert(Uninit?('_nonExistenT') is: false)
 		}

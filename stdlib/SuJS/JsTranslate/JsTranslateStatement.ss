@@ -262,11 +262,10 @@ JsTranslate // to get output stuff
 		.Print('try')
 		.body(ast.try)
 		.Println(' catch (_e) {')
-		if _fn.hasBlockReturn
-			.Indented()
-				{
-				.Println('su.rethrowBlockReturn(_e);')
-				}
+		.Indented()
+			{
+			.Println('su.rethrowBlockReturn(_e);')
+			}
 		if false is catchPart = ast.catch
 			{
 			.Println('}')

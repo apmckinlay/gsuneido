@@ -127,8 +127,7 @@ class
 
 	ColumnInvalid?(rec, col)
 		{
-		if .RecordChanged?(rec) and .ValidField isnt false and
-			rec.Member?(.ValidField) and rec[.ValidField] isnt ''
+		if .validRule(rec) isnt ''
 			return true
 		return .getInvalidCols(rec).Has?(col)
 		}
@@ -145,9 +144,20 @@ class
 		cols = .getInvalidCols(rec)
 		return not cols.Empty?()
 			? "Invalid: " $ cols.Map(PromptOrHeading).Join(', ')
-			: .RecordChanged?(rec) and rec.Member?(.ValidField)
-				? rec[.ValidField]
-				: ''
+			: .validRule(rec)
+		}
+
+	GetInvalidInfo(rec)
+		{
+		validRule = .validRule(rec)
+		return Object(:validRule, invalidCols: .getInvalidCols(rec))
+		}
+
+	validRule(rec)
+		{
+		if .RecordChanged?(rec) and .ValidField isnt false and rec.Member?(.ValidField)
+			return rec[.ValidField]
+		return ''
 		}
 
 	getInvalidCols(rec)

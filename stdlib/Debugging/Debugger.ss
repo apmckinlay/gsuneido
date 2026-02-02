@@ -18,11 +18,12 @@ Controller
 		Suneido.Debugger = Window(Object(this, hwnd, err, calls), keep_placement:,
 			:onDestroy)
 		}
-	New(hwnd, err, calls)
+	New(hwnd, .err, calls)
 		{
 		.list = .Vert.VertSplit.HorzSplit.ListBox
 		.inspect = .Vert.VertSplit.HorzSplit.Inspect
 		.debugView = .FindControl(#DebugView)
+		.allLocals = .FindControl(#allLocals)
 		.source = .debugView.Editor
 		.source.SETCARETLINEVISIBLEALWAYS(true)
 		.source.SETYCARETPOLICY(SC.CARET_STRICT | SC.CARET_EVEN)
@@ -76,7 +77,11 @@ Controller
 			#(Button "Destroy Window")
 			#Skip #Skip
 			#(Button "Exit")
-			#Fill
+			#Fill,
+			#(CheckBox, 'All Locals', name: 'allLocals'),
+			#Skip,
+			#(MenuButton, 'Copy Error', ('Full Stack', 'From Selected Stack')),
+			#Skip
 			#(Button "Go To Definition")
 			#Skip)
 		buttons.Add(@.ExtraButtons())
@@ -125,6 +130,40 @@ Controller
 		{
 		.On_Go_To_Definition()
 		}
+
+	On_Copy_Error_Full_Stack()
+		{
+		.copyError(0)
+		}
+
+	copyError(start)
+		{
+		ClipboardWriteString('Error:\r\n\t' $ .err $ '\r\n' $
+			'Locals:\r\n\t' $ .localsStr(start) $ '\r\n' $
+			'Stack:\r\n' $ .stackStr(start, .allLocals.Get() is true) $ '\r\n')
+		}
+
+	localsStr(sel)
+		{
+		return String(.calls[sel].locals)
+		}
+
+	stackStr(sel, allLocals?)
+		{
+		stack = Object()
+		for i in sel .. .list.GetCount()
+			stack.Add('\t' $ .list.GetText(i) $
+				(allLocals?
+					? '\r\n\t\t' $ .localsStr(i)
+					: ''))
+		return stack.Join('\r\n')
+		}
+
+	On_Copy_Error_From_Selected_Stack()
+		{
+		.copyError(.list.GetCurSel())
+		}
+
 	On_Go_To_Definition()
 		{
 		// TODO make this go to the right library

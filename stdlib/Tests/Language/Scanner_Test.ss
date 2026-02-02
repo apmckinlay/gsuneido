@@ -4,7 +4,7 @@ Test
 	Test_extras()
 		{
 		Assert(ScannerFind("test sort test1", "sort") is: 5)
-		Assert(ScannerHas?("test sort test1", "sort") is: true)
+		Assert(ScannerHas?("test sort test1", "sort"))
 		Assert(ScannerHas?("test where s = 'sort'", "sort") is: false)
 		}
 	Test_Scanner()

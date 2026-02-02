@@ -11,11 +11,8 @@ function (record, field, dd = false, value = #(0))
 	args[0] = value
 	args.record = record.Copy()
 	args.fieldToValidate = field
-	try
-		ctrl = Global(dd.Control[0] $ 'Control')
-	catch (err /*unused*/, "can't find")
+	if false is ctrl = GetControlClass.FromControl(dd.Control)
 		return true
-
 	return ctrl.Method?('ValidData?')
 		? ctrl.ValidData?(@args) : true
 	}

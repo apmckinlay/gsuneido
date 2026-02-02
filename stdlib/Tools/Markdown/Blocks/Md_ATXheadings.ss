@@ -6,16 +6,16 @@ Md_Base
 		{
 		}
 
-	Match(line)
+	Match(line, start)
 		{
-		if false is n = .IgnoreLeadingSpaces(line)
+		if false is n = .IgnoreLeadingSpaces(line, start)
 			return false
 
-		level = .CountLeadingChar(line[n..], '#')
+		level = .CountLeadingChar(line, start+n, '#')
 		if level < 1 or level > 6 /*=max*/
 			return false
 
-		remain = line[n + level..]
+		remain = line[start+n+level..]
 		if remain.Blank?() or remain[0] in (' ', '\t')
 			{
 			inline = remain

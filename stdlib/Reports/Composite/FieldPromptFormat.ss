@@ -10,7 +10,7 @@ TextFormat
 		// convert data passed to TextFormat to the actual prompt
 		for m in #(0 data)
 			if args.Member?(m) and String?(args[m])
-				args[m] = SelectPrompt(args[m])
+				args[m] = SelectFields.GetFieldPrompt(args[m])
 		return args
 		}
 	// needed for browse control in Gear Option
@@ -18,7 +18,11 @@ TextFormat
 		{
 		if .Data isnt false
 			data = .Data
-		data = SelectPrompt(data)
+		data = SelectFields.GetFieldPrompt(data)
 		super.Print(x, y, w, h, data)
+		}
+	DataToString(data, rec /*unused*/)
+		{
+		return SelectFields.GetFieldPrompt(data)
 		}
 	}

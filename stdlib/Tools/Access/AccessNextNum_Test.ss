@@ -30,7 +30,6 @@ Test
 		{
 		.nextNumTable = .MakeNextNum(num: 1)
 		parent = .parentMock()
-		watch = .WatchTable('suneidolog')
 		cl = AccessNextNum
 			{ AccessNextNum_logNextNumWarning(msg /*unused*/) { } }
 
@@ -48,7 +47,7 @@ Test
 		Assert(rec1.num is: 20)
 		.assertReserved(20)
 		.assertNext(21)
-		Assert(.GetWatchTable(watch) isSize: 0, msg: 'Test 1')
+		Assert(.GetSuneidoLog() isSize: 0, msg: 'Test 1')
 
 		// Reserve another number, should get 21 (the second number)
 		// 3 is now the next available
@@ -56,7 +55,7 @@ Test
 		Assert(rec2.num is: 21)
 		.assertReserved(21)
 		.assertNext(22)
-		Assert(.GetWatchTable(watch) isSize: 0, msg: 'Test 2')
+		Assert(.GetSuneidoLog() isSize: 0, msg: 'Test 2')
 
 		// Putback rec1's number (20), new instance attempts a reservation,
 		// 20 is reserved, 23 is still the next available
@@ -66,7 +65,7 @@ Test
 		Assert(rec3.num is: 20)
 		.assertReserved(20)
 		.assertNext(22)
-		Assert(.GetWatchTable(watch) isSize: 0, msg: 'Test 3')
+		Assert(.GetSuneidoLog() isSize: 0, msg: 'Test 3')
 
 		// Instance attempts to renew its reservation
 		parent.When.GetRecordControl().Return(.controlMock(rec2.num))
@@ -74,13 +73,13 @@ Test
 		Assert(accessNextNum2.Renew())
 		Assert(Query1(.nextNumTable, num: rec2.num).getnextnum_reserved_till
 			greaterThan: nextNumBefore.getnextnum_reserved_till)
-		Assert(.GetWatchTable(watch) isSize: 0, msg: 'Test 4')
+		Assert(.GetSuneidoLog() isSize: 0, msg: 'Test 4')
 
 		// Instance confirms reservation is used, removing it from the next num table
 		parent.When.GetData().Return(rec2)
 		accessNextNum2.Confirm()
 		Assert(Query1(.nextNumTable, num: rec2.num) is: false)
-		Assert(.GetWatchTable(watch) isSize: 0, msg: 'Test 5')
+		Assert(.GetSuneidoLog() isSize: 0, msg: 'Test 5')
 		}
 
 	parentMock()
@@ -128,7 +127,6 @@ Test
 		parent = .parentMock()
 		cl = AccessNextNum
 			{ AccessNextNum_logNextNumWarning(msg) { SuneidoLog(msg) } }
-		sulogWatch = .WatchTable('suneidolog')
 
 		nextNum = [table: .nextNumTable, table_field: 'num', field: 'num']
 		accessNextNum = cl(parent, nextNum)
@@ -142,7 +140,7 @@ Test
 		Assert(rec.num is: 5)
 		Assert(Query1(.nextNumTable, num: 5) is: false)
 		.assertNext(6)
-		Assert(.GetWatchTable(sulogWatch).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: 'AccessControl.nextnum - had to skip 5 numbers to get: 5')
 		parent.Verify.Never().GetData()
 		parent.Verify.Never().EditMode?()
@@ -172,7 +170,6 @@ Test
 		parent = .parentMock()
 		cl = AccessNextNum
 			{ AccessNextNum_logNextNumWarning(msg) { SuneidoLog(msg) } }
-		sulogWatch = .WatchTable('suneidolog')
 		nextNum = [table: .nextNumTable, table_field: 'num', field: 'num']
 		accessNextNum = cl(parent, nextNum)
 		accessNextNum.AccessNextNum_nextNumAttempts = 10
@@ -185,7 +182,7 @@ Test
 		Assert(rec.num is: 10)
 		Assert(Query1(.nextNumTable, num: 10) is: false)
 		.assertNext(11)
-		Assert(.GetWatchTable(sulogWatch).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: 'AccessControl.nextnum - had to skip 10 numbers to get: 10')
 		parent.Verify.Never().EditMode?()
 		parent.Verify.Delay([anyArgs:])
@@ -198,12 +195,12 @@ Test
 		Assert(accessNextNum.Renew())
 		Assert(rec.num is: 20)
 		.assertNext(21)
-		logs = .GetWatchTable(sulogWatch)
+		logs = .GetSuneidoLog()
 		Assert(logs[logs.Size() - 2].sulog_message // second last log
 			is: 'renew_next_num while looped 2 times')
 		parent.Verify.AlertWarn('Next Number',
 			'Another user has taken 10. You have been assigned 20')
-		Assert(.GetWatchTable(sulogWatch).Last().sulog_message
+		Assert(.GetSuneidoLog().Last().sulog_message
 			is: 'WARNING: Next Number started at: 10, skipped to: 20')
 		parent.Verify.EditMode?()
 		parent.Verify.GetData()

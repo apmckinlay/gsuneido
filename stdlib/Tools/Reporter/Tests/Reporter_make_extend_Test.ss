@@ -32,10 +32,10 @@ Test
 		compilable? = Reporter_make_extend.Reporter_make_extend_compilable?
 
 		fn = buildFn(#(a, b), 'a + b', 'Test Formula')
-		Assert(compilable?(fn) is: true)
+		Assert(compilable?(fn))
 
 		fn = buildFn(#(), '2 + 5', 'Test Formula')
-		Assert(compilable?(fn) is: true)
+		Assert(compilable?(fn))
 
 		fn = buildFn(#(a, b), 'a + ', 'Test Formula')
 		Assert(compilable?(fn) is: false)

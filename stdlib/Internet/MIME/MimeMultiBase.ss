@@ -14,7 +14,7 @@ MimeBase
 		if fileContent is false and not FileExists?(filename)
 			throw .FileNotFoundErrorPrefix $ filename
 		size = fileContent is false ? FileSize(filename) : fileContent.Size()
-		max_size = Email_CreateMIME.MaxSizeInMb().Mb()
+		max_size = EmailMimeMaxSizeInMb().Mb()
 		if size > max_size
 			throw .FileSizeErrorPrefix $ ReadableSize(size) $ ') ' $
 				'exceeds maximum (' $ ReadableSize(max_size) $ ')'

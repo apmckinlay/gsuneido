@@ -130,6 +130,7 @@ ContinuousTest_Base
 			<body>
 			<h1>Quality Checking Result</h1>
 			<h2>as of @.asOf.ShortDateTime()</h2>` $
+			`<h2>GSuneido Build Date: ` $ Built() $ `</h2>` $
 			(exceptmsg.Blank?() ? `` : exceptmsg) $
 			.tableTemplate $
 			`</body></html>`, [:allStatistics, :asOf])

@@ -128,6 +128,26 @@ Test
 		mock.Verify.deleteFile?(`\copyFolder\subFolder\` $ file)
 		}
 
+	Test_filePathTooLong()
+		{
+		mock = Mock(OpenImageSelect)
+		mock.When.s3Bucket().Return('')
+		mock.When.copyFile([anyArgs:]).Return(false, false, 'Retry', true)
+		mock.When.deleteFile?([anyArgs:]).Return(false)
+		mock.When.ensureCopyFolder([anyArgs:]).Return(`\copyFolder\subFolder\`)
+		mock.When.AlertWarn([anyArgs:]).Return(true)
+		mock.When.CopyFile([anyArgs:]).CallThrough()
+		mock.When.fileSize([anyArgs:]).Return(1)
+
+		// retryCopy returns error for path too long, should alert and return false
+		file = `a`.Repeat(245) $ `.txt`
+		filePath = `\testFolder\` $ file
+		mock.When.GetCopyToFilename([anyArgs:]).Return(filePath)
+		Assert(mock.CopyFile(filePath) is: false)
+		mock.Verify.Times(1).AlertWarn(OpenImageSelect.Title,
+			"The destination file path is too long: " $ filePath)
+		}
+
 	Test_ensureCopyFolder()
 		{
 		spy = .SpyOn(CheckDirExists)

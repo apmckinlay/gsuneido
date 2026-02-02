@@ -182,9 +182,9 @@ Controller
 			return true
 		if not Object?(condition[condition.condition_field])
 			{
-			SuneidoLog('ERROR: condition field must be an object', calls:,
-				params: Object(field: condition.condition_field,
-					condition: condition[condition.condition_field]))
+			SuneidoLog('ERROR: (CAUGHT) condition field must be an object', calls:,
+				params: condition, caughtMsg: 'Skipping invalid condition.  Check to ' $
+					'see if bad value is saved.')
 			return true
 			}
 		return false

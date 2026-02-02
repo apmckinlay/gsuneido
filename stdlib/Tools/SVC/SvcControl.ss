@@ -509,7 +509,7 @@ Controller
 			if .refreshRequired(sel)
 				{
 				.Defer(.On_Refresh)
-				return 0
+				return
 				}
 			.local_list.SetRow(selection, sel)
 			// replace type because .display.Display is designed for master changes
@@ -760,14 +760,16 @@ Controller
 		if .curtable is .allLibView
 			return .getAllMasterChanges(skipChecks)
 
-		.masterChanges()
+		updates = .masterChanges()
 		.On_Refresh(skipChecks:)
 		.skipChecks? = true
 		.resetLibraries()
 		.skipChecks? = false
 		if not skipChecks
 			.runChecksFresh()
+		return updates
 		}
+
 	selectAndHighlightConflict(conflicts)
 		{
 		// Highlight first conflict

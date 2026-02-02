@@ -125,7 +125,7 @@ Controller
 			if customHeader isnt CustomizeExpandControl.LayoutName
 				custom_tabs.Remove(customHeader).Add(customHeader, at: 0)
 			}
-		return custom_tabs.Empty?() ? false : custom_tabs
+		return custom_tabs
 		}
 
 	refresh(dirty)

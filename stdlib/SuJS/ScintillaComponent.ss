@@ -8,6 +8,7 @@ Component
 	Ystretch:	1
 	DefaultFontSize: 11
 	Unsortable: true
+	PaddingTop: 4
 
 	styles: `
 		.su-code-wrapper {
@@ -73,6 +74,8 @@ Component
 		.AddEventListenerToCM('keydown', .OnKeyDown)
 
 		.indicators = Object()
+		.markers = Object()
+		.gutters = Object()
 		.SetMinSize()
 		}
 
@@ -161,6 +164,11 @@ Component
 		.refresh()
 		}
 
+	TextHeight()
+		{
+		return .CM.DefaultTextHeight()
+		}
+
 	SetReadOnly(readOnly)
 		{
 		if (.readonly)
@@ -226,6 +234,87 @@ Component
 		return .setValue?
 		}
 
+	markerCss: false
+	DefineMarker(n, style, fore, back)
+		{
+		.markers[n] = [:style, :fore, :back]
+		.markerCss = false
+		}
+
+	ensureMarkerCss()
+		{
+		if .markerCss isnt false
+			return
+
+		css = ''
+		for n in .markers.Members()
+			{
+			className = 'su-code-' $ .MarkerName $ '-' $ n
+			marker = .markers[n]
+			if marker.style is SC.MARK_BACKGROUND
+				{
+				css $= '.' $ className $ '{
+						background-color: ' $ ToCssColor(marker.back) $ ';
+					}\r\n'
+				}
+			else if marker.style is SC.MARK_SHORTARROW
+				{
+				if not .gutters.Has?(className)
+					{
+					.gutters.Add(className)
+					.CM.SetOption(#gutters, .gutters)
+					}
+				if not marker.Member?(#div)
+					{
+					div = CreateElement('div', className: className $ '-div')
+					div.innerHTML = '
+						<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
+							<polygon
+								points="5,35 40,35 40,10 95,50 40,90 40,65 5,65"
+								fill="' $ ToCssColor(marker.back) $ '"
+								stroke="black"
+								stroke-width="6"
+								stroke-linejoin="round"
+							/>
+						</svg>'
+					marker.div = div
+					}
+				css $= '.' $ className $ '{
+						width: 1em;
+					}
+					.' $ className $ '-div {
+						display: flex;
+						justify-content: center;
+						align-items: center;
+					}\r\n'
+				}
+			}
+		LoadCssStyles('su-code-' $ .MarkerName $ '.css', .markerCss = css, override?:)
+		}
+
+	MarkerAdd(row, n)
+		{
+		if false is marker = .markers.GetDefault(n, false)
+			return
+		.ensureMarkerCss()
+		className = 'su-code-' $ .MarkerName $ '-' $ n
+		if marker.style is SC.MARK_BACKGROUND
+			.CM.AddLineClass(row, "background", className)
+		else if marker.style is SC.MARK_SHORTARROW
+			.CM.SetGutterMarker(row, className, marker.div.CloneNode(true))
+		}
+
+	MarkerDelete(row, n)
+		{
+		if false is marker = .markers.GetDefault(n, false)
+			return
+		className = 'su-code-' $ .MarkerName $ '-' $ n
+		if marker.style is SC.MARK_BACKGROUND
+			.CM.RemoveLineClass(row, 'background', className)
+		else if marker.style is SC.MARK_SHORTARROW
+			.CM.ClearGutter(className)
+		}
+
 	DefineIndicator(n, style, fore = false)
 		{
 		css = ''
@@ -234,6 +323,8 @@ Component
 			css = 'text-decoration: underline wavy ' $ color $ ' 1px;'
 		else if style is INDIC.TEXTFORE
 			css = 'color: ' $ color $ '; cursor: pointer;'
+		else if style is INDIC.ROUNDBOX
+			css = 'border-radius: 2%; background-color: ' $ color $ ';'
 		.indicators[n] = [:css, marks: Object()]
 		}
 
@@ -278,6 +369,7 @@ Component
 			// mark.Find() return undefined if the mark is no longer in the document
 			markPos = mark.Find()
 			markPos.from
+			markPos.to
 			return markPos
 			}
 		catch
@@ -448,9 +540,11 @@ Component
 		{
 		if '' isnt str = .CM.GetSelection()
 			{
-			if not .GetReadOnly()
-				.CM.ReplaceSelection('')
-			SuClipboardWriteString(str)
+			SuClipboardWriteString(str, 'Cut').Then(
+				{|res|
+				if false isnt res and not .GetReadOnly()
+					.CM.ReplaceSelection('')
+				})
 			}
 		}
 	COPY()
@@ -458,7 +552,7 @@ Component
 		if .CM.GetSelection() is ''
 			.CM.ExecCommand('selectAll')
 		if '' isnt str = .CM.GetSelection()
-			SuClipboardWriteString(str)
+			SuClipboardWriteString(str, 'Copy')
 		}
 	PASTE()
 		{
@@ -556,6 +650,15 @@ Component
 			event.PreventDefault()
 			event.StopPropagation()
 			}
+		}
+
+	GetDimension()
+		{
+		if not .Member?(#CM)
+			return #(scrollWidth: 0, scrollHeight: 0, clientWidth: 0, clientHeight: 0)
+		info = .CM.GetScrollInfo()
+		return Object(scrollWidth: info.width, scrollHeight: info.height,
+			clientWidth: info.clientWidth, clientHeight: info.clientHeight)
 		}
 
 	Getter_(member)

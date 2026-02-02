@@ -11,6 +11,8 @@ class
 		if s.Prefix?("<?xml") or s.Prefix?("<html") or s.Prefix?("<!DOCTYPE")
 			return s
 
+		s = BookContent.ToHtml(table, s)
+
 		if table is 'suneidoc'
 			s = Asup(s)
 

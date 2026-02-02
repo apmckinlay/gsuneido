@@ -23,4 +23,11 @@ MultiAutoChooseControl
 			Filter({ it isnt '' and ValidEmailAddress?(it) }).
 			Each(EmailAddresses.OutputAddr)
 		}
+
+	ValidData?(@args)
+		{
+		args.list = .list
+		args.allowOther = ValidEmailAddress?
+		super.ValidData?(@args)
+		}
 	}

@@ -4,6 +4,7 @@
 // then refresh could be implemented here (e.g. instead of LibDiff)
 PassthruController
 	{
+	ComponentName: "DiffBase"
 	New(list1, list2, .lib, .recName, title1, title2, .base = false,
 		.tags = "12", .gotoButton = false, .comment = false, .refresh = false,
 		.commentBgColor = false, .newOnRight? = false, .extraControls = #(Skip),
@@ -123,7 +124,7 @@ PassthruController
 
 		.ovbar = new .lists_class(@.OvBars())
 		.ovbar.SetNumRows(.diffs.Size())
-		.ovbar.SetMaxRowHeight(.lists.Get(0).TextHeight(0), scaled?:)
+		.ovbar.SetMaxRowHeight(.lists.Get(0), #TextHeight, scaled?:)
 		.ovbar.SetTopMargin(GetSystemMetrics(SM.CXHSCROLL))
 
 		selColor = CLR.GRAY
@@ -307,14 +308,24 @@ PassthruController
 		else if msg is WM.HSCROLL
 			lists.SetXOffSet(main)
 		else if msg is WM.LBUTTONDOWN
-			.updateSelectedLine(lists.Get(main).LineFromPosition())
+			.SyncSelectedLineByClick(main)
 		else if msg is WM.KEYDOWN and wparam in (VK.DOWN, VK.UP, VK.LEFT, VK.RIGHT)
-			.updateSelectedLine(lists.SetFirstVisibleLine(main))
+			.SyncSelectedLineByKeyDown(main)
 		return result
 		}
 	preventScroll(msg)
 		{
 		return msg is WM.MOUSEWHEEL and KeyPressed?(VK.CONTROL)
+		}
+
+	SyncSelectedLineByClick(main)
+		{
+		.updateSelectedLine(.lists.Get(main).LineFromPosition())
+		}
+
+	SyncSelectedLineByKeyDown(main)
+		{
+		.updateSelectedLine(.lists.SetFirstVisibleLine(main))
 		}
 
 	buttons()
@@ -391,7 +402,7 @@ PassthruController
 	findPrevChange(selected, diffs)
 		{
 		if (selected < 0)
-			{ Beep(); return }
+			{ Beep(); return selected}
 		// backup untill we find the start of the current change
 		for (; selected >= 0 and diffs[selected][1] isnt ""; --selected)
 			{}
@@ -557,7 +568,7 @@ PassthruController
 		else if false isnt pos = ClassHelp.FindDotDeclarations(code, name)
 			.Overview_Click(source.LineFromPosition(pos))
 		else if name[0].Upper?() and
-			false isnt x = ClassHelp.FindBaseMethod(.lib, code, name)
+			false isnt x = ClassHelp.FindBaseMethod(.lib, .recName, code, name)
 			GotoLibView(x.name $ '.' $ name, libs: Object(x.lib))
 		else
 			return 0

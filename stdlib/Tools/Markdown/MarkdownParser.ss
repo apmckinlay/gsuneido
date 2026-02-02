@@ -15,48 +15,64 @@ class
 		{
 		lines = md.Lines()
 		document = Md_Document()
+		_document = document
 
 		for line in lines
-			{
-			line = Md_Helper.Detab(line)
-			opens = document.GetOpenBlockItems()
-			for (i = 0; i < opens.Size(); i++)
-				{
-				if false is result = opens[i].Continue(line)
-					break
-				line = result
-				}
-			lastOpen = opens[i - 1]
-			lazyContinuation? = false
-			if ((opens.Last()).Base?(Md_Paragraph) and
-				i < opens.Size() - 1 and // there is unsatisfied container block
-				opens.Last().IsContinuationText?(line))
-				{
-				lastOpen = opens.Last()
-				lazyContinuation? = true
-				}
-			lastOpen.Add(line, :lazyContinuation?)
-			}
+			.processLine(document, line)
 
 		document.Finish()
 		return document
 		}
 
+	processLine(document, line)
+		{
+		line = Md_Helper.Detab(line)
+		start = 0
+		opens = document.GetOpenBlockItems()
+		n = opens.Size()
+		for (i = 0; i < n; i++)
+			{
+			result, start = opens[i].Continue(line, start)
+			if false is result
+				break
+			line = result
+			}
+		lastOpen = opens[i - 1]
+		container = opens.GetDefault(i - 2, false)
+		lazyContinuation? = false
+		if (opens[n - 1].Base?(Md_Paragraph) and
+			i < n - 1 and // there is unsatisfied container block
+			opens[n - 1].IsContinuationText?(line, start))
+			{
+			lastOpen = opens[n - 1]
+			container = opens.GetDefault(n - 2, false)
+			lazyContinuation? = true
+			}
+		// container is used by Md_Paragraph.Add for tables
+		lastOpen.Add(line, start, :lazyContinuation?, :container)
+		}
+
 	phase2(document)
 		{
+		_document = document
 		.forEachInline(document)
 		}
 
-	forEachInline(container)
+	forEachInline(container, _mdAddons = #())
 		{
 		container.ForEachBlockItem()
 			{
 			if it.Base?(Md_ContainerBlock)
 				.forEachInline(it)
 			else if it.Base?(Md_Paragraph)
-				it.ParsedInline = MarkdownInlineParser(it.Inline)
+				it.ParsedInline = MarkdownInlineParser2(it.Inline)
 			else if it.Base?(Md_ATXheadings)
-				it.ParsedInline = MarkdownInlineParser(it.Inline)
+				it.ParsedInline = MarkdownInlineParser2(it.Inline)
+			else
+				{
+				for addon in mdAddons
+					addon.ParseInline(it)
+				}
 			}
 		}
 	}

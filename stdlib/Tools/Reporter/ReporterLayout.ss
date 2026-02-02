@@ -27,7 +27,6 @@ class
 				Object('Scroll'
 					Object('Border', .select_tab(reporterMode)), noEdge:,
 					Tab: 'Select')
-				constructAll:
 				))
 		ob.Add(#(Skip 4))
 		.add_extra_buttons(ob, reporterMode)

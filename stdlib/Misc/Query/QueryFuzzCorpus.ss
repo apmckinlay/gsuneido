@@ -178,4 +178,5 @@
 `cus extend r1, a2 = r1 where a2 in ("", "3")`
 `cus extend r1, a2 = r1 where a2 >= "" and a2 < "5" // InRange`
 `cus extend r1, a2 = r1 where String?(a2)`
+`bln leftjoin by(ik) ((ivc where ck isnt '3') union ivc)`
 )

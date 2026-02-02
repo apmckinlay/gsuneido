@@ -131,6 +131,8 @@ VirtualListModelTests
 		mock = Mock(VirtualListEdit)
 		mock.VirtualListEdit_col = 'field1'
 		mock.VirtualListEdit_rec = ['field1': 'hello']
+		fakeController = FakeObject(Send: function (@unused) { return 0 })
+		mock.VirtualListEdit_parent = Object(Controller: fakeController)
 		mock.When.valueChanged?([anyArgs:]).CallThrough()
 		mock.When.commitChange([anyArgs:]).CallThrough()
 

@@ -176,6 +176,7 @@ window.downloadFile = function(filename, content) {
 			}
 		}
 
+	maxFileNameLength: 180  // longer file names may cause certain operations to fail
 	validateFiles?(files)
 		{
 		for i in ..files.length
@@ -187,6 +188,11 @@ window.downloadFile = function(filename, content) {
 			if file.size > .fileSizeLimit.Mb()
 				{
 				.Event(#FileSizeOverLimit)
+				return false
+				}
+			if file.name.Size() > .maxFileNameLength
+				{
+				.Event(#FileNameTooLong, file.name, .maxFileNameLength)
 				return false
 				}
 			if ExecutableExtension?(file.name)
@@ -386,6 +392,8 @@ window.downloadFile = function(filename, content) {
 	Destroy()
 		{
 		.abort()
+		if SuUI.GetCurrentWindow().GetFileCount() isnt 0
+			SuUI.GetCurrentWindow().ClearFileCount()
 		super.Destroy()
 		}
 	}

@@ -16,7 +16,7 @@ Format
 		return .getSize(data)
 		}
 
-	// used by sujswebgui:ListFormatting
+	// used by stdlib:ListFormatting__webgui
 	Format_data(data)
 		{
 		if not String?(data)

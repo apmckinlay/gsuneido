@@ -90,4 +90,12 @@ Test
 		Assert(c.LogOb[0].caughtMsg
 			is: "generic connection error handling; may need attention")
 		}
+
+	Teardown()
+		{
+		id = ConnectionErrorHandler.ConnectionErrorHandler_idPrefix $
+			'MessageManager_ClassId_Test'
+		ServerSuneido.DeleteMember(id)
+		super.Teardown()
+		}
 	}

@@ -1,9 +1,9 @@
 // Copyright (C) 2025 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	Continue(line/*unused*/)
+	Continue(line/*unused*/, start)
 		{
-		return false
+		return false, start
 		}
 
 	NextOpenBlock()
@@ -11,14 +11,19 @@ class
 		return false
 		}
 
-	Match(line/*unused*/)
+	Match(line/*unused*/, start/*unused*/)
 		{
 		throw 'NOT IMPLEMENTED'
 		}
 
-	Add(line/*unused*/)
+	Add(line/*unused*/, start/*unused*/)
 		{
 		throw 'NOT IMPLEMENTED'
+		}
+
+	HasEndingBlankLine?()
+		{
+		return false
 		}
 
 	Closed?: false
@@ -28,26 +33,28 @@ class
 		}
 
 	// helper
-	CountLeadingChar(line, char)
+	CountLeadingChar(line, start, char)
 		{
-		return line.FindRx('[^' $ char $ ']')
+		if line.Size() <= start
+			return 0
+		return line.Find1of('^' $ char, start) - start
 		}
 
-	IgnoreLeadingSpaces(line)
+	IgnoreLeadingSpaces(line, start, limit = 3)
 		{
-		n = .CountLeadingChar(line, ' ')
-		if n <= 3 /*=allowed spaces*/
+		n = .CountLeadingChar(line, start, ' ')
+		if limit is false or n <= limit
 			return n
 		return false
 		}
 
-	BlankLine?(line)
+	BlankLine?(line, start)
 		{
-		return line.Blank?()
+		return line[start..].Blank?()
 		}
 
-	NotBlankLine?(line)
+	NotBlankLine?(line, start = 0)
 		{
-		return not .BlankLine?(line)
+		return not .BlankLine?(line, start)
 		}
 	}

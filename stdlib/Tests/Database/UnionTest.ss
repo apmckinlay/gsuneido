@@ -69,9 +69,9 @@ Test
 			is: #((a: 1, b: 2, c: 3)))
 		Assert(QueryAll(.union(table1, table2) $ ' where a is ""')
 			equalsSet: #((b: 1, c: 2), (b: 2, c: 3, d: 4)))
-		Assert(QueryEmpty?(.union(table1, table2) $ ' where b is 9'), msg: 'b is 9')
-		Assert(QueryEmpty?(.union(table1, table2) $ ' where a is 9'), msg: 'a is 9')
-		Assert(QueryEmpty?(.union(table1, table2) $ ' where d is 9'), msg: 'd is 9')
+		Assert(QueryEmpty?(.union(table1, table2), b: 9), msg: 'b is 9')
+		Assert(QueryEmpty?(.union(table1, table2), a: 9), msg: 'a is 9')
+		Assert(QueryEmpty?(.union(table1, table2), d: 9), msg: 'd is 9')
 		}
 
 	Test_union_disjoint_bug()

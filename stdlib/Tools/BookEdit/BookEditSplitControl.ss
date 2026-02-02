@@ -19,9 +19,9 @@ CodeViewControl
 		Addon_speller: (ignore: (dl, dt, dd, ul, ol, li, href, br, pre,
 			suneido, Suneido, gSuneido, gsuneido, jSuneido, jsuneido,
 			https, stdlib, builtin, Builtin)))
-	New(data, readonly = false)
+	New(data, readonly = false, extraAddons = #())
 		{
-		super(:data, addons: .addons, :readonly)
+		super(:data, addons: .addons.Copy().Merge(extraAddons), :readonly)
 		}
 
 	InitialSet(data)

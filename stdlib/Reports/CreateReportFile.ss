@@ -72,14 +72,20 @@ class
 
 	buildSystemReportObject(report, params)
 		{
-		if not GetStandardScheduleReportsOb().Member?(report)
+		standardReports = GetStandardScheduleReportsOb()
+		if not standardReports.Member?(report)
 			throw "standard report not found: " $ report
 		params = .getConvertedParamsDateCodes(params)
-		rptDef = GetStandardScheduleReportsOb()[report]
+		rptDef = standardReports[report]
 		reportOb = Object()
 		reportOb.paramsdata = params isnt false ? params : []
 		reportOb[0] = rptDef[1]
-		reportOb.printParams = rptDef.Member?('printParams') ? rptDef.printParams : []
+		if rptDef.Member?('printParams')
+			reportOb.printParams = rptDef.printParams
+		ctrl = GetControlClass.FromControl(rptDef)
+		if ctrl isnt false and ctrl.Base?(Params)
+			ctrl.SetExtraParamsData(reportOb.paramsdata)
+
 		reportOb.title = rptDef.Member?('title') ? rptDef.title : report
 		if rptDef.Member?('header')
 			reportOb.header = rptDef.header

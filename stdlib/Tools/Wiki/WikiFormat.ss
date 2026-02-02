@@ -348,7 +348,7 @@ class
 		}
 
 	SearchForm:	'<form method="get" action=Wiki>
-				<input type="text" size=40 name="find">
+				<input type="text" size=40 name="find" spellcheck="true">
 				<input type="submit" value="Search">
 				</form>'
 	}

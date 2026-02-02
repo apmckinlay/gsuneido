@@ -11,5 +11,4 @@ Some tips for using Books:
 -	use the field at the top right to search
 -	use CTRL+F to search for text on a page
 
-
 ![](<../res/bookall.png>)

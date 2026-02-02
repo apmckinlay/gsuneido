@@ -245,7 +245,7 @@ WndProc
 	moveToEnd(x)
 		{
 		if .draggedTab is lastTab = .Count() - 1
-			return false
+			return
 		SendMessageRect(.Hwnd, TCM.GETITEMRECT, lastTab, rc = Object())
 		if x + .draggedTabWidth >= rc.right
 			.moveTab(lastTab)

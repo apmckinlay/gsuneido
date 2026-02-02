@@ -92,6 +92,7 @@ A Mutex is not a Go mutex. It is implement with a Go channel to support timeouts
 See also:
 [Channel](<Channel.md>),
 [object.CompareAndSet](<Object/object.CompareAndSet.md>),
+[Pipe](<Pipe.md>),
 [Synchronized](<Synchronized.md>),
 [class.Synchronized](<Class/class.Synchronized.md>),
 [Thread](<Thread.md>),

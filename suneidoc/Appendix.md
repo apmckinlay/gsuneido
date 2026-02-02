@@ -2,8 +2,8 @@
 
 |     |
 | --- |
-| [Idioms &raquo;](<Appendix/Idioms.md>) |
-| [Patterns &raquo;](<Appendix/Patterns.md>) |
-| [Errors &raquo;](<Appendix/Errors.md>) |
-| [Glossary &raquo;](<Appendix/Glossary.md>) |
+| [Idioms](<Appendix/Idioms.md>) |
+| [Patterns](<Appendix/Patterns.md>) |
+| [Errors](<Appendix/Errors.md>) |
+| [Glossary](<Appendix/Glossary.md>) |
 

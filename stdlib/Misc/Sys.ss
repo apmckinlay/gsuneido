@@ -60,7 +60,7 @@ class
 		{
 		try
 			{
-			// Cannot use SetTimer because SetTimer is defined sujswebgui
+			// Cannot use SetTimer because there is stdlib:SetTimer__webgui
 			Type(CreateWindowEx)
 			return true
 			}

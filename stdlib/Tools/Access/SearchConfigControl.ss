@@ -13,7 +13,11 @@ Controller
 			}
 		.wg = WaitGroup()
 		.wg.Thread({
-			.fields = CollectFields(c.GetControlLayout(), path?:)
+			try
+				layout = c.GetControlLayout()
+			catch (unused, '*member not found') // screen destroyed
+				layout = #()
+			.fields = CollectFields(layout, path?:)
 			})
 		}
 

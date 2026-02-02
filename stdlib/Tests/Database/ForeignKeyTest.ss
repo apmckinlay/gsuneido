@@ -239,9 +239,6 @@ Test
 		}
 	Test_bug_20250828()
 		{
-		if BuiltDate() < #20250828
-			return
-
 		master = .MakeTable("(x, id) index(x) key(id)", [x: 1, id: 2])
 
 		tran = .MakeTable("(k, id) key(k) index(id) in " $ master $ "(id)",

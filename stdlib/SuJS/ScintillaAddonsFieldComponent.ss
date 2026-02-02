@@ -7,10 +7,10 @@ ScintillaAddonsComponent
 	New(@args)
 		{
 		super(@args)
-		.AddEventListenerToCM('keydown', .keydown)
+		.AddEventListenerToCM('keydown', .HandleEnterKey)
 		}
 
-	keydown(unused, event)
+	HandleEnterKey(unused, event)
 		{
 		if event.key is "Enter"
 			event.PreventDefault()

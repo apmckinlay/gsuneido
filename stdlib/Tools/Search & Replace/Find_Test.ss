@@ -114,21 +114,20 @@ Test
 	Test_tryIgnoreRegexError()
 		{
 		fn = Find.Find_tryIgnoreRegexError
-		watch = .WatchTable('suneidolog')
 
 		fn({ throw 'regex: error' })
-		Assert(.GetWatchTable(watch) isSize: 0)
+		Assert(.GetSuneidoLog() isSize: 0)
 
 		fn({ throw 'regexp.cpp: error' })
-		Assert(.GetWatchTable(watch) isSize: 0)
+		Assert(.GetSuneidoLog() isSize: 0)
 
 		fn({ throw 'error caused by regex' })
-		Assert(.GetWatchTable(watch) isSize: 0)
+		Assert(.GetSuneidoLog() isSize: 0)
 
 		fn({ throw 'error caused by unforseen reasons' })
-		calls = .GetWatchTable(watch)
+		calls = .GetSuneidoLog()
 		Assert(calls isSize: 1)
 		Assert(calls[0].sulog_message
-			is: 'ERROR: (CAUGHT) Find failed: error caused by unforseen reasons')
+			has: 'ERROR: (CAUGHT) Find failed: error caused by unforseen reasons')
 		}
 	}

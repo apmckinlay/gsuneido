@@ -441,6 +441,114 @@ Server: AmazonS3")
 			'signed request', '', '')
 		}
 
+	Test_DeleteFiles2()
+		{
+		_count = Object(0)
+		_requestFailed? = Object(false)
+		_makeRequestRes = Object(
+`<DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<Deleted>
+<Key>sample1</Key>
+<DeleteMarker>true</DeleteMarker>
+<DeleteMarkerVersionId>null</DeleteMarkerVersionId>
+</Deleted>
+<Deleted>
+<Key>sample2</Key>
+<DeleteMarker>true</DeleteMarker>
+<DeleteMarkerVersionId>null</DeleteMarkerVersionId>
+</Deleted>
+</DeleteResult>`,
+`<DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<Deleted>
+<Key>sample1</Key>
+<DeleteMarker>true</DeleteMarker>
+<DeleteMarkerVersionId>null</DeleteMarkerVersionId>
+</Deleted>
+<Error>
+<Key>sample2</Key>
+<Code>AccessDenied</Code>
+<Message>Access Denied</Message>
+</Error>
+</DeleteResult>`)
+
+		cl = AmazonS3
+			{
+			AmazonS3_deleteFileLimit: 2
+			AmazonS3_makeRequest(@unused)
+				{
+				_count[0]++
+				if _requestFailed?[0] is true
+					return false
+
+				res = _makeRequestRes.PopFirst()
+				Assert(res isnt _makeRequestRes)
+				return res
+				}
+			GetBucketLocationCached(bucket)
+				{
+				return bucket
+				}
+			}
+
+		fn = cl.DeleteFiles2
+		Assert(fn('sample_bucket', #('sample1', 'sample2')) is: '')
+		Assert(_count[0] is: 1)
+		Assert(_makeRequestRes isSize: 1)
+
+		_count[0] = 0
+		_requestFailed?[0] = true
+		Assert(fn('sample_bucket', #('sample1', 'sample2')) is:
+			'Deleting files from Amazon S3 failed:\n\n\tsample1, sample2')
+		Assert(_count[0] is: 1)
+
+		_count[0] = 0
+		_requestFailed?[0] = false
+		result = fn('sample_bucket', #('sample1', 'sample2'))
+		Assert(result is: 'Deleting files from Amazon S3 failed:\n\n\tsample2')
+		Assert(_count[0] is: 1)
+		Assert(_makeRequestRes isSize: 0)
+
+		_count[0] = 0
+		_makeRequestRes.Append(Object(
+`<DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<Deleted>
+<Key>sample1</Key>
+<DeleteMarker>true</DeleteMarker>
+<DeleteMarkerVersionId>null</DeleteMarkerVersionId>
+</Deleted>
+<Deleted>
+<Key>sample2</Key>
+<DeleteMarker>true</DeleteMarker>
+<DeleteMarkerVersionId>null</DeleteMarkerVersionId>
+</Deleted>
+</DeleteResult>`,
+`<DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<Error>
+<Key>sample3</Key>
+<Code>AccessDenied</Code>
+<Message>Access Denied</Message>
+</Error>
+<Error>
+<Key>sample4</Key>
+<Code>AccessDenied</Code>
+<Message>Access Denied</Message>
+</Error>
+</DeleteResult>`,
+`<DeleteResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+<Deleted>
+<Key>sample5</Key>
+<DeleteMarker>true</DeleteMarker>
+<DeleteMarkerVersionId>null</DeleteMarkerVersionId>
+</Deleted>
+</DeleteResult>`))
+
+		Assert(fn('sample_bucket', #('sample1', 'sample2', 'sample3',
+			'sample4', 'sample5')) is:
+			'Deleting files from Amazon S3 failed:\n\n\tsample3, sample4')
+		Assert(_makeRequestRes isSize: 0)
+		Assert(_count[0] is: 3)
+		}
+
 	Test_DeleteFolder()
 		{
 		mock = .initializeMock()
@@ -565,5 +673,106 @@ Server: AmazonS3
 		mock.Verify.Times(1).addToLog('PUT',
 			'Bad HTTP Status Code (Invalid HTTP response code in: (empty header))',
 			'\r\n\r\n', '')
+		}
+
+	amazonUnprocessedFileList: #(
+		#(key: "1.txt", size: "68 bytes", last_modified: #20250424.103009),
+		#(key: "1093.pdf", size: "5978 bytes", last_modified: #20250424.083222),
+		#(key: "1099_Test.pdf", size: "5978 bytes", last_modified: #20250424.083222),
+		#(key: "202501/1.txt", size: "68 bytes", last_modified: #20250424.112849),
+		#(key: "202501/BizUsers.txt", size: "378 bytes", last_modified: #20250424.115410),
+		#(key: "202501/", size: "0 bytes", last_modified: #20250423.112849),
+		#(key: "202501/aaaaccccc", size: "487 bytes", last_modified: #20250424.115958),
+		#(key: "202501/jp.jpg", size: "65929 bytes", last_modified: #20250424.113032),
+		#(key: "202501/openfilename", size: "421 bytes", last_modified: #20250424.115536),
+		#(key: "202501/test.png", size: "45533 bytes", last_modified: #20250424.115827),
+		#(key: "202502/1.txt", size: "68 bytes", last_modified: #20250424.112020),
+		#(key: "202503/1.txt", size: "68 bytes", last_modified: #20250424.102603),
+		#(key: "202503/yay.PNG", size: "203639 bytes", last_modified: #20250331.151029),
+		#(key: "202504/1.doc", size: "68 bytes", last_modified: #20250424.091559),
+		#(key: "202504/1.txt", size: "68 bytes", last_modified: #20250424.091306),
+		#(key: "202505/Beach.jpg", size: "13677 bytes", last_modified: #20250516.114429),
+		#(key: "202505/jpTest.pdf", size: "25194 bytes", last_modified: #20250502.080505),
+		#(key: "202506/Order10.jpg", size: "1161 bytes", last_modified: #20250605.105327),
+		#(key: "202507/Beach.jpg", size: "13677 bytes", last_modified: #20250704.115313),
+		#(key: "5078.pdf", size: "5978 bytes", last_modified: #20250424.083222),
+		#(key: "ACI Test 123.jpg", size: "99488 bytes", last_modified: #20250424.083223),
+		#(key: "truck.gif", size: "20116 bytes", last_modified: #20250424.083214))
+
+	expectedProcessedRootList: #(
+		#(name: "1.txt", size: 68, date: #20250424.103009),
+		#(name: "1093.pdf", size: 5978, date: #20250424.083222),
+		#(name: "1099_Test.pdf", size: 5978, date: #20250424.083222),
+		#(name: "202501/", size: 0, date: #20250423.112849),
+		#(name: "202502/", size: 0, date: #20250424.112020),
+		#(name: "202503/", size: 0, date: #20250331.151029),
+		#(name: "202504/", size: 0, date: #20250424.091306),
+		#(name: "202505/", size: 0, date: #20250502.080505),
+		#(name: "202506/", size: 0, date: #20250605.105327),
+		#(name: "202507/", size: 0, date: #20250704.115313),
+		#(name: "5078.pdf", size: 5978, date: #20250424.083222),
+		#(name: "ACI Test 123.jpg", size: 99488, date: #20250424.083223),
+		#(name: "truck.gif", size: 20116, date: #20250424.083214))
+
+	Test_mimicExeDir()
+		{
+		nameOnlyList = .amazonUnprocessedFileList.Map({ it.key })
+		Assert(AmazonS3.AmazonS3_mimicExeDir('', nameOnlyList, false)
+			equalsSet: #("1.txt", "1093.pdf", "1099_Test.pdf", "202501/", "202502/",
+				"202503/", "202504/", "202505/", "202506/", "202507/", "5078.pdf",
+				"ACI Test 123.jpg", "truck.gif"))
+
+		Assert(AmazonS3.AmazonS3_mimicExeDir(
+			'', .amazonUnprocessedFileList.DeepCopy(), true)
+			is: .expectedProcessedRootList)
+
+		nameOnlyList = .amazonUnprocessedFileList.Map({ 'att/' $ it.key })
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/', nameOnlyList, false)
+			equalsSet: #("1.txt", "1093.pdf", "1099_Test.pdf", "202501/", "202502/",
+				"202503/", "202504/", "202505/", "202506/", "202507/", "5078.pdf",
+				"ACI Test 123.jpg", "truck.gif"))
+
+		list = .amazonUnprocessedFileList.DeepCopy().Each({ it.key = 'att/' $ it.key })
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/', list, true)
+			is: .expectedProcessedRootList)
+
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/', #(), true) is: #())
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/', #('att/'), false) is: #())
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/',
+			Object(Object(key: 'att/', last_modified: #20250916, size: '0')), true)
+			is: #())
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/', #(), false) is: #())
+		Assert(AmazonS3.AmazonS3_mimicExeDir('', #(), true) is: #())
+		Assert(AmazonS3.AmazonS3_mimicExeDir('', #(), false) is: #())
+
+		// dir one file
+		Assert(AmazonS3.AmazonS3_mimicExeDir('test.abc', #(), true) is: #())
+		Assert(AmazonS3.AmazonS3_mimicExeDir('test.abc', #(), false) is: #())
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/test.abc', #(), true) is: #())
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/test.abc', #(), false) is: #())
+
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/test.abc',
+			#('att/test.abc', 'att/test.abcdefg'), false)
+			is: #('test.abc'))
+		Assert(AmazonS3.AmazonS3_mimicExeDir('att/test.abc',
+			[[key: 'att/test.abcdefg', size: '2 bytes', last_modified: #20010101],
+			[key: 'att/test.abc', size: '1 bytes', last_modified: #20000101]], true)
+			is: #(#(name: 'test.abc', size: 1, date: #20000101)))
+		}
+
+	Test_formatDirPath()
+		{
+		fn = AmazonS3.AmazonS3_formatDirPath
+		Assert(fn('c:/hello') is: 'c:/hello')
+		Assert(fn('/srv/hello') is: '/srv/hello')
+
+		Assert(fn('c:/hello/*.*') is: 'c:/hello/')
+		Assert(fn('/srv/hello/*') is: '/srv/hello/')
+
+		Assert({ fn('/srv/hello/') } throws: 'only accept *, *.* or file listing')
+		Assert({ fn('c:/hello/') } throws: 'only accept *, *.* or file listing')
+		Assert({ fn('c:/hello/*.jpg') } throws: 'wildcards are not handled')
+		Assert({ fn('c:/hel*lo/*') } throws: 'wildcards are not handled')
+		Assert({ fn('c:/hel?lo/*') } throws: 'wildcards are not handled')
 		}
 	}

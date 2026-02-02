@@ -264,7 +264,8 @@ ExplorerAppsControl
 		if false is pos = ClassHelp.FindMethod(text, method)
 			{
 			if method[0].Upper?() and
-				false isnt x = ClassHelp.FindBaseMethod(.CurrentTable(), text, method)
+				false isnt x = ClassHelp.FindBaseMethod(
+					.CurrentTable(), .CurrentName(), text, method)
 				return .GotoBaseMethod(x.lib, x.name, method)
 			if false is pos = ClassHelp.FindDotDeclarations(text, method)
 				return false

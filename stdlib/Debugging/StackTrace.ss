@@ -15,5 +15,6 @@ function (n = 99, printFn = function (s) { Print(s) }, skip = 1)
 		if printFn is false
 			return s
 		printFn(s)
+		return Nothing()
 		}
 	}

@@ -316,7 +316,7 @@ class
 		{
 		iter = .Iter()
 		if iter is x = iter.Next()
-			return // no return value for empty sequence
+			return Nothing() // no return value for empty sequence
 		while iter isnt y = iter.Next()
 			x = block(x, y)
 		return x

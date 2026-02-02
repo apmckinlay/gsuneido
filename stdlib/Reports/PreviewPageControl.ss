@@ -2,13 +2,13 @@
 WndProc
 	{
 	Name: "PreviewPage"
-	New(report, scale = 1, dimens = false)
+	New(report, scale = 1, dimens = false, pdc = 0)
 		{
 		.CreateWindow("SuWhitePush", "", WS.VISIBLE)
 		.SubClass()
 
 		.report = Report(@report)
-		.report.SetDriver(new GdiPreviewDriver)
+		.report.SetDriver(new GdiPreviewDriver(:pdc))
 
 		.dimens = dimens is false ? .report.GetDimens() : dimens
 		.origWidth = .dimens.width * .ctrlScaleFactor

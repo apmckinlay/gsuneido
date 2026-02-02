@@ -232,11 +232,12 @@ class
 		if rec.text =~ '\r[^\n]' or rec.text.Suffix?('\r')
 			results.Add('Please ensure that this record does ' $
 				'not have any invalid newlines.')
-		if not rec.text.Prefix?('<!-- skipXmlCheck -->')
+		if BookContent.Type(.book) is #html and
+			not rec.text.Prefix?('<!-- skipXmlCheck -->')
 			try
 				XmlCheckNest(rec.text)
 			catch (e)
-			results.Add(e)
+				results.Add(e)
 		return results
 		}
 

@@ -9,7 +9,7 @@ class
 
 		if req.type is #OPEN
 			return SuSessionManager.Open(req.queryvalues.connectid, req.queryvalues.token,
-				wsHandler, req.queryvalues.GetDefault(#reconnect, false))
+				wsHandler, req.queryvalues.GetDefault(#reconnect, false), req)
 
 		if req.type is #CLOSE
 			{
@@ -25,6 +25,7 @@ class
 			{
 			.handleError(e, wsHandler)
 			}
+		return ''
 		}
 
 	handleError(e, wsHandler)

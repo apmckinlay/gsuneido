@@ -51,6 +51,9 @@ Controller
 			if not QueryEmpty?(lib, :name, group: -1)
 				libs.Add(lib)
 		msg = Opt(.otherDefinitionsWarning(name), libs.Join(', '))
+		for m in LastContribution('Svc_TrialTags').Members()
+			if not QueryEmpty?(curLib, name: name $ '__' $ m, group: -1)
+				msg = Opt(msg, '\n') $ 'WARNING: ' $ name $ '__' $ m $ ' also exists'
 		if BuiltinNames().BinarySearch?(name)
 			msg $= "\nWARNING: Built-in on gSuneido"
 		return msg

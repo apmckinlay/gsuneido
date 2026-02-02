@@ -90,7 +90,8 @@ class
 		fkeys = ""
 		QueryApply('indexes where fktable is ' $ Display(table))
 			{ |x|
-			fkeys $= '\t' $ x.table $ ' index(' $ x.columns $ ') in ' $
+			type = x.key is true ? "key" : x.key is 'u' ? "unique" : "index"
+			fkeys $= '\t' $ x.table $ ' ' $ type $ '(' $ x.columns $ ') in ' $
 				x.fktable $ (x.fkmode is cascadeMode ? ' cascade' : "")
 			if (x.columns isnt x.fkcolumns)
 				fkeys $= '(' $ x.fkcolumns $ ')'

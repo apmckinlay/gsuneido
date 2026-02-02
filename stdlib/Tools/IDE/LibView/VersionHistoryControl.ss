@@ -71,10 +71,15 @@ Controller
 			{
 			renames = .svc.SearchForRename(.table, name)
 			if renames.NotEmpty?()
+				{
 				if renames.Size() > 1 // should only happen with hash collisions
+					{
 					.branches = renames
+					.more.SetEnabled(false)
+					}
 				else
 					list.Append(.get(renames[0], .when))
+				}
 			else
 				.more.SetEnabled(false)
 			}

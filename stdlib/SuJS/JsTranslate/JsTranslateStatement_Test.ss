@@ -150,6 +150,7 @@ e;
 									`try {
 										x;
 									} catch (_e) {
+										rethrowBlockReturn(_e);
 										var e = catchMatch(_e, "");
 										y;
 									}`)
@@ -157,13 +158,22 @@ e;
 									`try {
 										x;
 									} catch (_e) {
+										rethrowBlockReturn(_e);
 										var e = catchMatch(_e, "foo");
+										y;
+									}`)
+		('try x catch y',
+									`try {
+										x;
+									} catch (_e) {
+										rethrowBlockReturn(_e);
 										y;
 									}`)
 		('try x',
 									`try {
 										x;
 									} catch (_e) {
+										rethrowBlockReturn(_e);
 									}`)
 		('return 1, a',
 									`return [1, a];`,

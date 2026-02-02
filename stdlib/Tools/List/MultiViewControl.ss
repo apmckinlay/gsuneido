@@ -121,7 +121,6 @@ CommandParent
 		.accessArgs = args.Copy().Merge(.accessArgs)
 		.accessArgs.fromMultiView = true
 		.listArgs = args.Copy().Merge(.listArgs)
-		.controlCustomization()
 
 		access = .accessArgs.Copy().Add('Access', at: 0)
 		list = .listArgs.Copy().Add('VirtualList', at: 0)
@@ -143,18 +142,6 @@ CommandParent
 			list = Object('Vert', list, totalLayout)
 
 		return Object('Flip', access, list)
-		}
-
-	controlCustomization()
-		{
-		// excludeCustomize? can be set in args, accessArgs, or listArgs, (setting the
-		// controls accordingly). If .accessArgs has "excludeCustomize?: true",
-		// then Customizable is NOT required.
-		if .accessArgs.GetDefault('excludeCustomize?', false)
-			return
-		if .listArgs.GetDefault('protectField', false) isnt false and
-			false is Display(.accessArgs[1]).Has?('Customizable')
-			ProgrammerError('Multiview Access is missing Customizable Layout')
 		}
 
 	flipButton(highlighted, command)
@@ -418,6 +405,7 @@ CommandParent
 			.redirToAccess()
 		else
 			.redirToList()
+		.checkControlCustomization()
 		}
 
 	redirToList()
@@ -454,6 +442,21 @@ CommandParent
 			return
 
 		.total.AfterChanged(saved?, .list.GetQuery(), listDirty?, .list.Select_vals)
+		}
+
+	checkControlCustomization()
+		{
+		// excludeCustomize? can be set in args, accessArgs, or listArgs, (setting the
+		// controls accordingly). If .accessArgs has "excludeCustomize?: true",
+		// then Customizable is NOT required.
+		if .accessArgs.GetDefault('excludeCustomize?', false)
+			return
+
+		if .listArgs.GetDefault('protectField', false) is false
+			return
+
+		if not .access.AllowCustomTabs?() and false is .access.FindControl('Customizable')
+			ProgrammerError('Multiview Access is not Customizable')
 		}
 
 	VirtualList_SwitchToForm()

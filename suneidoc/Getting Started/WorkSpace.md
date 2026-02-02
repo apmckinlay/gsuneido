@@ -4,7 +4,9 @@ When you first start up Suneido you'll see the WorkSpace.  This is the
 starting point for the Suneido IDE (Integrated Development Environment).
 From here you can write and execute Suneido code 
 and launch other Suneido tools such as LibraryView and QueryView.
+
 ![](<../res/workspace.png>)
+
 One use of the WorkSpace is to execute chunks of code.  Type the following
 into the WorkSpace:
 

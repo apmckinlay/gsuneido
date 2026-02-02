@@ -150,13 +150,10 @@ Controller
 
 	ValidData?(@args)
 		{
-		if false is i = args.GetDefault('types', InfoTypes).FindIf({ args[0].Prefix?(it)})
-			return true
-		ctrl = args.GetDefault('controls', .controls)[i]
-		try
-			ctrl = Global(ctrl $ 'Control')
-		catch (err /*unused*/, "can't find")
-			return true
+		if false is i = args.GetDefault('types', InfoTypes).
+			FindIf({ args[0].Prefix?(it) })
+			return false
+		ctrl = Global(args.GetDefault('controls', .controls)[i] $ 'Control')
 		args[0] = args[0].AfterFirst(': ')
 		return ctrl.Method?('ValidData?')
 			? ctrl.ValidData?(@args) : true

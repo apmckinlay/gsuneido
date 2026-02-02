@@ -7,15 +7,16 @@ Controller
 		.mshtml = .FindControl("Mshtml")
 		.metrics = .FindControl("qp_metrics")
 		.NewValue(0)
-		.FindControl('Editor').Set(FormatQuery(query))
 		}
-	Controls: (Tabs
-		(Vert
-			(Border (Horz qp_metrics Skip RefreshButton))
-			(Mshtml)
-			Tab: 'Profile')
-		(QueryCodeControl Tab: 'Query')
-		constructAll:)
+	Controls()
+		{
+		return Object('Tabs',
+			#(Vert,
+				(Border, (Horz, qp_metrics, Skip, RefreshButton)),
+				(Mshtml),
+				Tab: 'Profile'),
+			Object(QueryCodeControl, set: FormatQuery(.query), Tab: 'Query'))
+		}
 	NewValue(unused)
 		{
 		metrics = .metrics.Get()

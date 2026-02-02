@@ -7,7 +7,7 @@ Test
 		Assert(State?('') is: false)
 		Assert(State?('~') is: false)
 		for p in StateCodes
-			Assert(State?(p) is: true)
+			Assert(State?(p))
 		for p in ProvinceCodes
 			Assert(State?(p) is: false)
 		}

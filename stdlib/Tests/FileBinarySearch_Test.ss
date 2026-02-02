@@ -11,6 +11,7 @@ Test
 			return -1
 		if line > target
 			return 1
+		return false
 		}
 
 	Test_hiLoValueBeforeInvalidSect()

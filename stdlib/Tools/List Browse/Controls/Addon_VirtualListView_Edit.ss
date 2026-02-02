@@ -11,7 +11,7 @@ Addon_VirtualListViewBase
 
 	On_Context_New()
 		{
-		c = OptContribution('VirtualListView', class {})
+		c = VirtualListViewExtra
 		if c.Member?('On_Context_New')
 			c.On_Context_New(addon: this)
 		else
@@ -165,7 +165,7 @@ Addon_VirtualListViewBase
 
 	On_Context_Edit_Field()
 		{
-		c = OptContribution('VirtualListView', class {})
+		c = VirtualListViewExtra
 		if c.Member?('On_Context_Edit_Field')
 			c.On_Context_Edit_Field(addon: this)
 		else

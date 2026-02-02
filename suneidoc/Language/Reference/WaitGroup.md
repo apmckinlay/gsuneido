@@ -13,7 +13,7 @@ Methods:
 : Equivalent to 
 [Thread](<Thread.md>) but automatically does Add() and ensures Done() is called when the thread ends.
 
-`Add()`
+`Add(inc = 1)`
 : Adds one to the wait group counter. (Should be called before starting the thread.)
 
 `Done()`
@@ -41,6 +41,7 @@ See also:
 [Channel](<Channel.md>),
 [Mutex](<Mutex.md>),
 [object.CompareAndSet](<Object/object.CompareAndSet.md>),
+[Pipe](<Pipe.md>),
 [Synchronized](<Synchronized.md>),
 [class.Synchronized](<Class/class.Synchronized.md>),
 [Thread](<Thread.md>)

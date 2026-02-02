@@ -5,7 +5,9 @@ WorkSpace IDE menu. QueryView has two panes, a top Scintilla pane where you
 type in database requests, and a bottom ListView pane that displays the
 results of queries. Like the WorkSpace, F9/Run executes the current selection,
 or if there is no selection, the non-blank lines around the insertion point.
+
 ![](<../res/queryview.png>)
+
 The most common type of database request is a query, and the simplest kind
 of query is just a table name.  Try running:
 

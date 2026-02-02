@@ -5,7 +5,7 @@ Test
 		{
 		.user = Suneido.User
 		Suneido.User = 'default'
-		.created = false is Query1('tables', table: UserSettings.Table)
+		.created = QueryEmpty?('tables', table: UserSettings.Table)
 		}
 
 	key: 'BUSTestKey'

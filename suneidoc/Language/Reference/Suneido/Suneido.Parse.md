@@ -169,6 +169,16 @@ from => number or false
 
 len => number or false
 
+#### InRange
+
+InRange is internally produced by combining e.g. x > 0 and x <= 10 => InRange(0, 10)
+
+expr
+
+from => constant
+
+to => constant
+
 #### In
 
 expr => expression

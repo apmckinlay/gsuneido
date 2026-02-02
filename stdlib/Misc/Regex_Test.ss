@@ -4,10 +4,10 @@ Test
 	Test_one()
 		{
 		Assert(Regex?(true) is: false)
-		Assert(Regex?('') is: true)
-		Assert(Regex?('abc') is: true)
-		Assert(Regex?('(abc)') is: true)
-		
+		Assert(Regex?(''))
+		Assert(Regex?('abc'))
+		Assert(Regex?('(abc)'))
+
 		Assert(Regex?('(abc') is: false)
 		Assert(Regex?('[abc') is: false)
 		Assert(Regex?('abc)') is: false)

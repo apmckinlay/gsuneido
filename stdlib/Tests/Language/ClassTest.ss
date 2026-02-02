@@ -115,7 +115,7 @@ Test
 				if .data.Member?(member)
 					return .data[member]
 				else
-					return
+					return Nothing()
 				}
 			}
 		ob = c()

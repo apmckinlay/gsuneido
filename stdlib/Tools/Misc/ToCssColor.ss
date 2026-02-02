@@ -24,12 +24,13 @@ class
 		{
 		Assert(cssColor.Prefix?('#'))
 		n = 0
-		n = n * 16/*=hex base*/ + .fromHex(cssColor[5/*=idx*/])
-		n = n * 16/*=hex base*/ + .fromHex(cssColor[6/*=idx*/])
-		n = n * 16/*=hex base*/ + .fromHex(cssColor[3/*=idx*/])
-		n = n * 16/*=hex base*/ + .fromHex(cssColor[4/*=idx*/])
-		n = n * 16/*=hex base*/ + .fromHex(cssColor[1/*=idx*/])
-		n = n * 16/*=hex base*/ + .fromHex(cssColor[2/*=idx*/])
+		hex = 16
+		n = n * hex + .fromHex(cssColor[5/*=idx*/])
+		n = n * hex + .fromHex(cssColor[6/*=idx*/])
+		n = n * hex + .fromHex(cssColor[3/*=idx*/])
+		n = n * hex + .fromHex(cssColor[4/*=idx*/])
+		n = n * hex + .fromHex(cssColor[1/*=idx*/])
+		n = n * hex + .fromHex(cssColor[2/*=idx*/])
 		return n
 		}
 

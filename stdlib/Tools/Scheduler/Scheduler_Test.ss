@@ -58,7 +58,7 @@ Test
 		Assert({ runAsThread?(#(sched_thread?: true)) } throws:
 			"run as thread failed, task needs sched_name member for thread name")
 		Assert(runAsThread?(#(sched_name: 'hello')) is: false)
-		Assert(runAsThread?(#(sched_name: 'hello', sched_thread?: true)) is: true)
+		Assert(runAsThread?(#(sched_name: 'hello', sched_thread?: true)))
 		}
 
 	Test_currentlyRunning?()
@@ -76,11 +76,11 @@ Test
 			"Thread-15 scheduler-snapshot")
 		.SpyOn(Scheduler.Scheduler_threadList).Return(curThreads)
 		currentlyRunning? = Scheduler.CurrentlyRunning?
-		Assert(currentlyRunning?('http extra process') is: true)
+		Assert(currentlyRunning?('http extra process'))
 		Assert(currentlyRunning?('SocketServer-thread-pool') is: false)
-		Assert(currentlyRunning?('scheduler extra process') is: true)
-		Assert(currentlyRunning?('scheduler-autoAttachments') is: true)
-		Assert(currentlyRunning?('scheduler-snapshot') is: true)
+		Assert(currentlyRunning?('scheduler extra process'))
+		Assert(currentlyRunning?('scheduler-autoAttachments'))
+		Assert(currentlyRunning?('scheduler-snapshot'))
 		Assert(currentlyRunning?('') is: false)
 		Assert(currentlyRunning?('hello world') is: false)
 		}

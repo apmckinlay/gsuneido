@@ -2,7 +2,7 @@
 // called at startup by exe
 class
 	{
-	GsuneidoRequiredBuiltDate: #20250731
+	GsuneidoRequiredBuiltDate: #20251110
 
 	CallClass()
 		{

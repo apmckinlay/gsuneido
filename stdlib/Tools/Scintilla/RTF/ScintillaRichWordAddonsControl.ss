@@ -37,6 +37,7 @@ Controller
 		)
 	layout(args)
 		{
+		textLimit = args.GetDefault('textLimit', 50_000) /*= text limit with html format*/
 		args.Set_default(false)
 		.readonly = args.readonly
 		ignoreOb = Object()
@@ -55,7 +56,7 @@ Controller
 		sci = Object('ScintillaAddonsRichEditor',
 			height: args.height, width: args.width,	xmin: args.xmin, ymin: args.ymin,
 			Addon_speller: ignoreOb, zoom: args.zoom, readonly: .readonly,
-			tabthrough: args.tabthrough)
+			tabthrough: args.tabthrough, :textLimit)
 		// If no font or fontSize was specified, don't pass them to
 		// ScintillaAddonsRichEditor. This will default the ScintillaAddonsRichEditor
 		// to use the Suneido.logfont
@@ -219,6 +220,16 @@ Controller
 	ZoomReadonly(value)
 		{
 		ScintillaRichWordZoomControl(0, value, readonly:)
+		}
+
+	ValidData?(@args)
+		{
+		return ScintillaAddonsRichEditorControl.ValidData?(@args)
+		}
+
+	Valid?()
+		{
+		return .edit.Valid?()
 		}
 
 	Default(@args)

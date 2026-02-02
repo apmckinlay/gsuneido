@@ -67,12 +67,13 @@ class
 		{
 		_path = x.path // needed by suneidoc Asup
 		_name = x.name // needed by suneidoc Asup
-		if not x.text.Prefix?('<')
-			x.text = x.name // just index name
+		text = not BookContent.Match(_table, x.text)
+			? x.name // just index name
+			: BookContent.ToHtml(_table, x.text)
 		handler.S = ''
 		try
 			{
-			xr.Parse(Asup(x.text,
+			xr.Parse(Asup(text,
 				Object(GetHelpPage: Name(OptContribution('GetHelpPage', GetHelpPage)))))
 			handler.Check()
 			}

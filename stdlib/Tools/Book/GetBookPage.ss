@@ -9,5 +9,7 @@ function (path)
 		' and name = ' $ Display(name))
 	if page is false
 		return ""
-	return page.text.Prefix?('<') ? page.text : page.text.Eval() // needs Eval
+	return BookContent.Match(book, page.text)
+		? BookContent.ToHtml(book, page.text)
+		: page.text.Eval() // needs Eval
 	}

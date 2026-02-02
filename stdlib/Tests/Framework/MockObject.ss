@@ -25,7 +25,7 @@ class
 		if calli.Member?('result')
 			return calli.result
 		else
-			return // no return value
+			return Nothing() // to get around inconsistent number of return values
 		}
 	show(args)
 		{

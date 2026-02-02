@@ -2,7 +2,7 @@
 // Use this as the first middle-ware if we need to track the performance
 RackComposeBase
 	{
-	max: 284804 /*= low boundary of the 19th bucket*/
+	Max: 262144 /*= low boundary of the 19th bucket*/
 	New(@args)
 		{
 		super(@args)
@@ -31,7 +31,7 @@ RackComposeBase
 		if 0 is duration
 			return 0
 
-		if duration >= .max
+		if duration >= .Max
 			return 19 /*=max bucket*/
 
 		return (duration.Log10() * 3.3/*= base 2 and 10 conversion*/).Ceiling()

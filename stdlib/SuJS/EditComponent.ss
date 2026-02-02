@@ -228,25 +228,37 @@ Component
 
 	On_Delete()
 		{
-		.selectAllIfNoSelection()
-		SuUI.GetCurrentDocument().ExecCommand('delete')
-		}
-	On_Cut()
-		{
-		.selectAllIfNoSelection()
-		SuUI.GetCurrentDocument().ExecCommand('cut')
-		}
-	On_Copy()
-		{
-		.selectAllIfNoSelection()
-		SuUI.GetCurrentDocument().ExecCommand('copy')
+		if '' isnt .getSelectedTextOrAll()
+			.ReplaceSel('')
 		}
 
-	selectAllIfNoSelection()
+	On_Cut()
+		{
+		if '' isnt str = .getSelectedTextOrAll()
+			{
+			SuClipboardWriteString(str, 'Cut').Then({|res|
+				if false isnt res
+					.ReplaceSel('')
+				})
+			}
+		}
+
+	On_Copy()
+		{
+		if '' isnt str = .getSelectedTextOrAll()
+			SuClipboardWriteString(str, 'Copy')
+		}
+
+	getSelectedTextOrAll()
 		{
 		sel = .GetSel()
-		if sel[0] is sel[1]
+		if sel[0] is sel[1]	// no selection made
+			{
 			.SelectAll()
+			sel = .GetSel()
+			return .El.value[..sel[1]]
+			}
+		return .El.value[sel[0]..sel[1]]
 		}
 
 	On_Paste()

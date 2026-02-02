@@ -272,30 +272,30 @@ WndProc
 		{
 		ctrl = alt = shift = false
 		ac = Object(fVirt: 0, :cmd)
-		if (s =~ "Ctrl[+]")
+		if s.Has?("Ctrl+")
 			{
 			ac.fVirt |= FCONTROL
 			s = s.Replace("Ctrl[+]", "")
 			ctrl = true
 			}
-		if (s =~ "Alt[+]")
+		if s.Has?("Alt+")
 			{
 			ac.fVirt |= FALT
 			s = s.Replace("Alt[+]", "")
 			alt = true
 			}
-		if (s =~ "Shift[+]")
+		if s.Has?("Shift+")
 			{
 			ac.fVirt |= FSHIFT
 			s = s.Replace("Shift[+]", "")
 			shift = true
 			}
-		if (VK.Member?(s.Upper()))
+		if VK.Member?(u = s.Upper())
 			{
 			ac.fVirt |= FVIRTKEY
-			ac.key = VK[s.Upper()]
+			ac.key = VK[u]
 			}
-		else if (s.Size() is 1 and ' ' <= s and s <= "~")
+		else if s.Size() is 1 and ' ' <= s and s <= "~"
 			{
 			if ((ac.fVirt & FSHIFT) is 0)
 				s = s.Lower()

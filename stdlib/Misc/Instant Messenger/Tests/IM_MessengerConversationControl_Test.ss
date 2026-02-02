@@ -61,27 +61,32 @@ Test
 		Assert(fn('') is: '')
 		Assert(fn('This is a test message.') is: 'This is a test message.')
 		Assert(fn('Check out https://www.example.com/')
-			is: 'Check out <a href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
+			is: 'Check out <a data-copy-link="https://www.example.com/" ' $
+				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
 				'&quot;https%3A%2F%2Fwww.example.com%2F&quot;)">' $
 				'https://www.example.com/</a>')
 		Assert(fn(XmlEntityEncode(`Visit "https://www.example.com/" for more info. ` $
 			`Also, check out www.google.com/`))
-			is: 'Visit &quot;<a href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
+			is: 'Visit &quot;<a data-copy-link="https://www.example.com/" ' $
+				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
 				'&quot;https%3A%2F%2Fwww.example.com%2F&quot;)">' $
 				'https://www.example.com/</a>&quot; for more info. Also, check out ' $
-				'<a href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
+				'<a data-copy-link="www.google.com/" ' $
+				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
 				'&quot;www.google.com%2F&quot;)">www.google.com/</a>')
 		Assert(
 			fn('Click &lt;a href=&quot;https://www.example.com/&quot;&gt;here&lt;/a&gt;')
 			like: 'Click &lt;a href=&quot;' $
-				'<a href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
+				'<a data-copy-link="https://www.example.com/"  ' $
+				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
 				'&quot;https%3A%2F%2Fwww.example.com%2F&quot;)">' $
 				'https://www.example.com/</a>&quot;&gt;here&lt;/a&gt;')
 		Assert(fn(
 			XmlEntityEncode('This message contains a URL with special characters: ' $
 				'http://www.example.com/page?query=hello%20world'))
 			is: 'This message contains a URL with special characters: ' $
-				'<a href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
+				'<a data-copy-link="http://www.example.com/page?query=hello%20world" ' $
+				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
 				'&quot;http%3A%2F%2Fwww.example.com%2F' $
 				'page%3Fquery%3Dhello%2520world&quot;)">' $
 				'http://www.example.com/page?query=hello%20world</a>')

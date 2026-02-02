@@ -13,8 +13,7 @@ class
 			else if r[1] in ('in list', 'not in list')
 				where $= .build_in_list(r)
 			else if r[1] is 'not in range'
-				where $= ' and (' $ r[0] $ ' < ' $ Display(r[2]) $ ' or ' $
-					r[0] $ ' > ' $ Display(r[3 /* = second range val */]) $ ')'
+				where $= .notInRange(r)
 			else // normal case with field, operator and value
 				where $= ' and ' $ r[0] $ ' ' $ r[1] $ ' ' $ Display(r[2])
 			}
@@ -30,6 +29,11 @@ class
 		return idx is field.Size()
 			? 'rec.' $ field
 			: field[..idx+1] $ 'rec.' $ field[idx+1..] // for fields with SelectFunction
+		}
+	notInRange(r)
+		{
+		return ' and (' $ r[0] $ ' < ' $ Display(r[2]) $ ' or ' $
+			r[0] $ ' > ' $ Display(r[3 /* = second range val */]) $ ')'
 		}
 
 	callable(where)

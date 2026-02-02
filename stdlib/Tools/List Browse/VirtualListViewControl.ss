@@ -40,7 +40,7 @@ Controller
 
 	Startup()
 		{
-		OptContribution('VirtualListView', class { Startup(@unused) {} }).Startup(this)
+		VirtualListViewExtra.Startup(this)
 		}
 
 	getter_topFilters()
@@ -164,6 +164,11 @@ Controller
 	GetModel()
 		{
 		return .model
+		}
+
+	GetTableName()
+		{
+		return .model.GetTableName()
 		}
 
 	Seek(field, prefix)

@@ -16,43 +16,47 @@ Md_Base
 		return last
 		}
 
-	Add(line)
+	Add(line, start)
 		{
 		if false isnt next = .NextOpenBlock()
 			next.Close()
 
-		if false isnt blockItem = .build(line)
+		if false isnt blockItem = .build(line, start)
 			.children.Add(blockItem)
 		}
 
-	build(line)
+	build(line, start)
 		{
-		if .BlankLine?(line)
+		if .BlankLine?(line, start)
 			return false
-		if false isnt item = Md_IndentedCode.Match(line)
+		if false isnt item = Md_IndentedCode.Match(line, start)
 			return item
-		if false isnt item = .MatchParagraphInteruptableBlockItem(line, container: this)
+		if false isnt item = .MatchParagraphInteruptableBlockItem(line, start,
+			container: this)
 			return item
-		return Md_Paragraph(line)
+		return Md_Paragraph(line[start..])
 		}
 
-	MatchParagraphInteruptableBlockItem(line, checkingContinuationText? = false,
-		container = false)
+	MatchParagraphInteruptableBlockItem(line, start, checkingContinuationText? = false,
+		container = false, _mdAddons = #())
 		{
-		if false isnt item = Md_ThematicBreak.Match(line, :container,
+		if false isnt item = Md_ThematicBreak.Match(line, start, :container,
 			:checkingContinuationText?)
 			return item
-		if false isnt item = Md_ATXheadings.Match(line)
+		if false isnt item = Md_ATXheadings.Match(line, start)
 			return item
-		if false isnt item = Md_FencedCode.Match(line)
+		if false isnt item = Md_FencedCode.Match(line, start)
 			return item
-		if false isnt item = Md_BlockQuote.Match(line)
+		if false isnt item = Md_BlockQuote.Match(line, start)
 			return item
-		if false isnt item = Md_ListItem.Match(line, :checkingContinuationText?,
+		if false isnt item = Md_ListItem.Match(line, start, :checkingContinuationText?,
 			:container)
 			return item
-		if false isnt item = Md_Html.Match(line, :container)
+		if false isnt item = Md_Html.Match(line, start, :container)
 			return item
+		for addon in mdAddons
+			if false isnt item = addon.Match(line, start)
+				return item
 		return false
 		}
 
@@ -74,5 +78,10 @@ Md_Base
 	ForEachBlockItem(block)
 		{
 		.children.Each(block)
+		}
+
+	Getter_Children()
+		{
+		return .children
 		}
 	}

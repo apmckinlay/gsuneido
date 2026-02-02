@@ -1,11 +1,24 @@
 // Copyright (C) 2021 Suneido Software Corp. All rights reserved worldwide.
 Test
 	{
+	cl: ScintillaAddonsCommandManager
+		{
+		ScintillaAddonsCommandManager_keyPressed?(@unused)
+			{
+			if not Object?(_keyPressedResults)
+				return _keyPressedResults
+			return _keyPressedResults.PopFirst()
+			}
+		ScintillaAddonsCommandManager_logDuplicateLevels(option)
+			{
+			_logs.Add(option)
+			}
+		}
 	Test_main()
 		{
-		inst = new ScintillaAddonsCommandManager
-		spyCalls = .SpyOn(SuneidoLog).Return(false).CallLogs()
-		.SpyOn(KeyPressed?).Return(false)
+		inst = new .cl
+		_logs = Object()
+		_keyPressedResults = false
 
 		inst.Set(#())
 		Assert(inst.ScintillaAddonsCommandManager_commands isSize: 0)
@@ -13,13 +26,13 @@ Test
 		Assert(inst.GetMethod(commandOb) is: false)
 		Assert(commandOb = inst.BuildCommandOb(false) is: #('false'))
 		Assert(inst.GetMethod(commandOb) is: false)
-		Assert(spyCalls isSize: 0)
+		Assert(_logs isSize: 0)
 
 		inst.Set(#('Command0_NoAccels', 'Command1_NoAccels'))
 		Assert(inst.ScintillaAddonsCommandManager_commands isSize: 0)
 		Assert(commandOb = inst.BuildCommandOb('') is: #(''))
 		Assert(inst.GetMethod(commandOb) is: false)
-		Assert(spyCalls isSize: 0)
+		Assert(_logs isSize: 0)
 
 		inst.Set(#(
 			'Command0_NoAccels',
@@ -45,7 +58,7 @@ Test
 		Assert(inst.GetMethod(commandOb) is: false)
 		Assert(commandOb = inst.BuildCommandOb(false) is: #('false'))
 		Assert(inst.GetMethod(commandOb) is: false)
-		Assert(spyCalls isSize: 0)
+		Assert(_logs isSize: 0)
 		inst.Destroy()
 		Assert(commandOb = inst.BuildCommandOb('F1') is: #('f1'))
 		Assert(inst.GetMethod(commandOb) is: false)
@@ -53,8 +66,8 @@ Test
 
 	Test_main_WithKeyPressed()
 		{
-		inst = new ScintillaAddonsCommandManager
-		spyCalls = .SpyOn(SuneidoLog).Return(false).CallLogs()
+		inst = new .cl
+		_logs = Object()
 
 		// Some duplicate commands are processed, resulting in duplicate logging
 		inst.Set(#(
@@ -68,7 +81,7 @@ Test
 				#(method: 'On_Command1', command: #('ctrl', 'f1', 'shift')),
 				#(method: 'On_Command3', command: #('f2')),
 				#(method: 'On_Command5', command: #('c', 'ctrl'))))
-		.SpyOn(KeyPressed?).Return(
+		_keyPressedResults = Object(
 			/*shift: */ true, 	/*ctrl: */ true, 	/*alt: */ false, // On_Command1
 			/*shift: */ false, 	/*ctrl: */ false, 	/*alt: */ false, // On_Command3
 			/*shift: */ false, 	/*ctrl: */ true, 	/*alt: */ false, // On_Command5
@@ -84,9 +97,9 @@ Test
 		Assert(inst.GetMethod(commandOb) is: 'On_Command5')
 		Assert(commandOb = inst.BuildCommandOb('E') is: #('alt', 'e'))
 		Assert(inst.GetMethod(commandOb) is: false)
-		Assert(spyCalls isSize: 2)
-		Assert(spyCalls[0].message has: 'Command2\tShift+Ctrl+F1')
-		Assert(spyCalls[1].message has: 'Command4\tF2')
+		Assert(_logs isSize: 2)
+		Assert(_logs[0] has: 'Command2\tShift+Ctrl+F1')
+		Assert(_logs[1] has: 'Command4\tF2')
 		Assert(commandOb = inst.BuildCommandOb('F1') is: #('ctrl', 'f1'))
 		Assert(inst.GetMethod(commandOb) is: false)
 		inst.Destroy()

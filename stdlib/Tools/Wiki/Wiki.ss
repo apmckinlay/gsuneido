@@ -25,6 +25,8 @@ class
 				<meta http-equiv="Refresh" content="1;URL=Wiki?' $ args.unlock $ '">
 				</head><body>Thank you!</body></html>'
 			}
+		else if args[0] is ("preview")
+			return WikiView.BuildBody(env.body)
 		else
 			return WikiSave(args[0], env.body)
 		}

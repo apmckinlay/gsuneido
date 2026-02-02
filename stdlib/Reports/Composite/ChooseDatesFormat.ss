@@ -3,6 +3,12 @@ TextFormat
 	{
 	ConvertToStr(data)
 		{
-		return data.Split(',').Map!({ Date(it).ShortDate() }).Join(',')
+		suffix = ''
+		if data.Suffix?('...')
+			{
+			data = data.BeforeLast(',')
+			suffix = ',...'
+			}
+		return data.Split(',').Map!({ Date(it).ShortDate() }).Join(',') $ suffix
 		}
 	}

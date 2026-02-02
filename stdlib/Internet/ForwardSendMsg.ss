@@ -1,6 +1,6 @@
 // Copyright (C) 2013 Axon Development Corporation All rights reserved worldwide.
 // using EmailForwarder
-function (relay, from, to, message, _bufferedSend = false) // returns true or error message
+function (relay, from, to, message, sendFile? = false) // returns true or error message
 	{
 	authentication = SoleContribution('SESAuthentication')()
 	header = Object(
@@ -10,7 +10,7 @@ function (relay, from, to, message, _bufferedSend = false) // returns true or er
 
 	//TODO use Https.Post and let it check response code
 	args = Object('POST', 'https://' $ relay $ '/email', :header)
-	msgMember = bufferedSend ? 'fromFile' : 'content'
+	msgMember = sendFile? ? 'fromFile' : 'content'
 	args[msgMember] = message
 	response = Https(@args)
 	response_code = Http.ResponseCode(response.header)

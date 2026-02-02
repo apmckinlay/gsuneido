@@ -59,7 +59,6 @@ Test
 			true
 			}
 
-		suneidologWatch = .WatchTable('suneidolog')
 		table = .MakeTable('(amazonsqstestrlogcount) key()')
 		QueryOutput(table, Record(amazonsqstestrlogcount: 0))
 		_amazonsqstestrlogcount = table
@@ -87,13 +86,13 @@ Test
 		_amazonsqstestmessages = .makeMsgsOb(0)
 		Assert(fn(queue, processor, batchDelete?:))
 		Assert(Query1(table).amazonsqstestrlogcount is: 0)
-		Assert(.GetWatchTable(suneidologWatch) is: #())
+		Assert(.GetSuneidoLog() is: #())
 
 		count = 0
 		_amazonsqstestmessages = .makeMsgsOb(5)
 		Assert(fn(queue, processor, batchDelete?:))
 		Assert(Query1(table).amazonsqstestrlogcount is: 5)
-		Assert(.GetWatchTable(suneidologWatch) is: #())
+		Assert(.GetSuneidoLog() is: #())
 
 		count = 0
 		QueryDo('delete ' $ table)
@@ -101,7 +100,7 @@ Test
 		_amazonsqstestmessages = .makeMsgsOb(9)
 		Assert(fn(queue, processor, batchDelete?:) )
 		Assert(Query1(table).amazonsqstestrlogcount is: 9)
-		Assert(.GetWatchTable(suneidologWatch) is: #())
+		Assert(.GetSuneidoLog() is: #())
 
 		count = 0
 		QueryDo('delete ' $ table)
@@ -109,7 +108,7 @@ Test
 		_amazonsqstestmessages = .makeMsgsOb(10)
 		Assert(fn(queue, processor, batchDelete?:) is: false)
 		Assert(Query1(table).amazonsqstestrlogcount is: 10)
-		Assert(.GetWatchTable(suneidologWatch) is: #())
+		Assert(.GetSuneidoLog() is: #())
 		}
 
 	makeMsgsOb(loop)

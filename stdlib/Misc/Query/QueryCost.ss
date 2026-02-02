@@ -5,7 +5,7 @@ Memoize
 	Func(query)
 		{
 		WithQuery(query, { s = it.Strategy() })
-		x = s.ExtractAll(`nrecs~ (\d+) cost~ (\d+)`)
+		x = s.ExtractAll(`nrecs~ ([_0-9]+) cost~ ([_0-9]+)`)
 		return Object(nrecs: Number(x[1]), cost: Number(x[2]))
 		}
 	}

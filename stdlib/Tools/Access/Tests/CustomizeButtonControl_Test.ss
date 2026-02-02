@@ -7,7 +7,7 @@ Test
 		mock.When.getCustomTabs([anyArgs:]).CallThrough()
 
 		mock.Window = FakeObject(FindControl: false)
-		Assert(mock.getCustomTabs(Object()) is: false)
+		Assert(mock.getCustomTabs(Object()) is: #())
 
 		mock.Window = FakeObject(FindControl: Object(TabName: false))
 		Assert(mock.getCustomTabs(Object()) is: #(Header))

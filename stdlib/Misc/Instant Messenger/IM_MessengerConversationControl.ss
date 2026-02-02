@@ -53,7 +53,7 @@ IM_MessengerTabBase
 
 	getHtmlTail()
 		{
-		return '</div></body></html>'
+		return BookContextMenu() $ '</div></body></html>'
 		}
 
 	getHtmlRefreshScript()
@@ -236,9 +236,9 @@ IM_MessengerTabBase
 			{
 			url = msg[matches[i][0]::matches[i][1]]
 			replace = Sys.SuneidoJs?()
-				? Xml('a', url, href: url, target: '_blank')
+				? Xml('a', url, href: url, 'data-copy-link': url, target: '_blank')
 				: Xml('a', url, href: `suneido:/eval?ShellExecute(0,"open","` $
-					Url.EncodeQueryValue(url) $ '")')
+					Url.EncodeQueryValue(url) $ '")', 'data-copy-link': url)
 			result $= XmlEntityEncode(msg[start..matches[i][0]]) $ replace
 			start = matches[i][0] + matches[i][1]
 			}

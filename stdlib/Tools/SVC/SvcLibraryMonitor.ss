@@ -21,8 +21,6 @@ Singleton
 			{
 			.runningTests? = TestRunner.RunningTests?()
 			args.Each(.processChange)
-			if .resetCache? and not .runningTests?
-				LibrarySuppressions.ResetCache()
 			if .resetClass?
 				.Reset()
 			}
@@ -45,7 +43,7 @@ Singleton
 	resetRequired?(table, name)
 		{
 		return not .runningTests? and table isnt '' and name isnt ''
-			? .resetCache? or LibrarySuppressions.ResetRequired?(table, name)
+			? .resetCache?
 			: false
 		}
 

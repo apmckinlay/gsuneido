@@ -27,7 +27,7 @@ class
 			return ''
 		return '<p><a href="' $ path $ '/' $ rec.name $ '">' $ image $ rec.name $
 			(not (BookModel(book).Children(path[book.Size() + 1 ..] $
-				'/' $ rec.name)).Empty?() ? ' <font face="Wingdings">\xd8</font>' : '') $
+				'/' $ rec.name)).Empty?() ? '&nbsp;' $ HelpArrow('right') : '') $
 			'</a></p>'
 		}
 	images: (

@@ -231,26 +231,26 @@ window_text =
 	Test_add_book_recinfo()
 		{
 		lib_record = Record()
-		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record) is: '')
+		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record, 'TestBook') is: '')
 
 		lib_record.lib_modified = #20080101.1200
-		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record)
+		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record, 'TestBook')
 			is: '// lib_modified: #20080101.1200, lib_committed: ')
 
 		lib_record.lib_committed = #20080101.1201
-		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record)
+		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record, 'TestBook')
 			is: '// lib_modified: #20080101.1200, lib_committed: #20080101.1201')
 
 		lib_record.lib_modified = ''
-		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record)
+		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record, 'TestBook')
 			is: '// lib_modified: , lib_committed: #20080101.1201')
 
 		lib_record.text = '<h2>Test</h2>'
-		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record)
+		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record, 'TestBook')
 			is: '<!-- lib_modified: , lib_committed: #20080101.1201-->')
 
 		lib_record.lib_modified = #20080102.1333
-		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record)
+		Assert(.libIO_cl.LibIO_add_book_recinfo(lib_record, 'TestBook')
 			is: '<!-- lib_modified: #20080102.1333, lib_committed: #20080101.1201-->')
 		}
 

@@ -47,6 +47,8 @@ Controller
 		{
 		.Data.SetProtectField('reporter_protect')
 		.Tabs = .Data.Vert.Tabs
+		for i in .. .Tabs.GetTabCount()
+			.Tabs.ConstructTab(i)
 
 		.source = .FindControl('DataSource')
 		.select = .FindControl('Select2')

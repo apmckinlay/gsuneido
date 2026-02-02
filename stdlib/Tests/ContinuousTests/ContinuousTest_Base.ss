@@ -29,6 +29,7 @@ class
 
 		AddFile(resultFileName, "FAILED - " $ testInfoOb.type $
 			" started but did not finish\r\n")
+		ErrorLog(Timestamp().ShortDateTime() $ ' Started ' $ testInfoOb.type)
 		results = .runTests(testInfoOb, skipTags, bookCheckOnly)
 
 		.addResultsToFile(testInfoOb.type, results, resultFileName)
@@ -105,6 +106,7 @@ class
 
 	CheckBook(results, testInfoOb)
 		{
+ErrorLog(Timestamp().ShortDateTime() $ ' start book check')
 		if testInfoOb.GetDefault('skipBookCheck?', false) is false
 			try
 				{
@@ -116,6 +118,7 @@ class
 			catch (err)
 				results $= '\r\n\r\n' $ err
 
+ErrorLog(Timestamp().ShortDateTime() $ ' end book check')
 		return results
 		}
 
@@ -159,7 +162,7 @@ class
 					.getFile('../' $ subfolder $ '/stillRunningResults.txt')
 					{
 					extra = .snapshotTimeoutTesterFolder(subfolder)
-					result =	'ERROR: Missing Timeout/SuJsWeb Tester result from ' $
+					result = 'ERROR: Missing Timeout/SuJsWeb Tester result from ' $
 						subfolder $ extra
 					}
 				else if result =~ .ErrorRegex
@@ -194,7 +197,7 @@ class
 
 	snapshotTimeoutTesterFolder(timeoutFolder)
 		{
-		failedDir = timeoutFolder $ '_failedbak'
+		failedDir = '../' $ timeoutFolder $ '_failedbak'
 		if DirExists?(failedDir)
 			DeleteDir(failedDir)
 		EnsureDir(failedDir)
@@ -202,8 +205,7 @@ class
 			failed = MirrorDir('../' $ timeoutFolder, failedDir)
 		catch (err)
 			failed = Object(err)
-		return '\r\nThe ' $ timeoutFolder $ ' is copied to ' $
-			GetCurrentDirectory() $ '/' $ failedDir $
+		return '\r\nThe ' $ timeoutFolder $ ' is copied to ' $ failedDir $
 			Opt(', (Except ', failed.Join(','), ')')
 		}
 

@@ -7,9 +7,12 @@ Md_Base
 			.Close()
 		}
 
-	Match(line, container)
+	Match(line, start, container, _options = #())
 		{
-		if false is indentN = .IgnoreLeadingSpaces(line)
+		if options.GetDefault(#turnOffHtml, false) is true
+			return false
+
+		if false is indentN = .IgnoreLeadingSpaces(line, start)
 			return false
 
 		for i, condition in .conditions
@@ -18,10 +21,10 @@ Md_Base
 			if container is false and i is 6 /*=rule #7*/
 				continue
 			match? = String?(condition.start)
-				? line[indentN..] =~ condition.start
-				: (condition.start)(line[indentN..])
+				? line[start+indentN..] =~ condition.start
+				: (condition.start)(line[start+indentN..])
 			if match?
-				return new this(line, condition.end)
+				return new this(line[start..], condition.end)
 			}
 
 		return false
@@ -53,19 +56,22 @@ Md_Base
 			},
 			end: `^\s*$`))
 
-	Continue(line)
+	Continue(line, start)
 		{
-		if line =~ .end
+		if line[start..] =~ .end
 			{
 			.Close()
-			return .BlankLine?(line) ? false : line
+			if .BlankLine?(line, start)
+				return false, start
+			else
+				return line, start
 			}
-		return line
+		return line, start
 		}
 
-	Add(line)
+	Add(line, start)
 		{
-		.Html $= '\n' $ line
+		.Html $= '\n' $ line[start..]
 		}
 
 	Close()

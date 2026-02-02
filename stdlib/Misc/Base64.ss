@@ -17,7 +17,10 @@ class
 			(next3.Size() > 2 ? enc[n & 0x3f] : '=')
 		}
 
-	EncodeLines(src, eol = '\r\n', linelen = 70)
+	// Microsoft Exchange server has issue with line length that is not divisible by 4
+	// and could end up with file corrupt
+	// should be also consistent with Base64BufferEncodeFile.lineLength
+	EncodeLines(src, eol = '\r\n', linelen = 72)
 		{
 		src = .Encode(src)
 		for (dst = ""; src isnt ""; src = src[linelen..])

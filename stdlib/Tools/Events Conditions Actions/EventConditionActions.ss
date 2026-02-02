@@ -172,9 +172,6 @@ class
 				}
 			QueryDelete('event_actions', event)
 			}
-		ScheduleNextEvent.LogTask(taskName $ ' Completed',
-			'SchedulerLastProcessCompleted', '10MinuteTasks')
-		return true
 		}
 
 	execute(action, eventName, details, setting)

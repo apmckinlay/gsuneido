@@ -5,22 +5,23 @@ Md_ContainerBlock
 		{
 		}
 
-	Match(line, checkingContinuationText? = false, container = false)
+	Match(line, start, checkingContinuationText? = false, container = false)
 		{
-		if false is n = .IgnoreLeadingSpaces(line)
+		if false is n = .IgnoreLeadingSpaces(line, start)
 			return false
 
-		line = line[n..]
-		marker = .advanceMarker(line, container, checkingContinuationText?)
+		start += n
+		marker = .advanceMarker(line, start, container, checkingContinuationText?)
 		if marker isnt false
 			{
-			line = line[marker.Size()..]
-			spaces = .advanceSpaces(line, container, checkingContinuationText?)
+			start += marker.Size()
+			spaces, line = .advanceSpaces(line, start, container,
+				checkingContinuationText?)
 			if spaces isnt false
 				{
-				line = line[spaces..]
+				start += spaces
 				listItem = new this(n + marker.Size() + spaces)
-				listItem.Add(line)
+				listItem.Add(line, start)
 				if container isnt false and container.Base?(Md_List)
 					return listItem
 				else
@@ -34,20 +35,20 @@ Md_ContainerBlock
 		return false
 		}
 
-	advanceMarker(line, container, checkingContinuationText?)
+	advanceMarker(line, start, container, checkingContinuationText?)
 		{
 		marker = false
-		if line[::1] in ('-', '+', '*')
-			marker = line[::1]
+		if line[start::1] in ('-', '+', '*')
+			marker = line[start::1]
 		else
 			{
-			m = .CountLeadingChar(line, '0-9')
+			m = .CountLeadingChar(line, start, '0-9')
 			accept? = .isMatchingParagraphDirectly(container, checkingContinuationText?)
-				? m is 1 and line[0] is '1'
+				? m is 1 and line[start] is '1'
 				: m >= 1 and m <= 9/*=max length*/
-			if accept? and line[m::1] in ('.', ')')
+			if accept? and line[start+m::1] in ('.', ')')
 				{
-				marker = line[::m+1]
+				marker = line[start::m+1]
 				}
 			}
 		return marker
@@ -59,10 +60,10 @@ Md_ContainerBlock
 			checkingContinuationText? is false
 		}
 
-	advanceSpaces(line, container, checkingContinuationText?)
+	advanceSpaces(line, start, container, checkingContinuationText?)
 		{
 		spaces = false
-		if .BlankLine?(line) // rule #3
+		if .BlankLine?(line, start) // rule #3
 			{
 			// an empty list item cannot interrupt a paragraph
 			if not .isMatchingParagraphDirectly(container, checkingContinuationText?)
@@ -70,57 +71,58 @@ Md_ContainerBlock
 			}
 		else
 			{
-			line = Md_Helper.Detab(line)
-			c = .CountLeadingChar(line, ' ')
+			line = Md_Helper.Detab(line, start)
+			c = .CountLeadingChar(line, start, ' ')
 			if c >= 1 and c <= 4/*=max length from rule #1*/
 				spaces = c
 			else if c >= 5/*=length of indented code from rule #2*/
 				spaces = 1
 			}
-		return spaces
+		return spaces, line
 		}
 
-	Continue(line)
+	Continue(line, start)
 		{
-		if .BlankLine?(line)
-			return line
+		if .BlankLine?(line, start)
+			return line, start
+		if .indent <= .CountLeadingChar(line, start, ' ')
+			return line, start+.indent
 
-		if .indent <= .CountLeadingChar(line, ' ')
-			return line[.indent..]
-
-		return false
+		return false, start
 		}
 
-	Loose?: false
-	hasBlankLine?: false
-	checkStartBlankLine: 0
-	HasEndBlankLine?: false
-	Add(line)
+	endingBlankLines: 0
+	Add(line, start)
 		{
-		if .checkStartBlankLine isnt true
+		if .BlankLine?(line, start) is false
 			{
-			if .BlankLine?(line)
-				{
-				if ++.checkStartBlankLine >= 2
-					{
-					.HasEndBlankLine? = true
-					.Close()
-					}
-				}
-			else
-				.checkStartBlankLine = true
+			if .HasEndingBlankLine?()
+				.Loose? = true
+			.endingBlankLines = 0
 			}
 		else
 			{
-			if .Loose? is false
+			++.endingBlankLines
+			if .Children.Empty?() and .endingBlankLines >= 2
 				{
-				if .HasEndBlankLine? = .BlankLine?(line)
-					.hasBlankLine? = true
-				else if .hasBlankLine?
-					.Loose? = true
+				.Loose? = true
+				.Close()
 				}
 			}
-
-		super.Add(line)
+		super.Add(line, start)
 		}
+
+	HasEndingBlankLine?()
+		{
+		return .Children.NotEmpty?() and .endingBlankLines > 0 or
+			.lastItemHasEndingBlankLine?()
+		}
+
+	lastItemHasEndingBlankLine?()
+		{
+		children = .Children
+		return children.Size() > 0 and children.Last().HasEndingBlankLine?()
+		}
+
+	Loose?: false
 	}

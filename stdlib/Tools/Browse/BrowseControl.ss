@@ -25,13 +25,14 @@ PassthruController
 		.columnsSaveName = '', .buttonBar = false, .headerSelectPrompt = false,
 		.mandatoryFields = #(), stretch = false, .alwaysReadOnly = false, name = false,
 		extra = false, hideContents = false, .noSaveOnDestroy = false,
-		.loadRecordNotification = false, .addons = #(), limitSize? = false)
+		.loadRecordNotification = false, .addons = #(), limitSize? = false,
+		historyFields = false)
 		{
 		super(.createControls(statusBar, stretch, extra, limitSize?))
 		.addons = .addons.Copy().Append(GetContributions('FormatContextMenuItems'))
 		.Addons = AddonManager(this, .addons)
 		// REFACTOR: move this into .addons
-		.addon = BrowseAddon(this, options: false)
+		.addon = BrowseAddon(this, options: [:historyFields])
 
 		.initObserverListRow()
 
@@ -523,6 +524,7 @@ PassthruController
 		rec = .list.GetRow(sel[0])
 		.addon.QueueDeleteAttachmentFile(newFile, oldFile, rec, name, action)
 		}
+
 	RestoreAttachmentFiles()
 		{
 		.addon.CleanupAttachments(true)
@@ -651,6 +653,7 @@ PassthruController
 				}
 			else if oldrecs.Member?(row)
 				{
+				.addon.UpdateHistory(record, false)
 				oldrecs[row].Update(record)
 				}
 			}
@@ -665,6 +668,7 @@ PassthruController
 				for (record in outputs)
 					{
 					.nextSaveRec = record
+					.addon.UpdateHistory(record, true)
 					q.Output(record)
 					}
 				}
@@ -1048,15 +1052,7 @@ PassthruController
 	List_NewRowAdded(row)
 		{
 		// mark fields that require entry as invalid
-		rec = .list.GetRow(row)
-		for col in .list.GetColumns().Members()
-			{
-			field = .list.GetCol(col)
-			if ListCustomize.MandatoryAndEmpty?(
-				rec, field, .customFields, .protectField) or
-				false is .controlValidData?(rec, field)
-				.list.AddInvalidCell(col, row)
-			}
+		.ValidateRowControlData(rec = .list.GetRow(row), row)
 		// TODO: change Browse_NewRowAdded to pass record as well
 		.Send("Browse_NewRowAdded", row)
 
@@ -1069,6 +1065,18 @@ PassthruController
 			.Send("SetField", .allDataMember, .list.Get())
 			.Send("InvalidateFields", Object(.allDataMember))
 			.Refresh_BrowseData()
+			}
+		}
+
+	ValidateRowControlData(rec, row)
+		{
+		for col in .list.GetColumns().Members()
+			{
+			field = .list.GetCol(col)
+			if ListCustomize.MandatoryAndEmpty?(
+				rec, field, .customFields, .protectField) or
+				false is .controlValidData?(rec, field)
+				.list.AddInvalidCell(col, row)
 			}
 		}
 
@@ -1346,6 +1354,10 @@ PassthruController
 		{
 		.addon.PasteRecord(before: false)
 		}
+	On_Context_History()
+		{
+		.addon.History()
+		}
 	Observer_HeaderData(member)
 		{
 		if (.Empty?() or // after destroy
@@ -1430,17 +1442,14 @@ PassthruController
 			.Refresh_BrowseData() // will make Access record dirty if linked
 			}
 		}
-	refreshAndNotifyChange(data, row, member, col, _committing = false)
+	refreshAndNotifyChange(data, row, member, col)
 		{
 		record = data[row]
 		if .list.HasInvalidCell?(record, member) and
 			.list.InvalidCellValue(record, member) isnt record[member]
 			.list.RemoveInvalidCell(col, row)
 
-		// if field is modified by other field like rules, fill-in, assuming is valid
-		if member isnt committing
-			.list.SetInvalidFieldData(record, member, '')
-
+		.refreshInvalidFieldData(record, member)
 		.list.RepaintRow(row)
 
 		.Send("Browse_AfterField", member, record)
@@ -1460,6 +1469,14 @@ PassthruController
 			.Refresh_BrowseData() // will make Access record dirty if linked
 			}
 		}
+
+	refreshInvalidFieldData(record, member, _committing = false)
+		{
+		// if field is modified by another field (like rules/fill-in), assume it is valid
+		if committing isnt false and member isnt committing
+			.list.SetInvalidFieldData(record, member, '')
+		}
+
 	// interface (access)
 	AccessChanged(@args)
 		{

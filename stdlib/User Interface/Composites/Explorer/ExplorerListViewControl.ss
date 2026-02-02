@@ -51,11 +51,7 @@ CommandParent
 		key = .title is '' ? .base_query : .title
 		warn = 'WARNING: ExplorerListView Control is using query as ' $
 			'user columns key: ' $ key
-		if not TableExists?('suneidolog') or
-			QueryEmpty?('suneidolog
-				where sulog_timestamp > ' $ Display(Date().NoTime()) $
-					' and sulog_message is ' $ Display(warn))
-			SuneidoLog(warn)
+		SuneidoLog.Once(warn)
 		return key
 		}
 

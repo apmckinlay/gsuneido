@@ -7,15 +7,14 @@ Controller
 	Ystretch: 1
 	Name: "CommaListDlg"
 	Title: "Item List"
-	New(list, max_items, protectLineFunc = false)
+	New(list, max_items, .protectLineFunc = false)
 		{
 		super(.layout(max_items))
-		.Vert.List.SetColWidth(0, 250)
+		.Vert.List.SetColWidth(0, 250) /*= default width */
 		list_data = Object()
 		for item in list.Split(',')
 			list_data.Add(Object(commalist_value: item.Trim()))
 		.Vert.List.Set(list_data)
-		.protectLineFunc = protectLineFunc
 		}
 	layout(max_items)
 		{

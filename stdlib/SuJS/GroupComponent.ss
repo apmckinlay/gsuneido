@@ -57,7 +57,8 @@ HtmlContainer
 				}
 			ymin += el.Ymin
 			ystretch += el.Ystretch
-			el.El.SetStyle('flex-shrink', 0)
+			if el.GetDefault(#Shrinkable, false) is false
+				el.El.SetStyle('flex-shrink', 0)
 			if el.Ystretch isnt false
 				el.El.SetStyle('flex-grow', el.Ystretch)
 			if el.Xstretch >= 0
@@ -94,7 +95,8 @@ HtmlContainer
 			ymin = Max(ymin, el.Ymin)
 			xmin += el.Xmin
 			xstretch += el.Xstretch
-			el.El.SetStyle('flex-shrink', 0)
+			if el.GetDefault(#Shrinkable, false) is false
+				el.El.SetStyle('flex-shrink', 0)
 			if el.Xstretch isnt false
 				el.El.SetStyle('flex-grow', el.Xstretch)
 			if el.Ystretch >= 0

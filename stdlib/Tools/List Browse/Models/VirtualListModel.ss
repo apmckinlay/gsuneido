@@ -165,6 +165,11 @@ class
 		return .query
 		}
 
+	GetTableName()
+		{
+		return QueryGetTable(.GetBaseQuery(), orview:)
+		}
+
 	AllAvailableColumns(extra = "")
 		{
 		return QueryColumns(.sortModel.StripSort(.baseQuery) $ ' ' $ extra)
@@ -543,9 +548,9 @@ class
 		.startLast = false
 		.destroyCursors()
 		.curTop = VirtualListModelCursor(.data, queryNoSort, .startLast,
-			setupRecord: .setupRecord, useQuery: .useQuery)
+			setupRecord: .setupRecord, asof: .asof, useQuery: .useQuery)
 		.curBottom = VirtualListModelCursor(.data, queryNoSort, .startLast,
-			setupRecord: .setupRecord, useQuery: .useQuery)
+			setupRecord: .setupRecord, asof: .asof, useQuery: .useQuery)
 		if false is .ReadAllData(maxLoad)
 			{
 			blacklist[queryNoSort] = true
@@ -596,21 +601,9 @@ class
 		.curBottom.Close()
 		}
 
-	ValidateRow(row, returnBoundary? = false, extraLogging = false)
+	ValidateRow(row, returnBoundary? = false)
 		{
-		result = .validateRow(row, returnBoundary?)
-		if result is false and extraLogging is true and row is 0
-			{
-			params = Object(:row, dataSize: .data.Size(), topPos: .curTop.Pos,
-				botPos: .curBottom.Pos)
-			SuneidoLog("INFO: Extra Logging for 36225", :params)
-			}
-		return result
-		}
-
-	validateRow(row, returnBoundary? = false)
-		{
-		if .data.Size() is 0
+		if .data.Size() is 0 or .curTop is false
 			return false
 
 		if row < .curTop.Pos

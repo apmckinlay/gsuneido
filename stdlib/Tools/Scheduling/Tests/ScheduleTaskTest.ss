@@ -48,7 +48,6 @@ Test
 		Assert(testOb is: testOb2)
 
 		// test MinUID
-		Assert((testTask.MinUID() is 0) and (ScheduleTask.MinUID() is 0)
-			is: true msg: "MinUID")
+		Assert((testTask.MinUID() is 0) and (ScheduleTask.MinUID() is 0), msg: "MinUID")
 		}
 	}

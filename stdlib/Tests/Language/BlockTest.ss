@@ -91,7 +91,7 @@ Test
 		{
 		try
 			block()
-		catch (e)
+		catch
 			throw "should not get here"
 		}
 

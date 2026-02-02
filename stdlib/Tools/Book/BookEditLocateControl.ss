@@ -5,7 +5,7 @@ Controller
 	table: false
 	New(.table = '')
 		{
-		super(['AutoChoose', .RecordNames, width: 20, autoSelect:,
+		super(['AutoChoose', .RecordNames, width: 20, xstretch: 2, autoSelect:,
 			cue: 'Locate by name', allowOther:])
 		}
 

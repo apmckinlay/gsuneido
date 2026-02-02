@@ -6,14 +6,14 @@ Test
 		// test string op with non String fields
 		dd = Field_date {}
 		op = #('contains', '=~', pre: '(?i)(?q)', suf: '')
-		Assert(Select2.Invalid_operator?(op, dd) is: true)
+		Assert(Select2.Invalid_operator?(op, dd))
 		dd = Field_number {}
-		Assert(Select2.Invalid_operator?(op, dd) is: true)
+		Assert(Select2.Invalid_operator?(op, dd))
 
 		// test operator with Image (only empty and not empty are valid)
 		dd = Field_image {}
 		op = #('equals', 'is', pre: '', suf: '')
-		Assert(Select2.Invalid_operator?(op, dd) is: true)
+		Assert(Select2.Invalid_operator?(op, dd))
 		op = #('empty', 'is', pre: '', suf: '')
 		Assert(Select2.Invalid_operator?(op, dd) is: false)
 		op = #('not empty', 'isnt', pre: '', suf: '')

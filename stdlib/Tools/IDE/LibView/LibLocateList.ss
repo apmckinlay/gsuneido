@@ -195,7 +195,12 @@ class
 				nonMatches.Add(x)
 			}
 		matches.Append(nonMatches)
-		return exactMatch is false ? matches : matches.Add(exactMatch, at: 0)
+		if exactMatch is false
+			return matches
+
+		matches = matches.Add(exactMatch, at: 0)
+		matchList = matchList.RemoveIf({ it is exactMatch })
+		return matches.MergeUnion(matchList)
 		}
 
 	indexToLib(libs, i)

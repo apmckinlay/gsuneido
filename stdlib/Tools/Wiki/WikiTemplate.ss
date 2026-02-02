@@ -36,7 +36,7 @@ class
 	Find: '<div style="float: right; margin-top: 10;" class="noPrint">
 			<form method="get" action="Wiki">
 			$smallaction &nbsp;
-			<input type="text" size="20" name="find">
+			<input type="text" size="20" name="find" spellcheck="true">
 			<input type="submit" value="Find">
 			</form><br />
 			</div>\n'

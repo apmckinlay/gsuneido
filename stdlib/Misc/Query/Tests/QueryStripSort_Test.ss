@@ -3,8 +3,6 @@ Test
 	{
 	Test_main()
 		{
-		if BuiltDate() > #20250422
-			return
 		Assert(QueryStripSort("tables") is: "tables")
 		Assert(QueryStripSort("tables sort totalsize") is: "tables")
 		Assert(QueryStripSort("tables where table is 123 sort totalsize")
@@ -17,8 +15,8 @@ Test
 		Assert(QueryStripSort("/*CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/tables " $
 			"join by (table) columns /*CHECKQUERY SUPPRESS: JOIN MANY TO MANY*/ " $
 			"sort column")
-			is:"tables join by(table) columns " $
-				"/* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/ " $
-				"/* CHECKQUERY SUPPRESS: JOIN MANY TO MANY*/" )
+			is: "/*CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/" $
+				"tables join by (table) columns " $
+				"/*CHECKQUERY SUPPRESS: JOIN MANY TO MANY*/" )
 		}
 	}

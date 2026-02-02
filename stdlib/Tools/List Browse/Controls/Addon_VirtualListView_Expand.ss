@@ -26,7 +26,7 @@ Addon_VirtualListViewBase
 
 	rowNumWithOffset(rowNum)
 		{
-		c = OptContribution('VirtualListView', class { })
+		c = VirtualListViewExtra
 		if c.Member?('RowNumWithOffset')
 			return c.RowNumWithOffset(rowNum)
 		return rowNum + .Model.Offset

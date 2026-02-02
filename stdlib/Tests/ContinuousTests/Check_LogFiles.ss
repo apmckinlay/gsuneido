@@ -99,8 +99,6 @@ class
 		`ERROR: in rule.*SHOW`,
 		// WebView2 error when exit due to lost connection
 		`Failed to unregister class Chrome_WidgetWin_0`
-		// not needed after BuiltDate 2025-08-21
-		`WARNING: Query1 slow:.*views`
 		)
 	SuppressLine?(line)
 		{

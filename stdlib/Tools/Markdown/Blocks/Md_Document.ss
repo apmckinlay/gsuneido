@@ -3,11 +3,12 @@ Md_ContainerBlock
 	{
 	New()
 		{
+		.linkDefs = Object()
 		}
 
-	Continue(line)
+	Continue(line, start)
 		{
-		return line
+		return line, start
 		}
 
 	GetOpenBlockItems()
@@ -25,5 +26,17 @@ Md_ContainerBlock
 	Finish()
 		{
 		.Close()
+		}
+
+	AddLinkDefs(label, dest, title)
+		{
+		if .linkDefs.Member?(label)
+			return // ignore
+		.linkDefs[label] = Object(:dest, :title)
+		}
+
+	GetLinkDefs(label)
+		{
+		return .linkDefs.GetDefault(label, false)
 		}
 	}

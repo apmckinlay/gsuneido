@@ -86,22 +86,26 @@ class
 			not ControlValidData?(rec, field)
 		}
 
-	ReasonProtected(record, protectField, hwnd, query = false)
+	ReasonProtected(record, protectField, hwnd, query = false, foreignKeyUsage? = false)
 		{
 		allowDeleteMsg = ''
 		if (query isnt false and
 			('' isnt allowDeleteMsg = RecordAllowDelete(query, record)))
 			allowDeleteMsg = 'This record can not be deleted.\n\n' $ allowDeleteMsg
 
+		foreignKeyUsageMsg = query isnt false and foreignKeyUsage?
+			? RecordForeignKeyUsage(query, record) : ''
+
 		protect = protectField is false ? '' : record[protectField]
-		if .noInfo(protect) and allowDeleteMsg is ''
+		if .noInfo(protect) and allowDeleteMsg is '' and foreignKeyUsageMsg is ''
 			{
 			.alert('No Information', hwnd)
 			return
 			}
 		if Object?(protect)
 			protect = protect.reason
-		.alert(allowDeleteMsg $ Opt('\n\n', protect), hwnd)
+		.alert(allowDeleteMsg $ Opt('\n\n', protect) $
+			Opt('\n\n', foreignKeyUsageMsg), hwnd)
 		}
 
 	noInfo(protect)

@@ -2,8 +2,6 @@
 // e.g. AccessGoTo('Ar_Invoices', 'arivc_num_new', false)
 class
 	{
-	// NOTE: Until 33976 is completed, avoid adding new uses of newRecord as an Object().
-	// 	33976 will be changing how newRecord values are to be handled.
 	CallClass(access, goto_field, goto_value, hwnd = 0, newRecord = false,
 		defaultSelect = false, window = 'Modal', onDestroy = function () {},
 		editMode = false)
@@ -173,9 +171,10 @@ class
 				child = .GetChild()
 				if child.Member?('AccessGotoNew')
 					child.AccessGotoNew()
-				if Object?(args.newRecord)
-					ctrl.SetDefaultNewValues(args.newRecord)
-				.Defer(ctrl.On_New)
+				fillinData = Object?(args.newRecord)
+					? args.newRecord
+					: false
+				.Defer({ ctrl.On_New(:fillinData) })
 				}
 			if args.editMode isnt false and ctrl.Method?('SetEditMode')
 				.Defer(ctrl.SetEditMode)

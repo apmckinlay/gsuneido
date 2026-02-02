@@ -16,11 +16,10 @@ Test
 						contents: record.contents))
 					if record.address is 'httppost_queue_testing3'
 						return "post failed"
-					else
-						return ""
 					}
 				else if record.address.Has?('httppost_queue_error')
 					throw "program error"
+				return ""
 				}
 			}
 		.postQueue = new queueCl

@@ -82,7 +82,7 @@ Test
 				}
 			})
 		model.SetExpandReadOnly([value: '2'], readonly:)
-		Assert(_recCtrl.readonly is: true)
+		Assert(_recCtrl.readonly)
 		_recCtrl.edit.When.Pushed?(false)
 
 		model.SetExpandReadOnly([value: '2'], readonly: false)
@@ -264,21 +264,21 @@ Test
 
 		layoutOb = Object(ctrl: Object('Customizable',
 			tabName: CustomizeExpandControl.LayoutName))
-		Assert(fn(layoutOb) is: true)
+		Assert(fn(layoutOb))
 
 		layoutOb = #(ctrl: (Customizable, tabName: 'CustomizableExpand'))
-		Assert(fn(layoutOb) is: true)
+		Assert(fn(layoutOb))
 
 		layoutOb = #(ctrl: (Vert, Form,
 			(Customizable, tabName: CustomizableExpand)))
-		Assert(fn(layoutOb) is: true)
+		Assert(fn(layoutOb))
 
 		layoutOb = #(ctrl: (Customizable, test_table, test_tab, CustomizableExpand))
-		Assert(fn(layoutOb) is: true)
+		Assert(fn(layoutOb))
 
 		layoutOb = #(ctrl: (Form,
 			Customizable, nl,
 			(Customizable, tabName: 'CustomizableExpand')))
-		Assert(fn(layoutOb) is: true)
+		Assert(fn(layoutOb))
 		}
 	}

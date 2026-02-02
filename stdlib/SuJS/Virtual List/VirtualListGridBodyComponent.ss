@@ -48,7 +48,7 @@ ListBodyBaseComponent
 	addObserver(rowIdx)
 		{
 		Assert(.rows hasMember: rowIdx,
-			msg: 'sujslib:VirtualListGridBodyComponent.addObserver')
+			msg: 'VirtualListGridBodyComponent.addObserver')
 
 		rowRect = .rows[rowIdx].GetBoundingClientRect()
 		viewRect = .scrollContainerEl.GetBoundingClientRect()
@@ -92,7 +92,7 @@ ListBodyBaseComponent
 	removeObserver(rowIdx)
 		{
 		Assert(.rows hasMember: rowIdx,
-			msg: 'sujslib:VirtualListGridBodyComponent.removeObserver')
+			msg: 'VirtualListGridBodyComponent.removeObserver')
 		.observer.Unobserve(.rows[rowIdx])
 		.observerStatus.Delete(rowIdx)
 		}
@@ -265,7 +265,7 @@ ListBodyBaseComponent
 	DeleteRecord(rowNum, shiftTop?)
 		{
 		Assert(.rows hasMember: rowNum,
-			msg: 'sujslib:VirtualListGridBodyComponent.DeleteRecord')
+			msg: 'VirtualListGridBodyComponent.DeleteRecord')
 		newObserve = shiftTop? is true
 			? .deleteRowShiftTop(rowNum)
 			: .deleteRowShiftBottom(rowNum)
@@ -422,24 +422,12 @@ ListBodyBaseComponent
 		.SetCellAttributes(row, y: rowIdx, type: 'data-row')
 		.SetStyles(Object('line-height': .GetRowHeight() $ 'px'), row)
 
-		td = CreateElement('td', row)
-		.SetCellAttributes(td, x: 0, type: 'mark-cell')
-		.setMarkColValue(row, td, rec)
-
 		.setHighlight(row, rec.vl_brush)
-		.header.ForEachHeadCol()
-			{ |col, field, width|
-			cell = rec[field]
-			td = CreateElement('td', row)
-			el = .CreateCellElement(td, cell, col, 'su-vlistbody-cell')
-			if width is 0
-				td.SetStyle('display', 'none')
-			}
-		// empty col for filling remaining space
-		el = CreateElement('td', row)
-		// invisible character to take vertical space when the row is empty
-		el.innerHTML = '&#8205;'
-		.SetCellAttributes(el, x: .header.GetColsNum(), type: 'empty-cell')
+
+		row.innerHTML = .BuildRowContent(rec, .header, 'su-vlistbody-cell')
+		.AddTipListener(row, 'su-vlistbody-cell')
+
+		.setMarkColValue(row, row.QuerySelector('td'), rec)
 		row.AddEventListener('mouseenter', .mouseEnterRow)
 		row.AddEventListener('mouseleave', .mouseLeaveRow)
 		.rows[rowIdx] = row
@@ -549,7 +537,7 @@ ListBodyBaseComponent
 	SelectRow(row)
 		{
 		Assert(.data hasMember: row,
-			msg: 'sujslib:VirtualListGridBodyComponent.SelectRow')
+			msg: 'VirtualListGridBodyComponent.SelectRow')
 		.rows[row].classList.Add('su-vlistbody-row-selected')
 		}
 
@@ -708,11 +696,16 @@ ListBodyBaseComponent
 
 	VirtualListExpand_Recycle(uniqueId)
 		{
-		ctrl = .VirtualListExpand_Destroy(uniqueId)
-		.recycledExpands.Add(ctrl)
+		.recycledExpands.Add(.remove(uniqueId))
 		}
 
 	VirtualListExpand_Destroy(uniqueId)
+		{
+		ctrl = .remove(uniqueId)
+		ctrl.Destroy()
+		}
+
+	remove(uniqueId)
 		{
 		if false is i = .expandedCtrls.FindIf({ it.ctrl.UniqueId is uniqueId })
 			{
@@ -777,7 +770,7 @@ ListBodyBaseComponent
 			ctrl.ctrl.El.parentElement.SetStyle('height',
 				(ctrl.rows isnt false
 					? .GetRowHeight() * ctrl.rows
-					: ctrl.ctrl.Ymin) $ 'px')
+					: ctrl.ctrl.Ymin) + 8 /*=padding*/ $ 'px')
 			}
 		}
 
@@ -946,6 +939,14 @@ ListBodyBaseComponent
 		{
 		.cancelDelayedLoads()
 		.observer.Disconnect()
+
+		for row in .expandedCtrls
+			row.ctrl.Destroy()
+		.expandedCtrls = Object()
+
+		while false isnt expand = .recycledExpands.Extract(0, false)
+			expand.Destroy()
+
 		super.Destroy()
 		}
 	}

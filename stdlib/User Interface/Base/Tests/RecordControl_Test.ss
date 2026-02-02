@@ -13,10 +13,8 @@ Test
 			#(Custom: #(test_field: #(first_focus:)), Name: 'test_field'))
 			is: false)
 		Assert(isCustomizedMandatory(
-			#(Custom: #(test_field: #(mandatory:)), Name: 'test_field'))
-			is: true)
+			#(Custom: #(test_field: #(mandatory:)), Name: 'test_field')))
 		Assert(isCustomizedMandatory(
-			#(Custom: #(test_field: #(mandatory:, first_focus:)), Name: 'test_field'))
-			is: true)
+			#(Custom: #(test_field: #(mandatory:, first_focus:)), Name: 'test_field')))
 		}
 	}

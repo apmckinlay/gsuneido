@@ -24,8 +24,8 @@ Test
 	Test_ValidData?()
 		{
 		Assert(PatternControl.ValidData?('a', '#') is: false)
-		Assert(PatternControl.ValidData?('1', '#') is: true)
-		Assert(PatternControl.ValidData?('', '#') is: true)
+		Assert(PatternControl.ValidData?('1', '#'))
+		Assert(PatternControl.ValidData?('', '#'))
 		Assert(PatternControl.ValidData?('', '#', mandatory:) is: false)
 		}
 	}

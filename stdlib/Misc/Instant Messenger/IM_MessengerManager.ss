@@ -163,7 +163,7 @@ class
 
 	contactsImpl()
 		{
-		return SoleContribution('IM_ContactsImplementation')
+		return LastContribution('IM_ContactsImplementation')
 		}
 
 	GetGroupList()

@@ -9,7 +9,7 @@ Controller
 		}
 	Controls: (Horz
 		Skip
-		(FieldReturn name: 'search' status: 'Type your search and press Enter')
+		(ScintillaFieldReturn name: 'search' status: 'Type your search and press Enter')
 		(Skip 2)
 		(EnhancedButton command: #Search image: 'zoom.emf' tip: 'Search'
 			imagePadding: 0.1 mouseEffect:)
@@ -131,7 +131,7 @@ Controller
 			name = x.path $ "/" $ x.name
 			_path = x.path
 			_name = x.name
-			if (x.text.Prefix?('<') and Asup(x.text) =~ s)
+			if (BookContent.Match(book, x.text) and Asup(x.text) =~ s)
 				{
 				.add_result(name, book, results)
 				if (results.Size() > .searchSize)

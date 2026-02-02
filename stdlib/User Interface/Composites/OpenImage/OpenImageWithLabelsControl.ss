@@ -129,7 +129,7 @@ OpenImageAddonsBase
 			file = value.BeforeLast(.LabelDelimiter).Trim()
 			labels = value.AfterLast(.LabelDelimiter)
 			}
-		if .copyAndLinkPath?(file)
+		if .CopyAndLinkPath?(file)
 			{
 			subfolder = Paths.ParentOf(file)
 			file = Paths.Basename(file)
@@ -138,7 +138,7 @@ OpenImageAddonsBase
 		}
 
 	// a copyAndLink path is like subfolder/filename
-	copyAndLinkPath?(path)
+	CopyAndLinkPath?(path)
 		{
 		// It's not likely we will encounter a Linux absolute path here (because
 		// we only support Suneido.js on linux and Suneido.js only supports copy & link)

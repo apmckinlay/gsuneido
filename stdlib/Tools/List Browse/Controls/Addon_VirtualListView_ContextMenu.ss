@@ -36,7 +36,7 @@ Addon_VirtualListViewBase
 		rec = .GetContextMenu().ContextRec
 		query = .Model.GetQuery()
 		ListCustomize.ReasonProtected(
-			rec, .Model.EditModel.ProtectField , .GetGridHwnd(), query)
+			rec, .Model.EditModel.ProtectField , .GetGridHwnd(), query, foreignKeyUsage?:)
 		}
 
 	On_Context_Reset_Columns()

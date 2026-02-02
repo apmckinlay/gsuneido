@@ -4,8 +4,6 @@ class
 	CallClass()
 		{
 		.initDev()
-		if FileExists?('serverPostRun.bat')
-			DeleteFile('serverPostRun.bat')
 		ServerEval('CSDevServerWindow.SetServerPrint')
 		ServerSuneido.Set('SchedulerStopEmail', true)
 		ServerSuneido.Set('CSDev?', true)
@@ -41,20 +39,19 @@ class
 				loadliberrors.Join(","))
 		}
 
-	DoExtraSetups(libs = 'all')
+	DoExtraSetups()
 		{
 		try
-			for extraSetup in Contributions('CSDevExtraSetups')
-				{
-				skip? = false
-				if libs isnt 'all'
-					{
-					lib = Name(extraSetup).BeforeFirst('_').Lower()
-					skip? = not libs.Has?(lib)
-					}
-				if not skip?
-					extraSetup()
-				}
+			{
+			if not SuneidoJSEnabled?()
+				return
+
+			if not Thread.List().Any?({ it.Has?('SuJS Server') })
+				Thread({
+					Thread.Name('SuJS Server')
+					RunSuJSHttpServer()
+				})
+			}
 		catch (e)
 			CSDevServerPrint('EXTRA SETUP ERROR: ' $ e)
 		}
@@ -127,6 +124,8 @@ class
 				{
 				if Suneido.Member?('DevServerLog')
 					{
+					// to trigger the size change
+					GetFile(path $ 'golang.log', limit: 10)
 					// can't use last modified date. It stays set to the file
 					// creation date until the server closes the file
 					// need to use file size instead
@@ -134,6 +133,7 @@ class
 						? Dir1(path $ 'golang.log', details:).size
 						: 0
 					.readNewLog(initialSize, newSize, path)
+					initialSize = newSize
 					if not ServerSuneido.Get('csDevPrint', Object()).Empty?()
 						Defer(Suneido.DevServerLog)
 					}
@@ -173,7 +173,6 @@ class
 				while false isnt s = it.Readline()
 					fileLines.Add(s $ '\r\n')
 				}
-			initialSize = newSize
 			ServerEval('CSDevServerWindow.UpdateDevPrint', fileLines)
 			}
 		}
@@ -187,7 +186,9 @@ class
 
 	ShutdownAll()
 		{
-		System('taskkill /PID ' $ ServerSuneido.Get('CSDevServerWindowProc') $ ' /F')
+		if 0 isnt System('taskkill /PID ' $ ServerSuneido.Get('CSDevServerWindowProc') $
+			' /F')
+			ErrorLog('ERROR: CSDevServerWindow - could not kill task')
 		Shutdown(alsoServer:)
 		}
 	}

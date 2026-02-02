@@ -60,7 +60,7 @@ VirtualListModelTests
 
 		model.CheckRecordByKey(1, forceCheck:)
 		rec = model.GetCheckedRecords().list[0]
-		Assert(rec.test_checkbox_column is: true)
+		Assert(rec.test_checkbox_column)
 		Assert(rec.num is: 1)
 		}
 
@@ -68,7 +68,7 @@ VirtualListModelTests
 		{
 		// select one item
 		.selectItem('Selected Item Test')
-		Assert(.isSelected('Selected Item Test') is: true,
+		Assert(.isSelected('Selected Item Test'),
 			msg: 'Select One Item IsSelected Failed')
 		selected = .checkBoxColModel.GetSelectedInfo()
 		Assert(selected.state is: 'selected', msg: 'Select Item state Failed')
@@ -101,8 +101,7 @@ VirtualListModelTests
 		.checkBoxColModel.SelectAll()
 		selected = .checkBoxColModel.GetSelectedInfo()
 		Assert(selected.state is: 'all', msg: 'Select All Failed')
-		Assert(.isSelected('Test Item') is: true,
-			msg: 'Select All IsSelected Failed')
+		Assert(.isSelected('Test Item'), msg: 'Select All IsSelected Failed')
 
 		// unselect one
 		.unselectItem('Unselect This Item Test')

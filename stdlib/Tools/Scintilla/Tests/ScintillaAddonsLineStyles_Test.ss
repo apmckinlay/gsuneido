@@ -83,7 +83,7 @@ Test
 		{
 		Assert(styleOb isSize: expected.Size())
 		for level in expected
-			Assert(styleOb.Any?({ it.level is level }) is: true,
+			Assert(styleOb.Any?({ it.level is level }),
 				msg: 'failed to find ' $ styleType $ ' with level: ' $ level)
 		}
 

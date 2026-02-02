@@ -37,8 +37,9 @@ class
 			return sid
 		if .lockedKeys is false
 			.lockedKeys = Object()
+		if .lockedKeys.Empty?()
+			.schedule_lock_renew()
 		.lockedKeys.AddUnique(lock_key)
-		.schedule_lock_renew()
 		return true
 		}
 	renew_lock()

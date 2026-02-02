@@ -48,9 +48,8 @@ class
 			ServerSuneido.Set('TestRunningExpectedErrors', expectedErrors.Delete(pos))
 		else
 			{
-			.outputRecord(rec)
 			logs = ServerSuneido.Get('TestRunningLogs', Object())
-			ServerSuneido.Set('TestRunningLogs', logs.Add(rec.sulog_timestamp))
+			ServerSuneido.Set('TestRunningLogs', logs.Add(rec))
 			}
 		}
 
@@ -140,7 +139,7 @@ class
 
 		return Record(
 			sulog_user: Suneido.User,
-			sulog_message: message,
+			sulog_message: Type(message) isnt 'Except' ? message : Display(message),
 			sulog_calls: Object?(calls) ? FormatCallStack(calls, levels: 10) : calls,
 			sulog_locals: .format_locals(calls),
 			sulog_params: .format_params(params),

@@ -153,8 +153,11 @@ KeyFieldBaseControl
 
 	forceValid(val)
 		{
+		.valid = false
 		rec = .lookup_record(val)
-		.valid = rec isnt false ? rec[.nameField] : false
+		if rec isnt false
+			.valid = .num is rec[.numField] ? rec[.nameField] : false
+
 		return .valid isnt false
 		}
 

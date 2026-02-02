@@ -4,7 +4,7 @@ Format
 	New(image = "", .scale = 1, .width = false, .height = false,
 		.stretch = false, .background = false, .top = false, .maxWidth = false)
 		{
-		.data = FileStorage.GetAccessibleFilePath(image)
+		.data = image
 		}
 
 	aspectRatio: 1
@@ -20,7 +20,11 @@ Format
 			}
 		else
 			{
-			if false is imageSizeOb = .imageSizeOb(.dataString(data))
+			dataStr, textOnly? = .dataString(data)
+			if textOnly?
+				return .getTextSize(dataStr)
+
+			if false is imageSizeOb = .imageSizeOb(dataStr)
 				return .getFallbackSize()
 
 			heightAndWidth = .heightAndWidthFromImageSizeOb(imageSizeOb)
@@ -30,6 +34,14 @@ Format
 		d = .getDescent(height)
 		adjust = _report.GetImageSizeAdjustment()
 		return Object(w: width / adjust, h: height / adjust, :d)
+		}
+
+	getTextSize(dataStr)
+		{
+		w = .width is false ? 1 : .width
+		dataStr = .printPath(dataStr)
+		sz = WrapFormat(dataStr, :w).GetSize(dataStr)
+		return Object(:w, h: sz.h, d: sz.d)
 		}
 
 	validImageSize?: ""
@@ -88,7 +100,7 @@ Format
 		return 0
 		}
 
-	Print(x, y, w, h, data = "", textOnly? = false)
+	Print(x, y, w, h, data = "")
 		{
 		if Object?(.background)
 			{
@@ -100,30 +112,41 @@ Format
 		if .Xstretch isnt .Ystretch
 			.stretch = true
 
-		origData = OpenImageWithLabelsControl.SplitFullPath(data)
-		data = .dataString(data, :textOnly?)
+		data, textOnly? = .dataString(data)
 		if data is '' // no image to print
 			return
 
-		if textOnly? or not Image.RunWithErrorLog({ .print(x, y, w, h, data, origData) })
+		if textOnly? or not Image.RunWithErrorLog({ .print(x, y, w, h, data) })
 			{
-			wrap = WrapFormat(Paths.IsValid?(data) ? data : '?')
+			path? = Paths.IsValid?(data)
+			wrap = WrapFormat(path? ? .printPath(data) : '?')
+			if path?
+				Format.Hotspot(x, y, w, h, [],
+					access: [control: "AttachmentGoTo", file: data])
 			wrap.Print(x, y, w, h)
 			}
 		}
 
-	dataString(data, textOnly? = false)
+	dataString(data)
 		{
 		if not String?(data) or data is ""
 			data = .data
+		if data is ''
+			return data, true
 		if not Paths.IsValid?(data)
-			return data
+			return data, false
 		fullPath = OpenImageWithLabelsControl.SplitFullPath(data)
-		return textOnly?
-			? fullPath
-			: FileStorage.GetAccessibleFilePath(fullPath)
+		return fullPath, true
 		}
-	print(x, y, w, h, data, origData = false)
+
+	printPath(file)
+		{
+		return OpenImageWithLabelsControl.CopyAndLinkPath?(file)
+			? Paths.Basename(file)
+			: file
+		}
+
+	print(x, y, w, h, data)
 		{
 		if .stretch isnt true
 			{
@@ -132,7 +155,7 @@ Format
 			else
 				h = w / .aspectRatio
 			}
-		_report.AddImage(x, y, w, h, data, :origData)
+		_report.AddImage(x, y, w, h, data)
 		}
 
 	ExportCSV(data = '')

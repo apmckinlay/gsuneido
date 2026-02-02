@@ -56,8 +56,9 @@ Component
 		{
 		if event.target isnt .El
 			return
+		.body.KillFocus()
 		.EventWithFreeze('LIST_KILLFOCUS')
-		return 0
+		return
 		}
 
 	init(noShading, indicateHovered, noDragDrop, noHeaderButtons, noHeader)

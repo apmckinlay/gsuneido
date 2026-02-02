@@ -7,8 +7,7 @@ Test
 		// Note: this behavior seems wrong
 		// but it is the way suneido has worked for a long time
 		tbl = .MakeTable("(k, test_simple_default) key(k)", #(k: 1)) // object not record
-		Assert(QueryEmpty?(tbl $ " where test_simple_default is 'simple default'"),
-			msg: 'one')
+		Assert(QueryEmpty?(tbl, test_simple_default: 'simple default'), msg: 'one')
 		Assert(QueryEmpty?(tbl $ " where test_simple_default =~ 'simple default'"),
 			msg: 'two')
 		Assert(QueryEmpty?(tbl $ " where test_simple_default in ('simple default')"),

@@ -197,9 +197,6 @@ class
 		if .skipRecord?(rec, type)
 			return #()
 
-		if LibrarySuppressions(.library).Has?(rec.name)
-			return #('suppressed')
-
 		if true is .verifyCode(rec.text, rec.name, .library, results = [])
 			return #()
 
@@ -251,7 +248,7 @@ class
 		catch (err)
 			{
 			if err.Prefix?("can't find")
-				return Libraries().Has?(lib) and not lib.Suffix?("webgui")
+				return Libraries().Has?(lib)
 					? "ERROR: can't find: " $ name : ""
 			return err
 			}

@@ -28,6 +28,7 @@ CodeViewAddon
 		{
 		.SendToAddons(#GoToDef)
 		.SendToAddons(#Goto, member)
+		.Defer({ .Send("SetFocus") })
 		}
 
 	Outline_Highlight(cl, name)

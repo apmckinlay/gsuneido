@@ -30,7 +30,7 @@ ScintillaAddon
 		superClass = ClassHelp.SuperClass(.Get())
 		ref = ref.Replace('^super', superClass.LeftTrim('_'))
 		if superClass.Prefix?('_')
-			libs = LibraryTags.GetTagFromName(.Send(#CurrentName)) isnt ''
+			libs = LibraryTags.GetTagFromName(.currentName()) isnt ''
 				? [.table()]
 				: Libraries()[.. Libraries().Find(.table())]
 		GotoLibView(ref, this, :libview, :libs)
@@ -39,6 +39,9 @@ ScintillaAddon
 
 	table()
 		{ return .Send(#CurrentTable) }
+
+	currentName()
+		{ return .Send(#CurrentName) }
 
 	selectRef()
 		{
@@ -143,12 +146,11 @@ ScintillaAddon
 		if not object.Prefix?('.') or LibRecordType(code) isnt #object
 			return false
 		.gotoLibView(object, libview)
-		.Defer(.SetFocus)
 		return true
 		}
 	gotoLibView(object, libview)
 		{
-		GotoLibView(.Send(#CurrentName) $ object.Tr(':'),	libs: [.table()], :libview)
+		GotoLibView(.currentName() $ object.Tr(':'),	libs: [.table()], :libview)
 		}
 
 	gotoMethod?(method, code)
@@ -156,7 +158,6 @@ ScintillaAddon
 		method = method[1 ..]
 		if false is gotoMethod? = .gotoMethodLine(method, code)
 			.create_method(code, method, .GetSelect().cpMin)
-		.Defer(.SetFocus)
 		return gotoMethod?
 		}
 
@@ -165,7 +166,8 @@ ScintillaAddon
 		if false is pos = ClassHelp.FindMethod(code, method)
 			{
 			if method[0].Upper?() and
-				false isnt x = ClassHelp.FindBaseMethod(.table(), code, method)
+				false isnt x = ClassHelp.FindBaseMethod(
+					.table(), .currentName(), code, method)
 				return .gotoBaseMethod(x.lib, x.name, method)
 			if false is pos = ClassHelp.FindDotDeclarations(code, method)
 				return false
@@ -216,7 +218,7 @@ ScintillaAddon
 		libs = false
 		if ref.Prefix?('_')
 			{
-			current = .Send(#CurrentName)
+			current = .currentName()
 			if current isnt pureName = LibraryTags.RemoveTagFromName(current)
 				{
 				ref = pureName

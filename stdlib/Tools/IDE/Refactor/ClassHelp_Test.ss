@@ -131,24 +131,37 @@ Test
 	ch: ClassHelp
 		{
 		ClassHelp_libraries()
-			{ return Object('one', 'two', 'three', 'onewebgui') }
-		ClassHelp_getRecord(lib, name)
-			{ return .recs.GetDefault(lib $ '_' $ name, false) }
-		recs: (
-			one_ATest: (text: "class { Meth() { } }")
-			two_Test: (text: "class : ATest { }")
-			three_Test: (text: "_Test { }")
-			onewebgui_ATest: (text: "class { Meth() { } }")
-			onewebgui_Test: (text: "class : ATest { }") )
+			{ return _libs.Copy() }
+		ClassHelp_trials()
+			{ return #(tag) }
 		}
 	Test_FindBaseMethod()
 		{
-		Assert(ClassHelp.FindBaseMethod('lib', '', 'Meth') is: false)
-		Assert(.ch.FindBaseMethod('three', 'Test { }', 'Meth')
-			is: #(lib: one, name: ATest))
-		Assert(.ch.FindBaseMethod('onewebgui', 'Test { }', 'Meth')
-			is: #(lib: onewebgui, name: ATest))
-		Assert(.ch.FindBaseMethod('three', 'Test { }', 'Missing') is: false)
+		lib1 = .MakeLibrary(
+			[name: 'ATestRecord', text: 'class { Foo() { 1 } }'],
+			[name: 'ATestRecord__webgui', text: 'class { Foo() { 2 } }'],
+			[name: 'ATestRecord__webgui_tag', text: 'class { Foo() { 3 }}'])
+		lib2 = .MakeLibrary(
+			[name: 'ATestRecord', text: '_ATestRecord {}'])
+		lib3 = .MakeLibrary(
+			[name: 'CTestRecord', text: 'ATestRecord { Bar() { .Foo() }'],
+			[name: 'CTestRecord__webgui', text: '_CTestRecord { Baz() {} }'])
+
+		_libs = [lib1, lib2, lib3]
+		fn = .ch.FindBaseMethod
+
+		Assert(fn(lib1, 'BTestRecord', '', 'Foo') is: false)
+		Assert(fn(lib2, 'ATestRecord', '_ATestRecord {}', 'Foo')
+			is: Object(lib: lib1, name: 'ATestRecord'))
+		Assert(fn(lib2, 'ATestRecord', '_ATestRecord {}', 'Missing') is: false)
+
+		Assert(fn(lib3, 'CTestRecord', 'ATestRecord {}', 'Foo')
+			is: Object(lib: lib1, name: 'ATestRecord'))
+		Assert(fn(lib3, 'CTestRecord', 'ATestRecord {}', 'Missing') is: false)
+		Assert(fn(lib3, 'CTestRecord__webgui', '_CTestRecord {}', 'Bar')
+			is: Object(lib: lib3, name: 'CTestRecord'))
+		Assert(fn(lib3, 'CTestRecord__webgui', '_CTestRecord {}', 'Foo')
+			is: Object(lib: lib1, name: 'ATestRecord__webgui_tag'))
 		}
 	memberstext:
 		"class

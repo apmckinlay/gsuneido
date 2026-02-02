@@ -71,7 +71,7 @@ KeyListViewBase
 		}
 	On_Select()
 		{
-		SelectControl(this, okbutton:,  name: .saveInfoName)
+		SelectControl(this, okbutton:,  name: .saveInfoName, hideCount:)
 		SetFocus(.GetField().Hwnd)
 		.FieldChange()
 		}

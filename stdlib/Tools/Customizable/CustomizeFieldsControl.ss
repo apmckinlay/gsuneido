@@ -342,7 +342,10 @@ Controller
 	Save()
 		{
 		if not .readonly and .dirty?
+			{
 			Customizable.ResetCustomizedCache(.key)
+			Customizable.ResetServerCustomizedCache(.key)
+			}
 		ctrl = .FindControl('ExplorerListView')
 		data = ctrl.GetList().Get()
 		if 1 < data.MembersIf({|m| data[m].custfield_first_focus is true }).Size()

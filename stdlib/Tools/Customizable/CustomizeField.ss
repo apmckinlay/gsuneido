@@ -153,12 +153,30 @@ class
 		if node.Base?(TdopSymbolReserved)
 			throw "Formula: Cannot use the reserved keyword " $ node.Value
 
+		if not f.Prefix?('calc2') and PromptOrHeading(f) is f
+			if not .fromSelectFieldsSplittingNameAbbrev(f)
+			throw "Formula: Cannot find: " $ f
+
 		fields.AddUnique(f)
 		type = .type(f)
 		node.formulaTypes = Object(type)
 
 		value = useParams is true ? f : '.' $ f
 		return 'Object(type: ' $ Display(type) $ ', value: ' $ value $ '),'
+		}
+
+	// SelectFields sometimes creates dynamic abbrev/name fields from a num.
+	// Since we can't guarentee those datadicts truly exist anywhere except the select fields
+	// that created them, we need to check for the associated num field when we have abbrev/name
+	fromSelectFieldsSplittingNameAbbrev(f)
+		{
+		if f.Has?('abbrev')
+			return PromptOrHeading(f.Replace('abbrev', 'num')) isnt
+				f.Replace('abbrev', 'num')
+		if f.Has?('name')
+			return PromptOrHeading(f.Replace('name', 'num')) isnt f.Replace('name', 'num')
+
+		return false
 		}
 
 	handleRvalue(node)
@@ -386,8 +404,7 @@ class
 		{
 		if accessCustomKey isnt false and TableExists?('customizable_fields')
 			{
-			if not QueryEmpty?('customizable_fields
-				where custfield_name is "' $ accessCustomKey $ '"')
+			if not QueryEmpty?('customizable_fields', custfield_name: accessCustomKey)
 				return true
 			}
 		return false

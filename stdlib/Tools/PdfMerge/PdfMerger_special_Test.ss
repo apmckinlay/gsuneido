@@ -483,22 +483,22 @@ endobj
 	Test_securedPdf?()
 		{
 		fn = PdfMerger.PdfMerger_securedPdf?
-		Assert(fn('error', objs = Object(), trailers = Object()) is: false)
-		Assert(fn('Zlib', objs, trailers) is: false)
+		Assert(fn(objs = Object(), trailers = Object()) is: false)
+		Assert(fn(objs, trailers) is: false)
 
 		objs.Add([head: 'test'])
 		trailers.Add([head: 'test'])
-		Assert(fn('Zlib', objs, trailers) is: false)
+		Assert(fn(objs, trailers) is: false)
 
 		objs.Add([head: 'other /Encrypt'])
-		Assert(fn('Zlib', objs, trailers))
-		Assert(fn('zlib', objs, trailers) is: false)
-		Assert(fn('Zlib', objs.Delete(all:), trailers) is: false)
+		Assert(fn(objs, trailers))
+		Assert(fn(objs, trailers))
+		Assert(fn(objs.Delete(all:), trailers) is: false)
 
 		trailers.Add([head: 'other /Encrypt'])
-		Assert(fn('Zlib', objs, trailers))
-		Assert(fn('zlib', objs, trailers) is: false)
-		Assert(fn('Zlib', objs, trailers.Delete(all:)) is: false)
+		Assert(fn(objs, trailers))
+		Assert(fn(objs, trailers))
+		Assert(fn(objs, trailers.Delete(all:)) is: false)
 		}
 
 	Test_compressLimits()

@@ -131,16 +131,24 @@ class
 			: protocol $ '://' $ server
 		if .server isnt '' and not .server.Suffix?('/')
 			.server $= '/'
-		.userPass = .initUserPass(user, pass)
+		.userPass = .initUserPass(user, pass, options)
 		}
 
-	initUserPass(user, pass)
+	initUserPass(user, pass, options = #())
 		{
 		pwd = Opt(':', pass)
-		pwd.Has?(`"`)
+		hasConfig? = options.GetDefault(#config_file, false) is true
+		if pwd.Has?(`"`) and not hasConfig?
 			pwd = pwd.Replace(`"`,`\\"`)
 		userPass = not user.Blank?() and not pwd.Blank?() ? user $ pwd :
 			pwd.Blank?() and not user.Blank?() ? user : ''
+		if hasConfig?
+			{
+			.configFileName = 'up_' $ Md5(userPass).Base64Encode().Tr('=/+') $ '_' $
+				Display(Timestamp())[1..]
+			.configFileContent = userPass.Replace('\\', '\\\\\\\\').Replace(`"`, '\\\\"')
+			return ' --config ' $ .configFileName
+			}
 		return Opt(' -u ', '"', userPass, '"')
 		}
 
@@ -290,13 +298,13 @@ class
 			' -Q "RNFR ' $ oldName $ '" -Q "RNTO ' $ newName $ '"')
 		return result.Prefix?('curl: ') ? result : ''
 		}
-RenSFTP(oldName, newName)
-	{
-	Assert(.protocol.Has?('sftp'))
-	result = .runCommand(' ' $ .server $
-		' -Q "rename ' $ oldName $ ' ' $ newName $ '"')
-	return result.Prefix?('curl: ') ? result : ''
-	}
+	RenSFTP(oldName, newName)
+		{
+		Assert(.protocol.Has?('sftp'))
+		result = .runCommand(' ' $ .server $
+			' -Q "rename ' $ oldName $ ' ' $ newName $ '"')
+		return result.Prefix?('curl: ') ? result : ''
+		}
 
 	Dir(path = '*.*', details = false, caseSense = false, regExp = '',
 		listOnly = true)
@@ -399,6 +407,8 @@ RenSFTP(oldName, newName)
 		if cmd.Prefix?(`"false"`) // can not find curl.exe
 			return 'missing curl.exe'
 		cmd = .addExtraDebugging(cmd)
+		if .configFileContent isnt false and .configFileName isnt false
+			PutFile(.configFileName, 'user = "' $ .configFileContent $ '"')
 		for (i = 1; ; ++i)
 			{
 			result = block is false
@@ -409,7 +419,11 @@ RenSFTP(oldName, newName)
 				'error:0A000126:SSL routines::unexpected eof while reading, ' $
 				'errno 0(?-q)\r?\n?', '') // ignore this error
 			if not .retry?(result, i, retries)
+				{
+				if .configFileName isnt false
+					DeleteFile(.configFileName)
 				return .extractDebugging(result)
+				}
 			RetrySleep(i, 200) /*= 200, 400, 800 - not too short, not too long */
 			}
 		}
@@ -449,6 +463,8 @@ RenSFTP(oldName, newName)
 
 	timeoutConnect: 60
 	userPass: ''
+	configFileName: false
+	configFileContent: false
 	options: ()
 	buildCommand(args)
 		{
@@ -557,6 +573,7 @@ RenSFTP(oldName, newName)
 			'files': '-F'
 			'ignore_content_length': '--ignore-content-length'
 			'key_pass_phrase': '--pass'
+			'config_file': '--config'
 			)
 		return options
 		}
@@ -569,6 +586,8 @@ RenSFTP(oldName, newName)
 		str = quoteStr = ''
 		for option in options.Members()
 			{
+			if option is 'config_file'
+				continue
 			value = options[option]
 			curlOption = mappedOptions[option]
 			if not mappedOptions.Member?(option)

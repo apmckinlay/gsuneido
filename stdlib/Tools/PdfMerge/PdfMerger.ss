@@ -167,7 +167,7 @@ class
 			if .fileSize(filename) is 0
 				{
 				.trackInvalidFile(filename, 'empty file')
-				return false
+				return
 				}
 			fileData = .getFileContent(filename)
 			if .isJpg?(filename)
@@ -400,7 +400,7 @@ class
 			reason = 'SECURED'
 		else if not err.Prefix?('File:')
 			SuneidoLog('ERRATIC: (CAUGHT) Unable to merge - ' $ err, params: [:file],
-				caughtMsg: 'internal')
+				caughtMsg: 'internal', calls:)
 		.trackInvalidFile(file, reason)
 		return stop?
 		}
@@ -604,7 +604,7 @@ class
 				pdfOb.objs.Append(.convertStream(s,
 					reader.FileRead(f, obj.streamStart, obj.streamEnd), objs))
 			catch (e)
-				throw .securedPdf?(e, objs, trailers)
+				throw .securedPdf?(objs, trailers)
 					? 'Secured pdf'
 					: e
 		else
@@ -631,11 +631,10 @@ class
 			.maxCompressedFileSize isnt false
 		}
 
-	securedPdf?(e, objs, trailers)
+	securedPdf?(objs, trailers)
 		{
-		return e.Prefix?('Zlib') and
-			(objs.Any?({ it.head.Has?('/Encrypt') }) or
-				trailers.Any?({ it.head.Has?('/Encrypt') }))
+		return (objs.Any?({ it.head.Has?('/Encrypt') }) or
+			trailers.Any?({ it.head.Has?('/Encrypt') }))
 		}
 
 	updateNumObj(pdfOb, s = '')

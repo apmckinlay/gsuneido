@@ -1,6 +1,6 @@
 // Copyright (C) 2002 Suneido Software Corp. All rights reserved worldwide.
 // TODO: make headings work for multiple columns (they currently only work for 1 column)
-class
+BookHelperBase
 	{
 	orderMultiplier: 10
 	CallClass(path, cols, before = false, after = false, headingLevel = 1, headings = #())
@@ -21,11 +21,12 @@ class
 			RemoveIf({ it.name is 'Cover' or it.name is 'Contents' })
 		done = Object()
 		rows = (records.Size() / cols).Ceiling()
-		page $= '\n<table width="100%">\n'
+
+		table = Object()
 		nextorder = .orderMultiplier
 		for (row = 0; row < rows; ++row)
 			{
-			s = '\n<tr>\n'
+			tableRow = Object()
 			for (col = 0; col < cols; ++col)
 				{
 				rec = col * rows + row
@@ -41,9 +42,8 @@ class
 						records[item].order.Int() % .orderMultiplier is 0 and
 						records[item].order is nextorder
 						{
-						s $= '\t' $ Xml('td',
-							Xml('h' $ (headingLevel + 1), headings[nextorder],
-							style: 'padding-top=8px; margin-bottom=0')) $ '\n'
+						tableRow.Add(.BuildHeading(headings[nextorder], headingLevel + 1,
+							style: 'padding-top=8px; margin-bottom=0'))
 						nextorder += .orderMultiplier
 						--row
 						continue
@@ -52,15 +52,14 @@ class
 					authorize = BookEnabled(book, path $ '/' $ records[item].name)
 					if authorize is "hidden"
 						continue
-					s $= '\t' $ .getLink(records[item], fullpath, book) $ '\n'
+					tableRow.Add(.getLink(records[item], fullpath, book))
 					done.Add(item)
 					}
 				}
-			s $= '\n</tr>\n'
-			if s.Has?('<td>')
-				page $= s
+			if tableRow.NotEmpty?()
+				table.Add(tableRow)
 			}
-		page $= '\n</table>\n'
+		page $= .BuildTable(table, :cols)
 		if (after isnt false)
 			page $= after
 		return page
@@ -68,24 +67,19 @@ class
 	getHeading(title, level, book)
 		{
 		title = .getImage(title, book) $ title
-		return Xml('h' $ level, title) $ '\n'
+		return .BuildHeading(title, level)
 		}
 	getLink(rec, path, book)
 		{
-		children = BookModel(book).Children(path[book.Size() + 1..] $ '/' $ rec.name)
-		sideArrow = children.Empty?() ? '' : ' &raquo;'
-
 		image = .getImage(rec.name, book)
-		return Xml('td',
-			Xml('a', image $ rec.name $ sideArrow, href: path $ '/' $ rec.name))
+		return .BuildLink(image $ rec.name, path $ '/' $ rec.name)
 		}
 	getImage(str, book)
 		{
 		images = GetContributions('BookMenuImages')
 		for s in images.Members()
 			if str.Has?(s) and .imageFound?(book, images[s])
-				return '<img src="suneido:/' $ book $ '/res/' $ images[s] $
-					 '" align="middle"> '
+				return .BuildImage(book, images[s])
 		return ''
 		}
 	imageFound?(book, name)
@@ -93,5 +87,4 @@ class
 		return false isnt Query1Cached(book $
 			' where path is "/res" and name is ' $ Display(name))
 		}
-
 	}

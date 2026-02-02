@@ -1,7 +1,7 @@
 // Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.
 ScintillaAddonForThreadTasks
 	{
-	AddonName: 		"CheckCode"
+	AddonName:		'CheckCode'
 	warningLevel:	98
 	errorLevel:		99
 	Init()
@@ -12,10 +12,6 @@ ScintillaAddonForThreadTasks
 
 		.marker_warning = .MarkerIdx(level: .warningLevel)
 		.indic_warning = .IndicatorIdx(level: .warningLevel)
-
-		.oldQcInfo = false
-		.oldLineWarnings = false
-		.oldCheckCodeResult = false
 		}
 
 	Styling()
@@ -28,22 +24,6 @@ ScintillaAddonForThreadTasks
 				marker: [SC.MARK_ROUNDRECT, back: CLR.RED],
 				indicator: [INDIC.SQUIGGLE, fore: CLR.RED]]]
 		}
-
-	Set()
-		{
-		//TODO: Used named threads when exe is released to limit # of threads to 2
-		.fastWarnings = false
-		.extraWarnings = false
-		.name = .Send(#CurrentName)
-		.table = .Send(#CurrentTable)
-		.oldQcInfo = false
-		.oldLineWarnings = false
-		.oldCheckCodeResult = false
-		.Send(#CheckCode_QualityChanged, [warningText: .MsgWhenChecking, rating: false])
-		}
-	prev_result: ''
-	prev_warnings: ()
-	prev_line_warnings: ()
 
 	Invalidate()
 		{
@@ -60,83 +40,73 @@ ScintillaAddonForThreadTasks
 		return .name isnt false and .table isnt false
 		}
 
+	prevWarnings: #(lines: (), qc: (warningText: 'init', rating: false))
 	ThreadFn(startTime)
 		{
-		.fastWarnings = .extraWarnings = false
-		.checkCodeResult = CheckCode(.code, .name, .table, .checkCodeWarnings = Object())
-		if not QcIsEnabled()
-			{
-			.Defer({ .displayWarnings(.checkCodeWarnings) },
-				uniqueID: 'CheckCodeDisplayWarns')
+		checkCodeResult = CheckCode(.code, .name, .table, checkCodeWarnings = Object())
+		if .IsOutdatedRecord(startTime)
 			return
-			}
 
-		if false isnt (.fastWarnings = .checkWarning(startTime)) and
-			false isnt (.extraWarnings = .checkWarning(startTime, extraChecks:))
-			.Defer({ .updateLibView(startTime) },  uniqueID: 'CheckCodeUpdateLibView')
+		qcWarnings = .qcWarnings()
+		if .IsOutdatedRecord(startTime)
+			return
+
+		warnings = .buildWarnings(checkCodeWarnings, qcWarnings)
+		if .updateLibView?(warnings, .prevWarnings) and not .IsOutdatedRecord(startTime)
+			.Defer({ .updateLibView(startTime, warnings, checkCodeResult) },
+				uniqueID: #Addon_check_code)
 		}
 
-	checkWarning(startTime, extraChecks = false)
+	qcWarnings()
 		{
-		if .IsOutdatedRecord(startTime)
-			return false
 		try
-			warningOb = Qc_Main(.table, .name, .code, minimizeOutput?:,
-				:extraChecks)
-		catch(e /*unused*/, "Outdated")
-			return false
-
-		return warningOb
+			if QcIsEnabled()
+				return Qc_Main.CheckWithExtra(.table, .name, .code, minimizeOutput?:)
+		catch (e /*unused*/, 'Outdated')
+			{ }
+		return Object(lines: Object(), all: Object())
 		}
 
-	MsgWhenChecking: "Checking Code..."
+	buildWarnings(checkCodeWarnings, qcWarnings)
+		{
+		warnings = Object(lines: Object(), qc: Object())
+		warnings.lines.Append(checkCodeWarnings)
+		warnings.lines.Append(qcWarnings.GetDefault('lineWarnings', #()))
+		warnings.qc.warningText =
+			Opt(.createCheckCodeText(checkCodeWarnings, .name, .table), '\n') $
+			QcContinuousWarningsOutput(qcWarnings)
+		warnings.qc.rating = Qc_Main.CalcRatings(qcWarnings)
+		return warnings
+		}
 
-	updateLibView(startTime)
+	updateLibView?(warnings, prevWarnings)
+		{
+		return warnings.qc.rating isnt prevWarnings.qc.rating or
+			warnings.qc.warningText isnt prevWarnings.qc.warningText or
+			not warnings.lines.EqualSet?(prevWarnings.lines)
+		}
+
+	updateLibView(startTime, warnings, checkCodeResult)
 		{
 		if .IsOutdatedRecord(startTime)
 			return
 
-		lineWarnings = Object()
-		curWarnings = Object()
-		lineWarnings.Append(.checkCodeWarnings)
-		if .fastWarnings isnt false
-			{
-			lineWarnings.Append(.fastWarnings.lineWarnings)
-			curWarnings.Append(.fastWarnings)
-			}
-		if .extraWarnings isnt false
-			{
-			lineWarnings.Append(.extraWarnings.lineWarnings)
-			curWarnings.Append(.extraWarnings)
-			}
+		if warnings.lines isnt .prevWarnings.lines
+			.displayWarnings(warnings.lines, checkCodeResult)
 
-		curWarningsText = QcContinuousWarningsOutput(curWarnings)
-		checkCodeText = .createCheckCodeText(.checkCodeWarnings, .name, .table)
-		qcInfo = Object()
-		qcInfo.warningText = Opt(checkCodeText, '\n') $ curWarningsText
-		if .extraWarnings is false or .fastWarnings is false
-			qcInfo.warningText = .MsgWhenChecking $ qcInfo.warningText
-		qcInfo.rating = Qc_Main.CalcRatings(curWarnings)
-
-		if lineWarnings isnt .oldLineWarnings
+		if warnings.qc isnt .prevWarnings.qc
 			{
-			.displayWarnings(lineWarnings)
-			.oldLineWarnings = lineWarnings
-			.oldCheckCodeResult = .checkCodeResult
+			.updateAnnotations(warnings.qc.warningText)
+			.Send(#CheckCode_QualityChanged, warnings.qc)
 			}
-		if qcInfo isnt .oldQcInfo
-			{
-			.updateAnnotations(qcInfo.warningText)
-			.Send("CheckCode_QualityChanged", qcInfo)
-			.oldQcInfo = qcInfo
-			}
+		.prevWarnings = warnings
 		}
 
 	updateAnnotations(allWarningsText)
 		{
 		if .Empty?() or .Destroyed?()
 			return
-		.SendToAddons("ClearAllAnnotations")
+		.SendToAddons(#ClearAllAnnotations)
 		warnings = Object()
 		for line in allWarningsText.Lines()
 			{
@@ -144,36 +114,37 @@ ScintillaAddonForThreadTasks
 				{
 				afterPrefix = line.AfterFirst(.table $ ':' $ .name $ ':')
 				lineNum = Number(afterPrefix.BeforeFirst(' ')) - 1
-				warningText = afterPrefix.AfterFirst(" - ")
+				warningText = afterPrefix.AfterFirst(' - ')
 				warnings[lineNum] = warnings.Member?(lineNum)
 					? warnings[lineNum] $ '\r\n' $ warningText
 					: warningText
 				}
 			}
 		for lineNum in warnings.Members()
-			.SendToAddons("AddAnnotation", lineNum, warnings[lineNum])
+			.SendToAddons(#AddAnnotation, lineNum, warnings[lineNum])
 		}
 
-	createCheckCodeText(warnings, .name, lib)
+	createCheckCodeText(warnings, name, lib)
 		{
-		outputText = ""
+		outputText = ''
 		for warning in warnings
 			if not warning.GetDefault('noOutput', false)
-				outputText $= '\n' $ lib $ ':' $ .name $ ':' $ (warning.line + 1) $ ' ' $
+				outputText $= '\n' $ lib $ ':' $ name $ ':' $ (warning.line + 1) $ ' ' $
 				warning.msg
 		return outputText
 		}
 
-	displayWarnings(warnings)
+	displayWarnings(warnings, checkCodeResult)
 		{
 		if .Destroyed?() or warnings is false or .Empty?()
 			return
 		.clear()
 		.processWarnings(warnings)
-		.setStatus()
+		if checkCodeResult is false
+			.Send(#Status, '\terrors', invalid:)
+		else
+			.Send(#Status, '\t ', normal:)
 		.MarkersChanged() // e.g. update overview bar
-		.prev_result = .checkCodeResult
-		.prev_warnings = warnings
 		}
 
 	clear()
@@ -189,7 +160,7 @@ ScintillaAddonForThreadTasks
 		for err in warnings
 			{
 			if err.Member?(#pos) and err.Member?(#len) and err.Member?(#msg)
-				.squiggle(err.pos, err.len, warning: err.msg.Prefix?("WARNING"))
+				.squiggle(err.pos, err.len, warning: err.msg.Prefix?('WARNING'))
 			else if err.Size(list:) >= 2 // old style qc
 				.squiggle(err[0], err[1], warning: err.GetDefault(#warning, false))
 			else
@@ -206,13 +177,5 @@ ScintillaAddonForThreadTasks
 	AddWarning(line)
 		{
 		.MarkerAdd(line, .marker_warning)
-		}
-
-	setStatus()
-		{
-		if .checkCodeResult is false
-			.Send('Status', '\terrors', invalid:)
-		else
-			.Send('Status', '\t ', normal:)
 		}
 	}

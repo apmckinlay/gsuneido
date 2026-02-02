@@ -33,6 +33,7 @@ CommandParent
 
 		if args.GetDefault('fromMultiView', false) is false
 			{
+			.Load_initial_record(args)
 			.initDefaultSelect(args)
 			.Load_initial_record(args)
 			.SetDefaultStatus()
@@ -43,22 +44,15 @@ CommandParent
 
 	initDefaultSelect(args)
 		{
-		selName = AccessSelectMgr.DefaultSelectName(this, .title, .query)
+		selName = AccessSelectMgr.DefaultSelectName(this, .Title.BeforeFirst(" - Access"),
+			.query)
 		.SetSelectMgr(selName, args)
 		.setInitialWhere(fromNew?:)
 		}
 
 	setInitialWhere(fromNew? = false)
 		{
-		if .ApplySelects(fromNew?) is false
-			return
-		if not fromNew?
-			{
-			.Select_vals.Each({ it.check = false })
-			AlertDelayed('No records found that ' $
-				'match the current select.\r\n\r\nSelection has been reset.',
-				.title, flags: MB.ICONINFORMATION)
-			}
+		.ApplySelects(fromNew?)
 		}
 
 	SetDefaultStatus()
@@ -69,23 +63,12 @@ CommandParent
 		}
 
 	accessGoTo: false
-	ApplySelects(fromNew? = false, _accessGoTo? = false)
+	ApplySelects(fromNew? /*unused*/ = false, _accessGoTo? = false)
 		{
 		.accessGoTo = accessGoTo?
 		where = SelectRepeatControl.BuildWhere(.sf, .Select_vals)
 		whereStr = .sf.Joins(where.joinflds) $ where.where
-		found = .SetWhere(whereStr, quiet:)
-		if not found and .selectMgr.HasSavedDefault? and not accessGoTo?
-			{
-			.Select_vals.Each({ it.check = false })
-			.SetWhere('', quiet:)
-			.Send('SelectControl_Changed')
-			selectType = fromNew? ? 'default' : 'current'
-			AlertDelayed('No records found that ' $
-				'match the ' $ selectType $ ' select.\r\n\r\nSelection has been cleared.',
-				.title, flags: MB.ICONINFORMATION)
-			return false
-			}
+		.SetWhere(whereStr, quiet:)
 		return true
 		}
 
@@ -163,10 +146,9 @@ CommandParent
 		.protectField = args.GetDefault("protectField", false)
 		.historyFields = args.GetDefault("historyFields", false)
 		.Addons = AddonManager(this, args.GetDefault('addons', #()))
-		// DEPRECATING: defaultNewValues is to be removed under: 33976
-		.defaultNewValues = args.GetDefault("defaultNewValues", false)
 		.nextNumber = AccessNextNum(this, args.GetDefault("nextNum", false))
-		return .SetupControls(args)
+		.ControlFillin = ControlFillin(this, layout = .SetupControls(args))
+		return layout
 		}
 	SetupControls(args)
 		{
@@ -363,7 +345,7 @@ CommandParent
 		.types.ApplyStickyValues(.record)
 		.set_position_button_state('?')
 		.Send("Access_NewRecord", data: .data.Get())
-		.applyDefaultNewValues()
+		.fillinFields(args.GetDefault('fillinData', false))
 		.data.Dirty?(rec.forceDirty is true)
 		.FocusFirst(.Vert.Scroll.Hwnd, custom: .customFields)
 		.edit_button.Pushed?(true)
@@ -376,44 +358,25 @@ CommandParent
 		return sameType? and .newrecord? and not .data.Dirty?() and	not .new_setdata?
 		}
 
-	// vvvvvvvvvvvvvvvvvvvvvvvvv DEPRECATING: vvvvvvvvvvvvvvvvvvvvvvvvv
-	// - defaultNewValues and SetDefaultNewValues is to be removed under: 33976
-	defaultNewValues: false
-	SetDefaultNewValues(values)
+	fillinFields(fillinData)
 		{
-		.new_setdata? = true
-		.defaultNewValues = values
-		}
-	applyDefaultNewValues()
-		{
-		if .defaultNewValues is false
+		if fillinData is false
 			return
+		fields = fillinData.Member?('fillinSequence')
+			? fillinData.fillinSequence
+			: fillinData.Members()
 		data = .GetData()
-		loopFields = .defaultNewValues.Member?('fillinSequence')
-			? .defaultNewValues.fillinSequence
-			: .defaultNewValues.Members()
-		.applyEachDefaultNewValue(loopFields, data)
-		data.forceDirty = .defaultNewValues.GetDefault('forceDirty', false)
-		}
-	applyEachDefaultNewValue(loopFields, data)
-		{
-		for field in loopFields
+		for field in fields
 			{
-			if .defaultNewValues[field] is ""
-				continue
-			data[field] = .defaultNewValues[field]
-			if false is fieldCtrl = .GetControl(field)
-				if false isnt tabs = .FindControl('Tabs')
-					{
-					tabs.ConstructAllTabs()
-					fieldCtrl = .GetControl(field)
-					}
-			if fieldCtrl isnt false and fieldCtrl.Base?(KeyControl)
-				fieldCtrl.Field.Process_newvalue()
+			// FillinField will return false if it fails to set the Control.
+			// This can be due to the specified Field not existing on the actual layout,
+			// IE: Internal fields
+			if not .ControlFillin.FillinField(field, fillinData, data)
+				data[field] = fillinData[field]
 			.Record_NewValue(field, data[field])
 			}
+		data.forceDirty = fillinData.GetDefault('forceDirty', false)
 		}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	On_Edit()
 		{
@@ -442,8 +405,9 @@ CommandParent
 		{
 		if .data.GetReadOnly() is true
 			{
+			focused? = .data.HasFocus?()
 			.edit_mode()
-			if not .data.HasFocus?()
+			if not focused?
 				.FocusFirst(.Vert.Scroll.Hwnd, custom: .customFields)
 			}
 		else
@@ -518,7 +482,7 @@ CommandParent
 		{
 		if not .Save()
 			return
-		if firstlast is 'first' or firstlast is 'last'
+		if #('first', 'last').Has?(firstlast)
 			.c.Rewind()
 		Transaction(read:)
 			{|t| x = .c[dir](t) }
@@ -527,23 +491,16 @@ CommandParent
 			.beep()
 			// need to check if table is empty without select
 			// in this case, we don't want to give the message
-			if .select is true and not .model.TableEmpty?() and .firstRead? is true
-				{
-				if 'deleted' isnt .CheckDeleted(quiet:)
-					.noRecordFound(dir)
-				else // current record is deleted and last in select,
-					// remove select and go to last
-					.recordDeleted()
-				return
-				}
-			this[onfail]()
+			if .select is true and not .model.TableEmpty?() and .firstRead? is true and
+				'deleted' isnt .CheckDeleted(quiet:)
+				.noRecordFound(dir)
+			else
+				this[onfail]()
+			return
 			}
-		else
-			{
-			.firstRead? = false
-			.setdata(x)
-			.set_position_button_state(firstlast)
-			}
+		.firstRead? = false
+		.setdata(x)
+		.set_position_button_state(firstlast)
 		}
 	beep() // so tests can override
 		{
@@ -560,18 +517,11 @@ CommandParent
 		Alert('No records found that match the current select',
 			.title, flags: MB.ICONINFORMATION)
 		.SetWhere("")
+		// re-open the select
 		.Defer(uniqueID: 'reopen_select_dialog') // need the orig select to close first
 			{
 			.On_Select(selected)
 			}
-		}
-	recordDeleted()
-		{
-		.setInitialWhere()
-		if not QueryEmpty?(.query)
-			.On_Last()
-		else
-			.On_New()
 		}
 
 	set_position_button_state(position)
@@ -701,7 +651,7 @@ CommandParent
 		{
 		if msg isnt false
 			.AlertError('Current Delete', msg)
-		if not ReadOnlyAccess(this)
+		if not ReadOnlyAccess(this) and not .protect
 			.Reload()
 		}
 
@@ -911,31 +861,23 @@ CommandParent
 		}
 
 	firstRead?: false
-	SetWhere(where, quiet = false, hwnd = false, extraMsg = '') // called by Select
-		{
-		if hwnd is false
-			hwnd = .Window.Hwnd
+	SetWhere(where, quiet/*unused*/= false, hwnd/*unused*/= false, extraMsg/*unused*/= '')
+		{ // called by Select
 		.select = where > ""
 		.Defer(.set_select_button_state, uniqueID: 'select_button_state')
 
 		preQuery = .GetQuery()
-		ret = .model.AddMoreToQuery(where)
+		.model.AddMoreToQuery(where)
 		if preQuery isnt .GetQuery()
 			.types.ClearStickyFieldValues()
 		.SetDefaultStatus()
-		if String?(ret) and not quiet
-			Alert(ret $ extraMsg, title: 'Select', :hwnd, flags: MB.ICONINFORMATION)
 		.firstRead? = true
-		return ret is true
+		return true
 		}
-	ModifyWhere(where, hwnd)
+	ModifyWhere(where)
 		{
 		k = .getKey()
-		if not .SetWhere(where, :hwnd, extraMsg: '\r\n\r\nSelect will be cleared')
-			{
-			.select = false
-			.Select_vals.Each({ it.check = false })
-			}
+		.SetWhere(where)
 		.firstRead? = true
 		.AccessGoto(@k)
 		if .firstRead? is true // no records matched
@@ -1021,27 +963,17 @@ CommandParent
 			}
 		}
 
-	allowCustomTabs?: false
-	Tabs_BeforeConstruct(controls)
+	GetTableName()
 		{
-		if false is idx = controls.FindIf({ it.Tab is 'Custom' })
-			return
-		.allowCustomTabs? = true
-		if false is cl = OptContribution('CustomTabPermissions', false)
-			return
-		if not String?(tableName = .Send("GetCustomizableName"))
-			tableName = .model.GetTableName()
-
-		controls.Delete(idx)
-		cl.WithPermissableTabs(tableName)
-			{ |tab|
-			controls.Add(Object('Customizable' Tab: tab, tabName: tab))
-			}
+		return .model.GetTableName()
 		}
 
 	AllowCustomTabs?()
 		{
-		return .allowCustomTabs?
+		tabs = .FindControl('Tabs')
+		return tabs isnt false
+			? tabs.Customizable?
+			: false
 		}
 
 	Valid?()

@@ -83,7 +83,7 @@ class
 		return privMethodCalls
 		}
 
-	validTokensBeforePeriod: #("return", "if", "in", "try", "while", "throw")
+	validTokensBeforePeriod: #("return", "if", "in", "try", "while", "throw", "case")
 	privateMethod?(token, prevToken, prev2Token, prev3Token, isPrev2TokenIdentifier?,
 		isPrev3TokenIdentifier?)
 		{

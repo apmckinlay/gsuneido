@@ -82,12 +82,6 @@ WndProc
 
 		return Datadict.SelectPrompt(field, excludeTags: #(Internal))
 		}
-	GetItemFormat(i)
-		{
-		item = Object(mask: HDI.FORMAT)
-		SendMessageHditem(.Hwnd, HDM.SETITEM, i, item)
-		return item.fmt
-		}
 	SetItemFormat(i, format)
 		{
 		item = Object(mask: HDI.FORMAT, fmt: format)

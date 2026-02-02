@@ -19,8 +19,8 @@ ScintillaComponent
 		if .argXmin isnt false
 			.Xmin = .argXmin
 		else
-			.Xmin = SuRender().GetTextMetrics(.El,
-				'M'.Repeat(.width is false ? 60/*=default width*/ : .width)).width
+			.Xmin = .CM.DefaultCharWidth() *
+				(.width is false ? 60/*=default width*/ : .width).Ceiling()
 		.SetMinSize()
 		}
 
@@ -40,7 +40,8 @@ ScintillaComponent
 	OnKeyDown(cm, event)
 		{
 		pressed = Object(
-			control: event.ctrlKey, shift: event.shiftKey,
+			control: event.GetDefault(#ctrlKey, false),
+			shift: event.GetDefault(#shiftKey, false),
 			alt: event.GetDefault(#altKey, false))
 		if event.key is "Enter"
 			.Event(#Enter_Pressed, :pressed)

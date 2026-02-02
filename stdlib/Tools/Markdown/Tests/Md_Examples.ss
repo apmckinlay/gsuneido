@@ -1,9 +1,35 @@
 // Copyright (C) 2025 Suneido Software Corp. All rights reserved worldwide.
 // extacted from commonmark-spec@0.31.2
+//
+// Modifications:
+// example 1, 2, 3, 13, 40
+// replaced the unicode '\xe2\x86\x92' by '\t' because the example just uses that unicode to demonstrate tab
+//
+// example 25, 26, 27, 37, 38, 39, 40
+// HTML5 entities and numeric chars should remain their values
+//
+// example 32, 33, 34, 206
+// HTML5 entities parsing is not supported in href or code's language info
+//
+// example 353
+// Unicode nonbreaking spaces are not supported as whitespaces
+//
+// example 354
+// Unicode symbols are not counted as punctuation when processing emphasis
+//
+// example 503, 506
+// Entity and numerical character references in the destination/title are not parsed
+//
+// example 540
+// Unicode case fold is not supported
+//
+// example 598, 599, 605
+// the example's html doesn't encode + and , in href/src. Our algorithm does because Url.Encode does.
+// both should be equivalent
 #(
-#(id: 1, markdown: "\tfoo\tbaz\t\tbim\n", html: "<pre><code>foo\xe2\x86\x92baz\xe2\x86\x92\xe2\x86\x92bim\n</code></pre>\n")
-#(id: 2, markdown: "  \tfoo\tbaz\t\tbim\n", html: "<pre><code>foo\xe2\x86\x92baz\xe2\x86\x92\xe2\x86\x92bim\n</code></pre>\n")
-#(id: 3, markdown: "    a\ta\n    \xe1\xbd\x90\ta\n", html: "<pre><code>a\xe2\x86\x92a\n\xe1\xbd\x90\xe2\x86\x92a\n</code></pre>\n")
+#(id: 1, markdown: "\tfoo\tbaz\t\tbim\n", html: "<pre><code>foo\tbaz\t\tbim\n</code></pre>\n")
+#(id: 2, markdown: "  \tfoo\tbaz\t\tbim\n", html: "<pre><code>foo\tbaz\t\tbim\n</code></pre>\n")
+#(id: 3, markdown: "    a\ta\n    \xe1\xbd\x90\ta\n", html: "<pre><code>a\ta\n\xe1\xbd\x90\ta\n</code></pre>\n")
 #(id: 4, markdown: "  - foo\n\n\tbar\n", html: "<ul>\n<li>\n<p>foo</p>\n<p>bar</p>\n</li>\n</ul>\n")
 #(id: 5, markdown: "- foo\n\n\t\tbar\n", html: "<ul>\n<li>\n<p>foo</p>\n<pre><code>  bar\n</code></pre>\n</li>\n</ul>\n")
 #(id: 6, markdown: ">\t\tfoo\n", html: "<blockquote>\n<pre><code>  foo\n</code></pre>\n</blockquote>\n")
@@ -13,7 +39,7 @@
 #(id: 10, markdown: "#\tFoo\n", html: "<h1>Foo</h1>\n")
 #(id: 11, markdown: "*\t*\t*\t\n", html: "<hr />\n")
 #(id: 12, markdown: "\\!\\\"\\#\\$\\%\\&\\'\\(\\)\\*\\+\\,\\-\\.\\/\\:\\;\\<\\=\\>\\?\\@\\[\\\\\\]\\^\\_\\`\\{\\|\\}\\~\n", html: "<p>!&quot;#$%&amp;'()*+,-./:;&lt;=&gt;?@[\\]^_`{|}~</p>\n")
-#(id: 13, markdown: "\\\t\\A\\a\\ \\3\\\xcf\x86\\\xc2\xab\n", html: "<p>\\\xe2\x86\x92\\A\\a\\ \\3\\\xcf\x86\\\xc2\xab</p>\n")
+#(id: 13, markdown: "\\\t\\A\\a\\ \\3\\\xcf\x86\\\xc2\xab\n", html: "<p>\\\t\\A\\a\\ \\3\\\xcf\x86\\\xc2\xab</p>\n")
 #(id: 14, markdown: '\\*not emphasized*\n\\<br/> not a tag\n\\[not a link](/foo)\n\\`not code`\n1\\. not a list\n\\* not a list\n\\# not a heading\n\\[foo]: /url "not a reference"\n\\&ouml; not a character entity\n', html: "<p>*not emphasized*\n&lt;br/&gt; not a tag\n[not a link](/foo)\n`not code`\n1. not a list\n* not a list\n# not a heading\n[foo]: /url &quot;not a reference&quot;\n&amp;ouml; not a character entity</p>\n")
 #(id: 15, markdown: "\\\\*emphasis*\n", html: "<p>\\<em>emphasis</em></p>\n")
 #(id: 16, markdown: "foo\\\nbar\n", html: "<p>foo<br />\nbar</p>\n")
@@ -25,22 +51,28 @@
 #(id: 22, markdown: '[foo](/bar\\* "ti\\*tle")\n', html: '<p><a href="/bar*" title="ti*tle">foo</a></p>\n')
 #(id: 23, markdown: '[foo]\n\n[foo]: /bar\\* "ti\\*tle"\n', html: '<p><a href="/bar*" title="ti*tle">foo</a></p>\n')
 #(id: 24, markdown: "``` foo\\+bar\nfoo\n```\n", html: '<pre><code class="language-foo+bar">foo\n</code></pre>\n')
-#(id: 25, markdown: "&nbsp; &amp; &copy; &AElig; &Dcaron;\n&frac34; &HilbertSpace; &DifferentialD;\n&ClockwiseContourIntegral; &ngE;\n", html: "<p>\xc2\xa0 &amp; \xc2\xa9 \xc3\x86 \xc4\x8e\n\xc2\xbe \xe2\x84\x8b \xe2\x85\x86\n\xe2\x88\xb2 \xe2\x89\xa7\xcc\xb8</p>\n")
-#(id: 26, markdown: "&#35; &#1234; &#992; &#0;\n", html: "<p># \xd3\x92 \xcf\xa0 \xef\xbf\xbd</p>\n")
-#(id: 27, markdown: "&#X22; &#XD06; &#xcab;\n", html: "<p>&quot; \xe0\xb4\x86 \xe0\xb2\xab</p>\n")
+#(id: 25, markdown: "&nbsp; &amp; &copy; &AElig; &Dcaron;\n&frac34; &HilbertSpace; &DifferentialD;\n&ClockwiseContourIntegral; &ngE;\n", html: "<p>&nbsp; &amp; &copy; &AElig; &Dcaron;\n&frac34; &HilbertSpace; &DifferentialD;\n&ClockwiseContourIntegral; &ngE;</p>\n")
+#(id: 26, markdown: "&#35; &#1234; &#992; &#0;\n", html: "<p>&#35; &#1234; &#992; &#0;</p>\n")
+#(id: 27, markdown: "&#X22; &#XD06; &#xcab;\n", html: "<p>&#X22; &#XD06; &#xcab;</p>\n")
 #(id: 28, markdown: "&nbsp &x; &#; &#x;\n&#87654321;\n&#abcdef0;\n&ThisIsNotDefined; &hi?;\n", html: "<p>&amp;nbsp &amp;x; &amp;#; &amp;#x;\n&amp;#87654321;\n&amp;#abcdef0;\n&amp;ThisIsNotDefined; &amp;hi?;</p>\n")
 #(id: 29, markdown: "&copy\n", html: "<p>&amp;copy</p>\n")
 #(id: 30, markdown: "&MadeUpEntity;\n", html: "<p>&amp;MadeUpEntity;</p>\n")
 #(id: 31, markdown: '<a href="&ouml;&ouml;.html">\n', html: '<a href="&ouml;&ouml;.html">\n')
-#(id: 32, markdown: '[foo](/f&ouml;&ouml; "f&ouml;&ouml;")\n', html: '<p><a href="/f%C3%B6%C3%B6" title="f\xc3\xb6\xc3\xb6">foo</a></p>\n')
-#(id: 33, markdown: '[foo]\n\n[foo]: /f&ouml;&ouml; "f&ouml;&ouml;"\n', html: '<p><a href="/f%C3%B6%C3%B6" title="f\xc3\xb6\xc3\xb6">foo</a></p>\n')
-#(id: 34, markdown: "``` f&ouml;&ouml;\nfoo\n```\n", html: '<pre><code class="language-f\xc3\xb6\xc3\xb6">foo\n</code></pre>\n')
+// NOT SUPPORTED
+//#(id: 32, markdown: '[foo](/f&ouml;&ouml; "f&ouml;&ouml;")\n', html: '<p><a href="/f%C3%B6%C3%B6" title="f\xc3\xb6\xc3\xb6">foo</a></p>\n')
+// NOT SUPPORTED
+//#(id: 33, markdown: '[foo]\n\n[foo]: /f&ouml;&ouml; "f&ouml;&ouml;"\n', html: '<p><a href="/f%C3%B6%C3%B6" title="f\xc3\xb6\xc3\xb6">foo</a></p>\n')
+// NOT SUPPORTED
+//#(id: 34, markdown: "``` f&ouml;&ouml;\nfoo\n```\n", html: '<pre><code class="language-f\xc3\xb6\xc3\xb6">foo\n</code></pre>\n')
 #(id: 35, markdown: "`f&ouml;&ouml;`\n", html: "<p><code>f&amp;ouml;&amp;ouml;</code></p>\n")
 #(id: 36, markdown: "    f&ouml;f&ouml;\n", html: "<pre><code>f&amp;ouml;f&amp;ouml;\n</code></pre>\n")
-#(id: 37, markdown: "&#42;foo&#42;\n*foo*\n", html: "<p>*foo*\n<em>foo</em></p>\n")
-#(id: 38, markdown: "&#42; foo\n\n* foo\n", html: "<p>* foo</p>\n<ul>\n<li>foo</li>\n</ul>\n")
-#(id: 39, markdown: "foo&#10;&#10;bar\n", html: "<p>foo\n\nbar</p>\n")
-#(id: 40, markdown: "&#9;foo\n", html: "<p>\xe2\x86\x92foo</p>\n")
+#(id: 37, markdown: "&#42;foo&#42;\n*foo*\n", html: "<p>&#42;foo&#42;\n<em>foo</em></p>\n")
+// KEEP NUMERIC CHARACTER
+#(id: 38, markdown: "&#42; foo\n\n* foo\n", html: "<p>&#42; foo</p>\n<ul>\n<li>foo</li>\n</ul>\n")
+// KEEP NUMERIC CHARACTER
+#(id: 39, markdown: "foo&#10;&#10;bar\n", html: "<p>foo&#10;&#10;bar</p>\n")
+// KEEP NUMERIC CHARACTER
+#(id: 40, markdown: "&#9;foo\n", html: "<p>&#9;foo</p>\n")
 #(id: 41, markdown: "[a](url &quot;tit&quot;)\n", html: "<p>[a](url &quot;tit&quot;)</p>\n")
 #(id: 42, markdown: "- `one\n- two`\n", html: "<ul>\n<li>`one</li>\n<li>two`</li>\n</ul>\n")
 #(id: 43, markdown: "***\n---\n___\n", html: "<hr />\n<hr />\n<hr />\n")
@@ -206,7 +238,8 @@
 #(id: 203, markdown: "[foo]\n\n[foo]: url\n", html: '<p><a href="url">foo</a></p>\n')
 #(id: 204, markdown: "[foo]\n\n[foo]: first\n[foo]: second\n", html: '<p><a href="first">foo</a></p>\n')
 #(id: 205, markdown: "[FOO]: /url\n\n[Foo]\n", html: '<p><a href="/url">Foo</a></p>\n')
-#(id: 206, markdown: "[\xce\x91\xce\x93\xce\xa9]: /\xcf\x86\xce\xbf\xcf\x85\n\n[\xce\xb1\xce\xb3\xcf\x89]\n", html: '<p><a href="/%CF%86%CE%BF%CF%85">\xce\xb1\xce\xb3\xcf\x89</a></p>\n')
+// NOT SUPPORTED
+//#(id: 206, markdown: "[\xce\x91\xce\x93\xce\xa9]: /\xcf\x86\xce\xbf\xcf\x85\n\n[\xce\xb1\xce\xb3\xcf\x89]\n", html: '<p><a href="/%CF%86%CE%BF%CF%85">\xce\xb1\xce\xb3\xcf\x89</a></p>\n')
 #(id: 207, markdown: "[foo]: /url\n", html: "")
 #(id: 208, markdown: "[\nfoo\n]: /url\nbar\n", html: "<p>bar</p>\n")
 #(id: 209, markdown: '[foo]: /url "title" ok\n', html: "<p>[foo]: /url &quot;title&quot; ok</p>\n")
@@ -353,8 +386,10 @@
 #(id: 350, markdown: "*foo bar*\n", html: "<p><em>foo bar</em></p>\n")
 #(id: 351, markdown: "a * foo bar*\n", html: "<p>a * foo bar*</p>\n")
 #(id: 352, markdown: 'a*"foo"*\n', html: "<p>a*&quot;foo&quot;*</p>\n")
-#(id: 353, markdown: "*\xc2\xa0a\xc2\xa0*\n", html: "<p>*\xc2\xa0a\xc2\xa0*</p>\n")
-#(id: 354, markdown: "*$*alpha.\n\n*\xc2\xa3*bravo.\n\n*\xe2\x82\xac*charlie.\n", html: "<p>*$*alpha.</p>\n<p>*\xc2\xa3*bravo.</p>\n<p>*\xe2\x82\xac*charlie.</p>\n")
+// NOT SUPPORTED
+//#(id: 353, markdown: "*\xc2\xa0a\xc2\xa0*\n", html: "<p>*\xc2\xa0a\xc2\xa0*</p>\n")
+// NOT SUPPORTED
+//#(id: 354, markdown: "*$*alpha.\n\n*\xc2\xa3*bravo.\n\n*\xe2\x82\xac*charlie.\n", html: "<p>*$*alpha.</p>\n<p>*\xc2\xa3*bravo.</p>\n<p>*\xe2\x82\xac*charlie.</p>\n")
 #(id: 355, markdown: "foo*bar*\n", html: "<p>foo<em>bar</em></p>\n")
 #(id: 356, markdown: "5*6*78\n", html: "<p>5<em>6</em>78</p>\n")
 #(id: 357, markdown: "_foo bar_\n", html: "<p><em>foo bar</em></p>\n")
@@ -503,10 +538,12 @@
 #(id: 500, markdown: "[link](foo\\)\\:)\n", html: '<p><a href="foo):">link</a></p>\n')
 #(id: 501, markdown: "[link](#fragment)\n\n[link](https://example.com#fragment)\n\n[link](https://example.com?foo=3#frag)\n", html: '<p><a href="#fragment">link</a></p>\n<p><a href="https://example.com#fragment">link</a></p>\n<p><a href="https://example.com?foo=3#frag">link</a></p>\n')
 #(id: 502, markdown: "[link](foo\\bar)\n", html: '<p><a href="foo%5Cbar">link</a></p>\n')
-#(id: 503, markdown: "[link](foo%20b&auml;)\n", html: '<p><a href="foo%20b%C3%A4">link</a></p>\n')
+// NOT SUPPORTED
+//#(id: 503, markdown: "[link](foo%20b&auml;)\n", html: '<p><a href="foo%20b%C3%A4">link</a></p>\n')
 #(id: 504, markdown: '[link]("title")\n', html: '<p><a href="%22title%22">link</a></p>\n')
 #(id: 505, markdown: "[link](/url \"title\")\n[link](/url 'title')\n[link](/url (title))\n", html: '<p><a href="/url" title="title">link</a>\n<a href="/url" title="title">link</a>\n<a href="/url" title="title">link</a></p>\n')
-#(id: 506, markdown: '[link](/url "title \\"&quot;")\n', html: '<p><a href="/url" title="title &quot;&quot;">link</a></p>\n')
+// NOT SUPPORTED
+//#(id: 506, markdown: '[link](/url "title \\"&quot;")\n', html: '<p><a href="/url" title="title &quot;&quot;">link</a></p>\n')
 #(id: 507, markdown: '[link](/url\xc2\xa0"title")\n', html: '<p><a href="/url%C2%A0%22title%22">link</a></p>\n')
 #(id: 508, markdown: '[link](/url "title "and" title")\n', html: "<p>[link](/url &quot;title &quot;and&quot; title&quot;)</p>\n")
 #(id: 509, markdown: "[link](/url 'title \"and\" title')\n", html: '<p><a href="/url" title="title &quot;and&quot; title">link</a></p>\n')
@@ -540,7 +577,8 @@
 #(id: 537, markdown: "[foo`][ref]`\n\n[ref]: /uri\n", html: "<p>[foo<code>][ref]</code></p>\n")
 #(id: 538, markdown: "[foo<https://example.com/?search=][ref]>\n\n[ref]: /uri\n", html: '<p>[foo<a href="https://example.com/?search=%5D%5Bref%5D">https://example.com/?search=][ref]</a></p>\n')
 #(id: 539, markdown: '[foo][BaR]\n\n[bar]: /url "title"\n', html: '<p><a href="/url" title="title">foo</a></p>\n')
-#(id: 540, markdown: "[\xe1\xba\x9e]\n\n[SS]: /url\n", html: '<p><a href="/url">\xe1\xba\x9e</a></p>\n')
+// NOT SUPPORTED
+//#(id: 540, markdown: "[\xe1\xba\x9e]\n\n[SS]: /url\n", html: '<p><a href="/url">\xe1\xba\x9e</a></p>\n')
 #(id: 541, markdown: "[Foo\n  bar]: /url\n\n[Baz][Foo bar]\n", html: '<p><a href="/url">Baz</a></p>\n')
 #(id: 542, markdown: '[foo] [bar]\n\n[bar]: /url "title"\n', html: '<p>[foo] <a href="/url" title="title">bar</a></p>\n')
 #(id: 543, markdown: '[foo]\n[bar]\n\n[bar]: /url "title"\n', html: '<p>[foo]\n<a href="/url" title="title">bar</a></p>\n')
@@ -598,14 +636,14 @@
 #(id: 595, markdown: "<https://foo.bar.baz/test?q=hello&id=22&boolean>\n", html: '<p><a href="https://foo.bar.baz/test?q=hello&amp;id=22&amp;boolean">https://foo.bar.baz/test?q=hello&amp;id=22&amp;boolean</a></p>\n')
 #(id: 596, markdown: "<irc://foo.bar:2233/baz>\n", html: '<p><a href="irc://foo.bar:2233/baz">irc://foo.bar:2233/baz</a></p>\n')
 #(id: 597, markdown: "<MAILTO:FOO@BAR.BAZ>\n", html: '<p><a href="MAILTO:FOO@BAR.BAZ">MAILTO:FOO@BAR.BAZ</a></p>\n')
-#(id: 598, markdown: "<a+b+c:d>\n", html: '<p><a href="a+b+c:d">a+b+c:d</a></p>\n')
-#(id: 599, markdown: "<made-up-scheme://foo,bar>\n", html: '<p><a href="made-up-scheme://foo,bar">made-up-scheme://foo,bar</a></p>\n')
+#(id: 598, markdown: "<a+b+c:d>\n", html: '<p><a href="a%2Bb%2Bc:d">a+b+c:d</a></p>\n')
+#(id: 599, markdown: "<made-up-scheme://foo,bar>\n", html: '<p><a href="made-up-scheme://foo%2Cbar">made-up-scheme://foo,bar</a></p>\n')
 #(id: 600, markdown: "<https://../>\n", html: '<p><a href="https://../">https://../</a></p>\n')
 #(id: 601, markdown: "<localhost:5001/foo>\n", html: '<p><a href="localhost:5001/foo">localhost:5001/foo</a></p>\n')
 #(id: 602, markdown: "<https://foo.bar/baz bim>\n", html: "<p>&lt;https://foo.bar/baz bim&gt;</p>\n")
 #(id: 603, markdown: "<https://example.com/\\[\\>\n", html: '<p><a href="https://example.com/%5C%5B%5C">https://example.com/\\[\\</a></p>\n')
 #(id: 604, markdown: "<foo@bar.example.com>\n", html: '<p><a href="mailto:foo@bar.example.com">foo@bar.example.com</a></p>\n')
-#(id: 605, markdown: "<foo+special@Bar.baz-bar0.com>\n", html: '<p><a href="mailto:foo+special@Bar.baz-bar0.com">foo+special@Bar.baz-bar0.com</a></p>\n')
+#(id: 605, markdown: "<foo+special@Bar.baz-bar0.com>\n", html: '<p><a href="mailto:foo%2Bspecial@Bar.baz-bar0.com">foo+special@Bar.baz-bar0.com</a></p>\n')
 #(id: 606, markdown: "<foo\\+@bar.example.com>\n", html: "<p>&lt;foo+@bar.example.com&gt;</p>\n")
 #(id: 607, markdown: "<>\n", html: "<p>&lt;&gt;</p>\n")
 #(id: 608, markdown: "< https://foo.bar >\n", html: "<p>&lt; https://foo.bar &gt;</p>\n")

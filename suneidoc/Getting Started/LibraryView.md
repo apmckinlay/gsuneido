@@ -12,9 +12,10 @@ up in the right hand pane of the Library View.  The tabs at the top of the right
 hand pane allow you to easily jump back and forth between the records you're
 working on.  You can close tabs via the pop up menu accessed by right clicking
 on a tab.
+
 ![](<../res/libview.png>)
-Library View uses a Scintilla control ([www.scintilla.org)](<http://www.scintilla.org>) to view and edit the
-source code.  Scintilla supports features like syntax styling, multiple undo
+
+Library View uses a Scintilla control ([www.scintilla.org)](<http://www.scintilla.org>) to view and edit the source code.  Scintilla supports features like syntax styling, multiple undo
 and redo, drag and drop editing, brace highlighting, indentation guides, line
 markers, folding, and calltips.
 

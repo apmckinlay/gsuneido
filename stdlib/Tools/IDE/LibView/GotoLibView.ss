@@ -46,7 +46,7 @@ class
 		if false is result = .split(name)
 			return false
 		result.list = .generateList(list, result.name, libs, line, fromFindOutput)
-		if false isnt .hasBuiltIn(name)
+		if ((libs is false or libs.Has?('Builtin')) and false isnt .hasBuiltIn(name))
 			result.list.Add('Go To Documentation')
 		.extraAddRemove(result.list, path, fromFindOutput, result.name)
 		result.line = line is false ? 1 : line
@@ -89,7 +89,7 @@ class
 		}
 	isViewName?(view_name)
 		{
-		return false isnt Query1('views', :view_name)
+		return not QueryEmpty?('views', :view_name)
 		}
 	process(name, line, path, list, scintilla)
 		{

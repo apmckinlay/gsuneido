@@ -14,8 +14,9 @@ PairControl
 					weight: HeadingControl.Weight),
 				#(Static ''))
 		heading = Object('Heading', Prompt(args[0]), size)
-		weight = args.GetDefault(#weight, 'semibold')
-		field = args.Add('NoPrompt', at: 0).Merge([:size, :weight])
-		return Object(heading, field)
+		args.Add('NoPrompt', at: 0)
+		args.size = size
+		args.weight = args.GetDefault(#weight, 'semibold')
+		return Object(heading, args)
 		}
 	}

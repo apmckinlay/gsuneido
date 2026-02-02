@@ -33,8 +33,14 @@ Window
 			}
 		return 0
 		}
+
+	destroying?: false
 	DESTROY()
 		{
+		if .destroying?
+			return 0
+
+		.destroying? = true
 		// If the master is being closed, save all windows
 		if .Master?
 			{

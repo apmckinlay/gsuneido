@@ -15,20 +15,21 @@ HtmlDivComponent
 		extraAttachments = data.GetDefault('preSignedAtttachments', #()).Copy().
 			Add(filename, at: 0)
 		list = Object()
+		fileInfo = Object(counter: 0, err: '', size: extraAttachments.Size())
 		for attach in extraAttachments
-			.download(attach, list, data)
+			.download(attach, list, data, fileInfo)
 		}
 
-	download(attach, list, data)
+	download(attach, list, data, fileInfo)
 		{
 		path = .getFileName(attach)
 		name =  Paths.Basename(path)
 		item = Object(fileContent: '', compressed: '', :name, :path, url: attach)
 		list.Add(item)
-		.downloadAttch(item, list, data)
+		.downloadAttch(item, list, data, fileInfo)
 		}
 
-	downloadAttch(item, list, data)
+	downloadAttch(item, list, data, fileInfo)
 		{
 		xhr = SuUI.MakeWebObject('XMLHttpRequest')
 		item.xhr = xhr
@@ -43,7 +44,9 @@ HtmlDivComponent
 						.allDownloaded(list, data)
 					}
 				else if String(xhr.status)[0] in ('4','5') or xhr.status is 0
-					.alertErr("Cannot find file: " $ item.name)
+					fileInfo.err $= "Cannot find file: " $ item.name $ '\n'
+				if ++fileInfo.counter is fileInfo.size and not fileInfo.err.Blank?()
+					.alertErr(fileInfo.err)
 				}
 			})
 		xhr.Open('GET', item.url)
@@ -89,7 +92,7 @@ HtmlDivComponent
 			mergeableFiles.Add(list.FindOne({ f.Suffix?(it.path) }))
 		mergedFile = Object()
 		PdfMerger(data.mergeableFiles, mergedFile,
-			compress: data.GetDefault('compress', false)
+			compress: data.GetDefault('compress?', false)
 			filesData: mergeableFiles, afterMergedAsync: { |invalidFiles|
 				if not invalidFiles.Empty?()
 					.alertErr(PdfMerger.InvalidFilesMsg(invalidFiles))
@@ -117,7 +120,7 @@ HtmlDivComponent
 			return
 			}
 
-		compress? = attachmentsSize > Email_CreateMIME.MaxSizeInMb().Mb()
+		compress? = attachmentsSize > EmailMimeMaxSizeInMb().Mb()
 		if compress? is false
 			{
 			data.listAttachments.Each({ it.compressed = it.fileData })
@@ -150,7 +153,7 @@ HtmlDivComponent
 		{
 		compressedFile = Object()
 		PdfMerger(Object(item.path), compressedFile, compress:,
-			maxCompressedFileSizeInMb: Email_CreateMIME.MaxSizeInMb(),
+			maxCompressedFileSizeInMb: EmailMimeMaxSizeInMb(),
 			filesData: Object(item)
 			afterMergedAsync: { |invalidFiles|
 				if not .compressionValid(invalidFiles)
@@ -262,7 +265,7 @@ HtmlDivComponent
 	compressNext(item, compressIdx, list, data)
 		{
 		// track total size of the attachments, if > 7MB, send as links
-		if ((.totalSize += item.compressed.Size()) > Email_CreateMIME.MaxSizeInMb().Mb())
+		if ((.totalSize += item.compressed.Size()) > EmailMimeMaxSizeInMb().Mb())
 			{
 			if data.merge_pdf? is true
 				.sendMergedPdfAsLink(data, list[0])
@@ -357,7 +360,7 @@ HtmlDivComponent
 					{
 					if retry?
 						uploadHistory[fileName] =
-							tmpName $ '_' $ xhr.status $ '_att_failed'
+							tmpName $ '_errorcode_' $ xhr.status $ '_att_failed'
 					else
 						{
 						sendHistory = .sendHistory
@@ -385,8 +388,9 @@ HtmlDivComponent
 		extraAttach = uploadHistory.Values()
 		failed = extraAttach.Filter({ it.Suffix?('_att_failed') })
 		if not failed.Empty?()
-			SuneidoLog('ERROR: (CAUGHT) Failed to upload attachments for email history, '$
-				'the email was sent successfully', params: uploadHistory)
+			SuneidoLog('ERROR: (CAUGHT) Failed to upload attachments for email history',
+				params: uploadHistory,
+				caughtMsg: "uploading retried; the email was sent successfully")
 		succeeded = extraAttach.Filter({ not it.Suffix?('_att_failed') })
 		pdfNames = [uploaded?:, extraAttach: succeeded]
 		SuRender().Event(false, 'LogEmailString', [data.from, data.to,

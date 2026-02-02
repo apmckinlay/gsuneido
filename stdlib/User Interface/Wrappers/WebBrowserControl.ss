@@ -9,37 +9,26 @@ Hwnd
 	New(what)
 		{
 		.CreateWindow('SuWhiteArrow', '', WS.VISIBLE)
-		try
+		if not WebView2.Available?()
 			{
-			if not WebView2.Available?()
-				{
-				sid = LoginSessionAddress()
-				if not sid.Prefix?('wts')
-					{
-					Alert("Microsoft WebView2 is not installed " $
-						"on your system.\n\nPlease install it using the link below" $
-						"\n\n\thttps://go.microsoft.com/fwlink/p/?LinkId=2124703",
-						"WebView2 Required")
-					ExitClient(true)
-					}
-				else
-					.webview = WebView(this)
-				}
-			else
-				.webview = WebView2(this)
+			sid = LoginSessionAddress()
+			.alert(terminalUser?: sid.Prefix?('wts'))
+			ExitClient(true)
 			}
-		catch (e, 'WebView:')
-			{
-			SuneidoLog("ERROR: (CAUGHT) Unable to create WebBrowser (" $
-				e.RemovePrefix('WebView: ') $ ')', params: [:what], caughtMsg: 'fallback')
-			.webview = WebView(this)
-			}
+		else
+			.webview = WebView2(this)
+
 		.Load(what)
 		}
 
-	WebView2?()
+	alert(terminalUser? = false)
 		{
-		return .webview.Base?(WebView2)
+		msg = "Microsoft WebView2 is not installed on this computer."
+		msg $= "\n\nPlease " $
+			(terminalUser? ? "contact your administrator to " : "") $
+				"install WebView2 using the link below:" $
+				"\n\nhttps://go.microsoft.com/fwlink/p/?LinkId=2124703"
+		Alert(msg, title: "Microsoft WebView2 Required")
 		}
 
 	Default(@args)

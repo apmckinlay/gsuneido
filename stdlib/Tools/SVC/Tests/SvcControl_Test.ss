@@ -198,26 +198,26 @@ SvcTests
 		{
 		_resultOb = Object(
 			errMap:
-			Object(svc_all_changes_etalib_Eta_Orders: 8355839,
-			svc_all_changes_etalib_Eta_TrailerMoves: 65280,
-			svc_all_changes_sujslib_JsLogin: 11196671,
-			svc_all_changes_ticketlib_Ti_Tickets: 8355839,
-			svc_all_changes_stdlib_SvcControl: 65280,
-			svc_all_changes_stdlib_Svc: 65280,
-			svc_all_changes_sujslib_JsLogin_Test: 11196671),
+			Object(svc_all_changes_test1lib_Rec1: 8355839,
+			svc_all_changes_test1lib_Rec2: 65280,
+			svc_all_changes_test2lib_Rec3: 11196671,
+			svc_all_changes_test3lib_Rec4: 8355839,
+			svc_all_changes_test4lib_Rec5: 65280,
+			svc_all_changes_test4lib_Rec6: 65280,
+			svc_all_changes_test2lib_Rec3_Test: 11196671),
 			msgMap:
-			Object(etalib_Eta_Orders: "Record has syntax error(s)",
-			sujslib_JsLogin_Test: "sujslib:JsLogin_Test rating is: 4,
+			Object(test1lib_Rec1: "Record has syntax error(s)",
+			test2lib_Rec3_Test: "test2lib:Rec3_Test rating is: 4,
 				maintain/exceed: 5\n\r\n",
-				ticketlib_Ti_Tickets: "Record has syntax error(s)",
-			sujslib_JsLogin: "sujslib:JsLogin rating is: 4,
+				test3lib_Rec4: "Record has syntax error(s)",
+			test2lib_Rec3: "test2lib:Rec3 rating is: 4,
 				maintain/exceed: 5\n\r\n"),
 			svc_all_changes:
 				Object(qualityCheck:
-				Object(Object(lib: "sujslib", results: "sujslib:JsLogin rating is: 4,
-					maintain/exceed: 5\n", name: "JsLogin"),
-				Object(lib: "sujslib", results: "sujslib:JsLogin_Test rating is: 4,
-				maintain/exceed: 5\n", name: "JsLogin_Test"))))
+				Object(Object(lib: "test2lib", results: "test2lib:Rec3 rating is: 4,
+					maintain/exceed: 5\n", name: "Rec3"),
+				Object(lib: "test2lib", results: "test2lib:Rec3_Test rating is: 4,
+				maintain/exceed: 5\n", name: "Rec3_Test"))))
 
 		cl = SvcControl
 			{
@@ -233,8 +233,8 @@ SvcTests
 
 			SvcControl_getSentChanges()
 				{
-				return Object(Object(lib: "sujslib", name: "JsLogin", type: ' '),
-					#(lib: "sujslib", name: "JsLogin_Test", type: ' '))
+				return Object(Object(lib: "test2lib", name: "Rec3", type: ' '),
+					#(lib: "test2lib", name: "Rec3_Test", type: ' '))
 				}
 			}
 
@@ -242,14 +242,14 @@ SvcTests
 
 		fn()
 
-		Assert(_resultOb.errMap is: #(svc_all_changes_etalib_Eta_Orders: 8355839,
-			svc_all_changes_etalib_Eta_TrailerMoves: 65280,
-			svc_all_changes_ticketlib_Ti_Tickets: 8355839,
-			svc_all_changes_stdlib_SvcControl: 65280,
-			svc_all_changes_stdlib_Svc: 65280))
+		Assert(_resultOb.errMap is: #(svc_all_changes_test1lib_Rec1: 8355839,
+			svc_all_changes_test1lib_Rec2: 65280,
+			svc_all_changes_test3lib_Rec4: 8355839,
+			svc_all_changes_test4lib_Rec5: 65280,
+			svc_all_changes_test4lib_Rec6: 65280))
 
-		Assert(_resultOb.msgMap is: #(etalib_Eta_Orders: "Record has syntax error(s)",
-			ticketlib_Ti_Tickets: "Record has syntax error(s)"))
+		Assert(_resultOb.msgMap is: #(test1lib_Rec1: "Record has syntax error(s)",
+			test3lib_Rec4: "Record has syntax error(s)"))
 
 		Assert(_resultOb.svc_all_changes is: #(qualityCheck: #()))
 		}

@@ -26,10 +26,10 @@ Test
 		Assert(SteppingDebuggerManager().GetSource(.lib, .name) is: s)
 
 		// add break point on "c = a + b"
-		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 29) is: true)
-		Assert(SteppingDebuggerManager().HasBreakPoints?(.lib, .name) is: true)
+		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 29))
+		Assert(SteppingDebuggerManager().HasBreakPoints?(.lib, .name))
 		// add break point on "c *= 2"
-		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 34) is: true)
+		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 34))
 		Assert(SteppingDebuggerManager().GetBreakPointRanges(.lib, .name)
 			is: Object(Object(i: 22, n: 9), Object(i: 34, n: 6)))
 
@@ -37,15 +37,15 @@ Test
 		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 21) is: false)
 		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 31) is: false)
 		// remove break point on "c = a + b"
-		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 30) is: true)
-		Assert(SteppingDebuggerManager().HasBreakPoints?(.lib, .name) is: true)
+		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 30))
+		Assert(SteppingDebuggerManager().HasBreakPoints?(.lib, .name))
 		// remove break point on "c *= 2"
-		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 34) is: true)
+		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 34))
 		Assert(SteppingDebuggerManager().HasBreakPoints?(.lib, .name) is: false)
 		Assert(SteppingDebuggerManager().GetBreakPointRanges(.lib, .name) is: #())
 
 		// add break point on "c = a + b"
-		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 29) is: true)
+		Assert(SteppingDebuggerManager().ToggleBreakPoint(.lib, .name, s, 29))
 
 		fn = Global(.name)
 		Assert(fn(1, 2) is: 6)

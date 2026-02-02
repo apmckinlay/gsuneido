@@ -3,7 +3,7 @@ Test
 	{
 	Test_closeTab?()
 		{
-		// Check is required to handle the empty Tab2Control override in sujswebgui
+		// Check is required to handle the empty stdlib:Tab2Control__webgui override
 		if not Tab2Control.Method?(#Tab2Control_closeTab?)
 			return
 		calcsMock = Mock()
@@ -37,7 +37,7 @@ Test
 
 	Test_baseImage()
 		{
-		// Check is required to handle the empty Tab2Control override in sujswebgui
+		// Check is required to handle the empty stdlib:Tab2Control__webgui override
 		if not Tab2Control.Method?(#Tab2Control_baseImage)
 			return
 		mock = Mock(Tab2Control)
@@ -63,7 +63,7 @@ Test
 
 	Test_hideTab?()
 		{
-		// Check is required to handle the empty Tab2Control override in sujswebgui
+		// Check is required to handle the empty stdlib:Tab2Control__webgui override
 		if not Tab2Control.Method?(#Tab2Control_hideTab?)
 			return
 
@@ -97,7 +97,7 @@ Test
 
 	Test_tabFullyVisible?()
 		{
-		// Check is required to handle the empty Tab2Control override in sujswebgui
+		// Check is required to handle the empty stdlib:Tab2Control__webgui override
 		if not Tab2Control.Method?(#Tab2Control_tabFullyVisible?)
 			return
 		fn = Tab2Control.Tab2Control_tabFullyVisible?
@@ -109,7 +109,7 @@ Test
 
 	Test_attemptDrag_previous()
 		{
-		// Check is required to handle the empty Tab2Control override in sujswebgui
+		// Check is required to handle the empty stdlib:Tab2Control__webgui override
 		if not Tab2Control.Method?(#Tab2Control_attemptDrag)
 			return
 
@@ -172,7 +172,7 @@ Test
 
 	Test_attemptDrag_next()
 		{
-		// Check is required to handle the empty Tab2Control override in sujswebgui
+		// Check is required to handle the empty stdlib:Tab2Control__webgui override
 		if not Tab2Control.Method?(#Tab2Control_attemptDrag)
 			return
 

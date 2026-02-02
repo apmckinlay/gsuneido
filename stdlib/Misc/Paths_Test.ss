@@ -264,7 +264,11 @@ world') is: false)											// newline
 
 	Test_Volume()
 		{
-
+		Assert(Paths.Volume("foo.bar") is: "")
+		Assert(Paths.Volume("/foo/bar.baz") is: "")
+		Assert(Paths.Volume("c:foo.bar") is: "c:")
+		Assert(Paths.Volume("c:/baz/foo.bar") is: "c:")
+		Assert(Paths.Volume(`\\server\share\foo.bar`) is: `\\server\share`)
 		}
 
 	Test_AbsToRel()

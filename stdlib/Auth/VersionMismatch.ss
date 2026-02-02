@@ -14,6 +14,9 @@ class
 			return
 
 		file = .programNamesAndSetDir()
+		if not .verifyLockFile(file)
+			return
+
 		if "" is appFolder = .getAppFolder(s)
 			{
 			.alert('Invalid configuration file, please re-install the program.\r\n' $
@@ -44,6 +47,36 @@ class
 		exeName = pos is false ? path : path[pos + 1 ..]
 		appName = exeName.Replace('\.exe', '')
 		return Object(:exeName, :appName)
+		}
+
+	verifyLockFile(file)
+		{
+		lockFile = file.exeName $ '.lock'
+		if ((false isnt lock = .getFile(lockFile)) and
+			(false isnt lockDate = Date(lock)) and
+			Date().Plus(seconds: -3) < lockDate) /*= avoid too many calls in short time */
+			return false
+
+		// will be cleaned up by .cleanUpOld
+		.putFile(lockFile, Display(Date()))
+		return true
+		}
+
+	getFile(filename)
+		{
+		try File(filename)
+			{|f|
+			return f.Read(19) /*= date string size*/
+			}
+		return false
+		}
+
+	putFile(filename, str)
+		{
+		try File(filename, 'w')
+			{ |f|
+			f.Write(str)
+			}
 		}
 
 	alert(msg, details, title)

@@ -4,7 +4,7 @@
 (name = "Rack Server", port = 80, exit = false, app, with = #())
 ```
 
-An HTTP [SocketServer](<SocketServer.md>) based on [Ruby Rack](<http://rack.rubyforge.org/doc/SPEC.html>) and [Python WSGI](<http://www.python.org/dev/peps/pep-3333>) designs. RackServer is recommended over the older [HttpServer](<HttpServer.md>). RackServer supports HTTP 1.1 persistent connections whereas HttpServer does not.
+An HTTP [SocketServer](<SocketServer.md>) based on [Ruby Rack](<http://rack.rubyforge.org/doc/SPEC.html>) and [Python WSGI](<http://www.python.org/dev/peps/pep-3333>) designs. RackServer supports HTTP 1.1 persistent connections whereas HttpServer does not.
 
 If an exception is thrown it will be logged with SuneidoLog and a '500 Internal Server Error' will be returned. Socket related exceptions are not logged.
 
@@ -39,7 +39,7 @@ The supplied app is called with (env: env) which contains:
 `body`
 : The content of the request
 
-plus the headers from the request as intepreted by InetMesg.HeaderValues.
+plus the headers from the request as interpreted by InetMesg.HeaderValues.
 
 The app should return an object with three members - the response code, an object containing response headers, and a content string. The response header members will be translated from underscores to dashes so that e.g. you can write `#(Content_Type: 'text/html')` instead of `#('Content-Type': 'text/html')`
 

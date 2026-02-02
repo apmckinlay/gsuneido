@@ -6,19 +6,8 @@ function (field, dd = false)
 	if dd.GetDefault('Unsortable', false) is true
 		return true
 
-	ctrlName = dd.Control.GetDefault(0, '')
-	if Class?(ctrlName)
-		ctrlClass = ctrlName
-	else
-		{
-		if not ctrlName.Suffix?('Control')
-			ctrlName $= 'Control'
-		try
-			ctrlClass = Global(ctrlName)
-		catch (err /*unused*/, "can't find")
-			return false
-		}
-
+	if false is ctrlClass = GetControlClass.FromControl(dd.Control)
+		return false
 	// can't use GetDefault on a class
 	return ctrlClass.Member?('Unsortable') and ctrlClass.Unsortable
 	}

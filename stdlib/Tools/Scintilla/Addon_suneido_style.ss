@@ -13,7 +13,12 @@ Addon_base_style
 	Init()
 		{
 		super.Init()
-		.copyStyles = Object(
+		.copyStyles = .DefaultStyles()
+		}
+
+	DefaultStyles()
+		{
+		return Object(
 			DEFAULT:	'',
 			COMMENT:	'color:' $
 				ToCssColor(IDE_ColorScheme.GetColor('comment', 'default')),
@@ -33,18 +38,7 @@ Addon_base_style
 		s = .GetSelText()
 		if s.Size() is 0
 			return
-		s = s.Detab()
-		scan = Scanner(s)
-		prev = ''
-		ss = `<pre style="line-height:normal;">`
-		do
-			{
-			type = scan.Next2()
-			style = ScintillaStyle.TokenStyle(type, scan, prev, s, .copyStyles)
-			ss $= .wrap(scan.Text(), style)
-			}
-		while scan isnt type
-		ss $= '</pre>'
+		ss = .BuildWithStyles(s, .copyStyles)
 		ClipboardWriteHtml(ss, add?:)
 		}
 
@@ -53,5 +47,21 @@ Addon_base_style
 		if style is ''
 			return s
 		return '<span style="' $ style $ '">' $ XmlEntityEncode(s) $ '</span>'
+		}
+
+	BuildWithStyles(s, styles)
+		{
+		s = s.Detab()
+		scan = Scanner(s)
+		prev = ''
+		ss = `<pre style="line-height:normal;">`
+		do
+			{
+			type = scan.Next2()
+			style = ScintillaStyle.TokenStyle(type, scan, prev, s, styles)
+			ss $= .wrap(scan.Text(), style)
+			}
+		while scan isnt type
+		ss $= '</pre>'
 		}
 	}

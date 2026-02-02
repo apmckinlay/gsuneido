@@ -1,6 +1,10 @@
 // Copyright (C) 2014 Suneido Software Corp. All rights reserved worldwide.
 GdiDriver
 	{
+	New(.pdc = 0)
+		{
+		}
+
 	metaFile?: false
 	AddPage(dimens)
 		{
@@ -13,9 +17,9 @@ GdiDriver
 
 	createMetaFile(dimens, file = 0)
 		{
-		f = 2540; // inches to .01 mm
+		f = 2540 // inches to .01 mm
 		r = Object(right: dimens.width * f, bottom: dimens.height * f)
-		emfdc = CreateEnhMetaFile(Suneido.pdc, file, r, NULL)
+		emfdc = CreateEnhMetaFile(.pdc, file, r, NULL)
 
 		SetupGdiDeviceScale(emfdc)
 		// Cannot switch to WithBkMode as the end point is ambiguous

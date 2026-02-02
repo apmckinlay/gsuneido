@@ -236,17 +236,15 @@ class
 			' and userselect_title is ' $ Display(name)
 		}
 
-	std_parent_controls: #(Window Dialog ModalWindow BookBrowserControl PersistentWindow)
 	DefaultSelectName(ctrl, title, query)
 		{
+		selectName = ListCustomize.BuildCustomKeyFromQueryTitle(query, title)
 		if 0 isnt overrideSelect? = ctrl.Send('OverrideSelectManager?')
+			{
 			return overrideSelect?
 				? ''
-				// for Multiview, Access.Flip.Mulview.ControlRequired
-				: Display(ctrl.Parent.Parent.Parent)[.. -2]
-		name = Display(ctrl.Parent)[.. -2]
-		if .std_parent_controls.Has?(name) and title !~ query
-			name = title
-		return name
+				: selectName
+			}
+		return selectName
 		}
 	}

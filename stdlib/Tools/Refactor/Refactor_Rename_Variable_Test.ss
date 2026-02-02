@@ -22,11 +22,11 @@ Test
 		{
 		te = Refactor_Rename_Variable.ToExists?
 		src = 'function (a, .b, _c, ._d) { e .f f: #f }'
-		Assert(te(src, 'a') is: true)
-//		Assert(te(src, 'b') is: true)
-//		Assert(te(src, 'c') is: true)
-//		Assert(te(src, 'd') is: true)
-		Assert(te(src, 'e') is: true)
+		Assert(te(src, 'a'))
+//		Assert(te(src, 'b'))
+//		Assert(te(src, 'c'))
+//		Assert(te(src, 'd'))
+		Assert(te(src, 'e'))
 		Assert(te(src, 'f') is: false)
 		}
 	}

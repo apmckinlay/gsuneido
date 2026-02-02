@@ -65,4 +65,9 @@ class
 		{
 		return Url.EncodeValues(params.Copy().RemoveIf(#Blank?).Map!(#ToUtf8).Sort!())
 		}
+
+	Log(path, s)
+		{
+		Rlog(path, s, multi_line:)
+		}
 	}

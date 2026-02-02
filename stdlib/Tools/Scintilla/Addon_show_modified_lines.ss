@@ -100,17 +100,18 @@ ScintillaAddonForThreadTasks
 		return .name not in (0,'') and .table not in (0,'')
 		}
 
+	prevChangedLines: #()
 	ThreadFn(startTime)
 		{
 		changedLines = .getChangedLines(.rec.lib_before_text, .text)
-		if .IsOutdatedRecord(startTime)
+		if .IsOutdatedRecord(startTime) or .prevChangedLines.EqualSet?(changedLines)
 			return
 
 		.Defer(uniqueID: 'modified_lines')
 			{
 			if not .Destroyed?() and not .IsOutdatedRecord(startTime)
 				{
-				.addDiffMarkers(changedLines)
+				.addDiffMarkers(.prevChangedLines = changedLines)
 				.MarkersChanged()
 				}
 			}
@@ -162,7 +163,13 @@ ScintillaAddonForThreadTasks
 
 	Invalidate()
 		{
-		.IdleAfterChange()
+		super.IdleAfterChange() // Do not clear: .prevChangedLines on Invalidate
+		}
+
+	IdleAfterChange() // Explicit modification, next ThreadFn call should run
+		{
+		.prevChangedLines = #(false)
+		super.IdleAfterChange()
 		}
 
 	ContextMenu()

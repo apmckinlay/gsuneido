@@ -36,7 +36,15 @@ Controller
 		if .oldFileName is filename
 			return 'File not renamed'
 
-		return .attemptToRename(.getCopyToFilename(filename))
+		newFilePath = .getCopyToFilename(filename)
+		if newFilePath.Size() > CheckFileName.MaxAllowedFileNameChars
+			{
+			.AlertInfo('Invalid file name',
+				'Destination path is too long. Please choose a shorter file name')
+			return false
+			}
+
+		return .attemptToRename(newFilePath)
 		}
 
 	valid(filename)
@@ -81,7 +89,13 @@ Controller
 			.AlertInfo('Rename Attachment', e)
 			if AttachmentS3Bucket() isnt ''
 				return false
-			DeleteFile(newFilePath)
+
+			// Do not delete the file if it's the rename itself that failed
+			// due to potential network hiccups, it's possible the rename could have
+			// failed because an existnig file with the same name could already exist
+			// a delete at this point would delete an unrealed file.
+			if not e.Has?('Failed to rename attachment')
+				DeleteFile(newFilePath)
 			return false
 			}
 		return true
@@ -112,6 +126,9 @@ Controller
 			return ''
 			}
 
+		// if the copy itself fails we don't want to delete
+		// there is the potential that we could be deleting an already existing
+		// attachment that is linked somewhere else
 		if true isnt CopyFile(.fullPath, newFilePath, true)
 			return 'Failed to rename attachment'
 

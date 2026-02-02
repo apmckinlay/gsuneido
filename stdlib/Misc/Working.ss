@@ -7,7 +7,7 @@ Controller
 		if quiet? or not Sys.GUI?()
 			{
 			block()
-			return
+			return true
 			}
 
 		message = TranslateLanguage(message)

@@ -131,26 +131,22 @@ Controller
 		}
 	On_Context_Delete()
 		{
-		if .readonly
+		if false is field = .getFieldForDelete()
 			return
-
-		msg = ''
-		if false is field = .fieldList.GetDefault(.list.GetSelected(), false)
-			msg = 'Could not find field to delete'
-
-		if msg isnt '' or '' isnt msg = .c.CustomField_AllowDelete(field)
-			{
-			.AlertInfo('Can Not Delete', 'In order to delete (' $ Prompt(field) $
-				') please remove from the following places:\r\n' $ .formatMsg(msg))
-			return
-			}
 
 		prompt = .list.Get()
 		warning = 'Are you sure? Deleting a field cannot be undone. \r\n' $
 			'If you proceed you will no longer be able to access this field.\r\n'
 		if false isnt tab = .check_field_used(field)
+			{
+			if tab.Prefix?('a tab that you do not have permission to')
+				{
+				.AlertInfo('Can Not Delete', 'This field exists on ' $ tab)
+				return
+				}
 			warning = prompt  $ ' field is already selected on ' $
 				tab $ '\r\n' $ warning
+			}
 
 		if ToolDialog(.Window.Hwnd, [.warningDialog, warning])
 			{
@@ -160,6 +156,24 @@ Controller
 			if Object?(.browse_custom_fields)
 				.browse_custom_fields.Add(field)
 			}
+		}
+
+	getFieldForDelete()
+		{
+		if .readonly
+			return false
+
+		msg = ''
+		if false is field = .fieldList.GetDefault(.list.GetSelected(), false)
+			msg = 'Could not find field to delete'
+
+		if msg isnt '' or '' isnt msg = .c.CustomField_AllowDelete(field)
+			{
+			.AlertInfo('Can Not Delete', 'In order to delete (' $ Prompt(field) $
+				') please remove from the following places:\r\n' $ .formatMsg(msg))
+			return false
+			}
+		return field
 		}
 
 	formatMsg(msg)
@@ -244,21 +258,21 @@ Controller
 		{
 		.add_field(i)
 		}
+
 	On_Add_Field_to_Layout()
 		{
-		csf = .getCurrentlySelectedField()
-		if  false is csf
-			return
-		.add_field(csf)
+		if false isnt csf = .getCurrentlySelectedField()
+			.add_field(csf)
 		}
+
 	getCurrentlySelectedField()
 		{
-		if .list.GetCurSel() is -1
+		if -1 is sel = .list.GetCurSel()
 			{
-			Alert("Please select a field")
+			.AlertInfo(.AlertTitle, 'Please select a field')
 			return false
 			}
-		return .list.GetCurSel()
+		return sel
 		}
 
 	validateTabName(name)
@@ -344,7 +358,11 @@ Controller
 
 	On_Custom_Tabs_Rename_Current_Tab()
 		{
-		selected = .tabs_ctrl.GetSelected()
+		if -1 is selected = .tabs_ctrl.GetSelected()
+			{
+			.AlertInfo('Rename Tab', 'Please select a tab to rename.')
+			return
+			}
 		oldName = .tabs_ctrl.TabName(selected)
 		if not .c.TabCustom?(oldName)
 			{
@@ -396,7 +414,11 @@ Controller
 		}
 	On_Custom_Tabs_Remove_Current_Tab()
 		{
-		selected = .tabs_ctrl.GetSelected()
+		if -1 is selected = .tabs_ctrl.GetSelected()
+			{
+			.AlertInfo('Remove Tab', 'Please select a tab to remove.')
+			return
+			}
 		name = .tabs_ctrl.TabName(selected)
 		if not .c.TabCustom?(name)
 			{
@@ -410,7 +432,8 @@ Controller
 
 		.c.HideLayout(name)
 		.tabs_ctrl.Remove(selected)
-		.tabs_ctrl.Select(selected is 0 ? 0 : selected - 1)
+		if .tabs_ctrl.GetTabCount() isnt 0
+			.tabs_ctrl.Select(selected is 0 ? 0 : selected - 1)
 		.markFieldsChanged()
 		}
 	On_Custom_Tabs_Restore_Tab()
@@ -442,7 +465,7 @@ Controller
 			return
 			}
 		i = .getCurrentlySelectedField()
-		if  false is i
+		if false is i
 			return
 		field = .fieldList[.list.GetData(i)]
 		textSelectedRow = .list.GetText(i)
@@ -502,16 +525,18 @@ Controller
 			return
 			}
 
-		field = .fieldList[.list.GetData(i)]
-		prompt = .list.GetText(i)
-		if false isnt tab = .check_field_used(field)
+		if false is editor = .tabs_ctrl.GetControl()
 			{
-			.AlertError('Customizable', "This field is already selected on " $ tab)
+			.AlertInfo(.AlertTitle, 'Please select a tab to add the Custom Field to.')
 			return
 			}
 
-		editor = .FindControl('Tabs').GetControl()
-		editor.Paste(prompt $ ' ')
+		field = .fieldList[.list.GetData(i)]
+		prompt = .list.GetText(i)
+		if false isnt tab = .check_field_used(field)
+			.AlertError(.AlertTitle, 'This field is already selected on ' $ tab)
+		else
+			editor.Paste(prompt $ ' ')
 		}
 	getRecord() // for tests
 		{
