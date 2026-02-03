@@ -284,3 +284,19 @@ func BenchmarkCatN(b *testing.B) {
 		th.sp = 0
 	}
 }
+
+func TestReturnMulti(t *testing.T) {
+	var th Thread
+	th.frames[0].fn = &SuFunc{Code: string([]byte{byte(op.ReturnMulti), 3})}
+	th.fp = 1
+	th.Push(True)
+	th.Push(Zero)
+	th.Push(One)
+	result := th.interp()
+	assert.T(t).This(th.sp).Is(0)
+	assert.T(t).This(result).Is(nil)
+	assert.T(t).This(len(th.ReturnMulti)).Is(3)
+	assert.T(t).This(th.ReturnMulti[0]).Is(One)
+	assert.T(t).This(th.ReturnMulti[1]).Is(Zero)
+	assert.T(t).This(th.ReturnMulti[2]).Is(True)
+}
