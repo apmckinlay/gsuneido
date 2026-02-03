@@ -73,6 +73,9 @@ test:
 racetest:
 	go test -race -short -count=1 ./...
 
+sujs:
+	go build -ldflags "-s -w" -o sujs_$(GOOS)_$(GOARCH)$(EXE) ./cmd/sujs
+
 zap:
 	go build -ldflags "-s -w" ./cmd/zap
 
@@ -135,4 +138,4 @@ help:
 	@echo "    remove built files"
 
 .PHONY : build test generate clean zap race racetest release \
-    help deploy git-status both gui tlskey FORCE
+    help deploy git-status both gui tlskey FORCE sujs

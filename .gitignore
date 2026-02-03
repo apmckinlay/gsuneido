@@ -31,3 +31,6 @@ suneido.dbd
 server.crt
 server.key
 *.in
+sujs_darwin_*
+sujs_linux_*
+sujs_windows_*
