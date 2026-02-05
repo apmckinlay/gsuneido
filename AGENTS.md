@@ -28,10 +28,9 @@ gSuneido is the Go implementation of the Suneido integrated language and databas
 - use `make` to build the project (**not** `go build`)
 
 ## Testing
-- use `make test` to run all the tests for the project
+- use `make test` to run all the tests for the project (the makefile already uses `go test -short -timeout=30s`)
 - **IMPORTANT** Do not change directories with cd to run tests
-- **IMPORTANT** run Go tests with `-short`
-- **IMPORTANT** run Go tests with `-timeout=30s`
+- **IMPORTANT** If you run `go test` directly (instead of `make test`), include: `-short -timeout=30s`
 
 ## Tooling
 - **gopls MCP**: Use the `gopls` MCP server tools to navigate, understand, and verify the Go codebase.
