@@ -39,7 +39,7 @@ func main() {
 			"Use('configlib'); "+
 			"Use('demobookoptions'); "+
 			"Use('Test_lib'); "+
-			"RunSuJSHttpServer()")
+			"RunSuJSHttpServer(3248)")
 	err := cmd.Start()
 	if err != nil {
 		log.Fatal(err)
