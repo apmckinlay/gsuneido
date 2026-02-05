@@ -329,6 +329,22 @@ func (d SuDate) Format(fmt string) string {
 				add(d.Second() / 10)
 			}
 			add(d.Second() % 10)
+		case 'S': // milliseconds
+			ms := d.Millisecond()
+			switch {
+			case n <= 1:
+				add(ms / 100)
+			case n == 2:
+				add(ms / 100)
+				add((ms / 10) % 10)
+			default:
+				add(ms / 100)
+				add((ms / 10) % 10)
+				add(ms % 10)
+				for ; n > 3; n-- {
+					add(0)
+				}
+			}
 		case 'a':
 			if d.Hour() < 12 {
 				dst.WriteRune('a')

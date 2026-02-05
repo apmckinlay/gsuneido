@@ -222,6 +222,9 @@ func TestDateFormat(t *testing.T) {
 	format("20140108.093855", "h:mm:ss", "9:38:55")
 	format("20140108.103855", "h:mm:ss", "10:38:55")
 	format("20140108.093855", "h 'h:mm:ss' s", "9 h:mm:ss 55")
+	format("20140108.103855123", "HH:mm:ss.S", "10:38:55.1")
+	format("20140108.103855987", "HH:mm:ss.SS", "10:38:55.98")
+	format("20140108.103855123", "HH:mm:ss.SSS", "10:38:55.123")
 }
 
 func TestParseDate(t *testing.T) {
