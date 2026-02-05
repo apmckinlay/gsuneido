@@ -81,6 +81,14 @@ loop:
 					error("invalid web port number")
 				}
 			}
+		case match(&args, "-mcp"):
+			McpServer = true
+			args = optEqualArg(args, &McpPort)
+			if McpPort != "" {
+				if _, ok := atoui(McpPort); !ok {
+					error("invalid mcp port number")
+				}
+			}
 		case match(&args, "-printstates"):
 			setAction("printstates")
 		case match(&args, "-checkstates"):

@@ -27,6 +27,8 @@ var (
 	IgnoreVersion  bool
 	WebServer      bool
 	WebPort        string
+	McpServer      bool
+	McpPort        string
 	TimeoutMinutes = 2 * 60 // 2 hours
 	Passphrase     string   // used with -load
 )

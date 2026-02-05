@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"runtime/metrics"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	"github.com/apmckinlay/gsuneido/dbms"
+	"github.com/apmckinlay/gsuneido/mcp"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
@@ -42,6 +44,7 @@ var help = `options:
 	-d[ump] [table]
 	-h[elp] or -?
 	-l[oad] [table] (or @filename)
+	-mcp[=#] (default -port + 2, localhost only)
 	-p[ass]p[hrase]=string (for -load)
 	-p[ort][=#] (default 3147)
 	-repair
@@ -228,6 +231,9 @@ func main() {
 			options.DbStatus.Store("")
 			startHttpStatus()
 		}
+		if options.McpServer {
+			startMcp()
+		}
 	}
 	if mode == "gui" {
 		run("Init()")
@@ -317,6 +323,18 @@ func stopServer() {
 	httpServer.Close()
 	dbms.StopServer()
 	exit.Progress("server stopped")
+}
+
+func startMcp() {
+	port := "3149"
+	if options.McpPort != "" {
+		port = options.McpPort
+	} else if options.Port != "" {
+		p, _ := strconv.Atoi(options.Port)
+		port = strconv.Itoa(p + 1)
+	}
+	mcp.Start(port)
+	exit.Add("stop mcp", mcp.Stop)
 }
 
 var db *db19.Database
