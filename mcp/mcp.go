@@ -166,7 +166,7 @@ var toolSpecs = []toolSpec{
 		},
 	},
 	{
-		name:        "suneido_get_code",
+		name:        "suneido_read_code",
 		description: "Get the source code from a library for a specific name",
 		params: []stringParam{
 			{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
@@ -192,6 +192,22 @@ var toolSpecs = []toolSpec{
 				return nil, err
 			}
 			return codeTool(library, name, startLine, plain)
+		},
+	},
+	{
+		name:        "suneido_read_book",
+		description: "Read from a Suneido book (documentation) table. Returns a JSON object containing the page 'text' and a 'children' array of sub-topic names.",
+		params: []stringParam{
+			{name: "book", description: "Name of the book table (e.g. 'suneidoc')", required: true},
+			{name: "path", description: "The path to the book page. If sub-topics are returned in 'children', append them to this path to dive deeper. (e.g. 'Database/Reference/Query'). Empty or omitted for root.", required: false},
+		},
+		handler: func(ctx context.Context, args map[string]any) (any, error) {
+			book, err := requireString(args, "book")
+			if err != nil {
+				return nil, err
+			}
+			path := optionalString(args, "path")
+			return bookTool(book, path)
 		},
 	},
 	{
@@ -238,6 +254,11 @@ func requireString(args map[string]any, name string) (string, error) {
 		return "", errors.New(name + " must be a string")
 	}
 	return s, nil
+}
+
+func optionalString(args map[string]any, name string) string {
+	s, _ := args[name].(string)
+	return s
 }
 
 func optionalInt(args map[string]any, name string, def int) (int, error) {
