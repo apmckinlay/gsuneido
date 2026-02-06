@@ -6,12 +6,12 @@ package mcp
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/mark3labs/mcp-go/mcp"
 )
-
-// Tool definitions -------------------------------------------------
 
 // libraries
 var _ = addTool(toolSpec{
@@ -134,6 +134,47 @@ type readCodeOutput struct {
 	StartLine  int    `json:"start_line" jsonschema:"description=1-based starting line number for the snippet"`
 	TotalLines int    `json:"total_lines" jsonschema:"description=Total number of lines in the definition"`
 	HasMore    bool   `json:"has_more,omitempty" jsonschema:"description=True when additional lines remain past the snippet"`
+}
+
+// search_code
+var _ = addTool(toolSpec{
+	name:        "suneido_search_code",
+	description: "Search library code by regex on library, name, and text",
+	params: []stringParam{
+		{name: "library", description: "Regular expression applied to library names", required: true, kind: paramString},
+		{name: "name", description: "Regular expression applied to definition names (optional if code provided)", required: false, kind: paramString},
+		{name: "code", description: "Regular expression applied to definition text (optional if name provided)", required: false, kind: paramString},
+		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
+	},
+	outputSchema: mcp.WithOutputSchema[searchCodeOutput](),
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		libraryRx, err := requireString(args, "library")
+		if err != nil {
+			return nil, err
+		}
+		nameRx := optionalString(args, "name")
+		codeRx := optionalString(args, "code")
+		if strings.TrimSpace(nameRx) == "" && strings.TrimSpace(codeRx) == "" {
+			return nil, fmt.Errorf("name or code is required")
+		}
+		caseSensitive, err := optionalBool(args, "case_sensitive", false)
+		if err != nil {
+			return nil, err
+		}
+		return searchTool(libraryRx, nameRx, codeRx, caseSensitive)
+	},
+})
+
+type searchCodeOutput struct {
+	Matches []codeMatch `json:"matches" jsonschema:"description=List of matching library/name pairs"`
+	HasMore bool        `json:"has_more,omitempty" jsonschema:"description=True when additional matches were truncated"`
+}
+
+type codeMatch struct {
+	Library string `json:"library" jsonschema:"description=Library name"`
+	Name    string `json:"name" jsonschema:"description=Definition name"`
+	Path    string `json:"path" jsonschema:"description=Folder path within the library"`
+	Line    string `json:"line" jsonschema:"description=Matching line of source code with line number prefix"`
 }
 
 // read_book
