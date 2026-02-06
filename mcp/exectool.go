@@ -44,7 +44,7 @@ func execTool(code string) (result execOutput, err error) {
 	return
 }
 
-func checkTool(code string) (result execOutput, err error) {
+func checkTool(code string) (result checkCodeOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("check error: %v", r)
@@ -58,10 +58,9 @@ func checkTool(code string) (result execOutput, err error) {
 	src := "function () {\n" + code + "\n}"
 	_, warnings := compile.Checked(th, src)
 
-	result = execOutput{
+	result = checkCodeOutput{
 		Code:     code,
 		Warnings: warnings,
-		Results:  "",
 	}
 	return
 }

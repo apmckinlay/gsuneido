@@ -59,12 +59,10 @@ func TestCheckTool(t *testing.T) {
 		result, err := checkTool("1 + 2 \n")
 		assert.That(err == nil)
 		assert.That(len(result.Warnings) == 0)
-		assert.This(result.Results).Is("")
 	}
 	{
 		result, err := checkTool("x = 1; y = 2")
 		assert.That(err == nil)
-		assert.This(result.Results).Is("")
 		assert.That(strings.Contains(result.Warnings[0], "initialized but not used: x"))
 		assert.That(strings.Contains(result.Warnings[1], "initialized but not used: y"))
 	}
