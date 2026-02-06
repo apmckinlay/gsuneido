@@ -52,3 +52,33 @@ func TestExecTool(t *testing.T) {
 		assert.This(err.Error()).Is("execute error: uninitialized variable: x")
 	}
 }
+
+func TestCheckTool(t *testing.T) {
+	assert := assert.T(t)
+	{
+		result, err := checkTool("1 + 2 \n")
+		assert.That(err == nil)
+		assert.That(len(result.Warnings) == 0)
+		assert.This(result.Results).Is("")
+	}
+	{
+		result, err := checkTool("x = 1; y = 2")
+		assert.That(err == nil)
+		assert.This(result.Results).Is("")
+		assert.That(strings.Contains(result.Warnings[0], "initialized but not used: x"))
+		assert.That(strings.Contains(result.Warnings[1], "initialized but not used: y"))
+	}
+	{
+		_, err := checkTool("throw 'exception'")
+		assert.That(err == nil) // checkTool should not throw errors for exceptions in code
+	}
+	{
+		_, err := checkTool("x")
+		assert.That(err == nil) // checkTool should not throw errors for uninitialized variables
+	}
+	{
+		_, err := checkTool("if true") // syntax error - missing block
+		assert.That(err != nil)
+		assert.That(strings.Contains(err.Error(), "check error: syntax error"))
+	}
+}

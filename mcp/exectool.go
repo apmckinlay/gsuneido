@@ -43,3 +43,25 @@ func execTool(code string) (result execOutput, err error) {
 	}
 	return
 }
+
+func checkTool(code string) (result execOutput, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("check error: %v", r)
+		}
+	}()
+
+	th := core.NewThread(core.MainThread)
+	defer th.Close()
+
+	code = strings.TrimSpace(code)
+	src := "function () {\n" + code + "\n}"
+	_, warnings := compile.Checked(th, src)
+
+	result = execOutput{
+		Code:     code,
+		Warnings: warnings,
+		Results:  "",
+	}
+	return
+}

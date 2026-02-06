@@ -276,6 +276,19 @@ var toolSpecs = []toolSpec{
 			return execTool(code)
 		},
 	},
+	{
+		name:         "suneido_check_code",
+		description:  "Checks Suneido code for syntax and compilation errors without executing it. Returns compiler warnings only.",
+		params:       []stringParam{{name: "code", description: "Suneido code to check (as the body of a function)", required: true}},
+		outputSchema: mcp.WithOutputSchema[execOutput](),
+		handler: func(ctx context.Context, args map[string]any) (any, error) {
+			code, err := requireString(args, "code")
+			if err != nil {
+				return nil, err
+			}
+			return checkTool(code)
+		},
+	},
 }
 
 func makeTool(name, desc string, outputSchema mcp.ToolOption, params ...stringParam) mcp.Tool {
