@@ -152,7 +152,7 @@ type readBookOutput struct {
 type execOutput struct {
 	Code     string   `json:"code" jsonschema:"description=The code that was executed"`
 	Warnings []string `json:"warnings" jsonschema:"description=Compiler warnings"`
-	Results  string   `json:"results" jsonschema:"description=Formatted return values"`
+	Results  string   `json:"results" jsonschema:"description=0, 1, or multiple return values as Suneido-format strings"`
 }
 
 var toolSpecs = []toolSpec{
@@ -260,12 +260,9 @@ var toolSpecs = []toolSpec{
 	},
 	{
 		name: "suneido_execute",
-		description: "Executes Suneido code for its return value or side effects (e.g., database updates). Returns a text report containing:\n" +
-			"- code: The code that was executed.\n" +
-			"- results: Array of 0, 1, or multiple return values as Suneido-format strings (Value.String())\n" +
-			"- warnings: Array of compiler warnings\n" +
-			"Note: A single returned object will appear as the first result (e.g., [[1,2]]), while multiple return values appear as separate elements (e.g., [1,2])." +
-			"Use this for calculations, data manipulation, or system commands.",
+		description: "Executes Suneido code for its result or side effects.\n" +
+			"Use this for calculations, data manipulation, or system commands.\n" +
+			"Note: A single returned object will appear as the first result (e.g., [[1,2]]), while multiple return values appear as separate elements (e.g., [1,2]).",
 		params:       []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
 		outputSchema: mcp.WithOutputSchema[execOutput](),
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
