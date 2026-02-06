@@ -149,6 +149,12 @@ type readBookOutput struct {
 	Children []string `json:"children" jsonschema:"description=Child topic names at this path"`
 }
 
+type codeFoldersOutput struct {
+	Library  string   `json:"library" jsonschema:"description=Library name the folders were loaded from"`
+	Path     string   `json:"path" jsonschema:"description=Normalized folder path"`
+	Children []string `json:"children" jsonschema:"description=Child items at this path (folders end with '/')"`
+}
+
 type execOutput struct {
 	Code     string   `json:"code" jsonschema:"description=The code that was executed"`
 	Warnings []string `json:"warnings" jsonschema:"description=Compiler warnings"`
@@ -256,6 +262,26 @@ var toolSpecs = []toolSpec{
 			}
 			path := optionalString(args, "path")
 			return bookTool(book, path)
+		},
+	},
+	{
+		name:        "suneido_code_folders",
+		description: "List folders and code items under a library path",
+		params: []stringParam{
+			{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
+			{name: "path", description: "Folder path within the library (e.g. 'Debugging/Tests', empty string for root)", required: true, kind: paramString},
+		},
+		outputSchema: mcp.WithOutputSchema[codeFoldersOutput](),
+		handler: func(ctx context.Context, args map[string]any) (any, error) {
+			library, err := requireString(args, "library")
+			if err != nil {
+				return nil, err
+			}
+			path, err := requireString(args, "path")
+			if err != nil {
+				return nil, err
+			}
+			return codeFoldersTool(library, path)
 		},
 	},
 	{
