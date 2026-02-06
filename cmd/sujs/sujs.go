@@ -73,6 +73,8 @@ func main() {
 	w.Run()
 
 	if !finished {
+		// give the server a chance to clean up the client
+		time.Sleep(200 * time.Millisecond)
 		client := &http.Client{Timeout: 100 * time.Millisecond}
 		_, err = client.Post("http://localhost:3248/shutdown", "text/plain", nil)
 		if err != nil {
