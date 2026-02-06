@@ -20,7 +20,7 @@ func tablesTool(prefix string) (tables []string, err error) {
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	tran := core.GetDbms().Transaction(false)
+	tran := th.Dbms().Transaction(false)
 	defer tran.Complete()
 
 	q := tran.Query(tablesQuery(prefix), nil)

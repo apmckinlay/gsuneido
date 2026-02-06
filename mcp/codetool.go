@@ -20,16 +20,16 @@ func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, 
 	if startLine < 1 {
 		return readCodeOutput{}, fmt.Errorf("start_line must be >= 1")
 	}
-	libs := core.GetDbms().Libraries()
+	
+	th := core.NewThread(core.MainThread)
+	defer th.Close()
+	libs := th.Dbms().Libraries()
 	if !slices.Contains(libs, library) {
 		return readCodeOutput{}, fmt.Errorf("library not found: %s", library)
 	}
 
 	query := fmt.Sprintf("%s where group = -1 and name = '%s'", library, name)
-
-	th := core.NewThread(core.MainThread)
-	defer th.Close()
-	tran := core.GetDbms().Transaction(false)
+	tran := th.Dbms().Transaction(false)
 	defer tran.Complete()
 	q := tran.Query(query, nil)
 	hdr := q.Header()

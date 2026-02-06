@@ -18,7 +18,7 @@ func bookTool(book, path string) (readBookOutput, error) {
 	}
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	tran := core.GetDbms().Transaction(false)
+	tran := th.Dbms().Transaction(false)
 	defer tran.Complete()
 	st := core.NewSuTran(tran, false)
 
