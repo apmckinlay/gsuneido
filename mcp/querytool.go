@@ -13,7 +13,7 @@ import (
 
 const queryLimit = 100
 
-func queryTool(query string) (result string, err error) {
+func queryTool(query string) (result queryOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("query failed: %v", r)
@@ -40,7 +40,12 @@ func queryTool(query string) (result string, err error) {
 		}
 		rows = append(rows, vals)
 	}
-	return formatQueryResult(cols, rows, truncated), nil
+	result = queryOutput{
+		Query:   query,
+		Results: formatQueryResult(cols, rows, truncated),
+		HasMore: truncated,
+	}
+	return result, nil
 }
 
 func formatQueryResult(cols []string, rows [][]core.Value, truncated bool) string {

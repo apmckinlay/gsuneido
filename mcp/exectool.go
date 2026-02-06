@@ -5,7 +5,6 @@ package mcp
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -13,7 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func exectool(code string) (result string, err error) {
+func execTool(code string) (result execOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("execute error: %v", r)
@@ -37,22 +36,10 @@ func exectool(code string) (result string, err error) {
 			results = append(results, th.ReturnMulti[i].String())
 		}
 	}
-	result = fmt.Sprintf("{\n"+
-		"code: %q\n"+
-		"warnings: %s\n"+
-		"results: %s\n"+
-		"}",
-		code, quotedCommaList(warnings), str.Join("[, ]", results))
+	result = execOutput{
+		Code:     code,
+		Warnings: warnings,
+		Results:  str.Join("[, ]", results),
+	}
 	return
-}
-
-func quotedCommaList(ss []string) string {
-	if len(ss) == 0 {
-		return "[]"
-	}
-	qs := make([]string, len(ss))
-	for i, s := range ss {
-		qs[i] = strconv.Quote(s)
-	}
-	return "[" + strings.Join(qs, ", ") + "]"
 }

@@ -10,10 +10,11 @@
   "tools": {
     "bash": false,
     "edit": false,
-    "write": false,
+    "write": true,
     "read": false,
     "grep": false,
     "glob": false,
-    "list": false
+    "list": false,
+    "webfetch": false
   }
 }

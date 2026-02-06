@@ -36,29 +36,26 @@ func TestBookTool(t *testing.T) {
 	// root children (path not supplied)
 	res, err := bookTool("mybook", "")
 	assert.That(err == nil)
-	m := res.(map[string]any)
-	assert.This(m["book"]).Is("mybook")
-	assert.This(m["path"]).Is("")
-	assert.This(m["text"]).Is("")
-	children := m["children"].([]string)
+	assert.This(res.Book).Is("mybook")
+	assert.This(res.Path).Is("")
+	assert.This(res.Text).Is("")
+	children := res.Children
 	assert.This(len(children)).Is(2)
 
 	// root children (path supplied)
 	res, err = bookTool("mybook", "/")
 	assert.That(err == nil)
-	m = res.(map[string]any)
-	assert.This(m["book"]).Is("mybook")
-	assert.This(m["path"]).Is("")
-	assert.This(m["text"]).Is("")
-	children = m["children"].([]string)
+	assert.This(res.Book).Is("mybook")
+	assert.This(res.Path).Is("")
+	assert.This(res.Text).Is("")
+	children = res.Children
 	assert.This(len(children)).Is(2)
 
 	// text and children, sorted by order then name
 	res, err = bookTool("mybook", "Reference")
 	assert.That(err == nil)
-	m = res.(map[string]any)
-	assert.This(m["text"]).Is("ref text")
-	children = m["children"].([]string)
+	assert.This(res.Text).Is("ref text")
+	children = res.Children
 	assert.This(len(children)).Is(2)
 	assert.This(children[0]).Is("Array")
 	assert.This(children[1]).Is("Date")
@@ -66,26 +63,23 @@ func TestBookTool(t *testing.T) {
 	// also works with leading /
 	res, err = bookTool("mybook", "/Reference")
 	assert.That(err == nil)
-	m = res.(map[string]any)
-	assert.This(m["text"]).Is("ref text")
-	children = m["children"].([]string)
+	assert.This(res.Text).Is("ref text")
+	children = res.Children
 	assert.This(len(children)).Is(2)
 
 	// deeper path
 	res, err = bookTool("mybook", "Reference/Date")
 	assert.That(err == nil)
-	m = res.(map[string]any)
-	assert.This(m["text"]).Is("date text")
-	children = m["children"].([]string)
+	assert.This(res.Text).Is("date text")
+	children = res.Children
 	assert.This(len(children)).Is(1)
 	assert.This(children[0]).Is("FormatEn")
 
 	// leaf with no children
 	res, err = bookTool("mybook", "Reference/Date/FormatEn")
 	assert.That(err == nil)
-	m = res.(map[string]any)
-	assert.This(m["text"]).Is("format text")
-	assert.This(len(m["children"].([]string))).Is(0)
+	assert.This(res.Text).Is("format text")
+	assert.This(len(res.Children)).Is(0)
 }
 
 func TestSplitPath(t *testing.T) {

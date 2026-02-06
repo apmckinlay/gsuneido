@@ -70,7 +70,7 @@ func Stop() {
 func addTools(s *server.MCPServer) {
 	for _, spec := range toolSpecs {
 		spec := spec
-		t := makeTool(spec.name, spec.description, spec.params...)
+		t := makeTool(spec.name, spec.description, spec.outputSchema, spec.params...)
 		s.AddTool(t, func(ctx context.Context, request mcp.CallToolRequest) (result *mcp.CallToolResult, err error) {
 			defer func() {
 				if r := recover(); r != nil {
@@ -107,25 +107,69 @@ const (
 )
 
 type toolSpec struct {
-	name        string
-	description string
-	params      []stringParam
-	handler     func(context.Context, map[string]any) (any, error)
+	name         string
+	description  string
+	params       []stringParam
+	outputSchema mcp.ToolOption
+	handler      func(context.Context, map[string]any) (any, error)
+}
+
+type librariesOutput struct {
+	Libraries []string `json:"libraries" jsonschema:"description=List of libraries currently in use"`
+}
+
+type tablesOutput struct {
+	Tables []string `json:"tables" jsonschema:"description=Table names matching the requested prefix"`
+}
+
+type schemaOutput struct {
+	Schema string `json:"schema" jsonschema:"description=Schema definition for the requested table"`
+}
+
+type queryOutput struct {
+	Query   string `json:"query" jsonschema:"description=Query string that was executed"`
+	Results string `json:"results" jsonschema:"description=Formatted row/column output"`
+	HasMore bool   `json:"has_more,omitempty" jsonschema:"description=True when additional rows were truncated"`
+}
+
+type readCodeOutput struct {
+	Plain      bool   `json:"plain" jsonschema:"description=Whether line numbers were omitted"`
+	Library    string `json:"library" jsonschema:"description=Library name the definition was loaded from"`
+	Name       string `json:"name" jsonschema:"description=Definition name"`
+	Text       string `json:"text" jsonschema:"description=The source code content"`
+	StartLine  int    `json:"start_line" jsonschema:"description=1-based starting line number for the snippet"`
+	TotalLines int    `json:"total_lines" jsonschema:"description=Total number of lines in the definition"`
+	HasMore    bool   `json:"has_more,omitempty" jsonschema:"description=True when additional lines remain past the snippet"`
+}
+
+type readBookOutput struct {
+	Book     string   `json:"book" jsonschema:"description=Book table name"`
+	Path     string   `json:"path" jsonschema:"description=Normalized page path"`
+	Text     string   `json:"text" jsonschema:"description=Book page text"`
+	Children []string `json:"children" jsonschema:"description=Child topic names at this path"`
+}
+
+type execOutput struct {
+	Code     string   `json:"code" jsonschema:"description=The code that was executed"`
+	Warnings []string `json:"warnings" jsonschema:"description=Compiler warnings"`
+	Results  string   `json:"results" jsonschema:"description=Formatted return values"`
 }
 
 var toolSpecs = []toolSpec{
 	{
-		name:        "suneido_libraries",
-		description: "Get a list of the libraries currently in use in Suneido",
+		name:         "suneido_libraries",
+		description:  "Get a list of the libraries currently in use in Suneido",
+		outputSchema: mcp.WithOutputSchema[librariesOutput](),
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			libs := core.GetDbms().Libraries()
-			return map[string]any{"libraries": libs}, nil
+			return librariesOutput{Libraries: libs}, nil
 		},
 	},
 	{
-		name:        "suneido_tables",
-		description: "Get a list of database table names that start with the given prefix (limit of 100)",
-		params:      []stringParam{{name: "prefix", description: "Only return tables whose names start with this prefix (empty string for all)", required: true}},
+		name:         "suneido_tables",
+		description:  "Get a list of database table names that start with the given prefix (limit of 100)",
+		params:       []stringParam{{name: "prefix", description: "Only return tables whose names start with this prefix (empty string for all)", required: true}},
+		outputSchema: mcp.WithOutputSchema[tablesOutput](),
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			prefix, err := requireString(args, "prefix")
 			if err != nil {
@@ -135,20 +179,21 @@ var toolSpecs = []toolSpec{
 			if err != nil {
 				return nil, err
 			}
-			return map[string]any{"tables": tables}, nil
+			return tablesOutput{Tables: tables}, nil
 		},
 	},
 	{
-		name:        "suneido_schema",
-		description: "Get the schema for a Suneido database table",
-		params:      []stringParam{{name: "table", description: "Name of the table to get schema for", required: true}},
+		name:         "suneido_schema",
+		description:  "Get the schema for a Suneido database table",
+		params:       []stringParam{{name: "table", description: "Name of the table to get schema for", required: true}},
+		outputSchema: mcp.WithOutputSchema[schemaOutput](),
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			table, err := requireString(args, "table")
 			if err != nil {
 				return nil, err
 			}
 			schema := core.GetDbms().Schema(table)
-			return map[string]any{"schema": schema}, nil
+			return schemaOutput{Schema: schema}, nil
 		},
 	},
 	{
@@ -157,6 +202,7 @@ var toolSpecs = []toolSpec{
 		params: []stringParam{
 			{name: "query", description: "Suneido query (e.g. 'tables sort table')", required: true},
 		},
+		outputSchema: mcp.WithOutputSchema[queryOutput](),
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			qs, err := requireString(args, "query")
 			if err != nil {
@@ -174,6 +220,7 @@ var toolSpecs = []toolSpec{
 			{name: "start_line", description: "1-based line number to start from (default 1)", required: false, kind: paramNumber},
 			{name: "plain", description: "If true, don't add line numbers (default false)", required: false, kind: paramBool},
 		},
+		outputSchema: mcp.WithOutputSchema[readCodeOutput](),
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			library, err := requireString(args, "library")
 			if err != nil {
@@ -201,6 +248,7 @@ var toolSpecs = []toolSpec{
 			{name: "book", description: "Name of the book table (e.g. 'suneidoc')", required: true},
 			{name: "path", description: "The path to the book page. If sub-topics are returned in 'children', append them to this path to dive deeper. (e.g. 'Database/Reference/Query'). Empty or omitted for root.", required: false},
 		},
+		outputSchema: mcp.WithOutputSchema[readBookOutput](),
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			book, err := requireString(args, "book")
 			if err != nil {
@@ -218,32 +266,33 @@ var toolSpecs = []toolSpec{
 			"- warnings: Array of compiler warnings\n" +
 			"Note: A single returned object will appear as the first result (e.g., [[1,2]]), while multiple return values appear as separate elements (e.g., [1,2])." +
 			"Use this for calculations, data manipulation, or system commands.",
-		params: []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
+		params:       []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
+		outputSchema: mcp.WithOutputSchema[execOutput](),
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			code, err := requireString(args, "code")
 			if err != nil {
 				return nil, err
 			}
-			return exectool(code)
+			return execTool(code)
 		},
 	},
 }
 
-func makeTool(name, desc string, params ...stringParam) mcp.Tool {
-	opts := []mcp.ToolOption{mcp.WithDescription(desc)}
+func makeTool(name, desc string, outputSchema mcp.ToolOption, params ...stringParam) mcp.Tool {
+	opts := []mcp.ToolOption{mcp.WithDescription(desc), outputSchema}
 	for _, p := range params {
 		prop := []mcp.PropertyOption{mcp.Description(p.description)}
 		if p.required {
 			prop = append(prop, mcp.Required())
 		}
-	switch p.kind {
-	case paramNumber:
-		opts = append(opts, mcp.WithNumber(p.name, prop...))
-	case paramBool:
-		opts = append(opts, mcp.WithBoolean(p.name, prop...))
-	default:
-		opts = append(opts, mcp.WithString(p.name, prop...))
-	}
+		switch p.kind {
+		case paramNumber:
+			opts = append(opts, mcp.WithNumber(p.name, prop...))
+		case paramBool:
+			opts = append(opts, mcp.WithBoolean(p.name, prop...))
+		default:
+			opts = append(opts, mcp.WithString(p.name, prop...))
+		}
 	}
 	return mcp.NewTool(name, opts...)
 }

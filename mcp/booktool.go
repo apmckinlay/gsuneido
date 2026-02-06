@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 )
 
-func bookTool(book, path string) (any, error) {
+func bookTool(book, path string) (readBookOutput, error) {
 	if path == "/" {
 		path = ""
 	} else if path != "" && path[0] != '/' {
@@ -24,17 +24,17 @@ func bookTool(book, path string) (any, error) {
 
 	text, err := bookText(th, tran, st, book, path)
 	if err != nil {
-		return nil, err
+		return readBookOutput{}, err
 	}
 	children, err := bookChildren(th, tran, st, book, path)
 	if err != nil {
-		return nil, err
+		return readBookOutput{}, err
 	}
-	return map[string]any{
-		"book":     book,
-		"path":     path,
-		"text":     text,
-		"children": children,
+	return readBookOutput{
+		Book:     book,
+		Path:     path,
+		Text:     text,
+		Children: children,
 	}, nil
 }
 

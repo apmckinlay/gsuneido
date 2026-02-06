@@ -13,42 +13,42 @@ import (
 func TestExecTool(t *testing.T) {
 	assert := assert.T(t)
 	{
-		result, err := exectool("1 + 2 \n")
+		result, err := execTool("1 + 2 \n")
 		assert.That(err == nil)
-		assert.That(strings.Contains(result, "warnings: []"))
-		assert.That(strings.Contains(result, "results: [3]"))
+		assert.That(len(result.Warnings) == 0)
+		assert.This(result.Results).Is("[3]")
 	}
 	{
-		result, err := exectool("return")
+		result, err := execTool("return")
 		assert.That(err == nil)
-		assert.That(strings.Contains(result, "warnings: []"))
-		assert.That(strings.Contains(result, "results: []"))
+		assert.That(len(result.Warnings) == 0)
+		assert.This(result.Results).Is("[]")
 	}
 	{
-		result, err := exectool("return 123")
+		result, err := execTool("return 123")
 		assert.That(err == nil)
-		assert.That(strings.Contains(result, "warnings: []"))
-		assert.That(strings.Contains(result, "results: [123]"))
+		assert.That(len(result.Warnings) == 0)
+		assert.This(result.Results).Is("[123]")
 	}
 	{
-		result, err := exectool("return 1, 'string'")
+		result, err := execTool("return 1, 'string'")
 		assert.That(err == nil)
-		assert.That(strings.Contains(result, "warnings: []"))
-		assert.That(strings.Contains(result, `results: [1, "string"]`))
+		assert.That(len(result.Warnings) == 0)
+		assert.This(result.Results).Is(`[1, "string"]`)
 	}
 	{
-		result, err := exectool("x = 1; y = 2")
+		result, err := execTool("x = 1; y = 2")
 		assert.That(err == nil)
-		assert.That(strings.Contains(result, "results: [2]"))
-		assert.That(strings.Contains(result, "WARNING: initialized but not used: x @14"))
-		assert.That(strings.Contains(result, "WARNING: initialized but not used: y @21"))
+		assert.This(result.Results).Is("[2]")
+		assert.That(strings.Contains(result.Warnings[0], "initialized but not used: x"))
+		assert.That(strings.Contains(result.Warnings[1], "initialized but not used: y"))
 	}
 	{
-		_, err := exectool("throw 'exception'")
+		_, err := execTool("throw 'exception'")
 		assert.This(err.Error()).Is(`execute error: "exception"`)
 	}
 	{
-		_, err := exectool("x")
+		_, err := execTool("x")
 		assert.This(err.Error()).Is("execute error: uninitialized variable: x")
 	}
 }

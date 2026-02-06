@@ -13,16 +13,16 @@ import (
 
 const codeLineLimit = 400
 
-func codeTool(library, name string, startLine int, plain bool) (any, error) {
+func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, error) {
 	if !isValidName(name) {
-		return nil, fmt.Errorf("invalid name: %s", name)
+		return readCodeOutput{}, fmt.Errorf("invalid name: %s", name)
 	}
 	if startLine < 1 {
-		return nil, fmt.Errorf("start_line must be >= 1")
+		return readCodeOutput{}, fmt.Errorf("start_line must be >= 1")
 	}
 	libs := core.GetDbms().Libraries()
 	if !slices.Contains(libs, library) {
-		return nil, fmt.Errorf("library not found: %s", library)
+		return readCodeOutput{}, fmt.Errorf("library not found: %s", library)
 	}
 
 	query := fmt.Sprintf("%s where group = -1 and name = '%s'", library, name)
@@ -35,34 +35,32 @@ func codeTool(library, name string, startLine int, plain bool) (any, error) {
 	hdr := q.Header()
 	row, _ := q.Get(th, core.Next)
 	if row == nil {
-		return nil, fmt.Errorf("code not found for: %s in %s", name, library)
+		return readCodeOutput{}, fmt.Errorf("code not found for: %s in %s", name, library)
 	}
 
 	st := core.NewSuTran(tran, false)
 	val := row.GetVal(hdr, "text", th, st)
 	if val == nil {
-		return nil, fmt.Errorf("text column not found or null")
+		return readCodeOutput{}, fmt.Errorf("text column not found or null")
 	}
 
 	text, ok := val.ToStr()
 	if !ok {
-		return nil, fmt.Errorf("text column is not a string")
+		return readCodeOutput{}, fmt.Errorf("text column is not a string")
 	}
 
 	snippet, totalLines, hasMore := sliceCode(text, startLine, codeLineLimit)
 	if !plain {
 		snippet = addLineNumbers(snippet, startLine)
 	}
-	result := map[string]any{
-		"plain":       plain,
-		"library":     library,
-		"name":        name,
-		"text":        snippet,
-		"start_line":  startLine,
-		"total_lines": totalLines,
-	}
-	if hasMore {
-		result["has_more"] = true
+	result := readCodeOutput{
+		Plain:      plain,
+		Library:    library,
+		Name:       name,
+		Text:       snippet,
+		StartLine:  startLine,
+		TotalLines: totalLines,
+		HasMore:    hasMore,
 	}
 	return result, nil
 }

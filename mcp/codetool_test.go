@@ -41,26 +41,22 @@ func TestCodeTool(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := res.(map[string]any)
-	assert.This(m["library"]).Is("stdlib")
-	assert.This(m["name"]).Is("Foo")
-	assert.This(m["text"]).Is("function(){}")
-	assert.This(m["start_line"]).Is(1)
-	assert.This(m["total_lines"]).Is(1)
-	_, ok := m["has_more"]
-	assert.That(!ok)
+	assert.This(res.Library).Is("stdlib")
+	assert.This(res.Name).Is("Foo")
+	assert.This(res.Text).Is("function(){}")
+	assert.This(res.StartLine).Is(1)
+	assert.This(res.TotalLines).Is(1)
+	assert.That(!res.HasMore)
 
 	// Test start_line past end
 	res, err = codeTool("stdlib", "Foo", 2, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m = res.(map[string]any)
-	assert.This(m["text"]).Is("")
-	assert.This(m["start_line"]).Is(2)
-	assert.This(m["total_lines"]).Is(1)
-	_, ok = m["has_more"]
-	assert.That(ok)
+	assert.This(res.Text).Is("")
+	assert.This(res.StartLine).Is(2)
+	assert.This(res.TotalLines).Is(1)
+	assert.That(res.HasMore)
 
 	// Test invalid library
 	_, err = codeTool("nonexistent", "Foo", 1, true)
