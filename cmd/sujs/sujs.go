@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -16,6 +17,13 @@ import (
 )
 
 func main() {
+	// Redirect stdout and stderr to error.log
+	logFile, err := os.OpenFile("error.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logFile.Close()
+
 	exe := fmt.Sprintf("./gs_%s_%s", runtime.GOOS, runtime.GOARCH)
 	if runtime.GOOS == "windows" {
 		exe += ".exe"
@@ -40,7 +48,9 @@ func main() {
 			"Use('demobookoptions'); "+
 			"Use('Test_lib'); "+
 			"RunSuJSHttpServer(3248)")
-	err := cmd.Start()
+	cmd.Stdout = logFile
+	cmd.Stderr = logFile
+	err = cmd.Start()
 	if err != nil {
 		log.Fatal(err)
 	}
