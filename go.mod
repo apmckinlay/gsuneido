@@ -5,6 +5,7 @@ go 1.25
 require (
 	github.com/ProtonMail/go-crypto v1.3.0
 	github.com/ProtonMail/gopenpgp/v2 v2.9.0
+	github.com/aymanbagabas/go-udiff v0.3.1
 	github.com/google/uuid v1.6.0
 	github.com/kljensen/snowball v0.10.0
 	github.com/mark3labs/mcp-go v0.43.2

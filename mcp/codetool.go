@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
+	"github.com/aymanbagabas/go-udiff"
 )
 
 const codeLineLimit = 400
@@ -39,14 +40,13 @@ func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, 
 	}
 
 	st := core.NewSuTran(tran, false)
-	val := row.GetVal(hdr, "text", th, st)
-	if val == nil {
-		return readCodeOutput{}, fmt.Errorf("text column not found or null")
-	}
+	text := core.ToStr(row.GetVal(hdr, "text", th, st))
 
-	text, ok := val.ToStr()
-	if !ok {
-		return readCodeOutput{}, fmt.Errorf("text column is not a string")
+	beforeText := core.ToStr(row.GetVal(hdr, "lib_before_text", th, st))
+	var diff *string
+	if beforeText != "" && text != "" {
+		ud := udiff.Unified("old", "new", beforeText, text)
+		diff = &ud
 	}
 
 	snippet, totalLines, hasMore := sliceCode(text, startLine, codeLineLimit)
@@ -58,6 +58,7 @@ func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, 
 		Library:    library,
 		Name:       name,
 		Text:       snippet,
+		Diff:       diff,
 		StartLine:  startLine,
 		TotalLines: totalLines,
 		HasMore:    hasMore,

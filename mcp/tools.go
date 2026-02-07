@@ -6,8 +6,6 @@ package mcp
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -127,15 +125,16 @@ var _ = addTool(toolSpec{
 })
 
 type readCodeOutput struct {
-	Plain        bool   `json:"plain" jsonschema:"description=Whether line numbers were omitted"`
-	Library      string `json:"library" jsonschema:"description=Library name the definition was loaded from"`
-	Name         string `json:"name" jsonschema:"description=Definition name"`
-	Text         string `json:"text" jsonschema:"description=The source code content"`
-	StartLine    int    `json:"start_line" jsonschema:"description=1-based starting line number for the returned text"`
-	TotalLines   int    `json:"total_lines" jsonschema:"description=Total number of lines in the definition"`
-	HasMore      bool   `json:"has_more,omitempty" jsonschema:"description=True when additional lines remain past the returned text"`
-	Modified  string `json:"modified,omitempty" jsonschema:"description=Date/time when the record was last modified"`
-	Committed string `json:"committed,omitempty" jsonschema:"description=Date/time when the record was last committed to version control"`
+	Plain      bool    `json:"plain" jsonschema:"description=Whether line numbers were omitted"`
+	Library    string  `json:"library" jsonschema:"description=Library name the definition was loaded from"`
+	Name       string  `json:"name" jsonschema:"description=Definition name"`
+	Text       string  `json:"text" jsonschema:"description=The source code content"`
+	Diff       *string `json:"diff,omitempty" jsonschema:"description=Unified diff when lib_before_text is available"`
+	StartLine  int     `json:"start_line" jsonschema:"description=1-based starting line number for the returned text"`
+	TotalLines int     `json:"total_lines" jsonschema:"description=Total number of lines in the definition"`
+	HasMore    bool    `json:"has_more,omitempty" jsonschema:"description=True when additional lines remain past the returned text"`
+	Modified   string  `json:"modified,omitempty" jsonschema:"description=Date/time when the record was last modified"`
+	Committed  string  `json:"committed,omitempty" jsonschema:"description=Date/time when the record was last committed to version control"`
 }
 
 // search_code
@@ -147,7 +146,7 @@ var _ = addTool(toolSpec{
 		{name: "name", description: "Regular expression applied to definition names (optional if code provided)", required: false, kind: paramString},
 		{name: "code", description: "Regular expression applied to definition text (optional if name provided)", required: false, kind: paramString},
 		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
-		{name: "modified", description: "If true, only return results where lib_modified is not empty (default false)", required: false, kind: paramBool},
+		{name: "modified", description: "If true, only return results where the code has been modified", required: false, kind: paramBool},
 	},
 	outputSchema: mcp.WithOutputSchema[searchCodeOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -157,9 +156,6 @@ var _ = addTool(toolSpec{
 		}
 		nameRx := optionalString(args, "name")
 		codeRx := optionalString(args, "code")
-		if strings.TrimSpace(nameRx) == "" && strings.TrimSpace(codeRx) == "" {
-			return nil, fmt.Errorf("name or code is required")
-		}
 		caseSensitive, err := optionalBool(args, "case_sensitive", false)
 		if err != nil {
 			return nil, err

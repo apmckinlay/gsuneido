@@ -20,12 +20,12 @@ func TestCodeTool(t *testing.T) {
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	// Create stdlib table
-	dbmsLocal.Admin("create stdlib (name, text, group) key(name, group)", nil)
+	dbmsLocal.Admin("create stdlib (name, text, lib_before_text, group) key(name, group)", nil)
 
 	// Insert a record
 	th := core.NewThread(core.MainThread)
 	tran := dbmsLocal.Transaction(true)
-	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', group: -1 } into stdlib")
+	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', lib_before_text: '', group: -1 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
 
@@ -47,6 +47,7 @@ func TestCodeTool(t *testing.T) {
 	assert.This(res.StartLine).Is(1)
 	assert.This(res.TotalLines).Is(1)
 	assert.That(!res.HasMore)
+	assert.This(res.Diff).Is(nil)
 
 	// Test start_line past end
 	res, err = codeTool("stdlib", "Foo", 2, true)
@@ -57,6 +58,7 @@ func TestCodeTool(t *testing.T) {
 	assert.This(res.StartLine).Is(2)
 	assert.This(res.TotalLines).Is(1)
 	assert.That(res.HasMore)
+	assert.That(res.Diff == nil)
 
 	// Test invalid library
 	_, err = codeTool("nonexistent", "Foo", 1, true)

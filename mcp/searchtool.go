@@ -16,11 +16,6 @@ import (
 const searchLimit = 100
 
 func searchTool(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) (result searchCodeOutput, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("search code failed: %v", r)
-		}
-	}()
 	if strings.TrimSpace(nameRx) == "" && strings.TrimSpace(codeRx) == "" && !modified {
 		return searchCodeOutput{}, fmt.Errorf("name or code is required (unless modified is true)")
 	}
@@ -184,8 +179,6 @@ func lineAt(text string, pos int) string {
 	}
 	return text[start:end]
 }
-
-
 
 type folderInfo struct {
 	name   string
