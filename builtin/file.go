@@ -42,6 +42,13 @@ var _ = builtin(File, "(filename, mode='r', block=false)")
 
 func File(th *Thread, args []Value) Value {
 	name := ToStr(args[0])
+	if sandboxed() {
+		path, err := sandboxPath("File", name)
+		if err != nil {
+			panic(err.Error())
+		}
+		name = path
+	}
 	mode := ToStr(args[1])
 	sf := newSuFile(name, mode)
 	nFile.Add(1)

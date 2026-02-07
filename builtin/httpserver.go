@@ -21,6 +21,7 @@ import (
 var _ = builtin(HttpServer, `(port, app, stop = false)`)
 
 func HttpServer(th *Thread, args []Value) Value {
+	guardSandbox("HttpServer")
 	port := ToInt(args[0])
 	addr := fmt.Sprint(":", port)
 	server := &http.Server{

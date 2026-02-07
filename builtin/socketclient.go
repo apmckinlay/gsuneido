@@ -28,6 +28,7 @@ var _ = builtin(SocketClient,
 	"(ipaddress, port, timeout=60, timeoutConnect=0, block=false)")
 
 func SocketClient(th *Thread, args []Value) Value {
+	guardSandbox("SocketClient")
 	ipaddr := ToStr(args[0])
 	port := ToInt(args[1])
 	ipaddr += ":" + strconv.Itoa(port)

@@ -27,6 +27,7 @@ func init() {
 }
 
 func ssCallClass(th *Thread, as *ArgSpec, this Value, args []Value) Value {
+	guardSandbox("SocketServer")
 	if OnUIThread() {
 		panic("SocketServer not allowed on UI thread")
 	}

@@ -32,6 +32,20 @@ var _ = builtin(CopyFile, "(from, to, failIfExists)")
 func CopyFile(th *Thread, args []Value) Value {
 	from := ToStr(args[0])
 	to := ToStr(args[1])
+	if sandboxed() {
+		fromPath, err := sandboxPath("CopyFile", from)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("CopyFile: " + err.Error())
+		}
+		toPath, err := sandboxPath("CopyFile", to)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("CopyFile: " + err.Error())
+		}
+		from = fromPath
+		to = toPath
+	}
 	failIfExists := ToBool(args[2])
 	th.ReturnThrow = true
 

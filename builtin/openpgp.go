@@ -147,10 +147,23 @@ func opgpStr[T any](key T, source Value, f encdec[T]) Value {
 }
 
 func opgpFile[T any](key T, fromFile, toFile Value, f encdec[T]) Value {
-	src, err := os.Open(ToStr(fromFile))
+	from := ToStr(fromFile)
+	to := ToStr(toFile)
+	if sandboxed() {
+		fromPath, err := sandboxPath("OpenPGP", from)
+		if err != nil {
+			panic(err.Error())
+		}
+		toPath, err := sandboxPath("OpenPGP", to)
+		if err != nil {
+			panic(err.Error())
+		}
+		from = fromPath
+		to = toPath
+	}
+	src, err := os.Open(from)
 	ck(err)
 	defer src.Close()
-	to := ToStr(toFile)
 	dst, err := os.CreateTemp(filepath.Dir(to), "su")
 	ck(err)
 	defer os.Remove(dst.Name())

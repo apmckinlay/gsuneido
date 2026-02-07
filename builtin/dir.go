@@ -22,6 +22,25 @@ var _ = builtin(dir, "(path='*', files=false, details=false, block=false)")
 
 func dir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
+	if sandboxed() {
+		if strings.ContainsAny(path, `\\/`) {
+			dirPath, pat := filepath.Split(path)
+			if dirPath == "" {
+				dirPath = "."
+			}
+			cleaned, err := sandboxPath("Dir", dirPath)
+			if err != nil {
+				panic(err.Error())
+			}
+			path = filepath.Join(cleaned, pat)
+		} else if path != "" && path != "*" {
+			cleaned, err := sandboxPath("Dir", path)
+			if err != nil {
+				panic(err.Error())
+			}
+			path = cleaned
+		}
+	}
 	justfiles := ToBool(args[1])
 	details := ToBool(args[2])
 	block := args[3]

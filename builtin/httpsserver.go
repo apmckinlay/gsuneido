@@ -19,6 +19,7 @@ import (
 var _ = builtin(HttpsServer, `(port, app, stop = false)`)
 
 func HttpsServer(th *Thread, args []Value) Value {
+	guardSandbox("HttpsServer")
 	cert, err := tls.X509KeyPair(dbms.ServerCert, dbms.ServerKey)
 	if err != nil {
 		log.Fatalf("ERROR: Failed to load embedded key pair: %v", err)

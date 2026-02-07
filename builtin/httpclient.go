@@ -24,6 +24,7 @@ var _ = builtin(HttpClient2, `(method, url,
 
 // HttpClient2 is a wrapper around Go net/http
 func HttpClient2(th *Thread, args []Value) Value {
+	guardSandbox("HttpClient2")
 	method := ToStr(args[0])
 	url := ToStr(args[1])
 	var rdr io.Reader
@@ -63,6 +64,7 @@ var _ = builtin(HttpsClient, `(method, url,
 
 // HttpsClient makes an HTTPS request embedded cert
 func HttpsClient(th *Thread, args []Value) Value {
+	guardSandbox("HttpsClient")
 	caCertPool := x509.NewCertPool()
 	ok := caCertPool.AppendCertsFromPEM(dbms.ServerCert)
 	if !ok {

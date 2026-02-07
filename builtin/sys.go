@@ -49,7 +49,15 @@ func GetCurrentDirectory() Value {
 var _ = builtin(GetTempFileName, "(path, prefix)")
 
 func GetTempFileName(path, prefix Value) Value {
-	f, err := os.CreateTemp(ToStr(path), ToStr(prefix)+"*.tmp")
+	tmpDir := ToStr(path)
+	if sandboxed() {
+		p, err := sandboxPath("GetTempFileName", tmpDir)
+		if err != nil {
+			panic(err.Error())
+		}
+		tmpDir = p
+	}
+	f, err := os.CreateTemp(tmpDir, ToStr(prefix)+"*.tmp")
 	if err != nil {
 		panic("GetTempFileName: " + err.Error())
 	}
@@ -63,6 +71,14 @@ var _ = builtin(CreateDir, "(dirname)")
 
 func CreateDir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
+	if sandboxed() {
+		p, err := sandboxPath("CreateDir", path)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("CreateDir: " + err.Error())
+		}
+		path = p
+	}
 	err := os.Mkdir(path, 0755)
 	if errors.Is(err, os.ErrExist) {
 		if info, err2 := os.Stat(path); err2 == nil && info.Mode().IsDir() {
@@ -82,6 +98,14 @@ var _ = builtin(EnsureDir, "(dirname)")
 
 func EnsureDir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
+	if sandboxed() {
+		p, err := sandboxPath("EnsureDir", path)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("EnsureDir: " + err.Error())
+		}
+		path = p
+	}
 	err := os.Mkdir(path, 0755)
 	if errors.Is(err, os.ErrExist) {
 		if info, err2 := os.Stat(path); err2 == nil && info.Mode().IsDir() {
@@ -100,6 +124,14 @@ var _ = builtin(DeleteFileApi, "(filename)")
 
 func DeleteFileApi(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
+	if sandboxed() {
+		p, err := sandboxPath("DeleteFileApi", path)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("DeleteFileApi: " + err.Error())
+		}
+		path = p
+	}
 	err := deleteFile(path) // see sys_unix.go and sys_windows.go
 	if errors.Is(err, os.ErrNotExist) {
 		// not return-throw
@@ -117,6 +149,13 @@ var _ = builtin(FileExistsQ, "(filename)")
 
 func FileExistsQ(arg Value) Value {
 	path := ToStr(arg)
+	if sandboxed() {
+		p, err := sandboxPath("FileExists?", path)
+		if err != nil {
+			return False
+		}
+		path = p
+	}
 	info, err := os.Stat(path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		panic("FileExists?: " + err.Error())
@@ -128,6 +167,13 @@ var _ = builtin(DirExistsQ, "(filename)")
 
 func DirExistsQ(arg Value) Value {
 	path := ToStr(arg)
+	if sandboxed() {
+		p, err := sandboxPath("DirExists?", path)
+		if err != nil {
+			return False
+		}
+		path = p
+	}
 	info, err := os.Stat(path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		panic("DirExists?: " + err.Error())
@@ -140,6 +186,20 @@ var _ = builtin(MoveFile, "(from, to)")
 func MoveFile(th *Thread, args []Value) Value {
 	from := ToStr(args[0])
 	to := ToStr(args[1])
+	if sandboxed() {
+		fromPath, err := sandboxPath("MoveFile", from)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("MoveFile: " + err.Error())
+		}
+		toPath, err := sandboxPath("MoveFile", to)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("MoveFile: " + err.Error())
+		}
+		from = fromPath
+		to = toPath
+	}
 	err := os.Rename(from, to)
 	if err != nil {
 		th.ReturnThrow = true
@@ -152,6 +212,18 @@ var _ = builtin(DeleteDir, "(dir)")
 
 func DeleteDir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
+	if sandboxed() {
+		p, err := sandboxPath("DeleteDir", path)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("DeleteDir: " + err.Error())
+		}
+		path = p
+		if path == sandboxRoot {
+			th.ReturnThrow = true
+			return SuStr("DeleteDir: sandbox root not allowed")
+		}
+	}
 	info, err := os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return True
@@ -208,6 +280,13 @@ var _ = builtin(FileSize, "(file)")
 
 func FileSize(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
+	if sandboxed() {
+		p, err := sandboxPath("FileSize", path)
+		if err != nil {
+			panic(err.Error())
+		}
+		path = p
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {

@@ -15,6 +15,7 @@ import (
 var _ = builtin(System, "(command)")
 
 func System(th *Thread, args []Value) Value {
+	guardSandbox("System")
 	shell, flag := getShell()
 	command := ToStr(args[0])
 	cmd := exec.Command(shell)

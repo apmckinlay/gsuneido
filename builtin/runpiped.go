@@ -28,6 +28,7 @@ var _ = AddInfo("builtin.nRunPiped", &nRunPiped)
 var _ = builtin(RunPiped, "(command, block=false)")
 
 func RunPiped(th *Thread, args []Value) Value {
+	guardSandbox("RunPiped")
 	command := ToStr(args[0])
 	cmdargs := SplitCommand(command)
 	cmd := exec.Command(cmdargs[0])

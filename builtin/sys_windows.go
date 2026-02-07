@@ -69,6 +69,21 @@ var copyFile = kernel32.MustFindProc("CopyFileA").Addr()
 var _ = builtin(CopyFile, "(from, to, failIfExists)")
 
 func CopyFile(th *Thread, args []Value) Value {
+	if sandboxed() {
+		from := ToStr(args[0])
+		to := ToStr(args[1])
+		fromPath, err := sandboxPath("CopyFile", from)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("CopyFile: " + err.Error())
+		}
+		toPath, err := sandboxPath("CopyFile", to)
+		if err != nil {
+			th.ReturnThrow = true
+			return SuStr("CopyFile: " + err.Error())
+		}
+		args = []Value{SuStr(fromPath), SuStr(toPath), args[2]}
+	}
 	rtn, _, e := syscall.SyscallN(copyFile,
 		uintptr(unsafe.Pointer(zstrArg(args[0]))),
 		uintptr(unsafe.Pointer(zstrArg(args[1]))),

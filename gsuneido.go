@@ -44,7 +44,7 @@ var help = `options:
 	-d[ump] [table]
 	-h[elp] or -?
 	-l[oad] [table] (or @filename)
-	-mcp[=#] (default -port + 2, localhost only)
+	-mcp[=#] (main port + 2, localhost only, sandboxes)
 	-p[ass]p[hrase]=string (for -load)
 	-p[ort][=#] (default 3147)
 	-repair
@@ -78,6 +78,9 @@ func main() {
 	options.BuiltDate = builtDate
 	options.Mode = mode
 	options.Parse(getargs())
+	if options.McpServer {
+		builtin.EnableSandbox()
+	}
 	if options.Action == "client" {
 		options.ErrorLog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
