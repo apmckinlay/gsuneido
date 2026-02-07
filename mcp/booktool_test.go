@@ -4,6 +4,7 @@
 package mcp
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -28,9 +29,11 @@ func TestBookTool(t *testing.T) {
 	tran := dbmsLocal.Transaction(true)
 	tran.Action(th, "insert { name: 'Introduction', path: '', text: 'intro text', order: 1 } into mybook")
 	tran.Action(th, "insert { name: 'Reference', path: '', text: 'ref text', order: 2 } into mybook")
+	tran.Action(th, "insert { name: 'res', path: '', text: 'res text', order: 3 } into mybook")
 	tran.Action(th, "insert { name: 'Date', path: '/Reference', text: 'date text', order: 2 } into mybook")
 	tran.Action(th, "insert { name: 'Array', path: '/Reference', text: 'array text', order: 1 } into mybook")
 	tran.Action(th, "insert { name: 'FormatEn', path: '/Reference/Date', text: 'format text', order: 1 } into mybook")
+	tran.Action(th, "insert { name: 'Images', path: '/res', text: 'image text', order: 1 } into mybook")
 	tran.Complete()
 
 	// root children (path not supplied)
@@ -41,6 +44,7 @@ func TestBookTool(t *testing.T) {
 	assert.This(res.Text).Is("")
 	children := res.Children
 	assert.This(len(children)).Is(2)
+	assert.That(!slices.Contains(children, "res"))
 
 	// root children (path supplied)
 	res, err = bookTool("mybook", "/")
@@ -50,6 +54,7 @@ func TestBookTool(t *testing.T) {
 	assert.This(res.Text).Is("")
 	children = res.Children
 	assert.This(len(children)).Is(2)
+	assert.That(!slices.Contains(children, "res"))
 
 	// text and children, sorted by order then name
 	res, err = bookTool("mybook", "Reference")
@@ -79,6 +84,16 @@ func TestBookTool(t *testing.T) {
 	res, err = bookTool("mybook", "Reference/Date/FormatEn")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("format text")
+	assert.This(len(res.Children)).Is(0)
+
+	res, err = bookTool("mybook", "res")
+	assert.That(err == nil)
+	assert.This(res.Text).Is("")
+	assert.This(len(res.Children)).Is(0)
+
+	res, err = bookTool("mybook", "res/Images")
+	assert.That(err == nil)
+	assert.This(res.Text).Is("")
 	assert.This(len(res.Children)).Is(0)
 }
 

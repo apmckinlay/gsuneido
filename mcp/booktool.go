@@ -16,6 +16,14 @@ func bookTool(book, path string) (readBookOutput, error) {
 	} else if path != "" && path[0] != '/' {
 		path = "/" + path
 	}
+	if isResPath(path) {
+		return readBookOutput{
+			Book:     book,
+			Path:     path,
+			Text:     "",
+			Children: []string{},
+		}, nil
+	}
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
 	tran := th.Dbms().Transaction(false)
@@ -86,10 +94,17 @@ func bookChildren(th *core.Thread, tran core.ITran, st *core.SuTran,
 			continue
 		}
 		if s, ok := val.ToStr(); ok {
+			if path == "" && s == "res" {
+				continue
+			}
 			children = append(children, s)
 		}
 	}
 	return children, nil
+}
+
+func isResPath(path string) bool {
+	return path == "/res" || strings.HasPrefix(path, "/res/")
 }
 
 func splitPath(path string) (dir, name string) {
