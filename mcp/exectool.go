@@ -25,6 +25,9 @@ func execTool(code string) (result execOutput, err error) {
 	code = strings.TrimSpace(code)
 	src := "function () {\n" + code + "\n}"
 	v, warnings := compile.Checked(th, src)
+	if warnings == nil {
+		warnings = []string{}
+	}
 	fn := v.(*core.SuFunc)
 
 	res := th.Call(fn)
@@ -57,6 +60,9 @@ func checkTool(code string) (result checkCodeOutput, err error) {
 	code = strings.TrimSpace(code)
 	src := "function () {\n" + code + "\n}"
 	_, warnings := compile.Checked(th, src)
+	if warnings == nil {
+		warnings = []string{}
+	}
 
 	result = checkCodeOutput{
 		Code:     code,

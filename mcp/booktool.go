@@ -75,6 +75,7 @@ func bookChildren(th *core.Thread, tran core.ITran, st *core.SuTran,
 			err = fmt.Errorf("book children query failed: %v", r)
 		}
 	}()
+	children = []string{}
 	query := fmt.Sprintf("%s where path = %q sort order, name",
 		book, path)
 	q := tran.Query(query, nil)

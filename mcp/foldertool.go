@@ -95,6 +95,7 @@ func codeFolderChildren(th *core.Thread, tran core.ITran, st *core.SuTran, libra
 			err = fmt.Errorf("code folders query failed: %v", r)
 		}
 	}()
+	children = []string{}
 	query := fmt.Sprintf("%s where parent = %d and group >= -1 sort name", library, parent)
 	q := tran.Query(query, nil)
 	hdr := q.Header()
