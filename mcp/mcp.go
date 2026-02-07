@@ -6,6 +6,7 @@ package mcp
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -14,8 +15,8 @@ import (
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/util/exit"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 var httpServer *http.Server
@@ -24,20 +25,16 @@ var httpServer *http.Server
 // It binds to localhost only (127.0.0.1) for security.
 // Uses Streamable HTTP transport for streaming responses.
 func Start(port string) {
-	s := server.NewMCPServer(
-		"gSuneido MCP Server",
-		"0.0.1",
-		server.WithToolCapabilities(true),
-	)
+	s := mcp.NewServer(&mcp.Implementation{
+		Name:    "gSuneido MCP Server",
+		Version: "0.0.1",
+	}, nil)
 	addTools(s)
 
-	streamableServer := server.NewStreamableHTTPServer(s,
-		server.WithEndpointPath("/mcp"),
-		server.WithStateLess(false),
-	)
-
 	mux := http.NewServeMux()
-	mux.Handle("/mcp", streamableServer)
+	mux.Handle("/mcp", mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {
+		return s
+	}, nil))
 
 	addr := "127.0.0.1:" + port
 	httpServer = &http.Server{
@@ -66,26 +63,31 @@ func Stop() {
 }
 
 // addTools adds tools to the server.
-func addTools(s *server.MCPServer) {
+func addTools(s *mcp.Server) {
 	for _, spec := range toolSpecs {
 		spec := spec
 		t := makeTool(spec.name, spec.description, spec.outputSchema, spec.params...)
-		s.AddTool(t, func(ctx context.Context, request mcp.CallToolRequest) (result *mcp.CallToolResult, err error) {
+		s.AddTool(t, func(ctx context.Context, request *mcp.CallToolRequest) (result *mcp.CallToolResult, err error) {
 			defer func() {
 				if r := recover(); r != nil {
 					log.Printf("MCP tool panic: %s: %v\n%s", spec.name, r, debug.Stack())
-					result = mcp.NewToolResultError("panic in tool: " + spec.name + ": " + fmt.Sprint(r))
+					result = toolError(fmt.Errorf("panic in tool: %s: %v", spec.name, r))
 					err = nil
 				}
 			}()
-			out, herr := spec.handler(ctx, request.GetArguments())
+			args, herr := requestArgs(request)
 			if herr != nil {
-				return mcp.NewToolResultError(herr.Error()), nil
+				return toolError(herr), nil
 			}
-			if s, ok := out.(string); ok {
-				return mcp.NewToolResultText(s), nil
+			out, herr := spec.handler(ctx, args)
+			if herr != nil {
+				return toolError(herr), nil
 			}
-			return mcp.NewToolResultJSON(out)
+			result, err = toolResult(out)
+			if err != nil {
+				return toolError(err), nil
+			}
+			return result, nil
 		})
 	}
 }
@@ -109,7 +111,7 @@ type toolSpec struct {
 	name         string
 	description  string
 	params       []stringParam
-	outputSchema mcp.ToolOption
+	outputSchema any
 	handler      func(context.Context, map[string]any) (any, error)
 }
 
@@ -121,23 +123,88 @@ func addTool(spec toolSpec) bool {
 	return true
 }
 
-func makeTool(name, desc string, outputSchema mcp.ToolOption, params ...stringParam) mcp.Tool {
-	opts := []mcp.ToolOption{mcp.WithDescription(desc), outputSchema}
+func makeTool(name, desc string, outputSchema any, params ...stringParam) *mcp.Tool {
+	return &mcp.Tool{
+		Name:         name,
+		Description:  desc,
+		InputSchema:  inputSchema(params),
+		OutputSchema: outputSchema,
+	}
+}
+
+func inputSchema(params []stringParam) *jsonschema.Schema {
+	schema := &jsonschema.Schema{Type: "object"}
+	if len(params) == 0 {
+		return schema
+	}
+	props := make(map[string]*jsonschema.Schema, len(params))
+	required := []string{}
 	for _, p := range params {
-		prop := []mcp.PropertyOption{mcp.Description(p.description)}
-		if p.required {
-			prop = append(prop, mcp.Required())
-		}
+		prop := &jsonschema.Schema{Description: p.description}
 		switch p.kind {
 		case paramNumber:
-			opts = append(opts, mcp.WithNumber(p.name, prop...))
+			prop.Type = "integer"
 		case paramBool:
-			opts = append(opts, mcp.WithBoolean(p.name, prop...))
+			prop.Type = "boolean"
 		default:
-			opts = append(opts, mcp.WithString(p.name, prop...))
+			prop.Type = "string"
+		}
+		props[p.name] = prop
+		if p.required {
+			required = append(required, p.name)
 		}
 	}
-	return mcp.NewTool(name, opts...)
+	schema.Properties = props
+	if len(required) > 0 {
+		schema.Required = required
+	}
+	return schema
+}
+
+func outputSchema[T any]() any {
+	schema, err := jsonschema.For[T](nil)
+	if err != nil {
+		panic(fmt.Sprintf("tool output schema: %v", err))
+	}
+	return schema
+}
+
+func requestArgs(request *mcp.CallToolRequest) (map[string]any, error) {
+	args := map[string]any{}
+	if request == nil || request.Params == nil {
+		return args, nil
+	}
+	if len(request.Params.Arguments) == 0 {
+		return args, nil
+	}
+	if err := json.Unmarshal(request.Params.Arguments, &args); err != nil {
+		return nil, err
+	}
+	return args, nil
+}
+
+func toolResult(out any) (*mcp.CallToolResult, error) {
+	if out == nil {
+		return &mcp.CallToolResult{Content: []mcp.Content{}}, nil
+	}
+	if s, ok := out.(string); ok {
+		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: s}}}, nil
+	}
+	encoded, err := json.Marshal(out)
+	if err != nil {
+		return nil, err
+	}
+	return &mcp.CallToolResult{
+		Content:           []mcp.Content{&mcp.TextContent{Text: string(encoded)}},
+		StructuredContent: json.RawMessage(encoded),
+	}, nil
+}
+
+func toolError(err error) *mcp.CallToolResult {
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{&mcp.TextContent{Text: err.Error()}},
+		IsError: true,
+	}
 }
 
 func requireString(args map[string]any, name string) (string, error) {

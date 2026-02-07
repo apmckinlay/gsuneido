@@ -23,11 +23,13 @@ func TestTablesTool(t *testing.T) {
 	query.DoAdmin(db, `create beta (x, y) key(x)`, nil)
 	query.DoAdmin(db, `create gamma (m, n) key(m)`, nil)
 
-	tables, err := tablesTool("")
+	output, err := tablesTool("")
 	assert.That(err == nil)
-	assert.This(tables).Is([]string{"alpha", "beta", "columns", "gamma", "indexes", "tables", "views"})
+	assert.This(output.Tables).Is([]string{"alpha", "beta", "columns", "gamma", "indexes", "tables", "views"})
+	assert.That(output.HasMore == false)
 
-	tables, err = tablesTool("b")
+	output, err = tablesTool("b")
 	assert.That(err == nil)
-	assert.This(tables).Is([]string{"beta"})
+	assert.This(output.Tables).Is([]string{"beta"})
+	assert.That(output.HasMore == false)
 }

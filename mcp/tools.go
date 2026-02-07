@@ -8,14 +8,13 @@ import (
 	"context"
 
 	"github.com/apmckinlay/gsuneido/core"
-	"github.com/mark3labs/mcp-go/mcp"
 )
 
 // libraries
 var _ = addTool(toolSpec{
 	name:         "suneido_libraries",
 	description:  "Get a list of the libraries currently in use in Suneido",
-	outputSchema: mcp.WithOutputSchema[librariesOutput](),
+	outputSchema: outputSchema[librariesOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		libs := core.GetDbms().Libraries()
 		return librariesOutput{Libraries: libs}, nil
@@ -23,7 +22,7 @@ var _ = addTool(toolSpec{
 })
 
 type librariesOutput struct {
-	Libraries []string `json:"libraries" jsonschema:"description=List of libraries currently in use"`
+	Libraries []string `json:"libraries" jsonschema:"List of libraries currently in use"`
 }
 
 // tables
@@ -31,22 +30,19 @@ var _ = addTool(toolSpec{
 	name:         "suneido_tables",
 	description:  "Get a list of database table names that start with the given prefix (limit of 100)",
 	params:       []stringParam{{name: "prefix", description: "Only return tables whose names start with this prefix (empty string for all)", required: true}},
-	outputSchema: mcp.WithOutputSchema[tablesOutput](),
+	outputSchema: outputSchema[tablesOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		prefix, err := requireString(args, "prefix")
 		if err != nil {
 			return nil, err
 		}
-		tables, err := tablesTool(prefix)
-		if err != nil {
-			return nil, err
-		}
-		return tablesOutput{Tables: tables}, nil
+		return tablesTool(prefix)
 	},
 })
 
 type tablesOutput struct {
-	Tables []string `json:"tables" jsonschema:"description=Table names matching the requested prefix"`
+	Tables  []string `json:"tables" jsonschema:"Table names matching the requested prefix"`
+	HasMore bool     `json:"has_more,omitempty" jsonschema:"True when additional tables were truncated"`
 }
 
 // schema
@@ -54,7 +50,7 @@ var _ = addTool(toolSpec{
 	name:         "suneido_schema",
 	description:  "Get the schema for a Suneido database table",
 	params:       []stringParam{{name: "table", description: "Name of the table to get schema for", required: true}},
-	outputSchema: mcp.WithOutputSchema[schemaOutput](),
+	outputSchema: outputSchema[schemaOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		table, err := requireString(args, "table")
 		if err != nil {
@@ -66,7 +62,7 @@ var _ = addTool(toolSpec{
 })
 
 type schemaOutput struct {
-	Schema string `json:"schema" jsonschema:"description=Schema definition for the requested table"`
+	Schema string `json:"schema" jsonschema:"Schema definition for the requested table"`
 }
 
 // query
@@ -76,7 +72,7 @@ var _ = addTool(toolSpec{
 	params: []stringParam{
 		{name: "query", description: "Suneido query (e.g. 'tables sort table')", required: true},
 	},
-	outputSchema: mcp.WithOutputSchema[queryOutput](),
+	outputSchema: outputSchema[queryOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		qs, err := requireString(args, "query")
 		if err != nil {
@@ -87,9 +83,9 @@ var _ = addTool(toolSpec{
 })
 
 type queryOutput struct {
-	Query   string `json:"query" jsonschema:"description=Query string that was executed"`
-	Results string `json:"results" jsonschema:"description=Formatted row/column output"`
-	HasMore bool   `json:"has_more,omitempty" jsonschema:"description=True when additional rows were truncated"`
+	Query   string `json:"query" jsonschema:"Query string that was executed"`
+	Results string `json:"results" jsonschema:"Formatted row/column output"`
+	HasMore bool   `json:"has_more,omitempty" jsonschema:"True when additional rows were truncated"`
 }
 
 // read_code
@@ -102,7 +98,7 @@ var _ = addTool(toolSpec{
 		{name: "start_line", description: "1-based line number to start from (default 1)", required: false, kind: paramNumber},
 		{name: "plain", description: "If true, don't add line numbers (default false)", required: false, kind: paramBool},
 	},
-	outputSchema: mcp.WithOutputSchema[readCodeOutput](),
+	outputSchema: outputSchema[readCodeOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
 		if err != nil {
@@ -125,16 +121,16 @@ var _ = addTool(toolSpec{
 })
 
 type readCodeOutput struct {
-	Plain      bool    `json:"plain" jsonschema:"description=Whether line numbers were omitted"`
-	Library    string  `json:"library" jsonschema:"description=Library name the definition was loaded from"`
-	Name       string  `json:"name" jsonschema:"description=Definition name"`
-	Text       string  `json:"text" jsonschema:"description=The source code content"`
-	Diff       *string `json:"diff,omitempty" jsonschema:"description=Unified diff when lib_before_text is available"`
-	StartLine  int     `json:"start_line" jsonschema:"description=1-based starting line number for the returned text"`
-	TotalLines int     `json:"total_lines" jsonschema:"description=Total number of lines in the definition"`
-	HasMore    bool    `json:"has_more,omitempty" jsonschema:"description=True when additional lines remain past the returned text"`
-	Modified   string  `json:"modified,omitempty" jsonschema:"description=Date/time when the record was last modified"`
-	Committed  string  `json:"committed,omitempty" jsonschema:"description=Date/time when the record was last committed to version control"`
+	Plain      bool    `json:"plain" jsonschema:"Whether line numbers were omitted"`
+	Library    string  `json:"library" jsonschema:"Library name the definition was loaded from"`
+	Name       string  `json:"name" jsonschema:"Definition name"`
+	Text       string  `json:"text" jsonschema:"The source code content"`
+	Diff       *string `json:"diff,omitempty" jsonschema:"Unified diff when lib_before_text is available"`
+	StartLine  int     `json:"start_line" jsonschema:"1-based starting line number for the returned text"`
+	TotalLines int     `json:"total_lines" jsonschema:"Total number of lines in the definition"`
+	HasMore    bool    `json:"has_more,omitempty" jsonschema:"True when additional lines remain past the returned text"`
+	Modified   string  `json:"modified,omitempty" jsonschema:"Date/time when the record was last modified"`
+	Committed  string  `json:"committed,omitempty" jsonschema:"Date/time when the record was last committed to version control"`
 }
 
 // search_code
@@ -148,7 +144,7 @@ var _ = addTool(toolSpec{
 		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
 		{name: "modified", description: "If true, only return results where the code has been modified", required: false, kind: paramBool},
 	},
-	outputSchema: mcp.WithOutputSchema[searchCodeOutput](),
+	outputSchema: outputSchema[searchCodeOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		libraryRx, err := requireString(args, "library")
 		if err != nil {
@@ -169,15 +165,15 @@ var _ = addTool(toolSpec{
 })
 
 type searchCodeOutput struct {
-	Matches []codeMatch `json:"matches" jsonschema:"description=List of matching library/name pairs"`
-	HasMore bool        `json:"has_more,omitempty" jsonschema:"description=True when additional matches were truncated"`
+	Matches []codeMatch `json:"matches" jsonschema:"List of matching library/name pairs"`
+	HasMore bool        `json:"has_more,omitempty" jsonschema:"True when additional matches were truncated"`
 }
 
 type codeMatch struct {
-	Library string `json:"library" jsonschema:"description=Library name"`
-	Name    string `json:"name" jsonschema:"description=Definition name"`
-	Path    string `json:"path" jsonschema:"description=Folder path within the library"`
-	Line    string `json:"line" jsonschema:"description=Matching line of source code with line number prefix"`
+	Library string `json:"library" jsonschema:"Library name"`
+	Name    string `json:"name" jsonschema:"Definition name"`
+	Path    string `json:"path" jsonschema:"Folder path within the library"`
+	Line    string `json:"line" jsonschema:"Matching line of source code with line number prefix"`
 }
 
 // read_book
@@ -188,7 +184,7 @@ var _ = addTool(toolSpec{
 		{name: "book", description: "Name of the book table (e.g. 'suneidoc')", required: true},
 		{name: "path", description: "The path to the book page. If sub-topics are returned in 'children', append them to this path to dive deeper. (e.g. 'Database/Reference/Query'). Empty or omitted for root.", required: false},
 	},
-	outputSchema: mcp.WithOutputSchema[readBookOutput](),
+	outputSchema: outputSchema[readBookOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		book, err := requireString(args, "book")
 		if err != nil {
@@ -200,10 +196,10 @@ var _ = addTool(toolSpec{
 })
 
 type readBookOutput struct {
-	Book     string   `json:"book" jsonschema:"description=Book table name"`
-	Path     string   `json:"path" jsonschema:"description=Normalized page path"`
-	Text     string   `json:"text" jsonschema:"description=Book page text"`
-	Children []string `json:"children" jsonschema:"description=Child topic names at this path"`
+	Book     string   `json:"book" jsonschema:"Book table name"`
+	Path     string   `json:"path" jsonschema:"Normalized page path"`
+	Text     string   `json:"text" jsonschema:"Book page text"`
+	Children []string `json:"children" jsonschema:"Child topic names at this path"`
 }
 
 // code_folders
@@ -214,7 +210,7 @@ var _ = addTool(toolSpec{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
 		{name: "path", description: "Folder path within the library (e.g. 'Debugging/Tests', empty string for root)", required: true, kind: paramString},
 	},
-	outputSchema: mcp.WithOutputSchema[codeFoldersOutput](),
+	outputSchema: outputSchema[codeFoldersOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
 		if err != nil {
@@ -229,9 +225,9 @@ var _ = addTool(toolSpec{
 })
 
 type codeFoldersOutput struct {
-	Library  string   `json:"library" jsonschema:"description=Library name the folders were loaded from"`
-	Path     string   `json:"path" jsonschema:"description=Normalized folder path"`
-	Children []string `json:"children" jsonschema:"description=Child items at this path (folders end with '/')"`
+	Library  string   `json:"library" jsonschema:"Library name the folders were loaded from"`
+	Path     string   `json:"path" jsonschema:"Normalized folder path"`
+	Children []string `json:"children" jsonschema:"Child items at this path (folders end with '/')"`
 }
 
 // execute
@@ -241,7 +237,7 @@ var _ = addTool(toolSpec{
 		"Use this for calculations, data manipulation, or system commands.\n" +
 		"Note: A single returned object will appear as the first result (e.g., [[1,2]]), while multiple return values appear as separate elements (e.g., [1,2]).",
 	params:       []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
-	outputSchema: mcp.WithOutputSchema[execOutput](),
+	outputSchema: outputSchema[execOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		code, err := requireString(args, "code")
 		if err != nil {
@@ -252,9 +248,9 @@ var _ = addTool(toolSpec{
 })
 
 type execOutput struct {
-	Code     string   `json:"code" jsonschema:"description=The code that was executed"`
-	Warnings []string `json:"warnings" jsonschema:"description=Compiler warnings"`
-	Results  string   `json:"results" jsonschema:"description=0, 1, or multiple return values as Suneido-format strings"`
+	Code     string   `json:"code" jsonschema:"The code that was executed"`
+	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
+	Results  string   `json:"results" jsonschema:"0, 1, or multiple return values as Suneido-format strings"`
 }
 
 // check_code
@@ -262,7 +258,7 @@ var _ = addTool(toolSpec{
 	name:         "suneido_check_code",
 	description:  "Checks Suneido code for syntax and compilation errors without executing it. Returns compiler warnings only.",
 	params:       []stringParam{{name: "code", description: "Suneido code to check (as the body of a function)", required: true}},
-	outputSchema: mcp.WithOutputSchema[checkCodeOutput](),
+	outputSchema: outputSchema[checkCodeOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		code, err := requireString(args, "code")
 		if err != nil {
@@ -273,6 +269,6 @@ var _ = addTool(toolSpec{
 })
 
 type checkCodeOutput struct {
-	Code     string   `json:"code" jsonschema:"description=The code that was checked"`
-	Warnings []string `json:"warnings" jsonschema:"description=Compiler warnings"`
+	Code     string   `json:"code" jsonschema:"The code that was checked"`
+	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 )
 
-func tablesTool(prefix string) (tables []string, err error) {
+func tablesTool(prefix string) (output tablesOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("tables failed: %v", r)
@@ -26,8 +26,8 @@ func tablesTool(prefix string) (tables []string, err error) {
 	q := tran.Query(tablesQuery(prefix), nil)
 	hdr := q.Header()
 	for row, _ := q.Get(th, core.Next); row != nil; row, _ = q.Get(th, core.Next) {
-		if len(tables) >= queryLimit {
-			tables = append(tables, "...")
+		if len(output.Tables) >= queryLimit {
+			output.HasMore = true
 			break
 		}
 		v := row.GetVal(hdr, "table", nil, nil)
@@ -38,9 +38,9 @@ func tablesTool(prefix string) (tables []string, err error) {
 		if prefix != "" && !strings.HasPrefix(s, prefix) {
 			break
 		}
-		tables = append(tables, s)
+		output.Tables = append(output.Tables, s)
 	}
-	return tables, nil
+	return output, nil
 }
 
 func tablesQuery(prefix string) string {
