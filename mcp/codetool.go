@@ -20,7 +20,7 @@ func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, 
 	if startLine < 1 {
 		return readCodeOutput{}, fmt.Errorf("start_line must be >= 1")
 	}
-	
+
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
 	libs := th.Dbms().Libraries()
@@ -61,8 +61,20 @@ func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, 
 		StartLine:  startLine,
 		TotalLines: totalLines,
 		HasMore:    hasMore,
+		Modified:   formatDateVal(row.GetVal(hdr, "lib_modified", th, st)),
+		Committed:  formatDateVal(row.GetVal(hdr, "lib_committed", th, st)),
 	}
 	return result, nil
+}
+
+func formatDateVal(val core.Value) string {
+	if val == nil {
+		return ""
+	}
+	if d, ok := core.AsDate(val); ok {
+		return d.Format("yyyy-MM-dd HH:mm:ss")
+	}
+	return ""
 }
 
 func sliceCode(text string, startLine int, limit int) (string, int, bool) {

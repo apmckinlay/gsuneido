@@ -127,13 +127,15 @@ var _ = addTool(toolSpec{
 })
 
 type readCodeOutput struct {
-	Plain      bool   `json:"plain" jsonschema:"description=Whether line numbers were omitted"`
-	Library    string `json:"library" jsonschema:"description=Library name the definition was loaded from"`
-	Name       string `json:"name" jsonschema:"description=Definition name"`
-	Text       string `json:"text" jsonschema:"description=The source code content"`
-	StartLine  int    `json:"start_line" jsonschema:"description=1-based starting line number for the snippet"`
-	TotalLines int    `json:"total_lines" jsonschema:"description=Total number of lines in the definition"`
-	HasMore    bool   `json:"has_more,omitempty" jsonschema:"description=True when additional lines remain past the snippet"`
+	Plain        bool   `json:"plain" jsonschema:"description=Whether line numbers were omitted"`
+	Library      string `json:"library" jsonschema:"description=Library name the definition was loaded from"`
+	Name         string `json:"name" jsonschema:"description=Definition name"`
+	Text         string `json:"text" jsonschema:"description=The source code content"`
+	StartLine    int    `json:"start_line" jsonschema:"description=1-based starting line number for the returned text"`
+	TotalLines   int    `json:"total_lines" jsonschema:"description=Total number of lines in the definition"`
+	HasMore      bool   `json:"has_more,omitempty" jsonschema:"description=True when additional lines remain past the returned text"`
+	Modified  string `json:"modified,omitempty" jsonschema:"description=Date/time when the record was last modified"`
+	Committed string `json:"committed,omitempty" jsonschema:"description=Date/time when the record was last committed to version control"`
 }
 
 // search_code

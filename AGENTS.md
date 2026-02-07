@@ -28,6 +28,7 @@ gSuneido is the Go implementation of the Suneido integrated language and databas
 - use `make` to build the project (**not** `go build`)
 
 ## Testing
+- **IMPORTANT** Run applicable tests after making changes
 - **IMPORTANT** Do not change directories with cd to run tests
 - **IMPORTANT** When running `go test` include: `-short -timeout=30s`
 
