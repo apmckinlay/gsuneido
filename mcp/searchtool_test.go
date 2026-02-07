@@ -23,8 +23,8 @@ func TestSearchTool(t *testing.T) {
 	dbmsLocal := dbms.NewDbmsLocal(dd)
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
-	dbmsLocal.Admin("create stdlib (name, text, group, parent, num) key(num) key(name, group) index(parent, name) index(group)", nil)
-	dbmsLocal.Admin("create app (name, text, group, parent, num) key(num) key(name, group) index(parent, name) index(group)", nil)
+	dbmsLocal.Admin("create stdlib (name, text, group, parent, num, lib_modified) key(num) key(name, group) index(parent, name) index(group)", nil)
+	dbmsLocal.Admin("create app (name, text, group, parent, num, lib_modified) key(num) key(name, group) index(parent, name) index(group)", nil)
 	assert.That(dbmsLocal.Use("app"))
 
 	th := core.NewThread(core.MainThread)
@@ -36,23 +36,23 @@ func TestSearchTool(t *testing.T) {
 	tran.Action(th, "insert { name: 'SearchTarget', text: 'function(){return \"hello\"}', group: -1, parent: 4, num: 5 } into app")
 	tran.Complete()
 
-	res, err := searchTool("std.*", "Foo", "return 1", false)
+	res, err := searchTool("std.*", "Foo", "return 1", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{{Library: "stdlib", Name: "Foo", Path: "", Line: "0001: function(){return 1}"}})
 
-	res, err = searchTool("STDLIB", "FOO", "RETURN 1", false)
+	res, err = searchTool("STDLIB", "FOO", "RETURN 1", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{{Library: "stdlib", Name: "Foo", Path: "", Line: "0001: function(){return 1}"}})
 
-	res, err = searchTool("STDLIB", "FOO", "RETURN 1", true)
+	res, err = searchTool("STDLIB", "FOO", "RETURN 1", true, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{})
 
-	res, err = searchTool("app", "Foo.*", "return 3", false)
+	res, err = searchTool("app", "Foo.*", "return 3", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{{Library: "app", Name: "FooApp", Path: "", Line: "0001: function(){return 3}"}})
 
-	res, err = searchTool("", "", "return", false)
+	res, err = searchTool("", "", "return", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{
 		{Library: "stdlib", Name: "Bar", Path: "", Line: "0001: function(){return 2}"},
@@ -62,13 +62,18 @@ func TestSearchTool(t *testing.T) {
 	})
 	assert.That(!res.HasMore)
 
-	_, err = searchTool("", "", "", false)
+	_, err = searchTool("", "", "", false, false)
 	assert.That(err != nil)
+
+	// empty name and code is allowed when modified is true
+	res, err = searchTool("", "", "", false, true)
+	assert.That(err == nil)
+	assert.This(len(res.Matches)).Is(0)
 }
 
 func TestSearchQuery_InvalidRegex(t *testing.T) {
 	assert := assert.T(t)
-	_, err := searchQuery("[", "", false)
+	_, err := searchQuery("[", "", false, false)
 	assert.That(err != nil)
 	assert.That(strings.Contains(err.Error(), "invalid name regex"))
 }

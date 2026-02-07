@@ -147,6 +147,7 @@ var _ = addTool(toolSpec{
 		{name: "name", description: "Regular expression applied to definition names (optional if code provided)", required: false, kind: paramString},
 		{name: "code", description: "Regular expression applied to definition text (optional if name provided)", required: false, kind: paramString},
 		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
+		{name: "modified", description: "If true, only return results where lib_modified is not empty (default false)", required: false, kind: paramBool},
 	},
 	outputSchema: mcp.WithOutputSchema[searchCodeOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -163,7 +164,11 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return searchTool(libraryRx, nameRx, codeRx, caseSensitive)
+		modified, err := optionalBool(args, "modified", false)
+		if err != nil {
+			return nil, err
+		}
+		return searchTool(libraryRx, nameRx, codeRx, caseSensitive, modified)
 	},
 })
 

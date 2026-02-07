@@ -15,14 +15,14 @@ import (
 
 const searchLimit = 100
 
-func searchTool(libraryRx, nameRx, codeRx string, caseSensitive bool) (result searchCodeOutput, err error) {
+func searchTool(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) (result searchCodeOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("search code failed: %v", r)
 		}
 	}()
-	if strings.TrimSpace(nameRx) == "" && strings.TrimSpace(codeRx) == "" {
-		return searchCodeOutput{}, fmt.Errorf("name or code is required")
+	if strings.TrimSpace(nameRx) == "" && strings.TrimSpace(codeRx) == "" && !modified {
+		return searchCodeOutput{}, fmt.Errorf("name or code is required (unless modified is true)")
 	}
 
 	th := core.NewThread(core.MainThread)
@@ -35,7 +35,7 @@ func searchTool(libraryRx, nameRx, codeRx string, caseSensitive bool) (result se
 		return searchCodeOutput{Matches: []codeMatch{}}, nil
 	}
 
-	nameQuery, err := searchQuery(nameRx, codeRx, caseSensitive)
+	nameQuery, err := searchQuery(nameRx, codeRx, caseSensitive, modified)
 	if err != nil {
 		return searchCodeOutput{}, err
 	}
@@ -43,9 +43,11 @@ func searchTool(libraryRx, nameRx, codeRx string, caseSensitive bool) (result se
 	tran := th.Dbms().Transaction(false)
 	defer tran.Complete()
 	st := core.NewSuTran(tran, false)
+	folderCache := make(map[int]folderInfo)
 
 	var matches []codeMatch
 	for _, lib := range libs {
+		clear(folderCache)
 		q := tran.Query(lib+" "+nameQuery, nil)
 		hdr := q.Header()
 		for row, _ := q.Get(th, core.Next); row != nil; row, _ = q.Get(th, core.Next) {
@@ -57,7 +59,7 @@ func searchTool(libraryRx, nameRx, codeRx string, caseSensitive bool) (result se
 			if !ok {
 				continue
 			}
-			path, err := codeItemPath(th, tran, st, lib, row, hdr)
+			path, err := codeItemPath(th, tran, st, lib, row, hdr, folderCache)
 			if err != nil {
 				return searchCodeOutput{}, err
 			}
@@ -73,7 +75,7 @@ func searchTool(libraryRx, nameRx, codeRx string, caseSensitive bool) (result se
 	return result, nil
 }
 
-func searchQuery(nameRx, codeRx string, caseSensitive bool) (string, error) {
+func searchQuery(nameRx, codeRx string, caseSensitive, modified bool) (string, error) {
 	nameRx = strings.TrimSpace(nameRx)
 	codeRx = strings.TrimSpace(codeRx)
 	nameRx = applyCaseSensitivity(nameRx, caseSensitive)
@@ -84,8 +86,12 @@ func searchQuery(nameRx, codeRx string, caseSensitive bool) (string, error) {
 	if _, err := compileRegex(codeRx); err != nil {
 		return "", fmt.Errorf("invalid code regex: %w", err)
 	}
-	return fmt.Sprintf("where group = -1 and name =~ %s and text =~ %s sort name",
-		strconv.Quote(nameRx), strconv.Quote(codeRx)), nil
+	modCond := ""
+	if modified {
+		modCond = " and lib_modified isnt \"\""
+	}
+	return fmt.Sprintf("where group = -1 and name =~ %s and text =~ %s%s sort name",
+		strconv.Quote(nameRx), strconv.Quote(codeRx), modCond), nil
 }
 
 func filterLibraries(libs []string, libraryRx string, caseSensitive bool) ([]string, error) {
@@ -179,7 +185,14 @@ func lineAt(text string, pos int) string {
 	return text[start:end]
 }
 
-func codeItemPath(th *core.Thread, tran core.ITran, st *core.SuTran, library string, row core.Row, hdr *core.Header) (string, error) {
+
+
+type folderInfo struct {
+	name   string
+	parent int
+}
+
+func codeItemPath(th *core.Thread, tran core.ITran, st *core.SuTran, library string, row core.Row, hdr *core.Header, folderCache map[int]folderInfo) (string, error) {
 	group, err := intValue(row.GetVal(hdr, "group", th, st), "group")
 	if err != nil {
 		return "", err
@@ -196,25 +209,49 @@ func codeItemPath(th *core.Thread, tran core.ITran, st *core.SuTran, library str
 	}
 	segments := []string{}
 	for parent != 0 {
-		folderArgs := core.SuObjectOf(core.SuStr(library))
-		folderArgs.Set(core.SuStr("num"), core.IntVal(parent))
-		folder, fhdr, _ := tran.Get(th, folderArgs, core.Only)
-		if folder == nil {
-			return "", fmt.Errorf("folder not found: %d", parent)
-		}
-		nameVal := folder.GetVal(fhdr, "name", th, st)
-		name, ok := nameVal.ToStr()
-		if !ok {
-			return "", fmt.Errorf("folder name is not a string")
-		}
-		segments = append(segments, name)
-		parent, err = intValue(folder.GetVal(fhdr, "parent", th, st), "parent")
+		info, err := cachedFolderInfo(th, tran, st, library, parent, folderCache)
 		if err != nil {
 			return "", err
 		}
+		segments = append(segments, info.name)
+		parent = info.parent
 	}
 	slices.Reverse(segments)
 	return strings.Join(segments, "/"), nil
+}
+
+func cachedFolderInfo(th *core.Thread, tran core.ITran, st *core.SuTran, library string, num int, folderCache map[int]folderInfo) (folderInfo, error) {
+	if folderCache != nil {
+		if info, ok := folderCache[num]; ok {
+			return info, nil
+		}
+		info, err := fetchFolderInfo(th, tran, st, library, num)
+		if err != nil {
+			return folderInfo{}, err
+		}
+		folderCache[num] = info
+		return info, nil
+	}
+	return fetchFolderInfo(th, tran, st, library, num)
+}
+
+func fetchFolderInfo(th *core.Thread, tran core.ITran, st *core.SuTran, library string, num int) (folderInfo, error) {
+	folderArgs := core.SuObjectOf(core.SuStr(library))
+	folderArgs.Set(core.SuStr("num"), core.IntVal(num))
+	folder, fhdr, _ := tran.Get(th, folderArgs, core.Only)
+	if folder == nil {
+		return folderInfo{}, fmt.Errorf("folder not found: %d", num)
+	}
+	nameVal := folder.GetVal(fhdr, "name", th, st)
+	name, ok := nameVal.ToStr()
+	if !ok {
+		return folderInfo{}, fmt.Errorf("folder name is not a string")
+	}
+	parent, err := intValue(folder.GetVal(fhdr, "parent", th, st), "parent")
+	if err != nil {
+		return folderInfo{}, err
+	}
+	return folderInfo{name: name, parent: parent}, nil
 }
 
 func compileRegex(rx string) (pat regex.Pattern, err error) {
