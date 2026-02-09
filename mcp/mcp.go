@@ -14,6 +14,7 @@ import (
 	"runtime/debug"
 	"strconv"
 
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -68,27 +69,88 @@ func addTools(s *mcp.Server) {
 		spec := spec
 		t := makeTool(spec.name, spec.description, spec.outputSchema, spec.params...)
 		s.AddTool(t, func(ctx context.Context, request *mcp.CallToolRequest) (result *mcp.CallToolResult, err error) {
-			defer func() {
-				if r := recover(); r != nil {
-					log.Printf("MCP tool panic: %s: %v\n%s", spec.name, r, debug.Stack())
-					result = toolError(fmt.Errorf("panic in tool: %s: %v", spec.name, r))
-					err = nil
-				}
-			}()
-			args, herr := requestArgs(request)
-			if herr != nil {
-				return toolError(herr), nil
-			}
-			out, herr := spec.handler(ctx, args)
-			if herr != nil {
-				return toolError(herr), nil
-			}
-			result, err = toolResult(out)
-			if err != nil {
-				return toolError(err), nil
-			}
-			return result, nil
+			return handler(ctx, spec, request)
 		})
+	}
+}
+
+func handler(ctx context.Context, spec toolSpec, request *mcp.CallToolRequest) (result *mcp.CallToolResult, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("MCP tool panic: %s: %v\n%s", spec.name, r, debug.Stack())
+			result = toolError(fmt.Errorf("panic in tool: %s: %v", spec.name, r))
+			err = nil
+		}
+	}()
+
+	if options.McpLog {
+		logRequest(request, spec)
+	}
+
+	args, herr := requestArgs(request)
+	if herr != nil {
+		if options.McpLog {
+			log.Printf("MCP response error: tool=%s, error=%v", spec.name, herr)
+		}
+		return toolError(herr), nil
+	}
+	out, herr := spec.handler(ctx, args) // call handler
+	if herr != nil {
+		if options.McpLog {
+			log.Printf("MCP response error: tool=%s, error=%v", spec.name, herr)
+		}
+		return toolError(herr), nil
+	}
+	result, err = toolResult(out)
+	if err != nil {
+		if options.McpLog {
+			log.Printf("MCP response error: tool=%s, error=%v", spec.name, err)
+		}
+		return toolError(err), nil
+	}
+
+	if options.McpLog {
+		logResult(result, spec)
+	}
+
+	return result, nil
+}
+
+func logRequest(request *mcp.CallToolRequest, spec toolSpec) {
+	// Format request arguments as human-readable JSON
+	var argsMap map[string]any
+	if request.Params != nil && len(request.Params.Arguments) > 0 {
+		if err := json.Unmarshal(request.Params.Arguments, &argsMap); err == nil {
+			log.Printf("MCP request: tool=%s, args=%s", spec.name, formatJSON(argsMap))
+		} else {
+			log.Printf("MCP request: tool=%s, raw_args=%s", spec.name, string(request.Params.Arguments))
+		}
+	} else {
+		log.Printf("MCP request: tool=%s, args={}", spec.name)
+	}
+}
+
+func logResult(result *mcp.CallToolResult, spec toolSpec) {
+	// Format response as human-readable JSON
+	if result.StructuredContent != nil {
+		if sc, ok := result.StructuredContent.(json.RawMessage); ok && len(sc) > 0 {
+			var resultMap map[string]any
+			if err := json.Unmarshal(sc, &resultMap); err == nil {
+				log.Printf("MCP response: tool=%s, result=%s", spec.name, formatJSON(resultMap))
+			} else {
+				log.Printf("MCP response: tool=%s, raw_result=%s", spec.name, string(sc))
+			}
+		} else {
+			log.Printf("MCP response: tool=%s, structured_content=%+v", spec.name, result.StructuredContent)
+		}
+	} else if len(result.Content) > 0 {
+		if textContent, ok := result.Content[0].(*mcp.TextContent); ok {
+			log.Printf("MCP response: tool=%s, result=%s", spec.name, textContent.Text)
+		} else {
+			log.Printf("MCP response: tool=%s, result=%+v", spec.name, result.Content[0])
+		}
+	} else {
+		log.Printf("MCP response: tool=%s, result={}", spec.name)
 	}
 }
 
@@ -252,6 +314,14 @@ func optionalInt(args map[string]any, name string, def int) (int, error) {
 	default:
 		return 0, errors.New(name + " must be an integer")
 	}
+}
+
+func formatJSON(v any) string {
+	jsonBytes, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("%+v", v)
+	}
+	return string(jsonBytes)
 }
 
 func optionalBool(args map[string]any, name string, def bool) (bool, error) {

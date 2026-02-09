@@ -39,7 +39,10 @@ func TestParse(t *testing.T) {
 		if McpServer {
 			s += " mcp"
 			if McpPort != "" {
-				s += "=" + McpPort
+				s += "," + McpPort
+			}
+			if McpLog {
+				s += ",log"
 			}
 		}
 		if CmdLine != "" {
@@ -115,8 +118,11 @@ func TestParse(t *testing.T) {
 	test("-web=1.2.3.4", "error invalid web port number")
 
 	test("-mcp", "mcp")
-	test("-mcp=3149", "mcp=3149")
-	test("-mcp=1.2.3.4", "error invalid mcp port number")
+	test("-mcp=3149", "mcp,3149")
+	test("-mcp=log", "mcp,log")
+	test("-mcp=log,2222", "mcp,2222,log")
+	test("-mcp=2222,log", "mcp,2222,log")
+	test("-mcp=1.2.3.4", "error invalid mcp option: 1.2.3.4")
 
 	test("-xyz", "error invalid command line argument")
 
