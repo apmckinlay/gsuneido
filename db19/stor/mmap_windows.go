@@ -79,11 +79,21 @@ func (ms *mmapStor) close(size int64, unmap bool) {
 		}
 		exit.Progress("    unmapped")
 	}
-	ms.file.Truncate(size) // may not work if not unmap
+	ms.file.Truncate(size) // may not work if not unmap	ms.updateFileTime()
+	exit.Progress("    file time updating")
+	ms.updateFileTime()
 	exit.Progress("    file unlocking")
 	filelock.Unlock(ms.file)
 	exit.Progress("    file unlocked")
 	exit.Progress("    file closing")
 	ms.file.Close()
 	exit.Progress("    file closed")
+}
+
+func (ms *mmapStor) updateFileTime() {
+	var ft syscall.Filetime
+	syscall.GetSystemTimeAsFileTime(&ft)
+	if err := syscall.SetFileTime(syscall.Handle(ms.file.Fd()), nil, nil, &ft); err != nil {
+		log.Printf("ERROR: SetFileTime: %v", err)
+	}
 }
