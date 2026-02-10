@@ -126,8 +126,65 @@ func (ov *Overlay) Lookup(key string) uint64 {
 	return 0
 }
 
-func (ov *Overlay) RangeFrac(org, end string, nrecs int) float64 {
-	return ov.bt.RangeFrac(org, end, nrecs)
+// RangeFrac returns an estimate of the fraction of records in the range.
+func (ov *Overlay) RangeFrac(org, end string, nrecs, btreeNrows int) float64 {
+	if org >= end {
+		return 0
+	}
+	if nrecs == 0 {
+		return 0
+	}
+	btFrac := 0.0
+	if btreeNrows > 0 {
+		btFrac = ov.bt.RangeFrac(org, end, btreeNrows)
+	}
+	if float64(btreeNrows)/float64(nrecs) > 0.98 {
+		// ixbufs are < 2%
+		return btFrac
+	}
+
+	activity := ov.ixbufActivity(org, end)
+	if float64(activity)/float64(nrecs) < 0.02 {
+		// activity in range < 2%
+		return btFrac
+	}
+
+	delta := ov.ixbufApproxDelta(org, end)
+	btCount := btFrac * float64(nrecs)
+	count := btCount + float64(delta)
+	frac := float64(count) / float64(nrecs)
+	if frac < 0 {
+		return 0
+	}
+	if frac > 1 {
+		return 1
+	}
+	return frac
+}
+
+// ixbufActivity returns the number of ixbuf entries in the range.
+// The actual delta must be <= this.
+func (ov *Overlay) ixbufActivity(org, end string) int {
+	activity := 0
+	for _, layer := range ov.layers {
+		activity += layer.RangeActivity(org, end)
+	}
+	if ov.mut != nil {
+		activity += ov.mut.RangeActivity(org, end)
+	}
+	return activity
+}
+
+func (ov *Overlay) ixbufApproxDelta(org, end string) int {
+	delta := 0
+	rng := iface.Range{Org: org, End: end}
+	for _, layer := range ov.layers {
+		delta += layer.RangeApproxDelta(rng)
+	}
+	if ov.mut != nil {
+		delta += ov.mut.RangeApproxDelta(rng)
+	}
+	return delta
 }
 
 // CheckBtree applies a function to each entry in the btree.

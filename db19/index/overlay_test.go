@@ -4,6 +4,7 @@
 package index
 
 import (
+	"fmt"
 	"math/rand"
 	"sort"
 	"testing"
@@ -195,4 +196,86 @@ func TestOverlayLookup(*testing.T) {
 		assert.This(ov.Lookup(k)).Is(dat.K2o[k])
 		assert.This(ov.Lookup(k + "0")).Is(0) // nonexistent
 	}
+}
+
+func TestOverlayRangeFracIxbufOnly(t *testing.T) {
+	assert := assert.T(t)
+	bt := btree.Builder(stor.HeapStor(64 * 1024)).Finish()
+	layer := &ixbuf.T{}
+	for i := 0; i < 2000; i++ {
+		key := fmt.Sprintf("k%04d", i)
+		layer.Insert(key, uint64(i+1))
+	}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
+
+	org := "k0500"
+	end := "k1000"
+	frac := ov.RangeFrac(org, end, 2000, 0)
+	assert.This(frac).Is(0.25)
+}
+
+func TestOverlayRangeFracActivityThreshold(t *testing.T) {
+	assert := assert.T(t)
+	store := stor.HeapStor(64 * 1024)
+	bldr := btree.Builder(store)
+	for i := 0; i < 10000; i++ {
+		key := fmt.Sprintf("b%05d", i)
+		assert.That(bldr.Add(key, uint64(i+1)))
+	}
+	bt := bldr.Finish()
+	layer := &ixbuf.T{}
+	for i := 0; i < 50; i++ {
+		key := fmt.Sprintf("x%05d", i)
+		layer.Insert(key, uint64(20000+i))
+	}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
+
+	org := "b00000"
+	end := "b01000"
+	frac := ov.RangeFrac(org, end, 10050, 10000)
+	assert.That(frac > 0.095 && frac < 0.105)
+}
+
+func TestOverlayRangeFracClampHigh(t *testing.T) {
+	assert := assert.T(t)
+	store := stor.HeapStor(64 * 1024)
+	bldr := btree.Builder(store)
+	for i := 0; i < 1000; i++ {
+		key := fmt.Sprintf("b%05d", i)
+		assert.That(bldr.Add(key, uint64(i+1)))
+	}
+	bt := bldr.Finish()
+	layer := &ixbuf.T{}
+	for i := 0; i < 600; i++ {
+		key := fmt.Sprintf("b00000x%04d", i)
+		layer.Insert(key, uint64(i+2000))
+	}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
+
+	org := "b00000"
+	end := "b01000"
+	frac := ov.RangeFrac(org, end, 1100, 1000)
+	assert.This(frac).Is(1.0)
+}
+
+func TestOverlayRangeFracClampLow(t *testing.T) {
+	assert := assert.T(t)
+	store := stor.HeapStor(64 * 1024)
+	bldr := btree.Builder(store)
+	for i := 0; i < 1000; i++ {
+		key := fmt.Sprintf("b%05d", i)
+		assert.That(bldr.Add(key, uint64(i+1)))
+	}
+	bt := bldr.Finish()
+	layer := &ixbuf.T{}
+	for i := 0; i < 200; i++ {
+		key := fmt.Sprintf("b00000x%04d", i)
+		layer.Delete(key, uint64(i+2000))
+	}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
+
+	org := "b00000"
+	end := "b00100"
+	frac := ov.RangeFrac(org, end, 1100, 1000)
+	assert.This(frac).Is(0.0)
 }

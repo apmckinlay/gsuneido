@@ -137,7 +137,7 @@ func (t *ReadTran) ColToFld(table, col string) int {
 func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 {
 	info := t.meta.GetRoInfo(table)
 	idx := info.Indexes[iIndex]
-	return idx.RangeFrac(org, end, info.Nrows)
+	return idx.RangeFrac(org, end, info.Nrows, info.BtreeNrows)
 }
 
 // Lookup returns the DbRec for a key, or nil if not found

@@ -398,6 +398,51 @@ func (ib *ixbuf) Lookup(key string) uint64 {
 	return c[i].off
 }
 
+// RangeCount returns the number of entries with org <= key < end.
+func (ib *ixbuf) RangeActivity(org, end string) int {
+	if ib.size == 0 || org >= end {
+		return 0
+	}
+	chunks := ib.chunks
+	if org <= chunks[0].firstKey() && end > chunks[len(chunks)-1].lastKey() {
+		return int(ib.size)
+	}
+	startChunk := ib.searchChunks(org)
+	endChunk := ib.searchChunks(end)
+	start := search(chunks[startChunk], org)
+	if startChunk == endChunk {
+		endPos := search(chunks[startChunk], end)
+		if endPos <= start {
+			return 0
+		}
+		return endPos - start
+	}
+	count := len(chunks[startChunk]) - start
+	for ci := startChunk + 1; ci < endChunk; ci++ {
+		count += len(chunks[ci])
+	}
+	count += search(chunks[endChunk], end)
+	return count
+}
+
+func (ib *ixbuf) RangeApproxDelta(rng iface.Range) int {
+	if ib.Len() == 0 {
+		return 0
+	}
+	it := ib.Iterator()
+	it.Range(rng)
+	delta := 0
+	for it.Next(); !it.Eof(); it.Next() {
+		off := it.Offset()
+		if off&Delete != 0 {
+			delta--
+		} else if off&Update == 0 {
+			delta++
+		}
+	}
+	return delta
+}
+
 //-------------------------------------------------------------------
 
 // Iter is used with btree.MergeAndSave
