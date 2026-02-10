@@ -212,6 +212,16 @@ func (u *Union) getFixed() []Fixed {
 func (u *Union) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	// if there is a required index, use Merge
 	if index != nil {
+		if u.disjoint != "" {
+			fixcost1, varcost1 := Optimize(u.source1, mode, index, frac)
+			fixcost2, varcost2 := Optimize(u.source2, mode, index, frac)
+			if fixcost1+varcost1 >= impossible || fixcost2+varcost2 >= impossible {
+				return impossible, impossible, nil
+			}
+			approach := &unionApproach{keyIndex: index, strat: unionMerge,
+				idx1: index, idx2: index}
+			return fixcost1 + fixcost2, varcost1 + varcost2, approach
+		}
 		idx1, idx2, bestKey, fixcost, varcost := u.bestMergeIndexes(index, mode, frac)
 		if fixcost >= impossible {
 			return impossible, impossible, nil

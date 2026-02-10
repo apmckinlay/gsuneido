@@ -227,6 +227,38 @@ func TestBestMergeIndexes(t *testing.T) {
 		false)
 }
 
+func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
+	index := []string{"a"}
+	src1 := &QueryMock{
+		ColumnsResult: []string{"a", "k", "d"},
+		HeaderResult:  SimpleHeader([]string{"a", "k", "d"}),
+		IndexesResult: [][]string{index},
+		KeysResult:    [][]string{{"k"}},
+		FixedResult:   []Fixed{NewFixed("d", SuInt(1))},
+		NrowsN:        1,
+		NrowsP:        1,
+		RowSizeResult: 1,
+		LookupLevels:  1,
+	}
+	src2 := &QueryMock{
+		ColumnsResult: []string{"a", "k", "d"},
+		HeaderResult:  SimpleHeader([]string{"a", "k", "d"}),
+		IndexesResult: [][]string{index},
+		KeysResult:    [][]string{{"k"}},
+		FixedResult:   []Fixed{NewFixed("d", SuInt(2))},
+		NrowsN:        1,
+		NrowsP:        1,
+		RowSizeResult: 1,
+		LookupLevels:  1,
+	}
+
+	u := NewUnion(src1, src2)
+	assert.T(t).This(u.disjoint).Is("d")
+
+	fixcost, varcost := Optimize(u, CursorMode, index, 1)
+	assert.T(t).That(fixcost+varcost < impossible)
+}
+
 func TestIndexContainsKey(t *testing.T) {
 	assert := assert.T(t)
 
