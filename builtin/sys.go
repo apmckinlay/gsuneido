@@ -291,8 +291,8 @@ func FileSize(th *Thread, args []Value) Value {
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			panic("FileSize: " + path + " does not exist")
-		// WARNING: application code may depend on "does not exist"
-	}
+			// WARNING: application code may depend on "does not exist"
+		}
 		panic("FileSize: " + err.Error())
 	}
 	return Int64Val(info.Size())

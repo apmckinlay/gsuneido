@@ -160,8 +160,8 @@ func (slc *suLruCache) SetConcurrent() {
 	if slc.SetConc() {
 		for k, v := range slc.Lc.Entries() {
 			k.SetConcurrent()
-            v.SetConcurrent()
-        }
+			v.SetConcurrent()
+		}
 	}
 }
 

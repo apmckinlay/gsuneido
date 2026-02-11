@@ -57,7 +57,7 @@ func Spawn(th *Thread, as *ArgSpec, rawargs []Value) Value {
 		if result != 0 {
 			th.ReturnThrow = true
 		}
-			return IntVal(result)
+		return IntVal(result)
 	}
 	return IntVal(cmd.Process.Pid)
 }

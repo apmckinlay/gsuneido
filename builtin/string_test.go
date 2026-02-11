@@ -44,7 +44,7 @@ func TestReplace(t *testing.T) {
 
 	// Actual change
 	test("hello world", "hello", "hi", 1, "hi world")
-	
+
 	// zero width match
 	test("world", "^x?", "hello", 1, "helloworld")
 

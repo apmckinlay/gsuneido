@@ -24,7 +24,7 @@ func TestSandboxFilePath(t *testing.T) {
 	assert.T(t).That(err == nil)
 	assert.T(t).This(path).Is(filepath.Join(root, "sub/dir/file.txt"))
 
-	_, err = sandboxPath("test", string(filepath.Separator) + "abs")
+	_, err = sandboxPath("test", string(filepath.Separator)+"abs")
 	assert.T(t).This(err.Error()).Is("test: absolute paths disabled in sandbox")
 
 	_, err = sandboxPath("test", "../up")
