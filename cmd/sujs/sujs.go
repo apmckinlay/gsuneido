@@ -17,7 +17,6 @@ import (
 )
 
 func main() {
-	// Redirect stdout and stderr to error.log
 	logFile, err := os.OpenFile("error.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -47,6 +46,8 @@ func main() {
 			"Use('configlib'); "+
 			"Use('demobookoptions'); "+
 			"Use('Test_lib'); "+
+			// so closing the WorkSpace exits, requires SuInit change
+			"Suneido.RunAsStandalone = true;"+ 
 			"RunSuJSHttpServer(3248)")
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
@@ -69,14 +70,14 @@ func main() {
 
 	w.SetTitle("Suneido")
 	w.SetSize(1536, 1024, webview.HintNone)
-	w.Navigate("http://localhost:3248")
+	w.Navigate("http://127.0.0.1:3248")
 	w.Run()
 
 	if !finished {
 		// give the server a chance to clean up the client
 		time.Sleep(200 * time.Millisecond)
 		client := &http.Client{Timeout: 100 * time.Millisecond}
-		_, err = client.Post("http://localhost:3248/shutdown", "text/plain", nil)
+		_, err = client.Post("http://127.0.0.1:3248/shutdown", "text/plain", nil)
 		if err != nil {
 			cmd.Wait()
 		}
