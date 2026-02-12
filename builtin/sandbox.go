@@ -54,6 +54,9 @@ func sandboxPath(op, name string) (string, error) {
 	if filepath.VolumeName(name) != "" {
 		return "", fmt.Errorf("%s: volume paths disabled in sandbox", op)
 	}
+	if strings.HasPrefix(name, string(filepath.Separator)) {
+		return "", fmt.Errorf("%s: root-relative paths disabled in sandbox", op)
+	}
 	if hasDotDot(name) {
 		return "", fmt.Errorf("%s: parent paths disabled in sandbox", op)
 	}

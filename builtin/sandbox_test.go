@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -25,7 +26,8 @@ func TestSandboxFilePath(t *testing.T) {
 	assert.T(t).This(path).Is(filepath.Join(root, "sub/dir/file.txt"))
 
 	_, err = sandboxPath("test", string(filepath.Separator)+"abs")
-	assert.T(t).This(err.Error()).Is("test: absolute paths disabled in sandbox")
+	assert.T(t).That(err != nil)
+	assert.T(t).That(strings.Contains(err.Error(), "paths disabled in sandbox"))
 
 	_, err = sandboxPath("test", "../up")
 	assert.T(t).This(err.Error()).Is("test: parent paths disabled in sandbox")
@@ -52,5 +54,6 @@ func TestSandboxPath(t *testing.T) {
 	defer resetSandbox()
 
 	_, err := sandboxPath("CreateDir", string(filepath.Separator)+"abs")
-	assert.T(t).This(err.Error()).Is("CreateDir: absolute paths disabled in sandbox")
+	assert.T(t).That(err != nil)
+	assert.T(t).That(strings.Contains(err.Error(), "paths disabled in sandbox"))
 }
