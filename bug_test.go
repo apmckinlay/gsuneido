@@ -1,38 +1,47 @@
 package main
 
-import (
-	"testing"
+// import (
+// 	"testing"
 
-	"github.com/apmckinlay/gsuneido/compile"
-	. "github.com/apmckinlay/gsuneido/core"
-)
+// 	"github.com/apmckinlay/gsuneido/builtin"
+// 	. "github.com/apmckinlay/gsuneido/core"
+// 	"github.com/apmckinlay/gsuneido/util/exit"
+// )
 
-func TestBug(t *testing.T) {
-	Libload = libload // dependency injection
-	MainThread = &mainThread
+// func TestBug(t *testing.T) {
+// 	if testing.Short() {
+// 		t.Skip("skipping test in short mode")
+// 	}
+// 	Libload = libload // dependency injection
+// 	mainThread = &Thread{}
+// 	mainThread.Name = "main"
+// 	mainThread.UIThread = true
+// 	MainThread = mainThread
+// 	builtin.UIThread = mainThread
+// 	exit.Add(func() { mainThread.Close() })
 
-	openDbms()
-	defer db.CloseKeepMapped()
+// 	openDbms()
+// 	defer db.CloseKeepMapped()
 
-	src := `
-		Init.Repl()
-		retryException = 'some exception'
-		count = 0
-		block = { 
-			try  
-				{
-		Print(count, "++")
-				if count++ < 2
-					throw 'case failed: testing'
-		Print('Should see me!!')
-				}
-			catch (err, 'case failed:')
-				{
-				Suneido.X = err
-				throw retryException
-				}
-			}
-		Retry(block, maxRetries: 3, minDelayMs: 100, :retryException)
-		`
-	compile.EvalString(&mainThread, src)
-}
+// 	run(`
+// 		Init.Repl()
+// 		//Use("axonlib")
+// 		//Use("Accountinglib")
+// 		//Use("etalib")
+// 		//Use("pcmiler")
+// 		//Use("ticketlib")
+// 		//Use("prlib")
+// 		//Use("prcadlib")
+// 		//Use("etaprlib")
+// 		//Use("invenlib")
+// 		//Use("wolib")
+// 		//Use("polib")
+// 		//Use("configlib")
+// 		//Use("demobookoptions")
+// 		//Use("Test_lib")
+// 		Print("running...")
+// 		Timer(secs: 60) {
+// 			Qfuzz.MakeQuery()
+// 		}
+// 		`)
+// }
