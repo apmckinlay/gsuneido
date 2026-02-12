@@ -13,18 +13,19 @@ var _ = exportMethods(&ClassMethods, "class")
 
 func init() {
 	ClassMethods["*new*"] =
-		&SuBuiltinMethodRaw{Fn: class_new, 
+		&SuBuiltinMethodRaw{Fn: class_new,
 			BuiltinParams: BuiltinParams{ParamSpec: params("(@args)")}}
 }
 
 func class_new(th *Thread, as *ArgSpec, this Value, args []Value) Value {
-	return this.(*SuClass).New(th, as)
+	class := this.(interface{ Class() *SuClass }).Class()
+	return class.New(th, as)
 }
 
 var _ = method(class_BaseQ, "(class)")
 
 func class_BaseQ(th *Thread, this Value, args []Value) Value {
-	return nilToFalse(this.(*SuClass).Finder(th,
+	return nilToFalse(this.(Findable).Finder(th,
 		func(v Value, _ *MemBase) Value {
 			if v == args[0] {
 				return True
@@ -73,14 +74,12 @@ func class_StartCoverage(this, a Value) Value {
 	if !options.Coverage.Load() {
 		panic("coverage not enabled")
 	}
-	c := this.(*SuClass)
-	c.StartCoverage(ToBool(a))
+	this.(interface{ StartCoverage(bool) }).StartCoverage(ToBool(a))
 	return nil
 }
 
 var _ = method(class_StopCoverage, "()")
 
 func class_StopCoverage(this Value) Value {
-	c := this.(*SuClass)
-	return c.StopCoverage()
+	return this.(interface{ StopCoverage() *SuObject }).StopCoverage()
 }

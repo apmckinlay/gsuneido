@@ -18,22 +18,25 @@ import (
 // Classes are read-only so there is no locking.
 type SuClass struct {
 	ValueBase[*SuClass]
-	parentsCache atomic.Value // used by SuInstance getParents
+	parentsCache atomic.Pointer[SuClassChain] // used by SuInstance getParents
 	Lib          string
 	Name         string
 	MemBase
 	Base Gnum
 }
 
-// NOTE: the parents argument on some SuClass methods is used by SuInstance
-
-func (c *SuClass) SetParents(parents []*SuClass) {
+// SetParents caches the parents chain on the class.
+func (c *SuClass) SetParents(parents *SuClassChain) {
 	c.parentsCache.Store(parents)
 }
 
-func (c *SuClass) GetParents() []*SuClass {
-	x, _ := c.parentsCache.Load().([]*SuClass) // allow nil
-	return x
+// GetParents returns the cached parents chain, or nil if not cached.
+func (c *SuClass) GetParents() *SuClassChain {
+	return c.parentsCache.Load()
+}
+
+func (c *SuClass) Class() *SuClass {
+	return c
 }
 
 var _ Value = (*SuClass)(nil)
@@ -97,7 +100,7 @@ func (c *SuClass) get1(th *Thread, this Value, m Value, parents []*SuClass) Valu
 	val := c.get2(th, ms, parents)
 	if val != nil {
 		if _, ok := val.(*SuFunc); ok {
-			return &SuMethod{fn: val, this: c}
+			return &SuMethod{fn: val, this: this}
 		}
 		return val
 	}
@@ -138,6 +141,9 @@ func (c *SuClass) get2(th *Thread, m string, parents []*SuClass) Value {
 }
 
 func (c *SuClass) Equal(other any) bool {
+	if cc, ok := other.(*SuClassChain); ok {
+		return c == cc.Class()
+	}
 	return c == other
 }
 

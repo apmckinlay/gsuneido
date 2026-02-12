@@ -32,7 +32,7 @@ func ssCallClass(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 		panic("SocketServer not allowed on UI thread")
 	}
 	name, port, as2 := ssArgs(th, as, this, args)
-	class := this.(*SuClass)
+	class := this.(interface{ Class() *SuClass }).Class()
 	sm := suServerMaster{SuInstance: class.New(th, as2)}
 	sm.listen(th, ToStr(name), ToInt(port))
 	return nil

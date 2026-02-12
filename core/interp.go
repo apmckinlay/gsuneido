@@ -676,14 +676,18 @@ loop:
 			base := th.sp - int(argSpec.Nargs) - 1
 			this := th.stack[base]
 			if methstr, ok := method.ToStr(); ok {
+				if class, ok := this.(*SuClass); ok && class.Base > 0 {
+					this = getParents(th, class)
+				}
 				var f Value
 				ob := this
 				if super > 0 {
-					if instance, ok := this.(*SuInstance); ok {
-						for i, p := range instance.parents {
+					if p, ok := this.(interface{ Parents() []*SuClass }); ok {
+						parents := p.Parents()
+						for i, p := range parents {
 							if p.Base == super {
-								c := instance.parents[i+1]
-								f = c.lookup(th, methstr, instance.parents[i+1:])
+								c := parents[i+1]
+								f = c.lookup(th, methstr, parents[i+1:])
 								super = 0
 								goto done
 							}

@@ -116,10 +116,7 @@ func (f *SuFunc) StartCoverage(count bool) {
 	}
 	f.startCoverage(count)
 	for _, v := range f.Values {
-		if g, ok := v.(*SuFunc); ok {
-			g.StartCoverage(count) // RECURSE
-		}
-		if c, ok := v.(*SuClass); ok {
+		if c, ok := v.(interface{ StartCoverage(bool) }); ok {
 			c.StartCoverage(count)
 		}
 	}

@@ -11,52 +11,56 @@ import (
 // SuInstance is an instance of an SuClass
 type SuInstance struct {
 	ValueBase[*SuInstance]
-	class *SuClass
+	class *SuClass // same as parents.classes[0]
 	MemBase
-	parents       []*SuClass
+	parents       *SuClassChain
 	useDeepEquals bool
 }
 
 func NewInstance(th *Thread, class *SuClass) *SuInstance {
 	parents := getParents(th, class)
+	useDeepEquals := class.get2(th, "UseDeepEquals", parents.classes) == True
 	return &SuInstance{MemBase: NewMemBase(),
-		class: class, parents: parents,
-		useDeepEquals: class.get2(th, "UseDeepEquals", parents) == True}
+		class: class, parents: parents, useDeepEquals: useDeepEquals}
 }
 
 // getParents captures the inheritance chain (and caches it on the class).
 // Otherwise, the chain via SuClass Base is indirect by global number,
 // and if a parent is modified incompatibly or with an error
 // then existing (running) instances can fail.
-func getParents(th *Thread, class *SuClass) []*SuClass {
-	if class == nil {
-		return nil
-	}
+func getParents(th *Thread, class *SuClass) *SuClassChain {
 	// Use cached parents on class if valid.
 	// Still have to follow inheritance chain to validate, but no allocation.
 	parents := class.GetParents()
-	c := class
-	for _, p := range parents {
-		if c != p {
-			parents = nil // cached is invalid
-			break
-		}
-		c = c.Parent(th)
-	}
 	if parents != nil {
-		return parents // cached is valid
+		c := class
+		for _, p := range parents.classes {
+			if c != p {
+				parents = nil // cached is invalid
+				break
+			}
+			c = c.Parent(th)
+		}
+		if parents != nil {
+			return parents // cached is valid
+		}
 	}
 
-	parents = make([]*SuClass, 0, 4)
+	parentSlice := make([]*SuClass, 0, 4)
 	for c := class; c != nil; c = c.Parent(th) {
-		parents = append(parents, c)
+		parentSlice = append(parentSlice, c)
 	}
+	parents = &SuClassChain{classes: parentSlice}
 	class.SetParents(parents) // cache on class
 	return parents
 }
 
+func (ob *SuInstance) Parents() []*SuClass {
+	return ob.parents.classes
+}
+
 func (ob *SuInstance) FindParent(name string) *SuClass {
-	for _, c := range ob.parents {
+	for _, c := range ob.parents.classes {
 		if c.Name == name {
 			return c
 		}
@@ -71,7 +75,8 @@ func (ob *SuInstance) Base() *SuClass {
 // ToString is used by Cat, Display, and Print
 // to handle user defined ToString
 func (ob *SuInstance) ToString(th *Thread) string {
-	if f := ob.class.get2(th, "ToString", ob.parents); f != nil && th != nil {
+	f := ob.class.get2(th, "ToString", ob.parents.classes)
+	if f != nil && th != nil {
 		x := th.CallThis(f, ob)
 		if x != nil {
 			if s, ok := x.ToStr(); ok {
@@ -124,7 +129,7 @@ func (ob *SuInstance) get(th *Thread, m Value) Value {
 func (ob *SuInstance) get1(th *Thread, m Value) Value {
 	ob.Unlock() // can't hold lock because it may call getter
 	defer ob.Lock()
-	return ob.class.get1(th, ob, m, ob.parents)
+	return ob.class.get1(th, ob, m, ob.parents.classes)
 }
 
 func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
@@ -187,14 +192,15 @@ func (ob *SuInstance) Lookup(th *Thread, method string) Value {
 	if f, ok := InstanceMethods[method]; ok {
 		return f
 	}
-	return ob.class.lookup(th, method, ob.parents)
+	return ob.class.lookup(th, method, ob.parents.classes)
 }
 
 func (ob *SuInstance) Call(th *Thread, _ Value, as *ArgSpec) Value {
-	if f := ob.class.get2(th, "Call", ob.parents); f != nil {
+	parents := ob.parents.classes
+	if f := ob.class.get2(th, "Call", parents); f != nil {
 		return f.Call(th, ob, as)
 	}
-	if f := ob.class.get2(th, "Default", ob.parents); f != nil {
+	if f := ob.class.get2(th, "Default", parents); f != nil {
 		da := &defaultAdapter{fn: f, method: "Call"}
 		return da.Call(th, ob, as)
 	}
@@ -206,8 +212,8 @@ func (ob *SuInstance) Finder(_ *Thread, fn func(Value, *MemBase) Value) Value {
 	if x := fn(ob, &ob.MemBase); x != nil {
 		return x
 	}
-	assert.That(ob.parents[0] == ob.class)
-	for _, p := range ob.parents {
+	assert.That(ob.parents.Class() == ob.class)
+	for _, p := range ob.parents.classes {
 		if x := fn(p, &p.MemBase); x != nil {
 			return x
 		}
