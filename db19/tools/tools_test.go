@@ -41,7 +41,7 @@ func TestTools(t *testing.T) {
 	_, _, err = tools.LoadDatabase("dump_"+dbName, "loaded_"+dbName, "", "")
 	ck(err)
 	defer os.Remove("loaded" + dbName)
-	ck(db19.CheckDatabase("loaded_" + dbName, true))
+	ck(db19.CheckDatabase("loaded_"+dbName, true))
 	defer os.Remove("loaded_" + dbName)
 	tools.DumpDatabase("loaded_"+dbName, "dump2_"+dbName)
 	defer os.Remove("dump2_" + dbName)

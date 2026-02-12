@@ -29,7 +29,7 @@ func TestReturnConsistency(t *testing.T) {
 
 	// unknown number of return values from function call
 	test("function (a) { if a \n return \n return Date() }")
-	
+
 	// Inconsistent explicit returns - should fail
 	test("function (a) { if a \n return \n else \n return 1 }",
 		"WARNING: inconsistent number of return values @38")
@@ -57,21 +57,21 @@ func TestReturnConsistency(t *testing.T) {
 		"WARNING: inconsistent number of return values @66")
 
 	// Function call returns - should be allowed (no consistency checking)
-	test("function (f) { return f() }")                    // function call can return any number
-	test("function (a,f) { if a \n return f() \n else \n return }")  // mixed with regular return - should pass
-	test("function (a,f) { if a \n return \n else \n return f() }")  // mixed with regular return - should pass
-	test("function (a,f,g) { if a \n return f() \n else \n return g() }") // multiple function calls - should pass
+	test("function (f) { return f() }")                                     // function call can return any number
+	test("function (a,f) { if a \n return f() \n else \n return }")         // mixed with regular return - should pass
+	test("function (a,f) { if a \n return \n else \n return f() }")         // mixed with regular return - should pass
+	test("function (a,f,g) { if a \n return f() \n else \n return g() }")   // multiple function calls - should pass
 	test("function (a,f) { if a \n return f() \n else \n return 1, 2, 3 }") // function call mixed with multiple values - should pass
 
 	// Block returns (return from blocks returns from parent function)
-	test("function (f) { f({ return 1 }) }")            // block return should share parent's count
-	test("function (f) { if f \n return \n f({ return 2 }) }",  // block return inconsistent with parent
+	test("function (f) { f({ return 1 }) }")                   // block return should share parent's count
+	test("function (f) { if f \n return \n f({ return 2 }) }", // block return inconsistent with parent
 		"WARNING: inconsistent number of return values @35")
-	test("function (f) { f({ return }) \n return 1 }",    // block return inconsistent with parent  
+	test("function (f) { f({ return }) \n return 1 }", // block return inconsistent with parent
 		"WARNING: inconsistent number of return values @31")
 	test("function (f) { f({ return 1 }) \n return 2 }") // block return consistent with parent
 
 	// Block implicit returns should not be checked
-	test("function (f) { f({ 123 }) }")                 // block implicit return - no checking
-	test("function (f) { f({ 123 }) \n return 1 }")       // block implicit return with parent explicit return
+	test("function (f) { f({ 123 }) }")             // block implicit return - no checking
+	test("function (f) { f({ 123 }) \n return 1 }") // block implicit return with parent explicit return
 }

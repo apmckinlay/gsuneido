@@ -48,7 +48,7 @@ func RunFuncs() {
 	if !exiting.CompareAndSwap(false, true) {
 		log.Println("exit: already exiting")
 		runtime.Goexit()
-    }
+	}
 	i := len(exitfns) - 1
 	ds := make([]time.Duration, len(exitfns))
 	// failsafe in case exit funcs don't return

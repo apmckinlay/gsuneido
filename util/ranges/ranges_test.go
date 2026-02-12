@@ -192,24 +192,24 @@ func TestAddReturn(t *testing.T) {
 func TestEmptyStringRange(t *testing.T) {
 	assert := assert.T(t)
 	rs := &Ranges{}
-	
+
 	// Test that empty Ranges doesn't contain empty string
-	assert.False(rs.Contains("")) // Should return false for empty Ranges
+	assert.False(rs.Contains(""))   // Should return false for empty Ranges
 	assert.This(rs.String()).Is("") // Should be empty string
-	assert.This(rs.check()).Is(0) // Should have 0 ranges
-	
+	assert.This(rs.check()).Is(0)   // Should have 0 ranges
+
 	// Test inserting empty string range into empty Ranges
 	inc := rs.Insert("", "")
-	assert.This(inc).Is(Added) // Should return Added (1), not Existed (0)
+	assert.This(inc).Is(Added)        // Should return Added (1), not Existed (0)
 	assert.This(rs.String()).Is("->") // Should contain the empty range
-	assert.True(rs.Contains("")) // Should contain empty string
-	assert.This(rs.check()).Is(1) // Should have 1 range
-	
+	assert.True(rs.Contains(""))      // Should contain empty string
+	assert.This(rs.check()).Is(1)     // Should have 1 range
+
 	// Test inserting the same empty string range again
 	inc2 := rs.Insert("", "")
-	assert.This(inc2).Is(Existed) // Should return Existed (0) now
+	assert.This(inc2).Is(Existed)     // Should return Existed (0) now
 	assert.This(rs.String()).Is("->") // Should still contain just the empty range
-	assert.This(rs.check()).Is(1) // Should still have 1 range
+	assert.This(rs.check()).Is(1)     // Should still have 1 range
 }
 
 //-------------------------------------------------------------------

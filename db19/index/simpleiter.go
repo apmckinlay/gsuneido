@@ -24,9 +24,9 @@ type IndexIter interface {
 // with a single btree (no layers/mut).
 // It does not track reads and avoids unnecessary key allocations.
 type SimpleIter struct {
-	t      oiTran
-	it     iface.Iter
-	rng    Range
+	t   oiTran
+	it  iface.Iter
+	rng Range
 	state
 }
 

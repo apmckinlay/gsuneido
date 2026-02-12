@@ -184,14 +184,14 @@ func TestHasPrefix(t *testing.T) {
 	testHasPrefix := func(s1, s2 string, expected bool) {
 		t.Helper()
 		assert := assert.T(t)
-		
+
 		// Test all combinations of string and []byte
 		assert.This(HasPrefix(s1, s2)).Is(expected)
 		assert.This(HasPrefix(s1, []byte(s2))).Is(expected)
 		assert.This(HasPrefix([]byte(s1), s2)).Is(expected)
 		assert.This(HasPrefix([]byte(s1), []byte(s2))).Is(expected)
 	}
-	
+
 	testHasPrefix("", "", true)
 	testHasPrefix("hello", "", true)
 	testHasPrefix("", "h", false)

@@ -95,5 +95,5 @@ func BenchmarkLruCache(b *testing.B) {
 	for b.Loop() {
 		lc.GetPut(testKey(r.IntN(400)), get)
 	}
-	fmt.Println("hit %", lc.hits * 100 / (lc.hits + lc.misses))
+	fmt.Println("hit %", lc.hits*100/(lc.hits+lc.misses))
 }

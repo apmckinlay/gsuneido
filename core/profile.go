@@ -3,12 +3,10 @@
 
 package core
 
-
-
 type profile struct {
 	enabled bool
 	// calls is the number of times the function is called
-	calls   map[*SuFunc]int32
+	calls map[*SuFunc]int32
 	// total is the time (tsc) spent in each function (and builtins it calls)
 	total map[*SuFunc]int64
 	// self is total minus the time spent in functions called by this function

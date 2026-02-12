@@ -327,8 +327,8 @@ type state int
 
 const (
 	rewound state = iota
-	eofNext  // hit EOF going forward with Next
-	eofPrev  // hit EOF going backward with Prev
+	eofNext       // hit EOF going forward with Next
+	eofPrev       // hit EOF going backward with Prev
 	within
 )
 

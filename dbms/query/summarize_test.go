@@ -25,7 +25,7 @@ func TestSummarizeSelectFilter(t *testing.T) {
 	act(db, "insert { a: 2, b: 1, c: 20 } into test")
 	act(db, "insert { a: 3, b: 2, c: 30 } into test")
 	act(db, "insert { a: 4, b: 2, c: 25 } into test")
-	
+
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery("test summarize a, max c", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
@@ -46,7 +46,7 @@ func TestSummarizeSelectFilter(t *testing.T) {
 	row = q.Get(nil, Next)
 	assert.T(t).This(row).Is(nil)
 
-	// Test with wrong max_c - should return nil  
+	// Test with wrong max_c - should return nil
 	q.Select(nil, nil) // clear
 	vals2 := []string{Pack(SuInt(2)), Pack(SuInt(999))}
 	q.Select(cols, vals2)

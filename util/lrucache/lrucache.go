@@ -11,7 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/shmap"
 )
 
-// Cache is a fixed-capacity least-recently-used cache 
+// Cache is a fixed-capacity least-recently-used cache
 // keyed by types that have Hash and Equal methods.
 type Cache[K keyT, V any] struct {
 	lru     []uint8 // uint8 means max size of 256

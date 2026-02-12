@@ -33,8 +33,8 @@ func (sv *Sviews) GetSview(name string) string {
 
 func (sv *Sviews) DropSview(name string) bool {
 	if sv == nil {
-        return false
-    }
+		return false
+	}
 	sv.lock.Lock()
 	defer sv.lock.Unlock()
 	if _, ok := sv.defs[name]; ok {

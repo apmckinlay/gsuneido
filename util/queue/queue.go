@@ -93,6 +93,6 @@ func popfirst[T any](x *[]T) T {
 
 func (q *Queue[T]) Size() int {
 	q.lock.Lock()
-    defer q.lock.Unlock()
-    return len(q.items)
+	defer q.lock.Unlock()
+	return len(q.items)
 }

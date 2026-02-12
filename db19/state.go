@@ -75,7 +75,7 @@ func (sh *stateHolder) updateState(fn func(*DbState)) {
 	oldState := sh.get()
 	if oldState == nil {
 		core.Fatal("can't update closed database")
-		panic("should not reach here") 
+		panic("should not reach here")
 	}
 	newState := *oldState // shallow copy
 	fn(&newState)

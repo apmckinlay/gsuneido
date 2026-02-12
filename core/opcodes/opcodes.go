@@ -250,7 +250,7 @@ const (
 	BlockReturn
 	// BlockReturnNil pushes nil and then does BlockReturn
 	BlockReturnNil
-	
+
 	// combination op codes -----------------------------------------
 
 	// LoadValue <uint8> <uint8>

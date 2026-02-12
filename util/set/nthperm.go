@@ -69,4 +69,3 @@ func NewGen(rnd *rand.Rand, elements []string, k int) *Gen {
 func (g *Gen) Next() []string {
 	return NthPerm(g.elements, g.k, int(g.indexGen.Next()))
 }
-

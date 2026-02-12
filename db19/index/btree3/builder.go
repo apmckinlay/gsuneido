@@ -15,12 +15,12 @@ import (
 // All nodes will be "full" except for the right hand edge.
 // The builder holds the right hand edge of the btree.
 type builder struct {
-	stor        *stor.Stor
-	leaf        leafBuilder
-	tree        []*treeBuilder  // root is last (since tree grows up)
-	prev        string
-	havePrev    bool
-	count       int
+	stor     *stor.Stor
+	leaf     leafBuilder
+	tree     []*treeBuilder // root is last (since tree grows up)
+	prev     string
+	havePrev bool
+	count    int
 }
 
 func Builder(st *stor.Stor) *builder {

@@ -409,7 +409,7 @@ func TestFkey(t *testing.T) {
 	schemas["line"] = "line (c,d) key(c) index(d) in head(b)"
 	schemas["head"] = "head (a,b) key(a) key(b) from line(d)"
 	check()
-	
+
 	doAdmin(db, "create less (a) key(a)")
 	act(db, "insert { a: 1 } into less")
 	doAdmin(db, "create more (k, a, b) key(k)")
@@ -420,24 +420,24 @@ func TestFkey(t *testing.T) {
 	check()
 
 	doAdmin(db, "create master (x, id) index(x) key(id)")
-	act(db, "insert { x: 1, id: 2 } into master")	
+	act(db, "insert { x: 1, id: 2 } into master")
 	doAdmin(db, "create tran (k, id) key(k) index(id) in master(id)")
 	act(db, "insert { k: 123, id: 2 } into tran")
 	schemas["master"] = "master (x,id) index(x) key(id) from tran(id)"
 	schemas["tran"] = "tran (k,id) key(k) index(id) in master"
 	check()
-		
+
 	doAdmin(db, "rename tran to tran2")
 	schemas["tran2"] = "tran2 (k,id) key(k) index(id) in master"
 	delete(schemas, "tran")
 	schemas["master"] = "master (x,id) index(x) key(id) from tran2(id)"
 	check()
-	
+
 	doAdmin(db, "create tran3 (k, id) key(k)")
 	act(db, "insert { k: 123, id: 2 } into tran3")
 	doAdmin(db, "ensure tran3 index(id) in master(id)")
 	schemas["tran3"] = "tran3 (k,id) key(k) index(id) in master"
-	schemas["master"] = "master (x,id) index(x) key(id) " + 
+	schemas["master"] = "master (x,id) index(x) key(id) " +
 		"from tran2(id) from tran3(id)"
 	check()
 
@@ -446,7 +446,7 @@ func TestFkey(t *testing.T) {
 	doAdmin(db, "alter tran4 create index(id) in master(id)")
 	doAdmin(db, "alter tran4 rename id to xx")
 	schemas["tran4"] = "tran4 (k,xx) key(k) index(xx) in master(id)"
-	schemas["master"] = "master (x,id) index(x) key(id) " + 
+	schemas["master"] = "master (x,id) index(x) key(id) " +
 		"from tran2(id) from tran3(id) from tran4(xx)"
 	check()
 

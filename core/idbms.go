@@ -148,7 +148,7 @@ const (
 )
 
 func (dir Dir) String() string {
-	switch  dir{
+	switch dir {
 	case Next:
 		return "QueryFirst"
 	case Prev:

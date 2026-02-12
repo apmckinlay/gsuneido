@@ -78,7 +78,7 @@ func (ck *Check) VerifyConsistency() []string {
 	if len(errors) > 0 {
 		// print actvTran and cmtdTran start values
 		fmt.Println("actvTran", ck.actvTran)
-		fmt.Println("cmtdTran", ck.cmtdTran)	
+		fmt.Println("cmtdTran", ck.cmtdTran)
 		fmt.Println("bytable", ck.bytable["test_table"])
 		log.Fatalln("Check consistency errors")
 	}

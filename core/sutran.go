@@ -72,8 +72,8 @@ func (st *SuTran) Asof(val Value) Value {
 	default:
 		d, ok := AsDate(val)
 		if !ok {
-            panic("transaction.Asof requires a date")
-        }
+			panic("transaction.Asof requires a date")
+		}
 		asof = d.UnixMilli()
 	}
 	asof = st.itran.Asof(asof)

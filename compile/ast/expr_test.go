@@ -73,7 +73,7 @@ func TestCanBeEmpty(t *testing.T) {
 	test(in(one, foo), false)           // in (1, "foo")
 	test(&In{E: one}, true)
 	test(in(id), true)
-	
+
 	test(&Nary{Tok: tok.Add, Exprs: []Expr{id, id, id}}, true)
 }
 

@@ -308,7 +308,7 @@ func (ics *indexCheckers) checkOtherIndexes(st *stor.Stor, sc *meta.Schema,
 	info *meta.Info, count int, sum uint64) {
 	for i := 1; i < len(info.Indexes); i++ {
 		select {
-		case ics.work <- indexCheck{st: st, 
+		case ics.work <- indexCheck{st: st,
 			table: info.Table, ix: &sc.Indexes[0],
 			ov: info.Indexes[i], count: count, sum: sum}:
 		case <-ics.stop:

@@ -197,7 +197,7 @@ func (ls *leafSlot) contains(from, to string) bool {
 func (leaf *leafNode) insert(from, to string) int {
 	i := leaf.searchBinary(from)
 	if (i < leaf.size && leaf.slots[i].contains(from, to)) ||
-	//if (leaf.slots[i].contains(from, to)) ||
+		//if (leaf.slots[i].contains(from, to)) ||
 		(i > 0 && leaf.slots[i-1].contains(from, to)) {
 		return existing
 	}

@@ -34,7 +34,7 @@ func InfoStr(name string) Value {
 		return IntVal(int(x.Load()))
 	case *string:
 		return SuStr(*x)
-    case Value:
+	case Value:
 	case func() int:
 		return IntVal(x())
 	case func() string:

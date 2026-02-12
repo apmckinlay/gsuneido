@@ -36,7 +36,7 @@ func TestLexer(t *testing.T) {
 		from := it.Pos
 		to := lxr.Position()
 		S = src[from:to]
-		}
+	}
 	first("function", "function", tok.Function)
 	first("foo", "foo", tok.Identifier)
 	first("_foo", "_foo", tok.Identifier)
@@ -86,7 +86,7 @@ func TestLexer(t *testing.T) {
 			from := item.Pos
 			to := lexer.Position()
 			S = source[from:to]
-			}
+		}
 		assert(lexer.Next().Token).Msg("didn't consume input").Is(tok.Eof)
 	}
 	check("f()", tok.Identifier, tok.LParen, tok.RParen)

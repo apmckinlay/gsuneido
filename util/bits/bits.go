@@ -68,7 +68,7 @@ func Cycle(currentVal, rangeLimit uint64) uint64 {
 
 	// LCG
 	step := func(x uint64) uint64 {
-		return Mix((a*x + c) & (m - 1), bitLen)
+		return Mix((a*x+c)&(m-1), bitLen)
 	}
 
 	// Cycle Walking

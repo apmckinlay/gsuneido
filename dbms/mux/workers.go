@@ -76,7 +76,7 @@ func (ws *Workers) worker(t task) {
 		wb.id = uint32(t.id)
 		ws.h(wb, th, t.id, t.data) // do the task
 		th.Invalidate()
-		t = <-ws.ch                // blocking, wait for message
+		t = <-ws.ch // blocking, wait for message
 		if t.c == nil {
 			return // got poison pill so terminate
 		}

@@ -279,7 +279,7 @@ func (lxr *Lexer) next() Item {
 		return lxr.number(start)
 	case '_':
 		if IsDigit(lxr.peek()) {
-			return Item{Pos: int32(start), Token: tok.Error, 
+			return Item{Pos: int32(start), Token: tok.Error,
 				Text: "invalid identifier or number"}
 		}
 		return lxr.identifier(start)

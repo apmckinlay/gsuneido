@@ -319,7 +319,7 @@ func TestRangesBug(t *testing.T) {
 	dbRec2 := t2.Lookup("tmp", 0, emptyKey)
 	assert.T(t).That(dbRec2 != nil)
 	t2.Update(nil, "tmp", dbRec2.Off, mkrec("9", "3"))
-	
+
 	// wait till pending actions are done, with a low priority blocking request
 	db.ck.Transactions()
 	db.ck.Transactions()

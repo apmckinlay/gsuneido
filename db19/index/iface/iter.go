@@ -23,7 +23,7 @@ type Iter interface {
 	// Cur returns the current key & offset
 	// as of the most recent Next, Prev, or Seek
 	Cur() (key string, off uint64)
-	
+
 	Key() string
 	Offset() uint64
 

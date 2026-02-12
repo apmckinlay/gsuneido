@@ -235,7 +235,7 @@ func (d *dasm) next() *SuFunc {
 		endTok := tokens.Token(fetchUint8())
 		end := d.fn.Values[fetchUint8()]
 		s += fmt.Sprint(" ", orgTok, " ", org, " ", endTok, " ", end)
-	case op.ReturnMulti, op.PushReturn,  op.CatN:
+	case op.ReturnMulti, op.PushReturn, op.CatN:
 		n := fetchUint8()
 		s += fmt.Sprint(" ", n)
 	}

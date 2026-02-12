@@ -165,53 +165,53 @@ func TestStringEquals(t *testing.T) {
 		for _, y := range []Value{sustr, suexcept, suconcat} {
 			assert.T(t).Msg(fmt.Sprintf("%T .Equal %T", x, y)).
 				That(x.Equal(y))
-        }
+		}
 	}
-	
+
 }
 func TestNumFromString(t *testing.T) {
-    test := func(s string, expectedInt bool, expectedVal string) {
-        t.Helper()
-        v := NumFromString(s)
-        if expectedInt {
-            _, ok := v.(*smi)
-            if !ok {
-                _, ok = v.(SuInt64)
-            }
-            assert.T(t).Msg(s).This(ok).Is(true)
-        } else {
-            _, ok := v.(SuDnum)
-            assert.T(t).Msg(s).This(ok).Is(true)
-        }
-        assert.T(t).Msg(s).This(v.String()).Is(expectedVal)
-    }
+	test := func(s string, expectedInt bool, expectedVal string) {
+		t.Helper()
+		v := NumFromString(s)
+		if expectedInt {
+			_, ok := v.(*smi)
+			if !ok {
+				_, ok = v.(SuInt64)
+			}
+			assert.T(t).Msg(s).This(ok).Is(true)
+		} else {
+			_, ok := v.(SuDnum)
+			assert.T(t).Msg(s).This(ok).Is(true)
+		}
+		assert.T(t).Msg(s).This(v.String()).Is(expectedVal)
+	}
 
-    // Integer values
-    test("0", true, "0")
-    test("123", true, "123")
-    test("-123", true, "-123")
-    test("2147483647", true, "2147483647")    // MaxInt32
-    test("-2147483648", true, "-2147483648")  // MinInt32
-    
-    // Hex values
-    test("0x1a", true, "26")
+	// Integer values
+	test("0", true, "0")
+	test("123", true, "123")
+	test("-123", true, "-123")
+	test("2147483647", true, "2147483647")   // MaxInt32
+	test("-2147483648", true, "-2147483648") // MinInt32
+
+	// Hex values
+	test("0x1a", true, "26")
 	test("0xffff", true, "65535")
 	test("0xffffffff", true, "4294967295") // MaxUint32
 	test("0xffffffffffffffff", true, "-1")
-    test("-0xff", true, "-255")
-    
-    // Decimal values
-    test("123.456", false, "123.456")
-    test("-123.456", false, "-123.456")
-    test("0.123", false, ".123")
-    test("-0.123", false, "-.123")
-    
-    // Scientific notation
-    test("1e3", false, "1000")
-    test("1.23e2", false, "123")
-    test("1.23e-2", false, ".0123")
-    
-    // Large numbers
-    test("9223372036854775807", true, "9223372036854775807")  // MaxInt64
-    test("9999999999999999999", false, "9.999999999999999e18") // Beyond int64
+	test("-0xff", true, "-255")
+
+	// Decimal values
+	test("123.456", false, "123.456")
+	test("-123.456", false, "-123.456")
+	test("0.123", false, ".123")
+	test("-0.123", false, "-.123")
+
+	// Scientific notation
+	test("1e3", false, "1000")
+	test("1.23e2", false, "123")
+	test("1.23e-2", false, ".0123")
+
+	// Large numbers
+	test("9223372036854775807", true, "9223372036854775807")   // MaxInt64
+	test("9999999999999999999", false, "9.999999999999999e18") // Beyond int64
 }

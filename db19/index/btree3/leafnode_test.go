@@ -34,7 +34,7 @@ func TestLeafNode_builder(t *testing.T) {
 	assert(string(nd.prefix())).Is("")
 	assert(nd.String()).Is("leaf{hello 255}")
 	assert(nd.size()).Is(16)
-	
+
 	b = &leafBuilder{}
 	b.add("100", 100)
 	assert(b.size()).Is(14)
