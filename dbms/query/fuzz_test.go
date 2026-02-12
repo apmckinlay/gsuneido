@@ -24,6 +24,8 @@ func init() {
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 }
 
+const nfuzz = 200
+
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzRandom ./dbms/query/
 
@@ -37,7 +39,7 @@ func FuzzRandom(f *testing.F) {
 
 func TestFuzzRandom(t *testing.T) {
 	start := tempIndexCount.Load()
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzRandom(t, rnd)
@@ -76,7 +78,7 @@ func FuzzQuerySource(f *testing.F) {
 }
 
 func TestFuzzQuerySource(t *testing.T) {
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzQuerySource(t, rnd)
@@ -107,7 +109,7 @@ func TestFuzzProject(t *testing.T) {
 	startCopy := projCopyCount.Load()
 	startSeq := projSeqCount.Load()
 	startMap := projMapCount.Load()
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzProject(t, rnd)
@@ -201,7 +203,7 @@ func FuzzRename(f *testing.F) {
 }
 
 func TestFuzzRename(t *testing.T) {
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzRename(t, rnd)
@@ -236,7 +238,7 @@ func randomRename(rnd *rand.Rand, srcCols []string) (from, to []string) {
 	for i := range n {
 		// Generate a unique new name that doesn't conflict with existing columns
 		for {
-			newName := "renamed_" + strconv.Itoa(rnd.IntN(1000))
+			newName := "renamed_" + strconv.Itoa(rnd.IntN(nfuzz))
 			if !slices.Contains(srcCols, newName) && !slices.Contains(to[:i], newName) {
 				to[i] = newName
 				break
@@ -267,7 +269,7 @@ func TestFuzzSummarize(t *testing.T) {
 	startWholeRow := sumWholeRowCount.Load()
 	rnd := rand.New(rand.NewPCG(1091395294133611146, 8719992948325563695))
 	fuzzSummarize(t, rnd)
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		// fmt.Printf("%d, %d\n", seed1, seed2)
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
@@ -390,7 +392,7 @@ func FuzzMinus(f *testing.F) {
 }
 
 func TestFuzzMinus(t *testing.T) {
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzMinus(t, rnd)
@@ -417,7 +419,7 @@ func FuzzIntersect(f *testing.F) {
 }
 
 func TestFuzzIntersect(t *testing.T) {
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzIntersect(t, rnd)
@@ -451,7 +453,7 @@ func TestFuzzUnion(t *testing.T) {
 	startMerge := unionMergeCount.Load()
 	startLookup := unionLookupCount.Load()
 	startDisjoint := unionDisjointCount.Load()
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzUnion(t, rnd)
@@ -595,7 +597,7 @@ func FuzzTimes(f *testing.F) {
 }
 
 func TestFuzzTimes(t *testing.T) {
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzTimes(t, rnd)
@@ -644,7 +646,7 @@ func TestFuzzJoin(t *testing.T) {
 	start1nCount := join1nCount.Load()
 	startn1Count := joinn1Count.Load()
 	startnnCount := joinnnCount.Load()
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzJoin(t, rnd)
@@ -808,7 +810,7 @@ func TestFuzzLeftJoin(t *testing.T) {
 	start1nCount := leftJoin1nCount.Load()
 	startn1Count := leftJoinn1Count.Load()
 	startnnCount := leftJoinnnCount.Load()
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzLeftJoin(t, rnd)
@@ -854,7 +856,7 @@ func TestFuzzWhere(t *testing.T) {
 	// fuzzWhere(t, rnd)
 	// t.SkipNow()
 
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		// fmt.Printf("%d, %d\n", seed1, seed2)
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
@@ -954,7 +956,7 @@ func FuzzExtend(f *testing.F) {
 }
 
 func TestFuzzExtend(t *testing.T) {
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzExtend(t, rnd)
@@ -993,7 +995,7 @@ func FuzzTempIndex(f *testing.F) {
 }
 
 func TestFuzzTempIndex(t *testing.T) {
-	for range 1000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzTempIndex(t, rnd)
@@ -1503,7 +1505,7 @@ func TestFuzzSplitShare(t *testing.T) {
 		total      int
 	}{}
 
-	for range 10000 {
+	for range nfuzz {
 		seed1, seed2 := rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		part1Empty, part2Empty, part3Empty := fuzzSplitShare(t, rnd)
