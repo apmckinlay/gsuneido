@@ -22,8 +22,14 @@ endif
 build:
 	@go version
 	CGO_ENABLED=0 \
-	go $(BUILD) -o gs_$(GOOS)_$(GOARCH)$(EXE) \
-	  -ldflags "$(LDFLAGS)" 
+	go $(BUILD) $(BUILDARGS) -o gs_$(GOOS)_$(GOARCH)$(EXE) \
+	  -ldflags "$(LDFLAGS)"
+	  
+race:
+	@go version
+	CGO_ENABLED=1 \
+	go $(BUILD) -race -o gs_$(GOOS)_$(GOARCH)$(EXE) \
+	  -ldflags "$(LDFLAGS)"
 
 define BUILD_BINARY
 	$(eval GO_VARS := $(subst _, ,$*))
