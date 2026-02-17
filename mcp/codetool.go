@@ -36,7 +36,12 @@ func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, 
 	hdr := q.Header()
 	row, _ := q.Get(th, core.Next)
 	if row == nil {
-		return readCodeOutput{}, fmt.Errorf("code not found for: %s in %s", name, library)
+		extra := ""
+		if core.Global.IsBuiltin(name) {
+			extra = " (it is built-in)"
+		}
+		return readCodeOutput{}, fmt.Errorf("code not found for: %s in %s%s",
+			name, library, extra)
 	}
 
 	st := core.NewSuTran(tran, false)

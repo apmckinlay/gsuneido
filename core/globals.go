@@ -179,6 +179,17 @@ func (typeGlobal) Exists(name string) bool {
 	return ok
 }
 
+// IsBuiltin returns whether the name is a built-in global
+func (typeGlobal) IsBuiltin(name string) bool {
+	g.lock.RLock()
+	defer g.lock.RUnlock()
+	if gn, ok := g.name2num[name]; ok {
+		_, isBuiltin := g.builtins[gn]
+		return isBuiltin
+	}
+	return false
+}
+
 // GetName returns the value for a global name, or panics
 func (typeGlobal) GetName(th *Thread, name string) Value {
 	return Global.Get(th, Global.Num(name))

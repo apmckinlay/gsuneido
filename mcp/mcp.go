@@ -22,15 +22,22 @@ import (
 
 var httpServer *http.Server
 
-// Start starts the MCP server in the background on the given port.
-// It binds to localhost only (127.0.0.1) for security.
-// Uses Streamable HTTP transport for streaming responses.
-func Start(port string) {
+// Server returns a new MCP server with all tools registered.
+// This is useful for in-process communication without HTTP.
+func Server() *mcp.Server {
 	s := mcp.NewServer(&mcp.Implementation{
 		Name:    "gSuneido MCP Server",
 		Version: "0.0.1",
 	}, nil)
 	addTools(s)
+	return s
+}
+
+// Start starts the MCP server in the background on the given port.
+// It binds to localhost only (127.0.0.1) for security.
+// Uses Streamable HTTP transport for streaming responses.
+func Start(port string) {
+	s := Server()
 
 	mux := http.NewServeMux()
 	mux.Handle("/mcp", mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server {

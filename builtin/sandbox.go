@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 )
 
-var sandboxEnabled atomic.Bool
+var sandboxEnabled atomic.Int32
 var sandboxRoot string
 
 func EnableSandbox() {
@@ -26,26 +26,27 @@ func EnableSandbox() {
 
 func enableSandbox(root string) {
 	sandboxRoot = filepath.Clean(root)
-	sandboxEnabled.Store(true)
+	sandboxEnabled.Add(1)
 }
 
-func resetSandbox() {
-	sandboxEnabled.Store(false)
-	sandboxRoot = ""
+func DisableSandbox() {
+	if sandboxEnabled.Add(-1) < 0 {
+		sandboxEnabled.Store(0)
+	}
 }
 
 func sandboxed() bool {
-	return sandboxEnabled.Load()
+	return sandboxEnabled.Load() > 0
 }
 
 func guardSandbox(op string) {
-	if sandboxEnabled.Load() {
+	if sandboxed() {
 		panic("sandbox: " + op + " disabled")
 	}
 }
 
 func sandboxPath(op, name string) (string, error) {
-	if !sandboxEnabled.Load() {
+	if !sandboxed() {
 		return name, nil
 	}
 	if filepath.IsAbs(name) {

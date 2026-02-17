@@ -12,14 +12,14 @@ import (
 )
 
 func TestSandboxFilePath(t *testing.T) {
-	resetSandbox()
+	DisableSandbox()
 	path, err := sandboxPath("test", "file.txt")
 	assert.T(t).That(err == nil)
 	assert.T(t).This(path).Is("file.txt")
 
 	root := t.TempDir()
 	enableSandbox(root)
-	defer resetSandbox()
+	defer DisableSandbox()
 
 	path, err = sandboxPath("test", "sub/dir/file.txt")
 	assert.T(t).That(err == nil)
@@ -37,21 +37,21 @@ func TestSandboxFilePath(t *testing.T) {
 }
 
 func TestGuardSandbox(t *testing.T) {
-	resetSandbox()
+	DisableSandbox()
 	guardSandbox("System")
 
 	root := t.TempDir()
 	enableSandbox(root)
-	defer resetSandbox()
+	defer DisableSandbox()
 
 	assert.T(t).This(func() { guardSandbox("System") }).Panics("sandbox: System disabled")
 }
 
 func TestSandboxPath(t *testing.T) {
-	resetSandbox()
+	DisableSandbox()
 	root := t.TempDir()
 	enableSandbox(root)
-	defer resetSandbox()
+	defer DisableSandbox()
 
 	_, err := sandboxPath("CreateDir", string(filepath.Separator)+"abs")
 	assert.T(t).That(err != nil)
