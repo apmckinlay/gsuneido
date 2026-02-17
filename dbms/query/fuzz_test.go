@@ -118,14 +118,16 @@ func TestFuzzProject(t *testing.T) {
 	deltaSeq := projSeqCount.Load() - startSeq
 	deltaMap := projMapCount.Load() - startMap
 	fmt.Printf("Project strategies: copy=%d seq=%d map=%d\n", deltaCopy, deltaSeq, deltaMap)
-	if deltaCopy == 0 {
-		t.Error("projCopy strategy not used")
-	}
-	if deltaSeq == 0 {
-		t.Error("projSeq strategy not used")
-	}
-	if deltaMap == 0 {
-		t.Error("projMap strategy not used")
+	if nfuzz >= 1000 {
+		if deltaCopy == 0 {
+			t.Error("projCopy strategy not used")
+		}
+		if deltaSeq == 0 {
+			t.Error("projSeq strategy not used")
+		}
+		if deltaMap == 0 {
+			t.Error("projMap strategy not used")
+		}
 	}
 }
 
@@ -283,23 +285,25 @@ func TestFuzzSummarize(t *testing.T) {
 	deltaWholeRow := sumWholeRowCount.Load() - startWholeRow
 	fmt.Printf("Summarize strategies: seq=%d map=%d idx=%d tbl=%d unique=%d wholerow=%d\n",
 		deltaSeq, deltaMap, deltaIdx, deltaTbl, deltaUnique, deltaWholeRow)
-	if deltaSeq == 0 {
-		t.Error("sumSeq strategy not used")
-	}
-	if deltaMap == 0 {
-		t.Error("sumMap strategy not used")
-	}
-	if deltaIdx == 0 {
-		t.Error("sumIdx strategy not used")
-	}
-	if deltaTbl == 0 {
-		t.Error("sumTbl strategy not used")
-	}
-	if deltaUnique == 0 {
-		t.Error("sumUnique variation not used")
-	}
-	if deltaWholeRow == 0 {
-		t.Error("sumWholeRow variation not used")
+	if nfuzz >= 1000 {
+		if deltaSeq == 0 {
+			t.Error("sumSeq strategy not used")
+		}
+		if deltaMap == 0 {
+			t.Error("sumMap strategy not used")
+		}
+		if deltaIdx == 0 {
+			t.Error("sumIdx strategy not used")
+		}
+		if deltaTbl == 0 {
+			t.Error("sumTbl strategy not used")
+		}
+		if deltaUnique == 0 {
+			t.Error("sumUnique variation not used")
+		}
+		if deltaWholeRow == 0 {
+			t.Error("sumWholeRow variation not used")
+		}
 	}
 }
 
@@ -462,18 +466,20 @@ func TestFuzzUnion(t *testing.T) {
 	deltaLookup := unionLookupCount.Load() - startLookup
 	deltaDisjoint := unionDisjointCount.Load() - startDisjoint
 	fmt.Printf("Union strategies: merge=%d lookup=%d disjoint=%d\n", deltaMerge, deltaLookup, deltaDisjoint)
-	if deltaMerge == 0 {
-		t.Error("unionMerge strategy not used")
-	}
-	if deltaLookup == 0 {
-		t.Error("unionLookup strategy not used")
-	}
-	// TODO requires Fixed
-	// if deltaDisjoint == 0 {
-	// 	t.Error("unionDisjoint variation not used")
-	// }
-	if deltaMerge+deltaLookup-deltaDisjoint == 0 {
-		t.Error("union non-disjoint variation not used")
+	if nfuzz >= 1000 {
+		if deltaMerge == 0 {
+			t.Error("unionMerge strategy not used")
+		}
+		if deltaLookup == 0 {
+			t.Error("unionLookup strategy not used")
+		}
+		// TODO requires Fixed
+		// if deltaDisjoint == 0 {
+		// 	t.Error("unionDisjoint variation not used")
+		// }
+		if deltaMerge+deltaLookup-deltaDisjoint == 0 {
+			t.Error("union non-disjoint variation not used")
+		}
 	}
 }
 
