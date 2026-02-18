@@ -934,6 +934,7 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 		}
 		return row
 	}
+	cloned := false
 	cols = slices.Clip(cols)
 	vals = slices.Clip(vals)
 	indexFields := w.srcIndex
@@ -945,9 +946,10 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 			!slices.Contains(cols, fix.col) {
 			cols = append(cols, fix.col)
 			vals = append(vals, fix.values[0])
+			cloned = true // because they're clipped, append will realloc
 		}
 	}
-	icols, ivals, ocols, _ := Split(cols, vals, indexFields)
+	icols, ivals, ocols, _ := Split(cloned, cols, vals, indexFields)
 	for _, col := range ocols {
 		assert.That(isFixed(w.fixed, col))
 	}
@@ -959,11 +961,18 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 	return row
 }
 
-func Split(flds, vals, index []string) (iflds, ivals, oflds, ovals []string) {
+// Split partitions flds and vals, returning sub-slices.
+// It clones the slices only if modifications are needed.
+func Split(cloned bool, flds, vals, index []string) (iflds, ivals, oflds, ovals []string) {
 	pivot := func(i int) bool {
 		return slices.Contains(index, flds[i])
 	}
 	swap := func(i, j int) {
+		if !cloned {
+			flds = slc.Clone(flds)
+			vals = slc.Clone(vals)
+			cloned = true
+		}
 		flds[i], flds[j] = flds[j], flds[i]
 		vals[i], vals[j] = vals[j], vals[i]
 	}

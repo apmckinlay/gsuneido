@@ -190,7 +190,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		table.SetIndex(key)
 		strat = "key: " + table.String()
 		trace.QueryOpt.Println(dir, strat)
-		iflds, ivals, oflds, ovals := qry.Split(flds, vals, key)
+		iflds, ivals, oflds, ovals := qry.Split(false, flds, vals, key)
 		return true, strat, func() Row {
 			return filter(oflds, ovals, table.Lookup(th, iflds, ivals))
 		}

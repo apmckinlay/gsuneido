@@ -635,7 +635,7 @@ func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 
 func (su *Summarize) Select(cols, vals []string) {
 	su.nsels++
-	icols, ivals, ocols, ovals := Split(cols, vals, su.index)
+	icols, ivals, ocols, ovals := Split(false, cols, vals, su.index)
 	su.selCols, su.selVals = ocols, ovals
 	su.source.Select(icols, ivals)
 	su.rewound = true

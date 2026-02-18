@@ -670,22 +670,22 @@ func (u *Union) Select(cols, vals []string) {
 	if selConflict(u.source1.Columns(), cols, vals) {
 		u.src1get = nothing
 	} else {
-		cols, vals = removeNonexistentEmpty(u.source1.Columns(), cols, vals)
-		u.source1.Select(cols, vals)
+		u.source1.Select(
+			removeNonexistentEmpty(u.source1.Columns(), cols, vals))
 	}
 	if selConflict(u.source2.Columns(), cols, vals) {
 		u.src2get = nothing
 	} else {
-		cols, vals = removeNonexistentEmpty(u.source2.Columns(), cols, vals)
-		u.source2.Select(cols, vals)
+		u.source2.Select(
+			removeNonexistentEmpty(u.source2.Columns(), cols, vals))
 	}
 }
 
 func removeNonexistentEmpty(srccols, cols, vals []string) ([]string, []string) {
 	for i, col := range cols {
 		if !slices.Contains(srccols, col) && vals[i] == "" {
-			newcols := slc.Clone(cols[:i])
-			newvals := slc.Clone(vals[:i])
+			newcols := slices.Clip(cols[:i])
+			newvals := slices.Clip(vals[:i])
 			for ; i < len(cols); i++ {
 				if slices.Contains(srccols, cols[i]) || vals[i] != "" {
 					newcols = append(newcols, cols[i])

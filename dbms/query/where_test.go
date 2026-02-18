@@ -384,7 +384,7 @@ func TestSplit(t *testing.T) {
 	flds := []string{}
 	vals := []string{}
 	index := []string{"a"}
-	iflds, ivals, oflds, ovals := Split(flds, vals, index)
+	iflds, ivals, oflds, ovals := Split(false, flds, vals, index)
 	assert.T(t).This(iflds).Is(nil)
 	assert.T(t).This(ivals).Is(nil)
 	assert.T(t).This(oflds).Is(nil)
@@ -394,7 +394,7 @@ func TestSplit(t *testing.T) {
 	flds = []string{"a", "b"}
 	vals = []string{"1", "2"}
 	index = []string{"a", "b"}
-	iflds, ivals, oflds, ovals = Split(flds, vals, index)
+	iflds, ivals, oflds, ovals = Split(false, flds, vals, index)
 	assert.T(t).This(iflds).Is([]string{"a", "b"})
 	assert.T(t).This(ivals).Is([]string{"1", "2"})
 	assert.T(t).This(oflds).Is(nil)
@@ -404,7 +404,7 @@ func TestSplit(t *testing.T) {
 	flds = []string{"c", "d"}
 	vals = []string{"3", "4"}
 	index = []string{"a", "b"}
-	iflds, ivals, oflds, ovals = Split(flds, vals, index)
+	iflds, ivals, oflds, ovals = Split(false, flds, vals, index)
 	assert.T(t).This(iflds).Is(nil)
 	assert.T(t).This(ivals).Is(nil)
 	assert.T(t).This(oflds).Is([]string{"c", "d"})
@@ -414,7 +414,7 @@ func TestSplit(t *testing.T) {
 	flds = []string{"a", "c", "b", "d"}
 	vals = []string{"1", "3", "2", "4"}
 	index = []string{"a", "b"}
-	iflds, ivals, oflds, ovals = Split(flds, vals, index)
+	iflds, ivals, oflds, ovals = Split(false, flds, vals, index)
 	// iflds should contain "a" and "b", in some order, ivals accordingly
 	// oflds "c" and "d"
 	assert.T(t).This(len(iflds)).Is(2)

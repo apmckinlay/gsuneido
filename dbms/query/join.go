@@ -13,6 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/set"
+	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
@@ -495,8 +496,8 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	}
 	// fmt.Println("Join row1", jn.row1)
 	// assert.That(set.Disjoint(jn.by, jn.sel2cols))
-	sel2cols := append(jn.sel2cols, jn.by...)
-	sel2vals := append(jn.sel2vals, jn.projectRow1(th, jn.row1)...)
+	sel2cols := slc.With(jn.sel2cols, jn.by...)
+	sel2vals := slc.With(jn.sel2vals, jn.projectRow1(th, jn.row1)...)
 	if useLookup && jn.joinType.toOne() {
 		jn.lookupRow = jn.cachedLookup(th, sel2cols, sel2vals)
 	} else {
@@ -811,10 +812,11 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			if lj.row1 == nil {
 				return nil
 			}
+			byVals := lj.projectRow1(th, lj.row1)
 			if useLookup && lj.joinType.toOne() {
-				lj.lookupRow = lj.cachedLookup(th, lj.by, lj.projectRow1(th, lj.row1))
+				lj.lookupRow = lj.cachedLookup(th, lj.by, byVals)
 			} else {
-				lj.source2.Select(lj.by, lj.projectRow1(th, lj.row1))
+				lj.source2.Select(lj.by, byVals)
 			}
 			row1out = false
 		}
