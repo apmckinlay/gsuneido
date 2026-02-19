@@ -7,10 +7,14 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/core"
 )
 
 func bookTool(book, path string) (readBookOutput, error) {
+	if !lexer.IsIdentifier(book) {
+		return readBookOutput{}, fmt.Errorf("invalid book name: %s", book)
+	}
 	if path == "/" {
 		path = ""
 	} else if path != "" && path[0] != '/' {

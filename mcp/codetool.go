@@ -29,7 +29,7 @@ func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, 
 		return readCodeOutput{}, fmt.Errorf("library not found: %s", library)
 	}
 
-	query := fmt.Sprintf("%s where group = -1 and name = '%s'", library, name)
+	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
 	tran := th.Dbms().Transaction(false)
 	defer tran.Complete()
 	q := tran.Query(query, nil)
