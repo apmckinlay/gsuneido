@@ -6,7 +6,6 @@ package mcp
 import (
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
@@ -16,7 +15,8 @@ import (
 const searchLimit = 100
 
 func searchCode(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) (result searchCodeOutput, err error) {
-	if strings.TrimSpace(nameRx) == "" && strings.TrimSpace(codeRx) == "" && !modified {
+	nameRx = strings.TrimSpace(nameRx)
+	if nameRx == "" && codeRx == "" && !modified {
 		return searchCodeOutput{}, fmt.Errorf("name or code is required (unless modified is true)")
 	}
 
@@ -33,6 +33,16 @@ func searchCode(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) 
 	nameQuery, err := searchQuery(nameRx, codeRx, caseSensitive, modified)
 	if err != nil {
 		return searchCodeOutput{}, err
+	}
+
+	hasCodeRx := false
+	var codePat regex.Pattern
+	if codeRx != "" {
+		hasCodeRx = true
+		codeRx = applyCaseSensitivity(codeRx, caseSensitive)
+		if codePat, err = compileRegex(codeRx); err != nil {
+			return searchCodeOutput{}, fmt.Errorf("invalid code regex: %w", err)
+		}
 	}
 
 	tran := th.Dbms().Transaction(false)
@@ -58,11 +68,13 @@ func searchCode(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) 
 			if err != nil {
 				return searchCodeOutput{}, err
 			}
-			line, err := matchLine(row, hdr, th, st, codeRx, caseSensitive)
-			if err != nil {
-				return searchCodeOutput{}, err
+			var lines []string
+			var hasMore bool
+			if hasCodeRx {
+				lines, hasMore = matchLines(row, hdr, th, st, codePat)
 			}
-			matches = append(matches, codeMatch{Library: lib, Name: name, Path: path, Line: line})
+			matches = append(matches, codeMatch{Library: lib, Name: name,
+				Path: path, Lines: lines, HasMore: hasMore})
 		}
 	}
 
@@ -71,22 +83,27 @@ func searchCode(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) 
 }
 
 func searchQuery(nameRx, codeRx string, caseSensitive, modified bool) (string, error) {
-	nameRx = strings.TrimSpace(nameRx)
-	codeRx = strings.TrimSpace(codeRx)
-	nameRx = applyCaseSensitivity(nameRx, caseSensitive)
-	codeRx = applyCaseSensitivity(codeRx, caseSensitive)
-	if _, err := compileRegex(nameRx); err != nil {
-		return "", fmt.Errorf("invalid name regex: %w", err)
+	var query strings.Builder
+	query.WriteString("where group = -1")
+	if nameRx != "" {
+		nameRx = applyCaseSensitivity(nameRx, caseSensitive)
+		if _, err := compileRegex(nameRx); err != nil {
+			return "", fmt.Errorf("invalid name regex: %w", err)
+		}
+		fmt.Fprintf(&query, " where name =~ %q", nameRx)
 	}
-	if _, err := compileRegex(codeRx); err != nil {
-		return "", fmt.Errorf("invalid code regex: %w", err)
+	if codeRx != "" {
+		codeRx = applyCaseSensitivity(codeRx, caseSensitive)
+		if _, err := compileRegex(codeRx); err != nil {
+			return "", fmt.Errorf("invalid code regex: %w", err)
+		}
+		fmt.Fprintf(&query, " where text =~ %q", codeRx)
 	}
-	modCond := ""
 	if modified {
-		modCond = " and lib_modified isnt \"\""
+		query.WriteString(" where lib_modified isnt \"\"")
 	}
-	return fmt.Sprintf("where group = -1 and name =~ %s and text =~ %s%s sort name",
-		strconv.Quote(nameRx), strconv.Quote(codeRx), modCond), nil
+	query.WriteString(" sort name")
+	return query.String(), nil
 }
 
 func filterLibraries(libs []string, libraryRx string, caseSensitive bool) ([]string, error) {
@@ -118,41 +135,41 @@ func applyCaseSensitivity(rx string, caseSensitive bool) string {
 	return "(?i)" + rx
 }
 
-func matchLine(row core.Row, hdr *core.Header, th *core.Thread, st *core.SuTran, codeRx string, caseSensitive bool) (string, error) {
-	codeRx = strings.TrimSpace(codeRx)
-	if codeRx == "" {
-		return "", nil
-	}
-	codeRx = applyCaseSensitivity(codeRx, caseSensitive)
-	pat, err := compileRegex(codeRx)
-	if err != nil {
-		return "", fmt.Errorf("invalid code regex: %w", err)
-	}
+func matchLines(row core.Row, hdr *core.Header, th *core.Thread, st *core.SuTran,
+	pat regex.Pattern) (lines []string, hasMore bool) {
 	textVal := row.GetVal(hdr, "text", th, st)
 	if textVal == nil {
-		return "", fmt.Errorf("text column not found or null")
+		return nil, false
 	}
 	text, ok := textVal.ToStr()
 	if !ok {
-		return "", fmt.Errorf("text column is not a string")
+		return nil, false
 	}
-	var cap regex.Captures
-	if !pat.Match(text, &cap) {
-		return "", nil
+	seenLines := make(map[int]bool)
+	for cap := range pat.All(text) {
+		start := int(cap[0])
+		if start < 0 {
+			continue
+		}
+		if start > len(text) {
+			start = len(text)
+		}
+		lineNum := 1 + strings.Count(text[:start], "\n")
+		if seenLines[lineNum] {
+			continue
+		}
+		seenLines[lineNum] = true
+		if len(lines) >= linesLimit {
+			hasMore = true
+			break
+		}
+		lineText := lineAt(text, start)
+		if lineText == "" {
+			continue
+		}
+		lines = append(lines, addLineNumbers(lineText, lineNum))
 	}
-	start := int(cap[0])
-	if start < 0 {
-		return "", nil
-	}
-	if start > len(text) {
-		start = len(text)
-	}
-	lineNum := 1 + strings.Count(text[:start], "\n")
-	lineText := lineAt(text, start)
-	if lineText == "" {
-		return "", nil
-	}
-	return addLineNumbers(lineText, lineNum), nil
+	return lines, hasMore
 }
 
 func lineAt(text string, pos int) string {

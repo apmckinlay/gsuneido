@@ -170,10 +170,11 @@ type searchCodeOutput struct {
 }
 
 type codeMatch struct {
-	Library string `json:"library" jsonschema:"Library name"`
-	Name    string `json:"name" jsonschema:"Definition name"`
-	Path    string `json:"path" jsonschema:"Folder path within the library"`
-	Line    string `json:"line" jsonschema:"Matching line of source code with line number prefix"`
+	Library string   `json:"library" jsonschema:"Library name"`
+	Name    string   `json:"name" jsonschema:"Definition name"`
+	Path    string   `json:"path" jsonschema:"Folder path within the library"`
+	Lines   []string `json:"lines" jsonschema:"Matching lines of source code with line number prefixes"`
+	HasMore bool     `json:"has_more,omitempty" jsonschema:"True when additional matching lines were truncated"`
 }
 
 // read_book
