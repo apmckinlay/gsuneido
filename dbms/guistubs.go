@@ -25,3 +25,7 @@ func Conns() string {
 func connections() *SuObject {
 	return &SuObject{}
 }
+
+func kill(sid string) int {
+	return 0
+}

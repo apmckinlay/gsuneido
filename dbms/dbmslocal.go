@@ -162,6 +162,9 @@ func (dbms *DbmsLocal) Info() Value {
 }
 
 func (*DbmsLocal) Kill(addr string) int {
+	if options.Action == "server" {
+		return kill(addr)
+	}
 	panic("Kill is only available client-server")
 }
 
