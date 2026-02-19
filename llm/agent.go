@@ -172,8 +172,8 @@ func (agent *Agent) request(input string) {
 
 			// Process each tool call
 			for _, tc := range toolCallsList {
-				agent.emit("tool", "**"+tc.Function.Name+"**\n"+
-					tc.Function.Arguments)
+				agent.emit("tool",
+					"**"+tc.Function.Name+"** "+tc.Function.Arguments+"\n\n")
 				result, err := agent.mcpClient.CallToolFromLLM(ctx, tc)
 				if err != nil {
 					agent.emit("tool", "\n\nError: "+err.Error())
