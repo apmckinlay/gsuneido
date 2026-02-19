@@ -15,7 +15,7 @@ import (
 
 const searchLimit = 100
 
-func searchTool(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) (result searchCodeOutput, err error) {
+func searchCode(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) (result searchCodeOutput, err error) {
 	if strings.TrimSpace(nameRx) == "" && strings.TrimSpace(codeRx) == "" && !modified {
 		return searchCodeOutput{}, fmt.Errorf("name or code is required (unless modified is true)")
 	}

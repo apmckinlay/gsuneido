@@ -160,7 +160,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return searchTool(libraryRx, nameRx, codeRx, caseSensitive, modified)
+		return searchCode(libraryRx, nameRx, codeRx, caseSensitive, modified)
 	},
 })
 
@@ -200,6 +200,43 @@ type readBookOutput struct {
 	Path     string   `json:"path" jsonschema:"Normalized page path"`
 	Text     string   `json:"text" jsonschema:"Book page text"`
 	Children []string `json:"children" jsonschema:"Child topic names at this path"`
+}
+
+// search_book
+var _ = addTool(toolSpec{
+	name:        "suneido_search_book",
+	description: "Search book pages by regex on path and text",
+	params: []stringParam{
+		{name: "book", description: "Name of the book table (e.g. 'suneidoc')", required: true, kind: paramString},
+		{name: "path", description: "Regular expression applied to the full page path (path + name)", required: false, kind: paramString},
+		{name: "text", description: "Regular expression applied to page text (optional if path provided)", required: false, kind: paramString},
+		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
+	},
+	outputSchema: outputSchema[searchBookOutput](),
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		book, err := requireString(args, "book")
+		if err != nil {
+			return nil, err
+		}
+		pathRx := optionalString(args, "path")
+		textRx := optionalString(args, "text")
+		caseSensitive, err := optionalBool(args, "case_sensitive", false)
+		if err != nil {
+			return nil, err
+		}
+		return searchBook(book, pathRx, textRx, caseSensitive)
+	},
+})
+
+type searchBookOutput struct {
+	Matches []bookMatch `json:"matches" jsonschema:"List of matching book pages"`
+	HasMore bool        `json:"has_more,omitempty" jsonschema:"True when additional matches were truncated"`
+}
+
+type bookMatch struct {
+	Path    string   `json:"path" jsonschema:"Full path to the book page"`
+	Lines   []string `json:"lines" jsonschema:"Matching lines of text with line number prefixes"`
+	HasMore bool     `json:"has_more,omitempty" jsonschema:"True when additional matching lines were truncated"`
 }
 
 // code_folders

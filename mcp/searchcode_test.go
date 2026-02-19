@@ -36,23 +36,23 @@ func TestSearchTool(t *testing.T) {
 	tran.Action(th, "insert { name: 'SearchTarget', text: 'function(){return \"hello\"}', group: -1, parent: 4, num: 5 } into app")
 	tran.Complete()
 
-	res, err := searchTool("std.*", "Foo", "return 1", false, false)
+	res, err := searchCode("std.*", "Foo", "return 1", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{{Library: "stdlib", Name: "Foo", Path: "", Line: "0001: function(){return 1}"}})
 
-	res, err = searchTool("STDLIB", "FOO", "RETURN 1", false, false)
+	res, err = searchCode("STDLIB", "FOO", "RETURN 1", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{{Library: "stdlib", Name: "Foo", Path: "", Line: "0001: function(){return 1}"}})
 
-	res, err = searchTool("STDLIB", "FOO", "RETURN 1", true, false)
+	res, err = searchCode("STDLIB", "FOO", "RETURN 1", true, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{})
 
-	res, err = searchTool("app", "Foo.*", "return 3", false, false)
+	res, err = searchCode("app", "Foo.*", "return 3", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{{Library: "app", Name: "FooApp", Path: "", Line: "0001: function(){return 3}"}})
 
-	res, err = searchTool("", "", "return", false, false)
+	res, err = searchCode("", "", "return", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{
 		{Library: "stdlib", Name: "Bar", Path: "", Line: "0001: function(){return 2}"},
@@ -62,11 +62,11 @@ func TestSearchTool(t *testing.T) {
 	})
 	assert.That(!res.HasMore)
 
-	_, err = searchTool("", "", "", false, false)
+	_, err = searchCode("", "", "", false, false)
 	assert.That(err != nil)
 
 	// empty name and code is allowed when modified is true
-	res, err = searchTool("", "", "", false, true)
+	res, err = searchCode("", "", "", false, true)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(0)
 }
