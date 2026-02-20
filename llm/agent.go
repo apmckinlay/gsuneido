@@ -169,11 +169,11 @@ func (agent *Agent) request(input string) {
 
 			// Process each tool call
 			for _, tc := range toolCallsList {
-				agent.emit("tool",
-					"**"+tc.Function.Name+"** "+tc.Function.Arguments+"\n\n")
+				name := strings.TrimPrefix(tc.Function.Name, "suneido_")
+				agent.emit("tool", "**"+name+"** "+tc.Function.Arguments+"<br>")
 				result, err := agent.mcpClient.CallToolFromLLM(ctx, tc)
 				if err != nil {
-					agent.emit("tool", "\n\nError: "+err.Error())
+					agent.emit("tool", "**Error:** "+err.Error()+"<br>")
 				}
 				// Add tool result to history
 				agent.history = append(agent.history, Message{
