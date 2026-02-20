@@ -74,7 +74,7 @@ func (ip *inProgressStack) has(x, y Value) bool {
 var order [types.N]types.Type
 
 func init() {
-	for i := types.Boolean; i < types.N; i++ {
+	for i := range types.N {
 		order[i] = i
 	}
 	order[types.Record] = types.Object

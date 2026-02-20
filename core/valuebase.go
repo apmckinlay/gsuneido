@@ -23,7 +23,7 @@ func (ValueBase[E]) TypeName() string {
 func typeName[E any]() string {
 	var z E
 	t := reflect.TypeOf(z)
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	s := t.Name()

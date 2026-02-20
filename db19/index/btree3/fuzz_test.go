@@ -100,11 +100,8 @@ func FuzzRandomInsertBatches(f *testing.F) {
 	defer SetSplit(SetSplit(4))
 	f.Fuzz(func(t *testing.T, seed uint64, totalKeys, maxBatchSize uint8) {
 		// Ensure reasonable bounds
-		totalSize := int(totalKeys) + 1   // 1-256 keys
-		maxBatch := int(maxBatchSize) + 1 // 1-256 batch size
-		if maxBatch > totalSize {
-			maxBatch = totalSize
-		}
+		totalSize := int(totalKeys) + 1                 // 1-256 keys
+		maxBatch := min(int(maxBatchSize)+1, totalSize) // 1-256 batch size
 
 		// fmt.Println("seed:", seed, "totalKeys:", totalSize, "maxBatchSize:", maxBatch)
 
@@ -183,7 +180,7 @@ func FuzzRandomDeleteBatches(f *testing.F) {
 			batchSize := rng.IntN(min(maxBatchSize, len(remaining))) + 1
 
 			ib := &ixbuf.T{}
-			for i := 0; i < batchSize; i++ {
+			for i := range batchSize {
 				key := strconv.Itoa(keyBase + remaining[i])
 				keyNum, err := strconv.Atoi(key)
 				if err != nil {

@@ -4,6 +4,7 @@
 package sortlist
 
 import (
+	"cmp"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -13,14 +14,13 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"golang.org/x/exp/constraints"
 )
 
 var z = func(x int) bool { return x == 0 }
 var lt = func(x, y int) bool { return x < y }
 
 func sz[T any](s []T) bool { return s == nil }
-func slt[T constraints.Ordered](x, y []T) bool {
+func slt[T cmp.Ordered](x, y []T) bool {
 	return slices.Compare(x, y) < 0
 }
 

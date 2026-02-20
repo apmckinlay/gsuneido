@@ -342,7 +342,7 @@ func TestCursorDeleteBehavior(t *testing.T) {
 
 	// Insert records with k values 0-5
 	ut := db.NewUpdateTran()
-	for i := 0; i < 6; i++ {
+	for i := range 6 {
 		ut.Output(nil, "testtable", mkrec(strconv.Itoa(i)))
 	}
 	ut.Commit()

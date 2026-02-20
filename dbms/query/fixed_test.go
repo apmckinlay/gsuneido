@@ -111,7 +111,7 @@ func makeFixed(f string) []Fixed {
 	if f == "" {
 		return result
 	}
-	for _, g := range strings.Split(f, "; ") {
+	for g := range strings.SplitSeq(f, "; ") {
 		h := strings.Split(g, " ")
 		result = append(result, Fixed{col: h[0], values: h[1:]})
 	}

@@ -5,7 +5,6 @@
 package schema
 
 import (
-	"sort"
 	"strings"
 
 	"slices"
@@ -132,7 +131,7 @@ func (ix *Index) string(fktohere bool) string {
 			toHere[i] = " from " + fk.Table + str.Join("(,)", fk.Columns)
 		}
 		// sort for consistency in tests
-		sort.Slice(toHere, func(i, j int) bool { return toHere[i] < toHere[j] })
+		slices.Sort(toHere)
 		s += str.Join("", toHere)
 	}
 	return s
@@ -179,7 +178,7 @@ func (sc *Schema) Check() {
 
 func (sc *Schema) checkColumns() {
 	n := len(sc.Columns)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		assert.That(sc.Columns[i] != "")
 		if sc.Columns[i] != "-" {
 			for j := i + 1; j < n; j++ {

@@ -3,6 +3,8 @@
 
 package core
 
+import "maps"
+
 // MemBase is the shared base for SuClass and SuInstance
 type MemBase struct {
 	Data map[string]Value
@@ -41,9 +43,7 @@ func (mb *MemBase) Copy() MemBase {
 		defer mb.lock.Unlock()
 	}
 	copy := make(map[string]Value, len(mb.Data))
-	for k, v := range mb.Data {
-		copy[k] = v
-	}
+	maps.Copy(copy, mb.Data)
 	return MemBase{Data: copy}
 }
 

@@ -26,23 +26,25 @@ func NewFixed(col string, val Value) Fixed {
 func fixedStr(fixed []Fixed) string {
 	slices.SortFunc(fixed,
 		func(x, y Fixed) int { return strings.Compare(x.col, y.col) })
-	s := "["
+	var s strings.Builder
+	s.WriteString("[")
 	sep := ""
 	for _, fxd := range fixed {
-		s += sep + fxd.String()
+		s.WriteString(sep + fxd.String())
 		sep = ", "
 	}
-	return s + "]"
+	return s.String() + "]"
 }
 
 func (f *Fixed) String() string {
-	s := f.col + "=("
+	var s strings.Builder
+	s.WriteString(f.col + "=(")
 	sep := ""
 	for _, v := range f.values {
-		s += sep + Unpack(v).String()
+		s.WriteString(sep + Unpack(v).String())
 		sep = ","
 	}
-	return s + ")"
+	return s.String() + ")"
 }
 
 // combineFixed is used by Where, Join, and Intersect.

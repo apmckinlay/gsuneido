@@ -342,7 +342,7 @@ func TestIteratorBasic(t *testing.T) {
 	assert.T(t).That(!it.Eof())
 
 	// Test iteration forward
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		it.Next()
 		assert.T(t).That(it.HasCur())
 		assert.T(t).That(!it.Eof())

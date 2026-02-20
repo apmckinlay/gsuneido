@@ -21,6 +21,7 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -299,22 +300,24 @@ type Nary struct {
 }
 
 func (a *Nary) String() string {
-	s := "Nary(" + a.Tok.String()
+	var s strings.Builder
+	s.WriteString("Nary(" + a.Tok.String())
 	for _, e := range a.Exprs {
-		s += " " + e.String()
+		s.WriteString(" " + e.String())
 	}
-	return s + ")"
+	return s.String() + ")"
 }
 
 func (a *Nary) Echo() string {
 	if len(a.Exprs) == 0 {
 		return ""
 	}
-	s := a.Exprs[0].Echo()
+	var s strings.Builder
+	s.WriteString(a.Exprs[0].Echo())
 	for _, e := range a.Exprs[1:] {
-		s += tokEcho[a.Tok] + e.Echo()
+		s.WriteString(tokEcho[a.Tok] + e.Echo())
 	}
-	return s
+	return s.String()
 }
 
 func (a *Nary) Children(fn func(Node) Node) {
@@ -413,13 +416,14 @@ type In struct {
 }
 
 func (a *In) String() string {
-	s := "In(" + a.E.String() + " ["
+	var s strings.Builder
+	s.WriteString("In(" + a.E.String() + " [")
 	sep := ""
 	for _, e := range a.Exprs {
-		s += sep + e.String()
+		s.WriteString(sep + e.String())
 		sep = " "
 	}
-	return s + "])"
+	return s.String() + "])"
 }
 
 func (a *In) Echo() string {
@@ -427,13 +431,14 @@ func (a *In) Echo() string {
 }
 
 func (a *In) echo() string {
-	s := " in ("
+	var s strings.Builder
+	s.WriteString(" in (")
 	sep := ""
 	for _, e := range a.Exprs {
-		s += sep + e.Echo()
+		s.WriteString(sep + e.Echo())
 		sep = ", "
 	}
-	return s + ")"
+	return s.String() + ")"
 }
 
 func (a *In) Children(fn func(Node) Node) {
@@ -482,21 +487,23 @@ type Call struct {
 }
 
 func (a *Call) String() string {
-	s := "Call(" + a.Fn.String()
+	var s strings.Builder
+	s.WriteString("Call(" + a.Fn.String())
 	for _, arg := range a.Args {
-		s += " " + arg.String()
+		s.WriteString(" " + arg.String())
 	}
-	return s + ")"
+	return s.String() + ")"
 }
 
 func (a *Call) Echo() string {
-	s := a.Fn.Echo() + "("
+	var s strings.Builder
+	s.WriteString(a.Fn.Echo() + "(")
 	sep := ""
 	for _, arg := range a.Args {
-		s += sep + arg.Echo()
+		s.WriteString(sep + arg.Echo())
 		sep = ", "
 	}
-	return s + ")"
+	return s.String() + ")"
 }
 
 func (a *Call) Children(fn func(Node) Node) {
@@ -555,26 +562,27 @@ func (a *Function) String() string {
 }
 
 func (a *Function) str(which string) string {
-	s := which + "(" + params(a.Params)
+	var s strings.Builder
+	s.WriteString(which + "(" + params(a.Params))
 	for _, stmt := range a.Body {
 		if stmt != nil {
-			s += "\n\t" + stmt.String()
+			s.WriteString("\n\t" + stmt.String())
 		}
 	}
-	return s + ")"
+	return s.String() + ")"
 }
 
 func params(ps []Param) string {
-	s := ""
+	var s strings.Builder
 	sep := ""
 	for _, p := range ps {
 		if sep == "" && p.String() == "this" {
 			continue
 		}
-		s += sep + p.String()
+		s.WriteString(sep + p.String())
 		sep = ","
 	}
-	return s
+	return s.String()
 }
 
 func childStmt(fn func(Node) Node, pstmt *Statement) {
@@ -680,13 +688,14 @@ func (a *Compound) String() string {
 	if len(a.Body) == 1 {
 		return a.Body[0].String()
 	}
-	s := "{\n"
+	var s strings.Builder
+	s.WriteString("{\n")
 	for _, stmt := range a.Body {
 		if stmt != nil {
-			s += stmt.String() + "\n"
+			s.WriteString(stmt.String() + "\n")
 		}
 	}
-	return s + "}"
+	return s.String() + "}"
 }
 
 func (a *Compound) Children(fn func(Node) Node) {
@@ -845,23 +854,24 @@ type For struct {
 }
 
 func (a *For) String() string {
-	s := "For("
+	var s strings.Builder
+	s.WriteString("For(")
 	sep := ""
 	for _, e := range a.Init {
-		s += sep + e.String()
+		s.WriteString(sep + e.String())
 		sep = ","
 	}
-	s += "; "
+	s.WriteString("; ")
 	if a.Cond != nil {
-		s += a.Cond.String()
+		s.WriteString(a.Cond.String())
 	}
-	s += "; "
+	s.WriteString("; ")
 	sep = ""
 	for _, e := range a.Inc {
-		s += sep + e.String()
+		s.WriteString(sep + e.String())
 		sep = ","
 	}
-	return s + "\n" + a.Body.String() + ")"
+	return s.String() + "\n" + a.Body.String() + ")"
 }
 
 func (a *For) Children(fn func(Node) Node) {
@@ -941,11 +951,12 @@ type MultiAssign struct {
 }
 
 func (a *MultiAssign) String() string {
-	s := "MultiAssign("
+	var s strings.Builder
+	s.WriteString("MultiAssign(")
 	for _, e := range a.Lhs {
-		s += e.Echo() + " "
+		s.WriteString(e.Echo() + " ")
 	}
-	return s + a.Rhs.String() + ")"
+	return s.String() + a.Rhs.String() + ")"
 }
 
 func (a *MultiAssign) Children(fn func(Node) Node) {
@@ -973,37 +984,39 @@ type Case struct {
 }
 
 func (a *Switch) String() string {
-	s := "Switch(" + a.E.String()
+	var s strings.Builder
+	s.WriteString("Switch(" + a.E.String())
 	for _, c := range a.Cases {
-		s += "\n" + c.String()
+		s.WriteString("\n" + c.String())
 	}
 	if a.Default != nil {
 		if len(a.Default) == 0 {
-			s += "\n()"
+			s.WriteString("\n()")
 		}
 		for _, stmt := range a.Default {
 			if stmt != nil {
-				s += "\n" + stmt.String()
+				s.WriteString("\n" + stmt.String())
 			}
 		}
 	}
-	return s + ")"
+	return s.String() + ")"
 }
 
 func (a *Case) String() string {
-	s := "Case("
+	var s strings.Builder
+	s.WriteString("Case(")
 	sep := ""
 	for _, e := range a.Exprs {
-		s += sep + e.String()
+		s.WriteString(sep + e.String())
 		sep = ","
 	}
 	for _, stmt := range a.Body {
 		if stmt != nil {
-			s += "\n" + stmt.String()
+			s.WriteString("\n" + stmt.String())
 		}
 	}
-	s += ")"
-	return s
+	s.WriteString(")")
+	return s.String()
 }
 
 func (a *Switch) Children(fn func(Node) Node) {

@@ -183,7 +183,7 @@ func (nd leafNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 	splitKey = cat(prefix, nextSuffix[:cp+1])
 
 	leftSize := 4 + splitPos*7 + prefixLen
-	for i := 0; i < splitPos; i++ {
+	for i := range splitPos {
 		leftSize += len(nd.suffix(i))
 	}
 
@@ -203,7 +203,7 @@ func (nd leafNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 
 	fieldPos := 4 + splitPos*7 + prefixLen
 	pos := 2
-	for i := 0; i < splitPos; i++ {
+	for i := range splitPos {
 		off := nd.offset(i)
 		leftBuf[pos] = byte(fieldPos >> 8)
 		leftBuf[pos+1] = byte(fieldPos)
@@ -222,7 +222,7 @@ func (nd leafNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 	copy(leftBuf[pos:], prefix)
 	pos += prefixLen
 
-	for i := 0; i < splitPos; i++ {
+	for i := range splitPos {
 		suffix := nd.suffix(i)
 		copy(leftBuf[pos:], suffix)
 		pos += len(suffix)

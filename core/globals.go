@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strings"
 	"sync"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -119,11 +120,11 @@ func (typeGlobal) add(name string, val Value) Gnum {
 
 var _ = AddInfo("core.nGlobal", func() int { return len(g.names) })
 var _ = AddInfo("core.lastGlobals", func() string {
-	s := ""
+	var s strings.Builder
 	for i := len(g.names) - 1; i >= len(g.names)-10; i-- {
-		s += g.names[i] + "\n"
+		s.WriteString(g.names[i] + "\n")
 	}
-	return s
+	return s.String()
 })
 
 // TestDef sets a global for tests.

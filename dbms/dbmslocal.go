@@ -133,9 +133,9 @@ func (*DbmsLocal) Exec(th *Thread, v Value) Value {
 	defer UseMainSuneido(th)()
 	trace.Dbms.Println("Exec", v)
 	fname := ToStr(ToContainer(v).ListGet(0))
-	if i := strings.IndexByte(fname, '.'); i != -1 {
-		ob := Global.GetName(th, fname[:i])
-		m := fname[i+1:]
+	if before, after, ok := strings.Cut(fname, "."); ok {
+		ob := Global.GetName(th, before)
+		m := after
 		return th.CallLookupEach1(ob, m, v)
 	}
 	fn := Global.GetName(th, fname)

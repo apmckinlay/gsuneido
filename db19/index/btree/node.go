@@ -469,16 +469,17 @@ func print(args ...any) {
 }
 
 func (nd node) String() string {
-	s := "["
+	var s strings.Builder
+	s.WriteString("[")
 	it := nd.iter()
 	for it.next() {
 		known := string(it.known)
 		if known == "" {
 			known = "''"
 		}
-		s += fmt.Sprint(known, "=", it.offset) + " "
+		s.WriteString(fmt.Sprint(known, "=", it.offset) + " ")
 	}
-	return strings.TrimSpace(s) + "]"
+	return strings.TrimSpace(s.String()) + "]"
 }
 
 func (nd node) knowns() string {

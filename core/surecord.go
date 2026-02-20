@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"runtime"
 	"strings"
 	"sync/atomic"
@@ -170,9 +171,7 @@ func (r *SuRecord) copyDeps() map[string][]string {
 
 func (r *SuRecord) copyInvalid() map[string]bool {
 	copy := make(map[string]bool, len(r.invalid))
-	for k, v := range r.invalid {
-		copy[k] = v
-	}
+	maps.Copy(copy, r.invalid)
 	return copy
 }
 
@@ -877,7 +876,7 @@ func (r *SuRecord) SetDeps(key, deps string) {
 	}
 	r.ensureDeps()
 outer:
-	for _, to := range strings.Split(deps, ",") {
+	for to := range strings.SplitSeq(deps, ",") {
 		to = strings.TrimSpace(to)
 		for _, from := range r.dependents[to] {
 			if from == key {

@@ -419,8 +419,8 @@ func TestIterator(t *testing.T) {
 
 func TestIterRange(t *testing.T) {
 	ib := &ixbuf{}
-	data := strings.Fields("a b c d e f g h")
-	for _, d := range data {
+	data := strings.FieldsSeq("a b c d e f g h")
+	for d := range data {
 		ib.Insert(d, 1)
 	}
 	it := ib.Iterator().(*Iterator)

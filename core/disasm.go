@@ -38,7 +38,7 @@ func DisasmMixed(fn *SuFunc, src string) string {
 	cp := 0
 	printSrc := func(in, s string) {
 		pre := fmt.Sprintf("%s%5d: ", in, sp)
-		for _, line := range strings.Split(s, "\n") {
+		for line := range strings.SplitSeq(s, "\n") {
 			if line = strings.TrimSpace(line); line != "" {
 				fmt.Fprintf(&sb, "%s%s\n", pre, line)
 				pre = in + "       "

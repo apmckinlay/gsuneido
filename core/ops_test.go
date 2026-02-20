@@ -74,13 +74,13 @@ func TestOpCatN(t *testing.T) {
 	test := func(values ...string) {
 		t.Helper()
 		th := &Thread{}
-		expected := ""
+		var expected strings.Builder
 		for _, v := range values {
 			th.Push(SuStr(v))
-			expected += v
+			expected.WriteString(v)
 		}
 		result := OpCatN(th, len(values))
-		assert.T(t).This(result).Is(SuStr(expected))
+		assert.T(t).This(result).Is(SuStr(expected.String()))
 	}
 	test("hello", " ", "world")
 	test("a", "b", "c", "d")

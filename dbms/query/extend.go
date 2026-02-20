@@ -5,6 +5,7 @@ package query
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
@@ -117,16 +118,17 @@ func (e *Extend) SetTran(t QueryTran) {
 }
 
 func (e *Extend) String() string {
-	s := "extend "
+	var s strings.Builder
+	s.WriteString("extend ")
 	sep := ""
 	for i, c := range e.cols {
-		s += sep + c
+		s.WriteString(sep + c)
 		sep = ", "
 		if e.exprs[i] != nil {
-			s += " = " + e.exprs[i].Echo()
+			s.WriteString(" = " + e.exprs[i].Echo())
 		}
 	}
-	return s
+	return s.String()
 }
 
 func (e *Extend) getRowSize() int {
@@ -168,12 +170,7 @@ func (e *Extend) hasRules() bool {
 }
 
 func (e *Extend) needRule(cols []string) bool {
-	for _, col := range cols {
-		if e.needRule2(col) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(cols, e.needRule2)
 }
 
 func (e *Extend) needRule2(col string) bool {

@@ -122,7 +122,7 @@ func (nd treeNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 
 	// Calculate sizes for both nodes
 	leftSize := 1 + splitPos*7 + 2 + 5 // count + offsets + size + final offset
-	for i := 0; i < splitPos; i++ {
+	for i := range splitPos {
 		leftSize += len(nd.key(i))
 	}
 
@@ -141,7 +141,7 @@ func (nd treeNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 
 	fieldPos := 1 + splitPos*7 + 2 + 5
 	pos := 1
-	for i := 0; i < splitPos; i++ {
+	for i := range splitPos {
 		off := nd.offset(i)
 		leftBuf[pos] = byte(fieldPos >> 8)
 		leftBuf[pos+1] = byte(fieldPos)
@@ -164,7 +164,7 @@ func (nd treeNode) splitTo(st *stor.Stor) (leftOff, rightOff uint64, splitKey st
 	leftBuf[pos+6] = byte(finalOff)
 	pos += 7
 
-	for i := 0; i < splitPos; i++ {
+	for i := range splitPos {
 		key := nd.key(i)
 		copy(leftBuf[pos:], key)
 		pos += len(key)
@@ -511,7 +511,7 @@ func (nd treeNode) delete(i int) treeNode {
 	// Update field positions in all remaining entries
 	// All field positions need to be reduced by 7 (removed offset entry)
 	// Plus, entries after the deleted field need reduction by fieldLen
-	for j := 0; j < newNkeys; j++ {
+	for j := range newNkeys {
 		pos := 1 + j*7
 		oldFieldPos := int(uint16(nd[pos])<<8 | uint16(nd[pos+1]))
 		newFieldPos := oldFieldPos - 7 // account for removed offset entry

@@ -107,7 +107,7 @@ func TestPriorityQueueBlocking(t *testing.T) {
 	<-done
 
 	// Test blocking when full
-	for i := 0; i < bufSize; i++ {
+	for i := range bufSize {
 		pq.Put(i, i, i)
 	}
 
@@ -211,7 +211,7 @@ func BenchmarkPriorityQueueConcurrent(b *testing.B) {
 	val := &struct{}{}
 
 	// Pre-fill queue to avoid initial blocking
-	for i := 0; i < bufSize/2; i++ {
+	for i := range bufSize / 2 {
 		pq.Put(i, i, val)
 	}
 
@@ -229,7 +229,7 @@ func BenchmarkGoChannelConcurrent(b *testing.B) {
 	ch := make(chan int, bufSize)
 
 	// Pre-fill channel to avoid initial blocking
-	for i := 0; i < bufSize/2; i++ {
+	for i := range bufSize / 2 {
 		ch <- i
 	}
 
@@ -258,12 +258,10 @@ func TestPriorityQueue2(t *testing.T) {
 			fmt.Println("done")
 		}()
 	}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		for range 100_000 * nthreads {
 			pq.Get()
 		}
-		wg.Done()
-	}()
+	})
 	wg.Wait()
 }

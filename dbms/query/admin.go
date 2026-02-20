@@ -102,13 +102,14 @@ type alterRenameAdmin struct {
 }
 
 func (a *alterRenameAdmin) String() string {
-	s := "alter " + a.table + " rename "
+	var s strings.Builder
+	s.WriteString("alter " + a.table + " rename ")
 	sep := ""
 	for i, from := range a.from {
-		s += sep + from + " to " + a.to[i]
+		s.WriteString(sep + from + " to " + a.to[i])
 		sep = ", "
 	}
-	return s
+	return s.String()
 }
 
 func (a *alterRenameAdmin) execute(db *db19.Database, _ *Sviews) {

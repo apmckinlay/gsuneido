@@ -317,10 +317,7 @@ func (qs *QuerySource) optimize(_ Mode, index []string, frac float64) (Cost, Cos
 	if !qs.validIndex(index) {
 		return impossible, impossible, nil
 	}
-	varcost := Cost(float64(10000) * frac)
-	if varcost < 1 {
-		varcost = 1
-	}
+	varcost := max(Cost(float64(10000)*frac), 1)
 	return 0, varcost, nil
 }
 

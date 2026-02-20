@@ -7,6 +7,7 @@ package compile
 
 import (
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
@@ -54,15 +55,15 @@ func TestPropFold(t *testing.T) {
 		p := NewParser("function () {\n" + src + "\n}")
 		f := p.Function()
 		f = ast.PropFold(f) // this is what we're testing
-		s := ""
+		var s strings.Builder
 		sep := ""
 		for _, stmt := range f.Body {
 			if stmt != nil {
-				s += sep + stmt.String()
+				s.WriteString(sep + stmt.String())
 				sep = "\n"
 			}
 		}
-		assert.T(t).This(s).Like(expected)
+		assert.T(t).This(s.String()).Like(expected)
 	}
 	utest := func(src string) {
 		t.Helper()

@@ -5,6 +5,7 @@ package meta
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -60,13 +61,13 @@ func TestSetPrimary(t *testing.T) {
 	// }
 	primary := func() string {
 		ts.setPrimary()
-		s := ""
+		var s strings.Builder
 		for i, ix := range ts.Indexes {
 			if ix.Primary {
-				s += "," + strconv.Itoa(i)
+				s.WriteString("," + strconv.Itoa(i))
 			}
 		}
-		return s[1:]
+		return s.String()[1:]
 	}
 	ts.Indexes = []schema.Index{key("")}
 	assert.This(primary()).Is("0")
@@ -87,7 +88,7 @@ func TestOptimizeIndexes(t *testing.T) {
 		return schema.Index{Mode: mode, Columns: str.Split(cols, ",")}
 	}
 	str := func(ts *Schema) string {
-		s := ""
+		var s strings.Builder
 		for _, ix := range ts.Indexes {
 			mode := ix.Mode
 			if ix.Primary {
@@ -96,14 +97,14 @@ func TestOptimizeIndexes(t *testing.T) {
 			if ix.ContainsKey {
 				mode = ascii.ToUpper(mode)
 			}
-			s += " " + string(mode) + "(" + str.Join(",", ix.Columns)
+			s.WriteString(" " + string(mode) + "(" + str.Join(",", ix.Columns))
 			add := difference(ix.BestKey, ix.Columns)
 			if len(add) > 0 {
-				s += "+" + str.Join(",", add)
+				s.WriteString("+" + str.Join(",", add))
 			}
-			s += ")"
+			s.WriteString(")")
 		}
-		return s[1:]
+		return s.String()[1:]
 	}
 	ts := &Schema{Schema: schema.Schema{}}
 	ts.Indexes = []schema.Index{idx('k', "a"), idx('k', "z,x"),

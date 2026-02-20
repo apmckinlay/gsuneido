@@ -102,10 +102,7 @@ func (agent *Agent) request(input string) {
 
 			// Handle tool calls - accumulate deltas by index
 			for _, tc := range delta.ToolCalls {
-				idx := tc.Index
-				if idx < 0 {
-					idx = 0
-				}
+				idx := max(tc.Index, 0)
 				if existing, ok := toolCalls[idx]; ok {
 					// Append to existing tool call
 					existing.Function.Arguments += tc.Function.Arguments

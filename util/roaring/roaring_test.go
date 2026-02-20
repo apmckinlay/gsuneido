@@ -44,12 +44,12 @@ func TestArrayToBitmapConversion(t *testing.T) {
 	b := &Bitmap{}
 
 	// Add enough values to trigger conversion to bitmap
-	for i := uint64(0); i < 4100; i++ {
+	for i := range uint64(4100) {
 		b.Add(i)
 	}
 
 	// Verify all values are present
-	for i := uint64(0); i < 4100; i++ {
+	for i := range uint64(4100) {
 		assert.T(t).This(b.Has(i)).Is(true)
 	}
 	assert.T(t).This(b.Has(5000)).Is(false)

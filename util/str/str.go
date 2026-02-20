@@ -7,6 +7,7 @@ package str
 
 import (
 	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -76,21 +77,21 @@ func Doesc(s string, i int) (byte, int) {
 // BeforeFirst returns s up to the first occurrence of sub
 // or all of s if sub is not found.
 func BeforeFirst(s, sub string) string {
-	i := strings.Index(s, sub)
-	if i == -1 {
+	before, _, ok := strings.Cut(s, sub)
+	if !ok {
 		return s
 	}
-	return s[:i]
+	return before
 }
 
 // AfterFirst returns s up to the first occurrence of sub
 // or all of s if sub is not found.
 func AfterFirst(s, sub string) string {
-	i := strings.Index(s, sub)
-	if i == -1 {
+	_, after, ok := strings.Cut(s, sub)
+	if !ok {
 		return s // different from stdlib which returns ""
 	}
-	return s[i+len(sub):]
+	return after
 }
 
 // BeforeLast returns s before the last occurrence of sub
@@ -117,10 +118,8 @@ func AfterLast(s, sub string) string {
 // else it returns the concatenation of the strings.
 // e.g. Opt("=", s) or Opt(s, ",") or Opt("<", s, ">")
 func Opt(strs ...string) string {
-	for _, s := range strs {
-		if s == "" {
-			return ""
-		}
+	if slices.Contains(strs, "") {
+		return ""
 	}
 	return strings.Join(strs, "")
 }

@@ -282,19 +282,20 @@ func (bt *btree) stats(depth int, offset uint64, stats *Stats) {
 }
 
 func (stats Stats) String() string {
-	s := fmt.Sprintln(
+	var s strings.Builder
+	s.WriteString(fmt.Sprintln(
 		"lv", stats.Levels,
 		" n ", stats.Count,
 		" sz ", stats.Size,
 		" nn ", stats.Nnodes,
 		" rn ", stats.RootN,
-		" f ", stats.Fan) + "    >= "
+		" f ", stats.Fan) + "    >= ")
 	for i, n := range stats.NodeFan {
 		if n > 0 {
-			s += fmt.Sprintf("%d: %d ", (1<<i)/2, n)
+			s.WriteString(fmt.Sprintf("%d: %d ", (1<<i)/2, n))
 		}
 	}
-	return s
+	return s.String()
 }
 
 // print ------------------------------------------------------------

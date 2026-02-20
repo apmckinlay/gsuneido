@@ -144,7 +144,7 @@ func (spec *Spec) Encodes() bool {
 }
 
 func Encode(s string) string {
-	if i := strings.IndexByte(s, 0); i == -1 {
+	if found := strings.Contains(s, "\x00"); !found {
 		return s
 	}
 	buf := make([]byte, 0, len(s)+4)
@@ -252,7 +252,7 @@ func Decode1(comp string, i int) string {
 	// Find the i'th separator without splitting
 	pos := 0
 	sepLen := len(Sep)
-	for field := 0; field < i; field++ {
+	for range i {
 		sepPos := strings.Index(comp[pos:], Sep)
 		if sepPos == -1 {
 			return "" // not enough fields

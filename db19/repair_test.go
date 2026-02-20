@@ -94,7 +94,7 @@ func TestBisect(t *testing.T) {
 	}
 	const n = 10001
 	// lastGood := rand.IntN(n)
-	for lastGood := 0; lastGood < n; lastGood++ {
+	for lastGood := range n {
 		// fmt.Println("last good:", lastGood)
 		check := func(i int) bool {
 			// fmt.Println("check", i)

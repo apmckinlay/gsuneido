@@ -250,13 +250,13 @@ func TestParseStatements(t *testing.T) {
 		p.InitFuncInfo()
 		stmts := p.statements()
 		assert.T(t).This(p.Token).Is(tok.RCurly)
-		s := ""
+		var s strings.Builder
 		sep := ""
 		for _, stmt := range stmts {
-			s += sep + stmt.String()
+			s.WriteString(sep + stmt.String())
 			sep = "\n"
 		}
-		assert.T(t).This(s).Like(expected)
+		assert.T(t).This(s.String()).Like(expected)
 	}
 	test("x=123;;", "Binary(Eq x 123)\n{}")
 	test("a, b, c = f()", "MultiAssign(a b c Call(f))")

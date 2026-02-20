@@ -3,6 +3,8 @@
 
 package check
 
+import "slices"
+
 import "github.com/apmckinlay/gsuneido/util/slc"
 
 // set is a specialized set of strings in a slice.
@@ -24,12 +26,7 @@ func (ls set) with(s string) set {
 
 // has returns whether the set contains a string
 func (ls set) has(s string) bool {
-	for _, t := range ls {
-		if s == t {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ls, s)
 }
 
 // union returns ls extended with elements of ls2 not already in ls

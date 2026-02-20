@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
@@ -1067,11 +1068,11 @@ func verifyNoDuplicates(t *testing.T, rows []Row, hdr *Header, cols []string) {
 }
 
 func rowKey(row Row, hdr *Header, cols []string) string {
-	var key string
+	var key strings.Builder
 	for _, col := range cols {
-		key += row.GetRaw(hdr, col) + "|"
+		key.WriteString(row.GetRaw(hdr, col) + "|")
 	}
-	return key
+	return key.String()
 }
 
 func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *Header,
@@ -1221,7 +1222,7 @@ func testCursorPatterns(t *testing.T, q Query, hdr *Header, nextRows []Row) {
 	// Pattern 5: Next to end, past end (nil), then Prev
 	if n > 0 {
 		q.Rewind()
-		for i := 0; i < n; i++ {
+		for i := range n {
 			row = q.Get(nil, Next)
 			check("ToEnd: N"+strconv.Itoa(i), row, nextRows[i])
 		}

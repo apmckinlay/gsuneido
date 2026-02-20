@@ -180,23 +180,23 @@ func (su *Summarize) String() string {
 }
 
 func (su *Summarize) string2() string {
-	s := ""
+	var s strings.Builder
 	if len(su.by) > 0 {
-		s += " " + str.Join(", ", su.by) + ","
+		s.WriteString(" " + str.Join(", ", su.by) + ",")
 	}
 	sep := " "
 	for i := range su.cols {
-		s += sep
+		s.WriteString(sep)
 		sep = ", "
 		if su.cols[i] != defaultColName(su.ops[i], su.ons[i]) {
-			s += su.cols[i] + " = "
+			s.WriteString(su.cols[i] + " = ")
 		}
-		s += su.ops[i]
+		s.WriteString(su.ops[i])
 		if su.ops[i] != "count" {
-			s += " " + su.ons[i]
+			s.WriteString(" " + su.ons[i])
 		}
 	}
-	return s
+	return s.String()
 }
 
 func (su *Summarize) getNrows() (int, int) {

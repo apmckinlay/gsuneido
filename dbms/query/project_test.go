@@ -54,7 +54,7 @@ func TestProjectIndexes(t *testing.T) {
 // sToIdxs splits strings like: "a+b, c, d+e+f"
 func sToIdxs(s string) [][]string {
 	var idxs [][]string
-	for _, ix := range strings.Split(s, ", ") {
+	for ix := range strings.SplitSeq(s, ", ") {
 		idxs = append(idxs, strings.Split(ix, "+"))
 	}
 	return idxs

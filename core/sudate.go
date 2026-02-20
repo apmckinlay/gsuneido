@@ -655,7 +655,7 @@ func getSyspat(order string, datePatterns []string) []byte {
 	datePatterns[0] = string(syspat)
 
 	// swap month-day patterns if system setting is day first
-	for i = 0; i < 3; i++ {
+	for i = range 3 {
 		if syspat[i] == 'm' {
 			break
 		} else if syspat[i] == 'd' {

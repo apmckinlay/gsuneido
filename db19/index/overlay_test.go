@@ -202,7 +202,7 @@ func TestOverlayRangeFracIxbufOnly(t *testing.T) {
 	assert := assert.T(t)
 	bt := btree.Builder(stor.HeapStor(64 * 1024)).Finish()
 	layer := &ixbuf.T{}
-	for i := 0; i < 2000; i++ {
+	for i := range 2000 {
 		key := fmt.Sprintf("k%04d", i)
 		layer.Insert(key, uint64(i+1))
 	}
@@ -218,13 +218,13 @@ func TestOverlayRangeFracActivityThreshold(t *testing.T) {
 	assert := assert.T(t)
 	store := stor.HeapStor(64 * 1024)
 	bldr := btree.Builder(store)
-	for i := 0; i < 10000; i++ {
+	for i := range 10000 {
 		key := fmt.Sprintf("b%05d", i)
 		assert.That(bldr.Add(key, uint64(i+1)))
 	}
 	bt := bldr.Finish()
 	layer := &ixbuf.T{}
-	for i := 0; i < 50; i++ {
+	for i := range 50 {
 		key := fmt.Sprintf("x%05d", i)
 		layer.Insert(key, uint64(20000+i))
 	}
@@ -240,13 +240,13 @@ func TestOverlayRangeFracClampHigh(t *testing.T) {
 	assert := assert.T(t)
 	store := stor.HeapStor(64 * 1024)
 	bldr := btree.Builder(store)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		key := fmt.Sprintf("b%05d", i)
 		assert.That(bldr.Add(key, uint64(i+1)))
 	}
 	bt := bldr.Finish()
 	layer := &ixbuf.T{}
-	for i := 0; i < 600; i++ {
+	for i := range 600 {
 		key := fmt.Sprintf("b00000x%04d", i)
 		layer.Insert(key, uint64(i+2000))
 	}
@@ -262,13 +262,13 @@ func TestOverlayRangeFracClampLow(t *testing.T) {
 	assert := assert.T(t)
 	store := stor.HeapStor(64 * 1024)
 	bldr := btree.Builder(store)
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		key := fmt.Sprintf("b%05d", i)
 		assert.That(bldr.Add(key, uint64(i+1)))
 	}
 	bt := bldr.Finish()
 	layer := &ixbuf.T{}
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		key := fmt.Sprintf("b00000x%04d", i)
 		layer.Delete(key, uint64(i+2000))
 	}

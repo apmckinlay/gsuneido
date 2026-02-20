@@ -73,7 +73,6 @@ func Stop() {
 // addTools adds tools to the server.
 func addTools(s *mcp.Server) {
 	for _, spec := range toolSpecs {
-		spec := spec
 		t := makeTool(spec.name, spec.description, spec.outputSchema, spec.params...)
 		s.AddTool(t, func(ctx context.Context, request *mcp.CallToolRequest) (result *mcp.CallToolResult, err error) {
 			return handler(ctx, spec, request)

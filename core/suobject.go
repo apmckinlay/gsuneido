@@ -516,10 +516,8 @@ func (ob *SuObject) migrate() {
 type vstack []*SuObject
 
 func (vs *vstack) Push(ob *SuObject) bool {
-	for _, v := range *vs {
-		if v == ob { // deliberately == (pointers) not Equal (contents)
-			return false
-		}
+	if slices.Contains(*vs, ob) { // deliberately == (pointers) not Equal (contents)
+		return false
 	}
 	*vs = append(*vs, ob) // push
 	return true

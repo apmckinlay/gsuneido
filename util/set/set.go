@@ -195,10 +195,8 @@ outer:
 // i.e. Intersect(x, y) is empty
 func Disjoint[E comparable](x, y []E) bool {
 	for _, xe := range x {
-		for _, ye := range y {
-			if xe == ye {
-				return false
-			}
+		if slices.Contains(y, xe) {
+			return false
 		}
 	}
 	return true

@@ -213,32 +213,33 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 // idxSel -----------------------------------------------------------
 
 func (is idxSel) String() string {
-	s := str.Join(",", is.index)
+	var s strings.Builder
+	s.WriteString(str.Join(",", is.index))
 	sep := ": "
 	for _, pr := range is.ptrngs {
-		s += sep + showKey(is.encoded, pr.org)
+		s.WriteString(sep + showKey(is.encoded, pr.org))
 		sep = " | "
 		if pr.isRange() {
-			s += ".." + showKey(is.encoded, pr.end)
+			s.WriteString(".." + showKey(is.encoded, pr.end))
 		}
 	}
 	if is.frac != 0 {
-		s += " = " + strconv.FormatFloat(is.frac, 'g', 4, 64)
+		s.WriteString(" = " + strconv.FormatFloat(is.frac, 'g', 4, 64))
 	}
-	return s
+	return s.String()
 }
 
 func showKey(encode bool, key string) string {
 	if !encode {
 		return packToStr(key)
 	}
-	s := ""
+	var s strings.Builder
 	sep := ""
 	for _, t := range ixkey.Decode(key) {
-		s += sep + packToStr(t)
+		s.WriteString(sep + packToStr(t))
 		sep = ","
 	}
-	return s
+	return s.String()
 }
 
 func packToStr(s string) string {

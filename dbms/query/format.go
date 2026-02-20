@@ -49,7 +49,7 @@ func format(indent int, q Query, parens int) string { // recursive
 
 func which(x any) string {
 	t := reflect.TypeOf(x)
-	for t.Kind() == reflect.Ptr {
+	for t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	return t.Name()

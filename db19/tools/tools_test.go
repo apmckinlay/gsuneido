@@ -5,6 +5,7 @@ package tools_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -75,11 +76,11 @@ func createDb() {
 	for _, table := range []string{"foo", "bar"} {
 		adm("create " + table + " " + schema)
 		for _, d := range data {
-			s := ""
+			var s strings.Builder
 			for i := range d {
-				s += columns[i] + ": '" + d[i] + `' `
+				s.WriteString(columns[i] + ": '" + d[i] + `' `)
 			}
-			act("insert {" + s + "} into " + table)
+			act("insert {" + s.String() + "} into " + table)
 		}
 	}
 	adm("alter bar drop (three)")

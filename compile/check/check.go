@@ -11,6 +11,8 @@ package check
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -470,9 +472,7 @@ func (ck *Check) block(b *ast.Block, init set) set {
 		delete(ck.AllUsed, id)
 	}
 	// restore shadowed variables
-	for id, n := range allInit {
-		ck.AllInit[id] = n
-	}
+	maps.Copy(ck.AllInit, allInit)
 	for id := range allUsed {
 		ck.AllUsed[id] = struct{}{}
 	}
@@ -513,10 +513,8 @@ func (ck *Check) hasBreak(stmt ast.Statement) bool {
 	case *ast.Break:
 		return true
 	case *ast.Compound:
-		for _, s := range stmt.Body {
-			if ck.hasBreak(s) {
-				return true
-			}
+		if slices.ContainsFunc(stmt.Body, ck.hasBreak) {
+			return true
 		}
 	case *ast.If:
 		return ck.hasBreak(stmt.Then) || ck.hasBreak(stmt.Else)
@@ -524,17 +522,13 @@ func (ck *Check) hasBreak(stmt ast.Statement) bool {
 		return ck.hasBreak(stmt.Try) || ck.hasBreak(stmt.Catch)
 	case *ast.Switch:
 		for _, c := range stmt.Cases {
-			for _, s := range c.Body {
-				if ck.hasBreak(s) {
-					return true
-				}
+			if slices.ContainsFunc(c.Body, ck.hasBreak) {
+				return true
 			}
 		}
 		if stmt.Default != nil {
-			for _, s := range stmt.Default {
-				if ck.hasBreak(s) {
-					return true
-				}
+			if slices.ContainsFunc(stmt.Default, ck.hasBreak) {
+				return true
 			}
 		}
 	// Don't recurse into nested loops - breaks in nested loops don't affect the outer loop
