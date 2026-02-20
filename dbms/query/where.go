@@ -925,8 +925,9 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 	if conflictFixed(cols, vals, w.Fixed()) {
 		return nil
 	}
-	if w.singleton {
+	if w.fastSingle() {
 		// can't use source.Lookup because cols may not match source index
+		// (srcIndex may be empty when fastSingle)
 		w.Rewind()
 		row := w.Get(th, Next)
 		if row == nil || !singletonFilter(w.header, row, cols, vals) {

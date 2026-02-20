@@ -25,6 +25,7 @@ func QueryHash(th *Thread, args []Value) Value {
 	tran := th.Dbms().Transaction(false)
 	defer tran.Complete()
 	q := tran.Query(query, nil)
+	// fmt.Println(q.Strategy(true))
 	qh := qry.NewQueryHasher(q.Header())
 
 	hfn := func(row rowHash) uint64 { return row.hash }
