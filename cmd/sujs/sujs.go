@@ -47,7 +47,7 @@ func main() {
 			"Use('demobookoptions'); "+
 			"Use('Test_lib'); "+
 			// so closing the WorkSpace exits, requires SuInit change
-			"Suneido.RunAsStandalone = true;"+ 
+			"Suneido.RunAsStandalone = true;"+
 			"RunSuJSHttpServer(3248)")
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
@@ -69,7 +69,21 @@ func main() {
 	}()
 
 	w.SetTitle("Suneido")
-	w.SetSize(1536, 1024, webview.HintNone)
+	w.SetSize(1510, 1024, webview.HintNone)
+
+	// Bind quit function for macOS Cmd+Q
+	w.Bind("quit", func() {
+		w.Terminate()
+	})
+	w.Init(`
+		document.addEventListener('keydown', function(e) {
+			if (e.metaKey && e.key === 'q') {
+				e.preventDefault();
+				quit();
+			}
+		});
+	`)
+
 	w.Navigate("http://127.0.0.1:3248")
 	w.Run()
 
