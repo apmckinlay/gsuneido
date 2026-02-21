@@ -78,6 +78,10 @@ func searchCode(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) 
 		}
 	}
 
+	if len(matches) == 0 && isValidName(nameRx) && core.Global.IsBuiltin(nameRx) {
+		return searchCodeOutput{}, fmt.Errorf("%s is built-in", nameRx)
+	}
+
 	result = searchCodeOutput{Matches: matches}
 	return result, nil
 }

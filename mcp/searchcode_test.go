@@ -69,6 +69,12 @@ func TestSearchTool(t *testing.T) {
 	res, err = searchCode("", "", "", false, true)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(0)
+
+	// builtin name not in library returns specific error
+	core.Global.Builtin("ABuiltin", core.Zero)
+	_, err = searchCode("", "ABuiltin", "", false, false)
+	assert.That(err != nil)
+	assert.This(err.Error()).Is("ABuiltin is built-in")
 }
 
 func TestSearchQuery_InvalidRegex(t *testing.T) {
