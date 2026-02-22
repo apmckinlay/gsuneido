@@ -98,6 +98,17 @@ func agent_ClearHistory(this Value) Value {
 	return nil
 }
 
+var _ = method(agent_LoadConversation, "(filename)")
+
+func agent_LoadConversation(th *Thread, this Value, args []Value) Value {
+	err := this.(*suAgent).agent.LoadConversation(ToStr(args[0]))
+	if err != nil {
+		th.ReturnThrow = true
+		return SuStr("LoadConversation: " + err.Error())
+	}
+	return True
+}
+
 var _ = method(agent_Close, "()")
 
 func agent_Close(this Value) Value {
