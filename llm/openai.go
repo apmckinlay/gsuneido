@@ -82,7 +82,7 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 		return fmt.Errorf("marshal request: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+"/chat/completions", 
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+"/chat/completions",
 		bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)

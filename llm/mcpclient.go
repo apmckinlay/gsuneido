@@ -13,15 +13,15 @@ import (
 
 // Tool represents a tool definition for LLM function calling.
 type Tool struct {
-	Type     string                 `json:"type"`
-	Function ToolFunction           `json:"function"`
+	Type     string       `json:"type"`
+	Function ToolFunction `json:"function"`
 }
 
 // ToolFunction describes a tool's function interface.
 type ToolFunction struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description,omitempty"`
-	Parameters  map[string]any         `json:"parameters,omitempty"`
+	Name        string         `json:"name"`
+	Description string         `json:"description,omitempty"`
+	Parameters  map[string]any `json:"parameters,omitempty"`
 }
 
 // ToolCall represents a tool call request from the LLM.
