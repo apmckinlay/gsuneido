@@ -35,3 +35,4 @@ sujs_darwin_*
 sujs_linux_*
 sujs_windows_*
 .ai/
+temp/
