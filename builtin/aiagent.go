@@ -17,6 +17,7 @@ type suAgent struct {
 	agent     *llm.Agent
 	mcpClient *llm.MCPClient
 	th        *Thread
+	callback  Value
 }
 
 var _ = builtin(AiAgent, "(baseURL, apiKey, model, callback, prompt = '')")
@@ -38,20 +39,15 @@ func AiAgent(th *Thread, args []Value) Value {
 		panic(err)
 	}
 
-	return &suAgent{
+
+	a := &suAgent{
 		th:        t2,
 		mcpClient: mcpClient,
-		agent: llm.NewAgent(baseURL, apiKey, model, prompt, mcpClient,
-			func(what, data string) {
-				defer func() {
-					if err := recover(); err != nil {
-						log.Println("ERROR agent callback: ", err)
-						panic(err)
-					}
-				}()
-				t2.Call(callback, SuStr(what), SuStr(data))
-			}),
+		callback:  callback,
+		agent:  llm.NewAgent(baseURL, apiKey, model, prompt, mcpClient,
+			outputCallback(t2, callback)),
 	}
+	return a
 }
 
 var _ Value = (*suAgent)(nil)
@@ -66,6 +62,18 @@ func (a *suAgent) Lookup(_ *Thread, method string) Value {
 
 func (a *suAgent) SetConcurrent() {
 	// ok since immutable
+}
+
+func outputCallback(th *Thread, callback Value) func(what, data string) {
+	return func(what, data string) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Println("ERROR agent callback: ", err)
+				panic(err)
+			}
+		}()
+		th.Call(callback, SuStr(what), SuStr(data))
+	}
 }
 
 var agentMethods = methods("agent")
@@ -101,7 +109,9 @@ func agent_ClearHistory(this Value) Value {
 var _ = method(agent_LoadConversation, "(filename)")
 
 func agent_LoadConversation(th *Thread, this Value, args []Value) Value {
-	err := this.(*suAgent).agent.LoadConversation(ToStr(args[0]))
+	a := this.(*suAgent)
+	err := a.agent.LoadConversation(ToStr(args[0]), 
+		outputCallback(a.th, a.callback))
 	if err != nil {
 		th.ReturnThrow = true
 		return SuStr("LoadConversation: " + err.Error())

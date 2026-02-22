@@ -39,8 +39,8 @@ func TestAgentLogging(t *testing.T) {
 		Role:    "assistant",
 		Content: "",
 		ToolCalls: []ToolCall{{
-			ID:   "call1",
-			Type: "function",
+			ID:       "call1",
+			Type:     "function",
 			Function: ToolCallFunction{Name: "test_tool", Arguments: `{"arg": "value"}`},
 		}},
 	})
@@ -61,16 +61,42 @@ func TestAgentLogging(t *testing.T) {
 	assert.T(t).This(err).Is(nil)
 	content := string(data)
 
-	// Verify content
-	assert.T(t).True(strings.Contains(content, "## Model"))
+	// Verify content uses new format
+	assert.T(t).True(strings.Contains(content, "## {{ Model }}"))
 	assert.T(t).True(strings.Contains(content, "test-model"))
-	assert.T(t).True(strings.Contains(content, "## User"))
+	assert.T(t).True(strings.Contains(content, "## {{ User }}"))
 	assert.T(t).True(strings.Contains(content, "Hello"))
-	assert.T(t).True(strings.Contains(content, "## Assistant"))
+	assert.T(t).True(strings.Contains(content, "## {{ Assistant }}"))
 	assert.T(t).True(strings.Contains(content, "Hi there!"))
-	assert.T(t).True(strings.Contains(content, "## AssistantTool"))
+	assert.T(t).True(strings.Contains(content, "## {{ AssistantTool }}"))
 	assert.T(t).True(strings.Contains(content, "test_tool"))
+	assert.T(t).True(strings.Contains(content, "## {{ ToolResult }}"))
 	assert.T(t).True(strings.Contains(content, "tool result"))
+}
+
+func TestAgentLogThink(t *testing.T) {
+	// Create a temp directory for .ai
+	tmpDir := t.TempDir()
+	oldDir := aiDir
+	aiDir = tmpDir
+	defer func() { aiDir = oldDir }()
+
+	agent := NewAgent("", "", "test-model", "", nil, func(what, data string) {})
+
+	agent.emit("think", "reasoning line")
+	agent.emit("output", "done")
+	agent.closeLogFile()
+
+	files, err := os.ReadDir(tmpDir)
+	assert.T(t).This(err).Is(nil)
+	assert.T(t).This(len(files)).Is(1)
+
+	data, err := os.ReadFile(filepath.Join(tmpDir, files[0].Name()))
+	assert.T(t).This(err).Is(nil)
+	content := string(data)
+
+	assert.T(t).True(strings.Contains(content, "## {{ Think }}"))
+	assert.T(t).True(strings.Contains(content, "reasoning line"))
 }
 
 func TestAgentClearHistory(t *testing.T) {
@@ -116,8 +142,8 @@ func TestAgentSetModel(t *testing.T) {
 	assert.T(t).This(err).Is(nil)
 	content := string(data)
 
-	// Verify both models are logged
-	assert.T(t).True(strings.Contains(content, "## Model"))
+	// Verify both models are logged with new format
+	assert.T(t).True(strings.Contains(content, "## {{ Model }}"))
 	assert.T(t).True(strings.Contains(content, "initial-model"))
 	assert.T(t).True(strings.Contains(content, "new-model"))
 }
@@ -125,19 +151,19 @@ func TestAgentSetModel(t *testing.T) {
 func TestAgentLoadConversation(t *testing.T) {
 	// Create a temp file with conversation content
 	tmpFile := filepath.Join(t.TempDir(), "test.md")
-	content := `## Model
+	content := `## {{ Model }}
 
 gpt-4
 
-## System
+## {{ System }}
 
 You are a helpful assistant.
 
-## User
+## {{ User }}
 
 What is 2+2?
 
-## Assistant
+## {{ Assistant }}
 
 2+2 equals 4.
 `
@@ -147,7 +173,7 @@ What is 2+2?
 	// Agent has its own prompt - this should be used, not the file's
 	currentPrompt := "Current prompt"
 	agent := NewAgent("", "", "test-model", currentPrompt, nil, func(what, data string) {})
-	err = agent.LoadConversation(tmpFile)
+	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
 
 	// Verify model was extracted
@@ -180,15 +206,15 @@ func TestAgentLoadAndResave(t *testing.T) {
 	defer func() { aiDir = oldDir }()
 
 	// Create original conversation
-	originalContent := `## System
+	originalContent := `## {{ System }}
 
 Original prompt.
 
-## User
+## {{ User }}
 
 Question?
 
-## Assistant
+## {{ Assistant }}
 
 Answer.
 `
@@ -199,7 +225,7 @@ Answer.
 	// Agent has its own prompt - this should be used, not the file's
 	currentPrompt := "Current prompt"
 	agent := NewAgent("", "", "test-model", currentPrompt, nil, func(what, data string) {})
-	err = agent.LoadConversation(originalFile)
+	err = agent.LoadConversation(originalFile, nil)
 	assert.T(t).This(err).Is(nil)
 
 	// Log a new message (this creates a new log file)
@@ -232,8 +258,8 @@ func TestAgentLoadConversationWithTools(t *testing.T) {
 		Role:    "assistant",
 		Content: "",
 		ToolCalls: []ToolCall{{
-			ID:   "call_abc",
-			Type: "function",
+			ID:       "call_abc",
+			Type:     "function",
 			Function: ToolCallFunction{Name: "myTool", Arguments: `{"x":1}`},
 		}},
 	}
@@ -246,17 +272,17 @@ func TestAgentLoadConversationWithTools(t *testing.T) {
 		b, _ := json.Marshal(m)
 		return string(b)
 	}
-	logContent := "## User\n\ndo something\n\n" +
-		"## AssistantTool\n\n" + marshalMsg(assistantMsg) + "\n\n" +
-		"## ToolResult\n\n" + marshalMsg(toolResultMsg) + "\n\n" +
-		"## Assistant\n\ndone\n\n"
+	logContent := "## {{ User }}\n\ndo something\n\n" +
+		"## {{ AssistantTool }}\n\n" + marshalMsg(assistantMsg) + "\n\n" +
+		"## {{ ToolResult }}\n\n" + marshalMsg(toolResultMsg) + "\n\n" +
+		"## {{ Assistant }}\n\ndone\n\n"
 
 	tmpFile := filepath.Join(t.TempDir(), "conv.md")
 	err := os.WriteFile(tmpFile, []byte(logContent), 0644)
 	assert.T(t).This(err).Is(nil)
 
 	agent := NewAgent("", "", "", "", nil, func(what, data string) {})
-	err = agent.LoadConversation(tmpFile)
+	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
 
 	assert.T(t).This(len(agent.history)).Is(4)

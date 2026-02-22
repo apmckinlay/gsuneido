@@ -16,22 +16,25 @@ import (
 )
 
 type Agent struct {
-	client     *OpenAIClient
-	mcpClient  *MCPClient
-	model      string
-	prompt     string
-	history    []Message
-	outfn      OutFn
-	cancel     context.CancelFunc
-	logFile    *os.File
-	mu         sync.Mutex
-	inProgress bool
+	client        *OpenAIClient
+	mcpClient     *MCPClient
+	model         string
+	prompt        string
+	history       []Message
+	outfn         OutFn
+	cancel        context.CancelFunc
+	logFile       *os.File
+	mu            sync.Mutex
+	inProgress    bool
+	thinkBuf      strings.Builder
+	thinkDirty    bool
+	loadedContent string // content from LoadConversation to copy when log is created
 }
 
 var aiDir = ".ai"
 
 // OutFn is the push callback for streaming output.
-// what is one of "think", "output", "tool", "complete"
+// what is one of "user", "think", "output", "tool", "complete"
 type OutFn func(what, data string)
 
 // NewAgent creates an agent.
@@ -71,7 +74,13 @@ func (agent *Agent) ensureLogFile() {
 	agent.logFile = f
 	// Log the model at the start
 	if agent.model != "" {
-		agent.logWrite("## Model\n\n" + agent.model + "\n\n")
+		agent.logWrite("## {{ Model }}\n\n" + agent.model + "\n\n")
+	}
+	// Copy loaded conversation content if any
+	if agent.loadedContent != "" {
+		agent.logWrite(agent.loadedContent)
+		agent.logWrite("\n## {{ Continued }}\n\n---\n\n")
+		agent.loadedContent = ""
 	}
 }
 
@@ -83,15 +92,32 @@ func (agent *Agent) logMessage(role, content string) {
 	var marker string
 	switch role {
 	case "user":
-		marker = "## User\n\n"
+		marker = "## {{ User }}\n\n"
 	case "assistant":
-		marker = "## Assistant\n\n"
+		marker = "## {{ Assistant }}\n\n"
 	case "system":
-		marker = "## Prompt\n\n"
+		marker = "## {{ Prompt }}\n\n"
 	default:
-		marker = "## " + role + "\n\n"
+		marker = "## {{ " + role + " }}\n\n"
 	}
 	agent.logWrite(marker + content + "\n\n")
+}
+
+func (agent *Agent) logThink(content string) {
+	agent.ensureLogFile()
+	if agent.logFile == nil {
+		return
+	}
+	agent.logWrite("## {{ Think }}\n\n" + content + "\n\n")
+}
+
+func (agent *Agent) flushThink() {
+	if !agent.thinkDirty {
+		return
+	}
+	agent.logThink(agent.thinkBuf.String())
+	agent.thinkBuf.Reset()
+	agent.thinkDirty = false
 }
 
 func (agent *Agent) logAssistantToolCalls(msg Message) {
@@ -100,7 +126,7 @@ func (agent *Agent) logAssistantToolCalls(msg Message) {
 		return
 	}
 	b, _ := json.Marshal(msg)
-	agent.logWrite("## AssistantTool\n\n" + string(b) + "\n\n")
+	agent.logWrite("## {{ AssistantTool }}\n\n" + string(b) + "\n\n")
 }
 
 func (agent *Agent) logToolResult(msg Message) {
@@ -109,10 +135,11 @@ func (agent *Agent) logToolResult(msg Message) {
 		return
 	}
 	b, _ := json.Marshal(msg)
-	agent.logWrite("## ToolResult\n\n" + string(b) + "\n\n")
+	agent.logWrite("## {{ ToolResult }}\n\n" + string(b) + "\n\n")
 }
 
 func (agent *Agent) closeLogFile() {
+	agent.flushThink()
 	if agent.logFile != nil {
 		agent.logFile.Close()
 		agent.logFile = nil
@@ -129,67 +156,85 @@ func (agent *Agent) logWrite(s string) {
 // The file should be in the format created by the logging.
 // The current prompt is used, not the one from the file.
 // The loaded conversation is copied to a new log file and logging continues there.
+// outfn is called to restore the UI to its original state.
 // Panics if a request is in progress.
-func (agent *Agent) LoadConversation(path string) error {
+func (agent *Agent) LoadConversation(path string, outfn OutFn) error {
 	agent.mu.Lock()
-	defer agent.mu.Unlock()
 	if agent.inProgress {
+		agent.mu.Unlock()
 		panic("LoadConversation: request in progress")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {
+		agent.mu.Unlock()
 		return err
 	}
+	agent.flushThink()
 	agent.closeLogFile()
 	agent.resetHistory()
-	if err := agent.parseConversation(string(data)); err != nil {
-		return err
-	}
-	// Copy the loaded conversation to a new log file
-	agent.copyToNewLogFile(string(data))
-	return nil
+	agent.loadedContent = string(data) // will be copied when log file is created
+	agent.inProgress = true
+	agent.mu.Unlock()
+
+	defer func() {
+		agent.flushThink()
+		agent.mu.Lock()
+		agent.inProgress = false
+		agent.mu.Unlock()
+	}()
+
+	return agent.parseConversation(string(data), outfn)
 }
 
-// copyToNewLogFile creates a new log file and copies existing conversation content
-func (agent *Agent) copyToNewLogFile(content string) {
-	if err := os.MkdirAll(aiDir, 0755); err != nil {
-		return
-	}
-	filename := fmt.Sprintf("ai%s.md", time.Now().Format("20060102_150405"))
-	path := filepath.Join(aiDir, filename)
-	f, err := os.Create(path)
-	if err != nil {
-		return
-	}
-	agent.logFile = f
-	agent.logWrite(content)
-	agent.logWrite("\n## Continued\n\n---\n\n")
-}
-
-func (agent *Agent) parseConversation(content string) error {
-	for section := range strings.SplitSeq(content, "## ") {
+func (agent *Agent) parseConversation(content string, outfn OutFn) error {
+	for section := range strings.SplitSeq(content, "## {{ ") {
 		if section == "" {
 			continue
 		}
-		lines := strings.SplitN(section, "\n", 2)
-		if len(lines) < 2 {
+		// Find the closing }}
+		before, after, ok := strings.Cut(section, " }}")
+		if !ok {
 			continue
 		}
-		role := strings.TrimSpace(lines[0])
-		body := strings.TrimSpace(lines[1])
+		role := before
+		body := after
+		body = strings.TrimPrefix(body, "\n\n")
+		body = strings.TrimSuffix(body, "\n\n")
+		historyBody := strings.TrimRight(body, "\r\n")
+		logBody := body
+		switch role {
+		case "Model", "Prompt", "Continued":
+			logBody = strings.TrimSpace(body)
+		}
 		switch role {
 		case "Model":
-			agent.model = body
+			agent.model = logBody
 		case "User":
-			agent.history = append(agent.history, Message{Role: "user", Content: body})
+			agent.history = append(agent.history, Message{Role: "user", Content: historyBody})
+			if outfn != nil {
+				outfn("user", body)
+			}
+		case "Think":
+			if outfn != nil {
+				outfn("think", body)
+			}
 		case "Assistant":
-			agent.history = append(agent.history, Message{Role: "assistant", Content: body})
+			agent.history = append(agent.history, Message{Role: "assistant", Content: historyBody})
+			if outfn != nil {
+				outfn("output", body)
+			}
 		case "Prompt", "Continued":
 			// skip - use current prompt, Continued is just a marker
 		case "AssistantTool":
 			var msg Message
 			if err := json.Unmarshal([]byte(body), &msg); err == nil {
 				agent.history = append(agent.history, msg)
+				if outfn != nil && len(msg.ToolCalls) > 0 {
+					for _, tc := range msg.ToolCalls {
+						name := strings.TrimPrefix(tc.Function.Name, "suneido_")
+						outfn("tool", "**"+name+"** "+tc.Function.Arguments+"<br>")
+					}
+				}
 			} else {
 				log.Println("parseConversation AssistantTool:", err)
 			}
@@ -197,10 +242,14 @@ func (agent *Agent) parseConversation(content string) error {
 			var msg Message
 			if err := json.Unmarshal([]byte(body), &msg); err == nil {
 				agent.history = append(agent.history, msg)
+				// Tool result content is typically just logged, not displayed to UI
 			} else {
 				log.Println("parseConversation ToolResult:", err)
 			}
 		}
+	}
+	if outfn != nil {
+		outfn("complete", "")
 	}
 	return nil
 }
@@ -232,7 +281,7 @@ func (agent *Agent) SetModel(model string) {
 		panic("SetModel: request in progress")
 	}
 	if agent.logFile != nil && model != agent.model {
-		agent.logWrite("## Model\n\n" + model + "\n\n")
+		agent.logWrite("## {{ Model }}\n\n" + model + "\n\n")
 	}
 	agent.model = model
 }
@@ -246,7 +295,9 @@ func (agent *Agent) ClearHistory() {
 	if agent.inProgress {
 		panic("ClearHistory: request in progress")
 	}
+	agent.flushThink()
 	agent.closeLogFile()
+	agent.loadedContent = ""
 	agent.resetHistory()
 }
 
@@ -400,5 +451,12 @@ func (agent *Agent) request(input string) {
 }
 
 func (agent *Agent) emit(what, data string) {
+	if what == "think" {
+		agent.thinkBuf.WriteString(data)
+		agent.thinkDirty = true
+		agent.outfn(what, data)
+		return
+	}
+	agent.flushThink()
 	agent.outfn(what, data)
 }
