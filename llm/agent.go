@@ -11,18 +11,21 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Agent struct {
-	client    *OpenAIClient
-	mcpClient *MCPClient
-	model     string
-	prompt    string
-	history   []Message
-	outfn     OutFn
-	cancel    context.CancelFunc
-	logFile   *os.File
+	client     *OpenAIClient
+	mcpClient  *MCPClient
+	model      string
+	prompt     string
+	history    []Message
+	outfn      OutFn
+	cancel     context.CancelFunc
+	logFile    *os.File
+	mu         sync.Mutex
+	inProgress bool
 }
 
 var aiDir = ".ai"
@@ -126,7 +129,13 @@ func (agent *Agent) logWrite(s string) {
 // The file should be in the format created by the logging.
 // The current prompt is used, not the one from the file.
 // The loaded conversation is copied to a new log file and logging continues there.
+// Panics if a request is in progress.
 func (agent *Agent) LoadConversation(path string) error {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.inProgress {
+		panic("LoadConversation: request in progress")
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -197,6 +206,13 @@ func (agent *Agent) parseConversation(content string) error {
 }
 
 func (agent *Agent) Input(input string) {
+	agent.mu.Lock()
+	if agent.inProgress {
+		agent.mu.Unlock()
+		panic("Input: request already in progress")
+	}
+	agent.inProgress = true
+	agent.mu.Unlock()
 	go agent.request(input)
 }
 
@@ -208,7 +224,13 @@ func (agent *Agent) Interrupt() {
 }
 
 // SetModel sets the model to use for requests
+// Panics if a request is in progress.
 func (agent *Agent) SetModel(model string) {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.inProgress {
+		panic("SetModel: request in progress")
+	}
 	if agent.logFile != nil && model != agent.model {
 		agent.logWrite("## Model\n\n" + model + "\n\n")
 	}
@@ -217,13 +239,24 @@ func (agent *Agent) SetModel(model string) {
 
 // ClearHistory clears the conversation history and starts a new log file
 // The prompt is retained/restored.
+// Panics if a request is in progress.
 func (agent *Agent) ClearHistory() {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	if agent.inProgress {
+		panic("ClearHistory: request in progress")
+	}
 	agent.closeLogFile()
 	agent.resetHistory()
 }
 
 // request sends the request and streams the response to outfn
 func (agent *Agent) request(input string) {
+	defer func() {
+		agent.mu.Lock()
+		agent.inProgress = false
+		agent.mu.Unlock()
+	}()
 	ctx, cancel := context.WithCancel(context.Background())
 	agent.cancel = cancel
 	defer cancel()
@@ -312,6 +345,7 @@ func (agent *Agent) request(input string) {
 
 		if err != nil {
 			agent.emit("output", "Error: "+err.Error())
+			agent.emit("complete", "")
 			return
 		}
 
