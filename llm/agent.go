@@ -316,130 +316,19 @@ func (agent *Agent) request(input string) {
 	agent.logMessage("user", input)
 
 	for {
-		req := &ChatRequest{
-			Model:            agent.model,
-			Messages:         agent.history,
-			IncludeReasoning: true,
-		}
+		req := agent.buildRequest()
 
-		if agent.mcpClient != nil {
-			req.Tools = agent.mcpClient.GetTools()
-			req.ToolChoice = "auto"
-		}
-
-		var content strings.Builder
-		var think strings.Builder
-		toolCalls := make(map[int]*ToolCall) // accumulated tool calls by index
-		inThink := false
-
-		err := agent.client.Stream(ctx, req, func(chunk *ChatCompletionChunk) error {
-			if len(chunk.Choices) == 0 {
-				return nil
-			}
-			delta := chunk.Choices[0].Delta
-
-			// Handle reasoning_content field (used by DeepSeek R1)
-			if delta.ReasoningContent != "" {
-				agent.emit("think", delta.ReasoningContent)
-				return nil
-			}
-			// Handle reasoning field (alternative used by some providers)
-			if delta.Reasoning != "" {
-				agent.emit("think", delta.Reasoning)
-				return nil
-			}
-
-			// Handle tool calls - accumulate deltas by index
-			for _, tc := range delta.ToolCalls {
-				idx := max(tc.Index, 0)
-				if existing, ok := toolCalls[idx]; ok {
-					// Append to existing tool call
-					existing.Function.Arguments += tc.Function.Arguments
-					if tc.Function.Name != "" {
-						existing.Function.Name = tc.Function.Name
-					}
-					if tc.ID != "" {
-						existing.ID = tc.ID
-					}
-				} else {
-					// New tool call
-					toolCalls[idx] = &ToolCall{
-						ID:   tc.ID,
-						Type: tc.Type,
-						Function: ToolCallFunction{
-							Name:      tc.Function.Name,
-							Arguments: tc.Function.Arguments,
-						},
-					}
-				}
-			}
-
-			text := delta.Content
-			if inThink {
-				if strings.Contains(text, "</think") {
-					inThink = false
-					agent.emit("think", think.String())
-					think.Reset()
-					return nil
-				}
-				think.WriteString(text)
-			} else if strings.Contains(text, "<think") {
-				inThink = true
-				after := text[strings.Index(text, ">")+1:]
-				think.WriteString(after)
-			} else {
-				content.WriteString(text)
-				agent.emit("output", text)
-			}
-			return nil
-		})
-
+		content, toolCalls, err := agent.doStream(ctx, req)
 		if err != nil {
 			agent.emit("output", "Error: "+err.Error())
 			agent.emit("complete", "")
 			return
 		}
 
-		// Convert map to slice
-		var toolCallsList []ToolCall
-		for i := 0; i < len(toolCalls); i++ {
-			if tc, ok := toolCalls[i]; ok {
-				toolCallsList = append(toolCallsList, *tc)
-			}
-		}
-
 		// Handle tool calls
-		if len(toolCallsList) > 0 && agent.mcpClient != nil {
-			// Add assistant message with tool calls to history
-			assistantMsg := Message{
-				Role:      "assistant",
-				Content:   content.String(),
-				ToolCalls: toolCallsList,
-			}
-			agent.history = append(agent.history, assistantMsg)
-			agent.logAssistantToolCalls(assistantMsg)
-
-			// Process each tool call
-			for _, tc := range toolCallsList {
-				name := strings.TrimPrefix(tc.Function.Name, "suneido_")
-				agent.emit("tool", "**"+name+"** "+tc.Function.Arguments+"<br>")
-				result, err := agent.mcpClient.CallToolFromLLM(ctx, tc)
-				if err != nil {
-					agent.emit("tool", "**Error:** "+err.Error()+"<br>")
-					result = "Error: " + err.Error()
-				}
-				// Add tool result to history
-				toolMsg := Message{
-					Role:       "tool",
-					Content:    result,
-					ToolCallID: tc.ID,
-				}
-				agent.history = append(agent.history, toolMsg)
-				agent.logToolResult(toolMsg)
-			}
-
-			// Continue the loop to get next response
-			continue
+		if len(toolCalls) > 0 && agent.mcpClient != nil {
+			agent.processToolCalls(ctx, content.String(), toolCalls)
+			continue // Continue the loop to get next response
 		}
 
 		// No tool calls, we're done
@@ -448,6 +337,154 @@ func (agent *Agent) request(input string) {
 		agent.emit("complete", "")
 		return
 	}
+}
+
+// buildRequest creates the chat request with current history and tools
+func (agent *Agent) buildRequest() *ChatRequest {
+	req := &ChatRequest{
+		Model:            agent.model,
+		Messages:         agent.history,
+		IncludeReasoning: true,
+	}
+	if agent.mcpClient != nil {
+		req.Tools = agent.mcpClient.GetTools()
+		req.ToolChoice = "auto"
+	}
+	return req
+}
+
+// doStream performs the streaming request and returns accumulated content
+func (agent *Agent) doStream(ctx context.Context, req *ChatRequest) (
+	content strings.Builder, toolCalls []ToolCall, err error) {
+
+	toolCallsMap := make(map[int]*ToolCall)
+	inThink := false
+
+	err = agent.client.Stream(ctx, req, func(chunk *ChatCompletionChunk) error {
+		return agent.handleStreamChunk(chunk, &content, &toolCallsMap, &inThink)
+	})
+
+	if err != nil {
+		return
+	}
+
+	// Convert map to slice
+	for i := 0; i < len(toolCallsMap); i++ {
+		if tc, ok := toolCallsMap[i]; ok {
+			toolCalls = append(toolCalls, *tc)
+		}
+	}
+	return
+}
+
+// handleStreamChunk processes a single streaming chunk
+func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strings.Builder,
+	toolCallsMap *map[int]*ToolCall, inThink *bool) error {
+
+	if len(chunk.Choices) == 0 {
+		return nil
+	}
+	delta := chunk.Choices[0].Delta
+
+	// Handle reasoning_content field (used by DeepSeek R1)
+	if delta.ReasoningContent != "" {
+		agent.emit("think", delta.ReasoningContent)
+		return nil
+	}
+	// Handle reasoning field (alternative used by some providers)
+	if delta.Reasoning != "" {
+		agent.emit("think", delta.Reasoning)
+		return nil
+	}
+
+	// Handle tool calls - accumulate deltas by index
+	agent.accumulateToolCalls(delta.ToolCalls, toolCallsMap)
+
+	text := delta.Content
+	return agent.processContentText(text, content, inThink)
+}
+
+// accumulateToolCalls accumulates streaming tool call data by index
+func (agent *Agent) accumulateToolCalls(deltaToolCalls []ToolCall, toolCallsMap *map[int]*ToolCall) {
+	for _, tc := range deltaToolCalls {
+		idx := max(tc.Index, 0)
+		if existing, ok := (*toolCallsMap)[idx]; ok {
+			// Append to existing tool call
+			existing.Function.Arguments += tc.Function.Arguments
+			if tc.Function.Name != "" {
+				existing.Function.Name = tc.Function.Name
+			}
+			if tc.ID != "" {
+				existing.ID = tc.ID
+			}
+		} else {
+			// New tool call
+			(*toolCallsMap)[idx] = &ToolCall{
+				ID:   tc.ID,
+				Type: tc.Type,
+				Function: ToolCallFunction{
+					Name:      tc.Function.Name,
+					Arguments: tc.Function.Arguments,
+				},
+			}
+		}
+	}
+}
+
+// processContentText handles the content text, tracking think blocks
+func (agent *Agent) processContentText(text string, content *strings.Builder, inThink *bool) error {
+	if *inThink {
+		if strings.Contains(text, "</think") {
+			*inThink = false
+			agent.flushThink()
+			return nil
+		}
+		agent.emit("think", text)
+	} else if strings.Contains(text, "<think") {
+		*inThink = true
+		after := text[strings.Index(text, ">")+1:]
+		agent.emit("think", after)
+	} else {
+		content.WriteString(text)
+		agent.emit("output", text)
+	}
+	return nil
+}
+
+// processToolCalls processes tool calls and adds results to history
+func (agent *Agent) processToolCalls(ctx context.Context, content string, toolCallsList []ToolCall) {
+	// Add assistant message with tool calls to history
+	assistantMsg := Message{
+		Role:      "assistant",
+		Content:   content,
+		ToolCalls: toolCallsList,
+	}
+	agent.history = append(agent.history, assistantMsg)
+	agent.logAssistantToolCalls(assistantMsg)
+
+	// Process each tool call
+	for _, tc := range toolCallsList {
+		agent.executeSingleToolCall(ctx, tc)
+	}
+}
+
+// executeSingleToolCall executes a single tool call and logs the result
+func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
+	name := strings.TrimPrefix(tc.Function.Name, "suneido_")
+	agent.emit("tool", "**"+name+"** "+tc.Function.Arguments+"<br>")
+	result, err := agent.mcpClient.CallToolFromLLM(ctx, tc)
+	if err != nil {
+		agent.emit("tool", "**Error:** "+err.Error()+"<br>")
+		result = "Error: " + err.Error()
+	}
+	// Add tool result to history
+	toolMsg := Message{
+		Role:       "tool",
+		Content:    result,
+		ToolCallID: tc.ID,
+	}
+	agent.history = append(agent.history, toolMsg)
+	agent.logToolResult(toolMsg)
 }
 
 func (agent *Agent) emit(what, data string) {
