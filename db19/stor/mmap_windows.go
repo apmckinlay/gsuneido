@@ -79,9 +79,11 @@ func (ms *mmapStor) close(size int64, unmap bool) {
 		}
 		exit.Progress("    unmapped")
 	}
-	ms.file.Truncate(size) // may not work if not unmap	ms.updateFileTime()
-	exit.Progress("    file time updating")
-	ms.updateFileTime()
+	if ms.mode != Read {
+		ms.file.Truncate(size) // may not work if not unmap
+		exit.Progress("    file time updating")
+		ms.updateFileTime()
+	}
 	exit.Progress("    file unlocking")
 	filelock.Unlock(ms.file)
 	exit.Progress("    file unlocked")
