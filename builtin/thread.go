@@ -22,7 +22,7 @@ func init() {
 	Global.Builtin("Thread", &suThreadGlobal{
 		SuBuiltin{Fn: threadCallClass,
 			BuiltinParams: BuiltinParams{
-				ParamSpec: params("(block, name = false)")}}})
+				ParamSpec: params("(@args)")}}})
 }
 
 type threadList struct {
@@ -51,10 +51,21 @@ func (ts *threadList) count() int {
 }
 
 func threadCallClass(th *Thread, args []Value) Value {
-	fn := args[0]
-	fn.SetConcurrent()
+	ob := args[0].(*SuObject)
+	ob.SetConcurrent()
+	var fn Value
+	if block := ob.NamedGet(SuStr("block")); block != nil {
+		fn = block
+		ob.Delete(th, SuStr("block"))
+	} else {
+		fn = ob.ListGet(0)
+		ob.Delete(th, Zero)
+	}
 	t2 := NewThread(th)
-	thread_Name(t2, args[1:])
+	if name := ob.NamedGet(SuStr("name")); name != nil {
+		threadName(t2, name)
+		ob.Delete(th, SuStr("name"))
+	}
 	threads.add(t2)
 	go func() {
 		defer func() {
@@ -64,7 +75,7 @@ func threadCallClass(th *Thread, args []Value) Value {
 				LogUncaught(t2, "Thread", e)
 			}
 		}()
-		t2.Call(fn)
+		t2.CallEach(fn, ob)
 	}()
 	return nil
 }
@@ -82,9 +93,13 @@ var _ = staticMethod(thread_Name, "(name=false)")
 
 func thread_Name(th *Thread, args []Value) Value {
 	if args[0] != False {
-		th.Name = str.BeforeFirst(th.Name, " ") + " " + ToStr(args[0])
+		threadName(th, args[0])
 	}
 	return SuStr(th.Name)
+}
+
+func threadName(th *Thread, name Value) {
+	th.Name = str.BeforeFirst(th.Name, " ") + " " + ToStr(name)
 }
 
 var _ = staticMethod(thread_Count, "()")
