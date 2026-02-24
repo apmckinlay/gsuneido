@@ -51,7 +51,6 @@ func (agent *Agent) resetHistory() {
 	}
 }
 
-
 func (agent *Agent) Input(input string) {
 	agent.mu.Lock()
 	if agent.inProgress {
@@ -200,16 +199,14 @@ func (agent *Agent) doStream(ctx context.Context, req *ChatRequest) (
 	err = agent.client.Stream(ctx, req, func(chunk *ChatCompletionChunk) error {
 		return agent.handleStreamChunk(chunk, &contentBuilder, &reasoningBuilder, &toolCallsMap, &inThink)
 	})
-
 	if err != nil {
 		return
 	}
 
-	// Convert map to slice
-	for i := 0; i < len(toolCallsMap); i++ {
-		if tc, ok := toolCallsMap[i]; ok {
-			toolCalls = append(toolCalls, *tc)
-		}
+	// Convert map to slice (requires contiguous indices)
+	toolCalls = make([]ToolCall, len(toolCallsMap))
+	for i := range toolCalls {
+		toolCalls[i] = *toolCallsMap[i]
 	}
 	return contentBuilder.String(), reasoningBuilder.String(), toolCalls, nil
 }
