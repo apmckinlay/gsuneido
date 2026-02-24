@@ -182,6 +182,7 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 		case "AssistantTool":
 			var msg Message
 			if err := json.Unmarshal([]byte(body), &msg); err == nil {
+				msg.Reasoning = "" // clear - already sent when originally created
 				agent.history = append(agent.history, msg)
 				if outfn != nil && len(msg.ToolCalls) > 0 {
 					for _, tc := range msg.ToolCalls {
@@ -199,6 +200,8 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 			} else {
 				log.Println("parseConversation ToolResult:", err)
 			}
+		default:
+			log.Println("ERROR: parseConversation unknown role:", role)
 		}
 	}
 	if outfn != nil {

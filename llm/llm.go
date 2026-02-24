@@ -1,18 +1,18 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package llm provides a simple interface for interacting with LLM APIs.
-// This is a spike implementation for OpenAI-compatible endpoints.
+// Package llm provides a simple interface for OpenAI-compatible endpoints.
 package llm
 
 import "context"
 
 // Message represents a single message in a conversation.
 type Message struct {
-	Role       string     `json:"role"`
-	Content    string     `json:"content"`
-	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
-	ToolCallID string     `json:"tool_call_id,omitempty"`
+	Role             string     `json:"role"`
+	Content          string     `json:"content"`
+	Reasoning        string     `json:"reasoning,omitempty"`
+	ToolCalls        []ToolCall `json:"tool_calls,omitempty"`
+	ToolCallID       string     `json:"tool_call_id,omitempty"`
 }
 
 // ChatRequest represents a chat completion request.

@@ -116,25 +116,63 @@ func (agent *Agent) request(input string) {
 	for {
 		req := agent.buildRequest()
 
-		content, toolCalls, err := agent.doStream(ctx, req)
+		content, reasoning, toolCalls, err := agent.doStream(ctx, req)
 		if err != nil {
 			agent.emit("output", "Error: "+err.Error())
 			agent.emit("complete", "")
 			return
 		}
 
+		// Clear reasoning from previous assistant messages (already sent once)
+		agent.clearReasoning()
+
 		// Handle tool calls
 		if len(toolCalls) > 0 && agent.mcpClient != nil {
-			agent.processToolCalls(ctx, content.String(), toolCalls)
+			agent.processToolCalls(ctx, content, reasoning, toolCalls)
 			continue // Continue the loop to get next response
 		}
 
 		// No tool calls, we're done
-		agent.history = append(agent.history, Message{Role: "assistant", Content: content.String()})
-		agent.logMessage("assistant", content.String())
+		agent.history = append(agent.history,
+			Message{Role: "assistant", Content: content, Reasoning: truncateReasoning(reasoning)})
+		agent.logMessage("assistant", content)
 		agent.emit("complete", "")
 		return
 	}
+}
+
+// clearReasoning removes reasoning from all assistant messages in history
+// to avoid accumulating it in context after it's been sent once
+func (agent *Agent) clearReasoning() {
+	for i := range agent.history {
+		if agent.history[i].Role == "assistant" {
+			agent.history[i].Reasoning = ""
+		}
+	}
+}
+
+const (
+	reasoningLimit = reasoningHead + reasoningTail
+	reasoningHead  = 600
+	reasoningTail  = 1400
+)
+
+// truncateReasoning limits reasoning size by keeping head and tail portions
+func truncateReasoning(s string) string {
+	if len(s) <= reasoningLimit {
+		return s
+	}
+	head := s[:reasoningHead]
+	tail := s[len(s)-reasoningTail:]
+	// Trim partial line from end of head
+	if idx := strings.LastIndexByte(head, '\n'); idx >= 0 {
+		head = head[:idx]
+	}
+	// Trim partial line from start of tail
+	if idx := strings.IndexByte(tail, '\n'); idx >= 0 {
+		tail = tail[idx+1:]
+	}
+	return head + "\n...[truncated]...\n" + tail
 }
 
 // buildRequest creates the chat request with current history and tools
@@ -151,15 +189,16 @@ func (agent *Agent) buildRequest() *ChatRequest {
 	return req
 }
 
-// doStream performs the streaming request and returns accumulated content
+// doStream performs the streaming request and returns accumulated content and reasoning
 func (agent *Agent) doStream(ctx context.Context, req *ChatRequest) (
-	content strings.Builder, toolCalls []ToolCall, err error) {
+	content, reasoning string, toolCalls []ToolCall, err error) {
 
+	var contentBuilder, reasoningBuilder strings.Builder
 	toolCallsMap := make(map[int]*ToolCall)
 	inThink := false
 
 	err = agent.client.Stream(ctx, req, func(chunk *ChatCompletionChunk) error {
-		return agent.handleStreamChunk(chunk, &content, &toolCallsMap, &inThink)
+		return agent.handleStreamChunk(chunk, &contentBuilder, &reasoningBuilder, &toolCallsMap, &inThink)
 	})
 
 	if err != nil {
@@ -172,12 +211,12 @@ func (agent *Agent) doStream(ctx context.Context, req *ChatRequest) (
 			toolCalls = append(toolCalls, *tc)
 		}
 	}
-	return
+	return contentBuilder.String(), reasoningBuilder.String(), toolCalls, nil
 }
 
 // handleStreamChunk processes a single streaming chunk
 func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strings.Builder,
-	toolCallsMap *map[int]*ToolCall, inThink *bool) error {
+	reasoning *strings.Builder, toolCallsMap *map[int]*ToolCall, inThink *bool) error {
 
 	if len(chunk.Choices) == 0 {
 		return nil
@@ -186,11 +225,13 @@ func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strin
 
 	// Handle reasoning_content field (used by DeepSeek R1)
 	if delta.ReasoningContent != "" {
+		reasoning.WriteString(delta.ReasoningContent)
 		agent.emit("think", delta.ReasoningContent)
 		return nil
 	}
 	// Handle reasoning field (alternative used by some providers)
 	if delta.Reasoning != "" {
+		reasoning.WriteString(delta.Reasoning)
 		agent.emit("think", delta.Reasoning)
 		return nil
 	}
@@ -199,7 +240,7 @@ func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strin
 	agent.accumulateToolCalls(delta.ToolCalls, toolCallsMap)
 
 	text := delta.Content
-	return agent.processContentText(text, content, inThink)
+	return agent.processContentText(text, content, reasoning, inThink)
 }
 
 // accumulateToolCalls accumulates streaming tool call data by index
@@ -230,17 +271,20 @@ func (agent *Agent) accumulateToolCalls(deltaToolCalls []ToolCall, toolCallsMap 
 }
 
 // processContentText handles the content text, tracking think blocks
-func (agent *Agent) processContentText(text string, content *strings.Builder, inThink *bool) error {
+func (agent *Agent) processContentText(text string, content *strings.Builder,
+	reasoning *strings.Builder, inThink *bool) error {
 	if *inThink {
 		if strings.Contains(text, "</think") {
 			*inThink = false
 			agent.flushThink()
 			return nil
 		}
+		reasoning.WriteString(text)
 		agent.emit("think", text)
 	} else if strings.Contains(text, "<think") {
 		*inThink = true
 		after := text[strings.Index(text, ">")+1:]
+		reasoning.WriteString(after)
 		agent.emit("think", after)
 	} else {
 		content.WriteString(text)
@@ -250,11 +294,12 @@ func (agent *Agent) processContentText(text string, content *strings.Builder, in
 }
 
 // processToolCalls processes tool calls and adds results to history
-func (agent *Agent) processToolCalls(ctx context.Context, content string, toolCallsList []ToolCall) {
+func (agent *Agent) processToolCalls(ctx context.Context, content, reasoning string, toolCallsList []ToolCall) {
 	// Add assistant message with tool calls to history
 	assistantMsg := Message{
 		Role:      "assistant",
 		Content:   content,
+		Reasoning: truncateReasoning(reasoning),
 		ToolCalls: toolCallsList,
 	}
 	agent.history = append(agent.history, assistantMsg)
