@@ -67,6 +67,7 @@ deploy: git-status gs_windows_amd64.exe gs_windows_amd64_gui.exe \
 	cp gs_windows_amd64.exe deploy\gsport.exe
 	cp gs_windows_amd64_gui.exe deploy\gsuneido.exe
 	mv gs_linux_amd64 gs_linux_arm64 deploy
+	@echo Remember to tag the release and to update stdlib and suneidoc
 
 # NOTE: requires test e.g. from msys
 git-status:
