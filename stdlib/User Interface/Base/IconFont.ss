@@ -1,5 +1,5 @@
 // Copyright (C) 2020 Suneido Software Corp. All rights reserved worldwide.
-// NOTE: To add new icons, see http://appserver.axon:8080/Wiki?UpdateSuneidoIconFont
+// NOTE: To add new icons, see https://appserver.internal.axonsoft.com:8088/Wiki?UpdateSuneidoIconFont
 Singleton
 	{
 

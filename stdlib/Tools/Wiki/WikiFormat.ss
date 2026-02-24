@@ -264,7 +264,8 @@ class
 		}
 	addMarker(s, urls)
 		{
-		if s =~ `http://appserver(\.axon)?:8080/Wiki`
+		wiki = OptContribution('InternalWiki', { false })()
+		if wiki isnt false and s =~ wiki
 			return s // don't allow external links to wiki
 		urls.Add(s)
 		return .mark $ (urls.Size() - 1) $ .mark

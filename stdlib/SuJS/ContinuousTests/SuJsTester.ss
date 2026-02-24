@@ -10,12 +10,20 @@ class
 			' (' $ w.Ctrl.LocationURL $ ')') })
 		expire = Date().Plus(minutes: timeout)
 		.wait(expire, id)
+
+		WebView2.CleanUp()
 		}
 
 	wait(expire, id)
 		{
 		if ServerSuneido.Get(id, false) is true or Date() > expire
-			ExitClient()
+			{
+			.Log('Exit exe client ' $ id)
+			try
+				ExitClient(true)
+			catch (e)
+				.Log('ExitClient ' $ id $ ' - ' $ e)
+			}
 		Delay(100/*=.1 sec*/, { .wait(expire, id) })
 		}
 

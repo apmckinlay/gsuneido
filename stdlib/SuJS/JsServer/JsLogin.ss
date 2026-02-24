@@ -184,13 +184,19 @@ class
 			Map({ [tag: 'style', innerText: it] }))
 		set = .loginClass.GetInitSet(user)
 		return ['OK',
-			['Set-Cookie': Object(ob.token $ '=' $ ob.key $ '; Path=/; Secure; HttpOnly').
+			['Set-Cookie': Object(.buildSessionCookie(ob, host)).
 				MergeUnion(extraCookies)],
 			Json.Encode([sources: bundles,
 				onload: JsTranslate(
 					'function () {
 						SuInitClient(set: "' $ set $ '", token: "' $ ob.token $ '", ' $
 						'preAuth: ' $ Display(preAuth) $ ')}', 'eval') $ ".call()"])]
+		}
+
+	buildSessionCookie(token, host)
+		{
+		secure = host.Prefix?('localhost') or host.Prefix?('127.0.0.1') ? '' : ' Secure;'
+		return token.token $ '=' $ token.key $ '; Path=/;' $ secure $ ' HttpOnly'
 		}
 
 	TwoFA(env)

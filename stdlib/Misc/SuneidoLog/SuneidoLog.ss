@@ -39,6 +39,8 @@ class
 		{
 		pos = false
 		expectedErrors = #()
+		if false is rec.Member?('sulog_timestamp')
+			rec.sulog_timestamp = Timestamp()
 		if rec.sulog_message.Prefix?("ERROR")
 			{
 			expectedErrors = ServerSuneido.Get("TestRunningExpectedErrors", Object())
@@ -139,7 +141,7 @@ class
 
 		return Record(
 			sulog_user: Suneido.User,
-			sulog_message: Type(message) isnt 'Except' ? message : Display(message),
+			sulog_message: message,
 			sulog_calls: Object?(calls) ? FormatCallStack(calls, levels: 10) : calls,
 			sulog_locals: .format_locals(calls),
 			sulog_params: .format_params(params),

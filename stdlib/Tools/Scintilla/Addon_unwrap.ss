@@ -18,12 +18,11 @@ ScintillaAddon
 		}
 	unwrap(range)
 		{
-		.SetSel(range[0], range[1] + 1)
+		.SetSelect(range[0], range[1] - range[0] + 1)
 		text = .GetSelText()
-
 		unwrappedText = .getUnwrapped(text)
 		.ReplaceSel(unwrappedText)
-		.SetSel(range[0], range[0] + unwrappedText.Size())
+		.SetSelect(range[0], unwrappedText.Size())
 		}
 	getUnwrapped(text)
 		{

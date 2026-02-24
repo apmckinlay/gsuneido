@@ -7,7 +7,7 @@ PassthruController
 		.Top = .Horz.Top
 		}
 	Controls: #(Horz
-		(FieldHistory, font: '@mono', size: '+2', width: 10, xstretch: .001,
+		(FieldHistory, font: '@mono', size: '+2', width: 10, xstretch: 1,
 			trim: false, name: "find")
 		Skip
 		(Static name: "occurrence"))

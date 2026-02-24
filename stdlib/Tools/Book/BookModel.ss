@@ -50,6 +50,7 @@ class
 			key(num) key (path, name) index(name)
 			index(order, name) index(path, order, name) index (plugin)")
 		SvcDisabledBooks.ResetCache()
+		return // avoid returning cache
 		}
 	load_children(table)
 		{

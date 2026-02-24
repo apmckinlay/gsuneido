@@ -14,7 +14,7 @@ Methods:
 [Thread](<Thread.md>) but automatically does Add() and ensures Done() is called when the thread ends.
 
 `Add(inc = 1)`
-: Adds one to the wait group counter. (Should be called before starting the thread.)
+: Adds to the wait group counter. (Should be called before starting the thread.)
 
 `Done()`
 : Decrements the wait group counter. It will throw an exception if the counter becomes negative.

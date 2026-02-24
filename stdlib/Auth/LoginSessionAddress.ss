@@ -4,7 +4,7 @@ class
 	CallClass()
 		{
 		os = .getOsName()
-		if Sys.SuneidoJs?() or
+		if .js?() or
 			os.Has?('Windows 10') or os.Has?('Windows 11') or
 			os is '' // when not able to get os name
 			sid = 0
@@ -15,6 +15,11 @@ class
 			? .databaseSessionId() // ip address
 			: 'wts' $ sid
 		return sid
+		}
+
+	js?()
+		{
+		return Sys.SuneidoJs?()
 		}
 
 	getOsName()

@@ -47,6 +47,11 @@ Control
 		.Act(#ClearMarks)
 		}
 
+	Overview_Click(row)
+		{
+		.Send('Overview_Click', row)
+		}
+
 	Default(@args)
 		{
 		SuServerPrint(args[0])

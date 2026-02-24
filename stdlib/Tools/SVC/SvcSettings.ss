@@ -135,7 +135,7 @@ Controller
 
 	passhashFile()
 		{
-		dir = Sys.Linux?() ? 'HOME' : 'APPDATA'
+		dir = Sys.Windows?() ? 'APPDATA' : "HOME"
 		return Paths.ToLocal(Getenv(dir) $ '/svc.key')
 		}
 

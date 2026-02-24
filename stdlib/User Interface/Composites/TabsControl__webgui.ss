@@ -9,8 +9,9 @@ _TabsControl
 	initialConstruct(args, startTab)
 		{
 		super.TabsControl_initialConstruct(args, startTab)
-		.ComponentArgs = Object(.Tab.GetLayout(), vertical: .vertical,
-			xstretch: 1, ystretch: 1)
+		.ComponentArgs = Object(.Tab.GetLayout(),
+			vertical: .vertical,
+			alternativePos: .alternativePos)
 		}
 
 	construct(i)
@@ -18,11 +19,11 @@ _TabsControl
 		.ActWith()
 			{
 			.being_constructed = i
-			.ctrls[i] = .Construct(Object("WndPane"
+			.ctrls[i] = .Construct(Object("TabWndPane"
 				Object("Border", .controls[i], .border, borderline: 1,
 					xstretch: 1, ystretch: 1),
 				windowClass: 'SuBtnfaceArrow'))
-			Object('Insert', .alternativePos is true ? 0 : 1, .ctrls[i].GetLayout())
+			Object('Insert', .ctrls[i].GetLayout())
 			}
 		.being_constructed = false
 		return .ctrls[i]

@@ -292,6 +292,13 @@ AmazonAWS
 		return Number(f.size.Tr(' bytes'))
 		}
 
+	DeleteBucket(bucket)
+		{
+		region = .GetBucketLocationCached(bucket)
+		return false isnt .makeRequest('DELETE', [], '/' $ bucket,
+			expectedResponse: '204', :region)
+		}
+
 	CreateBucket(bucket, region = false)
 		{
 		fromFile = GetAppTempFullFileName('amazons3')
@@ -336,13 +343,14 @@ AmazonAWS
 		return .makeRequest('GET', ['cors': '1'], '/' $ bucket, :region)
 		}
 
-	PutBucketVersioning(bucket, region = false)
+	PutBucketVersioning(bucket, region = false, status = 'Enabled')
 		{
+		Assert(status in ('Enabled', 'Suspended'))
 		if region is false
 			region = .GetBucketLocationCached(bucket)
 		content = `<VersioningConfiguration ` $
 			`xmlns="http://s3.amazonaws.com/doc/2006-03-01/">` $
-			`<Status>Enabled</Status>` $
+			`<Status>` $ status $ `</Status>` $
 			`</VersioningConfiguration>`
 		return '' is .makeRequest('PUT', ['versioning': '1'], '/' $ bucket,
 			:content, :region)
@@ -499,7 +507,8 @@ AmazonAWS
 			RemoveIf({ not it.Suffix?('/')}) // remove files
 		}
 
-	ListBucketContents(bucket, prefix = '', rawResponse = false, region = false)
+	ListBucketContents(bucket, prefix = '', rawResponse = false, region = false,
+		block = false)
 		{
 		// AmazonS3: The maximum number of items that can be returned is 1000
 		// if IsTruncated is true then send another request
@@ -507,7 +516,8 @@ AmazonAWS
 		// keep making these requests until the IsTruncated element has a value of false
 		fileList = Object()
 		params = [marker: '', :prefix]
-		while true is .listTruncated(bucket, fileList, params, rawResponse, :region)
+		while true is .listTruncated(bucket, fileList, params, rawResponse, :region,
+			:block)
 			{
 			last = fileList.Last()
 			params.marker = last.key
@@ -516,21 +526,16 @@ AmazonAWS
 		}
 
 	listTruncated(bucket, fileList, params, rawResponse, xmlContent = 'contents',
-		region = false)
+		region = false, block = false)
 		{
 		if false is content = .makeRequest('GET', params, '/' $ bucket $ '/', :region)
 			return false
 
-		try
-			response = XmlParser(content)
-		catch (err)
-			{
-			.addToLog("LIST", 'listTruncated - ' $ err, content, params: Locals(0))
-			return false
-			}
-		if response is false or response is ''
+		if false is response = .getResponse(content)
 			return false
 
+		if block isnt false
+			fileList.Delete(all:)
 		for file in response[xmlContent].List()
 			{
 			last_modified = .getLastModified(rawResponse, file.lastmodified.Text())
@@ -545,9 +550,25 @@ AmazonAWS
 			.addXmlTypeIfNotEmpty(file, fileOb, 'storageclass', 'storage')
 			.addXmlTypeIfNotEmpty(file, fileOb, 'versionid', 'versionId')
 
+			if block isnt false
+				block(fileOb)
 			fileList.Add(fileOb)
 			}
 		return response.istruncated.Text().SafeEval()
+		}
+
+	getResponse(content)
+		{
+		try
+			response = XmlParser(content)
+		catch (err)
+			{
+			.addToLog("LIST", 'listTruncated - ' $ err, content, params: Locals(0))
+			return false
+			}
+		if response is false or response is ''
+			return false
+		return response
 		}
 
 	addXmlTypeIfNotEmpty(file, fileOb, type, member)

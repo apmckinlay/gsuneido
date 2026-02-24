@@ -53,7 +53,6 @@ Test
 		}
 	Test_update()
 		{
-		spy = .SpyOn(SuneidoLog).Return(true)
 		log1 = Object()
 		log2 = Object()
 		openAI = (.fakeOpenAI)(log1)
@@ -105,9 +104,9 @@ Test
 			[text: 'a b c d', id: 'id 5', metadata: #(source: 'test')],
 			[text: 'throw', id: 'id 6', metadata: #(source: 'test')]]
 		Assert(fn(outputs, openAI, vdb) is: 2)
-		callLogs = spy.CallLogs()
+		callLogs = .GetSuneidoLog()
 		Assert(callLogs isSize: 1)
-		Assert(callLogs[0].params is: #('id 6'))
+		Assert(callLogs[0].sulog_params is: #('id 6'))
 		Assert(log1 is: [['a b c d', 'throw'], ['a b c', 8], ['d', 9]])
 		Assert(log2 is: [
 			[metadata: #(source: "test"), id: "id 5.0", values: #(8)],

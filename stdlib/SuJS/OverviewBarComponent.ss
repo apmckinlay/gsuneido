@@ -14,11 +14,13 @@ Component
 		.su-overview-bar-item {
 			position: absolute;
 			width: 100%;
+			pointer-events: none;
 		}`
 	New(.priorityColor = false, .partnerCtrlHwnd = false)
 		{
 		LoadCssStyles('su-overview-bar.css', .Styles)
 		.CreateElement('div', className: 'su-overview-bar')
+		.El.AddEventListener('mouseup', .mouseup)
 		.SetMinSize()
 		.marks = Object()
 		}
@@ -68,6 +70,17 @@ Component
 			}
 		}
 
+	mouseup(event)
+		{
+		if .numRows is 0
+			return
+
+		rect = SuRender().GetClientRect(.El)
+		clickY = event.clientY - rect.top
+		row = (clickY * .numRows / rect.height).Floor()
+		.EventWithFreeze('Overview_Click', row)
+		}
+
 	numRows: 0
 	SetNumRows(.numRows) {}
 
@@ -100,7 +113,7 @@ Component
 
 	ClearMarks()
 		{
-		.El.InnerHTML = ''
+		.El.innerHTML = ''
 		.marks = Object()
 		}
 

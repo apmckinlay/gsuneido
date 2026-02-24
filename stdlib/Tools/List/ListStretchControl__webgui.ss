@@ -10,4 +10,8 @@ _ListStretchControl
 	Adjust(@unused)
 		{
 		}
+
+	recalcCols(@unused)
+		{
+		}
 	}

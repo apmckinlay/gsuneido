@@ -313,18 +313,10 @@ Controller
 		return w
 		}
 
-	previewArgs: #(title, name, devmode_name, header, footer, paramsdata, printParams,
-		noPageRange, pageRange, minBorder, margins, previewDialog, onDestroy,
-		EmailAttachments)
+	excludeReportMembers: #(Params)
 	PreviewReport(report)
 		{
-		previewReport = Object(report[0]) // Report Format
-		for member in .previewArgs
-			if report.Member?(member)
-				previewReport[member] = Object?(report[member])
-					? report[member].DeepCopy()
-					: report[member]
-		return previewReport
+		return report.DeepCopy().Delete(@.excludeReportMembers)
 		}
 
 	addFilterIfSlowQuery(report)

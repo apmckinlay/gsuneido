@@ -142,9 +142,11 @@ Controller
 
 	name(class? = false)
 		{
-		name = .list.GetText(.list.GetCurSel()).BeforeFirst(' /*')
+		text = .list.GetText(.list.GetCurSel())
+		name = text.BeforeFirst(' /*')
+		clSuffix = Opt('__', text.AfterFirst('/* ').BeforeFirst(' ').AfterFirst('__'))
 		return class?
-			? name.BeforeFirst('.')
+			? name.BeforeFirst('.') $ clSuffix
 			: name.AfterFirst('.')
 		}
 

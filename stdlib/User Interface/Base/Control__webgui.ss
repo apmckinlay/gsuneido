@@ -512,6 +512,10 @@ class
 				: .Name
 		}
 
+	Update()
+		{
+		}
+
 	Destroyed?()
 		{
 		return not .Member?('Window')

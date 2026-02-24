@@ -158,7 +158,8 @@ Md_Addon_Base
 		}
 	extractUrl(url)
 		{
-		if url =~ `http://appserver(\.axon)?:8080/Wiki`
+		wiki = OptContribution('InternalWiki', { false })()
+		if wiki isnt false and url =~ wiki
 			return url // don't allow external links to wiki
 		return .addLiteral(.externalLink(url))
 		}

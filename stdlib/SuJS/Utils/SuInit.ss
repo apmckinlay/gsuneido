@@ -13,6 +13,7 @@ class
 			if LastContribution('JsLogin').PostLogin(:set, :userAgent, :preAuth) is false
 				.exit()
 
+			SuRenderBackend().RegisterBeforeDisconnectFn(.onDisconnect)
 			PersistentWindow.Load(set)
 			if not JsLogin.NoAuth?()
 				Login.PostLoginPlugins(origCmd: '')
@@ -76,5 +77,14 @@ class
 	exit()
 		{
 		SuRenderBackend().Terminate(reason: '')
+		}
+
+	onDisconnect()
+		{
+		if ServerSuneido.Get('RunAsStandalone', false)
+			{
+			// Don't call on client because this is already in disconnect
+			ServerEval('Shutdown')
+			}
 		}
 	}

@@ -219,7 +219,8 @@ ScintillaAddon
 		if ref.Prefix?('_')
 			{
 			current = .currentName()
-			if current isnt pureName = LibraryTags.RemoveTagFromName(current)
+			if current isnt 0 /* currentName() handled */ and
+				current isnt pureName = LibraryTags.RemoveTagFromName(current)
 				{
 				ref = pureName
 				libs = [.table()]
@@ -230,6 +231,7 @@ ScintillaAddon
 				ref = ref[1 ..]
 				libs = Libraries()
 				libs = libs[.. libs.Find(.table())]
+				libs = (not libs.Empty?()) ? libs : false
 				}
 			}
 		path = .Send(#Goto_GetPath)

@@ -23,6 +23,8 @@ ScintillaControl
 			args.GetDefault(#width, .Width/*=default width*/),
 			args.GetDefault(#xmin, false),
 			args.GetDefault(#ymin, false))
+
+		.addons.Send(#ComponentAddon, .ComponentArgs.componentAddons = Object())
 		}
 
 	processArgs(args)
@@ -51,7 +53,36 @@ ScintillaControl
 		Addon_highlight_cursor_line,
 		Addon_multiple_selection,
 		Addon_suneido_style,
-		Addon_status, Addon_auto_complete_code, Addon_auto_complete_queries)
+		Addon_status,
+		Addon_auto_complete_code,
+		Addon_auto_complete_queries,
+		Addon_go_to_definition,
+		Addon_comment,
+		Addon_overview_bar,
+		Addon_show_modified_lines,
+		Addon_check_code,
+		Addon_libview_todo,
+		Addon_svc,
+		Addon_highlight_occurrences,
+		Addon_move_lines,
+		Addon_show_line_numbers,
+		Addon_class_outline,
+		Addon_auto_delimit,
+		Addon_star_rating,
+		Addon_auto_indent,
+		Addon_show_margin,
+		Addon_inspect,
+		Addon_brace_match,
+		Addon_suneido_style_lines,
+		Addon_md,
+		Addon_md_edit,
+		Addon_html,
+		Addon_html_display,
+		Addon_html_edit,
+		Addon_unwrap,
+		Addon_highlight_customFields,
+		Addon_highlight_warnings,
+		)
 	SupportedAddon?(addon)
 		{
 		return .supportedAddons.Has?(addon)
@@ -176,6 +207,12 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 		{
 		.addons.Send(#DoubleClick)
 		return super.SCN_DOUBLECLICK()
+		}
+
+	SU_UPDATESELECT(@args)
+		{
+		super.SU_UPDATESELECT(@args)
+		.addons.Send(#Scintilla_Selection)
 		}
 
 	MarkersChanged()

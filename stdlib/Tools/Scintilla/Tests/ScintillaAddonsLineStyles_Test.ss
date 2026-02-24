@@ -4,13 +4,12 @@ Test
 	Test_Main()
 		{
 		.styles = .instance()
-		suneidolog = .SpyOn(SuneidoLog).Return('')
 
 		addons = .mockAddons()
 		.styles.DefineStyles(addons)
 
 		.test_defineStyles()
-		.test_errorHandling(suneidolog.CallLogs())
+		.test_errorHandling(.GetSuneidoLog())
 		.test_markerColors()
 		}
 
@@ -90,20 +89,21 @@ Test
 	test_errorHandling(logs)
 		{
 		duplicates = logs[0]
-		Assert(duplicates.message
+		Assert(duplicates.sulog_message
 			is: 'ERROR: (CAUGHT) Two markers share the same type and level. ' $
 				'Skipping marker')
-		Assert(duplicates.params.level is: 8)
+		Assert(duplicates.sulog_params.level is: 8)
 
 		duplicates = logs[1]
-		Assert(duplicates.message is:
+		Assert(duplicates.sulog_message is:
 			'ERROR: (CAUGHT) Two indicators share the same type and level. ' $
 				'Skipping indicator')
-		Assert(duplicates.params.level is: 8)
+		Assert(duplicates.sulog_params.level is: 8)
 
 		excessMarkers = logs[2]
-		Assert(excessMarkers.message is: 'ERROR: (CAUGHT) Too many markers defined: 10')
-		.verifyStyling(excessMarkers.params, #(1, 5), #marker)
+		Assert(excessMarkers.sulog_message
+			is: 'ERROR: (CAUGHT) Too many markers defined: 10')
+		.verifyStyling(excessMarkers.sulog_params, #(1, 5), #marker)
 		}
 
 	test_markerColors()

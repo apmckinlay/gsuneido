@@ -177,13 +177,29 @@ ReportBase
 			'Consider adjusting the report options to filter the data.',
 			flag: #ICONINFORMATION)
 		)
-	DisplayAlert(status, quiet? = false, noDelay? = false)
+	DisplayAlert(status, quiet? = false, noDelay? = false, _fromGenerateParams = false)
 		{
 		if quiet? is true or status is ReportStatus.SUCCESS
 			return
 		if  Suneido.GetDefault('CheckReports', false) is true
 			return
 		alert = .alerts[status]
+		if status is ReportStatus.TOOLARGE
+			{
+			alert = alert.Copy()
+			if fromGenerateParams is true
+				{
+				alert.msg = 'Partially Generated.\n\n' $
+					'Too much data for the report to process. ' $
+					'Consider adjusting the report options to filter the data.'
+				alert.flag = 'ICONERROR'
+				}
+			else if fromGenerateParams is 'all_generated'
+				alert.msg = 'Generate Complete.\n\n' $
+					'Too much data for the report to output a PDF file.\n' $
+					'Please use the reprint screen and ' $
+					'adjust the report options to filter the data.'
+			}
 		fn = noDelay? is true ? Alert : AlertDelayed
 		fn(alert.msg, 'Report', flags: MB[alert.flag], uniqueId: 'ReportAlert' $ status)
 		}
@@ -210,7 +226,7 @@ ReportBase
 		.SelectFont(.Driver.GetDefaultFont())
 
 		_env = Object(vbox: false, no_output?:, :maxPages)
-		finished? = DoTaskWithPause('Working...', .printNextPage)
+		finished? = DoTaskWithPause('Working...', .tryPrintNextPage)
 
 		// if merging pdfs' the base report has no return value.
 		if Params.HasIndividualReport?()
@@ -220,13 +236,24 @@ ReportBase
 			? ReportStatus.ABORT
 			: _env.vbox isnt false
 				? _env.vbox 	// ReportStatus.NOFIT or INVALIDMATCHER or LONGTEMPINDEX
-						// or DERIVEDTOOLARGE
+						// or TOOLARGE
 				: _env.no_output?
 					? ReportStatus.NODATA
 					: ReportStatus.SUCCESS
 
 		.DisplayAlert(status, quiet?)
 		return .Close(status)
+		}
+
+	tryPrintNextPage(_env)
+		{
+		try
+			return .printNextPage(_env)
+		catch (unused, 'PDF too large')
+			{
+			env.vbox = ReportStatus.TOOLARGE
+			return false
+			}
 		}
 
 	printNextPage(_env)
@@ -321,7 +348,7 @@ ReportBase
 'REPORT: NOFIT|*regex|temp index entry size|temp index: derived too large|File|DirExists|summarize')
 			{
 			if err.Prefix?('temp index: derived too large')
-				return ReportStatus.DERIVEDTOOLARGE
+				return ReportStatus.TOOLARGE
 			else if err.Prefix?('temp')
 				return ReportStatus.LONGTEMPINDEX
 			else if err.Prefix?('REPORT: NOFIT')
@@ -340,7 +367,7 @@ ReportBase
 		return status in (ReportStatus.NOFIT,
 			ReportStatus.INVALIDMATCHER,
 			ReportStatus.LONGTEMPINDEX,
-			ReportStatus.DERIVEDTOOLARGE,
+			ReportStatus.TOOLARGE,
 			ReportStatus.FILEERROR,
 			ReportStatus.SUMMARIZETOOLARGE)
 		}

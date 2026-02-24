@@ -100,7 +100,10 @@ calls = FormatCallStack(calls, levels: 99).
 		}
 
 	wordchars: 'zyxwvutsrqponmlkjihgfedcba_ZYXWVUTSRQPONMLKJIHGFEDCBA?9876543210!'
-	SetWordChars(.wordchars) {}
+	SetWordChars(.wordchars)
+		{
+		.Act(#SetWordChars, wordchars)
+		}
 	GetWordChars()
 		{
 		return .wordchars
@@ -138,6 +141,16 @@ calls = FormatCallStack(calls, levels: 99).
 	GetAt(pos)
 		{
 		return pos < 0 or pos >= .GetTextLength() ? '\x00' : .GetRange(pos, pos + 1)
+		}
+
+	BraceMatch(pos)
+		{
+		return BraceMatch(.Get(), pos)
+		}
+
+	FindReplaceData()
+		{
+		return .findreplacedata
 		}
 
 	Trim() // remove whitespace from beginning and end
@@ -242,11 +255,13 @@ calls = FormatCallStack(calls, levels: 99).
 		return .firstVisibleLine
 		}
 
-	SetFirstVisibleLine(line)
+	SetFirstVisibleLine(line, centerInScreen? = false)
 		{
 		.firstVisibleLine = line
-		.Act('SetFirstVisibleLine', line)
+		.Act('SetFirstVisibleLine', line, :centerInScreen?)
 		}
+
+	LinesOnScreen() { return 0 }
 
 	GetSelectionStart()
 		{
@@ -273,6 +288,7 @@ calls = FormatCallStack(calls, levels: 99).
 		}
 	SetSelect(i, n = 0)
 		{
+		.selection = Object(anchor: i, head: i + n)
 		.SetSel(i, i + n)
 		}
 	SetVisibleSelect(i, n)
@@ -310,6 +326,23 @@ calls = FormatCallStack(calls, levels: 99).
 		pos = .PositionFromLine(line)
 		.SetVisibleSelect(pos, 0)
 		}
+
+	GetLine(line = false)
+		{
+		if line is false
+			line = .LineFromPosition()
+		curLine = 0
+		prevPos = 0
+		.s.ForEach1of('\n')
+			{
+			if curLine is line
+				return .s[prevPos..it - 1]
+			curLine++
+			prevPos = it + 1
+			}
+		return .s[prevPos...s.Size()]
+		}
+
 	LineFromPosition(pos = false)
 		{
 		if pos is false
@@ -344,7 +377,7 @@ calls = FormatCallStack(calls, levels: 99).
 		lineStart = 0
 		.s.ForEach1of('\n')
 			{
-			if it > pos
+			if it >= pos
 				return .s[lineStart..pos].Detab().Size()
 			lineStart = it + 1
 			}
@@ -398,7 +431,7 @@ calls = FormatCallStack(calls, levels: 99).
 		{
 		getSelect = prev is false ? .GetSelect().cpMax : .GetSelect().cpMin
 		if false is match =
-			Find.DoFind(.SearchText(), getSelect, .findreplacedata, :prev)
+			Find.DoFind(.SearchText(), getSelect, .findreplace_options, :prev)
 			{
 			.Send('UpdateOccurrence', num: 0, count: 0)
 			return false
@@ -408,16 +441,78 @@ calls = FormatCallStack(calls, levels: 99).
 		.SetVisibleSelect(match[0], match[1])
 		return true
 		}
+
 	numOfMatch(match)
 		{
-		matches = Find.FindAll(.SearchText(), .findreplacedata)
+		matches = Find.FindAll(.SearchText(), .findreplace_options)
 		num = matches.FindIf({ it is match }) + 1
 		return Object(:num, count: matches.Size())
+		}
+
+	ReplaceOne()
+		{
+		sel = .GetSelect()
+		size = .GetTextLength()
+		if false is s = Find.DoReplace(.SearchText(), .GetSelText(), sel.cpMin, sel.cpMax,
+			.findreplace_options)
+			return false
+		.ReplaceSelFromServer(s)
+		if .findreplacedata.replaceIn is "Selection"
+			{
+			size_after = .GetTextLength()
+			.SetSelect(sel.cpMin, sel.cpMax - sel.cpMin + (size_after - size))
+			}
+		return true
+		}
+
+	ReplaceAll()
+		{
+		sel = .GetSelect()
+		size = .GetTextLength()
+		line = .GetFirstVisibleLine()
+		if .findreplacedata.replaceIn isnt "Selection" // whole file
+			.SelectAllFromServer()
+		curSel = .GetSelect()
+		if false is	s = Find.DoReplace(.SearchText(), .GetSelText(),
+			curSel.cpMin, curSel.cpMax, .findreplace_options)
+			return
+		.ReplaceSelFromServer(s)
+		.SetFirstVisibleLine(line)
+		if (.findreplacedata.replaceIn is "Selection")
+			{
+			size_after = .GetTextLength()
+			.SetSelect(sel.cpMin, sel.cpMax - sel.cpMin + (size_after - size))
+			}
+		}
+
+	ReplaceSelFromServer(s)
+		{
+		start = .GetSelectionStart()
+		end = .GetSelectionEnd()
+		.s = .s[..start] $ s $ .s[end..]
+		toUpdate = .selection.anchor < .selection.head ? #head : #anchor
+		.selection[toUpdate] += s.Size() - (end - start)
+		.Act(#ReplaceSelFromServer, s, start, end)
+		.astWriterManager = false
 		}
 
 	SearchText()
 		{
 		return .Get()
+		}
+
+	astWriterManager: false
+	Getter_AstWriterManager()
+		{
+		if .astWriterManager is false
+			try .astWriterManager = AstWriteManager(.SearchText())
+		return .astWriterManager
+		}
+
+	getter_findreplace_options()
+		{
+		.findreplacedata.ast = Find.NeedAst?(.findreplacedata) ? .AstWriterManager : false
+		return .findreplacedata
 		}
 
 	Context_Menu: (
@@ -492,6 +587,13 @@ calls = FormatCallStack(calls, levels: 99).
 	On_Select_All()
 		{
 		.Act('SELECTALL')
+		}
+
+	SelectAllFromServer()
+		{
+		.selection.head = 0
+		.selection.anchor = .s.Size()
+		.On_Select_All()
 		}
 
 	MarkersChanged()

@@ -202,11 +202,12 @@ class
 			.y + .h - .h * .data / .normRange[1], .valueColor)
 
 		// Draw target value indicator:
-		lineOb = Object(
-			x: .x + .w / .targetIndicatorRatio
-			y: .y + .h - .h * .target / .normRange[1]
-			w: .x + .w / .targetIndicatorRatio * .targetIndicatorEnd)
-		.DrawVerticalBars(lineOb)
+		if .target > 0
+			.DrawVerticalBars(
+				Object(
+					x: .x + .w / .targetIndicatorRatio,
+					y: .y + .h - .h * .target / .normRange[1],
+					w: .x + .w / .targetIndicatorRatio * .targetIndicatorEnd))
 		}
 
 	DrawBar(x1 /*unused*/, y1 /*unused*/, x2 /*unused*/, y2 /*unused*/, color /*unused*/)
@@ -239,11 +240,12 @@ class
 			.y + .h / .actualBarRatio * 2, .valueColor)
 
 		// Draw target value indicator:
-		lineOb = Object(
-			x: .x + .w * .target / .normRange[1]
-			y: .y + .h / .targetIndicatorRatio
-			h: .y + .h / .targetIndicatorRatio * .targetIndicatorEnd)
-		.DrawHorizontalBars(lineOb)
+		if .target > 0
+			.DrawHorizontalBars(
+				Object(
+					x: .x + .w * .target / .normRange[1],
+					y: .y + .h / .targetIndicatorRatio,
+					h: .y + .h / .targetIndicatorRatio * .targetIndicatorEnd))
 		}
 
 	DrawHorizontalBars(lineOb /*unused*/)

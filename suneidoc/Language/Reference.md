@@ -2,9 +2,10 @@
 
 |     |     |     |     |
 | --- | --- | --- | --- |
-| [Abs](<Reference/Abs.md>) | [FakeObject](<Reference/FakeObject.md>) | [MockObject](<Reference/MockObject.md>) | [SelectPrompt](<Reference/SelectPrompt.md>) |
-| [AddFile](<Reference/AddFile.md>) | [File](<Reference/File.md>) | [MoneyBag](<Reference/MoneyBag.md>) | [Seq](<Reference/Seq.md>) |
-| [Adler32](<Reference/Adler32.md>) | [FileExists?](<Reference/FileExists?.md>) | [MoveFile](<Reference/MoveFile.md>) | [Sequence](<Reference/Sequence.md>) |
+| [Abs](<Reference/Abs.md>) | [ExportXML](<Reference/ExportXML.md>) | [Mock](<Reference/Mock.md>) | [Scheduler](<Reference/Scheduler.md>) |
+| [AddFile](<Reference/AddFile.md>) | [FakeObject](<Reference/FakeObject.md>) | [MockObject](<Reference/MockObject.md>) | [SelectPrompt](<Reference/SelectPrompt.md>) |
+| [Adler32](<Reference/Adler32.md>) | [File](<Reference/File.md>) | [MoneyBag](<Reference/MoneyBag.md>) | [Seq](<Reference/Seq.md>) |
+| [AiAgent](<Reference/AiAgent.md>) | [FileExists?](<Reference/FileExists?.md>) | [MoveFile](<Reference/MoveFile.md>) | [Sequence](<Reference/Sequence.md>) |
 | [Assert](<Reference/Assert.md>) | [FileLines](<Reference/FileLines.md>) | [MultiByteToWideChar](<Reference/MultiByteToWideChar.md>) | [Server?](<Reference/Server?.md>) |
 | [Asup](<Reference/Asup.md>) | [FileSize](<Reference/FileSize.md>) | [Mutex](<Reference/Mutex.md>) | [ServerEval](<Reference/ServerEval.md>) |
 | [Atom](<Reference/Atom.md>) | [Filter](<Reference/Filter.md>) | [Name](<Reference/Name.md>) | [ServerIP](<Reference/ServerIP.md>) |
@@ -62,5 +63,4 @@
 | [Export](<Reference/Export.md>) | [MimeMultiPart](<Reference/MimeMultiPart.md>) | [Scanner](<Reference/Scanner.md>) | [Zlib](<Reference/Zlib.md>) |
 | [ExportCSV](<Reference/ExportCSV.md>) | [MimeText](<Reference/MimeText.md>) | [ScannerFind](<Reference/ScannerFind.md>) |
 | [ExportTab](<Reference/ExportTab.md>) | [Min](<Reference/Min.md>) | [ScannerSeq](<Reference/ScannerSeq.md>) |
-| [ExportXML](<Reference/ExportXML.md>) | [Mock](<Reference/Mock.md>) | [Scheduler](<Reference/Scheduler.md>) |
 

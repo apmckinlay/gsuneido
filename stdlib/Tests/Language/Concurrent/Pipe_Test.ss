@@ -1,12 +1,19 @@
 // Copyright (C) 2025 Suneido Software Corp. All rights reserved worldwide.
+// BuiltDate > 20260211
 Test
 	{
 	Test_one()
 		{
 		r, w = Pipe()
-		Thread({ w.Write("hello world"); w.Close() })
-		Assert(r.Read(99) is: "hello world")
+		s = "hello world"
+		Thread(Bind(.writer, w, s))
+		Assert(r.Read(99) is: s)
 		Assert(r.Read(99) is: false)
+		}
+	writer(w, s)
+		{
+		w.Write(s)
+		w.Close()
 		}
 	Test_CopyTo()
 		{
@@ -17,19 +24,20 @@ Test
 			"of their party"
 
 		r, w = Pipe()
-		Thread({ w.Write(s); w.Close() })
-		File(file, "w") {|f| r.CopyTo(f); f = 0 }
+		Thread(Bind(.writer, w, s))
+		File(file, "w") {|f| r.CopyTo(f) }
 		Assert(GetFile(file) is: s)
 
 		r, w = Pipe()
-		Thread()
-			{
-			File(file) {|f| f.CopyTo(w); f = 0 }
-			w.Close()
-			}
+		Thread(Bind(.copy, file, w))
 		t = ""
 		while false isnt chunk = r.Read(999)
 			t $= chunk
 		Assert(t is: s)
+		}
+	copy(file, w)
+		{
+		File(file) {|f| f.CopyTo(w) }
+		w.Close()
 		}
 	}

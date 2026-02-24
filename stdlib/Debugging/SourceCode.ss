@@ -8,6 +8,8 @@ function (fn)
 	name = Name(fn).BeforeFirst('.').BeforeFirst(' ')
 	s = Display(fn)
 	lib = s.AfterFirst('/* ').BeforeFirst(' ')
+	name = lib.Has?('__') ? name $ '__' $ lib.AfterFirst('__') : name
+	lib = lib.BeforeFirst('__')
 	if lib isnt "function"
 		try
 			return Query1(lib, group: -1, :name).text

@@ -17,7 +17,7 @@ class
 		for c in tm.Children(parent)
 			if c.group
 				.export(tm, c.num, dest, c.name)
-			else //if c.lib_modified isnt "" or c.lib_committed > #20181122
+			else if not c.name.Suffix?("_alpha") and not c.name.Suffix?("_trial")
 				PutFile(Paths.Combine(dest, c.name.Tr('?', 'Q')) $ ".ss", c.text)
 		}
 	}

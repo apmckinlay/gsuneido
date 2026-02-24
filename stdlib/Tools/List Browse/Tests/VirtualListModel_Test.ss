@@ -652,7 +652,6 @@ VirtualListModelTests
 	Test_expand_collapse_over_limit_but_all_read()
 		{
 		_stopLoadAll = true
-		spy = .SpyOn(SuneidoLog)
 		modelClass = VirtualListModel
 			{
 			VirtualListModel_limit: 35
@@ -672,7 +671,7 @@ VirtualListModelTests
 		// scrolling down should not trigger recyling
 		// because all data is read and cursors are closed
 		model.UpdateOffset(15, .FakeSaveAndCollapse)
-		Assert(spy.CallLogs() isSize: 0)
+		Assert(.GetSuneidoLog() isSize: 0)
 		}
 
 	Test_ReadAllData()

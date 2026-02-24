@@ -53,7 +53,7 @@ ScintillaAddonForThreadTasks
 
 		warnings = .buildWarnings(checkCodeWarnings, qcWarnings)
 		if .updateLibView?(warnings, .prevWarnings) and not .IsOutdatedRecord(startTime)
-			.Defer({ .updateLibView(startTime, warnings, checkCodeResult) },
+			.Defer(Bind(.updateLibView, startTime, warnings, checkCodeResult),
 				uniqueID: #Addon_check_code)
 		}
 

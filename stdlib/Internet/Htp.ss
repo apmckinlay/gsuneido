@@ -19,7 +19,7 @@ class
 	InternetFormat()
 		{
 		hdr = .Header()
-		result = hdr.Extract('^Date: (.* GMT)$')
+		result = hdr.Extract('^(?i)Date: (.* (?-i)GMT)$')
 		if result is false
 			SuneidoLog('INFO: Htp: header missing Date', params: hdr.Lines())
 		return result

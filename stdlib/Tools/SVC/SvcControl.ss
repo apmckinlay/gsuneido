@@ -69,7 +69,7 @@ Controller
 			#(Skip 5)
 			Object('VertSplit'
 				Object('FixedYmin', fixedymin,
-					Object('Horz',
+					Object('HorzEven',
 						.localVert(),
 						.masterVert(),
 						ystretch: 1))
@@ -142,7 +142,7 @@ Controller
 				(Button 'Compare'
 					tip: 'Compare local copy to version control master (Alt+C)')
 				Skip)
-			xmin: 400, xstretch: 1,
+			xstretch: 1,
 			name: 'Local')
 		}
 
@@ -154,7 +154,7 @@ Controller
 				svc_master_date, svc_local_date, svc_name)
 				noShading:, defWidth: false, name: 'masterList',
 				columnsSaveName: 'svc_master', stretchColumn: 'svc_name')
-			xmin: 400, xstretch: 1,
+			xstretch: 1,
 			name: 'Master')
 		}
 

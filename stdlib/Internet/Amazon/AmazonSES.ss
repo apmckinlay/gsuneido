@@ -107,7 +107,7 @@ class
 		catch (err, 'curl: (35) gnutls_handshake() failed:')
 			{
 			// treat the Curl tls error like a 500 error so it can Retry
-			SuneidoLog('AmazonSES: ' $ err)
+			SuneidoLog('AmazonSES: ' $ err[0..], calls:)
 			throw .retryErrorMsg
 			}
 		}

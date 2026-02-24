@@ -323,6 +323,8 @@ Controller
 	ExpandColumns()
 		{
 		fields = .model.ColModel.GetAvailableColumns(.model.GetQuery())
+		if Object?(extraExpandFields = .Send('VirtualList_ExtraExpandFields'))
+			fields.MergeUnion(extraExpandFields)
 		removeCols = Customizable.GetNonPermissableFields(.model.GetQuery())
 		return fields.Difference(removeCols).Difference(.expandExcludeFields)
 		}

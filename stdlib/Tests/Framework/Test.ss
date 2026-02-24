@@ -162,7 +162,6 @@ class
 		{
 		.teardowns = Object()
 		.teardownsAfterEachMethod = Object()
-		.suneidolog_exists? = TableExists?('suneidolog')
 		ServerSuneido.Set('TestRunningLogs', Object())
 		}
 
@@ -563,16 +562,20 @@ class
 		}
 	watchTableOverrideCode(watchMember, callSuper)
 		{
+		// if query updates occur in a suneido.js thread (on the server),
+		// the trigger function is invoked within that thread, which runs inside
+		// the suneido.js session. In this case, ServerSuneido must be used to ensure
+		// access to the server suneido context
 		return `function(t, oldrec, newrec)
 			{
 			member = "` $ watchMember  $ `"
 			` $ callSuper $ `
-			if not Suneido.Member?(member) // for teardown
+			if not ServerSuneido.HasMember?(member) // for teardown
 				return
 			if oldrec isnt false
-				Suneido[member].Remove(oldrec)
+				ServerSuneido.RemoveFromMember(member, oldrec)
 			if newrec isnt false
-				Suneido[member].Add(newrec)
+				ServerSuneido.AddToMember(member, newrec)
 			}`
 		}
 	getCallSuperAndTrackWatch(table, trigger, watchMember)
@@ -699,8 +702,6 @@ class
 		}
 	cleanUp()
 		{
-		if not .suneidolog_exists? and TableExists?('suneidolog')
-			Database('destroy suneidolog')
 		ServerSuneido.DeleteMember('TestRunningLogs')
 		}
 	}

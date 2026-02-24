@@ -6,9 +6,22 @@ Control
 	New(readonly = false, style = 0)
 		{
 		.ComponentArgs = Object(readonly, style)
+		.init()
+		}
+
+	init()
+		{
 		.root = Object(id: 0, name: '', image: 0, children: Object(), expanded?:)
 		.trees = Object(.root)
 		.next = 1
+		.selected = 0
+		.images = Object()
+		}
+
+	Reset()
+		{
+		.init()
+		.Act(#Reset)
 		}
 
 	AddItem(parent, name, image = 0, container? = false, param = 0)
@@ -18,9 +31,7 @@ Control
 			throw 'TreeViewControl.AddItem: Cannot not find parent ' $ Display(parent)
 
 		id = .next++
-		image = image is 0
-			? false
-			: .images.GetDefault(image - 1, false)
+		image = .images.GetDefault(image, false)
 		newItem = Object(:parent, :id, :name, :image, :param, expanded?: false)
 		if container? is true
 			newItem.children = Object()
@@ -52,6 +63,8 @@ Control
 
 	TVN_SELCHANGED(oldSelect, newSelect)
 		{
+		.Send('TreeView_ItemClicked', newSelect)
+
 		Assert(oldSelect is: .selected)
 		.selected = newSelect
 		.Tree_SelChanged(oldSelect, newSelect)
@@ -205,9 +218,7 @@ Control
 		item = .convert(item)
 		if not .ItemExists?(item)
 			return
-		image = image is 0
-			? false
-			: .images.GetDefault(image - 1, false)
+		image = .images.GetDefault(image, false)
 		.Act('SetImage', item, image)
 		}
 

@@ -115,9 +115,6 @@ ScintillaAddon
 		}
 	autodelete()
 		{
-		pos = .GetSelect().cpMin
-		.SetTargetStart(pos)
-		.SetTargetEnd(pos + 1)
-		SendMessageTextIn(.Hwnd, SCI.REPLACETARGET, 0, "")
+		.On_Delete()
 		}
 	}

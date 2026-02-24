@@ -483,7 +483,9 @@ Controller
 
 	GetCustomFields()
 		{
-		return .list.GetCustomFields()
+		accessCustomKey = .Send('GetAccessCustomKey')
+		customKey = .buildCustomKey(accessCustomKey, .Name)
+		return Customizable.GetCustomizedFields(customKey)
 		}
 
 	VirtualList_Expand(unused)

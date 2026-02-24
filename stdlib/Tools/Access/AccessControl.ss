@@ -514,8 +514,15 @@ CommandParent
 		.set_position_button_state(position)
 		selected = .Select_vals.DeepCopy()
 		.Select_vals.Each({ it.check = false })
-		Alert('No records found that match the current select',
-			.title, flags: MB.ICONINFORMATION)
+		msg = .recordsExist is true
+			? "Current record does not match the current select.\r\n" $
+			"Please use First/Last to navigate to other records that do."
+			: 'No records found that match the current select'
+		// this should act like a latch. once it's used, reset it back to false once used
+		.recordsExist = false
+
+		Alert(msg, .title, flags: MB.ICONINFORMATION)
+
 		.SetWhere("")
 		// re-open the select
 		.Defer(uniqueID: 'reopen_select_dialog') // need the orig select to close first
@@ -557,20 +564,42 @@ CommandParent
 		// non-indexed field (cursor throws exception)
 		try
 			{
+			// locate a record that matches our select
 			.c.Seek(field, value)
 			Transaction(read:)
 				{|t| x = .c.Next(t) }
-			if x isnt false and x[field] is value
+			// need to try forward, AND back
+			// .c.Seek could have taken us to the end of the cursor
+			// in which case .c.Next(t) would ALWAYS return false
+			if x is false
+				Transaction(read:)
+					{|t| x = .c.Prev(t) }
+			// found a record
+			if x isnt false
 				{
-				.setdata(x)
-				.firstRead? = false
-				return
+				if x[field] is value
+					{
+					// current record matches record found
+					.setdata(x)
+					.firstRead? = false
+					return
+					}
+				// a record IS found, but current one does not match.
+				// want to change the alert message, but GoTo/Locate still need to work
+				.recordsExist = true
 				}
-			else if .invalidLocate?(value)
+			// Need to ensure that Both Drill Downs and Locate still work correctly
+			// if we get here it does not matter if a record was found or not,
+			// the current record is not what we are looking for so we still need to
+			// trip the locate validation in.
+			if .invalidLocate?(value)
 				{
+				// if locate was used, but current record does not match
+				// stay on current record, and show locate as invalid
 				.showTipForInvalidLocate(x, field, value)
 				return
 				}
+			// else Drill Down was used and need to ensure we call gotoWithoutSelect
 			}
 		catch (err /*unused*/, "invalid query")
 			{ } // fall through
@@ -861,6 +890,7 @@ CommandParent
 		}
 
 	firstRead?: false
+	recordsExist: false
 	SetWhere(where, quiet/*unused*/= false, hwnd/*unused*/= false, extraMsg/*unused*/= '')
 		{ // called by Select
 		.select = where > ""
@@ -879,6 +909,7 @@ CommandParent
 		k = .getKey()
 		.SetWhere(where)
 		.firstRead? = true
+		.recordsExist = false
 		.AccessGoto(@k)
 		if .firstRead? is true // no records matched
 			{

@@ -8,7 +8,8 @@ ChooseControl
 		set = false, selectFirst = false, .listField = false, .splitValue = ',',
 		.listSeparator = ' - ', status = '', .otherListOptions = #(), font = "",
 		trim = true, size = "", bgndcolor = "", textcolor = "", tabover = false,
-		hidden = false, weight = '', field = #(), cue = false, .readonly = false)
+		hidden = false, weight = '', field = #(), cue = false, .readonly = false,
+		.defaultChooseVal = false)
 		{
 		super(Object('Field', name: 'Value', style: WS.CLIPSIBLINGS,
 			:width, :mandatory, :status, :font, :size, :weight, :trim,
@@ -122,6 +123,23 @@ ChooseControl
 			return
 		if ((false is r = .InitDropDown()) or .list.Size() is 0)
 			return
+		x, y, width = .calculateListPos(r)
+		if false is sel = .findDefaultChooseValue()
+			sel = .matchPrefix(.allowOther?, .list, .listSeparator)
+		.dialog = true
+
+		// save and restore dirty flag since field losing focus (when list displayed)
+		//  can cause the field to become not dirty
+		dirty? = .Dirty?()
+		Window(Object(.listbox, .list, sel, ScaleWithDpiFactor.Reverse(width),
+			ScaleWithDpiFactor.Reverse(.lineheight), this, .listSeparator),
+			parentHwnd: .Window.Hwnd,
+			style: WS.POPUP | WS.BORDER, exStyle: WS_EX.TOOLWINDOW, :x, :y)
+		.Dirty?(dirty?)
+		}
+
+	calculateListPos(r)
+		{
 		x = r.left; y = r.bottom
 		wr = GetWorkArea(r)
 		height = Min(ChooseList.NumLines, .list.Size()) * .lineheight + 2
@@ -142,18 +160,7 @@ ChooseControl
 			width = Max(width, r.right - r.left)
 		if wr.right < (x + width)
 			x -= ((x + width) - wr.right) + 2
-
-		sel = .matchPrefix(.allowOther?, .list, .listSeparator)
-		.dialog = true
-
-		// save and restore dirty flag since field losing focus (when list displayed)
-		//  can cause the field to become not dirty
-		dirty? = .Dirty?()
-		Window(Object(.listbox, .list, sel, ScaleWithDpiFactor.Reverse(width),
-			ScaleWithDpiFactor.Reverse(.lineheight), this, .listSeparator),
-			parentHwnd: .Window.Hwnd,
-			style: WS.POPUP | WS.BORDER, exStyle: WS_EX.TOOLWINDOW, :x, :y)
-		.Dirty?(dirty?)
+		return x, y, width
 		}
 
 	getWidth(hdc)
@@ -205,6 +212,14 @@ ChooseControl
 			})
 			return i
 		return false
+		}
+	findDefaultChooseValue()
+		{
+		// no default specified for list value, or field already has a value
+		if .defaultChooseVal is false or "" isnt .Field.Get()
+			return false
+
+		return .list.FindIf({ it.BeforeFirst(.listSeparator) is .defaultChooseVal })
 		}
 	itemInList?(value)
 		{

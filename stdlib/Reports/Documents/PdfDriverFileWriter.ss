@@ -35,6 +35,8 @@ class
 		s = (nextObj is 0 ? '' : nextObj $ ' 0 obj ') $ content
 		.s $= s
 		.curPos += s.Size()
+		if .locations.Size() > 30000 or .curPos > 10.Mb() /*= pdf size limit */
+			throw 'PDF too large'
 		return nextObj
 		}
 

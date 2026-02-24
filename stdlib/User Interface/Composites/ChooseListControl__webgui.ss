@@ -6,7 +6,8 @@ ChooseControl
 		set = false, selectFirst = false, .listField = false, .splitValue = ',',
 		.listSeparator = ' - ', status = '', .otherListOptions = #(), font = "",
 		trim = true, size = "", bgndcolor = "", textcolor = "", tabover = false,
-		hidden = false, weight = '', cue = false, .readonly = false)
+		hidden = false, weight = '', cue = false, .readonly = false,
+		.defaultChooseVal = false)
 		{
 		super(Object('Field', name: 'Value',
 			:width, :mandatory, :status, :font, :size, :weight, :trim,
@@ -59,7 +60,9 @@ ChooseControl
 		Assert(posInfo isnt: false)
 		if .readonly or false is .InitDropDown() or .list.Size() is 0
 			return
-		sel = .matchPrefix(.allowOther?, .list, .listSeparator)
+
+		if false is sel = .findDefaultChooseValue()
+			sel = .matchPrefix(.allowOther?, .list, .listSeparator)
 
 		.dialog = true
 		value = Dialog(0,
@@ -81,6 +84,17 @@ ChooseControl
 		if .Member?(#Field) and .Member?(#Window)
 			.Field.SetFocus()
 		}
+
+	findDefaultChooseValue()
+		{
+		// no default specified for list value, or field already has a value
+		if .defaultChooseVal is false or "" isnt .Field.Get()
+			return false
+
+		return .list.FindIf({ it.BeforeFirst(.listSeparator) is .defaultChooseVal })
+		}
+
+
 	matchPrefix(allowOther?, list, listSeparator)
 		{
 		value = .Field.Get()

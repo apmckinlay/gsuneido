@@ -88,9 +88,6 @@ Test
 		mock.When.CopyFile([anyArgs:]).CallThrough()
 		mock.When.fileSize([anyArgs:]).Return(1)
 
-		suneidoLog = .SpyOn(SuneidoLog)
-		suneidoLog.Return('')
-
 		// No file to copy, return
 		Assert(mock.CopyFile(``) is: false)
 
@@ -159,9 +156,6 @@ Test
 		mock.When.ensureCopyFolder([anyArgs:]).CallThrough()
 		mock.When.fileSize([anyArgs:]).Return(1)
 
-		suneidoLog = .SpyOn(SuneidoLog)
-		suneidoLog.Return('')
-
 		// Not using subfolder, returns passed in path
 		Assert(mock.ensureCopyFolder('', 'testFolder') is: 'testFolder')
 
@@ -184,8 +178,8 @@ Test
 		Assert(mock.ensureCopyFolder(true, 'testFolder') is: `testFolder`)
 		Assert(callLogs[2] is: #(folder: `testFolder\subFolder\`))
 		mock.Verify.Times(2).createDir?(`testFolder\subFolder\`)
-		Assert(logs = suneidoLog.CallLogs() isSize: 1)
-		Assert(logs[0].message
+		Assert(logs = .GetSuneidoLog() isSize: 1)
+		Assert(logs[0].sulog_message
 			is: `ERRATIC: (CAUGHT) Could not create folder: testFolder\subFolder\`)
 
 		// folder is not accessable and DirExists? throws

@@ -16,7 +16,7 @@ ScintillaAddon
 	Query: false
 	Init()
 		{
-		.SetOption('mode', .Name)
+		.SetMode()
 		.SetOption('theme', .Name)
 		SuRenderBackend().RecordAction(false, 'LoadCssStyles',
 			['cm-theme-' $ .Name $ '.css', .buildCss(.Name)])
@@ -31,6 +31,11 @@ ScintillaAddon
 				.SetStyleProperty('--cm-theme-' $ type $ '-color',
 					ToCssColor(.GetSchemeColor(.Styles[type].color)))
 			}
+		}
+
+	SetMode()
+		{
+		.SetOption('mode', .Name)
 		}
 
 	buildCss(theme)

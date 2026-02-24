@@ -5,7 +5,16 @@ function (el, parent, at)
 		return
 
 	if Object?(at)
-		at = at.parent.El is parent ? at.at : false
+		{
+		if at.parent.El is parent
+			{
+			if at.Member?(#parentEl)
+				parent = at.parentEl
+			at = at.at
+			}
+		else
+			at = false
+		}
 
 	if at is false
 		parent.AppendChild(el)

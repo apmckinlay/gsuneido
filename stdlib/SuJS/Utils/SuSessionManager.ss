@@ -74,16 +74,6 @@ class
 			return 'Reconnect expired'
 			}
 		socket.ManualClose()
-
-		try
-			{
-			cookie = env.GetDefault('cookie', '')
-			len = cookie.Size()
-			i = cookie.Find(token)
-			cookie = cookie[i::50/*=len*/]
-			BookLog('SuSessionManager.handlerReconnect success',
-				params: Object(t: token, :cookie, :len), systemLog:)
-			}
 		return 'close'
 		}
 
@@ -153,8 +143,6 @@ class
 					SuMessageFormatter.Type.CONNECTED, arg1: reconnect.connectid)))
 				.setThreadName(Thread.Name().RemoveSuffix('(waiting for reconnect)'))
 				SuSessionLog().Error(e, reconnected?:)
-				try BookLog('SuSessionManager.OnConnectionError',
-					params: [t: token, key: SuRenderBackend().Key], systemLog:)
 				return false
 				}
 			if count++ > 300/*=wait 5 mins*/

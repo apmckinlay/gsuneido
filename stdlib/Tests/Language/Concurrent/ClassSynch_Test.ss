@@ -6,24 +6,21 @@ Test
 		.a = false
 		.Error = false
 		wg = WaitGroup()
-		f = {
-			for ..1000
-				.good()
-			}
-		wg.Thread(f)
-		wg.Thread(f)
+		wg.Thread(.good)
+		wg.Thread(.good)
 		wg.Wait()
 		Assert(not .Error)
 		}
 	good()
 		{
-		.Synchronized()
-			{
-			if .a
-				.Error = true
-			.a = true
-			.a = false
-			}
+		for ..1000
+			.Synchronized()
+				{
+				if .a
+					.Error = true
+				.a = true
+				.a = false
+				}
 		}
 
 	XTest_bad() // disabled because it fails on some systems
@@ -31,20 +28,19 @@ Test
 		.a = false
 		.Error = false
 		wg = WaitGroup()
-		f = {
-			for ..1000
-				.bad()
-			}
-		wg.Thread(f)
-		wg.Thread(f)
+		wg.Thread(.bad)
+		wg.Thread(.bad)
 		wg.Wait()
 		Assert(.Error)
 		}
 	bad()
 		{
-		if .a
-			.Error = true
-		.a = true
-		.a = false
+		for ..1000
+			{
+			if .a
+				.Error = true
+			.a = true
+			.a = false
+			}
 		}
 	}

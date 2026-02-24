@@ -29,7 +29,6 @@ Component
 			border-spacing: 0px;
 			padding: 5px;
 			box-sizing: border-box;
-			padding-inline-start: 0px;
 			list-style-type: none;
 		}
 		.su-treeview-item {
@@ -73,6 +72,13 @@ Component
 		.root = CreateElement('ul', .El, className: 'su-treeview')
 		.trees = Object(.root)
 		.items = Object()
+		}
+
+	Reset()
+		{
+		.trees = Object(.root)
+		.items = Object()
+		.root.innerHTML = ''
 		}
 
 	AddItem(parent, id, name, image, container?)

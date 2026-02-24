@@ -4,6 +4,7 @@ Html_ahref_Control
 	New(text, .href, .prefix = 'http://', .valign = false)
 		{
 		super(text, href)
+		.ToolTip(.prefix $ .href)
 		.valign = .valign in ('bottom', 'top', 'vcenter') ? DT[.valign.Upper()] : 0
 		}
 	LBUTTONUP()
@@ -18,6 +19,7 @@ Html_ahref_Control
 	Set(href)
 		{
 		.href = href
+		.ToolTip(.prefix $ .href)
 		}
 	// Links should be usable, regardless of parent controls being set read only
 	SetReadOnly(unused) { }

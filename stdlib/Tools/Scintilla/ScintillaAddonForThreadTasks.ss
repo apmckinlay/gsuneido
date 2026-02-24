@@ -16,7 +16,8 @@ ScintillaAddon
 			return
 		if .threadBusy is true
 			return
-		Thread(.runThread, 'ScintillaAddonForThreadTasks-' $ .AddonName $ 'Thread')
+		Thread(.runThread,
+			name: 'ScintillaAddonForThreadTasks-' $ .AddonName $ 'Thread')
 		}
 
 	runThread()

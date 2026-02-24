@@ -41,6 +41,12 @@ class
 
 	Reset(onlyClient? = false)
 		{
+		if Sys.SuneidoJs?()
+			{
+			ServerEval('LibraryTags.Reset')
+			return
+			}
+
 		if Client?() and not onlyClient?
 			ServerEval('LibraryTags.Reset')
 

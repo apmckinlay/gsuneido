@@ -15,7 +15,7 @@ class
 			else if r[1] is 'not in range'
 				where $= .notInRange(r)
 			else // normal case with field, operator and value
-				where $= ' and ' $ r[0] $ ' ' $ r[1] $ ' ' $ Display(r[2])
+				where $= .normalRestrictions(r)
 			}
 		where = where.Replace('and', not build_callable ? 'where' : '', 1)
 		return not build_callable
@@ -32,8 +32,20 @@ class
 		}
 	notInRange(r)
 		{
+		dd = Datadict(r[0])
+		if dd.Base?(Field_number)
+			return ' and (Number?(' $ r[0] $ ') and (' $ r[0] $ ' < ' $ Display(r[2]) $
+				' or ' $ r[0] $ ' > ' $ Display(r[3 /* = second range val */]) $ '))'
 		return ' and (' $ r[0] $ ' < ' $ Display(r[2]) $ ' or ' $
 			r[0] $ ' > ' $ Display(r[3 /* = second range val */]) $ ')'
+		}
+	normalRestrictions(r)
+		{
+		dd = Datadict(r[0])
+		if dd.Base?(Field_number) and r[1] in ('<', '<=', '>', '>=')
+			return ' and Number?(' $ r[0] $ ') and ' $
+				r[0] $ ' ' $ r[1] $ ' ' $ Display(r[2])
+		return ' and ' $ r[0] $ ' ' $ r[1] $ ' ' $ Display(r[2])
 		}
 
 	callable(where)

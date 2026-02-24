@@ -35,9 +35,11 @@ Memoize
 
 	Init()
 		{
-		LibUnload.AddObserver(#GetContributions, {|name|
-			if IsContribution?(name)
-				.ResetCache()
-			})
+		LibUnload.AddObserver(#GetContributions, .unload)
+		}
+	unload(name)
+		{
+		if IsContribution?(name)
+			.ResetCache()
 		}
 	}

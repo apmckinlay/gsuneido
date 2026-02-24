@@ -389,9 +389,10 @@ Controller
 			if debuggingOptions.snapshot?
 				.snapshotCompare(debuggingOptions)
 			_systemChanges_excludeTables = SnapshotTables.Snaps()
+			before = Object()
 			.timeTestEvent('Collecting system state')
 				{
-				before = SystemChanges.GetState()
+				before.Merge(SystemChanges.GetState())
 				}
 			guiTests = Object()
 			Suneido.testUi.totalTime += Timer()
@@ -533,14 +534,20 @@ Controller
 		// they way this works the UI updates should be continuoisly playing "catch-up"
 		// with the tests - i.e. the tests can be adding to these objects while we are
 		// still looping through them. once we catch up, then restart the timer
+		last = false
 		while Suneido.testUi.ovbarMarks.Size() > 0 or
 			Suneido.testUi.repaintRows.Size() > 0
 			{
 			if false isnt item = Suneido.testUi.ovbarMarks.Extract(0, false)
 				.updateOvBar(@item)
 			if false isnt item = Suneido.testUi.repaintRows.Extract(0, false)
+				{
 				.updateList(@item)
+				last = item[0]
+				}
 			}
+		if last isnt false
+			.list.SetSelection(last)
 
 		// Restart the timer if the tests haven't finished/failed yet
 		if Suneido.testUi.state is 'running'
@@ -640,8 +647,6 @@ Controller
 
 	updateList(i, error = false)
 		{
-		.list.SetSelection(i)
-		.list.Update()
 		if error
 			.list.AddHighlight(i, CLR.ErrorColor)
 		.list.RepaintRow(i)

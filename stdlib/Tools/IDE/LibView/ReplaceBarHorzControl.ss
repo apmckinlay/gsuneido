@@ -3,6 +3,7 @@
 // Grid would be simpler but doesn't handle stretch
 HorzControl
 	{
+	ComponentName: 'ReplaceBarHorz'
 	Resize(x, y, w, h)
 		{
 		fc = .Window.FindControl('find').Field

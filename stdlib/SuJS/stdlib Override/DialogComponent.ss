@@ -13,9 +13,19 @@ ModalWindowComponent
 
 	AlignToField(fieldHwnd)
 		{
+		method = args = false
+		// fieldHwnd can be an object (stdlib:GotoLibView.multiMatch)
+		if Object?(fieldHwnd)
+			{
+			method = fieldHwnd.method
+			args = fieldHwnd.args
+			fieldHwnd = fieldHwnd.target
+			}
 		if false isnt field = SuRender().GetRegisteredComponent(fieldHwnd)
 			{
-			r = SuRender.GetClientRect(field.El)
+			r = method is false
+				? SuRender.GetClientRect(field.El)
+				: (field[method])(@args)
 			rcExclude = Object(left: -9999, right: 9999, top: r.top, bottom: r.bottom)
 			// context menu place itself instead of the window container
 			container = .Ctrl.Base?(ContextMenuListComponent)

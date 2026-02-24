@@ -35,9 +35,10 @@ Controller
 		(Strikeout, "Ctrl+S")
 		(ResetFont,	"Ctrl+Space")
 		)
+	textLimit: 50_000 /*= text limit with html format*/
 	layout(args)
 		{
-		textLimit = args.GetDefault('textLimit', 50_000) /*= text limit with html format*/
+		textLimit = args.GetDefault('textLimit', .textLimit)
 		args.Set_default(false)
 		.readonly = args.readonly
 		ignoreOb = Object()
@@ -224,6 +225,7 @@ Controller
 
 	ValidData?(@args)
 		{
+		args.GetInit('textLimit', .textLimit)
 		return ScintillaAddonsRichEditorControl.ValidData?(@args)
 		}
 

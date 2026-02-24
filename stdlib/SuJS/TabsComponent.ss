@@ -1,43 +1,76 @@
 // Copyright (C) 2021 Axon Development Corporation All rights reserved worldwide.
-GroupComponent
+HtmlContainer
 	{
 	Name: "Tabs"
-	Dir: "vert"
+	Xstretch: 1
+	Ystretch: 1
 
-	New(@elements)
+	styles: `
+		.su-tabs-container {
+			position: relative;
+			flex-grow: 1;
+			align-self: stretch;
+		}`
+	New(tab, .vertical = false, alternativePos = false)
 		{
-		super(.args(elements))
-		}
+		LoadCssStyles('su-tabs.css', .styles)
+		.CreateElement('div')
+		.SetStyles(Object(
+			'display': 'inline-flex',
+			'flex-direction': .vertical is true ? 'row' : 'column',
+			'align-items': 'baseline'))
 
-	args(elements)
-		{
-		.Dir = elements.GetDefault(#vertical, false) ? 'horz' : 'vert'
-		return elements
+		.tab = .Construct(tab)
+		.tab.SetStyles(#('flex-shrink': '0', 'align-self': 'stretch'))
+
+		.tabs = Object()
+
+		.container = CreateElement('div', .El, className: 'su-tabs-container',
+			at: alternativePos is true ? 0 : 1)
+		.Recalc()
 		}
 
 	ctrl: false
 	SelectTab(id)
 		{
-		for ctrl in .GetChildren()
-			if ctrl.UniqueId is id
-				{
-				.ctrl = ctrl
-				break
-				}
+		if false isnt i = .tabs.FindIf({ it.UniqueId is id })
+			.ctrl = .tabs[i]
+		else
+			.ctrl = false
 		}
+
 	Recalc()
 		{
-		super.Recalc()
 		.Left = 0
 		if .findSelectedCtrl() is false
 			.Xmin = .Ymin = 0
 		else
 			{
-			tab = .FindControl(#Tab)
-			.Xmin = Max(.ctrl.Xmin, tab.Xmin)
-			.Ymin = .ctrl.Ymin + tab.Ymin
+			.ctrl.Recalc()
+			.Xmin = Max(.ctrl.Xmin, .tab.Xmin)
+			.Ymin = .ctrl.Ymin + .tab.Ymin
 			}
 		.SetMinSize()
+		}
+
+	Insert(control)
+		{
+		_at = [parent: this, parentEl: .container, at: false]
+		.tabs.Add(el = .Construct(control))
+		DoStartup(el)
+		.WindowRefresh()
+		}
+
+	RemoveAll()
+		{
+		.tabs.Each(#Destroy)
+		.tabs = Object()
+		.WindowRefresh()
+		}
+
+	GetChildren()
+		{
+		return Object(.tab).Append(.tabs)
 		}
 
 	findSelectedCtrl()
@@ -52,7 +85,11 @@ GroupComponent
 
 	RemoveTab(id)
 		{
-		if false isnt i = .GetChildren().FindIf({ it.UniqueId is id })
-			.Remove(i)
+		if false isnt i = .tabs.FindIf({ it.UniqueId is id })
+			{
+			.tabs[i].Destroy()
+			.tabs.Delete(i)
+			.WindowRefresh()
+			}
 		}
 	}

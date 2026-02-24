@@ -33,7 +33,9 @@ SuJsTester
 		.Log("attempting to add client for " $ type $ ' as ' $ Suneido.User)
 		ServerEval('TimeoutTester.AddStartedClient', name)
 
-		SuRenderBackend().RegisterBeforeDisconnectFn({ ServerSuneido.Set(name, true) })
+		SuRenderBackend().RegisterBeforeDisconnectFn({
+			.Log("Before disconnect for " $ type $ ' as ' $ Suneido.User)
+			ServerSuneido.Set(name, true) })
 
 		if timeoutTester.GetDefault(#access?, true)
 			{

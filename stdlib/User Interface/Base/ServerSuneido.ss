@@ -32,6 +32,22 @@ class
 		Suneido[member].Delete(at)
 		}
 
+	RemoveFromMember(member, value)
+		{
+		if Sys.Client?()
+			return ServerEval('ServerSuneido.RemoveFromMember', member, value)
+		.validateObject(member)
+		Suneido[member].Remove(value)
+		}
+
+	AddToMember(member, value)
+		{
+		if Sys.Client?()
+			return ServerEval('ServerSuneido.AddToMember', member, value)
+		.validateObject(member)
+		Suneido[member].Add(value)
+		}
+
 	Add(member, value, at)
 		{
 		if Sys.Client?()

@@ -694,6 +694,12 @@ calls = FormatCallStack(calls, levels: 20).
 		SetFocus(.Hwnd)
 		return 'callsuper'
 		}
+	RBUTTONUP(lParam /*unused*/)
+		{
+		return .HasFocus?()
+			? 'callsuper'
+			: 0
+		}
 	Context_Menu: (
 		"&Undo\tCtrl+Z", "&Redo\tCtrl+Y", "",
 		"Cu&t\tCtrl+X", "&Copy\tCtrl+C", "&Paste\tCtrl+V", "&Delete", "",

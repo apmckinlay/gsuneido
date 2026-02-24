@@ -60,8 +60,8 @@ Test
 		Assert(Url.Encode('a,b') is: 'a%2Cb')
 		Assert(Url.Encode('\x05') is: '%05')
 		Assert(Url.Encode('\xee') is: '%EE')
-		Assert(Url.Encode('http://appserver:8080/Wiki?ProgrammingDepartment#1') is:
-			'http://appserver:8080/Wiki?ProgrammingDepartment#1')
+		Assert(Url.Encode('https://example.com:8088/Wiki?ProgrammingDepartment#1') is:
+			'https://example.com:8088/Wiki?ProgrammingDepartment#1')
 
 		Assert(Url.Encode("http://www.website.com/bobs'site",
 			#(value: '15', query: '"table"'))

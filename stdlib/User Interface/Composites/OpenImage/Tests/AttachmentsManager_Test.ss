@@ -14,17 +14,6 @@ Test
 		mock.Verify.AttachmentsManager_deleteFile('456', .rec2, 'custom1')
 		mock.Verify.AttachmentsManager_deleteFile('789', .rec3, 'custom2')
 
-		mock.Verify.Times(5).AttachmentsManager_logAction([anyArgs:])
-		mock.Verify.AttachmentsManager_logAction('123', [fakeNum: '111'],
-			'attach', 'rename')
-		mock.Verify.AttachmentsManager_logAction('abc', [fakeNum: '111'],
-			'attach', 'rename')
-		mock.Verify.AttachmentsManager_logAction('222', [fakeNum: '111'],
-			'attach', 'rename')
-		mock.Verify.AttachmentsManager_logAction('456', [fakeNum: 'key'],
-			'custom1', 'replace')
-		mock.Verify.AttachmentsManager_logAction('789', [], 'custom2', 'replace')
-
 		mock = .setupMock()
 		mock.ProcessQueue(restore?:)
 		Assert(.getAttachments(mock) is: #())

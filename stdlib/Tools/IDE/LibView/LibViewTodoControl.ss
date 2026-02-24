@@ -3,7 +3,7 @@
 Controller
 	{
 	Xmin: 10
-	Ystretch: .3
+	Ystretch: 1
 	Name: 'LibViewTodo'
 	New()
 		{

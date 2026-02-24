@@ -1,6 +1,7 @@
 // Copyright (C) 2025 Suneido Software Corp. All rights reserved worldwide.
 // NOTE: this is deliberately named so it will NOT be found by the test runner
 // because it is slow and accesses the internet
+// BuiltDate > 20260211
 Test
 	{
 	http: "http://httpbin.io"

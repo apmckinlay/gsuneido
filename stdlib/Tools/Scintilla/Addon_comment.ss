@@ -48,10 +48,9 @@ ScintillaAddon
 			{ // comment
 			selText2 = selText.Replace("^", "//").Replace("//$", "")
 			}
-		SendMessageTextIn(.Hwnd, SCI.REPLACESEL, 0, selText2)
 
-		textLengthAfter = .GetTextLength()
-		selEnd += (textLengthAfter - textLengthBefore)
+		.ReplaceSel(selText2)
+		selEnd += selText2.Size() - selText.Size()
 		.SetSelect(selStart, selEnd - selStart)
 		}
 	On_Comment_Selection()

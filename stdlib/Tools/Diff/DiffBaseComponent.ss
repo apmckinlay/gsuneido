@@ -33,7 +33,6 @@ HtmlDivComponent
 				continue
 			list.CM.ScrollTo(scrollInfo.left, scrollInfo.top)
 			}
-		//TODO .ovbar
 		}
 
 	delay: false

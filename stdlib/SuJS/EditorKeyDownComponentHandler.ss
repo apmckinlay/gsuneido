@@ -13,10 +13,21 @@ class
 			.keyDownEvent(component, VK.F3, :pressed, :event)
 		if extraCommands.NotEmpty?()
 			{
-			command = pressed.FindAll(true).Add(event.key)
+			key = .getKey(event, pressed)
+			command = pressed.FindAll(true).Add(key)
 			if extraCommands.Any?({ it.EqualSet?(command) })
-				.keyDownEvent(component, VK[event.key.Upper()], :pressed, :event)
+				.keyDownEvent(component, VK[key.Upper()], :pressed, :event)
 			}
+		}
+
+	codeToKey: (
+		'Slash': '/')
+	getKey(event, pressed)
+		{
+		key = pressed.shift isnt true
+			? event.key.Lower()
+			: .codeToKey.GetDefault(event.code, event.key).Lower()
+		return key.RemovePrefix('arrow')
 		}
 
 	keyDownEvent(component, key, pressed, event)

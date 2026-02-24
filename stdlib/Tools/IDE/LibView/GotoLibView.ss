@@ -105,10 +105,7 @@ class
 			path = list[0]
 		else // multiple matches
 			{
-			pt = scintilla.PointFromPosition(scintilla.GetSelectionStart())
-			ClientToScreen(scintilla.Hwnd, pt)
-			pt.y += 15/*=height*/
-			i = ContextMenu(list).Show(scintilla.Window.Hwnd, pt.x, pt.y, left:)
+			i = .multiMatch(scintilla, list)
 			if i <= 0
 				return false
 			path = list[i - 1]
@@ -123,6 +120,21 @@ class
 				return false
 		return Object(:new_item, :path)
 		}
+
+	multiMatch(scintilla, list)
+		{
+		if Sys.SuneidoJs?()
+			return ContextMenu(list).Show(
+				Object(target: scintilla.Hwnd, method: #GetCharPos,
+					args: [scintilla.GetSelectionStart()]),
+				x: false, y: false, left:)
+
+		pt = scintilla.PointFromPosition(scintilla.GetSelectionStart())
+		ClientToScreen(scintilla.Hwnd, pt)
+		pt.y += 15/*=height*/
+		return ContextMenu(list).Show(scintilla.Window.Hwnd, pt.x, pt.y, left:)
+		}
+
 	goto_built_in?(name)
 		{
 		if false isnt x = .hasBuiltIn(name)

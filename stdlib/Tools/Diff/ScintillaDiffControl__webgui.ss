@@ -3,18 +3,6 @@ _ScintillaDiffControl
 	{
 	ComponentName: #ScintillaDiff
 
-	init()
-		{
-		.markers = Object(
-			add: .MarkerIdx(level: .addLevel)
-			remove: .MarkerIdx(level: .removeLevel)
-			modify: .MarkerIdx(level: .modifyLevel)
-			select: .MarkerIdx(level: .selectLevel)
-			)
-		.indic = .IndicatorIdx(.modifyLevel)
-		.indicSelect = .IndicatorIdx(.selectLevel)
-		}
-
 	AddMarginText(line, text)
 		{
 		SuServerPrint('AddMarginText', line, text)

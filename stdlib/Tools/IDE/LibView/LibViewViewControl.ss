@@ -4,7 +4,7 @@ CodeViewControl
 	Name: LibViewView
 	New(data, readonly = false)
 		{
-		super(:data, addons: .Addons(), :readonly)
+		super(:data, addons: .Addons(), ystretch: 3, :readonly)
 		}
 
 	addons: #(

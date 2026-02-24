@@ -16,6 +16,7 @@ h       hour in 12 hour format
 H       hour in 24 hour format
 m       minute
 s       second
+S       millisecond
 a       am/pm
 A       AM/PM
 t       AM/PM

@@ -117,11 +117,99 @@ class
 
 	defaultActions(user)
 		{
-		actions = ['s3:GetBucketLocation', 'sqs:*', 'ses:*']
+		actions = ['s3:GetBucketLocation', 'sqs:*']
 		func = OptContribution('AdditionalIAMPolicy',
 			function (@unused)  { })
 		func(user, actions)
 		return actions
+		}
+
+	iam: AmazonIAM
+		{
+		Host()
+			{
+			return 'iam.amazonaws.com'
+			}
+		Service()
+			{
+			return 'iam'
+			}
+		}
+	CreateUser(userName)
+		{
+		messageRec = [Version: '2010-05-08'
+			Action: 'CreateUser'
+			UserName: String(userName)]
+		return .iamRequest(messageRec)
+		}
+
+	iamRequest(messageRec)
+		{
+		params = AmazonAWS.UrlEncodeValues(messageRec)
+		header = AmazonV4Signing(.iam, 'POST', 'us-east-1', params).AuthorizationHeader()
+		url = 'https://iam.amazonaws.com/?' $ params
+		return Https.Post(url, params, :header)
+		}
+
+	DeleteUser(userName)
+		{
+		messageRec = [Version: '2010-05-08'
+			Action: 'DeleteUser'
+			UserName: String(userName)]
+		return .iamRequest(messageRec)
+		}
+
+	CreateAccessKey(userName)
+		{
+		_secureLogging = true
+		messageRec = [Version: '2010-05-08'
+			Action: 'CreateAccessKey'
+			UserName: String(userName)]
+		try
+			{
+			response = .iamRequest(messageRec)
+			node = XmlParser(response)
+			return [accessKey: node.createaccesskeyresult.accesskey.accesskeyid.Text()
+				secretKey: node.createaccesskeyresult.accesskey.secretaccesskey.Text()]
+			}
+		catch (err)
+			{
+			SuneidoLog('ERROR: CreateAccessKey failed - ' $ err)
+			return false
+			}
+		}
+
+	ListUsers()
+		{
+		messageRec = [Version: '2010-05-08', Action: 'ListUsers']
+		response = .iamRequest(messageRec)
+		xml = XmlParser(response)
+		users = Object()
+		for member in xml.listusersresult.users.member.List()
+			users.Add(Object(username: member.username.Text(),
+				date: member.createdate.Text()))
+		return users
+		}
+
+	ListAccessKeys(userName)
+		{
+		messageRec = [Version: '2010-05-08'
+			Action: 'ListAccessKeys'
+			UserName: String(userName)]
+
+		response = .iamRequest(messageRec)
+		xml = XmlParser(response)
+		return xml.listaccesskeysresult.accesskeymetadata.member.List().
+			Map({ it.accesskeyid.Text() })
+		}
+
+	DeleteAccessKey(userName, accessKeyId)
+		{
+		messageRec = [Version: '2010-05-08'
+			Action: 'DeleteAccessKey'
+			AccessKeyId: String(accessKeyId),
+			UserName: String(userName)]
+		return .iamRequest(messageRec)
 		}
 
 	log(@args)

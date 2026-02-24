@@ -15,7 +15,13 @@ Controller
 		.outerHorz = .FindControl('outerHorz')
 		.typeField = .FindControl('ChooseList')
 		.valueField = .FindControl('Field')
-		.allLabels = GetContributions(.Name.BeforeFirst('_').Capitalize() $ 'InfoLabels')
+		.allLabels = Object(MailLink: Object())
+		for contrib in GetContributions(.Name.BeforeFirst('_').Capitalize() $
+			'InfoLabels')
+			{
+			list = Function?(contrib) ? contrib() : contrib
+			.allLabels.MailLink.Append(list.Member?('MailLink') ? list.MailLink : list)
+			}
 		.valueField.AddContextMenuItem("", "", .contextMenuEnabled)
 		.valueField.AddContextMenuItem('Labels', .On_Labels, .contextMenuEnabled)
 		.typeField.Set(.types[.def])

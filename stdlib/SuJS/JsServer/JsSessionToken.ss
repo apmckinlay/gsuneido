@@ -43,18 +43,14 @@ class
 			ServerSuneido.Add(#SuSessionTokens, key, token)
 			ServerSuneido.DeleteAt(#SuSessionTokenCandidates, token)
 			}
-		try BookLog('JsSessionToken.Register', params: Object(t: token, :key), systemLog:)
 		}
 
 	Unregister(token)
 		{
 		.Synchronized()
 			{
-			key = ServerSuneido.GetAt(#SuSessionTokens, token, false)
 			ServerSuneido.DeleteAt(#SuSessionTokens, token)
 			}
-		try BookLog('JsSessionToken.Unregister', params: Object(t: token, :key),
-			systemLog:)
 		}
 
 	Validate(env)

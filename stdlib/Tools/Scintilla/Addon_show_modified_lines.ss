@@ -107,13 +107,14 @@ ScintillaAddonForThreadTasks
 		if .IsOutdatedRecord(startTime) or .prevChangedLines.EqualSet?(changedLines)
 			return
 
-		.Defer(uniqueID: 'modified_lines')
+		.Defer(Bind(.markers, startTime, changedLines), uniqueID: 'modified_lines')
+		}
+	markers(startTime, changedLines)
+		{
+		if not .Destroyed?() and not .IsOutdatedRecord(startTime)
 			{
-			if not .Destroyed?() and not .IsOutdatedRecord(startTime)
-				{
-				.addDiffMarkers(.prevChangedLines = changedLines)
-				.MarkersChanged()
-				}
+			.addDiffMarkers(.prevChangedLines = changedLines)
+			.MarkersChanged()
 			}
 		}
 

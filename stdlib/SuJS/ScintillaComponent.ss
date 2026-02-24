@@ -25,6 +25,12 @@ Component
 			padding-top: 4px;
 			padding-bottom: 4px;
 		}
+		.su-code-gutter {
+			width: 1em;
+		}
+		.su-code-gutter-container {
+			position: relative;
+		}
 		.su-code-mirror .CodeMirror-lines {
 			padding: 0;
 		}
@@ -58,12 +64,16 @@ Component
 		.CM.SetOption("styleSelectedText", true)
 		if readonly
 			.CM.SetOption("tabindex", "-1")
+
+		extraKeys = ['Shift-Tab': 'indentLess']
 		if tabthrough is true
-			.CM.SetOption("extraKeys", [Tab: false])
+			extraKeys['Tab'] = false
+		.CM.SetOption("extraKeys", extraKeys)
 
 		.SetStyles(Object('border': '1px solid black'), .CMEl)
 
 		.AddEventListenerToCM('change', .OnChange)
+		.CodeMirror.OnBeforeChange(.CM, .eventFactory(.ensureCRLF))
 		.AddEventListenerToCM('beforeChange', .onBeforeChange)
 		.AddEventListenerToCM('focus', .OnFocus)
 		.AddEventListenerToCM('blur', .blur)
@@ -72,6 +82,7 @@ Component
 		.AddEventListenerToCM('scroll', .onScroll)
 		.El.AddEventListener('mouseup', .onMouseUp)
 		.AddEventListenerToCM('keydown', .OnKeyDown)
+		.El.AddEventListener('dragend', .dragEnd)
 
 		.indicators = Object()
 		.markers = Object()
@@ -111,7 +122,7 @@ Component
 		pos = .CM.CoordsChar(Object(left: event.pageX, top: event.pageY))
 		if not selections.Any?({ .inSelect?(pos, it.anchor, it.head) })
 			.CM.SetCursor(pos)
-		.updateUI()
+		.UpdateUI()
 		.OnContextMenu(event)
 		}
 
@@ -130,7 +141,7 @@ Component
 		return ob1 < ob2
 		}
 
-	updateUI()
+	UpdateUI()
 		{
 		.Event(#UPDATEUI)
 		}
@@ -199,6 +210,27 @@ Component
 		.CM.SetOption('indentWithTabs', true)
 		}
 
+	wordchars: 'zyxwvutsrqponmlkjihgfedcba_ZYXWVUTSRQPONMLKJIHGFEDCBA?9876543210!'
+	SetWordChars(.wordChars)
+		{
+		if not Suneido.Member?(#RegisteredWC)
+			Suneido.RegisteredWC = Object()
+		if false is name = Suneido.RegisteredWC.GetDefault(wordChars, false)
+			{
+			name = 'suneido_' $ Suneido.RegisteredWC.Size()
+			regex = SuUI.MakeWebObject('RegExp', '[' $ wordChars $ ']')
+			.CodeMirror.RegisterHelper('wordChars', name, regex)
+			Suneido.RegisteredWC[wordChars] = name
+			}
+		mode = .CodeMirror.GetMode(.CM)
+		mode.wordChars = name
+		}
+
+	GetWordChars()
+		{
+		return .wordchars
+		}
+
 	setValue?: false
 	Set(s)
 		{
@@ -239,8 +271,23 @@ Component
 		{
 		.markers[n] = [:style, :fore, :back]
 		.markerCss = false
+		if .gutterMarker?(style)
+			.ensureGutter('su-code-gutter')
 		}
 
+	gutterMarker?(style)
+		{
+		return style is SC.MARK_SHORTARROW or
+			style is SC.MARK_ROUNDRECT or
+			style is #diffMarker
+		}
+
+	DefineXPMMarker(n, style, fore, back)
+		{
+		.DefineMarker(n, style, fore, back)
+		}
+
+	MarkerName: 'default'
 	ensureMarkerCss()
 		{
 		if .markerCss isnt false
@@ -258,38 +305,78 @@ Component
 					}\r\n'
 				}
 			else if marker.style is SC.MARK_SHORTARROW
-				{
-				if not .gutters.Has?(className)
-					{
-					.gutters.Add(className)
-					.CM.SetOption(#gutters, .gutters)
-					}
-				if not marker.Member?(#div)
-					{
-					div = CreateElement('div', className: className $ '-div')
-					div.innerHTML = '
-						<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
-							<polygon
-								points="5,35 40,35 40,10 95,50 40,90 40,65 5,65"
-								fill="' $ ToCssColor(marker.back) $ '"
-								stroke="black"
-								stroke-width="6"
-								stroke-linejoin="round"
-							/>
-						</svg>'
-					marker.div = div
-					}
-				css $= '.' $ className $ '{
-						width: 1em;
-					}
-					.' $ className $ '-div {
-						display: flex;
-						justify-content: center;
-						align-items: center;
-					}\r\n'
-				}
+				css $= .buildShortArrow(marker, className, n)
+			else if marker.style is #diffMarker
+				css $= .buildDiffMarker(marker, className, n)
+			else if marker.style is SC.MARK_ROUNDRECT
+				css $= .buildRoundRect(marker, className, n)
+			else
+				Print('marker not handled: ', marker)
 			}
 		LoadCssStyles('su-code-' $ .MarkerName $ '.css', .markerCss = css, override?:)
+		}
+
+	ensureGutter(className)
+		{
+		if not .gutters.Has?(className)
+			{
+			.gutters.Add(className)
+			.CM.SetOption(#gutters, .gutters)
+			}
+		}
+
+	buildShortArrow(marker, className, n)
+		{
+		shape = '<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
+				<polygon
+					points="5,35 40,35 40,10 95,50 40,90 40,65 5,65"
+					fill="' $ ToCssColor(marker.back) $ '"
+					stroke="black"
+					stroke-width="6"
+					stroke-linejoin="round"
+				/>
+			</svg>'
+		return .buildMarker(marker, className, n, :shape,
+			extraCss: 'justify-content: center; align-items: center;')
+		}
+
+	buildRoundRect(marker, className, n)
+		{
+		shape = '<svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
+				<rect
+					width="60" height="80"
+					x="20" y="10" rx="20" ry="20"
+					fill="' $ ToCssColor(marker.back) $ '"
+					stroke="black"
+					stroke-width="6"
+				/>
+			</svg>'
+		return .buildMarker(marker, className, n, :shape,
+			extraCss: 'justify-content: center; align-items: center;')
+		}
+
+	buildDiffMarker(marker, className, n)
+		{
+		return .buildMarker(marker, className, n,
+			extraCss: 'width: 33%; right: 0px; background-color: ' $
+				ToCssColor(marker.back) $ ';')
+		}
+
+	buildMarker(marker, className, n, shape = '', extraCss = '')
+		{
+		if not marker.Member?(#div)
+			{
+			div = CreateElement('div', className: className $ '-div')
+			div.innerHTML = shape
+			marker.div = div
+			}
+		return '.' $ className $ '-div {
+				display: flex;
+				position: absolute;
+				height: ' $ .CM.DefaultTextHeight() $ 'px;
+				z-index: ' $ n $ ';
+				' $ extraCss $ '
+			}\r\n'
 		}
 
 	MarkerAdd(row, n)
@@ -300,22 +387,184 @@ Component
 		className = 'su-code-' $ .MarkerName $ '-' $ n
 		if marker.style is SC.MARK_BACKGROUND
 			.CM.AddLineClass(row, "background", className)
-		else if marker.style is SC.MARK_SHORTARROW
-			.CM.SetGutterMarker(row, className, marker.div.CloneNode(true))
+		else if .gutterMarker?(marker.style)
+			{
+			info = .CM.LineInfo(row)
+			try
+				container = info['gutterMarkers']['su-code-gutter']
+			catch
+				{
+				container = CreateElement('div', className: 'su-code-gutter-container')
+				.CM.SetGutterMarker(row, 'su-code-gutter', container)
+				}
+			container.AppendChild(marker.div.CloneNode(true))
+			}
 		}
 
 	MarkerDelete(row, n)
 		{
 		if false is marker = .markers.GetDefault(n, false)
 			return
+
 		className = 'su-code-' $ .MarkerName $ '-' $ n
 		if marker.style is SC.MARK_BACKGROUND
 			.CM.RemoveLineClass(row, 'background', className)
-		else if marker.style is SC.MARK_SHORTARROW
-			.CM.ClearGutter(className)
+		else if .gutterMarker?(marker.style)
+			{
+			info = .CM.LineInfo(row)
+			container = false
+			try container = info['gutterMarkers']['su-code-gutter']
+			if container isnt false
+				{
+				list = container.QuerySelectorAll('.' $ className $ '-div')
+				for i in .. list.length
+					list.Item(i).Remove()
+				}
+			}
+		}
+
+	MarkerDeleteAll(n)
+		{
+		if false is marker = .markers.GetDefault(n, false)
+			return
+
+		className = 'su-code-' $ .MarkerName $ '-' $ n
+		if marker.style is SC.MARK_BACKGROUND
+			{
+			c = .CM.LineCount()
+			for row in c
+				.CM.RemoveLineClass(row, 'background', className)
+			}
+
+		className = 'su-code-' $ .MarkerName $ '-' $ n
+		list = .CMEl.QuerySelectorAll('.' $ className $ '-div')
+		for i in .. list.length
+			list.Item(i).Remove()
+		}
+
+	UpdateOverview(ovbarHwnds, markersInfo)
+		{
+		ovbars = Object()
+		for type in ovbarHwnds.Members()
+			ovbars[type] = SuRender().GetRegisteredComponent(ovbarHwnds[type])
+		ovbars.Each(#ClearMarks)
+
+		curLine = .CM.GetCursor().line
+		for row in ...CM.LineCount()
+			{
+			if row is curLine
+				ovbars.Each({ it.AddMark(row, CLR.GRAY) })
+			else
+				.updateMarkersAtLine(row, markersInfo, ovbars)
+			}
+		}
+
+	updateMarkersAtLine(row, markersInfo, ovbars)
+		{
+		info = .CM.LineInfo(row)
+		container = false
+		try container = info['gutterMarkers']['su-code-gutter']
+		if container isnt false and container.childElementCount isnt 0
+			{
+			for type in markersInfo.Members()
+				{
+				for idx in markersInfo[type]
+					{
+					list = container.QuerySelectorAll(
+						'.su-code-' $ .MarkerName $ '-' $ idx $ '-div')
+					if list.length isnt 0
+						{
+						ovbars[type].AddMark(row, .markers[idx].back)
+						break
+						}
+					}
+				}
+			}
+		}
+
+	braceStyle: ''
+	braceMark1: false
+	braceMark2: false
+	braceBadStyle: ''
+	braceBadMark: false
+	DefineStyle(n, fore = false, back = false, bold = false,
+		underline/*unused*/ = false, italic/*unused*/ = false)
+		{
+		if n is SC.STYLE_BRACELIGHT
+			.braceStyle = .buildStyle(fore, back, bold)
+		else if n is SC.STYLE_BRACEBAD
+			.braceBadStyle = .buildStyle(fore, back, bold)
+		}
+
+	buildStyle(fore = false, back = false, bold = false)
+		{
+		css = ''
+		if fore isnt false
+			css $= ' color: ' $ ToCssColor(fore) $ ';'
+		if back isnt false
+			css $= ' background-color: ' $ ToCssColor(back) $ ';'
+		if bold isnt false
+			css $= ' font-weight: bold;'
+		return css
+		}
+
+	BraceHighlight(pos1, pos2)
+		{
+		.clearBraceHighlights()
+		.braceMark1 = .addBrace(pos1, .braceStyle)
+		.braceMark2 = .addBrace(pos2, .braceStyle)
+		}
+
+	BraceBadLight(pos)
+		{
+		.clearBraceHighlights()
+		.braceBadMark = .addBrace(pos, .braceBadStyle)
+		}
+
+	addBrace(pos, css)
+		{
+		if pos is -1
+			return false
+		return .CM.MarkText(.CM.PosFromIndex(pos), .CM.PosFromIndex(pos + 1),
+			[:css, inclusiveLeft: false, inclusiveRight: false])
+		}
+
+	clearBraceHighlights()
+		{
+		.clearBrace(.braceMark1)
+		.clearBrace(.braceMark2)
+		.clearBrace(.braceBadMark)
+		.braceMark1 = .braceMark2 = .braceBadMark = false
+		}
+
+	clearBrace(mark)
+		{
+		if mark is false
+			return
+		mark.Clear()
 		}
 
 	DefineIndicator(n, style, fore = false)
+		{
+		.indicators[n] = [styles: Object(:style, :fore),
+			css: .buildCss(style, fore), marks: Object()]
+		}
+
+	IndicSetAlpha(n, alpha)
+		{
+		.indicators[n].styles.alpha = alpha.Hex()
+		.indicators[n].css = .buildCss(@.indicators[n].styles)
+		}
+
+	IndicSetOutlineAlpha(n, alpha)
+		{
+		.indicators[n].styles.outlineAlpha = alpha.Hex()
+		.indicators[n].css = .buildCss(@.indicators[n].styles)
+		}
+
+	IndicSetHoverStyle(@unused) {}
+
+	buildCss(style, fore, alpha = '1A', outlineAlpha = '80')
 		{
 		css = ''
 		color = fore is false ? 'black' : ToCssColor(fore)
@@ -324,8 +573,13 @@ Component
 		else if style is INDIC.TEXTFORE
 			css = 'color: ' $ color $ '; cursor: pointer;'
 		else if style is INDIC.ROUNDBOX
-			css = 'border-radius: 2%; background-color: ' $ color $ ';'
-		.indicators[n] = [:css, marks: Object()]
+			css = 'border-radius: 2%; background-color: ' $ color $ alpha $ ';'
+		else if style is INDIC.STRAIGHTBOX
+			css = 'background-color: ' $ color $ alpha $ '; ' $
+				'outline: 1px solid ' $ color $ outlineAlpha $ ';'
+		else if style is INDIC.HIDDEN
+			css = ''
+		return css
 		}
 
 	SetIndicator(indic, pos, len)
@@ -335,6 +589,15 @@ Component
 		mark = .CM.MarkText(from, to,
 			[css: .indicators[indic].css, inclusiveLeft: false, inclusiveRight:])
 		.indicators[indic].marks.Add(mark)
+		}
+
+	curIndic: false
+	SetIndicatorCurrent(.curIndic) { }
+	IndicatorFillRange(pos, len)
+		{
+		if .curIndic is false
+			return
+		.SetIndicator(.curIndic, pos, len)
 		}
 
 	ClearIndicator(indic, pos = 0, len = false)
@@ -360,6 +623,21 @@ Component
 			mark.Clear()
 			}
 		.indicators[indic].marks.Delete(@toClear)
+		}
+
+	HasIndicator?(pos, indic)
+		{
+		for mark in .indicators[indic].marks
+			{
+			if false isnt markPos = .getMarkPos(mark)
+				{
+				markFrom = .CM.IndexFromPos(markPos.from)
+				markTo = .CM.IndexFromPos(markPos.to)
+				if markFrom < pos + 1 and markTo >= pos
+					return true
+				}
+			}
+		return false
 		}
 
 	getMarkPos(mark)
@@ -437,12 +715,31 @@ Component
 
 		toAfterChange = to + added.Size() - removed.Size()
 		.Event(#SCN_MODIFIED, [
-			modificationType: changeObj.text.Empty?()
+			modificationType: added is ''
 				? SC.MOD_DELETETEXT
 				: SC.MOD_INSERTTEXT,
 			position: from,
 			length: toAfterChange - from + 1
 			])
+		}
+
+	ensureCRLF(unused, changeObj)
+		{
+		try
+			{
+			if not changeObj.text.Any?({ it.Has1of?('\r\n') })
+				return
+			newText = Object()
+			for line in changeObj.text
+				newText.Append(line.Tr('\r').Split('\n'))
+			(changeObj.update)(changeObj.from, changeObj.to, newText)
+			}
+		catch (e)
+			{
+			SuRender().Event(false, 'SuneidoLog', Object(
+				'ERROR (CAUGHT): ScintillaComponent.ensureCRLF - ' $ e,
+				params: changeObj.text, caughtMsg: 'continue'))
+			}
 		}
 
 	onBeforeChange(unused, changeObj)
@@ -472,7 +769,7 @@ Component
 		anchor = .CM.IndexFromPos(obj.ranges.Last().anchor)
 		head = .CM.IndexFromPos(obj.ranges.Last().head)
 		.Event(#SU_UPDATESELECT, Object(:anchor, :head))
-		.updateUI()
+		.UpdateUI()
 		}
 
 	onScroll(unused)
@@ -482,10 +779,13 @@ Component
 		.Event(#SU_SYNCFIRSTVISIBLELINE, line)
 		}
 
-	SetFirstVisibleLine(line)
+	SetFirstVisibleLine(line, centerInScreen? = false)
 		{
+		offset = 0
+		if centerInScreen? is true
+			offset = .CM.GetScrollInfo().clientHeight / 2
 		top = .CM.HeightAtLine(line, 'local')
-		.CM.ScrollTo(0, top)
+		.CM.ScrollTo(0, top - offset)
 		}
 
 	scrollInfo: false
@@ -599,6 +899,15 @@ Component
 		.CM.ReplaceSelection(s)
 		}
 
+	ReplaceSelFromServer(s, start, end)
+		{
+		.setValue? = true
+		.CM.SetSelection(.CM.PosFromIndex(start), .CM.PosFromIndex(end))
+		.CM.ReplaceSelection(s)
+		.Event(#EN_CHANGE)
+		.setValue? = false
+		}
+
 	Paste(s)
 		{
 		.ReplaceSel(s)
@@ -640,6 +949,13 @@ Component
 		return coord
 		}
 
+	GetCharPos(i) // called by GotoLibView.pt
+		{
+		pos = .CM.PosFromIndex(i)
+		coord = .CM.CharCoords(pos)
+		return coord
+		}
+
 	autocOpen?: false
 	SyncAutocStatus(.autocOpen?) {}
 	OnKeyDown(unused, event)
@@ -650,6 +966,45 @@ Component
 			event.PreventDefault()
 			event.StopPropagation()
 			}
+		}
+
+	dragEnd(event /*unused*/)
+		{
+		.EventWithFreeze(#SCEN_KILLFOCUS)
+		}
+
+	MoveSelectedLinesUp()
+		{
+		cursor = .CM.GetCursor()
+		line = cursor.line
+
+		if line <= 0
+			return
+
+		.swap(line, line - 1, cursor.ch)
+		}
+
+	MoveSelectedLinesDown()
+		{
+		cursor = .CM.GetCursor()
+		line = cursor.line
+
+		if line >= .CM.LineCount() - 1
+			return
+
+		.swap(line, line + 1, cursor.ch)
+		}
+
+	swap(from, to, ch)
+		{
+		fromLine = .CM.GetLine(from)
+		toLine = .CM.GetLine(to)
+
+		.CM.StartOperation()
+		.CM.replaceRange(fromLine, [line: to, ch: 0], [line: to, ch: toLine.Size()]);
+		.CM.replaceRange(toLine, [line: from, ch: 0], [line: from, ch: fromLine.Size()]);
+		.CM.SetCursor([line: to, :ch])
+		.CM.EndOperation()
 		}
 
 	GetDimension()

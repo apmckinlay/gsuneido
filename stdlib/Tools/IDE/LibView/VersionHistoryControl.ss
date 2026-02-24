@@ -25,7 +25,6 @@ Controller
 		.list.Set(data)
 		if not data.Empty?()
 			.list.SetSelection(0)
-		.list.VSCROLL(SB.TOP)
 		.list.SetMultiSelect(true)
 		.diffWindow = #()
 		.viewWindow = #()
@@ -257,7 +256,8 @@ Controller
 			if not .more.GetEnabled()
 				break
 
-			Thread.Sleep(.halfSecondInMs)
+			if not Sys.SuneidoJs?()
+				Thread.Sleep(.halfSecondInMs)
 			.On_More()
 			.list.SetSelection(.list.GetNumRows() - 1)
 			}

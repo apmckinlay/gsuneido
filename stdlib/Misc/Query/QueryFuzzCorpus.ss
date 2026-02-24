@@ -179,4 +179,8 @@
 `cus extend r1, a2 = r1 where a2 >= "" and a2 < "5" // InRange`
 `cus extend r1, a2 = r1 where String?(a2)`
 `bln leftjoin by(ik) ((ivc where ck isnt '3') union ivc)`
+`(((cus extend a1 = c3) join (ivc join aln)) union ((ivc join aln) leftjoin
+	((cus union (cus extend a1 = c4)) where ck <= "")))`
+`(((cus union cus) union cus) join by(ck) (ivc extend r0))
+	where r0 is '3' where ik is ""`
 )

@@ -251,9 +251,11 @@ Test
 			// vvvvv Not copied into returned object vvvvv
 			showLogo?: false,
 			allowSchedule:,
-			pageCount:)
+			pageCount:,
+			Params: Object(/* params controls */))
 		result = m(report)
-		Assert(result members: #(0, name))
+		Assert(result hasntMember: 'Params')
+		Assert(result.Members() isSize: report.Members().Size() - 1)
 		Assert(result[0] is: 'Format')
 		Assert(result.name is: 'Test Report')
 
@@ -273,21 +275,10 @@ Test
 			previewDialog:,
 			onDestroy: destroyFunc = function () { },
 			EmailAttachments: Object(),
-			// vvvvv Not copied into returned object vvvvv
-			showLogo?: false,
-			HelpOption: '/ETAHelp/Path',
-			scroll:,
-			wait:,
-			disableFieldProtectRules:,
-			allowSchedule:,
-			Params: Object(/* controls */),
-			ReprintFormat: 'ReprintFormat',
-			pageCount:)
+			Params: Object(/* controls */))
 		result = m(report)
-		Assert(result
-			members: #(0, EmailAttachments, devmode_name, footer, header, margins,
-				minBorder, name, noPageRange, onDestroy, pageRange, paramsdata,
-				previewDialog, printParams))
+		Assert(result hasntMember: 'Params')
+		Assert(result.Members() isSize: report.Members().Size() - 1)
 		Assert(result[0] is: 'Format')
 		Assert(result.EmailAttachments is: #())
 		Assert(result.devmode_name is: 'devmode')

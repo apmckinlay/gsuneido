@@ -1,0 +1,130 @@
+**Role**: Expert Suneido Software Engineer.
+
+**Context**: Use Suneido MCP to search, read, check, and execute code, read documentation, query the database.
+
+**Workflow**: Explore -> Plan -> Write -> Verify
+
+Suneido is an integrated system including language, database, and UI.
+
+Explore via MCP before making suggestions. Do not hallucinate library or builtin functions.
+
+**Note**:
+
+Suneido does **not** use SQL, do not use `select *`
+
+`if false isnt x = ...` and similar patterns are standard.
+Do not flag these as errors.
+
+Comments like /*= ... */ are to explain magic numbers.
+
+When chaining method calls the periods (.) must be at the *end* of the line, *not* at the beginning e.g.
+```
+value.
+    One().
+    Two().
+    Three()
+```
+
+`Timestamp()` guarantees a unique value, even across client-server
+
+If a global (capitalized) name is referenced but not defined in a library, 
+it may be built-in. Most built-ins are documented in suneidoc.
+
+**Tests**:
+
+Test are identified by names ending in `Test`
+Tests inherit from the `Test` class.
+Test methods have names starting with `Test`
+
+You can call them to run them. e.g. `execute NumberTest()`
+
+Tests are not safe to run concurrently in parallel.
+
+---
+
+# Suneido Language Summary
+
+## Introduction
+- Small, dynamically typed, object-oriented language.
+- Functions, blocks (closures), classes, instance, methods are first-class values.
+- Only two scopes: global and local (plus dynamic variables).
+- Globals are read-only names defined in libraries/built-ins, not assignable.
+## Syntax basics
+- Comments: `//` line, `/* ... */` block (no nesting).
+- Semicolons are not used
+- Parentheses around control expressions are optional if the line ends, but required for classic `for (init; cond; inc)`.
+- Newlines end an expression unless it is obviously incomplete.
+- `is`, `isnt`, `and`, `or`, `not` are used instead of `==`, `!=`, `&&`, `||`, `!`
+## Names and scoping (important differences)
+- Local variables: start with lower-case letter.
+- Global names: start with upper-case letter; cannot be assigned to.
+- Dynamic variables: start with `_` then lower-case; dynamically scoped. Calls can read them; assigning creates a new dynamic binding.
+- `_Name` (underscore + upper-case) refers to the previous global definition when overriding a library definition.
+- Functions do not capture outer scope; only blocks are closures.
+## Core data types
+- Boolean: only `true` and `false` (no truthy/falsy coercion in conditions).
+- Number: single numeric type, decimal floating point (16 digits precision). 64 bit integers are supported transparently.
+- String: 8 bit ASCII (not unicode), immutable, can be multi-line; single, double, or backquotes allowed, backquotes disable escapes (useful for regex/paths), `\` escapes, `#identifier` is equivalent to "identifier", also used for binary data.
+- Date: literal `#yyyyMMdd[.HHmm[ss[ttt]]]` (millisecond precision). Local times, no time zone.
+- Object(...): single general-purpose container with vector + map parts. Keys (members) can be most types (string, number, date, object). ob["x"] is equivalent to ob.x
+- Record(...): records are objects plus rules and observers, used with the database.
+- Object literals `#(1, 2, name: "Joe")` and record literals `#{name: "Joe"}`are immutable constants
+- `[...]` is shorthand: unnamed members -> Object, named only -> Record.
+- Object arrays have no gaps; values after a gap become named members.
+- Sequence: lazy/streaming list wrapper around an iterator.
+- No `null` or `undefined`; using an uninitialized value throws.
+## Functions and calls
+- Function literals: `function (params) { ... }`.
+- Default parameter values supported.
+- `@name` parameter collects all arguments into an Object (must be only param).
+- Named arguments are supported: `f(x: 1, y: 2)`; order not significant. If a named argument is supplied without a value, it defaults to `true`.
+- Argument spreading/unpacking: `f(@object)` passes object unamed and named opmembers as arguments. `@+1 object` skips the first member.
+- Commas between arguments are optional but preferred.
+- Shortcut: `f(:a, :b)` is `f(a: a, b: b)`.
+- Block after a call becomes `block:` named argument.
+- Inverted method call: `"Size"(value)` is `value.Size()`.
+- Multiple return values are allowed
+- `return f()` returns whatever `f()` returns (0, 1, or multiple values)
+## Blocks (closures)
+- Block literal: `{ ... }` or `{|x, y| ... }` (commas optional).
+- Blocks capture local variables (closures).
+- Block return value is last statement; `return` exits the containing function.
+- `it` or `_` in a parameterless block auto-inserts a parameter.
+- `break`/`continue` inside a block throws `"block:break"`/`"block:continue"`; loop-like functions should catch these.
+## Classes and instances
+- Classes are read-only objects with methods/members; instances are mutable.
+- Class literal: `class { ... }`, `class : Base { ... }`, or `Base { ... }`.
+- Constructor is `New(...)` (base `New` runs first; use `super(...)`).
+- `this` is the instance; `.name` is shorthand for `this.name`.
+- Public members/methods start with upper-case; lower-case is private.
+- Missing member lookup calls `Getter_`/`getter_` if present.
+- Missing method call uses `Default` if present.
+- Calling a class creates an instance unless `CallClass` overrides.
+- A `Call` method will intercept calls to an instance
+- Only Objects/Records and class instances have named members.
+- Instances can override data members defined on super classes.
+## Expressions and operators
+- Operator precedence similar to C/Java
+- `,` is not an operator (only used in `for (...)` lists).
+- String concatenation is `$` and `$=` (not `+`), always yields a string.
+- Arithmetic & bitwise operators always yield numbers.
+- Bitwise operations are 64 bit
+- Regular expression operators: `=~` and `!~` yielding true or false. Back-references are not supported. Match substring by default; use `\A` and `\Z` to anchor.
+- Comparisons always yield booleans; different types are never equal without explicit conversion such as Number(x) or String(x).
+- Multiple assignments with function calls: `a, b = Fn()` (must match return count)
+## Control flow
+- Conditions must evaluate to `true` or `false` (no truthiness).
+- Supports `if-else`, `while`, `do-while`, `for`, `switch`
+- `switch` cases do *not* fall through and there is no explicit fallthrough, `case` accepts multiple expressions, throws on unhandled value. `switch` is allowed without an expression, `case` expressions must then be boolean.
+- `for` forms:
+- `for i in from..to` (counted loop, `to` evaluated once)
+- `for x in iterable` (uses `.Iter().Next()`)
+- `for m, v in object` (snapshot iteration of keys/values)
+- classic `for (init; cond; inc)`
+## Exceptions
+- `try`/`catch`/`throw` with string exceptions.
+- `catch (e, "pattern")` matches prefixes; `*pattern` matches substring; `|` allows multiple patterns. Pattern must be a literal string. 
+- Nested try-catch within the same function is not allowed.
+## Missing features
+- No declarations, no `var` or `val`, no enums, no operator overloading, no `goto`, `finally`, or modules.
+- No multiple inheritance; no protected members.

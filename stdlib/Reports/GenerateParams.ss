@@ -69,6 +69,7 @@ Params
 		{
 		if false isnt .generateValid()
 			{
+			_fromGenerateParams = true
 			this.On_PDF_Save_to_file(@report)
 			.unlockGenerate()
 			}
@@ -84,6 +85,7 @@ Params
 		{
 		if false isnt .generateValid()
 			{
+			_fromGenerateParams = true
 			this.On_PDF_Email_as_attachment(@report)
 			.unlockGenerate()
 			}

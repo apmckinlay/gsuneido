@@ -170,9 +170,6 @@ class
 		for fileOb in .oldAttachments
 			{
 			file = restore? ? fileOb.new_file : fileOb.old_file
-			if fileOb.action isnt ''
-				.logAction(file, fileOb.rec.Project(.keyFields),
-					fileOb.fieldName, fileOb.action)
 			.deleteFile(file, fileOb.rec, fileOb.fieldName)
 			}
 		.oldAttachments = Object()
@@ -200,13 +197,6 @@ class
 		{
 		failed = OptContribution('CleanupAttachments', .deleteFailed)
 		failed(file, .query, .keyFields, rec.Project(.keyFields), fieldName)
-		}
-
-	logAction(file, key, fieldName, action)
-		{
-		table = QueryGetTable(.query, noThrow:)
-		SuneidoLog('Attachment ' $ action, params: [:table, :key, keyFields: .keyFields,
-			:fieldName, :file])
 		}
 
 	deleteFailed(file, query, keyFields, keys, fieldName)

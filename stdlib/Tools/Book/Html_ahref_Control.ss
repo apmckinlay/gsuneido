@@ -12,6 +12,7 @@ HtmlTextControl
 		.CalcSize()
 		.href = href
 		.underMouse? = false
+		.ToolTip(href)
 		}
 	Resize(x, y, w, h /*unused*/)
 		{

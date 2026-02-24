@@ -62,34 +62,36 @@ Test
 		Assert(fn('This is a test message.') is: 'This is a test message.')
 		Assert(fn('Check out https://www.example.com/')
 			is: 'Check out <a data-copy-link="https://www.example.com/" ' $
-				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
-				'&quot;https%3A%2F%2Fwww.example.com%2F&quot;)">' $
-				'https://www.example.com/</a>')
+					.buildLink('https://www.example.com/') $
+					'>https://www.example.com/</a>')
 		Assert(fn(XmlEntityEncode(`Visit "https://www.example.com/" for more info. ` $
 			`Also, check out www.google.com/`))
 			is: 'Visit &quot;<a data-copy-link="https://www.example.com/" ' $
-				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
-				'&quot;https%3A%2F%2Fwww.example.com%2F&quot;)">' $
-				'https://www.example.com/</a>&quot; for more info. Also, check out ' $
-				'<a data-copy-link="www.google.com/" ' $
-				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
-				'&quot;www.google.com%2F&quot;)">www.google.com/</a>')
+					.buildLink('https://www.example.com/') $
+					'>https://www.example.com/</a>&quot; for more info. Also, check out '$
+					'<a data-copy-link="www.google.com/" ' $
+					.buildLink('www.google.com/') $ '>www.google.com/</a>')
 		Assert(
 			fn('Click &lt;a href=&quot;https://www.example.com/&quot;&gt;here&lt;/a&gt;')
 			like: 'Click &lt;a href=&quot;' $
 				'<a data-copy-link="https://www.example.com/"  ' $
-				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
-				'&quot;https%3A%2F%2Fwww.example.com%2F&quot;)">' $
+				.buildLink('https://www.example.com/') $ '>' $
 				'https://www.example.com/</a>&quot;&gt;here&lt;/a&gt;')
 		Assert(fn(
 			XmlEntityEncode('This message contains a URL with special characters: ' $
 				'http://www.example.com/page?query=hello%20world'))
 			is: 'This message contains a URL with special characters: ' $
 				'<a data-copy-link="http://www.example.com/page?query=hello%20world" ' $
-				'href="suneido:/eval?ShellExecute(0,&quot;open&quot;,' $
-				'&quot;http%3A%2F%2Fwww.example.com%2F' $
-				'page%3Fquery%3Dhello%2520world&quot;)">' $
+				.buildLink('http://www.example.com/page?query=hello%20world') $ '>' $
 				'http://www.example.com/page?query=hello%20world</a>')
+		}
+
+	buildLink(url)
+		{
+		return Sys.SuneidoJs?()
+			? 'href="' $ url $ '" target="_blank"'
+			: `href="suneido:/eval?ShellExecute(0,&quot;open&quot;,&quot;` $
+				Url.EncodeQueryValue(url) $ '&quot;)"'
 		}
 
 	Test_messageOrder()

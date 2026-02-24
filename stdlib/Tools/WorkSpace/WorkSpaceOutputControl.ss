@@ -2,7 +2,6 @@
 ScintillaIDEControl
 	{
 	Addon_show_references:,
-	Addon_suneido_log:,
 	Addon_inspect:,
 	Addon_suneido_style_lines:,
 	Addon_zoom: [
@@ -12,7 +11,6 @@ ScintillaIDEControl
 			// zoom_ctrl arguments depend on zoomDialog interface in stdlib:EditorZoom
 			zoomArgs = [
 				set: text,
-				Addon_suneido_log:,
 				Addon_inspect:,
 				Addon_suneido_style_lines:
 			]

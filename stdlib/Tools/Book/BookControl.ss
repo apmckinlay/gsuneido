@@ -646,7 +646,7 @@ Controller
 		if .wikiNotes is false or .current is false
 			return
 
-		url = `http://` $ .wikiNotes.Server $ ':' $ .wikiNotes.Port $ '/Wiki?' $
+		url = `https://` $ .wikiNotes.Server $ ':' $ .wikiNotes.Port $ '/Wiki?' $
 			.wikiNotes.PagePrefix $ .buildWikiNotesURLName(.current.path, .current.name)
 		ShellExecute(.WindowHwnd(), 'open', Url.Encode(url))
 		}

@@ -282,29 +282,6 @@ class
 			"; Clients Started: " $ expectedConnStatus)
 		}
 
-	GetLogFiles(startTime, exeType)
-		{
-		.suneidoLog(startTime)
-		logs = Object('error.log', 'suneidolog.log')
-		logs.Add(Rlog.CurrentLog('timeout'))
-		types = GetContributions('TimeoutTesterTypes')
-		.forTimeoutTestTypes(types, exeType)
-			{ |name, web?|
-			if not web?
-				logs.Add('./' $ name $ '/trace.log')
-			}
-		return logs
-		}
-
-	suneidoLog(startTime)
-		{
-		PutFile('suneidolog.log', 'SuneidoLog:\r\n')
-		QueryApply('suneidolog where sulog_timestamp >= ' $ Display(startTime))
-			{
-			AddFile('suneidolog.log', Display(it) $ '\r\n')
-			}
-		}
-
 	killConnections(types, exeType)
 		{
 		.forTimeoutTestTypes(types, exeType)

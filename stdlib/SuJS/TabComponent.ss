@@ -37,6 +37,18 @@ Component
 			border-top-left-radius: 0.5em;
 			border-top-right-radius: 0.5em;
 		}
+		.su-tab-top.su-tab-right .su-tab {
+			border-top-left-radius: 0;
+			border-bottom-right-radius: 0.5em;
+		}
+		.su-tab-top.su-tab-left .su-tab {
+			border-top-right-radius: 0;
+			border-bottom-left-radius: 0.5em;
+		}
+		.su-tab-container.su-tab-top.su-tab-right .su-tab:last-child,
+		.su-tab-container.su-tab-top.su-tab-left .su-tab:last-child {
+			border-bottom: 1px solid lightgrey;
+		}
 		.su-tab-bottom .su-tab {
 			border-bottom: 1px solid lightgrey;
 			border-bottom-left-radius: 0.5em;
@@ -97,6 +109,7 @@ Component
 		.initHiddenTab()
 		if .vertical = orientation in ('left', 'right')
 			{
+			.tabEl.classList.Add(orientation is 'right' ? 'su-tab-right' : 'su-tab-left')
 			.SetStyles(#('flex-direction': 'column', 'order': '100'), .tabEl)
 
 			.Ystretch = 1

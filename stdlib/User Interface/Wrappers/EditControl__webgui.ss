@@ -132,6 +132,11 @@ Control
 		.Act('SetValid', valid?, force)
 		}
 
+	SetBgndColor(color)
+		{
+		.Act('SetBgndColor', color)
+		}
+
 	Valid?() // derived classes should define this
 		{
 		return .validCheck?(.Get(), .mandatory)
