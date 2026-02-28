@@ -19,13 +19,13 @@ EXE = .exe
 endif
 
 # build compiles the native non-gui version
-build:
+build : dbms/server.crt
 	@go version
 	CGO_ENABLED=0 \
 	go $(BUILD) $(BUILDARGS) -o gs_$(GOOS)_$(GOARCH)$(EXE) \
 	  -ldflags "$(LDFLAGS)"
 	  
-race:
+race :
 	@go version
 	CGO_ENABLED=1 \
 	go $(BUILD) -race -o gs_$(GOOS)_$(GOARCH)$(EXE) \
@@ -40,15 +40,15 @@ define BUILD_BINARY
 	go $(BUILD) -o $@ -ldflags "$(LDFLAGS)"
 endef
 
-gs_%: FORCE
+gs_% : FORCE
 	$(call BUILD_BINARY)
 
-gs_%.exe: FORCE
+gs_%.exe : FORCE
 	$(call BUILD_BINARY)
 
 WINGUI = -X main.mode=gui -H windowsgui
 	
-gs_windows_amd64_gui.exe: FORCE gsuneido_windows_amd64.syso
+gs_windows_amd64_gui.exe : FORCE gsuneido_windows_amd64.syso
 	@go version
 	go run cmd/deps/deps.go
 	CGO_ENABLED=1 \
@@ -61,7 +61,7 @@ gui: gs_windows_amd64_gui.exe
 
 both: build gui
 	
-deploy: git-status gs_windows_amd64.exe gs_windows_amd64_gui.exe \
+deploy : git-status gs_windows_amd64.exe gs_windows_amd64_gui.exe \
 	gs_linux_arm64 gs_linux_amd64
 	@mkdir -p deploy
 	cp gs_windows_amd64.exe deploy\gsport.exe
@@ -70,32 +70,32 @@ deploy: git-status gs_windows_amd64.exe gs_windows_amd64_gui.exe \
 	@echo Remember to tag the release and to update stdlib and suneidoc
 
 # NOTE: requires test e.g. from msys
-git-status:
+git-status :
 	@test -z "$(shell git status --porcelain)"
 
-test:
+test :
 	CGO_ENABLED=0 \
 	go test -short -vet=off -timeout 30s ./...
 
-racetest:
+racetest :
 	go test -race -short -count=1 ./...
 
-sujs:
+sujs :
 	go build -ldflags "-s -w" -o sujs_$(GOOS)_$(GOARCH)$(EXE) ./cmd/sujs
 
-zap:
+zap :
 	go build -ldflags "-s -w" ./cmd/zap
 
-generate:
+generate :
 	go generate -x ./...
 
-clean:
+clean :
 	go clean -cache -testcache
 
 # for cross compiling on Arm Mac for Arm Windows
 LLVM_MINGW = /Users/andrew/apps/llvm-mingw/bin/aarch64-w64-mingw32
 
-gs_windows_arm64_gui.exe: FORCE gsuneido_windows_arm64.syso
+gs_windows_arm64_gui.exe : FORCE gsuneido_windows_arm64.syso
 	CGO_ENABLED=1 \
 	GOARCH=arm64 GOOS=windows \
 	CC=$(LLVM_MINGW)-clang \
@@ -107,7 +107,7 @@ gs_windows_arm64_gui.exe: FORCE gsuneido_windows_arm64.syso
 gsuneido_windows_arm64.syso : res/suneido.rc res/suneido.manifest
 	$(LLVM_MINGW)-windres -o gsuneido_windows_arm64.syso res/suneido.rc
 	
-tlskey :
+dbms/server.crt :
 	openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
 		-keyout dbms/server.key -out dbms/server.crt -subj "/CN=internal-api" \
 		-addext "subjectAltName = DNS:localhost,IP:127.0.0.1"
@@ -144,5 +144,5 @@ help:
 	@echo "clean"
 	@echo "    remove built files"
 
-.PHONY : build test generate clean zap race racetest release \
-    help deploy git-status both gui tlskey FORCE sujs
+.PHONY : FORCE build test generate clean zap race racetest release \
+    help deploy git-status both gui sujs
