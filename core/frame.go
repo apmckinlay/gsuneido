@@ -130,6 +130,45 @@ func (fr *Frame) setSlot(idx int, val Value) {
 	fr.setSharedSlot(idx, val)
 }
 
+// getSetSlot updates a slot using op(orig, val), and returns either the
+// original value (retOrig) or the updated value.
+// For shared slots this is done under one lock for atomic read-modify-write.
+func (fr *Frame) getSetSlot(idx int, val Value,
+	op func(x, y Value) Value, retOrig bool) Value {
+	if idx < SharedSlotStart {
+		orig := fr.locals[idx]
+		if orig == nil {
+			panic("uninitialized variable: " + fr.fn.VarName(idx))
+		}
+		val = op(orig, val)
+		fr.locals[idx] = val
+		if retOrig {
+			return orig
+		}
+		return val
+	}
+	return fr.getSetSharedSlot(idx, val, op, retOrig)
+}
+
+// getSetSharedSlot is split off so getSetSlot is inlined
+func (fr *Frame) getSetSharedSlot(idx int, val Value,
+	op func(x, y Value) Value, retOrig bool) Value {
+	if fr.shared.Lock() {
+		defer fr.shared.Unlock()
+	}
+	i := idx - SharedSlotStart
+	orig := fr.shared.values[i]
+	if orig == nil {
+		panic("uninitialized variable: " + fr.fn.VarName(idx))
+	}
+	val = op(orig, val)
+	fr.shared.values[i] = val
+	if retOrig {
+		return orig
+	}
+	return val
+}
+
 // setSharedSlot is split off so setSlot is inlined
 func (fr *Frame) setSharedSlot(idx int, val Value) {
 	if fr.shared.Lock() {

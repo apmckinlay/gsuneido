@@ -347,10 +347,6 @@ func (th *Thread) Close() {
 	}
 }
 
-func (th *Thread) Cat(x, y Value) Value {
-	return OpCat(th, x, y)
-}
-
 func (th *Thread) SessionId(id string) string {
 	if id != "" && th == MainThread {
 		log.SetPrefix(id + " ")

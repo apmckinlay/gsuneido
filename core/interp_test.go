@@ -135,7 +135,7 @@ func BenchmarkLoadStore(b *testing.B) {
 		case 1:
 			r = OpSub(x, y)
 		case 2:
-			r = OpCat(nil, x, y)
+			r = OpCat(x, y)
 		case 3:
 			r = OpMul(x, y)
 		case 4:
@@ -159,10 +159,9 @@ func BenchmarkLoadStore(b *testing.B) {
 func BenchmarkLoadStore2(b *testing.B) {
 	x := One
 	y := One
-	var th *Thread
 	for n := range b.N {
 		op := []func(x, y Value) Value{
-			OpAdd, OpSub, th.Cat, OpMul, OpDiv, OpMod,
+			OpAdd, OpSub, OpCat, OpMul, OpDiv, OpMod,
 			OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n%11]
 		r = op(x, y)
 	}

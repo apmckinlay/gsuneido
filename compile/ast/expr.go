@@ -359,13 +359,9 @@ func (a *Nary) Eval(c Context) Value {
 	case tok.And:
 		return nary(exprs, c, and, False)
 	case tok.Cat:
-		return nary(exprs, c, opCat, nil)
+		return nary(exprs, c, OpCat, nil)
 	}
 	panic(assert.ShouldNotReachHere())
-}
-
-func opCat(x, y Value) Value {
-	return OpCat(nil, x, y)
 }
 
 func nary(exprs []Expr, c Context,

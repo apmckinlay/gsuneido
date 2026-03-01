@@ -238,43 +238,11 @@ loop:
 			fr.setSlot(fetchUint8(), th.Top())
 		case op.LoadStore:
 			i := fetchUint8()
-			op := fetchUint8()
-			x := fr.getSlot(i)
-			if x == nil {
-				panic("uninitialized variable: " + fr.fn.VarName(i))
-			}
-			y := th.stack[th.sp-1]
-			var result Value
-			switch op >> 1 {
-			case 0:
-				result = OpAdd(x, y)
-			case 1:
-				result = OpSub(x, y)
-			case 2:
-				result = OpCat(th, x, y)
-			case 3:
-				result = OpMul(x, y)
-			case 4:
-				result = OpDiv(x, y)
-			case 5:
-				result = OpMod(x, y)
-			case 6:
-				result = OpLeftShift(x, y)
-			case 7:
-				result = OpRightShift(x, y)
-			case 8:
-				result = OpBitOr(x, y)
-			case 9:
-				result = OpBitAnd(x, y)
-			case 10:
-				result = OpBitXor(x, y)
-			}
-			fr.setSlot(i, result)
-			if op&1 == 0 {
-				th.stack[th.sp-1] = result
-			} else { // retOrig
-				th.stack[th.sp-1] = x
-			}
+			n := fetchUint8()
+			op := []func(x, y Value) Value{
+				OpAdd, OpSub, OpCat, OpMul, OpDiv, OpMod,
+				OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n>>1]
+			th.stack[th.sp-1] = fr.getSetSlot(i, th.stack[th.sp-1], op, n&1 != 0)
 		case op.Dyload:
 			i := fetchUint8()
 			val := fr.getSlot(i)
@@ -377,14 +345,14 @@ loop:
 			ob.Put(th, m, val)
 			th.Push(val)
 		case op.GetPut:
-			i := fetchUint8()
+			n := fetchUint8()
 			op := []func(x, y Value) Value{
-				OpAdd, OpSub, th.Cat, OpMul, OpDiv, OpMod,
-				OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[i>>1]
+				OpAdd, OpSub, OpCat, OpMul, OpDiv, OpMod,
+				OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n>>1]
 			val := th.Pop()
 			m := th.Pop()
 			ob := th.Pop()
-			th.Push(ob.GetPut(th, m, val, op, i&1 != 0))
+			th.Push(ob.GetPut(th, m, val, op, n&1 != 0))
 		case op.RangeTo:
 			j := ToInt(th.Pop())
 			i := ToIndex(th.Pop())
@@ -427,7 +395,7 @@ loop:
 			th.stack[th.sp-1] = OpSub(th.stack[th.sp-1], th.stack[th.sp])
 		case op.Cat:
 			th.sp--
-			th.stack[th.sp-1] = OpCat(th, th.stack[th.sp-1], th.stack[th.sp])
+			th.stack[th.sp-1] = OpCat(th.stack[th.sp-1], th.stack[th.sp])
 		case op.CatN:
 			count := fetchUint8()
 			result := OpCatN(th, count)

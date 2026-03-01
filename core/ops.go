@@ -191,13 +191,13 @@ func OpUnaryMinus(x Value) Value {
 	return SuDnum{Dnum: ToDnum(x).Neg()}
 }
 
-func OpCat(th *Thread, x, y Value) Value {
+func OpCat(x, y Value) Value {
 	if ssx, ok := x.(SuStr); ok {
 		if ssy, ok := y.(SuStr); ok {
 			return cat2(string(ssx), string(ssy))
 		}
 	}
-	return cat3(th, x, y)
+	return cat3(x, y)
 }
 
 func cat2(xs, ys string) Value {
@@ -215,12 +215,12 @@ func cat2(xs, ys string) Value {
 	return NewSuConcat().Add(xs).Add(ys)
 }
 
-func cat3(th *Thread, x, y Value) Value {
+func cat3(x, y Value) Value {
 	var result Value
 	if xc, ok := x.(SuConcat); ok {
-		result = xc.Add(catToStr(th, y))
+		result = xc.Add(AsStr(y))
 	} else {
-		result = cat2(catToStr(th, x), catToStr(th, y))
+		result = cat2(AsStr(x), AsStr(y))
 	}
 	if xe, ok := x.(*SuExcept); ok {
 		return &SuExcept{SuStr: SuStr(AsStr(result)), Callstack: xe.Callstack}
@@ -229,13 +229,6 @@ func cat3(th *Thread, x, y Value) Value {
 		return &SuExcept{SuStr: SuStr(AsStr(result)), Callstack: ye.Callstack}
 	}
 	return result
-}
-
-func catToStr(th *Thread, v Value) string {
-	if d, ok := v.(ToStringable); ok {
-		return d.ToString(th)
-	}
-	return AsStr(v)
 }
 
 func OpCatN(th *Thread, count int) Value {
@@ -251,7 +244,7 @@ func OpCatN(th *Thread, count int) Value {
 		if ss, ok := v.(SuStr); ok {
 			totalLen += len(ss)
 		} else {
-			ss = SuStr(catToStr(th, v))
+			ss = SuStr(AsStr(v))
 			values[i] = ss
 			totalLen += len(ss)
 		}
