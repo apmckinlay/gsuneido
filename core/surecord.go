@@ -373,8 +373,9 @@ func (r *SuRecord) Erase(th *Thread, key Value) bool {
 }
 
 func (r *SuRecord) delete(th *Thread, key Value, fn func(Value) bool) bool {
-	r.Lock()
-	defer r.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
+	}
 	r.ensureDeps()
 	r.ob.mustBeMutable()
 	// have to unpack
@@ -455,8 +456,9 @@ func (r *SuRecord) Iter() Iter {
 // ------------------------------------------------------------------
 
 func (r *SuRecord) Put(th *Thread, keyval, val Value) {
-	r.Lock()
-	defer r.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
+	}
 	r.put(th, keyval, val)
 }
 func (r *SuRecord) put(th *Thread, keyval, val Value) {
@@ -496,8 +498,9 @@ func (r *SuRecord) invalidateDependents(key string) {
 
 func (r *SuRecord) GetPut(th *Thread, m, v Value,
 	op func(x, y Value) Value, retOrig bool) Value {
-	r.Lock()
-	defer r.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
+	}
 	orig := r.get(th, m)
 	if orig == nil {
 		MemberNotFound(m)
@@ -511,8 +514,9 @@ func (r *SuRecord) GetPut(th *Thread, m, v Value,
 }
 
 func (r *SuRecord) Invalidate(th *Thread, key string) {
-	r.Lock()
-	defer r.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
+	}
 	r.ensureDeps()
 	r.invalidate(key)
 	r.callObservers(th, key)
@@ -568,8 +572,9 @@ func (r *SuRecord) callObservers2(th *Thread, key string) {
 				r.activeObservers.Push(activeObserver{ofn, key})
 				defer r.activeObservers.Pop()
 				func() {
-					r.Unlock() // can't hold lock while calling observer
-					defer r.Lock()
+					if r.Unlock() { // can't hold lock while calling observer
+						defer r.Lock()
+					}
 					th.PushCall(ofn, r, argSpecMember, SuStr(key))
 				}()
 			}(ofn, key)
@@ -594,8 +599,9 @@ func (a activeObserver) Equal(other any) bool {
 
 // Get returns the value associated with a key, or defval if not found
 func (r *SuRecord) Get(th *Thread, key Value) Value {
-	r.Lock()
-	defer r.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
+	}
 	return r.get(th, key)
 }
 func (r *SuRecord) get(th *Thread, key Value) Value {
@@ -609,8 +615,9 @@ func (r *SuRecord) get(th *Thread, key Value) Value {
 // GetIfPresent is the same as Get
 // except it returns nil instead of defval for missing members
 func (r *SuRecord) GetIfPresent(th *Thread, keyval Value) Value {
-	r.Lock()
-	defer r.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
+	}
 	return r.getIfPresent(th, keyval)
 }
 func (r *SuRecord) getIfPresent(th *Thread, keyval Value) Value {
@@ -765,8 +772,9 @@ func (r *SuRecord) catchRule(th *Thread, rule Value, key string) Value {
 			WrapPanic(th, e, "rule for "+key)
 		}
 	}()
-	r.Unlock() // can't hold lock while calling rule
-	defer r.Lock()
+	if r.Unlock() { // can't hold lock while calling rule
+		defer r.Lock()
+	}
 	return th.CallThis(rule, r)
 }
 
@@ -896,8 +904,9 @@ func (r *SuRecord) Transaction() *SuTran {
 
 // ToRecord converts this SuRecord to a Record to be stored in the database
 func (r *SuRecord) ToRecord(th *Thread, hdr *Header) Record {
-	r.Lock()
-	defer r.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
+	}
 	r.ensureDeps()
 	fields := hdr.Fields[0]
 

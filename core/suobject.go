@@ -1103,13 +1103,15 @@ func (ob *SuObject) BinarySearch(value Value) int {
 
 // BinarySearch2 does a binary search with a user specified less than function
 func (ob *SuObject) BinarySearch2(th *Thread, value, lt Value) int {
-	ob.RLock()
-	defer ob.RUnlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
+	}
 	defer ob.clockCheck(ob.clock, "BinarySearch")
 	list := ob.list
 	return sort.Search(len(list), func(i int) bool {
-		ob.RUnlock() // can't hold lock while calling arbitrary code
-		defer ob.RLock()
+		if ob.RUnlock() { // can't hold lock while calling arbitrary code
+			defer ob.RLock()
+		}
 		return True != th.Call(lt, list[i], value)
 		// note: could become concurrent during lt
 	})
