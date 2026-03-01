@@ -555,6 +555,13 @@ type Function struct {
 	Pos2        int32
 	HasBlocks   bool
 	IsNewMethod bool
+	// SharedCount is the number of shared slots required by this
+	// function's closure tree (set on the outer function by ast.Blocks).
+	SharedCount int16
+	// Vars maps variable names to slot indexes.
+	// Local slots: < SharedSlotStart, Shared slots: >= SharedSlotStart
+	// Set by ast.Blocks for functions with blocks.
+	Vars map[string]int16
 }
 
 func (a *Function) String() string {

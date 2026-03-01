@@ -18,12 +18,13 @@ var BlockBreak = BuiltinSuExcept("block:break")
 var BlockContinue = BuiltinSuExcept("block:continue")
 var BlockReturn = BuiltinSuExcept("block return")
 
-// invoke sets up a frame to run a compiled Suneido function
+// invoke sets up a Frame and runs a compiled Suneido function
 // The stack must already be in the form required by the function (massaged)
-// WARNING: invoke does not pop the stack, the caller is responsible for that
+// WARNING: invoke does not pop the stack, the caller is responsible for that.
+// SuClosure.Call does similar setup, it should be kept in sync.
 func (th *Thread) invoke(fn *SuFunc, this Value) Value {
 	// reserve stack space for locals
-	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
+	for expand := fn.Nstack - fn.Nparams; expand > 0; expand-- {
 		th.Push(nil)
 	}
 	if th.fp >= len(th.frames) {
@@ -33,8 +34,13 @@ func (th *Thread) invoke(fn *SuFunc, this Value) Value {
 	fr.fn = fn
 	fr.this = this
 	fr.blockParent = nil
-	fr.locals = locals{v: th.stack[th.sp-int(fn.Nlocals) : th.sp]}
-	fr.ip = 0
+	fr.locals = th.stack[th.sp-int(fn.Nstack) : th.sp]
+	nshared := len(fn.Names) - int(fn.Nstack)
+	fr.shared = nil
+	if nshared > 0 {
+		fr.shared = &Shared{values: make([]Value, nshared)}
+		fr.moveLocalsToShared()
+	}
 	return th.run()
 }
 
@@ -44,8 +50,8 @@ func (th *Thread) invoke(fn *SuFunc, this Value) Value {
 // Called by Thread.invoke (above) and SuClosure.Call
 func (th *Thread) run() Value {
 	fr := &th.frames[th.fp]
-	fr.ip = 0
 	th.fp++
+	fr.ip = 0
 	if th.profile.enabled {
 		th.profile.calls[fr.fn]++
 	}
@@ -215,27 +221,27 @@ loop:
 			th.Push(fr.fn.Values[fetchUint8()])
 		case op.LoadLoad:
 			i := fetchUint8()
-			val := fr.locals.v[i]
+			val := fr.getSlot(i)
 			if val == nil {
-				panic("uninitialized variable: " + fr.fn.Names[i])
+				panic("uninitialized variable: " + fr.fn.VarName(i))
 			}
 			th.Push(val)
 			fallthrough
 		case op.Load:
 			i := fetchUint8()
-			val := fr.locals.v[i]
+			val := fr.getSlot(i)
 			if val == nil {
-				panic("uninitialized variable: " + fr.fn.Names[i])
+				panic("uninitialized variable: " + fr.fn.VarName(i))
 			}
 			th.Push(val)
 		case op.Store:
-			fr.locals.v[fetchUint8()] = th.Top()
+			fr.setSlot(fetchUint8(), th.Top())
 		case op.LoadStore:
 			i := fetchUint8()
 			op := fetchUint8()
-			x := fr.locals.v[i]
+			x := fr.getSlot(i)
 			if x == nil {
-				panic("uninitialized variable: " + fr.fn.Names[i])
+				panic("uninitialized variable: " + fr.fn.VarName(i))
 			}
 			y := th.stack[th.sp-1]
 			var result Value
@@ -263,7 +269,7 @@ loop:
 			case 10:
 				result = OpBitXor(x, y)
 			}
-			fr.locals.v[i] = result
+			fr.setSlot(i, result)
 			if op&1 == 0 {
 				th.stack[th.sp-1] = result
 			} else { // retOrig
@@ -271,7 +277,7 @@ loop:
 			}
 		case op.Dyload:
 			i := fetchUint8()
-			val := fr.locals.v[i]
+			val := fr.getSlot(i)
 			if val == nil {
 				val = th.dyload(fr, i)
 			}
@@ -279,9 +285,9 @@ loop:
 		case op.LoadValue:
 			// Load
 			localIdx := fetchUint8()
-			val := fr.locals.v[localIdx]
+			val := fr.getSlot(localIdx)
 			if val == nil {
-				panic("uninitialized variable: " + fr.fn.Names[localIdx])
+				panic("uninitialized variable: " + fr.fn.VarName(localIdx))
 			}
 			th.Push(val)
 			// Value
@@ -298,7 +304,7 @@ loop:
 			th.Push(fr.fn.Values[valueIdx])
 		case op.StorePop:
 			i := fetchUint8()
-			fr.locals.v[i] = th.Pop()
+			fr.setSlot(i, th.Pop())
 		case op.ThisLoad:
 			// This
 			if fr.this == nil {
@@ -307,9 +313,9 @@ loop:
 			th.Push(fr.this)
 			// Load
 			i := fetchUint8()
-			val := fr.locals.v[i]
+			val := fr.getSlot(i)
 			if val == nil {
-				panic("uninitialized variable: " + fr.fn.Names[i])
+				panic("uninitialized variable: " + fr.fn.VarName(i))
 			}
 			th.Push(val)
 		case op.GetValue:
@@ -336,9 +342,9 @@ loop:
 			th.Pop()
 			// Load
 			i := fetchUint8()
-			val := fr.locals.v[i]
+			val := fr.getSlot(i)
 			if val == nil {
-				panic("uninitialized variable: " + fr.fn.Names[i])
+				panic("uninitialized variable: " + fr.fn.VarName(i))
 			}
 			th.Push(val)
 		case op.Global:
@@ -539,7 +545,7 @@ loop:
 		case op.ForIn:
 			next := th.Top().(interface{ Next() Value }).Next()
 			if next != nil {
-				fr.locals.v[fetchUint8()] = next
+				fr.setSlot(fetchUint8(), next)
 				jump()
 			} else {
 				fr.ip += 3
@@ -549,8 +555,8 @@ loop:
 		case op.ForIn2:
 			m, v := th.Top().(SuIter2).iter2()
 			if m != nil {
-				fr.locals.v[fetchUint8()] = m
-				fr.locals.v[fetchUint8()] = v
+				fr.setSlot(fetchUint8(), m)
+				fr.setSlot(fetchUint8(), v)
 				jump()
 			} else {
 				fr.ip += 4
@@ -564,7 +570,7 @@ loop:
 			}
 		case op.ForRangeVar:
 			th.stack[th.sp-1] = OpAdd1(th.stack[th.sp-1])
-			fr.locals.v[fetchUint8()] = th.stack[th.sp-1]
+			fr.setSlot(fetchUint8(), th.stack[th.sp-1])
 			if strictCompare(th.stack[th.sp-1], th.stack[th.sp-2]) < 0 {
 				jump()
 			} else {
@@ -607,15 +613,15 @@ loop:
 		case op.Throw:
 			panic(th.Pop())
 		case op.Closure:
-			fr.locals.moveToHeap()
 			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
 			parent := fr
 			if fr.blockParent != nil {
 				parent = fr.blockParent
 			}
-			block := &SuClosure{SuFunc: fn, locals: fr.locals.v, this: fr.this,
+			// parent is the frame that will handle block returns
+			c := &SuClosure{SuFunc: fn, shared: fr.shared, this: fr.this,
 				parent: parent}
-			th.Push(block)
+			th.Push(c)
 		case op.BlockBreak:
 			panic(BlockBreak)
 		case op.BlockContinue:
@@ -771,16 +777,11 @@ func (th *Thread) popbool() bool {
 // dyload pushes a dynamic variable onto the stack
 // It looks up the frame stack to find it, and copies it locally
 func (th *Thread) dyload(fr *Frame, idx int) Value {
-	name := fr.fn.Names[idx]
+	name := fr.fn.VarName(idx)
 	for i := th.fp - 2; i >= 0; i-- {
-		fr2 := &th.frames[i]
-		for j, s := range fr2.fn.Names {
-			if s == name {
-				if x := fr2.locals.v[j]; x != nil {
-					fr.locals.v[idx] = x
-					return x
-				}
-			}
+		if x, ok := th.frames[i].lookupName(name); ok {
+			fr.setSlot(idx, x)
+			return x
 		}
 	}
 	panic("uninitialized variable: " + name)

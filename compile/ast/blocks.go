@@ -7,170 +7,252 @@ import (
 	"fmt"
 
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-type strset map[string]struct{}
-
-var yes = struct{}{}
-
-type blok struct {
-	block  *Block
-	parent *blok
-	params strset
-	vars   strset
-	hasRet bool
+// scope tracks block scope information during Blocks processing
+type scope struct {
+	parent   *scope    // nil for outer function
+	block    *Block    // nil for outer function (scopes[0])
+	fn       *Function // the function or block's function
+	hasThis  bool
+	hasSuper bool
+	hasRet   bool
 }
 
-type bloks struct {
-	cur   *blok
-	bloks []*blok
+// scopes manages the collection of scopes during Blocks processing
+type scopes struct {
+	cur    *scope
+	scopes []*scope // scopes[0] is the outer function
 }
 
-// Blocks sets compileAsFunction
-// if a block can be compiled as a function
+// Blocks sets CompileAsFunction if a block can be compiled as a function
 // i.e. isn't a closure, doesn't share any variables.
+// It also assigns slot indexes to variables:
+//   - Local stack frame slots:  < SharedSlotStart
+//   - Shared (heap) slots: >= SharedSlotStart
+//
 // NOTE: This is trickier than it seems.
-// e.g. Have to handle nested blocks and sharing between peer blocks.
-// Does not process nested functions (they're already codegen and not Ast);
-// they are checked as constructed bottom up.
+// due to e.g. nested blocks and parameter shadowing.
+// Blocks does not process nested *functions* (they're already codegen and not Ast);
+// they are handled as constructed bottom up.
 func Blocks(f *Function) {
-	// first traverse the ast and collect outer variables
-	// and a list of blocks, their params & variables, and their parent if nested.
-	var b bloks
-	vars := make(strset)
-	b.params(f.Params, vars)
+	var ss scopes
+	// Phase 1: Collect scopes and variables
+	ss.collect(f)
+	// Phase 2: Assign shared slots >= SharedSlotStart and set CompileAsFunction
+	ss.assignShared()
+	// Phase 3: Assign local slots < SharedSlotStart
+	ss.assignLocal()
+}
+
+// collect scopes and variables.
+func (ss *scopes) collect(f *Function) {
+	// Create scope for outer function (scopes[0])
+	ss.cur = &scope{block: nil, parent: nil, fn: f}
+	ss.scopes = append(ss.scopes, ss.cur)
+	// Initialize Vars on the outer function
+	f.Vars = make(map[string]int16)
+	// Add parameters with slot indexes starting at 0
+	AddParams(f.Params, f.Vars)
+	// Collect variables from the function body
+	vars := f.Vars
 	for _, stmt := range f.Body {
-		b.statement(stmt, vars)
+		ss.statement(stmt, vars, f)
 	}
-	// then check for variable sharing
-	for _, x := range b.bloks {
-		x.block.CompileAsFunction = true
-	}
-	for i, x := range b.bloks {
-		_, this := x.vars["this"]
-		_, super := x.vars["super"]
-		if this || super || x.hasRet || shares(x.vars, vars) ||
-			(x.parent != nil && shares(x.vars, x.parent.params)) {
-			closure(x)
+}
+
+// AddParams adds parameters to vars
+// assigning slot indexes starting at 0
+func AddParams(params []Param, vars map[string]int16) {
+	for i, p := range params {
+		if i >= SharedSlotStart {
+			panic("too many local variables")
 		}
-		for j := i + 1; j < len(b.bloks); j++ {
-			y := b.bloks[j]
-			if shares(x.vars, y.vars) {
-				closure(x)
-				closure(y)
+		vars[p.Name.ParamName()] = int16(i)
+	}
+}
+
+// assignShared slots (>= SharedSlotStart)
+// Variables shared between a block and its parent chain get shared slots
+// Also sets CompileAsFunction
+// NOTE: assignShared requires scopes to be top down (outer first)
+func (ss *scopes) assignShared() {
+	sharedIdx := int16(SharedSlotStart) // shared slots start at SharedSlotStart
+	// For each block scope (skip scopes[0] which is the outer function)
+	for _, s := range ss.scopes[1:] {
+		if s.block == nil {
+			continue
+		}
+		blockVars := s.block.Function.Vars
+		hasShared := false
+		// Check each variable in the block
+		for vname, vidx := range blockVars {
+			// Skip parameters (already assigned starting at 0)
+			if vidx >= 0 && vidx < SharedSlotStart {
+				continue
+			}
+			// Dynamic vars (_name) are never shared across scopes.
+			if vname != "" && vname[0] == '_' {
+				continue
+			}
+			// Walk up the parent chain to find shared variables
+			// but do NOT go past a parameter in the CURRENT scope
+			// that shadows an outer variable with the same name
+			// Note: we check s (current scope), not parent, because we want to
+			// stop if the variable we're searching for is a parameter in the
+			// block that captured it (creating a new binding)
+			for parent := s.parent; parent != nil; parent = parent.parent {
+				parentVars := parent.fn.Vars
+				if parentVidx, ok := parentVars[vname]; ok {
+					// Variable exists in parent
+					if parentVidx >= SharedSlotStart {
+						// Already assigned as shared, use same slot
+						blockVars[vname] = parentVidx
+						hasShared = true
+					} else if parentVidx >= 0 {
+						// Parameter in parent - make it shared
+						if sharedIdx > 255 {
+							panic("too many shared variables")
+						}
+						blockVars[vname] = sharedIdx
+						parentVars[vname] = sharedIdx
+						sharedIdx++
+						hasShared = true
+					} else {
+						// Variable in parent is unassigned - make it shared
+						if sharedIdx > 255 {
+							panic("too many shared variables")
+						}
+						blockVars[vname] = sharedIdx
+						parentVars[vname] = sharedIdx
+						sharedIdx++
+						hasShared = true
+					}
+					break // found in parent, no need to continue up chain
+				}
+			}
+		}
+		// Block can be compiled as function if:
+		// - no shared variables
+		// - no this/super references
+		// - no return statement
+		// Only set to false (never back to true, since inner blocks may have set it)
+		if hasShared || s.hasThis || s.hasSuper || s.hasRet {
+			s.block.CompileAsFunction = false
+			// Parents must be closures too
+			for parent := s.parent; parent != nil; parent = parent.parent {
+				if parent.block != nil {
+					if !parent.block.CompileAsFunction {
+						break // already false, no need to continue
+					}
+					parent.block.CompileAsFunction = false
+				}
+			}
+		}
+	}
+	root := ss.scopes[0].fn
+	root.SharedCount = sharedIdx - SharedSlotStart
+}
+
+// assignLocal slots (< SharedSlotStart)
+// Unshared variables get local slots starting at len(params)
+func (ss *scopes) assignLocal() {
+	for _, s := range ss.scopes {
+		vars := s.fn.Vars
+		nextSlot := int16(len(s.fn.Params))
+		for vname, vidx := range vars {
+			if vidx == -1 { // unassigned
+				if nextSlot >= SharedSlotStart {
+					panic("too many local variables")
+				}
+				vars[vname] = nextSlot
+				nextSlot++
 			}
 		}
 	}
 }
 
-func shares(v1, v2 strset) bool {
-	for v := range v1 {
-		if _, ok := v2[v]; ok {
-			return true
-		}
-	}
-	return false
-}
-
-func closure(x *blok) {
-	for x != nil {
-		x.block.CompileAsFunction = false
-		x = x.parent
-	}
-}
-
-func (b *bloks) params(params []Param, vars strset) {
-	for _, p := range params {
-		name := p.Name.Name
-		switch name[0] {
-		case '.':
-			name = str.UnCapitalize(name[1:])
-		case '@', '_':
-			name = name[1:]
-		}
-		vars[name] = yes
-	}
-}
+// ast traversal (used by scopes.collect) ---------------------------
 
 // statement processes one statement (and its children)
-func (b *bloks) statement(stmt Statement, vars strset) {
+func (ss *scopes) statement(stmt Statement, vars map[string]int16, fn *Function) {
 	if stmt == nil {
 		return
 	}
 	switch stmt := stmt.(type) {
 	case *Compound:
 		for _, stmt := range stmt.Body {
-			b.statement(stmt, vars)
+			ss.statement(stmt, vars, fn)
 		}
 	case *ExprStmt:
-		b.expr(stmt.E, vars)
+		ss.expr(stmt.E, vars, fn)
 	case *Return:
-		if b.cur != nil {
-			b.cur.hasRet = true
+		if ss.cur != nil && ss.cur.block != nil {
+			ss.cur.hasRet = true
 		}
 		for _, expr := range stmt.Exprs {
-			b.expr(expr, vars)
+			ss.expr(expr, vars, fn)
 		}
 	case *MultiAssign:
 		// see expr Binary Eq
 		for _, expr := range stmt.Lhs {
 			id := expr.(*Ident)
-			vars[id.Name] = yes
+			ss.addVar(id.Name, vars)
 		}
-		b.expr(stmt.Rhs, vars)
+		ss.expr(stmt.Rhs, vars, fn)
 	case *Throw:
-		b.expr(stmt.E, vars)
+		ss.expr(stmt.E, vars, fn)
 	case *TryCatch:
-		b.statement(stmt.Try, vars)
+		ss.statement(stmt.Try, vars, fn)
 		if stmt.CatchVar.Name != "" {
-			vars[stmt.CatchVar.Name] = yes
+			ss.addVar(stmt.CatchVar.Name, vars)
 		}
-		b.statement(stmt.Catch, vars)
+		ss.statement(stmt.Catch, vars, fn)
 	case *While:
-		b.expr(stmt.Cond, vars)
-		b.statement(stmt.Body, vars)
+		ss.expr(stmt.Cond, vars, fn)
+		ss.statement(stmt.Body, vars, fn)
 	case *Forever:
-		b.statement(stmt.Body, vars)
+		ss.statement(stmt.Body, vars, fn)
 	case *DoWhile:
-		b.statement(stmt.Body, vars)
-		b.expr(stmt.Cond, vars)
+		ss.statement(stmt.Body, vars, fn)
+		ss.expr(stmt.Cond, vars, fn)
 	case *If:
-		b.expr(stmt.Cond, vars)
-		b.statement(stmt.Then, vars)
-		b.statement(stmt.Else, vars)
+		ss.expr(stmt.Cond, vars, fn)
+		ss.statement(stmt.Then, vars, fn)
+		ss.statement(stmt.Else, vars, fn)
 	case *Switch:
-		b.expr(stmt.E, vars)
+		ss.expr(stmt.E, vars, fn)
 		for _, c := range stmt.Cases {
 			for _, e := range c.Exprs {
-				b.expr(e, vars)
+				ss.expr(e, vars, fn)
 			}
 			for _, stmt := range c.Body {
-				b.statement(stmt, vars)
+				ss.statement(stmt, vars, fn)
 			}
 		}
 		for _, d := range stmt.Default {
-			b.statement(d, vars)
+			ss.statement(d, vars, fn)
 		}
 	case *ForIn:
 		if stmt.Var.Name != "" {
-			vars[stmt.Var.Name] = yes
+			ss.addVar(stmt.Var.Name, vars)
 		}
 		if stmt.Var2.Name != "" {
-			vars[stmt.Var2.Name] = yes
+			ss.addVar(stmt.Var2.Name, vars)
 		}
-		b.expr(stmt.E, vars)
-		b.expr(stmt.E2, vars)
-		b.statement(stmt.Body, vars)
+		ss.expr(stmt.E, vars, fn)
+		ss.expr(stmt.E2, vars, fn)
+		ss.statement(stmt.Body, vars, fn)
 	case *For:
 		for _, expr := range stmt.Init {
-			b.expr(expr, vars)
+			ss.expr(expr, vars, fn)
 		}
-		b.expr(stmt.Cond, vars)
-		b.statement(stmt.Body, vars)
+		ss.expr(stmt.Cond, vars, fn)
+		ss.statement(stmt.Body, vars, fn)
 		for _, expr := range stmt.Inc {
-			b.expr(expr, vars)
+			ss.expr(expr, vars, fn)
 		}
 	case *Break, *Continue:
 		// nothing to do
@@ -179,7 +261,7 @@ func (b *bloks) statement(stmt Statement, vars strset) {
 	}
 }
 
-func (b *bloks) expr(expr Expr, vars strset) {
+func (ss *scopes) expr(expr Expr, vars map[string]int16, fn *Function) {
 	if expr == nil {
 		return
 	}
@@ -188,56 +270,79 @@ func (b *bloks) expr(expr Expr, vars strset) {
 		if expr.Tok == tok.Eq {
 			if id, ok := expr.Lhs.(*Ident); ok {
 				// assignment
-				vars[id.Name] = yes
-				b.expr(expr.Rhs, vars)
+				ss.addVar(id.Name, vars)
+				ss.expr(expr.Rhs, vars, fn)
 				break
 			}
 		}
-		b.expr(expr.Lhs, vars)
-		b.expr(expr.Rhs, vars)
+		ss.expr(expr.Lhs, vars, fn)
+		ss.expr(expr.Rhs, vars, fn)
 	case *Ident:
-		if !ascii.IsUpper(expr.Name[0]) {
-			vars[expr.Name] = yes
+		if expr.Name == "this" {
+			if ss.cur != nil && ss.cur.block != nil {
+				ss.cur.hasThis = true
+			}
+			break
+		}
+		if expr.Name == "super" {
+			if ss.cur != nil && ss.cur.block != nil {
+				ss.cur.hasSuper = true
+			}
+			break
+		}
+		if isLocalVarName(expr.Name) {
+			ss.addVar(expr.Name, vars)
 		}
 	case *Trinary:
-		b.expr(expr.Cond, vars)
-		b.expr(expr.T, vars)
-		b.expr(expr.F, vars)
+		ss.expr(expr.Cond, vars, fn)
+		ss.expr(expr.T, vars, fn)
+		ss.expr(expr.F, vars, fn)
 	case *Nary:
 		if expr.Tok == tok.And || expr.Tok == tok.Or {
-			b.expr(expr.Exprs[0], vars) // first is always done
+			ss.expr(expr.Exprs[0], vars, fn) // first is always done
 			for _, e := range expr.Exprs[1:] {
-				b.expr(e, vars) // rest are conditional
+				ss.expr(e, vars, fn) // rest are conditional
 			}
 		} else {
 			expr.Children(func(e Node) Node {
-				b.expr(e.(Expr), vars)
+				ss.expr(e.(Expr), vars, fn)
 				return e
 			})
 		}
 	case *Block:
-		b.block(expr)
+		ss.block(expr)
 	default:
 		expr.Children(func(e Node) Node {
-			b.expr(e.(Expr), vars)
+			ss.expr(e.(Expr), vars, fn)
 			return e
 		})
 	}
 }
 
-func (b *bloks) block(block *Block) {
-	parent := b.cur
-	params := make(strset)
-	b.params(block.Params, params)
-	b.cur = &blok{block: block, parent: parent, params: params}
-	blockVars := make(strset)
+// addVar adds a variable to the vars map if not already present
+// Variables are initialized with slot index -1 (unassigned)
+func (ss *scopes) addVar(name string, vars map[string]int16) {
+	if _, ok := vars[name]; !ok {
+		vars[name] = -1 // unassigned
+	}
+}
+
+func isLocalVarName(name string) bool {
+	return ascii.IsLower(name[0]) ||
+		(name[0] == '_' && len(name) > 1 && ascii.IsLower(name[1]))
+}
+
+func (ss *scopes) block(block *Block) {
+	parent := ss.cur
+	ss.cur = &scope{block: block, parent: parent, fn: &block.Function}
+	// append before recursing so scopes are top down
+	ss.scopes = append(ss.scopes, ss.cur)
+	block.Function.Vars = make(map[string]int16)
+	block.CompileAsFunction = true
+	AddParams(block.Params, block.Function.Vars)
+	blockVars := block.Function.Vars
 	for _, stmt := range block.Body {
-		b.statement(stmt, blockVars)
+		ss.statement(stmt, blockVars, &block.Function)
 	}
-	for v := range params {
-		delete(blockVars, v)
-	}
-	b.cur.vars = blockVars
-	b.bloks = append(b.bloks, b.cur)
-	b.cur = parent
+	ss.cur = parent
 }

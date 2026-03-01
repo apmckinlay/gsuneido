@@ -121,6 +121,15 @@ type dasm struct {
 	nest int
 }
 
+// varName returns the variable name for idx, appending '^' if it's a shared variable.
+func (d *dasm) varName(idx uint8) string {
+	name := d.fn.VarName(int(idx))
+	if idx >= SharedSlotStart {
+		return name + "^"
+	}
+	return name
+}
+
 func (d *dasm) next() *SuFunc {
 	fetchUint8 := func() uint8 {
 		d.i++
@@ -164,24 +173,24 @@ func (d *dasm) next() *SuFunc {
 		nestedfn = f
 	case op.Load, op.Store, op.Dyload:
 		idx := fetchUint8()
-		s += " " + d.fn.Names[idx]
+		s += " " + d.varName(idx)
 	case op.LoadValue:
 		localIdx := fetchUint8()
 		valueIdx := fetchUint8()
-		s += " " + d.fn.Names[localIdx] + fmt.Sprintf(" %v", d.fn.Values[valueIdx])
+		s += " " + d.varName(localIdx) + fmt.Sprintf(" %v", d.fn.Values[valueIdx])
 	case op.LoadLoad:
 		idx1 := fetchUint8()
 		idx2 := fetchUint8()
-		s += " " + d.fn.Names[idx1] + " " + d.fn.Names[idx2]
+		s += " " + d.varName(idx1) + " " + d.varName(idx2)
 	case op.ValueGet, op.ThisValue, op.GetValue:
 		valueIdx := fetchUint8()
 		s += fmt.Sprintf(" %v", d.fn.Values[valueIdx])
 	case op.StorePop, op.ThisLoad, op.PopLoad:
 		idx := fetchUint8()
-		s += " " + d.fn.Names[idx]
+		s += " " + d.varName(idx)
 	case op.LoadStore:
 		idx := fetchUint8()
-		s += " " + d.fn.Names[idx]
+		s += " " + d.varName(idx)
 		fallthrough
 	case op.GetPut:
 		i := fetchUint8()
@@ -200,19 +209,19 @@ func (d *dasm) next() *SuFunc {
 	case op.ForIn:
 		idx := fetchUint8()
 		j := fetchInt16()
-		s += " " + d.fn.Names[idx] + fmt.Sprint(" ", d.i+j)
+		s += " " + d.varName(idx) + fmt.Sprint(" ", d.i+j)
 	case op.ForIn2:
 		v1 := fetchUint8()
 		v2 := fetchUint8()
 		j := fetchInt16()
-		s += " " + d.fn.Names[v1] + " " + d.fn.Names[v2] + fmt.Sprint(" ", d.i+j)
+		s += " " + d.varName(v1) + " " + d.varName(v2) + fmt.Sprint(" ", d.i+j)
 	case op.ForRange:
 		j := fetchInt16()
 		s += fmt.Sprint(" ", d.i+j)
 	case op.ForRangeVar:
 		idx := fetchUint8()
 		j := fetchInt16()
-		s += " " + d.fn.Names[idx] + fmt.Sprint(" ", d.i+j)
+		s += " " + d.varName(idx) + fmt.Sprint(" ", d.i+j)
 	case op.Try:
 		j := fetchInt16()
 		v := d.fn.Values[fetchUint8()]

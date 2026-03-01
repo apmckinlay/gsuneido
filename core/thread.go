@@ -247,15 +247,37 @@ func (th *Thread) locals(i int) *SuObject {
 	if fr.this != nil {
 		locals.Set(SuStr("this"), fr.this)
 	}
-	for i, v := range fr.locals.v {
-		if v != nil && fr.fn != nil && i < len(fr.fn.Names) {
+	if fr.fn != nil {
+		for i, v := range fr.locals {
+			if v == nil {
+				continue
+			}
 			if se, ok := v.(*SuExcept); ok {
-				// only capture exception string to avoid chaining
-				// the string is probably all we'd look at anyway
-				// type assertion to concrete type should be fast
 				v = se.SuStr
 			}
-			locals.Set(SuStr(fr.fn.Names[i]), v)
+			locals.Set(SuStr(fr.fn.VarName(i)), v)
+		}
+		if fr.shared != nil {
+			nsharedNames := len(fr.fn.Names) - int(fr.fn.Nstack)
+			for j, v := range fr.shared.values {
+				if j >= nsharedNames {
+					continue
+				}
+				if v == nil {
+					continue
+				}
+				name := fr.fn.VarName(SharedSlotStart + j)
+				if name == "" {
+					continue
+				}
+				if se, ok := v.(*SuExcept); ok {
+					// only capture exception string to avoid chaining
+					// the string is probably all we'd look at anyway
+					// type assertion to concrete type should be fast
+					v = se.SuStr
+				}
+				locals.Set(SuStr(name), v)
+			}
 		}
 	}
 	return locals

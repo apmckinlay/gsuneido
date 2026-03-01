@@ -144,13 +144,8 @@ func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 
 func (th *Thread) dyn(name string) Value {
 	for i := th.fp - 1; i >= 0; i-- {
-		fr := th.frames[i]
-		for j, s := range fr.fn.Names {
-			if s == name {
-				if x := fr.locals.v[j]; x != nil {
-					return x
-				}
-			}
+		if x, ok := th.frames[i].lookupName(name); ok {
+			return x
 		}
 	}
 	return nil

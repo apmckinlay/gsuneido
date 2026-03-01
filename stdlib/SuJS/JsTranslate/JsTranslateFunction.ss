@@ -34,6 +34,7 @@ JsTranslate // inherit to get output stuff
 		.Print('(') // start of IIFE
 		.func()
 		start = .PrintPos()
+		before = after = false
 		params = ast.params
 		.Indented()
 			{

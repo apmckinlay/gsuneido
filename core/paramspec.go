@@ -11,6 +11,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+// SharedSlotStart is the first shared slot index (192-255)
+const SharedSlotStart = 192
+
 type sufunction struct{}
 
 // ParamSpec describes the parameters of a function
@@ -37,6 +40,9 @@ type ParamSpec struct {
 	Flags []Flag
 
 	// Names normally starts with the parameters, followed by local variables
+	// For functions with shared variables (closures):
+	// - Names[0:Nstack] = local variable names (index 0-SharedSlotStart-1)
+	// - Names[Nstack:] = shared variable names (index SharedSlotStart-255)
 	Names []string
 
 	// Nparams is the number of arguments required on the stack
@@ -46,12 +52,9 @@ type ParamSpec struct {
 	// They are in the start of Values
 	Ndefaults uint8
 
-	// Offset is the location of the parameter names within Names
-	// and the arguments within Locals
-	// It is used for closure blocks, for normal functions it is 0
-	// Offset is only required for parameters (or arguments),
-	// it is not needed for local variables
-	Offset uint8
+	// Nstack is the stack size required for arguments and unshared locals.
+	// Shared variable names start at Names[Nstack].
+	Nstack uint8
 
 	// Signature is used for fast matching of simple Argspec to ParamSpec
 	Signature byte
@@ -101,7 +104,17 @@ func (ps *ParamSpec) String() string {
 }
 
 func (ps *ParamSpec) ParamName(i int) string {
-	return ps.Names[i+int(ps.Offset)]
+	return ps.Names[i]
+}
+
+// VarName returns the variable name for a given slot index.
+// For local variables (index 0-SharedSlotStart-1), returns Names[idx].
+// For shared variables (index SharedSlotStart-255), returns Names[Nstack + (idx - SharedSlotStart)].
+func (ps *ParamSpec) VarName(idx int) string {
+	if idx >= SharedSlotStart {
+		return ps.Names[int(ps.Nstack)+idx-SharedSlotStart]
+	}
+	return ps.Names[idx]
 }
 
 func flagsToName(p string, flags Flag) string {

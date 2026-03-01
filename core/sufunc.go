@@ -34,9 +34,6 @@ type SuFunc struct {
 	// SrcBase is the starting point for the SrcPos source deltas
 	SrcBase int
 
-	// Nlocals is the number of parameters and local variables
-	Nlocals uint8
-
 	IsBlock bool
 }
 

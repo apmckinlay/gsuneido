@@ -200,7 +200,6 @@ func BenchmarkLoadValue(b *testing.B) {
 			Names:   []string{"x"},          // Local var name at index 0
 			Nparams: 1,                      // Treat as parameter so it gets initialized
 		},
-		Nlocals: 1,
 	}
 	var th Thread
 	th.Push(SuStr("local_value")) // Push parameter value outside loop
@@ -224,7 +223,6 @@ func BenchmarkLoadValueUnoptimized(b *testing.B) {
 			Names:   []string{"x"},          // Local var name at index 0
 			Nparams: 1,                      // Treat as parameter so it gets initialized
 		},
-		Nlocals: 1,
 	}
 	var th Thread
 	th.Push(SuStr("local_value")) // Push parameter value outside loop

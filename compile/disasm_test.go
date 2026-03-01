@@ -119,4 +119,63 @@ func TestDisasm(t *testing.T) {
 	    47: return e
 			   12: Load e
 			   14: Return`)
+
+	// block tests - simple block without captured variables
+	test(`function () {
+		b = { }
+		}`,
+		`16: b = { }
+		        0: Value b /* block */
+		        2: Store b`)
+
+	// block that references a local variable (requires closure)
+	test(`function (x) {
+		b = { x }
+		}`,
+		`17: b = {
+                    0: Closure
+        >    23: x }
+        >             0: Load x^
+                    2: Store b`)
+
+	// block that captures and modifies a shared variable
+	test(`function () {
+		x = 1
+		b = { x = x + 1 }
+		}`,
+		`16: x = 1
+		        0: One
+		        1: StorePop x^
+	   24: b = {
+		        3: Closure
+		>    30: x = x + 1 }
+		>             0: Load x^
+		>             2: One
+		>             3: Add
+		>             4: Store x^
+		        5: Store b`)
+
+	// closure with parameters
+	test(`function (x) {
+		b = {|a| a + x }
+		}`,
+		`17: b = {|a|
+                    0: Closure
+        >    26: a + x }
+        >             0: LoadLoad a x^
+        >             3: Add
+                    2: Store b`)
+
+	// nested blocks with shared variable
+	test(`function (x) {
+		b1 = { b2 = { x } }
+		}`,
+		`17: b1 = {
+                    0: Closure
+        >    24: b2 = {
+        >             0: Closure
+        > >             0: Load x^
+        >             2: Store b2
+                    2: Store b1`)
+
 }

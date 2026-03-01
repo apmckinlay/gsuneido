@@ -18,12 +18,18 @@ func TestCodegen(t *testing.T) {
 	defer func() { DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
-		classNum.Store(0)
-		ast := parseFunction("function () {\n" + src + "\n}")
-		fn := codegen("", "", ast, nil).(*SuFunc)
-		actual := disasm(fn)
-		if actual != expected {
-			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
+		for _, forceHasBlocks := range []bool{false, true} {
+			classNum.Store(0)
+			ast := parseFunction("function () {\n" + src + "\n}")
+			if forceHasBlocks {
+				ast.HasBlocks = true
+			}
+			fn := codegen("", "", ast, nil).(*SuFunc)
+			actual := disasm(fn)
+			if actual != expected {
+				t.Errorf("\n%s\nforceHasBlocks: %v\nexpect: %s\nactual: %s",
+					src, forceHasBlocks, expected, actual)
+			}
 		}
 	}
 	test("true", "True")
@@ -70,6 +76,10 @@ func TestCodegen(t *testing.T) {
 	test("a,b = f()",
 		"Load f, CallFuncNilOk (), PushReturn 2, StorePop a, StorePop b")
 	test("_dyn = 123", "Int 123, Store _dyn")
+	test("++_x", "One, Dyload _x, Pop, LoadStore _x AddEq")
+	test("_x += 1", "One, Dyload _x, Pop, LoadStore _x AddEq")
+	test("_x += 1; b = { }", 
+		"One, Dyload _x, Pop, LoadStore _x AddEq, Pop, Value b /* block */, Store b")
 	test("a = b = c", "Load c, Store b, Store a")
 	test("a = b; not a", "Load b, StorePop a, Load a, Not")
 	test("n += 5", "Int 5, LoadStore n AddEq")
@@ -157,6 +167,15 @@ func TestCodegen(t *testing.T) {
 		assert.This(func() { codegen("", "", ast, nil) }).Panics(expected)
 	}
 	xtest("b = { return 1, 2, 3}", "not allowed")
+}
+
+func TestCodegen_OverloadedGlobalRef(t *testing.T) {
+	prev := NamedConstant("", "A", "function () { }", nil)
+	// need a block to get into Blocks code
+	fn := NamedConstant("", "A", "function () { b = { }; _A() }", prev).(*SuFunc)
+	ops := disasm(fn)
+	assert.T(t).This(strings.Contains(ops, "Dyload _A")).Is(false)
+	assert.T(t).This(strings.Contains(ops, "Value")).Is(true)
 }
 
 func TestCodegenSuper(t *testing.T) {
@@ -572,13 +591,14 @@ func TestBlock(t *testing.T) {
 	fn := codegen("", "", ast, nil).(*SuFunc)
 	block := fn.Values[0].(*SuFunc)
 
-	assert(fn.Names).Is([]string{"x", "b", "a|2"})
-	assert(block.Names).Is([]string{"x", "b", "a"})
-	assert(int(block.Offset)).Is(2)
+	assert(fn.Nstack).Is(uint8(2))
+	assert(fn.Names[fn.Nstack:]).Is([]string{"x"})
+	assert(block.Nstack).Is(uint8(1))
+	assert(block.Names[block.Nstack:]).Is([]string{"x"})
 
 	assert(block.ParamSpec.Params()).Is("(a)")
 
-	assert(disasm(fn)).Is("Closure, {LoadLoad a x, Add, Store b}")
+	assert(disasm(fn)).Is("Closure, {LoadLoad a x^, Add, Store b}")
 }
 
 // parseFunction parses a function and returns an AST for it
@@ -586,9 +606,3 @@ func parseFunction(src string) *ast.Function {
 	p := NewParser(src)
 	return p.Function()
 }
-
-// func TestBug(t *testing.T) {
-// 	assert.T(t).
-// 		This(func() { parseFunction("function (x) { a = function() { _ } }") }).
-// 		Panics("syntax error @32 invalid identifier: '_'")
-// }

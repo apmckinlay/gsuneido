@@ -8,7 +8,6 @@ package compile
 import (
 	"fmt"
 	"math"
-	"strconv"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -25,7 +24,7 @@ import (
 // cgen is the context/results for compiling a function or block
 type cgen struct {
 	prevDef Value
-	outerFn *ast.Function
+	fn      *ast.Function // current function being compiled
 	// srcPos contains pairs of source and code position deltas
 	srcPos   []byte
 	argspecs []ArgSpec
@@ -80,16 +79,20 @@ func codegen(lib, name string, fn *ast.Function, prevDef Value) Value {
 	}
 	if fn.HasBlocks {
 		ast.Blocks(fn)
+	} else {
+		// Initialize Vars for functions without blocks
+		fn.Vars = make(map[string]int16)
+		ast.AddParams(fn.Params, fn.Vars)
 	}
-	f := codegen2(lib, name, fn, fn, prevDef)
+	f := codegen2(lib, name, fn, false, prevDef)
 	return f
 }
 
-func codegen2(lib, name string, fn *ast.Function, outerFn *ast.Function,
+func codegen2(lib, name string, fn *ast.Function, isBlock bool,
 	prevDef Value) *SuFunc {
 	cover := options.Coverage.Load()
-	cg := cgen{outerFn: outerFn, base: fn.Base, isNew: fn.IsNewMethod,
-		isBlock: fn != outerFn, cover: cover, prevDef: prevDef}
+	cg := cgen{fn: fn, base: fn.Base, isNew: fn.IsNewMethod,
+		isBlock: isBlock, cover: cover, prevDef: prevDef}
 	cg.Lib = lib
 	cg.Name = name
 	return cg.codegen(fn)
@@ -102,6 +105,7 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 		}
 	}()
 	cg.function(fn)
+	cg.buildNames(fn)
 	cg.finishParamSpec()
 	cg.argspecs = slc.Shrink(cg.argspecs)
 	for i := range cg.argspecs {
@@ -110,7 +114,6 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 
 	return &SuFunc{
 		Code:      hacks.BStoS(cg.code),
-		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
 		ArgSpecs:  cg.argspecs,
 		SrcPos:    hacks.BStoS(cg.srcPos),
@@ -118,26 +121,67 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	}
 }
 
+// buildNames constructs the Names slice from Function.Vars.
+// Parameters come first, then other local variables (< SharedSlotStart)
+// followed by shared variables (>= SharedSlotStart)
+func (cg *cgen) buildNames(fn *ast.Function) {
+	// Find max indices for locals and shareds.
+	var maxLocal, maxShared int16 = -1, -1
+	for _, idx := range fn.Vars {
+		if idx >= SharedSlotStart {
+			if idx > maxShared {
+				maxShared = idx
+			}
+		} else if idx > maxLocal {
+			maxLocal = idx
+		}
+	}
+
+	// Ensure local slots include all parameters, even if some were promoted to shared.
+	nparams := len(fn.Params)
+	localCount := max(int(maxLocal)+1, nparams)
+
+	sharedCount := 0
+	if maxShared >= SharedSlotStart {
+		sharedCount = int(maxShared-SharedSlotStart) + 1
+	}
+	if int(fn.SharedCount) > sharedCount {
+		sharedCount = int(fn.SharedCount)
+	}
+
+	names := make([]string, localCount+sharedCount)
+
+	// Parameter names always occupy their local parameter slots.
+	for i, p := range fn.Params {
+		names[i], _ = param(p.Name.Name)
+	}
+
+	// Fill non-parameter locals and shared slots from Vars.
+	for name, idx := range fn.Vars {
+		if idx >= SharedSlotStart {
+			names[localCount+int(idx-SharedSlotStart)] = name
+		} else if names[idx] == "" {
+			names[idx] = name
+		}
+	}
+
+	cg.Names = names
+	cg.Nstack = uint8(localCount)
+}
+
 func codegenClosureBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
-	base := len(outercg.Names)
-	cg := cgen{outerFn: outercg.outerFn, base: outercg.base, isBlock: true,
-		cover: outercg.cover}
-	cg.Names = outercg.Names
+	cg := cgen{
+		fn:      ast,
+		base:    outercg.base,
+		isBlock: true,
+		cover:   outercg.cover,
+	}
 	cg.Lib = outercg.Lib
 	cg.Name = outercg.Name
 
 	f := cg.codegen(ast)
 
-	// hide parameters from outer function
-	outerNames := f.Names
-	f.Names = make([]string, len(outerNames))
-	assert.That(base <= math.MaxUint8)
-	f.Offset = uint8(base)
-	copy(f.Names, outerNames)
-	for i := range int(f.Nparams) {
-		outerNames[base+i] += "|" + strconv.Itoa(base+i)
-	}
-	return f, outerNames
+	return f, cg.Names
 }
 
 func (cg *cgen) finishParamSpec() {
@@ -694,18 +738,25 @@ func isLocal(s string) bool {
 	return 'a' <= s[0] && s[0] <= 'z'
 }
 
-// name returns the index for a name variable
+// name returns the slot index for a variable
 func (cg *cgen) name(s string) int {
-	// have to search backwards to find block params before outer vars
-	for i := len(cg.Names) - 1; i >= 0; i-- {
-		if s == cg.Names[i] {
-			return i
+	// Look up pre-assigned slot index from Function.Vars
+	if idx, ok := cg.fn.Vars[s]; ok {
+		i := int(idx)
+		if i >= len(cg.Names) {
+			cg.Names = append(cg.Names, make([]string, i-len(cg.Names)+1)...)
 		}
+		if cg.Names[i] == "" {
+			cg.Names[i] = s
+		}
+		return i
 	}
+	// Variable not in Vars - assign dynamically (for functions without blocks)
 	i := len(cg.Names)
-	if i > math.MaxUint8 {
-		panic("too many local variables (>255)")
+	if i >= SharedSlotStart {
+		panic("too many local variables (>=SharedSlotStart)")
 	}
+	cg.fn.Vars[s] = int16(i)
 	cg.Names = append(cg.Names, s)
 	return i
 }
@@ -793,7 +844,7 @@ func (cg *cgen) binary(node *ast.Binary) {
 }
 
 func (cg *cgen) handleDynamic(ref int) {
-	if cg.Names[ref][0] == '_' {
+	if ref < len(cg.Names) && cg.Names[ref][0] == '_' {
 		cg.emitUint8(op.Dyload, ref)
 		cg.emit(op.Pop)
 	}
@@ -1080,11 +1131,11 @@ func (cg *cgen) block(b *ast.Block) {
 	f := &b.Function
 	var fn *SuFunc
 	if b.CompileAsFunction {
-		fn = codegen2(cg.Lib, b.Name, f, cg.outerFn, cg.prevDef)
+		fn = codegen2(cg.Lib, b.Name, f, true, cg.prevDef)
 		cg.emitValue(fn)
 	} else {
 		// closure
-		fn, cg.Names = codegenClosureBlock(f, cg)
+		fn, _ = codegenClosureBlock(f, cg)
 		i := cg.value(fn)
 		cg.emitUint8(op.Closure, i)
 	}

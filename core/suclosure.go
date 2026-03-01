@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core/types"
-	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 // SuClosure is an instance of a closure block
@@ -16,9 +15,8 @@ type SuClosure struct {
 	// parent is the Frame of the outer function that created this closure.
 	// It is used by interp to handle block returns.
 	parent *Frame
-	locals []Value // if concurrent, then read-only
+	shared *Shared // captured shared variables from parent frame
 	*SuFunc
-	concurrent bool
 }
 
 // Value interface
@@ -33,21 +31,15 @@ func (b *SuClosure) Equal(other any) bool {
 	return b == other
 }
 
+// Call sets up a Frame and runs a closure.
+// Thread.invoke (interp.go) does similar setup, it should be kept in sync.
 func (b *SuClosure) Call(th *Thread, this Value, as *ArgSpec) Value {
-	bf := b.SuFunc
-
-	v := b.locals
-	if b.concurrent {
-		// make a mutable copy of the locals for the frame
-		v = slc.Clone(b.locals)
-	}
+	fn := b.SuFunc
 
 	// normally done by SuFunc Call
-	args := th.Args(&b.ParamSpec, as)
-
-	// copy args
-	for i := range int(b.Nparams) {
-		v[int(bf.Offset)+i] = args[i]
+	th.Args(&b.ParamSpec, as)
+	for expand := fn.Nstack - fn.Nparams; expand > 0; expand-- {
+		th.Push(nil)
 	}
 
 	if this == nil {
@@ -57,10 +49,12 @@ func (b *SuClosure) Call(th *Thread, this Value, as *ArgSpec) Value {
 		panic("function call overflow")
 	}
 	fr := &th.frames[th.fp]
-	fr.fn = bf
+	fr.fn = fn
 	fr.this = this
 	fr.blockParent = b.parent
-	fr.locals = locals{v: v, onHeap: true}
+	fr.locals = th.stack[th.sp-int(fn.Nstack) : th.sp]
+	fr.shared = b.shared
+	fr.moveLocalsToShared()
 	return th.run()
 }
 
@@ -69,24 +63,21 @@ func (*SuClosure) Type() types.Type {
 }
 
 func (b *SuClosure) SetConcurrent() {
-	if b.concurrent {
+	if b.this != nil {
+		b.this.SetConcurrent()
+	}
+	if b.shared == nil || b.shared.concurrent {
 		return
 	}
-	b.concurrent = true
-	// make a copy of the locals - read-only since it will be shared
-	v := slc.Clone(b.locals)
-	// make them concurrent
-	for _, x := range v {
+	b.shared.concurrent = true
+	// make shared values concurrent
+	for _, x := range b.shared.values {
 		if x != nil {
 			x.SetConcurrent()
 		}
 	}
-	b.locals = v
-	if b.this != nil {
-		b.this.SetConcurrent()
-	}
 }
 
 func (b *SuClosure) IsConcurrent() Value {
-	return SuBool(b.concurrent)
+	return SuBool(b.shared != nil && b.shared.concurrent)
 }
