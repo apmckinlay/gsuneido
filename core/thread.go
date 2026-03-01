@@ -174,11 +174,9 @@ func (th *Thread) SetSviews(sv *Sviews) {
 	th.sv = sv
 }
 
-// Push pushes a value onto the value stack
+// Push pushes a value onto the value stack.
+// Go panic on overflow
 func (th *Thread) Push(x Value) {
-	if th.sp >= maxStack {
-		panic("value stack overflow")
-	}
 	th.stack[th.sp] = x
 	th.sp++
 }
