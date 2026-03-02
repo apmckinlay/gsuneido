@@ -28,7 +28,7 @@ import (
 // MainThread is injected by gsuneido.go
 var MainThread *Thread
 
-// See interp.go and args.go for the rest of the Thread methods
+// See interp.go and args.go for other Thread methods
 
 // maxStack is the size of the value stack, fixed size for performance
 const maxStack = 1024

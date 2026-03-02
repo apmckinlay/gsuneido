@@ -18,17 +18,13 @@ var BlockBreak = BuiltinSuExcept("block:break")
 var BlockContinue = BuiltinSuExcept("block:continue")
 var BlockReturn = BuiltinSuExcept("block return")
 
-// invoke sets up a Frame and runs a compiled Suneido function
+// invoke sets up a Frame and runs an [SuFunc].
 // The stack must already be in the form required by the function (massaged)
 // WARNING: invoke does not pop the stack, the caller is responsible for that.
-// SuClosure.Call does similar setup, it should be kept in sync.
 func (th *Thread) invoke(fn *SuFunc, this Value) Value {
 	// reserve stack space for locals
 	for expand := fn.Nstack - fn.Nparams; expand > 0; expand-- {
 		th.Push(nil)
-	}
-	if th.fp >= len(th.frames) {
-		panic("function call overflow")
 	}
 	fr := &th.frames[th.fp]
 	fr.fn = fn
@@ -44,10 +40,28 @@ func (th *Thread) invoke(fn *SuFunc, this Value) Value {
 	return th.run()
 }
 
+// invokeClosure sets up a Frame and runs a [SuClosure].
+func (th *Thread) invokeClosure(fn *SuFunc, this Value, c *SuClosure) Value {
+	for expand := fn.Nstack - fn.Nparams; expand > 0; expand-- {
+		th.Push(nil)
+	}
+	if this == nil {
+		this = c.this
+	}
+	fr := &th.frames[th.fp]
+	fr.fn = fn
+	fr.this = this
+	fr.blockParent = c.parent
+	fr.locals = th.stack[th.sp-int(fn.Nstack) : th.sp]
+	fr.shared = c.shared
+	fr.moveLocalsToShared()
+	return th.run()
+}
+
 // run is needed in addition to interp
-// because we can only recover panic on the way out of a function
+// because panic can only be recovered on the way out of a function
 // so if the exception is caught we have to re-enter interp
-// Called by Thread.invoke (above) and SuClosure.Call
+// Called by Thread.invoke and Thread.invokeClosure (above)
 func (th *Thread) run() Value {
 	fr := &th.frames[th.fp]
 	th.fp++
