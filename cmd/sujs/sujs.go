@@ -29,25 +29,7 @@ func main() {
 	}
 	cmd := exec.Command(exe,
 		"Use('stdlib'); "+
-			"Use('axonlib'); "+
-			"Use('Accountinglib'); "+
-			"Use('etalib'); "+
-			"Use('towlib'); "+
-			"Use('pcmiler'); "+
-			"Use('ticketlib'); "+
-			"Use('joblib'); "+
-			"Use('prlib'); "+
-			"Use('prcadlib'); "+
-			"Use('etaprlib'); "+
-			"Use('invenlib'); "+
-			"Use('wolib'); "+
-			"Use('polib'); "+
-			"Use('carslib'); "+
-			"Use('configlib'); "+
-			"Use('demobookoptions'); "+
-			"Use('Test_lib'); "+
-			// so closing the WorkSpace exits, requires SuInit change
-			"Suneido.RunAsStandalone = true;"+
+			"Suneido.RunAsStandalone = true;"+ // so closing the WorkSpace exits
 			"RunSuJSHttpServer(3248)")
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
