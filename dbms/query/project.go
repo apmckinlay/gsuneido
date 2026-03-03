@@ -274,10 +274,7 @@ func (p *Project) Transform() Query {
 		if p.splitable(&q.Compatible) {
 			return NewUnion(p.splitOver(&q.Query2)).Transform()
 		}
-	case *Intersect:
-		if p.splitable(&q.Compatible) {
-			return NewIntersect(p.splitOver(&q.Query2)).Transform()
-		}
+	// Intersect and Minus are not eligible
 	}
 	return p.transform(src)
 }
