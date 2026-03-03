@@ -6,7 +6,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
@@ -43,11 +42,11 @@ func main() {
 
 	// close the window if the server exits
 	// e.g. from Shutdown(alsoServer:)
-	finished := false
+	done := make(chan struct{})
 	go func() {
 		cmd.Wait()
+		close(done)
 		w.Terminate()
-		finished = true
 	}()
 
 	w.SetTitle("Suneido")
@@ -69,13 +68,6 @@ func main() {
 	w.Navigate("http://127.0.0.1:3248")
 	w.Run()
 
-	if !finished {
-		// give the server a chance to clean up the client
-		time.Sleep(200 * time.Millisecond)
-		client := &http.Client{Timeout: 100 * time.Millisecond}
-		_, err = client.Post("http://127.0.0.1:3248/shutdown", "text/plain", nil)
-		if err != nil {
-			cmd.Wait()
-		}
-	}
+	<-done
+	time.Sleep(200 * time.Millisecond)
 }
