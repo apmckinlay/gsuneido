@@ -81,8 +81,6 @@ func (jt joinType) toOne() bool {
 	return jt == one_one || jt == n_one
 }
 
-const useLookup = true
-
 func (jt joinType) String() string {
 	switch jt {
 	case 0:
@@ -346,7 +344,7 @@ func joinopt(src1, src2 Query, nrows func() (int, int), jt joinType,
 	read2, _ := nrows()
 	frac2 := float64(read2) * frac / float64(max(1, nrows2))
 	var best2 bestIndex
-	if useLookup && jt.toOne() {
+	if jt.toOne() {
 		best2 = bestGroupedKey(src2, mode, frac2, by)
 	} else {
 		best2 = bestGrouped(src2, mode, nil, frac2, by)
@@ -475,7 +473,7 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 		if jn.row2 == nil && !jn.nextRow1(th, dir) {
 			return nil
 		}
-		if useLookup && jn.joinType.toOne() {
+		if jn.joinType.toOne() {
 			jn.row2 = jn.lookupRow
 			jn.lookupRow = nil
 		} else {
@@ -498,7 +496,7 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	// assert.That(set.Disjoint(jn.by, jn.sel2cols))
 	sel2cols := slc.With(jn.sel2cols, jn.by...)
 	sel2vals := slc.With(jn.sel2vals, jn.projectRow1(th, jn.row1)...)
-	if useLookup && jn.joinType.toOne() {
+	if jn.joinType.toOne() {
 		jn.lookupRow = jn.cachedLookup(th, sel2cols, sel2vals)
 	} else {
 		jn.source2.Select(sel2cols, sel2vals)
@@ -578,7 +576,7 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	var row2 Row
 	sel2cols = append(sel2cols, jn.by...)
 	sel2vals = append(sel2vals, jn.projectRow1(th, row1)...)
-	if useLookup && jn.joinType.toOne() {
+	if jn.joinType.toOne() {
 		row2 = jn.cachedLookup(th, sel2cols, sel2vals)
 	} else {
 		jn.source2.Select(sel2cols, sel2vals)
@@ -813,14 +811,14 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 				return nil
 			}
 			byVals := lj.projectRow1(th, lj.row1)
-			if useLookup && lj.joinType.toOne() {
+			if lj.joinType.toOne() {
 				lj.lookupRow = lj.cachedLookup(th, lj.by, byVals)
 			} else {
 				lj.source2.Select(lj.by, byVals)
 			}
 			row1out = false
 		}
-		if useLookup && lj.joinType.toOne() {
+		if lj.joinType.toOne() {
 			lj.row2 = lj.lookupRow
 			lj.lookupRow = nil
 		} else {
@@ -882,7 +880,7 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 		return nil
 	}
 	var row2 Row
-	if useLookup && lj.joinType.toOne() {
+	if lj.joinType.toOne() {
 		row2 = lj.cachedLookup(th, lj.by, lj.projectRow1(th, row1))
 	} else {
 		lj.source2.Select(lj.by, lj.projectRow1(th, row1))
