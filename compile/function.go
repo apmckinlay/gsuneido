@@ -7,6 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/shmap"
 )
 
 // Function parses a function (starting with the "function" keyword)
@@ -321,8 +322,9 @@ func (p *Parser) switchStmt() (result *ast.Switch) {
 	p.Match(tok.LCurly)
 	pos2 := p.EndPos
 	var cases []ast.Case
+	values := shmap.NewMapMeth[Value, struct{}]()
 	for p.Token == tok.Case {
-		cases = append(cases, p.switchCase())
+		cases = append(cases, p.switchCase(values))
 	}
 	var def []ast.Statement
 	var posdef int32
@@ -336,13 +338,20 @@ func (p *Parser) switchStmt() (result *ast.Switch) {
 		Pos1: pos1, Pos2: pos2, PosDef: posdef}
 }
 
-func (p *Parser) switchCase() ast.Case {
+type valset = shmap.Map[Value, struct{}, shmap.Meth[Value]]
+
+func (p *Parser) switchCase(values *valset) ast.Case {
 	pos := p.Pos
 	p.Match(tok.Case)
 	var exprs []ast.Expr
 	for {
 		pos := p.Pos
 		expr := p.Expression()
+		if c, ok := expr.(*ast.Constant); ok {
+			if _, ok := values.GetInit(c.Val); ok {
+				p.Error("duplicate case value")
+			}
+		}
 		exprs = append(exprs, p.exprPos(expr, pos, p.EndPos))
 		if !p.MatchIf(tok.Comma) {
 			break
