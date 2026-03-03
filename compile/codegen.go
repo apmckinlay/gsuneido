@@ -391,6 +391,9 @@ func (cg *cgen) statements(stmts []ast.Statement, labels *Labels) {
 }
 
 func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
+	if cg.isNew && len(node.Exprs) > 0 {
+		panic("New cannot return a value")
+	}
 	if len(node.Exprs) > 1 {
 		if cg.isBlock {
 			panic("multiple return values not allowed from a block")
