@@ -15,8 +15,7 @@ class
 		['POST',	'/twoFA_submit$',		'JsLogin.TwoFA'],
 		['GET', 	'/connect$',			function (env) {
 						WebSocketHandler(env, env.socket, JsWebSocketServer) }],
-		['GET', 	'/robots.txt', 			'JsRobotsTxt'],
-		['POST',	'/shutdown',			function (env) { Exit(0) }]
+		['GET', 	'/robots.txt', 			'JsRobotsTxt']
 	)
 	CallClass()
 		{

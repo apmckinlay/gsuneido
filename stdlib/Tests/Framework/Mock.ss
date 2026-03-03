@@ -178,11 +178,14 @@ class
 			if .minTimes is 1 and .maxTimes is 1 and n is 0
 				throw "wanted but not invoked: " $ .display(call)
 			if .minTimes is .maxTimes and n isnt .minTimes
-				throw "wanted " $ .minTimes $ " calls, but got " $ n
+				throw "wanted " $ .minTimes $ " calls, but got " $ n $ " " $
+					.display(call)
 			if n < .minTimes
-				throw "wanted at least " $ .minTimes $ " calls, but got " $ n
+				throw "wanted at least " $ .minTimes $ " calls, but got " $ n $ " " $
+					.display(call)
 			if n > .maxTimes
-				throw "wanted at most " $ .maxTimes $ " calls, but got " $ n
+				throw "wanted at most " $ .maxTimes $ " calls, but got " $ n $ " " $
+					.display(call)
 			}
 		display(call)
 			{

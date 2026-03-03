@@ -59,28 +59,18 @@ Component
 
 	setupColors()
 		{
-		// Setup Colors
-		r = (.color & 0xFF0000) / 0x10000 	/*= RGB: red value */
-		g = (.color & 0x00FF00) / 0x100		/*= RGB: green value */
-		b = (.color & 0x0000FF)				/*= RGB: blue value */
-
-		.badColor = .bgr(r, g, b, 80 /*= fading rate*/)
-		.satisfactoryColor = .bgr(r, g, b, 120 /*= fading rate*/)
-		.goodColor = .bgr(r, g, b, 150 /*= fading rate*/)
-		.valueColor = .bgr(r, g, b, 0)
-
+		colors = BulletGraphColors(.color, .rgbStr)
+		.badColor = colors.bad
+		.satisfactoryColor = colors.satisfactory
+		.goodColor = colors.good
+		.valueColor = colors.value
 		if .selectedColor isnt false
 			.selectedColor = ToCssColor(.selectedColor)
 		}
 
-	bgr(r, g, b, fadingRate)
+	rgbStr(rgbOb)
 		{
-		shade = Max(r, g, b)
-		incr = (shade * fadingRate).PercentToDecimal().Int()
-		r = Min(255 /*= max color*/, r + incr)
-		g = Min(255 /*= max color*/, g + incr)
-		b = Min(255 /*= max color*/, b + incr)
-		return 'rgb(' $ r $ ', ' $ g $ ', ' $ b $ ')'
+		return 'rgb(' $ rgbOb.r $ ', ' $ rgbOb.g $ ', ' $ rgbOb.b $ ')'
 		}
 
 	// ========================== Draw Vertical ==========================

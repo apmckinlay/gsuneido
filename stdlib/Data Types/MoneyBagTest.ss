@@ -58,7 +58,6 @@ Test
 			x = s.Eval() // needs to use eval
 			Assert(x.ToString() is: s)
 			Assert(Display(x) is: s)
-			Assert('' $ x is: s)
 			}
 		test('MoneyBag()')
 		test('MoneyBag(USD: 123)')

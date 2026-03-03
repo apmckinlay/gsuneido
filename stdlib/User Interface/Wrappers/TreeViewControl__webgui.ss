@@ -137,6 +137,11 @@ Control
 		return Boolean?(x = .Send("Children?", item)) ? x : false
 		}
 
+	Static?(item)
+		{
+		return Boolean?(x = .Send("Static?", item)) ? x : false
+		}
+
 	GetName(item)
 		{
 		item = .convert(item)
@@ -166,6 +171,31 @@ Control
 			return ''
 		.SelectItem(item)
 		.Act('EditLabel', item)
+		}
+
+	On_Delete()
+		{
+		.Act('On_Delete')
+		}
+	On_Cut()
+		{
+		.Act('On_Cut')
+		}
+	On_Copy()
+		{
+		.Act('On_Copy')
+		}
+	On_Paste()
+		{
+		.Act('On_Paste')
+		}
+	On_Undo()
+		{
+		.Act('On_Undo')
+		}
+	On_Select_All()
+		{
+		.Act('On_Select_All')
 		}
 
 	EndLabelEdit(id, text)
@@ -259,6 +289,18 @@ Control
 		if .Send(@args) is 0 and .Method?(args[0])
 			(this[args[0]])(@+1args)
 		return 0
+		}
+
+	ContextMenu(hItem, x, y)
+		{
+		if .selected isnt hItem
+			.SelectItem(hItem)
+		.ShowContextMenu(hItem, x, y)
+		}
+
+	ShowContextMenu(item, x, y)
+		{
+		return .Send(#ShowContextMenu, item, x, y)
 		}
 
 	Default(@args)

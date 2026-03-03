@@ -8,6 +8,7 @@ EditControl
 		font = "", size = "")
 		{
 		super(:status, :readonly, :mandatory, :style, :width, :height, :cue, :font, :size)
+		.multiLine? = height > 1
 		.Window.ObserveMove(.close_list)
 		if String?(list) and list[0].Upper?()
 			list = Global(list)
@@ -88,16 +89,36 @@ EditControl
 	EN_CHANGE(text)
 		{
 		super.EN_CHANGE(text)
-		if .ignore
-			.ignore = false
-		else if .listctrl is false
+		.changed()
+		return 0
+		}
+
+	changed()
+		{
+		// Doesn't need to check .ignore because SetWindowText (.InsertChoice) doesn't
+		// trigger EN_CHANGE
+		if .listctrl is false
 			{
 			.killtimer()
 			.timer = Delay(.Delay, .open_list)
 			}
 		else
 			.change()
-		return 0
+		}
+
+	Set(value)
+		{
+		super.Set(value)
+		// This is needed by MultiAutoChooseControl.GetPrefix
+		// It seems like the selection is set to [0, 0] by SetWindowExt in Win32,
+		// but in suneido.js, it is set to [value.Size(), value.Size()] by
+		// EditControl__webgui.Set
+		.SetSel(0, 0)
+		// In Win32, SetWindowText (.Set) triggers EN_CHANGE when the control doesn't have
+		// ES.MULTILINE style. But in suneido.js, SetWindowText never triggers EN_CHANGE.
+		// So here we need to call .changed manually.
+		if not .multiLine?
+			.changed()
 		}
 
 	EN_KILLFOCUS()

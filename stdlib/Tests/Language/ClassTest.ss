@@ -242,7 +242,6 @@ Test
 			}
 		x = c(123)
 		Assert(Display(x) is: "MyClass(123)")
-		Assert('=' $ x $ '=' is: "=MyClass(123)=")
 
 		c = class
 			{

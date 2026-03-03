@@ -54,6 +54,8 @@ Test
 			{
 			ExplorerMultiTreeContextMenu_isLibViewControl?()
 				{ return true }
+			ExplorerMultiTreeContextMenu_isSuneidoJs?()
+				{ return false }
 			}
 		instance = new cl(explorer = new .explorer, false)
 		method = instance.ExplorerMultiTreeContextMenu_buildItemMenu
@@ -92,9 +94,9 @@ Test
 			is: [
 				[order: 10, name: 'C&ut'],
 				[order: 11, name: '&Copy'],
-				[order: 20, name: '&Paste'],
-				[order: 30, name: 'Copy To...'],
-				[order: 31, name: '&Move To...'],
+				[order: 20, name: 'Copy To...'],
+				[order: 21, name: '&Move To...'],
+				[order: 30, name: '&Paste'],
 				[order: 40, name: ''],
 				[order: 50, name: '&New'],
 				[order: 60, name: ''],
@@ -111,9 +113,9 @@ Test
 			is: [
 				[order: 10, name: 'C&ut'],
 				[order: 11, name: '&Copy'],
-				[order: 20, name: '&Paste'],
-				[order: 30, name: 'Copy To...'],
-				[order: 31, name: '&Move To...'],
+				[order: 20, name: 'Copy To...'],
+				[order: 21, name: '&Move To...'],
+				[order: 30, name: '&Paste'],
 				[order: 40, name: ''],
 				[order: 50, name: '&Delete'],
 				[order: 51, name: 'Rena&me'],
@@ -128,6 +130,8 @@ Test
 			{
 			ExplorerMultiTreeContextMenu_isLibViewControl?()
 				{ return true }
+			ExplorerMultiTreeContextMenu_isSuneidoJs?()
+				{ return false }
 			}
 		instance = new cl(explorer = new .explorer, true)
 		method = instance.ExplorerMultiTreeContextMenu_buildItemMenu
@@ -175,9 +179,9 @@ Test
 			is: [
 				[order: 10, name: 'C&ut'],
 				[order: 11, name: '&Copy'],
-				[order: 20, name: '&Paste'],
-				[order: 30, name: 'Copy To...'],
-				[order: 31, name: '&Move To...'],
+				[order: 20, name: 'Copy To...'],
+				[order: 21, name: '&Move To...'],
+				[order: 30, name: '&Paste'],
 				[order: 40, name: ''],
 				[order: 50, name: '&New'],
 				[order: 60, name: ''],
@@ -195,6 +199,8 @@ Test
 		cl = ExplorerMultiTreeContextMenu
 			{
 			ExplorerMultiTreeContextMenu_isLibViewControl?()
+				{ return false }
+			ExplorerMultiTreeContextMenu_isSuneidoJs?()
 				{ return false }
 			}
 		instance = new cl(new .explorer, false)

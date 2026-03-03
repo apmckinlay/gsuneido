@@ -39,11 +39,9 @@ Controller
 			"Delete the selected text or next character")
 		(Select_All					"Ctrl+A")
 
-		(Find_in_Folders, 			"Shift+Ctrl+F", "Find text in the libraries")
-		(Find_Next_in_Folders,		"",
-			"Find the next occurrence in the libraries", Find_Next)
-		(Find_Previous_in_Folders,	"",
-			"Find the previous occurrence in the libraries", Find_Previous)
+		(Find_in_Folders, 			"Shift+Ctrl+F")
+		(Find_Next_in_Folders,		"",			"", Find_Next)
+		(Find_Previous_in_Folders,	"",			"", Find_Previous)
 
 		(Users_Manual,		"F1")
 		(About_Suneido)

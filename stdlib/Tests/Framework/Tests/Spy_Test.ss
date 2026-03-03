@@ -46,10 +46,11 @@ Test
 		fn = Global(#SpyTest_1)
 		Assert(fn(1) is: 2)
 
-		spy = .SpyOn("SpyTest_1")
+		spy = .SpyOn(fn)
 		spy.Return("case 1", when: { |a, b| a + b > 5 })
 		spy.Throw("case 2", when: function (a, b) { a + b is 5 })
 		spy.Return("case 3 - 1", "case 3 - 2", when: { |a, b| a + b > 0 })
+		spy.ReturnNothing(when: { |a, b| a + b is 0 })
 
 		fn = Global(#SpyTest_1)
 		Assert(fn(5) is: 'case 1')
@@ -57,12 +58,14 @@ Test
 		Assert(fn(3) is: 'case 3 - 1')
 		Assert(fn(2) is: 'case 3 - 2')
 		Assert({ fn(1) } throws:)
+		fn(-1) // no return value
+		Assert({ _ = fn(-1) } throws: 'no return value')
 		Assert(fn(-1, -2) is: -3)
 
 		callLogs = spy.CallLogs()
-		Assert(callLogs isSize: 6)
+		Assert(callLogs isSize: 8)
 		Assert(callLogs is: #((a: 5, b: 1), (a: 4, b: 1), (a: 3, b: 1), (a: 2, b: 1),
-			(a: 1, b: 1), (a: -1, b: -2)))
+			(a: 1, b: 1), (a: -1, b: 1), (a: -1, b: 1), (a: -1, b: -2)))
 
 		spy.Close()
 		fn = Global(#SpyTest_1)

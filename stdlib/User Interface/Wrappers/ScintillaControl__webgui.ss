@@ -109,6 +109,28 @@ calls = FormatCallStack(calls, levels: 99).
 		return .wordchars
 		}
 
+	WordRight()
+		{
+		cur = .GetSelectionEnd()
+		s = .Get()
+		pos = s.Find1of('^' $ .wordchars, pos: cur + 1)
+		.SetSelect(pos)
+		}
+
+	CharRight()
+		{
+		.SetSelect(Min(.GetSelectionEnd() + 1, .GetTextLength()))
+		}
+
+	Home()
+		{
+		curPos = .GetCurrentPos()
+		lineNum = .LineFromPosition(curPos)
+		start = .PositionFromLine(lineNum)
+		firstNonWS = .Get().Find1of('^ \t', pos: start)
+		.SetSelect(curPos > firstNonWS ? firstNonWS : start)
+		}
+
 	GetLength()
 		{
 		return .s.Size()
@@ -215,7 +237,7 @@ calls = FormatCallStack(calls, levels: 99).
 .lastEvents['SCEN_KILLFOCUS'] = Object(
 	eventId: SuRenderBackend().SuRenderBackend_eventId,
 	t: Timestamp(), dirty?: .Dirty?())
-		.closeAutoc()
+		.closePopup()
 		.Send('Scintilla_KillFocus')
 		if (.Dirty?())
 			.Send("NewValue", .Get())
@@ -241,8 +263,8 @@ calls = FormatCallStack(calls, levels: 99).
 	selection: #(anchor: 0, head: 0)
 	SU_UPDATESELECT(.selection)
 		{
-		.curPos = .selection.head
-		.closeAutoc()
+		.selection.head
+		.closePopup()
 		}
 
 	firstVisibleLine: 0
@@ -313,10 +335,9 @@ calls = FormatCallStack(calls, levels: 99).
 		.Send('Scintilla_DoubleClick')
 		}
 
-	curPos: false
 	GetCurrentPos()
 		{
-		return .curPos
+		return .selection.head
 		}
 
 	GotoLine(line, noFocus? = false)
@@ -684,6 +705,38 @@ calls = FormatCallStack(calls, levels: 99).
 		.syncAutocStatus(false)
 		}
 
+	callTip: false
+	CallTipShow(pos, tip)
+		{
+		.closeCallTip()
+		.callTip = ScintillaTooltipControl(tip, editorId: .UniqueId, :pos)
+		}
+
+	closeCallTip()
+		{
+		if .callTip isnt false
+			{
+			.callTip.Close()
+			.callTip = false
+			}
+		}
+
+	CallTipActive()
+		{
+		return .callTip isnt false ? 1 : 0
+		}
+
+	CallTipCancel()
+		{
+		.closeCallTip()
+		}
+
+	closePopup()
+		{
+		.closeAutoc()
+		.closeCallTip()
+		}
+
 	Default(@args)
 		{
 		.Act(@args)
@@ -691,6 +744,7 @@ calls = FormatCallStack(calls, levels: 99).
 
 	Destroy()
 		{
+		.closePopup()
 		.Send("NoData")
 		super.Destroy()
 		}

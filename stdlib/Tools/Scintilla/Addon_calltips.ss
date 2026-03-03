@@ -33,8 +33,7 @@ ScintillaAddon
 		word = word.RightTrim('.')
 		if false is params = .params(word)
 			return
-		SendMessageTextIn(.Hwnd, SCI.CALLTIPSHOW,
-			.GetCurrentPos() - word.Size() - 1,	word $ params)
+		.CallTipShow(.GetCurrentPos() - word.Size() - 1, word $ params)
 		}
 	params(word)
 		{

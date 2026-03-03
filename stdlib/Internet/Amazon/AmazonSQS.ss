@@ -250,7 +250,8 @@ AmazonAWS
 
 		if false is num = XmlFind.First(xmlNode,
 			#(getqueueattributesresponse, getqueueattributesresult, attribute, value))
-			throw 'ApproximateNumberOfMessages does not exist in response xml: ' $ xmlNode
+			throw 'ApproximateNumberOfMessages does not exist in response xml: ' $
+				String(xmlNode)
 		return Number(num.Text())
 		}
 

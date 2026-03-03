@@ -1,24 +1,27 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 Test
 	{
-	Test_buildGraphs()
+	Test_Controls()
 		{
 		mock = .mockControl()
-		mock.When.buildGraphs().CallThrough()
+		mock.When.Controls().CallThrough()
 
+		// Empty data / graph
 		mock.BulletGraphsControl_data = #()
+		mock.BulletGraphsControl_heading = ''
+		mock.BulletGraphsControl_controlContainer = 'Vert'
 		mock.BulletGraphsControl_initDisplayDetails = false
-		Assert(mock.buildGraphs() is: #())
+		Assert(mock.Controls() is: Object('Vert', name: 'graphs'))
 
-		// Graph with applicable data
+		// Minimal Vertical Graph
 		mock.BulletGraphsControl_data = #(
 			#20260101: 0,
 			#20260201: 200,
 			#20260301: 400,
 			#20260401: 1000,
 			#20260501: 300)
-		Assert(mock.buildGraphs() is:
-			#('Skip',
+		Assert(mock.Controls() is: #('Vert',
+			#('Vert', 'Skip',
 				#('Horz',
 					#('BulletGraph', 0, satisfactory: 0, vertical:, height: 100,
 						outside: 0, axisFormat: '#,###.##', name: #20260101, good: 0,
@@ -42,18 +45,26 @@ Test
 						axis: false, axisDensity: 3, selectedColor: 16711680),
 					),
 					#('Horz', 'Fill', #('Static', ' ', justify: 'RIGHT',
-						name: 'displayDetails'))))
+						name: 'displayDetails'))), name: 'graphs'))
+		mock.Verify.Never().displayDetailsSend([anyArgs:])
 
-		// Graph with no applicable data
+		// Horizontal Graph with heading and initDisplayDetails
+		mock.BulletGraphsControl_heading = 'Test Heading'
+		mock.BulletGraphsControl_controlContainer = 'Horz'
+		mock.BulletGraphsControl_graphsContainer = 'Vert'
+		mock.BulletGraphsControl_displayDetailsSpacer = 'Skip'
+		mock.BulletGraphsControl_initDisplayDetails = 'Last'
+		mock.When.displayDetailsSend([anyArgs:]).Return('Display Details')
 		mock.BulletGraphsControl_data = #(
 			#20260101: -10,
 			#20260201: 0,
 			#20260301: 0,
 			#20260401: 0,
 			#20260501: 0)
-		Assert(mock.buildGraphs() is:
-			#('Skip',
-				#('Horz',
+		Assert(mock.Controls() is: #('Vert',
+			#('Heading', 'Test Heading'),
+			#('Horz', 'Skip',
+				#('Vert',
 					#('BulletGraph', 0, satisfactory: 0, vertical:, height: 100,
 						outside: 0, axisFormat: '#,###.##', name: #20260101, good: 0,
 						target: false, range: #(0, 1), color: 0x5e3838, width: 25,
@@ -75,8 +86,9 @@ Test
 						target: false, range: #(0, 1), color: 0x4d4d4d, width: 25,
 						axis: false, axisDensity: 1, selectedColor: 16711680),
 					),
-					#('Horz', 'Fill', #('Static', ' ', justify: 'RIGHT',
-						name: 'displayDetails'))))
+					#('Horz', 'Skip', #('Static', 'Display Details', justify: 'RIGHT',
+						name: 'displayDetails'))), name: 'graphs'))
+		mock.Verify.displayDetailsSend('construct', #20260501)
 		}
 
 	mockControl()
@@ -150,6 +162,37 @@ Test
 		Assert(mock.determineColor(data, 10, 0) is: 0x226322)
 		Assert(mock.determineColor(data, 35, 20) is: 0x666622)
 		Assert(mock.determineColor(data, 40, 35) is: 0x883322)
+		}
+
+	Test_Set()
+		{
+		mock = .mockControl()
+		mock.When.Set([anyArgs:]).CallThrough()
+		mock.BulletGraphsControl_graphs = graphsMock = Mock()
+		graphsMock.When.RemoveAll().Do({ })
+		graphsMock.When.AppendAll().Do({ })
+
+		// Graphs container is empty, and no graphs are built
+		mock.BulletGraphsControl_selected = 1
+		mock.BulletGraphsControl_hover = 2
+		graphsMock.When.GetChildren().Return(Object())
+		mock.When.graphControls().Return(false)
+		mock.Set(Object(/* data */))
+		Assert(mock.BulletGraphsControl_selected is: false)
+		Assert(mock.BulletGraphsControl_hover is: false)
+		graphsMock.Verify.Never().RemoveAll()
+		graphsMock.Verify.Never().AppendAll([anyArgs:])
+
+		// Graphs container has controls, and graphs are built
+		mock.BulletGraphsControl_selected = 3
+		mock.BulletGraphsControl_hover = 4
+		graphsMock.When.GetChildren().Return(Object('fake children'))
+		mock.When.graphControls().Return(expectedGraphControls = Object('fake controls'))
+		mock.Set(Object(/* data */))
+		Assert(mock.BulletGraphsControl_selected is: false)
+		Assert(mock.BulletGraphsControl_hover is: false)
+		graphsMock.Verify.RemoveAll()
+		graphsMock.Verify.AppendAll(expectedGraphControls)
 		}
 
 	Test_BulletGraph_Hover()

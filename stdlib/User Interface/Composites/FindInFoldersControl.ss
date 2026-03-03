@@ -3,9 +3,9 @@
 Controller
 	{
 	Title: "Find in Folders"
-	CallClass(data, valid = function (unused) { "" })
+	CallClass(data, valid = function (unused) { "" }, _hwnd = 0)
 		{
-		ToolDialog(_hwnd, [this, data, valid], keep_size: false)
+		ToolDialog(hwnd, [this, data, valid], keep_size: false)
 		}
 	New(data, .valid)
 		{

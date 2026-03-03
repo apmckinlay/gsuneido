@@ -82,6 +82,10 @@ ScintillaControl
 		Addon_unwrap,
 		Addon_highlight_customFields,
 		Addon_highlight_warnings,
+		Addon_editor_status,
+		Addon_detab,
+		Addon_calltips,
+		Addon_overwrite_lines,
 		)
 	SupportedAddon?(addon)
 		{

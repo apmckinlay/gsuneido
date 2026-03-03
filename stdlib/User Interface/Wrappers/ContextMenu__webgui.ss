@@ -126,10 +126,10 @@ class
 		return i
 		}
 
-	popupMenu(ctrl, x, y, hwnd/*unused*/, rcExclude)
+	popupMenu(ctrl, x, y, hwnd, rcExclude)
 		{
 		// Exit if ctrl isnt valid control
-		if not (Instance?(ctrl) and ctrl.Base?(Control))
+		if not ((Instance?(ctrl) and (ctrl.Base?(Control))) or Number?(hwnd))
 			return false
 		// when openning context menu and destroying control (alt+F4) at same time
 		if ctrl.Empty?()

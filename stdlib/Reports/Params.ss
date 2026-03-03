@@ -313,10 +313,19 @@ Controller
 		return w
 		}
 
-	excludeReportMembers: #(Params)
+	excludeReportMembers:	#(Params)
+	deepCopyReportMembers:	#(paramsdata, printParams)
 	PreviewReport(report)
 		{
-		return report.DeepCopy().Delete(@.excludeReportMembers)
+		previewReport = Object()
+		for m, v in report
+			if not .excludeReportMembers.Has?(m)
+				previewReport[m] = Object?(v)
+					? .deepCopyReportMembers.Has?(m)
+						? v.DeepCopy()
+						: v.Copy()
+					: v
+		return previewReport
 		}
 
 	addFilterIfSlowQuery(report)

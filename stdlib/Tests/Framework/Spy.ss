@@ -86,6 +86,8 @@ class
 
 	buildReturn(returnOb)
 		{
+		if returnOb.action is #nothing
+			return Object(action: #nothing)
 		if returnOb.values.Size() is 1
 			return Object(action: returnOb.action, value: returnOb.values[0])
 		Assert(returnOb.values.Size() greaterThan: returnOb.index)
@@ -97,6 +99,13 @@ class
 		values = args.Values(list:)
 		when = args.GetDefault(#when, true)
 		.returns.Add(Object(:values, :when, index: 0, action: #return))
+		return this
+		}
+
+	ReturnNothing(@args)
+		{
+		when = args.GetDefault(#when, true)
+		.returns.Add(Object(:when, action: #nothing))
 		return this
 		}
 

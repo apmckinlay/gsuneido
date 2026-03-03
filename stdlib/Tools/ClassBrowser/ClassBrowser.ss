@@ -24,11 +24,9 @@ Controller
 		(Find_Next,		"F3",		"Find the next occurrence in the current item")
 		(Find_Previous,	"Shift+F3",	"Find the previous occurrence in the current item")
 
-		(Find_in_Folders,			"Shift+Ctrl+F",	"Find text in the libraries")
-		(Find_Next_in_Folders,		"",		"Find the next occurrence in the libraries",
-			Find_Next)
-		(Find_Previous_in_Folders,	"",		"Find the next occurrence in the libraries",
-			Find_Previous)
+		(Find_in_Folders,			"Shift+Ctrl+F")
+		(Find_Next_in_Folders,		"",		"",			Find_Next)
+		(Find_Previous_in_Folders,	"",		"",			Find_Previous)
 
 		(Users_Manual,				"F1")
 		(Close,						"",			"Close this window")

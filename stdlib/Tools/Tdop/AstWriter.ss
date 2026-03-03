@@ -107,7 +107,7 @@ class
 			? node.Children[index].Position - 1
 			: node.Position - 1 + node.Length
 		start = .GetCurPos(oriStart)
-		.content = .content[..start] $ value $ .content[start..]
+		.content = .content[..start] $ String(value) $ .content[start..]
 		change = String?(value) ? value.Size() : value.Length()
 		.updateOffsets(oriStart, oriStart, change)
 		.updateLength(change)
@@ -123,7 +123,7 @@ class
 		start = .GetCurPos(oriStart)
 		end = .GetCurPos(oriEnd)
 
-		.content = .content[..start] $ value $ .content[end + 1..]
+		.content = .content[..start] $ String(value) $ .content[end + 1..]
 		change = (String?(value) ? value.Size() : value.Length()) - (end - start + 1)
 		.updateOffsets(oriStart, oriEnd + 1, change)
 		.updateLength(change)

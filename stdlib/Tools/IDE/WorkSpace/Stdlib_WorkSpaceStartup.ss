@@ -22,4 +22,10 @@
 			if Sys.Win32?()
 				Thread(WebView2.CleanUp)
 			}
+	cleanupTemp:
+		function ()
+			{
+			if Sys.SuneidoJs?()
+				Thread(SuCleanupTempFolder)
+			}
 )

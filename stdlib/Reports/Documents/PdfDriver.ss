@@ -474,7 +474,7 @@ Document_Builder
 		.writer.AddObject("<< /Producer (Suneido PDF Generator) >>\nendobj\n")
 		}
 
-	BuildXRef(size, locs, root, totalLength) // also used by PdfMerger
+	BuildXRef(size, locs, root, totalLength, encryptDict = '') // also used by PdfMerger
 		{
 		xref = "xref\n" $ "0 " $ size $"\n"
 		for x in locs
@@ -486,7 +486,7 @@ Document_Builder
 			else
 				xref $= locString $ " 00000 n \n"
 			}
-		xref $= "trailer <</Size " $ size $"/Root " $ root $ " 0 R>>\n" $
+		xref $= "trailer <</Size " $ size $ encryptDict $ "/Root " $ root $ " 0 R>>\n" $
 			"startxref\n" $ Display(totalLength) $ "\n" $
 			"%%EOF"
 		return xref
@@ -558,7 +558,7 @@ Document_Builder
 			{
 			if not Jpeg.ValidExtension?(data)
 				throw Jpeg.InvalidExtension
-			if false is data = ImageHandler.GenerateThumbnail(data)
+			if false is data = .imageHandler().GenerateThumbnail(data)
 				throw "Image: Couldn't generate thumbnail"
 			}
 		jpeg = .jpeg(data)
@@ -618,7 +618,7 @@ Document_Builder
 		w = h = 0
 		if jpeg is false
 			{
-			size = ImageHandler.GetWidthHeight(data)
+			size = .imageHandler().GetWidthHeight(data)
 			w = size.w
 			h = size.h
 			}
@@ -628,6 +628,11 @@ Document_Builder
 			h = jpeg.GetHeight()
 			}
 		return Object(height: h * .pspToTwip / 1.27, width: w * .pspToTwip / 1.27)
+		}
+
+	imageHandler()
+		{
+		return ImageHandler
 		}
 
 	GetAcceptedImageExtension()

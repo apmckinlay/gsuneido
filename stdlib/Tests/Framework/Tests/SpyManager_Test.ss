@@ -8,6 +8,7 @@ Test
 	fn1WithSpy: `A(.a, .B = 1, _c = false, ._d = {})
 		{
 		res = SpyManager().Spy(1, Object(:a, :b, :c, :d))
+		if res.action is 'nothing' { return }
 		if res.action is 'return' { return res.value }
 		if res.action is 'throw' { throw res.value }
 		return 1 + .b()
@@ -15,6 +16,7 @@ Test
 	fn2: `b() { return 1 }`
 	fn2WithSpy: `b() {
 		res = SpyManager().Spy(2, Object())
+		if res.action is 'nothing' { return }
 		if res.action is 'return' { return res.value }
 		if res.action is 'throw' { throw res.value }
 		return 1 }`
@@ -25,6 +27,7 @@ Test
 	fn3WithSpy: `C(@args)
 		{
 		res = SpyManager().Spy(3, Object(:args))
+		if res.action is 'nothing' { return }
 		if res.action is 'return' { return res.value }
 		if res.action is 'throw' { throw res.value }
 		return args

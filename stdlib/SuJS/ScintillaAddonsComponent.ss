@@ -71,6 +71,9 @@ ScintillaComponent
 
 	OnKeyDown(cm, event)
 		{
+		if event.GetDefault(#key, false) is false
+			return
+
 		pressed = Object(
 			control: event.GetDefault(#ctrlKey, false),
 			shift: event.GetDefault(#shiftKey, false),

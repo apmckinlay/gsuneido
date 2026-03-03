@@ -110,7 +110,7 @@ class
 	failureHandler(error)
 		{
 		teardown? = false
-		if Sys.Win32?()
+		if Sys.Win32?() or Sys.SuneidoJs?()
 			Debugger.Window(0, error, calls: .callsBeforeDebug(error.Callstack()),
 				onDestroy: .teardownOnDestroy)
 		else

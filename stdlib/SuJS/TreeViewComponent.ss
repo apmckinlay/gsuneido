@@ -69,6 +69,8 @@ Component
 		{
 		LoadCssStyles('treeview-control.css', .styles)
 		.CreateElement('div', className: 'su-treeview-container')
+		.El.AddEventListener('contextmenu', .contextMenu)
+
 		.root = CreateElement('ul', .El, className: 'su-treeview')
 		.trees = Object(.root)
 		.items = Object()
@@ -86,6 +88,7 @@ Component
 		parentEl = .trees[parent]
 		.items[id] = item = CreateElement('li', parentEl,
 			className: 'su-treeview-item su-treeview-item-folded')
+		item.SetAttribute('data-id', id)
 		if container? is true
 			{
 			button = CreateElement('span', item, className: 'su-treeview-button')
@@ -95,21 +98,23 @@ Component
 		textEl.innerText = name
 		textEl.title = name
 		textEl.AddEventListener('click', .labelFactory(id))
+		textEl.SetAttribute('data-id', id)
 		if container? is true
 			{
 			subList = CreateElement('ul', item, className: 'su-treeview-subtree')
 			.trees[id] = subList
 			}
-		.addImageEl(textEl, image)
+		.addImageEl(textEl, image, id)
 		}
 
-	addImageEl(el, image)
+	addImageEl(el, image, id)
 		{
 		if image is false
 			return
 		imageEl = CreateElement('span', el, at: 0)
 		imageEl.SetAttribute('translate', 'no')
 		imageEl.textContent = image[0].char
+		imageEl.SetAttribute('data-id', id)
 		.SetStyles(Object(
 			'font-family': image[0].font,
 			'font-style': 'normal',
@@ -119,6 +124,19 @@ Component
 			'color': ToCssColor(image.GetDefault(1, #inherit))), imageEl)
 		}
 
+	contextMenu(event)
+		{
+		target = event.target
+		id = false
+		try id = Number(target.GetAttribute('data-id'))
+		if id is false
+			return
+		.RunWhenNotFrozen({
+			.EventWithOverlay('ContextMenu', id, event.clientX, event.clientY) })
+		event.StopPropagation()
+		event.PreventDefault()
+		}
+
 	SetImage(id, image)
 		{
 		if not .items.Member?(id)
@@ -126,7 +144,7 @@ Component
 		textEl = .items[id].GetElementsByClassName('su-treeview-label').Item(0)
 		if textEl.children.length > 0
 			textEl.children.Item(0).Remove()
-		.addImageEl(textEl, image)
+		.addImageEl(textEl, image, id)
 		}
 
 	buttonFactory(item, id)
@@ -224,6 +242,8 @@ Component
 		if .edit is false
 			{
 			.edit = CreateElement('input', el, className: 'su-treeview-edit')
+			// to redirct copy/paste to TreeView
+			.edit.AddEventListener('focus', .OnFocus)
 			.edit.AddEventListener('blur', .onEditBlur)
 			.edit.AddEventListener('keydown', .onEditKeydown)
 			}
@@ -233,6 +253,7 @@ Component
 		.editId = id
 		.edit.value = el.GetElementsByClassName('su-treeview-label').Item(0).title
 		.edit.Focus()
+		.On_Select_All()
 		.ensureVisible(el)
 		}
 
@@ -261,6 +282,7 @@ Component
 		parent = .editParent
 		.editId = .editParent = false
 		.edit.Remove()
+		.edit = false
 		parent.SetStyle('position', '')
 		.ensureVisible(parent)
 		}
@@ -283,5 +305,87 @@ Component
 			}
 		if textNode isnt false
 			textNode.nodeValue = name
+		}
+
+	HasFocus?()
+		{
+		return SuUI.GetCurrentDocument().activeElement is .edit or super.HasFocus?()
+		}
+
+	On_Delete()
+		{
+		if .edit is false
+			return
+
+		if '' isnt .getSelectedTextOrAll()
+			.replaceSel('')
+		}
+	On_Cut()
+		{
+		if .edit is false
+			return
+		if '' isnt str = .getSelectedTextOrAll()
+			SuClipboardWriteString(str, 'Cut').Then({|res|
+				if false isnt res
+					.replaceSel('')
+				})
+		}
+
+	On_Copy()
+		{
+		if .edit is false
+			return
+		if '' isnt str = .getSelectedTextOrAll()
+			SuClipboardWriteString(str, 'Copy')
+		}
+
+	On_Paste()
+		{
+		if .edit is false
+			return
+		SuClipboardPasteString(this, .replaceSel)
+		}
+
+	On_Undo()
+		{
+		if .edit is false
+			return
+		SuUI.GetCurrentDocument().ExecCommand('undo')
+		}
+
+	On_Select_All()
+		{
+		if .edit is false
+			return
+		.setSel(0, .edit.value.Size())
+		}
+
+	getSel()
+		{
+		return [.edit.selectionStart, .edit.selectionEnd]
+		}
+
+	getSelectedTextOrAll()
+		{
+		sel = .getSel()
+		if sel[0] is sel[1]	// no selection made
+			{
+			.On_Select_All()
+			sel = .getSel()
+			return .edit.value[..sel[1]]
+			}
+		return .edit.value[sel[0]..sel[1]]
+		}
+
+	setSel(start, end)
+		{
+		.edit.SetSelectionRange(start, end)
+		}
+
+	replaceSel(text)
+		{
+		value = .edit.value
+		range = .getSel()
+		.edit.value = value[..range[0]] $ text $ value[range[1]..]
 		}
 	}

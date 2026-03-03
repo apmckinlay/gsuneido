@@ -324,25 +324,31 @@ Test
 
 	Test_GetImageSize()
 		{
-		size = PdfDriver.GetImageSize('', FakeObject(GetWidth: 100, GetHeight: 10))
+		cl = PdfDriver
+			{
+			PdfDriver_imageHandler()
+				{
+				return class
+					{
+					GetWidthHeight(s)
+						{
+						size = s.BeforeFirst('_')
+						return Object(w: Number(size), h: Number(size))
+						}
+					}
+				}
+			}
+		size = cl.GetImageSize('', FakeObject(GetWidth: 100, GetHeight: 10))
 		Assert(size.width.Round(2) is: 1574.80)
 		Assert(size.height.Round(2) is: 157.48)
 
-		.MakeLibraryRecord([name: "ImageMagick", text: `class
-			{
-			GetWidthHeight(s)
-				{
-				size = s.BeforeFirst('_')
-				return Object(w: Number(size), h: Number(size))
-				}
-			}`])
-		size = PdfDriver.GetImageSize('200_jpg_content'.Repeat(100))
+		size = cl.GetImageSize('200_jpg_content'.Repeat(100))
 		Assert(size.width.Round(2) is: 3149.61)
 		Assert(size.height.Round(2) is: 3149.61)
 
 		filename = .MakeFile('300_jpg_file')
 		filedata = GetFile(filename)
-		size = PdfDriver.GetImageSize(filedata)
+		size = cl.GetImageSize(filedata)
 		Assert(size.width.Round(2) is: 4724.41)
 		Assert(size.height.Round(2) is: 4724.41)
 		}

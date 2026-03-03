@@ -151,6 +151,11 @@ WndProc
 		SendMessageTextIn(.Hwnd, SCI.AUTOCSHOW, length, matches.Join(' '))
 		}
 
+	CallTipShow(pos, tip)
+		{
+		SendMessageTextIn(.Hwnd, SCI.CALLTIPSHOW, pos, tip)
+		}
+
 	Default(@args)
 		// this translates .Xyz(...) to .SendMessage(SCI.XYZ, ...)
 		{

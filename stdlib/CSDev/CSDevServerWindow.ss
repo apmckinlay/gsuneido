@@ -47,10 +47,7 @@ class
 				return
 
 			if not Thread.List().Any?({ it.Has?('SuJS Server') })
-				Thread({
-					Thread.Name('SuJS Server')
-					RunSuJSHttpServer()
-				})
+				Thread(RunSuJSHttpServer, name: 'SuJS Server')
 			}
 		catch (e)
 			CSDevServerPrint('EXTRA SETUP ERROR: ' $ e)

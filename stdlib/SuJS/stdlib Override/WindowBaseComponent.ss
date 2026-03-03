@@ -111,7 +111,8 @@ Component
 		// In this case, both windows will receive the mousedown event
 		if .windowContains?(target)
 			{
-			if Same?(SuRender().ActiveWindow, this)
+			if Same?(SuRender().ActiveWindow, this) or
+				SuRender().ActiveWindow.Base?(AutoChooseListComponent)
 				{
 				.Event(#DoActivate)
 				SuRender().Notification.OnWindowActivated(.UniqueId)

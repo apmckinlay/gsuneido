@@ -23,24 +23,25 @@ Controller
 
 	Controls()
 		{
-		controls = Object('Vert')
-		if not .heading.Blank?()
-			controls.Add(Object('Heading', .heading))
-		return controls.
-			Add(Object(.controlContainer, name: 'graphs').Append(.buildGraphs()))
+		controls = Object('Vert', name: 'graphs')
+		if Object?(graphControls = .graphControls())
+			controls.Append(graphControls)
+		return controls
 		}
 
-	getter_controlContainer()
+	graphControls()
 		{
-		return .controlContainer = .vertical ? 'Vert' : 'Horz'
+		if .data.Empty?()
+			return false
+		controls = Object()
+		if not .heading.Blank?()
+			controls.Add(Object('Heading', .heading))
+		return controls.Add(.buildGraphs())
 		}
 
 	buildGraphs()
 		{
 		.labels = #()
-		if .data.Empty?()
-			return #()
-
 		graphsBase = .graphsBase(.target, .data, .min, .axisDensity)
 		.labels = .data.Members().Sort!()
 		axisLabel = .vertical
@@ -49,7 +50,7 @@ Controller
 		graphs = Object(.graphsContainer)
 		for label in .labels
 			graphs.Add(.bulletGraph(.graphArgs(graphsBase, label, axisLabel, .data)))
-		return Object('Skip', graphs, .displayDetails())
+		return Object(.controlContainer, 'Skip', graphs, .displayDetails())
 		}
 
 	graphsBase(target, data, min, axisDensity)
@@ -126,6 +127,11 @@ Controller
 		return .axisFormat
 		}
 
+	getter_controlContainer()
+		{
+		return .controlContainer = .vertical ? 'Vert' : 'Horz'
+		}
+
 	displayDetails()
 		{
 		value = ' '
@@ -152,8 +158,10 @@ Controller
 	Set(.data)
 		{
 		.selected = .hover = false
-		.graphs.RemoveAll()
-		.graphs.AppendAll(.buildGraphs())
+		if .graphs.GetChildren().NotEmpty?()
+			.graphs.RemoveAll()
+		if Object?(graphControls = .graphControls())
+			.graphs.AppendAll(graphControls)
 		}
 
 	Get()
@@ -189,13 +197,6 @@ Controller
 		if .setDisplayDetails('click', .selected = source.Name)
 			.FindControl(.selected).Selected(true)
 		return false
-		}
-
-	// TEMPORARY: 37414
-	// Allows us to develop the suneido.js equivalent and test with select customers
-	AllowBulletGraphs?()
-		{
-		return OptContribution('AllowBulletGraphs', { true })()
 		}
 
 	Destroy()

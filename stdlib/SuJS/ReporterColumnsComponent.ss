@@ -7,6 +7,7 @@ Component
 	New()
 		{
 		.CreateElement('table')
+		.El.SetAttribute('translate', 'no')
 		.SetStyles(#(
 			'table-layout': 'fixed',
 			'user-select': 'none',

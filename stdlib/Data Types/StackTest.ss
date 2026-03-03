@@ -46,7 +46,5 @@ Test
 		{
 		Assert(Display(Stack()) is: 'Stack()')
 		Assert(Display(Stack(1, 2, 3)) is: 'Stack(1, 2, 3)')
-		Assert('' $ Stack() is: 'Stack()')
-		Assert('' $ Stack(1, 2, 3) is: 'Stack(1, 2, 3)')
 		}
 	}

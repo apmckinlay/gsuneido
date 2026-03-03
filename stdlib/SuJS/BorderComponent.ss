@@ -3,14 +3,12 @@ HtmlContainer
 	{
 	Name: "Border"
 	Ctrl: false
-	New(control, border, borderline)
+	New(control, border)
 		{
 		.CreateElement('div')
 		.border = border
-		if borderline isnt 0
-			.SetStyles(Object('border': borderline $ 'px solid lightgrey'))
 		.SetStyles(Object(display: 'inline-flex', 'flex-direction': 'row',
-			'box-sizing': 'border-box', padding: (.border - borderline) $ 'px'))
+			'box-sizing': 'border-box', padding: .border $ 'px'))
 
 		.xmin_original = .Xmin
 		.ymin_original = .Ymin

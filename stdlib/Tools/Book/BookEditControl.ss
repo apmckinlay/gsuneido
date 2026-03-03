@@ -138,11 +138,11 @@ Controller
 		(DD					"Ctrl+Alt+D",	"", D)
 		(PRE				"Ctrl+Alt+P",	"", R)
 
-		(Find_in_Folders,	"Shift+Ctrl+F",	"Find text in the libraries")
+		(Find_in_Folders,	"Shift+Ctrl+F",	"Find text in book")
 		(Find_Next_in_Folders,		"",
-			"Find the next occurrence in the libraries", Find_Next)
+			"Find next occurrence in book", Find_Next)
 		(Find_Previous_in_Folders,	"",
-			"Find the next occurrence in the libraries", Find_Previous)
+			"Find previous occurrence in book", Find_Previous)
 
 		(Import_Records,	"",				"Import records from a text file into a book")
 		(Export_Record,		"",				"Append current record to a text file")
@@ -415,14 +415,14 @@ Controller
 		name = path[path.FindLast("/") - path.Size() + 1 ..]
 		// strip tablename and record name off path
 		path = path[.table.Size()..][.. -(name.Size() + 1)]
-		filename = SaveFileName(
+		DoWithSaveFileName(
 			hwnd:	.Window.Hwnd,
 			flags:	OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR,
 			title:	"Export Image to",
-			file: name
-			)
-		if filename isnt ''
+			file: name)
+			{ |filename|
 			PutFile(filename, .Explorer.Get().text)
+			}
 		}
 
 	On_Export_Multiple_Html_Files()
@@ -434,16 +434,16 @@ Controller
 
 	On_Export_Single_Html_File()
 		{
-		filename = SaveFileName(
+		DoWithSaveFileName(
 			hwnd:	.Window.Hwnd,
 			flags:	OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.OVERWRITEPROMPT |
 				OFN.NOCHANGEDIR,
 			title:	"Export to",
 			filter: "HTML Files (*.htm)\x00*.htm\x00All Files (*.*)\x00*.*\x00",
-			ext: 'htm'
-			)
-		if filename isnt ''
+			ext: 'htm')
+			{ |filename|
 			BookExportOne(.table, filename)
+			}
 		}
 
 	On_Export_Record()
@@ -457,10 +457,11 @@ Controller
 		name = path.AfterLast('/')
 		// strip tablename and record name off path
 		path = path.RemovePrefix(.table).BeforeLast('/')
-		filename = SaveFileName(hwnd: .Window.Hwnd, title: "Export (append) to",
+		DoWithSaveFileName(hwnd: .Window.Hwnd, title: "Export (append) to",
 			flags: OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR)
-		if filename isnt ''
+			{ |filename|
 			LibIO.Export(.table, name, filename, path, interactive:)
+			}
 		}
 
 	On_Import_Records()

@@ -109,16 +109,28 @@ class
 		return .controller.Base?(LibViewControl)
 		}
 
+	isSuneidoJs?()
+		{
+		return Sys.SuneidoJs?()
+		}
+
 	addCopyPaste(menu, selectionSize, static?)
 		{
+		options = Object()
 		if not static?
-			.addToMenu(menu, #('C&ut', '&Copy'))
-		if allowPaste? = .checkContoller(#CanPaste?) and selectionSize is 1
-			.addToMenu(menu, '&Paste')
-		if not static? and .isLibViewControl?()
-			.addToMenu(menu, #('Copy To...', '&Move To...'))
-		if allowPaste? or not static?
+			{
+			if not .isSuneidoJs?()
+				options.Add(#('C&ut', '&Copy'))
+			if .isLibViewControl?()
+				options.Add(#('Copy To...', '&Move To...'))
+			}
+		if .checkContoller(#CanPaste?) and selectionSize is 1
+			options.Add('&Paste')
+		if options.NotEmpty?()
+			{
+			options.Each({ .addToMenu(menu, it) })
 			.addToMenu(menu, '')
+			}
 		}
 
 	orderMenu(baseMenu, addonMenus)

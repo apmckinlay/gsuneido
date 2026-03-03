@@ -1,6 +1,6 @@
 ## Blocks
 
-A block is a section of code within a function. It can be called like a function, and can have parameters and accept arguments like a function. But blocks can share local variables with the containing function like a closure.
+A block is a section of code within a function. It can be called like a function, and can have parameters and accept arguments like a function. But blocks can be closures that share local variables with the containing function. Blocks also handle `break`, `continue`, and `return` specially.
 
 Blocks can be used to create user defined control structures or as anonymous functions.
 
@@ -14,9 +14,9 @@ Blocks are written as:
 {|@args| ... }
 ```
 
-Commas between parameters are optional. Blocks have the same parameters as functions and methods except they do not currently allow default values.
+Blocks have the same parameters as functions and methods except they do not currently allow default values.
 
-Block parameters are independent from local variables with the same names in the containing function. i.e. If you have a block parameter called "x", the block will not be able to access "x" in the containing function, and any changes the block makes to its "x" will not affect "x" outside the block. These block parameters will appear in the debugger preceded by an underscore.
+Block parameters are independent from local variables with the same names in the containing function. i.e. If you have a block parameter called "x", the block will not be able to access "x" in the containing function, and any changes the block makes to its "x" will not affect "x" outside the block.
 
 The "value" of a block is the value of its last statement. On the other hand, an actual "return" will return from the function containing the block.
 
@@ -100,7 +100,7 @@ QueryApply(query, block, dir = 'Next')
 
 **Note:** If block:break and block:continue exceptions are not caught and break or continue are used you will get an error.
 
-While a block looks similar to a function, blocks have to be constructed. For example:
+Closure blocks that share variables have to be constructed. For example:
 
 ``` suneido
 b = { ... }
@@ -109,10 +109,10 @@ b = { ... }
 is actually implemented more like:
 
 ``` suneido
-b = make_block(...)
+b = make_closure(...)
 ```
 
-i.e. an instance of a block must be constructed at runtime to associate it with the current environment (parent local variables).
+i.e. an instance of a closure must be constructed at runtime to associate it with the current environment (shared local variables).
 
 Whereas:
 
@@ -122,18 +122,4 @@ f = function () { ... }
 
 does not need to create an instance, there is just one function value, created at compile time.
 
-Note: Suneido optimize blocks that do not reference parent local variables to be just regular functions, not closures.
-
-**Warning:** if a closure becomes concurrent (by being stored in a concurrent object) it becomes "detached" from its original context and any changes will not affect its origin. For example:
-
-``` suneido
-x = 1
-b = { x++ }
-b() // modifies x
-Print(x)
-	=> 2
-Suneido.b = b // this makes the block concurrent
-b() // does not modify the original x
-Print(x)
-	=> 2
-```
+Note: Suneido optimize blocks that do not reference shared local variables to be just regular functions, not closures.

@@ -14,6 +14,7 @@ Component
 			left: 0px;
 			width: 100%;
 			height: 100%;
+			box-sizing: border-box;
 		}
 		.su-tab-container.su-tab-top {
 			border-bottom: 1px solid lightgrey;
@@ -21,12 +22,18 @@ Component
 		.su-tab-container.su-tab-bottom {
 			border-top: 1px solid lightgrey;
 		}
+		.su-tab-container.su-tab-left {
+			border-right: 1px solid lightgrey;
+		}
+		.su-tab-container.su-tab-right {
+			border-left: 1px solid lightgrey;
+		}
 		.su-tab {
 			border-right: 1px solid lightgrey;
 			outline: none;
 			cursor: pointer;
 			padding: 5px;
-			transition: 0.3s;
+			transition: background-color 0.3s, font-weight 0.3s, color 0.3s;;
 			display: flex;
 			align-items: baseline;
 			overflow: hidden;
@@ -37,22 +44,36 @@ Component
 			border-top-left-radius: 0.5em;
 			border-top-right-radius: 0.5em;
 		}
-		.su-tab-top.su-tab-right .su-tab {
-			border-top-left-radius: 0;
-			border-bottom-right-radius: 0.5em;
-		}
-		.su-tab-top.su-tab-left .su-tab {
-			border-top-right-radius: 0;
-			border-bottom-left-radius: 0.5em;
-		}
-		.su-tab-container.su-tab-top.su-tab-right .su-tab:last-child,
-		.su-tab-container.su-tab-top.su-tab-left .su-tab:last-child {
-			border-bottom: 1px solid lightgrey;
-		}
 		.su-tab-bottom .su-tab {
 			border-bottom: 1px solid lightgrey;
 			border-bottom-left-radius: 0.5em;
 			border-bottom-right-radius: 0.5em;
+		}
+		.su-tab-right .su-tab {
+			border-right: 1px solid lightgrey;
+			border-top-right-radius: 0.5em;
+			border-bottom-right-radius: 0.5em;
+		}
+		.su-tab-left .su-tab {
+			border-left: 1px solid lightgrey;
+			border-top-left-radius: 0.5em;
+			border-bottom-left-radius: 0.5em;
+		}
+		.su-tab-top .su-tab:last-child
+		.su-tab-bottom .su-tab:last-child {
+			border-right: 1px solid lightgrey;
+		}
+		.su-tab-right .su-tab:last-child,
+		.su-tab-left .su-tab:last-child {
+			border-bottom: 1px solid lightgrey;
+		}
+		.su-tab-top .su-tab:first-child
+		.su-tab-bottom .su-tab:first-child {
+			border-left: 1px solid lightgrey;
+		}
+		.su-tab-left .su-tab:first-child
+		.su-tab-right .su-tab:first-child {
+			border-top: 1px solid lightgrey;
 		}
 		.su-tab-text {
 			text-overflow: ellipsis;
@@ -60,9 +81,6 @@ Component
 			overflow: hidden;
 			user-select: none;
 			text-align: center;
-		}
-		.su-tab:first-child {
-			border-left: 1px solid lightgrey;
 		}
 		.su-tab:hover {
 			background-color: lightblue;
@@ -105,10 +123,10 @@ Component
 
 		.CreateElement('div', className: 'su-tab-control')
 		.TargetEl = .tabEl = CreateElement('div', .El, 'su-tab-container')
-		.tabEl.classList.Add(orientation is 'bottom' ? 'su-tab-bottom' : 'su-tab-top')
 		.initHiddenTab()
-		if .vertical = orientation in ('left', 'right')
+		if orientation in ('left', 'right')
 			{
+			.vertical = true
 			.tabEl.classList.Add(orientation is 'right' ? 'su-tab-right' : 'su-tab-left')
 			.SetStyles(#('flex-direction': 'column', 'order': '100'), .tabEl)
 
@@ -116,7 +134,11 @@ Component
 			.Xstretch = 0
 			}
 		else
+			{
+			.vertical = false
+			.tabEl.classList.Add(orientation is 'bottom' ? 'su-tab-bottom' : 'su-tab-top')
 			.Xstretch = 1
+			}
 
 		if tabButton isnt false
 			{

@@ -2,11 +2,11 @@
 
 Operators:
 
-|  |  | 
-| :---- | :---- |
-| $ | concatenate, returns a string | 
-| =~ | matches regular expression, returns true or false | 
-| !~ | does not match regular expression, returns true or false | 
+|     | | 
+| --- | ---- |
+| $   | concatenate, returns a string | 
+| =~  | matches regular expression, returns true or false | 
+| !~  | does not match regular expression, returns true or false | 
 
 
 For example:
@@ -16,7 +16,7 @@ For example:
     => "hello world"
 ```
 
-Concatenation ($) will automatically convert booleans, numbers, and instances with a [ToString](<../Classes/ToString.md>) method to strings. Using a string operator with other types will throw an exception of "cannot convert {type} to string". Use [Display](<../Reference/Display.md>) to convert other values to strings.
+Concatenation ($) will automatically convert booleans and numbers to strings. Using a string operator with other types will throw an exception of "cannot convert {type} to string". Use [Display](<../Reference/Display.md>) to convert other values to strings.
 
 See also:
 [Basic Data Types - String](<../Basic Data Types/String.md>),

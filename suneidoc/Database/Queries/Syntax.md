@@ -9,11 +9,12 @@ query <b>sort</b> [ <b>reverse</b> ] column [ , ... ]
 *query* =
 <pre>
 table
-history(table)
 query <b>where</b> expression
 query <b>project</b> columns
 query <b>remove</b> columns
 query <b>join</b> query
+query <b>leftjoin</b> query
+query <b>semijoin</b> query
 query <b>times</b> query
 query <b>union</b> query
 query <b>intersect</b> query

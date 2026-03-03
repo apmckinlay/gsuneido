@@ -1,6 +1,6 @@
 ### ToString
 
-If a instance has a `ToString()` method it will be used by [Display](<../Reference/Display.md>) (and therefore [Print](<../Reference/Print.md>) and other functions that use Display). It will also be used by string concatenation ($).
+If an instance has a `ToString()` method it will be used by [Display](<../Reference/Display.md>) (and therefore [Print](<../Reference/Print.md>) and [String](<../Reference/String.md>) and other functions that use Display).
 
 This can be very useful for debugging so you can see the contents of class objects.
 

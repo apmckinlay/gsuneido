@@ -12,6 +12,6 @@ WndPaneComponent
 	SetVisible(visible)
 		{
 		visible = not .GetHidden() and visible
-		.El.SetStyle("visibility", visible ? 'visible' : 'hidden')
+		.El.SetStyle("visibility", visible ? '' : 'hidden')
 		}
 	}

@@ -8,5 +8,6 @@ Test
 		Assert(DirSizeFromBytesFormat.Convert(5368709120) is: '5 gb')
 		Assert(DirSizeFromBytesFormat.Convert('') is: '0')
 		Assert(DirSizeFromBytesFormat.Convert('5 gb') is: '5 gb')
+		Assert(DirSizeFromBytesFormat.Convert(1/0) is: '0 kb') // inf
 		}
 	}

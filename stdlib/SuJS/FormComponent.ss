@@ -170,8 +170,6 @@ HtmlContainer
 					rowXmin += c.Xmin
 
 				div.el.SetStyle('grid-column', .CalcGridColumn(i, gns, offset))
-				if gns[i] is -1
-					div.el.SetStyle('z-index', '1')
 				}
 			xmin = Max(xmin, rowXmin)
 			}

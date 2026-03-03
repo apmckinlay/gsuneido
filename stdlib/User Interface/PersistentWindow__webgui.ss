@@ -7,7 +7,14 @@ _PersistentWindow
 		stateobject.classstate.logfont =
 			stateobject.classstate.GetDefault(mLogName, Suneido.logfont.Copy())
 		}
-	restoreLibs(@unused) { }
+	restoreLibs(stateobject)
+		{
+		if ServerSuneido.Get('RunAsStandalone', false)
+			{
+			ResetCaches()
+			super.PersistentWindow_restoreLibs(stateobject)
+			}
+		}
 	resolution()
 		{
 		return 'web'

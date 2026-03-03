@@ -4,12 +4,12 @@ Container
 	Name: "Border"
 	ComponentName: "Border"
 	Ctrl: false
-	New(control, border = 10, borderline = 0)
+	New(control, border = 10)
 		{
 		if Number?(control) and Object?(border)
 			{ tmp = control; control = border; border = tmp }
 		.Ctrl = .Construct(control)
-		.ComponentArgs = Object(.Ctrl.GetLayout(), border, borderline)
+		.ComponentArgs = Object(.Ctrl.GetLayout(), border)
 		}
 
 	SetCtrl(control)

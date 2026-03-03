@@ -1159,12 +1159,13 @@ Controller
 			.info("Please checkmark the records to export")
 			return
 			}
-		if '' is (fileName = SaveFileName(hwnd:	.Window.Hwnd,
+		DoWithSaveFileName(hwnd: .Window.Hwnd,
 			flags:	OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR,
-			title:	"Export (append) " $ checked.Size() $ " records to"))
-			return
-		for record in checked
-			.exportOne(record.lib, record.name, fileName, record.type is '-')
+			title:	"Export (append) " $ checked.Size() $ " records to")
+			{ |fileName|
+			for record in checked
+				.exportOne(record.lib, record.name, fileName, record.type is '-')
+			}
 		}
 
 	getLocalChecked()

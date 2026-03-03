@@ -43,10 +43,10 @@ Component
 			background-color: var(--active-line-bg-color)
 		}`
 
-	New(.readonly = false, height = false, tabthrough = false)
+	New(.readonly = false, height = false, .tabthrough = false)
 		{
 		if height is 1
-			tabthrough = true
+			.tabthrough = true
 
 		LoadCssStyles('code-mirror.css', .styles)
 		.CreateElement('div', className: 'su-code-wrapper')
@@ -66,7 +66,7 @@ Component
 			.CM.SetOption("tabindex", "-1")
 
 		extraKeys = ['Shift-Tab': 'indentLess']
-		if tabthrough is true
+		if .tabthrough is true
 			extraKeys['Tab'] = false
 		.CM.SetOption("extraKeys", extraKeys)
 
@@ -113,6 +113,14 @@ Component
 		default:
 			return false
 			}
+		}
+
+	SetUseTabs(useTabs)
+		{
+		if .tabthrough is true
+			return
+		if useTabs is false
+			.CM.AddKeyMap(['Tab': function (cm) { cm.ReplaceSelection('    ') }])
 		}
 
 	onContextMenu(unused, event)
@@ -960,6 +968,9 @@ Component
 	SyncAutocStatus(.autocOpen?) {}
 	OnKeyDown(unused, event)
 		{
+		if event.GetDefault(#key, false) is false
+			return
+
 		if .autocOpen? and event.key in (#ArrowUp, #ArrowDown, #Tab, #Enter, #Escape)
 			{
 			.Event(#AUTOC_KEYDOWN, event.key)

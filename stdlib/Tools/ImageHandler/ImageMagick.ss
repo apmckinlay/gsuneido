@@ -284,7 +284,7 @@ class
 				msg = 'There was a problem accessing ImageMagick \r\n\r\n' $
 					'Please contact your system administrator'
 				Alert(msg, title: 'Access Denied', flags: MB.ICONERROR)
-				SuneidoLog('ERROR: (CAUGHT) ImageMagickAccessError:' $ err,
+				SuneidoLog('ERRATIC: (CAUGHT) ImageMagickAccessError:' $ err,
 					caughtMsg: 'Alerted user to contact their system administrator')
 				return errRes
 				}
