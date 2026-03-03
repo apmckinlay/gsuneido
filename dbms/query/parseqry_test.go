@@ -44,6 +44,10 @@ func TestParseQuery(t *testing.T) {
 		"cus leftjoin by(cnum) task")
 	test("cus leftjoin by(cnum) task",
 		"cus leftjoin by(cnum) task")
+	test("cus semijoin task",
+		"cus semijoin by(cnum) task")
+	test("cus semijoin by(cnum) task",
+		"cus semijoin by(cnum) task")
 	test("table summarize count",
 		"table summarize count")
 	test("table summarize n = count")
@@ -77,6 +81,7 @@ func TestParseQuery(t *testing.T) {
 	xtest("table remove", "expecting identifier")
 	xtest("table rename", "expecting identifier")
 	xtest("cus join by() task", "invalid empty join by")
+	xtest("cus semijoin by() task", "invalid empty join by")
 	xtest("table summarize a, b", "expecting Comma")
 	xtest("table summarize total", "expecting identifier")
 

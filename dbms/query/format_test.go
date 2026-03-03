@@ -81,4 +81,8 @@ join by(table)
     tables
 leftjoin by(table)
     columns`)
+	test("tables semijoin columns", `
+    tables
+semijoin by(table)
+    columns`)
 }

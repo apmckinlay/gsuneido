@@ -130,34 +130,36 @@ func _() {
 	_ = x[Join-119]
 	_ = x[Key-120]
 	_ = x[Leftjoin-121]
-	_ = x[Lower-122]
-	_ = x[Minus-123]
-	_ = x[Project-124]
-	_ = x[Remove-125]
-	_ = x[Rename-126]
-	_ = x[Reverse-127]
-	_ = x[Set-128]
-	_ = x[Sort-129]
-	_ = x[Summarize-130]
-	_ = x[Sview-131]
-	_ = x[TempIndex-132]
-	_ = x[Times-133]
-	_ = x[To-134]
-	_ = x[Union-135]
-	_ = x[Unique-136]
-	_ = x[Update-137]
-	_ = x[View-138]
-	_ = x[Where-139]
-	_ = x[Ntokens-140]
+	_ = x[Semijoin-122]
+	_ = x[Lower-123]
+	_ = x[Minus-124]
+	_ = x[Project-125]
+	_ = x[Remove-126]
+	_ = x[Rename-127]
+	_ = x[Reverse-128]
+	_ = x[Set-129]
+	_ = x[Sort-130]
+	_ = x[Summarize-131]
+	_ = x[Sview-132]
+	_ = x[TempIndex-133]
+	_ = x[Times-134]
+	_ = x[To-135]
+	_ = x[Union-136]
+	_ = x[Unique-137]
+	_ = x[Update-138]
+	_ = x[View-139]
+	_ = x[Where-140]
+	_ = x[Ntokens-141]
 }
 
-const _Token_name = "NilEofErrorIdentifierNumberStringSymbolWhitespaceCommentNewlineHashCommaSemicolonAtLParenRParenLBracketRBracketLCurlyRCurlyRangeToRangeLenOpsStartNotBitNotNewDotCompareStartIsIsntMatchMatchNotLtLteGtGteCompareEndQMarkColonAssocStartAndOrBitOrBitAndBitXorAddSubCatMulDivAssocEndModLShiftRShiftPipeIncDecStartIncPostIncDecPostDecIncDecEndAssignStartEqAddEqSubEqCatEqMulEqDivEqModEqLShiftEqRShiftEqBitOrEqBitAndEqBitXorEqAssignEndInBreakCaseCatchClassContinueDefaultDoElseFalseForForeverFunctionIfReturnSwitchSuperThisThrowTrueTryWhileQueryStartSummarizeStartAverageCountListMaxMinTotalSummarizeEndAlterByCascadeCreateDeleteDropEnsureExtendHistoryIndexInsertIntersectIntoJoinKeyLeftjoinLowerMinusProjectRemoveRenameReverseSetSortSummarizeSviewTempIndexTimesToUnionUniqueUpdateViewWhereNtokens"
+const _Token_name = "NilEofErrorIdentifierNumberStringSymbolWhitespaceCommentNewlineHashCommaSemicolonAtLParenRParenLBracketRBracketLCurlyRCurlyRangeToRangeLenOpsStartNotBitNotNewDotCompareStartIsIsntMatchMatchNotLtLteGtGteCompareEndQMarkColonAssocStartAndOrBitOrBitAndBitXorAddSubCatMulDivAssocEndModLShiftRShiftPipeIncDecStartIncPostIncDecPostDecIncDecEndAssignStartEqAddEqSubEqCatEqMulEqDivEqModEqLShiftEqRShiftEqBitOrEqBitAndEqBitXorEqAssignEndInBreakCaseCatchClassContinueDefaultDoElseFalseForForeverFunctionIfReturnSwitchSuperThisThrowTrueTryWhileQueryStartSummarizeStartAverageCountListMaxMinTotalSummarizeEndAlterByCascadeCreateDeleteDropEnsureExtendHistoryIndexInsertIntersectIntoJoinKeyLeftjoinSemijoinLowerMinusProjectRemoveRenameReverseSetSortSummarizeSviewTempIndexTimesToUnionUniqueUpdateViewWhereNtokens"
 
-var _Token_index = [...]uint16{0, 3, 6, 11, 21, 27, 33, 39, 49, 56, 63, 67, 72, 81, 83, 89, 95, 103, 111, 117, 123, 130, 138, 146, 149, 155, 158, 161, 173, 175, 179, 184, 192, 194, 197, 199, 202, 212, 217, 222, 232, 235, 237, 242, 248, 254, 257, 260, 263, 266, 269, 277, 280, 286, 292, 296, 307, 310, 317, 320, 327, 336, 347, 349, 354, 359, 364, 369, 374, 379, 387, 395, 402, 410, 418, 427, 429, 434, 438, 443, 448, 456, 463, 465, 469, 474, 477, 484, 492, 494, 500, 506, 511, 515, 520, 524, 527, 532, 542, 556, 563, 568, 572, 575, 578, 583, 595, 600, 602, 609, 615, 621, 625, 631, 637, 644, 649, 655, 664, 668, 672, 675, 683, 688, 693, 700, 706, 712, 719, 722, 726, 735, 740, 749, 754, 756, 761, 767, 773, 777, 782, 789}
+var _Token_index = [...]uint16{0, 3, 6, 11, 21, 27, 33, 39, 49, 56, 63, 67, 72, 81, 83, 89, 95, 103, 111, 117, 123, 130, 138, 146, 149, 155, 158, 161, 173, 175, 179, 184, 192, 194, 197, 199, 202, 212, 217, 222, 232, 235, 237, 242, 248, 254, 257, 260, 263, 266, 269, 277, 280, 286, 292, 296, 307, 310, 317, 320, 327, 336, 347, 349, 354, 359, 364, 369, 374, 379, 387, 395, 402, 410, 418, 427, 429, 434, 438, 443, 448, 456, 463, 465, 469, 474, 477, 484, 492, 494, 500, 506, 511, 515, 520, 524, 527, 532, 542, 556, 563, 568, 572, 575, 578, 583, 595, 600, 602, 609, 615, 621, 625, 631, 637, 644, 649, 655, 664, 668, 672, 675, 683, 691, 696, 701, 708, 714, 720, 727, 730, 734, 743, 748, 757, 762, 764, 769, 775, 781, 785, 790, 797}
 
 func (i Token) String() string {
-	if i >= Token(len(_Token_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_Token_index)-1 {
 		return "Token(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _Token_name[_Token_index[i]:_Token_index[i+1]]
+	return _Token_name[_Token_index[idx]:_Token_index[idx+1]]
 }

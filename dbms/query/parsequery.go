@@ -110,6 +110,8 @@ func (p *queryParser) operation(pq *Query) bool {
 		*pq = p.join(*pq)
 	case p.MatchIf(tok.Leftjoin):
 		*pq = p.leftjoin(*pq)
+	case p.MatchIf(tok.Semijoin):
+		*pq = p.semijoin(*pq)
 	case p.MatchIf(tok.Minus):
 		*pq = p.minus(*pq)
 	case p.MatchIf(tok.Project):
@@ -164,6 +166,12 @@ func (p *queryParser) leftjoin(q Query) Query {
 	by := p.joinBy()
 	q2 := p.source()
 	return NewLeftJoin(q, q2, by, p.t)
+}
+
+func (p *queryParser) semijoin(q Query) Query {
+	by := p.joinBy()
+	q2 := p.source()
+	return NewSemiJoin(q, q2, by, p.t)
 }
 
 func (p *queryParser) joinBy() []string {

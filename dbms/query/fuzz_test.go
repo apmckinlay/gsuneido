@@ -63,6 +63,7 @@ func fuzzRandom(t *testing.T, rnd *rand.Rand) {
 		fuzzTimes,
 		fuzzJoin,
 		fuzzLeftJoin,
+		fuzzSemiJoin,
 	}
 	f := random(fuzzers, rnd)
 	f(t, rnd)
@@ -840,6 +841,36 @@ func fuzzLeftJoin(t *testing.T, rnd *rand.Rand) {
 
 	qs1, qs2, to := newFuzzJoin(rnd)
 	q := NewLeftJoin(qs1, qs2, to, &testTran{})
+	index := chooseIndex(rnd, q)
+	fuzzQuery(t, q, rnd, index)
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzSemiJoin ./dbms/query/
+
+func FuzzSemiJoin(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
+	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzSemiJoin(t, rnd)
+	})
+}
+
+func TestFuzzSemiJoin(t *testing.T) {
+	for range nfuzz {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzSemiJoin(t, rnd)
+	}
+	fmt.Println("fuzzCount", fuzzCount, "noResults", noResults)
+}
+
+func fuzzSemiJoin(t *testing.T, rnd *rand.Rand) {
+	defer func(ti int) { ticostAdj = ti }(ticostAdj)
+	ticostAdj = 9999999
+
+	qs1, qs2, to := newFuzzJoin(rnd)
+	q := NewSemiJoin(qs1, qs2, to, &testTran{})
 	index := chooseIndex(rnd, q)
 	fuzzQuery(t, q, rnd, index)
 }

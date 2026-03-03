@@ -136,6 +136,7 @@ const (
 	Join
 	Key
 	Leftjoin
+	Semijoin
 	Lower
 	Minus
 	Project

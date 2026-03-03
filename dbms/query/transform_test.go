@@ -166,6 +166,9 @@ func TestTransform(t *testing.T) {
 	// distribute where over leftjoin
 	test("(customer leftjoin trans) where id > 5",
 		"customer where id > 5 leftjoin 1:n by(id) trans")
+	// distribute where over semijoin
+	test("(customer semijoin trans) where id > 5",
+		"customer where id > 5 semijoin by(id) trans")
 	// distribute where over leftjoin
 	test("(customer leftjoin trans) where id > 5 and item =~ 'x'",
 		"(customer where id > 5 leftjoin 1:n by(id) trans) where item =~ 'x'")
@@ -195,6 +198,9 @@ func TestTransform(t *testing.T) {
 	// split project over join
 	test("(trans join customer) project city, item, id",
 		"trans project /*NOT UNIQUE*/ item, id join n:1 by(id) (customer project city, id)")
+	// split project over semijoin
+	test("(trans semijoin customer) project item, id",
+		"trans project /*NOT UNIQUE*/ item, id semijoin by(id) customer")
 	// ... but only if project includes join fields
 	test("(trans join by(id) customer) project city, item",
 		"(trans join n:1 by(id) customer) project /*NOT UNIQUE*/ city, item")
@@ -211,6 +217,7 @@ func TestTransform(t *testing.T) {
 	test("table project b, c summarize b, total c",
 		"table project /*NOT UNIQUE*/ b, c summarize b, total c")
 
+	// join - apply fixed to both sides
 	test("trans where id is 1 join customer",
 		"trans where id is 1 join n:1 by(id) (customer where id is 1)")
 	test("trans join (customer where id is 1)",
@@ -222,6 +229,7 @@ func TestTransform(t *testing.T) {
 	test("(abc where b is 1) join (bcd where c is 2)",
 		"abc where b is 1 and c is 2 join 1:1 by(b,c) (bcd where c is 2 and b is 1)")
 
+	// leftjoin - apply fixed to both sides
 	test("trans where id is 1 leftjoin customer",
 		"trans where id is 1 leftjoin n:1 by(id) (customer where id is 1)")
 	test("trans leftjoin (customer where id is 1)",
@@ -232,4 +240,13 @@ func TestTransform(t *testing.T) {
 		"trans where id is 1 extend name = '', city = ''")
 	test("(abc where b is 1) leftjoin (bcd where c is 2)",
 		"abc where b is 1 leftjoin 1:1 by(b,c) (bcd where c is 2 and b is 1)")
+
+	test("trans where id is 1 semijoin customer",
+		"trans where id is 1 semijoin by(id) (customer where id is 1)")
+	test("trans semijoin (customer where id is 1)",
+		"trans where id is 1 semijoin by(id) (customer where id is 1)")
+	test("trans where id is 1 semijoin (customer where id is 1)",
+		"trans where id is 1 semijoin by(id) (customer where id is 1)")
+	test("trans where id is 1 semijoin (customer where id is 2)",
+		"nothing")
 }

@@ -216,6 +216,7 @@ var queryKeywords = map[string]tok.Token{
 	"remove":    tok.Remove,
 	"rename":    tok.Rename,
 	"reverse":   tok.Reverse,
+	"semijoin":  tok.Semijoin,
 	"set":       tok.Set,
 	"sort":      tok.Sort,
 	"summarize": tok.Summarize,

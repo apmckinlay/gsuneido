@@ -265,6 +265,11 @@ func (p *Project) Transform() Query {
 			src1, src2 := p.splitOver(&q.Query2)
 			return q.With(src1, src2).Transform()
 		}
+	case *SemiJoin:
+		if set.Subset(p.columns, q.by) {
+			src1 := newProject(q.source1, p.columns)
+			return q.With(src1, q.source2).Transform()
+		}
 	case *LeftJoin:
 		if set.Subset(p.columns, q.by) {
 			src1, src2 := p.splitOver(&q.Query2)

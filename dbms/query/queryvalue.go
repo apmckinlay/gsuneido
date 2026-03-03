@@ -304,3 +304,11 @@ func (lj *LeftJoin) ValueGet(key Value) Value {
 	}
 	return query2(lj, key)
 }
+
+func (sj *SemiJoin) ValueGet(key Value) Value {
+	switch key {
+	case SuStr("type"):
+		return SuStr("semijoin")
+	}
+	return query2(sj, key)
+}

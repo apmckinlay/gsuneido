@@ -409,6 +409,10 @@ func (w *Where) Transform() Query {
 		return w.split(q, func(src1, src2 Query) Query {
 			return q.With(src1, src2).Transform()
 		})
+	case *SemiJoin:
+		// move where before semijoin
+		src1 := NewWhere(q.source1, w.expr, w.t)
+		return q.With(src1, q.source2).Transform()
 	case *LeftJoin:
 		if w.leftJoinToJoin(q) {
 			return w.split(q, func(src1, src2 Query) Query {

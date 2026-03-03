@@ -526,12 +526,27 @@ func TestQueryGet(t *testing.T) {
 		`city	id	name	name2
 		'calgary'	'c'	'calac'	'trical'
 		'saskatoon'	'a'	'axon'	'abc'`)
+	test("customer semijoin alias",
+		"customer^(id) semijoin by(id) alias^(id)",
+		`city	id	name
+		'calgary'	'c'	'calac'
+		'saskatoon'	'a'	'axon'`)
 	test("trans join inven",
 		"inven^(item) join 1:n by(item) trans^(item)",
 		`cost	date	id	item	qty
 		100	970101	'a'	'disk'	5
 		200	960204	'e'	'mouse'	2
 		200	970101	'c'	'mouse'	2`)
+	test("inven semijoin trans",
+		"inven^(item) semijoin by(item) trans^(item)",
+		`item	qty
+		'disk'	5
+		'mouse'	2`)
+	test("customer semijoin hist2",
+		"customer^(id) semijoin by(id) hist2^(id)",
+		`city	id	name
+		'saskatoon'	'a'	'axon'
+		'vancouver'	'e'	'emerald'`)
 	test("customer leftjoin alias",
 		"customer^(id) leftjoin 1:1 by(id) alias^(id)",
 		`city	id	name	name2

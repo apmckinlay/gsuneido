@@ -161,6 +161,9 @@ func queryKeyword(s string) (tok.Token, string) {
 		if s == "leftjoin" {
 			return tok.Leftjoin, "leftjoin"
 		}
+		if s == "semijoin" {
+			return tok.Semijoin, "semijoin"
+		}
 	case 9:
 		if s == "intersect" {
 			return tok.Intersect, "intersect"
