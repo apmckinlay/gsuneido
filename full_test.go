@@ -5,8 +5,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -18,7 +16,7 @@ import (
 )
 
 func TestQueryBug(t *testing.T) {
-	TestOnlyIndividually(t)
+	assert.TestOnlyIndividually(t)
 	Libload = libload // dependency injection
 	mainThread.Name = "main"
 	mainThread.SetSviews(&sviews)
@@ -43,7 +41,7 @@ func TestQueryBug(t *testing.T) {
 }
 
 func TestFastGet(t *testing.T) {
-	TestOnlyIndividually(t)
+	assert.TestOnlyIndividually(t)
 	Libload = libload // dependency injection
 	mainThread.Name = "main"
 	mainThread.SetSviews(&sviews)
@@ -51,7 +49,7 @@ func TestFastGet(t *testing.T) {
 	openDbms()
 	defer db.CloseKeepMapped()
 
-	compile.EvalString(MainThread, `Database('drop tmp')
+	compile.EvalString(MainThread, `try Database('drop tmp')
 		Database('create tmp (a, b, c, d, e) key(a) index(b) index(c) index(d)')
 		for i in ..1000
 			QueryOutput(#tmp, [a: i, b: i % 64, c: i % 16, d: i % 4])`)
@@ -116,14 +114,4 @@ func BenchmarkFast(b *testing.B) {
 	for b.Loop() {
 		dbmsLocal.Get(MainThread, args, Only)
 	}
-}
-
-func TestOnlyIndividually(t *testing.T) {
-	for _, arg := range os.Args {
-		if strings.Contains(arg, "-test.run") &&
-			!strings.Contains(arg, "|") {
-			return
-		}
-	}
-	t.SkipNow()
 }

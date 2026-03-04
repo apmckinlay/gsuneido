@@ -25,6 +25,7 @@ package assert
 import (
 	"fmt"
 	"log"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -422,4 +423,15 @@ func ShouldNotReachHere() int {
 	log.Println(e)
 	dbg.PrintStack()
 	panic(e)
+}
+
+func TestOnlyIndividually(t *testing.T) {
+	for _, arg := range os.Args {
+		if strings.Contains(arg, "-test.run") &&
+			!strings.Contains(arg, "|") {
+			return
+		}
+	}
+	fmt.Fprintln(t.Output(), "test only runs individually")
+	t.SkipNow()
 }

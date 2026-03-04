@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package tests
+package query_test
 
 import (
 	"fmt"
@@ -23,12 +23,11 @@ import (
 )
 
 func TestQuery(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	assert.TestOnlyIndividually(t)
+
 	// Global.TestDef("Rule_c",
 	// 	compile.Constant("function() { return .b }"))
-	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
+	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -114,9 +113,8 @@ func hashObject(p string) uint64 {
 }
 
 func TestQuery2(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	assert.TestOnlyIndividually(t)
+
 	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())
@@ -251,14 +249,13 @@ func TestHeader_Union(t *testing.T) {
 }
 
 func TestSimple(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
+	assert.TestOnlyIndividually(t)
+
 	MakeSuTran = func(QueryTran) *SuTran {
 		return nil
 	}
 	s := `cus extend r0 extend x1 = r0 where x1 is ""`
-	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
+	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())
 	}

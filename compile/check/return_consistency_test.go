@@ -1,10 +1,14 @@
-package tests
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
+package check_test
 
 import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	_ "github.com/apmckinlay/gsuneido/builtin"
 )
 
 func TestReturnConsistency(t *testing.T) {

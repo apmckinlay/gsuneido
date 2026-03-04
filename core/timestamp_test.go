@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package tests
+package core_test
 
 import (
 	"fmt"
@@ -17,9 +17,8 @@ import (
 )
 
 func TestTimestamp(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping in short mode")
-	}
+	assert.TestOnlyIndividually(t)
+
 	db19.StartTimestamps()
 	var lock sync.Mutex
 	var prev Value = SuDate{}
