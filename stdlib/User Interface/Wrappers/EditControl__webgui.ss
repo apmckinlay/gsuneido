@@ -281,6 +281,8 @@ Control
 			.EnsureSelect()
 			return 0
 			}
+		if .Destroyed?()
+			return 0
 		.callContext(menu, i)
 		return 0
 		}

@@ -19,9 +19,9 @@ MemoizeSingle
 
 	ExcludeSymbols: ()
 	SymbolsMap: (
-		IDENTIFIER: (Curry, TdopSymbolIdentifier)
-		NUMBER: (Curry, TdopSymbolNumber)
-		STRING: (Curry, TdopSymbolString)
+		IDENTIFIER: (Bind, TdopSymbolIdentifier)
+		NUMBER: (Bind, TdopSymbolNumber)
+		STRING: (Bind, TdopSymbolString)
 
 		'++': (TdopSymbolIncDec, "TDOPTOKEN.INC", lbp: 90, rbp: 80)
 		'--': (TdopSymbolIncDec, "TDOPTOKEN.DEC", lbp: 90, rbp: 80)

@@ -55,6 +55,7 @@ class
 		note = display.AfterFirst(`/* `).BeforeFirst(` */`)
 		.Name = name.BeforeFirst('.')
 		.Paths = name.Split('.')[1..]
+		.InNew? = .Paths.NotEmpty?() and .Paths.Last() is #New
 		.Lib = LibraryTags.RemoveTagFromName(note.BeforeLast(' '))
 		.Method? = note.Suffix?('method')
 		.Params = .Target.Params()
@@ -96,6 +97,8 @@ class
 
 	Return(@args)
 		{
+		Assert(not .InNew?,
+			msg: 'Spy.Return is not allowed on .New method; use .ReturnNothing')
 		values = args.Values(list:)
 		when = args.GetDefault(#when, true)
 		.returns.Add(Object(:values, :when, index: 0, action: #return))

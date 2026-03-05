@@ -5,7 +5,6 @@ Test
 		{
 		Assert(CheckCode('function () { 123 }'))
 		Assert(CheckCode('function () { $ }') is: false)
-		Assert(CheckCode('function () { Curry() }') is: "")
 		}
 	Test_warnings()
 		{

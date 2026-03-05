@@ -249,7 +249,6 @@ class
 		('RetryTransaction\(update:',			'RetryTransaction does not take update:')
 		('/\*[ \t\r\n]*?\*/',					'empty comment',				warning:)
 		(`\+\s*\<0\>|\<0\>\s*\+[^+]`,			'use Number()',					warning:)
-		(`Curry\(`,							'deprecated, use a block instead',	warning:)
 		('\?[ \t\r\n]*?true[ \t\r\n]*?:[ \t\r\n]*?false', "useless, remove", 	warning:)
 		(`\[0 ?(\.\.|::)[^\]]`,					"omit 0 default",				warning:)
 		(`\<class ?:? [A-Z]`,					"omit 'class :'",				warning:)
@@ -309,6 +308,7 @@ class
 		(`(?q)Thread.Main?()`,					'use Sys.MainThread?',			warning:,
 			filter: function (name) { return name is 'Sys' })
 		(`\<Each2\(`,							'use: for m, v',				warning:)
+		(`\<Curry\(`,							'use a block or Bind')
 		)
 
 	ast()

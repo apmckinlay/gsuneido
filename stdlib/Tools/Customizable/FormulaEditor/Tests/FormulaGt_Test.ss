@@ -11,10 +11,10 @@ FormulaBase_Test
 		b = FORMULATYPE.BOOLEAN
 		d = FORMULATYPE.DATE
 
-//		.Check(fn, [n, ''], [n, 1], [b, true])
-//		.Check(fn, [n, ''], [n, -1], [b, true])
-//		.Check(fn, [b, ''], [b, true], [b, true])
-//		.Check(fn, [b, ''], [b, false], [b, true])
+		.Check(fn, [n, ''], [n, 1], [b, true])
+		.Check(fn, [n, ''], [n, -1], [b, true])
+		.Check(fn, [b, ''], [b, true], [b, true])
+		.Check(fn, [b, ''], [b, false], [b, true])
 
 		.Check(fn, [n, 0], [n, 1], [b, false])
 		.Check(fn, [n, 1], [n, 1], [b, false])
@@ -36,11 +36,11 @@ FormulaBase_Test
 		.Check(fn, [b, false], [b, false], [b, false])
 		.Check(fn, [b, true], [b, false], [b, true])
 
-//		.Check(fn, [n, 1], [s, ""], [b, false])
-//		.Check(fn, [n, 1], [n, ""], [b, false])
+		.Check(fn, [n, 1], [s, ""], [b, false])
+		.Check(fn, [n, 1], [n, ""], [b, false])
 		.Check(fn, [n, ""], [n, ""], [b, false])
-//		.Check(fn, [d, #20180101], [s, ""], [b, true])
-//		.Check(fn, [d, #20180101], [d, ""], [b, true])
+		.Check(fn, [d, #20180101], [s, ""], [b, true])
+		.Check(fn, [d, #20180101], [d, ""], [b, true])
 		.Check(fn, [d, ""], [d, ""], [b, false])
 		.Check(fn, [u, ""], [u, ""], [b, false])
 		.Check(fn, [u, ""], [u, "10 kg"], [b, false])

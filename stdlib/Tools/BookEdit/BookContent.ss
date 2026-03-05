@@ -25,7 +25,8 @@ class
 			return text
 		case #md:
 			return MarkdownToHtml(text,
-				addons: [Md_Addon_Table, Md_Addon_Definition, Md_Addon_Book,
+				addons: [[Md_Addon_Table, #(class: 'md-table')],
+					Md_Addon_Definition, Md_Addon_Book,
 					Md_Addon_suneido_style])
 			}
 		}

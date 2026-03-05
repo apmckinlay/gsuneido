@@ -14,10 +14,20 @@ class
 		{
 		dest = Paths.Combine(dest, name)
 		EnsureDir(dest)
+		seen = Object().Set_default(0)
 		for c in tm.Children(parent)
+			{
 			if c.group
 				.export(tm, c.num, dest, c.name)
 			else if not c.name.Suffix?("_alpha") and not c.name.Suffix?("_trial")
-				PutFile(Paths.Combine(dest, c.name.Tr('?', 'Q')) $ ".ss", c.text)
+				{
+				filename = c.name.Tr('?', 'Q')
+				lower = filename.Lower()
+				if seen.Member?(lower)
+					filename $= '(' $ seen[lower] $ ')'
+				++seen[lower]
+				PutFile(Paths.Combine(dest, filename $ ".ss"), c.text)
+				}
+			}
 		}
 	}

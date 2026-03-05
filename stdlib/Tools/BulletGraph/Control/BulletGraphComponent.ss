@@ -3,6 +3,9 @@ Component
 	{
 	ComponentName: 'BulletGraphs'
 	style: `
+		.su-bulletgraph {
+			box-sizing: border-box;
+		}
 		.su-bulletgraph-container {
 			position: relative;
 			display: flex;
@@ -38,8 +41,10 @@ Component
 		.axisFormat = false, .selectedColor = false)
 		{
 		.Name = String(.Name) // Handle non-string names
-		.Xmin = .width -= outside * 2
-		.Ymin = .height -= outside * 2
+		.Xmin = .width
+		.Ymin = .height
+		.width -= outside * 2
+		.height -= outside * 2
 		LoadCssStyles('bulletgraph-control.css', .style)
 		.CreateElement('div', className: .className)
 		.SetStyles(Object(padding: outside $ 'px'), .El)
@@ -84,7 +89,6 @@ Component
 		.graphRangeEl = .addGraphRange('to top')
 		return Object(
 			'flex-direction': 'row',
-			'margin-bottom': '4px',
 			'max-height': .height $ 'px')
 		}
 
@@ -92,9 +96,9 @@ Component
 		{
 		offset = .axisOffset + 2 /*= spacing between value / mark*/
 		valueStyle = Object(
-			bottom: .axisPosCalc(percent, metrics.height / 2),
+			bottom: .axisPosCalc(percent, maxHeight = metrics.height / 2),
 			right: offset $ 'px')
-		return valueStyle, metrics.width + offset, 0
+		return valueStyle, metrics.width + offset, maxHeight
 		}
 
 	verticalAxisMarkStyle(percent, maxWidth)

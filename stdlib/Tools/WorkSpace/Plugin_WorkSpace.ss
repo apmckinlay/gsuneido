@@ -20,5 +20,7 @@ Contributions:
 		target: function (@unused) { PersistentWindow(LibViewControl) })
 	(WorkSpace, Toolbar, 'QueryView', hsplit,
 		target: function (@unused) { QueryViewControl() })
+	(WorkSpace, Toolbar, 'AI_Agent', A,
+		target: function (@unused) { AiAgentControl() })
 	)
 )

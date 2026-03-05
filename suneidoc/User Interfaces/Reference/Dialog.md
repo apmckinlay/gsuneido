@@ -29,7 +29,7 @@ Only certain combinations of style and exstyle work. For example:
 <div class="table-style table-full-width">
 
 |  |  | 
-| :---- | :---- |
+| ---- | ---- |
 | close button on the title bar (default (if no style is specified) | <code>style: WS.SYSMENU \| WS.CAPTION<br />exStyle: WS_EX.DLGMODALFRAME</code> | 
 | no title bar | <code>style: WS.POPUP \| WS.BORDER // for 2d border<br />style: WS.POPUP \| WS.MODALFRAME // for 3d border</code> | 
 | thin title bar with close button, resizable, double click on title bar maximizes | <code>style: WS.DLGFRAME \| WS.SYSMENU \| WS.SIZEBOX \| WS.MAXIMIZEBOX,<br />exStyle: WS_EX.TOOLWINDOW</code> | 

@@ -667,7 +667,7 @@ class
 		{
 		fn = args.Size() is 1
 			? args[0]
-			: Curry(@args) // need Curry for AddUnique since blocks are always unique
+			: Bind(@args) // need Curry for AddUnique since blocks are always unique
 		.teardowns.AddUnique(fn)
 		}
 	Teardown()

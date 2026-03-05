@@ -21,7 +21,7 @@ MenuButtonComponent
 			return 0
 		i = list.FindIf({ it[1] is .El.innerText })
 		i = i is false ? 0 : (i + 1) % list.Size()
-		return .Event(#On_ChooseButton, list[i][1], index: list[i][0])
+		return .EventWithFreeze(#On_ChooseButton, list[i][1], index: list[i][0])
 		}
 
 	SetList(.list) { }

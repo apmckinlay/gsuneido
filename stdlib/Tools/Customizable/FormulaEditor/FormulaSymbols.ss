@@ -2,9 +2,9 @@
 TdopSymbols
 	{
 	SymbolsMap: (
-		IDENTIFIER: (Curry, TdopSymbolIdentifier)
-		NUMBER: (Curry, TdopSymbolNumber)
-		STRING: (Curry, TdopSymbolString)
+		IDENTIFIER: (Bind, TdopSymbolIdentifier)
+		NUMBER: (Bind, TdopSymbolNumber)
+		STRING: (Bind, TdopSymbolString)
 		'*': (TdopSymbolInfix, "TDOPTOKEN.MUL", lbp: 80)
 		'/': (TdopSymbolInfix, "TDOPTOKEN.DIV", lbp: 80)
 		'%': (TdopSymbolInfix, "TDOPTOKEN.MOD", lbp: 80)

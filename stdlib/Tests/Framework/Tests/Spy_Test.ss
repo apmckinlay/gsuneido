@@ -32,6 +32,10 @@ Test
 		private_func() { }
 		Public_func() { }
 		}`
+	src4: `class
+		{
+		New(a) { throw "from New" }
+		}`
 	Setup()
 		{
 		.MakeLibraryRecord([name: "SpyTest_1", text: .src1])
@@ -39,6 +43,7 @@ Test
 		.MakeLibraryRecord([name: "SpyTest_3?", text: .src3])
 		.MakeLibraryRecord([name: "SpyTest_4", text: .src3])
 		.MakeLibraryRecord([name: "SpyTest_4__trial", text: .src3])
+		.MakeLibraryRecord([name: "SpyTest_5", text: .src4])
 		}
 
 	Test_SpyOnFunction()
@@ -108,6 +113,7 @@ Test
 		Assert(Display(spy1.Target) is: "SpyTest_2.CallClass /* Test_lib method */")
 		Assert(spy1.Name is: "SpyTest_2")
 		Assert(spy1.Paths is: #("CallClass"))
+		Assert(not spy1.InNew?)
 		Assert(spy1.Lib is: "Test_lib")
 		Assert(spy1.Method?)
 		Assert(spy1.Params is: '(a,_b=1)')
@@ -117,6 +123,7 @@ Test
 		Assert(Display(spy2.Target) is: target)
 		Assert(spy2.Name is: "SpyTest_3?")
 		Assert(spy2.Paths is: #("CallClass"))
+		Assert(not spy1.InNew? )
 		Assert(spy2.Lib is: "Test_lib")
 		Assert(spy2.Method?)
 		Assert(spy2.Params is: '()')
@@ -128,9 +135,14 @@ Test
 		Assert(Display(spy3.Target) is: target)
 		Assert(spy3.Name is: "SpyTest_4")
 		Assert(spy3.Paths is: #("CallClass"))
+		Assert(not spy1.InNew? )
 		Assert(spy3.Lib is: "Test_lib")
 		Assert(spy3.Method?)
 		Assert(spy3.Params is: '()')
+
+		spy4 = fakeSpy(Global("SpyTest_5.New"))
+		Assert(spy4.Paths is: #("New"))
+		Assert(spy4.InNew?)
 		}
 
 	Test_CallClass()
@@ -143,5 +155,17 @@ Test
 		.SpyOn(GetContributions).Return(#('return from GetContributions'))
 		result = QueryCost('stdlib')
 		Assert(result hasMember: #nrecs)
+		}
+
+	Test_New()
+		{
+		spy = .SpyOn(Global("SpyTest_5.New"))
+		Assert({ spy.Return('return') }
+			throws: 'Spy.Return is not allowed on .New method; use .ReturnNothing')
+		spy.Throw('a > 5', when: { |a| a > 5 })
+		spy.ReturnNothing(when: { |a| a is 5 })
+		Assert({ new (Global('SpyTest_5'))(4) } throws: 'from New')
+		new (Global('SpyTest_5'))(5)
+		Assert({ new (Global('SpyTest_5'))(6) } throws: 'a > 5')
 		}
 	}

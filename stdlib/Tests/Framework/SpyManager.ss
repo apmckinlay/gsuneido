@@ -91,7 +91,7 @@ Singleton
 		"\r\nres = SpyManager().Spy(" $ Display(spy.Id) $
 			", " $ .buildParams(spy.Params) $ ")\r\n" $
 		"if res.action is 'nothing' { return }\r\n" $
-		"if res.action is 'return' { return res.value }\r\n" $
+		(spy.InNew? ? "" : "if res.action is 'return' { return res.value }\r\n") $
 		"if res.action is 'throw' { throw res.value }\r\n"
 		}
 

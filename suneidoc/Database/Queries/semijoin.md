@@ -10,13 +10,23 @@ The input queries must have at least one column in common.
 Semijoin is like [join](<join.md>) but only outputs columns from the first table,
 and like [intersect](<intersect.md>) but matches on specified columns rather than requiring all columns to match.
 
+<div style="display: flex; justify-content: space-around; align-items: center;" class="table-style table-full-width">
+
+<div style="flex-shrink: 0;flex-grow: 1;">
+	
 | table | tablename |
 | ----- | --------- |
 | 17    | suppliers |
 | 18    | empty     |
 | 19    | parts     |
 
+</div>
+<div style="flex-shrink: 0;text-align: center; padding-left: 1em; padding-right: 1em;">
+
 semijoin
+
+</div>
+<div style="flex-shrink: 0;text-align: center; padding-left: 1em; padding-right: 1em;">
 
 | table | column |
 | ----- | ------ |
@@ -25,10 +35,21 @@ semijoin
 | 19    | item   |
 | 19    | cost   |
 
+</div>
+<div style="flex-shrink: 0;text-align: center; padding-left: 1em; padding-right: 1em;">
+
+=
+
+</div>
+<div style="flex-shrink: 0;text-align: center; padding-left: 1em; padding-right: 1em;">
+
 | table | tablename |
 | ----- | --------- |
 | 17    | suppliers |
 | 19    | parts     |
+
+</div>
+</div>
 
 Notice that row 18 from the first table is not included because there is no matching row in the second table.
 

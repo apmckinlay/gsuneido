@@ -5,7 +5,7 @@ Test
 		{
 		c1 = Channel()
 		c2 = Channel()
-		Thread(Curry(.sum, c1, c2))
+		Thread(Bind(.sum, c1, c2))
 		for i in ..10
 			c1.Send(i)
 		c1.Close()

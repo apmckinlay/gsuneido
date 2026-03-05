@@ -108,9 +108,12 @@ class
 		}
 
 	reconnectSocket: false
+	checkReconnect?: false
 	SetReconnectSocket(socket)
 		{
 		.reconnectSocket = socket
+		if socket isnt false
+			.checkReconnect? = true
 		}
 	closeReconnectSocket()
 		{
@@ -194,6 +197,9 @@ check(ob)
 	eventId: false
 	EventHandler(@args)
 		{
+		if .checkReconnect?
+			.checkReconnect(args[2], args[1])
+
 		.eventRecorder.Add(#event, args)
 		.processAck(args[2])
 
@@ -226,6 +232,36 @@ check(ob)
 					.actionToAck.Erase(id)
 			.mostRecentAck = ack
 			}
+		}
+
+	checkReconnect(ack, eventId)
+		{
+		if .connectionValid?(ack, eventId) is false
+			{
+			SuneidoLog('INFO: Invalid reconnect detected',
+				params: [:ack, :eventId, mostRecentAck: .mostRecentAck,
+					actionToAck: .actionToAck.Members()])
+			.DumpStatus('Invalid reconnect detected')
+			.Terminate(reason: 'Reconnect is invalid')
+			}
+		.checkReconnect? = false
+		}
+
+	connectionValid?(ack, eventId)
+		{
+		if not Number?(ack) or not Number?(eventId) or ack >= eventId
+			return false
+		if .actionToAck.Empty?() // should not happen after init
+			return false
+
+		// eventId should be greater than .mostRecentAck
+		if eventId <= .mostRecentAck
+			return false
+		// if ack is greater than .mostRecentAck, it must be a member of .actionToAck
+		if ack > .mostRecentAck
+			return .actionToAck.Member?(ack)
+
+		return true
 		}
 
 	TimedOutMsg: `INFO: Suneido.js Timeout - closing idle connection `

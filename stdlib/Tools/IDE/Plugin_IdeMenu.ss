@@ -18,6 +18,8 @@ Contributions:
 		target: function (@unused) { PersistentWindow(ClassBrowser) })
 	(UI, viewsubmenu, menu: IDE, name: "&PluginsView",
 		target: function (@unused) { PersistentWindow(PluginsView) })
+	(UI, viewsubmenu, menu: IDE, name: "&AI Agent",
+		target: function (@unused) { AiAgentControl() })
 
 	(UI, action, menu: IDE, name: ("&Edit a Book"),
 		target: IdeActions)
