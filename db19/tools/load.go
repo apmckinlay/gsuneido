@@ -18,7 +18,6 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
-	btree3 "github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/query"
@@ -224,7 +223,7 @@ func loadTable1(db *Database, r *bufio.Reader, schema string) (
 // It is multi-threaded when loading an entire database
 func loadTable2(db *Database, ts *meta.Schema,
 	nrows int, size int64, list *slBuilder, overwrite bool) {
-	indexes := buildIndexes(ts, list, db.Store, nrows)
+	indexes := buildIndexes(ts, list, db, nrows)
 	ti := meta.NewInfo(ts.Table, indexes, nrows, size)
 	if overwrite {
 		db.OverwriteTable(ts, ti)
@@ -269,7 +268,7 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *slBuilder) (
 	return nrecs, size
 }
 
-func buildIndexes(ts *meta.Schema, list *slBuilder, store *stor.Stor,
+func buildIndexes(ts *meta.Schema, list *slBuilder, db *Database,
 	nrecs int) []*index.Overlay {
 	i := -1
 	defer func() {
@@ -287,15 +286,14 @@ func buildIndexes(ts *meta.Schema, list *slBuilder, store *stor.Stor,
 		ix := ts.Indexes[i]
 		trace(ix)
 		if i > 0 || ix.Mode != 'k' {
-			list.Sort(MakeLess(store, &ix.Ixspec))
+			list.Sort(MakeLess(db.Store, &ix.Ixspec))
 		}
-		before := store.Size()
-		// only used by load and compact, so hard wired to new btree version
-		bldr := btree3.Builder(store)
+		before := db.Store.Size()
+		bldr := db.BtreeBuilder()
 		iter := list.Iter()
 		n := 0
 		for off := iter(); off != 0; off = iter() {
-			if !bldr.Add(IndexKey(store, &ix.Ixspec, off), off) {
+			if !bldr.Add(IndexKey(db.Store, &ix.Ixspec, off), off) {
 				panic("cannot build index: duplicate value: " +
 					ts.Table + " " + ix.String())
 			}
@@ -308,7 +306,7 @@ func buildIndexes(ts *meta.Schema, list *slBuilder, store *stor.Stor,
 		bt.SetIxspec(&ix.Ixspec)
 		ov[i] = index.OverlayFor(bt)
 		assert.That(n == nrecs)
-		trace("size", store.Size()-before)
+		trace("size", db.Store.Size()-before)
 	}
 	return ov
 }

@@ -16,26 +16,22 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestLoadTable(*testing.T) {
-	if testing.Short() {
-		return
-	}
+func TestLoadTable(t *testing.T) {
+	assert.TestOnlyIndividually(t)
 	defer os.Remove("tmp.su")
 	_, err := DumpTable("../../suneido.db", "configlib", "tmp.su")
 	ck(err)
-	t := time.Now()
+	start := time.Now()
 	defer os.Remove("tmp.db")
 	os.Remove("tmp.db")
 	n, err := LoadTable("tmp", "tmp.db")
 	ck(err)
-	fmt.Println("loaded", n, "records in", time.Since(t).Round(time.Millisecond))
+	fmt.Println("loaded", n, "records in", time.Since(start).Round(time.Millisecond))
 	ck(CheckDatabase("tmp.db", true))
 }
 
-func TestLoadDbTable(*testing.T) {
-	if testing.Short() {
-		return
-	}
+func TestLoadDbTable(t *testing.T) {
+	assert.TestOnlyIndividually(t)
 	defer os.Remove("tmp.su")
 	_, err := DumpTable("../../suneido.db", "configlib", "tmp.su")
 	ck(err)
@@ -46,32 +42,28 @@ func TestLoadDbTable(*testing.T) {
 	ck(err)
 	StartConcur(db, 100*time.Millisecond)
 
-	t := time.Now()
+	start := time.Now()
 	n, err := LoadDbTable("tmp", "tmp.su", "", "", db)
 	ck(err)
-	fmt.Println("loaded", n, "records in", time.Since(t).Round(time.Millisecond))
+	fmt.Println("loaded", n, "records in", time.Since(start).Round(time.Millisecond))
 
 	db.Close()
 	ck(CheckDatabase("tmp.db", true))
 }
 
-func TestLoadDatabase(*testing.T) {
-	if testing.Short() {
-		return
-	}
-	t := time.Now()
+func TestLoadDatabase(t *testing.T) {
+	assert.TestOnlyIndividually(t)
+	start := time.Now()
 	defer os.Remove("tmp.db")
 	nTables, nViews, err := LoadDatabase("../../database.su", "tmp.db", "", "")
 	ck(err)
 	fmt.Println("loaded", nTables, "tables", nViews, "views in",
-		time.Since(t).Round(time.Millisecond))
+		time.Since(start).Round(time.Millisecond))
 	ck(CheckDatabase("tmp.db", true))
 }
 
-func TestLoadFkey(*testing.T) {
-	if testing.Short() {
-		return
-	}
+func TestLoadFkey(t *testing.T) {
+	assert.TestOnlyIndividually(t)
 	db := CreateDb(stor.HeapStor(8192))
 	doAdmin := func(cmd string) {
 		query.DoAdmin(db, cmd, nil)

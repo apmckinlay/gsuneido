@@ -31,9 +31,7 @@ var data = [][]string{
 }
 
 func TestTools(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping slow TestTools")
-	}
+	assert.TestOnlyIndividually(t)
 	createDb()
 	defer os.Remove(dbName)
 	_, _, err := tools.DumpDatabase(dbName, "dump_"+dbName)
