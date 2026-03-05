@@ -27,12 +27,12 @@ type semiJoinApproach struct {
 func NewSemiJoin(src1, src2 Query, by []string, t QueryTran) *SemiJoin {
 	b := set.Intersect(src1.Columns(), src2.Columns())
 	if len(b) == 0 {
-		panic("join: common columns required")
+		panic("semijoin: common columns required")
 	}
 	if by == nil {
 		by = b
-	} else if !set.Equal(by, b) {
-		panic("join: by does not match common columns")
+	} else if !set.Subset(b, by) {
+		panic("semijoinjoin: by must be a subset of the common columns")
 	}
 	sj := &SemiJoin{qt: t, st: MakeSuTran(t), by: by}
 	sj.source1, sj.source2 = src1, src2
