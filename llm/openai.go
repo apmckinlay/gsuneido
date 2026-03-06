@@ -97,12 +97,30 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		var chatResp ChatResponse
+		if err := json.Unmarshal(body, &chatResp); err == nil && chatResp.Error != nil {
+			return fmt.Errorf("api error: %s", chatResp.Error.Message)
+		}
+		return fmt.Errorf("http error: %s: %s", resp.Status,
+			strings.TrimSpace(string(body)))
+	}
+
 	scanner := bufio.NewScanner(resp.Body)
+	seenData := false
+	var nonSSE strings.Builder
 	for scanner.Scan() {
 		line := scanner.Text()
-		if !strings.HasPrefix(line, "data: ") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
 			continue
 		}
+		if !strings.HasPrefix(line, "data: ") {
+			nonSSE.WriteString(trimmed)
+			continue
+		}
+		seenData = true
 
 		data := strings.TrimPrefix(line, "data: ")
 		if data == "[DONE]" {
@@ -123,5 +141,21 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 		}
 	}
 
-	return scanner.Err()
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	if !seenData {
+		if nonSSE.Len() > 0 {
+			raw := nonSSE.String()
+			var chatResp ChatResponse
+			if err := json.Unmarshal([]byte(raw), &chatResp); err == nil && chatResp.Error != nil {
+				return fmt.Errorf("api error: %s", chatResp.Error.Message)
+			}
+			return fmt.Errorf("stream response missing data chunks: %s", raw)
+		}
+		return fmt.Errorf("stream response missing data chunks")
+	}
+
+	return nil
 }

@@ -8,16 +8,14 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/llm"
-	"github.com/apmckinlay/gsuneido/mcp"
 )
 
 // @immutable
 type suAgent struct {
 	ValueBase[suAgent]
-	agent     *llm.Agent
-	mcpClient *llm.MCPClient
-	th        *Thread
-	callback  Value
+	agent    *llm.Agent
+	th       *Thread
+	callback Value
 }
 
 var _ = builtin(AiAgent, "(baseURL, apiKey, model, callback, prompt = '')")
@@ -33,18 +31,10 @@ func AiAgent(th *Thread, args []Value) Value {
 	t2 := NewThread(th)
 	th.Call(callback, SuStr(model), EmptyStr)
 
-	mcpClient, err := llm.NewMCPClient(mcp.Server())
-	if err != nil {
-		log.Println("ERROR creating MCP client: ", err)
-		panic(err)
-	}
-
-
 	a := &suAgent{
-		th:        t2,
-		mcpClient: mcpClient,
-		callback:  callback,
-		agent:  llm.NewAgent(baseURL, apiKey, model, prompt, mcpClient,
+		th:       t2,
+		callback: callback,
+		agent: llm.NewAgent(baseURL, apiKey, model, prompt,
 			outputCallback(t2, callback)),
 	}
 	return a
@@ -124,9 +114,6 @@ var _ = method(agent_Close, "()")
 func agent_Close(this Value) Value {
 	a := this.(*suAgent)
 	a.agent.Interrupt()
-	if a.mcpClient != nil {
-		a.mcpClient.Close()
-	}
 	a.th.Close()
 	DisableSandbox()
 	return nil

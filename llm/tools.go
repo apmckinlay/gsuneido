@@ -1,8 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package mcp provides an MCP (Model Context Protocol) server for gSuneido.
-package mcp
+package llm
 
 import (
 	"context"
@@ -13,9 +12,8 @@ import (
 
 // libraries
 var _ = addTool(toolSpec{
-	name:         "suneido_libraries",
-	description:  "Get a list of the libraries currently in use in Suneido",
-	outputSchema: outputSchema[librariesOutput](),
+	name:        "suneido_libraries",
+	description: "Get a list of the libraries currently in use in Suneido",
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		libs := core.GetDbms().Libraries()
 		return librariesOutput{Libraries: libs}, nil
@@ -28,10 +26,9 @@ type librariesOutput struct {
 
 // tables
 var _ = addTool(toolSpec{
-	name:         "suneido_tables",
-	description:  "Get a list of database table names that start with the given prefix (limit of 100)",
-	params:       []stringParam{{name: "prefix", description: "Only return tables whose names start with this prefix (empty string for all)", required: true}},
-	outputSchema: outputSchema[tablesOutput](),
+	name:        "suneido_tables",
+	description: "Get a list of database table names that start with the given prefix (limit of 100)",
+	params:      []stringParam{{name: "prefix", description: "Only return tables whose names start with this prefix (empty string for all)", required: true}},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		prefix, err := requireString(args, "prefix")
 		if err != nil {
@@ -48,10 +45,9 @@ type tablesOutput struct {
 
 // schema
 var _ = addTool(toolSpec{
-	name:         "suneido_schema",
-	description:  "Get the schema for a Suneido database table, or the definition for a view",
-	params:       []stringParam{{name: "table", description: "Name of the table or view to get schema for", required: true}},
-	outputSchema: outputSchema[schemaOutput](),
+	name:        "suneido_schema",
+	description: "Get the schema for a Suneido database table, or the definition for a view",
+	params:      []stringParam{{name: "table", description: "Name of the table or view to get schema for", required: true}},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		table, err := requireString(args, "table")
 		if err != nil {
@@ -95,7 +91,6 @@ var _ = addTool(toolSpec{
 	params: []stringParam{
 		{name: "query", description: "Suneido query (e.g. 'tables sort table')", required: true},
 	},
-	outputSchema: outputSchema[queryOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		qs, err := requireString(args, "query")
 		if err != nil {
@@ -121,7 +116,6 @@ var _ = addTool(toolSpec{
 		{name: "start_line", description: "1-based line number to start from (default 1)", required: false, kind: paramNumber},
 		{name: "plain", description: "If true, don't add line numbers (default false)", required: false, kind: paramBool},
 	},
-	outputSchema: outputSchema[readCodeOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
 		if err != nil {
@@ -167,7 +161,6 @@ var _ = addTool(toolSpec{
 		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
 		{name: "modified", description: "If true, only return results where the code has been modified", required: false, kind: paramBool},
 	},
-	outputSchema: outputSchema[searchCodeOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		libraryRx, err := requireString(args, "library")
 		if err != nil {
@@ -208,7 +201,6 @@ var _ = addTool(toolSpec{
 		{name: "book", description: "Name of the book table (e.g. 'suneidoc')", required: true},
 		{name: "path", description: "The path to the book page. If sub-topics are returned in 'children', append them to this path to dive deeper. (e.g. 'Database/Reference/Query'). Empty or omitted for root.", required: false},
 	},
-	outputSchema: outputSchema[readBookOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		book, err := requireString(args, "book")
 		if err != nil {
@@ -236,7 +228,6 @@ var _ = addTool(toolSpec{
 		{name: "text", description: "Regular expression applied to page text (optional if path provided)", required: false, kind: paramString},
 		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
 	},
-	outputSchema: outputSchema[searchBookOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		book, err := requireString(args, "book")
 		if err != nil {
@@ -271,7 +262,6 @@ var _ = addTool(toolSpec{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
 		{name: "path", description: "Folder path within the library (e.g. 'Debugging/Tests', empty string for root)", required: true, kind: paramString},
 	},
-	outputSchema: outputSchema[codeFoldersOutput](),
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
 		if err != nil {
@@ -297,8 +287,7 @@ var _ = addTool(toolSpec{
 	description: "Executes Suneido code for its result or side effects.\n" +
 		"Use this for calculations, data manipulation, or system commands.\n" +
 		"Note: A single returned object will appear as the first result (e.g., [[1,2]]), while multiple return values appear as separate elements (e.g., [1,2]).",
-	params:       []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
-	outputSchema: outputSchema[execOutput](),
+	params: []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		code, err := requireString(args, "code")
 		if err != nil {
@@ -316,10 +305,9 @@ type execOutput struct {
 
 // check_code
 var _ = addTool(toolSpec{
-	name:         "suneido_check_code",
-	description:  "Checks Suneido code for syntax and compilation errors without executing it. Returns compiler warnings only.",
-	params:       []stringParam{{name: "code", description: "Suneido code to check (as the body of a function)", required: true}},
-	outputSchema: outputSchema[checkCodeOutput](),
+	name:        "suneido_check_code",
+	description: "Checks Suneido code for syntax and compilation errors without executing it. Returns compiler warnings only.",
+	params:      []stringParam{{name: "code", description: "Suneido code to check (as the body of a function)", required: true}},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		code, err := requireString(args, "code")
 		if err != nil {

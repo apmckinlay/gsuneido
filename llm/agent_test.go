@@ -21,7 +21,7 @@ func TestAgentLogging(t *testing.T) {
 	defer func() { aiDir = oldDir }()
 
 	prompt := "You are a helpful assistant."
-	agent := NewAgent("", "", "test-model", prompt, nil, func(what, data string) {})
+	agent := NewAgent("", "", "test-model", prompt, func(what, data string) {})
 
 	// Verify prompt is stored
 	assert.T(t).This(agent.prompt).Is(prompt)
@@ -81,7 +81,7 @@ func TestAgentLogThink(t *testing.T) {
 	aiDir = tmpDir
 	defer func() { aiDir = oldDir }()
 
-	agent := NewAgent("", "", "test-model", "", nil, func(what, data string) {})
+	agent := NewAgent("", "", "test-model", "", func(what, data string) {})
 
 	agent.emit("think", "reasoning line")
 	agent.emit("output", "done")
@@ -100,7 +100,7 @@ func TestAgentLogThink(t *testing.T) {
 }
 
 func TestAgentClearHistory(t *testing.T) {
-	agent := NewAgent("", "", "test-model", "test prompt", nil, func(what, data string) {})
+	agent := NewAgent("", "", "test-model", "test prompt", func(what, data string) {})
 
 	// Add some history
 	agent.history = append(agent.history, Message{Role: "user", Content: "Hello"})
@@ -124,7 +124,7 @@ func TestAgentSetModel(t *testing.T) {
 	aiDir = tmpDir
 	defer func() { aiDir = oldDir }()
 
-	agent := NewAgent("", "", "initial-model", "test prompt", nil, func(what, data string) {})
+	agent := NewAgent("", "", "initial-model", "test prompt", func(what, data string) {})
 
 	// Trigger log file creation
 	agent.logMessage("user", "Hello")
@@ -172,7 +172,7 @@ What is 2+2?
 
 	// Agent has its own prompt - this should be used, not the file's
 	currentPrompt := "Current prompt"
-	agent := NewAgent("", "", "test-model", currentPrompt, nil, func(what, data string) {})
+	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string) {})
 	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
 
@@ -224,7 +224,7 @@ Answer.
 
 	// Agent has its own prompt - this should be used, not the file's
 	currentPrompt := "Current prompt"
-	agent := NewAgent("", "", "test-model", currentPrompt, nil, func(what, data string) {})
+	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string) {})
 	err = agent.LoadConversation(originalFile, nil)
 	assert.T(t).This(err).Is(nil)
 
@@ -281,7 +281,7 @@ func TestAgentLoadConversationWithTools(t *testing.T) {
 	err := os.WriteFile(tmpFile, []byte(logContent), 0644)
 	assert.T(t).This(err).Is(nil)
 
-	agent := NewAgent("", "", "", "", nil, func(what, data string) {})
+	agent := NewAgent("", "", "", "", func(what, data string) {})
 	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
 

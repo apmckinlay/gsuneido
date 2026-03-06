@@ -4,15 +4,13 @@
 // Package llm provides a simple interface for OpenAI-compatible endpoints.
 package llm
 
-import "context"
-
 // Message represents a single message in a conversation.
 type Message struct {
-	Role             string     `json:"role"`
-	Content          string     `json:"content"`
-	Reasoning        string     `json:"reasoning,omitempty"`
-	ToolCalls        []ToolCall `json:"tool_calls,omitempty"`
-	ToolCallID       string     `json:"tool_call_id,omitempty"`
+	Role       string     `json:"role"`
+	Content    string     `json:"content"`
+	Reasoning  string     `json:"reasoning,omitempty"`
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string     `json:"tool_call_id,omitempty"`
 }
 
 // ChatRequest represents a chat completion request.
@@ -83,10 +81,4 @@ type DeltaMessage struct {
 	ReasoningContent string     `json:"reasoning_content,omitempty"`
 	Reasoning        string     `json:"reasoning,omitempty"`
 	ToolCalls        []ToolCall `json:"tool_calls,omitempty"`
-}
-
-// Client defines the interface for LLM clients.
-type Client interface {
-	// Chat sends a chat completion request and returns the response.
-	Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error)
 }

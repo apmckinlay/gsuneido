@@ -18,7 +18,6 @@ func TestParse(t *testing.T) {
 		Action, Arg, Port, CmdLine, Error = "", "", "", "", ""
 		TimeoutMinutes = 0
 		WebServer, WebPort = false, ""
-		McpServer, McpPort = false, ""
 		Parse(args)
 		s := Action
 		if Arg != "" {
@@ -34,15 +33,6 @@ func TestParse(t *testing.T) {
 			s += " web"
 			if WebPort != "" {
 				s += "=" + WebPort
-			}
-		}
-		if McpServer {
-			s += " mcp"
-			if McpPort != "" {
-				s += "," + McpPort
-			}
-			if McpLog {
-				s += ",log"
 			}
 		}
 		if CmdLine != "" {
@@ -116,13 +106,6 @@ func TestParse(t *testing.T) {
 	test("-web=1234", "web=1234")
 	test("-w foo", "web | foo")
 	test("-web=1.2.3.4", "error invalid web port number")
-
-	test("-mcp", "mcp")
-	test("-mcp=3149", "mcp,3149")
-	test("-mcp=log", "mcp,log")
-	test("-mcp=log,2222", "mcp,2222,log")
-	test("-mcp=2222,log", "mcp,2222,log")
-	test("-mcp=1.2.3.4", "error invalid mcp option: 1.2.3.4")
 
 	test("-xyz", "error invalid command line argument")
 

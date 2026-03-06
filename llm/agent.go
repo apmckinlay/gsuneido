@@ -12,7 +12,7 @@ import (
 
 type Agent struct {
 	client        *OpenAIClient
-	mcpClient     *MCPClient
+	toolClient    *ToolClient
 	model         string
 	prompt        string
 	history       []Message
@@ -31,14 +31,19 @@ type Agent struct {
 type OutFn func(what, data string)
 
 // NewAgent creates an agent.
-// prompt and mcpClient are optional.
-func NewAgent(baseURL, apiKey, model, prompt string, mcpClient *MCPClient, outfn OutFn) *Agent {
+// prompt is optional.
+func NewAgent(baseURL, apiKey, model, prompt string, outfn OutFn) *Agent {
+	toolClient, err := NewToolClient()
+	if err != nil {
+		panic("NewAgent: " + err.Error())
+	}
+
 	agent := &Agent{
-		client:    NewOpenAIClient(baseURL, apiKey),
-		mcpClient: mcpClient,
-		model:     model,
-		prompt:    prompt,
-		outfn:     outfn,
+		client:     NewOpenAIClient(baseURL, apiKey),
+		toolClient: toolClient,
+		model:      model,
+		prompt:     prompt,
+		outfn:      outfn,
 	}
 	agent.resetHistory()
 	return agent
@@ -126,7 +131,7 @@ func (agent *Agent) request(input string) {
 		agent.clearReasoning()
 
 		// Handle tool calls
-		if len(toolCalls) > 0 && agent.mcpClient != nil {
+		if len(toolCalls) > 0 && agent.toolClient != nil {
 			agent.processToolCalls(ctx, content, reasoning, toolCalls)
 			continue // Continue the loop to get next response
 		}
@@ -181,8 +186,8 @@ func (agent *Agent) buildRequest() *ChatRequest {
 		Messages:         agent.history,
 		IncludeReasoning: true,
 	}
-	if agent.mcpClient != nil {
-		req.Tools = agent.mcpClient.GetTools()
+	if agent.toolClient != nil {
+		req.Tools = agent.toolClient.GetTools()
 		req.ToolChoice = "auto"
 	}
 	return req
@@ -312,7 +317,7 @@ func (agent *Agent) processToolCalls(ctx context.Context, content, reasoning str
 func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	name := strings.TrimPrefix(tc.Function.Name, "suneido_")
 	agent.emit("tool", "**"+name+"** "+tc.Function.Arguments+"<br>")
-	result, err := agent.mcpClient.CallToolFromLLM(ctx, tc)
+	result, err := agent.toolClient.CallToolFromLLM(ctx, tc)
 	if err != nil {
 		agent.emit("tool", "**Error:** "+err.Error()+"<br>")
 		result = "Error: " + err.Error()

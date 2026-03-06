@@ -6,7 +6,6 @@ package options
 import (
 	"log"
 	"math/bits"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -80,24 +79,6 @@ loop:
 			if WebPort != "" {
 				if _, ok := atoui(WebPort); !ok {
 					error("invalid web port number")
-				}
-			}
-		case match(&args, "-mcp"):
-			McpServer = true
-			var mcp string
-			if args = optEqualArg(args, &mcp); mcp != "" {
-				split := strings.Split(mcp, ",")
-				slices.Sort(split) // port first
-				if _, ok := atoui(split[0]); ok {
-					McpPort = split[0]
-					split = split[1:]
-				}
-				if len(split) > 0 && split[0] == "log" {
-					McpLog = true
-					split = split[1:]
-				}
-				if len(split) > 0 {
-					error("invalid mcp option: " + split[0])
 				}
 			}
 		case match(&args, "-printstates"):
