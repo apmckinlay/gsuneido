@@ -198,27 +198,35 @@ func (agent *Agent) doStream(ctx context.Context, req *ChatRequest) (
 	content, reasoning string, toolCalls []ToolCall, err error) {
 
 	var contentBuilder, reasoningBuilder strings.Builder
-	toolCallsMap := make(map[int]*ToolCall)
+	toolCallsState := make([]*streamToolCall, 0, 2)
 	inThink := false
 
 	err = agent.client.Stream(ctx, req, func(chunk *ChatCompletionChunk) error {
-		return agent.handleStreamChunk(chunk, &contentBuilder, &reasoningBuilder, &toolCallsMap, &inThink)
+		return agent.handleStreamChunk(chunk, &contentBuilder, &reasoningBuilder, &toolCallsState, &inThink)
 	})
 	if err != nil {
 		return
 	}
 
-	// Convert map to slice (requires contiguous indices)
-	toolCalls = make([]ToolCall, len(toolCallsMap))
-	for i := range toolCalls {
-		toolCalls[i] = *toolCallsMap[i]
+	toolCalls = make([]ToolCall, 0, len(toolCallsState))
+	for _, st := range toolCallsState {
+		if st == nil {
+			continue
+		}
+		st.call.Function.Arguments = st.args.String()
+		toolCalls = append(toolCalls, st.call)
 	}
 	return contentBuilder.String(), reasoningBuilder.String(), toolCalls, nil
 }
 
+type streamToolCall struct {
+	call ToolCall
+	args strings.Builder
+}
+
 // handleStreamChunk processes a single streaming chunk
 func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strings.Builder,
-	reasoning *strings.Builder, toolCallsMap *map[int]*ToolCall, inThink *bool) error {
+	reasoning *strings.Builder, toolCallsState *[]*streamToolCall, inThink *bool) error {
 
 	if len(chunk.Choices) == 0 {
 		return nil
@@ -239,35 +247,35 @@ func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strin
 	}
 
 	// Handle tool calls - accumulate deltas by index
-	agent.accumulateToolCalls(delta.ToolCalls, toolCallsMap)
+	agent.accumulateToolCalls(delta.ToolCalls, toolCallsState)
 
 	text := delta.Content
 	return agent.processContentText(text, content, reasoning, inThink)
 }
 
 // accumulateToolCalls accumulates streaming tool call data by index
-func (agent *Agent) accumulateToolCalls(deltaToolCalls []ToolCall, toolCallsMap *map[int]*ToolCall) {
+func (agent *Agent) accumulateToolCalls(deltaToolCalls []ToolCall, toolCallsState *[]*streamToolCall) {
 	for _, tc := range deltaToolCalls {
 		idx := max(tc.Index, 0)
-		if existing, ok := (*toolCallsMap)[idx]; ok {
-			// Append to existing tool call
-			existing.Function.Arguments += tc.Function.Arguments
-			if tc.Function.Name != "" {
-				existing.Function.Name = tc.Function.Name
-			}
-			if tc.ID != "" {
-				existing.ID = tc.ID
-			}
-		} else {
-			// New tool call
-			(*toolCallsMap)[idx] = &ToolCall{
-				ID:   tc.ID,
-				Type: tc.Type,
-				Function: ToolCallFunction{
-					Name:      tc.Function.Name,
-					Arguments: tc.Function.Arguments,
-				},
-			}
+		if idx >= len(*toolCallsState) {
+			*toolCallsState = append(*toolCallsState, make([]*streamToolCall, idx-len(*toolCallsState)+1)...)
+		}
+		st := (*toolCallsState)[idx]
+		if st == nil {
+			st = &streamToolCall{call: ToolCall{}}
+			(*toolCallsState)[idx] = st
+		}
+		if tc.ID != "" {
+			st.call.ID = tc.ID
+		}
+		if tc.Type != "" {
+			st.call.Type = tc.Type
+		}
+		if tc.Function.Name != "" {
+			st.call.Function.Name = tc.Function.Name
+		}
+		if tc.Function.Arguments != "" {
+			st.args.WriteString(tc.Function.Arguments)
 		}
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime/debug"
+	"strings"
 )
 
 // Tool represents a tool definition for LLM function calling.
@@ -53,21 +54,32 @@ type localTool struct {
 
 // ToolClient provides a direct local interface to tool handlers.
 type ToolClient struct {
-	tools []localTool
+	tools       []localTool
+	openAITools []Tool
 }
 
 // NewToolClient creates a direct local tool client.
 func NewToolClient() (*ToolClient, error) {
 	tools := make([]localTool, 0, len(toolSpecs))
+	openAITools := make([]Tool, 0, len(toolSpecs))
 	for _, spec := range toolSpecs {
+		params := spec.inputSchema()
 		tools = append(tools, localTool{
 			Name:        spec.name,
 			Description: spec.description,
-			InputSchema: inputSchema(spec.params),
+			InputSchema: params,
 			Handler:     spec.handler,
 		})
+		openAITools = append(openAITools, Tool{
+			Type: "function",
+			Function: ToolFunction{
+				Name:        spec.name,
+				Description: spec.description,
+				Parameters:  params,
+			},
+		})
 	}
-	return &ToolClient{tools: tools}, nil
+	return &ToolClient{tools: tools, openAITools: openAITools}, nil
 }
 
 // Close closes the tool client.
@@ -77,31 +89,11 @@ func (c *ToolClient) Close() error {
 
 // GetTools returns available tools in OpenAI function calling format.
 func (c *ToolClient) GetTools() []Tool {
-	tools := make([]Tool, len(c.tools))
-	for i, t := range c.tools {
-		params := t.InputSchema
-		if params == nil {
-			params = map[string]any{"type": "object", "properties": map[string]any{}}
-		} else if _, ok := params["properties"]; !ok {
-			params["properties"] = map[string]any{}
-		}
-		tools[i] = Tool{
-			Type: "function",
-			Function: ToolFunction{
-				Name:        t.Name,
-				Description: t.Description,
-				Parameters:  params,
-			},
-		}
-	}
-	return tools
+	return c.openAITools
 }
 
 // CallTool invokes a local tool by name with the given arguments.
 func (c *ToolClient) CallTool(ctx context.Context, name string, args map[string]any) (string, error) {
-	if args == nil {
-		args = map[string]any{}
-	}
 	for _, t := range c.tools {
 		if t.Name != name {
 			continue
@@ -143,8 +135,8 @@ func callToolHandler(ctx context.Context, t localTool, args map[string]any) (res
 // CallToolFromLLM parses LLM tool call arguments and invokes the tool.
 func (c *ToolClient) CallToolFromLLM(ctx context.Context, tc ToolCall) (string, error) {
 	var args map[string]any
-	argsStr := tc.Function.Arguments
-	if argsStr != "" && argsStr != "null" {
+	argsStr := strings.TrimSpace(tc.Function.Arguments)
+	if argsStr != "" && argsStr != "null" && !isEmptyJSONObject(argsStr) {
 		if err := json.Unmarshal([]byte(argsStr), &args); err != nil {
 			return "", fmt.Errorf("parse arguments: %w", err)
 		}
@@ -156,4 +148,18 @@ func (c *ToolClient) CallToolFromLLM(ctx context.Context, tc ToolCall) (string, 
 	}
 
 	return result, nil
+}
+
+func isEmptyJSONObject(s string) bool {
+	if len(s) < 2 || s[0] != '{' || s[len(s)-1] != '}' {
+		return false
+	}
+	for i := 1; i < len(s)-1; i++ {
+		switch s[i] {
+		case ' ', '\t', '\n', '\r':
+		default:
+			return false
+		}
+	}
+	return true
 }

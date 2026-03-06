@@ -31,6 +31,10 @@ type toolSpec struct {
 	handler     func(ctx context.Context, args map[string]any) (any, error)
 }
 
+func (spec toolSpec) inputSchema() map[string]any {
+	return inputSchema(spec.params)
+}
+
 var toolSpecs []toolSpec
 
 // addTool adds a tool specification to the toolSpecs list.
