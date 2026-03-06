@@ -4,14 +4,13 @@
 package dnum
 
 import (
-	"fmt"
 	"math"
-	// "math/rand/v2"
+	"math/rand/v2"
+
 	"testing"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
 func Test_size(t *testing.T) {
@@ -205,7 +204,8 @@ func Test_Neg(t *testing.T) {
 func Test_Compare(t *testing.T) {
 	assert := assert.T(t).This
 	data := []string{
-		"-inf", "-1e9", "-123", "-1e-9", "0", "1e-9", "123", "1e9", "inf"}
+		"-inf", "-1234567890123456", "-1e9", "-123456", "-9", "-1", "-1e-9",
+		"0", "1e-9", "1", "9", "123456", "1e9", "1234567890123456", "inf"}
 	for i, xs := range data {
 		x := FromStr(xs)
 		assert(Compare(x, x)).Msg(x, " >< ", x).Is(0)
@@ -226,6 +226,8 @@ func Test_Add(t *testing.T) {
 		assert.T(t).This(Add(yn, xn)).Is(zn)
 	}
 	// special cases (no actual math)
+	add("0", "0", "0")
+	add("0", "1", "1")
 	add("123", "0", "123")
 	add("inf", "-inf", "0")
 	add("inf", "inf", "inf")
@@ -240,12 +242,19 @@ func Test_Add(t *testing.T) {
 	add("-123", "456", "333")
 	// need aligning
 	add("1e12", "1e14", "1.01e14")
+	add("123", "1e-99", "123")
+	add("1e-99", "123", "123")
+	add("1111111111111111", "222222222222222e-4", "1111133333333333")
+	add("1111111111111111", "666666666666666e-4", "1111177777777778")
 	add("1111111111111111", "2222222222222222e-4", "1111333333333333")
 	add("1111111111111111", "6666666666666666e-4", "1111777777777778")
 	// exceeds alignment
 	add("123", "1e-99", "123")
 	add("1e-99", "123", "123")
 	add("1e-128", "1", "1")
+	// E16 overflow
+	add("9999999999999999", "1", "1e16")
+	add("9999999999999999e127", "1", "inf")
 }
 
 func Test_Sub(t *testing.T) {
@@ -259,6 +268,7 @@ func Test_Sub(t *testing.T) {
 		}
 	}
 	// special cases (no actual math)
+	sub("0", "0", "0")
 	sub("123", "0", "123")
 	sub("inf", "-inf", "inf")
 	sub("inf", "inf", "0")
@@ -273,8 +283,10 @@ func Test_Sub(t *testing.T) {
 	sub("123", "-456", "579")
 	// need aligning
 	sub("123", "1e-99", "123")
+	sub("1e99", "123", "1e99")
 	sub("1e50", "123", "1e50")
 	sub("1e14", "1e12", "9.9e13")
+	sub("1222222222222222", "1111111111111111e-4", "1222111111111111")
 	sub("12222222222222222222", "11111111111111111111e-4", "12221111111111111111")
 }
 
@@ -291,6 +303,8 @@ func Test_Mul(t *testing.T) {
 	}
 	// special cases (no actual math)
 	mul("0", "0", "0")
+	mul("1", "-1", "-1")
+	mul("-1", "-1", "1")
 	mul("123", "0", "0")
 	mul("123", "inf", "inf")
 	mul("inf", "inf", "inf")
@@ -310,6 +324,7 @@ func Test_Mul(t *testing.T) {
 	mul("1.111111111111111", "1.111111111111111", "1.234567901234568")
 	mul("1.23456789", "1.23456789", "1.524157875019052")
 	mul("1.234567899", "1.234567899", "1.524157897241274")
+	mul("1.234567890123456", "1.234567890123456", "1.524157875323882")
 
 	mul("2e99", "2e99", "inf") // exp overflow
 }
@@ -324,6 +339,7 @@ func Test_Div(t *testing.T) {
 	// special cases (no actual math)
 	div("0", "0", "0")
 	div("123", "0", "inf")
+	div("-123", "0", "-inf")
 	div("123", "inf", "0")
 	div("inf", "123", "inf")
 	div("inf", "inf", "1")
@@ -331,7 +347,11 @@ func Test_Div(t *testing.T) {
 	// exp overflow
 	div("1e99", "1e-99", "inf")
 	div("1e-99", "1e99", "0")
-	// divides evenly
+	// exact
+	div("1", "-1", "-1")
+	div("-1", "-1", "1")
+	div("123", "123", "1")
+	div("123000", ".000123", "1e9")
 	div("4444", "2222", "2")
 	div("2222", "4444", ".5")
 	div("123000", ".000123", "1e9")
@@ -361,9 +381,10 @@ func Test_Format(t *testing.T) {
 	// see also: suneido_tests/number.test
 }
 
-// benchmarks (for 1000 operations) ---------------------------------
-/*
+// benchmarks -------------------------------------------------------
+
 func BenchmarkAdd(b *testing.B) {
+	nums := makeNums()
 	for b.Loop() {
 		for i := 1; i < len(nums); i++ {
 			Add(nums[i-1], nums[i])
@@ -372,6 +393,7 @@ func BenchmarkAdd(b *testing.B) {
 }
 
 func BenchmarkMul(b *testing.B) {
+	nums := makeNums()
 	for b.Loop() {
 		for i := 1; i < len(nums); i++ {
 			Mul(nums[i-1], nums[i])
@@ -380,6 +402,7 @@ func BenchmarkMul(b *testing.B) {
 }
 
 func BenchmarkDiv(b *testing.B) {
+	nums := makeNums()
 	for b.Loop() {
 		for i := 1; i < len(nums); i++ {
 			Div(nums[i-1], nums[i])
@@ -387,122 +410,20 @@ func BenchmarkDiv(b *testing.B) {
 	}
 }
 
-var nums [1000]Dnum
-
-func init() {
-	for i := range len(nums) {
-		nums[i] = New(signPos, uint64(rand.Intn(1000000)), rand.Intn(9)-5)
+func makeNums() []Dnum {
+	nums := make([]Dnum, 0, 1000)
+	for range len(nums) {
+		nums = append(nums,
+			New(signPos, uint64(rand.IntN(1000000)), rand.IntN(9)-5))
 	}
+	return nums
 }
-*/
 
 func BenchmarkFromFloat(b *testing.B) {
 	for b.Loop() {
 		FromFloat(123456e-99)
 	}
 }
-
-// portable tests ---------------------------------------------------
-
-func ptAdd(args []string, _ []bool) bool {
-	xn := FromStr(args[0])
-	yn := FromStr(args[1])
-	zn := FromStr(args[2])
-	return Add(xn, yn) == zn && Add(yn, xn) == zn
-}
-
-var _ = ptest.Add("dnum_add", ptAdd)
-
-func ptSub(args []string, _ []bool) bool {
-	xn := FromStr(args[0])
-	yn := FromStr(args[1])
-	zn := FromStr(args[2])
-	return Sub(xn, yn) == zn &&
-		(args[2] == "0" || Sub(yn, xn) == zn.Neg())
-}
-
-var _ = ptest.Add("dnum_sub", ptSub)
-
-func ptMul(args []string, _ []bool) bool {
-	xn := FromStr(args[0])
-	yn := FromStr(args[1])
-	zn := FromStr(args[2])
-	return Mul(xn, yn) == zn && Mul(yn, xn) == zn
-}
-
-var _ = ptest.Add("dnum_mul", ptMul)
-
-func ptDiv(args []string, _ []bool) bool {
-	xn := FromStr(args[0])
-	yn := FromStr(args[1])
-	zn := FromStr(args[2])
-	ok := Div(xn, yn) == zn
-	if !ok {
-		fmt.Println("got:", Div(xn, yn))
-	}
-	return ok
-}
-
-var _ = ptest.Add("dnum_div", ptDiv)
-
-func ptCompare(args []string, _ []bool) bool {
-	for i, xs := range args {
-		x := FromStr(xs)
-		if Compare(x, x) != 0 {
-			return false
-		}
-		for _, ys := range args[i+1:] {
-			y := FromStr(ys)
-			if Compare(x, y) != -1 || Compare(y, x) != +1 {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-var _ = ptest.Add("dnum_cmp", ptCompare)
-
-func TestPtest(t *testing.T) {
-	if !ptest.RunFile("dnum.test") {
-		t.Fail()
-	}
-}
-
-/*
-func closeTo(x Dnum) Tester {
-	return func(actual any) string {
-		y := actual.(Dnum)
-		if x.sign == y.sign && x.exp == y.exp &&
-			(x.coef/10) == (y.coef/10) {
-			return ""
-		}
-		return fmt.Sprintf("expected: %v but got: %v", x, y)
-	}
-}
-
-func Test_ToUint(t *testing.T) {
-	assert := Assert(t)
-	test := func(x string, expected string) {
-		dn := FromStr(x)
-		z, err := dn.Uint64()
-		if err != nil {
-			assert.That(err.Error(), Equals(expected))
-			return
-		}
-		nexpected, err := strconv.ParseUint(expected, 10, 64)
-		if err != nil {
-			panic("bad test data!")
-		}
-		assert.That(z, Equals(nexpected))
-	}
-	test("123", "123")
-	test("1e99", "outside range")
-	test("-123", "outside range")
-	test("9223372036854775807", "9223372036854775807")   // max int64
-	test("18446744073709551615", "18446744073709551615") // max uint64
-}
-*/
 
 func FuzzAdd(f *testing.F) {
 	f.Fuzz(func(t *testing.T, xcoef uint64, xexp int8, xsign bool,
@@ -524,13 +445,3 @@ func mknum(coef uint64, exp int8, neg bool) Dnum {
 	assert.That(coefMin <= coef && coef <= coefMax)
 	return Dnum{coef: coef, exp: exp, sign: sign}
 }
-
-// func TestMknum(t *testing.T) {
-// 	for range 100 {
-// 		coef := rand.Uint64()
-// 		exp := int8(rand.Int32() & 0xff)
-// 		neg := rand.IntN(2) == 0
-// 		n := mknum(coef, exp, neg)
-// 		fmt.Println(n)
-// 	}
-// }

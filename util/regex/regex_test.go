@@ -11,23 +11,8 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ptest"
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
-
-func TestPlay(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	// s := "now is the time"
-	pat := Compile(`\A_?[[:alpha:]]\w*[!?]?\Z`)
-	fmt.Println(pat)
-	// var cap Captures
-	// ok := pat.LastMatch(s, len(s), &cap)
-	// fmt.Println(">>>", ok)
-	// fmt.Println("cap", cap)
-	// cap.Print(s)
-}
 
 func (c *Captures) Print(s string) {
 	// fmt.Println(cap)
@@ -100,16 +85,33 @@ func TestCapture(t *testing.T) {
 	test := func(str, pat string, expected ...string) {
 		t.Helper()
 		var cap Captures
-		Compile(pat).Match(str, &cap)
+		assert.T(t).True(Compile(pat).Match(str, &cap))
 		// cap.Print(str)
 		for i, e := range expected {
-			assert.T(t).This(str[cap[i+2]:cap[i+3+1]]).Is(e)
+			got := ""
+			if cap[i*2] >= 0 {
+				got = str[cap[i*2]:cap[i*2+1]]
+			}
+			assert.T(t).This(got).Is(e)
 		}
 	}
-	test("abcd", "(.+)(.+)", "abc", "d")
-	test("abcd", "(.+?)(.+)", "a", "bcd")
-	test("abcd", "(.*)(.*)", "abcd", "")
-	test("abcd", "(.*?)(.*)", "", "abcd")
+	test("abcd", "(.+)(.+)", "abcd", "abc", "d")
+	test("abcd", "(.+?)(.+)", "abcd", "a", "bcd")
+	test("abcd", "(.*)(.*)", "abcd", "abcd", "")
+	test("abcd", "(.*?)(.*)", "abcd", "", "abcd")
+
+	test("a", "a?", "a")
+	test("a", "a??", "")
+	test("aaab", "a*", "aaa")
+	test("aaab", "a*?", "")
+	test("aaab", "a+", "aaa")
+	test("aaab", "a+?", "a")
+	test("axb", "[\x00-\xff]+", "axb")
+	test("foo123", `([a-z]+)([0-9]+)`, "foo123", "foo", "123")
+	test("hello there world", `(\w+ )+`, "hello there ", "there ")
+	test("hello world", "hello(x?)", "hello", "")
+	test("hello world", `(a...b)|(h...o)`, "hello", "", "hello")
+	test("-ccc-", `(aaa)|(bbb)|(ccc)`, "ccc", "", "", "ccc")
 }
 
 func TestMatch(t *testing.T) {
@@ -118,7 +120,9 @@ func TestMatch(t *testing.T) {
 		t.Helper()
 		// fmt.Printf("%q =~ %q -> %v\n", str, pat, expected)
 		rx := Compile(pat)
-		assert.This(rxType(rx)).Is(rt)
+		if rt != 0 {
+			assert.This(rxType(rx)).Is(rt)
+		}
 		assert.T(t).This(rx.Match(str, nil)).Is(expected)
 	}
 	full := func(pat string) string {
@@ -160,6 +164,170 @@ func TestMatch(t *testing.T) {
 	match("c", "a|b", false)
 	match("", "a?", true)
 	match("a", "a?", true)
+
+	// Additional tests from ptest/regex.test
+	rt = 0
+	match("", "", true)
+	match("abc", "x", false)
+	match("ab", "abc", false)
+	match("abc", "^...$", true)
+	match("ab\n", "...", false)
+	match("abde", "abc+de", false)
+	match("abcde", "abc+de", true)
+	match("abccde", "abc+de", true)
+	match("abccd", "abc+de", false)
+	match("abde", "abc?de", true)
+	match("abcde", "abc?de", true)
+	match("abccde", "abc?de", false)
+	match("abe", "ab(cd)*ef", false)
+	match("abef", "ab(cd)*ef", true)
+	match("abcdef", "ab(cd)*ef", true)
+	match("abcdcdcdef", "ab(cd)*ef", true)
+	match("abcdcdcde", "ab(cd)*ef", false)
+	match("abcx", "(ab*c)*x", true)
+	match("abbc", "(ab*c)*", true)
+	match("abcabc", "(ab*c)*", true)
+	match("acabbbc", "(ab*c)*", true)
+	match("abbbcac", "(ab*c)*", true)
+	match("acabcabbcx", "(ab*c)*x", true)
+	match("a", "a|b|c", true)
+	match("b", "a|b|c", true)
+	match("c", "a|b|c", true)
+	match("x", "a|b|c", false)
+	match("", "a|b|c", false)
+	match("ab", "a?b", true)
+	match("ab", "a??b", true)
+	match("aaab", "a*b", true)
+	match("aaab", "a*?b", true)
+	match("aaab", "a+?b", true)
+	match("hello\nworld", `\Ahe`, true)
+	match("hello\nworld", `\Awo`, false)
+	match("hello\nworld", `ld\Z`, true)
+	match("hello\nworld", `lo\Z`, false)
+	match("(+*)", `^(+*)$`, false)
+	match("(+*)", `^(?q)(+*)(?-q)$`, true)
+	match("hello", "eLL", false)
+	match("hello", "(?i)eLL", true)
+	match("hello", "(?i)eL(?-i)L", false)
+	match("foobar", `\<foo`, true)
+	match("foobar", `\<foo\>`, false)
+	match("foo bar", `\<foo\>`, true)
+	match("foobar", `bar\>`, true)
+	match("foobar", `\<bar\>`, false)
+	match("foo bar", `\<bar\>`, true)
+	match("foobar", `\<foobar\>`, true)
+	match("foo bar", "(?i)bar", true)
+	match("foo Bar", "(?i)bar", true)
+	match("123x", "(?i)[a-z]", true)
+	match("123X", "(?i)[a-z]", true)
+	match("hello\nworld", `\Ahello`, true)
+	match("hello\nworld", `\Aworld`, false)
+	match("hello\nworld", `world\Z`, true)
+	match("hello\nworld", `hello\Z`, false)
+	match("hello\r\nworld", `\Ahello`, true)
+	match("hello\r\nworld", `\Aworld`, false)
+	match("hello\r\nworld", `world\Z`, true)
+	match("hello\r\nworld", `hello\Z`, false)
+	match("one_1 two_2\nthree_3", `\<one_1\>`, true)
+	match("one_1 two_2\nthree_3", `\<two_2\>`, true)
+	match("one_1 two_2\nthree_3", `\<three_3\>`, true)
+	match("one_1 two_2\r\nthree_3", `\<two_2\>`, true)
+	match("one_1 two_2\r\nthree_3", `\<three_3\>`, true)
+	match("one_1 two_2\nthree_3", `\<one\>`, false)
+	match("one_1 two_2\nthree_3", `\<two\>`, false)
+	match("hello", "fred", false)
+	match("hello", "h.*o", true)
+	match("hello", "[a-z]ello", true)
+	match("hello", "[^0-9]ello", true)
+	match("hello", "ell", true)
+	match("hello", "^ell", false)
+	match("hello", "ell$", false)
+	match("heeeeeeeello", "^he+llo$", true)
+	match("heeeeeeeello", "^he*llo*", true)
+	match("hllo", "^he*llo$", true)
+	match("hllo", "^he?llo$", true)
+	match("heello", "^he?llo$", false)
+	match("+123.456", `^[+-][0-9]+[.][0123456789]*$`, true)
+	match("0123456789", `^\d+$`, true)
+	match("0123456789", `\D`, false)
+	match("hello_123", `^\w+$`, true)
+	match("hello_123", `\W`, false)
+	match("hello \t\r\nworld", `^\w+\s+\w+$`, true)
+	match("!@#@!# \r\t{},()[];", `^\W+$`, true)
+	match("123adjf!@#", `^\S+$`, true)
+	match("123adjf!@#", `\s`, false)
+	match("()[]", `^\(\)\[\]$`, true)
+	match("hello world", `^(hello|howdy) (\w+)$`, true)
+	match("ab", "(a|ab)b", true)
+	match("abc", "x*c", true)
+	match("abc", "x*$", true)
+	match("abc", "x?$", true)
+	match("abc", "^x?", true)
+	match("abc", "^x*", true)
+	match("aBcD", "abcd", false)
+	match("aBcD", "(?i)abcd", true)
+	match("aBCd", "a(?i)bc(?-i)d", true)
+	match("aBCD", "a(?i)bc(?-i)D", true)
+	match("ABCD", "a(?i)bc(?-i)d", false)
+	match("abc", "a.c", true)
+	match("a.c", "(?q)a.c", true)
+	match("abc", "(?q)a.c", false)
+	match("a.cd", "(?q)a.c(?-q).", true)
+	match("abcd", "(?q)a.c(?-q).", false)
+	match("abc", "(?q)(", false)
+	match("ABC", "(?i)[A-Z]", true)
+	match("ABC", "(?i)[a-z]", true)
+	match("abc", "(?i)[A-Z]", true)
+	match("abc", "(?i)[a-z]", true)
+	match("a", "[abc]", true)
+	match("b", "[abc]", true)
+	match("c", "[abc]", true)
+	match("b", "[^abc]", false)
+	match("x", "[^abc]", true)
+	match("c", `\w`, true)
+	match(" ", `\W`, true)
+	match(" ", `\w`, false)
+	match(" ", `\s`, true)
+	match("c", `\S`, true)
+	match("c", `\s`, false)
+	match("c", `[\w]`, true)
+	match(" ", `[\W]`, true)
+	match(" ", `[\w]`, false)
+	match(" ", `[\s]`, true)
+	match("c", `[\S]`, true)
+	match("c", `[\s]`, false)
+	match("b", "[[:alpha:]]", true)
+	match("b", "[[:alnum:]]", true)
+	match("b", "[[:print:]]", true)
+	match("b", "[[:graph:]]", true)
+	match("b", "[[:lower:]]", true)
+	match("b", "[[:upper:]]", false)
+	match("B", "[[:upper:]]", true)
+	match("5", "[[:digit:]]", true)
+	match("5", "[[:alnum:]]", true)
+	match("5", "[[:alpha:]]", false)
+	match("5", "[[:lower:]]", false)
+	match("5", "[[:upper:]]", false)
+	match("aBc", "[aBc]+", true)
+	match("aBc", "(?i)[ABC]+", true)
+	match("ABC", "(?i)ABC", true)
+	match("ABC", "(?i)abc", true)
+	match("abc", "(?i)ABC", true)
+	match("abc", "(?i)abc", true)
+	match("abc", "(?i)ark", false)
+	match("b", "(?i)[abc]", true)
+	match("b", "(?i)[ABC]", true)
+	match("B", "(?i)[abc]", true)
+	match("B", "(?i)[ABC]", true)
+	match("@", "(?i)[@#]", true)
+	match("m", "[a-z]", true)
+	match("-", "[-z]", true)
+	match("m", "[-z]", false)
+	match("-", "[a-]", true)
+	match("m", "[a-]", false)
+	match("aZ", "[a-Z]", false)
+	match("\r\n", "^\n", false)
+	match("xyz\r\n\r\nxyz", `^[^x].*$`, false)
 }
 
 func rxType(pat Pattern) rune {
@@ -507,6 +675,30 @@ func TestLiteralRep(t *testing.T) {
 	test(`\2 \1`, false)
 }
 
+func TestReplace(t *testing.T) {
+	test := func(s, pat, rep, expected string) {
+		t.Helper()
+		rx := Compile(pat)
+		var cap Captures
+		assert.T(t).True(rx.Match(s, &cap))
+		r := Replacement(s, rep, &cap)
+		got := s[:cap[0]] + r + s[cap[1]:]
+		assert.T(t).This(got).Is(expected)
+	}
+
+	test("now is the time", "now", "never", "never is the time")
+	test("now is the time", "now", `\=never`, "never is the time")
+	test("now is the time", "is", "&&", "now isis the time")
+	test("now is the time", "is", `&\n`, "now is\n the time")
+	test("now is the time", "is", `\&`, "now & the time")
+	test("now is the time", "the", `\U&`, "now is THE time")
+	test("now is the time", "the", `\u&`, "now is The time")
+	test("NOW IS THE TIME", "THE", `\L&`, "NOW IS the TIME")
+	test("NOW IS THE TIME", "THE", `\l&`, "NOW IS tHE TIME")
+	test("now is the time", `(\w+) (\w+)`, "\\2-\\1", "is-now the time")
+	test("now is the time", ` (\w+) (\w+) `, "\\2\\1", "nowtheistime")
+}
+
 func BenchmarkMatch(b *testing.B) {
 	s := strings.Repeat("helloworld", 1000)
 	pat := Compile("x|y|z")
@@ -515,66 +707,3 @@ func BenchmarkMatch(b *testing.B) {
 		pat.match(s, 0, &Captures{}, false)
 	}
 }
-
-// ptest support ----------------------------------------------------
-
-func TestPtest(t *testing.T) {
-	if !ptest.RunFile("regex.test") {
-		t.Fail()
-	}
-}
-
-func TestPtest2(t *testing.T) {
-	result := ptReplace([]string{`now is the time`, `is`, `&&`, `now isis the time`}, nil)
-	fmt.Println(result)
-}
-
-// pt_match is a ptest for matching
-// simple usage is two arguments, string and pattern
-// an optional third argument can be "false" for matches that should fail
-// or additional arguments can specify expected \0, \1, ...
-func ptMatch(args []string, _ []bool) bool {
-	// fmt.Println(args)
-	s := args[0]
-	pat := Compile("(?m)" + args[1])
-	var cap Captures
-	result := pat.Match(s, &cap)
-	if len(args) > 2 {
-		if args[2] == "false" {
-			result = !result
-		} else {
-			for i, e := range args[2:] {
-				p := ""
-				if cap[i*2] >= 0 {
-					p = s[cap[i*2]:cap[i*2+1]]
-				}
-				result = result && (e == p)
-			}
-		}
-	}
-	return result
-}
-
-var _ = ptest.Add("regex_match", ptMatch)
-
-// pt_replace is a ptest for regex replace
-func ptReplace(args []string, _ []bool) bool {
-	s := args[0]
-	pat := Compile(args[1])
-	rep := args[2]
-	expected := args[3]
-	var cap Captures
-	result := pat.Match(s, &cap)
-	if !result {
-		return false
-	}
-	r := Replacement(s, rep, &cap)
-	t := s[:cap[0]] + r + s[cap[1]:]
-	if t != expected {
-		fmt.Println("\t     got:", t, "\n\texpected:", expected)
-		return false
-	}
-	return true
-}
-
-var _ = ptest.Add("regex_replace", ptReplace)

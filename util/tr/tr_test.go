@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
 func Test_makset(t *testing.T) {
@@ -26,34 +25,64 @@ func Test_makset(t *testing.T) {
 	test("z-a", "")
 }
 
+func TestReplace(t *testing.T) {
+	test := func(src, from, to, expected string) {
+		t.Helper()
+		result := Replace(src, New(from), New(to))
+		assert.T(t).This(result).Is(expected)
+	}
+	// empty source
+	test("", "", "", "")
+	test("", "abc", "ABC", "")
+	test("", "^abc", "x", "")
+
+	// delete
+	test("abc", "", "", "abc")
+	test("abc", "xyz", "", "abc")
+	test("zon", "xyz", "", "on")
+	test("oyn", "xyz", "", "on")
+	test("nox", "xyz", "", "no")
+	test("zyx", "xyz", "", "")
+
+	// replace
+	test("zon", "xyz", "XYZ", "Zon")
+	test("oyn", "xyz", "XYZ", "oYn")
+	test("nox", "xyz", "XYZ", "noX")
+	test("zyx", "xyz", "XYZ", "ZYX")
+	test("zyx", "a-z", "A-Z", "ZYX")
+
+	// allbut delete
+	test("a b - c", "^abc", "", "abc")
+	test("a b - c", "^a-z", "", "abc")
+
+	// allbut collapse
+	test("a  b - c", "^abc", " ", "a b c")
+	test("a  b - c", "^a-z", " ", "a b c")
+
+	// literal dash
+	test("a-b-c", "-x", "", "abc")
+	test("a-b-c", "x-", "", "abc")
+
+	// collapse at end
+	test("hello \t\n\n", " \t\n", "\n", "hello\n")
+
+	// complex allbut
+	test("abc", "^\t\r\n\x20-\xff", "", "abc")
+	test("a\x00b\x1fc\xffd", "^\t\r\n\x20-\xff", "", "abc\xffd")
+}
+
+// to run: go test -fuzz=Fuzz_makset -run=Fuzz_makset
+
 func Fuzz_makset(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s string) {
 		New(s)
 	})
 }
 
-// to run: go test -fuzz=Fuzz_makset -run=Fuzz_makset
+// to run: go test -fuzz=FuzzReplace -run=FuzzReplace
 
 func FuzzReplace(f *testing.F) {
 	f.Fuzz(func(t *testing.T, s1, s2, s3 string) {
 		Replace(s1, New(s2), New(s3))
 	})
 }
-
-// to run: go test -fuzz=FuzzReplace -run=FuzzReplace
-
-// ptest support ---------------------------------------------------------------
-
-func TestPtest(t *testing.T) {
-	if !ptest.RunFile("tr.test") {
-		t.Fail()
-	}
-}
-
-// pt_tr is a ptest for matching
-// usage: "string", "from", "to", "result"
-func ptTr(args []string, _ []bool) bool {
-	return Replace(args[0], New(args[1]), New(args[2])) == args[3]
-}
-
-var _ = ptest.Add("tr", ptTr)

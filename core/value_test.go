@@ -6,6 +6,8 @@ package core
 import (
 	"fmt"
 	"math"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -38,18 +40,44 @@ func TestPanics(t *testing.T) {
 
 func TestCompare(t *testing.T) {
 	assert := assert.T(t)
-	vals := []Value{False, True,
+	vals := []Value{
+		False, True,
 		SuDnum{Dnum: dnum.NegInf},
-		SuInt(-1), SuInt(0), SuInt(+1), SuDnum{Dnum: dnum.PosInf},
-		SuStr(""), SuStr("abc"),
-		&SuExcept{SuStr: "bar"},
-		NewSuConcat().Add("foo"),
-		SuStr("world"),
-		&SuExcept{SuStr: "zoo"}}
+		SuDnum{Dnum: dnum.FromStr("-1e99")},
+		SuInt(-123), SuDnum{Dnum: dnum.FromStr("-.1")},
+		SuInt(0), SuDnum{Dnum: dnum.FromStr(".1")},
+		SuInt(123), SuDnum{Dnum: dnum.FromStr("1e99")},
+		SuDnum{Dnum: dnum.PosInf},
+		EmptyStr, SuStr("bar"), SuStr("foo"), SuStr("foobar"),
+		DateFromLiteral("#20000101"), DateFromLiteral("#20000102"),
+		DateFromLiteral("#20000201"), DateFromLiteral("#20010101"),
+		&SuObject{},
+		SuObjectOf(SuInt(1)),
+		SuObjectOf(SuInt(2)),
+		SuObjectOf(SuInt(3), SuInt(3)),
+		SuObjectOf(SuInt(3), SuInt(4)),
+	}
+
 	for i := 1; i < len(vals); i++ {
 		assert.This(vals[i].Compare(vals[i])).Is(0)
 		assert.That(vals[i-1].Compare(vals[i]) < 0)
 		assert.That(vals[i].Compare(vals[i-1]) > 0)
+	}
+
+	// move EmptyStr to the beginning for packed ordering
+	vals = slices.DeleteFunc(vals, func(v Value) bool { return v == EmptyStr })
+	vals = slices.Insert(vals, 0, EmptyStr)
+
+	for i, x := range vals {
+		xp := Pack(x.(Packable))
+		x2 := Unpack(xp)
+		assert.Msg("pack/unpack").That(x.Equal(x2))
+		for j := i + 1; j < len(vals); j++ {
+			y := vals[j]
+			yp := Pack(y.(Packable))
+			assert.Msg("packed compare").That(strings.Compare(xp, yp) < 0)
+			assert.Msg("packed compare reverse").That(strings.Compare(yp, xp) > 0)
+		}
 	}
 }
 
