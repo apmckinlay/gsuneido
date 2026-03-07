@@ -12,11 +12,10 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/openpgputil"
 	"github.com/apmckinlay/gsuneido/util/system"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
-	"github.com/ProtonMail/gopenpgp/v2/crypto"
-	"github.com/ProtonMail/gopenpgp/v2/helper"
 )
 
 type suOpenPGP struct {
@@ -91,14 +90,8 @@ var _ = staticMethod(opgp_KeyGen, "(name, email, passphrase)")
 
 func opgp_KeyGen(name, email, passphrase Value) Value {
 	const rsaBits = 2048
-	privateKey, err := helper.GenerateKey(ToStr(name), ToStr(email),
-		[]byte(ToStr(passphrase)), "rsa", rsaBits)
-	ck(err)
-
-	keyRing, err := crypto.NewKeyFromArmoredReader(strings.NewReader(privateKey))
-	ck(err)
-
-	publicKey, err := keyRing.GetArmoredPublicKey()
+	publicKey, privateKey, err := openpgputil.GenerateArmoredKeyPair(
+		ToStr(name), ToStr(email), ToStr(passphrase), rsaBits)
 	ck(err)
 
 	ob := &SuObject{}
@@ -110,18 +103,17 @@ func opgp_KeyGen(name, email, passphrase Value) Value {
 var _ = staticMethod(opgp_KeyId, "(key)")
 
 func opgp_KeyId(key Value) Value {
-	keyOb, err := crypto.NewKeyFromArmored(ToStr(key))
+	entity, err := openpgputil.ReadArmoredEntity(ToStr(key))
 	ck(err)
-	return SuStr(keyOb.GetHexKeyID())
+	return SuStr(openpgputil.KeyIDHex(entity))
 }
 
 var _ = staticMethod(opgp_KeyEntity, "(key)")
 
 func opgp_KeyEntity(key Value) Value {
-	keyOb, err := crypto.NewKeyFromArmored(ToStr(key))
+	entity, err := openpgputil.ReadArmoredEntity(ToStr(key))
 	ck(err)
-	e := keyOb.GetEntity()
-	for name := range e.Identities {
+	if name := openpgputil.FirstIdentity(entity); name != "" {
 		return SuStr(name)
 	}
 	return False
@@ -199,11 +191,9 @@ func symDecrypt(passphrase Value, src io.Reader, dst io.Writer) {
 }
 
 func asymEncrypt(publicKey string, src io.Reader, dst io.Writer) {
-	publicKeyObj, err := crypto.NewKeyFromArmored(publicKey)
+	publicKeyRing, err := openpgputil.ReadArmoredKeyRing(publicKey)
 	ck(err)
-	publicKeyRing, err := crypto.NewKeyRing(publicKeyObj)
-	ck(err)
-	encryptor, err := publicKeyRing.EncryptStreamWithCompression(dst, nil, nil)
+	encryptor, err := openpgputil.Encrypt(dst, publicKeyRing)
 	ck(err)
 	defer encryptor.Close()
 	_, err = io.Copy(encryptor, src)
@@ -211,16 +201,12 @@ func asymEncrypt(publicKey string, src io.Reader, dst io.Writer) {
 }
 
 func asymDecrypt(kp keyPair, src io.Reader, dst io.Writer) {
-	privateKeyObj, err := crypto.NewKeyFromArmored(kp.privateKey)
+	privateKeyRing, err := openpgputil.ReadPrivateKeyRing(
+		kp.privateKey, kp.passphrase)
 	ck(err)
-	privateKeyUnlocked, err := privateKeyObj.Unlock([]byte(kp.passphrase))
+	md, err := openpgp.ReadMessage(src, privateKeyRing, nil, openpgputil.Config())
 	ck(err)
-	defer privateKeyUnlocked.ClearPrivateParams()
-	privateKeyRing, err := crypto.NewKeyRing(privateKeyUnlocked)
-	ck(err)
-	decryptor, err := privateKeyRing.DecryptStream(src, nil, 0)
-	ck(err)
-	_, err = io.Copy(dst, decryptor)
+	_, err = io.Copy(dst, md.UnverifiedBody)
 	ck(err)
 }
 

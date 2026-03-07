@@ -16,7 +16,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ProtonMail/gopenpgp/v2/crypto"
 	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -26,6 +25,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/openpgputil"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/system"
 )
@@ -52,7 +52,7 @@ func Dump(db *Database, to, publicKey string) (nTables, nViews int, err error) {
 	}
 	defer func() {
 		if e := recover(); e != nil {
-			if strings.HasPrefix(fmt.Sprint(e), "gopenpgp: ") {
+			if strings.HasPrefix(fmt.Sprint(e), "OpenPGP: ") {
 				panic(e)
 			}
 			db.Corrupt()
@@ -111,7 +111,7 @@ func DumpDbTable(db *Database, table, to, publicKey string) (nrecs int, err erro
 	}
 	defer func() {
 		if e := recover(); e != nil {
-			if strings.HasPrefix(fmt.Sprint(e), "gopenpgp: ") {
+			if strings.HasPrefix(fmt.Sprint(e), "OpenPGP: ") {
 				panic(e)
 			}
 			db.Corrupt()
@@ -156,20 +156,18 @@ func dumpOpen(to, publicKey string) (*os.File, WriterPlus, error) {
 	if publicKey == "" {
 		w = bufio.NewWriter(f)
 	} else {
-		w = writerPlus{encryptor(publicKey, f)}
+		encryptor, err := openpgputil.EncryptArmored(publicKey, f)
+		pgpck(err)
+		w = writerPlus{encryptor}
 	}
 	w.WriteString(dumpVersion)
 	return f, w, nil
 }
 
-func encryptor(publicKey string, dst io.Writer) io.WriteCloser {
-	publicKeyObj, err := crypto.NewKeyFromArmored(publicKey)
-	ck(err)
-	publicKeyRing, err := crypto.NewKeyRing(publicKeyObj)
-	ck(err)
-	encryptor, err := publicKeyRing.EncryptStreamWithCompression(dst, nil, nil)
-	ck(err)
-	return encryptor
+func pgpck(err error) {
+	if err != nil {
+		panic("OpenPGP: " + strings.Replace(err.Error(), "openpgp: ", "", 1))
+	}
 }
 
 type WriterPlus interface {

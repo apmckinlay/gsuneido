@@ -14,7 +14,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/ProtonMail/gopenpgp/v2/crypto"
 	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -25,6 +24,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/errs"
+	"github.com/apmckinlay/gsuneido/util/openpgputil"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/system"
 )
@@ -165,7 +165,9 @@ func loadOpen(filename, privateKey, passphrase string) (*os.File, *bufio.Reader)
 	if privateKey == "" {
 		r = bufio.NewReader(f)
 	} else {
-		r = bufio.NewReader(decryptor(privateKey, passphrase, f))
+		decryptor, err := openpgputil.DecryptArmored(privateKey, passphrase, f)
+		pgpck(err)
+		r = bufio.NewReader(decryptor)
 	}
 	s, err := r.ReadString('\n')
 	ck(err)
@@ -177,20 +179,6 @@ func loadOpen(filename, privateKey, passphrase string) (*os.File, *bufio.Reader)
 	}
 	return f, r
 }
-
-func decryptor(privateKey, passphrase string, src io.Reader) io.Reader {
-	privateKeyObj, err := crypto.NewKeyFromArmored(privateKey)
-	ck(err)
-	privateKeyUnlocked, err := privateKeyObj.Unlock([]byte(passphrase))
-	ck(err)
-	defer privateKeyUnlocked.ClearPrivateParams()
-	privateKeyRing, err := crypto.NewKeyRing(privateKeyUnlocked)
-	ck(err)
-	decryptor, err := privateKeyRing.DecryptStream(src, nil, 0)
-	ck(err)
-	return decryptor
-}
-
 func tableSchema(db *Database, schem string) *meta.Schema {
 	sch := query.NewAdminParser(schem).Schema()
 	ts := &meta.Schema{Schema: sch}
