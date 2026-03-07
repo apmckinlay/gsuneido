@@ -4,6 +4,7 @@
 package llm
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -11,6 +12,49 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/aymanbagabas/go-udiff"
 )
+
+var _ = addTool(toolSpec{
+	name:        "suneido_read_code",
+	description: "Get the source code from a library for a specific name",
+	params: []stringParam{
+		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
+		{name: "name", description: "Name of the definition (e.g. 'Alert')", required: true, kind: paramString},
+		{name: "start_line", description: "1-based line number to start from (default 1)", required: false, kind: paramNumber},
+		{name: "plain", description: "If true, don't add line numbers (default false)", required: false, kind: paramBool},
+	},
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		library, err := requireString(args, "library")
+		if err != nil {
+			return nil, err
+		}
+		name, err := requireString(args, "name")
+		if err != nil {
+			return nil, err
+		}
+		startLine, err := optionalInt(args, "start_line", 1)
+		if err != nil {
+			return nil, err
+		}
+		plain, err := optionalBool(args, "plain", false)
+		if err != nil {
+			return nil, err
+		}
+		return codeTool(library, name, startLine, plain)
+	},
+})
+
+type readCodeOutput struct {
+	Plain      bool    `json:"plain" jsonschema:"Whether line numbers were omitted"`
+	Library    string  `json:"library" jsonschema:"Library name the definition was loaded from"`
+	Name       string  `json:"name" jsonschema:"Definition name"`
+	Text       string  `json:"text" jsonschema:"The source code content"`
+	Diff       *string `json:"diff,omitempty" jsonschema:"Unified diff when lib_before_text is available"`
+	StartLine  int     `json:"start_line" jsonschema:"1-based starting line number for the returned text"`
+	TotalLines int     `json:"total_lines" jsonschema:"Total number of lines in the definition"`
+	HasMore    bool    `json:"has_more,omitempty" jsonschema:"True when additional lines remain past the returned text"`
+	Modified   string  `json:"modified,omitempty" jsonschema:"Date/time when the record was last modified"`
+	Committed  string  `json:"committed,omitempty" jsonschema:"Date/time when the record was last committed to version control"`
+}
 
 const codeLineLimit = 400
 

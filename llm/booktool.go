@@ -4,12 +4,38 @@
 package llm
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/core"
 )
+
+// read_book
+var _ = addTool(toolSpec{
+	name:        "suneido_read_book",
+	description: "Read from a Suneido book (documentation) table. Returns a JSON object containing the page 'text' and a 'children' array of sub-topic names.",
+	params: []stringParam{
+		{name: "book", description: "Name of the book table (e.g. 'suneidoc')", required: true},
+		{name: "path", description: "The path to the book page. If sub-topics are returned in 'children', append them to this path to dive deeper. (e.g. 'Database/Reference/Query'). Empty or omitted for root.", required: false},
+	},
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		book, err := requireString(args, "book")
+		if err != nil {
+			return nil, err
+		}
+		path := optionalString(args, "path")
+		return bookTool(book, path)
+	},
+})
+
+type readBookOutput struct {
+	Book     string   `json:"book" jsonschema:"Book table name"`
+	Path     string   `json:"path" jsonschema:"Normalized page path"`
+	Text     string   `json:"text" jsonschema:"Book page text"`
+	Children []string `json:"children" jsonschema:"Child topic names at this path"`
+}
 
 func bookTool(book, path string) (readBookOutput, error) {
 	if !lexer.IsIdentifier(book) {

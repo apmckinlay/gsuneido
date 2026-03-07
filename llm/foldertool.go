@@ -4,12 +4,40 @@
 package llm
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
 )
+
+// code_folders
+var _ = addTool(toolSpec{
+	name:        "suneido_code_folders",
+	description: "List folders and code items under a library path",
+	params: []stringParam{
+		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
+		{name: "path", description: "Folder path within the library (e.g. 'Debugging/Tests', empty string for root)", required: true, kind: paramString},
+	},
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		library, err := requireString(args, "library")
+		if err != nil {
+			return nil, err
+		}
+		path, err := requireString(args, "path")
+		if err != nil {
+			return nil, err
+		}
+		return codeFoldersTool(library, path)
+	},
+})
+
+type codeFoldersOutput struct {
+	Library  string   `json:"library" jsonschema:"Library name the folders were loaded from"`
+	Path     string   `json:"path" jsonschema:"Normalized folder path"`
+	Children []string `json:"children" jsonschema:"Child items at this path (folders end with '/')"`
+}
 
 const codeFolderLimit = 400
 

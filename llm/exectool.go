@@ -4,6 +4,7 @@
 package llm
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,45 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+var _ = addTool(toolSpec{
+	name: "suneido_execute",
+	description: "Executes Suneido code for its result or side effects.\n" +
+		"Use this for calculations, data manipulation, or system commands.\n" +
+		"Note: A single returned object will appear as the first result (e.g., [[1,2]]), while multiple return values appear as separate elements (e.g., [1,2]).",
+	params: []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		code, err := requireString(args, "code")
+		if err != nil {
+			return nil, err
+		}
+		return execTool(code)
+	},
+})
+
+type execOutput struct {
+	Code     string   `json:"code" jsonschema:"The code that was executed"`
+	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
+	Results  string   `json:"results" jsonschema:"0, 1, or multiple return values as Suneido-format strings"`
+}
+
+var _ = addTool(toolSpec{
+	name:        "suneido_check_code",
+	description: "Checks Suneido code for syntax and compilation errors without executing it. Returns compiler warnings only.",
+	params:      []stringParam{{name: "code", description: "Suneido code to check (as the body of a function)", required: true}},
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		code, err := requireString(args, "code")
+		if err != nil {
+			return nil, err
+		}
+		return checkTool(code)
+	},
+})
+
+type checkCodeOutput struct {
+	Code     string   `json:"code" jsonschema:"The code that was checked"`
+	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
+}
 
 func execTool(code string) (result execOutput, err error) {
 	defer func() {

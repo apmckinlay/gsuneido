@@ -4,12 +4,32 @@
 package llm
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
 )
+
+// tables
+var _ = addTool(toolSpec{
+	name:        "suneido_tables",
+	description: "Get a list of database table names that start with the given prefix (limit of 100)",
+	params:      []stringParam{{name: "prefix", description: "Only return tables whose names start with this prefix (empty string for all)", required: true}},
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		prefix, err := requireString(args, "prefix")
+		if err != nil {
+			return nil, err
+		}
+		return tablesTool(prefix)
+	},
+})
+
+type tablesOutput struct {
+	Tables  []string `json:"tables" jsonschema:"Table names matching the requested prefix"`
+	HasMore bool     `json:"has_more,omitempty" jsonschema:"True when additional tables were truncated"`
+}
 
 func tablesTool(prefix string) (output tablesOutput, err error) {
 	defer func() {

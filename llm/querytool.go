@@ -4,12 +4,34 @@
 package llm
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
 )
+
+var _ = addTool(toolSpec{
+	name:        "suneido_query",
+	description: "Execute a Suneido database query and return the results as Suneido-format text (Value.String) in a simple row/column array format (limit 100)",
+	params: []stringParam{
+		{name: "query", description: "Suneido query (e.g. 'tables sort table')", required: true},
+	},
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		qs, err := requireString(args, "query")
+		if err != nil {
+			return nil, err
+		}
+		return queryTool(qs)
+	},
+})
+
+type queryOutput struct {
+	Query   string `json:"query" jsonschema:"Query string that was executed"`
+	Results string `json:"results" jsonschema:"Formatted row/column output"`
+	HasMore bool   `json:"has_more,omitempty" jsonschema:"True when additional rows were truncated"`
+}
 
 const queryLimit = 100
 

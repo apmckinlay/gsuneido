@@ -4,6 +4,7 @@
 package llm
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -11,6 +12,48 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
+
+var _ = addTool(toolSpec{
+	name:        "suneido_search_code",
+	description: "Search library code by regex on library, name, and text",
+	params: []stringParam{
+		{name: "library", description: "Regular expression applied to library names", required: true, kind: paramString},
+		{name: "name", description: "Regular expression applied to definition names (optional if code provided)", required: false, kind: paramString},
+		{name: "code", description: "Regular expression applied to definition text (optional if name provided)", required: false, kind: paramString},
+		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
+		{name: "modified", description: "If true, only return results where the code has been modified", required: false, kind: paramBool},
+	},
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		libraryRx, err := requireString(args, "library")
+		if err != nil {
+			return nil, err
+		}
+		nameRx := optionalString(args, "name")
+		codeRx := optionalString(args, "code")
+		caseSensitive, err := optionalBool(args, "case_sensitive", false)
+		if err != nil {
+			return nil, err
+		}
+		modified, err := optionalBool(args, "modified", false)
+		if err != nil {
+			return nil, err
+		}
+		return searchCode(libraryRx, nameRx, codeRx, caseSensitive, modified)
+	},
+})
+
+type searchCodeOutput struct {
+	Matches []codeMatch `json:"matches" jsonschema:"List of matching library/name pairs"`
+	HasMore bool        `json:"has_more,omitempty" jsonschema:"True when additional matches were truncated"`
+}
+
+type codeMatch struct {
+	Library string   `json:"library" jsonschema:"Library name"`
+	Name    string   `json:"name" jsonschema:"Definition name"`
+	Path    string   `json:"path" jsonschema:"Folder path within the library"`
+	Lines   []string `json:"lines" jsonschema:"Matching lines of source code with line number prefixes"`
+	HasMore bool     `json:"has_more,omitempty" jsonschema:"True when additional matching lines were truncated"`
+}
 
 const searchLimit = 100
 

@@ -4,6 +4,7 @@
 package llm
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,41 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
+
+var _ = addTool(toolSpec{
+	name:        "suneido_search_book",
+	description: "Search book pages by regex on path and text",
+	params: []stringParam{
+		{name: "book", description: "Name of the book table (e.g. 'suneidoc')", required: true, kind: paramString},
+		{name: "path", description: "Regular expression applied to the full page path (path + name)", required: false, kind: paramString},
+		{name: "text", description: "Regular expression applied to page text (optional if path provided)", required: false, kind: paramString},
+		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
+	},
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		book, err := requireString(args, "book")
+		if err != nil {
+			return nil, err
+		}
+		pathRx := optionalString(args, "path")
+		textRx := optionalString(args, "text")
+		caseSensitive, err := optionalBool(args, "case_sensitive", false)
+		if err != nil {
+			return nil, err
+		}
+		return searchBook(book, pathRx, textRx, caseSensitive)
+	},
+})
+
+type searchBookOutput struct {
+	Matches []bookMatch `json:"matches" jsonschema:"List of matching book pages"`
+	HasMore bool        `json:"has_more,omitempty" jsonschema:"True when additional matches were truncated"`
+}
+
+type bookMatch struct {
+	Path    string   `json:"path" jsonschema:"Full path to the book page"`
+	Lines   []string `json:"lines" jsonschema:"Matching lines of text with line number prefixes"`
+	HasMore bool     `json:"has_more,omitempty" jsonschema:"True when additional matching lines were truncated"`
+}
 
 const linesLimit = 5
 
