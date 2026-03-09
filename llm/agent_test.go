@@ -297,3 +297,29 @@ func TestAgentLoadConversationWithTools(t *testing.T) {
 	assert.T(t).This(agent.history[3].Role).Is("assistant")
 	assert.T(t).This(agent.history[3].Content).Is("done")
 }
+
+func TestAgentEmitExecToolResult(t *testing.T) {
+	type out struct {
+		what string
+		data string
+	}
+	collect := func(result string) []out {
+		outs := []out{}
+		agent := NewAgent("", "", "", "", func(what, data string) {
+			outs = append(outs, out{what: what, data: data})
+		})
+		agent.emitExecToolResult(result)
+		return outs
+	}
+
+	// with results and print
+	outs := collect(`{"code":"","warnings":[],"results":"[1,2]","print":"a\nb"}`)
+	assert.T(t).This(len(outs)).Is(2)
+	assert.T(t).This(outs[0].data).Is("=> [1,2]<br>")
+	assert.T(t).This(outs[1].data).Is("a<br>b<br>")
+
+	// no results ([]): still emits => line but without the []
+	outs = collect(`{"code":"","warnings":[],"results":"[]"}`)
+	assert.T(t).This(len(outs)).Is(1)
+	assert.T(t).This(outs[0].data).Is("=> <br>")
+}

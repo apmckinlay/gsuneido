@@ -5,6 +5,7 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"strings"
 	"sync"
@@ -138,7 +139,7 @@ func (agent *Agent) request(input string) {
 
 		// No tool calls, we're done
 		agent.history = append(agent.history,
-			Message{Role: "assistant", Content: content, Reasoning: truncateReasoning(reasoning)})
+			Message{Role: "assistant", Content: content, Reasoning: truncate(reasoning)})
 		agent.logMessage("assistant", content)
 		agent.emit("complete", "")
 		return
@@ -156,18 +157,18 @@ func (agent *Agent) clearReasoning() {
 }
 
 const (
-	reasoningLimit = reasoningHead + reasoningTail
-	reasoningHead  = 600
-	reasoningTail  = 1400
+	truncateLimit = truncateHead + truncateTail
+	truncateHead  = 600
+	truncateTail  = 1400
 )
 
-// truncateReasoning limits reasoning size by keeping head and tail portions
-func truncateReasoning(s string) string {
-	if len(s) <= reasoningLimit {
+// truncate limits string size by keeping head and tail portions
+func truncate(s string) string {
+	if len(s) <= truncateLimit {
 		return s
 	}
-	head := s[:reasoningHead]
-	tail := s[len(s)-reasoningTail:]
+	head := s[:truncateHead]
+	tail := s[len(s)-truncateTail:]
 	// Trim partial line from end of head
 	if idx := strings.LastIndexByte(head, '\n'); idx >= 0 {
 		head = head[:idx]
@@ -309,7 +310,7 @@ func (agent *Agent) processToolCalls(ctx context.Context, content, reasoning str
 	assistantMsg := Message{
 		Role:      "assistant",
 		Content:   content,
-		Reasoning: truncateReasoning(reasoning),
+		Reasoning: truncate(reasoning),
 		ToolCalls: toolCallsList,
 	}
 	agent.history = append(agent.history, assistantMsg)
@@ -329,6 +330,8 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	if err != nil {
 		agent.emit("tool", "**Error:** "+err.Error()+"<br>")
 		result = "Error: " + err.Error()
+	} else if tc.Function.Name == "suneido_execute" {
+		agent.emitExecToolResult(result)
 	}
 	// Add tool result to history
 	toolMsg := Message{
@@ -340,6 +343,23 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	agent.logToolResult(toolMsg)
 }
 
+func (agent *Agent) emitExecToolResult(result string) {
+	var execOut execOutput
+	if err := json.Unmarshal([]byte(result), &execOut); err != nil {
+		agent.emit("tool", "=> "+result+"<br>")
+		return
+	}
+	results := execOut.Results
+	if results == "[]" {
+		results = ""
+	}
+	agent.emit("tool", "=> "+results+"<br>")
+	if execOut.Print != "" {
+		s := strings.ReplaceAll(execOut.Print, "\n", "<br>")
+		agent.emit("tool", s+"<br>")
+	}
+}
+
 func (agent *Agent) emit(what, data string) {
 	if what == "think" {
 		agent.thinkBuf.WriteString(data)
@@ -348,5 +368,5 @@ func (agent *Agent) emit(what, data string) {
 		return
 	}
 	agent.flushThink()
-	agent.outfn(what, data)
+	agent.outfn(what, truncate(data))
 }
