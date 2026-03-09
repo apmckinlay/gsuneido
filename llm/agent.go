@@ -285,18 +285,30 @@ func (agent *Agent) accumulateToolCalls(deltaToolCalls []ToolCall, toolCallsStat
 func (agent *Agent) processContentText(text string, content *strings.Builder,
 	reasoning *strings.Builder, inThink *bool) error {
 	if *inThink {
-		if strings.Contains(text, "</think") {
+		if idx := strings.Index(text, "</think"); idx >= 0 {
+			if idx > 0 {
+				reasoning.WriteString(text[:idx])
+				agent.emit("think", text[:idx])
+			}
 			*inThink = false
 			agent.flushThink()
 			return nil
 		}
 		reasoning.WriteString(text)
 		agent.emit("think", text)
-	} else if strings.Contains(text, "<think") {
+	} else if idx := strings.Index(text, "<think"); idx >= 0 {
+		if idx > 0 {
+			content.WriteString(text[:idx])
+			agent.emit("output", text[:idx])
+		}
 		*inThink = true
-		after := text[strings.Index(text, ">")+1:]
-		reasoning.WriteString(after)
-		agent.emit("think", after)
+		if gtIdx := strings.Index(text[idx:], ">"); gtIdx >= 0 {
+			after := text[idx+gtIdx+1:]
+			if after != "" {
+				reasoning.WriteString(after)
+				agent.emit("think", after)
+			}
+		}
 	} else {
 		content.WriteString(text)
 		agent.emit("output", text)

@@ -298,6 +298,48 @@ func TestAgentLoadConversationWithTools(t *testing.T) {
 	assert.T(t).This(agent.history[3].Content).Is("done")
 }
 
+func TestProcessContentTextThinkTags(t *testing.T) {
+	type emission struct {
+		what string
+		data string
+	}
+	run := func(chunks []string) ([]emission, string, string) {
+		var emitted []emission
+		agent := NewAgent("", "", "", "", func(what, data string) {
+			emitted = append(emitted, emission{what, data})
+		})
+		var content, reasoning strings.Builder
+		inThink := false
+		for _, chunk := range chunks {
+			agent.processContentText(chunk, &content, &reasoning, &inThink)
+		}
+		return emitted, content.String(), reasoning.String()
+	}
+
+	// content before </think> in the same chunk must not be dropped
+	emitted, content, reasoning := run([]string{
+		"<think>", "for it</think>", "output",
+	})
+	assert.T(t).This(reasoning).Is("for it")
+	assert.T(t).This(content).Is("output")
+	_ = emitted
+
+	// content before <think> in the same chunk must not be dropped
+	emitted, content, reasoning = run([]string{
+		"output before<think>think after",
+	})
+	assert.T(t).This(content).Is("output before")
+	assert.T(t).This(reasoning).Is("think after")
+	_ = emitted
+
+	// normal multi-chunk think with no tags
+	_, content, reasoning = run([]string{
+		"<think>", "hello ", "world", "</think>", "output",
+	})
+	assert.T(t).This(reasoning).Is("hello world")
+	assert.T(t).This(content).Is("output")
+}
+
 func TestAgentEmitExecToolResult(t *testing.T) {
 	type out struct {
 		what string
