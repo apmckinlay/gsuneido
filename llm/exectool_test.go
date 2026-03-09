@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -64,6 +65,35 @@ func TestExecTool(t *testing.T) {
 		assert.That(err == nil)
 		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
 		assert.That(strings.Contains(result.Warnings[1], "@line:2"))
+	}
+	// Set Print to a function that dispatches to Suneido.Print,
+	// matching the pattern of stdlib Print.ss.
+	oldPrint := core.Global.GetIfPresent("Print")
+	defer core.Global.TestDef("Print", oldPrint)
+	core.Global.TestDef("Print", &core.SuBuiltinRaw{
+		Fn: func(th *core.Thread, as *core.ArgSpec, args []core.Value) core.Value {
+			suneido := th.Suneido.Load()
+			if suneido == nil {
+				return nil
+			}
+			printFn := suneido.Get(th, core.SuStr("Print"))
+			if printFn == nil {
+				return nil
+			}
+			th.Call(printFn, args[0])
+			return nil
+		},
+		BuiltinParams: core.BuiltinParams{ParamSpec: core.ParamSpec1},
+	})
+	{
+		result, err := execTool("Print('hello')")
+		assert.That(err == nil)
+		assert.This(result.Print).Is("hello")
+	}
+	{
+		result, err := execTool("Print('a')\nPrint('b')")
+		assert.That(err == nil)
+		assert.This(result.Print).Is("ab")
 	}
 }
 

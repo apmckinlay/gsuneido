@@ -34,6 +34,7 @@ type execOutput struct {
 	Code     string   `json:"code" jsonschema:"The code that was executed"`
 	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
 	Results  string   `json:"results" jsonschema:"0, 1, or multiple return values as Suneido-format strings"`
+	Print    string   `json:"print,omitempty" jsonschema:"Output from Print calls"`
 }
 
 var _ = addTool(toolSpec{
@@ -91,6 +92,20 @@ func execTool(code string) (result execOutput, err error) {
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
 
+	var printBuf strings.Builder
+	suneido := th.Suneido.Load()
+	if suneido == nil {
+		suneido = new(core.SuneidoObject)
+	}
+	suneido.Set(core.SuStr("Print"), &core.SuBuiltin1{
+		Fn: func(s core.Value) core.Value {
+			printBuf.WriteString(core.ToStr(s))
+			return nil
+		},
+		BuiltinParams: core.BuiltinParams{ParamSpec: core.ParamSpec1},
+	})
+	th.Suneido.Store(suneido)
+
 	code = strings.TrimSpace(code)
 	src := srcPrefix + code + "\n}"
 	savedCode = src
@@ -116,6 +131,7 @@ func execTool(code string) (result execOutput, err error) {
 		Code:     code,
 		Warnings: warnings,
 		Results:  str.Join("[, ]", results),
+		Print:    printBuf.String(),
 	}
 	return
 }
