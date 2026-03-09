@@ -41,7 +41,9 @@ func TestExecTool(t *testing.T) {
 		assert.That(err == nil)
 		assert.This(result.Results).Is("[2]")
 		assert.That(strings.Contains(result.Warnings[0], "initialized but not used: x"))
+		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
 		assert.That(strings.Contains(result.Warnings[1], "initialized but not used: y"))
+		assert.That(strings.Contains(result.Warnings[1], "@line:1"))
 	}
 	{
 		_, err := execTool("throw 'exception'")
@@ -50,6 +52,18 @@ func TestExecTool(t *testing.T) {
 	{
 		_, err := execTool("x")
 		assert.This(err.Error()).Is("execute error: uninitialized variable: x")
+	}
+	{
+		_, err := execTool("if true") // syntax error - missing block
+		assert.That(err != nil)
+		assert.That(strings.Contains(err.Error(), "execute error: syntax error"))
+		assert.That(strings.Contains(err.Error(), "@line:2")) // error at closing }
+	}
+	{
+		result, err := execTool("x = 1\ny = 2")
+		assert.That(err == nil)
+		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
+		assert.That(strings.Contains(result.Warnings[1], "@line:2"))
 	}
 }
 
@@ -64,7 +78,9 @@ func TestCheckTool(t *testing.T) {
 		result, err := checkTool("x = 1; y = 2")
 		assert.That(err == nil)
 		assert.That(strings.Contains(result.Warnings[0], "initialized but not used: x"))
+		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
 		assert.That(strings.Contains(result.Warnings[1], "initialized but not used: y"))
+		assert.That(strings.Contains(result.Warnings[1], "@line:1"))
 	}
 	{
 		_, err := checkTool("throw 'exception'")
@@ -78,5 +94,12 @@ func TestCheckTool(t *testing.T) {
 		_, err := checkTool("if true") // syntax error - missing block
 		assert.That(err != nil)
 		assert.That(strings.Contains(err.Error(), "check error: syntax error"))
+		assert.That(strings.Contains(err.Error(), "@line:2")) // error at closing }
+	}
+	{
+		result, err := checkTool("x = 1\ny = 2")
+		assert.That(err == nil)
+		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
+		assert.That(strings.Contains(result.Warnings[1], "@line:2"))
 	}
 }

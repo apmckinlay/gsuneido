@@ -6,6 +6,8 @@ package llm
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -52,10 +54,37 @@ type checkCodeOutput struct {
 	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
 }
 
+// srcPrefix is prepended to user code when wrapping in a function
+const srcPrefix = "function () {\n"
+
+// offsetToLine converts a byte offset in src (which includes srcPrefix)
+// to a 1-based line number within src,
+// then subtracts 1 for the srcPrefix line to give the line in user code.
+func offsetToLine(src string, offset int) int {
+	if offset > len(src) {
+		offset = len(src)
+	}
+	line := strings.Count(src[:offset], "\n") + 1
+	return line - 1 // subtract the srcPrefix line
+}
+
+var atOffsetRe = regexp.MustCompile(`@(\d+)`)
+
+// convertPositions replaces @<byteoffset> with @line:<linenum> in s.
+// src is the full wrapped source (including srcPrefix).
+func convertPositions(s, src string) string {
+	return atOffsetRe.ReplaceAllStringFunc(s, func(m string) string {
+		n, _ := strconv.Atoi(m[1:])
+		return "@line:" + strconv.Itoa(offsetToLine(src, n))
+	})
+}
+
 func execTool(code string) (result execOutput, err error) {
+	var savedCode string
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("execute error: %v", r)
+			msg := convertPositions(fmt.Sprintf("%v", r), savedCode)
+			err = fmt.Errorf("execute error: %s", msg)
 		}
 	}()
 
@@ -63,10 +92,14 @@ func execTool(code string) (result execOutput, err error) {
 	defer th.Close()
 
 	code = strings.TrimSpace(code)
-	src := "function () {\n" + code + "\n}"
+	src := srcPrefix + code + "\n}"
+	savedCode = src
 	v, warnings := compile.Checked(th, src)
 	if warnings == nil {
 		warnings = []string{}
+	}
+	for i, w := range warnings {
+		warnings[i] = convertPositions(w, src)
 	}
 	fn := v.(*core.SuFunc)
 
@@ -88,9 +121,11 @@ func execTool(code string) (result execOutput, err error) {
 }
 
 func checkTool(code string) (result checkCodeOutput, err error) {
+	var savedCode string
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("check error: %v", r)
+			msg := convertPositions(fmt.Sprintf("%v", r), savedCode)
+			err = fmt.Errorf("check error: %s", msg)
 		}
 	}()
 
@@ -98,10 +133,14 @@ func checkTool(code string) (result checkCodeOutput, err error) {
 	defer th.Close()
 
 	code = strings.TrimSpace(code)
-	src := "function () {\n" + code + "\n}"
+	src := srcPrefix + code + "\n}"
+	savedCode = src
 	_, warnings := compile.Checked(th, src)
 	if warnings == nil {
 		warnings = []string{}
+	}
+	for i, w := range warnings {
+		warnings[i] = convertPositions(w, src)
 	}
 
 	result = checkCodeOutput{
