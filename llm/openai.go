@@ -91,7 +91,12 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+c.APIKey)
 
-	resp, err := c.HTTPClient.Do(httpReq)
+	// Streaming responses can legitimately run for several minutes.
+	// Use request context cancellation, not http.Client.Timeout,
+	// to avoid aborting long streams while reading the body.
+	streamClient := *c.HTTPClient
+	streamClient.Timeout = 0
+	resp, err := streamClient.Do(httpReq)
 	if err != nil {
 		return fmt.Errorf("send request: %w", err)
 	}
