@@ -11,6 +11,7 @@ import (
 	"math/rand/v2"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -289,6 +290,12 @@ func (th *Thread) PrintStack() {
 // TraceStack outputs the thread's call stack to trace
 func (th *Thread) TraceStack() {
 	th.printStack(trace.Writer, 6)
+}
+
+func (th *Thread) StackString(levels int) string {
+	var b strings.Builder
+	th.printStack(&b, levels)
+	return b.String()
 }
 
 func (th *Thread) printStack(w io.Writer, levels int) {

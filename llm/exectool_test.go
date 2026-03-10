@@ -48,11 +48,13 @@ func TestExecTool(t *testing.T) {
 	}
 	{
 		_, err := execTool("throw 'exception'")
-		assert.This(err.Error()).Is(`execute error: "exception"`)
+		assert.That(strings.Contains(err.Error(), `execute error: "exception"`))
+		assert.That(strings.Contains(err.Error(), "\n"))
 	}
 	{
 		_, err := execTool("x")
-		assert.This(err.Error()).Is("execute error: uninitialized variable: x")
+		assert.That(strings.Contains(err.Error(), "execute error: uninitialized variable: x"))
+		assert.That(strings.Contains(err.Error(), "\n"))
 	}
 	{
 		_, err := execTool("if true") // syntax error - missing block
@@ -72,7 +74,7 @@ func TestExecTool(t *testing.T) {
 	defer core.Global.TestDef("Print", oldPrint)
 	core.Global.TestDef("Print", &core.SuBuiltinRaw{
 		Fn: func(th *core.Thread, as *core.ArgSpec, args []core.Value) core.Value {
-			suneido := th.Suneido.Load()
+			suneido := core.Global.GetName(th, "Suneido")
 			if suneido == nil {
 				return nil
 			}

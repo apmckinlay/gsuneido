@@ -187,7 +187,7 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 				if outfn != nil && len(msg.ToolCalls) > 0 {
 					for _, tc := range msg.ToolCalls {
 						name := strings.TrimPrefix(tc.Function.Name, "suneido_")
-						outfn("tool", "**"+name+"** "+tc.Function.Arguments+"<br>")
+						outfn("tool", name+" "+tc.Function.Arguments+"\n")
 					}
 				}
 			} else {

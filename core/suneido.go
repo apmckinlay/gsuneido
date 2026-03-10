@@ -12,6 +12,10 @@ type SuneidoObject struct {
 // SuneidoObjectMethods is initialized by builtin/suneido.go
 var SuneidoObjectMethods Methods
 
+func (so *SuneidoObject) Clone() *SuneidoObject {
+	return &SuneidoObject{SuObject: *so.SuObject.Clone()}
+}
+
 func (so *SuneidoObject) Lookup(th *Thread, method string) Value {
 	if m := SuneidoObjectMethods[method]; m != nil {
 		return m

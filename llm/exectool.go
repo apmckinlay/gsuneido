@@ -19,7 +19,9 @@ var _ = addTool(toolSpec{
 	name: "suneido_execute",
 	description: "Executes Suneido code for its result or side effects.\n" +
 		"Use this for calculations, data manipulation, or system commands.\n" +
-		"Note: A single returned object will appear as the first result (e.g., [[1,2]]), while multiple return values appear as separate elements (e.g., [1,2]).",
+		"A single returned object will appear as the first result (e.g., [[1,2]])\n" +
+		"multiple return values appear as separate elements (e.g., [1,2]).\n" +
+		"Errors will include the call stack trace",
 	params: []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		code, err := requireString(args, "code")
@@ -82,21 +84,24 @@ func convertPositions(s, src string) string {
 
 func execTool(code string) (result execOutput, err error) {
 	var savedCode string
+	var th *core.Thread
 	defer func() {
 		if r := recover(); r != nil {
 			msg := convertPositions(fmt.Sprintf("%v", r), savedCode)
+			if th != nil {
+				if stack := th.StackString(6); stack != "" {
+					msg += "\n" + strings.TrimRight(stack, "\n")
+				}
+			}
 			err = fmt.Errorf("execute error: %s", msg)
 		}
 	}()
 
-	th := core.NewThread(core.MainThread)
+	th = core.NewThread(core.MainThread)
 	defer th.Close()
 
 	var printBuf strings.Builder
-	suneido := th.Suneido.Load()
-	if suneido == nil {
-		suneido = new(core.SuneidoObject)
-	}
+	suneido := core.Suneido.Clone()
 	suneido.Set(core.SuStr("Print"), &core.SuBuiltin1{
 		Fn: func(s core.Value) core.Value {
 			printBuf.WriteString(core.ToStr(s))

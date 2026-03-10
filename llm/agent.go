@@ -123,7 +123,7 @@ func (agent *Agent) request(input string) {
 
 		content, reasoning, toolCalls, err := agent.doStream(ctx, req)
 		if err != nil {
-			agent.emit("output", "Error: "+err.Error())
+			agent.emit("output", "ERROR: "+err.Error())
 			agent.emit("complete", "")
 			return
 		}
@@ -337,11 +337,11 @@ func (agent *Agent) processToolCalls(ctx context.Context, content, reasoning str
 // executeSingleToolCall executes a single tool call and logs the result
 func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	name := strings.TrimPrefix(tc.Function.Name, "suneido_")
-	agent.emit("tool", "**"+name+"** "+tc.Function.Arguments+"<br>")
+	agent.emit("tool", name+" "+tc.Function.Arguments+"\n")
 	result, err := agent.toolClient.CallToolFromLLM(ctx, tc)
 	if err != nil {
-		agent.emit("tool", "**Error:** "+err.Error()+"<br>")
-		result = "Error: " + err.Error()
+		agent.emit("tool", "ERROR: "+err.Error()+"\n")
+		result = "ERROR: " + err.Error()
 	} else if tc.Function.Name == "suneido_execute" {
 		agent.emitExecToolResult(result)
 	}
@@ -358,17 +358,16 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 func (agent *Agent) emitExecToolResult(result string) {
 	var execOut execOutput
 	if err := json.Unmarshal([]byte(result), &execOut); err != nil {
-		agent.emit("tool", "=> "+result+"<br>")
+		agent.emit("tool", "=> "+result+"\n")
 		return
 	}
 	results := execOut.Results
 	if results == "[]" {
 		results = ""
 	}
-	agent.emit("tool", "=> "+results+"<br>")
+	agent.emit("tool", "=> "+results+"\n")
 	if execOut.Print != "" {
-		s := strings.ReplaceAll(execOut.Print, "\n", "<br>")
-		agent.emit("tool", s+"<br>")
+		agent.emit("tool", execOut.Print+"\n")
 	}
 }
 

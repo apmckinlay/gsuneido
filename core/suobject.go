@@ -102,6 +102,10 @@ func SuObjectOfArgs(args []Value, as *ArgSpec) *SuObject {
 }
 
 func (ob *SuObject) Copy() Container {
+	return ob.Clone()
+}
+
+func (ob *SuObject) Clone() *SuObject {
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
