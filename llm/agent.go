@@ -421,7 +421,8 @@ func (agent *Agent) waitForApproval(ctx context.Context, approval *ToolApproval)
 }
 
 func (*Agent) needsApproval(toolName string) bool {
-	return strings.HasPrefix(toolName, "suneido_upsert_")
+	return strings.HasPrefix(toolName, "suneido_upsert_") ||
+		strings.HasPrefix(toolName, "suneido_delete_")
 }
 
 func (agent *Agent) emitExecToolResult(result string) {
