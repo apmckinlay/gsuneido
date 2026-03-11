@@ -401,7 +401,11 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 		approval := newToolApproval()
 		approvalFn := func() (bool, error) {
 			agent.emitToolWithApproval("", approval)
-			return agent.waitForApproval(ctx, approval)
+			allowed, err := agent.waitForApproval(ctx, approval)
+			if allowed {
+				agent.emit("tool", "Allowed\n")
+			}
+			return allowed, err
 		}
 		ctx = context.WithValue(ctx, approvalFnKey{}, approvalFn)
 	} else {
