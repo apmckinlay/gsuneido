@@ -6,7 +6,6 @@ package llm
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
@@ -44,9 +43,8 @@ const codeFolderLimit = 400
 func codeFoldersTool(library, path string) (codeFoldersOutput, error) {
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	libs := th.Dbms().Libraries()
-	if !slices.Contains(libs, library) {
-		return codeFoldersOutput{}, fmt.Errorf("library not found: %s", library)
+	if err := validateLibrary(th, library); err != nil {
+		return codeFoldersOutput{}, err
 	}
 	tran := th.Dbms().Transaction(false)
 	defer tran.Complete()

@@ -6,7 +6,6 @@ package llm
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/apmckinlay/gsuneido/core"
 )
@@ -45,9 +44,8 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
 
-	libs := th.Dbms().Libraries()
-	if !slices.Contains(libs, library) {
-		return deleteCodeOutput{}, fmt.Errorf("library not found: %s", library)
+	if err := validateLibrary(th, library); err != nil {
+		return deleteCodeOutput{}, err
 	}
 
 	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)

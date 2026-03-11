@@ -68,9 +68,8 @@ func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, 
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	libs := th.Dbms().Libraries()
-	if !slices.Contains(libs, library) {
-		return readCodeOutput{}, fmt.Errorf("library not found: %s", library)
+	if err := validateLibrary(th, library); err != nil {
+		return readCodeOutput{}, err
 	}
 
 	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
@@ -205,4 +204,14 @@ func isValidName(s string) bool {
 		}
 	}
 	return true
+}
+
+// validateLibrary checks if a library exists in the database.
+// It returns an error if the library is not found.
+func validateLibrary(th *core.Thread, library string) error {
+	libs := th.Dbms().Libraries()
+	if !slices.Contains(libs, library) {
+		return fmt.Errorf("library not found: %s", library)
+	}
+	return nil
 }

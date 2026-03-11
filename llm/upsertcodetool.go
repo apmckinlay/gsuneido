@@ -6,7 +6,6 @@ package llm
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -66,9 +65,8 @@ func upsertCodeTool(ctx context.Context, library, path, name, text string) (resu
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
 
-	libs := th.Dbms().Libraries()
-	if !slices.Contains(libs, library) {
-		return upsertCodeOutput{}, fmt.Errorf("library not found: %s", library)
+	if err := validateLibrary(th, library); err != nil {
+		return upsertCodeOutput{}, err
 	}
 
 	// Validate the code by compiling it
