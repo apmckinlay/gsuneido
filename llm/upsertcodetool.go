@@ -40,7 +40,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return upsertCodeTool(library, path, name, text)
+		return upsertCodeTool(ctx, library, path, name, text)
 	},
 })
 
@@ -51,7 +51,7 @@ type upsertCodeOutput struct {
 	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
 }
 
-func upsertCodeTool(library, path, name, text string) (result upsertCodeOutput, err error) {
+func upsertCodeTool(ctx context.Context, library, path, name, text string) (result upsertCodeOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("upsert error: %v", r)
@@ -71,11 +71,6 @@ func upsertCodeTool(library, path, name, text string) (result upsertCodeOutput, 
 		return upsertCodeOutput{}, fmt.Errorf("library not found: %s", library)
 	}
 
-	parent, err := ensurePathParent(th, library, path)
-	if err != nil {
-		return upsertCodeOutput{}, err
-	}
-
 	// Validate the code by compiling it
 	warnings, err := validateLibCode(th, text)
 	if err != nil {
@@ -83,6 +78,22 @@ func upsertCodeTool(library, path, name, text string) (result upsertCodeOutput, 
 	}
 	if warnings == nil {
 		warnings = []string{}
+	}
+
+	// Request approval after code is validated
+	if approvalFn, ok := ctx.Value(approvalFnKey{}).(func() (bool, error)); ok {
+		allowed, err := approvalFn()
+		if err != nil {
+			return upsertCodeOutput{}, err
+		}
+		if !allowed {
+			return upsertCodeOutput{}, fmt.Errorf("DENIED")
+		}
+	}
+
+	parent, err := ensurePathParent(th, library, path)
+	if err != nil {
+		return upsertCodeOutput{}, err
 	}
 
 	now := core.Now()

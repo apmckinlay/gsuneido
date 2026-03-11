@@ -371,37 +371,21 @@ func (agent *Agent) processToolCalls(ctx context.Context, content, reasoning str
 	}
 }
 
+// approvalFnKey is the context key for injecting an approval function into tool handlers.
+type approvalFnKey struct{}
+
 // executeSingleToolCall executes a single tool call and logs the result
 func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	name := strings.TrimPrefix(tc.Function.Name, "suneido_")
 	toolOutput := name + " " + tc.Function.Arguments + "\n"
 	if agent.needsApproval(tc.Function.Name) {
+		agent.emit("tool", toolOutput)
 		approval := newToolApproval()
-		agent.emitToolWithApproval(toolOutput, approval)
-		allowed, err := agent.waitForApproval(ctx, approval)
-		if err != nil {
-			agent.emit("tool", "ERROR: "+err.Error()+"\n")
-			toolMsg := Message{
-				Role:       "tool",
-				Content:    "ERROR: " + err.Error(),
-				ToolCallID: tc.ID,
-			}
-			agent.history = append(agent.history, toolMsg)
-			agent.logToolResult(toolMsg)
-			return
+		approvalFn := func() (bool, error) {
+			agent.emitToolWithApproval("", approval)
+			return agent.waitForApproval(ctx, approval)
 		}
-		if !allowed {
-			agent.emit("tool", "DENIED\n")
-			toolMsg := Message{
-				Role:       "tool",
-				Content:    "DENIED",
-				ToolCallID: tc.ID,
-			}
-			agent.history = append(agent.history, toolMsg)
-			agent.logToolResult(toolMsg)
-			return
-		}
-		agent.emit("tool", "ALLOWED\n")
+		ctx = context.WithValue(ctx, approvalFnKey{}, approvalFn)
 	} else {
 		agent.emit("tool", toolOutput)
 	}

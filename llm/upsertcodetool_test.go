@@ -4,6 +4,7 @@
 package llm
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -24,22 +25,24 @@ func TestUpsertCodeTool(t *testing.T) {
 
 	dbmsLocal.Admin("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)", nil)
 
+	ctx := context.Background()
+
 	// Test invalid library
-	_, err := upsertCodeTool("nonexistent", "", "Foo", "function(){}")
+	_, err := upsertCodeTool(ctx, "nonexistent", "", "Foo", "function(){}")
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("library not found: nonexistent")
 
 	// Test invalid name
-	_, err = upsertCodeTool("stdlib", "", "lowercase", "function(){}")
+	_, err = upsertCodeTool(ctx, "stdlib", "", "lowercase", "function(){}")
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("invalid name: lowercase")
 
 	// Test invalid code
-	_, err = upsertCodeTool("stdlib", "", "Foo", "not valid {{{ code")
+	_, err = upsertCodeTool(ctx, "stdlib", "", "Foo", "not valid {{{ code")
 	assert.That(err != nil)
 
 	// Test insert
-	res, err := upsertCodeTool("stdlib", "", "Foo", "function() { return 1 }")
+	res, err := upsertCodeTool(ctx, "stdlib", "", "Foo", "function() { return 1 }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +75,7 @@ func TestUpsertCodeTool(t *testing.T) {
 	assert.That(cr.Modified != "")
 
 	// Test update
-	res, err = upsertCodeTool("stdlib", "", "Foo", "function() { return 2 }")
+	res, err = upsertCodeTool(ctx, "stdlib", "", "Foo", "function() { return 2 }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +95,7 @@ func TestUpsertCodeTool(t *testing.T) {
 	th.Close()
 
 	// Test second update should NOT change lib_before_text again
-	res, err = upsertCodeTool("stdlib", "", "Foo", "function() { return 3 }")
+	res, err = upsertCodeTool(ctx, "stdlib", "", "Foo", "function() { return 3 }")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +115,7 @@ func TestUpsertCodeTool(t *testing.T) {
 	th2.Close()
 
 	// Test path insert creates intermediate folders and sets leaf parent
-	res, err = upsertCodeTool("stdlib", "A/B", "Bar", "function() { return 9 }")
+	res, err = upsertCodeTool(ctx, "stdlib", "A/B", "Bar", "function() { return 9 }")
 	if err != nil {
 		t.Fatal(err)
 	}
