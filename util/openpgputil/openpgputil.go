@@ -180,7 +180,7 @@ func serializePrivate(entity *openpgp.Entity) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := entity.SerializePrivate(w, Config()); err != nil {
+	if err := entity.SerializePrivateWithoutSigning(w, Config()); err != nil {
 		w.Close()
 		return "", err
 	}
