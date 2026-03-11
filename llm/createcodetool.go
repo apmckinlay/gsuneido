@@ -51,12 +51,6 @@ type createCodeOutput struct {
 }
 
 func createCodeTool(ctx context.Context, library, path, name, text string) (result createCodeOutput, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("create error: %v", r)
-		}
-	}()
-
 	if !isValidName(name) {
 		return createCodeOutput{}, fmt.Errorf("invalid name: %s", name)
 	}
