@@ -157,7 +157,7 @@ func TestAgentLoadConversation(t *testing.T) {
 
 gpt-4
 
-## {{ System }}
+## {{ Prompt }}
 
 You are a helpful assistant.
 
@@ -208,7 +208,7 @@ func TestAgentLoadAndResave(t *testing.T) {
 	defer func() { aiDir = oldDir }()
 
 	// Create original conversation
-	originalContent := `## {{ System }}
+	originalContent := `## {{ Prompt }}
 
 Original prompt.
 
