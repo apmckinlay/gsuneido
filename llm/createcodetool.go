@@ -13,9 +13,10 @@ import (
 )
 
 var _ = addTool(toolSpec{
-	name: "suneido_upsert_code",
-	description: "Output or update a library definition. " +
-		"The definition must be valid Suneido code.",
+	name: "suneido_create_code",
+	description: "Create a new library definition. " +
+		"The definition must be valid Suneido code. " +
+		"Returns an error if the definition already exists.",
 	params: []stringParam{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
 		{name: "path", description: "Folder path within the library (e.g. 'Debugging/Tests', empty string for root)", required: true, kind: paramString},
@@ -39,26 +40,25 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return upsertCodeTool(ctx, library, path, name, text)
+		return createCodeTool(ctx, library, path, name, text)
 	},
 })
 
-type upsertCodeOutput struct {
+type createCodeOutput struct {
 	Library  string   `json:"library" jsonschema:"Library name"`
 	Name     string   `json:"name" jsonschema:"Definition name"`
-	Action   string   `json:"action" jsonschema:"Either 'inserted' or 'updated'"`
 	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
 }
 
-func upsertCodeTool(ctx context.Context, library, path, name, text string) (result upsertCodeOutput, err error) {
+func createCodeTool(ctx context.Context, library, path, name, text string) (result createCodeOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("upsert error: %v", r)
+			err = fmt.Errorf("create error: %v", r)
 		}
 	}()
 
 	if !isValidName(name) {
-		return upsertCodeOutput{}, fmt.Errorf("invalid name: %s", name)
+		return createCodeOutput{}, fmt.Errorf("invalid name: %s", name)
 	}
 	path = normalizeFolderPath(path)
 
@@ -66,104 +66,60 @@ func upsertCodeTool(ctx context.Context, library, path, name, text string) (resu
 	defer th.Close()
 
 	if err := validateLibrary(th, library); err != nil {
-		return upsertCodeOutput{}, err
+		return createCodeOutput{}, err
 	}
 
-	// Validate the code by compiling it
 	warnings, err := validateLibCode(th, text)
 	if err != nil {
-		return upsertCodeOutput{}, err
+		return createCodeOutput{}, err
 	}
 	if warnings == nil {
 		warnings = []string{}
 	}
 
-	// Request approval after code is validated
-	if approvalFn, ok := ctx.Value(approvalFnKey{}).(func() (bool, error)); ok {
-		allowed, err := approvalFn()
-		if err != nil {
-			return upsertCodeOutput{}, err
-		}
-		if !allowed {
-			return upsertCodeOutput{}, fmt.Errorf("DENIED")
-		}
+	// Check if definition already exists
+	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
+	rtran := th.Dbms().Transaction(false)
+	rq := rtran.Query(query, nil)
+	row, _ := rq.Get(th, core.Next)
+	rtran.Complete()
+	if row != nil {
+		return createCodeOutput{}, fmt.Errorf("definition already exists: %s", name)
+	}
+
+	if err := requireApproval(ctx, "createCodeTool"); err != nil {
+		return createCodeOutput{}, err
 	}
 
 	parent, err := ensurePathParent(th, library, path)
 	if err != nil {
-		return upsertCodeOutput{}, err
+		return createCodeOutput{}, err
 	}
 
 	now := core.Now()
 
-	// Look up existing record in a read transaction
-	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
-	rtran := th.Dbms().Transaction(false)
-	rq := rtran.Query(query, nil)
-	hdr := rq.Header()
-	row, _ := rq.Get(th, core.Next)
-
-	var action string
-	if row == nil {
-		// Get max num to assign a unique num to the new record
-		maxNum := maxLibNum(th, rtran, library)
-		rtran.Complete()
-		// Insert: use Output on the table
-		action = "inserted"
-		utran := th.Dbms().Transaction(true)
-		iq := utran.Query(library, nil)
-		ihdr := iq.Header()
-		rec := buildRecord(ihdr, map[string]core.Value{
-			"name":            core.SuStr(name),
-			"text":            core.SuStr(text),
-			"lib_before_text": core.SuStr(""),
-			"lib_modified":    now,
-			"group":           core.SuInt(-1),
-			"num":             core.SuInt(maxNum + 1),
-			"parent":          core.SuInt(parent),
-		})
-		iq.Output(th, rec)
-		if conflict := utran.Complete(); conflict != "" {
-			return upsertCodeOutput{}, fmt.Errorf("transaction conflict: %s", conflict)
-		}
-	} else {
-		// Update existing record
-		action = "updated"
-		off := row[0].Off
-		st := core.NewSuTran(rtran, false)
-		// Collect all existing field values
-		fields := hdr.Fields[0]
-		vals := make(map[string]core.Value, len(fields))
-		for _, f := range fields {
-			vals[f] = row.GetVal(hdr, f, th, st)
-		}
-		// Check lib_before_text: if empty, set to original text
-		existingBefore := core.ToStr(vals["lib_before_text"])
-		if existingBefore == "" {
-			vals["lib_before_text"] = vals["text"]
-		}
-		// Apply changes
-		vals["text"] = core.SuStr(text)
-		vals["lib_modified"] = now
-		vals["parent"] = core.SuInt(parent)
-		rtran.Complete()
-
-		// Build new record
-		utran := th.Dbms().Transaction(true)
-		uq := utran.Query(query, nil)
-		uhdr := uq.Header()
-		newRec := buildRecord(uhdr, vals)
-		utran.Update(th, library, off, newRec)
-		if conflict := utran.Complete(); conflict != "" {
-			return upsertCodeOutput{}, fmt.Errorf("transaction conflict: %s", conflict)
-		}
-		core.Global.Unload(name)
+	// Get max num to assign a unique num to the new record
+	utran := th.Dbms().Transaction(true)
+	maxNum := maxLibNum(th, utran, library)
+	iq := utran.Query(library, nil)
+	ihdr := iq.Header()
+	rec := buildRecord(ihdr, map[string]core.Value{
+		"name":            core.SuStr(name),
+		"text":            core.SuStr(text),
+		"lib_before_text": core.SuStr(""),
+		"lib_modified":    now,
+		"group":           core.SuInt(-1),
+		"num":             core.SuInt(maxNum + 1),
+		"parent":          core.SuInt(parent),
+	})
+	iq.Output(th, rec)
+	if conflict := utran.Complete(); conflict != "" {
+		return createCodeOutput{}, fmt.Errorf("transaction conflict: %s", conflict)
 	}
 
-	result = upsertCodeOutput{
+	result = createCodeOutput{
 		Library:  library,
 		Name:     name,
-		Action:   action,
 		Warnings: warnings,
 	}
 	return result, nil
@@ -203,9 +159,9 @@ func ensurePathParent(th *core.Thread, library, path string) (int, error) {
 			"text":            core.SuStr(""),
 			"lib_before_text": core.SuStr(""),
 			"lib_modified":    core.Now(),
-			"group":           core.SuInt(parent),
-			"num":             core.SuInt(nextNum),
-			"parent":          core.SuInt(parent),
+			"group":           core.IntVal(parent),
+			"num":             core.IntVal(nextNum),
+			"parent":          core.IntVal(parent),
 		})
 		iq.Output(th, rec)
 		parent = nextNum

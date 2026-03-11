@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -374,6 +375,23 @@ func (agent *Agent) processToolCalls(ctx context.Context, content, reasoning str
 // approvalFnKey is the context key for injecting an approval function into tool handlers.
 type approvalFnKey struct{}
 
+// requireApproval gets the approval function from context and calls it.
+// It panics if no approval function is found, or returns an error if denied.
+func requireApproval(ctx context.Context, toolName string) error {
+	approvalFn, ok := ctx.Value(approvalFnKey{}).(func() (bool, error))
+	if !ok {
+		panic(toolName + ": missing approval function")
+	}
+	allowed, err := approvalFn()
+	if err != nil {
+		return err
+	}
+	if !allowed {
+		return fmt.Errorf("DENIED")
+	}
+	return nil
+}
+
 // executeSingleToolCall executes a single tool call and logs the result
 func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	name := strings.TrimPrefix(tc.Function.Name, "suneido_")
@@ -421,7 +439,7 @@ func (agent *Agent) waitForApproval(ctx context.Context, approval *ToolApproval)
 }
 
 func (*Agent) needsApproval(toolName string) bool {
-	return strings.HasPrefix(toolName, "suneido_upsert_") ||
+	return strings.HasPrefix(toolName, "suneido_create_") ||
 		strings.HasPrefix(toolName, "suneido_delete_")
 }
 

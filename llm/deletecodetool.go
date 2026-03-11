@@ -59,14 +59,8 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	off := row[0].Off
 	rtran.Complete()
 
-	if approvalFn, ok := ctx.Value(approvalFnKey{}).(func() (bool, error)); ok {
-		allowed, err := approvalFn()
-		if err != nil {
-			return deleteCodeOutput{}, err
-		}
-		if !allowed {
-			return deleteCodeOutput{}, fmt.Errorf("DENIED")
-		}
+	if err := requireApproval(ctx, "deleteCodeTool"); err != nil {
+		return deleteCodeOutput{}, err
 	}
 
 	utran := th.Dbms().Transaction(true)

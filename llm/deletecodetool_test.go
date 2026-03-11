@@ -32,7 +32,9 @@ func TestDeleteCodeTool(t *testing.T) {
 	tran.Complete()
 	th.Close()
 
-	ctx := context.Background()
+	ctx := context.WithValue(context.Background(), approvalFnKey{}, func() (bool, error) {
+		return true, nil
+	})
 
 	// invalid library
 	_, err := deleteCodeTool(ctx, "nonexistent", "Foo")
