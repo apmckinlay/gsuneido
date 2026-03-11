@@ -6,6 +6,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 	"sync"
@@ -29,7 +30,43 @@ type Agent struct {
 
 // OutFn is the push callback for streaming output.
 // what is one of "user", "think", "output", "tool", "complete"
-type OutFn func(what, data string)
+// approval is non-nil when a tool call requires user approval.
+type OutFn func(what, data string, approval *ToolApproval)
+
+type ToolApproval struct {
+	once sync.Once
+	ch   chan approvalDecision
+}
+
+type approvalDecision struct {
+	allow bool
+	text  string
+}
+
+func newToolApproval() *ToolApproval {
+	return &ToolApproval{ch: make(chan approvalDecision, 1)}
+}
+
+func (a *ToolApproval) Allow(text string) {
+	a.once.Do(func() {
+		a.ch <- approvalDecision{allow: true, text: text}
+	})
+}
+
+func (a *ToolApproval) Deny(text string) {
+	a.once.Do(func() {
+		a.ch <- approvalDecision{allow: false, text: text}
+	})
+}
+
+func (a *ToolApproval) Wait(ctx context.Context) (approvalDecision, error) {
+	select {
+	case d := <-a.ch:
+		return d, nil
+	case <-ctx.Done():
+		return approvalDecision{}, ctx.Err()
+	}
+}
 
 // NewAgent creates an agent.
 // prompt is optional.
@@ -337,7 +374,37 @@ func (agent *Agent) processToolCalls(ctx context.Context, content, reasoning str
 // executeSingleToolCall executes a single tool call and logs the result
 func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	name := strings.TrimPrefix(tc.Function.Name, "suneido_")
-	agent.emit("tool", name+" "+tc.Function.Arguments+"\n")
+	toolOutput := name + " " + tc.Function.Arguments + "\n"
+	if agent.needsApproval(tc.Function.Name) {
+		approval := newToolApproval()
+		agent.emitToolWithApproval(toolOutput, approval)
+		allowed, err := agent.waitForApproval(ctx, approval)
+		if err != nil {
+			agent.emit("tool", "ERROR: "+err.Error()+"\n")
+			toolMsg := Message{
+				Role:       "tool",
+				Content:    "ERROR: " + err.Error(),
+				ToolCallID: tc.ID,
+			}
+			agent.history = append(agent.history, toolMsg)
+			agent.logToolResult(toolMsg)
+			return
+		}
+		if !allowed {
+			agent.emit("tool", "DENIED\n")
+			toolMsg := Message{
+				Role:       "tool",
+				Content:    "DENIED",
+				ToolCallID: tc.ID,
+			}
+			agent.history = append(agent.history, toolMsg)
+			agent.logToolResult(toolMsg)
+			return
+		}
+		agent.emit("tool", "ALLOWED\n")
+	} else {
+		agent.emit("tool", toolOutput)
+	}
 	result, err := agent.toolClient.CallToolFromLLM(ctx, tc)
 	if err != nil {
 		agent.emit("tool", "ERROR: "+err.Error()+"\n")
@@ -353,6 +420,24 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	}
 	agent.history = append(agent.history, toolMsg)
 	agent.logToolResult(toolMsg)
+}
+
+func (agent *Agent) waitForApproval(ctx context.Context, approval *ToolApproval) (bool, error) {
+	decision, err := approval.Wait(ctx)
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return false, errors.New("tool approval canceled")
+		}
+		return false, err
+	}
+	if !decision.allow {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (*Agent) needsApproval(toolName string) bool {
+	return strings.HasPrefix(toolName, "suneido_upsert_")
 }
 
 func (agent *Agent) emitExecToolResult(result string) {
@@ -375,9 +460,14 @@ func (agent *Agent) emit(what, data string) {
 	if what == "think" {
 		agent.thinkBuf.WriteString(data)
 		agent.thinkDirty = true
-		agent.outfn(what, data)
+		agent.outfn(what, data, nil)
 		return
 	}
 	agent.flushThink()
-	agent.outfn(what, truncate(data))
+	agent.outfn(what, truncate(data), nil)
+}
+
+func (agent *Agent) emitToolWithApproval(data string, approval *ToolApproval) {
+	agent.flushThink()
+	agent.outfn("tool", truncate(data), approval)
 }

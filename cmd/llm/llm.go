@@ -53,7 +53,7 @@ func main() {
 }
 
 // outfn handles streaming output from the agent.
-func outfn(what, data string) {
+func outfn(what, data string, _ *llm.ToolApproval) {
 	switch what {
 	case "think":
 		fmt.Printf("\x1b[34m%s\x1b[0m", data) // blue

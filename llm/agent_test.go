@@ -4,11 +4,13 @@
 package llm
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -21,7 +23,7 @@ func TestAgentLogging(t *testing.T) {
 	defer func() { aiDir = oldDir }()
 
 	prompt := "You are a helpful assistant."
-	agent := NewAgent("", "", "test-model", prompt, func(what, data string) {})
+	agent := NewAgent("", "", "test-model", prompt, func(what, data string, _ *ToolApproval) {})
 
 	// Verify prompt is stored
 	assert.T(t).This(agent.prompt).Is(prompt)
@@ -81,7 +83,7 @@ func TestAgentLogThink(t *testing.T) {
 	aiDir = tmpDir
 	defer func() { aiDir = oldDir }()
 
-	agent := NewAgent("", "", "test-model", "", func(what, data string) {})
+	agent := NewAgent("", "", "test-model", "", func(what, data string, _ *ToolApproval) {})
 
 	agent.emit("think", "reasoning line")
 	agent.emit("output", "done")
@@ -100,7 +102,7 @@ func TestAgentLogThink(t *testing.T) {
 }
 
 func TestAgentClearHistory(t *testing.T) {
-	agent := NewAgent("", "", "test-model", "test prompt", func(what, data string) {})
+	agent := NewAgent("", "", "test-model", "test prompt", func(what, data string, _ *ToolApproval) {})
 
 	// Add some history
 	agent.history = append(agent.history, Message{Role: "user", Content: "Hello"})
@@ -124,7 +126,7 @@ func TestAgentSetModel(t *testing.T) {
 	aiDir = tmpDir
 	defer func() { aiDir = oldDir }()
 
-	agent := NewAgent("", "", "initial-model", "test prompt", func(what, data string) {})
+	agent := NewAgent("", "", "initial-model", "test prompt", func(what, data string, _ *ToolApproval) {})
 
 	// Trigger log file creation
 	agent.logMessage("user", "Hello")
@@ -172,7 +174,7 @@ What is 2+2?
 
 	// Agent has its own prompt - this should be used, not the file's
 	currentPrompt := "Current prompt"
-	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string) {})
+	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string, _ *ToolApproval) {})
 	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
 
@@ -224,7 +226,7 @@ Answer.
 
 	// Agent has its own prompt - this should be used, not the file's
 	currentPrompt := "Current prompt"
-	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string) {})
+	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string, _ *ToolApproval) {})
 	err = agent.LoadConversation(originalFile, nil)
 	assert.T(t).This(err).Is(nil)
 
@@ -281,7 +283,7 @@ func TestAgentLoadConversationWithTools(t *testing.T) {
 	err := os.WriteFile(tmpFile, []byte(logContent), 0644)
 	assert.T(t).This(err).Is(nil)
 
-	agent := NewAgent("", "", "", "", func(what, data string) {})
+	agent := NewAgent("", "", "", "", func(what, data string, _ *ToolApproval) {})
 	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
 
@@ -305,7 +307,7 @@ func TestProcessContentTextThinkTags(t *testing.T) {
 	}
 	run := func(chunks []string) ([]emission, string, string) {
 		var emitted []emission
-		agent := NewAgent("", "", "", "", func(what, data string) {
+		agent := NewAgent("", "", "", "", func(what, data string, _ *ToolApproval) {
 			emitted = append(emitted, emission{what, data})
 		})
 		var content, reasoning strings.Builder
@@ -347,7 +349,7 @@ func TestAgentEmitExecToolResult(t *testing.T) {
 	}
 	collect := func(result string) []out {
 		outs := []out{}
-		agent := NewAgent("", "", "", "", func(what, data string) {
+		agent := NewAgent("", "", "", "", func(what, data string, _ *ToolApproval) {
 			outs = append(outs, out{what: what, data: data})
 		})
 		agent.emitExecToolResult(result)
@@ -364,4 +366,69 @@ func TestAgentEmitExecToolResult(t *testing.T) {
 	outs = collect(`{"code":"","warnings":[],"results":"[]"}`)
 	assert.T(t).This(len(outs)).Is(1)
 	assert.T(t).This(outs[0].data).Is("=> \n")
+}
+
+func TestToolApprovalAllowAndDeny(t *testing.T) {
+	t.Run("allow", func(t *testing.T) {
+		a := newToolApproval()
+		go a.Allow("ok")
+		d, err := a.Wait(context.Background())
+		assert.T(t).This(err).Is(nil)
+		assert.T(t).This(d.allow).Is(true)
+		assert.T(t).This(d.text).Is("ok")
+	})
+
+	t.Run("deny", func(t *testing.T) {
+		a := newToolApproval()
+		go a.Deny("no")
+		d, err := a.Wait(context.Background())
+		assert.T(t).This(err).Is(nil)
+		assert.T(t).This(d.allow).Is(false)
+		assert.T(t).This(d.text).Is("no")
+	})
+}
+
+func TestAgentWaitForApproval(t *testing.T) {
+	t.Run("allow proceeds", func(t *testing.T) {
+		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {})
+		approval := newToolApproval()
+		go approval.Allow("approved")
+		allowed, err := agent.waitForApproval(context.Background(), approval)
+		assert.T(t).This(err).Is(nil)
+		assert.T(t).This(allowed).Is(true)
+	})
+
+	t.Run("deny returns error", func(t *testing.T) {
+		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {})
+		approval := newToolApproval()
+		go approval.Deny("not now")
+		allowed, err := agent.waitForApproval(context.Background(), approval)
+		assert.T(t).This(err).Is(nil)
+		assert.T(t).This(allowed).Is(false)
+	})
+
+	t.Run("blocks until decision", func(t *testing.T) {
+		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {})
+		approval := newToolApproval()
+		type result struct {
+			allowed bool
+			err     error
+		}
+		done := make(chan result, 1)
+		go func() {
+			allowed, err := agent.waitForApproval(context.Background(), approval)
+			done <- result{allowed: allowed, err: err}
+		}()
+
+		select {
+		case r := <-done:
+			t.Fatalf("expected wait to block, got %+v", r)
+		case <-time.After(10 * time.Millisecond):
+		}
+
+		approval.Allow("ok")
+		r := <-done
+		assert.T(t).This(r.err).Is(nil)
+		assert.T(t).This(r.allowed).Is(true)
+	})
 }

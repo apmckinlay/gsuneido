@@ -166,16 +166,16 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 		case "User":
 			agent.history = append(agent.history, Message{Role: "user", Content: historyBody})
 			if outfn != nil {
-				outfn("user", body)
+				outfn("user", body, nil)
 			}
 		case "Think":
 			if outfn != nil {
-				outfn("think", body)
+				outfn("think", body, nil)
 			}
 		case "Assistant":
 			agent.history = append(agent.history, Message{Role: "assistant", Content: historyBody})
 			if outfn != nil {
-				outfn("output", body)
+				outfn("output", body, nil)
 			}
 		case "Prompt", "Continued":
 			// skip - use current prompt, Continued is just a marker
@@ -187,7 +187,7 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 				if outfn != nil && len(msg.ToolCalls) > 0 {
 					for _, tc := range msg.ToolCalls {
 						name := strings.TrimPrefix(tc.Function.Name, "suneido_")
-						outfn("tool", name+" "+tc.Function.Arguments+"\n")
+						outfn("tool", name+" "+tc.Function.Arguments+"\n", nil)
 					}
 				}
 			} else {
@@ -205,7 +205,7 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 		}
 	}
 	if outfn != nil {
-		outfn("complete", "")
+		outfn("complete", "", nil)
 	}
 	return nil
 }

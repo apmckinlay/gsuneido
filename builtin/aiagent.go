@@ -40,6 +40,26 @@ func AiAgent(th *Thread, args []Value) Value {
 	return a
 }
 
+// @immutable
+type suToolApproval struct {
+	ValueBase[suToolApproval]
+	approval *llm.ToolApproval
+}
+
+var _ Value = (*suToolApproval)(nil)
+
+func (ta *suToolApproval) Equal(other any) bool {
+	return ta == other
+}
+
+func (ta *suToolApproval) Lookup(_ *Thread, method string) Value {
+	return toolApprovalMethods[method]
+}
+
+func (*suToolApproval) SetConcurrent() {
+	// safe: wraps thread-safe llm.ToolApproval
+}
+
 var _ Value = (*suAgent)(nil)
 
 func (a *suAgent) Equal(other any) bool {
@@ -54,19 +74,39 @@ func (a *suAgent) SetConcurrent() {
 	// ok since immutable
 }
 
-func outputCallback(th *Thread, callback Value) func(what, data string) {
-	return func(what, data string) {
+func outputCallback(th *Thread, callback Value) func(what, data string, approval *llm.ToolApproval) {
+	return func(what, data string, approval *llm.ToolApproval) {
 		defer func() {
 			if err := recover(); err != nil {
 				log.Println("ERROR agent callback: ", err)
 				panic(err)
 			}
 		}()
-		th.Call(callback, SuStr(what), SuStr(data))
+		if approval == nil {
+			th.Call(callback, SuStr(what), SuStr(data))
+			return
+		}
+		ta := &suToolApproval{approval: approval}
+		th.Call(callback, SuStr(what), SuStr(data), ta)
 	}
 }
 
 var agentMethods = methods("agent")
+var toolApprovalMethods = methods("toolapproval")
+
+var _ = method(toolapproval_Allow, "(text = '')")
+
+func toolapproval_Allow(this Value, text Value) Value {
+	this.(*suToolApproval).approval.Allow(ToStr(text))
+	return nil
+}
+
+var _ = method(toolapproval_Deny, "(text = '')")
+
+func toolapproval_Deny(this Value, text Value) Value {
+	this.(*suToolApproval).approval.Deny(ToStr(text))
+	return nil
+}
 
 var _ = method(agent_Input, "(input)")
 
