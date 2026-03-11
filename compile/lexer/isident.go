@@ -17,5 +17,8 @@ func IsIdentifier(s string) bool {
 			return false
 		}
 	}
+	if len(s) >= 2 && s[0] == '_' && !ascii.IsLetter(s[1]) {
+		return false
+	}
 	return true
 }

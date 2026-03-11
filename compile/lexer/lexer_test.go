@@ -30,12 +30,15 @@ func TestLexer(t *testing.T) {
 	assert := assert.T(t).This
 	first := func(src string, text string, token tok.Token) {
 		t.Helper()
-		lxr := NewLexer(src)
-		it := lxr.Next()
-		assert(it).Is(Item{Text: text, Pos: 0, Token: token})
-		from := it.Pos
-		to := lxr.Position()
-		S = src[from:to]
+		for range 2 {
+			lxr := NewLexer(src)
+			it := lxr.Next()
+			assert(it).Is(Item{Text: text, Pos: 0, Token: token})
+			from := it.Pos
+			to := lxr.Position()
+			S = src[from:to]
+			src += " "
+		}
 	}
 	first("function", "function", tok.Function)
 	first("foo", "foo", tok.Identifier)
@@ -69,6 +72,9 @@ func TestLexer(t *testing.T) {
 	first(`"`, "missing closing quote", tok.Error)
 	first("`", "missing closing quote", tok.Error)
 	first("_000", "invalid identifier or number", tok.Error)
+	first("__", "invalid identifier or number", tok.Error)
+	first("_!", "invalid identifier or number", tok.Error)
+	first("_?", "invalid identifier or number", tok.Error)
 
 	check := func(source string, expected ...tok.Token) {
 		t.Helper()
