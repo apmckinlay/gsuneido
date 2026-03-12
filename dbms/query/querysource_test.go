@@ -549,6 +549,8 @@ type QuerySourceWT struct {
 	QuerySource
 }
 
+var _ whereTable = (*QuerySourceWT)(nil)
+
 func (qs *QuerySourceWT) IndexCols(index []string) []string {
 	return index
 }

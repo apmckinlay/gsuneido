@@ -57,6 +57,16 @@ type Table struct {
 	cursorMode  bool
 }
 
+var _ whereTable = (*Table)(nil)
+
+func (tbl *Table) isSingleton() bool {
+	return tbl.singleton
+}
+
+func (tbl *Table) schemaIndexes() []Index {
+	return tbl.schema.Indexes
+}
+
 type tableApproach struct {
 	index []string
 }
