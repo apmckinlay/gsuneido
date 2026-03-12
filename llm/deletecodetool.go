@@ -6,6 +6,7 @@ package llm
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/apmckinlay/gsuneido/core"
 )
@@ -51,11 +52,26 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
 	rtran := th.Dbms().Transaction(false)
 	rq := rtran.Query(query, nil)
+	hdr := rq.Header()
 	row, _ := rq.Get(th, core.Next)
 	if row == nil {
 		rtran.Complete()
 		return deleteCodeOutput{}, fmt.Errorf("code not found for: %s in %s", name, library)
 	}
+
+	st := core.NewSuTran(rtran, false)
+	vals := make(map[string]core.Value, len(hdr.Fields[0]))
+	for _, f := range hdr.Fields[0] {
+		vals[f] = row.GetVal(hdr, f, th, st)
+	}
+
+	softDelete := false
+	if slices.Contains(hdr.Fields[0], "lib_committed") {
+		if v := vals["lib_committed"]; v != nil && v != core.EmptyStr {
+			softDelete = true
+		}
+	}
+
 	off := row[0].Off
 	rtran.Complete()
 
@@ -64,11 +80,32 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	}
 
 	utran := th.Dbms().Transaction(true)
-	utran.Delete(th, library, off)
+	action := "deleted"
+	if softDelete {
+		vals["group"] = core.SuInt(-2)
+		vals["lib_modified"] = core.Now()
+
+		if slices.Contains(hdr.Fields[0], "lib_before_text") {
+			if v := vals["lib_before_text"]; v == nil || core.ToStr(v) == "" {
+				vals["lib_before_text"] = vals["text"]
+			}
+		}
+		if slices.Contains(hdr.Fields[0], "lib_before_path") {
+			if v := vals["lib_before_path"]; v == nil || core.ToStr(v) == "" {
+				vals["lib_before_path"] = vals["path"]
+			}
+		}
+
+		newRec := buildRecord(hdr, vals)
+		utran.Update(th, library, off, newRec)
+		action = "soft-deleted"
+	} else {
+		utran.Delete(th, library, off)
+	}
 	if conflict := utran.Complete(); conflict != "" {
 		return deleteCodeOutput{}, fmt.Errorf("transaction conflict: %s", conflict)
 	}
 
 	core.Global.Unload(name)
-	return deleteCodeOutput{Library: library, Name: name, Action: "deleted"}, nil
+	return deleteCodeOutput{Library: library, Name: name, Action: action}, nil
 }
