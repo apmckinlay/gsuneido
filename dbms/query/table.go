@@ -189,8 +189,7 @@ func (tbl *Table) SetIndex(index []string) {
 	}
 	tbl.index = index
 	tbl.iIndex = tbl.indexi(index)
-	tbl.indexEncode = len(tbl.index) > 1 ||
-		!slc.ContainsFn(tbl.allKeys, tbl.index, set.Equal[string])
+	tbl.indexEncode = tbl.IndexEncodes(index)
 	IdxUse(tbl.name, tbl.index)
 }
 
@@ -201,6 +200,13 @@ func (tbl *Table) SetIndex(index []string) {
 func (tbl *Table) IndexCols(index []string) []string {
 	iIndex := tbl.indexi(index)
 	return tbl.schema.Indexes[iIndex].Fields
+}
+
+// IndexEncodes returns whether the index key is encoded
+// (multi-field or unique with Fields2)
+func (tbl *Table) IndexEncodes(index []string) bool {
+	return len(index) > 1 ||
+		!slc.ContainsFn(tbl.allKeys, index, set.Equal[string])
 }
 
 func (tbl *Table) indexi(index []string) int {

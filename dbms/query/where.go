@@ -83,6 +83,7 @@ type whereTable interface {
 	// optimization
 	optimize(mode Mode, index []string, frac float64) (Cost, Cost, any)
 	IndexCols(index []string) []string
+	IndexEncodes(index []string) bool
 	SetIndex(index []string)
 	schemaIndexes() []Index
 	indexi(index []string) int
@@ -727,6 +728,7 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 			w.idxSelPos = -1
 		} else {
 			w.ixCtx.cols = w.tbl.IndexCols(idx)
+			w.ixCtx.encodes = w.tbl.IndexEncodes(idx)
 			w.ixExpr = w.exprsFor(w.ixCtx.cols)
 			w.tbl.setCost(frac, 0, app.cost)
 		}
@@ -1040,9 +1042,10 @@ func (w *Where) Simple(th *Thread) []Row {
 //-------------------------------------------------------------------
 
 type ixContext struct {
-	th   *Thread
-	key  string
-	cols []string
+	th      *Thread
+	key     string
+	cols    []string
+	encodes bool
 }
 
 func (c *ixContext) GetVal(id string) Value {
@@ -1053,7 +1056,7 @@ func (c *ixContext) GetVal(id string) Value {
 }
 
 func (c *ixContext) GetRaw(id string) string {
-	if len(c.cols) == 1 {
+	if !c.encodes {
 		return c.key
 	}
 	return ixkey.Decode1(c.key, slices.Index(c.cols, id))

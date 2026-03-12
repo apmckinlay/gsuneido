@@ -513,6 +513,22 @@ func TestLookupOnUniqueIndexWithEmptyFields(t *testing.T) {
 	assert.T(t).Msg("lookup u='', k=2").This(row2str(hdr, row)).Is("data=second k=2")
 }
 
+func TestWhereMatchOnUniqueIndexWithEmptyFields(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+
+	db.adm("create tmp (k, u, data) key(k) index unique(u)")
+	db.act("insert { k: 1, u: '', data: 'first' } into tmp")
+	db.act("insert { k: 2, u: '', data: 'second' } into tmp")
+	db.act("insert { k: 3, u: 'x', data: 'third' } into tmp")
+
+	tran := db.NewReadTran()
+	q := ParseQuery("tmp where u =~ 'x'", tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+
+	assert.T(t).This(queryAll2(q)).Is("data=third k=3 u=x")
+}
+
 func TestSummarizeWhere(t *testing.T) {
 	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)

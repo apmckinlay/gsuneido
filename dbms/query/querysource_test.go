@@ -553,6 +553,10 @@ func (qs *QuerySourceWT) IndexCols(index []string) []string {
 	return index
 }
 
+func (qs *QuerySourceWT) IndexEncodes(index []string) bool {
+	return len(index) > 1
+}
+
 func (qs *QuerySourceWT) SetIndex(index []string) {
 	qs.setApproach(index, 0, nil, nil)
 }
