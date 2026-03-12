@@ -14,14 +14,16 @@ import (
 
 var _ = addTool(toolSpec{
 	name: "suneido_patch_code",
-	description: `Modify an existing library definition by replacing a line range with new text.
-The updated definition must be valid Suneido code.
-
-Line range rules:
-- from and to are 1-based line numbers.
-- to is exclusive.
-- from == to inserts without deleting.
-- text may be empty to delete lines.
+description: `Modify a Suneido definition by replacing a specific line range.
+This tool is the preferred way to edit existing code.
+- Lines are 1-based (matching the output of suneido_read_code)
+- The 'to' parameter is EXCLUSIVE 
+  (e.g., from:10, to:11 replaces ONLY line 10)
+- For insertions: Set 'from' and 'to' to the same number 
+  (new text is placed BEFORE the original line)
+- For deletions: Set 'text' to an empty string
+- Always call suneido_read_code before this to ensure line numbers are current
+- Do NOT include line numbers in the replacement text, just the code itself
 `,
 	params: []stringParam{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
@@ -208,5 +210,9 @@ func findFromTo(from int, to int, oldText string) (int, int, error) {
 func normalizeCRLF(s string) string {
 	s = strings.ReplaceAll(s, "\r\n", "\n")
 	s = strings.ReplaceAll(s, "\r", "\n")
-	return strings.ReplaceAll(s, "\n", "\r\n")
+	s = strings.ReplaceAll(s, "\n", "\r\n")
+	if s != "" && !strings.HasSuffix(s, "\r\n") {
+		s += "\r\n"
+	}
+	return s
 }
