@@ -85,11 +85,11 @@ func patchCodeTool(ctx context.Context, library, name string, from, to int, text
 
 	off := row[0].Off
 	st := core.NewSuTran(rtran, false)
-	vals := make(map[string]core.Value, len(hdr.Fields[0]))
+	vals := make(map[string]string, len(hdr.Fields[0]))
 	for _, f := range hdr.Fields[0] {
-		vals[f] = row.GetVal(hdr, f, th, st)
+		vals[f] = row.GetRawVal(hdr, f, th, st)
 	}
-	oldText := core.ToStr(vals["text"])
+	oldText := core.ToStr(core.Unpack(vals["text"]))
 	rtran.Complete()
 
 	newText, err := applyLineEdit(oldText, from, to, text)
@@ -109,11 +109,11 @@ func patchCodeTool(ctx context.Context, library, name string, from, to int, text
 		return patchCodeOutput{}, err
 	}
 
-	if core.ToStr(vals["lib_before_text"]) == "" {
-		vals["lib_before_text"] = core.SuStr(oldText)
+	if core.ToStr(core.Unpack(vals["lib_before_text"])) == "" {
+		vals["lib_before_text"] = core.PackValue(core.SuStr(oldText))
 	}
-	vals["text"] = core.SuStr(newText)
-	vals["lib_modified"] = core.Now()
+	vals["text"] = core.PackValue(core.SuStr(newText))
+	vals["lib_modified"] = core.PackValue(core.Now())
 
 	utran := th.Dbms().Transaction(true)
 	newRec := buildRecord(hdr, vals)

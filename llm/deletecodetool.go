@@ -60,14 +60,14 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	}
 
 	st := core.NewSuTran(rtran, false)
-	vals := make(map[string]core.Value, len(hdr.Fields[0]))
+	vals := make(map[string]string, len(hdr.Fields[0]))
 	for _, f := range hdr.Fields[0] {
-		vals[f] = row.GetVal(hdr, f, th, st)
+		vals[f] = row.GetRawVal(hdr, f, th, st)
 	}
 
 	softDelete := false
 	if slices.Contains(hdr.Fields[0], "lib_committed") {
-		if v := vals["lib_committed"]; v != nil && v != core.EmptyStr {
+		if v := vals["lib_committed"]; v != "" {
 			softDelete = true
 		}
 	}
@@ -82,16 +82,16 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	utran := th.Dbms().Transaction(true)
 	action := "deleted"
 	if softDelete {
-		vals["group"] = core.SuInt(-2)
-		vals["lib_modified"] = core.Now()
+		vals["group"] = core.PackValue(core.SuInt(-2))
+		vals["lib_modified"] = core.PackValue(core.Now())
 
 		if slices.Contains(hdr.Fields[0], "lib_before_text") {
-			if v := vals["lib_before_text"]; v == nil || core.ToStr(v) == "" {
+			if v := vals["lib_before_text"]; v == "" {
 				vals["lib_before_text"] = vals["text"]
 			}
 		}
 		if slices.Contains(hdr.Fields[0], "lib_before_path") {
-			if v := vals["lib_before_path"]; v == nil || core.ToStr(v) == "" {
+			if v := vals["lib_before_path"]; v == "" {
 				vals["lib_before_path"] = vals["path"]
 			}
 		}

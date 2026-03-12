@@ -97,14 +97,13 @@ func createCodeTool(ctx context.Context, library, path, name, text string) (resu
 	maxNum := maxLibNum(th, utran, library)
 	iq := utran.Query(library, nil)
 	ihdr := iq.Header()
-	rec := buildRecord(ihdr, map[string]core.Value{
-		"name":            core.SuStr(name),
-		"text":            core.SuStr(text),
-		"lib_before_text": core.SuStr(""),
-		"lib_modified":    now,
-		"group":           core.SuInt(-1),
-		"num":             core.SuInt(maxNum + 1),
-		"parent":          core.SuInt(parent),
+	rec := buildRecord(ihdr, map[string]string{
+		"name":            core.PackValue(core.SuStr(name)),
+		"text":            core.PackValue(core.SuStr(text)),
+		"lib_modified":    core.PackValue(now),
+		"group":           core.PackValue(core.SuInt(-1)),
+		"num":             core.PackValue(core.SuInt(maxNum + 1)),
+		"parent":          core.PackValue(core.SuInt(parent)),
 	})
 	iq.Output(th, rec)
 	if conflict := utran.Complete(); conflict != "" {
@@ -148,14 +147,12 @@ func ensurePathParent(th *core.Thread, library, path string) (int, error) {
 
 		iq := utran.Query(library, nil)
 		ihdr := iq.Header()
-		rec := buildRecord(ihdr, map[string]core.Value{
-			"name":            core.SuStr(segment),
-			"text":            core.SuStr(""),
-			"lib_before_text": core.SuStr(""),
-			"lib_modified":    core.Now(),
-			"group":           core.IntVal(parent),
-			"num":             core.IntVal(nextNum),
-			"parent":          core.IntVal(parent),
+		rec := buildRecord(ihdr, map[string]string{
+			"name":            core.PackValue(core.SuStr(segment)),
+			"lib_modified":    core.PackValue(core.Now()),
+			"group":           core.PackValue(core.IntVal(parent)),
+			"num":             core.PackValue(core.IntVal(nextNum)),
+			"parent":          core.PackValue(core.IntVal(parent)),
 		})
 		iq.Output(th, rec)
 		parent = nextNum
@@ -205,9 +202,9 @@ func maxLibNum(th *core.Thread, tran core.ITran, library string) int {
 	return 0
 }
 
-// buildRecord builds a Record from a map of field values, using the header's
-// field order.
-func buildRecord(hdr *core.Header, vals map[string]core.Value) core.Record {
+// buildRecord builds a Record from a map of packed field values, using the
+// header's field order.
+func buildRecord(hdr *core.Header, vals map[string]string) core.Record {
 	fields := hdr.Fields[0]
 	rb := core.RecordBuilder{}
 	for _, f := range fields {
@@ -216,10 +213,10 @@ func buildRecord(hdr *core.Header, vals map[string]core.Value) core.Record {
 			continue
 		}
 		v, ok := vals[f]
-		if !ok || v == nil {
+		if !ok {
 			rb.AddRaw("")
 		} else {
-			rb.AddRaw(core.PackValue(v))
+			rb.AddRaw(v)
 		}
 	}
 	return rb.Trim().Build()
