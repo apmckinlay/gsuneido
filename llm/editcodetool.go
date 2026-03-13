@@ -13,7 +13,7 @@ import (
 )
 
 var _ = addTool(toolSpec{
-	name: "suneido_patch_code",
+	name: "suneido_edit_code",
 	description: `Modify a Suneido definition by inserting or replacing lines.
 This tool is the preferred way to edit existing code.
 - Lines are 1-based (matching the output of suneido_read_code)
@@ -33,7 +33,7 @@ This tool is the preferred way to edit existing code.
 		{name: "count", description: "Number of lines to replace (only for replace_lines mode)", required: false, kind: paramNumber},
 		{name: "text", description: "Replacement text", required: true, kind: paramString},
 	},
-		handler: func(ctx context.Context, args map[string]any) (any, error) {
+	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
 		if err != nil {
 			return nil, err
@@ -54,33 +54,35 @@ This tool is the preferred way to edit existing code.
 		if err != nil {
 			return nil, err
 		}
-		if err := validatePatchModeArgs(mode, count); err != nil {
+		if err := validateEditModeArgs(mode, count); err != nil {
 			return nil, err
 		}
 		text, err := requireString(args, "text")
 		if err != nil {
 			return nil, err
 		}
-		return patchCodeTool(ctx, library, name, mode, line, count, text)
+		return editCodeTool(ctx, library, name, mode, line, count, text)
 	},
 })
 
-type patchCodeOutput struct {
-	Library  string   `json:"library" jsonschema:"Library name"`
-	Name     string   `json:"name" jsonschema:"Definition name"`
-	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
+type editCodeOutput struct {
+	Library       string   `json:"library" jsonschema:"Library name"`
+	Name          string   `json:"name" jsonschema:"Definition name"`
+	Warnings      []string `json:"warnings" jsonschema:"Compiler warnings"`
+	ResultContext string   `json:"resultContext" jsonschema:"Text around the edit (4 lines before to 4 lines after)"`
+	LineCount     int      `json:"lineCount" jsonschema:"Total number of lines in the resulting code"`
 }
 
-func patchCodeTool(ctx context.Context, library, name, mode string, line, count int, text string) (patchCodeOutput, error) {
+func editCodeTool(ctx context.Context, library, name, mode string, line, count int, text string) (editCodeOutput, error) {
 	if !isValidName(name) {
-		return patchCodeOutput{}, fmt.Errorf("invalid name: %s", name)
+		return editCodeOutput{}, fmt.Errorf("invalid name: %s", name)
 	}
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
 
 	if err := validateLibrary(th, library); err != nil {
-		return patchCodeOutput{}, err
+		return editCodeOutput{}, err
 	}
 
 	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
@@ -90,7 +92,7 @@ func patchCodeTool(ctx context.Context, library, name, mode string, line, count 
 	row, _ := rq.Get(th, core.Next)
 	if row == nil {
 		rtran.Complete()
-		return patchCodeOutput{}, fmt.Errorf("code not found for: %s in %s", name, library)
+		return editCodeOutput{}, fmt.Errorf("code not found for: %s in %s", name, library)
 	}
 
 	off := row[0].Off
@@ -104,22 +106,56 @@ func patchCodeTool(ctx context.Context, library, name, mode string, line, count 
 
 	newText, err := applyLineEdit(oldText, mode, line, count, text)
 	if err != nil {
-		return patchCodeOutput{}, err
+		// Return context from oldText on error
+		ctxLines := extractContext(oldText, line, line+count-1)
+		lineCount := countLines(oldText)
+		return editCodeOutput{
+			Library:       library,
+			Name:          name,
+			ResultContext: ctxLines,
+			LineCount:     lineCount,
+		}, err
 	}
+
+	// Calculate edit location in new text for context
+	normalizedText := normalizeCRLF(text)
+	insertedLines := countLines(normalizedText)
+	if insertedLines == 0 {
+		insertedLines = 1
+	}
+	editStart, editEnd := editLineRange(mode, line, insertedLines)
+	ctxLines := extractContext(newText, editStart, editEnd)
+	lineCount := countLines(newText)
 
 	warnings, err := validateLibCode(th, newText)
 	if err != nil {
-		return patchCodeOutput{}, err
+		return editCodeOutput{
+			Library:       library,
+			Name:          name,
+			ResultContext: ctxLines,
+			LineCount:     lineCount,
+		}, err
 	}
 	if err := errorWarnings(warnings); err != nil {
-		return patchCodeOutput{}, err
+		return editCodeOutput{
+			Library:       library,
+			Name:          name,
+			ResultContext: ctxLines,
+			LineCount:     lineCount,
+			Warnings:      warnings,
+		}, err
 	}
 	if warnings == nil {
 		warnings = []string{}
 	}
 
-	if err := requireApproval(ctx, "patchCodeTool"); err != nil {
-		return patchCodeOutput{}, err
+	if err := requireApproval(ctx, "editCodeTool"); err != nil {
+		return editCodeOutput{
+			Library:       library,
+			Name:          name,
+			ResultContext: ctxLines,
+			LineCount:     lineCount,
+		}, err
 	}
 
 	if core.ToStr(core.Unpack(vals["lib_before_text"])) == "" {
@@ -132,14 +168,21 @@ func patchCodeTool(ctx context.Context, library, name, mode string, line, count 
 	newRec := buildRecord(hdr, vals)
 	utran.Update(th, library, off, newRec)
 	if conflict := utran.Complete(); conflict != "" {
-		return patchCodeOutput{}, fmt.Errorf("transaction conflict: %s", conflict)
+		return editCodeOutput{
+			Library:       library,
+			Name:          name,
+			ResultContext: ctxLines,
+			LineCount:     lineCount,
+		}, fmt.Errorf("transaction conflict: %s", conflict)
 	}
 
 	core.Global.Unload(name)
-	return patchCodeOutput{
-		Library:  library,
-		Name:     name,
-		Warnings: warnings,
+	return editCodeOutput{
+		Library:       library,
+		Name:          name,
+		Warnings:      warnings,
+		ResultContext: ctxLines,
+		LineCount:     lineCount,
 	}, nil
 }
 
@@ -164,7 +207,7 @@ func requireInt(args map[string]any, name string) (int, error) {
 	return optionalInt(args, name, 0)
 }
 
-func validatePatchModeArgs(mode string, count int) error {
+func validateEditModeArgs(mode string, count int) error {
 	switch mode {
 	case "replace_lines":
 		if count < 1 {
@@ -268,4 +311,49 @@ func normalizeCRLF(s string) string {
 		s += "\r\n"
 	}
 	return s
+}
+
+// countLines returns the number of lines in the text
+func countLines(text string) int {
+	return strings.Count(text, "\n")
+}
+
+// editLineRange returns the start and end line numbers (1-based, inclusive)
+// of the edit context in the new text
+func editLineRange(mode string, line, insertedLines int) (start, end int) {
+	switch mode {
+	case "insert_before":
+		return line, line + insertedLines - 1
+	case "insert_after":
+		return line + 1, line + insertedLines
+	case "replace_lines":
+		return line, line + insertedLines - 1
+	}
+	return line, line
+}
+
+// extractContext returns lines from 4 lines before start to 4 lines after end
+// with line numbers prefixed
+func extractContext(text string, start, end int) string {
+	lines := strings.Split(strings.TrimRight(text, "\r\n"), "\n")
+	for i := range lines {
+		lines[i] = strings.TrimSuffix(lines[i], "\r")
+	}
+
+	// Calculate context range (4 lines before and after)
+	contextStart := start - 4
+	if contextStart < 1 {
+		contextStart = 1
+	}
+	contextEnd := end + 4
+	if contextEnd > len(lines) {
+		contextEnd = len(lines)
+	}
+
+	// Build result with line numbers
+	var b strings.Builder
+	for i := contextStart; i <= contextEnd; i++ {
+		fmt.Fprintf(&b, "%4d: %s\n", i, lines[i-1])
+	}
+	return b.String()
 }
