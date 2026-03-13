@@ -34,56 +34,6 @@ func NewOpenAIClient(baseURL, apiKey string) *OpenAIClient {
 	}
 }
 
-// Chat sends a chat request to an OpenAI-compatible API.
-func (c *OpenAIClient) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error) {
-	body, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("marshal request: %w", err)
-	}
-	c.logRawRequest(body)
-
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+"/chat/completions", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("create request: %w", err)
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer "+c.APIKey)
-
-	resp, err := c.HTTPClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		c.logRawResponse(resp.Status, respBody)
-		var chatResp ChatResponse
-		if err := json.Unmarshal(respBody, &chatResp); err == nil && chatResp.Error != nil {
-			return nil, fmt.Errorf("api error: %s", chatResp.Error.Message)
-		}
-		return nil, fmt.Errorf("http error: %s: %s", resp.Status,
-			strings.TrimSpace(string(respBody)))
-	}
-	c.logRawResponse("", respBody)
-
-	var chatResp ChatResponse
-	if err := json.Unmarshal(respBody, &chatResp); err != nil {
-		return nil, fmt.Errorf("unmarshal response: %w", err)
-	}
-
-	if chatResp.Error != nil {
-		return nil, fmt.Errorf("api error: %s", chatResp.Error.Message)
-	}
-
-	return &chatResp, nil
-}
-
 // StreamChunk is a callback function for streaming responses.
 type StreamChunk func(chunk *ChatCompletionChunk) error
 
