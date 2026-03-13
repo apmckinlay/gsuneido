@@ -20,6 +20,7 @@ type OpenAIClient struct {
 	BaseURL    string
 	APIKey     string
 	HTTPClient *http.Client
+	RawLog     io.Writer // optional raw HTTP payload logging
 }
 
 // NewOpenAIClient creates a new OpenAI-compatible client.
@@ -39,6 +40,7 @@ func (c *OpenAIClient) Chat(ctx context.Context, req *ChatRequest) (*ChatRespons
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
+	c.logRawRequest(body)
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
@@ -58,6 +60,17 @@ func (c *OpenAIClient) Chat(ctx context.Context, req *ChatRequest) (*ChatRespons
 	if err != nil {
 		return nil, fmt.Errorf("read response: %w", err)
 	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		c.logRawResponse(resp.Status, respBody)
+		var chatResp ChatResponse
+		if err := json.Unmarshal(respBody, &chatResp); err == nil && chatResp.Error != nil {
+			return nil, fmt.Errorf("api error: %s", chatResp.Error.Message)
+		}
+		return nil, fmt.Errorf("http error: %s: %s", resp.Status,
+			strings.TrimSpace(string(respBody)))
+	}
+	c.logRawResponse("", respBody)
 
 	var chatResp ChatResponse
 	if err := json.Unmarshal(respBody, &chatResp); err != nil {
@@ -81,6 +94,7 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 	if err != nil {
 		return fmt.Errorf("marshal request: %w", err)
 	}
+	c.logRawRequest(body)
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.BaseURL+"/chat/completions",
 		bytes.NewReader(body))
@@ -104,6 +118,7 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
+		c.logRawResponse(resp.Status, body)
 		var chatResp ChatResponse
 		if err := json.Unmarshal(body, &chatResp); err == nil && chatResp.Error != nil {
 			return fmt.Errorf("api error: %s", chatResp.Error.Message)
@@ -112,7 +127,13 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 			strings.TrimSpace(string(body)))
 	}
 
-	scanner := bufio.NewScanner(resp.Body)
+	responseBody := io.Reader(resp.Body)
+	if c.RawLog != nil {
+		_, _ = io.WriteString(c.RawLog, "\n----------------------------------------\n")
+		responseBody = io.TeeReader(resp.Body, c.RawLog)
+	}
+
+	scanner := bufio.NewScanner(responseBody)
 	seenData := false
 	var nonSSE strings.Builder
 	for scanner.Scan() {
@@ -163,4 +184,25 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk Str
 	}
 
 	return nil
+}
+
+func (c *OpenAIClient) logRawRequest(body []byte) {
+	if c.RawLog == nil {
+		return
+	}
+	_, _ = io.WriteString(c.RawLog, "\n========================================\n")
+	_, _ = c.RawLog.Write(body)
+	_, _ = io.WriteString(c.RawLog, "\n")
+}
+
+func (c *OpenAIClient) logRawResponse(status string, body []byte) {
+	if c.RawLog == nil {
+		return
+	}
+	_, _ = io.WriteString(c.RawLog, "\n----------------------------------------\n")
+	if status != "" {
+		_, _ = io.WriteString(c.RawLog, status+"\n")
+	}
+	_, _ = c.RawLog.Write(body)
+	_, _ = io.WriteString(c.RawLog, "\n")
 }

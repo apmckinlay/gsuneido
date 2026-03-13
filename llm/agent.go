@@ -22,6 +22,7 @@ type Agent struct {
 	outfn         OutFn
 	cancel        context.CancelFunc
 	logFile       *os.File
+	rawLogFile    *os.File
 	mu            sync.Mutex
 	inProgress    bool
 	thinkBuf      strings.Builder

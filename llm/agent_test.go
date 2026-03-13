@@ -57,9 +57,10 @@ func TestAgentLogging(t *testing.T) {
 	// Read the log file
 	files, err := os.ReadDir(tmpDir)
 	assert.T(t).This(err).Is(nil)
-	assert.T(t).This(len(files)).Is(1)
+	name := files[0].Name()
+	assert.T(t).That(strings.HasPrefix(name, "ai") && strings.HasSuffix(name, ".md"))
 
-	data, err := os.ReadFile(filepath.Join(tmpDir, files[0].Name()))
+	data, err := os.ReadFile(filepath.Join(tmpDir, name))
 	assert.T(t).This(err).Is(nil)
 	content := string(data)
 
@@ -91,9 +92,10 @@ func TestAgentLogThink(t *testing.T) {
 
 	files, err := os.ReadDir(tmpDir)
 	assert.T(t).This(err).Is(nil)
-	assert.T(t).This(len(files)).Is(1)
+	name := files[0].Name()
+	assert.T(t).That(strings.HasPrefix(name, "ai") && strings.HasSuffix(name, ".md"))
 
-	data, err := os.ReadFile(filepath.Join(tmpDir, files[0].Name()))
+	data, err := os.ReadFile(filepath.Join(tmpDir, name))
 	assert.T(t).This(err).Is(nil)
 	content := string(data)
 

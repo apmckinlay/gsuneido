@@ -15,6 +15,8 @@ import (
 
 var aiDir = ".ai"
 
+const rawLog = false
+
 func (agent *Agent) ensureLogFile() {
 	if agent.logFile != nil {
 		return
@@ -22,13 +24,23 @@ func (agent *Agent) ensureLogFile() {
 	if err := os.MkdirAll(aiDir, 0755); err != nil {
 		return
 	}
-	filename := fmt.Sprintf("ai%s.md", time.Now().Format("20060102_150405"))
-	path := filepath.Join(aiDir, filename)
+	stamp := time.Now().Format("20060102_150405")
+	path := filepath.Join(aiDir, fmt.Sprintf("ai%s.md", stamp))
 	f, err := os.Create(path)
 	if err != nil {
 		return
 	}
 	agent.logFile = f
+	if rawLog {
+		rawPath := filepath.Join(aiDir, fmt.Sprintf("ai%s.raw", stamp))
+		raw, err := os.Create(rawPath)
+		if err != nil {
+			f.Close()
+			return
+		}
+		agent.rawLogFile = raw
+		agent.client.RawLog = raw
+	}
 	if agent.model != "" {
 		agent.logWrite("## {{ Model }}\n\n" + agent.model + "\n\n")
 	}
@@ -99,6 +111,11 @@ func (agent *Agent) closeLogFile() {
 		agent.logFile.Close()
 		agent.logFile = nil
 	}
+	if agent.rawLogFile != nil {
+		agent.rawLogFile.Close()
+		agent.rawLogFile = nil
+	}
+	agent.client.RawLog = nil
 }
 
 func (agent *Agent) logWrite(s string) {
