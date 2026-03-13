@@ -14,25 +14,26 @@ import (
 
 var _ = addTool(toolSpec{
 	name: "suneido_patch_code",
-description: `Modify a Suneido definition by replacing a specific line range.
+	description: `Modify a Suneido definition by inserting or replacing lines.
 This tool is the preferred way to edit existing code.
 - Lines are 1-based (matching the output of suneido_read_code)
-- The 'to' parameter is EXCLUSIVE 
-  (e.g., from:10, to:11 replaces ONLY line 10)
-- For insertions: Set 'from' and 'to' to the same number 
-  (new text is placed BEFORE the original line)
-- For deletions: Set 'text' to an empty string
+- Modes:
+  - "insert_before": Insert text before the specified line
+  - "insert_after": Insert text after the specified line
+  - "replace_lines": Replace 'count' lines starting at 'line'
+- For deletions with replace_lines: Set 'text' to an empty string
 - Always call suneido_read_code before this to ensure line numbers are current
 - Do NOT include line numbers in the replacement text, just the code itself
 `,
 	params: []stringParam{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
 		{name: "name", description: "Name of the definition (e.g. 'Alert')", required: true, kind: paramString},
-		{name: "from", description: "First line number to replace (inclusive, 1-based)", required: true, kind: paramNumber},
-		{name: "to", description: "Line number after the replaced range (exclusive, 1-based)", required: true, kind: paramNumber},
+		{name: "mode", description: "Operation mode: 'insert_before', 'insert_after', or 'replace_lines'", required: true, kind: paramString},
+		{name: "line", description: "Line number (1-based)", required: true, kind: paramNumber},
+		{name: "count", description: "Number of lines to replace (only for replace_lines mode)", required: false, kind: paramNumber},
 		{name: "text", description: "Replacement text", required: true, kind: paramString},
 	},
-	handler: func(ctx context.Context, args map[string]any) (any, error) {
+		handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
 		if err != nil {
 			return nil, err
@@ -41,19 +42,26 @@ This tool is the preferred way to edit existing code.
 		if err != nil {
 			return nil, err
 		}
-		from, err := requireInt(args, "from")
+		mode, err := requireString(args, "mode")
 		if err != nil {
 			return nil, err
 		}
-		to, err := requireInt(args, "to")
+		line, err := requireInt(args, "line")
 		if err != nil {
+			return nil, err
+		}
+		count, err := optionalInt(args, "count", 0)
+		if err != nil {
+			return nil, err
+		}
+		if err := validatePatchModeArgs(mode, count); err != nil {
 			return nil, err
 		}
 		text, err := requireString(args, "text")
 		if err != nil {
 			return nil, err
 		}
-		return patchCodeTool(ctx, library, name, from, to, text)
+		return patchCodeTool(ctx, library, name, mode, line, count, text)
 	},
 })
 
@@ -63,7 +71,7 @@ type patchCodeOutput struct {
 	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
 }
 
-func patchCodeTool(ctx context.Context, library, name string, from, to int, text string) (patchCodeOutput, error) {
+func patchCodeTool(ctx context.Context, library, name, mode string, line, count int, text string) (patchCodeOutput, error) {
 	if !isValidName(name) {
 		return patchCodeOutput{}, fmt.Errorf("invalid name: %s", name)
 	}
@@ -94,7 +102,7 @@ func patchCodeTool(ctx context.Context, library, name string, from, to int, text
 	oldText := core.ToStr(core.Unpack(vals["text"]))
 	rtran.Complete()
 
-	newText, err := applyLineEdit(oldText, from, to, text)
+	newText, err := applyLineEdit(oldText, mode, line, count, text)
 	if err != nil {
 		return patchCodeOutput{}, err
 	}
@@ -156,7 +164,36 @@ func requireInt(args map[string]any, name string) (int, error) {
 	return optionalInt(args, name, 0)
 }
 
-func applyLineEdit(oldText string, from, to int, insert string) (string, error) {
+func validatePatchModeArgs(mode string, count int) error {
+	switch mode {
+	case "replace_lines":
+		if count < 1 {
+			return errors.New("count must be >= 1 for replace_lines")
+		}
+	case "insert_before", "insert_after":
+		if count != 0 {
+			return errors.New("count is only valid for replace_lines")
+		}
+	default:
+		return fmt.Errorf("invalid mode: %s (must be 'insert_before', 'insert_after', or 'replace_lines')", mode)
+	}
+	return nil
+}
+
+func applyLineEdit(oldText string, mode string, line, count int, insert string) (string, error) {
+	var from, to int
+	switch mode {
+	case "insert_before":
+		from = line
+		to = line
+	case "insert_after":
+		from = line + 1
+		to = line + 1
+	case "replace_lines":
+		from = line
+		to = line + count
+	}
+
 	startOff, endOff, err := findFromTo(from, to, oldText)
 	if err != nil {
 		return "", err
@@ -179,10 +216,10 @@ func applyLineEdit(oldText string, from, to int, insert string) (string, error) 
 
 func findFromTo(from int, to int, oldText string) (int, int, error) {
 	if from < 1 || to < 1 {
-		return 0, 0, fmt.Errorf("from and to must be >= 1")
+		return 0, 0, fmt.Errorf("line must be >= 1")
 	}
 	if to < from {
-		return 0, 0, fmt.Errorf("to must be >= from")
+		return 0, 0, fmt.Errorf("line + count exceeds valid range")
 	}
 
 	// line 1 starts at offset 0; subsequent lines start after each '\n'
@@ -218,7 +255,7 @@ func findFromTo(from int, to int, oldText string) (int, int, error) {
 		endOff = len(oldText)
 	}
 	if startOff == -1 || endOff == -1 {
-		return 0, 0, fmt.Errorf("line range [%d,%d) out of bounds for %d lines", from, to, line)
+		return 0, 0, fmt.Errorf("line %d out of bounds for %d lines", from, line)
 	}
 	return startOff, endOff, nil
 }

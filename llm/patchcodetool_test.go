@@ -26,7 +26,7 @@ func TestApplyLineEdit(t *testing.T) {
 		"\t}",
 	}, "\n")
 
-	newText, err := applyLineEdit(oldText, 3, 4, "\treturn 2")
+	newText, err := applyLineEdit(oldText, "replace_lines", 3, 1, "\treturn 2")
 	assert.That(err == nil)
 	assert.This(newText).Is(strings.Join([]string{
 		"function()",
@@ -35,7 +35,7 @@ func TestApplyLineEdit(t *testing.T) {
 		"\t}",
 	}, "\n"))
 
-	newText, err = applyLineEdit(oldText, 3, 3, "\t// inserted\n")
+	newText, err = applyLineEdit(oldText, "insert_before", 3, 0, "\t// inserted\n")
 	assert.That(err == nil)
 	assert.This(newText).Is(strings.Join([]string{
 		"function()",
@@ -45,7 +45,7 @@ func TestApplyLineEdit(t *testing.T) {
 		"\t}",
 	}, "\n"))
 
-	newText, err = applyLineEdit(oldText, 3, 4, "")
+	newText, err = applyLineEdit(oldText, "replace_lines", 3, 1, "")
 	assert.That(err == nil)
 	assert.This(newText).Is(strings.Join([]string{
 		"function()",
@@ -53,17 +53,23 @@ func TestApplyLineEdit(t *testing.T) {
 		"\t}",
 	}, "\n"))
 
-	_, err = applyLineEdit(oldText, 0, 1, "x")
+	_, err = applyLineEdit(oldText, "replace_lines", 0, 1, "x")
 	assert.That(err != nil)
-	assert.This(err.Error()).Is("from and to must be >= 1")
+	assert.This(err.Error()).Is("line must be >= 1")
 
-	_, err = applyLineEdit(oldText, 4, 3, "x")
-	assert.That(err != nil)
-	assert.This(err.Error()).Is("to must be >= from")
+	newText2, err := applyLineEdit(oldText, "insert_after", 3, 0, "\t// after\n")
+	assert.That(err == nil)
+	assert.This(newText2).Is(strings.Join([]string{
+		"function()",
+		"\t{",
+		"\treturn 1",
+		"\t// after\r",
+		"\t}",
+	}, "\n"))
 
-	_, err = applyLineEdit(oldText, 1, 6, "x")
+	_, err = applyLineEdit(oldText, "replace_lines", 1, 6, "x")
 	assert.That(err != nil)
-	assert.This(err.Error()).Is("line range [1,6) out of bounds for 4 lines")
+	assert.This(err.Error()).Is("line 1 out of bounds for 4 lines")
 }
 
 func TestPatchCodeTool(t *testing.T) {
@@ -87,21 +93,21 @@ func TestPatchCodeTool(t *testing.T) {
 		return true, nil
 	})
 
-	_, err := patchCodeTool(ctx, "nonexistent", "Foo", 1, 1, "x")
+	_, err := patchCodeTool(ctx, "nonexistent", "Foo", "replace_lines", 1, 1, "x")
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("library not found: nonexistent")
 
-	_, err = patchCodeTool(ctx, "stdlib", "lowercase", 1, 1, "x")
+	_, err = patchCodeTool(ctx, "stdlib", "lowercase", "replace_lines", 1, 1, "x")
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("invalid name: lowercase")
 
-	_, err = patchCodeTool(ctx, "stdlib", "Bar", 1, 1, "x")
+	_, err = patchCodeTool(ctx, "stdlib", "Bar", "replace_lines", 1, 1, "x")
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("code not found for: Bar in stdlib")
 
 	oldText := "function()\n\t{\n\treturn 1\n\t}"
 	newText := "function()\n\t{\n\treturn 2\r\n\t}"
-	res, err := patchCodeTool(ctx, "stdlib", "Foo", 3, 4, "\treturn 2")
+	res, err := patchCodeTool(ctx, "stdlib", "Foo", "replace_lines", 3, 1, "\treturn 2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -121,15 +127,15 @@ func TestPatchCodeTool(t *testing.T) {
 	tran2.Complete()
 	th2.Close()
 
-	_, err = patchCodeTool(ctx, "stdlib", "Foo", 3, 4, "\tnot valid {{{ code")
+	_, err = patchCodeTool(ctx, "stdlib", "Foo", "replace_lines", 3, 1, "\tnot valid {{{ code")
 	assert.That(err != nil)
 
-	_, err = patchCodeTool(ctx, "stdlib", "Foo", 1, 10, "x")
+	_, err = patchCodeTool(ctx, "stdlib", "Foo", "replace_lines", 1, 10, "x")
 	assert.That(err != nil)
-	assert.This(err.Error()).Is("line range [1,10) out of bounds for 4 lines")
+	assert.This(err.Error()).Is("line 1 out of bounds for 4 lines")
 
 	nextText := "function()\n\t{\n\treturn 3\r\n\t}"
-	_, err = patchCodeTool(ctx, "stdlib", "Foo", 3, 4, "\treturn 3")
+	_, err = patchCodeTool(ctx, "stdlib", "Foo", "replace_lines", 3, 1, "\treturn 3")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,4 +151,29 @@ func TestPatchCodeTool(t *testing.T) {
 	assert.This(core.ToStr(row3.GetVal(hdr3, "lib_before_text", th3, st3))).Is(oldText)
 	tran3.Complete()
 	th3.Close()
+}
+
+func TestValidatePatchModeArgs(t *testing.T) {
+	assert := assert.T(t)
+
+	err := validatePatchModeArgs("replace_lines", 1)
+	assert.That(err == nil)
+
+	err = validatePatchModeArgs("insert_before", 0)
+	assert.That(err == nil)
+
+	err = validatePatchModeArgs("insert_after", 0)
+	assert.That(err == nil)
+
+	err = validatePatchModeArgs("invalid_mode", 0)
+	assert.That(err != nil)
+	assert.This(err.Error()).Is("invalid mode: invalid_mode (must be 'insert_before', 'insert_after', or 'replace_lines')")
+
+	err = validatePatchModeArgs("replace_lines", 0)
+	assert.That(err != nil)
+	assert.This(err.Error()).Is("count must be >= 1 for replace_lines")
+
+	err = validatePatchModeArgs("insert_before", 1)
+	assert.That(err != nil)
+	assert.This(err.Error()).Is("count is only valid for replace_lines")
 }
