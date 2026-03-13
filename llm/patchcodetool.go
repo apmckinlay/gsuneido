@@ -103,6 +103,9 @@ func patchCodeTool(ctx context.Context, library, name string, from, to int, text
 	if err != nil {
 		return patchCodeOutput{}, err
 	}
+	if err := errorWarnings(warnings); err != nil {
+		return patchCodeOutput{}, err
+	}
 	if warnings == nil {
 		warnings = []string{}
 	}
@@ -130,6 +133,19 @@ func patchCodeTool(ctx context.Context, library, name string, from, to int, text
 		Name:     name,
 		Warnings: warnings,
 	}, nil
+}
+
+func errorWarnings(warnings []string) error {
+	errWarnings := make([]string, 0, len(warnings))
+	for _, w := range warnings {
+		if strings.HasPrefix(w, "ERROR:") {
+			errWarnings = append(errWarnings, w)
+		}
+	}
+	if len(errWarnings) == 0 {
+		return nil
+	}
+	return fmt.Errorf("compile errors: %s", strings.Join(errWarnings, "; "))
 }
 
 func requireInt(args map[string]any, name string) (int, error) {
