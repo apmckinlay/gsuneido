@@ -395,18 +395,20 @@ func TestAgentWaitForApproval(t *testing.T) {
 		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {})
 		approval := newToolApproval()
 		go approval.Allow("approved")
-		allowed, err := agent.waitForApproval(context.Background(), approval)
+		allowed, text, err := agent.waitForApproval(context.Background(), approval)
 		assert.T(t).This(err).Is(nil)
 		assert.T(t).This(allowed).Is(true)
+		assert.T(t).This(text).Is("approved")
 	})
 
 	t.Run("deny returns error", func(t *testing.T) {
 		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {})
 		approval := newToolApproval()
 		go approval.Deny("not now")
-		allowed, err := agent.waitForApproval(context.Background(), approval)
+		allowed, text, err := agent.waitForApproval(context.Background(), approval)
 		assert.T(t).This(err).Is(nil)
 		assert.T(t).This(allowed).Is(false)
+		assert.T(t).This(text).Is("not now")
 	})
 
 	t.Run("blocks until decision", func(t *testing.T) {
@@ -414,12 +416,13 @@ func TestAgentWaitForApproval(t *testing.T) {
 		approval := newToolApproval()
 		type result struct {
 			allowed bool
+			text    string
 			err     error
 		}
 		done := make(chan result, 1)
 		go func() {
-			allowed, err := agent.waitForApproval(context.Background(), approval)
-			done <- result{allowed: allowed, err: err}
+			allowed, text, err := agent.waitForApproval(context.Background(), approval)
+			done <- result{allowed: allowed, text: text, err: err}
 		}()
 
 		select {
@@ -432,5 +435,6 @@ func TestAgentWaitForApproval(t *testing.T) {
 		r := <-done
 		assert.T(t).This(r.err).Is(nil)
 		assert.T(t).This(r.allowed).Is(true)
+		assert.T(t).This(r.text).Is("ok")
 	})
 }

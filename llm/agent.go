@@ -397,14 +397,18 @@ func requireApproval(ctx context.Context, toolName string) error {
 func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	name := strings.TrimPrefix(tc.Function.Name, "suneido_")
 	toolOutput := name + " " + tc.Function.Arguments + "\n"
+	var approvalText string
 	if agent.needsApproval(tc.Function.Name) {
 		agent.emit("tool", toolOutput)
 		approval := newToolApproval()
 		approvalFn := func() (bool, error) {
 			agent.emitToolWithApproval("", approval)
-			allowed, err := agent.waitForApproval(ctx, approval)
+			allowed, text, err := agent.waitForApproval(ctx, approval)
+			approvalText = text
 			if allowed {
 				agent.emit("tool", "Allowed\n")
+			} else {
+				agent.emit("tool", "Denied\n")
 			}
 			return allowed, err
 		}
@@ -419,6 +423,9 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	} else if tc.Function.Name == "suneido_execute" {
 		agent.emitExecToolResult(result)
 	}
+	if approvalText != "" {
+		result += "\nUSER FEEDBACK: " + approvalText
+	}
 	// Add tool result to history
 	toolMsg := Message{
 		Role:       "tool",
@@ -429,24 +436,24 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	agent.logToolResult(toolMsg)
 }
 
-func (agent *Agent) waitForApproval(ctx context.Context, approval *ToolApproval) (bool, error) {
+func (agent *Agent) waitForApproval(ctx context.Context, approval *ToolApproval) (bool, string, error) {
 	decision, err := approval.Wait(ctx)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			return false, errors.New("tool approval canceled")
+			return false, "", errors.New("tool approval canceled")
 		}
-		return false, err
+		return false, "", err
 	}
 	if !decision.allow {
-		return false, nil
+		return false, decision.text, nil
 	}
-	return true, nil
+	return true, decision.text, nil
 }
 
 func (*Agent) needsApproval(toolName string) bool {
 	return strings.HasPrefix(toolName, "suneido_create_") ||
 		strings.HasPrefix(toolName, "suneido_delete_") ||
-		strings.HasPrefix(toolName, "suneido_patch_")
+		strings.HasPrefix(toolName, "suneido_edit_")
 }
 
 func (agent *Agent) emitExecToolResult(result string) {
