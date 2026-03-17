@@ -188,19 +188,19 @@ func TestCountLines(t *testing.T) {
 func TestExtractContext(t *testing.T) {
 	assert := assert.T(t)
 	text := "line1\r\nline2\r\nline3\r\nline4\r\nline5\r\nline6\r\nline7\r\nline8\r\nline9\r\nline10\r\n"
-	
+
 	// Test context around middle lines
 	ctx := extractContext(text, 5, 5)
 	assert.This(ctx).Is("   1: line1\n   2: line2\n   3: line3\n   4: line4\n   5: line5\n   6: line6\n   7: line7\n   8: line8\n   9: line9\n")
-	
+
 	// Test context at beginning
 	ctx = extractContext(text, 1, 1)
 	assert.This(ctx).Is("   1: line1\n   2: line2\n   3: line3\n   4: line4\n   5: line5\n")
-	
+
 	// Test context at end
 	ctx = extractContext(text, 10, 10)
 	assert.This(ctx).Is("   6: line6\n   7: line7\n   8: line8\n   9: line9\n  10: line10\n")
-	
+
 	// Test multi-line edit
 	ctx = extractContext(text, 4, 6)
 	assert.This(ctx).Is("   1: line1\n   2: line2\n   3: line3\n   4: line4\n   5: line5\n   6: line6\n   7: line7\n   8: line8\n   9: line9\n  10: line10\n")

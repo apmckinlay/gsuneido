@@ -98,12 +98,12 @@ func createCodeTool(ctx context.Context, library, path, name, text string) (resu
 	iq := utran.Query(library, nil)
 	ihdr := iq.Header()
 	rec := buildRecord(ihdr, map[string]string{
-		"name":            core.PackValue(core.SuStr(name)),
-		"text":            core.PackValue(core.SuStr(text)),
-		"lib_modified":    core.PackValue(now),
-		"group":           core.PackValue(core.SuInt(-1)),
-		"num":             core.PackValue(core.SuInt(maxNum + 1)),
-		"parent":          core.PackValue(core.SuInt(parent)),
+		"name":         core.PackValue(core.SuStr(name)),
+		"text":         core.PackValue(core.SuStr(text)),
+		"lib_modified": core.PackValue(now),
+		"group":        core.PackValue(core.SuInt(-1)),
+		"num":          core.PackValue(core.SuInt(maxNum + 1)),
+		"parent":       core.PackValue(core.SuInt(parent)),
 	})
 	iq.Output(th, rec)
 	if conflict := utran.Complete(); conflict != "" {
@@ -148,11 +148,11 @@ func ensurePathParent(th *core.Thread, library, path string) (int, error) {
 		iq := utran.Query(library, nil)
 		ihdr := iq.Header()
 		rec := buildRecord(ihdr, map[string]string{
-			"name":            core.PackValue(core.SuStr(segment)),
-			"lib_modified":    core.PackValue(core.Now()),
-			"group":           core.PackValue(core.IntVal(parent)),
-			"num":             core.PackValue(core.IntVal(nextNum)),
-			"parent":          core.PackValue(core.IntVal(parent)),
+			"name":         core.PackValue(core.SuStr(segment)),
+			"lib_modified": core.PackValue(core.Now()),
+			"group":        core.PackValue(core.IntVal(parent)),
+			"num":          core.PackValue(core.IntVal(nextNum)),
+			"parent":       core.PackValue(core.IntVal(parent)),
 		})
 		iq.Output(th, rec)
 		parent = nextNum
