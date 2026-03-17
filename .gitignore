@@ -36,3 +36,4 @@ sujs_linux_*
 sujs_windows_*
 .ai/
 temp/
+cmd/sujs/sujs
