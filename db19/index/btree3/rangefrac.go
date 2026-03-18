@@ -34,7 +34,12 @@ func (bt *btree) RangeFrac(org, end string, _ int) float64 {
 // For large ranges that diverge within the tree, more estimation is involved,
 // but the result should still be within 2%
 // NOTE: depends on btree.count being correct
-func (bt *btree) rangeFrac(org, end string) float64 {
+func (bt *btree) rangeFrac(org, end string) (result float64) {
+	defer func() {
+		if result < 0 {
+			result = 0
+		}
+	}()
 	_ = t && trace("=== rangeFrac", org, end)
 	nkeys := bt.count
 
