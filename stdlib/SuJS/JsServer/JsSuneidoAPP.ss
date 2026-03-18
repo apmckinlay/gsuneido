@@ -3,13 +3,12 @@ class
 	{
 	CallClass(url)
 		{
-		return .convert(SuneidoAPP(url))
+		res = SuneidoAPP(url)
+		return res.Prefix?("<") ? .Convert(res) : res
 		}
 
-	convert(res)
+	Convert(res)
 		{
-		if not res.Prefix?("<")
-			return res
 		res = res.
 			Replace(`src=(['"])suneido:`, `src=\1/suneidoapp`).
 			Replace(`url\((['"]?)suneido:`, `url(\1/suneidoapp`).

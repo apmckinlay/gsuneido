@@ -55,9 +55,15 @@ Control
 		if what is false
 			return
 		if what.Prefix?('MSHTML:')
-			.webview.Load(what.RemovePrefix('MSHTML:'))
+			.webview.Load(JsSuneidoAPP.Convert(what.RemovePrefix('MSHTML:')))
 		else
 			.webview.Navigate(what)
+		}
+
+	SetCssStyle(style)
+		{
+		.InsertAdjacentHTML(false, 'beforeend', '<style>' $
+			JsSuneidoAPP.Convert(style.Tr('\r\n')) $ '</style>')
 		}
 
 	Getter_LocationURL()
@@ -86,6 +92,7 @@ Control
 		.Act('TriggerKeyDown', key)
 		}
 
+	// if id is false, insert to body
 	InsertAdjacentHTML(id, position, text)
 		{
 		.Act('InsertAdjacentHTML', id, position, text)

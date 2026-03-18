@@ -17,9 +17,9 @@ Test
 			'<a href="https://example.com">External link</a>',
 			'<a href="https://example.com" target="_blank" ' $
 				'rel="noopener noreferrer">External link</a>'))
-	Test_convert()
+	Test_Convert()
 		{
-		fn = JsSuneidoAPP.JsSuneidoAPP_convert
+		fn = JsSuneidoAPP.Convert
 
 		.cases.Each({ Assert(fn(it[0]) is: it[1]) })
 		Assert(fn('<head>' $ .cases.Map({ it[0] }).Join('\r\n') $ '</head>')

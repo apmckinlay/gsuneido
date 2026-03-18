@@ -955,9 +955,9 @@ class
 
 	// The basic format for the start of Suneido Pdf files
 	headerFormat: "%PDF-1.3\n%\xe9\xe9\xe9\xe9\n"
-	bodyFormat: #("\n1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj",
-		"\n2 0 obj <</Type /Pages /Kids [] /Count 0>>\nendobj",
-		"\n3 0 obj << /Producer (Suneido PDF Generator) >>\nendobj")
+	bodyFormat: #("\n1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj",
+		"\n2 0 obj\n<</Type /Pages /Kids [] /Count 0>>\nendobj",
+		"\n3 0 obj\n<< /Producer (Suneido PDF Generator) >>\nendobj")
 	convertBodyToSuneidoFormat(pdfOb)
 		{
 		firstPdf = Object(

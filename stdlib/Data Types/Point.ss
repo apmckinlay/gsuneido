@@ -5,7 +5,7 @@ class
 	UseDeepEquals: true
 	New(.x, .y)
 		{
-		Assert(Number?(x) and (Number?(y)))
+		Assert(Number?(x) and Number?(y))
 		}
 	GetX()
 		{
@@ -29,6 +29,6 @@ class
 		}
 	ToString()
 		{
-		return "Point(" $ String(.x) $ ", " $ String(.y) $ ")"
+		return "Point(" $ .x $ ", " $ .y $ ")"
 		}
 	}

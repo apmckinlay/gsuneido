@@ -10,6 +10,8 @@ The input queries must have at least one column in common.
 Semijoin is like [join](<join.md>) but only outputs columns from the first table,
 and like [intersect](<intersect.md>) but matches on specified columns rather than requiring all columns to match.
 
+Unlike **join** and **leftjoin**, `semijoin by(fields)` can override what fields are used to join by. However, the fields must still be common fields in the two sources.
+
 <div style="display: flex; justify-content: space-around; align-items: center;" class="table-style table-full-width">
 
 <div style="flex-shrink: 0;flex-grow: 1;">
@@ -58,5 +60,3 @@ To control which fields to join on, use [rename](<rename.md>), [project](<projec
 ``` suneido
 orders rename shipper1 to shipper semijoin shippers
 ```
-
-Note: **by (*fields*)** is only an assertion, it does not alter which fields to join on. It only checks that the fields that the semijoin uses are what you expect. If they differ an exception will be thrown. This is useful to ensure that the semijoin does not change as the schema changes (e.g. you add fields).

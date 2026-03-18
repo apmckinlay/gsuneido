@@ -13,7 +13,7 @@ _Params
 
 	On_Page_Setup(@report)
 		{
-		if (Object?(.report))
+		if .OverrideReport?(report)
 			report = .report
 
 		x = .Get_devmode(report)

@@ -32,7 +32,7 @@ Test
 
 		writer.Flush()
 		Assert(writer.PdfDriverFileWriter_f.Get()
-			is: "<<Object 0>>1 0 obj <<Object 1>>3 0 obj <<Object 3>>" $
-				"4 0 obj <<Object 4>>2 0 obj <<Object 2>>END")
+			is: "<<Object 0>>1 0 obj\n<<Object 1>>3 0 obj\n<<Object 3>>" $
+				"4 0 obj\n<<Object 4>>2 0 obj\n<<Object 2>>END")
 		}
 	}

@@ -11,7 +11,7 @@ KeyListViewBase
 		if saveInfoName isnt ''
 			{
 			.selectMgr = AccessSelectMgr(name: saveInfoName)
-			.selectMgr.LoadSelects(this)
+			.selectMgr.LoadSelects(.GetSelectFields().Fields)
 			}
 		.Redir('On_Select', this)
 		}

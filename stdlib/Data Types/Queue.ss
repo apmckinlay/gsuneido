@@ -28,16 +28,19 @@ class
 		}
 	Front()
 		{
-		if .size < 1
-			throw "Queue empty"
+		.checkNotEmpty()
 		// .back.Next is the dummy value, so .back.Next.Next is the front
 		return .back.Next.Next.Value
 		}
 	Back()
 		{
+		.checkNotEmpty()
+		return .back.Value
+		}
+	checkNotEmpty()
+		{
 		if .size < 1
 			throw "Queue empty"
-		return .back.Value
 		}
 	Dequeue()
 		{

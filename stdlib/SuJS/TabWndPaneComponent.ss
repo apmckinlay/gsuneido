@@ -13,5 +13,13 @@ WndPaneComponent
 		{
 		visible = not .GetHidden() and visible
 		.El.SetStyle("visibility", visible ? '' : 'hidden')
+		.El.SetStyle("overflow", visible ? '' : 'hidden')
+		}
+
+	// To avoid setting min-width and min-height
+	// Its parent TabsComponent handles the size.
+	// This should just take its parent's full height and width
+	SetMinSize()
+		{
 		}
 	}

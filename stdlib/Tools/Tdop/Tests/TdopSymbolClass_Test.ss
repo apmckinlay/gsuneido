@@ -159,8 +159,6 @@ TdopTests
 			type: 'constant')
 		.CheckTdopCatch('class: _a{}', 'base class must be global defined in library',
 			type: 'constant')
-		.CheckTdopCatch('class: __A{}', 'base class must be global defined in library',
-			type: 'constant')
 		.CheckTdopCatch('class: A{1}', 'class members must be named',
 			type: 'constant')
 		.CheckTdopCatch('class: A{A: 1+2}', 'class members must be named',

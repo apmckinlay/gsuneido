@@ -3,17 +3,15 @@ class
 	{
 	CallClass(message, calls = "", params = "", switch_prefix_limit = 10, caughtMsg = '')
 		{
-		rec = Record()
 		try
-			rec = .run(message, calls, params, switch_prefix_limit, caughtMsg)
+			return .run(message, calls, params, switch_prefix_limit, caughtMsg)
 		catch (err)
 			try ErrorLog('ERROR: ' $ err $' caused by:\n' $ message)
-		return rec
+		return Object()
 		}
 
 	run(message, calls, params, switch_prefix_limit, caughtMsg)
 		{
-		origMsg = message
 		calls = .tryGetCalls(message, calls)
 		rec = .buildRecord(message, calls, params, caughtMsg, switch_prefix_limit)
 		if TestRunner.RunningTests?()
@@ -25,16 +23,20 @@ class
 		if not .repeatedMessage?(rec.sulog_message)
 			{
 			if .outputRecord(rec) is true // true means output to suneidolog
+				{
 				.incrementMessageCount(rec.sulog_message)
+				if false isnt sendErrorsTask = OptContribution('SendErrorsTask', false)
+					sendErrorsTask(rec)
+				}
 			}
-		if Suneido.User is 'default'
-			{
-			Print('SuneidoLog [' $ Display(rec.sulog_timestamp) $ ']: ' $ origMsg)
-			if rec.sulog_message.Prefix?("ERROR") and rec.sulog_calls isnt ''
-				Print(rec.sulog_calls)
-			}
+		// time check preventing Print from opening a console window at startup
+		if Suneido.User is 'default' and Suneido.Member?('start_time') and
+			Date().MinusMinutes(Suneido.start_time) > .05 /*= 3 seconds */
+			.printAndStore(rec)
+
 		return rec
 		}
+
 	handleTestRunnerOutput(rec)
 		{
 		pos = false
@@ -53,6 +55,18 @@ class
 			logs = ServerSuneido.Get('TestRunningLogs', Object())
 			ServerSuneido.Set('TestRunningLogs', logs.Add(rec))
 			}
+		}
+
+	maxSuLogsInMemory: 10
+	printAndStore(rec)
+		{
+		Print('SuneidoLog [' $ Display(rec.sulog_timestamp) $ ']: ' $ rec.sulog_message)
+		if false is Suneido.Member?('SuLogs')
+			Suneido.SuLogs = []
+
+		if Suneido.SuLogs.Size() is .maxSuLogsInMemory
+			Suneido.SuLogs.Delete(0)
+		Suneido.SuLogs.Add(rec)
 		}
 
 	max_same_message_per_day: 10

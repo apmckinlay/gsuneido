@@ -1,6 +1,7 @@
 // Copyright (C) 2017 Suneido Software Corp. All rights reserved worldwide.
 ScintillaAddonIDE
 	{
+	SuJsSupport?: false // Annotation is not supported
 	Setting: ide_show_annotations
 	Init()
 		{ .SetVisible(.Set) }

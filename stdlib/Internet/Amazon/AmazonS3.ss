@@ -139,7 +139,7 @@ AmazonAWS
 		}
 
 	PutFile(bucket, fileFrom, fileTo = '', policy = '', region = false,
-		allowEmpty? = false, limitRate = '')
+		allowEmpty? = false, limitRate = '', failIfExists? = false)
 		{
 		if false is fileTo = .validateAndGetFileTo(fileFrom, fileTo, allowEmpty?)
 			return false
@@ -147,9 +147,12 @@ AmazonAWS
 		path = '/' $ bucket $ '/' $ fileTo
 		// toFile needs to be '' when sending, it is already set in the url path
 		// if in request will change where curl stores the file prior to sending
+		extraHeaders = Object()
+		if failIfExists?
+			extraHeaders['If-None-Match'] = "*"
 		return false isnt
 			.makeRequest('PUT', [], path, toFile: '', fromFile: fileFrom, :policy,
-				:region, :limitRate)
+				:region, :limitRate, :extraHeaders)
 		}
 
 	validateAndGetFileTo(fileFrom, fileTo, allowEmpty? = false)

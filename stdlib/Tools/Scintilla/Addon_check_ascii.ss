@@ -1,6 +1,7 @@
 // Copyright (C) 2010 Suneido Software Corp. All rights reserved worldwide.
 ScintillaAddonForChanges
 	{
+	SuJsSupport?: false // Realtime .MarkerGet is not supported
 	// Need this to handle deleting trailing characters in which case the text in
 	// .IdleAfterChange is empty
 	IgnoreIfEmpty?: false

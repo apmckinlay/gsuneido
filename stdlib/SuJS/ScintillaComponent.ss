@@ -25,11 +25,18 @@ Component
 			padding-top: 4px;
 			padding-bottom: 4px;
 		}
-		.su-code-gutter {
+		.su-marker-gutter, .su-margin-gutter {
 			width: 1em;
 		}
-		.su-code-gutter-container {
+		.su-margin-gutter {
+			width: var(--su-margin-gutter-width);
+		}
+		.su-marker-gutter-container {
 			position: relative;
+		}
+		.su-margin-gutter-container {
+			text-align: center;
+			overflow: hidden;
 		}
 		.su-code-mirror .CodeMirror-lines {
 			padding: 0;
@@ -80,6 +87,7 @@ Component
 		.AddEventListenerToCM('beforeSelectionChange', .onSelectionChange)
 		.AddEventListenerToCM('contextmenu', .onContextMenu)
 		.AddEventListenerToCM('scroll', .onScroll)
+		.AddEventListenerToCM('gutterClick', .onGutterClick)
 		.El.AddEventListener('mouseup', .onMouseUp)
 		.AddEventListenerToCM('keydown', .OnKeyDown)
 		.El.AddEventListener('dragend', .dragEnd)
@@ -87,6 +95,7 @@ Component
 		.indicators = Object()
 		.markers = Object()
 		.gutters = Object()
+		.definedStyles = Object()
 		.SetMinSize()
 		}
 
@@ -274,19 +283,61 @@ Component
 		return .setValue?
 		}
 
+	SetMarginTypeN(margin/*unused*/, type)
+		{
+		if type is SC.MARGIN_TEXT or type is SC.MARGIN_RTEXT
+			{
+			.ensureGutter('su-margin-gutter')
+			}
+		}
+
+	SetMarginWidthN(margin/*unused*/, width)
+		{
+		.CMEl.style.setProperty('--su-margin-gutter-width', width $ 'px')
+		.CM.Refresh()
+		}
+
+	SetMarginText(line, text)
+		{
+		container = .getLineGutter(line, 'su-margin-gutter')
+		container.innerText = text
+		}
+
+	getLineGutter(line, type)
+		{
+		info = .CM.LineInfo(line)
+		try
+			container = info['gutterMarkers'][type]
+		catch
+			{
+			container = CreateElement('div', className: type $ '-container')
+			.CM.SetGutterMarker(line, type, container)
+			}
+		return container
+		}
+
+	MarginSetStyle(line, style)
+		{
+		if not .definedStyles.Member?(style)
+			return
+		container = .getLineGutter(line, 'su-margin-gutter')
+		container.style.cssText = .definedStyles[style]
+		}
+
 	markerCss: false
 	DefineMarker(n, style, fore, back)
 		{
 		.markers[n] = [:style, :fore, :back]
 		.markerCss = false
 		if .gutterMarker?(style)
-			.ensureGutter('su-code-gutter')
+			.ensureGutter('su-marker-gutter')
 		}
 
 	gutterMarker?(style)
 		{
 		return style is SC.MARK_SHORTARROW or
 			style is SC.MARK_ROUNDRECT or
+			style is SC.MARK_VLINE or
 			style is #diffMarker
 		}
 
@@ -318,6 +369,8 @@ Component
 				css $= .buildDiffMarker(marker, className, n)
 			else if marker.style is SC.MARK_ROUNDRECT
 				css $= .buildRoundRect(marker, className, n)
+			else if marker.style is SC.MARK_VLINE
+				css $= .buildVlineMarker(marker, className, n)
 			else
 				Print('marker not handled: ', marker)
 			}
@@ -370,6 +423,12 @@ Component
 				ToCssColor(marker.back) $ ';')
 		}
 
+	buildVlineMarker(marker, className, n)
+		{
+		.buildMarker(marker, className, n,
+			extraCss: 'border-right: 2px solid ' $ ToCssColor(marker.back) $ ';')
+		}
+
 	buildMarker(marker, className, n, shape = '', extraCss = '')
 		{
 		if not marker.Member?(#div)
@@ -397,15 +456,9 @@ Component
 			.CM.AddLineClass(row, "background", className)
 		else if .gutterMarker?(marker.style)
 			{
-			info = .CM.LineInfo(row)
-			try
-				container = info['gutterMarkers']['su-code-gutter']
-			catch
-				{
-				container = CreateElement('div', className: 'su-code-gutter-container')
-				.CM.SetGutterMarker(row, 'su-code-gutter', container)
-				}
-			container.AppendChild(marker.div.CloneNode(true))
+			container = .getLineGutter(row, 'su-marker-gutter')
+			if container.QuerySelectorAll('.' $ className $ '-div').length is 0
+				container.AppendChild(marker.div.CloneNode(true))
 			}
 		}
 
@@ -421,7 +474,7 @@ Component
 			{
 			info = .CM.LineInfo(row)
 			container = false
-			try container = info['gutterMarkers']['su-code-gutter']
+			try container = info['gutterMarkers']['su-marker-gutter']
 			if container isnt false
 				{
 				list = container.QuerySelectorAll('.' $ className $ '-div')
@@ -433,21 +486,11 @@ Component
 
 	MarkerDeleteAll(n)
 		{
-		if false is marker = .markers.GetDefault(n, false)
+		if not .markers.Member?(n)
 			return
 
-		className = 'su-code-' $ .MarkerName $ '-' $ n
-		if marker.style is SC.MARK_BACKGROUND
-			{
-			c = .CM.LineCount()
-			for row in c
-				.CM.RemoveLineClass(row, 'background', className)
-			}
-
-		className = 'su-code-' $ .MarkerName $ '-' $ n
-		list = .CMEl.QuerySelectorAll('.' $ className $ '-div')
-		for i in .. list.length
-			list.Item(i).Remove()
+		for row in ...CM.LineCount()
+			.MarkerDelete(row, n)
 		}
 
 	UpdateOverview(ovbarHwnds, markersInfo)
@@ -471,7 +514,7 @@ Component
 		{
 		info = .CM.LineInfo(row)
 		container = false
-		try container = info['gutterMarkers']['su-code-gutter']
+		try container = info['gutterMarkers']['su-marker-gutter']
 		if container isnt false and container.childElementCount isnt 0
 			{
 			for type in markersInfo.Members()
@@ -502,6 +545,8 @@ Component
 			.braceStyle = .buildStyle(fore, back, bold)
 		else if n is SC.STYLE_BRACEBAD
 			.braceBadStyle = .buildStyle(fore, back, bold)
+		else if n > SC.STYLE_LASTPREDEFINED
+			.definedStyles[n] = .buildStyle(fore, back, bold)
 		}
 
 	buildStyle(fore = false, back = false, bold = false)
@@ -585,6 +630,8 @@ Component
 		else if style is INDIC.STRAIGHTBOX
 			css = 'background-color: ' $ color $ alpha $ '; ' $
 				'outline: 1px solid ' $ color $ outlineAlpha $ ';'
+		else if style is INDIC.FULLBOX
+			css = 'background-color: ' $ color $ alpha $ '; '
 		else if style is INDIC.HIDDEN
 			css = ''
 		return css
@@ -727,7 +774,8 @@ Component
 				? SC.MOD_DELETETEXT
 				: SC.MOD_INSERTTEXT,
 			position: from,
-			length: toAfterChange - from + 1
+			length: toAfterChange - from + 1,
+			setValue?: .setValue?
 			])
 		}
 
@@ -785,6 +833,20 @@ Component
 		scrollInfo = .CM.GetScrollInfo()
 		line = .CM.LineAtHeight(scrollInfo.top, 'local')
 		.Event(#SU_SYNCFIRSTVISIBLELINE, line)
+		}
+
+	onGutterClick(cm/*unused*/, line, gutter/*unused*/, event)
+		{
+		if event.GetDefault(#ctrlKey, false) is true
+			.SELECTALL()
+		else if event.GetDefault(#shiftKey, false) is true
+			{
+			anchor = .CM.GetCursor('anchor')
+			.CM.SetSelection(anchor, [line: line + 1, ch: 0])
+			}
+		else
+			.CM.SetSelection([:line, ch: 0], [line: line + 1, ch: 0])
+		.CM.Focus()
 		}
 
 	SetFirstVisibleLine(line, centerInScreen? = false)
@@ -986,36 +1048,78 @@ Component
 
 	MoveSelectedLinesUp()
 		{
-		cursor = .CM.GetCursor()
-		line = cursor.line
-
-		if line <= 0
-			return
-
-		.swap(line, line - 1, cursor.ch)
+		.moveSelectedLines(-1)
 		}
 
 	MoveSelectedLinesDown()
 		{
-		cursor = .CM.GetCursor()
-		line = cursor.line
-
-		if line >= .CM.LineCount() - 1
-			return
-
-		.swap(line, line + 1, cursor.ch)
+		.moveSelectedLines(1)
 		}
 
-	swap(from, to, ch)
+	// dir: -1 for up, 1 for down
+	moveSelectedLines(dir)
 		{
-		fromLine = .CM.GetLine(from)
-		toLine = .CM.GetLine(to)
+		from = .CM.GetCursor('from')
+		to = .CM.GetCursor('to')
+
+		startLine = from.line
+		endLine = to.line
+
+		if endLine > startLine and to.ch is 0
+			endLine--
+
+		if not .canMove?(startLine, endLine, dir)
+			return
+
+		blockLines = .getLines(startLine, endLine, dir)
 
 		.CM.StartOperation()
-		.CM.replaceRange(fromLine, [line: to, ch: 0], [line: to, ch: toLine.Size()]);
-		.CM.replaceRange(toLine, [line: from, ch: 0], [line: from, ch: fromLine.Size()]);
-		.CM.SetCursor([line: to, :ch])
+
+		// Build the replacement text based on direction
+		if dir < 0
+			{
+			// Moving up: block + boundary line
+			text = blockLines[1..].Join('\r\n') $ '\r\n' $ blockLines[0]
+			replaceStart = [line: startLine - 1, ch: 0]
+			replaceEnd = [line: endLine, ch: blockLines.Last().Size()]
+			}
+		else
+			{
+			// Moving down: boundary line + block
+			text = blockLines.Last() $ '\r\n' $ blockLines[..-1].Join('\r\n')
+			replaceStart = [line: startLine, ch: 0]
+			replaceEnd = [line: endLine + 1, ch: blockLines.Last().Size()]
+			}
+
+		.CM.ReplaceRange(text, replaceStart, replaceEnd)
+
+		// Move selection in the direction of movement
+		.CM.SetSelection(
+			[line: from.line + dir, ch: from.ch],
+			[line: to.line + dir, ch: to.ch])
+
 		.CM.EndOperation()
+		}
+
+	canMove?(startLine, endLine, dir)
+		{
+		if dir < 0
+			return startLine > 0
+		else
+			return endLine < .CM.LineCount() - 1
+		}
+
+	getLines(startLine, endLine, dir)
+		{
+		if dir < 0
+			startLine--
+		else
+			endLine++
+
+		lines = Object()
+		for i in startLine .. endLine + 1
+			lines.Add(.CM.GetLine(i))
+		return lines
 		}
 
 	GetDimension()

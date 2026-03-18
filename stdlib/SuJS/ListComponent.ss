@@ -111,6 +111,11 @@ Component
 				: CLR.WHITE))
 		}
 
+	GetReadOnly()
+		{
+		return .readOnly
+		}
+
 	enabled: true
 	SetEnabled(.enabled)
 		{

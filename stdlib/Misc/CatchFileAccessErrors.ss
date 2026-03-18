@@ -7,7 +7,8 @@ class
 			'read file': #(Read, Readline, Seek, Tell),
 			'save file': #(Write, Writeline)
 			),
-		DirExists: #('access location'))
+		DirExists: #('access location')
+		FileExists: #('verify location'))
 
 	// not handled yet:
 	// Seek, Tell,

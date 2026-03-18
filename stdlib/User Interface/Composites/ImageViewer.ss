@@ -29,7 +29,12 @@ Controller
 	Style(url)
 		{
 		return 'body {
+			width: 100vw;
+			height: 100vh;
+			margin: 0px;
+			background-color: #eee;
 			background-image: url(' $ url.Replace(' ', '%20') $ ');
+			background-size: contain;
 			background-repeat: no-repeat;
 			}'
 		}

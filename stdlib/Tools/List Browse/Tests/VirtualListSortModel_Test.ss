@@ -20,7 +20,13 @@ VirtualListModelTests
 			index (vl_sort_test_num) in ' $ .masterTable $
 			' index (vl_sort_test2_num) in ' $ .masterTable2)
 
-		.sf = SelectFields(#(vl_sort_test_num, vl_sort_test2_num))
+		.MakeDatadict(fieldName: 'a', Prompt: 'A')
+		.MakeDatadict(fieldName: 'b', Prompt: 'B')
+		.MakeDatadict(fieldName: 'c', Prompt: 'C')
+		.MakeDatadict(fieldName: 'vl_sort_test_num', Prompt: 'D')
+		.MakeDatadict(fieldName: 'vl_sort_test2_num', Prompt: 'E')
+		cols = #(a, b, c, vl_sort_test_num, vl_sort_test2_num)
+		.sf = VirtualListColModel.BuildSelectFields(cols, #(), false)
 		}
 
 	Test_new()
@@ -47,6 +53,46 @@ VirtualListModelTests
 			is: ' sort b')
 
 		Assert(sort.VirtualListSortModel_getSortStr() is: ' sort reverse a')
+		}
+
+	Test_reuse_sortOb()
+		{
+		sortOb = #([col: 'b', dir: -1, id?: false])
+		sort = VirtualListSortModel(.table, .sf, .TempName(), :sortOb)
+		Assert(sort.VirtualListSortModel_getSortStr() is: ' sort reverse b')
+
+		// does not exist; fall back to default
+		sortOb = #([col: 'd', dir: -1, id?: false])
+		sort = VirtualListSortModel(.table, .sf, .TempName(), :sortOb)
+		Assert(sort.VirtualListSortModel_getSortStr() is: ' ')
+
+		// does not exist; fall back to default
+		sortOb = #([col: 'd', dir: -1, id?: false])
+		sort = VirtualListSortModel(.table $ ' sort a', .sf, .TempName(), :sortOb)
+		Assert(sort.VirtualListSortModel_getSortStr() is: ' sort a')
+
+		// one sort exists, other doesnt; fall back to default
+		sortOb = #([col: 'b', dir: -1, id?: false] [col: 'd', dir: -1, id?: false])
+		sort = VirtualListSortModel(.table $ ' sort a', .sf, .TempName(), :sortOb)
+		Assert(sort.VirtualListSortModel_getSortStr() is: ' sort a')
+
+		// both sorts exist
+		sortOb = #([col: 'b', dir: -1, id?: false] [col: 'c', dir: -1, id?: false])
+		sort = VirtualListSortModel(.table $ ' sort a', .sf, .TempName(), :sortOb)
+		Assert(sort.VirtualListSortModel_getSortStr() is: ' sort reverse b,c')
+
+		sortOb = #([col: vl_sort_test2_name, dir: 1, id?: true,
+			displayCol: vl_sort_test2_num])
+		sort = VirtualListSortModel(.table $ ' sort a', .sf, .TempName(), :sortOb)
+		Assert(sort.VirtualListSortModel_getSortStr() is: ' sort vl_sort_test2_name')
+
+		// extended sort is not in the columns
+		extendedSort = .TempName()
+		q = .table $ ' extend ' $ extendedSort $ ' sort ' $ extendedSort
+		sortOb = Object([col: extendedSort, dir: 1, id?: false])
+		sort = VirtualListSortModel(q, .sf, .TempName(), :sortOb)
+		Assert(sort.VirtualListSortModel_validateSortOb(sortOb))
+		Assert(sort.VirtualListSortModel_getSortStr() is: ' sort ' $ extendedSort)
 		}
 
 	Test_no_save_name()

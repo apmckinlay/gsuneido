@@ -517,30 +517,30 @@ PdfTest
 	Test_convertBodyToSuneidoFormat()
 		{
 		data = "%PDF-1.3\n%encoded\n1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
-			"2 0 obj <</Type /Pages /Kids [4 0 R 6 0 R ] /Count 2>>\nendobj\n" $
-			"3 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
+			"2 0 obj\n<</Type /Pages /Kids [4 0 R 6 0 R ] /Count 2>>\nendobj\n" $
+			"3 0 obj\n<</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
 			"/WinAnsiEncoding >>\nendobj\n" $
-			"4 0 obj<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " $
+			"4 0 obj\n<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " $
 			"/Contents [5 0 R] /Resources<<\n/Font <<\n/F1 3 0 R>>>>>>\nendobj\n" $
 			"5 0 obj\n<</Length 6 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
 			"endstream\nendobj\n" $
-			"6 0 obj<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " $
+			"6 0 obj\n<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " $
 			"/Contents [7 0 R] /Resources<<\n/Font <<\n/F1 3 0 R>>>>>>\nendobj\n" $
 			"7 0 obj\n<</Length 7 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
 			"endstream\nendobj\n%comments\ntrailer <</Size 8/Root 1 0 R>> "
 		expected =
-			"\n1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
-			"2 0 obj <</Type /Pages /Kids [] /Count 0>>\nendobj\n" $
-			"3 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
-			"5 0 obj <</Parent 2 0 R/Type /Pages /Kids [7 0 R 9 0 R ] /Count 2>>\n" $
+			"\n1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
+			"2 0 obj\n<</Type /Pages /Kids [] /Count 0>>\nendobj\n" $
+			"3 0 obj\n<< /Producer (Suneido PDF Generator) >>\nendobj\n" $
+			"5 0 obj\n<</Parent 2 0 R/Type /Pages /Kids [7 0 R 9 0 R ] /Count 2>>\n" $
 			"endobj\n" $
-			"6 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
+			"6 0 obj\n<</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
 			"/WinAnsiEncoding >>\nendobj\n" $
-			"7 0 obj<</Type /Page /Parent 5 0 R /MediaBox [0 0 612 792] " $
+			"7 0 obj\n<</Type /Page /Parent 5 0 R /MediaBox [0 0 612 792] " $
 			"/Contents [8 0 R] /Resources<<\n/Font <<\n/F1 6 0 R>>>>>>\nendobj\n" $
 			"8 0 obj\n<</Length 9 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
 			"endstream\nendobj\n" $
-			"9 0 obj<</Type /Page /Parent 5 0 R /MediaBox [0 0 612 792] " $
+			"9 0 obj\n<</Type /Page /Parent 5 0 R /MediaBox [0 0 612 792] " $
 			"/Contents [10 0 R] /Resources<<\n/Font <<\n/F1 6 0 R>>>>>>\nendobj\n" $
 			"10 0 obj\n<</Length 10 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
 			"endstream\nendobj"

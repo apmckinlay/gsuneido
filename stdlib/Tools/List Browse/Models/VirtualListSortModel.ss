@@ -4,13 +4,31 @@ class
 	sortOb: false
 	customSort?: false
 	New(query, .sf, .sortSaveName = false, .loadAll? = false,
-		.disableCheckSortLimit? = false)
+		.disableCheckSortLimit? = false, .sortOb = false)
 		{
 		sort = QueryGetSort(query)
 		.origSort = sort
-		.initSortOb(sort)
+		if .sortOb is false or false is .validateSortOb(sortOb)
+			{
+			.initSortOb(sort)
+			.loadSavedSort(query)
+			}
+		}
 
-		.loadSavedSort(query)
+	validateSortOb(sortOb)
+		{
+		for sort in sortOb
+			{
+			sortCol = sort.displayCol isnt ''
+				? sort.displayCol
+				: sort.id? is true
+					? sort.col.Replace("_name", "_num")
+					: sort.col
+
+			if sortCol isnt .origSort and not .sf.Fields.Has?(sortCol)
+				return false
+			}
+		return true
 		}
 
 	initSortOb(sort)
@@ -194,6 +212,11 @@ class
 	GetPrimarySort()
 		{
 		return .sortOb.GetDefault(0, .buildSortOb(false, 1))
+		}
+
+	GetSortOb()
+		{
+		return .sortOb
 		}
 
 	CheckSortable(query, col)

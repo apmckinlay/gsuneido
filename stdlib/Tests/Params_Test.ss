@@ -195,7 +195,7 @@ Test
 		Assert(fn(rpt) is: false)
 		Assert(rpt hasntMember: 'suppressSlowQuery')
 
-		spy = .SpyOn('SlowQuery.Validate')
+		spy = .SpyOn(SlowQuery.Validate)
 		spy.Return(false)
 		rpt = Object(.testFmt, slowQueryFilter: 'hello', paramsdata: [])
 		Assert(fn(rpt) is: false)
@@ -237,7 +237,7 @@ Test
 
 	Test_previewReport()
 		{
-		m = Params.PreviewReport
+		m = Params.Params_previewReport
 
 		report = Object('Format')
 		result = m(report)

@@ -5,6 +5,8 @@ class
 	// NOTE: you may need to add an extension to have the file type recognized
 	Add(data)
 		{
+		if .serverEval?()
+			return ServerEval('InMemory.Add', data)
 		t = Display(Timestamp()).Tr('#.')
 		Suneido.GetInit('InMemory', { Object() })[t] = data
 		return 'suneido:/inmemory/' $ t
@@ -13,6 +15,8 @@ class
 	// called by SuneidoApp to retrieve the data
 	Get(url)
 		{
+		if .serverEval?()
+			return ServerEval('InMemory.Get', url)
 		// ignore any extension added for file type
 		if url.Has?('.')
 			url = url.BeforeLast('.')
@@ -22,7 +26,14 @@ class
 	// remove the url/data
 	Remove(url)
 		{
+		if .serverEval?()
+			return ServerEval('InMemory.Remove', url)
 		Suneido.InMemory.Delete(url.Tr('^0-9'))
 		return
+		}
+
+	serverEval?()
+		{
+		return Sys.SuneidoJs?()
 		}
 	}

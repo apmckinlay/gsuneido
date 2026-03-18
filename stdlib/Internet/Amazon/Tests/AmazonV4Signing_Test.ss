@@ -140,7 +140,8 @@ Test
 				'a8629fb8dc4885bdd70b3c46297def3a3ab11b1534a246f4b1bd694db293e264')
 		Assert((new c(s3, 'PUT', 'us-east-1', '', '/test.png')).PresignUrl(
 			'testbucket.s3.amazonaws.com')
-			is: 'https://testbucket.s3.amazonaws.com/test.png?X-Amz-Algorithm=' $
+			is: 'https://testbucket.s3.amazonaws.com/test.png?If-None-Match=%2A&'$
+				'X-Amz-Algorithm=' $
 				'AWS4-HMAC-SHA256&X-Amz-Credential=ACCESS%2F20000101%2F' $
 				'us-east-1%2Fs3%2Faws4_request&X-Amz-Date=20000101T000000Z&' $
 				'X-Amz-Expires=3600&X-Amz-Security-Token=secretToken&' $
@@ -148,6 +149,6 @@ Test
 				'response-content-disposition=inline%3B%20filename%3D%22test.png%22&' $
 				'response-content-type=image%2Fpng&' $
 				'X-Amz-Signature=' $
-				'3c40d35bfd435d41de2c88cedbbf969665f8f2dc3298367e2c7c77f5de8421c0')
+				'd13e7a66fa2d69549375ea16af9cf71f037872d4521f3ba3eb078255c60d49b9')
 		}
 	}

@@ -30,7 +30,7 @@ class
 		stretchColumn = false, .enableMultiSelect = false, .saveQuery = false,
 		hideColumnsNotSaved? = false, .linked? = false, useExpandModel? = false,
 		option = false, defaultColumns = false, .asof = false, .useQuery = 'auto',
-		warningField = false)
+		warningField = false, sortOb = false)
 		{
 		.Created = Timestamp()
 		.baseQuery = .query = query
@@ -38,7 +38,7 @@ class
 		sf = VirtualListColModel.BuildSelectFields(
 			columns, excludeSelectFields, headerSelectPrompt)
 		.sortModel = VirtualListSortModel(query, sf, sortSaveName, .loadAll?,
-			disableCheckSortLimit?)
+			disableCheckSortLimit?, sortOb)
 		.InitSelection()
 
 		if where is false
@@ -186,6 +186,11 @@ class
 		.query = .sortModel.BuildQuery(.query)
 		.Selection.ClearShiftStart()
 		.resetQuery()
+		}
+
+	GetSortOb()
+		{
+		return .sortModel.GetSortOb()
 		}
 
 	CheckSortable(field)

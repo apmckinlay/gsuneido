@@ -5,10 +5,11 @@ Controller
 	Xstretch:	1
 	Ystretch:	1
 
-	New(.text = '', .allowReadOnly = false, style /*unused*/ = false)
+	New(.text = '', .allowReadOnly = false, .style = false)
 		{
 		.ctrl = .FindControl('WebBrowser')
 		.ctrl.Load(.convertValue(text))
+		.setStyle()
 		.Send('Data')
 		}
 
@@ -24,6 +25,12 @@ Controller
 	Set(.text)
 		{
 		.ctrl.Load(.convertValue(text))
+		.setStyle()
+		}
+	setStyle()
+		{
+		if .style isnt false
+			.ctrl.SetCssStyle(.style)
 		}
 	Get()
 		{

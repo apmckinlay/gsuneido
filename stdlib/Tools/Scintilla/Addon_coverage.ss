@@ -16,7 +16,7 @@ ScintillaAddon
 		.nonCovered.Marker = .MarkerIdx(level: .nonCoveredLevel)
 		.nonCovered.Indicator = .IndicatorIdx(level: .nonCoveredLevel)
 
-		SendMessage(.Hwnd, SCI.SETMARGINS, .marginId + 1, 0)
+		.SetMargins(.marginId + 1)
 		.SetMarginTypeN(.marginId, SC.MARGIN_RTEXT)
 
 		defaultFore = .GetSchemeColor('defaultFore')
@@ -45,9 +45,10 @@ ScintillaAddon
 		.MarkersChanged() // update overview bar
 		}
 
-	Modified(scn /*unused*/)
+	Modified(scn)
 		{
-		if not .SetMethodModifying?()
+		if not .SetMethodModifying?() and
+			not scn.GetDefault(#setValue?, false) // from Suneido.js
 			.reset()
 		}
 
@@ -251,7 +252,7 @@ ScintillaAddon
 			.MarkerAdd(line, style.Marker)
 			.SetIndicator(style.Indicator, coverStart, end - coverStart)
 			.MarginSetStyle(line, s[1] is 0 ? .uncoveredStyle : .coveredStyle)
-			SendMessageTextIn(.Hwnd, SCI.MARGINSETTEXT, line, txt)
+			.SetMarginText(line, txt)
 			pre = end
 			preLine = line
 			}

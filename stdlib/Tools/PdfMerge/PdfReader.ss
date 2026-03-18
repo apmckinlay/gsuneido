@@ -59,6 +59,8 @@ class
 					{
 					firstChunk? = false
 					imgChunk = imgChunk.LeftTrim(.newLine)
+					if chunkSize >= remaining
+						imgChunk = imgChunk.RightTrim(.newLine)
 					}
 				else if remaining <= chunkSize
 					imgChunk = imgChunk.RightTrim(.newLine)

@@ -32,7 +32,7 @@ class
 			nextObj = id
 			.locations[id] = .curPos
 			}
-		s = (nextObj is 0 ? '' : nextObj $ ' 0 obj ') $ content
+		s = (nextObj is 0 ? '' : nextObj $ ' 0 obj\n') $ content
 		.s $= s
 		.curPos += s.Size()
 		if .locations.Size() > 30000 or .curPos > 10.Mb() /*= pdf size limit */

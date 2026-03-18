@@ -57,8 +57,13 @@ CommandParent
 		{
 		where = .VirtualListView.SetFilter(filters)
 		recycled = .recycleExpands()
+
+		sortOb = false
 		if .model isnt false
+			{
+			sortOb = .model.GetSortOb()
 			.model.Destroy()
+			}
 
 		extraSetupRecord = .VirtualListView.BeforeRecord
 
@@ -80,7 +85,7 @@ CommandParent
 			enableMultiSelect: .enableMultiSelect, saveQuery: .saveQuery,
 			hideColumnsNotSaved?: .hideColumnsNotSaved?, linked?: .linked?,
 			:useExpandModel?, option: .option, defaultColumns: .defaultColumns, :asof,
-			useQuery: .useQuery, warningField: .warningField)
+			useQuery: .useQuery, warningField: .warningField, :sortOb)
 		.Send('RegisterLinkedBrowse', this, .Name)
 		if selectName isnt ''
 			.selectName = selectName

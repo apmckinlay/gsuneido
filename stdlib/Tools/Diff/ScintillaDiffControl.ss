@@ -6,6 +6,7 @@ ScintillaAddonsControl
 	removeLevel: 	17
 	modifyLevel: 	18
 	selectLevel:	19
+	ComponentName: #ScintillaDiff
 	New(@args)
 		{
 		super(@.processArgs(args))
@@ -99,7 +100,7 @@ ScintillaAddonsControl
 	AddMarginText(line, text)
 		{
 		.MarginSetStyle(line, SC.STYLE_LINENUMBER)
-		SendMessageTextIn(.Hwnd, SCI.MARGINSETTEXT, line, text)
+		.SetMarginText(line, text)
 		}
 
 	Addon_brace_match:,

@@ -18,31 +18,23 @@ Params
 	action: false
 	On_Generate(@report)
 		{
-		if false is .generateValid()
-			return
-
-		if false is .runNoOutput(report)
-			return
-		.updateResult(report)
+		if false isnt .generateValid()
+			.runNoOutput(report)
 		}
 
 	On_Generate_Result(@report)
 		{
-		if false is .generateValid()
-			return false
-
-		result = .RunWithNoOutput(report)
-		.unlockGenerate()
-		if result is false
-			return false
-		.updateResult(report)
-		return result
+		if false isnt .generateValid()
+			return .runNoOutput(report)
+		return false
 		}
 
-	runNoOutput(@report)
+	runNoOutput(report)
 		{
-		result = .RunWithNoOutput(report)
+		result = .RunWithNoOutput(@report)
 		.unlockGenerate()
+		if false isnt result
+			.updateResult(report)
 		return result
 		}
 

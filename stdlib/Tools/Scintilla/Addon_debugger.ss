@@ -2,6 +2,7 @@
 // requires On_ methods be forwarded to Scintilla as LibView does
 ScintillaAddon
 	{
+	SuJsSupport?: false // Realtime .MarkerGet is not supported
 	insertCodes: 	false
 	breakLevel: 	56
 	watchLevel: 	57

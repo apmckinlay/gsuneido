@@ -342,8 +342,14 @@ HtmlDivComponent
 	updateHistory(data, mime)
 		{
 		uploadHistory = Object()
+		sending = Object()
 		for file in data.listAttachments
+			{
+			if sending.Member?(data.historyLinks[file.name].tmpName)
+				continue
+			sending[data.historyLinks[file.name].tmpName] = true
 			.sendHistory(file.name, file.compressed, uploadHistory, data, mime)
+			}
 		}
 
 	sendHistory(fileName, compressed, uploadHistory, data, mime, retry? = false)

@@ -10,8 +10,6 @@ class
 			' (' $ w.Ctrl.LocationURL $ ')') })
 		expire = Date().Plus(minutes: timeout)
 		.wait(expire, id)
-
-		WebView2.CleanUp()
 		}
 
 	wait(expire, id)

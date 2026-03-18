@@ -90,6 +90,10 @@ Controller
 		{
 		.Window.Result(ID.OK)
 		}
+	Static_Escape()
+		{
+		.On_Cancel()
+		}
 	allowCancel: true
 	On_Cancel()
 		{

@@ -142,12 +142,11 @@ class
 			userselect_selects: selects))
 		}
 	defaultSel: #()
-	LoadSelects(ctrl, noUserDefaultSelects? = false, _accessGoTo? = false)
+	LoadSelects(fields, noUserDefaultSelects? = false, _accessGoTo? = false)
 		{
-		if not TableExists?('userselects') or .name is '' or
-			.name is VirtualListColModel.TmpSelectName
-			return false
-		sf = ctrl.GetSelectFields()
+		if .skipLoad()
+			return
+
 		noDefault? = noUserDefaultSelects? or accessGoTo?
 		// in case old bad selects, users can still get into screens and we are notified
 		try
@@ -162,13 +161,18 @@ class
 				.select_vals = Object()
 			.select_vals.Append(combinedSel)
 			// clean up invalid ones
-			.select_vals.RemoveIf({ not sf.Fields.Has?(it.condition_field) })
+			.select_vals.RemoveIf({ not fields.Has?(it.condition_field) })
 			.removeDuplicateEmptyDefaults()
 			.select_vals = .select_vals.UniqueValues()[.. .maxSelectRecords()]
 			}
 		catch (err)
 			SuneidoLog('ERROR: (CAUGHT) Cannot load Selects: ' $ err,
 				caughtMsg: 'bad select data, needs attention')
+		}
+	skipLoad()
+		{
+		return not TableExists?('userselects') or .name is '' or
+			.name is VirtualListColModel.TmpSelectName
 		}
 	maxSelectRecords()
 		{

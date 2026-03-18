@@ -152,10 +152,16 @@ Component
 			.lastScrollTop = .El.scrollTop
 		}
 
-	SetReadOnly(readOnly)
+	readOnly: false
+	SetReadOnly(.readOnly)
 		{
 		.El.SetStyle('background-color',
 			ToCssColor(readOnly ? CLR.ButtonFace : CLR.WHITE))
+		}
+
+	GetReadOnly()
+		{
+		return .readOnly
 		}
 
 	Recalc()

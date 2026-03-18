@@ -33,7 +33,7 @@ TwoListDlgControl
 			return
 
 		newList = newList.Split(.delimiter)
-		if newList is cur_cols.list
+		if newList is cur_cols.list or listCtrl.Destroyed?()
 			return
 
 		.handleReArrangedColumns(listCtrl, available_cols, newList)

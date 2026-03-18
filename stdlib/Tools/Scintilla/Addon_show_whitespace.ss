@@ -1,6 +1,7 @@
 // Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.
 ScintillaAddonIDE
 	{
+	SuJsSupport?: false
 	Setting: ide_show_whitespace
 	Init()
 		{

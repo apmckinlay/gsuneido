@@ -12,6 +12,8 @@ Controller
 		.keepAlive()
 		if 0 isnt cmdHwnd = FindWindow(NULL, 'Administrator:  Start Suneido Server')
 			ShowWindow(cmdHwnd, SW.HIDE)
+		if 0 isnt cmdHwnd = FindWindow(NULL, 'Start Suneido Server')
+			ShowWindow(cmdHwnd, SW.HIDE)
 		Suneido.DevServerLog = .ServerLog
 		ServerSuneido.Set('DevHwnd', .WindowHwnd())
 		.startTimer()

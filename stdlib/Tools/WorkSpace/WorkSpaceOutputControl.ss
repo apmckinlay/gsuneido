@@ -3,6 +3,7 @@ ScintillaIDEControl
 	{
 	Addon_show_references:,
 	Addon_inspect:,
+	Addon_suneido_log:,
 	Addon_suneido_style_lines:,
 	Addon_zoom: [
 		zoom: false,

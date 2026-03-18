@@ -146,7 +146,12 @@ Component
 	InsertAdjacentHTML(id, position, text)
 		{
 		if .contentReady? is true
-			.El.contentDocument.GetElementById(id).InsertAdjacentHTML(position, text)
+			{
+			target = id is false
+				? .El.contentDocument.body
+				: .El.contentDocument.GetElementById(id)
+			target.InsertAdjacentHTML(position, text)
+			}
 		else
 			.pendingInsert.Add(Object(id, position, text))
 		}

@@ -248,7 +248,7 @@ window.downloadFile = function(filename, content) {
 				else if xhr.status is HttpResponseCodes.BadRequest
 					.updateMsg(msgEl, xhr.response, color: 'red', file: file.name)
 				// 0: cors preflight request failed, like permission or credential expired
-				else if xhr.status is 0
+				else if xhr.status is 0 or xhr.status is 412/*= Precondition Failed*/
 					.updateMsg(msgEl, 'upload failed', color: 'red', file: file.name)
 
 				if SuUI.GetCurrentWindow().GetFileCount() is .fileCount

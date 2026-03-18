@@ -1397,7 +1397,7 @@ CommandParent
 		.selectMgr = AccessSelectMgr(args.GetDefault('select', #()),
 			name: selectName)
 		if .select_button isnt false
-			.selectMgr.LoadSelects(this)
+			.selectMgr.LoadSelects(.GetSelectFields().Fields)
 		}
 	Getter_Select_vals()
 		{

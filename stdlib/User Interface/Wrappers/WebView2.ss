@@ -366,16 +366,26 @@ el.scrollIntoView(` $ Display(alignToTop) $ `)`
 	CleanUp()
 		{
 		toDelete = Date().NoTime().Minus(days: 3)
+		failedToDelete = totalToDelete = 0
+		lastFailure = ''
 		Dir(Paths.Combine(GetTempPath(), .folderPrefix $ '*'))
 			{
 			date = Date(it.RemovePrefix(.folderPrefix).BeforeFirst('_'),
 				format: 'yyyyMMdd')
 			if Date?(date) and date <= toDelete
 				{
+				totalToDelete++
 				if true isnt result = DeleteDir(Paths.Combine(GetTempPath(), it))
-					SuneidoLog('INFO: WebView2.CleanUp - ' $ result)
+					{
+					failedToDelete++
+					lastFailure = result
+					}
 				}
 			}
+		if failedToDelete > 100 /*=max*/
+			SuneidoLog('WARNING: WebView2.CleanUp - Failed to delete ' $
+				failedToDelete $ ' out of ' $ totalToDelete $ ' temp folders',
+				params: [:lastFailure])
 		}
 
 	browserKey: `SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\ClientState\`

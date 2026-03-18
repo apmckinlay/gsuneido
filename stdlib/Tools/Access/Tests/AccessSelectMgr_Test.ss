@@ -126,10 +126,7 @@ Test
 			mgr.SetDefaultSel(defaultSelects)
 
 		sf = SelectFields(#(city, state_prov, number_withprompt))
-		ctrl = FakeObject(GetSelectFields: sf)
-		option = .nextName()
-		ctrl.Option = option
-		mgr.LoadSelects(ctrl)
+		mgr.LoadSelects(sf.Fields)
 
 		if false isnt addSelects
 			{
@@ -142,11 +139,6 @@ Test
 		transaction = MockObject(calls)
 		mgr.SetTransaction(transaction)
 		return mgr
-		}
-	// can't inherit from BizTests
-	nextName()
-		{
-		return 'biztests_' $ Display(Timestamp())[1..].Tr('.', '_')
 		}
 	selectVal(check = false)
 		{
@@ -245,16 +237,9 @@ Test
 		{
 		.WatchTable('userselects')
 		selName = .TempName()
-		ctrl = class
-			{
-			Option: 'test'
-			GetSelectFields()
-				{
-				return SelectFields(#(city, country, date))
-				}
-			}
+		sf = SelectFields(#(city, country, date))
 		mgr = AccessSelectMgr(#((city, '=', 'Saskatoon')), name: selName)
-		mgr.LoadSelects(ctrl)
+		mgr.LoadSelects(sf.Fields)
 		Assert(mgr.Select_vals()
 			is: #([condition_field: 'city', check:,
 				city: #(operation: 'equals', value: 'Saskatoon', value2: '')]))
@@ -267,7 +252,7 @@ Test
 			])
 
 		mgr = AccessSelectMgr(#((city, '=', 'Saskatoon')), name: selName)
-		mgr.LoadSelects(ctrl)
+		mgr.LoadSelects(sf.Fields)
 		Assert(mgr.Select_vals()
 			is: #([condition_field: 'city', check:,
 				city: #(operation: 'equals', value: 'Saskatoon', value2: '')],
@@ -283,7 +268,7 @@ Test
 					invalid: #(operation: 'not empty', value: '', value2: '')])
 			])
 		mgr = AccessSelectMgr(#((city, '=', 'Saskatoon')), name: selName)
-		mgr.LoadSelects(ctrl)
+		mgr.LoadSelects(sf.Fields)
 		Assert(mgr.Select_vals()
 			is: #([condition_field: 'date', check:,
 				date: #(operation: 'equals', value: #20190101, value2: '')],
@@ -301,7 +286,7 @@ Test
 					country: #(operation: 'not empty', value: '', value2: '')])
 			])
 		mgr = AccessSelectMgr(#((city), (date)), name: selName)
-		mgr.LoadSelects(ctrl)
+		mgr.LoadSelects(sf.Fields)
 		Assert(mgr.Select_vals()
 			is: #(
 				[condition_field: 'date', check: false,
@@ -322,7 +307,7 @@ Test
 					country: #(operation: 'not empty', value: '', value2: '')])
 			])
 		mgr = AccessSelectMgr(#((city), (date)), name: selName)
-		mgr.LoadSelects(ctrl)
+		mgr.LoadSelects(sf.Fields)
 		Assert(mgr.Select_vals()
 			is: #(
 				[condition_field: 'city', check: false,
@@ -352,7 +337,7 @@ Test
 					city: #(operation: 'contains', value: 'e', value2: '')])
 			])
 		mgr = cl(#((city), (date)), name: selName)
-		mgr.LoadSelects(ctrl)
+		mgr.LoadSelects(sf.Fields)
 		Assert(mgr.Select_vals()
 			is: #(
 				[condition_field: 'date', check: false,
@@ -377,7 +362,7 @@ Test
 					invalid: #(operation: 'not empty', value: '', value2: '')])
 			])
 		mgr = cl(#(), name: selName)
-		mgr.LoadSelects(ctrl)
+		mgr.LoadSelects(sf.Fields)
 		Assert(mgr.Select_vals()
 			is: #(
 				[condition_field: 'date', check:,

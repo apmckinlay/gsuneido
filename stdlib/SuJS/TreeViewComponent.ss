@@ -159,14 +159,11 @@ Component
 	labelFactory(id)
 		{
 		return { |event/*unused*/|
-			if id isnt .selected
-				{
-				oldSelect = .selected
-				.SelectItem(id)
-				that = this
-				.RunWhenNotFrozen({
-					that.EventWithOverlay('TVN_SELCHANGED', oldSelect, id) })
-				}
+			oldSelect = .selected
+			.SelectItem(id)
+			that = this
+			.RunWhenNotFrozen({
+				that.EventWithOverlay('TVN_SELCHANGED', oldSelect, id) })
 			}
 		}
 
@@ -320,6 +317,7 @@ Component
 		if '' isnt .getSelectedTextOrAll()
 			.replaceSel('')
 		}
+
 	On_Cut()
 		{
 		if .edit is false

@@ -3,8 +3,13 @@ Controller
 	{
 	Title: 'Warning'
 
-	CallClass(msg = false, hwnd = 0, log_rec = #())
+	CallClass(msg = false, hwnd = 0, log_rec = #(), logOnly? = false)
 		{
+		if logOnly?
+			{
+			.output_log(:log_rec, setOutput?: false)
+			return
+			}
 		if msg is false
 			{
 			msg = "An unexpected problem has occurred."
@@ -15,12 +20,12 @@ Controller
 				return
 				}
 			}
+		.output_log(:log_rec, setOutput?: false)
 		Alert(msg, title: "Warning", :hwnd, flags: MB.ICONWARNING)
 		}
-	New(msg = '', log_rec = #())
+	New(msg = '', .log_rec = #())
 		{
 		super(.layout(msg))
-		.sulog_timestamp = log_rec.GetDefault('sulog_timestamp', false)
 		}
 	layout(msg)
 		{
@@ -48,18 +53,28 @@ Controller
 			}
 
 		// append user's message to the error log
-		.update_log('DESC: ' $ message)
+		.output_log(message: .descPrefix $ message, log_rec: .log_rec)
 		.Window.Result(true)
 		}
 
-	update_log(message = '')
+	outputlog?: true
+	descPrefix: 'DESC: '
+	output_log(message = '', log_rec = #(), setOutput? = true)
 		{
-		if .sulog_timestamp is false or message is ""
+		if log_rec.Empty?()
 			return
-		QueryApply1('suneidolog', sulog_timestamp: .sulog_timestamp)
-			{|x|
-			x.sulog_message = x.sulog_message $ ', ' $ message
-			x.Update()
-			}
+		message = message is .descPrefix ? '' : message
+		SuneidoLog(log_rec.sulog_message $ Opt(', ', message),
+			calls: log_rec.calls)
+		if setOutput?
+			.outputlog? = false
+		}
+
+	Destroy()
+		{
+		if .outputlog?
+			.output_log(message: Opt(.descPrefix, .Vert.message.Get().Trim()),
+				log_rec: .log_rec)
+		super.Destroy()
 		}
 	}

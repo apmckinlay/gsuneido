@@ -14,6 +14,7 @@ SuJsTester
 
 	Setup() // called by RunContinuousTest on server
 		{
+		WebView2.CleanUp()
 		// ensure the log file is fresh
 		PutFile(Rlog.CurrentLog(.LogFileName), '')
 		try

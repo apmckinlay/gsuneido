@@ -5,9 +5,8 @@ in the form of an inheritance hierarchy tree.
 
 -	displays classes from all the libraries currently in use.
 -	collects its data on startup -
-	        it won't reflect changes made while it's open.
+	it won't reflect changes made while it's open.
 -	currently display only - editing is not supported.
-
 
 The right hand pane shows the source code of the selected class
 using a Scintilla control.

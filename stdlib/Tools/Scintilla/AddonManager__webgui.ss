@@ -8,9 +8,7 @@ _AddonManager
 			if not m.Prefix?('Addon_')
 				continue
 			addon = Global(m)
-			// temporarily disable unsupported Scintilla addons
-			if addon.Base?(ScintillaAddon) and
-				not ScintillaAddonsControl.SupportedAddon?(m)
+			if addon.GetDefault(#SuJsSupport?, true) is false
 				continue
 			.construct(m, ob[m])
 			}

@@ -209,13 +209,12 @@ ScintillaControl
 		}
 	Recv(@args) // used by redirected accelerator keys
 		{
-		if .addons is false
-			return false
-		if args[0].Prefix?('On_')
+		if .addons isnt false and args[0].Prefix?('On_')
 			{
 			args[0] = args[0].Replace("^On_Context_", "On_")
 			return .addons.Send(@args)
 			}
+		return false
 		}
 
 	KEYDOWN(wParam)
@@ -261,6 +260,13 @@ ScintillaControl
 		.UPDATEUI()
 		return // no return value
 		}
+
+	SetReadOnlyLogging(name)
+		{
+		try name $= ' - ' $ .Controller.Name
+		super.SetReadOnlyLogging(name, limit: 22)
+		}
+
 	CHARADDED(lParam)
 		{
 		scn = SCNotification(lParam)

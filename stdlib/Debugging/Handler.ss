@@ -14,9 +14,19 @@ class
 	programmerError(err, hwnd, calls)
 		{
 		if .interrupt?(err)
-			Print(err)
+			.print(err)
 		else
-			Debugger.Window(hwnd, err, calls)
+			.debuggerWindow(hwnd, err, calls)
+		}
+
+	print(err)
+		{
+		Print(err)
+		}
+
+	debuggerWindow(hwnd, err, calls)
+		{
+		Debugger.Window(hwnd, err, calls)
 		}
 
 	interrupt?(err)
@@ -35,18 +45,20 @@ class
 			: .interrupt?(err)
 				? ''
 				: 'ERROR: '
-		log_rec = SuneidoLog(logPrefix $ err, calls)
+		log_rec = Object(sulog_message: logPrefix $ err, :calls)
 		err = err.RemovePrefix(.showPrefix).RemoveSuffix(.serverSuffix)
-		if not .interrupt?(err)
-			.alertError(show?, err, log_rec, hwnd)
+		.alertError(show?, err, log_rec, hwnd, logOnly?: .interrupt?(err))
 		}
 
-	alertError(show?, err, log_rec, hwnd)
+	alertError(show?, err, log_rec, hwnd, logOnly? = false)
 		{
-		if show?
-			log_rec = #()
-		else
+		if not show?
 			err = false
-		AlertError(err, :hwnd, :log_rec)
+		.alert(err, :hwnd, :log_rec, :logOnly?)
+		}
+
+	alert(err, hwnd, log_rec, logOnly?)
+		{
+		AlertError(err, :hwnd, :log_rec, :logOnly?)
 		}
 	}

@@ -288,7 +288,7 @@ class
 				: .getSelectSaveName()
 		.selectMgr = AccessSelectMgr(ctrl.GetDefaultSelect(), :name)
 		noUserDefaultSelects? = not .enableUserDefaultSelect
-		.selectMgr.LoadSelects(ctrl, :noUserDefaultSelects?)
+		.selectMgr.LoadSelects(ctrl.GetSelectFields().Fields, :noUserDefaultSelects?)
 		}
 
 	UserDefaultSelectEnabled?()

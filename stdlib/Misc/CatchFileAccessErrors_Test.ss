@@ -50,6 +50,15 @@ Test
 		Assert(msg is: "Can not read file: " $ name $ '\n\n' $
 			'An unexpected network error occurred')
 
+		error = `FileExists?: CreateFile E:\AxonETAAttachments\202403\test.pdf: ` $
+			`The filename, directory name, or volume label syntax is incorrect.`
+		msg = CatchFileAccessErrors(name)
+			{
+			throw error
+			}
+		Assert(msg is: "Can not verify location: " $ name $ '\n\n' $
+			'The filename, directory name, or volume label syntax is incorrect.')
+
 		Assert(
 			{ CatchFileAccessErrors(name)
 				{

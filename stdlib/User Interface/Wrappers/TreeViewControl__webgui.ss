@@ -66,8 +66,11 @@ Control
 		.Send('TreeView_ItemClicked', newSelect)
 
 		Assert(oldSelect is: .selected)
-		.selected = newSelect
-		.Tree_SelChanged(oldSelect, newSelect)
+		if oldSelect isnt newSelect
+			{
+			.selected = newSelect
+			.Tree_SelChanged(oldSelect, newSelect)
+			}
 		}
 
 	Tree_SelChanged(olditem, newitem)

@@ -405,7 +405,8 @@ class
 	FocusFirst()
 		{
 		first = false
-		list = .El.QuerySelectorAll("input, .su-code-wrapper")
+		list = .El.QuerySelectorAll(
+			"input, .su-code-wrapper, .su-list-container, su-vlist-container")
 		for i in .. list.length
 			{
 			el = list.Item(i)

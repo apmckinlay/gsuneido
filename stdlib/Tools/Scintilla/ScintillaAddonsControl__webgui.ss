@@ -36,7 +36,7 @@ ScintillaControl
 
 	setupAddons(args)
 		{
-		.addons = AddonManager(this, args.Copy().DeleteIf({ not .SupportedAddon?(it) }))
+		.addons = AddonManager(this, args)
 		.styleManager.DefineStyles(.addons)
 		.addons.Send(#Init)
 		if args.GetDefault(#readonly, false) is true and
@@ -47,49 +47,6 @@ ScintillaControl
 			.longIdle = IdleTimer(.LONG_IDLE, { .addons.Send(#LongIdle) }).Reset()
 			.changeIdle = IdleTimer(.CHANGE_IDLE, { .addons.Send(#IdleAfterChange) })
 			}
-		}
-
-	supportedAddons: #(Addon_speller, Addon_url, Addon_zoom,
-		Addon_highlight_cursor_line,
-		Addon_multiple_selection,
-		Addon_suneido_style,
-		Addon_status,
-		Addon_auto_complete_code,
-		Addon_auto_complete_queries,
-		Addon_go_to_definition,
-		Addon_comment,
-		Addon_overview_bar,
-		Addon_show_modified_lines,
-		Addon_check_code,
-		Addon_libview_todo,
-		Addon_svc,
-		Addon_highlight_occurrences,
-		Addon_move_lines,
-		Addon_show_line_numbers,
-		Addon_class_outline,
-		Addon_auto_delimit,
-		Addon_star_rating,
-		Addon_auto_indent,
-		Addon_show_margin,
-		Addon_inspect,
-		Addon_brace_match,
-		Addon_suneido_style_lines,
-		Addon_md,
-		Addon_md_edit,
-		Addon_html,
-		Addon_html_display,
-		Addon_html_edit,
-		Addon_unwrap,
-		Addon_highlight_customFields,
-		Addon_highlight_warnings,
-		Addon_editor_status,
-		Addon_detab,
-		Addon_calltips,
-		Addon_overwrite_lines,
-		)
-	SupportedAddon?(addon)
-		{
-		return .supportedAddons.Has?(addon)
 		}
 
 	setupContextMenu()
@@ -261,13 +218,12 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 
 	Recv(@args) // used by redirected accelerator keys
 		{
-		if .addons is false
-			return false
-		if args[0].Prefix?('On_')
+		if .addons isnt false and args[0].Prefix?('On_')
 			{
 			args[0] = args[0].Replace("^On_Context_", "On_")
 			return .addons.Send(@args)
 			}
+		return false
 		}
 
 	MakeSummary()
@@ -277,6 +233,12 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 		if text.Size() > summary.Size()
 			summary $= '...'
 		return summary
+		}
+
+	SetReadOnlyLogging(name)
+		{
+		try name $= ' - ' $ .Controller.Name
+		super.SetReadOnlyLogging(name)
 		}
 
 	SendToAddons(@args)

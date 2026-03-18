@@ -172,6 +172,9 @@ WndProc
 		.Send("EN_CHANGE")
 		return 0
 		}
+
+	logging_lastModify: false
+	logging_focusedModify?: false
 	SCN_MODIFIED(lParam)
 		{
 		modificationType = SCNotification(lParam).modificationType
@@ -182,6 +185,8 @@ WndProc
 		// by default and therefore the control does not set its dirty state.
 		// This is manually setting the focus to this control to handle dirty
 		userModified = SC.STARTACTION | SC.PERFORMED_USER | SC.MOD_INSERTTEXT
+		.logging_lastModify = modificationType
+		.logging_focusedModify? = .HasFocus?()
 		if not .setMethodModifying? and .GetReadOnly() is false and not .HasFocus?() and
 			(modificationType & userModified) is userModified and .Dirty?()
 			.Send("NewValue", .Get())
@@ -559,22 +564,38 @@ WndProc
 		if .readonly
 			return
 		if readonly and .Dirty?()
-			{
-// Extra logging for suggestion 25689
-calls = GetCallStack(limit: 20)
-RemoveAssertsFromCallStack(calls)
-// avoiding broadcast/send loop
-calls = FormatCallStack(calls, levels: 20).
-	Replace('stdlib:Container.Broadcast:63', '').
-	Replace('stdlib:Container.SetReadOnly:31', '').Lines().
-	RemoveIf({ it.Blank?() }).Join('\n')
-			SuneidoLog('ERROR: ScintillaControl SetReadonly(true) when dirty', :calls
-				params: Object(dirty: .dirty, modify: .GetModify(),
-					alreadyReadOnly: .GetReadOnly()))
-			}
+			.SetReadOnlyLogging(.Name)
 
 		return .SETREADONLY(readonly ? 1 : 0)
 		}
+
+	SetReadOnlyLogging(name. limit = 21) // Extra logging for suggestion 25689, and 37312
+		{
+		try
+			{
+			calls = GetCallStack(:limit)
+			RemoveAssertsFromCallStack(calls)
+			// Remove redundant / unnecessary broadcast/send loop
+			calls = FormatCallStack(calls, levels: limit).Lines().
+				RemoveIf(
+					{
+					it.Prefix?('stdlib:Container.Broadcast:') or
+					it.Prefix?('stdlib:Container.SetReadOnly:')
+					}).Join('\n')
+			SuneidoLog('ERROR: ScintillaControl SetReadonly(true) when dirty', :calls,
+				params: Object(
+					:name,
+					dirty: .dirty,
+					modify: .GetModify(),
+					alreadyReadOnly: .GetReadOnly()
+					lastModify: .logging_lastModify,
+					modifyFocused?: .logging_focusedModify?))
+			}
+		catch (error)
+			SuneidoLog('ERROR: ScintillaControl.SetReadOnlyLogging encountered an error',
+				calls:, params: Object(:error, :name))
+		}
+
 	SetFirstVisibleLine(idx)
 		{
 		.LineScroll(0, idx - .GetFirstVisibleLine())
@@ -785,6 +806,15 @@ calls = FormatCallStack(calls, levels: 20).
 	MarkersChanged()
 		{
 		.Send(#Scintilla_MarkersChanged)
+		}
+
+	SetMarginText(line, text)
+		{
+		SendMessageTextIn(.Hwnd, SCI.MARGINSETTEXT, line, text)
+		}
+	SetMargins(margins)
+		{
+		SendMessage(.Hwnd, SCI.SETMARGINS, margins, 0)
 		}
 
 	GETDLGCODE(wParam, lParam)

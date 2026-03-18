@@ -2,7 +2,7 @@
 // WARNING: this is the old function, anything new should use GetNextNum instead
 class
 	{
-	CallClass(table, field, log = false)
+	CallClass(table, field)
 		{
 		nextnum = false
 		RetryTransaction()
@@ -11,8 +11,6 @@ class
 			nextnum = x[field]++
 			x.Update()
 			}
-		if log
-			SuneidoLog("GetNextNumber from " $ table $ ": " $ String(nextnum))
 		return nextnum
 		}
 

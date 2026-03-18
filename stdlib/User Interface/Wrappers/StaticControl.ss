@@ -199,8 +199,10 @@ EditControl
 	// SetBgndColor already handled by EditControl
 	// SetBgndBrush non usage found
 
-	KEYDOWN()
+	KEYDOWN(wParam)
 		{
+		if wParam is VK.ESCAPE
+			.Send('Static_Escape')
 		return 0
 		}
 

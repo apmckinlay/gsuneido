@@ -57,24 +57,36 @@ Control
 		if .readonly
 			return
 		if readonly and .Dirty?()
-			{
-// Extra logging for suggestion 36802
-calls = GetCallStack(limit: 99)
-RemoveAssertsFromCallStack(calls)
-// avoiding broadcast/send loop
-calls = FormatCallStack(calls, levels: 99).
-	Replace('(?q)Container.Broadcast /* stdlib__webgui method */', '').
-	Replace('(?q)Container.SetReadOnly /* stdlib__webgui method */', '').Lines().
-	RemoveIf({ it.Blank?() }).Join('\n')
-			SuneidoLog('ERROR: ScintillaControl SetReadonly(true) when dirty (36802)',
-				:calls
-				params: Object(dirty: .dirty, modify: .GetModify(),
-					alreadyReadOnly: .GetReadOnly(), name: .Name, uniqueId: .UniqueId).
-					Merge(.lastEvents))
-			SuRenderBackend().DumpStatus('ScintillaControl SetReadonly(true) when dirty')
-			}
+			.SetReadOnlyLogging(.Name)
 		return .Act(#SetReadOnly, .setReadOnly = readonly)
 		}
+
+	SetReadOnlyLogging(name) // Extra logging for suggestion 25689, and 37312
+		{
+		try
+			{
+			calls = GetCallStack(limit: 99)
+			RemoveAssertsFromCallStack(calls)
+			// Remove redundant / unnecessary broadcast/send loop
+			calls = FormatCallStack(calls, levels: 99).Lines().
+				RemoveIf(
+					{
+					it.Has?('Container.Broadcast ') or it.Has?('Container.SetReadOnly ')
+					}).Join('\n')
+			SuneidoLog('ERROR: ScintillaControl SetReadonly(true) when dirty', :calls,
+				params: Object(
+					:name,
+					dirty: .dirty,
+					modify: .GetModify(),
+					alreadyReadOnly: .GetReadOnly()
+					lastModify: .logging_lastModify,
+					modifyFocused?: .logging_focusedModify?))
+			}
+		catch (error)
+			SuneidoLog('ERROR: ScintillaControl.SetReadOnlyLogging encountered an error',
+				calls:, params: Object(:error, :name))
+		}
+
 	GETREADONLY()
 		{
 		return .GetReadOnly() ? 1 : 0
@@ -215,14 +227,26 @@ calls = FormatCallStack(calls, levels: 99).
 		return 0
 		}
 
-	SCN_MODIFIED(unused)
+	logging_lastModify: false
+	logging_focusedModify?: false
+	SCN_MODIFIED(lParam)
 		{
+		try
+			.logging_lastModify = SCNotification(lParam).modificationType
+		catch(error)
+			.logging_lastModify = 'Failed to get modification type: ' $ error
+		.logging_focusedModify? = .HasFocus?()
 .lastEvents['SCN_MODIFIED'] = Object(
 	eventId: SuRenderBackend().SuRenderBackend_eventId,
 	t: Timestamp(), readonly: .GetReadOnly(), focus: .HasFocus?(), dirty?: .Dirty?())
 		// .Paste may change the value without having the focus in the field
 		if .GetReadOnly() is false and not .HasFocus?() and .Dirty?()
 			.Send("NewValue", .Get())
+		}
+
+	SetMethodModifying?()
+		{
+		return false
 		}
 
 	LBUTTONUP(pos)
@@ -344,8 +368,9 @@ calls = FormatCallStack(calls, levels: 99).
 		{
 		if noFocus? is false
 			.SetFocus()
+		.SetFirstVisibleLine(line, centerInScreen?:)
 		pos = .PositionFromLine(line)
-		.SetVisibleSelect(pos, 0)
+		.SetSelect(pos, 0)
 		}
 
 	GetLine(line = false)
@@ -736,6 +761,8 @@ calls = FormatCallStack(calls, levels: 99).
 		.closeAutoc()
 		.closeCallTip()
 		}
+
+	SetMargins(@unused) { }
 
 	Default(@args)
 		{

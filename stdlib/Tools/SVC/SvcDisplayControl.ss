@@ -65,7 +65,7 @@ PassthruController
 
 	displayImage()
 		{
-		localStyle = .style('suneido:/' $ .table $ .name)
+		localStyle = ImageViewer.Style('suneido:/' $ .table $ .name)
 
 		master = .model.GetMasterRec(.table, .name)
 		if .type is '-' or master is false
@@ -76,21 +76,12 @@ PassthruController
 
 		// keep the extension for the file type
 		url = .toRemove = InMemory.Add(master.text) $ '.' $ .name.AfterLast('.')
-		masterStyle = .style(url)
+		masterStyle = ImageViewer.Style(url)
 		if .type is '+'
 			.bottom.Insert(0, Object('Mshtml' style: masterStyle))
 		else
 			.bottom.Insert(0,
 				Object('DiffImage' '', '', style1: localStyle, style2: masterStyle))
-		}
-	style(url)
-		{
-		return 'body {
-			background-color: #eee;
-			background-image: url(' $ url.Replace(' ', '%20') $ ');
-			background-size: contain;
-			background-repeat: no-repeat;
-			}'
 		}
 
 	displayMetaImage()

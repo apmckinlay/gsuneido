@@ -42,6 +42,8 @@ class
 		params.X_Amz_Expires = '3600'
 		params.X_Amz_SignedHeaders = 'host'
 		params.X_Amz_Security_Token = .awsClass.SecurityToken()
+		if .method is 'PUT'
+			params['If-None-Match'] = "*"
 		filename = Paths.Basename(.path)
 		params.response_content_disposition = (download? ? 'attachment' : 'inline') $
 			`; filename="` $ filename $ `"`

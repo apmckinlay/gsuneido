@@ -1,6 +1,7 @@
 // Copyright (C) 2023 Suneido Software Corp. All rights reserved worldwide.
 ScintillaAddon
 	{
+	SuJsSupport?: false
 	ContextMenu()
 		{
 		return #("Reset Zoom")
