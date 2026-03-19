@@ -67,7 +67,7 @@ func (agent *Agent) logMessage(role, content string) {
 	default:
 		marker = "## {{ " + role + " }}\n\n"
 	}
-	agent.logWrite(marker + content + "\n\n")
+	agent.logWrite(marker + strings.Trim(content, "\r\n") + "\n\n")
 }
 
 func (agent *Agent) logThink(content string) {
@@ -75,7 +75,7 @@ func (agent *Agent) logThink(content string) {
 	if agent.logFile == nil {
 		return
 	}
-	agent.logWrite("## {{ Think }}\n\n" + content + "\n\n")
+	agent.logWrite("## {{ Think }}\n\n" + strings.Trim(content, "\r\n") + "\n\n")
 }
 
 func (agent *Agent) flushThink() {
@@ -203,8 +203,15 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 				agent.history = append(agent.history, msg)
 				if outfn != nil && len(msg.ToolCalls) > 0 {
 					for _, tc := range msg.ToolCalls {
-						name := strings.TrimPrefix(tc.Function.Name, "suneido_")
-						outfn("tool", name+" "+tc.Function.Arguments+"\n", nil)
+						summary, err := agent.toolClient.FormatToolCallForDisplay(tc)
+						if err != nil {
+							name := strings.TrimPrefix(tc.Function.Name, "suneido_")
+							summary = name + " " + tc.Function.Arguments + "\n"
+						}
+						if !strings.HasSuffix(summary, "\n\n") {
+							summary = strings.TrimRight(summary, "\r\n") + "\n\n"
+						}
+						outfn("tool", summary, nil)
 					}
 				}
 			} else {

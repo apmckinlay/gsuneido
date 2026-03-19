@@ -36,17 +36,17 @@ func TestSearchTool(t *testing.T) {
 	tran.Action(th, "insert { name: 'SearchTarget', text: 'function(){return \"hello\"}', group: -1, parent: 4, num: 5 } into app")
 	tran.Complete()
 
-	res, err := searchCode("std.*", "Foo", "return 1", false, false)
+	res, err := searchCode("stdlib", "Foo", "return 1", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{{Library: "stdlib", Name: "Foo", Path: "", Lines: []string{"0001: function(){return 1}"}}})
 
-	res, err = searchCode("STDLIB", "FOO", "RETURN 1", false, false)
-	assert.That(err == nil)
-	assert.This(res.Matches).Is([]codeMatch{{Library: "stdlib", Name: "Foo", Path: "", Lines: []string{"0001: function(){return 1}"}}})
+	_, err = searchCode("STDLIB", "FOO", "RETURN 1", false, false)
+	assert.That(err != nil)
+	assert.That(strings.Contains(err.Error(), "library not found"))
 
-	res, err = searchCode("STDLIB", "FOO", "RETURN 1", true, false)
-	assert.That(err == nil)
-	assert.This(res.Matches).Is([]codeMatch{})
+	_, err = searchCode("STDLIB", "FOO", "RETURN 1", true, false)
+	assert.That(err != nil)
+	assert.That(strings.Contains(err.Error(), "library not found"))
 
 	res, err = searchCode("app", "Foo.*", "return 3", false, false)
 	assert.That(err == nil)
@@ -84,8 +84,4 @@ func TestSearchQuery_InvalidRegex(t *testing.T) {
 	assert.That(strings.Contains(err.Error(), "invalid name regex"))
 }
 
-func TestFilterLibraries_InvalidRegex(t *testing.T) {
-	assert := assert.T(t)
-	_, err := filterLibraries([]string{"stdlib"}, "[", false)
-	assert.That(err != nil)
-}
+

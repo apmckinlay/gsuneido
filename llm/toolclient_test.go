@@ -6,6 +6,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -17,6 +18,9 @@ func TestToolClientGetTools(t *testing.T) {
 	_ = addTool(toolSpec{
 		name:        "test_tool",
 		description: "A test tool",
+		summarize: func(args map[string]any) string {
+			return mdSummary("Test Tool")
+		},
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return "test result", nil
 		},
@@ -40,6 +44,9 @@ func TestToolClientCallTool(t *testing.T) {
 		params: []stringParam{
 			{name: "message", kind: paramString},
 		},
+		summarize: func(args map[string]any) string {
+			return mdSummary("Echo", argReqStr(args, "message"))
+		},
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			s, _ := args["message"].(string)
 			return s, nil
@@ -61,6 +68,9 @@ func TestToolClientCallToolFromLLM(t *testing.T) {
 	_ = addTool(toolSpec{
 		name:        "add",
 		description: "Add two numbers",
+		summarize: func(args map[string]any) string {
+			return mdSummary("Add", mdAny(args["a"]), mdAny(args["b"]))
+		},
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			a := int(args["a"].(float64))
 			b := int(args["b"].(float64))
@@ -91,6 +101,9 @@ func TestToolClientCallToolStructuredResult(t *testing.T) {
 	defer resetToolSpecsForTests()
 	_ = addTool(toolSpec{
 		name: "obj",
+		summarize: func(args map[string]any) string {
+			return mdSummary("Obj")
+		},
 		handler: func(ctx context.Context, args map[string]any) (any, error) {
 			return map[string]any{"ok": true}, nil
 		},
@@ -106,6 +119,73 @@ func TestToolClientCallToolStructuredResult(t *testing.T) {
 	err = json.Unmarshal([]byte(result), &got)
 	assert.T(t).This(err, nil)
 	assert.T(t).This(got["ok"], true)
+}
+
+func TestToolClientFormatToolCallForDisplay(t *testing.T) {
+	resetToolSpecsForTests()
+	defer resetToolSpecsForTests()
+	_ = addTool(toolSpec{
+		name: "suneido_demo",
+		summarize: func(args map[string]any) string {
+			return mdSummary("Demo", "X: "+mdAny(args["x"]))
+		},
+		handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return nil, nil
+		},
+	})
+
+	client, err := NewToolClient()
+	assert.T(t).This(err, nil)
+	defer client.Close()
+
+	tc := ToolCall{
+		ID:   "call_123",
+		Type: "function",
+		Function: ToolCallFunction{
+			Name:      "suneido_demo",
+			Arguments: `{"x": 3}`,
+		},
+	}
+
+	result, err := client.FormatToolCallForDisplay(tc)
+	assert.T(t).This(err, nil)
+	assert.T(t).True(strings.Contains(result, "**Demo**"))
+	assert.T(t).True(strings.Contains(result, "X: `3`"))
+}
+
+func TestToolClientFormatToolCallForDisplayDefault(t *testing.T) {
+	resetToolSpecsForTests()
+	defer resetToolSpecsForTests()
+	_ = addTool(toolSpec{
+		name: "suneido_demo",
+		summarize: func(args map[string]any) string {
+			return mdSummary("Demo",
+				argReqStr(args, "a"),
+				argOptBool(args, "b"))
+		},
+		handler: func(ctx context.Context, args map[string]any) (any, error) {
+			return nil, nil
+		},
+	})
+
+	client, err := NewToolClient()
+	assert.T(t).This(err, nil)
+	defer client.Close()
+
+	tc := ToolCall{
+		ID:   "call_123",
+		Type: "function",
+		Function: ToolCallFunction{
+			Name:      "suneido_demo",
+			Arguments: `{"b": true, "a": "x"}`,
+		},
+	}
+
+	result, err := client.FormatToolCallForDisplay(tc)
+	assert.T(t).This(err, nil)
+	assert.T(t).True(strings.Contains(result, "**Demo**"))
+	assert.T(t).True(strings.Contains(result, "`x`"))
+	assert.T(t).True(strings.Contains(result, "b"))
 }
 
 func resetToolSpecsForTests() {

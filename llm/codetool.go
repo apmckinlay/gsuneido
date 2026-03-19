@@ -22,6 +22,13 @@ var _ = addTool(toolSpec{
 		{name: "start_line", description: "1-based line number to start from (default 1)", required: false, kind: paramNumber},
 		{name: "plain", description: "If true, don't add line numbers (default false)", required: false, kind: paramBool},
 	},
+	summarize: func(args map[string]any) string {
+		return mdSummary("Read Code",
+			argReqStr(args, "library"),
+			argReqStr(args, "name"),
+			argOptInt(args, "start_line", 1),
+			argOptBool(args, "plain"))
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
 		if err != nil {

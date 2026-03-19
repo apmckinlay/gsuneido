@@ -18,6 +18,11 @@ var _ = addTool(toolSpec{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
 		{name: "name", description: "Name of the definition (e.g. 'Alert')", required: true, kind: paramString},
 	},
+	summarize: func(args map[string]any) string {
+		return mdSummary("Delete Code",
+			argReqStr(args, "library"),
+			argReqStr(args, "name"))
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
 		if err != nil {

@@ -396,7 +396,11 @@ func requireApproval(ctx context.Context, toolName string) error {
 // executeSingleToolCall executes a single tool call and logs the result
 func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	name := strings.TrimPrefix(tc.Function.Name, "suneido_")
-	toolOutput := name + " " + tc.Function.Arguments + "\n"
+	toolOutput, err := agent.toolClient.FormatToolCallForDisplay(tc)
+	if err != nil {
+		toolOutput = name + " " + tc.Function.Arguments + "\n"
+	}
+	toolOutput = ensureTrailingNewlines(toolOutput, 2)
 	var approvalText string
 	if agent.needsApproval(tc.Function.Name) {
 		agent.emit("tool", toolOutput)
@@ -406,9 +410,9 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 			allowed, text, err := agent.waitForApproval(ctx, approval)
 			approvalText = text
 			if allowed {
-				agent.emit("tool", "Allowed\n")
+				agent.emit("tool", "Allowed\n\n")
 			} else {
-				agent.emit("tool", "Denied\n")
+				agent.emit("tool", "Denied\n\n")
 			}
 			return allowed, err
 		}
@@ -418,7 +422,7 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	}
 	result, err := agent.toolClient.CallToolFromLLM(ctx, tc)
 	if err != nil {
-		agent.emit("tool", "ERROR: "+err.Error()+"\n")
+		agent.emit("tool", "ERROR: "+err.Error()+"\n\n")
 		result = "ERROR: " + err.Error()
 	} else if tc.Function.Name == "suneido_execute" {
 		agent.emitExecToolResult(result)
@@ -480,10 +484,69 @@ func (agent *Agent) emit(what, data string) {
 		return
 	}
 	agent.flushThink()
-	agent.outfn(what, truncate(data), nil)
+	data = truncate(data)
+	if what == "tool" {
+		data = capTrailingNewlines(data, 2)
+	}
+	agent.outfn(what, data, nil)
 }
 
 func (agent *Agent) emitToolWithApproval(data string, approval *ToolApproval) {
 	agent.flushThink()
-	agent.outfn("tool", truncate(data), approval)
+	agent.outfn("tool", capTrailingNewlines(truncate(data), 2), approval)
+}
+
+// capTrailingNewlines limits trailing newlines to at most n,
+// normalizing CRLF to LF. Returns the original string when no change is needed.
+func capTrailingNewlines(s string, n int) string {
+	if n < 0 {
+		n = 0
+	}
+	i := len(s) - 1
+	count := 0
+	allLF := true
+	for i >= 0 {
+		switch s[i] {
+		case '\n':
+			count++
+			i--
+			if i >= 0 && s[i] == '\r' {
+				allLF = false
+				i--
+			}
+		case '\r':
+			allLF = false
+			count++
+			i--
+		default:
+			goto done
+		}
+	}
+done:
+	if count <= n && allLF {
+		return s
+	}
+	base := s[:i+1]
+	if count > n {
+		count = n
+	}
+	if count == 0 {
+		return base
+	}
+	return base + strings.Repeat("\n", count)
+}
+
+// ensureTrailingNewlines returns s ending with exactly n newlines.
+// Returns the original string when no change is needed.
+func ensureTrailingNewlines(s string, n int) string {
+	capped := capTrailingNewlines(s, n)
+	// Count trailing newlines in capped result
+	count := 0
+	for i := len(capped) - 1; i >= 0 && capped[i] == '\n'; i-- {
+		count++
+	}
+	if count == n {
+		return capped
+	}
+	return capped + strings.Repeat("\n", n-count)
 }

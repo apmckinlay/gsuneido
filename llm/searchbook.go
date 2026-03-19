@@ -22,6 +22,13 @@ var _ = addTool(toolSpec{
 		{name: "text", description: "Regular expression applied to page text (optional if path provided)", required: false, kind: paramString},
 		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
 	},
+	summarize: func(args map[string]any) string {
+		return mdSummary("Search Book",
+			argReqStr(args, "book"),
+			argOptStr(args, "path"),
+			argOptStr(args, "text"),
+			argOptBool(args, "case_sensitive"))
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		book, err := requireString(args, "book")
 		if err != nil {

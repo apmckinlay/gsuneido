@@ -15,19 +15,24 @@ import (
 
 var _ = addTool(toolSpec{
 	name:        "suneido_search_code",
-	description: "Search library code by regex on library, name, and text",
+	description: "Search library code by exact library name and regex on name/text",
 	params: []stringParam{
-		{name: "library", description: "Regular expression applied to library names", required: true, kind: paramString},
+		{name: "library", description: "Library name (exact match, optional; default all libraries)", required: false, kind: paramString},
 		{name: "name", description: "Regular expression applied to definition names (optional if code provided)", required: false, kind: paramString},
 		{name: "code", description: "Regular expression applied to definition text (optional if name provided)", required: false, kind: paramString},
 		{name: "case_sensitive", description: "If true, regex matching is case sensitive (default false)", required: false, kind: paramBool},
 		{name: "modified", description: "If true, only return results where the code has been modified", required: false, kind: paramBool},
 	},
+	summarize: func(args map[string]any) string {
+		return mdSummary("Search Code",
+			argOptStr(args, "library"),
+			argOptStr(args, "name"),
+			argOptStr(args, "code"),
+			argOptBool(args, "case_sensitive"),
+			argOptBool(args, "modified"))
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
-		libraryRx, err := requireString(args, "library")
-		if err != nil {
-			return nil, err
-		}
+		library := optionalString(args, "library")
 		nameRx := optionalString(args, "name")
 		codeRx := optionalString(args, "code")
 		caseSensitive, err := optionalBool(args, "case_sensitive", false)
@@ -38,7 +43,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return searchCode(libraryRx, nameRx, codeRx, caseSensitive, modified)
+		return searchCode(library, nameRx, codeRx, caseSensitive, modified)
 	},
 })
 
@@ -57,7 +62,7 @@ type codeMatch struct {
 
 const searchLimit = 100
 
-func searchCode(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) (result searchCodeOutput, err error) {
+func searchCode(library, nameRx, codeRx string, caseSensitive, modified bool) (result searchCodeOutput, err error) {
 	nameRx = strings.TrimSpace(nameRx)
 	if nameRx == "" && codeRx == "" && !modified {
 		return searchCodeOutput{}, fmt.Errorf("name or code is required (unless modified is true)")
@@ -65,12 +70,14 @@ func searchCode(libraryRx, nameRx, codeRx string, caseSensitive, modified bool) 
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	libs, err := filterLibraries(th.Dbms().Libraries(), libraryRx, caseSensitive)
-	if err != nil {
-		return searchCodeOutput{}, err
+	allLibs := th.Dbms().Libraries()
+	library = strings.TrimSpace(library)
+	if library != "" && !slices.Contains(allLibs, library) {
+		return searchCodeOutput{}, fmt.Errorf("library not found: %s", library)
 	}
-	if len(libs) == 0 {
-		return searchCodeOutput{Matches: []codeMatch{}}, nil
+	libs := allLibs
+	if library != "" {
+		libs = []string{library}
 	}
 
 	nameQuery, err := searchQuery(nameRx, codeRx, caseSensitive, modified)
@@ -151,25 +158,6 @@ func searchQuery(nameRx, codeRx string, caseSensitive, modified bool) (string, e
 	}
 	query.WriteString(" sort name")
 	return query.String(), nil
-}
-
-func filterLibraries(libs []string, libraryRx string, caseSensitive bool) ([]string, error) {
-	libraryRx = strings.TrimSpace(libraryRx)
-	if libraryRx == "" {
-		return slices.Clone(libs), nil
-	}
-	libraryRx = applyCaseSensitivity(libraryRx, caseSensitive)
-	pat, err := compileRegex(libraryRx)
-	if err != nil {
-		return nil, fmt.Errorf("invalid library regex: %w", err)
-	}
-	filtered := make([]string, 0, len(libs))
-	for _, lib := range libs {
-		if pat.Match(lib, nil) {
-			filtered = append(filtered, lib)
-		}
-	}
-	return filtered, nil
 }
 
 func applyCaseSensitivity(rx string, caseSensitive bool) string {

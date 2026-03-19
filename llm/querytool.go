@@ -18,6 +18,14 @@ var _ = addTool(toolSpec{
 	params: []stringParam{
 		{name: "query", description: "Suneido query (e.g. 'tables sort table')", required: true},
 	},
+	summarize: func(args map[string]any) string {
+		query := argString(args, "query")
+		trimmed := strings.TrimSpace(query)
+		if strings.Contains(trimmed, "\n") || strings.Contains(trimmed, "\r") {
+			return mdSummary("Query") + "\n" + summarizeCodeBlock(query)
+		}
+		return mdSummary("Query", mdInline(trimmed))
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		qs, err := requireString(args, "query")
 		if err != nil {

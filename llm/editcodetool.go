@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
@@ -18,12 +19,12 @@ var _ = addTool(toolSpec{
 This tool is the preferred way to edit existing code.
 - Lines are 1-based (matching the output of suneido_read_code)
 - Modes:
-  - "insert_before": Insert text before the specified line
-  - "insert_after": Insert text after the specified line
-  - "replace_lines": Replace 'count' lines starting at 'line'
-- For deletions with replace_lines: Set 'text' to an empty string
+  - "insert_before": Insert lines of code before the specified line
+  - "insert_after": Insert lines of code after the specified line
+  - "replace_lines": Replace 'count' lines of code starting at 'line'
+- For deletions with replace_lines: Set 'code' to an empty string
 - Always call suneido_read_code before this to ensure line numbers are current
-- Do NOT include line numbers in the replacement text, just the code itself
+- Do NOT include line numbers in the replacement code, just the code itself
 `,
 	params: []stringParam{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
@@ -31,7 +32,26 @@ This tool is the preferred way to edit existing code.
 		{name: "mode", description: "Operation mode: 'insert_before', 'insert_after', or 'replace_lines'", required: true, kind: paramString},
 		{name: "line", description: "Line number (1-based)", required: true, kind: paramNumber},
 		{name: "count", description: "Number of lines to replace (only for replace_lines mode)", required: false, kind: paramNumber},
-		{name: "text", description: "Replacement text", required: true, kind: paramString},
+		{name: "code", description: "Replacement code", required: true, kind: paramString},
+	},
+	summarize: func(args map[string]any) string {
+		line := argInt(args, "line", 0)
+		count := argInt(args, "count", 0)
+		mode := argString(args, "mode")
+		code := argString(args, "code")
+		var lineInfo string
+		if mode == "replace_lines" && count > 0 {
+			endLine := line + count - 1
+			lineInfo = "line: `" + strconv.Itoa(line) + " to " + strconv.Itoa(endLine) + "`"
+		} else {
+			lineInfo = "line: `" + strconv.Itoa(line) + "`"
+		}
+		return mdSummary("Edit Code",
+			argReqStr(args, "library"),
+			argReqStr(args, "name"),
+			mdInline(strings.ReplaceAll(mode, "_", "-")),
+			lineInfo) + "\n" +
+			summarizeCodeBlock(code)
 	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
@@ -57,11 +77,11 @@ This tool is the preferred way to edit existing code.
 		if err := validateEditModeArgs(mode, count); err != nil {
 			return nil, err
 		}
-		text, err := requireString(args, "text")
+		code, err := requireString(args, "code")
 		if err != nil {
 			return nil, err
 		}
-		return editCodeTool(ctx, library, name, mode, line, count, text)
+		return editCodeTool(ctx, library, name, mode, line, count, code)
 	},
 })
 

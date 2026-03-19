@@ -15,6 +15,9 @@ var _ = addTool(toolSpec{
 	name:        "suneido_schema",
 	description: "Get the schema for a Suneido database table, or the definition for a view",
 	params:      []stringParam{{name: "table", description: "Name of the table or view to get schema for", required: true}},
+	summarize: func(args map[string]any) string {
+		return mdSummary("Schema", argReqStr(args, "table"))
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		table, err := requireString(args, "table")
 		if err != nil {

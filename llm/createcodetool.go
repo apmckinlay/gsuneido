@@ -21,7 +21,15 @@ var _ = addTool(toolSpec{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
 		{name: "path", description: "Folder path within the library (e.g. 'Debugging/Tests', empty string for root)", required: true, kind: paramString},
 		{name: "name", description: "Name of the definition (e.g. 'Alert')", required: true, kind: paramString},
-		{name: "text", description: "The source code for the definition", required: true, kind: paramString},
+		{name: "code", description: "The source code for the definition", required: true, kind: paramString},
+	},
+	summarize: func(args map[string]any) string {
+		code := argString(args, "code")
+		return mdSummary("Create Code",
+			argReqStr(args, "library"),
+			argReqStr(args, "path"),
+			argReqStr(args, "name")) + "\n" +
+			summarizeCodeBlock(code)
 	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
@@ -36,11 +44,11 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		text, err := requireString(args, "text")
+		code, err := requireString(args, "code")
 		if err != nil {
 			return nil, err
 		}
-		return createCodeTool(ctx, library, path, name, text)
+		return createCodeTool(ctx, library, path, name, code)
 	},
 })
 
@@ -50,7 +58,7 @@ type createCodeOutput struct {
 	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
 }
 
-func createCodeTool(ctx context.Context, library, path, name, text string) (result createCodeOutput, err error) {
+func createCodeTool(ctx context.Context, library, path, name, code string) (result createCodeOutput, err error) {
 	if !isValidName(name) {
 		return createCodeOutput{}, fmt.Errorf("invalid name: %s", name)
 	}
@@ -63,7 +71,7 @@ func createCodeTool(ctx context.Context, library, path, name, text string) (resu
 		return createCodeOutput{}, err
 	}
 
-	warnings, err := validateLibCode(th, text)
+	warnings, err := validateLibCode(th, code)
 	if err != nil {
 		return createCodeOutput{}, err
 	}
@@ -99,7 +107,7 @@ func createCodeTool(ctx context.Context, library, path, name, text string) (resu
 	ihdr := iq.Header()
 	rec := buildRecord(ihdr, map[string]string{
 		"name":         core.PackValue(core.SuStr(name)),
-		"text":         core.PackValue(core.SuStr(text)),
+		"text":         core.PackValue(core.SuStr(code)),
 		"lib_modified": core.PackValue(now),
 		"group":        core.PackValue(core.SuInt(-1)),
 		"num":          core.PackValue(core.SuInt(maxNum + 1)),

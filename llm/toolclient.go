@@ -49,6 +49,7 @@ type localTool struct {
 	Name        string
 	Description string
 	InputSchema map[string]any
+	Summarize   func(args map[string]any) string
 	Handler     func(context.Context, map[string]any) (any, error)
 }
 
@@ -63,11 +64,15 @@ func NewToolClient() (*ToolClient, error) {
 	tools := make([]localTool, 0, len(toolSpecs))
 	openAITools := make([]Tool, 0, len(toolSpecs))
 	for _, spec := range toolSpecs {
+		if spec.summarize == nil {
+			panic("tool " + spec.name + " missing summarize function")
+		}
 		params := spec.inputSchema()
 		tools = append(tools, localTool{
 			Name:        spec.name,
 			Description: spec.description,
 			InputSchema: params,
+			Summarize:   spec.summarize,
 			Handler:     spec.handler,
 		})
 		openAITools = append(openAITools, Tool{
@@ -82,6 +87,15 @@ func NewToolClient() (*ToolClient, error) {
 	return &ToolClient{tools: tools, openAITools: openAITools}, nil
 }
 
+func (c *ToolClient) getTool(name string) (localTool, bool) {
+	for _, t := range c.tools {
+		if t.Name == name {
+			return t, true
+		}
+	}
+	return localTool{}, false
+}
+
 // Close closes the tool client.
 func (c *ToolClient) Close() error {
 	return nil
@@ -94,27 +108,25 @@ func (c *ToolClient) GetTools() []Tool {
 
 // CallTool invokes a local tool by name with the given arguments.
 func (c *ToolClient) CallTool(ctx context.Context, name string, args map[string]any) (string, error) {
-	for _, t := range c.tools {
-		if t.Name != name {
-			continue
-		}
-		out, err := callToolHandler(ctx, t, args)
-		if err != nil {
-			return "", err
-		}
-		if out == nil {
-			return "", nil
-		}
-		if s, ok := out.(string); ok {
-			return s, nil
-		}
-		b, err := json.Marshal(out)
-		if err != nil {
-			return "", fmt.Errorf("marshal result: %w", err)
-		}
-		return string(b), nil
+	t, ok := c.getTool(name)
+	if !ok {
+		return "", fmt.Errorf("call tool: unknown tool %q", name)
 	}
-	return "", fmt.Errorf("call tool: unknown tool %q", name)
+	out, err := callToolHandler(ctx, t, args)
+	if err != nil {
+		return "", err
+	}
+	if out == nil {
+		return "", nil
+	}
+	if s, ok := out.(string); ok {
+		return s, nil
+	}
+	b, err := json.Marshal(out)
+	if err != nil {
+		return "", fmt.Errorf("marshal result: %w", err)
+	}
+	return string(b), nil
 }
 
 func callToolHandler(ctx context.Context, t localTool, args map[string]any) (result any, err error) {
@@ -134,12 +146,9 @@ func callToolHandler(ctx context.Context, t localTool, args map[string]any) (res
 
 // CallToolFromLLM parses LLM tool call arguments and invokes the tool.
 func (c *ToolClient) CallToolFromLLM(ctx context.Context, tc ToolCall) (string, error) {
-	var args map[string]any
-	argsStr := strings.TrimSpace(tc.Function.Arguments)
-	if argsStr != "" && argsStr != "null" && !isEmptyJSONObject(argsStr) {
-		if err := json.Unmarshal([]byte(argsStr), &args); err != nil {
-			return "", fmt.Errorf("parse arguments: %w", err)
-		}
+	args, err := parseToolArgs(tc.Function.Arguments)
+	if err != nil {
+		return "", err
 	}
 
 	result, err := c.CallTool(ctx, tc.Function.Name, args)
@@ -148,6 +157,29 @@ func (c *ToolClient) CallToolFromLLM(ctx context.Context, tc ToolCall) (string, 
 	}
 
 	return result, nil
+}
+
+func (c *ToolClient) FormatToolCallForDisplay(tc ToolCall) (string, error) {
+	t, ok := c.getTool(tc.Function.Name)
+	if !ok {
+		return "", fmt.Errorf("format tool call: unknown tool %q", tc.Function.Name)
+	}
+	args, err := parseToolArgs(tc.Function.Arguments)
+	if err != nil {
+		return "", err
+	}
+	return t.Summarize(args), nil
+}
+
+func parseToolArgs(argsStr string) (map[string]any, error) {
+	var args map[string]any
+	argsStr = strings.TrimSpace(argsStr)
+	if argsStr != "" && argsStr != "null" && !isEmptyJSONObject(argsStr) {
+		if err := json.Unmarshal([]byte(argsStr), &args); err != nil {
+			return nil, fmt.Errorf("parse arguments: %w", err)
+		}
+	}
+	return args, nil
 }
 
 func isEmptyJSONObject(s string) bool {

@@ -19,6 +19,11 @@ var _ = addTool(toolSpec{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
 		{name: "path", description: "Folder path within the library (e.g. 'Debugging/Tests', empty string for root)", required: true, kind: paramString},
 	},
+	summarize: func(args map[string]any) string {
+		return mdSummary("Code Folders",
+			argReqStr(args, "library"),
+			argReqStr(args, "path"))
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		library, err := requireString(args, "library")
 		if err != nil {

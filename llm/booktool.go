@@ -20,6 +20,11 @@ var _ = addTool(toolSpec{
 		{name: "book", description: "Name of the book table (e.g. 'suneidoc')", required: true},
 		{name: "path", description: "The path to the book page. If sub-topics are returned in 'children', append them to this path to dive deeper. (e.g. 'Database/Reference/Query'). Empty or omitted for root.", required: false},
 	},
+	summarize: func(args map[string]any) string {
+		return mdSummary("Read Book",
+			argReqStr(args, "book"),
+			argOptStr(args, "path"))
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		book, err := requireString(args, "book")
 		if err != nil {

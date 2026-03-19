@@ -13,6 +13,9 @@ import (
 var _ = addTool(toolSpec{
 	name:        "suneido_libraries",
 	description: "Get a list of the libraries currently in use in Suneido",
+	summarize: func(args map[string]any) string {
+		return mdSummary("Libraries")
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		libs := core.GetDbms().Libraries()
 		return librariesOutput{Libraries: libs}, nil

@@ -438,3 +438,46 @@ func TestAgentWaitForApproval(t *testing.T) {
 		assert.T(t).This(r.text).Is("ok")
 	})
 }
+
+func TestCapTrailingNewlines(t *testing.T) {
+	assert := assert.T(t)
+	// no trailing newlines - unchanged
+	assert.This(capTrailingNewlines("hello", 2)).Is("hello")
+	// fewer than cap - unchanged
+	assert.This(capTrailingNewlines("hello\n", 2)).Is("hello\n")
+	assert.This(capTrailingNewlines("hello\n\n", 2)).Is("hello\n\n")
+	// exactly at cap - unchanged
+	assert.This(capTrailingNewlines("hello\n\n\n", 3)).Is("hello\n\n\n")
+	// over cap - trimmed
+	assert.This(capTrailingNewlines("hello\n\n\n", 2)).Is("hello\n\n")
+	assert.This(capTrailingNewlines("hello\n\n\n\n", 1)).Is("hello\n")
+	// CRLF normalized to LF, count preserved (not inflated to cap)
+	assert.This(capTrailingNewlines("hello\r\n", 2)).Is("hello\n")
+	assert.This(capTrailingNewlines("hello\r\n\r\n", 2)).Is("hello\n\n")
+	// CRLF over cap - trimmed and normalized
+	assert.This(capTrailingNewlines("hello\r\n\r\n\r\n", 2)).Is("hello\n\n")
+	// bare CR normalized
+	assert.This(capTrailingNewlines("hello\r", 2)).Is("hello\n")
+	// n=0 strips all trailing newlines
+	assert.This(capTrailingNewlines("hello\n\n", 0)).Is("hello")
+	assert.This(capTrailingNewlines("hello\r\n", 0)).Is("hello")
+	// empty string
+	assert.This(capTrailingNewlines("", 2)).Is("")
+	// only newlines
+	assert.This(capTrailingNewlines("\n\n\n", 2)).Is("\n\n")
+}
+
+func TestEnsureTrailingNewlines(t *testing.T) {
+	assert := assert.T(t)
+	// already correct
+	assert.This(ensureTrailingNewlines("hello\n\n", 2)).Is("hello\n\n")
+	// too few - adds newlines
+	assert.This(ensureTrailingNewlines("hello", 2)).Is("hello\n\n")
+	assert.This(ensureTrailingNewlines("hello\n", 2)).Is("hello\n\n")
+	// too many - caps
+	assert.This(ensureTrailingNewlines("hello\n\n\n", 2)).Is("hello\n\n")
+	// CRLF normalized and padded to exactly n
+	assert.This(ensureTrailingNewlines("hello\r\n", 2)).Is("hello\n\n")
+	// n=0 strips all
+	assert.This(ensureTrailingNewlines("hello\n\n", 0)).Is("hello")
+}

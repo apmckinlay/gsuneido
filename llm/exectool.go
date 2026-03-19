@@ -23,6 +23,14 @@ var _ = addTool(toolSpec{
 		"multiple return values appear as separate elements (e.g., [1,2]).\n" +
 		"Errors will include the call stack trace",
 	params: []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
+	summarize: func(args map[string]any) string {
+		code := argString(args, "code")
+		trimmed := strings.TrimSpace(code)
+		if strings.Contains(trimmed, "\n") || strings.Contains(trimmed, "\r") {
+			return mdSummary("Execute") + "\n" + summarizeCodeBlock(code)
+		}
+		return mdSummary("Execute", mdInline(trimmed))
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		code, err := requireString(args, "code")
 		if err != nil {
@@ -43,6 +51,10 @@ var _ = addTool(toolSpec{
 	name:        "suneido_check_code",
 	description: "Checks Suneido code for syntax and compilation errors without executing it. Returns compiler warnings only.",
 	params:      []stringParam{{name: "code", description: "Suneido code to check (as the body of a function)", required: true}},
+	summarize: func(args map[string]any) string {
+		code := argString(args, "code")
+		return mdSummary("Check Code") + "\n" + summarizeCodeBlock(code)
+	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
 		code, err := requireString(args, "code")
 		if err != nil {
