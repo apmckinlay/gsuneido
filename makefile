@@ -24,6 +24,9 @@ build : dbms/server.crt
 	CGO_ENABLED=0 \
 	go $(BUILD) $(BUILDARGS) -o gs_$(GOOS)_$(GOARCH)$(EXE) \
 	  -ldflags "$(LDFLAGS)"
+ifeq ($(GOOS),darwin)
+	codesign --force --sign - gs_$(GOOS)_$(GOARCH)$(EXE)
+endif
 	  
 race :
 	@go version
@@ -42,6 +45,9 @@ endef
 
 gs_% : FORCE
 	$(call BUILD_BINARY)
+ifeq ($(GOOS),darwin)
+	codesign --force --sign - $@
+endif
 
 gs_%.exe : FORCE
 	$(call BUILD_BINARY)
@@ -82,6 +88,9 @@ racetest :
 
 sujs :
 	go build -ldflags "-s -w" -o sujs_$(GOOS)_$(GOARCH)$(EXE) ./cmd/sujs
+ifeq ($(GOOS),darwin)
+	codesign --force --sign - sujs_$(GOOS)_$(GOARCH)$(EXE)
+endif
 
 zap :
 	go build -ldflags "-s -w" ./cmd/zap
