@@ -32,6 +32,7 @@ PassthruController
 		if not .allowOverride?()
 			return false
 
+		_hwnd = .WindowHwnd()
 		if event is 'KEYDOWN'
 			{
 			if args[0] in (VK.UP, VK.DOWN)

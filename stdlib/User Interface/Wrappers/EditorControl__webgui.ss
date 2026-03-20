@@ -52,7 +52,6 @@ EditControl
 		s = .GetSelText()
 		if s > "" and not s.Has?('\n')
 			.findreplacedata.find = s
-		_hwnd = .WindowHwnd()
 		x = FindDialog(.findreplacedata)
 		if x is #next
 			.On_Find_Next()

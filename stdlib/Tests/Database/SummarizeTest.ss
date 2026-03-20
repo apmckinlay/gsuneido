@@ -49,7 +49,7 @@ Test
 		{
 		table = .MakeTable("(a,b,c,d) key(a,b) index(a) index(b)")
 		for i in .. 100
-			QueryOutput(table, Record(a: i.Even?(), b: i))
+			QueryOutput(table, Record(a: i % 3 is 0, b: i))
 		query = table $ ' where a = true summarize b, min d sort b'
 		Assert(QueryStrategy(query) has: table $ '^(a,b)')
 		}

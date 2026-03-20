@@ -649,6 +649,22 @@ PassthruController
 		return Object(.Tab).Append(.ctrls.Values().Remove(false))
 		}
 
+	TabNameFromChild(ctrl)
+		{
+		//NOTE: this is currently assuming that every tab is constructed
+		children = .GetChildren()[1..]
+		// first child is .Tab. Not looking there.
+		for (i=0; i < children.Size(); i++)
+			{
+			.ForeachChild(children[i])
+				{ |child|
+				if child is ctrl
+					return .TabName(i)
+				}
+			}
+		throw 'TAB WAS NOT FOUND - CHECK IF CONSTRUCTED'
+		}
+
 	GetTabCount()
 		{
 		return .ctrls.Size()

@@ -206,7 +206,7 @@ Controller
 		}
 	On_Preview(@report)
 		{
-		if .OverrideReport?(report)
+		if (Object?(.report))
 			report = .report
 
 		if not .paramsWindowValid?(report)
@@ -234,16 +234,6 @@ Controller
 			return .previewForPageCount(report, pdc)
 		w = .runPreview(report, pdc)
 		return w // is this used? could be either dialog result or a Window ???
-		}
-
-	OverrideReport?(report)
-		{
-		return Object?(.report) and not .fromPreview?(report)
-		}
-
-	fromPreview?(report)
-		{
-		return report.GetDefault('from_preview', false) is true
 		}
 
 	setPreviewParams(report)
@@ -287,13 +277,12 @@ Controller
 			? .PreviewButtons.Copy().AddUnique(#Export)
 			: .PreviewButtons
 
-		previewReport = .previewReport(report)
 		if (report.Member?('previewDialog') and report.previewDialog is true)
 			{
 			keep_size = 'Print Preview Dialog'
 			if report.Member?('PreviewParams') and report.Member?('name')
 				keep_size $= ' - ' $ report.name
-			w = ModalWindow(Object("Preview", previewReport, this, :extraButtons, :pdc),
+			w = ModalWindow(Object("Preview", report, this, :extraButtons, :pdc),
 				:keep_size, useDefaultSize:,
 				onDestroy: {
 					.onDestroyModalPreview()
@@ -302,7 +291,7 @@ Controller
 			}
 		else
 			{
-			w = Window(Object(PreviewControl, previewReport, this, :extraButtons, :pdc),
+			w = Window(Object(PreviewControl, report, this, :extraButtons, :pdc),
 				keep_placement:, useDefaultSize:,
 				excludeModalWindow: .closeDialog?() ? .Window : false,
 				onDestroy: {
@@ -312,21 +301,6 @@ Controller
 			.closeDialog()
 			}
 		return w
-		}
-
-	excludeReportMembers:	#(Params)
-	deepCopyReportMembers:	#(paramsdata, printParams)
-	previewReport(report)
-		{
-		previewReport = Object()
-		for m, v in report
-			if not .excludeReportMembers.Has?(m)
-				previewReport[m] = Object?(v)
-					? .deepCopyReportMembers.Has?(m)
-						? v.DeepCopy()
-						: v.Copy()
-					: v
-		return previewReport
 		}
 
 	addFilterIfSlowQuery(report)
@@ -417,7 +391,7 @@ Controller
 
 	CloseDialog(report)
 		{
-		if not .fromPreview?(report)
+		if not report.GetDefault(#from_preview, false)
 			.closeDialog()
 		}
 
@@ -501,17 +475,18 @@ Controller
 
 	On_Print(@report)
 		{
-		if .OverrideReport?(report)
+		if (Object?(.report))
 			report = .report
 
 		if not .paramsWindowValid?(report)
 			return
 
+		fromPreview? = report.GetDefault("from_preview", false)
 		.checkAndResetParams(report)
 		report.paramsdata.ReportDestination = 'printer'
 		.SetExtraParamsData(report.paramsdata)
 		.add_print_lines(report.paramsdata)
-		if not .fromPreview?(report) and true is .addFilterIfSlowQuery(report)
+		if not fromPreview? and true is .addFilterIfSlowQuery(report)
 			return
 
 		params_window = .hwnd(report)
@@ -623,7 +598,7 @@ Controller
 
 	paramsWindowValid?(report)
 		{
-		if not this.Member?("Vert") or .fromPreview?(report)
+		if not this.Member?("Vert") or report.Member?("from_preview")
 			return true
 		return .params_valid?()
 		}
@@ -634,7 +609,7 @@ Controller
 
 	On_Export(@report)
 		{
-		if .OverrideReport?(report)
+		if Object?(.report)
 			report = .report
 
 		if '' isnt msg = .validExport(report)
@@ -670,7 +645,7 @@ Controller
 				? 'Export is not supported for this report'
 				: ''
 
-		if not .fromPreview?(report)
+		if not report.GetDefault('from_preview', false)
 			.checkAndResetParams(report)
 
 		return (export)(report.paramsdata)
@@ -681,10 +656,11 @@ Controller
 		if report is false
 			report = .report
 
+		fromPreview? = report.GetDefault("from_preview", false)
 		.checkAndResetParams(report)
 		report.paramsdata.ReportDestination = 'csv'
 		.SetExtraParamsData(report.paramsdata)
-		if not .fromPreview?(report) and true is .addFilterIfSlowQuery(report)
+		if not fromPreview? and true is .addFilterIfSlowQuery(report)
 			return false
 		return Report(@report).ExportCSV(filename) is ReportStatus.SUCCESS
 		}
@@ -698,9 +674,9 @@ Controller
 
 	RunWithNoOutput(@report)
 		{
-		if .OverrideReport?(report)
+		if (Object?(.report))
 			report = .report
-		if not .fromPreview?(report) and this.Member?("Vert")
+		if (this.Member?("Vert"))
 			{
 			if (not .params_valid?())
 				return false
@@ -730,7 +706,7 @@ Controller
 
 	On_PDF_Save_to_file(@report)
 		{
-		if .OverrideReport?(report)
+		if Object?(.report)
 			report = .report
 
 		if false is filename = Dialog.DoWithWindowsDisabled(
@@ -903,7 +879,7 @@ Controller
 		}
 	On_PDF_Email_as_attachment(@report)
 		{
-		if .OverrideReport?(report)
+		if Object?(.report)
 			report = .report
 		if not .paramsWindowValid?(report)
 			return
@@ -941,11 +917,14 @@ Controller
 
 	SavePDF(filename) // called by ReportCheck
 		{
-		.pdf(.report, filename)
+		.pdf(false, filename)
 		}
-
 	pdf(report, filename, quiet? = false)
 		{
+		if (Object?(.report))
+			report = .report
+
+		fromPreview? = report.GetDefault("from_preview", false)
 		.checkAndResetParams(report)
 		report.paramsdata.ReportDestination = 'pdf'
 		.SetExtraParamsData(report.paramsdata)
@@ -953,7 +932,7 @@ Controller
 
 		report.paramsdata.EmailAttachments = .EmailAttachments(report)
 
-		if not .fromPreview?(report) and true is .addFilterIfSlowQuery(report)
+		if not fromPreview? and true is .addFilterIfSlowQuery(report)
 			return false
 
 		result = msg = false
@@ -984,12 +963,14 @@ Controller
 		if (this.Member?("Vert"))
 			{
 			// don't reset params if from preview
-			if not .fromPreview?(report)
+			if (not report.Member?("from_preview"))
 				{
 				report.paramsdata = .Vert.Data.GetControlData()
 				report.paramsdata.lastRan = Timestamp()
 				.update_params(report)
 				}
+			else
+				report.Delete("from_preview")
 			}
 		else if not report.Member?('paramsdata')
 			report.paramsdata = Record()

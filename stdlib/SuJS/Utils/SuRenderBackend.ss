@@ -294,8 +294,19 @@ check(ob)
 			if ((.overrideProc[uniqueId][i])(uniqueId, event, args) is false)
 				return
 
-		if .controls.Member?(uniqueId) and .controls[uniqueId].Method?(event)
-			(.controls[uniqueId][event])(@args)
+		if false isnt control = .controls.GetDefault(uniqueId, false)
+			{
+			if control.Method?(event)
+				{
+				// RunSuJsWebTest and DoTaskWithPause__webgui register as a control
+				// not doesn't have .WindowHwnd
+				try
+					_hwnd = control.WindowHwnd()
+				catch
+					_hwnd = 0
+				(.controls[uniqueId][event])(@args)
+				}
+			}
 		}
 
 	ReserveAction()

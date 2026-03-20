@@ -249,4 +249,40 @@ Test
 		r.Set(height: 450, width: 150, y: 5, x: 1)
 		Assert(r is: Rect(1, 5, 150, 450))
 		}
+	Test_Getters()
+		{
+		r = Rect(5, 10, 20, 30)
+		Assert(r.GetX2() is: 25)
+		Assert(r.GetY2() is: 40)
+		}
+	Test_Union()
+		{
+		// Non-overlapping rects
+		r1 = Rect(0, 0, 10, 10)
+		r2 = Rect(20, 20, 10, 10)
+		u = r1.Union(r2)
+		Assert(u is: Rect(0, 0, 30, 30))
+		// Overlapping rects
+		r1 = Rect(0, 0, 10, 10)
+		r2 = Rect(5, 5, 10, 10)
+		u = r1.Union(r2)
+		Assert(u is: Rect(0, 0, 15, 15))
+		// Contained rect
+		r1 = Rect(0, 0, 20, 20)
+		r2 = Rect(5, 5, 10, 10)
+		u = r1.Union(r2)
+		Assert(u is: Rect(0, 0, 20, 20))
+		// Negative coordinates
+		r1 = Rect(-10, -10, 20, 20)
+		r2 = Rect(0, 0, 10, 10)
+		u = r1.Union(r2)
+		Assert(u is: Rect(-10, -10, 20, 20))
+		}
+	Test_ToString()
+		{
+		r = Rect(1, 2, 3, 4)
+		Assert(r.ToString() is: "Rect(1, 2, 3, 4)")
+		r = Rect(-5, 10.5, 0, 100)
+		Assert(r.ToString() is: "Rect(-5, 10.5, 0, 100)")
+		}
 	}

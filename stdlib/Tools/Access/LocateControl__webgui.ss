@@ -10,6 +10,7 @@ _LocateControl
 
 	enterProc(uniqueId/*unused*/, event, args)
 		{
+		_hwnd = .WindowHwnd()
 		if event is 'KEYDOWN' and args[0] is VK.RETURN
 			{
 			.Horz.Locate.FieldReturn()

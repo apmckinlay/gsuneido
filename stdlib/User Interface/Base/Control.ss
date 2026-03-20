@@ -406,8 +406,8 @@ class /*abstract*/
 		.Delete(all:) // to help garbage collection
 		}
 
-	Act(@unused) { throw "Suniedo.js only" }
-	ActWith(@unused) { throw "Suniedo.js only" }
-	CancelAct(@unused) { throw "Suniedo.js only" }
-	SuSetHidden(@unused) { throw "Suniedo.js only" }
+	Act(@unused) { throw "Suneido.js only" }
+	ActWith(@unused) { throw "Suneido.js only" }
+	CancelAct(@unused) { throw "Suneido.js only" }
+	SuSetHidden(@unused) { throw "Suneido.js only" }
 	}

@@ -800,10 +800,12 @@ class
 		return dropFiles
 		}
 
+	DisableUnloadAlert?: false
 	beforeUnload(event)
 		{
 		if .socketStatus is SuSocketStatus.init or
-			.socketStatus is SuSocketStatus.terminated
+			.socketStatus is SuSocketStatus.terminated or
+			.DisableUnloadAlert?
 			return
 
 		event.PreventDefault()

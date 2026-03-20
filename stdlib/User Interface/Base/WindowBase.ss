@@ -707,6 +707,6 @@ WndProc
 		return 'callsuper'
 		}
 
-	DoActivate(@unused) { throw "Suniedo.js only" }
-	UnregisterWindow(@unused) { throw "Suniedo.js only" }
+	DoActivate(@unused) { throw "Suneido.js only" }
+	UnregisterWindow(@unused) { throw "Suneido.js only" }
 	}

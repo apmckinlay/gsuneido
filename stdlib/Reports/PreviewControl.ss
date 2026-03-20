@@ -16,8 +16,6 @@ Controller
 	New(.report, .params = false, extraButtons = #(Print, PDF), .pdc = 0)
 		{
 		super(.controls(extraButtons))
-		.report.from_preview = true
-		.report.previewWindow = .Window.Hwnd
 		.vbox = .Vert.Scroll.Center.PreviewPage
 		.first_button = .FindControl(#First)
 		.last_button = .FindControl(#Last)
@@ -110,6 +108,12 @@ Controller
 
 	ClickParamsButton(buttonMethod)
 		{
+		// have to identify that we chose print from the preview so that
+		// params won't override the paramsdata with empty record (param's
+		// controls are most likely destroyed by this point
+		.report.from_preview = true
+		.report.previewWindow = .Window.Hwnd
+
 		Finally({
 			if .params[buttonMethod].Params() is "()"
 				(.params[buttonMethod])()

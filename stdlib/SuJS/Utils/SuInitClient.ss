@@ -10,6 +10,12 @@ class
 			args.userAgent = SuUI.GetCurrentWindow().navigator.userAgent
 			SuRender.Init(args.token)
 			SuRender().Event(false, 'SuInit', args)
+
+			if not args.isHttps? and args.GetDefault(#set, false) is 'IDE'
+				{
+				SuUI.GetCurrentDocument().title = 'Suneido'
+				SuRender().DisableUnloadAlert? = true
+				}
 			}
 		catch (e)
 			{

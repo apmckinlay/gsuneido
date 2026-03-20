@@ -124,8 +124,8 @@ class
 		{
 		x = Min(.x, rect.GetX())
 		y = Min(.y, rect.GetY())
-		right = Max(.x + .width, rect.GetX2)
-		bottom = Max(.y + .height, rect.GetY2)
+		right = Max(.x + .width, rect.GetX2())
+		bottom = Max(.y + .height, rect.GetY2())
 		return Rect(x, y, right - x, bottom - y)
 		}
 	ContainsPoint?(pt)

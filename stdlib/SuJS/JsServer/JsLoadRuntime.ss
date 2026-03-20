@@ -49,12 +49,18 @@ class
 			rec.GetDefault('lib_modified', rec.lib_committed).Format("yyyyMMddHHmmss")
 		}
 
-	Import(dir) // Called manually
+	Import(projectDir) // Called manually
 		{
-		path = Paths.Combine(dir, 'runtime')
+		path = Paths.Combine(projectDir, 'runtime')
 		for file in #('su_bundle.js', 'su_bundle.min.js', 'su_bundle.min.js.map',
 			'su_global_builtins.json')
 			ImportSvcTableText(
 				Paths.Combine(path, file), 'imagebook', '/res', quiet:, skipSize:)
+		}
+
+	ImportCodeMirror(projectDir) // Called manually
+		{
+		file = Paths.Combine(projectDir, 'CodeMirror', 'codemirror_bundle.js')
+		ImportSvcTableText(file, 'imagebook', '/res', quiet:, skipSize:)
 		}
 	}

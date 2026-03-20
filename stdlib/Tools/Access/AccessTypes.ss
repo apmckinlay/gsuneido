@@ -36,6 +36,8 @@ class
 		types.Remove("typefield")
 		types.Remove("default")
 
+		types.Remove('ignoreLinked')
+
 		if omitTypes and .DynamicTypes.Member?("omitTypes")
 			for type in .DynamicTypes.omitTypes
 				types.Remove(type)

@@ -212,6 +212,7 @@ Controller
 			.headerData = .Send("GetData")
 			.headerData.Observer(.observer_HeaderData)
 			}
+// This is why we can't just ask virtual list for .GetQuery
 		query = QueryAddWhere(.query,
 			" where " $ .linkField $ " is " $ Display(.linkValue))
 
@@ -608,6 +609,16 @@ Controller
 	RegisterLinkedBrowse(ctrl, name)
 		{
 		.Send('RegisterLinkedBrowse', ctrl, name)
+		}
+
+	GetLinkField()
+		{
+		return .linkField
+		}
+
+	GetLinkedQuery()
+		{
+		return .query
 		}
 
 	Destroy()
