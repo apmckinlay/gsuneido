@@ -68,7 +68,7 @@ func TestCreateCodeTool(t *testing.T) {
 	th0.Close()
 
 	// Verify create via codeTool
-	cr, err := codeTool("stdlib", "Foo", 1, true)
+	cr, err := readCodeTool("stdlib", "Foo", 1, true)
 	if err != nil {
 		t.Fatal(err)
 	}

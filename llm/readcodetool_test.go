@@ -37,7 +37,7 @@ func TestCodeTool(t *testing.T) {
 	rt.Complete()
 
 	// Test codeTool
-	res, err := codeTool("stdlib", "Foo", 1, true)
+	res, err := readCodeTool("stdlib", "Foo", 1, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +50,7 @@ func TestCodeTool(t *testing.T) {
 	assert.This(res.Diff).Is(nil)
 
 	// Test start_line past end
-	res, err = codeTool("stdlib", "Foo", 2, true)
+	res, err = readCodeTool("stdlib", "Foo", 2, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,22 +61,22 @@ func TestCodeTool(t *testing.T) {
 	assert.That(res.Diff == nil)
 
 	// Test invalid library
-	_, err = codeTool("nonexistent", "Foo", 1, true)
+	_, err = readCodeTool("nonexistent", "Foo", 1, true)
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("library not found: nonexistent")
 
 	// Test invalid name
-	_, err = codeTool("stdlib", "invalid name", 1, true)
+	_, err = readCodeTool("stdlib", "invalid name", 1, true)
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("invalid name: invalid name")
 
 	// Test invalid start_line
-	_, err = codeTool("stdlib", "Foo", 0, true)
+	_, err = readCodeTool("stdlib", "Foo", 0, true)
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("start_line must be >= 1")
 
 	// Test not found
-	_, err = codeTool("stdlib", "NonExistent", 1, true)
+	_, err = readCodeTool("stdlib", "NonExistent", 1, true)
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("code not found for: NonExistent in stdlib")
 }

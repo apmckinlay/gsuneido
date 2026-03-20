@@ -46,7 +46,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return codeTool(library, name, startLine, plain)
+		return readCodeTool(library, name, startLine, plain)
 	},
 })
 
@@ -65,7 +65,7 @@ type readCodeOutput struct {
 
 const codeLineLimit = 400
 
-func codeTool(library, name string, startLine int, plain bool) (readCodeOutput, error) {
+func readCodeTool(library, name string, startLine int, plain bool) (readCodeOutput, error) {
 	if !isValidName(name) {
 		return readCodeOutput{}, fmt.Errorf("invalid name: %s", name)
 	}

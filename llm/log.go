@@ -32,7 +32,7 @@ func (agent *Agent) ensureLogFile() {
 	}
 	agent.logFile = f
 	if rawLog {
-		rawPath := filepath.Join(aiDir, fmt.Sprintf("ai%s.raw", stamp))
+		rawPath := filepath.Join(aiDir, fmt.Sprintf("ai%sraw.txt", stamp))
 		raw, err := os.Create(rawPath)
 		if err != nil {
 			f.Close()

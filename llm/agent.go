@@ -333,6 +333,9 @@ func (agent *Agent) processContentText(text string, content *strings.Builder,
 			agent.flushThink()
 			return nil
 		}
+		if text == "" {
+			return nil
+		}
 		reasoning.WriteString(text)
 		agent.emit("think", text)
 	} else if idx := strings.Index(text, "<think"); idx >= 0 {
@@ -348,7 +351,7 @@ func (agent *Agent) processContentText(text string, content *strings.Builder,
 				agent.emit("think", after)
 			}
 		}
-	} else {
+	} else if text != "" {
 		content.WriteString(text)
 		agent.emit("output", text)
 	}
