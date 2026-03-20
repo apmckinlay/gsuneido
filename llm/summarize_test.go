@@ -63,6 +63,7 @@ func generateExamples(toolName string, params []stringParam) []map[string]any {
 		examples = []map[string]any{
 			{"library": "stdlib", "name": "Alert"},
 			{"library": "stdlib", "name": "Alert", "start_line": 1},
+			{"library": "stdlib", "name": "Alert", "num_lines": 50},
 			{"library": "stdlib", "name": "Alert", "start_line": 10, "plain": true},
 		}
 	case "suneido_create_code":

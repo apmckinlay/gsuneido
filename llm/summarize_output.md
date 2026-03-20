@@ -27,33 +27,6 @@ Read from a Suneido book (documentation) table. Returns a JSON object containing
 
 ---
 
-## suneido_read_code
-
-Get the source code from a library for a specific name
-
-### Parameters
-
-- `library` (required): Name of the library (e.g. 'stdlib')
-- `name` (required): Name of the definition (e.g. 'Alert')
-- `start_line`: 1-based line number to start from (default 1)
-- `plain`: If true, don't add line numbers (default false)
-
-### Summarize Output Examples
-
-**Args:** `{library: "stdlib", name: "Alert"}`
-
-=> **Read Code** `stdlib` `Alert`
-
-**Args:** `{library: "stdlib", name: "Alert", start_line: 1}`
-
-=> **Read Code** `stdlib` `Alert`
-
-**Args:** `{library: "stdlib", name: "Alert", start_line: 10, plain: true}`
-
-=> **Read Code** `stdlib` `Alert` start-line:`10` plain
-
----
-
 ## suneido_create_code
 
 Create a new library definition. The definition must be valid Suneido code. Returns an error if the definition already exists.
@@ -67,7 +40,7 @@ Create a new library definition. The definition must be valid Suneido code. Retu
 
 ### Summarize Output Examples
 
-**Args:** `{library: "stdlib", path: "", name: "TestFunc", code: "TestFunc()↩	{↩	123↩	…"}`
+**Args:** `{code: "TestFunc()↩	{↩	123↩	…", library: "stdlib", path: "", name: "TestFunc"}`
 
 => **Create Code** `stdlib` `TestFunc`
 ```suneido
@@ -77,7 +50,7 @@ TestFunc()
 	}
 ```
 
-**Args:** `{path: "Debugging/Tests", name: "TestFunc", code: "TestFunc()↩	{↩	123↩	…", library: "stdlib"}`
+**Args:** `{library: "stdlib", path: "Debugging/Tests", name: "TestFunc", code: "TestFunc()↩	{↩	123↩	…"}`
 
 => **Create Code** `stdlib` `Debugging/Tests` `TestFunc`
 ```suneido
@@ -131,7 +104,7 @@ This tool is the preferred way to edit existing code.
 
 ### Summarize Output Examples
 
-**Args:** `{library: "stdlib", name: "Alert", mode: "insert_before", line: 5, code: "new line"}`
+**Args:** `{code: "new line", library: "stdlib", name: "Alert", mode: "insert_before", line: 5}`
 
 => **Edit Code** `stdlib` `Alert` `insert-before` line: `5`
 ```suneido
@@ -278,6 +251,38 @@ where table = 'test'
 
 ---
 
+## suneido_read_code
+
+Get the source code from a library for a specific name
+
+### Parameters
+
+- `library` (required): Name of the library (e.g. 'stdlib')
+- `name` (required): Name of the definition (e.g. 'Alert')
+- `start_line`: 1-based line number to start from (default 1)
+- `num_lines`: Maximum number of lines to return (default 400)
+- `plain`: If true, don't add line numbers (default false)
+
+### Summarize Output Examples
+
+**Args:** `{library: "stdlib", name: "Alert"}`
+
+=> **Read Code** `stdlib` `Alert`
+
+**Args:** `{library: "stdlib", name: "Alert", start_line: 1}`
+
+=> **Read Code** `stdlib` `Alert`
+
+**Args:** `{library: "stdlib", name: "Alert", num_lines: 50}`
+
+=> **Read Code** `stdlib` `Alert` num-lines:`50`
+
+**Args:** `{name: "Alert", start_line: 10, plain: true, library: "stdlib"}`
+
+=> **Read Code** `stdlib` `Alert` start-line:`10` plain
+
+---
+
 ## suneido_schema
 
 Get the schema for a Suneido database table, or the definition for a view
@@ -351,11 +356,11 @@ Search library code by exact library name and regex on name/text
 
 => **Search Code** library:`stdlib` code:`function`
 
-**Args:** `{library: "", name: "^A", code: "", case_sensitive: true}`
+**Args:** `{case_sensitive: true, library: "", name: "^A", code: ""}`
 
 => **Search Code** name:`^A` case-sensitive
 
-**Args:** `{library: "stdlib", modified: true}`
+**Args:** `{modified: true, library: "stdlib"}`
 
 => **Search Code** library:`stdlib` modified
 

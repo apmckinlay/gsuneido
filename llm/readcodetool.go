@@ -20,6 +20,7 @@ var _ = addTool(toolSpec{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
 		{name: "name", description: "Name of the definition (e.g. 'Alert')", required: true, kind: paramString},
 		{name: "start_line", description: "1-based line number to start from (default 1)", required: false, kind: paramNumber},
+		{name: "num_lines", description: "Maximum number of lines to return (default 400)", required: false, kind: paramNumber},
 		{name: "plain", description: "If true, don't add line numbers (default false)", required: false, kind: paramBool},
 	},
 	summarize: func(args map[string]any) string {
@@ -27,6 +28,7 @@ var _ = addTool(toolSpec{
 			argReqStr(args, "library"),
 			argReqStr(args, "name"),
 			argOptInt(args, "start_line", 1),
+			argOptInt(args, "num_lines", codeLineLimit),
 			argOptBool(args, "plain"))
 	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
@@ -42,11 +44,15 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
+		numLines, err := optionalInt(args, "num_lines", codeLineLimit)
+		if err != nil {
+			return nil, err
+		}
 		plain, err := optionalBool(args, "plain", false)
 		if err != nil {
 			return nil, err
 		}
-		return readCodeTool(library, name, startLine, plain)
+		return readCodeTool(library, name, startLine, numLines, plain)
 	},
 })
 
@@ -65,12 +71,18 @@ type readCodeOutput struct {
 
 const codeLineLimit = 400
 
-func readCodeTool(library, name string, startLine int, plain bool) (readCodeOutput, error) {
+func readCodeTool(library, name string, startLine int, numLines int, plain bool) (readCodeOutput, error) {
 	if !isValidName(name) {
 		return readCodeOutput{}, fmt.Errorf("invalid name: %s", name)
 	}
 	if startLine < 1 {
 		return readCodeOutput{}, fmt.Errorf("start_line must be >= 1")
+	}
+	if numLines < 1 {
+		return readCodeOutput{}, fmt.Errorf("num_lines must be >= 1")
+	}
+	if numLines > codeLineLimit {
+		return readCodeOutput{}, fmt.Errorf("num_lines must be <= %d", codeLineLimit)
 	}
 
 	th := core.NewThread(core.MainThread)
@@ -104,7 +116,7 @@ func readCodeTool(library, name string, startLine int, plain bool) (readCodeOutp
 		diff = &ud
 	}
 
-	snippet, totalLines, hasMore := sliceCode(text, startLine, codeLineLimit)
+	snippet, totalLines, hasMore := sliceCode(text, startLine, numLines)
 	if !plain {
 		snippet = addLineNumbers(snippet, startLine)
 	}
