@@ -45,53 +45,6 @@ type execOutput struct {
 	Print    string   `json:"print,omitempty" jsonschema:"output from Print calls"`
 }
 
-var _ = addTool(toolSpec{
-	name:        "suneido_check_code",
-	description: "Checks Suneido code for syntax and compilation errors without executing it. Returns compiler warnings only.",
-	params:      []stringParam{{name: "code", description: "Suneido code to check (as the body of a function)", required: true}},
-	summarize: func(args map[string]any) string {
-		code := argString(args, "code")
-		return mdSummary("Check Code") + "\n" + summarizeCodeBlock(code)
-	},
-	handler: func(ctx context.Context, args map[string]any) (any, error) {
-		code, err := requireString(args, "code")
-		if err != nil {
-			return nil, err
-		}
-		return checkTool(code)
-	},
-})
-
-type checkCodeOutput struct {
-	Code     string   `json:"code" jsonschema:"The code that was checked"`
-	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
-}
-
-// srcPrefix is prepended to user code when wrapping in a function
-const srcPrefix = "function () {\n"
-
-// offsetToLine converts a byte offset in src (which includes srcPrefix)
-// to a 1-based line number within src,
-// then subtracts 1 for the srcPrefix line to give the line in user code.
-func offsetToLine(src string, offset int) int {
-	if offset > len(src) {
-		offset = len(src)
-	}
-	line := strings.Count(src[:offset], "\n") + 1
-	return line - 1 // subtract the srcPrefix line
-}
-
-var atOffsetRe = regexp.MustCompile(`@(\d+)`)
-
-// convertPositions replaces @<byteoffset> with @line:<linenum> in s.
-// src is the full wrapped source (including srcPrefix).
-func convertPositions(s, src string) string {
-	return atOffsetRe.ReplaceAllStringFunc(s, func(m string) string {
-		n, _ := strconv.Atoi(m[1:])
-		return "@line:" + strconv.Itoa(offsetToLine(src, n))
-	})
-}
-
 func execTool(code string) (result execOutput, err error) {
 	var savedCode string
 	var th *core.Thread
@@ -121,8 +74,7 @@ func execTool(code string) (result execOutput, err error) {
 	})
 	th.Suneido.Store(suneido)
 
-	code = strings.TrimSpace(code)
-	src := srcPrefix + code + "\n}"
+	src := funcWrap(code)
 	savedCode = src
 	v, warnings := compile.Checked(th, src)
 	if warnings == nil {
@@ -151,6 +103,32 @@ func execTool(code string) (result execOutput, err error) {
 	return
 }
 
+func funcWrap(code string) string {
+	return "function () {\n" + code + "\n}"
+}
+
+var atOffsetRe = regexp.MustCompile(`@(\d+)`)
+
+// convertPositions replaces @<byteoffset> with @line:<linenum> in s.
+// src is the full wrapped source (including srcPrefix).
+func convertPositions(s, src string) string {
+	return atOffsetRe.ReplaceAllStringFunc(s, func(m string) string {
+		n, _ := strconv.Atoi(m[1:])
+		return "@line:" + strconv.Itoa(offsetToLine(src, n))
+	})
+}
+
+// offsetToLine converts a byte offset in src (which includes srcPrefix)
+// to a 1-based line number within src,
+// then subtracts 1 for the srcPrefix line to give the line in user code.
+func offsetToLine(src string, offset int) int {
+	if offset > len(src) {
+		offset = len(src)
+	}
+	line := strings.Count(src[:offset], "\n") + 1
+	return line - 1 // subtract the srcPrefix line
+}
+
 const maxDisplayLen = 512
 
 func displayOrType(th *core.Thread, val core.Value) string {
@@ -161,32 +139,3 @@ func displayOrType(th *core.Thread, val core.Value) string {
 	return display
 }
 
-func checkTool(code string) (result checkCodeOutput, err error) {
-	var savedCode string
-	defer func() {
-		if r := recover(); r != nil {
-			msg := convertPositions(fmt.Sprintf("%v", r), savedCode)
-			err = fmt.Errorf("check error: %s", msg)
-		}
-	}()
-
-	th := core.NewThread(core.MainThread)
-	defer th.Close()
-
-	code = strings.TrimSpace(code)
-	src := srcPrefix + code + "\n}"
-	savedCode = src
-	_, warnings := compile.Checked(th, src)
-	if warnings == nil {
-		warnings = []string{}
-	}
-	for i, w := range warnings {
-		warnings[i] = convertPositions(w, src)
-	}
-
-	result = checkCodeOutput{
-		Code:     code,
-		Warnings: warnings,
-	}
-	return
-}
