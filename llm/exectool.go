@@ -12,17 +12,15 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 var _ = addTool(toolSpec{
 	name: "suneido_execute",
 	description: "Executes Suneido code for its result or side effects.\n" +
 		"Use this for calculations, data manipulation, or system commands.\n" +
-		"A single returned object will appear as the first result (e.g., [[1,2]])\n" +
-		"multiple return values appear as separate elements (e.g., [1,2]).\n" +
 		"Errors will include the call stack trace",
-	params: []stringParam{{name: "code", description: "Suneido code to execute (as the body of a function)", required: true}},
+	params: []stringParam{{name: "code", required: true,
+		description: "Suneido code to execute (as the body of a function)"}},
 	summarize: func(args map[string]any) string {
 		code := argString(args, "code")
 		trimmed := strings.TrimSpace(code)
@@ -41,10 +39,10 @@ var _ = addTool(toolSpec{
 })
 
 type execOutput struct {
-	Code     string   `json:"code" jsonschema:"The code that was executed"`
-	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
-	Results  string   `json:"results" jsonschema:"0, 1, or multiple return values as Suneido-format strings"`
-	Print    string   `json:"print,omitempty" jsonschema:"Output from Print calls"`
+	Code     string   `json:"code" jsonschema:"the code that was executed"`
+	Warnings []string `json:"warnings" jsonschema:"compiler warnings"`
+	Results  string   `json:"results" jsonschema:"comma separated list of return values"`
+	Print    string   `json:"print,omitempty" jsonschema:"output from Print calls"`
 }
 
 var _ = addTool(toolSpec{
@@ -138,19 +136,29 @@ func execTool(code string) (result execOutput, err error) {
 	res := th.Call(fn)
 	results := []string{}
 	if res != nil {
-		results = append(results, res.String())
+		results = append(results, displayOrType(th, res))
 	} else if len(th.ReturnMulti) > 0 {
 		for i := len(th.ReturnMulti) - 1; i >= 0; i-- {
-			results = append(results, th.ReturnMulti[i].String())
+			results = append(results, displayOrType(th, th.ReturnMulti[i]))
 		}
 	}
 	result = execOutput{
 		Code:     code,
 		Warnings: warnings,
-		Results:  str.Join("[, ]", results),
+		Results:  strings.Join(results, ", "),
 		Print:    printBuf.String(),
 	}
 	return
+}
+
+const maxDisplayLen = 512
+
+func displayOrType(th *core.Thread, val core.Value) string {
+	display := core.Display(th, val)
+	if len(display) > maxDisplayLen {
+		return val.Type().String()
+	}
+	return display
 }
 
 func checkTool(code string) (result checkCodeOutput, err error) {

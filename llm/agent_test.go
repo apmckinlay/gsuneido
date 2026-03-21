@@ -359,13 +359,13 @@ func TestAgentEmitExecToolResult(t *testing.T) {
 	}
 
 	// with results and print
-	outs := collect(`{"code":"","warnings":[],"results":"[1,2]","print":"a\nb"}`)
+	outs := collect(`{"code":"","warnings":[],"results":"1, 2","print":"a\nb"}`)
 	assert.T(t).This(len(outs)).Is(2)
-	assert.T(t).This(outs[0].data).Is("=> [1,2]\n")
+	assert.T(t).This(outs[0].data).Is("=> 1, 2\n")
 	assert.T(t).This(outs[1].data).Is("a\nb\n")
 
-	// no results ([]): still emits => line but without the []
-	outs = collect(`{"code":"","warnings":[],"results":"[]"}`)
+	// no results: still emits => line
+	outs = collect(`{"code":"","warnings":[],"results":""}`)
 	assert.T(t).This(len(outs)).Is(1)
 	assert.T(t).This(outs[0].data).Is("=> \n")
 }

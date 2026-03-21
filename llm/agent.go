@@ -470,9 +470,6 @@ func (agent *Agent) emitExecToolResult(result string) {
 		return
 	}
 	results := execOut.Results
-	if results == "[]" {
-		results = ""
-	}
 	agent.emit("tool", "=> "+results+"\n")
 	if execOut.Print != "" {
 		agent.emit("tool", execOut.Print+"\n")
