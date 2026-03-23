@@ -138,4 +138,3 @@ func displayOrType(th *core.Thread, val core.Value) string {
 	}
 	return display
 }
-

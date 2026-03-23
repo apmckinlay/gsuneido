@@ -27,8 +27,8 @@ type Agent struct {
 	inProgress    bool
 	thinkBuf      strings.Builder
 	thinkDirty    bool
-	loadedContent string // content from LoadConversation to copy when log is created
-	usage         *Usage // token usage from last response
+	loadedContent string  // content from LoadConversation to copy when log is created
+	usage         *Usage  // token usage from last response
 	totalCost     float64 // cumulative cost across all requests
 }
 

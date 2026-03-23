@@ -83,5 +83,3 @@ func TestSearchQuery_InvalidRegex(t *testing.T) {
 	assert.That(err != nil)
 	assert.That(strings.Contains(err.Error(), "invalid name regex"))
 }
-
-
