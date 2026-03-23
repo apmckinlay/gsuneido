@@ -149,6 +149,16 @@ func agent_LoadConversation(th *Thread, this Value, args []Value) Value {
 	return True
 }
 
+var _ = method(agent_Usage, "()")
+
+func agent_Usage(this Value) Value {
+	usage := this.(*suAgent).agent.LastUsage()
+	if usage == nil {
+		return False
+	}
+	return IntVal(usage.TotalTokens)
+}
+
 var _ = method(agent_Close, "()")
 
 func agent_Close(this Value) Value {

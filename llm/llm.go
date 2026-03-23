@@ -13,16 +13,22 @@ type Message struct {
 	ToolCallID string     `json:"tool_call_id,omitempty"`
 }
 
+// StreamOptions controls streaming behavior.
+type StreamOptions struct {
+	IncludeUsage bool `json:"include_usage"`
+}
+
 // ChatRequest represents a chat completion request.
 type ChatRequest struct {
-	Model            string    `json:"model"`
-	Messages         []Message `json:"messages"`
-	Temperature      float64   `json:"temperature,omitempty"`
-	MaxTokens        int       `json:"max_tokens,omitempty"`
-	Stream           bool      `json:"stream,omitempty"`
-	IncludeReasoning bool      `json:"include_reasoning,omitempty"`
-	Tools            []Tool    `json:"tools,omitempty"`
-	ToolChoice       any       `json:"tool_choice,omitempty"`
+	Model            string         `json:"model"`
+	Messages         []Message      `json:"messages"`
+	Temperature      float64        `json:"temperature,omitempty"`
+	MaxTokens        int            `json:"max_tokens,omitempty"`
+	Stream           bool           `json:"stream,omitempty"`
+	StreamOptions    *StreamOptions `json:"stream_options,omitempty"`
+	IncludeReasoning bool           `json:"include_reasoning,omitempty"`
+	Tools            []Tool         `json:"tools,omitempty"`
+	ToolChoice       any            `json:"tool_choice,omitempty"`
 }
 
 // ChatResponse represents a chat completion response.
@@ -64,6 +70,7 @@ type ChatCompletionChunk struct {
 	Created int64         `json:"created"`
 	Model   string        `json:"model"`
 	Choices []ChunkChoice `json:"choices"`
+	Usage   *Usage        `json:"usage,omitempty"`
 	Error   *Error        `json:"error,omitempty"`
 }
 

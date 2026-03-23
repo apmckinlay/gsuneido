@@ -40,6 +40,7 @@ type StreamChunk func(chunk *ChatCompletionChunk) error
 // Stream sends a streaming chat completion request to an OpenAI-compatible API.
 func (c *OpenAIClient) Stream(ctx context.Context, req *ChatRequest, onChunk StreamChunk) error {
 	req.Stream = true
+	req.StreamOptions = &StreamOptions{IncludeUsage: true}
 	body, err := json.Marshal(req)
 	if err != nil {
 		return fmt.Errorf("marshal request: %w", err)

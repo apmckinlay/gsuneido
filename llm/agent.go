@@ -28,6 +28,7 @@ type Agent struct {
 	thinkBuf      strings.Builder
 	thinkDirty    bool
 	loadedContent string // content from LoadConversation to copy when log is created
+	lastUsage     *Usage // token usage from last response
 }
 
 // OutFn is the push callback for streaming output.
@@ -126,6 +127,14 @@ func (agent *Agent) SetModel(model string) {
 		agent.logWrite("## {{ Model }}\n\n" + model + "\n\n")
 	}
 	agent.model = model
+}
+
+// LastUsage returns the token usage from the last response.
+// Returns nil if no usage information is available.
+func (agent *Agent) LastUsage() *Usage {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	return agent.lastUsage
 }
 
 // ClearHistory clears the conversation history and starts a new log file
@@ -267,6 +276,13 @@ type streamToolCall struct {
 // handleStreamChunk processes a single streaming chunk
 func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strings.Builder,
 	reasoning *strings.Builder, toolCallsState *[]*streamToolCall, inThink *bool) error {
+
+	// Capture usage if present (typically in final chunk)
+	if chunk.Usage != nil {
+		agent.mu.Lock()
+		agent.lastUsage = chunk.Usage
+		agent.mu.Unlock()
+	}
 
 	if len(chunk.Choices) == 0 {
 		return nil
