@@ -8,6 +8,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/llm"
+	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
 // @immutable
@@ -140,7 +141,7 @@ var _ = method(agent_LoadConversation, "(filename)")
 
 func agent_LoadConversation(th *Thread, this Value, args []Value) Value {
 	a := this.(*suAgent)
-	err := a.agent.LoadConversation(ToStr(args[0]), 
+	err := a.agent.LoadConversation(ToStr(args[0]),
 		outputCallback(a.th, a.callback))
 	if err != nil {
 		th.ReturnThrow = true
@@ -157,6 +158,12 @@ func agent_Usage(this Value) Value {
 		return False
 	}
 	return IntVal(usage.TotalTokens)
+}
+
+var _ = method(agent_Cost, "()")
+
+func agent_Cost(this Value) Value {
+	return SuDnum{Dnum: dnum.FromFloat(this.(*suAgent).agent.TotalCost())}
 }
 
 var _ = method(agent_Close, "()")

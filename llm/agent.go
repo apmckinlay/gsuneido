@@ -28,7 +28,8 @@ type Agent struct {
 	thinkBuf      strings.Builder
 	thinkDirty    bool
 	loadedContent string // content from LoadConversation to copy when log is created
-	lastUsage     *Usage // token usage from last response
+	usage         *Usage // token usage from last response
+	totalCost     float64 // cumulative cost across all requests
 }
 
 // OutFn is the push callback for streaming output.
@@ -134,7 +135,14 @@ func (agent *Agent) SetModel(model string) {
 func (agent *Agent) LastUsage() *Usage {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
-	return agent.lastUsage
+	return agent.usage
+}
+
+// TotalCost returns the cumulative cost across all requests.
+func (agent *Agent) TotalCost() float64 {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	return agent.totalCost
 }
 
 // ClearHistory clears the conversation history and starts a new log file
@@ -149,6 +157,8 @@ func (agent *Agent) ClearHistory() {
 	agent.flushThink()
 	agent.closeLogFile()
 	agent.loadedContent = ""
+	agent.usage = nil
+	agent.totalCost = 0
 	agent.resetHistory()
 }
 
@@ -280,7 +290,8 @@ func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strin
 	// Capture usage if present (typically in final chunk)
 	if chunk.Usage != nil {
 		agent.mu.Lock()
-		agent.lastUsage = chunk.Usage
+		agent.usage = chunk.Usage
+		agent.totalCost += chunk.Usage.Cost
 		agent.mu.Unlock()
 	}
 
