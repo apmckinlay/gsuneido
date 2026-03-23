@@ -69,7 +69,7 @@ type readCodeOutput struct {
 	Committed  string  `json:"committed,omitempty" jsonschema:"Date/time when the record was last committed to version control"`
 }
 
-const codeLineLimit = 400
+const codeLineLimit = 500
 
 func readCodeTool(library, name string, startLine int, numLines int, plain bool) (readCodeOutput, error) {
 	if !isValidName(name) {
