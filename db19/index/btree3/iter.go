@@ -5,6 +5,7 @@ package btree
 
 import (
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -12,12 +13,15 @@ import (
 type Iterator struct {
 	bt        *btree
 	rng       Range
+	skipRng   Range               // suffix range used by skip-scan mode
 	tree      [maxLevels]treeIter // tree[0] is root
 	leaf      leafIter
 	state     iterState
 	noRange   bool // true if rng is iterator.All, bypasses checkRange
 	curKeySet bool
 	curKey    string
+	skipScan  bool   // true if SkipScan mode is active
+	skipGroup string // current first-field group in skip-scan traversal
 }
 
 const maxLevels = 8
@@ -79,12 +83,25 @@ func (it *Iterator) HasCur() bool {
 func (it *Iterator) Rewind() {
 	it.state = rewound
 	it.curKeySet = false
+	it.skipGroup = ""
 }
 
 // Range sets the range and rewinds the iterator
 func (it *Iterator) Range(rng Range) {
 	it.rng = rng
+	it.skipScan = false
 	it.noRange = (rng == iface.All)
+	it.Rewind()
+}
+
+// SkipScan enables btree3-only skip-scan mode.
+// rng applies to suffix fields (excluding the first field).
+func (it *Iterator) SkipScan(rng Range) {
+	it.skipScan = true
+	it.skipRng = rng
+	it.rng = iface.All
+	it.noRange = true
+	it.skipGroup = ""
 	it.Rewind()
 }
 
@@ -93,6 +110,10 @@ func (it *Iterator) Range(rng Range) {
 // Next advances the iterator to the next key in the range or sets eof.
 func (it *Iterator) Next() {
 	it.curKeySet = false
+	if it.skipScan {
+		it.skipNext()
+		return
+	}
 	switch it.state {
 	case rewound:
 		it.SeekAll(it.rng.Org)
@@ -140,11 +161,108 @@ func (it *Iterator) nextLeaf() bool {
 	return true
 }
 
+func (it *Iterator) skipNext() {
+	switch it.state {
+	case rewound:
+		it.seekAllRaw(ixkey.Min)
+		if it.state != within {
+			return
+		}
+	case within:
+		it.next()
+	case eof:
+		return
+	}
+	it.skipAdvanceToMatch()
+}
+
+func (it *Iterator) skipAdvanceToMatch() {
+	for it.state == within {
+		key := it.leaf.key()
+		first, suffix := splitFirstSuffix(key)
+		if first != it.skipGroup {
+			// New first-field group: jump directly to this group's suffix lower bound.
+			// This avoids scanning the beginning of every group when Org is selective.
+			it.skipGroup = first
+			it.skipSeekGroupOrg(first)
+			if it.state != within {
+				return
+			}
+			continue
+		}
+		if suffix < it.skipRng.Org {
+			it.next()
+			continue
+		}
+		if suffix >= it.skipRng.End {
+			it.skipSeekNextGroup(first)
+			continue
+		}
+		return
+	}
+}
+
+func (it *Iterator) skipSeekGroupOrg(first string) {
+	target := first
+	if it.skipRng.Org != ixkey.Min {
+		target = first + ixkey.Sep + it.skipRng.Org
+	}
+	it.seekAllRaw(target)
+	// If we can't land at/after target, this group has no keys in range.
+	if it.state != within || it.Key() < target {
+		it.state = eof
+	}
+}
+
+func (it *Iterator) skipSeekNextGroup(first string) {
+	target := first + ixkey.Sep + ixkey.Max
+
+	// First try to find the target in the current leaf. This is the fast path when
+	// the next first-field group is still in the same leaf node.
+	it.leaf = it.leaf.nd.seek(target)
+	if !it.leaf.eof() {
+		it.state = within
+		return
+	}
+
+	bt := it.bt
+	var nodeOff uint64
+	level := bt.treeLevels - 1
+	for ; level >= 0; level-- {
+		it.tree[level] = it.tree[level].nd.seek(target)
+		if it.tree[level].i < it.tree[level].nd.noffs() {
+			nodeOff = it.tree[level].offset()
+			break
+		}
+	}
+	if level < 0 {
+		it.state = eof
+		return
+	}
+
+	// We found an ancestor whose seek landed within the node. Descend from there
+	// using seek(target) at each level so we reposition to the next group.
+	for level++; level < bt.treeLevels; level++ {
+		it.tree[level] = bt.readTree(nodeOff).seek(target)
+		nodeOff = it.tree[level].offset()
+	}
+	it.leaf = bt.readLeaf(nodeOff).seek(target)
+	if !it.leaf.eof() {
+		it.state = within
+		return
+	}
+	it.next()
+}
+
 //-------------------------------------------------------------------
 
 // Prev moves the iterator to the previous key in the range or sets eof.
 func (it *Iterator) Prev() {
 	it.curKeySet = false
+	if it.skipScan {
+		it.skipPrev()
+		return
+	}
 	switch it.state {
 	case rewound:
 		it.SeekAll(it.rng.End)
@@ -200,13 +318,144 @@ func (it *Iterator) prevLeaf() bool {
 	return true
 }
 
+func (it *Iterator) skipPrev() {
+	// Start from physical end; skipRetreatToMatch applies suffix filtering.
+	switch it.state {
+	case rewound:
+		it.seekAllRaw(ixkey.Max)
+		if it.state != within {
+			return
+		}
+	case within:
+		it.prev()
+	case eof:
+		return
+	}
+	it.skipRetreatToMatch()
+}
+
+func (it *Iterator) skipRetreatToMatch() {
+	// Reverse-direction mirror of skipAdvanceToMatch.
+	for it.state == within {
+		first, suffix := splitFirstSuffix(it.leaf.key())
+		if first != it.skipGroup {
+			it.skipGroup = first
+			it.skipSeekGroupEnd(first)
+			if it.state != within {
+				return
+			}
+			continue
+		}
+		if suffix >= it.skipRng.End {
+			it.prev()
+			continue
+		}
+		if suffix < it.skipRng.Org {
+			it.skipSeekPrevGroup(first)
+			continue
+		}
+		return
+	}
+}
+
+func (it *Iterator) skipSeekGroupEnd(first string) {
+	target := first + ixkey.Sep + it.skipRng.End
+	it.seekAllRaw(target)
+	if it.state != within {
+		return
+	}
+	// seekAllRaw positions >= target; back up until we're inside this group's range
+	for it.state == within {
+		f2, s2 := splitFirstSuffix(it.leaf.key())
+		if f2 > first || (f2 == first && s2 >= it.skipRng.End) {
+			it.prev()
+			it.curKeySet = false
+			continue
+		}
+		// f2 < first: backed up past the group entirely (no keys in range).
+		// Return with state=within in group f2; skipRetreatToMatch will
+		// re-enter and process group f2 (skipFirst still == first, not f2).
+		// f2 == first && s2 < End: in range, done.
+		return
+	}
+}
+
+func (it *Iterator) skipSeekPrevGroup(first string) {
+	// Walk up the already-loaded tree nodes to find an ancestor that spans 'first',
+	// then descend using seek(first) at each level and back up one at the leaf.
+	// This mirrors the seekAllRaw(first)+prev() approach but reuses already-loaded
+	// upper nodes instead of re-reading them from storage.
+	bt := it.bt
+	var nodeOff uint64
+	level := bt.treeLevels - 1
+	for ; level >= 0; level-- {
+		ti := it.tree[level].nd.seek(first)
+		if ti.i < ti.nd.noffs() {
+			it.tree[level] = ti
+			nodeOff = it.tree[level].offset()
+			break
+		}
+	}
+	if level < 0 {
+		if bt.treeLevels > 0 {
+			it.state = eof
+			return
+		}
+		// single-leaf tree: seek directly in the leaf
+		it.leaf = bt.readLeaf(bt.root).seek(first)
+	} else {
+		for level++; level < bt.treeLevels; level++ {
+			it.tree[level] = bt.readTree(nodeOff).seek(first)
+			nodeOff = it.tree[level].offset()
+		}
+		it.leaf = bt.readLeaf(nodeOff).seek(first)
+	}
+	it.state = within
+	if it.leaf.eof() || it.Key() >= first {
+		it.prev()
+	}
+}
+
 //-------------------------------------------------------------------
 
 // Seek moves the iterator to the first position >= key.
 // If the key is outside the current range, eof will be set.
 func (it *Iterator) Seek(key string) {
-	it.SeekAll(key)
-	it.checkRange()
+	if !it.skipScan {
+		it.SeekAll(key)
+		it.checkRange()
+		return
+	}
+	// In skip-scan mode, Seek should match regular Seek semantics on the
+	// filtered view: find first visible key >= key, or stay on last visible key.
+	visible := func(k string) (first string, ok bool) {
+		f, s := splitFirstSuffix(k)
+		return f, it.skipRng.Org <= s && s < it.skipRng.End
+	}
+
+	it.seekAllRaw(key)
+	for it.state == within {
+		k := it.leaf.key()
+		if k < key {
+			it.next()
+			continue
+		}
+		if first, ok := visible(k); ok {
+			it.skipGroup = first
+			return
+		}
+		it.next()
+	}
+
+	// No visible key >= key; position to the last visible key.
+	it.seekAllRaw(ixkey.Max)
+	for it.state == within {
+		if first, ok := visible(it.leaf.key()); ok {
+			it.skipGroup = first
+			return
+		}
+		it.prev()
+	}
 }
 
 // SeekAll moves the iterator to the first position >= key.
@@ -216,6 +465,25 @@ func (it *Iterator) Seek(key string) {
 // unless the btree is empty in which case it will be set to eof.
 // It does *not* apply the current range.
 func (it *Iterator) SeekAll(key string) {
+	if !it.skipScan {
+		it.seekAllRaw(key)
+		return
+	}
+	// In skip-scan mode, SeekAll finds the first key where suffix >= key,
+	// without applying skipRng bounds. This mirrors normal SeekAll (no range).
+	it.seekAllRaw(ixkey.Min)
+	it.skipGroup = ""
+	startedWithin := it.state == within
+	it.skipSuffixSeekUnbounded(key)
+	// Mirror seekAllRaw: if no suffix matched (but tree is non-empty), back up to
+	// the last physical key rather than leaving the iterator at EOF.
+	if startedWithin && it.state == eof {
+		it.prev()
+		it.state = within
+	}
+}
+
+func (it *Iterator) seekAllRaw(key string) {
 	it.curKeySet = false
 	bt := it.bt
 	off := bt.root
@@ -240,6 +508,47 @@ func (it *Iterator) SeekAll(key string) {
 		}
 	}
 	it.state = within
+}
+
+// skipSuffixSeekUnbounded advances to the first key with suffix >= minSuffix,
+// across all first-field groups, without applying any upper bound.
+func (it *Iterator) skipSuffixSeekUnbounded(minSuffix string) {
+	for it.state == within {
+		first, suffix := splitFirstSuffix(it.leaf.key())
+		if first != it.skipGroup {
+			it.skipGroup = first
+			target := first + ixkey.Sep + minSuffix
+			it.seekAllRaw(target)
+			it.skipGroup = first
+			if it.state != within {
+				return
+			}
+			continue
+		}
+		if suffix < minSuffix {
+			it.next()
+			continue
+		}
+		return
+	}
+}
+
+func splitFirstSuffix(key string) (first, suffix string) {
+	// Composite keys use 0,0 separators and escape embedded zero bytes as 0,1.
+	// So a real field boundary is the first unescaped 0,0 pair.
+	for i := 0; i+1 < len(key); i++ {
+		if key[i] != 0 {
+			continue
+		}
+		if key[i+1] == 1 {
+			i++
+			continue
+		}
+		if key[i+1] == 0 {
+			return key[:i], key[i+2:]
+		}
+	}
+	return key, ""
 }
 
 // checkRange changes state from within to eof

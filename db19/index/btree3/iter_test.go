@@ -5,6 +5,8 @@ package btree
 
 import (
 	"fmt"
+	"math/rand"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"testing"
@@ -517,6 +519,396 @@ func padKey(i, width int) string {
 		s = "0" + s
 	}
 	return s
+}
+
+func compKey(first, suffix string) string {
+	var enc ixkey.Encoder
+	enc.Add(first)
+	enc.Add(suffix)
+	return enc.String()
+}
+
+func TestSkipScanSuffixRange(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	rows := []struct {
+		first  string
+		suffix string
+		off    uint64
+	}{
+		{"a", "01", 1},
+		{"a", "03", 2},
+		{"a", "05", 3},
+		{"b", "02", 4},
+		{"b", "04", 5},
+		{"c", "00", 6},
+		{"c", "03", 7},
+		{"d", "02", 8},
+	}
+	for _, r := range rows {
+		assert.That(b.Add(compKey(r.first, r.suffix), r.off))
+	}
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "02", End: "04"})
+
+	var got []string
+	for it.Next(); !it.Eof(); it.Next() {
+		k := it.Key()
+		f, s := splitFirstSuffix(k)
+		got = append(got, f+":"+s)
+	}
+	assert.This(got).Is([]string{"a:03", "b:02", "c:03", "d:02"})
+}
+
+func TestSkipScanSuffixRangeNoMatches(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	assert.That(b.Add(compKey("a", "01"), 1))
+	assert.That(b.Add(compKey("b", "01"), 2))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "02", End: "03"})
+	it.Next()
+	assert.That(it.Eof())
+}
+
+func TestSkipScanThenRangeDisablesSkipScan(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	assert.That(b.Add(compKey("a", "01"), 1))
+	assert.That(b.Add(compKey("a", "02"), 2))
+	assert.That(b.Add(compKey("b", "01"), 3))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+
+	it.SkipScan(iface.Range{Org: "01", End: "03"})
+	it.Next()
+	assert.That(!it.Eof())
+
+	org := compKey("a", "02")
+	end := compKey("a", "03")
+	it.Range(iface.Range{Org: org, End: end})
+	it.Next()
+	assert.That(!it.Eof())
+	f, s := splitFirstSuffix(it.Key())
+	assert.This(f).Is("a")
+	assert.This(s).Is("02")
+	it.Next()
+	assert.That(it.Eof())
+}
+
+func TestSkipScanSeekAndPrev(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	rows := []struct {
+		first  string
+		suffix string
+		off    uint64
+	}{
+		{"a", "01", 1},
+		{"a", "03", 2},
+		{"a", "05", 3},
+		{"b", "02", 4},
+		{"b", "04", 5},
+		{"c", "00", 6},
+		{"c", "03", 7},
+		{"d", "02", 8},
+	}
+	for _, r := range rows {
+		assert.That(b.Add(compKey(r.first, r.suffix), r.off))
+	}
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "02", End: "04"})
+
+	// Seek takes a full composite key; suffix is extracted internally.
+	it.Seek(compKey("a", "03"))
+	assert.That(!it.Eof())
+	f, s := splitFirstSuffix(it.Key())
+	assert.This(f).Is("a")
+	assert.This(s).Is("03")
+
+	it.Next()
+	assert.That(!it.Eof())
+	f, s = splitFirstSuffix(it.Key())
+	assert.This(f).Is("b")
+	assert.This(s).Is("02")
+
+	it.Prev()
+	assert.That(!it.Eof())
+	f, s = splitFirstSuffix(it.Key())
+	assert.This(f).Is("a")
+	assert.This(s).Is("03")
+
+	// SeekAll("04") seeks to first key in any group with suffix >= "04"
+	// ignoring skipRng bounds, so a:05 is first.
+	it.SeekAll("04")
+	assert.That(!it.Eof())
+	f, s = splitFirstSuffix(it.Key())
+	assert.This(f).Is("a")
+	assert.This(s).Is("05")
+
+	// Prev with skipRng {Org:"02", End:"04"}: retreat to last valid match in a group = a:03
+	it.Prev()
+	assert.That(!it.Eof())
+	f, s = splitFirstSuffix(it.Key())
+	assert.This(f).Is("a")
+	assert.This(s).Is("03")
+}
+
+func TestSkipScanSeekAllAboveMax(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	assert.That(b.Add(compKey("a", "01"), 1))
+	assert.That(b.Add(compKey("a", "03"), 2))
+	assert.That(b.Add(compKey("b", "02"), 3))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "01", End: "04"})
+
+	// SeekAll with suffix above every suffix in the tree should stay at last key, not EOF.
+	it.SeekAll("99")
+	assert.That(!it.Eof())
+	f, s := splitFirstSuffix(it.Key())
+	assert.This(f).Is("b")
+	assert.This(s).Is("02")
+}
+
+func TestSkipScanRandomParallelWithSubset(t *testing.T) {
+	// Run the same scenario at treeLevels 0, 1, and 2
+	// by controlling splitCount (fewer keys per node => more levels).
+	for _, splitSize := range []int{100, 8, 4} {
+		t.Run(fmt.Sprintf("split%d", splitSize), func(t *testing.T) {
+			testSkipScanRandomParallelWithSubset(t, splitSize)
+		})
+	}
+}
+
+func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
+	const (
+		groups          = 1000
+		recordsPerGroup = 250
+		totalRecords    = groups * recordsPerGroup
+		suffixWidth     = 4
+		startSuffix     = 25
+	)
+	if totalRecords < 100000 {
+		b.Fatalf("expected at least 100,000 records, got %d", totalRecords)
+	}
+
+	file := filepath.Join(b.TempDir(), "skipscan-breakeven.db")
+	st, err := stor.MmapStor(file, stor.Create)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.Cleanup(func() {
+		st.Close(true)
+	})
+
+	bld := Builder(st)
+	for g := range groups {
+		first := fmt.Sprintf("g%04d", g)
+		for s := range recordsPerGroup {
+			suffix := fmt.Sprintf("%0*d", suffixWidth, s)
+			off := uint64(g*recordsPerGroup + s + 1)
+			assert.That(bld.Add(compKey(first, suffix), off))
+		}
+	}
+	bt := bld.Finish().(*btree)
+
+	widths := []int{8, 16, 32, 64, 96, 128, 160, 192, 224}
+	maxWidth := widths[len(widths)-1]
+	fullOrg := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
+	fullEnd := fmt.Sprintf("%0*d", suffixWidth, startSuffix+maxWidth)
+	fullExpected := groups * maxWidth
+
+	for _, width := range widths {
+		width := width
+		endSuffix := startSuffix + width
+		org := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
+		end := fmt.Sprintf("%0*d", suffixWidth, endSuffix)
+		expected := groups * width
+
+		b.Run(fmt.Sprintf("skip_w%03d", width), func(b *testing.B) {
+			b.ReportAllocs()
+			for range b.N {
+				it := bt.Iterator().(*Iterator)
+				it.SkipScan(iface.Range{Org: org, End: end})
+				n := 0
+				for it.Next(); !it.Eof(); it.Next() {
+					n++
+				}
+				if n != expected {
+					b.Fatalf("skip scan width %d expected %d got %d", width, expected, n)
+				}
+			}
+		})
+	}
+
+	b.Run("full_once", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			it := bt.Iterator()
+			n := 0
+			for it.Next(); !it.Eof(); it.Next() {
+				_, suffix := splitFirstSuffix(it.Key())
+				if fullOrg <= suffix && suffix < fullEnd {
+					n++
+				}
+			}
+			if n != fullExpected {
+				b.Fatalf("full scan expected %d got %d", fullExpected, n)
+			}
+		}
+	})
+}
+
+func testSkipScanRandomParallelWithSubset(t *testing.T, splitSize int) {
+	t.Helper()
+	defer SetSplit(SetSplit(splitSize))
+
+	const (
+		org   = "08"
+		end   = "19"
+		steps = 3000
+	)
+
+	// groups and the suffixes they contain, chosen to exercise edge cases:
+	//   "a","b" have only suffixes below org  -> none of the range
+	//   "c","d" have only suffixes within [org,end) -> fully contained in range
+	//   "e","f" have only suffixes >= end       -> none of the range
+	//   "g","h","i","j" span the range boundary  -> partial overlap
+	type groupSpec struct {
+		first    string
+		suffixes []string
+	}
+	groups := []groupSpec{
+		{"a", []string{"01", "03", "05", "07"}},       // all below org
+		{"b", []string{"02", "04", "06"}},             // all below org
+		{"c", []string{"08", "10", "12", "15", "18"}}, // all within [org,end)
+		{"d", []string{"09", "11", "14", "17"}},       // all within [org,end)
+		{"e", []string{"19", "21", "25"}},             // all >= end
+		{"f", []string{"20", "22", "28"}},             // all >= end
+		{"g", []string{"05", "08", "12", "19", "22"}}, // straddles both boundaries
+		{"h", []string{"06", "09", "13", "18", "20"}}, // straddles both boundaries
+		{"i", []string{"07", "10", "18"}},             // from below into range
+		{"j", []string{"11", "16", "19", "24"}},       // from inside range past end
+	}
+
+	fullb := Builder(stor.HeapStor(8192))
+	subb := Builder(stor.HeapStor(8192))
+
+	var off uint64 = 1
+	for _, g := range groups {
+		for _, suffix := range g.suffixes {
+			k := compKey(g.first, suffix)
+			assert.That(fullb.Add(k, off))
+			if org <= suffix && suffix < end {
+				assert.That(subb.Add(k, off))
+			}
+			off++
+		}
+	}
+
+	firsts := make([]string, len(groups))
+	for i, g := range groups {
+		firsts[i] = g.first
+	}
+
+	full := fullb.Finish().(*btree)
+	sub := subb.Finish().(*btree)
+
+	fit := full.Iterator().(*Iterator)
+	fit.SkipScan(iface.Range{Org: org, End: end})
+	sit := sub.Iterator().(*Iterator)
+
+	assertSame := func(step int, op string) {
+		t.Helper()
+		assert.T(t).Msg(fmt.Sprintf("step %d op %s hascur", step, op)).
+			This(fit.HasCur()).Is(sit.HasCur())
+		assert.T(t).Msg(fmt.Sprintf("step %d op %s eof", step, op)).
+			This(fit.Eof()).Is(sit.Eof())
+		if fit.Eof() {
+			return
+		}
+		fk, fo := fit.Cur()
+		sk, so := sit.Cur()
+		assert.T(t).Msg(fmt.Sprintf("step %d op %s key", step, op)).
+			This(fk).Is(sk)
+		assert.T(t).Msg(fmt.Sprintf("step %d op %s off", step, op)).
+			This(fo).Is(so)
+	}
+
+	seek := func(first, s string) {
+		t.Helper()
+		k := compKey(first, s)
+		fit.Seek(k)
+		sit.Seek(k)
+	}
+
+	boundary := []struct {
+		first  string
+		suffix string
+	}{
+		{"a", "00"}, // before first key in a no-range group
+		{"b", "00"}, // before first key in a no-range group
+		{"c", "00"}, // before all keys in a fully-in-range group
+		{"d", "00"}, // before all keys in a fully-in-range group
+		{"e", "00"}, // before all keys in a no-range (above) group
+		{"g", "00"}, // before first key in a straddle group
+		{"a", "08"}, // at org boundary, group has no such key
+		{"c", "08"}, // at org boundary, group has this exact key
+		{"g", "08"}, // at org boundary, group has this exact key
+		{"a", "18"}, // just before end, group has no such key
+		{"c", "18"}, // just before end, group has this exact key
+		{"h", "18"}, // just before end, group has this exact key
+		{"a", "19"}, // at end boundary (exclusive), group has no such key
+		{"e", "19"}, // at end boundary, group has this exact key
+		{"j", "19"}, // at end boundary, group has this exact key
+		{"a", "99"}, // above all suffixes in any group
+		{"j", "99"}, // above all suffixes in any group
+	}
+	for i, b := range boundary {
+		seek(b.first, b.suffix)
+		assertSame(-(i + 1), "SeekBoundary")
+	}
+
+	// seekSuffixes covers: before first key, between keys, at boundary keys,
+	// and after last key — exercising all seek edge cases
+	seekSuffixes := []string{
+		"00",       // before first key in any group
+		"01", "02", // actual/between keys below org
+		"07", "075", // last below org / between last-below and org
+		"08",       // exactly org
+		"085",      // between first in-range and next
+		"10", "11", // within range
+		"135",      // between two in-range keys
+		"18",       // last suffix before end
+		"185",      // between last in-range and end
+		"19",       // exactly end (exclusive upper bound)
+		"20", "21", // above end
+		"29", "30", // well above all suffixes
+	}
+
+	r := rand.New(rand.NewSource(1))
+	assertSame(0, "init")
+	for step := 1; step <= steps; step++ {
+		switch r.Intn(4) {
+		case 0:
+			fit.Next()
+			sit.Next()
+			assertSame(step, "Next")
+		case 1:
+			fit.Prev()
+			sit.Prev()
+			assertSame(step, "Prev")
+		case 2:
+			fit.Rewind()
+			sit.Rewind()
+			assertSame(step, "Rewind")
+		case 3:
+			first := firsts[r.Intn(len(firsts))]
+			s := seekSuffixes[r.Intn(len(seekSuffixes))]
+			seek(first, s)
+			assertSame(step, "Seek")
+		}
+	}
 }
 
 func (it *Iterator) Print() {
