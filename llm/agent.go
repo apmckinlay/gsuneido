@@ -244,6 +244,10 @@ func (agent *Agent) buildRequest() *ChatRequest {
 		Model:            agent.model,
 		Messages:         agent.history,
 		IncludeReasoning: true,
+		Plugins: []Plugin{
+			{ID: "context-compression"},
+			{ID: "response-healing"},
+		},
 	}
 	if agent.toolClient != nil {
 		req.Tools = agent.toolClient.GetTools()

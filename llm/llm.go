@@ -18,6 +18,11 @@ type StreamOptions struct {
 	IncludeUsage bool `json:"include_usage"`
 }
 
+// Plugin represents an OpenRouter plugin configuration.
+type Plugin struct {
+	ID string `json:"id"`
+}
+
 // ChatRequest represents a chat completion request.
 type ChatRequest struct {
 	Model            string         `json:"model"`
@@ -29,6 +34,7 @@ type ChatRequest struct {
 	IncludeReasoning bool           `json:"include_reasoning,omitempty"`
 	Tools            []Tool         `json:"tools,omitempty"`
 	ToolChoice       any            `json:"tool_choice,omitempty"`
+	Plugins          []Plugin       `json:"plugins,omitempty"`
 }
 
 // ChatResponse represents a chat completion response.
