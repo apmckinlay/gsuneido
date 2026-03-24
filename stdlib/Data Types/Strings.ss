@@ -134,16 +134,11 @@ class
 		}
 
 	ReplaceSubstr(i, n, s)
-		// pre: i and n are integers >= 0 AND s is a string
 		{
 		return this[.. i] $ s $ this[i + n ..]
 		}
 
 	LeftFill(minSize, char = " ")
-		// pre:		minSize is a positive integer AND
-		//			char is a string of length 1
-		// post:	returns a string of at least minSize characters
-		//			with leading char's added if necessary
 		{
 		Assert(char.Size() is 1)
 		return char.Repeat(minSize - .Size()) $ this
@@ -155,10 +150,6 @@ class
 		}
 
 	RightFill(minSize, char = " ")
-		// pre:		minSize is a positive integer AND
-		//			char is a string of length 1
-		// post:	returns a string of at least minSize characters
-		//			with trailing char's added if necessary
 		{
 		Assert(char.Size() is 1)
 		return this $ char.Repeat(minSize - .Size())

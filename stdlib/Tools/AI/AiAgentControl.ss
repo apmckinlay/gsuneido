@@ -6,52 +6,79 @@ Controller
 	Ymin: 800
 	Title: "AI Chat"
 	url: "https://openrouter.ai/api/v1"
+	keyUrl: "https://appserver.internal.axonsoft.com:8088/Wiki?" $
+		"OpenRouterApiKeyForAiAgentControl"
 	modelSettingKey: "AiAgentControl_model"
-	validModels: #(
-		"anthropic/claude-haiku-4.5",
-		"deepseek/deepseek-v3.2",
-		"minimax/minimax-m2.7",
-		"moonshotai/kimi-k2.5",
-		"openai/gpt-5.3-codex",
-		"qwen/qwen3-coder-next",
-		"nvidia/nemotron-3-super-120b-a12b:free",
-		"xiaomi/mimo-v2-pro",
-		"x-ai/grok-code-fast-1",
-		"z-ai/glm-5",
-		"z-ai/glm-5-turbo"
+	models: #(
+		"anthropic/claude-haiku-4.5":
+			{ context: 200000, output: 64000, in: 1.00, out: 5.00 },
+		"deepseek/deepseek-v3.2":
+			{ context: 128000, output: 8192, in: 0.28, out: 0.42 },
+		"openai/gpt-5.3-codex":
+			{ context: 400000, output: 128000, in: 1.75, out: 14.00 },
+		"minimax/minimax-m2.7":
+			{ context: 205000, output: 128000, in: 0.30, out: 1.20 },
+		"moonshotai/kimi-k2.5":
+			{ context: 256000, output: 16384, in: 0.55, out: 2.20 },
+		"nvidia/nemotron-3-super-120b-a12b:free":
+			{ context: 262144, output: 262144, in: 0.00, out: 0.00 },
+		"qwen/qwen3-coder-next":
+			{ context: 262144, output: 16384, in: 0.40, out: 2.40 },
+		"x-ai/grok-code-fast-1":
+			{ context: 256000, output: 10000, in: 0.20, out: 0.50 },
+		"xiaomi/mimo-v2-pro":
+			{ context: 1050000, output: 128000, in: 1.00, out: 3.00 },
+		"z-ai/glm-5":
+			{ context: 202752, output: 128000, in: 0.80, out: 2.56 },
+		"z-ai/glm-5-turbo":
+			{ context: 202752, output: 131072, in: 0.40, out: 1.50 },
 		)
 	defaultModel: "minimax/minimax-m2.7"
 
-	New()
+	CallClass()
 		{
 		DeleteOldFiles('.ai/', -7) /*= one week */
 		prompt = Query1("suneidoc", path: "/res", name: "AiPrompt").text
-		.model = .FindControl("model")
 		model = UserSettings.Get(.modelSettingKey, .defaultModel)
-		if not .validModels.Has?(model)
+		if not .models.Member?(model)
 			model = .defaultModel
-		.model.Set(model)
-
-		.agent = AiAgent(.url, .getApiKey(), model, .output, prompt)
-		.vert = .VertSplit.Vert
-		.editor = .FindControl("editor")
-		Defer({ .editor.SetFocus() })
+		// cache the key since the ai sandbox will prevent fetching it again
+		key = Suneido.GetInit(#AIAGENT_API_KEY, .getApiKey)
+		super.CallClass(key, model, prompt)
 		}
 	getApiKey()
 		{
-		s = Https.Get("https://appserver.internal.axonsoft.com:8088/Wiki?OpenRouterApiKeyForAiAgentControl")
-		return s.Extract(`sk-or-v1-[0-9a-f]+`)
+		try
+			{
+			x = HttpClient2(#GET, .keyUrl)
+			return x.content.Extract(`sk-or-v1-[0-9a-f]+`)
+			}
+		catch (e)
+			throw "error getting api key from wiki: " $ e
+		}
+	New(key, model, prompt)
+		{
+		.agent = AiAgent(.url, key, model, .output, prompt)
+		.model = .FindControl("model")
+		.model.Set(model)
+		.vert = .Vert.VertSplit.Vert
+		.editor = .FindControl("editor")
+		.status = .FindControl("statusbar")
+		Defer({ .editor.SetFocus() })
 		}
 	Controls()
 		{
-		["VertSplit",
-			[#Mshtml, .page, name: "webView", xstretch: 1, ystretch: 4],
-			[#Vert,
-				#Skip,
-				.normalButtons(),
-				#Skip,
-				#(ScintillaAddons, name: "editor", wrap:, xstretch: 1)
+		["Vert",
+			["VertSplit",
+				[#Mshtml, .page, name: "webView", xstretch: 1, ystretch: 4],
+				[#Vert,
+					#Skip,
+					.normalButtons(),
+					#Skip,
+					#(ScintillaAddons, name: "editor", wrap:, xstretch: 1),
+					]
 				]
+			#(Statusbar, name: "statusbar")
 			]
 		}
 	normalButtons(model = false)
@@ -68,7 +95,10 @@ Controller
 			#Fill,
 			#(Button, "Load", tip: "load a previous conversation"),
 			#Fill,
-			[#ChooseButton model, list: .validModels, name: "model"],
+			[#ChooseButton model, name: "model",
+				list: .models.Members().Sort!()],
+			#Skip
+			#(LinkButton, "?", modelHelp)
 			#Fill
 			]
 		}
@@ -81,6 +111,26 @@ Controller
 			mouseEffect:, buttonStyle:, pad: 20, weight: bold, textColor: 0x0000ff)
 		Fill
 		)
+	On_modelHelp()
+		{
+		w0 = 40
+		w1 = 10
+		w2 = 8
+		w3 = 6
+		w4 = 6
+		s = "Id".RightFill(w0) $ "Context".LeftFill(w1) $ "Output".LeftFill(w2) $
+			"In".LeftFill(w3) $ "Out".LeftFill(w4) $ "\n"
+		s $= "-".Repeat(w0 + w1 + w2 + w3 + w4) $ "\n"
+		for m in .models.Members().Sort!()
+			{
+			x = .models[m]
+			s $= m.RightFill(w0) $
+				.k(x.context).LeftFill(w1) $ .k(x.output).LeftFill(w2) $
+				x.in.Format('##.##').LeftFill(w3) $
+				x.out.Format('##.##').LeftFill(w4) $ "\n"
+			}
+		Alert(s, font: "@mono", title: "Models")
+		}
 	sending: false
 	On_Send()
 		{
@@ -108,28 +158,48 @@ Controller
 		return false
 		}
 
-	output(what, data, update = false)
+	output(what, data, approve = false)
 		{
 		switch what
 			{
 		case "user":
 			.Defer({ .AppendMd("**You:** " $ data, what) })
 		case "think", "tool", "output":
-			.Defer({ .AppendMd(data, what) })
+			.Defer()
+				{
+				.AppendMd(data, what)
+				.updateStatus()
+				}
 		case "complete":
 			.Defer()
 				{
-				//.AppendMd("\n\n---\n")
 				.AppendMd(.endMarker)
 				.FindControl("Send").SetEnabled(true)
 				.sending = false
+				.updateStatus()
 				}
 		default:
 			}
-		if update isnt false
-			.Defer({ .showAllowDeny(update) })
+		if approve isnt false
+			.Defer({ .approval(approve) })
 		}
 	endMarker: "[END_OF_MESSAGE]"
+
+	updateStatus()
+		{
+		model = .model.Get()
+		contextLimit = .models[model].context
+		try // in case the exe doesn't have Usage or Cost yet
+			{
+			.status.Set("\t\tContext: " $ .k(.agent.Usage()) $ " / " $ .k(contextLimit) $
+				"  |  Cost: " $ .agent.Cost().Format("##.##"))
+			}
+		}
+	k(n)
+		{
+		k = 1000
+		return (n / k).RoundToPrecision(2) $ "k"
+		}
 
 	buttonsRowIndex: 1
 	replaceBottomRow(row)
@@ -138,11 +208,27 @@ Controller
 		.vert.Insert(.buttonsRowIndex, row)
 		}
 
-	showAllowDeny(update)
+	approval(approve)
 		{
-		.pendingUpdate = update
+		.pendingUpdate = approve
 		.selectedModel = .model.Get()
 		.replaceBottomRow(.approveButtons)
+		before = approve.Before()
+		after = approve.After()
+		if after isnt ""
+			{
+			response = before is ""
+				? AiAgentView(.Window.Hwnd, after, .approveButtons)
+				: AiAgentDiff(.Window.Hwnd, before, after, .approveButtons)
+			switch response
+				{
+			case "allow":
+				.On_Allow()
+			case "deny":
+				.On_Deny()
+			default:
+				}
+			}
 		}
 
 	restoreNormalButtons()
@@ -186,7 +272,8 @@ Controller
 	On_New()
 		{
 		.agent.ClearHistory()
-		.Defer({ .FindControl("webView").Set(.page) })
+		.FindControl("webView").Set(.page)
+		.status.Set("")
 		}
 	On_Load()
 		{
@@ -261,6 +348,7 @@ page: `<!DOCTYPE html>
 			overflow-x: auto;
 			border-radius: 5px;
 			position: relative;
+			tab-size: 4;
 		}
 		code { background: #eee; padding: 2px 4px; border-radius: 3px; }
 		pre code { background: transparent; padding: 0; border-radius: 0; }
@@ -422,7 +510,8 @@ page: `<!DOCTYPE html>
 						const renderBuffer = (type === "think")
 							? currentSec.buffer.replace(/\s+$/, '')
 							: currentSec.buffer;
-						currentSec.element.innerHTML = DOMPurify.sanitize(marked.parse(renderBuffer));
+						currentSec.element.innerHTML =
+							DOMPurify.sanitize(marked.parse(renderBuffer));
 						addCopyButtonsToCodeBlocks(currentSec.element);
 						scrollToBottom();
 					}

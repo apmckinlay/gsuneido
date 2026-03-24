@@ -4,9 +4,9 @@
 StaticControl
 	{
 	Name: 'AlertText'
-	New(.text)
+	New(.text, font = "")
 		{
-		super(.text, whitebgnd:)
+		super(.text, :font, whitebgnd:)
 		.flags = DT.WORDBREAK | DT.EDITCONTROL | DT.NOPREFIX | DT.EXPANDTABS
 		.setSize()
 		.AdjustControlSize()

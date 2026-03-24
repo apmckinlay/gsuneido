@@ -4,8 +4,8 @@
 | --- | --- | --- | --- |
 | [Access1Control](<Reference/Access1Control.md>) | [Delay](<Reference/Delay.md>) | [ListControl](<Reference/ListControl.md>) | [ScrollControl](<Reference/ScrollControl.md>) |
 | [AccessControl](<Reference/AccessControl.md>) | [Dialog](<Reference/Dialog.md>) | [ListViewControl](<Reference/ListViewControl.md>) | [ScrollbarControl](<Reference/ScrollbarControl.md>) |
-| [AccordionControl](<Reference/AccordionControl.md>) | [DiffImageControl](<Reference/DiffImageControl.md>) | [MainFieldControl](<Reference/MainFieldControl.md>) | [ShowHideControl](<Reference/ShowHideControl.md>) |
-| [AddressControl](<Reference/AddressControl.md>) | [DiffListControl](<Reference/DiffListControl.md>) | [MenuButtonControl](<Reference/MenuButtonControl.md>) | [ShowOneControl](<Reference/ShowOneControl.md>) |
+| [AccordionControl](<Reference/AccordionControl.md>) | [Diff2Control](<Reference/Diff2Control.md>) | [MainFieldControl](<Reference/MainFieldControl.md>) | [ShowHideControl](<Reference/ShowHideControl.md>) |
+| [AddressControl](<Reference/AddressControl.md>) | [DiffImageControl](<Reference/DiffImageControl.md>) | [MenuButtonControl](<Reference/MenuButtonControl.md>) | [ShowOneControl](<Reference/ShowOneControl.md>) |
 | [Alert](<Reference/Alert.md>) | [DrawControl](<Reference/DrawControl.md>) | [MessageLoop](<Reference/MessageLoop.md>) | [SkipControl](<Reference/SkipControl.md>) |
 | [Ask](<Reference/Ask.md>) | [EditControl](<Reference/EditControl.md>) | [ModalWindow](<Reference/ModalWindow.md>) | [SparklineControl](<Reference/SparklineControl.md>) |
 | [AtLeastOneControl](<Reference/AtLeastOneControl.md>) | [EditorControl](<Reference/EditorControl.md>) | [MonthCalControl](<Reference/MonthCalControl.md>) | [SpinnerControl](<Reference/SpinnerControl.md>) |

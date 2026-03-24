@@ -4,19 +4,20 @@
 // displays message with AlertTextControl
 Controller
 	{
-	CallClass(hwnd, msg, title = "ALERT", flags = 0)
+	CallClass(hwnd, msg, title = "ALERT", flags = 0, font = "")
 		{
-		result = ToolDialog(hwnd, [this, msg, flags, GetWorkArea()], border: 0, :title,
-			closeButton?: MB.YESNO isnt (flags & MB.BUTTONBITS), keep_size: false)
+		result = ToolDialog(hwnd, [this, msg, flags, GetWorkArea(), font],
+			border: 0, :title, keep_size: false,
+			closeButton?: MB.YESNO isnt (flags & MB.BUTTONBITS))
 		return result is false ? ID.CANCEL : result // false is from window X close button
 		}
-	New(.msg, flags, rect)
+	New(.msg, flags, rect, font)
 		{
-		super(.controls(msg, flags, rect))
+		super(.controls(msg, flags, rect, font))
 		.Window.SetupAccels(#((Copy, "Ctrl+C")))
 		.Redir('On_Copy', .FindControl(#AlertText))
 		}
-	controls(msg, flags, rect)
+	controls(msg, flags, rect, font)
 		{
 		ymin = ((rect.bottom-rect.top)*.75 /*=scaleFactor*/)/GetDpiFactor()
 		xmin = 9999 // set this very large so it will trim down
@@ -25,7 +26,7 @@ Controller
 				[#WndPane, // for white background
 					[#Scroll,
 						[#Border,
-							horz = [#Horz, [#AlertText msg]],
+							horz = [#Horz, [#AlertText msg, :font]],
 						]
 					// trim: will shrink the Scroll to match the size of the AlertText
 					noEdge:, wndclass: 'SuWhiteArrow', trim:, :xmin, :ymin,

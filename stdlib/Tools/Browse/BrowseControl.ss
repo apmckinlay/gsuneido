@@ -26,13 +26,13 @@ PassthruController
 		.mandatoryFields = #(), stretch = false, .alwaysReadOnly = false, name = false,
 		extra = false, hideContents = false, .noSaveOnDestroy = false,
 		.loadRecordNotification = false, .addons = #(), limitSize? = false,
-		historyFields = false)
+		.historyFields = false)
 		{
 		super(.createControls(statusBar, stretch, extra, limitSize?))
 		.addons = .addons.Copy().Append(GetContributions('FormatContextMenuItems'))
 		.Addons = AddonManager(this, .addons)
 		// REFACTOR: move this into .addons
-		.addon = BrowseAddon(this, options: [:historyFields])
+		.addon = BrowseAddon(this, options: [historyFields: .historyFields])
 
 		.initObserverListRow()
 
@@ -1356,7 +1356,10 @@ PassthruController
 		}
 	On_Context_History()
 		{
-		.addon.History()
+		if false isnt .historyFields
+			.addon.History()
+		else
+			.Send('Browse_ContextMenuItemClicked', 'History')
 		}
 	Observer_HeaderData(member)
 		{

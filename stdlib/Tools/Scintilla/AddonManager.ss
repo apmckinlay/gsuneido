@@ -69,4 +69,8 @@ class
 			return 0
 		targetAddon[args[0]](@+1args)
 		}
+	AddonMethod?(method)
+		{
+		return .addons.Any?({ it.Method?(method) })
+		}
 	}

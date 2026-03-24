@@ -343,9 +343,10 @@ PassthruController
 		{
 		controls = Object('VertSplit', .DiffPanes(),
 			Object('Vert'
+				#(Skip medium:)
 				Object('Horz', .buttons() #(Skip 20) 'show_line_difference',
 					'Fill', .extraControls, #(Skip))
-				#(Skip medium:)
+				#(Skip small:)
 				name: 'lineDiffVert'
 				)
 			)
