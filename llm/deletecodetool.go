@@ -80,7 +80,8 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	off := row[0].Off
 	rtran.Complete()
 
-	if err := requireApproval(ctx, "deleteCodeTool"); err != nil {
+	existingCode := core.ToStr(core.Unpack(vals["text"]))
+	if err := requireApproval(ctx, "deleteCodeTool", existingCode, ""); err != nil {
 		return deleteCodeOutput{}, err
 	}
 

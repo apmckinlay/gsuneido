@@ -169,7 +169,7 @@ func editCodeTool(ctx context.Context, library, name, mode string, line, count i
 		warnings = []string{}
 	}
 
-	if err := requireApproval(ctx, "editCodeTool"); err != nil {
+	if err := requireApproval(ctx, "editCodeTool", oldText, newText); err != nil {
 		return editCodeOutput{
 			Library:       library,
 			Name:          name,

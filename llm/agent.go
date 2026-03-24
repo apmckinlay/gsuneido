@@ -38,8 +38,10 @@ type Agent struct {
 type OutFn func(what, data string, approval *ToolApproval)
 
 type ToolApproval struct {
-	once sync.Once
-	ch   chan approvalDecision
+	Before string
+	After  string
+	once   sync.Once
+	ch     chan approvalDecision
 }
 
 type approvalDecision struct {
@@ -411,13 +413,14 @@ func (agent *Agent) processToolCalls(ctx context.Context, content, reasoning str
 type approvalFnKey struct{}
 
 // requireApproval gets the approval function from context and calls it.
+// before is the original code (empty for create), after is the new code.
 // It panics if no approval function is found, or returns an error if denied.
-func requireApproval(ctx context.Context, toolName string) error {
-	approvalFn, ok := ctx.Value(approvalFnKey{}).(func() (bool, error))
+func requireApproval(ctx context.Context, toolName, before, after string) error {
+	approvalFn, ok := ctx.Value(approvalFnKey{}).(func(before, after string) (bool, error))
 	if !ok {
 		panic(toolName + ": missing approval function")
 	}
-	allowed, err := approvalFn()
+	allowed, err := approvalFn(before, after)
 	if err != nil {
 		return err
 	}
@@ -439,7 +442,9 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	if agent.needsApproval(tc.Function.Name) {
 		agent.emit("tool", toolOutput)
 		approval := newToolApproval()
-		approvalFn := func() (bool, error) {
+		approvalFn := func(before, after string) (bool, error) {
+			approval.Before = before
+			approval.After = after
 			agent.emitToolWithApproval("", approval)
 			allowed, text, err := agent.waitForApproval(ctx, approval)
 			approvalText = text

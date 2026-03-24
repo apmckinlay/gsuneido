@@ -89,7 +89,7 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 		return createCodeOutput{}, fmt.Errorf("definition already exists: %s", name)
 	}
 
-	if err := requireApproval(ctx, "createCodeTool"); err != nil {
+	if err := requireApproval(ctx, "createCodeTool", "", code); err != nil {
 		return createCodeOutput{}, err
 	}
 

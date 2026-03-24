@@ -109,6 +109,18 @@ func toolapproval_Deny(this Value, text Value) Value {
 	return nil
 }
 
+var _ = method(toolapproval_Before, "()")
+
+func toolapproval_Before(this Value) Value {
+	return SuStr(this.(*suToolApproval).approval.Before)
+}
+
+var _ = method(toolapproval_After, "()")
+
+func toolapproval_After(this Value) Value {
+	return SuStr(this.(*suToolApproval).approval.After)
+}
+
 var _ = method(agent_Input, "(input)")
 
 func agent_Input(this, input Value) Value {

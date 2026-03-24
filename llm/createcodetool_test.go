@@ -25,7 +25,7 @@ func TestCreateCodeTool(t *testing.T) {
 
 	dbmsLocal.Admin("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)", nil)
 
-	ctx := context.WithValue(context.Background(), approvalFnKey{}, func() (bool, error) {
+	ctx := context.WithValue(context.Background(), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
 	})
 

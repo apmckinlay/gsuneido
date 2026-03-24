@@ -89,7 +89,7 @@ func TestEditCodeTool(t *testing.T) {
 	tran.Complete()
 	th.Close()
 
-	ctx := context.WithValue(context.Background(), approvalFnKey{}, func() (bool, error) {
+	ctx := context.WithValue(context.Background(), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
 	})
 
