@@ -42,6 +42,10 @@ func (it *Iterator) Range(rng Range) {
 	it.Rewind()
 }
 
+func (it *Iterator) SkipScan(_ Range, _ int) {
+	panic("old btree iterator: skip scan not supported")
+}
+
 func (it *Iterator) Eof() bool {
 	return it.state == eof
 }

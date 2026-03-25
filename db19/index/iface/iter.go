@@ -50,6 +50,11 @@ type Iter interface {
 	// Range sets the range for the iterator.
 	// It also does Rewind.
 	Range(Range)
+
+	// SkipScan enables skip-scan mode.
+	// rng applies to suffix fields (excluding prefix fields).
+	// prefixLen must be >= 1
+	SkipScan(rng Range, prefixLen int)
 }
 
 // Range specifies (key >= org && key < end)

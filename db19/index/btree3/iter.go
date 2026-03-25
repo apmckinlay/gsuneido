@@ -11,18 +11,17 @@ import (
 
 // Iterator traverses a range of a btree.
 type Iterator struct {
-	bt               *btree
-	rng              Range
-	skipRng          Range               // suffix range used by skip-scan mode
-	skipPrefixFields int                 // number of leading fields treated as prefix in skip-scan mode
-	tree             [maxLevels]treeIter // tree[0] is root
-	leaf             leafIter
-	state            iterState
-	noRange          bool // true if rng is iterator.All, bypasses checkRange
-	curKeySet        bool
-	curKey           string
-	skipScan         bool   // true if SkipScan mode is active
-	skipGroup        string // current prefix group in skip-scan traversal
+	bt            *btree
+	rng           Range
+	skipRng       Range               // suffix range used by skip-scan mode
+	skipPrefixLen int                 // number of prefix fields
+	tree          [maxLevels]treeIter // tree[0] is root
+	leaf          leafIter
+	state         iterState
+	noRange       bool // true if rng is iterator.All, bypasses checkRange
+	curKeySet     bool
+	curKey        string
+	skipGroup     string // current prefix group in skip-scan traversal
 }
 
 const maxLevels = 8
@@ -38,8 +37,7 @@ const (
 )
 
 func (bt *btree) Iterator() iface.Iter {
-	return &Iterator{bt: bt, state: rewound, rng: iface.All, noRange: true,
-		skipPrefixFields: 1}
+	return &Iterator{bt: bt, state: rewound, rng: iface.All, noRange: true}
 }
 
 // Key returns the current key or an empty string. It allocates.
@@ -91,25 +89,17 @@ func (it *Iterator) Rewind() {
 // Range sets the range and rewinds the iterator
 func (it *Iterator) Range(rng Range) {
 	it.rng = rng
-	it.skipScan = false
+	it.skipPrefixLen = 0
 	it.noRange = (rng == iface.All)
 	it.Rewind()
 }
 
 // SkipScan enables btree3-only skip-scan mode.
 // rng applies to suffix fields (excluding prefix fields).
-// prefixFields defaults to 1.
-func (it *Iterator) SkipScan(rng Range, prefixFields ...int) {
-	n := 1
-	if len(prefixFields) > 0 {
-		n = prefixFields[0]
-	}
-	if n < 1 {
-		panic("btree skip scan: prefixFields must be >= 1")
-	}
-	it.skipScan = true
+func (it *Iterator) SkipScan(rng Range, prefixLen int) {
+	assert.That(prefixLen > 0)
 	it.skipRng = rng
-	it.skipPrefixFields = n
+	it.skipPrefixLen = prefixLen
 	it.rng = iface.All
 	it.noRange = true
 	it.skipGroup = ""
@@ -121,7 +111,7 @@ func (it *Iterator) SkipScan(rng Range, prefixFields ...int) {
 // Next advances the iterator to the next key in the range or sets eof.
 func (it *Iterator) Next() {
 	it.curKeySet = false
-	if it.skipScan {
+	if it.skipPrefixLen != 0 {
 		it.skipNext()
 		return
 	}
@@ -190,7 +180,7 @@ func (it *Iterator) skipNext() {
 func (it *Iterator) skipAdvanceToMatch() {
 	for it.state == within {
 		key := it.leaf.key()
-		prefix, suffix := ixkey.SplitPrefixSuffix(key, it.skipPrefixFields)
+		prefix, suffix := ixkey.SplitPrefixSuffix(key, it.skipPrefixLen)
 		if prefix != it.skipGroup {
 			// New first-field group: jump directly to this group's suffix lower bound.
 			// This avoids scanning the beginning of every group when Org is selective.
@@ -255,7 +245,7 @@ func (it *Iterator) skipSeekNextGroup(prefix string) {
 // Prev moves the iterator to the previous key in the range or sets eof.
 func (it *Iterator) Prev() {
 	it.curKeySet = false
-	if it.skipScan {
+	if it.skipPrefixLen != 0 {
 		it.skipPrev()
 		return
 	}
@@ -333,7 +323,7 @@ func (it *Iterator) skipPrev() {
 func (it *Iterator) skipRetreatToMatch() {
 	// Reverse-direction mirror of skipAdvanceToMatch.
 	for it.state == within {
-		prefix, suffix := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipPrefixFields)
+		prefix, suffix := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipPrefixLen)
 		if prefix != it.skipGroup {
 			it.skipGroup = prefix
 			it.skipSeekGroupEnd(prefix)
@@ -359,7 +349,7 @@ func (it *Iterator) skipSeekGroupEnd(prefix string) {
 	it.seekAllRaw(target)
 	// seekAllRaw positions >= target; back up until we're inside this group's range
 	for it.state == within {
-		p2, s2 := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipPrefixFields)
+		p2, s2 := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipPrefixLen)
 		if p2 > prefix || (p2 == prefix && s2 >= it.skipRng.End) {
 			it.prev()
 			it.curKeySet = false
@@ -399,7 +389,7 @@ func (it *Iterator) skipSeekPrevGroup(prefix string) {
 // Seek moves the iterator to the first position >= key.
 // If the key is outside the current range, eof will be set.
 func (it *Iterator) Seek(key string) {
-	if !it.skipScan {
+	if it.skipPrefixLen == 0 {
 		it.SeekAll(key)
 		it.checkRange()
 		return
@@ -407,7 +397,7 @@ func (it *Iterator) Seek(key string) {
 	// In skip-scan mode, Seek should match regular Seek semantics on the
 	// filtered view: find first visible key >= key, or stay on last visible key.
 	visible := func(k string) (first string, ok bool) {
-		p, s := ixkey.SplitPrefixSuffix(k, it.skipPrefixFields)
+		p, s := ixkey.SplitPrefixSuffix(k, it.skipPrefixLen)
 		return p, it.skipRng.Org <= s && s < it.skipRng.End
 	}
 
@@ -443,7 +433,7 @@ func (it *Iterator) Seek(key string) {
 // unless the btree is empty in which case it will be set to eof.
 // It does *not* apply the current range.
 func (it *Iterator) SeekAll(key string) {
-	if !it.skipScan {
+	if it.skipPrefixLen == 0 {
 		it.seekAllRaw(key)
 		return
 	}
@@ -492,7 +482,7 @@ func (it *Iterator) seekAllRaw(key string) {
 // across all first-field groups, without applying any upper bound.
 func (it *Iterator) skipSuffixSeekUnbounded(minSuffix string) {
 	for it.state == within {
-		prefix, suffix := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipPrefixFields)
+		prefix, suffix := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipPrefixLen)
 		if prefix != it.skipGroup {
 			it.skipGroup = prefix
 			target := prefix + ixkey.Sep + minSuffix

@@ -493,7 +493,7 @@ func TestSkipScanNext(t *testing.T) {
 		ib.Insert(ixkey.CompKey(r[0], r[1]), uint64(i+1))
 	}
 	it := ib.Iterator().(*Iterator)
-	it.SkipScan(Range{Org: "02", End: "04"})
+	it.SkipScan(Range{Org: "02", End: "04"}, 1)
 
 	var got []string
 	for it.Next(); !it.Eof(); it.Next() {
@@ -508,7 +508,7 @@ func TestSkipScanNoMatches(t *testing.T) {
 	ib.Insert(ixkey.CompKey("a", "01"), 1)
 	ib.Insert(ixkey.CompKey("b", "01"), 2)
 	it := ib.Iterator().(*Iterator)
-	it.SkipScan(Range{Org: "02", End: "03"})
+	it.SkipScan(Range{Org: "02", End: "03"}, 1)
 	it.Next()
 	assert.T(t).That(it.Eof())
 }
@@ -525,7 +525,7 @@ func TestSkipScanPrev(t *testing.T) {
 		ib.Insert(ixkey.CompKey(r[0], r[1]), uint64(i+1))
 	}
 	it := ib.Iterator().(*Iterator)
-	it.SkipScan(Range{Org: "02", End: "04"})
+	it.SkipScan(Range{Org: "02", End: "04"}, 1)
 
 	var got []string
 	for it.Prev(); !it.Eof(); it.Prev() {
@@ -569,7 +569,7 @@ func TestSkipScanRangeDisablesSkipScan(t *testing.T) {
 	ib.Insert(ixkey.CompKey("b", "01"), 3)
 	it := ib.Iterator().(*Iterator)
 
-	it.SkipScan(Range{Org: "01", End: "03"})
+	it.SkipScan(Range{Org: "01", End: "03"}, 1)
 	it.Next()
 	assert.T(t).That(!it.Eof())
 
@@ -591,7 +591,7 @@ func TestSkipScanPrevGroupOutOfRange(t *testing.T) {
 	ib.Insert(ixkey.CompKey("a", "20"), 1)
 	ib.Insert(ixkey.CompKey("a", "25"), 2)
 	it := ib.Iterator().(*Iterator)
-	it.SkipScan(Range{Org: "08", End: "19"})
+	it.SkipScan(Range{Org: "08", End: "19"}, 1)
 	it.Prev()
 	assert.T(t).That(it.Eof())
 }
@@ -658,7 +658,7 @@ func TestSkipScanRandomParallelWithSubset(t *testing.T) {
 	}
 
 	fit := fullIb.Iterator().(*Iterator)
-	fit.SkipScan(Range{Org: org, End: end})
+	fit.SkipScan(Range{Org: org, End: end}, 1)
 	sit := subIb.Iterator()
 
 	assertSame := func(step int, op string) {
@@ -763,7 +763,7 @@ func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 			b.ReportAllocs()
 			for range b.N {
 				it := ib.Iterator().(*Iterator)
-				it.SkipScan(Range{Org: org, End: end})
+				it.SkipScan(Range{Org: org, End: end}, 1)
 				n := 0
 				for it.Next(); !it.Eof(); it.Next() {
 					n++

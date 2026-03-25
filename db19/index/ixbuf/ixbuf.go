@@ -479,11 +479,10 @@ type Range = iface.Range
 type Iterator struct {
 	ib *ixbuf
 	// rng is the Range of the iterator
-	rng     Range
-	skipRng Range // suffix range used by skip-scan mode
-	// number of leading fields treated as prefix in skip-scan mode
-	skipPrefixFields int
-	c       chunk
+	rng           Range
+	skipRng       Range // suffix range used by skip-scan mode
+	skipPrefixLen int   // number of prefix fields
+	c             chunk
 	// cur is the current key and offset.
 	// We need to keep a copy of it because the ixbuf could change.
 	cur slot
@@ -492,7 +491,6 @@ type Iterator struct {
 	i         int
 	modCount  int32  // gets updated by Seek(All)
 	skipGroup string // current prefix group in skip-scan traversal
-	skipScan  bool   // true if SkipScan mode is active
 	state
 }
 
@@ -513,24 +511,16 @@ func (ib *ixbuf) Iterator() iface.Iter {
 
 func (it *Iterator) Range(rng Range) {
 	it.rng = rng
-	it.skipScan = false
+	it.skipPrefixLen = 0
 	it.Rewind()
 }
 
 // SkipScan enables skip-scan mode.
 // rng applies to suffix fields (excluding prefix fields).
-// prefixFields defaults to 1.
-func (it *Iterator) SkipScan(rng Range, prefixFields ...int) {
-	n := 1
-	if len(prefixFields) > 0 {
-		n = prefixFields[0]
-	}
-	if n < 1 {
-		panic("ixbuf skip scan: prefixFields must be >= 1")
-	}
-	it.skipScan = true
+func (it *Iterator) SkipScan(rng Range, prefixLen int) {
+	assert.That(prefixLen > 0)
 	it.skipRng = rng
-	it.skipPrefixFields = n
+	it.skipPrefixLen = prefixLen
 	it.rng = iface.All
 	it.skipGroup = ""
 	it.Rewind()
@@ -562,7 +552,7 @@ func (it *Iterator) HasCur() bool {
 }
 
 func (it *Iterator) Next() {
-	if it.skipScan {
+	if it.skipPrefixLen != 0 {
 		it.skipNext()
 		return
 	}
@@ -590,7 +580,7 @@ func (it *Iterator) Next() {
 }
 
 func (it *Iterator) Prev() {
-	if it.skipScan {
+	if it.skipPrefixLen != 0 {
 		it.skipPrev()
 		return
 	}
@@ -626,7 +616,7 @@ func (it *Iterator) Rewind() {
 }
 
 func (it *Iterator) Seek(key string) {
-	if it.skipScan {
+	if it.skipPrefixLen != 0 {
 		it.skipSeek(key)
 		return
 	}
@@ -639,7 +629,7 @@ func (it *Iterator) Seek(key string) {
 // skipSeek positions the iterator at the first visible key >= key in skip-scan mode,
 // or at the last visible key if no visible key >= key exists.
 func (it *Iterator) skipSeek(key string) {
-	seekPrefix, seekSuffix := ixkey.SplitPrefixSuffix(key, it.skipPrefixFields)
+	seekPrefix, seekSuffix := ixkey.SplitPrefixSuffix(key, it.skipPrefixLen)
 	it.skipGroup = seekPrefix // pre-set group so skipAdvanceToMatch skips re-seeking it
 	switch {
 	case seekSuffix < it.skipRng.Org:
@@ -689,7 +679,7 @@ func (it *Iterator) skipNext() {
 
 func (it *Iterator) skipAdvanceToMatch() {
 	for it.state == within {
-		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixFields)
+		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixLen)
 		if prefix != it.skipGroup {
 			it.skipGroup = prefix
 			it.skipSeekOrg(prefix)
@@ -723,7 +713,7 @@ func (it *Iterator) skipSeekOrg(prefix string) {
 func (it *Iterator) skipSeekNext(prefix string) {
 	it.seekRaw(prefix + ixkey.Sep + ixkey.Max)
 	if it.state == within {
-		p, _ := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixFields)
+		p, _ := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixLen)
 		if p == prefix {
 			it.state = eof
 		}
@@ -744,7 +734,7 @@ func (it *Iterator) skipPrev() {
 
 func (it *Iterator) skipRetreatToMatch() {
 	for it.state == within {
-		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixFields)
+		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixLen)
 		if prefix != it.skipGroup {
 			it.skipGroup = prefix
 			it.skipSeekGroupEnd(prefix)
@@ -769,7 +759,7 @@ func (it *Iterator) skipSeekGroupEnd(prefix string) {
 	it.seekRaw(prefix + ixkey.Sep + it.skipRng.End)
 	// seekRaw positions at >= End; back up until inside this group's range
 	for it.state == within {
-		p2, s2 := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixFields)
+		p2, s2 := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixLen)
 		if p2 > prefix || (p2 == prefix && s2 >= it.skipRng.End) {
 			it.retreat()
 			continue

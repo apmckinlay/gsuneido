@@ -8,6 +8,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type iterT = iface.Iter
@@ -21,6 +22,7 @@ type Range = iface.Range
 type OverIter struct {
 	overlay *Overlay
 	rng     Range
+	skipRng Range
 	table   string
 	// We need to keep our own curKey/Off independent of the source iterators
 	// because new source iterators may be returned by the callback.
@@ -32,6 +34,8 @@ type OverIter struct {
 	lastDir dir
 	// singleIter is true when only the btree iterator is needed (no layers/mut)
 	singleIter bool
+	// number of leading fields treated as prefix in skip-scan mode
+	skipPrefixLen int
 }
 
 type state byte
@@ -107,9 +111,23 @@ func (oi *OverIter) checkHasCur() {
 
 func (oi *OverIter) Range(rng Range) {
 	oi.rng = rng
+	oi.skipPrefixLen = 0
 	oi.state = rewound
 	for _, it := range oi.iters {
 		it.Range(rng)
+	}
+}
+
+// SkipScan enables skip-scan mode.
+// rng applies to suffix fields (excluding prefix fields).
+func (oi *OverIter) SkipScan(rng Range, prefixLen int) {
+	assert.That(prefixLen > 0)
+	oi.skipRng = rng
+	oi.skipPrefixLen = prefixLen
+	oi.rng = iface.All
+	oi.state = rewound
+	for _, it := range oi.iters {
+		it.SkipScan(rng, prefixLen)
 	}
 }
 
@@ -165,7 +183,11 @@ func (oi *OverIter) newIters(ov *Overlay) {
 		its = append(its, ov.mut.Iterator())
 	}
 	for _, it := range its {
-		it.Range(oi.rng)
+		if oi.skipPrefixLen != 0 {
+			it.SkipScan(oi.skipRng, oi.skipPrefixLen)
+		} else {
+			it.Range(oi.rng)
+		}
 	}
 	oi.iters = its
 	oi.overlay = ov
