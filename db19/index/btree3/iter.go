@@ -190,10 +190,6 @@ func (it *Iterator) skipAdvanceToMatch() {
 			}
 			continue
 		}
-		if suffix < it.skipRng.Org {
-			it.next()
-			continue
-		}
 		if suffix >= it.skipRng.End {
 			it.skipSeekNextGroup(first)
 			continue
@@ -226,26 +222,15 @@ func (it *Iterator) skipSeekNextGroup(first string) {
 	}
 
 	bt := it.bt
-	var nodeOff uint64
-	level := bt.treeLevels - 1
-	for ; level >= 0; level-- {
-		it.tree[level] = it.tree[level].nd.seek(target)
-		if it.tree[level].i < it.tree[level].nd.noffs() {
-			nodeOff = it.tree[level].offset()
-			break
-		}
-	}
-	if level < 0 {
+	if bt.treeLevels == 0 {
 		it.state = eof
 		return
 	}
-
-	// We found an ancestor whose seek landed within the node. Descend from there
-	// using seek(target) at each level so we reposition to the next group.
-	for level++; level < bt.treeLevels; level++ {
-		it.tree[level] = bt.readTree(nodeOff).seek(target)
-		nodeOff = it.tree[level].offset()
-	}
+	// treeNode.seek always returns a valid position (i < noffs),
+	// so we always find the ancestor at the deepest tree level.
+	level := bt.treeLevels - 1
+	it.tree[level] = it.tree[level].nd.seek(target)
+	nodeOff := it.tree[level].offset()
 	it.leaf = bt.readLeaf(nodeOff).seek(target)
 	if !it.leaf.eof() {
 		it.state = within
@@ -361,9 +346,6 @@ func (it *Iterator) skipRetreatToMatch() {
 func (it *Iterator) skipSeekGroupEnd(first string) {
 	target := first + ixkey.Sep + it.skipRng.End
 	it.seekAllRaw(target)
-	if it.state != within {
-		return
-	}
 	// seekAllRaw positions >= target; back up until we're inside this group's range
 	for it.state == within {
 		f2, s2 := splitFirstSuffix(it.leaf.key())
@@ -381,33 +363,18 @@ func (it *Iterator) skipSeekGroupEnd(first string) {
 }
 
 func (it *Iterator) skipSeekPrevGroup(first string) {
-	// Walk up the already-loaded tree nodes to find an ancestor that spans 'first',
-	// then descend using seek(first) at each level and back up one at the leaf.
-	// This mirrors the seekAllRaw(first)+prev() approach but reuses already-loaded
-	// upper nodes instead of re-reading them from storage.
+	// Reuse already-loaded tree nodes: seek at the deepest tree level for 'first',
+	// then descend to the leaf and back up one step.
 	bt := it.bt
-	var nodeOff uint64
-	level := bt.treeLevels - 1
-	for ; level >= 0; level-- {
-		ti := it.tree[level].nd.seek(first)
-		if ti.i < ti.nd.noffs() {
-			it.tree[level] = ti
-			nodeOff = it.tree[level].offset()
-			break
-		}
-	}
-	if level < 0 {
-		if bt.treeLevels > 0 {
-			it.state = eof
-			return
-		}
+	if bt.treeLevels == 0 {
 		// single-leaf tree: seek directly in the leaf
 		it.leaf = bt.readLeaf(bt.root).seek(first)
 	} else {
-		for level++; level < bt.treeLevels; level++ {
-			it.tree[level] = bt.readTree(nodeOff).seek(first)
-			nodeOff = it.tree[level].offset()
-		}
+		// treeNode.seek always returns a valid position (i < noffs),
+		// so we find the ancestor at level bt.treeLevels-1.
+		level := bt.treeLevels - 1
+		it.tree[level] = it.tree[level].nd.seek(first)
+		nodeOff := it.tree[level].offset()
 		it.leaf = bt.readLeaf(nodeOff).seek(first)
 	}
 	it.state = within
@@ -520,9 +487,6 @@ func (it *Iterator) skipSuffixSeekUnbounded(minSuffix string) {
 			target := first + ixkey.Sep + minSuffix
 			it.seekAllRaw(target)
 			it.skipGroup = first
-			if it.state != within {
-				return
-			}
 			continue
 		}
 		if suffix < minSuffix {

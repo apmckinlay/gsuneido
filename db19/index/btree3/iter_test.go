@@ -680,85 +680,6 @@ func TestSkipScanRandomParallelWithSubset(t *testing.T) {
 	}
 }
 
-func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
-	const (
-		groups          = 1000
-		recordsPerGroup = 250
-		totalRecords    = groups * recordsPerGroup
-		suffixWidth     = 4
-		startSuffix     = 25
-	)
-	if totalRecords < 100000 {
-		b.Fatalf("expected at least 100,000 records, got %d", totalRecords)
-	}
-
-	file := filepath.Join(b.TempDir(), "skipscan-breakeven.db")
-	st, err := stor.MmapStor(file, stor.Create)
-	if err != nil {
-		b.Fatal(err)
-	}
-	b.Cleanup(func() {
-		st.Close(true)
-	})
-
-	bld := Builder(st)
-	for g := range groups {
-		first := fmt.Sprintf("g%04d", g)
-		for s := range recordsPerGroup {
-			suffix := fmt.Sprintf("%0*d", suffixWidth, s)
-			off := uint64(g*recordsPerGroup + s + 1)
-			assert.That(bld.Add(compKey(first, suffix), off))
-		}
-	}
-	bt := bld.Finish().(*btree)
-
-	widths := []int{8, 16, 32, 64, 96, 128, 160, 192, 224}
-	maxWidth := widths[len(widths)-1]
-	fullOrg := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
-	fullEnd := fmt.Sprintf("%0*d", suffixWidth, startSuffix+maxWidth)
-	fullExpected := groups * maxWidth
-
-	for _, width := range widths {
-		width := width
-		endSuffix := startSuffix + width
-		org := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
-		end := fmt.Sprintf("%0*d", suffixWidth, endSuffix)
-		expected := groups * width
-
-		b.Run(fmt.Sprintf("skip_w%03d", width), func(b *testing.B) {
-			b.ReportAllocs()
-			for range b.N {
-				it := bt.Iterator().(*Iterator)
-				it.SkipScan(iface.Range{Org: org, End: end})
-				n := 0
-				for it.Next(); !it.Eof(); it.Next() {
-					n++
-				}
-				if n != expected {
-					b.Fatalf("skip scan width %d expected %d got %d", width, expected, n)
-				}
-			}
-		})
-	}
-
-	b.Run("full_once", func(b *testing.B) {
-		b.ReportAllocs()
-		for range b.N {
-			it := bt.Iterator()
-			n := 0
-			for it.Next(); !it.Eof(); it.Next() {
-				_, suffix := splitFirstSuffix(it.Key())
-				if fullOrg <= suffix && suffix < fullEnd {
-					n++
-				}
-			}
-			if n != fullExpected {
-				b.Fatalf("full scan expected %d got %d", fullExpected, n)
-			}
-		}
-	})
-}
-
 func testSkipScanRandomParallelWithSubset(t *testing.T, splitSize int) {
 	t.Helper()
 	defer SetSplit(SetSplit(splitSize))
@@ -766,7 +687,7 @@ func testSkipScanRandomParallelWithSubset(t *testing.T, splitSize int) {
 	const (
 		org   = "08"
 		end   = "19"
-		steps = 3000
+		steps = 30000
 	)
 
 	// groups and the suffixes they contain, chosen to exercise edge cases:
@@ -911,12 +832,350 @@ func testSkipScanRandomParallelWithSubset(t *testing.T, splitSize int) {
 	}
 }
 
+func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
+	const (
+		groups          = 1000
+		recordsPerGroup = 250
+		totalRecords    = groups * recordsPerGroup
+		suffixWidth     = 4
+		startSuffix     = 25
+	)
+	if totalRecords < 100000 {
+		b.Fatalf("expected at least 100,000 records, got %d", totalRecords)
+	}
+
+	file := filepath.Join(b.TempDir(), "skipscan-breakeven.db")
+	st, err := stor.MmapStor(file, stor.Create)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.Cleanup(func() {
+		st.Close(true)
+	})
+
+	bld := Builder(st)
+	for g := range groups {
+		first := fmt.Sprintf("g%04d", g)
+		for s := range recordsPerGroup {
+			suffix := fmt.Sprintf("%0*d", suffixWidth, s)
+			off := uint64(g*recordsPerGroup + s + 1)
+			assert.That(bld.Add(compKey(first, suffix), off))
+		}
+	}
+	bt := bld.Finish().(*btree)
+
+	widths := []int{8, 16, 32, 64, 96, 128, 160, 192, 224}
+	maxWidth := widths[len(widths)-1]
+	fullOrg := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
+	fullEnd := fmt.Sprintf("%0*d", suffixWidth, startSuffix+maxWidth)
+	fullExpected := groups * maxWidth
+
+	for _, width := range widths {
+		width := width
+		endSuffix := startSuffix + width
+		org := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
+		end := fmt.Sprintf("%0*d", suffixWidth, endSuffix)
+		expected := groups * width
+
+		b.Run(fmt.Sprintf("skip_w%03d", width), func(b *testing.B) {
+			b.ReportAllocs()
+			for range b.N {
+				it := bt.Iterator().(*Iterator)
+				it.SkipScan(iface.Range{Org: org, End: end})
+				n := 0
+				for it.Next(); !it.Eof(); it.Next() {
+					n++
+				}
+				if n != expected {
+					b.Fatalf("skip scan width %d expected %d got %d", width, expected, n)
+				}
+			}
+		})
+	}
+
+	b.Run("full_once", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			it := bt.Iterator()
+			n := 0
+			for it.Next(); !it.Eof(); it.Next() {
+				_, suffix := splitFirstSuffix(it.Key())
+				if fullOrg <= suffix && suffix < fullEnd {
+					n++
+				}
+			}
+			if n != fullExpected {
+				b.Fatalf("full scan expected %d got %d", fullExpected, n)
+			}
+		}
+	})
+}
+
 func (it *Iterator) Print() {
 	fmt.Println("Iterator:")
 	for i := 0; i < len(it.tree) && len(it.tree[i].nd) > 0; i++ {
 		fmt.Println(strconv.Itoa(it.tree[i].i), it.tree[i].nd.String())
 	}
 	fmt.Println(strconv.Itoa(it.leaf.i), it.leaf.nd.String())
+}
+
+// TestModified verifies the iface requirement that btree iterators return false.
+func TestModified(t *testing.T) {
+	bt := buildTestTree(5)
+	it := bt.Iterator().(*Iterator)
+	assert.T(t).This(it.Modified()).Is(false)
+	it.Next()
+	assert.T(t).This(it.Modified()).Is(false)
+}
+
+// TestSkipRetreatSuffixAboveEndSameGroup covers the suffix >= End path in
+// skipRetreatToMatch (line 342) when skipGroup is already set to the current group.
+// This is reached when SeekAll positions us above End in the same group we're tracking.
+func TestSkipRetreatSuffixAboveEndSameGroup(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	// Group "a" has two keys both above End="04"
+	assert.That(b.Add(compKey("a", "05"), 1))
+	assert.That(b.Add(compKey("a", "07"), 2))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "02", End: "04"})
+	// SeekAll("06") positions at ("a","07") with skipGroup="a"; no key is in [Org,End)
+	it.SeekAll("06")
+	// Prev from ("a","07"): prev() -> ("a","05") which is also >= End; then prev again -> eof
+	it.Prev()
+	assert.T(t).That(it.Eof())
+}
+
+// TestSplitFirstSuffix covers the escaped zero (\x00\x01) and no-separator paths.
+func TestSplitFirstSuffix(t *testing.T) {
+	// no separator: single-field key returns (key, "")
+	f, s := splitFirstSuffix("abc")
+	assert.T(t).This(f).Is("abc")
+	assert.T(t).This(s).Is("")
+
+	// real separator \x00\x00
+	f, s = splitFirstSuffix("ab\x00\x00cd")
+	assert.T(t).This(f).Is("ab")
+	assert.T(t).This(s).Is("cd")
+
+	// escaped zero \x00\x01 is not a separator
+	f, s = splitFirstSuffix("a\x00\x01b\x00\x00c")
+	assert.T(t).This(f).Is("a\x00\x01b")
+	assert.T(t).This(s).Is("c")
+}
+
+// TestSkipNextEmptyTree covers the rewound->eof path in skipNext (empty btree).
+func TestSkipNextEmptyTree(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "01", End: "02"})
+	it.Next()
+	assert.T(t).That(it.Eof())
+}
+
+// TestSkipPrevEmptyTree covers the rewound->eof path in skipPrev (empty btree).
+func TestSkipPrevEmptyTree(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "01", End: "02"})
+	it.Prev()
+	assert.T(t).That(it.Eof())
+}
+
+// TestSkipAdvanceSuffixBelowOrg covers the suffix < Org path in skipAdvanceToMatch:
+// within a group, some keys have suffixes below Org, requiring it.next() in the loop.
+func TestSkipAdvanceSuffixBelowOrg(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	// Group "a" has three keys: "01" (below Org), "03" (in range), "05" (in range)
+	assert.That(b.Add(compKey("a", "01"), 1))
+	assert.That(b.Add(compKey("a", "03"), 2))
+	assert.That(b.Add(compKey("a", "05"), 3))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	// Org="02" so suffix "01" is below Org and must be skipped
+	it.SkipScan(iface.Range{Org: "02", End: "06"})
+	it.Next()
+	assert.T(t).That(!it.Eof())
+	_, s := splitFirstSuffix(it.Key())
+	assert.T(t).This(s).Is("03")
+}
+
+// TestSkipRetreatSuffixAboveEnd covers the suffix >= End path in skipRetreatToMatch:
+// within a group, some keys have suffixes at or above End, requiring it.prev().
+func TestSkipRetreatSuffixAboveEnd(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	// Group "a" has keys: "01" (in range), "03" (in range), "05" (at/above End)
+	assert.That(b.Add(compKey("a", "01"), 1))
+	assert.That(b.Add(compKey("a", "03"), 2))
+	assert.That(b.Add(compKey("a", "05"), 3))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	// End="04" so suffix "05" is >= End and must be skipped backward
+	it.SkipScan(iface.Range{Org: "00", End: "04"})
+	// Rewind and iterate backward
+	it.Prev()
+	assert.T(t).That(!it.Eof())
+	_, s := splitFirstSuffix(it.Key())
+	assert.T(t).This(s).Is("03")
+}
+
+// TestSkipSeekGroupEndBeyondAllData covers skipSeekGroupEnd when seekAllRaw hits eof
+// because the group+End target lies beyond all keys in the tree.
+func TestSkipSeekGroupEndBeyondAllData(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	// Only one group "a" with suffixes below End; the last group's End would exceed all keys.
+	assert.That(b.Add(compKey("a", "01"), 1))
+	assert.That(b.Add(compKey("a", "02"), 2))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	// End="03": when we do skipSeekGroupEnd("a"), target = "a\x00\x0003"
+	// seekAllRaw on that might round to last key. Verify Prev works.
+	it.SkipScan(iface.Range{Org: "01", End: "03"})
+	it.Prev()
+	assert.T(t).That(!it.Eof())
+	_, s := splitFirstSuffix(it.Key())
+	assert.T(t).This(s).Is("02")
+}
+
+// TestSkipRetreatNewGroupGoesEof covers the path where skipSeekGroupEnd
+// results in !within (the first group's end is before min data).
+func TestSkipRetreatNewGroupGoesEof(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	// Only group "z" keys, all suffixes >= End
+	assert.That(b.Add(compKey("z", "05"), 1))
+	assert.That(b.Add(compKey("z", "06"), 2))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	// End="03": no key in "z" has suffix in [Org, End), Prev should reach eof
+	it.SkipScan(iface.Range{Org: "01", End: "03"})
+	it.Prev()
+	assert.T(t).That(it.Eof())
+}
+
+// TestSkipSeekPrevGroupLevel0 covers skipSeekPrevGroup when level<0 and treeLevels==0
+// (single-leaf tree): seeks directly in the root leaf.
+func TestSkipSeekPrevGroupLevel0(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	// Two groups: "b" (in range) then "c" (in range) — prev from "c" should go to "b"
+	assert.That(b.Add(compKey("b", "02"), 1))
+	assert.That(b.Add(compKey("b", "03"), 2))
+	assert.That(b.Add(compKey("c", "02"), 3))
+	assert.That(b.Add(compKey("c", "03"), 4))
+	bt := b.Finish().(*btree)
+	assert.T(t).This(bt.treeLevels).Is(0) // single-leaf tree
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "02", End: "04"})
+
+	// Iterate forward to get into group "c"
+	it.Next()
+	f, s := splitFirstSuffix(it.Key())
+	assert.T(t).This(f).Is("b")
+	assert.T(t).This(s).Is("02")
+
+	// Now call Prev twice to skip back through "b:03" and into "b:02"
+	it.Next()
+	assert.T(t).That(!it.Eof())
+	it.Next()
+	assert.T(t).That(!it.Eof())
+	it.Next()
+	assert.T(t).That(!it.Eof())
+	// Now backward: from "c:03" retreat to "c:02", "b:03", "b:02"
+	it.Prev()
+	f, s = splitFirstSuffix(it.Key())
+	assert.T(t).This(f).Is("c")
+	assert.T(t).This(s).Is("02")
+}
+
+// TestSkipSeekPrevGroupEofBeforeFirst covers the level<0 and treeLevels>0 path
+// in skipSeekPrevGroup: the first group has no predecessor.
+func TestSkipSeekPrevGroupEofBeforeFirst(t *testing.T) {
+	defer SetSplit(SetSplit(4)) // force multi-level tree
+	b := Builder(stor.HeapStor(8192))
+	// Only one group "a"; prev past "a" should reach eof
+	for i := range 20 {
+		assert.That(b.Add(compKey("a", fmt.Sprintf("%02d", i)), uint64(i+1)))
+	}
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "05", End: "10"})
+	// Advance to first match then keep calling Prev past the beginning
+	it.Next()
+	assert.T(t).That(!it.Eof())
+	for !it.Eof() {
+		it.Prev()
+	}
+	assert.T(t).That(it.Eof())
+}
+
+// TestSkipSeekNextGroupMultiLevel covers the multi-level descent path in
+// skipSeekNextGroup (lines 245-248) when next group spans multiple tree levels.
+func TestSkipSeekNextGroupMultiLevel(t *testing.T) {
+	defer SetSplit(SetSplit(4)) // small split -> treeLevels >= 1
+	b := Builder(stor.HeapStor(64 * 1024))
+	// Many groups spread across multiple leaf nodes so the skip crosses tree levels
+	for g := 0; g < 30; g++ {
+		first := fmt.Sprintf("g%02d", g)
+		for s := 0; s < 10; s++ {
+			assert.That(b.Add(compKey(first, fmt.Sprintf("%02d", s)), uint64(g*10+s+1)))
+		}
+	}
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	// Range only includes suffix "05": forces skipSeekNextGroup across tree boundaries
+	it.SkipScan(iface.Range{Org: "05", End: "06"})
+	var got []string
+	for it.Next(); !it.Eof(); it.Next() {
+		f, s := splitFirstSuffix(it.Key())
+		got = append(got, f+":"+s)
+	}
+	assert.T(t).This(len(got)).Is(30)
+	for i, k := range got {
+		assert.T(t).This(k).Is(fmt.Sprintf("g%02d:05", i))
+	}
+}
+
+// TestSkipSeekPrevGroupMultiLevel covers the multi-level descent in skipSeekPrevGroup
+// (lines 407-410) when the previous group is in a different subtree.
+func TestSkipSeekPrevGroupMultiLevel(t *testing.T) {
+	defer SetSplit(SetSplit(4)) // small split -> treeLevels >= 1
+	b := Builder(stor.HeapStor(64 * 1024))
+	for g := 0; g < 30; g++ {
+		first := fmt.Sprintf("g%02d", g)
+		for s := 0; s < 10; s++ {
+			assert.That(b.Add(compKey(first, fmt.Sprintf("%02d", s)), uint64(g*10+s+1)))
+		}
+	}
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "05", End: "06"})
+	// Collect keys in reverse order
+	var got []string
+	for it.Prev(); !it.Eof(); it.Prev() {
+		f, s := splitFirstSuffix(it.Key())
+		got = append(got, f+":"+s)
+	}
+	assert.T(t).This(len(got)).Is(30)
+	for i, k := range got {
+		assert.T(t).This(k).Is(fmt.Sprintf("g%02d:05", 29-i))
+	}
+}
+
+// TestSkipSuffixSeekUnboundedBeyondAll covers the case in skipSuffixSeekUnbounded
+// where seekAllRaw for target lands beyond all data (state != within).
+func TestSkipSuffixSeekUnboundedBeyondAll(t *testing.T) {
+	b := Builder(stor.HeapStor(8192))
+	// All keys have suffixes below minSuffix used in SeekAll
+	assert.That(b.Add(compKey("a", "01"), 1))
+	assert.That(b.Add(compKey("b", "01"), 2))
+	bt := b.Finish().(*btree)
+	it := bt.Iterator().(*Iterator)
+	it.SkipScan(iface.Range{Org: "01", End: "03"})
+	// SeekAll with a suffix > all existing suffixes triggers the eof path
+	it.SeekAll("99") // all suffixes are "01", none >= "99" after seeking
+	// The SeekAll in skip-scan mode backs up to last physical key on eof
+	assert.T(t).That(!it.Eof())
 }
 
 func TestGte(t *testing.T) {
