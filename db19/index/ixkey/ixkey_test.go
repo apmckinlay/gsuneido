@@ -215,6 +215,24 @@ func TestHasPrefix(t *testing.T) {
 	assert.T(t).False(HasPrefix("foo\x00\x00bar", "foo\x00\x00ba"))
 }
 
+// TestSplitFirstSuffix covers the escaped zero (\x00\x01) and no-separator paths.
+func TestSplitFirstSuffix(t *testing.T) {
+	// no separator: single-field key returns (key, "")
+	f, s := SplitPrefixSuffix("abc", 1)
+	assert.T(t).This(f).Is("abc")
+	assert.T(t).This(s).Is("")
+
+	// real separator \x00\x00
+	f, s = SplitPrefixSuffix("ab\x00\x00cd", 1)
+	assert.T(t).This(f).Is("ab")
+	assert.T(t).This(s).Is("cd")
+
+	// escaped zero \x00\x01 is not a separator
+	f, s = SplitPrefixSuffix("a\x00\x01b\x00\x00c", 1)
+	assert.T(t).This(f).Is("a\x00\x01b")
+	assert.T(t).This(s).Is("c")
+}
+
 func TestMaxEntry(t *testing.T) {
 	s := strings.Repeat("x", maxEntry+1)
 	rec := mkrec(s)

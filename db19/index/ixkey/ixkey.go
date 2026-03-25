@@ -79,6 +79,14 @@ func (e *Encoder) Dup() *Encoder {
 	return &Encoder{buf: slc.Clone(e.buf)}
 }
 
+func CompKey(vals ...string) string {
+	var enc Encoder
+	for _, v := range vals {
+		enc.Add(v)
+	}
+	return enc.String()
+}
+
 // Key builds a key from a data Record using a Spec.
 func (spec *Spec) Key(rec Record) string {
 	assert.That(spec.Fields != nil)
@@ -312,6 +320,32 @@ func HasPrefix(s, prefix string) bool {
 	return sn >= pn && s[0:pn] == prefix && // byte-wise prefix
 		(sn == pn ||
 			(sn >= pn+2 && s[pn:pn+2] == Sep))
+}
+
+// SplitPrefixSuffix splits a composite key into a prefix of n fields and the rest.
+// Composite keys use 0,0 separators and escape embedded zero bytes as 0,1.
+func SplitPrefixSuffix(key string, n int) (prefix, suffix string) {
+	if n <= 0 {
+		return "", key
+	}
+	seen := 0
+	for i := 0; i+1 < len(key); i++ {
+		if key[i] != 0 {
+			continue
+		}
+		if key[i+1] == 1 {
+			i++
+			continue
+		}
+		if key[i+1] == 0 {
+			seen++
+			if seen == n {
+				return key[:i], key[i+2:]
+			}
+			i++
+		}
+	}
+	return key, ""
 }
 
 // Make builds a key for cols from a Row and Header

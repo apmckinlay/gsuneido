@@ -481,6 +481,8 @@ type Iterator struct {
 	// rng is the Range of the iterator
 	rng     Range
 	skipRng Range // suffix range used by skip-scan mode
+	// number of leading fields treated as prefix in skip-scan mode
+	skipPrefixFields int
 	c       chunk
 	// cur is the current key and offset.
 	// We need to keep a copy of it because the ixbuf could change.
@@ -489,7 +491,7 @@ type Iterator struct {
 	ci        int
 	i         int
 	modCount  int32  // gets updated by Seek(All)
-	skipGroup string // current first-field group in skip-scan traversal
+	skipGroup string // current prefix group in skip-scan traversal
 	skipScan  bool   // true if SkipScan mode is active
 	state
 }
@@ -516,10 +518,19 @@ func (it *Iterator) Range(rng Range) {
 }
 
 // SkipScan enables skip-scan mode.
-// rng applies to suffix fields (excluding the first field).
-func (it *Iterator) SkipScan(rng Range) {
+// rng applies to suffix fields (excluding prefix fields).
+// prefixFields defaults to 1.
+func (it *Iterator) SkipScan(rng Range, prefixFields ...int) {
+	n := 1
+	if len(prefixFields) > 0 {
+		n = prefixFields[0]
+	}
+	if n < 1 {
+		panic("ixbuf skip scan: prefixFields must be >= 1")
+	}
 	it.skipScan = true
 	it.skipRng = rng
+	it.skipPrefixFields = n
 	it.rng = iface.All
 	it.skipGroup = ""
 	it.Rewind()
@@ -628,13 +639,13 @@ func (it *Iterator) Seek(key string) {
 // skipSeek positions the iterator at the first visible key >= key in skip-scan mode,
 // or at the last visible key if no visible key >= key exists.
 func (it *Iterator) skipSeek(key string) {
-	seekFirst, seekSuffix := splitFirstSuffix(key)
-	it.skipGroup = seekFirst // pre-set group so skipAdvanceToMatch skips re-seeking it
+	seekPrefix, seekSuffix := ixkey.SplitPrefixSuffix(key, it.skipPrefixFields)
+	it.skipGroup = seekPrefix // pre-set group so skipAdvanceToMatch skips re-seeking it
 	switch {
 	case seekSuffix < it.skipRng.Org:
-		it.skipSeekOrg(seekFirst)
+		it.skipSeekOrg(seekPrefix)
 	case seekSuffix >= it.skipRng.End:
-		it.skipSeekNext(seekFirst)
+		it.skipSeekNext(seekPrefix)
 	default:
 		it.seekRaw(key)
 		if it.state == within && it.cur.key < key {
@@ -678,17 +689,17 @@ func (it *Iterator) skipNext() {
 
 func (it *Iterator) skipAdvanceToMatch() {
 	for it.state == within {
-		first, suffix := splitFirstSuffix(it.cur.key)
-		if first != it.skipGroup {
-			it.skipGroup = first
-			it.skipSeekOrg(first)
+		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixFields)
+		if prefix != it.skipGroup {
+			it.skipGroup = prefix
+			it.skipSeekOrg(prefix)
 			if it.state != within {
 				return
 			}
 			continue
 		}
 		if suffix >= it.skipRng.End {
-			it.skipSeekNext(first)
+			it.skipSeekNext(prefix)
 			continue
 		}
 		if suffix >= it.skipRng.Org {
@@ -698,22 +709,22 @@ func (it *Iterator) skipAdvanceToMatch() {
 	}
 }
 
-// skipSeekOrg seeks to the first visible key in group first.
-func (it *Iterator) skipSeekOrg(first string) {
-	target := first + ixkey.Sep + it.skipRng.Org
+// skipSeekOrg seeks to the first visible key in group prefix.
+func (it *Iterator) skipSeekOrg(prefix string) {
+	target := prefix + ixkey.Sep + it.skipRng.Org
 	it.seekRaw(target)
 	if it.cur.key < target { // eof if group has no keys >= Org
 		it.state = eof
 	}
 }
 
-// skipSeekNext seeks past group first to the first key of the next group.
+// skipSeekNext seeks past group prefix to the first key of the next group.
 // Sets eof if no keys beyond this group exist.
-func (it *Iterator) skipSeekNext(first string) {
-	it.seekRaw(first + ixkey.Sep + ixkey.Max)
+func (it *Iterator) skipSeekNext(prefix string) {
+	it.seekRaw(prefix + ixkey.Sep + ixkey.Max)
 	if it.state == within {
-		f, _ := splitFirstSuffix(it.cur.key)
-		if f == first {
+		p, _ := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixFields)
+		if p == prefix {
 			it.state = eof
 		}
 	}
@@ -733,17 +744,17 @@ func (it *Iterator) skipPrev() {
 
 func (it *Iterator) skipRetreatToMatch() {
 	for it.state == within {
-		first, suffix := splitFirstSuffix(it.cur.key)
-		if first != it.skipGroup {
-			it.skipGroup = first
-			it.skipSeekGroupEnd(first)
+		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixFields)
+		if prefix != it.skipGroup {
+			it.skipGroup = prefix
+			it.skipSeekGroupEnd(prefix)
 			if it.state != within {
 				return
 			}
 			continue
 		}
 		if suffix < it.skipRng.Org {
-			it.skipSeekPrevGroup(first)
+			it.skipSeekPrevGroup(prefix)
 			continue
 		}
 		if suffix < it.skipRng.End {
@@ -753,13 +764,13 @@ func (it *Iterator) skipRetreatToMatch() {
 	}
 }
 
-// skipSeekGroupEnd seeks to the last visible key in group first.
-func (it *Iterator) skipSeekGroupEnd(first string) {
-	it.seekRaw(first + ixkey.Sep + it.skipRng.End)
+// skipSeekGroupEnd seeks to the last visible key in group prefix.
+func (it *Iterator) skipSeekGroupEnd(prefix string) {
+	it.seekRaw(prefix + ixkey.Sep + it.skipRng.End)
 	// seekRaw positions at >= End; back up until inside this group's range
 	for it.state == within {
-		f2, s2 := splitFirstSuffix(it.cur.key)
-		if f2 > first || (f2 == first && s2 >= it.skipRng.End) {
+		p2, s2 := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixFields)
+		if p2 > prefix || (p2 == prefix && s2 >= it.skipRng.End) {
 			it.retreat()
 			continue
 		}
@@ -767,10 +778,10 @@ func (it *Iterator) skipSeekGroupEnd(first string) {
 	}
 }
 
-// skipSeekPrevGroup seeks to the last key of the group before first.
-func (it *Iterator) skipSeekPrevGroup(first string) {
-	it.seekRaw(first)
-	if it.cur.key >= first { // position before the start of group first
+// skipSeekPrevGroup seeks to the last key of the group before prefix.
+func (it *Iterator) skipSeekPrevGroup(prefix string) {
+	it.seekRaw(prefix)
+	if it.cur.key >= prefix { // position before the start of group prefix
 		it.retreat()
 	}
 }
@@ -808,24 +819,6 @@ func (it *Iterator) retreat() {
 		it.i = len(it.c) - 1
 	}
 	it.cur = it.c[it.i]
-}
-
-// splitFirstSuffix splits a composite key into the first field and the rest.
-// Composite keys use 0,0 separators and escape embedded zero bytes as 0,1.
-func splitFirstSuffix(key string) (first, suffix string) {
-	for i := 0; i+1 < len(key); i++ {
-		if key[i] != 0 {
-			continue
-		}
-		if key[i+1] == 1 {
-			i++
-			continue
-		}
-		if key[i+1] == 0 {
-			return key[:i], key[i+2:]
-		}
-	}
-	return key, ""
 }
 
 //-------------------------------------------------------------------

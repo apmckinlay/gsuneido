@@ -490,14 +490,14 @@ func TestSkipScanNext(t *testing.T) {
 		{"d", "02"},
 	}
 	for i, r := range rows {
-		ib.Insert(compKey(r[0], r[1]), uint64(i+1))
+		ib.Insert(ixkey.CompKey(r[0], r[1]), uint64(i+1))
 	}
 	it := ib.Iterator().(*Iterator)
 	it.SkipScan(Range{Org: "02", End: "04"})
 
 	var got []string
 	for it.Next(); !it.Eof(); it.Next() {
-		f, s := splitFirstSuffix(it.Key())
+		f, s := ixkey.SplitPrefixSuffix(it.Key(), 1)
 		got = append(got, f+":"+s)
 	}
 	assert.T(t).This(got).Is([]string{"a:03", "b:02", "c:03", "d:02"})
@@ -505,8 +505,8 @@ func TestSkipScanNext(t *testing.T) {
 
 func TestSkipScanNoMatches(t *testing.T) {
 	ib := &ixbuf{}
-	ib.Insert(compKey("a", "01"), 1)
-	ib.Insert(compKey("b", "01"), 2)
+	ib.Insert(ixkey.CompKey("a", "01"), 1)
+	ib.Insert(ixkey.CompKey("b", "01"), 2)
 	it := ib.Iterator().(*Iterator)
 	it.SkipScan(Range{Org: "02", End: "03"})
 	it.Next()
@@ -522,24 +522,51 @@ func TestSkipScanPrev(t *testing.T) {
 		{"d", "02"},
 	}
 	for i, r := range rows {
-		ib.Insert(compKey(r[0], r[1]), uint64(i+1))
+		ib.Insert(ixkey.CompKey(r[0], r[1]), uint64(i+1))
 	}
 	it := ib.Iterator().(*Iterator)
 	it.SkipScan(Range{Org: "02", End: "04"})
 
 	var got []string
 	for it.Prev(); !it.Eof(); it.Prev() {
-		f, s := splitFirstSuffix(it.Key())
+		f, s := ixkey.SplitPrefixSuffix(it.Key(), 1)
 		got = append(got, f+":"+s)
 	}
 	assert.T(t).This(got).Is([]string{"d:02", "c:03", "b:02", "a:03"})
 }
 
+func TestSkipScanNextMultiPrefix(t *testing.T) {
+	ib := &ixbuf{}
+	rows := [][3]string{
+		{"a", "x", "01"}, {"a", "x", "03"}, {"a", "x", "05"},
+		{"a", "y", "02"}, {"a", "y", "04"},
+		{"b", "x", "03"},
+		{"b", "y", "00"}, {"b", "y", "02"},
+	}
+	for i, r := range rows {
+		ib.Insert(ixkey.CompKey(r[0], r[1], r[2]), uint64(i+1))
+	}
+	it := ib.Iterator().(*Iterator)
+	it.SkipScan(Range{Org: "02", End: "04"}, 2)
+
+	var got []string
+	for it.Next(); !it.Eof(); it.Next() {
+		p, s := ixkey.SplitPrefixSuffix(it.Key(), 2)
+		got = append(got, p+":"+s)
+	}
+	assert.T(t).This(got).Is([]string{
+		ixkey.CompKey("a", "x") + ":03",
+		ixkey.CompKey("a", "y") + ":02",
+		ixkey.CompKey("b", "x") + ":03",
+		ixkey.CompKey("b", "y") + ":02",
+	})
+}
+
 func TestSkipScanRangeDisablesSkipScan(t *testing.T) {
 	ib := &ixbuf{}
-	ib.Insert(compKey("a", "01"), 1)
-	ib.Insert(compKey("a", "02"), 2)
-	ib.Insert(compKey("b", "01"), 3)
+	ib.Insert(ixkey.CompKey("a", "01"), 1)
+	ib.Insert(ixkey.CompKey("a", "02"), 2)
+	ib.Insert(ixkey.CompKey("b", "01"), 3)
 	it := ib.Iterator().(*Iterator)
 
 	it.SkipScan(Range{Org: "01", End: "03"})
@@ -547,10 +574,10 @@ func TestSkipScanRangeDisablesSkipScan(t *testing.T) {
 	assert.T(t).That(!it.Eof())
 
 	// Range() disables skip scan and returns to normal range mode
-	it.Range(Range{Org: compKey("a", "02"), End: compKey("a", "03")})
+	it.Range(Range{Org: ixkey.CompKey("a", "02"), End: ixkey.CompKey("a", "03")})
 	it.Next()
 	assert.T(t).That(!it.Eof())
-	f, s := splitFirstSuffix(it.Key())
+	f, s := ixkey.SplitPrefixSuffix(it.Key(), 1)
 	assert.T(t).This(f).Is("a")
 	assert.T(t).This(s).Is("02")
 	it.Next()
@@ -561,8 +588,8 @@ func TestSkipScanPrevGroupOutOfRange(t *testing.T) {
 	// group "a" has only keys with suffix >= End; Prev should return eof
 	// (exercises the eof path in skipRetreatToMatch after skipSeekGroupEnd)
 	ib := &ixbuf{}
-	ib.Insert(compKey("a", "20"), 1)
-	ib.Insert(compKey("a", "25"), 2)
+	ib.Insert(ixkey.CompKey("a", "20"), 1)
+	ib.Insert(ixkey.CompKey("a", "25"), 2)
 	it := ib.Iterator().(*Iterator)
 	it.SkipScan(Range{Org: "08", End: "19"})
 	it.Prev()
@@ -614,7 +641,7 @@ func TestSkipScanRandomParallelWithSubset(t *testing.T) {
 	var off uint64 = 1
 	for _, g := range groups {
 		for _, suffix := range g.suffixes {
-			k := compKey(g.first, suffix)
+			k := ixkey.CompKey(g.first, suffix)
 			fullIb.Insert(k, off)
 			if org <= suffix && suffix < end {
 				subIb.Insert(k, off)
@@ -655,7 +682,7 @@ func TestSkipScanRandomParallelWithSubset(t *testing.T) {
 
 	seek := func(first, s string) {
 		t.Helper()
-		k := compKey(first, s)
+		k := ixkey.CompKey(first, s)
 		fit.Seek(k)
 		sit.Seek(k)
 	}
@@ -700,14 +727,6 @@ func TestSkipScanRandomParallelWithSubset(t *testing.T) {
 	}
 }
 
-// compKey builds a two-field composite key using ixkey encoding
-func compKey(first, suffix string) string {
-	e := ixkey.Encoder{}
-	e.Add(first)
-	e.Add(suffix)
-	return e.String()
-}
-
 func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 	// 32 groups × 500 records = 16k total, goal ≈ 192 => each group spans ~2-3 chunks
 	const (
@@ -723,7 +742,7 @@ func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 		for s := range recordsPerGroup {
 			suffix := fmt.Sprintf("%0*d", suffixWidth, s)
 			off := uint64(g*recordsPerGroup + s + 1)
-			ib.Insert(compKey(first, suffix), off)
+			ib.Insert(ixkey.CompKey(first, suffix), off)
 		}
 	}
 
@@ -762,7 +781,7 @@ func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 			it := ib.Iterator()
 			n := 0
 			for it.Next(); !it.Eof(); it.Next() {
-				_, suffix := splitFirstSuffix(it.Key())
+				_, suffix := ixkey.SplitPrefixSuffix(it.Key(), 1)
 				if fullOrg <= suffix && suffix < fullEnd {
 					n++
 				}
