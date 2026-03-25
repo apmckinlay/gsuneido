@@ -16,6 +16,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/slc"
@@ -478,15 +479,18 @@ type Range = iface.Range
 type Iterator struct {
 	ib *ixbuf
 	// rng is the Range of the iterator
-	rng Range
-	c   chunk
+	rng     Range
+	skipRng Range // suffix range used by skip-scan mode
+	c       chunk
 	// cur is the current key and offset.
 	// We need to keep a copy of it because the ixbuf could change.
 	cur slot
 	// ci, i, and c point to the current slot = ib.chunks[ci][i]
-	ci       int
-	i        int
-	modCount int32 // gets updated by Seek(All)
+	ci        int
+	i         int
+	modCount  int32  // gets updated by Seek(All)
+	skipGroup string // current first-field group in skip-scan traversal
+	skipScan  bool   // true if SkipScan mode is active
 	state
 }
 
@@ -507,6 +511,17 @@ func (ib *ixbuf) Iterator() iface.Iter {
 
 func (it *Iterator) Range(rng Range) {
 	it.rng = rng
+	it.skipScan = false
+	it.Rewind()
+}
+
+// SkipScan enables skip-scan mode.
+// rng applies to suffix fields (excluding the first field).
+func (it *Iterator) SkipScan(rng Range) {
+	it.skipScan = true
+	it.skipRng = rng
+	it.rng = iface.All
+	it.skipGroup = ""
 	it.Rewind()
 }
 
@@ -536,6 +551,10 @@ func (it *Iterator) HasCur() bool {
 }
 
 func (it *Iterator) Next() {
+	if it.skipScan {
+		it.skipNext()
+		return
+	}
 	if it.state == eof {
 		return // stick at eof
 	}
@@ -560,6 +579,10 @@ func (it *Iterator) Next() {
 }
 
 func (it *Iterator) Prev() {
+	if it.skipScan {
+		it.skipPrev()
+		return
+	}
 	if it.state == eof {
 		return // stick at eof
 	}
@@ -588,12 +611,42 @@ func (it *Iterator) Prev() {
 
 func (it *Iterator) Rewind() {
 	it.state = rewound
+	it.skipGroup = ""
 }
 
 func (it *Iterator) Seek(key string) {
+	if it.skipScan {
+		it.skipSeek(key)
+		return
+	}
 	it.SeekAll(key)
 	if it.cur.key < it.rng.Org || it.rng.End <= it.cur.key {
 		it.state = eof
+	}
+}
+
+// skipSeek positions the iterator at the first visible key >= key in skip-scan mode,
+// or at the last visible key if no visible key >= key exists.
+func (it *Iterator) skipSeek(key string) {
+	seekFirst, seekSuffix := splitFirstSuffix(key)
+	it.skipGroup = seekFirst // pre-set group so skipAdvanceToMatch skips re-seeking it
+	switch {
+	case seekSuffix < it.skipRng.Org:
+		it.skipSeekOrg(seekFirst)
+	case seekSuffix >= it.skipRng.End:
+		it.skipSeekNext(seekFirst)
+	default:
+		it.seekRaw(key)
+		if it.state == within && it.cur.key < key {
+			it.state = eof
+		}
+	}
+	it.skipAdvanceToMatch()
+	if it.state != within {
+		// No visible key >= key; position at the last visible key
+		it.seekRaw(ixkey.Max)
+		it.skipGroup = ""
+		it.skipRetreatToMatch()
 	}
 }
 
@@ -609,6 +662,170 @@ func (it *Iterator) SeekAll(key string) {
 	}
 	it.cur = it.c[it.i]
 	it.state = within
+}
+
+func (it *Iterator) skipNext() {
+	switch it.state {
+	case rewound:
+		it.seekRaw(ixkey.Min)
+	case within:
+		it.advance()
+	case eof:
+		return
+	}
+	it.skipAdvanceToMatch()
+}
+
+func (it *Iterator) skipAdvanceToMatch() {
+	for it.state == within {
+		first, suffix := splitFirstSuffix(it.cur.key)
+		if first != it.skipGroup {
+			it.skipGroup = first
+			it.skipSeekOrg(first)
+			if it.state != within {
+				return
+			}
+			continue
+		}
+		if suffix >= it.skipRng.End {
+			it.skipSeekNext(first)
+			continue
+		}
+		if suffix >= it.skipRng.Org {
+			return
+		}
+		panic("ixbuf skip scan: unexpected suffix below org")
+	}
+}
+
+// skipSeekOrg seeks to the first visible key in group first.
+func (it *Iterator) skipSeekOrg(first string) {
+	target := first + ixkey.Sep + it.skipRng.Org
+	it.seekRaw(target)
+	if it.cur.key < target { // eof if group has no keys >= Org
+		it.state = eof
+	}
+}
+
+// skipSeekNext seeks past group first to the first key of the next group.
+// Sets eof if no keys beyond this group exist.
+func (it *Iterator) skipSeekNext(first string) {
+	it.seekRaw(first + ixkey.Sep + ixkey.Max)
+	if it.state == within {
+		f, _ := splitFirstSuffix(it.cur.key)
+		if f == first {
+			it.state = eof
+		}
+	}
+}
+
+func (it *Iterator) skipPrev() {
+	switch it.state {
+	case rewound:
+		it.seekRaw(ixkey.Max)
+	case within:
+		it.retreat()
+	case eof:
+		return
+	}
+	it.skipRetreatToMatch()
+}
+
+func (it *Iterator) skipRetreatToMatch() {
+	for it.state == within {
+		first, suffix := splitFirstSuffix(it.cur.key)
+		if first != it.skipGroup {
+			it.skipGroup = first
+			it.skipSeekGroupEnd(first)
+			if it.state != within {
+				return
+			}
+			continue
+		}
+		if suffix < it.skipRng.Org {
+			it.skipSeekPrevGroup(first)
+			continue
+		}
+		if suffix < it.skipRng.End {
+			return
+		}
+		panic("ixbuf skip scan: unexpected suffix above end")
+	}
+}
+
+// skipSeekGroupEnd seeks to the last visible key in group first.
+func (it *Iterator) skipSeekGroupEnd(first string) {
+	it.seekRaw(first + ixkey.Sep + it.skipRng.End)
+	// seekRaw positions at >= End; back up until inside this group's range
+	for it.state == within {
+		f2, s2 := splitFirstSuffix(it.cur.key)
+		if f2 > first || (f2 == first && s2 >= it.skipRng.End) {
+			it.retreat()
+			continue
+		}
+		return
+	}
+}
+
+// skipSeekPrevGroup seeks to the last key of the group before first.
+func (it *Iterator) skipSeekPrevGroup(first string) {
+	it.seekRaw(first)
+	if it.cur.key >= first { // position before the start of group first
+		it.retreat()
+	}
+}
+
+// seekRaw positions the iterator at the first key >= target without range checks.
+func (it *Iterator) seekRaw(key string) {
+	it.SeekAll(key)
+}
+
+// advance moves to the next slot without range checks.
+func (it *Iterator) advance() {
+	it.i++
+	if it.i >= len(it.c) {
+		if it.ci+1 >= len(it.ib.chunks) {
+			it.state = eof
+			return
+		}
+		it.ci++
+		it.c = it.ib.chunks[it.ci]
+		it.i = 0
+	}
+	it.cur = it.c[it.i]
+}
+
+// retreat moves to the previous slot without range checks.
+func (it *Iterator) retreat() {
+	it.i--
+	if it.i < 0 {
+		if it.ci <= 0 {
+			it.state = eof
+			return
+		}
+		it.ci--
+		it.c = it.ib.chunks[it.ci]
+		it.i = len(it.c) - 1
+	}
+	it.cur = it.c[it.i]
+}
+
+// splitFirstSuffix splits a composite key into the first field and the rest.
+// Composite keys use 0,0 separators and escape embedded zero bytes as 0,1.
+func splitFirstSuffix(key string) (first, suffix string) {
+	for i := 0; i+1 < len(key); i++ {
+		if key[i] != 0 {
+			continue
+		}
+		if key[i+1] == 1 {
+			i++
+			continue
+		}
+		if key[i+1] == 0 {
+			return key[:i], key[i+2:]
+		}
+	}
+	return key, ""
 }
 
 //-------------------------------------------------------------------

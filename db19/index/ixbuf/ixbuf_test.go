@@ -4,6 +4,7 @@
 package ixbuf
 
 import (
+	"fmt"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -478,6 +479,299 @@ func TestIxbufSearch(t *testing.T) {
 	assert.T(t).This(i).Is(0)
 	_, _, i = ib.search("a\x00\x00\xff")
 	assert.T(t).This(i).Is(1)
+}
+
+func TestSkipScanNext(t *testing.T) {
+	ib := &ixbuf{}
+	rows := [][2]string{
+		{"a", "01"}, {"a", "03"}, {"a", "05"},
+		{"b", "02"}, {"b", "04"},
+		{"c", "00"}, {"c", "03"},
+		{"d", "02"},
+	}
+	for i, r := range rows {
+		ib.Insert(compKey(r[0], r[1]), uint64(i+1))
+	}
+	it := ib.Iterator().(*Iterator)
+	it.SkipScan(Range{Org: "02", End: "04"})
+
+	var got []string
+	for it.Next(); !it.Eof(); it.Next() {
+		f, s := splitFirstSuffix(it.Key())
+		got = append(got, f+":"+s)
+	}
+	assert.T(t).This(got).Is([]string{"a:03", "b:02", "c:03", "d:02"})
+}
+
+func TestSkipScanNoMatches(t *testing.T) {
+	ib := &ixbuf{}
+	ib.Insert(compKey("a", "01"), 1)
+	ib.Insert(compKey("b", "01"), 2)
+	it := ib.Iterator().(*Iterator)
+	it.SkipScan(Range{Org: "02", End: "03"})
+	it.Next()
+	assert.T(t).That(it.Eof())
+}
+
+func TestSkipScanPrev(t *testing.T) {
+	ib := &ixbuf{}
+	rows := [][2]string{
+		{"a", "01"}, {"a", "03"}, {"a", "05"},
+		{"b", "02"}, {"b", "04"},
+		{"c", "00"}, {"c", "03"},
+		{"d", "02"},
+	}
+	for i, r := range rows {
+		ib.Insert(compKey(r[0], r[1]), uint64(i+1))
+	}
+	it := ib.Iterator().(*Iterator)
+	it.SkipScan(Range{Org: "02", End: "04"})
+
+	var got []string
+	for it.Prev(); !it.Eof(); it.Prev() {
+		f, s := splitFirstSuffix(it.Key())
+		got = append(got, f+":"+s)
+	}
+	assert.T(t).This(got).Is([]string{"d:02", "c:03", "b:02", "a:03"})
+}
+
+func TestSkipScanRangeDisablesSkipScan(t *testing.T) {
+	ib := &ixbuf{}
+	ib.Insert(compKey("a", "01"), 1)
+	ib.Insert(compKey("a", "02"), 2)
+	ib.Insert(compKey("b", "01"), 3)
+	it := ib.Iterator().(*Iterator)
+
+	it.SkipScan(Range{Org: "01", End: "03"})
+	it.Next()
+	assert.T(t).That(!it.Eof())
+
+	// Range() disables skip scan and returns to normal range mode
+	it.Range(Range{Org: compKey("a", "02"), End: compKey("a", "03")})
+	it.Next()
+	assert.T(t).That(!it.Eof())
+	f, s := splitFirstSuffix(it.Key())
+	assert.T(t).This(f).Is("a")
+	assert.T(t).This(s).Is("02")
+	it.Next()
+	assert.T(t).That(it.Eof())
+}
+
+func TestSkipScanPrevGroupOutOfRange(t *testing.T) {
+	// group "a" has only keys with suffix >= End; Prev should return eof
+	// (exercises the eof path in skipRetreatToMatch after skipSeekGroupEnd)
+	ib := &ixbuf{}
+	ib.Insert(compKey("a", "20"), 1)
+	ib.Insert(compKey("a", "25"), 2)
+	it := ib.Iterator().(*Iterator)
+	it.SkipScan(Range{Org: "08", End: "19"})
+	it.Prev()
+	assert.T(t).That(it.Eof())
+}
+
+func TestSkipScanRandomParallelWithSubset(t *testing.T) {
+	const (
+		org   = "08"
+		end   = "19"
+		steps = 30000
+	)
+
+	// groups with suffixes designed to exercise edge cases:
+	//   "a","b" have only suffixes below org
+	//   "c","d" have only suffixes within [org,end)
+	//   "e","f" have only suffixes >= end
+	//   "g","h","i","j" span the range boundary
+	// Extra filler groups "p".."z" ensure the ixbuf uses multiple chunks.
+	type groupSpec struct {
+		first    string
+		suffixes []string
+	}
+	groups := []groupSpec{
+		{"a", []string{"01", "03", "05", "07"}},
+		{"b", []string{"02", "04", "06"}},
+		{"c", []string{"08", "10", "12", "15", "18"}},
+		{"d", []string{"09", "11", "14", "17"}},
+		{"e", []string{"19", "21", "25"}},
+		{"f", []string{"20", "22", "28"}},
+		{"g", []string{"05", "08", "12", "19", "22"}},
+		{"h", []string{"06", "09", "13", "18", "20"}},
+		{"i", []string{"07", "10", "18"}},
+		{"j", []string{"11", "16", "19", "24"}},
+	}
+	// Add filler groups to push total entries above one chunk (goal >= 24)
+	for _, letter := range "pqrstuvwxyz" {
+		first := string(letter)
+		var suffixes []string
+		for s := 1; s <= 5; s++ {
+			suffixes = append(suffixes, fmt.Sprintf("%02d", s))
+		}
+		groups = append(groups, groupSpec{first, suffixes})
+	}
+
+	fullIb := &ixbuf{}
+	subIb := &ixbuf{}
+
+	var off uint64 = 1
+	for _, g := range groups {
+		for _, suffix := range g.suffixes {
+			k := compKey(g.first, suffix)
+			fullIb.Insert(k, off)
+			if org <= suffix && suffix < end {
+				subIb.Insert(k, off)
+			}
+			off++
+		}
+	}
+	// Verify multiple chunks are used
+	assert.T(t).That(len(fullIb.chunks) > 1)
+
+	firsts := make([]string, len(groups))
+	for i, g := range groups {
+		firsts[i] = g.first
+	}
+
+	fit := fullIb.Iterator().(*Iterator)
+	fit.SkipScan(Range{Org: org, End: end})
+	sit := subIb.Iterator()
+
+	assertSame := func(step int, op string) {
+		t.Helper()
+		fhc := fit.HasCur()
+		shc := sit.HasCur()
+		assert.T(t).Msg(fmt.Sprintf("step %d op %s hascur", step, op)).
+			This(fhc).Is(shc)
+		assert.T(t).Msg(fmt.Sprintf("step %d op %s eof", step, op)).
+			This(fit.Eof()).Is(sit.Eof())
+		if !fhc {
+			return
+		}
+		fk, fo := fit.Cur()
+		sk, so := sit.Cur()
+		assert.T(t).Msg(fmt.Sprintf("step %d op %s key", step, op)).
+			This(fk).Is(sk)
+		assert.T(t).Msg(fmt.Sprintf("step %d op %s off", step, op)).
+			This(fo).Is(so)
+	}
+
+	seek := func(first, s string) {
+		t.Helper()
+		k := compKey(first, s)
+		fit.Seek(k)
+		sit.Seek(k)
+	}
+
+	seekSuffixes := []string{
+		"00",
+		"01", "02",
+		"07", "075",
+		"08",
+		"085",
+		"10", "11",
+		"135",
+		"18",
+		"185",
+		"19",
+		"20", "21",
+		"29", "30",
+	}
+
+	r := rand.New(rand.NewSource(1))
+	assertSame(0, "init")
+	for step := 1; step <= steps; step++ {
+		switch r.Intn(4) {
+		case 0:
+			fit.Next()
+			sit.Next()
+			assertSame(step, "Next")
+		case 1:
+			fit.Prev()
+			sit.Prev()
+			assertSame(step, "Prev")
+		case 2:
+			fit.Rewind()
+			sit.Rewind()
+			assertSame(step, "Rewind")
+		case 3:
+			first := firsts[r.Intn(len(firsts))]
+			s := seekSuffixes[r.Intn(len(seekSuffixes))]
+			seek(first, s)
+			assertSame(step, "Seek")
+		}
+	}
+}
+
+// compKey builds a two-field composite key using ixkey encoding
+func compKey(first, suffix string) string {
+	e := ixkey.Encoder{}
+	e.Add(first)
+	e.Add(suffix)
+	return e.String()
+}
+
+func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
+	// 32 groups × 500 records = 16k total, goal ≈ 192 => each group spans ~2-3 chunks
+	const (
+		groups          = 32
+		recordsPerGroup = 500
+		suffixWidth     = 4
+		startSuffix     = 50
+	)
+
+	ib := &ixbuf{}
+	for g := range groups {
+		first := fmt.Sprintf("g%04d", g)
+		for s := range recordsPerGroup {
+			suffix := fmt.Sprintf("%0*d", suffixWidth, s)
+			off := uint64(g*recordsPerGroup + s + 1)
+			ib.Insert(compKey(first, suffix), off)
+		}
+	}
+
+	widths := []int{50, 100, 150, 200, 250, 300, 350, 400, 450}
+	maxWidth := widths[len(widths)-1]
+	fullOrg := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
+	fullEnd := fmt.Sprintf("%0*d", suffixWidth, startSuffix+maxWidth)
+	fullExpected := groups * maxWidth
+
+	for _, width := range widths {
+		width := width
+		endSuffix := startSuffix + width
+		org := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
+		end := fmt.Sprintf("%0*d", suffixWidth, endSuffix)
+		expected := groups * width
+
+		b.Run(fmt.Sprintf("skip_w%03d", width), func(b *testing.B) {
+			b.ReportAllocs()
+			for range b.N {
+				it := ib.Iterator().(*Iterator)
+				it.SkipScan(Range{Org: org, End: end})
+				n := 0
+				for it.Next(); !it.Eof(); it.Next() {
+					n++
+				}
+				if n != expected {
+					b.Fatalf("skip scan width %d expected %d got %d", width, expected, n)
+				}
+			}
+		})
+	}
+
+	b.Run("full_once", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			it := ib.Iterator()
+			n := 0
+			for it.Next(); !it.Eof(); it.Next() {
+				_, suffix := splitFirstSuffix(it.Key())
+				if fullOrg <= suffix && suffix < fullEnd {
+					n++
+				}
+			}
+			if n != fullExpected {
+				b.Fatalf("full scan expected %d got %d", fullExpected, n)
+			}
+		}
+	})
 }
 
 //-------------------------------------------------------------------
