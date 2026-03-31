@@ -18,6 +18,7 @@ type IndexIter interface {
 	HasCur() bool
 	Rewind()
 	Range(rng Range)
+	SkipScan(prefixRng Range, suffixRng Range, prefixLen int)
 }
 
 // SimpleIter is an optimized iterator for read-only use
@@ -26,7 +27,6 @@ type IndexIter interface {
 type SimpleIter struct {
 	t   oiTran
 	it  iface.Iter
-	rng Range
 	state
 }
 
@@ -42,7 +42,6 @@ func NewSimpleIter(t oiTran, ov *Overlay) IndexIter {
 		return &SimpleIter{
 			t:     t,
 			it:    it,
-			rng:   iface.All,
 			state: rewound,
 		}
 	}
@@ -77,9 +76,13 @@ func (si *SimpleIter) checkHasCur() {
 }
 
 func (si *SimpleIter) Range(rng Range) {
-	si.rng = rng
 	si.state = rewound
 	si.it.Range(rng)
+}
+
+func (si *SimpleIter) SkipScan(prefixRng Range, suffixRng Range, prefixLen int) {
+	si.state = rewound
+	si.it.SkipScan(prefixRng, suffixRng, prefixLen)
 }
 
 func (si *SimpleIter) Next(t oiTran) {

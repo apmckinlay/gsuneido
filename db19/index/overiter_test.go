@@ -11,7 +11,9 @@ import (
 	"testing"
 
 	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ranges"
@@ -147,6 +149,50 @@ func TestOverIterDeletePrevBug(*testing.T) {
 	key, off := it.Cur()
 	assert.This(key).Is("8")
 	assert.This(off).Is(8)
+}
+
+func TestOverIterSkipScanEmptyStringSuffix(t *testing.T) {
+	packStr := func(s string) string {
+		if s == "" {
+			return ""
+		}
+		return string(rune(4)) + s
+	}
+	key := func(name, path string) string {
+		return ixkey.CompKey(packStr(name), packStr(path))
+	}
+	b := btree.Builder(stor.HeapStor(8192))
+	off := uint64(1)
+	const groups = 50
+	const extras = 20
+	expected := make([]int, 0, groups)
+	for i := range groups {
+		name := fmt.Sprintf("n%02d", i)
+		assert.That(b.Add(key(name, ""), off))
+		expected = append(expected, int(off))
+		off++
+		for j := range extras {
+			assert.That(b.Add(key(name, fmt.Sprintf("/x%02d", j)), off))
+			off++
+		}
+	}
+	bt := b.Finish()
+	ov := &Overlay{bt: bt}
+
+	oi := NewOverIter("t", 0)
+	tt := &testTran{getIndex: func() *Overlay { return ov }}
+	oi.SkipScan(iface.All, Range{Org: "", End: "\x00"}, 1)
+
+	var got []int
+	for {
+		oi.Next(tt)
+		if oi.Eof() {
+			break
+		}
+		_, off := oi.Cur()
+		got = append(got, int(off))
+	}
+	assert.T(t).This(got).Is(expected)
 }
 
 func TestOverIterReads(*testing.T) {

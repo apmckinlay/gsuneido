@@ -22,7 +22,7 @@ type Range = iface.Range
 type OverIter struct {
 	overlay *Overlay
 	rng     Range
-	skipRng Range
+	skipRng Range // suffix range for skip-scan mode
 	table   string
 	// We need to keep our own curKey/Off independent of the source iterators
 	// because new source iterators may be returned by the callback.
@@ -119,15 +119,16 @@ func (oi *OverIter) Range(rng Range) {
 }
 
 // SkipScan enables skip-scan mode.
-// rng applies to suffix fields (excluding prefix fields).
-func (oi *OverIter) SkipScan(rng Range, prefixLen int) {
+// prefixRng restricts visited prefix groups; iface.All means unrestricted.
+// suffixRng applies to suffix fields (excluding prefix fields).
+func (oi *OverIter) SkipScan(prefixRng Range, suffixRng Range, prefixLen int) {
 	assert.That(prefixLen > 0)
-	oi.skipRng = rng
+	oi.rng = prefixRng
+	oi.skipRng = suffixRng
 	oi.skipPrefixLen = prefixLen
-	oi.rng = iface.All
 	oi.state = rewound
 	for _, it := range oi.iters {
-		it.SkipScan(rng, prefixLen)
+		it.SkipScan(prefixRng, suffixRng, prefixLen)
 	}
 }
 
@@ -184,7 +185,7 @@ func (oi *OverIter) newIters(ov *Overlay) {
 	}
 	for _, it := range its {
 		if oi.skipPrefixLen != 0 {
-			it.SkipScan(oi.skipRng, oi.skipPrefixLen)
+			it.SkipScan(oi.rng, oi.skipRng, oi.skipPrefixLen)
 		} else {
 			it.Range(oi.rng)
 		}

@@ -515,13 +515,14 @@ func (it *Iterator) Range(rng Range) {
 	it.Rewind()
 }
 
-// SkipScan enables skip-scan mode.
-// rng applies to suffix fields (excluding prefix fields).
-func (it *Iterator) SkipScan(rng Range, prefixLen int) {
+// SkipScan enables skip-scan mode (and rewinds).
+// prefixRng restricts visited prefix groups; iface.All means unrestricted.
+// suffixRng applies to suffix fields (excluding prefix fields).
+func (it *Iterator) SkipScan(prefixRng Range, suffixRng Range, prefixLen int) {
 	assert.That(prefixLen > 0)
-	it.skipRng = rng
+	it.rng = prefixRng
+	it.skipRng = suffixRng
 	it.skipPrefixLen = prefixLen
-	it.rng = iface.All
 	it.skipGroup = ""
 	it.Rewind()
 }
@@ -668,7 +669,7 @@ func (it *Iterator) SeekAll(key string) {
 func (it *Iterator) skipNext() {
 	switch it.state {
 	case rewound:
-		it.seekRaw(ixkey.Min)
+		it.seekRaw(it.rng.Org)
 	case within:
 		it.advance()
 	case eof:
@@ -680,8 +681,16 @@ func (it *Iterator) skipNext() {
 func (it *Iterator) skipAdvanceToMatch() {
 	for it.state == within {
 		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixLen)
+		if prefix >= it.rng.End {
+			it.state = eof
+			return
+		}
 		if prefix != it.skipGroup {
 			it.skipGroup = prefix
+			if prefix < it.rng.Org {
+				it.skipSeekNext(prefix)
+				continue
+			}
 			it.skipSeekOrg(prefix)
 			if it.state != within {
 				return
@@ -695,13 +704,22 @@ func (it *Iterator) skipAdvanceToMatch() {
 		if suffix >= it.skipRng.Org {
 			return
 		}
-		panic("ixbuf skip scan: unexpected suffix below org")
+		// suffix < skipRng.Org: seekOrg to skip past keys below the suffix range.
+		// This handles the initial skipGroup="" colliding with a valid empty prefix.
+		it.skipSeekOrg(prefix)
+		if it.state != within {
+			return
+		}
+		continue
 	}
 }
 
 // skipSeekOrg seeks to the first visible key in group prefix.
 func (it *Iterator) skipSeekOrg(prefix string) {
-	target := prefix + ixkey.Sep + it.skipRng.Org
+	target := prefix
+	if it.skipRng.Org != ixkey.Min {
+		target = prefix + ixkey.Sep + it.skipRng.Org
+	}
 	it.seekRaw(target)
 	if it.cur.key < target { // eof if group has no keys >= Org
 		it.state = eof
@@ -723,7 +741,7 @@ func (it *Iterator) skipSeekNext(prefix string) {
 func (it *Iterator) skipPrev() {
 	switch it.state {
 	case rewound:
-		it.seekRaw(ixkey.Max)
+		it.seekRaw(it.rng.End)
 	case within:
 		it.retreat()
 	case eof:
@@ -735,8 +753,16 @@ func (it *Iterator) skipPrev() {
 func (it *Iterator) skipRetreatToMatch() {
 	for it.state == within {
 		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixLen)
+		if prefix < it.rng.Org {
+			it.state = eof
+			return
+		}
 		if prefix != it.skipGroup {
 			it.skipGroup = prefix
+			if prefix >= it.rng.End {
+				it.skipSeekPrevGroup(prefix)
+				continue
+			}
 			it.skipSeekGroupEnd(prefix)
 			if it.state != within {
 				return
@@ -750,7 +776,13 @@ func (it *Iterator) skipRetreatToMatch() {
 		if suffix < it.skipRng.End {
 			return
 		}
-		panic("ixbuf skip scan: unexpected suffix above end")
+		// suffix >= skipRng.End: seekGroupEnd to skip past keys above the suffix range.
+		// This handles the initial skipGroup="" colliding with a valid empty prefix.
+		it.skipSeekGroupEnd(prefix)
+		if it.state != within {
+			return
+		}
+		continue
 	}
 }
 
