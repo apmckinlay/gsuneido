@@ -408,7 +408,7 @@ func (a assert) fail(args ...any) {
 	}
 
 	if a.t != nil {
-		a.t.Error("\n" + s)
+		a.t.Error("\nASSERT FAILED " + s)
 	} else {
 		log.Println("ASSERT FAILED:", s)
 		panic("assert failed: " + s)
