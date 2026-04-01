@@ -60,7 +60,7 @@ func BenchmarkInsert(b *testing.B) {
 	for b.Loop() {
 		Ib = &ixbuf{}
 		for j := range nkeys {
-			Ib.Insert(keys[j], uint64(j))
+			Ib.Insert(keys[j], uint64(j+1))
 		}
 	}
 }
