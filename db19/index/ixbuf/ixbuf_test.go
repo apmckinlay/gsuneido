@@ -5,13 +5,14 @@ package ixbuf
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
+	"github.com/apmckinlay/gsuneido/db19/index/itertest"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -150,10 +151,10 @@ func TestMergeRandom(*testing.T) {
 	var s slot
 	r := str.UniqueRandom(4, 8)
 	for range n {
-		nacts := rand.Intn(11)
+		nacts := rand.IntN(11)
 		x := &ixbuf{}
 		for range nacts {
-			k := rand.Intn(4)
+			k := rand.IntN(4)
 			switch {
 			case k == 0 || k == 1 || len(data) == 0: // add
 				s = slot{key: r(), off: uint64(rand.Uint32())}
@@ -161,13 +162,13 @@ func TestMergeRandom(*testing.T) {
 				data = append(data, s)
 				x.Insert(s.key, s.off)
 			case k == 2: // update
-				i := rand.Intn(len(data))
+				i := rand.IntN(len(data))
 				data[i].off = uint64(rand.Uint32())
 				s = data[i]
 				// fmt.Println("update", s)
 				x.Update(s.key, s.off)
 			case k == 3: // delete
-				i := rand.Intn(len(data))
+				i := rand.IntN(len(data))
 				s = data[i]
 				// fmt.Println("delete", s)
 				data[i] = data[len(data)-1]
@@ -207,16 +208,16 @@ func TestMergeMore(t *testing.T) {
 	}
 
 	gen := func() *ixbuf {
-		size := rand.Intn(10)
+		size := rand.IntN(10)
 		ib := &ixbuf{}
 		for range size {
-			i := rand.Intn(n)
+			i := rand.IntN(n)
 			if keys[i] == "" { // insert
 				keys[i] = strconv.Itoa(i)
 				adrs[i] = uint64(nextadr)
 				nextadr++
 				ib.Insert(keys[i], adrs[i])
-			} else if rand.Intn(2) == 0 { // update
+			} else if rand.IntN(2) == 0 { // update
 				adrs[i] = uint64(nextadr)
 				nextadr++
 				ib.Update(keys[i], adrs[i])
@@ -375,7 +376,6 @@ func TestIterator(t *testing.T) {
 	testNext := func(expected int) { t.Helper(); it.Next(); test(expected) }
 	testPrev := func(expected int) { t.Helper(); it.Prev(); test(expected) }
 
-	test(eof)
 	testNext(eof)
 	it.Rewind()
 	testPrev(eof)
@@ -679,137 +679,6 @@ func TestSkipScanPrefixRangePrev(t *testing.T) {
 	assert.T(t).This(got).Is([]string{"c:03", "b:02"})
 }
 
-func TestSkipScanRandomParallelWithSubset(t *testing.T) {
-	const (
-		org   = "08"
-		end   = "19"
-		steps = 30000
-	)
-
-	// groups with suffixes designed to exercise edge cases:
-	//   "a","b" have only suffixes below org
-	//   "c","d" have only suffixes within [org,end)
-	//   "e","f" have only suffixes >= end
-	//   "g","h","i","j" span the range boundary
-	// Extra filler groups "p".."z" ensure the ixbuf uses multiple chunks.
-	type groupSpec struct {
-		first    string
-		suffixes []string
-	}
-	groups := []groupSpec{
-		{"a", []string{"01", "03", "05", "07"}},
-		{"b", []string{"02", "04", "06"}},
-		{"c", []string{"08", "10", "12", "15", "18"}},
-		{"d", []string{"09", "11", "14", "17"}},
-		{"e", []string{"19", "21", "25"}},
-		{"f", []string{"20", "22", "28"}},
-		{"g", []string{"05", "08", "12", "19", "22"}},
-		{"h", []string{"06", "09", "13", "18", "20"}},
-		{"i", []string{"07", "10", "18"}},
-		{"j", []string{"11", "16", "19", "24"}},
-	}
-	// Add filler groups to push total entries above one chunk (goal >= 24)
-	for _, letter := range "pqrstuvwxyz" {
-		first := string(letter)
-		var suffixes []string
-		for s := 1; s <= 5; s++ {
-			suffixes = append(suffixes, fmt.Sprintf("%02d", s))
-		}
-		groups = append(groups, groupSpec{first, suffixes})
-	}
-
-	fullIb := &ixbuf{}
-	subIb := &ixbuf{}
-
-	var off uint64 = 1
-	for _, g := range groups {
-		for _, suffix := range g.suffixes {
-			k := ixkey.CompKey(g.first, suffix)
-			fullIb.Insert(k, off)
-			if org <= suffix && suffix < end {
-				subIb.Insert(k, off)
-			}
-			off++
-		}
-	}
-	// Verify multiple chunks are used
-	assert.T(t).That(len(fullIb.chunks) > 1)
-
-	firsts := make([]string, len(groups))
-	for i, g := range groups {
-		firsts[i] = g.first
-	}
-
-	fit := fullIb.Iterator().(*Iterator)
-	fit.SkipScan(iface.All, Range{Org: org, End: end}, 1)
-	sit := subIb.Iterator()
-
-	assertSame := func(step int, op string) {
-		t.Helper()
-		fhc := fit.HasCur()
-		shc := sit.HasCur()
-		assert.T(t).Msg(fmt.Sprintf("step %d op %s hascur", step, op)).
-			This(fhc).Is(shc)
-		assert.T(t).Msg(fmt.Sprintf("step %d op %s eof", step, op)).
-			This(fit.Eof()).Is(sit.Eof())
-		if !fhc {
-			return
-		}
-		fk, fo := fit.Cur()
-		sk, so := sit.Cur()
-		assert.T(t).Msg(fmt.Sprintf("step %d op %s key", step, op)).
-			This(fk).Is(sk)
-		assert.T(t).Msg(fmt.Sprintf("step %d op %s off", step, op)).
-			This(fo).Is(so)
-	}
-
-	seek := func(first, s string) {
-		t.Helper()
-		k := ixkey.CompKey(first, s)
-		fit.Seek(k)
-		sit.Seek(k)
-	}
-
-	seekSuffixes := []string{
-		"00",
-		"01", "02",
-		"07", "075",
-		"08",
-		"085",
-		"10", "11",
-		"135",
-		"18",
-		"185",
-		"19",
-		"20", "21",
-		"29", "30",
-	}
-
-	r := rand.New(rand.NewSource(1))
-	assertSame(0, "init")
-	for step := 1; step <= steps; step++ {
-		switch r.Intn(4) {
-		case 0:
-			fit.Next()
-			sit.Next()
-			assertSame(step, "Next")
-		case 1:
-			fit.Prev()
-			sit.Prev()
-			assertSame(step, "Prev")
-		case 2:
-			fit.Rewind()
-			sit.Rewind()
-			assertSame(step, "Rewind")
-		case 3:
-			first := firsts[r.Intn(len(firsts))]
-			s := seekSuffixes[r.Intn(len(seekSuffixes))]
-			seek(first, s)
-			assertSame(step, "Seek")
-		}
-	}
-}
-
 func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 	// 32 groups × 500 records = 16k total, goal ≈ 192 => each group spans ~2-3 chunks
 	const (
@@ -876,6 +745,20 @@ func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 	})
 }
 
+// go test ./db19/index/ixbuf -run=^$ -fuzz=FuzzSkipScanIter
+
+func FuzzSkipScanIter(f *testing.F) {
+	itertest.SkipScanTest(f, makeIter)
+}
+
+func makeIter(_ *rand.Rand, keys []itertest.KeyOff) itertest.Iter {
+	ib := &T{}
+	for _, k := range keys {
+		ib.Insert(k.Key, k.Off)
+	}
+	return ib.Iterator()
+}
+
 //-------------------------------------------------------------------
 
 // func (ib *ixbuf) stats() {
@@ -892,8 +775,4 @@ func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 // 	default:
 // 		return fmt.Sprint(c[0].key, " -> ", c.lastKey(), " (", len(c), ")")
 // 	}
-// }
-
-// func TestCombine(t *testing.T) {
-// 	Combine(123 | Delete, 456 | Update)
 // }

@@ -5,7 +5,7 @@ package btree
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
+	"github.com/apmckinlay/gsuneido/db19/index/itertest"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -866,168 +867,6 @@ func TestSkipScanPrefixRangePrev(t *testing.T) {
 	assert.This(got).Is([]string{"c:03", "b:02"})
 }
 
-func TestSkipScanRandomParallelWithSubset(t *testing.T) {
-	// Run the same scenario at treeLevels 0, 1, and 2
-	// by controlling splitCount (fewer keys per node => more levels).
-	for _, splitSize := range []int{100, 8, 4} {
-		t.Run(fmt.Sprintf("split%d", splitSize), func(t *testing.T) {
-			testSkipScanRandomParallelWithSubset(t, splitSize)
-		})
-	}
-}
-
-func testSkipScanRandomParallelWithSubset(t *testing.T, splitSize int) {
-	t.Helper()
-	defer SetSplit(SetSplit(splitSize))
-
-	const (
-		org   = "08"
-		end   = "19"
-		steps = 30000
-	)
-
-	// groups and the suffixes they contain, chosen to exercise edge cases:
-	//   "a","b" have only suffixes below org  -> none of the range
-	//   "c","d" have only suffixes within [org,end) -> fully contained in range
-	//   "e","f" have only suffixes >= end       -> none of the range
-	//   "g","h","i","j" span the range boundary  -> partial overlap
-	type groupSpec struct {
-		first    string
-		suffixes []string
-	}
-	groups := []groupSpec{
-		{"a", []string{"01", "03", "05", "07"}},       // all below org
-		{"b", []string{"02", "04", "06"}},             // all below org
-		{"c", []string{"08", "10", "12", "15", "18"}}, // all within [org,end)
-		{"d", []string{"09", "11", "14", "17"}},       // all within [org,end)
-		{"e", []string{"19", "21", "25"}},             // all >= end
-		{"f", []string{"20", "22", "28"}},             // all >= end
-		{"g", []string{"05", "08", "12", "19", "22"}}, // straddles both boundaries
-		{"h", []string{"06", "09", "13", "18", "20"}}, // straddles both boundaries
-		{"i", []string{"07", "10", "18"}},             // from below into range
-		{"j", []string{"11", "16", "19", "24"}},       // from inside range past end
-	}
-
-	fullb := Builder(stor.HeapStor(8192))
-	subb := Builder(stor.HeapStor(8192))
-
-	var off uint64 = 1
-	for _, g := range groups {
-		for _, suffix := range g.suffixes {
-			k := ixkey.CompKey(g.first, suffix)
-			assert.That(fullb.Add(k, off))
-			if org <= suffix && suffix < end {
-				assert.That(subb.Add(k, off))
-			}
-			off++
-		}
-	}
-
-	firsts := make([]string, len(groups))
-	for i, g := range groups {
-		firsts[i] = g.first
-	}
-
-	full := fullb.Finish().(*btree)
-	sub := subb.Finish().(*btree)
-
-	fit := full.Iterator().(*Iterator)
-	fit.SkipScan(iface.All, iface.Range{Org: org, End: end}, 1)
-	sit := sub.Iterator().(*Iterator)
-
-	assertSame := func(step int, op string) {
-		t.Helper()
-		assert.T(t).Msg(fmt.Sprintf("step %d op %s hascur", step, op)).
-			This(fit.HasCur()).Is(sit.HasCur())
-		assert.T(t).Msg(fmt.Sprintf("step %d op %s eof", step, op)).
-			This(fit.Eof()).Is(sit.Eof())
-		if fit.Eof() {
-			return
-		}
-		fk, fo := fit.Cur()
-		sk, so := sit.Cur()
-		assert.T(t).Msg(fmt.Sprintf("step %d op %s key", step, op)).
-			This(fk).Is(sk)
-		assert.T(t).Msg(fmt.Sprintf("step %d op %s off", step, op)).
-			This(fo).Is(so)
-	}
-
-	seek := func(first, s string) {
-		t.Helper()
-		k := ixkey.CompKey(first, s)
-		fit.Seek(k)
-		sit.Seek(k)
-	}
-
-	boundary := []struct {
-		first  string
-		suffix string
-	}{
-		{"a", "00"}, // before first key in a no-range group
-		{"b", "00"}, // before first key in a no-range group
-		{"c", "00"}, // before all keys in a fully-in-range group
-		{"d", "00"}, // before all keys in a fully-in-range group
-		{"e", "00"}, // before all keys in a no-range (above) group
-		{"g", "00"}, // before first key in a straddle group
-		{"a", "08"}, // at org boundary, group has no such key
-		{"c", "08"}, // at org boundary, group has this exact key
-		{"g", "08"}, // at org boundary, group has this exact key
-		{"a", "18"}, // just before end, group has no such key
-		{"c", "18"}, // just before end, group has this exact key
-		{"h", "18"}, // just before end, group has this exact key
-		{"a", "19"}, // at end boundary (exclusive), group has no such key
-		{"e", "19"}, // at end boundary, group has this exact key
-		{"j", "19"}, // at end boundary, group has this exact key
-		{"a", "99"}, // above all suffixes in any group
-		{"j", "99"}, // above all suffixes in any group
-	}
-	for i, b := range boundary {
-		seek(b.first, b.suffix)
-		assertSame(-(i + 1), "SeekBoundary")
-	}
-
-	// seekSuffixes covers: before first key, between keys, at boundary keys,
-	// and after last key — exercising all seek edge cases
-	seekSuffixes := []string{
-		"00",       // before first key in any group
-		"01", "02", // actual/between keys below org
-		"07", "075", // last below org / between last-below and org
-		"08",       // exactly org
-		"085",      // between first in-range and next
-		"10", "11", // within range
-		"135",      // between two in-range keys
-		"18",       // last suffix before end
-		"185",      // between last in-range and end
-		"19",       // exactly end (exclusive upper bound)
-		"20", "21", // above end
-		"29", "30", // well above all suffixes
-	}
-
-	r := rand.New(rand.NewSource(1))
-	assertSame(0, "init")
-	for step := 1; step <= steps; step++ {
-		switch r.Intn(4) {
-		case 0:
-			fit.Next()
-			sit.Next()
-			assertSame(step, "Next")
-		case 1:
-			fit.Prev()
-			sit.Prev()
-			assertSame(step, "Prev")
-		case 2:
-			fit.Rewind()
-			sit.Rewind()
-			assertSame(step, "Rewind")
-		case 3:
-			first := firsts[r.Intn(len(firsts))]
-			s := seekSuffixes[r.Intn(len(seekSuffixes))]
-			seek(first, s)
-			assertSame(step, "Seek")
-		}
-	}
-}
-
 func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 	const (
 		groups          = 1000
@@ -1422,4 +1261,21 @@ func TestGte(t *testing.T) {
 	test("abc", "de", "abcde", true)  // equal at compared length, same total
 	test("abc", "d", "abcde", false)  // equal at compared length, shorter total
 	test("abc", "", "abcdef", false)  // prefix matches but too short
+}
+
+// go test ./db19/index/btree3 -run=^$ -fuzz=FuzzSkipScanIter
+
+func FuzzSkipScanIter(f *testing.F) {
+	itertest.SkipScanTest(f, makeIter)
+}
+
+func makeIter(_ *rand.Rand, keys []itertest.KeyOff) itertest.Iter {
+	sort.Slice(keys, func(i, j int) bool { return keys[i].Key < keys[j].Key })
+	defer SetSplit(SetSplit(7)) // ???
+	b := Builder(stor.HeapStor(8192))
+	for _, k := range keys {
+		assert.That(b.Add(k.Key, k.Off))
+	}
+	bt := b.Finish()
+	return bt.Iterator()
 }

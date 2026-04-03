@@ -5,13 +5,14 @@ package index
 
 import (
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"sort"
 	"strconv"
 	"testing"
 
 	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
+	"github.com/apmckinlay/gsuneido/db19/index/itertest"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -348,7 +349,7 @@ func TestOverIterCombine(*testing.T) {
 	assert.This(count).Is(n * 2)
 
 	for range n / 2 {
-		j := rand.Intn(len(data))
+		j := rand.IntN(len(data))
 		if data[j] != "" {
 			ov.Delete(data[j], key2off(data[j]))
 			data[j] = ""
@@ -433,9 +434,9 @@ func TestOverIterRandom(*testing.T) {
 	}
 	for n := 1; n < N; n++ { // reserve 0 for deleted
 		trace(n, " ")
-		switch rand.Intn(7) {
+		switch rand.IntN(7) {
 		case 0:
-			if rand.Intn(sizing)+1 > data.Len() {
+			if rand.IntN(sizing)+1 > data.Len() {
 				// insert
 				key := gen.randKey()
 				data.Insert(key)
@@ -444,7 +445,7 @@ func TestOverIterRandom(*testing.T) {
 				traceln("insert", key, "len", data.Len())
 			} else {
 				// delete
-				j := rand.Intn(data.Len())
+				j := rand.IntN(data.Len())
 				key := data.Get(j)
 				traceln("delete", key, "len", data.Len()-1)
 				data.Delete(key)
@@ -514,9 +515,9 @@ func TestOverIterRandom2(t *testing.T) {
 	nextoff := uint64(1)
 	for i := range nlayers {
 		for range nkeys / 5 {
-			key := keys[rand.Intn(nkeys)]
+			key := keys[rand.IntN(nkeys)]
 			if off := keyoff[key]; off != 0 {
-				if rand.Intn(3) == 1 {
+				if rand.IntN(3) == 1 {
 					ibs[i].Delete(key, off)
 					dum.Delete(key)
 					keyoff[key] = 0
@@ -563,7 +564,7 @@ func TestOverIterRandom2(t *testing.T) {
 	it.Rewind()
 	oi.Rewind()
 	for range steps {
-		if rand.Intn(2) == 1 {
+		if rand.IntN(2) == 1 {
 			it.Next()
 			oi.Next(tran)
 		} else {
@@ -772,7 +773,7 @@ func TestOverIterRandom3(t *testing.T) {
 	var nextOffset uint64
 	var oi *OverIter
 	var i int
-	seed := rand.Int63()
+	seed := rand.Uint64()
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println("seed", seed, "loop", i)
@@ -781,7 +782,7 @@ func TestOverIterRandom3(t *testing.T) {
 			panic(r)
 		}
 	}()
-	localRand := rand.New(rand.NewSource(seed))
+	localRand := rand.New(rand.NewPCG(seed, seed))
 	for i = range n {
 		ops = ops[:0]
 		ov, keys, keyOffsets, nextOffset = generateRandomLayers(localRand)
@@ -789,7 +790,7 @@ func TestOverIterRandom3(t *testing.T) {
 		tran := &testTran{getIndex: func() *Overlay { return ov }}
 		for range 100 {
 			oi.Check()
-			switch localRand.Intn(6) {
+			switch localRand.IntN(6) {
 			case 0:
 				ops = append(ops, "next")
 				oi.Next(tran)
@@ -812,7 +813,7 @@ func TestOverIterRandom3(t *testing.T) {
 				ops = append(ops, "modify "+mod)
 				ov.Check()
 			case 4: // start a new transaction
-				if localRand.Intn(3) == 0 {
+				if localRand.IntN(3) == 0 {
 					// Simulate concurrent modification: generate completely new overlay
 					// This tests OverIter's update detection when overlay structure changes
 					ov, keys, keyOffsets, nextOffset = generateRandomLayers(localRand)
@@ -834,19 +835,19 @@ func TestOverIterRandom3(t *testing.T) {
 func generateRandomLayers(localRand *rand.Rand) (*Overlay, []string, map[string]uint64, uint64) {
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 
-	nlayers := localRand.Intn(7) + 2
+	nlayers := localRand.IntN(7) + 2
 	layers := make([]*ixbuf.T, nlayers)
 	for i := range layers {
 		layers[i] = &ixbuf.T{}
 	}
 
 	keys := []string{"k0", "k1", "k2", "k3", "k4", "k5", "k6", "k7"}
-	nkeys := localRand.Intn(len(keys)-1) + 1
+	nkeys := localRand.IntN(len(keys)-1) + 1
 	keyOffsets := make(map[string]uint64) // track key offset, 0 if non-existent
 	nextOffset := uint64(1)
 
 	for _, layer := range layers {
-		nmods := localRand.Intn(5)
+		nmods := localRand.IntN(5)
 		for range nmods {
 			randomModifyLayer(layer, keys[:nkeys], keyOffsets, &nextOffset, localRand)
 		}
@@ -858,7 +859,7 @@ func generateRandomLayers(localRand *rand.Rand) (*Overlay, []string, map[string]
 }
 
 func randomModifyLayer(layer *ixbuf.T, keys []string, keyOffsets map[string]uint64, nextOffset *uint64, localRand *rand.Rand) string {
-	key := keys[localRand.Intn(len(keys))]
+	key := keys[localRand.IntN(len(keys))]
 	if keyOffsets[key] == 0 {
 		// Key doesn't exist - can only do a plain add (no flags)
 		layer.Insert(key, *nextOffset)
@@ -867,7 +868,7 @@ func randomModifyLayer(layer *ixbuf.T, keys []string, keyOffsets map[string]uint
 		return key + "+" + strconv.Itoa(int(*nextOffset-1))
 	} else {
 		// key exists
-		if localRand.Intn(2) == 1 {
+		if localRand.IntN(2) == 1 {
 			layer.Insert(key, *nextOffset|ixbuf.Update)
 			keyOffsets[key] = *nextOffset
 			*nextOffset++
@@ -883,14 +884,14 @@ func randomModifyLayer(layer *ixbuf.T, keys []string, keyOffsets map[string]uint
 
 func createRandomRangedIterator(keys []string, localRand *rand.Rand) *OverIter {
 	it := NewOverIter("", 0)
-	switch localRand.Intn(4) {
+	switch localRand.IntN(4) {
 	case 0:
 		// Full range (default)
 		return it
 	case 1:
 		// Range with two different keys
-		i := localRand.Intn(len(keys))
-		j := localRand.Intn(len(keys))
+		i := localRand.IntN(len(keys))
+		j := localRand.IntN(len(keys))
 		if i == j {
 			j = (j + 1) % len(keys)
 		}
@@ -898,11 +899,11 @@ func createRandomRangedIterator(keys []string, localRand *rand.Rand) *OverIter {
 		it.Range(Range{Org: min(x, y), End: max(x, y)})
 	case 2:
 		// Range with single key as both start and end
-		key := keys[localRand.Intn(len(keys))]
+		key := keys[localRand.IntN(len(keys))]
 		it.Range(Range{Org: key, End: key})
 	case 3:
 		// Range with key prefixes or variations
-		key := keys[localRand.Intn(len(keys))]
+		key := keys[localRand.IntN(len(keys))]
 		it.Range(Range{Org: key, End: key + "z"})
 	}
 	return it
@@ -1136,4 +1137,69 @@ func BenchmarkOverIterSingle(b *testing.B) {
 			assert.That(!it.singleIter)
 		}
 	})
+}
+
+// go test ./db19/index -run=^$ -fuzz=FuzzSkipScanIter
+
+func FuzzSkipScanIter(f *testing.F) {
+	itertest.SkipScanTest(f, makeIter)
+}
+
+func makeIter(rng *rand.Rand, keys []itertest.KeyOff) itertest.Iter {
+	defer btree.SetSplit(btree.SetSplit(7)) // ???
+	nbtree := 0
+	if len(keys) > 0 {
+		nbtree = rng.IntN(len(keys))
+	}
+	nlayers := rng.IntN(3) + 1
+	btreeStart := len(keys) - nbtree
+	layers := make([]*ixbuf.T, nlayers)
+	for i := range nlayers {
+		layers[i] = &ixbuf.T{}
+	}
+	// The last nbtree (>= nExtra) keys are sorted in place and added to the btree.
+	// Some btree entries are written with +10000 and paired with either:
+	// - a layer update back to the original offset, or
+	// - a layer tombstone (delete)
+	sort.Slice(keys[btreeStart:], func(i, j int) bool {
+		return keys[btreeStart+i].Key < keys[btreeStart+j].Key
+	})
+	b := btree.Builder(stor.HeapStor(8192))
+	for i := btreeStart; i < len(keys); i++ {
+		k := &keys[i]
+		off := k.Off
+		r := rng.IntN(7)
+		if r == 3 {
+			// delete
+			layers[rng.IntN(nlayers)].Insert(k.Key, k.Off|ixbuf.Delete)
+			k.Off = 0 // zero so caller can remove with DeleteFunc
+		} else if r == 5 {
+			// update
+			layers[rng.IntN(nlayers)].Insert(k.Key, k.Off|ixbuf.Update)
+			off += 10000
+		}
+		assert.That(b.Add(k.Key, off))
+	}
+	bt := b.Finish()
+	// First portion goes into ixbuf layers.
+	for _, k := range keys[:btreeStart] {
+		layers[rng.IntN(nlayers)].Insert(k.Key, k.Off)
+	}
+
+	ov := &Overlay{bt: bt, layers: layers}
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+	return &testIter{OverIter: NewOverIter("", 0), tran: tran}
+}
+
+type testIter struct {
+	*OverIter
+	tran oiTran
+}
+
+func (ti *testIter) Next() {
+	ti.OverIter.Next(ti.tran)
+}
+
+func (ti *testIter) Prev() {
+	ti.OverIter.Prev(ti.tran)
 }
