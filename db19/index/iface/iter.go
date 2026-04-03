@@ -12,8 +12,8 @@ import (
 // Iter is the interface for a Suneido style iterator
 // implemented by btree and ixbuf
 type Iter interface {
-	// Eof returns true if the index is empty,
-	// Next hit the end, or Prev hit the beginning
+	// Eof returns true if Next hit the end, or Prev hit the beginning.
+	// Returns false when rewound, even if the index is empty.
 	Eof() bool
 
 	// Modified returns true if the index has been modified.

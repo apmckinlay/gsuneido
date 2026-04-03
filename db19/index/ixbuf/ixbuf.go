@@ -528,7 +528,7 @@ func (it *Iterator) SkipScan(prefixRng Range, suffixRng Range, prefixLen int) {
 }
 
 func (it *Iterator) Eof() bool {
-	return it.ib.size == 0 || it.state == eof
+	return it.state == eof
 }
 
 func (it *Iterator) Modified() bool {
