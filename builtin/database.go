@@ -4,10 +4,15 @@
 package builtin
 
 import (
+	"cmp"
+	"slices"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/dbms"
+	"github.com/apmckinlay/gsuneido/util/hll"
+	"github.com/apmckinlay/gsuneido/util/ss"
 )
 
 type suDatabaseGlobal struct {
@@ -149,6 +154,81 @@ func db_CorruptedQ(th *Thread, args []Value) Value {
 		return SuBool(dbms.Corrupted())
 	}
 	return th.Dbms().Exec(th, SuObjectOf(SuStr("Database.Corrupted?")))
+}
+
+var _ = staticMethod(db_Top10, "(table, column)")
+
+func db_Top10(th *Thread, args []Value) Value {
+	table := ToStr(args[0])
+	column := ToStr(args[1])
+
+	tran := th.Dbms().Transaction(false)
+	defer tran.Complete()
+
+	sk := ss.New[string](128)
+	q := tran.Query(table, nil)
+	hdr := q.Header()
+	for row, _ := q.Get(th, Next); row != nil; row, _ = q.Get(th, Next) {
+		sk.Add(row.GetRawVal(hdr, column, nil, nil))
+	}
+
+	top := sk.Top()
+	slices.SortFunc(top, func(a, b ss.Entry[string]) int {
+		return -cmp.Compare(a.Count-a.Error, b.Count-b.Error)
+	})
+	if len(top) > 10 {
+		top = top[:10]
+	}
+
+	result := &SuObject{}
+	for _, e := range top {
+		result.Set(Unpack(e.Value), IntVal(e.Count-e.Error))
+	}
+	return result
+}
+
+var _ = staticMethod(db_Distinct, "(table)")
+
+func db_Distinct(th *Thread, args []Value) Value {
+	table := ToStr(args[0])
+	t := th.Dbms().Transaction(false)
+	defer t.Complete()
+	rt := t.(*dbms.ReadTranLocal).ReadTran
+	cols := indexedColumns(rt.GetSchema(table).Indexes)
+	hdr := SimpleHeader(cols)
+	sketches := make([]*hll.HLL, len(cols))
+	for i := range cols {
+		sketches[i] = hll.New()
+	}
+	q := t.Query(table, nil)
+	for row, _ := q.Get(th, Next); row != nil; row, _ = q.Get(th, Next) {
+		for i, col := range cols {
+			sketches[i].Add(row.GetRawVal(hdr, col, nil, nil))
+		}
+	}
+	ob := &SuObject{}
+	for i, col := range cols {
+		ob.Set(SuStr(col), Int64Val(int64(sketches[i].Count())))
+	}
+	return ob
+}
+
+func indexedColumns(indexes []schema.Index) []string {
+	cols := make([]string, 0, len(indexes))
+	seen := make(map[string]struct{}, len(indexes))
+	for _, ix := range indexes {
+		for _, col := range ix.Columns {
+			if strings.HasSuffix(col, "_lower!") {
+				continue
+			}
+			if _, ok := seen[col]; ok {
+				continue
+			}
+			seen[col] = struct{}{}
+			cols = append(cols, col)
+		}
+	}
+	return cols
 }
 
 var _ = staticMethod(db_Members, "()")
