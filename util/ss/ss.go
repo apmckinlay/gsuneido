@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package ss implements the Space-Saving algorithm for string streams.
+// Package ss implements the Space-Saving algorithm for streams.
 //
 // It tracks approximate frequent items using fixed memory.
 // See: Efficient Computation of Frequent and Top-k Elements in Data Streams
@@ -9,6 +9,7 @@
 package ss
 
 import (
+	"cmp"
 	"container/heap"
 	"slices"
 )
@@ -16,35 +17,35 @@ import (
 // Entry is one tracked item.
 //
 // The true count is in [Count-Error, Count].
-type Entry struct {
-	Value string
+type Entry[T comparable] struct {
+	Value T
 	Count int
 	Error int
 	idx   int
 }
 
-// Sketch tracks approximate frequencies of strings using fixed capacity.
-type Sketch struct {
+// Sketch tracks approximate frequencies using fixed capacity.
+type Sketch[T comparable] struct {
 	capacity int
 	total    int
-	entries  minHeap
-	index    map[string]*Entry
+	entries  minHeap[T]
+	index    map[T]*Entry[T]
 }
 
 // New creates a Space-Saving sketch that tracks up to capacity items.
-func New(capacity int) *Sketch {
+func New[T comparable](capacity int) *Sketch[T] {
 	if capacity <= 0 {
 		panic("ss capacity must be > 0")
 	}
-	return &Sketch{
+	return &Sketch[T]{
 		capacity: capacity,
-		entries:  make(minHeap, 0, capacity),
-		index:    make(map[string]*Entry, capacity),
+		entries:  make(minHeap[T], 0, capacity),
+		index:    make(map[T]*Entry[T], capacity),
 	}
 }
 
 // Add inserts one value from the stream.
-func (ss *Sketch) Add(value string) {
+func (ss *Sketch[T]) Add(value T) {
 	ss.total++
 	if e, ok := ss.index[value]; ok {
 		e.Count++
@@ -53,7 +54,7 @@ func (ss *Sketch) Add(value string) {
 	}
 
 	if len(ss.entries) < ss.capacity {
-		e := &Entry{Value: value, Count: 1}
+		e := &Entry[T]{Value: value, Count: 1}
 		heap.Push(&ss.entries, e)
 		ss.index[value] = e
 		return
@@ -70,24 +71,24 @@ func (ss *Sketch) Add(value string) {
 }
 
 // Count returns the number of Add calls.
-func (ss *Sketch) Count() int {
+func (ss *Sketch[T]) Count() int {
 	return ss.total
 }
 
 // Capacity returns the maximum number of tracked items.
-func (ss *Sketch) Capacity() int {
+func (ss *Sketch[T]) Capacity() int {
 	return ss.capacity
 }
 
 // Len returns the current number of tracked items.
-func (ss *Sketch) Len() int {
+func (ss *Sketch[T]) Len() int {
 	return len(ss.entries)
 }
 
 // Estimate returns the tracked estimate for value.
 //
 // When ok is true, the true count is in [count-error, count].
-func (ss *Sketch) Estimate(value string) (count int, error int, ok bool) {
+func (ss *Sketch[T]) Estimate(value T) (count int, error int, ok bool) {
 	e, ok := ss.index[value]
 	if !ok {
 		return 0, 0, false
@@ -96,53 +97,38 @@ func (ss *Sketch) Estimate(value string) (count int, error int, ok bool) {
 }
 
 // Top returns the tracked entries sorted by descending count.
-func (ss *Sketch) Top() []Entry {
-	top := make([]Entry, len(ss.entries))
+func (ss *Sketch[T]) Top() []Entry[T] {
+	top := make([]Entry[T], len(ss.entries))
 	for i, e := range ss.entries {
-		top[i] = Entry{Value: e.Value, Count: e.Count, Error: e.Error}
+		top[i] = Entry[T]{Value: e.Value, Count: e.Count, Error: e.Error}
 	}
-	slices.SortFunc(top, func(a, b Entry) int {
-		if a.Count > b.Count {
-			return -1
-		}
-		if a.Count < b.Count {
-			return 1
-		}
-		if a.Value < b.Value {
-			return -1
-		}
-		if a.Value > b.Value {
-			return 1
-		}
-		return 0
+	slices.SortFunc(top, func(a, b Entry[T]) int {
+		return -cmp.Compare(a.Count, b.Count)
 	})
 	return top
 }
 
-type minHeap []*Entry
+type minHeap[T comparable] []*Entry[T]
 
-func (h minHeap) Len() int { return len(h) }
+func (h minHeap[T]) Len() int { return len(h) }
 
-func (h minHeap) Less(i, j int) bool {
-	if h[i].Count != h[j].Count {
-		return h[i].Count < h[j].Count
-	}
-	return h[i].Value < h[j].Value
+func (h minHeap[T]) Less(i, j int) bool {
+	return h[i].Count < h[j].Count
 }
 
-func (h minHeap) Swap(i, j int) {
+func (h minHeap[T]) Swap(i, j int) {
 	h[i], h[j] = h[j], h[i]
 	h[i].idx = i
 	h[j].idx = j
 }
 
-func (h *minHeap) Push(x any) {
-	e := x.(*Entry)
+func (h *minHeap[T]) Push(x any) {
+	e := x.(*Entry[T])
 	e.idx = len(*h)
 	*h = append(*h, e)
 }
 
-func (h *minHeap) Pop() any {
+func (h *minHeap[T]) Pop() any {
 	n := len(*h)
 	e := (*h)[n-1]
 	e.idx = -1

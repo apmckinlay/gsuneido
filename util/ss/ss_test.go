@@ -11,16 +11,16 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	ss := New(3)
+	ss := New[string](3)
 	assert.T(t).This(ss.Capacity()).Is(3)
 	assert.T(t).This(ss.Count()).Is(0)
 	assert.T(t).This(ss.Len()).Is(0)
 
-	assert.T(t).This(func() { New(0) }).Panics("capacity")
+	assert.T(t).This(func() { New[string](0) }).Panics("capacity")
 }
 
 func TestAddNoEviction(t *testing.T) {
-	ss := New(4)
+	ss := New[string](4)
 	ss.Add("a")
 	ss.Add("b")
 	ss.Add("a")
@@ -43,7 +43,7 @@ func TestAddNoEviction(t *testing.T) {
 }
 
 func TestEvictionBounds(t *testing.T) {
-	ss := New(2)
+	ss := New[string](2)
 	ss.Add("a")
 	ss.Add("b")
 	ss.Add("c")
@@ -62,7 +62,7 @@ func TestEvictionBounds(t *testing.T) {
 }
 
 func TestHeavyHitters(t *testing.T) {
-	ss := New(8)
+	ss := New[string](8)
 	for range 1000 {
 		ss.Add("hot")
 	}
