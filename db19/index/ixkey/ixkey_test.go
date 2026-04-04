@@ -324,3 +324,59 @@ func TestTruncFunc(t *testing.T) {
 		"a\x00\x01x\x00\x00b\x00\x01y\x00\x00c\x00\x00d",
 		"a\x00\x01x\x00\x00b\x00\x01y")
 }
+
+func TestJoinPrefixSuffix(t *testing.T) {
+	assert := assert.T(t).This
+
+	// full prefix (n-1 separators): join adds exactly one Sep
+	assert(JoinPrefixSuffix("a\x00\x00b", 2, "c")).Is("a\x00\x00b\x00\x00c")
+	assert(JoinPrefixSuffix("a\x00\x00b\x00\x00c", 3, "d")).Is("a\x00\x00b\x00\x00c\x00\x00d")
+
+	// partial prefix (fewer than n-1 separators): missing Sep are added
+	assert(JoinPrefixSuffix("a", 2, "c")).Is("a\x00\x00\x00\x00c")
+	assert(JoinPrefixSuffix("a", 3, "d")).Is("a\x00\x00\x00\x00\x00\x00d")
+	assert(JoinPrefixSuffix("a\x00\x00b", 3, "d")).Is("a\x00\x00b\x00\x00\x00\x00d")
+
+	// split-then-join: SplitPrefixSuffix then JoinPrefixSuffix recovers prefix and suffix
+	check := func(key string, n int) {
+		t.Helper()
+		p, s := SplitPrefixSuffix(key, n)
+		rejoined := JoinPrefixSuffix(p, n, s)
+		// For a full key, split+join should recover something that splits the same way
+		p2, s2 := SplitPrefixSuffix(rejoined, n)
+		assert(p2).Is(p)
+		assert(s2).Is(s)
+	}
+	check("a\x00\x00b\x00\x00c", 2)
+	check("a\x00\x00b\x00\x00c", 1)
+	check("a", 2)          // short key: prefix="a", suffix=""
+	check("a\x00\x00b", 3) // 2-field key for 3-field prefix: prefix="a\x00\x00b", suffix=""
+
+	// The key use case: JoinPrefixSuffix correctly positions for partial prefix seek
+	// For partial prefix "a" (1 field) with n=2, seek target for suffix "m" must be
+	// "a\x00\x00\x00\x00m" (not "a\x00\x00m" which would skip groups like "a\x00\x00c")
+	target := JoinPrefixSuffix("a", 2, "m")
+	assert(target).Is("a\x00\x00\x00\x00m")
+	// "a\x00\x00c\x00\x00m" sorts before "a\x00\x00m" but after "a\x00\x00\x00\x00m"
+	assert(target <= "a\x00\x00c\x00\x00m").Is(true) // target does NOT skip group "a,c"
+}
+
+func BenchmarkJoinPrefixSuffix(b *testing.B) {
+	prefixes := []string{
+		"a",
+		"a\x00\x00b",
+		"a\x00\x00",
+		"a\x00\x00\x00\x00",
+		"a\x00\x00\x00\x00b",
+	}
+	suffix := "suffix"
+	nVals := []int{3, 5, 7}
+
+	for b.Loop() {
+		for _, prefix := range prefixes {
+			for _, n := range nVals {
+				JoinPrefixSuffix(prefix, n, suffix)
+			}
+		}
+	}
+}

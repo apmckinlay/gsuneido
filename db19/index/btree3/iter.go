@@ -199,6 +199,12 @@ func (it *Iterator) skipAdvanceToMatch() {
 			}
 			continue
 		}
+		// prefix == skipGroup
+		if !it.noRange && prefix < it.rng.Org {
+			// handles the initial skipGroup="" colliding with an out-of-range empty prefix
+			it.skipSeekNextGroup(prefix)
+			continue
+		}
 		if suffix >= it.skipRng.End {
 			it.skipSeekNextGroup(prefix)
 			continue
@@ -219,7 +225,7 @@ func (it *Iterator) skipAdvanceToMatch() {
 func (it *Iterator) skipSeekGroupOrg(prefix string) {
 	target := prefix
 	if it.skipRng.Org != ixkey.Min {
-		target = prefix + ixkey.Sep + it.skipRng.Org
+		target = ixkey.JoinPrefixSuffix(prefix, it.skipPrefixLen, it.skipRng.Org)
 	}
 	it.seekAllRaw(target)
 	// If we can't land at/after target, this group has no keys in range.
@@ -229,7 +235,7 @@ func (it *Iterator) skipSeekGroupOrg(prefix string) {
 }
 
 func (it *Iterator) skipSeekNextGroup(prefix string) {
-	target := prefix + ixkey.Sep + ixkey.Max
+	target := ixkey.JoinPrefixSuffix(prefix, it.skipPrefixLen, ixkey.Max)
 
 	// First try to find the target in the current leaf. This is the fast path when
 	// the next first-field group is still in the same leaf node.
@@ -375,7 +381,7 @@ func (it *Iterator) skipRetreatToMatch() {
 }
 
 func (it *Iterator) skipSeekGroupEnd(prefix string) {
-	target := prefix + ixkey.Sep + it.skipRng.End
+	target := ixkey.JoinPrefixSuffix(prefix, it.skipPrefixLen, it.skipRng.End)
 	it.seekAllRaw(target)
 	// seekAllRaw positions >= target; back up until we're inside this group's range
 	for it.state == within {

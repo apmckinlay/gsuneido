@@ -34,13 +34,14 @@ const npool = 16
 
 var pool = func() []string {
 	pool := make([]string, npool)
-	for i := range npool {
-		pool[i] = core.Pack(core.IntVal(i))
+	pool[0] = "" // include empty string for better skip-scan coverage
+	for i := 1; i < npool; i++ {
+		pool[i] = core.Pack(core.IntVal(i - 1))
 	}
 	return pool
 }()
 
-func SkipScanTest(f *testing.F, makeIter func(*rand.Rand, []KeyOff) Iter) {
+func SkipScanTest(f *testing.F, makeIter func([]KeyOff) Iter) {
 	// add some random cases so it does something as a test (when not fuzzing)
 	for range 100 {
 		f.Add(rand.Uint64(), randUint8(), rand.Uint32(), randBytes(100))
@@ -51,43 +52,49 @@ func SkipScanTest(f *testing.F, makeIter func(*rand.Rand, []KeyOff) Iter) {
 		nkeys := int(u8) // 0 to 255
 		nfields, prefixLen, prefixRng, suffixRng := genCriteria(u32)
 		allKeys := genData(rng, nfields, nkeys)
-		it := makeIter(rng, allKeys)
+		it := makeIter(allKeys)
 		// remove any zeroed (deleted) entries and sort to get the visible keys
 		keys := slices.DeleteFunc(allKeys, func(k KeyOff) bool { return k.Off == 0 })
 		sort.Slice(keys, func(i, j int) bool { return keys[i].Key < keys[j].Key })
 
-		it.SkipScan(prefixRng, suffixRng, prefixLen)
-		or := newOracle(keys, prefixRng, suffixRng, prefixLen)
+		runSkipScan(t, it, keys, prefixRng, suffixRng, prefixLen, steps)
+	})
+}
 
-		for i := 0; !or.Eof(); i++ {
-			assertSame(t, i, it, or)
+func runSkipScan(t *testing.T, it Iter, keys []KeyOff,
+	prefixRng, suffixRng iface.Range, prefixLen int, steps []byte) {
+	t.Helper()
+	it.SkipScan(prefixRng, suffixRng, prefixLen)
+	or := newOracle(keys, prefixRng, suffixRng, prefixLen)
+
+	for i := 0; !or.Eof(); i++ {
+		assertSame(t, i, it, or)
+		it.Next()
+		or.Next()
+	}
+	assertSame(t, 9999, it, or)
+
+	for i := 0; !or.Eof(); i++ {
+		assertSame(t, i+10000, it, or)
+		it.Prev()
+		or.Prev()
+	}
+	assertSame(t, 19999, it, or)
+
+	for step := range steps {
+		switch step % 3 {
+		case 0:
 			it.Next()
 			or.Next()
-		}
-		assertSame(t, 9999, it, or)
-
-		for i := 0; !or.Eof(); i++ {
-			assertSame(t, i+10000, it, or)
+		case 1:
 			it.Prev()
 			or.Prev()
+		case 2:
+			it.Rewind()
+			or.Rewind()
 		}
-		assertSame(t, 19999, it, or)
-
-		for step := range steps {
-			switch step % 3 {
-			case 0:
-				it.Next()
-				or.Next()
-			case 1:
-				it.Prev()
-				or.Prev()
-			case 2:
-				it.Rewind()
-				or.Rewind()
-			}
-			assertSame(t, step+20000, it, or)
-		}
-	})
+		assertSame(t, step+20000, it, or)
+	}
 }
 
 func randUint8() uint8 {
@@ -110,20 +117,22 @@ func randBytes(maxLen int) []byte {
 func genData(rng *rand.Rand, nfields, nkeys int) []KeyOff {
 	seen := map[string]struct{}{}
 	data := make([]KeyOff, 0, nkeys)
+	off := uint64(1)
+	var enc ixkey.Encoder
 	for len(data) < nkeys {
-		vals := make([]string, nfields)
-		for i := range nfields {
-			vals[i] = pool[rng.IntN(len(pool))]
+		for range nfields {
+			enc.Add(pool[rng.IntN(len(pool))])
 		}
-		k := ixkey.CompKey(vals...)
+		k := enc.String()
 		if _, ok := seen[k]; ok {
 			continue
 		}
 		seen[k] = struct{}{}
-		data = append(data, KeyOff{Key: k})
+		data = append(data, KeyOff{Key: k, Off: off})
+		off++
 	}
-	for i := range data {
-		data[i].Off = uint64(i + 1)
+	if _, ok := seen[""]; !ok && nkeys > 0 && rng.IntN(2) == 1 {
+		data[rng.IntN(nkeys)].Key = ""
 	}
 	return data
 }
@@ -277,4 +286,62 @@ func assertSame(t *testing.T, step int, it Iter, or *oracleIter) {
 	ork, oro := or.Cur()
 	assert.T(t).Msg("step", step, "key or").This(itk).Is(ork)
 	assert.T(t).Msg("step", step, "off or").This(ito).Is(oro)
+}
+
+func SkipScanEmptyPrefixTest(t *testing.T, makeIter func([]KeyOff) Iter) {
+	t.Helper()
+	keys := []KeyOff{
+		{Key: ixkey.CompKey("", "One"), Off: 1},
+		{Key: ixkey.CompKey("", "Two"), Off: 2},
+		{Key: ixkey.CompKey("", "Three"), Off: 3},
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i].Key < keys[j].Key })
+	runSkipScan(t, makeIter(keys), keys, iface.All, iface.Range{Org: "Two", End: "Two\x00"}, 1, nil)
+}
+
+func SkipScanEmptyPrefixPrevTest(t *testing.T, makeIter func([]KeyOff) Iter) {
+	t.Helper()
+	keys := []KeyOff{
+		{Key: ixkey.CompKey("", "01"), Off: 1},
+		{Key: ixkey.CompKey("", "03"), Off: 2},
+		{Key: ixkey.CompKey("", "05"), Off: 3},
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i].Key < keys[j].Key })
+	runSkipScan(t, makeIter(keys), keys, iface.All, iface.Range{Org: "01", End: "04"}, 1, nil)
+}
+
+func SkipScanEmptyStringSuffixTest(t *testing.T, makeIter func([]KeyOff) Iter) {
+	t.Helper()
+	packStr := func(s string) string {
+		if s == "" {
+			return ""
+		}
+		return string(rune(core.PackString)) + s
+	}
+	key := func(name, path string) string {
+		return ixkey.CompKey(packStr(name), packStr(path))
+	}
+	const groups = 50
+	const extras = 20
+	keys := make([]KeyOff, 0, groups*(extras+1))
+	off := uint64(1)
+	for i := range groups {
+		name := "n" + twoDigits(i)
+		keys = append(keys, KeyOff{Key: key(name, ""), Off: off})
+		off++
+		for j := range extras {
+			path := "/x" + twoDigits(j)
+			keys = append(keys, KeyOff{Key: key(name, path), Off: off})
+			off++
+		}
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i].Key < keys[j].Key })
+	runSkipScan(t, makeIter(keys), keys, iface.All, iface.Range{Org: "", End: "\x00"}, 1, nil)
+}
+
+func twoDigits(n int) string {
+	if n < 10 {
+		return "0" + string(rune('0'+n))
+	}
+	return string([]rune{'0' + rune(n/10), '0' + rune(n%10)})
 }

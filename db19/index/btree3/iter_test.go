@@ -5,13 +5,11 @@ package btree
 
 import (
 	"fmt"
-	"math/rand/v2"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/itertest"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -461,87 +459,15 @@ func TestIteratorSeekWithRange(t *testing.T) {
 }
 
 func TestSkipScanEmptyStringSuffix(t *testing.T) {
-	packStr := func(s string) string {
-		if s == "" {
-			return ""
-		}
-		return string(rune(core.PackString)) + s
-	}
-	key := func(name, path string) string {
-		return ixkey.CompKey(packStr(name), packStr(path))
-	}
-
-	b := Builder(stor.HeapStor(8192))
-	off := uint64(1)
-	const groups = 50
-	const extras = 20
-	expected := make([]int, 0, groups)
-	for i := range groups {
-		name := fmt.Sprintf("n%02d", i)
-		assert.That(b.Add(key(name, ""), off))
-		expected = append(expected, int(off))
-		off++
-		for j := range extras {
-			assert.That(b.Add(key(name, fmt.Sprintf("/x%02d", j)), off))
-			off++
-		}
-	}
-	bt := b.Finish()
-
-	it := bt.Iterator().(*Iterator)
-	it.SkipScan(iface.All, iface.Range{Org: "", End: "\x00"}, 1)
-
-	var got []int
-	for {
-		it.Next()
-		if it.Eof() {
-			break
-		}
-		got = append(got, int(it.Offset()))
-	}
-	assert.T(t).This(got).Is(expected)
+	itertest.SkipScanEmptyStringSuffixTest(t, makeIter)
 }
 
-// TestSkipScanEmptyPrefix tests skip scan when the key's first field is empty string.
-// This triggered a bug because skipGroup is initialized to "" which is also a valid prefix.
 func TestSkipScanEmptyPrefix(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
-	assert.That(b.Add(ixkey.CompKey("", "One"), 1))
-	assert.That(b.Add(ixkey.CompKey("", "Three"), 3))
-	assert.That(b.Add(ixkey.CompKey("", "Two"), 2))
-	bt := b.Finish()
-
-	it := bt.Iterator().(*Iterator)
-	it.SkipScan(iface.All, iface.Range{Org: "Two", End: "Two\x00"}, 1)
-	it.Next()
-	assert.T(t).That(!it.Eof())
-	_, s := ixkey.SplitPrefixSuffix(it.Key(), 1)
-	assert.T(t).This(s).Is("Two")
-	it.Next()
-	assert.T(t).That(it.Eof())
+	itertest.SkipScanEmptyPrefixTest(t, makeIter)
 }
 
-// TestSkipScanEmptyPrefixPrev tests backward skip scan with empty first field.
-// Exercises the suffix >= End path in skipRetreatToMatch with skipGroup="" collision.
 func TestSkipScanEmptyPrefixPrev(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
-	assert.That(b.Add(ixkey.CompKey("", "01"), 1))
-	assert.That(b.Add(ixkey.CompKey("", "03"), 2))
-	assert.That(b.Add(ixkey.CompKey("", "05"), 3))
-	bt := b.Finish()
-
-	it := bt.Iterator().(*Iterator)
-	it.SkipScan(iface.All, iface.Range{Org: "01", End: "04"}, 1)
-	it.Prev()
-	assert.T(t).That(!it.Eof())
-	_, s := ixkey.SplitPrefixSuffix(it.Key(), 1)
-	assert.T(t).This(s).Is("03")
-	it.Prev()
-	assert.T(t).That(!it.Eof())
-	_, s = ixkey.SplitPrefixSuffix(it.Key(), 1)
-	assert.T(t).This(s).Is("01")
-	it.Prev()
-	assert.T(t).That(it.Eof())
+	itertest.SkipScanEmptyPrefixPrevTest(t, makeIter)
 }
 
 // TestSkipScanRangeQuery simulates a range query like:
@@ -1269,7 +1195,7 @@ func FuzzSkipScanIter(f *testing.F) {
 	itertest.SkipScanTest(f, makeIter)
 }
 
-func makeIter(_ *rand.Rand, keys []itertest.KeyOff) itertest.Iter {
+func makeIter(keys []itertest.KeyOff) itertest.Iter {
 	sort.Slice(keys, func(i, j int) bool { return keys[i].Key < keys[j].Key })
 	defer SetSplit(SetSplit(7)) // ???
 	b := Builder(stor.HeapStor(8192))

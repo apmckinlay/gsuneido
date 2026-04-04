@@ -11,12 +11,11 @@ import (
 	"testing"
 
 	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
-	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/itertest"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/ranges"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -153,47 +152,16 @@ func TestOverIterDeletePrevBug(*testing.T) {
 }
 
 func TestOverIterSkipScanEmptyStringSuffix(t *testing.T) {
-	packStr := func(s string) string {
-		if s == "" {
-			return ""
-		}
-		return string(rune(4)) + s
-	}
-	key := func(name, path string) string {
-		return ixkey.CompKey(packStr(name), packStr(path))
-	}
-	b := btree.Builder(stor.HeapStor(8192))
-	off := uint64(1)
-	const groups = 50
-	const extras = 20
-	expected := make([]int, 0, groups)
-	for i := range groups {
-		name := fmt.Sprintf("n%02d", i)
-		assert.That(b.Add(key(name, ""), off))
-		expected = append(expected, int(off))
-		off++
-		for j := range extras {
-			assert.That(b.Add(key(name, fmt.Sprintf("/x%02d", j)), off))
-			off++
-		}
-	}
-	bt := b.Finish()
-	ov := &Overlay{bt: bt}
-
-	oi := NewOverIter("t", 0)
-	tt := &testTran{getIndex: func() *Overlay { return ov }}
-	oi.SkipScan(iface.All, Range{Org: "", End: "\x00"}, 1)
-
-	var got []int
-	for {
-		oi.Next(tt)
-		if oi.Eof() {
-			break
-		}
-		_, off := oi.Cur()
-		got = append(got, int(off))
-	}
-	assert.T(t).This(got).Is(expected)
+	itertest.SkipScanEmptyStringSuffixTest(t,
+		func(keys []itertest.KeyOff) itertest.Iter {
+			b := btree.Builder(stor.HeapStor(8192))
+			for _, k := range keys {
+				assert.That(b.Add(k.Key, k.Off))
+			}
+			ov := &Overlay{bt: b.Finish()}
+			tran := &testTran{getIndex: func() *Overlay { return ov }}
+			return &testIter{OverIter: NewOverIter("", 0), tran: tran}
+		})
 }
 
 func TestOverIterReads(*testing.T) {
@@ -1145,8 +1113,16 @@ func FuzzSkipScanIter(f *testing.F) {
 	itertest.SkipScanTest(f, makeIter)
 }
 
-func makeIter(rng *rand.Rand, keys []itertest.KeyOff) itertest.Iter {
+func makeIter(keys []itertest.KeyOff) itertest.Iter {
 	defer btree.SetSplit(btree.SetSplit(7)) // ???
+
+	var seed1, seed2 uint64 = 123, 456
+	if len(keys) > 0 {
+		seed1 = hash.String(keys[len(keys)-1].Key)
+		seed2 = uint64(len(keys)) * hash.String(keys[0].Key)
+	}
+	rng := rand.New(rand.NewPCG(seed1, seed2))
+
 	nbtree := 0
 	if len(keys) > 0 {
 		nbtree = rng.IntN(len(keys))
@@ -1169,7 +1145,7 @@ func makeIter(rng *rand.Rand, keys []itertest.KeyOff) itertest.Iter {
 		k := &keys[i]
 		off := k.Off
 		r := rng.IntN(7)
-		if r == 3 {
+		if r == 3 && len(keys) > 10 {
 			// delete
 			layers[rng.IntN(nlayers)].Insert(k.Key, k.Off|ixbuf.Delete)
 			k.Off = 0 // zero so caller can remove with DeleteFunc

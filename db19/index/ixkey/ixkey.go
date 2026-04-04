@@ -324,28 +324,44 @@ func HasPrefix(s, prefix string) bool {
 
 // SplitPrefixSuffix splits a composite key into a prefix of n fields and the rest.
 // Composite keys use 0,0 separators and escape embedded zero bytes as 0,1.
+// If the key has fewer than n fields (e.g. trailing empty fields trimmed),
+// the entire key is returned as prefix and suffix is "".
+// Trailing separators (empty fields) are trimmed from the prefix,
 func SplitPrefixSuffix(key string, n int) (prefix, suffix string) {
-	if n <= 0 {
-		return "", key
-	}
-	seen := 0
+	assert.That(n > 0)
 	for i := 0; i+1 < len(key); i++ {
-		if key[i] != 0 {
-			continue
-		}
-		if key[i+1] == 1 {
-			i++
-			continue
-		}
-		if key[i+1] == 0 {
-			seen++
-			if seen == n {
-				return key[:i], key[i+2:]
+		if key[i] == 0 && key[i+1] == 0 {
+			if n--; n == 0 {
+				suffix = key[i+2:]
+				key = key[:i]
+				break
 			}
 			i++
 		}
 	}
-	return key, ""
+	for strings.HasSuffix(key, Sep) {
+		key = key[:len(key)-len(Sep)]
+	}
+	return key, suffix
+}
+
+// JoinPrefixSuffix is the inverse of SplitPrefixSuffix.
+// It reconstructs a seek target by joining prefix and suffix with the correct
+// number of Sep bytes. The prefix may have fewer than n-1 separators
+// (trailing empty fields trimmed), so missing separators are added.
+// This ensures the target is within the correct group's key namespace.
+func JoinPrefixSuffix(prefix string, n int, suffix string) string {
+	assert.That(n > 0)
+	seps := strings.Count(prefix, Sep)
+	assert.That(seps < n)
+	sepsToAdd := n - seps
+	buf := make([]byte, 0, len(prefix)+sepsToAdd*len(Sep)+len(suffix))
+	buf = append(buf, prefix...)
+	for range sepsToAdd {
+		buf = append(buf, 0, 0)
+	}
+	buf = append(buf, suffix...)
+	return hacks.BStoS(buf)
 }
 
 // Make builds a key for cols from a Row and Header
@@ -354,7 +370,7 @@ func Make(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) string {
 		return Cklen(row.GetRawVal(hdr, cols[0], th, st))
 	}
 	enc := Encoder{}
-	for _, col := range cols {
+	for _, col := range cols { 
 		enc.Add(row.GetRawVal(hdr, col, th, st))
 	}
 	return enc.String()

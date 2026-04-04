@@ -504,42 +504,12 @@ func TestSkipScanNext(t *testing.T) {
 	assert.T(t).This(got).Is([]string{"a:03", "b:02", "c:03", "d:02"})
 }
 
-// TestSkipScanEmptyPrefix tests skip scan when the key's first field is empty string.
-// This triggered a bug because skipGroup is initialized to "" which is also a valid prefix.
 func TestSkipScanEmptyPrefix(t *testing.T) {
-	ib := &ixbuf{}
-	ib.Insert(ixkey.CompKey("", "One"), 1)
-	ib.Insert(ixkey.CompKey("", "Two"), 2)
-	ib.Insert(ixkey.CompKey("", "Three"), 3)
-	it := ib.Iterator().(*Iterator)
-	it.SkipScan(iface.All, Range{Org: "Two", End: "Two\x00"}, 1)
-	it.Next()
-	assert.T(t).That(!it.Eof())
-	_, s := ixkey.SplitPrefixSuffix(it.Key(), 1)
-	assert.T(t).This(s).Is("Two")
-	it.Next()
-	assert.T(t).That(it.Eof())
+	itertest.SkipScanEmptyPrefixTest(t, makeIter)
 }
 
-// TestSkipScanEmptyPrefixPrev tests backward skip scan with empty first field.
-// Exercises the suffix >= End path in skipRetreatToMatch with skipGroup="" collision.
 func TestSkipScanEmptyPrefixPrev(t *testing.T) {
-	ib := &ixbuf{}
-	ib.Insert(ixkey.CompKey("", "01"), 1)
-	ib.Insert(ixkey.CompKey("", "03"), 2)
-	ib.Insert(ixkey.CompKey("", "05"), 3)
-	it := ib.Iterator().(*Iterator)
-	it.SkipScan(iface.All, Range{Org: "01", End: "04"}, 1)
-	it.Prev()
-	assert.T(t).That(!it.Eof())
-	_, s := ixkey.SplitPrefixSuffix(it.Key(), 1)
-	assert.T(t).This(s).Is("03")
-	it.Prev()
-	assert.T(t).That(!it.Eof())
-	_, s = ixkey.SplitPrefixSuffix(it.Key(), 1)
-	assert.T(t).This(s).Is("01")
-	it.Prev()
-	assert.T(t).That(it.Eof())
+	itertest.SkipScanEmptyPrefixPrevTest(t, makeIter)
 }
 
 func TestSkipScanNoMatches(t *testing.T) {
@@ -751,7 +721,7 @@ func FuzzSkipScanIter(f *testing.F) {
 	itertest.SkipScanTest(f, makeIter)
 }
 
-func makeIter(_ *rand.Rand, keys []itertest.KeyOff) itertest.Iter {
+func makeIter(keys []itertest.KeyOff) itertest.Iter {
 	ib := &T{}
 	for _, k := range keys {
 		ib.Insert(k.Key, k.Off)

@@ -697,6 +697,12 @@ func (it *Iterator) skipAdvanceToMatch() {
 			}
 			continue
 		}
+		// prefix == skipGroup
+		if prefix < it.rng.Org {
+			// handles the initial skipGroup="" colliding with an out-of-range empty prefix
+			it.skipSeekNext(prefix)
+			continue
+		}
 		if suffix >= it.skipRng.End {
 			it.skipSeekNext(prefix)
 			continue
@@ -718,7 +724,7 @@ func (it *Iterator) skipAdvanceToMatch() {
 func (it *Iterator) skipSeekOrg(prefix string) {
 	target := prefix
 	if it.skipRng.Org != ixkey.Min {
-		target = prefix + ixkey.Sep + it.skipRng.Org
+		target = ixkey.JoinPrefixSuffix(prefix, it.skipPrefixLen, it.skipRng.Org)
 	}
 	it.seekRaw(target)
 	if it.cur.key < target { // eof if group has no keys >= Org
@@ -729,7 +735,7 @@ func (it *Iterator) skipSeekOrg(prefix string) {
 // skipSeekNext seeks past group prefix to the first key of the next group.
 // Sets eof if no keys beyond this group exist.
 func (it *Iterator) skipSeekNext(prefix string) {
-	it.seekRaw(prefix + ixkey.Sep + ixkey.Max)
+	it.seekRaw(ixkey.JoinPrefixSuffix(prefix, it.skipPrefixLen, ixkey.Max))
 	if it.state == within {
 		p, _ := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixLen)
 		if p == prefix {
@@ -788,7 +794,8 @@ func (it *Iterator) skipRetreatToMatch() {
 
 // skipSeekGroupEnd seeks to the last visible key in group prefix.
 func (it *Iterator) skipSeekGroupEnd(prefix string) {
-	it.seekRaw(prefix + ixkey.Sep + it.skipRng.End)
+	target := ixkey.JoinPrefixSuffix(prefix, it.skipPrefixLen, it.skipRng.End)
+	it.seekRaw(target)
 	// seekRaw positions at >= End; back up until inside this group's range
 	for it.state == within {
 		p2, s2 := ixkey.SplitPrefixSuffix(it.cur.key, it.skipPrefixLen)
