@@ -4,8 +4,6 @@
 package builtin
 
 import (
-	"cmp"
-	"slices"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -173,16 +171,13 @@ func db_Top10(th *Thread, args []Value) Value {
 	}
 
 	top := sk.Top()
-	slices.SortFunc(top, func(a, b ss.Entry[string]) int {
-		return -cmp.Compare(a.Count-a.Error, b.Count-b.Error)
-	})
 	if len(top) > 10 {
 		top = top[:10]
 	}
 
 	result := &SuObject{}
 	for _, e := range top {
-		result.Set(Unpack(e.Value), IntVal(e.Count-e.Error))
+		result.Set(Unpack(e.Value), IntVal(int(e.Count-e.Error)))
 	}
 	return result
 }

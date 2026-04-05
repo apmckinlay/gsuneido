@@ -12,7 +12,7 @@ import (
 
 func TestNew(t *testing.T) {
 	ss := New[string](3)
-	assert.T(t).This(ss.Capacity()).Is(3)
+	assert.T(t).This(ss.Capacity()).Is(6)
 	assert.T(t).This(ss.Count()).Is(0)
 	assert.T(t).This(ss.Len()).Is(0)
 
@@ -20,7 +20,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestAddNoEviction(t *testing.T) {
-	ss := New[string](4)
+	ss := New[string](2) // becomes 4
 	ss.Add("a")
 	ss.Add("b")
 	ss.Add("a")
@@ -43,7 +43,7 @@ func TestAddNoEviction(t *testing.T) {
 }
 
 func TestEvictionBounds(t *testing.T) {
-	ss := New[string](2)
+	ss := New[string](1) // becomes 2
 	ss.Add("a")
 	ss.Add("b")
 	ss.Add("c")

@@ -11,17 +11,19 @@ package ss
 import (
 	"cmp"
 	"container/heap"
+	"math"
 	"slices"
 )
 
 // Entry is one tracked item.
 //
-// The true count is in [Count-Error, Count].
+// The true count is in the range [Count-Error, Count].
 type Entry[T comparable] struct {
+	// layout and types are optimized for T being uint16 or string
 	Value T
-	Count int
-	Error int
-	idx   int
+	idx   uint16
+	Count uint32
+	Error uint32
 }
 
 // Sketch tracks approximate frequencies using fixed capacity.
@@ -34,11 +36,11 @@ type Sketch[T comparable] struct {
 
 // New creates a Space-Saving sketch that tracks up to capacity items.
 func New[T comparable](capacity int) *Sketch[T] {
-	if capacity <= 0 {
-		panic("ss capacity must be > 0")
+	if capacity <= 0 || capacity > math.MaxUint16 {
+		panic("ss capacity must be from 0 to 64k")
 	}
 	return &Sketch[T]{
-		capacity: capacity,
+		capacity: capacity * 2, // for more accuracy
 		entries:  make(minHeap[T], 0, capacity),
 		index:    make(map[T]*Entry[T], capacity),
 	}
@@ -49,7 +51,7 @@ func (ss *Sketch[T]) Add(value T) {
 	ss.total++
 	if e, ok := ss.index[value]; ok {
 		e.Count++
-		heap.Fix(&ss.entries, e.idx)
+		heap.Fix(&ss.entries, int(e.idx))
 		return
 	}
 
@@ -67,7 +69,7 @@ func (ss *Sketch[T]) Add(value T) {
 	min.Error = min.Count
 	min.Count++
 	ss.index[value] = min
-	heap.Fix(&ss.entries, min.idx)
+	heap.Fix(&ss.entries, int(min.idx))
 }
 
 // Count returns the number of Add calls.
@@ -93,18 +95,22 @@ func (ss *Sketch[T]) Estimate(value T) (count int, error int, ok bool) {
 	if !ok {
 		return 0, 0, false
 	}
-	return e.Count, e.Error, true
+	return int(e.Count), int(e.Error), true
 }
 
-// Top returns the tracked entries sorted by descending count.
-func (ss *Sketch[T]) Top() []Entry[T] {
-	top := make([]Entry[T], len(ss.entries))
-	for i, e := range ss.entries {
-		top[i] = Entry[T]{Value: e.Value, Count: e.Count, Error: e.Error}
-	}
-	slices.SortFunc(top, func(a, b Entry[T]) int {
+// Top returns the top entries
+// pruned by (count - error), sorted by descending count.
+func (ss *Sketch[T]) Top() []*Entry[T] {
+	// temporarily reorder the entries (breaking the heap)
+	slices.SortFunc(ss.entries, func(a, b *Entry[T]) int {
+		return -cmp.Compare(a.Count-a.Error, b.Count-a.Error)
+	})
+	topLen := min(ss.capacity/2, len(ss.entries))
+	top := slices.Clone(ss.entries[:topLen])
+	slices.SortFunc(top, func(a, b *Entry[T]) int {
 		return -cmp.Compare(a.Count, b.Count)
 	})
+	heap.Init(&ss.entries) // restore heap
 	return top
 }
 
@@ -118,20 +124,19 @@ func (h minHeap[T]) Less(i, j int) bool {
 
 func (h minHeap[T]) Swap(i, j int) {
 	h[i], h[j] = h[j], h[i]
-	h[i].idx = i
-	h[j].idx = j
+	h[i].idx = uint16(i)
+	h[j].idx = uint16(j)
 }
 
 func (h *minHeap[T]) Push(x any) {
 	e := x.(*Entry[T])
-	e.idx = len(*h)
+	e.idx = uint16(len(*h))
 	*h = append(*h, e)
 }
 
 func (h *minHeap[T]) Pop() any {
 	n := len(*h)
 	e := (*h)[n-1]
-	e.idx = -1
 	*h = (*h)[:n-1]
 	return e
 }
