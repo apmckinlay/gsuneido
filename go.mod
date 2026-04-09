@@ -1,6 +1,6 @@
 module github.com/apmckinlay/gsuneido
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/ProtonMail/go-crypto v1.4.0
