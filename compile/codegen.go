@@ -77,12 +77,12 @@ func codegen(lib, name string, fn *ast.Function, prevDef Value) Value {
 	if len(fn.Final) > 0 {
 		ast.PropFold(fn)
 	}
-	if fn.HasBlocks {
-		ast.Blocks(fn)
-	} else {
+	if !fn.HasBlocks {
 		// Initialize Vars for functions without blocks
 		fn.Vars = make(map[string]int16)
 		ast.AddParams(fn.Params, fn.Vars)
+	} else if fn.Vars == nil {
+		ast.Blocks(fn)
 	}
 	f := codegen2(lib, name, fn, false, prevDef)
 	return f

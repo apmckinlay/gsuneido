@@ -47,6 +47,11 @@ func New(th *Thread) *Check {
 // CheckFunc is the main entry point.
 // It can be called more than once (for nested functions).
 func (ck *Check) CheckFunc(f *ast.Function) {
+	// Runs Blocks before checking so that CompileAsFunction and shared-var
+	// slot assignments are available for accurate block-scope warnings.
+	if f.HasBlocks && f.Vars == nil {
+		ast.Blocks(f)
+	}
 	ck.CheckFunc2(f)
 }
 
@@ -426,15 +431,68 @@ func (ck *Check) expr(expr ast.Expr, init set) (initOut set, effects bool) {
 }
 
 func (ck *Check) block(b *ast.Block, init set) set {
+	if b.CompileAsFunction {
+		return ck.blockAsFunction(b, init)
+	}
+	return ck.blockAsClosure(b, init)
+}
+
+// sharedVarNames returns the names of variables shared between this block
+// and its outer scope (identified by slot >= SharedSlotStart after Blocks()).
+func sharedVarNames(b *ast.Block) []string {
+	var shared []string
+	for name, slot := range b.Function.Vars {
+		if slot >= SharedSlotStart {
+			shared = append(shared, name)
+		}
+	}
+	return shared
+}
+
+// blockAsFunction checks a block that shares no variables with the outer scope.
+// AllInit/AllUsed are saved and restored so block-local state doesn't leak out.
+func (ck *Check) blockAsFunction(b *ast.Block, init set) set {
+	savedAllInit := maps.Clone(ck.AllInit)
+	savedAllUsed := maps.Clone(ck.AllUsed)
+	ck.AllInit = make(map[string]int)
+	ck.AllUsed = make(map[string]struct{})
+
+	ck.check(&b.Function, nil, true)
+
+	params := make(map[string]struct{}, len(b.Params))
+	for _, p := range b.Params {
+		id := p.Name.ParamName()
+		params[id] = struct{}{}
+		if !p.Unused {
+			if _, ok := ck.AllUsed[id]; !ok {
+				ck.CheckResult(int(p.Name.Pos),
+					"WARNING: initialized but not used: "+id)
+			}
+		}
+	}
+
+	for id, pos := range ck.AllInit {
+		if _, isParam := params[id]; isParam {
+			continue
+		}
+		if _, ok := ck.AllUsed[id]; !ok {
+			ck.CheckResult(pos, "WARNING: initialized but not used: "+id)
+		}
+	}
+
+	ck.AllInit = savedAllInit
+	ck.AllUsed = savedAllUsed
+	return init // outer init unchanged
+}
+
+// blockAsClosure checks a true closure block.
+// The full outer init is visible inside; only shared vars merge back on return.
+func (ck *Check) blockAsClosure(b *ast.Block, init set) set {
 	// save & remove variables shadowed by params
 	allInit := map[string]int{}
 	allUsed := map[string]struct{}{}
-	nUsedParams := 0
 	for _, p := range b.Params {
 		id := p.Name.ParamName()
-		if !p.Unused {
-			nUsedParams++
-		}
 		if n, ok := ck.AllInit[id]; ok {
 			allInit[id] = n
 			delete(ck.AllInit, id)
@@ -445,14 +503,18 @@ func (ck *Check) block(b *ast.Block, init set) set {
 		}
 	}
 
-	// assume that blocks are executed at point of definition
-	// this is not necessarily true
-	// they may be called elsewhere or not at all
-	// but too many spurious warnings otherwise
+	shared := sharedVarNames(b)
+
 	before := init
+	// pass full init so nested closures can see all outer vars
 	after := ck.check(&b.Function, init, true)
-	// remove params from init
-	init = append(before, after[len(before)+nUsedParams:]...)
+	// only merge shared vars back; non-shared block-locals stay invisible
+	init = before
+	for _, name := range shared {
+		if after.has(name) && !init.has(name) {
+			init = init.with(name)
+		}
+	}
 
 	// detect unused params
 	for _, p := range b.Params {
