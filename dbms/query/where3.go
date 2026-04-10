@@ -29,6 +29,8 @@ func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 		isel, singleton := w.buildIdxSel(schix.Columns, schix.Mode, perCol)
 		if singleton {
 			w.singleton = true
+			f := w.prefixFrac(&isel)
+			isel.indexFrac, isel.dataFrac = f, f
 			return []idxSel{isel}
 		}
 
@@ -48,9 +50,27 @@ func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) (idxSel, bool) {
 	key := mode == 'k'
 	encode := !key || len(index) > 1
-	isel := idxSel{index: index, encoded: encode}
+	isel := idxSel{index: index, encoded: encode, mode: mode}
 
-	if idxSpans := indexSpans(index, perCol); len(idxSpans) > 0 {
+	// Fast path: all prefix columns have single-value spans
+	if prefixLen, org, ok := allSingleValuePrefix(index, encode, perCol); ok {
+		isel.prefixLen = prefixLen
+		uniq := mode == 'u'
+		lookup := prefixLen == len(index) && (key || (uniq && org != ""))
+		if lookup {
+			isel.prefixRanges = []pointRange{{Org: org}}
+		} else {
+			assert.That(encode)
+			end := org + ixkey.Sep + ixkey.Max
+			isel.prefixRanges = []pointRange{{Org: org, End: end}}
+		}
+		if prefixLen == len(index) {
+			if isel.prefixRanges[0].isPoint() {
+				return isel, true
+			}
+			return isel, false
+		}
+	} else if idxSpans := indexSpans(index, perCol); len(idxSpans) > 0 {
 		// prefix range
 		uniq := mode == 'u'
 		exploded := explodeIndexSpans(idxSpans, [][]span{nil})
@@ -61,22 +81,14 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 				lookup := len(exploded[i]) == len(index) &&
 					(key || (uniq && c.Org != ""))
 				if !lookup {
-					// convert point to range
-					if !encode {
-						c.End = c.Org + "\x00"
-					} else {
-						c.End = c.Org + ixkey.Sep + ixkey.Max
-					}
+					assert.That(encode)
+					c.End = c.Org + ixkey.Sep + ixkey.Max
 				}
 			}
 		}
 		isel.prefixLen = len(idxSpans)
 		isel.prefixRanges = comp
-		if len(isel.prefixRanges) == 1 && isel.prefixRanges[0].isPoint() {
-			f := w.prefixFrac(&isel)
-			isel.indexFrac, isel.dataFrac = f, f
-			return isel, true
-		}
+		assert.That(len(isel.prefixRanges) != 1 || !isel.prefixRanges[0].isPoint())
 	}
 
 	// skip scan range
@@ -98,16 +110,45 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 	return isel, false
 }
 
+// allSingleValuePrefix checks if all prefix columns have exactly one value span.
+// If so, it encodes the values directly and returns (prefixLen, org, true).
+// Otherwise returns (0, "", false).
+func allSingleValuePrefix(index []string, encode bool, perCol map[string][]span) (int, string, bool) {
+	prefixLen := 0
+	for i, col := range index {
+		colSpans := perCol[col]
+		if colSpans == nil {
+			break
+		}
+		if len(colSpans) != 1 || !colSpans[0].isValue() {
+			return 0, "", false
+		}
+		prefixLen = i + 1
+	}
+	if prefixLen == 0 {
+		return 0, "", false
+	}
+	var org string
+	if !encode {
+		org = perCol[index[0]][0].org.val
+	} else {
+		var enc ixkey.Encoder
+		for i := 0; i < prefixLen; i++ {
+			enc.Add(perCol[index[i]][0].org.val)
+		}
+		org = enc.String()
+	}
+	return prefixLen, org, true
+}
+
 // recalcIdxSel rebuilds the idxSel for the current index using merged
 // where+select constraints. Returns (isel, conflict).
-func (w *Where) recalcIdxSel(index, cols, vals []string) (idxSel, bool) {
+func (w *Where) recalcIdxSel(index []string, mode byte, cols, vals []string) (idxSel, bool) {
 	merged, conflict := w.mergedPerCol(index, cols, vals)
 	if conflict {
 		return idxSel{}, true
 	}
-	mode := w.idxMode(index)
 	isel, _ := w.buildIdxSel(index, mode, merged)
-	isel.indexFrac, isel.dataFrac = w.indexFrac(&isel)
 	return isel, false
 }
 
@@ -115,35 +156,29 @@ func (w *Where) recalcIdxSel(index, cols, vals []string) (idxSel, bool) {
 // spans for the select cols that appear in the current index.
 // Returns (nil, true) if the intersection results in a conflict.
 func (w *Where) mergedPerCol(index, cols, vals []string) (map[string][]span, bool) {
-	merged := make(map[string][]span, len(w.colSels)+len(cols))
-	maps.Copy(merged, w.colSels)
+	if w.mergedBuf == nil {
+		w.mergedBuf = make(map[string][]span, len(w.colSels)+len(cols))
+	} else {
+		clear(w.mergedBuf)
+	}
+	maps.Copy(w.mergedBuf, w.colSels)
 	idxFields := w.tbl.IndexCols(index)
 	for i, col := range cols {
 		if !slices.Contains(idxFields, col) {
 			continue
 		}
 		eq := []span{valSpan(vals[i])}
-		if existing := merged[col]; existing != nil {
+		if existing := w.mergedBuf[col]; existing != nil {
 			result := intersectSpans(existing, eq)
 			if result == nil {
 				return nil, true // conflict
 			}
-			merged[col] = result
+			w.mergedBuf[col] = result
 		} else {
-			merged[col] = eq
+			w.mergedBuf[col] = eq
 		}
 	}
-	return merged, false
-}
-
-func (w *Where) idxMode(index []string) byte {
-	indexes := w.tbl.schemaIndexes()
-	for i := range indexes {
-		if slices.Equal(indexes[i].Columns, index) {
-			return indexes[i].Mode
-		}
-	}
-	panic("where recalcIdxSel unknown index")
+	return w.mergedBuf, false
 }
 
 // indexSpans returns the spans for an index

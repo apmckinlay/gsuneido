@@ -297,8 +297,8 @@ func TestWhere_Select(t *testing.T) {
 	query := "lin where b = 5"
 	tran := db.NewReadTran()
 	q := ParseQuery(query, tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
 	cols := []string{"a", "b"}
+	q = SetupIdx(q, CursorMode, tran, cols)
 	vals := []string{Pack(IntVal(4)), Pack(IntVal(5)), Pack(IntVal(6))}
 	q.Select(cols, vals)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6")
@@ -306,12 +306,18 @@ func TestWhere_Select(t *testing.T) {
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
 
 	q = ParseQuery(query, tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
+	q = SetupIdx(q, CursorMode, tran, cols)
 	vals = []string{Pack(IntVal(1)), Pack(IntVal(2))} // conflict
 	q.Select(cols, vals)
 	assert.This(queryAll2(q)).Is("")
 	q.Select(nil, nil)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
+
+	// select with col not in index fields (c not in key(a,b))
+	q = ParseQuery(query, tran, nil)
+	q = SetupIdx(q, CursorMode, tran, cols)
+	q.Select([]string{"a", "c"}, []string{Pack(IntVal(4)), Pack(IntVal(6))})
+	assert.This(queryAll2(q)).Is("a=4 b=5 c=6")
 }
 
 func TestWhere_fixed(t *testing.T) {
@@ -441,7 +447,7 @@ func TestWhere_Select_recalcIdxSel(t *testing.T) {
 
 	tran := db.NewReadTran()
 	q := ParseQuery("table where b > 2", tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
+	q = SetupIdx(q, CursorMode, tran, []string{"a", "b", "c"})
 	w := q.(*Where)
 	assert.T(t).That(w.idxSelBase != nil)
 	assert.T(t).This(w.idxSelBase.skipLen).Is(1)

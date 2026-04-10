@@ -32,7 +32,8 @@ var _ = AddInfo("query.where.singleton", &whereSingletonCount)
 
 type Where struct {
 	t       QueryTran
-	colSels map[string][]span // from NewWhere, result of perField
+	colSels    map[string][]span // from NewWhere, result of perField
+	mergedBuf  map[string][]span // reusable buffer for mergedPerCol
 	// tbl will be set if the source is a table, nil otherwise
 	tbl whereTable
 	// idxSel is for the chosen index
@@ -861,7 +862,7 @@ func (w *Where) Select(cols, vals []string) {
 	}
 
 	var isel idxSel
-	isel, w.selConflict = w.recalcIdxSel(w.idxSelBase.index, cols, vals)
+	isel, w.selConflict = w.recalcIdxSel(w.idxSelBase.index, w.idxSelBase.mode, cols, vals)
 	if w.selConflict {
 		return
 	}

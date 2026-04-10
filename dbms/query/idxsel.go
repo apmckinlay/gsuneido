@@ -17,6 +17,7 @@ import (
 type idxSel struct {
 	index     []string
 	encoded   bool
+	mode      byte
 	indexFrac float64 // not including filters
 	dataFrac  float64 // including filters
 
