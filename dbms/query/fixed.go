@@ -12,6 +12,11 @@ import (
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
+// In the query system "fixed" means a column has a constant value
+// e.g. in `where x = 1` or `extend x = 1` x is fixed
+// Fixed can track multiple values e.g. `where x in (1,2)`
+// but some uses require a single value (isSingleFixed)
+
 type Fixed struct {
 	col string
 	// values are packed
@@ -94,6 +99,7 @@ func isSingleFixed(fixed []Fixed, col string) bool {
 	return false
 }
 
+// isFixed returns true if col is fixed, possibly with multiple values
 func isFixed(fixed []Fixed, col string) bool {
 	for _, f := range fixed {
 		if col == f.col {
@@ -132,6 +138,8 @@ func fixedWith(fixed Fixed, val string) Fixed {
 		values: append(slices.Clip(fixed.values), val)}
 }
 
+// selectFixed returns satisfied=true if cols,vals are satisfied by fixed
+// and conflict=true if cols,vals conflict with fixed
 func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) {
 	// fixed 1,2,3 val 5 => conflict
 	// fixed 2 val 2 => satisfied
@@ -152,11 +160,13 @@ func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) 
 	return satisfied, false
 }
 
+// conflictFixed returns true if cols,vals conflict with fixed
 func conflictFixed(cols, vals []string, fixed []Fixed) bool {
 	_, conflict := selectFixed(cols, vals, fixed)
 	return conflict
 }
 
+// allFixed returns true if all cols are fixed
 func allFixed(fixed []Fixed, cols []string) bool {
 	for _, col := range cols {
 		if !isSingleFixed(fixed, col) {
