@@ -24,18 +24,17 @@ package main
 // 		(ck, i1, i2, i3, i4, ik)
 // 		key (ik)
 // 		index (ck) in cus
+		
+// 	aln
+// 		(a1, a2, a3, a4, ak, ik)
+// 		key (ik,ak)
+
+// 	bln
+// 	    (b1, b2, b3, b4, bk, ik)
+//     	key (ik,bk)
 // 	*/
 
-// 	query := `	(((cus
-// 			union /*NOT DISJOINT*/
-// 				cus)
-// 			union /*NOT DISJOINT*/
-// 				cus)
-// 		join /*MANY TO MANY*/ by(ck)
-// 			(ivc
-// 			extend r0))
-// 		where r0 is '3'
-// 		where ik is ""`
+// 	query := `(((((((ivc leftjoin bln) union (ivc join (aln union bln))) extend x0 = i1)) where ik is "")) where bk is "")`
 // 	th := &Thread{}
 // 	builtin.QueryHash(th, []Value{SuStr(query), False})
 // }

@@ -875,8 +875,9 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 	if conflictFixed(cols, vals, w.Fixed()) {
 		return nil
 	}
-	if w.fastSingle() {
-		// can't use source.Lookup because cols may not match source index
+	if w.fastSingle() || w.srcIndex == nil {
+		// can't use source.Lookup because cols may not match source index.
+		// srcIndex == nil when allFixed cleared it (logical singleton)
 		w.Rewind()
 		row := w.Get(th, Next)
 		if row == nil || !singletonFilter(w.header, row, cols, vals) {
@@ -884,7 +885,6 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 		}
 		return row
 	}
-	assert.That(w.srcIndex != nil)
 	cloned := false
 	cols = slices.Clip(cols)
 	vals = slices.Clip(vals)
