@@ -46,8 +46,7 @@ type Table struct {
 	schema  *Schema
 	name    string
 	allKeys [][]string
-	// index is the index that will be used to access the data.
-	index   []string
+	index   []string // index that will be used to access the data
 	selcols []string
 	selvals []string
 	queryBase
@@ -195,7 +194,7 @@ func (tbl *Table) SetIndex(index []string) {
 	IdxUse(tbl.name, tbl.index)
 }
 
-// IndexCols returns the columns available in index entried.
+// IndexCols returns the columns available in index entries.
 // i.e. on non-unique indexes it includes the key fields added for uniqueness
 // WARNING: for unique indexes, these columns are NOT sufficient for lookup
 // because they exclude the key fields added when the index fields are empty
@@ -262,10 +261,10 @@ func (tbl *Table) Lookup(_ *Thread, cols, vals []string) (row Row) {
 	} else {
 		assert.That(set.Equal(ix.Fields, cols))
 	}
-	return tbl.lookup(key)
+	return tbl.LookupRaw(key)
 }
 
-func (tbl *Table) lookup(key string) Row {
+func (tbl *Table) LookupRaw(key string) Row {
 	rec := tbl.tran.Lookup(tbl.name, tbl.iIndex, key)
 	if rec == nil {
 		return nil
@@ -311,7 +310,8 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string) bool) Row {
 		}
 		rec := tbl.tran.GetRecord(off)
 		row := Row{DbRec{Record: rec, Off: off}}
-		if tbl.singleton && !singletonFilter(tbl.header, row, tbl.selcols, tbl.selvals) {
+		if tbl.singleton &&
+			!singletonFilter(tbl.header, row, tbl.selcols, tbl.selvals) {
 			return nil
 		}
 		tbl.ngets++
@@ -408,6 +408,10 @@ func selOrg(encode bool, dstCols, srcCols, vals []string, full bool) string {
 
 func (tbl *Table) SelectRaw(org, end string) {
 	tbl.ensureIter().Range(index.Range{Org: org, End: end})
+}
+
+func (tbl *Table) SelectSkipScan(prefixRng, suffixRng iface.Range, prefixLen int) {
+	tbl.ensureIter().SkipScan(prefixRng, suffixRng, prefixLen)
 }
 
 func (tbl *Table) ensureIter() index.IndexIter {

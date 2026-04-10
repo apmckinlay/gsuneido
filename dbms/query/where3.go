@@ -4,8 +4,8 @@
 package query
 
 import (
+	"maps"
 	"math"
-	"strconv"
 	"strings"
 
 	"slices"
@@ -13,72 +13,140 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/set"
 )
-
-// idxSel is the pointRanges for a single index.
-type idxSel struct {
-	index   []string
-	ptrngs  []pointRange
-	frac    float64
-	nfields int
-	encoded bool
-}
-
-// pointRange holds either a range or a single key (in org with end = "")
-type pointRange struct {
-	org string
-	end string
-}
 
 // perIndex returns an idxSel for each usable index.
 // It is called by optInit (which is called on-demand by several methods)
-// Its input is the result of perField.
-// Its output is used by Nrows, bestIndex, and finally Get
+// Its input is the result of perField (where2.go).
+// Its output is used by Nrows, bestIndex, and finally Get.
+// It sets w.singleton if the where selects a single row.
 func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 	idxSels := make([]idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
 	for i := range indexes {
 		schix := &indexes[i]
-		idx := schix.Columns
-		key := schix.Mode == 'k'
-		uniq := schix.Mode == 'u'
-		encode := !key || len(idx) > 1
-		if idxSpans := indexSpans(idx, perCol); len(idxSpans) > 0 {
-			exploded := explodeIndexSpans(idxSpans, [][]span{nil})
-			comp := makePointRanges(encode, exploded)
-			for i := range comp {
-				c := &comp[i]
-				if c.isPoint() {
-					lookup := len(exploded[i]) == len(idx) &&
-						(key || (uniq && c.org != ""))
-					if !lookup {
-						// convert point to range
-						if !encode {
-							c.end = c.org + "\x00"
-						} else {
-							c.end = c.org + ixkey.Sep + ixkey.Max
-						}
-					}
-				}
-			}
-			isel := idxSel{index: idx, nfields: len(idxSpans),
-				ptrngs: comp, encoded: encode}
-			if isel.singleton() {
-				w.singleton = true
-				idxSels = append(idxSels[:0], isel)
-				break
-			}
+		isel, singleton := w.buildIdxSel(schix.Columns, schix.Mode, perCol)
+		if singleton {
+			w.singleton = true
+			return []idxSel{isel}
+		}
+
+		if len(isel.prefixRanges) > 0 || len(isel.moreFilters) > 0 {
 			idxSels = append(idxSels, isel)
 		}
 	}
+	// calculate frac in a separate pass
+	// so we don't waste time doing it if there's a singleton
 	for i := range idxSels {
 		is := &idxSels[i]
-		is.frac = w.idxFrac(is.index, is.ptrngs)
+		is.indexFrac, is.dataFrac = w.indexFrac(is)
 	}
 	return idxSels
 }
 
+func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) (idxSel, bool) {
+	key := mode == 'k'
+	encode := !key || len(index) > 1
+	isel := idxSel{index: index, encoded: encode}
+
+	if idxSpans := indexSpans(index, perCol); len(idxSpans) > 0 {
+		// prefix range
+		uniq := mode == 'u'
+		exploded := explodeIndexSpans(idxSpans, [][]span{nil})
+		comp := makePointRanges(encode, exploded)
+		for i := range comp {
+			c := &comp[i]
+			if c.isPoint() {
+				lookup := len(exploded[i]) == len(index) &&
+					(key || (uniq && c.Org != ""))
+				if !lookup {
+					// convert point to range
+					if !encode {
+						c.End = c.Org + "\x00"
+					} else {
+						c.End = c.Org + ixkey.Sep + ixkey.Max
+					}
+				}
+			}
+		}
+		isel.prefixLen = len(idxSpans)
+		isel.prefixRanges = comp
+		if len(isel.prefixRanges) == 1 && isel.prefixRanges[0].isPoint() {
+			f := w.prefixFrac(&isel)
+			isel.indexFrac, isel.dataFrac = f, f
+			return isel, true
+		}
+	}
+
+	// skip scan range
+	if encode {
+		isel.skipStart, isel.skipLen, isel.skipRange =
+			skipScanSuffix(perCol, index, max(1, isel.prefixLen))
+		if isel.prefixLen == 0 && isel.skipLen > 0 {
+			isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
+		}
+	}
+
+	// more filters
+	isel.moreFilters = w.moreFilters(index, &isel)
+	if len(isel.prefixRanges) == 0 && len(isel.moreFilters) > 0 {
+		// filter-only index selection needs a range for execution
+		isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
+	}
+
+	return isel, false
+}
+
+// recalcIdxSel rebuilds the idxSel for the current index using merged
+// where+select constraints. Returns (isel, conflict).
+func (w *Where) recalcIdxSel(index, cols, vals []string) (idxSel, bool) {
+	merged, conflict := w.mergedPerCol(index, cols, vals)
+	if conflict {
+		return idxSel{}, true
+	}
+	mode := w.idxMode(index)
+	isel, _ := w.buildIdxSel(index, mode, merged)
+	isel.indexFrac, isel.dataFrac = w.indexFrac(&isel)
+	return isel, false
+}
+
+// mergedPerCol builds a perCol map from w.colSels intersected with equality
+// spans for the select cols that appear in the current index.
+// Returns (nil, true) if the intersection results in a conflict.
+func (w *Where) mergedPerCol(index, cols, vals []string) (map[string][]span, bool) {
+	merged := make(map[string][]span, len(w.colSels)+len(cols))
+	maps.Copy(merged, w.colSels)
+	idxFields := w.tbl.IndexCols(index)
+	for i, col := range cols {
+		if !slices.Contains(idxFields, col) {
+			continue
+		}
+		eq := []span{valSpan(vals[i])}
+		if existing := merged[col]; existing != nil {
+			result := intersectSpans(existing, eq)
+			if result == nil {
+				return nil, true // conflict
+			}
+			merged[col] = result
+		} else {
+			merged[col] = eq
+		}
+	}
+	return merged, false
+}
+
+func (w *Where) idxMode(index []string) byte {
+	indexes := w.tbl.schemaIndexes()
+	for i := range indexes {
+		if slices.Equal(indexes[i].Columns, index) {
+			return indexes[i].Mode
+		}
+	}
+	panic("where recalcIdxSel unknown index")
+}
+
+// indexSpans returns the spans for an index
 func indexSpans(idx []string, perCol map[string][]span) [][]span {
 	idxSpans := make([][]span, 0, len(idx))
 	for i := range idx {
@@ -128,7 +196,7 @@ func explodeIndexSpans(remaining [][]span, prefixes [][]span) [][]span {
 			Warning("query where explode large >", explodeWarn)
 		}
 		for i := range prefixes {
-			// Clip so each append will make a new copy (COW)
+			// Clip so append will make a new copy (COW)
 			pre := slices.Clip(prefixes[i])
 			for _, v := range f {
 				p := append(pre, v)
@@ -143,6 +211,7 @@ func explodeIndexSpans(remaining [][]span, prefixes [][]span) [][]span {
 	return prefixes
 }
 
+// makePointRanges converts spans to pointRanges
 func makePointRanges(encode bool, spans [][]span) []pointRange {
 	result := make([]pointRange, len(spans))
 outer:
@@ -151,9 +220,9 @@ outer:
 			assert.That(len(fs) == 1)
 			f := fs[0]
 			if f.isValue() {
-				result[i] = pointRange{org: f.org.val}
+				result[i] = pointRange{Org: f.org.val}
 			} else { // range
-				result[i] = pointRange{org: f.org.valRaw(), end: f.end.valRaw()}
+				result[i] = pointRange{Org: f.org.valRaw(), End: f.end.valRaw()}
 			}
 		} else {
 			var enc ixkey.Encoder
@@ -170,11 +239,11 @@ outer:
 					if f.end.inc {
 						enc2.Add(ixkey.Max)
 					}
-					result[i] = pointRange{org: enc.String(), end: enc2.String()}
+					result[i] = pointRange{Org: enc.String(), End: enc2.String()}
 					continue outer
 				}
 			}
-			result[i] = pointRange{org: enc.String()}
+			result[i] = pointRange{Org: enc.String()}
 		}
 	}
 	return result
@@ -188,18 +257,105 @@ func (x side) valRaw() string {
 	return x.val
 }
 
-func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
-	iIndex := w.tbl.indexi(idx)
-	var frac float64
+// skipScanSuffix looks for a skip scan suffix range for index idx.
+// prefixLen is the first column position to consider.
+// Skip scan only supports a single contiguous range.
+// If the first column has multiple spans (e.g. in-list), skip this position.
+// If a later column has multiple spans, truncate the spans there.
+func skipScanSuffix(perCol map[string][]span, idx []string, prefixLen int) (
+	start, size int, sr pointRange) {
+	for i := prefixLen; i < len(idx); i++ {
+		spans := indexSpans(idx[i:], perCol)
+		if len(spans) == 0 {
+			continue
+		}
+		// if first column is multi-span (e.g. in-list), can't start here
+		if len(spans[0]) > 1 {
+			continue
+		}
+		// truncate at the first multi-span column
+		for j, s := range spans {
+			if len(s) > 1 {
+				spans = spans[:j]
+				break
+			}
+		}
+		sp := make([]span, len(spans))
+		for j, s := range spans {
+			sp[j] = s[0]
+		}
+		pr := makePointRanges(true, [][]span{sp})[0]
+		if pr.isPoint() {
+			// convert point to range
+			pr.End = pr.Org + ixkey.Sep + ixkey.Max
+		}
+		return i, len(spans), pr
+	}
+	return
+}
+
+// moreFilters returns the index fields
+// that are included in expressions that only require index fields
+// and that are not already included in the prefix or skip ranges.
+func (w *Where) moreFilters(index []string, isel *idxSel) []string {
+	// This does not handle e.g. `key(x) where x > 5 and f(x)`
+	// which has a filter on x, even though x may be in prefix or skip ranges
+	fields := w.tbl.IndexCols(index)
+	unconstrained := fields
+	if isel.skipStart == 0 {
+		unconstrained = fields[isel.prefixLen:]
+	} else {
+		unconstrained = fields[isel.prefixLen:isel.skipStart]
+		unconstrained = append(slices.Clip(unconstrained),
+			fields[isel.skipStart+isel.skipLen:]...)
+	}
+	var result []string
+	for _, e := range w.expr.Exprs {
+		exprCols := e.Columns()
+		if set.Subset(fields, exprCols) {
+			result = set.Union(result, set.Intersect(exprCols, unconstrained))
+		}
+	}
+	return result
+}
+
+//-------------------------------------------------------------------
+
+// indexFrac returns the index and data fractions for an idxSel
+func (w *Where) indexFrac(isel *idxSel) (indexFrac, dataFrac float64) {
+	p := 1.0
+	indexFrac = 1.0
+	if isel.prefixLen > 0 {
+		indexFrac = w.prefixFrac(isel)
+		p = .5
+	}
+	if isel.skipStart > 0 {
+		indexFrac *= math.Pow(w.skipFrac(isel), p)
+		p = .5
+	}
+	dataFrac = indexFrac
+	if len(isel.moreFilters) > 0 {
+		dataFrac *= math.Pow(.1, p) // ???
+		p = .5
+	}
+	if w.exprMore || w.exprExtra(isel) {
+		dataFrac *= math.Pow(.5, p) // ???
+	}
+	return
+}
+
+func (w *Where) prefixFrac(isel *idxSel) float64 {
+	iIndex := w.tbl.indexi(isel.index)
 	npoints := 0
-	nrows, _ := w.tbl.Nrows()
-	for _, pr := range ptrngs {
+	var frac float64
+	for _, pr := range isel.prefixRanges {
 		if pr.isPoint() {
 			npoints++
 		} else { // range
-			frac += w.t.RangeFrac(w.tbl.Name(), iIndex, pr.org, pr.end)
+			frac += w.t.RangeFrac(w.tbl.Name(), iIndex, pr.Org, pr.End)
 		}
 	}
+	nrows, _ := w.tbl.Nrows()
 	if nrows > 0 {
 		frac += .5 * float64(npoints) / float64(nrows) // ??? estimate 1/2 exist
 	}
@@ -210,104 +366,36 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 	return frac
 }
 
-// idxSel -----------------------------------------------------------
+const ( // ???
+	pointFrac   = .01
+	rangeFrac   = .1
+	compareFrac = .33
+)
 
-func (is idxSel) String() string {
-	var s strings.Builder
-	s.WriteString(str.Join(",", is.index))
-	sep := ": "
-	for _, pr := range is.ptrngs {
-		s.WriteString(sep + showKey(is.encoded, pr.org))
-		sep = " | "
-		if pr.isRange() {
-			s.WriteString(".." + showKey(is.encoded, pr.end))
+func (w *Where) skipFrac(isel *idxSel) float64 {
+	// not pointRange.isPoint() because skipScanSuffix converts to range
+	if wasPoint(isel.skipRange) {
+		return pointFrac
+	} else if isel.skipRange.Org != ixkey.Min &&
+		isel.skipRange.End != ixkey.Max {
+		return rangeFrac
+	}
+	return compareFrac
+}
+
+func wasPoint(pr pointRange) bool {
+	return strings.HasSuffix(pr.End, ixkey.Sep+ixkey.Max) &&
+		strings.HasPrefix(pr.End, pr.Org)
+}
+
+// exprMore returns true if there are expressions
+// that use columns not used by the idxSel
+func (w *Where) exprExtra(isel *idxSel) bool {
+	used := isel.Used()
+	for _, e := range w.expr.Exprs {
+		if !set.Subset(used, e.Columns()) {
+			return true
 		}
 	}
-	if is.frac != 0 {
-		s.WriteString(" = " + strconv.FormatFloat(is.frac, 'g', 4, 64))
-	}
-	return s.String()
-}
-
-func showKey(encode bool, key string) string {
-	if !encode {
-		return packToStr(key)
-	}
-	var s strings.Builder
-	sep := ""
-	for _, t := range ixkey.Decode(key) {
-		s.WriteString(sep + packToStr(t))
-		sep = ","
-	}
-	return s.String()
-}
-
-func packToStr(s string) string {
-	if s == "" {
-		return "''"
-	}
-	if s[0] == 0xff {
-		return "<max>"
-	}
-	if len(s) == 1 && s[0] == PackString {
-		return "PackString"
-	}
-	if len(s) == 1 && s[0] == PackMinus {
-		return "PackMinus"
-	}
-	if len(s) == 1 && s[0] == PackDate {
-		return "PackDate"
-	}
-	if len(s) == 1 && s[0] == PackDate+1 {
-		return "PackDate+1"
-	}
-	return strings.ReplaceAll(Unpack(s).String(), `"`, `'`)
-}
-
-// singleton returns true if we know the result is at most one record
-// because there is a single point select on a key
-func (is idxSel) singleton() bool {
-	return len(is.ptrngs) == 1 && is.ptrngs[0].end == ""
-}
-
-// pointRange -------------------------------------------------------
-
-func (pr pointRange) isPoint() bool {
-	return pr.end == ""
-}
-
-func (pr pointRange) isRange() bool {
-	return pr.end != ""
-}
-
-func (pr pointRange) String() string {
-	if pr.conflict() {
-		return "<empty>"
-	}
-	// WARNING: does NOT decode, intended for explode output
-	// use idxSel.String for compositePtrngs output
-	s := packToStr(pr.org)
-	if pr.isRange() {
-		s += ".." + packToStr(pr.end)
-	}
-	return s
-}
-
-// intersect returns a new pointRange restricted to selOrg,selEnd
-func (pr pointRange) intersect(selOrg, selEnd string) pointRange {
-	if pr.isPoint() {
-		if selOrg <= pr.org && pr.org < selEnd {
-			return pr
-		}
-	} else { // range
-		pr = pointRange{org: max(pr.org, selOrg), end: min(pr.end, selEnd)}
-		if pr.org < pr.end {
-			return pr
-		}
-	}
-	return pointRange{org: "z", end: "a"} // conflict
-}
-
-func (pr pointRange) conflict() bool {
-	return pr.end != "" && pr.end < pr.org
+	return false
 }

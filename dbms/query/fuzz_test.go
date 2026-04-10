@@ -878,6 +878,11 @@ func fuzzSemiJoin(t *testing.T, rnd *rand.Rand) {
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzWhere ./dbms/query/
 
+func TestFuzzWhereDebug(t *testing.T) {
+	rnd := rand.New(rand.NewPCG(10918279612574239048, 16100497310763331146))
+	fuzzWhere(t, rnd)
+}
+
 func FuzzWhere(f *testing.F) {
 	f.Add(uint64(122), uint64(334))
 	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
@@ -889,14 +894,17 @@ func FuzzWhere(f *testing.F) {
 func TestFuzzWhere(t *testing.T) {
 	startSingleton := whereSingletonCount.Load()
 
-	// var seed1, seed2 uint64 = 6136001711508103013, 8138898432833308271
-	// rnd := rand.New(rand.NewPCG(seed1, seed2))
-	// fuzzWhere(t, rnd)
-	// t.SkipNow()
-
+	var seed1, seed2 uint64
+	defer func() {
+		if r := recover(); r != nil || t.Failed() {
+			fmt.Printf("failing seed: %d, %d\n", seed1, seed2)
+			if r != nil {
+				panic(r)
+			}
+		}
+	}()
 	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		// fmt.Printf("%d, %d\n", seed1, seed2)
+		seed1, seed2 = rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzWhere(t, rnd)
 	}
@@ -905,15 +913,21 @@ func TestFuzzWhere(t *testing.T) {
 }
 
 func fuzzWhere(t *testing.T, rnd *rand.Rand) {
-	qs := NewQuerySource(rnd)
-	expr := randomWhereExpr(rnd, qs.ColumnsResult, qs.KeysResult)
+	// Use richer index topologies 75% of the time to exercise skip scan,
+	// but keep some coverage of empty keys and plain QuerySource.
+	var qs *QuerySource
+	if rnd.IntN(4) != 0 {
+		qs = newQS(rnd).NoEmptyKey().Sizes(151, 6, 8).Build()
+	} else {
+		qs = NewQuerySource(rnd)
+	}
+	expr := randomWhereExpr(rnd, qs.ColumnsResult, qs.KeysResult, qs.IndexesResult)
 	q := Query(qs)
 	tran := QueryTran(&testTran{})
-	if rnd.IntN(5) != 3 {
-		qswt := &QuerySourceWT{QuerySource: *qs}
-		tran = &fuzzTran{qswt: qswt}
-		q = qswt
-	}
+	//TODO non-table with expr on rules
+	qswt := &QuerySourceWT{QuerySource: *qs}
+	tran = &fuzzTran{qswt: qswt}
+	q = qswt
 	q = NewWhere(q, expr, tran)
 	defer func() {
 		if t.Failed() {
@@ -933,13 +947,13 @@ func (t fuzzTran) RangeFrac(_ string, iIndex int, org, end string) float64 {
 	return t.qswt.RangeFrac(iIndex, org, end)
 }
 
-func randomWhereExpr(rnd *rand.Rand, cols []string, keys [][]string) ast.Expr {
+func randomWhereExpr(rnd *rand.Rand, cols []string, keys [][]string, indexes [][]string) ast.Expr {
 	if len(keys) > 0 && rnd.IntN(10) == 0 {
 		key := random(keys, rnd)
 		if len(key) > 0 {
 			exprs := make([]ast.Expr, len(key))
 			for i, col := range key {
-				val := IntVal(rnd.IntN(10))
+				val := SuStr(col + "_" + strconv.Itoa(rnd.IntN(16)))
 				exprs[i] = &ast.Binary{Tok: tok.Is, Lhs: &ast.Ident{Name: col}, Rhs: &ast.Constant{Val: val}}
 			}
 			if len(exprs) == 1 {
@@ -952,11 +966,22 @@ func randomWhereExpr(rnd *rand.Rand, cols []string, keys [][]string) ast.Expr {
 	if len(cols) == 0 {
 		return &ast.Constant{Val: True}
 	}
-	n := 1 + rnd.IntN(3)
+	n := 1 + rnd.IntN(4)
 	exprs := make([]ast.Expr, n)
+	var ix []string
+	if len(indexes) > 0 && rnd.IntN(2) == 0 {
+		ix = random(indexes, rnd)
+	}
 	for i := range n {
 		col := random(cols, rnd)
-		val := IntVal(rnd.IntN(10)) // small range to ensure some matches
+		if len(ix) > 0 && rnd.IntN(2) == 0 {
+			if len(ix) > 1 && rnd.IntN(3) != 0 {
+				col = ix[1+rnd.IntN(len(ix)-1)]
+			} else {
+				col = random(ix, rnd)
+			}
+		}
+		val := SuStr(col + "_" + strconv.Itoa(rnd.IntN(16)))
 		switch rnd.IntN(5) {
 		case 0:
 			exprs[i] = &ast.Binary{Tok: tok.Is, Lhs: &ast.Ident{Name: col}, Rhs: &ast.Constant{Val: val}}
@@ -1344,7 +1369,6 @@ func testExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header
 		selCols, selVals := indexSelectCriteria(rnd, srcRow, hdr, index, false)
 		q.Select(selCols, selVals)
 
-		// Select only filters by index columns, not extra columns
 		qh := NewQueryHasher(hdr)
 		for _, row := range allRows {
 			if selMatchIndex(hdr, row, selCols, selVals, index) {

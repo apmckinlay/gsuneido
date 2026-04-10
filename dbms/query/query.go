@@ -384,6 +384,20 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 	return q
 }
 
+// SetupIdx is like Setup but specifies an index
+// e.g. to test Select or Lookup
+func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
+	fixcost, varcost := Optimize(q, mode, index, 1)
+	if fixcost+varcost >= impossible {
+		panic("invalid query: " + String(q))
+	}
+	q = SetApproach(q, index, 1, t)
+	if mode == CursorMode {
+		setCursorMode(q)
+	}
+	return q
+}
+
 const outOfOrder = 10 // minimal penalty for executing out of order
 
 const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's

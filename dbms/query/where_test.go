@@ -41,7 +41,7 @@ func TestWhere_perField(t *testing.T) {
 	test("a < ''", "conflict")
 	test("a <= ''", "[a:['']]")
 	test("a > ''", "[a:[>'']]")
-	test("a >= ''", "[a:[<<max>]]") // everything, always matches
+	test("a >= ''", "[a:[<max]]") // everything, always matches
 	// in
 	test("a in (3,1,2)", "[a:[1 2 3]]")
 	// range
@@ -93,7 +93,7 @@ func TestWhere_span_none(t *testing.T) {
 }
 
 func TestWhere_indexSpans(t *testing.T) {
-	idx := []string{"a", "b", "c"}
+	var idx []string
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery(query, testTran{}, nil).(*Where)
@@ -101,6 +101,8 @@ func TestWhere_indexSpans(t *testing.T) {
 		idxSpans := indexSpans(idx, pf)
 		assert.T(t).This(fmt.Sprint(idxSpans)).Is("[" + expected + "]")
 	}
+
+	idx = []string{"a", "b", "c"}
 	test("comp where a is 1", "[1]")
 	test("comp where a is 1 and c is 2", "[1]")
 	test("comp where a is 1 and b is 2", "[1] [2]")
@@ -110,6 +112,8 @@ func TestWhere_indexSpans(t *testing.T) {
 	test("comp where a is 2 and b >= 4", "[2] [>=4]")
 	test("comp where a in (1,2) and b in (3,4)", "[1 2] [3 4]")
 	test("comp where a is '' and b isnt 0", "[''] [<0 >0]")
+	test("comp where a > ''", "[>'']")
+
 	idx = []string{"id"}
 	test("customer where id is 'e'", "['e']")
 }
@@ -139,33 +143,56 @@ func TestWhere_perIndex(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery(table+" where "+query, testTran{}, nil).(*Where)
-		w.optInit()
-		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
-		idxSels := w.perIndex(pf)
-		assert.T(t).This(fmt.Sprint(idxSels)).Is("[" + expected + "]")
+		w.optInit() // runs perIndex
+		assert.T(t).This(fmt.Sprint(w.idxSels)).Is("[" + expected + "]")
 	}
 
-	table = "comp" // key(a,b,c)
-	test("a is 1", "a,b,c: 1..1,<max> = 0.1")
-	test("a is 1 and b is 2", "a,b,c: 1,2..1,2,<max> = 0.01")
-	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3 = 0.0005")
-	test("a > 4", "a,b,c: 4,<max>..<max> = 0.5")
-	test("a <= 4", "a,b,c: ..4,<max> = 0.5")
-	test("a is 2 and b >= 4", "a,b,c: 2,4..2,<max> = 0.06")
-	test("a in (1,2) and b in (3,4)", "a,b,c: 1,3..1,3,<max> | 1,4..1,4,<max> | "+
-		"2,3..2,3,<max> | 2,4..2,4,<max> = 0.04")
+	table = "comp" // key(a,b,c) nrows = 1000
+	test("a is 1",
+		"(a,b,c) a: <1..1,max> = .1")
+	test("a is 1 and b is 2",
+		"(a,b,c) a,b: <1,2..1,2,max> = .01")
+	test("a is 1 and b is 2 and c is 3",
+		"(a,b,c) a,b,c: <1,2,3> = .0005")
+
+	test("a > 4",
+		"(a,b,c) a: <4,max..max> = .5")
+	test("a <= 4",
+		"(a,b,c) a: <..4,max> = .5")
+	test("a is 2 and b >= 4",
+		"(a,b,c) a,b: <2,4..2,max> = .06")
+	test("a in (1,2) and b in (3,4)",
+		"(a,b,c) a,b: <1,3..1,3,max | 1,4..1,4,max | "+
+			"2,3..2,3,max | 2,4..2,4,max> = .04")
 	test("a in (1,2) and b > 4",
-		"a,b,c: 1,4,<max>..1,<max> | 2,4,<max>..2,<max> = 0.1")
-	test("a is 1 or a > 3", "a,b,c: 1..1,<max> | 3,<max>..<max> = 0.7")
-	test("a isnt 5", "a,b,c: ..5 | 5,<max>..<max> = 0.9")
-	test("a is '' and b isnt 0", "a,b,c: ..'',0 | '',0,<max>..'',<max> = 0.09")
+		"(a,b,c) a,b: <1,4,max..1,max | 2,4,max..2,max> = .1")
+	test("a is 1 or a > 3",
+		"(a,b,c) a: <1..1,max | 3,max..max> = .7")
+	test("a isnt 5",
+		"(a,b,c) a: <..5 | 5,max..max> = .9")
+	test("a is '' and b isnt 0",
+		"(a,b,c) a,b: <..'',0 | '',0,max..'',max> = .09")
 
-	table = "table"
-	test("a >= ''", "a: ''..<max> = 1")
-	// test("a >= ''", "a: '' | '\\x00'..<max> = 1.005")
+	test("b is 2",
+		"(a,b,c) +b: <2..2,max> = .01")
+	test("F(b)",
+		"(a,b,c) b = 1 .071")
+	test("b in (2,3)",
+		"(a,b,c) b = 1 .1")
+	test("b is 1 and c in (2,3)",
+		"(a,b,c) +b: <1..1,max> c = .01 .0032")
+	test("b is 2 and c is 3",
+		"(a,b,c) +b,c: <2,3..2,3,max> = .01")
+	test("a is 1 and c is 3",
+		"(a,b,c) a: <1..1,max> +c: <3..3,max> = .01")
 
-	table = "comp2"
-	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3")
+	table = "table" // key(a) nrows = 100
+	test("a >= ''",
+		"(a) a: <''..max> = 1") //TODO skip useless
+
+	table = "comp2" // key(a,b,c) nrows = 0
+	test("a is 1 and b is 2 and c is 3",
+		"(a,b,c) a,b,c: <1,2,3> = 0")
 }
 
 type wtestTran struct {
@@ -198,12 +225,12 @@ func TestWhere_consistent(t *testing.T) {
 		if !w.conflict {
 			idxsel := w.idxSels[0]
 			packed := Pack(vals[lhs].(Packable))
-			for _, pr := range idxsel.ptrngs {
+			for _, pr := range idxsel.prefixRanges {
 				if pr.isPoint() {
-					ixrange = ixrange || packed == pr.org
+					ixrange = ixrange || packed == pr.Org
 					// fmt.Printf("%q == %q\n", packed, pr.org)
 				} else { // range
-					ixrange = ixrange || pr.org <= packed && packed < pr.end
+					ixrange = ixrange || pr.Org <= packed && packed < pr.End
 					// fmt.Printf("%q <= %q < %q\n", pr.org, packed, pr.end)
 				}
 			}
@@ -253,7 +280,7 @@ func TestWhere_Nrows(t *testing.T) {
 	test("inven where item is 1", 1)
 	test("inven where item in (1,2,3,4)", 2)
 	test("inven where item > 2 and item < 4", 20)
-	test("inven where item > 2 and item < 4 and qty", 10)
+	test("inven where item > 2 and item < 4 and qty", 14)
 	test("hist where date is 3", 10)
 	test("inven extend x where x > 5", 50) // not on table
 }
@@ -285,28 +312,6 @@ func TestWhere_Select(t *testing.T) {
 	assert.This(queryAll2(q)).Is("")
 	q.Select(nil, nil)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
-}
-
-func TestWhere_ptrange(t *testing.T) {
-	table := "comp"
-	test := func(query string, selCols, selVals []string) {
-		t.Helper()
-		w := ParseQuery(table+" where "+query, testTran{}, nil).(*Where)
-		w.optInit()
-		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
-		w.idxSel = &w.perIndex(pf)[0]
-		// fmt.Printf("idxSel ptrange\n\t%q\n\t%q\n",
-		// 	w.idxSel.ptrngs[0].org, w.idxSel.ptrngs[0].end)
-		w.fixed = nil
-		w.singleton = false
-		w.Select(selCols, selVals)
-		// fmt.Printf("selOrg, selEnd\n\t%q\n\t%q\n", w.selOrg, w.selEnd)
-		pr := w.idxSel.ptrngs[0].intersect(w.selOrg, w.selEnd)
-		// fmt.Printf("intersect\n\t%q\n\t%q\n", pr.org, pr.end)
-		assert.This(pr).Is(w.idxSel.ptrngs[0])
-	}
-	test("a is '1' and b is '2' and c is '3'",
-		[]string{"a"}, []string{Pack(SuStr("1"))})
 }
 
 func TestWhere_fixed(t *testing.T) {
@@ -344,7 +349,7 @@ func TestWhere_indexes(t *testing.T) {
 		w.optInit()
 		assert.T(t).This(fmt.Sprint(w.idxSels)).Is(idxSels)
 	}
-	test("(a,b,c) key(a)", "a = 1", "[a:[1]]", "[a: 1]")
+	test("(a,b,c) key(a)", "a = 1", "[a:[1]]", "[(a) a: <1> = 0]")
 }
 
 func TestWhere_ixfilter(t *testing.T) {
@@ -363,6 +368,193 @@ func TestWhere_ixfilter(t *testing.T) {
 		where c is 8`)
 }
 
+func TestWhere_idxSel_plus_indexFilter(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c) key(a,b,c)")
+	db.act("insert { a: 1, b: 1, c: 2 } into table")
+	db.act("insert { a: 2, b: 1, c: 2 } into table")
+	db.act("insert { a: 2, b: 2, c: 3 } into table")
+	db.act("insert { a: 3, b: 1, c: 2 } into table")
+	db.act("insert { a: 4, b: 1, c: 1 } into table")
+
+	tran := db.NewReadTran()
+	q := ParseQuery("table where a > 1 and c = 2", tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	w, ok := q.(*Where)
+	assert.T(t).That(ok)
+	assert.T(t).That(w.idxSelBase != nil)
+	assert.T(t).That(w.idxSelBase.prefixLen == 1)
+	assert.T(t).That(w.ixExpr != nil)
+	assert.This(queryAll2(q)).Is("a=2 b=1 c=2 | a=3 b=1 c=2")
+}
+
+func TestWhere_skipScan_pure(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b) key(a,b)")
+	for a := range 3 {
+		for b := range 10 {
+			db.act(fmt.Sprintf("insert { a: %d, b: %d } into table", a+1, b+1))
+		}
+	}
+
+	tran := db.NewReadTran()
+	q := ParseQuery("table where b = 5", tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	w := q.(*Where)
+	assert.T(t).This(fmt.Sprint(w.idxSelBase)).Is("(a,b) +b: <5..5,max> = .01")
+	assert.This(queryAll2(q)).Is("a=1 b=5 | a=2 b=5 | a=3 b=5")
+}
+
+func TestWhere_skipScan_idxSel(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b) key(a,b)")
+	for a := range 5 {
+		for b := range 5 {
+			db.act(fmt.Sprintf("insert { a: %d, b: %d } into table", a+1, b+1))
+		}
+	}
+
+	tran := db.NewReadTran()
+	q := ParseQuery("table where a > 2 and b = 3", tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	w, ok := q.(*Where)
+	assert.T(t).That(ok)
+	assert.T(t).That(w.idxSelBase != nil)
+	assert.T(t).That(w.idxSelBase.prefixLen == 1)
+	// assert.T(t).That(w.skipScan)
+	// assert.T(t).That(w.skipPrefixLen == 1)
+	assert.This(queryAll2(q)).Is("a=3 b=3 | a=4 b=3 | a=5 b=3")
+}
+
+func TestWhere_Select_recalcIdxSel(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c) key(a,b,c)")
+	for a := range 3 {
+		for b := range 5 {
+			db.act(fmt.Sprintf("insert { a: %d, b: %d, c: 9 } into table", a+1, b+1))
+		}
+	}
+
+	tran := db.NewReadTran()
+	q := ParseQuery("table where b > 2", tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	w := q.(*Where)
+	assert.T(t).That(w.idxSelBase != nil)
+	assert.T(t).This(w.idxSelBase.skipLen).Is(1)
+
+	q.Select([]string{"a"}, []string{Pack(IntVal(2))})
+	assert.T(t).This(w.idxSelActive.prefixLen).Is(2)
+	assert.T(t).This(w.idxSelActive.skipLen).Is(0)
+	assert.This(queryAll2(q)).Is("a=2 b=3 c=9 | a=2 b=4 c=9 | a=2 b=5 c=9")
+}
+
+// TestWhere_Select_conflict tests that Select with a value conflicting with
+// the where range constraint sets a no-scan conflict marker (not a full scan).
+// where a > 1 means a is NOT fixed, so selectFixed doesn't catch a=0;
+// the conflict must be detected in mergedPerCol / recalcIdxSel.
+func TestWhere_Select_conflict(t *testing.T) {
+	setup := func(where string) *Where {
+		t.Helper()
+		w := ParseQuery("comp where "+where, testTran{}, nil).(*Where)
+		w.optInit()
+		w.idxSelBase = &w.idxSels[0]
+		w.fixed = nil
+		w.singleton = false
+		return w
+	}
+
+	// full recalc path: first select, a=0 conflicts with where a>1
+	w := setup("a > 1")
+	w.Select([]string{"a"}, []string{Pack(SuInt(0))})
+	assert.T(t).Msg("recalc conflict").That(w.selConflict)
+
+	// fast-path: first select a=2 (non-conflict), then a=0 conflicts
+	w = setup("a > 1")
+	w.Select([]string{"a"}, []string{Pack(SuInt(2))})
+	assert.T(t).Msg("non-conflict selOrg").That(!w.selConflict)
+	w.Select([]string{"a"}, []string{Pack(SuInt(0))}) // conflict
+	assert.T(t).Msg("reRange conflict").This(w.selConflict)
+}
+
+func TestWhere_skipScan_gap(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c) key(a,b,c)")
+	for b := range 3 {
+		db.act(fmt.Sprintf("insert { a: 1, b: %d, c: 5 } into table", b+1))
+		db.act(fmt.Sprintf("insert { a: 1, b: %d, c: 6 } into table", b+1))
+	}
+	db.act("insert { a: 2, b: 1, c: 5 } into table")
+
+	tran := db.NewReadTran()
+	q := ParseQuery("table where a = 1 and c = 5", tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	w, ok := q.(*Where)
+	assert.T(t).That(ok)
+	assert.T(t).That(w.idxSelBase != nil)
+	assert.T(t).That(w.idxSelBase.prefixLen == 1)
+	// assert.T(t).That(w.skipScan)
+	// assert.T(t).That(w.skipPrefixLen == 2)
+	assert.This(queryAll2(q)).Is("a=1 b=1 c=5 | a=1 b=2 c=5 | a=1 b=3 c=5")
+}
+
+func TestWhere_skipScan_emptyString(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create sktest3 (name, path) key(name, path)")
+	const n = 50
+	for i := range n {
+		name := fmt.Sprintf("n%02d", i)
+		db.act(fmt.Sprintf("insert { name: '%s', path: '' } into sktest3", name))
+		for j := range 20 {
+			db.act(fmt.Sprintf("insert { name: '%s', path: '/x%02d' } into sktest3", name, j))
+		}
+	}
+
+	tran := db.NewReadTran()
+	q := ParseQuery("sktest3 where path = ''", tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	// w, ok := q.(*Where)
+	// assert.T(t).That(ok)
+	// assert.T(t).That(w.skipScan)
+	// assert.T(t).That(w.skipPrefixLen == 1)
+	th := &Thread{}
+	count := 0
+	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+		count++
+	}
+	assert.T(t).This(count).Is(n)
+}
+
+// TestWhere_skipScan_rangeQuery simulates a query like start_date <= X and end_date >= X
+// on a (start, end) index with an extra key field appended for uniqueness.
+// Uses SuDate values to match TestQueryBug2 row types.
+func TestWhere_skipScan_rangeQuery(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create events (num, start, end) key(num) index(start, end)")
+	// (start, end, num) events sorted by start, end, num:
+	db.act("insert { num: 3, start: #20260318, end: #20260320 } into events")
+	db.act("insert { num: 4, start: #20260320, end: #20260320 } into events")
+	db.act("insert { num: 2, start: #20260320, end: #20260327 } into events")
+	db.act("insert { num: 1, start: #20260327, end: #20260327 } into events")
+
+	tran := db.NewReadTran()
+	// Query: start <= #20260320 and end >= #20260320 => should match num=3,4,2
+	q := ParseQuery("events where start <= #20260320 and end >= #20260320", tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	th := &Thread{}
+	count := 0
+	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+		count++
+	}
+	assert.T(t).This(count).Is(3)
+}
+
 func TestWhere_bug(t *testing.T) {
 	db := heapDb()
 	defer db.Close()
@@ -377,6 +569,32 @@ func TestWhere_bug(t *testing.T) {
 	assert.This(Strategy2(q)).Like(`
 		table^(a,b,c)
 		where*1 a is 1 and b is 2 and c is 3`)
+}
+
+func TestWhere_keyfixed(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c,d) key(a)")
+	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
+	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
+	tran := db.NewReadTran()
+	q := ParseQuery("table where a=4", tran, nil)
+	q = q.Transform()
+	index := []string{"b"}
+	Optimize(q, ReadMode, index, 1)
+	q = SetApproach(q, index, 1, tran)
+	assert.That(q.fastSingle())
+	th := &Thread{}
+	vals := []string{Pack(IntVal(5))}
+	row := q.Lookup(th, index, vals)
+	hdr := q.Header()
+	assert.This(row2str(hdr, row)).Is("a=4 b=5 c=6 d=7")
+
+	q.Select(index, vals)
+	row = q.Get(th, Next)
+	assert.This(row2str(hdr, row)).Is("a=4 b=5 c=6 d=7")
+	row = q.Get(th, Next)
+	assert.This(row).Is(nil)
 }
 
 func TestSplit(t *testing.T) {

@@ -309,7 +309,7 @@ func TestSingleton(t *testing.T) {
 	act(db, "insert { a: 3, b: 4 } into tmp")
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery("tmp where a = 3", tran, nil)
-	q, _, _ = Setup(q, ReadMode, tran)
+	q = SetupIdx(q, ReadMode, tran, []string{"b"})
 	assert.This(String(q)).Is("tmp^(a) where*1 a is 3") // singleton
 	// reading by a, but singleton so we can Select/Lookup on b
 	bcols := []string{"b"}

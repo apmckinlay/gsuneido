@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
@@ -101,8 +102,6 @@ type QuerySource struct {
 	dataSource
 	selCols []string
 	selVals []string
-	rawOrg  string
-	rawEnd  string
 }
 
 type buildQS struct {
@@ -376,25 +375,10 @@ func (qs *QuerySource) Get(_ *Thread, dir Dir) Row {
 	}
 }
 
-// matches checks if a row matches the current Select criteria.
+// matches checks if a row matches the Select criteria (selCols/selVals).
 // It only checks the index prefix columns (stopping at first missing column),
 // matching the behavior of Table and TempIndex.
 func (qs *QuerySource) matches(row Row) bool {
-	if qs.rawOrg != "" || qs.rawEnd != "" {
-		var enc ixkey.Encoder
-		for _, col := range qs.index {
-			val := row.GetRaw(qs.HeaderResult, col)
-			enc.Add(val)
-		}
-		key := enc.String()
-		if qs.rawOrg != "" && key < qs.rawOrg {
-			return false
-		}
-		if qs.rawEnd != "" && key >= qs.rawEnd {
-			return false
-		}
-	}
-
 	if qs.selCols == nil {
 		return true
 	}
@@ -434,7 +418,6 @@ func (qs *QuerySource) Select(cols, vals []string) {
 		assert.That(!selConflict(qs.ColumnsResult, cols, vals))
 		assert.That(selPrefix(qs.index, cols))
 	}
-	qs.rawOrg, qs.rawEnd = "", ""
 	qs.selCols = cols
 	qs.selVals = vals
 	qs.Rewind()
@@ -442,6 +425,7 @@ func (qs *QuerySource) Select(cols, vals []string) {
 
 // selPrefix does the same validation as Table
 func selPrefix(index, selCols []string) bool {
+	// return len(index) == 0 || slices.Contains(selCols, index[0])
 	if len(index) == 0 {
 		return true
 	}
@@ -547,6 +531,11 @@ func checkSorted(t *testing.T, qs *QuerySource, index []string) {
 // QuerySourceWT is a QuerySource that implements the whereTable interface.
 type QuerySourceWT struct {
 	QuerySource
+	rawOrg  string
+	rawEnd  string
+	skipOrg string
+	skipEnd string
+	skipLen int
 }
 
 var _ whereTable = (*QuerySourceWT)(nil)
@@ -601,10 +590,61 @@ func (qs *QuerySourceWT) setCost(frac float64, fixcost, varcost Cost) {
 func (qs *QuerySourceWT) SelectRaw(org, end string) {
 	qs.rawOrg = org
 	qs.rawEnd = end
+	qs.skipLen = 0
 	qs.Rewind()
 }
 
-func (qs *QuerySourceWT) lookup(key string) Row {
+func (qs *QuerySourceWT) SelectSkipScan(prefixRng iface.Range,
+	suffixRng iface.Range, prefixLen int) {
+	qs.rawOrg = prefixRng.Org
+	qs.rawEnd = prefixRng.End
+	qs.skipOrg = suffixRng.Org
+	qs.skipEnd = suffixRng.End
+	qs.skipLen = prefixLen
+	qs.Rewind()
+}
+
+// Get returns the next or previous row, respecting any active Select.
+func (qs *QuerySourceWT) Get(_ *Thread, dir Dir) Row {
+	for {
+		row := qs.get(dir)
+		if row == nil {
+			return nil
+		}
+		if qs.matches(row) {
+			return row
+		}
+	}
+}
+
+// matches checks if a row matches the current Select criteria.
+// It only checks the index prefix columns (stopping at first missing column),
+// matching the behavior of Table and TempIndex.
+func (qs *QuerySourceWT) matches(row Row) bool {
+	if qs.rawOrg != "" || qs.rawEnd != "" || qs.skipLen > 0 {
+		var enc ixkey.Encoder
+		for _, col := range qs.index {
+			val := row.GetRaw(qs.HeaderResult, col)
+			enc.Add(val)
+		}
+		key := enc.String()
+		if qs.rawOrg != "" && key < qs.rawOrg {
+			return false
+		}
+		if qs.rawEnd != "" && key >= qs.rawEnd {
+			return false
+		}
+		if qs.skipLen > 0 {
+			_, sfx := ixkey.SplitPrefixSuffix(key, qs.skipLen)
+			if sfx < qs.skipOrg || sfx >= qs.skipEnd {
+				return false
+			}
+		}
+	}
+	return qs.QuerySource.matches(row)
+}
+
+func (qs *QuerySourceWT) LookupRaw(key string) Row {
 	for _, row := range qs.rows {
 		if qs.getKey(row, qs.index) == key {
 			return row
