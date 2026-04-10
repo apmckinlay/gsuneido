@@ -1189,7 +1189,7 @@ func TestGte(t *testing.T) {
 	test("abc", "", "abcdef", false)  // prefix matches but too short
 }
 
-// go test ./db19/index/btree3 -run=^$ -fuzz=FuzzSkipScanIter
+// go test ./db19/index/btree -run=^$ -fuzz=FuzzSkipScanIter
 
 func FuzzSkipScanIter(f *testing.F) {
 	itertest.SkipScanTest(f, makeIter)

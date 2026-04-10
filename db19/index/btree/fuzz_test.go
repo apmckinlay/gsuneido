@@ -27,7 +27,7 @@ func createTestBtree(treeSize int) *btree {
 	return bt
 }
 
-// go test ./db19/index/btree3 -run="^$" -fuzz=FuzzRandomUpdateBatches
+// go test ./db19/index/btree -run="^$" -fuzz=FuzzRandomUpdateBatches
 
 func FuzzRandomUpdateBatches(f *testing.F) {
 	f.Add(uint64(42), uint8(10), uint8(5))
@@ -92,7 +92,7 @@ func FuzzRandomUpdateBatches(f *testing.F) {
 	})
 }
 
-// go test ./db19/index/btree3 -run="^$" -fuzz=FuzzRandomInsertBatches
+// go test ./db19/index/btree -run="^$" -fuzz=FuzzRandomInsertBatches
 
 func FuzzRandomInsertBatches(f *testing.F) {
 	f.Add(uint64(42), uint8(20), uint8(5))
@@ -161,7 +161,7 @@ func FuzzRandomInsertBatches(f *testing.F) {
 	})
 }
 
-// go test ./db19/index/btree3 -run="^$" -fuzz=FuzzRandomDeleteBatches
+// go test ./db19/index/btree -run="^$" -fuzz=FuzzRandomDeleteBatches
 
 func FuzzRandomDeleteBatches(f *testing.F) {
 	f.Add(uint64(42), uint8(10), uint8(3))

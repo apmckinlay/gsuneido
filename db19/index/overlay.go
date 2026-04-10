@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
+	btree "github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"

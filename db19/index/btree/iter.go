@@ -94,7 +94,7 @@ func (it *Iterator) Range(rng Range) {
 	it.Rewind()
 }
 
-// SkipScan enables btree3-only skip-scan mode.
+// SkipScan enables btree-only skip-scan mode.
 // prefixRng applies to prefix fields and suffixRng to suffix fields.
 func (it *Iterator) SkipScan(prefixRng Range, suffixRng Range, prefixLen int) {
 	assert.That(prefixLen > 0)
