@@ -16,18 +16,19 @@ const keyBase = 1000
 
 // createTestBtree creates a btree with the specified number of keys
 func createTestBtree(treeSize int) *btree {
-	bldr := Builder(heapstor(8192))
+	bldr := NewBuilder(heapstor(8192))
 	defer SetSplit(SetSplit(4))
 	for i := range treeSize {
 		key := strconv.Itoa(keyBase + i)
 		assert.That(bldr.Add(key, uint64(keyBase+i)))
 	}
-	bt := bldr.Finish().(*btree)
+	bt := bldr.Finish()
 	bt.Check(nil)
 	return bt
 }
 
 // go test ./db19/index/btree3 -run="^$" -fuzz=FuzzRandomUpdateBatches
+
 func FuzzRandomUpdateBatches(f *testing.F) {
 	f.Add(uint64(42), uint8(10), uint8(5))
 	f.Add(uint64(123), uint8(20), uint8(15))
@@ -68,7 +69,7 @@ func FuzzRandomUpdateBatches(f *testing.F) {
 				ib.Update(key, newOffset)
 			}
 
-			bt = bt.MergeAndSave(ib.Iter()).(*btree)
+			bt = bt.MergeAndSave(ib.Iter())
 			// bt.print()
 			bt.Check(nil)
 		}
@@ -92,6 +93,7 @@ func FuzzRandomUpdateBatches(f *testing.F) {
 }
 
 // go test ./db19/index/btree3 -run="^$" -fuzz=FuzzRandomInsertBatches
+
 func FuzzRandomInsertBatches(f *testing.F) {
 	f.Add(uint64(42), uint8(20), uint8(5))
 	f.Add(uint64(123), uint8(50), uint8(10))
@@ -108,7 +110,7 @@ func FuzzRandomInsertBatches(f *testing.F) {
 		rng := rand.New(rand.NewPCG(seed, seed))
 
 		// Start with empty btree
-		bt := Builder(heapstor(8192)).Finish()
+		bt := NewBuilder(heapstor(8192)).Finish()
 
 		// Generate shuffled unique keys
 		perm := rng.Perm(totalSize)
@@ -129,7 +131,7 @@ func FuzzRandomInsertBatches(f *testing.F) {
 				ib.Insert(key, offset)
 			}
 
-			bt = bt.MergeAndSave(ib.Iter()).(*btree)
+			bt = bt.MergeAndSave(ib.Iter())
 			bt.Check(nil)
 			i += batchSize
 		}
@@ -160,6 +162,7 @@ func FuzzRandomInsertBatches(f *testing.F) {
 }
 
 // go test ./db19/index/btree3 -run="^$" -fuzz=FuzzRandomDeleteBatches
+
 func FuzzRandomDeleteBatches(f *testing.F) {
 	f.Add(uint64(42), uint8(10), uint8(3))
 	f.Add(uint64(123), uint8(50), uint8(10))
@@ -189,7 +192,7 @@ func FuzzRandomDeleteBatches(f *testing.F) {
 				// fmt.Println("-" + key)
 				ib.Insert(key, ixbuf.Delete|uint64(keyNum))
 			}
-			bt = bt.MergeAndSave(ib.Iter()).(*btree)
+			bt = bt.MergeAndSave(ib.Iter())
 			// bt.print()
 			bt.Check(nil)
 

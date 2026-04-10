@@ -291,7 +291,6 @@ func buildIndexes(ts *meta.Schema, list *slBuilder, db *Database,
 		if bt.TreeLevels() > 6 {
 			log.Println("ERROR: btree levels > 6 in", ts.Table, "nrecs", nrecs, "treeLevels", bt.TreeLevels(), "index", ts.Indexes[i].Columns)
 		}
-		bt.SetIxspec(&ix.Ixspec)
 		ov[i] = index.OverlayFor(bt)
 		assert.That(n == nrecs)
 		trace("size", db.Store.Size()-before)

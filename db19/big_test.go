@@ -15,7 +15,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -113,7 +112,7 @@ func createTables() []string {
 				}
 			}
 			idxSchema = append(idxSchema, schema.Index{Columns: idxcols, Mode: mode})
-			ov := index.NewOverlay(db.Store, &ixkey.Spec{})
+			ov := index.NewOverlay(db.Store)
 			idxInfo = append(idxInfo, ov)
 		}
 		schema := schema.Schema{Table: table, Columns: cols, Indexes: idxSchema}

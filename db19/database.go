@@ -13,9 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
-	btree3 "github.com/apmckinlay/gsuneido/db19/index/btree3"
-	"github.com/apmckinlay/gsuneido/db19/index/iface"
+	"github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -52,7 +50,6 @@ type Database struct {
 }
 
 const magic = "gsndo004"
-const magicPrev = "gsndo003"
 const magicBase = "gsndo"
 const tailSize = 8 // len(shutdown/corrupt)
 const shutdown = "\x2b\xc1\x85\x63\x8d\x71\x65\x6d"
@@ -134,18 +131,14 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 	return db, nil
 }
 
-// version checks the version of the database and sets store.OldVer
+// version checks the version of the database
 func version(store *stor.Stor) {
 	buf := store.Data(0)
-	if !bufHasPrefix(buf, magicBase) {
-		core.Fatal("not a valid database file")
-	}
-	if bufHasPrefix(buf, magicPrev) {
-		store.OldVer = true
-	} else {
-		if !bufHasPrefix(buf, magic) {
-			core.Fatal("invalid database version")
+	if !bufHasPrefix(buf, magic) {
+		if bufHasPrefix(buf, magicBase) {
+			core.Fatal("unsupported database version - run compact")
 		}
+		core.Fatal("not a valid database file")
 	}
 }
 
@@ -236,26 +229,18 @@ func (db *Database) create(state *DbState, schema *schema.Schema) {
 func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 	ov := make([]*index.Overlay, len(idxs))
 	for i := range ov {
-		bt := db.CreateBtree(&idxs[i].Ixspec)
+		bt := db.CreateBtree()
 		ov[i] = index.OverlayFor(bt)
 	}
 	return ov
 }
 
-func (db *Database) CreateBtree(is *ixkey.Spec) iface.Btree {
-	if db.Store.OldVer {
-		return btree.CreateBtree(db.Store, is)
-	} else {
-		return btree3.CreateBtree(db.Store, is)
-	}
+func (db *Database) CreateBtree() *btree.T {
+	return btree.CreateBtree(db.Store)
 }
 
-func (db *Database) BtreeBuilder() iface.BtreeBuilder {
-	if db.Store.OldVer {
-		return btree.Builder(db.Store)
-	} else {
-		return btree3.Builder(db.Store)
-	}
+func (db *Database) BtreeBuilder() *btree.Builder {
+	return btree.NewBuilder(db.Store)
 }
 
 func (db *Database) Ensure(sch *schema.Schema) {
@@ -431,7 +416,6 @@ func (db *Database) buildIndexes(table string,
 			}
 		}
 		bt := bldr.Finish()
-		bt.SetIxspec(&ix.Ixspec)
 		ovs[i] = index.OverlayForN(bt, nlayers)
 	}
 	return ovs
@@ -665,10 +649,6 @@ func (db *Database) HaveUsers() bool {
 }
 
 //-------------------------------------------------------------------
-
-func init() {
-	btree.GetLeafKey = IndexKey // old btree
-}
 
 func IndexKey(store *stor.Stor, is *ixkey.Spec, recoff uint64) string {
 	return is.Key(OffToRec(store, recoff))

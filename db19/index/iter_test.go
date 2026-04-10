@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
+	"github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -32,8 +32,8 @@ func TestIterRange(*testing.T) {
 	testIterRange(ib.Iterator())
 
 	store := stor.HeapStor(8192)
-	testIterEmpty(btree.CreateBtree(store, nil).Iterator())
-	bldr := btree.Builder(store)
+	testIterEmpty(btree.CreateBtree(store).Iterator())
+	bldr := btree.NewBuilder(store)
 	for i := start; i <= limit; i++ {
 		key := itoa(i)
 		assert.That(bldr.Add(key, uint64(i)))

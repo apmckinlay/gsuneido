@@ -76,7 +76,7 @@ For an update farther away, we go up the tree as needed
 We also need to handle splitting full leaf nodes and updating their parent(s)
 and removing empty nodes by updating their parent(s).
 */
-func (bt *btree) MergeAndSave(iter iface.IterFn) iface.Btree {
+func (bt *btree) MergeAndSave(iter iface.IterFn) *T {
 	bt2 := *bt // copy
 	st := state{bt: &bt2}
 	st.tree = make([]treeMerge, 0, maxLevels)

@@ -9,8 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
-	"github.com/apmckinlay/gsuneido/db19/index/iface"
+	"github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/testdata"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -20,7 +19,7 @@ import (
 
 func TestOverlay(*testing.T) {
 	var data []string
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	defer btree.SetSplit(btree.SetSplit(5))
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
@@ -90,7 +89,7 @@ func TestOverlayBug(*testing.T) {
 	st := stor.HeapStor(8192)
 	st.Alloc(1)
 	defer btree.SetSplit(btree.SetSplit(5))
-	bt := btree.CreateBtree(st, nil)
+	bt := btree.CreateBtree(st)
 	ov := &Overlay{bt: bt}
 	checkOver(d, ov)
 
@@ -139,7 +138,7 @@ func TestOverlayMerge(t *testing.T) {
 	}
 	mut := randIxbuf()
 	defer btree.SetSplit(btree.SetSplit(5))
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	bi := &ixbuf.T{}
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
@@ -170,12 +169,12 @@ func TestOverlayLookup(*testing.T) {
 	dat := testdata.New()
 	store := stor.HeapStor(8192)
 	defer btree.SetSplit(btree.SetSplit(5))
-	randBtree := func(nkeys int) iface.Btree {
+	randBtree := func(nkeys int) *btree.T {
 		for range nkeys {
 			dat.Gen()
 		}
 		sort.Strings(dat.Keys)
-		b := btree.Builder(store)
+		b := btree.NewBuilder(store)
 		for _, k := range dat.Keys {
 			assert.That(b.Add(k, dat.K2o[k]))
 		}
@@ -200,7 +199,7 @@ func TestOverlayLookup(*testing.T) {
 
 func TestOverlayRangeFracIxbufOnly(t *testing.T) {
 	assert := assert.T(t)
-	bt := btree.Builder(stor.HeapStor(64 * 1024)).Finish()
+	bt := btree.NewBuilder(stor.HeapStor(64 * 1024)).Finish()
 	layer := &ixbuf.T{}
 	for i := range 2000 {
 		key := fmt.Sprintf("k%04d", i)
@@ -217,7 +216,7 @@ func TestOverlayRangeFracIxbufOnly(t *testing.T) {
 func TestOverlayRangeFracActivityThreshold(t *testing.T) {
 	assert := assert.T(t)
 	store := stor.HeapStor(64 * 1024)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	for i := range 10000 {
 		key := fmt.Sprintf("b%05d", i)
 		assert.That(bldr.Add(key, uint64(i+1)))
@@ -239,7 +238,7 @@ func TestOverlayRangeFracActivityThreshold(t *testing.T) {
 func TestOverlayRangeFracClampHigh(t *testing.T) {
 	assert := assert.T(t)
 	store := stor.HeapStor(64 * 1024)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	for i := range 1000 {
 		key := fmt.Sprintf("b%05d", i)
 		assert.That(bldr.Add(key, uint64(i+1)))
@@ -261,7 +260,7 @@ func TestOverlayRangeFracClampHigh(t *testing.T) {
 func TestOverlayRangeFracClampLow(t *testing.T) {
 	assert := assert.T(t)
 	store := stor.HeapStor(64 * 1024)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	for i := range 1000 {
 		key := fmt.Sprintf("b%05d", i)
 		assert.That(bldr.Add(key, uint64(i+1)))

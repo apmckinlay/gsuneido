@@ -5,7 +5,7 @@ package meta
 
 import (
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/iface"
+	"github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hamt"
@@ -167,7 +167,7 @@ func (mu MergeUpdate) Apply2(ov *index.Overlay, i int) *index.Overlay {
 
 type PersistUpdate struct {
 	table   string
-	results []iface.Btree // per index
+	results []*btree.T // per index
 }
 
 // Persist is called by state.Persist to write the index updates.
@@ -177,7 +177,7 @@ func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 	for ti := range m.info.All() {
 		if len(ti.Indexes) >= 1 && ti.Indexes[0].Modified() {
 			exec(func() PersistUpdate {
-				results := make([]iface.Btree, len(ti.Indexes))
+				results := make([]*btree.T, len(ti.Indexes))
 				for i, ov := range ti.Indexes {
 					results[i] = ov.Save()
 				}

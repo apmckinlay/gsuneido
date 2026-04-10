@@ -10,9 +10,7 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
-	btree3 "github.com/apmckinlay/gsuneido/db19/index/btree3"
-	"github.com/apmckinlay/gsuneido/db19/index/iface"
+	"github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -564,15 +562,9 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 		ts.Indexes = append(ts.Indexes, *ix)
 	}
 	idxs = ts.SetupNewIndexes(nold)
-	n := len(ti.Indexes)
 	ti.Indexes = slices.Clip(ti.Indexes) // copy on write
-	for i := range idxs {
-		var bt iface.Btree
-		if store.OldVer {
-			bt = btree.CreateBtree(store, &ts.Indexes[n+i].Ixspec)
-		} else {
-			bt = btree3.CreateBtree(store, nil)
-		}
+	for range idxs {
+		bt := btree.CreateBtree(store)
 		ti.Indexes = append(ti.Indexes, index.OverlayFor(bt))
 	}
 }
@@ -947,17 +939,6 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 	m := Meta{
 		schema: hamt.ReadChain(store, offSchema, ReadSchema),
 		info:   hamt.ReadChain(store, offInfo, ReadInfo)}
-	// copy Ixspec to Info from Schema (constructed by ReadSchema)
-	// Ok to modify since it's not in use yet.
-	for ti := range m.info.All() {
-		if ti.IsTomb() {
-			continue
-		}
-		ts := m.schema.MustGet(ti.Table)
-		for i := range ti.Indexes {
-			ti.Indexes[i].SetIxspec(&ts.Indexes[i].Ixspec)
-		}
-	}
 	linkFkeys(&m)
 	return &m
 }

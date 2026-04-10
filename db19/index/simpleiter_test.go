@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
+	"github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -33,7 +33,7 @@ func (t *simpleTestTran) Num() int {
 func TestNewSimpleIter(t *testing.T) {
 	// Test with valid overlay (single empty layer, no mut)
 	store := stor.HeapStor(8192)
-	bt := btree.CreateBtree(store, nil)
+	bt := btree.CreateBtree(store)
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
 	tran := &simpleTestTran{overlay: ov}
 
@@ -65,7 +65,7 @@ func TestSimpleIterBasic(t *testing.T) {
 
 	// Create overlay with some data
 	store := stor.HeapStor(8192)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	for i := 1; i <= 5; i++ {
 		key := strconv.Itoa(i)
 		assert.That(bldr.Add(key, uint64(i)))
@@ -110,7 +110,7 @@ func TestSimpleIterEmpty(t *testing.T) {
 
 	// Create empty overlay
 	store := stor.HeapStor(8192)
-	bt := btree.CreateBtree(store, nil)
+	bt := btree.CreateBtree(store)
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
 	tran := &simpleTestTran{overlay: ov}
 
@@ -134,7 +134,7 @@ func TestSimpleIterSingleItem(t *testing.T) {
 
 	// Create overlay with single item
 	store := stor.HeapStor(8192)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	assert.That(bldr.Add("42", 42))
 	bt := bldr.Finish()
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
@@ -170,7 +170,7 @@ func TestSimpleIterRange(t *testing.T) {
 
 	// Create overlay with data 1..9
 	store := stor.HeapStor(8192)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	for i := 1; i <= 9; i++ {
 		key := strconv.Itoa(i)
 		assert.That(bldr.Add(key, uint64(i)))
@@ -225,7 +225,7 @@ func TestSimpleIterRange(t *testing.T) {
 func TestSimpleIterStateTransitions(t *testing.T) {
 	// Create overlay with data 1..3
 	store := stor.HeapStor(8192)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	for i := 1; i <= 3; i++ {
 		key := strconv.Itoa(i)
 		assert.That(bldr.Add(key, uint64(i)))
@@ -275,7 +275,7 @@ func TestSimpleIterPanicConditions(t *testing.T) {
 
 	// Create overlay with data
 	store := stor.HeapStor(8192)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	assert.That(bldr.Add("test", 123))
 	bt := bldr.Finish()
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
@@ -304,7 +304,7 @@ func TestSimpleIterPanicConditions(t *testing.T) {
 func TestSimpleIterTransactionMismatch(t *testing.T) {
 	// Create overlay with data
 	store := stor.HeapStor(8192)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	assert.That(bldr.Add("test", 123))
 	bt := bldr.Finish()
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
@@ -324,7 +324,7 @@ func TestSimpleIterDirectionChanges(t *testing.T) {
 
 	// Create overlay with data 1..5
 	store := stor.HeapStor(8192)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	for i := 1; i <= 5; i++ {
 		key := strconv.Itoa(i)
 		assert.That(bldr.Add(key, uint64(i)))
@@ -367,7 +367,7 @@ func TestSimpleIterLargeDataset(t *testing.T) {
 
 	// Create overlay with larger dataset
 	store := stor.HeapStor(8192)
-	bldr := btree.Builder(store)
+	bldr := btree.NewBuilder(store)
 	const n = 1000
 	for i := 1; i <= n; i++ {
 		// Zero-pad to ensure lexicographic order
@@ -401,7 +401,7 @@ func TestSimpleIterOptimizationConditions(t *testing.T) {
 	assert := assert.T(t)
 
 	store := stor.HeapStor(8192)
-	bt := btree.CreateBtree(store, nil)
+	bt := btree.CreateBtree(store)
 
 	// Test case 1: No layers, no mut - should work
 	ov1 := &Overlay{bt: bt, layers: []*ixbuf.T{{}}}

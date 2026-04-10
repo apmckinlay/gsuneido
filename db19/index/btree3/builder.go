@@ -4,17 +4,16 @@
 package btree
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-// builder is used to bulk load a btree.
+// Builder is used to bulk load a btree.
 // Keys must be added in order.
 // The btree is built bottom up with no splitting or inserting.
 // All nodes will be "full" except for the right hand edge.
 // The builder holds the right hand edge of the btree.
-type builder struct {
+type Builder struct {
 	stor     *stor.Stor
 	leaf     leafBuilder
 	tree     []*treeBuilder // root is last (since tree grows up)
@@ -23,12 +22,12 @@ type builder struct {
 	count    int
 }
 
-func Builder(st *stor.Stor) *builder {
-	return &builder{stor: st}
+func NewBuilder(st *stor.Stor) *Builder {
+	return &Builder{stor: st}
 }
 
 // Add returns false for duplicate keys and panics for out of order
-func (b *builder) Add(key string, off uint64) bool {
+func (b *Builder) Add(key string, off uint64) bool {
 	if b.havePrev {
 		if key == b.prev {
 			return false // duplicate
@@ -44,7 +43,7 @@ func (b *builder) Add(key string, off uint64) bool {
 	return true
 }
 
-func (b *builder) addLeaf(key string, off uint64) {
+func (b *Builder) addLeaf(key string, off uint64) {
 	if !b.leaf.tryAdd(key, off) {
 		off2 := b.leaf.finishTo(b.stor)
 		sep := b.sep(b.prev, key)
@@ -54,7 +53,7 @@ func (b *builder) addLeaf(key string, off uint64) {
 	}
 }
 
-func (b *builder) addTree(ti int, off uint64, sep string) {
+func (b *Builder) addTree(ti int, off uint64, sep string) {
 	if ti >= len(b.tree) {
 		b.tree = append(b.tree, &treeBuilder{}) // new root
 	}
@@ -69,12 +68,12 @@ func (b *builder) addTree(ti int, off uint64, sep string) {
 	}
 }
 
-func (b *builder) sep(prev, key string) string {
+func (b *Builder) sep(prev, key string) string {
 	cp := str.CommonPrefixLen(prev, key)
 	return key[:cp+1]
 }
 
-func (b *builder) Finish() iface.Btree {
+func (b *Builder) Finish() *T {
 	off := b.leaf.finishTo(b.stor)
 
 	for i := range b.tree {

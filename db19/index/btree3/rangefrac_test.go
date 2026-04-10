@@ -19,11 +19,11 @@ func BenchmarkBtreeRangeFrac(b *testing.B) {
 		return fmt.Sprintf("%05d", i)
 	}
 	const n = 11_000
-	bldr := Builder(heapstor(64 * 1024))
+	bldr := NewBuilder(heapstor(64 * 1024))
 	for i := range n {
 		assert.That(bldr.Add(key(i), 1))
 	}
-	bt := bldr.Finish().(*btree)
+	bt := bldr.Finish()
 	for b.Loop() {
 		x := key(rng.IntN(n))
 		y := key(rng.IntN(n))
@@ -42,11 +42,11 @@ func TestBtreeRangeFrac(t *testing.T) {
 	}
 	makeBtree := func(m int) {
 		n = m
-		b := Builder(heapstor(64 * 1024))
+		b := NewBuilder(heapstor(64 * 1024))
 		for i := range n {
 			assert.That(b.Add(key(i), 1))
 		}
-		bt = b.Finish().(*btree)
+		bt = b.Finish()
 		// fmt.Println(bt.Stats())
 	}
 	var one, all, over, under int

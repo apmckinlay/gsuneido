@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"testing"
 
-	btree "github.com/apmckinlay/gsuneido/db19/index/btree3"
+	"github.com/apmckinlay/gsuneido/db19/index/btree3"
 	"github.com/apmckinlay/gsuneido/db19/index/itertest"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -47,7 +47,7 @@ func TestOverIter(t *testing.T) {
 	}
 	even := from(2, 4, 6, 8)
 	odd := from(1, 3, 5, 7, 9)
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	it := NewOverIter("", 0)
 	test := func(expected int) {
 		t.Helper()
@@ -133,7 +133,7 @@ func TestOverIter(t *testing.T) {
 }
 
 func TestOverIterDeletePrevBug(*testing.T) {
-	bldr := btree.Builder(stor.HeapStor(8192))
+	bldr := btree.NewBuilder(stor.HeapStor(8192))
 	for i := 1; i <= 9; i++ {
 		assert.That(bldr.Add(strconv.Itoa(i), uint64(i)))
 	}
@@ -154,7 +154,7 @@ func TestOverIterDeletePrevBug(*testing.T) {
 func TestOverIterSkipScanEmptyStringSuffix(t *testing.T) {
 	itertest.SkipScanEmptyStringSuffixTest(t,
 		func(keys []itertest.KeyOff) itertest.Iter {
-			b := btree.Builder(stor.HeapStor(8192))
+			b := btree.NewBuilder(stor.HeapStor(8192))
 			for _, k := range keys {
 				assert.That(b.Add(k.Key, k.Off))
 			}
@@ -165,7 +165,7 @@ func TestOverIterSkipScanEmptyStringSuffix(t *testing.T) {
 }
 
 func TestOverIterReads(*testing.T) {
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	ib := &ixbuf.T{}
 	for i := 1; i < 10; i++ {
 		ib.Insert(strconv.Itoa(i), uint64(i))
@@ -222,7 +222,7 @@ func TestOverIterReads(*testing.T) {
 }
 
 func TestOverIterReadsWithRange(*testing.T) {
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	ib := &ixbuf.T{}
 	// Put odd numbers in the data (1 to 9)
 	for i := 1; i < 10; i += 2 {
@@ -297,7 +297,7 @@ func TestOverIterReadsWithRange(*testing.T) {
 
 func TestOverIterCombine(*testing.T) {
 	var data []string
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	defer btree.SetSplit(btree.SetSplit(5))
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
@@ -359,7 +359,7 @@ func TestOverIterRandom(*testing.T) {
 	data := new(dummy)
 	it := &dumIter{d: data}
 	keyoff := map[string]uint64{}
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	ibs := []*ixbuf.T{{}, {}, {}}
 	ov := &Overlay{bt: bt, layers: ibs}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
@@ -465,7 +465,7 @@ func TestOverIterRandom2(t *testing.T) {
 	dum := new(dummy)
 	it := &dumIter{d: dum}
 	keyoff := map[string]uint64{}
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	ibs := []*ixbuf.T{}
 	for range nlayers {
 		ibs = append(ibs, &ixbuf.T{})
@@ -552,7 +552,7 @@ func TestOverIterRandom2(t *testing.T) {
 }
 
 func TestOverIterDups(*testing.T) {
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	u := &ixbuf.T{}
 	u.Insert("", 1)
 	mut := &ixbuf.T{}
@@ -580,7 +580,7 @@ func TestOverIterDups(*testing.T) {
 }
 
 func TestOverIterBug(*testing.T) {
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	layers := []*ixbuf.T{{}, {}, {}, {}}
 	layers[0].Insert("z", 1)
 	layers[1].Insert("z", 1|ixbuf.Update)
@@ -608,7 +608,7 @@ func TestOverIterBug(*testing.T) {
 }
 
 func TestOverIterBug2(*testing.T) {
-	b := btree.Builder(stor.HeapStor(8192))
+	b := btree.NewBuilder(stor.HeapStor(8192))
 	assert.That(b.Add("1111", 1111))
 	assert.That(b.Add("2222", 2222))
 	bt := b.Finish()
@@ -623,7 +623,7 @@ func TestOverIterBug2(*testing.T) {
 }
 
 func TestOverIterBug3(*testing.T) {
-	b := btree.Builder(stor.HeapStor(8192))
+	b := btree.NewBuilder(stor.HeapStor(8192))
 	assert.That(b.Add("1111", 1111))
 	bt := b.Finish()
 	layers := []*ixbuf.T{{}}
@@ -643,7 +643,7 @@ func TestOverIterBug3(*testing.T) {
 }
 
 func TestOverIterBug4(*testing.T) {
-	b := btree.Builder(stor.HeapStor(8192))
+	b := btree.NewBuilder(stor.HeapStor(8192))
 	assert.That(b.Add("1", 1))
 	bt := b.Finish()
 	// bt.Print()
@@ -663,7 +663,7 @@ func TestOverIterBug4(*testing.T) {
 }
 
 func TestOverIterInvalidCombine(t *testing.T) {
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	layers := make([]*ixbuf.T, 3)
 	for i := range layers {
 		layers[i] = &ixbuf.T{}
@@ -692,7 +692,7 @@ func TestOverIterInvalidCombine(t *testing.T) {
 }
 
 func TestOverIterCurDeletedBug(t *testing.T) {
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 	layers := make([]*ixbuf.T, 3)
 	for i := range layers {
 		layers[i] = &ixbuf.T{}
@@ -801,7 +801,7 @@ func TestOverIterRandom3(t *testing.T) {
 }
 
 func generateRandomLayers(localRand *rand.Rand) (*Overlay, []string, map[string]uint64, uint64) {
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 
 	nlayers := localRand.IntN(7) + 2
 	layers := make([]*ixbuf.T, nlayers)
@@ -879,7 +879,7 @@ func createRandomRangedIterator(keys []string, localRand *rand.Rand) *OverIter {
 
 func TestCheckOverlay(t *testing.T) {
 	assert := assert.T(t)
-	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192))
 
 	// Test valid overlay
 	layer1 := &ixbuf.T{}
@@ -1056,7 +1056,7 @@ func (it *dumIter) Prev() {
 // i.e., when there are no layers and mut is empty (read-only transactions)
 func BenchmarkOverIterSingle(b *testing.B) {
 	const nrecs = 1000
-	bldr := btree.Builder(stor.HeapStor(8192))
+	bldr := btree.NewBuilder(stor.HeapStor(8192))
 	for i := 1; i <= nrecs; i++ {
 		// Zero-pad to ensure lexicographic order matches numeric order
 		key := strconv.Itoa(i*10 + 100000) // e.g., "100010", "100020", etc.
@@ -1140,7 +1140,7 @@ func makeIter(keys []itertest.KeyOff) itertest.Iter {
 	sort.Slice(keys[btreeStart:], func(i, j int) bool {
 		return keys[btreeStart+i].Key < keys[btreeStart+j].Key
 	})
-	b := btree.Builder(stor.HeapStor(8192))
+	b := btree.NewBuilder(stor.HeapStor(8192))
 	for i := btreeStart; i < len(keys); i++ {
 		k := &keys[i]
 		off := k.Off

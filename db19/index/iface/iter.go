@@ -9,6 +9,9 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 )
 
+// IterFn is the function type for iterating over ixbuf entries.
+type IterFn = func() (key string, off uint64, ok bool)
+
 // Iter is the interface for a Suneido style iterator
 // implemented by btree and ixbuf
 type Iter interface {

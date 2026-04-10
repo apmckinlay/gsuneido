@@ -30,15 +30,11 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/db19/index/iface"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
-
-var _ iface.Btree = (*btree)(nil)
 
 var splitCount = 100     // ??? // overridden by tests
 const maxNodeSize = 8192 // ???
@@ -57,11 +53,11 @@ type btree struct {
 
 type T = btree
 
-func CreateBtree(st *stor.Stor, _ *ixkey.Spec) iface.Btree {
-	return Builder(st).Finish()
+func CreateBtree(st *stor.Stor) *T {
+	return NewBuilder(st).Finish()
 }
 
-func OpenBtree(st *stor.Stor, root uint64, treeLevels int, nrows int) iface.Btree {
+func OpenBtree(st *stor.Stor, root uint64, treeLevels int, nrows int) *T {
 	return &btree{stor: st, root: root, treeLevels: treeLevels,
 		count: nrows}
 }
@@ -81,15 +77,11 @@ func (bt *btree) TreeLevels() int {
 	return bt.treeLevels
 }
 
-func (bt *btree) SetIxspec(is *ixkey.Spec) {
-	// temporary for transition
-}
-
 func (bt *btree) Write(w *stor.Writer) {
 	w.Put5(int64(bt.root)).Put1(bt.treeLevels)
 }
 
-func Read(st *stor.Stor, r *stor.Reader, nrows int) iface.Btree {
+func Read(st *stor.Stor, r *stor.Reader, nrows int) *T {
 	root := uint64(r.Get5())
 	treeLevels := r.Get1()
 	return OpenBtree(st, root, treeLevels, nrows)

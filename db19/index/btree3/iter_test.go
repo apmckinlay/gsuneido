@@ -20,7 +20,7 @@ import (
 
 func TestIterEmpty(*testing.T) {
 	st := heapstor(8192)
-	b := Builder(st)
+	b := NewBuilder(st)
 	bt := b.Finish()
 
 	it := bt.Iterator()
@@ -44,7 +44,7 @@ func TestIterEmpty(*testing.T) {
 
 func TestIter(t *testing.T) {
 	st := heapstor(8192)
-	b := Builder(st)
+	b := NewBuilder(st)
 	assert.That(b.Add("a", 1))
 	assert.That(b.Add("b", 2))
 	assert.That(b.Add("c", 3))
@@ -125,12 +125,12 @@ const base = 1000
 
 func testBtree(n, split int) *btree {
 	assert.That(n < base)
-	b := Builder(heapstor(8192))
+	b := NewBuilder(heapstor(8192))
 	defer SetSplit(SetSplit(split))
 	for i := base; i < base+n; i++ {
 		assert.That(b.Add(strconv.Itoa(i), uint64(i)))
 	}
-	return b.Finish().(*btree)
+	return b.Finish()
 }
 
 func TestIterator(t *testing.T) {
@@ -141,12 +141,12 @@ func TestIterator(t *testing.T) {
 		data[i] = randKey()
 	}
 	sort.Strings(data[:])
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	defer SetSplit(SetSplit(8))
 	for i, k := range data {
 		assert.That(b.Add(k, uint64(i+1))) // +1 to avoid zero
 	}
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 
 	// bt.Print()
 
@@ -288,12 +288,12 @@ func TestIterator(t *testing.T) {
 // buildTree builds a simple one-level btree with keys "1".."n"
 // and offsets equal to the integer value.
 func buildTree(n int) *btree {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	for i := 1; i <= n; i++ {
 		k := strconv.Itoa(i)
 		assert.That(b.Add(k, uint64(i)))
 	}
-	return b.Finish().(*btree)
+	return b.Finish()
 }
 
 // seek on an exact key should position on that key (not the next).
@@ -477,7 +477,7 @@ func TestSkipScanRangeQuery(t *testing.T) {
 	// Data: (start, end, num) events
 	// Events matching start <= "20260320" and end >= "20260320":
 	//   ("20260318", "20260320", 3), ("20260320", "20260320", 4), ("20260320", "20260327", 2)
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	type event struct {
 		start, end string
 		num        string
@@ -534,7 +534,7 @@ func TestIteratorRewind(t *testing.T) {
 
 func TestIteratorEmptyTree(t *testing.T) {
 	st := stor.HeapStor(64 * 1024)
-	b := Builder(st)
+	b := NewBuilder(st)
 	bt := b.Finish() // empty tree
 
 	it := bt.Iterator()
@@ -546,23 +546,23 @@ func TestIteratorEmptyTree(t *testing.T) {
 // buildTestTree creates a btree with keys "0" to "n-1" and offsets 0 to n-1
 func buildTestTree(n int) *btree {
 	st := stor.HeapStor(64 * 1024)
-	b := Builder(st)
+	b := NewBuilder(st)
 	for i := range n {
 		key := fmt.Sprintf("%04d", i)
 		assert.That(b.Add(key, uint64(i)))
 	}
-	return b.Finish().(*btree)
+	return b.Finish()
 }
 
 // buildPaddedTree creates a btree with zero-padded keys "000" to "n-1" (padded) and offsets 0 to n-1
 func buildPaddedTree(n int) *btree {
 	st := stor.HeapStor(64 * 1024)
-	b := Builder(st)
+	b := NewBuilder(st)
 	for i := range n {
 		key := padKey(i, 3) // pad to 3 digits
 		assert.That(b.Add(key, uint64(i)))
 	}
-	return b.Finish().(*btree)
+	return b.Finish()
 }
 
 // padKey pads an integer to a string of the specified width with leading zeros
@@ -575,7 +575,7 @@ func padKey(i, width int) string {
 }
 
 func TestSkipScanSuffixRange(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	rows := []struct {
 		first  string
 		suffix string
@@ -593,7 +593,7 @@ func TestSkipScanSuffixRange(t *testing.T) {
 	for _, r := range rows {
 		assert.That(b.Add(ixkey.CompKey(r.first, r.suffix), r.off))
 	}
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "02", End: "04"}, 1)
 
@@ -607,7 +607,7 @@ func TestSkipScanSuffixRange(t *testing.T) {
 }
 
 func TestSkipScanSuffixRangeMultiPrefix(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	rows := []struct {
 		a, b, c string
 		off     uint64
@@ -620,7 +620,7 @@ func TestSkipScanSuffixRangeMultiPrefix(t *testing.T) {
 	for _, r := range rows {
 		assert.That(b.Add(ixkey.CompKey(r.a, r.b, r.c), r.off))
 	}
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "02", End: "04"}, 2)
 
@@ -638,10 +638,10 @@ func TestSkipScanSuffixRangeMultiPrefix(t *testing.T) {
 }
 
 func TestSkipScanSuffixRangeNoMatches(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	assert.That(b.Add(ixkey.CompKey("a", "01"), 1))
 	assert.That(b.Add(ixkey.CompKey("b", "01"), 2))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "02", End: "03"}, 1)
 	it.Next()
@@ -649,11 +649,11 @@ func TestSkipScanSuffixRangeNoMatches(t *testing.T) {
 }
 
 func TestSkipScanThenRangeDisablesSkipScan(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	assert.That(b.Add(ixkey.CompKey("a", "01"), 1))
 	assert.That(b.Add(ixkey.CompKey("a", "02"), 2))
 	assert.That(b.Add(ixkey.CompKey("b", "01"), 3))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 
 	it.SkipScan(iface.All, iface.Range{Org: "01", End: "03"}, 1)
@@ -673,7 +673,7 @@ func TestSkipScanThenRangeDisablesSkipScan(t *testing.T) {
 }
 
 func TestSkipScanSeekAndPrev(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	rows := []struct {
 		first  string
 		suffix string
@@ -691,7 +691,7 @@ func TestSkipScanSeekAndPrev(t *testing.T) {
 	for _, r := range rows {
 		assert.That(b.Add(ixkey.CompKey(r.first, r.suffix), r.off))
 	}
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "02", End: "04"}, 1)
 
@@ -731,11 +731,11 @@ func TestSkipScanSeekAndPrev(t *testing.T) {
 }
 
 func TestSkipScanSeekAllAboveMax(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	assert.That(b.Add(ixkey.CompKey("a", "01"), 1))
 	assert.That(b.Add(ixkey.CompKey("a", "03"), 2))
 	assert.That(b.Add(ixkey.CompKey("b", "02"), 3))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "01", End: "04"}, 1)
 
@@ -748,7 +748,7 @@ func TestSkipScanSeekAllAboveMax(t *testing.T) {
 }
 
 func TestSkipScanPrefixRangeNext(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	rows := [][2]string{
 		{"a", "01"}, {"a", "03"},
 		{"b", "02"},
@@ -758,7 +758,7 @@ func TestSkipScanPrefixRangeNext(t *testing.T) {
 	for i, r := range rows {
 		assert.That(b.Add(ixkey.CompKey(r[0], r[1]), uint64(i+1)))
 	}
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.Range{Org: "b", End: "d"}, iface.Range{Org: "02", End: "04"}, 1)
 
@@ -771,7 +771,7 @@ func TestSkipScanPrefixRangeNext(t *testing.T) {
 }
 
 func TestSkipScanPrefixRangePrev(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	rows := [][2]string{
 		{"a", "01"}, {"a", "03"},
 		{"b", "02"},
@@ -781,7 +781,7 @@ func TestSkipScanPrefixRangePrev(t *testing.T) {
 	for i, r := range rows {
 		assert.That(b.Add(ixkey.CompKey(r[0], r[1]), uint64(i+1)))
 	}
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.Range{Org: "b", End: "d"}, iface.Range{Org: "02", End: "04"}, 1)
 
@@ -814,7 +814,7 @@ func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 		st.Close(true)
 	})
 
-	bld := Builder(st)
+	bld := NewBuilder(st)
 	for g := range groups {
 		first := fmt.Sprintf("g%04d", g)
 		for s := range recordsPerGroup {
@@ -823,7 +823,7 @@ func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 			assert.That(bld.Add(ixkey.CompKey(first, suffix), off))
 		}
 	}
-	bt := bld.Finish().(*btree)
+	bt := bld.Finish()
 
 	widths := []int{8, 16, 32, 64, 96, 128, 160, 192, 224}
 	maxWidth := widths[len(widths)-1]
@@ -893,11 +893,11 @@ func TestModified(t *testing.T) {
 // skipRetreatToMatch (line 342) when skipGroup is already set to the current group.
 // This is reached when SeekAll positions us above End in the same group we're tracking.
 func TestSkipRetreatSuffixAboveEndSameGroup(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	// Group "a" has two keys both above End="04"
 	assert.That(b.Add(ixkey.CompKey("a", "05"), 1))
 	assert.That(b.Add(ixkey.CompKey("a", "07"), 2))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "02", End: "04"}, 1)
 	// SeekAll("06") positions at ("a","07") with skipGroup="a"; no key is in [Org,End)
@@ -909,8 +909,8 @@ func TestSkipRetreatSuffixAboveEndSameGroup(t *testing.T) {
 
 // TestSkipNextEmptyTree covers the rewound->eof path in skipNext (empty btree).
 func TestSkipNextEmptyTree(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
-	bt := b.Finish().(*btree)
+	b := NewBuilder(stor.HeapStor(8192))
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "01", End: "02"}, 1)
 	it.Next()
@@ -919,8 +919,8 @@ func TestSkipNextEmptyTree(t *testing.T) {
 
 // TestSkipPrevEmptyTree covers the rewound->eof path in skipPrev (empty btree).
 func TestSkipPrevEmptyTree(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
-	bt := b.Finish().(*btree)
+	b := NewBuilder(stor.HeapStor(8192))
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "01", End: "02"}, 1)
 	it.Prev()
@@ -930,12 +930,12 @@ func TestSkipPrevEmptyTree(t *testing.T) {
 // TestSkipAdvanceSuffixBelowOrg covers the suffix < Org path in skipAdvanceToMatch:
 // within a group, some keys have suffixes below Org, requiring it.next() in the loop.
 func TestSkipAdvanceSuffixBelowOrg(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	// Group "a" has three keys: "01" (below Org), "03" (in range), "05" (in range)
 	assert.That(b.Add(ixkey.CompKey("a", "01"), 1))
 	assert.That(b.Add(ixkey.CompKey("a", "03"), 2))
 	assert.That(b.Add(ixkey.CompKey("a", "05"), 3))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	// Org="02" so suffix "01" is below Org and must be skipped
 	it.SkipScan(iface.All, iface.Range{Org: "02", End: "06"}, 1)
@@ -948,12 +948,12 @@ func TestSkipAdvanceSuffixBelowOrg(t *testing.T) {
 // TestSkipRetreatSuffixAboveEnd covers the suffix >= End path in skipRetreatToMatch:
 // within a group, some keys have suffixes at or above End, requiring it.prev().
 func TestSkipRetreatSuffixAboveEnd(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	// Group "a" has keys: "01" (in range), "03" (in range), "05" (at/above End)
 	assert.That(b.Add(ixkey.CompKey("a", "01"), 1))
 	assert.That(b.Add(ixkey.CompKey("a", "03"), 2))
 	assert.That(b.Add(ixkey.CompKey("a", "05"), 3))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	// End="04" so suffix "05" is >= End and must be skipped backward
 	it.SkipScan(iface.All, iface.Range{Org: "00", End: "04"}, 1)
@@ -967,11 +967,11 @@ func TestSkipRetreatSuffixAboveEnd(t *testing.T) {
 // TestSkipSeekGroupEndBeyondAllData covers skipSeekGroupEnd when seekAllRaw hits eof
 // because the group+End target lies beyond all keys in the tree.
 func TestSkipSeekGroupEndBeyondAllData(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	// Only one group "a" with suffixes below End; the last group's End would exceed all keys.
 	assert.That(b.Add(ixkey.CompKey("a", "01"), 1))
 	assert.That(b.Add(ixkey.CompKey("a", "02"), 2))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	// End="03": when we do skipSeekGroupEnd("a"), target = "a\x00\x0003"
 	// seekAllRaw on that might round to last key. Verify Prev works.
@@ -985,11 +985,11 @@ func TestSkipSeekGroupEndBeyondAllData(t *testing.T) {
 // TestSkipRetreatNewGroupGoesEof covers the path where skipSeekGroupEnd
 // results in !within (the first group's end is before min data).
 func TestSkipRetreatNewGroupGoesEof(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	// Only group "z" keys, all suffixes >= End
 	assert.That(b.Add(ixkey.CompKey("z", "05"), 1))
 	assert.That(b.Add(ixkey.CompKey("z", "06"), 2))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	// End="03": no key in "z" has suffix in [Org, End), Prev should reach eof
 	it.SkipScan(iface.All, iface.Range{Org: "01", End: "03"}, 1)
@@ -1000,13 +1000,13 @@ func TestSkipRetreatNewGroupGoesEof(t *testing.T) {
 // TestSkipSeekPrevGroupLevel0 covers skipSeekPrevGroup when level<0 and treeLevels==0
 // (single-leaf tree): seeks directly in the root leaf.
 func TestSkipSeekPrevGroupLevel0(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	// Two groups: "b" (in range) then "c" (in range) — prev from "c" should go to "b"
 	assert.That(b.Add(ixkey.CompKey("b", "02"), 1))
 	assert.That(b.Add(ixkey.CompKey("b", "03"), 2))
 	assert.That(b.Add(ixkey.CompKey("c", "02"), 3))
 	assert.That(b.Add(ixkey.CompKey("c", "03"), 4))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	assert.T(t).This(bt.treeLevels).Is(0) // single-leaf tree
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "02", End: "04"}, 1)
@@ -1035,12 +1035,12 @@ func TestSkipSeekPrevGroupLevel0(t *testing.T) {
 // in skipSeekPrevGroup: the first group has no predecessor.
 func TestSkipSeekPrevGroupEofBeforeFirst(t *testing.T) {
 	defer SetSplit(SetSplit(4)) // force multi-level tree
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	// Only one group "a"; prev past "a" should reach eof
 	for i := range 20 {
 		assert.That(b.Add(ixkey.CompKey("a", fmt.Sprintf("%02d", i)), uint64(i+1)))
 	}
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "05", End: "10"}, 1)
 	// Advance to first match then keep calling Prev past the beginning
@@ -1056,7 +1056,7 @@ func TestSkipSeekPrevGroupEofBeforeFirst(t *testing.T) {
 // skipSeekNextGroup (lines 245-248) when next group spans multiple tree levels.
 func TestSkipSeekNextGroupMultiLevel(t *testing.T) {
 	defer SetSplit(SetSplit(4)) // small split -> treeLevels >= 1
-	b := Builder(stor.HeapStor(64 * 1024))
+	b := NewBuilder(stor.HeapStor(64 * 1024))
 	// Many groups spread across multiple leaf nodes so the skip crosses tree levels
 	for g := 0; g < 30; g++ {
 		first := fmt.Sprintf("g%02d", g)
@@ -1064,7 +1064,7 @@ func TestSkipSeekNextGroupMultiLevel(t *testing.T) {
 			assert.That(b.Add(ixkey.CompKey(first, fmt.Sprintf("%02d", s)), uint64(g*10+s+1)))
 		}
 	}
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	// Range only includes suffix "05": forces skipSeekNextGroup across tree boundaries
 	it.SkipScan(iface.All, iface.Range{Org: "05", End: "06"}, 1)
@@ -1083,14 +1083,14 @@ func TestSkipSeekNextGroupMultiLevel(t *testing.T) {
 // (lines 407-410) when the previous group is in a different subtree.
 func TestSkipSeekPrevGroupMultiLevel(t *testing.T) {
 	defer SetSplit(SetSplit(4)) // small split -> treeLevels >= 1
-	b := Builder(stor.HeapStor(64 * 1024))
+	b := NewBuilder(stor.HeapStor(64 * 1024))
 	for g := 0; g < 30; g++ {
 		first := fmt.Sprintf("g%02d", g)
 		for s := 0; s < 10; s++ {
 			assert.That(b.Add(ixkey.CompKey(first, fmt.Sprintf("%02d", s)), uint64(g*10+s+1)))
 		}
 	}
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "05", End: "06"}, 1)
 	// Collect keys in reverse order
@@ -1108,11 +1108,11 @@ func TestSkipSeekPrevGroupMultiLevel(t *testing.T) {
 // TestSkipSuffixSeekUnboundedBeyondAll covers the case in skipSuffixSeekUnbounded
 // where seekAllRaw for target lands beyond all data (state != within).
 func TestSkipSuffixSeekUnboundedBeyondAll(t *testing.T) {
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	// All keys have suffixes below minSuffix used in SeekAll
 	assert.That(b.Add(ixkey.CompKey("a", "01"), 1))
 	assert.That(b.Add(ixkey.CompKey("b", "01"), 2))
-	bt := b.Finish().(*btree)
+	bt := b.Finish()
 	it := bt.Iterator().(*Iterator)
 	it.SkipScan(iface.All, iface.Range{Org: "01", End: "03"}, 1)
 	// SeekAll with a suffix > all existing suffixes triggers the eof path
@@ -1198,7 +1198,7 @@ func FuzzSkipScanIter(f *testing.F) {
 func makeIter(keys []itertest.KeyOff) itertest.Iter {
 	sort.Slice(keys, func(i, j int) bool { return keys[i].Key < keys[j].Key })
 	defer SetSplit(SetSplit(7)) // ???
-	b := Builder(stor.HeapStor(8192))
+	b := NewBuilder(stor.HeapStor(8192))
 	for _, k := range keys {
 		assert.That(b.Add(k.Key, k.Off))
 	}
