@@ -434,13 +434,8 @@ func TestFuzzIntersect(t *testing.T) {
 
 func fuzzIntersect(t *testing.T, rnd *rand.Rand) {
 	qs1, qs2 := newCompatibleQS(rnd)
-	// fmt.Print("intersect ", len(qs1.rows), " ", len(qs2.rows), " = ")
 	q := NewIntersect(qs1, qs2)
 	index := chooseIndex(rnd, q)
-	fixcost, varcost := Optimize(q, ReadMode, index, 1)
-	if fixcost+varcost >= impossible {
-		return
-	}
 	fuzzQuery(t, q, rnd, index)
 }
 
