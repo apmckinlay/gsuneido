@@ -24,7 +24,7 @@ type Iter interface {
 	Next()
 	Prev()
 	Rewind()
-	SkipScan(prefixRn, suffixRng iface.Range, prefixLen int)
+	SkipScan(prefixRn, suffixRng iface.Range, skipStart int)
 	HasCur() bool
 	Eof() bool
 	Cur() (key string, off uint64)
@@ -50,22 +50,22 @@ func SkipScanTest(f *testing.F, makeIter func([]KeyOff) Iter) {
 		rng := rand.New(rand.NewPCG(seed, seed))
 
 		nkeys := int(u8) // 0 to 255
-		nfields, prefixLen, prefixRng, suffixRng := genCriteria(u32)
+		nfields, skipStart, prefixRng, suffixRng := genCriteria(u32)
 		allKeys := genData(rng, nfields, nkeys)
 		it := makeIter(allKeys)
 		// remove any zeroed (deleted) entries and sort to get the visible keys
 		keys := slices.DeleteFunc(allKeys, func(k KeyOff) bool { return k.Off == 0 })
 		sort.Slice(keys, func(i, j int) bool { return keys[i].Key < keys[j].Key })
 
-		runSkipScan(t, it, keys, prefixRng, suffixRng, prefixLen, steps)
+		runSkipScan(t, it, keys, prefixRng, suffixRng, skipStart, steps)
 	})
 }
 
 func runSkipScan(t *testing.T, it Iter, keys []KeyOff,
-	prefixRng, suffixRng iface.Range, prefixLen int, steps []byte) {
+	prefixRng, suffixRng iface.Range, skipStart int, steps []byte) {
 	t.Helper()
-	it.SkipScan(prefixRng, suffixRng, prefixLen)
-	or := newOracle(keys, prefixRng, suffixRng, prefixLen)
+	it.SkipScan(prefixRng, suffixRng, skipStart)
+	or := newOracle(keys, prefixRng, suffixRng, skipStart)
 
 	for i := 0; !or.Eof(); i++ {
 		assertSame(t, i, it, or)
@@ -197,10 +197,10 @@ type oracleIter struct {
 }
 
 func newOracle(keys []KeyOff, prefixRng, suffixRng iface.Range,
-	prefixLen int) *oracleIter {
+	skipStart int) *oracleIter {
 	out := make([]KeyOff, 0, len(keys))
 	for _, k := range keys {
-		pfx, sfx := ixkey.SplitPrefixSuffix(k.Key, prefixLen)
+		pfx, sfx := ixkey.SplitPrefixSuffix(k.Key, skipStart)
 		if prefixRng.Org <= pfx && pfx < prefixRng.End &&
 			suffixRng.Org <= sfx && sfx < suffixRng.End {
 			out = append(out, k)

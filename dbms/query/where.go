@@ -31,9 +31,9 @@ var _ = AddInfo("query.where.singleton", &whereSingletonCount)
 // instead, construct a new one with NewWhere
 
 type Where struct {
-	t       QueryTran
-	colSels    map[string][]span // from NewWhere, result of perField
-	mergedBuf  map[string][]span // reusable buffer for mergedPerCol
+	t         QueryTran
+	colSels   map[string][]span // from NewWhere, result of perField
+	mergedBuf map[string][]span // reusable buffer for mergedPerCol
 	// tbl will be set if the source is a table, nil otherwise
 	tbl whereTable
 	// idxSel is for the chosen index
@@ -95,7 +95,7 @@ type whereTable interface {
 	// execution
 	LookupRaw(key string) Row
 	SelectRaw(org, end string)
-	SelectSkipScan(prefixRng, suffixRng iface.Range, prefixLen int)
+	SelectSkipScan(prefixRng, suffixRng iface.Range, skipStart int)
 	GetFilter(dir Dir, filter func(key string) bool) Row
 	Nrows() (int, int)
 }

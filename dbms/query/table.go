@@ -410,8 +410,8 @@ func (tbl *Table) SelectRaw(org, end string) {
 	tbl.ensureIter().Range(index.Range{Org: org, End: end})
 }
 
-func (tbl *Table) SelectSkipScan(prefixRng, suffixRng iface.Range, prefixLen int) {
-	tbl.ensureIter().SkipScan(prefixRng, suffixRng, prefixLen)
+func (tbl *Table) SelectSkipScan(prefixRng, suffixRng iface.Range, skipStart int) {
+	tbl.ensureIter().SkipScan(prefixRng, suffixRng, skipStart)
 }
 
 func (tbl *Table) ensureIter() index.IndexIter {

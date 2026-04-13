@@ -57,8 +57,8 @@ type Iter interface {
 	// SkipScan enables skip-scan mode.
 	// prefixRng restricts visited prefix groups; iface.All means unrestricted.
 	// suffixRng applies to suffix fields (excluding prefix fields).
-	// prefixLen must be >= 1
-	SkipScan(prefixRng Range, suffixRng Range, prefixLen int)
+	// skipStart must be >= 1
+	SkipScan(prefixRng Range, suffixRng Range, skipStart int)
 }
 
 // Range specifies (key >= org && key < end)

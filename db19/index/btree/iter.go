@@ -11,17 +11,17 @@ import (
 
 // Iterator traverses a range of a btree.
 type Iterator struct {
-	bt            *btree
-	rng           Range
-	skipRng       Range               // suffix range used by skip-scan mode
-	skipPrefixLen int                 // number of prefix fields
-	tree          [maxLevels]treeIter // tree[0] is root
-	leaf          leafIter
-	state         iterState
-	noRange       bool // true if rng is iterator.All, bypasses checkRange
-	curKeySet     bool
-	curKey        string
-	skipGroup     string // current prefix group in skip-scan traversal
+	bt        *btree
+	rng       Range
+	skipRng   Range               // suffix range used by skip-scan mode
+	skipStart int                 // number of prefix fields
+	tree      [maxLevels]treeIter // tree[0] is root
+	leaf      leafIter
+	state     iterState
+	noRange   bool // true if rng is iterator.All, bypasses checkRange
+	curKeySet bool
+	curKey    string
+	skipGroup string // current prefix group in skip-scan traversal
 }
 
 const maxLevels = 8
@@ -89,18 +89,18 @@ func (it *Iterator) Rewind() {
 // Range sets the range and rewinds the iterator
 func (it *Iterator) Range(rng Range) {
 	it.rng = rng
-	it.skipPrefixLen = 0
+	it.skipStart = 0
 	it.noRange = (rng == iface.All)
 	it.Rewind()
 }
 
 // SkipScan enables btree-only skip-scan mode.
 // prefixRng applies to prefix fields and suffixRng to suffix fields.
-func (it *Iterator) SkipScan(prefixRng Range, suffixRng Range, prefixLen int) {
-	assert.That(prefixLen > 0)
+func (it *Iterator) SkipScan(prefixRng Range, suffixRng Range, skipStart int) {
+	assert.That(skipStart > 0)
 	it.rng = prefixRng
 	it.skipRng = suffixRng
-	it.skipPrefixLen = prefixLen
+	it.skipStart = skipStart
 	it.noRange = (prefixRng == iface.All)
 	it.skipGroup = ""
 	it.Rewind()
@@ -111,7 +111,7 @@ func (it *Iterator) SkipScan(prefixRng Range, suffixRng Range, prefixLen int) {
 // Next advances the iterator to the next key in the range or sets eof.
 func (it *Iterator) Next() {
 	it.curKeySet = false
-	if it.skipPrefixLen != 0 {
+	if it.skipStart != 0 {
 		it.skipNext()
 		return
 	}
@@ -180,7 +180,7 @@ func (it *Iterator) skipNext() {
 func (it *Iterator) skipAdvanceToMatch() {
 	for it.state == within {
 		key := it.leaf.key()
-		prefix, suffix := ixkey.SplitPrefixSuffix(key, it.skipPrefixLen)
+		prefix, suffix := ixkey.SplitPrefixSuffix(key, it.skipStart)
 		if !it.noRange && prefix >= it.rng.End {
 			it.state = eof
 			return
@@ -225,7 +225,7 @@ func (it *Iterator) skipAdvanceToMatch() {
 func (it *Iterator) skipSeekGroupOrg(prefix string) {
 	target := prefix
 	if it.skipRng.Org != ixkey.Min {
-		target = ixkey.JoinPrefixSuffix(prefix, it.skipPrefixLen, it.skipRng.Org)
+		target = ixkey.JoinPrefixSuffix(prefix, it.skipStart, it.skipRng.Org)
 	}
 	it.seekAllRaw(target)
 	// If we can't land at/after target, this group has no keys in range.
@@ -235,7 +235,7 @@ func (it *Iterator) skipSeekGroupOrg(prefix string) {
 }
 
 func (it *Iterator) skipSeekNextGroup(prefix string) {
-	target := ixkey.JoinPrefixSuffix(prefix, it.skipPrefixLen, ixkey.Max)
+	target := ixkey.JoinPrefixSuffix(prefix, it.skipStart, ixkey.Max)
 
 	// First try to find the target in the current leaf. This is the fast path when
 	// the next first-field group is still in the same leaf node.
@@ -268,7 +268,7 @@ func (it *Iterator) skipSeekNextGroup(prefix string) {
 // Prev moves the iterator to the previous key in the range or sets eof.
 func (it *Iterator) Prev() {
 	it.curKeySet = false
-	if it.skipPrefixLen != 0 {
+	if it.skipStart != 0 {
 		it.skipPrev()
 		return
 	}
@@ -346,7 +346,7 @@ func (it *Iterator) skipPrev() {
 func (it *Iterator) skipRetreatToMatch() {
 	// Reverse-direction mirror of skipAdvanceToMatch.
 	for it.state == within {
-		prefix, suffix := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipPrefixLen)
+		prefix, suffix := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipStart)
 		if !it.noRange && prefix < it.rng.Org {
 			it.state = eof
 			return
@@ -381,11 +381,11 @@ func (it *Iterator) skipRetreatToMatch() {
 }
 
 func (it *Iterator) skipSeekGroupEnd(prefix string) {
-	target := ixkey.JoinPrefixSuffix(prefix, it.skipPrefixLen, it.skipRng.End)
+	target := ixkey.JoinPrefixSuffix(prefix, it.skipStart, it.skipRng.End)
 	it.seekAllRaw(target)
 	// seekAllRaw positions >= target; back up until we're inside this group's range
 	for it.state == within {
-		p2, s2 := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipPrefixLen)
+		p2, s2 := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipStart)
 		if p2 > prefix || (p2 == prefix && s2 >= it.skipRng.End) {
 			it.prev()
 			it.curKeySet = false
@@ -425,7 +425,7 @@ func (it *Iterator) skipSeekPrevGroup(prefix string) {
 // Seek moves the iterator to the first position >= key.
 // If the key is outside the current range, eof will be set.
 func (it *Iterator) Seek(key string) {
-	if it.skipPrefixLen == 0 {
+	if it.skipStart == 0 {
 		it.SeekAll(key)
 		it.checkRange()
 		return
@@ -433,7 +433,7 @@ func (it *Iterator) Seek(key string) {
 	// In skip-scan mode, Seek should match regular Seek semantics on the
 	// filtered view: find first visible key >= key, or stay on last visible key.
 	visible := func(k string) (first string, ok bool) {
-		p, s := ixkey.SplitPrefixSuffix(k, it.skipPrefixLen)
+		p, s := ixkey.SplitPrefixSuffix(k, it.skipStart)
 		if !it.noRange && (p < it.rng.Org || p >= it.rng.End) {
 			return p, false
 		}
@@ -472,7 +472,7 @@ func (it *Iterator) Seek(key string) {
 // unless the btree is empty in which case it will be set to eof.
 // It does *not* apply the current range.
 func (it *Iterator) SeekAll(key string) {
-	if it.skipPrefixLen == 0 {
+	if it.skipStart == 0 {
 		it.seekAllRaw(key)
 		return
 	}
@@ -521,7 +521,7 @@ func (it *Iterator) seekAllRaw(key string) {
 // across all first-field groups, without applying any upper bound.
 func (it *Iterator) skipSuffixSeekUnbounded(minSuffix string) {
 	for it.state == within {
-		prefix, suffix := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipPrefixLen)
+		prefix, suffix := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipStart)
 		if prefix != it.skipGroup {
 			it.skipGroup = prefix
 			target := prefix + ixkey.Sep + minSuffix

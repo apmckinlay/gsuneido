@@ -35,7 +35,7 @@ type OverIter struct {
 	// singleIter is true when only the btree iterator is needed (no layers/mut)
 	singleIter bool
 	// number of leading fields treated as prefix in skip-scan mode
-	skipPrefixLen int
+	skipStart int
 }
 
 type state byte
@@ -111,7 +111,7 @@ func (oi *OverIter) checkHasCur() {
 
 func (oi *OverIter) Range(rng Range) {
 	oi.rng = rng
-	oi.skipPrefixLen = 0
+	oi.skipStart = 0
 	oi.state = rewound
 	for _, it := range oi.iters {
 		it.Range(rng)
@@ -121,14 +121,14 @@ func (oi *OverIter) Range(rng Range) {
 // SkipScan enables skip-scan mode.
 // prefixRng restricts visited prefix groups; iface.All means unrestricted.
 // suffixRng applies to suffix fields (excluding prefix fields).
-func (oi *OverIter) SkipScan(prefixRng Range, suffixRng Range, prefixLen int) {
-	assert.That(prefixLen > 0)
+func (oi *OverIter) SkipScan(prefixRng Range, suffixRng Range, skipStart int) {
+	assert.That(skipStart > 0)
 	oi.rng = prefixRng
 	oi.skipRng = suffixRng
-	oi.skipPrefixLen = prefixLen
+	oi.skipStart = skipStart
 	oi.state = rewound
 	for _, it := range oi.iters {
-		it.SkipScan(prefixRng, suffixRng, prefixLen)
+		it.SkipScan(prefixRng, suffixRng, skipStart)
 	}
 }
 
@@ -184,8 +184,8 @@ func (oi *OverIter) newIters(ov *Overlay) {
 		its = append(its, ov.mut.Iterator())
 	}
 	for _, it := range its {
-		if oi.skipPrefixLen != 0 {
-			it.SkipScan(oi.rng, oi.skipRng, oi.skipPrefixLen)
+		if oi.skipStart != 0 {
+			it.SkipScan(oi.rng, oi.skipRng, oi.skipStart)
 		} else {
 			it.Range(oi.rng)
 		}
