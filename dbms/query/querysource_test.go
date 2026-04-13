@@ -195,7 +195,6 @@ func (b *buildQS) makeKeys() {
 	if !b.noEmptyKey && b.rnd.IntN(11) == 5 {
 		b.emptyKey = true
 		b.keys = [][]string{{}}
-		b.indexes = [][]string{{}}
 		return
 	}
 	nkeys := 1 + b.rnd.IntN(b.maxKeys)
@@ -219,7 +218,7 @@ func (b *buildQS) makeKeys() {
 
 func (b *buildQS) makeIndexes() {
 	if b.emptyKey || len(b.columns) < 2 {
-		b.indexes = b.keys
+		b.indexes = slices.Clone(b.keys)
 		return
 	}
 	nindexes := b.rnd.IntN(b.maxIndexes)
@@ -228,10 +227,10 @@ func (b *buildQS) makeIndexes() {
 	maxcols := min(nindexes, len(b.columns))
 	for ncols := 1; ncols < maxcols; ncols++ {
 		idx := set.RandPerm(b.rnd, b.columns, ncols)
-		if !slices.ContainsFunc(b.indexes,
-			func(x []string) bool { return slices.Equal(x, idx) }) {
-			b.indexes = append(b.indexes, idx)
+		if slc.ContainsFn(b.indexes, idx, slices.Equal) {
+			continue
 		}
+		b.indexes = append(b.indexes, idx)
 	}
 }
 
@@ -305,6 +304,9 @@ func (qs *QuerySource) String() string {
 		sb.WriteString(")")
 	}
 	for _, i := range qs.IndexesResult {
+		// if slc.ContainsFn(qs.KeysResult, i, slices.Equal) {
+		// 	continue
+		// }
 		sb.WriteString(" index(")
 		sb.WriteString(str.Join(",", i))
 		sb.WriteString(")")
