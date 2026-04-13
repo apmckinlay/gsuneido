@@ -1,13 +1,13 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package set
-
-// this provides set operations on []T.
+// Package set provides set operations on []T.
+// Operations assume no duplicates.
 // Operations do not modify their inputs
 // but may return an input unmodified, rather than a copy.
 // Where applicable, the order of the values is maintained.
 // WARNING: these operations will be slow on large sets.
+package set
 
 import (
 	"slices"
@@ -179,6 +179,9 @@ outer:
 // Subset returns true is y is a subset of x
 // i.e. x contains all of y
 func Subset[E comparable](x, y []E) bool {
+	if len(y) > len(x) {
+		return false
+	}
 outer:
 	for _, ye := range y {
 		for _, xe := range x {

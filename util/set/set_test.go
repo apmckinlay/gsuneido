@@ -47,6 +47,7 @@ func TestSubset(*testing.T) {
 	test("a b c", "c a b", true)
 	test("a b c", "c a", true)
 	test("c a", "a b c", false)
+	test("c a x y", "a b c", false)
 }
 
 func TestDisjoint(*testing.T) {
