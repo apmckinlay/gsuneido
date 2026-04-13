@@ -43,8 +43,15 @@ func (t *Times) getKeys() [][]string {
 }
 
 func (t *Times) getIndexes() [][]string {
+	idx1 := t.source1.Indexes()
+	idx2 := t.source2.Indexes()
+	if isEmptyKey(idx1) {
+		return idx2
+	} else if isEmptyKey(idx2) {
+		return idx1
+	}
 	// no columns in common so no indexes in common
-	return slc.With(t.source1.Indexes(), t.source2.Indexes()...)
+	return slc.With(idx1, idx2...)
 }
 
 func (t *Times) getFixed() []Fixed {

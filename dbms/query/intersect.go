@@ -55,7 +55,14 @@ func (it *Intersect) getKeys() [][]string {
 }
 
 func (it *Intersect) getIndexes() [][]string {
-	return set.UnionFn(it.source1.Indexes(), it.source2.Indexes(), slices.Equal)
+	idx1 := it.source1.Indexes()
+	idx2 := it.source2.Indexes()
+	if isEmptyKey(idx1) {
+		return idx2
+	} else if isEmptyKey(idx2) {
+		return idx1
+	}
+	return set.UnionFn(idx1, idx2, slices.Equal)
 }
 
 func (it *Intersect) getFixed() []Fixed {

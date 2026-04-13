@@ -116,7 +116,14 @@ func (*Union) fastSingle() bool {
 func (u *Union) getIndexes() [][]string {
 	// lookup can read via any index
 	// merge cannot but that will be handled by optimize
-	return set.UnionFn(u.source1.Indexes(), u.source2.Indexes(), slices.Equal)
+	idx1 := u.source1.Indexes()
+	idx2 := u.source2.Indexes()
+	if isEmptyKey(idx1) {
+		return idx2
+	} else if isEmptyKey(idx2) {
+		return idx1
+	}
+	return set.UnionFn(idx1, idx2, slices.Equal)
 }
 
 func (u *Union) getNrows() (int, int) {
