@@ -1093,9 +1093,7 @@ func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand, index []string) {
 		noResults++
 	}
 
-	verifyNoDuplicates(t, expected, hdr, cols)
-
-	qh := NewQueryHasher(hdr)
+	qh := NewQueryHasher(hdr).CheckDups()
 	for _, row := range expected {
 		qh.Row(row)
 	}
@@ -1105,25 +1103,6 @@ func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand, index []string) {
 		testRandomSelects(t, rnd, q, index, expected)
 		testRandomLookups(t, rnd, q, index, cols, expected)
 	}
-}
-
-func verifyNoDuplicates(t *testing.T, rows []Row, hdr *Header, cols []string) {
-	seen := make(map[string]bool)
-	for _, row := range rows {
-		key := rowKey(row, hdr, cols)
-		if seen[key] {
-			t.Fatal("duplicate row in project result")
-		}
-		seen[key] = true
-	}
-}
-
-func rowKey(row Row, hdr *Header, cols []string) string {
-	var key strings.Builder
-	for _, col := range cols {
-		key.WriteString(row.GetRaw(hdr, col) + "|")
-	}
-	return key.String()
 }
 
 func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *Header,
