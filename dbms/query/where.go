@@ -603,7 +603,9 @@ func (w *Where) optInit() {
 		// fmt.Println("idxSels", w.idxSels)
 	}
 	w.setNrows(w.calcNrows())
-	if !w.singleton {
+	if w.singleton {
+		w.indexes = [][]string{{}}
+	} else {
 		w.indexes = w.source.Indexes()
 	}
 	w.optInited = optInitYes

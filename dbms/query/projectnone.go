@@ -45,7 +45,7 @@ func (*ProjectNone) fastSingle() bool {
 }
 
 func (*ProjectNone) Indexes() [][]string {
-	return nil
+	return [][]string{{}}
 }
 
 func (*ProjectNone) Nrows() (int, int) {

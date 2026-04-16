@@ -38,7 +38,7 @@ func (*Nothing) Keys() [][]string {
 }
 
 func (*Nothing) Indexes() [][]string {
-	return nil
+	return [][]string{{}}
 }
 
 func (*Nothing) Nrows() (int, int) {
