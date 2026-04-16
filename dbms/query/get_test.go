@@ -15,25 +15,24 @@ import (
 )
 
 func TestTableLookup(t *testing.T) {
-	ss := func(args ...string) []string {
-		return args
-	}
-	is := func(args ...int) []string {
-		ss := make([]string, len(args))
-		for i, n := range args {
-			ss[i] = Pack(IntVal(n))
+	sels := func(args ...any) Sels {
+		sels := make(Sels, 0, len(args)/2)
+		for i := 0; i < len(args); i += 2 {
+			col := args[i].(string)
+			val := Pack(IntVal(args[i+1].(int)))
+			sels = append(sels, Sel{col, val})
 		}
-		return ss
+		return sels
 	}
-	test := func(query string, cols, vals []string, expected string) {
+	test := func(query string, sels Sels, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
 		q, _, _ = Setup(q, ReadMode, testTran{})
-		row := q.(*Table).Lookup(nil, cols, vals)
+		row := q.(*Table).Lookup(nil, sels)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
 	}
-	test("table", ss("a"), is(123), "[{123}]")
-	test("comp", ss("a", "b", "c"), is(12, 34, 56), "[{12, 34, 56}]")
+	test("table", sels("a", 123), "[{123}]")
+	test("comp", sels("a", 12, "b", 34, "c", 56), "[{12, 34, 56}]")
 }
 
 func TestQueryGet(t *testing.T) {

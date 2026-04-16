@@ -81,7 +81,7 @@ func (*Nothing) lookupCost() Cost {
 	return 0
 }
 
-func (*Nothing) Lookup(*Thread, []string, []string) Row {
+func (*Nothing) Lookup(*Thread, Sels) Row {
 	return nil
 }
 
@@ -96,7 +96,7 @@ func (*Nothing) Get(*Thread, Dir) Row {
 func (*Nothing) Rewind() {
 }
 
-func (*Nothing) Select([]string, []string) {
+func (*Nothing) Select(Sels) {
 }
 
 func (*Nothing) Simple(*Thread) []Row {

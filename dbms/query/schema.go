@@ -78,11 +78,11 @@ func (st *schemaTable) lookupCost() Cost {
 	return 1000
 }
 
-func (*schemaTable) Lookup(*Thread, []string, []string) Row {
+func (*schemaTable) Lookup(*Thread, Sels) Row {
 	panic(assert.ShouldNotReachHere())
 }
 
-func (*schemaTable) Select([]string, []string) {
+func (*schemaTable) Select(Sels) {
 	assert.ShouldNotReachHere()
 }
 

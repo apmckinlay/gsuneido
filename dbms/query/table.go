@@ -47,8 +47,7 @@ type Table struct {
 	name    string
 	allKeys [][]string
 	index   []string // index that will be used to access the data
-	selcols []string
-	selvals []string
+	sels    Sels
 	queryBase
 	iIndex      int
 	singleton   bool
@@ -237,29 +236,29 @@ func lookupCost(levels int) Cost {
 
 // execution --------------------------------------------------------
 
-func (tbl *Table) Lookup(_ *Thread, cols, vals []string) (row Row) {
-	assert.That(!selConflict(tbl.header.Columns, cols, vals))
+func (tbl *Table) Lookup(_ *Thread, sels Sels) (row Row) {
+	assert.That(!selConflict(tbl.header.Columns, sels))
 	tbl.nlooks++
 	if tbl.singleton {
 		// For singleton tables (empty key), any columns are acceptable
 		// Singleton tables have at most one row, so we can use GetFilter
 		// which already handles singleton filtering
-		tbl.selcols, tbl.selvals = cols, vals
+		tbl.sels = sels
 		tbl.ensureIter().Range(iface.All)
 		tbl.Rewind()
 		return tbl.GetFilter(Next, nil)
 	}
 	// For non-singleton tables, the lookup columns must match the index.
 	ix := &tbl.schema.Indexes[tbl.iIndex]
-	key := selOrg(tbl.indexEncode, ix.Fields, cols, vals, true)
+	key := selOrg(tbl.indexEncode, ix.Fields, sels, true)
 	if len(ix.Ixspec.Fields2) > 0 && key == "" {
 		// For unique indexes, if all index field values are empty,
 		// Fields2 (from BestKey) is added to make the key unique
 		fullFields := set.Union(ix.Fields, ix.BestKey)
-		assert.That(set.Equal(fullFields, cols))
-		key = selOrg(true, fullFields, cols, vals, true)
+		assert.That(sels.ColsAre(fullFields))
+		key = selOrg(true, fullFields, sels, true)
 	} else {
-		assert.That(set.Equal(ix.Fields, cols))
+		assert.That(sels.ColsAre(ix.Fields))
 	}
 	return tbl.LookupRaw(key)
 }
@@ -311,7 +310,7 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string) bool) Row {
 		rec := tbl.tran.GetRecord(off)
 		row := Row{DbRec{Record: rec, Off: off}}
 		if tbl.singleton &&
-			!singletonFilter(tbl.header, row, tbl.selcols, tbl.selvals) {
+			!singletonFilter(tbl.header, row, tbl.sels) {
 			return nil
 		}
 		tbl.ngets++
@@ -319,52 +318,46 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string) bool) Row {
 	}
 }
 
-func (tbl *Table) Select(cols, vals []string) {
+func (tbl *Table) Select(sels Sels) {
 	tbl.nsels++
 	if tbl.singleton {
-		tbl.selcols, tbl.selvals = cols, vals
+		tbl.sels = sels
 		tbl.ensureIter().Range(iface.All)
 		return
 	}
-	if cols == nil && vals == nil { // clear select
+	if sels == nil { // clear select
 		tbl.ensureIter().Range(iface.All)
 		return
 	}
-	assert.That(!selConflict(tbl.header.Columns, cols, vals))
-	org, end := selKeys(tbl.indexEncode, tbl.index, cols, vals)
+	assert.That(!selConflict(tbl.header.Columns, sels))
+	org, end := selKeys(tbl.indexEncode, tbl.index, sels)
 	tbl.SelectRaw(org, end)
 }
 
-func selKeys(encode bool, dstCols, srcCols, vals []string) (string, string) {
+func selKeys(encode bool, dstCols []string, sels Sels) (string, string) {
 	if len(dstCols) == 0 {
 		return ixkey.Min, ixkey.Max
 	}
 	if !encode {
 		assert.That(len(dstCols) == 1)
-		org := selGet(dstCols[0], srcCols, vals)
+		org := sels.MustGet(dstCols[0])
 		end := org + "\x00"
 		return org, end
 	}
-	end := selEnd(dstCols, srcCols, vals)
+	end := selEnd(dstCols, sels)
 	org := trim(end) // selOrg(true, dstCols, srcCols, vals)
 	return org, end
 }
 
-func selGet(col string, cols, vals []string) string {
-	i := slices.Index(cols, col)
-	assert.That(i != -1)
-	return vals[i]
-}
-
-func selEnd(dstCols, srcCols, vals []string) string {
+func selEnd(dstCols []string, sels Sels) string {
 	enc := ixkey.Encoder{}
 	data := false
 	for _, col := range dstCols {
-		i := slices.Index(srcCols, col)
-		if i == -1 {
+		val, ok := sels.Get(col)
+		if !ok {
 			break
 		}
-		enc.Add(vals[i])
+		enc.Add(val)
 		data = true
 	}
 	assert.That(data)
@@ -381,25 +374,25 @@ func trim(end string) string {
 	return org[:n]
 }
 
-func selOrg(encode bool, dstCols, srcCols, vals []string, full bool) string {
+func selOrg(encode bool, dstCols []string, sels Sels, full bool) string {
 	if !encode {
 		if len(dstCols) == 0 {
 			return ""
 		}
 		assert.That(len(dstCols) == 1)
-		return selGet(dstCols[0], srcCols, vals)
+		return sels.MustGet(dstCols[0])
 	}
 	enc := ixkey.Encoder{}
 	data := false
 	for _, col := range dstCols {
-		i := slices.Index(srcCols, col)
-		if i == -1 {
+		val, ok := sels.Get(col)
+		if !ok {
 			if full {
 				panic("selOrg not full")
 			}
 			break
 		}
-		enc.Add(vals[i])
+		enc.Add(val)
 		data = true
 	}
 	assert.That(data)
@@ -445,10 +438,10 @@ func (tbl *Table) Simple(*Thread) []Row {
 	return rows
 }
 
-func (tbl *Table) RangeFrac(index, cols, vals []string) float64 {
+func (tbl *Table) RangeFrac(index []string, sels Sels) float64 {
 	iIndex := tbl.indexi(index)
 	encode := len(index) > 1 ||
 		!slc.ContainsFn(tbl.allKeys, index, set.Equal[string])
-	org, end := selKeys(encode, index, cols, vals)
+	org, end := selKeys(encode, index, sels)
 	return tbl.tran.RangeFrac(tbl.name, iIndex, org, end)
 }

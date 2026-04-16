@@ -141,28 +141,28 @@ func (sj *SemiJoin) Get(th *Thread, dir Dir) Row {
 }
 
 func (sj *SemiJoin) source2Has(th *Thread, row Row, dir Dir) bool {
-	vals := make([]string, len(sj.by))
+	sels := make(Sels, len(sj.by))
 	for i, col := range sj.by {
-		vals[i] = row.GetRawVal(sj.source1.Header(), col, th, sj.st)
+		sels[i] = Sel{col, row.GetRawVal(sj.source1.Header(), col, th, sj.st)}
 	}
-	sj.source2.Select(sj.by, vals)
+	sj.source2.Select(sels)
 	return sj.source2.Get(th, dir) != nil
 }
 
-func (sj *SemiJoin) Select(cols, vals []string) {
+func (sj *SemiJoin) Select(sels Sels) {
 	sj.nsels++
-	sj.source1.Select(cols, vals)
-	sj.source2.Select(nil, nil)
+	sj.source1.Select(sels)
+	sj.source2.Select(nil)
 	sj.Rewind()
 }
 
-func (sj *SemiJoin) Lookup(th *Thread, cols, vals []string) Row {
+func (sj *SemiJoin) Lookup(th *Thread, sels Sels) Row {
 	sj.nlooks++
-	row := sj.source1.Lookup(th, cols, vals)
+	row := sj.source1.Lookup(th, sels)
 	if row != nil && !sj.source2Has(th, row, Next) {
 		row = nil
 	}
-	sj.source2.Select(nil, nil)
+	sj.source2.Select(nil)
 	return row
 }
 

@@ -169,11 +169,10 @@ func TestSelKeys(t *testing.T) {
 	max := ixkey.Max
 	encode := false
 	dstCols := []string{"one"}
-	srcCols := []string{"two", "one"}
-	vals := []string{"2", "1"}
+	srcSels := Sels{{"two", "2"}, {"one", "1"}}
 	test := func(org, end string) {
 		t.Helper()
-		o, e := selKeys(encode, dstCols, srcCols, vals)
+		o, e := selKeys(encode, dstCols, srcSels)
 		assert.Msg("org").This(o).Is(org)
 		assert.Msg("end").This(e).Is(end)
 	}
@@ -182,8 +181,7 @@ func TestSelKeys(t *testing.T) {
 	dstCols = []string{"one", "two"}
 	test("1"+sep+"2", "1"+sep+"2"+sep+max)
 	dstCols = []string{"a", "b", "c"}
-	srcCols = []string{"a"}
-	vals = []string{"1"}
+	srcSels = Sels{{"a", "1"}}
 	test("1", "1"+sep+max)
 }
 
@@ -282,19 +280,18 @@ func TestLookupOnSingleton(t *testing.T) {
 	tbl := NewTable(db.NewReadTran(), "tmp")
 	hdr := tbl.Header()
 
-	row := tbl.Lookup(nil, []string{"a", "b"},
-		[]string{Pack(IntVal(1)), Pack(IntVal(2))})
+	sels := Sels{{"a", Pack(IntVal(1))}, {"b", Pack(IntVal(2))}}
+	row := tbl.Lookup(nil, sels)
 	assert.T(t).This(row).Is(nil)
 
 	act(db, "insert {a: 1, b: 2, c: 3} into tmp")
 	tbl = NewTable(db.NewReadTran(), "tmp")
 	// existent row
-	row = tbl.Lookup(nil, []string{"a", "b"},
-		[]string{Pack(IntVal(1)), Pack(IntVal(2))})
+	row = tbl.Lookup(nil, sels)
 	assert.T(t).This(row2str(hdr, row)).Is("a=1 b=2 c=3")
 	// nonexistent row
-	row = tbl.Lookup(nil, []string{"a", "b"},
-		[]string{Pack(IntVal(3)), Pack(IntVal(4))})
+	sels = Sels{{"a", Pack(IntVal(3))}, {"b", Pack(IntVal(4))}}
+	row = tbl.Lookup(nil, sels)
 	assert.T(t).This(row).Is(nil)
 }
 
@@ -312,17 +309,16 @@ func TestSingleton(t *testing.T) {
 	q = SetupIdx(q, ReadMode, tran, []string{"b"})
 	assert.This(String(q)).Is("tmp^(a) where*1 a is 3") // singleton
 	// reading by a, but singleton so we can Select/Lookup on b
-	bcols := []string{"b"}
-	bvals := []string{Pack(SuInt(4))}
-	q.Select(bcols, bvals)
+	bsels := Sels{{"b", Pack(SuInt(4))}}
+	q.Select(bsels)
 	assert.This(queryAll2(q)).Is("a=3 b=4")
 	hdr := q.Header()
-	assert.This(row2str(hdr, q.Lookup(nil, bcols, bvals))).Is("a=3 b=4")
+	assert.This(row2str(hdr, q.Lookup(nil, bsels))).Is("a=3 b=4")
 
-	bvals = []string{Pack(SuInt(2))}
-	q.Select(bcols, bvals)
+	bsels = Sels{{"b", Pack(SuInt(2))}}
+	q.Select(bsels)
 	assert.This(queryAll2(q)).Is("")
-	assert.This(q.Lookup(nil, bcols, bvals)).Is(nil)
+	assert.This(q.Lookup(nil, bsels)).Is(nil)
 }
 
 func TestWithoutDupsOrSupersets(t *testing.T) {
@@ -397,10 +393,9 @@ func TestJoin_splitSelect(t *testing.T) {
 	jn := NewJoin(q1, q2, nil, nil).(*Join)
 	assert.This(jn.by).Is([]string{"c"})
 
-	cols := []string{"a", "c"}
-	vals := fixvals("9", "1")
-	jn.Select(cols, vals)
-	assert.This(q1.sel).Is(sel{cols: cols, vals: vals})
+	sels := Sels{{"a", fixvals("9")[0]}, {"c", fixvals("1")[0]}}
+	jn.Select(sels)
+	assert.This(q1.sels).Is(sels)
 }
 
 func fixvals(strs ...string) []string {
@@ -411,18 +406,13 @@ func fixvals(strs ...string) []string {
 
 type TestQop struct {
 	Nothing
-	sel
+	sels Sels
 }
 
 func newTestQop(cols []string) *TestQop {
 	q := &TestQop{}
 	q.header = SimpleHeader(cols)
 	return q
-}
-
-type sel struct {
-	cols []string
-	vals []string
 }
 
 func (q *TestQop) Indexes() [][]string { // override Nothing
@@ -436,8 +426,8 @@ func (q *TestQop) Keys() [][]string { // override Nothing
 	return q.keys
 }
 
-func (q *TestQop) Select(cols, vals []string) {
-	q.sel = sel{cols: cols, vals: vals}
+func (q *TestQop) Select(sels Sels) {
+	q.sels = sels
 }
 
 func (q *TestQop) fastSingle() bool { // override Nothing
@@ -459,10 +449,9 @@ func TestTimesLookup(t *testing.T) {
 	tran := db.NewReadTran()
 	q := ParseQuery("tmp1 times tmp2", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
-	cols := []string{"a", "x"}
 	test := func(a, x int, expected string) {
-		vals := []string{Pack(SuInt(a)), Pack(SuInt(x))}
-		row := q.Lookup(nil, cols, vals)
+		sels := Sels{{"a", Pack(SuInt(a))}, {"x", Pack(SuInt(x))}}
+		row := q.Lookup(nil, sels)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
 	}
 	test(3, 7, "[{3, 4} {7, 8}]")
@@ -498,18 +487,16 @@ func TestLookupOnUniqueIndexWithEmptyFields(t *testing.T) {
 	hdr := tbl.Header()
 
 	// Test 1: Lookup by non-empty unique index value should work
-	row := tbl.Lookup(nil, []string{"u"}, []string{Pack(SuStr("x"))})
+	row := tbl.Lookup(nil, Sels{{"u", Pack(SuStr("x"))}})
 	assert.T(t).Msg("lookup u='x'").This(row2str(hdr, row)).Is("data=third k=3 u=x")
 
 	// Test 2: Lookup by empty unique index value - this is the problematic case.
 	// There are two records with u='', so to get a unique lookup,
 	// the lookup needs to include the Fields2 columns (k) as well.
-	row = tbl.Lookup(nil, []string{"u", "k"},
-		[]string{Pack(SuStr("")), Pack(SuInt(1))})
+	row = tbl.Lookup(nil, Sels{{"u", Pack(SuStr(""))}, {"k", Pack(SuInt(1))}})
 	assert.T(t).Msg("lookup u='', k=1").This(row2str(hdr, row)).Is("data=first k=1")
 
-	row = tbl.Lookup(nil, []string{"u", "k"},
-		[]string{Pack(SuStr("")), Pack(SuInt(2))})
+	row = tbl.Lookup(nil, Sels{{"u", Pack(SuStr(""))}, {"k", Pack(SuInt(2))}})
 	assert.T(t).Msg("lookup u='', k=2").This(row2str(hdr, row)).Is("data=second k=2")
 }
 

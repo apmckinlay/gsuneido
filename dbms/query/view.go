@@ -46,11 +46,11 @@ func (v *View) Get(th *Thread, dir Dir) Row {
 	panic(assert.ShouldNotReachHere())
 }
 
-func (v *View) Select(cols []string, vals []string) {
+func (v *View) Select(Sels) {
 	panic(assert.ShouldNotReachHere())
 }
 
-func (v *View) Lookup(th *Thread, cols []string, vals []string) Row {
+func (v *View) Lookup(*Thread, Sels) Row {
 	panic(assert.ShouldNotReachHere())
 }
 

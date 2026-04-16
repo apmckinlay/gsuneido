@@ -110,14 +110,14 @@ func (m *QueryMock) Get(*Thread, Dir) Row {
 	panic("QueryMock.Get not implemented")
 }
 
-func (m *QueryMock) Lookup(*Thread, []string, []string) Row {
+func (m *QueryMock) Lookup(*Thread, Sels) Row {
 	if m.LookupResult != nil {
 		return m.LookupResult
 	}
 	panic("QueryMock.Lookup not implemented")
 }
 
-func (*QueryMock) Select([]string, []string) {
+func (*QueryMock) Select(Sels) {
 	panic("QueryMock.Select not implemented")
 }
 

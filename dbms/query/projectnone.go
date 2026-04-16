@@ -81,7 +81,7 @@ func (*ProjectNone) lookupCost() Cost {
 	return 0
 }
 
-func (*ProjectNone) Lookup(*Thread, []string, []string) Row {
+func (*ProjectNone) Lookup(*Thread, Sels) Row {
 	return nil
 }
 
@@ -106,7 +106,7 @@ func (pn *ProjectNone) Get(*Thread, Dir) Row {
 func (*ProjectNone) Rewind() {
 }
 
-func (*ProjectNone) Select([]string, []string) {
+func (*ProjectNone) Select(Sels) {
 }
 
 func (*ProjectNone) Simple(*Thread) []Row {

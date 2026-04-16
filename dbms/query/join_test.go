@@ -89,7 +89,7 @@ func TestJoin_EmptyTempIndexBug(t *testing.T) {
 	// fmt.Println(Strategy(q))
 	assert.T(t).Msg("empty TempIndex").
 		That(!strings.Contains(Strategy(q), "TEMPINDEX()"))
-	q.Select(idx, []string{"", ""})
+	q.Select(Sels{{"ck", ""}, {"ik", ""}})
 }
 
 func setupIndex(q Query, mode Mode, index []string, tran QueryTran) Query {

@@ -37,25 +37,20 @@ const (
 )
 
 // lookupKey is the composite key for caching lookups based on column/value pairs.
-type lookupKey struct {
-	cols []string
-	vals []string
-}
+type lookupKey Sels
 
 func (lk lookupKey) Hash() uint64 {
 	h := uint64(0)
-	for _, col := range lk.cols {
-		h = h*131 + hash.String(col)
-	}
-	for _, val := range lk.vals {
-		h = h*131 + hash.String(val)
+	for _, sel := range lk {
+		h = h*131 + hash.String(sel.col)
+		h = h*131 + hash.String(sel.val)
 	}
 	return h
 }
 
 func (lk lookupKey) Equal(other any) bool {
 	if o, ok := other.(lookupKey); ok {
-		return slices.Equal(lk.cols, o.cols) && slices.Equal(lk.vals, o.vals)
+		return slices.Equal(lk, o)
 	}
 	return false
 }
@@ -81,7 +76,7 @@ func (lc *lookupCache) SetCounters(probes, misses *atomic.Int64) {
 // - Increments probes for every attempted cache access.
 // - Increments misses only when the provider runs (i.e. cache insert).
 // - Uses GetPut so cache hits avoid invoking the provider function.
-func (lc *lookupCache) Lookup(th *Thread, q Query, cols, vals []string, st *SuTran) Row {
+func (lc *lookupCache) Lookup(th *Thread, q Query, sels Sels, st *SuTran) Row {
 	if !lc.cacheDisabled && (st == nil || !st.Updatable()) {
 		if lc.cache == nil {
 			lc.cache = lrucache.New[lookupKey, Row](cacheCapacity)
@@ -94,7 +89,7 @@ func (lc *lookupCache) Lookup(th *Thread, q Query, cols, vals []string, st *SuTr
 			}
 		}
 
-		key := lookupKey{cols: cols, vals: vals}
+		key := lookupKey(sels)
 		if lc.probes != nil {
 			lc.probes.Add(1)
 		}
@@ -102,11 +97,11 @@ func (lc *lookupCache) Lookup(th *Thread, q Query, cols, vals []string, st *SuTr
 			if lc.misses != nil {
 				lc.misses.Add(1)
 			}
-			return q.Lookup(th, k.cols, k.vals)
+			return q.Lookup(th, Sels(k))
 		})
 	}
 bypass:
-	return q.Lookup(th, cols, vals)
+	return q.Lookup(th, sels)
 }
 
 // evaluatePerformance uses cache stats since Reset (hits and misses).

@@ -47,17 +47,16 @@ func TestExtendSelect(t *testing.T) {
 	q = SetupIdx(q, ReadMode, rt, ex)
 	assert.That(q.fastSingle())
 	
-	zero := []string{Pack(Zero.(Packable))}
-	q.Select(ex, zero)
+	q.Select(Sels{{col: "ex", val: Pack(IntVal(0))}})
 	assert.This(q.Get(nil, Next)).Is(nil)
-	q.Select(nil, nil)
+	q.Select(nil)
 
-	two := []string{Pack(IntVal(2))}
-	q.Select(ex, two)
+	two := Sels{{col: "ex", val: Pack(IntVal(2))}}
+	q.Select(two)
 	assert.That(q.Get(nil, Next) != nil)
-	q.Select(nil, nil)
+	q.Select(nil)
 
-	assert.That(q.Lookup(nil, ex, two) != nil)
+	assert.That(q.Lookup(nil, two) != nil)
 }
 
 func TestExtendRuleBug(t *testing.T) {

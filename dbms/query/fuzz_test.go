@@ -1094,7 +1094,7 @@ func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand) {
 	for _, row := range expected {
 		qh.Row(row)
 	}
-	testRandomGet(t, rnd, q, qh, hdr, nil, nil)
+	testRandomGet(t, rnd, q, qh, hdr, nil)
 
 	switch which {
 	case "lookup":
@@ -1116,8 +1116,7 @@ func keyIndexes(q Query) [][]string {
 	return keyIndexes
 }
 
-func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *Header,
-	selCols, selVals []string) {
+func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *Header, sels Sels) {
 	// Get all rows using Next first to establish correct iteration order
 	q.Rewind()
 	nextRows := getAllRows(q, Next)
@@ -1131,15 +1130,15 @@ func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *He
 	data := NewDataSource(nextRows)
 
 	// Redo the Select after getAllRows to reset indexed state for projMap
-	q.Select(selCols, selVals)
+	q.Select(sels)
 
 	// Do a random walk with Next/Prev using nextRows as expected
 	nsteps := min(100, len(nextRows)*3)
 	for range nsteps {
 		// Occasionally add a Select to reset indexed flag for projMap
 		if rnd.IntN(20) == 0 { // 5% chance
-			if selCols == nil {
-				q.Select(nil, nil) // this also rewinds
+			if sels == nil {
+				q.Select(nil) // this also rewinds
 			} else {
 				q.Rewind()
 			}
@@ -1351,32 +1350,32 @@ func testExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header
 	}
 	for range 10 {
 		srcRow := random(allRows, rnd)
-		selCols, selVals := indexSelectCriteria(rnd, srcRow, hdr, index)
-		q.Select(selCols, selVals)
+		sels := indexSelectCriteria(rnd, srcRow, hdr, index)
+		q.Select(sels)
 
 		qh := NewQueryHasher(hdr)
 		for _, row := range allRows {
-			if selMatchIndex(hdr, row, selCols, selVals, index) {
+			if selMatchIndex(hdr, row, sels, index) {
 				qh.Row(row)
 			}
 		}
 
-		testRandomGet(t, rnd, q, qh, hdr, selCols, selVals)
+		testRandomGet(t, rnd, q, qh, hdr, sels)
 
-		q.Select(nil, nil) // clear select
+		q.Select(nil) // clear select
 	}
 }
 
 // selMatchIndex checks only the index columns, not extra columns.
 // It iterates the index in order and stops at the first missing column,
 // matching the behavior of selKeys/TempIndex.makeKey.
-func selMatchIndex(hdr *Header, row Row, selCols, selVals, index []string) bool {
+func selMatchIndex(hdr *Header, row Row, sels Sels, index []string) bool {
 	for _, col := range index {
-		i := slices.Index(selCols, col)
-		if i == -1 {
+		val, ok := sels.Get(col)
+		if !ok {
 			break // stop at first missing column (matches selKeys behavior)
 		}
-		if row.GetRaw(hdr, col) != selVals[i] {
+		if row.GetRaw(hdr, col) != val {
 			return false
 		}
 	}
@@ -1384,18 +1383,18 @@ func selMatchIndex(hdr *Header, row Row, selCols, selVals, index []string) bool 
 }
 
 // indexSelectCriteria picks a random prefix of the index for select criteria.
-func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index []string) ([]string, []string) {
+func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index []string) Sels {
 	n := 1 + rnd.IntN(len(index))
 	selCols := slices.Clone(index[:n])
 	rnd.Shuffle(len(selCols), func(i, j int) {
 		selCols[i], selCols[j] = selCols[j], selCols[i]
 	})
 
-	selVals := make([]string, len(selCols))
+	sels := make(Sels, len(selCols))
 	for i, col := range selCols {
-		selVals[i] = row.GetRaw(hdr, col)
+		sels[i] = Sel{col: col, val: row.GetRaw(hdr, col)}
 	}
-	return selCols, selVals
+	return sels
 }
 
 func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header, index []string, q Query) {
@@ -1406,13 +1405,13 @@ func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Hea
 		if len(allRows) > 0 {
 			srcRow = random(allRows, rnd)
 		}
-		selCols, selVals := indexSelectCriteria(rnd, srcRow, hdr, index)
-		selVals[rnd.IntN(len(selVals))] = "nonexistent"
-		q.Select(selCols, selVals)
+		sels := indexSelectCriteria(rnd, srcRow, hdr, index)
+		sels[rnd.IntN(len(sels))].val = "nonexistent"
+		q.Select(sels)
 		if q.Get(nil, Next) != nil {
 			t.Fatal("non-existent select returned a row")
 		}
-		q.Select(nil, nil) // clear select
+		q.Select(nil) // clear select
 	}
 }
 
@@ -1466,19 +1465,19 @@ func testExistentLookup(t *testing.T, allRows []Row, rnd *rand.Rand, lookupCols 
 	for range min(10, len(allRows)) {
 		srcRow := random(allRows, rnd)
 
-		lookupVals := make([]string, len(lookupCols))
+		sels := make(Sels, len(lookupCols))
 		for i, col := range lookupCols {
-			lookupVals[i] = srcRow.GetRaw(hdr, col)
+			sels[i] = Sel{col: col, val: srcRow.GetRaw(hdr, col)}
 		}
 
-		result := q.Lookup(nil, lookupCols, lookupVals)
+		result := q.Lookup(nil, sels)
 
 		if result == nil {
 			t.Fatal("lookup returned nil for existing key")
 		}
 
 		for i, col := range lookupCols {
-			if result.GetRaw(hdr, col) != lookupVals[i] {
+			if result.GetRaw(hdr, col) != sels[i].val {
 				t.Fatalf("lookup result doesn't match key: col=%s", col)
 			}
 		}
@@ -1500,18 +1499,19 @@ func testExistentLookup(t *testing.T, allRows []Row, rnd *rand.Rand, lookupCols 
 func testNonExistentLookup(t *testing.T, rnd *rand.Rand, q Query, lookupCols []string) {
 	t.Helper()
 	for range 10 {
-		keyVals := make([]string, len(lookupCols))
+		sels := make(Sels, len(lookupCols))
 		// set one of the keyVals to a non-existent value
 		// the others to possibly existing values
 		r := rnd.IntN(len(lookupCols))
 		for i, col := range lookupCols {
+			sels[i].col = col
 			if i == r {
-				keyVals[i] = "nonexistent"
+				sels[i].val = "nonexistent"
 			} else {
-				keyVals[i] = col + "_" + strconv.Itoa(rnd.IntN(100))
+				sels[i].val = col + "_" + strconv.Itoa(rnd.IntN(100))
 			}
 		}
-		result := q.Lookup(nil, lookupCols, keyVals)
+		result := q.Lookup(nil, sels)
 		if result != nil {
 			t.Fatal("lookup returned row for non-existent key")
 		}

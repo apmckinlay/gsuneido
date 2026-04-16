@@ -103,9 +103,9 @@ func (sort *Sort) Get(th *Thread, dir Dir) Row {
 	return row
 }
 
-func (sort *Sort) Select(cols, vals []string) {
+func (sort *Sort) Select(sels Sels) {
 	sort.nsels++
-	sort.source.Select(cols, vals)
+	sort.source.Select(sels)
 }
 
 func (sort *Sort) Simple(th *Thread) []Row {

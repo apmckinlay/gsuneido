@@ -29,7 +29,7 @@ import (
 // joinLike is common stuff for Join, LeftJoin, and Times
 type joinLike struct {
 	// sel2cols/vals are from an incoming Select and used by Get
-	sel2cols, sel2vals []string
+	sel2 Sels
 	Query2
 }
 
@@ -493,94 +493,89 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 		return false
 	}
 	// fmt.Println("Join row1", jn.row1)
-	// assert.That(set.Disjoint(jn.by, jn.sel2cols))
-	sel2cols := slc.With(jn.sel2cols, jn.by...)
-	sel2vals := slc.With(jn.sel2vals, jn.projectRow1(th, jn.row1)...)
+	// assert.That(set.Disjoint(jn.by, jn.sel2))
+	sel2 := slc.With(jn.sel2, jn.projectRow1(th, jn.row1)...)
 	if jn.joinType.toOne() {
-		jn.lookupRow = jn.cachedLookup(th, sel2cols, sel2vals)
+		jn.lookupRow = jn.cachedLookup(th, sel2)
 	} else {
-		jn.source2.Select(sel2cols, sel2vals)
+		jn.source2.Select(sel2)
 	}
 	return true
 }
 
-func (jb *joinBase) cachedLookup(th *Thread, cols, vals []string) Row {
-	return jb.lookupCache.Lookup(th, jb.source2, cols, vals, jb.st)
+func (jb *joinBase) cachedLookup(th *Thread, sels Sels) Row {
+	return jb.lookupCache.Lookup(th, jb.source2, sels, jb.st)
 }
 
-func (jb *joinBase) projectRow1(th *Thread, row Row) []string {
-	key := make([]string, len(jb.by))
+func (jb *joinBase) projectRow1(th *Thread, row Row) Sels {
+	sels := make(Sels, len(jb.by))
 	for i, col := range jb.by {
-		key[i] = row.GetRawVal(jb.source1.Header(), col, th, jb.st)
+		sels[i] = Sel{col, row.GetRawVal(jb.source1.Header(), col, th, jb.st)}
 	}
-	return key
+	return sels
 }
 
-func (jn *Join) Select(cols, vals []string) {
+func (jn *Join) Select(sels Sels) {
 	// fmt.Println(jn.strategy(), "Select", cols, unpack(vals))
 	jn.nsels++
 	jn.rewind()
-	jn.select1(cols, vals)
+	jn.select1(sels)
 }
 
 // select1 splits the select, calls source1 Select, and sets sel2cols/vals.
 // It is used by Join, LeftJoin, and Times.
-func (jl *joinLike) select1(cols, vals []string) {
-	if cols == nil { // clear
-		jl.source1.Select(nil, nil)
-		jl.source2.Select(nil, nil)
-		jl.sel2cols, jl.sel2vals = nil, nil
+func (jl *joinLike) select1(sels Sels) {
+	if sels == nil { // clear
+		jl.source1.Select(nil)
+		jl.source2.Select(nil)
+		jl.sel2 = nil
 		return
 	}
-	sel1cols, sel1vals, sel2cols, sel2vals := jl.splitSelect(cols, vals)
-	jl.source1.Select(sel1cols, sel1vals)
-	jl.sel2cols, jl.sel2vals = sel2cols, sel2vals
+	sel1, sel2 := jl.splitSelect(sels)
+	jl.source1.Select(sel1)
+	jl.sel2 = sel2
 }
 
-func (jl *joinLike) splitSelect(cols, vals []string) (
-	sel1cols, sel1vals, sel2cols, sel2vals []string) {
+func (jl *joinLike) splitSelect(sels Sels) (sel1, sel2 Sels) {
 	columns1 := jl.source1.Columns()
 	columns2 := jl.source2.Columns()
-	for i, col := range cols {
-		if slices.Contains(columns1, col) { // includes common
-			sel1cols = append(sel1cols, col)
-			sel1vals = append(sel1vals, vals[i])
-		} else if slices.Contains(columns2, col) {
-			sel2cols = append(sel2cols, col)
-			sel2vals = append(sel2vals, vals[i])
+	for _, sel := range sels {
+		if slices.Contains(columns1, sel.col) { // includes common
+			sel1 = append(sel1, sel)
+		} else if slices.Contains(columns2, sel.col) {
+			sel2 = append(sel2, sel)
 		}
 	}
 	return
 }
 
-func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
+func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	// fmt.Println(jn.strategy(), "Lookup", cols, unpack(vals))
 	jn.nlooks++
-	sel1cols, sel1vals, sel2cols, sel2vals := jn.splitSelect(cols, vals)
-	if jn.lookupFallback(sel1cols) {
+	sel1, sel2 := jn.splitSelect(sels)
+	if jn.lookupFallback(sel1) {
 		// log.Println("INFO Join Lookup fallback to Select & Get")
 		jn.rewind()
-		jn.source1.Select(sel1cols, sel1vals)
-		defer jn.Select(nil, nil)
-		jn.sel2cols, jn.sel2vals = sel2cols, sel2vals
+		jn.source1.Select(sel1)
+		defer jn.Select(nil)
+		jn.sel2 = sel2
 		x := jn.Get(th, Next)
 		// if x != nil { // verify unique
 		// 	assert.That(jn.Get(th, Next) == nil)
 		// }
 		return x
 	}
-	row1 := jn.source1.Lookup(th, sel1cols, sel1vals)
+	row1 := jn.source1.Lookup(th, sel1)
 	if row1 == nil {
 		return nil
 	}
 	var row2 Row
-	sel2cols = append(sel2cols, jn.by...)
-	sel2vals = append(sel2vals, jn.projectRow1(th, row1)...)
+	sel2 = append(sel2, jn.projectRow1(th, row1)...)
 	if jn.joinType.toOne() {
-		row2 = jn.cachedLookup(th, sel2cols, sel2vals)
+		row2 = jn.cachedLookup(th, sel2)
 	} else {
-		jn.source2.Select(sel2cols, sel2vals)
-		defer jn.Select(nil, nil)
+		jn.source2.Select(sel2)
+		defer jn.Select(nil)
 		row2 = jn.source2.Get(th, Next)
 	}
 	if row2 == nil {
@@ -590,14 +585,14 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	return JoinRows(row1, row2)
 }
 
-func (jb *joinBase) lookupFallback(sel1cols []string) bool {
+func (jb *joinBase) lookupFallback(sel1 Sels) bool {
 	if jb.lookup == nil { // memoize
 		jb.lookup = &lookupInfo{
 			keys1:  jb.source1.Keys(),
 			fixed1: jb.source1.Fixed(),
 		}
 	}
-	if !hasKey(sel1cols, jb.lookup.keys1, jb.lookup.fixed1) {
+	if !selHasKey(sel1, jb.lookup.keys1, jb.lookup.fixed1) {
 		// can't do lookup on source1
 		// this can happen (rarely) because there's no way to tell Optimize
 		// that we want to do lookups with the index
@@ -605,6 +600,19 @@ func (jb *joinBase) lookupFallback(sel1cols []string) bool {
 			jb.lookup.fallback = true
 			// log.Println("INFO query", which, "Lookup fallback to Select & Get")
 			// fmt.Println("sel1cols", sel1cols, "keys1", jb.lookup.keys1, "fixed1", jb.lookup.fixed1)
+		}
+		return true
+	}
+	return false
+}
+
+func selHasKey(sels Sels, keys [][]string, fixed []Fixed) bool {
+outer:
+	for _, key := range keys {
+		for _, k := range key {
+			if !isSingleFixed(fixed, k) && !sels.HasCol(k) {
+				continue outer
+			}
 		}
 		return true
 	}
@@ -810,11 +818,11 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			if lj.row1 == nil {
 				return nil
 			}
-			byVals := lj.projectRow1(th, lj.row1)
+			sels := lj.projectRow1(th, lj.row1)
 			if lj.joinType.toOne() {
-				lj.lookupRow = lj.cachedLookup(th, lj.by, byVals)
+				lj.lookupRow = lj.cachedLookup(th, sels)
 			} else {
-				lj.source2.Select(lj.by, byVals)
+				lj.source2.Select(sels)
 			}
 			row1out = false
 		}
@@ -843,47 +851,48 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 
 func (lj *LeftJoin) filter2(row2 Row) bool {
 	// fmt.Println(lj.strategy(), "filter", lj.sel2cols, unpack(lj.sel2vals))
-	for i, col := range lj.sel2cols {
-		x := row2.GetRaw(lj.source2.Header(), col)
+	for _, sel := range lj.sel2 {
+		x := row2.GetRaw(lj.source2.Header(), sel.col)
 		assert.That(len(x) == 0 || x[0] != PackForward)
-		if x != lj.sel2vals[i] {
+		if x != sel.val {
 			return false
 		}
 	}
 	return true
 }
 
-func (lj *LeftJoin) Select(cols, vals []string) {
+func (lj *LeftJoin) Select(sels Sels) {
 	// fmt.Println(lj.strategy(), "Select", cols, unpack(vals))
 	lj.nsels++
 	lj.rewind()
-	lj.select1(cols, vals)
+	lj.select1(sels)
 }
 
-func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
+func (lj *LeftJoin) Lookup(th *Thread, sels Sels) Row {
 	lj.nlooks++
-	defer lj.Select(nil, nil)
-	sel1cols, sel1vals, sel2cols, sel2vals := lj.splitSelect(cols, vals)
-	lj.sel2cols, lj.sel2vals = sel2cols, sel2vals
-	if lj.lookupFallback(sel1cols) {
+	defer lj.Select(nil)
+	sel1, sel2 := lj.splitSelect(sels)
+	lj.sel2 = sel2
+	if lj.lookupFallback(sel1) {
 		// log.Println("INFO LeftJoin Lookup fallback to Select & Get")
 		lj.rewind()
-		lj.source1.Select(sel1cols, sel1vals)
+		lj.source1.Select(sel1)
 		x := lj.Get(th, Next)
 		// if x != nil { // verify unique
 		// 	assert.That(lj.Get(th, Next) == nil)
 		// }
 		return x
 	}
-	row1 := lj.source1.Lookup(th, sel1cols, sel1vals)
+	row1 := lj.source1.Lookup(th, sel1)
 	if row1 == nil {
 		return nil
 	}
 	var row2 Row
+	sel := lj.projectRow1(th, row1)
 	if lj.joinType.toOne() {
-		row2 = lj.cachedLookup(th, lj.by, lj.projectRow1(th, row1))
+		row2 = lj.cachedLookup(th, sel)
 	} else {
-		lj.source2.Select(lj.by, lj.projectRow1(th, row1))
+		lj.source2.Select(sel)
 		row2 = lj.source2.Get(th, Next)
 	}
 	if row2 == nil {

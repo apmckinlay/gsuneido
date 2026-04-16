@@ -655,22 +655,22 @@ func (p *Project) Output(th *Thread, rec Record) {
 	p.source.Output(th, rec)
 }
 
-func (p *Project) Select(cols, vals []string) {
+func (p *Project) Select(sels Sels) {
 	p.nsels++
-	p.source.Select(cols, vals)
+	p.source.Select(sels)
 	if p.strat == projMap {
 		p.indexed = false
 	}
 	p.rewind()
 }
 
-func (p *Project) Lookup(th *Thread, cols, vals []string) Row {
+func (p *Project) Lookup(th *Thread, sels Sels) Row {
 	p.nlooks++
 	if p.strat == projCopy {
-		return p.source.Lookup(th, cols, vals)
+		return p.source.Lookup(th, sels)
 	}
-	p.Select(cols, vals)
-	defer p.Select(nil, nil) // clear
+	p.Select(sels)
+	defer p.Select(nil) // clear
 	return p.Get(th, Next)
 }
 

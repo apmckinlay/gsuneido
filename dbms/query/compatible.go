@@ -82,11 +82,12 @@ func (c *Compatible) source2Has(th *Thread, row Row) bool {
 	if c.disjoint != "" {
 		return false
 	}
-	vals := make([]string, len(c.keyIndex))
+	sels := make(Sels, len(c.keyIndex))
 	for i, col := range c.keyIndex {
-		vals[i] = row.GetRawVal(c.source1.Header(), col, th, c.st)
+		sels[i].col = col
+		sels[i].val = row.GetRawVal(c.source1.Header(), col, th, c.st)
 	}
-	row2 := c.lookupCache.Lookup(th, c.source2, c.keyIndex, vals, c.st)
+	row2 := c.lookupCache.Lookup(th, c.source2, sels, c.st)
 	return row2 != nil && c.equal(th, row, row2)
 }
 
@@ -121,9 +122,9 @@ func (c1 *Compatible1) Rewind() {
 	c1.source1.Rewind()
 }
 
-func (c1 *Compatible1) Select(cols, vals []string) {
+func (c1 *Compatible1) Select(sels Sels) {
 	c1.nsels++
-	c1.source1.Select(cols, vals)
+	c1.source1.Select(sels)
 }
 
 func (c1 *Compatible1) getLookupCost() int {

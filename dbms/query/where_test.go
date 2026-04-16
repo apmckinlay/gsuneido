@@ -299,24 +299,24 @@ func TestWhere_Select(t *testing.T) {
 	q := ParseQuery(query, tran, nil)
 	cols := []string{"a", "b"}
 	q = SetupIdx(q, CursorMode, tran, cols)
-	vals := []string{Pack(IntVal(4)), Pack(IntVal(5)), Pack(IntVal(6))}
-	q.Select(cols, vals)
+	sels := Sels{{"a", Pack(IntVal(4))}, {"b", Pack(IntVal(5))}}
+	q.Select(sels)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6")
-	q.Select(nil, nil)
+	q.Select(nil)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
 
 	q = ParseQuery(query, tran, nil)
 	q = SetupIdx(q, CursorMode, tran, cols)
-	vals = []string{Pack(IntVal(1)), Pack(IntVal(2))} // conflict
-	q.Select(cols, vals)
+	sels = Sels{{"a", Pack(IntVal(1))}, {"b", Pack(IntVal(2))}} // conflict
+	q.Select(sels)
 	assert.This(queryAll2(q)).Is("")
-	q.Select(nil, nil)
+	q.Select(nil)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
 
 	// select with col not in index fields (c not in key(a,b))
 	q = ParseQuery(query, tran, nil)
 	q = SetupIdx(q, CursorMode, tran, cols)
-	q.Select([]string{"a", "c"}, []string{Pack(IntVal(4)), Pack(IntVal(6))})
+	q.Select(Sels{{"a", Pack(IntVal(4))}, {"c", Pack(IntVal(6))}})
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6")
 }
 
@@ -452,7 +452,7 @@ func TestWhere_Select_recalcIdxSel(t *testing.T) {
 	assert.T(t).That(w.idxSelBase != nil)
 	assert.T(t).This(w.idxSelBase.skipLen).Is(1)
 
-	q.Select([]string{"a"}, []string{Pack(IntVal(2))})
+	q.Select(Sels{{"a", Pack(IntVal(2))}})
 	assert.T(t).This(w.idxSelActive.prefixLen).Is(2)
 	assert.T(t).This(w.idxSelActive.skipLen).Is(0)
 	assert.This(queryAll2(q)).Is("a=2 b=3 c=9 | a=2 b=4 c=9 | a=2 b=5 c=9")
@@ -475,14 +475,14 @@ func TestWhere_Select_conflict(t *testing.T) {
 
 	// full recalc path: first select, a=0 conflicts with where a>1
 	w := setup("a > 1")
-	w.Select([]string{"a"}, []string{Pack(SuInt(0))})
+	w.Select(Sels{{"a", Pack(SuInt(0))}})
 	assert.T(t).Msg("recalc conflict").That(w.selConflict)
 
 	// fast-path: first select a=2 (non-conflict), then a=0 conflicts
 	w = setup("a > 1")
-	w.Select([]string{"a"}, []string{Pack(SuInt(2))})
+	w.Select(Sels{{"a", Pack(SuInt(2))}})
 	assert.T(t).Msg("non-conflict selOrg").That(!w.selConflict)
-	w.Select([]string{"a"}, []string{Pack(SuInt(0))}) // conflict
+	w.Select(Sels{{"a", Pack(SuInt(0))}}) // conflict
 	assert.T(t).Msg("reRange conflict").This(w.selConflict)
 }
 
@@ -591,12 +591,12 @@ func TestWhere_keyfixed(t *testing.T) {
 	q = SetApproach(q, index, 1, tran)
 	assert.That(q.fastSingle())
 	th := &Thread{}
-	vals := []string{Pack(IntVal(5))}
-	row := q.Lookup(th, index, vals)
+	sels := Sels{{"b", Pack(IntVal(5))}}
+	row := q.Lookup(th, sels)
 	hdr := q.Header()
 	assert.This(row2str(hdr, row)).Is("a=4 b=5 c=6 d=7")
 
-	q.Select(index, vals)
+	q.Select(sels)
 	row = q.Get(th, Next)
 	assert.This(row2str(hdr, row)).Is("a=4 b=5 c=6 d=7")
 	row = q.Get(th, Next)
@@ -605,63 +605,51 @@ func TestWhere_keyfixed(t *testing.T) {
 
 func TestSplit(t *testing.T) {
 	// Test empty
-	flds := []string{}
-	vals := []string{}
+	sels := Sels{}
 	index := []string{"a"}
-	iflds, ivals, oflds, ovals := Split(false, flds, vals, index)
-	assert.T(t).This(iflds).Is(nil)
-	assert.T(t).This(ivals).Is(nil)
-	assert.T(t).This(oflds).Is(nil)
-	assert.T(t).This(ovals).Is(nil)
+	isels, osels := Split(false, sels, index)
+	assert.T(t).This(isels).Is(nil)
+	assert.T(t).This(osels).Is(nil)
 
 	// Test all in index
-	flds = []string{"a", "b"}
-	vals = []string{"1", "2"}
+	sels = Sels{{"a", "1"}, {"b", "2"}}
 	index = []string{"a", "b"}
-	iflds, ivals, oflds, ovals = Split(false, flds, vals, index)
-	assert.T(t).This(iflds).Is([]string{"a", "b"})
-	assert.T(t).This(ivals).Is([]string{"1", "2"})
-	assert.T(t).This(oflds).Is(nil)
-	assert.T(t).This(ovals).Is(nil)
+	isels, osels = Split(false, sels, index)
+	assert.T(t).This(isels).Is(Sels{{"a", "1"}, {"b", "2"}})
+	assert.T(t).This(osels).Is(nil)
 
 	// Test none in index
-	flds = []string{"c", "d"}
-	vals = []string{"3", "4"}
+	sels = Sels{{"c", "3"}, {"d", "4"}}
 	index = []string{"a", "b"}
-	iflds, ivals, oflds, ovals = Split(false, flds, vals, index)
-	assert.T(t).This(iflds).Is(nil)
-	assert.T(t).This(ivals).Is(nil)
-	assert.T(t).This(oflds).Is([]string{"c", "d"})
-	assert.T(t).This(ovals).Is([]string{"3", "4"})
+	isels, osels = Split(false, sels, index)
+	assert.T(t).This(isels).Is(nil)
+	assert.T(t).This(osels).Is(Sels{{"c", "3"}, {"d", "4"}})
 
 	// Test mixed
-	flds = []string{"a", "c", "b", "d"}
-	vals = []string{"1", "3", "2", "4"}
+	sels = Sels{{"a", "1"}, {"c", "3"}, {"b", "2"}, {"d", "4"}}
 	index = []string{"a", "b"}
-	iflds, ivals, oflds, ovals = Split(false, flds, vals, index)
+	isels, osels = Split(false, sels, index)
 	// iflds should contain "a" and "b", in some order, ivals accordingly
 	// oflds "c" and "d"
-	assert.T(t).This(len(iflds)).Is(2)
-	assert.T(t).This(len(ivals)).Is(2)
-	assert.T(t).This(len(oflds)).Is(2)
-	assert.T(t).This(len(ovals)).Is(2)
+	assert.T(t).This(len(isels)).Is(2)
+	assert.T(t).This(len(osels)).Is(2)
 	// Check that iflds are in index
-	for _, f := range iflds {
-		if !slices.Contains(index, f) {
-			t.Errorf("iflds contains %s not in index", f)
+	for _, sel := range isels {
+		if !slices.Contains(index, sel.col) {
+			t.Errorf("isels contains %s not in index", sel.col)
 		}
 	}
-	for _, f := range oflds {
-		if slices.Contains(index, f) {
-			t.Errorf("oflds contains %s which is in index", f)
+	for _, sel := range osels {
+		if slices.Contains(index, sel.col) {
+			t.Errorf("osels contains %s which is in index", sel.col)
 		}
 	}
 	// Check vals match flds order
 	expected := map[string]string{"a": "1", "b": "2", "c": "3", "d": "4"}
-	for i, f := range iflds {
-		assert.T(t).This(ivals[i]).Is(expected[f])
+	for _, sel := range isels {
+		assert.T(t).This(sel.val).Is(expected[sel.col])
 	}
-	for i, f := range oflds {
-		assert.T(t).This(ovals[i]).Is(expected[f])
+	for _, sel := range osels {
+		assert.T(t).This(sel.val).Is(expected[sel.col])
 	}
 }

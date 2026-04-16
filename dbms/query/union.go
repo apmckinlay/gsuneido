@@ -663,65 +663,61 @@ func (u *Union) compare(th *Thread, row1, row2 Row) int {
 
 func nothing(*Thread, Dir) Row { return nil }
 
-func (u *Union) Select(cols, vals []string) {
+func (u *Union) Select(sels Sels) {
 	// fmt.Println("Union Select", cols, unpack(vals))
 	u.nsels++
 	u.rewound = true
 	u.src1get = u.source1.Get
 	u.src2get = u.source2.Get
-	if cols == nil { // clear
-		u.source1.Select(nil, nil)
-		u.source2.Select(nil, nil)
+	if sels == nil { // clear
+		u.source1.Select(nil)
+		u.source2.Select(nil)
 		return
 	}
-	if selConflict(u.source1.Columns(), cols, vals) {
+	if selConflict(u.source1.Columns(), sels) {
 		u.src1get = nothing
 	} else {
-		u.source1.Select(
-			removeNonexistentEmpty(u.source1.Columns(), cols, vals))
+		u.source1.Select(removeNonexistentEmpty(u.source1.Columns(), sels))
 	}
-	if selConflict(u.source2.Columns(), cols, vals) {
+	if selConflict(u.source2.Columns(), sels) {
 		u.src2get = nothing
 	} else {
-		u.source2.Select(
-			removeNonexistentEmpty(u.source2.Columns(), cols, vals))
+		u.source2.Select(removeNonexistentEmpty(u.source2.Columns(), sels))
 	}
 }
 
-func removeNonexistentEmpty(srccols, cols, vals []string) ([]string, []string) {
-	for i, col := range cols {
-		if !slices.Contains(srccols, col) && vals[i] == "" {
-			newcols := slices.Clip(cols[:i])
-			newvals := slices.Clip(vals[:i])
-			for ; i < len(cols); i++ {
-				if slices.Contains(srccols, cols[i]) || vals[i] != "" {
-					newcols = append(newcols, cols[i])
-					newvals = append(newvals, vals[i])
+func removeNonexistentEmpty(srccols []string, sels Sels) Sels {
+	for i, sel := range sels {
+		if !slices.Contains(srccols, sel.col) && sel.val == "" {
+			newsels := slices.Clip(sels[:i])
+			for ; i < len(sels); i++ {
+				if slices.Contains(srccols, sels[i].col) || sels[i].val != "" {
+					newsels = append(newsels, sels[i])
 				}
 			}
-			if len(newcols) == 0 {
-				return nil, nil
+			if len(newsels) == 0 {
+				return nil
 			}
-			return newcols, newvals
+			return newsels
 		}
 	}
-	return cols, vals
+	return sels
 }
 
 // selConflict is also used by Table
-func selConflict(srcCols, cols, vals []string) bool {
-	for i, col := range cols {
-		if vals[i] != "" && !slices.Contains(srcCols, col) {
+func selConflict(srcCols []string, sels Sels) bool {
+	for _, sel := range sels {
+		if sel.val != "" && !slices.Contains(srcCols, sel.col) {
 			return true
 		}
 	}
 	return false
 }
 
-func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
+func (u *Union) Lookup(th *Thread, sels Sels) Row {
 	u.nlooks++
-	u.Select(cols, vals)
-	defer u.Select(nil, nil) // clear select
+	u.Select(sels)
+	defer u.Select(nil) // clear select
 	return u.Get(th, Next)
 }
 

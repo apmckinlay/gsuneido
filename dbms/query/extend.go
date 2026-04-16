@@ -23,8 +23,7 @@ type Extend struct {
 	exprs    []ast.Expr
 	exprCols []string // columns used in exprs
 	physical []string // cols with exprs
-	selCols  []string
-	selVals  []string
+	sels     Sels
 	srcFlds  []string
 	fwd      map[int]string
 	Query1
@@ -290,8 +289,8 @@ func (e *Extend) extendRow(th *Thread, row Row) Record {
 
 func (e *Extend) filter(rec Record, th *Thread, row Row) bool {
 	var extrow Row
-	for i, col := range e.selCols {
-		j := slices.Index(e.physical, col)
+	for _, sel := range e.sels {
+		j := slices.Index(e.physical, sel.col)
 		var x string
 		if j >= 0 {
 			x = rec.GetRaw(j)
@@ -300,44 +299,44 @@ func (e *Extend) filter(rec Record, th *Thread, row Row) bool {
 			if extrow == nil {
 				extrow = append(row, DbRec{Record: rec})
 			}
-			x = extrow.GetRawVal(e.header, col, th, e.ctx.Tran)
+			x = extrow.GetRawVal(e.header, sel.col, th, e.ctx.Tran)
 		}
-		if x != e.selVals[i] {
+		if x != sel.val {
 			return false
 		}
 	}
 	return true
 }
 
-func (e *Extend) Select(cols, vals []string) {
+func (e *Extend) Select(sels Sels) {
 	// fmt.Println("Extend Select", cols, unpack(vals))
 	e.nsels++
 	e.conflict = false
-	e.selCols, e.selVals = nil, nil
-	if cols == nil && vals == nil {
-		e.source.Select(nil, nil) // clear select
+	e.sels = nil
+	if sels == nil {
+		e.source.Select(nil) // clear select
 		return
 	}
-	satisfied, conflict := selectFixed(cols, vals, e.Fixed())
+	satisfied, conflict := selectFixed(sels, e.Fixed())
 	if conflict {
 		e.conflict = true
 	} else if satisfied {
-		e.source.Select(nil, nil) // clear select
+		e.source.Select(nil) // clear select
 	} else {
-		e.source.Select(e.splitSelect(cols, vals))
+		e.source.Select(e.splitSelect(sels))
 	}
 }
 
-func (e *Extend) Lookup(th *Thread, cols, vals []string) Row {
+func (e *Extend) Lookup(th *Thread, sels Sels) Row {
 	e.nlooks++
-	if conflictFixed(cols, vals, e.Fixed()) {
+	if conflictFixed(sels, e.Fixed()) {
 		return nil
 	}
 	defer func() {
-		e.selCols, e.selVals = nil, nil
+		e.sels = nil
 	}()
-	srccols, srcvals := e.splitSelect(cols, vals)
-	row := e.source.Lookup(th, srccols, srcvals)
+	srcsels := e.splitSelect(sels)
+	row := e.source.Lookup(th, srcsels)
 	if row == nil {
 		return nil
 	}
@@ -351,19 +350,17 @@ func (e *Extend) Lookup(th *Thread, cols, vals []string) Row {
 	return append(row, DbRec{Record: rec})
 }
 
-func (e *Extend) splitSelect(cols, vals []string) ([]string, []string) {
-	var ecols, evals, srccols, srcvals []string
-	for i, col := range cols {
-		if slices.Contains(e.cols, col) {
-			ecols = append(ecols, col)
-			evals = append(evals, vals[i])
+func (e *Extend) splitSelect(sels Sels) Sels {
+	var esels, srcsels Sels
+	for _, sel := range sels {
+		if slices.Contains(e.cols, sel.col) {
+			esels = append(esels, sel)
 		} else {
-			srccols = append(srccols, col)
-			srcvals = append(srcvals, vals[i])
+			srcsels = append(srcsels, sel)
 		}
 	}
-	e.selCols, e.selVals = ecols, evals
-	return srccols, srcvals
+	e.sels = esels
+	return srcsels
 }
 
 func (e *Extend) Simple(th *Thread) []Row {

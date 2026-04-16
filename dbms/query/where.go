@@ -47,9 +47,8 @@ type Where struct {
 
 	rowCtx ast.RowContext
 
-	// singleSelCols and singleSelVals are set by Select when singleton
-	singleSelCols []string
-	singleSelVals []string
+	// singleSels are set by Select when singleton
+	singleSels Sels
 
 	idxSels []idxSel // from optInit, result of perIndex
 	Query1
@@ -781,8 +780,8 @@ func (w *Where) filter(th *Thread, row Row) bool {
 	if row == nil {
 		return true
 	}
-	if w.singleSelCols != nil &&
-		!singletonFilter(w.header, row, w.singleSelCols, w.singleSelVals) {
+	if w.singleSels != nil &&
+		!singletonFilter(w.header, row, w.singleSels) {
 		return false
 	}
 	if w.rowCtx.Tran == nil {
@@ -820,24 +819,23 @@ func (w *Where) Rewind() {
 	w.idxSelPos = -1
 }
 
-func (w *Where) Select(cols, vals []string) {
+func (w *Where) Select(sels Sels) {
 	// fmt.Println("Where Select", cols, unpack(vals))
 	w.nsels++
 	w.Rewind()
 	w.idxSelActive = w.idxSelBase
 	w.selConflict = false
-	w.singleSelCols = nil
-	w.singleSelVals = nil
-	if cols == nil && vals == nil { // clear select
+	w.singleSels = nil
+	if sels == nil { // clear select
 		if w.idxSelBase == nil {
-			w.source.Select(nil, nil)
+			w.source.Select(nil)
 		}
 		return
 	}
 	// Note: conflict could come from any of expr, not just fixed.
 	// But to evaluate that would require building a Row.
 	// It should be rare.
-	satisfied, conflict := selectFixed(cols, vals, w.Fixed())
+	satisfied, conflict := selectFixed(sels, w.Fixed())
 	if conflict {
 		w.selConflict = true
 		return
@@ -847,8 +845,7 @@ func (w *Where) Select(cols, vals []string) {
 	}
 
 	if w.singleton {
-		w.singleSelCols = cols
-		w.singleSelVals = vals
+		w.singleSels = sels
 		return
 	}
 
@@ -857,22 +854,22 @@ func (w *Where) Select(cols, vals []string) {
 		// then just pass the Select to the source.
 		// Don't need to add fixed because
 		// if there was applicable fixed, there would be an idxSel.
-		w.source.Select(cols, vals)
+		w.source.Select(sels)
 		return
 	}
 
 	var isel idxSel
-	isel, w.selConflict = w.recalcIdxSel(w.idxSelBase.index, w.idxSelBase.mode, cols, vals)
+	isel, w.selConflict = w.recalcIdxSel(w.idxSelBase.index, w.idxSelBase.mode, sels)
 	if w.selConflict {
 		return
 	}
 	w.idxSelActive = &isel
 }
 
-func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
+func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	// cols,vals (plus fixed) specify a single source row
 	w.nlooks++
-	if conflictFixed(cols, vals, w.Fixed()) {
+	if conflictFixed(sels, w.Fixed()) {
 		return nil
 	}
 	if w.fastSingle() || w.srcIndex == nil {
@@ -880,32 +877,30 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 		// srcIndex == nil when allFixed cleared it (logical singleton)
 		w.Rewind()
 		row := w.Get(th, Next)
-		if row == nil || !singletonFilter(w.header, row, cols, vals) {
+		if row == nil || !singletonFilter(w.header, row, sels) {
 			return nil
 		}
 		return row
 	}
 	cloned := false
-	cols = slices.Clip(cols)
-	vals = slices.Clip(vals)
+	sels = slices.Clip(sels)
 	indexFields := w.srcIndex
 	if w.tbl != nil {
 		indexFields = w.tbl.IndexCols(w.srcIndex)
 	}
 	for _, fix := range w.fixed {
 		if fix.single() && slices.Contains(indexFields, fix.col) &&
-			!slices.Contains(cols, fix.col) {
-			cols = append(cols, fix.col)
-			vals = append(vals, fix.values[0])
+			!sels.HasCol(fix.col) {
+			sels = append(sels, Sel{fix.col, fix.values[0]})
 			cloned = true // because they're clipped, append will realloc
 		}
 	}
-	icols, ivals, ocols, _ := Split(cloned, cols, vals, indexFields)
-	for _, col := range ocols {
-		assert.That(isFixed(w.fixed, col))
+	isels, osels := Split(cloned, sels, indexFields)
+	for _, sel := range osels {
+		assert.That(isFixed(w.fixed, sel.col))
 	}
 
-	row := w.source.Lookup(th, icols, ivals)
+	row := w.source.Lookup(th, isels)
 	if !w.filter(th, row) {
 		row = nil
 	}
@@ -914,39 +909,34 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 
 // Split partitions flds and vals, returning sub-slices.
 // It clones the slices only if modifications are needed.
-func Split(cloned bool, flds, vals, index []string) (iflds, ivals, oflds, ovals []string) {
+func Split(cloned bool, sels Sels, index []string) (isels, osels Sels) {
 	pivot := func(i int) bool {
-		return slices.Contains(index, flds[i])
+		return slices.Contains(index, sels[i].col)
 	}
 	swap := func(i, j int) {
 		if !cloned {
-			flds = slc.Clone(flds)
-			vals = slc.Clone(vals)
+			sels = slc.Clone(sels)
 			cloned = true
 		}
-		flds[i], flds[j] = flds[j], flds[i]
-		vals[i], vals[j] = vals[j], vals[i]
+		sels[i], sels[j] = sels[j], sels[i]
 	}
-	i := slc.Partition(len(flds), pivot, swap)
-	iflds, ivals = flds[:i], vals[:i]
-	oflds, ovals = flds[i:], vals[i:]
-	if len(iflds) == 0 {
-		iflds = nil
-		ivals = nil
+	i := slc.Partition(len(sels), pivot, swap)
+	isels = sels[:i]
+	osels = sels[i:]
+	if len(isels) == 0 {
+		isels = nil
 	}
-	if len(oflds) == 0 {
-		oflds = nil
-		ovals = nil
+	if len(osels) == 0 {
+		osels = nil
 	}
 	return
 }
 
-func singletonFilter(
-	hdr *Header, row Row, cols []string, vals []string) bool {
-	for i, col := range cols {
-		x := row.GetRaw(hdr, col)
+func singletonFilter(hdr *Header, row Row, sels Sels) bool {
+	for _, sel := range sels {
+		x := row.GetRaw(hdr, sel.col)
 		assert.That(len(x) == 0 || x[0] != PackForward)
-		if x != vals[i] {
+		if x != sel.val {
 			return false
 		}
 	}

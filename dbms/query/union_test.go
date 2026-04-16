@@ -90,18 +90,16 @@ func TestUnion_MergeSwitchDir(t *testing.T) {
 
 func TestUnion_removeNonexistentEmpty(t *testing.T) {
 	srccols := []string{"a", "b", "c"}
-	test := func(colsIn, valsIn, colsOut, valsOut []string) {
-		cols, vals := removeNonexistentEmpty(srccols, colsIn, valsIn)
-		assert.This(cols).Is(colsOut)
-		assert.This(vals).Is(valsOut)
+	test := func(selsIn, selsOut Sels) {
+		assert.This(removeNonexistentEmpty(srccols, selsIn)).Is(selsOut)
 	}
-	test(nil, nil, nil, nil)
-	test([]string{}, []string{}, []string{}, []string{})
-	test([]string{"a", "c", "x"}, []string{"1", "2", "3"},
-		[]string{"a", "c", "x"}, []string{"1", "2", "3"})
-	test([]string{"a", "n", "c", "x"}, []string{"1", "", "2", "3"},
-		[]string{"a", "c", "x"}, []string{"1", "2", "3"})
-	test([]string{"x", "y"}, []string{"", ""}, nil, nil)
+	test(nil, nil)
+	test(Sels{}, Sels{})
+	test(Sels{{"a", "1"}, {"c", "2"}, {"x", "3"}},
+		Sels{{"a", "1"}, {"c", "2"}, {"x", "3"}})
+	test(Sels{{"a", "1"}, {"n", ""}, {"c", "2"}, {"x", "3"}},
+		Sels{{"a", "1"}, {"c", "2"}, {"x", "3"}})
+	test(Sels{{"x", ""}, {"y", ""}}, nil)
 }
 
 func TestBestMergeIndexes(t *testing.T) {

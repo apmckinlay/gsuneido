@@ -152,9 +152,9 @@ func (it *Intersect) Get(th *Thread, dir Dir) Row {
 	}
 }
 
-func (it *Intersect) Lookup(th *Thread, cols, vals []string) Row {
+func (it *Intersect) Lookup(th *Thread, sels Sels) Row {
 	it.nlooks++
-	row := it.source1.Lookup(th, cols, vals)
+	row := it.source1.Lookup(th, sels)
 	if row == nil || it.source2Has(th, row) {
 		return row
 	}

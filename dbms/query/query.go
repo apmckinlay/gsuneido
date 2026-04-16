@@ -33,6 +33,7 @@
 				joinBase
 					Join
 					LeftJoin
+					SemiJoin
 */
 package query
 
@@ -128,15 +129,15 @@ type Query interface {
 	// to implement Lookup with Select and Get
 	// in which case it should leave the select cleared.
 	// Lookup should rewind.
-	Lookup(th *Thread, cols, vals []string) Row
+	Lookup(th *Thread, sels Sels) Row
 
 	// Select restricts the query to records matching the given packed values.
 	// It is used by Where, Join, and LeftJoin.
-	// To clear the select, use Select(nil, nil)
+	// To clear the select, use Select(nil)
 	// Select should rewind.
 	// It is only valid to call Select for the index chosen by optimize/setApproach.
 	// If index is nil, then Select should not be called.
-	Select(cols, vals []string)
+	Select(sels Sels)
 
 	Header() *Header
 	Output(th *Thread, rec Record)
@@ -668,7 +669,7 @@ func (q1 *Query1) optimize(mode Mode, index []string, frac float64) (
 }
 
 // Lookup default applies to Summarize and Sort
-func (*Query1) Lookup(*Thread, []string, []string) Row {
+func (*Query1) Lookup(*Thread, Sels) Row {
 	panic("Lookup not implemented")
 }
 

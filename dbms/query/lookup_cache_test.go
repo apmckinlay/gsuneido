@@ -15,7 +15,7 @@ func TestLookupCachePerformanceMonitoring(t *testing.T) {
 	q := &TestQop{} // minimal Query; Lookup returns nil via Nothing
 
 	for i := range lookupCacheCheckInterval + 50 {
-		lc.Lookup(nil, q, []string{"id"}, []string{strconv.Itoa(i)}, nil)
+		lc.Lookup(nil, q, Sels{{"id", strconv.Itoa(i)}}, nil)
 	}
 	assert.That(lc.cacheDisabled)
 }
@@ -26,9 +26,9 @@ func TestLookupCacheGoodPerformance(t *testing.T) {
 
 	for i := range lookupCacheCheckInterval + 50 {
 		if i%2 == 0 {
-			lc.Lookup(nil, q, []string{"id"}, []string{"1"}, nil)
+			lc.Lookup(nil, q, Sels{{"id", "1"}}, nil)
 		} else {
-			lc.Lookup(nil, q, []string{"id"}, []string{"2"}, nil)
+			lc.Lookup(nil, q, Sels{{"id", "2"}}, nil)
 		}
 	}
 	assert.That(!lc.cacheDisabled)
@@ -38,15 +38,15 @@ func TestLookupCacheOperationCounter(t *testing.T) {
 	var lc lookupCache
 	q := &TestQop{}
 
-	lc.Lookup(nil, q, []string{"id"}, []string{"1"}, nil)
+	lc.Lookup(nil, q, Sels{{"id", "1"}}, nil)
 	assert.That(lc.cacheOpCount == 1)
 
-	lc.Lookup(nil, q, []string{"id"}, []string{"2"}, nil)
+	lc.Lookup(nil, q, Sels{{"id", "2"}}, nil)
 	assert.That(lc.cacheOpCount == 2)
 
 	// Disable cache and verify counter doesn't increment
 	lc.cacheDisabled = true
-	lc.Lookup(nil, q, []string{"id"}, []string{"3"}, nil)
+	lc.Lookup(nil, q, Sels{{"id", "3"}}, nil)
 	assert.That(lc.cacheOpCount == 2)
 }
 

@@ -72,7 +72,7 @@ func BenchmarkLookup(b *testing.B) {
 	for nrecs := 10; nrecs <= 1_000_000; nrecs *= 10 {
 		for rsize := 200; rsize <= 200; rsize *= 10 {
 			tbl := tblname(nrecs, rsize)
-			cols := []string{tbl + "_a"}
+			sels := []Sel{{col: tbl + "_a"}}
 			tran := db.NewReadTran()
 			q := ParseQuery(tbl, tran, nil)
 			q, _, _ = Setup(q, ReadMode, tran)
@@ -80,8 +80,8 @@ func BenchmarkLookup(b *testing.B) {
 				successful := 0
 				for b.Loop() {
 					r := rand.Intn(nrecs * 2)
-					vals := []string{Pack(IntVal(r))}
-					if q.Lookup(th, cols, vals) != nil {
+					sels[0].val = Pack(IntVal(r))
+					if q.Lookup(th, sels) != nil {
 						successful++
 					}
 				}

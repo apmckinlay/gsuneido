@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 func TestGetQuery(t *testing.T) {
@@ -73,27 +73,35 @@ func TestFindKey(t *testing.T) {
 		{"a", "b", "c"},
 	}
 
-	test := func(flds []string, expected []string) {
+	test := func(sels Sels, expected []string) {
 		t.Helper()
-		result := findKey(keys, flds)
+		result := findKey(keys, sels)
 		assert.T(t).This(result).Is(expected)
 	}
 
 	// Exact match
-	test([]string{"id"}, []string{"id"})
+	test(selCols("id"), []string{"id"})
 
-	// Superset match (flds must contain all of key)
-	test([]string{"name", "date", "extra"}, []string{"name", "date"})
-	test([]string{"name", "date"}, []string{"name", "date"})
+	// Superset match (sels must contain all of key)
+	test(selCols("name", "date", "extra"), []string{"name", "date"})
+	test(selCols("name", "date"), []string{"name", "date"})
 
-	// No match (flds doesn't contain all of key)
-	test([]string{"name"}, nil)
-	test([]string{"date"}, nil)
-	test([]string{"xyz"}, nil)
-	test([]string{}, nil)
+	// No match (sels doesn't contain all of key)
+	test(selCols("name"), nil)
+	test(selCols("date"), nil)
+	test(selCols("xyz"), nil)
+	test(Sels{}, nil)
 
 	// Multiple keys possible (should return first match)
-	test([]string{"a", "b", "c"}, []string{"a", "b", "c"})
+	test(selCols("a", "b", "c"), []string{"a", "b", "c"})
+}
+
+func selCols(cols ...string) Sels {
+	sels := make(Sels, len(cols))
+	for i, col := range cols {
+		sels[i] = qry.NewSel(col, "")
+	}
+	return sels
 }
 
 func TestFindAll(t *testing.T) {
@@ -103,41 +111,41 @@ func TestFindAll(t *testing.T) {
 		{"p", "q", "r"},
 	}
 
-	test := func(flds []string, expected []string) {
+	test := func(sels Sels, expected []string) {
 		t.Helper()
-		result := findAll(indexes, flds)
+		result := findAll(indexes, sels)
 		assert.T(t).This(result).Is(expected)
 	}
 
 	// Exact match on first index
-	test([]string{"a", "b", "c"}, []string{"a", "b", "c"})
+	test(selCols("a", "b", "c"), []string{"a", "b", "c"})
 
 	// Prefix match
-	test([]string{"a", "b"}, []string{"a", "b", "c"})
-	test([]string{"a"}, []string{"a", "b", "c"})
+	test(selCols("a", "b"), []string{"a", "b", "c"})
+	test(selCols("a"), []string{"a", "b", "c"})
 
 	// Match on second index
-	test([]string{"x", "y"}, []string{"x", "y"})
-	test([]string{"x"}, []string{"x", "y"})
+	test(selCols("x", "y"), []string{"x", "y"})
+	test(selCols("x"), []string{"x", "y"})
 
 	// No match
-	test([]string{"z"}, nil)
-	test([]string{"a", "x"}, nil)
-	test([]string{"b", "c"}, nil) // must start from beginning
+	test(selCols("z"), nil)
+	test(selCols("a", "x"), nil)
+	test(selCols("b", "c"), nil) // must start from beginning
 }
 
 func TestHasPrefix(t *testing.T) {
-	test := func(idx, flds []string, expected bool) {
+	test := func(idx []string, sels Sels, expected bool) {
 		t.Helper()
-		result := hasPrefix(idx, flds)
+		result := hasPrefix(idx, sels)
 		assert.T(t).This(result).Is(expected)
 	}
 
-	test([]string{"a", "b"}, []string{"a"}, true)
-	test([]string{"a", "b"}, []string{"b"}, false)
-	test([]string{"a", "b"}, []string{"a", "b"}, true)
-	test([]string{"a", "b"}, []string{"x"}, false)
-	test([]string{"a"}, []string{"a"}, true)
+	test([]string{"a", "b"}, selCols("a"), true)
+	test([]string{"a", "b"}, selCols("b"), false)
+	test([]string{"a", "b"}, selCols("a", "b"), true)
+	test([]string{"a", "b"}, selCols("x"), false)
+	test([]string{"a"}, selCols("a"), true)
 }
 
 func TestUsableIndexes(t *testing.T) {
@@ -148,39 +156,38 @@ func TestUsableIndexes(t *testing.T) {
 		{"a", "x"},
 	}
 
-	test := func(flds []string, expected [][]string) {
+	test := func(sels Sels, expected [][]string) {
 		t.Helper()
-		result := usableIndexes(indexes, flds)
+		result := usableIndexes(indexes, sels)
 		assert.T(t).This(result).Is(expected)
 	}
 
-	// Fields match first elements (any index whose first field is in flds)
-	test([]string{"a"}, [][]string{{"a", "b"}, {"a", "x"}})
-	test([]string{"b"}, [][]string{{"b", "c"}})
-	test([]string{"c"}, [][]string{{"c", "d"}})
+	// Fields match first elements (any index whose first field is in sels)
+	test(selCols("a"), [][]string{{"a", "b"}, {"a", "x"}})
+	test(selCols("b"), [][]string{{"b", "c"}})
+	test(selCols("c"), [][]string{{"c", "d"}})
 
 	// Multiple fields - includes indexes starting with "a" or "b"
-	test([]string{"a", "b"}, [][]string{{"a", "b"}, {"b", "c"}, {"a", "x"}})
+	test(selCols("a", "b"), [][]string{{"a", "b"}, {"b", "c"}, {"a", "x"}})
 
 	// No matches
-	test([]string{"x"}, nil)
-	test([]string{"d"}, nil)
+	test(selCols("x"), nil)
+	test(selCols("d"), nil)
 }
 
 func TestFormatFieldsVals(t *testing.T) {
-	test := func(flds []string, vals []Value, expected string) {
+	test := func(sels Sels, expected string) {
 		t.Helper()
-		packed := slc.MapFn(vals, func(v Value) string { return Pack(v.(Packable)) })
-		result := formatFieldsVals(flds, packed)
+		result := formatFieldsVals(sels)
 		assert.T(t).This(result).Is(expected)
 	}
 
 	// Single field
-	test([]string{"name"}, []Value{SuStr("John")}, `name: "John"`)
+	test(Sels{qry.NewSel("name", Pack(SuStr("John")))}, `name: "John"`)
 
 	// Multiple fields
-	test([]string{"name", "age"}, []Value{SuStr("John"), SuInt(30)}, `name: "John", age: 30`)
+	test(Sels{qry.NewSel("name", Pack(SuStr("John"))), qry.NewSel("age", Pack(SuInt(30)))}, `name: "John", age: 30`)
 
 	// Empty
-	test([]string{}, []Value{}, "")
+	test(Sels{}, "")
 }

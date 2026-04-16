@@ -189,14 +189,14 @@ func (r *Rename) Get(th *Thread, dir Dir) Row {
 	return row
 }
 
-func (r *Rename) Select(cols, vals []string) {
+func (r *Rename) Select(sels Sels) {
 	r.nsels++
-	r.source.Select(r.renameRev(cols), vals)
+	r.source.Select(r.renameSels(sels))
 }
 
-func (r *Rename) Lookup(th *Thread, cols, vals []string) Row {
+func (r *Rename) Lookup(th *Thread, sels Sels) Row {
 	r.nlooks++
-	return r.source.Lookup(th, r.renameRev(cols), vals)
+	return r.source.Lookup(th, r.renameSels(sels))
 }
 
 func (r *Rename) Simple(th *Thread) []Row {
@@ -205,4 +205,18 @@ func (r *Rename) Simple(th *Thread) []Row {
 
 func (r *Rename) knowExactNrows() bool {
 	return r.source.knowExactNrows()
+}
+
+func (r *Rename) renameSels(sels Sels) Sels {
+	cloned := false
+	for i := len(r.to) - 1; i >= 0; i-- {
+		if j := sels.FindCol(r.to[i]); j != -1 {
+			if !cloned {
+				sels = slc.Clone(sels)
+				cloned = true
+			}
+			sels[j].col = r.from[i]
+		}
+	}
+	return sels
 }

@@ -146,23 +146,23 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 	return JoinRows(t.row1, row2)
 }
 
-func (t *Times) Select(cols, vals []string) {
+func (t *Times) Select(sels Sels) {
 	t.nsels++
 	t.Rewind()
-	t.select1(cols, vals)
-	if len(t.sel2cols) > 0 {
-		t.source2.Select(t.sel2cols, t.sel2vals)
+	t.select1(sels)
+	if len(t.sel2) > 0 {
+		t.source2.Select(t.sel2)
 	}
 }
 
-func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
+func (t *Times) Lookup(th *Thread, sels Sels) Row {
 	// could use source1.Lookup like (Left)Join
 	// but Times isn't used much
 	t.nlooks++
 	t.Rewind()
-	t.select1(cols, vals)
-	if len(t.sel2cols) > 0 {
-		t.source2.Select(t.sel2cols, t.sel2vals)
+	t.select1(sels)
+	if len(t.sel2) > 0 {
+		t.source2.Select(t.sel2)
 	}
 	return t.Get(th, Next)
 }

@@ -83,15 +83,15 @@ func (ti *TempIndex) Rewind() {
 	ti.rewound = true
 }
 
-func (ti *TempIndex) Select(cols, vals []string) {
+func (ti *TempIndex) Select(sels Sels) {
 	// similar to Where Select
 	ti.nsels++
 	ti.Rewind()
-	if cols == nil && vals == nil { // clear select
+	if sels == nil { // clear select
 		ti.selOrg, ti.selEnd = selMin, selMax
 		return
 	}
-	satisfied, conflict := selectFixed(cols, vals, ti.source.Fixed())
+	satisfied, conflict := selectFixed(sels, ti.source.Fixed())
 	if conflict {
 		ti.selOrg, ti.selEnd = selMax, selMin
 		return
@@ -100,13 +100,13 @@ func (ti *TempIndex) Select(cols, vals []string) {
 		ti.selOrg, ti.selEnd = selMin, selMax
 		return
 	}
-	ti.selOrg = ti.makeKey(cols, vals, false)
+	ti.selOrg = ti.makeKey(sels, false)
 	ti.selEnd = append(ti.selOrg, ixkey.Max)
 }
 
-func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
+func (ti *TempIndex) Lookup(th *Thread, sels Sels) Row {
 	ti.nlooks++
-	if conflictFixed(cols, vals, ti.source.Fixed()) {
+	if conflictFixed(sels, ti.source.Fixed()) {
 		return nil
 	}
 	ti.th = th
@@ -114,7 +114,7 @@ func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
 	if ti.iter == nil {
 		ti.iter = ti.makeIndex()
 	}
-	key := ti.makeKey(cols, vals, true)
+	key := ti.makeKey(sels, true)
 	row := ti.iter.Seek(key)
 	if row == nil || !ti.matches(row, key) {
 		return nil
@@ -122,17 +122,17 @@ func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
 	return row
 }
 
-func (ti *TempIndex) makeKey(cols, vals []string, full bool) []string {
+func (ti *TempIndex) makeKey(sels Sels, full bool) []string {
 	key := make([]string, 0, len(ti.order))
 	for _, col := range ti.order {
-		j := slices.Index(cols, col)
-		if j == -1 {
+		val, ok := sels.Get(col)
+		if !ok {
 			if full {
 				panic("TempIndex makeKey not full")
 			}
 			break
 		}
-		key = append(key, vals[j])
+		key = append(key, val)
 	}
 	return key
 }

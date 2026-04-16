@@ -138,9 +138,9 @@ func fixedWith(fixed Fixed, val string) Fixed {
 		values: append(slices.Clip(fixed.values), val)}
 }
 
-// selectFixed returns satisfied=true if cols,vals are satisfied by fixed
-// and conflict=true if cols,vals conflict with fixed
-func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) {
+// selectFixed returns satisfied=true if sels are satisfied by fixed
+// and conflict=true if sels conflict with fixed
+func selectFixed(sels Sels, fixed []Fixed) (satisfied, conflict bool) {
 	// fixed 1,2,3 val 5 => conflict
 	// fixed 2 val 2 => satisfied
 	// fixed 1,2,3 val 2 => not conflict, not satisfied
@@ -148,9 +148,9 @@ func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) 
 		return false, false
 	}
 	satisfied = true
-	for i, col := range cols {
-		fv := getFixed(fixed, col)
-		if fv != nil && !slices.Contains(fv, vals[i]) {
+	for _, sel := range sels {
+		fv := getFixed(fixed, sel.col)
+		if fv != nil && !slices.Contains(fv, sel.val) {
 			return false, true // conflict
 		}
 		if fv == nil || len(fv) > 1 {
@@ -161,8 +161,8 @@ func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) 
 }
 
 // conflictFixed returns true if cols,vals conflict with fixed
-func conflictFixed(cols, vals []string, fixed []Fixed) bool {
-	_, conflict := selectFixed(cols, vals, fixed)
+func conflictFixed(sels Sels, fixed []Fixed) bool {
+	_, conflict := selectFixed(sels, fixed)
 	return conflict
 }
 

@@ -5,17 +5,16 @@ package dbms
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/set"
-	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+type Sels = qry.Sels
 
 var slow = map[Dir]int{Only: 100, Any: 2000}
 
@@ -106,38 +105,34 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 	if !ok {
 		return
 	}
-	flds := make([]string, 0, ob.NamedSize())
-	vals := make([]Value, 0, ob.NamedSize())
+	sels := make(Sels, 0, ob.NamedSize())
 	iter := ob.Iter2(false, true)
 	for k, v := iter(); v != nil; k, v = iter() {
 		field := ToStr(k)
 		if field == "query" {
 			continue
 		}
-		flds = append(flds, field)
-		vals = append(vals, v)
+		sels = append(sels, qry.NewSel(field, Pack(v.(Packable))))
 	}
-	packed := slc.MapFn(vals,
-		func(v Value) string { return Pack(v.(Packable)) })
 	switch dir {
 	case Strat:
-		_, strarg, _ = getIndex(th, tran, tbl, flds, packed, dir)
+		_, strarg, _ = getIndex(th, tran, tbl, sels, dir)
 		if strarg == "" {
 			return nil, nil, ""
 		}
 		return existsRow, existsHdr, strarg
 	case Only:
-		row, hdr = getLookup(th, tran, tbl, flds, packed, dir)
+		row, hdr = getLookup(th, tran, tbl, sels, dir)
 		return
 	case Any:
-		row, hdr = getExists(th, tran, tbl, flds, packed, dir)
+		row, hdr = getExists(th, tran, tbl, sels, dir)
 		return
 	}
 	panic(assert.ShouldNotReachHere())
 }
 
-func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string, dir Dir) (Row, *Header) {
-	single, _, getfn := getIndex(th, tran, table, flds, vals, dir)
+func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, sels Sels, dir Dir) (Row, *Header) {
+	single, _, getfn := getIndex(th, tran, table, sels, dir)
 	if getfn == nil {
 		return nil, nil
 	}
@@ -150,8 +145,8 @@ func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []st
 	return row, table.Header()
 }
 
-func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []string, dir Dir) (row Row, hdr *Header) {
-	_, _, getfn := getIndex(th, tran, table, flds, vals, dir)
+func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, sels Sels, dir Dir) (row Row, hdr *Header) {
+	_, _, getfn := getIndex(th, tran, table, sels, dir)
 	if getfn == nil {
 		return nil, nil
 	}
@@ -163,21 +158,21 @@ func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, flds, vals []st
 }
 
 func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
-	flds, vals []string, dir Dir) (single bool, strat string,
+	sels Sels, dir Dir) (single bool, strat string,
 	getfn func() Row) {
 	st := qry.MakeSuTran(tran)
 	hdr := table.Header()
-	filter := func(oflds, ovals []string, row Row) Row {
+	filter := func(osels Sels, row Row) Row {
 		if row != nil {
-			for i, fld := range oflds {
-				if row.GetRawVal(hdr, fld, th, st) != ovals[i] {
+			for col, val := range osels.All() {
+				if row.GetRawVal(hdr, col, th, st) != val {
 					return nil
 				}
 			}
 		}
 		return row
 	}
-	if len(flds) == 0 {
+	if len(sels) == 0 {
 		table.SetIndex(table.Indexes()[0])
 		strat = "no select: " + table.String()
 		trace.QueryOpt.Println(dir, strat)
@@ -185,26 +180,26 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 			return table.Get(th, Next)
 		}
 	}
-	if key := findKey(table.Keys(), flds); key != nil {
+	if key := findKey(table.Keys(), sels); key != nil {
 		// selecting on a key so only one record in the result
 		table.SetIndex(key)
 		strat = "key: " + table.String()
 		trace.QueryOpt.Println(dir, strat)
-		iflds, ivals, oflds, ovals := qry.Split(false, flds, vals, key)
+		isels, osels := qry.Split(false, sels, key)
 		return true, strat, func() Row {
-			return filter(oflds, ovals, table.Lookup(th, iflds, ivals))
+			return filter(osels, table.Lookup(th, isels))
 		}
 	}
-	if idx := findAll(table.Indexes(), flds); idx != nil {
+	if idx := findAll(table.Indexes(), sels); idx != nil {
 		table.SetIndex(idx)
 		strat = "just index: " + table.String()
 		trace.QueryOpt.Println(dir, strat)
-		table.Select(flds, vals)
+		table.Select(sels)
 		return false, strat, func() Row {
 			return table.Get(th, Next)
 		}
 	}
-	indexes := usableIndexes(table.Indexes(), flds)
+	indexes := usableIndexes(table.Indexes(), sels)
 	if len(indexes) == 0 {
 		return
 	}
@@ -212,13 +207,13 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		table.SetIndex(indexes[0])
 		strat = "only " + table.String()
 		trace.QueryOpt.Println(dir, strat)
-		table.Select(flds, vals)
+		table.Select(sels)
 		return false, strat, func() Row {
 			for n := 0; ; n++ {
 				row := table.Get(th, Next)
-				if row == nil || nil != filter(flds, vals, row) {
+				if row == nil || nil != filter(sels, row) {
 					if n > slow[dir] {
-						Warning(dir, "slow:", n, table, formatFieldsVals(flds, vals))
+						Warning(dir, "slow:", n, table, formatFieldsVals(sels))
 					}
 					return row
 				}
@@ -231,7 +226,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		tbl := *table // copy
 		tables[i] = &tbl
 		tables[i].SetIndex(idx)
-		tables[i].Select(flds, vals)
+		tables[i].Select(sels)
 		strat += " " + str.Join("(,)", idx)
 	}
 	var prevRow Row
@@ -244,10 +239,10 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 				}
 				row := tbl.Get(th, Next)
 				if row == nil ||
-					(!row.SameAs(prevRow) && nil != filter(flds, vals, row)) {
+					(!row.SameAs(prevRow) && nil != filter(sels, row)) {
 					trace.QueryOpt.Println(dir, "multi", tbl)
 					if n > slow[dir] {
-						Warning(dir, "slow:", n, tbl, formatFieldsVals(flds, vals))
+						Warning(dir, "slow:", n, tbl, formatFieldsVals(sels))
 					}
 					prevRow = row
 					return row
@@ -257,9 +252,9 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 	}
 }
 
-func findKey(keys [][]string, flds []string) []string {
+func findKey(keys [][]string, sels Sels) []string {
 	for _, key := range keys {
-		if set.Subset(flds, key) {
+		if selsSubset(sels, key) {
 			return key
 		}
 	}
@@ -267,27 +262,39 @@ func findKey(keys [][]string, flds []string) []string {
 }
 
 // findAll returns the first index that contains all the fields
-func findAll(indexes [][]string, flds []string) []string {
+func findAll(indexes [][]string, sels Sels) []string {
 	for _, idx := range indexes {
-		if len(idx) >= len(flds) && set.Equal(idx[:len(flds)], flds) {
+		if len(idx) >= len(sels) && sels.ColsAre(idx[:len(sels)]) {
 			return idx
 		}
 	}
 	return nil
 }
 
-func usableIndexes(indexes [][]string, flds []string) [][]string {
+func usableIndexes(indexes [][]string, sels Sels) [][]string {
 	var usable [][]string
 	for _, idx := range indexes {
-		if hasPrefix(idx, flds) {
+		if hasPrefix(idx, sels) {
 			usable = append(usable, idx)
 		}
 	}
 	return usable
 }
 
-func hasPrefix(idx []string, flds []string) bool {
-	return slices.Contains(flds, idx[0])
+func hasPrefix(idx []string, sels Sels) bool {
+	return sels.HasCol(idx[0])
+}
+
+func selsSubset(sels Sels, cols []string) bool {
+	if len(cols) > len(sels) {
+		return false
+	}
+	for _, col := range cols {
+		if !sels.HasCol(col) {
+			return false
+		}
+	}
+	return true
 }
 
 // getWhere builds a where for the named arguments.
@@ -310,15 +317,17 @@ func getWhere(ob *SuObject) string {
 	return sb.String()
 }
 
-func formatFieldsVals(flds, vals []string) string {
+func formatFieldsVals(sels Sels) string {
 	var sb strings.Builder
-	for i, fld := range flds {
-		if i > 0 {
+	first := true
+	for col, val := range sels.All() {
+		if !first {
 			sb.WriteString(", ")
 		}
-		sb.WriteString(fld)
+		first = false
+		sb.WriteString(col)
 		sb.WriteString(": ")
-		sb.WriteString(Unpack(vals[i]).String())
+		sb.WriteString(Unpack(val).String())
 	}
 	return sb.String()
 }

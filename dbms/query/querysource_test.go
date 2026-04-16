@@ -100,8 +100,7 @@ type QuerySource struct {
 	QueryMock
 	index []string
 	dataSource
-	selCols []string
-	selVals []string
+	sels Sels
 }
 
 type buildQS struct {
@@ -381,7 +380,7 @@ func (qs *QuerySource) Get(_ *Thread, dir Dir) Row {
 // It only checks the index prefix columns (stopping at first missing column),
 // matching the behavior of Table and TempIndex.
 func (qs *QuerySource) matches(row Row) bool {
-	if qs.selCols == nil {
+	if qs.sels == nil {
 		return true
 	}
 
@@ -396,17 +395,17 @@ func (qs *QuerySource) matches(row Row) bool {
 
 	if hasEmptyKey {
 		// Use singletonFilter for empty key case
-		return singletonFilter(qs.HeaderResult, row, qs.selCols, qs.selVals)
+		return singletonFilter(qs.HeaderResult, row, qs.sels)
 	}
 
 	// Normal case: check index prefix columns
 	for _, col := range qs.index {
-		i := slices.Index(qs.selCols, col)
-		if i == -1 {
+		val, ok := qs.sels.Get(col)
+		if !ok {
 			break // stop at first missing column
 		}
 		raw := row.GetRaw(qs.HeaderResult, col)
-		if raw != qs.selVals[i] {
+		if raw != val {
 			return false
 		}
 	}
@@ -415,38 +414,21 @@ func (qs *QuerySource) matches(row Row) bool {
 
 // Select restricts subsequent Get calls to rows matching the given columns/values.
 // cols and vals are packed values (output of Pack).
-func (qs *QuerySource) Select(cols, vals []string) {
-	if cols != nil {
-		assert.That(!selConflict(qs.ColumnsResult, cols, vals))
-		assert.That(selPrefix(qs.index, cols))
+func (qs *QuerySource) Select(sels Sels) {
+	if sels != nil {
+		assert.That(!selConflict(qs.ColumnsResult, sels))
+		assert.That(len(qs.index) == 0 || sels.HasCol(qs.index[0]))
 	}
-	qs.selCols = cols
-	qs.selVals = vals
+	qs.sels = sels
 	qs.Rewind()
 }
 
-// selPrefix does the same validation as Table
-func selPrefix(index, selCols []string) bool {
-	// return len(index) == 0 || slices.Contains(selCols, index[0])
-	if len(index) == 0 {
-		return true
-	}
-	data := false
-	for _, col := range index {
-		if slices.Index(selCols, col) == -1 {
-			break
-		}
-		data = true
-	}
-	return data
-}
-
 // Lookup finds and returns the first row matching the given columns/values.
-func (qs *QuerySource) Lookup(_ *Thread, cols, vals []string) Row {
-	qs.Select(cols, vals)
+func (qs *QuerySource) Lookup(_ *Thread, sels Sels) Row {
+	qs.Select(sels)
 	row := qs.Get(nil, Next)
 	assert.That(row == nil || qs.Get(nil, Next) == nil)
-	qs.Select(nil, nil) // clear select
+	qs.Select(nil) // clear select
 	return row
 }
 

@@ -44,11 +44,10 @@ type Summarize struct {
 	st  *SuTran
 	by  []string
 	// cols, ops, and ons are parallel
-	cols    []string
-	ops     []string
-	ons     []string
-	selCols []string
-	selVals []string
+	cols []string
+	ops  []string
+	ons  []string
+	sels Sels
 	summarizeApproach
 	wholeRow bool
 	rewound  bool
@@ -409,10 +408,10 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	return Row{DbRec{Record: rec}}
 }
 
-func (su *Summarize) Lookup(th *Thread, cols, vals []string) Row {
+func (su *Summarize) Lookup(th *Thread, sels Sels) Row {
 	su.nlooks++
-	su.Select(cols, vals)
-	defer su.Select(nil, nil) // clear
+	su.Select(sels)
+	defer su.Select(nil) // clear
 	return su.Get(th, Next)
 }
 
@@ -633,18 +632,18 @@ func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 	return row
 }
 
-func (su *Summarize) Select(cols, vals []string) {
+func (su *Summarize) Select(sels Sels) {
 	su.nsels++
-	icols, ivals, ocols, ovals := Split(false, cols, vals, su.index)
-	su.selCols, su.selVals = ocols, ovals
-	su.source.Select(icols, ivals)
+	isels, osels := Split(false, sels, su.index)
+	su.sels = osels
+	su.source.Select(isels)
 	su.rewound = true
 }
 
 func (su *Summarize) filter(row Row, th *Thread) bool {
-	for i, col := range su.selCols {
-		x := row.GetRawVal(su.header, col, th, su.st)
-		if x != su.selVals[i] {
+	for _, sel := range su.sels {
+		x := row.GetRawVal(su.header, sel.col, th, su.st)
+		if x != sel.val {
 			return false
 		}
 	}

@@ -143,8 +143,8 @@ func allSingleValuePrefix(index []string, encode bool, perCol map[string][]span)
 
 // recalcIdxSel rebuilds the idxSel for the current index using merged
 // where+select constraints. Returns (isel, conflict).
-func (w *Where) recalcIdxSel(index []string, mode byte, cols, vals []string) (idxSel, bool) {
-	merged, conflict := w.mergedPerCol(index, cols, vals)
+func (w *Where) recalcIdxSel(index []string, mode byte, sels Sels) (idxSel, bool) {
+	merged, conflict := w.mergedPerCol(index, sels)
 	if conflict {
 		return idxSel{}, true
 	}
@@ -155,27 +155,27 @@ func (w *Where) recalcIdxSel(index []string, mode byte, cols, vals []string) (id
 // mergedPerCol builds a perCol map from w.colSels intersected with equality
 // spans for the select cols that appear in the current index.
 // Returns (nil, true) if the intersection results in a conflict.
-func (w *Where) mergedPerCol(index, cols, vals []string) (map[string][]span, bool) {
+func (w *Where) mergedPerCol(index []string, sels Sels) (map[string][]span, bool) {
 	if w.mergedBuf == nil {
-		w.mergedBuf = make(map[string][]span, len(w.colSels)+len(cols))
+		w.mergedBuf = make(map[string][]span, len(w.colSels)+len(sels))
 	} else {
 		clear(w.mergedBuf)
 	}
 	maps.Copy(w.mergedBuf, w.colSels)
 	idxFields := w.tbl.IndexCols(index)
-	for i, col := range cols {
-		if !slices.Contains(idxFields, col) {
+	for _, sel := range sels {
+		if !slices.Contains(idxFields, sel.col) {
 			continue
 		}
-		eq := []span{valSpan(vals[i])}
-		if existing := w.mergedBuf[col]; existing != nil {
+		eq := []span{valSpan(sel.val)}
+		if existing := w.mergedBuf[sel.col]; existing != nil {
 			result := intersectSpans(existing, eq)
 			if result == nil {
 				return nil, true // conflict
 			}
-			w.mergedBuf[col] = result
+			w.mergedBuf[sel.col] = result
 		} else {
-			w.mergedBuf[col] = eq
+			w.mergedBuf[sel.col] = eq
 		}
 	}
 	return w.mergedBuf, false

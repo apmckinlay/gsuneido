@@ -120,9 +120,9 @@ func makeFixed(f string) []Fixed {
 
 func Test_selectFixed(t *testing.T) {
 	test := func(fixedStr string, expected string) {
-		cols, vals := []string{"a", "b"}, []string{"1", "2"}
+		sels := Sels{{col: "a", val: "1"}, {col: "b", val: "2"}}
 		fixed := makeFixed(fixedStr)
-		satisfied, conflict := selectFixed(cols, vals, fixed)
+		satisfied, conflict := selectFixed(sels, fixed)
 		assert.That(!(satisfied && conflict))
 		actual := ""
 		if satisfied {
