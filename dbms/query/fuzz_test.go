@@ -69,6 +69,27 @@ func fuzzRandom(t *testing.T, rnd *rand.Rand) {
 }
 
 //-------------------------------------------------------------------
+
+func TestFuzzNothing(t *testing.T) {
+	q := &Nothing{table: "nothing"}
+	q.header = SimpleHeader([]string{"a", "b", "c"})
+	for range nfuzz {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzQuery(t, q, rnd)
+	}
+}
+
+func TestFuzzProjectNone(t *testing.T) {
+	q := &ProjectNone{}
+	for range nfuzz {
+		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		rnd := rand.New(rand.NewPCG(seed1, seed2))
+		fuzzQuery(t, q, rnd)
+	}
+}
+
+//-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzQuerySource ./dbms/query/
 
 func FuzzQuerySource(f *testing.F) {
@@ -87,8 +108,21 @@ func TestFuzzQuerySource(t *testing.T) {
 }
 
 func fuzzQuerySource(t *testing.T, rnd *rand.Rand) {
-	qs := NewQuerySource(rnd)
+	qs := fuzzSource(rnd)
 	fuzzQuery(t, qs, rnd)
+}
+
+func fuzzSource(rnd *rand.Rand) Query {
+	switch rnd.IntN(7) {
+	case 0:
+		q := &Nothing{table: "nothing"}
+		q.header = SimpleHeader([]string{})
+		return q
+	case 1:
+		return &ProjectNone{}
+	default:
+		return NewQuerySource(rnd)
+	}
 }
 
 //-------------------------------------------------------------------
@@ -132,7 +166,7 @@ func TestFuzzProject(t *testing.T) {
 
 func fuzzProject(t *testing.T, rnd *rand.Rand) {
 	qs := NewQuerySource(rnd)
-	projCols := randomProjectCols(rnd, qs.ColumnsResult, qs.IndexesResult)
+	projCols := randomProjectCols(rnd, qs.Columns(), qs.Indexes())
 	q := NewProject(qs, projCols)
 	fuzzQuery(t, q, rnd)
 }
@@ -181,8 +215,8 @@ func TestFuzzRename(t *testing.T) {
 }
 
 func fuzzRename(t *testing.T, rnd *rand.Rand) {
-	qs := NewQuerySource(rnd)
-	from, to := randomRename(rnd, qs.ColumnsResult)
+	qs := fuzzSource(rnd)
+	from, to := randomRename(rnd, qs.Columns())
 	q := NewRename(qs, from, to)
 	fuzzQuery(t, q, rnd)
 }
@@ -278,7 +312,7 @@ var sumOps = []string{"count", "total", "average", "min", "max", "list"}
 
 func fuzzSummarize(t *testing.T, rnd *rand.Rand) {
 	qs := NewQuerySource(rnd)
-	by, cols, ops, ons := randomSummarize(rnd, qs.ColumnsResult, qs.IndexesResult)
+	by, cols, ops, ons := randomSummarize(rnd, qs.Columns(), qs.Indexes())
 	q := NewSummarize(qs, "", by, cols, ops, ons)
 	fuzzQuery(t, q, rnd)
 }
@@ -577,27 +611,22 @@ func TestFuzzTimes(t *testing.T) {
 }
 
 func fuzzTimes(t *testing.T, rnd *rand.Rand) {
-	qs1, qs2 := NewDisjointQS(rnd)
-	q := NewTimes(qs1, qs2)
+	q1, q2 := NewDisjointQS(rnd)
+	q := NewTimes(q1, q2)
 	fuzzQuery(t, q, rnd)
 }
 
-func NewDisjointQS(rnd *rand.Rand) (*QuerySource, *QuerySource) {
-	qs1 := NewQuerySource(rnd)
-	if len(qs1.rows) > 20 {
-		qs1.rows = qs1.rows[:20]
-		qs1.NrowsN = len(qs1.rows)
-		qs1.NrowsP = len(qs1.rows)
+func NewDisjointQS(rnd *rand.Rand) (Query, Query) {
+	q1 := fuzzSource(rnd)
+	if qs, ok := q1.(*QuerySource); ok && len(qs.rows) > 20 {
+		qs.rows = qs.rows[:20]
+		qs.NrowsN = len(qs.rows)
+		qs.NrowsP = len(qs.rows)
 	}
 
-	qs2 := newQS(rnd).Prefix("d").Build()
-	if len(qs2.rows) > 20 {
-		qs2.rows = qs2.rows[:20]
-		qs2.NrowsN = len(qs2.rows)
-		qs2.NrowsP = len(qs2.rows)
-	}
+	qs2 := newQS(rnd).Sizes(20, 3, 3).Prefix("d").Build()
 
-	return qs1, qs2
+	return q1, qs2
 }
 
 //-------------------------------------------------------------------
@@ -875,17 +904,16 @@ func TestFuzzWhere(t *testing.T) {
 func fuzzWhere(t *testing.T, rnd *rand.Rand) {
 	// Use richer index topologies 75% of the time to exercise skip scan,
 	// but keep some coverage of empty keys and plain QuerySource.
-	var qs *QuerySource
+	var q Query
 	if rnd.IntN(4) != 0 {
-		qs = newQS(rnd).NoEmptyKey().Sizes(151, 6, 8).Build()
+		q = newQS(rnd).NoEmptyKey().Sizes(151, 6, 8).Build()
 	} else {
-		qs = NewQuerySource(rnd)
+		q = fuzzSource(rnd)
 	}
-	expr := randomWhereExpr(rnd, qs.ColumnsResult, qs.KeysResult, qs.IndexesResult)
-	q := Query(qs)
+	expr := randomWhereExpr(rnd, q.Columns(), q.Keys(), q.Indexes())
 	tran := QueryTran(&testTran{})
 	//TODO non-table with expr on rules
-	if rnd.IntN(5) != 3 {
+	if qs, ok := q.(*QuerySource); ok && rnd.IntN(5) != 3 {
 		qswt := &QuerySourceWT{QuerySource: *qs}
 		tran = &fuzzTran{qswt: qswt}
 		q = qswt
@@ -985,16 +1013,17 @@ func TestFuzzExtend(t *testing.T) {
 func fuzzExtend(t *testing.T, rnd *rand.Rand) {
 	// Keep this simple: we are fuzzing cursor behavior and query plumbing,
 	// not expression evaluation.
-	qs := NewQuerySource(rnd)
+	qs := fuzzSource(rnd)
 	n := 1 + rnd.IntN(5)
 	cols := make([]string, n)
 	exprs := make([]ast.Expr, n)
+	qcols := qs.Columns()
 	for i := range n {
 		cols[i] = "x" + strconv.Itoa(i)
-		if rnd.IntN(2) == 0 {
-			exprs[i] = &ast.Constant{Val: IntVal(rnd.IntN(1000))}
+		if rnd.IntN(2) == 0 && len(qcols) > 0 {
+			exprs[i] = &ast.Ident{Name: random(qcols, rnd)}
 		} else {
-			exprs[i] = &ast.Ident{Name: random(qs.ColumnsResult, rnd)}
+			exprs[i] = &ast.Constant{Val: IntVal(rnd.IntN(1000))}
 		}
 	}
 	q := NewExtend(qs, cols, exprs)
