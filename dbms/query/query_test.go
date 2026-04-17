@@ -667,3 +667,168 @@ func TestGrouped(t *testing.T) {
 	nu = countUnfixed(cols, fixed)
 	assert.T(t).That(!grouped(idx, cols, nu, fixed))
 }
+
+func TestBestLookupIndex(t *testing.T) {
+	test := func(q Query, expected []string) {
+		t.Helper()
+		best := bestLookupIndex(q, ReadMode, 100)
+		assert.T(t).This(best.index).Is(expected)
+	}
+
+	// ineligible index should be ignored even if cheaper
+	test(&bestLookupIndexMock{
+		QueryMock: QueryMock{
+			ColumnsResult:     []string{"date", "item", "id", "cost"},
+			FixedResult:       []Fixed{},
+			IndexesResult:     [][]string{{"item"}, {"date", "item", "id"}},
+			KeysResult:        [][]string{{"date", "item", "id"}},
+			LookupLevels:      1,
+			SingleTableResult: true,
+		},
+		costs: costs{
+			"item":         {fix: 1, varc: 1},
+			"date,item,id": {fix: 10, varc: 10},
+		},
+	}, []string{"date", "item", "id"})
+
+	// among eligible indexes, lower cost should win
+	test(&bestLookupIndexMock{
+		QueryMock: QueryMock{
+			ColumnsResult:     []string{"a", "b", "c"},
+			FixedResult:       []Fixed{},
+			IndexesResult:     [][]string{{"a", "b"}, {"b", "a"}},
+			KeysResult:        [][]string{{"a", "b"}},
+			LookupLevels:      1,
+			SingleTableResult: true,
+		},
+		costs: costs{
+			"a,b": {fix: 40, varc: 30},
+			"b,a": {fix: 10, varc: 10},
+		},
+	}, []string{"b", "a"})
+
+	// fixed key columns make any index eligible (nColsUnfixed == 0)
+	test(&bestLookupIndexMock{
+		QueryMock: QueryMock{
+			ColumnsResult:     []string{"a", "b", "x", "y"},
+			FixedResult:       []Fixed{NewFixed("a", SuInt(1)), NewFixed("b", SuInt(1))},
+			IndexesResult:     [][]string{{"x"}, {"y"}},
+			KeysResult:        [][]string{{"a", "b"}},
+			LookupLevels:      1,
+			SingleTableResult: true,
+		},
+		costs: costs{
+			"x": {fix: 30, varc: 10},
+			"y": {fix: 5, varc: 5},
+		},
+	}, []string{"y"})
+
+	// fallback to logical keys when no physical index is eligible
+	test(&bestLookupIndexMock{
+		QueryMock: QueryMock{
+			ColumnsResult:     []string{"a", "b", "x"},
+			FixedResult:       []Fixed{},
+			IndexesResult:     [][]string{{"x"}},
+			KeysResult:        [][]string{{"a", "b"}, {"a"}},
+			LookupLevels:      1,
+			SingleTableResult: true,
+		},
+		costs: costs{
+			"x":   {fix: 1, varc: 1},
+			"a,b": {fix: 50, varc: 10},
+			"a":   {fix: 10, varc: 10},
+		},
+	}, []string{"a"})
+}
+
+type bestLookupIndexMock struct {
+	QueryMock
+	costs
+}
+
+type costs map[string]struct {
+	fix  Cost
+	varc Cost
+}
+
+func (m *bestLookupIndexMock) optimize(_ Mode, index []string, _ float64) (Cost, Cost, any) {
+	c, ok := m.costs[strings.Join(index, ",")]
+	if !ok {
+		return impossible, impossible, nil
+	}
+	return c.fix, c.varc, nil
+}
+
+func TestBestGroupedKeyIndex(t *testing.T) {
+	test := func(q Query, cols []string, expected []string) {
+		t.Helper()
+		best := bestGroupedKeyIndex(q, ReadMode, 1, cols)
+		assert.T(t).This(best.index).Is(expected)
+	}
+
+	// grouped index must also be lookup-eligible; otherwise fallback to cols
+	test(&bestLookupIndexMock{
+		QueryMock: QueryMock{
+			ColumnsResult:     []string{"a", "b", "k"},
+			FixedResult:       []Fixed{},
+			IndexesResult:     [][]string{{"a", "b"}},
+			KeysResult:        [][]string{{"k"}},
+			LookupLevels:      1,
+			SingleTableResult: true,
+		},
+		costs: costs{
+			"a,b": {fix: 20, varc: 20},
+		},
+	}, []string{"a", "b"}, []string{"a", "b"})
+
+	// among eligible grouped indexes, lower cost should win
+	test(&bestLookupIndexMock{
+		QueryMock: QueryMock{
+			ColumnsResult:     []string{"a", "b", "c", "d"},
+			FixedResult:       []Fixed{},
+			IndexesResult:     [][]string{{"a", "b", "c"}, {"b", "a", "d"}},
+			KeysResult:        [][]string{{"a", "b"}},
+			LookupLevels:      1,
+			SingleTableResult: true,
+		},
+		costs: costs{
+			"a,b,c": {fix: 40, varc: 20},
+			"b,a,d": {fix: 5, varc: 5},
+			"a,b":   {fix: 30, varc: 30},
+		},
+	}, []string{"a", "b"}, []string{"b", "a", "d"})
+
+	// if no physical index groups by cols, fallback to cols
+	test(&bestLookupIndexMock{
+		QueryMock: QueryMock{
+			ColumnsResult:     []string{"a", "b", "x", "y"},
+			FixedResult:       []Fixed{},
+			IndexesResult:     [][]string{{"x"}, {"y"}},
+			KeysResult:        [][]string{{"a", "b"}},
+			LookupLevels:      1,
+			SingleTableResult: true,
+		},
+		costs: costs{
+			"x":   {fix: 1, varc: 1},
+			"y":   {fix: 1, varc: 1},
+			"a,b": {fix: 10, varc: 10},
+		},
+	}, []string{"a", "b"}, []string{"a", "b"})
+
+	// fixed columns reduce required grouped columns (nColsUnfixed)
+	test(&bestLookupIndexMock{
+		QueryMock: QueryMock{
+			ColumnsResult:     []string{"a", "b", "x", "y"},
+			FixedResult:       []Fixed{NewFixed("a", SuInt(1))},
+			IndexesResult:     [][]string{{"b", "x"}, {"b", "y"}},
+			KeysResult:        [][]string{{"a", "b"}},
+			LookupLevels:      1,
+			SingleTableResult: true,
+		},
+		costs: costs{
+			"b,x": {fix: 50, varc: 10},
+			"b,y": {fix: 10, varc: 10},
+			"a,b": {fix: 30, varc: 30},
+		},
+	}, []string{"a", "b"}, []string{"b", "y"})
+}

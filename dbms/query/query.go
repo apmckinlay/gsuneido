@@ -595,6 +595,8 @@ func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 	return fixcost, varcost, app
 }
 
+// LookupCost returns the cost of performing nrows lookup operations on a query
+// using the specified index
 func LookupCost(q Query, mode Mode, index []string, nrows int) (
 	Cost, Cost) {
 	fixcost, varcost, approach := optimize(q, mode, index, 0)
@@ -789,16 +791,6 @@ func bestGrouped(source Query, mode Mode, index []string, frac float64, cols []s
 	return best
 }
 
-// bestGroupedKey finds the best key with cols as a prefix
-// taking fixed into consideration.
-// It is used by Join.
-func bestGroupedKey(source Query, mode Mode, frac float64, cols []string) bestIndex {
-	best := bestGrouped2(source, mode, source.Keys(), frac, cols)
-	fixcost, varcost := Optimize(source, mode, cols, frac)
-	best.update(cols, fixcost, varcost)
-	return best
-}
-
 func bestGrouped2(source Query, mode Mode, indexes [][]string, frac float64, cols []string) bestIndex {
 	fixed := source.Fixed()
 	nColsUnfixed := countUnfixed(cols, fixed)
@@ -809,6 +801,59 @@ func bestGrouped2(source Query, mode Mode, indexes [][]string, frac float64, col
 			best.update(idx, fixcost, varcost)
 		}
 	}
+	return best
+}
+
+// bestLookupIndex finds the best physical index that can satisfy key lookups.
+// It is used by Intersect, Minus, and Union.
+// If no physical index qualifies, falls back to logical keys.
+func bestLookupIndex(source Query, mode Mode, nrows int) bestIndex {
+	fixed := source.Fixed()
+	keys := source.Keys()
+	best := newBestIndex()
+	for _, idx := range source.Indexes() {
+		if lookupIndexEligible(idx, keys, fixed) {
+			fixcost, varcost := LookupCost(source, mode, idx, nrows)
+			best.update(idx, fixcost, varcost)
+		}
+	}
+	if best.index != nil {
+		return best
+	}
+	// fallback: no qualifying physical index (e.g. system tables with nil Indexes)
+	for _, key := range keys {
+		fixcost, varcost := LookupCost(source, mode, key, nrows)
+		best.update(key, fixcost, varcost)
+	}
+	return best
+}
+
+func lookupIndexEligible(index []string, keys [][]string, fixed []Fixed) bool {
+	for _, key := range keys {
+		nColsUnfixed := countUnfixed(key, fixed)
+		if nColsUnfixed == 0 || grouped(index, key, nColsUnfixed, fixed) {
+			return true
+		}
+	}
+	return false
+}
+
+// bestGroupedKeyIndex finds the best physical index that groups by key.
+// It is used by Join and LeftJoin on the to-one side.
+func bestGroupedKeyIndex(source Query, mode Mode, frac float64, key []string) bestIndex {
+	best := newBestIndex()
+	fixed := source.Fixed()
+	keys := source.Keys()
+	nColsUnfixed := countUnfixed(key, fixed)
+	for _, idx := range source.Indexes() {
+		if grouped(idx, key, nColsUnfixed, fixed) &&
+			lookupIndexEligible(key, keys, fixed) {
+			fixcost, varcost := Optimize(source, mode, idx, frac)
+			best.update(idx, fixcost, varcost)
+		}
+	}
+	fixcost, varcost := Optimize(source, mode, key, frac)
+	best.update(key, fixcost, varcost)
 	return best
 }
 

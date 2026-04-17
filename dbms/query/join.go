@@ -345,7 +345,7 @@ func joinopt(src1, src2 Query, nrows func() (int, int), jt joinType,
 	frac2 := float64(read2) * frac / float64(max(1, nrows2))
 	var best2 bestIndex
 	if jt.toOne() {
-		best2 = bestGroupedKey(src2, mode, frac2, by)
+		best2 = bestGroupedKeyIndex(src2, mode, frac2, by)
 	} else {
 		best2 = bestGrouped(src2, mode, nil, frac2, by)
 	}

@@ -473,14 +473,9 @@ func keyPerm(index, key []string) []string {
 }
 
 func (u *Union) optLookup(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, any) {
-	best := newBestIndex()
 	fixcost1, varcost1 := Optimize(src1, mode, nil, frac)
 	nrows1, _ := src1.Nrows()
-	for _, key := range src2.Keys() { // FIXME same as compatible bestLookupKey
-		fixcost2, varcost2 :=
-			LookupCost(src2, mode, key, int(float64(nrows1)*frac))
-		best.update(key, fixcost2, varcost2)
-	}
+	best := bestLookupIndex(src2, mode, int(float64(nrows1)*frac))
 	approach := &unionApproach{keyIndex: best.index, strat: unionLookup,
 		idx1: nil, idx2: best.index}
 	if src1 == u.source2 {

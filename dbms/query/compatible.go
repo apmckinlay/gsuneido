@@ -99,16 +99,6 @@ func (c *Compatible) equal(th *Thread, row1, row2 Row) bool {
 		c.allCols, th, c.st)
 }
 
-// bestLookupKey is used by Intersect and Minus
-func bestLookupKey(q Query, mode Mode, nrows int) bestIndex {
-	//TODO possibly exclude fixed
-	best := newBestIndex()
-	for _, key := range q.Keys() {
-		fixcost, varcost := LookupCost(q, mode, key, nrows)
-		best.update(key, fixcost, varcost)
-	}
-	return best
-}
 
 //-------------------------------------------------------------------
 
