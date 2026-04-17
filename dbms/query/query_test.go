@@ -331,6 +331,11 @@ func TestWithoutDupsOrSupersets(t *testing.T) {
 	test([][]string{{"a"}, {"b", "c"}}, [][]string{{"a"}, {"b", "c"}})
 	test([][]string{{"a", "b"}, {"b", "a"}}, [][]string{{"a", "b"}})
 	test([][]string{{"a", "b"}, {"b", "a", "c"}}, [][]string{{"a", "b"}})
+	test([][]string{{"a", "b", "c"}, {"a", "b"}}, [][]string{{"a", "b"}})
+	test([][]string{{"a"}, {"a", "b"}, {"a", "c"}}, [][]string{{"a"}})
+	test([][]string{{"a", "b"}, {"a", "b"}}, [][]string{{"a", "b"}})
+	test([][]string{{"a"}, {"b"}, {"c"}}, [][]string{{"a"}, {"b"}, {"c"}})
+	test([][]string{{}, {"a"}}, [][]string{{}})
 }
 
 func TestWhereSplitBug(t *testing.T) {

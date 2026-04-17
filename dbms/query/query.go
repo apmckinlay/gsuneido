@@ -883,9 +883,9 @@ outer:
 			if len(k1) > len(k2) && set.Subset(k1, k2) {
 				continue outer // skip/exclude k1 - superset
 			}
-			if !slc.ContainsFn(om.result(), k1, set.Equal[string]) { // exclude duplicates
-				om.add(k1)
-			}
+		}
+		if !slc.ContainsFn(om.result(), k1, set.Equal[string]) { // exclude duplicates
+			om.add(k1)
 		}
 	}
 	return om.result()
