@@ -620,3 +620,50 @@ func TestOrderedN(t *testing.T) {
 	// Single field no match
 	test([]string{"a"}, []string{"b"}, nil, 0)
 }
+
+func TestGrouped(t *testing.T) {
+	oneval := []string{""}
+	fixed := []Fixed{{col: "f1", values: oneval}, {col: "f2", values: oneval}}
+	test := func(sidx, scols string) {
+		t.Helper()
+		idx := strings.Fields(sidx)
+		cols := strings.Fields(scols)
+		nu := countUnfixed(cols, fixed)
+		assert.T(t).That(grouped(idx, cols, nu, fixed))
+		idx = append(idx, "x")
+		assert.T(t).That(grouped(idx, cols, nu, fixed))
+		cols = append(cols, "y")
+		assert.T(t).That(!grouped(idx, cols, nu+1, fixed))
+	}
+	test("a", "a")
+	test("a b", "a")
+	test("a b", "b a")
+	test("a f1", "f2 a")
+	test("a f1 b f2", "a f1")
+	test("a f1 b f2", "f1 b f2 a")
+
+	// index too short - only has one unfixed column but need two
+	idx := []string{"a"}
+	cols := []string{"a", "b"}
+	nu := countUnfixed(cols, fixed)
+	assert.T(t).That(!grouped(idx, cols, nu, fixed))
+
+	// missing required column in index
+	idx = []string{"a", "c"}
+	cols = []string{"a", "b"}
+	nu = countUnfixed(cols, fixed)
+	assert.T(t).That(!grouped(idx, cols, nu, fixed))
+
+	// index starts with fixed column, then has required unfixed columns
+	fixed2 := []Fixed{{col: "f1", values: oneval}, {col: "f2", values: oneval}, {col: "f3", values: oneval}}
+	idx = []string{"f3", "a", "b"}
+	cols = []string{"a", "b"}
+	nu = countUnfixed(cols, fixed2)
+	assert.T(t).That(grouped(idx, cols, nu, fixed2))
+
+	// empty index but non-zero unfixed columns should return false
+	idx = []string{}
+	cols = []string{"a"}
+	nu = countUnfixed(cols, fixed)
+	assert.T(t).That(!grouped(idx, cols, nu, fixed))
+}
