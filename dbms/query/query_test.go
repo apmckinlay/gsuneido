@@ -555,3 +555,68 @@ func TestSummarizeWhere(t *testing.T) {
 	assert.T(t).This(strategy("tmp where a < 2 summarize max b")).
 		Is("tmp^(a) where a < 2 summarize-seq* max b")
 }
+
+func TestOrderedN(t *testing.T) {
+	test := func(index []string, order []string, fixed []Fixed, expected int) {
+		t.Helper()
+		result := orderedn(index, order, fixed)
+		assert.T(t).This(result).Is(expected)
+	}
+
+	// Basic matching - all fields match
+	test([]string{"a", "b", "c"}, []string{"a", "b", "c"}, nil, 3)
+
+	// Partial match
+	test([]string{"a", "b", "c"}, []string{"a", "b"}, nil, 2)
+
+	// No match at first field
+	test([]string{"a", "b", "c"}, []string{"x", "y"}, nil, 0)
+
+	// Index shorter than order
+	test([]string{"a", "b"}, []string{"a", "b", "c"}, nil, 2)
+
+	// Order shorter than index
+	test([]string{"a", "b", "c"}, []string{"a"}, nil, 1)
+
+	// Empty index
+	test([]string{}, []string{"a", "b"}, nil, 0)
+
+	// Empty order
+	test([]string{"a", "b"}, []string{}, nil, 0)
+
+	// Both empty
+	test([]string{}, []string{}, nil, 0)
+
+	// Fixed allows skipping in index - fixed 'b' allows index to skip 'b'
+	fixed := []Fixed{{col: "b", values: fixvals("1")}}
+	test([]string{"a", "b", "c"}, []string{"a", "c"}, fixed, 2)
+
+	// Fixed allows skipping in order - fixed 'b' allows order to skip 'b'
+	test([]string{"a", "c"}, []string{"a", "b", "c"}, fixed, 3)
+
+	// Fixed in both index and order
+	test([]string{"a", "b", "c"}, []string{"a", "b", "c"}, fixed, 3)
+
+	// Multiple fixed values
+	fixed2 := []Fixed{{col: "a", values: fixvals("1")}, {col: "c", values: fixvals("2")}}
+	test([]string{"a", "b", "c"}, []string{"b"}, fixed2, 1)
+
+	// Fixed doesn't help when fields don't match
+	test([]string{"x", "y"}, []string{"a", "b"}, fixed, 0)
+
+	// Order has fixed field that can be skipped
+	fixed3 := []Fixed{{col: "b", values: fixvals("1")}, {col: "c", values: fixvals("2")}}
+	test([]string{"a"}, []string{"a", "b", "c"}, fixed3, 3)
+
+	// Index exhausted before order
+	test([]string{"a"}, []string{"a", "b", "c"}, nil, 1)
+
+	// Mismatch after some matches
+	test([]string{"a", "x", "c"}, []string{"a", "b", "c"}, nil, 1)
+
+	// Single field match
+	test([]string{"a"}, []string{"a"}, nil, 1)
+
+	// Single field no match
+	test([]string{"a"}, []string{"b"}, nil, 0)
+}
