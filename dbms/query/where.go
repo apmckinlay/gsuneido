@@ -254,11 +254,11 @@ func (w *Where) Keys() [][]string {
 	if w.keys == nil {
 		w.optInit()
 		if w.singleton || w.conflict {
-			return emptyKey // intentionally {} not nil
+			w.keys = emptyKey // intentionally {} not nil
+		} else {
+			//TODO treat unique indexes with a where != "" as keys
+			w.keys = w.source.Keys()
 		}
-		//TODO treat unique indexes with a where != "" as keys
-		w.keys = w.source.Keys()
-		assert.That(w.keys != nil)
 	}
 	return w.keys
 }
