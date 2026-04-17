@@ -34,11 +34,11 @@ func (no *Nothing) Transform() Query {
 }
 
 func (*Nothing) Keys() [][]string {
-	return [][]string{{}}
+	return emptyKey
 }
 
 func (*Nothing) Indexes() [][]string {
-	return [][]string{{}}
+	return emptyKey
 }
 
 func (*Nothing) Nrows() (int, int) {

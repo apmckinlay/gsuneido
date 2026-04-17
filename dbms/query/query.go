@@ -192,6 +192,8 @@ type Query interface {
 	knowExactNrows() bool
 }
 
+var emptyKey = [][]string{{}}
+
 // queryBase is embedded by almost all Query types
 type queryBase struct {
 	// header must be set by constructors and setApproach.

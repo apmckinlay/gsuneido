@@ -191,7 +191,6 @@ func TestBestMergeIndexes(t *testing.T) {
 		true)
 
 	// both sources have empty keys - don't need order
-	emptyKey := [][]string{{}}
 	test([]string{"x"},
 		[][]string{{"a", "b"}},
 		[][]string{{"a", "b"}},

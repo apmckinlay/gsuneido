@@ -193,7 +193,7 @@ func (b *buildQS) makeColumns() {
 func (b *buildQS) makeKeys() {
 	if !b.noEmptyKey && b.rnd.IntN(11) == 5 {
 		b.emptyKey = true
-		b.keys = [][]string{{}}
+		b.keys = emptyKey
 		return
 	}
 	nkeys := 1 + b.rnd.IntN(b.maxKeys)

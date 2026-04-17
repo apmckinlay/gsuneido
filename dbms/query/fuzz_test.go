@@ -576,8 +576,8 @@ func splitShare[E any](rnd *rand.Rand, s []E) ([]E, []E) {
 }
 
 func makeEmptyKey(rnd *rand.Rand, qs *QuerySource) {
-	qs.KeysResult = [][]string{{}}
-	qs.IndexesResult = [][]string{{}}
+	qs.KeysResult = emptyKey
+	qs.IndexesResult = emptyKey
 	qs.FastSingleResult = true
 	if len(qs.rows) > 1 {
 		qs.rows = qs.rows[:1]

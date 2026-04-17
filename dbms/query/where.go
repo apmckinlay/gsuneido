@@ -254,7 +254,7 @@ func (w *Where) Keys() [][]string {
 	if w.keys == nil {
 		w.optInit()
 		if w.singleton || w.conflict {
-			return [][]string{{}} // intentionally {} not nil
+			return emptyKey // intentionally {} not nil
 		}
 		//TODO treat unique indexes with a where != "" as keys
 		w.keys = w.source.Keys()
@@ -604,7 +604,7 @@ func (w *Where) optInit() {
 	}
 	w.setNrows(w.calcNrows())
 	if w.singleton {
-		w.indexes = [][]string{{}}
+		w.indexes = emptyKey
 	} else {
 		w.indexes = w.source.Indexes()
 	}

@@ -58,7 +58,7 @@ func TestSummarize_Keys(t *testing.T) {
 	keys := projectKeys(srckeys, []string{"x", "y"})
 	assert.T(t).This(keys).Is([][]string{{"x", "y"}})
 	keys = projectKeys(srckeys, []string{})
-	assert.T(t).This(keys).Is([][]string{{}})
+	assert.T(t).This(keys).Is(emptyKey)
 }
 
 func TestSummarize_Indexes(t *testing.T) {

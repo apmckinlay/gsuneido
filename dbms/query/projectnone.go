@@ -37,7 +37,7 @@ func (*ProjectNone) Columns() []string {
 }
 
 func (*ProjectNone) Keys() [][]string {
-	return [][]string{{}}
+	return emptyKey
 }
 
 func (*ProjectNone) fastSingle() bool {
@@ -45,7 +45,7 @@ func (*ProjectNone) fastSingle() bool {
 }
 
 func (*ProjectNone) Indexes() [][]string {
-	return [][]string{{}}
+	return emptyKey
 }
 
 func (*ProjectNone) Nrows() (int, int) {
