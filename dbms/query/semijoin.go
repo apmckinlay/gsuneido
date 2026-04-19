@@ -191,4 +191,3 @@ func (sj *SemiJoin) equalBy(th *Thread, row1, row2 Row) bool {
 	}
 	return true
 }
-

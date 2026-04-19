@@ -19,6 +19,7 @@ type Intersect struct {
 
 type intersectApproach struct {
 	keyIndex []string
+	frac2    float64
 	reverse  bool
 }
 
@@ -108,22 +109,25 @@ func (it *Intersect) Transform() Query {
 
 func (it *Intersect) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	assert.That(it.disjoint == "") // eliminated by Transform
-	fixcost1, varcost1, key1 := it.cost(it.source1, it.source2, mode, index, frac)
-	fixcost2, varcost2, key2 := it.cost(it.source2, it.source1, mode, index, frac)
+	fixcost1, varcost1, key1, frac1 := it.cost(it.source1, it.source2, mode, index, frac)
+	fixcost2, varcost2, key2, frac2 := it.cost(it.source2, it.source1, mode, index, frac)
 	fixcost2 += outOfOrder
 	if fixcost1+varcost1 < fixcost2+varcost2 {
-		return fixcost1, varcost1, &intersectApproach{keyIndex: key1}
+		return fixcost1, varcost1, &intersectApproach{keyIndex: key1, frac2: frac1}
 	}
-	return fixcost2, varcost2, &intersectApproach{keyIndex: key2, reverse: true}
+	return fixcost2, varcost2, &intersectApproach{keyIndex: key2, frac2: frac2, reverse: true}
 }
 
 func (*Intersect) cost(src1, src2 Query, mode Mode, index []string, frac float64) (
-	Cost, Cost, []string) {
+	Cost, Cost, []string, float64) {
 	// iterate source and lookup on source2
 	fixcost1, varcost1 := Optimize(src1, mode, index, frac)
 	nrows1, _ := src1.Nrows()
-	best2 := bestLookupIndex(src2, mode, int(float64(nrows1)*frac))
-	return fixcost1 + best2.fixcost, varcost1 + best2.varcost, best2.index
+	nrows2, _ := src2.Nrows()
+	lookups := int(float64(nrows1) * frac)
+	frac2 := float64(lookups) / float64(max(1, nrows2))
+	best2 := bestLookupIndex(src2, mode, lookups, frac2, nil)
+	return fixcost1 + best2.fixcost, varcost1 + best2.varcost, best2.index, frac2
 }
 
 func (it *Intersect) setApproach(index []string, frac float64, approach any,
@@ -134,7 +138,7 @@ func (it *Intersect) setApproach(index []string, frac float64, approach any,
 		it.source1, it.source2 = it.source2, it.source1
 	}
 	it.source1 = SetApproach(it.source1, index, frac, tran)
-	it.source2 = SetApproach(it.source2, it.keyIndex, 0, tran)
+	it.source2 = SetApproach(it.source2, it.keyIndex, ap.frac2, tran)
 	it.header = it.getHeader()
 }
 

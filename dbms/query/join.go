@@ -345,21 +345,21 @@ func joinopt(src1, src2 Query, nrows func() (int, int), jt joinType,
 	frac2 := float64(read2) * frac / float64(max(1, nrows2))
 	var best2 bestIndex
 	if jt.toOne() {
-		best2 = bestGroupedKeyIndex(src2, mode, frac2, by)
+		lookupFrac := float64(nrows1) * frac / float64(max(1, nrows2))
+		best2 = bestLookupIndex(src2, mode, int(float64(nrows1)*frac), lookupFrac, by)
+		frac2 = lookupFrac
 	} else {
 		best2 = bestGrouped(src2, mode, nil, frac2, by)
 	}
 	if best2.index == nil {
 		return joinCost{fixcost: impossible}
 	}
-	varcost2 := Cost(frac * float64(nrows1*src2.lookupCost()))
 	// trace.Println("joinopt", joinType, "frac", frac)
 	// trace.Println("   ", nrows1, joinType, nrows2, "=> read2", read2, "=> frac2", frac2)
 	// trace.Println("    best2", best2.index, "=", best2.fixcost, best2.varcost)
-	// trace.Println("    nrows1", nrows1, "lookups", nrows1 * src2.lookupCost())
 	return joinCost{index1: index, index2: best2.index, frac2: frac2,
 		fixcost: fixcost1 + best2.fixcost,
-		varcost: varcost1 + varcost2 + best2.varcost,
+		varcost: varcost1 + best2.varcost,
 	}
 }
 

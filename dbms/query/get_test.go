@@ -798,8 +798,8 @@ func TestQueryGet(t *testing.T) {
 		'c'
 		'e'`)
 	test("(customer summarize id,count) join (hist summarize id,count) sort id",
-		"customer^(id) summarize-seq id, count join 1:1 by(id,count) "+
-			"(hist^(date) summarize-map id, count tempindex(id,count))",
+		"(hist^(date) summarize-map id, count join 1:1 by(id,count) "+
+			"(customer^(id) summarize-seq id, count tempindex(id,count))) tempindex(id)",
 		`count	id
 		1	'a'
 		1	'c'`)

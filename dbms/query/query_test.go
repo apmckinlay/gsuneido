@@ -671,7 +671,7 @@ func TestGrouped(t *testing.T) {
 func TestBestLookupIndex(t *testing.T) {
 	test := func(q Query, expected []string) {
 		t.Helper()
-		best := bestLookupIndex(q, ReadMode, 100)
+		best := bestLookupIndex(q, ReadMode, 100, 1, nil)
 		assert.T(t).This(best.index).Is(expected)
 	}
 
@@ -759,10 +759,10 @@ func (m *bestLookupIndexMock) optimize(_ Mode, index []string, _ float64) (Cost,
 	return c.fix, c.varc, nil
 }
 
-func TestBestGroupedKeyIndex(t *testing.T) {
+func TestBestLookupIndexGrouped(t *testing.T) {
 	test := func(q Query, cols []string, expected []string) {
 		t.Helper()
-		best := bestGroupedKeyIndex(q, ReadMode, 1, cols)
+		best := bestLookupIndex(q, ReadMode, 100, 1, cols)
 		assert.T(t).This(best.index).Is(expected)
 	}
 

@@ -47,6 +47,7 @@ type unionApproach struct {
 	keyIndex   []string
 	idx1, idx2 []string
 	strat      unionStrategy
+	frac2      float64
 	reverse    bool
 }
 
@@ -475,9 +476,12 @@ func keyPerm(index, key []string) []string {
 func (u *Union) optLookup(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, any) {
 	fixcost1, varcost1 := Optimize(src1, mode, nil, frac)
 	nrows1, _ := src1.Nrows()
-	best := bestLookupIndex(src2, mode, int(float64(nrows1)*frac))
+	nrows2, _ := src2.Nrows()
+	lookups := int(float64(nrows1) * frac)
+	frac2 := float64(lookups) / float64(max(1, nrows2))
+	best := bestLookupIndex(src2, mode, lookups, frac2, nil)
 	approach := &unionApproach{keyIndex: best.index, strat: unionLookup,
-		idx1: nil, idx2: best.index}
+		idx1: nil, idx2: best.index, frac2: frac2}
 	if src1 == u.source2 {
 		approach.reverse = true
 		best.fixcost += outOfOrder
@@ -505,7 +509,7 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 	}
 	u.source1 = SetApproach(u.source1, app.idx1, frac, tran)
 	if app.strat == unionLookup {
-		frac = 0
+		frac = app.frac2
 	}
 	u.source2 = SetApproach(u.source2, app.idx2, frac, tran)
 	u.header = JoinHeaders(u.source1.Header(), u.source2.Header())

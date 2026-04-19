@@ -184,9 +184,9 @@ func TestOptimize(t *testing.T) {
 	test("customer join alias",
 		"alias^(id) join 1:1 by(id) customer^(id)")
 	test("(inven join trans) union (inven join trans)",
-		"(inven^(item) join 1:n by(item) trans^(item)) "+
-			"union-lookup(date,item,id) "+
-			"(trans^(date,item,id) join n:1 by(item) inven^(item))")
+		"(trans^(date,item,id) join n:1 by(item) (inven^(item) tempindex(item))) "+
+			"union-merge(date,item,id) "+
+			"(trans^(date,item,id) join n:1 by(item) (inven^(item) tempindex(item)))")
 	test("task join co join cus",
 		"(task^(tnum) join 1:1 by(tnum) co^(tnum)) "+
 			"join n:1 by(cnum) cus^(cnum)")
