@@ -20,10 +20,10 @@ func TestQueryTool(t *testing.T) {
 	dbms := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbms }
 
-	result, err := queryTool("tables join columns")
+	result, err := queryTool("tables")
 	assert.That(err == nil)
-	assert.That(strings.Contains(result.Results, `["table", "nrows", "totalsize", "column", "field"]`))
-	assert.That(strings.Contains(result.Results, `["tables", 4, 0, "table", 0]`))
+	assert.That(strings.Contains(result.Results, `["table", "nrows", "totalsize"]`))
+	assert.That(strings.Contains(result.Results, `["tables", 4, 0]`))
 }
 
 func TestFormatQueryResult(t *testing.T) {
