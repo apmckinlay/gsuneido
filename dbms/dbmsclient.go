@@ -225,8 +225,8 @@ func (ms *muxSession) Run(_ *Thread, code string) Value {
 	return ms.ValueResult()
 }
 
-func (ms *muxSession) Schema(string) string {
-	panic("Schema only available standalone")
+func (ms *muxSession) Schema(table string) string {
+	return ToStr(ms.Exec(nil, SuObjectOf(SuStr("Database.Schema"), SuStr(table))))
 }
 
 func (ms *muxSession) SessionId(th *Thread, id string) string {
