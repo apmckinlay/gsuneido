@@ -13,9 +13,7 @@ import (
 )
 
 func TestDumpTable(t *testing.T) {
-	if testing.Short() {
-		return
-	}
+	assert.TestOnlyIndividually(t)
 	start := time.Now()
 	defer os.Remove("tmp.su")
 	defer os.Remove("tmp.su.bak")
@@ -25,9 +23,7 @@ func TestDumpTable(t *testing.T) {
 }
 
 func TestDumpDatabase(t *testing.T) {
-	if testing.Short() {
-		return
-	}
+	assert.TestOnlyIndividually(t)
 	start := time.Now()
 	defer os.Remove("tmp.su")
 	nTables, nViews, err := DumpDatabase("../../suneido.db", "tmp.su")
