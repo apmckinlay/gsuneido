@@ -4,8 +4,11 @@
 package meta
 
 import (
+	"math"
+
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hamt"
@@ -119,6 +122,28 @@ func (ti *Info) Check() {
 	}
 	assert.That(sum.Nrows == ti.Nrows)
 	assert.That(sum.Size == ti.Size)
+}
+
+// SmallestKeyIndex returns the index of the smallest key (mode 'k') index.
+// Smallest is based first on btree treeLevels, then on number of columns.
+func (ti *Info) SmallestKeyIndex(schemaIndexes []schema.Index) int {
+	best := -1
+	bestLevels := math.MaxInt
+	bestCols := math.MaxInt
+	for i := range ti.Indexes {
+		if schemaIndexes[i].Mode != 'k' {
+			continue
+		}
+		levels := ti.Indexes[i].BtreeLevels()
+		cols := len(schemaIndexes[i].Columns)
+		if levels < bestLevels || (levels == bestLevels && cols < bestCols) {
+			best = i
+			bestLevels = levels
+			bestCols = cols
+		}
+	}
+	assert.That(best != -1) // there should always be at least one key index
+	return best
 }
 
 //-------------------------------------------------------------------

@@ -105,6 +105,25 @@ func TestCheckForKey(t *testing.T) {
 	s.Check() // Should not panic
 }
 
+func TestDumpString(t *testing.T) {
+	assert := assert.T(t)
+	sc := Schema{
+		Table:   "test",
+		Columns: []string{"a", "b", "c"},
+		Indexes: []Index{
+			{Mode: 'k', Columns: []string{"a"}},
+			{Mode: 'k', Columns: []string{"b"}},
+			{Mode: 'i', Columns: []string{"c"}},
+		},
+	}
+	// firstIdx=0 => same as DumpString
+	assert.This(sc.DumpString(0)).Is("test (a,b,c) key(a) key(b) index(c)")
+	// firstIdx=1 => second key first
+	assert.This(sc.DumpString(1)).Is("test (a,b,c) key(b) key(a) index(c)")
+	// firstIdx=2 => index first
+	assert.This(sc.DumpString(2)).Is("test (a,b,c) index(c) key(a) key(b)")
+}
+
 func TestCheckLower(t *testing.T) {
 	assert := assert.T(t)
 

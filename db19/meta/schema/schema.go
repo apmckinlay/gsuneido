@@ -64,21 +64,23 @@ const (
 )
 
 func (sc *Schema) String() string {
-	return sc.string(false, true, false)
+	return sc.string(false, true, false, 0)
 }
 
 // String2 includes fkToHere information.
 // It is used by Database.Schema(table)
 func (sc *Schema) String2() string {
-	return sc.string(true, true, true)
+	return sc.string(true, true, true, 0)
 }
 
-// DumpString does not include fkToHere or deleted columns
-func (sc *Schema) DumpString() string {
-	return sc.string(false, false, true)
+// DumpString does not include fkToHere or deleted columns.
+// It outputs the index at firstIdx first.
+// This is used by dump so the load can assume the data is sorted by index 0.
+func (sc *Schema) DumpString(firstIdx int) string {
+	return sc.string(false, false, true, firstIdx)
 }
 
-func (sc *Schema) string(fktohere, delcols, emptycols bool) string {
+func (sc *Schema) string(fktohere, delcols, emptycols bool, firstIdx int) string {
 	var sb strings.Builder
 	sb.WriteString(sc.Table)
 	sb.WriteString(" ")
@@ -97,7 +99,13 @@ func (sc *Schema) string(fktohere, delcols, emptycols bool) string {
 		sb.WriteString(") ")
 	}
 	sep := ""
-	for i := range sc.Indexes {
+	for n := range len(sc.Indexes) {
+		i := n
+		if n == 0 {
+			i = firstIdx
+		} else if n <= firstIdx {
+			i = n - 1
+		}
 		sb.WriteString(sep)
 		sb.WriteString(sc.Indexes[i].string(fktohere))
 		sep = " "

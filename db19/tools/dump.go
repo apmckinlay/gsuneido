@@ -203,14 +203,15 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	}
 	sc.Check(state.Meta.GetRoSchema)
 	hasdel := sc.HasDeleted()
-	schema := sc.DumpString()
+	info := state.Meta.GetRoInfo(table)
+	ixi := info.SmallestKeyIndex(sc.Indexes)
+	schema := sc.DumpString(ixi)
 	if !multi {
 		schema = str.AfterFirst(schema, " ")
 	}
 	w.WriteString(schema + "\n")
-	info := state.Meta.GetRoInfo(table)
 	sum := uint64(0)
-	nrows := info.Indexes[0].CheckBtree(func(off uint64) {
+	nrows := info.Indexes[ixi].CheckBtree(func(off uint64) {
 		sum += off                       // addition so order doesn't matter
 		rec := OffToRecCk(db.Store, off) // verify data checksums
 		if hasdel {
@@ -221,10 +222,10 @@ func dumpTable2(db *Database, state *DbState, table string, multi bool,
 	})
 	writeInt(w, 0) // end of table records
 	if nrows != info.Nrows {
-		panic(fmt.Sprintln("dump", table, sc.Indexes[0].Columns,
+		panic(fmt.Sprintln("dump", table, sc.Indexes[ixi].Columns,
 			"count", nrows, "should equal info", info.Nrows))
 	}
-	ics.checkOtherIndexes(db.Store, sc, info, nrows, sum) // concurrent
+	ics.checkOtherIndexes(db.Store, sc, info, ixi, nrows, sum) // concurrent
 	return nrows
 }
 
@@ -303,8 +304,11 @@ type indexCheck struct {
 }
 
 func (ics *indexCheckers) checkOtherIndexes(st *stor.Stor, sc *meta.Schema,
-	info *meta.Info, count int, sum uint64) {
-	for i := 1; i < len(info.Indexes); i++ {
+	info *meta.Info, skipIdx, count int, sum uint64) {
+	for i := range info.Indexes {
+		if i == skipIdx {
+			continue
+		}
 		select {
 		case ics.work <- indexCheck{st: st,
 			table: info.Table, ix: &sc.Indexes[i],

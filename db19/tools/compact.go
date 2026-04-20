@@ -113,12 +113,13 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	ts.Check(state.Meta.GetRoSchema)
 	hasdel := ts.HasDeleted()
 	info := state.Meta.GetRoInfo(ts.Table)
+	ixi := info.SmallestKeyIndex(ts.Indexes)
 	sum := uint64(0)
 	size := int64(0)
 	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
 	var off2 uint64
 	var dstbuf []byte
-	nrows := info.Indexes[0].CheckBtree(func(off uint64) {
+	nrows := info.Indexes[ixi].CheckBtree(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		buf := src.Store.Data(off)
 		n := core.RecLen(buf)
@@ -140,13 +141,16 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	})
 	list.Finish()
 	assert.That(nrows == info.Nrows)
-	for i := 1; i < len(info.Indexes); i++ {
+	for i := range info.Indexes {
+		if i == ixi {
+			continue
+		}
 		CheckOtherIndex(src.Store, &ts.Indexes[i], info.Indexes[i], nrows, sum, false, nil)
 	}
 	if hasdel {
 		ts.Columns = slc.Without(ts.Columns, "-")
 	}
-	indexes := buildIndexes(ts, list, dst, nrows) // same as load
+	indexes := buildIndexes(ts, list, dst, nrows, ixi)
 	ti := meta.NewInfo(ts.Table, indexes, nrows, size)
 	dst.AddNewTable(ts, ti)
 }

@@ -211,7 +211,8 @@ func loadTable1(db *Database, r *bufio.Reader, schema string) (
 // It is multi-threaded when loading an entire database
 func loadTable2(db *Database, ts *meta.Schema,
 	nrows int, size int64, list *slBuilder, overwrite bool) {
-	indexes := buildIndexes(ts, list, db, nrows)
+	// dump ensures that index 0 is the physical sort order
+	indexes := buildIndexes(ts, list, db, nrows, 0)
 	ti := meta.NewInfo(ts.Table, indexes, nrows, size)
 	if overwrite {
 		db.OverwriteTable(ts, ti)
@@ -257,7 +258,7 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *slBuilder) (
 }
 
 func buildIndexes(ts *meta.Schema, list *slBuilder, db *Database,
-	nrecs int) []*index.Overlay {
+	nrecs int, sortedBy int) []*index.Overlay {
 	i := -1
 	defer func() {
 		if e := recover(); e != nil {
@@ -270,10 +271,12 @@ func buildIndexes(ts *meta.Schema, list *slBuilder, db *Database,
 	}()
 	ts.SetupIndexes()
 	ov := make([]*index.Overlay, len(ts.Indexes))
-	for i = range ts.Indexes {
-		ix := ts.Indexes[i]
+	// Process sortedBy first since the list starts in its order.
+	// Once we sort for another index, the original order is lost.
+	buildIndex := func(i int) {
+		ix := &ts.Indexes[i]
 		trace(ix)
-		if i > 0 || ix.Mode != 'k' {
+		if i != sortedBy || ix.Mode != 'k' {
 			list.Sort(MakeLess(db.Store, &ix.Ixspec))
 		}
 		before := db.Store.Size()
@@ -294,6 +297,14 @@ func buildIndexes(ts *meta.Schema, list *slBuilder, db *Database,
 		ov[i] = index.OverlayFor(bt)
 		assert.That(n == nrecs)
 		trace("size", db.Store.Size()-before)
+	}
+	i = sortedBy // for error reporting
+	buildIndex(sortedBy)
+	for i = range ts.Indexes {
+		if i == sortedBy {
+			continue
+		}
+		buildIndex(i)
 	}
 	return ov
 }

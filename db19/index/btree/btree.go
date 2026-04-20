@@ -69,6 +69,11 @@ func SetSplit(split int) int {
 	return prev
 }
 
+// BtreeWithLevels creates a btree with the given treeLevels for testing.
+func BtreeWithLevels(treeLevels int) *T {
+	return &btree{treeLevels: treeLevels}
+}
+
 func (bt *btree) Cksum() uint32 {
 	return uint32(bt.treeLevels) + uint32(bt.root)
 }

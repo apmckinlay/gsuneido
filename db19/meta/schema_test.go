@@ -128,3 +128,72 @@ func TestOptimizeIndexes(t *testing.T) {
 	ts.setContainsKey()
 	assert.This(str(ts)).Is("k(a_lower!) k(x) U(b,a) U(b,a_lower!) u(x_lower!)")
 }
+
+func TestSetBestKeys(t *testing.T) {
+	assert := assert.T(t)
+	idx := func(mode byte, cols string) schema.Index {
+		return schema.Index{Mode: mode, Columns: str.Split(cols, ",")}
+	}
+	bestKey := func(ts *Schema) string {
+		var s strings.Builder
+		for _, ix := range ts.Indexes {
+			if s.Len() > 0 {
+				s.WriteString(" ")
+			}
+			s.WriteString(string(ix.Mode) + "(" + str.Join(",", ix.Columns))
+			if ix.BestKey != nil {
+				add := difference(ix.BestKey, ix.Columns)
+				if len(add) > 0 {
+					s.WriteString("+" + str.Join(",", add))
+				}
+			}
+			s.WriteString(")")
+		}
+		return s.String()
+	}
+
+	// basic: one key, one index
+	ts := &Schema{Schema: schema.Schema{}}
+	ts.Indexes = []schema.Index{idx('k', "a"), idx('i', "b")}
+	ts.SetBestKeys(0)
+	assert.This(bestKey(ts)).Is("k(a) i(b+a)")
+
+	// key columns are a subset of index columns => no additions needed
+	ts.Indexes = []schema.Index{idx('k', "a"), idx('i', "a,b")}
+	ts.SetBestKeys(0)
+	assert.This(bestKey(ts)).Is("k(a) i(a,b)")
+
+	// multiple keys: picks the one with fewest additional columns
+	ts.Indexes = []schema.Index{idx('k', "a"), idx('k', "x,y,z"),
+		idx('i', "b,c")}
+	ts.SetBestKeys(0)
+	assert.This(bestKey(ts)).Is("k(a) k(x,y,z) i(b,c+a)")
+
+	// tie-breaking: same number of additions, prefer fewer key columns
+	ts.Indexes = []schema.Index{idx('k', "a,b"), idx('k', "d"),
+		idx('i', "a,c")}
+	ts.SetBestKeys(0)
+	assert.This(bestKey(ts)).Is("k(a,b) k(d) i(a,c+d)")
+
+	// _lower! matches corresponding column in difference
+	ts.Indexes = []schema.Index{idx('k', "a_lower!"), idx('i', "a")}
+	ts.SetBestKeys(0)
+	assert.This(bestKey(ts)).Is("k(a_lower!) i(a)")
+
+	// nold: only indexes from nold onward get BestKey
+	ts.Indexes = []schema.Index{idx('k', "a"), idx('i', "b"), idx('i', "c")}
+	ts.SetBestKeys(2)
+	assert.This(ts.Indexes[1].BestKey).Is(nil)
+	assert.This(ts.Indexes[2].BestKey).Is([]string{"a"})
+
+	// key indexes don't get BestKey
+	ts.Indexes = []schema.Index{idx('k', "a"), idx('k', "b")}
+	ts.SetBestKeys(0)
+	assert.This(ts.Indexes[0].BestKey).Is(nil)
+	assert.This(ts.Indexes[1].BestKey).Is(nil)
+
+	// unique indexes also get BestKey
+	ts.Indexes = []schema.Index{idx('k', "a"), idx('u', "b")}
+	ts.SetBestKeys(0)
+	assert.This(bestKey(ts)).Is("k(a) u(b+a)")
+}

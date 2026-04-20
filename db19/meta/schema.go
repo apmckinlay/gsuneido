@@ -224,6 +224,7 @@ func (ts *Schema) SetupNewIndexes(nold int) []schema.Index {
 
 // SetBestKeys determines the BestKey for each index
 // that requires the fewest additional columns.
+// On ties, prefers the key with fewer columns (matches SmallestKeyIndex).
 // This should be done before IxSpecs.
 // WARNING: this affects the stored index entries
 // so it should only be used for empty indexes.
@@ -233,13 +234,16 @@ func (ts *Schema) SetBestKeys(nold int) {
 		if (ix.Mode == 'i' || ix.Mode == 'u') && ix.BestKey == nil {
 			var best *schema.Index
 			bestLen := math.MaxInt
+			bestCols := math.MaxInt
 			for j := range ts.Indexes {
 				key := &ts.Indexes[j]
 				if key.Mode == 'k' {
 					n := len(difference(key.Columns, ix.Columns))
-					if n < bestLen {
+					ncols := len(key.Columns)
+					if n < bestLen || (n == bestLen && ncols < bestCols) {
 						best = key
 						bestLen = n
+						bestCols = ncols
 					}
 				}
 			}

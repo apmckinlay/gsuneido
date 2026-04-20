@@ -8,6 +8,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hamt"
@@ -86,4 +87,51 @@ func mkdata(tbl InfoHamt, n int) []string {
 			Indexes: []*index.Overlay{index.OverlayStub()}})
 	}
 	return data
+}
+
+func TestSmallestKeyIndex(t *testing.T) {
+	assert := assert.T(t)
+	ov := func(treeLevels int) *index.Overlay {
+		return index.OverlayFor(btree.BtreeWithLevels(treeLevels))
+	}
+	key := func(c ...string) schema.Index {
+		return schema.Index{Mode: 'k', Columns: c}
+	}
+	idx := func(c ...string) schema.Index {
+		return schema.Index{Mode: 'i', Columns: c}
+	}
+
+	// single key index
+	info := &Info{Indexes: []*index.Overlay{ov(0)}}
+	assert.This(info.SmallestKeyIndex([]schema.Index{key("a")})).Is(0)
+
+	// same treeLevels, different column counts => fewer columns wins
+	info = &Info{Indexes: []*index.Overlay{ov(2), ov(2), ov(2)}}
+	assert.This(info.SmallestKeyIndex(
+		[]schema.Index{key("a", "b", "c"), key("x"), key("y", "z")})).Is(1)
+
+	// different treeLevels => fewer levels wins
+	info = &Info{Indexes: []*index.Overlay{ov(3), ov(1), ov(2)}}
+	assert.This(info.SmallestKeyIndex(
+		[]schema.Index{key("a"), key("x", "y", "z"), key("y")})).Is(1)
+
+	// treeLevels takes priority over columns
+	info = &Info{Indexes: []*index.Overlay{ov(1), ov(2)}}
+	assert.This(info.SmallestKeyIndex(
+		[]schema.Index{key("a", "b", "c"), key("x")})).Is(0)
+
+	// tie on both => first wins
+	info = &Info{Indexes: []*index.Overlay{ov(2), ov(2)}}
+	assert.This(info.SmallestKeyIndex(
+		[]schema.Index{key("a"), key("b")})).Is(0)
+
+	// non-key indexes are skipped
+	info = &Info{Indexes: []*index.Overlay{ov(3), ov(1), ov(2)}}
+	assert.This(info.SmallestKeyIndex(
+		[]schema.Index{idx("a"), key("x"), idx("y")})).Is(1)
+
+	// first key is not first index
+	info = &Info{Indexes: []*index.Overlay{ov(3), ov(1), ov(2)}}
+	assert.This(info.SmallestKeyIndex(
+		[]schema.Index{idx("a"), key("x"), key("y")})).Is(1)
 }
