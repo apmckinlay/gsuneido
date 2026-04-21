@@ -14,6 +14,7 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/bits"
 )
 
 var z = func(x int) bool { return x == 0 }
@@ -719,4 +720,30 @@ func (li *conc) alloc() *block[int] {
 	}
 	// fmt.Println("alloc block")
 	return new(block[int])
+}
+
+//-------------------------------------------------------------------
+
+func BenchmarkLarge(b *testing.B) {
+	const size = 1_000_000
+	b.Run("ordered", func(b *testing.B) {
+		for b.Loop() {
+			bldr := NewSorting(z, lt)
+			for i := range size {
+				bldr.Add(1 + i)
+			}
+			bldr.Finish()
+			b.SetBytes(size * 8)
+		}
+	})
+	b.Run("random", func(b *testing.B) {
+		for b.Loop() {
+			bldr := NewSorting(z, lt)
+			for i := range size {
+				bldr.Add(1 + int(bits.Cycle(uint64(i), uint64(size))))
+			}
+			bldr.Finish()
+			b.SetBytes(size * 8)
+		}
+	})
 }
