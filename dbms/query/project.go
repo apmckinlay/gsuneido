@@ -86,7 +86,8 @@ func NewProject(src Query, cols []string) *Project {
 func NewRemove(src Query, cols []string) *Project {
 	proj := slc.WithoutFn(src.Columns(), func(col string) bool {
 		return slices.Contains(cols, col) ||
-			strings.HasSuffix(col, "_lower!") ||
+			(strings.HasSuffix(col, "_lower!") &&
+				slices.Contains(cols, strings.TrimSuffix(col, "_lower!"))) ||
 			(strings.HasSuffix(col, "_deps") &&
 				slices.Contains(cols, strings.TrimSuffix(col, "_deps")))
 	})

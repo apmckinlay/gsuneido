@@ -11,11 +11,15 @@ import (
 )
 
 func TestRemove(t *testing.T) {
-	cols := []string{"a", "a_deps", "b", "b_deps", "c", "c_deps",
-		"d", "d_deps", "x_lower!"}
+	cols := []string{"a", "b", "c", "c_deps", "d", "d_lower!"}
 	tbl := newTestQop(cols)
-	proj := NewRemove(tbl, []string{"a", "c"})
-	assert.T(t).This(proj.columns).Is([]string{"b", "b_deps", "d", "d_deps"})
+	test := func(remove, expected string) {
+		t.Helper()
+		proj := NewRemove(tbl, strings.Split(remove, ","))
+		assert.T(t).This(proj.columns).Is(strings.Split(expected, ","))
+	}
+	test("a,b", "c,c_deps,d,d_lower!")
+	test("c,d", "a,b")
 }
 
 func TestProjectIndexes(t *testing.T) {
