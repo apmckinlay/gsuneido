@@ -232,9 +232,15 @@ type singleIter struct {
 
 func (ti *TempIndex) single() rowIter {
 	var th2 Thread // separate thread because sortlist runs in the background
+	xrow := Row{DbRec{}}
+	yrow := Row{DbRec{}}
 	b := sortlist.NewSorting(
 		func(x DbRec) bool { return x == DbRec{} },
-		func(x, y DbRec) bool { return ti.less(&th2, Row{x}, Row{y}) })
+		func(x, y DbRec) bool {
+			xrow[0] = x
+			yrow[0] = y
+			return ti.less(&th2, xrow, yrow)
+		})
 	nrows := 0
 	warned := false
 	for {
@@ -254,7 +260,8 @@ func (ti *TempIndex) single() rowIter {
 	}
 	// NOTE: the closure captures ti not ti.th
 	lt := func(rec DbRec, key []string) bool {
-		return ti.less2(ti.th, Row{rec}, key)
+		xrow[0] = rec
+		return ti.less2(ti.th, xrow, key)
 	}
 	return singleIter{b.Finish().Iter(lt)}
 }
