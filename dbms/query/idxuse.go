@@ -17,7 +17,8 @@ var idxUse = make(map[string]int)
 var idxUseLock sync.Mutex // guards idxUse
 
 func IdxUse(table string, idx []string) {
-	if strings.HasPrefix(table, "tests_20") {
+	if len(idx) == 0 || // empty key
+		strings.HasPrefix(table, "tests_20") {
 		return
 	}
 	var sb strings.Builder
