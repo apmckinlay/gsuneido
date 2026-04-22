@@ -160,7 +160,7 @@ func selectFixed(sels Sels, fixed []Fixed) (satisfied, conflict bool) {
 	return satisfied, false
 }
 
-// conflictFixed returns true if cols,vals conflict with fixed
+// conflictFixed returns true if sels conflict with fixed
 func conflictFixed(sels Sels, fixed []Fixed) bool {
 	_, conflict := selectFixed(sels, fixed)
 	return conflict

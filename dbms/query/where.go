@@ -869,7 +869,7 @@ func (w *Where) Select(sels Sels) {
 }
 
 func (w *Where) Lookup(th *Thread, sels Sels) Row {
-	// cols,vals (plus fixed) specify a single source row
+	// sels (plus fixed) specify a single source row
 	w.nlooks++
 	if conflictFixed(sels, w.Fixed()) {
 		return nil
