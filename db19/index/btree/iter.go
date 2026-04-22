@@ -40,12 +40,10 @@ func (bt *btree) Iterator() iface.Iter {
 	return &Iterator{bt: bt, state: rewound, rng: iface.All, noRange: true}
 }
 
-// Key returns the current key or an empty string. It allocates.
+// Key returns the current key.
+// Returns ixkey.Max when eof (regardless of direction).
 func (it *Iterator) Key() string {
-	if it.state != within {
-		return ""
-	}
-	if !it.curKeySet {
+	if it.state == within && !it.curKeySet {
 		it.curKey = it.leaf.key()
 		it.curKeySet = true
 	}
@@ -132,10 +130,16 @@ func (it *Iterator) next() {
 		if it.leaf.next() {
 			return
 		} else if !it.nextLeaf() {
-			it.state = eof
+			it.setEof()
 			return
 		}
 	}
+}
+
+func (it *Iterator) setEof() {
+	it.state = eof
+	it.curKey = ixkey.Max
+	it.curKeySet = true
 }
 
 func (it *Iterator) nextLeaf() bool {
@@ -182,7 +186,7 @@ func (it *Iterator) skipAdvanceToMatch() {
 		key := it.leaf.key()
 		prefix, suffix := ixkey.SplitPrefixSuffix(key, it.skipStart)
 		if !it.noRange && prefix >= it.rng.End {
-			it.state = eof
+			it.setEof()
 			return
 		}
 		if prefix != it.skipGroup {
@@ -230,7 +234,7 @@ func (it *Iterator) skipSeekGroupOrg(prefix string) {
 	it.seekAllRaw(target)
 	// If we can't land at/after target, this group has no keys in range.
 	if it.state != within || it.Key() < target {
-		it.state = eof
+		it.setEof()
 	}
 }
 
@@ -247,7 +251,7 @@ func (it *Iterator) skipSeekNextGroup(prefix string) {
 
 	bt := it.bt
 	if bt.treeLevels == 0 {
-		it.state = eof
+		it.setEof()
 		return
 	}
 	// treeNode.seek always returns a valid position (i < noffs),
@@ -296,7 +300,7 @@ func (it *Iterator) prev() {
 			it.state = within
 			return
 		} else if !it.prevLeaf() {
-			it.state = eof
+			it.setEof()
 			return
 		}
 	}
@@ -348,7 +352,7 @@ func (it *Iterator) skipRetreatToMatch() {
 	for it.state == within {
 		prefix, suffix := ixkey.SplitPrefixSuffix(it.leaf.key(), it.skipStart)
 		if !it.noRange && prefix < it.rng.Org {
-			it.state = eof
+			it.setEof()
 			return
 		}
 		if prefix != it.skipGroup {
@@ -485,6 +489,7 @@ func (it *Iterator) SeekAll(key string) {
 	// Mirror seekAllRaw: if no suffix matched (but tree is non-empty), back up to
 	// the last physical key rather than leaving the iterator at EOF.
 	if startedWithin && it.state == eof {
+		it.curKeySet = false
 		it.prev()
 		it.state = within
 	}
@@ -503,7 +508,7 @@ func (it *Iterator) seekAllRaw(key string) {
 	leaf := bt.readLeaf(off)
 	if leaf.nkeys() == 0 {
 		assert.That(bt.treeLevels == 0) // only root can be empty
-		it.state = eof
+		it.setEof()
 		return
 	}
 	it.leaf = leaf.seek(key)
@@ -538,7 +543,7 @@ func (it *Iterator) skipSuffixSeekUnbounded(minSuffix string) {
 }
 
 // checkRange changes state from within to eof
-// if the current key is outside the range
+// if the current key is outside the range (used after Seek, treated as forward)
 func (it *Iterator) checkRange() {
 	if it.noRange || it.state != within {
 		return
@@ -546,7 +551,7 @@ func (it *Iterator) checkRange() {
 	prefix := it.leaf.prefix()
 	suffix := it.leaf.suffix()
 	if gte(prefix, suffix, it.rng.End) || !gte(prefix, suffix, it.rng.Org) {
-		it.state = eof
+		it.setEof()
 	}
 }
 
@@ -559,7 +564,7 @@ func (it *Iterator) checkRangeEnd() {
 	prefix := it.leaf.prefix()
 	suffix := it.leaf.suffix()
 	if gte(prefix, suffix, it.rng.End) {
-		it.state = eof
+		it.setEof()
 	}
 }
 
@@ -572,7 +577,7 @@ func (it *Iterator) checkRangeOrg() {
 	prefix := it.leaf.prefix()
 	suffix := it.leaf.suffix()
 	if !gte(prefix, suffix, it.rng.Org) {
-		it.state = eof
+		it.setEof()
 	}
 }
 

@@ -419,6 +419,30 @@ func TestIterator(t *testing.T) {
 	test(9) // or last
 }
 
+func TestIteratorEofSentinel(t *testing.T) {
+	// After Next or Prev hits eof, Cur() must return (ixkey.Max, 0).
+	// This sentinel allows minIter in overiter to work without eof checks.
+	assert := assert.T(t)
+	ib := &ixbuf{}
+	ib.Insert("a", 42)
+	it := ib.Iterator()
+	it.Next() // lands on "a"
+	it.Next() // hits eof
+	assert.That(it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is(ixkey.Max)
+	assert.This(off).Is(uint64(0))
+
+	// After Prev hits eof, Cur() must also return (ixkey.Max, 0).
+	it.Rewind()
+	it.Prev() // lands on "a"
+	it.Prev() // hits eof
+	assert.That(it.Eof())
+	key, off = it.Cur()
+	assert.This(key).Is(ixkey.Max)
+	assert.This(off).Is(uint64(0))
+}
+
 func TestIterRange(t *testing.T) {
 	ib := &ixbuf{}
 	data := strings.FieldsSeq("a b c d e f g h")

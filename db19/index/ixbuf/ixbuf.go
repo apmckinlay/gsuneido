@@ -535,8 +535,12 @@ func (it *Iterator) Modified() bool {
 	return it.modCount != it.ib.modCount
 }
 
+func (it *Iterator) setEof() {
+	it.state = eof
+	it.cur = slot{key: ixkey.Max}
+}
+
 func (it *Iterator) Cur() (string, uint64) {
-	assert.That(it.state == within)
 	return it.cur.key, it.cur.off
 }
 
@@ -567,7 +571,7 @@ func (it *Iterator) Next() {
 	it.i++
 	if it.i >= len(it.c) {
 		if it.ci+1 >= len(it.ib.chunks) {
-			it.state = eof
+			it.setEof()
 			return
 		}
 		it.ci++
@@ -576,7 +580,7 @@ func (it *Iterator) Next() {
 	}
 	it.cur = it.c[it.i]
 	if it.cur.key >= it.rng.End {
-		it.state = eof
+		it.setEof()
 	}
 }
 
@@ -598,7 +602,7 @@ func (it *Iterator) Prev() {
 	it.i--
 	if it.i < 0 {
 		if it.ci <= 0 {
-			it.state = eof
+			it.setEof()
 			return
 		}
 		it.ci--
@@ -607,7 +611,7 @@ func (it *Iterator) Prev() {
 	}
 	it.cur = it.c[it.i]
 	if it.cur.key < it.rng.Org || it.rng.End <= it.cur.key {
-		it.state = eof
+		it.setEof()
 	}
 }
 
@@ -623,7 +627,7 @@ func (it *Iterator) Seek(key string) {
 	}
 	it.SeekAll(key)
 	if it.cur.key < it.rng.Org || it.rng.End <= it.cur.key {
-		it.state = eof
+		it.setEof()
 	}
 }
 
@@ -640,7 +644,7 @@ func (it *Iterator) skipSeek(key string) {
 	default:
 		it.seekRaw(key)
 		if it.state == within && it.cur.key < key {
-			it.state = eof
+			it.setEof()
 		}
 	}
 	it.skipAdvanceToMatch()
@@ -654,7 +658,7 @@ func (it *Iterator) skipSeek(key string) {
 
 func (it *Iterator) SeekAll(key string) {
 	if len(it.ib.chunks) == 0 {
-		it.state = eof
+		it.setEof()
 		return
 	}
 	it.ci, it.c, it.i = it.ib.search(key)
@@ -682,7 +686,7 @@ func (it *Iterator) skipAdvanceToMatch() {
 	for it.state == within {
 		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipStart)
 		if prefix >= it.rng.End {
-			it.state = eof
+			it.setEof()
 			return
 		}
 		if prefix != it.skipGroup {
@@ -728,7 +732,7 @@ func (it *Iterator) skipSeekOrg(prefix string) {
 	}
 	it.seekRaw(target)
 	if it.cur.key < target { // eof if group has no keys >= Org
-		it.state = eof
+		it.setEof()
 	}
 }
 
@@ -739,7 +743,7 @@ func (it *Iterator) skipSeekNext(prefix string) {
 	if it.state == within {
 		p, _ := ixkey.SplitPrefixSuffix(it.cur.key, it.skipStart)
 		if p == prefix {
-			it.state = eof
+			it.setEof()
 		}
 	}
 }
@@ -760,7 +764,7 @@ func (it *Iterator) skipRetreatToMatch() {
 	for it.state == within {
 		prefix, suffix := ixkey.SplitPrefixSuffix(it.cur.key, it.skipStart)
 		if prefix < it.rng.Org {
-			it.state = eof
+			it.setEof()
 			return
 		}
 		if prefix != it.skipGroup {
@@ -825,7 +829,7 @@ func (it *Iterator) advance() {
 	it.i++
 	if it.i >= len(it.c) {
 		if it.ci+1 >= len(it.ib.chunks) {
-			it.state = eof
+			it.setEof()
 			return
 		}
 		it.ci++
@@ -840,7 +844,7 @@ func (it *Iterator) retreat() {
 	it.i--
 	if it.i < 0 {
 		if it.ci <= 0 {
-			it.state = eof
+			it.setEof()
 			return
 		}
 		it.ci--

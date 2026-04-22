@@ -27,6 +27,8 @@ type Iter interface {
 	// as of the most recent Next, Prev, or Seek
 	Cur() (key string, off uint64)
 
+	// Key returns the current key.
+	// Returns ixkey.Max when eof (regardless of direction).
 	Key() string
 	Offset() uint64
 

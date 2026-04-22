@@ -8,6 +8,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -208,31 +209,22 @@ func (oi *OverIter) modNext(modified bool) {
 		}
 		if modified || it.Modified() {
 			it.Seek(oi.curKey)
-			if !it.Eof() {
-				key := it.Key()
-				if key <= oi.curKey {
-					it.Next()
-				}
+			if it.Key() <= oi.curKey {
+				it.Next()
 			}
 		} else if oi.lastDir != next {
 			if it.Eof() {
 				it.Rewind()
 			}
 			it.Next()
-		} else if atKey(it, oi.curKey) {
+		} else if it.Key() == oi.curKey {
 			it.Next()
 		}
 	}
 }
 
-func atKey(it iface.Iter, key string) bool {
-	if it.Eof() {
-		return false
-	}
-	return it.Key() == key
-}
-
-// minIter finds the the minimum current key
+// minIter finds the minimum current key.
+// Eof iterators return ixkey.Max so they are naturally excluded.
 func (oi *OverIter) minIter() (bool, string, uint64) {
 	// NOTE: keep this code in sync with maxIter
 	if oi.singleIter {
@@ -245,19 +237,15 @@ func (oi *OverIter) minIter() (bool, string, uint64) {
 		return true, key, off
 	}
 	for {
-		var keyMin string
+		keyMin := ixkey.Max
 		var result uint64
-		found := false
 
 		// find minimum key and its most recent operation
+		// eof iterators return ixkey.Max so they are naturally excluded
 		for _, it := range oi.iters {
-			if it.Eof() {
-				continue
-			}
 			key, off := it.Cur()
-			if !found || key < keyMin { // new minimum found
+			if key < keyMin { // new minimum found
 				keyMin = key
-				found = true
 			}
 			if key == keyMin { // track the most recent operation for keyMin
 				if off&ixbuf.Delete != 0 {
@@ -267,7 +255,7 @@ func (oi *OverIter) minIter() (bool, string, uint64) {
 				}
 			}
 		}
-		if !found {
+		if keyMin == ixkey.Max {
 			return false, "", 0
 		}
 		if result != 0 {
@@ -276,7 +264,7 @@ func (oi *OverIter) minIter() (bool, string, uint64) {
 
 		// Skip this key - advance all iterators that have it
 		for _, it := range oi.iters {
-			if !it.Eof() && it.Key() == keyMin {
+			if it.Key() == keyMin {
 				it.Next()
 			}
 		}
@@ -320,23 +308,19 @@ func (oi *OverIter) modPrev(modified bool) {
 		}
 		if modified || it.Modified() {
 			it.Seek(oi.curKey) // finds first key >= curKey
-			// Seek is upper bound but Prev needs lower bound
+			// Seek eof means all keys < curKey; rewind to position at last key
 			if it.Eof() {
-				// Seek hit EOF, all keys < curKey
-				// For reverse iteration, position at the last key
 				it.Rewind()
-				it.Prev() // go to last key in range
-			} else {
-				if it.Key() >= oi.curKey {
-					it.Prev()
-				}
+			}
+			if it.Key() >= oi.curKey {
+				it.Prev()
 			}
 		} else if oi.lastDir != prev {
 			if it.Eof() {
 				it.Rewind()
 			}
 			it.Prev()
-		} else if atKey(it, oi.curKey) {
+		} else if it.Key() == oi.curKey {
 			it.Prev()
 		}
 	}

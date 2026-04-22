@@ -13,6 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/itertest"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
@@ -149,6 +150,35 @@ func TestOverIterDeletePrevBug(*testing.T) {
 	key, off := it.Cur()
 	assert.This(key).Is("8")
 	assert.This(off).Is(8)
+}
+
+// TestOverIterMinIterEofSentinel verifies that minIter terminates correctly
+// when all iterators are at eof, rather than looping indefinitely.
+func TestOverIterMinIterEofSentinel(t *testing.T) {
+	assert := assert.T(t)
+	bldr := btree.NewBuilder(stor.HeapStor(8192))
+	assert.That(bldr.Add("a", 1))
+	bt := bldr.Finish()
+
+	it1 := bt.Iterator()
+	it1.Prev()
+	it1.Prev()
+	assert.That(it1.Eof())
+	assert.This(it1.Key()).Is(ixkey.Max) // universal eof sentinel
+
+	it2 := bt.Iterator()
+	it2.Next()
+	it2.Next()
+	assert.That(it2.Eof())
+	assert.This(it2.Key()).Is(ixkey.Max)
+
+	oi := &OverIter{iters: []iterT{it1, it2}}
+
+	// Both iterators are at eof; minIter should return (false, "", 0) immediately.
+	found, key, off := oi.minIter()
+	assert.That(!found)
+	assert.This(key).Is("")
+	assert.This(off).Is(uint64(0))
 }
 
 func TestOverIterSkipScanEmptyStringSuffix(t *testing.T) {
