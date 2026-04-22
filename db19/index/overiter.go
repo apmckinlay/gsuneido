@@ -33,8 +33,13 @@ type OverIter struct {
 	curOff uint64
 	state
 	lastDir dir
-	// singleIter is true when only the btree iterator is needed (no layers/mut)
-	singleIter bool
+	// fastIdx is the index of the winning iterator from the last minIter/maxIter.
+	// -1 means no fast path is available.
+	// secondMin is the minimum key of all non-winning iterators (ixkey.Max if none),
+	// used by the Next fast path to detect when re-merging is needed.
+	fastIdx   int
+	secondMin string
+	secondMax string
 	// number of leading fields treated as prefix in skip-scan mode
 	skipStart int
 }
@@ -77,7 +82,7 @@ type oiTran interface {
 }
 
 func NewOverIter(table string, iIndex int) *OverIter {
-	return &OverIter{table: table, iIndex: iIndex, rng: iface.All}
+	return &OverIter{table: table, iIndex: iIndex, rng: iface.All, fastIdx: -1}
 }
 
 func (oi *OverIter) Eof() bool {
@@ -140,7 +145,6 @@ func (oi *OverIter) Next(t oiTran) {
 	if oi.state == eof {
 		return // stick at eof
 	}
-
 	prevKey := oi.curKey
 
 	modified := oi.update(t)
@@ -148,7 +152,11 @@ func (oi *OverIter) Next(t oiTran) {
 		oi.all(iterT.Next)
 		oi.state = front
 		prevKey = oi.rng.Org
+		oi.fastIdx = -1
+	} else if oi.canFast(modified, next) && oi.fastNext(t, prevKey) {
+		return
 	} else {
+		oi.fastIdx = -1
 		oi.modNext(modified)
 	}
 	var found bool
@@ -167,10 +175,6 @@ func (oi *OverIter) update(t oiTran) bool {
 	if ov == oi.overlay {
 		return false
 	}
-	// Optimization: if no layers and no mut, only need btree iterator
-	// (almost 3/4 of the time for application tests, about 10% faster)
-	oi.singleIter = (ov.mut == nil || ov.mut.Len() == 0) &&
-		(len(ov.layers) == 0 || (len(ov.layers) == 1 && ov.layers[0].Len() == 0))
 	oi.newIters(ov)
 	return true
 }
@@ -193,6 +197,34 @@ func (oi *OverIter) newIters(ov *Overlay) {
 	}
 	oi.iters = its
 	oi.overlay = ov
+}
+
+func (oi *OverIter) canFast(modified bool, d dir) bool {
+	return !modified &&
+		oi.lastDir == d &&
+		oi.fastIdx >= 0 &&
+		!oi.iters[len(oi.iters)-1].Modified()
+}
+
+func (oi *OverIter) fastNext(t oiTran, prevKey string) bool {
+	it := oi.iters[oi.fastIdx]
+	it.Next()
+	if !it.Eof() && it.Key() < oi.secondMin {
+		// still the sole winner, skip full scan.
+		// Safe to use Cur() without checking Delete: any tombstone in this iter
+		// has a companion in another iter, creating a tie in minIter which sets
+		// secondMin <= tombstone key, so the fast path is never taken past a tombstone.
+		oi.curKey, oi.curOff = it.Cur()
+		t.Read(oi.table, oi.iIndex, prevKey, oi.curKey)
+		oi.lastDir = next
+		return true
+	}
+	// winner advanced past secondMin; fall back to full merge.
+	// The winner's key is now > curKey, so the "it.Key() == curKey" guard in
+	// modNext will skip it — no double-advance.
+	oi.fastIdx = -1
+	oi.modNext(false)
+	return false
 }
 
 func (oi *OverIter) all(fn func(it iterT)) {
@@ -225,27 +257,36 @@ func (oi *OverIter) modNext(modified bool) {
 
 // minIter finds the minimum current key.
 // Eof iterators return ixkey.Max so they are naturally excluded.
+// As a side effect it sets oi.fastIdx and oi.secondMin for the Next fast path.
 func (oi *OverIter) minIter() (bool, string, uint64) {
 	// NOTE: keep this code in sync with maxIter
-	if oi.singleIter {
-		// Fast path: only btree iterator, no merge needed
-		it := oi.iters[0]
-		if it.Eof() {
-			return false, "", 0
-		}
-		key, off := it.Cur()
-		return true, key, off
-	}
 	for {
 		keyMin := ixkey.Max
+		second := ixkey.Max // second-smallest key (across non-winning iters)
+		winIdx := -1
 		var result uint64
 
-		// find minimum key and its most recent operation
-		// eof iterators return ixkey.Max so they are naturally excluded
-		for _, it := range oi.iters {
+		// find minimum key and its most recent operation;
+		// simultaneously track second-smallest key for the fast path.
+		// eof iterators return ixkey.Max so they are naturally excluded.
+		for i, it := range oi.iters {
 			key, off := it.Cur()
 			if key < keyMin { // new minimum found
+				// old keyMin (if any) becomes a candidate for second
+				if keyMin < second {
+					second = keyMin
+				}
 				keyMin = key
+				winIdx = i
+			} else if key == keyMin {
+				// tie: this iter is also at keyMin; it's a non-winner at keyMin
+				if keyMin < second {
+					second = keyMin
+				}
+			} else { // key > keyMin
+				if key < second {
+					second = key
+				}
 			}
 			if key == keyMin { // track the most recent operation for keyMin
 				if off&ixbuf.Delete != 0 {
@@ -256,13 +297,20 @@ func (oi *OverIter) minIter() (bool, string, uint64) {
 			}
 		}
 		if keyMin == ixkey.Max {
+			oi.fastIdx = -1
 			return false, "", 0
 		}
 		if result != 0 {
+			oi.fastIdx = winIdx
+			// secondMin <= any tombstone/update key in this iter: such an entry must
+			// have a companion in another iter (invariant), creating a tie here, which
+			// causes second to be <= that key. ixkey.Max when len(iters)==1.
+			oi.secondMin = second
 			return true, keyMin, result &^ ixbuf.Update
 		}
 
-		// Skip this key - advance all iterators that have it
+		// Skip this deleted key - lose fast path since multiple iters may advance
+		oi.fastIdx = -1
 		for _, it := range oi.iters {
 			if it.Key() == keyMin {
 				it.Next()
@@ -286,7 +334,11 @@ func (oi *OverIter) Prev(t oiTran) {
 		oi.all(iterT.Prev)
 		oi.state = back
 		prevKey = oi.rng.End
+		oi.fastIdx = -1
+	} else if oi.canFast(modified, prev) && oi.fastPrev(t, prevKey) {
+		return
 	} else {
+		oi.fastIdx = -1
 		oi.modPrev(modified)
 	}
 	var found bool
@@ -298,6 +350,27 @@ func (oi *OverIter) Prev(t oiTran) {
 		t.Read(oi.table, oi.iIndex, oi.rng.Org, prevKey)
 	}
 	oi.lastDir = prev
+}
+
+func (oi *OverIter) fastPrev(t oiTran, prevKey string) bool {
+	it := oi.iters[oi.fastIdx]
+	it.Prev()
+	if !it.Eof() && it.Key() > oi.secondMax {
+		// still the sole winner, skip full scan.
+		// Safe to use Cur() without checking Delete/Update: any tombstone or update
+		// in this iter has a companion in another iter, creating a tie in maxIter
+		// which sets secondMax >= that key, so the fast path is never taken past one.
+		oi.curKey, oi.curOff = it.Cur()
+		t.Read(oi.table, oi.iIndex, oi.curKey, prevKey)
+		oi.lastDir = prev
+		return true
+	}
+	// winner retreated past secondMax; fall back to full merge.
+	// The winner's key is now < curKey, so the "it.Key() == curKey" guard in
+	// modPrev will skip it — no double-advance.
+	oi.fastIdx = -1
+	oi.modPrev(false)
+	return false
 }
 
 func (oi *OverIter) modPrev(modified bool) {
@@ -326,32 +399,41 @@ func (oi *OverIter) modPrev(modified bool) {
 	}
 }
 
-// maxIter finds the maximum current key
+// maxIter finds the maximum current key.
+// As a side effect it sets oi.fastIdx and oi.secondMax for the Prev fast path.
 func (oi *OverIter) maxIter() (bool, string, uint64) {
 	// NOTE: keep this code in sync with minIter
-	if oi.singleIter {
-		// Fast path: only btree iterator, no merge needed
-		it := oi.iters[0]
-		if it.Eof() {
-			return false, "", 0
-		}
-		key, off := it.Cur()
-		return true, key, off
-	}
 	for {
 		var keyMax string
+		second := ixkey.Min // second-largest key (across non-winning iters)
+		winIdx := -1
 		var result uint64
 		found := false
 
-		// find maximum key and its most recent operation
-		for _, it := range oi.iters {
+		// find maximum key and its most recent operation;
+		// simultaneously track second-largest key for the fast path.
+		for i, it := range oi.iters {
 			if it.Eof() {
 				continue
 			}
 			key, off := it.Cur()
 			if !found || key > keyMax { // new maximum found
+				// old keyMax (if any) becomes a candidate for second
+				if found && keyMax > second {
+					second = keyMax
+				}
 				keyMax = key
+				winIdx = i
 				found = true
+			} else if key == keyMax {
+				// tie: this iter is also at keyMax; it's a non-winner at keyMax
+				if keyMax > second {
+					second = keyMax
+				}
+			} else { // key < keyMax
+				if key > second {
+					second = key
+				}
 			}
 			if key == keyMax { // track the most recent operation for keyMax
 				if off&ixbuf.Delete != 0 {
@@ -362,13 +444,20 @@ func (oi *OverIter) maxIter() (bool, string, uint64) {
 			}
 		}
 		if !found {
+			oi.fastIdx = -1
 			return false, "", 0
 		}
 		if result != 0 {
+			oi.fastIdx = winIdx
+			// secondMax >= any tombstone/update key in this iter: such an entry must
+			// have a companion in another iter (invariant), creating a tie here, which
+			// causes second to be >= that key. ixkey.Min when len(iters)==1.
+			oi.secondMax = second
 			return true, keyMax, result &^ ixbuf.Update
 		}
 
-		// Skip this key - advance all iterators that have it
+		// Skip this deleted key - lose fast path since multiple iters may advance
+		oi.fastIdx = -1
 		for _, it := range oi.iters {
 			if !it.Eof() && it.Key() == keyMax {
 				it.Prev()
@@ -382,6 +471,7 @@ func (oi *OverIter) Rewind() {
 	oi.state = rewound
 	oi.curKey = ""
 	oi.curOff = 0
+	oi.fastIdx = -1
 }
 
 func (oi *OverIter) String() string {

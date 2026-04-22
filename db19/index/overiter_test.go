@@ -1082,6 +1082,96 @@ func (it *dumIter) Prev() {
 	it.state = eof
 }
 
+// TestOverIterFastPathTransition verifies that the fast path fires for a long run
+// from the winning iterator and correctly falls through when it reaches secondMin.
+func TestOverIterFastPathTransition(t *testing.T) {
+	assert := assert.T(t)
+	// btree: "a","b","c","d","e","f","g","h","i","j"
+	// layer: "f" with Update (overwrites btree "f"), "k" (new key after btree range)
+	b := btree.NewBuilder(stor.HeapStor(8192))
+	for _, k := range []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"} {
+		assert.That(b.Add(k, uint64(k[0])))
+	}
+	bt := b.Finish()
+	layer := &ixbuf.T{}
+	layer.Insert("f", uint64('f')|ixbuf.Update) // update "f" to same offset
+	layer.Insert("k", uint64('k'))               // new key past btree range
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+
+	it := NewOverIter("", 0)
+	expected := []string{"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"}
+	for _, want := range expected {
+		it.Next(tran)
+		assert.False(it.Eof())
+		key, _ := it.Cur()
+		assert.This(key).Is(want)
+	}
+	it.Next(tran)
+	assert.True(it.Eof())
+
+	// Also test Prev: should see the same sequence in reverse
+	it.Rewind()
+	for i := len(expected) - 1; i >= 0; i-- {
+		it.Prev(tran)
+		assert.False(it.Eof())
+		key, _ := it.Cur()
+		assert.This(key).Is(expected[i])
+	}
+	it.Prev(tran)
+	assert.True(it.Eof())
+}
+
+func TestOverIterFastPathMutInsertNext(t *testing.T) {
+	assert := assert.T(t)
+	b := btree.NewBuilder(stor.HeapStor(8192))
+	assert.That(b.Add("a", 1))
+	assert.That(b.Add("z", 26))
+	bt := b.Finish()
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{{}}, mut: &ixbuf.T{}}
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+
+	it := NewOverIter("", 0)
+	it.Next(tran)
+	assert.False(it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is("a")
+	assert.This(off).Is(uint64(1))
+
+	ov.mut.Insert("b", 2)
+
+	it.Next(tran)
+	assert.False(it.Eof())
+	key, off = it.Cur()
+	assert.This(key).Is("b")
+	assert.This(off).Is(uint64(2))
+}
+
+func TestOverIterFastPathMutInsertPrev(t *testing.T) {
+	assert := assert.T(t)
+	b := btree.NewBuilder(stor.HeapStor(8192))
+	assert.That(b.Add("a", 1))
+	assert.That(b.Add("z", 26))
+	bt := b.Finish()
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{{}}, mut: &ixbuf.T{}}
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+
+	it := NewOverIter("", 0)
+	it.Prev(tran)
+	assert.False(it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is("z")
+	assert.This(off).Is(uint64(26))
+
+	ov.mut.Insert("y", 25)
+
+	it.Prev(tran)
+	assert.False(it.Eof())
+	key, off = it.Cur()
+	assert.This(key).Is("y")
+	assert.This(off).Is(uint64(25))
+}
+
 // BenchmarkOverIterSingle benchmarks iteration when singleIter optimization applies
 // i.e., when there are no layers and mut is empty (read-only transactions)
 func BenchmarkOverIterSingle(b *testing.B) {
@@ -1101,7 +1191,6 @@ func BenchmarkOverIterSingle(b *testing.B) {
 			it := NewOverIter("", 0)
 			for it.Next(tran); !it.Eof(); it.Next(tran) {
 			}
-			assert.That(it.singleIter)
 		}
 	})
 
@@ -1110,29 +1199,6 @@ func BenchmarkOverIterSingle(b *testing.B) {
 			it := NewOverIter("", 0)
 			for it.Prev(tran); !it.Eof(); it.Prev(tran) {
 			}
-			assert.That(it.singleIter)
-		}
-	})
-
-	b.Run("Next merge", func(b *testing.B) {
-		for b.Loop() {
-			it := NewOverIter("", 0)
-			it.update(tran)       // sets singleIter = true
-			it.singleIter = false // force unoptimized path
-			for it.Next(tran); !it.Eof(); it.Next(tran) {
-			}
-			assert.That(!it.singleIter)
-		}
-	})
-
-	b.Run("Prev merge", func(b *testing.B) {
-		for b.Loop() {
-			it := NewOverIter("", 0)
-			it.update(tran)       // sets singleIter = true
-			it.singleIter = false // force unoptimized path
-			for it.Prev(tran); !it.Eof(); it.Prev(tran) {
-			}
-			assert.That(!it.singleIter)
 		}
 	})
 }

@@ -20,7 +20,7 @@ import (
 type Overlay struct {
 	// bt is the stored base btree (immutable)
 	bt *btree.T
-	// mut is the per transaction mutable top ixbuf.T, nil if read-only
+	// mut is the per transaction mutable top ixbuf, nil if read-only
 	mut *ixbuf.T
 	// layers is: (immutable)
 	// - a base ixbuf of merged but not persisted changes,
