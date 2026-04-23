@@ -173,7 +173,7 @@ func (w *Where) calcFixed() {
 		w.conflict = true
 		return
 	}
-	fixed, none := combineFixed(w.source.Fixed(), efixed)
+	fixed, none := w.source.Fixed().Combine(efixed)
 	if none {
 		w.conflict = true
 		return
@@ -181,7 +181,7 @@ func (w *Where) calcFixed() {
 	w.fixed = fixed
 }
 
-func (w *Where) exprsToFixed() (fixed []Fixed, conflict bool) {
+func (w *Where) exprsToFixed() (fixed Fixed, conflict bool) {
 	for _, e := range w.expr.Exprs {
 		fixed, conflict = addFixed(fixed, e)
 		if conflict {
@@ -191,7 +191,7 @@ func (w *Where) exprsToFixed() (fixed []Fixed, conflict bool) {
 	return fixed, false
 }
 
-func addFixed(fixed []Fixed, e ast.Expr) ([]Fixed, bool) {
+func addFixed(fixed Fixed, e ast.Expr) (Fixed, bool) {
 	// MAYBE: handle OR, could use colSels
 	if b, ok := e.(*ast.Binary); ok && (b.Tok == tok.Is || b.Tok == tok.Lte) {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
@@ -227,7 +227,7 @@ func inToFixed(e ast.Expr) (col string, vals []Value) {
 }
 
 // fixedAnd adds col,vals to fixed, handling if col already exists
-func fixedAnd(fixed []Fixed, col string, vals ...Value) ([]Fixed, bool) {
+func fixedAnd(fixed Fixed, col string, vals ...Value) (Fixed, bool) {
 	vs := make([]string, len(vals))
 	for i, v := range vals {
 		vs[i] = Pack(v.(Packable))
@@ -241,13 +241,13 @@ func fixedAnd(fixed []Fixed, col string, vals ...Value) ([]Fixed, bool) {
 			if len(v) == len(f.values) {
 				return fixed, false // no change
 			}
-			fixed := slc.Clone(fixed)
-			fixed[i].values = v
-			return fixed, false
+			fixed2 := slc.Clone(fixed)
+			fixed2[i].values = v
+			return fixed2, false
 		}
 	}
 	// col not found
-	return append(fixed, Fixed{col: col, values: vs}), false
+	return append(fixed, Fix{col: col, values: vs}), false
 }
 
 func (w *Where) Keys() [][]string {
@@ -837,7 +837,7 @@ func (w *Where) Select(sels Sels) {
 	// Note: conflict could come from any of expr, not just fixed.
 	// But to evaluate that would require building a Row.
 	// It should be rare.
-	satisfied, conflict := selectFixed(sels, w.Fixed())
+	satisfied, conflict := w.Fixed().Match(sels)
 	if conflict {
 		w.selConflict = true
 		return
@@ -871,7 +871,7 @@ func (w *Where) Select(sels Sels) {
 func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	// sels (plus fixed) specify a single source row
 	w.nlooks++
-	if conflictFixed(sels, w.Fixed()) {
+	if w.Fixed().Conflicts(sels) {
 		return nil
 	}
 	if w.fastSingle() || w.srcIndex == nil {
@@ -891,7 +891,7 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 		indexFields = w.tbl.IndexCols(w.srcIndex)
 	}
 	for _, fix := range w.fixed {
-		if fix.single() && slices.Contains(indexFields, fix.col) &&
+		if fix.Single() && slices.Contains(indexFields, fix.col) &&
 			!sels.HasCol(fix.col) {
 			sels = append(sels, Sel{fix.col, fix.values[0]})
 			cloned = true // because they're clipped, append will realloc
@@ -899,7 +899,7 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	}
 	isels, osels := Split(cloned, sels, indexFields)
 	for _, sel := range osels {
-		assert.That(isFixed(w.fixed, sel.col))
+		assert.That(w.fixed.Has(sel.col))
 	}
 
 	row := w.source.Lookup(th, isels)

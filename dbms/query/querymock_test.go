@@ -12,7 +12,7 @@ type QueryMock struct {
 	ColumnsResult     []string
 	TransformResult   Query
 	OrderResult       []string
-	FixedResult       []Fixed
+	FixedResult       Fixed
 	UpdateableResult  string
 	SingleTableResult bool
 	IndexesResult     [][]string
@@ -62,7 +62,7 @@ func (m *QueryMock) Order() []string {
 	panic("QueryMock.Order not implemented")
 }
 
-func (m *QueryMock) Fixed() []Fixed {
+func (m *QueryMock) Fixed() Fixed {
 	if m.FixedResult != nil {
 		return m.FixedResult
 	}

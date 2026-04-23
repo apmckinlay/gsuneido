@@ -137,7 +137,7 @@ func (tbl *Table) Transform() Query {
 	return tbl
 }
 
-func (tbl *Table) Fixed() []Fixed {
+func (tbl *Table) Fixed() Fixed {
 	return nil
 }
 

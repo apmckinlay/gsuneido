@@ -112,7 +112,7 @@ func bestLookupIndex(source Query, mode Mode, nrows int, frac float64, cols []st
 	return best
 }
 
-func lookupIndexEligible(index []string, keys [][]string, fixed []Fixed) bool {
+func lookupIndexEligible(index []string, keys [][]string, fixed Fixed) bool {
 	for _, key := range keys {
 		nColsUnfixed := countUnfixed(key, fixed)
 		if nColsUnfixed == 0 || grouped(index, key, nColsUnfixed, fixed) {
@@ -122,10 +122,10 @@ func lookupIndexEligible(index []string, keys [][]string, fixed []Fixed) bool {
 	return false
 }
 
-func countUnfixed(cols []string, fixed []Fixed) int {
+func countUnfixed(cols []string, fixed Fixed) int {
 	nunfixed := 0
 	for _, col := range cols {
-		if !isSingleFixed(fixed, col) {
+		if !fixed.Single(col) {
 			nunfixed++
 		}
 	}
@@ -134,13 +134,13 @@ func countUnfixed(cols []string, fixed []Fixed) int {
 
 // grouped returns whether an index has cols (in any order) as a prefix
 // taking fixed into consideration
-func grouped(index []string, cols []string, nColsUnfixed int, fixed []Fixed) bool {
+func grouped(index []string, cols []string, nColsUnfixed int, fixed Fixed) bool {
 	if len(index) < nColsUnfixed {
 		return false
 	}
 	n := 0
 	for _, col := range index {
-		if isSingleFixed(fixed, col) {
+		if fixed.Single(col) {
 			continue
 		}
 		if !slices.Contains(cols, col) {
@@ -157,12 +157,12 @@ func grouped(index []string, cols []string, nColsUnfixed int, fixed []Fixed) boo
 // ordered returns whether an index supplies an order
 // taking fixed into consideration.
 // It is used by Where and Sort.
-func ordered(index []string, order []string, fixed []Fixed) bool {
+func ordered(index []string, order []string, fixed Fixed) bool {
 	return orderedn(index, order, fixed) >= len(order)
 }
 
 // orderedn returns the number of fields in order that are satisfied
-func orderedn(index []string, order []string, fixed []Fixed) int {
+func orderedn(index []string, order []string, fixed Fixed) int {
 	i := 0
 	o := 0
 	in := len(index)
@@ -171,15 +171,15 @@ func orderedn(index []string, order []string, fixed []Fixed) int {
 		if index[i] == order[o] {
 			o++
 			i++
-		} else if isSingleFixed(fixed, index[i]) {
+		} else if fixed.Single(index[i]) {
 			i++
-		} else if isSingleFixed(fixed, order[o]) {
+		} else if fixed.Single(order[o]) {
 			o++
 		} else {
 			return o
 		}
 	}
-	for o < on && isSingleFixed(fixed, order[o]) {
+	for o < on && fixed.Single(order[o]) {
 		o++
 	}
 	return o
@@ -187,7 +187,7 @@ func orderedn(index []string, order []string, fixed []Fixed) int {
 
 //-------------------------------------------------------------------
 
-// withoutDupsOrSupersets simplifies a set of keys 
+// withoutDupsOrSupersets simplifies a set of keys
 // by removing duplicates and supersets
 func withoutDupsOrSupersets(keys [][]string) [][]string {
 	om := newOptMod(keys)

@@ -175,7 +175,7 @@ func keepCols(src, nothing Query, hdr *Header) Query {
 	return NewExtend(src, cols, exprs).Transform()
 }
 
-func (u *Union) Fixed() []Fixed {
+func (u *Union) Fixed() Fixed {
 	if u.fixed == nil {
 		u.fixed = u.getFixed()
 		assert.That(u.fixed != nil)
@@ -183,16 +183,16 @@ func (u *Union) Fixed() []Fixed {
 	return u.fixed
 }
 
-func (u *Union) getFixed() []Fixed {
+func (u *Union) getFixed() Fixed {
 	fixed1 := u.source1.Fixed()
 	fixed2 := u.source2.Fixed()
-	fixed := make([]Fixed, 0, len(fixed1)+len(fixed2))
+	fixed := make(Fixed, 0, len(fixed1)+len(fixed2))
 	// add ones that are in both
 	for _, f1 := range fixed1 {
 		for _, f2 := range fixed2 {
 			if f1.col == f2.col {
 				fixed = append(fixed,
-					Fixed{col: f1.col, values: set.Union(f1.values, f2.values)})
+					Fix{col: f1.col, values: set.Union(f1.values, f2.values)})
 				break
 			}
 		}
@@ -204,14 +204,14 @@ func (u *Union) getFixed() []Fixed {
 	for _, f1 := range fixed1 {
 		if !slices.Contains(cols2, f1.col) {
 			fixed = append(fixed,
-				Fixed{col: f1.col, values: set.Union(f1.values, emptyStr)})
+				Fix{col: f1.col, values: set.Union(f1.values, emptyStr)})
 		}
 	}
 	cols1 := u.source1.Columns()
 	for _, f2 := range fixed2 {
 		if !slices.Contains(cols1, f2.col) {
 			fixed = append(fixed,
-				Fixed{col: f2.col, values: set.Union(f2.values, emptyStr)})
+				Fix{col: f2.col, values: set.Union(f2.values, emptyStr)})
 		}
 	}
 	return fixed
@@ -411,10 +411,10 @@ func (*Union) optMerge(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, a
 	// we need a common key (unique) index to eliminate duplicates
 	fixed1 := src1.Fixed()
 	indexes1 := src1.Indexes()
-	idxs1 := withoutFixed2(indexes1, fixed1)
+	idxs1 := fixed1.RemoveFrom2(indexes1)
 	fixed2 := src2.Fixed()
 	indexes2 := src2.Indexes()
-	idxs2 := withoutFixed2(indexes2, fixed2)
+	idxs2 := fixed2.RemoveFrom2(indexes2)
 
 	var bestKey, bestIdx1, bestIdx2 []string
 	bestFixCost := impossible
@@ -437,8 +437,8 @@ func (*Union) optMerge(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, a
 			bestIdx1, bestIdx2 = index1, index2
 		}
 	}
-	keys1 := withoutFixed2(src1.Keys(), fixed1)
-	keys2 := withoutFixed2(src2.Keys(), fixed2)
+	keys1 := fixed1.RemoveFrom2(src1.Keys())
+	keys2 := fixed2.RemoveFrom2(src2.Keys())
 	// intersect using set.Equal to ignore order
 	keys := set.IntersectFn(keys1, keys2, set.Equal[string])
 	mergeIndexes(keys, idxs1, idxs2, opt)

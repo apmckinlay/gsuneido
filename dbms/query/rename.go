@@ -118,7 +118,7 @@ func (r *Rename) renameIndexes(idxs [][]string) [][]string {
 	return idxs2
 }
 
-func (r *Rename) Fixed() []Fixed {
+func (r *Rename) Fixed() Fixed {
 	if r.fixed == nil {
 		r.fixed = r.source.Fixed()
 		cloned := false
@@ -129,13 +129,13 @@ func (r *Rename) Fixed() []Fixed {
 						r.fixed = slc.Clone(r.fixed)
 						cloned = true
 					}
-					r.fixed[j] = Fixed{col: r.to[i], values: fxd.values}
+					r.fixed[j] = Fix{col: r.to[i], values: fxd.values}
 					break
 				}
 			}
 		}
 		if r.fixed == nil {
-			r.fixed = []Fixed{}
+			r.fixed = Fixed{}
 		}
 	}
 	return r.fixed

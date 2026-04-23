@@ -18,7 +18,7 @@ func TestFixed(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
-		assert.T(t).Msg(q).This(fixedStr(q.Fixed())).Is(expected)
+		assert.T(t).Msg(q).This(q.Fixed().String()).Is(expected)
 	}
 	test("table", "[]")
 
@@ -92,7 +92,7 @@ func TestFixed(t *testing.T) {
 
 func TestCombineFixed(t *testing.T) {
 	test := func(src, oth string, expected string) {
-		result, none := combineFixed(makeFixed(src), makeFixed(oth))
+		result, none := makeFixed(src).Combine(makeFixed(oth))
 		if expected == "none" {
 			assert.T(t).That(none == true)
 		} else {
@@ -106,14 +106,14 @@ func TestCombineFixed(t *testing.T) {
 	test("a 1 2 3", "a 4 5 6", "none")
 }
 
-func makeFixed(f string) []Fixed {
-	result := []Fixed{}
+func makeFixed(f string) Fixed {
+	result := Fixed{}
 	if f == "" {
 		return result
 	}
 	for g := range strings.SplitSeq(f, "; ") {
 		h := strings.Split(g, " ")
-		result = append(result, Fixed{col: h[0], values: h[1:]})
+		result = append(result, Fix{col: h[0], values: h[1:]})
 	}
 	return result
 }
@@ -122,7 +122,7 @@ func Test_selectFixed(t *testing.T) {
 	test := func(fixedStr string, expected string) {
 		sels := Sels{{col: "a", val: "1"}, {col: "b", val: "2"}}
 		fixed := makeFixed(fixedStr)
-		satisfied, conflict := selectFixed(sels, fixed)
+		satisfied, conflict := fixed.Match(sels)
 		assert.That(!(satisfied && conflict))
 		actual := ""
 		if satisfied {

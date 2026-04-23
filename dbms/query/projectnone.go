@@ -64,7 +64,7 @@ func (*ProjectNone) Order() []string {
 	return nil
 }
 
-func (*ProjectNone) Fixed() []Fixed {
+func (*ProjectNone) Fixed() Fixed {
 	return nil
 }
 

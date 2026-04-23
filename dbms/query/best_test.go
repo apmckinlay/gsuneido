@@ -52,7 +52,7 @@ func BenchmarkOptMod(b *testing.B) {
 }
 
 func TestOrderedN(t *testing.T) {
-	test := func(index []string, order []string, fixed []Fixed, expected int) {
+	test := func(index []string, order []string, fixed Fixed, expected int) {
 		t.Helper()
 		result := orderedn(index, order, fixed)
 		assert.T(t).This(result).Is(expected)
@@ -83,7 +83,7 @@ func TestOrderedN(t *testing.T) {
 	test([]string{}, []string{}, nil, 0)
 
 	// Fixed allows skipping in index - fixed 'b' allows index to skip 'b'
-	fixed := []Fixed{{col: "b", values: fixvals("1")}}
+	fixed := Fixed{{col: "b", values: fixvals("1")}}
 	test([]string{"a", "b", "c"}, []string{"a", "c"}, fixed, 2)
 
 	// Fixed allows skipping in order - fixed 'b' allows order to skip 'b'
@@ -93,14 +93,14 @@ func TestOrderedN(t *testing.T) {
 	test([]string{"a", "b", "c"}, []string{"a", "b", "c"}, fixed, 3)
 
 	// Multiple fixed values
-	fixed2 := []Fixed{{col: "a", values: fixvals("1")}, {col: "c", values: fixvals("2")}}
+	fixed2 := Fixed{{col: "a", values: fixvals("1")}, {col: "c", values: fixvals("2")}}
 	test([]string{"a", "b", "c"}, []string{"b"}, fixed2, 1)
 
 	// Fixed doesn't help when fields don't match
 	test([]string{"x", "y"}, []string{"a", "b"}, fixed, 0)
 
 	// Order has fixed field that can be skipped
-	fixed3 := []Fixed{{col: "b", values: fixvals("1")}, {col: "c", values: fixvals("2")}}
+	fixed3 := Fixed{{col: "b", values: fixvals("1")}, {col: "c", values: fixvals("2")}}
 	test([]string{"a"}, []string{"a", "b", "c"}, fixed3, 3)
 
 	// Index exhausted before order
@@ -118,7 +118,7 @@ func TestOrderedN(t *testing.T) {
 
 func TestGrouped(t *testing.T) {
 	oneval := []string{""}
-	fixed := []Fixed{{col: "f1", values: oneval}, {col: "f2", values: oneval}}
+	fixed := Fixed{{col: "f1", values: oneval}, {col: "f2", values: oneval}}
 	test := func(sidx, scols string) {
 		t.Helper()
 		idx := strings.Fields(sidx)
@@ -150,7 +150,7 @@ func TestGrouped(t *testing.T) {
 	assert.T(t).That(!grouped(idx, cols, nu, fixed))
 
 	// index starts with fixed column, then has required unfixed columns
-	fixed2 := []Fixed{{col: "f1", values: oneval}, {col: "f2", values: oneval}, {col: "f3", values: oneval}}
+	fixed2 := Fixed{{col: "f1", values: oneval}, {col: "f2", values: oneval}, {col: "f3", values: oneval}}
 	idx = []string{"f3", "a", "b"}
 	cols = []string{"a", "b"}
 	nu = countUnfixed(cols, fixed2)
@@ -174,7 +174,7 @@ func TestBestLookupIndex(t *testing.T) {
 	test(&bestLookupIndexMock{
 		QueryMock: QueryMock{
 			ColumnsResult:     []string{"date", "item", "id", "cost"},
-			FixedResult:       []Fixed{},
+			FixedResult:       Fixed{},
 			IndexesResult:     [][]string{{"item"}, {"date", "item", "id"}},
 			KeysResult:        [][]string{{"date", "item", "id"}},
 			LookupLevels:      1,
@@ -190,7 +190,7 @@ func TestBestLookupIndex(t *testing.T) {
 	test(&bestLookupIndexMock{
 		QueryMock: QueryMock{
 			ColumnsResult:     []string{"a", "b", "c"},
-			FixedResult:       []Fixed{},
+			FixedResult:       Fixed{},
 			IndexesResult:     [][]string{{"a", "b"}, {"b", "a"}},
 			KeysResult:        [][]string{{"a", "b"}},
 			LookupLevels:      1,
@@ -206,7 +206,7 @@ func TestBestLookupIndex(t *testing.T) {
 	test(&bestLookupIndexMock{
 		QueryMock: QueryMock{
 			ColumnsResult:     []string{"a", "b", "x", "y"},
-			FixedResult:       []Fixed{NewFixed("a", SuInt(1)), NewFixed("b", SuInt(1))},
+			FixedResult:       Fixed{NewFix("a", SuInt(1)), NewFix("b", SuInt(1))},
 			IndexesResult:     [][]string{{"x"}, {"y"}},
 			KeysResult:        [][]string{{"a", "b"}},
 			LookupLevels:      1,
@@ -222,7 +222,7 @@ func TestBestLookupIndex(t *testing.T) {
 	test(&bestLookupIndexMock{
 		QueryMock: QueryMock{
 			ColumnsResult:     []string{"a", "b", "x"},
-			FixedResult:       []Fixed{},
+			FixedResult:       Fixed{},
 			IndexesResult:     [][]string{{"x"}},
 			KeysResult:        [][]string{{"a", "b"}, {"a"}},
 			LookupLevels:      1,
@@ -265,7 +265,7 @@ func TestBestLookupIndexGrouped(t *testing.T) {
 	test(&bestLookupIndexMock{
 		QueryMock: QueryMock{
 			ColumnsResult:     []string{"a", "b", "k"},
-			FixedResult:       []Fixed{},
+			FixedResult:       Fixed{},
 			IndexesResult:     [][]string{{"a", "b"}},
 			KeysResult:        [][]string{{"k"}},
 			LookupLevels:      1,
@@ -280,7 +280,7 @@ func TestBestLookupIndexGrouped(t *testing.T) {
 	test(&bestLookupIndexMock{
 		QueryMock: QueryMock{
 			ColumnsResult:     []string{"a", "b", "c", "d"},
-			FixedResult:       []Fixed{},
+			FixedResult:       Fixed{},
 			IndexesResult:     [][]string{{"a", "b", "c"}, {"b", "a", "d"}},
 			KeysResult:        [][]string{{"a", "b"}},
 			LookupLevels:      1,
@@ -297,7 +297,7 @@ func TestBestLookupIndexGrouped(t *testing.T) {
 	test(&bestLookupIndexMock{
 		QueryMock: QueryMock{
 			ColumnsResult:     []string{"a", "b", "x", "y"},
-			FixedResult:       []Fixed{},
+			FixedResult:       Fixed{},
 			IndexesResult:     [][]string{{"x"}, {"y"}},
 			KeysResult:        [][]string{{"a", "b"}},
 			LookupLevels:      1,
@@ -314,7 +314,7 @@ func TestBestLookupIndexGrouped(t *testing.T) {
 	test(&bestLookupIndexMock{
 		QueryMock: QueryMock{
 			ColumnsResult:     []string{"a", "b", "x", "y"},
-			FixedResult:       []Fixed{NewFixed("a", SuInt(1))},
+			FixedResult:       Fixed{NewFix("a", SuInt(1))},
 			IndexesResult:     [][]string{{"b", "x"}, {"b", "y"}},
 			KeysResult:        [][]string{{"a", "b"}},
 			LookupLevels:      1,

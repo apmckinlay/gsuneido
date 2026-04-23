@@ -1457,12 +1457,12 @@ func testRandomLookups(t *testing.T, rnd *rand.Rand, q Query, index, cols []stri
 // canLookup checks if a lookup with the given index is valid.
 // The index columns must form a key (or be a subset of a key with
 // remaining key columns being fixed).
-func canLookup(keys [][]string, fixed []Fixed, index []string) bool {
+func canLookup(keys [][]string, fixed Fixed, index []string) bool {
 	for _, key := range keys {
 		// Check if index is subset of key+fixed (no extra columns)
 		subset := true
 		for _, col := range index {
-			if !slices.Contains(key, col) && !isSingleFixed(fixed, col) {
+			if !slices.Contains(key, col) && !fixed.Single(col) {
 				subset = false
 				break
 			}
@@ -1472,7 +1472,7 @@ func canLookup(keys [][]string, fixed []Fixed, index []string) bool {
 			// Check if key is subset of index+fixed (complete key)
 			superset := true
 			for _, col := range key {
-				if !slices.Contains(index, col) && !isSingleFixed(fixed, col) {
+				if !slices.Contains(index, col) && !fixed.Single(col) {
 					superset = false
 					break
 				}
@@ -1627,31 +1627,31 @@ func fuzzSplitShare(t *testing.T, rnd *rand.Rand) (part1Empty, part2Empty, part3
 func TestCanLookup(t *testing.T) {
 	// Case 1: Index is subset of key (should be false, currently true)
 	keys := [][]string{{"a", "b"}}
-	fixed := []Fixed{}
+	fixed := Fixed{}
 	index := []string{"a"}
 	assert.T(t).This(canLookup(keys, fixed, index)).Is(false)
 
 	// Case 2: Index contains complete key but has extra column (should be false due to Where.Lookup restriction)
 	keys = [][]string{{"a"}}
-	fixed = []Fixed{}
+	fixed = Fixed{}
 	index = []string{"a", "b"}
 	assert.T(t).This(canLookup(keys, fixed, index)).Is(false)
 
 	// Case 3: Index matches key exactly (should be true)
 	keys = [][]string{{"a", "b"}}
-	fixed = []Fixed{}
+	fixed = Fixed{}
 	index = []string{"b", "a"}
 	assert.T(t).This(canLookup(keys, fixed, index)).Is(true)
 
 	// Case 4: Key part is fixed (should be true)
 	keys = [][]string{{"a", "b"}}
-	fixed = []Fixed{{col: "b", values: []string{"1"}}}
+	fixed = Fixed{{col: "b", values: []string{"1"}}}
 	index = []string{"a"}
 	assert.T(t).This(canLookup(keys, fixed, index)).Is(true)
 
 	// Case 5: Key part is fixed (should be true)
 	keys = [][]string{{"a"}}
-	fixed = []Fixed{{col: "b", values: []string{"1"}}}
+	fixed = Fixed{{col: "b", values: []string{"1"}}}
 	index = []string{"a", "b"}
 	assert.T(t).This(canLookup(keys, fixed, index)).Is(true)
 }

@@ -40,8 +40,8 @@ type joinBase struct {
 	lookup      *lookupInfo
 	lookupCache lookupCache
 	by          []string
-	prevFixed1  []Fixed
-	prevFixed2  []Fixed
+	prevFixed1  Fixed
+	prevFixed2  Fixed
 	row1        Row
 	row2        Row // nil when we need a new row1
 	lookupRow   Row
@@ -57,7 +57,7 @@ type Join struct {
 
 type lookupInfo struct {
 	keys1    [][]string
-	fixed1   []Fixed
+	fixed1   Fixed
 	fallback bool
 }
 
@@ -131,12 +131,12 @@ func NewJoin(src1, src2 Query, by []string, t QueryTran) Query {
 }
 
 func newJoin(src1, src2 Query, by []string, t QueryTran,
-	prevFixed1, prevFixed2 []Fixed) *Join {
+	prevFixed1, prevFixed2 Fixed) *Join {
 	jn := &Join{joinBase: newJoinBase(src1, src2, by, t,
 		prevFixed1, prevFixed2)}
 	jn.keys = jn.getKeys()
 	jn.indexes = jn.getIndexes()
-	fixed, none := combineFixed(src1.Fixed(), src2.Fixed())
+	fixed, none := src1.Fixed().Combine(src2.Fixed())
 	jn.conflict = none
 	jn.fixed = fixed
 	jn.setNrows(jn.getNrows())
@@ -149,7 +149,7 @@ func (jn *Join) With(src1, src2 Query) *Join {
 }
 
 func newJoinBase(src1, src2 Query, by []string, t QueryTran,
-	prevFixed1, prevFixed2 []Fixed) joinBase {
+	prevFixed1, prevFixed2 Fixed) joinBase {
 	b := set.Intersect(src1.Columns(), src2.Columns())
 	if len(b) == 0 {
 		panic("join: common columns required")
@@ -255,7 +255,7 @@ func (jn *Join) Transform() Query {
 		return NewNothing(jn)
 	}
 	fix1, fix2 := src1.Fixed(), src2.Fixed()
-	if !equalFixed(fix1, jn.prevFixed1) || !equalFixed(fix2, jn.prevFixed2) {
+	if !fix1.Equal(jn.prevFixed1) || !fix2.Equal(jn.prevFixed2) {
 		src1 = copyFixed(fix2, fix1, src1, jn.by, jn.qt)
 		src2 = copyFixed(fix1, fix2, src2, jn.by, jn.qt)
 		jn.prevFixed1, jn.prevFixed2 = fix1, fix2
@@ -268,11 +268,11 @@ func (jn *Join) Transform() Query {
 
 // copyFixed adds a Where to `to` for fixed from `from` for common by columns.
 // It doesn't check if the where is conflicting, that should be handled by Where
-func copyFixed(fromFixed, toFixed []Fixed, to Query, by []string, t QueryTran) Query {
+func copyFixed(fromFixed, toFixed Fixed, to Query, by []string, t QueryTran) Query {
 	var exprs []ast.Expr
 	for _, col := range by {
-		if frf := getFixed(fromFixed, col); frf != nil {
-			if tof := getFixed(toFixed, col); !set.Equal(frf, tof) {
+		if frf := fromFixed.Get(col); frf != nil {
+			if tof := toFixed.Get(col); !set.Equal(frf, tof) {
 				exprs = append(exprs, fixedToExpr(col, frf))
 			}
 		}
@@ -333,7 +333,7 @@ type joinCost struct {
 }
 
 func joinopt(src1, src2 Query, nrows func() (int, int), jt joinType,
-	mode Mode, index []string, frac float64, by []string, fixed []Fixed) joinCost {
+	mode Mode, index []string, frac float64, by []string, fixed Fixed) joinCost {
 	// always have to read all of source 1
 	fixcost1, varcost1, index := optOrdered(src1, mode, index, frac, fixed)
 	if fixcost1+varcost1 >= impossible {
@@ -363,7 +363,7 @@ func joinopt(src1, src2 Query, nrows func() (int, int), jt joinType,
 	}
 }
 
-func optOrdered(q Query, mode Mode, index []string, frac float64, fixed []Fixed) (Cost, Cost, []string) {
+func optOrdered(q Query, mode Mode, index []string, frac float64, fixed Fixed) (Cost, Cost, []string) {
 	//TODO singleton ?
 	//TODO all cols fixed ?
 	if len(index) > 0 && len(fixed) > 0 {
@@ -380,7 +380,7 @@ func optOrdered(q Query, mode Mode, index []string, frac float64, fixed []Fixed)
 
 // bestOrdered returns the best index that supplies the required order
 // taking fixed into consideration.
-func bestOrdered(q Query, order []string, mode Mode, frac float64, fixed []Fixed) bestIndex {
+func bestOrdered(q Query, order []string, mode Mode, frac float64, fixed Fixed) bestIndex {
 	best := newBestIndex()
 	for _, ix := range q.Indexes() {
 		if ordered(ix, order, fixed) {
@@ -606,11 +606,11 @@ func (jb *joinBase) lookupFallback(sel1 Sels) bool {
 	return false
 }
 
-func selHasKey(sels Sels, keys [][]string, fixed []Fixed) bool {
+func selHasKey(sels Sels, keys [][]string, fixed Fixed) bool {
 outer:
 	for _, key := range keys {
 		for _, k := range key {
-			if !isSingleFixed(fixed, k) && !sels.HasCol(k) {
+			if !fixed.Single(k) && !sels.HasCol(k) {
 				continue outer
 			}
 		}
@@ -656,7 +656,7 @@ func NewLeftJoin(src1, src2 Query, by []string, t QueryTran) *LeftJoin {
 }
 
 func newLeftJoin(src1, src2 Query, by []string, t QueryTran,
-	prevFixed1, prevFixed2 []Fixed) *LeftJoin {
+	prevFixed1, prevFixed2 Fixed) *LeftJoin {
 	lj := &LeftJoin{joinBase: newJoinBase(src1, src2, by, t,
 		prevFixed1, prevFixed2)}
 	lj.lookupCache.SetCounters(&leftJoinCacheProbes, &leftJoinCacheMisses)
@@ -689,20 +689,20 @@ func (lj *LeftJoin) getKeys() [][]string {
 	}
 }
 
-func (lj *LeftJoin) getFixed() []Fixed {
+func (lj *LeftJoin) getFixed() Fixed {
 	fixed1 := lj.source1.Fixed()
 	fixed2 := lj.source2.Fixed()
 	if len(fixed2) == 0 {
 		return fixed1
 	}
-	result := make([]Fixed, 0, len(fixed1)+len(fixed2))
+	result := make(Fixed, 0, len(fixed1)+len(fixed2))
 	// all of fixed1
 	result = append(result, fixed1...)
 	// fixed2 that are not common with source1
 	for _, f2 := range fixed2 {
 		if !slices.Contains(lj.by, f2.col) {
 			// add "" because source2 row can be empty
-			result = append(result, fixedWith(f2, ""))
+			result = append(result, f2.With(""))
 		}
 	}
 	return result
@@ -721,7 +721,7 @@ func (lj *LeftJoin) Transform() Query {
 		// remove useless left join
 		return keepCols(src1, src2, lj.Header())
 	}
-	if !equalFixed(fix1, lj.prevFixed1) || !equalFixed(fix2, lj.prevFixed2) {
+	if !fix1.Equal(lj.prevFixed1) || !fix2.Equal(lj.prevFixed2) {
 		// for leftjoin, we can only apply fixed from src1 to src2
 		// can't do the reverse because src2 is "optional"
 		src2 = copyFixed(fix1, fix2, src2, lj.by, lj.qt)
@@ -733,9 +733,9 @@ func (lj *LeftJoin) Transform() Query {
 	return lj
 }
 
-func fixedConflict(fixed1, fixed2 []Fixed) bool {
+func fixedConflict(fixed1, fixed2 Fixed) bool {
 	for _, f2 := range fixed2 {
-		if src1vals := getFixed(fixed1, f2.col); src1vals != nil {
+		if src1vals := fixed1.Get(f2.col); src1vals != nil {
 			// field is in both
 			if set.Disjoint(src1vals, f2.values) {
 				return true // can't match anything

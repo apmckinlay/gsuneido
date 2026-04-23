@@ -39,7 +39,7 @@ func (*schemaTable) Indexes() [][]string {
 	return nil
 }
 
-func (*schemaTable) Fixed() []Fixed {
+func (*schemaTable) Fixed() Fixed {
 	return nil
 }
 

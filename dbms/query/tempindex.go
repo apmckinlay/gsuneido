@@ -37,7 +37,7 @@ const tempindexWarn = 200_000 // ???
 const derivedWarn = 8_000_000 // ??? // derivedWarn is also used by Project
 
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
-	order = withoutFixed(order, src.Fixed())
+	order = src.Fixed().RemoveFrom(order)
 	if len(order) == 0 {
 		log.Println("ERROR: empty TempIndex")
 	}
@@ -91,7 +91,7 @@ func (ti *TempIndex) Select(sels Sels) {
 		ti.selOrg, ti.selEnd = selMin, selMax
 		return
 	}
-	satisfied, conflict := selectFixed(sels, ti.source.Fixed())
+	satisfied, conflict := ti.source.Fixed().Match(sels)
 	if conflict {
 		ti.selOrg, ti.selEnd = selMax, selMin
 		return
@@ -106,7 +106,7 @@ func (ti *TempIndex) Select(sels Sels) {
 
 func (ti *TempIndex) Lookup(th *Thread, sels Sels) Row {
 	ti.nlooks++
-	if conflictFixed(sels, ti.source.Fixed()) {
+	if ti.source.Fixed().Conflicts(sels) {
 		return nil
 	}
 	ti.th = th

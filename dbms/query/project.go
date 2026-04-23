@@ -145,11 +145,11 @@ func (p *Project) getHeader() *Header {
 
 // hasKey returns whether cols contains a key
 // taking fixed into consideration
-func hasKey(cols []string, keys [][]string, fixed []Fixed) bool {
+func hasKey(cols []string, keys [][]string, fixed Fixed) bool {
 outer:
 	for _, key := range keys {
 		for _, k := range key {
-			if !isSingleFixed(fixed, k) && !slices.Contains(cols, k) {
+			if !fixed.Single(k) && !slices.Contains(cols, k) {
 				continue outer
 			}
 		}
@@ -394,7 +394,7 @@ func isConstant(e ast.Expr) bool {
 	return ok
 }
 
-func (p *Project) Fixed() []Fixed {
+func (p *Project) Fixed() Fixed {
 	if p.fixed == nil {
 		p.fixed = projectFixed(p.source.Fixed(), p.columns)
 		assert.That(p.fixed != nil)
@@ -403,8 +403,8 @@ func (p *Project) Fixed() []Fixed {
 }
 
 // projectFixed is also used by Summarize
-func projectFixed(srcFixed []Fixed, cols []string) []Fixed {
-	fixed := []Fixed{}
+func projectFixed(srcFixed Fixed, cols []string) Fixed {
+	fixed := Fixed{}
 	for _, f := range srcFixed {
 		if slices.Contains(cols, f.col) {
 			fixed = append(fixed, f)

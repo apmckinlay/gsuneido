@@ -79,7 +79,7 @@ type Query interface {
 	Order() []string
 
 	// Fixed returns the field values that are constant from Extend or Where
-	Fixed() []Fixed
+	Fixed() Fixed
 
 	// Updateable returns the table name if the rows from the query can be updated
 	// else ""
@@ -198,7 +198,7 @@ type queryBase struct {
 	header    *Header
 	keys      [][]string
 	indexes   [][]string
-	fixed     []Fixed
+	fixed     Fixed
 	nNrows    opt.Int
 	pNrows    opt.Int
 	rowSiz    opt.Int
@@ -252,7 +252,7 @@ func (*queryBase) Order() []string {
 	return nil
 }
 
-func (q *queryBase) Fixed() []Fixed {
+func (q *queryBase) Fixed() Fixed {
 	return q.fixed
 }
 
@@ -415,7 +415,7 @@ func optimize(q Query, mode Mode, index []string, frac float64) (
 
 	// short circuit on empty index
 	// Note: this condition should match SetApproach
-	if len(index) == 0 || fastSingle(q, index) || allFixed(q.Fixed(), index) {
+	if len(index) == 0 || fastSingle(q, index) || q.Fixed().All(index) {
 		index = nil
 	}
 	if fixcost, varcost, app := q.cacheGet(index, frac); varcost >= 0 {
@@ -625,7 +625,7 @@ var _ = AddInfo("query.tempindex", &tempIndexCount)
 func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 	// short circuit on empty index
 	// Note: this condition should match Optimize
-	if len(index) == 0 || fastSingle(q, index) || allFixed(q.Fixed(), index) {
+	if len(index) == 0 || fastSingle(q, index) || q.Fixed().All(index) {
 		index = nil
 	}
 	fixcost, varcost, approach := q.cacheGet(index, frac)

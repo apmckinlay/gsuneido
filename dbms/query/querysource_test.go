@@ -170,7 +170,7 @@ func (b *buildQS) finish() *QuerySource {
 	qs.NrowsN = nrows
 	qs.NrowsP = nrows
 	qs.MetricsResult = &metrics{}
-	qs.FixedResult = []Fixed{}
+	qs.FixedResult = Fixed{}
 	qs.FastSingleResult = b.emptyKey
 	qs.LookupLevels = 2 // ???
 	qs.KnowExactNrowsResult = true

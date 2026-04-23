@@ -14,8 +14,8 @@ type SemiJoin struct {
 	qt         QueryTran
 	st         *SuTran
 	by         []string
-	prevFixed1 []Fixed
-	prevFixed2 []Fixed
+	prevFixed1 Fixed
+	prevFixed2 Fixed
 	Query2
 }
 
@@ -88,7 +88,7 @@ func (sj *SemiJoin) Transform() Query {
 		return NewNothing(sj)
 	}
 	fix1, fix2 := src1.Fixed(), src2.Fixed()
-	if !equalFixed(fix1, sj.prevFixed1) || !equalFixed(fix2, sj.prevFixed2) {
+	if !fix1.Equal(sj.prevFixed1) || !fix2.Equal(sj.prevFixed2) {
 		src1 = copyFixed(fix2, fix1, src1, sj.by, sj.qt)
 		src2 = copyFixed(fix1, fix2, src2, sj.by, sj.qt)
 		sj.prevFixed1, sj.prevFixed2 = fix1, fix2

@@ -184,22 +184,21 @@ func (e *Extend) needRule2(col string) bool {
 	return e.needRule(exprdeps) // recursive
 }
 
-func (e *Extend) Fixed() []Fixed {
+func (e *Extend) Fixed() Fixed {
 	if e.fixed == nil {
-		e.fixed = append([]Fixed{}, e.source.Fixed()...) // non-nil copy
+		e.fixed = append(Fixed{}, e.source.Fixed()...) // non-nil copy
 		for i := range len(e.cols) {
 			if expr := e.exprs[i]; expr != nil {
 				switch expr := expr.(type) {
 				case *ast.Constant: // col = <Constant>
-					e.fixed = append(e.fixed, NewFixed(e.cols[i], expr.Val))
+					e.fixed = append(e.fixed, NewFix(e.cols[i], expr.Val))
 				case *ast.Ident: // col = <Ident>
-					if v := getFixed(e.fixed, expr.Name); v != nil {
-						e.fixed = append(e.fixed, Fixed{col: e.cols[i], values: v})
+					if v := e.fixed.Get(expr.Name); v != nil {
+						e.fixed = append(e.fixed, Fix{col: e.cols[i], values: v})
 					}
 				}
 			}
 		}
-		assert.That(e.fixed != nil)
 	}
 	return e.fixed
 }
@@ -317,7 +316,7 @@ func (e *Extend) Select(sels Sels) {
 		e.source.Select(nil) // clear select
 		return
 	}
-	satisfied, conflict := selectFixed(sels, e.Fixed())
+	satisfied, conflict := e.Fixed().Match(sels)
 	if conflict {
 		e.conflict = true
 	} else if satisfied {
@@ -329,7 +328,7 @@ func (e *Extend) Select(sels Sels) {
 
 func (e *Extend) Lookup(th *Thread, sels Sels) Row {
 	e.nlooks++
-	if conflictFixed(sels, e.Fixed()) {
+	if e.Fixed().Conflicts(sels) {
 		return nil
 	}
 	defer func() {

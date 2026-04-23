@@ -54,7 +54,7 @@ func (t *Times) getIndexes() [][]string {
 	return slc.With(idx1, idx2...)
 }
 
-func (t *Times) getFixed() []Fixed {
+func (t *Times) getFixed() Fixed {
 	// no common columns so no overlap
 	return slc.With(t.source1.Fixed(), t.source2.Fixed()...)
 }

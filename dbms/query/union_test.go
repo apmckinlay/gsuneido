@@ -110,14 +110,14 @@ func TestBestMergeIndexes(t *testing.T) {
 			ColumnsResult: []string{"a", "b", "c", "d", "e", "f"},
 			IndexesResult: idx1,
 			KeysResult:    keys1,
-			FixedResult:   []Fixed{},
+			FixedResult:   Fixed{},
 			MetricsResult: &metrics{},
 		}
 		src2 := &QueryMock{
 			ColumnsResult: []string{"a", "b", "c", "d", "x", "y"},
 			IndexesResult: idx2,
 			KeysResult:    keys2,
-			FixedResult:   []Fixed{},
+			FixedResult:   Fixed{},
 			MetricsResult: &metrics{},
 		}
 		u := &Union{}
@@ -231,7 +231,7 @@ func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
 		HeaderResult:  SimpleHeader([]string{"a", "k", "d"}),
 		IndexesResult: [][]string{index},
 		KeysResult:    [][]string{{"k"}},
-		FixedResult:   []Fixed{NewFixed("d", SuInt(1))},
+		FixedResult:   Fixed{NewFix("d", SuInt(1))},
 		NrowsN:        1,
 		NrowsP:        1,
 		RowSizeResult: 1,
@@ -242,7 +242,7 @@ func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
 		HeaderResult:  SimpleHeader([]string{"a", "k", "d"}),
 		IndexesResult: [][]string{index},
 		KeysResult:    [][]string{{"k"}},
-		FixedResult:   []Fixed{NewFixed("d", SuInt(2))},
+		FixedResult:   Fixed{NewFix("d", SuInt(2))},
 		NrowsN:        1,
 		NrowsP:        1,
 		RowSizeResult: 1,

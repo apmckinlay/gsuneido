@@ -62,7 +62,7 @@ func TestProjectKeys(t *testing.T) {
 }
 
 func TestHasKey(t *testing.T) {
-	var fixed []Fixed
+	var fixed Fixed
 	test := func(cols string, keys string, expected bool) {
 		t.Helper()
 		result := hasKey(strings.Fields(cols), sToIdxs(keys), fixed)
@@ -74,7 +74,7 @@ func TestHasKey(t *testing.T) {
 	test("a b", "b", true)
 	test("a b", "x, a+b, y", true)
 
-	fixed = []Fixed{{col: "b", values: []string{"1"}}}
+	fixed = Fixed{{col: "b", values: []string{"1"}}}
 	test("", "a", false)
 	test("", "b", true)
 	test("a c", "a+b+c", true)

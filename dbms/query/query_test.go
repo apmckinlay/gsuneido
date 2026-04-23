@@ -351,7 +351,7 @@ func TestJoin_splitSelect(t *testing.T) {
 	q1.indexes = [][]string{{"a"}}
 	q2 := newTestQop([]string{"c", "d", "e"})
 	q1.indexes = [][]string{{"c"}}
-	q2.fixed = []Fixed{
+	q2.fixed = Fixed{
 		{col: "c", values: fixvals("1")},
 		{col: "e", values: fixvals("2", "")},
 	}

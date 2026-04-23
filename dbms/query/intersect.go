@@ -66,9 +66,9 @@ func (it *Intersect) getIndexes() [][]string {
 	return set.UnionFn(idx1, idx2, slices.Equal)
 }
 
-func (it *Intersect) getFixed() []Fixed {
+func (it *Intersect) getFixed() Fixed {
 	// same as Join
-	fixed, none := combineFixed(it.source1.Fixed(), it.source2.Fixed())
+	fixed, none := it.source1.Fixed().Combine(it.source2.Fixed())
 	if none {
 		it.conflict = true
 	}

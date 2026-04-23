@@ -324,7 +324,7 @@ func TestWhere_fixed(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()
 		w := ParseQuery("table where "+query, testTran{}, nil).(*Where)
-		assert.T(t).This(fixedStr(w.Fixed())).Is(expected)
+		assert.T(t).This(w.Fixed().String()).Is(expected)
 	}
 	test("a", "[]")
 	test("a is 1", "[a=(1)]")
