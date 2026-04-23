@@ -591,8 +591,9 @@ func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 	return fixcost, varcost, app
 }
 
-// LookupCost returns the cost of performing nrows lookup operations on a query
-// using the specified index. frac is used for the optimize call (temp index decision).
+// LookupCost returns the cost of performing nrows lookups on a query
+// using the specified index. frac is used for the optimize call 
+// (temp index decision).
 func LookupCost(q Query, mode Mode, index []string, nrows int, frac float64) (
 	Cost, Cost) {
 	fixcost, varcost, approach := optimize(q, mode, index, frac)
