@@ -624,7 +624,15 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
 	}
 	best := newBestIndex()
 	var bestApp *whereApproach
-	for _, idx := range w.source.Indexes() {
+	indexes := w.source.Indexes()
+	if slc.ContainsFn(w.source.Keys(), order, slices.Equal) {
+		// This forces the use of the requested index if it is a key,
+		// because that means it may be intended for Lookups.
+		// Without this, Where can pick a different index than the requested one
+		// causing Lookup to fail in Table with "selOrg not full"
+		indexes = [][]string{order}
+	}
+	for _, idx := range indexes {
 		if !ordered(idx, order, w.fixed) {
 			continue
 		}

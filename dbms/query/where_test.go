@@ -653,3 +653,22 @@ func TestSplit(t *testing.T) {
 		assert.T(t).This(sel.val).Is(expected[sel.col])
 	}
 }
+
+func TestWhere_SelOrgNotFull(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c,d) index(a,c) key(a,b)") // index must be first
+	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
+	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
+	db.act("insert { a: 7, b: 5, c: 8, d: 9 } into table")
+	tran := db.NewReadTran()
+	q := ParseQuery("table where b=5", tran, nil)
+	// b is fixed, so index (a,c) can provide order (a,b)
+	// (a,c) and (a,b) have the same cost so Where picks the first (a,c)
+	// but (a,c) doesn't support lookups on (a,b) even with fixed
+	q = q.Transform()
+	key := []string{"a", "b"}
+	Optimize(q, ReadMode, key, 1)
+	q = SetApproach(q, key, 1, tran)
+	q.Lookup(nil, Sels{{"a", Pack(SuInt(4))}, {"b", Pack(SuInt(5))}})
+}
