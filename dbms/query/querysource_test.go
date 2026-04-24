@@ -244,7 +244,7 @@ func (b *buildQS) makeRows() []Row {
 func (b *buildQS) makeData() {
 	var nrows int
 	if b.emptyKey {
-		nrows = b.rnd.IntN(1) // 0 or 1
+		nrows = b.rnd.IntN(2) // 0 or 1
 	} else {
 		nrows = b.rnd.IntN(b.maxRows)
 	}
@@ -425,6 +425,12 @@ func (qs *QuerySource) Select(sels Sels) {
 
 // Lookup finds and returns the first row matching the given columns/values.
 func (qs *QuerySource) Lookup(_ *Thread, sels Sels) Row {
+	// mirror Table's "selOrg not full" panic
+	for _, col := range qs.index {
+		if !sels.HasCol(col) {
+			panic("selOrg not full: lookup cols don't cover index col " + col)
+		}
+	}
 	qs.Select(sels)
 	row := qs.Get(nil, Next)
 	assert.That(row == nil || qs.Get(nil, Next) == nil)
