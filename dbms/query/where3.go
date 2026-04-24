@@ -336,10 +336,8 @@ func (w *Where) moreFilters(index []string, isel *idxSel) []string {
 	// This does not handle e.g. `key(x) where x > 5 and f(x)`
 	// which has a filter on x, even though x may be in prefix or skip ranges
 	fields := w.tbl.IndexCols(index)
-	unconstrained := fields
-	if isel.skipStart == 0 {
-		unconstrained = fields[isel.prefixLen:]
-	} else {
+	unconstrained := fields[isel.prefixLen:]
+	if isel.skipStart > 0 {
 		unconstrained = fields[isel.prefixLen:isel.skipStart]
 		unconstrained = append(slices.Clip(unconstrained),
 			fields[isel.skipStart+isel.skipLen:]...)

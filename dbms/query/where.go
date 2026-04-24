@@ -802,18 +802,16 @@ func (w *Where) advance(dir Dir) bool {
 			w.idxSelPos = len(w.idxSelActive.prefixRanges)
 		}
 	}
-	for {
-		if dir == Prev {
-			w.idxSelPos--
-		} else { // Next
-			w.idxSelPos++
-		}
-		if w.idxSelPos < 0 || len(w.idxSelActive.prefixRanges) <= w.idxSelPos {
-			return false // eof
-		}
-		w.curPtrng = w.idxSelActive.prefixRanges[w.idxSelPos]
-		return true
+	if dir == Prev {
+		w.idxSelPos--
+	} else { // Next
+		w.idxSelPos++
 	}
+	if w.idxSelPos < 0 || len(w.idxSelActive.prefixRanges) <= w.idxSelPos {
+		return false // eof
+	}
+	w.curPtrng = w.idxSelActive.prefixRanges[w.idxSelPos]
+	return true
 }
 
 func (w *Where) Rewind() {
