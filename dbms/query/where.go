@@ -630,9 +630,18 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
 			cost: cost, idxSel: true}
 	}
 
+	indexes := w.source.Indexes()
+	if slc.ContainsFn(w.source.Keys(), order, slices.Equal) {
+		// This forces the use of the requested index if it is a key,
+		// because that means it may be intended for Lookups.
+		// Without this, Where can pick a different index than the requested one
+		// causing Lookup to fail in Table with "selOrg not full"
+		indexes = [][]string{order}
+	}
+
 	best := newBestIndex()
 	bestIdxSel := false
-	for _, idx := range w.source.Indexes() {
+	for _, idx := range indexes {
 		if ordered(idx, order, w.fixed) {
 			if is := w.getIdxSel(idx); is != nil {
 				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac*is.frac)
