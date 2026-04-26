@@ -342,7 +342,7 @@ func joinopt(src1, src2 Query, nrows func() (int, int), jt joinType,
 	nrows1, _ := src1.Nrows()
 	nrows2, _ := src2.Nrows()
 	read2, _ := nrows()
-	frac2 := float64(read2) * frac / float64(max(1, nrows2))
+	frac2 := float64(max(1, read2)) * frac / float64(max(1, nrows2))
 	var best2 bestIndex
 	if jt.toOne() {
 		lookupFrac := float64(nrows1) * frac / float64(max(1, nrows2))
