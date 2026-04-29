@@ -52,9 +52,9 @@ func idxsToS(idxs [][]string) string {
 }
 
 func TestProjectKeys(t *testing.T) {
-	test := func(idxs string, cols string, expected string) {
+	test := func(keys string, cols string, expected string) {
 		t.Helper()
-		result := projectKeys(sToIdxs(idxs), strings.Fields(cols))
+		result := projectKeys(sToIdxs(keys), strings.Fields(cols))
 		assert.T(t).This(idxsToS(result)).Is(expected)
 	}
 	test("a, b+c, b+c+x, d+e+f", "a b c d", "a, b+c")

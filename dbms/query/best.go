@@ -187,9 +187,9 @@ func orderedn(index []string, order []string, fixed Fixed) int {
 
 //-------------------------------------------------------------------
 
-// withoutDupsOrSupersets simplifies a set of keys
-// by removing duplicates and supersets
-func withoutDupsOrSupersets(keys [][]string) [][]string {
+// minimizeKeys simplifies a set of keys by removing duplicates and supersets.
+// This will simplify an empty key because everything else will be a superset.
+func minimizeKeys(keys [][]string) [][]string {
 	om := newOptMod(keys)
 outer:
 	for _, k1 := range keys {

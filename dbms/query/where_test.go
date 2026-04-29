@@ -336,6 +336,19 @@ func TestWhere_fixed(t *testing.T) {
 	test("a in (1,2) and a in (3,4)", "[]")
 }
 
+func TestWhere_keysWithoutFixed(t *testing.T) {
+	fixed := Fixed{
+		NewFix("a", One),
+		{col: "b", values: []string{Pack(SuInt(1)), Pack(SuInt(2))}},
+		NewFix("c", One),
+	}
+	keys := [][]string{{"a", "b"}, {"b", "c"}, {"d"}}
+	assert.T(t).This(fmt.Sprint(keysWithoutFixed(keys, fixed))).Is("[[b] [d]]")
+	
+	keys = [][]string{{"a", "b"}, {"b", "c"}, {"c"}}
+	assert.T(t).This(fmt.Sprint(keysWithoutFixed(keys, fixed))).Is("[[]]")
+}
+
 func TestWhere_indexes(t *testing.T) {
 	db := heapDb()
 	defer db.Close()

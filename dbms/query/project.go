@@ -186,7 +186,8 @@ func (p *Project) SetTran(t QueryTran) {
 	p.st = MakeSuTran(t)
 }
 
-// projectKeys is also used by Summarize
+// projectKeys keeps keys that are subsets of cols.
+// Also used by Summarize
 func projectKeys(keys [][]string, cols []string) [][]string {
 	var keys2 [][]string
 	for _, k := range keys {
@@ -200,7 +201,8 @@ func projectKeys(keys [][]string, cols []string) [][]string {
 	return keys2
 }
 
-// projectIndexes is also used by Summarize
+// projectIndexes keeps prefixes of indexes that are subsets of cols.
+// Also used by Summarize
 func projectIndexes(idxs [][]string, cols []string) [][]string {
 	var idxs2 [][]string
 	for _, ix := range idxs {

@@ -103,7 +103,7 @@ func (u *Union) Keys() [][]string {
 				// keypairs must ensure that appending is valid
 				keys[i] = set.AddUnique(keys[i], u.disjoint)
 			}
-			u.keys = withoutDupsOrSupersets(keys)
+			u.keys = minimizeKeys(keys)
 		}
 		assert.That(u.keys != nil)
 	}

@@ -9,6 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/set"
+	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
@@ -48,11 +49,8 @@ func (it *Intersect) getHeader() *Header {
 }
 
 func (it *Intersect) getKeys() [][]string {
-	k := set.IntersectFn(it.source1.Keys(), it.source2.Keys(), set.Equal[string])
-	if len(k) == 0 {
-		k = [][]string{it.Columns()}
-	}
-	return k
+	k := slc.With(it.source1.Keys(), it.source2.Keys()...)
+	return minimizeKeys(k)
 }
 
 func (it *Intersect) getIndexes() [][]string {

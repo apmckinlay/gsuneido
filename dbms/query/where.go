@@ -75,6 +75,7 @@ type Where struct {
 	ixExpr ast.Expr
 
 	srcIndex []string // set by setApproach, used by Lookup
+	wFixed   Fixed
 }
 
 // whereTable is the additional functionality that Where needs from a Table.
@@ -173,6 +174,7 @@ func (w *Where) calcFixed() {
 		w.conflict = true
 		return
 	}
+	w.wFixed = efixed
 	fixed, none := w.source.Fixed().Combine(efixed)
 	if none {
 		w.conflict = true
@@ -257,10 +259,21 @@ func (w *Where) Keys() [][]string {
 			w.keys = emptyKey // intentionally {} not nil
 		} else {
 			//TODO treat unique indexes with a where != "" as keys
-			w.keys = w.source.Keys()
+			w.keys = keysWithoutFixed(w.source.Keys(), w.wFixed)
 		}
+		assert.That(w.keys != nil) // once only
 	}
 	return w.keys
+}
+
+func keysWithoutFixed(keys [][]string, fixed Fixed) [][]string {
+	if len(fixed) > 0 {
+		keys = slc.MapFn(keys, func(key []string) []string {
+			return slc.WithoutFn(key, fixed.Single)
+		})
+		keys = minimizeKeys(keys)
+	}
+	return keys
 }
 
 func (w *Where) fastSingle() bool {

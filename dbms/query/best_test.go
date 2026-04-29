@@ -11,9 +11,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestWithoutDupsOrSupersets(t *testing.T) {
+func TestMinimizeKeys(t *testing.T) {
 	test := func(keys, expected [][]string) {
-		result := withoutDupsOrSupersets(keys)
+		result := minimizeKeys(keys)
 		assert.T(t).This(result).Is(expected)
 	}
 	test([][]string{}, [][]string{})
