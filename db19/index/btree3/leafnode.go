@@ -4,6 +4,7 @@
 package btree
 
 import (
+	"log"
 	"strconv"
 	"strings"
 
@@ -464,20 +465,13 @@ func (b *leafBuilder) finishInto(buf []byte) leafNode {
 }
 
 func (b *leafBuilder) finish() leafNode {
-	size := b.size()
-	if size > maxNodeSize {
-		panic("btree leafNode too large (finish)")
-	}
-	buf := make([]byte, size)
+	buf := make([]byte, b.size())
 	return b.finishInto(buf)
 }
 
 // finishTo builds the leaf node and writes it to storage
 func (b *leafBuilder) finishTo(st *stor.Stor) uint64 {
 	size := b.size()
-	if size > maxNodeSize {
-		panic("btree leafNode too large (finishTo)")
-	}
 	off, buf := st.Alloc(size + cksum.Len)
 	b.finishInto(buf[:size])
 	cksum.Update(buf)
@@ -519,7 +513,12 @@ func (nd leafNode) insert(i int, key string, newoff uint64) leafNode {
 		for j := i; j < n; j++ {
 			b.add(nd.key(j), nd.offset(j))
 		}
-		return b.finish()
+		nd := b.finish()
+		if nd.size() > maxNodeSize {
+			log.Println("leafNode overflow", nd.size(), ">", maxNodeSize,
+				", prefix", len(prefix), "=>", len(nd.prefix()))
+		}
+		return nd
 	}
 
 	// Prefix won't change, proceed with in-place insertion
