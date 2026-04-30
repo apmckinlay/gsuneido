@@ -123,6 +123,21 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	return p
 }
 
+// hasKey returns whether cols contains a key
+// taking fixed into consideration
+func hasKey(cols []string, keys [][]string, fixed Fixed) bool {
+outer:
+	for _, key := range keys {
+		for _, k := range key {
+			if !fixed.Single(k) && !slices.Contains(cols, k) {
+				continue outer
+			}
+		}
+		return true
+	}
+	return false
+}
+
 func (*Project) includeDeps(cols, srcCols []string) []string {
 	newCols := cols
 	for _, f := range cols {
@@ -143,19 +158,16 @@ func (p *Project) getHeader() *Header {
 	return NewHeader(newflds, p.columns)
 }
 
-// hasKey returns whether cols contains a key
-// taking fixed into consideration
-func hasKey(cols []string, keys [][]string, fixed Fixed) bool {
-outer:
-	for _, key := range keys {
-		for _, k := range key {
-			if !fixed.Single(k) && !slices.Contains(cols, k) {
-				continue outer
-			}
+func projectFields(fs []string, pcols []string) []string {
+	flds := make([]string, len(fs))
+	for i, f := range fs {
+		if slices.Contains(pcols, f) {
+			flds[i] = f
+		} else {
+			flds[i] = "-"
 		}
-		return true
 	}
-	return false
+	return flds
 }
 
 func (p *Project) String() string {
@@ -472,18 +484,6 @@ func (p *Project) setApproach(_ []string, frac float64, approach any, tran Query
 }
 
 // execution --------------------------------------------------------
-
-func projectFields(fs []string, pcols []string) []string {
-	flds := make([]string, len(fs))
-	for i, f := range fs {
-		if slices.Contains(pcols, f) {
-			flds[i] = f
-		} else {
-			flds[i] = "-"
-		}
-	}
-	return flds
-}
 
 func (p *Project) Rewind() {
 	p.source.Rewind()
