@@ -371,7 +371,7 @@ func (w *Where) indexFrac(isel *idxSel) (indexFrac, dataFrac float64) {
 		dataFrac *= math.Pow(.1, p) // ???
 		p = .5
 	}
-	if w.exprMore || w.exprExtra(isel) {
+	if w.exprExtra(isel) {
 		dataFrac *= math.Pow(.5, p) // ???
 	}
 	return

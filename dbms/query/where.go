@@ -66,8 +66,6 @@ type Where struct {
 	// NOTE: this does NOT mean source.fastSingle
 	singleton bool
 
-	// exprMore is whether expr has more than colSels (set by perField)
-	exprMore  bool
 	optInited      // used by optinit
 	optimized bool // set by setApproach, used by String
 
@@ -134,7 +132,7 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	if !w.conflict {
 		fields := w.source.Header().Physical()
 		w.expr.CanEvalRaw(fields)
-		w.colSels, w.exprMore = perField(w.expr.Exprs, fields)
+		w.colSels = perField(w.expr.Exprs, fields)
 		// fmt.Println("colSels", w.colSels)
 		w.conflict = (w.colSels == nil)
 	}
