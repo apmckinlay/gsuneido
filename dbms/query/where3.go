@@ -18,11 +18,13 @@ import (
 
 // idxSel is the pointRanges for a single index.
 type idxSel struct {
-	index   []string
-	ptrngs  []pointRange
-	frac    float64
-	nfields int
-	encoded bool
+	index      []string
+	ptrngs     []pointRange
+	nfields    int
+	encoded    bool
+	irFrac     float64 // index range fraction
+	ifFrac     float64 // index filter fraction
+	dataFilter bool    // whether there is additional filtering on the data
 }
 
 // pointRange holds either a range or a single key (in org with end = "")
@@ -38,32 +40,20 @@ type pointRange struct {
 func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 	idxSels := make([]idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
+	physical := w.source.Header().Physical()
 	for i := range indexes {
 		schix := &indexes[i]
 		idx := schix.Columns
 		key := schix.Mode == 'k'
 		uniq := schix.Mode == 'u'
 		encode := !key || len(idx) > 1
-		if idxSpans := indexSpans(idx, perCol); len(idxSpans) > 0 {
-			exploded := explodeIndexSpans(idxSpans, [][]span{nil})
-			comp := makePointRanges(encode, exploded)
-			for i := range comp {
-				c := &comp[i]
-				if c.isPoint() {
-					lookup := len(exploded[i]) == len(idx) &&
-						(key || (uniq && c.org != ""))
-					if !lookup {
-						// convert point to range
-						if !encode {
-							c.end = c.org + "\x00"
-						} else {
-							c.end = c.org + ixkey.Sep + ixkey.Max
-						}
-					}
-				}
-			}
-			isel := idxSel{index: idx, nfields: len(idxSpans),
-				ptrngs: comp, encoded: encode}
+		isel := idxSel{index: idx, irFrac: 1.0, ifFrac: 1.0}
+		isel.ptrngs, isel.nfields, isel.irFrac = w.indexPtrngs(idx, key, uniq, encode, perCol)
+		if len(isel.ptrngs) > 0 {
+			isel.encoded = encode
+		}
+		isel.ifFrac, isel.dataFilter = w.indexFilterFrac(idx, isel.nfields, physical)
+		if len(isel.ptrngs) > 0 || isel.ifFrac < 1 {
 			if isel.singleton() {
 				w.singleton = true
 				idxSels = append(idxSels[:0], isel)
@@ -72,11 +62,64 @@ func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 			idxSels = append(idxSels, isel)
 		}
 	}
-	for i := range idxSels {
-		is := &idxSels[i]
-		is.frac = w.idxFrac(is.index, is.ptrngs)
-	}
 	return idxSels
+}
+
+func (w *Where) indexPtrngs(idx []string, key, uniq, encode bool, perCol map[string][]span) ([]pointRange, int, float64) {
+	idxSpans := indexSpans(idx, perCol)
+	if len(idxSpans) == 0 {
+		return nil, 0, 1.0
+	}
+	exploded := explodeIndexSpans(idxSpans, [][]span{nil})
+	comp := makePointRanges(encode, exploded)
+	for j := range comp {
+		c := &comp[j]
+		if c.isPoint() {
+			lookup := len(exploded[j]) == len(idx) &&
+				(key || (uniq && c.org != ""))
+			if !lookup {
+				if !encode {
+					c.end = c.org + "\x00"
+				} else {
+					c.end = c.org + ixkey.Sep + ixkey.Max
+				}
+			}
+		}
+	}
+	nfields := len(idxSpans)
+	irFrac := w.idxFrac(idx, comp)
+	return comp, nfields, irFrac
+}
+
+func (w *Where) indexFilterFrac(idx []string, nfields int, physical []string) (float64, bool) {
+	ifFrac := 1.0
+	var dataFilter bool
+	indexCols := w.tbl.IndexCols(idx)
+	rangeCols := idx[:nfields]
+	for _, e := range w.expr.Exprs {
+		ecols := e.Columns()
+		allInIndex := true
+		anyBeyondRange := false
+		for _, col := range ecols {
+			if !slices.Contains(indexCols, col) {
+				allInIndex = false
+				break
+			}
+			if !slices.Contains(rangeCols, col) {
+				anyBeyondRange = true
+			}
+		}
+		if len(ecols) == 0 || !allInIndex {
+			dataFilter = true
+		} else if anyBeyondRange {
+			ifFrac = 0.5
+		} else {
+			if col, _ := exprToSpans(e, physical); col == "" {
+				ifFrac = 0.5
+			}
+		}
+	}
+	return ifFrac, dataFilter
 }
 
 func indexSpans(idx []string, perCol map[string][]span) [][]span {
@@ -189,6 +232,7 @@ func (x side) valRaw() string {
 }
 
 func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
+	assert.That(len(ptrngs) > 0)
 	iIndex := w.tbl.indexi(idx)
 	var frac float64
 	npoints := 0
@@ -223,8 +267,8 @@ func (is idxSel) String() string {
 			s.WriteString(".." + showKey(is.encoded, pr.end))
 		}
 	}
-	if is.frac != 0 {
-		s.WriteString(" = " + strconv.FormatFloat(is.frac, 'g', 4, 64))
+	if is.irFrac != 0 {
+		s.WriteString(" = " + strconv.FormatFloat(is.irFrac, 'g', 4, 64))
 	}
 	return s.String()
 }

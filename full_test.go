@@ -15,30 +15,20 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-func TestQueryBug(t *testing.T) {
-	assert.TestOnlyIndividually(t)
-	Libload = libload // dependency injection
-	mainThread.Name = "main"
-	mainThread.SetSviews(&sviews)
-	MainThread = &mainThread
-	openDbms()
-	defer db.CloseKeepMapped()
+// func TestQueryBug(t *testing.T) {
+// 	os.Chdir("/home/apm/nobackup/newway")
+// 	assert.TestOnlyIndividually(t)
+// 	Libload = libload // dependency injection
+// 	mainThread.Name = "main"
+// 	mainThread.SetSviews(&sviews)
+// 	MainThread = &mainThread
+// 	openDbms()
+// 	defer db.CloseKeepMapped()
 
-	query := `
-		(ap_checklines where apivc_invoice is "12567" 
-		join by(apchk_num) 
-		(ap_checks where bizpartner_num is #20260113.104240513110 
-			and apchk_void? isnt true 
-			and apchk_type is "CK" 
-		rename 
-			etaequipstmt_name to etaequipstmt_name_hdr, 
-			etaequipstmt_date to etaequipstmt_date_hdr, 
-			etaequip_num to etaequip_num_hdr
-		)) 
-		summarize max apchk_date, total apchklin_amount_paid`
-	args := SuObjectOf(SuStr(query))
-	dbmsLocal.Get(MainThread, args, Only)
-}
+// 	query := `eta_order_charges where etarate_id is "Walmart"`
+// 	args := SuObjectOf(SuStr(query))
+// 	dbmsLocal.Get(MainThread, args, Any)
+// }
 
 func TestFastGet(t *testing.T) {
 	assert.TestOnlyIndividually(t)

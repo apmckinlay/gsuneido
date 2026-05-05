@@ -40,21 +40,18 @@ type side struct {
 // perField returns the spans for each field, or nil if there is a conflict.
 // It is called by NewWhere. The result is later used by perIndex.
 // It depends on CanEvalRaw already being done.
-func perField(exprs []ast.Expr, fields []string) (map[string][]span, bool) {
-	exprMore := false
+func perField(exprs []ast.Expr, fields []string) map[string][]span {
 	result := make(map[string][]span)
 	for _, expr := range exprs {
 		if col, espans := exprToSpans(expr, fields); espans != nil {
 			x := intersectSpans(result[col], espans)
 			if x == nil {
-				return nil, false // conflict
+				return nil // conflict
 			}
 			result[col] = x
-		} else {
-			exprMore = true // since expr not used for column span
 		}
 	}
-	return result, exprMore
+	return result
 }
 
 // exprToSpans returns the spans for an expression, or nil if not indexable

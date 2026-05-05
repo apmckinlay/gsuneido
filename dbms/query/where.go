@@ -6,7 +6,6 @@ package query
 import (
 	"fmt"
 	"math"
-	"math/bits"
 	"sync/atomic"
 
 	"slices"
@@ -66,8 +65,6 @@ type Where struct {
 	singleton bool
 	selSet    bool
 
-	// exprMore is whether expr has more than idxSels
-	exprMore bool
 	optInited
 	optimized bool
 
@@ -132,7 +129,7 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	if !w.conflict {
 		fields := w.source.Header().Physical()
 		w.expr.CanEvalRaw(fields)
-		w.colSels, w.exprMore = perField(w.expr.Exprs, fields)
+		w.colSels = perField(w.expr.Exprs, fields)
 		// fmt.Println("colSels", w.colSels)
 		w.conflict = (w.colSels == nil)
 	}
@@ -286,6 +283,9 @@ func (w *Where) Nrows() (int, int) {
 
 func (w *Where) calcNrows() (int, int) {
 	assert.That(w.optInited == optInitInProgress)
+	// Note: the estimated row count should be consistent 
+	// with bestIndex and WhereCost
+	// since cost is primarily driven by number of rows
 	srcNrows, srcPop := w.source.Nrows()
 	if w.conflict || srcPop == 0 {
 		return 0, srcPop
@@ -296,18 +296,17 @@ func (w *Where) calcNrows() (int, int) {
 	if len(w.idxSels) == 0 {
 		return srcNrows / 2, srcPop
 	}
-	est := math.MaxInt
-	nsrc := float64(srcNrows)
+	minFrac := 1.0
 	for i := range w.idxSels {
-		is := &w.idxSels[i]
-		n := int(math.Round(is.frac * nsrc))
-		if n < est {
-			est = n
+		frac := w.idxSels[i].irFrac * w.idxSels[i].ifFrac
+		if w.idxSels[i].dataFilter {
+			frac *= 0.5
+		}
+		if frac < minFrac {
+			minFrac = frac
 		}
 	}
-	if w.exprMore {
-		est /= 2 // ??? adjust for additional restrictions
-	}
+	est := int(math.Round(minFrac * float64(srcNrows)))
 	return est, srcPop
 }
 
@@ -603,15 +602,6 @@ func (w *Where) optInit() {
 	if !w.conflict && w.tbl != nil {
 		w.idxSels = w.perIndex(w.colSels)
 		// fmt.Println("idxSels", w.idxSels)
-		if !w.exprMore {
-			// check if any colSels were not used by idxSels
-			for _, idxSel := range w.idxSels {
-				for i := range idxSel.nfields {
-					delete(w.colSels, idxSel.index[i])
-				}
-			}
-			w.exprMore = len(w.colSels) > 0
-		}
 	}
 	w.setNrows(w.calcNrows())
 	if !w.singleton {
@@ -620,10 +610,10 @@ func (w *Where) optInit() {
 	w.optInited = optInitYes
 }
 
-// bestIndex returns the best (lowest cost) index with an idxSel
+// bestIndex returns the best (lowest cost) index
 // that satisfies the required order (or impossible)
-func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
-	// fmt.Println("bestIndex", w.tbl.Name(), order, frac, "---------------")
+func (w *Where) bestIndex(order []string, inFrac float64) (Cost, any) {
+	// fmt.Println("bestIndex", w.tbl.Name(), order, "inFrac", inFrac)
 	if w.singleton {
 		cost := w.source.lookupCost()
 		return cost, &whereApproach{index: w.idxSels[0].index,
@@ -643,35 +633,26 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
 	bestIdxSel := false
 	for _, idx := range indexes {
 		if ordered(idx, order, w.fixed) {
+			_, varCost, _ := w.tbl.optimize(CursorMode, idx, 1.0)
+			hasIdxSel := false
+			irFrac := 1.0
+			ifFrac := 1.0
+			// a Where always has an expression
+			// so even without an idxSel it still has to filter the data
+			dataFilter := true
+			nptrngs := 0
 			if is := w.getIdxSel(idx); is != nil {
-				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac*is.frac)
-				assert.That(fixCost == 0)
-				varCost += w.source.lookupCost() * len(is.ptrngs)
-				// fmt.Println("where idxSel", idx, is.frac, frac, "=", varCost)
-				if best.update(idx, 0, varCost) {
-					bestIdxSel = true
-				}
-			} else if ncols := w.indexFilter(idx); ncols > 0 {
-				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac)
-				assert.That(fixCost == 0)
-				// unknown selectivity so estimate .6 ^ ncols
-				f := math.Pow(.6, float64(ncols)) // ???
-				// the selectivity only affects how much of the data we read
-				// we still have to read all the index we're filtering.
-				const dataFrac = .8 // ??? guess of data vs index read cost
-				varCost = int(float64(varCost) * (1 - f*dataFrac))
-				// fmt.Println("where indexFilter", idx, f, frac, "=", varCost)
-				if best.update(idx, 0, varCost) {
-					bestIdxSel = false
-				}
-			} else {
-				// index satisfies order but no idxSel or filter
-				fixCost, varCost, _ := w.tbl.optimize(CursorMode, idx, frac)
-				// fmt.Println("where order", idx, 1, "=", varCost)
-				assert.That(fixCost == 0)
-				if best.update(idx, 0, varCost) {
-					bestIdxSel = false
-				}
+				hasIdxSel = len(is.ptrngs) > 0
+				irFrac = is.irFrac
+				ifFrac = is.ifFrac
+				dataFilter = is.dataFilter
+				nptrngs = len(is.ptrngs)
+			}
+			cost := WhereCost(float64(varCost), inFrac, irFrac, ifFrac, dataFilter) +
+				float64(w.source.lookupCost())*float64(nptrngs)
+			// fmt.Println("\t", idx, "varCost", varCost, "irFrac", irFrac, "ifFrac", ifFrac, "dataFilter", dataFilter, "cost", cost)
+			if best.update(idx, 0, int(math.Round(cost))) {
+				bestIdxSel = hasIdxSel
 			}
 		}
 	}
@@ -679,6 +660,38 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
 		return best.varcost, &whereApproach{index: best.index, cost: best.varcost, idxSel: bestIdxSel}
 	}
 	return impossible, nil
+}
+
+func WhereCost(cost, inFrac, irFrac, ifFrac float64, dataFilter bool) float64 {
+	// Model the cost of reading via a particular index.
+	// We have 3 potential filter stages:
+	// 1. Index Range (irFrac)
+	// 2. Index Filter (ifFrac)
+	// 3. Data Filter (dataFilter)
+
+	// this is necessary because some places e.g. LookupCost pass 0 frac
+	if inFrac == 0 {
+		return 0
+	}
+
+	// index range
+	cost *= irFrac
+
+	// index filter
+	indexCost := .2 * cost
+	dataCost := .8 * cost * ifFrac
+	cost = indexCost + dataCost
+
+	// data filter does NOT affect cost (other than pessimism)
+	// because you still have to read everything
+
+	// apply inFrac
+	if dataFilter || ifFrac < 1 {
+		inFrac = .25 + (.75 * inFrac) // pessimistic guard
+	}
+	cost *= inFrac
+
+	return cost
 }
 
 func (w *Where) getIdxSel(index []string) *idxSel {
@@ -689,29 +702,6 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 		}
 	}
 	return nil
-}
-
-// indexFilter returns the number of index columns
-// that a portion of the expr can filter.
-// Bitset limits size of index to 64 columns
-// which is ok since indexes are generally just a few columns.
-func (w *Where) indexFilter(index []string) int {
-	fields := w.tbl.IndexCols(index)
-	var used uint
-outer:
-	for _, e := range w.expr.Exprs {
-		ecols := e.Columns()
-		var u uint
-		for _, col := range ecols {
-			i := slices.Index(fields, col)
-			if i < 0 {
-				continue outer
-			}
-			u |= 1 << i
-		}
-		used |= u
-	}
-	return bits.OnesCount(used)
 }
 
 func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTran) {
@@ -733,8 +723,13 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 		w.srcIndex = idx
 		if app.idxSel {
 			w.idxSel = w.getIdxSel(idx)
-			w.tbl.setCost(frac*w.idxSel.frac, 0, app.cost)
+			w.tbl.setCost(frac*w.idxSel.irFrac, 0, app.cost)
 			w.idxSelPos = -1
+			if w.idxSel.ifFrac < 1 {
+				w.ixCtx.cols = w.tbl.IndexCols(idx)
+				w.ixCtx.encodes = w.tbl.IndexEncodes(idx)
+				w.ixExpr = w.exprsFor(w.ixCtx.cols)
+			}
 		} else {
 			w.ixCtx.cols = w.tbl.IndexCols(idx)
 			w.ixCtx.encodes = w.tbl.IndexEncodes(idx)

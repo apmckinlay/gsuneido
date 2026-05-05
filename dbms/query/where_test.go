@@ -97,7 +97,7 @@ func TestWhere_indexSpans(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery(query, testTran{}, nil).(*Where)
-		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
+		pf := perField(w.expr.Exprs, w.source.Header().Physical())
 		idxSpans := indexSpans(idx, pf)
 		assert.T(t).This(fmt.Sprint(idxSpans)).Is("[" + expected + "]")
 	}
@@ -119,7 +119,7 @@ func TestWhere_explodeIndexSpans(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery("comp where "+query, testTran{}, nil).(*Where)
-		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
+		pf := perField(w.expr.Exprs, w.source.Header().Physical())
 		idxSpans := indexSpans(idx, pf)
 		exploded := explodeIndexSpans(idxSpans, [][]span{nil})
 		assert.T(t).This(fmt.Sprint(exploded)).Is("[" + expected + "]")
@@ -140,7 +140,7 @@ func TestWhere_perIndex(t *testing.T) {
 		t.Helper()
 		w := ParseQuery(table+" where "+query, testTran{}, nil).(*Where)
 		w.optInit()
-		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
+		pf := perField(w.expr.Exprs, w.source.Header().Physical())
 		idxSels := w.perIndex(pf)
 		assert.T(t).This(fmt.Sprint(idxSels)).Is("[" + expected + "]")
 	}
@@ -164,8 +164,36 @@ func TestWhere_perIndex(t *testing.T) {
 	test("a >= ''", "a: ''..<max> = 1")
 	// test("a >= ''", "a: '' | '\\x00'..<max> = 1.005")
 
-	table = "comp2"
+	table = "comp2" // key(a,b,c) index(b)
+	// singleton, skip b index
 	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3")
+}
+
+func TestWhere_perIndex_fracs(t *testing.T) {
+	test := func(table, expr string, ifFrac float64, dataFilter bool) {
+		t.Helper()
+		w := ParseQuery(table+" where "+expr, testTran{}, nil).(*Where)
+		w.optInit()
+		pf := perField(w.expr.Exprs, w.source.Header().Physical())
+		idxSels := w.perIndex(pf)
+		assert.T(t).That(len(idxSels) == 1)
+		is := idxSels[0]
+		assert.T(t).Msg(expr + " ifFrac").This(is.ifFrac).Is(ifFrac)
+		assert.T(t).Msg(expr + " dataFilter").This(is.dataFilter).Is(dataFilter)
+	}
+	// no extra expressions: ifFrac=1, no dataFilter
+	test("comp", "a is 1", 1.0, false)
+	// expression on index field beyond range columns: ifFrac=.5
+	// a > 1 becomes range (nfields=1), c is in IndexCols but not in rangeCols
+	test("comp", "a > 1 and c is 2", 0.5, false)
+	// expression on non-index field: dataFilter=true
+	// hist index(item) has IndexCols=[item,date,id]; cost is not in IndexCols
+	test("table", "a is 1 and b is 2", 1.0, true)
+	
+	// F(a) is not covered by a > 1
+	test("comp", "a > 1 and F(a)", 0.5, false)
+	// zero-column expression: dataFilter=true
+	test("comp", "a is 1 and Foo()", 1.0, true)
 }
 
 type wtestTran struct {
@@ -238,24 +266,33 @@ func TestFracPos(t *testing.T) {
 }
 
 func TestWhere_Nrows(t *testing.T) {
-	test := func(query string, nrows int) {
+	test := func(query string, nrows, pop int) {
 		t.Helper()
 		var tran testTran
 		w := ParseQuery(query, tran, nil)
 		Setup(w, ReadMode, tran)
 		n, p := w.Nrows()
 		assert.T(t).This(n).Is(nrows)
-		assert.T(t).This(p).Is(100)
+		assert.T(t).This(p).Is(pop)
 	}
-	test("table where F()", 50)
-	test("inven where item >= 5", 50)
-	test("inven where item < 3 and item > 3", 0) // conflict
-	test("inven where item is 1", 1)
-	test("inven where item in (1,2,3,4)", 2)
-	test("inven where item > 2 and item < 4", 20)
-	test("inven where item > 2 and item < 4 and qty", 10)
-	test("hist where date is 3", 10)
-	test("inven extend x where x > 5", 50) // not on table
+	test("table where F()", 50, 100)
+	test("inven where item >= 5", 50, 100)
+	test("inven where item < 3 and item > 3", 0, 100) // conflict
+	test("inven where item is 1", 1, 100)
+	test("inven where item in (1,2,3,4)", 2, 100)
+	test("inven where item > 2 and item < 4", 20, 100)
+	// dataFilter (non-index column)
+	test("inven where item > 2 and item < 4 and qty", 10, 100)
+	// ifFrac (index column beyond range)
+	test("comp where a > 1 and c is 2", 400, 1000)
+	test("comp where a > 1 and F(a)", 400, 1000)
+	// zero-column expression => dataFilter
+	test("table where Foo()", 50, 100)
+	test("comp where a is 1 and Foo()", 50, 1000)
+	// combined irFrac + ifFrac + dataFilter
+	test("hist where date is 3", 10, 100)
+	// not on table
+	test("inven extend x where x > 5", 50, 100)
 }
 
 func TestWhere_Select(t *testing.T) {
@@ -293,7 +330,7 @@ func TestWhere_ptrange(t *testing.T) {
 		t.Helper()
 		w := ParseQuery(table+" where "+query, testTran{}, nil).(*Where)
 		w.optInit()
-		pf, _ := perField(w.expr.Exprs, w.source.Header().Physical())
+		pf := perField(w.expr.Exprs, w.source.Header().Physical())
 		w.idxSel = &w.perIndex(pf)[0]
 		// fmt.Printf("idxSel ptrange\n\t%q\n\t%q\n",
 		// 	w.idxSel.ptrngs[0].org, w.idxSel.ptrngs[0].end)
@@ -459,4 +496,57 @@ func TestWhere_SelOrgNotFull(t *testing.T) {
 	Optimize(q, ReadMode, key, 1)
 	q = SetApproach(q, key, 1, tran)
 	q.Lookup(nil, key, []string{Pack(SuInt(4)), Pack(SuInt(5))})
+}
+
+func TestWhereCost(t *testing.T) {
+	assert := assert.T(t).This
+	type Eg struct {
+		// irFrac is the selectivity of the index range (or 1 for all)
+		irFrac float64
+		// ifFrac is the selectivity of the index filter (or 1 for none)
+		ifFrac float64
+		// dataFilter is whether there is additional filtering of the data
+		dataFilter bool
+		// inFrac is the amount the caller expects to read
+		inFrac float64
+	}
+	test := func(eg *Eg, expected float64) {
+		// defaults
+		if eg.irFrac == 0 {
+			eg.irFrac = 1
+		}
+		if eg.ifFrac == 0 {
+			eg.ifFrac = 1
+		}
+		if eg.inFrac == 0 {
+			eg.inFrac = 1
+		}
+		cost :=
+			WhereCost(100_000, eg.inFrac, eg.irFrac, eg.ifFrac, eg.dataFilter)
+		assert(cost).Is(expected)
+	}
+	// baseline: all defaults => 100 * srcRows
+	test(&Eg{}, 100_000)
+	// irFrac only
+	test(&Eg{irFrac: 1.0 / 1000}, 100)
+	// dataFilter triggers pessimistic guard on inFrac
+	test(&Eg{dataFilter: true, inFrac: .01}, 25_750)
+	// ifFrac < 1 triggers pessimistic guard
+	test(&Eg{ifFrac: 0.5}, 60_000)
+	// ifFrac < 1 + inFrac with pessimistic guard
+	test(&Eg{ifFrac: 0.1, inFrac: 0.5}, 17_500)
+	// both irFrac and ifFrac
+	test(&Eg{irFrac: 0.1, ifFrac: 0.5}, 6_000)
+	// dataFilter + ifFrac
+	test(&Eg{dataFilter: true, ifFrac: 0.5}, 60_000)
+	// all parameters non-default
+	test(&Eg{irFrac: 0.5, ifFrac: 0.5, dataFilter: true, inFrac: 0.5}, 18_750)
+	// inFrac without pessimistic guard (no dataFilter, ifFrac >= 1)
+	test(&Eg{inFrac: 0.5}, 50_000)
+	// irFrac + inFrac: no guard (pure index range, ifFrac=1, no dataFilter)
+	test(&Eg{irFrac: 0.1, inFrac: 0.5}, 5_000)
+	// dataFilter=true with inFrac=1: guard is no-op, same cost as baseline
+	test(&Eg{dataFilter: true}, 100_000)
+	// irFrac + dataFilter + small inFrac: guard applied to narrowed range
+	test(&Eg{irFrac: 0.5, dataFilter: true, inFrac: 0.01}, 12_875)
 }
