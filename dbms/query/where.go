@@ -668,6 +668,38 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
 	return impossible, nil
 }
 
+func WhereCost(cost, inFrac, irFrac, ifFrac float64, dataFilter bool) float64 {
+	// Model the cost of reading via a particular index.
+	// We have 3 potential filter stages:
+	// 1. Index Range (irFrac)
+	// 2. Index Filter (ifFrac)
+	// 3. Data Filter (dataFilter)
+
+	// this is necessary because some places e.g. LookupCost pass 0 frac
+	if inFrac == 0 {
+		return 0
+	}
+
+	// index range
+	cost *= irFrac
+
+	// index filter
+	indexCost := .2 * cost
+	dataCost := .8 * cost * ifFrac
+	cost = indexCost + dataCost
+
+	// data filter does NOT affect cost (other than pessimism)
+	// because you still have to read everything
+
+	// apply inFrac
+	if dataFilter || ifFrac < 1 {
+		inFrac = .25 + (.75 * inFrac) // pessimistic guard
+	}
+	cost *= inFrac
+
+	return cost
+}
+
 func (w *Where) getIdxSel(index []string) *idxSel {
 	for i := range w.idxSels {
 		is := &w.idxSels[i]
