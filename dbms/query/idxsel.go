@@ -30,7 +30,13 @@ type idxSel struct {
 	skipLen   int
 	skipRange pointRange
 
+	// moreFilters are index columns in where expressions
+	// that are not covered by prefix or skip ranges
 	moreFilters []string
+	
+	// dataFilter is whether there are where expressions
+	// that are not covered by the index
+	dataFilter  bool
 }
 
 // Used returns a list of columns "used" by the idxSel

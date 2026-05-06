@@ -101,7 +101,7 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 	}
 
 	// more filters
-	isel.moreFilters = w.moreFilters(index, &isel)
+	isel.moreFilters, isel.dataFilter = w.moreFilters(index, &isel)
 	if len(isel.prefixRanges) == 0 && len(isel.moreFilters) > 0 {
 		// filter-only index selection needs a range for execution
 		isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
@@ -332,9 +332,9 @@ func skipScanSuffix(perCol map[string][]span, idx []string, prefixLen int) (
 // moreFilters returns the index fields
 // that are included in expressions that only require index fields
 // and that are not already included in the prefix or skip ranges.
-func (w *Where) moreFilters(index []string, isel *idxSel) []string {
-	// This does not handle e.g. `key(x) where x > 5 and f(x)`
-	// which has a filter on x, even though x may be in prefix or skip ranges
+// Also returns dataFilter=true if there are expressions
+// that use non-index columns or no columns.
+func (w *Where) moreFilters(index []string, isel *idxSel) ([]string, bool) {
 	fields := w.tbl.IndexCols(index)
 	unconstrained := fields[isel.prefixLen:]
 	if isel.skipStart > 0 {
@@ -343,13 +343,16 @@ func (w *Where) moreFilters(index []string, isel *idxSel) []string {
 			fields[isel.skipStart+isel.skipLen:]...)
 	}
 	var result []string
+	dataFilter := false
 	for _, e := range w.expr.Exprs {
 		exprCols := e.Columns()
-		if set.Subset(fields, exprCols) {
+		if len(exprCols) == 0 || !set.Subset(fields, exprCols) {
+			dataFilter = true
+		} else {
 			result = set.Union(result, set.Intersect(exprCols, unconstrained))
 		}
 	}
-	return result
+	return result, dataFilter
 }
 
 //-------------------------------------------------------------------
