@@ -46,9 +46,13 @@ func getParents(th *Thread, class *SuClass) *SuClassChain {
 		}
 	}
 
+	loops := 0
 	parentSlice := make([]*SuClass, 0, 4)
 	for c := class; c != nil; c = c.Parent(th) {
 		parentSlice = append(parentSlice, c)
+		if loops++; loops > 64 {
+			panic("too many levels of inheritance, possible loop")
+		}
 	}
 	parents = &SuClassChain{classes: parentSlice}
 	class.SetParents(parents) // cache on class
