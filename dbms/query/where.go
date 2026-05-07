@@ -298,6 +298,9 @@ func (w *Where) Nrows() (int, int) {
 
 func (w *Where) calcNrows() (int, int) {
 	assert.That(w.optInited == optInitInProgress)
+	// Note: the estimated row count should be consistent
+	// with bestIndex and WhereCost
+	// since cost is primarily driven by number of rows
 	srcNrows, srcPop := w.source.Nrows()
 	if w.conflict || srcPop == 0 {
 		return 0, srcPop
@@ -308,16 +311,17 @@ func (w *Where) calcNrows() (int, int) {
 	if len(w.idxSels) == 0 {
 		return srcNrows / 2, srcPop
 	}
-	// find the minimum data frac
-	frac := 1.0
+	// find the minimum frac
+	minFrac := 1.0
 	for i := range w.idxSels {
-		is := &w.idxSels[i]
-		f := is.dataFrac
-		if f < frac {
-			frac = f
+		isel := w.idxSels[i]
+		frac := isel.indexFrac * isel.indexFilter * isel.dataFilter
+		if frac < minFrac {
+			minFrac = frac
 		}
 	}
-	return int(math.Round(float64(srcNrows) * frac)), srcPop
+	est := int(math.Round(minFrac * float64(srcNrows)))
+	return est, srcPop
 }
 
 func (w *Where) Transform() Query {
@@ -625,7 +629,7 @@ func (w *Where) optInit() {
 // bestIndex returns an approach for the lowest cost index
 // that satisfies the required order,
 // or impossible if no index satisfies the order.
-func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
+func (w *Where) bestIndex(order []string, inFrac float64) (Cost, any) {
 	// fmt.Println("bestIndex", w.tbl.Name(), order, frac, "---------------")
 	if w.singleton {
 		cost := w.source.lookupCost()
@@ -633,8 +637,6 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
 		return cost,
 			&whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
-	best := newBestIndex()
-	var bestApp *whereApproach
 	indexes := w.source.Indexes()
 	if slc.ContainsFn(w.source.Keys(), order, slices.Equal) {
 		// This forces the use of the requested index if it is a key,
@@ -643,30 +645,39 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, any) {
 		// causing Lookup to fail in Table with "selOrg not full"
 		indexes = [][]string{order}
 	}
+	best := newBestIndex()
+	var bestIdxSel *idxSel
 	for _, idx := range indexes {
 		if !ordered(idx, order, w.fixed) {
 			continue
 		}
-		_, cost, _ := w.tbl.optimize(CursorMode, idx, 1.0)
+		_, varCost, _ := w.tbl.optimize(CursorMode, idx, 1.0)
+		irFrac := 1.0
+		ifFrac := 1.0
+		dfFrac := 0.5
+		nptrngs := 0
 		isel := w.getIdxSel(idx)
-		if isel == nil {
-			cost = Cost(frac * float64(cost))
-		} else {
-			dataCost := .2 * float64(cost)
-			indexCost := .8 * float64(cost)
-			cost = Cost(frac * (indexCost*isel.indexFrac + dataCost*isel.dataFrac))
+		if isel != nil {
+			irFrac = isel.indexFrac
+			ifFrac = isel.indexFilter
+			dfFrac = isel.dataFilter
+			nptrngs = len(isel.prefixRanges)
 		}
+		cost := WhereCost(float64(varCost), inFrac, irFrac, ifFrac, dfFrac) +
+			w.source.lookupCost()*nptrngs
+		// fmt.Println("\t", idx, "varCost", varCost, "irFrac", irFrac, "ifFrac", ifFrac, "dfFrac", dfFrac, "cost", cost)
 		if best.update(idx, 0, cost) {
-			bestApp = &whereApproach{index: idx, cost: cost, idxSel: isel}
+			bestIdxSel = isel
 		}
 	}
 	if best.varcost < impossible {
-		return best.varcost, bestApp
+		return best.varcost, &whereApproach{
+			index: best.index, cost: best.varcost, idxSel: bestIdxSel}
 	}
 	return impossible, nil
 }
 
-func WhereCost(cost, inFrac, irFrac, ifFrac float64, dataFilter bool) float64 {
+func WhereCost(cost, inFrac, irFrac, ifFrac, dfFrac float64) Cost {
 	// Model the cost of reading via a particular index.
 	// We have 3 potential filter stages:
 	// 1. Index Range (irFrac)
@@ -686,16 +697,16 @@ func WhereCost(cost, inFrac, irFrac, ifFrac float64, dataFilter bool) float64 {
 	dataCost := .8 * cost * ifFrac
 	cost = indexCost + dataCost
 
-	// data filter does NOT affect cost (other than pessimism)
+	// data filter (dfFrac) does NOT affect cost (other than pessimism)
 	// because you still have to read everything
 
 	// apply inFrac
-	if dataFilter || ifFrac < 1 {
+	if ifFrac < 1 || dfFrac < 1 {
 		inFrac = .25 + (.75 * inFrac) // pessimistic guard
 	}
 	cost *= inFrac
 
-	return cost
+	return int(math.Round(cost))
 }
 
 func (w *Where) getIdxSel(index []string) *idxSel {
@@ -732,6 +743,8 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 			w.idxSelActive = w.idxSelBase
 			w.tbl.setCost(frac*app.idxSel.indexFrac, 0, app.cost)
 			w.idxSelPos = -1
+		} else {
+			w.tbl.setCost(frac, 0, app.cost)
 		}
 	}
 	w.header = w.source.Header()

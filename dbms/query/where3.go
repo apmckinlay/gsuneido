@@ -18,7 +18,7 @@ import (
 
 // perIndex returns an idxSel for each usable index.
 // It is called by optInit (which is called on-demand by several methods)
-// Its input is the result of perField (where2.go).
+// Its input (perCol) is the result of perField (where2.go).
 // Its output is used by Nrows, bestIndex, and finally Get.
 // It sets w.singleton if the where selects a single row.
 func (w *Where) perIndex(perCol map[string][]span) []idxSel {
@@ -29,20 +29,18 @@ func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 		isel, singleton := w.buildIdxSel(schix.Columns, schix.Mode, perCol)
 		if singleton {
 			w.singleton = true
-			f := w.prefixFrac(&isel)
-			isel.indexFrac, isel.dataFrac = f, f
+			isel.indexFrac = w.prefixFrac(&isel)
 			return []idxSel{isel}
 		}
-
-		if len(isel.prefixRanges) > 0 || len(isel.moreFilters) > 0 {
+		if len(isel.prefixRanges) > 0 || isel.indexFilter < 1 {
 			idxSels = append(idxSels, isel)
 		}
 	}
 	// calculate frac in a separate pass
-	// so we don't waste time doing it if there's a singleton
+	// so we don't waste time doing btree probes if there's a singleton
 	for i := range idxSels {
 		is := &idxSels[i]
-		is.indexFrac, is.dataFrac = w.indexFrac(is)
+		is.indexFrac = w.indexFrac(is)
 	}
 	return idxSels
 }
@@ -50,7 +48,8 @@ func (w *Where) perIndex(perCol map[string][]span) []idxSel {
 func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) (idxSel, bool) {
 	key := mode == 'k'
 	encode := !key || len(index) > 1
-	isel := idxSel{index: index, encoded: encode, mode: mode}
+	isel := idxSel{index: index, encoded: encode, mode: mode,
+		indexFilter: 1, dataFilter: 1}
 
 	// Fast path: all prefix columns have single-value spans
 	if prefixLen, org, ok := allSingleValuePrefix(index, encode, perCol); ok {
@@ -101,8 +100,8 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 	}
 
 	// more filters
-	isel.moreFilters, isel.dataFilter = w.moreFilters(index, &isel)
-	if len(isel.prefixRanges) == 0 && len(isel.moreFilters) > 0 {
+	isel.indexFilter, isel.dataFilter = w.moreFilters(index, &isel)
+	if len(isel.prefixRanges) == 0 && isel.indexFilter < 1 {
 		// filter-only index selection needs a range for execution
 		isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
 	}
@@ -329,12 +328,10 @@ func skipScanSuffix(perCol map[string][]span, idx []string, prefixLen int) (
 	return
 }
 
-// moreFilters returns the index fields
-// that are included in expressions that only require index fields
-// and that are not already included in the prefix or skip ranges.
-// Also returns dataFilter=true if there are expressions
-// that use non-index columns or no columns.
-func (w *Where) moreFilters(index []string, isel *idxSel) ([]string, bool) {
+// moreFilters returns estimated selectivity fractions for expressions
+// not already handled by the prefix points/ranges and skip scan.
+// indexFilter covers expressions on index columns, dataFilter on non-index columns.
+func (w *Where) moreFilters(index []string, isel *idxSel) (float64, float64) {
 	fields := w.tbl.IndexCols(index)
 	unconstrained := fields[isel.prefixLen:]
 	if isel.skipStart > 0 {
@@ -342,42 +339,42 @@ func (w *Where) moreFilters(index []string, isel *idxSel) ([]string, bool) {
 		unconstrained = append(slices.Clip(unconstrained),
 			fields[isel.skipStart+isel.skipLen:]...)
 	}
-	var result []string
-	dataFilter := false
+	indexFilter := 1.0
+	dataFilter := 1.0
 	for _, e := range w.expr.Exprs {
 		exprCols := e.Columns()
 		if len(exprCols) == 0 || !set.Subset(fields, exprCols) {
-			dataFilter = true
-		} else {
-			result = set.Union(result, set.Intersect(exprCols, unconstrained))
+			dataFilter = .5
+		} else if !set.Disjoint(exprCols, unconstrained) {
+			// e.g. index(a,b) where a>1 and F(a,b)
+			// F(a,b) overlaps unconstrained (b)
+			// so we know it is in addition to the range/skip
+			indexFilter = .5
+		} else if _, sp := exprToSpans(e, fields); sp == nil {
+			// e.g. index(a) where a=1 and F(a)
+			// F(a) is not a span
+			// so we know it is in addition to the range/skip
+			indexFilter = .5
 		}
 	}
-	return result, dataFilter
+	//TODO when applicable use more specific values like skipFrac
+	return indexFilter, dataFilter
 }
 
 //-------------------------------------------------------------------
 
 // indexFrac returns the index and data fractions for an idxSel
-func (w *Where) indexFrac(isel *idxSel) (indexFrac, dataFrac float64) {
+func (w *Where) indexFrac(isel *idxSel) float64 {
 	p := 1.0
-	indexFrac = 1.0
+	indexFrac := 1.0
 	if isel.prefixLen > 0 {
 		indexFrac = w.prefixFrac(isel)
 		p = .5
 	}
 	if isel.skipStart > 0 {
 		indexFrac *= math.Pow(w.skipFrac(isel), p)
-		p = .5
 	}
-	dataFrac = indexFrac
-	if len(isel.moreFilters) > 0 {
-		dataFrac *= math.Pow(.1, p) // ???
-		p = .5
-	}
-	if w.exprExtra(isel) {
-		dataFrac *= math.Pow(.5, p) // ???
-	}
-	return
+	return indexFrac
 }
 
 func (w *Where) prefixFrac(isel *idxSel) float64 {
@@ -422,16 +419,4 @@ func (w *Where) skipFrac(isel *idxSel) float64 {
 func wasPoint(pr pointRange) bool {
 	return strings.HasSuffix(pr.End, ixkey.Sep+ixkey.Max) &&
 		strings.HasPrefix(pr.End, pr.Org)
-}
-
-// exprMore returns true if there are expressions
-// that use columns not used by the idxSel
-func (w *Where) exprExtra(isel *idxSel) bool {
-	used := isel.Used()
-	for _, e := range w.expr.Exprs {
-		if !set.Subset(used, e.Columns()) {
-			return true
-		}
-	}
-	return false
 }

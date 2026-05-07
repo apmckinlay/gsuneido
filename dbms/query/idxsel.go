@@ -18,38 +18,28 @@ type idxSel struct {
 	index     []string
 	encoded   bool
 	mode      byte
-	indexFrac float64 // not including filters
-	dataFrac  float64 // including filters
+	
+	// indexFrac is the selectivity of the index prefix range and skip scan
+	indexFrac float64
 
 	// prefix points/ranges
 	prefixLen    int
 	prefixRanges []pointRange
 
-	// skip scan
+	// skip scan range
 	skipStart int // 0 means no skip scan
 	skipLen   int
 	skipRange pointRange
 
-	// moreFilters are index columns in where expressions
+	// indexFilter is the selectivity of where expressions on index columns
 	// that are not covered by prefix or skip ranges
-	moreFilters []string
-	
-	// dataFilter is whether there are where expressions
-	// that are not covered by the index
-	dataFilter  bool
-}
+	// 1 means no index filter
+	indexFilter float64
 
-// Used returns a list of columns "used" by the idxSel
-func (is idxSel) Used() []string {
-	var used []string
-	if is.prefixLen > 0 {
-		used = append(used, is.index[:is.prefixLen]...)
-	}
-	if is.skipStart > 0 {
-		used = append(used, is.index[is.skipStart:is.skipStart+is.skipLen]...)
-	}
-	used = append(used, is.moreFilters...)
-	return used
+	// dataFilter is the selectivity of where expressions
+	// that are not covered by the index
+	// 1 means no data filter
+	dataFilter float64
 }
 
 func (is idxSel) String() string {
@@ -83,15 +73,14 @@ func (is idxSel) String() string {
 		}
 		sb.WriteString(">")
 	}
-	if len(is.moreFilters) > 0 {
-		sb.WriteString(" ")
-		sb.WriteString(str.Join(",", is.moreFilters))
-	}
 	sb.WriteString(" = ")
 	sb.WriteString(fracStr(is.indexFrac))
-	if is.dataFrac != is.indexFrac {
+	if (is.indexFilter > 0 && is.indexFilter < 1) || 
+		(is.dataFilter > 0 && is.dataFilter < 1) {
 		sb.WriteString(" ")
-		sb.WriteString(fracStr(is.dataFrac))
+		sb.WriteString(fracStr(is.indexFilter))
+		sb.WriteString(" ")
+		sb.WriteString(fracStr(is.dataFilter))
 	}
 	return sb.String()
 }
@@ -99,7 +88,10 @@ func (is idxSel) String() string {
 // fracStr formats a fraction to 2 significant digits, without a leading zero
 func fracStr(frac float64) string {
 	s := strconv.FormatFloat(frac, 'g', 2, 64)
-	return strings.Replace(s, "0.", ".", 1)
+	if strings.HasPrefix(s, "0.") {
+		s = s[1:]
+	}
+	return s
 }
 
 func showKey(sb *strings.Builder, encode bool, key string) {
