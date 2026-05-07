@@ -94,7 +94,7 @@ func (ps *ParamSpec) String() string {
 		buf.WriteString(flagsToName(ps.ParamName(i), ps.Flags[i]))
 		if i >= int(ps.Nparams-ps.Ndefaults) {
 			buf.WriteString("=")
-			buf.WriteString(fmt.Sprint(ps.Values[v]))
+			fmt.Fprint(&buf, ps.Values[v])
 			v++
 		}
 		sep = ","
