@@ -8,7 +8,6 @@ import (
 
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -231,30 +230,6 @@ func (f *fold) fold(node Node) Node { // NOT recursive
 		return f.foldCall(node)
 	}
 	// TODO switch
-	return node
-}
-
-func (f *fold) foldCall(node *Call) Node {
-	// if calling Number?, String?, or Date?
-	// and the single argument is a constant
-	// evaluate it
-	if id, ok := node.Fn.(*Ident); ok && len(node.Args) == 1 {
-		if arg, ok := node.Args[0].E.(*Constant); ok && node.Args[0].Name == nil {
-			var result Value
-			switch id.Name {
-			case "Number?":
-				result = SuBool(arg.Val.Type() == types.Number)
-			case "String?":
-				t := arg.Val.Type()
-				result = SuBool(t == types.String || t == types.Except)
-			case "Date?":
-				result = SuBool(arg.Val.Type() == types.Date)
-			}
-			if result != nil {
-				return &Constant{Val: result}
-			}
-		}
-	}
 	return node
 }
 

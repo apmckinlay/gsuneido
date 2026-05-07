@@ -6,6 +6,7 @@ package query
 import (
 	. "github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
@@ -209,6 +210,37 @@ func replaceExpr(expr Expr, from []string, to []Expr, clone bool) Expr {
 		}
 		return &RangeLen{E: cond, From: f, Len: n}
 	case *Nary:
+		if e.Tok == tok.And || e.Tok == tok.Or {
+			// short-circuit to avoid folding sub-expressions that would panic
+			// e.g. ('' isnt '') and ('' > 0) should stop at false, not eval '' > 0
+			zero := Value(False)
+			if e.Tok == tok.Or {
+				zero = True
+			}
+			var newExprs []Expr
+			for i, e2 := range e.Exprs {
+				r := replaceExpr(e2, from, to, clone)
+				if c, ok := r.(*Constant); ok && c.Val == zero {
+					return r
+				}
+				if r != e2 || clone {
+					if newExprs == nil {
+						newExprs = make([]Expr, len(e.Exprs))
+						copy(newExprs, e.Exprs[:i])
+					}
+				}
+				if newExprs != nil {
+					newExprs[i] = r
+				}
+			}
+			if newExprs == nil {
+				if !clone {
+					return expr
+				}
+				newExprs = e.Exprs
+			}
+			return aFolder.Nary(e.Tok, newExprs)
+		}
 		exprs := replaceExprs(e.Exprs, from, to, clone)
 		if exprs == nil && !clone {
 			return expr

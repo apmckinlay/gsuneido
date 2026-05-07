@@ -8,6 +8,7 @@ import (
 
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/set"
@@ -456,20 +457,41 @@ func foldCat(exprs []Expr) []Expr {
 var dateBegin = Constant{Val: DateBegin}
 var dateEnd = Constant{Val: DateEnd}
 
-func (Folder) Call(fn Expr, args []Arg, end int32) Expr {
-	if m, ok := fn.(*Mem); ok {
-		if e, ok := m.E.(*Ident); ok {
-			if e.Name == "Date" {
-				if c, ok := m.M.(*Constant); ok {
-					if c.Val == SuStr("Begin") {
-						return &dateBegin
-					}
-					if c.Val == SuStr("End") {
-						return &dateEnd
-					}
+func (f Folder) Call(fn Expr, args []Arg, end int32) Expr {
+	return f.foldCall(&Call{Fn: fn, Args: args, End: end})
+}
+
+func (Folder) foldCall(c *Call) Expr {
+	switch fn := c.Fn.(type) {
+	case *Mem:
+		if e, ok := fn.E.(*Ident); ok && e.Name == "Date" {
+			if c, ok := fn.M.(*Constant); ok {
+				switch c.Val {
+				case SuStr("Begin"):
+					return &dateBegin
+				case SuStr("End"):
+					return &dateEnd
+				}
+			}
+		}
+	case *Ident:
+		if len(c.Args) == 1 && c.Args[0].Name == nil {
+			if arg, ok := c.Args[0].E.(*Constant); ok {
+				var result Value
+				switch fn.Name {
+				case "Number?":
+					result = SuBool(arg.Val.Type() == types.Number)
+				case "String?":
+					t := arg.Val.Type()
+					result = SuBool(t == types.String || t == types.Except)
+				case "Date?":
+					result = SuBool(arg.Val.Type() == types.Date)
+				}
+				if result != nil {
+					return &Constant{Val: result}
 				}
 			}
 		}
 	}
-	return &Call{Fn: fn, Args: args, End: end}
+	return c
 }

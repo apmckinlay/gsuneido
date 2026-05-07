@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -319,4 +320,23 @@ func TestSameKeyFieldOrder(t *testing.T) {
 		[]string{"a", "b", "c"},
 		[]string{"c", "b", "a"},
 	))
+}
+
+
+func TestUnion_StrictCompareDb(t *testing.T) {
+	defer func(sc bool) { options.StrictCompareDb = sc }(options.StrictCompareDb)
+	options.StrictCompareDb = true
+	db := heapDb()
+	db.adm("create one (k, i) key(k)")
+	db.act("insert { k: 1, i: '' } into one")
+	db.adm("create two (k, j) key(k)")
+	db.act("insert { k: 1, j: 2 } into two")
+	
+	queryAll(db.Database, "(one union two) where i isnt '' where i > 0")
+	
+	queryAll(db.Database, "(one union two) where i isnt '' and i > 0")
+		
+	queryAll(db.Database, "(one union two) where Number?(i) where i > 0")
+	
+	queryAll(db.Database, "(one union two) where Number?(i) and i > 0")
 }
