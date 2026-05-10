@@ -153,30 +153,39 @@ func (tbl *Table) SingleTable() bool {
 	return true
 }
 
+const ( // ???
+	tableFast = 150
+	tableSlow = 300
+	tableLarge = 4_000_000
+)
+
 func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, any) {
 	if index == nil {
 		index = tbl.indexes[0]
 	} else if !tbl.singleton {
-		i := tbl.indexFor(index)
-		if i < 0 {
+		index = tbl.indexFor(index)
+		if index == nil {
 			return impossible, impossible, nil
 		}
-		index = tbl.indexes[i]
 	}
-	varcost := tbl.info.Nrows * 250 // empirical
+	rowCost := tableFast
+	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
+		rowCost = tableSlow
+	}
+	varcost := tbl.info.Nrows * rowCost // empirical
 	trace.QueryOpt.Println("Table optimize", tbl.name, index, frac, "=",
 		Cost(frac*float64(varcost)))
 	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
 }
 
 // find an index that satisfies the required order
-func (tbl *Table) indexFor(order []string) int {
+func (tbl *Table) indexFor(order []string) []string {
 	for i, ix := range tbl.indexes {
 		if slc.HasPrefix(ix, order) {
-			return i
+			return tbl.indexes[i]
 		}
 	}
-	return -1 // not found
+	return nil // not found
 }
 
 func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) {

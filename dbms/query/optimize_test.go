@@ -108,7 +108,7 @@ func TestOptimize(t *testing.T) {
 	test("supplier where supplier > 1 sort city",
 		"supplier^(city) where supplier > 1")
 	test("supplier where supplier > 9 sort city",
-		"supplier^(supplier) where supplier > 9 tempindex(city)")
+		"supplier^(city) where supplier > 9")
 
 	test("table project a",
 		"table^(a) project-copy a")
@@ -206,12 +206,12 @@ func TestOptimize(t *testing.T) {
 	test("customer leftjoin hist2 sort date",
 		"(customer^(id) leftjoin 1:n by(id) hist2^(id)) tempindex(date)")
 	test("customer leftjoin alias",
-		"customer^(id) leftjoin 1:1 by(id) (alias^(id) tempindex(id))")
+		"customer^(id) leftjoin 1:1 by(id) alias^(id)")
 
 	test("inven semijoin trans",
 		"inven^(item) semijoin by(item) trans^(item)")
 	test("customer semijoin alias",
-		"customer^(id) semijoin by(id) (alias^(id) tempindex(id))")
+		"customer^(id) semijoin by(id) alias^(id)")
 
 	test("hist2 where date > 1 sort id",
 		"hist2^(id) where date > 1")
