@@ -50,7 +50,7 @@ type Where struct {
 	// singleSels are set by Select when singleton
 	singleSels Sels
 
-	idxSels []idxSel // from optInit, result of perIndex
+	idxSels []*idxSel // from optInit, result of perIndex
 	Query1
 	// idxSelPos is the current index in idxSel.ptrngs
 	idxSelPos int
@@ -313,8 +313,7 @@ func (w *Where) calcNrows() (int, int) {
 	}
 	// find the minimum frac
 	minFrac := 1.0
-	for i := range w.idxSels {
-		isel := w.idxSels[i]
+	for _, isel := range w.idxSels {
 		frac := isel.indexFrac * isel.indexFilter * isel.dataFilter
 		if frac < minFrac {
 			minFrac = frac
@@ -633,7 +632,7 @@ func (w *Where) bestIndex(order []string, inFrac float64) (Cost, any) {
 	// fmt.Println("bestIndex", w.tbl.Name(), order, frac, "---------------")
 	if w.singleton {
 		cost := w.source.lookupCost()
-		isel := &w.idxSels[0]
+		isel := w.idxSels[0]
 		return cost,
 			&whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
@@ -710,10 +709,9 @@ func WhereCost(cost, inFrac, irFrac, ifFrac, dfFrac float64) Cost {
 }
 
 func (w *Where) getIdxSel(index []string) *idxSel {
-	for i := range w.idxSels {
-		is := &w.idxSels[i]
-		if slices.Equal(index, is.index) {
-			return is
+	for _, isel := range w.idxSels {
+		if slices.Equal(index, isel.index) {
+			return isel
 		}
 	}
 	return nil
@@ -922,12 +920,12 @@ func (w *Where) Select(sels Sels) {
 		return
 	}
 
-	var isel idxSel
+	var isel *idxSel
 	isel, w.selConflict = w.recalcIdxSel(w.idxSelBase.index, w.idxSelBase.mode, sels)
 	if w.selConflict {
 		return
 	}
-	w.idxSelActive = &isel
+	w.idxSelActive = isel
 }
 
 func (w *Where) Lookup(th *Thread, sels Sels) Row {

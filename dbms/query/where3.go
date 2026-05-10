@@ -21,31 +21,26 @@ import (
 // Its input (perCol) is the result of perField (where2.go).
 // Its output is used by Nrows, bestIndex, and finally Get.
 // It sets w.singleton if the where selects a single row.
-func (w *Where) perIndex(perCol map[string][]span) []idxSel {
-	idxSels := make([]idxSel, 0, 4)
+func (w *Where) perIndex(perCol map[string][]span) []*idxSel {
+	idxSels := make([]*idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
 	for i := range indexes {
 		schix := &indexes[i]
 		isel, singleton := w.buildIdxSel(schix.Columns, schix.Mode, perCol)
 		if singleton {
 			w.singleton = true
-			isel.indexFrac = w.prefixFrac(&isel)
-			return []idxSel{isel}
+			isel.indexFrac = w.prefixFrac(isel)
+			return []*idxSel{isel}
 		}
 		if len(isel.prefixRanges) > 0 || isel.indexFilter < 1 {
+			isel.indexFrac = w.indexFrac(isel)
 			idxSels = append(idxSels, isel)
 		}
-	}
-	// calculate frac in a separate pass
-	// so we don't waste time doing btree probes if there's a singleton
-	for i := range idxSels {
-		is := &idxSels[i]
-		is.indexFrac = w.indexFrac(is)
 	}
 	return idxSels
 }
 
-func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) (idxSel, bool) {
+func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) (*idxSel, bool) {
 	key := mode == 'k'
 	encode := !key || len(index) > 1
 	isel := idxSel{index: index, encoded: encode, mode: mode,
@@ -65,9 +60,9 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 		}
 		if prefixLen == len(index) {
 			if isel.prefixRanges[0].isPoint() {
-				return isel, true
+				return &isel, true
 			}
-			return isel, false
+			return &isel, false
 		}
 	} else if idxSpans := indexSpans(index, perCol); len(idxSpans) > 0 {
 		// prefix range
@@ -106,7 +101,7 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 		isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
 	}
 
-	return isel, false
+	return &isel, false
 }
 
 // allSingleValuePrefix checks if all prefix columns have exactly one value span.
@@ -142,10 +137,10 @@ func allSingleValuePrefix(index []string, encode bool, perCol map[string][]span)
 
 // recalcIdxSel rebuilds the idxSel for the current index using merged
 // where+select constraints. Returns (isel, conflict).
-func (w *Where) recalcIdxSel(index []string, mode byte, sels Sels) (idxSel, bool) {
+func (w *Where) recalcIdxSel(index []string, mode byte, sels Sels) (*idxSel, bool) {
 	merged, conflict := w.mergedPerCol(index, sels)
 	if conflict {
-		return idxSel{}, true
+		return &idxSel{}, true
 	}
 	isel, _ := w.buildIdxSel(index, mode, merged)
 	return isel, false

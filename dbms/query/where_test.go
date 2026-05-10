@@ -502,7 +502,7 @@ func TestWhere_Select_conflict(t *testing.T) {
 		t.Helper()
 		w := ParseQuery("comp where "+where, testTran{}, nil).(*Where)
 		w.optInit()
-		w.idxSelBase = &w.idxSels[0]
+		w.idxSelBase = w.idxSels[0]
 		w.fixed = nil
 		w.singleton = false
 		return w
