@@ -241,6 +241,39 @@ func TestParseParams(t *testing.T) {
 	test("(.a,._b=1)")
 }
 
+func TestParamAnnotationFunc(t *testing.T) {
+	test := func(src string, expected ...string) {
+		t.Helper()
+		p := NewParser(src + "{}")
+		result := p.function(false)
+		assert.T(t).This(p.Token).Is(tok.Eof)
+		for i, want := range expected {
+			assert.T(t).This(result.Params[i].Annotations).Is(want)
+		}
+	}
+	test("(a: string)", "string")
+	test("(a: string | number)", "string|number")
+	test("(a: Foo | Bar | Baz)", "Foo|Bar|Baz")
+	test("(a, b: Foo)", "", "Foo")
+	test("(a: Foo, b: Bar | Baz)", "Foo", "Bar|Baz")
+	test("(a: string = 1)", "string")
+}
+
+func TestReturnAnnotationFunc(t *testing.T) {
+	test := func(src string, expected string) {
+		t.Helper()
+		p := NewParser(src + "{}")
+		result := p.function(false)
+		assert.T(t).This(p.Token).Is(tok.Eof)
+		assert.T(t).This(result.ReturnAnnotation).Is(expected)
+	}
+	test("()", "")
+	test("() : string", "string")
+	test("() : string | number", "string|number")
+	test("() : Foo | Bar | Baz", "Foo|Bar|Baz")
+	test("(a: Foo) : Bar", "Bar")
+}
+
 func TestParseStatements(t *testing.T) {
 	core.DefaultSingleQuotes = true
 	defer func() { core.DefaultSingleQuotes = false }()

@@ -561,7 +561,8 @@ type Function struct {
 	// Vars maps variable names to slot indexes.
 	// Local slots: < SharedSlotStart, Shared slots: >= SharedSlotStart
 	// Set by ast.Blocks for functions with blocks.
-	Vars map[string]int16
+	Vars             map[string]int16
+	ReturnAnnotation string
 }
 
 func (a *Function) String() string {
@@ -628,7 +629,8 @@ type Param struct {
 	Name   Ident // including prefix @ . _
 	End    int32
 	// Unused is set if the parameter was followed by /*unused*/
-	Unused bool
+	Unused      bool
+	Annotations string
 }
 
 func (a *Param) String() string {

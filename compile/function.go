@@ -4,6 +4,8 @@
 package compile
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
@@ -22,6 +24,7 @@ func (p *Parser) function(inClass bool) (result *ast.Function) {
 	p.InitFuncInfo()
 	params := p.params(inClass)
 	pos1 := p.EndPos
+	returnAnnotation := p.annotation()
 	p.Match(tok.LCurly)
 	pos2 := p.EndPos
 	body := p.statements()
@@ -29,6 +32,7 @@ func (p *Parser) function(inClass bool) (result *ast.Function) {
 	p.processFinal()
 	fn := &ast.Function{Params: params, Body: body, Final: p.final,
 		HasBlocks: p.hasBlocks, Pos1: pos1, Pos2: pos2}
+	fn.ReturnAnnotation = returnAnnotation
 	p.funcInfo = funcInfoSave
 	return fn
 }
@@ -55,7 +59,7 @@ func (p *Parser) processFinal() {
 func (p *Parser) params(inClass bool) []ast.Param {
 	p.Match(tok.LParen)
 	var params []ast.Param
-	addParam := func(name string, pos int32, unused bool, def Value) {
+	addParam := func(name string, pos int32, unused bool, def Value, annotation string) {
 		if name == "unused" || name == "@unused" {
 			unused = true
 		}
@@ -68,6 +72,7 @@ func (p *Parser) params(inClass bool) []ast.Param {
 			}
 		}
 		param := mkParam(name, pos, p.EndPos, unused, def)
+		param.Annotations = annotation
 		params = append(params, param)
 	}
 	if p.Token == tok.At {
@@ -76,7 +81,7 @@ func (p *Parser) params(inClass bool) []ast.Param {
 		name := p.Text
 		unused := p.unusedAhead()
 		p.MatchIdent()
-		addParam("@"+name, pos, unused, nil)
+		addParam("@"+name, pos, unused, nil, "object")
 		p.final[name] = disqualified
 	} else {
 		defs := false
@@ -94,6 +99,9 @@ func (p *Parser) params(inClass bool) []ast.Param {
 			unused := p.unusedAhead()
 			p.MatchIdent()
 			p.checkForDupParam(params, name)
+
+			annotation := p.annotation()
+
 			if p.MatchIf(tok.Eq) {
 				wasString := p.Token == tok.String || p.Token == tok.Symbol
 				defs = true
@@ -101,19 +109,34 @@ func (p *Parser) params(inClass bool) []ast.Param {
 				if _, ok := def.(SuStr); ok && !wasString {
 					p.Error("parameter defaults must be constants")
 				}
-				addParam(name, pos, unused, def)
+				addParam(name, pos, unused, def, annotation)
 				p.MatchIf(tok.Comma)
 			} else {
 				if defs {
 					p.Error("default parameters must come last")
 				}
-				addParam(name, pos, unused, nil)
+				addParam(name, pos, unused, nil, annotation)
 				p.MatchIf(tok.Comma)
 			}
 		}
 	}
 	p.Match(tok.RParen)
 	return params
+}
+
+func (p *Parser) annotation() string {
+	if !p.MatchIf(tok.Colon) {
+		return ""
+	}
+
+	var annotation string
+	for {
+		annotation += p.MatchIdent() + "|"
+		if !p.MatchIf(tok.BitOr) {
+			break
+		}
+	}
+	return strings.TrimSuffix(annotation, "|")
 }
 
 func mkParam(name string, pos, end int32, unused bool, def Value) ast.Param {
