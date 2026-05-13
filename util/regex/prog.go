@@ -49,7 +49,7 @@ func (pat Pattern) String() string {
 	pi := 0
 	for pi < len(pat) {
 		inc, s := pat.opstr(pi)
-		sb.WriteString(fmt.Sprintf("%d: %s\n", pi, s))
+		fmt.Fprintf(&sb, "%d: %s\n", pi, s)
 		pi += inc
 	}
 	return sb.String()

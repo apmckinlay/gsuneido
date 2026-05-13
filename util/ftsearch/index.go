@@ -157,10 +157,9 @@ func (ix *Index) WordInfo(s string) string {
 			for _, count := it(); count != 0; _, count = it() {
 				n += int(count)
 			}
-			sb.WriteString(fmt.Sprintln(
-				term, "count", n, "in", t.ndocsWithTerm, "documents"))
+			fmt.Fprintln(&sb, term, "count", n, "in", t.ndocsWithTerm, "documents")
 		} else {
-			sb.WriteString(fmt.Sprintln(term, "not found"))
+			fmt.Fprintln(&sb, term, "not found")
 		}
 	}
 	return sb.String()
