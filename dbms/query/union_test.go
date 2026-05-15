@@ -167,7 +167,7 @@ func TestBestMergeIndexes(t *testing.T) {
 		[][]string{{"b", "a", "c"}},
 		[]string{"c", "b", "a"},
 		[]string{"c", "b", "d", "a"},
-		[]string{"a", "c", "b"},
+		[]string{"c", "b", "a"},
 		false)
 
 	test(nil,
@@ -177,7 +177,7 @@ func TestBestMergeIndexes(t *testing.T) {
 		[][]string{{"b", "a", "c"}},
 		[]string{"c", "b", "a"},
 		[]string{"c", "b", "d", "a"},
-		[]string{"a", "c", "b"},
+		[]string{"c", "b", "a"},
 		false)
 
 	// no matching indexes
@@ -190,6 +190,19 @@ func TestBestMergeIndexes(t *testing.T) {
 		nil,
 		nil,
 		true)
+
+	// required order has non-key prefix fields (e.g. [a,b] where key is [b]).
+	// keyIndex must be the physical index [a,b], not just the logical key [b],
+	// so that mergeCols matches the actual read order and compareSrc does not fail.
+	test([]string{"a", "b"},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		[][]string{{"b"}},
+		[][]string{{"b"}},
+		[]string{"a", "b"},
+		[]string{"a", "b"},
+		[]string{"a", "b"},
+		false)
 
 	// both sources have empty keys - don't need order
 	test([]string{"x"},

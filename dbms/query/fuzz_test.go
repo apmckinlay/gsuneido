@@ -868,7 +868,7 @@ func fuzzSemiJoin(t *testing.T, rnd *rand.Rand) {
 // go test -run '^$' -fuzz=FuzzWhere ./dbms/query/
 
 func TestFuzzWhereDebug(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(552, 724))
+	rnd := rand.New(rand.NewPCG(65, 455))
 	fuzzWhere(t, rnd)
 }
 
@@ -1135,11 +1135,11 @@ func fuzzQuery(t *testing.T, q Query, rnd *rand.Rand) {
 
 func keyIndexes(q Query) [][]string {
 	var keyIndexes [][]string
-	keys := q.Keys()
-	fixed := q.Fixed()
 	for _, index := range q.Indexes() {
-		if hasKey(index, keys, fixed) {
-			keyIndexes = append(keyIndexes, index)
+		for _, key := range q.Keys() {
+			if set.Equal(index, key) {
+				keyIndexes = append(keyIndexes, index)
+			}
 		}
 	}
 	return keyIndexes

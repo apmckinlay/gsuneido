@@ -74,6 +74,8 @@ type Where struct {
 
 	srcIndex []string // set by setApproach, used by Lookup
 	wFixed   Fixed
+
+	wfrac float64
 }
 
 // whereTable is the additional functionality that Where needs from a Table.
@@ -81,7 +83,6 @@ type Where struct {
 type whereTable interface {
 	// optimization
 	optimize(mode Mode, index []string, frac float64) (Cost, Cost, any)
-	IndexCols(index []string) []string
 	IndexEncodes(index []string) bool
 	SetIndex(index []string)
 	schemaIndexes() []Index
@@ -257,21 +258,13 @@ func (w *Where) Keys() [][]string {
 			w.keys = emptyKey // intentionally {} not nil
 		} else {
 			//TODO treat unique indexes with a where != "" as keys
-			w.keys = keysWithoutFixed(w.source.Keys(), w.wFixed)
+			w.keys = w.source.Keys()
+			// logically, we should remove fixed from the keys
+			// but it causes problems for operations choosing a key index
 		}
 		assert.That(w.keys != nil) // once only
 	}
 	return w.keys
-}
-
-func keysWithoutFixed(keys [][]string, fixed Fixed) [][]string {
-	if len(fixed) > 0 {
-		keys = slc.MapFn(keys, func(key []string) []string {
-			return slc.WithoutFn(key, fixed.Single)
-		})
-		keys = minimizeKeys(keys)
-	}
-	return keys
 }
 
 func (w *Where) fastSingle() bool {
@@ -309,17 +302,9 @@ func (w *Where) calcNrows() (int, int) {
 		return 1, srcPop
 	}
 	if len(w.idxSels) == 0 {
-		return srcNrows / 2, srcPop
+		return int(math.Round(float64(srcNrows) * unknownFrac)), srcPop
 	}
-	// find the minimum frac
-	minFrac := 1.0
-	for _, isel := range w.idxSels {
-		frac := isel.indexFrac * isel.indexFilter * isel.dataFilter
-		if frac < minFrac {
-			minFrac = frac
-		}
-	}
-	est := int(math.Round(minFrac * float64(srcNrows)))
+	est := int(math.Round(w.wfrac * float64(srcNrows)))
 	return est, srcPop
 }
 
@@ -629,7 +614,7 @@ func (w *Where) optInit() {
 // that satisfies the required order,
 // or impossible if no index satisfies the order.
 func (w *Where) bestIndex(order []string, inFrac float64) (Cost, any) {
-	// fmt.Println("bestIndex", w.tbl.Name(), order, frac, "---------------")
+	// fmt.Println("bestIndex", w.tbl.Name(), order, inFrac, "---------------")
 	if w.singleton {
 		cost := w.source.lookupCost()
 		isel := w.idxSels[0]
@@ -637,11 +622,13 @@ func (w *Where) bestIndex(order []string, inFrac float64) (Cost, any) {
 			&whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
 	indexes := w.source.Indexes()
-	if slc.ContainsFn(w.source.Keys(), order, slices.Equal) {
-		// This forces the use of the requested index if it is a key,
-		// because that means it may be intended for Lookups.
+	if slc.ContainsFn(w.Keys(), order, slices.Equal) {
+		// The requested order is a key, so we have to assume Lookup.
+		// ordered is not sufficient.
 		// Without this, Where can pick a different index than the requested one
 		// causing Lookup to fail in Table with "selOrg not full"
+		// In general, a key is not guaranteed to be an index
+		// but we are on a table, in which case keys are indexes.
 		indexes = [][]string{order}
 	}
 	best := newBestIndex()
@@ -650,21 +637,22 @@ func (w *Where) bestIndex(order []string, inFrac float64) (Cost, any) {
 		if !ordered(idx, order, w.fixed) {
 			continue
 		}
-		_, varCost, _ := w.tbl.optimize(CursorMode, idx, 1.0)
+		_, varCost, _ := w.tbl.optimize(0, idx, 1.0)
 		irFrac := 1.0
 		ifFrac := 1.0
-		dfFrac := 0.5
+		dfFrac := w.wfrac
 		nptrngs := 0
 		isel := w.getIdxSel(idx)
 		if isel != nil {
-			irFrac = isel.indexFrac
-			ifFrac = isel.indexFilter
-			dfFrac = isel.dataFilter
+			irFrac = isel.prefixFrac * isel.skipFrac
+			ifFrac = isel.indexFilterFrac
+			dfFrac = isel.dataFilterFrac
 			nptrngs = len(isel.prefixRanges)
 		}
-		cost := WhereCost(float64(varCost), inFrac, irFrac, ifFrac, dfFrac) +
-			w.source.lookupCost()*nptrngs
-		// fmt.Println("\t", idx, "varCost", varCost, "irFrac", irFrac, "ifFrac", ifFrac, "dfFrac", dfFrac, "cost", cost)
+		wc := WhereCost(float64(varCost), inFrac, irFrac, ifFrac, dfFrac)
+		lc := w.source.lookupCost() * nptrngs
+		cost := wc + lc
+		// fmt.Println("\t", idx, "varCost", varCost, "irFrac", irFrac, "ifFrac", ifFrac, "dfFrac", dfFrac, "nptrngs", nptrngs, "wc", wc, "lc", lc, "cost", cost)
 		if best.update(idx, 0, cost) {
 			bestIdxSel = isel
 		}
@@ -734,12 +722,13 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 		w.tbl.SetIndex(app.index)
 		w.srcIndex = app.index
 		if app.idxSel != nil {
-			w.ixCtx.cols = w.tbl.IndexCols(app.index)
+			w.ixCtx.cols = app.index
 			w.ixCtx.encodes = w.tbl.IndexEncodes(app.index)
 			w.ixExpr = w.exprsFor(w.ixCtx.cols)
 			w.idxSelBase = app.idxSel
 			w.idxSelActive = w.idxSelBase
-			w.tbl.setCost(frac*app.idxSel.indexFrac, 0, app.cost)
+			w.tbl.setCost(frac*app.idxSel.prefixFrac*app.idxSel.skipFrac,
+				0, app.cost)
 			w.idxSelPos = -1
 		} else {
 			w.tbl.setCost(frac, 0, app.cost)
@@ -947,9 +936,6 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	cloned := false
 	sels = slices.Clip(sels)
 	indexFields := w.srcIndex
-	if w.tbl != nil {
-		indexFields = w.tbl.IndexCols(w.srcIndex)
-	}
 	for _, fix := range w.fixed {
 		if fix.Single() && slices.Contains(indexFields, fix.col) &&
 			!sels.HasCol(fix.col) {

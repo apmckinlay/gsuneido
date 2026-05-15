@@ -23,14 +23,14 @@ func TestSetFields(t *testing.T) {
 	test("supplier", 1, []string{"city", "supplier"})
 
 	// key with multiple columns
-	test("hist", 1, []string{"date", "item", "id"})
+	test("hist", 0, []string{"date", "item", "id"})
 	// non-key - key columns not in index columns are added
-	test("hist", 0, []string{"item", "date", "id"})
+	test("hist", 1, []string{"item", "date", "id"})
 
 	// single column key
-	test("hist2", 1, []string{"date"})
+	test("hist2", 0, []string{"date"})
 	// non-key with single column key
-	test("hist2", 0, []string{"id", "date"})
+	test("hist2", 1, []string{"id", "date"})
 
 	// all schemas have Fields set
 	for table, schema := range testSchemas {

@@ -15,40 +15,53 @@ import (
 
 // idxSel specifies usage of a single index
 type idxSel struct {
-	index     []string
-	encoded   bool
-	mode      byte
-	
-	// indexFrac is the selectivity of the index prefix range and skip scan
-	indexFrac float64
+	index   []string
+	encoded bool
+	mode    byte
+
+	singleton bool
 
 	// prefix points/ranges
 	prefixLen    int
 	prefixRanges []pointRange
+	prefixFrac   float64
 
 	// skip scan range
-	skipStart int // 0 means no skip scan
+	skipStart int // 0 means no skip scan; indexes into fields
 	skipLen   int
 	skipRange pointRange
+	skipFrac  float64
 
-	// indexFilter is the selectivity of where expressions on index columns
+	// indexFilter is where expressions on index columns
 	// that are not covered by prefix or skip ranges
-	// 1 means no index filter
-	indexFilter float64
+	indexFilter     bool
+	indexFilterFrac float64
 
-	// dataFilter is the selectivity of where expressions
+	// dataFilter is where expressions
 	// that are not covered by the index
-	// 1 means no data filter
-	dataFilter float64
+	dataFilter     bool
+	dataFilterFrac float64
 }
 
+func (is *idxSel) HasSkipScan() bool {
+	return is.skipStart > 0
+}
+
+func (is *idxSel) OnlyPrefix() bool {
+	return !is.HasSkipScan() && !is.indexFilter && !is.dataFilter
+}
+
+func (is *idxSel) frac() float64 {
+	return is.prefixFrac * is.skipFrac * is.indexFilterFrac * is.dataFilterFrac
+}
 func (is idxSel) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString(str.Join("(,)", is.index))
 
 	if is.prefixLen > 0 {
+		prefixCols := is.index
 		sb.WriteString(" ")
-		sb.WriteString(str.Join(",", is.index[:is.prefixLen]))
+		sb.WriteString(str.Join(",", prefixCols[:is.prefixLen]))
 		sb.WriteString(":")
 		sep := " <"
 		for _, pr := range is.prefixRanges {
@@ -62,25 +75,36 @@ func (is idxSel) String() string {
 		}
 		sb.WriteString(">")
 	}
-	if is.skipStart > 0 {
-		sb.WriteString(" +")
-		sb.WriteString(str.Join(",", is.index[is.skipStart:is.skipStart+is.skipLen]))
-		sb.WriteString(": <")
-		showKey(sb, is.encoded, is.skipRange.Org)
-		if is.skipRange.isRange() {
-			sb.WriteString("..")
-			showKey(sb, is.encoded, is.skipRange.End)
+	if is.singleton {
+		sb.WriteString(" = singleton")
+	} else {
+		if is.skipStart > 0 {
+			skipCols := is.index
+			sb.WriteString(" +")
+			sb.WriteString(str.Join(",", skipCols[is.skipStart:is.skipStart+is.skipLen]))
+			sb.WriteString(": <")
+			showKey(sb, is.encoded, is.skipRange.Org)
+			if is.skipRange.isRange() {
+				sb.WriteString("..")
+				showKey(sb, is.encoded, is.skipRange.End)
+			}
+			sb.WriteString(">")
 		}
-		sb.WriteString(">")
-	}
-	sb.WriteString(" = ")
-	sb.WriteString(fracStr(is.indexFrac))
-	if (is.indexFilter > 0 && is.indexFilter < 1) || 
-		(is.dataFilter > 0 && is.dataFilter < 1) {
-		sb.WriteString(" ")
-		sb.WriteString(fracStr(is.indexFilter))
-		sb.WriteString(" ")
-		sb.WriteString(fracStr(is.dataFilter))
+		// fractions
+		sb.WriteString(" = pre: ")
+		sb.WriteString(fracStr(is.prefixFrac))
+		if is.skipStart > 0 {
+			sb.WriteString(" skp: ")
+			sb.WriteString(fracStr(is.skipFrac))
+		}
+		if is.indexFilter {
+			sb.WriteString(" idx: ")
+			sb.WriteString(fracStr(is.indexFilterFrac))
+		}
+		if is.dataFilter {
+			sb.WriteString(" dat: ")
+			sb.WriteString(fracStr(is.dataFilterFrac))
+		}
 	}
 	return sb.String()
 }

@@ -98,7 +98,8 @@ func (ds *dataSource) get(dir Dir) Row {
 // It generates rows of data that can be filtered with Select or Lookup.
 type QuerySource struct {
 	QueryMock
-	index []string
+	origIndexes [][]string // before adding key fields for uniqueness
+	index       []string
 	dataSource
 	sels Sels
 }
@@ -165,7 +166,8 @@ func (b *buildQS) finish() *QuerySource {
 	qs.HeaderResult = SimpleHeader(b.columns)
 	qs.ColumnsResult = b.columns
 	assert.That(isEmptyKey(b.keys) == isEmptyKey(b.indexes))
-	qs.IndexesResult = b.indexes
+	qs.origIndexes = b.indexes
+	qs.IndexesResult = makeUnique(b.indexes, b.keys)
 	qs.KeysResult = b.keys
 	qs.NrowsN = nrows
 	qs.NrowsP = nrows
@@ -175,6 +177,34 @@ func (b *buildQS) finish() *QuerySource {
 	qs.LookupLevels = 2 // ???
 	qs.KnowExactNrowsResult = true
 	return qs
+}
+
+// makeUnique adds key fields to indexes to make them unique
+func makeUnique(indexes, keys [][]string) [][]string {
+	result := make([][]string, 0, len(indexes))
+	seen := make(map[string]bool, len(indexes))
+	for _, index := range indexes {
+		fields := index
+		if !slc.ContainsFn(keys, index, slices.Equal) {
+			var bestExtra []string
+			for _, key := range keys {
+				extra := set.Difference(key, index)
+				if bestExtra == nil || len(extra) < len(bestExtra) {
+					bestExtra = extra
+				}
+			}
+			if len(bestExtra) > 0 {
+				fields = slc.With(index, bestExtra...)
+			}
+		}
+		sig := strings.Join(fields, "\x00")
+		if seen[sig] {
+			continue
+		}
+		seen[sig] = true
+		result = append(result, fields)
+	}
+	return result
 }
 
 func (b *buildQS) makeColumns() {
@@ -226,11 +256,16 @@ func (b *buildQS) makeIndexes() {
 	maxcols := min(nindexes, len(b.columns))
 	for ncols := 1; ncols < maxcols; ncols++ {
 		idx := set.RandPerm(b.rnd, b.columns, ncols)
-		if slc.ContainsFn(b.indexes, idx, slices.Equal) {
+		if slc.ContainsFn(b.indexes, idx, slices.Equal) ||
+			slc.ContainsFn(b.keys, idx, containsKey) {
 			continue
 		}
 		b.indexes = append(b.indexes, idx)
 	}
+}
+
+func containsKey(key, idx []string) bool {
+	return set.Subset(idx, key)
 }
 
 func (b *buildQS) makeRows() []Row {
@@ -526,13 +561,10 @@ type QuerySourceWT struct {
 	skipOrg string
 	skipEnd string
 	skipLen int
+	index   []string
 }
 
 var _ whereTable = (*QuerySourceWT)(nil)
-
-func (qs *QuerySourceWT) IndexCols(index []string) []string {
-	return index
-}
 
 func (qs *QuerySourceWT) IndexEncodes(index []string) bool {
 	return len(index) > 1
@@ -540,19 +572,20 @@ func (qs *QuerySourceWT) IndexEncodes(index []string) bool {
 
 func (qs *QuerySourceWT) SetIndex(index []string) {
 	qs.setApproach(index, 0, nil, nil)
+	qs.index = index
 }
 
 func (qs *QuerySourceWT) schemaIndexes() []Index {
 	idxs := make([]Index, 0, len(qs.IndexesResult))
-	for _, ix := range qs.IndexesResult {
+	for i, ix := range qs.IndexesResult {
 		mode := 'i'
 		for _, k := range qs.KeysResult {
-			if slices.Equal(ix, k) {
+			if slices.Equal(qs.origIndexes[i], k) {
 				mode = 'k'
 				break
 			}
 		}
-		idxs = append(idxs, Index{Columns: ix, Mode: byte(mode)})
+		idxs = append(idxs, Index{Columns: qs.origIndexes[i], Fields: ix, Mode: byte(mode)})
 	}
 	return idxs
 }
@@ -608,16 +641,10 @@ func (qs *QuerySourceWT) Get(_ *Thread, dir Dir) Row {
 }
 
 // matches checks if a row matches the current Select criteria.
-// It only checks the index prefix columns (stopping at first missing column),
-// matching the behavior of Table and TempIndex.
+// It encodes using physical index fields to mirror real tables.
 func (qs *QuerySourceWT) matches(row Row) bool {
 	if qs.rawOrg != "" || qs.rawEnd != "" || qs.skipLen > 0 {
-		var enc ixkey.Encoder
-		for _, col := range qs.index {
-			val := row.GetRaw(qs.HeaderResult, col)
-			enc.Add(val)
-		}
-		key := enc.String()
+		key := qs.getKey(row, qs.index)
 		if qs.rawOrg != "" && key < qs.rawOrg {
 			return false
 		}
@@ -656,6 +683,9 @@ func (qs *QuerySourceWT) getKey(row Row, index []string) string {
 	var enc ixkey.Encoder
 	for _, col := range index {
 		val := row.GetRaw(qs.HeaderResult, col)
+		if len(index) == 1 {
+			return val
+		}
 		enc.Add(val)
 	}
 	return enc.String()

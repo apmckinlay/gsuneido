@@ -149,63 +149,69 @@ func TestWhere_perIndex(t *testing.T) {
 
 	table = "comp" // key(a,b,c) nrows = 1000
 	test("a is 1",
-		"(a,b,c) a: <1..1,max> = .1")
+		"(a,b,c) a: <1..1,max> = pre: .1")
 	test("a is 1 and b is 2",
-		"(a,b,c) a,b: <1,2..1,2,max> = .01")
+		"(a,b,c) a,b: <1,2..1,2,max> = pre: .01")
 	test("a is 1 and b is 2 and c is 3",
-		"(a,b,c) a,b,c: <1,2,3> = .0005")
+		"(a,b,c) a,b,c: <1,2,3> = singleton")
 	test("a is 1 and b >= 2",
-		"(a,b,c) a,b: <1,2..1,max> = .08")
+		"(a,b,c) a,b: <1,2..1,max> = pre: .08")
 
 	test("a > 4",
-		"(a,b,c) a: <4,max..max> = .5")
+		"(a,b,c) a: <4,max..max> = pre: .5")
 	test("a <= 4",
-		"(a,b,c) a: <..4,max> = .5")
+		"(a,b,c) a: <..4,max> = pre: .5")
 	test("a is 2 and b >= 4",
-		"(a,b,c) a,b: <2,4..2,max> = .06")
+		"(a,b,c) a,b: <2,4..2,max> = pre: .06")
 	test("a in (1,2) and b in (3,4)",
 		"(a,b,c) a,b: <1,3..1,3,max | 1,4..1,4,max | "+
-			"2,3..2,3,max | 2,4..2,4,max> = .04")
+			"2,3..2,3,max | 2,4..2,4,max> = pre: .04")
 	test("a in (1,2) and b > 4",
-		"(a,b,c) a,b: <1,4,max..1,max | 2,4,max..2,max> = .1")
+		"(a,b,c) a,b: <1,4,max..1,max | 2,4,max..2,max> = pre: .1")
 	test("a is 1 or a > 3",
-		"(a,b,c) a: <1..1,max | 3,max..max> = .7")
+		"(a,b,c) a: <1..1,max | 3,max..max> = pre: .7")
 	test("a isnt 5",
-		"(a,b,c) a: <..5 | 5,max..max> = .9")
+		"(a,b,c) a: <..5 | 5,max..max> = pre: .9")
 	test("a is '' and b isnt 0",
-		"(a,b,c) a,b: <..'',0 | '',0,max..'',max> = .09")
+		"(a,b,c) a,b: <..'',0 | '',0,max..'',max> = pre: .09")
 
 	test("b is 2",
-		"(a,b,c) +b: <2..2,max> = .01")
+		"(a,b,c) +b: <2..2,max> = pre: 1 skp: .5")
 	test("F(b)",
-		"(a,b,c) = 1 .5 1")
+		"(a,b,c) = pre: 1 idx: .5")
 	test("b in (2,3)",
-		"(a,b,c) = 1 .5 1")
+		"(a,b,c) = pre: 1 idx: .5")
 	test("b is 1 and c in (2,3)",
-		"(a,b,c) +b: <1..1,max> = .01 .5 1")
+		"(a,b,c) +b: <1..1,max> = pre: 1 skp: .71 idx: .71")
 	test("b is 2 and c is 3",
-		"(a,b,c) +b,c: <2,3..2,3,max> = .01")
+		"(a,b,c) +b,c: <2,3..2,3,max> = pre: 1 skp: .5")
 	test("a is 1 and c is 3",
-		"(a,b,c) a: <1..1,max> +c: <3..3,max> = .01")
+		"(a,b,c) a: <1..1,max> +c: <3..3,max> = pre: .1 skp: .5")
 
 	test("b >= 2 and b <= 4",
-		"(a,b,c) +b: <2..4,max> = .1")
+		"(a,b,c) +b: <2..4,max> = pre: 1 skp: .5")
 	test("b > 2",
-		"(a,b,c) +b: <2,max..max> = .33")
+		"(a,b,c) +b: <2,max..max> = pre: 1 skp: .5")
 	test("b < 5",
-		"(a,b,c) +b: <..5> = .33")
+		"(a,b,c) +b: <..5> = pre: 1 skp: .5")
 
-	test("a > 1 and F(c)", "(a,b,c) a: <1,max..max> = .8 .5 1")
-	test("a > 1 and F(a)", "(a,b,c) a: <1,max..max> = .8 .5 1")
-	test("a is 1 and Foo()", "(a,b,c) a: <1..1,max> = .1 1 .5")
+	test("a > 1 and F(c)", "(a,b,c) a: <1,max..max> = pre: .8 idx: .5")
+	test("a > 1 and F(a)", "(a,b,c) a: <1,max..max> = pre: .8 idx: .5")
+	test("a is 1 and Foo()", "(a,b,c) a: <1..1,max> = pre: .1 dat: .5")
 
 	table = "table" // key(a) nrows = 100
 	test("a >= ''",
-		"(a) a: <''..max> = 1") //TODO skip useless
+		"(a) a: <''..max> = pre: 1") //TODO skip useless
 
-	table = "comp2" // key(a,b,c) nrows = 0
+	table = "comp2" // index(b) key(a,b,c) nrows = 0
+	// (b) will be (b,a,c) after adding key columns to make it unique
+	// so it should get a skip scan the same as (a,b,c)
 	test("a is 1 and b is 2 and c is 3",
-		"(a,b,c) a,b,c: <1,2,3> = 0")
+		"(a,b,c) a,b,c: <1,2,3> = singleton")
+	test("c is 1",
+		"(a,b,c) +c: <1..1,max> = pre: 1 skp: .5 (b,a,c) +c: <1..1,max> = pre: 1 skp: .5")
+	test("a is 1 and b is 2",
+		"(a,b,c) a,b: <1,2..1,2,max> = pre: .01 (b,a,c) b,a: <2,1..2,1,max> = pre: .01")
 }
 
 type wtestTran struct {
@@ -358,19 +364,6 @@ func TestWhere_fixed(t *testing.T) {
 	test("a in (1,2) and a in (3,4)", "[]")
 }
 
-func TestWhere_keysWithoutFixed(t *testing.T) {
-	fixed := Fixed{
-		NewFix("a", One),
-		{col: "b", values: []string{Pack(SuInt(1)), Pack(SuInt(2))}},
-		NewFix("c", One),
-	}
-	keys := [][]string{{"a", "b"}, {"b", "c"}, {"d"}}
-	assert.T(t).This(fmt.Sprint(keysWithoutFixed(keys, fixed))).Is("[[b] [d]]")
-
-	keys = [][]string{{"a", "b"}, {"b", "c"}, {"c"}}
-	assert.T(t).This(fmt.Sprint(keysWithoutFixed(keys, fixed))).Is("[[]]")
-}
-
 func TestWhere_indexes(t *testing.T) {
 	db := heapDb()
 	defer db.Close()
@@ -390,22 +383,14 @@ func TestWhere_indexes(t *testing.T) {
 		w.optInit()
 		assert.T(t).This(fmt.Sprint(w.idxSels)).Is(idxSels)
 	}
-	test("(a,b,c) key(a)", "a = 1", "[a:[1]]", "[(a) a: <1> = 0]")
+	test("(a,b,c) key(a)", "a = 1", "[a:[1]]", "[(a) a: <1> = singleton]")
 }
 
 func TestWhere_ixfilter(t *testing.T) {
-	db := heapDb()
-	defer db.Close()
-	db.adm("create table (a,b,c,d) key(a) index(b,c)")
-	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
-	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
-	db.act("insert { a: 7, b: 5, c: 8, d: 9 } into table")
-	db.act("insert { a: 9, b: 0, c: 3, d: 4 } into table")
-	tran := db.NewReadTran()
-	q := ParseQuery("table where c=8", tran, nil)
-	q, _, _ = Setup(q, ReadMode, tran)
+	q := ParseQuery("ixftab where c=8", testTran{}, nil)
+	q, _, _ = Setup(q, ReadMode, testTran{})
 	assert.This(Strategy2(q)).Like(`
-		table^(b,c)
+		ixftab^(b,c,a)
 		where c is 8`)
 }
 
@@ -444,7 +429,8 @@ func TestWhere_skipScan_pure(t *testing.T) {
 	q := ParseQuery("table where b = 5", tran, nil)
 	q, _, _ = Setup(q, CursorMode, tran)
 	w := q.(*Where)
-	assert.T(t).This(fmt.Sprint(w.idxSelBase)).Is("(a,b) +b: <5..5,max> = .01")
+	assert.T(t).This(fmt.Sprint(w.idxSelBase)).
+		Is("(a,b) +b: <5..5,max> = pre: 1 skp: .5")
 	assert.This(queryAll2(q)).Is("a=1 b=5 | a=2 b=5 | a=3 b=5")
 }
 
@@ -693,6 +679,7 @@ func TestWhere_SelOrgNotFull(t *testing.T) {
 	db := heapDb()
 	defer db.Close()
 	db.adm("create table (a,b,c,d) index(a,c) key(a,b)") // index must be first
+	// note: index(a,c) will be (a,c,b) with key(a,b) added for uniqueness
 	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
 	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
 	db.act("insert { a: 7, b: 5, c: 8, d: 9 } into table")
@@ -763,4 +750,192 @@ func TestWhereCost(t *testing.T) {
 	test(&Eg{dfFrac: .5}, 100_000)
 	// irFrac + dataFilter + small inFrac: guard applied to narrowed range
 	test(&Eg{irFrac: 0.5, dfFrac: .5, inFrac: 0.01}, 12_875)
+}
+
+func TestTable_vs_QuerySourceWT(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create wtcomp (a,b,c) key(a) index(b,c)")
+	db.act("insert { a: 1, b: 2, c: 3 } into wtcomp")
+	db.act("insert { a: 4, b: 5, c: 6 } into wtcomp")
+	db.act("insert { a: 7, b: 5, c: 8 } into wtcomp")
+
+	tran := db.NewReadTran()
+	cols := []string{"a", "b", "c"}
+	keys := [][]string{{"a"}}
+	indexes := [][]string{{"a"}, {"b", "c", "a"}}
+
+	baseRows := []Row{
+		makeTestRow(1, 2, 3),
+		makeTestRow(4, 5, 6),
+		makeTestRow(7, 5, 8),
+	}
+
+	newTbl := func() *Table {
+		return NewTable(tran, "wtcomp").(*Table)
+	}
+	newQswt := func() *QuerySourceWT {
+		qs := &QuerySource{}
+		qs.rows = slices.Clone(baseRows)
+		qs.pos = dsRewound
+		qs.HeaderResult = SimpleHeader(cols)
+		qs.ColumnsResult = cols
+		qs.IndexesResult = indexes
+		qs.origIndexes = [][]string{{"a"}, {"b", "c"}}
+		qs.KeysResult = keys
+		qs.NrowsN = 3
+		qs.NrowsP = 3
+		qs.MetricsResult = &metrics{}
+		qs.FixedResult = Fixed{}
+		qs.FastSingleResult = false
+		qs.LookupLevels = 1
+		qs.KnowExactNrowsResult = true
+		return &QuerySourceWT{QuerySource: *qs}
+	}
+
+	a := assert.T(t)
+
+	tbl := newTbl()
+	qswt := newQswt()
+
+	// isSingleton
+	a.This(tbl.isSingleton()).Is(qswt.isSingleton())
+
+	// Nrows
+	tn, tp := tbl.Nrows()
+	qn, qp := qswt.Nrows()
+	a.This(tn).Is(qn)
+	a.This(tp).Is(qp)
+
+	// indexi, IndexEncodes
+	for _, idx := range indexes {
+		a.Msg(idx).This(tbl.indexi(idx)).Is(qswt.indexi(idx))
+		a.Msg(idx).This(tbl.IndexEncodes(idx)).Is(qswt.IndexEncodes(idx))
+	}
+
+	// schemaIndexes: compare Fields and Mode of each entry
+	tIdxs := tbl.schemaIndexes()
+	qIdxs := qswt.schemaIndexes()
+	a.This(len(tIdxs)).Is(len(qIdxs))
+	for i := range tIdxs {
+		a.Msg(i, "Columns").This(tIdxs[i].Columns).Is(qIdxs[i].Columns)
+		a.Msg(i, "Fields").This(tIdxs[i].Fields).Is(qIdxs[i].Fields)
+		a.Msg(i, "Mode").This(string([]byte{tIdxs[i].Mode})).
+			Is(string([]byte{qIdxs[i].Mode}))
+	}
+
+	// gather rows via GetFilter into a sorted string slice for comparison
+	gatherRows := func(wt whereTable, hdr *Header, org, end string,
+		filter func(string) bool) []string {
+		t.Helper()
+		wt.SelectRaw(org, end)
+		var ss []string
+		for row := wt.GetFilter(Next, filter); row != nil; row = wt.GetFilter(Next, filter) {
+			ss = append(ss, row2str(hdr, row))
+		}
+		slices.Sort(ss)
+		return ss
+	}
+
+	// key(a) index: scan all rows
+	tbl = newTbl()
+	tbl.SetIndex([]string{"a"})
+	qswt = newQswt()
+	qswt.SetIndex([]string{"a"})
+	a.This(gatherRows(tbl, tbl.Header(), ixkey.Min, ixkey.Max, nil)).
+		Is(gatherRows(qswt, qswt.HeaderResult, ixkey.Min, ixkey.Max, nil))
+
+	// key(a) index: range scan selecting only a=4
+	a4 := Pack(SuInt(4))
+	tbl = newTbl()
+	tbl.SetIndex([]string{"a"})
+	qswt = newQswt()
+	qswt.SetIndex([]string{"a"})
+	a.This(gatherRows(tbl, tbl.Header(), a4, a4+"\x00", nil)).
+		Is(gatherRows(qswt, qswt.HeaderResult, a4, a4+"\x00", nil))
+
+	// key(a) index: GetFilter with filter rejecting a > 4
+	limit := Pack(SuInt(4))
+	filterFn := func(key string) bool { return key <= limit }
+	tbl = newTbl()
+	tbl.SetIndex([]string{"a"})
+	qswt = newQswt()
+	qswt.SetIndex([]string{"a"})
+	a.This(gatherRows(tbl, tbl.Header(), ixkey.Min, ixkey.Max, filterFn)).
+		Is(gatherRows(qswt, qswt.HeaderResult, ixkey.Min, ixkey.Max, filterFn))
+
+	// LookupRaw on key(a) index
+	tbl = newTbl()
+	tbl.SetIndex([]string{"a"})
+	qswt = newQswt()
+	qswt.SetIndex([]string{"a"})
+	a.This(tbl.LookupRaw(Pack(SuInt(4))) != nil).Is(true)
+	a.This(qswt.LookupRaw(Pack(SuInt(4))) != nil).Is(true)
+	a.This(tbl.LookupRaw(Pack(SuInt(99))) == nil).Is(true)
+	a.This(qswt.LookupRaw(Pack(SuInt(99))) == nil).Is(true)
+
+	// b,c,a index (encoded, multi-field): scan all rows
+	tbl = newTbl()
+	tbl.SetIndex([]string{"b", "c", "a"})
+	qswt = newQswt()
+	qswt.SetIndex([]string{"b", "c", "a"})
+	a.This(gatherRows(tbl, tbl.Header(), ixkey.Min, ixkey.Max, nil)).
+		Is(gatherRows(qswt, qswt.HeaderResult, ixkey.Min, ixkey.Max, nil))
+
+	// b,c,a index: range scan selecting rows with b=5
+	var enc ixkey.Encoder
+	enc.Add(Pack(SuInt(5)))
+	enc.Add(ixkey.Max)
+	b5End := enc.String()
+	b5Org := Pack(SuInt(5))
+	tbl = newTbl()
+	tbl.SetIndex([]string{"b", "c", "a"})
+	qswt = newQswt()
+	qswt.SetIndex([]string{"b", "c", "a"})
+	a.This(gatherRows(tbl, tbl.Header(), b5Org, b5End, nil)).
+		Is(gatherRows(qswt, qswt.HeaderResult, b5Org, b5End, nil))
+}
+
+func makeTestRow(a, b, c int) Row {
+	var rb RecordBuilder
+	rb.Add(SuInt(a))
+	rb.Add(SuInt(b))
+	rb.Add(SuInt(c))
+	return Row{DbRec{Record: rb.Build()}}
+}
+
+func TestSplitFrac(t *testing.T) {
+	test := func(f float64, b1, b2, b3 bool) {
+		r1, r2, r3 := splitFrac(f, b1, b2, b3)
+		product := r1 * r2 * r3
+		assert.T(t).That(sameFrac(product, f))
+		bs := []bool{b1, b2, b3}
+		rs := []float64{r1, r2, r3}
+		n := countTrue(b1, b2, b3)
+		if n > 0 {
+			v := math.Pow(f, 1.0/float64(n))
+			for i, b := range bs {
+				if b {
+					assert.T(t).That(sameFrac(rs[i], v))
+				} else {
+					assert.T(t).That(sameFrac(rs[i], 1.0))
+				}
+			}
+		}
+	}
+	test(.49, true, false, true)
+	test(.25, true, true, true)
+	test(.8, true, false, false)
+	test(.5, false, true, false)
+	test(.36, true, true, false)
+}
+
+func countTrue(bs ...bool) int {
+	n := 0
+	for _, b := range bs {
+		if b {
+			n++
+		}
+	}
+	return n
 }

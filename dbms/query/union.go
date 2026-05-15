@@ -315,7 +315,7 @@ func (u *Union) bestMergeIndexes(order []string, mode Mode, frac float64) (
 			bestMergeIndex(u.source2, u.source1, indexes1, keys1, order, mode, frac)
 		return
 	}
-	// neither source has empty key, use original logic
+	// neither source has empty key
 	for _, index1 := range indexes1 {
 		if !slc.HasPrefix(index1, order) {
 			continue
@@ -342,7 +342,7 @@ func (u *Union) bestMergeIndexes(order []string, mode Mode, frac float64) (
 			if fc1+vc1+fc2+vc2 < fixcost+varcost {
 				idx1 = index1
 				idx2 = index2
-				bestKey = key1
+				bestKey = index1
 				fixcost = fc1 + fc2
 				varcost = vc1 + vc2
 			}
@@ -369,7 +369,7 @@ func bestMergeIndex(src1, src2 Query, indexes2, keys2 [][]string,
 		fc2, vc2 := Optimize(src2, mode, index2, frac)
 		if fc1+vc1+fc2+vc2 < fixcost+varcost {
 			idx = index2
-			bestKey = key2
+			bestKey = index2
 			fixcost = fc1 + fc2
 			varcost = vc1 + vc2
 		}
