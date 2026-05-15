@@ -231,7 +231,7 @@ func (ts *Schema) SetupNewIndexes(nold int) []schema.Index {
 func (ts *Schema) SetBestKeys(nold int) {
 	for i := nold; i < len(ts.Indexes); i++ {
 		ix := &ts.Indexes[i]
-		if (ix.Mode == 'i' || ix.Mode == 'u') && ix.BestKey == nil {
+		if (ix.Mode == 'i' || ix.Mode == 'u') {
 			var best *schema.Index
 			bestLen := math.MaxInt
 			bestCols := math.MaxInt
@@ -247,7 +247,6 @@ func (ts *Schema) SetBestKeys(nold int) {
 					}
 				}
 			}
-			assert.That(ix.BestKey == nil) // should never overwrite
 			ix.BestKey = best.Columns
 		}
 	}
