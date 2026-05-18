@@ -8,7 +8,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
+	"errors"
 	"io"
+	"math/rand"
 	"net"
 	"net/http"
 	"strconv"
@@ -25,7 +27,7 @@ var VersionMismatch func(string) // injected by gsuneido.go
 
 func ConnectClient(addr string, port string) net.Conn {
 	// Start with plain TCP connection to handle version mismatch
-	conn, err := net.Dial("tcp", addr+":"+port)
+	conn, err := dialWithRetry(addr, port)
 	if err != nil {
 		checkServerStatus(addr, port)
 		cantConnect(err.Error())
@@ -53,6 +55,27 @@ func ConnectClient(addr string, port string) net.Conn {
 		cantConnect("TLS handshake failed: " + err.Error())
 	}
 	return tlsConn
+}
+
+// dialWithRetry does DialTimeout with a retry
+// partly to handle Windows Filtering Platform (WFP) used by security software
+// which can cause the first dial to fail
+func dialWithRetry(addr, port string) (net.Conn, error) {
+	const timeout = 5 * time.Second
+	const baseDelay = 10 * time.Millisecond
+	target := net.JoinHostPort(addr, port)
+	tries := 2
+	for {
+		conn, err := net.DialTimeout("tcp", target, timeout)
+		if err == nil {
+			return conn, nil
+		}
+		var netErr net.Error
+		if tries--; tries <= 0 || !errors.As(err, &netErr) {
+			return nil, err
+		}
+		time.Sleep(baseDelay + time.Duration(rand.Intn(5))*time.Millisecond)
+	}
 }
 
 func clientVersionMismatch(conn net.Conn) {
