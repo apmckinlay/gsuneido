@@ -329,8 +329,7 @@ func (w *Where) Transform() Query {
 		return NewWhere(q.source, e, w.t).Transform()
 	case *Project:
 		// move where before project
-		q = newProject(NewWhere(q.source, w.expr, w.t), q.columns)
-		return q.Transform()
+		return newProject(NewWhere(q.source, w.expr, w.t), q.columns).Transform()
 	case *Rename:
 		// move where before rename
 		newExpr := renameExpr(w.expr, q)
@@ -600,6 +599,15 @@ func (w *Where) optInit() {
 	if !w.conflict && w.tbl != nil {
 		w.idxSels = w.perIndex(w.colSels)
 		// fmt.Println("idxSels", w.idxSels)
+	}
+	// detect singleton when fixed covers a key (for non-whereTable sources).
+	// Required so bestLookupIndex doesn't pick an index with extra columns
+	// that sels can't cover at Lookup time 
+	// (lookupIndexEligible allows any index when nColsUnfixed == 0).
+	if !w.singleton && !w.conflict && w.tbl == nil {
+		if slices.ContainsFunc(w.source.Keys(), w.fixed.All) {
+			w.singleton = true
+		}
 	}
 	w.setNrows(w.calcNrows())
 	if w.singleton {
@@ -901,10 +909,15 @@ func (w *Where) Select(sels Sels) {
 	}
 
 	if w.idxSelBase == nil {
-		// if this where is not using an index selection
-		// then just pass the Select to the source.
-		// Don't need to add fixed because
-		// if there was applicable fixed, there would be an idxSel.
+		// add applicable fixed to sels for the source
+		// (same as Lookup) since source index may include fixed columns
+		sels = slices.Clip(sels)
+		for _, fix := range w.fixed {
+			if fix.Single() && slices.Contains(w.srcIndex, fix.col) &&
+				!sels.HasCol(fix.col) {
+				sels = append(sels, Sel{fix.col, fix.values[0]})
+			}
+		}
 		w.source.Select(sels)
 		return
 	}

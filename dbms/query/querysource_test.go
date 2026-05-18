@@ -330,7 +330,12 @@ func (b *buildQS) dataToRecord(vals []string) Record {
 
 func (qs *QuerySource) String() string {
 	var sb strings.Builder
-	sb.WriteString("QuerySource ")
+	sb.WriteString("QuerySource")
+	if qs.index != nil {
+		sb.WriteString("^")
+		sb.WriteString(str.Join("(,)", qs.index))
+	}
+	sb.WriteString(" ")
 	sb.WriteString(str.Join("(,)", qs.ColumnsResult))
 	for _, k := range qs.KeysResult {
 		sb.WriteString(" key(")
@@ -346,6 +351,10 @@ func (qs *QuerySource) String() string {
 		sb.WriteString(")")
 	}
 	return sb.String()
+}
+
+func (qs *QuerySource) Transform() Query {
+	return qs
 }
 
 func (qs *QuerySource) optimize(_ Mode, index []string, frac float64) (Cost, Cost, any) {
@@ -565,6 +574,11 @@ type QuerySourceWT struct {
 }
 
 var _ whereTable = (*QuerySourceWT)(nil)
+
+func (qs *QuerySourceWT) String() string {
+	s := qs.QuerySource.String()
+	return strings.Replace(s, "QuerySource", "QuerySourceWT", 1)
+}
 
 func (qs *QuerySourceWT) IndexEncodes(index []string) bool {
 	return len(index) > 1

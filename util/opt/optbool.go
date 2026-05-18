@@ -22,6 +22,10 @@ func (b *Bool) Set(v bool) {
 	}
 }
 
+func (b *Bool) UnSet() {
+	b.val = 0
+}
+
 func (b Bool) IsSet() bool {
 	return b.val != 0
 }

@@ -94,15 +94,19 @@ func NewRemove(src Query, cols []string) *Project {
 	if len(proj) == 0 {
 		panic("remove: can't remove all columns")
 	}
-	p := newProject(src, proj)
+	p := newProject2(src, proj, false)
 	p.remove = cols
 	return p
 }
 
-// newProject is common to NewProject and NewRemove
-func newProject(src Query, cols []string) *Project {
+// newProject is used by Transform
+func newProject(src Query, cols []string) Query {
+	if len(cols) == 0 {
+		return &ProjectNone{source: src}
+	}
 	return newProject2(src, cols, false)
 }
+
 func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p := &Project{Query1: Query1{source: src}, rewound: true}
 	if hasKey(cols, src.Keys(), src.Fixed()) {
@@ -331,8 +335,8 @@ func (p *Project) transformRename(r *Rename) Query {
 	slices.Reverse(newFrom)
 	slices.Reverse(newTo)
 	newProj := r.renameRev(p.columns)
-	p = newProject(r.source, newProj)
-	r = NewRename(p, newFrom, newTo)
+	q := newProject(r.source, newProj)
+	r = NewRename(q, newFrom, newTo)
 	return r.Transform()
 }
 
@@ -368,8 +372,7 @@ func (p *Project) transformExtend(e *Extend) Query {
 		beforeExprs = append(beforeExprs, e.exprs[i])
 	}
 	if len(newProjCols) == 0 {
-		// the before extend is irrelevant with ProjectNone
-		return NewExtend(&ProjectNone{}, afterCols, afterExprs)
+		return NewExtend(&ProjectNone{source: e.source}, afterCols, afterExprs)
 	}
 	if slices.Equal(beforeCols, e.cols) {
 		return p.transform(e)
