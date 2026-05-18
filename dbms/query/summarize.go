@@ -441,6 +441,7 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 	defer func() { su.th = nil }()
 	if su.rewound {
 		assert.That(!su.wholeRow)
+		su.rewound = false // before buildMap (Get loop might call getMap again)
 		t.mapList = su.buildMap()
 		if dir == Next {
 			t.mapPos = -1
