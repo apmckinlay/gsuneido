@@ -924,8 +924,10 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 		return nil
 	}
 	if w.fastSingle() || w.srcIndex == nil {
-		// can't use source.Lookup because cols may not match source index.
-		// srcIndex == nil when allFixed cleared it (logical singleton)
+		// can't use source.Lookup because cols may not cover the source index.
+		// fastSingle: source is a literal singleton (empty key).
+		// srcIndex == nil: fixed covers a key (singleton detected in optInit),
+		// so Optimize passed index=nil and setApproach left srcIndex nil.
 		w.Rewind()
 		row := w.Get(th, Next)
 		if row == nil || !singletonFilter(w.header, row, sels) {

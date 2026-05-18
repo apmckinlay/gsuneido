@@ -54,9 +54,9 @@ type unionApproach struct {
 type unionStrategy int
 
 const (
-	// unionMerge is a merge of source and source2
+	// unionMerge is a merge of source1 and source2
 	unionMerge unionStrategy = iota + 2
-	// unionLookup is source not in source2, followed by source2 (unordered).
+	// unionLookup is source1 not in source2, followed by source2 (unordered).
 	// Also used for disjoint, but without lookups.
 	unionLookup
 )
