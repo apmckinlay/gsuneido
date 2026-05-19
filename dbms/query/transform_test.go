@@ -150,6 +150,11 @@ func TestTransform(t *testing.T) {
 	test("hist where cost summarize id, total cost where id is 3 and total_cost > 10",
 		"hist where cost and id is 3 summarize id, total cost "+
 			"where total_cost > 10")
+	// wholeRow summarize: source-only condition (date is 970101) should still
+	// move before the summarize; the new summarize stays wholeRow because
+	// a singleton source also uniquely identifies a row.
+	test("hist2 summarize min date where date is 970101 and date is min_date",
+		"hist2 where date is 970101 summarize min date where date is min_date")
 
 	// distribute where over intersect
 	test("(hist intersect trans) where cost > 10",

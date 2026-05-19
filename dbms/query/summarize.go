@@ -105,7 +105,8 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 	sort.Stable(su)
 	su.unique = hasKey(cols, src.Keys(), src.Fixed())
 	// if single min or max, and on is a key, then we can give the whole row
-	su.wholeRow = su.minmax1() && slc.ContainsFn(src.Keys(), ons, set.Equal[string])
+	su.wholeRow = su.minmax1() &&
+		(slc.ContainsFn(src.Keys(), ons, set.Equal[string]) || isEmptyKey(src.Keys()))
 	su.header = su.getHeader()
 	su.keys = projectKeys(src.Keys(), su.by)
 	su.indexes = projectIndexes(src.Indexes(), su.by)
