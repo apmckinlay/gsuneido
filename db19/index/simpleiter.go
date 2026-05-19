@@ -93,7 +93,7 @@ func (si *SimpleIter) Next(t oiTran) {
 		return // stick at eof
 	}
 	if si.state == rewound {
-		si.state = front
+		si.state = within
 	}
 	si.it.Next()
 	if si.it.Eof() {
@@ -109,7 +109,7 @@ func (si *SimpleIter) Prev(t oiTran) {
 		return // stick at eof
 	}
 	if si.state == rewound {
-		si.state = back
+		si.state = within
 	}
 	si.it.Prev()
 	if si.it.Eof() {

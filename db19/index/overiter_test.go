@@ -1047,7 +1047,7 @@ func (it *dumIter) Next() {
 			return
 		}
 		it.cur = it.d.keys[0]
-		it.state = front
+		it.state = within
 		return
 	}
 	for _, k := range it.d.keys {
@@ -1069,7 +1069,7 @@ func (it *dumIter) Prev() {
 			return
 		}
 		it.cur = it.d.keys[len(it.d.keys)-1]
-		it.state = back
+		it.state = within
 		return
 	}
 	for i := len(it.d.keys) - 1; i >= 0; i-- {
