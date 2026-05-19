@@ -490,6 +490,9 @@ func (q queryLocal) Order() []string {
 	return q.Query.Order()
 }
 
+// Get does Rewind when it hits eof, so Next and Prev wrap around
+// SuQuery converts this to sticking at eof unidirectionally.
+// And the underlying OverIter just sticks at eof regardless of direction.
 func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
 	defer UseMainSuneido(th)()
 	row := q.Query.Get(th, dir)
