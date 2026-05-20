@@ -162,6 +162,9 @@ type Query interface {
 	// varcost should already incorporate frac
 	optimize(mode Mode, index []string, frac float64) (
 		fixcost, varcost Cost, approach any)
+		
+	// setApproach locks in the approach chosen by optimize.
+	// index and frac must match a previous optimize call
 	setApproach(index []string, frac float64, approach any, tran QueryTran)
 
 	// lookupCost returns the cost of one Lookup
