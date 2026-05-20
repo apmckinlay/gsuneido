@@ -229,8 +229,7 @@ func TestIter(t *testing.T) {
 		testNext(i)
 	}
 	testNext(eof)
-	it.Prev()
-	test(10) // Should be at last element
+	testPrev(eof) // plain stick: Prev should also be eof
 
 	// Continue with original test
 	it.Rewind()
@@ -238,13 +237,12 @@ func TestIter(t *testing.T) {
 		testPrev(i)
 	}
 	testPrev(eof)
-	it.Next()
-	test(1) // Should be at first element
+	testNext(eof) // plain stick: Next should also be eof
 
 	it.Rewind()
 	testNext(1)
 	testPrev(eof)
-	testNext(1)
+	testNext(eof) // plain stick: Next after Prev-eof should also be eof
 
 	it.Rewind()
 	testPrev(10)

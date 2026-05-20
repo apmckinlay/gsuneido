@@ -24,14 +24,6 @@ type schemaTable struct {
 	metrics
 }
 
-type state byte
-
-const (
-	rewound state = iota
-	within
-	eof
-)
-
 func (*schemaTable) Init() {
 }
 

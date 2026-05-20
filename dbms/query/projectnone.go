@@ -16,18 +16,9 @@ import (
 type ProjectNone struct {
 	cache
 	source Query
-	state  pnState
+	done   bool
 	hasrow opt.Bool
 }
-
-type pnState byte
-
-const (
-	pnRewound pnState = iota
-	pnBefore
-	pnOn
-	pnAfter
-)
 
 var _ Query = (*ProjectNone)(nil)
 
@@ -144,31 +135,18 @@ func (*ProjectNone) Output(*Thread, Record) {
 
 var pnRow = Row{DbRec{Record: Record("")}}
 
-func (pn *ProjectNone) Get(_ *Thread, dir Dir) Row {
-	if pn.state == pnRewound ||
-		(pn.state == pnBefore && dir == Next) ||
-		(pn.state == pnAfter && dir == Prev) {
+func (pn *ProjectNone) Get(_ *Thread, _ Dir) Row {
+	if !pn.done {
+		pn.done = true
 		if pn.hasRow() {
-			pn.state = pnOn
 			return pnRow
 		}
-		if dir == Next {
-			pn.state = pnAfter
-		} else {
-			pn.state = pnBefore
-		}
-		return nil
-	}
-	if dir == Next {
-		pn.state = pnAfter
-	} else {
-		pn.state = pnBefore
 	}
 	return nil
 }
 
 func (pn *ProjectNone) Rewind() {
-	pn.state = pnRewound
+	pn.done = false
 }
 
 func (pn *ProjectNone) Select(sels Sels) {

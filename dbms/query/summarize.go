@@ -50,11 +50,10 @@ type Summarize struct {
 	sels Sels
 	summarizeApproach
 	wholeRow bool
-	rewound  bool
+	state
 	unique   bool
 	hint     sumHint
 	th       *Thread
-	done     bool // for getTbl and getIdx: true if we've returned the result
 }
 
 type summarizeApproach struct {
@@ -325,7 +324,7 @@ func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran Qu
 		assert.ShouldNotReachHere()
 	}
 	su.source = SetApproach(su.source, su.index, su.frac, tran)
-	su.rewound = true
+	su.state = rewound
 	su.header = su.getHeader()
 }
 
@@ -350,17 +349,21 @@ func (su *Summarize) getColumns() []string {
 
 func (su *Summarize) Rewind() {
 	su.source.Rewind()
-	su.rewound = true
+	su.state = rewound
 }
 
 func (su *Summarize) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { su.tget += tsc.Read() - t }(tsc.Read())
-	defer func() { su.rewound = false }()
+	if su.state == eof {
+		return nil
+	}
 	for {
 		row := su.get(th, su, dir)
 		if row == nil {
+			su.state = eof
 			return nil
 		}
+		su.state = within
 		if su.filter(row, th) {
 			su.ngets++
 			return row
@@ -369,12 +372,10 @@ func (su *Summarize) Get(th *Thread, dir Dir) Row {
 }
 
 func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
-	if !su.rewound && su.done {
-		su.done = false
+	if su.state == within {
 		return nil
 	}
-	su.rewound = false
-	su.done = true
+	su.state = within
 	nr, _ := su.source.Nrows()
 	if nr == 0 {
 		return nil
@@ -385,11 +386,10 @@ func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
 }
 
 func getIdx(th *Thread, su *Summarize, _ Dir) Row {
-	if !su.rewound && su.done {
-		su.done = false
+	if su.state == within {
 		return nil
 	}
-	su.rewound = false
+	su.state = within
 	dir := Prev // max
 	if str.EqualCI(su.ops[0], "min") {
 		dir = Next
@@ -402,7 +402,6 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	var rb RecordBuilder
 	rb.AddRaw(row.GetRawVal(su.source.Header(), su.ons[0], th, su.st))
 	rec := rb.Build()
-	su.done = true
 	if su.wholeRow {
 		return append(row, DbRec{Record: rec})
 	}
@@ -440,9 +439,9 @@ type mapPair struct {
 func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 	su.th = th
 	defer func() { su.th = nil }()
-	if su.rewound {
+	if su.state == rewound {
 		assert.That(!su.wholeRow)
-		su.rewound = false // before buildMap (Get loop might call getMap again)
+		su.state = within // before buildMap (Get loop might call getMap again)
 		t.mapList = su.buildMap()
 		if dir == Next {
 			t.mapPos = -1
@@ -533,8 +532,8 @@ type sumSeqT struct {
 }
 
 func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
-	if su.rewound {
-		su.rewound = false // clear before source.Get (filter loop might call getSeq again)
+	if su.state == rewound {
+		su.state = within // clear before source.Get (filter loop might call getSeq again)
 		t.sums = su.newSums()
 		t.curDir = dir
 		t.curRow = nil
@@ -639,7 +638,7 @@ func (su *Summarize) Select(sels Sels) {
 	isels, osels := Split(false, sels, su.index)
 	su.sels = osels
 	su.source.Select(isels)
-	su.rewound = true
+	su.state = rewound
 }
 
 func (su *Summarize) filter(row Row, th *Thread) bool {

@@ -37,7 +37,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(73,483))
+	rnd := rand.New(rand.NewPCG(811, 438))
 	fuzzRandom(t, rnd)
 }
 
@@ -216,12 +216,26 @@ func FuzzProject(f *testing.F) {
 	// 	strategyCounts[projCopy], strategyCounts[projSeq], strategyCounts[projMap])
 }
 
+func TestFuzzProjectDebug(t *testing.T) {
+	rnd := rand.New(rand.NewPCG(4886698708123789290, 16491253703327079940))
+	fuzzProject(t, rnd)
+}
+
 func TestFuzzProject(t *testing.T) {
+	var seed1, seed2 uint64
+	defer func() {
+		if r := recover(); r != nil || t.Failed() {
+			fmt.Printf("failing seed: %d, %d\n", seed1, seed2)
+			if r != nil {
+				panic(r)
+			}
+		}
+	}()
 	startCopy := projCopyCount.Load()
 	startSeq := projSeqCount.Load()
 	startMap := projMapCount.Load()
 	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		seed1, seed2 = rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzProject(t, rnd)
 	}
@@ -290,9 +304,23 @@ func FuzzRename(f *testing.F) {
 	})
 }
 
+func TestFuzzRenameDebug(t *testing.T) {
+	rnd := rand.New(rand.NewPCG(2736498751574507473, 11100617320412793980))
+	fuzzRename(t, rnd)
+}
+
 func TestFuzzRename(t *testing.T) {
+	var seed1, seed2 uint64
+	defer func() {
+		if r := recover(); r != nil || t.Failed() {
+			fmt.Printf("failing seed: %d, %d\n", seed1, seed2)
+			if r != nil {
+				panic(r)
+			}
+		}
+	}()
 	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
+		seed1, seed2 = rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
 		fuzzRename(t, rnd)
 	}
@@ -1139,7 +1167,7 @@ func FuzzTempIndex(f *testing.F) {
 }
 
 func TestFuzzTempIndexDebug(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(9267148201074394103, 3791587508642446263))
+	rnd := rand.New(rand.NewPCG(493, 913))
 	fuzzTempIndex(t, rnd)
 }
 
@@ -1307,8 +1335,9 @@ func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *He
 	q.Select(sels)
 
 	// Do a random walk with Next/Prev using nextRows as expected
+	history := ""
 	nsteps := min(100, len(nextRows)*3)
-	for range nsteps {
+	for i := range nsteps {
 		// Occasionally add a Select to reset indexed flag for projMap
 		if rnd.IntN(20) == 0 { // 5% chance
 			if sels == nil {
@@ -1320,29 +1349,27 @@ func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *He
 		}
 
 		pos := data.pos
-		var dir Dir
-		switch data.pos {
-		case dsAtOrg:
-			dir = Next
-		case dsAtEnd:
-			dir = Prev
-		default: // rewound or with -> random dir
-			dir = random([]Dir{Next, Prev}, rnd)
+		if data.pos == dsEof {
+			history += "r"
+			q.Rewind()
+			data.rewind()
 		}
+		dir := random([]Dir{Next, Prev}, rnd)
+		history += string(dir)
 		expectedRow := data.get(dir)
 		row := q.Get(nil, dir)
 
 		if expectedRow == nil && row != nil {
-			t.Fatalf("random walk %c from %v: expected nil, got row\nsteps so far: %d\nexpected rows count: %d",
-				dir, pos, nsteps-len(nextRows)*3+1, len(nextRows))
+			t.Fatalf("random walk step %d: %c from %v: expected nil, got row\nhistory %s",
+				i, dir, pos, history)
 		} else if expectedRow != nil && row == nil {
 			t.Log(q)
-			t.Fatalf("random walk %c from %v: expected row, got nil\nsteps so far: %d\nexpected rows count: %d",
-				dir, pos, nsteps-len(nextRows)*3+1, len(nextRows))
+			t.Fatalf("random walk step %d: %c from %v: expected row, got nil\nhistory %s",
+				i, dir, pos, history)
 		} else if expectedRow != nil && row != nil {
 			if !hdr.EqualRows(row, expectedRow, nil, nil) {
-				t.Fatalf("random walk %c from %v: row mismatch\nsteps so far: %d\nexpected rows count: %d",
-					dir, pos, nsteps-len(nextRows)*3+1, len(nextRows))
+				t.Fatalf("random walk step %d: %c from %v: row mismatch\nhistory %s",
+					i, dir, pos, history)
 			}
 		}
 	}
@@ -1434,6 +1461,7 @@ func testCursorPatterns(t *testing.T, q Query, hdr *Header, nextRows []Row) {
 	}
 
 	// Pattern 5: Next to end, past end (nil), then Prev
+	// plain stick at eof: Prev should also return nil
 	if n > 0 {
 		q.Rewind()
 		for i := range n {
@@ -1442,11 +1470,12 @@ func testCursorPatterns(t *testing.T, q Query, hdr *Header, nextRows []Row) {
 		}
 		row = q.Get(nil, Next) // past end
 		check("ToEnd: N-past", row, nil)
-		row = q.Get(nil, Prev) // should return last row
-		check("ToEnd: P", row, nextRows[n-1])
+		row = q.Get(nil, Prev) // plain stick: should be nil
+		check("ToEnd: P", row, nil)
 	}
 
 	// Pattern 6: Prev to beginning, past beginning (nil), then Next
+	// plain stick at eof: Next should also return nil
 	if n > 0 {
 		q.Rewind()
 		for i := n - 1; i >= 0; i-- {
@@ -1455,30 +1484,30 @@ func testCursorPatterns(t *testing.T, q Query, hdr *Header, nextRows []Row) {
 		}
 		row = q.Get(nil, Prev) // past beginning
 		check("ToBegin: P-past", row, nil)
-		row = q.Get(nil, Next) // should return first row
-		check("ToBegin: N", row, nextRows[0])
+		row = q.Get(nil, Next) // plain stick: should be nil
+		check("ToBegin: N", row, nil)
 	}
 
-	// Pattern 7: Rewind, Next, Prev, Next - should get first row twice
+	// Pattern 7: Rewind, Next, Prev, Next - plain stick at eof after Prev
 	if n > 0 {
 		q.Rewind()
 		row = q.Get(nil, Next) // first
 		check("NPN: N1", row, nextRows[0])
 		row = q.Get(nil, Prev) // nil
 		check("NPN: P", row, nil)
-		row = q.Get(nil, Next) // first again
-		check("NPN: N2", row, nextRows[0])
+		row = q.Get(nil, Next) // plain stick: nil
+		check("NPN: N2", row, nil)
 	}
 
-	// Pattern 8: Rewind, Prev, Next, Prev - should get last row twice
+	// Pattern 8: Rewind, Prev, Next, Prev - plain stick at eof after Next
 	if n > 0 {
 		q.Rewind()
 		row = q.Get(nil, Prev) // last
 		check("PNP: P1", row, nextRows[n-1])
 		row = q.Get(nil, Next) // nil
 		check("PNP: N", row, nil)
-		row = q.Get(nil, Prev) // last again
-		check("PNP: P2", row, nextRows[n-1])
+		row = q.Get(nil, Prev) // plain stick: nil
+		check("PNP: P2", row, nil)
 	}
 
 	// Reset for subsequent tests
@@ -1581,7 +1610,6 @@ func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Hea
 		}
 		sels := indexSelectCriteria(rnd, srcRow, hdr, index)
 		sels[rnd.IntN(len(sels))].val = "nonexistent"
-		fmt.Println("Sels:", sels)
 		q.Select(sels)
 		if q.Get(nil, Next) != nil {
 			t.Fatal("non-existent select returned a row")

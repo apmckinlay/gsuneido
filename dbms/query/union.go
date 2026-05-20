@@ -40,7 +40,7 @@ type Union struct {
 	src2    bool
 	prevDir Dir
 	src1    bool
-	rewound bool
+	state
 }
 
 type unionApproach struct {
@@ -517,7 +517,7 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 	u.empty1 = make(Row, len(u.source1.Header().Fields))
 	u.empty2 = make(Row, len(u.source2.Header().Fields))
 
-	u.rewound = true
+	u.state = rewound
 	u.src1get = u.source1.Get
 	u.src2get = u.source2.Get
 }
@@ -527,12 +527,14 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 func (u *Union) Rewind() {
 	u.source1.Rewind()
 	u.source2.Rewind()
-	u.rewound = true
+	u.state = rewound
 }
 
 func (u *Union) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { u.tget += tsc.Read() - t }(tsc.Read())
-	defer func() { u.rewound = false }()
+	if u.state == eof {
+		return nil
+	}
 	var row Row
 	switch u.strat {
 	case unionLookup:
@@ -543,13 +545,16 @@ func (u *Union) Get(th *Thread, dir Dir) Row {
 		panic(assert.ShouldNotReachHere())
 	}
 	if row != nil {
+		u.state = within
 		u.ngets++
+	} else {
+		u.state = eof
 	}
 	return row
 }
 
 func (u *Union) getLookup(th *Thread, dir Dir) Row {
-	if u.rewound {
+	if u.state == rewound {
 		u.src1 = (dir == Next)
 	}
 	var row Row
@@ -567,8 +572,8 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 			if dir == Prev {
 				return nil
 			}
+			u.source2.Rewind() // source2 may be stuck at eof from a prior Prev
 			u.src1 = false
-			u.source2.Rewind()
 		} else { // source2
 			row = u.src2get(th, dir)
 			if row != nil {
@@ -577,9 +582,10 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 			if dir == Next {
 				return nil
 			}
+			u.source1.Rewind() // source1 may be stuck at eof from a prior Next
 			u.src1 = true
-			// continue
 		}
+		// continue
 	}
 }
 
@@ -602,7 +608,7 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 	}
 
 	// refill row1 and row2
-	if u.rewound || (u.src1 && u.src2) {
+	if u.state == rewound || (u.src1 && u.src2) {
 		get1()
 		get2()
 	} else if u.src1 {
@@ -665,7 +671,7 @@ func nothing(*Thread, Dir) Row { return nil }
 func (u *Union) Select(sels Sels) {
 	// fmt.Println("Union Select", cols, unpack(vals))
 	u.nsels++
-	u.rewound = true
+	u.state = rewound
 	u.src1get = u.source1.Get
 	u.src2get = u.source2.Get
 	if sels == nil { // clear

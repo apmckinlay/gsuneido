@@ -29,9 +29,8 @@ type dataSource struct {
 type dsState int
 
 const (
-	dsRewound dsState = math.MaxInt - 1
-	dsAtEnd           = math.MaxInt
-	dsAtOrg           = math.MinInt
+	dsRewound dsState = math.MinInt
+	dsEof             = math.MaxInt
 )
 
 func NewDataSource(rows []Row) *dataSource {
@@ -42,10 +41,8 @@ func (ds dsState) String() string {
 	switch ds {
 	case dsRewound:
 		return "Rewound"
-	case dsAtEnd:
-		return "AtEnd"
-	case dsAtOrg:
-		return "AtOrg"
+	case dsEof:
+		return "Eof"
 	default:
 		return strconv.Itoa(int(ds))
 	}
@@ -58,22 +55,14 @@ func (ds *dataSource) rewind() {
 
 func (ds *dataSource) get(dir Dir) Row {
 	switch ds.pos {
+	case dsEof:
+		return nil
 	case dsRewound:
 		if dir == Next {
 			ds.pos = 0
 		} else { // Prev
 			ds.pos = dsState(len(ds.rows) - 1)
 		}
-	case dsAtEnd:
-		if dir == Next {
-			panic("QuerySource.Get: Next at end")
-		}
-		ds.pos = dsState(len(ds.rows) - 1)
-	case dsAtOrg:
-		if dir == Prev {
-			panic("QuerySource.Get: Prev at beginning")
-		}
-		ds.pos = 0
 	default: // within
 		if dir == Next {
 			ds.pos++
@@ -81,12 +70,8 @@ func (ds *dataSource) get(dir Dir) Row {
 			ds.pos--
 		}
 	}
-	if ds.pos < 0 {
-		ds.pos = dsAtOrg
-		return nil
-	}
-	if int(ds.pos) >= len(ds.rows) {
-		ds.pos = dsAtEnd
+	if ds.pos < 0 || int(ds.pos) >= len(ds.rows) {
+		ds.pos = dsEof
 		return nil
 	}
 	return ds.rows[ds.pos]

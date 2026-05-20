@@ -117,6 +117,8 @@ type Query interface {
 	// It does *not* clear any Select.
 	Rewind()
 
+	// Get returns the next or previous row, or nil if at end.
+	// It sticks at eof until Rewind.
 	Get(th *Thread, dir Dir) Row
 
 	// Lookup returns the row matching the given key value, or nil if not found.
@@ -208,6 +210,14 @@ type queryBase struct {
 	cache
 	metrics
 }
+
+type state byte
+
+const (
+	rewound state = iota
+	within
+	eof
+)
 
 type metrics struct {
 	fixcost  Cost

@@ -15,7 +15,7 @@ import (
 type Times struct {
 	row1 Row
 	joinLike
-	rewound bool
+	state
 }
 
 func NewTimes(src1, src2 Query) *Times {
@@ -23,7 +23,7 @@ func NewTimes(src1, src2 Query) *Times {
 		panic("times: common columns not allowed: " + str.Join(", ",
 			set.Intersect(src1.Columns(), src2.Columns())))
 	}
-	t := &Times{joinLike: newJoinLike(src1, src2), rewound: true}
+	t := &Times{joinLike: newJoinLike(src1, src2)}
 	t.keys = t.getKeys()
 	t.indexes = t.getIndexes()
 	t.fixed = t.getFixed()
@@ -110,35 +110,42 @@ func (t *Times) getNrows() (int, int) {
 // execution --------------------------------------------------------
 
 func (t *Times) Rewind() {
-	t.rewound = true
+	t.state = rewound
 	t.source1.Rewind()
 	t.source2.Rewind()
 }
 
 func (t *Times) Get(th *Thread, dir Dir) Row {
 	defer func(t0 uint64) { t.tget += tsc.Read() - t0 }(tsc.Read())
+	if t.state == eof {
+		return nil
+	}
 	row2 := t.source2.Get(th, dir)
-	if t.rewound {
-		t.rewound = false
+	if t.state == rewound {
+		t.state = within
 		t.row1 = t.source1.Get(th, dir)
 		if t.row1 == nil || row2 == nil {
+			t.state = eof
 			return nil
 		}
 	}
 	if row2 != nil && t.row1 == nil {
 		t.row1 = t.source1.Get(th, dir)
 		if t.row1 == nil {
+			t.state = eof
 			return nil
 		}
 	}
 	if row2 == nil {
 		t.row1 = t.source1.Get(th, dir)
 		if t.row1 == nil {
+			t.state = eof
 			return nil
 		}
 		t.source2.Rewind()
 		row2 = t.source2.Get(th, dir)
 		if row2 == nil {
+			t.state = eof
 			return nil
 		}
 	}

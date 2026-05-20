@@ -39,8 +39,8 @@ type Project struct {
 	curRow  Row
 	projectApproach
 	Query1
+	state
 	unique        bool
-	rewound       bool
 	indexed       bool
 	warned        bool
 	derivedWarned bool
@@ -108,7 +108,7 @@ func newProject(src Query, cols []string) Query {
 }
 
 func newProject2(src Query, cols []string, includeDeps bool) *Project {
-	p := &Project{Query1: Query1{source: src}, rewound: true}
+	p := &Project{Query1: Query1{source: src}}
 	if hasKey(cols, src.Keys(), src.Fixed()) {
 		p.unique = true
 		if includeDeps {
@@ -298,7 +298,7 @@ func (p *Project) Transform() Query {
 		if p.splitable(&q.Compatible) {
 			return NewUnion(p.splitOver(&q.Query2)).Transform()
 		}
-	// Intersect and Minus are not eligible
+		// Intersect and Minus are not eligible
 	}
 	return p.transform(src)
 }
@@ -494,13 +494,16 @@ func (p *Project) Rewind() {
 }
 
 func (p *Project) rewind() {
-	p.rewound = true
+	p.state = rewound
 	p.curRow = nil
 	p.prevRow = nil
 }
 
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { p.tget += tsc.Read() - t }(tsc.Read())
+	if p.state == eof {
+		return nil
+	}
 	var row Row
 	switch p.strat {
 	case projCopy:
@@ -513,7 +516,10 @@ func (p *Project) Get(th *Thread, dir Dir) Row {
 		panic(assert.ShouldNotReachHere())
 	}
 	if row != nil {
+		p.state = within
 		p.ngets++
+	} else {
+		p.state = eof
 	}
 	return row
 }
@@ -530,9 +536,8 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 				p.curRow = nil
 				return nil
 			}
-			if p.rewound || p.curRow == nil ||
+			if p.state == rewound || p.curRow == nil ||
 				!p.header.EqualRows(row, p.curRow, th, p.st) {
-				p.rewound = false
 				p.prevRow = p.curRow
 				p.curRow = row
 				return row
@@ -542,9 +547,9 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// output the last of each group
 		// i.e. output when next record is different
 		// (to get the same records as NEXT)
-		if p.rewound || (p.prevRow == nil && p.prevDir == Next) {
+
+		if p.state == rewound || (p.prevRow == nil && p.prevDir == Next) {
 			p.prevRow = p.source.Get(th, dir)
-			p.rewound = false
 		}
 		p.prevDir = dir
 		for {
@@ -554,8 +559,13 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 			}
 			row := p.prevRow
 			p.prevRow = p.source.Get(th, dir)
-			if p.prevRow == nil ||
-				!p.header.EqualRows(row, p.prevRow, th, p.st) {
+			if p.prevRow == nil {
+				// source reached the front; rewind so Next direction works
+				p.source.Rewind()
+				p.curRow = row
+				return row
+			}
+			if !p.header.EqualRows(row, p.prevRow, th, p.st) {
 				// output the last row of a group
 				p.curRow = row
 				return row
@@ -572,8 +582,7 @@ type rowHash struct {
 func (p *Project) getMap(th *Thread, dir Dir) Row {
 	p.th = th
 	defer func() { p.th = nil }()
-	if p.rewound {
-		p.rewound = false
+	if p.state == rewound {
 		if p.results == nil {
 			hfn := func(k rowHash) uint64 { return k.hash }
 			eqfn := func(x, y rowHash) bool {
