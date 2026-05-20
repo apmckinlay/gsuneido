@@ -26,23 +26,33 @@ func init() {
 
 const nfuzz = 200
 
-//-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzRandom ./dbms/query/
+type fuzzRunner struct {
+	build func(*rand.Rand) Query
+}
 
-func FuzzRandom(f *testing.F) {
+func (fr fuzzRunner) run(t *testing.T, rnd *rand.Rand) {
+	defer func(jr int) { joinRev = jr }(joinRev)
+	joinRev = impossible
+	defer func(ti int) { ticostAdj = ti }(ticostAdj)
+	ticostAdj = 9999999
+	q := fr.build(rnd)
+	fuzzQuery(t, q, rnd)
+}
+
+func (fr fuzzRunner) Fuzz(f *testing.F) {
+	f.Add(uint64(122), uint64(334))
 	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzRandom(t, rnd)
+		fr.run(t, rnd)
 	})
 }
 
-func TestFuzzRandomDebug(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(811, 438))
-	fuzzRandom(t, rnd)
+func (fr fuzzRunner) Debug(t *testing.T, seed1, seed2 uint64) {
+	rnd := rand.New(rand.NewPCG(seed1, seed2))
+	fr.run(t, rnd)
 }
 
-func TestFuzzRandom(t *testing.T) {
-	// start := tempIndexCount.Load()
+func (fr fuzzRunner) Test(t *testing.T) {
 	var seed1, seed2 uint64
 	defer func() {
 		if r := recover(); r != nil || t.Failed() {
@@ -55,42 +65,35 @@ func TestFuzzRandom(t *testing.T) {
 	for range nfuzz {
 		seed1, seed2 = rand.Uint64(), rand.Uint64()
 		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzRandom(t, rnd)
+		fr.run(t, rnd)
 	}
+}
+
+//-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzRandom ./dbms/query/
+
+var fuzzRandomRunner = fuzzRunner{build: fuzzRandom}
+
+func FuzzRandom(f *testing.F) { fuzzRandomRunner.Fuzz(f) }
+
+func TestFuzzRandomDebug(t *testing.T) {
+	fuzzRandomRunner.Debug(t, 811, 438)
+}
+
+func TestFuzzRandom(t *testing.T) {
+	// start := tempIndexCount.Load()
+	fuzzRandomRunner.Test(t)
 	// fmt.Println("tempIndexCount", tempIndexCount.Load()-start)
 }
 
-func fuzzRandom(t *testing.T, rnd *rand.Rand) {
-	composers := []func(*rand.Rand, sourceBuilder) Query{
-		buildFuzzProject,
-		buildFuzzRename,
-		buildFuzzExtend,
-		buildFuzzSummarize,
-		buildFuzzWhereSrc,
-	}
+func fuzzRandom(rnd *rand.Rand) Query {
 	builders := []func(*rand.Rand) Query{
-		buildQuerySource,
-		func(rnd *rand.Rand) Query { return buildFuzzProject(rnd, buildQuerySource) },
-		func(rnd *rand.Rand) Query { return buildFuzzRename(rnd, buildQuerySource) },
-		func(rnd *rand.Rand) Query { return buildFuzzExtend(rnd, buildQuerySource) },
-		func(rnd *rand.Rand) Query { return buildFuzzSummarize(rnd, buildQuerySource) },
-		func(rnd *rand.Rand) Query { return buildFuzzWhereSrc(rnd, buildQuerySource) },
-		buildFuzzMinus,
-		buildFuzzIntersect,
-		buildFuzzUnion,
-		buildFuzzTimes,
-		buildFuzzJoin,
-		buildFuzzLeftJoin,
-		buildFuzzSemiJoin,
-	}
-	fuzzers := []func(*testing.T, *rand.Rand){
 		fuzzQuerySource,
-		fuzzTempIndex,
-		fuzzRename,
-		fuzzWhere,
-		fuzzExtend,
 		fuzzProject,
+		fuzzRename,
+		fuzzExtend,
 		fuzzSummarize,
+		fuzzWhere,
 		fuzzMinus,
 		fuzzIntersect,
 		fuzzUnion,
@@ -99,19 +102,19 @@ func fuzzRandom(t *testing.T, rnd *rand.Rand) {
 		fuzzLeftJoin,
 		fuzzSemiJoin,
 	}
-	if rnd.IntN(3) != 0 {
-		defer func(jr int) { joinRev = jr }(joinRev)
-		joinRev = impossible
-		defer func(ti int) { ticostAdj = ti }(ticostAdj)
-		ticostAdj = 9999999
-		inner := random(builders, rnd)
-		outer := random(composers, rnd)
-		q := outer(rnd, inner)
-		fuzzQuery(t, q, rnd)
-	} else {
-		f := random(fuzzers, rnd)
-		f(t, rnd)
+	composers := []func(*rand.Rand, Query) Query{
+		composeFuzzProject,
+		composeFuzzRename,
+		composeFuzzExtend,
+		composeFuzzSummarize,
+		composeFuzzWhere,
 	}
+	if rnd.IntN(3) == 0 {
+		return random(builders, rnd)(rnd)
+	}
+	inner := random(builders, rnd)
+	outer := random(composers, rnd)
+	return outer(rnd, inner(rnd))
 }
 
 //-------------------------------------------------------------------
@@ -147,98 +150,40 @@ func TestFuzzProjectNone(t *testing.T) {
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzQuerySource ./dbms/query/
 
+var fuzzQuerySourceRunner = fuzzRunner{build: fuzzQuerySource}
+
 func FuzzQuerySource(f *testing.F) {
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzQuerySource(t, rnd)
-	})
+	fuzzQuerySourceRunner.Fuzz(f)
 }
 
 func TestFuzzQuerySource(t *testing.T) {
-	var seed1, seed2 uint64
-	defer func() {
-		if r := recover(); r != nil || t.Failed() {
-			fmt.Printf("failing seed: %d, %d\n", seed1, seed2)
-			if r != nil {
-				panic(r)
-			}
-		}
-	}()
-	for range nfuzz {
-		seed1, seed2 = rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzQuerySource(t, rnd)
-	}
+	fuzzQuerySourceRunner.Test(t)
 }
 
-func fuzzQuerySource(t *testing.T, rnd *rand.Rand) {
-	q := fuzzSource(rnd)
-	fuzzQuery(t, q, rnd)
-}
-
-type sourceBuilder func(*rand.Rand) Query
-
-// buildQuerySource adapts NewQuerySource to the sourceBuilder type
-func buildQuerySource(rnd *rand.Rand) Query {
+func fuzzQuerySource(rnd *rand.Rand) Query {
 	return NewQuerySource(rnd)
-}
-
-// fuzzSource returns a random Query operation on a QuerySource
-func fuzzSource(rnd *rand.Rand) Query {
-	switch rnd.IntN(10) {
-	case 0:
-		q := &Nothing{table: "nothing"}
-		q.header = SimpleHeader([]string{})
-		return q
-	case 1:
-		return buildFuzzProject(rnd, buildQuerySource)
-	case 2:
-		return buildFuzzRename(rnd, buildQuerySource)
-	case 3:
-		return buildFuzzExtend(rnd, buildQuerySource)
-	case 4:
-		return buildFuzzSummarize(rnd, buildQuerySource)
-	default:
-		return NewQuerySource(rnd)
-	}
 }
 
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzProject ./dbms/query/
 
+var fuzzProjectRunner = fuzzRunner{build: fuzzProject}
+
 func FuzzProject(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzProject(t, rnd)
-	})
-	// fmt.Printf("Strategy: copy=%d, seq=%d, map=%d\n",
-	// 	strategyCounts[projCopy], strategyCounts[projSeq], strategyCounts[projMap])
+	fuzzProjectRunner.Fuzz(f)
 }
 
 func TestFuzzProjectDebug(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(4886698708123789290, 16491253703327079940))
-	fuzzProject(t, rnd)
+	fuzzProjectRunner.Debug(t, 4886698708123789290, 16491253703327079940)
 }
 
 func TestFuzzProject(t *testing.T) {
-	var seed1, seed2 uint64
-	defer func() {
-		if r := recover(); r != nil || t.Failed() {
-			fmt.Printf("failing seed: %d, %d\n", seed1, seed2)
-			if r != nil {
-				panic(r)
-			}
-		}
-	}()
 	startCopy := projCopyCount.Load()
 	startSeq := projSeqCount.Load()
 	startMap := projMapCount.Load()
-	for range nfuzz {
-		seed1, seed2 = rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzProject(t, rnd)
-	}
+
+	fuzzProjectRunner.Test(t)
+
 	deltaCopy := projCopyCount.Load() - startCopy
 	deltaSeq := projSeqCount.Load() - startSeq
 	deltaMap := projMapCount.Load() - startMap
@@ -256,17 +201,16 @@ func TestFuzzProject(t *testing.T) {
 	}
 }
 
-func buildFuzzProject(rnd *rand.Rand, src sourceBuilder) Query {
-	qs := src(rnd)
+func fuzzProject(rnd *rand.Rand) Query {
+	return composeFuzzProject(rnd, NewQuerySource(rnd))
+}
+
+func composeFuzzProject(rnd *rand.Rand, qs Query) Query {
 	if len(qs.Columns()) == 0 {
 		return NewQuerySource(rnd)
 	}
 	projCols := randomProjectCols(rnd, qs.Columns(), qs.Indexes())
 	return NewProject(qs, projCols)
-}
-
-func fuzzProject(t *testing.T, rnd *rand.Rand) {
-	fuzzQuery(t, buildFuzzProject(rnd, fuzzSource), rnd)
 }
 
 func randomProjectCols(rnd *rand.Rand, srcCols []string, indexes [][]string) []string {
@@ -296,44 +240,27 @@ func randomProjectCols(rnd *rand.Rand, srcCols []string, indexes [][]string) []s
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzRename ./dbms/query/
 
+var fuzzRenameRunner = fuzzRunner{build: fuzzRename}
+
 func FuzzRename(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzRename(t, rnd)
-	})
+	fuzzRenameRunner.Fuzz(f)
 }
 
 func TestFuzzRenameDebug(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(2736498751574507473, 11100617320412793980))
-	fuzzRename(t, rnd)
+	fuzzRenameRunner.Debug(t, 2736498751574507473, 11100617320412793980)
 }
 
 func TestFuzzRename(t *testing.T) {
-	var seed1, seed2 uint64
-	defer func() {
-		if r := recover(); r != nil || t.Failed() {
-			fmt.Printf("failing seed: %d, %d\n", seed1, seed2)
-			if r != nil {
-				panic(r)
-			}
-		}
-	}()
-	for range nfuzz {
-		seed1, seed2 = rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzRename(t, rnd)
-	}
+	fuzzRenameRunner.Test(t)
 }
 
-func buildFuzzRename(rnd *rand.Rand, src sourceBuilder) Query {
-	qs := src(rnd)
+func fuzzRename(rnd *rand.Rand) Query {
+	return composeFuzzRename(rnd, NewQuerySource(rnd))
+}
+
+func composeFuzzRename(rnd *rand.Rand, qs Query) Query {
 	from, to := randomRename(rnd, qs.Columns())
 	return NewRename(qs, from, to)
-}
-
-func fuzzRename(t *testing.T, rnd *rand.Rand) {
-	fuzzQuery(t, buildFuzzRename(rnd, fuzzSource), rnd)
 }
 
 func randomRename(rnd *rand.Rand, srcCols []string) (from, to []string) {
@@ -370,13 +297,9 @@ func randomRename(rnd *rand.Rand, srcCols []string) (from, to []string) {
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzSummarize ./dbms/query/
 
-func FuzzSummarize(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzSummarize(t, rnd)
-	})
-}
+var fuzzSummarizeRunner = fuzzRunner{build: fuzzSummarize}
+
+func FuzzSummarize(f *testing.F) { fuzzSummarizeRunner.Fuzz(f) }
 
 func TestFuzzSummarize(t *testing.T) {
 	startSeq := sumSeqCount.Load()
@@ -385,14 +308,9 @@ func TestFuzzSummarize(t *testing.T) {
 	startTbl := sumTblCount.Load()
 	startUnique := sumUniqueCount.Load()
 	startWholeRow := sumWholeRowCount.Load()
-	rnd := rand.New(rand.NewPCG(1091395294133611146, 8719992948325563695))
-	fuzzSummarize(t, rnd)
-	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		// fmt.Printf("%d, %d\n", seed1, seed2)
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzSummarize(t, rnd)
-	}
+
+	fuzzSummarizeRunner.Test(t)
+
 	deltaSeq := sumSeqCount.Load() - startSeq
 	deltaMap := sumMapCount.Load() - startMap
 	deltaIdx := sumIdxCount.Load() - startIdx
@@ -422,11 +340,11 @@ func TestFuzzSummarize(t *testing.T) {
 		}
 	}
 }
+func fuzzSummarize(rnd *rand.Rand) Query {
+	return composeFuzzSummarize(rnd, NewQuerySource(rnd))
+}
 
-var sumOps = []string{"count", "total", "average", "min", "max"}
-
-func buildFuzzSummarize(rnd *rand.Rand, src sourceBuilder) Query {
-	qs := src(rnd)
+func composeFuzzSummarize(rnd *rand.Rand, qs Query) Query {
 	if len(qs.Columns()) == 0 {
 		return NewSummarize(qs, "", nil, []string{""}, []string{"count"}, []string{""})
 	}
@@ -434,9 +352,7 @@ func buildFuzzSummarize(rnd *rand.Rand, src sourceBuilder) Query {
 	return NewSummarize(qs, "", by, cols, ops, ons)
 }
 
-func fuzzSummarize(t *testing.T, rnd *rand.Rand) {
-	fuzzQuery(t, buildFuzzSummarize(rnd, fuzzSource), rnd)
-}
+var sumOps = []string{"count", "total", "average", "min", "max"}
 
 func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, cols, ops, ons []string) {
 	// 20% of the time, choose 'by' columns that allow sumSeq
@@ -508,74 +424,45 @@ func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, 
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzMinus ./dbms/query/
 
-func FuzzMinus(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzMinus(t, rnd)
-	})
-}
+var fuzzMinusRunner = fuzzRunner{build: fuzzMinus}
 
-func TestFuzzMinus(t *testing.T) {
-	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzMinus(t, rnd)
-	}
-}
+func FuzzMinus(f *testing.F) { fuzzMinusRunner.Fuzz(f) }
 
-func fuzzMinus(t *testing.T, rnd *rand.Rand) {
+func TestFuzzMinus(t *testing.T) { fuzzMinusRunner.Test(t) }
+
+func fuzzMinus(rnd *rand.Rand) Query {
 	qs1, qs2 := newCompatibleQS(rnd)
-	// fmt.Printf("minus %d %d = ", len(qs1.rows), len(qs2.rows))
-	q := NewMinus(qs1, qs2)
-	fuzzQuery(t, q, rnd)
+	return NewMinus(qs1, qs2)
 }
 
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzIntersect ./dbms/query/
 
-func FuzzIntersect(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzIntersect(t, rnd)
-	})
-}
+var fuzzIntersectRunner = fuzzRunner{build: fuzzIntersect}
 
-func TestFuzzIntersect(t *testing.T) {
-	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzIntersect(t, rnd)
-	}
-}
+func FuzzIntersect(f *testing.F) { fuzzIntersectRunner.Fuzz(f) }
 
-func fuzzIntersect(t *testing.T, rnd *rand.Rand) {
+func TestFuzzIntersect(t *testing.T) { fuzzIntersectRunner.Test(t) }
+
+func fuzzIntersect(rnd *rand.Rand) Query {
 	qs1, qs2 := newCompatibleQS(rnd)
-	q := NewIntersect(qs1, qs2)
-	fuzzQuery(t, q, rnd)
+	return NewIntersect(qs1, qs2)
 }
 
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzUnion ./dbms/query/
 
-func FuzzUnion(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzUnion(t, rnd)
-	})
-}
+var fuzzUnionRunner = fuzzRunner{build: fuzzUnion}
+
+func FuzzUnion(f *testing.F) { fuzzUnionRunner.Fuzz(f) }
 
 func TestFuzzUnion(t *testing.T) {
 	startMerge := unionMergeCount.Load()
 	startLookup := unionLookupCount.Load()
 	startDisjoint := unionDisjointCount.Load()
-	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzUnion(t, rnd)
-	}
+
+	fuzzUnionRunner.Test(t)
+
 	deltaMerge := unionMergeCount.Load() - startMerge
 	deltaLookup := unionLookupCount.Load() - startLookup
 	deltaDisjoint := unionDisjointCount.Load() - startDisjoint
@@ -597,10 +484,9 @@ func TestFuzzUnion(t *testing.T) {
 	}
 }
 
-func fuzzUnion(t *testing.T, rnd *rand.Rand) {
+func fuzzUnion(rnd *rand.Rand) Query {
 	qs1, qs2 := newCompatibleQS(rnd)
-	q := NewUnion(qs1, qs2)
-	fuzzQuery(t, q, rnd)
+	return NewUnion(qs1, qs2)
 }
 
 //-------------------------------------------------------------------
@@ -715,26 +601,19 @@ func makeEmptyKey(rnd *rand.Rand, qs *QuerySource) {
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzTimes ./dbms/query/
 
+var fuzzTimesRunner = fuzzRunner{build: fuzzTimes}
+
 func FuzzTimes(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzTimes(t, rnd)
-	})
+	fuzzTimesRunner.Fuzz(f)
 }
 
 func TestFuzzTimes(t *testing.T) {
-	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzTimes(t, rnd)
-	}
+	fuzzTimesRunner.Test(t)
 }
 
-func fuzzTimes(t *testing.T, rnd *rand.Rand) {
+func fuzzTimes(rnd *rand.Rand) Query {
 	q1, q2 := newDisjointQS(rnd)
-	q := NewTimes(q1, q2)
-	fuzzQuery(t, q, rnd)
+	return NewTimes(q1, q2)
 }
 
 func newDisjointQS(rnd *rand.Rand) (Query, Query) {
@@ -745,14 +624,12 @@ func newDisjointQS(rnd *rand.Rand) (Query, Query) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzLeft ./dbms/query/
+// go test -run '^$' -fuzz=FuzzJoin ./dbms/query/
+
+var fuzzJoinRunner = fuzzRunner{build: fuzzJoin}
 
 func FuzzJoin(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzJoin(t, rnd)
-	})
+	fuzzJoinRunner.Fuzz(f)
 }
 
 func TestFuzzJoin(t *testing.T) {
@@ -761,11 +638,9 @@ func TestFuzzJoin(t *testing.T) {
 	start1nCount := join1nCount.Load()
 	startn1Count := joinn1Count.Load()
 	startnnCount := joinnnCount.Load()
-	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzJoin(t, rnd)
-	}
+
+	fuzzJoinRunner.Test(t)
+
 	fmt.Println("11:", join11Count.Load()-start11Count)
 	fmt.Println("1n:", join1nCount.Load()-start1nCount)
 	fmt.Println("n1:", joinn1Count.Load()-startn1Count)
@@ -779,15 +654,9 @@ func TestFuzzJoin(t *testing.T) {
 	fmt.Println("tempIndexCount", tempIndexCount.Load()-startTICount)
 }
 
-func fuzzJoin(t *testing.T, rnd *rand.Rand) {
-	defer func(jr int) { joinRev = jr }(joinRev)
-	joinRev = impossible
-	defer func(ti int) { ticostAdj = ti }(ticostAdj)
-	ticostAdj = 9999999
-
+func fuzzJoin(rnd *rand.Rand) Query {
 	qs1, qs2, to := newJoinQS(rnd)
-	q := NewJoin(qs1, qs2, to, &testTran{})
-	fuzzQuery(t, q, rnd)
+	return NewJoin(qs1, qs2, to, &testTran{})
 }
 
 func newJoinQS(rnd *rand.Rand) (Query, Query, []string) {
@@ -910,13 +779,9 @@ func addKey(rnd *rand.Rand, b *buildQS, key []string) {
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzLeftJoin ./dbms/query/
 
-func FuzzLeftJoin(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzLeftJoin(t, rnd)
-	})
-}
+var fuzzLeftJoinRunner = fuzzRunner{build: fuzzLeftJoin}
+
+func FuzzLeftJoin(f *testing.F) { fuzzLeftJoinRunner.Fuzz(f) }
 
 func TestFuzzLeftJoin(t *testing.T) {
 	startTICount := tempIndexCount.Load()
@@ -924,11 +789,9 @@ func TestFuzzLeftJoin(t *testing.T) {
 	start1nCount := leftJoin1nCount.Load()
 	startn1Count := leftJoinn1Count.Load()
 	startnnCount := leftJoinnnCount.Load()
-	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzLeftJoin(t, rnd)
-	}
+
+	fuzzLeftJoinRunner.Test(t)
+
 	fmt.Println("11:", leftJoin11Count.Load()-start11Count)
 	fmt.Println("1n:", leftJoin1nCount.Load()-start1nCount)
 	fmt.Println("n1:", leftJoinn1Count.Load()-startn1Count)
@@ -941,100 +804,69 @@ func TestFuzzLeftJoin(t *testing.T) {
 	fmt.Println("tempIndexCount", tempIndexCount.Load()-startTICount)
 }
 
-func fuzzLeftJoin(t *testing.T, rnd *rand.Rand) {
-	defer func(ti int) { ticostAdj = ti }(ticostAdj)
-	ticostAdj = 9999999
-
+func fuzzLeftJoin(rnd *rand.Rand) Query {
 	qs1, qs2, to := newJoinQS(rnd)
-	q := NewLeftJoin(qs1, qs2, to, &testTran{})
-	fuzzQuery(t, q, rnd)
+	return NewLeftJoin(qs1, qs2, to, &testTran{})
 }
 
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzSemiJoin ./dbms/query/
 
-func FuzzSemiJoin(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzSemiJoin(t, rnd)
-	})
-}
+var fuzzSemiJoinRunner = fuzzRunner{build: fuzzSemiJoin}
+
+func FuzzSemiJoin(f *testing.F) { fuzzSemiJoinRunner.Fuzz(f) }
 
 func TestFuzzSemiJoin(t *testing.T) {
-	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzSemiJoin(t, rnd)
-	}
+	fuzzSemiJoinRunner.Test(t)
 	fmt.Println("fuzzCount", fuzzCount, "noResults", noResults)
 }
 
-func fuzzSemiJoin(t *testing.T, rnd *rand.Rand) {
-	defer func(ti int) { ticostAdj = ti }(ticostAdj)
-	ticostAdj = 9999999
-
+func fuzzSemiJoin(rnd *rand.Rand) Query {
 	qs1, qs2, to := newJoinQS(rnd)
-	q := NewSemiJoin(qs1, qs2, to, &testTran{})
-	fuzzQuery(t, q, rnd)
+	return NewSemiJoin(qs1, qs2, to, &testTran{})
 }
 
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzWhere ./dbms/query/
 
+var fuzzWhereRunner = fuzzRunner{build: fuzzWhere}
+
 func TestFuzzWhereDebug(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(65, 455))
-	fuzzWhere(t, rnd)
+	fuzzWhereRunner.Debug(t, 65, 455)
 }
 
 func FuzzWhere(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzWhere(t, rnd)
-	})
+	fuzzWhereRunner.Fuzz(f)
 }
 
 func TestFuzzWhere(t *testing.T) {
 	startSingleton := whereSingletonCount.Load()
-
-	var seed1, seed2 uint64
-	defer func() {
-		if r := recover(); r != nil || t.Failed() {
-			fmt.Printf("failing seed: %d, %d\n", seed1, seed2)
-			if r != nil {
-				panic(r)
-			}
-		}
-	}()
-	for range nfuzz {
-		seed1, seed2 = rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzWhere(t, rnd)
-	}
+	fuzzWhereRunner.Test(t)
 	deltaSingleton := whereSingletonCount.Load() - startSingleton
 	fmt.Printf("Where strategies: singleton=%d\n", deltaSingleton)
 }
 
-func fuzzWhere(t *testing.T, rnd *rand.Rand) {
+func fuzzWhere(rnd *rand.Rand) Query {
 	// Use richer index topologies 75% of the time to exercise skip scan,
 	// but keep some coverage of empty keys and plain QuerySource.
 	var q Query
-	if rnd.IntN(4) != 0 {
-		q = newQS(rnd).NoEmptyKey().Sizes(151, 6, 8).Build()
+	if rnd.IntN(4) == 0 {
+		q = NewQuerySource(rnd)
 	} else {
-		q = fuzzSource(rnd)
+		q = newQS(rnd).NoEmptyKey().Sizes(151, 6, 8).Build()
 	}
+	return composeFuzzWhere(rnd, q)
+}
+
+func composeFuzzWhere(rnd *rand.Rand, q Query) Query {
 	expr := randomWhereExpr(rnd, q.Columns(), q.Keys(), q.Indexes())
 	tran := QueryTran(&testTran{})
-	//TODO non-table with expr on rules
 	if qs, ok := q.(*QuerySource); ok && rnd.IntN(5) != 3 {
 		qswt := &QuerySourceWT{QuerySource: *qs}
 		tran = &fuzzTran{qswt: qswt}
 		q = qswt
 	}
-	q = NewWhere(q, expr, tran)
-	fuzzQuery(t, q, rnd)
+	return NewWhere(q, expr, tran)
 }
 
 type fuzzTran struct {
@@ -1109,24 +941,21 @@ func randomWhereExpr(rnd *rand.Rand, cols []string, keys [][]string, indexes [][
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzExtend ./dbms/query/
 
+var fuzzExtendRunner = fuzzRunner{build: fuzzExtend}
+
 func FuzzExtend(f *testing.F) {
-	f.Add(uint64(122), uint64(334))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzExtend(t, rnd)
-	})
+	fuzzExtendRunner.Fuzz(f)
 }
 
 func TestFuzzExtend(t *testing.T) {
-	for range nfuzz {
-		seed1, seed2 := rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzExtend(t, rnd)
-	}
+	fuzzExtendRunner.Test(t)
 }
 
-func buildFuzzExtend(rnd *rand.Rand, src sourceBuilder) Query {
-	qs := src(rnd)
+func fuzzExtend(rnd *rand.Rand) Query {
+	return composeFuzzExtend(rnd, NewQuerySource(rnd))
+}
+
+func composeFuzzExtend(rnd *rand.Rand, qs Query) Query {
 	n := 1 + rnd.IntN(5)
 	cols := make([]string, n)
 	exprs := make([]ast.Expr, n)
@@ -1151,95 +980,29 @@ func buildFuzzExtend(rnd *rand.Rand, src sourceBuilder) Query {
 	return NewExtend(qs, cols, exprs)
 }
 
-func fuzzExtend(t *testing.T, rnd *rand.Rand) {
-	fuzzQuery(t, buildFuzzExtend(rnd, fuzzSource), rnd)
-}
-
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzTempIndex ./dbms/query/
 
+var fuzzTempIndexRunner = fuzzRunner{build: fuzzTempIndex}
+
 func FuzzTempIndex(f *testing.F) {
-	f.Add(uint64(493), uint64(913))
-	f.Fuzz(func(t *testing.T, seed1, seed2 uint64) {
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzTempIndex(t, rnd)
-	})
+	fuzzTempIndexRunner.Fuzz(f)
 }
 
 func TestFuzzTempIndexDebug(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(493, 913))
-	fuzzTempIndex(t, rnd)
+	fuzzTempIndexRunner.Debug(t, 493, 913)
 }
 
 func TestFuzzTempIndex(t *testing.T) {
-	var seed1, seed2 uint64
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Printf("seed1, seed2 = %d, %d\n", seed1, seed2)
-			panic(r)
-		}
-	}()
-	for range nfuzz {
-		seed1, seed2 = rand.Uint64(), rand.Uint64()
-		rnd := rand.New(rand.NewPCG(seed1, seed2))
-		fuzzTempIndex(t, rnd)
-	}
+	fuzzTempIndexRunner.Test(t)
 }
 
-func fuzzTempIndex(t *testing.T, rnd *rand.Rand) {
+func fuzzTempIndex(rnd *rand.Rand) Query {
 	qs := newQS(rnd).NoEmptyKey().Build()
 	cols := qs.ColumnsResult
 	n := 1 + rnd.IntN(min(3, len(cols)))
 	order := set.RandPerm(rnd, cols, n)
-	ti := NewTempIndex(qs, order, nil)
-	fuzzQuery(t, ti, rnd)
-}
-
-func buildFuzzMinus(rnd *rand.Rand) Query {
-	qs1, qs2 := newCompatibleQS(rnd)
-	return NewMinus(qs1, qs2)
-}
-
-func buildFuzzIntersect(rnd *rand.Rand) Query {
-	qs1, qs2 := newCompatibleQS(rnd)
-	return NewIntersect(qs1, qs2)
-}
-
-func buildFuzzUnion(rnd *rand.Rand) Query {
-	qs1, qs2 := newCompatibleQS(rnd)
-	return NewUnion(qs1, qs2)
-}
-
-func buildFuzzTimes(rnd *rand.Rand) Query {
-	q1, q2 := newDisjointQS(rnd)
-	return NewTimes(q1, q2)
-}
-
-func buildFuzzJoin(rnd *rand.Rand) Query {
-	qs1, qs2, to := newJoinQS(rnd)
-	return NewJoin(qs1, qs2, to, &testTran{})
-}
-
-func buildFuzzLeftJoin(rnd *rand.Rand) Query {
-	qs1, qs2, to := newJoinQS(rnd)
-	return NewLeftJoin(qs1, qs2, to, &testTran{})
-}
-
-func buildFuzzSemiJoin(rnd *rand.Rand) Query {
-	qs1, qs2, to := newJoinQS(rnd)
-	return NewSemiJoin(qs1, qs2, to, &testTran{})
-}
-
-func buildFuzzWhereSrc(rnd *rand.Rand, src sourceBuilder) Query {
-	q := src(rnd)
-	expr := randomWhereExpr(rnd, q.Columns(), q.Keys(), q.Indexes())
-	tran := QueryTran(&testTran{})
-	if qs, ok := q.(*QuerySource); ok && rnd.IntN(5) != 3 {
-		qswt := &QuerySourceWT{QuerySource: *qs}
-		tran = &fuzzTran{qswt: qswt}
-		q = qswt
-	}
-	return NewWhere(q, expr, tran)
+	return NewTempIndex(qs, order, nil)
 }
 
 //-------------------------------------------------------------------
