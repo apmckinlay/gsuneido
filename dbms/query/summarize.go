@@ -39,7 +39,6 @@ var _ = AddInfo("query.summarize.wholerow", &sumWholeRowCount)
 
 type Summarize struct {
 	Query1
-	t   QueryTran
 	get func(th *Thread, su *Summarize, dir Dir) Row
 	st  *SuTran
 	by  []string
@@ -151,8 +150,7 @@ func (su *Summarize) minmax1() bool {
 }
 
 func (su *Summarize) SetTran(t QueryTran) {
-	su.t = t
-	su.st = MakeSuTran(su.t)
+	su.st = MakeSuTran(t)
 	su.source.SetTran(t)
 }
 

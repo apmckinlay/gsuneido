@@ -200,6 +200,7 @@ func (p *Project) String() string {
 
 func (p *Project) SetTran(t QueryTran) {
 	p.st = MakeSuTran(t)
+	p.source.SetTran(t)
 }
 
 // projectKeys keeps keys that are subsets of cols.

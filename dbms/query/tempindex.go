@@ -76,6 +76,11 @@ func (ti *TempIndex) setApproach(index []string, frac float64, app any, tran Que
 
 // execution --------------------------------------------------------
 
+func (ti *TempIndex) SetTran(tran QueryTran) {
+	ti.tran = tran
+	ti.source.SetTran(tran)
+}
+
 func (ti *TempIndex) Rewind() {
 	if ti.iter != nil {
 		ti.iter.Rewind()

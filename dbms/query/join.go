@@ -211,6 +211,7 @@ func (jb *joinBase) SetTran(qt QueryTran) {
 	jb.qt = qt
 	jb.st = MakeSuTran(qt)
 	jb.lookupCache.Reset()
+	jb.Query2.SetTran(qt)
 }
 
 func (jl *joinLike) getHeader() *Header {

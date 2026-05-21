@@ -74,6 +74,7 @@ func (c *Compatible) String(s string) string {
 func (c *Compatible) SetTran(t QueryTran) {
 	c.st = MakeSuTran(t)
 	c.lookupCache.Reset()
+	c.Query2.SetTran(t)
 }
 
 // source2Has returns true if a row from source exists in source2.

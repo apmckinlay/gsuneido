@@ -61,8 +61,7 @@ func (sj *SemiJoin) String() string {
 func (sj *SemiJoin) SetTran(t QueryTran) {
 	sj.qt = t
 	sj.st = MakeSuTran(t)
-	sj.source1.SetTran(t)
-	sj.source2.SetTran(t)
+	sj.Query2.SetTran(t)
 }
 
 func (sj *SemiJoin) getNrows() (int, int) {
