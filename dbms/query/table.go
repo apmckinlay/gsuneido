@@ -441,6 +441,7 @@ func (tbl *Table) Simple(*Thread) []Row {
 		rows = append(rows, row)
 		assert.That(len(rows) < maxSimple)
 	}
+	tbl.iter.Rewind()
 	return rows
 }
 
