@@ -54,6 +54,9 @@ type Where struct {
 	Query1
 	// idxSelPos is the current index in idxSel.ptrngs
 	idxSelPos int
+	// eof is set when advance returns false (past end or past beginning)
+	// to enforce "plain stick" cursor behavior: once past eof, stay past eof
+	eof bool
 
 	nIn  int
 	nOut int
@@ -768,7 +771,7 @@ var MakeSuTran func(qt QueryTran) *SuTran
 
 func (w *Where) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { w.tget += tsc.Read() - t }(tsc.Read())
-	if w.selConflict {
+	if w.selConflict || w.eof {
 		return nil
 	}
 	// apply the non-indexed filtering
@@ -777,6 +780,7 @@ func (w *Where) Get(th *Thread, dir Dir) Row {
 		if w.filter(th, row) {
 			w.nOut++
 			if row == nil {
+				w.eof = true
 				w.slowQueries()
 				return nil
 			}
@@ -876,6 +880,7 @@ func (w *Where) advance(dir Dir) bool {
 func (w *Where) Rewind() {
 	w.source.Rewind()
 	w.idxSelPos = -1
+	w.eof = false
 }
 
 func (w *Where) Select(sels Sels) {
