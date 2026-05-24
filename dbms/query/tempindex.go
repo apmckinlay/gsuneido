@@ -63,6 +63,7 @@ func (ti *TempIndex) Transform() Query {
 }
 
 // optimize is only used by fuzz_test.go
+// (normally TempIndex is introduced by query.go Optimize)
 func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
 	Cost, Cost, any) {
 	fixcost, varcost := Optimize(ti.source, mode, nil, frac)

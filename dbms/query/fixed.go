@@ -109,6 +109,7 @@ func (fixed Fixed) Single(col string) bool {
 	return false
 }
 
+// Single returns true if there is a single value
 func (f Fix) Single() bool {
 	return len(f.values) == 1
 }
