@@ -386,13 +386,13 @@ func (w *Where) Transform() Query {
 		// no project because Intersect Columns are the intersection
 		src1 := NewWhere(q.source1, w.expr, w.t)
 		src2 := NewWhere(q.source2, w.expr, w.t)
-		return NewIntersect(src1, src2).Transform()
+		return NewIntersect(src1, src2, w.t).Transform()
 	case *Minus:
 		// distribute where over minus
 		// need project because Minus Columns are just the left side's
 		src1 := NewWhere(q.source1, w.expr, w.t)
 		src2 := NewWhere(q.source2, w.project(q.source2), w.t)
-		return NewMinus(src1, src2).Transform()
+		return NewMinus(src1, src2, w.t).Transform()
 	case *Union:
 		// distribute where over union
 		// need project because Union Columns is the union

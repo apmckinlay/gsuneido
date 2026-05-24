@@ -15,7 +15,10 @@ import (
 
 type Intersect struct {
 	Compatible1
-	conflict bool
+	conflict   bool
+	qt         QueryTran
+	prevFixed1 Fixed
+	prevFixed2 Fixed
 }
 
 type intersectApproach struct {
@@ -24,8 +27,12 @@ type intersectApproach struct {
 	reverse  bool
 }
 
-func NewIntersect(src1, src2 Query) *Intersect {
-	it := Intersect{}
+func NewIntersect(src1, src2 Query, t QueryTran) *Intersect {
+	return newIntersect(src1, src2, t, nil, nil)
+}
+
+func newIntersect(src1, src2 Query, t QueryTran, prevFixed1, prevFixed2 Fixed) *Intersect {
+	it := Intersect{qt: t, prevFixed1: prevFixed1, prevFixed2: prevFixed2}
 	it.Compatible = *newCompatible(src1, src2)
 	it.header = it.getHeader()
 	it.keys = it.getKeys()
@@ -99,10 +106,35 @@ func (it *Intersect) Transform() Query {
 	if _, ok := src2.(*Nothing); ok {
 		return NewNothing(it)
 	}
+	fix1, fix2 := src1.Fixed(), src2.Fixed()
+	if !fix1.Equal(it.prevFixed1) || !fix2.Equal(it.prevFixed2) {
+		src1 = compatCopyFixed(fix2, fix1, src1, it.qt)
+		if src1 == nil {
+			return NewNothing(it)
+		}
+		src2 = compatCopyFixed(fix1, fix2, src2, it.qt)
+		if src2 == nil {
+			return NewNothing(it)
+		}
+		it.prevFixed1, it.prevFixed2 = fix1, fix2
+	}
 	if src1 != it.source1 || src2 != it.source2 {
-		return NewIntersect(src1, src2)
+		return newIntersect(src1, src2, it.qt, it.prevFixed1, it.prevFixed2).Transform()
 	}
 	return it
+}
+
+// compatCopyFixed wraps copyFixed (join) with a conflict check:
+// if fromFixed has non-"" values for columns not in to (treated as ""),
+// it can never match and nil is returned.
+func compatCopyFixed(fromFixed, toFixed Fixed, to Query, t QueryTran) Query {
+	cols := to.Columns()
+	for _, f := range fromFixed {
+		if !slices.Contains(cols, f.col) && !slices.Contains(f.values, "") {
+			return nil
+		}
+	}
+	return copyFixed(fromFixed, toFixed, to, cols, t)
 }
 
 func (it *Intersect) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {

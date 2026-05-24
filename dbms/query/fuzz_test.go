@@ -432,7 +432,7 @@ func TestFuzzMinus(t *testing.T) { fuzzMinusRunner.Test(t) }
 
 func fuzzMinus(rnd *rand.Rand) Query {
 	qs1, qs2 := newCompatibleQS(rnd)
-	return NewMinus(qs1, qs2)
+	return NewMinus(qs1, qs2, QueryTran(&testTran{}))
 }
 
 //-------------------------------------------------------------------
@@ -446,7 +446,7 @@ func TestFuzzIntersect(t *testing.T) { fuzzIntersectRunner.Test(t) }
 
 func fuzzIntersect(rnd *rand.Rand) Query {
 	qs1, qs2 := newCompatibleQS(rnd)
-	return NewIntersect(qs1, qs2)
+	return NewIntersect(qs1, qs2, QueryTran(&testTran{}))
 }
 
 //-------------------------------------------------------------------

@@ -153,7 +153,7 @@ func (p *queryParser) extend(q Query) Query {
 
 func (p *queryParser) intersect(q Query) Query {
 	q2 := p.source()
-	return NewIntersect(q, q2)
+	return NewIntersect(q, q2, p.t)
 }
 
 func (p *queryParser) join(q Query) Query {
@@ -187,7 +187,7 @@ func (p *queryParser) joinBy() []string {
 
 func (p *queryParser) minus(q Query) Query {
 	q2 := p.source()
-	return NewMinus(q, q2)
+	return NewMinus(q, q2, p.t)
 }
 
 func (p *queryParser) project(q Query) Query {
