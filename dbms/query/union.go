@@ -21,11 +21,13 @@ var (
 	unionMergeCount    atomic.Int64
 	unionLookupCount   atomic.Int64
 	unionDisjointCount atomic.Int64
+	unionMergeDisjoint atomic.Int64
 )
 
 var _ = AddInfo("query.union.merge", &unionMergeCount)
 var _ = AddInfo("query.union.lookup", &unionLookupCount)
 var _ = AddInfo("query.union.disjoint", &unionDisjointCount)
+var _ = AddInfo("query.union.merge-disjoint", &unionMergeDisjoint)
 
 type Union struct {
 	src2get   func(*Thread, Dir) Row
@@ -44,7 +46,7 @@ type Union struct {
 }
 
 type unionApproach struct {
-	keyIndex   []string
+	keyIndex   []string // not necessarily a key if disjoint
 	idx1, idx2 []string
 	strat      unionStrategy
 	frac2      float64
@@ -281,9 +283,10 @@ func (u *Union) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 // bestMergeIndexes finds the pair of indexes from source1 and source2 that have
 // the lowest cost for a merge operation with the required order.
 // For each source1 index that is prefixed by the required order and contains a
-// source1 key, and for each source2 index that is prefixed by the required
-// order and contains a source2 key with the key fields in the same order,
-// the pair is a candidate. Returns the pair with the lowest cost.
+// source1 key, the keyIndex is the prefix of that index through all key fields.
+// A source2 index is only a candidate if it is also prefixed by keyIndex
+// (ensuring both sources iterate in exactly the same order for the merge key).
+// Returns the pair with the lowest cost.
 // Empty keys (singletons) are handled specially:
 // - If both sources have empty keys, order is not needed
 // - If only one source has an empty key, we need a key index on the other
@@ -324,16 +327,14 @@ func (u *Union) bestMergeIndexes(order []string, mode Mode, frac float64) (
 		if key1 == nil {
 			continue
 		}
-		keyOrder := keyFieldOrder(index1, key1)
+		// keyIndex is the prefix of index1 through all key fields.
+		// Both sources must iterate in this order for the merge to be correct.
+		keyIndex := keyPrefixOfIndex(index1, key1)
 		for _, index2 := range indexes2 {
-			if !slc.HasPrefix(index2, order) {
+			if !slc.HasPrefix(index2, keyIndex) {
 				continue
 			}
-			key2 := indexContainsKey(index2, keys2)
-			if key2 == nil {
-				continue
-			}
-			if !sameKeyFieldOrder(index2, key2, keyOrder) {
+			if indexContainsKey(index2, keys2) == nil {
 				continue
 			}
 			// candidate pair found, get cost
@@ -342,7 +343,7 @@ func (u *Union) bestMergeIndexes(order []string, mode Mode, frac float64) (
 			if fc1+vc1+fc2+vc2 < fixcost+varcost {
 				idx1 = index1
 				idx2 = index2
-				bestKey = index1
+				bestKey = keyIndex
 				fixcost = fc1 + fc2
 				varcost = vc1 + vc2
 			}
@@ -375,6 +376,20 @@ func bestMergeIndex(src1, src2 Query, indexes2, keys2 [][]string,
 		}
 	}
 	return
+}
+
+// keyPrefixOfIndex returns the prefix of index up to and including
+// the last field that belongs to key.
+// This is the minimum index prefix that both sources must share
+// for the merge to iterate in a compatible order.
+func keyPrefixOfIndex(index, key []string) []string {
+	last := -1
+	for i, col := range index {
+		if slices.Contains(key, col) {
+			last = i
+		}
+	}
+	return index[:last+1]
 }
 
 // indexContainsKey returns a key from keys if the index contains all fields
@@ -431,7 +446,9 @@ func (*Union) optMerge(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, a
 		fixcost1, varcost1 := Optimize(src1, mode, index1, frac)
 		fixcost2, varcost2 := Optimize(src2, mode, index2, frac)
 		if fixcost1+varcost1+fixcost2+varcost2 < bestFixCost+bestVarCost {
-			bestKey = key
+			// use the actual index order, not the key order,
+			// so the merge comparison matches the iteration order
+			bestKey = index1[:len(key)]
 			bestFixCost = fixcost1 + fixcost2
 			bestVarCost = varcost1 + varcost2
 			bestIdx1, bestIdx2 = index1, index2
@@ -500,6 +517,9 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 	}
 	if u.strat == unionMerge {
 		unionMergeCount.Add(1)
+		if u.disjoint != "" {
+			unionMergeDisjoint.Add(1)
+		}
 	} else {
 		unionLookupCount.Add(1)
 	}
@@ -540,7 +560,11 @@ func (u *Union) Get(th *Thread, dir Dir) Row {
 	case unionLookup:
 		row = u.getLookup(th, dir)
 	case unionMerge:
-		row = u.getMerge(th, dir)
+		if u.disjoint != "" {
+			row = u.getMergeDisjoint(th, dir)
+		} else {
+			row = u.getMerge(th, dir)
+		}
 	default:
 		panic(assert.ShouldNotReachHere())
 	}
@@ -594,36 +618,22 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 		// compare keyIndex fields first
 		u.mergeCols = set.Union(u.keyIndex, u.allCols)
 	}
-	get1 := func() {
-		if dir != u.prevDir && u.row1 == nil {
-			u.source1.Rewind()
-		}
-		u.row1 = u.src1get(th, dir)
-	}
-	get2 := func() {
-		if dir != u.prevDir && u.row2 == nil {
-			u.source2.Rewind()
-		}
-		u.row2 = u.src2get(th, dir)
-	}
 
 	// refill row1 and row2
 	if u.state == rewound || (u.src1 && u.src2) {
-		get1()
-		get2()
+		u.get1(th, dir)
+		u.get2(th, dir)
 	} else if u.src1 {
-		get1()
+		u.get1(th, dir)
 		if dir != u.prevDir {
-			get2()
+			u.get2(th, dir)
 		}
 	} else if u.src2 {
-		get2()
+		u.get2(th, dir)
 		if dir != u.prevDir {
-			get1()
+			u.get1(th, dir)
 		}
 	}
-	// fmt.Println("row1:", u.row1)
-	// fmt.Println("row2:", u.row2)
 
 	u.prevDir = dir
 	u.src1, u.src2 = false, false
@@ -637,7 +647,7 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 		u.src2 = true
 		return JoinRows(u.empty1, u.row2)
 	}
-	cmp := u.compare(th, u.row1, u.row2)
+	cmp := u.compare(th, u.row1, u.row2, u.mergeCols)
 	if cmp == 0 {
 		// rows identical, arbitrarily return row1
 		u.src1, u.src2 = true, true
@@ -655,8 +665,22 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 	}
 }
 
-func (u *Union) compare(th *Thread, row1, row2 Row) int {
-	for _, col := range u.mergeCols {
+func (u *Union) get1(th *Thread, dir Dir) {
+	if dir != u.prevDir && u.row1 == nil {
+		u.source1.Rewind()
+	}
+	u.row1 = u.src1get(th, dir)
+}
+
+func (u *Union) get2(th *Thread, dir Dir) {
+	if dir != u.prevDir && u.row2 == nil {
+		u.source2.Rewind()
+	}
+	u.row2 = u.src2get(th, dir)
+}
+
+func (u *Union) compare(th *Thread, row1, row2 Row, cols []string) int {
+	for _, col := range cols {
 		x1 := row1.GetRawVal(u.source1.Header(), col, th, u.st)
 		x2 := row2.GetRawVal(u.source2.Header(), col, th, u.st)
 		if c := strings.Compare(x1, x2); c != 0 {
@@ -664,6 +688,56 @@ func (u *Union) compare(th *Thread, row1, row2 Row) int {
 		}
 	}
 	return 0
+}
+
+func (u *Union) getMergeDisjoint(th *Thread, dir Dir) (r Row) {
+	// refill row1 and row2
+	if u.state == rewound {
+		u.get1(th, dir)
+		u.get2(th, dir)
+	} else if u.src1 {
+		u.get1(th, dir)
+		if dir != u.prevDir {
+			u.get2(th, dir)
+		}
+	} else if u.src2 {
+		u.get2(th, dir)
+		if dir != u.prevDir {
+			u.get1(th, dir)
+		}
+	}
+
+	u.prevDir = dir
+	u.src1, u.src2 = false, false
+	if u.row1 == nil && u.row2 == nil {
+		u.src1, u.src2 = true, true
+		return nil
+	} else if u.row2 == nil {
+		u.src1 = true
+		return JoinRows(u.row1, u.empty2)
+	} else if u.row1 == nil {
+		u.src2 = true
+		return JoinRows(u.empty1, u.row2)
+	}
+
+	cmp := u.compare(th, u.row1, u.row2, u.keyIndex)
+	if dir == Next {
+		if cmp <= 0 {
+			u.src1 = true
+			return JoinRows(u.row1, u.empty2)
+		} else {
+			u.src2 = true
+			return JoinRows(u.empty1, u.row2)
+		}
+	} else { // Prev
+		if cmp <= 0 {
+			u.src2 = true
+			return JoinRows(u.empty1, u.row2)
+		} else {
+			u.src1 = true
+			return JoinRows(u.row1, u.empty2)
+		}
+	}
 }
 
 func nothing(*Thread, Dir) Row { return nil }

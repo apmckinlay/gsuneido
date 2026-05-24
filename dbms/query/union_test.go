@@ -156,29 +156,29 @@ func TestBestMergeIndexes(t *testing.T) {
 		[]string{"a", "b"},
 		false)
 
-	// example from spec:
-	// required order(c,b)
-	// source1 key(a,c,b) index(c,b,a)
-	// source2 key(b,a,c) index(c,b,d,a)
+	// index2 has an extra field (d) between the order prefix and the key field (a),
+	// so it does not iterate in [c,b,a] order — source2 would be ordered by d within
+	// each (c,b) group, not by a. The merge cannot correctly detect duplicates.
+	// Both the order=[c,b] and nil-order variants must be impossible.
 	test([]string{"c", "b"},
 		[][]string{{"c", "b", "a"}},
 		[][]string{{"c", "b", "d", "a"}},
 		[][]string{{"a", "c", "b"}},
 		[][]string{{"b", "a", "c"}},
-		[]string{"c", "b", "a"},
-		[]string{"c", "b", "d", "a"},
-		[]string{"c", "b", "a"},
-		false)
+		nil,
+		nil,
+		nil,
+		true)
 
 	test(nil,
 		[][]string{{"c", "b", "a"}},
 		[][]string{{"c", "b", "d", "a"}},
 		[][]string{{"a", "c", "b"}},
 		[][]string{{"b", "a", "c"}},
-		[]string{"c", "b", "a"},
-		[]string{"c", "b", "d", "a"},
-		[]string{"c", "b", "a"},
-		false)
+		nil,
+		nil,
+		nil,
+		true)
 
 	// no matching indexes
 	test([]string{"c", "b"},
