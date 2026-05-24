@@ -955,15 +955,14 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	}
 	cloned := false
 	sels = slices.Clip(sels)
-	indexFields := w.srcIndex
 	for _, fix := range w.fixed {
-		if fix.Single() && slices.Contains(indexFields, fix.col) &&
+		if fix.Single() && slices.Contains(w.srcIndex, fix.col) &&
 			!sels.HasCol(fix.col) {
 			sels = append(sels, Sel{fix.col, fix.values[0]})
 			cloned = true // because they're clipped, append will realloc
 		}
 	}
-	isels, osels := Split(cloned, sels, indexFields)
+	isels, osels := Split(cloned, sels, w.srcIndex)
 	for _, sel := range osels {
 		assert.That(w.fixed.Has(sel.col))
 	}
