@@ -103,10 +103,15 @@ type alterRenameAdmin struct {
 
 func (a *alterRenameAdmin) String() string {
 	var s strings.Builder
-	s.WriteString("alter " + a.table + " rename ")
+	s.WriteString("alter ")
+	s.WriteString(a.table)
+	s.WriteString(" rename ")
 	sep := ""
 	for i, from := range a.from {
-		s.WriteString(sep + from + " to " + a.to[i])
+		s.WriteString(sep)
+		s.WriteString(from)
+		s.WriteString(" to ")
+		s.WriteString(a.to[i])
 		sep = ", "
 	}
 	return s.String()

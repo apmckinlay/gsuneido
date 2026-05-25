@@ -84,10 +84,15 @@ type updateAction struct {
 
 func (a *updateAction) String() string {
 	var s strings.Builder
-	s.WriteString("update " + String(a.query) + " set ")
+	s.WriteString("update ")
+	s.WriteString(String(a.query))
+	s.WriteString(" set ")
 	sep := ""
 	for i := range a.cols {
-		s.WriteString(sep + a.cols[i] + " = " + a.exprs[i].String())
+		s.WriteString(sep)
+		s.WriteString(a.cols[i])
+		s.WriteString(" = ")
+		s.WriteString(a.exprs[i].String())
 		sep = ", "
 	}
 	return s.String()

@@ -50,9 +50,9 @@ type Summarize struct {
 	summarizeApproach
 	wholeRow bool
 	state
-	unique   bool
-	hint     sumHint
-	th       *Thread
+	unique bool
+	hint   sumHint
+	th     *Thread
 }
 
 type summarizeApproach struct {
@@ -179,18 +179,22 @@ func (su *Summarize) String() string {
 func (su *Summarize) string2() string {
 	var s strings.Builder
 	if len(su.by) > 0 {
-		s.WriteString(" " + str.Join(", ", su.by) + ",")
+		s.WriteString(" ")
+		s.WriteString(str.Join(", ", su.by))
+		s.WriteString(",")
 	}
 	sep := " "
 	for i := range su.cols {
 		s.WriteString(sep)
 		sep = ", "
 		if su.cols[i] != defaultColName(su.ops[i], su.ons[i]) {
-			s.WriteString(su.cols[i] + " = ")
+			s.WriteString(su.cols[i])
+			s.WriteString(" = ")
 		}
 		s.WriteString(su.ops[i])
 		if su.ops[i] != "count" {
-			s.WriteString(" " + su.ons[i])
+			s.WriteString(" ")
+			s.WriteString(su.ons[i])
 		}
 	}
 	return s.String()
