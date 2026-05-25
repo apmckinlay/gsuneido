@@ -425,10 +425,12 @@ func Optimize(q Query, mode Mode, index []string, frac float64) (
 func optimize(q Query, mode Mode, index []string, frac float64) (
 	fixcost, varcost Cost, approach any) {
 	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
+	if !set.Subset(q.Columns(), index) {
+		return impossible, impossible, nil
+	}
 
-	// short circuit on empty index
-	// Note: this condition should match SetApproach
-	if len(index) == 0 || fastSingle(q, index) || q.Fixed().All(index) {
+	// this condition must match SetApproach
+	if len(index) == 0 || q.fastSingle() || q.Fixed().All(index) {
 		index = nil
 	}
 	if fixcost, varcost, app := q.cacheGet(index, frac); varcost >= 0 {
@@ -438,10 +440,6 @@ func optimize(q Query, mode Mode, index []string, frac float64) (
 	assert.That(fixcost >= 0 && varcost >= 0)
 	q.cacheAdd(index, frac, fixcost, varcost, app)
 	return fixcost, varcost, app
-}
-
-func fastSingle(q Query, index []string) bool {
-	return q.fastSingle() && set.Subset(q.Columns(), index)
 }
 
 // optTempIndex determines if a TempIndex is a benefit
@@ -457,10 +455,6 @@ func optTempIndex(q Query, mode Mode, index []string, frac float64) (
 		}
 	}
 	traceQO("optTempIndex", "----------------")
-	if !set.Subset(q.Columns(), index) {
-		traceQO("impossible index not a subset of columns")
-		return impossible, impossible, nil
-	}
 
 	indexedFixCost, indexedVarCost, indexedApp := q.optimize(mode, index, frac)
 	assert.That(indexedFixCost >= 0 && indexedVarCost >= 0)
@@ -637,9 +631,8 @@ var _ = AddInfo("query.tempindex", &tempIndexCount)
 // SetApproach finalizes the chosen approach.
 // It also adds temp indexes where required.
 func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
-	// short circuit on empty index
-	// Note: this condition should match Optimize
-	if len(index) == 0 || fastSingle(q, index) || q.Fixed().All(index) {
+	// this condition must match Optimize
+	if len(index) == 0 || q.fastSingle() || q.Fixed().All(index) {
 		index = nil
 	}
 	fixcost, varcost, approach := q.cacheGet(index, frac)

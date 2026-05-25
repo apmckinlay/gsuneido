@@ -72,7 +72,7 @@ func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
 
 // setApproach is only used by fuzz_test.go
 func (ti *TempIndex) setApproach(index []string, frac float64, app any, tran QueryTran) {
-	ti.source.setApproach(nil, frac, app, tran)
+	SetApproach(ti.source, nil, frac, tran)
 }
 
 // execution --------------------------------------------------------
