@@ -1095,7 +1095,7 @@ func TestOverIterFastPathTransition(t *testing.T) {
 	bt := b.Finish()
 	layer := &ixbuf.T{}
 	layer.Insert("f", uint64('f')|ixbuf.Update) // update "f" to same offset
-	layer.Insert("k", uint64('k'))               // new key past btree range
+	layer.Insert("k", uint64('k'))              // new key past btree range
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
 

@@ -28,13 +28,14 @@ import (
 
 // joinLike is common stuff for Join, LeftJoin, and Times
 type joinLike struct {
+	Query2
 	// sel2cols/vals are from an incoming Select and used by Get
 	sel2 Sels
-	Query2
 }
 
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
+	joinLike
 	qt          QueryTran
 	st          *SuTran
 	lookup      *lookupInfo
@@ -45,9 +46,8 @@ type joinBase struct {
 	row1        Row
 	row2        Row // nil when we need a new row1
 	lookupRow   Row
-	joinLike
-	joinType  joinType
-	optimized bool
+	joinType    joinType
+	optimized   bool
 }
 
 type Join struct {
@@ -648,8 +648,8 @@ func (jb *joinBase) equalBy(th *Thread, st *SuTran, row1, row2 Row) bool {
 // LeftJoin ---------------------------------------------------------
 
 type LeftJoin struct {
-	empty2 Row
 	joinBase
+	empty2 Row
 }
 
 func NewLeftJoin(src1, src2 Query, by []string, t QueryTran) *LeftJoin {

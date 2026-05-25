@@ -31,6 +31,7 @@ var _ = AddInfo("query.project.seq", &projSeqCount)
 var _ = AddInfo("query.project.map", &projMapCount)
 
 type Project struct {
+	Query1
 	results *mapType
 	st      *SuTran
 	columns []string
@@ -38,7 +39,6 @@ type Project struct {
 	prevRow Row
 	curRow  Row
 	projectApproach
-	Query1
 	state
 	unique        bool
 	indexed       bool

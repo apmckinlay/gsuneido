@@ -26,7 +26,7 @@ func TestVarName(t *testing.T) {
 	assert := assert.T(t).This
 	// Test without shared variables
 	ps := &ParamSpec{
-		Names:   []string{"a", "b", "c"},
+		Names:  []string{"a", "b", "c"},
 		Nstack: 3, // no shared vars
 	}
 	assert(ps.VarName(0)).Is("a")
@@ -37,7 +37,7 @@ func TestVarName(t *testing.T) {
 	// Names = [local0, local1, shared0, shared1]
 	// Nshared = 2 (locals are indices 0-1)
 	ps = &ParamSpec{
-		Names:   []string{"local0", "local1", "shared0", "shared1"},
+		Names:  []string{"local0", "local1", "shared0", "shared1"},
 		Nstack: 2,
 	}
 	assert(ps.VarName(0)).Is("local0")
@@ -50,14 +50,14 @@ func TestNshared(t *testing.T) {
 	assert := assert.T(t).This
 	// No shared variables
 	ps := &ParamSpec{
-		Names:   []string{"a", "b", "c"},
+		Names:  []string{"a", "b", "c"},
 		Nstack: 3,
 	}
 	assert(len(ps.Names[ps.Nstack:])).Is(0)
 
 	// With shared variables
 	ps = &ParamSpec{
-		Names:   []string{"local", "shared1", "shared2"},
+		Names:  []string{"local", "shared1", "shared2"},
 		Nstack: 1,
 	}
 	assert(ps.Nstack).Is(uint8(1))

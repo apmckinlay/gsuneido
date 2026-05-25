@@ -21,7 +21,7 @@ type HLL struct {
 	p         uint8
 	m         uint32
 	registers []uint8
-	seed         maphash.Seed
+	seed      maphash.Seed
 }
 
 // New creates a new HyperLogLog with default precision.

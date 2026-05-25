@@ -335,7 +335,6 @@ func TestSameKeyFieldOrder(t *testing.T) {
 	))
 }
 
-
 func TestUnion_StrictCompareDb(t *testing.T) {
 	defer func(sc bool) { options.StrictCompareDb = sc }(options.StrictCompareDb)
 	options.StrictCompareDb = true
@@ -344,12 +343,12 @@ func TestUnion_StrictCompareDb(t *testing.T) {
 	db.act("insert { k: 1, i: '' } into one")
 	db.adm("create two (k, j) key(k)")
 	db.act("insert { k: 1, j: 2 } into two")
-	
+
 	queryAll(db.Database, "(one union two) where i isnt '' where i > 0")
-	
+
 	queryAll(db.Database, "(one union two) where i isnt '' and i > 0")
-		
+
 	queryAll(db.Database, "(one union two) where Number?(i) where i > 0")
-	
+
 	queryAll(db.Database, "(one union two) where Number?(i) and i > 0")
 }

@@ -13,8 +13,8 @@ import (
 )
 
 type Times struct {
-	row1 Row
 	joinLike
+	row1 Row
 	state
 }
 

@@ -14,8 +14,8 @@ import (
 // It should not be used when doing Transform and Optimize
 // because it blocks identification of child queries.
 type View struct {
-	name string
 	Query1
+	name string
 }
 
 var _ Query = (*View)(nil)

@@ -17,6 +17,7 @@ import (
 )
 
 type Extend struct {
+	Query1
 	t        QueryTran
 	ctx      ast.RowContext
 	cols     []string
@@ -26,7 +27,6 @@ type Extend struct {
 	sels     Sels
 	srcFlds  []string
 	fwd      map[int]string
-	Query1
 	hasExprs bool
 	conflict bool
 }

@@ -78,7 +78,7 @@ func TestCodegen(t *testing.T) {
 	test("_dyn = 123", "Int 123, Store _dyn")
 	test("++_x", "One, Dyload _x, Pop, LoadStore _x AddEq")
 	test("_x += 1", "One, Dyload _x, Pop, LoadStore _x AddEq")
-	test("_x += 1; b = { }", 
+	test("_x += 1; b = { }",
 		"One, Dyload _x, Pop, LoadStore _x AddEq, Pop, Value b /* block */, Store b")
 	test("a = b = c", "Load c, Store b, Store a")
 	test("a = b; not a", "Load b, StorePop a, Load a, Not")

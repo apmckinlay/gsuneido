@@ -11,9 +11,9 @@ import (
 
 type Minus struct {
 	Compatible1
-	qt          QueryTran
-	prevFixed1  Fixed
-	prevFixed2  Fixed
+	qt         QueryTran
+	prevFixed1 Fixed
+	prevFixed2 Fixed
 }
 
 type minusApproach struct {

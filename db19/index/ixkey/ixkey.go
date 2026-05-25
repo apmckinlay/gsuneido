@@ -370,7 +370,7 @@ func Make(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) string {
 		return Cklen(row.GetRawVal(hdr, cols[0], th, st))
 	}
 	enc := Encoder{}
-	for _, col := range cols { 
+	for _, col := range cols {
 		enc.Add(row.GetRawVal(hdr, col, th, st))
 	}
 	return enc.String()

@@ -40,15 +40,15 @@ func NewTable(t QueryTran, name string) Query {
 }
 
 type Table struct {
-	tran    QueryTran
-	iter    index.IndexIter
-	info    *meta.Info
-	schema  *Schema
-	name    string
-	allKeys [][]string
-	index   []string // index that will be used to access the data
-	sels    Sels
 	queryBase
+	tran        QueryTran
+	iter        index.IndexIter
+	info        *meta.Info
+	schema      *Schema
+	name        string
+	allKeys     [][]string
+	index       []string // index that will be used to access the data
+	sels        Sels
 	iIndex      int
 	singleton   bool
 	indexEncode bool

@@ -162,19 +162,21 @@ func TestBtreeRangeFrac(t *testing.T) {
 // The test manually constructs such a tree with treeLevels=4.
 //
 // Structure (treeLevels=4):
-//   root -> [child0, child1]  (small root, triggers fattenRoot)
-//   child0 -> [t200, empty, empty, empty, empty]  (n_fat=10 after fattenRoot)
-//   child1 -> [empty, empty, empty, empty, empty]
-//   t200 -> [t3a, t3c, t3ef, empty, empty]  (n=5 at level 2)
-//   t3a -> [leaf_a(a1,a2,a3), leaf_b(b1)]
-//   t3c -> [leaf_c(c1), leaf_d(d1)]
-//   ...
+//
+//	root -> [child0, child1]  (small root, triggers fattenRoot)
+//	child0 -> [t200, empty, empty, empty, empty]  (n_fat=10 after fattenRoot)
+//	child1 -> [empty, empty, empty, empty, empty]
+//	t200 -> [t3a, t3c, t3ef, empty, empty]  (n=5 at level 2)
+//	t3a -> [leaf_a(a1,a2,a3), leaf_b(b1)]
+//	t3c -> [leaf_c(c1), leaf_d(d1)]
+//	...
 //
 // rangeFrac("b1", "c1"):
-//   fat root: orgPos=0, endPos=0 (both in t200) -> descend with atRoot=false
-//   level 2 (t200): orgPos=0, endPos=1 -> diverge with atRoot=false
-//   level+1=3 != treeLevels=4 -> close-children path (not leafRangeFrac)
-//   fanout=(8/10)^(1/3)=0.928 < n=5 -> result is negative
+//
+//	fat root: orgPos=0, endPos=0 (both in t200) -> descend with atRoot=false
+//	level 2 (t200): orgPos=0, endPos=1 -> diverge with atRoot=false
+//	level+1=3 != treeLevels=4 -> close-children path (not leafRangeFrac)
+//	fanout=(8/10)^(1/3)=0.928 < n=5 -> result is negative
 func TestBtreeRangeFracNonNegative(t *testing.T) {
 	hs := heapstor(64 * 1024)
 

@@ -31,6 +31,7 @@ var _ = AddInfo("query.where.singleton", &whereSingletonCount)
 // instead, construct a new one with NewWhere
 
 type Where struct {
+	Query1
 	t         QueryTran
 	colSels   map[string][]span // from NewWhere, result of perField
 	mergedBuf map[string][]span // reusable buffer for mergedPerCol
@@ -51,7 +52,6 @@ type Where struct {
 	singleSels Sels
 
 	idxSels []*idxSel // from optInit, result of perIndex
-	Query1
 	// idxSelPos is the current index in idxSel.ptrngs
 	idxSelPos int
 	// eof is set when advance returns false (past end or past beginning)
@@ -605,7 +605,7 @@ func (w *Where) optInit() {
 	}
 	// detect singleton when fixed covers a key (for non-whereTable sources).
 	// Required so bestLookupIndex doesn't pick an index with extra columns
-	// that sels can't cover at Lookup time 
+	// that sels can't cover at Lookup time
 	// (lookupIndexEligible allows any index when nColsUnfixed == 0).
 	if !w.singleton && !w.conflict && w.tbl == nil {
 		if slices.ContainsFunc(w.source.Keys(), w.fixed.All) {

@@ -11,12 +11,12 @@ import (
 )
 
 type SemiJoin struct {
+	Query2
 	qt         QueryTran
 	st         *SuTran
 	by         []string
 	prevFixed1 Fixed
 	prevFixed2 Fixed
-	Query2
 }
 
 type semiJoinApproach struct {

@@ -30,6 +30,7 @@ var _ = AddInfo("query.union.disjoint", &unionDisjointCount)
 var _ = AddInfo("query.union.merge-disjoint", &unionMergeDisjoint)
 
 type Union struct {
+	Compatible
 	src2get   func(*Thread, Dir) Row
 	src1get   func(*Thread, Dir) Row
 	mergeCols []string
@@ -37,11 +38,10 @@ type Union struct {
 	empty1    Row
 	empty2    Row
 	row1      Row
-	Compatible
-	strat   unionStrategy
-	src2    bool
-	prevDir Dir
-	src1    bool
+	strat     unionStrategy
+	src2      bool
+	prevDir   Dir
+	src1      bool
 	state
 }
 

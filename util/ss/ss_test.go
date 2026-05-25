@@ -88,4 +88,3 @@ func TestHeavyHitters(t *testing.T) {
 	total := 1000 + 200 + 200
 	assert.T(t).This(ss.Count()).Is(total)
 }
-

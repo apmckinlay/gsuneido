@@ -18,8 +18,8 @@ import (
 // schema implements virtual tables for tables, columns, indexes, and views
 
 type schemaTable struct {
-	tran QueryTran
 	cache
+	tran QueryTran
 	state
 	metrics
 }
@@ -97,9 +97,9 @@ func (st *schemaTable) Metrics() *metrics {
 //-------------------------------------------------------------------
 
 type Tables struct {
-	info []*meta.Info
 	schemaTable
-	i int
+	info []*meta.Info
+	i    int
 }
 
 func (*Tables) String() string {
@@ -209,8 +209,8 @@ func (ts *Tables) ensure() {
 // TablesLookup is used to optimize lookups on tables.
 // It is inserted by Where Transform.
 type TablesLookup struct {
-	table string
 	Tables
+	table string
 }
 
 func NewTablesLookup(tran QueryTran, table string) *TablesLookup {
@@ -256,11 +256,11 @@ func (tl *TablesLookup) Get(*Thread, Dir) Row {
 //-------------------------------------------------------------------
 
 type Columns struct {
-	schema []*meta.Schema
 	schemaTable
-	si    int
-	ci    int
-	nrows int
+	schema []*meta.Schema
+	si     int
+	ci     int
+	nrows  int
 }
 
 func (*Columns) String() string {
@@ -394,11 +394,11 @@ func (cs *Columns) ensure() {
 // note: indexes does not include tables, columns, indexes, views
 
 type Indexes struct {
-	schema []*meta.Schema
 	schemaTable
-	si    int
-	ci    int
-	nrows int
+	schema []*meta.Schema
+	si     int
+	ci     int
+	nrows  int
 }
 
 func (*Indexes) String() string {

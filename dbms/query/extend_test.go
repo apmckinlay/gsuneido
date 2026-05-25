@@ -41,12 +41,12 @@ func TestExtendSelect(t *testing.T) {
 	}
 	rt := db.NewReadTran()
 	ex := []string{"ex"}
-	
+
 	// where singleton
 	q := ParseQuery("cus where cnum=1 extend ex=cnum+1", rt, nil) // expression
 	q = SetupIdx(q, ReadMode, rt, ex)
 	assert.That(q.fastSingle())
-	
+
 	q.Select(Sels{{col: "ex", val: Pack(IntVal(0))}})
 	assert.This(q.Get(nil, Next)).Is(nil)
 	q.Select(nil)

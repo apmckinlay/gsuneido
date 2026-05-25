@@ -162,7 +162,7 @@ type Query interface {
 	// varcost should already incorporate frac
 	optimize(mode Mode, index []string, frac float64) (
 		fixcost, varcost Cost, approach any)
-		
+
 	// setApproach locks in the approach chosen by optimize.
 	// index and frac must match a previous optimize call
 	setApproach(index []string, frac float64, approach any, tran QueryTran)
@@ -599,7 +599,7 @@ func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 }
 
 // LookupCost returns the cost of performing nrows lookups on a query
-// using the specified index. frac is used for the optimize call 
+// using the specified index. frac is used for the optimize call
 // (temp index decision).
 func LookupCost(q Query, mode Mode, index []string, nrows int, frac float64) (
 	Cost, Cost) {
@@ -657,8 +657,8 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 // Query1 -----------------------------------------------------------
 
 type Query1 struct {
-	source Query
 	queryBase
+	source Query
 }
 
 func (q1 *Query1) Updateable() string {
@@ -700,9 +700,9 @@ func (q1 *Query1) Source() Query {
 // Query2 -----------------------------------------------------------
 
 type Query2 struct {
+	queryBase
 	source1 Query
 	source2 Query
-	queryBase
 }
 
 func (q2 *Query2) SetTran(t QueryTran) {

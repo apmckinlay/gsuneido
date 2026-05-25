@@ -19,6 +19,7 @@ import (
 // Keys are not constructed for the index or Lookup/Select
 // so there are no size limits.
 type TempIndex struct {
+	Query1
 	tran   QueryTran
 	iter   rowIter
 	st     *SuTran
@@ -26,7 +27,6 @@ type TempIndex struct {
 	order  []string
 	selOrg []string
 	selEnd []string
-	Query1
 	state
 }
 
