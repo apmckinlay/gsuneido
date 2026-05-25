@@ -797,7 +797,7 @@ func (u *Union) Lookup(th *Thread, sels Sels) Row {
 	u.nlooks++
 	u.Select(sels)
 	defer u.Select(nil) // clear select
-	return u.Get(th, Next)
+	return GetNext1(u, th)
 }
 
 func (u *Union) Simple(th *Thread) []Row {

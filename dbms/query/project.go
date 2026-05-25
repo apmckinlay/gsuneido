@@ -687,7 +687,7 @@ func (p *Project) Lookup(th *Thread, sels Sels) Row {
 	}
 	p.Select(sels)
 	defer p.Select(nil) // clear
-	return p.Get(th, Next)
+	return GetNext1(p, th)
 }
 
 func (p *Project) getLookupCost() Cost {

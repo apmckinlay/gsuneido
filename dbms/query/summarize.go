@@ -414,7 +414,7 @@ func (su *Summarize) Lookup(th *Thread, sels Sels) Row {
 	su.nlooks++
 	su.Select(sels)
 	defer su.Select(nil) // clear
-	return su.Get(th, Next)
+	return GetNext1(su, th)
 }
 
 func (su *Summarize) getLookupCost() Cost {

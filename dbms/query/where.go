@@ -947,7 +947,7 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 		// srcIndex == nil: fixed covers a key (singleton detected in optInit),
 		// so Optimize passed index=nil and setApproach left srcIndex nil.
 		w.Rewind()
-		row := w.Get(th, Next)
+		row := GetNext1(w, th)
 		if row == nil || !singletonFilter(w.header, row, sels) {
 			return nil
 		}

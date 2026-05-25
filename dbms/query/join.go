@@ -29,13 +29,12 @@ import (
 // joinLike is common stuff for Join, LeftJoin, and Times
 type joinLike struct {
 	Query2
-	// sel2cols/vals are from an incoming Select and used by Get
-	sel2 Sels
 }
 
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
 	joinLike
+	sel2 Sels // from an incoming Select, used by Get/filter2
 	qt          QueryTran
 	st          *SuTran
 	lookup      *lookupInfo
@@ -523,21 +522,18 @@ func (jn *Join) Select(sels Sels) {
 	jn.select1(sels)
 }
 
-// select1 splits the select, calls source1 Select, and sets sel2cols/vals.
-// It is used by Join, LeftJoin, and Times.
-func (jl *joinLike) select1(sels Sels) {
-	if sels == nil { // clear
-		jl.source1.Select(nil)
-		jl.source2.Select(nil)
-		jl.sel2 = nil
-		return
-	}
-	sel1, sel2 := jl.splitSelect(sels)
-	jl.source1.Select(sel1)
-	jl.sel2 = sel2
+// select1 splits the select, calls source1 Select, and sets sel2.
+// It is used by Join and LeftJoin.
+func (jb *joinBase) select1(sels Sels) {
+	sel1, sel2 := jb.splitSelect(sels)
+	jb.source1.Select(sel1)
+	jb.sel2 = sel2
 }
 
 func (jl *joinLike) splitSelect(sels Sels) (sel1, sel2 Sels) {
+	if sels == nil {
+		return nil, nil
+	}
 	columns1 := jl.source1.Columns()
 	columns2 := jl.source2.Columns()
 	for _, sel := range sels {
@@ -560,11 +556,7 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 		jn.source1.Select(sel1)
 		defer jn.Select(nil)
 		jn.sel2 = sel2
-		x := jn.Get(th, Next)
-		// if x != nil { // verify unique
-		// 	assert.That(jn.Get(th, Next) == nil)
-		// }
-		return x
+		return GetNext1(jn, th)
 	}
 	row1 := jn.source1.Lookup(th, sel1)
 	if row1 == nil {
@@ -577,7 +569,7 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	} else {
 		jn.source2.Select(sel2)
 		defer jn.Select(nil)
-		row2 = jn.source2.Get(th, Next)
+		row2 = GetNext1(jn.source2, th)
 	}
 	if row2 == nil {
 		return nil

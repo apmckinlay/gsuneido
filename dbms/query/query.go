@@ -654,6 +654,16 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 	return q
 }
 
+// execution --------------------------------------------------------
+
+// GetNext1 is used when Lookup is implemented with Select+Get
+// to allow checking uniqueness for debugging
+func GetNext1(q Query, th *Thread) Row {
+	row := q.Get(th, Next)
+	// assert.That(row == nil || q.Get(th, Next) == nil)
+	return row
+}
+
 // Query1 -----------------------------------------------------------
 
 type Query1 struct {
