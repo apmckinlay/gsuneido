@@ -674,9 +674,7 @@ func (p *Project) Output(th *Thread, rec Record) {
 func (p *Project) Select(sels Sels) {
 	p.nsels++
 	p.source.Select(sels)
-	if p.strat == projMap {
-		p.indexed = false
-	}
+	p.indexed = false
 	p.rewind()
 }
 
