@@ -100,6 +100,9 @@ func SendErrorLog(dbms IDbms, sid string) {
 		}
 		dbms.Log(s)
 	}
+	if err = in.Err(); err != nil {
+		dbms.Log(fmt.Sprintf("PREV: ERROR %v", err))
+	}
 }
 
 func (ms *muxSession) Check(full bool) string {
