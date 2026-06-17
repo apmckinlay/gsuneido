@@ -247,7 +247,7 @@ func (d *suDatabaseGlobal) String() string {
 	return "Database /* builtin class */"
 }
 
-var _ = builtin(DoWithoutTriggers, "(tables, block)")
+var _ = builtin(DoWithoutTriggers, "(tables, block) :unknown")
 
 func DoWithoutTriggers(th *Thread, args []Value) Value {
 	dbms := th.Dbms()

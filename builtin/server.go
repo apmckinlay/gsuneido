@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 )
 
-var _ = builtin(ServerIP, "()")
+var _ = builtin(ServerIP, "() :string")
 
 func ServerIP() Value {
 	if options.Action == "client" {
@@ -19,14 +19,14 @@ func ServerIP() Value {
 	return EmptyStr
 }
 
-var _ = builtin(ServerPort, "()")
+var _ = builtin(ServerPort, "() :number")
 
 func ServerPort() Value {
 	n, _ := strconv.Atoi(options.Port)
 	return IntVal(n)
 }
 
-var _ = builtin(ServerQ, "()")
+var _ = builtin(ServerQ, "() :boolean")
 
 func ServerQ() Value {
 	return SuBool(options.Action == "server")

@@ -19,7 +19,7 @@ type suAgent struct {
 	callback Value
 }
 
-var _ = builtin(AiAgent, "(baseURL, apiKey, model, callback, prompt = '')")
+var _ = builtin(AiAgent, "(baseURL, apiKey, model, callback, prompt = '') :unknown")
 
 func AiAgent(th *Thread, args []Value) Value {
 	EnableSandbox()

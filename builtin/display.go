@@ -5,7 +5,7 @@ package builtin
 
 import . "github.com/apmckinlay/gsuneido/core"
 
-var _ = builtin(display, "(value, quotes=0)")
+var _ = builtin(display, "(value, quotes=0) :string")
 
 func display(th *Thread, args []Value) Value {
 	defer func(q int) { th.Quote = q }(th.Quote)

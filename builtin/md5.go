@@ -21,7 +21,7 @@ type suMd5 struct {
 	hash hash.Hash
 }
 
-var _ = builtin(Md5, "(@args)")
+var _ = builtin(Md5, "(@args) :string|unknown")
 
 func Md5(th *Thread, as *ArgSpec, args []Value) Value {
 	h := suMd5{hash: md5.New()}

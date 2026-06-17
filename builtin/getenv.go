@@ -9,7 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(Getenv, "(string)")
+var _ = builtin(Getenv, "(string) :string")
 
 func Getenv(arg Value) Value {
 	return SuStr(os.Getenv(ToStr(arg)))

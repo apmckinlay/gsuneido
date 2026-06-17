@@ -15,7 +15,7 @@ type suWaitGroup struct {
 	wg sync.WaitGroup
 }
 
-var _ = builtin(WaitGroup, "()")
+var _ = builtin(WaitGroup, "() :unknown")
 
 func WaitGroup() Value {
 	return &suWaitGroup{}

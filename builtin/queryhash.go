@@ -8,7 +8,7 @@ import (
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 )
 
-var _ = builtin(QueryHash, "(query, details=false)")
+var _ = builtin(QueryHash, "(query, details=false) :number|hash")
 
 func QueryHash(th *Thread, args []Value) Value {
 	query := ToStr(args[0]) + `

@@ -18,7 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-var _ = builtin(HttpServer, `(port, app, stop = false)`)
+var _ = builtin(HttpServer, `(port, app, stop = false) :void`)
 
 func HttpServer(th *Thread, args []Value) Value {
 	guardSandbox("HttpServer")

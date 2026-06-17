@@ -15,7 +15,7 @@ type suBloom struct {
 	data *bloom.Bloom
 }
 
-var _ = builtin(Bloom, "(n, p)")
+var _ = builtin(Bloom, "(n, p) :unknown")
 
 func Bloom(n, p Value) Value {
 	m, k := bloom.Calc(ToInt(n), ToDnum(p).ToFloat())

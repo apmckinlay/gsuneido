@@ -21,7 +21,7 @@ type suSha1 struct {
 // The implementations are very similar.
 // Modifications to any of them should probably be done to the others.
 
-var _ = builtin(Sha1, "(@args)")
+var _ = builtin(Sha1, "(@args) :unknown|string")
 
 func Sha1(th *Thread, as *ArgSpec, args []Value) Value {
 	h := suSha1{hash: sha1.New()}

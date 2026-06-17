@@ -16,7 +16,7 @@ func Run() int {
 	return 0
 }
 
-var _ = builtin(GetComputerName, "()")
+var _ = builtin(GetComputerName, "() :string")
 
 func GetComputerName() Value {
 	name, err := os.Hostname()

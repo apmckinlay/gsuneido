@@ -14,7 +14,7 @@ type suMutex struct {
 	mut MutexT
 }
 
-var _ = builtin(Mutex, "()")
+var _ = builtin(Mutex, "() :unknown")
 
 func Mutex() Value {
 	return &suMutex{mut: MakeMutexT()}

@@ -17,7 +17,7 @@ import (
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
 // pointer lParam) pointer
 var sendMessage = user32.MustFindProc("SendMessageA").Addr()
-var _ = builtin(SendMessage, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessage, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessage(a, b, c, d Value) Value {
 	rtn, _, _ := syscall.SyscallN(sendMessage,
@@ -30,7 +30,7 @@ func SendMessage(a, b, c, d Value) Value {
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
 // string text) pointer
-var _ = builtin(SendMessageText, "(hwnd, msg, wParam, text)")
+var _ = builtin(SendMessageText, "(hwnd, msg, wParam, text) :number")
 
 func SendMessageText(a, b, c, d Value) Value {
 	rtn, _, _ := syscall.SyscallN(sendMessage,
@@ -43,14 +43,14 @@ func SendMessageText(a, b, c, d Value) Value {
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
 // [in] string text) pointer
-var _ = builtin(SendMessageTextIn, "(hwnd, msg, wParam, text)")
+var _ = builtin(SendMessageTextIn, "(hwnd, msg, wParam, text) :number")
 
 func SendMessageTextIn(a, b, c, d Value) Value {
 	// can't pass direct pointer so same as SendMessageText (i.e. still copies)
 	return SendMessageText(a, b, c, d)
 }
 
-var _ = builtin(SendMessageTextOut, "(hwnd, msg, wParam = 0, bufsize = 1024)")
+var _ = builtin(SendMessageTextOut, "(hwnd, msg, wParam = 0, bufsize = 1024) :object")
 
 func SendMessageTextOut(a, b, c, d Value) Value {
 	n := uintptr(ToInt(d) + 1)
@@ -66,7 +66,7 @@ func SendMessageTextOut(a, b, c, d Value) Value {
 	return ob
 }
 
-var _ = builtin(SendMessagePoint, "(hwnd, msg, wParam, point)")
+var _ = builtin(SendMessagePoint, "(hwnd, msg, wParam, point) :number")
 
 func SendMessagePoint(a, b, c, d Value) Value {
 	pt := toPoint(d)
@@ -79,7 +79,7 @@ func SendMessagePoint(a, b, c, d Value) Value {
 	return intRet(rtn)
 }
 
-var _ = builtin(SendMessageRect, "(hwnd, msg, wParam, rect)")
+var _ = builtin(SendMessageRect, "(hwnd, msg, wParam, rect) :number")
 
 func SendMessageRect(a, b, c, d Value) Value {
 	r := toRect(d)
@@ -92,7 +92,7 @@ func SendMessageRect(a, b, c, d Value) Value {
 	return intRet(rtn)
 }
 
-var _ = builtin(SendMessageTcitem, "(hwnd, msg, wParam, tcitem)")
+var _ = builtin(SendMessageTcitem, "(hwnd, msg, wParam, tcitem) :number")
 
 func SendMessageTcitem(a, b, c, d Value) Value {
 	t := getZstr(d, "pszText")
@@ -134,7 +134,7 @@ type stTCItem struct {
 	_           [4]byte // padding
 }
 
-var _ = builtin(SendMessageTextRange, "(hwnd, msg, cpMin, cpMax, each = 1)")
+var _ = builtin(SendMessageTextRange, "(hwnd, msg, cpMin, cpMax, each = 1) :string")
 
 func SendMessageTextRange(a, b, c, d, e Value) Value {
 	cpMin := ToInt(c)
@@ -157,7 +157,7 @@ func SendMessageTextRange(a, b, c, d, e Value) Value {
 	return SuStr(hacks.BStoS(buf[:n]))
 }
 
-var _ = builtin(SendMessageTOOLINFO, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageTOOLINFO, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageTOOLINFO(a, b, c, d Value) Value {
 	ti := stToolInfo{
@@ -178,7 +178,7 @@ func SendMessageTOOLINFO(a, b, c, d Value) Value {
 	return intRet(rtn)
 }
 
-var _ = builtin(SendMessageTOOLINFO2, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageTOOLINFO2, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageTOOLINFO2(a, b, c, d Value) Value {
 	ti2 := stToolInfo2{
@@ -199,7 +199,7 @@ func SendMessageTOOLINFO2(a, b, c, d Value) Value {
 	return intRet(rtn)
 }
 
-var _ = builtin(SendMessageTreeItem, "(hwnd, msg, wParam, tvitem)")
+var _ = builtin(SendMessageTreeItem, "(hwnd, msg, wParam, tvitem) :number")
 
 func SendMessageTreeItem(a, b, c, d Value) Value {
 	n := uintptr(getInt32(d, "cchTextMax"))
@@ -244,7 +244,7 @@ func SendMessageTreeItem(a, b, c, d Value) Value {
 	return intRet(rtn)
 }
 
-var _ = builtin(SendMessageTreeSort, "(hwnd, msg, wParam, tvitem)")
+var _ = builtin(SendMessageTreeSort, "(hwnd, msg, wParam, tvitem) :boolean")
 
 func SendMessageTreeSort(th *Thread, args []Value) Value {
 	tvcb := stTVSortCB{
@@ -260,7 +260,7 @@ func SendMessageTreeSort(th *Thread, args []Value) Value {
 	return boolRet(rtn)
 }
 
-var _ = builtin(SendMessageTreeInsert, "(hwnd, msg, wParam, tvins)")
+var _ = builtin(SendMessageTreeInsert, "(hwnd, msg, wParam, tvins) :number")
 
 func SendMessageTreeInsert(a, b, c, d Value) Value {
 	tvins := stTVInsertStruct{
@@ -288,7 +288,7 @@ func SendMessageTreeInsert(a, b, c, d Value) Value {
 	return intRet(rtn)
 }
 
-var _ = builtin(SendMessageSBPART, "(hwnd, msg, wParam, sbpart)")
+var _ = builtin(SendMessageSBPART, "(hwnd, msg, wParam, sbpart) :number")
 
 func SendMessageSBPART(a, b, c, d Value) Value {
 	np := ToInt(c)
@@ -314,7 +314,7 @@ func SendMessageSBPART(a, b, c, d Value) Value {
 	return intRet(rtn)
 }
 
-var _ = builtin(SendMessageMSG, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageMSG, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageMSG(a, b, c, d Value) Value {
 	msg := stMsg{
@@ -333,7 +333,7 @@ func SendMessageMSG(a, b, c, d Value) Value {
 	return intRet(rtn)
 }
 
-var _ = builtin(SendMessageHditem, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageHditem, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageHditem(a, b, c, d Value) Value {
 	pszTextGiven := d.Get(nil, SuStr("pszText")) != nil
@@ -413,7 +413,7 @@ type stHdItem struct {
 	_          [4]byte // padding
 }
 
-var _ = builtin(SendMessageHDHITTESTINFO, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageHDHITTESTINFO, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageHDHITTESTINFO(a, b, c, d Value) Value {
 	ht := stHdHitTestInfo{
@@ -438,7 +438,7 @@ type stHdHitTestInfo struct {
 	iItem int32
 }
 
-var _ = builtin(SendMessageTreeHitTest, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageTreeHitTest, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageTreeHitTest(a, b, c, d Value) Value {
 	ht := stTVHitTestInfo{
@@ -463,7 +463,7 @@ type stTVHitTestInfo struct {
 	iItem HANDLE
 }
 
-var _ = builtin(SendMessageTabHitTest, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageTabHitTest, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageTabHitTest(a, b, c, d Value) Value {
 	ht := stTCHitTestInfo{
@@ -485,7 +485,7 @@ type stTCHitTestInfo struct {
 	flags int32
 }
 
-var _ = builtin(SendMessageListColumn, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageListColumn, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageListColumn(a, b, c, d Value) Value {
 	var lvc *stLVColumn
@@ -524,7 +524,7 @@ type stLVColumn struct {
 	_          [4]byte // padding
 }
 
-var _ = builtin(SendMessageListItem, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageListItem, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageListItem(a, b, c, d Value) Value {
 	li := toLVItem(d)
@@ -558,7 +558,7 @@ func toLVItem(ob Value) *stLVItem {
 const LVIF_TEXT = 1
 const LVM_ITEM = 4101
 
-var _ = builtin(SendMessageListItemOut, "(hwnd, iItem, iSubItem)")
+var _ = builtin(SendMessageListItemOut, "(hwnd, iItem, iSubItem) :string")
 
 func SendMessageListItemOut(a, b, c Value) Value {
 	const bufsize = 256
@@ -597,7 +597,7 @@ type stLVItem struct {
 	_          [4]byte // padding
 }
 
-var _ = builtin(SendMessageListColumnOrder, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageListColumnOrder, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageListColumnOrder(a, b, c, d Value) Value {
 	n := ToInt(c)
@@ -623,7 +623,7 @@ func SendMessageListColumnOrder(a, b, c, d Value) Value {
 	return intRet(rtn)
 }
 
-var _ = builtin(SendMessageLVHITTESTINFO, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageLVHITTESTINFO, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageLVHITTESTINFO(a, b, c, d Value) Value {
 	ht := stLVHitTestInfo{
@@ -651,7 +651,7 @@ type stLVHitTestInfo struct {
 	iGroup   int32
 }
 
-var _ = builtin(SendMessageSystemTime, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageSystemTime, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageSystemTime(a, b, c, d Value) Value {
 	st := toSystemTime(d)
@@ -702,7 +702,7 @@ type stSystemTime struct {
 
 const nSystemTime = unsafe.Sizeof(stSystemTime{})
 
-var _ = builtin(SendMessageSTRange, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageSTRange, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageSTRange(a, b, c, d Value) Value {
 	str := SystemTimeRange{
@@ -722,7 +722,7 @@ type SystemTimeRange struct {
 	max stSystemTime
 }
 
-var _ = builtin(SendMessageEDITBALLOONTIP, "(hwnd, msg, wParam, lParam)")
+var _ = builtin(SendMessageEDITBALLOONTIP, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageEDITBALLOONTIP(a, b, c, d Value) Value {
 	ebt := stEditBalloonTip{

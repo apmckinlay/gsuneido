@@ -38,7 +38,7 @@ type suFile struct {
 var nFile atomic.Int32
 var _ = AddInfo("builtin.nFile", &nFile)
 
-var _ = builtin(File, "(filename, mode='r', block=false)")
+var _ = builtin(File, "(filename, mode='r', block=false) :unknown")
 
 func File(th *Thread, args []Value) Value {
 	name := ToStr(args[0])

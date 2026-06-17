@@ -29,7 +29,7 @@ func (*suWebBrowser2) SetConcurrent() {
 	// ok since immutable (assuming the COM object is thread safe)
 }
 
-var _ = builtin(WebBrowser2, "(hwnd, dllPath, userDataFolder, cb)")
+var _ = builtin(WebBrowser2, "(hwnd, dllPath, userDataFolder, cb) :number|unknown")
 
 func WebBrowser2(th *Thread, args []Value) Value {
 	var iunk uintptr

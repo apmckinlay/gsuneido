@@ -9,7 +9,7 @@ import (
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 )
 
-var _ = builtin(QueryAlt, "(@args)")
+var _ = builtin(QueryAlt, "(@args) :object")
 
 func QueryAlt(th *Thread, as *ArgSpec, args []Value) Value {
 	query, _ := extractQuery(th, &queryParams, as, args)

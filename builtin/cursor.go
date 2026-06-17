@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(Cursor, "(@args)")
+var _ = builtin(Cursor, "(@args) :unknown")
 
 func Cursor(th *Thread, as *ArgSpec, args []Value) Value {
 	query, args := extractQuery(th, &queryBlockParams, as, args)

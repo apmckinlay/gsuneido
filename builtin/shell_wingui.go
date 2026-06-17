@@ -18,7 +18,7 @@ var shell32 = MustLoadDLL("shell32.dll")
 
 // dll void Shell32:DragAcceptFiles(pointer hWnd, bool fAccept)
 var dragAcceptFiles = shell32.MustFindProc("DragAcceptFiles").Addr()
-var _ = builtin(DragAcceptFiles, "(hWnd, fAccept)")
+var _ = builtin(DragAcceptFiles, "(hWnd, fAccept) :void")
 
 func DragAcceptFiles(a, b Value) Value {
 	syscall.SyscallN(dragAcceptFiles,
@@ -29,7 +29,7 @@ func DragAcceptFiles(a, b Value) Value {
 
 // dll bool Shell32:SHGetPathFromIDList(pointer pidl, string path)
 var shGetPathFromIDList = shell32.MustFindProc("SHGetPathFromIDListA").Addr()
-var _ = builtin(SHGetPathFromIDList, "(pidl)")
+var _ = builtin(SHGetPathFromIDList, "(pidl) :string")
 
 func SHGetPathFromIDList(a Value) Value {
 	var buf [MAX_PATH]byte
@@ -46,7 +46,7 @@ func SHGetPathFromIDList(a Value) Value {
 // pointer hDrop, long iFile, string lpszFile, long cch)
 var dragQueryFile = shell32.MustFindProc("DragQueryFile").Addr()
 
-var _ = builtin(DragQueryFile, "(hDrop, iFile)")
+var _ = builtin(DragQueryFile, "(hDrop, iFile) :string")
 
 func DragQueryFile(a, b Value) Value {
 	n, _, _ := syscall.SyscallN(dragQueryFile,
@@ -63,7 +63,7 @@ func DragQueryFile(a, b Value) Value {
 	return SuStr(hacks.BStoS(buf[:n]))
 }
 
-var _ = builtin(DragQueryFileCount, "(hDrop)")
+var _ = builtin(DragQueryFileCount, "(hDrop) :number")
 
 func DragQueryFileCount(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(dragQueryFile,
@@ -76,7 +76,7 @@ func DragQueryFileCount(a Value) Value {
 
 // dll bool Shell32:Shell_NotifyIcon(long dwMessage, NOTIFYICONDATA* lpdata)
 var shell_NotifyIcon = shell32.MustFindProc("Shell_NotifyIconA").Addr()
-var _ = builtin(Shell_NotifyIcon, "(dwMessage, lpdata)")
+var _ = builtin(Shell_NotifyIcon, "(dwMessage, lpdata) :boolean")
 
 func Shell_NotifyIcon(a, b Value) Value {
 	nid := stNotifyIconData{
@@ -122,7 +122,7 @@ const nNotifyIconData = unsafe.Sizeof(stNotifyIconData{})
 
 // dll bool Shell32:ShellExecuteEx(SHELLEXECUTEINFO* lpExecInfo)
 var shellExecuteEx = shell32.MustFindProc("ShellExecuteExA").Addr()
-var _ = builtin(ShellExecuteEx, "(lpExecInfo)")
+var _ = builtin(ShellExecuteEx, "(lpExecInfo) :boolean")
 
 func ShellExecuteEx(a Value) Value {
 	sei := stShellExecuteInfo{
@@ -171,7 +171,7 @@ const MAX_PATH = 260
 
 // dll pointer Shell32:SHBrowseForFolder(BROWSEINFO* lpbi)
 var sHBrowseForFolder = shell32.MustFindProc("SHBrowseForFolderA").Addr()
-var _ = builtin(SHBrowseForFolder, "(lpbi)")
+var _ = builtin(SHBrowseForFolder, "(lpbi) :number")
 
 func SHBrowseForFolder(th *Thread, args []Value) Value {
 	b := args[0]

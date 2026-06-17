@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
-var _ = builtin(Transaction, "(read=nil, update=nil, block=false)")
+var _ = builtin(Transaction, "(read=nil, update=nil, block=false) :unknown")
 
 func Transaction(th *Thread, args []Value) Value {
 	if (args[0] == nil) == (args[1] == nil) {

@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 )
 
-var _ = builtin(Trace, "(value, block = false)")
+var _ = builtin(Trace, "(value, block = false) :void")
 
 func Trace(th *Thread, args []Value) Value {
 	if s, ok := args[0].ToStr(); ok {

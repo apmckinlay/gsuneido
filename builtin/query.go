@@ -12,19 +12,19 @@ import (
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 )
 
-var _ = builtin(Query1, "(@args)")
+var _ = builtin(Query1, "(@args) :object")
 
 func Query1(th *Thread, args []Value) Value {
 	return queryOne(th, args[0], Only)
 }
 
-var _ = builtin(QueryFirst, "(@args)")
+var _ = builtin(QueryFirst, "(@args) :false|object")
 
 func QueryFirst(th *Thread, args []Value) Value {
 	return queryOne(th, args[0], Next)
 }
 
-var _ = builtin(QueryLast, "(@args)")
+var _ = builtin(QueryLast, "(@args) :false|object")
 
 func QueryLast(th *Thread, args []Value) Value {
 	return queryOne(th, args[0], Prev)
@@ -38,7 +38,7 @@ func queryOne(th *Thread, args Value, dir Dir) Value {
 	return SuRecordFromRow(row, hdr, table, nil) // no transaction
 }
 
-var _ = builtin(QueryEmptyQ, "(@args)")
+var _ = builtin(QueryEmptyQ, "(@args) :boolean")
 
 func QueryEmptyQ(th *Thread, args []Value) Value {
 	row, _, _ := th.Dbms().Get(th, args[0], Any)
@@ -163,7 +163,7 @@ func query_Tree(this Value) Value {
 	return this.(ISuQueryCursor).Tree()
 }
 
-var _ = builtin(formatQuery, "(query)")
+var _ = builtin(formatQuery, "(query) :string")
 
 func formatQuery(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {

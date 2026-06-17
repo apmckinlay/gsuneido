@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-var _ = builtin(global, "(name)")
+var _ = builtin(global, "(name) :unknown")
 
 func global(th *Thread, args []Value) Value {
 	s := ToStr(args[0])

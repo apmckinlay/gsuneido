@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 )
 
-var _ = builtin(record, "(@args)")
+var _ = builtin(record, "(@args) :object")
 
 func record(arg Value) Value {
 	return SuRecordFromObject(arg.(*SuObject))

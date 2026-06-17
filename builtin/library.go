@@ -19,7 +19,7 @@ func Libraries(th *Thread, args []Value) Value {
 	return &ob
 }
 
-var _ = builtin(Use, "(library)")
+var _ = builtin(Use, "(library) :boolean")
 
 func Use(th *Thread, args []Value) Value {
 	if !th.Dbms().Use(ToStr(args[0])) {
@@ -29,14 +29,14 @@ func Use(th *Thread, args []Value) Value {
 	return True
 }
 
-var _ = builtin(Unuse, "(library)")
+var _ = builtin(Unuse, "(library) :boolean")
 
 func Unuse(th *Thread, args []Value) Value {
 	Global.UnloadAll()
 	return SuBool(th.Dbms().Unuse(ToStr(args[0])))
 }
 
-var _ = builtin(Unload, "(name = false)")
+var _ = builtin(Unload, "(name = false) :void")
 
 func Unload(arg Value) Value {
 	if arg == False {
@@ -47,14 +47,14 @@ func Unload(arg Value) Value {
 	return nil
 }
 
-var _ = builtin(LibraryOverride, "(lib, name, text='')")
+var _ = builtin(LibraryOverride, "(lib, name, text='') :void")
 
 func LibraryOverride(lib, name, text Value) Value {
 	LibraryOverrides.Put(ToStr(lib), ToStr(name), ToStr(text))
 	return nil
 }
 
-var _ = builtin(LibraryOverrideClear, "()")
+var _ = builtin(LibraryOverrideClear, "() :void")
 
 func LibraryOverrideClear() Value {
 	LibraryOverrides.Clear()

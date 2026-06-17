@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 )
 
-var _ = builtin(CoverageEnable, "(enable)")
+var _ = builtin(CoverageEnable, "(enable) :void")
 
 func CoverageEnable(a Value) Value {
 	options.Coverage.Store(ToBool(a))

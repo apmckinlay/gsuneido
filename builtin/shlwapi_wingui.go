@@ -16,7 +16,7 @@ var shlwapi = MustLoadDLL("shlwapi.dll")
 
 // dll long SHCreateStreamOnFileA(string pszFile, int32 grfMode, POINTER* ppstm)
 var shCreateStreamOnFile = shlwapi.MustFindProc("SHCreateStreamOnFileA").Addr()
-var _ = builtin(SHCreateStreamOnFile, "(pszFile, grfMode, ppstm)")
+var _ = builtin(SHCreateStreamOnFile, "(pszFile, grfMode, ppstm) :number")
 
 func SHCreateStreamOnFile(a, b, c Value) Value {
 	var p uintptr

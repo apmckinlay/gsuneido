@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
-var _ = builtin(Number, "(value)")
+var _ = builtin(Number, "(value) :number")
 
 func Number(th *Thread, args []Value) Value {
 	val := args[0]
@@ -240,7 +240,7 @@ func fromFloat(f float64) Value {
 // Max and Min aren't specific to numbers,
 // but that's normally what they're used for
 
-var _ = builtin(Max, "(@args)")
+var _ = builtin(Max, "(@args) :unknown")
 
 func Max(_ *Thread, as *ArgSpec, args []Value) Value {
 	if as.Nargs == 0 {
@@ -275,7 +275,7 @@ func Max(_ *Thread, as *ArgSpec, args []Value) Value {
 	return max
 }
 
-var _ = builtin(Min, "(@args)")
+var _ = builtin(Min, "(@args) :unknown")
 
 func Min(_ *Thread, as *ArgSpec, args []Value) Value {
 	if as.Nargs == 0 {

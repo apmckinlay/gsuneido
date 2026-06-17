@@ -18,7 +18,7 @@ type suChannel struct {
 
 var sc_timeout = 10 * time.Second
 
-var _ = builtin(Channel, "(size = 4)")
+var _ = builtin(Channel, "(size = 4) :unknown")
 
 func Channel(size Value) Value {
 	return &suChannel{ch: make(chan Value, IfInt(size))}

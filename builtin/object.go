@@ -10,13 +10,13 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 )
 
-var _ = builtin(ConcurrentQ, "(value)")
+var _ = builtin(ConcurrentQ, "(value) :boolean")
 
 func ConcurrentQ(v Value) Value {
 	return IsConcurrent(v)
 }
 
-var _ = builtin(Object, "(@args)")
+var _ = builtin(Object, "(@args) :object")
 
 func Object(arg Value) Value {
 	return arg

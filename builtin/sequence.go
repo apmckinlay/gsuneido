@@ -9,7 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(Sequence, "(iter)")
+var _ = builtin(Sequence, "(iter) :sequence")
 
 func Sequence(th *Thread, args []Value) Value {
 	return NewSuSequence(&wrapIter{it: args[0], th: th})

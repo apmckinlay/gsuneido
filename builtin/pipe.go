@@ -11,7 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
-var _ = builtin(Pipe, "()")
+var _ = builtin(Pipe, "() :void")
 
 // Pipe is a thin wrapper around the Go io.Pipe
 func Pipe(th *Thread, _ []Value) Value {

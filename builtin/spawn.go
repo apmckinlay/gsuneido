@@ -14,7 +14,7 @@ import (
 
 var InheritHandles = false
 
-var _ = builtin(Spawn, "(@args)")
+var _ = builtin(Spawn, "(@args) :number")
 
 func Spawn(th *Thread, as *ArgSpec, rawargs []Value) Value {
 	guardSandbox("Spawn")

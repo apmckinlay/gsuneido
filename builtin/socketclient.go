@@ -25,7 +25,7 @@ var nSocketClient atomic.Int32
 var _ = AddInfo("builtin.nSocketClient", &nSocketClient)
 
 var _ = builtin(SocketClient,
-	"(ipaddress, port, timeout=60, timeoutConnect=0, block=false)")
+	"(ipaddress, port, timeout=60, timeoutConnect=0, block=false) :unknown")
 
 func SocketClient(th *Thread, args []Value) Value {
 	guardSandbox("SocketClient")

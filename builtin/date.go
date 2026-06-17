@@ -262,7 +262,7 @@ func dayOfWeek(x Value) int {
 	panic("usage: date.WeekDay(day name or number)")
 }
 
-var _ = builtin(UnixTime, "()")
+var _ = builtin(UnixTime, "() :number")
 
 func UnixTime() Value {
 	return IntVal(int(time.Now().Unix()))
