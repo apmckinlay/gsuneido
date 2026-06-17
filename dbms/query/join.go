@@ -34,7 +34,7 @@ type joinLike struct {
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
 	joinLike
-	sel2 Sels // from an incoming Select, used by Get/filter2
+	sel2        Sels // from an incoming Select, used by Get/filter2
 	qt          QueryTran
 	st          *SuTran
 	lookup      *lookupInfo

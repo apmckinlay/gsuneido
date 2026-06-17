@@ -192,8 +192,7 @@ func BuiltinTypeSignatures() []TypeSignature {
 	return slices.Clone(builtinTypeSignatures)
 }
 
-func appendBuiltinTypeSignature(kind string, prefix string, name string, sig string)  {
-	builtinTypeSignatures = append(builtinTypeSignatures, 
-		TypeSignature{Kind   : kind,Prefix : prefix,Name   : name,Sig    : sig})
+func appendBuiltinTypeSignature(kind string, prefix string, name string, sig string) {
+	builtinTypeSignatures = append(builtinTypeSignatures,
+		TypeSignature{Kind: kind, Prefix: prefix, Name: name, Sig: sig})
 }
-
