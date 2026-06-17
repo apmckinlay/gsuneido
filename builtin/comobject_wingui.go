@@ -48,13 +48,13 @@ func COMobject(arg Value) Value {
 
 var suComObjectMethods = methods("com")
 
-var _ = method(com_DispatchQ, "()")
+var _ = method(com_DispatchQ, "() :boolean")
 
 func com_DispatchQ(this Value) Value {
 	return SuBool(this.(*suCOMObject).idisp)
 }
 
-var _ = method(com_Release, "()")
+var _ = method(com_Release, "() :number")
 
 func com_Release(this Value) Value {
 	return IntVal(goc.Release(this.(*suCOMObject).ptr))

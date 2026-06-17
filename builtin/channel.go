@@ -45,7 +45,7 @@ func chan_Send(this, val Value) Value {
 	return nil
 }
 
-var _ = method(chan_Recv, "()")
+var _ = method(chan_Recv, "() :unknown")
 
 func chan_Recv(this Value) Value {
 	sc := this.(*suChannel)
@@ -63,7 +63,7 @@ func chan_Recv(this Value) Value {
 	}
 }
 
-var _ = method(chan_Recv2, "(channel)")
+var _ = method(chan_Recv2, "(channel) :object")
 
 func chan_Recv2(this, arg Value) Value {
 	sc := this.(*suChannel)

@@ -109,13 +109,13 @@ func toolapproval_Deny(this Value, text Value) Value {
 	return nil
 }
 
-var _ = method(toolapproval_Before, "()")
+var _ = method(toolapproval_Before, "() :string")
 
 func toolapproval_Before(this Value) Value {
 	return SuStr(this.(*suToolApproval).approval.Before)
 }
 
-var _ = method(toolapproval_After, "()")
+var _ = method(toolapproval_After, "() :string")
 
 func toolapproval_After(this Value) Value {
 	return SuStr(this.(*suToolApproval).approval.After)
@@ -162,7 +162,7 @@ func agent_LoadConversation(th *Thread, this Value, args []Value) Value {
 	return True
 }
 
-var _ = method(agent_Usage, "()")
+var _ = method(agent_Usage, "() :number")
 
 func agent_Usage(this Value) Value {
 	usage := this.(*suAgent).agent.LastUsage()
@@ -172,7 +172,7 @@ func agent_Usage(this Value) Value {
 	return IntVal(usage.TotalTokens)
 }
 
-var _ = method(agent_Cost, "()")
+var _ = method(agent_Cost, "() :number")
 
 func agent_Cost(this Value) Value {
 	return SuDnum{Dnum: dnum.FromFloat(this.(*suAgent).agent.TotalCost())}

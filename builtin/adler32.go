@@ -55,7 +55,7 @@ func adler32_Update(this, arg Value) Value {
 	return this
 }
 
-var _ = method(adler32_Value, "()")
+var _ = method(adler32_Value, "() :number")
 
 func adler32_Value(this Value) Value {
 	return this.(suAdler32).value()

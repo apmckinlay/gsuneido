@@ -15,19 +15,19 @@ import (
 
 var _ = exportMethods(&BaseMethods, "base")
 
-var _ = method(base_Base, "()")
+var _ = method(base_Base, "() :false|unknown")
 
 func base_Base(th *Thread, this Value, args []Value) Value {
 	return base(th, this, func(v Value, _ *MemBase) Value { return v })
 }
 
-var _ = method(base_Eval, "(@args)")
+var _ = method(base_Eval, "(@args) :unknown")
 
 func base_Eval(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return EvalAsMethod(th, as, this, args)
 }
 
-var _ = method(base_Eval2, "(@args)")
+var _ = method(base_Eval2, "(@args) :object")
 
 func base_Eval2(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := &SuObject{}
@@ -37,7 +37,7 @@ func base_Eval2(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return ob
 }
 
-var _ = method(base_GetDefault, "(member, block)")
+var _ = method(base_GetDefault, "(member, block) :unknown")
 
 func base_GetDefault(th *Thread, this Value, args []Value) Value {
 	if x := this.Get(th, args[0]); x != nil {
@@ -49,7 +49,7 @@ func base_GetDefault(th *Thread, this Value, args []Value) Value {
 	return args[1]
 }
 
-var _ = method(base_MemberQ, "(string)")
+var _ = method(base_MemberQ, "(string) :boolean")
 
 func base_MemberQ(th *Thread, this Value, arg []Value) Value {
 	m := ToStr(arg[0])
@@ -62,7 +62,7 @@ func base_MemberQ(th *Thread, this Value, arg []Value) Value {
 	return nilToFalse(result)
 }
 
-var _ = method(base_Members, "(all = false)")
+var _ = method(base_Members, "(all = false) :object")
 
 func base_Members(th *Thread, this Value, args []Value) Value {
 	if args[0] == True {
@@ -78,7 +78,7 @@ func base_Members(th *Thread, this Value, args []Value) Value {
 	return list
 }
 
-var _ = method(base_Size, "()")
+var _ = method(base_Size, "() :number")
 
 func base_Size(th *Thread, this Value, args []Value) Value {
 	return this.(Findable).Finder(th, func(_ Value, mb *MemBase) Value {
