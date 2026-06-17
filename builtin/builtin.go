@@ -83,7 +83,8 @@ func exportMethods(m *Methods, prefix string) any {
 // staticMethod adds to curMethods, like method,
 // but creates a standalone function like builtin
 func staticMethod(f any, p string) any {
-	_, name, meths := methodName(f)
+	prefix, name, meths := methodName(f)
+	appendBuiltinTypeSignature("static", prefix, name, p)
 	fn := builtinVal(name, f, p)
 	meths[name] = fn
 	return nil
@@ -92,7 +93,8 @@ func staticMethod(f any, p string) any {
 // method adds to curMethods, which is set by methods.
 // method function names must start with a prefix e.g. xyz_
 func method(f any, p string) any {
-	_, name, meths := methodName(f)
+	prefix, name, meths := methodName(f)
+	appendBuiltinTypeSignature("method", prefix, name, p)
 	ps := params(p)
 	ps.Name = name
 	switch f := f.(type) {
