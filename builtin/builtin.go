@@ -20,6 +20,7 @@ import (
 func builtin(f any, p string) any {
 	name := funcName(f)
 	name = str.Capitalize(name)
+	appendBuiltinTypeSignature("free", "", name, p)
 	Global.Builtin(name, builtinVal(name, f, p))
 	return nil
 }
@@ -82,7 +83,7 @@ func exportMethods(m *Methods, prefix string) any {
 // staticMethod adds to curMethods, like method,
 // but creates a standalone function like builtin
 func staticMethod(f any, p string) any {
-	name, meths := methodName(f)
+	_, name, meths := methodName(f)
 	fn := builtinVal(name, f, p)
 	meths[name] = fn
 	return nil
@@ -91,7 +92,7 @@ func staticMethod(f any, p string) any {
 // method adds to curMethods, which is set by methods.
 // method function names must start with a prefix e.g. xyz_
 func method(f any, p string) any {
-	name, meths := methodName(f)
+	_, name, meths := methodName(f)
 	ps := params(p)
 	ps.Name = name
 	switch f := f.(type) {
@@ -124,7 +125,7 @@ func method(f any, p string) any {
 	return nil
 }
 
-func methodName(f any) (string, Methods) {
+func methodName(f any) (string, string, Methods) {
 	fname := funcName(f)
 	prefix, name, _ := strings.Cut(fname, "_")
 	if name == "" {
@@ -137,7 +138,7 @@ func methodName(f any) (string, Methods) {
 	if _, ok := meths[name]; ok {
 		Fatal("duplicate method name:", fname)
 	}
-	return name, meths
+	return prefix, name, meths
 }
 
 func funcName(f any) string {
@@ -175,3 +176,22 @@ func (*staticClass[E]) SetConcurrent() {
 func methodList(m map[string]Value) Value {
 	return SuObjectOfStrs(slices.AppendSeq(make([]string, 0, len(m)), maps.Keys(m)))
 }
+
+type TypeSignature struct {
+	Kind   string
+	Prefix string
+	Name   string
+	Sig    string
+}
+
+var builtinTypeSignatures []TypeSignature
+
+func BuiltinTypeSignatures() []TypeSignature {
+	return slices.Clone(builtinTypeSignatures)
+}
+
+func appendBuiltinTypeSignature(kind string, prefix string, name string, sig string)  {
+	builtinTypeSignatures = append(builtinTypeSignatures, 
+		TypeSignature{Kind   : kind,Prefix : prefix,Name   : name,Sig    : sig})
+}
+
