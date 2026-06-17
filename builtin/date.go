@@ -125,13 +125,13 @@ var msFactor = dnum.FromStr(".001")
 
 var dateStaticMethods = methods("dateStatic")
 
-var _ = staticMethod(dateStatic_Begin, "()")
+var _ = staticMethod(dateStatic_Begin, "() :date")
 
 func dateStatic_Begin() Value {
 	return DateBegin
 }
 
-var _ = staticMethod(dateStatic_End, "()")
+var _ = staticMethod(dateStatic_End, "() :date")
 
 func dateStatic_End() Value {
 	return DateEnd
@@ -147,7 +147,7 @@ var date_members = methodList(dateStaticMethods)
 
 var _ = exportMethods(&DateMethods, "date")
 
-var _ = method(date_MinusDays, "(date)")
+var _ = method(date_MinusDays, "(date) :number")
 
 func date_MinusDays(this Value, val Value) Value {
 	t1 := toDate(this)
@@ -157,7 +157,7 @@ func date_MinusDays(this Value, val Value) Value {
 	panic("date.MinusDays requires date")
 }
 
-var _ = method(date_MinusSeconds, "(date)")
+var _ = method(date_MinusSeconds, "(date) :number")
 
 func date_MinusSeconds(this Value, val Value) Value {
 	t1 := toDate(this)
@@ -171,13 +171,13 @@ func date_MinusSeconds(this Value, val Value) Value {
 	panic("date.MinusSeconds requires date")
 }
 
-var _ = method(date_FormatEn, "(format)")
+var _ = method(date_FormatEn, "(format) :string")
 
 func date_FormatEn(this, arg Value) Value {
 	return SuStr(toDate(this).Format(ToStr(arg)))
 }
 
-var _ = method(date_GetLocalGMTBias, "()")
+var _ = method(date_GetLocalGMTBias, "() :number")
 
 func date_GetLocalGMTBias(this Value) Value {
 	_, offset := toDate(this).ToGoTime().Zone()
@@ -185,7 +185,7 @@ func date_GetLocalGMTBias(this Value) Value {
 }
 
 var _ = method(date_Plus, "(years=0, months=0, days=0, "+
-	"hours=0, minutes=0, seconds=0, milliseconds=0)")
+	"hours=0, minutes=0, seconds=0, milliseconds=0) :date")
 
 func date_Plus(th *Thread, this Value, args []Value) Value {
 	d := toDate(this).Plus(ToInt(args[0]), ToInt(args[1]),
@@ -198,50 +198,50 @@ func date_Plus(th *Thread, this Value, args []Value) Value {
 	return d
 }
 
-var _ = method(date_WeekDay, "(firstDay='Sun')")
+var _ = method(date_WeekDay, "(firstDay='Sun') :number")
 
 func date_WeekDay(this, arg Value) Value {
 	i := dayOfWeek(arg)
 	return IntVal(((toDate(this).WeekDay() - i) + 7) % 7)
 }
 
-var _ = method(date_Year, "()")
+var _ = method(date_Year, "() :number")
 
 func date_Year(this Value) Value {
 	return IntVal(toDate(this).Year())
 }
 
-var _ = method(date_Month, "()")
+var _ = method(date_Month, "() :number")
 
 func date_Month(this Value) Value {
 	return IntVal(toDate(this).Month())
 }
 
-var _ = method(date_Day, "()")
+var _ = method(date_Day, "() :number")
 
 func date_Day(this Value) Value {
 	return IntVal(toDate(this).Day())
 }
 
-var _ = method(date_Hour, "()")
+var _ = method(date_Hour, "() :number")
 
 func date_Hour(this Value) Value {
 	return IntVal(toDate(this).Hour())
 }
 
-var _ = method(date_Minute, "()")
+var _ = method(date_Minute, "() :number")
 
 func date_Minute(this Value) Value {
 	return IntVal(toDate(this).Minute())
 }
 
-var _ = method(date_Second, "()")
+var _ = method(date_Second, "() :number")
 
 func date_Second(this Value) Value {
 	return IntVal(toDate(this).Second())
 }
 
-var _ = method(date_Millisecond, "()")
+var _ = method(date_Millisecond, "() :number")
 
 func date_Millisecond(this Value) Value {
 	return IntVal(toDate(this).Millisecond())
