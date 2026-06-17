@@ -209,14 +209,14 @@ func TestQueryGet(t *testing.T) {
 		'saskatoon'	'i'	'intercon'
 		'vancouver'	'e'	'emerald'`)
 	test("hist",
-		"hist^(date)",
+		"hist^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		200	970101	'e'	'disk'
 		200	970102	'c'	'mouse'
 		300	970103	'e'	'pencil'`)
 	test("trans",
-		"trans^(item)",
+		"trans^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		150	970201	'c'	'eraser'
@@ -225,7 +225,7 @@ func TestQueryGet(t *testing.T) {
 
 	// rename
 	test("trans rename id to code, date to when",
-		"trans^(item) rename id to code, date to when",
+		"trans^(date,item,id) rename id to code, date to when",
 		`code	cost	item	when
 		'a'	100	'disk'	970101
 		'c'	150	'eraser'	970201
@@ -295,7 +295,7 @@ func TestQueryGet(t *testing.T) {
 		'saskatoon'	'a'	'axon'	'askatoon'
 		'saskatoon'	'i'	'intercon'	'askatoon'`)
 	test("trans minus hist sort id, cost",
-		"(trans^(item) minus(date,item,id) hist^(date,item,id)) tempindex(id,cost)",
+		"(trans^(date,item,id) minus(date,item,id) hist^(date,item,id)) tempindex(id,cost)",
 		`cost	date	id	item
 		150	970201	'c'	'eraser'
 		200	970101	'c'	'mouse'
@@ -317,13 +317,13 @@ func TestQueryGet(t *testing.T) {
 		'saskatoon'	'i'
 		'vancouver'	'e'`)
 	test("supplier project city",
-		"supplier^(city) project-seq city",
+		"supplier^(city,supplier) project-seq city",
 		`city
 		'calgary'
 		'saskatoon'
 		'vancouver'`)
 	test("trans project item",
-		"trans^(item) project-seq item",
+		"trans^(item,date,id) project-seq item",
 		`item
 		'disk'
 		'eraser'
@@ -337,14 +337,14 @@ func TestQueryGet(t *testing.T) {
 
 	// extend
 	test("trans extend newcost = cost * 1.1",
-		"trans^(item) extend newcost = cost * 1.1",
+		"trans^(date,item,id) extend newcost = cost * 1.1",
 		`cost	date	id	item	newcost
 		100	970101	'a'	'disk'	110
 		150	970201	'c'	'eraser'	165
 		200	960204	'e'	'mouse'	220
 		200	970101	'c'	'mouse'	220`)
 	test("trans extend x = cost * 1.1, y = x $ '*'",
-		"trans^(item) extend x = cost * 1.1, y = x $ '*'",
+		"trans^(date,item,id) extend x = cost * 1.1, y = x $ '*'",
 		`cost	date	id	item	x	y
 		100	970101	'a'	'disk'	110	'110*'
 		150	970201	'c'	'eraser'	165	'165*'
@@ -370,15 +370,15 @@ func TestQueryGet(t *testing.T) {
 
 	// minus
 	test("trans minus trans",
-		"trans^(item) minus(date,item,id) trans^(date,item,id)",
+		"trans^(date,item,id) minus(date,item,id) trans^(date,item,id)",
 		`cost	date	id	item`)
 	test("hist minus hist2",
-		"hist^(date) minus(date) hist2^(date)",
+		"hist^(date,item,id) minus(date) hist2^(date)",
 		`cost	date	id	item
 		200	970101	'e'	'disk'
 		200	970102	'c'	'mouse'`)
 	test("trans minus hist",
-		"trans^(item) minus(date,item,id) hist^(date,item,id)",
+		"trans^(date,item,id) minus(date,item,id) hist^(date,item,id)",
 		`cost	date	id	item
 		150	970201	'c'	'eraser'
 		200	960204	'e'	'mouse'
@@ -390,7 +390,7 @@ func TestQueryGet(t *testing.T) {
 		200	970101	'c'	'mouse'
 		150	970201	'c'	'eraser'`)
 	test("(trans minus trans) where item = 0",
-		"trans^(item) where item is 0 minus(date,item,id) "+
+		"trans^(date,item,id) where item is 0 minus(date,item,id) "+
 			"(trans^(date,item,id) where item is 0)",
 		`cost	date	id	item`)
 	test("inven minus (inven where item = 'mouse')",
@@ -401,23 +401,23 @@ func TestQueryGet(t *testing.T) {
 
 	// intersect
 	test("trans intersect trans",
-		"trans^(item) intersect(date,item,id) trans^(date,item,id)",
+		"trans^(date,item,id) intersect(date,item,id) trans^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		150	970201	'c'	'eraser'
 		200	960204	'e'	'mouse'
 		200	970101	'c'	'mouse'`)
 	test("trans intersect hist",
-		"trans^(item) intersect(date,item,id) hist^(date,item,id)",
+		"trans^(date,item,id) intersect(date,item,id) hist^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'`)
 	test("hist intersect hist2",
-		"hist^(date) intersect(date) hist2^(date)",
+		"hist2^(date) intersect(date,item,id) hist^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		300	970103	'e'	'pencil'`)
 	test("(hist intersect hist2) where cost = 100",
-		"hist^(date) where cost is 100 intersect(date) (hist2^(date) where cost is 100)",
+		"hist2^(date) where cost is 100 intersect(date,item,id) (hist^(date,item,id) where cost is 100)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'`)
 
@@ -531,18 +531,18 @@ func TestQueryGet(t *testing.T) {
 		'calgary'	'c'	'calac'
 		'saskatoon'	'a'	'axon'`)
 	test("trans join inven",
-		"inven^(item) join 1:n by(item) trans^(item)",
+		"inven^(item) join 1:n by(item) trans^(item,date,id)",
 		`cost	date	id	item	qty
 		100	970101	'a'	'disk'	5
 		200	960204	'e'	'mouse'	2
 		200	970101	'c'	'mouse'	2`)
 	test("inven semijoin trans",
-		"inven^(item) semijoin by(item) trans^(item)",
+		"inven^(item) semijoin by(item) trans^(item,date,id)",
 		`item	qty
 		'disk'	5
 		'mouse'	2`)
 	test("customer semijoin hist2",
-		"customer^(id) semijoin by(id) hist2^(id)",
+		"customer^(id) semijoin by(id) hist2^(id,date)",
 		`city	id	name
 		'saskatoon'	'a'	'axon'
 		'vancouver'	'e'	'emerald'`)
@@ -554,14 +554,14 @@ func TestQueryGet(t *testing.T) {
 		'saskatoon'	'i'	'intercon'	''
 		'vancouver'	'e'	'emerald'	''`)
 	test("inven leftjoin trans",
-		"inven^(item) leftjoin 1:n by(item) trans^(item)",
+		"inven^(item) leftjoin 1:n by(item) trans^(item,date,id)",
 		`cost	date	id	item	qty
 		''	''	''	'pencil'	7
 		100	970101	'a'	'disk'	5
 		200	960204	'e'	'mouse'	2
 		200	970101	'c'	'mouse'	2`)
 	test("customer leftjoin hist2",
-		"customer^(id) leftjoin 1:n by(id) hist2^(id)",
+		"customer^(id) leftjoin 1:n by(id) hist2^(id,date)",
 		`city	cost	date	id	item	name
 		'calgary'	''	''	'c'	''	'calac'
 		'saskatoon'	''	''	'i'	''	'intercon'
@@ -569,7 +569,7 @@ func TestQueryGet(t *testing.T) {
 		'vancouver'	200	970102	'e'	'disk'	'emerald'
 		'vancouver'	300	970103	'e'	'pencil'	'emerald'`)
 	test("hist join customer",
-		"hist^(date) join n:1 by(id) customer^(id)",
+		"hist^(date,item,id) join n:1 by(id) customer^(id)",
 		`city	cost	date	id	item	name
 		'calgary'	200	970102	'c'	'mouse'	'calac'
 		'saskatoon'	100	970101	'a'	'disk'	'axon'
@@ -647,7 +647,7 @@ func TestQueryGet(t *testing.T) {
 		`abbrev	cnum	name
 		'b'	2	'bill'`)
 	test("hist where date in (970101, 970102) and item < 'z'", // ranges
-		"hist^(date) where date in (970101, 970102) and item < 'z'",
+		"hist^(date,item,id) where date in (970101, 970102) and item < 'z'",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		200	970101	'e'	'disk'
@@ -666,7 +666,7 @@ func TestQueryGet(t *testing.T) {
 		`count
 		1000`)
 	test("hist summarize max date",
-		"hist^(date) summarize-idx max date",
+		"hist^(date,item,id) summarize-idx max date",
 		`max_date
 		970103`)
 	test("customer summarize max id",
@@ -674,20 +674,20 @@ func TestQueryGet(t *testing.T) {
 		`city	id	max_id	name
 		'saskatoon'	'i'	'i'	'intercon'`)
 	test("hist summarize item, total cost sort item",
-		"hist^(date) summarize-map item, total cost tempindex(item)",
+		"hist^(date,item,id) summarize-map item, total cost tempindex(item)",
 		`item		total_cost
 		'disk'		300
 		'mouse'		200
 		'pencil'	300`)
 	test("hist summarize item, total cost, max id, average cost sort item",
-		"hist^(date) summarize-map item, total cost, "+
+		"hist^(date,item,id) summarize-map item, total cost, "+
 			"average cost, max id tempindex(item)",
 		`average_cost	item	max_id	total_cost
 		150	'disk'	'e'	300
 		200	'mouse'	'c'	200
 		300	'pencil'	'e'	300`)
 	test("hist summarize item, total cost sort total_cost, item",
-		"hist^(date) summarize-map item, total cost "+
+		"hist^(date,item,id) summarize-map item, total cost "+
 			"tempindex(total_cost,item)",
 		`item		total_cost
 		'mouse'		200
@@ -698,12 +698,12 @@ func TestQueryGet(t *testing.T) {
 		`max_name
 		'intercon'`)
 	test("hist summarize min cost, average cost, max cost, sum = total cost",
-		"hist^(date) summarize-seq min cost, "+
+		"hist^(date,item,id) summarize-seq min cost, "+
 			"average cost, max cost, sum = total cost",
 		`average_cost	max_cost	min_cost	sum
 		200	300	100	800`)
 	test("hist summarize item, total cost, count sort item",
-		"hist^(date) summarize-map item, count, total cost tempindex(item)",
+		"hist^(date,item,id) summarize-map item, count, total cost tempindex(item)",
 		`count	item	total_cost
 		2	'disk'	300
 		1	'mouse'	200
@@ -713,19 +713,19 @@ func TestQueryGet(t *testing.T) {
 		`item	max_item	qty
 		'pencil'	'pencil'	7`)
 	test("hist summarize date, list id",
-		"hist^(date) summarize-seq date, list id",
+		"hist^(date,item,id) summarize-seq date, list id",
 		`date	list_id
 		970101	#('a', 'e')
 		970102	#('c')
 		970103	#('e')`)
 	test("hist summarize date, total cost sort total_cost",
-		"hist^(date) summarize-seq date, total cost tempindex(total_cost)",
+		"hist^(date,item,id) summarize-seq date, total cost tempindex(total_cost)",
 		`date	total_cost
         970102	200
         970101	300
         970103	300`)
 	test("hist summarize list id",
-		"hist^(date) summarize-seq list id",
+		"hist^(date,item,id) summarize-seq list id",
 		`list_id
 		#('a', 'c', 'e')`)
 	test("cus summarize max cnum sort name",
@@ -733,11 +733,11 @@ func TestQueryGet(t *testing.T) {
 		`abbrev	cnum	max_cnum	name
 		'd'	4	4	'dick'`)
 	test("supplier summarize min city",
-		"supplier^(city) summarize-idx min city",
+		"supplier^(city,supplier) summarize-idx min city",
 		`min_city
 		'calgary'`)
 	test("supplier summarize max city",
-		"supplier^(city) summarize-idx max city",
+		"supplier^(city,supplier) summarize-idx max city",
 		`max_city
 		'vancouver'`)
 	test("supplier summarize min city, max city",
@@ -745,7 +745,7 @@ func TestQueryGet(t *testing.T) {
 		`max_city	min_city
 		'vancouver'	'calgary'`)
 	test("hist summarize max cost",
-		"hist^(date) summarize-seq max cost",
+		"hist^(date,item,id) summarize-seq max cost",
 		`max_cost
 		300`)
 
@@ -764,9 +764,9 @@ func TestQueryGet(t *testing.T) {
 		'c'
 		'e'
 		'i'`)
-	test("(trans project item,date) union (trans project date, item)",
-		"trans^(date,item,id) project-seq item, date union-merge(item,date) "+
-			"(trans^(date,item,id) project-seq date, item)",
+	test("(trans project item, date) union (trans project date, item)",
+		"trans^(item,date,id) project-seq item, date union-merge(item,date) "+
+			"(trans^(item,date,id) project-seq date, item)",
 		`date	item
 		960204	'mouse'
 		970101	'disk'
@@ -781,10 +781,10 @@ func TestQueryGet(t *testing.T) {
 		1	'c'
 		1	'e'
 		1	'i'`)
-	test("(trans summarize item,date, count) union (trans summarize date,item, count)",
-		"trans^(date,item,id) summarize-seq item, date, count "+
+	test("(trans summarize item, date, count) union (trans summarize date,item, count)",
+		"trans^(item,date,id) summarize-seq item, date, count "+
 			"union-merge(item,date) "+
-			"(trans^(date,item,id) summarize-seq date, item, count)",
+			"(trans^(item,date,id) summarize-seq date, item, count)",
 		`count	date	item
 		1	960204	'mouse'
 		1	970101	'disk'
@@ -792,13 +792,13 @@ func TestQueryGet(t *testing.T) {
 		1	970201	'eraser'`)
 
 	test("(customer project id) join (hist project id)",
-		"hist^(date) project-map id join 1:1 by(id) (customer^(id) project-copy id)",
+		"hist^(date,item,id) project-map id join 1:1 by(id) (customer^(id) project-copy id)",
 		`id
 		'a'
 		'c'
 		'e'`)
 	test("(customer summarize id,count) join (hist summarize id,count) sort id",
-		"(hist^(date) summarize-map id, count join 1:1 by(id,count) "+
+		"(hist^(date,item,id) summarize-map id, count join 1:1 by(id,count) "+
 			"(customer^(id) summarize-seq id, count tempindex(id,count))) tempindex(id)",
 		`count	id
 		1	'a'

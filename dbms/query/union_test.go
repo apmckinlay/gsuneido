@@ -156,29 +156,29 @@ func TestBestMergeIndexes(t *testing.T) {
 		[]string{"a", "b"},
 		false)
 
-	// example from spec:
-	// required order(c,b)
-	// source1 key(a,c,b) index(c,b,a)
-	// source2 key(b,a,c) index(c,b,d,a)
+	// index2 has an extra field (d) between the order prefix and the key field (a),
+	// so it does not iterate in [c,b,a] order — source2 would be ordered by d within
+	// each (c,b) group, not by a. The merge cannot correctly detect duplicates.
+	// Both the order=[c,b] and nil-order variants must be impossible.
 	test([]string{"c", "b"},
 		[][]string{{"c", "b", "a"}},
 		[][]string{{"c", "b", "d", "a"}},
 		[][]string{{"a", "c", "b"}},
 		[][]string{{"b", "a", "c"}},
-		[]string{"c", "b", "a"},
-		[]string{"c", "b", "d", "a"},
-		[]string{"a", "c", "b"},
-		false)
+		nil,
+		nil,
+		nil,
+		true)
 
 	test(nil,
 		[][]string{{"c", "b", "a"}},
 		[][]string{{"c", "b", "d", "a"}},
 		[][]string{{"a", "c", "b"}},
 		[][]string{{"b", "a", "c"}},
-		[]string{"c", "b", "a"},
-		[]string{"c", "b", "d", "a"},
-		[]string{"a", "c", "b"},
-		false)
+		nil,
+		nil,
+		nil,
+		true)
 
 	// no matching indexes
 	test([]string{"c", "b"},
@@ -190,6 +190,19 @@ func TestBestMergeIndexes(t *testing.T) {
 		nil,
 		nil,
 		true)
+
+	// required order has non-key prefix fields (e.g. [a,b] where key is [b]).
+	// keyIndex must be the physical index [a,b], not just the logical key [b],
+	// so that mergeCols matches the actual read order and compareSrc does not fail.
+	test([]string{"a", "b"},
+		[][]string{{"a", "b"}},
+		[][]string{{"a", "b"}},
+		[][]string{{"b"}},
+		[][]string{{"b"}},
+		[]string{"a", "b"},
+		[]string{"a", "b"},
+		[]string{"a", "b"},
+		false)
 
 	// both sources have empty keys - don't need order
 	test([]string{"x"},
@@ -322,7 +335,6 @@ func TestSameKeyFieldOrder(t *testing.T) {
 	))
 }
 
-
 func TestUnion_StrictCompareDb(t *testing.T) {
 	defer func(sc bool) { options.StrictCompareDb = sc }(options.StrictCompareDb)
 	options.StrictCompareDb = true
@@ -331,12 +343,12 @@ func TestUnion_StrictCompareDb(t *testing.T) {
 	db.act("insert { k: 1, i: '' } into one")
 	db.adm("create two (k, j) key(k)")
 	db.act("insert { k: 1, j: 2 } into two")
-	
+
 	queryAll(db.Database, "(one union two) where i isnt '' where i > 0")
-	
+
 	queryAll(db.Database, "(one union two) where i isnt '' and i > 0")
-		
+
 	queryAll(db.Database, "(one union two) where Number?(i) where i > 0")
-	
+
 	queryAll(db.Database, "(one union two) where Number?(i) and i > 0")
 }

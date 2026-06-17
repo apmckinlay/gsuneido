@@ -56,7 +56,7 @@ func testDb() *db19.Database {
 	db.act("insert {id: 'e', name: 'emerald', city: 'vancouver'} into customer")
 	db.act("insert {id: 'i', name: 'intercon', city: 'saskatoon'} into customer")
 
-	db.adm("create hist (date, item, id, cost) index(date) key(date,item,id)")
+	db.adm("create hist (date, item, id, cost) key(date,item,id) index(date)")
 	db.act("insert{date: 970101, item: 'disk', id: 'a', cost: 100} into hist")
 	db.act("insert{date: 970101, item: 'disk', id: 'e', cost: 200} into hist")
 	db.act("insert{date: 970102, item: 'mouse', id: 'c', cost: 200} into hist")
@@ -67,7 +67,7 @@ func testDb() *db19.Database {
 	db.act("insert{date: 970102, item: 'disk', id: 'e', cost: 200} into hist2")
 	db.act("insert{date: 970103, item: 'pencil', id: 'e', cost: 300} into hist2")
 
-	db.adm("create trans (item, id, cost, date) index(item) key(date,item,id)")
+	db.adm("create trans (item, id, cost, date) key(date,item,id) index(item)")
 	db.act("insert{item: 'mouse', id: 'e', cost: 200, date: 960204} into trans")
 	db.act("insert{item: 'disk', id: 'a', cost: 100, date: 970101} into trans")
 	db.act("insert{item: 'mouse', id: 'c', cost: 200, date: 970101} into trans")

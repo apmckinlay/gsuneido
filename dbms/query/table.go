@@ -40,15 +40,15 @@ func NewTable(t QueryTran, name string) Query {
 }
 
 type Table struct {
-	tran    QueryTran
-	iter    index.IndexIter
-	info    *meta.Info
-	schema  *Schema
-	name    string
-	allKeys [][]string
-	index   []string // index that will be used to access the data
-	sels    Sels
 	queryBase
+	tran        QueryTran
+	iter        index.IndexIter
+	info        *meta.Info
+	schema      *Schema
+	name        string
+	allKeys     [][]string
+	index       []string // index that will be used to access the data
+	sels        Sels
 	iIndex      int
 	singleton   bool
 	indexEncode bool
@@ -104,7 +104,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 	keys := make([][]string, 0, 1)
 	for i := range tbl.schema.Indexes {
 		ix := &tbl.schema.Indexes[i]
-		idxs = append(idxs, ix.Columns)
+		idxs = append(idxs, ix.Fields)
 		if ix.Mode == 'k' {
 			keys = append(keys, ix.Columns)
 			if len(ix.Columns) == 0 {
@@ -154,38 +154,45 @@ func (tbl *Table) SingleTable() bool {
 }
 
 const ( // ???
-	tableFast = 150
-	tableSlow = 300
+	tableFast  = 150
+	tableSlow  = 300
 	tableLarge = 4_000_000
+	colsBias   = 5
 )
 
 func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, any) {
-	if index == nil {
-		index = tbl.indexes[0]
-	} else if !tbl.singleton {
-		index = tbl.indexFor(index)
-		if index == nil {
+	idxi := 0
+	if len(index) > 0 && !tbl.singleton {
+		idxi = tbl.indexFor(index)
+		if idxi == -1 {
 			return impossible, impossible, nil
 		}
 	}
+	index = tbl.indexes[idxi]
+
+	// The first index is in physical order (after compact)
+	// so it is faster to read if the table is large.
 	rowCost := tableFast
 	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
 		rowCost = tableSlow
 	}
-	varcost := tbl.info.Nrows * rowCost // empirical
+	// add a slight bias against indexes with more columns
+	// this also makes optimization a little more deterministic
+	rowCost += len(index) * colsBias
+	varcost := tbl.info.Nrows * rowCost
 	trace.QueryOpt.Println("Table optimize", tbl.name, index, frac, "=",
 		Cost(frac*float64(varcost)))
 	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
 }
 
 // find an index that satisfies the required order
-func (tbl *Table) indexFor(order []string) []string {
-	for i, ix := range tbl.indexes {
-		if slc.HasPrefix(ix, order) {
-			return tbl.indexes[i]
+func (tbl *Table) indexFor(order []string) int {
+	for i, index := range tbl.indexes {
+		if slc.HasPrefix(index, order) {
+			return i
 		}
 	}
-	return nil // not found
+	return -1 // not found
 }
 
 func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) {
@@ -202,15 +209,6 @@ func (tbl *Table) SetIndex(index []string) {
 	IdxUse(tbl.name, tbl.index)
 }
 
-// IndexCols returns the columns available in index entries.
-// i.e. on non-unique indexes it includes the key fields added for uniqueness
-// WARNING: for unique indexes, these columns are NOT sufficient for lookup
-// because they exclude the key fields added when the index fields are empty
-func (tbl *Table) IndexCols(index []string) []string {
-	iIndex := tbl.indexi(index)
-	return tbl.schema.Indexes[iIndex].Fields
-}
-
 // IndexEncodes returns whether the index key is encoded
 // (multi-field or unique with Fields2)
 func (tbl *Table) IndexEncodes(index []string) bool {
@@ -219,7 +217,6 @@ func (tbl *Table) IndexEncodes(index []string) bool {
 }
 
 func (tbl *Table) indexi(index []string) int {
-	// WARNING: assumes tbl.indexes is parallel to schema.Indexes
 	i := slc.IndexFn(tbl.indexes, index, slices.Equal)
 	assert.That(i >= 0)
 	return i
@@ -444,6 +441,7 @@ func (tbl *Table) Simple(*Thread) []Row {
 		rows = append(rows, row)
 		assert.That(len(rows) < maxSimple)
 	}
+	tbl.iter.Rewind()
 	return rows
 }
 

@@ -31,6 +31,7 @@ var _ = AddInfo("query.project.seq", &projSeqCount)
 var _ = AddInfo("query.project.map", &projMapCount)
 
 type Project struct {
+	Query1
 	results *mapType
 	st      *SuTran
 	columns []string
@@ -38,9 +39,8 @@ type Project struct {
 	prevRow Row
 	curRow  Row
 	projectApproach
-	Query1
+	state
 	unique        bool
-	rewound       bool
 	indexed       bool
 	warned        bool
 	derivedWarned bool
@@ -94,17 +94,21 @@ func NewRemove(src Query, cols []string) *Project {
 	if len(proj) == 0 {
 		panic("remove: can't remove all columns")
 	}
-	p := newProject(src, proj)
+	p := newProject2(src, proj, false)
 	p.remove = cols
 	return p
 }
 
-// newProject is common to NewProject and NewRemove
-func newProject(src Query, cols []string) *Project {
+// newProject is used by Transform
+func newProject(src Query, cols []string) Query {
+	if len(cols) == 0 {
+		return &ProjectNone{source: src}
+	}
 	return newProject2(src, cols, false)
 }
+
 func newProject2(src Query, cols []string, includeDeps bool) *Project {
-	p := &Project{Query1: Query1{source: src}, rewound: true}
+	p := &Project{Query1: Query1{source: src}}
 	if hasKey(cols, src.Keys(), src.Fixed()) {
 		p.unique = true
 		if includeDeps {
@@ -196,6 +200,7 @@ func (p *Project) String() string {
 
 func (p *Project) SetTran(t QueryTran) {
 	p.st = MakeSuTran(t)
+	p.source.SetTran(t)
 }
 
 // projectKeys keeps keys that are subsets of cols.
@@ -294,7 +299,7 @@ func (p *Project) Transform() Query {
 		if p.splitable(&q.Compatible) {
 			return NewUnion(p.splitOver(&q.Query2)).Transform()
 		}
-	// Intersect and Minus are not eligible
+		// Intersect and Minus are not eligible
 	}
 	return p.transform(src)
 }
@@ -331,8 +336,8 @@ func (p *Project) transformRename(r *Rename) Query {
 	slices.Reverse(newFrom)
 	slices.Reverse(newTo)
 	newProj := r.renameRev(p.columns)
-	p = newProject(r.source, newProj)
-	r = NewRename(p, newFrom, newTo)
+	q := newProject(r.source, newProj)
+	r = NewRename(q, newFrom, newTo)
 	return r.Transform()
 }
 
@@ -368,8 +373,7 @@ func (p *Project) transformExtend(e *Extend) Query {
 		beforeExprs = append(beforeExprs, e.exprs[i])
 	}
 	if len(newProjCols) == 0 {
-		// the before extend is irrelevant with ProjectNone
-		return NewExtend(&ProjectNone{}, afterCols, afterExprs)
+		return NewExtend(&ProjectNone{source: e.source}, afterCols, afterExprs)
 	}
 	if slices.Equal(beforeCols, e.cols) {
 		return p.transform(e)
@@ -491,13 +495,16 @@ func (p *Project) Rewind() {
 }
 
 func (p *Project) rewind() {
-	p.rewound = true
+	p.state = rewound
 	p.curRow = nil
 	p.prevRow = nil
 }
 
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { p.tget += tsc.Read() - t }(tsc.Read())
+	if p.state == eof {
+		return nil
+	}
 	var row Row
 	switch p.strat {
 	case projCopy:
@@ -510,7 +517,10 @@ func (p *Project) Get(th *Thread, dir Dir) Row {
 		panic(assert.ShouldNotReachHere())
 	}
 	if row != nil {
+		p.state = within
 		p.ngets++
+	} else {
+		p.state = eof
 	}
 	return row
 }
@@ -527,9 +537,8 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 				p.curRow = nil
 				return nil
 			}
-			if p.rewound || p.curRow == nil ||
+			if p.state == rewound || p.curRow == nil ||
 				!p.header.EqualRows(row, p.curRow, th, p.st) {
-				p.rewound = false
 				p.prevRow = p.curRow
 				p.curRow = row
 				return row
@@ -539,9 +548,9 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// output the last of each group
 		// i.e. output when next record is different
 		// (to get the same records as NEXT)
-		if p.rewound || (p.prevRow == nil && p.prevDir == Next) {
+
+		if p.state == rewound || (p.prevRow == nil && p.prevDir == Next) {
 			p.prevRow = p.source.Get(th, dir)
-			p.rewound = false
 		}
 		p.prevDir = dir
 		for {
@@ -551,8 +560,13 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 			}
 			row := p.prevRow
 			p.prevRow = p.source.Get(th, dir)
-			if p.prevRow == nil ||
-				!p.header.EqualRows(row, p.prevRow, th, p.st) {
+			if p.prevRow == nil {
+				// source reached the front; rewind so Next direction works
+				p.source.Rewind()
+				p.curRow = row
+				return row
+			}
+			if !p.header.EqualRows(row, p.prevRow, th, p.st) {
 				// output the last row of a group
 				p.curRow = row
 				return row
@@ -569,8 +583,7 @@ type rowHash struct {
 func (p *Project) getMap(th *Thread, dir Dir) Row {
 	p.th = th
 	defer func() { p.th = nil }()
-	if p.rewound {
-		p.rewound = false
+	if p.state == rewound {
 		if p.results == nil {
 			hfn := func(k rowHash) uint64 { return k.hash }
 			eqfn := func(x, y rowHash) bool {
@@ -661,9 +674,7 @@ func (p *Project) Output(th *Thread, rec Record) {
 func (p *Project) Select(sels Sels) {
 	p.nsels++
 	p.source.Select(sels)
-	if p.strat == projMap {
-		p.indexed = false
-	}
+	p.indexed = false
 	p.rewind()
 }
 
@@ -674,7 +685,7 @@ func (p *Project) Lookup(th *Thread, sels Sels) Row {
 	}
 	p.Select(sels)
 	defer p.Select(nil) // clear
-	return p.Get(th, Next)
+	return GetNext1(p, th)
 }
 
 func (p *Project) getLookupCost() Cost {

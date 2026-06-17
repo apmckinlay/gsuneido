@@ -20,7 +20,7 @@ func Test_isIdentifier(t *testing.T) {
 	assert(IsIdentifier("Bar!")).Is(true)
 	assert(IsIdentifier("Bar?")).Is(true)
 	assert(IsIdentifier("Bar?x")).Is(false)
-	
+
 	assert(IsIdentifier("_foo")).Is(true)
 	assert(IsIdentifier("_Bar")).Is(true)
 	assert(IsIdentifier("_")).Is(true)

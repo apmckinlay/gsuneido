@@ -490,6 +490,9 @@ func (q queryLocal) Order() []string {
 	return q.Query.Order()
 }
 
+// Get does Rewind when it hits eof, so Next and Prev wrap around
+// SuQuery converts this to sticking at eof unidirectionally.
+// And the underlying OverIter just sticks at eof regardless of direction.
 func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
 	defer UseMainSuneido(th)()
 	row := q.Query.Get(th, dir)
@@ -522,47 +525,4 @@ type cursorLocal struct {
 func (q cursorLocal) Get(th *Thread, t ITran, dir Dir) (Row, string) {
 	q.Query.SetTran(t.(qry.QueryTran))
 	return q.queryLocal.Get(th, dir)
-}
-
-func rowToRecord(row Row, hdr *Header) (rec Record, fields []string) {
-	if len(row) == 1 {
-		assert.That(len(hdr.Fields) == 1)
-		return maybeSqueeze(row[0].Record, hdr)
-	}
-	var rb RecordBuilder
-	fields = hdr.GetFields()
-	for _, fld := range fields {
-		if fld == "-" {
-			rb.AddRaw("")
-		} else {
-			rb.AddRaw(row.GetRaw(hdr, fld))
-		}
-	}
-	return rb.Trim().Build(), fields
-}
-
-func maybeSqueeze(rec Record, hdr *Header) (Record, []string) {
-	fields := hdr.Fields[0]
-	const small = 16 * 1024 // ???
-	if len(rec) < small || !hdr.HasDeleted() {
-		return rec, fields
-	}
-	savings := 0
-	for i, fld := range fields {
-		if fld == "-" {
-			savings += len(rec.GetRaw(i))
-		}
-	}
-	if savings < len(rec)/3 { // ???
-		return rec, fields
-	}
-	var rb RecordBuilder
-	for i, fld := range fields {
-		if fld == "-" {
-			rb.AddRaw("")
-		} else {
-			rb.AddRaw(rec.GetRaw(i))
-		}
-	}
-	return rb.Trim().Build(), fields
 }

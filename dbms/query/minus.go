@@ -11,6 +11,9 @@ import (
 
 type Minus struct {
 	Compatible1
+	qt         QueryTran
+	prevFixed1 Fixed
+	prevFixed2 Fixed
 }
 
 type minusApproach struct {
@@ -18,8 +21,12 @@ type minusApproach struct {
 	frac2    float64
 }
 
-func NewMinus(src1, src2 Query) *Minus {
-	var m Minus
+func NewMinus(src1, src2 Query, t QueryTran) *Minus {
+	return newMinus(src1, src2, t, nil, nil)
+}
+
+func newMinus(src1, src2 Query, t QueryTran, prevFixed1, prevFixed2 Fixed) *Minus {
+	m := Minus{qt: t, prevFixed1: prevFixed1, prevFixed2: prevFixed2}
 	m.Compatible = *newCompatible(src1, src2)
 	m.header = src1.Header()
 	m.keys = src1.Keys()
@@ -59,8 +66,16 @@ func (m *Minus) Transform() Query {
 	if _, ok := src2.(*Nothing); ok {
 		return src1
 	}
+	fix1, fix2 := src1.Fixed(), src2.Fixed()
+	if !fix1.Equal(m.prevFixed1) || !fix2.Equal(m.prevFixed2) {
+		src2 = compatCopyFixed(fix1, fix2, src2, m.qt)
+		if src2 == nil {
+			return src1
+		}
+		m.prevFixed1, m.prevFixed2 = fix1, fix2
+	}
 	if src1 != m.source1 || src2 != m.source2 {
-		return NewMinus(src1, src2)
+		return newMinus(src1, src2, m.qt, m.prevFixed1, m.prevFixed2).Transform()
 	}
 	return m
 }

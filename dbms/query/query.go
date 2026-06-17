@@ -117,6 +117,8 @@ type Query interface {
 	// It does *not* clear any Select.
 	Rewind()
 
+	// Get returns the next or previous row, or nil if at end.
+	// It sticks at eof until Rewind.
 	Get(th *Thread, dir Dir) Row
 
 	// Lookup returns the row matching the given key value, or nil if not found.
@@ -160,6 +162,9 @@ type Query interface {
 	// varcost should already incorporate frac
 	optimize(mode Mode, index []string, frac float64) (
 		fixcost, varcost Cost, approach any)
+
+	// setApproach locks in the approach chosen by optimize.
+	// index and frac must match a previous optimize call
 	setApproach(index []string, frac float64, approach any, tran QueryTran)
 
 	// lookupCost returns the cost of one Lookup
@@ -208,6 +213,14 @@ type queryBase struct {
 	cache
 	metrics
 }
+
+type state byte
+
+const (
+	rewound state = iota
+	within
+	eof
+)
 
 type metrics struct {
 	fixcost  Cost
@@ -412,10 +425,12 @@ func Optimize(q Query, mode Mode, index []string, frac float64) (
 func optimize(q Query, mode Mode, index []string, frac float64) (
 	fixcost, varcost Cost, approach any) {
 	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
+	if !set.Subset(q.Columns(), index) {
+		return impossible, impossible, nil
+	}
 
-	// short circuit on empty index
-	// Note: this condition should match SetApproach
-	if len(index) == 0 || fastSingle(q, index) || q.Fixed().All(index) {
+	// this condition must match SetApproach
+	if len(index) == 0 || q.fastSingle() || q.Fixed().All(index) {
 		index = nil
 	}
 	if fixcost, varcost, app := q.cacheGet(index, frac); varcost >= 0 {
@@ -425,10 +440,6 @@ func optimize(q Query, mode Mode, index []string, frac float64) (
 	assert.That(fixcost >= 0 && varcost >= 0)
 	q.cacheAdd(index, frac, fixcost, varcost, app)
 	return fixcost, varcost, app
-}
-
-func fastSingle(q Query, index []string) bool {
-	return q.fastSingle() && set.Subset(q.Columns(), index)
 }
 
 // optTempIndex determines if a TempIndex is a benefit
@@ -444,10 +455,6 @@ func optTempIndex(q Query, mode Mode, index []string, frac float64) (
 		}
 	}
 	traceQO("optTempIndex", "----------------")
-	if !set.Subset(q.Columns(), index) {
-		traceQO("impossible index not a subset of columns")
-		return impossible, impossible, nil
-	}
 
 	indexedFixCost, indexedVarCost, indexedApp := q.optimize(mode, index, frac)
 	assert.That(indexedFixCost >= 0 && indexedVarCost >= 0)
@@ -592,7 +599,7 @@ func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 }
 
 // LookupCost returns the cost of performing nrows lookups on a query
-// using the specified index. frac is used for the optimize call 
+// using the specified index. frac is used for the optimize call
 // (temp index decision).
 func LookupCost(q Query, mode Mode, index []string, nrows int, frac float64) (
 	Cost, Cost) {
@@ -624,9 +631,8 @@ var _ = AddInfo("query.tempindex", &tempIndexCount)
 // SetApproach finalizes the chosen approach.
 // It also adds temp indexes where required.
 func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
-	// short circuit on empty index
-	// Note: this condition should match Optimize
-	if len(index) == 0 || fastSingle(q, index) || q.Fixed().All(index) {
+	// this condition must match Optimize
+	if len(index) == 0 || q.fastSingle() || q.Fixed().All(index) {
 		index = nil
 	}
 	fixcost, varcost, approach := q.cacheGet(index, frac)
@@ -648,11 +654,21 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 	return q
 }
 
+// execution --------------------------------------------------------
+
+// GetNext1 is used when Lookup is implemented with Select+Get
+// to allow checking uniqueness for debugging
+func GetNext1(q Query, th *Thread) Row {
+	row := q.Get(th, Next)
+	// assert.That(row == nil || q.Get(th, Next) == nil)
+	return row
+}
+
 // Query1 -----------------------------------------------------------
 
 type Query1 struct {
-	source Query
 	queryBase
+	source Query
 }
 
 func (q1 *Query1) Updateable() string {
@@ -694,9 +710,9 @@ func (q1 *Query1) Source() Query {
 // Query2 -----------------------------------------------------------
 
 type Query2 struct {
+	queryBase
 	source1 Query
 	source2 Query
-	queryBase
 }
 
 func (q2 *Query2) SetTran(t QueryTran) {

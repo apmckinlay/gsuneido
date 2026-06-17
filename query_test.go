@@ -24,7 +24,7 @@ package main
 // 		(ck, i1, i2, i3, i4, ik)
 // 		key (ik)
 // 		index (ck) in cus
-		
+
 // 	aln
 // 		(a1, a2, a3, a4, ak, ik)
 // 		key (ik,ak)

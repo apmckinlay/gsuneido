@@ -48,8 +48,7 @@ type state byte
 
 const (
 	rewound state = iota
-	front
-	back
+	within
 	eof
 )
 
@@ -57,10 +56,8 @@ func (s state) String() string {
 	switch s {
 	case rewound:
 		return "rewound"
-	case front:
-		return "front"
-	case back:
-		return "back"
+	case within:
+		return "within"
 	case eof:
 		return "eof"
 	default:
@@ -150,7 +147,7 @@ func (oi *OverIter) Next(t oiTran) {
 	modified := oi.update(t)
 	if oi.state == rewound {
 		oi.all(iterT.Next)
-		oi.state = front
+		oi.state = within
 		prevKey = oi.rng.Org
 		oi.fastIdx = -1
 	} else if oi.canFast(modified, next) && oi.fastNext(t, prevKey) {
@@ -332,7 +329,7 @@ func (oi *OverIter) Prev(t oiTran) {
 	modified := oi.update(t)
 	if oi.state == rewound {
 		oi.all(iterT.Prev)
-		oi.state = back
+		oi.state = within
 		prevKey = oi.rng.End
 		oi.fastIdx = -1
 	} else if oi.canFast(modified, prev) && oi.fastPrev(t, prevKey) {

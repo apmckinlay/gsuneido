@@ -132,6 +132,11 @@ func (q *SuQuery) Lookup(_ *Thread, method string) Value {
 	return QueryMethods[method]
 }
 
+// GetRec sticks at eof unidirectionally
+// i.e. if you hit eof going Next, additional Next will return False
+// or if you hit eof going Prev, additional Prev will return False
+// but Prev after hitting eof going Next will return the last record
+// and Next after hitting eof going Prev will return the first record
 func (q *SuQuery) GetRec(th *Thread, dir Dir) Value {
 	q.ckActive()
 	if dir == q.eof {

@@ -27,8 +27,9 @@ func TestOptimize(t *testing.T) {
 		assert.T(t).Msg(query).This(String(q)).Like(expected)
 	}
 	// trace.Set(int(trace.QueryOpt))
-	// test("table rename a to x, x to y sort y",
-	// 	"table^(a) rename a to x, x to y")
+	// test("customer leftjoin alias",
+	// 	"customer^(id) leftjoin 1:1 by(id) alias^(id)")
+
 	// t.SkipNow()
 
 	test("table",
@@ -51,26 +52,26 @@ func TestOptimize(t *testing.T) {
 	test("supplier",
 		"supplier^(supplier)")
 	test("supplier where city is 5",
-		"supplier^(city) where city is 5")
+		"supplier^(city,supplier) where city is 5")
 	test("supplier where supplier is 5",
 		"supplier^(supplier) where*1 supplier is 5")
 	test("supplier where name is 5",
 		"supplier^(supplier) where name is 5")
 	test("supplier where name is 5 and city is 5",
-		"supplier^(city) where name is 5 and city is 5")
+		"supplier^(city,supplier) where name is 5 and city is 5")
 	test("supplier where supplier is 3 and city is 5",
 		"supplier^(supplier) where*1 supplier is 3 and city is 5")
 	test("supplier where String?(city)",
-		"supplier^(city) where String?(city)")
+		"supplier^(city,supplier) where String?(city)")
 	test("supplier where false",
 		"nothing(supplier)")
 
 	test("supplier where Func(name)",
 		"supplier^(supplier) where Func(name)")
 	test("supplier where city is 5 and Func(name)",
-		"supplier^(city) where city is 5 and Func(name)") // previous bug
+		"supplier^(city,supplier) where city is 5 and Func(name)") // previous bug
 	test("supplier where Func(name) and city is 5",
-		"supplier^(city) where Func(name) and city is 5")
+		"supplier^(city,supplier) where Func(name) and city is 5")
 	test("supplier where Func(name).x",
 		"supplier^(supplier) where Func(name).x")
 
@@ -90,14 +91,14 @@ func TestOptimize(t *testing.T) {
 		"table^(a) extend x = 1")
 
 	test("hist intersect hist2",
-		"hist^(item) intersect(date) hist2^(date)")
+		"hist^(date,item,id) intersect(date) hist2^(date)")
 	test("hist2 intersect hist",
-		"hist^(item) intersect(date) hist2^(date)")
+		"hist^(date,item,id) intersect(date) hist2^(date)")
 
 	test("hist union hist2",
-		"hist^(item) union-lookup(date) hist2^(date)")
+		"hist^(date,item,id) union-lookup(date) hist2^(date)")
 	test("hist2 union hist",
-		"hist^(item) union-lookup(date) hist2^(date)")
+		"hist^(date,item,id) union-lookup(date) hist2^(date)")
 	test("hist union hist sort date",
 		"hist^(date,item,id) union-merge(date,item,id) hist^(date,item,id)")
 	test("table union table",
@@ -106,16 +107,16 @@ func TestOptimize(t *testing.T) {
 		"table^(a) where*1 a is 1 "+
 			"union-disjoint(a) (table^(a) where*1 a is 2)")
 	test("supplier where supplier > 1 sort city",
-		"supplier^(city) where supplier > 1")
+		"supplier^(city,supplier) where supplier > 1")
 	test("supplier where supplier > 9 sort city",
-		"supplier^(city) where supplier > 9")
+		"supplier^(city,supplier) where supplier > 9")
 
 	test("table project a",
 		"table^(a) project-copy a")
 	test("table project a sort a",
 		"table^(a) project-copy a")
 	test("abc project a",
-		"abc^(a) project-seq a")
+		"abc^(a,b) project-seq a")
 	test("comp project b",
 		"comp^(a,b,c) project-map b")
 	test("comp where a is 1 and b is 2 project c",
@@ -123,11 +124,11 @@ func TestOptimize(t *testing.T) {
 	test("customer project id, name",
 		"customer^(id) project-copy id, name")
 	test("trans project item",
-		"trans^(item) project-seq item")
+		"trans^(item,date,id) project-seq item")
 	test("trans project item,id,cost,date project item",
-		"trans^(item) project-seq item")
+		"trans^(item,date,id) project-seq item")
 	test("trans project item,id,cost project item,id project item",
-		"trans^(item) project-seq item")
+		"trans^(item,date,id) project-seq item")
 	test("hist project date,item",
 		"hist^(date,item,id) project-seq date, item")
 	test("customer project city",
@@ -142,23 +143,23 @@ func TestOptimize(t *testing.T) {
 	test("trans summarize total cost sort total_cost", // ignore sort
 		"trans^(date,item,id) summarize-seq total cost")
 	test("trans summarize item, total cost",
-		"trans^(item) summarize-seq item, total cost")
+		"trans^(item,date,id) summarize-seq item, total cost")
 	test("trans summarize item, total cost sort total_cost",
-		"trans^(item) summarize-seq item, total cost"+
+		"trans^(item,date,id) summarize-seq item, total cost"+
 			" tempindex(total_cost)")
 	test("supplier summarize max supplier", // key
 		"supplier^(supplier) summarize-idx* max supplier")
 	test("supplier summarize max supplier sort name", // ignore sort
 		"supplier^(supplier) summarize-idx* max supplier")
 	test("supplier summarize max city", // index
-		"supplier^(city) summarize-idx max city")
+		"supplier^(city,supplier) summarize-idx max city")
 	// hints
 	test("hist summarize id, total cost",
-		"hist^(item) summarize-map id, total cost")
+		"hist^(date,item,id) summarize-map id, total cost")
 	test("hist summarize/*small*/ id, total cost",
-		"hist^(item) summarize-map id, total cost")
+		"hist^(date,item,id) summarize-map id, total cost")
 	test("hist summarize/*large*/ id, total cost",
-		"hist^(item) tempindex(id) summarize-seq id, total cost")
+		"hist^(date,item,id) tempindex(id) summarize-seq id, total cost")
 	test("trans summarize id, count",
 		"trans^(date,item,id) tempindex(id) summarize-seq id, count")
 	test("trans summarize/*large*/ id, count",
@@ -174,11 +175,11 @@ func TestOptimize(t *testing.T) {
 		"nothing")
 
 	test("hist join customer",
-		"hist^(item) join n:1 by(id) customer^(id)")
+		"hist^(date,item,id) join n:1 by(id) customer^(id)")
 	test("customer join hist",
-		"hist^(item) join n:1 by(id) customer^(id)")
+		"hist^(date,item,id) join n:1 by(id) customer^(id)")
 	test("trans join inven",
-		"inven^(item) join 1:n by(item) trans^(item)")
+		"inven^(item) join 1:n by(item) trans^(item,date,id)")
 	test("task join co",
 		"task^(tnum) join 1:1 by(tnum) co^(tnum)")
 	test("customer join alias",
@@ -191,7 +192,7 @@ func TestOptimize(t *testing.T) {
 		"(task^(tnum) join 1:1 by(tnum) co^(tnum)) "+
 			"join n:1 by(cnum) cus^(cnum)")
 	test("trans join inven",
-		"inven^(item) join 1:n by(item) trans^(item)")
+		"inven^(item) join 1:n by(item) trans^(item,date,id)")
 
 	test("(trans union trans) join (inven union inven)",
 		"(trans^(date,item,id) union-merge(date,item,id) trans^(date,item,id)) "+
@@ -200,21 +201,21 @@ func TestOptimize(t *testing.T) {
 			"union-merge(item) (inven^(item) tempindex(item)))")
 
 	test("inven leftjoin trans",
-		"inven^(item) leftjoin 1:n by(item) trans^(item)")
+		"inven^(item) leftjoin 1:n by(item) trans^(item,date,id)")
 	test("customer leftjoin hist2",
-		"customer^(id) leftjoin 1:n by(id) hist2^(id)")
+		"customer^(id) leftjoin 1:n by(id) hist2^(id,date)")
 	test("customer leftjoin hist2 sort date",
-		"(customer^(id) leftjoin 1:n by(id) hist2^(id)) tempindex(date)")
+		"(customer^(id) leftjoin 1:n by(id) hist2^(id,date)) tempindex(date)")
 	test("customer leftjoin alias",
 		"customer^(id) leftjoin 1:1 by(id) alias^(id)")
 
 	test("inven semijoin trans",
-		"inven^(item) semijoin by(item) trans^(item)")
+		"inven^(item) semijoin by(item) trans^(item,date,id)")
 	test("customer semijoin alias",
 		"customer^(id) semijoin by(id) alias^(id)")
 
 	test("hist2 where date > 1 sort id",
-		"hist2^(id) where date > 1")
+		"hist2^(id,date) where date > 1")
 	test("hist2 where date is 1 sort id",
 		"hist2^(date) where*1 date is 1")
 
@@ -242,13 +243,13 @@ func TestOptimize(t *testing.T) {
 			"join n:n by(item) "+
 			"(inven^(item) union-merge(item) inven^(item))")
 	test("(inven join trans) union (inven join trans)",
-		"(inven^(item) join 1:n by(item) trans^(item)) "+
+		"(inven^(item) join 1:n by(item) trans^(item,date,id)) "+
 			"union-lookup(date,item,id) "+
 			"(trans^(date,item,id) join n:1 by(item) inven^(item))")
 	test("trans join customer",
 		"trans^(date,item,id) join n:1 by(id) customer^(id)")
 	test("trans join inven join customer",
-		"(inven^(item) join 1:n by(item) trans^(item)) "+
+		"(inven^(item) join 1:n by(item) trans^(item,date,id)) "+
 			"join n:1 by(id) customer^(id)")
 	assert.T(t).This(func() { test("table rename b to bb sort c", "") }).
 		Panics("invalid query")

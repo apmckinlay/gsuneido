@@ -6,9 +6,9 @@ package check_test
 import (
 	"testing"
 
+	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	_ "github.com/apmckinlay/gsuneido/builtin"
 )
 
 func TestReturnConsistency(t *testing.T) {

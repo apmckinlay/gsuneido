@@ -1047,7 +1047,7 @@ func (it *dumIter) Next() {
 			return
 		}
 		it.cur = it.d.keys[0]
-		it.state = front
+		it.state = within
 		return
 	}
 	for _, k := range it.d.keys {
@@ -1069,7 +1069,7 @@ func (it *dumIter) Prev() {
 			return
 		}
 		it.cur = it.d.keys[len(it.d.keys)-1]
-		it.state = back
+		it.state = within
 		return
 	}
 	for i := len(it.d.keys) - 1; i >= 0; i-- {
@@ -1095,7 +1095,7 @@ func TestOverIterFastPathTransition(t *testing.T) {
 	bt := b.Finish()
 	layer := &ixbuf.T{}
 	layer.Insert("f", uint64('f')|ixbuf.Update) // update "f" to same offset
-	layer.Insert("k", uint64('k'))               // new key past btree range
+	layer.Insert("k", uint64('k'))              // new key past btree range
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
 

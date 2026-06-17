@@ -52,7 +52,6 @@ func (m *QueryMock) Transform() Query {
 }
 
 func (*QueryMock) SetTran(QueryTran) {
-	panic("QueryMock.SetTran not implemented")
 }
 
 func (m *QueryMock) Order() []string {

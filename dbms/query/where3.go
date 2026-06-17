@@ -4,9 +4,10 @@
 package query
 
 import (
+	"fmt"
+	"log"
 	"maps"
 	"math"
-	"strings"
 
 	"slices"
 
@@ -16,41 +17,95 @@ import (
 	"github.com/apmckinlay/gsuneido/util/set"
 )
 
+const unknownFrac = .5
+
 // perIndex returns an idxSel for each usable index.
 // It is called by optInit (which is called on-demand by several methods)
 // Its input (perCol) is the result of perField (where2.go).
 // Its output is used by Nrows, bestIndex, and finally Get.
 // It sets w.singleton if the where selects a single row.
 func (w *Where) perIndex(perCol map[string][]span) []*idxSel {
+	var minPreFrac *idxSel
 	idxSels := make([]*idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
 	for i := range indexes {
 		schix := &indexes[i]
-		isel, singleton := w.buildIdxSel(schix.Columns, schix.Mode, perCol)
-		if singleton {
+		isel := w.buildIdxSel(schix.Fields, schix.Mode, perCol)
+		if isel.singleton {
 			w.singleton = true
-			isel.indexFrac = w.prefixFrac(isel)
 			return []*idxSel{isel}
 		}
-		if len(isel.prefixRanges) > 0 || isel.indexFilter < 1 {
-			isel.indexFrac = w.indexFrac(isel)
+		if len(isel.prefixRanges) > 0 || isel.indexFilter {
+			isel.prefixFrac = w.prefixFrac(isel)
+			if minPreFrac == nil || betterMinPre(isel, minPreFrac) {
+				minPreFrac = isel
+			}
 			idxSels = append(idxSels, isel)
+		}
+	}
+	if len(idxSels) == 0 {
+		w.wfrac = unknownFrac
+		return nil
+	}
+
+	// now we have minPreFrac we can calculate the other fractions
+	// if minPreFrac is prefix only then that is the overall selectivity
+	w.wfrac = minPreFrac.prefixFrac
+	if !minPreFrac.OnlyPrefix() {
+		w.wfrac *= unknownFrac
+	}
+
+	for _, isel := range idxSels {
+		if isel.OnlyPrefix() || isel.prefixFrac < w.wfrac {
+			isel.prefixFrac = w.wfrac
+		}
+		moreFrac := 1.0
+		if w.wfrac < isel.prefixFrac {
+			moreFrac = w.wfrac / isel.prefixFrac
+		}
+		isel.skipFrac, isel.indexFilterFrac, isel.dataFilterFrac =
+			splitFrac(moreFrac, isel.HasSkipScan(), isel.indexFilter, isel.dataFilter)
+
+		// all the isels should have the same overall fraction
+		// since a Where has the same result regardless of index used
+		product := isel.prefixFrac * isel.skipFrac * isel.indexFilterFrac * isel.dataFilterFrac
+		if !sameFrac(w.wfrac, product) {
+			log.Println("ERROR: Where perIndex frac mismatch")
+			for _, is := range idxSels {
+				fmt.Println("\tisel:", is, "=", fracStr(is.frac()))
+			}
 		}
 	}
 	return idxSels
 }
 
-func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) (*idxSel, bool) {
-	key := mode == 'k'
-	encode := !key || len(index) > 1
-	isel := idxSel{index: index, encoded: encode, mode: mode,
-		indexFilter: 1, dataFilter: 1}
+// betterMinPre returns true if a should replace b as minPreFrac.
+// OnlyPrefix always wins (btree-derived fraction is more reliable).
+// Within the same kind, lower prefixFrac wins.
+// Rationale: OnlyPrefix means it covers the entire Where expression.
+// This means it should be the most selective (within btree probe accuracy).
+// No other idxSel should be significantly better
+// unless there is an error somewhere.
+func betterMinPre(a, b *idxSel) bool {
+	if a.OnlyPrefix() != b.OnlyPrefix() {
+		return a.OnlyPrefix()
+	}
+	return a.prefixFrac < b.prefixFrac
+}
+
+func sameFrac(x, y float64) bool {
+	const epsilon = 1e-9
+	return math.Abs(x-y) < epsilon
+}
+
+func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) *idxSel {
+	encode := mode != 'k' || len(index) > 1
+	isel := idxSel{index: index, encoded: encode, mode: mode}
 
 	// Fast path: all prefix columns have single-value spans
 	if prefixLen, org, ok := allSingleValuePrefix(index, encode, perCol); ok {
 		isel.prefixLen = prefixLen
-		uniq := mode == 'u'
-		lookup := prefixLen == len(index) && (key || (uniq && org != ""))
+		lookup := prefixLen == len(index)
 		if lookup {
 			isel.prefixRanges = []pointRange{{Org: org}}
 		} else {
@@ -60,20 +115,19 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 		}
 		if prefixLen == len(index) {
 			if isel.prefixRanges[0].isPoint() {
-				return &isel, true
+				isel.singleton = true
+				return &isel
 			}
-			return &isel, false
+			return &isel
 		}
 	} else if idxSpans := indexSpans(index, perCol); len(idxSpans) > 0 {
 		// prefix range
-		uniq := mode == 'u'
 		exploded := explodeIndexSpans(idxSpans, [][]span{nil})
 		comp := makePointRanges(encode, exploded)
 		for i := range comp {
 			c := &comp[i]
 			if c.isPoint() {
-				lookup := len(exploded[i]) == len(index) &&
-					(key || (uniq && c.Org != ""))
+				lookup := len(exploded[i]) == len(index)
 				if !lookup {
 					assert.That(encode)
 					c.End = c.Org + ixkey.Sep + ixkey.Max
@@ -88,7 +142,7 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 	// skip scan range
 	if encode {
 		isel.skipStart, isel.skipLen, isel.skipRange =
-			skipScanSuffix(perCol, index, max(1, isel.prefixLen))
+			skipScanSuffix(perCol, isel.index, max(1, isel.prefixLen))
 		if isel.prefixLen == 0 && isel.skipLen > 0 {
 			isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
 		}
@@ -96,12 +150,12 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 
 	// more filters
 	isel.indexFilter, isel.dataFilter = w.moreFilters(index, &isel)
-	if len(isel.prefixRanges) == 0 && isel.indexFilter < 1 {
+	if len(isel.prefixRanges) == 0 && isel.indexFilter {
 		// filter-only index selection needs a range for execution
 		isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
 	}
 
-	return &isel, false
+	return &isel
 }
 
 // allSingleValuePrefix checks if all prefix columns have exactly one value span.
@@ -142,7 +196,7 @@ func (w *Where) recalcIdxSel(index []string, mode byte, sels Sels) (*idxSel, boo
 	if conflict {
 		return &idxSel{}, true
 	}
-	isel, _ := w.buildIdxSel(index, mode, merged)
+	isel := w.buildIdxSel(index, mode, merged)
 	return isel, false
 }
 
@@ -156,9 +210,8 @@ func (w *Where) mergedPerCol(index []string, sels Sels) (map[string][]span, bool
 		clear(w.mergedBuf)
 	}
 	maps.Copy(w.mergedBuf, w.colSels)
-	idxFields := w.tbl.IndexCols(index)
 	for _, sel := range sels {
-		if !slices.Contains(idxFields, sel.col) {
+		if !slices.Contains(index, sel.col) {
 			continue
 		}
 		eq := []span{valSpan(sel.val)}
@@ -326,56 +379,40 @@ func skipScanSuffix(perCol map[string][]span, idx []string, prefixLen int) (
 // moreFilters returns estimated selectivity fractions for expressions
 // not already handled by the prefix points/ranges and skip scan.
 // indexFilter covers expressions on index columns, dataFilter on non-index columns.
-func (w *Where) moreFilters(index []string, isel *idxSel) (float64, float64) {
-	fields := w.tbl.IndexCols(index)
-	unconstrained := fields[isel.prefixLen:]
+func (w *Where) moreFilters(index []string, isel *idxSel) (bool, bool) {
+	unconstrained := index[isel.prefixLen:]
 	if isel.skipStart > 0 {
-		unconstrained = fields[isel.prefixLen:isel.skipStart]
+		unconstrained = index[isel.prefixLen:isel.skipStart]
 		unconstrained = append(slices.Clip(unconstrained),
-			fields[isel.skipStart+isel.skipLen:]...)
+			index[isel.skipStart+isel.skipLen:]...)
 	}
-	indexFilter := 1.0
-	dataFilter := 1.0
+	indexFilter := false
+	dataFilter := false
 	for _, e := range w.expr.Exprs {
 		exprCols := e.Columns()
-		if len(exprCols) == 0 || !set.Subset(fields, exprCols) {
-			dataFilter = .5
+		if len(exprCols) == 0 || !set.Subset(index, exprCols) {
+			dataFilter = true
 		} else if !set.Disjoint(exprCols, unconstrained) {
 			// e.g. index(a,b) where a>1 and F(a,b)
 			// F(a,b) overlaps unconstrained (b)
 			// so we know it is in addition to the range/skip
-			indexFilter = .5
-		} else if _, sp := exprToSpans(e, fields); sp == nil {
+			indexFilter = true
+		} else if _, sp := exprToSpans(e, index); sp == nil {
 			// e.g. index(a) where a=1 and F(a)
 			// F(a) is not a span
 			// so we know it is in addition to the range/skip
-			indexFilter = .5
+			indexFilter = true
 		}
 	}
-	//TODO when applicable use more specific values like skipFrac
 	return indexFilter, dataFilter
 }
 
 //-------------------------------------------------------------------
 
-// indexFrac returns the index and data fractions for an idxSel
-func (w *Where) indexFrac(isel *idxSel) float64 {
-	p := 1.0
-	indexFrac := 1.0
-	if isel.prefixLen > 0 {
-		indexFrac = w.prefixFrac(isel)
-		p = .5
-	}
-	if isel.skipStart > 0 {
-		indexFrac *= math.Pow(w.skipFrac(isel), p)
-	}
-	return indexFrac
-}
-
 func (w *Where) prefixFrac(isel *idxSel) float64 {
 	iIndex := w.tbl.indexi(isel.index)
 	npoints := 0
-	var frac float64
+	frac := 0.0
 	for _, pr := range isel.prefixRanges {
 		if pr.isPoint() {
 			npoints++
@@ -394,24 +431,30 @@ func (w *Where) prefixFrac(isel *idxSel) float64 {
 	return frac
 }
 
-const ( // ???
-	pointFrac   = .01
-	rangeFrac   = .1
-	compareFrac = .33
-)
-
-func (w *Where) skipFrac(isel *idxSel) float64 {
-	// not pointRange.isPoint() because skipScanSuffix converts to range
-	if wasPoint(isel.skipRange) {
-		return pointFrac
-	} else if isel.skipRange.Org != ixkey.Min &&
-		isel.skipRange.End != ixkey.Max {
-		return rangeFrac
+func splitFrac(f float64, b1, b2, b3 bool) (float64, float64, float64) {
+	n := 0
+	if b1 {
+		n++
 	}
-	return compareFrac
-}
-
-func wasPoint(pr pointRange) bool {
-	return strings.HasSuffix(pr.End, ixkey.Sep+ixkey.Max) &&
-		strings.HasPrefix(pr.End, pr.Org)
+	if b2 {
+		n++
+	}
+	if b3 {
+		n++
+	}
+	if n == 0 {
+		return 1, 1, 1
+	}
+	v := math.Pow(f, 1.0/float64(n))
+	r := [...]float64{1, 1, 1}
+	if b1 {
+		r[0] = v
+	}
+	if b2 {
+		r[1] = v
+	}
+	if b3 {
+		r[2] = v
+	}
+	return r[0], r[1], r[2]
 }

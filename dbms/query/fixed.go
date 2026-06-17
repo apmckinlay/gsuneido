@@ -45,7 +45,8 @@ func (fixed Fixed) String() string {
 	s.WriteString("[")
 	sep := ""
 	for _, f := range fixed {
-		s.WriteString(sep + f.String())
+		s.WriteString(sep)
+		s.WriteString(f.String())
 		sep = ", "
 	}
 	return s.String() + "]"
@@ -53,10 +54,12 @@ func (fixed Fixed) String() string {
 
 func (f Fix) String() string {
 	var s strings.Builder
-	s.WriteString(f.col + "=(")
+	s.WriteString(f.col)
+	s.WriteString("=(")
 	sep := ""
 	for _, v := range f.values {
-		s.WriteString(sep + Unpack(v).String())
+		s.WriteString(sep)
+		s.WriteString(Unpack(v).String())
 		sep = ","
 	}
 	return s.String() + ")"
@@ -109,6 +112,7 @@ func (fixed Fixed) Single(col string) bool {
 	return false
 }
 
+// Single returns true if there is a single value
 func (f Fix) Single() bool {
 	return len(f.values) == 1
 }

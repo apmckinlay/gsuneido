@@ -244,7 +244,7 @@ func TestWhereLowerIndex(t *testing.T) {
 	rt := db.NewReadTran()
 	q := ParseQuery("t1 where b_lower! = '8'", rt, nil)
 	q, _, _ = Setup(q, ReadMode, rt)
-	assert.T(t).This(String(q)).Is("t1^(b_lower!) where b_lower! is '8'")
+	assert.T(t).This(String(q)).Is("t1^(b_lower!,a) where b_lower! is '8'")
 }
 
 func TestJoinBug(t *testing.T) {

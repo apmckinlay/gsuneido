@@ -24,7 +24,7 @@ func TestBuiltinString(t *testing.T) {
 
 func TestThrow(t *testing.T) {
 	assert.TestOnlyIndividually(t)
-	
+
 	f := compile.Constant(`function () {
         for ..100000
                try 

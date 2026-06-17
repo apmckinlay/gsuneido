@@ -14,12 +14,12 @@ import (
 
 // Compatible is shared by Intersect, Minus, and Union
 type Compatible struct {
+	Query2
 	st          *SuTran
 	disjoint    string
 	allCols     []string
 	keyIndex    []string
 	lookupCache lookupCache
-	Query2
 }
 
 // newCompatible sets disjoint
@@ -74,6 +74,7 @@ func (c *Compatible) String(s string) string {
 func (c *Compatible) SetTran(t QueryTran) {
 	c.st = MakeSuTran(t)
 	c.lookupCache.Reset()
+	c.Query2.SetTran(t)
 }
 
 // source2Has returns true if a row from source exists in source2.
@@ -98,7 +99,6 @@ func (c *Compatible) equal(th *Thread, row1, row2 Row) bool {
 	return EqualRows(c.source1.Header(), row1, c.source2.Header(), row2,
 		c.allCols, th, c.st)
 }
-
 
 //-------------------------------------------------------------------
 

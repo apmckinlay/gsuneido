@@ -17,6 +17,7 @@ import (
 )
 
 type Extend struct {
+	Query1
 	t        QueryTran
 	ctx      ast.RowContext
 	cols     []string
@@ -26,7 +27,6 @@ type Extend struct {
 	sels     Sels
 	srcFlds  []string
 	fwd      map[int]string
-	Query1
 	hasExprs bool
 	conflict bool
 }
@@ -121,10 +121,12 @@ func (e *Extend) String() string {
 	s.WriteString("extend ")
 	sep := ""
 	for i, c := range e.cols {
-		s.WriteString(sep + c)
+		s.WriteString(sep)
+		s.WriteString(c)
 		sep = ", "
 		if e.exprs[i] != nil {
-			s.WriteString(" = " + e.exprs[i].Echo())
+			s.WriteString(" = ")
+			s.WriteString(e.exprs[i].Echo())
 		}
 	}
 	return s.String()

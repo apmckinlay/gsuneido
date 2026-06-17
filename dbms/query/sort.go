@@ -15,8 +15,8 @@ import (
 )
 
 type Sort struct {
-	order []string
 	Query1
+	order     []string
 	reverse   bool
 	optimized bool
 }

@@ -31,19 +31,19 @@ var testSchemas = map[string]*Schema{
 		{Mode: 'k', Columns: []string{"supplier"}},
 		{Mode: 'i', Columns: []string{"city"}}}},
 	"hist": {Columns: []string{"date", "item", "id", "cost"}, Indexes: []Index{
-		{Mode: 'i', Columns: []string{"item"}},
-		{Mode: 'k', Columns: []string{"date", "item", "id"}}}},
+		{Mode: 'k', Columns: []string{"date", "item", "id"}},
+		{Mode: 'i', Columns: []string{"item"}}}},
 	"hist2": {Columns: []string{"date", "item", "id", "cost"}, Indexes: []Index{
-		{Mode: 'i', Columns: []string{"id"}},
-		{Mode: 'k', Columns: []string{"date"}}}},
+		{Mode: 'k', Columns: []string{"date"}},
+		{Mode: 'i', Columns: []string{"id"}}}},
 	"trans": {Columns: []string{"item", "id", "cost", "date"}, Indexes: []Index{
 		{Mode: 'k', Columns: []string{"date", "item", "id"}},
 		{Mode: 'i', Columns: []string{"item"}}}},
 	"inven": {Columns: []string{"item", "qty"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"item"}}}},
 	"abc": {Columns: []string{"a", "b", "c"}, Indexes: []Index{
-		{Mode: 'i', Columns: []string{"a"}},
 		{Mode: 'k', Columns: []string{"b"}},
+		{Mode: 'i', Columns: []string{"a"}},
 		{Mode: 'k', Columns: []string{"c"}}}},
 	"bcd": {Columns: []string{"b", "c", "d"}, Indexes: []Index{
 		{Mode: 'k', Columns: []string{"b"}},
@@ -62,8 +62,11 @@ var testSchemas = map[string]*Schema{
 	"withdeps": {Columns: []string{"a", "b", "b_deps", "c", "c_deps"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"a"}}}},
 	"comp2": {Columns: []string{"a", "b", "c"}, Indexes: []Index{
-		{Mode: 'i', Columns: []string{"b"}},
-		{Mode: 'k', Columns: []string{"a", "b", "c"}}}},
+		{Mode: 'k', Columns: []string{"a", "b", "c"}},
+		{Mode: 'i', Columns: []string{"b"}}}},
+	"ixftab": {Columns: []string{"a", "b", "c", "d"}, Indexes: []Index{
+		{Mode: 'k', Columns: []string{"a"}},
+		{Mode: 'i', Columns: []string{"b", "c"}}}},
 }
 
 func (testTran) GetSchema(table string) *Schema {
@@ -75,7 +78,7 @@ func (testTran) GetSchema(table string) *Schema {
 }
 
 var testInfo = map[string]*meta.Info{
-	"alias":   {Nrows: 10, Size: 1000},
+	"alias":   {Nrows: 20, Size: 1000},
 	"task":    {Nrows: 200, Size: 20000},
 	"columns": {Nrows: 1000, Size: 100000},
 	"trans":   {Nrows: 200000, Size: 100000},
@@ -165,7 +168,7 @@ func (t testTran) RangeFrac(table string, iIndex int, org, end string) float64 {
 
 	schema := t.GetSchema(table)
 	ix := schema.Indexes[iIndex]
-	decode := len(ix.Columns) > 1 || ix.Mode != 'k'
+	decode := len(ix.Fields) > 1 || ix.Mode != 'k'
 	orgPos := t.fracPos(org, decode)
 	endPos := t.fracPos(end, decode)
 	return endPos - orgPos

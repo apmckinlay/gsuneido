@@ -1,47 +1,45 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 package main
 
-// import (
-// 	"testing"
+import (
+	"fmt"
+	"testing"
 
-// 	"github.com/apmckinlay/gsuneido/builtin"
-// 	. "github.com/apmckinlay/gsuneido/core"
-// 	"github.com/apmckinlay/gsuneido/util/exit"
-// )
+	"github.com/apmckinlay/gsuneido/compile"
+	"github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
 
-// func TestBug(t *testing.T) {
-// 	if testing.Short() {
-// 		t.Skip("skipping test in short mode")
-// 	}
-// 	Libload = libload // dependency injection
-// 	mainThread = &Thread{}
-// 	mainThread.Name = "main"
-// 	mainThread.UIThread = true
-// 	MainThread = mainThread
-// 	builtin.UIThread = mainThread
-// 	exit.Add(func() { mainThread.Close() })
+func TestBug(t *testing.T) {
+	assert.TestOnlyIndividually(t)
 
-// 	openDbms()
-// 	defer db.CloseKeepMapped()
+	core.Libload = libload // dependency injection
 
-// 	run(`
-// 		Init.Repl()
-// 		//Use("axonlib")
-// 		//Use("Accountinglib")
-// 		//Use("etalib")
-// 		//Use("pcmiler")
-// 		//Use("ticketlib")
-// 		//Use("prlib")
-// 		//Use("prcadlib")
-// 		//Use("etaprlib")
-// 		//Use("invenlib")
-// 		//Use("wolib")
-// 		//Use("polib")
-// 		//Use("configlib")
-// 		//Use("demobookoptions")
-// 		//Use("Test_lib")
-// 		Print("running...")
-// 		Timer(secs: 60) {
-// 			Qfuzz.MakeQuery()
-// 		}
-// 		`)
-// }
+	openDbms()
+	defer db.CloseKeepMapped()
+
+	query := `
+				(cus
+			join by(ck)
+					(ivc
+				union /*NOT DISJOINT*/
+						(ivc
+					union /*NOT DISJOINT*/
+						(ivc
+						where ik is '3'))))
+		union /*NOT DISJOINT*/
+					((cus
+				join by(ck)
+					ivc)
+			union /*NOT DISJOINT*/
+					((cus
+					where c2 <= '3')
+				join by(ck)
+					ivc))`
+	th := &core.Thread{}
+	s := compile.EvalString(th, `QueryStrategy("`+query+`", formatted:)`)
+	fmt.Println(core.ToStr(s))
+	compile.EvalString(th, `QueryHash("`+query+`", details:)`)
+}

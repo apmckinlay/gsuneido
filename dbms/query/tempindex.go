@@ -19,6 +19,7 @@ import (
 // Keys are not constructed for the index or Lookup/Select
 // so there are no size limits.
 type TempIndex struct {
+	Query1
 	tran   QueryTran
 	iter   rowIter
 	st     *SuTran
@@ -26,8 +27,7 @@ type TempIndex struct {
 	order  []string
 	selOrg []string
 	selEnd []string
-	Query1
-	rewound bool
+	state
 }
 
 var selMin []string
@@ -63,6 +63,7 @@ func (ti *TempIndex) Transform() Query {
 }
 
 // optimize is only used by fuzz_test.go
+// (normally TempIndex is introduced by query.go Optimize)
 func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
 	Cost, Cost, any) {
 	fixcost, varcost := Optimize(ti.source, mode, nil, frac)
@@ -71,16 +72,21 @@ func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
 
 // setApproach is only used by fuzz_test.go
 func (ti *TempIndex) setApproach(index []string, frac float64, app any, tran QueryTran) {
-	ti.source.setApproach(nil, frac, app, tran)
+	SetApproach(ti.source, nil, frac, tran)
 }
 
 // execution --------------------------------------------------------
+
+func (ti *TempIndex) SetTran(tran QueryTran) {
+	ti.tran = tran
+	ti.source.SetTran(tran)
+}
 
 func (ti *TempIndex) Rewind() {
 	if ti.iter != nil {
 		ti.iter.Rewind()
 	}
-	ti.rewound = true
+	ti.state = rewound
 }
 
 func (ti *TempIndex) Select(sels Sels) {
@@ -152,15 +158,14 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { ti.tget += tsc.Read() - t }(tsc.Read())
 	ti.th = th
 	defer func() { ti.th = nil }()
-	if ti.iter == nil {
-		ti.iter = ti.makeIndex()
-		ti.rewound = true
-	}
-	if ti.conflict() {
+	if ti.conflict() || ti.state == eof {
 		return nil
 	}
+	if ti.iter == nil {
+		ti.iter = ti.makeIndex()
+	}
 	var row Row
-	if ti.rewound {
+	if ti.state == rewound {
 		if dir == Next {
 			row = ti.iter.Seek(ti.selOrg)
 		} else { // Prev
@@ -170,11 +175,12 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 			}
 			row = ti.iter.Get(dir)
 		}
-		ti.rewound = false
+		ti.state = within
 	} else {
 		row = ti.iter.Get(dir)
 	}
 	if row == nil || !ti.selected(row) {
+		ti.state = eof
 		return nil
 	}
 	ti.ngets++

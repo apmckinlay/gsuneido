@@ -327,9 +327,8 @@ type state int
 
 const (
 	rewound state = iota
-	eofNext       // hit EOF going forward with Next
-	eofPrev       // hit EOF going backward with Prev
 	within
+	eof
 )
 
 // Iter returns an iterator for the list.
@@ -349,17 +348,13 @@ func (it *Iter[T]) Next() {
 	case rewound:
 		it.i = 0
 		it.state = within
-	case eofNext:
-		// stick - already at end from Next
-	case eofPrev:
-		// If we hit EOF going backward, going forward should take us to first element
-		it.i = 0
-		it.state = within
+	case eof:
+		// do nothing
 	default:
 		it.i++
 	}
 	if it.i >= it.size {
-		it.state = eofNext
+		it.state = eof
 	}
 }
 
@@ -368,23 +363,18 @@ func (it *Iter[T]) Prev() {
 	case rewound:
 		it.i = it.size - 1
 		it.state = within
-	case eofNext:
-		// If we hit EOF going forward, going backward should take us to last element
-		it.i = it.size - 1
-		it.state = within
-	case eofPrev:
-		// If we hit EOF going backward, stay there
-		// stick
+	case eof:
+		// do nothing
 	default:
 		it.i--
 	}
 	if it.i < 0 {
-		it.state = eofPrev
+		it.state = eof
 	}
 }
 
 func (it *Iter[T]) Eof() bool {
-	return it.state == eofNext || it.state == eofPrev
+	return it.state == eof
 }
 
 func (it *Iter[T]) Cur() T {
@@ -407,7 +397,7 @@ func (it *Iter[T]) Seek(key []string) {
 		}
 	}
 	if first >= it.size {
-		it.state = eofNext
+		it.state = eof
 		it.i = -1
 	} else {
 		it.i = first
