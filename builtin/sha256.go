@@ -55,7 +55,7 @@ func Sha256_Update(this, arg Value) Value {
 	return this
 }
 
-var _ = method(Sha256_Value, "()")
+var _ = method(Sha256_Value, "() :string")
 
 func Sha256_Value(this Value) Value {
 	return this.(suSha256).value()

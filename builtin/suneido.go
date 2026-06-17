@@ -145,7 +145,7 @@ func suneido_Info(x Value) Value {
 	return InfoStr(ToStr(x))
 }
 
-var _ = method(suneido_Members, "(all = false)")
+var _ = method(suneido_Members, "(all = false) :object")
 
 func suneido_Members(this Value, all Value) Value {
 	if !ToBool(all) {

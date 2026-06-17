@@ -53,19 +53,19 @@ func tran_Complete(this Value) Value {
 	return nil
 }
 
-var _ = method(tran_Data, "()")
+var _ = method(tran_Data, "() :object")
 
 func tran_Data(this Value) Value {
 	return this.(*SuTran).Data()
 }
 
-var _ = method(tran_EndedQ, "()")
+var _ = method(tran_EndedQ, "() :boolean")
 
 func tran_EndedQ(this Value) Value {
 	return SuBool(this.(*SuTran).Ended())
 }
 
-var _ = method(tran_Query, "(@args)")
+var _ = method(tran_Query, "(@args) :unknown")
 
 func tran_Query(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	query, args := extractQuery(th, &queryBlockParams, as, args)
@@ -92,19 +92,19 @@ func tran_QueryDo(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return IntVal(this.(*SuTran).Action(th, query))
 }
 
-var _ = method(tran_Query1, "(@args)")
+var _ = method(tran_Query1, "(@args) :object")
 
 func tran_Query1(th *Thread, this Value, args []Value) Value {
 	return tranQueryOne(th, this.(*SuTran), args[0], Only)
 }
 
-var _ = method(tran_QueryFirst, "(@args)")
+var _ = method(tran_QueryFirst, "(@args) :object")
 
 func tran_QueryFirst(th *Thread, this Value, args []Value) Value {
 	return tranQueryOne(th, this.(*SuTran), args[0], Next)
 }
 
-var _ = method(tran_QueryLast, "(@args)")
+var _ = method(tran_QueryLast, "(@args) :object")
 
 func tran_QueryLast(th *Thread, this Value, args []Value) Value {
 	return tranQueryOne(th, this.(*SuTran), args[0], Prev)
@@ -118,14 +118,14 @@ func tranQueryOne(th *Thread, st *SuTran, args Value, dir Dir) Value {
 	return SuRecordFromRow(row, hdr, table, st)
 }
 
-var _ = method(tran_QueryEmptyQ, "(@args)")
+var _ = method(tran_QueryEmptyQ, "(@args) :boolean")
 
 func tran_QueryEmptyQ(th *Thread, this Value, args []Value) Value {
 	row, _, _ := this.(*SuTran).GetRow(th, args[0], Any)
 	return SuBool(row == nil)
 }
 
-var _ = method(tran_ReadCount, "()")
+var _ = method(tran_ReadCount, "() :number")
 
 func tran_ReadCount(this Value) Value {
 	return IntVal(this.(*SuTran).ReadCount())
@@ -138,19 +138,19 @@ func tran_Rollback(this Value) Value {
 	return nil
 }
 
-var _ = method(tran_UpdateQ, "()")
+var _ = method(tran_UpdateQ, "() :boolean")
 
 func tran_UpdateQ(this Value) Value {
 	return SuBool(this.(*SuTran).Updatable())
 }
 
-var _ = method(tran_WriteCount, "()")
+var _ = method(tran_WriteCount, "() :number")
 
 func tran_WriteCount(this Value) Value {
 	return IntVal(this.(*SuTran).WriteCount())
 }
 
-var _ = method(tran_Asof, "(asof = false)")
+var _ = method(tran_Asof, "(asof = false) :false|date")
 
 func tran_Asof(this, arg Value) Value {
 	return this.(*SuTran).Asof(arg)

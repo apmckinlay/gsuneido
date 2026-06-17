@@ -83,7 +83,7 @@ func sock_Close(this Value) Value {
 	return nil
 }
 
-var _ = method(sock_Read, "(nbytes=false)")
+var _ = method(sock_Read, "(nbytes=false) :false|string")
 
 func sock_Read(this, arg Value) Value {
 	sc := scOpen(this)
@@ -94,7 +94,7 @@ func sock_Read(this, arg Value) Value {
 	return limitedRead("socket.Read", sc.rdr, arg)
 }
 
-var _ = method(sock_Readline, "()")
+var _ = method(sock_Readline, "() :string")
 
 func sock_Readline(this Value) Value {
 	sc := scOpen(this)
@@ -149,7 +149,7 @@ func sock_Writeline(this, arg Value) Value {
 	return nil
 }
 
-var _ = method(sock_CopyTo, "(dest, nbytes = false)")
+var _ = method(sock_CopyTo, "(dest, nbytes = false) :number")
 
 func sock_CopyTo(th *Thread, this Value, args []Value) Value {
 	return CopyTo(th, scOpen(this).rdr, args[0], args[1])

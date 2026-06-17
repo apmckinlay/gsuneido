@@ -203,7 +203,7 @@ func (sc *suServerConnect) Close() {
 
 var socketServerMethods = methods("sockserv")
 
-var _ = method(sockserv_RemoteUser, "()")
+var _ = method(sockserv_RemoteUser, "() :string")
 
 func sockserv_RemoteUser(this Value) Value {
 	sc := this.(*suServerConnect)

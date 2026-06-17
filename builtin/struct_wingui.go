@@ -75,7 +75,7 @@ type sizeable interface{ Size() int }
 
 var structMethods = methods("st")
 
-var _ = method(st_Size, "()")
+var _ = method(st_Size, "() :number")
 
 func st_Size(this Value) Value {
 	return IntVal(this.(sizeable).Size())
