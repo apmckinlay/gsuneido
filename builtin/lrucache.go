@@ -64,7 +64,7 @@ var suLruCacheMethods = methods("lru")
 
 // Get calls the getter with exactly the same arguments it receives.
 // If called with multiple arguments, the hash key is an @args object.
-var _ = method(lru_Get, "(@args)")
+var _ = method(lru_Get, "(@args) :unknown")
 
 func lru_Get(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if as.Nargs == 0 {
@@ -91,14 +91,14 @@ func lru_Reset(this Value) Value {
 	return nil
 }
 
-var _ = method(lru_OkForResetAllQ, "()")
+var _ = method(lru_OkForResetAllQ, "() :boolean")
 
 func lru_OkForResetAllQ(this Value) Value {
 	slc := this.(*suLruCache)
 	return SuBool(slc.okForResetAll)
 }
 
-var _ = method(lru_GetMissRate, "()")
+var _ = method(lru_GetMissRate, "() :number")
 
 func lru_GetMissRate(this Value) Value {
 	slc := this.(*suLruCache)

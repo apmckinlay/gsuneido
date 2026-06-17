@@ -9,7 +9,7 @@ import (
 
 var _ = exportMethods(&InstanceMethods, "instance")
 
-var _ = method(instance_BaseQ, "(class)")
+var _ = method(instance_BaseQ, "(class) :boolean")
 
 func instance_BaseQ(th *Thread, this Value, args []Value) Value {
 	instance := this.(*SuInstance)
@@ -55,13 +55,13 @@ func instance_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return this
 }
 
-var _ = method(instance_ReadonlyQ, "()")
+var _ = method(instance_ReadonlyQ, "() :false")
 
 func instance_ReadonlyQ(this Value) Value {
 	return False
 }
 
-var _ = method(instance_CompareAndSet, "(member, newValue, oldValue = nil)")
+var _ = method(instance_CompareAndSet, "(member, newValue, oldValue = nil) :boolean")
 
 func instance_CompareAndSet(th *Thread, this Value, args []Value) Value {
 	th.ReturnThrow = true

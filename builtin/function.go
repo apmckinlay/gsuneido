@@ -17,7 +17,7 @@ func CoverageEnable(a Value) Value {
 
 var _ = exportMethods(&SuFuncMethods, "func")
 
-var _ = method(func_Disasm, "(source = false)")
+var _ = method(func_Disasm, "(source = false) :string")
 
 func func_Disasm(this, a Value) Value {
 	fn := this.(*SuFunc)

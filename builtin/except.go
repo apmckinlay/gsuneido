@@ -9,7 +9,7 @@ import (
 
 var _ = exportMethods(&SuExceptMethods, "except")
 
-var _ = method(except_Callstack, "()")
+var _ = method(except_Callstack, "() :object")
 
 func except_Callstack(this Value) Value {
 	return this.(*SuExcept).Callstack

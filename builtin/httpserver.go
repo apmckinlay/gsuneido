@@ -158,7 +158,7 @@ func (e *suHttpEnv) writer() io.Writer {
 var httpEnvMethods = methods("httpEnv")
 
 // Read allows reading the body
-var _ = method(httpEnv_Read, "(n)")
+var _ = method(httpEnv_Read, "(n) :string")
 
 func httpEnv_Read(this Value, a Value) Value {
 	rd := this.(*suHttpEnv).rq.Body
@@ -180,7 +180,7 @@ func httpEnv_Read(this Value, a Value) Value {
 	return EmptyStr
 }
 
-var _ = method(httpEnv_CopyTo, "(dest, nbytes = false)")
+var _ = method(httpEnv_CopyTo, "(dest, nbytes = false) :number")
 
 func httpEnv_CopyTo(th *Thread, this Value, args []Value) Value {
 	rd := this.(*suHttpEnv).rq.Body

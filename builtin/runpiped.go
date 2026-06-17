@@ -139,7 +139,7 @@ func runpiped_CloseWrite(this Value) Value {
 	return this
 }
 
-var _ = method(runpiped_ExitValue, "()")
+var _ = method(runpiped_ExitValue, "() :number")
 
 func runpiped_ExitValue(this Value) Value {
 	rp := rpOpen(this)
@@ -160,7 +160,7 @@ func runpiped_Flush(this Value) Value {
 	return nil
 }
 
-var _ = method(runpiped_Read, "(nbytes=false)")
+var _ = method(runpiped_Read, "(nbytes=false) :false|string")
 
 func runpiped_Read(this, arg Value) Value {
 	return limitedRead("runpiped.Read", rpOpen(this).r, arg)
@@ -187,7 +187,7 @@ func limitedRead(which string, r io.Reader, arg Value) Value {
 	return SuStr(dst.String())
 }
 
-var _ = method(runpiped_Readline, "()")
+var _ = method(runpiped_Readline, "() :false|string")
 
 func runpiped_Readline(this Value) Value {
 	return Readline(rpOpen(this).r, "runPiped.Readline: ")
@@ -214,7 +214,7 @@ func runpiped_Writeline(this, arg Value) Value {
 	return arg
 }
 
-var _ = method(runpiped_CopyTo, "(dest, nbytes = false)")
+var _ = method(runpiped_CopyTo, "(dest, nbytes = false) :number")
 
 func runpiped_CopyTo(th *Thread, this Value, args []Value) Value {
 	return CopyTo(th, rpOpen(this).r, args[0], args[1])

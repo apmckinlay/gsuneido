@@ -112,7 +112,7 @@ func ftsBuilder_Index(this Value) Value {
 	return newSuFtsIndex(b.ToIndex())
 }
 
-var _ = method(ftsBuilder_Pack, "()")
+var _ = method(ftsBuilder_Pack, "() :string")
 
 func ftsBuilder_Pack(this Value) Value {
 	b := this.(*suFtsBuilder).b
@@ -152,7 +152,7 @@ func (*suFtsIndex) Lookup(_ *Thread, method string) Value {
 
 var ftsIndexMethods = methods("ftsIndex")
 
-var _ = method(ftsIndex_Search, "(query, scores = false)")
+var _ = method(ftsIndex_Search, "(query, scores = false) :object")
 
 func ftsIndex_Search(this, query, scores Value) Value {
 	scors := ToBool(scores)
@@ -186,14 +186,14 @@ func ftsIndex_Update(_ *Thread, this Value, args []Value) Value {
 	return nil
 }
 
-var _ = method(ftsIndex_Pack, "()")
+var _ = method(ftsIndex_Pack, "() :string")
 
 func ftsIndex_Pack(this Value) Value {
 	sfi := this.(*suFtsIndex)
 	return SuStr(sfi.get().Pack())
 }
 
-var _ = method(ftsIndex_WordInfo, "(word)")
+var _ = method(ftsIndex_WordInfo, "(word) :string")
 
 func ftsIndex_WordInfo(this, word Value) Value {
 	sfi := this.(*suFtsIndex)

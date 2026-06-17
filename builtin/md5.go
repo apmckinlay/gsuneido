@@ -55,7 +55,7 @@ func md5_Update(this, arg Value) Value {
 	return this
 }
 
-var _ = method(md5_Value, "()")
+var _ = method(md5_Value, "() :string")
 
 func md5_Value(this Value) Value {
 	return this.(suMd5).value()

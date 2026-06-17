@@ -27,19 +27,19 @@ func Cursor(th *Thread, as *ArgSpec, args []Value) Value {
 
 var _ = exportMethods(&CursorMethods, "cursor")
 
-var _ = method(cursor_Next, "(transaction)")
+var _ = method(cursor_Next, "(transaction) :false|object")
 
 func cursor_Next(th *Thread, this Value, args []Value) Value {
 	return this.(*SuCursor).GetRec(th, args[0].(*SuTran), Next)
 }
 
-var _ = method(cursor_Prev, "(transaction)")
+var _ = method(cursor_Prev, "(transaction) :false|object")
 
 func cursor_Prev(th *Thread, this Value, args []Value) Value {
 	return this.(*SuCursor).GetRec(th, args[0].(*SuTran), Prev)
 }
 
-var _ = method(cursor_Output, "(transaction, record)")
+var _ = method(cursor_Output, "(transaction, record) :boolean")
 
 func cursor_Output(*Thread, Value, []Value) Value {
 	panic("cursor.Output is not supported")

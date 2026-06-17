@@ -13,7 +13,7 @@ type paramsable interface {
 
 var _ = exportMethods(&ParamsMethods, "params")
 
-var _ = method(params_Params, "()")
+var _ = method(params_Params, "() :string")
 
 func params_Params(this Value) Value {
 	fn := this.(paramsable)

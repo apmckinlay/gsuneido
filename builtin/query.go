@@ -99,25 +99,25 @@ func query_Close(this Value) Value {
 	return nil
 }
 
-var _ = method(query_Columns, "()")
+var _ = method(query_Columns, "() :object")
 
 func query_Columns(this Value) Value {
 	return this.(ISuQueryCursor).Columns()
 }
 
-var _ = method(query_Keys, "()")
+var _ = method(query_Keys, "() :object")
 
 func query_Keys(this Value) Value {
 	return this.(ISuQueryCursor).Keys()
 }
 
-var _ = method(query_Next, "()")
+var _ = method(query_Next, "() :false|object")
 
 func query_Next(th *Thread, this Value, _ []Value) Value {
 	return this.(*SuQuery).GetRec(th, Next)
 }
 
-var _ = method(query_Prev, "()")
+var _ = method(query_Prev, "() :false|object")
 
 func query_Prev(th *Thread, this Value, _ []Value) Value {
 	return this.(*SuQuery).GetRec(th, Prev)
@@ -131,7 +131,7 @@ func query_Output(th *Thread, this Value, args []Value) Value {
 	return nil
 }
 
-var _ = method(query_Order, "()")
+var _ = method(query_Order, "() :object")
 
 func query_Order(this Value) Value {
 	return this.(ISuQueryCursor).Order()
@@ -144,13 +144,13 @@ func query_Rewind(this Value) Value {
 	return nil
 }
 
-var _ = method(query_RuleColumns, "()")
+var _ = method(query_RuleColumns, "() :object")
 
 func query_RuleColumns(this Value) Value {
 	return this.(ISuQueryCursor).RuleColumns()
 }
 
-var _ = method(query_Strategy, "(formatted = false)")
+var _ = method(query_Strategy, "(formatted = false) :string")
 
 func query_Strategy(_ *Thread, this Value, args []Value) Value {
 	formatted := ToBool(args[0])

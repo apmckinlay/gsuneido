@@ -215,7 +215,7 @@ func (hr *suHttpResponse) Get(_ *Thread, k Value) Value {
 
 var suHttpResponseMethods = methods("resp")
 
-var _ = method(resp_Read, "(n)")
+var _ = method(resp_Read, "(n) :false|string")
 
 func resp_Read(this Value, a Value) Value {
 	rdr := this.(*suHttpResponse).resp.Body
@@ -237,7 +237,7 @@ func resp_Read(this Value, a Value) Value {
 	return EmptyStr
 }
 
-var _ = method(resp_CopyTo, "(dest, nbytes = false)")
+var _ = method(resp_CopyTo, "(dest, nbytes = false) :number")
 
 func resp_CopyTo(th *Thread, this Value, args []Value) Value {
 	rd := this.(*suHttpResponse).resp.Body

@@ -28,7 +28,7 @@ const readMax = 64 * 1024 // no advantage to larger
 
 var suPipeReaderMethods = methods("piper")
 
-var _ = method(piper_Read, "(n)")
+var _ = method(piper_Read, "(n) :false|string")
 
 func piper_Read(this Value, a Value) Value {
 	rd := this.(*suPipeReader).rd
@@ -50,7 +50,7 @@ func piper_Read(this Value, a Value) Value {
 	return SuStr("")
 }
 
-var _ = method(piper_CopyTo, "(dest, nbytes = false)")
+var _ = method(piper_CopyTo, "(dest, nbytes = false) :number")
 
 func piper_CopyTo(th *Thread, this Value, args []Value) Value {
 	rd := this.(*suPipeReader).rd

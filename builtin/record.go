@@ -30,7 +30,7 @@ func record_Clear(this Value) Value {
 	return nil
 }
 
-var _ = method(record_GetDeps, "(field)")
+var _ = method(record_GetDeps, "(field) :string")
 
 func record_GetDeps(this, arg Value) Value {
 	return this.(*SuRecord).GetDeps(ToStr(arg))
@@ -72,7 +72,7 @@ func record_Invalidate(th *Thread, as *ArgSpec, this Value, args []Value) Value 
 	return nil
 }
 
-var _ = method(record_NewQ, "()")
+var _ = method(record_NewQ, "() :boolean")
 
 func record_NewQ(this Value) Value {
 	return SuBool(this.(*SuRecord).IsNew())
@@ -92,7 +92,7 @@ func record_PreSet(this, arg1, arg2 Value) Value {
 	return nil
 }
 
-var _ = method(record_RemoveObserver, "(observer)")
+var _ = method(record_RemoveObserver, "(observer) :boolean")
 
 func record_RemoveObserver(this, arg Value) Value {
 	return SuBool(this.(*SuRecord).RemoveObserver(arg))
@@ -105,7 +105,7 @@ func record_SetDeps(this, arg1, arg2 Value) Value {
 	return nil
 }
 
-var _ = method(record_Transaction, "()")
+var _ = method(record_Transaction, "() :false|unknown")
 
 func record_Transaction(this Value) Value {
 	t := this.(*SuRecord).Transaction()

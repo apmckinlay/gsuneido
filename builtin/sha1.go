@@ -55,7 +55,7 @@ func Sha1_Update(this, arg Value) Value {
 	return this
 }
 
-var _ = method(Sha1_Value, "()")
+var _ = method(Sha1_Value, "() :string")
 
 func Sha1_Value(this Value) Value {
 	return this.(suSha1).value()
