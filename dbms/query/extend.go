@@ -216,11 +216,32 @@ func (e *Extend) optimize(mode Mode, index []string, frac float64) (
 	return fixcost, varcost, nil
 }
 
+func (e *Extend) optimize2(mode Mode, req *Require, frac float64) (Cost, Cost, any) {
+	cols := req.cols
+	if e.source.fastSingle() {
+		cols = e.filterSourceIndex(cols)
+	} else if !set.Disjoint(cols, e.cols) {
+		return impossible, impossible, nil
+	}
+	fixcost, varcost := Optimize2(e.source, mode, &Require{req.use, cols}, frac)
+	return fixcost, varcost, nil
+}
+
 func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran) {
 	if e.source.fastSingle() {
 		index = e.filterSourceIndex(index)
 	}
 	e.source = SetApproach(e.source, index, frac, tran)
+	e.header = e.getHeader()
+	e.ctx.Hdr = e.header
+}
+
+func (e *Extend) setApproach2(req *Require, frac float64, _ any, tran QueryTran) {
+	cols := req.cols
+	if e.source.fastSingle() {
+		cols = e.filterSourceIndex(cols)
+	}
+	e.source = SetApproach2(e.source, &Require{req.use, cols}, frac, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header
 }

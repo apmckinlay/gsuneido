@@ -70,9 +70,20 @@ func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
 	return fixcost, varcost, nil
 }
 
+// optimize2 is only used by fuzz_test.go
+func (ti *TempIndex) optimize2(mode Mode, _ *Require, frac float64) (Cost, Cost, any) {
+	fixcost, varcost := Optimize2(ti.source, mode, reqUnordered, frac)
+	return fixcost, varcost, nil
+}
+
 // setApproach is only used by fuzz_test.go
 func (ti *TempIndex) setApproach(index []string, frac float64, app any, tran QueryTran) {
 	SetApproach(ti.source, nil, frac, tran)
+}
+
+// setApproach2 is only used by fuzz_test.go
+func (ti *TempIndex) setApproach2(_ *Require, frac float64, _ any, tran QueryTran) {
+	SetApproach2(ti.source, reqUnordered, frac, tran)
 }
 
 // execution --------------------------------------------------------
