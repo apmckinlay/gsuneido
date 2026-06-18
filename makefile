@@ -12,6 +12,8 @@ GOOS = $(shell go env GOOS)
 GOARCH = $(shell go env GOARCH)
 LDFLAGS = -s -w -X 'main.builtDate=$(BUILT)'
 GOAMD64 = v2
+GOARM64 = v8.1
+GO_ENV = GOAMD64=$(GOAMD64) GOARM64=$(GOARM64)
 BUILD = build -v -buildvcs=true -trimpath
 
 EXE =
@@ -23,7 +25,7 @@ endif
 build : dbms/server.crt
 	@go version
 	CGO_ENABLED=0 \
-	GOAMD64=$(GOAMD64) \
+	$(GO_ENV) \
 	go $(BUILD) $(BUILDARGS) -o gs_$(GOOS)_$(GOARCH)$(EXE) \
 	  -ldflags "$(LDFLAGS)"
 ifeq ($(GOOS),darwin)
@@ -33,7 +35,7 @@ endif
 race :
 	@go version
 	CGO_ENABLED=1 \
-	GOAMD64=$(GOAMD64) \
+	$(GO_ENV) \
 	go $(BUILD) -race -o gs_$(GOOS)_$(GOARCH)$(EXE) \
 	  -ldflags "$(LDFLAGS)"
 
@@ -43,7 +45,7 @@ define BUILD_BINARY
 	$(eval GOARCH := $(word 2,$(GO_VARS)))
 	CGO_ENABLED=0 \
 	GOARCH=$(GOARCH) GOOS=$(GOOS) \
-	GOAMD64=$(GOAMD64) \
+	$(GO_ENV) \
 	go $(BUILD) -o $@ -ldflags "$(LDFLAGS)"
 endef
 
