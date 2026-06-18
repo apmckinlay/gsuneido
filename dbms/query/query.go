@@ -370,11 +370,11 @@ func Setup1(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
 }
 
 func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
-	fixcost, varcost := Optimize(q, mode, nil, frac)
+	fixcost, varcost := Optimize2(q, mode, reqUnordered, frac)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
 	}
-	q = SetApproach(q, nil, frac, t)
+	q = SetApproach2(q, reqUnordered, frac, t)
 	if mode == CursorMode {
 		setCursorMode(q)
 	}
@@ -399,11 +399,11 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 // SetupIdx is like Setup but specifies an index
 // e.g. to test Select or Lookup
 func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
-	fixcost, varcost := Optimize(q, mode, index, 1)
+	fixcost, varcost := Optimize2(q, mode, &Require{ReqOrdered, index}, 1)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
 	}
-	q = SetApproach(q, index, 1, t)
+	q = SetApproach2(q, &Require{ReqOrdered, index}, 1, t)
 	if mode == CursorMode {
 		setCursorMode(q)
 	}
