@@ -34,13 +34,13 @@ func (*suFtsearch) Lookup(_ *Thread, method string) Value {
 
 var ftsearchMethods = methods("ftsearch")
 
-var _ = staticMethod(ftsearch_Create, "()")
+var _ = staticMethod(ftsearch_Create, "() :unknown")
 
 func ftsearch_Create() Value {
 	return &suFtsBuilder{b: ftsearch.NewBuilder()}
 }
 
-var _ = staticMethod(ftsearch_Load, "(data)")
+var _ = staticMethod(ftsearch_Load, "(data) :unknown")
 
 func ftsearch_Load(data Value) Value {
 	return newSuFtsIndex(ftsearch.Unpack(ToStr(data)))
@@ -52,7 +52,7 @@ func newSuFtsIndex(idx *ftsearch.Index) *suFtsIndex {
 	return &si
 }
 
-var _ = staticMethod(ftsearch_Members, "()")
+var _ = staticMethod(ftsearch_Members, "() :object")
 
 func ftsearch_Members() Value {
 	return ftsearch_members
@@ -60,7 +60,7 @@ func ftsearch_Members() Value {
 
 var ftsearch_members = methodList(ftsearchMethods)
 
-var _ = staticMethod(ftsearch_Tokens, "(text)")
+var _ = staticMethod(ftsearch_Tokens, "(text) :object")
 
 func ftsearch_Tokens(text Value) Value {
 	in := ftsearch.NewInput(ToStr(text))

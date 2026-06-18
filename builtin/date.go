@@ -137,7 +137,7 @@ func dateStatic_End() Value {
 	return DateEnd
 }
 
-var _ = staticMethod(dateStatic_Members, "()")
+var _ = staticMethod(dateStatic_Members, "() :object")
 
 func dateStatic_Members() Value {
 	return date_members

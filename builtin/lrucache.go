@@ -29,7 +29,7 @@ var lruCacheCallClass = func(th *Thread, args []Value) Value {
 
 var lruStaticMethods = methods("lruStatic")
 
-var _ = staticMethod(lruStatic_ResetAll, "()")
+var _ = staticMethod(lruStatic_ResetAll, "() :void")
 
 func lruStatic_ResetAll(th *Thread, _ []Value) Value {
 	iter := ToContainer(Global.Find(th, GnSuneido)).Iter2(true, true)
@@ -41,7 +41,7 @@ func lruStatic_ResetAll(th *Thread, _ []Value) Value {
 	return nil
 }
 
-var _ = staticMethod(lruStatic_Members, "()")
+var _ = staticMethod(lruStatic_Members, "() :object")
 
 func lruStatic_Members() Value {
 	return lruStatic_members

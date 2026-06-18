@@ -38,7 +38,7 @@ func initRand(th *Thread) {
 
 var randomMethods = methods("rnd")
 
-var _ = staticMethod(rnd_Seed, "(seed)")
+var _ = staticMethod(rnd_Seed, "(seed) :void")
 
 func rnd_Seed(th *Thread, args []Value) Value {
 	seed := uint64(IfInt(args[0]))
@@ -47,7 +47,7 @@ func rnd_Seed(th *Thread, args []Value) Value {
 	return nil
 }
 
-var _ = staticMethod(rnd_Bytes, "(nbytes)")
+var _ = staticMethod(rnd_Bytes, "(nbytes) :string")
 
 func rnd_Bytes(arg Value) Value {
 	n := ToInt(arg)
@@ -59,7 +59,7 @@ func rnd_Bytes(arg Value) Value {
 	return SuStr(hacks.BStoS(buf))
 }
 
-var _ = staticMethod(rnd_Members, "()")
+var _ = staticMethod(rnd_Members, "() :object")
 
 func rnd_Members() Value {
 	return rnd_members

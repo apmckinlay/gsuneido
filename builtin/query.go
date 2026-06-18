@@ -198,21 +198,21 @@ func (*suQueryStatic) Lookup(th *Thread, method string) Value {
 
 var queryStaticMethods = methods("sqs")
 
-var _ = staticMethod(sqs_StripSort, "(query)")
+var _ = staticMethod(sqs_StripSort, "(query) :string")
 
 func sqs_StripSort(arg Value) Value {
 	query := ToStr(arg)
 	return SuStr(qry.StripSort(query))
 }
 
-var _ = staticMethod(sqs_GetSort, "(query)")
+var _ = staticMethod(sqs_GetSort, "(query) :string")
 
 func sqs_GetSort(arg Value) Value {
 	query := ToStr(arg)
 	return SuStr(qry.GetSort(query))
 }
 
-var _ = staticMethod(sqs_Parse, "(parse)")
+var _ = staticMethod(sqs_Parse, "(parse) :unknown")
 
 func sqs_Parse(th *Thread, args []Value) Value {
 	dbms, ok := th.Dbms().(*dbms.DbmsLocal)
@@ -226,7 +226,7 @@ func sqs_Parse(th *Thread, args []Value) Value {
 	return qry.NewSuQueryNode(q)
 }
 
-var _ = staticMethod(sqs_Strategy1, "(@args)")
+var _ = staticMethod(sqs_Strategy1, "(@args) :string")
 
 func sqs_Strategy1(th *Thread, args []Value) Value {
 	_, _, s := th.Dbms().Get(th, args[0], Strat)
