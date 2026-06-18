@@ -142,11 +142,11 @@ type Query interface {
 
 	String() string
 
-	cacheAdd(index []string, frac float64, fixcost, varcost Cost, approach any)
+	cacheAdd(use Use, index []string, frac float64, fixcost, varcost Cost, approach any)
 
 	// cacheGet returns the cost and approach associated with an index
 	// or -1 if the index has not been added.
-	cacheGet(index []string, frac float64) (fixcost, varcost Cost, approach any)
+	cacheGet(use Use, index []string, frac float64) (fixcost, varcost Cost, approach any)
 
 	cacheClear()
 
@@ -435,12 +435,12 @@ func optimize2(q Query, mode Mode, req *Require, frac float64) (
 	if q.fastSingle() || q.Fixed().All(req.cols) {
 		req = reqUnordered
 	}
-	// if fixcost, varcost, app := q.cacheGet(index, frac); varcost >= 0 {
-	// 	return fixcost, varcost, app
-	// }
+	if fixcost, varcost, app := q.cacheGet(req.use, req.cols, frac); varcost >= 0 {
+		return fixcost, varcost, app
+	}
 	fixcost, varcost, app := optTempIndex2(q, mode, req, frac)
 	assert.That(fixcost >= 0 && varcost >= 0)
-	// q.cacheAdd(index, frac, fixcost, varcost, app)
+	q.cacheAdd(req.use, req.cols, frac, fixcost, varcost, app)
 	return fixcost, varcost, app
 }
 
@@ -541,12 +541,12 @@ func optimize(q Query, mode Mode, index []string, frac float64) (
 	if len(index) == 0 || q.fastSingle() || q.Fixed().All(index) {
 		index = nil
 	}
-	if fixcost, varcost, app := q.cacheGet(index, frac); varcost >= 0 {
+	if fixcost, varcost, app := q.cacheGet(ReqOrdered, index, frac); varcost >= 0 {
 		return fixcost, varcost, app
 	}
 	fixcost, varcost, app := optTempIndex(q, mode, index, frac)
 	assert.That(fixcost >= 0 && varcost >= 0)
-	q.cacheAdd(index, frac, fixcost, varcost, app)
+	q.cacheAdd(ReqOrdered, index, frac, fixcost, varcost, app)
 	return fixcost, varcost, app
 }
 
@@ -743,7 +743,7 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 	if len(index) == 0 || q.fastSingle() || q.Fixed().All(index) {
 		index = nil
 	}
-	fixcost, varcost, approach := q.cacheGet(index, frac)
+	fixcost, varcost, approach := q.cacheGet(ReqOrdered, index, frac)
 	q.cacheClear()
 	if fixcost == -1 {
 		panic("SetApproach: not found in cache")
