@@ -42,7 +42,7 @@ func db_Check(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Check(false))
 }
 
-var _ = staticMethod(db_FullCheck, "() :sting")
+var _ = staticMethod(db_FullCheck, "() :string")
 
 func db_FullCheck(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Check(true))
