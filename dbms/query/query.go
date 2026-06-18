@@ -414,6 +414,114 @@ const outOfOrder = 10 // minimal penalty for executing out of order
 
 const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 
+//-------------------------------------------------------------------
+// new version of Optimize using Require (not used yet)
+// initially duplicates the existing one, will eventually replace it
+
+func Optimize2(q Query, mode Mode, req *Require, frac float64) (
+	fixcost, varcost Cost) {
+	fixcost, varcost, _ = optimize2(q, mode, req, frac)
+	return fixcost, varcost
+}
+
+func optimize2(q Query, mode Mode, req *Require, frac float64) (
+	fixcost, varcost Cost, approach any) {
+	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
+	if !set.Subset(q.Columns(), req.cols) {
+		return impossible, impossible, nil
+	}
+
+	// this condition must match SetApproach
+	if q.fastSingle() || q.Fixed().All(req.cols) {
+		req = reqUnordered
+	}
+	// if fixcost, varcost, app := q.cacheGet(index, frac); varcost >= 0 {
+	// 	return fixcost, varcost, app
+	// }
+	fixcost, varcost, app := optTempIndex2(q, mode, req, frac)
+	assert.That(fixcost >= 0 && varcost >= 0)
+	// q.cacheAdd(index, frac, fixcost, varcost, app)
+	return fixcost, varcost, app
+}
+
+type optReq interface {
+	optimize2(mode Mode, req *Require, frac float64) (Cost, Cost, any)
+}
+
+// optTempIndex determines if a TempIndex is a benefit
+// and if it is, returns a special tempIndex approach
+// that is processed by SetApproach which creates the actual TempIndex
+func optTempIndex2(q Query, mode Mode, req *Require, frac float64) (
+	fixcost, varcost Cost, approach any) {
+	traceQO := func(more ...any) {
+		if trace.QueryOpt.On() {
+			args := append([]any{req, frac, "="}, more...)
+			trace.QueryOpt.Println(mode, args...)
+			trace.Println(strategy(q, 1))
+		}
+	}
+	traceQO("optTempIndex", "----------------")
+
+	indexedFixCost, indexedVarCost, indexedApp := qopt2(q, mode, req, frac)
+	assert.That(indexedFixCost >= 0 && indexedVarCost >= 0)
+
+	if req.use == ReqUnordered || !tempIndexable(mode) {
+		traceQO(indexedFixCost + indexedVarCost)
+		return indexedFixCost, indexedVarCost, indexedApp
+	}
+
+	nrows, _ := q.Nrows()
+	assert.That(nrows >= 0)
+	best := newBestApp()
+
+	// with no index
+	optTI2(best, q, mode, reqUnordered, frac, nrows, factorNone)
+
+	// with required index
+	optTI2(best, q, mode, req, frac, nrows, factorAll)
+
+	// with "best" index
+	if bestIndex := tempIndexBest(q, req.cols); bestIndex != nil {
+		optTI2(best, q, mode, &Require{ReqOrdered, bestIndex}, frac, nrows, factorPre)
+	}
+
+	tempIndexCost := best.fixcost + best.varcost
+	indexedCost := indexedFixCost + indexedVarCost
+	if indexedCost <= tempIndexCost {
+		traceQO("indexed", indexedCost, "<=", tempIndexCost)
+		return indexedFixCost, indexedVarCost, indexedApp
+	}
+	traceQO("tempindex", best.index, tempIndexCost, "<", indexedCost)
+	return best.fixcost, best.varcost,
+		&tempIndex{index: req.cols, srcapp: best.srcapp, srcindex: best.index,
+			srcfixcost: best.srcfixcost, srcvarcost: best.srcvarcost}
+}
+
+func qopt2(q Query, mode Mode, req *Require, frac float64) (Cost, Cost, any) {
+	if q, ok := q.(optReq); ok {
+		return q.optimize2(mode, req, frac)
+	}
+	return q.optimize(mode, req.cols, frac)
+}
+
+func optTI2(best *bestTI, q Query, mode Mode, req *Require, frac float64,
+	nrows, factor int) {
+	srcfixcost, srcvarcost, srcapp := qopt2(q, mode, req, 1) // frac=1
+	assert.That(srcfixcost >= 0 && srcvarcost >= 0)
+	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, req.cols, nrows, frac, factor)
+	if fixcost+varcost < best.fixcost+best.varcost {
+		best.index = req.cols
+		best.srcfixcost = srcfixcost
+		best.srcvarcost = srcvarcost
+		best.srcapp = srcapp
+		best.fixcost = fixcost
+		best.varcost = varcost
+		// fmt.Println("optTI", index, fixcost + varcost)
+	}
+}
+
+//-------------------------------------------------------------------
+
 // Optimize determines the best (lowest estimated cost) query execution approach
 func Optimize(q Query, mode Mode, index []string, frac float64) (
 	fixcost, varcost Cost) {
