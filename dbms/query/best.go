@@ -46,6 +46,27 @@ func (bi *bestIndex) String() string {
 
 //-------------------------------------------------------------------
 
+// bestGroupedV2 finds the best index with cols (in any order) as a prefix
+// taking fixed into consideration.
+// It is used by Project, Summarize, and Join.
+// Uses v2 Optimize2 internally.
+func bestGroupedV2(source Query, mode Mode, frac float64, cols []string) bestIndex {
+	fixed := source.Fixed()
+	nColsUnfixed := countUnfixed(cols, fixed)
+	best := newBestIndex()
+	for _, idx := range source.Indexes() {
+		if grouped(idx, cols, nColsUnfixed, fixed) {
+			req := &Require{ReqGrouped, idx}
+			fixcost, varcost := Optimize2(source, mode, req, frac)
+			best.update(idx, fixcost, varcost)
+		}
+	}
+	req := &Require{ReqGrouped, cols}
+	fixcost, varcost := Optimize2(source, mode, req, frac)
+	best.update(cols, fixcost, varcost)
+	return best
+}
+
 // bestGrouped finds the best index with cols (in any order) as a prefix
 // taking fixed into consideration.
 // It is used by Project, Summarize, and Join.
