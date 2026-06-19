@@ -382,17 +382,20 @@ func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
 }
 
 // SetupKey is like Setup but it ensures a key index
+// It is used by updateAction (action.go)
 func SetupKey(q Query, mode Mode, t QueryTran) Query {
+	// we use ReqGrouped because it matches the search for a key
+	// although we don't actually need the rows to be grouped
 	q = q.Transform()
 	best := newBestIndex()
 	for _, key := range q.Keys() {
-		b := bestGrouped(q, mode, nil, 1, key)
-		best.update(b.index, b.fixcost, b.varcost)
+        f, v, _ := optimize2(q, mode, Require{ReqGrouped, key}, 1)
+		best.update(key, f, v)
 	}
 	if best.fixcost+best.varcost >= impossible {
 		panic("invalid query: " + String(q))
 	}
-	q = SetApproach(q, best.index, 1, t)
+	q = SetApproach2(q, Require{ReqGrouped, best.index}, 1, t)
 	return q
 }
 
