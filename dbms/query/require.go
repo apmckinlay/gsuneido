@@ -29,11 +29,11 @@ type Require struct {
 	cols []string
 }
 
-func (r *Require) String() string {
+func (r Require) String() string {
 	return r.use.String() + " " + str.Join("(,)", r.cols)
 }
 
-var reqUnordered = &Require{ReqUnordered, nil}
+var reqUnordered = Require{ReqUnordered, nil}
 
 // MergeReq combines index usage requirements symmetrically.
 // Only really applicable to Query1, Project and Summarize

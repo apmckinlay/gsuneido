@@ -102,7 +102,7 @@ func (pn *ProjectNone) optimize(mode Mode, _ []string, _ float64) (Cost, Cost, a
 	return fixcost, varcost, nil
 }
 
-func (pn *ProjectNone) optimize2(mode Mode, _ *Require, _ float64) (Cost, Cost, any) {
+func (pn *ProjectNone) optimize2(mode Mode, _ Require, _ float64) (Cost, Cost, any) {
 	nrows, _ := pn.source.Nrows()
 	frac := 1.0
 	if nrows > 1 {
@@ -121,7 +121,7 @@ func (pn *ProjectNone) setApproach(_ []string, _ float64, _ any, tran QueryTran)
 	pn.source = SetApproach(pn.source, nil, frac, tran)
 }
 
-func (pn *ProjectNone) setApproach2(_ *Require, _ float64, _ any, tran QueryTran) {
+func (pn *ProjectNone) setApproach2(_ Require, _ float64, _ any, tran QueryTran) {
 	nrows, _ := pn.source.Nrows()
 	frac := 1.0
 	if nrows > 1 {

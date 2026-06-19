@@ -73,7 +73,7 @@ func (*Nothing) optimize(Mode, []string, float64) (Cost, Cost, any) {
 	return 0, 0, nil
 }
 
-func (*Nothing) optimize2(Mode, *Require, float64) (Cost, Cost, any) {
+func (*Nothing) optimize2(Mode, Require, float64) (Cost, Cost, any) {
 	return 0, 0, nil
 }
 
@@ -81,7 +81,7 @@ func (no *Nothing) setApproach(_ []string, _ float64, _ any, tran QueryTran) {
 	no.tran = tran
 }
 
-func (no *Nothing) setApproach2(_ *Require, _ float64, _ any, tran QueryTran) {
+func (no *Nothing) setApproach2(_ Require, _ float64, _ any, tran QueryTran) {
 	no.tran = tran
 }
 

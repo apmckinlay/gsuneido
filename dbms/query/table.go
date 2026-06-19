@@ -185,7 +185,7 @@ func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, an
 	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
 }
 
-func (tbl *Table) optimize2(_ Mode, req *Require, frac float64) (Cost, Cost, any) {
+func (tbl *Table) optimize2(_ Mode, req Require, frac float64) (Cost, Cost, any) {
 	idxi := 0
 	if req.use != ReqUnordered && !tbl.singleton {
 		idxi = tbl.indexFor(req.cols)
@@ -220,7 +220,7 @@ func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) 
 	tbl.SetIndex(approach.(tableApproach).index)
 }
 
-func (tbl *Table) setApproach2(_ *Require, _ float64, approach any, _ QueryTran) {
+func (tbl *Table) setApproach2(_ Require, _ float64, approach any, _ QueryTran) {
 	tbl.SetIndex(approach.(tableApproach).index)
 }
 
