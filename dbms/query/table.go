@@ -186,24 +186,58 @@ func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, an
 }
 
 func (tbl *Table) optimize2(_ Mode, req Require, frac float64) (Cost, Cost, any) {
-	idxi := 0
-	if req.use != ReqUnordered && !tbl.singleton {
-		idxi = tbl.indexFor(req.cols)
+	if tbl.singleton {
+		return tbl.costFor(tbl.indexes[0], frac)
+	}
+	switch req.use {
+	case ReqUnordered:
+		return tbl.costFor(tbl.indexes[0], frac)
+	case ReqOrdered:
+		idxi := tbl.indexFor(req.cols)
 		if idxi == -1 {
 			return impossible, impossible, nil
 		}
+		return tbl.costFor(tbl.indexes[idxi], frac)
+	case ReqGrouped:
+		best := newBestIndex()
+		for _, idx := range tbl.indexes {
+			// Table.Fixed() is always nil, so nColsUnfixed == len(req.cols)
+			if grouped(idx, req.cols, len(req.cols), nil) {
+				f, v, _ := tbl.costFor(idx, frac)
+				best.update(idx, f, v)
+			}
+		}
+		if best.index == nil {
+			return impossible, impossible, nil
+		}
+		return best.fixcost, best.varcost, tableApproach{index: best.index}
+	case ReqLookup:
+		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
+			return 0, tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
+		}
+		best := newBestIndex()
+		for i, idx := range tbl.indexes {
+			if lookupIndexEligible(idx, tbl.allKeys, nil) &&
+				grouped(idx, req.cols, len(req.cols), nil) {
+				best.update(idx, 0, tbl.lookupCostFor(i))
+			}
+		}
+		if best.index == nil {
+			return impossible, impossible, nil
+		}
+		return best.fixcost, best.varcost, tableApproach{index: best.index}
 	}
-	cols := tbl.indexes[idxi]
+	panic("unreachable")
+}
 
+func (tbl *Table) costFor(index []string, frac float64) (Cost, Cost, any) {
 	rowCost := tableFast
-	if tbl.info.Size > tableLarge && !slices.Equal(cols, tbl.indexes[0]) {
+	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
 		rowCost = tableSlow
 	}
-	rowCost += len(cols) * colsBias
+	rowCost += len(index) * colsBias
 	varcost := tbl.info.Nrows * rowCost
-	trace.QueryOpt.Println("Table optimize", tbl.name, cols, frac, "=",
-		Cost(frac*float64(varcost)))
-	return 0, Cost(frac * float64(varcost)), tableApproach{index: cols}
+	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
 }
 
 // find an index that satisfies the required order
@@ -257,6 +291,19 @@ func (tbl *Table) lookupCost() Cost {
 	} else {
 		levels = tbl.info.Indexes[0].BtreeLevels()
 		//TODO should be the actual index but we don't have it
+	}
+	return lookupCost(levels)
+}
+
+func (tbl *Table) lookupCostFor(i int) Cost {
+	var levels int
+	if tbl.info.Indexes == nil { // tests
+		levels = 1
+		if tbl.info.Nrows > 100 {
+			levels = 2
+		}
+	} else {
+		levels = tbl.info.Indexes[i].BtreeLevels()
 	}
 	return lookupCost(levels)
 }
