@@ -81,7 +81,7 @@ var _ Iter = (*wrapIter)(nil)
 
 var _ = exportMethods(&SequenceMethods, "seq")
 
-var _ = method(seq_Copy, "()")
+var _ = method(seq_Copy, "() :object")
 
 func seq_Copy(this Value) Value {
 	return this.(*SuSequence).Copy()
@@ -99,7 +99,7 @@ func seq_InstantiatedQ(this Value) Value {
 	return SuBool(this.(*SuSequence).Instantiated())
 }
 
-var _ = method(seq_Iter, "()")
+var _ = method(seq_Iter, "() :object")
 
 func seq_Iter(this Value) Value {
 	iter := this.(*SuSequence).Iter()
