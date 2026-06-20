@@ -88,22 +88,18 @@ func (sort *Sort) setApproach(_ []string, frac float64, _ any, tran QueryTran) {
 	sort.optimized = true
 }
 
-func (sort *Sort) optimize2(mode Mode, req Require, frac float64) (Cost, Cost, any) {
-	assert.That(req.use == ReqUnordered)
-	req2 := Require{use: ReqOrdered, cols: sort.order}
-	// Optimize2 will add temp index if needed
-	fixcost, varcost := Optimize2(sort.source, mode, req2, frac)
+func (sort *Sort) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	assert.That(len(req.cols) == 0)
+	srcReq := Require{cols: sort.order, frac: req.frac, nlookups: 0}
+	fixcost, varcost := Optimize2(sort.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
 
-func (sort *Sort) setApproach2(_ Require, frac float64, _ any, tran QueryTran) {
-	sort.source = SetApproach2(sort.source, Require{use: ReqOrdered, cols: sort.order}, frac, tran)
+func (sort *Sort) setApproach2(req Require, _ any, tran QueryTran) {
+	srcReq := Require{cols: sort.order, frac: req.frac, nlookups: 0}
+	sort.source = SetApproach2(sort.source, srcReq, tran)
 	sort.header = sort.source.Header()
 	sort.optimized = true
-}
-
-func (sort *Sort) optimizeLookup2(mode Mode, cols []string, frac float64) (Cost, Cost, any) {
-	return 0, sort.lookupCost(), nil
 }
 
 // execution --------------------------------------------------------

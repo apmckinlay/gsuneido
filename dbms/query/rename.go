@@ -175,9 +175,10 @@ func (r *Rename) optimize(mode Mode, index []string, frac float64) (Cost, Cost, 
 	return fixcost, varcost, nil
 }
 
-func (r *Rename) optimize2(mode Mode, req Require, frac float64) (Cost, Cost, any) {
+func (r *Rename) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	cols := r.renameRev(req.cols)
-	fixcost, varcost := Optimize2(r.source, mode, Require{use: req.use, cols: cols}, frac)
+	srcReq := Require{cols: cols, frac: req.frac, nlookups: req.nlookups}
+	fixcost, varcost := Optimize2(r.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
 
@@ -186,13 +187,10 @@ func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran
 	r.header = r.getHeader()
 }
 
-func (r *Rename) setApproach2(req Require, frac float64, _ any, tran QueryTran) {
-	r.source = SetApproach2(r.source, Require{use: req.use, cols: r.renameRev(req.cols)}, frac, tran)
+func (r *Rename) setApproach2(req Require, _ any, tran QueryTran) {
+	srcReq := Require{cols: r.renameRev(req.cols), frac: req.frac, nlookups: req.nlookups}
+	r.source = SetApproach2(r.source, srcReq, tran)
 	r.header = r.getHeader()
-}
-
-func (r *Rename) optimizeLookup2(mode Mode, cols []string, frac float64) (Cost, Cost, any) {
-	return optimizeLookup2(r.source, mode, r.renameRev(cols), frac)
 }
 
 // execution --------------------------------------------------------

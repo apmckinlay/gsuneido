@@ -73,13 +73,10 @@ func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
 }
 
 // optimize2 is only used by fuzz_test.go
-func (ti *TempIndex) optimize2(mode Mode, _ Require, frac float64) (Cost, Cost, any) {
-	fixcost, varcost := Optimize2(ti.source, mode, reqUnordered, frac)
+func (ti *TempIndex) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	srcReq := Require{frac: req.frac, nlookups: req.nlookups}
+	fixcost, varcost := Optimize2(ti.source, mode, srcReq)
 	return fixcost, varcost, nil
-}
-
-func (ti *TempIndex) optimizeLookup2(_ Mode, _ []string, _ float64) (Cost, Cost, any) {
-	return impossible, impossible, nil
 }
 
 // setApproach is only used by fuzz_test.go
@@ -88,8 +85,9 @@ func (ti *TempIndex) setApproach(index []string, frac float64, app any, tran Que
 }
 
 // setApproach2 is only used by fuzz_test.go
-func (ti *TempIndex) setApproach2(_ Require, frac float64, _ any, tran QueryTran) {
-	SetApproach2(ti.source, reqUnordered, frac, tran)
+func (ti *TempIndex) setApproach2(req Require, _ any, tran QueryTran) {
+	srcReq := Require{frac: req.frac, nlookups: req.nlookups}
+	SetApproach2(ti.source, srcReq, tran)
 }
 
 // execution --------------------------------------------------------

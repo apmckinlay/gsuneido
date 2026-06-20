@@ -186,26 +186,44 @@ func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, an
 	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
 }
 
-func (tbl *Table) optimize2(mode Mode, req Require, frac float64) (Cost, Cost, any) {
+func (tbl *Table) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton {
-		return tbl.costFor(tbl.indexes[0], frac)
+		return tbl.costFor(tbl.indexes[0], float64(req.frac))
 	}
-	switch req.use {
+	switch req.Use() {
 	case ReqUnordered:
-		return tbl.costFor(tbl.indexes[0], frac)
+		return tbl.costFor(tbl.indexes[0], float64(req.frac))
 	case ReqOrdered:
 		idxi := tbl.indexFor(req.cols)
 		if idxi == -1 {
 			return impossible, impossible, nil
 		}
-		return tbl.costFor(tbl.indexes[idxi], frac)
+		return tbl.costFor(tbl.indexes[idxi], float64(req.frac))
 	case ReqGrouped:
 		best := newBestIndex()
 		for _, idx := range tbl.indexes {
 			// Table.Fixed() is always nil, so nColsUnfixed == len(req.cols)
 			if grouped(idx, req.cols, len(req.cols), nil) {
-				f, v, _ := tbl.costFor(idx, frac)
+				f, v, _ := tbl.costFor(idx, float64(req.frac))
 				best.update(idx, f, v)
+			}
+		}
+		if best.index == nil {
+			return impossible, impossible, nil
+		}
+		return best.fixcost, best.varcost, tableApproach{index: best.index}
+	case ReqLookup:
+		if tbl.singleton {
+			return 0, tbl.lookupCost(), tableApproach{index: tbl.indexes[0]}
+		}
+		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
+			return 0, tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
+		}
+		best := newBestIndex()
+		for i, idx := range tbl.indexes {
+			if lookupIndexEligible(idx, tbl.allKeys, nil) &&
+				grouped(idx, req.cols, len(req.cols), nil) {
+				best.update(idx, 0, tbl.lookupCostFor(i))
 			}
 		}
 		if best.index == nil {
@@ -240,7 +258,7 @@ func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) 
 	tbl.SetIndex(approach.(tableApproach).index)
 }
 
-func (tbl *Table) setApproach2(_ Require, _ float64, approach any, _ QueryTran) {
+func (tbl *Table) setApproach2(_ Require, approach any, _ QueryTran) {
 	tbl.SetIndex(approach.(tableApproach).index)
 }
 
@@ -296,26 +314,6 @@ func (tbl *Table) lookupCostFor(i int) Cost {
 
 func lookupCost(levels int) Cost {
 	return levels*800 - 300 // empirical
-}
-
-func (tbl *Table) optimizeLookup2(_ Mode, cols []string, _ float64) (Cost, Cost, any) {
-	if tbl.singleton {
-		return 0, tbl.lookupCost(), tableApproach{index: tbl.indexes[0]}
-	}
-	if idxi := slc.IndexFn(tbl.indexes, cols, slices.Equal); idxi != -1 {
-		return 0, tbl.lookupCostFor(idxi), tableApproach{index: cols}
-	}
-	best := newBestIndex()
-	for i, idx := range tbl.indexes {
-		if lookupIndexEligible(idx, tbl.allKeys, nil) &&
-			grouped(idx, cols, len(cols), nil) {
-			best.update(idx, 0, tbl.lookupCostFor(i))
-		}
-	}
-	if best.index == nil {
-		return impossible, impossible, nil
-	}
-	return best.fixcost, best.varcost, tableApproach{index: best.index}
 }
 
 // execution --------------------------------------------------------

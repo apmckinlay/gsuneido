@@ -21,6 +21,7 @@ var _ optReq = (*schemaTable)(nil)
 
 type schemaTable struct {
 	cache
+	cache2
 	tran QueryTran
 	state
 	metrics
@@ -64,21 +65,17 @@ func (*schemaTable) optimize(_ Mode, index []string, _ float64) (Cost, Cost, any
 	return impossible, impossible, nil
 }
 
-func (*schemaTable) optimize2(_ Mode, req Require, _ float64) (Cost, Cost, any) {
-	if req.use == ReqUnordered {
+func (*schemaTable) optimize2(_ Mode, req Require) (Cost, Cost, any) {
+	if len(req.cols) == 0 {
 		return 0, 1000, nil
 	}
-	return impossible, impossible, nil
-}
-
-func (*schemaTable) optimizeLookup2(Mode, []string, float64) (Cost, Cost, any) {
 	return impossible, impossible, nil
 }
 
 func (*schemaTable) setApproach([]string, float64, any, QueryTran) {
 }
 
-func (*schemaTable) setApproach2(Require, float64, any, QueryTran) {
+func (*schemaTable) setApproach2(Require, any, QueryTran) {
 }
 
 func (st *schemaTable) lookupCost() Cost {

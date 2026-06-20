@@ -15,6 +15,7 @@ import (
 // It returns 0 rows when the source is empty, otherwise 1 row.
 type ProjectNone struct {
 	cache
+	cache2
 	source Query
 	done   bool
 	hasrow opt.Bool
@@ -103,18 +104,15 @@ func (pn *ProjectNone) optimize(mode Mode, _ []string, _ float64) (Cost, Cost, a
 	return fixcost, varcost, nil
 }
 
-func (pn *ProjectNone) optimize2(mode Mode, _ Require, _ float64) (Cost, Cost, any) {
+func (pn *ProjectNone) optimize2(mode Mode, _ Require) (Cost, Cost, any) {
 	nrows, _ := pn.source.Nrows()
 	frac := 1.0
 	if nrows > 1 {
 		frac = 1.0 / float64(nrows)
 	}
-	fixcost, varcost := Optimize2(pn.source, mode, reqUnordered, frac)
+	srcReq := Require{frac: float32(frac), nlookups: 0}
+	fixcost, varcost := Optimize2(pn.source, mode, srcReq)
 	return fixcost, varcost, nil
-}
-
-func (*ProjectNone) optimizeLookup2(Mode, []string, float64) (Cost, Cost, any) {
-	return 0, 0, nil
 }
 
 func (pn *ProjectNone) setApproach(_ []string, _ float64, _ any, tran QueryTran) {
@@ -126,13 +124,14 @@ func (pn *ProjectNone) setApproach(_ []string, _ float64, _ any, tran QueryTran)
 	pn.source = SetApproach(pn.source, nil, frac, tran)
 }
 
-func (pn *ProjectNone) setApproach2(_ Require, _ float64, _ any, tran QueryTran) {
+func (pn *ProjectNone) setApproach2(_ Require, _ any, tran QueryTran) {
 	nrows, _ := pn.source.Nrows()
 	frac := 1.0
 	if nrows > 1 {
 		frac = 1.0 / float64(nrows)
 	}
-	pn.source = SetApproach2(pn.source, reqUnordered, frac, tran)
+	srcReq := Require{frac: float32(frac), nlookups: 0}
+	pn.source = SetApproach2(pn.source, srcReq, tran)
 }
 
 func (*ProjectNone) lookupCost() Cost {

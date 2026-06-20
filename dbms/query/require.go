@@ -26,7 +26,6 @@ const (
 )
 
 type Require struct {
-	use      Use
 	cols     []string
 	frac     float32
 	nlookups int32
@@ -46,14 +45,12 @@ func (r Require) Use() Use {
 }
 
 func (r Require) String() string {
-	s := r.use.String() + " " + str.Join("(,)", r.cols)
+	s := r.Use().String() + " " + str.Join("(,)", r.cols)
 	if r.nlookups > 0 || r.frac > 0 {
 		s += fmt.Sprintf(" f%g n%d", r.frac, r.nlookups)
 	}
 	return s
 }
-
-var reqUnordered = Require{}
 
 // MergeReq combines index usage requirements symmetrically.
 // Only really applicable to Query1, Project and Summarize
