@@ -225,7 +225,7 @@ func (e *Extend) optimize2(mode Mode, req Require, frac float64) (Cost, Cost, an
 	} else if !set.Disjoint(cols, e.cols) {
 		return impossible, impossible, nil
 	}
-	fixcost, varcost := Optimize2(e.source, mode, Require{req.use, cols}, frac)
+	fixcost, varcost := Optimize2(e.source, mode, Require{use: req.use, cols: cols}, frac)
 	return fixcost, varcost, nil
 }
 
@@ -243,7 +243,7 @@ func (e *Extend) setApproach2(req Require, frac float64, _ any, tran QueryTran) 
 	if e.source.fastSingle() {
 		cols = e.filterSourceIndex(cols)
 	}
-	e.source = SetApproach2(e.source, Require{req.use, cols}, frac, tran)
+	e.source = SetApproach2(e.source, Require{use: req.use, cols: cols}, frac, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header
 }

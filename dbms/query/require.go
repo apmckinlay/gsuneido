@@ -4,6 +4,7 @@
 package query
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -25,15 +26,34 @@ const (
 )
 
 type Require struct {
-	use  Use
-	cols []string
+	use      Use
+	cols     []string
+	frac     float32
+	nlookups int32
+} // 32 bytes
+
+func (r Require) Use() Use {
+    if len(r.cols) == 0 {
+        return ReqUnordered
+    }
+    if r.frac > 0 {
+        if r.nlookups > 0 {
+            return ReqGrouped
+        }
+        return ReqOrdered
+    }
+    return ReqLookup // frac == 0, nlookups > 0
 }
 
 func (r Require) String() string {
-	return r.use.String() + " " + str.Join("(,)", r.cols)
+	s := r.use.String() + " " + str.Join("(,)", r.cols)
+	if r.nlookups > 0 || r.frac > 0 {
+		s += fmt.Sprintf(" f%g n%d", r.frac, r.nlookups)
+	}
+	return s
 }
 
-var reqUnordered = Require{ReqUnordered, nil}
+var reqUnordered = Require{}
 
 // MergeReq combines index usage requirements symmetrically.
 // Only really applicable to Query1, Project and Summarize

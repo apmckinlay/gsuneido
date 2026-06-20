@@ -389,24 +389,24 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 	q = q.Transform()
 	best := newBestIndex()
 	for _, key := range q.Keys() {
-        f, v, _ := optimize2(q, mode, Require{ReqGrouped, key}, 1)
+		f, v, _ := optimize2(q, mode, Require{use: ReqGrouped, cols: key}, 1)
 		best.update(key, f, v)
 	}
 	if best.fixcost+best.varcost >= impossible {
 		panic("invalid query: " + String(q))
 	}
-	q = SetApproach2(q, Require{ReqGrouped, best.index}, 1, t)
+	q = SetApproach2(q, Require{use: ReqGrouped, cols: best.index}, 1, t)
 	return q
 }
 
 // SetupIdx is like Setup but specifies an index
 // e.g. to test Select or Lookup
 func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
-	fixcost, varcost := Optimize2(q, mode, Require{ReqOrdered, index}, 1)
+	fixcost, varcost := Optimize2(q, mode, Require{use: ReqOrdered, cols: index}, 1)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
 	}
-	q = SetApproach2(q, Require{ReqOrdered, index}, 1, t)
+	q = SetApproach2(q, Require{use: ReqOrdered, cols: index}, 1, t)
 	if mode == CursorMode {
 		setCursorMode(q)
 	}
@@ -495,7 +495,7 @@ func optTempIndex2(q Query, mode Mode, req Require, frac float64) (
 
 	// with "best" index
 	if bestIndex := tempIndexBest(q, req.cols); bestIndex != nil {
-		optTI2(best, q, mode, Require{ReqOrdered, bestIndex}, frac, nrows, factorPre)
+		optTI2(best, q, mode, Require{use: ReqOrdered, cols: bestIndex}, frac, nrows, factorPre)
 	}
 
 	tempIndexCost := best.fixcost + best.varcost
@@ -507,7 +507,7 @@ func optTempIndex2(q Query, mode Mode, req Require, frac float64) (
 	traceQO("tempindex", best.index, tempIndexCost, "<", indexedCost)
 	return best.fixcost, best.varcost,
 		&tempIndex{index: req.cols, srcuse: best.srcuse, srcapp: best.srcapp,
-			srcindex: best.index,
+			srcindex:   best.index,
 			srcfixcost: best.srcfixcost, srcvarcost: best.srcvarcost}
 }
 
@@ -800,7 +800,7 @@ func setApproach2migrated(q optReq, req Require, frac float64, tran QueryTran) Q
 	assert.That(fixcost >= 0 && varcost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
 		qq.Metrics().setCost(1, app.srcfixcost, app.srcvarcost)
-		q.setApproach2(Require{app.srcuse, app.srcindex}, 1, app.srcapp, tran)
+		q.setApproach2(Require{use: app.srcuse, cols: app.srcindex}, 1, app.srcapp, tran)
 		ti := NewTempIndex(qq, app.index, tran)
 		ti.setCost(frac, fixcost, varcost)
 		tempIndexCount.Add(1)

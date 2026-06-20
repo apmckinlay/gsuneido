@@ -90,14 +90,14 @@ func (sort *Sort) setApproach(_ []string, frac float64, _ any, tran QueryTran) {
 
 func (sort *Sort) optimize2(mode Mode, req Require, frac float64) (Cost, Cost, any) {
 	assert.That(req.use == ReqUnordered)
-	req2 := Require{ReqOrdered, sort.order}
+	req2 := Require{use: ReqOrdered, cols: sort.order}
 	// Optimize2 will add temp index if needed
 	fixcost, varcost := Optimize2(sort.source, mode, req2, frac)
 	return fixcost, varcost, nil
 }
 
 func (sort *Sort) setApproach2(_ Require, frac float64, _ any, tran QueryTran) {
-	sort.source = SetApproach2(sort.source, Require{ReqOrdered, sort.order}, frac, tran)
+	sort.source = SetApproach2(sort.source, Require{use: ReqOrdered, cols: sort.order}, frac, tran)
 	sort.header = sort.source.Header()
 	sort.optimized = true
 }
