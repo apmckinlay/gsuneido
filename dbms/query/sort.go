@@ -14,6 +14,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
+var _ optReq = (*Sort)(nil)
+
 type Sort struct {
 	Query1
 	order     []string
@@ -98,6 +100,10 @@ func (sort *Sort) setApproach2(_ Require, frac float64, _ any, tran QueryTran) {
 	sort.source = SetApproach2(sort.source, Require{ReqOrdered, sort.order}, frac, tran)
 	sort.header = sort.source.Header()
 	sort.optimized = true
+}
+
+func (sort *Sort) optimizeLookup2(mode Mode, cols []string, frac float64) (Cost, Cost, any) {
+	return 0, sort.lookupCost(), nil
 }
 
 // execution --------------------------------------------------------

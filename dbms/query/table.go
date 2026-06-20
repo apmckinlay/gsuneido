@@ -56,6 +56,7 @@ type Table struct {
 }
 
 var _ whereTable = (*Table)(nil)
+var _ optReq = (*Table)(nil)
 
 func (tbl *Table) isSingleton() bool {
 	return tbl.singleton
@@ -185,7 +186,7 @@ func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, an
 	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
 }
 
-func (tbl *Table) optimize2(_ Mode, req Require, frac float64) (Cost, Cost, any) {
+func (tbl *Table) optimize2(mode Mode, req Require, frac float64) (Cost, Cost, any) {
 	if tbl.singleton {
 		return tbl.costFor(tbl.indexes[0], frac)
 	}
@@ -205,21 +206,6 @@ func (tbl *Table) optimize2(_ Mode, req Require, frac float64) (Cost, Cost, any)
 			if grouped(idx, req.cols, len(req.cols), nil) {
 				f, v, _ := tbl.costFor(idx, frac)
 				best.update(idx, f, v)
-			}
-		}
-		if best.index == nil {
-			return impossible, impossible, nil
-		}
-		return best.fixcost, best.varcost, tableApproach{index: best.index}
-	case ReqLookup:
-		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
-			return 0, tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
-		}
-		best := newBestIndex()
-		for i, idx := range tbl.indexes {
-			if lookupIndexEligible(idx, tbl.allKeys, nil) &&
-				grouped(idx, req.cols, len(req.cols), nil) {
-				best.update(idx, 0, tbl.lookupCostFor(i))
 			}
 		}
 		if best.index == nil {
@@ -310,6 +296,26 @@ func (tbl *Table) lookupCostFor(i int) Cost {
 
 func lookupCost(levels int) Cost {
 	return levels*800 - 300 // empirical
+}
+
+func (tbl *Table) optimizeLookup2(_ Mode, cols []string, _ float64) (Cost, Cost, any) {
+	if tbl.singleton {
+		return 0, tbl.lookupCost(), tableApproach{index: tbl.indexes[0]}
+	}
+	if idxi := slc.IndexFn(tbl.indexes, cols, slices.Equal); idxi != -1 {
+		return 0, tbl.lookupCostFor(idxi), tableApproach{index: cols}
+	}
+	best := newBestIndex()
+	for i, idx := range tbl.indexes {
+		if lookupIndexEligible(idx, tbl.allKeys, nil) &&
+			grouped(idx, cols, len(cols), nil) {
+			best.update(idx, 0, tbl.lookupCostFor(i))
+		}
+	}
+	if best.index == nil {
+		return impossible, impossible, nil
+	}
+	return best.fixcost, best.varcost, tableApproach{index: best.index}
 }
 
 // execution --------------------------------------------------------

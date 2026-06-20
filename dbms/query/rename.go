@@ -13,6 +13,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
+var _ optReq = (*Rename)(nil)
+
 type Rename struct {
 	Query1
 	from []string
@@ -187,6 +189,10 @@ func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran
 func (r *Rename) setApproach2(req Require, frac float64, _ any, tran QueryTran) {
 	r.source = SetApproach2(r.source, Require{req.use, r.renameRev(req.cols)}, frac, tran)
 	r.header = r.getHeader()
+}
+
+func (r *Rename) optimizeLookup2(mode Mode, cols []string, frac float64) (Cost, Cost, any) {
+	return optimizeLookup2(r.source, mode, r.renameRev(cols), frac)
 }
 
 // execution --------------------------------------------------------

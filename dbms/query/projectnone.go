@@ -21,6 +21,7 @@ type ProjectNone struct {
 }
 
 var _ Query = (*ProjectNone)(nil)
+var _ optReq = (*ProjectNone)(nil)
 
 func (*ProjectNone) String() string {
 	return "project-none"
@@ -110,6 +111,10 @@ func (pn *ProjectNone) optimize2(mode Mode, _ Require, _ float64) (Cost, Cost, a
 	}
 	fixcost, varcost := Optimize2(pn.source, mode, reqUnordered, frac)
 	return fixcost, varcost, nil
+}
+
+func (*ProjectNone) optimizeLookup2(Mode, []string, float64) (Cost, Cost, any) {
+	return 0, 0, nil
 }
 
 func (pn *ProjectNone) setApproach(_ []string, _ float64, _ any, tran QueryTran) {

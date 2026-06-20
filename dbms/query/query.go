@@ -449,10 +449,16 @@ func optimize2(q Query, mode Mode, req Require, frac float64) (
 
 type optReq interface {
 	optimize2(mode Mode, req Require, frac float64) (Cost, Cost, any)
+	setApproach2(req Require, frac float64, approach any, tran QueryTran)
+	optimizeLookup2(mode Mode, cols []string, frac float64) (Cost, Cost, any)
 }
 
-type setReq interface {
-	setApproach2(req Require, frac float64, approach any, tran QueryTran)
+func optimizeLookup2(q Query, mode Mode, cols []string, frac float64) (
+	fixcost, perLookup Cost, approach any) {
+	if q, ok := q.(optReq); ok {
+		return q.optimizeLookup2(mode, cols, frac)
+	}
+	return 0, q.lookupCost(), nil
 }
 
 // optTempIndex determines if a TempIndex is a benefit
@@ -775,13 +781,13 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 // SetApproach2 is the v2 version of SetApproach.
 // It finalizes the chosen approach using Require instead of index.
 func SetApproach2(q Query, req Require, frac float64, tran QueryTran) Query {
-	if q, ok := q.(setReq); ok {
+	if q, ok := q.(optReq); ok {
 		return setApproach2migrated(q, req, frac, tran)
 	}
 	return setApproach2v1(q, req, frac, tran)
 }
 
-func setApproach2migrated(q setReq, req Require, frac float64, tran QueryTran) Query {
+func setApproach2migrated(q optReq, req Require, frac float64, tran QueryTran) Query {
 	qq := q.(Query)
 	if qq.fastSingle() || qq.Fixed().All(req.cols) {
 		req = reqUnordered

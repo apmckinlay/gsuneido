@@ -24,6 +24,7 @@ func NewNothing(q Query) *Nothing {
 }
 
 var _ Query = (*Nothing)(nil)
+var _ optReq = (*Nothing)(nil)
 
 func (no *Nothing) String() string {
 	return "nothing" + str.Opt("(", no.table, ")")
@@ -74,6 +75,10 @@ func (*Nothing) optimize(Mode, []string, float64) (Cost, Cost, any) {
 }
 
 func (*Nothing) optimize2(Mode, Require, float64) (Cost, Cost, any) {
+	return 0, 0, nil
+}
+
+func (*Nothing) optimizeLookup2(Mode, []string, float64) (Cost, Cost, any) {
 	return 0, 0, nil
 }
 

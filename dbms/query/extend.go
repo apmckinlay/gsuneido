@@ -16,6 +16,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
+var _ optReq = (*Extend)(nil)
+
 type Extend struct {
 	Query1
 	t        QueryTran
@@ -244,6 +246,13 @@ func (e *Extend) setApproach2(req Require, frac float64, _ any, tran QueryTran) 
 	e.source = SetApproach2(e.source, Require{req.use, cols}, frac, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header
+}
+
+func (e *Extend) optimizeLookup2(mode Mode, cols []string, frac float64) (Cost, Cost, any) {
+	if !set.Disjoint(cols, e.cols) {
+		return impossible, impossible, nil
+	}
+	return optimizeLookup2(e.source, mode, cols, frac)
 }
 
 // filterSourceIndex filters out extended columns from the index for the source query

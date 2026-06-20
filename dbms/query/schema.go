@@ -15,6 +15,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
+var _ optReq = (*schemaTable)(nil)
+
 // schema implements virtual tables for tables, columns, indexes, and views
 
 type schemaTable struct {
@@ -66,6 +68,10 @@ func (*schemaTable) optimize2(_ Mode, req Require, _ float64) (Cost, Cost, any) 
 	if req.use == ReqUnordered {
 		return 0, 1000, nil
 	}
+	return impossible, impossible, nil
+}
+
+func (*schemaTable) optimizeLookup2(Mode, []string, float64) (Cost, Cost, any) {
 	return impossible, impossible, nil
 }
 

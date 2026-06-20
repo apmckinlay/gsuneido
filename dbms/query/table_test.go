@@ -14,11 +14,21 @@ func TestTableOptimize2(t *testing.T) {
 	assert := assert.T(t)
 	tran := testTran{}
 
+	// optimizeFor dispatches ReqLookup to optimizeLookup2,
+	// all other uses to optimize2 (matching the design: Optimize2
+	// never receives ReqLookup; lookup uses a separate interface).
+	optimizeFor := func(tbl *Table, req Require, frac float64) (Cost, Cost, any) {
+		if req.use == ReqLookup {
+			return tbl.optimizeLookup2(ReadMode, req.cols, frac)
+		}
+		return tbl.optimize2(ReadMode, req, frac)
+	}
+
 	test := func(table string, req Require, frac float64, expected []string) {
 		t.Helper()
 		tbl := &Table{name: table}
 		tbl.SetTran(tran)
-		f, v, app := tbl.optimize2(ReadMode, req, frac)
+		f, v, app := optimizeFor(tbl, req, frac)
 		assert.True(f+v < impossible)
 		assert.This(app.(tableApproach).index).Is(expected)
 	}
@@ -26,7 +36,7 @@ func TestTableOptimize2(t *testing.T) {
 		t.Helper()
 		tbl := &Table{name: table}
 		tbl.SetTran(tran)
-		f, v, app := tbl.optimize2(ReadMode, req, frac)
+		f, v, app := optimizeFor(tbl, req, frac)
 		assert.False(f+v < impossible)
 		assert.This(app).Is(nil)
 	}
@@ -137,7 +147,7 @@ func TestTableOptimize2(t *testing.T) {
 		{ReqGrouped, []string{"x"}},
 		{ReqLookup, []string{"x"}},
 	} {
-		f, v, app := singleton.optimize2(ReadMode, req, 1)
+		f, v, app := optimizeFor(singleton, req, 1)
 		assert.Msg(req).True(f+v < impossible)
 		assert.Msg(req).This(app.(tableApproach).index).Is([]string{"x"})
 	}
