@@ -188,43 +188,34 @@ func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, an
 
 func (tbl *Table) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton {
-		return tbl.costFor(tbl.indexes[0], float64(req.frac))
+		return tbl.costFor(tbl.indexes[0], float64(req.frac), 0)
 	}
 	switch req.Use() {
 	case ReqUnordered:
-		return tbl.costFor(tbl.indexes[0], float64(req.frac))
+		return tbl.costFor(tbl.indexes[0], float64(req.frac), 0)
 	case ReqOrdered:
 		idxi := tbl.indexFor(req.cols)
 		if idxi == -1 {
 			return impossible, impossible, nil
 		}
-		return tbl.costFor(tbl.indexes[idxi], float64(req.frac))
+		return tbl.costFor(tbl.indexes[idxi], float64(req.frac), 0)
+	case ReqLookup:
+		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
+			return 0, Cost(req.nlookups) * tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
+		}
+		fallthrough
 	case ReqGrouped:
 		best := newBestIndex()
 		for _, idx := range tbl.indexes {
 			// Table.Fixed() is always nil, so nColsUnfixed == len(req.cols)
-			if grouped(idx, req.cols, len(req.cols), nil) {
-				f, v, _ := tbl.costFor(idx, float64(req.frac))
-				best.update(idx, f, v)
+			if !grouped(idx, req.cols, len(req.cols), nil) {
+				continue
 			}
-		}
-		if best.index == nil {
-			return impossible, impossible, nil
-		}
-		return best.fixcost, best.varcost, tableApproach{index: best.index}
-	case ReqLookup:
-		if tbl.singleton {
-			return 0, tbl.lookupCost(), tableApproach{index: tbl.indexes[0]}
-		}
-		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
-			return 0, tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
-		}
-		best := newBestIndex()
-		for i, idx := range tbl.indexes {
-			if lookupIndexEligible(idx, tbl.allKeys, nil) &&
-				grouped(idx, req.cols, len(req.cols), nil) {
-				best.update(idx, 0, tbl.lookupCostFor(i))
+			if req.Use() == ReqLookup && !lookupIndexEligible(idx, tbl.allKeys, nil) {
+				continue
 			}
+			f, v, _ := tbl.costFor(idx, float64(req.frac), req.nlookups)
+			best.update(idx, f, v)
 		}
 		if best.index == nil {
 			return impossible, impossible, nil
@@ -234,14 +225,21 @@ func (tbl *Table) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	panic("unreachable")
 }
 
-func (tbl *Table) costFor(index []string, frac float64) (Cost, Cost, any) {
+func (tbl *Table) costFor(index []string, frac float64, nlookups int32) (Cost, Cost, any) {
 	rowCost := tableFast
 	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
 		rowCost = tableSlow
 	}
 	rowCost += len(index) * colsBias
 	varcost := tbl.info.Nrows * rowCost
-	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
+	result := Cost(frac * float64(varcost))
+	if nlookups > 0 {
+		idxi := slc.IndexFn(tbl.indexes, index, slices.Equal)
+		if idxi != -1 {
+			result += Cost(nlookups) * tbl.lookupCostFor(idxi)
+		}
+	}
+	return 0, result, tableApproach{index: index}
 }
 
 // find an index that satisfies the required order
