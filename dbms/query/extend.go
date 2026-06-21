@@ -219,14 +219,17 @@ func (e *Extend) optimize(mode Mode, index []string, frac float64) (
 }
 
 func (e *Extend) optimize2(mode Mode, req Require) (Cost, Cost, any) {
-	cols := req.cols
 	if e.source.fastSingle() {
-		cols = e.filterSourceIndex(cols)
-	} else if !set.Disjoint(cols, e.cols) {
+		cols := e.filterSourceIndex(req.cols)
+		if len(cols) == 0 {
+			req = Require{}
+		} else {
+			req = Require{cols: cols, frac: req.frac, nlookups: req.nlookups}
+		}
+	} else if !set.Disjoint(req.cols, e.cols) {
 		return impossible, impossible, nil
 	}
-	srcReq := Require{cols: cols, frac: req.frac, nlookups: req.nlookups}
-	fixcost, varcost := Optimize2(e.source, mode, srcReq)
+	fixcost, varcost := Optimize2(e.source, mode, req)
 	return fixcost, varcost, nil
 }
 
@@ -240,12 +243,15 @@ func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran
 }
 
 func (e *Extend) setApproach2(req Require, _ any, tran QueryTran) {
-	cols := req.cols
 	if e.source.fastSingle() {
-		cols = e.filterSourceIndex(cols)
+		cols := e.filterSourceIndex(req.cols)
+		if len(cols) == 0 {
+			req = Require{}
+		} else {
+			req = Require{cols: cols, frac: req.frac, nlookups: req.nlookups}
+		}
 	}
-	srcReq := Require{cols: cols, frac: req.frac, nlookups: req.nlookups}
-	e.source = SetApproach2(e.source, srcReq, tran)
+	e.source = SetApproach2(e.source, req, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header
 }
