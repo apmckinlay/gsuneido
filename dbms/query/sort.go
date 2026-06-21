@@ -89,7 +89,7 @@ func (sort *Sort) setApproach(_ []string, frac float64, _ any, tran QueryTran) {
 }
 
 func (sort *Sort) optimize2(mode Mode, req Require) (Cost, Cost, any) {
-	assert.That(len(req.cols) == 0)
+	assert.That(req.Use() == ReqUnordered)
 	srcReq := Require{cols: sort.order, frac: req.frac}
 	fixcost, varcost := Optimize2(sort.source, mode, srcReq)
 	return fixcost, varcost, nil
