@@ -18,11 +18,11 @@ func TestOptimize2(t *testing.T) {
 		q := ParseQuery(query, testTran{}, nil)
 		q = q.Transform()
 
-		fixcost, varcost := Optimize2(q, mode, Require{frac: 1, nlookups: 0})
+		fixcost, varcost := Optimize2(q, mode, Require{frac: 1})
 		if fixcost+varcost >= impossible {
 			panic("invalid query: " + String(q))
 		}
-		q = SetApproach2(q, Require{frac: 1, nlookups: 0}, testTran{})
+		q = SetApproach2(q, Require{frac: 1}, testTran{})
 
 		assert.T(t).Msg(query).This(String(q)).Like(expected)
 	}

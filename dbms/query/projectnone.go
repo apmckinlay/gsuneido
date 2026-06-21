@@ -110,7 +110,7 @@ func (pn *ProjectNone) optimize2(mode Mode, _ Require) (Cost, Cost, any) {
 	if nrows > 1 {
 		frac = 1.0 / float64(nrows)
 	}
-	srcReq := Require{frac: float32(frac), nlookups: 0}
+	srcReq := Require{frac: float32(frac)}
 	fixcost, varcost := Optimize2(pn.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
@@ -130,7 +130,7 @@ func (pn *ProjectNone) setApproach2(_ Require, _ any, tran QueryTran) {
 	if nrows > 1 {
 		frac = 1.0 / float64(nrows)
 	}
-	srcReq := Require{frac: float32(frac), nlookups: 0}
+	srcReq := Require{frac: float32(frac)}
 	pn.source = SetApproach2(pn.source, srcReq, tran)
 }
 

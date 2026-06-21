@@ -39,13 +39,13 @@ func TestTableOptimize2(t *testing.T) {
 	// indexes: [[a]], allKeys: [[a]]
 
 	// ReqUnordered
-	test("table", Require{frac: 1, nlookups: 0}, []string{"a"})
+	test("table", Require{frac: 1}, []string{"a"})
 
 	// ReqOrdered — match
-	test("table", Require{cols: []string{"a"}, frac: 1, nlookups: 0}, []string{"a"})
+	test("table", Require{cols: []string{"a"}, frac: 1}, []string{"a"})
 
 	// ReqOrdered — no match (b not a prefix of {a})
-	assertImpossible("table", Require{cols: []string{"b"}, frac: 1, nlookups: 0})
+	assertImpossible("table", Require{cols: []string{"b"}, frac: 1})
 
 	// ReqGrouped — match
 	test("table", Require{cols: []string{"a"}, frac: 1, nlookups: 1}, []string{"a"})
@@ -63,19 +63,19 @@ func TestTableOptimize2(t *testing.T) {
 	// indexes: [[supplier], [city,supplier]], allKeys: [[supplier]]
 
 	// ReqUnordered — primary index
-	test("supplier", Require{frac: 1, nlookups: 0}, []string{"supplier"})
+	test("supplier", Require{frac: 1}, []string{"supplier"})
 
 	// ReqOrdered — match key
-	test("supplier", Require{cols: []string{"supplier"}, frac: 1, nlookups: 0}, []string{"supplier"})
+	test("supplier", Require{cols: []string{"supplier"}, frac: 1}, []string{"supplier"})
 
 	// ReqOrdered — match non-key index
-	test("supplier", Require{cols: []string{"city", "supplier"}, frac: 1, nlookups: 0}, []string{"city", "supplier"})
+	test("supplier", Require{cols: []string{"city", "supplier"}, frac: 1}, []string{"city", "supplier"})
 
 	// ReqOrdered — no match (name not in any index)
-	assertImpossible("supplier", Require{cols: []string{"name"}, frac: 1, nlookups: 0})
+	assertImpossible("supplier", Require{cols: []string{"name"}, frac: 1})
 
 	// ReqOrdered — city is a prefix of [city,supplier], so indexFor finds it
-	test("supplier", Require{cols: []string{"city"}, frac: 1, nlookups: 0}, []string{"city", "supplier"})
+	test("supplier", Require{cols: []string{"city"}, frac: 1}, []string{"city", "supplier"})
 
 	// ReqGrouped — {city} is grouped by [city,supplier]
 	test("supplier", Require{cols: []string{"city"}, frac: 1, nlookups: 1}, []string{"city", "supplier"})
@@ -100,7 +100,7 @@ func TestTableOptimize2(t *testing.T) {
 	// indexes: [[b], [a,b], [c]], allKeys: [[b], [c]]
 
 	// ReqUnordered — primary index {b}
-	test("abc", Require{frac: 1, nlookups: 0}, []string{"b"})
+	test("abc", Require{frac: 1}, []string{"b"})
 
 	// ReqGrouped — {a} is grouped by [a,b]
 	test("abc", Require{cols: []string{"a"}, frac: 1, nlookups: 1}, []string{"a", "b"})
@@ -136,8 +136,8 @@ func TestTableOptimize2(t *testing.T) {
 	singleton.singleton = true
 	singleton.info = &meta.Info{Nrows: 1, Size: 100}
 	for _, req := range []Require{
-		{frac: 1, nlookups: 0},
-		{cols: []string{"x"}, frac: 1, nlookups: 0},
+		{frac: 1},
+		{cols: []string{"x"}, frac: 1},
 		{cols: []string{"x"}, frac: 1, nlookups: 1},
 		{cols: []string{"x"}, frac: 0, nlookups: 1},
 	} {

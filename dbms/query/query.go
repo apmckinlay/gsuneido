@@ -375,7 +375,7 @@ func Setup1(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
 }
 
 func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
-	req := Require{frac: float32(frac), nlookups: 0}
+	req := Require{frac: float32(frac)}
 	fixcost, varcost := Optimize2(q, mode, req)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
@@ -408,7 +408,7 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 // SetupIdx is like Setup but specifies an index
 // e.g. to test Select or Lookup
 func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
-	req := Require{cols: index, frac: 1, nlookups: 0}
+	req := Require{cols: index, frac: 1}
 	fixcost, varcost := Optimize2(q, mode, req)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
@@ -486,14 +486,14 @@ func optTempIndex2(q Query, mode Mode, req Require) (
 	best := newBestApp()
 
 	// with no index
-	optTI2(best, q, mode, Require{frac: req.frac, nlookups: 0}, nrows, factorNone)
+	optTI2(best, q, mode, Require{frac: req.frac}, nrows, factorNone)
 
 	// with required index
 	optTI2(best, q, mode, req, nrows, factorAll)
 
 	// with "best" index
 	if bestIndex := tempIndexBest(q, req.cols); bestIndex != nil {
-		optTI2(best, q, mode, Require{cols: bestIndex, frac: req.frac, nlookups: 0}, nrows, factorPre)
+		optTI2(best, q, mode, Require{cols: bestIndex, frac: req.frac}, nrows, factorPre)
 	}
 
 	// for ReqLookup, add per-lookup cost on temp index
@@ -526,7 +526,7 @@ func qopt2(q Query, mode Mode, req Require) (Cost, Cost, any) {
 }
 
 func optTI2(best *bestTI, q Query, mode Mode, req Require, nrows, factor int) {
-	srcReq := Require{cols: req.cols, frac: 1, nlookups: 0}
+	srcReq := Require{cols: req.cols, frac: 1}
 	srcfixcost, srcvarcost, srcapp := qopt2(q, mode, srcReq)
 	assert.That(srcfixcost >= 0 && srcvarcost >= 0)
 	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, req.cols, nrows, float64(req.frac), factor)
@@ -804,7 +804,7 @@ func setApproach2migrated(q optReq, req Require, tran QueryTran) Query {
 	assert.That(fixcost >= 0 && varcost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
 		qq.Metrics().setCost(1, app.srcfixcost, app.srcvarcost)
-		q.setApproach2(Require{cols: app.srcindex, frac: 1, nlookups: 0}, app.srcapp, tran)
+		q.setApproach2(Require{cols: app.srcindex, frac: 1}, app.srcapp, tran)
 		ti := NewTempIndex(qq, app.index, tran)
 		ti.setCost(float64(req.frac), fixcost, varcost)
 		tempIndexCount.Add(1)
