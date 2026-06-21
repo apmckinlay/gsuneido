@@ -675,6 +675,9 @@ func (p *Project) Select(sels Sels) {
 	p.nsels++
 	p.source.Select(sels)
 	p.indexed = false
+	if p.results != nil {
+		p.results.Clear()
+	}
 	p.rewind()
 }
 
