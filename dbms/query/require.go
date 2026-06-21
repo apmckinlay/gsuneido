@@ -31,6 +31,10 @@ type Require struct {
 	nlookups int32
 } // 32 bytes
 
+func NewRequire(cols []string, frac float32, nlookups int32) Require {
+	return Require{cols: cols, frac: frac, nlookups: nlookups}
+}
+
 func (r Require) Use() Use {
     if len(r.cols) == 0 {
         return ReqUnordered

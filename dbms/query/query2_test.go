@@ -115,7 +115,7 @@ func hashObject(p string) uint64 {
 func TestQuery2(t *testing.T) {
 	assert.TestOnlyIndividually(t)
 
-	db, err := db19.OpenDb("../suneido.db", stor.Read, true)
+	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -128,12 +128,12 @@ func TestQuery2(t *testing.T) {
 	// trace.QueryOpt.Set()
 	q = q.Transform()
 	const frac = 100
-	var index []string
-	fixcost, varcost := Optimize(q, ReadMode, index, frac)
+	req := NewRequire(nil, frac, 0)
+	fixcost, varcost := Optimize2(q, ReadMode, req)
 	if fixcost+varcost >= 9999999999 {
 		panic("invalid query: " + q.String())
 	}
-	q = SetApproach(q, index, frac, tran)
+	q = SetApproach2(q, req, tran)
 
 	fmt.Println("----------------")
 	fmt.Println(Strategy(q))

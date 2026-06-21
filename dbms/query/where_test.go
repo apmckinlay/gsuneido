@@ -608,8 +608,9 @@ func TestWhere_keyfixed(t *testing.T) {
 	q := ParseQuery("table where a=4", tran, nil)
 	q = q.Transform()
 	index := []string{"b"}
-	Optimize(q, ReadMode, index, 1)
-	q = SetApproach(q, index, 1, tran)
+	req := Require{cols: index, frac: 1}
+	Optimize2(q, ReadMode, req)
+	q = SetApproach2(q, req, tran)
 	assert.That(q.fastSingle())
 	th := &Thread{}
 	sels := Sels{{"b", Pack(IntVal(5))}}
@@ -690,8 +691,9 @@ func TestWhere_SelOrgNotFull(t *testing.T) {
 	// but (a,c) doesn't support lookups on (a,b) even with fixed
 	q = q.Transform()
 	key := []string{"a", "b"}
-	Optimize(q, ReadMode, key, 1)
-	q = SetApproach(q, key, 1, tran)
+	req := Require{cols: key, frac: 1}
+	Optimize2(q, ReadMode, req)
+	q = SetApproach2(q, req, tran)
 	q.Lookup(nil, Sels{{"a", Pack(SuInt(4))}, {"b", Pack(SuInt(5))}})
 }
 

@@ -1047,13 +1047,14 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 		}
 	}
 	q = q.Transform()
-	fixcost, varcost := Optimize(q, ReadMode, index, 1)
+	req := Require{cols: index, frac: 1}
+	fixcost, varcost := Optimize2(q, ReadMode, req)
 	fuzzCount++
 	if fixcost+varcost >= impossible {
 		t.Fatal("impossible\n", format(0, q, 0))
 	}
 	// fmt.Println(String(q))
-	q = SetApproach(q, index, 1, ft.rt)
+	q = SetApproach2(q, req, ft.rt)
 	q.SetTran(ft.rt)
 
 	hdr := q.Header()

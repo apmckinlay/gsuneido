@@ -266,7 +266,7 @@ func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
 	u := NewUnion(src1, src2)
 	assert.T(t).This(u.disjoint).Is("d")
 
-	fixcost, varcost := Optimize(u, CursorMode, index, 1)
+	fixcost, varcost := Optimize2(u, CursorMode, Require{cols: index, frac: 1})
 	assert.T(t).That(fixcost+varcost < impossible)
 }
 
