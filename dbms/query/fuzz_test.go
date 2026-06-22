@@ -1047,7 +1047,7 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 		}
 	}
 	q = q.Transform()
-	req := Require{cols: index, frac: 1}
+	req := OrderedReq(index, 1)
 	fixcost, varcost := Optimize2(q, ReadMode, req)
 	fuzzCount++
 	if fixcost+varcost >= impossible {

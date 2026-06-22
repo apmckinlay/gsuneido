@@ -22,7 +22,7 @@ const (
 	ReqOrdered
 	ReqGrouped
 	ReqLookup
-	ReqConflict = -1
+	ReqConflict = -1 // only used by MergeReq
 )
 
 type Require struct {
@@ -35,17 +35,53 @@ func NewRequire(cols []string, frac float32, nlookups int32) Require {
 	return Require{cols: cols, frac: frac, nlookups: nlookups}
 }
 
+func UnorderedReq(frac float32) Require {
+	req := Require{frac: frac}
+	assert.That(req.Use() == ReqUnordered)
+	return req
+}
+
+// OrderedReq will return UnorderedReq if cols is empty
+func OrderedReq(cols []string, frac float32) Require {
+	if len(cols) == 0 {
+		return UnorderedReq(frac)
+	}
+	req := Require{cols: cols, frac: frac}
+	assert.That(req.Use() == ReqOrdered)
+	return req
+}
+
+// GroupedReq will return UnorderedReq if cols is empty
+func GroupedReq(cols []string, frac float32, nlookups int32) Require {
+	if len(cols) == 0 {
+		return UnorderedReq(frac)
+	}
+	if nlookups <= 0 {
+		nlookups = 1
+	}
+	req := Require{cols: cols, frac: frac, nlookups: nlookups}
+	assert.That(req.Use() == ReqGrouped)
+	return req
+}
+
+func LookupReq(cols []string, nlookups int32) Require {
+	req := Require{cols: cols, nlookups: nlookups}
+	assert.That(req.Use() == ReqLookup)
+	return req
+}
+
 func (r Require) Use() Use {
-    if len(r.cols) == 0 {
-        return ReqUnordered
-    }
-    if r.frac > 0 {
-        if r.nlookups > 0 {
+	if len(r.cols) == 0 {
+		assert.That(r.nlookups == 0)
+		return ReqUnordered
+	}
+    if r.nlookups > 0 {
+        if r.frac > 0 {
             return ReqGrouped
         }
-        return ReqOrdered
+        return ReqLookup
     }
-    return ReqLookup // frac == 0, nlookups > 0
+    return ReqOrdered
 }
 
 func (r Require) String() string {

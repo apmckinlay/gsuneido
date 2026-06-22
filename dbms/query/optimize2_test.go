@@ -18,11 +18,11 @@ func TestOptimize2(t *testing.T) {
 		q := ParseQuery(query, testTran{}, nil)
 		q = q.Transform()
 
-		fixcost, varcost := Optimize2(q, mode, Require{frac: 1})
+		fixcost, varcost := Optimize2(q, mode, UnorderedReq(1))
 		if fixcost+varcost >= impossible {
 			panic("invalid query: " + String(q))
 		}
-		q = SetApproach2(q, Require{frac: 1}, testTran{})
+		q = SetApproach2(q, UnorderedReq(1), testTran{})
 
 		assert.T(t).Msg(query).This(String(q)).Like(expected)
 	}
@@ -108,4 +108,20 @@ func TestOptimize2(t *testing.T) {
 		"table^(a) extend x = F() tempindex(x)")
 	test2("((inven extend x=1) where x is 2) union inven",
 		`inven^(item) extend x = ""`)
+}
+
+// TestOptimize2FastSingleLookup verifies that a ReqLookup reaching a fastSingle
+// node does not panic. The top-level optimize2 guard must normalize the req to
+// a valid ReqUnordered (clearing nlookups, since Use() asserts nlookups==0 when
+// cols is empty). A singleton trivially satisfies any require.
+func TestOptimize2FastSingleLookup(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *core.SuTran { return nil }
+	q := ParseQuery("customer where id is 5", testTran{}, nil)
+	q = q.Transform()
+	assert.T(t).That(q.fastSingle())
+	// would panic at optTempIndex2's req.Use() before the guard cleared nlookups
+	fixcost, varcost := Optimize2(q, ReadMode, LookupReq([]string{"id"}, 5))
+	assert.T(t).True(fixcost+varcost < impossible)
+	q = SetApproach2(q, LookupReq([]string{"id"}, 5), testTran{})
+	_ = q
 }

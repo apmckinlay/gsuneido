@@ -39,93 +39,93 @@ func TestTableOptimize2(t *testing.T) {
 	// indexes: [[a]], allKeys: [[a]]
 
 	// ReqUnordered
-	test("table", Require{frac: 1}, []string{"a"})
+	test("table", UnorderedReq(1), []string{"a"})
 
 	// ReqOrdered — match
-	test("table", Require{cols: []string{"a"}, frac: 1}, []string{"a"})
+	test("table", OrderedReq([]string{"a"}, 1), []string{"a"})
 
 	// ReqOrdered — no match (b not a prefix of {a})
-	assertImpossible("table", Require{cols: []string{"b"}, frac: 1})
+	assertImpossible("table", OrderedReq([]string{"b"}, 1))
 
 	// ReqGrouped — match
-	test("table", Require{cols: []string{"a"}, frac: 1, nlookups: 1}, []string{"a"})
+	test("table", GroupedReq([]string{"a"}, 1, 1), []string{"a"})
 
 	// ReqGrouped — b not found in any index
-	assertImpossible("table", Require{cols: []string{"b"}, frac: 1, nlookups: 1})
+	assertImpossible("table", GroupedReq([]string{"b"}, 1, 1))
 
 	// ReqLookup — {a} is a physical index
-	test("table", Require{cols: []string{"a"}, frac: 0, nlookups: 1}, []string{"a"})
+	test("table", LookupReq([]string{"a"}, 1), []string{"a"})
 
 	// ReqLookup — {b} is not a physical index, no lookup-eligible index has {b}
-	assertImpossible("table", Require{cols: []string{"b"}, frac: 0, nlookups: 1})
+	assertImpossible("table", LookupReq([]string{"b"}, 1))
 
 	// supplier: key on {supplier}, index on {city}
 	// indexes: [[supplier], [city,supplier]], allKeys: [[supplier]]
 
 	// ReqUnordered — primary index
-	test("supplier", Require{frac: 1}, []string{"supplier"})
+	test("supplier", UnorderedReq(1), []string{"supplier"})
 
 	// ReqOrdered — match key
-	test("supplier", Require{cols: []string{"supplier"}, frac: 1}, []string{"supplier"})
+	test("supplier", OrderedReq([]string{"supplier"}, 1), []string{"supplier"})
 
 	// ReqOrdered — match non-key index
-	test("supplier", Require{cols: []string{"city", "supplier"}, frac: 1}, []string{"city", "supplier"})
+	test("supplier", OrderedReq([]string{"city", "supplier"}, 1), []string{"city", "supplier"})
 
 	// ReqOrdered — no match (name not in any index)
-	assertImpossible("supplier", Require{cols: []string{"name"}, frac: 1})
+	assertImpossible("supplier", OrderedReq([]string{"name"}, 1))
 
 	// ReqOrdered — city is a prefix of [city,supplier], so indexFor finds it
-	test("supplier", Require{cols: []string{"city"}, frac: 1}, []string{"city", "supplier"})
+	test("supplier", OrderedReq([]string{"city"}, 1), []string{"city", "supplier"})
 
 	// ReqGrouped — {city} is grouped by [city,supplier]
-	test("supplier", Require{cols: []string{"city"}, frac: 1, nlookups: 1}, []string{"city", "supplier"})
+	test("supplier", GroupedReq([]string{"city"}, 1, 1), []string{"city", "supplier"})
 
 	// ReqGrouped — {name} not in any index
-	assertImpossible("supplier", Require{cols: []string{"name"}, frac: 1, nlookups: 1})
+	assertImpossible("supplier", GroupedReq([]string{"name"}, 1, 1))
 
 	// ReqLookup — {supplier} is a physical index
-	test("supplier", Require{cols: []string{"supplier"}, frac: 0, nlookups: 1}, []string{"supplier"})
+	test("supplier", LookupReq([]string{"supplier"}, 1), []string{"supplier"})
 
 	// ReqLookup — {city,supplier} is a physical index
-	test("supplier", Require{cols: []string{"city", "supplier"}, frac: 0, nlookups: 1}, []string{"city", "supplier"})
+	test("supplier", LookupReq([]string{"city", "supplier"}, 1), []string{"city", "supplier"})
 
 	// ReqLookup — {city} is not a physical index and no index is both
 	// lookup-eligible (contains a key as a prefix) AND grouped by {city}.
 	// [supplier] is lookup-eligible but not grouped by {city}.
 	// [city,supplier] is grouped by {city} but NOT lookup-eligible
 	// (key {supplier} is not a prefix of [city,supplier]).
-	assertImpossible("supplier", Require{cols: []string{"city"}, frac: 0, nlookups: 1})
+	assertImpossible("supplier", LookupReq([]string{"city"}, 1))
 
 	// abc: key on {b}, index on {a}, key on {c}
 	// indexes: [[b], [a,b], [c]], allKeys: [[b], [c]]
 
 	// ReqUnordered — primary index {b}
-	test("abc", Require{frac: 1}, []string{"b"})
+	test("abc", UnorderedReq(1), []string{"b"})
 
 	// ReqGrouped — {a} is grouped by [a,b]
-	test("abc", Require{cols: []string{"a"}, frac: 1, nlookups: 1}, []string{"a", "b"})
+	test("abc", GroupedReq([]string{"a"}, 1, 1), []string{"a", "b"})
 
 	// ReqGrouped — {b} is grouped by [b] (cheapest)
-	test("abc", Require{cols: []string{"b"}, frac: 1, nlookups: 1}, []string{"b"})
+	test("abc", GroupedReq([]string{"b"}, 1, 1), []string{"b"})
 
 	// ReqGrouped — {c} is grouped by [c]
-	test("abc", Require{cols: []string{"c"}, frac: 1, nlookups: 1}, []string{"c"})
+	test("abc", GroupedReq([]string{"c"}, 1, 1), []string{"c"})
 
 	// ReqLookup — {b} is a physical index (and a key)
-	test("abc", Require{cols: []string{"b"}, frac: 0, nlookups: 1}, []string{"b"})
+	test("abc", LookupReq([]string{"b"}, 1), []string{"b"})
 
 	// ReqLookup — {c} is a physical index (and a key)
-	test("abc", Require{cols: []string{"c"}, frac: 0, nlookups: 1}, []string{"c"})
+	test("abc", LookupReq([]string{"c"}, 1), []string{"c"})
 
 	// ReqLookup — {a} is not a physical index. [a,b] is not
 	// lookup-eligible (key {b} is not a prefix, key {c} is not in index).
-	assertImpossible("abc", Require{cols: []string{"a"}, frac: 0, nlookups: 1})
+	assertImpossible("abc", LookupReq([]string{"a"}, 1))
 
 	// comp: key on {a,b,c} — single index [a,b,c], keys [[a,b,c]]
 	// ReqLookup {b,a} is not a physical index, but the fallback search
 	// finds [a,b,c]: it is lookup-eligible (starts with key) and has
 	// {b,a} grouped (first 2 cols {a,b} are in {b,a}).
-	test("comp", Require{cols: []string{"b", "a"}, frac: 0, nlookups: 1},
+	test("comp", LookupReq([]string{"b", "a"}, 1),
 		[]string{"a", "b", "c"})
 
 	// singleton: table with empty key — all req types return indexes[0]
@@ -136,10 +136,10 @@ func TestTableOptimize2(t *testing.T) {
 	singleton.singleton = true
 	singleton.info = &meta.Info{Nrows: 1, Size: 100}
 	for _, req := range []Require{
-		{frac: 1},
-		{cols: []string{"x"}, frac: 1},
-		{cols: []string{"x"}, frac: 1, nlookups: 1},
-		{cols: []string{"x"}, frac: 0, nlookups: 1},
+		UnorderedReq(1),
+		OrderedReq([]string{"x"}, 1),
+		GroupedReq([]string{"x"}, 1, 1),
+		LookupReq([]string{"x"}, 1),
 	} {
 		f, v, app := optimizeFor(singleton, req)
 		assert.Msg(req).True(f+v < impossible)

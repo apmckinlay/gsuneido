@@ -375,7 +375,7 @@ func Setup1(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
 }
 
 func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
-	req := Require{frac: float32(frac)}
+	req := UnorderedReq(float32(frac))
 	fixcost, varcost := Optimize2(q, mode, req)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
@@ -395,20 +395,20 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 	q = q.Transform()
 	best := newBestIndex()
 	for _, key := range q.Keys() {
-		f, v, _ := optimize2(q, mode, Require{cols: key, frac: 1, nlookups: 1})
+		f, v, _ := optimize2(q, mode, GroupedReq(key, 1, 1))
 		best.update(key, f, v)
 	}
 	if best.fixcost+best.varcost >= impossible {
 		panic("invalid query: " + String(q))
 	}
-	q = SetApproach2(q, Require{cols: best.index, frac: 1, nlookups: 1}, t)
+	q = SetApproach2(q, GroupedReq(best.index, 1, 1), t)
 	return q
 }
 
 // SetupIdx is like Setup but specifies an index
 // e.g. to test Select or Lookup
 func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
-	req := Require{cols: index, frac: 1}
+	req := OrderedReq(index, 1)
 	fixcost, varcost := Optimize2(q, mode, req)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
@@ -441,8 +441,15 @@ func optimize2(q Query, mode Mode, req Require) (
 	}
 
 	// this condition must match SetApproach
+	// A fastSingle node (or one whose fixed covers req.cols) trivially
+	// satisfies any require, so the qualitative aspect (cols/use) is
+	// irrelevant. Clear cols AND nlookups to produce a valid ReqUnordered —
+	// Use() asserts nlookups==0 when cols is empty, and a singleton's
+	// access cost is independent of the lookup/ordered/grouped distinction.
+	// frac is kept as it scales the (single) row's varcost.
 	if q.fastSingle() || q.Fixed().All(req.cols) {
 		req.cols = nil
+		req.nlookups = 0
 	}
 	if fixcost, varcost, app := q.cacheGet2(req); varcost >= 0 {
 		return fixcost, varcost, app
@@ -486,14 +493,14 @@ func optTempIndex2(q Query, mode Mode, req Require) (
 	best := newBestApp()
 
 	// with no index
-	optTI2(best, q, mode, Require{frac: req.frac}, nrows, factorNone)
+	optTI2(best, q, mode, UnorderedReq(req.frac), nrows, factorNone)
 
 	// with required index
 	optTI2(best, q, mode, req, nrows, factorAll)
 
 	// with "best" index
 	if bestIndex := tempIndexBest(q, req.cols); bestIndex != nil {
-		optTI2(best, q, mode, Require{cols: bestIndex, frac: req.frac}, nrows, factorPre)
+		optTI2(best, q, mode, OrderedReq(bestIndex, req.frac), nrows, factorPre)
 	}
 
 	// for ReqLookup, add per-lookup cost on temp index
@@ -526,7 +533,7 @@ func qopt2(q Query, mode Mode, req Require) (Cost, Cost, any) {
 }
 
 func optTI2(best *bestTI, q Query, mode Mode, req Require, nrows, factor int) {
-	srcReq := Require{cols: req.cols, frac: 1}
+	srcReq := OrderedReq(req.cols, 1)
 	srcfixcost, srcvarcost, srcapp := qopt2(q, mode, srcReq)
 	assert.That(srcfixcost >= 0 && srcvarcost >= 0)
 	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, req.cols, nrows, float64(req.frac), factor)
@@ -793,8 +800,10 @@ func SetApproach2(q Query, req Require, tran QueryTran) Query {
 
 func setApproach2migrated(q optReq, req Require, tran QueryTran) Query {
 	qq := q.(Query)
+	// must match optimize2's guard (see comment there)
 	if qq.fastSingle() || qq.Fixed().All(req.cols) {
 		req.cols = nil
+		req.nlookups = 0
 	}
 	fixcost, varcost, approach := qq.cacheGet2(req)
 	qq.cacheClear()
@@ -804,7 +813,7 @@ func setApproach2migrated(q optReq, req Require, tran QueryTran) Query {
 	assert.That(fixcost >= 0 && varcost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
 		qq.Metrics().setCost(1, app.srcfixcost, app.srcvarcost)
-		q.setApproach2(Require{cols: app.srcindex, frac: 1}, app.srcapp, tran)
+		q.setApproach2(OrderedReq(app.srcindex, 1), app.srcapp, tran)
 		ti := NewTempIndex(qq, app.index, tran)
 		ti.setCost(float64(req.frac), fixcost, varcost)
 		tempIndexCount.Add(1)
@@ -819,6 +828,7 @@ func setApproach2v1(q Query, req Require, tran QueryTran) Query {
 	// this condition must match optimize2 (query.go:435)
 	if q.fastSingle() || q.Fixed().All(req.cols) {
 		req.cols = nil
+		req.nlookups = 0
 	}
 	fixcost, varcost, approach := q.cacheGet2(req)
 	q.cacheClear()

@@ -74,7 +74,7 @@ func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
 
 // optimize2 is only used by fuzz_test.go
 func (ti *TempIndex) optimize2(mode Mode, req Require) (Cost, Cost, any) {
-	srcReq := Require{frac: req.frac, nlookups: req.nlookups}
+	srcReq := UnorderedReq(req.frac)
 	fixcost, varcost := Optimize2(ti.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
@@ -86,7 +86,7 @@ func (ti *TempIndex) setApproach(index []string, frac float64, app any, tran Que
 
 // setApproach2 is only used by fuzz_test.go
 func (ti *TempIndex) setApproach2(req Require, _ any, tran QueryTran) {
-	srcReq := Require{frac: req.frac, nlookups: req.nlookups}
+	srcReq := UnorderedReq(req.frac)
 	SetApproach2(ti.source, srcReq, tran)
 }
 

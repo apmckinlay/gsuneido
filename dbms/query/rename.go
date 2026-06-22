@@ -176,9 +176,8 @@ func (r *Rename) optimize(mode Mode, index []string, frac float64) (Cost, Cost, 
 }
 
 func (r *Rename) optimize2(mode Mode, req Require) (Cost, Cost, any) {
-	cols := r.renameRev(req.cols)
-	srcReq := Require{cols: cols, frac: req.frac, nlookups: req.nlookups}
-	fixcost, varcost := Optimize2(r.source, mode, srcReq)
+	req.cols = r.renameRev(req.cols)
+	fixcost, varcost := Optimize2(r.source, mode, req)
 	return fixcost, varcost, nil
 }
 
@@ -188,8 +187,8 @@ func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran
 }
 
 func (r *Rename) setApproach2(req Require, _ any, tran QueryTran) {
-	srcReq := Require{cols: r.renameRev(req.cols), frac: req.frac, nlookups: req.nlookups}
-	r.source = SetApproach2(r.source, srcReq, tran)
+	req.cols = r.renameRev(req.cols)
+	r.source = SetApproach2(r.source, req, tran)
 	r.header = r.getHeader()
 }
 
