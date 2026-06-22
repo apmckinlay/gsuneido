@@ -119,7 +119,7 @@ func (r Require) SelectFrac(nrows int) float32 {
 }
 
 func (r Require) String() string {
-	s := r.Use().String() + " " + str.Join("(,)", r.cols)
+	s := r.Use().String() + str.Join("(,)", r.cols)
 	if r.nlookups > 0 || r.frac > 0 {
 		s += fmt.Sprintf(" f%g n%d", r.frac, r.nlookups)
 	}
