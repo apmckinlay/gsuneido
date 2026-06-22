@@ -503,8 +503,8 @@ func optTempIndex2(q Query, mode Mode, req Require) (
 		optTI2(best, q, mode, OrderedReq(bestIndex, req.frac), nrows, factorPre)
 	}
 
-	// for ReqLookup, add per-lookup cost on temp index
-	if u == ReqLookup {
+	// for ReqLookup or ReqGrouped with nlookups, add per-lookup cost on temp index
+	if u == ReqLookup || (u == ReqGrouped && req.nlookups > 0) {
 		perLookup := Cost(400)
 		if q.SingleTable() {
 			perLookup = Cost(200)

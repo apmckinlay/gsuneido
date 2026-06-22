@@ -75,13 +75,26 @@ func (r Require) Use() Use {
 		assert.That(r.nlookups == 0)
 		return ReqUnordered
 	}
-    if r.nlookups > 0 {
-        if r.frac > 0 {
-            return ReqGrouped
-        }
-        return ReqLookup
-    }
-    return ReqOrdered
+	if r.nlookups > 0 {
+		if r.frac > 0 {
+			return ReqGrouped
+		}
+		return ReqLookup
+	}
+	return ReqOrdered
+}
+
+// LookupCount returns how many lookups a per-row-driven downstream source
+// (Join/SemiJoin source2, Intersect/Minus source2) should expect from this
+// require. ReqLookup/ReqGrouped inherit the parent's count; scanning (ReqOrdered/
+// ReqUnordered) estimates from frac × nrows1.
+// Never derive the count from frac alone — frac=0 (pure lookup) must not
+// collapse the count to zero, since each parent lookup drives one child lookup.
+func (r Require) LookupCount(nrows1 int) int32 {
+	if r.nlookups > 0 {
+		return r.nlookups
+	}
+	return int32(float64(max(1, nrows1)) * float64(r.frac))
 }
 
 func (r Require) String() string {
