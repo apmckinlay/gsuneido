@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strconv"
+	"sync/atomic"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
@@ -25,6 +26,13 @@ func init() {
 }
 
 const nfuzz = 200
+
+var (
+	reqUnorderedCount atomic.Int64
+	reqOrderedCount   atomic.Int64
+	reqGroupedCount   atomic.Int64
+	reqLookupCount    atomic.Int64
+)
 
 type fuzzRunner struct {
 	build func(*FT) Query
@@ -79,7 +87,18 @@ func TestFuzzRandomDebug(t *testing.T) {
 }
 
 func TestFuzzRandom(t *testing.T) {
+	startUnordered := reqUnorderedCount.Load()
+	startOrdered := reqOrderedCount.Load()
+	startGrouped := reqGroupedCount.Load()
+	startLookup := reqLookupCount.Load()
+
 	fuzzRandomRunner.Test(t)
+
+	fmt.Printf("Require uses: unordered=%d ordered=%d grouped=%d lookup=%d\n",
+		reqUnorderedCount.Load()-startUnordered,
+		reqOrderedCount.Load()-startOrdered,
+		reqGroupedCount.Load()-startGrouped,
+		reqLookupCount.Load()-startLookup)
 }
 
 func fuzzRandom(ft *FT) Query {
@@ -1025,34 +1044,85 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 			}
 		}
 	}()
-	which := random([]string{"lookup", "select"}, ft.rnd)
+	reqUse := random([]string{"unordered", "ordered", "grouped", "lookup"}, ft.rnd)
 	if isEmptyKey(q.Indexes()) {
-		which = "get"
+		reqUse = "unordered"
 	}
 	var index []string
-	if which == "lookup" {
-		ki := keyIndexes(q)
-		if len(ki) > 0 {
-			index = random(keyIndexes(q), ft.rnd)
-		} else {
-			which = "select"
-		}
-	}
-	if which == "select" {
+	var req Require
+	switch reqUse {
+	case "unordered":
+		req = UnorderedReq(1)
+	case "ordered":
 		indexes := q.Indexes()
 		if len(indexes) > 0 {
-			index = random(q.Indexes(), ft.rnd)
-		} else {
-			which = "get"
+			index = random(indexes, ft.rnd)
 		}
+		if len(index) == 0 {
+			reqUse = "unordered"
+			req = UnorderedReq(1)
+		} else {
+			req = OrderedReq(index, 1)
+		}
+	case "grouped":
+		indexes := q.Indexes()
+		if len(indexes) > 0 {
+			index = random(indexes, ft.rnd)
+		}
+		if len(index) == 0 {
+			reqUse = "unordered"
+			req = UnorderedReq(1)
+		} else {
+			nlookups := int32(1 + ft.rnd.IntN(10))
+			frac := float32(1) / float32(1+ft.rnd.IntN(4))
+			req = GroupedReq(slices.Clone(index), frac, nlookups)
+		}
+	case "lookup":
+		ki := keyIndexes(q)
+		if len(ki) > 0 {
+			index = random(ki, ft.rnd)
+		}
+		if len(index) == 0 {
+			reqUse = "ordered"
+			indexes := q.Indexes()
+			if len(indexes) > 0 {
+				index = random(indexes, ft.rnd)
+			}
+			if len(index) == 0 {
+				reqUse = "unordered"
+				req = UnorderedReq(1)
+			} else {
+				req = OrderedReq(index, 1)
+			}
+		} else {
+			nlookups := int32(1 + ft.rnd.IntN(10))
+			req = LookupReq(index, nlookups)
+		}
+
 	}
 	q = q.Transform()
-	req := OrderedReq(index, 1)
 	fixcost, varcost := Optimize2(q, ReadMode, req)
-	fuzzCount++
 	if fixcost+varcost >= impossible {
-		t.Fatal("impossible\n", format(0, q, 0))
+		// fall back to an unordered read so the test can still validate results
+		reqUse = "unordered"
+		req = UnorderedReq(1)
+		index = nil
+		fixcost, varcost = Optimize2(q, ReadMode, req)
+		if fixcost+varcost >= impossible {
+			t.Fatal("impossible\n", format(0, q, 0))
+		}
 	}
+	switch req.Use() {
+	case ReqUnordered:
+		reqUnorderedCount.Add(1)
+	case ReqOrdered:
+		reqOrderedCount.Add(1)
+	case ReqGrouped:
+		reqGroupedCount.Add(1)
+	case ReqLookup:
+		reqLookupCount.Add(1)
+	}
+	fuzzCount++
 	// fmt.Println(String(q))
 	q = SetApproach2(q, req, ft.rt)
 	q.SetTran(ft.rt)
@@ -1070,12 +1140,18 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	}
 	testRandomGet(t, ft.rnd, q, qh, hdr, nil)
 
-	switch which {
+	// Implicit contract: Select only for ReqGrouped, Lookup only for ReqLookup,
+	// iteration only for ReqOrdered/ReqUnordered. See require.go for details.
+	switch reqUse {
 	case "lookup":
-		cols := hdr.Columns
-		testRandomLookups(t, ft.rnd, q, index, cols, expected)
-	case "select":
-		testRandomSelects(t, ft.rnd, q, index, expected)
+		if len(index) > 0 {
+			cols := hdr.Columns
+			testRandomLookups(t, ft.rnd, q, index, cols, expected)
+		}
+	case "grouped":
+		if len(index) > 0 {
+			testRandomSelects(t, ft.rnd, q, index, expected)
+		}
 	}
 }
 
@@ -1364,10 +1440,9 @@ func selMatchIndex(hdr *Header, row Row, sels Sels, index []string) bool {
 	return true
 }
 
-// indexSelectCriteria picks a random prefix of the index for select criteria.
+// indexSelectCriteria uses all columns of the index for select criteria.
 func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index []string) Sels {
-	n := 1 + rnd.IntN(len(index))
-	selCols := slices.Clone(index[:n])
+	selCols := slices.Clone(index)
 	rnd.Shuffle(len(selCols), func(i, j int) {
 		selCols[i], selCols[j] = selCols[j], selCols[i]
 	})

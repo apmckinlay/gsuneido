@@ -126,10 +126,10 @@ func (sj *SemiJoin) setApproach(index []string, frac float64, approach any, tran
 func (sj *SemiJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	fixcost1, varcost1 := Optimize2(sj.source1, mode, req)
 	nrows1, _ := sj.source1.Nrows()
-	read2, _ := sj.Nrows()
 	nrows2, _ := sj.source2.Nrows()
-	frac2 := float32(float64(max(1, read2)) * float64(req.frac) / float64(max(1, nrows2)))
-	req2 := GroupedReq(sj.by, frac2, req.LookupCount(nrows1))
+	nlookups := req.LookupCount(nrows1)
+	frac2 := min(float32(1), float32(nlookups)/float32(max(1, nrows2)))
+	req2 := GroupedReq(sj.by, frac2, nlookups)
 	fixcost2, varcost2 := Optimize2(sj.source2, mode, req2)
 	if fixcost2+varcost2 >= impossible {
 		return impossible, impossible, nil

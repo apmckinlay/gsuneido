@@ -15,6 +15,17 @@ import (
 
 //go:generate stringer -type=Use
 
+// Use specifies the type of requirement placed on a query.
+// There is an implicit contract between the Use type and the operations
+// that can be performed on the query after SetApproach:
+//   - ReqUnordered: iteration only (Get), no Select, no Lookup
+//   - ReqOrdered: ordered iteration (Get), no Select, no Lookup
+//   - ReqGrouped: enables Select (with the exact index columns, not a prefix)
+//   - ReqLookup: enables Lookup (with the exact index columns)
+//
+// This contract is enforced by the optimizer: Select should only be called
+// if the query was optimized with ReqGrouped, and Lookup should only be
+// called if optimized with ReqLookup. ReqOrdered is for ordered iteration only.
 type Use int
 
 const (
@@ -95,6 +106,19 @@ func (r Require) LookupCount(nrows1 int) int32 {
 		return r.nlookups
 	}
 	return int32(float64(max(1, nrows1)) * float64(r.frac))
+}
+
+// SelectFrac returns the fraction of rows/groups the parent will access.
+// For ReqLookup (frac == 0) it is derived from nlookups relative to nrows.
+// For ReqUnordered/ReqOrdered it returns the stored frac.
+func (r Require) SelectFrac(nrows int) float32 {
+	if r.frac > 0 {
+		return r.frac
+	}
+	if r.nlookups > 0 {
+		return min(float32(1), float32(r.nlookups)/float32(max(1, nrows)))
+	}
+	return 1
 }
 
 func (r Require) String() string {

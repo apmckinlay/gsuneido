@@ -511,9 +511,10 @@ func (p *Project) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 	fixed := p.source.Fixed()
 	nColsUnfixed := countUnfixed(p.columns, fixed)
+	nrows, _ := p.Nrows()
 	switch req.Use() {
 	case ReqUnordered:
-		srcReq := GroupedReq(p.columns, req.frac, 1)
+		srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), 1)
 		fixcost, varcost := Optimize2(p.source, mode, srcReq)
 		return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 	case ReqOrdered:
@@ -524,7 +525,7 @@ func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 		return impossible, impossible, nil
 	case ReqGrouped, ReqLookup:
 		if set.Equal(req.cols, p.columns) {
-			srcReq := GroupedReq(p.columns, req.frac, req.nlookups)
+			srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), req.nlookups)
 			fixcost, varcost := Optimize2(p.source, mode, srcReq)
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 		}
@@ -536,13 +537,13 @@ func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 		for _, idx := range p.source.Indexes() {
 			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
 				grouped(idx, p.columns, nColsUnfixed, fixed) {
-				srcReq := GroupedReq(idx, req.frac, req.nlookups)
+				srcReq := GroupedReq(idx, req.SelectFrac(nrows), req.nlookups)
 				f, v := Optimize2(p.source, mode, srcReq)
 				best.update(idx, f, v)
 			}
 		}
 		if best.index != nil {
-			srcReq := GroupedReq(best.index, req.frac, req.nlookups)
+			srcReq := GroupedReq(best.index, req.SelectFrac(nrows), req.nlookups)
 			return best.fixcost, best.varcost,
 				&projectApproach{strat: projSeq, req: srcReq}
 		}
@@ -560,7 +561,7 @@ func (p *Project) mapCost2(mode Mode, req Require) (Cost, Cost, any) {
 		return impossible, impossible, nil
 	}
 	if req.Use() == ReqLookup {
-		req = GroupedReq(req.cols, req.frac, req.nlookups)
+		req = GroupedReq(req.cols, req.SelectFrac(nrows), req.nlookups)
 	}
 	srcFixcost, srcVarcost := Optimize2(p.source, mode, req)
 	mapBuild := Cost(float64(nrows) * float64(req.frac) * 20)

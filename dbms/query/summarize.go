@@ -357,9 +357,10 @@ func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 	}
 	fixed := su.source.Fixed()
 	nColsUnfixed := countUnfixed(su.by, fixed)
+	nrows, _ := su.Nrows()
 	switch req.Use() {
 	case ReqUnordered:
-		srcReq := GroupedReq(su.by, req.frac, 1)
+		srcReq := GroupedReq(su.by, req.SelectFrac(nrows), 1)
 		fixcost, varcost := Optimize2(su.source, mode, srcReq)
 		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
 	case ReqOrdered:
@@ -369,7 +370,7 @@ func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 		}
 	case ReqGrouped, ReqLookup:
 		if set.Equal(req.cols, su.by) {
-			srcReq := GroupedReq(su.by, req.frac, req.nlookups)
+			srcReq := GroupedReq(su.by, req.SelectFrac(nrows), req.nlookups)
 			fixcost, varcost := Optimize2(su.source, mode, srcReq)
 			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
 		}
@@ -378,13 +379,13 @@ func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 		for _, idx := range su.source.Indexes() {
 			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
 				grouped(idx, su.by, nColsUnfixed, fixed) {
-				srcReq := GroupedReq(idx, req.frac, req.nlookups)
+				srcReq := GroupedReq(idx, req.SelectFrac(nrows), req.nlookups)
 				f, v := Optimize2(su.source, mode, srcReq)
 				best.update(idx, f, v)
 			}
 		}
 		if best.index != nil {
-			srcReq := GroupedReq(best.index, req.frac, req.nlookups)
+			srcReq := GroupedReq(best.index, req.SelectFrac(nrows), req.nlookups)
 			return best.fixcost, best.varcost,
 				&summarizeApproach{strat: sumSeq, req: srcReq}
 		}
