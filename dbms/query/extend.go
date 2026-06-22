@@ -219,14 +219,9 @@ func (e *Extend) optimize(mode Mode, index []string, frac float64) (
 }
 
 func (e *Extend) optimize2(mode Mode, req Require) (Cost, Cost, any) {
-	if e.source.fastSingle() {
-		cols := e.filterSourceIndex(req.cols)
-		if len(cols) == 0 {
-			req = Require{}
-		} else {
-			req = Require{cols: cols, frac: req.frac, nlookups: req.nlookups}
-		}
-	} else if !set.Disjoint(req.cols, e.cols) {
+	// source.fastSingle is handled at the top-level (req.cols cleared),
+	// so any extended cols in req.cols are a genuine conflict here.
+	if !set.Disjoint(req.cols, e.cols) {
 		return impossible, impossible, nil
 	}
 	fixcost, varcost := Optimize2(e.source, mode, req)
@@ -243,14 +238,6 @@ func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran
 }
 
 func (e *Extend) setApproach2(req Require, _ any, tran QueryTran) {
-	if e.source.fastSingle() {
-		cols := e.filterSourceIndex(req.cols)
-		if len(cols) == 0 {
-			req = Require{}
-		} else {
-			req = Require{cols: cols, frac: req.frac, nlookups: req.nlookups}
-		}
-	}
 	e.source = SetApproach2(e.source, req, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header
