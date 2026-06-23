@@ -83,33 +83,28 @@ func anyKeyLookup2(src Query, mode Mode, nlookups int32) (Require, Cost, Cost) {
 	}
 	fixed := src.Fixed()
 	keys := src.Keys()
-	best := newBestIndex()
-	var bestReq Require
+	best := newBestReq()
 	for _, idx := range src.Indexes() {
 		if len(idx) > 0 && lookupIndexEligible(idx, keys, fixed) {
 			req := LookupReq(idx, nlookups)
 			fixcost, varcost := Optimize2(src, mode, req)
-			if best.update(idx, fixcost, varcost) {
-				bestReq = req
-			}
+			best.update(req, fixcost, varcost)
 		}
 	}
-	if best.index != nil {
-		return bestReq, best.fixcost, best.varcost
+	if best.found() {
+		return best.req, best.fixcost, best.varcost
 	}
 	for _, key := range keys {
 		if len(key) > 0 {
 			req := LookupReq(key, nlookups)
 			fixcost, varcost := Optimize2(src, mode, req)
-			if best.update(key, fixcost, varcost) {
-				bestReq = req
-			}
+			best.update(req, fixcost, varcost)
 		}
 	}
-	if best.index == nil {
+	if !best.found() {
 		return Require{}, impossible, impossible
 	}
-	return bestReq, best.fixcost, best.varcost
+	return best.req, best.fixcost, best.varcost
 }
 
 func (c *Compatible) SetTran(t QueryTran) {
