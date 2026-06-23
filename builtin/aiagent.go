@@ -22,7 +22,6 @@ type suAgent struct {
 var _ = builtin(AiAgent, "(baseURL, apiKey, model, callback, prompt = '')")
 
 func AiAgent(th *Thread, args []Value) Value {
-	EnableSandbox()
 	baseURL := ToStr(args[0])
 	apiKey := ToStr(args[1])
 	model := ToStr(args[2])
@@ -36,7 +35,7 @@ func AiAgent(th *Thread, args []Value) Value {
 		th:       t2,
 		callback: callback,
 		agent: llm.NewAgent(baseURL, apiKey, model, prompt,
-			outputCallback(t2, callback)),
+			outputCallback(t2, callback), EnableSandbox, DisableSandbox),
 	}
 	return a
 }
@@ -184,6 +183,5 @@ func agent_Close(this Value) Value {
 	a := this.(*suAgent)
 	a.agent.Interrupt()
 	a.th.Close()
-	DisableSandbox()
 	return nil
 }
