@@ -17,9 +17,12 @@ type Minus struct {
 }
 
 type minusApproach struct {
-	keyIndex []string
-	frac2    float64
+	keyIndex   []string
+	frac2      float64
+	req1, req2 Require
 }
+
+var _ optReq = (*Minus)(nil)
 
 func NewMinus(src1, src2 Query, t QueryTran) *Minus {
 	return newMinus(src1, src2, t, nil, nil)
@@ -98,6 +101,34 @@ func (m *Minus) setApproach(index []string, frac float64, approach any, tran Que
 	m.keyIndex = ap.keyIndex
 	m.source1 = SetApproach(m.source1, index, frac, tran)
 	m.source2 = SetApproach(m.source2, m.keyIndex, ap.frac2, tran)
+	m.header = m.source1.Header()
+}
+
+func (m *Minus) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	assert.That(m.disjoint == "")
+	fixcost1, varcost1 := Optimize2(m.source1, mode, req)
+	nrows1, _ := m.source1.Nrows()
+	nlookups := req.LookupCount(nrows1)
+	req2, fc2, vc2 := anyKeyLookup2(m.source2, mode, nlookups)
+	if fc2+vc2 >= impossible {
+		return impossible, impossible, nil
+	}
+	// keyIndex drives source2Has sels and the String() display.
+	// nil cols (fastSingle/Unordered) becomes a non-nil empty slice so
+	// String() renders bare "minus" rather than suppressing the marker.
+	ki := req2.cols
+	if ki == nil {
+		ki = []string{}
+	}
+	return fixcost1 + fc2, varcost1 + vc2,
+		&minusApproach{keyIndex: ki, req1: req, req2: req2}
+}
+
+func (m *Minus) setApproach2(req Require, approach any, tran QueryTran) {
+	ap := approach.(*minusApproach)
+	m.keyIndex = ap.keyIndex
+	m.source1 = SetApproach2(m.source1, ap.req1, tran)
+	m.source2 = SetApproach2(m.source2, ap.req2, tran)
 	m.header = m.source1.Header()
 }
 

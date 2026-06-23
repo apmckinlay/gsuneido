@@ -71,6 +71,47 @@ func (c *Compatible) String(s string) string {
 	return s
 }
 
+// anyKeyLookup2 returns the Require actually used to optimize src (so the
+// caller can pass the same Require to SetApproach2), plus its cost.
+// For a fastSingle source the require is UnorderedReq(0); otherwise it is
+// the LookupReq on the best eligible index/key (or impossible if none).
+func anyKeyLookup2(src Query, mode Mode, nlookups int32) (Require, Cost, Cost) {
+	if src.fastSingle() {
+		req := UnorderedReq(0)
+		fixcost, varcost := Optimize2(src, mode, req)
+		return req, fixcost, varcost
+	}
+	fixed := src.Fixed()
+	keys := src.Keys()
+	best := newBestIndex()
+	var bestReq Require
+	for _, idx := range src.Indexes() {
+		if len(idx) > 0 && lookupIndexEligible(idx, keys, fixed) {
+			req := LookupReq(idx, nlookups)
+			fixcost, varcost := Optimize2(src, mode, req)
+			if best.update(idx, fixcost, varcost) {
+				bestReq = req
+			}
+		}
+	}
+	if best.index != nil {
+		return bestReq, best.fixcost, best.varcost
+	}
+	for _, key := range keys {
+		if len(key) > 0 {
+			req := LookupReq(key, nlookups)
+			fixcost, varcost := Optimize2(src, mode, req)
+			if best.update(key, fixcost, varcost) {
+				bestReq = req
+			}
+		}
+	}
+	if best.index == nil {
+		return Require{}, impossible, impossible
+	}
+	return bestReq, best.fixcost, best.varcost
+}
+
 func (c *Compatible) SetTran(t QueryTran) {
 	c.st = MakeSuTran(t)
 	c.lookupCache.Reset()
