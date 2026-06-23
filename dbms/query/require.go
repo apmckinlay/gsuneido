@@ -73,6 +73,15 @@ func GroupedReq(cols []string, frac float32, nlookups int32) Require {
 }
 
 func LookupReq(cols []string, nlookups int32) Require {
+	// Floor nlookups so a degenerate caller (e.g. empty source1 yielding
+	// LookupCount==0, or tempindex exploration under a ReqLookup parent)
+	// still produces a valid ReqLookup. With nlookups==0 Use() would derive
+	// ReqOrdered and the assert below would fail. Matches GroupedReq's floor.
+	// The cost distortion (1 seek vs 0) only arises in vacuous cases where
+	// the subtree produces no rows anyway.
+	if nlookups <= 0 {
+		nlookups = 1
+	}
 	req := Require{cols: cols, nlookups: nlookups}
 	assert.That(req.Use() == ReqLookup)
 	return req
@@ -105,9 +114,16 @@ func (r Require) LookupCount(nrows1 int) int32 {
 	return int32(float64(max(1, nrows1)) * float64(r.frac))
 }
 
-// SelectFrac returns the fraction of rows/groups the parent will access.
-// For ReqLookup (frac == 0) it is derived from nlookups relative to nrows.
-// For ReqUnordered/ReqOrdered it returns the stored frac.
+// SelectFrac returns the fraction of rows/groups the parent will access,
+// for scaling a downstream source's iteration varcost or its own child frac.
+// Use this — not r.frac directly — whenever a query needs the parent's
+// access fraction to build a child Require. r.frac is 0 for ReqLookup
+// (frac==0, nlookups>0), so using it naively would compute a child frac of 0,
+// collapsing a GroupedReq into ReqLookup. That breaks the implicit contract
+// - a node optimized ReqGrouped may only be Select+iterated, never Lookup.
+// Deriving from nlookups keeps the child frac > 0, preserving ReqGrouped.
+// This is the dual of LookupCount's "never derive from frac alone" warning.
+// ReqUnordered/ReqOrdered return the stored frac unchanged.
 func (r Require) SelectFrac(nrows int) float32 {
 	if r.frac > 0 {
 		return r.frac

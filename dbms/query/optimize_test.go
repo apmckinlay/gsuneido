@@ -207,7 +207,7 @@ func TestOptimize(t *testing.T) {
 	test("customer leftjoin hist2 sort date",
 		"(customer^(id) leftjoin 1:n by(id) hist2^(id,date)) tempindex(date)")
 	test("customer leftjoin alias",
-		"customer^(id) leftjoin 1:1 by(id) alias^(id)")
+		"customer^(id) leftjoin 1:1 by(id) (alias^(id) tempindex(id))")
 
 	test("inven semijoin trans",
 		"inven^(item) semijoin by(item) trans^(item,date,id)")
