@@ -15,12 +15,14 @@ import (
 // It returns 0 rows when the source is empty, otherwise 1 row.
 type ProjectNone struct {
 	cache
+	cache2
 	source Query
 	done   bool
 	hasrow opt.Bool
 }
 
 var _ Query = (*ProjectNone)(nil)
+var _ optReq = (*ProjectNone)(nil)
 
 func (*ProjectNone) String() string {
 	return "project-none"
@@ -102,6 +104,17 @@ func (pn *ProjectNone) optimize(mode Mode, _ []string, _ float64) (Cost, Cost, a
 	return fixcost, varcost, nil
 }
 
+func (pn *ProjectNone) optimize2(mode Mode, _ Require) (Cost, Cost, any) {
+	nrows, _ := pn.source.Nrows()
+	frac := 1.0
+	if nrows > 1 {
+		frac = 1.0 / float64(nrows)
+	}
+	srcReq := UnorderedReq(float32(frac))
+	fixcost, varcost := Optimize2(pn.source, mode, srcReq)
+	return fixcost, varcost, nil
+}
+
 func (pn *ProjectNone) setApproach(_ []string, _ float64, _ any, tran QueryTran) {
 	nrows, _ := pn.source.Nrows()
 	frac := 1.0
@@ -109,6 +122,16 @@ func (pn *ProjectNone) setApproach(_ []string, _ float64, _ any, tran QueryTran)
 		frac = 1.0 / float64(nrows)
 	}
 	pn.source = SetApproach(pn.source, nil, frac, tran)
+}
+
+func (pn *ProjectNone) setApproach2(_ Require, _ any, tran QueryTran) {
+	nrows, _ := pn.source.Nrows()
+	frac := 1.0
+	if nrows > 1 {
+		frac = 1.0 / float64(nrows)
+	}
+	srcReq := UnorderedReq(float32(frac))
+	pn.source = SetApproach2(pn.source, srcReq, tran)
 }
 
 func (*ProjectNone) lookupCost() Cost {

@@ -53,6 +53,7 @@ type mapType = shmap.Map[rowHash, struct{}, shmap.Funcs[rowHash]]
 
 type projectApproach struct {
 	index []string
+	req   Require
 	strat projectStrategy
 }
 
@@ -63,7 +64,10 @@ const (
 	projCopy projectStrategy = iota + 1
 	// projSeq orders by the columns so duplicates are consecutive
 	projSeq
-	// projMap builds a map to identify duplicates
+	// projMap uses a map to identify duplicates.
+	// It does not care about source order — it produces rows in source order,
+	// returning the first occurrence of each group.
+	// The map is built incrementally (not up front), so cost is variable.
 	projMap
 )
 
@@ -487,6 +491,97 @@ func (p *Project) setApproach(_ []string, frac float64, approach any, tran Query
 	p.header = p.getHeader()
 }
 
+var _ optReq = (*Project)(nil)
+
+func (p *Project) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	if p.unique {
+		// no dedup needed — pass req through unchanged
+		fixcost, varcost := Optimize2(p.source, mode, req)
+		return fixcost, varcost, &projectApproach{strat: projCopy, req: req}
+	}
+	// non-unique: merge incoming req with own ReqGrouped(p.columns)
+	seqFix, seqVar, seqApp := p.seqCost2(mode, req)
+	mapFix, mapVar, mapApp := p.mapCost2(mode, req)
+	if seqFix+seqVar <= mapFix+mapVar {
+		return seqFix, seqVar, seqApp
+	}
+	return mapFix, mapVar, mapApp
+}
+
+func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
+	fixed := p.source.Fixed()
+	nColsUnfixed := countUnfixed(p.columns, fixed)
+	nrows, _ := p.Nrows()
+	switch req.Use() {
+	case ReqUnordered:
+		srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), 1)
+		fixcost, varcost := Optimize2(p.source, mode, srcReq)
+		return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
+	case ReqOrdered:
+		if grouped(req.cols, p.columns, nColsUnfixed, fixed) {
+			fixcost, varcost := Optimize2(p.source, mode, req)
+			return fixcost, varcost, &projectApproach{strat: projSeq, req: req}
+		}
+		return impossible, impossible, nil
+	case ReqGrouped, ReqLookup:
+		if set.Equal(req.cols, p.columns) {
+			srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), req.nlookups)
+			fixcost, varcost := Optimize2(p.source, mode, srcReq)
+			return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
+		}
+		// requires are different ReqGrouped
+		// this can't be handled with a single Require
+		// so we need to search here
+		nColsUnfixedReq := countUnfixed(req.cols, fixed)
+		best := newBestReq()
+		for _, idx := range p.source.Indexes() {
+			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
+				grouped(idx, p.columns, nColsUnfixed, fixed) {
+				srcReq := GroupedReq(idx, req.SelectFrac(nrows), req.nlookups)
+				f, v := Optimize2(p.source, mode, srcReq)
+				best.update(srcReq, f, v)
+			}
+		}
+		if best.found() {
+			return best.fixcost, best.varcost,
+				&projectApproach{strat: projSeq, req: best.req}
+		}
+		return impossible, impossible, nil
+	}
+	return impossible, impossible, nil
+}
+
+// mapCost2 estimates the cost of projMap.
+// The map is built incrementally during iteration (not up front),
+// so the map build cost is added to varcost, not fixcost.
+func (p *Project) mapCost2(mode Mode, req Require) (Cost, Cost, any) {
+	nrows, _ := p.Nrows()
+	if mode != ReadMode || nrows > mapThreshold {
+		return impossible, impossible, nil
+	}
+	if req.Use() == ReqLookup {
+		req = GroupedReq(req.cols, req.SelectFrac(nrows), req.nlookups)
+	}
+	srcFixcost, srcVarcost := Optimize2(p.source, mode, req)
+	mapBuild := Cost(float64(nrows) * float64(req.frac) * 20)
+	return srcFixcost, srcVarcost + mapBuild,
+		&projectApproach{strat: projMap, req: req}
+}
+
+func (p *Project) setApproach2(_ Require, approach any, tran QueryTran) {
+	p.projectApproach = *approach.(*projectApproach)
+	switch p.strat {
+	case projCopy:
+		projCopyCount.Add(1)
+	case projSeq:
+		projSeqCount.Add(1)
+	case projMap:
+		projMapCount.Add(1)
+	}
+	p.source = SetApproach2(p.source, p.projectApproach.req, tran)
+	p.header = p.getHeader()
+}
+
 // execution --------------------------------------------------------
 
 func (p *Project) Rewind() {
@@ -580,6 +675,10 @@ type rowHash struct {
 	hash uint64
 }
 
+// getMap returns rows in source order, skipping duplicates.
+// For Next direction, the map is built incrementally — each row is checked
+// against the map as it is read, so there is no up-front build cost.
+// For Prev direction, the full map must be built first (buildMap).
 func (p *Project) getMap(th *Thread, dir Dir) Row {
 	p.th = th
 	defer func() { p.th = nil }()
@@ -675,6 +774,9 @@ func (p *Project) Select(sels Sels) {
 	p.nsels++
 	p.source.Select(sels)
 	p.indexed = false
+	if p.results != nil {
+		p.results.Clear()
+	}
 	p.rewind()
 }
 

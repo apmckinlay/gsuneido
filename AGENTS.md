@@ -2,8 +2,8 @@
 
 gSuneido is the Go implementation of the Suneido integrated language and database.
 
-**Language Reference**: For syntax and semantics, strictly refer to @.kilocode/skills/suneido-language/SKILL.md
-**Database Reference**: For query language, strictly refer to @.kilocode/skills/suneido-database/SKILL.md
+**Language Reference**: For syntax and semantics, strictly refer to @.agents/skills/suneido-language/SKILL.md
+**Database Reference**: For query language, strictly refer to @.agents/skills/suneido-database/SKILL.md
 **Suneido Code**: Stored in library tables (database), compiled to bytecode, and interpreted. Suneido standard library code can be found in `.ss` files under the `stdlib/` directory
 **Database**: Immutable append-only with MVCC and relational algebra query language.
 

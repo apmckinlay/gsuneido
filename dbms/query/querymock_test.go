@@ -9,6 +9,7 @@ import . "github.com/apmckinlay/gsuneido/core"
 // By default all methods panic. Set fields to override return values.
 type QueryMock struct {
 	cache
+	cache2
 	ColumnsResult     []string
 	TransformResult   Query
 	OrderResult       []string

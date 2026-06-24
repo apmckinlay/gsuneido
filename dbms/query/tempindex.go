@@ -14,6 +14,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
+var _ optReq = (*TempIndex)(nil)
+
 // TempIndex is inserted by SetApproach as required.
 // It builds a sortlist of either DbRec or Row.
 // Keys are not constructed for the index or Lookup/Select
@@ -70,9 +72,22 @@ func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
 	return fixcost, varcost, nil
 }
 
+// optimize2 is only used by fuzz_test.go
+func (ti *TempIndex) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	srcReq := UnorderedReq(req.frac)
+	fixcost, varcost := Optimize2(ti.source, mode, srcReq)
+	return fixcost, varcost, nil
+}
+
 // setApproach is only used by fuzz_test.go
 func (ti *TempIndex) setApproach(index []string, frac float64, app any, tran QueryTran) {
 	SetApproach(ti.source, nil, frac, tran)
+}
+
+// setApproach2 is only used by fuzz_test.go
+func (ti *TempIndex) setApproach2(req Require, _ any, tran QueryTran) {
+	srcReq := UnorderedReq(req.frac)
+	SetApproach2(ti.source, srcReq, tran)
 }
 
 // execution --------------------------------------------------------

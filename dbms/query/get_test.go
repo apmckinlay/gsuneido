@@ -496,9 +496,9 @@ func TestQueryGet(t *testing.T) {
         990101`)
 	test("((co where tnum = 100) union (co where tnum = 102)) union "+
 		"(co where tnum = 100)",
-		"co^(tnum) where*1 tnum is 100 union-lookup(tnum) "+
-			"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum)-merge(tnum) "+
-			"(co^(tnum) where*1 tnum is 102))",
+		"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum) "+
+			"(co^(tnum) where*1 tnum is 102)) "+
+			"union-lookup() (co^(tnum) where*1 tnum is 100)",
 		`signed	tnum
 		990101	100
 		990102	102`)
@@ -514,7 +514,7 @@ func TestQueryGet(t *testing.T) {
 	test(`((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))
 		union
 		((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))`,
-		"(co^(tnum) where*1 tnum is 104 project-copy signed union-merge(signed) (co^(tnum) where*1 tnum is 106 project-copy signed)) union-merge(signed) (co^(tnum) where*1 tnum is 104 project-copy signed union-merge(signed) (co^(tnum) where*1 tnum is 106 project-copy signed))",
+		"(co^(tnum) where*1 tnum is 104 project-copy signed union-merge (co^(tnum) where*1 tnum is 106 project-copy signed)) union-merge(signed) (co^(tnum) where*1 tnum is 104 project-copy signed union-merge (co^(tnum) where*1 tnum is 106 project-copy signed))",
 		`signed
         990103
         990104`)
@@ -569,7 +569,7 @@ func TestQueryGet(t *testing.T) {
 		'vancouver'	200	970102	'e'	'disk'	'emerald'
 		'vancouver'	300	970103	'e'	'pencil'	'emerald'`)
 	test("hist join customer",
-		"hist^(date,item,id) join n:1 by(id) customer^(id)",
+		"hist^(date,item,id) join n:1 by(id) (customer^(id) tempindex(id))",
 		`city	cost	date	id	item	name
 		'calgary'	200	970102	'c'	'mouse'	'calac'
 		'saskatoon'	100	970101	'a'	'disk'	'axon'
@@ -774,7 +774,7 @@ func TestQueryGet(t *testing.T) {
 		970201	'eraser'`)
 
 	test("(customer summarize id, count) union (customer summarize id, count)",
-		"customer^(id) summarize-seq id, count union-merge(id) "+
+		"customer^(id) summarize-seq id, count union-lookup(id) "+
 			"(customer^(id) summarize-seq id, count)",
 		`count	id
 		1	'a'
@@ -792,7 +792,7 @@ func TestQueryGet(t *testing.T) {
 		1	970201	'eraser'`)
 
 	test("(customer project id) join (hist project id)",
-		"hist^(date,item,id) project-map id join 1:1 by(id) (customer^(id) project-copy id)",
+		"hist^(date,item,id) project-map id join 1:1 by(id) (customer^(id) tempindex(id) project-copy id)",
 		`id
 		'a'
 		'c'

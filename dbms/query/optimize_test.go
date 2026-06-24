@@ -207,12 +207,12 @@ func TestOptimize(t *testing.T) {
 	test("customer leftjoin hist2 sort date",
 		"(customer^(id) leftjoin 1:n by(id) hist2^(id,date)) tempindex(date)")
 	test("customer leftjoin alias",
-		"customer^(id) leftjoin 1:1 by(id) alias^(id)")
+		"customer^(id) leftjoin 1:1 by(id) (alias^(id) tempindex(id))")
 
 	test("inven semijoin trans",
 		"inven^(item) semijoin by(item) trans^(item,date,id)")
 	test("customer semijoin alias",
-		"customer^(id) semijoin by(id) alias^(id)")
+		"customer^(id) semijoin by(id) (alias^(id) tempindex(id))")
 
 	test("hist2 where date > 1 sort id",
 		"hist2^(id,date) where date > 1")
@@ -243,8 +243,8 @@ func TestOptimize(t *testing.T) {
 			"join n:n by(item) "+
 			"(inven^(item) union-merge(item) inven^(item))")
 	test("(inven join trans) union (inven join trans)",
-		"(inven^(item) join 1:n by(item) trans^(item,date,id)) "+
-			"union-lookup(date,item,id) "+
+		"(trans^(date,item,id) join n:1 by(item) inven^(item)) "+
+			"union-merge(date,item,id) "+
 			"(trans^(date,item,id) join n:1 by(item) inven^(item))")
 	test("trans join customer",
 		"trans^(date,item,id) join n:1 by(id) customer^(id)")
@@ -253,4 +253,20 @@ func TestOptimize(t *testing.T) {
 			"join n:1 by(id) customer^(id)")
 	assert.T(t).This(func() { test("table rename b to bb sort c", "") }).
 		Panics("invalid query")
+}
+
+// TestOptimize2FastSingleLookup verifies that a ReqLookup reaching a fastSingle
+// node does not panic. The top-level optimize2 guard must normalize the req to
+// a valid ReqUnordered (clearing nlookups, since Use() asserts nlookups==0 when
+// cols is empty). A singleton trivially satisfies any require.
+func TestOptimize2FastSingleLookup(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *core.SuTran { return nil }
+	q := ParseQuery("customer where id is 5", testTran{}, nil)
+	q = q.Transform()
+	assert.T(t).That(q.fastSingle())
+	// would panic at optTempIndex2's req.Use() before the guard cleared nlookups
+	fixcost, varcost := Optimize2(q, ReadMode, LookupReq([]string{"id"}, 5))
+	assert.T(t).True(fixcost+varcost < impossible)
+	q = SetApproach2(q, LookupReq([]string{"id"}, 5), testTran{})
+	_ = q
 }

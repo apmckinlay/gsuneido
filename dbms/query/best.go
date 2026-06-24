@@ -46,6 +46,40 @@ func (bi *bestIndex) String() string {
 
 //-------------------------------------------------------------------
 
+// bestReq is the v2 analog of bestIndex.
+// It carries the Require actually used (not just the index),
+// so callers pass it straight to SetApproach2 without reconstruction.
+// This avoids the drift between per-candidate req construction
+// and the final req passed downstream.
+type bestReq struct {
+	req     Require
+	fixcost Cost
+	varcost Cost
+}
+
+func newBestReq() bestReq {
+	return bestReq{fixcost: impossible, varcost: impossible}
+}
+
+// update returns true if req is the new lowest-cost candidate.
+func (b *bestReq) update(req Require, fixcost, varcost Cost) bool {
+	if fixcost+varcost < b.fixcost+b.varcost {
+		*b = bestReq{req: req, fixcost: fixcost, varcost: varcost}
+		return true
+	}
+	return false
+}
+
+func (b *bestReq) cost() Cost {
+	return b.fixcost + b.varcost
+}
+
+func (b *bestReq) found() bool {
+	return b.cost() < impossible
+}
+
+//-------------------------------------------------------------------
+
 // bestGrouped finds the best index with cols (in any order) as a prefix
 // taking fixed into consideration.
 // It is used by Project, Summarize, and Join.

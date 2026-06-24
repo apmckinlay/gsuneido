@@ -56,6 +56,7 @@ type Table struct {
 }
 
 var _ whereTable = (*Table)(nil)
+var _ optReq = (*Table)(nil)
 
 func (tbl *Table) isSingleton() bool {
 	return tbl.singleton
@@ -185,6 +186,62 @@ func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, an
 	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
 }
 
+func (tbl *Table) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	if tbl.singleton {
+		return tbl.costFor(tbl.indexes[0], float64(req.frac), 0)
+	}
+	switch req.Use() {
+	case ReqUnordered:
+		return tbl.costFor(tbl.indexes[0], float64(req.frac), 0)
+	case ReqOrdered:
+		idxi := tbl.indexFor(req.cols)
+		if idxi == -1 {
+			return impossible, impossible, nil
+		}
+		return tbl.costFor(tbl.indexes[idxi], float64(req.frac), 0)
+	case ReqLookup:
+		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
+			return 0, Cost(req.nlookups) * tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
+		}
+		fallthrough
+	case ReqGrouped:
+		best := newBestIndex()
+		for _, idx := range tbl.indexes {
+			// Table.Fixed() is always nil, so nColsUnfixed == len(req.cols)
+			if !grouped(idx, req.cols, len(req.cols), nil) {
+				continue
+			}
+			if req.Use() == ReqLookup && !lookupIndexEligible(idx, tbl.allKeys, nil) {
+				continue
+			}
+			f, v, _ := tbl.costFor(idx, float64(req.frac), req.nlookups)
+			best.update(idx, f, v)
+		}
+		if best.index == nil {
+			return impossible, impossible, nil
+		}
+		return best.fixcost, best.varcost, tableApproach{index: best.index}
+	}
+	panic("unreachable")
+}
+
+func (tbl *Table) costFor(index []string, frac float64, nlookups int32) (Cost, Cost, any) {
+	rowCost := tableFast
+	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
+		rowCost = tableSlow
+	}
+	rowCost += len(index) * colsBias
+	varcost := tbl.info.Nrows * rowCost
+	result := Cost(frac * float64(varcost))
+	if nlookups > 0 {
+		idxi := slc.IndexFn(tbl.indexes, index, slices.Equal)
+		if idxi != -1 {
+			result += Cost(nlookups) * tbl.lookupCostFor(idxi)
+		}
+	}
+	return 0, result, tableApproach{index: index}
+}
+
 // find an index that satisfies the required order
 func (tbl *Table) indexFor(order []string) int {
 	for i, index := range tbl.indexes {
@@ -196,6 +253,10 @@ func (tbl *Table) indexFor(order []string) int {
 }
 
 func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) {
+	tbl.SetIndex(approach.(tableApproach).index)
+}
+
+func (tbl *Table) setApproach2(_ Require, approach any, _ QueryTran) {
 	tbl.SetIndex(approach.(tableApproach).index)
 }
 
@@ -232,6 +293,19 @@ func (tbl *Table) lookupCost() Cost {
 	} else {
 		levels = tbl.info.Indexes[0].BtreeLevels()
 		//TODO should be the actual index but we don't have it
+	}
+	return lookupCost(levels)
+}
+
+func (tbl *Table) lookupCostFor(i int) Cost {
+	var levels int
+	if tbl.info.Indexes == nil { // tests
+		levels = 1
+		if tbl.info.Nrows > 100 {
+			levels = 2
+		}
+	} else {
+		levels = tbl.info.Indexes[i].BtreeLevels()
 	}
 	return lookupCost(levels)
 }

@@ -16,6 +16,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
+var _ optReq = (*Extend)(nil)
+
 type Extend struct {
 	Query1
 	t        QueryTran
@@ -216,11 +218,27 @@ func (e *Extend) optimize(mode Mode, index []string, frac float64) (
 	return fixcost, varcost, nil
 }
 
+func (e *Extend) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	// source.fastSingle is handled at the top-level (req.cols cleared),
+	// so any extended cols in req.cols are a genuine conflict here.
+	if !set.Disjoint(req.cols, e.cols) {
+		return impossible, impossible, nil
+	}
+	fixcost, varcost := Optimize2(e.source, mode, req)
+	return fixcost, varcost, nil
+}
+
 func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran) {
 	if e.source.fastSingle() {
 		index = e.filterSourceIndex(index)
 	}
 	e.source = SetApproach(e.source, index, frac, tran)
+	e.header = e.getHeader()
+	e.ctx.Hdr = e.header
+}
+
+func (e *Extend) setApproach2(req Require, _ any, tran QueryTran) {
+	e.source = SetApproach2(e.source, req, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header
 }

@@ -14,22 +14,25 @@ import (
 )
 
 type Agent struct {
-	client        *OpenAIClient
-	toolClient    *ToolClient
-	model         string
-	prompt        string
-	history       []Message
-	outfn         OutFn
-	cancel        context.CancelFunc
-	logFile       *os.File
-	rawLogFile    *os.File
-	mu            sync.Mutex
-	inProgress    bool
-	thinkBuf      strings.Builder
-	thinkDirty    bool
-	loadedContent string  // content from LoadConversation to copy when log is created
-	usage         *Usage  // token usage from last response
-	totalCost     float64 // cumulative cost across all requests
+	client         *OpenAIClient
+	toolClient     *ToolClient
+	model          string
+	prompt         string
+	history        []Message
+	outfn          OutFn
+	cancel         context.CancelFunc
+	logFile        *os.File
+	rawLogFile     *os.File
+	mu             sync.Mutex
+	inProgress     bool
+	thinkBuf       strings.Builder
+	thinkDirty     bool
+	loadedContent  string  // content from LoadConversation to copy when log is created
+	usage          *Usage  // token usage from last response
+	totalCost      float64 // cumulative cost across all requests
+	sandboxMode    bool
+	EnableSandbox  func()
+	DisableSandbox func()
 }
 
 // OutFn is the push callback for streaming output.
@@ -76,18 +79,21 @@ func (a *ToolApproval) Wait(ctx context.Context) (approvalDecision, error) {
 
 // NewAgent creates an agent.
 // prompt is optional.
-func NewAgent(baseURL, apiKey, model, prompt string, outfn OutFn) *Agent {
+func NewAgent(baseURL, apiKey, model, prompt string, outfn OutFn, enableSandbox, disableSandbox func()) *Agent {
 	toolClient, err := NewToolClient()
 	if err != nil {
 		panic("NewAgent: " + err.Error())
 	}
 
 	agent := &Agent{
-		client:     NewOpenAIClient(baseURL, apiKey),
-		toolClient: toolClient,
-		model:      model,
-		prompt:     prompt,
-		outfn:      outfn,
+		client:         NewOpenAIClient(baseURL, apiKey),
+		toolClient:     toolClient,
+		model:          model,
+		prompt:         prompt,
+		outfn:          outfn,
+		sandboxMode:    false,
+		EnableSandbox:  enableSandbox,
+		DisableSandbox: disableSandbox,
 	}
 	agent.resetHistory()
 	return agent
@@ -115,6 +121,16 @@ func (agent *Agent) Input(input string) {
 func (agent *Agent) Interrupt() {
 	if agent.cancel != nil {
 		agent.cancel()
+	}
+	agent.mu.Lock()
+	disableSandboxIfNeeded(agent)
+	agent.mu.Unlock()
+}
+
+func disableSandboxIfNeeded(agent *Agent) {
+	if agent.sandboxMode {
+		agent.DisableSandbox()
+		agent.sandboxMode = false
 	}
 }
 
@@ -169,11 +185,19 @@ func (agent *Agent) request(input string) {
 	defer func() {
 		agent.mu.Lock()
 		agent.inProgress = false
+		disableSandboxIfNeeded(agent)
 		agent.mu.Unlock()
 	}()
 	ctx, cancel := context.WithCancel(context.Background())
 	agent.cancel = cancel
 	defer cancel()
+
+	if agent.sandboxMode == false {
+		agent.EnableSandbox()
+		agent.mu.Lock()
+		agent.sandboxMode = true
+		agent.mu.Unlock()
+	}
 
 	agent.history = append(agent.history, Message{Role: "user", Content: input})
 	agent.logMessage("user", input)

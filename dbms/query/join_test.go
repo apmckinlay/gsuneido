@@ -58,6 +58,8 @@ func TestJoin_SelectFixedBug(t *testing.T) {
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
+	// TODO: tempindex(bk) may not be needed once Where is migrated to v2
+	// v2 Join can't see that ck is fixed by Where (v1 bestLookupIndex could)
 	assert.This(Strategy2(q)).Like(`
 			cus^(c3,ck)
 			where ck is ""
@@ -67,7 +69,8 @@ func TestJoin_SelectFixedBug(t *testing.T) {
 				where ik is 4
 			join n:1 by(ik)
 				ivc^(ik)
-				where*1 ik is 4 and ck is ""`)
+				where*1 ik is 4 and ck is ""
+			tempindex(bk)`)
 	assert.This(queryAll2(q)).Is("")
 }
 
@@ -94,11 +97,12 @@ func TestJoin_EmptyTempIndexBug(t *testing.T) {
 
 func setupIndex(q Query, mode Mode, index []string, tran QueryTran) Query {
 	q = q.Transform()
-	fixcost, varcost := Optimize(q, mode, index, float64(1))
+	req := OrderedReq(index, 1)
+	fixcost, varcost := Optimize2(q, mode, req)
 	if fixcost+varcost >= impossible {
 		panic("impossible")
 	}
-	q = SetApproach(q, index, float64(1), tran)
+	q = SetApproach2(q, req, tran)
 	return q
 }
 

@@ -57,6 +57,7 @@ type Summarize struct {
 
 type summarizeApproach struct {
 	index []string
+	req   Require
 	strat sumStrategy
 	frac  float64
 }
@@ -326,6 +327,127 @@ func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran Qu
 		assert.ShouldNotReachHere()
 	}
 	su.source = SetApproach(su.source, su.index, su.frac, tran)
+	su.state = rewound
+	su.header = su.getHeader()
+}
+
+var _ optReq = (*Summarize)(nil)
+
+func (su *Summarize) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	if su.source.knowExactNrows() &&
+		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
+		Optimize2(su.source, mode, UnorderedReq(0))
+		return 0, 1, &summarizeApproach{strat: sumTbl, req: UnorderedReq(0)}
+	}
+	seqFix, seqVar, seqApp := su.seqCost2(mode, req)
+	idxFix, idxVar, idxApp := su.idxCost2(mode)
+	mapFix, mapVar, mapApp := su.mapCost2(mode, req)
+	return min3(seqFix, seqVar, seqApp, idxFix, idxVar, idxApp,
+		mapFix, mapVar, mapApp)
+}
+
+func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
+	if len(su.by) == 0 {
+		fixcost, varcost := Optimize2(su.source, mode, UnorderedReq(1))
+		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: UnorderedReq(1)}
+	}
+	if hasKey(su.by, su.source.Keys(), su.source.Fixed()) {
+		fixcost, varcost := Optimize2(su.source, mode, req)
+		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: req}
+	}
+	fixed := su.source.Fixed()
+	nColsUnfixed := countUnfixed(su.by, fixed)
+	nrows, _ := su.Nrows()
+	switch req.Use() {
+	case ReqUnordered:
+		srcReq := GroupedReq(su.by, req.SelectFrac(nrows), 1)
+		fixcost, varcost := Optimize2(su.source, mode, srcReq)
+		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
+	case ReqOrdered:
+		if grouped(req.cols, su.by, nColsUnfixed, fixed) {
+			fixcost, varcost := Optimize2(su.source, mode, req)
+			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: req}
+		}
+	case ReqGrouped, ReqLookup:
+		if set.Equal(req.cols, su.by) {
+			srcReq := GroupedReq(su.by, req.SelectFrac(nrows), req.nlookups)
+			fixcost, varcost := Optimize2(su.source, mode, srcReq)
+			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
+		}
+		nColsUnfixedReq := countUnfixed(req.cols, fixed)
+		best := newBestIndex()
+		for _, idx := range su.source.Indexes() {
+			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
+				grouped(idx, su.by, nColsUnfixed, fixed) {
+				srcReq := GroupedReq(idx, req.SelectFrac(nrows), req.nlookups)
+				f, v := Optimize2(su.source, mode, srcReq)
+				best.update(idx, f, v)
+			}
+		}
+		if best.index != nil {
+			srcReq := GroupedReq(best.index, req.SelectFrac(nrows), req.nlookups)
+			return best.fixcost, best.varcost,
+				&summarizeApproach{strat: sumSeq, req: srcReq}
+		}
+		return impossible, impossible, nil
+	}
+	return impossible, impossible, nil
+}
+
+func (su *Summarize) idxCost2(mode Mode) (Cost, Cost, any) {
+	if !su.minmax1() {
+		return impossible, impossible, nil
+	}
+	nrows, _ := su.source.Nrows()
+	frac := float32(1.)
+	if nrows > 0 {
+		frac = 1 / float32(nrows)
+	}
+	srcReq := OrderedReq(su.ons, frac)
+	fixcost, varcost := Optimize2(su.source, mode, srcReq)
+	return fixcost, varcost,
+		&summarizeApproach{strat: sumIdx, index: su.ons, req: srcReq}
+}
+
+func (su *Summarize) mapCost2(mode Mode, req Require) (Cost, Cost, any) {
+	nrows, _ := su.Nrows()
+	if req.Use() != ReqUnordered || su.hint == sumLarge ||
+		(nrows > mapThreshold && su.hint != sumSmall) {
+		return impossible, impossible, nil
+	}
+	srcReq := UnorderedReq(1)
+	srcFixcost, srcVarcost := Optimize2(su.source, mode, srcReq)
+	fixcost := srcFixcost + srcVarcost + Cost(nrows)*20
+	return fixcost, 0, &summarizeApproach{strat: sumMap, req: srcReq}
+}
+
+func (su *Summarize) setApproach2(_ Require, approach any, tran QueryTran) {
+	if su.unique {
+		sumUniqueCount.Add(1)
+	}
+	if su.wholeRow {
+		sumWholeRowCount.Add(1)
+	}
+	su.summarizeApproach = *approach.(*summarizeApproach)
+	switch su.strat {
+	case sumTbl:
+		sumTblCount.Add(1)
+		su.get = getTbl
+	case sumIdx:
+		sumIdxCount.Add(1)
+		su.get = getIdx
+	case sumMap:
+		sumMapCount.Add(1)
+		t := sumMapT{}
+		su.get = t.getMap
+	case sumSeq:
+		sumSeqCount.Add(1)
+		t := sumSeqT{}
+		su.get = t.getSeq
+	default:
+		assert.ShouldNotReachHere()
+	}
+	su.source = SetApproach2(su.source, su.summarizeApproach.req, tran)
 	su.state = rewound
 	su.header = su.getHeader()
 }
