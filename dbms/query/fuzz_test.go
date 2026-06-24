@@ -553,6 +553,17 @@ func newCompatibleQS(ft *FT) (Query, Query) {
 
 	b1.keys, b2.keys = splitShare(rnd, b.keys)
 
+	// 10% of the time, set key to all columns (like non-disjoint Union result)
+	switch rnd.IntN(19) {
+	case 5:
+		makeAllColsKey(&b1)
+	case 13:
+		makeAllColsKey(&b2)
+	case 17:
+		makeAllColsKey(&b1)
+		makeAllColsKey(&b2)
+	}
+
 	// 10% of the time, force empty keys
 	switch rnd.IntN(19) {
 	case 7:
@@ -616,6 +627,10 @@ func splitShare[E any](rnd *rand.Rand, s []E) ([]E, []E) {
 		a, b = b, a
 	}
 	return slices.Clip(s[:b]), slices.Clip(s[a:])
+}
+
+func makeAllColsKey(b *buildFT) {
+	b.keys = [][]string{slices.Clip(b.columns)}
 }
 
 func makeEmptyKey(rnd *rand.Rand, qs *buildFT) {
