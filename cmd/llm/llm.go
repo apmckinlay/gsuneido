@@ -19,7 +19,7 @@ var done chan struct{}
 
 func main() {
 	agent := llm.NewAgent("https://openrouter.ai/api/v1",
-		os.Getenv("OPENROUTER_API_KEY"), model, "", outfn)
+		os.Getenv("OPENROUTER_API_KEY"), model, "", outfn, func(){}, func(){})
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Chat with", model, "('q' to quit)")
 	fmt.Println()
