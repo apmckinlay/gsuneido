@@ -21,7 +21,7 @@ type suAdler32 struct {
 	hash hash.Hash32
 }
 
-var _ = builtin(Adler32, "(@args) :unknown|string")
+var _ = builtin(Adler32, "(@args) :unknown|number")
 
 func Adler32(th *Thread, as *ArgSpec, args []Value) Value {
 	h := suAdler32{hash: adler32.New()}
@@ -48,7 +48,7 @@ func (suAdler32) Lookup(_ *Thread, method string) Value {
 
 var adler32Methods = methods("adler32")
 
-var _ = method(adler32_Update, "(string)")
+var _ = method(adler32_Update, "(string) :unknown")
 
 func adler32_Update(this, arg Value) Value {
 	io.WriteString(this.(suAdler32).hash, ToStr(arg))

@@ -37,7 +37,7 @@ func (suBloom) Lookup(_ *Thread, method string) Value {
 
 var bloomMethods = methods("bloom")
 
-var _ = method(bloom_Add, "(value)")
+var _ = method(bloom_Add, "(value) :unknown")
 
 func bloom_Add(this, arg Value) Value {
 	this.(suBloom).data.Add(arg.Hash())

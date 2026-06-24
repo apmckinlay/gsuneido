@@ -151,14 +151,14 @@ const MaxLine = 4000
 
 var suFileMethods = methods("file")
 
-var _ = method(file_Close, "()")
+var _ = method(file_Close, "() :void")
 
 func file_Close(this Value) Value {
 	sfOpen(this).close()
 	return nil
 }
 
-var _ = method(file_Flush, "()")
+var _ = method(file_Flush, "() :void")
 
 func file_Flush(this Value) Value {
 	err := sfOpenWrite(this).w.Flush()
@@ -210,7 +210,7 @@ func file_Readline(this Value) Value {
 	return val
 }
 
-var _ = method(file_Seek, "(offset, origin='set') :boolean")
+var _ = method(file_Seek, "(offset, origin='set') :void")
 
 func file_Seek(this, arg1, arg2 Value) Value {
 	sf := sfOpen(this)

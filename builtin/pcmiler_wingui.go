@@ -47,7 +47,7 @@ var pcmsrv = windows.NewLazyDLL("pcmsrv64.dll")
 
 // dll long pcmsrv32:PCMSAbout(string which, buffer buf, long bufsize)
 var pcmsAbout = pcmsrv.NewProc("PCMSAbout")
-var _ = staticMethod(pcm_Version, "() :string")
+var _ = staticMethod(pcm_Version, "() :false|string")
 
 func pcm_Version() Value {
 	if pcmsrv.Load() != nil {

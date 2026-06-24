@@ -22,7 +22,7 @@ func init() {
 	ss := &SuClass{Lib: "builtin", Name: "SocketServer", MemBase: NewMemBase()}
 	ss.Data["CallClass"] = &SuBuiltinMethodRaw{Fn: ssCallClass,
 		BuiltinParams: BuiltinParams{
-			ParamSpec: params("(name = nil, port = nil)")}}
+			ParamSpec: params("(name = nil, port = nil) :void")}}
 	Global.Builtin("SocketServer", ss)
 }
 
@@ -211,7 +211,7 @@ func sockserv_RemoteUser(this Value) Value {
 	return SuStr(str.BeforeLast(addr, ":"))
 }
 
-var _ = method(sockserv_ManualClose, "()")
+var _ = method(sockserv_ManualClose, "() :void")
 
 func sockserv_ManualClose(this Value) Value {
 	this.(*suServerConnect).manualClose = true

@@ -23,7 +23,7 @@ func WaitGroup() Value {
 
 var suWaitGroupMethods = methods("wg")
 
-var _ = method(wg_Add, "(inc = 1)")
+var _ = method(wg_Add, "(inc = 1) :void")
 
 func wg_Add(this Value, a Value) Value {
 	wg := this.(*suWaitGroup)
@@ -32,7 +32,7 @@ func wg_Add(this Value, a Value) Value {
 	return nil
 }
 
-var _ = method(wg_Done, "()")
+var _ = method(wg_Done, "() :void")
 
 func wg_Done(this Value) Value {
 	wg := this.(*suWaitGroup)
@@ -40,7 +40,7 @@ func wg_Done(this Value) Value {
 	return nil
 }
 
-var _ = method(wg_Thread, "(block, name = false)")
+var _ = method(wg_Thread, "(block, name = false) :void")
 
 func wg_Thread(th *Thread, this Value, args []Value) Value {
 	wg := this.(*suWaitGroup)
@@ -62,7 +62,7 @@ func wg_Thread(th *Thread, this Value, args []Value) Value {
 	return nil
 }
 
-var _ = method(wg_Wait, "(secs = 10) :false|string")
+var _ = method(wg_Wait, "(secs = 10) :true")
 
 func wg_Wait(th *Thread, this Value, args []Value) Value {
 	timeout := IfInt(args[0])

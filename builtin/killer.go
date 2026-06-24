@@ -28,7 +28,7 @@ func (k *killer) Lookup(_ *Thread, method string) Value {
 
 var killerMethods = methods("killer")
 
-var _ = method(killer_Kill, "()")
+var _ = method(killer_Kill, "() :void")
 
 func killer_Kill(this Value) Value {
 	this.(*killer).kill()

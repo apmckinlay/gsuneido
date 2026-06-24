@@ -158,7 +158,7 @@ func (e *suHttpEnv) writer() io.Writer {
 var httpEnvMethods = methods("httpEnv")
 
 // Read allows reading the body
-var _ = method(httpEnv_Read, "(n) :string")
+var _ = method(httpEnv_Read, "(n) :false|string")
 
 func httpEnv_Read(this Value, a Value) Value {
 	rd := this.(*suHttpEnv).rq.Body
@@ -188,7 +188,7 @@ func httpEnv_CopyTo(th *Thread, this Value, args []Value) Value {
 }
 
 // WriteHeader sets header values and writes the header
-var _ = method(httpEnv_WriteHeader, "(status, header=false)")
+var _ = method(httpEnv_WriteHeader, "(status, header=false) :void")
 
 func httpEnv_WriteHeader(this Value, a, b Value) Value {
 	e := this.(*suHttpEnv)
@@ -198,7 +198,7 @@ func httpEnv_WriteHeader(this Value, a, b Value) Value {
 	return nil
 }
 
-var _ = method(httpEnv_Write, "(s)")
+var _ = method(httpEnv_Write, "(s) :void")
 
 func httpEnv_Write(this Value, a Value) Value {
 	e := this.(*suHttpEnv)
@@ -211,7 +211,7 @@ func httpEnv_Write(this Value, a Value) Value {
 	return nil
 }
 
-var _ = method(httpEnv_Hijack, "()")
+var _ = method(httpEnv_Hijack, "() :unknown")
 
 func httpEnv_Hijack(this Value) Value {
 	e := this.(*suHttpEnv)

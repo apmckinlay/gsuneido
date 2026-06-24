@@ -216,7 +216,7 @@ type stNMTVDispInfo struct {
 	item  stTVItem
 }
 
-var _ = builtin(NMTVDISPINFO, "(address) :object")
+var _ = builtin(NMTVDISPINFO, "(address) :false|object")
 
 func NMTVDISPINFO(a Value) Value {
 	adr := ToInt(a)
@@ -339,7 +339,7 @@ type stNMHeader struct {
 	pitem   *stHdItem
 }
 
-var _ = builtin(NMHEADER, "(address) :object")
+var _ = builtin(NMHEADER, "(address) :false|object")
 
 func NMHEADER(a Value) Value {
 	adr := ToInt(a)
@@ -370,7 +370,7 @@ type stNMTreeView struct {
 	ptDrag  stPoint
 }
 
-var _ = builtin(NMTREEVIEW, "(address) :object")
+var _ = builtin(NMTREEVIEW, "(address) :false|object")
 
 func NMTREEVIEW(a Value) Value {
 	adr := ToInt(a)
@@ -395,7 +395,7 @@ type stNMTVKeyDown struct {
 	flags int32
 }
 
-var _ = builtin(NMTVKEYDOWN, "(address) :object")
+var _ = builtin(NMTVKEYDOWN, "(address) :false|object")
 
 func NMTVKEYDOWN(a Value) Value {
 	adr := ToInt(a)

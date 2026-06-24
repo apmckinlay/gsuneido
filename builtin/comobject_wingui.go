@@ -25,7 +25,7 @@ type suCOMObject struct {
 
 var _ Value = (*suCOMObject)(nil)
 
-var _ = builtin(COMobject, "(progid) :unknown")
+var _ = builtin(COMobject, "(progid) :false|unknown")
 
 func COMobject(arg Value) Value {
 	if n, ok := arg.ToInt(); ok {

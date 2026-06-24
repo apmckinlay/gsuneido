@@ -26,7 +26,7 @@ func Channel(size Value) Value {
 
 var suChannelMethods = methods("chan")
 
-var _ = method(chan_Send, "(value)")
+var _ = method(chan_Send, "(value) :void")
 
 func chan_Send(this, val Value) Value {
 	defer func() {
@@ -92,7 +92,7 @@ func chan_Recv2(this, arg Value) Value {
 	return ob
 }
 
-var _ = method(chan_Close, "()")
+var _ = method(chan_Close, "() :void")
 
 func chan_Close(th *Thread, this Value, args []Value) Value {
 	// WARNING there is a race if Send & Close are called concurrently

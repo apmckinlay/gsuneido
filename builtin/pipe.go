@@ -57,7 +57,7 @@ func piper_CopyTo(th *Thread, this Value, args []Value) Value {
 	return CopyTo(th, rd, args[0], args[1])
 }
 
-var _ = method(piper_Close, "()")
+var _ = method(piper_Close, "() :void")
 
 func piper_Close(this Value) Value {
 	rd := this.(*suPipeReader).rd
@@ -72,7 +72,7 @@ func piper_Close(this Value) Value {
 
 var suPipeWriterMethods = methods("pipew")
 
-var _ = method(pipew_Write, "(s)")
+var _ = method(pipew_Write, "(s) :void")
 
 func pipew_Write(this Value, a Value) Value {
 	wr := this.(*suPipeWriter).wr
@@ -84,7 +84,7 @@ func pipew_Write(this Value, a Value) Value {
 	return nil
 }
 
-var _ = method(pipew_Close, "()")
+var _ = method(pipew_Close, "() :void")
 
 func pipew_Close(this Value) Value {
 	wr := this.(*suPipeWriter).wr

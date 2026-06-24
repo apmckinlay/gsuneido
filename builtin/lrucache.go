@@ -83,7 +83,7 @@ func lru_Get(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return val
 }
 
-var _ = method(lru_Reset, "()")
+var _ = method(lru_Reset, "() :void")
 
 func lru_Reset(this Value) Value {
 	slc := this.(*suLruCache)

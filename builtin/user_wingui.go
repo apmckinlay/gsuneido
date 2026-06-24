@@ -375,7 +375,7 @@ func toPaintStruct(ob Value) *stPaintStruct {
 // dll User32:CallWindowProc(pointer wndprcPrev, pointer hwnd, long msg,
 // pointer wParam, pointer lParam) pointer
 var callWindowProc = user32.MustFindProc("CallWindowProcA").Addr()
-var _ = builtin(CallWindowProc, "(wndprcPrev, hwnd, msg, wParam, lParam) :number")
+var _ = builtin(CallWindowProc, "(wndprcPrev, hwnd, msg, wParam, lParam) :number|unknown")
 
 func CallWindowProc(th *Thread, a []Value) Value {
 	if a[0].Type() != types.Number {
@@ -993,7 +993,7 @@ func SetWindowLongPtr(a, b, c Value) Value {
 }
 
 // dll User32:SetWindowProc(pointer hwnd, long offset, WNDPROC proc) pointer
-var _ = builtin(SetWindowProc, "(hwnd, offset, proc) :number")
+var _ = builtin(SetWindowProc, "(hwnd, offset, proc) :number|unknown")
 
 func SetWindowProc(th *Thread, args []Value) Value {
 	hwnd := intArg(args[0])

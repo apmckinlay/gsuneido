@@ -94,14 +94,14 @@ func outputCallback(th *Thread, callback Value) func(what, data string, approval
 var agentMethods = methods("agent")
 var toolApprovalMethods = methods("toolapproval")
 
-var _ = method(toolapproval_Allow, "(text = '')")
+var _ = method(toolapproval_Allow, "(text = '') :void")
 
 func toolapproval_Allow(this Value, text Value) Value {
 	this.(*suToolApproval).approval.Allow(ToStr(text))
 	return nil
 }
 
-var _ = method(toolapproval_Deny, "(text = '')")
+var _ = method(toolapproval_Deny, "(text = '') :void")
 
 func toolapproval_Deny(this Value, text Value) Value {
 	this.(*suToolApproval).approval.Deny(ToStr(text))
@@ -120,35 +120,35 @@ func toolapproval_After(this Value) Value {
 	return SuStr(this.(*suToolApproval).approval.After)
 }
 
-var _ = method(agent_Input, "(input)")
+var _ = method(agent_Input, "(input) :void")
 
 func agent_Input(this, input Value) Value {
 	this.(*suAgent).agent.Input(ToStr(input))
 	return nil
 }
 
-var _ = method(agent_Interrupt, "()")
+var _ = method(agent_Interrupt, "() :void")
 
 func agent_Interrupt(this Value) Value {
 	this.(*suAgent).agent.Interrupt()
 	return nil
 }
 
-var _ = method(agent_SetModel, "(model)")
+var _ = method(agent_SetModel, "(model) :void")
 
 func agent_SetModel(this, model Value) Value {
 	this.(*suAgent).agent.SetModel(ToStr(model))
 	return nil
 }
 
-var _ = method(agent_ClearHistory, "()")
+var _ = method(agent_ClearHistory, "() :void")
 
 func agent_ClearHistory(this Value) Value {
 	this.(*suAgent).agent.ClearHistory()
 	return nil
 }
 
-var _ = method(agent_LoadConversation, "(filename)")
+var _ = method(agent_LoadConversation, "(filename) :true")
 
 func agent_LoadConversation(th *Thread, this Value, args []Value) Value {
 	a := this.(*suAgent)
@@ -161,7 +161,7 @@ func agent_LoadConversation(th *Thread, this Value, args []Value) Value {
 	return True
 }
 
-var _ = method(agent_Usage, "() :number")
+var _ = method(agent_Usage, "() :false|number")
 
 func agent_Usage(this Value) Value {
 	usage := this.(*suAgent).agent.LastUsage()
@@ -177,7 +177,7 @@ func agent_Cost(this Value) Value {
 	return SuDnum{Dnum: dnum.FromFloat(this.(*suAgent).agent.TotalCost())}
 }
 
-var _ = method(agent_Close, "()")
+var _ = method(agent_Close, "() :void")
 
 func agent_Close(this Value) Value {
 	a := this.(*suAgent)

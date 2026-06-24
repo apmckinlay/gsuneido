@@ -48,7 +48,7 @@ func (suSha256) Lookup(_ *Thread, method string) Value {
 
 var sha256Methods = methods("Sha256")
 
-var _ = method(Sha256_Update, "(string)")
+var _ = method(Sha256_Update, "(string) :unknown")
 
 func Sha256_Update(this, arg Value) Value {
 	io.WriteString(this.(suSha256).hash, ToStr(arg))

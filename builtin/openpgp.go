@@ -41,7 +41,7 @@ func (*suOpenPGP) Lookup(_ *Thread, method string) Value {
 var openpgpMethods = methods("opgp")
 
 var _ = staticMethod(opgp_SymmetricEncrypt,
-	"(passphrase, source, toFile = false) :string")
+	"(passphrase, source, toFile = false) :string|void")
 
 func opgp_SymmetricEncrypt(passphrase, source, toFile Value) Value {
 	if toFile == False {
@@ -51,7 +51,7 @@ func opgp_SymmetricEncrypt(passphrase, source, toFile Value) Value {
 }
 
 var _ = staticMethod(opgp_SymmetricDecrypt,
-	"(passphrase, source, toFile = false) :string")
+	"(passphrase, source, toFile = false) :string|void")
 
 func opgp_SymmetricDecrypt(passphrase, source, toFile Value) Value {
 	if toFile == False {
@@ -61,7 +61,7 @@ func opgp_SymmetricDecrypt(passphrase, source, toFile Value) Value {
 }
 
 var _ = staticMethod(opgp_PublicEncrypt,
-	"(publicKey, source, toFile = false) :string")
+	"(publicKey, source, toFile = false) :string|void")
 
 func opgp_PublicEncrypt(publicKey, source, toFile Value) Value {
 	if toFile == False {
@@ -71,7 +71,7 @@ func opgp_PublicEncrypt(publicKey, source, toFile Value) Value {
 }
 
 var _ = staticMethod(opgp_PrivateDecrypt,
-	"(privateKey, passphrase, source, toFile = false) :string")
+	"(privateKey, passphrase, source, toFile = false) :string|void")
 
 func opgp_PrivateDecrypt(privateKey, passphrase, source, toFile Value) Value {
 	kp := keyPair{privateKey: ToStr(privateKey), passphrase: ToStr(passphrase)}

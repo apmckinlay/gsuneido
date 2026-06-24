@@ -46,7 +46,7 @@ var queryBlockParams = params("(query, block = false)")
 
 var _ = exportMethods(&TranMethods, "tran")
 
-var _ = method(tran_Complete, "()")
+var _ = method(tran_Complete, "() :void")
 
 func tran_Complete(this Value) Value {
 	this.(*SuTran).Complete()
@@ -83,7 +83,7 @@ func tran_Query(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return th.Call(args[1], q)
 }
 
-var _ = method(tran_QueryDo, "(@args)")
+var _ = method(tran_QueryDo, "(@args) :number")
 
 var queryParams = params("(query)")
 
@@ -92,19 +92,19 @@ func tran_QueryDo(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return IntVal(this.(*SuTran).Action(th, query))
 }
 
-var _ = method(tran_Query1, "(@args) :object")
+var _ = method(tran_Query1, "(@args) :false|object")
 
 func tran_Query1(th *Thread, this Value, args []Value) Value {
 	return tranQueryOne(th, this.(*SuTran), args[0], Only)
 }
 
-var _ = method(tran_QueryFirst, "(@args) :object")
+var _ = method(tran_QueryFirst, "(@args) :false|object")
 
 func tran_QueryFirst(th *Thread, this Value, args []Value) Value {
 	return tranQueryOne(th, this.(*SuTran), args[0], Next)
 }
 
-var _ = method(tran_QueryLast, "(@args) :object")
+var _ = method(tran_QueryLast, "(@args) :false|object")
 
 func tran_QueryLast(th *Thread, this Value, args []Value) Value {
 	return tranQueryOne(th, this.(*SuTran), args[0], Prev)
@@ -131,7 +131,7 @@ func tran_ReadCount(this Value) Value {
 	return IntVal(this.(*SuTran).ReadCount())
 }
 
-var _ = method(tran_Rollback, "()")
+var _ = method(tran_Rollback, "() :void")
 
 func tran_Rollback(this Value) Value {
 	this.(*SuTran).Rollback()

@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/intern"
 )
 
-var _ = builtin(Libraries, "()")
+var _ = builtin(Libraries, "() :object")
 
 func Libraries(th *Thread, args []Value) Value {
 	list := th.Dbms().Libraries()

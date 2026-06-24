@@ -68,7 +68,7 @@ func class_ReadonlyQ(this Value) Value {
 	return True
 }
 
-var _ = method(class_StartCoverage, "(count = false)")
+var _ = method(class_StartCoverage, "(count = false) :void")
 
 func class_StartCoverage(this, a Value) Value {
 	if !options.Coverage.Load() {
@@ -78,7 +78,7 @@ func class_StartCoverage(this, a Value) Value {
 	return nil
 }
 
-var _ = method(class_StopCoverage, "()")
+var _ = method(class_StopCoverage, "() :object")
 
 func class_StopCoverage(this Value) Value {
 	return this.(interface{ StopCoverage() *SuObject }).StopCoverage()

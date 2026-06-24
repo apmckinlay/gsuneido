@@ -31,13 +31,13 @@ func instance_BaseQ(th *Thread, this Value, args []Value) Value {
 		}))
 }
 
-var _ = method(instance_Copy, "()")
+var _ = method(instance_Copy, "() :unknown")
 
 func instance_Copy(this Value) Value {
 	return this.(*SuInstance).Copy()
 }
 
-var _ = method(instance_Delete, "(@args)")
+var _ = method(instance_Delete, "(@args) :unknown")
 
 func instance_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if all := getNamed(as, args, SuStr("all")); all == True {

@@ -22,7 +22,7 @@ func Mutex() Value {
 
 var suMutexMethods = methods("mu")
 
-var _ = method(mu_Do, "(block)")
+var _ = method(mu_Do, "(block) :unknown")
 
 func mu_Do(th *Thread, this Value, args []Value) Value {
 	sm := this.(*suMutex)

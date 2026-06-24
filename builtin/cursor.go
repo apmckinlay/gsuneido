@@ -39,7 +39,7 @@ func cursor_Prev(th *Thread, this Value, args []Value) Value {
 	return this.(*SuCursor).GetRec(th, args[0].(*SuTran), Prev)
 }
 
-var _ = method(cursor_Output, "(transaction, record) :boolean")
+var _ = method(cursor_Output, "(transaction, record) :void")
 
 func cursor_Output(*Thread, Value, []Value) Value {
 	panic("cursor.Output is not supported")

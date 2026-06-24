@@ -48,7 +48,7 @@ func (suMd5) Lookup(_ *Thread, method string) Value {
 
 var md5Methods = methods("md5")
 
-var _ = method(md5_Update, "(string)")
+var _ = method(md5_Update, "(string) :unknown")
 
 func md5_Update(this, arg Value) Value {
 	io.WriteString(this.(suMd5).hash, ToStr(arg))

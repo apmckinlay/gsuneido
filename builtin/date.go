@@ -20,7 +20,7 @@ type suDateGlobal struct {
 func init() {
 	ps := params(`(string=nil, pattern=nil,
 		year=nil, month=nil, day=nil,
-		hour=nil, minute=nil, second=nil, millisecond=nil)`)
+		hour=nil, minute=nil, second=nil, millisecond=nil) :false|date`)
 	Global.Builtin("Date", &suDateGlobal{SuBuiltin{Fn: Date,
 		BuiltinParams: BuiltinParams{ParamSpec: ps}}})
 }

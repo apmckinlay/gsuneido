@@ -86,7 +86,7 @@ func base_Size(th *Thread, this Value, args []Value) Value {
 	})
 }
 
-var _ = method(base_Synchronized, "(block)")
+var _ = method(base_Synchronized, "(block) :unknown")
 
 func base_Synchronized(th *Thread, this Value, args []Value) Value {
 	name := th.ClassName()

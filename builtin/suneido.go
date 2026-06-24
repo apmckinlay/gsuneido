@@ -134,7 +134,7 @@ func suneido_WarningsThrow(x Value) Value {
 	return nil
 }
 
-var _ = staticMethod(suneido_Info, "(name = false) :object|string")
+var _ = staticMethod(suneido_Info, "(name = false) :object|string|number")
 
 func suneido_Info(x Value) Value {
 	if x == False {

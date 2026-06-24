@@ -314,7 +314,7 @@ func GetPixel(a, b, c Value) Value {
 
 // dll Gdi32:PtVisible(pointer hdc, long nXPos, long nYPos) bool
 var ptVisible = gdi32.MustFindProc("PtVisible").Addr()
-var _ = builtin(PtVisible, "(hdc, nXPos, nYPos) :boolean")
+var _ = builtin(PtVisible, "(hdc, nXPos, nYPos) :number|boolean")
 
 func PtVisible(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(ptVisible,
@@ -979,7 +979,7 @@ func MoveToEx(a, b, c, d Value) Value {
 // dll long Gdi32:GetObject(pointer hgdiobj, long bufsize, buffer buf)
 var getObject = gdi32.MustFindProc("GetObjectA").Addr()
 
-var _ = builtin(GetObjectBrush, "(h) :object")
+var _ = builtin(GetObjectBrush, "(h) :false|object")
 
 func GetObjectBrush(a Value) Value {
 	var lb stLogBrush
@@ -997,7 +997,7 @@ func GetObjectBrush(a Value) Value {
 	return ob
 }
 
-var _ = builtin(GetObjectBitmap, "(h) :object")
+var _ = builtin(GetObjectBitmap, "(h) :false|object")
 
 func GetObjectBitmap(a Value) Value {
 	var bm stBitMap

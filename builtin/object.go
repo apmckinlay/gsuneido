@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 )
 
-var _ = builtin(ConcurrentQ, "(value) :boolean")
+var _ = builtin(ConcurrentQ, "(value) :boolean|string")
 
 func ConcurrentQ(v Value) Value {
 	return IsConcurrent(v)

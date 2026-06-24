@@ -12,7 +12,7 @@ import (
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 )
 
-var _ = builtin(Query1, "(@args) :object")
+var _ = builtin(Query1, "(@args) :false|object")
 
 func Query1(th *Thread, args []Value) Value {
 	return queryOne(th, args[0], Only)
@@ -92,7 +92,7 @@ func stringable(v Value) bool {
 
 var _ = exportMethods(&QueryMethods, "query")
 
-var _ = method(query_Close, "()")
+var _ = method(query_Close, "() :void")
 
 func query_Close(this Value) Value {
 	this.(ISuQueryCursor).Close()
@@ -123,7 +123,7 @@ func query_Prev(th *Thread, this Value, _ []Value) Value {
 	return this.(*SuQuery).GetRec(th, Prev)
 }
 
-var _ = method(query_Output, "(record)")
+var _ = method(query_Output, "(record) :void")
 
 func query_Output(th *Thread, this Value, args []Value) Value {
 	trace.Dbms.Println("Query Output", this, args[0])
@@ -137,7 +137,7 @@ func query_Order(this Value) Value {
 	return this.(ISuQueryCursor).Order()
 }
 
-var _ = method(query_Rewind, "()")
+var _ = method(query_Rewind, "() :void")
 
 func query_Rewind(this Value) Value {
 	this.(ISuQueryCursor).Rewind()
@@ -157,7 +157,7 @@ func query_Strategy(_ *Thread, this Value, args []Value) Value {
 	return this.(ISuQueryCursor).Strategy(formatted)
 }
 
-var _ = method(query_Tree, "()")
+var _ = method(query_Tree, "() :unknown")
 
 func query_Tree(this Value) Value {
 	return this.(ISuQueryCursor).Tree()

@@ -15,7 +15,7 @@ func except_Callstack(this Value) Value {
 	return this.(*SuExcept).Callstack
 }
 
-var _ = method(except_As, "(string)")
+var _ = method(except_As, "(string) :unknown")
 
 func except_As(this Value, val Value) Value {
 	return &SuExcept{SuStr: SuStr(AsStr(val)),

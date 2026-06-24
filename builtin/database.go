@@ -66,7 +66,7 @@ func db_Cursors(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Cursors())
 }
 
-var _ = staticMethod(db_Dump, "(table = '', to = '', publicKey = '') :string|number")
+var _ = staticMethod(db_Dump, "(table = '', to = '', publicKey = '') :string")
 
 func db_Dump(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {

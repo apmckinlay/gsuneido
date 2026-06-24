@@ -96,7 +96,7 @@ func (*suFtsBuilder) Lookup(_ *Thread, method string) Value {
 
 var ftsBuilderMethods = methods("ftsBuilder")
 
-var _ = method(ftsBuilder_Add, "(id, title, text)")
+var _ = method(ftsBuilder_Add, "(id, title, text) :void")
 
 func ftsBuilder_Add(this, id, title, text Value) Value {
 	b := this.(*suFtsBuilder).b
@@ -104,7 +104,7 @@ func ftsBuilder_Add(this, id, title, text Value) Value {
 	return nil
 }
 
-var _ = method(ftsBuilder_Index, "()")
+var _ = method(ftsBuilder_Index, "() :unknown")
 
 func ftsBuilder_Index(this Value) Value {
 	b := this.(*suFtsBuilder).b
@@ -172,7 +172,7 @@ func ftsIndex_Search(this, query, scores Value) Value {
 	return NewSuObject(list)
 }
 
-var _ = method(ftsIndex_Update, "(id, oldTitle, oldText, newTitle, newText)")
+var _ = method(ftsIndex_Update, "(id, oldTitle, oldText, newTitle, newText) :void")
 
 func ftsIndex_Update(_ *Thread, this Value, args []Value) Value {
 	sfi := this.(*suFtsIndex)

@@ -75,7 +75,7 @@ var noDeadline time.Time
 
 var suSocketClientMethods = methods("sock")
 
-var _ = method(sock_Close, "()")
+var _ = method(sock_Close, "() :void")
 
 func sock_Close(this Value) Value {
 	c := this.(interface{ Close() })
@@ -94,7 +94,7 @@ func sock_Read(this, arg Value) Value {
 	return limitedRead("socket.Read", sc.rdr, arg)
 }
 
-var _ = method(sock_Readline, "() :string")
+var _ = method(sock_Readline, "() :false|string")
 
 func sock_Readline(this Value) Value {
 	sc := scOpen(this)
@@ -105,7 +105,7 @@ func sock_Readline(this Value) Value {
 	return Readline(sc.rdr, "socket.Readline: ")
 }
 
-var _ = method(sock_SetTimeout, "(seconds)")
+var _ = method(sock_SetTimeout, "(seconds) :void")
 
 func sock_SetTimeout(this, arg Value) Value {
 	sc := scOpen(this)
@@ -113,7 +113,7 @@ func sock_SetTimeout(this, arg Value) Value {
 	return nil
 }
 
-var _ = method(sock_Write, "(string)")
+var _ = method(sock_Write, "(string) :void")
 
 func sock_Write(this, arg Value) Value {
 	sc := scOpen(this)
@@ -129,7 +129,7 @@ func sock_Write(this, arg Value) Value {
 	return nil
 }
 
-var _ = method(sock_Writeline, "(string)")
+var _ = method(sock_Writeline, "(string) :void")
 
 func sock_Writeline(this, arg Value) Value {
 	sc := scOpen(this)

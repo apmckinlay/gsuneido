@@ -27,7 +27,7 @@ func func_Disasm(this, a Value) Value {
 	return SuStr(DisasmMixed(fn, ToStr(a)))
 }
 
-var _ = method(func_StartCoverage, "(count = false)")
+var _ = method(func_StartCoverage, "(count = false) :void")
 
 func func_StartCoverage(this, a Value) Value {
 	if !options.Coverage.Load() {
@@ -38,7 +38,7 @@ func func_StartCoverage(this, a Value) Value {
 	return nil
 }
 
-var _ = method(func_StopCoverage, "()")
+var _ = method(func_StopCoverage, "() :object")
 
 func func_StopCoverage(this Value) Value {
 	fn := this.(*SuFunc)

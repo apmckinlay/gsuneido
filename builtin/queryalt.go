@@ -25,7 +25,7 @@ func QueryAlt(th *Thread, as *ArgSpec, args []Value) Value {
 	return ob
 }
 
-var _ = builtin(QueryAltHash, "(query, details=false)")
+var _ = builtin(QueryAltHash, "(query, details=false) :string|number")
 
 func QueryAltHash(th *Thread, args []Value) Value {
 	query := ToStr(args[0]) + `
