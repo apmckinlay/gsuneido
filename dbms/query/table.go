@@ -211,7 +211,9 @@ func (tbl *Table) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 			if !grouped(idx, req.cols, len(req.cols), nil) {
 				continue
 			}
-			if req.Use() == ReqLookup && !lookupIndexEligible(idx, tbl.allKeys, nil) {
+			if req.Use() == ReqLookup &&
+				(!lookupIndexEligible(idx, tbl.allKeys, nil) ||
+					!indexCovered(idx, req.cols, nil)) {
 				continue
 			}
 			f, v, _ := tbl.costFor(idx, float64(req.frac), req.nlookups)

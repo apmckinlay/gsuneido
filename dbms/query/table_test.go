@@ -122,11 +122,10 @@ func TestTableOptimize2(t *testing.T) {
 	assertImpossible("abc", LookupReq([]string{"a"}, 1))
 
 	// comp: key on {a,b,c} — single index [a,b,c], keys [[a,b,c]]
-	// ReqLookup {b,a} is not a physical index, but the fallback search
-	// finds [a,b,c]: it is lookup-eligible (starts with key) and has
-	// {b,a} grouped (first 2 cols {a,b} are in {b,a}).
-	test("comp", LookupReq([]string{"b", "a"}, 1),
-		[]string{"a", "b", "c"})
+	// ReqLookup {b,a} is not a physical index.
+	// [a,b,c] is lookup-eligible and has {b,a} grouped,
+	// but is not indexCovered (c is not in {b,a}).
+	assertImpossible("comp", LookupReq([]string{"b", "a"}, 1))
 
 	// singleton: table with empty key — all req types return indexes[0]
 	// Set up manually (no SetTran since _singleton_ is not in testSchemas).
