@@ -448,8 +448,6 @@ func (jn *Join) setApproach(index []string, frac float64, approach any, tran Que
 	jn.header = jn.getHeader()
 }
 
-var _ optReq = (*Join)(nil)
-
 func (jn *Join) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	fwd := joinopt2(jn.source1, jn.source2, jn.Nrows, jn.joinType,
 		mode, req, jn.by)
@@ -848,8 +846,6 @@ func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 	lj.header = lj.getHeader()
 }
-
-var _ optReq = (*LeftJoin)(nil)
 
 func (lj *LeftJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	jc := joinopt2(lj.source1, lj.source2, lj.Nrows, lj.joinType,

@@ -24,7 +24,6 @@ func NewNothing(q Query) *Nothing {
 }
 
 var _ Query = (*Nothing)(nil)
-var _ optReq = (*Nothing)(nil)
 
 func (no *Nothing) String() string {
 	return "nothing" + str.Opt("(", no.table, ")")

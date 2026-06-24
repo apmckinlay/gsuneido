@@ -145,6 +145,15 @@ func (*QueryMock) setApproach([]string, float64, any, QueryTran) {
 	panic("QueryMock.setApproach not implemented")
 }
 
+func (m *QueryMock) optimize2(Mode, Require) (Cost, Cost, any) {
+	return m.OptimizeResult.Fixcost, m.OptimizeResult.Varcost,
+		m.OptimizeResult.Approach
+}
+
+func (*QueryMock) setApproach2(Require, any, QueryTran) {
+	panic("QueryMock.setApproach not implemented")
+}
+
 func (m *QueryMock) lookupCost() Cost {
 	if m.LookupLevels != 0 {
 		return lookupCost(m.LookupLevels)

@@ -14,8 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var _ optReq = (*TempIndex)(nil)
-
 // TempIndex is inserted by SetApproach as required.
 // It builds a sortlist of either DbRec or Row.
 // Keys are not constructed for the index or Lookup/Select

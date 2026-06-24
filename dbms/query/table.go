@@ -56,7 +56,6 @@ type Table struct {
 }
 
 var _ whereTable = (*Table)(nil)
-var _ optReq = (*Table)(nil)
 
 func (tbl *Table) isSingleton() bool {
 	return tbl.singleton

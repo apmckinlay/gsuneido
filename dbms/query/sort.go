@@ -14,8 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var _ optReq = (*Sort)(nil)
-
 type Sort struct {
 	Query1
 	order     []string

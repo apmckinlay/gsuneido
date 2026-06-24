@@ -22,8 +22,6 @@ type minusApproach struct {
 	req1, req2 Require
 }
 
-var _ optReq = (*Minus)(nil)
-
 func NewMinus(src1, src2 Query, t QueryTran) *Minus {
 	return newMinus(src1, src2, t, nil, nil)
 }

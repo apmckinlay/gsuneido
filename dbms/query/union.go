@@ -75,8 +75,6 @@ func (us unionStrategy) String() string {
 	}
 }
 
-var _ optReq = (*Union)(nil)
-
 func NewUnion(src1, src2 Query) *Union {
 	u := &Union{Compatible: *newCompatible(src1, src2)}
 	u.header = JoinHeaders(src1.Header(), src2.Header())

@@ -16,8 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var _ optReq = (*Extend)(nil)
-
 type Extend struct {
 	Query1
 	t        QueryTran

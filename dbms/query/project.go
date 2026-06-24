@@ -491,8 +491,6 @@ func (p *Project) setApproach(_ []string, frac float64, approach any, tran Query
 	p.header = p.getHeader()
 }
 
-var _ optReq = (*Project)(nil)
-
 func (p *Project) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	if p.unique {
 		// no dedup needed — pass req through unchanged

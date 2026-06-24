@@ -27,8 +27,6 @@ import (
 var whereSingletonCount atomic.Int64
 var _ = AddInfo("query.where.singleton", &whereSingletonCount)
 
-var _ optReq = (*Where)(nil)
-
 // NOTE: Where source and expr should NOT be modified,
 // instead, construct a new one with NewWhere
 

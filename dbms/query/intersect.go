@@ -28,8 +28,6 @@ type intersectApproach struct {
 	req1, req2 Require
 }
 
-var _ optReq = (*Intersect)(nil)
-
 func NewIntersect(src1, src2 Query, t QueryTran) *Intersect {
 	return newIntersect(src1, src2, t, nil, nil)
 }

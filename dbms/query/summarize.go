@@ -331,8 +331,6 @@ func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran Qu
 	su.header = su.getHeader()
 }
 
-var _ optReq = (*Summarize)(nil)
-
 func (su *Summarize) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	if su.source.knowExactNrows() &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
