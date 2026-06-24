@@ -496,9 +496,9 @@ func TestQueryGet(t *testing.T) {
         990101`)
 	test("((co where tnum = 100) union (co where tnum = 102)) union "+
 		"(co where tnum = 100)",
-		"co^(tnum) where*1 tnum is 100 union-lookup(tnum) "+
-			"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum)-merge(tnum) "+
-			"(co^(tnum) where*1 tnum is 102))",
+		"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum) "+
+			"(co^(tnum) where*1 tnum is 102)) "+
+			"union-lookup() (co^(tnum) where*1 tnum is 100)",
 		`signed	tnum
 		990101	100
 		990102	102`)
@@ -514,7 +514,7 @@ func TestQueryGet(t *testing.T) {
 	test(`((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))
 		union
 		((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))`,
-		"(co^(tnum) where*1 tnum is 104 project-copy signed union-merge(signed) (co^(tnum) where*1 tnum is 106 project-copy signed)) union-merge(signed) (co^(tnum) where*1 tnum is 104 project-copy signed union-merge(signed) (co^(tnum) where*1 tnum is 106 project-copy signed))",
+		"(co^(tnum) where*1 tnum is 104 project-copy signed union-merge (co^(tnum) where*1 tnum is 106 project-copy signed)) union-merge(signed) (co^(tnum) where*1 tnum is 104 project-copy signed union-merge (co^(tnum) where*1 tnum is 106 project-copy signed))",
 		`signed
         990103
         990104`)
@@ -774,7 +774,7 @@ func TestQueryGet(t *testing.T) {
 		970201	'eraser'`)
 
 	test("(customer summarize id, count) union (customer summarize id, count)",
-		"customer^(id) summarize-seq id, count union-merge(id) "+
+		"customer^(id) summarize-seq id, count union-lookup(id) "+
 			"(customer^(id) summarize-seq id, count)",
 		`count	id
 		1	'a'

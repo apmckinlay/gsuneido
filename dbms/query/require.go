@@ -16,13 +16,18 @@ import (
 // There is an implicit contract between the Use type and the operations
 // that can be performed on the query after SetApproach:
 //   - ReqUnordered: iteration only (Get), no Select, no Lookup
-//   - ReqOrdered: ordered iteration (Get), no Select, no Lookup
-//   - ReqGrouped: enables Select (with the exact index columns, not a prefix)
-//   - ReqLookup: enables Lookup (with the exact index columns)
+//   - ReqOrdered: ordered iteration (Get), plus Select (order-preserving),
+//     no Lookup
+//   - ReqGrouped: enables Select (grouped by the required columns, which must
+//     be a prefix of an index, in any order)
+//   - ReqLookup: enables Lookup (with the exact index columns, in any order)
 //
-// This contract is enforced by the optimizer: Select should only be called
-// if the query was optimized with ReqGrouped, and Lookup should only be
-// called if optimized with ReqLookup. ReqOrdered is for ordered iteration only.
+// Select is permitted on ReqOrdered (as well as ReqGrouped) because Select
+// filters rows while preserving iteration order — operators that rely on
+// ordered merge (e.g. Union) forward Select to sources optimized ReqOrdered.
+// Lookup is only permitted on ReqLookup. ReqGrouped is weaker than
+// ReqOrdered in that the required columns may appear in any order, whereas
+// ReqOrdered demands them as a specific ordered prefix.
 type Use int
 
 const (

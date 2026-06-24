@@ -243,8 +243,8 @@ func TestOptimize(t *testing.T) {
 			"join n:n by(item) "+
 			"(inven^(item) union-merge(item) inven^(item))")
 	test("(inven join trans) union (inven join trans)",
-		"(inven^(item) join 1:n by(item) trans^(item,date,id)) "+
-			"union-lookup(date,item,id) "+
+		"(trans^(date,item,id) join n:1 by(item) inven^(item)) "+
+			"union-merge(date,item,id) "+
 			"(trans^(date,item,id) join n:1 by(item) inven^(item))")
 	test("trans join customer",
 		"trans^(date,item,id) join n:1 by(id) customer^(id)")
