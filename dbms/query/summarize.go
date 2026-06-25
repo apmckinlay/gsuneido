@@ -349,9 +349,22 @@ func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 		fixcost, varcost := Optimize2(su.source, mode, UnorderedReq(1))
 		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: UnorderedReq(1)}
 	}
+	// Computed output columns (su.cols) don't exist in the source and
+	// can't constrain a source seek. For ReqLookup they're residual — a
+	// group is identified by its by columns, the computed columns are
+	// derived from it and verified by filter at runtime (like Extend).
+	// Drop them so the source sees only columns it actually has.
+	if req.Use() == ReqLookup {
+		stripped := set.Difference(req.cols, su.cols)
+		if len(stripped) != len(req.cols) {
+			req = LookupReq(stripped, req.nlookups)
+		}
+	}
 	if hasKey(su.by, su.source.Keys(), su.source.Fixed()) {
 		fixcost, varcost := Optimize2(su.source, mode, req)
-		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: req}
+		// Setting index=by lets Select() push sels on by-columns down to
+		// the source seek; sels on computed columns are filtered at runtime.
+		return fixcost, varcost, &summarizeApproach{strat: sumSeq, index: su.by, req: req}
 	}
 	fixed := su.source.Fixed()
 	nColsUnfixed := countUnfixed(su.by, fixed)

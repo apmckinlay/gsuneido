@@ -324,48 +324,21 @@ func lookupCost(levels int) Cost {
 
 // execution --------------------------------------------------------
 
-func (tbl *Table) Lookup(_ *Thread, sels Sels) (row Row) {
+func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
 	assert.That(!selConflict(tbl.header.Columns, sels))
 	tbl.nlooks++
-	if tbl.singleton {
-		// For singleton tables (empty key), any columns are acceptable
-		// Singleton tables have at most one row, so we can use GetFilter
-		// which already handles singleton filtering
-		tbl.sels = sels
-		tbl.ensureIter().Range(iface.All)
-		tbl.Rewind()
-		return tbl.GetFilter(Next, nil)
-	}
-	// For non-singleton tables, the lookup columns must match the index.
-	ix := &tbl.schema.Indexes[tbl.iIndex]
-	key := selOrg(tbl.indexEncode, ix.Fields, sels, true)
-	if len(ix.Ixspec.Fields2) > 0 && key == "" {
-		// unique 'u' indexes use Fields2 if Fields are empty
-		fullFields := set.Union(ix.Fields, ix.BestKey) // i.e. Fields + Fields2
-		key = selOrg(true, fullFields, sels, true)
-		row = tbl.LookupRaw(key)
-		if row == nil {
-			return nil
+	key := ""
+	if !tbl.singleton {
+		ix := &tbl.schema.Indexes[tbl.iIndex]
+		key = selOrg(tbl.indexEncode, ix.Fields, sels, true)
+		if len(ix.Ixspec.Fields2) > 0 && key == "" {
+			fullFields := set.Union(ix.Fields, ix.BestKey)
+			key = selOrg(true, fullFields, sels, true)
 		}
-		for _, sel := range sels {
-			if !slices.Contains(fullFields, sel.col) {
-				if row.GetRaw(tbl.header, sel.col) != sel.val {
-					return nil
-				}
-			}
-		}
-		return row
 	}
-	row = tbl.LookupRaw(key)
-	if row == nil {
+	row := tbl.LookupRaw(key)
+	if row == nil || !singletonFilter(tbl.header, row, sels) {
 		return nil
-	}
-	for _, sel := range sels {
-		if !slices.Contains(ix.Fields, sel.col) {
-			if row.GetRaw(tbl.header, sel.col) != sel.val {
-				return nil
-			}
-		}
 	}
 	return row
 }

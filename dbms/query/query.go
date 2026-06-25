@@ -491,14 +491,18 @@ func optTempIndex2(q Query, mode Mode, req Require) (
 	best := newBestApp()
 
 	// with no index
-	optTI2(best, q, mode, UnorderedReq(req.frac), nrows, factorNone)
+	noIdxOrder := req.cols
+	if u == ReqLookup {
+		noIdxOrder = tempIndexKey(q, req.cols)
+	}
+	optTI2(best, q, mode, UnorderedReq(req.frac), nrows, factorNone, noIdxOrder)
 
 	// with required index
-	optTI2(best, q, mode, req, nrows, factorAll)
+	optTI2(best, q, mode, req, nrows, factorAll, req.cols)
 
 	// with "best" index
 	if bestIndex := tempIndexBest(q, req.cols); bestIndex != nil {
-		optTI2(best, q, mode, OrderedReq(bestIndex, req.frac), nrows, factorPre)
+		optTI2(best, q, mode, OrderedReq(bestIndex, req.frac), nrows, factorPre, req.cols)
 	}
 
 	// key-subset candidates for ReqLookup
@@ -514,7 +518,7 @@ func optTempIndex2(q Query, mode Mode, req Require) (
 				continue
 			}
 			keyUnfixed := fixed.RemoveFrom(key)
-			optTI2(best, q, mode, LookupReq(keyUnfixed, req.nlookups), nrows, factorAll)
+			optTI2(best, q, mode, LookupReq(keyUnfixed, req.nlookups), nrows, factorAll, keyUnfixed)
 		}
 	}
 
@@ -535,18 +539,44 @@ func optTempIndex2(q Query, mode Mode, req Require) (
 	}
 	traceQO("tempindex", best.index, tempIndexCost, "<", indexedCost)
 	return best.fixcost, best.varcost,
-		&tempIndex{index: req.cols, srcapp: best.srcapp,
+		&tempIndex{index: best.tiOrder, srcapp: best.srcapp,
 			srcindex:   best.index,
 			srcfixcost: best.srcfixcost, srcvarcost: best.srcvarcost}
 }
 
-func optTI2(best *bestTI, q Query, mode Mode, req Require, nrows, factor int) {
+// tempIndexKey finds the smallest key (by unfixed count) that's covered by cols.
+// Used to minimize tempindex order when source is unordered.
+func tempIndexKey(q Query, cols []string) []string {
+	fixed := q.Fixed()
+	var bestKey []string
+	bestN := -1
+	for _, key := range q.Keys() {
+		if !indexCovered(key, cols, fixed) {
+			continue
+		}
+		n := countUnfixed(key, fixed)
+		if n == 0 {
+			continue
+		}
+		if bestKey == nil || n < bestN {
+			bestKey = key
+			bestN = n
+		}
+	}
+	if bestKey != nil {
+		return fixed.RemoveFrom(bestKey)
+	}
+	return cols
+}
+
+func optTI2(best *bestTI, q Query, mode Mode, req Require, nrows, factor int, tiOrder []string) {
 	srcReq := OrderedReq(req.cols, 1)
 	srcfixcost, srcvarcost, srcapp := q.optimize2(mode, srcReq)
 	assert.That(srcfixcost >= 0 && srcvarcost >= 0)
 	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, req.cols, nrows, float64(req.frac), factor)
 	if fixcost+varcost < best.fixcost+best.varcost {
 		best.index = req.cols
+		best.tiOrder = tiOrder
 		best.srcfixcost = srcfixcost
 		best.srcvarcost = srcvarcost
 		best.srcapp = srcapp
@@ -669,7 +699,7 @@ func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 		varcost *= 2 // ???
 	}
 	return fixcost, varcost
-}
+	}
 
 // tempIndexBest finds the index that has the longest common prefix.
 // NOTE: it assumes that all indexes have the same cost
@@ -693,6 +723,7 @@ func tempIndexBest(q Query, index []string) []string {
 
 type bestTI struct {
 	index      []string
+	tiOrder    []string
 	srcfixcost Cost
 	srcvarcost Cost
 	srcapp     any

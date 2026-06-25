@@ -217,10 +217,13 @@ func (e *Extend) optimize(mode Mode, index []string, frac float64) (
 }
 
 func (e *Extend) optimize2(mode Mode, req Require) (Cost, Cost, any) {
-	// source.fastSingle is handled at the top-level (req.cols cleared),
-	// so any extended cols in req.cols are a genuine conflict here.
 	if !set.Disjoint(req.cols, e.cols) {
-		return impossible, impossible, nil
+		if req.Use() != ReqLookup {
+			return impossible, impossible, nil
+		}
+		// Extend.Lookup handles extend-column sels via splitSelect + filter,
+		// so strip them before passing to the source.
+		req = LookupReq(set.Difference(req.cols, e.cols), req.nlookups)
 	}
 	fixcost, varcost := Optimize2(e.source, mode, req)
 	return fixcost, varcost, nil
@@ -236,6 +239,12 @@ func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran
 }
 
 func (e *Extend) setApproach2(req Require, _ any, tran QueryTran) {
+	// optimize2 returns impossible when req.cols intersects e.cols and
+	// req.Use() != ReqLookup, so only the ReqLookup case reaches here.
+	// Strip extend columns so the source req matches what optimize2 cached.
+	if !set.Disjoint(req.cols, e.cols) {
+		req = LookupReq(set.Difference(req.cols, e.cols), req.nlookups)
+	}
 	e.source = SetApproach2(e.source, req, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header

@@ -86,23 +86,23 @@ func TestOptimize(t *testing.T) {
 		"table^(a) extend x = F() tempindex(x)")
 
 	test("table minus table",
-		"table^(a) minus(a) table^(a)")
+		"table^(a) minus table^(a)")
 	test("(table extend x = 1) minus hist",
 		"table^(a) extend x = 1")
 
 	test("hist intersect hist2",
-		"hist^(date,item,id) intersect(date) hist2^(date)")
+		"hist^(date,item,id) intersect hist2^(date)")
 	test("hist2 intersect hist",
-		"hist^(date,item,id) intersect(date) hist2^(date)")
+		"hist^(date,item,id) intersect hist2^(date)")
 
 	test("hist union hist2",
-		"hist^(date,item,id) union-lookup(date) hist2^(date)")
+		"hist^(date,item,id) union-lookup hist2^(date)")
 	test("hist2 union hist",
-		"hist^(date,item,id) union-lookup(date) hist2^(date)")
+		"hist^(date,item,id) union-lookup hist2^(date)")
 	test("hist union hist sort date",
-		"hist^(date,item,id) union-merge(date,item,id) hist^(date,item,id)")
+		"hist^(date,item,id) union-merge hist^(date,item,id)")
 	test("table union table",
-		"table^(a) union-merge(a) table^(a)")
+		"table^(a) union-merge table^(a)")
 	test("(table where a is 1) union (table where a is 2)",
 		"table^(a) where*1 a is 1 "+
 			"union-disjoint(a) (table^(a) where*1 a is 2)")
@@ -186,7 +186,7 @@ func TestOptimize(t *testing.T) {
 		"alias^(id) join 1:1 by(id) customer^(id)")
 	test("(inven join trans) union (inven join trans)",
 		"(trans^(date,item,id) join n:1 by(item) (inven^(item) tempindex(item))) "+
-			"union-merge(date,item,id) "+
+			"union-merge "+
 			"(trans^(date,item,id) join n:1 by(item) (inven^(item) tempindex(item)))")
 	test("task join co join cus",
 		"(task^(tnum) join 1:1 by(tnum) co^(tnum)) "+
@@ -195,10 +195,10 @@ func TestOptimize(t *testing.T) {
 		"inven^(item) join 1:n by(item) trans^(item,date,id)")
 
 	test("(trans union trans) join (inven union inven)",
-		"(trans^(date,item,id) union-merge(date,item,id) trans^(date,item,id)) "+
+		"(trans^(date,item,id) union-merge trans^(date,item,id)) "+
 			"join n:n by(item) "+
 			"(inven^(item) tempindex(item) "+
-			"union-merge(item) (inven^(item) tempindex(item)))")
+			"union-merge (inven^(item) tempindex(item)))")
 
 	test("inven leftjoin trans",
 		"inven^(item) leftjoin 1:n by(item) trans^(item,date,id)")
@@ -239,12 +239,12 @@ func TestOptimize(t *testing.T) {
 
 	mode = CursorMode
 	test("(trans union trans) join (inven union inven)",
-		"(trans^(date,item,id) union-merge(date,item,id) trans^(date,item,id)) "+
+		"(trans^(date,item,id) union-merge trans^(date,item,id)) "+
 			"join n:n by(item) "+
-			"(inven^(item) union-merge(item) inven^(item))")
+			"(inven^(item) union-merge inven^(item))")
 	test("(inven join trans) union (inven join trans)",
 		"(trans^(date,item,id) join n:1 by(item) inven^(item)) "+
-			"union-merge(date,item,id) "+
+			"union-merge "+
 			"(trans^(date,item,id) join n:1 by(item) inven^(item))")
 	test("trans join customer",
 		"trans^(date,item,id) join n:1 by(id) customer^(id)")
