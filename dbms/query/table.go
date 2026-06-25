@@ -202,17 +202,24 @@ func (tbl *Table) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
 			return 0, Cost(req.nlookups) * tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
 		}
-		fallthrough
+		best := newBestIndex()
+		for _, idx := range tbl.indexes {
+			if !lookupIndexEligible(idx, tbl.allKeys, nil) ||
+				!indexCovered(idx, req.cols, nil) {
+				continue
+			}
+			f, v, _ := tbl.costFor(idx, 0, req.nlookups)
+			best.update(idx, f, v)
+		}
+		if best.index != nil {
+			return best.fixcost, best.varcost, tableApproach{index: best.index}
+		}
+		return impossible, impossible, nil
 	case ReqGrouped:
 		best := newBestIndex()
 		for _, idx := range tbl.indexes {
 			// Table.Fixed() is always nil, so nColsUnfixed == len(req.cols)
 			if !grouped(idx, req.cols, len(req.cols), nil) {
-				continue
-			}
-			if req.Use() == ReqLookup &&
-				(!lookupIndexEligible(idx, tbl.allKeys, nil) ||
-					!indexCovered(idx, req.cols, nil)) {
 				continue
 			}
 			f, v, _ := tbl.costFor(idx, float64(req.frac), req.nlookups)
@@ -333,15 +340,34 @@ func (tbl *Table) Lookup(_ *Thread, sels Sels) (row Row) {
 	ix := &tbl.schema.Indexes[tbl.iIndex]
 	key := selOrg(tbl.indexEncode, ix.Fields, sels, true)
 	if len(ix.Ixspec.Fields2) > 0 && key == "" {
-		// For unique indexes, if all index field values are empty,
-		// Fields2 (from BestKey) is added to make the key unique
-		fullFields := set.Union(ix.Fields, ix.BestKey)
-		assert.That(sels.ColsAre(fullFields))
+		// unique 'u' indexes use Fields2 if Fields are empty
+		fullFields := set.Union(ix.Fields, ix.BestKey) // i.e. Fields + Fields2
 		key = selOrg(true, fullFields, sels, true)
-	} else {
-		assert.That(sels.ColsAre(ix.Fields))
+		row = tbl.LookupRaw(key)
+		if row == nil {
+			return nil
+		}
+		for _, sel := range sels {
+			if !slices.Contains(fullFields, sel.col) {
+				if row.GetRaw(tbl.header, sel.col) != sel.val {
+					return nil
+				}
+			}
+		}
+		return row
 	}
-	return tbl.LookupRaw(key)
+	row = tbl.LookupRaw(key)
+	if row == nil {
+		return nil
+	}
+	for _, sel := range sels {
+		if !slices.Contains(ix.Fields, sel.col) {
+			if row.GetRaw(tbl.header, sel.col) != sel.val {
+				return nil
+			}
+		}
+	}
+	return row
 }
 
 func (tbl *Table) LookupRaw(key string) Row {

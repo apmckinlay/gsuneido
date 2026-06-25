@@ -163,6 +163,41 @@ func TestGrouped(t *testing.T) {
 	assert.T(t).That(!grouped(idx, cols, nu, fixed))
 }
 
+func TestIndexCovered(t *testing.T) {
+	oneval := []string{""}
+	fixed := Fixed{{col: "f1", values: oneval}, {col: "f2", values: oneval}}
+	test := func(sidx, scols string, expected bool) {
+		t.Helper()
+		idx := strings.Fields(sidx)
+		cols := strings.Fields(scols)
+		result := indexCovered(idx, cols, fixed)
+		assert.T(t).This(result).Is(expected)
+	}
+
+	// no fixed
+	test("", "", true)
+	test("a", "a", true)
+	test("a b", "a b", true)
+	test("a b", "b a", true)
+	test("a", "b", false)
+	test("a b", "a", false)
+	test("a b c", "a b", false)
+
+	// with fixed - fixed columns in index are ignored
+	test("a f1", "a", true)
+	test("f1 a", "a", true)
+	test("a f1 b", "a b", true)
+	test("f1 f2 a", "a", true)
+	test("a f1 b f2", "a b", true)
+
+	// fixed columns in cols don't help cover unfixed index columns
+	test("a b", "a f1", false)
+
+	// all index columns fixed - always covered
+	test("f1 f2", "", true)
+	test("f1 f2", "a", true)
+}
+
 func TestBestLookupIndex(t *testing.T) {
 	test := func(q Query, expected []string) {
 		t.Helper()

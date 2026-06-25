@@ -660,10 +660,8 @@ func (w *Where) optWhereLookup2(req Require) (Cost, Cost, any) {
 		return 0, cost, &whereApproach{index: req.cols, cost: cost}
 	}
 	best := newBestIndex()
-	nColsUnfixed := countUnfixed(req.cols, w.fixed)
 	for _, idx := range w.source.Indexes() {
 		if !lookupIndexEligible(idx, keys, w.fixed) ||
-			!grouped(idx, req.cols, nColsUnfixed, w.fixed) ||
 			!indexCovered(idx, req.cols, w.fixed) {
 			continue
 		}
@@ -1093,11 +1091,14 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 		}
 	}
 	isels, osels := Split(cloned, sels, w.srcIndex)
+	var residual Sels
 	for _, sel := range osels {
-		assert.That(w.fixed.Has(sel.col))
+		if !w.fixed.Has(sel.col) {
+			residual = append(residual, sel)
+		}
 	}
 
-	row := w.source.Lookup(th, isels)
+	row := w.source.Lookup(th, slc.With(isels, residual...))
 	if !w.filter(th, row) {
 		row = nil
 	}

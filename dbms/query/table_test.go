@@ -145,3 +145,57 @@ func TestTableOptimize2(t *testing.T) {
 		assert.Msg(req).This(app.(tableApproach).index).Is([]string{"x"})
 	}
 }
+
+func TestTableOptimize2_ReqLookup_indexCovered(t *testing.T) {
+	assert := assert.T(t)
+	optimizeFor := func(tbl *Table, req Require) (Cost, Cost, any) {
+		return tbl.optimize2(ReadMode, req)
+	}
+	test := func(tbl *Table, req Require, expected []string) {
+		t.Helper()
+		f, v, app := optimizeFor(tbl, req)
+		assert.True(f+v < impossible)
+		assert.This(app.(tableApproach).index).Is(expected)
+	}
+	assertImpossible := func(tbl *Table, req Require) {
+		t.Helper()
+		f, v, app := optimizeFor(tbl, req)
+		assert.False(f+v < impossible)
+		assert.This(app).Is(nil)
+	}
+	newTable := func(name string, indexes, keys [][]string, nrows int) *Table {
+		tbl := &Table{name: name}
+		tbl.indexes = indexes
+		tbl.allKeys = keys
+		tbl.info = &meta.Info{Nrows: nrows, Size: int64(nrows * 100)}
+		return tbl
+	}
+
+	// by=(x,y), key=(y): partial lookup — indexCovered passes (y is in by)
+	tbl := newTable("xy", [][]string{{"y"}}, [][]string{{"y"}}, 100)
+	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"y"})
+
+	// by=(x,y), key=(x,y): full lookup — exact index match
+	tbl = newTable("xy2", [][]string{{"x", "y"}}, [][]string{{"x", "y"}}, 100)
+	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"x", "y"})
+
+	// by=(x,y), key=(x,y,z): should fail — indexCovered fails (z not in by)
+	tbl = newTable("xyz", [][]string{{"x", "y", "z"}}, [][]string{{"x", "y", "z"}}, 100)
+	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
+
+	// by=(x,y), index=(x,c), key=(x): fails — indexCovered fails (c not in by)
+	tbl = newTable("xc", [][]string{{"x", "c"}}, [][]string{{"x"}}, 100)
+	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
+
+	// by=(x,y), index=(x), no key: fails — lookupIndexEligible fails
+	tbl = newTable("xnokey", [][]string{{"x"}}, [][]string{}, 100)
+	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
+
+	// by=(x,y), indexes=[x],[y], key=(y): picks [y] (smallest eligible index)
+	tbl = newTable("twoidx", [][]string{{"x"}, {"y"}}, [][]string{{"y"}}, 100)
+	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"y"})
+
+	// by=(x,y,z), key=(y,z): picks [y,z] — indexCovered passes (y,z both in by)
+	tbl = newTable("xyz2", [][]string{{"y", "z"}}, [][]string{{"y", "z"}}, 100)
+	test(tbl, LookupReq([]string{"x", "y", "z"}, 1), []string{"y", "z"})
+}

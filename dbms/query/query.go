@@ -501,6 +501,23 @@ func optTempIndex2(q Query, mode Mode, req Require) (
 		optTI2(best, q, mode, OrderedReq(bestIndex, req.frac), nrows, factorPre)
 	}
 
+	// key-subset candidates for ReqLookup
+	if u == ReqLookup {
+		fixed := q.Fixed()
+		nReqColsUnfixed := countUnfixed(req.cols, fixed)
+		for _, key := range q.Keys() {
+			if !indexCovered(key, req.cols, fixed) {
+				continue
+			}
+			nKeyUnfixed := countUnfixed(key, fixed)
+			if nKeyUnfixed == 0 || nKeyUnfixed >= nReqColsUnfixed {
+				continue
+			}
+			keyUnfixed := fixed.RemoveFrom(key)
+			optTI2(best, q, mode, LookupReq(keyUnfixed, req.nlookups), nrows, factorAll)
+		}
+	}
+
 	// for ReqLookup or ReqGrouped with nlookups, add per-lookup cost on temp index
 	if u == ReqLookup || (u == ReqGrouped && req.nlookups > 0) {
 		perLookup := Cost(400)

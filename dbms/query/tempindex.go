@@ -138,6 +138,13 @@ func (ti *TempIndex) Lookup(th *Thread, sels Sels) Row {
 	if row == nil || !ti.matches(row, key) {
 		return nil
 	}
+	for _, sel := range sels {
+		if !slices.Contains(ti.order, sel.col) {
+			if row.GetRawVal(ti.header, sel.col, ti.th, ti.st) != sel.val {
+				return nil
+			}
+		}
+	}
 	return row
 }
 

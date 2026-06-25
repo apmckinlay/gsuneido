@@ -134,14 +134,10 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 // hasKey returns whether cols contains a key
 // taking fixed into consideration
 func hasKey(cols []string, keys [][]string, fixed Fixed) bool {
-outer:
 	for _, key := range keys {
-		for _, k := range key {
-			if !fixed.Single(k) && !slices.Contains(cols, k) {
-				continue outer
-			}
+		if indexCovered(key, cols, fixed) {
+			return true
 		}
-		return true
 	}
 	return false
 }
