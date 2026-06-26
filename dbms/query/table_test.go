@@ -15,7 +15,7 @@ func TestTableOptimize2(t *testing.T) {
 	tran := testTran{}
 
 	optimizeFor := func(tbl *Table, req Require) (Cost, Cost, any) {
-		return tbl.optimize2(ReadMode, req)
+		return tbl.optimize(ReadMode, req)
 	}
 
 	test := func(table string, req Require, expected []string) {
@@ -149,7 +149,7 @@ func TestTableOptimize2(t *testing.T) {
 func TestTableOptimize2_ReqLookup_indexCovered(t *testing.T) {
 	assert := assert.T(t)
 	optimizeFor := func(tbl *Table, req Require) (Cost, Cost, any) {
-		return tbl.optimize2(ReadMode, req)
+		return tbl.optimize(ReadMode, req)
 	}
 	test := func(tbl *Table, req Require, expected []string) {
 		t.Helper()

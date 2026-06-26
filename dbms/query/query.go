@@ -142,17 +142,9 @@ type Query interface {
 
 	String() string
 
-	cacheAdd(use Use, index []string, frac float64, fixcost, varcost Cost, approach any)
-
-	// cacheGet returns the cost and approach associated with an index
-	// or -1 if the index has not been added.
-	cacheGet(use Use, index []string, frac float64) (fixcost, varcost Cost, approach any)
-
+	cacheAdd(req Require, fixcost, varcost Cost, approach any)
+	cacheGet(req Require) (fixcost, varcost Cost, approach any)
 	cacheClear()
-
-	cacheAdd2(req Require, fixcost, varcost Cost, approach any)
-	cacheGet2(req Require) (fixcost, varcost Cost, approach any)
-	cacheClear2()
 
 	// optimize determines the minimum cost strategy based on estimates.
 	//
@@ -164,11 +156,11 @@ type Query interface {
 	// frac = 0 means only Lookup, else frac < 1 means Select or first/last
 	//
 	// varcost should already incorporate frac
-	optimize2(mode Mode, req Require) (Cost, Cost, any)
+	optimize(mode Mode, req Require) (Cost, Cost, any)
 
 	// setApproach locks in the approach chosen by optimize.
 	// index and frac must match a previous optimize call
-	setApproach2(req Require, approach any, tran QueryTran)
+	setApproach(req Require, approach any, tran QueryTran)
 
 	// lookupCost returns the cost of one Lookup
 	lookupCost() Cost
@@ -214,7 +206,6 @@ type queryBase struct {
 	singleTbl opt.Bool
 	lookCost  opt.Int
 	cache
-	cache2
 	metrics
 }
 
@@ -394,7 +385,7 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 	q = q.Transform()
 	best := newBestIndex()
 	for _, key := range q.Keys() {
-		f, v, _ := optimize2(q, mode, GroupedReq(key, 1, 1))
+		f, v, _ := optimize(q, mode, GroupedReq(key, 1, 1))
 		best.update(key, f, v)
 	}
 	if best.fixcost+best.varcost >= impossible {
@@ -428,11 +419,11 @@ const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 // initially duplicates the existing one, will eventually replace it
 
 func Optimize2(q Query, mode Mode, req Require) (fixcost, varcost Cost) {
-	fixcost, varcost, _ = optimize2(q, mode, req)
+	fixcost, varcost, _ = optimize(q, mode, req)
 	return fixcost, varcost
 }
 
-func optimize2(q Query, mode Mode, req Require) (
+func optimize(q Query, mode Mode, req Require) (
 	fixcost, varcost Cost, approach any) {
 	assert.That(!math.IsNaN(float64(req.frac)) && !math.IsInf(float64(req.frac), 0))
 	if !set.Subset(q.Columns(), req.cols) {
@@ -450,12 +441,12 @@ func optimize2(q Query, mode Mode, req Require) (
 		req.cols = nil
 		req.nlookups = 0
 	}
-	if fixcost, varcost, app := q.cacheGet2(req); varcost >= 0 {
+	if fixcost, varcost, app := q.cacheGet(req); varcost >= 0 {
 		return fixcost, varcost, app
 	}
 	fixcost, varcost, app := optTempIndex2(q, mode, req)
 	assert.That(fixcost >= 0 && varcost >= 0)
-	q.cacheAdd2(req, fixcost, varcost, app)
+	q.cacheAdd(req, fixcost, varcost, app)
 	return fixcost, varcost, app
 }
 
@@ -473,7 +464,7 @@ func optTempIndex2(q Query, mode Mode, req Require) (
 	}
 	traceQO("optTempIndex", "----------------")
 
-	indexedFixCost, indexedVarCost, indexedApp := q.optimize2(mode, req)
+	indexedFixCost, indexedVarCost, indexedApp := q.optimize(mode, req)
 	assert.That(indexedFixCost >= 0 && indexedVarCost >= 0)
 
 	u := req.Use()
@@ -567,7 +558,7 @@ func tempIndexKey(q Query, cols []string) []string {
 
 func optTI2(best *bestTI, q Query, mode Mode, req Require, nrows, factor int, tiOrder []string) {
 	srcReq := OrderedReq(req.cols, 1)
-	srcfixcost, srcvarcost, srcapp := q.optimize2(mode, srcReq)
+	srcfixcost, srcvarcost, srcapp := q.optimize(mode, srcReq)
 	assert.That(srcfixcost >= 0 && srcvarcost >= 0)
 	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, req.cols, nrows, float64(req.frac), factor)
 	if fixcost+varcost < best.fixcost+best.varcost {
@@ -582,7 +573,6 @@ func optTI2(best *bestTI, q Query, mode Mode, req Require, nrows, factor int, ti
 }
 
 //-------------------------------------------------------------------
-
 
 const factorAll = 105  // ???
 const factorPre = 110  // ???
@@ -603,7 +593,7 @@ func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 		varcost *= 2 // ???
 	}
 	return fixcost, varcost
-	}
+}
 
 // tempIndexBest finds the index that has the longest common prefix.
 // NOTE: it assumes that all indexes have the same cost
@@ -682,12 +672,12 @@ var _ = AddInfo("query.tempindex", &tempIndexCount)
 // SetApproach2 is the v2 version of SetApproach.
 // It finalizes the chosen approach using Require instead of index.
 func SetApproach2(q Query, req Require, tran QueryTran) Query {
-	// must match optimize2's guard (see comment there)
+	// must match optimize's guard (see comment there)
 	if q.fastSingle() || q.Fixed().All(req.cols) {
 		req.cols = nil
 		req.nlookups = 0
 	}
-	fixcost, varcost, approach := q.cacheGet2(req)
+	fixcost, varcost, approach := q.cacheGet(req)
 	q.cacheClear()
 	if fixcost == -1 {
 		panic("SetApproach2: not found in cache")
@@ -695,14 +685,14 @@ func SetApproach2(q Query, req Require, tran QueryTran) Query {
 	assert.That(fixcost >= 0 && varcost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
 		q.Metrics().setCost(1, app.srcfixcost, app.srcvarcost)
-		q.setApproach2(OrderedReq(app.srcindex, 1), app.srcapp, tran)
+		q.setApproach(OrderedReq(app.srcindex, 1), app.srcapp, tran)
 		ti := NewTempIndex(q, app.index, tran)
 		ti.setCost(float64(req.frac), fixcost, varcost)
 		tempIndexCount.Add(1)
 		return ti
 	}
 	q.Metrics().setCost(float64(req.frac), fixcost, varcost)
-	q.setApproach2(req, approach, tran)
+	q.setApproach(req, approach, tran)
 	return q
 }
 
@@ -729,21 +719,6 @@ func (q1 *Query1) Updateable() string {
 
 func (q1 *Query1) SetTran(t QueryTran) {
 	q1.source.SetTran(t)
-}
-
-func (q1 *Query1) optimize2(mode Mode, req Require) (
-	Cost, Cost, any) {
-	fixcost, varcost := Optimize2(q1.source, mode, req)
-	return fixcost, varcost, nil
-}
-
-func (*Query1) setApproach2(Require, any, QueryTran) {
-	panic(assert.ShouldNotReachHere())
-}
-
-// Lookup default applies to Summarize and Sort
-func (*Query1) Lookup(*Thread, Sels) Row {
-	panic("Lookup not implemented")
 }
 
 func (q1 *Query1) Output(th *Thread, rec Record) {

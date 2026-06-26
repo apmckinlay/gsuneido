@@ -74,7 +74,7 @@ func (t *Times) Transform() Query {
 	return t
 }
 
-func (t *Times) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (t *Times) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	opt := func(src1, src2 Query) (Cost, Cost) {
 		nrows1, _ := src1.Nrows()
 		fixcost1, varcost1 := Optimize2(src1, mode, req)
@@ -91,7 +91,7 @@ func (t *Times) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	return fixRev, varRev, true
 }
 
-func (t *Times) setApproach2(req Require, approach any, tran QueryTran) {
+func (t *Times) setApproach(req Require, approach any, tran QueryTran) {
 	if approach.(bool) {
 		t.source1, t.source2 = t.source2, t.source1
 	}

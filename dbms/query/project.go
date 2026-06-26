@@ -52,9 +52,8 @@ type Project struct {
 type mapType = shmap.Map[rowHash, struct{}, shmap.Funcs[rowHash]]
 
 type projectApproach struct {
-	index []string
-	req   Require
 	strat projectStrategy
+	req   Require
 }
 
 type projectStrategy int
@@ -446,7 +445,7 @@ const (
 	mapWarn      = 20000
 )
 
-func (p *Project) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (p *Project) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if p.unique {
 		// no dedup needed — pass req through unchanged
 		fixcost, varcost := Optimize2(p.source, mode, req)
@@ -521,7 +520,7 @@ func (p *Project) mapCost2(mode Mode, req Require) (Cost, Cost, any) {
 		&projectApproach{strat: projMap, req: req}
 }
 
-func (p *Project) setApproach2(_ Require, approach any, tran QueryTran) {
+func (p *Project) setApproach(_ Require, approach any, tran QueryTran) {
 	p.projectApproach = *approach.(*projectApproach)
 	switch p.strat {
 	case projCopy:

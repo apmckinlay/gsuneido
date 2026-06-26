@@ -85,7 +85,7 @@ type Where struct {
 // It is deliberately separate from *Table so it can be replaced for testing.
 type whereTable interface {
 	// optimization
-	optimize(mode Mode, index []string, frac float64) (Cost, Cost, any)
+	optimize(mode Mode, req Require) (Cost, Cost, any)
 	IndexEncodes(index []string) bool
 	SetIndex(index []string)
 	schemaIndexes() []Index
@@ -556,7 +556,7 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 
 // optimize ---------------------------------------------------------
 
-func (w *Where) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (w *Where) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	w.optInit()
 	if w.conflict {
 		return 0, 0, nil
@@ -596,7 +596,7 @@ func (w *Where) optWhereIdx2(req Require, indexOk func([]string) bool,
 		if !indexOk(idx) {
 			continue
 		}
-		_, varCost, _ := w.tbl.optimize(0, idx, 1.0)
+		_, varCost, _ := w.tbl.optimize(0, OrderedReq(idx, 1.0))
 		irFrac := 1.0
 		ifFrac := 1.0
 		dfFrac := w.wfrac
@@ -732,7 +732,7 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 	return nil
 }
 
-func (w *Where) setApproach2(req Require, approach any, tran QueryTran) {
+func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 	w.optimized = true
 	if w.singleton {
 		whereSingletonCount.Add(1)

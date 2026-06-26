@@ -168,13 +168,13 @@ func (r *Rename) Transform() Query {
 	return r
 }
 
-func (r *Rename) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (r *Rename) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	req.cols = r.renameRev(req.cols)
 	fixcost, varcost := Optimize2(r.source, mode, req)
 	return fixcost, varcost, nil
 }
 
-func (r *Rename) setApproach2(req Require, _ any, tran QueryTran) {
+func (r *Rename) setApproach(req Require, _ any, tran QueryTran) {
 	req.cols = r.renameRev(req.cols)
 	r.source = SetApproach2(r.source, req, tran)
 	r.header = r.getHeader()

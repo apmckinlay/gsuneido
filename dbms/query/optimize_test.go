@@ -256,7 +256,7 @@ func TestOptimize(t *testing.T) {
 }
 
 // TestOptimize2FastSingleLookup verifies that a ReqLookup reaching a fastSingle
-// node does not panic. The top-level optimize2 guard must normalize the req to
+// node does not panic. The top-level optimize guard must normalize the req to
 // a valid ReqUnordered (clearing nlookups, since Use() asserts nlookups==0 when
 // cols is empty). A singleton trivially satisfies any require.
 func TestOptimize2FastSingleLookup(t *testing.T) {

@@ -57,9 +57,8 @@ type Summarize struct {
 
 type summarizeApproach struct {
 	index []string
-	req   Require
 	strat sumStrategy
-	frac  float64
+	req   Require
 }
 
 type sumStrategy int
@@ -238,7 +237,7 @@ func (su *Summarize) Transform() Query {
 	return su
 }
 
-func (su *Summarize) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (su *Summarize) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if su.source.knowExactNrows() &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
 		Optimize2(su.source, mode, UnorderedReq(0))
@@ -339,7 +338,7 @@ func (su *Summarize) mapCost2(mode Mode, req Require) (Cost, Cost, any) {
 	return fixcost, 0, &summarizeApproach{strat: sumMap, req: srcReq}
 }
 
-func (su *Summarize) setApproach2(_ Require, approach any, tran QueryTran) {
+func (su *Summarize) setApproach(_ Require, approach any, tran QueryTran) {
 	if su.unique {
 		sumUniqueCount.Add(1)
 	}

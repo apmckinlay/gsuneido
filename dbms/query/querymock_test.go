@@ -9,7 +9,6 @@ import . "github.com/apmckinlay/gsuneido/core"
 // By default all methods panic. Set fields to override return values.
 type QueryMock struct {
 	cache
-	cache2
 	ColumnsResult     []string
 	TransformResult   Query
 	OrderResult       []string
@@ -136,12 +135,12 @@ func (m *QueryMock) String() string {
 	return m.StringResult
 }
 
-func (m *QueryMock) optimize2(Mode, Require) (Cost, Cost, any) {
+func (m *QueryMock) optimize(Mode, Require) (Cost, Cost, any) {
 	return m.OptimizeResult.Fixcost, m.OptimizeResult.Varcost,
 		m.OptimizeResult.Approach
 }
 
-func (*QueryMock) setApproach2(Require, any, QueryTran) {
+func (*QueryMock) setApproach(Require, any, QueryTran) {
 	panic("QueryMock.setApproach not implemented")
 }
 

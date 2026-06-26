@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -160,32 +159,7 @@ const ( // ???
 	colsBias   = 5
 )
 
-func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, any) {
-	idxi := 0
-	if len(index) > 0 && !tbl.singleton {
-		idxi = tbl.indexFor(index)
-		if idxi == -1 {
-			return impossible, impossible, nil
-		}
-	}
-	index = tbl.indexes[idxi]
-
-	// The first index is in physical order (after compact)
-	// so it is faster to read if the table is large.
-	rowCost := tableFast
-	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
-		rowCost = tableSlow
-	}
-	// add a slight bias against indexes with more columns
-	// this also makes optimization a little more deterministic
-	rowCost += len(index) * colsBias
-	varcost := tbl.info.Nrows * rowCost
-	trace.QueryOpt.Println("Table optimize", tbl.name, index, frac, "=",
-		Cost(frac*float64(varcost)))
-	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
-}
-
-func (tbl *Table) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton {
 		return tbl.costFor(tbl.indexes[0], float64(req.frac), 0)
 	}
@@ -260,7 +234,7 @@ func (tbl *Table) indexFor(order []string) int {
 	return -1 // not found
 }
 
-func (tbl *Table) setApproach2(_ Require, approach any, _ QueryTran) {
+func (tbl *Table) setApproach(_ Require, approach any, _ QueryTran) {
 	tbl.SetIndex(approach.(tableApproach).index)
 }
 

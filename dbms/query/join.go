@@ -61,9 +61,6 @@ type lookupInfo struct {
 }
 
 type joinApproach struct {
-	index1  []string
-	index2  []string
-	frac2   float64
 	reverse bool
 	req1    Require
 	req2    Require
@@ -332,7 +329,7 @@ func joinopt2(src1, src2 Query, nrows func() (int, int), jt joinType,
 	}
 }
 
-func (jn *Join) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (jn *Join) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	fwd := joinopt2(jn.source1, jn.source2, jn.Nrows, jn.joinType,
 		mode, req, jn.by)
 	rev := joinopt2(jn.source2, jn.source1, jn.Nrows, jn.joinType.reverse(),
@@ -359,7 +356,7 @@ func (jn *Join) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	return fwd.fixcost, fwd.varcost, approach
 }
 
-func (jn *Join) setApproach2(req Require, approach any, tran QueryTran) {
+func (jn *Join) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
 	if ap.reverse {
 		jn.source1, jn.source2 = jn.source2, jn.source1
@@ -706,7 +703,7 @@ func fixedConflict(fixed1, fixed2 Fixed) bool {
 	return false
 }
 
-func (lj *LeftJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (lj *LeftJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	jc := joinopt2(lj.source1, lj.source2, lj.Nrows, lj.joinType,
 		mode, req, lj.by)
 	if jc.fixcost == impossible {
@@ -716,7 +713,7 @@ func (lj *LeftJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 		&joinApproach{req1: jc.req1, req2: jc.req2}
 }
 
-func (lj *LeftJoin) setApproach2(req Require, approach any, tran QueryTran) {
+func (lj *LeftJoin) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
 	switch lj.joinType {
 	case one_one:

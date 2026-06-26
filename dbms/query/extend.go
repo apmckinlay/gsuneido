@@ -205,7 +205,7 @@ func (e *Extend) Fixed() Fixed {
 	return e.fixed
 }
 
-func (e *Extend) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (e *Extend) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if !set.Disjoint(req.cols, e.cols) {
 		if req.Use() != ReqLookup {
 			return impossible, impossible, nil
@@ -218,11 +218,10 @@ func (e *Extend) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	return fixcost, varcost, nil
 }
 
-
-func (e *Extend) setApproach2(req Require, _ any, tran QueryTran) {
-	// optimize2 returns impossible when req.cols intersects e.cols and
+func (e *Extend) setApproach(req Require, _ any, tran QueryTran) {
+	// optimize returns impossible when req.cols intersects e.cols and
 	// req.Use() != ReqLookup, so only the ReqLookup case reaches here.
-	// Strip extend columns so the source req matches what optimize2 cached.
+	// Strip extend columns so the source req matches what optimize cached.
 	if !set.Disjoint(req.cols, e.cols) {
 		req = LookupReq(set.Difference(req.cols, e.cols), req.nlookups)
 	}

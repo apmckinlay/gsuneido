@@ -47,9 +47,7 @@ type Union struct {
 
 type unionApproach struct {
 	keyIndex   []string // not necessarily a key if disjoint
-	idx1, idx2 []string
 	strat      unionStrategy
-	frac2      float64
 	reverse    bool
 	req1, req2 Require
 }
@@ -231,7 +229,7 @@ func (u *Union) getFixed() Fixed {
 	return fixed
 }
 
-func (u *Union) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (u *Union) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	switch req.Use() {
 	case ReqUnordered:
 		return u.opt2Unordered(mode, req)
@@ -277,8 +275,7 @@ func (u *Union) opt2Merge(mode Mode, req Require) (Cost, Cost, any) {
 			return impossible, impossible, nil
 		}
 		return fc1 + fc2, vc1 + vc2,
-			&unionApproach{keyIndex: req.cols, strat: unionMerge,
-				idx1: req.cols, idx2: req.cols, req1: mr, req2: mr}
+			&unionApproach{keyIndex: req.cols, strat: unionMerge, req1: mr, req2: mr}
 	}
 	if req.Use() == ReqUnordered {
 		return u.optMergeNoOrder2(mode, req)
@@ -299,8 +296,7 @@ func (u *Union) optMergeNoOrder2(mode Mode, req Require) (Cost, Cost, any) {
 
 	bestFixCost := impossible
 	bestVarCost := impossible
-	var bestKey, bestIdx1, bestIdx2 []string
-	var bestReq1, bestReq2 Require
+	var bestApproach *unionApproach
 	for _, key := range commonKeys {
 		// try key itself
 		mr := OrderedReq(key, req.frac)
@@ -310,9 +306,8 @@ func (u *Union) optMergeNoOrder2(mode Mode, req Require) (Cost, Cost, any) {
 			fc1+vc1+fc2+vc2 < bestFixCost+bestVarCost {
 			bestFixCost = fc1 + fc2
 			bestVarCost = vc1 + vc2
-			bestKey = key
-			bestIdx1, bestIdx2 = key, key
-			bestReq1, bestReq2 = mr, mr
+			bestApproach = &unionApproach{keyIndex: key,
+				strat: unionMerge, req1: mr, req2: mr}
 		}
 		// try index pairs
 		for i1, idx1 := range idxs1 {
@@ -327,22 +322,19 @@ func (u *Union) optMergeNoOrder2(mode Mode, req Require) (Cost, Cost, any) {
 							fc1i+vc1i+fc2i+vc2i < bestFixCost+bestVarCost {
 							bestFixCost = fc1i + fc2i
 							bestVarCost = vc1i + vc2i
-							bestKey = indexes1[i1][:len(key)]
-							bestIdx1 = indexes1[i1]
-							bestIdx2 = indexes2[i2]
-							bestReq1, bestReq2 = mr1, mr2
+							bestApproach = &unionApproach{
+								keyIndex: indexes1[i1][:len(key)],
+								strat:    unionMerge, req1: mr1, req2: mr2}
 						}
 					}
 				}
 			}
 		}
 	}
-	if bestIdx1 == nil {
+	if bestApproach == nil {
 		return impossible, impossible, nil
 	}
-	return bestFixCost, bestVarCost,
-		&unionApproach{keyIndex: bestKey, strat: unionMerge,
-			idx1: bestIdx1, idx2: bestIdx2, req1: bestReq1, req2: bestReq2}
+	return bestFixCost, bestVarCost, bestApproach
 }
 
 func (u *Union) optMergeWithOrder2(mode Mode, req Require) (Cost, Cost, any) {
@@ -407,8 +399,7 @@ func (u *Union) optMergeWithOrder2(mode Mode, req Require) (Cost, Cost, any) {
 				bestFixCost = fc1 + fc2
 				bestVarCost = vc1 + vc2
 				bestApproach = &unionApproach{keyIndex: keyIdx,
-					strat: unionMerge, idx1: index1, idx2: index2,
-					req1: mr1, req2: mr2}
+					strat: unionMerge, req1: mr1, req2: mr2}
 			}
 		}
 	}
@@ -439,19 +430,15 @@ func (u *Union) bestMergeIndexOne2(mode Mode, req Require,
 			bestFixCost = fc0 + fc2
 			bestVarCost = vc0 + vc2
 			var mr1, mr2s Require
-			var idx1, idx2 []string
 			if srcKey == u.source1 {
-				idx1 = index2
 				mr1 = mr2
 				mr2s = mr0
 			} else {
-				idx2 = index2
 				mr1 = mr0
 				mr2s = mr2
 			}
 			bestApproach = &unionApproach{keyIndex: index2,
-				strat: unionMerge, idx1: idx1, idx2: idx2,
-				req1: mr1, req2: mr2s}
+				strat: unionMerge, req1: mr1, req2: mr2s}
 		}
 	}
 	if bestApproach == nil {
@@ -516,7 +503,7 @@ func (u *Union) opt2LookupDir(mode Mode, req Require, reverse bool) (Cost, Cost,
 			req1: req1, req2: req2, reverse: reverse}
 }
 
-func (u *Union) setApproach2(_ Require, approach any, tran QueryTran) {
+func (u *Union) setApproach(_ Require, approach any, tran QueryTran) {
 	app := approach.(*unionApproach)
 	u.strat = app.strat
 	if app.strat == 0 {

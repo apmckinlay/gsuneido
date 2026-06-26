@@ -19,7 +19,6 @@ type Minus struct {
 
 type minusApproach struct {
 	keyIndex   []string
-	frac2      float64
 	req1, req2 Require
 }
 
@@ -82,7 +81,7 @@ func (m *Minus) Transform() Query {
 	return m
 }
 
-func (m *Minus) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (m *Minus) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	assert.That(m.disjoint == "")
 	fixcost1, varcost1 := Optimize2(m.source1, mode, req)
 	nrows1, _ := m.source1.Nrows()
@@ -96,7 +95,7 @@ func (m *Minus) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 		&minusApproach{keyIndex: req2.cols, req1: req, req2: req2}
 }
 
-func (m *Minus) setApproach2(req Require, approach any, tran QueryTran) {
+func (m *Minus) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*minusApproach)
 	m.keyIndex = ap.keyIndex
 	m.source1 = SetApproach2(m.source1, ap.req1, tran)

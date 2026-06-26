@@ -73,14 +73,14 @@ func (sort *Sort) Transform() Query {
 	return sort
 }
 
-func (sort *Sort) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (sort *Sort) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	assert.That(req.Use() == ReqUnordered)
 	srcReq := OrderedReq(sort.order, req.frac)
 	fixcost, varcost := Optimize2(sort.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
 
-func (sort *Sort) setApproach2(req Require, _ any, tran QueryTran) {
+func (sort *Sort) setApproach(req Require, _ any, tran QueryTran) {
 	srcReq := OrderedReq(sort.order, req.frac)
 	sort.source = SetApproach2(sort.source, srcReq, tran)
 	sort.header = sort.source.Header()
@@ -105,8 +105,11 @@ func (sort *Sort) Get(th *Thread, dir Dir) Row {
 }
 
 func (sort *Sort) Select(sels Sels) {
-	sort.nsels++
-	sort.source.Select(sels)
+	panic(assert.ShouldNotReachHere())
+}
+
+func (*Sort) Lookup(*Thread, Sels) Row {
+	panic(assert.ShouldNotReachHere())
 }
 
 func (sort *Sort) Simple(th *Thread) []Row {

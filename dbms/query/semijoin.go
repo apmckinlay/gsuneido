@@ -20,9 +20,7 @@ type SemiJoin struct {
 }
 
 type semiJoinApproach struct {
-	index2 []string
-	frac2  float64
-	req2   Require
+	req2 Require
 }
 
 func NewSemiJoin(src1, src2 Query, by []string, t QueryTran) *SemiJoin {
@@ -99,7 +97,7 @@ func (sj *SemiJoin) Transform() Query {
 	return sj
 }
 
-func (sj *SemiJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (sj *SemiJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	fixcost1, varcost1 := Optimize2(sj.source1, mode, req)
 	nrows1, _ := sj.source1.Nrows()
 	nrows2, _ := sj.source2.Nrows()
@@ -122,7 +120,7 @@ func (sj *SemiJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 		&semiJoinApproach{req2: req2}
 }
 
-func (sj *SemiJoin) setApproach2(req Require, approach any, tran QueryTran) {
+func (sj *SemiJoin) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*semiJoinApproach)
 	sj.source1 = SetApproach2(sj.source1, req, tran)
 	sj.source2 = SetApproach2(sj.source2, ap.req2, tran)

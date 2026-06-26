@@ -23,7 +23,6 @@ type Intersect struct {
 
 type intersectApproach struct {
 	keyIndex   []string
-	frac2      float64
 	reverse    bool
 	req1, req2 Require
 }
@@ -138,7 +137,7 @@ func compatCopyFixed(fromFixed, toFixed Fixed, to Query, t QueryTran) Query {
 	return copyFixed(fromFixed, toFixed, to, cols, t)
 }
 
-func (it *Intersect) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (it *Intersect) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	assert.That(it.disjoint == "") // eliminated by Transform
 	fixcost1, varcost1, ap1 := it.cost2(mode, req, false)
 	fixcost2, varcost2, ap2 := it.cost2(mode, req, true)
@@ -167,7 +166,7 @@ func (it *Intersect) cost2(mode Mode, req Require, reverse bool) (Cost, Cost, *i
 		&intersectApproach{keyIndex: req2.cols, req1: req, req2: req2, reverse: reverse}
 }
 
-func (it *Intersect) setApproach2(req Require, approach any, tran QueryTran) {
+func (it *Intersect) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*intersectApproach)
 	it.keyIndex = ap.keyIndex
 	if ap.reverse {

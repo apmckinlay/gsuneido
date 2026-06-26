@@ -244,8 +244,8 @@ func TestUnionDuplicateBug(t *testing.T) {
 		req := UnorderedReq(1)
 		// capture the top union's chosen approach
 		top := q.(*Union)
-		fc, vc, app := top.optimize2(ReadMode, req)
-		fmt.Printf("top union optimize2: cost=%d+%d app=%T %+v\n", fc, vc, app, app)
+		fc, vc, app := top.optimize(ReadMode, req)
+		fmt.Printf("top union optimize: cost=%d+%d app=%T %+v\n", fc, vc, app, app)
 		Optimize2(q, ReadMode, req)
 		q = SetApproach2(q, req, tran)
 		fmt.Println("=== optimized ===")

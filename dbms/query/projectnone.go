@@ -15,7 +15,6 @@ import (
 // It returns 0 rows when the source is empty, otherwise 1 row.
 type ProjectNone struct {
 	cache
-	cache2
 	source Query
 	done   bool
 	hasrow opt.Bool
@@ -93,7 +92,7 @@ func (pn *ProjectNone) hasRow() bool {
 	return pn.hasrow.Get()
 }
 
-func (pn *ProjectNone) optimize2(mode Mode, _ Require) (Cost, Cost, any) {
+func (pn *ProjectNone) optimize(mode Mode, _ Require) (Cost, Cost, any) {
 	nrows, _ := pn.source.Nrows()
 	frac := 1.0
 	if nrows > 1 {
@@ -104,7 +103,7 @@ func (pn *ProjectNone) optimize2(mode Mode, _ Require) (Cost, Cost, any) {
 	return fixcost, varcost, nil
 }
 
-func (pn *ProjectNone) setApproach2(_ Require, _ any, tran QueryTran) {
+func (pn *ProjectNone) setApproach(_ Require, _ any, tran QueryTran) {
 	nrows, _ := pn.source.Nrows()
 	frac := 1.0
 	if nrows > 1 {

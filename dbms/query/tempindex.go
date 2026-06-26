@@ -62,15 +62,15 @@ func (ti *TempIndex) Transform() Query {
 	return ti
 }
 
-// optimize2 is only used by fuzz_test.go
-func (ti *TempIndex) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+// optimize is only used by fuzz_test.go
+func (ti *TempIndex) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	srcReq := UnorderedReq(req.frac)
 	fixcost, varcost := Optimize2(ti.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
 
-// setApproach2 is only used by fuzz_test.go
-func (ti *TempIndex) setApproach2(req Require, _ any, tran QueryTran) {
+// setApproach is only used by fuzz_test.go
+func (ti *TempIndex) setApproach(req Require, _ any, tran QueryTran) {
 	srcReq := UnorderedReq(req.frac)
 	SetApproach2(ti.source, srcReq, tran)
 }
