@@ -187,14 +187,6 @@ func TestTableOptimize2_ReqLookup_indexCovered(t *testing.T) {
 	tbl = newTable("xc", [][]string{{"x", "c"}}, [][]string{{"x"}}, 100)
 	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
 
-	// by=(x,y), index=(x), no key: fails — lookupIndexEligible fails
-	tbl = newTable("xnokey", [][]string{{"x"}}, [][]string{}, 100)
-	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
-
-	// by=(x,y), indexes=[x],[y], key=(y): picks [y] (smallest eligible index)
-	tbl = newTable("twoidx", [][]string{{"x"}, {"y"}}, [][]string{{"y"}}, 100)
-	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"y"})
-
 	// by=(x,y,z), key=(y,z): picks [y,z] — indexCovered passes (y,z both in by)
 	tbl = newTable("xyz2", [][]string{{"y", "z"}}, [][]string{{"y", "z"}}, 100)
 	test(tbl, LookupReq([]string{"x", "y", "z"}, 1), []string{"y", "z"})

@@ -178,12 +178,10 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		}
 		best := newBestIndex()
 		for _, idx := range tbl.indexes {
-			if !lookupIndexEligible(idx, tbl.allKeys, nil) ||
-				!indexCovered(idx, req.cols, nil) {
-				continue
+			if indexCovered(idx, req.cols, nil) {
+				f, v, _ := tbl.costFor(idx, 0, req.nlookups)
+				best.update(idx, f, v)
 			}
-			f, v, _ := tbl.costFor(idx, 0, req.nlookups)
-			best.update(idx, f, v)
 		}
 		if best.index != nil {
 			return best.fixcost, best.varcost, tableApproach{index: best.index}

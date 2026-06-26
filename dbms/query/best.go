@@ -80,20 +80,6 @@ func (b *bestReq) found() bool {
 
 //-------------------------------------------------------------------
 
-func lookupIndexEligible(index []string, keys [][]string, fixed Fixed) bool {
-	for _, key := range keys {
-		nColsUnfixed := countUnfixed(key, fixed)
-		// nColsUnfixed == 0 means the key is fully fixed (singleton result),
-		// so any index is eligible. The Where must detect this as singleton
-		// so Lookup uses the Get fallback rather than forwarding sels to
-		// source.Lookup with columns that only cover a prefix of the index.
-		if nColsUnfixed == 0 || grouped(index, key, nColsUnfixed, fixed) {
-			return true
-		}
-	}
-	return false
-}
-
 func countUnfixed(cols []string, fixed Fixed) int {
 	nunfixed := 0
 	for _, col := range cols {

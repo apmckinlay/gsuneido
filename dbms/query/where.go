@@ -628,7 +628,6 @@ func (w *Where) optWhereLookup2(req Require) (Cost, Cost, any) {
 		isel := w.idxSels[0]
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
-	keys := w.source.Keys()
 	if idxi := slc.IndexFn(w.source.Indexes(), req.cols, slices.Equal); idxi != -1 {
 		perLookup := w.source.lookupCost() + 1
 		cost := Cost(req.nlookups) * perLookup
@@ -636,13 +635,11 @@ func (w *Where) optWhereLookup2(req Require) (Cost, Cost, any) {
 	}
 	best := newBestIndex()
 	for _, idx := range w.source.Indexes() {
-		if !lookupIndexEligible(idx, keys, w.fixed) ||
-			!indexCovered(idx, req.cols, w.fixed) {
-			continue
+		if indexCovered(idx, req.cols, w.fixed) {
+			perLookup := w.source.lookupCost() + 1
+			cost := Cost(req.nlookups) * perLookup
+			best.update(idx, 0, cost)
 		}
-		perLookup := w.source.lookupCost() + 1
-		cost := Cost(req.nlookups) * perLookup
-		best.update(idx, 0, cost)
 	}
 	if best.varcost < impossible {
 		return 0, best.varcost, &whereApproach{index: best.index,
