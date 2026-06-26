@@ -260,10 +260,6 @@ func (tbl *Table) indexFor(order []string) int {
 	return -1 // not found
 }
 
-func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) {
-	tbl.SetIndex(approach.(tableApproach).index)
-}
-
 func (tbl *Table) setApproach2(_ Require, approach any, _ QueryTran) {
 	tbl.SetIndex(approach.(tableApproach).index)
 }

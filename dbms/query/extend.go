@@ -205,17 +205,6 @@ func (e *Extend) Fixed() Fixed {
 	return e.fixed
 }
 
-func (e *Extend) optimize(mode Mode, index []string, frac float64) (
-	Cost, Cost, any) {
-	if e.source.fastSingle() {
-		index = e.filterSourceIndex(index)
-	} else if !set.Disjoint(index, e.cols) {
-		return impossible, impossible, nil
-	}
-	fixcost, varcost := Optimize(e.source, mode, index, frac)
-	return fixcost, varcost, nil
-}
-
 func (e *Extend) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	if !set.Disjoint(req.cols, e.cols) {
 		if req.Use() != ReqLookup {
@@ -229,14 +218,6 @@ func (e *Extend) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	return fixcost, varcost, nil
 }
 
-func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran) {
-	if e.source.fastSingle() {
-		index = e.filterSourceIndex(index)
-	}
-	e.source = SetApproach(e.source, index, frac, tran)
-	e.header = e.getHeader()
-	e.ctx.Hdr = e.header
-}
 
 func (e *Extend) setApproach2(req Require, _ any, tran QueryTran) {
 	// optimize2 returns impossible when req.cols intersects e.cols and
@@ -248,18 +229,6 @@ func (e *Extend) setApproach2(req Require, _ any, tran QueryTran) {
 	e.source = SetApproach2(e.source, req, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header
-}
-
-// filterSourceIndex filters out extended columns from the index for the source query
-// This is needed when the source is fastSingle and accepts any columns as index
-func (e *Extend) filterSourceIndex(index []string) []string {
-	filteredIndex := make([]string, 0, len(index))
-	for _, col := range index {
-		if !slices.Contains(e.cols, col) {
-			filteredIndex = append(filteredIndex, col)
-		}
-	}
-	return filteredIndex
 }
 
 // execution --------------------------------------------------------

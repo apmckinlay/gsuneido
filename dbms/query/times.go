@@ -74,33 +74,6 @@ func (t *Times) Transform() Query {
 	return t
 }
 
-func (t *Times) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	//TODO index could be split, first part on source1, second part on source2
-	opt := func(src1, src2 Query) (Cost, Cost) {
-		nrows1, _ := src1.Nrows()
-		fixcost1, varcost1 := Optimize(src1, mode, index, frac)
-		fixcost2, varcost2 := Optimize(src2, mode, nil, frac*float64(nrows1))
-		return fixcost1 + fixcost2, varcost1 + varcost2
-	}
-	fixFwd, varFwd := opt(t.source1, t.source2)
-	fixRev, varRev := opt(t.source2, t.source1)
-	fixRev += outOfOrder
-	if fixFwd+varFwd < fixRev+varRev {
-		return fixFwd, varFwd, false
-	}
-	return fixRev, varRev, true
-}
-
-func (t *Times) setApproach(index []string, frac float64, approach any, tran QueryTran) {
-	if approach.(bool) {
-		t.source1, t.source2 = t.source2, t.source1
-	}
-	t.source1 = SetApproach(t.source1, index, frac, tran)
-	nrows1, _ := t.source1.Nrows()
-	t.source2 = SetApproach(t.source2, nil, frac*float64(nrows1), tran)
-	t.header = t.getHeader()
-}
-
 func (t *Times) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	opt := func(src1, src2 Query) (Cost, Cost) {
 		nrows1, _ := src1.Nrows()

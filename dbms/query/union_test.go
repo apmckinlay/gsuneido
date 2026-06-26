@@ -106,141 +106,6 @@ func TestUnion_removeNonexistentEmpty(t *testing.T) {
 	test(Sels{{"x", ""}, {"y", ""}}, nil)
 }
 
-func TestBestMergeIndexes(t *testing.T) {
-	test := func(order []string, idx1, idx2, keys1, keys2 [][]string,
-		expIdx1, expIdx2, expKey []string, expImpossible bool) {
-		t.Helper()
-		src1 := &QueryMock{
-			ColumnsResult: []string{"a", "b", "c", "d", "e", "f"},
-			IndexesResult: idx1,
-			KeysResult:    keys1,
-			FixedResult:   Fixed{},
-			MetricsResult: &metrics{},
-		}
-		src2 := &QueryMock{
-			ColumnsResult: []string{"a", "b", "c", "d", "x", "y"},
-			IndexesResult: idx2,
-			KeysResult:    keys2,
-			FixedResult:   Fixed{},
-			MetricsResult: &metrics{},
-		}
-		u := &Union{}
-		u.source1 = src1
-		u.source2 = src2
-
-		resIdx1, resIdx2, resKey, fixcost, _ := u.bestMergeIndexes(order, ReadMode, 1.0)
-		assert.T(t).This(resIdx1).Is(expIdx1)
-		assert.T(t).This(resIdx2).Is(expIdx2)
-		assert.T(t).This(resKey).Is(expKey)
-		if expImpossible {
-			assert.T(t).That(fixcost == impossible)
-		}
-	}
-
-	// nil order
-	test(nil,
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		[]string{"a", "b"},
-		[]string{"a", "b"},
-		[]string{"a", "b"},
-		false)
-
-	// simple case with keys and order equal
-	test([]string{"a", "b"},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		[]string{"a", "b"},
-		[]string{"a", "b"},
-		[]string{"a", "b"},
-		false)
-
-	// index2 has an extra field (d) between the order prefix and the key field (a),
-	// so it does not iterate in [c,b,a] order — source2 would be ordered by d within
-	// each (c,b) group, not by a. The merge cannot correctly detect duplicates.
-	// Both the order=[c,b] and nil-order variants must be impossible.
-	test([]string{"c", "b"},
-		[][]string{{"c", "b", "a"}},
-		[][]string{{"c", "b", "d", "a"}},
-		[][]string{{"a", "c", "b"}},
-		[][]string{{"b", "a", "c"}},
-		nil,
-		nil,
-		nil,
-		true)
-
-	test(nil,
-		[][]string{{"c", "b", "a"}},
-		[][]string{{"c", "b", "d", "a"}},
-		[][]string{{"a", "c", "b"}},
-		[][]string{{"b", "a", "c"}},
-		nil,
-		nil,
-		nil,
-		true)
-
-	// no matching indexes
-	test([]string{"c", "b"},
-		[][]string{{"x", "y"}},
-		[][]string{{"c", "b", "d"}},
-		[][]string{{"x", "y"}},
-		[][]string{{"c", "b"}},
-		nil,
-		nil,
-		nil,
-		true)
-
-	// required order has non-key prefix fields (e.g. [a,b] where key is [b]).
-	// keyIndex must be the physical index [a,b], not just the logical key [b],
-	// so that mergeCols matches the actual read order and compareSrc does not fail.
-	test([]string{"a", "b"},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		[][]string{{"b"}},
-		[][]string{{"b"}},
-		[]string{"a", "b"},
-		[]string{"a", "b"},
-		[]string{"a", "b"},
-		false)
-
-	// both sources have empty keys - don't need order
-	test([]string{"x"},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		emptyKey,
-		emptyKey,
-		nil,
-		nil,
-		nil,
-		false)
-
-	// only source1 has empty key - need index on source2 that includes a key
-	test([]string{"a"},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		emptyKey,
-		[][]string{{"a", "b"}},
-		nil,
-		[]string{"a", "b"},
-		[]string{"a", "b"},
-		false)
-
-	// only source2 has empty key - need index on source1 that includes a key
-	test([]string{"a"},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		[][]string{{"a", "b"}},
-		emptyKey,
-		[]string{"a", "b"},
-		nil,
-		[]string{"a", "b"},
-		false)
-}
-
 func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
 	index := []string{"a"}
 	src1 := &QueryMock{
@@ -408,8 +273,8 @@ func TestUnionDuplicateBug(t *testing.T) {
 	// V1 for comparison
 	q1 := ParseQuery(minimal[0], tran, nil)
 	q1 = q1.Transform()
-	Optimize(q1, ReadMode, nil, 1)
-	q1 = SetApproach(q1, nil, 1, tran)
+	Optimize2(q1, ReadMode, UnorderedReq(1))
+	q1 = SetApproach2(q1, UnorderedReq(1), tran)
 	hdr1 := q1.Header()
 	seen1 := map[string]int{}
 	th1 := &Thread{}

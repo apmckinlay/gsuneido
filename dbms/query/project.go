@@ -440,52 +440,11 @@ func (p *Project) Updateable() string {
 
 // optimize ---------------------------------------------------------
 
-func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	if p.unique {
-		approach := &projectApproach{strat: projCopy, index: index}
-		fixcost, varcost := Optimize(p.source, mode, index, frac)
-		return fixcost, varcost, approach
-	}
-	seq := bestGrouped(p.source, mode, index, frac, p.columns)
-	fixcostMap, varcostMap := p.mapCost(mode, index, frac)
-	if fixcostMap+varcostMap < seq.cost() {
-		return fixcostMap, varcostMap,
-			&projectApproach{strat: projMap, index: index}
-	}
-	return seq.fixcost, seq.varcost,
-		&projectApproach{strat: projSeq, index: seq.index}
-}
-
 // mapThreshold and mapWarn are used by Project and Summarize
 const (
 	mapThreshold = 10000 // used by optimize
 	mapWarn      = 20000
 )
-
-func (p *Project) mapCost(mode Mode, index []string, frac float64) (Cost, Cost) {
-	nrows, _ := p.Nrows()
-	if mode != ReadMode || nrows > mapThreshold {
-		return impossible, impossible
-	}
-	// assume we're reading Next (normal)
-	fixcost, varcost := Optimize(p.source, mode, index, frac)
-	mapCost := nrows * 20 // ???
-	return fixcost, varcost + mapCost
-}
-
-func (p *Project) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
-	p.projectApproach = *approach.(*projectApproach)
-	switch p.strat {
-	case projCopy:
-		projCopyCount.Add(1)
-	case projSeq:
-		projSeqCount.Add(1)
-	case projMap:
-		projMapCount.Add(1)
-	}
-	p.source = SetApproach(p.source, p.index, frac, tran)
-	p.header = p.getHeader()
-}
 
 func (p *Project) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	if p.unique {

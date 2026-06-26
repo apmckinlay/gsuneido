@@ -73,19 +73,6 @@ func (sort *Sort) Transform() Query {
 	return sort
 }
 
-func (sort *Sort) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	assert.That(index == nil)
-	src := sort.source
-	fixcost, varcost := Optimize(src, mode, sort.order, frac) // adds temp index if needed
-	return fixcost, varcost, nil
-}
-
-func (sort *Sort) setApproach(_ []string, frac float64, _ any, tran QueryTran) {
-	sort.source = SetApproach(sort.source, sort.order, frac, tran)
-	sort.header = sort.source.Header()
-	sort.optimized = true
-}
-
 func (sort *Sort) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	assert.That(req.Use() == ReqUnordered)
 	srcReq := OrderedReq(sort.order, req.frac)

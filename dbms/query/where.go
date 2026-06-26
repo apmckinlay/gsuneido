@@ -556,31 +556,6 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 
 // optimize ---------------------------------------------------------
 
-func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cost, a any) {
-	// defer func() { fmt.Println("Where opt", index, frac, "=", f, v, a) }()
-	w.optInit()
-	if w.conflict {
-		// fmt.Println("Where opt CONFLICT")
-		return 0, 0, nil
-	}
-	assert.That(!w.singleton || index == nil) // ensured by query.go Optimize
-	// we always have the option of just filtering (no specific index use)
-	filterFixCost, filterVarCost := Optimize(w.source, mode, index, frac)
-	if w.tbl == nil || w.tbl.isSingleton() {
-		// fmt.Println("Where opt", index, frac, "= filter", filterFixCost, filterVarCost)
-		return filterFixCost, filterVarCost, nil
-	}
-	// where on table
-	cost, app := w.bestIndex(index, frac)
-	if app == nil {
-		// only use the filter if there are no possible idxSel
-		// fmt.Println("Where opt", index, frac, "= filter", filterFixCost, filterVarCost)
-		return filterFixCost, filterVarCost, nil
-	}
-	// fmt.Println("Where opt", index, frac, "= ", app, cost)
-	return 0, cost, app
-}
-
 func (w *Where) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	w.optInit()
 	if w.conflict {
@@ -716,60 +691,6 @@ func (w *Where) optInit() {
 	w.optInited = optInitYes
 }
 
-// bestIndex returns an approach for the lowest cost index
-// that satisfies the required order,
-// or impossible if no index satisfies the order.
-func (w *Where) bestIndex(order []string, inFrac float64) (Cost, any) {
-	// fmt.Println("bestIndex", w.tbl.Name(), order, inFrac, "---------------")
-	if w.singleton {
-		cost := w.source.lookupCost()
-		isel := w.idxSels[0]
-		return cost,
-			&whereApproach{index: isel.index, cost: cost, idxSel: isel}
-	}
-	indexes := w.source.Indexes()
-	if slc.ContainsFn(w.Keys(), order, slices.Equal) {
-		// The requested order is a key, so we have to assume Lookup.
-		// ordered is not sufficient.
-		// Without this, Where can pick a different index than the requested one
-		// causing Lookup to fail in Table with "selOrg not full"
-		// In general, a key is not guaranteed to be an index
-		// but we are on a table, in which case keys are indexes.
-		indexes = [][]string{order}
-	}
-	best := newBestIndex()
-	var bestIdxSel *idxSel
-	for _, idx := range indexes {
-		if !ordered(idx, order, w.fixed) {
-			continue
-		}
-		_, varCost, _ := w.tbl.optimize(0, idx, 1.0)
-		irFrac := 1.0
-		ifFrac := 1.0
-		dfFrac := w.wfrac
-		nptrngs := 0
-		isel := w.getIdxSel(idx)
-		if isel != nil {
-			irFrac = isel.prefixFrac * isel.skipFrac
-			ifFrac = isel.indexFilterFrac
-			dfFrac = isel.dataFilterFrac
-			nptrngs = len(isel.prefixRanges)
-		}
-		wc := WhereCost(float64(varCost), inFrac, irFrac, ifFrac, dfFrac)
-		lc := w.source.lookupCost() * nptrngs
-		cost := wc + lc
-		// fmt.Println("\t", idx, "varCost", varCost, "irFrac", irFrac, "ifFrac", ifFrac, "dfFrac", dfFrac, "nptrngs", nptrngs, "wc", wc, "lc", lc, "cost", cost)
-		if best.update(idx, 0, cost) {
-			bestIdxSel = isel
-		}
-	}
-	if best.varcost < impossible {
-		return best.varcost, &whereApproach{
-			index: best.index, cost: best.varcost, idxSel: bestIdxSel}
-	}
-	return impossible, nil
-}
-
 func WhereCost(cost, inFrac, irFrac, ifFrac, dfFrac float64) Cost {
 	// Model the cost of reading via a particular index.
 	// We have 3 potential filter stages:
@@ -809,39 +730,6 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 		}
 	}
 	return nil
-}
-
-func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTran) {
-	w.optimized = true
-	if w.singleton {
-		whereSingletonCount.Add(1)
-	}
-	if w.conflict {
-		return
-	}
-	if app == nil {
-		w.source = SetApproach(w.source, index, frac, tran)
-		w.srcIndex = index
-		w.tbl = nil
-	} else {
-		app := app.(*whereApproach)
-		w.tbl.SetIndex(app.index)
-		w.srcIndex = app.index
-		if app.idxSel != nil {
-			w.ixCtx.cols = app.index
-			w.ixCtx.encodes = w.tbl.IndexEncodes(app.index)
-			w.ixExpr = w.exprsFor(w.ixCtx.cols)
-			w.idxSelBase = app.idxSel
-			w.idxSelActive = w.idxSelBase
-			w.tbl.setCost(frac*app.idxSel.prefixFrac*app.idxSel.skipFrac,
-				0, app.cost)
-			w.idxSelPos = -1
-		} else {
-			w.tbl.setCost(frac, 0, app.cost)
-		}
-	}
-	w.header = w.source.Header()
-	w.rowCtx.Hdr = w.header
 }
 
 func (w *Where) setApproach2(req Require, approach any, tran QueryTran) {
