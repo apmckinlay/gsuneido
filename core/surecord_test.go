@@ -146,6 +146,30 @@ func TestSuRecord_validRule(t *testing.T) {
 	test(strings.Repeat("x", maxRule+1), false)
 }
 
+func TestSuRecord_RuleSetConcurrentUnlock(t *testing.T) {
+	rec := NewSuRecord()
+
+	ruleA := &SuBuiltinMethod{
+		Fn: func(th *Thread, this Value, _ []Value) Value {
+			this.(*SuRecord).SetConcurrent()
+			return SuStr("a_value")
+		},
+		BuiltinParams: BuiltinParams{ParamSpec: ParamSpec0}}
+
+	ruleB := &SuBuiltinMethod{
+		Fn: func(th *Thread, this Value, _ []Value) Value {
+			return SuStr("b_value")
+		},
+		BuiltinParams: BuiltinParams{ParamSpec: ParamSpec0}}
+
+	rec.AttachRule(SuStr("a"), ruleA)
+	rec.AttachRule(SuStr("b"), ruleB)
+
+	hdr := SimpleHeader([]string{"a", "b"})
+	th := &Thread{}
+	rec.ToRecord(th, hdr)
+}
+
 func BenchmarkSuRecord(b *testing.B) {
 	th := &Thread{}
 	var rec SuRecord
