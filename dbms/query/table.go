@@ -161,17 +161,17 @@ const ( // ???
 
 func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton {
-		return tbl.costFor(tbl.indexes[0], float64(req.frac), 0)
+		return tbl.costFor(tbl.indexes[0], req.frac, 0)
 	}
 	switch req.Use() {
 	case ReqUnordered:
-		return tbl.costFor(tbl.indexes[0], float64(req.frac), 0)
+		return tbl.costFor(tbl.indexes[0], req.frac, 0)
 	case ReqOrdered:
 		idxi := tbl.indexFor(req.cols)
 		if idxi == -1 {
 			return impossible, impossible, nil
 		}
-		return tbl.costFor(tbl.indexes[idxi], float64(req.frac), 0)
+		return tbl.costFor(tbl.indexes[idxi], req.frac, 0)
 	case ReqLookup:
 		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
 			return 0, Cost(req.nlookups) * tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
@@ -196,7 +196,7 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 			if !grouped(idx, req.cols, len(req.cols), nil) {
 				continue
 			}
-			f, v, _ := tbl.costFor(idx, float64(req.frac), req.nlookups)
+			f, v, _ := tbl.costFor(idx, req.frac, req.nlookups)
 			best.update(idx, f, v)
 		}
 		if best.index == nil {
@@ -207,14 +207,14 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	panic("unreachable")
 }
 
-func (tbl *Table) costFor(index []string, frac float64, nlookups int32) (Cost, Cost, any) {
+func (tbl *Table) costFor(index []string, frac float32, nlookups int32) (Cost, Cost, any) {
 	rowCost := tableFast
 	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
 		rowCost = tableSlow
 	}
 	rowCost += len(index) * colsBias
 	varcost := tbl.info.Nrows * rowCost
-	result := Cost(frac * float64(varcost))
+	result := Cost(float64(frac) * float64(varcost))
 	if nlookups > 0 {
 		idxi := slc.IndexFn(tbl.indexes, index, slices.Equal)
 		if idxi != -1 {
