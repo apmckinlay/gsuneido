@@ -36,7 +36,7 @@ type Where struct {
 	colSels   map[string][]span // from NewWhere, result of perField
 	mergedBuf map[string][]span // reusable buffer for mergedPerCol
 	// tbl will be set if the source is a table, nil otherwise
-	tbl whereTable
+	tbl *Table
 	// idxSel is for the chosen index
 	idxSelBase   *idxSel
 	idxSelActive *idxSel
@@ -79,27 +79,6 @@ type Where struct {
 	wFixed   Fixed
 
 	wfrac float64
-}
-
-// whereTable is the additional functionality that Where needs from a Table.
-// It is deliberately separate from *Table so it can be replaced for testing.
-type whereTable interface {
-	// optimization
-	optimize(mode Mode, req Require) (Cost, Cost, any)
-	IndexEncodes(index []string) bool
-	SetIndex(index []string)
-	schemaIndexes() []Index
-	indexi(index []string) int
-	Name() string
-	isSingleton() bool
-	setCost(frac float64, fixcost, varcost Cost)
-
-	// execution
-	LookupRaw(key string) Row
-	SelectRaw(org, end string)
-	SelectSkipScan(prefixRng, suffixRng iface.Range, skipStart int)
-	GetFilter(dir Dir, filter func(key string) bool) Row
-	Nrows() (int, int)
 }
 
 type optInited byte
@@ -665,12 +644,12 @@ func (w *Where) optInit() {
 	}
 	assert.That(w.optInited == optInitNo)
 	w.optInited = optInitInProgress
-	w.tbl, _ = w.source.(whereTable)
+	w.tbl, _ = w.source.(*Table)
 	if !w.conflict && w.tbl != nil {
 		w.idxSels = w.perIndex(w.colSels)
 		// fmt.Println("idxSels", w.idxSels)
 	}
-	// detect singleton when fixed covers a key (for non-whereTable sources).
+	// detect singleton when fixed covers a key (for non-Table sources).
 	// Required so bestLookupIndex doesn't pick an index with extra columns
 	// that sels can't cover at Lookup time
 	// (lookupIndexEligible allows any index when nColsUnfixed == 0).

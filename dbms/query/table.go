@@ -54,8 +54,6 @@ type Table struct {
 	cursorMode  bool
 }
 
-var _ whereTable = (*Table)(nil)
-
 func (tbl *Table) isSingleton() bool {
 	return tbl.singleton
 }
