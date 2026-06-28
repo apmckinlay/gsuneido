@@ -302,7 +302,7 @@ type joinCost2 struct {
 
 func joinopt2(src1, src2 Query, nrows func() (int, int), jt joinType,
 	mode Mode, req Require, by []string) joinCost2 {
-	fixcost1, varcost1 := Optimize2(src1, mode, req)
+	fixcost1, varcost1 := Optimize(src1, mode, req)
 	if fixcost1+varcost1 >= impossible {
 		return joinCost2{fixcost: impossible}
 	}
@@ -319,7 +319,7 @@ func joinopt2(src1, src2 Query, nrows func() (int, int), jt joinType,
 			float32(max(1, nrows2))
 		req2 = GroupedReq(by, frac2, nlookups)
 	}
-	fixcost2, varcost2 := Optimize2(src2, mode, req2)
+	fixcost2, varcost2 := Optimize(src2, mode, req2)
 	if fixcost2+varcost2 >= impossible {
 		return joinCost2{fixcost: impossible}
 	}
@@ -372,8 +372,8 @@ func (jn *Join) setApproach(req Require, approach any, tran QueryTran) {
 	case n_n:
 		joinnnCount.Add(1)
 	}
-	jn.source1 = SetApproach2(jn.source1, ap.req1, tran)
-	jn.source2 = SetApproach2(jn.source2, ap.req2, tran)
+	jn.source1 = SetApproach(jn.source1, ap.req1, tran)
+	jn.source2 = SetApproach(jn.source2, ap.req2, tran)
 	jn.header = jn.getHeader()
 }
 
@@ -725,8 +725,8 @@ func (lj *LeftJoin) setApproach(req Require, approach any, tran QueryTran) {
 	case n_n:
 		leftJoinnnCount.Add(1)
 	}
-	lj.source1 = SetApproach2(lj.source1, ap.req1, tran)
-	lj.source2 = SetApproach2(lj.source2, ap.req2, tran)
+	lj.source1 = SetApproach(lj.source1, ap.req1, tran)
+	lj.source2 = SetApproach(lj.source2, ap.req2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 	lj.header = lj.getHeader()
 }

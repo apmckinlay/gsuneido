@@ -1096,13 +1096,13 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 		req = LookupReq(index, nlookups)
 	}
 	q = q.Transform()
-	fixcost, varcost := Optimize2(q, ReadMode, req)
+	fixcost, varcost := Optimize(q, ReadMode, req)
 	if fixcost+varcost >= impossible {
 		// fall back to an unordered read so the test can still validate results
 		reqUse = "unordered"
 		req = UnorderedReq(1)
 		index = nil
-		fixcost, varcost = Optimize2(q, ReadMode, req)
+		fixcost, varcost = Optimize(q, ReadMode, req)
 		if fixcost+varcost >= impossible {
 			t.Fatal("impossible\n", format(0, q, 0))
 		}
@@ -1119,7 +1119,7 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	}
 	fuzzCount++
 	// fmt.Println(String(q))
-	q = SetApproach2(q, req, ft.rt)
+	q = SetApproach(q, req, ft.rt)
 	q.SetTran(ft.rt)
 
 	hdr := q.Header()

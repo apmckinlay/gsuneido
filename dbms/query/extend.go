@@ -214,7 +214,7 @@ func (e *Extend) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		// so strip them before passing to the source.
 		req = LookupReq(set.Difference(req.cols, e.cols), req.nlookups)
 	}
-	fixcost, varcost := Optimize2(e.source, mode, req)
+	fixcost, varcost := Optimize(e.source, mode, req)
 	return fixcost, varcost, nil
 }
 
@@ -225,7 +225,7 @@ func (e *Extend) setApproach(req Require, _ any, tran QueryTran) {
 	if !set.Disjoint(req.cols, e.cols) {
 		req = LookupReq(set.Difference(req.cols, e.cols), req.nlookups)
 	}
-	e.source = SetApproach2(e.source, req, tran)
+	e.source = SetApproach(e.source, req, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header
 }

@@ -83,11 +83,11 @@ func (m *Minus) Transform() Query {
 
 func (m *Minus) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	assert.That(m.disjoint == "")
-	fixcost1, varcost1 := Optimize2(m.source1, mode, req)
+	fixcost1, varcost1 := Optimize(m.source1, mode, req)
 	nrows1, _ := m.source1.Nrows()
 	nlookups := req.LookupCount(nrows1)
 	req2 := LookupReq(m.source2.Columns(), nlookups)
-	fc2, vc2 := Optimize2(m.source2, mode, req2)
+	fc2, vc2 := Optimize(m.source2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil
 	}
@@ -98,8 +98,8 @@ func (m *Minus) optimize(mode Mode, req Require) (Cost, Cost, any) {
 func (m *Minus) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*minusApproach)
 	m.keyIndex = ap.keyIndex
-	m.source1 = SetApproach2(m.source1, ap.req1, tran)
-	m.source2 = SetApproach2(m.source2, ap.req2, tran)
+	m.source1 = SetApproach(m.source1, ap.req1, tran)
+	m.source2 = SetApproach(m.source2, ap.req2, tran)
 	m.header = m.source1.Header()
 	m.src1Only = set.Difference(m.source1.Columns(), m.source2.Columns())
 }

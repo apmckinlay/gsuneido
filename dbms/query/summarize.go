@@ -240,19 +240,21 @@ func (su *Summarize) Transform() Query {
 func (su *Summarize) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if su.source.knowExactNrows() &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
-		Optimize2(su.source, mode, UnorderedReq(0))
+		Optimize(su.source, mode, UnorderedReq(0))
 		return 0, 1, &summarizeApproach{strat: sumTbl, req: UnorderedReq(0)}
 	}
-	seqFix, seqVar, seqApp := su.seqCost2(mode, req)
-	idxFix, idxVar, idxApp := su.idxCost2(mode)
-	mapFix, mapVar, mapApp := su.mapCost2(mode, req)
-	return min3(seqFix, seqVar, seqApp, idxFix, idxVar, idxApp,
+	seqFix, seqVar, seqApp := su.seqCost(mode, req)
+	idxFix, idxVar, idxApp := su.idxCost(mode)
+	mapFix, mapVar, mapApp := su.mapCost(mode, req)
+	return min3(
+		seqFix, seqVar, seqApp, 
+		idxFix, idxVar, idxApp,
 		mapFix, mapVar, mapApp)
 }
 
-func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
+func (su *Summarize) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 	if len(su.by) == 0 {
-		fixcost, varcost := Optimize2(su.source, mode, UnorderedReq(1))
+		fixcost, varcost := Optimize(su.source, mode, UnorderedReq(1))
 		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: UnorderedReq(1)}
 	}
 	// Computed output columns (su.cols) don't exist in the source and
@@ -267,7 +269,7 @@ func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 		}
 	}
 	if hasKey(su.by, su.source.Keys(), su.source.Fixed()) {
-		fixcost, varcost := Optimize2(su.source, mode, req)
+		fixcost, varcost := Optimize(su.source, mode, req)
 		// Setting index=by lets Select() push sels on by-columns down to
 		// the source seek; sels on computed columns are filtered at runtime.
 		return fixcost, varcost, &summarizeApproach{strat: sumSeq, index: su.by, req: req}
@@ -278,17 +280,17 @@ func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 	switch req.Use() {
 	case ReqUnordered:
 		srcReq := GroupedReq(su.by, req.SelectFrac(nrows), 1)
-		fixcost, varcost := Optimize2(su.source, mode, srcReq)
+		fixcost, varcost := Optimize(su.source, mode, srcReq)
 		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
 	case ReqOrdered:
 		if grouped(req.cols, su.by, nColsUnfixed, fixed) {
-			fixcost, varcost := Optimize2(su.source, mode, req)
+			fixcost, varcost := Optimize(su.source, mode, req)
 			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: req}
 		}
 	case ReqGrouped, ReqLookup:
 		if set.Equal(req.cols, su.by) {
 			srcReq := GroupedReq(su.by, req.SelectFrac(nrows), req.nlookups)
-			fixcost, varcost := Optimize2(su.source, mode, srcReq)
+			fixcost, varcost := Optimize(su.source, mode, srcReq)
 			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
 		}
 		nColsUnfixedReq := countUnfixed(req.cols, fixed)
@@ -297,7 +299,7 @@ func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
 				grouped(idx, su.by, nColsUnfixed, fixed) {
 				srcReq := GroupedReq(idx, req.SelectFrac(nrows), req.nlookups)
-				f, v := Optimize2(su.source, mode, srcReq)
+				f, v := Optimize(su.source, mode, srcReq)
 				best.update(idx, f, v)
 			}
 		}
@@ -311,7 +313,7 @@ func (su *Summarize) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 	return impossible, impossible, nil
 }
 
-func (su *Summarize) idxCost2(mode Mode) (Cost, Cost, any) {
+func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 	if !su.minmax1() {
 		return impossible, impossible, nil
 	}
@@ -321,19 +323,19 @@ func (su *Summarize) idxCost2(mode Mode) (Cost, Cost, any) {
 		frac = 1 / float32(nrows)
 	}
 	srcReq := OrderedReq(su.ons, frac)
-	fixcost, varcost := Optimize2(su.source, mode, srcReq)
+	fixcost, varcost := Optimize(su.source, mode, srcReq)
 	return fixcost, varcost,
 		&summarizeApproach{strat: sumIdx, index: su.ons, req: srcReq}
 }
 
-func (su *Summarize) mapCost2(mode Mode, req Require) (Cost, Cost, any) {
+func (su *Summarize) mapCost(mode Mode, req Require) (Cost, Cost, any) {
 	nrows, _ := su.Nrows()
 	if req.Use() != ReqUnordered || su.hint == sumLarge ||
 		(nrows > mapThreshold && su.hint != sumSmall) {
 		return impossible, impossible, nil
 	}
 	srcReq := UnorderedReq(1)
-	srcFixcost, srcVarcost := Optimize2(su.source, mode, srcReq)
+	srcFixcost, srcVarcost := Optimize(su.source, mode, srcReq)
 	fixcost := srcFixcost + srcVarcost + Cost(nrows)*20
 	return fixcost, 0, &summarizeApproach{strat: sumMap, req: srcReq}
 }
@@ -364,7 +366,7 @@ func (su *Summarize) setApproach(_ Require, approach any, tran QueryTran) {
 	default:
 		assert.ShouldNotReachHere()
 	}
-	su.source = SetApproach2(su.source, su.summarizeApproach.req, tran)
+	su.source = SetApproach(su.source, su.summarizeApproach.req, tran)
 	su.state = rewound
 	su.header = su.getHeader()
 }

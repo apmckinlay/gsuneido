@@ -98,7 +98,7 @@ func (sj *SemiJoin) Transform() Query {
 }
 
 func (sj *SemiJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
-	fixcost1, varcost1 := Optimize2(sj.source1, mode, req)
+	fixcost1, varcost1 := Optimize(sj.source1, mode, req)
 	nrows1, _ := sj.source1.Nrows()
 	nrows2, _ := sj.source2.Nrows()
 	nlookups := req.LookupCount(nrows1)
@@ -112,7 +112,7 @@ func (sj *SemiJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	}
 	frac2 := min(float32(1), float32(nlookups)/float32(max(1, nrows2)))
 	req2 := GroupedReq(sj.by, frac2, nlookups)
-	fixcost2, varcost2 := Optimize2(sj.source2, mode, req2)
+	fixcost2, varcost2 := Optimize(sj.source2, mode, req2)
 	if fixcost2+varcost2 >= impossible {
 		return impossible, impossible, nil
 	}
@@ -122,8 +122,8 @@ func (sj *SemiJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
 
 func (sj *SemiJoin) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*semiJoinApproach)
-	sj.source1 = SetApproach2(sj.source1, req, tran)
-	sj.source2 = SetApproach2(sj.source2, ap.req2, tran)
+	sj.source1 = SetApproach(sj.source1, req, tran)
+	sj.source2 = SetApproach(sj.source2, ap.req2, tran)
 	sj.header = sj.source1.Header()
 }
 

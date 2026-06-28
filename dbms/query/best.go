@@ -46,11 +46,6 @@ func (bi *bestIndex) String() string {
 
 //-------------------------------------------------------------------
 
-// bestReq is the v2 analog of bestIndex.
-// It carries the Require actually used (not just the index),
-// so callers pass it straight to SetApproach2 without reconstruction.
-// This avoids the drift between per-candidate req construction
-// and the final req passed downstream.
 type bestReq struct {
 	req     Require
 	fixcost Cost

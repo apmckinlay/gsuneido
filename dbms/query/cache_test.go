@@ -9,7 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestCache2(t *testing.T) {
+func TestCache(t *testing.T) {
 	var c cache
 	test := func(req Require, fixcost, varcost int) {
 		t.Helper()

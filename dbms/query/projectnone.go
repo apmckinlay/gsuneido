@@ -99,7 +99,7 @@ func (pn *ProjectNone) optimize(mode Mode, _ Require) (Cost, Cost, any) {
 		frac = 1.0 / float64(nrows)
 	}
 	srcReq := UnorderedReq(float32(frac))
-	fixcost, varcost := Optimize2(pn.source, mode, srcReq)
+	fixcost, varcost := Optimize(pn.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
 
@@ -110,7 +110,7 @@ func (pn *ProjectNone) setApproach(_ Require, _ any, tran QueryTran) {
 		frac = 1.0 / float64(nrows)
 	}
 	srcReq := UnorderedReq(float32(frac))
-	pn.source = SetApproach2(pn.source, srcReq, tran)
+	pn.source = SetApproach(pn.source, srcReq, tran)
 }
 
 func (*ProjectNone) lookupCost() Cost {

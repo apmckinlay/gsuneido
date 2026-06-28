@@ -154,11 +154,11 @@ func (it *Intersect) cost2(mode Mode, req Require, reverse bool) (Cost, Cost, *i
 	if reverse {
 		src1, src2 = src2, src1
 	}
-	fixcost1, varcost1 := Optimize2(src1, mode, req)
+	fixcost1, varcost1 := Optimize(src1, mode, req)
 	nrows1, _ := src1.Nrows()
 	nlookups := req.LookupCount(nrows1)
 	req2 := LookupReq(src2.Columns(), nlookups)
-	fc2, vc2 := Optimize2(src2, mode, req2)
+	fc2, vc2 := Optimize(src2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil
 	}
@@ -172,8 +172,8 @@ func (it *Intersect) setApproach(req Require, approach any, tran QueryTran) {
 	if ap.reverse {
 		it.source1, it.source2 = it.source2, it.source1
 	}
-	it.source1 = SetApproach2(it.source1, ap.req1, tran)
-	it.source2 = SetApproach2(it.source2, ap.req2, tran)
+	it.source1 = SetApproach(it.source1, ap.req1, tran)
+	it.source2 = SetApproach(it.source2, ap.req2, tran)
 	it.header = it.getHeader()
 	it.src1Only = set.Difference(it.source1.Columns(), it.source2.Columns())
 }

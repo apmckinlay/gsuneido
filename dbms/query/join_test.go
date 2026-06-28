@@ -98,11 +98,11 @@ func TestJoin_EmptyTempIndexBug(t *testing.T) {
 func setupIndex(q Query, mode Mode, index []string, tran QueryTran) Query {
 	q = q.Transform()
 	req := OrderedReq(index, 1)
-	fixcost, varcost := Optimize2(q, mode, req)
+	fixcost, varcost := Optimize(q, mode, req)
 	if fixcost+varcost >= impossible {
 		panic("impossible")
 	}
-	q = SetApproach2(q, req, tran)
+	q = SetApproach(q, req, tran)
 	return q
 }
 

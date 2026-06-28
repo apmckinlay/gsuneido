@@ -134,7 +134,7 @@ func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
 	u := NewUnion(src1, src2)
 	assert.T(t).This(u.disjoint).Is("d")
 
-	fixcost, varcost := Optimize2(u, CursorMode, OrderedReq(index, 1))
+	fixcost, varcost := Optimize(u, CursorMode, OrderedReq(index, 1))
 	assert.T(t).That(fixcost+varcost < impossible)
 }
 
@@ -246,8 +246,8 @@ func TestUnionDuplicateBug(t *testing.T) {
 		top := q.(*Union)
 		fc, vc, app := top.optimize(ReadMode, req)
 		fmt.Printf("top union optimize: cost=%d+%d app=%T %+v\n", fc, vc, app, app)
-		Optimize2(q, ReadMode, req)
-		q = SetApproach2(q, req, tran)
+		Optimize(q, ReadMode, req)
+		q = SetApproach(q, req, tran)
 		fmt.Println("=== optimized ===")
 		fmt.Println(format(0, q, 0))
 		walkUnion(t, q, 0)
@@ -273,8 +273,8 @@ func TestUnionDuplicateBug(t *testing.T) {
 	// V1 for comparison
 	q1 := ParseQuery(minimal[0], tran, nil)
 	q1 = q1.Transform()
-	Optimize2(q1, ReadMode, UnorderedReq(1))
-	q1 = SetApproach2(q1, UnorderedReq(1), tran)
+	Optimize(q1, ReadMode, UnorderedReq(1))
+	q1 = SetApproach(q1, UnorderedReq(1), tran)
 	hdr1 := q1.Header()
 	seen1 := map[string]int{}
 	th1 := &Thread{}

@@ -251,8 +251,8 @@ func (u *Union) optimize(mode Mode, req Require) (Cost, Cost, any) {
 func (u *Union) opt2Unordered(mode Mode, req Require) (Cost, Cost, any) {
 	if u.disjoint != "" {
 		mr := UnorderedReq(req.frac)
-		fc1, vc1 := Optimize2(u.source1, mode, mr)
-		fc2, vc2 := Optimize2(u.source2, mode, mr)
+		fc1, vc1 := Optimize(u.source1, mode, mr)
+		fc2, vc2 := Optimize(u.source2, mode, mr)
 		return fc1 + fc2, vc1 + vc2,
 			&unionApproach{strat: unionLookup, req1: mr, req2: mr}
 	}
@@ -269,8 +269,8 @@ func (u *Union) opt2Unordered(mode Mode, req Require) (Cost, Cost, any) {
 func (u *Union) opt2Merge(mode Mode, req Require) (Cost, Cost, any) {
 	if u.disjoint != "" {
 		mr := OrderedReq(req.cols, req.frac)
-		fc1, vc1 := Optimize2(u.source1, mode, mr)
-		fc2, vc2 := Optimize2(u.source2, mode, mr)
+		fc1, vc1 := Optimize(u.source1, mode, mr)
+		fc2, vc2 := Optimize(u.source2, mode, mr)
 		if fc1+vc1 >= impossible || fc2+vc2 >= impossible {
 			return impossible, impossible, nil
 		}
@@ -278,12 +278,12 @@ func (u *Union) opt2Merge(mode Mode, req Require) (Cost, Cost, any) {
 			&unionApproach{keyIndex: req.cols, strat: unionMerge, req1: mr, req2: mr}
 	}
 	if req.Use() == ReqUnordered {
-		return u.optMergeNoOrder2(mode, req)
+		return u.optMergeNoOrder(mode, req)
 	}
-	return u.optMergeWithOrder2(mode, req)
+	return u.optMergeWithOrder(mode, req)
 }
 
-func (u *Union) optMergeNoOrder2(mode Mode, req Require) (Cost, Cost, any) {
+func (u *Union) optMergeNoOrder(mode Mode, req Require) (Cost, Cost, any) {
 	fixed1 := u.source1.Fixed()
 	indexes1 := u.source1.Indexes()
 	idxs1 := fixed1.RemoveFrom2(indexes1)
@@ -300,8 +300,8 @@ func (u *Union) optMergeNoOrder2(mode Mode, req Require) (Cost, Cost, any) {
 	for _, key := range commonKeys {
 		// try key itself
 		mr := OrderedReq(key, req.frac)
-		fc1, vc1 := Optimize2(u.source1, mode, mr)
-		fc2, vc2 := Optimize2(u.source2, mode, mr)
+		fc1, vc1 := Optimize(u.source1, mode, mr)
+		fc2, vc2 := Optimize(u.source2, mode, mr)
 		if fc1+vc1 < impossible && fc2+vc2 < impossible &&
 			fc1+vc1+fc2+vc2 < bestFixCost+bestVarCost {
 			bestFixCost = fc1 + fc2
@@ -313,11 +313,11 @@ func (u *Union) optMergeNoOrder2(mode Mode, req Require) (Cost, Cost, any) {
 		for i1, idx1 := range idxs1 {
 			if kp := keyPerm(idx1, key); kp != nil {
 				mr1 := OrderedReq(indexes1[i1], req.frac)
-				fc1i, vc1i := Optimize2(u.source1, mode, mr1)
+				fc1i, vc1i := Optimize(u.source1, mode, mr1)
 				for i2, idx2 := range idxs2 {
 					if slc.HasPrefix(idx2, kp) {
 						mr2 := OrderedReq(indexes2[i2], req.frac)
-						fc2i, vc2i := Optimize2(u.source2, mode, mr2)
+						fc2i, vc2i := Optimize(u.source2, mode, mr2)
 						if fc1i+vc1i < impossible && fc2i+vc2i < impossible &&
 							fc1i+vc1i+fc2i+vc2i < bestFixCost+bestVarCost {
 							bestFixCost = fc1i + fc2i
@@ -337,7 +337,7 @@ func (u *Union) optMergeNoOrder2(mode Mode, req Require) (Cost, Cost, any) {
 	return bestFixCost, bestVarCost, bestApproach
 }
 
-func (u *Union) optMergeWithOrder2(mode Mode, req Require) (Cost, Cost, any) {
+func (u *Union) optMergeWithOrder(mode Mode, req Require) (Cost, Cost, any) {
 	order := req.cols
 	fixed1 := u.source1.Fixed()
 	indexes1 := u.source1.Indexes()
@@ -349,8 +349,8 @@ func (u *Union) optMergeWithOrder2(mode Mode, req Require) (Cost, Cost, any) {
 
 	if emptyKey1 && emptyKey2 {
 		mr := OrderedReq(nil, req.frac)
-		fc1, vc1 := Optimize2(u.source1, mode, mr)
-		fc2, vc2 := Optimize2(u.source2, mode, mr)
+		fc1, vc1 := Optimize(u.source1, mode, mr)
+		fc2, vc2 := Optimize(u.source2, mode, mr)
 		return fc1 + fc2, vc1 + vc2,
 			&unionApproach{strat: unionMerge, req1: mr, req2: mr}
 	}
@@ -392,8 +392,8 @@ func (u *Union) optMergeWithOrder2(mode Mode, req Require) (Cost, Cost, any) {
 			}
 			mr1 := OrderedReq(index1, req.frac)
 			mr2 := OrderedReq(index2, req.frac)
-			fc1, vc1 := Optimize2(u.source1, mode, mr1)
-			fc2, vc2 := Optimize2(u.source2, mode, mr2)
+			fc1, vc1 := Optimize(u.source1, mode, mr1)
+			fc2, vc2 := Optimize(u.source2, mode, mr2)
 			if fc1+vc1 < impossible && fc2+vc2 < impossible &&
 				fc1+vc1+fc2+vc2 < bestFixCost+bestVarCost {
 				bestFixCost = fc1 + fc2
@@ -415,7 +415,7 @@ func (u *Union) bestMergeIndexOne2(mode Mode, req Require,
 	bestVarCost := impossible
 	var bestApproach *unionApproach
 	mr0 := OrderedReq(nil, req.frac)
-	fc0, vc0 := Optimize2(srcEmpty, mode, mr0)
+	fc0, vc0 := Optimize(srcEmpty, mode, mr0)
 	for _, index2 := range indexes {
 		if !slc.HasPrefix(index2, order) {
 			continue
@@ -425,7 +425,7 @@ func (u *Union) bestMergeIndexOne2(mode Mode, req Require,
 			continue
 		}
 		mr2 := OrderedReq(index2, req.frac)
-		fc2, vc2 := Optimize2(srcKey, mode, mr2)
+		fc2, vc2 := Optimize(srcKey, mode, mr2)
 		if fc0+vc0+fc2+vc2 < bestFixCost+bestVarCost {
 			bestFixCost = fc0 + fc2
 			bestVarCost = vc0 + vc2
@@ -477,14 +477,14 @@ func (u *Union) opt2LookupDir(mode Mode, req Require, reverse bool) (Cost, Cost,
 	default:
 		return impossible, impossible, nil
 	}
-	fc1, vc1 := Optimize2(src1, mode, req1)
+	fc1, vc1 := Optimize(src1, mode, req1)
 	if fc1+vc1 >= impossible {
 		return impossible, impossible, nil
 	}
 	nlookups := req.LookupCount(nrows1)
 	if u.disjoint != "" {
 		mr2 := req1
-		fc2, vc2 := Optimize2(src2, mode, mr2)
+		fc2, vc2 := Optimize(src2, mode, mr2)
 		if fc2+vc2 >= impossible {
 			return impossible, impossible, nil
 		}
@@ -493,7 +493,7 @@ func (u *Union) opt2LookupDir(mode Mode, req Require, reverse bool) (Cost, Cost,
 				req1: req1, req2: mr2, reverse: reverse}
 	}
 	req2 := LookupReq(src2.Columns(), nlookups)
-	fc2, vc2 := Optimize2(src2, mode, req2)
+	fc2, vc2 := Optimize(src2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil
 	}
@@ -524,8 +524,8 @@ func (u *Union) setApproach(_ Require, approach any, tran QueryTran) {
 	if app.reverse {
 		u.source1, u.source2 = u.source2, u.source1
 	}
-	u.source1 = SetApproach2(u.source1, app.req1, tran)
-	u.source2 = SetApproach2(u.source2, app.req2, tran)
+	u.source1 = SetApproach(u.source1, app.req1, tran)
+	u.source2 = SetApproach(u.source2, app.req2, tran)
 	u.header = JoinHeaders(u.source1.Header(), u.source2.Header())
 	u.src1Only = set.Difference(u.source1.Columns(), u.source2.Columns())
 	u.empty1 = make(Row, len(u.source1.Header().Fields))

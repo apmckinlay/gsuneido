@@ -265,8 +265,8 @@ func TestOptimize2FastSingleLookup(t *testing.T) {
 	q = q.Transform()
 	assert.T(t).That(q.fastSingle())
 	// would panic at optTempIndex2's req.Use() before the guard cleared nlookups
-	fixcost, varcost := Optimize2(q, ReadMode, LookupReq([]string{"id"}, 5))
+	fixcost, varcost := Optimize(q, ReadMode, LookupReq([]string{"id"}, 5))
 	assert.T(t).True(fixcost+varcost < impossible)
-	q = SetApproach2(q, LookupReq([]string{"id"}, 5), testTran{})
+	q = SetApproach(q, LookupReq([]string{"id"}, 5), testTran{})
 	_ = q
 }

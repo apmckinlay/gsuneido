@@ -541,30 +541,32 @@ func (w *Where) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		return 0, 0, nil
 	}
 	if w.tbl == nil || w.tbl.isSingleton() {
-		fixcost, varcost := Optimize2(w.source, mode, req)
+		fixcost, varcost := Optimize(w.source, mode, req)
 		return fixcost, varcost, nil
 	}
 	switch req.Use() {
 	case ReqUnordered:
-		return w.optWhereIdx2(req, func(idx []string) bool { return true }, false)
+		return w.optWhereIdx(req, func(idx []string) bool { return true }, false)
 	case ReqOrdered:
-		return w.optWhereIdx2(req, func(idx []string) bool {
+		return w.optWhereIdx(req, func(idx []string) bool {
 			return ordered(idx, req.cols, w.fixed)
 		}, false)
 	case ReqGrouped:
 		nColsUnfixed := countUnfixed(req.cols, w.fixed)
-		return w.optWhereIdx2(req, func(idx []string) bool {
+		return w.optWhereIdx(req, func(idx []string) bool {
 			return grouped(idx, req.cols, nColsUnfixed, w.fixed)
 		}, true)
 	case ReqLookup:
-		return w.optWhereLookup2(req)
+		return w.optWhereLookup(req)
 	}
 	panic("unreachable")
 }
 
-func (w *Where) optWhereIdx2(req Require, indexOk func([]string) bool,
+func (w *Where) optWhereIdx(req Require, indexOk func([]string) bool,
 	addSeek bool) (Cost, Cost, any) {
 	if w.singleton {
+		// here singleton == fastSingle
+		// because source is a Table and Table keys are a subset of indexes
 		cost := w.source.lookupCost()
 		isel := w.idxSels[0]
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
@@ -594,37 +596,30 @@ func (w *Where) optWhereIdx2(req Require, indexOk func([]string) bool,
 			bestIdxSel = isel
 		}
 	}
-	if best.varcost < impossible {
-		return 0, best.varcost, &whereApproach{index: best.index,
-			cost: best.varcost, idxSel: bestIdxSel}
+	if best.index == nil {
+		return impossible, impossible, nil
 	}
-	return impossible, impossible, nil
+	return 0, best.varcost, &whereApproach{index: best.index,
+		cost: best.varcost, idxSel: bestIdxSel}
 }
 
-func (w *Where) optWhereLookup2(req Require) (Cost, Cost, any) {
+func (w *Where) optWhereLookup(req Require) (Cost, Cost, any) {
 	if w.singleton {
-		cost := w.source.lookupCost()
 		isel := w.idxSels[0]
+		cost := w.tbl.lookupCostFor(w.tbl.indexi(isel.index))
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
-	if idxi := slc.IndexFn(w.source.Indexes(), req.cols, slices.Equal); idxi != -1 {
-		perLookup := w.source.lookupCost() + 1
-		cost := Cost(req.nlookups) * perLookup
-		return 0, cost, &whereApproach{index: req.cols, cost: cost}
-	}
 	best := newBestIndex()
-	for _, idx := range w.source.Indexes() {
+	for idxi, idx := range w.tbl.indexes {
 		if indexCovered(idx, req.cols, w.fixed) {
-			perLookup := w.source.lookupCost() + 1
-			cost := Cost(req.nlookups) * perLookup
-			best.update(idx, 0, cost)
+			varcost := Cost(req.nlookups) * w.tbl.lookupCostFor(idxi)
+			best.update(idx, 0, varcost)
 		}
 	}
-	if best.varcost < impossible {
-		return 0, best.varcost, &whereApproach{index: best.index,
-			cost: best.varcost}
+	if best.index == nil {
+		return impossible, impossible, nil
 	}
-	return impossible, impossible, nil
+	return 0, best.varcost, &whereApproach{index: best.index, cost: best.varcost}
 }
 
 // exprFalse checks if any expressions folded to false
@@ -717,7 +712,7 @@ func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 		return
 	}
 	if approach == nil {
-		w.source = SetApproach2(w.source, req, tran)
+		w.source = SetApproach(w.source, req, tran)
 		w.srcIndex = req.cols
 		w.tbl = nil
 	} else {

@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestTableOptimize2(t *testing.T) {
+func TestTableOptimize(t *testing.T) {
 	assert := assert.T(t)
 	tran := testTran{}
 
