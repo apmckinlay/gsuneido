@@ -86,8 +86,8 @@ func TestTableOptimize2(t *testing.T) {
 	// ReqLookup — {supplier} is a physical index
 	test("supplier", LookupReq([]string{"supplier"}, 1), []string{"supplier"})
 
-	// ReqLookup — {city,supplier} is a physical index
-	test("supplier", LookupReq([]string{"city", "supplier"}, 1), []string{"city", "supplier"})
+	// ReqLookup — {supplier} is the shortest key
+	test("supplier", LookupReq([]string{"city", "supplier"}, 1), []string{"supplier"})
 
 	// ReqLookup — {city} is not a physical index and no index is both
 	// lookup-eligible (contains a key as a prefix) AND grouped by {city}.

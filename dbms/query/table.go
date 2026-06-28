@@ -170,35 +170,30 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 			return impossible, impossible, nil
 		}
 		return tbl.costFor(tbl.indexes[idxi], req.frac, 0)
-	case ReqLookup:
-		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
-			return 0, Cost(req.nlookups) * tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
-		}
-		best := newBestIndex()
-		for _, idx := range tbl.indexes {
-			if indexCovered(idx, req.cols, nil) {
-				f, v, _ := tbl.costFor(idx, 0, req.nlookups)
-				best.update(idx, f, v)
-			}
-		}
-		if best.index != nil {
-			return best.fixcost, best.varcost, tableApproach{index: best.index}
-		}
-		return impossible, impossible, nil
 	case ReqGrouped:
 		best := newBestIndex()
 		for _, idx := range tbl.indexes {
-			// Table.Fixed() is always nil, so nColsUnfixed == len(req.cols)
-			if !grouped(idx, req.cols, len(req.cols), nil) {
-				continue
+			if set.StartsWithSet(idx, req.cols) {
+				f, v, _ := tbl.costFor(idx, req.frac, req.nlookups)
+				best.update(idx, f, v)
 			}
-			f, v, _ := tbl.costFor(idx, req.frac, req.nlookups)
-			best.update(idx, f, v)
 		}
 		if best.index == nil {
 			return impossible, impossible, nil
 		}
 		return best.fixcost, best.varcost, tableApproach{index: best.index}
+	case ReqLookup:
+		best := newBestIndex()
+		for idxi, idx := range tbl.indexes {
+			if set.Subset(req.cols, idx) {
+				varcost := Cost(req.nlookups) * tbl.lookupCostFor(idxi)
+				best.update(idx, 0, varcost)
+			}
+		}
+		if best.index == nil {
+			return impossible, impossible, nil
+		}
+		return 0, best.varcost, tableApproach{index: best.index}
 	}
 	panic("unreachable")
 }
