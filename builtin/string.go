@@ -36,7 +36,7 @@ func sameStr(x Value, s string) Value {
 
 var _ = exportMethods(&StringMethods, "string")
 
-var _ = method(string_AlphaQ, "()")
+var _ = method(string_AlphaQ, "() :boolean")
 
 func string_AlphaQ(this Value) Value {
 	s := ToStr(this)
@@ -51,7 +51,7 @@ func string_AlphaQ(this Value) Value {
 	return True
 }
 
-var _ = method(string_AlphaNumQ, "()")
+var _ = method(string_AlphaNumQ, "() :boolean")
 
 func string_AlphaNumQ(this Value) Value {
 	s := ToStr(this)
@@ -66,7 +66,7 @@ func string_AlphaNumQ(this Value) Value {
 	return True
 }
 
-var _ = method(string_Asc, "()")
+var _ = method(string_Asc, "() :number")
 
 func string_Asc(this Value) Value {
 	s := ToStr(this)
@@ -77,7 +77,7 @@ func string_Asc(this Value) Value {
 }
 
 // TODO remove after we switch to Suneido.Compile (after jSuneido is gone)
-var _ = method(string_Compile, "(errob = false)")
+var _ = method(string_Compile, "(errob = false) :unknown")
 
 func string_Compile(th *Thread, this Value, args []Value) Value {
 	if args[0] == False {
@@ -91,25 +91,25 @@ func string_Compile(th *Thread, this Value, args []Value) Value {
 	return val
 }
 
-var _ = method(string_Count, "(string)")
+var _ = method(string_Count, "(string) :number")
 
 func string_Count(this, arg Value) Value {
 	return IntVal(strings.Count(ToStr(this), ToStr(arg)))
 }
 
-var _ = method(string_Detab, "()")
+var _ = method(string_Detab, "() :string")
 
 func string_Detab(this Value) Value {
 	return sameStr(this, tabs.Detab(ToStr(this)))
 }
 
-var _ = method(string_Entab, "()")
+var _ = method(string_Entab, "() :string")
 
 func string_Entab(this Value) Value {
 	return SuStr(tabs.Entab(ToStr(this)))
 }
 
-var _ = method(string_Eval, "()")
+var _ = method(string_Eval, "() :unknown")
 
 func string_Eval(th *Thread, this Value, args []Value) Value {
 	result := compile.EvalString(th, ToStr(this))
@@ -119,7 +119,7 @@ func string_Eval(th *Thread, this Value, args []Value) Value {
 	return result
 }
 
-var _ = method(string_Eval2, "()")
+var _ = method(string_Eval2, "() :object")
 
 func string_Eval2(th *Thread, this Value, args []Value) Value {
 	ob := &SuObject{}
@@ -133,7 +133,7 @@ func string_Eval2(th *Thread, this Value, args []Value) Value {
 	return ob
 }
 
-var _ = method(string_Extract, "(pattern, part=false)")
+var _ = method(string_Extract, "(pattern, part=false) :false|string")
 
 func string_Extract(th *Thread, this Value, args []Value) Value {
 	s := ToStr(this)
@@ -158,7 +158,7 @@ func string_Extract(th *Thread, this Value, args []Value) Value {
 	return SuStr(s[pos:end])
 }
 
-var _ = method(string_Find, "(string, pos=0)")
+var _ = method(string_Find, "(string, pos=0) :number")
 
 func string_Find(this, arg1, arg2 Value) Value {
 	s := ToStr(this)
@@ -170,7 +170,7 @@ func string_Find(this, arg1, arg2 Value) Value {
 	return IntVal(pos + i)
 }
 
-var _ = method(string_Find1of, "(chars, pos=0)")
+var _ = method(string_Find1of, "(chars, pos=0) :number")
 
 func string_Find1of(this, arg1, arg2 Value) Value {
 	s := ToStr(this)
@@ -182,7 +182,7 @@ func string_Find1of(this, arg1, arg2 Value) Value {
 	return IntVal(pos + i)
 }
 
-var _ = method(string_FindLast, "(string, pos=false)")
+var _ = method(string_FindLast, "(string, pos=false) :false|number")
 
 func string_FindLast(this, arg1, arg2 Value) Value {
 	s := ToStr(this)
@@ -203,7 +203,7 @@ func string_FindLast(this, arg1, arg2 Value) Value {
 	return intOrFalse(strings.LastIndex(s[:end], substr))
 }
 
-var _ = method(string_FindLast1of, "(chars, pos=false)")
+var _ = method(string_FindLast1of, "(chars, pos=false) :false|number")
 
 func string_FindLast1of(this, arg1, arg2 Value) Value {
 	set := ToStr(arg1)
@@ -218,7 +218,7 @@ func string_FindLast1of(this, arg1, arg2 Value) Value {
 	return intOrFalse(str.FindLast1of(s[:end], set))
 }
 
-var _ = method(string_FromUtf8, "()")
+var _ = method(string_FromUtf8, "() :string")
 
 func string_FromUtf8(this Value) Value {
 	utf8 := ToStr(this)
@@ -231,26 +231,26 @@ func string_FromUtf8(this Value) Value {
 	return SuStr(s)
 }
 
-var _ = method(string_HasQ, "(string)")
+var _ = method(string_HasQ, "(string) :boolean")
 
 func string_HasQ(this, arg Value) Value {
 	return SuBool(strings.Contains(ToStr(this), ToStr(arg)))
 }
 
-var _ = method(string_Iter, "()")
+var _ = method(string_Iter, "() :object")
 
 func string_Iter(this Value) Value {
 	iterable := this.(interface{ Iter() Iter })
 	return SuIter{Iter: iterable.Iter()}
 }
 
-var _ = method(string_Lower, "()")
+var _ = method(string_Lower, "() :string")
 
 func string_Lower(this Value) Value {
 	return sameStr(this, str.ToLower(ToStr(this)))
 }
 
-var _ = method(string_LowerQ, "()")
+var _ = method(string_LowerQ, "() :boolean")
 
 func string_LowerQ(this Value) Value {
 	result := false
@@ -264,7 +264,7 @@ func string_LowerQ(this Value) Value {
 	return SuBool(result)
 }
 
-var _ = method(string_MapN, "(n, block)")
+var _ = method(string_MapN, "(n, block) :string")
 
 func string_MapN(th *Thread, this Value, args []Value) Value {
 	s := ToStr(this)
@@ -283,7 +283,7 @@ func string_MapN(th *Thread, this Value, args []Value) Value {
 	return SuStr(buf.String())
 }
 
-var _ = method(string_Match, "(pattern, pos=false, prev=false)")
+var _ = method(string_Match, "(pattern, pos=false, prev=false) :false|object")
 
 func string_Match(th *Thread, this Value, args []Value) Value {
 	s := ToStr(this)
@@ -315,7 +315,7 @@ func string_Match(th *Thread, this Value, args []Value) Value {
 	return ob
 }
 
-var _ = method(string_NthLine, "(n)")
+var _ = method(string_NthLine, "(n) :string")
 
 func string_NthLine(this, arg Value) Value {
 	s := ToStr(this)
@@ -337,7 +337,7 @@ func string_NthLine(this, arg Value) Value {
 	return SuStr(s[i:j])
 }
 
-var _ = method(string_NumberQ, "()")
+var _ = method(string_NumberQ, "() :boolean")
 
 func string_NumberQ(this Value) Value {
 	// see also Lexer.number
@@ -353,7 +353,7 @@ func string_NumberQ(this Value) Value {
 	return SuBool(item.Token == tok.Eof)
 }
 
-var _ = method(string_NumericQ, "()")
+var _ = method(string_NumericQ, "() :boolean")
 
 func string_NumericQ(this Value) Value {
 	s := ToStr(this)
@@ -368,7 +368,7 @@ func string_NumericQ(this Value) Value {
 	return True
 }
 
-var _ = method(string_PrefixQ, "(string, pos=0)")
+var _ = method(string_PrefixQ, "(string, pos=0) :boolean")
 
 func string_PrefixQ(this, arg1, arg2 Value) Value {
 	s := ToStr(this)
@@ -377,7 +377,7 @@ func string_PrefixQ(this, arg1, arg2 Value) Value {
 	return SuBool(strings.HasPrefix(s[pos:], pre))
 }
 
-var _ = method(string_Repeat, "(count)")
+var _ = method(string_Repeat, "(count) :string")
 
 func string_Repeat(this, arg Value) Value {
 	s := ToStr(this)
@@ -386,7 +386,7 @@ func string_Repeat(this, arg Value) Value {
 	return SuStr(strings.Repeat(s, n))
 }
 
-var _ = method(string_Replace, "(pattern, block = '', count = false)")
+var _ = method(string_Replace, "(pattern, block = '', count = false) :string")
 
 func string_Replace(th *Thread, this Value, args []Value) Value {
 	count := math.MaxInt
@@ -396,7 +396,7 @@ func string_Replace(th *Thread, this Value, args []Value) Value {
 	return sameStr(this, replace(th, ToStr(this), args[0], args[1], count))
 }
 
-var _ = method(string_Reverse, "()")
+var _ = method(string_Reverse, "() :string")
 
 func string_Reverse(this Value) Value {
 	s := []byte(ToStr(this))
@@ -410,13 +410,13 @@ func string_Reverse(this Value) Value {
 	return SuStr(hacks.BStoS(s))
 }
 
-var _ = method(string_ServerEval, "()")
+var _ = method(string_ServerEval, "() :unknown")
 
 func string_ServerEval(th *Thread, this Value, args []Value) Value {
 	return th.Dbms().Run(th, ToStr(this))
 }
 
-var _ = method(string_Size, "()")
+var _ = method(string_Size, "() :number")
 
 func string_Size(this Value) Value {
 	// avoid calling ToStr so we don't have to convert concats
@@ -424,7 +424,7 @@ func string_Size(this Value) Value {
 	// "this" should always have Len
 }
 
-var _ = method(string_Split, "(separator = '')")
+var _ = method(string_Split, "(separator = '') :object")
 
 func string_Split(this, arg Value) Value {
 	s := ToStr(this)
@@ -448,20 +448,20 @@ func string_Split(this, arg Value) Value {
 	return NewSuObject(vals)
 }
 
-var _ = method(string_SuffixQ, "(string)")
+var _ = method(string_SuffixQ, "(string) :boolean")
 
 func string_SuffixQ(this, arg Value) Value {
 	return SuBool(strings.HasSuffix(ToStr(this), ToStr(arg)))
 }
 
-var _ = method(string_ToHex, "()")
+var _ = method(string_ToHex, "() :string")
 
 func string_ToHex(this Value) Value {
 	s := ToStr(this)
 	return SuStr(hex.EncodeToString(hacks.Stobs(s)))
 }
 
-var _ = method(string_FromHex, "()")
+var _ = method(string_FromHex, "() :string")
 
 func string_FromHex(this Value) Value {
 	s := ToStr(this)
@@ -472,7 +472,7 @@ func string_FromHex(this Value) Value {
 	return SuStr(hacks.BStoS(b))
 }
 
-var _ = method(string_ToUtf8, "()")
+var _ = method(string_ToUtf8, "() :string")
 
 func string_ToUtf8(this Value) Value {
 	s := ToStr(this)
@@ -484,7 +484,7 @@ func string_ToUtf8(this Value) Value {
 	return SuStr(utf8)
 }
 
-var _ = method(string_Tr, "(from, to='')")
+var _ = method(string_Tr, "(from, to='') :string")
 
 func string_Tr(th *Thread, this Value, args []Value) Value {
 	from := th.TrSet(args[0])
@@ -492,7 +492,7 @@ func string_Tr(th *Thread, this Value, args []Value) Value {
 	return sameStr(this, tr.Replace(ToStr(this), from, to))
 }
 
-var _ = method(string_Unescape, "()")
+var _ = method(string_Unescape, "() :string")
 
 func string_Unescape(this Value) Value {
 	s := ToStr(this)
@@ -506,13 +506,13 @@ func string_Unescape(this Value) Value {
 	return SuStr(buf.String())
 }
 
-var _ = method(string_Upper, "()")
+var _ = method(string_Upper, "() :string")
 
 func string_Upper(this Value) Value {
 	return sameStr(this, str.ToUpper(ToStr(this)))
 }
 
-var _ = method(string_UpperQ, "()")
+var _ = method(string_UpperQ, "() :boolean")
 
 func string_UpperQ(this Value) Value {
 	result := false

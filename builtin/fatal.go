@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(fatal, "(msg)")
+var _ = builtin(fatal, "(msg) :void")
 
 func fatal(a Value) Value {
 	Fatal(ToStrOrString(a))

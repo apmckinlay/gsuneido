@@ -49,7 +49,7 @@ func WTS_GetClientProtocolType() int {
 	return int(data)
 }
 
-var _ = builtin(WTS_GetSessionId, "()")
+var _ = builtin(WTS_GetSessionId, "() :number")
 
 func WTS_GetSessionId() Value {
 	if WTS_GetClientProtocolType() == 0 {

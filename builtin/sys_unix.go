@@ -15,7 +15,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(GetDiskFreeSpace, "(dir = '.')")
+var _ = builtin(GetDiskFreeSpace, "(dir = '.') :number")
 
 func GetDiskFreeSpace(arg Value) Value {
 	var stat syscall.Statfs_t
@@ -27,7 +27,7 @@ func GetDiskFreeSpace(arg Value) Value {
 	return Int64Val(int64(freeBytes))
 }
 
-var _ = builtin(CopyFile, "(from, to, failIfExists)")
+var _ = builtin(CopyFile, "(from, to, failIfExists) :string|true")
 
 func CopyFile(th *Thread, args []Value) Value {
 	from := ToStr(args[0])

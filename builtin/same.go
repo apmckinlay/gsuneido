@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(SameQ, "(x, y)")
+var _ = builtin(SameQ, "(x, y) :boolean")
 
 func SameQ(x, y Value) Value {
 	return SuBool(x == y)

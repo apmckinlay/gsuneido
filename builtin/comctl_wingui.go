@@ -15,7 +15,7 @@ import (
 var comctl32 = MustLoadDLL("comctl32.dll")
 
 var initCommonControlsEx = comctl32.MustFindProc("InitCommonControlsEx").Addr()
-var _ = builtin(InitCommonControlsEx, "(picce)")
+var _ = builtin(InitCommonControlsEx, "(picce) :boolean")
 
 func InitCommonControlsEx(a Value) Value {
 	p := &stInitCommonControlsEx{
@@ -37,7 +37,7 @@ const nInitCommonControlsEx = unsafe.Sizeof(stInitCommonControlsEx{})
 // dll Comctl32:ImageList_Create(
 // long x, long y, long flags, long initial, long grow) pointer
 var imageList_Create = comctl32.MustFindProc("ImageList_Create").Addr()
-var _ = builtin(ImageList_Create, "(cx, cy, flags, cInitial, cGrow)")
+var _ = builtin(ImageList_Create, "(cx, cy, flags, cInitial, cGrow) :number")
 
 func ImageList_Create(a, b, c, d, e Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_Create,
@@ -51,7 +51,7 @@ func ImageList_Create(a, b, c, d, e Value) Value {
 
 // dll Comctl32:ImageList_Destroy(pointer himl) bool
 var imageList_Destroy = comctl32.MustFindProc("ImageList_Destroy").Addr()
-var _ = builtin(ImageList_Destroy, "(himl)")
+var _ = builtin(ImageList_Destroy, "(himl) :boolean")
 
 func ImageList_Destroy(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_Destroy,
@@ -61,7 +61,7 @@ func ImageList_Destroy(a Value) Value {
 
 // dll Comctl32:ImageList_ReplaceIcon(pointer imagelist, long i, pointer hicon) long
 var imageList_ReplaceIcon = comctl32.MustFindProc("ImageList_ReplaceIcon").Addr()
-var _ = builtin(ImageList_ReplaceIcon, "(himl, i, hicon)")
+var _ = builtin(ImageList_ReplaceIcon, "(himl, i, hicon) :number")
 
 func ImageList_ReplaceIcon(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_ReplaceIcon,
@@ -74,7 +74,7 @@ func ImageList_ReplaceIcon(a, b, c Value) Value {
 // dll bool Comctl32:ImageList_BeginDrag(
 // pointer himlTrack, long iTrack, long dxHotspot, long dyHotspot)
 var imageList_BeginDrag = comctl32.MustFindProc("ImageList_BeginDrag").Addr()
-var _ = builtin(ImageList_BeginDrag, "(himlTrack, iTrack, dxHotspot, dyHotspot)")
+var _ = builtin(ImageList_BeginDrag, "(himlTrack, iTrack, dxHotspot, dyHotspot) :boolean")
 
 func ImageList_BeginDrag(a, b, c, d Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_BeginDrag,
@@ -87,7 +87,7 @@ func ImageList_BeginDrag(a, b, c, d Value) Value {
 
 // dll bool Comctl32:ImageList_DragEnter(pointer hwnd, long x, long y)
 var imageList_DragEnter = comctl32.MustFindProc("ImageList_DragEnter").Addr()
-var _ = builtin(ImageList_DragEnter, "(hwnd, x, y)")
+var _ = builtin(ImageList_DragEnter, "(hwnd, x, y) :boolean")
 
 func ImageList_DragEnter(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_DragEnter,
@@ -99,7 +99,7 @@ func ImageList_DragEnter(a, b, c Value) Value {
 
 // dll bool Comctl32:ImageList_DragLeave(pointer hwnd)
 var imageList_DragLeave = comctl32.MustFindProc("ImageList_DragLeave").Addr()
-var _ = builtin(ImageList_DragLeave, "(hwnd)")
+var _ = builtin(ImageList_DragLeave, "(hwnd) :boolean")
 
 func ImageList_DragLeave(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_DragLeave,
@@ -109,7 +109,7 @@ func ImageList_DragLeave(a Value) Value {
 
 // dll bool Comctl32:ImageList_DragMove(long x, long y)
 var imageList_DragMove = comctl32.MustFindProc("ImageList_DragMove").Addr()
-var _ = builtin(ImageList_DragMove, "(x, y)")
+var _ = builtin(ImageList_DragMove, "(x, y) :boolean")
 
 func ImageList_DragMove(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_DragMove,
@@ -120,7 +120,7 @@ func ImageList_DragMove(a, b Value) Value {
 
 // dll void Comctl32:ImageList_EndDrag()
 var imageList_EndDrag = comctl32.MustFindProc("ImageList_EndDrag").Addr()
-var _ = builtin(ImageList_EndDrag, "()")
+var _ = builtin(ImageList_EndDrag, "() :void")
 
 func ImageList_EndDrag() Value {
 	syscall.SyscallN(imageList_EndDrag)
@@ -130,7 +130,7 @@ func ImageList_EndDrag() Value {
 // dll pointer Comctl32:ImageList_Merge(pointer	himl1, long i1,
 // pointer himl2, long i2, long dx, long dy)
 var imageList_Merge = comctl32.MustFindProc("ImageList_Merge").Addr()
-var _ = builtin(ImageList_Merge, "(himl1, i1, himl2, i2, dx, dy)")
+var _ = builtin(ImageList_Merge, "(himl1, i1, himl2, i2, dx, dy) :number")
 
 func ImageList_Merge(a, b, c, d, e, f Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_Merge,
@@ -145,7 +145,7 @@ func ImageList_Merge(a, b, c, d, e, f Value) Value {
 
 // dll long Comctl32:ImageList_Add(pointer imagelist, pointer image, pointer mask)
 var imageList_Add = comctl32.MustFindProc("ImageList_Add").Addr()
-var _ = builtin(ImageList_Add, "(imagelist, image, mask)")
+var _ = builtin(ImageList_Add, "(imagelist, image, mask) :number")
 
 func ImageList_Add(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_Add,
@@ -158,7 +158,7 @@ func ImageList_Add(a, b, c Value) Value {
 // dll long ComCtl32:ImageList_AddMasked(pointer himl, pointer hbmImage,
 // long crMask)
 var imageList_AddMasked = comctl32.MustFindProc("ImageList_AddMasked").Addr()
-var _ = builtin(ImageList_AddMasked, "(himl, hbmImage, crMask)")
+var _ = builtin(ImageList_AddMasked, "(himl, hbmImage, crMask) :number")
 
 func ImageList_AddMasked(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_AddMasked,
@@ -171,7 +171,7 @@ func ImageList_AddMasked(a, b, c Value) Value {
 // dll void comctl32:DrawStatusText(pointer hdc, RECT* rect, [in] string text,
 // long flags)
 var drawStatusText = comctl32.MustFindProc("DrawStatusTextA").Addr()
-var _ = builtin(DrawStatusText, "(himlTrack, iTrack, dxHotspot, dyHotspot)")
+var _ = builtin(DrawStatusText, "(himlTrack, iTrack, dxHotspot, dyHotspot) :void")
 
 func DrawStatusText(a, b, c, d Value) Value {
 	syscall.SyscallN(drawStatusText,
@@ -185,7 +185,7 @@ func DrawStatusText(a, b, c, d Value) Value {
 // dll bool Comctl32:ImageList_GetImageInfo(pointer himl, long imageindex,
 // IMAGEINFO* pImageInfo)
 var imageList_GetImageInfo = comctl32.MustFindProc("ImageList_GetImageInfo").Addr()
-var _ = builtin(ImageList_GetImageInfo, "(himl, imageindex, pImageInfo)")
+var _ = builtin(ImageList_GetImageInfo, "(himl, imageindex, pImageInfo) :boolean")
 
 func ImageList_GetImageInfo(a, b, c Value) Value {
 	var ii stImageInfo
@@ -203,7 +203,7 @@ func ImageList_GetImageInfo(a, b, c Value) Value {
 // dll bool Comctl32:ImageList_Draw(pointer himl, long imageindex,
 // pointer hdc, long x, long y, UINT fStyle)
 var imageList_Draw = comctl32.MustFindProc("ImageList_Draw").Addr()
-var _ = builtin(ImageList_Draw, "(himl, imageindex, hdc, x, y, fStyle)")
+var _ = builtin(ImageList_Draw, "(himl, imageindex, hdc, x, y, fStyle) :boolean")
 
 func ImageList_Draw(a, b, c, d, e, f Value) Value {
 	rtn, _, _ := syscall.SyscallN(imageList_Draw,

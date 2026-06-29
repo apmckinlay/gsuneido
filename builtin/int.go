@@ -11,13 +11,13 @@ import (
 
 var _ = exportMethods(&IntMethods, "int")
 
-var _ = method(int_Int, "()")
+var _ = method(int_Int, "() :number")
 
 func int_Int(this Value) Value {
 	return this
 }
 
-var _ = method(int_Frac, "()")
+var _ = method(int_Frac, "() :number")
 
 func int_Frac(Value) Value {
 	return Zero

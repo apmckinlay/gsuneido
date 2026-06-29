@@ -12,7 +12,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(exit, "(code = 0)")
+var _ = builtin(exit, "(code = 0) :void")
 
 func exit(arg Value) Value {
 	if arg == True {

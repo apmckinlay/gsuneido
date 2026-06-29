@@ -29,7 +29,7 @@ var kernel32 = windows.MustLoadDLL("kernel32.dll")
 
 var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
 
-var _ = builtin(GetDiskFreeSpace, "(dir = '.')")
+var _ = builtin(GetDiskFreeSpace, "(dir = '.') :number")
 
 func GetDiskFreeSpace(arg Value) Value {
 	var n int64
@@ -66,7 +66,7 @@ func systemMemory() uint64 {
 }
 
 var copyFile = kernel32.MustFindProc("CopyFileA").Addr()
-var _ = builtin(CopyFile, "(from, to, failIfExists)")
+var _ = builtin(CopyFile, "(from, to, failIfExists) :string|true")
 
 func CopyFile(th *Thread, args []Value) Value {
 	if sandboxed() {

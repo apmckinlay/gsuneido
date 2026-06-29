@@ -18,7 +18,7 @@ var dwmapi = MustLoadDLL("dwmapi.dll")
 // RECT* pvAttribute, long cbAttribute)
 var dwmGetWindowAttribute = dwmapi.MustFindProc("DwmGetWindowAttribute").Addr()
 var _ = builtin(DwmGetWindowAttributeRect,
-	"(hwnd, dwAttribute, pvAttribute, cbAttribute)")
+	"(hwnd, dwAttribute, pvAttribute, cbAttribute) :number")
 
 func DwmGetWindowAttributeRect(a, b, c, d Value) Value {
 	r := toRect(c)

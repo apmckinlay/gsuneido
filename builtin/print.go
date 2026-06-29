@@ -10,7 +10,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(PrintStdout, "(string)")
+var _ = builtin(PrintStdout, "(string) :void")
 
 func PrintStdout(_ *Thread, args []Value) Value {
 	s := ToStr(args[0])

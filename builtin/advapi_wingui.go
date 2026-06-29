@@ -16,7 +16,7 @@ var advapi32 = MustLoadDLL("advapi32.dll")
 
 // RegOpenKeyEx
 var regOpenKeyEx = advapi32.MustFindProc("RegOpenKeyExA").Addr()
-var _ = builtin(RegOpenKeyEx, "(hKey, lpSubKey, ulOptions, samDesired, phkResult)")
+var _ = builtin(RegOpenKeyEx, "(hKey, lpSubKey, ulOptions, samDesired, phkResult) :number")
 
 func RegOpenKeyEx(a, b, c, d, e Value) Value {
 	var result uintptr
@@ -32,7 +32,7 @@ func RegOpenKeyEx(a, b, c, d, e Value) Value {
 
 // RegCloseKey
 var regCloseKey = advapi32.MustFindProc("RegCloseKey").Addr()
-var _ = builtin(RegCloseKey, "(hKey)")
+var _ = builtin(RegCloseKey, "(hKey) :number")
 
 func RegCloseKey(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(regCloseKey,
@@ -43,7 +43,7 @@ func RegCloseKey(a Value) Value {
 // RegCreateKeyEx
 var regCreateKeyEx = advapi32.MustFindProc("RegCreateKeyExA").Addr()
 var _ = builtin(RegCreateKeyEx, "(hKey, lpSubKey, reserved/*unused*/, lpClass, "+
-	"dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition)")
+	"dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition) :number")
 
 func RegCreateKeyEx(_ *Thread, a []Value) Value {
 	var result uintptr
@@ -64,7 +64,7 @@ func RegCreateKeyEx(_ *Thread, a []Value) Value {
 // RegQueryValueEx - hard coded for 4 byte data
 var regQueryValueEx = advapi32.MustFindProc("RegQueryValueExA").Addr()
 var _ = builtin(RegQueryValueEx, "(hKey, lpValueName, lpReserved/*unused*/, "+
-	"lpType/*unused*/, lpData, lpcbData/*unused*/)")
+	"lpType/*unused*/, lpData, lpcbData/*unused*/) :number")
 
 func RegQueryValueEx(a, b, c, d, e, f Value) Value {
 	var data int32
@@ -85,7 +85,7 @@ const REG_DWORD = 4
 // RegSetValueEx - hard coded for 4 byte data
 var regSetValueEx = advapi32.MustFindProc("RegSetValueExA").Addr()
 var _ = builtin(RegSetValueEx, "(hKey, lpValueName, reserved/*unused*/, "+
-	"dwType/*unused*/, lpData, cbData/*unused*/)")
+	"dwType/*unused*/, lpData, cbData/*unused*/) :number")
 
 func RegSetValueEx(a, b, c, d, e, f Value) Value {
 	data := getInt32(e, "x")

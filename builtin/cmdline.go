@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 )
 
-var _ = builtin(Cmdline, "()")
+var _ = builtin(Cmdline, "() :string")
 
 func Cmdline() Value {
 	return SuStr(options.CmdLine)

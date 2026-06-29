@@ -9,7 +9,7 @@ import (
 
 // DefConcat must be called to make Concat available
 func DefConcat() {
-	builtin(Concat, "(s, t)")
+	builtin(Concat, "(s, t) :sequence")
 }
 
 func Concat(x, y Value) Value {

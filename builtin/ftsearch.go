@@ -34,13 +34,13 @@ func (*suFtsearch) Lookup(_ *Thread, method string) Value {
 
 var ftsearchMethods = methods("ftsearch")
 
-var _ = staticMethod(ftsearch_Create, "()")
+var _ = staticMethod(ftsearch_Create, "() :unknown")
 
 func ftsearch_Create() Value {
 	return &suFtsBuilder{b: ftsearch.NewBuilder()}
 }
 
-var _ = staticMethod(ftsearch_Load, "(data)")
+var _ = staticMethod(ftsearch_Load, "(data) :unknown")
 
 func ftsearch_Load(data Value) Value {
 	return newSuFtsIndex(ftsearch.Unpack(ToStr(data)))
@@ -52,7 +52,7 @@ func newSuFtsIndex(idx *ftsearch.Index) *suFtsIndex {
 	return &si
 }
 
-var _ = staticMethod(ftsearch_Members, "()")
+var _ = staticMethod(ftsearch_Members, "() :object")
 
 func ftsearch_Members() Value {
 	return ftsearch_members
@@ -60,7 +60,7 @@ func ftsearch_Members() Value {
 
 var ftsearch_members = methodList(ftsearchMethods)
 
-var _ = staticMethod(ftsearch_Tokens, "(text)")
+var _ = staticMethod(ftsearch_Tokens, "(text) :object")
 
 func ftsearch_Tokens(text Value) Value {
 	in := ftsearch.NewInput(ToStr(text))
@@ -96,7 +96,7 @@ func (*suFtsBuilder) Lookup(_ *Thread, method string) Value {
 
 var ftsBuilderMethods = methods("ftsBuilder")
 
-var _ = method(ftsBuilder_Add, "(id, title, text)")
+var _ = method(ftsBuilder_Add, "(id, title, text) :void")
 
 func ftsBuilder_Add(this, id, title, text Value) Value {
 	b := this.(*suFtsBuilder).b
@@ -104,7 +104,7 @@ func ftsBuilder_Add(this, id, title, text Value) Value {
 	return nil
 }
 
-var _ = method(ftsBuilder_Index, "()")
+var _ = method(ftsBuilder_Index, "() :unknown")
 
 func ftsBuilder_Index(this Value) Value {
 	b := this.(*suFtsBuilder).b
@@ -112,7 +112,7 @@ func ftsBuilder_Index(this Value) Value {
 	return newSuFtsIndex(b.ToIndex())
 }
 
-var _ = method(ftsBuilder_Pack, "()")
+var _ = method(ftsBuilder_Pack, "() :string")
 
 func ftsBuilder_Pack(this Value) Value {
 	b := this.(*suFtsBuilder).b
@@ -152,7 +152,7 @@ func (*suFtsIndex) Lookup(_ *Thread, method string) Value {
 
 var ftsIndexMethods = methods("ftsIndex")
 
-var _ = method(ftsIndex_Search, "(query, scores = false)")
+var _ = method(ftsIndex_Search, "(query, scores = false) :object")
 
 func ftsIndex_Search(this, query, scores Value) Value {
 	scors := ToBool(scores)
@@ -172,7 +172,7 @@ func ftsIndex_Search(this, query, scores Value) Value {
 	return NewSuObject(list)
 }
 
-var _ = method(ftsIndex_Update, "(id, oldTitle, oldText, newTitle, newText)")
+var _ = method(ftsIndex_Update, "(id, oldTitle, oldText, newTitle, newText) :void")
 
 func ftsIndex_Update(_ *Thread, this Value, args []Value) Value {
 	sfi := this.(*suFtsIndex)
@@ -186,14 +186,14 @@ func ftsIndex_Update(_ *Thread, this Value, args []Value) Value {
 	return nil
 }
 
-var _ = method(ftsIndex_Pack, "()")
+var _ = method(ftsIndex_Pack, "() :string")
 
 func ftsIndex_Pack(this Value) Value {
 	sfi := this.(*suFtsIndex)
 	return SuStr(sfi.get().Pack())
 }
 
-var _ = method(ftsIndex_WordInfo, "(word)")
+var _ = method(ftsIndex_WordInfo, "(word) :string")
 
 func ftsIndex_WordInfo(this, word Value) Value {
 	sfi := this.(*suFtsIndex)

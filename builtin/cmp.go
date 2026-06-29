@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(Cmp, "(x, y)")
+var _ = builtin(Cmp, "(x, y) :number")
 
 func Cmp(x, y Value) Value {
 	return IntVal(x.Compare(y))

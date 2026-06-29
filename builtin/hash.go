@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(Hash, "(value)")
+var _ = builtin(Hash, "(value) :number")
 
 func Hash(arg Value) Value {
 	return Int64Val(int64(arg.Hash()))

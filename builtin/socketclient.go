@@ -25,7 +25,7 @@ var nSocketClient atomic.Int32
 var _ = AddInfo("builtin.nSocketClient", &nSocketClient)
 
 var _ = builtin(SocketClient,
-	"(ipaddress, port, timeout=60, timeoutConnect=0, block=false)")
+	"(ipaddress, port, timeout=60, timeoutConnect=0, block=false) :unknown")
 
 func SocketClient(th *Thread, args []Value) Value {
 	guardSandbox("SocketClient")
@@ -75,7 +75,7 @@ var noDeadline time.Time
 
 var suSocketClientMethods = methods("sock")
 
-var _ = method(sock_Close, "()")
+var _ = method(sock_Close, "() :void")
 
 func sock_Close(this Value) Value {
 	c := this.(interface{ Close() })
@@ -83,7 +83,7 @@ func sock_Close(this Value) Value {
 	return nil
 }
 
-var _ = method(sock_Read, "(nbytes=false)")
+var _ = method(sock_Read, "(nbytes=false) :false|string")
 
 func sock_Read(this, arg Value) Value {
 	sc := scOpen(this)
@@ -94,7 +94,7 @@ func sock_Read(this, arg Value) Value {
 	return limitedRead("socket.Read", sc.rdr, arg)
 }
 
-var _ = method(sock_Readline, "()")
+var _ = method(sock_Readline, "() :false|string")
 
 func sock_Readline(this Value) Value {
 	sc := scOpen(this)
@@ -105,7 +105,7 @@ func sock_Readline(this Value) Value {
 	return Readline(sc.rdr, "socket.Readline: ")
 }
 
-var _ = method(sock_SetTimeout, "(seconds)")
+var _ = method(sock_SetTimeout, "(seconds) :void")
 
 func sock_SetTimeout(this, arg Value) Value {
 	sc := scOpen(this)
@@ -113,7 +113,7 @@ func sock_SetTimeout(this, arg Value) Value {
 	return nil
 }
 
-var _ = method(sock_Write, "(string)")
+var _ = method(sock_Write, "(string) :void")
 
 func sock_Write(this, arg Value) Value {
 	sc := scOpen(this)
@@ -129,7 +129,7 @@ func sock_Write(this, arg Value) Value {
 	return nil
 }
 
-var _ = method(sock_Writeline, "(string)")
+var _ = method(sock_Writeline, "(string) :void")
 
 func sock_Writeline(this, arg Value) Value {
 	sc := scOpen(this)
@@ -149,7 +149,7 @@ func sock_Writeline(this, arg Value) Value {
 	return nil
 }
 
-var _ = method(sock_CopyTo, "(dest, nbytes = false)")
+var _ = method(sock_CopyTo, "(dest, nbytes = false) :number")
 
 func sock_CopyTo(th *Thread, this Value, args []Value) Value {
 	return CopyTo(th, scOpen(this).rdr, args[0], args[1])

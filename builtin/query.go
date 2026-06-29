@@ -12,19 +12,19 @@ import (
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 )
 
-var _ = builtin(Query1, "(@args)")
+var _ = builtin(Query1, "(@args) :false|object")
 
 func Query1(th *Thread, args []Value) Value {
 	return queryOne(th, args[0], Only)
 }
 
-var _ = builtin(QueryFirst, "(@args)")
+var _ = builtin(QueryFirst, "(@args) :false|object")
 
 func QueryFirst(th *Thread, args []Value) Value {
 	return queryOne(th, args[0], Next)
 }
 
-var _ = builtin(QueryLast, "(@args)")
+var _ = builtin(QueryLast, "(@args) :false|object")
 
 func QueryLast(th *Thread, args []Value) Value {
 	return queryOne(th, args[0], Prev)
@@ -38,7 +38,7 @@ func queryOne(th *Thread, args Value, dir Dir) Value {
 	return SuRecordFromRow(row, hdr, table, nil) // no transaction
 }
 
-var _ = builtin(QueryEmptyQ, "(@args)")
+var _ = builtin(QueryEmptyQ, "(@args) :boolean")
 
 func QueryEmptyQ(th *Thread, args []Value) Value {
 	row, _, _ := th.Dbms().Get(th, args[0], Any)
@@ -92,38 +92,38 @@ func stringable(v Value) bool {
 
 var _ = exportMethods(&QueryMethods, "query")
 
-var _ = method(query_Close, "()")
+var _ = method(query_Close, "() :void")
 
 func query_Close(this Value) Value {
 	this.(ISuQueryCursor).Close()
 	return nil
 }
 
-var _ = method(query_Columns, "()")
+var _ = method(query_Columns, "() :object")
 
 func query_Columns(this Value) Value {
 	return this.(ISuQueryCursor).Columns()
 }
 
-var _ = method(query_Keys, "()")
+var _ = method(query_Keys, "() :object")
 
 func query_Keys(this Value) Value {
 	return this.(ISuQueryCursor).Keys()
 }
 
-var _ = method(query_Next, "()")
+var _ = method(query_Next, "() :false|object")
 
 func query_Next(th *Thread, this Value, _ []Value) Value {
 	return this.(*SuQuery).GetRec(th, Next)
 }
 
-var _ = method(query_Prev, "()")
+var _ = method(query_Prev, "() :false|object")
 
 func query_Prev(th *Thread, this Value, _ []Value) Value {
 	return this.(*SuQuery).GetRec(th, Prev)
 }
 
-var _ = method(query_Output, "(record)")
+var _ = method(query_Output, "(record) :void")
 
 func query_Output(th *Thread, this Value, args []Value) Value {
 	trace.Dbms.Println("Query Output", this, args[0])
@@ -131,39 +131,39 @@ func query_Output(th *Thread, this Value, args []Value) Value {
 	return nil
 }
 
-var _ = method(query_Order, "()")
+var _ = method(query_Order, "() :object")
 
 func query_Order(this Value) Value {
 	return this.(ISuQueryCursor).Order()
 }
 
-var _ = method(query_Rewind, "()")
+var _ = method(query_Rewind, "() :void")
 
 func query_Rewind(this Value) Value {
 	this.(ISuQueryCursor).Rewind()
 	return nil
 }
 
-var _ = method(query_RuleColumns, "()")
+var _ = method(query_RuleColumns, "() :object")
 
 func query_RuleColumns(this Value) Value {
 	return this.(ISuQueryCursor).RuleColumns()
 }
 
-var _ = method(query_Strategy, "(formatted = false)")
+var _ = method(query_Strategy, "(formatted = false) :string")
 
 func query_Strategy(_ *Thread, this Value, args []Value) Value {
 	formatted := ToBool(args[0])
 	return this.(ISuQueryCursor).Strategy(formatted)
 }
 
-var _ = method(query_Tree, "()")
+var _ = method(query_Tree, "() :unknown")
 
 func query_Tree(this Value) Value {
 	return this.(ISuQueryCursor).Tree()
 }
 
-var _ = builtin(formatQuery, "(query)")
+var _ = builtin(formatQuery, "(query) :string")
 
 func formatQuery(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
@@ -198,21 +198,21 @@ func (*suQueryStatic) Lookup(th *Thread, method string) Value {
 
 var queryStaticMethods = methods("sqs")
 
-var _ = staticMethod(sqs_StripSort, "(query)")
+var _ = staticMethod(sqs_StripSort, "(query) :string")
 
 func sqs_StripSort(arg Value) Value {
 	query := ToStr(arg)
 	return SuStr(qry.StripSort(query))
 }
 
-var _ = staticMethod(sqs_GetSort, "(query)")
+var _ = staticMethod(sqs_GetSort, "(query) :string")
 
 func sqs_GetSort(arg Value) Value {
 	query := ToStr(arg)
 	return SuStr(qry.GetSort(query))
 }
 
-var _ = staticMethod(sqs_Parse, "(parse)")
+var _ = staticMethod(sqs_Parse, "(parse) :unknown")
 
 func sqs_Parse(th *Thread, args []Value) Value {
 	dbms, ok := th.Dbms().(*dbms.DbmsLocal)
@@ -226,7 +226,7 @@ func sqs_Parse(th *Thread, args []Value) Value {
 	return qry.NewSuQueryNode(q)
 }
 
-var _ = staticMethod(sqs_Strategy1, "(@args)")
+var _ = staticMethod(sqs_Strategy1, "(@args) :string")
 
 func sqs_Strategy1(th *Thread, args []Value) Value {
 	_, _, s := th.Dbms().Get(th, args[0], Strat)

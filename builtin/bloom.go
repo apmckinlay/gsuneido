@@ -15,7 +15,7 @@ type suBloom struct {
 	data *bloom.Bloom
 }
 
-var _ = builtin(Bloom, "(n, p)")
+var _ = builtin(Bloom, "(n, p) :unknown")
 
 func Bloom(n, p Value) Value {
 	m, k := bloom.Calc(ToInt(n), ToDnum(p).ToFloat())
@@ -37,20 +37,20 @@ func (suBloom) Lookup(_ *Thread, method string) Value {
 
 var bloomMethods = methods("bloom")
 
-var _ = method(bloom_Add, "(value)")
+var _ = method(bloom_Add, "(value) :unknown")
 
 func bloom_Add(this, arg Value) Value {
 	this.(suBloom).data.Add(arg.Hash())
 	return this
 }
 
-var _ = method(bloom_Test, "(value)")
+var _ = method(bloom_Test, "(value) :boolean")
 
 func bloom_Test(this, arg Value) Value {
 	return SuBool(this.(suBloom).data.Test(arg.Hash()))
 }
 
-var _ = method(bloom_Size, "()")
+var _ = method(bloom_Size, "() :number")
 
 func bloom_Size(this Value) Value {
 	return IntVal(this.(suBloom).data.Size())
