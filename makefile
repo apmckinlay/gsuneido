@@ -90,9 +90,9 @@ test :
 	go test -short -vet=off -timeout 30s ./...
 	
 fulltest: build test
+	go test -run "^$$" -fuzz=FuzzRandom -fuzztime=60s ./dbms/query/
 	./gs_$(GOOS)_$(GOARCH)$(EXE) etatests.ss	
 	./gs_$(GOOS)_$(GOARCH)$(EXE) "QueryFuzz.Cmdline(60)"	
-	go test -run "^$$" -fuzz=FuzzRandom -fuzztime=60s ./dbms/query/
 
 racetest :
 	go test -race -short -count=1 ./...

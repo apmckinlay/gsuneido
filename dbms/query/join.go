@@ -34,7 +34,7 @@ type joinLike struct {
 // joinBase is common stuff for Join and LeftJoin
 type joinBase struct {
 	joinLike
-	sel2 Sels // from an incoming Select, used by Get/filter2
+	sel2        Sels // from an incoming Select, used by Get/filter2
 	qt          QueryTran
 	st          *SuTran
 	lookup      *lookupInfo
@@ -65,6 +65,8 @@ type joinApproach struct {
 	index2  []string
 	frac2   float64
 	reverse bool
+	req1    Require
+	req2    Require
 }
 
 type joinType int
@@ -332,6 +334,11 @@ type joinCost struct {
 	varcost Cost
 }
 
+type joinCost2 struct {
+	req1, req2       Require
+	fixcost, varcost Cost
+}
+
 func joinopt(src1, src2 Query, nrows func() (int, int), jt joinType,
 	mode Mode, index []string, frac float64, by []string, fixed Fixed) joinCost {
 	// always have to read all of source 1
@@ -360,6 +367,35 @@ func joinopt(src1, src2 Query, nrows func() (int, int), jt joinType,
 	return joinCost{index1: index, index2: best2.index, frac2: frac2,
 		fixcost: fixcost1 + best2.fixcost,
 		varcost: varcost1 + best2.varcost,
+	}
+}
+
+func joinopt2(src1, src2 Query, nrows func() (int, int), jt joinType,
+	mode Mode, req Require, by []string) joinCost2 {
+	fixcost1, varcost1 := Optimize2(src1, mode, req)
+	if fixcost1+varcost1 >= impossible {
+		return joinCost2{fixcost: impossible}
+	}
+	nrows1, _ := src1.Nrows()
+	nrows2, _ := src2.Nrows()
+	nlookups := req.LookupCount(nrows1)
+	var req2 Require
+	if jt.toOne() {
+		req2 = LookupReq(by, nlookups)
+	} else {
+		read2, _ := nrows()
+		// SelectFrac (not req.frac) keeps frac2 > 0 under a ReqLookup parent
+		frac2 := float32(max(1, read2)) * req.SelectFrac(nrows1) /
+			float32(max(1, nrows2))
+		req2 = GroupedReq(by, frac2, nlookups)
+	}
+	fixcost2, varcost2 := Optimize2(src2, mode, req2)
+	if fixcost2+varcost2 >= impossible {
+		return joinCost2{fixcost: impossible}
+	}
+	return joinCost2{req1: req, req2: req2,
+		fixcost: fixcost1 + fixcost2,
+		varcost: varcost1 + varcost2,
 	}
 }
 
@@ -409,6 +445,54 @@ func (jn *Join) setApproach(index []string, frac float64, approach any, tran Que
 	}
 	jn.source1 = SetApproach(jn.source1, ap.index1, frac, tran)
 	jn.source2 = SetApproach(jn.source2, ap.index2, ap.frac2, tran)
+	jn.header = jn.getHeader()
+}
+
+func (jn *Join) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	fwd := joinopt2(jn.source1, jn.source2, jn.Nrows, jn.joinType,
+		mode, req, jn.by)
+	rev := joinopt2(jn.source2, jn.source1, jn.Nrows, jn.joinType.reverse(),
+		mode, req, jn.by)
+	rev.fixcost += outOfOrder + joinRev
+	if trace.JoinOpt.On() {
+		trace.JoinOpt.Println(mode, req)
+		trace.Println("    fwd req1", fwd.req1, "req2", fwd.req2,
+			"=", fwd.fixcost, fwd.varcost)
+		trace.Println("    rev req1", rev.req1, "req2", rev.req2,
+			"=", rev.fixcost, rev.varcost)
+		trace.Println(strategy(jn, 1))
+	}
+	approach := &joinApproach{}
+	if rev.fixcost+rev.varcost < fwd.fixcost+fwd.varcost {
+		fwd = rev
+		approach.reverse = true
+	}
+	if fwd.fixcost == impossible {
+		return impossible, impossible, nil
+	}
+	approach.req1 = fwd.req1
+	approach.req2 = fwd.req2
+	return fwd.fixcost, fwd.varcost, approach
+}
+
+func (jn *Join) setApproach2(req Require, approach any, tran QueryTran) {
+	ap := approach.(*joinApproach)
+	if ap.reverse {
+		jn.source1, jn.source2 = jn.source2, jn.source1
+		jn.joinType = jn.joinType.reverse()
+	}
+	switch jn.joinType {
+	case one_one:
+		join11Count.Add(1)
+	case one_n:
+		join1nCount.Add(1)
+	case n_one:
+		joinn1Count.Add(1)
+	case n_n:
+		joinnnCount.Add(1)
+	}
+	jn.source1 = SetApproach2(jn.source1, ap.req1, tran)
+	jn.source2 = SetApproach2(jn.source2, ap.req2, tran)
 	jn.header = jn.getHeader()
 }
 
@@ -759,6 +843,34 @@ func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran
 	}
 	lj.source1 = SetApproach(lj.source1, ap.index1, frac, tran)
 	lj.source2 = SetApproach(lj.source2, ap.index2, ap.frac2, tran)
+	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
+	lj.header = lj.getHeader()
+}
+
+func (lj *LeftJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	jc := joinopt2(lj.source1, lj.source2, lj.Nrows, lj.joinType,
+		mode, req, lj.by)
+	if jc.fixcost == impossible {
+		return impossible, impossible, nil
+	}
+	return jc.fixcost, jc.varcost,
+		&joinApproach{req1: jc.req1, req2: jc.req2}
+}
+
+func (lj *LeftJoin) setApproach2(req Require, approach any, tran QueryTran) {
+	ap := approach.(*joinApproach)
+	switch lj.joinType {
+	case one_one:
+		leftJoin11Count.Add(1)
+	case one_n:
+		leftJoin1nCount.Add(1)
+	case n_one:
+		leftJoinn1Count.Add(1)
+	case n_n:
+		leftJoinnnCount.Add(1)
+	}
+	lj.source1 = SetApproach2(lj.source1, ap.req1, tran)
+	lj.source2 = SetApproach2(lj.source2, ap.req2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 	lj.header = lj.getHeader()
 }

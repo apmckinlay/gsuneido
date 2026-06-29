@@ -9,7 +9,6 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/set"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // Compatible is shared by Intersect, Minus, and Union
@@ -18,6 +17,7 @@ type Compatible struct {
 	st          *SuTran
 	disjoint    string
 	allCols     []string
+	src1Only    []string
 	keyIndex    []string
 	lookupCache lookupCache
 }
@@ -34,11 +34,11 @@ var _ = AddInfo("query.compatible.cacheMisses", &compatCacheMisses)
 func newCompatible(src1, src2 Query) *Compatible {
 	c := &Compatible{}
 	c.source1, c.source2 = src1, src2
-	c.allCols = set.Union(c.source1.Columns(), c.source2.Columns())
-	fixed1 := src1.Fixed()
-	fixed2 := src2.Fixed()
 	cols1 := src1.Columns()
 	cols2 := src2.Columns()
+	c.allCols = set.Union(cols1, cols2)
+	fixed1 := src1.Fixed()
+	fixed2 := src2.Fixed()
 	for _, f1 := range fixed1 {
 		for _, f2 := range fixed2 {
 			if f1.col == f2.col && set.Disjoint(f1.values, f2.values) {
@@ -64,13 +64,6 @@ done:
 	return c
 }
 
-func (c *Compatible) String(s string) string {
-	if c.keyIndex != nil {
-		s += str.Join("(,)", c.keyIndex)
-	}
-	return s
-}
-
 func (c *Compatible) SetTran(t QueryTran) {
 	c.st = MakeSuTran(t)
 	c.lookupCache.Reset()
@@ -78,18 +71,25 @@ func (c *Compatible) SetTran(t QueryTran) {
 }
 
 // source2Has returns true if a row from source exists in source2.
-// It does Lookup on source2.
+// It does Lookup on source2 using all source2 columns.
+// Since the lookup verifies all source2 columns, we only need to check
+// that source1-only columns (not in source2) are "" in the source1 row.
 func (c *Compatible) source2Has(th *Thread, row Row) bool {
 	if c.disjoint != "" {
 		return false
 	}
+	hdr1 := c.source1.Header()
+	for _, col := range c.src1Only {
+		if row.GetRawVal(hdr1, col, th, c.st) != "" {
+			return false
+		}
+	}
 	sels := make(Sels, len(c.keyIndex))
 	for i, col := range c.keyIndex {
 		sels[i].col = col
-		sels[i].val = row.GetRawVal(c.source1.Header(), col, th, c.st)
+		sels[i].val = row.GetRawVal(hdr1, col, th, c.st)
 	}
-	row2 := c.lookupCache.Lookup(th, c.source2, sels, c.st)
-	return row2 != nil && c.equal(th, row, row2)
+	return c.lookupCache.Lookup(th, c.source2, sels, c.st) != nil
 }
 
 func (c *Compatible) equal(th *Thread, row1, row2 Row) bool {

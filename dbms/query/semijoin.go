@@ -22,6 +22,7 @@ type SemiJoin struct {
 type semiJoinApproach struct {
 	index2 []string
 	frac2  float64
+	req2   Require
 }
 
 func NewSemiJoin(src1, src2 Query, by []string, t QueryTran) *SemiJoin {
@@ -117,6 +118,36 @@ func (sj *SemiJoin) setApproach(index []string, frac float64, approach any, tran
 	ap := approach.(*semiJoinApproach)
 	sj.source1 = SetApproach(sj.source1, index, frac, tran)
 	sj.source2 = SetApproach(sj.source2, ap.index2, ap.frac2, tran)
+	sj.header = sj.source1.Header()
+}
+
+func (sj *SemiJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	fixcost1, varcost1 := Optimize2(sj.source1, mode, req)
+	nrows1, _ := sj.source1.Nrows()
+	nrows2, _ := sj.source2.Nrows()
+	nlookups := req.LookupCount(nrows1)
+	// Floor nlookups so a degenerate parent (empty/tiny source1 yielding
+	// LookupCount==0) still builds a valid ReqGrouped. GroupedReq can't floor
+	// frac itself (frac==0 is how LookupReq is distinguished), so the caller
+	// must keep frac2 > 0. The 1-seek overestimate only matters in a vacuous
+	// case where source2 is never accessed anyway.
+	if nlookups <= 0 {
+		nlookups = 1
+	}
+	frac2 := min(float32(1), float32(nlookups)/float32(max(1, nrows2)))
+	req2 := GroupedReq(sj.by, frac2, nlookups)
+	fixcost2, varcost2 := Optimize2(sj.source2, mode, req2)
+	if fixcost2+varcost2 >= impossible {
+		return impossible, impossible, nil
+	}
+	return fixcost1 + fixcost2, varcost1 + varcost2,
+		&semiJoinApproach{req2: req2}
+}
+
+func (sj *SemiJoin) setApproach2(req Require, approach any, tran QueryTran) {
+	ap := approach.(*semiJoinApproach)
+	sj.source1 = SetApproach2(sj.source1, req, tran)
+	sj.source2 = SetApproach2(sj.source2, ap.req2, tran)
 	sj.header = sj.source1.Header()
 }
 

@@ -22,9 +22,10 @@ type Intersect struct {
 }
 
 type intersectApproach struct {
-	keyIndex []string
-	frac2    float64
-	reverse  bool
+	keyIndex   []string
+	frac2      float64
+	reverse    bool
+	req1, req2 Require
 }
 
 func NewIntersect(src1, src2 Query, t QueryTran) *Intersect {
@@ -46,7 +47,7 @@ func newIntersect(src1, src2 Query, t QueryTran, prevFixed1, prevFixed2 Fixed) *
 }
 
 func (it *Intersect) String() string {
-	return it.Compatible.String("intersect")
+	return "intersect"
 }
 
 func (it *Intersect) getHeader() *Header {
@@ -170,6 +171,48 @@ func (it *Intersect) setApproach(index []string, frac float64, approach any,
 	it.source1 = SetApproach(it.source1, index, frac, tran)
 	it.source2 = SetApproach(it.source2, it.keyIndex, ap.frac2, tran)
 	it.header = it.getHeader()
+	it.src1Only = set.Difference(it.source1.Columns(), it.source2.Columns())
+}
+
+func (it *Intersect) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	assert.That(it.disjoint == "") // eliminated by Transform
+	fixcost1, varcost1, ap1 := it.cost2(mode, req, false)
+	fixcost2, varcost2, ap2 := it.cost2(mode, req, true)
+	fixcost2 += outOfOrder
+	if fixcost1+varcost1 < fixcost2+varcost2 {
+		return fixcost1, varcost1, ap1
+	}
+	return fixcost2, varcost2, ap2
+}
+
+func (it *Intersect) cost2(mode Mode, req Require, reverse bool) (Cost, Cost, *intersectApproach) {
+	// iterate source and lookup on source2
+	src1, src2 := it.source1, it.source2
+	if reverse {
+		src1, src2 = src2, src1
+	}
+	fixcost1, varcost1 := Optimize2(src1, mode, req)
+	nrows1, _ := src1.Nrows()
+	nlookups := req.LookupCount(nrows1)
+	req2 := LookupReq(src2.Columns(), nlookups)
+	fc2, vc2 := Optimize2(src2, mode, req2)
+	if fc2+vc2 >= impossible {
+		return impossible, impossible, nil
+	}
+	return fixcost1 + fc2, varcost1 + vc2,
+		&intersectApproach{keyIndex: req2.cols, req1: req, req2: req2, reverse: reverse}
+}
+
+func (it *Intersect) setApproach2(req Require, approach any, tran QueryTran) {
+	ap := approach.(*intersectApproach)
+	it.keyIndex = ap.keyIndex
+	if ap.reverse {
+		it.source1, it.source2 = it.source2, it.source1
+	}
+	it.source1 = SetApproach2(it.source1, ap.req1, tran)
+	it.source2 = SetApproach2(it.source2, ap.req2, tran)
+	it.header = it.getHeader()
+	it.src1Only = set.Difference(it.source1.Columns(), it.source2.Columns())
 }
 
 func (it *Intersect) Get(th *Thread, dir Dir) Row {

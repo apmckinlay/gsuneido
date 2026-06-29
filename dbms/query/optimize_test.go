@@ -86,23 +86,23 @@ func TestOptimize(t *testing.T) {
 		"table^(a) extend x = F() tempindex(x)")
 
 	test("table minus table",
-		"table^(a) minus(a) table^(a)")
+		"table^(a) minus table^(a)")
 	test("(table extend x = 1) minus hist",
 		"table^(a) extend x = 1")
 
 	test("hist intersect hist2",
-		"hist^(date,item,id) intersect(date) hist2^(date)")
+		"hist^(date,item,id) intersect hist2^(date)")
 	test("hist2 intersect hist",
-		"hist^(date,item,id) intersect(date) hist2^(date)")
+		"hist^(date,item,id) intersect hist2^(date)")
 
 	test("hist union hist2",
-		"hist^(date,item,id) union-lookup(date) hist2^(date)")
+		"hist^(date,item,id) union-lookup hist2^(date)")
 	test("hist2 union hist",
-		"hist^(date,item,id) union-lookup(date) hist2^(date)")
+		"hist^(date,item,id) union-lookup hist2^(date)")
 	test("hist union hist sort date",
-		"hist^(date,item,id) union-merge(date,item,id) hist^(date,item,id)")
+		"hist^(date,item,id) union-merge hist^(date,item,id)")
 	test("table union table",
-		"table^(a) union-merge(a) table^(a)")
+		"table^(a) union-merge table^(a)")
 	test("(table where a is 1) union (table where a is 2)",
 		"table^(a) where*1 a is 1 "+
 			"union-disjoint(a) (table^(a) where*1 a is 2)")
@@ -186,7 +186,7 @@ func TestOptimize(t *testing.T) {
 		"alias^(id) join 1:1 by(id) customer^(id)")
 	test("(inven join trans) union (inven join trans)",
 		"(trans^(date,item,id) join n:1 by(item) (inven^(item) tempindex(item))) "+
-			"union-merge(date,item,id) "+
+			"union-merge "+
 			"(trans^(date,item,id) join n:1 by(item) (inven^(item) tempindex(item)))")
 	test("task join co join cus",
 		"(task^(tnum) join 1:1 by(tnum) co^(tnum)) "+
@@ -195,10 +195,10 @@ func TestOptimize(t *testing.T) {
 		"inven^(item) join 1:n by(item) trans^(item,date,id)")
 
 	test("(trans union trans) join (inven union inven)",
-		"(trans^(date,item,id) union-merge(date,item,id) trans^(date,item,id)) "+
+		"(trans^(date,item,id) union-merge trans^(date,item,id)) "+
 			"join n:n by(item) "+
 			"(inven^(item) tempindex(item) "+
-			"union-merge(item) (inven^(item) tempindex(item)))")
+			"union-merge (inven^(item) tempindex(item)))")
 
 	test("inven leftjoin trans",
 		"inven^(item) leftjoin 1:n by(item) trans^(item,date,id)")
@@ -207,12 +207,12 @@ func TestOptimize(t *testing.T) {
 	test("customer leftjoin hist2 sort date",
 		"(customer^(id) leftjoin 1:n by(id) hist2^(id,date)) tempindex(date)")
 	test("customer leftjoin alias",
-		"customer^(id) leftjoin 1:1 by(id) alias^(id)")
+		"customer^(id) leftjoin 1:1 by(id) (alias^(id) tempindex(id))")
 
 	test("inven semijoin trans",
 		"inven^(item) semijoin by(item) trans^(item,date,id)")
 	test("customer semijoin alias",
-		"customer^(id) semijoin by(id) alias^(id)")
+		"customer^(id) semijoin by(id) (alias^(id) tempindex(id))")
 
 	test("hist2 where date > 1 sort id",
 		"hist2^(id,date) where date > 1")
@@ -239,12 +239,12 @@ func TestOptimize(t *testing.T) {
 
 	mode = CursorMode
 	test("(trans union trans) join (inven union inven)",
-		"(trans^(date,item,id) union-merge(date,item,id) trans^(date,item,id)) "+
+		"(trans^(date,item,id) union-merge trans^(date,item,id)) "+
 			"join n:n by(item) "+
-			"(inven^(item) union-merge(item) inven^(item))")
+			"(inven^(item) union-merge inven^(item))")
 	test("(inven join trans) union (inven join trans)",
-		"(inven^(item) join 1:n by(item) trans^(item,date,id)) "+
-			"union-lookup(date,item,id) "+
+		"(trans^(date,item,id) join n:1 by(item) inven^(item)) "+
+			"union-merge "+
 			"(trans^(date,item,id) join n:1 by(item) inven^(item))")
 	test("trans join customer",
 		"trans^(date,item,id) join n:1 by(id) customer^(id)")
@@ -253,4 +253,20 @@ func TestOptimize(t *testing.T) {
 			"join n:1 by(id) customer^(id)")
 	assert.T(t).This(func() { test("table rename b to bb sort c", "") }).
 		Panics("invalid query")
+}
+
+// TestOptimize2FastSingleLookup verifies that a ReqLookup reaching a fastSingle
+// node does not panic. The top-level optimize2 guard must normalize the req to
+// a valid ReqUnordered (clearing nlookups, since Use() asserts nlookups==0 when
+// cols is empty). A singleton trivially satisfies any require.
+func TestOptimize2FastSingleLookup(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *core.SuTran { return nil }
+	q := ParseQuery("customer where id is 5", testTran{}, nil)
+	q = q.Transform()
+	assert.T(t).That(q.fastSingle())
+	// would panic at optTempIndex2's req.Use() before the guard cleared nlookups
+	fixcost, varcost := Optimize2(q, ReadMode, LookupReq([]string{"id"}, 5))
+	assert.T(t).True(fixcost+varcost < impossible)
+	q = SetApproach2(q, LookupReq([]string{"id"}, 5), testTran{})
+	_ = q
 }

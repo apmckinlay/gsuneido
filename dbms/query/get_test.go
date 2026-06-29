@@ -295,7 +295,7 @@ func TestQueryGet(t *testing.T) {
 		'saskatoon'	'a'	'axon'	'askatoon'
 		'saskatoon'	'i'	'intercon'	'askatoon'`)
 	test("trans minus hist sort id, cost",
-		"(trans^(date,item,id) minus(date,item,id) hist^(date,item,id)) tempindex(id,cost)",
+		"(trans^(date,item,id) minus hist^(date,item,id)) tempindex(id,cost)",
 		`cost	date	id	item
 		150	970201	'c'	'eraser'
 		200	970101	'c'	'mouse'
@@ -370,60 +370,60 @@ func TestQueryGet(t *testing.T) {
 
 	// minus
 	test("trans minus trans",
-		"trans^(date,item,id) minus(date,item,id) trans^(date,item,id)",
+		"trans^(date,item,id) minus trans^(date,item,id)",
 		`cost	date	id	item`)
 	test("hist minus hist2",
-		"hist^(date,item,id) minus(date) hist2^(date)",
+		"hist^(date,item,id) minus hist2^(date)",
 		`cost	date	id	item
 		200	970101	'e'	'disk'
 		200	970102	'c'	'mouse'`)
 	test("trans minus hist",
-		"trans^(date,item,id) minus(date,item,id) hist^(date,item,id)",
+		"trans^(date,item,id) minus hist^(date,item,id)",
 		`cost	date	id	item
 		150	970201	'c'	'eraser'
 		200	960204	'e'	'mouse'
 		200	970101	'c'	'mouse'`)
 	test("trans minus hist sort date",
-		"trans^(date,item,id) minus(date,item,id) hist^(date,item,id)",
+		"trans^(date,item,id) minus hist^(date,item,id)",
 		`cost	date	id	item
 		200	960204	'e'	'mouse'
 		200	970101	'c'	'mouse'
 		150	970201	'c'	'eraser'`)
 	test("(trans minus trans) where item = 0",
-		"trans^(date,item,id) where item is 0 minus(date,item,id) "+
+		"trans^(date,item,id) where item is 0 minus "+
 			"(trans^(date,item,id) where item is 0)",
 		`cost	date	id	item`)
 	test("inven minus (inven where item = 'mouse')",
-		"inven^(item) minus() (inven^(item) where*1 item is 'mouse')",
+		"inven^(item) minus (inven^(item) where*1 item is 'mouse')",
 		`item		qty
 		'disk'		5
 		'pencil'	7`)
 
 	// intersect
 	test("trans intersect trans",
-		"trans^(date,item,id) intersect(date,item,id) trans^(date,item,id)",
+		"trans^(date,item,id) intersect trans^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		150	970201	'c'	'eraser'
 		200	960204	'e'	'mouse'
 		200	970101	'c'	'mouse'`)
 	test("trans intersect hist",
-		"trans^(date,item,id) intersect(date,item,id) hist^(date,item,id)",
+		"trans^(date,item,id) intersect hist^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'`)
 	test("hist intersect hist2",
-		"hist2^(date) intersect(date,item,id) hist^(date,item,id)",
+		"hist2^(date) intersect hist^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		300	970103	'e'	'pencil'`)
 	test("(hist intersect hist2) where cost = 100",
-		"hist2^(date) where cost is 100 intersect(date,item,id) (hist^(date,item,id) where cost is 100)",
+		"hist2^(date) where cost is 100 intersect (hist^(date,item,id) where cost is 100)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'`)
 
 	// union
 	test("hist2 union hist",
-		"hist2^(date) union-lookup(date,item,id) hist^(date,item,id)",
+		"hist2^(date) union-lookup hist^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		200	970101	'e'	'disk'
@@ -431,7 +431,7 @@ func TestQueryGet(t *testing.T) {
 		200	970102	'e'	'disk'
 		300	970103	'e'	'pencil'`)
 	test("hist2 union trans",
-		"hist2^(date) union-lookup(date,item,id) trans^(date,item,id)",
+		"hist2^(date) union-lookup trans^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		150	970201	'c'	'eraser'
@@ -440,12 +440,12 @@ func TestQueryGet(t *testing.T) {
 		200	970102	'e'	'disk'
 		300	970103	'e'	'pencil'`)
 	test("alias union alias",
-		"alias^(id) union-merge(id) alias^(id)",
+		"alias^(id) union-merge alias^(id)",
 		`id name2
         'a'	'abc'
 		'c'	'trical'`)
 	test("trans union hist",
-		"trans^(date,item,id) union-merge(date,item,id) hist^(date,item,id)",
+		"trans^(date,item,id) union-merge hist^(date,item,id)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
 		150	970201	'c'	'eraser'
@@ -455,7 +455,7 @@ func TestQueryGet(t *testing.T) {
 		200	970102	'c'	'mouse'
 		300	970103	'e'	'pencil'`)
 	test("trans union trans sort id,cost",
-		"(trans^(date,item,id) union-merge(date,item,id) "+
+		"(trans^(date,item,id) union-merge "+
 			"trans^(date,item,id)) tempindex(id,cost)",
 		`cost	date	id	item
 		100	970101	'a'	'disk'
@@ -463,7 +463,7 @@ func TestQueryGet(t *testing.T) {
 		200	970101	'c'	'mouse'
 		200	960204	'e'	'mouse'`)
 	test("(hist2 rename cost to amt) union (trans rename cost to amt)",
-		"hist2^(date) rename cost to amt union-lookup(date,item,id) "+
+		"hist2^(date) rename cost to amt union-lookup "+
 			"(trans^(date,item,id) rename cost to amt)",
 		`amt	date	id	item
 		100	970101	'a'	'disk'
@@ -473,7 +473,7 @@ func TestQueryGet(t *testing.T) {
 		200	970102	'e'	'disk'
 		300	970103	'e'	'pencil'`)
 	test("(hist2 extend x = 1) union (trans extend x = 1)",
-		"hist2^(date) extend x = 1 union-lookup(date,item,id) "+
+		"hist2^(date) extend x = 1 union-lookup "+
 			"(trans^(date,item,id) extend x = 1)",
 		`cost	date	id	item	x
 		100	970101	'a'	'disk'	1
@@ -484,28 +484,28 @@ func TestQueryGet(t *testing.T) {
 		300	970103	'e'	'pencil'	1`)
 	test("(co where tnum = 100 remove signed) union "+
 		"(co where tnum = 100 remove signed)",
-		"co^(tnum) where*1 tnum is 100 project-copy tnum union-merge() "+
+		"co^(tnum) where*1 tnum is 100 project-copy tnum union-merge "+
 			"(co^(tnum) where*1 tnum is 100 project-copy tnum)",
 		`tnum
         100`)
 	test("(co where tnum = 100 remove tnum) union "+
 		"(co where tnum = 100 remove tnum)",
-		"co^(tnum) where*1 tnum is 100 project-copy signed union-merge() "+
+		"co^(tnum) where*1 tnum is 100 project-copy signed union-merge "+
 			"(co^(tnum) where*1 tnum is 100 project-copy signed)",
 		`signed
         990101`)
 	test("((co where tnum = 100) union (co where tnum = 102)) union "+
 		"(co where tnum = 100)",
-		"co^(tnum) where*1 tnum is 100 union-lookup(tnum) "+
-			"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum)-merge(tnum) "+
-			"(co^(tnum) where*1 tnum is 102))",
+		"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum) "+
+			"(co^(tnum) where*1 tnum is 102)) "+
+			"union-lookup (co^(tnum) where*1 tnum is 100)",
 		`signed	tnum
 		990101	100
 		990102	102`)
 	test("(((co where tnum = 100) union (co where tnum = 102)) remove tnum)"+
 		" union "+
 		"(((co where tnum = 104) union (co where tnum = 106)) remove tnum)",
-		"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum)-merge(signed) (co^(tnum) where*1 tnum is 102)) project-seq signed union-merge(signed) ((co^(tnum) where*1 tnum is 104 union-disjoint(tnum)-merge(signed) (co^(tnum) where*1 tnum is 106)) project-seq signed)",
+		"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum)-merge (co^(tnum) where*1 tnum is 102)) project-seq signed union-merge ((co^(tnum) where*1 tnum is 104 union-disjoint(tnum)-merge (co^(tnum) where*1 tnum is 106)) project-seq signed)",
 		`signed
         990101
         990102
@@ -514,7 +514,7 @@ func TestQueryGet(t *testing.T) {
 	test(`((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))
 		union
 		((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))`,
-		"(co^(tnum) where*1 tnum is 104 project-copy signed union-merge(signed) (co^(tnum) where*1 tnum is 106 project-copy signed)) union-merge(signed) (co^(tnum) where*1 tnum is 104 project-copy signed union-merge(signed) (co^(tnum) where*1 tnum is 106 project-copy signed))",
+		"(co^(tnum) where*1 tnum is 104 project-copy signed union-merge (co^(tnum) where*1 tnum is 106 project-copy signed)) union-merge (co^(tnum) where*1 tnum is 104 project-copy signed union-merge (co^(tnum) where*1 tnum is 106 project-copy signed))",
 		`signed
         990103
         990104`)
@@ -569,7 +569,7 @@ func TestQueryGet(t *testing.T) {
 		'vancouver'	200	970102	'e'	'disk'	'emerald'
 		'vancouver'	300	970103	'e'	'pencil'	'emerald'`)
 	test("hist join customer",
-		"hist^(date,item,id) join n:1 by(id) customer^(id)",
+		"hist^(date,item,id) join n:1 by(id) (customer^(id) tempindex(id))",
 		`city	cost	date	id	item	name
 		'calgary'	200	970102	'c'	'mouse'	'calac'
 		'saskatoon'	100	970101	'a'	'disk'	'axon'
@@ -751,21 +751,21 @@ func TestQueryGet(t *testing.T) {
 
 	// tempindex
 	test("tables intersect columns",
-		"columns intersect(table) (tables tempindex(table))",
+		"columns intersect (tables tempindex(table))",
 		`table`)
 	test("tables minus tables",
-		"tables minus(table) (tables tempindex(table))",
+		"tables minus (tables tempindex(table))",
 		`nrows	table	totalsize`)
 
 	test("(customer project id) union (customer project id)",
-		"customer^(id) project-copy id union-merge(id) (customer^(id) project-copy id)",
+		"customer^(id) project-copy id union-merge (customer^(id) project-copy id)",
 		`id
 		'a'
 		'c'
 		'e'
 		'i'`)
 	test("(trans project item, date) union (trans project date, item)",
-		"trans^(item,date,id) project-seq item, date union-merge(item,date) "+
+		"trans^(item,date,id) project-seq item, date union-merge "+
 			"(trans^(item,date,id) project-seq date, item)",
 		`date	item
 		960204	'mouse'
@@ -774,7 +774,7 @@ func TestQueryGet(t *testing.T) {
 		970201	'eraser'`)
 
 	test("(customer summarize id, count) union (customer summarize id, count)",
-		"customer^(id) summarize-seq id, count union-merge(id) "+
+		"customer^(id) summarize-seq id, count union-lookup "+
 			"(customer^(id) summarize-seq id, count)",
 		`count	id
 		1	'a'
@@ -783,7 +783,7 @@ func TestQueryGet(t *testing.T) {
 		1	'i'`)
 	test("(trans summarize item, date, count) union (trans summarize date,item, count)",
 		"trans^(item,date,id) summarize-seq item, date, count "+
-			"union-merge(item,date) "+
+			"union-merge "+
 			"(trans^(item,date,id) summarize-seq date, item, count)",
 		`count	date	item
 		1	960204	'mouse'
@@ -792,14 +792,14 @@ func TestQueryGet(t *testing.T) {
 		1	970201	'eraser'`)
 
 	test("(customer project id) join (hist project id)",
-		"hist^(date,item,id) project-map id join 1:1 by(id) (customer^(id) project-copy id)",
+		"hist^(date,item,id) project-map id join 1:1 by(id) (customer^(id) tempindex(id) project-copy id)",
 		`id
 		'a'
 		'c'
 		'e'`)
 	test("(customer summarize id,count) join (hist summarize id,count) sort id",
 		"(hist^(date,item,id) summarize-map id, count join 1:1 by(id,count) "+
-			"(customer^(id) summarize-seq id, count tempindex(id,count))) tempindex(id)",
+			"(customer^(id) summarize-seq id, count)) tempindex(id)",
 		`count	id
 		1	'a'
 		1	'c'`)

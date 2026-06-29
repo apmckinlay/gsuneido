@@ -134,14 +134,10 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 // hasKey returns whether cols contains a key
 // taking fixed into consideration
 func hasKey(cols []string, keys [][]string, fixed Fixed) bool {
-outer:
 	for _, key := range keys {
-		for _, k := range key {
-			if !fixed.Single(k) && !slices.Contains(cols, k) {
-				continue outer
-			}
+		if indexCovered(key, cols, fixed) {
+			return true
 		}
-		return true
 	}
 	return false
 }
@@ -491,8 +487,6 @@ func (p *Project) setApproach(_ []string, frac float64, approach any, tran Query
 	p.header = p.getHeader()
 }
 
-var _ optReq = (*Project)(nil)
-
 func (p *Project) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	if p.unique {
 		// no dedup needed — pass req through unchanged
@@ -511,9 +505,10 @@ func (p *Project) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 	fixed := p.source.Fixed()
 	nColsUnfixed := countUnfixed(p.columns, fixed)
+	nrows, _ := p.Nrows()
 	switch req.Use() {
 	case ReqUnordered:
-		srcReq := GroupedReq(p.columns, req.frac, 1)
+		srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), 1)
 		fixcost, varcost := Optimize2(p.source, mode, srcReq)
 		return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 	case ReqOrdered:
@@ -524,7 +519,7 @@ func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 		return impossible, impossible, nil
 	case ReqGrouped, ReqLookup:
 		if set.Equal(req.cols, p.columns) {
-			srcReq := GroupedReq(p.columns, req.frac, req.nlookups)
+			srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), req.nlookups)
 			fixcost, varcost := Optimize2(p.source, mode, srcReq)
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 		}
@@ -532,19 +527,18 @@ func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 		// this can't be handled with a single Require
 		// so we need to search here
 		nColsUnfixedReq := countUnfixed(req.cols, fixed)
-		best := newBestIndex()
+		best := newBestReq()
 		for _, idx := range p.source.Indexes() {
 			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
 				grouped(idx, p.columns, nColsUnfixed, fixed) {
-				srcReq := GroupedReq(idx, req.frac, req.nlookups)
+				srcReq := GroupedReq(idx, req.SelectFrac(nrows), req.nlookups)
 				f, v := Optimize2(p.source, mode, srcReq)
-				best.update(idx, f, v)
+				best.update(srcReq, f, v)
 			}
 		}
-		if best.index != nil {
-			srcReq := GroupedReq(best.index, req.frac, req.nlookups)
+		if best.found() {
 			return best.fixcost, best.varcost,
-				&projectApproach{strat: projSeq, req: srcReq}
+				&projectApproach{strat: projSeq, req: best.req}
 		}
 		return impossible, impossible, nil
 	}
@@ -560,7 +554,7 @@ func (p *Project) mapCost2(mode Mode, req Require) (Cost, Cost, any) {
 		return impossible, impossible, nil
 	}
 	if req.Use() == ReqLookup {
-		req = GroupedReq(req.cols, req.frac, req.nlookups)
+		req = GroupedReq(req.cols, req.SelectFrac(nrows), req.nlookups)
 	}
 	srcFixcost, srcVarcost := Optimize2(p.source, mode, req)
 	mapBuild := Cost(float64(nrows) * float64(req.frac) * 20)

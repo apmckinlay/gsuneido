@@ -4,11 +4,14 @@
 package query
 
 import (
+	"fmt"
 	"math/rand"
 	"strings"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -351,4 +354,92 @@ func TestUnion_StrictCompareDb(t *testing.T) {
 	queryAll(db.Database, "(one union two) where Number?(i) where i > 0")
 
 	queryAll(db.Database, "(one union two) where Number?(i) and i > 0")
+}
+
+func TestUnionDuplicateBug(t *testing.T) {
+	assert.TestOnlyIndividually(t)
+
+	// QueryFuzz seed: 6218445892
+	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
+	if err != nil {
+		panic(err.Error())
+	}
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	tran := db.NewReadTran()
+	const qstr = `(((cus union (cus union cus)) union (cus union (cus union ((cus extend x1 = "1") union cus)))) where c2 <= "77")`
+
+	minimal := []string{
+		`((cus union (cus union cus)) union (cus union (cus union ((cus extend x1 = "1") union cus)))) where c2 <= "77"`,
+	}
+	for _, mq := range minimal {
+		q := ParseQuery(mq, tran, nil)
+		q = q.Transform()
+		fmt.Println("=== transformed ===")
+		fmt.Println(format(0, q, 0))
+		req := UnorderedReq(1)
+		// capture the top union's chosen approach
+		top := q.(*Union)
+		fc, vc, app := top.optimize2(ReadMode, req)
+		fmt.Printf("top union optimize2: cost=%d+%d app=%T %+v\n", fc, vc, app, app)
+		Optimize2(q, ReadMode, req)
+		q = SetApproach2(q, req, tran)
+		fmt.Println("=== optimized ===")
+		fmt.Println(format(0, q, 0))
+		walkUnion(t, q, 0)
+		hdr := q.Header()
+		seen := map[string]int{}
+		th := &Thread{}
+		var n, dups int
+		for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+			n++
+			s := row2str(hdr, row)
+			if seen[s] > 0 {
+				dups++
+			}
+			seen[s]++
+		}
+		fmt.Printf("rows=%d unique=%d dups=%d\n", n, len(seen), dups)
+		for s, c := range seen {
+			if c > 1 {
+				fmt.Printf("  DUP(%d): %s\n", c, s)
+			}
+		}
+	}
+	// V1 for comparison
+	q1 := ParseQuery(minimal[0], tran, nil)
+	q1 = q1.Transform()
+	Optimize(q1, ReadMode, nil, 1)
+	q1 = SetApproach(q1, nil, 1, tran)
+	hdr1 := q1.Header()
+	seen1 := map[string]int{}
+	th1 := &Thread{}
+	var n1, dups1 int
+	for row := q1.Get(th1, Next); row != nil; row = q1.Get(th1, Next) {
+		n1++
+		s := row2str(hdr1, row)
+		if seen1[s] > 0 {
+			dups1++
+		}
+		seen1[s]++
+	}
+	fmt.Printf("V1 rows=%d unique=%d dups=%d\n", n1, len(seen1), dups1)
+	fmt.Println("=== V1 plan ===")
+	fmt.Println(format(0, q1, 0))
+	walkUnion(t, q1, 0)
+}
+
+func walkUnion(t *testing.T, q Query, depth int) {
+	if u, ok := q.(*Union); ok {
+		fmt.Printf("%*sunion strat=%v keyIndex=%v disjoint=%q\n", depth*2, "", u.strat, u.keyIndex, u.disjoint)
+		fmt.Printf("%*s  allCols=%v\n", depth*2, "", u.allCols)
+		fmt.Printf("%*s  keys=%v\n", depth*2, "", u.Keys())
+		fmt.Printf("%*s  src1 cols=%v keys=%v\n", depth*2, "", u.source1.Columns(), u.source1.Keys())
+		fmt.Printf("%*s  src2 cols=%v keys=%v\n", depth*2, "", u.source2.Columns(), u.source2.Keys())
+	}
+	if q1, ok := q.(q1i); ok {
+		walkUnion(t, q1.Source(), depth+1)
+	}
+	if q2, ok := q.(q2i); ok {
+		walkUnion(t, q2.Source2(), depth+1)
+	}
 }

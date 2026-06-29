@@ -58,10 +58,6 @@ func (v *View) String() string {
 	return v.name + " /*view*/"
 }
 
-func (v *View) setApproach(index []string, frac float64, approach any, tran QueryTran) {
-	panic(assert.ShouldNotReachHere())
-}
-
 func (*View) Simple(*Thread) []Row {
 	panic(assert.ShouldNotReachHere())
 }

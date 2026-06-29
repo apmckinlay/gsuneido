@@ -101,6 +101,34 @@ func (t *Times) setApproach(index []string, frac float64, approach any, tran Que
 	t.header = t.getHeader()
 }
 
+func (t *Times) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	opt := func(src1, src2 Query) (Cost, Cost) {
+		nrows1, _ := src1.Nrows()
+		fixcost1, varcost1 := Optimize2(src1, mode, req)
+		fixcost2, varcost2 := Optimize2(src2, mode,
+			UnorderedReq(req.frac*float32(max(1, nrows1))))
+		return fixcost1 + fixcost2, varcost1 + varcost2
+	}
+	fixFwd, varFwd := opt(t.source1, t.source2)
+	fixRev, varRev := opt(t.source2, t.source1)
+	fixRev += outOfOrder
+	if fixFwd+varFwd < fixRev+varRev {
+		return fixFwd, varFwd, false
+	}
+	return fixRev, varRev, true
+}
+
+func (t *Times) setApproach2(req Require, approach any, tran QueryTran) {
+	if approach.(bool) {
+		t.source1, t.source2 = t.source2, t.source1
+	}
+	t.source1 = SetApproach2(t.source1, req, tran)
+	nrows1, _ := t.source1.Nrows()
+	t.source2 = SetApproach2(t.source2,
+		UnorderedReq(req.frac*float32(max(1, nrows1))), tran)
+	t.header = t.getHeader()
+}
+
 func (t *Times) getNrows() (int, int) {
 	n1, p1 := t.source1.Nrows()
 	n2, p2 := t.source2.Nrows()

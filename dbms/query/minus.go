@@ -6,6 +6,7 @@ package query
 import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
@@ -17,8 +18,9 @@ type Minus struct {
 }
 
 type minusApproach struct {
-	keyIndex []string
-	frac2    float64
+	keyIndex   []string
+	frac2      float64
+	req1, req2 Require
 }
 
 func NewMinus(src1, src2 Query, t QueryTran) *Minus {
@@ -40,7 +42,7 @@ func newMinus(src1, src2 Query, t QueryTran, prevFixed1, prevFixed2 Fixed) *Minu
 }
 
 func (m *Minus) String() string {
-	return m.Compatible.String("minus")
+	return "minus"
 }
 
 func (m *Minus) getNrows() (int, int) {
@@ -99,6 +101,30 @@ func (m *Minus) setApproach(index []string, frac float64, approach any, tran Que
 	m.source1 = SetApproach(m.source1, index, frac, tran)
 	m.source2 = SetApproach(m.source2, m.keyIndex, ap.frac2, tran)
 	m.header = m.source1.Header()
+	m.src1Only = set.Difference(m.source1.Columns(), m.source2.Columns())
+}
+
+func (m *Minus) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	assert.That(m.disjoint == "")
+	fixcost1, varcost1 := Optimize2(m.source1, mode, req)
+	nrows1, _ := m.source1.Nrows()
+	nlookups := req.LookupCount(nrows1)
+	req2 := LookupReq(m.source2.Columns(), nlookups)
+	fc2, vc2 := Optimize2(m.source2, mode, req2)
+	if fc2+vc2 >= impossible {
+		return impossible, impossible, nil
+	}
+	return fixcost1 + fc2, varcost1 + vc2,
+		&minusApproach{keyIndex: req2.cols, req1: req, req2: req2}
+}
+
+func (m *Minus) setApproach2(req Require, approach any, tran QueryTran) {
+	ap := approach.(*minusApproach)
+	m.keyIndex = ap.keyIndex
+	m.source1 = SetApproach2(m.source1, ap.req1, tran)
+	m.source2 = SetApproach2(m.source2, ap.req2, tran)
+	m.header = m.source1.Header()
+	m.src1Only = set.Difference(m.source1.Columns(), m.source2.Columns())
 }
 
 func (m *Minus) Get(th *Thread, dir Dir) Row {
