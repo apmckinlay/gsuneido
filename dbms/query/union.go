@@ -55,7 +55,7 @@ type unionApproach struct {
 type unionStrategy int
 
 const (
-	// unionMerge is a merge of source1 and source2
+	// unionMerge is an ordered merge of source1 and source2
 	unionMerge unionStrategy = iota + 2
 	// unionLookup is source1 not in source2, followed by source2 (unordered).
 	// Also used for disjoint, but without lookups.
@@ -229,26 +229,28 @@ func (u *Union) getFixed() Fixed {
 	return fixed
 }
 
+// optimize ---------------------------------------------------------
+
 func (u *Union) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	switch req.Use() {
 	case ReqUnordered:
-		return u.opt2Unordered(mode, req)
+		return u.optUnordered(mode, req)
 	case ReqOrdered, ReqGrouped:
-		return u.opt2Merge(mode, req)
+		return u.optMerge(mode, req)
 	case ReqLookup:
 		if u.disjoint != "" {
-			return u.opt2Lookup(mode, req)
+			return u.optLookup(mode, req)
 		}
 		// Non-disjoint: the lookup strategy's source2Has does inner
 		// Lookup calls that clobber the parent's Select state, causing
 		// duplicates. Use merge instead (optTempIndex2 wraps it for
 		// efficient lookups), matching v1 optimize(index != nil).
-		return u.opt2Merge(mode, req)
+		return u.optMerge(mode, req)
 	}
 	panic(assert.ShouldNotReachHere())
 }
 
-func (u *Union) opt2Unordered(mode Mode, req Require) (Cost, Cost, any) {
+func (u *Union) optUnordered(mode Mode, req Require) (Cost, Cost, any) {
 	if u.disjoint != "" {
 		mr := UnorderedReq(req.frac)
 		fc1, vc1 := Optimize(u.source1, mode, mr)
@@ -256,17 +258,16 @@ func (u *Union) opt2Unordered(mode Mode, req Require) (Cost, Cost, any) {
 		return fc1 + fc2, vc1 + vc2,
 			&unionApproach{strat: unionLookup, req1: mr, req2: mr}
 	}
-	mergeFix, mergeVar, mergeApp := u.opt2Merge(mode, req)
-	lookupFix, lookupVar, lookupApp :=
-		u.opt2Lookup(mode, req)
-	lookupRevFix, lookupRevVar, lookupRevApp :=
-		u.opt2LookupRev(mode, req)
-	return min3(mergeFix, mergeVar, mergeApp,
+	mergeFix, mergeVar, mergeApp := u.optMerge(mode, req)
+	lookupFix, lookupVar, lookupApp := u.optLookup(mode, req)
+	lookupRevFix, lookupRevVar, lookupRevApp := u.optLookupRev(mode, req)
+	return min3(
+		mergeFix, mergeVar, mergeApp,
 		lookupFix, lookupVar, lookupApp,
 		lookupRevFix, lookupRevVar, lookupRevApp)
 }
 
-func (u *Union) opt2Merge(mode Mode, req Require) (Cost, Cost, any) {
+func (u *Union) optMerge(mode Mode, req Require) (Cost, Cost, any) {
 	if u.disjoint != "" {
 		mr := OrderedReq(req.cols, req.frac)
 		fc1, vc1 := Optimize(u.source1, mode, mr)
@@ -356,11 +357,11 @@ func (u *Union) optMergeWithOrder(mode Mode, req Require) (Cost, Cost, any) {
 	}
 
 	if emptyKey1 {
-		return u.bestMergeIndexOne2(mode, req,
+		return u.bestMergeIndex(mode, req,
 			u.source2, u.source1, indexes2, keys2, order)
 	}
 	if emptyKey2 {
-		return u.bestMergeIndexOne2(mode, req,
+		return u.bestMergeIndex(mode, req,
 			u.source1, u.source2, indexes1, keys1, order)
 	}
 
@@ -409,7 +410,7 @@ func (u *Union) optMergeWithOrder(mode Mode, req Require) (Cost, Cost, any) {
 	return bestFixCost, bestVarCost, bestApproach
 }
 
-func (u *Union) bestMergeIndexOne2(mode Mode, req Require,
+func (u *Union) bestMergeIndex(mode Mode, req Require,
 	srcKey, srcEmpty Query, indexes, keys [][]string, order []string) (Cost, Cost, any) {
 	bestFixCost := impossible
 	bestVarCost := impossible
@@ -447,12 +448,12 @@ func (u *Union) bestMergeIndexOne2(mode Mode, req Require,
 	return bestFixCost, bestVarCost, bestApproach
 }
 
-func (u *Union) opt2Lookup(mode Mode, req Require) (Cost, Cost, any) {
-	return u.opt2LookupDir(mode, req, false)
+func (u *Union) optLookup(mode Mode, req Require) (Cost, Cost, any) {
+	return u.optLookupDir(mode, req, false)
 }
 
-func (u *Union) opt2LookupRev(mode Mode, req Require) (Cost, Cost, any) {
-	fixcost, varcost, app := u.opt2LookupDir(mode, req, true)
+func (u *Union) optLookupRev(mode Mode, req Require) (Cost, Cost, any) {
+	fixcost, varcost, app := u.optLookupDir(mode, req, true)
 	if ap, ok := app.(*unionApproach); ok {
 		ap.reverse = true
 		fixcost += outOfOrder
@@ -460,7 +461,7 @@ func (u *Union) opt2LookupRev(mode Mode, req Require) (Cost, Cost, any) {
 	return fixcost, varcost, app
 }
 
-func (u *Union) opt2LookupDir(mode Mode, req Require, reverse bool) (Cost, Cost, any) {
+func (u *Union) optLookupDir(mode Mode, req Require, reverse bool) (Cost, Cost, any) {
 	src1, src2 := u.source1, u.source2
 	if reverse {
 		src1, src2 = src2, src1
