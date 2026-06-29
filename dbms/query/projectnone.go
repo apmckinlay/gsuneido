@@ -22,7 +22,6 @@ type ProjectNone struct {
 }
 
 var _ Query = (*ProjectNone)(nil)
-var _ optReq = (*ProjectNone)(nil)
 
 func (*ProjectNone) String() string {
 	return "project-none"

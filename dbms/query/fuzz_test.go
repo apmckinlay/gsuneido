@@ -83,7 +83,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 120, 291)
+	fuzzRandomRunner.Run(t, 286, 278)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -477,7 +477,7 @@ func TestFuzzIntersect(t *testing.T) {
 }
 
 func TestFuzzIntersectDebug(t *testing.T) {
-	fuzzIntersectRunner.Run(t, 15551282355907782167, 17075134520393906833)
+	fuzzIntersectRunner.Run(t, 8687611748617673601, 15585953995166667714)
 }
 
 //-------------------------------------------------------------------
@@ -517,6 +517,10 @@ func TestFuzzUnion(t *testing.T) {
 			t.Error("union non-disjoint variation not used")
 		}
 	}
+}
+
+func TestFuzzUnionDebug(t *testing.T) {
+	fuzzUnionRunner.Run(t, 16648623267720352087, 5930884177317611061)
 }
 
 func fuzzUnion(ft *FT) Query {

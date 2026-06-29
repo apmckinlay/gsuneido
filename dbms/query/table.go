@@ -56,7 +56,6 @@ type Table struct {
 }
 
 var _ whereTable = (*Table)(nil)
-var _ optReq = (*Table)(nil)
 
 func (tbl *Table) isSingleton() bool {
 	return tbl.singleton
@@ -203,15 +202,24 @@ func (tbl *Table) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
 			return 0, Cost(req.nlookups) * tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
 		}
-		fallthrough
+		best := newBestIndex()
+		for _, idx := range tbl.indexes {
+			if !lookupIndexEligible(idx, tbl.allKeys, nil) ||
+				!indexCovered(idx, req.cols, nil) {
+				continue
+			}
+			f, v, _ := tbl.costFor(idx, 0, req.nlookups)
+			best.update(idx, f, v)
+		}
+		if best.index != nil {
+			return best.fixcost, best.varcost, tableApproach{index: best.index}
+		}
+		return impossible, impossible, nil
 	case ReqGrouped:
 		best := newBestIndex()
 		for _, idx := range tbl.indexes {
 			// Table.Fixed() is always nil, so nColsUnfixed == len(req.cols)
 			if !grouped(idx, req.cols, len(req.cols), nil) {
-				continue
-			}
-			if req.Use() == ReqLookup && !lookupIndexEligible(idx, tbl.allKeys, nil) {
 				continue
 			}
 			f, v, _ := tbl.costFor(idx, float64(req.frac), req.nlookups)
@@ -316,31 +324,23 @@ func lookupCost(levels int) Cost {
 
 // execution --------------------------------------------------------
 
-func (tbl *Table) Lookup(_ *Thread, sels Sels) (row Row) {
+func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
 	assert.That(!selConflict(tbl.header.Columns, sels))
 	tbl.nlooks++
-	if tbl.singleton {
-		// For singleton tables (empty key), any columns are acceptable
-		// Singleton tables have at most one row, so we can use GetFilter
-		// which already handles singleton filtering
-		tbl.sels = sels
-		tbl.ensureIter().Range(iface.All)
-		tbl.Rewind()
-		return tbl.GetFilter(Next, nil)
+	key := ""
+	if !tbl.singleton {
+		ix := &tbl.schema.Indexes[tbl.iIndex]
+		key = selOrg(tbl.indexEncode, ix.Fields, sels, true)
+		if len(ix.Ixspec.Fields2) > 0 && key == "" {
+			fullFields := set.Union(ix.Fields, ix.BestKey)
+			key = selOrg(true, fullFields, sels, true)
+		}
 	}
-	// For non-singleton tables, the lookup columns must match the index.
-	ix := &tbl.schema.Indexes[tbl.iIndex]
-	key := selOrg(tbl.indexEncode, ix.Fields, sels, true)
-	if len(ix.Ixspec.Fields2) > 0 && key == "" {
-		// For unique indexes, if all index field values are empty,
-		// Fields2 (from BestKey) is added to make the key unique
-		fullFields := set.Union(ix.Fields, ix.BestKey)
-		assert.That(sels.ColsAre(fullFields))
-		key = selOrg(true, fullFields, sels, true)
-	} else {
-		assert.That(sels.ColsAre(ix.Fields))
+	row := tbl.LookupRaw(key)
+	if row == nil || !singletonFilter(tbl.header, row, sels) {
+		return nil
 	}
-	return tbl.LookupRaw(key)
+	return row
 }
 
 func (tbl *Table) LookupRaw(key string) Row {

@@ -192,6 +192,17 @@ func grouped(index []string, cols []string, nColsUnfixed int, fixed Fixed) bool 
 	return false
 }
 
+// indexCovered returns whether all columns of the index are
+// either in cols or fixed (single-valued).
+func indexCovered(index []string, cols []string, fixed Fixed) bool {
+	for _, col := range index {
+		if !fixed.Single(col) && !slices.Contains(cols, col) {
+			return false
+		}
+	}
+	return true
+}
+
 // ordered returns whether an index supplies an order
 // taking fixed into consideration.
 // It is used by Where and Sort.

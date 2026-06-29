@@ -133,9 +133,8 @@ func deps(row Row, hdr *Header) map[string][]string {
 }
 
 func (r *SuRecord) Copy() Container {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	return r.slice(0)
 }
 
@@ -272,9 +271,8 @@ func (r *SuRecord) IsConcurrent() Value {
 var _ Container = (*SuRecord)(nil) // includes Value and Lockable
 
 func (r *SuRecord) ToObject() *SuObject {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	return r.toObject()
 }
 func (r *SuRecord) toObject() *SuObject {
@@ -310,9 +308,8 @@ func (r *SuRecord) Insert(at int, val Value) {
 }
 
 func (r *SuRecord) HasKey(key Value) bool {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	if r.ob.hasKey(key) {
 		return true
 	}
@@ -329,17 +326,15 @@ func (r *SuRecord) Set(key, val Value) {
 }
 
 func (r *SuRecord) Clear() {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ob.deleteAll()
 	r.suRec = suRec{}
 }
 
 func (r *SuRecord) DeleteAll() {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ob.deleteAll()
 	r.row = nil
 	r.userow = false
@@ -373,9 +368,8 @@ func (r *SuRecord) Erase(th *Thread, key Value) bool {
 }
 
 func (r *SuRecord) delete(th *Thread, key Value, fn func(Value) bool) bool {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ensureDeps()
 	r.ob.mustBeMutable()
 	// have to unpack
@@ -403,9 +397,8 @@ func (r *SuRecord) ListGet(i int) Value {
 }
 
 func (r *SuRecord) NamedSize() int {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	if r.userow {
 		return r.rowSize()
 	}
@@ -438,16 +431,14 @@ func (r *SuRecord) Iter2(list bool, named bool) func() (Value, Value) {
 }
 
 func (r *SuRecord) Slice(n int) Container {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	return r.slice(n)
 }
 
 func (r *SuRecord) Iter() Iter {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.toObject()
 	return &obIter{ob: &r.ob, iter: r.ob.iter2(true, true),
 		result: func(k, v Value) Value { return v }}
@@ -456,9 +447,8 @@ func (r *SuRecord) Iter() Iter {
 // ------------------------------------------------------------------
 
 func (r *SuRecord) Put(th *Thread, keyval, val Value) {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.put(th, keyval, val)
 }
 func (r *SuRecord) put(th *Thread, keyval, val Value) {
@@ -498,9 +488,8 @@ func (r *SuRecord) invalidateDependents(key string) {
 
 func (r *SuRecord) GetPut(th *Thread, m, v Value,
 	op func(x, y Value) Value, retOrig bool) Value {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	orig := r.get(th, m)
 	if orig == nil {
 		MemberNotFound(m)
@@ -514,9 +503,8 @@ func (r *SuRecord) GetPut(th *Thread, m, v Value,
 }
 
 func (r *SuRecord) Invalidate(th *Thread, key string) {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ensureDeps()
 	r.invalidate(key)
 	r.callObservers(th, key)
@@ -541,17 +529,16 @@ func (r *SuRecord) PreSet(key, val Value) {
 
 func (r *SuRecord) Observer(ofn Value) {
 	if r.Lock() {
-		defer r.Unlock()
 		ofn.SetConcurrent()
 	}
+	defer r.Unlock()
 	r.observers.List = slc.Clone(r.observers.List) // copy on write
 	r.observers.Push(ofn)
 }
 
 func (r *SuRecord) RemoveObserver(ofn Value) bool {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.observers.List = slc.Clone(r.observers.List) // copy on write
 	return r.observers.Remove(ofn)
 }
@@ -572,9 +559,8 @@ func (r *SuRecord) callObservers2(th *Thread, key string) {
 				r.activeObservers.Push(activeObserver{ofn, key})
 				defer r.activeObservers.Pop()
 				func() {
-					if r.Unlock() { // can't hold lock while calling observer
-						defer r.Lock()
-					}
+					r.Unlock() // can't hold lock while calling observer
+					defer r.Lock()
 					th.PushCall(ofn, r, argSpecMember, SuStr(key))
 				}()
 			}(ofn, key)
@@ -599,9 +585,8 @@ func (a activeObserver) Equal(other any) bool {
 
 // Get returns the value associated with a key, or defval if not found
 func (r *SuRecord) Get(th *Thread, key Value) Value {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	return r.get(th, key)
 }
 func (r *SuRecord) get(th *Thread, key Value) Value {
@@ -615,9 +600,8 @@ func (r *SuRecord) get(th *Thread, key Value) Value {
 // GetIfPresent is the same as Get
 // except it returns nil instead of defval for missing members
 func (r *SuRecord) GetIfPresent(th *Thread, keyval Value) Value {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	return r.getIfPresent(th, keyval)
 }
 func (r *SuRecord) getIfPresent(th *Thread, keyval Value) Value {
@@ -772,9 +756,8 @@ func (r *SuRecord) catchRule(th *Thread, rule Value, key string) Value {
 			WrapPanic(th, e, "rule for "+key)
 		}
 	}()
-	if r.Unlock() { // can't hold lock while calling rule
-		defer r.Lock()
-	}
+	r.Unlock() // can't hold lock while calling rule
+	defer r.Lock()
 	return th.CallThis(rule, r)
 }
 
@@ -843,9 +826,9 @@ func (r *SuRecord) getRule(th *Thread, key string) Value {
 
 func (r *SuRecord) AttachRule(key, callable Value) {
 	if r.Lock() {
-		defer r.Unlock()
 		callable.SetConcurrent()
 	}
+	defer r.Unlock()
 	r.attachRule(AsStr(key), callable)
 }
 
@@ -857,9 +840,8 @@ func (r *SuRecord) attachRule(key string, callable Value) {
 }
 
 func (r *SuRecord) GetDeps(key string) Value {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ensureDeps()
 	var sb strings.Builder
 	sep := ""
@@ -876,9 +858,8 @@ func (r *SuRecord) GetDeps(key string) Value {
 }
 
 func (r *SuRecord) SetDeps(key, deps string) {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	if deps == "" {
 		return
 	}
@@ -896,17 +877,15 @@ outer:
 }
 
 func (r *SuRecord) Transaction() *SuTran {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	return r.tran
 }
 
 // ToRecord converts this SuRecord to a Record to be stored in the database
 func (r *SuRecord) ToRecord(th *Thread, hdr *Header) Record {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ensureDeps()
 	fields := hdr.Fields[0]
 
@@ -996,9 +975,8 @@ func (r *SuRecord) Table() string {
 }
 
 func (r *SuRecord) DbDelete(th *Thread) {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ckModify("Delete")
 	r.tran.Delete(th, r.table, r.recoff)
 	r.status = DELETED
@@ -1011,9 +989,8 @@ func (r *SuRecord) DbUpdate(th *Thread, ob Value) {
 	} else {
 		rec = ToContainer(ob).ToRecord(th, r.hdr)
 	}
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ckModify("Update")
 	r.recoff = r.tran.Update(th, r.table, r.recoff, rec) // ??? ok while locked ???
 }

@@ -14,8 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var _ optReq = (*TempIndex)(nil)
-
 // TempIndex is inserted by SetApproach as required.
 // It builds a sortlist of either DbRec or Row.
 // Keys are not constructed for the index or Lookup/Select
@@ -139,6 +137,13 @@ func (ti *TempIndex) Lookup(th *Thread, sels Sels) Row {
 	row := ti.iter.Seek(key)
 	if row == nil || !ti.matches(row, key) {
 		return nil
+	}
+	for _, sel := range sels {
+		if !slices.Contains(ti.order, sel.col) {
+			if row.GetRawVal(ti.header, sel.col, ti.th, ti.st) != sel.val {
+				return nil
+			}
+		}
 	}
 	return row
 }

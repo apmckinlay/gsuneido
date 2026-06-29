@@ -77,7 +77,11 @@ func GroupedReq(cols []string, frac float32, nlookups int32) Require {
 	return req
 }
 
+// LookupReq will return UnorderedReq if cols is empty
 func LookupReq(cols []string, nlookups int32) Require {
+	if len(cols) == 0 {
+		return UnorderedReq(0)
+	}
 	// Floor nlookups so a degenerate caller (e.g. empty source1 yielding
 	// LookupCount==0, or tempindex exploration under a ReqLookup parent)
 	// still produces a valid ReqLookup. With nlookups==0 Use() would derive

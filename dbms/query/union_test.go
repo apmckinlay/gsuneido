@@ -358,7 +358,7 @@ func TestUnion_StrictCompareDb(t *testing.T) {
 
 func TestUnionDuplicateBug(t *testing.T) {
 	assert.TestOnlyIndividually(t)
-	
+
 	// QueryFuzz seed: 6218445892
 	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
 	if err != nil {

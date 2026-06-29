@@ -13,8 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var _ optReq = (*Rename)(nil)
-
 type Rename struct {
 	Query1
 	from []string

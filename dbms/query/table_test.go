@@ -122,11 +122,10 @@ func TestTableOptimize2(t *testing.T) {
 	assertImpossible("abc", LookupReq([]string{"a"}, 1))
 
 	// comp: key on {a,b,c} — single index [a,b,c], keys [[a,b,c]]
-	// ReqLookup {b,a} is not a physical index, but the fallback search
-	// finds [a,b,c]: it is lookup-eligible (starts with key) and has
-	// {b,a} grouped (first 2 cols {a,b} are in {b,a}).
-	test("comp", LookupReq([]string{"b", "a"}, 1),
-		[]string{"a", "b", "c"})
+	// ReqLookup {b,a} is not a physical index.
+	// [a,b,c] is lookup-eligible and has {b,a} grouped,
+	// but is not indexCovered (c is not in {b,a}).
+	assertImpossible("comp", LookupReq([]string{"b", "a"}, 1))
 
 	// singleton: table with empty key — all req types return indexes[0]
 	// Set up manually (no SetTran since _singleton_ is not in testSchemas).
@@ -145,4 +144,58 @@ func TestTableOptimize2(t *testing.T) {
 		assert.Msg(req).True(f+v < impossible)
 		assert.Msg(req).This(app.(tableApproach).index).Is([]string{"x"})
 	}
+}
+
+func TestTableOptimize2_ReqLookup_indexCovered(t *testing.T) {
+	assert := assert.T(t)
+	optimizeFor := func(tbl *Table, req Require) (Cost, Cost, any) {
+		return tbl.optimize2(ReadMode, req)
+	}
+	test := func(tbl *Table, req Require, expected []string) {
+		t.Helper()
+		f, v, app := optimizeFor(tbl, req)
+		assert.True(f+v < impossible)
+		assert.This(app.(tableApproach).index).Is(expected)
+	}
+	assertImpossible := func(tbl *Table, req Require) {
+		t.Helper()
+		f, v, app := optimizeFor(tbl, req)
+		assert.False(f+v < impossible)
+		assert.This(app).Is(nil)
+	}
+	newTable := func(name string, indexes, keys [][]string, nrows int) *Table {
+		tbl := &Table{name: name}
+		tbl.indexes = indexes
+		tbl.allKeys = keys
+		tbl.info = &meta.Info{Nrows: nrows, Size: int64(nrows * 100)}
+		return tbl
+	}
+
+	// by=(x,y), key=(y): partial lookup — indexCovered passes (y is in by)
+	tbl := newTable("xy", [][]string{{"y"}}, [][]string{{"y"}}, 100)
+	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"y"})
+
+	// by=(x,y), key=(x,y): full lookup — exact index match
+	tbl = newTable("xy2", [][]string{{"x", "y"}}, [][]string{{"x", "y"}}, 100)
+	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"x", "y"})
+
+	// by=(x,y), key=(x,y,z): should fail — indexCovered fails (z not in by)
+	tbl = newTable("xyz", [][]string{{"x", "y", "z"}}, [][]string{{"x", "y", "z"}}, 100)
+	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
+
+	// by=(x,y), index=(x,c), key=(x): fails — indexCovered fails (c not in by)
+	tbl = newTable("xc", [][]string{{"x", "c"}}, [][]string{{"x"}}, 100)
+	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
+
+	// by=(x,y), index=(x), no key: fails — lookupIndexEligible fails
+	tbl = newTable("xnokey", [][]string{{"x"}}, [][]string{}, 100)
+	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
+
+	// by=(x,y), indexes=[x],[y], key=(y): picks [y] (smallest eligible index)
+	tbl = newTable("twoidx", [][]string{{"x"}, {"y"}}, [][]string{{"y"}}, 100)
+	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"y"})
+
+	// by=(x,y,z), key=(y,z): picks [y,z] — indexCovered passes (y,z both in by)
+	tbl = newTable("xyz2", [][]string{{"y", "z"}}, [][]string{{"y", "z"}}, 100)
+	test(tbl, LookupReq([]string{"x", "y", "z"}, 1), []string{"y", "z"})
 }

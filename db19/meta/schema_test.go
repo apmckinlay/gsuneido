@@ -64,7 +64,8 @@ func TestSetPrimary(t *testing.T) {
 		var s strings.Builder
 		for i, ix := range ts.Indexes {
 			if ix.Primary {
-				s.WriteString("," + strconv.Itoa(i))
+				s.WriteString(",")
+				s.WriteString(strconv.Itoa(i))
 			}
 		}
 		return s.String()[1:]
@@ -97,10 +98,14 @@ func TestOptimizeIndexes(t *testing.T) {
 			if ix.ContainsKey {
 				mode = ascii.ToUpper(mode)
 			}
-			s.WriteString(" " + string(mode) + "(" + str.Join(",", ix.Columns))
+			s.WriteString(" ")
+			s.WriteString(string(mode))
+			s.WriteString("(")
+			s.WriteString(str.Join(",", ix.Columns))
 			add := difference(ix.BestKey, ix.Columns)
 			if len(add) > 0 {
-				s.WriteString("+" + str.Join(",", add))
+				s.WriteString("+")
+				s.WriteString(str.Join(",", add))
 			}
 			s.WriteString(")")
 		}
@@ -140,11 +145,14 @@ func TestSetBestKeys(t *testing.T) {
 			if s.Len() > 0 {
 				s.WriteString(" ")
 			}
-			s.WriteString(string(ix.Mode) + "(" + str.Join(",", ix.Columns))
+			s.WriteString(string(ix.Mode))
+			s.WriteString("(")
+			s.WriteString(str.Join(",", ix.Columns))
 			if ix.BestKey != nil {
 				add := difference(ix.BestKey, ix.Columns)
 				if len(add) > 0 {
-					s.WriteString("+" + str.Join(",", add))
+					s.WriteString("+")
+					s.WriteString(str.Join(",", add))
 				}
 			}
 			s.WriteString(")")

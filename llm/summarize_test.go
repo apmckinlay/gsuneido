@@ -20,23 +20,36 @@ func TestSummarizeOutput(t *testing.T) {
 	b.WriteString("This document shows the output of summarize functions for all tools.\n\n")
 
 	for _, spec := range toolSpecs {
-		b.WriteString("## " + spec.name + "\n\n")
-		b.WriteString(spec.description + "\n\n")
+		b.WriteString("## ")
+		b.WriteString(spec.name)
+		b.WriteString("\n\n")
+		b.WriteString(spec.description)
+		b.WriteString("\n\n")
 		b.WriteString("### Parameters\n\n")
 		for _, p := range spec.params {
 			req := ""
 			if p.required {
 				req = " (required)"
 			}
-			b.WriteString("- `" + p.name + "`" + req + ": " + p.description + "\n")
+			b.WriteString("- `")
+			b.WriteString(p.name)
+			b.WriteString("`")
+			b.WriteString(req)
+			b.WriteString(": ")
+			b.WriteString(p.description)
+			b.WriteString("\n")
 		}
 		b.WriteString("\n### Summarize Output Examples\n\n")
 
 		// Generate example args based on tool type
 		examples := generateExamples(spec.name, spec.params)
 		for _, args := range examples {
-			b.WriteString("**Args:** `" + formatArgs(args) + "`\n\n")
-			b.WriteString("=> " + spec.summarize(args) + "\n\n")
+			b.WriteString("**Args:** `")
+			b.WriteString(formatArgs(args))
+			b.WriteString("`\n\n")
+			b.WriteString("=> ")
+			b.WriteString(spec.summarize(args))
+			b.WriteString("\n\n")
 		}
 		b.WriteString("---\n\n")
 	}

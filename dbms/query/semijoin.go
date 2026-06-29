@@ -19,8 +19,6 @@ type SemiJoin struct {
 	prevFixed2 Fixed
 }
 
-var _ optReq = (*SemiJoin)(nil)
-
 type semiJoinApproach struct {
 	index2 []string
 	frac2  float64

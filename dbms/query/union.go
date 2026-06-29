@@ -75,8 +75,6 @@ func (us unionStrategy) String() string {
 	}
 }
 
-var _ optReq = (*Union)(nil)
-
 func NewUnion(src1, src2 Query) *Union {
 	u := &Union{Compatible: *newCompatible(src1, src2)}
 	u.header = JoinHeaders(src1.Header(), src2.Header())
@@ -106,7 +104,7 @@ func (u *Union) String() string {
 			s += "-lookup"
 		}
 	}
-	return u.Compatible.String(s)
+	return s
 }
 
 func (u *Union) Keys() [][]string {
@@ -507,14 +505,12 @@ func (u *Union) opt2LookupDir(mode Mode, req Require, reverse bool) (Cost, Cost,
 			&unionApproach{strat: unionLookup,
 				req1: req1, req2: mr2, reverse: reverse}
 	}
-	req2, fc2, vc2 := anyKeyLookup2(src2, mode, nlookups)
+	req2 := LookupReq(src2.Columns(), nlookups)
+	fc2, vc2 := Optimize2(src2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil
 	}
 	ki := req2.cols
-	if ki == nil {
-		ki = []string{}
-	}
 	return fc1 + fc2, vc1 + vc2,
 		&unionApproach{keyIndex: ki, strat: unionLookup,
 			req1: req1, req2: req2, reverse: reverse}
@@ -544,6 +540,7 @@ func (u *Union) setApproach2(_ Require, approach any, tran QueryTran) {
 	u.source1 = SetApproach2(u.source1, app.req1, tran)
 	u.source2 = SetApproach2(u.source2, app.req2, tran)
 	u.header = JoinHeaders(u.source1.Header(), u.source2.Header())
+	u.src1Only = set.Difference(u.source1.Columns(), u.source2.Columns())
 	u.empty1 = make(Row, len(u.source1.Header().Fields))
 	u.empty2 = make(Row, len(u.source2.Header().Fields))
 	u.state = rewound
@@ -865,6 +862,7 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 	}
 	u.source2 = SetApproach(u.source2, app.idx2, frac, tran)
 	u.header = JoinHeaders(u.source1.Header(), u.source2.Header())
+	u.src1Only = set.Difference(u.source1.Columns(), u.source2.Columns())
 
 	u.empty1 = make(Row, len(u.source1.Header().Fields))
 	u.empty2 = make(Row, len(u.source2.Header().Fields))

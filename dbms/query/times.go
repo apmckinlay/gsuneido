@@ -74,8 +74,6 @@ func (t *Times) Transform() Query {
 	return t
 }
 
-var _ optReq = (*Times)(nil)
-
 func (t *Times) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	//TODO index could be split, first part on source1, second part on source2
 	opt := func(src1, src2 Query) (Cost, Cost) {

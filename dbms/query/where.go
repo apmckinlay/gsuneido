@@ -581,6 +581,101 @@ func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cos
 	return 0, cost, app
 }
 
+func (w *Where) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+	w.optInit()
+	if w.conflict {
+		return 0, 0, nil
+	}
+	if w.tbl == nil || w.tbl.isSingleton() {
+		fixcost, varcost := Optimize2(w.source, mode, req)
+		return fixcost, varcost, nil
+	}
+	switch req.Use() {
+	case ReqUnordered:
+		return w.optWhereIdx2(req, func(idx []string) bool { return true }, false)
+	case ReqOrdered:
+		return w.optWhereIdx2(req, func(idx []string) bool {
+			return ordered(idx, req.cols, w.fixed)
+		}, false)
+	case ReqGrouped:
+		nColsUnfixed := countUnfixed(req.cols, w.fixed)
+		return w.optWhereIdx2(req, func(idx []string) bool {
+			return grouped(idx, req.cols, nColsUnfixed, w.fixed)
+		}, true)
+	case ReqLookup:
+		return w.optWhereLookup2(req)
+	}
+	panic("unreachable")
+}
+
+func (w *Where) optWhereIdx2(req Require, indexOk func([]string) bool,
+	addSeek bool) (Cost, Cost, any) {
+	if w.singleton {
+		cost := w.source.lookupCost()
+		isel := w.idxSels[0]
+		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
+	}
+	best := newBestIndex()
+	var bestIdxSel *idxSel
+	for _, idx := range w.source.Indexes() {
+		if !indexOk(idx) {
+			continue
+		}
+		_, varCost, _ := w.tbl.optimize(0, idx, 1.0)
+		irFrac := 1.0
+		ifFrac := 1.0
+		dfFrac := w.wfrac
+		isel := w.getIdxSel(idx)
+		if isel != nil {
+			irFrac = isel.prefixFrac * isel.skipFrac
+			ifFrac = isel.indexFilterFrac
+			dfFrac = isel.dataFilterFrac
+		}
+		wc := WhereCost(float64(varCost), float64(req.frac), irFrac, ifFrac, dfFrac)
+		cost := wc
+		if addSeek {
+			cost += Cost(req.nlookups) * w.source.lookupCost()
+		}
+		if best.update(idx, 0, cost) {
+			bestIdxSel = isel
+		}
+	}
+	if best.varcost < impossible {
+		return 0, best.varcost, &whereApproach{index: best.index,
+			cost: best.varcost, idxSel: bestIdxSel}
+	}
+	return impossible, impossible, nil
+}
+
+func (w *Where) optWhereLookup2(req Require) (Cost, Cost, any) {
+	if w.singleton {
+		cost := w.source.lookupCost()
+		isel := w.idxSels[0]
+		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
+	}
+	keys := w.source.Keys()
+	if idxi := slc.IndexFn(w.source.Indexes(), req.cols, slices.Equal); idxi != -1 {
+		perLookup := w.source.lookupCost() + 1
+		cost := Cost(req.nlookups) * perLookup
+		return 0, cost, &whereApproach{index: req.cols, cost: cost}
+	}
+	best := newBestIndex()
+	for _, idx := range w.source.Indexes() {
+		if !lookupIndexEligible(idx, keys, w.fixed) ||
+			!indexCovered(idx, req.cols, w.fixed) {
+			continue
+		}
+		perLookup := w.source.lookupCost() + 1
+		cost := Cost(req.nlookups) * perLookup
+		best.update(idx, 0, cost)
+	}
+	if best.varcost < impossible {
+		return 0, best.varcost, &whereApproach{index: best.index,
+			cost: best.varcost}
+	}
+	return impossible, impossible, nil
+}
+
 // exprFalse checks if any expressions folded to false
 func (w *Where) exprFalse() bool {
 	//TODO also check for always true
@@ -743,6 +838,39 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 			w.idxSelPos = -1
 		} else {
 			w.tbl.setCost(frac, 0, app.cost)
+		}
+	}
+	w.header = w.source.Header()
+	w.rowCtx.Hdr = w.header
+}
+
+func (w *Where) setApproach2(req Require, approach any, tran QueryTran) {
+	w.optimized = true
+	if w.singleton {
+		whereSingletonCount.Add(1)
+	}
+	if w.conflict {
+		return
+	}
+	if approach == nil {
+		w.source = SetApproach2(w.source, req, tran)
+		w.srcIndex = req.cols
+		w.tbl = nil
+	} else {
+		app := approach.(*whereApproach)
+		w.tbl.SetIndex(app.index)
+		w.srcIndex = app.index
+		if app.idxSel != nil {
+			w.ixCtx.cols = app.index
+			w.ixCtx.encodes = w.tbl.IndexEncodes(app.index)
+			w.ixExpr = w.exprsFor(w.ixCtx.cols)
+			w.idxSelBase = app.idxSel
+			w.idxSelActive = w.idxSelBase
+			w.tbl.setCost(float64(req.frac)*app.idxSel.prefixFrac*app.idxSel.skipFrac,
+				0, app.cost)
+			w.idxSelPos = -1
+		} else {
+			w.tbl.setCost(float64(req.frac), 0, app.cost)
 		}
 	}
 	w.header = w.source.Header()
@@ -963,11 +1091,14 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 		}
 	}
 	isels, osels := Split(cloned, sels, w.srcIndex)
+	var residual Sels
 	for _, sel := range osels {
-		assert.That(w.fixed.Has(sel.col))
+		if !w.fixed.Has(sel.col) {
+			residual = append(residual, sel)
+		}
 	}
 
-	row := w.source.Lookup(th, isels)
+	row := w.source.Lookup(th, slc.With(isels, residual...))
 	if !w.filter(th, row) {
 		row = nil
 	}

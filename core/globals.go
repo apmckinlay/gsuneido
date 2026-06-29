@@ -122,7 +122,8 @@ var _ = AddInfo("core.nGlobal", func() int { return len(g.names) })
 var _ = AddInfo("core.lastGlobals", func() string {
 	var s strings.Builder
 	for i := len(g.names) - 1; i >= len(g.names)-10; i-- {
-		s.WriteString(g.names[i] + "\n")
+		s.WriteString(g.names[i])
+		s.WriteString("\n")
 	}
 	return s.String()
 })

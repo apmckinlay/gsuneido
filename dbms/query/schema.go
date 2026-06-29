@@ -15,8 +15,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var _ optReq = (*schemaTable)(nil)
-
 // schema implements virtual tables for tables, columns, indexes, and views
 
 type schemaTable struct {
