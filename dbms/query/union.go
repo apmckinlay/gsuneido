@@ -287,12 +287,12 @@ func (u *Union) optMerge(mode Mode, req Require) (Cost, Cost, any) {
 func (u *Union) optMergeNoOrder(mode Mode, req Require) (Cost, Cost, any) {
 	fixed1 := u.source1.Fixed()
 	indexes1 := u.source1.Indexes()
-	idxs1 := fixed1.RemoveFrom2(indexes1)
+	idxs1 := fixed1.RemoveFromAll(indexes1)
 	fixed2 := u.source2.Fixed()
 	indexes2 := u.source2.Indexes()
-	idxs2 := fixed2.RemoveFrom2(indexes2)
-	keys1 := fixed1.RemoveFrom2(u.source1.Keys())
-	keys2 := fixed2.RemoveFrom2(u.source2.Keys())
+	idxs2 := fixed2.RemoveFromAll(indexes2)
+	keys1 := fixed1.RemoveFromAll(u.source1.Keys())
+	keys2 := fixed2.RemoveFromAll(u.source2.Keys())
 	commonKeys := set.IntersectFn(keys1, keys2, set.Equal[string])
 
 	bestFixCost := impossible

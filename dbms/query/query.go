@@ -410,7 +410,10 @@ func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
 	return q
 }
 
-const outOfOrder = 10 // minimal penalty for executing out of order
+// outOfOrder is added when we reverse sources.
+// This discourages reversing the order without a good reason
+// which makes tests and debugging easier.
+const outOfOrder = 10
 
 const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 

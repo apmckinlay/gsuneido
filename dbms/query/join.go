@@ -300,6 +300,33 @@ type joinCost2 struct {
 	fixcost, varcost Cost
 }
 
+func (jn *Join) optimize(mode Mode, req Require) (Cost, Cost, any) {
+	fwd := joinopt2(jn.source1, jn.source2, jn.Nrows, jn.joinType,
+		mode, req, jn.by)
+	rev := joinopt2(jn.source2, jn.source1, jn.Nrows, jn.joinType.reverse(),
+		mode, req, jn.by)
+	rev.fixcost += outOfOrder + joinRev
+	if trace.JoinOpt.On() {
+		trace.JoinOpt.Println(mode, req)
+		trace.Println("    fwd req1", fwd.req1, "req2", fwd.req2,
+			"=", fwd.fixcost, fwd.varcost)
+		trace.Println("    rev req1", rev.req1, "req2", rev.req2,
+			"=", rev.fixcost, rev.varcost)
+		trace.Println(strategy(jn, 1))
+	}
+	approach := &joinApproach{}
+	if rev.fixcost+rev.varcost < fwd.fixcost+fwd.varcost {
+		fwd = rev
+		approach.reverse = true
+	}
+	if fwd.fixcost == impossible {
+		return impossible, impossible, nil
+	}
+	approach.req1 = fwd.req1
+	approach.req2 = fwd.req2
+	return fwd.fixcost, fwd.varcost, approach
+}
+
 func joinopt2(src1, src2 Query, nrows func() (int, int), jt joinType,
 	mode Mode, req Require, by []string) joinCost2 {
 	fixcost1, varcost1 := Optimize(src1, mode, req)
@@ -327,33 +354,6 @@ func joinopt2(src1, src2 Query, nrows func() (int, int), jt joinType,
 		fixcost: fixcost1 + fixcost2,
 		varcost: varcost1 + varcost2,
 	}
-}
-
-func (jn *Join) optimize(mode Mode, req Require) (Cost, Cost, any) {
-	fwd := joinopt2(jn.source1, jn.source2, jn.Nrows, jn.joinType,
-		mode, req, jn.by)
-	rev := joinopt2(jn.source2, jn.source1, jn.Nrows, jn.joinType.reverse(),
-		mode, req, jn.by)
-	rev.fixcost += outOfOrder + joinRev
-	if trace.JoinOpt.On() {
-		trace.JoinOpt.Println(mode, req)
-		trace.Println("    fwd req1", fwd.req1, "req2", fwd.req2,
-			"=", fwd.fixcost, fwd.varcost)
-		trace.Println("    rev req1", rev.req1, "req2", rev.req2,
-			"=", rev.fixcost, rev.varcost)
-		trace.Println(strategy(jn, 1))
-	}
-	approach := &joinApproach{}
-	if rev.fixcost+rev.varcost < fwd.fixcost+fwd.varcost {
-		fwd = rev
-		approach.reverse = true
-	}
-	if fwd.fixcost == impossible {
-		return impossible, impossible, nil
-	}
-	approach.req1 = fwd.req1
-	approach.req2 = fwd.req2
-	return fwd.fixcost, fwd.varcost, approach
 }
 
 func (jn *Join) setApproach(req Require, approach any, tran QueryTran) {
