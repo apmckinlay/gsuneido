@@ -291,10 +291,13 @@ func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
 	key := ""
 	if !tbl.singleton {
 		ix := &tbl.schema.Indexes[tbl.iIndex]
-		key = selOrg(tbl.indexEncode, ix.Fields, sels, true)
+		key = selOrg(tbl.indexEncode, ix.Fields, sels, false)
+		if !selsHasAllOf(sels, ix.Fields) {
+			assert.That(selsHasKey(sels, tbl.allKeys))
+		}
 		if len(ix.Ixspec.Fields2) > 0 && key == "" {
 			fullFields := set.Union(ix.Fields, ix.BestKey)
-			key = selOrg(true, fullFields, sels, true)
+			key = selOrg(true, fullFields, sels, false)
 		}
 	}
 	row := tbl.LookupRaw(key)
@@ -302,6 +305,24 @@ func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
 		return nil
 	}
 	return row
+}
+
+func selsHasAllOf(sels Sels, cols []string) bool {
+	for _, col := range cols {
+		if !sels.HasCol(col) {
+			return false
+		}
+	}
+	return true
+}
+
+func selsHasKey(sels Sels, allKeys [][]string) bool {
+	for _, key := range allKeys {
+		if selsHasAllOf(sels, key) {
+			return true
+		}
+	}
+	return false
 }
 
 func (tbl *Table) LookupRaw(key string) Row {

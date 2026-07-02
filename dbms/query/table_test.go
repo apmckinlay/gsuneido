@@ -6,6 +6,7 @@ package query
 import (
 	"testing"
 
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -146,7 +147,7 @@ func TestTableOptimize(t *testing.T) {
 	}
 }
 
-func TestTableOptimize2_ReqLookup_indexCovered(t *testing.T) {
+func TestTableOptimize_ReqLookup_indexCovered(t *testing.T) {
 	assert := assert.T(t)
 	optimizeFor := func(tbl *Table, req Require) (Cost, Cost, any) {
 		return tbl.optimize(ReadMode, req)
@@ -190,4 +191,55 @@ func TestTableOptimize2_ReqLookup_indexCovered(t *testing.T) {
 	// by=(x,y,z), key=(y,z): picks [y,z] — indexCovered passes (y,z both in by)
 	tbl = newTable("xyz2", [][]string{{"y", "z"}}, [][]string{{"y", "z"}}, 100)
 	test(tbl, LookupReq([]string{"x", "y", "z"}, 1), []string{"y", "z"})
+}
+
+func TestTableOptimize_ReqGrouped_Lookup(t *testing.T) {
+	// Regression test: optimize with ReqGrouped(a,b) could choose index
+	// (a,b,c), then a subsequent Lookup with sels for (a,b) would panic
+	// in selOrg because it doesn't supply all columns of the index.
+	assert := assert.T(t)
+
+	// Build an isolated Table with:
+	//   key on (x)
+	//   index on (a,b,c) — non-key, Fields = (a,b,c,x) since BestKey=(x)
+	//     but we simplify Fields to (a,b,c) for this test
+	// ReqGrouped(a,b) matches (a,b,c) via StartsWithSet and it's the
+	// only matching index, so it gets chosen.
+	// Lookup with sels{a,b} should NOT panic.
+	tbl := &Table{name: "test_grouped_lookup"}
+	tbl.indexes = [][]string{{"x"}, {"a", "b", "c"}}
+	tbl.allKeys = [][]string{{"x"}, {"a", "b"}}
+	tbl.info = &meta.Info{Nrows: 100, Size: 10000}
+	tbl.keys = [][]string{{"x"}}
+	tbl.header = NewHeader([][]string{{"x", "a", "b", "c"}}, []string{"x", "a", "b", "c"})
+	tbl.schema = &Schema{
+		Columns: []string{"x", "a", "b", "c"},
+		Indexes: []Index{
+			{Mode: 'k', Columns: []string{"x"}, Fields: []string{"x"}},
+			{Mode: 'i', Columns: []string{"a", "b", "c"}, Fields: []string{"a", "b", "c", "x"},
+				BestKey: []string{"x"}},
+		},
+	}
+	tbl.tran = testTran{}
+
+	// Optimize with ReqGrouped(a,b)
+	f, v, app := tbl.optimize(ReadMode, GroupedReq([]string{"a", "b"}, 1, 1))
+	assert.True(f+v < impossible)
+	chosen := app.(tableApproach).index
+	assert.This(chosen).Is([]string{"a", "b", "c"})
+
+	// Apply the chosen approach (sets tbl.iIndex, tbl.indexEncode, etc.)
+	tbl.SetIndex(chosen)
+
+	// Lookup with only (a,b) — this must not panic even though the
+	// optimizer chose the wider (a,b,c) index.
+	sels := Sels{{"a", Pack(SuInt(1))}, {"b", Pack(SuInt(2))}}
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Fatalf("Lookup panicked with index %v: %v", chosen, r)
+			}
+		}()
+		tbl.Lookup(nil, sels)
+	}()
 }

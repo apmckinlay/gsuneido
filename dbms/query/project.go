@@ -475,8 +475,15 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: req}
 		}
 		return impossible, impossible, nil
-	case ReqGrouped, ReqLookup:
-		if set.Equal(req.cols, p.columns) {
+	case ReqLookup:
+		debug.assert(set.Equal(req.cols, p.columns)) // only key is all columns
+		// BUG Grouped can use a longer index, but that won't work for Lookup
+		srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), req.nlookups)
+		fixcost, varcost := Optimize(p.source, mode, srcReq)
+		return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
+	case ReqGrouped:
+		if len(req.cols) == len(p.columns) {
+			debug.assert(set.Equal(req.cols, p.columns)) // only key is all columns
 			srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), req.nlookups)
 			fixcost, varcost := Optimize(p.source, mode, srcReq)
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
@@ -489,8 +496,11 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 		for _, idx := range p.source.Indexes() {
 			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
 				grouped(idx, p.columns, nColsUnfixed, fixed) {
-				srcReq := GroupedReq(idx, req.SelectFrac(nrows), req.nlookups)
+				// source req must be ordered so it doesn't ignore column order
+				// which is necessary to satisfy both groupings
+				srcReq := OrderedReq(idx, req.SelectFrac(nrows))
 				f, v := Optimize(p.source, mode, srcReq)
+				v += Cost(req.nlookups) * p.source.lookupCost()
 				best.update(srcReq, f, v)
 			}
 		}

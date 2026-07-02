@@ -287,26 +287,34 @@ func (su *Summarize) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 			fixcost, varcost := Optimize(su.source, mode, req)
 			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: req}
 		}
-	case ReqGrouped, ReqLookup:
+	case ReqLookup:
+		debug.assert(set.Equal(req.cols, su.by)) // only key is by columns
+		// BUG Grouped can use a longer index, but that won't work for Lookup
+		srcReq := GroupedReq(su.by, req.SelectFrac(nrows), req.nlookups)
+		fixcost, varcost := Optimize(su.source, mode, srcReq)
+		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
+	case ReqGrouped:
 		if set.Equal(req.cols, su.by) {
 			srcReq := GroupedReq(su.by, req.SelectFrac(nrows), req.nlookups)
 			fixcost, varcost := Optimize(su.source, mode, srcReq)
 			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
 		}
 		nColsUnfixedReq := countUnfixed(req.cols, fixed)
-		best := newBestIndex()
+		best := newBestReq()
 		for _, idx := range su.source.Indexes() {
 			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
 				grouped(idx, su.by, nColsUnfixed, fixed) {
-				srcReq := GroupedReq(idx, req.SelectFrac(nrows), req.nlookups)
+				// source req must be ordered so it doesn't ignore column order
+				// which is necessary to satisfy both groupings
+				srcReq := OrderedReq(idx, req.SelectFrac(nrows))
 				f, v := Optimize(su.source, mode, srcReq)
-				best.update(idx, f, v)
+				v += Cost(req.nlookups) * su.source.lookupCost()
+				best.update(srcReq, f, v)
 			}
 		}
-		if best.index != nil {
-			srcReq := GroupedReq(best.index, req.SelectFrac(nrows), req.nlookups)
+		if best.found() {
 			return best.fixcost, best.varcost,
-				&summarizeApproach{strat: sumSeq, req: srcReq}
+				&summarizeApproach{strat: sumSeq, req: best.req}
 		}
 		return impossible, impossible, nil
 	}

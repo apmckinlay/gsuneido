@@ -941,3 +941,16 @@ func setCursorMode(q Query) {
 // 	}
 // 	return vals
 // }
+
+//-------------------------------------------------------------------
+
+var debug debugT
+
+type debugT struct{}
+
+func (debugT) assert(cond bool) {
+	assert.That(cond)
+}
+
+// func (debugT) assert(cond bool) {
+// }

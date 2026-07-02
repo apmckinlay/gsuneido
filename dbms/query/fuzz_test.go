@@ -83,7 +83,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 262, 640)
+	fuzzRandomRunner.Run(t, 268, 413)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -1063,32 +1063,32 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 			}
 		}
 	}()
-	reqUse := random([]string{"unordered", "ordered", "grouped", "lookup"}, ft.rnd)
+	use := random([]Use{ReqUnordered, ReqOrdered, ReqGrouped, ReqLookup}, ft.rnd)
 	indexes := q.Indexes()
 	var index []string
 	if len(indexes) == 0 || isEmptyKey(indexes) {
-		reqUse = "unordered"
-	} else if reqUse == "lookup" {
+		use = ReqUnordered
+	} else if use == ReqLookup {
 		keyIdxs := keyIndexes(q)
 		if len(keyIdxs) > 0 {
 			index = random(keyIdxs, ft.rnd)
 		} else {
-			reqUse = "unordered"
+			use = ReqUnordered
 		}
 	} else {
 		index = random(indexes, ft.rnd)
 	}
 	var req Require
-	switch reqUse {
-	case "unordered":
+	switch use {
+	case ReqUnordered:
 		req = UnorderedReq(1)
-	case "ordered":
+	case ReqOrdered:
 		req = OrderedReq(index, 1)
-	case "grouped":
+	case ReqGrouped:
 		nlookups := int32(1 + ft.rnd.IntN(10))
 		frac := float32(1) / float32(1+ft.rnd.IntN(4))
 		req = GroupedReq(slices.Clone(index), frac, nlookups)
-	case "lookup":
+	case ReqLookup:
 		for range ft.rnd.IntN(len(index)) {
 			index = set.AddUnique(index, random(q.Columns(), ft.rnd))
 		}
@@ -1098,8 +1098,8 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	q = q.Transform()
 	fixcost, varcost := Optimize(q, ReadMode, req)
 	if fixcost+varcost >= impossible {
-		// fall back to an unordered read so the test can still validate results
-		reqUse = "unordered"
+		// fall back to an unordered read 
+		use = ReqUnordered
 		req = UnorderedReq(1)
 		index = nil
 		fixcost, varcost = Optimize(q, ReadMode, req)
@@ -1133,17 +1133,19 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	for _, row := range expected {
 		qh.Row(row)
 	}
-	testRandomGet(t, ft.rnd, q, qh, hdr, nil)
 
-	// Implicit contract: Select only for ReqGrouped, Lookup only for ReqLookup,
-	// iteration only for ReqOrdered/ReqUnordered. See require.go for details.
-	switch reqUse {
-	case "lookup":
+	// match implicit contract, see require.go
+	if use != ReqLookup {
+		testRandomGet(t, ft.rnd, q, qh, hdr, nil)
+	}
+	if use == ReqLookup ||
+		(use == ReqGrouped && hasKey(req.cols, q.Keys(), nil)) {
 		if len(index) > 0 {
 			cols := hdr.Columns
 			testRandomLookups(t, ft.rnd, q, index, cols, expected)
 		}
-	case "grouped":
+	}
+	if use == ReqGrouped || use == ReqOrdered {
 		if len(index) > 0 {
 			testRandomSelects(t, ft.rnd, q, index, expected)
 		}

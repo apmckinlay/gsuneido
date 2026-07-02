@@ -15,12 +15,10 @@ import (
 // Use specifies the type of requirement placed on a query.
 // There is an implicit contract between the Use type and the operations
 // that can be performed on the query after SetApproach:
-//   - ReqUnordered: iteration only (Get), no Select, no Lookup
-//   - ReqOrdered: ordered iteration (Get), plus Select (order-preserving),
-//     no Lookup
-//   - ReqGrouped: enables Select (grouped by the required columns, which must
-//     be a prefix of an index, in any order)
-//   - ReqLookup: enables Lookup (with the exact index columns, in any order)
+//   - ReqUnordered: unordered Get, no Lookup
+//   - ReqOrdered: ordered Get, Select, no Lookup
+//   - ReqGrouped: Select + unordered Get, Lookup (requires key)
+//   - ReqLookup: Lookup (cols must contain a key), no Select, no Get
 //
 // Select is permitted on ReqOrdered (as well as ReqGrouped) because Select
 // filters rows while preserving iteration order — operators that rely on
