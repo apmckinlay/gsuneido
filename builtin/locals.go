@@ -5,7 +5,7 @@ package builtin
 
 import . "github.com/apmckinlay/gsuneido/core"
 
-var _ = builtin(Locals, "(i)")
+var _ = builtin(Locals, "(i) :object")
 
 func Locals(th *Thread, args []Value) Value {
 	return th.Locals(ToInt(args[0]))

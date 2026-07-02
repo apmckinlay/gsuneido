@@ -25,7 +25,7 @@ type suRunPiped struct {
 var nRunPiped atomic.Int32
 var _ = AddInfo("builtin.nRunPiped", &nRunPiped)
 
-var _ = builtin(RunPiped, "(command, block=false)")
+var _ = builtin(RunPiped, "(command, block=false) :unknown")
 
 func RunPiped(th *Thread, args []Value) Value {
 	guardSandbox("RunPiped")
@@ -123,14 +123,14 @@ func (*suRunPiped) Lookup(_ *Thread, method string) Value {
 
 var suRunPipedMethods = methods("runpiped")
 
-var _ = method(runpiped_Close, "()")
+var _ = method(runpiped_Close, "() :unknown")
 
 func runpiped_Close(this Value) Value {
 	rpOpen(this).close()
 	return this
 }
 
-var _ = method(runpiped_CloseWrite, "()")
+var _ = method(runpiped_CloseWrite, "() :unknown")
 
 func runpiped_CloseWrite(this Value) Value {
 	rp := rpOpen(this)
@@ -139,7 +139,7 @@ func runpiped_CloseWrite(this Value) Value {
 	return this
 }
 
-var _ = method(runpiped_ExitValue, "()")
+var _ = method(runpiped_ExitValue, "() :number")
 
 func runpiped_ExitValue(this Value) Value {
 	rp := rpOpen(this)
@@ -154,13 +154,13 @@ func runpiped_ExitValue(this Value) Value {
 	return IntVal(cmd.ProcessState.ExitCode())
 }
 
-var _ = method(runpiped_Flush, "()")
+var _ = method(runpiped_Flush, "() :void")
 
 func runpiped_Flush(this Value) Value {
 	return nil
 }
 
-var _ = method(runpiped_Read, "(nbytes=false)")
+var _ = method(runpiped_Read, "(nbytes=false) :false|string")
 
 func runpiped_Read(this, arg Value) Value {
 	return limitedRead("runpiped.Read", rpOpen(this).r, arg)
@@ -187,13 +187,13 @@ func limitedRead(which string, r io.Reader, arg Value) Value {
 	return SuStr(dst.String())
 }
 
-var _ = method(runpiped_Readline, "()")
+var _ = method(runpiped_Readline, "() :false|string")
 
 func runpiped_Readline(this Value) Value {
 	return Readline(rpOpen(this).r, "runPiped.Readline: ")
 }
 
-var _ = method(runpiped_Write, "(string)")
+var _ = method(runpiped_Write, "(string) :unknown")
 
 func runpiped_Write(this, arg Value) Value {
 	_, err := io.WriteString(rpWrite(this).w, AsStr(arg))
@@ -203,7 +203,7 @@ func runpiped_Write(this, arg Value) Value {
 	return arg
 }
 
-var _ = method(runpiped_Writeline, "(string)")
+var _ = method(runpiped_Writeline, "(string) :unknown")
 
 func runpiped_Writeline(this, arg Value) Value {
 	w := rpWrite(this).w
@@ -214,7 +214,7 @@ func runpiped_Writeline(this, arg Value) Value {
 	return arg
 }
 
-var _ = method(runpiped_CopyTo, "(dest, nbytes = false)")
+var _ = method(runpiped_CopyTo, "(dest, nbytes = false) :number")
 
 func runpiped_CopyTo(th *Thread, this Value, args []Value) Value {
 	return CopyTo(th, rpOpen(this).r, args[0], args[1])

@@ -12,7 +12,7 @@ import (
 var builtinNamesOnce sync.Once
 var builtinNames *SuObject
 
-var _ = builtin(BuiltinNames, "()")
+var _ = builtin(BuiltinNames, "() :object")
 
 func BuiltinNames() Value {
 	builtinNamesOnce.Do(func() {

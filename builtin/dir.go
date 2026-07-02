@@ -18,7 +18,7 @@ import (
 
 const maxDir = 10000
 
-var _ = builtin(dir, "(path='*', files=false, details=false, block=false)")
+var _ = builtin(dir, "(path='*', files=false, details=false, block=false) :object|void")
 
 func dir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])

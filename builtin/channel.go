@@ -18,7 +18,7 @@ type suChannel struct {
 
 var sc_timeout = 10 * time.Second
 
-var _ = builtin(Channel, "(size = 4)")
+var _ = builtin(Channel, "(size = 4) :unknown")
 
 func Channel(size Value) Value {
 	return &suChannel{ch: make(chan Value, IfInt(size))}
@@ -26,7 +26,7 @@ func Channel(size Value) Value {
 
 var suChannelMethods = methods("chan")
 
-var _ = method(chan_Send, "(value)")
+var _ = method(chan_Send, "(value) :void")
 
 func chan_Send(this, val Value) Value {
 	defer func() {
@@ -45,7 +45,7 @@ func chan_Send(this, val Value) Value {
 	return nil
 }
 
-var _ = method(chan_Recv, "()")
+var _ = method(chan_Recv, "() :unknown")
 
 func chan_Recv(this Value) Value {
 	sc := this.(*suChannel)
@@ -63,7 +63,7 @@ func chan_Recv(this Value) Value {
 	}
 }
 
-var _ = method(chan_Recv2, "(channel)")
+var _ = method(chan_Recv2, "(channel) :object")
 
 func chan_Recv2(this, arg Value) Value {
 	sc := this.(*suChannel)
@@ -92,7 +92,7 @@ func chan_Recv2(this, arg Value) Value {
 	return ob
 }
 
-var _ = method(chan_Close, "()")
+var _ = method(chan_Close, "() :void")
 
 func chan_Close(th *Thread, this Value, args []Value) Value {
 	// WARNING there is a race if Send & Close are called concurrently

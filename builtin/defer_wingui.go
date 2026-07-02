@@ -83,7 +83,7 @@ var _ = AddInfo("windows.nDefer", deferQueue.Size)
 
 //-------------------------------------------------------------------
 
-var _ = builtin(Defer, "(block)")
+var _ = builtin(Defer, "(block) :unknown")
 
 func Defer(th *Thread, args []Value) Value {
 	trace.Defer.Println("Defer", args[0])
@@ -95,7 +95,7 @@ func Defer(th *Thread, args []Value) Value {
 	return &killer{kill: func() { dqRemove(id) }}
 }
 
-var _ = builtin(Delay, "(delayMs, block)")
+var _ = builtin(Delay, "(delayMs, block) :unknown")
 
 func Delay(th *Thread, args []Value) Value {
 	if th != MainThread {

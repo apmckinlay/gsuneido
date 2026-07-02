@@ -254,7 +254,7 @@ func clearCallback(fn Value) bool {
 	return false // not found
 }
 
-var _ = builtin(Callbacks, "()")
+var _ = builtin(Callbacks, "() :object")
 
 func Callbacks() Value {
 	cblock.Lock()
@@ -292,7 +292,7 @@ func CallbacksCount() int {
 
 var _ = AddInfo("windows.nCallback", CallbacksCount)
 
-var _ = builtin(ClearCallback, "(fn)")
+var _ = builtin(ClearCallback, "(fn) :boolean")
 
 func ClearCallback(fn Value) Value {
 	return SuBool(clearCallback(fn))

@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 )
 
-var _ = builtin(Built, "()")
+var _ = builtin(Built, "() :string")
 
 func Built() Value {
 	return SuStr(options.BuiltStr())

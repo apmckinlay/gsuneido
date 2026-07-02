@@ -16,7 +16,7 @@ import (
 
 // dll Kernel32:GetComputerName(buffer lpBuffer, LONG* lpnSize) bool
 var getComputerName = kernel32.MustFindProc("GetComputerNameA").Addr()
-var _ = builtin(GetComputerName, "()")
+var _ = builtin(GetComputerName, "() :string")
 
 func GetComputerName() Value {
 	const bufsize = 32
@@ -33,7 +33,7 @@ func GetComputerName() Value {
 
 // dll Kernel32:GetModuleHandle(instring name) pointer
 var getModuleHandle = kernel32.MustFindProc("GetModuleHandleA").Addr()
-var _ = builtin(GetModuleHandle, "(unused)")
+var _ = builtin(GetModuleHandle, "(unused) :number")
 
 func GetModuleHandle(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(getModuleHandle, 0)
@@ -42,7 +42,7 @@ func GetModuleHandle(a Value) Value {
 
 // dll Kernel32:GetLocaleInfo(long locale, long lctype, string lpLCData, long cchData) long
 var getLocaleInfo = kernel32.MustFindProc("GetLocaleInfoA").Addr()
-var _ = builtin(GetLocaleInfo, "(a,b)")
+var _ = builtin(GetLocaleInfo, "(a,b) :string")
 
 func GetLocaleInfo(a, b Value) Value {
 	const bufsize = 255
@@ -57,7 +57,7 @@ func GetLocaleInfo(a, b Value) Value {
 
 // dll Kernel32:GetProcAddress(pointer hModule, [in] string procName) pointer
 var getProcAddress = kernel32.MustFindProc("GetProcAddress").Addr()
-var _ = builtin(GetProcAddress, "(hModule, procName)")
+var _ = builtin(GetProcAddress, "(hModule, procName) :number")
 
 func GetProcAddress(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(getProcAddress,
@@ -76,7 +76,7 @@ func globalalloc(flags, n uintptr) HANDLE {
 	return rtn
 }
 
-var _ = builtin(GlobalAlloc, "(flags, size)")
+var _ = builtin(GlobalAlloc, "(flags, size) :number")
 
 func GlobalAlloc(a, b Value) Value {
 	return intRet(globalalloc(intArg(a), intArg(b)))
@@ -90,7 +90,7 @@ func globallock(handle HANDLE) uintptr {
 	return rtn
 }
 
-var _ = builtin(GlobalLock, "(hMem)")
+var _ = builtin(GlobalLock, "(hMem) :number")
 
 func GlobalLock(a Value) Value {
 	return intRet(uintptr(globallock(intArg(a))))
@@ -104,7 +104,7 @@ func globalsize(handle HANDLE) uintptr {
 	return rtn
 }
 
-var _ = builtin(GlobalSize, "(hMem)")
+var _ = builtin(GlobalSize, "(hMem) :number")
 
 func GlobalSize(a Value) Value {
 	return intRet(globalsize(intArg(a)))
@@ -112,7 +112,7 @@ func GlobalSize(a Value) Value {
 
 const GMEM_MOVEABLE = 2
 
-var _ = builtin(GlobalAllocData, "(s)")
+var _ = builtin(GlobalAllocData, "(s) :number")
 
 func GlobalAllocData(a Value) Value {
 	s := ToStr(a)
@@ -128,7 +128,7 @@ func GlobalAllocData(a Value) Value {
 	return intRet(handle) // caller must GlobalFree
 }
 
-var _ = builtin(GlobalData, "(hMem)")
+var _ = builtin(GlobalData, "(hMem) :string")
 
 func GlobalData(a Value) Value {
 	hm := intArg(a)
@@ -151,7 +151,7 @@ func globalunlock(handle HANDLE) uintptr {
 	return rtn
 }
 
-var _ = builtin(GlobalUnlock, "(hMem)")
+var _ = builtin(GlobalUnlock, "(hMem) :boolean")
 
 func GlobalUnlock(a Value) Value {
 	return boolRet(globalunlock(intArg(a)))
@@ -159,7 +159,7 @@ func GlobalUnlock(a Value) Value {
 
 // dll pointer Kernel32:GlobalFree(pointer hglb)
 var globalFree = kernel32.MustFindProc("GlobalFree").Addr()
-var _ = builtin(GlobalFree, "(hglb)")
+var _ = builtin(GlobalFree, "(hglb) :number")
 
 func GlobalFree(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(globalFree, intArg(a))
@@ -168,7 +168,7 @@ func GlobalFree(a Value) Value {
 
 //-------------------------------------------------------------------
 
-var _ = builtin(MulDiv, "(x, y, z)")
+var _ = builtin(MulDiv, "(x, y, z) :number")
 
 func MulDiv(a, b, c Value) Value {
 	return IntVal(int(int64(ToInt(a)) * int64(ToInt(b)) / int64(ToInt(c))))
@@ -176,7 +176,7 @@ func MulDiv(a, b, c Value) Value {
 
 // dll bool Kernel32:CloseHandle(pointer handle)
 var closeHandle = kernel32.MustFindProc("CloseHandle").Addr()
-var _ = builtin(CloseHandle, "(handle)")
+var _ = builtin(CloseHandle, "(handle) :boolean")
 
 func CloseHandle(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(closeHandle, intArg(a))
@@ -185,7 +185,7 @@ func CloseHandle(a Value) Value {
 
 // dll pointer Kernel32:GetCurrentProcess()
 var getCurrentProcess = kernel32.MustFindProc("GetCurrentProcess").Addr()
-var _ = builtin(GetCurrentProcess, "()")
+var _ = builtin(GetCurrentProcess, "() :number")
 
 func GetCurrentProcess() Value {
 	rtn, _, _ := syscall.SyscallN(getCurrentProcess)
@@ -194,14 +194,14 @@ func GetCurrentProcess() Value {
 
 // dll long Kernel32:GetCurrentProcessId()
 var getCurrentProcessId = kernel32.MustFindProc("GetCurrentProcessId").Addr()
-var _ = builtin(GetCurrentProcessId, "()")
+var _ = builtin(GetCurrentProcessId, "() :number")
 
 func GetCurrentProcessId() Value {
 	rtn, _, _ := syscall.SyscallN(getCurrentProcessId)
 	return intRet(rtn)
 }
 
-var _ = builtin(GetCurrentThreadId, "()")
+var _ = builtin(GetCurrentThreadId, "() :number")
 
 func GetCurrentThreadId() Value {
 	return intRet(uintptr(windows.GetCurrentThreadId()))
@@ -209,7 +209,7 @@ func GetCurrentThreadId() Value {
 
 // dll pointer Kernel32:GetStdHandle(long nStdHandle)
 var getStdHandle = kernel32.MustFindProc("GetStdHandle").Addr()
-var _ = builtin(GetStdHandle, "(nStdHandle)")
+var _ = builtin(GetStdHandle, "(nStdHandle) :number")
 
 func GetStdHandle(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(getStdHandle, intArg(a))
@@ -218,7 +218,7 @@ func GetStdHandle(a Value) Value {
 
 // dll int64 Kernel32:GetTickCount64()
 var getTickCount64 = kernel32.MustFindProc("GetTickCount64").Addr()
-var _ = builtin(GetTickCount, "()")
+var _ = builtin(GetTickCount, "() :number")
 
 func GetTickCount() Value {
 	rtn, _, _ := syscall.SyscallN(getTickCount64)
@@ -227,7 +227,7 @@ func GetTickCount() Value {
 
 // dll pointer Kernel32:LoadLibrary([in] string library)
 var loadLibrary = kernel32.MustFindProc("LoadLibraryA").Addr()
-var _ = builtin(LoadLibrary, "(library)")
+var _ = builtin(LoadLibrary, "(library) :number")
 
 func LoadLibrary(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(loadLibrary,
@@ -237,7 +237,7 @@ func LoadLibrary(a Value) Value {
 
 // dll pointer Kernel32:LoadResource(pointer module, pointer res)
 var loadResource = kernel32.MustFindProc("LoadResource").Addr()
-var _ = builtin(LoadResource, "(module, res)")
+var _ = builtin(LoadResource, "(module, res) :number")
 
 func LoadResource(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(loadResource,
@@ -248,7 +248,7 @@ func LoadResource(a, b Value) Value {
 
 // dll bool Kernel32:SetCurrentDirectory(string lpPathName)
 var setCurrentDirectory = kernel32.MustFindProc("SetCurrentDirectoryA").Addr()
-var _ = builtin(SetCurrentDirectory, "(lpPathName)")
+var _ = builtin(SetCurrentDirectory, "(lpPathName) :boolean")
 
 func SetCurrentDirectory(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(setCurrentDirectory,
@@ -263,7 +263,7 @@ func SetCurrentDirectory(a Value) Value {
 var createFile = kernel32.MustFindProc("CreateFileA").Addr()
 var _ = builtin(CreateFile, "(lpFileName, dwDesiredAccess, dwShareMode, "+
 	"lpSecurityAttributes, dwCreationDistribution, dwFlagsAndAttributes, "+
-	"hTemplateFile)")
+	"hTemplateFile) :number")
 
 func CreateFile(a, b, c, d, e, f, g Value) Value {
 	rtn, _, _ := syscall.SyscallN(createFile,
@@ -285,7 +285,7 @@ func CreateFile(a, b, c, d, e, f, g Value) Value {
 // pointer lpOverlapped)
 var writeFile = kernel32.MustFindProc("WriteFile").Addr()
 var _ = builtin(WriteFile, "(hFile, lpBuffer, nNumberOfBytesToWrite, "+
-	"lpNumberOfBytesWritten, lpOverlapped/*unused*/)")
+	"lpNumberOfBytesWritten, lpOverlapped/*unused*/) :boolean")
 
 func WriteFile(a, b, c, d, e Value) Value {
 	s := ToStr(b)
@@ -295,7 +295,7 @@ func WriteFile(a, b, c, d, e Value) Value {
 }
 
 var _ = builtin(WriteFilePtr, "(hFile, lpBuffer, nNumberOfBytesToWrite, "+
-	"lpNumberOfBytesWritten, lpOverlapped/*unused*/)")
+	"lpNumberOfBytesWritten, lpOverlapped/*unused*/) :boolean")
 
 func WriteFilePtr(a, b, c, d, e Value) Value {
 	buf := toptr(ToInt(b))
@@ -323,7 +323,7 @@ func writefile(f Value, buf unsafe.Pointer, size Value, written Value) Value {
 // LONG* lpMaximumComponentLength, LONG* lpFileSystemFlags,
 // string lpFileSystemNameBuffer, long nFileSystemNameSize)
 var getVolumeInformation = kernel32.MustFindProc("GetVolumeInformationA").Addr()
-var _ = builtin(GetVolumeName, "(vol = `c:\\`)")
+var _ = builtin(GetVolumeName, "(vol = `c:\\`) :string")
 
 func GetVolumeName(a Value) Value {
 	const bufsize = 255

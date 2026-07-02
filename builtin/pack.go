@@ -7,19 +7,19 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(packSize, "(value)")
+var _ = builtin(packSize, "(value) :number")
 
 func packSize(arg Value) Value {
 	return IntVal(PackSize(arg))
 }
 
-var _ = builtin(pack, "(value)")
+var _ = builtin(pack, "(value) :string")
 
 func pack(arg Value) Value {
 	return SuStr(PackValue(arg))
 }
 
-var _ = builtin(unpack, "(string)")
+var _ = builtin(unpack, "(string) :unknown")
 
 func unpack(arg Value) Value {
 	defer func() {

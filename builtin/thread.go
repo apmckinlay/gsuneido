@@ -82,14 +82,14 @@ func threadCallClass(th *Thread, args []Value) Value {
 
 var threadMethods = methods("thread")
 
-var _ = staticMethod(thread_GC, "()")
+var _ = staticMethod(thread_GC, "() :void")
 
 func thread_GC() Value {
 	runtime.GC()
 	return nil
 }
 
-var _ = staticMethod(thread_Name, "(name=false)")
+var _ = staticMethod(thread_Name, "(name=false) :string")
 
 func thread_Name(th *Thread, args []Value) Value {
 	if args[0] != False {
@@ -102,7 +102,7 @@ func threadName(th *Thread, name Value) {
 	th.Name = str.BeforeFirst(th.Name, " ") + " " + ToStr(name)
 }
 
-var _ = staticMethod(thread_Count, "()")
+var _ = staticMethod(thread_Count, "() :number")
 
 func thread_Count() Value {
 	return IntVal(threads.count())
@@ -110,7 +110,7 @@ func thread_Count() Value {
 
 var _ = AddInfo("builtin.nThread", threads.count)
 
-var _ = staticMethod(thread_List, "()")
+var _ = staticMethod(thread_List, "() :object")
 
 func thread_List() Value {
 	ob := &SuObject{}
@@ -122,14 +122,14 @@ func thread_List() Value {
 	return ob
 }
 
-var _ = staticMethod(thread_Sleep, "(ms)")
+var _ = staticMethod(thread_Sleep, "(ms) :void")
 
 func thread_Sleep(ms Value) Value {
 	time.Sleep(time.Duration(ToInt(ms)) * time.Millisecond)
 	return nil
 }
 
-var _ = staticMethod(thread_Profile, "(block)")
+var _ = staticMethod(thread_Profile, "(block) :object")
 
 func thread_Profile(th *Thread, args []Value) Value {
 	th.StartProfile()
@@ -148,20 +148,20 @@ func thread_Profile(th *Thread, args []Value) Value {
 	return prof
 }
 
-var _ = staticMethod(thread_NewSuneidoGlobal, "()")
+var _ = staticMethod(thread_NewSuneidoGlobal, "() :void")
 
 func thread_NewSuneidoGlobal(th *Thread, _ []Value) Value {
 	th.Suneido.Store(new(SuneidoObject))
 	return nil
 }
 
-var _ = staticMethod(thread_MainQ, "()")
+var _ = staticMethod(thread_MainQ, "() :boolean")
 
 func thread_MainQ(th *Thread, _ []Value) Value {
 	return SuBool(th == MainThread || OnUIThread())
 }
 
-var _ = staticMethod(thread_Exit, "()")
+var _ = staticMethod(thread_Exit, "() :void")
 
 func thread_Exit(th *Thread, _ []Value) Value {
 	if th == MainThread || OnUIThread() {
@@ -171,7 +171,7 @@ func thread_Exit(th *Thread, _ []Value) Value {
 	return nil
 }
 
-var _ = staticMethod(thread_Members, "()")
+var _ = staticMethod(thread_Members, "() :object")
 
 func thread_Members() Value {
 	return thread_members

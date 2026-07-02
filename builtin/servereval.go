@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(ServerEval, "(@args)")
+var _ = builtin(ServerEval, "(@args) :unknown")
 
 func ServerEval(th *Thread, args []Value) Value {
 	return th.Dbms().Exec(th, args[0])

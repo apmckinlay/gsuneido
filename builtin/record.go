@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 )
 
-var _ = builtin(record, "(@args)")
+var _ = builtin(record, "(@args) :object")
 
 func record(arg Value) Value {
 	return SuRecordFromObject(arg.(*SuObject))
@@ -16,27 +16,27 @@ func record(arg Value) Value {
 
 var _ = exportMethods(&RecordMethods, "record")
 
-var _ = method(record_AttachRule, "(key,callable)")
+var _ = method(record_AttachRule, "(key,callable) :void")
 
 func record_AttachRule(this, arg1, arg2 Value) Value {
 	this.(*SuRecord).AttachRule(arg1, arg2)
 	return nil
 }
 
-var _ = method(record_Clear, "()")
+var _ = method(record_Clear, "() :void")
 
 func record_Clear(this Value) Value {
 	this.(*SuRecord).Clear()
 	return nil
 }
 
-var _ = method(record_GetDeps, "(field)")
+var _ = method(record_GetDeps, "(field) :string")
 
 func record_GetDeps(this, arg Value) Value {
 	return this.(*SuRecord).GetDeps(ToStr(arg))
 }
 
-var _ = method(record_Delete, "()")
+var _ = method(record_Delete, "() :void|object")
 
 func record_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if as.Nargs != 0 {
@@ -48,7 +48,7 @@ func record_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return nil
 }
 
-var _ = method(record_Drop, "()")
+var _ = method(record_Drop, "() :void")
 
 func record_Drop(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	surec := this.(*SuRecord)
@@ -57,7 +57,7 @@ func record_Drop(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return nil
 }
 
-var _ = method(record_Invalidate, "(@args)")
+var _ = method(record_Invalidate, "(@args) :void")
 
 func record_Invalidate(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	r := this.(*SuRecord)
@@ -72,40 +72,40 @@ func record_Invalidate(th *Thread, as *ArgSpec, this Value, args []Value) Value 
 	return nil
 }
 
-var _ = method(record_NewQ, "()")
+var _ = method(record_NewQ, "() :boolean")
 
 func record_NewQ(this Value) Value {
 	return SuBool(this.(*SuRecord).IsNew())
 }
 
-var _ = method(record_Observer, "(observer)")
+var _ = method(record_Observer, "(observer) :void")
 
 func record_Observer(this, arg Value) Value {
 	this.(*SuRecord).Observer(arg)
 	return nil
 }
 
-var _ = method(record_PreSet, "(field,value)")
+var _ = method(record_PreSet, "(field,value) :void")
 
 func record_PreSet(this, arg1, arg2 Value) Value {
 	this.(*SuRecord).PreSet(arg1, arg2)
 	return nil
 }
 
-var _ = method(record_RemoveObserver, "(observer)")
+var _ = method(record_RemoveObserver, "(observer) :boolean")
 
 func record_RemoveObserver(this, arg Value) Value {
 	return SuBool(this.(*SuRecord).RemoveObserver(arg))
 }
 
-var _ = method(record_SetDeps, "(field,deps)")
+var _ = method(record_SetDeps, "(field,deps) :void")
 
 func record_SetDeps(this, arg1, arg2 Value) Value {
 	this.(*SuRecord).SetDeps(ToStr(arg1), ToStr(arg2))
 	return nil
 }
 
-var _ = method(record_Transaction, "()")
+var _ = method(record_Transaction, "() :false|unknown")
 
 func record_Transaction(this Value) Value {
 	t := this.(*SuRecord).Transaction()
@@ -115,7 +115,7 @@ func record_Transaction(this Value) Value {
 	return t
 }
 
-var _ = method(record_Update, "(record = false)")
+var _ = method(record_Update, "(record = false) :void")
 
 func record_Update(th *Thread, this Value, args []Value) Value {
 	surec := this.(*SuRecord)

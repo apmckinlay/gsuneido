@@ -38,7 +38,7 @@ type suFile struct {
 var nFile atomic.Int32
 var _ = AddInfo("builtin.nFile", &nFile)
 
-var _ = builtin(File, "(filename, mode='r', block=false)")
+var _ = builtin(File, "(filename, mode='r', block=false) :unknown")
 
 func File(th *Thread, args []Value) Value {
 	name := ToStr(args[0])
@@ -151,14 +151,14 @@ const MaxLine = 4000
 
 var suFileMethods = methods("file")
 
-var _ = method(file_Close, "()")
+var _ = method(file_Close, "() :void")
 
 func file_Close(this Value) Value {
 	sfOpen(this).close()
 	return nil
 }
 
-var _ = method(file_Flush, "()")
+var _ = method(file_Flush, "() :void")
 
 func file_Flush(this Value) Value {
 	err := sfOpenWrite(this).w.Flush()
@@ -168,7 +168,7 @@ func file_Flush(this Value) Value {
 	return nil
 }
 
-var _ = method(file_Read, "(nbytes=false)")
+var _ = method(file_Read, "(nbytes=false) :string|false")
 
 func file_Read(this, arg Value) Value {
 	sf := sfOpenRead(this)
@@ -191,7 +191,7 @@ func file_Read(this, arg Value) Value {
 	return SuStr(hacks.BStoS(buf))
 }
 
-var _ = method(file_CopyTo, "(dest, nbytes = false)")
+var _ = method(file_CopyTo, "(dest, nbytes = false) :number")
 
 func file_CopyTo(th *Thread, this Value, args []Value) Value {
 	return CopyTo(th, sfOpenRead(this).r, args[0], args[1])
@@ -201,7 +201,7 @@ func (sf *suFile) writer() io.Writer {
 	return sfOpenWrite(sf).w
 }
 
-var _ = method(file_Readline, "()")
+var _ = method(file_Readline, "() :false|string")
 
 func file_Readline(this Value) Value {
 	sf := sfOpenRead(this)
@@ -210,7 +210,7 @@ func file_Readline(this Value) Value {
 	return val
 }
 
-var _ = method(file_Seek, "(offset, origin='set')")
+var _ = method(file_Seek, "(offset, origin='set') :void")
 
 func file_Seek(this, arg1, arg2 Value) Value {
 	sf := sfOpen(this)
@@ -237,7 +237,7 @@ func file_Seek(this, arg1, arg2 Value) Value {
 	return nil
 }
 
-var _ = method(file_Size, "()")
+var _ = method(file_Size, "() :number")
 
 func file_Size(this Value) Value {
 	sf := sfOpen(this)
@@ -247,7 +247,7 @@ func file_Size(this Value) Value {
 	return Int64Val(sf.size())
 }
 
-var _ = method(file_Tell, "()")
+var _ = method(file_Tell, "() :number")
 
 func file_Tell(this Value) Value {
 	sf := sfOpen(this)
@@ -261,7 +261,7 @@ func file_Tell(this Value) Value {
 	return Int64Val(sf.tell)
 }
 
-var _ = method(file_Write, "(string)")
+var _ = method(file_Write, "(string) :string")
 
 func file_Write(this, arg Value) Value {
 	s := AsStr(arg)
@@ -274,7 +274,7 @@ func file_Write(this, arg Value) Value {
 	return arg
 }
 
-var _ = method(file_Writeline, "(string)")
+var _ = method(file_Writeline, "(string) :string")
 
 func file_Writeline(this, arg Value) Value {
 	s := AsStr(arg)

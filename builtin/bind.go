@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 )
 
-var _ = builtin(Bind, "(@args)")
+var _ = builtin(Bind, "(@args) :unknown")
 
 func Bind(args Value) Value {
 	ob := args.(*SuObject)

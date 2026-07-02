@@ -17,7 +17,7 @@ var comdlg32 = MustLoadDLL("comdlg32.dll")
 
 // dll long ComDlg32:CommDlgExtendedError()
 var commDlgExtendedError = comdlg32.MustFindProc("CommDlgExtendedError").Addr()
-var _ = builtin(CommDlgExtendedError, "()")
+var _ = builtin(CommDlgExtendedError, "() :number")
 
 func CommDlgExtendedError() Value {
 	rtn, _, _ := syscall.SyscallN(commDlgExtendedError)
@@ -26,7 +26,7 @@ func CommDlgExtendedError() Value {
 
 // dll bool ComDlg32:PrintDlg(PRINTDLG* printdlg)
 var printDlg = comdlg32.MustFindProc("PrintDlgA").Addr()
-var _ = builtin(PrintDlg, "(printdlg)")
+var _ = builtin(PrintDlg, "(printdlg) :boolean")
 
 func PrintDlg(a Value) Value {
 	pd := stPrintDlg{
@@ -93,7 +93,7 @@ const nPrintDlg = unsafe.Sizeof(stPrintDlg{})
 
 // dll bool ComDlg32:PageSetupDlg(PAGESETUPDLG* pagesetupdlg)
 var pageSetupDlg = comdlg32.MustFindProc("PageSetupDlgA").Addr()
-var _ = builtin(PageSetupDlg, "(pagesetupdlg)")
+var _ = builtin(PageSetupDlg, "(pagesetupdlg) :boolean")
 
 func PageSetupDlg(a Value) Value {
 	psd := stPageSetupDlg{
@@ -153,7 +153,7 @@ const nPageSetupDlg = unsafe.Sizeof(stPageSetupDlg{})
 
 // dll bool ComDlg32:GetSaveFileName(OPENFILENAME* ofn)
 var getSaveFileName = comdlg32.MustFindProc("GetSaveFileNameA").Addr()
-var _ = builtin(GetSaveFileName, "(a)")
+var _ = builtin(GetSaveFileName, "(a) :boolean")
 
 func GetSaveFileName(a Value) Value {
 	ofn, buf := buildOPENFILENAME(a)
@@ -167,7 +167,7 @@ func GetSaveFileName(a Value) Value {
 
 // dll bool ComDlg32:GetOpenFileName(OPENFILENAME* ofn)
 var getOpenFileName = comdlg32.MustFindProc("GetOpenFileNameA").Addr()
-var _ = builtin(GetOpenFileName, "(a)")
+var _ = builtin(GetOpenFileName, "(a) :boolean")
 
 func GetOpenFileName(a Value) Value {
 	ofn, buf := buildOPENFILENAME(a)
@@ -231,7 +231,7 @@ const nOpenFileName = unsafe.Sizeof(stOpenFileName{})
 
 // dll bool ComDlg32:ChooseColor(CHOOSECOLOR* x)
 var chooseColor = comdlg32.MustFindProc("ChooseColorA").Addr()
-var _ = builtin(ChooseColor, "(x)")
+var _ = builtin(ChooseColor, "(x) :boolean")
 
 func ChooseColor(a Value) Value {
 	var custColors CustColors
@@ -286,7 +286,7 @@ type CustColors [nCustColors]int32
 
 // dll bool ComDlg32:ChooseFont(CHOOSEFONT* cf)
 var chooseFont = comdlg32.MustFindProc("ChooseFontA").Addr()
-var _ = builtin(ChooseFont, "(cf)")
+var _ = builtin(ChooseFont, "(cf) :boolean")
 
 func ChooseFont(a Value) Value {
 	lfob := a.Get(nil, SuStr("lpLogFont"))
@@ -367,7 +367,7 @@ const nChooseFont = unsafe.Sizeof(stChooseFont{})
 
 // dll HRESULT ComDlg32:PrintDlgEx(PRINTDLGEX* printdlgex)
 var printDlgEx = comdlg32.MustFindProc("PrintDlgExA").Addr()
-var _ = builtin(PrintDlgEx, "(printdlgex)")
+var _ = builtin(PrintDlgEx, "(printdlgex) :number")
 
 func PrintDlgEx(a Value) Value {
 	pd := stPrintDlgEx{

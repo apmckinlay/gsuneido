@@ -29,7 +29,7 @@ var lruCacheCallClass = func(th *Thread, args []Value) Value {
 
 var lruStaticMethods = methods("lruStatic")
 
-var _ = staticMethod(lruStatic_ResetAll, "()")
+var _ = staticMethod(lruStatic_ResetAll, "() :void")
 
 func lruStatic_ResetAll(th *Thread, _ []Value) Value {
 	iter := ToContainer(Global.Find(th, GnSuneido)).Iter2(true, true)
@@ -41,7 +41,7 @@ func lruStatic_ResetAll(th *Thread, _ []Value) Value {
 	return nil
 }
 
-var _ = staticMethod(lruStatic_Members, "()")
+var _ = staticMethod(lruStatic_Members, "() :object")
 
 func lruStatic_Members() Value {
 	return lruStatic_members
@@ -64,7 +64,7 @@ var suLruCacheMethods = methods("lru")
 
 // Get calls the getter with exactly the same arguments it receives.
 // If called with multiple arguments, the hash key is an @args object.
-var _ = method(lru_Get, "(@args)")
+var _ = method(lru_Get, "(@args) :unknown")
 
 func lru_Get(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if as.Nargs == 0 {
@@ -83,7 +83,7 @@ func lru_Get(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return val
 }
 
-var _ = method(lru_Reset, "()")
+var _ = method(lru_Reset, "() :void")
 
 func lru_Reset(this Value) Value {
 	slc := this.(*suLruCache)
@@ -91,14 +91,14 @@ func lru_Reset(this Value) Value {
 	return nil
 }
 
-var _ = method(lru_OkForResetAllQ, "()")
+var _ = method(lru_OkForResetAllQ, "() :boolean")
 
 func lru_OkForResetAllQ(this Value) Value {
 	slc := this.(*suLruCache)
 	return SuBool(slc.okForResetAll)
 }
 
-var _ = method(lru_GetMissRate, "()")
+var _ = method(lru_GetMissRate, "() :number")
 
 func lru_GetMissRate(this Value) Value {
 	slc := this.(*suLruCache)

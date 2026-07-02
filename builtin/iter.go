@@ -9,21 +9,21 @@ import (
 
 var _ = exportMethods(&IterMethods, "iter")
 
-var _ = method(iter_Dup, "()")
+var _ = method(iter_Dup, "() :sequence")
 
 func iter_Dup(this Value) Value {
 	it := this.(SuIter)
 	return SuIter{Iter: it.Dup()}
 }
 
-var _ = method(iter_InfiniteQ, "()")
+var _ = method(iter_InfiniteQ, "() :boolean")
 
 func iter_InfiniteQ(this Value) Value {
 	it := this.(SuIter)
 	return SuBool(it.Infinite())
 }
 
-var _ = method(iter_Next, "()")
+var _ = method(iter_Next, "() :unknown")
 
 func iter_Next(this Value) Value {
 	it := this.(SuIter)
