@@ -19,7 +19,6 @@ type Minus struct {
 
 type minusApproach struct {
 	keyIndex   []string
-	frac2      float64
 	req1, req2 Require
 }
 
@@ -82,35 +81,13 @@ func (m *Minus) Transform() Query {
 	return m
 }
 
-func (m *Minus) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	assert.That(m.disjoint == "") // eliminated by Transform
-	// iterate source and lookup on source2
-	fixcost, varcost := Optimize(m.source1, mode, index, frac)
-	nrows1, _ := m.source1.Nrows()
-	nrows2, _ := m.source2.Nrows()
-	lookups := int(float64(nrows1) * frac)
-	frac2 := float64(lookups) / float64(max(1, nrows2))
-	best2 := bestLookupIndex(m.source2, mode, lookups, frac2, nil)
-	return fixcost + best2.fixcost, varcost + best2.varcost,
-		&minusApproach{keyIndex: best2.index, frac2: frac2}
-}
-
-func (m *Minus) setApproach(index []string, frac float64, approach any, tran QueryTran) {
-	ap := approach.(*minusApproach)
-	m.keyIndex = ap.keyIndex
-	m.source1 = SetApproach(m.source1, index, frac, tran)
-	m.source2 = SetApproach(m.source2, m.keyIndex, ap.frac2, tran)
-	m.header = m.source1.Header()
-	m.src1Only = set.Difference(m.source1.Columns(), m.source2.Columns())
-}
-
-func (m *Minus) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (m *Minus) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	assert.That(m.disjoint == "")
-	fixcost1, varcost1 := Optimize2(m.source1, mode, req)
+	fixcost1, varcost1 := Optimize(m.source1, mode, req)
 	nrows1, _ := m.source1.Nrows()
 	nlookups := req.LookupCount(nrows1)
 	req2 := LookupReq(m.source2.Columns(), nlookups)
-	fc2, vc2 := Optimize2(m.source2, mode, req2)
+	fc2, vc2 := Optimize(m.source2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil
 	}
@@ -118,11 +95,11 @@ func (m *Minus) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 		&minusApproach{keyIndex: req2.cols, req1: req, req2: req2}
 }
 
-func (m *Minus) setApproach2(req Require, approach any, tran QueryTran) {
+func (m *Minus) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*minusApproach)
 	m.keyIndex = ap.keyIndex
-	m.source1 = SetApproach2(m.source1, ap.req1, tran)
-	m.source2 = SetApproach2(m.source2, ap.req2, tran)
+	m.source1 = SetApproach(m.source1, ap.req1, tran)
+	m.source2 = SetApproach(m.source2, ap.req2, tran)
 	m.header = m.source1.Header()
 	m.src1Only = set.Difference(m.source1.Columns(), m.source2.Columns())
 }

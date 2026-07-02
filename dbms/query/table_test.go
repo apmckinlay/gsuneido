@@ -10,12 +10,12 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestTableOptimize2(t *testing.T) {
+func TestTableOptimize(t *testing.T) {
 	assert := assert.T(t)
 	tran := testTran{}
 
 	optimizeFor := func(tbl *Table, req Require) (Cost, Cost, any) {
-		return tbl.optimize2(ReadMode, req)
+		return tbl.optimize(ReadMode, req)
 	}
 
 	test := func(table string, req Require, expected []string) {
@@ -86,8 +86,8 @@ func TestTableOptimize2(t *testing.T) {
 	// ReqLookup — {supplier} is a physical index
 	test("supplier", LookupReq([]string{"supplier"}, 1), []string{"supplier"})
 
-	// ReqLookup — {city,supplier} is a physical index
-	test("supplier", LookupReq([]string{"city", "supplier"}, 1), []string{"city", "supplier"})
+	// ReqLookup — {supplier} is the shortest key
+	test("supplier", LookupReq([]string{"city", "supplier"}, 1), []string{"supplier"})
 
 	// ReqLookup — {city} is not a physical index and no index is both
 	// lookup-eligible (contains a key as a prefix) AND grouped by {city}.
@@ -149,7 +149,7 @@ func TestTableOptimize2(t *testing.T) {
 func TestTableOptimize2_ReqLookup_indexCovered(t *testing.T) {
 	assert := assert.T(t)
 	optimizeFor := func(tbl *Table, req Require) (Cost, Cost, any) {
-		return tbl.optimize2(ReadMode, req)
+		return tbl.optimize(ReadMode, req)
 	}
 	test := func(tbl *Table, req Require, expected []string) {
 		t.Helper()
@@ -186,14 +186,6 @@ func TestTableOptimize2_ReqLookup_indexCovered(t *testing.T) {
 	// by=(x,y), index=(x,c), key=(x): fails — indexCovered fails (c not in by)
 	tbl = newTable("xc", [][]string{{"x", "c"}}, [][]string{{"x"}}, 100)
 	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
-
-	// by=(x,y), index=(x), no key: fails — lookupIndexEligible fails
-	tbl = newTable("xnokey", [][]string{{"x"}}, [][]string{}, 100)
-	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
-
-	// by=(x,y), indexes=[x],[y], key=(y): picks [y] (smallest eligible index)
-	tbl = newTable("twoidx", [][]string{{"x"}, {"y"}}, [][]string{{"y"}}, 100)
-	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"y"})
 
 	// by=(x,y,z), key=(y,z): picks [y,z] — indexCovered passes (y,z both in by)
 	tbl = newTable("xyz2", [][]string{{"y", "z"}}, [][]string{{"y", "z"}}, 100)

@@ -609,8 +609,8 @@ func TestWhere_keyfixed(t *testing.T) {
 	q = q.Transform()
 	index := []string{"b"}
 	req := OrderedReq(index, 1)
-	Optimize2(q, ReadMode, req)
-	q = SetApproach2(q, req, tran)
+	Optimize(q, ReadMode, req)
+	q = SetApproach(q, req, tran)
 	assert.That(q.fastSingle())
 	th := &Thread{}
 	sels := Sels{{"b", Pack(IntVal(5))}}
@@ -692,8 +692,8 @@ func TestWhere_SelOrgNotFull(t *testing.T) {
 	q = q.Transform()
 	key := []string{"a", "b"}
 	req := OrderedReq(key, 1)
-	Optimize2(q, ReadMode, req)
-	q = SetApproach2(q, req, tran)
+	Optimize(q, ReadMode, req)
+	q = SetApproach(q, req, tran)
 	q.Lookup(nil, Sels{{"a", Pack(SuInt(4))}, {"b", Pack(SuInt(5))}})
 }
 

@@ -52,9 +52,8 @@ type Project struct {
 type mapType = shmap.Map[rowHash, struct{}, shmap.Funcs[rowHash]]
 
 type projectApproach struct {
-	index []string
-	req   Require
 	strat projectStrategy
+	req   Require
 }
 
 type projectStrategy int
@@ -440,87 +439,46 @@ func (p *Project) Updateable() string {
 
 // optimize ---------------------------------------------------------
 
-func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	if p.unique {
-		approach := &projectApproach{strat: projCopy, index: index}
-		fixcost, varcost := Optimize(p.source, mode, index, frac)
-		return fixcost, varcost, approach
-	}
-	seq := bestGrouped(p.source, mode, index, frac, p.columns)
-	fixcostMap, varcostMap := p.mapCost(mode, index, frac)
-	if fixcostMap+varcostMap < seq.cost() {
-		return fixcostMap, varcostMap,
-			&projectApproach{strat: projMap, index: index}
-	}
-	return seq.fixcost, seq.varcost,
-		&projectApproach{strat: projSeq, index: seq.index}
-}
-
 // mapThreshold and mapWarn are used by Project and Summarize
 const (
 	mapThreshold = 10000 // used by optimize
 	mapWarn      = 20000
 )
 
-func (p *Project) mapCost(mode Mode, index []string, frac float64) (Cost, Cost) {
-	nrows, _ := p.Nrows()
-	if mode != ReadMode || nrows > mapThreshold {
-		return impossible, impossible
-	}
-	// assume we're reading Next (normal)
-	fixcost, varcost := Optimize(p.source, mode, index, frac)
-	mapCost := nrows * 20 // ???
-	return fixcost, varcost + mapCost
-}
-
-func (p *Project) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
-	p.projectApproach = *approach.(*projectApproach)
-	switch p.strat {
-	case projCopy:
-		projCopyCount.Add(1)
-	case projSeq:
-		projSeqCount.Add(1)
-	case projMap:
-		projMapCount.Add(1)
-	}
-	p.source = SetApproach(p.source, p.index, frac, tran)
-	p.header = p.getHeader()
-}
-
-func (p *Project) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (p *Project) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if p.unique {
 		// no dedup needed — pass req through unchanged
-		fixcost, varcost := Optimize2(p.source, mode, req)
+		fixcost, varcost := Optimize(p.source, mode, req)
 		return fixcost, varcost, &projectApproach{strat: projCopy, req: req}
 	}
 	// non-unique: merge incoming req with own ReqGrouped(p.columns)
-	seqFix, seqVar, seqApp := p.seqCost2(mode, req)
-	mapFix, mapVar, mapApp := p.mapCost2(mode, req)
+	seqFix, seqVar, seqApp := p.seqCost(mode, req)
+	mapFix, mapVar, mapApp := p.mapCost(mode, req)
 	if seqFix+seqVar <= mapFix+mapVar {
 		return seqFix, seqVar, seqApp
 	}
 	return mapFix, mapVar, mapApp
 }
 
-func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
+func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 	fixed := p.source.Fixed()
 	nColsUnfixed := countUnfixed(p.columns, fixed)
 	nrows, _ := p.Nrows()
 	switch req.Use() {
 	case ReqUnordered:
 		srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), 1)
-		fixcost, varcost := Optimize2(p.source, mode, srcReq)
+		fixcost, varcost := Optimize(p.source, mode, srcReq)
 		return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 	case ReqOrdered:
 		if grouped(req.cols, p.columns, nColsUnfixed, fixed) {
-			fixcost, varcost := Optimize2(p.source, mode, req)
+			fixcost, varcost := Optimize(p.source, mode, req)
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: req}
 		}
 		return impossible, impossible, nil
 	case ReqGrouped, ReqLookup:
 		if set.Equal(req.cols, p.columns) {
 			srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), req.nlookups)
-			fixcost, varcost := Optimize2(p.source, mode, srcReq)
+			fixcost, varcost := Optimize(p.source, mode, srcReq)
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 		}
 		// requires are different ReqGrouped
@@ -532,7 +490,7 @@ func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
 				grouped(idx, p.columns, nColsUnfixed, fixed) {
 				srcReq := GroupedReq(idx, req.SelectFrac(nrows), req.nlookups)
-				f, v := Optimize2(p.source, mode, srcReq)
+				f, v := Optimize(p.source, mode, srcReq)
 				best.update(srcReq, f, v)
 			}
 		}
@@ -545,10 +503,10 @@ func (p *Project) seqCost2(mode Mode, req Require) (Cost, Cost, any) {
 	return impossible, impossible, nil
 }
 
-// mapCost2 estimates the cost of projMap.
+// mapCost estimates the cost of projMap.
 // The map is built incrementally during iteration (not up front),
 // so the map build cost is added to varcost, not fixcost.
-func (p *Project) mapCost2(mode Mode, req Require) (Cost, Cost, any) {
+func (p *Project) mapCost(mode Mode, req Require) (Cost, Cost, any) {
 	nrows, _ := p.Nrows()
 	if mode != ReadMode || nrows > mapThreshold {
 		return impossible, impossible, nil
@@ -556,13 +514,13 @@ func (p *Project) mapCost2(mode Mode, req Require) (Cost, Cost, any) {
 	if req.Use() == ReqLookup {
 		req = GroupedReq(req.cols, req.SelectFrac(nrows), req.nlookups)
 	}
-	srcFixcost, srcVarcost := Optimize2(p.source, mode, req)
+	srcFixcost, srcVarcost := Optimize(p.source, mode, req)
 	mapBuild := Cost(float64(nrows) * float64(req.frac) * 20)
 	return srcFixcost, srcVarcost + mapBuild,
 		&projectApproach{strat: projMap, req: req}
 }
 
-func (p *Project) setApproach2(_ Require, approach any, tran QueryTran) {
+func (p *Project) setApproach(_ Require, approach any, tran QueryTran) {
 	p.projectApproach = *approach.(*projectApproach)
 	switch p.strat {
 	case projCopy:
@@ -572,7 +530,7 @@ func (p *Project) setApproach2(_ Require, approach any, tran QueryTran) {
 	case projMap:
 		projMapCount.Add(1)
 	}
-	p.source = SetApproach2(p.source, p.projectApproach.req, tran)
+	p.source = SetApproach(p.source, p.projectApproach.req, tran)
 	p.header = p.getHeader()
 }
 

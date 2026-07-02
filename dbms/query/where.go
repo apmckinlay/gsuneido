@@ -36,7 +36,7 @@ type Where struct {
 	colSels   map[string][]span // from NewWhere, result of perField
 	mergedBuf map[string][]span // reusable buffer for mergedPerCol
 	// tbl will be set if the source is a table, nil otherwise
-	tbl whereTable
+	tbl *Table
 	// idxSel is for the chosen index
 	idxSelBase   *idxSel
 	idxSelActive *idxSel
@@ -79,27 +79,6 @@ type Where struct {
 	wFixed   Fixed
 
 	wfrac float64
-}
-
-// whereTable is the additional functionality that Where needs from a Table.
-// It is deliberately separate from *Table so it can be replaced for testing.
-type whereTable interface {
-	// optimization
-	optimize(mode Mode, index []string, frac float64) (Cost, Cost, any)
-	IndexEncodes(index []string) bool
-	SetIndex(index []string)
-	schemaIndexes() []Index
-	indexi(index []string) int
-	Name() string
-	isSingleton() bool
-	setCost(frac float64, fixcost, varcost Cost)
-
-	// execution
-	LookupRaw(key string) Row
-	SelectRaw(org, end string)
-	SelectSkipScan(prefixRng, suffixRng iface.Range, skipStart int)
-	GetFilter(dir Dir, filter func(key string) bool) Row
-	Nrows() (int, int)
 }
 
 type optInited byte
@@ -556,61 +535,38 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 
 // optimize ---------------------------------------------------------
 
-func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cost, a any) {
-	// defer func() { fmt.Println("Where opt", index, frac, "=", f, v, a) }()
-	w.optInit()
-	if w.conflict {
-		// fmt.Println("Where opt CONFLICT")
-		return 0, 0, nil
-	}
-	assert.That(!w.singleton || index == nil) // ensured by query.go Optimize
-	// we always have the option of just filtering (no specific index use)
-	filterFixCost, filterVarCost := Optimize(w.source, mode, index, frac)
-	if w.tbl == nil || w.tbl.isSingleton() {
-		// fmt.Println("Where opt", index, frac, "= filter", filterFixCost, filterVarCost)
-		return filterFixCost, filterVarCost, nil
-	}
-	// where on table
-	cost, app := w.bestIndex(index, frac)
-	if app == nil {
-		// only use the filter if there are no possible idxSel
-		// fmt.Println("Where opt", index, frac, "= filter", filterFixCost, filterVarCost)
-		return filterFixCost, filterVarCost, nil
-	}
-	// fmt.Println("Where opt", index, frac, "= ", app, cost)
-	return 0, cost, app
-}
-
-func (w *Where) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (w *Where) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	w.optInit()
 	if w.conflict {
 		return 0, 0, nil
 	}
 	if w.tbl == nil || w.tbl.isSingleton() {
-		fixcost, varcost := Optimize2(w.source, mode, req)
+		fixcost, varcost := Optimize(w.source, mode, req)
 		return fixcost, varcost, nil
 	}
 	switch req.Use() {
 	case ReqUnordered:
-		return w.optWhereIdx2(req, func(idx []string) bool { return true }, false)
+		return w.optWhereIdx(req, func(idx []string) bool { return true }, false)
 	case ReqOrdered:
-		return w.optWhereIdx2(req, func(idx []string) bool {
+		return w.optWhereIdx(req, func(idx []string) bool {
 			return ordered(idx, req.cols, w.fixed)
 		}, false)
 	case ReqGrouped:
 		nColsUnfixed := countUnfixed(req.cols, w.fixed)
-		return w.optWhereIdx2(req, func(idx []string) bool {
+		return w.optWhereIdx(req, func(idx []string) bool {
 			return grouped(idx, req.cols, nColsUnfixed, w.fixed)
 		}, true)
 	case ReqLookup:
-		return w.optWhereLookup2(req)
+		return w.optWhereLookup(req)
 	}
 	panic("unreachable")
 }
 
-func (w *Where) optWhereIdx2(req Require, indexOk func([]string) bool,
+func (w *Where) optWhereIdx(req Require, indexOk func([]string) bool,
 	addSeek bool) (Cost, Cost, any) {
 	if w.singleton {
+		// here singleton == fastSingle
+		// because source is a Table and Table keys are a subset of indexes
 		cost := w.source.lookupCost()
 		isel := w.idxSels[0]
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
@@ -621,7 +577,7 @@ func (w *Where) optWhereIdx2(req Require, indexOk func([]string) bool,
 		if !indexOk(idx) {
 			continue
 		}
-		_, varCost, _ := w.tbl.optimize(0, idx, 1.0)
+		_, varCost, _ := w.tbl.optimize(0, OrderedReq(idx, 1.0))
 		irFrac := 1.0
 		ifFrac := 1.0
 		dfFrac := w.wfrac
@@ -640,40 +596,30 @@ func (w *Where) optWhereIdx2(req Require, indexOk func([]string) bool,
 			bestIdxSel = isel
 		}
 	}
-	if best.varcost < impossible {
-		return 0, best.varcost, &whereApproach{index: best.index,
-			cost: best.varcost, idxSel: bestIdxSel}
+	if best.index == nil {
+		return impossible, impossible, nil
 	}
-	return impossible, impossible, nil
+	return 0, best.varcost, &whereApproach{index: best.index,
+		cost: best.varcost, idxSel: bestIdxSel}
 }
 
-func (w *Where) optWhereLookup2(req Require) (Cost, Cost, any) {
+func (w *Where) optWhereLookup(req Require) (Cost, Cost, any) {
 	if w.singleton {
-		cost := w.source.lookupCost()
 		isel := w.idxSels[0]
+		cost := w.tbl.lookupCostFor(w.tbl.indexi(isel.index))
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
-	keys := w.source.Keys()
-	if idxi := slc.IndexFn(w.source.Indexes(), req.cols, slices.Equal); idxi != -1 {
-		perLookup := w.source.lookupCost() + 1
-		cost := Cost(req.nlookups) * perLookup
-		return 0, cost, &whereApproach{index: req.cols, cost: cost}
-	}
 	best := newBestIndex()
-	for _, idx := range w.source.Indexes() {
-		if !lookupIndexEligible(idx, keys, w.fixed) ||
-			!indexCovered(idx, req.cols, w.fixed) {
-			continue
+	for idxi, idx := range w.tbl.indexes {
+		if indexCovered(idx, req.cols, w.fixed) {
+			varcost := Cost(req.nlookups) * w.tbl.lookupCostFor(idxi)
+			best.update(idx, 0, varcost)
 		}
-		perLookup := w.source.lookupCost() + 1
-		cost := Cost(req.nlookups) * perLookup
-		best.update(idx, 0, cost)
 	}
-	if best.varcost < impossible {
-		return 0, best.varcost, &whereApproach{index: best.index,
-			cost: best.varcost}
+	if best.index == nil {
+		return impossible, impossible, nil
 	}
-	return impossible, impossible, nil
+	return 0, best.varcost, &whereApproach{index: best.index, cost: best.varcost}
 }
 
 // exprFalse checks if any expressions folded to false
@@ -693,12 +639,12 @@ func (w *Where) optInit() {
 	}
 	assert.That(w.optInited == optInitNo)
 	w.optInited = optInitInProgress
-	w.tbl, _ = w.source.(whereTable)
+	w.tbl, _ = w.source.(*Table)
 	if !w.conflict && w.tbl != nil {
 		w.idxSels = w.perIndex(w.colSels)
 		// fmt.Println("idxSels", w.idxSels)
 	}
-	// detect singleton when fixed covers a key (for non-whereTable sources).
+	// detect singleton when fixed covers a key (for non-Table sources).
 	// Required so bestLookupIndex doesn't pick an index with extra columns
 	// that sels can't cover at Lookup time
 	// (lookupIndexEligible allows any index when nColsUnfixed == 0).
@@ -714,60 +660,6 @@ func (w *Where) optInit() {
 		w.indexes = w.source.Indexes()
 	}
 	w.optInited = optInitYes
-}
-
-// bestIndex returns an approach for the lowest cost index
-// that satisfies the required order,
-// or impossible if no index satisfies the order.
-func (w *Where) bestIndex(order []string, inFrac float64) (Cost, any) {
-	// fmt.Println("bestIndex", w.tbl.Name(), order, inFrac, "---------------")
-	if w.singleton {
-		cost := w.source.lookupCost()
-		isel := w.idxSels[0]
-		return cost,
-			&whereApproach{index: isel.index, cost: cost, idxSel: isel}
-	}
-	indexes := w.source.Indexes()
-	if slc.ContainsFn(w.Keys(), order, slices.Equal) {
-		// The requested order is a key, so we have to assume Lookup.
-		// ordered is not sufficient.
-		// Without this, Where can pick a different index than the requested one
-		// causing Lookup to fail in Table with "selOrg not full"
-		// In general, a key is not guaranteed to be an index
-		// but we are on a table, in which case keys are indexes.
-		indexes = [][]string{order}
-	}
-	best := newBestIndex()
-	var bestIdxSel *idxSel
-	for _, idx := range indexes {
-		if !ordered(idx, order, w.fixed) {
-			continue
-		}
-		_, varCost, _ := w.tbl.optimize(0, idx, 1.0)
-		irFrac := 1.0
-		ifFrac := 1.0
-		dfFrac := w.wfrac
-		nptrngs := 0
-		isel := w.getIdxSel(idx)
-		if isel != nil {
-			irFrac = isel.prefixFrac * isel.skipFrac
-			ifFrac = isel.indexFilterFrac
-			dfFrac = isel.dataFilterFrac
-			nptrngs = len(isel.prefixRanges)
-		}
-		wc := WhereCost(float64(varCost), inFrac, irFrac, ifFrac, dfFrac)
-		lc := w.source.lookupCost() * nptrngs
-		cost := wc + lc
-		// fmt.Println("\t", idx, "varCost", varCost, "irFrac", irFrac, "ifFrac", ifFrac, "dfFrac", dfFrac, "nptrngs", nptrngs, "wc", wc, "lc", lc, "cost", cost)
-		if best.update(idx, 0, cost) {
-			bestIdxSel = isel
-		}
-	}
-	if best.varcost < impossible {
-		return best.varcost, &whereApproach{
-			index: best.index, cost: best.varcost, idxSel: bestIdxSel}
-	}
-	return impossible, nil
 }
 
 func WhereCost(cost, inFrac, irFrac, ifFrac, dfFrac float64) Cost {
@@ -811,40 +703,7 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 	return nil
 }
 
-func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTran) {
-	w.optimized = true
-	if w.singleton {
-		whereSingletonCount.Add(1)
-	}
-	if w.conflict {
-		return
-	}
-	if app == nil {
-		w.source = SetApproach(w.source, index, frac, tran)
-		w.srcIndex = index
-		w.tbl = nil
-	} else {
-		app := app.(*whereApproach)
-		w.tbl.SetIndex(app.index)
-		w.srcIndex = app.index
-		if app.idxSel != nil {
-			w.ixCtx.cols = app.index
-			w.ixCtx.encodes = w.tbl.IndexEncodes(app.index)
-			w.ixExpr = w.exprsFor(w.ixCtx.cols)
-			w.idxSelBase = app.idxSel
-			w.idxSelActive = w.idxSelBase
-			w.tbl.setCost(frac*app.idxSel.prefixFrac*app.idxSel.skipFrac,
-				0, app.cost)
-			w.idxSelPos = -1
-		} else {
-			w.tbl.setCost(frac, 0, app.cost)
-		}
-	}
-	w.header = w.source.Header()
-	w.rowCtx.Hdr = w.header
-}
-
-func (w *Where) setApproach2(req Require, approach any, tran QueryTran) {
+func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 	w.optimized = true
 	if w.singleton {
 		whereSingletonCount.Add(1)
@@ -853,7 +712,7 @@ func (w *Where) setApproach2(req Require, approach any, tran QueryTran) {
 		return
 	}
 	if approach == nil {
-		w.source = SetApproach2(w.source, req, tran)
+		w.source = SetApproach(w.source, req, tran)
 		w.srcIndex = req.cols
 		w.tbl = nil
 	} else {
