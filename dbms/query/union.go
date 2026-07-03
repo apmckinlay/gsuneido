@@ -541,13 +541,12 @@ func (u *Union) setApproach(_ Require, approach any, tran QueryTran) {
 // This is the minimum index prefix that both sources must share
 // for the merge to iterate in a compatible order.
 func keyPrefixOfIndex(index, key []string) []string {
-	last := -1
-	for i, col := range index {
-		if slices.Contains(key, col) {
-			last = i
+	for i := len(index) - 1; i >= 0; i-- {
+		if slices.Contains(key, index[i]) {
+			return index[:i+1]
 		}
 	}
-	return index[:last+1]
+	return nil
 }
 
 // indexContainsKey returns a key from keys if the index contains all fields

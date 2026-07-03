@@ -163,6 +163,25 @@ func TestIndexContainsKey(t *testing.T) {
 	)).Is([]string{"a", "c"})
 }
 
+func TestKeyPrefixOfIndex(t *testing.T) {
+	assert := assert.T(t)
+	// last key field is at position 1
+	assert.This(keyPrefixOfIndex(
+		[]string{"a", "b", "c"},
+		[]string{"b", "d"},
+	)).Is([]string{"a", "b"})
+	// all index fields are in key
+	assert.This(keyPrefixOfIndex(
+		[]string{"a", "b", "c"},
+		[]string{"a", "b", "c"},
+	)).Is([]string{"a", "b", "c"})
+	// no key fields in index
+	assert.This(keyPrefixOfIndex(
+		[]string{"a", "b"},
+		[]string{"x", "y"},
+	)).Is(nil)
+}
+
 func TestKeyFieldOrder(t *testing.T) {
 	assert := assert.T(t)
 
