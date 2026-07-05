@@ -525,7 +525,8 @@ class
 			fields.AddUnique(where[ x[2][0] :: x[2][1] ])
 			}
 		// need to strip where clause, because it could contain rule fields
-		joins = where.BeforeFirst('where')
+		// ensure we do not break semijoins
+		joins = where.BeforeFirst('where').BeforeFirst('semijoin')
 		nonExistFields = fields.Difference(allAvailableCols(joins))
 		extend = Opt(' extend ', nonExistFields.Join(','), ' ')
 		if .suppressed is true

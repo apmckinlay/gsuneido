@@ -43,7 +43,8 @@ BookHelperBase
 						records[item].order is nextorder
 						{
 						tableRow.Add(.BuildHeading(headings[nextorder], headingLevel + 1,
-							style: 'padding-top=8px; margin-bottom=0'))
+							style: 'padding-top: 8px; margin-bottom: 0; ' $
+								'page-break-before: avoid;'))
 						nextorder += .orderMultiplier
 						--row
 						continue

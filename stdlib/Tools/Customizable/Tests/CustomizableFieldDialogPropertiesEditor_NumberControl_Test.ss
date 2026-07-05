@@ -15,6 +15,7 @@ Test
 	Test_set()
 		{
 		mock = Mock()
+		mock.CustomizableFieldDialogPropertiesEditor_controls = Object()
 		mock.CustomizableFieldDialogPropertiesEditor_NumberControl_decimals =
 			decimals = Mock()
 		mock.CustomizableFieldDialogPropertiesEditor_NumberControl_digits =

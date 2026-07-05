@@ -1,25 +1,24 @@
 // Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.
-Controller
+CustomizableFieldDialogPropertiesEditor
 	{
-	// Must be named like this in order to be found by CustomizableFieldDialog
-	Name:'peditor'
-
 	New()
 		{
 		.format = .FindControl('format')
 		.tooltip = .FindControl('tooltip')
 		}
-	Controls:	(Vert
-					Skip
-					(Static 'Please select date format')
-					Skip
-					(RadioButtons  'Short' 'Long' name: 'format')
-					Skip
-					(Static 'Tooltip')
-					Skip
-					(Field name: 'tooltip')
-					Skip
-				)
+	GetControls()
+		{
+		return Object(#Vert
+			#Skip
+			#(Static 'Please select date format')
+			#Skip
+			#(RadioButtons  'Short' 'Long' name: 'format')
+			#Skip
+			#(Static 'Tooltip')
+			#Skip
+			#(Field name: 'tooltip')
+			#Skip)
+		}
 	Valid?()
 		{
 		return true

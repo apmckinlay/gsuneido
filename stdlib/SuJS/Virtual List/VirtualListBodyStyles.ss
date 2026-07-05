@@ -54,10 +54,14 @@
 	color: black;
 	border: deepskyblue 1px solid;
 }
-.su-vlistbody tr[data-editing] .su-vlist-edit-button {
+.su-vlistbody tr[data-editing="true"] .su-vlist-edit-button {
 	color: black;
 	border: deepskyblue 1px solid;
 	background-color: azure;
+}
+.su-vlistbody tr[data-editing="disabled"] .su-vlist-edit-button {
+	display: none;
+	pointer-events: none;
 }
 .su-vlistbody td[data-type="fill-cell"] {
 	height: 2em;

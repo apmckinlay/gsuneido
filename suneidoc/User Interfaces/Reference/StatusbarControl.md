@@ -9,7 +9,7 @@ Methods:
 `Set(text, at)`
 : Sets the text of a panel box at the indicated position
 
-`Get(at) &rarr; string`
+`Get(at)` &rarr; `string`
 : returns the text of a panel box at the indicated position
 
 `SetBkColor(color)`
@@ -21,7 +21,7 @@ Methods:
 `RemPanel(at)`
 : remove panel box at the indicated position
 
-`GetNumPanels() &rarr; number`
+`GetNumPanels()` &rarr; `number`
 : returns the number of addded panels boxes
 
 `SetPanels(panels)`
@@ -29,11 +29,11 @@ Methods:
 (e.g. #( 110, 170, 280, 450) to define 4 panels box with 
 widths of 110, 60, 110, 170 pixels)
 
-`GetPanels() &rarr; object`
+`GetPanels()` &rarr; `object`
 : returns an object containing the panels end positions in pixels
 (e.g. #( 110, 170, 280, 450))
 
-`GetPanelRect(panel) &rarr; rect`
+`GetPanelRect(panel)` &rarr; `rect`
 : returns a Rect object containing the coordinates of the rectangle
 of the statusbar part indexed by panel position
 

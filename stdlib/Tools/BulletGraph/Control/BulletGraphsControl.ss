@@ -59,8 +59,8 @@ Controller
 		color = .inactive
 		if false isnt max = .calcMax(target, data, min)
 			{
-			good = (data.Sum() / data.Size()).Round(0)
-			satisfactory = (good / 2).Round(0)
+			good = Max((data.Sum() / data.Size()).Round(0), min)
+			satisfactory = Max((good / 2).Round(0), min)
 			color = .determineColor(data, good, satisfactory)
 			}
 		else

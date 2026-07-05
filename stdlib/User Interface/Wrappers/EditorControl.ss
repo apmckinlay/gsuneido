@@ -12,13 +12,14 @@ EditControl
 	New(style = 0, .readonly = false, .font = "", .size = "", .zoom = false,
 		mandatory = false, set = "", height =  false, .tabthrough = false,
 		hidden = false, tabover = false, width = false, weight = false,
-		readOnlyBgndColor = false, status = '')
+		readOnlyBgndColor = false, status = '', textLimit = false)
 		{
 		super(mandatory, readonly,
 			style | WS.VSCROLL | ES.MULTILINE | ES.AUTOVSCROLL | ES.WANTRETURN,
 			:hidden, :tabover, :font, :size, :weight, :width, :height,
 			:readOnlyBgndColor, :status)
 		.SubClass()
+		.editorTextLimit = .editorTextLimit(textLimit)
 		.Set(set)
 		.Map[EN.CHANGE] = 'EN_CHANGE'
 		.findreplacedata = Record()
@@ -26,7 +27,15 @@ EditControl
 		.AddContextMenuItem("Print...\tCtrl+P", .On_Print)
 		if .zoom is false
 			.AddContextMenuItem("Zoom...\tF6", .On_Zoom)
-		.SendMessage(EM.SETLIMITTEXT, EditorTextLimit, 0)
+		.SendMessage(EM.SETLIMITTEXT, .editorTextLimit, 0)
+		}
+
+	editorTextLimit(textLimit)
+		{
+		return Number?(textLimit)
+			// Ensure specified textLimit never exceeds EditorTextLimit
+			? Min(EditorTextLimit, textLimit)
+			: EditorTextLimit
 		}
 
 	tabthrough: false
@@ -38,12 +47,12 @@ EditControl
 
 	KEYDOWN(wParam)
 		{
-		return .Eval(EditorKeyDownHandler, wParam, zoomArgs: .zoomArgs())
+		return .Eval(EditorKeyDownHandler, wParam, zoomArgs: .ZoomArgs())
 		}
 
-	zoomArgs()
+	ZoomArgs()
 		{
-		return [this, .zoom, font: .font, size: .size]
+		return [this, .zoom, font: .font, size: .size, textLimit: .editorTextLimit]
 		}
 
 	EN_KILLFOCUS()
@@ -115,7 +124,7 @@ EditControl
 
 	On_Zoom()
 		{
-		EditorZoom(@.zoomArgs())
+		EditorZoom(@.ZoomArgs())
 		}
 
 	Get()
@@ -128,11 +137,11 @@ EditControl
 	Set(value)
 		{
 		value = String(value)
-		if value.Size() > EditorTextLimit
+		if value.Size() > .editorTextLimit
 			{
 			ProgrammerError('EditorControl Set value is over limit',
 				params: Object(size: value.Size(), name: .Name))
-			value = value[::EditorTextLimit - 3/*=size of '...'*/] $ '...'
+			value = value[::.editorTextLimit - 3/*=size of '...'*/] $ '...'
 			}
 		value = value.Replace("\n", "\r\n")
 		SetWindowText(.Hwnd, value)

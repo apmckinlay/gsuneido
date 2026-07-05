@@ -954,7 +954,7 @@ WndProc
 	ContextEdit(pt)
 		{
 		ScreenToClient(.Hwnd, pt)
-		row = Min(.GetDataRowFromY(pt.y), .GetNumRows())
+		row = Min(.GetDataRowFromY(pt.y), .GetNumRows() - 1)
 		col = Min(.GetColFromX(pt.x), .GetNumCols() - 1)
 		if .data[row].listrow_deleted isnt true
 			.Edit(col, row, 1)

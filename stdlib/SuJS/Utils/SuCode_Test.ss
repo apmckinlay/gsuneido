@@ -211,6 +211,15 @@ Test
 				lib_modified: ""))]
 		Assert(fn())
 
+		// trial changes
+		if TableExists?('su_bundle_records') and not QueryEmpty?('su_bundle_records')
+			{
+			Assert(fn("Component__trial"))
+			Assert(fn("Component__alpha"))
+			Assert(fn(.TempTableName()) is: false) // does not exist in su_bundle_records
+			Assert(fn(.TempTableName() $ "__alpha") is: false)
+			}
+
 		// lib_committed changed
 		_deps = [recs: Object(
 			#(name: "Name1", lib: "Lib1", lib_committed: #20241015,

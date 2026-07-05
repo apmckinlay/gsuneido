@@ -31,6 +31,12 @@ Contributions:
 			Window(Object('QualityChecker', libview),
 				w: 800, h: 1000, keep_placement:)
 			} )
+	(LibView, Tools, Type_Checker, "", "",
+		target: function(libview)
+			{
+			Window(Object("TypeChecker", libview))
+			}
+		)
 	(LibView, Tools, Version_Control_Settings, "",
 		target: function () { SvcSettings(openDialog:) } )
 	(LibView, Tools, Svc_Statistics, "",

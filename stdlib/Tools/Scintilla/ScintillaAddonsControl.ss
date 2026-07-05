@@ -10,8 +10,8 @@ ScintillaControl
 	Height: 		7		// Determines how many lines before scrolling is required
 	Width:			60		// Determines how many characters can fit on a line
 	MarginLeft: 	false
-	LONG_IDLE: 		3000 	// 3 sec
 	CHANGE_IDLE: 	500 	// .5 sec
+	readonly: 		false
 	addons:			false
 	IDE: 			false
 	New(@args)
@@ -26,6 +26,7 @@ ScintillaControl
 
 		.styleManager = ScintillaAddonsLineStyles(this)
 		.scheme = args.GetDefault(#scheme, '')
+		.readonly = args.GetDefault(#readonly, false)
 
 		.setupAddons(args)
 		.setupContextMenu()
@@ -46,14 +47,6 @@ ScintillaControl
 		.addons = AddonManager(this, args)
 		.styleManager.DefineStyles(.addons)
 		.addons.Send(#Init)
-		if args.GetDefault(#readonly, false) is true and
-			args.GetDefault(#readonlyEnableIdle, false) isnt true
-			.longIdle = .changeIdle = class { Reset(){} Kill(){} }
-		else
-			{
-			.longIdle = IdleTimer(.LONG_IDLE, { .addons.Send(#LongIdle) }).Reset()
-			.changeIdle = IdleTimer(.CHANGE_IDLE, { .addons.Send(#IdleAfterChange) })
-			}
 		}
 
 	InitMarkers()
@@ -192,9 +185,9 @@ ScintillaControl
 		}
 	ContextMenu(x, y)
 		{
-		i = ContextMenu(.Context_Menu).ShowCall(this, x, y)
-		if i > 0
-			.addons.Send("ContextMenuChoice", i - 1)
+		if .HasFocus?()
+			if 0 < i = ContextMenu(.Context_Menu).ShowCall(this, x, y)
+				.addons.Send("ContextMenuChoice", i - 1)
 		return 0
 		}
 	Default(@args) // used by context menu
@@ -299,18 +292,29 @@ ScintillaControl
 			return DLGC.WANTALLKEYS
 		return super.GETDLGCODE(wParam, lParam)
 		}
-	longIdle: false
+
 	EN_CHANGE()
 		{
 		.ResetTimers()
 		.Send('EditorChange')
 		return super.EN_CHANGE()
 		}
+
 	ResetTimers()
 		{
-		.longIdle.Reset()
 		.changeIdle.Reset()
 		}
+
+	fakeTimer: class { Reset(){ } Kill(){ } }
+	getter_changeIdle()
+		{
+		if .addons is false or .readonly
+			return .fakeTimer
+		return .changeIdle = .addons.AddonMethod?(#IdleAfterChange)
+			? IdleTimer(.CHANGE_IDLE, { .addons.Send(#IdleAfterChange) })
+			: .fakeTimer
+		}
+
 	SCN_MODIFIED(lParam)
 		{
 		scn = SCNotification(lParam)
@@ -448,7 +452,6 @@ ScintillaControl
 	Destroy()
 		{
 		.commandManager.Destroy()
-		.longIdle.Kill()
 		.changeIdle.Kill()
 		.addons.Send(#Destroy)
 		super.Destroy()

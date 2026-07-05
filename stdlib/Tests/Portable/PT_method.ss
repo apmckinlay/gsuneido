@@ -13,7 +13,7 @@ class
 		result = ob[method](@argvals)
 		ok = result is expected
 		if not ok
-			Print("\tgot: " + Display(result))
+			Print("\tgot: " $ Display(result))
 		return ok
 		}
 	toValue(str?, args, i)

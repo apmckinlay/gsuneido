@@ -7,6 +7,8 @@ Test
 			{ }
 		GetReadOnly()
 			{ return .readOnly }
+		SetFocus()
+			{ }
 		Dirty?(unused = '') // Based on stdlib:Control.Dirty?
 			{ return false }
 		}
@@ -16,6 +18,8 @@ Test
 			{ }
 		GetReadOnly()
 			{ return .readOnly }
+		SetFocus()
+			{ }
 		dirty?: false
 		Dirty?(dirty? = '')
 			{
@@ -34,6 +38,8 @@ Test
 			{ }
 		GetReadOnly()
 			{ return .readOnly }
+		SetFocus()
+			{ }
 		dirty?: false
 		Dirty?(dirty? = '')
 			{

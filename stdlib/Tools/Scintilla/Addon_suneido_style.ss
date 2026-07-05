@@ -1,4 +1,4 @@
-// Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.
+// Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.Append
 Addon_base_style
 	{
 	Name: 'suneido'
@@ -8,7 +8,8 @@ Addon_base_style
 			string: (color: "string"),
 			keyword: (color: "keyword", bold:),
 			operator: (color: "operator", bold:),
-			whitespace: (color: "whitespace"))
+			whitespace: (color: "whitespace"),
+			annotation: (color: "annotation", italic:))
 
 	Init()
 		{
@@ -30,6 +31,8 @@ Addon_base_style
 				ToCssColor(IDE_ColorScheme.GetColor('keyword', 'default')),
 			OPERATOR:	'font-weight:bold; color:' $
 				ToCssColor(IDE_ColorScheme.GetColor('operator', 'default')),
+			ANNOTATION:	'color:' $
+				ToCssColor(IDE_ColorScheme.GetColor('annotation', 'default')),
 			WHITESPACE:	'')
 		}
 

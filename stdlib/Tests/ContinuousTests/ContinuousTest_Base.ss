@@ -68,7 +68,9 @@ class
 				currency: testInfoOb.GetDefault('currency', 'USD'),
 				:skipTags,
 				dept?: testInfoOb.GetDefault('dept?', true),
-				:additionalServerTests?, :bookCheckOnly)
+				:additionalServerTests?, :bookCheckOnly,
+				sujs?: testInfoOb.GetDefault('sujs?', false),
+				testType: testInfoOb.GetDefault('type', ''))
 			}
 		catch (err)
 			results = 'ERROR: ' $ err

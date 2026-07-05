@@ -47,6 +47,9 @@ class
 
 		if (dict.Member?('NoCustomDefaultValue') and dict.NoCustomDefaultValue is true)
 			protect.custfield_default_value = true
+
+		if dict.Control[0].BeforeFirst('Control') is 'Id'
+			protect.custfield_formula = true
 		}
 
 	handleUOM(dict, protect)

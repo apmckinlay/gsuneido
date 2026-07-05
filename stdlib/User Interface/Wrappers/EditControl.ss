@@ -139,7 +139,8 @@ WndProc
 		}
 	On_Undo()
 		{
-		SendMessage(.Hwnd, WM.UNDO, 0, 0)
+		if not .GetReadOnly()
+			SendMessage(.Hwnd, WM.UNDO, 0, 0)
 		}
 	GetSel()
 		{

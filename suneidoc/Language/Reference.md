@@ -2,14 +2,15 @@
 
 |     |     |     |     |
 | --- | --- | --- | --- |
-| [Abs](<Reference/Abs.md>) | [ExportXML](<Reference/ExportXML.md>) | [Mock](<Reference/Mock.md>) | [Scheduler](<Reference/Scheduler.md>) |
-| [AddFile](<Reference/AddFile.md>) | [FakeObject](<Reference/FakeObject.md>) | [MockObject](<Reference/MockObject.md>) | [SelectPrompt](<Reference/SelectPrompt.md>) |
-| [Adler32](<Reference/Adler32.md>) | [File](<Reference/File.md>) | [MoneyBag](<Reference/MoneyBag.md>) | [Seq](<Reference/Seq.md>) |
-| [AiAgent](<Reference/AiAgent.md>) | [FileExists?](<Reference/FileExists?.md>) | [MoveFile](<Reference/MoveFile.md>) | [Sequence](<Reference/Sequence.md>) |
-| [Assert](<Reference/Assert.md>) | [FileLines](<Reference/FileLines.md>) | [MultiByteToWideChar](<Reference/MultiByteToWideChar.md>) | [Server?](<Reference/Server?.md>) |
-| [Asup](<Reference/Asup.md>) | [FileSize](<Reference/FileSize.md>) | [Mutex](<Reference/Mutex.md>) | [ServerEval](<Reference/ServerEval.md>) |
-| [Atom](<Reference/Atom.md>) | [Filter](<Reference/Filter.md>) | [Name](<Reference/Name.md>) | [ServerIP](<Reference/ServerIP.md>) |
-| [Base64](<Reference/Base64.md>) | [Finally](<Reference/Finally.md>) | [NameArgs](<Reference/NameArgs.md>) | [ServerPort](<Reference/ServerPort.md>) |
+| [Abs](<Reference/Abs.md>) | [ExportTab](<Reference/ExportTab.md>) | [Min](<Reference/Min.md>) | [ScannerSeq](<Reference/ScannerSeq.md>) |
+| [AddFile](<Reference/AddFile.md>) | [ExportXML](<Reference/ExportXML.md>) | [Mock](<Reference/Mock.md>) | [Scheduler](<Reference/Scheduler.md>) |
+| [Adler32](<Reference/Adler32.md>) | [FakeObject](<Reference/FakeObject.md>) | [MockObject](<Reference/MockObject.md>) | [SelectPrompt](<Reference/SelectPrompt.md>) |
+| [AiAgent](<Reference/AiAgent.md>) | [File](<Reference/File.md>) | [MoneyBag](<Reference/MoneyBag.md>) | [Seq](<Reference/Seq.md>) |
+| [Assert](<Reference/Assert.md>) | [FileExists?](<Reference/FileExists?.md>) | [MoveFile](<Reference/MoveFile.md>) | [Sequence](<Reference/Sequence.md>) |
+| [Asup](<Reference/Asup.md>) | [FileLines](<Reference/FileLines.md>) | [MultiByteToWideChar](<Reference/MultiByteToWideChar.md>) | [Server?](<Reference/Server?.md>) |
+| [Atom](<Reference/Atom.md>) | [FileSize](<Reference/FileSize.md>) | [Mutex](<Reference/Mutex.md>) | [ServerEval](<Reference/ServerEval.md>) |
+| [Base64](<Reference/Base64.md>) | [Filter](<Reference/Filter.md>) | [Name](<Reference/Name.md>) | [ServerIP](<Reference/ServerIP.md>) |
+| [Bind](<Reference/Bind.md>) | [Finally](<Reference/Finally.md>) | [NameArgs](<Reference/NameArgs.md>) | [ServerPort](<Reference/ServerPort.md>) |
 | [Bitnames](<Reference/Bitnames.md>) | [Ftsearch](<Reference/Ftsearch.md>) | [Negative?](<Reference/Negative?.md>) | [Sha1](<Reference/Sha1.md>) |
 | [Block](<Reference/Block.md>) | [Function](<Reference/Function.md>) | [Nof](<Reference/Nof.md>) | [Shutdown](<Reference/Shutdown.md>) |
 | [Bloom](<Reference/Bloom.md>) | [Function?](<Reference/Function?.md>) | [Nothing](<Reference/Nothing.md>) | [Singleton](<Reference/Singleton.md>) |
@@ -62,5 +63,4 @@
 | [Exit](<Reference/Exit.md>) | [MimeBase](<Reference/MimeBase.md>) | [Same?](<Reference/Same?.md>) | [XmlWriter](<Reference/XmlWriter.md>) |
 | [Export](<Reference/Export.md>) | [MimeMultiPart](<Reference/MimeMultiPart.md>) | [Scanner](<Reference/Scanner.md>) | [Zlib](<Reference/Zlib.md>) |
 | [ExportCSV](<Reference/ExportCSV.md>) | [MimeText](<Reference/MimeText.md>) | [ScannerFind](<Reference/ScannerFind.md>) |
-| [ExportTab](<Reference/ExportTab.md>) | [Min](<Reference/Min.md>) | [ScannerSeq](<Reference/ScannerSeq.md>) |
 

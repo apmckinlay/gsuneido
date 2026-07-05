@@ -52,8 +52,13 @@ Controller
 				libs.Add(lib)
 		msg = Opt(.otherDefinitionsWarning(name), libs.Join(', '))
 		for m in LastContribution('Svc_TrialTags').Members()
-			if not QueryEmpty?(curLib, name: name $ '__' $ m, group: -1)
-				msg = Opt(msg, '\n') $ 'WARNING: ' $ name $ '__' $ m $ ' also exists'
+			{
+			trialName = name $ (name.Suffix?('__webgui') ? '_' : '__') $ m
+			if name.Suffix?('_' $ m)
+				trialName = name.Replace('(_|__)' $ m, '')
+			if not QueryEmpty?(curLib, name: trialName, group: -1)
+				msg = Opt(msg, '\n') $ 'WARNING: ' $ trialName $ ' also exists'
+			}
 		if BuiltinNames().BinarySearch?(name)
 			msg $= "\nWARNING: Built-in on gSuneido"
 		return msg
@@ -106,6 +111,12 @@ Controller
 			lib = libview.CurrentTable()
 			text = libview.Editor.Get()
 			LibDiffOverriddenControl(name, lib, text)
+			}
+		else if line =~ `^WARNING: \S+ also exists$`
+			{
+			lib = libview.CurrentTable()
+			trialName = line.RemovePrefix('WARNING: ').BeforeLast(' also exists')
+			LibDiff(lib, name, lib, trialName)
 			}
 		}
 	}

@@ -32,6 +32,7 @@ class
 		longLineMargin:	0x000000,
 		selectedBack:	0xd0d0d0,
 		operator: 		0x7f0000,
+		annotation:		0x997f26, // type annotations, e.g. foo(x: object) :number
 		whitespace: 	0xffffff,
 		warning:		0x154f91,
 		error:			0x3c14dc,

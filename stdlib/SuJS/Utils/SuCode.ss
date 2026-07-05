@@ -25,7 +25,8 @@ Singleton
 	checkUpdate(name = false)
 		{
 		update = name isnt false
-			? not QueryEmpty?('su_bundle_records', :name) or .overrides.Has?(name)
+			? not QueryEmpty?('su_bundle_records',
+				name: LibraryTags.RemoveTagFromName(name)) or .overrides.Has?(name)
 			: .checkDependencies()
 		if update is true
 			.clear()
@@ -245,7 +246,7 @@ window.suCodeBundle = {
 		// records referenced in strings
 		'PrintCancelDoc', 'PrintEndDoc', 'PrintEndPage', 'PrintManager',
 		'DoTaskWithPauseClient',
-		"SuCanvasArc", "SuCanvasEllipse", "SuCanvasGroup", "SuCanvasImage",
+		"SuCanvasEllipse", "SuCanvasGroup", "SuCanvasImage",
 			"SuCanvasLine", "SuCanvasRect", "SuCanvasRoundRect", "SuCanvasText",
 		"SuDrawClickTracker", "SuDrawLineTracker", "SuDrawRectTracker",
 			"SuDrawSelectTracker"

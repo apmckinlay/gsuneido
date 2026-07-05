@@ -117,7 +117,8 @@ class
 
 	defaultActions(user)
 		{
-		actions = ['s3:GetBucketLocation', 'sqs:*']
+		actions = ['sqs:*']
+
 		func = OptContribution('AdditionalIAMPolicy',
 			function (@unused)  { })
 		func(user, actions)

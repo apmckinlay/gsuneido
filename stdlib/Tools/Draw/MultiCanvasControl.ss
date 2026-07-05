@@ -339,11 +339,6 @@ Controller
 		.palette.SetButtons('ellipse')
 		.forEachCanvas() {|canvas| canvas.SetTracker(DrawRectTracker, CanvasEllipse) }
 		}
-	On_Arc()
-		{
-		.palette.SetButtons('arc')
-		.forEachCanvas() {|canvas| canvas.SetTracker(DrawRectTracker, DrawArcAdapter) }
-		}
 	On_Text()
 		{
 		.palette.SetButtons('text')

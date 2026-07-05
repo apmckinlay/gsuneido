@@ -13,6 +13,10 @@ ContinuousTest_Base
 
 	ExceptionFile: 'exceptions.txt'
 	exceptionSplit: '\n---------\n'
+	cmpTypeCheckWorst(x, y)
+		{
+		return Cmp(x.GetDefault(#nError, -1), y.GetDefault(#nError, -1)) > 0
+		}
 	runQc(libs)
 		{
 		asOf = Date()
@@ -21,6 +25,7 @@ ContinuousTest_Base
 		PutFile(.ExceptionFile, '')
 		for lib in libs
 			{
+			tc_worst = Heap(cmpFn: .cmpTypeCheckWorst)
 			statistics = Object(recsInLib: 0, worst: Object(), libAvgRating: 0,
 				totalLibWarnings: 0, :lib)
 			for .. .worstSize
@@ -41,6 +46,7 @@ ContinuousTest_Base
 						statistics.libAvgRating += rating
 						statistics.recsInLib++
 						}
+						.parseTypeCheckWarnings(it.name, warnings, lib, tc_worst)
 					}
 				catch(e)
 					{
@@ -52,12 +58,27 @@ ContinuousTest_Base
 			statistics.libAvgRating /= statistics.recsInLib
 			statistics.libAvgRating = statistics.libAvgRating.Round(2)
 			statistics.worst.RemoveIf({ it.name is '' }).Reverse!()
+			statistics.tc_worst = tc_worst.Collection()
 			allStatistics.Add(statistics)
 			}
 		exceptmsg = ''
 		if hasExceptions?
 			exceptmsg = .exceptionsMessage()
 		return .buildHtml(allStatistics, exceptmsg, asOf)
+		}
+
+	parseTypeCheckWarnings(recName, warnings, lib, tc_worst)
+		{
+		if false isnt w = warnings.FindOne({ it.GetDefault(#desc, '') is
+						"Type Check" })
+			{
+			nError = w.nError
+			text = lib $ ":" $ recName $ " has " $ nError $
+				" type error(s)"
+			w.warnings = text
+			o = Object(:nError, :text, :recName)
+			tc_worst.Add(o)
+			}
 		}
 
 	countWarnings(warnings)
@@ -100,6 +121,7 @@ ContinuousTest_Base
 				<th onclick="sortTable(2)" id='col2'>Average Rating</th>
 				<th onclick="sortTable(3)" id='col3'>Total Warnings</th>
 				<th onclick="sortTable(4)" id='col4'>10 Worst in Lib</th>
+				<th onclick="sortTable(5)" id='col5'>10 Worst for Type Check</th>
 			</tr></thead>
 			<tbody>
 			@for(lib in .allStatistics)
@@ -113,6 +135,12 @@ ContinuousTest_Base
 						@for(worstRec in lib.worst)
 							{
 							<div>@worstRec.name: @worstRec.rating</div>
+							}
+					</td>
+					<td>
+						@for(worstRec in lib.tc_worst)
+							{
+							<div>@worstRec.recName: @worstRec.nError</div>
 							}
 					</td>
 				</tr>

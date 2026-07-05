@@ -27,7 +27,8 @@ class
 			return ''
 		CheckCode(x.lib_current_text, x.name, library, warnings = [])
 		results = warnings.
-			Filter({ not it.msg.Prefix?("WARNING") }).
+			Filter({ not it.msg.Prefix?("WARNING") or
+				it.msg.Has?('used but possibly not initialized') }).
 			Map!({ library $ ':' $ x.name $ ' - ' $ it.msg $ '\n' }).
 			Join()
 		return results

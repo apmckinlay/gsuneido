@@ -150,8 +150,9 @@ Control
 
 	currentRowExpanded?()
 		{
-		return .model.ExpandModel isnt false and
-			.GetSelectedRecord().vl_expanded_rows isnt ''
+		selected = .GetSelectedRecord()
+		return .model.ExpandModel isnt false and selected isnt false and
+			selected.vl_expanded_rows isnt ''
 		}
 
 	MoveRow(focused, newRow)

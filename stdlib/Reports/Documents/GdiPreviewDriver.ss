@@ -100,6 +100,7 @@ GdiDriver
 	doWithSettings(dc, justify, rect, color, block)
 		{
 		prevTextAlign = false
+		prevLineColor = false // code warning "used but possibly not initialized"
 		refPtr = Object(x: rect.left, y: rect.top)
 		if justify is 'right'
 			{

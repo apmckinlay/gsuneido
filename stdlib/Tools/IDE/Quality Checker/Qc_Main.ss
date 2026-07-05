@@ -15,11 +15,13 @@ class
 		return Qc_ContinuousChecks.RunChecksAsContributions('slow', [:recordData])
 		}
 
-	CheckWithExtra(lib, name, text, minimizeOutput? = false, missingTest = "check_local")
+	CheckWithExtra(lib, name, text, minimizeOutput? = false, missingTest = "check_local",
+		excludedChecks = #())
 		{
-		warnings = Qc_ContinuousChecks(lib, name, text, minimizeOutput?, :missingTest)
+		warnings = Qc_ContinuousChecks(lib, name, text, minimizeOutput?, :missingTest,
+			:excludedChecks)
 		extraWarnings = Qc_ContinuousChecks(lib, name, text, minimizeOutput?,
-			extraChecks:, :missingTest)
+			extraChecks:, :missingTest, :excludedChecks)
 		warnings.lineWarnings.Append(extraWarnings.Extract('lineWarnings'))
 		warnings.Append(extraWarnings)
 		return warnings
@@ -41,7 +43,7 @@ class
 			if it.Member?("maxRating")
 				maxRating = Min(it.maxRating * 2, maxRating)
 			})
-		return Min(maxRating, (sum * 2 / count).RoundDown(0))
+		return Number(Min(maxRating, (sum * 2 / count).RoundDown(0)))
 		}
 
 	// Used to compare ratings when sending or receiving
@@ -68,7 +70,7 @@ class
 			if oldRating is false and revisionRating < .minNewQuality
 				qcErrs.existingRecordErrors.Add(
 					Object(:lib, :name, :revision, old: .minNewQuality / 2))
-			else if revisionRating < oldRating
+			else if Number?(oldRating) and revisionRating < oldRating
 				qcErrs.existingRecordErrors.Add(
 					Object(:lib, :name, :revision, old: oldRating / 2))
 			}

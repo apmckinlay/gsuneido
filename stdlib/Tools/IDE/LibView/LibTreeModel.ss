@@ -38,7 +38,8 @@ class
 		{
 		TreeModel.Create(library)
 		.database("alter " $ library $
-			" create (text, lib_invalid_text, lib_modified) key (name, group)")
+			" create (text, lib_invalid_text, lib_modified) " $
+			" key (name, group)")
 		SvcDisabledLibraries.ResetCache()
 		}
 

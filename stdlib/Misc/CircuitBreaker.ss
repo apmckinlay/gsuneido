@@ -248,7 +248,6 @@ class
 	halfOpen?()
 		{
 		Assert(.state is 'open', 'invalid state')
-		// if the state is open, lastFailureTime should be recent
-		Date().MinusSeconds(.lastFailureTime) > .timeout
+		return Date().MinusSeconds(.lastFailureTime) > .timeout
 		}
 	}

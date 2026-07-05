@@ -4,7 +4,7 @@ TestObserver
 	New(.quiet = false)
 		{
 		.succeeded = .failed = 0
-		.total_slowqueries = ""
+		.total_slowqueries = 0
 		}
 	BeforeTest(name)
 		{
@@ -12,7 +12,7 @@ TestObserver
 			.Output(name)
 		.ok = true
 		.Name = name
-		.slowqueries = ""
+		.slowqueries = 0
 		}
 	BeforeMethod(method)
 		{

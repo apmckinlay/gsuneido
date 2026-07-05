@@ -64,7 +64,7 @@ Component
 		{
 		.SetFont(.font, .size, .weight)
 		metrics = SuRender().GetTextMetrics(.input, 'M')
-		.Xmin = metrics.width + 5/*=gap*/
+		.Xmin = metrics.width + 10/*=gap*/
 		.Ymin = metrics.height
 		if .label isnt false
 			{

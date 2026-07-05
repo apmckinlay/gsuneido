@@ -5,18 +5,18 @@ Controller
 	{
 	edit: false
 	EditorControl: 'Editor' // overridden for Scintilla
-	CallClass(hwnd, text, readonly, font = "", size = "")
+	CallClass(hwnd, text, readonly, font = "", size = "", textLimit = false)
 		{
-		ctrl = [this, text, title: 'Zoom', :readonly, :font, :size]
+		ctrl = [this, text, title: 'Zoom', :readonly, :font, :size, :textLimit]
 		if readonly
 			ModalWindow(ctrl, border: 0)
 		else
 			text = OkCancel(ctrl, "Zoom", hwnd)
 		return text
 		}
-	New(.text, readonly = false, font = "", size = "")
+	New(.text, readonly = false, font = "", size = "", textLimit = false)
 		{
-		super(.Layout(readonly, font, size))
+		super(.Layout(readonly, font, size, textLimit))
 		.edit = .FindControl(.EditorControl)
 		.edit.Set(text)
 		.Defer(.setfocus)
@@ -29,13 +29,13 @@ Controller
 		(Paste,	"Ctrl+V",	"Insert the contents of the clipboard")
 		(Print,	"Ctrl+P",	"Print the contents of the clipboard")
 		)
-	Layout(.readonly, font, size)
+	Layout(.readonly, font, size, textLimit)
 		{
 		layout = Object('Vert',
 			.readonly
 				? #('Toolbar', 'Copy', '', 'Print')
 				: #('Toolbar', 'Cut', 'Copy', 'Paste','', 'Undo', 'Print'),
-			Object(.EditorControl, :readonly, :font, :size, zoom:,
+			Object(.EditorControl, :readonly, :font, :size, zoom:, :textLimit,
 				name: .EditorControl))
 		return layout
 		}

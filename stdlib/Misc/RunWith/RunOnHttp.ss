@@ -2,20 +2,13 @@
 class
 	{
 	CallClass(port, endpoint, args = #(), ip = false,
-		timeout = 60, timeoutConnect = 60, asyncCompletion = false)
+		timeout = 60, timeoutConnect = 60)
 		{
 		if ip is false
 			ip = .defaultIP()
 		address = 'http://' $ ip $ ':' $ port $ '/' $ endpoint
 		content = Pack(args)
-		if asyncCompletion isnt false
-			{
-			// Calls Http instead of Http.Post, in order to circumvent Http.ResponseCode.
-			// As when using asyncCompletion, a thread is started and nothing is returned
-			Http('POST', address, :content, :timeout, :timeoutConnect, :asyncCompletion)
-			return true
-			}
-		result = Http.Post(address, :content)
+		result = Http.Post(address, :content, :timeout, :timeoutConnect)
 		return Unpack(result)
 		}
 

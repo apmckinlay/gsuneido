@@ -357,12 +357,11 @@ PassthruController
 
 	DiffWithBar(diffname, barname, readonly = true)
 		{
-		showMargin = TableExists?(.lib)
-			? QueryColumns(.lib).Has?(#group)
-			: false
+		libRec? = TableExists?(.lib) and QueryColumns(.lib).Has?(#group)
+		type = libRec? ? 'code' : BookContent.Type(.lib)
 		return 	Object('Horz'
 			Object('ScintillaDiff', xstretch: 1, ystretch: 200, fontSize: 11,
-				name: diffname, :readonly, :showMargin),
+				name: diffname, :readonly, showMargin: libRec?, :type),
 			Object('OverviewBar', name: barname))
 		}
 

@@ -229,6 +229,8 @@ class
 		{
 		if not TableExists?(lib)
 			.makeLibrary(lib)
+		if lib is .testlib
+			Database('ensure ' $ .testlib $ ' (lib_committed)')
 		if ServerEval('Use', lib)
 			Unload()
 		else if lib is .testlib and Libraries().Last() isnt lib
@@ -276,7 +278,7 @@ class
 			}
 		return library
 		}
-	checkLibraryName(name)
+	checkLibraryName(name /*unused*/)
 		{
 //		if name.GlobalName?() and
 //			not name.Has?(Date().Format("yyyyMMdd")) and

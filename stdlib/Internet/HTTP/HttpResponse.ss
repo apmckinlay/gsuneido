@@ -9,7 +9,8 @@ class
 	fields: ('Date', 'Cache-Control', 'Last-Modified', 'Content-Type',
 		'Content-Disposition', 'Expires', 'ETag', 'Location', 'Server',
 		'Content-Encoding', 'Connection', 'Access-Control-Allow-Origin',
-		'Access-Control-Allow-Methods', 'Access-Control-Allow-Headers', 'Set-Cookie')
+		'Access-Control-Allow-Methods', 'Access-Control-Allow-Headers', 'Set-Cookie',
+		'Retry-After')
 
 	ResponseHeaderField(field, value, headers)
 		{

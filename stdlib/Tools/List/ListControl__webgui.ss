@@ -172,6 +172,7 @@ Control
 			}
 		record = .GetRow(idx)
 		record[field] = value
+		.RepaintRow(idx)
 		}
 
 	GetCurrentRecord()
@@ -1019,7 +1020,8 @@ Control
 					.focused--
 				}
 			.checkAndSetFocusedRow()
-			.Act(#DeleteRows, rowsToDelete)
+			if .hideContent isnt true
+				.Act(#DeleteRows, rowsToDelete)
 			// notify controller of deletions
 			if .forceDelete is false
 				.Send("List_Deletions", deletions: dataRowsDeleted.Reverse!())

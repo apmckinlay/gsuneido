@@ -23,6 +23,7 @@ class
 		if .dir isnt false
 			return .dir
 		path = 'ptestdir.txt'
+		dir = false // code warning "used but possibly not initialized"
 		for (i = 0; ; ++i)
 			{
 			if false isnt dir = GetFile(path)

@@ -52,15 +52,15 @@ CommandParent
 		.list.SetQuery(.query, .listArgs.columns, :selectName)
 
 		if .accessMode?()
-			.accessSelectsSetup()
+			.accessSelectsSetup(fromNew?:)
 		else
-			.listSelectsSetup()
+			.listSelectsSetup(fromNew?:)
 		}
 
 	accessInitialRecordLoaded: false
-	accessSelectsSetup()
+	accessSelectsSetup(fromNew? = false)
 		{
-		.access.ApplySelects()
+		.access.ApplySelects(fromNew?)
 		if .accessInitialRecordLoaded
 			return
 		.access.Load_initial_record(.accessArgs)
@@ -69,9 +69,9 @@ CommandParent
 		}
 
 	listDefaultStatusSet: false
-	listSelectsSetup()
+	listSelectsSetup(fromNew? = false)
 		{
-		.list.ApplySelects()
+		.list.ApplySelects(fromNew?)
 		if .listDefaultStatusSet
 			return
 		.list.SetDefaultStatus()
@@ -421,7 +421,10 @@ CommandParent
 		{
 		if fromNew?
 			return false
-		return .access.Select_vals isnt .prevSelVal or .newRecordsSinceFlip
+
+		return .access.Select_vals isnt .prevSelVal or
+			.access.SubTables_Select_vals() isnt .prevExtraSelVal or
+			.newRecordsSinceFlip
 		}
 
 	reloadModifiedRecords(fromNew?)
@@ -518,10 +521,14 @@ CommandParent
 
 	accessMode: 0
 	prevSelVal: false
+	prevExtraSelVal: false
 	flipToAccess()
 		{
 		.prevSelVal = .list.Select_vals.DeepCopy()
-//Print('.prevSelVal' : .prevSelVal)
+		if .list.Extra_Select_vals isnt false
+			.prevExtraSelVal = .list.Extra_Select_vals.DeepCopy()
+		else
+			.prevExtraSelVal = #()
 		.flip.SetCurrent(.accessMode)
 		.redirToAccess()
 		.accessSelectsSetup()
@@ -654,7 +661,10 @@ CommandParent
 	SelectControl_Changed()
 		{
 		if .accessMode?()
+			{
 			.list.SetSelectVals(.access.Select_vals.Copy())
+			.list.SetExtraSelectVals(.access.SubTables_Select_vals())
+			}
 		else
 			.access.SetSelectVals(.list.Select_vals.Copy())
 		}
@@ -703,6 +713,38 @@ CommandParent
 		.calculateTotal(true, false)
 		}
 
+	UseSubTableFilters?()
+		{
+		return .access.UseSubTableFilters?()
+		}
+
+	WithLinkedBrowses(block)
+		{
+		linkedBrowses = .access.GetLinkedBrowseTabs()
+		for idx in linkedBrowses.Members().Sort!()
+			{
+			block(linkedBrowses[idx])
+			}
+		}
+
+	VirtualList_ExtraFilters()
+		{
+		selects = Object()
+		AccessSubtables.Layout(.access)
+			{ |control, linkedName, saveName|
+			selects.Add(Object(:linkedName, :saveName, :control))
+			}
+		return selects
+	}
+
+	VirtualList_ExtraWhere(selectControls = false)
+		{
+		return .access.SubTables_Where(selectControls)
+		}
+	VirtualList_ExtraConditions()
+		{
+		return #()
+		}
 	Access_BeforeRecord(rec)
 		{
 		.Send('MultiView_BeforeRecord', rec)

@@ -51,9 +51,7 @@ ScintillaAddonForChanges
 		if .GetReadonly() is 1 or not Speller.Open()
 			return
 		.ClearIndicator(.indic_word, pos, text.Size())
-		typos = .collectTypos(pos, text, .ignore?)
-		// Defer in order to allow other Addon's to add their indicators first.
-		.Defer({ .indicateTypos(typos) })
+		.indicateTypos(.collectTypos(pos, text, .ignore?))
 		}
 
 	collectTypos(pos, text, ignore?)

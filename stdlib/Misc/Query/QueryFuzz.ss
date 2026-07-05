@@ -24,6 +24,18 @@ class
 			}
 		}
 
+	Cmdline(secs = 5)
+		{
+		try
+			.Test(secs)
+		catch (e)
+			{
+			Print(e)
+			Exit(1) // failure
+			}
+		Exit(0) // success
+		}
+
 	TestCorpus()
 		{
 		// TODO multi-thread

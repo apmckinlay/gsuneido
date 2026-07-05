@@ -5,21 +5,29 @@ class
 	{
 	CallClass(@args)
 		{
+		.checkArgs(args)
+		access = args.access
+		plugin = args.plugin
+		.init(access, plugin)
+		if plugin.tabs isnt false and not plugin.tabs.Destroyed?()
+			plugin.tabs.SetImage(plugin.tab_i, .tabHasData?(access, plugin) ? 0 : -1)
+		}
+
+	checkArgs(args)
+		{
 		for field in #('access', 'plugin')
 			if not args.Member?(field)
 				throw 'missing argument'
-		access = args.access
-		plugin = args.plugin
+		}
 
-		.init(access, plugin)
+	tabHasData?(access, plugin)
+		{
 		hasdata = false
 		data = access.GetData()
 		for field in plugin.fields
 			if data[field] isnt "" and data[field] isnt false
 				hasdata = true
-
-		if plugin.tabs isnt false and not plugin.tabs.Destroyed?()
-			plugin.tabs.SetImage(plugin.tab_i, hasdata ? 0 : -1)
+		return hasdata
 		}
 
 	TabAlwaysExists?: true

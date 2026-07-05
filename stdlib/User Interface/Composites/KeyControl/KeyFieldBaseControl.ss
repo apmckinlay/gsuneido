@@ -99,6 +99,7 @@ FieldControl
 			.Parent.Name)
 		}
 
+fillinField: false
 	Fillin_fields(rec)
 		{
 		if .noClear and rec is Object()
@@ -107,10 +108,17 @@ FieldControl
 		.handleCustomFillin(rec)
 
 		if .AllowFillin?(rec)
+			{
+Finally(
+	{
 			.forFillins(.fillin)
 				{ |i|
+.fillinField = Object(field: .fillin[i],
+	value: rec[.from is false ? .fillin[i] : .from[i]])
 				.Send("SetField", .fillin[i], rec[.from is false ? .fillin[i] : .from[i]])
 				}
+	}, { .fillinField = false })
+			}
 		}
 
 	forFillins(fillin, block)
@@ -196,4 +204,16 @@ FieldControl
 				rec[fillin[i]] = masterRec[from[i]]
 				}
 		}
+
+Destroy()
+	{
+	if .fillinField isnt false
+		{
+		calls = GetCallStack(limit: 99)
+		calls = FormatCallStack(calls, levels: 99)
+		SuneidoLog('INFO: 33749 .Destroy() called during the Fillin loop',
+			params: .fillinField, :calls)
+		}
+	super.Destroy()
+	}
 	}

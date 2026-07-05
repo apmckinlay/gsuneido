@@ -5,6 +5,7 @@ Control
 	Name: 'Edit'
 	Status: ''
 	ComponentName: "Edit"
+	DefaultHeight: 2
 	New(.mandatory = false, .readonly = false, style/*unused*/ = 0,
 		bgndcolor = "", textcolor = "", hidden = false,
 		tabover = false, font = "", size = "", weight = "", underline = false,
@@ -23,7 +24,7 @@ Control
 
 		.ComponentArgs = Object(readonly, bgndcolor, textcolor, hidden, tabover,
 			font, size, weight, underline,
-			width, height, readOnlyBgndColor)
+			width, height, readOnlyBgndColor, .DefaultHeight)
 		}
 
 	isReadonly?: false
@@ -276,13 +277,13 @@ Control
 		if Suneido.User is 'default'
 			menu.Add(@.DevMenu)
 		i = ContextMenu(menu).Show(.Hwnd, x, y) - 1
+		if .Destroyed?()
+			return 0
 		if i is -1
 			{
 			.EnsureSelect()
 			return 0
 			}
-		if .Destroyed?()
-			return 0
 		.callContext(menu, i)
 		return 0
 		}

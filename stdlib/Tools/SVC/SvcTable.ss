@@ -312,7 +312,7 @@ class
 
 	ModifiedQuery()
 		{
-		extend = not .SvcEnabled?()
+		extend = QueryEmpty?('columns', table: .Table(), column: 'lib_committed')
 			? ' extend lib_committed'
 			: ''
 		modifiedWhere = ' where lib_committed is "" or lib_modified isnt ""'

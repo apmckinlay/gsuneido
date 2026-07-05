@@ -732,10 +732,14 @@ ListBodyBaseComponent
 	VirtualListExpandEditPushed(updates)
 		{
 		for row in updates.Members()
-			if updates[row]
-				.expandedCtrls[row].expandRow.SetAttribute('data-editing', '')
+			{
+			if updates[row] is 'hidden'
+				.expandedCtrls[row].expandRow.SetAttribute('data-editing', 'disabled')
+			else if updates[row] is true
+				.expandedCtrls[row].expandRow.SetAttribute('data-editing', 'true')
 			else
 				.expandedCtrls[row].expandRow.RemoveAttribute('data-editing')
+			}
 		}
 
 	showEditButton?: true
@@ -853,7 +857,11 @@ ListBodyBaseComponent
 		{
 		if .dragging is false
 			return
-
+		if event.buttons isnt 1 // left button was released, treat as mouseup
+			{
+			.mouseup(event)
+			return
+			}
 		focusedPos = .getRowPos(.focused)
 		y = event.clientY
 		if y < focusedPos.top // going up

@@ -200,7 +200,8 @@ ButtonControl
 	focusRectOffSet: -3
 	DRAWITEM(dis)
 		{
-		hdc = dis.hDC
+		if 0 is hdc = dis.hDC
+			return true
 		rect = dis.rcItem
 		textRect = rect.Copy()
 		textRect.left += .tx

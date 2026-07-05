@@ -111,34 +111,62 @@ Component
 		// In this case, both windows will receive the mousedown event
 		if .windowContains?(target)
 			{
-			if Same?(SuRender().ActiveWindow, this) or
-				SuRender().ActiveWindow.Base?(AutoChooseListComponent)
+			if not Same?(SuRender().ActiveWindow, this) and
+				// need this to block further user actions during ListEditWindow commit
+				SuRender().ActiveWindow.Base?(ListEditWindowComponent)
+				.EventWithOverlay(#DoActivate)
+			else
 				{
-				.Event(#DoActivate)
+				.Event(#DoActivate, newFocus: .focusable(target))
 				SuRender().Notification.OnWindowActivated(.UniqueId)
 				}
-			else
-				// need this to block further user actions during ListEditWindow commit
-				.EventWithOverlay(#DoActivate)
 			}
 		}
 	windowContains?(target)
 		{
+		return .findIf(target)
+			{ |element, continue?|
+			match = 0
+			try match = Same?(this, element.Window())
+			match is 0 ? continue? : match
+			}
+		}
+
+	focusable(target)
+		{
+		clicked = .findIf(target)
+			{ |element, continue?|
+			component = false
+			try
+				{
+				tmp = element.Control()
+				tmp.UniqueId
+				component = tmp
+				}
+			component is false ? continue? : component
+			}
+		if clicked isnt false and
+			(clicked.Base?(EditComponent) or clicked.Base?(ScintillaComponent))
+			return clicked.UniqueId
+		return false
+		}
+
+	findIf(target, block)
+		{
+		continue? = #(0)
 		forever
 			{
-			match = 0
-			try
-				match = Same?(this, target.Window())
-			if match isnt 0
-				return match
+			if not Same?(continue?, res = block(target, continue?))
+				return res
+
 			newtarget = false
-			try
-				newtarget = target.parentElement
+			try newtarget = target.parentElement
 			if newtarget is false
 				return false
 			target = newtarget
 			}
 		}
+
 	UpdateOrder(order, active?)
 		{
 		.GetContainerEl().SetStyle('z-index', order)

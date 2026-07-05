@@ -3,27 +3,28 @@
 // to abort incomplete multipart uploads
 class
 	{
-	PutFile(bucket, fileFrom, fileTo, makeRequest)
+	PutFile(bucket, fileFrom, fileTo, region, makeRequest)
 		{
 		_makeRequest = makeRequest
-		if false is uploadId = .init(bucket, fileTo)
+		if false is uploadId = .init(bucket, fileTo, region)
 			return false
-		if false is etags = .uploadParts(bucket, fileFrom, fileTo, uploadId)
-			return .abort(bucket, fileTo, uploadId)
+		if false is etags = .uploadParts(bucket, fileFrom, fileTo, region, uploadId)
+			return .abort(bucket, fileTo, region, uploadId)
 		else
-			return .complete(bucket, fileTo, uploadId, etags)
+			return .complete(bucket, fileTo, region, uploadId, etags)
 		}
 
-	init(bucket, fileTo)
+	init(bucket, fileTo, region)
 		{
 		// it seems s3 expects "?uploads=" and value does not matter
-		content = _makeRequest("POST", [uploads: 'x'], '/' $ bucket $ '/' $ fileTo)
+		content = _makeRequest("POST", [uploads: 'x'], '/' $ bucket $ '/' $ fileTo,
+			:region)
 		return String?(content) and content isnt ''
 			? XmlParser(content).uploadid.Text()
 			: false
 		}
 
-	uploadParts(bucket, fileFrom, fileTo, uploadId)
+	uploadParts(bucket, fileFrom, fileTo, region, uploadId)
 		{
 		partCount = .splitFile(fileFrom, 8.Mb()) /*= reasonable part size */
 		etags = Object()
@@ -38,7 +39,7 @@ class
 					[:partNumber, :uploadId],
 					'/' $ bucket $ '/' $ fileTo,
 					fromFile: fileFrom $ '_p' $ i,
-					fullResponse?:)
+					fullResponse?:, :region)
 				Object?(response) and response.content is ''
 				}
 			if result is false
@@ -73,7 +74,7 @@ class
 			DeleteFile(fileFrom $ '_p' $ i)
 		}
 
-	complete(bucket, fileTo, uploadId, etags)
+	complete(bucket, fileTo, region, uploadId, etags)
 		{
 		content = Razor('<CompleteMultipartUpload>
 			@for(part in .etags)
@@ -84,13 +85,14 @@ class
 				</Part>
 				}
 			</CompleteMultipartUpload>', Object(:etags))
-		response = _makeRequest('POST', [:uploadId], '/' $ bucket $ '/' $ fileTo,:content)
+		response = _makeRequest('POST', [:uploadId], '/' $ bucket $ '/' $ fileTo,
+			:content, :region)
 		return String?(response) and response isnt ''
 		}
 
-	abort(bucket, fileTo, uploadId)
+	abort(bucket, fileTo, region, uploadId)
 		{
-		_makeRequest('DELETE', [:uploadId], '/' $ bucket $ '/' $ fileTo)
+		_makeRequest('DELETE', [:uploadId], '/' $ bucket $ '/' $ fileTo, :region)
 		return false
 		}
 	}

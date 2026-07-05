@@ -266,16 +266,37 @@ class
 				})
 		(`catch ?\(unused\)`,					"omit (unused)", 				warning:)
 		(`:[a-zA-Z]\w*`,						"must be preceded by ( or comma",
-			filter: function (code, pos)
+			filter: function(code, pos)
 				{
 				if code[pos-1] is ':' or code[..pos][-80..].Has?('dll') /*= line length */
 					return true
-				for (i = pos-1; i >= 0; i--)
-					if code[i] in ('(', '[', ',')
-						return true
-					else if code[i] not in (' ', '\t', '\r', '\n')
-						break
-				return false
+				filterWithAnnotate = function (code, pos)
+					{
+					i = pos - 1
+					while i >= 0 and code[i] in (' ', '\t', '\r', '\n')
+						i--
+					if i >= 0 and code[i] =~ '[A-Za-z0-9_]'
+						{
+						while i >= 0 and code[i] =~ '[A-Za-z0-9_]'
+							i--
+						while i >= 0 and code[i] in (' ', '\t', '\r', '\n')
+							i--
+						}
+					return i >= 0 and code[i] in ('(', '[', ',', ')')
+					}
+				filterWithOutAnnotate = function (code, pos)
+					{
+					for (i = pos-1; i >= 0; i--)
+						if code[i] in ('(', '[', ',')
+							return true
+						else if code[i] not in (' ', '\t', '\r', '\n')
+							break
+					return false
+					}
+				return BuiltDate() > #20260514
+					? filterWithAnnotate(code, pos)
+					: filterWithOutAnnotate(code, pos)
+
 				})
 		(`LocalCmds\(\)`, 						'instance not needed, omit ()')
 		('default ?:[ \t\r\n]*throw', 			'omit default that just throws', warning:)

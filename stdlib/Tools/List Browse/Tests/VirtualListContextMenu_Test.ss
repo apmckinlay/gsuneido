@@ -31,6 +31,7 @@ Test
 		recMenu = RecordMenuManager(false, false, false, control)
 
 		control.When.Editable?().Return(false)
+		control.When.GetCheckBoxField().Return(false)
 		Assert(menu.VirtualListContextMenu_buildMenu(control, Object("Test"))
 			is: Object("Reset Columns", "Test", "", "Print...", "Reporter..."))
 

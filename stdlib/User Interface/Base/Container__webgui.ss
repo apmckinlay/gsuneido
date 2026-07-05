@@ -70,8 +70,16 @@ Control
 		for (child in .GetChildren())
 			child.Destroy()
 		}
+
+	destroying?: false
+	Destroying?()
+		{
+		return .destroying? or .Destroyed?()
+		}
+
 	Destroy()
 		{
+		.destroying? = true
 		.Clear()
 		super.Destroy()
 		}

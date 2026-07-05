@@ -7,11 +7,17 @@ _Addon_VirtualListTopFilters
 		filtersWrapper.Remove(0)
 		UserSettings.Put(view.Option $ ' - Split Open', true)
 		colModel = view.GetModel().ColModel
-		filtersWrapper.Append(Object('SelectRepeat',
-			view.GetSelectFields(), view.Select_vals, colModel.GetSelectMgr().Name(),
-			option: view.Option, title: view.GetTitle(), fromFilter:,
-			selChanged: view.GetDefault('SelectChanged?', false),
-			noUserDefaultSelects?: not colModel.UserDefaultSelectEnabled?()))
+
+		if .Send('UseSubTableFilters?') is true
+			filtersWrapper.Append(
+				Object('SelectRepeatSubtables', view, colModel, .selectRepeatName))
+		else
+			filtersWrapper.Append(Object('SelectRepeat',
+				view.GetSelectFields(), view.Select_vals, colModel.GetSelectMgr().Name(),
+				option: view.Option, title: view.GetTitle(), fromFilter:,
+				selChanged: view.GetDefault('SelectChanged?', false),
+				noUserDefaultSelects?: not colModel.UserDefaultSelectEnabled?()))
+
 		split = view.FindControl('VertSplit')
 		split.UpdateSplitter()
 		if false is split.SetSplitSaveName(view.Option) // no default

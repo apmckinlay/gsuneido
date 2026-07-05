@@ -128,7 +128,10 @@ class
 
 	AddIndexedFilter(filter, topFilters)
 		{
-		newFilters = topFilters.Get()
+		// Issue 1034 - if topFilters is a SelectRepeateSubtablesControl
+		// then need to specify "Header" to get the filters we want here.
+		// if topFilters is SelectRepeateControl, item param will just get ignored
+		newFilters = topFilters.Get(item: 'Header')
 		conditions = newFilters.conditions
 		conditions.RemoveIf({ it.condition_field is filter.condition_field and
 			(it.check isnt true or it[it.condition_field].operation in ('', 'all')) })

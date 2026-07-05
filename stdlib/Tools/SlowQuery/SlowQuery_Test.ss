@@ -14,7 +14,8 @@ Test
 		SlowQuery.SlowQuery_log(query, 10)
 
 		Assert(SlowQuery.SlowQuery_slow?(query))
-		QueryApply1('slow_queries where sq_query is ' $ Display(query))
+		hash = Sha1(query.Trim()).ToHex()
+		QueryApply1('slow_queries where sq_hash is ' $ Display(hash))
 			{
 			Assert(it.sq_last_used isnt: '')
 			it.Delete()

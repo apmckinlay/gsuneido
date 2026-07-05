@@ -36,6 +36,7 @@ ScintillaAddonsControl
 		{
 		if args.showMargin
 			.Addon_show_margin = true
+		DisplayCodeControl.SetupHighlightStyle(args, this)
 		args.scheme = 'default'
 		return args
 		}
@@ -104,10 +105,7 @@ ScintillaAddonsControl
 		}
 
 	Addon_brace_match:,
-	Addon_calltips:,
 	Addon_highlight_occurrences:,
-	Addon_suneido_style:,
 	Addon_indent_guides:,
 	Addon_overwrite_lines:,
-	Addon_go_to_definition:
 	}

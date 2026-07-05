@@ -3,7 +3,7 @@
 #### Suneido.GoMetric
 
 ``` suneido
-(string = false) => number
+(name = false) => number or false or object
 ```
 
 Returns a [Go runtime metric](<https://pkg.go.dev/runtime/metrics>) or a list of the available metrics.

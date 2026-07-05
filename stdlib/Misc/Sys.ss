@@ -185,6 +185,12 @@ class
 
 	killDbSession(session_id)
 		{
+		// Database.Kill will produce an error if running stand-alone. We cannot use
+		// the Standalone? method here since it actually returns false when running
+		// suneido stand-alone for the purpose of hosting a jsS application. In these
+		// cases, the connections are killed via the Suneido.SessionsToKill object
+		if Sys.LinuxServer?() and not Server?()
+			return
 		Database.Kill(session_id)
 		}
 

@@ -7,12 +7,12 @@ function (date)
 	// but this should not matter much since transition time is 2 A.M.
 
 	secondSundayOfMarch = Date(date.Year() $ '0314', 'yyyyMMdd')
-	dayOfWeek = secondSundayOfMarch.WeekDay(sun: 0)
+	dayOfWeek = secondSundayOfMarch.WeekDay()
 	if dayOfWeek isnt 0
 		secondSundayOfMarch = secondSundayOfMarch.Plus(days: -dayOfWeek)
 
 	firstSundayInNovember = Date(date.Year() $ '1101', 'yyyyMMdd')
-	dayOfWeek = firstSundayInNovember.WeekDay(sun: 0)
+	dayOfWeek = firstSundayInNovember.WeekDay()
 	if dayOfWeek isnt 0
 		firstSundayInNovember = firstSundayInNovember.Plus(days: 7 - dayOfWeek)
 

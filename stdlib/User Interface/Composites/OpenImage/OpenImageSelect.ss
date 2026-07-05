@@ -222,7 +222,17 @@ Controller
 
 	retryCopy(copyfolder, fileBasename, copyto, file, fromBucket = '')
 		{
-		dest = .GetCopyToFilename(copyfolder, fileBasename)
+		msg = CatchFileAccessErrors(Paths.Combine(copyfolder, fileBasename))
+			{
+			dest = .GetCopyToFilename(copyfolder, fileBasename)
+			}
+		if msg isnt true
+			{
+			SuneidoLog('ERRATIC: (CAUGHT) Could not get copy to filename - ' $ msg,
+				caughtMsg: 'needs attention if this is unattended')
+			return msg
+			}
+
 		if dest.Size() > CheckFileName.MaxAllowedFileNameChars
 			return "The destination file path is too long: " $ dest
 		if copyto is ""

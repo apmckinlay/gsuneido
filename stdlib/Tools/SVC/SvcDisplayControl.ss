@@ -138,7 +138,8 @@ PassthruController
 		{
 		if x is false
 			return
-		vertOb = Object('Vert', #(DisplayCode, ymin: 400, ystretch: 1))
+		vertOb = Object('Vert', Object(#DisplayCode, ymin: 400, ystretch: 1,
+			type: .getHighlightStyle()))
 		if false isnt rec = .model.GetLocalRec(.table, .name, :deleted)
 			vertOb.Add(Object('StaticText', text: 'LOCAL ' $ rec.path $ '/' $ .name,
 				size: '+2'), at: 1)
@@ -174,7 +175,8 @@ PassthruController
 		if data.oldRec is false or data.newRec is false
 			{
 			text = Object?(data.oldRec) ? data.oldRec.text : data.newRec.text
-			control = Object('DisplayCode', ymin: 400, ystretch: 1, set: text)
+			control = Object('DisplayCode', ymin: 400, ystretch: 1, set: text,
+				type: .getHighlightStyle())
 			}
 		else if .type is "%"
 			control = .displayConflictChange(data, showComment?, masterNewer?)
@@ -187,6 +189,13 @@ PassthruController
 			mode = UserSettings.Get('VersionControl-OrigMerge', def: 0)
 			.flip.SetCurrent(mode is false ? 0 : mode)
 			}
+		}
+
+	getHighlightStyle()
+		{
+		return TableExists?(.table) and QueryColumns(.table).Has?(#group)
+			? 'code'
+			: BookContent.Type(.table)
 		}
 
 	displayConflictChange(data, showComment?, masterNewer?)

@@ -10,13 +10,15 @@
 class
 	{
 	title: Import
-	CallClass(filename, table, destination, hwnd = 0, quiet = false, skipSize = false)
+	CallClass(filename, table, destination, hwnd = 0, quiet = false, skipSize = false,
+		recName = false)
 		{
 		if false is text = .getFile(filename, hwnd, quiet, skipSize)
 			return false
 
 		svcTable = SvcTable(table)
-		importRec = [name: Paths.Basename(filename), path: destination, :text]
+		importRec = [name: recName is false ? Paths.Basename(filename) : recName,
+			path: destination, :text]
 		outputRec? = svcTable.Get(lookupName = svcTable.MakeName(importRec)) is false
 		if outputRec?
 			.outputNewRecord(svcTable, importRec, lookupName)

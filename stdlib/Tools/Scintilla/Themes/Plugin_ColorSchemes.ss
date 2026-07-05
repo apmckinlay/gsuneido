@@ -62,6 +62,7 @@ Contributions:
 		longLineMargin:	0xdddddd,
 		selectedBack:	0x770000,
 		operator: 		0xd172bb,
+		annotation:		0xb0c94e,
 		whitespace:		0x362b00,
 		warning:		0x00cccc,
 		error:			0x2222ff,

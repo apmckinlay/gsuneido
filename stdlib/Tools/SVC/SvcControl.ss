@@ -608,7 +608,8 @@ Controller
 			return 0
 
 		ContextMenu(#("Go To Definition", "Export Record", "Find References",
-			"Version History", "", "Restore", #(Restore))).ShowCall(this, x, y)
+			"Version History", "Review With AI", "",
+			"Restore", #(Restore))).ShowCall(this, x, y)
 		}
 
 	On_Copy_To()
@@ -681,6 +682,15 @@ Controller
 			return
 		for change in changes
 			VersionHistoryControl(change.lib, change.name)
+		}
+
+	On_Context_Review_With_AI()
+		{
+		if false is changes = .getHighlightedCheckNotEmpty()
+			return
+		setText = "review the changes in " $
+			changes.Map({ it.lib $ ':' $ it.name }).Join(', ')
+		AiAgentControl(:setText)
 		}
 
 	On_Merge()

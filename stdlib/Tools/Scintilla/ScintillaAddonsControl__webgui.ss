@@ -3,10 +3,10 @@ ScintillaControl
 	{
 	Height: 		7		// = Determines how many lines before scrolling is required
 	Width:			60		// = Determines how many characters can fit on a line
-	LONG_IDLE: 		3000 	// 3 sec
 	CHANGE_IDLE: 	500 	// .5 sec
+	readonly: 		false
 	addons:			false
-	IDE: false
+	IDE: 			false
 	ComponentName:	"ScintillaAddons"
 	New(@args)
 		{
@@ -14,6 +14,7 @@ ScintillaControl
 
 		.styleManager = ScintillaAddonsLineStyles(this)
 		.scheme = args.GetDefault(#scheme, '')
+		.readonly = args.GetDefault(#readonly, false)
 
 		.setupAddons(args)
 		.setupContextMenu()
@@ -39,14 +40,6 @@ ScintillaControl
 		.addons = AddonManager(this, args)
 		.styleManager.DefineStyles(.addons)
 		.addons.Send(#Init)
-		if args.GetDefault(#readonly, false) is true and
-			args.GetDefault(#readonlyEnableIdle, false) isnt true
-			.longIdle = .changeIdle = class { Reset(){} Kill(){} }
-		else
-			{
-			.longIdle = IdleTimer(.LONG_IDLE, { .addons.Send(#LongIdle) }).Reset()
-			.changeIdle = IdleTimer(.CHANGE_IDLE, { .addons.Send(#IdleAfterChange) })
-			}
 		}
 
 	setupContextMenu()
@@ -151,8 +144,17 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 
 	ResetTimers()
 		{
-		.longIdle.Reset()
 		.changeIdle.Reset()
+		}
+
+	fakeTimer: class { Reset(){ } Kill(){ } }
+	getter_changeIdle()
+		{
+		if .addons is false or .readonly
+			return .fakeTimer
+		return .changeIdle = .addons.AddonMethod?(#IdleAfterChange)
+			? IdleTimer(.CHANGE_IDLE, { .addons.Send(#IdleAfterChange) })
+			: .fakeTimer
 		}
 
 	SCN_MODIFIED(lParam)
@@ -289,7 +291,6 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 	Destroy()
 		{
 		.commandManager.Destroy()
-		.longIdle.Kill()
 		.changeIdle.Kill()
 		.addons.Send(#Destroy)
 		super.Destroy()

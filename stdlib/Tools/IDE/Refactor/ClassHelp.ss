@@ -118,8 +118,24 @@ class
 	RetrieveParamsList(text, vars)
 		{
 		scanner = Scanner(text)
+		inAnnotation? = false
 		while scanner isnt token = scanner.Next()
 			{
+			if BuiltDate() > #20260514
+				{
+				if inAnnotation?
+					{
+					if token in (',', '=', ')')
+						inAnnotation? = false
+					else
+						continue
+					}
+				if not inAnnotation? and token is ':'
+					{
+					inAnnotation? = true
+					continue
+					}
+				}
 			if scanner.Type() is #IDENTIFIER
 				vars.Add(token.Replace('^_').UnCapitalize())
 			else

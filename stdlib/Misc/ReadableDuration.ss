@@ -11,6 +11,9 @@ class
 		for (i = 0; i < div.Size(); ++i)
 			if secs > div[i]
 				return (secs / div[i]).RoundToPrecision(precision) $ ' ' $ units[i]
+
+		// beyond the shortest handled unit is treated as '0'
+		return '0'
 		}
 	Between(t1, t2)
 		{

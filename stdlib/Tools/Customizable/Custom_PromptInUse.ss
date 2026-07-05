@@ -1,6 +1,7 @@
 // Copyright (C) 2008 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
+	// TODO: replace usages of this with Custom_TagInUse
 	CallClass(field, fieldMap, value, hwnd = 0, data = false,
 		exclude_custom? = false, _customizable = false)
 		{

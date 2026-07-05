@@ -41,24 +41,27 @@ class
 
 		// add _abbrev, _name for num fields
 		for fld in fields.Copy() // need copy because of removes
-			{
-			if false isnt .HandleSpecialJoinFields(fld, fields, .other,
-				.field_suffixes, .table_fieldprefix, .table_fieldnum, includeMasterNum,
-				:convertCustomNumFields, converted: .converted)
-				continue
-
-			if not fld.Suffix?("_num") and not fld.Has?("_num_")
-				continue
-
-			// get num field suffix if applicable
-			suffix = Opt('_', fld.AfterLast('_num_'))
-			// strip off everything after and including '_num'
-			f = fld.BeforeFirst('_num')
-			if .nameAndAbbrevExist(fields, f, fld)
-				continue
-			.addForeignTableFields(f, fld, fields, suffix, includeMasterNum)
-			}
+			.addSingleAbbrevName(fld, fields, includeMasterNum, convertCustomNumFields)
 		}
+	addSingleAbbrevName(fld, fields, includeMasterNum, convertCustomNumFields)
+		{
+		if false isnt .HandleSpecialJoinFields(fld, fields, .other,
+			.field_suffixes, .table_fieldprefix, .table_fieldnum, includeMasterNum,
+			:convertCustomNumFields, converted: .converted)
+			return
+
+		if not fld.Suffix?("_num") and not fld.Has?("_num_")
+			return
+
+		// get num field suffix if applicable
+		suffix = Opt('_', fld.AfterLast('_num_'))
+		// strip off everything after and including '_num'
+		f = fld.BeforeFirst('_num')
+		if .nameAndAbbrevExist(fields, f, fld)
+			return
+		.addForeignTableFields(f, fld, fields, suffix, includeMasterNum)
+		}
+
 	GetConverted()
 		{
 		return .converted
@@ -228,6 +231,20 @@ class
 			}
 		else
 			.field_ob[prompt] = field
+		}
+
+	// This is to handle Sub-Table Selects on Dynamic Types
+	// See AccessSubtables.renamedCondition
+	AddNumField(field, prompt)
+		{
+		.AddField(field, prompt)
+		if not field.Has?('_num')
+			return //* please just use .AddField
+
+		fields = Object()
+		.addSingleAbbrevName(field, fields, includeMasterNum:,
+			convertCustomNumFields: false)
+		.handlePrompts(fields, #(), #())
 		}
 
 	Prompts()

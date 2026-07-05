@@ -16,6 +16,9 @@ class
 		['GET', 	'/connect$',			function (env) {
 						WebSocketHandler(env, env.socket, JsWebSocketServer) }],
 		['GET', 	'/robots.txt', 			'JsRobotsTxt']
+		['GET', 	'/sw.js', 				'JsServiceWorker.Get']
+		['GET',		'/rally',				'JsRally']
+		['POST',	'/rally',				'JsRally']
 	)
 	CallClass()
 		{

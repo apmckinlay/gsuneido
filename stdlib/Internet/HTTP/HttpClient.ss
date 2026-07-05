@@ -4,38 +4,23 @@
 class
 	{
 	CallClass(method, url, content = "", header = #(),
-		timeout = 60, timeoutConnect = 60, asyncCompletion = false)
+		timeout = 60, timeoutConnect = 60)
 		{
 		Assert(url.Prefix?('http://'), "Http: url must have http:// prefix")
 		Assert(#(GET, PUT, POST, DELETE, OPTIONS, TRACE, HEAD).Has?(method),
 			'HttpClient: invalid method: ' $ method)
-		if asyncCompletion is false
-			return .socketClient(url, timeout, timeoutConnect, method, content, header,
-				function (response) { return response })
-		else
-			Thread({ .threadfn(url, timeout, timeoutConnect,
-				method, content, header, asyncCompletion) })
+		return .socketClient(url, timeout, timeoutConnect, method, content, header)
 		}
-	socketClient(url, timeout, timeoutConnect, method, content, header, completion)
+	socketClient(url, timeout, timeoutConnect, method, content, header)
 		{
 		a = Url.Split(url)
-		port = a.GetDefault('port', 80) /*= default http port*/
+		port = a.GetDefault('port', Http.DefaultPort)
 		Assert(Type(port) is: 'Number')
 		SocketClient(a.host, port, timeout, :timeoutConnect)
 			{|sc|
 			.request(sc, method, a, content, header)
-			response = .response(sc, method)
+			return .response(sc, method)
 			}
-		completion(response)
-		}
-	threadfn(url, timeout, timeoutConnect, method, content, header, completion)
-		{
-		Thread.Name('HttpClient-thread')
-		try
-			.socketClient(url, timeout, timeoutConnect, method, content,
-				header, completion)
-		catch (e)
-			completion([content: "ERROR " $ e])
 		}
 	request(sc, method, a, content, header)
 		{
@@ -43,11 +28,8 @@ class
 		header['User-Agent'] = 'Suneido'
 		header.Host = a.host $ Opt(':', a.GetDefault(#port, ''))
 		header.Connection = 'close'
-		HttpSend(sc, method $ " " $ a.GetDefault(#path, '/') $ " HTTP/1.1", header, content)
-		}
-	sendFile(sc, start, header, file)
-		{
-		SendFileToSocket(sc, file, header, start, delete?:)
+		HttpSend(sc,
+			method $ " " $ a.GetDefault(#path, '/') $ " HTTP/1.1", header, content)
 		}
 	response(sc, method)
 		{

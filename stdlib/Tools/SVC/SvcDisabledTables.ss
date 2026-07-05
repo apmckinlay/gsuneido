@@ -9,6 +9,7 @@ MemoizeSingle
 
 	disabled(table)
 		{
-		return QueryEmpty?("columns", :table, column: "lib_committed")
+		cols = QueryList("columns where table is " $ Display(table), 'column')
+		return not cols.Intersects?(SvcTable.SvcColumns)
 		}
 	}

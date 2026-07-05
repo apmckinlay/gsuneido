@@ -83,7 +83,7 @@ Test
 
 		q = 'stdlib where num < 10 summarize max name'
 		Assert(QueryStrategy(q) has: '-seq') // better to use num index
-		q = 'stdlib where num < 1000 summarize max name'
+		q = 'stdlib where num < 9999 summarize max name'
 		Assert(QueryStrategy(q) has: '-idx')
 		}
 	}

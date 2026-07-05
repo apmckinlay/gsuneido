@@ -50,6 +50,7 @@ TdopSymbol
 					}
 
 				elemChildren = Object()
+				arg = false // code warning "used but possibly not initialized"
 				if t.Match(TDOPTOKEN.COLON)
 					{
 					key = true

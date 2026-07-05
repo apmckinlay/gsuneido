@@ -10,6 +10,10 @@ Test
 				{
 				_result.Add(args[0])
 				}
+			Destroyed?()
+				{
+				return false
+				}
 			}
 		fCE = cl.EditControl_callContext
 		contextExtra = Object(

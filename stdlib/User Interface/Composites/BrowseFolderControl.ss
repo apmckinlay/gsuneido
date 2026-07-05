@@ -3,9 +3,9 @@
 OpenFileControl
 	{
 	Name: 'BrowseFolder'
-	New(title = 'Browse for Folder', pidlroot = 0, dirpath = false)
+	New(title = 'Browse for Folder', pidlroot = 0, dirpath = false, width = 30)
 		{
-		super(disableDrop:)
+		super(:width, disableDrop:)
 		.SetOpenDirTitle(title)
 		switch dirpath
 			{

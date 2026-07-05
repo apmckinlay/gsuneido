@@ -41,10 +41,6 @@ WndProc
 		.color = color
 		.Repaint()
 		}
-	Dirty?(unused)
-		{
-		return false
-		}
 	Destroy()
 		{
 		.Send('NoData')

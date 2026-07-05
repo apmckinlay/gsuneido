@@ -183,4 +183,8 @@
 	((cus union (cus extend a1 = c4)) where ck <= "")))`
 `(((cus union cus) union cus) join by(ck) (ivc extend r0))
 	where r0 is '3' where ik is ""`
+`((((cus union cus) join (ivc remove i1 union ivc)) where c1 >= "") union
+	((cus union cus) join (ivc union ivc))) sort i4,c2,c4`
+`(((cus join ivc) remove i3 union ((cus join ivc) where c4 isnt "66")) union
+	((cus join ivc) union ((cus union cus) join ivc)))`
 )

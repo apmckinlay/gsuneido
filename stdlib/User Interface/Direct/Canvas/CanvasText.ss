@@ -107,11 +107,11 @@ CanvasItem
 				bottom: .rect.bottom))
 		if (result is false)
 			return
-		.x1 = Number(result.left)
-		.y1 = Number(result.top)
-		.x2 = Number(result.right)
-		.y2 = Number(result.bottom)
-		.rect = Object(left: .x1, top: .y1, right: .x2, bottom: .y2)
+		.rect = result
+		.x1 = result.left
+		.y1 = result.top
+		.x2 = result.right
+		.y2 = result.bottom
 		}
 
 	Resize(origx, origy, x, y)

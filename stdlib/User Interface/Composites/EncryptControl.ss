@@ -4,11 +4,11 @@ FieldControl
 	Name: "Encrypt"
 	Get()
 		{
-		return super.Get().Xor(EncryptControlKey())
+		return Decrypt(super.Get())
 		}
 	Set(value)
 		{
-		super.Set(value.Xor(EncryptControlKey()))
+		super.Set(Decrypt(value))
 		}
 	ZoomReadonly(value)
 		{

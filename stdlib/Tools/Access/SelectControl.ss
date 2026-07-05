@@ -13,27 +13,71 @@ Controller
 		}
 
 	Title: "Select"
+	subTableSelects: false
 	New(access, .name, okbutton = false, defaultButton = '',
 		noUserDefaultSelects? = false, setSelectVals = false, .hideCount = false)
 		{
 		super(.layout(access, okbutton, defaultButton, noUserDefaultSelects?,
 			setSelectVals))
-		.select2 = .Vert.SelectRepeat
+		.select2 = .FindControl(.name)
+		.subSelectRepeats()
 		}
+	subSelectRepeats()
+		{
+		if .access.Method?('UseSubTableFilters?') and
+			.access.UseSubTableFilters?() is true
+			{
+			.subTableSelects = Object()
+			for idx in .linkedBrowses.Members().Sort!()
+				{
+				linked = .linkedBrowses[idx]
+				linkedBrowse = linked.browse
+				saveName = .subTableFilterName(linkedBrowse)
+				.subTableSelects.Add(.FindControl(linked.name) at: saveName)
+				}
+			}
+		}
+
 	layout(access, okbutton, defaultButton, noUserDefaultSelects?, setSelectVals)
 		{
 		.DefaultButton = defaultButton
 		.access = access
 
+
 		.sf = access.GetSelectFields()
 		selects = setSelectVals is false ? access.Select_vals : setSelectVals
 		.remove_invalid_selects(selects)
 
-		return Object('Vert',
+		layout = Object('Vert',
 			Object('SelectRepeat', .sf, selects, .name, option: access.Option,
-				title: access.Title, :noUserDefaultSelects?),
-			okbutton is true ? .buttons("Select") : .buttons(@.AccessButtons))
+				title: access.Title, :noUserDefaultSelects?))
+
+		// .access could also be a KeyListView
+		if .access.Method?('UseSubTableFilters?') and
+			.access.UseSubTableFilters?() is true
+			{
+			.linkedBrowses = .access.GetLinkedBrowseTabs()
+			.layoutSubtables(layout)
+			}
+
+		buttons = okbutton is true ? .buttons("Select") : .buttons(@.AccessButtons)
+		return layout.Add(buttons)
 		}
+
+	layoutSubtables(layout)
+		{
+		AccessSubtables.Layout(.access)
+			{ |control, unused, unused|
+			layout.Add(control)
+			}
+		}
+
+	// this name is the saved name in userselects
+	subTableFilterName(linkedBrowse)
+		{
+		return linkedBrowse.GetColumnsSaveName() $ ' Filter'
+		}
+
 	AccessButtons: ("First", "Last", "Current") // public to allow overriding
 	remove_invalid_selects(selects)
 		{
@@ -114,8 +158,16 @@ Controller
 		if false is where = .select2.Where()
 			return false
 		.access.SetSelectVals(.select2.Get().conditions)
-		return .sf.Joins(where.joinflds) $ where.where
+		headerWhere = .sf.Joins(where.joinflds) $ where.where
+
+		lineItemWhere = ""
+		if .access.Method?('UseSubTableFilters?') and
+			.access.UseSubTableFilters?() is true
+			lineItemWhere $= .access.SubTables_Where(.subTableSelects)
+// Need to handle if this returns something NOT in the current re-name
+		return headerWhere $ '\r\n' $ lineItemWhere
 		}
+
 	On_Uncheck_All()
 		{
 		newConditions = .select2.Get().conditions.Map({ it.check = false; it })

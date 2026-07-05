@@ -255,7 +255,13 @@
 			<p>Working...</p>
 		</dialog>
 	</div><!-- #bg -->
-
+	<script>
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('/sw.js')
+				.then(() => console.log("Service Worker Registered!"))
+				.catch(err => console.error("SW Registration failed:", err));
+		}
+	</script>
 	<script>
 		function isTextMetricsSupported() {
 			if (typeof CanvasRenderingContext2D === 'undefined') {
@@ -274,6 +280,9 @@
 		}
 		function isDecompressionSupported() {
 			return 'DecompressionStream' in window;
+		}
+		function isServiceWorkerSupported() {
+			return 'serviceWorker' in navigator
 		}
 		var checkBrowserCompatibility = function() {
 			if (!isTextMetricsSupported() || !isDialogSupported() || !isDecompressionSupported()) {

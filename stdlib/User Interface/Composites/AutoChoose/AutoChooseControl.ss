@@ -213,6 +213,8 @@ EditControl
 	listctrl: false
 	open_list(choices = false)
 		{
+		if .Destroyed?()
+			return false
 		if .listctrl isnt false
 			return .listctrl
 		if choices is false

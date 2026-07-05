@@ -26,6 +26,9 @@ CommandParent
 		.saveOnlyLinked = args.Member?('saveOnlyLinked') and
 			args.saveOnlyLinked is true
 		.protect = args.GetDefault(#protect, false) is true
+		.allowSubTableSelect = args.Member?('subTableSelect') and
+			args.subTableSelect is true
+		.subTableConfig = args.GetDefault('subTableConfig', #())
 
 		.Window.AddValidationItem(this)
 
@@ -63,11 +66,17 @@ CommandParent
 		}
 
 	accessGoTo: false
-	ApplySelects(fromNew? /*unused*/ = false, _accessGoTo? = false)
+	ApplySelects(fromNew? = false, _accessGoTo? = false)
 		{
 		.accessGoTo = accessGoTo?
 		where = SelectRepeatControl.BuildWhere(.sf, .Select_vals)
 		whereStr = .sf.Joins(where.joinflds) $ where.where
+		// .subtables is NOT constructed when we FIRST initialize the screen
+		// need to skip it.
+		// NOTE: this will be an issue IF we ever descide to allow subtables to be part
+		// of the initial select, which we currently do NOT allow.
+		if not fromNew? and .allowSubTableSelect is true
+			whereStr $= .subtables.Where(this, false)
 		.SetWhere(whereStr, quiet:)
 		return true
 		}
@@ -279,6 +288,8 @@ CommandParent
 	lastSetDataTime: false
 	setdata(x, newrec = false)
 		{
+		// need to flush references to old linked browses before any data gets set
+		.linkedBrowses = Object()
 		.Send("Access_BeforeLoadingRecord", x)
 		.types.DetectTypeChange(newrec, x, .change_type)
 		.model.NotifyObservers('before_setdata')
@@ -491,11 +502,15 @@ CommandParent
 			.beep()
 			// need to check if table is empty without select
 			// in this case, we don't want to give the message
-			if .select is true and not .model.TableEmpty?() and .firstRead? is true and
-				'deleted' isnt .CheckDeleted(quiet:)
+			if .showNoRecordFound?(onfail)
+				{
 				.noRecordFound(dir)
-			else
-				this[onfail]()
+				// if last record that matches current select gets deleted, need to create
+				// new record in case user cancels out of the Select
+				if 'deleted' isnt .CheckDeleted(quiet:)
+					return
+				}
+			this[onfail]()
 			return
 			}
 		.firstRead? = false
@@ -506,6 +521,11 @@ CommandParent
 		{
 		Beep()
 		}
+	showNoRecordFound?(onfail)
+		{
+		return .select is true and not .model.TableEmpty?() and
+			(.firstRead? is true or onfail is "On_New")
+		}
 	noRecordFound(dir)
 		{
 		position = dir is 'Prev'
@@ -514,6 +534,7 @@ CommandParent
 		.set_position_button_state(position)
 		selected = .Select_vals.DeepCopy()
 		.Select_vals.Each({ it.check = false })
+		.subtables.Clear()
 		msg = .recordsExist is true
 			? "Current record does not match the current select.\r\n" $
 			"Please use First/Last to navigate to other records that do."
@@ -527,6 +548,7 @@ CommandParent
 		// re-open the select
 		.Defer(uniqueID: 'reopen_select_dialog') // need the orig select to close first
 			{
+			// NOTE: this does NOT keep the subtable checks, only the header checks
 			.On_Select(selected)
 			}
 		}
@@ -1249,12 +1271,20 @@ CommandParent
 			newFile, oldFile, .GetData(), name, action)
 		}
 	linkedBrowses: ()
-	RegisterLinkedBrowse(browseCtrl, name)
+	RegisterLinkedBrowse(browseCtrl, name /*unused*/)
 		{
+		// NEED TO BE CAREFULL, at this point browseCtrl is NOT fully constructed yet
 		if .linkedBrowses.Readonly?()
 			.linkedBrowses = Object()
-		.linkedBrowses[name] = browseCtrl
+
+		.linkedBrowses.AddUnique(browseCtrl)
 		}
+
+	BrowseAlreadyRegistered(browseCtrl)
+		{
+		return .linkedBrowses.Has?(browseCtrl)
+		}
+
 	Access_Save()
 		{
 		return .Save()
@@ -1391,22 +1421,128 @@ CommandParent
 		.data.SetReadOnly(readOnly)
 		}
 
+	subtables: false
 	SetSelectMgr(selectName, args)
 		{
 		// set initial select if any
 		.selectMgr = AccessSelectMgr(args.GetDefault('select', #()),
 			name: selectName)
+
 		if .select_button isnt false
 			.selectMgr.LoadSelects(.GetSelectFields().Fields)
+
+		.subtables = AccessSubtables(dynamic?: .types.DynamicTypes isnt false)
 		}
+
+	UseSubTableFilters?()
+		{
+		// Need the March 5th exe for filtering on sub-tables
+		if BuiltDate() < #20260305
+			return false
+		return .allowSubTableSelect is true
+		}
+	// this is ONLY to be used if the Control on the SelectControl needs
+	// to be different that the control in the List
+	SubTablesConfig()
+		{
+		return .subTableConfig
+		}
+
+	SetSubtableSelectMgr(fields, saveName)
+		{
+		.subtables.SetSubtableSelectMgr(fields, saveName)
+		}
+
+	SetSubtableSelectFields(columns, availableColumns, saveName)
+		{
+		return .subtables.SetSubtableSelectFields(columns, availableColumns, saveName)
+		}
+
+	SubTables_Select_vals()
+		{
+		return .subtables.Select_vals()
+		}
+
+	SubTables_Where(selectControls = false)
+		{
+		return .allowSubTableSelect is true ? .subtables.Where(this, selectControls) : ""
+		}
+
+	GetLinkedBrowseTabs()
+		{
+		// We have the tab names here.
+		// We want to use the tab names as it should make it clear to the
+		// user which item the filters are going to apply to
+		names = #('Line Items')
+		if false isnt tabs = .FindControl('Tabs')
+			{
+			for (i=0; i < tabs.GetAllTabCount(); i++)
+				tabs.ConstructAndSetTab(i)
+			names = tabs.GetAllTabNames()
+			}
+
+		linked = Object()
+		// .linkedBrowses is in the order the tabs were constructed, not the order they
+		// appear on the screen
+		// using tabs.GetAllTabNames to determine the order we should use when
+		// showing the SelectRepeate Controls
+		for browse in .linkedBrowses
+			{
+			// This name is used to display to the users on the SelectControl
+			name = tabs is false ? 'Line Items' : tabs.TabNameFromChild(browse)
+			if false is idx = names.Find(name)
+				throw 'Tab ' $ name $ ' does not exist'
+
+			// Handle if a tab has more than one browse on it
+			// append the table name
+			if linked.Member?(idx)
+				{
+				// need to be carefull here, this will have the same idx as an already
+				// existing item.
+				//TOD: handle if there are more than 10, this currently does not exist
+				while linked.Member?(idx)
+					idx+= 0.1 /*=increment*/
+
+				// If the tab has more than one browse, append the Table Name
+				linked[idx] = Object(:browse,
+					name: name $ ' - ' $ Tables.GetTable(QueryGetTable(browse.GetQuery()),
+						'Name'))
+				continue
+				}
+			linked[idx] = Object(:browse, :name)
+			}
+		return linked
+		}
+
+	IgnoreLinkedBrowseType(linkedBrowseNameName)
+		{
+		if .types.DynamicTypes is false
+			return false
+		if not .types.DynamicTypes.Member?('ignoreLinked')
+			return false
+		if not .types.DynamicTypes.ignoreLinked.Member?(linkedBrowseNameName)
+			return false
+		return .types.DynamicTypes.ignoreLinked[linkedBrowseNameName]
+		}
+
 	Getter_Select_vals()
 		{
 		return .selectMgr.Select_vals()
 		}
 	SetSelectVals(select_vals)
 		{
+		// on MultiViewControl, the VirtualList_ExtraWhere is kicking in
+		// .subTables.SetSubTableSelectVals
+		// which is WHY we do NOT handle subtables here
+		// also SelectControl is the other place that calls this, it too handles
+		// .subTables.SetSubTableSelectVals
 		.selectMgr.SetSelectVals(select_vals, .GetSelectFields())
 		}
+	SetSubTableSelectVals(saveName, conditions)
+		{
+		.subtables.SetSubTableSelectVals(saveName, conditions)
+		}
+
 	SetSelect(selects)
 		{
 		.selectMgr.Reset(selects)
@@ -1551,7 +1687,10 @@ CommandParent
 		.lock.Unlock()
 		.c.Close()
 		if .select_button isnt false
+			{
 			.selectMgr.SaveSelects()
+			.subtables.SaveSelects()
+			}
 		.Window.RemoveValidationItem(this)
 		.kill_valid_timer()
 		.nextNumber.PutBack()

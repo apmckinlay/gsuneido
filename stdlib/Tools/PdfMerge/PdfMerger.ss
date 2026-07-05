@@ -19,15 +19,19 @@ class
 	*  Returns: An object that contains a list of files that couldn't be merged/compressed
 	*/
 	afterMergedAsync: false
+	encrypt: false
+	cleanupFiles: #()
 	CallClass(files, saveFileName, compress = false, maxCompressedFileSizeInMb = false,
-		filesData = false, afterMergedAsync = false)
+		filesData = false, afterMergedAsync = false,
+		userPassword = false, ownerPassword = false)
 		{
-		if files.Size() is 0 or (files.Size() is 1 and files[0] is saveFileName)
+		if files.Size() is 0 or (files.Size() is 1 and files[0] is saveFileName and
+			userPassword is false)
 			return Object()
 		if compress and maxCompressedFileSizeInMb isnt false
 			Assert(files.Size() is 1)
 		merger = new this(files, saveFileName, compress, maxCompressedFileSizeInMb,
-			filesData, afterMergedAsync)
+			filesData, afterMergedAsync, :userPassword, :ownerPassword)
 		return merger.InvalidFiles
 		}
 
@@ -38,7 +42,8 @@ class
 	*		.newfile: The filename of the new file being created
 	*/
 	New(.files, .newfile, .compress = false, maxCompressedFileSizeInMb = false,
-		.filesData = false, .afterMergedAsync = false)
+		.filesData = false, .afterMergedAsync = false,
+		userPassword = false, ownerPassword = false)
 		{
 		.maxMerge = Objects.SizeLimit
 		.maxCompressedFileSize = maxCompressedFileSizeInMb isnt false
@@ -50,7 +55,8 @@ class
 		.totalImageSize = 0
 		.InvalidFiles = Object()
 		.cleanupFiles = Object()
-		if files.Size() is 1 and not compress
+		.encrypt = PdfMergerEncrypt.Setup(userPassword, ownerPassword)
+		if files.Size() is 1 and not compress and .encrypt is false
 			{
 			Assert(.afterMergedAsync is: false)
 			// If we reach this point, it is basically a file rename
@@ -325,7 +331,19 @@ class
 		.afterObjCompressed(head, pdfOb, reader, f, obj, objs, trailers)
 		.pdfObIndex++
 		if .pdfObIndex isnt objs.Size()
-			.processOneObjectAsync(pdfOb, reader, f, objs, trailers)
+			{
+			if .pdfObIndex % 500 is 0 /*= use timeout to avoid stack overflow */
+				{
+				SuUI.GetCurrentWindow().SetTimeout({
+					try
+						.processOneObjectAsync(pdfOb, reader, f, objs, trailers)
+					catch (err)
+						.processErrorAndContinue(err)
+					}, 0)
+				}
+			else
+				.processOneObjectAsync(pdfOb, reader, f, objs, trailers)
+			}
 		else
 			.afterAllObjectProcessed(pdfOb, trailers)
 		}
@@ -608,7 +626,10 @@ class
 					? 'Secured pdf'
 					: e
 		else
+			{
+			PdfMergerEncrypt.EncryptObj(obj, reader, f, .encrypt, .cleanupFiles)
 			pdfOb.objs.Add(obj)
+			}
 		}
 
 	initializePdfOb()
@@ -833,6 +854,7 @@ class
 				head: '\n' $ objNum $ " 0 obj\n" $ stream[objStart .. objEnd] $
 					"\nendobj\n"
 				tail: '')
+			PdfMergerEncrypt.EncryptHead(objects[i], .encrypt)
 			}
 		return objects
 		}
@@ -967,7 +989,8 @@ class
 			catalog: 0,
 			pages: '2 0 R',
 			pagesPos: 1,
-			objs: .bodyFormat.Map({ Object(head: it, tail: "") }))
+			objs: .bodyFormat.Map({
+				PdfMergerEncrypt.EncryptHead(Object(head: it, tail: ""), .encrypt) }))
 		.mergedOb.Add(firstPdf)
 		.totalObj = 3
 		.kids = ""
@@ -1063,12 +1086,22 @@ class
 	*/
 	buildXRef()
 		{
+		if .encrypt isnt false
+			{
+			.encrypt.num = .totalObj + 1
+			.mergedOb.Last().objs.Add(Object(head: "\n" $ .encrypt.num $ " 0 obj\n" $
+				.encrypt.keyEntry $ "\nendobj", tail: ""))
+			.totalObj += 1
+			}
 		locs = .calcLocations(.mergedOb)
 		firstPdf = .mergedOb[0]
 		rootIdx = firstPdf.catalog
 		s = firstPdf.objs[rootIdx].head
 		root = s[1..s.Find(' ', 1)]
-		return PdfDriver.BuildXRef(.totalObj + 1, locs, root, .totalLength)
+		encryptDict = .encrypt is false
+			? ""
+			: "/Encrypt " $ .encrypt.num $ " 0 R" $ .encrypt.trailerID
+		return PdfDriver.BuildXRef(.totalObj + 1, locs, root, .totalLength, :encryptDict)
 		}
 
 	/* calcLocations

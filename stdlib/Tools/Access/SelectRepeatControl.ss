@@ -6,6 +6,7 @@ Controller
 	New(.sf, select_vals, .name, .option = '', .title = '',
 		.noUserDefaultSelects? = false, .fromFilter = false, selChanged = false)
 		{
+		.Name = .name
 		.filters = .FindControl('conditions')
 		.scroll = .FindControl('Scroll')
 		if fromFilter
@@ -108,6 +109,8 @@ Controller
 		.loadButton.SetTextColor(applied ? CLR.BLACK : CLR.RED)
 		}
 
+	// NOTE: if this gets changed to do ANYTHING other than .SetSelectApplied
+	// code in SelectRepeatSubtablesControl.Record_NewValue will need to be updated
 	Record_NewValue(field, value /*unused*/)
 		{
 		if .fromFilter is true and field is 'conditions'
@@ -128,6 +131,11 @@ Controller
 		if .valid?()
 			return .BuildWhere(.sf, .Get().conditions)
 		return false
+		}
+
+	Valid?(quiet = false)
+		{
+		return .valid?(quiet)
 		}
 
 	valid?(quiet = false)

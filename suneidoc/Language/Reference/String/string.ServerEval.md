@@ -1,4 +1,5 @@
-<div style="float:right"><span class="deprecated">Deprecated</span><span class="builtin">Builtin</span></div>
+<div style="float:right"><span class="deprecated">Deprecated</span>
+<span class="builtin">Builtin</span></div>
 
 #### string.ServerEval
 

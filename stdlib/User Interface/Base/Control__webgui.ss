@@ -494,6 +494,8 @@ class
 
 	ContextMenuCall(menu)
 		{
+		if .Destroyed?()
+			return
 		this['On_' $ ToIdentifier(menu.BeforeFirst('\t'))]()
 		}
 	DevMenu: ('', 'Copy Field Name')

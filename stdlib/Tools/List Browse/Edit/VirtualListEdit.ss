@@ -168,7 +168,8 @@ class
 		if ListControl.SetInvalidFieldData(rec, col, unvalidated_val)
 			.Send('VirtualList_InvalidDataChanged', rec)
 		grid.Controller.Send('VirtualList_AfterField', col, data, rec)
-		if model.CheckBoxColModel isnt false
+		if model.CheckBoxColModel isnt false and 0 is grid.Controller.Send(
+			'VirtualList_AllowAutoSelectByAmount')
 			{
 			model.CheckBoxColModel.AutoSelectByAmount(col, data, rec)
 			grid.Controller.UpdateTotalSelected(recalc:)

@@ -8,8 +8,10 @@ Test
 
 		m = Object()
 		m.MultiViewControl_prevSelVal = []
+		m.MultiViewControl_prevExtraSelVal = []
 		m.MultiViewControl_newRecordsSinceFlip = false
-		m.MultiViewControl_access = #(Select_vals: ())
+		m.MultiViewControl_access = FakeObject(SubTables_Select_vals: [])
+		m.MultiViewControl_access.Select_vals = []
 		Assert(m.Eval(fn, fromNew?: false) is: false)
 
 		m.MultiViewControl_newRecordsSinceFlip = true

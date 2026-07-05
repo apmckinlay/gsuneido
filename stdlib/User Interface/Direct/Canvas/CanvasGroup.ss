@@ -47,7 +47,7 @@ CanvasItem
 		}
 	ObToSave()
 		{
-		return Object('CanvasGroup', .items.Map(#ObToSave))
+		return Object('CanvasGroup', .items.Map(#ObToSave).Copy())
 		}
 	Move(dx, dy)
 		{

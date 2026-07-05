@@ -107,12 +107,17 @@ class
 	GetSelectedTotal(recalc = false)
 		{
 		if not recalc and .total isnt false
-			return .total
+			return Object?(.checkBoxAmountField) ? .total.Display() : .total
 		Assert(.selected.state isnt 'all')
-		.total = 0
+		.total = Object?(.checkBoxAmountField) ? new MoneyBag : 0
 		for rec in .selected.list
-			.total += rec[.checkBoxAmountField]
-		return .total
+			{
+			if Object?(.checkBoxAmountField) // moneybag (amt, currency)
+				.total.Plus(rec[.checkBoxAmountField[0]], rec[.checkBoxAmountField[1]])
+			else
+				.total += rec[.checkBoxAmountField]
+			}
+		return Object?(.checkBoxAmountField) ? .total.Display() : .total
 		}
 
 	AutoSelectByAmount(col, data, rec)

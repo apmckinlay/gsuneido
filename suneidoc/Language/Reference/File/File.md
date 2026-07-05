@@ -13,16 +13,16 @@ File is based on the standard stream io functions
 (e.g. fopen, fclose, fflush, fread, fwrite, fseek, ftell).
 
 The *mode* specifies the type of access for the file:
-`**"r"**`
+"r"
 : Open a file for reading. 
 If the file does not exist or cannot be opened, an exception will be thrown:
 "File: can't open '*filename*' for r".
 
-`**"w"**`
+"w"
 : Create an empty file for writing. 
 If the file exists, its contents are destroyed.
 
-`**"a"**`
+"a"
 : Open a file for writing at the end of the file (appending); 
 creates the file if it doesn’t exist.
 

@@ -717,14 +717,8 @@ WndProc
 		pos = .PositionFromPoint(x, y)
 		if pos < select.cpMin or select.cpMax < pos
 			.SetSelect(pos)
-		SetFocus(.Hwnd)
+		.SetFocus()
 		return 'callsuper'
-		}
-	RBUTTONUP(lParam /*unused*/)
-		{
-		return .HasFocus?()
-			? 'callsuper'
-			: 0
 		}
 	Context_Menu: (
 		"&Undo\tCtrl+Z", "&Redo\tCtrl+Y", "",
@@ -732,7 +726,8 @@ WndProc
 		"Select &All\tCtrl+A", "Find...\tCtrl+F")
 	ContextMenu(x, y)
 		{
-		ContextMenu(.Context_Menu).ShowCall(this, x, y)
+		if .HasFocus?()
+			ContextMenu(.Context_Menu).ShowCall(this, x, y)
 		return 0
 		}
 	On_Context_Cut()

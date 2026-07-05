@@ -24,6 +24,7 @@ Component
 			height: 100%;
 			padding-top: 4px;
 			padding-bottom: 4px;
+			isolation: isolate;
 		}
 		.su-marker-gutter, .su-margin-gutter {
 			width: 1em;
@@ -1131,9 +1132,9 @@ Component
 			clientWidth: info.clientWidth, clientHeight: info.clientHeight)
 		}
 
-	Getter_(member)
+	Getter_(unused)
 		{
-		return { |@args| Print('Scintilla', member, args) }
+		return { |@unused| }
 		}
 
 	Destroy()

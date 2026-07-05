@@ -9,7 +9,8 @@ ScintillaAddon
 		3: 'string'
 		4: 'keyword'
 		5: 'operator'
-		6: 'whitespace')
+		6: 'whitespace'
+		7: 'annotation')
 
 	Init()
 		{
@@ -37,7 +38,8 @@ ScintillaAddon
 			if .Styles.Member?(style)
 				{
 				.DefineStyle(i, .GetSchemeColor(.Styles[style].color),
-					back: defaultBack, bold: .Styles[style].GetDefault("bold", false))
+					back: defaultBack, bold: .Styles[style].GetDefault("bold", false),
+					italic: .Styles[style].GetDefault("italic", false))
 				}
 			else
 				.DefineStyle(i, defaultFore, back: defaultBack)

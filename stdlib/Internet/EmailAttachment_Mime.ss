@@ -119,18 +119,24 @@ class
 
 	FileSize(file, _sendError = false)
 		{
+		fs = false
+		caughtMsg = ''
+		prefix = 'INFO: '
 		try
 			{
-			fs = FileStorage.FileSize(file)
+			if FileStorage.Exists?(file)
+				fs = FileStorage.FileSize(file)
 			}
 		catch (e)
 			{
 			if Object?(sendError)
 				sendError.AddUnique('Can not access file or path: ' $ file)
-			prefix = OptContribution('Hosted?', function() { return false })()
-				? 'ERROR: (CAUGHT) '
-				: 'INFO: '
-			SuneidoLog(prefix $ e, calls:)
+			if OptContribution('Hosted?', function() { return false })()
+				{
+				prefix  = 'ERROR: (CAUGHT) '
+				caughtMsg = "User notified. Can't find file"
+				}
+			SuneidoLog(prefix $ e, calls:, :caughtMsg)
 			return 'Can not access file or path: ' $ file
 			}
 		if fs in (0, false)

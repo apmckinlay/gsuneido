@@ -108,9 +108,9 @@ class
 			? .headerMenu.Copy().Add(@.defaultHeaderMenus)
 			: .menu.Copy()
 		.addToMenu(m, extraMenu, pos: m.Find(""))
-		if control.Editable?()
+		if .controlEditable?(control)
 			.addToMenu(m, Object("New"))
-		if .ContextRec isnt false and control.Editable?()
+		if .ContextRec isnt false and .controlEditable?(control)
 			{
 			selectedCount = control.GetSelectedRecords().Size()
 			.buildRecordMenu(selectedCount, m)
@@ -124,6 +124,11 @@ class
 		if control.GetHeaderSelectPrompt() isnt 'no_prompts'
 			.addFormatMenu(m)
 		return m
+		}
+
+	controlEditable?(control)
+		{
+		return control.Editable?() and control.GetCheckBoxField() is false
 		}
 
 	buildRecordMenu(selectedCount, m)

@@ -61,6 +61,7 @@ class
 
 	checkMemberValue(ahead, sign, classMember, end, allowDefault)
 		{
+		memberValue = false // code warning "used but possibly not initialized"
 		if .isMethod(classMember, ahead)
 			memberValue = TdopFunction()
 		else if not _token().Match(end) and not _token().Match(TDOPTOKEN.COMMA)

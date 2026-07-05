@@ -21,9 +21,11 @@ Component
 	ContextMenu: true
 	New(.readonly = false, .bgndcolor = "", textcolor = "", hidden = false,
 		tabover = false, font = "", size = "", weight = "", underline = false,
-		width = false, height = false, .readOnlyBgndColor = false)
+		width = false, height = false, .readOnlyBgndColor = false, defaultHeight = false)
 		{
 		LoadCssStyles('su-edit.css', .styles)
+		if defaultHeight isnt false
+			.DefaultHeight = defaultHeight
 		.init(height)
 		.SetHidden(hidden)
 		.SetFontAndSize(font, size, weight, underline, width, height)

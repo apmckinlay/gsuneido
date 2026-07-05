@@ -82,7 +82,7 @@ WndProc
 		for rec in .ToObject()
 			maxWidth = Max(maxWidth, .TextExtent(rec[.cols[column]]).x)
 		SendMessage(.Hwnd, LVM.SETCOLUMNWIDTH, column,
-			maxWidth + .headerBorder + 5 /*= inner content padding*/)
+			ScaleWithDpiFactor(maxWidth) + .headerBorder + 5 /*= inner content padding*/)
 		}
 	SetColWidth(col, width)
 		{

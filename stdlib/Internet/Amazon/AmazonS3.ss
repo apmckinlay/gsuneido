@@ -78,21 +78,22 @@ AmazonAWS
 			{
 			Func(bucket)
 				{
-				AmazonS3.GetBucketLocation(bucket)
+				attBucket = AttachmentS3Bucket.Info()
+				if attBucket.bucket is bucket and attBucket.region isnt ''
+					return attBucket.region
+
+				return AmazonS3.GetBucketRegion(bucket)
 				}
 			}(bucket)
 		}
 
-	GetBucketLocation(bucket)
+	GetBucketRegion(bucket)
 		{
-		path = '/' $ bucket $ '/'
-		if false is res = .makeRequest('GET', [location: '1'], path)
-			return false
-
-		resXml = XmlParser(res)
-		if #() is region = resXml.Children()
-			return .region
-		return String(region[0])
+		res = .makeRequest('HEAD', [], '/' $ bucket,
+			expectedResponse: #('200', '301', '403'), fullResponse?:)
+		// this should throw error if region cannot be determined
+		region = res.header.Extract(`(?i)x-amz-bucket-region:\s*(\S+)`)
+		return region.Lower()
 		}
 
 	CopyFile(bucketFrom, fileFrom, bucketTo, fileTo, policy = '')
@@ -288,11 +289,28 @@ AmazonAWS
 
 	FileSize(bucket, file)
 		{
+		list = #()
 		region = .GetBucketLocationCached(bucket)
-		list = .ListBucketContents(bucket, file, :region)
+		// Retry one time if list is empty
+		for (i = 0; i < 2 and list.Empty?(); ++i)
+			{
+			.fileSizeSleep(i)
+			list = .ListBucketContents(bucket, file, :region)
+			}
+		// Throw a different error if list is finally empty
+		if list.Empty?()
+			throw 'Could not get file list for ' $ file
 		if false is f = list.FindOne({ it.key is file })
 			throw file $ ' does not exist'
 		return Number(f.size.Tr(' bytes'))
+		}
+
+	// extracted for testing
+	fileSizeSleep(i)
+		{
+		if i is 0
+			return
+		Thread.Sleep(200 /*=interval*/)
 		}
 
 	DeleteBucket(bucket)
@@ -666,8 +684,11 @@ AmazonAWS
 	// extrated for tests
 	throttleRetry(block)
 		{
-		Retry(block, maxRetries: 3, minDelayMs: 100,
-			retryException: 'Bad HTTP Status Code (503)')
+		Retry({
+			Retry(block, maxRetries: 3, minDelayMs: 100,
+				retryException: 'Bad HTTP Status Code (503)')
+			}, maxRetries: 3, minDelayMs: 200,
+			retryException: 'curl: (52) Empty reply from server')
 		}
 
 	cleanupFileIfFailed(retVal, fileTo)
@@ -724,11 +745,11 @@ AmazonAWS
 		return false
 		}
 
-	PutMultipartFile(bucket, fileFrom, fileTo = '')
+	PutMultipartFile(bucket, fileFrom, fileTo = '', region = false)
 		{
 		if false is fileTo = .validateAndGetFileTo(fileFrom, fileTo)
 			return false
-		return AmazonS3_Multipart.PutFile(bucket, fileFrom, fileTo, .makeRequest)
+		return AmazonS3_Multipart.PutFile(bucket, fileFrom, fileTo, region, .makeRequest)
 		}
 
 	notificationConfig: `<NotificationConfiguration ` $

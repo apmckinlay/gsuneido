@@ -171,6 +171,12 @@ class
 			list.Add('Object(#FindByExpression, name, lib_current_text, ' $
 				Display(data.byexpression) $ ', ' $ Display(hint) $ ')')
 			}
+		if data.bycomby isnt ''
+			{
+			hint = CombyMatch.GetHint(data.bycomby)
+			list.Add('Object(#FindByComby, name, lib_current_text, ' $
+				Display(data.bycomby) $ ', ' $ Display(hint) $ ')')
+			}
 		return list.Join(',\n')
 		}
 

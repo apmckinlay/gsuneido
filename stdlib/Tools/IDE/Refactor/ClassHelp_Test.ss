@@ -267,6 +267,18 @@ Test
 		test('(.a, _b, ._c, .Dad, parentHwnd)', #(a, b, c, dad, parentHwnd))
 		test('(a = 1, b = (2), c = (1, (2), 3))', #(a,b,c))
 		test('(a = function() {return true}, b = 2)', #(a, b))
+
+		// type annotations: must not add type names as phantom params
+		if BuiltDate() < #20260514
+			return
+		test('(x :string)', #(x))
+		test('(x: string)', #(x))
+		test('(x: string|number)', #(x))
+		test('(x :string, y: number)', #(x, y))
+		test('(x: string = 0)', #(x))
+		test('(x: string = 0, y :object = false)', #(x, y))
+		test('(x: string|number = 0, y :object|false = false)', #(x, y))
+		test('(x :object = false)', #(x))
 		}
 
 	Test_AllClassMembers()
@@ -425,7 +437,3 @@ Test
 		}
 
 	}
-
-
-
-

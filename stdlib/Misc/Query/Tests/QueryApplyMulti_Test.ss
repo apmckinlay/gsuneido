@@ -6,8 +6,6 @@ Test
 		cursorCost = QueryApplyMulti.QueryApplyMulti_cursorCost
 		Assert(cursorCost('stdlib sort name,group').query is: 'stdlib sort name,group')
 		Assert(cursorCost('stdlib').query is: 'stdlib sort num')
-		Assert(cursorCost('stdlib where name = "Test"').query
-			is: 'stdlib where name = "Test" sort name,group')
 		tbl = .MakeTable("(a) key()")
 		Assert(cursorCost(tbl).query is: tbl)
 		}

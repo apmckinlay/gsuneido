@@ -1,8 +1,6 @@
 // Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.
-Controller
+CustomizableFieldDialogPropertiesEditor
 	{
-	Name: 'peditor' // Must be named like this to be found by CustomizableFieldDialog
-
 	New()
 		{
 		.decimals = .FindControl('decimals')
@@ -12,29 +10,34 @@ Controller
 		.tooltip = .FindControl('tooltip')
 		.Defer(.updateExample)
 		}
-	Controls:	(Border (Vert
-					(CheckBox text: 'No Formatting', name: 'noFormat')
-					Skip
-					(Static 'Number of digits before the decimal')
-					Skip
-					(Spinner set: 9 rangefrom: 2, rangeto: 9 name: 'digits')
-					Skip
-					(Static 'Number of digits after the decimal')
-					Skip
-					(Spinner set: 2 rangeto: 5 name: 'decimals' )
-					Skip
-					(Pair (Static 'e.g.')
-						(Field width: 12, justify: 'RIGHT', readonly:, name: 'example'))
-					Skip
-					(Static 'Tooltip')
-					Skip
-					(Field name: 'tooltip')
-					Skip
-				))
+	GetControls()
+		{
+		return	Object(#Vert
+			#(CheckBox text: 'No Formatting', name: 'noFormat')
+			#Skip
+			#(Static 'Number of digits before the decimal')
+			#Skip
+			#(Spinner set: 9 rangefrom: 2, rangeto: 9 name: 'digits')
+			#Skip
+			#(Static 'Number of digits after the decimal')
+			#Skip
+			#(Spinner set: 2 rangeto: 5 name: 'decimals' )
+			#Skip
+			#(Pair (Static 'e.g.')
+				(Field width: 12, justify: 'RIGHT', readonly:, name: 'example'))
+			#Skip
+			#(Static 'Tooltip')
+			#Skip
+			#(Field name: 'tooltip')
+			#Skip
+		)
+		}
 	maxDigits: 9
 	maxDecimals: 5
 	Valid?()
 		{
+		if false is super.Valid?()
+			return false
 		decimals = .decimals.Get()
 		digits = .digits.Get()
 		return Number?(decimals) and 0 <= decimals and decimals <= .maxDecimals and
@@ -67,12 +70,15 @@ Controller
 	// should return an object with options i.e. (list:('a' 'b') width:50 )
 	Get()
 		{
+		x = super.Get()
 		m = .getMask()
 		status = .tooltip.Get()
 		format = m is false
 			? Object(mask: m, width: 8)
 			: Object(mask: m)
-		return Object(control: Object(mask: m, :status), :format)
+		x.control = Object(mask: m, :status)
+		x.format = format
+		return x
 		}
 	getMask()
 		{
@@ -101,6 +107,7 @@ Controller
 
 	Set(object)
 		{
+		super.Set(object)
 		mask = object.Control_mask
 		if mask is false
 			{

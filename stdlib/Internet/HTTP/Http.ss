@@ -2,6 +2,8 @@
 // HTTP client that uses either HttpClient or Curl
 class
 	{
+	DefaultPort: 80
+
 	// Returns the response body. Throws if response code isnt 2xx
 	Get(@args)
 		{
@@ -36,16 +38,14 @@ class
 	// code. When using the CallClass directly, the response code must be checked by
 	// the calling code.
 	CallClass(method, url, content = '', fromFile = '', toFile = '', header = #(),
-		timeout = 60, timeoutConnect = 60, curl = false, asyncCompletion = false)
+		timeout = 60, timeoutConnect = 60, curl = false)
 		{
 		method = method.Upper()
-		if curl and asyncCompletion isnt false
-			throw "Curl does not support asyncCompletion"
 		if not curl and (toFile isnt "" or fromFile isnt "")
 			throw "HttpClient does not support toFile or fromFile"
 		impl = curl is false ? HttpClient : Curl.Http
 		return impl(method, url, :content, :header,	:fromFile, :toFile,
-			:timeout, :timeoutConnect, :asyncCompletion)
+			:timeout, :timeoutConnect)
 		}
 
 	Piped(method, url, block, header = #(), timeoutConnect = 60,

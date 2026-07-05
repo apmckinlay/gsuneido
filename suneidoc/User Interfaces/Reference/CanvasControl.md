@@ -24,8 +24,7 @@ Would display:
 
 |     |     |     |
 | --- | --- | --- |
-| [CanvasArc](<CanvasControl/CanvasArc.md>) | [CanvasLine](<CanvasControl/CanvasLine.md>) | [CanvasStockObject](<CanvasControl/CanvasStockObject.md>) |
-| [CanvasEllipse](<CanvasControl/CanvasEllipse.md>) | [CanvasPolygon](<CanvasControl/CanvasPolygon.md>) | [CanvasText](<CanvasControl/CanvasText.md>) |
-| [CanvasImage](<CanvasControl/CanvasImage.md>) | [CanvasRect](<CanvasControl/CanvasRect.md>) |
-| [CanvasItem](<CanvasControl/CanvasItem.md>) | [CanvasRoundRect](<CanvasControl/CanvasRoundRect.md>) |
+| [CanvasEllipse](<CanvasControl/CanvasEllipse.md>) | [CanvasLine](<CanvasControl/CanvasLine.md>) | [CanvasRoundRect](<CanvasControl/CanvasRoundRect.md>) |
+| [CanvasImage](<CanvasControl/CanvasImage.md>) | [CanvasPolygon](<CanvasControl/CanvasPolygon.md>) | [CanvasStockObject](<CanvasControl/CanvasStockObject.md>) |
+| [CanvasItem](<CanvasControl/CanvasItem.md>) | [CanvasRect](<CanvasControl/CanvasRect.md>) | [CanvasText](<CanvasControl/CanvasText.md>) |
 

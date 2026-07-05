@@ -10,7 +10,7 @@ Memoize
 	HashArgs?: true
 	OkForResetAll?: false
 	Func(lib, name, code, minimizeOutput?, extraChecks = false,
-		missingTest = "check_local")
+		missingTest = "check_local", excludedChecks = #())
 		{
 		if .skipQc?(lib, name, code)
 			return Object(#(warnings: #(), rating: false, desc: ""),
@@ -19,7 +19,7 @@ Memoize
 		recordData = Record(:lib, recordName: name, :code)
 		qcArgs = [:recordData, :minimizeOutput?, :missingTest]
 		type = extraChecks ? 'extra' : 'normal'
-		return .RunChecksAsContributions(type, qcArgs)
+		return .RunChecksAsContributions(type, qcArgs, :excludedChecks)
 		}
 
 	skipQc?(lib, name, code)
@@ -34,10 +34,11 @@ Memoize
 		return not code.Has?('}') or code.AfterFirst('{').BeforeLast('}').LineCount() <= 2
 		}
 
-	RunChecksAsContributions(type, qcArgs, _checkStop? = false)
+	RunChecksAsContributions(type, qcArgs, _checkStop? = false, excludedChecks = #())
 		{
 		warnings = Object(lineWarnings: Object())
-		for c in SoleContribution("ContinuousQualityChecks").Filter({ it.type is type })
+		for c in SoleContribution("ContinuousQualityChecks").Filter(
+			{ it.type is type and not excludedChecks.Has?(it.name) })
 			{
 			if .skipThisContrib?(c, qcArgs.recordData.recordName)
 				{

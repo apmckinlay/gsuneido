@@ -301,11 +301,11 @@ class
 			sort name"
 		}
 
-	LibraryChecksumFromMaster(table)
+	LibraryChecksumFromMaster(table, t)
 		{
 		masterTable = table $ "_master"
 		query = .CurrentLibraryRecordsQuery(masterTable)
-		ChecksumLibraries.Calc_cksums(masterTable, query, false, cksumOb = Object())
+		ChecksumLibraries.Calc_cksums(masterTable, query, false, cksumOb = Object(), :t)
 		if cksumOb.Empty?()
 			return cksumOb
 

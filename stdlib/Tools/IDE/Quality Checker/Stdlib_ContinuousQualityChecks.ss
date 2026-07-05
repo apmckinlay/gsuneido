@@ -32,4 +32,7 @@
 
 	(name: Qc_DuplicateCode,
 		type: 'slow', warning:)
+
+	(name: Qc_TypeCheck,
+		type: 'normal', warning:, noTests:)
 )

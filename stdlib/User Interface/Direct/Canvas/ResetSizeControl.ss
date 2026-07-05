@@ -12,20 +12,22 @@ Controller
 		{
 		super(.controls(fields))
 		}
-	//FIXME: width and height editing are not working on Round Rectangle
+
 	controls(fields)
 		{
 		ctrl = Object('Vert')
-		//QUESTION: sort members instead of random order ?
 		for field in fields.Members()
 			ctrl.Add(Object('Pair'
 				Object('Static' field)
-				Object('Field' name: field set: fields[field])))
+				Object('Number', name: field, set: fields[field],
+					mask: '#####.##', mandatory:, xstretch: 1)))
 		return Object('Record', ctrl)
 		}
 
 	OK()
 		{
-		return .Data.Get()
+		return .Data.Valid(forceCheck:) is true
+			? .Data.Get()
+			: false
 		}
 	}

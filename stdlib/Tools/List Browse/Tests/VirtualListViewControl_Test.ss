@@ -61,10 +61,13 @@ VirtualListModelTests
 			VirtualListModel(
 				.VirtualList_Table, stickyFields: #(field1), observerList: mock)
 		.AddTeardownModel(model)
+		model.ColModel.VirtualListColModel_selectMgr =
+			FakeObject(Name: 'selectRepeatName', GetSelectVals: [], Select_vals: #())
 		mock.When.GetModel().Return(model)
 		mock.When.GetColumns().Return(#(num))
 		mock.Parent = [Window: [Parent: 0]]
-		mock.When.FindControl('SelectRepeat').Return(filters = Mock())
+
+		mock.When.FindControl('selectRepeatName').Return(filters = Mock())
 		mock.When.SetSelectVals([anyArgs:]).Do({ })
 		mock.When.SetWhere([anyArgs:]).Do({ })
 

@@ -6,5 +6,6 @@ ExtensionPoints:
 	(nightlyChecks)
 	(bookCheck)
 	(buildMessage)
+	(testResults)
 	)
 )

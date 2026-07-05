@@ -57,15 +57,28 @@ Control
 		updates = Object()
 		for rec in .model.ExpandModel.GetExpanded()
 			{
-			pushed = .model.EditModel.RecordLocked?(rec)
 			row = .model.GetRecordRowNum(rec) + .model.Offset
-			updates[row] = pushed
+			updates[row] = not .needEditBtn?(rec)
+				? 'hidden'
+				: .model.EditModel.RecordLocked?(rec)
 			}
 		if updates.NotEmpty?()
 			{
 			grid = .Parent.FindControl(#VirtualListGrid)
 			grid.Act('VirtualListExpandEditPushed', updates)
 			}
+		}
+
+	needEditBtn?(rec)
+		{
+		// control data is only what is in the expand control (not the columns)
+		if false isnt recordControl = .model.ExpandModel.GetRecordControl(rec)
+			recordControl.GetControlData().Members().Each()
+				{
+				if not FieldProtected?(it, rec, .model.EditModel.ProtectField)
+					return true
+				}
+		return false
 		}
 
 	Default(@unused) { }

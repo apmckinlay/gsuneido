@@ -3,7 +3,7 @@
 #### Suneido.Info
 
 ``` suneido
-(string = false) => number
+(string = false) => value
 ```
 
 Returns a Suneido metric or a list of the available metrics.

@@ -34,7 +34,6 @@ class
 	RunSuJsHttpServer()
 		{
 		SuCode().CodeBundle // build the code bundle
-		SuSessionLog.Ensure()
 		routes = Object(
 			['POST',	'/SuJsTesterLog$', 		Name(this) $ '.LogFromWeb'])
 		Thread({

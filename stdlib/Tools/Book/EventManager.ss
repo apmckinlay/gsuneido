@@ -24,15 +24,16 @@ class
 				" threads: " $ threadCount)
 			return
 			}
-		// run in the background (async) so the user doesn't have to wait if it's slow
-		try
-			RunOnHttp(HttpPort(), 'EventManagerServerFuncs', [Suneido.User],
-				asyncCompletion: .handleResponseOnCompletion)
-		catch (e)
+		// run in the background so the user doesn't have to wait if it's slow
+		Thread(name: 'EventManager')
 			{
-			Suneido.EventManagerRunning = false
-			throw e
+			try
+				.handleResponse(
+					RunOnHttp(HttpPort(), 'EventManagerServerFuncs', [Suneido.User]))
+			catch (e)
+				.handleResponse([content: "ERROR " $ e])
 			}
+		Suneido.EventManagerRunning = false
 		}
 	lockEventManager()
 		{
@@ -59,20 +60,6 @@ class
 			}
 		return ob
 		}
-	handleResponseOnCompletion(result)
-		{
-		content = result.content
-		if content.Prefix?('ERROR ')
-			response = content $ ' (from httpserver)'
-		else
-			{
-			try
-				response = Unpack(content)
-			catch // handleReponse should get a proper error message so just set response
-				response = content
-			}
-		.handleResponse(response)
-		}
 	handleResponse(result) // run on client
 		{
 		Suneido.EventManagerLastRun = Date()
@@ -88,10 +75,7 @@ class
 					? 'ERRATIC'
 					: 'ERROR'
 				errStr = errPrefx $ ": (CAUGHT) Event Manager bad result: " $ resultStr
-				try
-					SuneidoLog(errStr, caughtMsg: 'unattended; no msg to user')
-				catch (err)
-					ErrorLog(errStr $ ' (err: ' $ err $ ')')
+				SuneidoLog(errStr, caughtMsg: 'unattended; no msg to user')
 				}
 			Suneido.EventManagerFinished = Date()
 			Suneido.EventManagerRunning = false

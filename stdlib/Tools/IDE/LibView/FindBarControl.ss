@@ -107,7 +107,7 @@ Controller
 		{
 		.UpdateOccurrenceMsg()
 		.kill_timer()
-		.timer = Delay(200, .send_change) /*= delay before highlighting */
+		.timer = Delay(500, .send_change) /*= delay before highlighting */
 		}
 	kill_timer()
 		{

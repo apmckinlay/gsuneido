@@ -1,9 +1,6 @@
 // Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.
-Controller
+CustomizableFieldDialogPropertiesEditor
 	{
-	// Must be named like this in order to be found by CustomizableFieldDialog
-	Name: 'peditor'
-
 	RangeFrom: 10
 	RangeTo: 40
 	MaxItems: 300
@@ -18,7 +15,7 @@ Controller
 		.status = .FindControl('Status')
 		}
 
-	Controls()
+	GetControls()
 		{
 		return Object('Vert',
 			#Skip,
@@ -80,14 +77,17 @@ Controller
 	// should return an object with options i.e. (list: ('a' 'b') width: 50 )
 	Get()
 		{
+		x = super.Get()
 		width = .field_width.Get()
 		status = .tooltip.Get()
-		return Object(control: Object(list: .getList(), :width, :status)
-			format: Object(.Format, :width))
+		x.control = Object(list: .getList(), :width, :status)
+		x.format = Object(.Format, :width)
+		return x
 		}
 
 	Set(object)
 		{
+		super.Set(object)
 		list = object.GetDefault('Control_list', #())
 		data = list.Map({ Object(Items: it) })
 		.list.Set(data)

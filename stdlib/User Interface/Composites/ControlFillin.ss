@@ -30,6 +30,7 @@ class
 		if control.GetReadOnly()
 			return false
 
+		control.SetFocus()
 		controlData[field] = fillinData[field]
 		control.Dirty?(true)
 

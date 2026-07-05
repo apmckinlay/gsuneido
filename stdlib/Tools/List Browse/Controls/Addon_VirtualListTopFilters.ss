@@ -61,7 +61,7 @@ Addon_VirtualListViewBase
 
 	getTopFilters(view)
 		{
-		return view.FindControl('SelectRepeat')
+		return view.FindControl(.selectRepeatName)
 		}
 
 	OpenFilters(view)
@@ -74,11 +74,17 @@ Addon_VirtualListViewBase
 		scroll.Ymin = (rect.bottom - rect.top) / 2
 		UserSettings.Put(view.Option $ ' - Split Open', true)
 		colModel = view.GetModel().ColModel
-		filtersWrapper.Append(Object('SelectRepeat',
-			view.GetSelectFields(), view.Select_vals, colModel.GetSelectMgr().Name(),
-			option: view.Option, title: view.GetTitle(), fromFilter:,
-			selChanged: view.GetDefault('SelectChanged?', false),
-			noUserDefaultSelects?: not colModel.UserDefaultSelectEnabled?()))
+
+		if .Send('UseSubTableFilters?') is true
+			filtersWrapper.Append(
+				Object('SelectRepeatSubtables', view, colModel, .selectRepeatName))
+		else
+			filtersWrapper.Append(Object('SelectRepeat',
+				view.GetSelectFields(), view.Select_vals, .selectRepeatName,
+				option: view.Option, title: view.GetTitle(), fromFilter:,
+				selChanged: view.GetDefault('SelectChanged?', false),
+				noUserDefaultSelects?: not colModel.UserDefaultSelectEnabled?()))
+
 		split = view.FindControl('VertSplit')
 		split.UpdateSplitter()
 		if false is split.SetSplitSaveName(view.Option) // no default
@@ -93,6 +99,11 @@ Addon_VirtualListViewBase
 		view.AfterTopFilter("open")
 		}
 
+	getter_selectRepeatName()
+		{
+		return .selectRepeatName = .Model.ColModel.GetSelectMgr().Name()
+		}
+
 	setWarnButtonState(warnButton)
 		{
 		if .showSortWarning?()
@@ -103,8 +114,15 @@ Addon_VirtualListViewBase
 
 	showSortWarning?()
 		{
-		show? = .Model.QueryAboveSortLimit?(
-			.Parent.FindControl('SelectRepeat').Get().conditions)
+		x = .Parent.FindControl(.selectRepeatName).Get()
+		if x.Member?('Header')
+			x = x.Header
+
+		// do NOT need to worry about SubTable filters here
+		// the SortQuery only cares about filters on index fields
+		// of the base query (i.e. it cannot use indexes from the sub tables,
+		// so it will end up ignoring any filters on the sub tables anyway)
+		show? = .Model.QueryAboveSortLimit?(x.conditions)
 		return .Model.SetOverSortLimit(show?)
 		}
 
@@ -115,7 +133,7 @@ Addon_VirtualListViewBase
 		split.SaveSplit()
 		UserSettings.Put(view.Option $ ' - Split Open', false)
 		filtersWrapper = view.FindControl('select')  // possibly call once ???
-		filtersWrapper.Remove(0)
+		filtersWrapper.RemoveAll()
 		.addTopExtraButtons(view)
 		split.UpdateSplitter(remove:)
 		scroll = view.FindControl('VirtualListScroll')
@@ -140,10 +158,17 @@ Addon_VirtualListViewBase
 		if false is where = .filtersWhere()
 			return false
 		_slowQueryLog = Object(logged: false, from: 'Select_Apply')
-		conditions = .topFilters.Get().conditions
+
+		// need to handle conditions being an object of objects if topFilters
+		// is a SelectRepeatSubtables
+		x = .topFilters.Get()
+		if x.Member?('Header')
+			conditions = x['Header'].conditions
+		else
+			conditions = x.conditions
 		if .checkSlowSelect(conditions, where) is false
 			return false
-		return .applySelect(conditions, where)
+		return .applySelect(x, where)
 		}
 
 	checkSlowSelect(conditions, where)
@@ -167,7 +192,7 @@ Addon_VirtualListViewBase
 		if queryState.filter isnt false
 			.addIndexedFilter(queryState.filter)
 		else
-			.applySelect(queryState.conditions, queryState.where) // continue even if slow
+			.applySelect(queryState, queryState.where) // continue even if slow
 		}
 
 	addIndexedFilter(filter)
@@ -177,6 +202,7 @@ Addon_VirtualListViewBase
 		SlowQuery.AddIndexedFilter(filter, .topFilters)
 		}
 
+// TODO: 1034 - conditions needs to be cleaned up, object is inconsistant
 	applySelect(conditions, where)
 		{
 		changed = .topFilters.SelectChanged?()
@@ -184,7 +210,17 @@ Addon_VirtualListViewBase
 		preSelectVals = .Select_vals.DeepCopy()
 		try
 			{
-			.SetSelectVals(conditions)
+			if not conditions.Empty?()
+				{
+				if conditions.Member?('Header')
+					{
+					.SetSelectVals(conditions.Header.conditions)
+					.SetExtraSelectVals(conditions.Delete('Header'))
+					}
+				else
+					.SetSelectVals(conditions.conditions)
+				}
+
 			curSelectVals = .Select_vals.DeepCopy()
 			if false isnt .Send('VirtualList_BeforeApplySelect', where)
 				.SetWhere(where)
@@ -212,14 +248,18 @@ Addon_VirtualListViewBase
 
 	filtersWhere()
 		{
-		if false is where = .topFilters.Where()
-			return false
-		return .GetSelectFields().Joins(where.joinflds) $ where.where
+		if .topFilters.Base?(SelectRepeatControl)
+			{
+			if false is where = .topFilters.Where()
+				return false
+			return .GetSelectFields().Joins(where.joinflds) $ where.where
+			}
+		return .topFilters.Where(.GetSelectFields())
 		}
 
 	getter_topFilters()
 		{
-		return .FindControl('SelectRepeat')
+		return .FindControl(.selectRepeatName)
 		}
 
 	Getter_Select_vals()
@@ -290,6 +330,7 @@ Addon_VirtualListViewBase
 		// displayCol is the column the user clicked on
 		// dataCol - if it exists - is the column we actually want to sort on
 		posPreSort = .Model.GetPosition()
+		.Send('VirtualList_BeforeSort')
 		.Model.SetSort(displayCol, dataCol)
 		ctrls = .GetViewControls()
 		ctrls.header.RefreshSort(.GetPrimarySort())

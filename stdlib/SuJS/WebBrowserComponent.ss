@@ -71,11 +71,17 @@ Component
 		.pendingScroll = .lastScrollY = false
 		.contentReady? = false
 		.pendingInsert = Object()
+		SuUI.GetCurrentWindow().Eval(
+			'navigator.serviceWorker.controller?.postMessage({ type: "ping" });')
 		.El.srcdoc = res
 		}
 
 	Navigate(url)
 		{
+		token = SuRender().GetToken()
+		url $= url.Has?('?')
+			? '&SESSION_TOKEN=' $ token
+			: '?SESSION_TOKEN=' $ token
 		.pendingScroll = .lastScrollY = false
 		.contentReady? = false
 		.pendingInsert = Object()

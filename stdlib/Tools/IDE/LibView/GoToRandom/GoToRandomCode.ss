@@ -3,12 +3,8 @@ function (source)
 	{
 	do
 		rec = RandomLibraryRecord()
-		while rec.text.LineCount() < 20
-	lib = rec.lib
-	name = rec.name
-	n = rec.text.LineCount()
-	line = Random(n)
+		while rec.text.LineCount() < 20 /*= minLines */
 	libview = source.Ctrl
-	path = LibHelp.NamePath(lib, name)
-	libview.GotoPathLine(path, line)
+	path = LibHelp.NamePath(rec.lib, rec.name)
+	libview.GotoPathLine(path, Random(rec.text.LineCount()))
 	}

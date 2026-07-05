@@ -1,9 +1,6 @@
 // Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.
-Controller
+CustomizableFieldDialogPropertiesEditor
 	{
-	// Must be named like this in order to be found by CustomizableFieldDialog
-	Name: 'peditor'
-
 	RangeFrom: 5
 	RangeTo: 40
 	DefaultWidth: 20
@@ -13,7 +10,7 @@ Controller
 		.field_width = .FindControl('field_width')
 		.tooltip = .FindControl('tooltip')
 		}
-	Controls()
+	GetControls()
 		{
 		layoutOb = Object('Vert',
 			#Skip,
@@ -33,6 +30,8 @@ Controller
 		}
 	Valid?()
 		{
+		if false is super.Valid?()
+			return false
 		value = .field_width.Get()
 		return Number?(value) and .RangeFrom <= value and value <= .RangeTo
 		}
@@ -40,12 +39,16 @@ Controller
 	// should return an object with options i.e. (list:('a' 'b') width:50 )
 	Get()
 		{
+		x = super.Get()
 		width = .field_width.Get()
 		status = false is .tooltip ? '' : .tooltip.Get()
-		return Object(control: Object(:width, :status) format: Object(:width))
+		x.control = Object(:width, :status)
+		x.format = Object(:width)
+		return x
 		}
 	Set(object)
 		{
+		super.Set(object)
 		.field_width.Set(object.GetDefault('Control_width', .DefaultWidth))
 		if false isnt .tooltip
 			.tooltip.Set(object.GetDefault('Control_status', ''))

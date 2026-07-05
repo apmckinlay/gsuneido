@@ -10,16 +10,25 @@ EditControl
 	New(style = 0, .readonly = false, .font = "", .size = "", .zoom = false,
 		mandatory = false, set = "", height =  false, .tabthrough = false,
 		hidden = false, tabover = false, width = false, weight = false,
-		readOnlyBgndColor = false, status = '')
+		readOnlyBgndColor = false, status = '', textLimit = false)
 		{
 		super(mandatory, readonly, style, :hidden, :tabover, :font, :size, :weight,
 			:width, :height, :readOnlyBgndColor, :status)
+		.ComponentArgs.editorTextLimit = .editorTextLimit = .editorTextLimit(textLimit)
 		.Set(set)
 		.findreplacedata = Record()
 		.AddContextMenuItem("Find...\tCtrl+F", .On_Find)
 		.AddContextMenuItem("Print...\tCtrl+P", .On_Print)
 		if .zoom is false
 			.AddContextMenuItem("Zoom...\tF6", .On_Zoom)
+		}
+
+	editorTextLimit(textLimit)
+		{
+		return Number?(textLimit)
+			// Ensure specified textLimit never exceeds EditorTextLimit
+			? Min(EditorTextLimit, textLimit)
+			: EditorTextLimit
 		}
 
 	EN_KILLFOCUS()
@@ -31,12 +40,12 @@ EditControl
 
 	KEYDOWN(wParam, pressed = false)
 		{
-		return .Eval(EditorKeyDownHandler, wParam, zoomArgs: .zoomArgs(), :pressed)
+		return .Eval(EditorKeyDownHandler, wParam, zoomArgs: .ZoomArgs(), :pressed)
 		}
 
-	zoomArgs()
+	ZoomArgs()
 		{
-		return [this, .zoom, font: .font, size: .size]
+		return [this, .zoom, font: .font, size: .size, textLimit: .editorTextLimit]
 		}
 
 	On_Print()
@@ -82,7 +91,7 @@ EditControl
 
 	On_Zoom()
 		{
-		EditorZoom(@.zoomArgs())
+		EditorZoom(@.ZoomArgs())
 		}
 
 	SetFontAndSize(@args)

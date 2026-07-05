@@ -1,21 +1,26 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 Controller
 	{
-	CallClass(hwnd, before, after, buttons)
+	CallClass(hwnd, before, after, lib = '', recname = '')
 		{
-		return Dialog(hwnd, [this, before, after, buttons],
-			keep_size: "AiAgentDiff", closeButton?:, title: "Approve Changes")
+		return Dialog(hwnd, [this, before, after, :lib, :recname],
+			keep_size: "AiAgentDiff", closeButton?:,
+			title: "Approve Changes" $ Opt(" - ", lib, ':' $ recname))
 		}
-	New(before, after, buttons)
+	New(before, after, lib = '', recname = '')
 		{
-		super(["Diff2", before, after, "", "", "Before", "After", extraControls: buttons])
+		super(["Vert",
+			["Diff2", after, before, lib, recname, "After", "Before",
+				extraControls: AiAgentControl.ApproveButtons, newOnRight?:]
+			#Skip,
+			#(ScintillaAddons, name: "feedback", wrap:, xstretch: 1, ystretch: 0)])
 		}
 	On_Allow()
 		{
-		.Window.Result("allow")
+		.Window.Result(Object("allow", feedback: .FindControl("feedback").Get()))
 		}
 	On_Deny()
 		{
-		.Window.Result("deny")
+		.Window.Result(Object("deny", feedback: .FindControl("feedback").Get()))
 		}
 	}

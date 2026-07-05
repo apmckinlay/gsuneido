@@ -31,10 +31,6 @@ Control
 		{
 		return .Get()
 		}
-	Dirty?(unused)
-		{
-		return false
-		}
 	Destroy()
 		{
 		.Send('NoData')

@@ -10,32 +10,32 @@ Controller
 		"OpenRouterApiKeyForAiAgentControl"
 	modelSettingKey: "AiAgentControl_model"
 	models: #(
-		"anthropic/claude-haiku-4.5":
-			{ context: 200000, output: 64000, in: 1.00, out: 5.00 },
-		"deepseek/deepseek-v3.2":
-			{ context: 128000, output: 8192, in: 0.28, out: 0.42 },
-		"openai/gpt-5.3-codex":
-			{ context: 400000, output: 128000, in: 1.75, out: 14.00 },
-		"minimax/minimax-m2.7":
-			{ context: 205000, output: 128000, in: 0.30, out: 1.20 },
-		"moonshotai/kimi-k2.5":
-			{ context: 256000, output: 16384, in: 0.55, out: 2.20 },
-		"nvidia/nemotron-3-super-120b-a12b:free":
-			{ context: 262144, output: 262144, in: 0.00, out: 0.00 },
-		"qwen/qwen3-coder-next":
-			{ context: 262144, output: 16384, in: 0.40, out: 2.40 },
-		"x-ai/grok-code-fast-1":
-			{ context: 256000, output: 10000, in: 0.20, out: 0.50 },
-		"xiaomi/mimo-v2-pro":
-			{ context: 1050000, output: 128000, in: 1.00, out: 3.00 },
-		"z-ai/glm-5":
-			{ context: 202752, output: 128000, in: 0.80, out: 2.56 },
-		"z-ai/glm-5-turbo":
-			{ context: 202752, output: 131072, in: 0.40, out: 1.50 },
+		"arcee-ai/trinity-large-thinking":
+			{ context: "256K", in: .22, out: .85 },
+		"deepseek/deepseek-v4-flash":
+			{ context: "1M", in: 0.10, out: 0.20 },
+		"deepseek/deepseek-v4-pro":
+			{ context: "1M", in: 0.44, out: 0.87 },
+		"google/gemini-3.1-flash-lite":
+			{ context: "1M", in: 0.25, out: 1.50 },
+		"minimax/minimax-m3":
+			{ context: "1M", in: 0.60, out: 2.40 },
+		"moonshotai/kimi-k2.7-code":
+			{ context: "256K", in: 0.75, out: 3.50 },
+		"nvidia/nemotron-3-super-120b-a12b":
+			{ context: "1M", in: 0.09, out: 0.45 },
+		"nvidia/nemotron-3-ultra-550b-a55b":
+			{ context: "1M", in: 0.50, out: 2.50 },
+		"qwen/qwen3.7-plus":
+			{ context: "1M", in: 0.32, out: 1.28 },
+		"qwen/qwen3.7-max":
+			{ context: "1M", in: 1.25, out: 3.75 },
+		"xiaomi/mimo-v2.5-pro":
+			{ context: "1M", in: 0.44, out: 0.87 },
 		)
-	defaultModel: "minimax/minimax-m2.7"
+	defaultModel: "deepseek/deepseek-v4-pro"
 
-	CallClass()
+	CallClass(setText = '')
 		{
 		DeleteOldFiles('.ai/', -7) /*= one week */
 		prompt = Query1("suneidoc", path: "/res", name: "AiPrompt").text
@@ -44,7 +44,7 @@ Controller
 			model = .defaultModel
 		// cache the key since the ai sandbox will prevent fetching it again
 		key = Suneido.GetInit(#AIAGENT_API_KEY, .getApiKey)
-		super.CallClass(key, model, prompt)
+		super.CallClass(key, model, prompt, setText)
 		}
 	getApiKey()
 		{
@@ -56,16 +56,21 @@ Controller
 		catch (e)
 			throw "error getting api key from wiki: " $ e
 		}
-	New(key, model, prompt)
+	New(key, model, prompt, setText = '')
 		{
 		.agent = AiAgent(.url, key, model, .output, prompt)
 		.model = .FindControl("model")
 		.model.Set(model)
 		.vert = .Vert.VertSplit.Vert
-		.editor = .FindControl("editor")
+		.editor = .FindControl("Editor")
+		if setText isnt ''
+			.editor.Set(setText)
 		.status = .FindControl("statusbar")
 		Defer({ .editor.SetFocus() })
 		}
+
+	Commands: ((Users_Manual,	"F1"))
+	Menu: ()
 	Controls()
 		{
 		["Vert",
@@ -75,7 +80,7 @@ Controller
 					#Skip,
 					.normalButtons(),
 					#Skip,
-					#(ScintillaAddons, name: "editor", wrap:, xstretch: 1),
+					#(ScintillaAddons, name: "Editor", wrap:, xstretch: 1),
 					]
 				]
 			#(Statusbar, name: "statusbar")
@@ -102,7 +107,7 @@ Controller
 			#Fill
 			]
 		}
-	approveButtons: #(Horz,
+	ApproveButtons: #(Horz,
 		Fill,
 		(EnhancedButton, "Allow", tip: "let the action go ahead"
 			mouseEffect:, buttonStyle:, pad: 20, weight: bold, textColor: 0x007700)
@@ -115,19 +120,18 @@ Controller
 		{
 		w0 = 40
 		w1 = 10
-		w2 = 8
+		w2 = 6
 		w3 = 6
-		w4 = 6
-		s = "Id".RightFill(w0) $ "Context".LeftFill(w1) $ "Output".LeftFill(w2) $
-			"In".LeftFill(w3) $ "Out".LeftFill(w4) $ "\n"
-		s $= "-".Repeat(w0 + w1 + w2 + w3 + w4) $ "\n"
+		s = "Id".RightFill(w0) $ "Context".LeftFill(w1) $
+			"In".LeftFill(w2) $ "Out".LeftFill(w3) $ "\n"
+		s $= "-".Repeat(w0 + w1 + w2 + w3) $ "\n"
 		for m in .models.Members().Sort!()
 			{
 			x = .models[m]
 			s $= m.RightFill(w0) $
-				.k(x.context).LeftFill(w1) $ .k(x.output).LeftFill(w2) $
-				x.in.Format('##.##').LeftFill(w3) $
-				x.out.Format('##.##').LeftFill(w4) $ "\n"
+				x.context.LeftFill(w1) $
+				x.in.Format('##.##').LeftFill(w2) $
+				x.out.Format('##.##').LeftFill(w3) $ "\n"
 			}
 		Alert(s, font: "@mono", title: "Models")
 		}
@@ -163,21 +167,16 @@ Controller
 		switch what
 			{
 		case "user":
-			.Defer({ .AppendMd("**You:** " $ data, what) })
+			.AppendMd("**You:** " $ data, what)
 		case "think", "tool", "output":
-			.Defer()
-				{
-				.AppendMd(data, what)
-				.updateStatus()
-				}
+			.AppendMd(data, what)
+			.updateStatus()
 		case "complete":
-			.Defer()
-				{
-				.AppendMd(.endMarker)
-				.FindControl("Send").SetEnabled(true)
-				.sending = false
-				.updateStatus()
-				}
+			.AppendMd(.endMarker)
+			if false isnt sendBtn = .FindControl("Send")
+				sendBtn.SetEnabled(true)
+			.sending = false
+			.updateStatus()
 		default:
 			}
 		if approve isnt false
@@ -187,12 +186,16 @@ Controller
 
 	updateStatus()
 		{
-		model = .model.Get()
+		if .model.Destroyed?()
+			return
+		if '' is model = .model.Get()
+			return
 		contextLimit = .models[model].context
 		try // in case the exe doesn't have Usage or Cost yet
 			{
-			.status.Set("\t\tContext: " $ .k(.agent.Usage()) $ " / " $ .k(contextLimit) $
-				"  |  Cost: " $ .agent.Cost().Format("##.##"))
+			// using ending spaces to avoid overlapping with the resizing handler
+			.status.Set("\t\tContext: " $ .k(.agent.Usage()) $ " / " $ contextLimit $
+				"  |  Cost: " $ .agent.Cost().Format("##.##") $ '      ' )
 			}
 		}
 	k(n)
@@ -212,22 +215,26 @@ Controller
 		{
 		.pendingUpdate = approve
 		.selectedModel = .model.Get()
-		.replaceBottomRow(.approveButtons)
+		.replaceBottomRow(.ApproveButtons)
 		before = approve.Before()
 		after = approve.After()
 		if after isnt ""
 			{
-			response = before is ""
-				? AiAgentView(.Window.Hwnd, after, .approveButtons)
-				: AiAgentDiff(.Window.Hwnd, before, after, .approveButtons)
-			switch response
+			if false isnt response = before is ""
+				? AiAgentView(.Window.Hwnd, after, .editLib, .editName)
+				: AiAgentDiff(.Window.Hwnd, before, after, .editLib, .editName)
 				{
-			case "allow":
-				.On_Allow()
-			case "deny":
-				.On_Deny()
-			default:
+				.editor.Set(response.feedback)
+				switch response[0]
+					{
+				case "allow":
+					.On_Allow()
+				case "deny":
+					.On_Deny()
+				default:
+					}
 				}
+			.editLib = .editName = ''
 			}
 		}
 
@@ -248,6 +255,7 @@ Controller
 		.pendingUpdate = false
 		update.Allow(.userText())
 		.restoreNormalButtons()
+		PubSub.PublishConsolidate('LibraryTreeChange', force:)
 		}
 
 	On_Deny()
@@ -287,6 +295,7 @@ Controller
 
 	agent: false
 	model: false
+	selectedModel: false
 	NewValue(value, source)
 		{
 		if source is .model and .agent isnt false
@@ -296,12 +305,45 @@ Controller
 			}
 		}
 
+	appendDeferred: false
+	editLib: ''
+	editName: ''
 	AppendMd(chunk, type = "output")
 		{
+		.queue.Add(Object(chunk, type))
+		if .appendDeferred is true
+			return
+		.appendDeferred = true
+		.Defer()
+			{
+			while not Same?(.queue, first = .queue.PopFirst())
+				.appendMd(first)
+			.appendDeferred = false
+			}
+		return
+		}
+
+	getter_queue()
+		{
+		.queue = Object()
+		}
+
+	appendMd(item)
+		{
+		if false is webview = .FindControl("webView")
+			return
+		chunk = item[0]
+		type = item[1]
 		// base64 encode to avoid unicode issues
 		b64 = Base64.Encode(chunk)
 		html = `<i data-b64="` $ b64 $ `" data-type="` $ type $ `"></i>`
-		.FindControl("webView").InsertAdjacentHTML("base64-sink", "beforeend", html)
+		if type is 'tool' and
+			(chunk.Prefix?("**Edit Code** ") or chunk.Prefix?("**Create Code** "))
+			{
+			.editLib = chunk.AfterFirst('`').BeforeFirst('`')
+			.editName = chunk.AfterFirst('` `').BeforeFirst('`')
+			}
+		webview.InsertAdjacentHTML("base64-sink", "beforeend", html)
 		}
 
 page: `<!DOCTYPE html>
@@ -560,8 +602,8 @@ page: `<!DOCTYPE html>
 
 	Destroy()
 		{
-		if .model isnt false
-			UserSettings.Put(.modelSettingKey, .model.Get())
+		if .selectedModel isnt false
+			UserSettings.Put(.modelSettingKey, .selectedModel)
 		.agent.Close()
 		}
 	}

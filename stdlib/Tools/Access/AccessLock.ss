@@ -29,7 +29,11 @@ Addon
 
 		// locked successfully. Just renew the lock
 		if lock_result is true
-			.schedule_lock_renew() // case 1
+			{
+			// Double-check before scheduling (race with Unlock)
+			if .locked isnt false
+				.schedule_lock_renew()
+			}
 
 		// if the lock was renewed, but LockManager did not find the previous lock
 		// (i.e. "this" session went to sleep and another user	went in and out of edit
@@ -46,7 +50,9 @@ Addon
 					: 'someone'
 				.logAndExit('the record was modified by ' $ user)
 				}
-			.schedule_lock_renew()
+			// Double-check before scheduling (race with Unlock)
+			if .locked isnt false
+				.schedule_lock_renew()
 			return
 			}
 		// lock renew failed. Another user took the lock and is currently editing
@@ -71,8 +77,9 @@ Addon
 		if .locked is false
 			return
 		.kill_lock_timer()
-		LockManager.Unlock(.locked)
-		.locked = false
+		saved_key = .locked
+		.locked = false // Signal shutdown early (race with renew_lock)
+		LockManager.Unlock(saved_key)
 		// Print(unlocked: .locked)
 		}
 	lock_timer: false

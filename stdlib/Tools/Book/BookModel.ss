@@ -46,7 +46,8 @@ class
 	Create(table)
 		{
 		Database("ensure " $ table $
-			" (path, name, num, order, text, plugin, hasSubmenu?, lib_modified)
+			" (path, name, num, order, text, plugin, hasSubmenu?, lib_modified,
+				lib_committed)
 			key(num) key (path, name) index(name)
 			index(order, name) index(path, order, name) index (plugin)")
 		SvcDisabledBooks.ResetCache()

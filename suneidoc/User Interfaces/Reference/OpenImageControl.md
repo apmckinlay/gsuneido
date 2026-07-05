@@ -29,13 +29,13 @@ Methods:
 `SetStatus(status)`
 : to set a tip for the field
 
-`Get() &rarr; string`
+`Get()` &rarr; `string`
 : to retrieve the field text value
 
-`GetFileName() &rarr; string`
+`GetFileName()` &rarr; `string`
 : to retrieve only file name from the field text value
 
-`GetFilePath() &rarr; string`
+`GetFilePath()` &rarr; `string`
 : to retrieve only file path from the field text value
 
 `SetReadOnly(bool)`

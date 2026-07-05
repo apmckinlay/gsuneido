@@ -55,10 +55,7 @@ PassthruController
 		j = .FindRow(source) + 1
 		for (i = .Tally() - 1; i > j; --i)
 			rows[i - 1].MoveStateTo(rows[i])
-		.BeforeRowSet(rows[j], newRec)
-		rows[j].Set(newRec)
-		rows[j].SetFocus()
-		.Send('Repeat_RowsChanged', newRow: j)
+		.finishNewRow(j, newRec, rows)
 		}
 
 	// tests if adding one record will put us over max, NOT if already over max
@@ -110,11 +107,15 @@ PassthruController
 		.handleFocus()
 		length = .Tally()
 		.insertRow(length)
-		rows = .rows()
-		.BeforeRowSet(rows[length], newRec)
-		rows[length].Set(newRec)
-		rows[length].SetFocus()
-		.Send('Repeat_RowsChanged', newRow: length)
+		.finishNewRow(length, newRec, .rows())
+		}
+
+	finishNewRow(i, newRec, rows)
+		{
+		.BeforeRowSet(rows[i], newRec)
+		rows[i].Set(newRec)
+		rows[i].SetFocus()
+		.Send('Repeat_RowsChanged', newRow: i)
 		}
 
 	On_Minus(source)

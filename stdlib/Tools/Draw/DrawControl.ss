@@ -53,8 +53,8 @@ Controller
 			{
 			canvas = Object('Scroll',
 				Object('DrawCanvas',
-					xmin: .width.InchesInCanvasUnit(),
-					ymin: .height.InchesInCanvasUnit(),
+					xmin: ScaleWithDpiFactor(.width.InchesInCanvasUnit()),
+					ymin: ScaleWithDpiFactor(.height.InchesInCanvasUnit()),
 					xstretch: false,
 					ystretch: false)
 				)
@@ -77,8 +77,8 @@ Controller
 	SetSize(.width, .height)
 		{
 		.canvas.SetXminYmin(
-			.width.InchesInCanvasUnit(),
-			.height.InchesInCanvasUnit())
+			ScaleWithDpiFactor(.width.InchesInCanvasUnit()),
+			ScaleWithDpiFactor(.height.InchesInCanvasUnit()))
 		}
 
 	Commands:
@@ -144,11 +144,6 @@ Controller
 		{
 		.palette.SetButtons('ellipse')
 		.canvas.SetTracker(DrawRectTracker, CanvasEllipse)
-		}
-	On_Arc()
-		{
-		.palette.SetButtons('arc')
-		.canvas.SetTracker(DrawRectTracker, DrawArcAdapter)
 		}
 	On_Text()
 		{
@@ -345,29 +340,31 @@ Controller
 			justify: .justify is false ? 'Left' : .justify.Get()).
 			MergeNew(.extraValues)
 		}
-	BuildItems(valueOb, ignoreOld?/*unused*/ = false)
+	BuildItems(valueOb, skipSetupScale? = false)
 		{
 		items = Object()
 		if valueOb.Member?('items') and valueOb.items.Every?(Object?)
 			{
-			for item in valueOb.items
-				items.Add(Construct(item).SetupScale())
+			for itemOb in valueOb.items
+				{
+				item = Construct(itemOb)
+				if not skipSetupScale?
+					item.SetupScale()
+				items.Add(item)
+				}
 			return items
 			}
 
 		if ((not valueOb.Member?('resources')) or (not valueOb.Member?('items')))
 			return items
 
-//		if not ignoreOld?
-//			ProgrammerError('Found old canvas format', params: valueOb,
-//				caughtMsg: 'handled')
-
 		valueOb = valueOb.Copy()
 		valueOb.resources = valueOb.resources.Copy()
 		valueOb.items.Each()
 			{
 			// CanvasImage saves .references so we need to use Compile and object.Eval
-			fn = ("function() { " $ it $ ".SetupScale() }").Compile()
+			fn = ("function() { " $ it $ (skipSetupScale? ? "" : ".SetupScale()") $ " }").
+				Compile()
 			item = valueOb.resources.Eval(fn)
 			items.Add(item)
 			}

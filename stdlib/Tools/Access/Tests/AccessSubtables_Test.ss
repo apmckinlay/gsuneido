@@ -53,7 +53,7 @@ Test
 		sCondition = .makeCondition("field_a", true)
 		currentConditions = Object(.makeCondition("field_a", false))
 
-		fn(sCondition, currentConditions, csf, ssf)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is false,
 			msg: "Test 1: sCondition.check should be set to false")
 
@@ -64,7 +64,7 @@ Test
 		sCondition = .makeCondition("field_a", true)
 		currentConditions = Object(.makeCondition("field_b", false))
 
-		fn(sCondition, currentConditions, csf, ssf)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is false,
 			msg: "Test 2: sCondition.check should get unchecked when there is no match")
 
@@ -75,7 +75,7 @@ Test
 		sCondition = .makeCondition("field_a", false)
 		currentConditions = Object(.makeCondition("field_a", false))
 
-		fn(sCondition, currentConditions, csf, ssf)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is false,
 			msg: "Test 3: sCondition.check should remain false")
 
@@ -86,7 +86,7 @@ Test
 		sCondition = .makeCondition("field_x", true)
 		currentConditions = Object(.makeCondition("field_y", false))
 
-		fn(sCondition, currentConditions, csf, ssf)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is false,
 			msg: "Test 4: sCondition.check should be false when renamed fields match")
 
@@ -97,7 +97,7 @@ Test
 		sCondition = .makeCondition("field_a", true)
 		currentConditions = Object(.makeCondition("field_a", true))
 
-		fn(sCondition, currentConditions, csf, ssf)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check is true,
 			msg: "Test 5: sCondition.check should remain true when cCondition is checked")
 
@@ -108,7 +108,7 @@ Test
 		sCondition = .makeCondition("field_a", true)
 		currentConditions = Object()
 
-		fn(sCondition, currentConditions, csf, ssf)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf)
 		Assert(sCondition.check isnt true,
 			msg: "Test 6: sCondition.check should not remain true " $
 				"with empty currentConditions")
@@ -127,7 +127,7 @@ Test
 		currentConditions = Object(cCondition)
 		selectMgr = .selectMgr()
 
-		fn(sCondition, currentConditions, csf, ssf, selectMgr)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
 		Assert(cCondition.check is true,
 			msg: "Test 1: cCondition.check should be set to true")
 
@@ -139,7 +139,7 @@ Test
 		currentConditions = Object(.makeCondition("field_b", false))
 		selectMgr = .selectMgr()
 
-		fn(sCondition, currentConditions, csf, ssf, selectMgr)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
 		Assert(selectMgr.Select_vals().Size() is 1,
 			msg: "Test 2: condition should be added to selectMgr when no match")
 		added = selectMgr.Select_vals()[0]
@@ -157,7 +157,7 @@ Test
 		currentConditions = Object(cCondition)
 		selectMgr = .selectMgr()
 
-		fn(sCondition, currentConditions, csf, ssf, selectMgr)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
 		Assert(cCondition.check is false,
 			msg: "Test 3: cCondition.check should remain false " $
 				"when sCondition is unchecked")
@@ -173,7 +173,7 @@ Test
 		currentConditions = Object(cCondition)
 		selectMgr = .selectMgr()
 
-		fn(sCondition, currentConditions, csf, ssf, selectMgr)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
 		Assert(cCondition.check is true,
 			msg: "Test 4: cCondition.check should be true with renamed fields match")
 
@@ -185,7 +185,7 @@ Test
 		currentConditions = Object(.makeCondition("other_field", false))
 		selectMgr = .selectMgr()
 
-		fn(sCondition, currentConditions, csf, ssf, selectMgr)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
 		Assert(selectMgr.Select_vals().Size() is 1,
 			msg: "Test 5: renamed condition should be added when no match")
 		added = selectMgr.Select_vals()[0]
@@ -202,7 +202,7 @@ Test
 		currentConditions = Object()
 		selectMgr = .selectMgr()
 
-		fn(sCondition, currentConditions, csf, ssf, selectMgr)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
 		Assert(selectMgr.Select_vals().Size() is 1,
 			msg: "Test 6: condition should be added with empty currentConditions")
 		added = selectMgr.Select_vals()[0]
@@ -220,7 +220,7 @@ Test
 		currentConditions = Object(cCondition)
 		selectMgr = .selectMgr()
 
-		fn(sCondition, currentConditions, csf, ssf, selectMgr)
+		fn(sCondition, currentConditions, csf, csf, ssf, ssf, selectMgr)
 		Assert(sCondition.check is true,
 			msg: "Test 7: sCondition.check should remain unchanged")
 		}
@@ -260,13 +260,13 @@ Test
 			"subtable2": sm2
 			)
 		testSfs = Object(
-			"subtable1": sf1,
-			"subtable2": sf2
+			"subtable1": Object(sf: sf1, asf: sf1),
+			"subtable2": Object(sf: sf2, asf: sf2)
 			)
 		ast = .cl(false, testSelectMgrs, testSfs)
 
 		// Step 1: SetSubtableSelectFields for subtable1
-		ast.SetSubtableSelectFields(#("field_a"), "subtable1")
+		ast.SetSubtableSelectFields(#("field_a"), #("field_a"), "subtable1")
 		Assert(ast.AccessSubtables_linkedSelectFields.Member?("subtable1"),
 			msg: "subtable1 should be in linkedSelectFields")
 
@@ -276,7 +276,7 @@ Test
 			msg: "SetSubtableSelectMgr should return the selectMgr")
 
 		// Step 3: SetSubtableSelectFields for subtable2
-		ast.SetSubtableSelectFields(#("field_b"), "subtable2")
+		ast.SetSubtableSelectFields(#("field_b"), #("field_b"), "subtable2")
 		Assert(ast.AccessSubtables_linkedSelectFields.Member?("subtable2"),
 			msg: "subtable2 should be in linkedSelectFields")
 
@@ -315,18 +315,18 @@ Test
 			"table2|linkedBrowse": sm2
 			)
 		testSfs = Object(
-			"table|linkedBrowse": sf1,
-			"table2|linkedBrowse": sf2
+			"table|linkedBrowse": Object(sf: sf1, asf: sf2),
+			"table2|linkedBrowse": Object(sf: sf2, asf: sf2)
 			)
 		ast = .cl(true, testSelectMgrs, testSfs)
 
 		// Step 1: Initialize first subtable
-		ast.SetSubtableSelectFields(#("field_a"), "table|linkedBrowse")
+		ast.SetSubtableSelectFields(#("field_a"), #("field_a"), "table|linkedBrowse")
 		ast.SetSubtableSelectMgr(#("field_a"), "table|linkedBrowse")
 
 		// Step 2: Initialize second subtable (different field, same prompt)
 		// This triggers updateChecked via handleDynamic
-		ast.SetSubtableSelectFields(#("field_x"), "table2|linkedBrowse")
+		ast.SetSubtableSelectFields(#("field_x"),#("field_x"), "table2|linkedBrowse")
 		ast.SetSubtableSelectMgr(#("field_x"), "table2|linkedBrowse")
 
 		// Verify the condition was added to sm2 (renamed from field_a to field_x)
@@ -366,20 +366,20 @@ Test
 			"subtable3": sm3
 			)
 		testSfs = Object(
-			"subtable1": sf1,
-			"subtable2": sf2,
-			"subtable3": sf3
+			"subtable1": Object(sf: sf1, asf: sf1),
+			"subtable2": Object(sf: sf2, asf: sf2),
+			"subtable3": Object(sf: sf3, asf: sf3)
 			)
 		ast = .cl(false, testSelectMgrs, testSfs)
 
 		// Initialize all three subtables
-		ast.SetSubtableSelectFields(#("field_a"), "subtable1")
+		ast.SetSubtableSelectFields(#("field_a"), #("field_a"), "subtable1")
 		ast.SetSubtableSelectMgr(#("field_a"), "subtable1")
 
-		ast.SetSubtableSelectFields(#("field_b"), "subtable2")
+		ast.SetSubtableSelectFields(#("field_b"), #("field_b"), "subtable2")
 		ast.SetSubtableSelectMgr(#("field_b"), "subtable2")
 
-		ast.SetSubtableSelectFields(#("field_c"), "subtable3")
+		ast.SetSubtableSelectFields(#("field_c"), #("field_c"), "subtable3")
 		ast.SetSubtableSelectMgr(#("field_c"), "subtable3")
 
 		// Verify all subtables are registered

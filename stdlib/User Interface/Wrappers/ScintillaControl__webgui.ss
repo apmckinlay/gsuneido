@@ -61,30 +61,38 @@ Control
 		return .Act(#SetReadOnly, .setReadOnly = readonly)
 		}
 
+	lastDirtyCallstack: ''
 	SetReadOnlyLogging(name) // Extra logging for suggestion 25689, and 37312
 		{
 		try
 			{
-			calls = GetCallStack(limit: 99)
-			RemoveAssertsFromCallStack(calls)
-			// Remove redundant / unnecessary broadcast/send loop
-			calls = FormatCallStack(calls, levels: 99).Lines().
-				RemoveIf(
-					{
-					it.Has?('Container.Broadcast ') or it.Has?('Container.SetReadOnly ')
-					}).Join('\n')
-			SuneidoLog('ERROR: ScintillaControl SetReadonly(true) when dirty', :calls,
+			SuneidoLog('ERROR: ScintillaControl SetReadonly(true) when dirty',
+				calls: .callStack(),
 				params: Object(
 					:name,
 					dirty: .dirty,
 					modify: .GetModify(),
 					alreadyReadOnly: .GetReadOnly()
 					lastModify: .logging_lastModify,
-					modifyFocused?: .logging_focusedModify?))
+					modifyFocused?: .logging_focusedModify?).Merge(.lastEvents))
+			SuneidoLog('INFO: Error follow up log, last .Dirty? call stack',
+				calls: .lastDirtyCallstack)
+			SuRenderBackend().DumpStatus('ScintillaControl SetReadonly(true) when dirty')
 			}
 		catch (error)
 			SuneidoLog('ERROR: ScintillaControl.SetReadOnlyLogging encountered an error',
 				calls:, params: Object(:error, :name))
+		}
+
+	callStack(limit = 99)
+		{
+		RemoveAssertsFromCallStack(calls = GetCallStack(:limit))
+		// Remove redundant / unnecessary broadcast/send loop
+		return FormatCallStack(calls, levels: limit).Lines().
+			RemoveIf(
+				{
+				it.Has?('Container.Broadcast ') or it.Has?('Container.SetReadOnly ')
+				}).Join('\n')
 		}
 
 	GETREADONLY()
@@ -207,6 +215,8 @@ Control
 		Assert(dirty is true or dirty is false or dirty is "")
 		if dirty isnt ''
 			.dirty = dirty
+		if dirty is true
+			.lastDirtyCallstack = .callStack(limit: 15)
 		return .dirty
 		}
 
@@ -224,6 +234,7 @@ Control
 		.astWriterManager = false
 		.Send("EN_CHANGE")
 		.dirty = true
+		.lastDirtyCallstack = .callStack(limit: 25)
 		return 0
 		}
 
@@ -560,6 +571,31 @@ Control
 		return .findreplacedata
 		}
 
+	On_Find_Next_Selected()
+		{
+		.find_selected(.On_Find_Next)
+		}
+	On_Find_Prev_Selected()
+		{
+		.find_selected(.On_Find_Previous)
+		}
+	find_selected(nextprev)
+		{
+		sel = .GetSelect()
+		.SelectCurrentWord()
+		if "" is s = .GetSelText().Trim()
+			{
+			.SetSel(sel.cpMin, sel.cpMax)
+			return
+			}
+		.findreplacedata.find = s
+		.findreplacedata.case = true
+		.findreplacedata.regex = false
+		.findreplacedata.word = sel.cpMin is sel.cpMax
+		.Send("FindBar_OpenFindBar")
+		nextprev()
+		}
+
 	Context_Menu: (
 		"&Undo\tCtrl+Z", "&Redo\tCtrl+Y", "",
 		"Cu&t\tCtrl+X", "&Copy\tCtrl+C", "&Paste\tCtrl+V", "&Delete", "",
@@ -594,6 +630,18 @@ Control
 		{ .On_Select_All() }
 	On_Context_Find()
 		{ .On_Find() }
+	SelectCurrentWord()
+		{
+		// TODO handle cursor at start of word
+		if .GetSelectionStart() < .GetSelectionEnd()
+			return
+		org = end = .GetCurrentPos()
+		while .wordchars.Has?(.GetAt(org - 1))
+			--org
+		while .wordchars.Has?(.GetAt(end))
+			++end
+		.SetSelect(org, end - org)
+		}
 
 	On_Cut()
 		{

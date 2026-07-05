@@ -150,8 +150,6 @@ class
 			res = parser.Statement()
 		case 'statements':
 			res = parser.Statements()
-		default:
-			throw 'Unhandled Tdop Type'
 			}
 		Assert(parser.Scan.Token() is: parser.Scan.End)
 		return res

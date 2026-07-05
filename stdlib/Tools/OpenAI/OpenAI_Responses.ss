@@ -13,7 +13,7 @@ OpenAI
 			body.tools = tools
 		if format isnt false
 			body.text = Object(:format)
-		res = .Send(.BaseUrl $ 'responses' body)
+		res = .Send(.BaseUrl $ 'responses', body)
 		if .usageTracker isnt false
 			(.usageTracker)(res['usage'])
 		return res

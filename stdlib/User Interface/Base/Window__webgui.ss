@@ -230,6 +230,13 @@ WindowBase
 		return 0
 		}
 
+	DoActivate(newFocus = false)
+		{
+		if newFocus isnt false
+			.focus = newFocus
+		super.DoActivate()
+		}
+
 	GetWindowTitle()
 		{
 		return .title

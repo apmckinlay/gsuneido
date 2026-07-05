@@ -143,6 +143,7 @@ class
 		ae = Diff(base, a)
 		be = Diff(base, b)
 		result = Object()
+		e = which = '' // code warning "used but possibly not initialized"
 		for (i in base.Members())
 			result[i] = Object(base[i], '', base[i])
 		for (ai = bi = 0; ai < ae.Size() or bi < be.Size(); )

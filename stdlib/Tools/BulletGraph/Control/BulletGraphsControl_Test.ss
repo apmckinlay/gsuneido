@@ -138,6 +138,14 @@ Test
 		Assert(graphsBase.satisfactory is: 20)
 		Assert(graphsBase.color is: 0x883322)
 		Assert(graphsBase.axisDensity is: 3)
+
+		data = [a: -100, b: -500, c: 200]
+		graphsBase = mock.graphsBase(false, data, 10, 3)
+		Assert(graphsBase.range is: #(10, 210))
+		Assert(graphsBase.good is: 10)
+		Assert(graphsBase.satisfactory is: 10)
+		Assert(graphsBase.color is: 0x883322)
+		Assert(graphsBase.axisDensity is: 3)
 		}
 
 	Test_calcMax()

@@ -2,7 +2,7 @@
 KeyListViewBase
 	{
 	New(query, columns, saveInfoName = "", prefix = "", prefixColumn = false,
-		keys = false, field = "", value = "", checkBoxColumn = false,
+		keys = false, field = "", value = "", .checkBoxColumn = false,
 		customizeQueryCols = false, optionalRestrictions = #(), .excludeSelect = #())
 		{
 		super(query, columns, saveInfoName, prefix, :prefixColumn, :keys, :field, :value,
@@ -23,6 +23,13 @@ KeyListViewBase
 	VirtualList_ModelChanged()
 		{
 		.Send('VirtualList_ModelChanged')
+		}
+
+	VirtualList_DoubleClick(rec, col)
+		{
+		return .checkBoxColumn isnt col
+			? .Send('VirtualList_DoubleClick', :rec, :col)
+			: false
 		}
 
 	GetCheckedRecords()

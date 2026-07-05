@@ -45,7 +45,7 @@ Controller
 
 	getter_topFilters()
 		{
-		return .FindControl('SelectRepeat')
+		return .FindControl(.model.ColModel.GetSelectMgr().Name())
 		}
 
 	getter_addGlobalMenu?()
@@ -105,7 +105,8 @@ Controller
 	UpdateTopFilters(vals = false)
 		{
 		if .topFilters isnt false
-			.topFilters.Set([conditions: vals is false ? .Select_vals : vals])
+			.topFilters.Set([conditions: vals is false ? .Select_vals : vals],
+				extra_select_vals: .extra_select_vals)
 		}
 	Select_ExtraButtons()
 		{
@@ -118,6 +119,18 @@ Controller
 		if not Object?(extraLayout.buttons)
 			extraLayout.buttons = Object()
 		return extraLayout
+		}
+	Select_ExtraFilters()
+		{
+		.Send('VirtualList_ExtraFilters')
+		}
+	Select_ExtraConditions()
+		{
+		.Send("VirtualList_ExtraConditions")
+		}
+	Select_ExtraWhere(selectControls = false)
+		{
+		.Send('VirtualList_ExtraWhere', selectControls)
 		}
 
 	GetDefaultSelect()
@@ -152,13 +165,16 @@ Controller
 
 	setModelWhere(selectName, updateWhere)
 		{
+		if updateWhere isnt false
+			{
+			.model.SetWhere(updateWhere)
+			return
+			}
 		whereStr = .model.ColModel.GetSelectWhere(
 			selectName, this, .model.AllAvailableColumns) $
 			.Addons.Collect('ExtraWhere').Join(' ')
 		if not whereStr.Blank?()
 			.model.SetWhere(whereStr)
-		else if updateWhere isnt false
-			.model.SetWhere(updateWhere)
 		}
 
 	GetModel()
@@ -495,15 +511,31 @@ Controller
 		return .model.ColModel.GetColumnsSaveName()
 		}
 
+	GetColumnsSaveName()
+		{
+		return .model.ColModel.GetColumnsSaveName()
+		}
+
 	Getter_Select_vals()
 		{
 		return .model.ColModel.GetSelectVals()
+		}
+	Getter_Extra_Select_vals()
+		{
+		return .extra_select_vals
 		}
 
 	SetSelectVals(select_vals)
 		{
 		.model.ColModel.SetSelectVals(select_vals)
 		FilterButtonControl.UpdateStatus(this, .model.ColModel.HasSelectedVals?())
+		}
+
+	extra_select_vals: false
+	SetExtraSelectVals(select_vals)
+		{
+		// NOT top filters yet.
+		.extra_select_vals = select_vals
 		}
 
 	GetCurrentSelectWhere()
@@ -782,6 +814,19 @@ Controller
 	RestoreAttachmentFiles()
 		{
 		.model.CleanupAttachments(true)
+		}
+
+	GetLinkField()
+		{
+		return .Send('GetLinkField')
+		}
+
+	// This is used to return the query for subtables when doing select.
+	GetLinkedQuery()
+		{
+		// We CANNOT just use .model.GetQuery() here, as it already has a where for
+		// the CURRENT record tacked on. We need the base query at this point
+		return .Send('GetLinkedQuery')
 		}
 
 	Valid?()

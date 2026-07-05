@@ -24,7 +24,6 @@ class
 		ServerSuneido.DeleteAt(#WebSocketExpiredConnection, token)
 		Thread.NewSuneidoGlobal()
 		SuInit.FromServer(info)
-		SuSessionLog().Login(info.user, info.remote, info.userAgent)
 		SuRenderBackend.Init(wsHandler, token, info.key)
 		wsHandler.Send(#BINARY, Pack(SuMessageFormatter.FormatResponse(
 			SuMessageFormatter.Type.CONNECTED, arg1: connectid)))
@@ -110,7 +109,6 @@ class
 
 	BeforeDisconnect()
 		{
-		SuSessionLog().Logout()
 		if false isnt backend = SuRenderBackend(noThrow:)
 			backend.BeforeDisconnect()
 		}
@@ -118,6 +116,7 @@ class
 	// return true to quit the connection
 	OnConnectionError(e, wsHandler)
 		{
+		SuRenderBackend().AddLog('Connection ERROR: ' $ e)
 		.setThreadName(Thread.Name() $ '(waiting for reconnect)')
 		socket = wsHandler.GetSocket()
 		socket.ManualClose()
@@ -142,13 +141,11 @@ class
 				wsHandler.Send(#BINARY, Pack(SuMessageFormatter.FormatResponse(
 					SuMessageFormatter.Type.CONNECTED, arg1: reconnect.connectid)))
 				.setThreadName(Thread.Name().RemoveSuffix('(waiting for reconnect)'))
-				SuSessionLog().Error(e, reconnected?:)
 				return false
 				}
 			if count++ > 300/*=wait 5 mins*/
 				{
 				ServerSuneido.Add(#WebSocketExpiredConnection, true, token)
-				SuSessionLog().Error(e)
 				return true
 				}
 			Thread.Sleep(1.SecondsInMs())

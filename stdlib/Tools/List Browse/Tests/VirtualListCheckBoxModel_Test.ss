@@ -154,6 +154,25 @@ VirtualListModelTests
 		Assert(model.GetSelectedTotal() is: 10)
 		}
 
+	Test_totalSelectedMoneyBag()
+		{
+		model = VirtualListCheckBoxModel('test_checkbox_col', 'num',
+			#('test_amount_col', 'test_cur'))
+		Assert(model.GetSelectedTotal() is: '')
+
+		model.SelectItem([test_checkbox_col: true, num: 1, test_amount_col: 1,
+			test_cur: 'home'])
+		model.SelectItem([test_checkbox_col: true, num: 2, test_amount_col: 2,
+			test_cur: 'home'])
+		model.SelectItem([test_checkbox_col: true, num: 3, test_amount_col: 3,
+			test_cur: 'foreign'])
+		model.SelectItem([test_checkbox_col: true, num: 4, test_amount_col: 4,
+			test_cur: 'foreign'])
+
+		Assert(model.GetSelectedTotal(recalc:) is: '7.00 foreign, 3.00 home')
+		Assert(model.GetSelectedTotal() is: '7.00 foreign, 3.00 home')
+	}
+
 	Test_autoSelectByAmount()
 		{
 		model = VirtualListCheckBoxModel('test_checkbox_col', 'num', 'test_amount_col')

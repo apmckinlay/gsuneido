@@ -3,7 +3,7 @@
 ### Thread
 
 ``` suneido
-(callable, name = false)
+(callable, @args, name = false)
 ```
 
 Thread creates a new thread to run the specified function or class. Thread returns immediately, without waiting for the new thread.
@@ -26,6 +26,15 @@ Thread(f)
 ```
 
 This will beep 10 times, while allowing you to continue to work.
+
+Extra arguments are passed to the callable. For example:
+```suneido
+Thread(Print, 1, 2, 3)
+```
+is equivalent to, but simpler than:
+```suneido
+Thread({ Print(1, 2, 3) })
+```
 
 [SocketServer](<../SocketServer.md>) creates threads for each accepted connection.
 

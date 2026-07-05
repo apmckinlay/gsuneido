@@ -6,7 +6,7 @@ Test
 		init = AmazonS3_Multipart.AmazonS3_Multipart_init
 
 		_makeRequest = function (@unused) { return false }
-		Assert(init('test_bucket', 'test_file') is: false)
+		Assert(init('test_bucket', 'test_file', false) is: false)
 
 		_makeRequest = function (@unused)
 			{ return `<?xml version="1.0" encoding="UTF-8"?>
@@ -16,7 +16,7 @@ Test
   <UploadId>VXBsb2FkIElEIGZvciA2aWWpbmcncyBteS1tb3ZpZS5tMnRzIHVwbG9hZA</UploadId>
 </InitiateMultipartUploadResult>`
 			}
-		Assert(init('test_bucket', 'test_file')
+		Assert(init('test_bucket', 'test_file', false)
 			is: 'VXBsb2FkIElEIGZvciA2aWWpbmcncyBteS1tb3ZpZS5tMnRzIHVwbG9hZA')
 		}
 
@@ -27,7 +27,7 @@ Test
 
 		_makeRequest = function (@unused) { return false }
 		Assert(mock.Eval(AmazonS3_Multipart.AmazonS3_Multipart_uploadParts,
-				'test_bucket', 'test_file', 'test_file', 'test_upload_id')
+				'test_bucket', 'test_file', 'test_file', 'test_region', 'test_upload_id')
 			is: false)
 		mock.Verify.cleanupFiles([anyArgs:])
 
@@ -42,7 +42,7 @@ Test
 			throw "should not get here"
 			}
 		Assert(mock.Eval(AmazonS3_Multipart.AmazonS3_Multipart_uploadParts,
-				'test_bucket', 'test_file', 'test_file', 'test_upload_id')
+				'test_bucket', 'test_file', 'test_file', 'test_region', 'test_upload_id')
 			is: #(#(partNumber: "1", etag: '"upload0"'),
 				#(partNumber: "2", etag: '"upload1"'),
 				#(partNumber: "3", etag: '"upload2"')))
@@ -57,7 +57,7 @@ Test
 			throw "should not get here"
 			}
 		Assert(mock.Eval(AmazonS3_Multipart.AmazonS3_Multipart_uploadParts,
-				'test_bucket', 'test_file', 'test_file', 'test_upload_id')
+				'test_bucket', 'test_file', 'test_file', 'test_region', 'test_upload_id')
 			is: false)
 		mock.Verify.Times(3).cleanupFiles([anyArgs:])
 		}
@@ -88,7 +88,8 @@ Test
 		etags = #(#(partNumber: "1", etag: '"upload0"'),
 			#(partNumber: "2", etag: '"upload1"'),
 			#(partNumber: "3", etag: '"upload2"'))
-		Assert(complete('test_bucket', 'test_file', 'test_upload_id', etags)
+		Assert(complete('test_bucket', 'test_file', 'test_region',
+			'test_upload_id', etags)
 			is: false)
 		}
 
@@ -106,4 +107,41 @@ Test
 		test(64)
 		test(100)
 		}
+
+	Test_region()
+		{
+		cl = AmazonS3_Multipart
+			{
+			AmazonS3_Multipart_splitFile(@unused)
+				{
+				return 1
+				}
+			AmazonS3_Multipart_cleanupFiles(@args)
+				{
+				_cleanup.Add(args)
+				}
+			}
+		makeRequest = function (@args)
+			{
+			Assert(args.region is: 'eu-west-1')
+			if args[0] is "PUT" // uploadParts
+				return Object(content: '', header: 'ETag: "etag1"')
+			else if args.Member?('content') // complete
+				return 'ok'
+			else // init
+				return `<?xml version="1.0" encoding="UTF-8"?>
+<InitiateMultipartUploadResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+  <Bucket>bucket</Bucket>
+  <Key>file</Key>
+  <UploadId>test-id</UploadId>
+</InitiateMultipartUploadResult>`
+			}
+
+		_cleanup = Object()
+		Assert(cl.PutFile(
+				'test_bucket', 'test_file_from', 'test_file_to', 'eu-west-1',
+				makeRequest))
+		Assert(_cleanup is: #(('test_file_from', 1)))
+		}
+
 	}

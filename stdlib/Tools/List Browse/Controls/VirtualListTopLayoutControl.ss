@@ -15,13 +15,25 @@ Controller
 		if layout is false
 			layout = Object('HorzEqual', 'Fill')
 
-		if extraLayout.checkBoxAmountField isnt false
-			layout.Add(#(Pair
-				(Static 'Total Selected')
-				(Number mask: "-###,###,###.##", readonly:, name: 'totalSelected')))
+		.addTotalSelected(extraLayout, layout)
 		extraLayout.buttons.Each()
 			{ layout.Add(#('Skip', small:), Object?(it) ? it : Object(#Button, it)) }
 		return layout
+		}
+
+	addTotalSelected(extraLayout, layout)
+		{
+		if extraLayout.checkBoxAmountField is false
+			return
+
+		amtFormat = Object?(extraLayout.checkBoxAmountField)
+			? #(Field width: 15, readonly:, name: 'totalSelected')
+			: #(Number mask: "-###,###,###.##", width: 15,
+				readonly:, name: 'totalSelected')
+
+		layout.Add(Object('Pair'
+			#(Static 'Total Selected')
+			amtFormat))
 		}
 
 	Recv(@args)

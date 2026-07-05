@@ -104,11 +104,16 @@ Addon_VirtualListViewBase
 	VirtualListGrid_Space()
 		{
 		checkBoxColumn = .GetCheckBoxField()
-		if checkBoxColumn isnt false and
-			false is .Send('VirtualList_AllowCheckRecord?', .GetSelectedRecord())
+		if false is checkBoxColumn
 			return
+
 		for rec in .Grid.GetSelectedRecords()
+			{
+			if false is .Send('VirtualList_AllowCheckRecord?', rec)
+				continue
+
 			.Model.CheckRecord(rec, forceCheck:)
+			}
 		.Send('VirtualList_Space')
 		.UpdateTotalSelected(recalc:)
 		.Grid.RepaintSelectedRows()

@@ -1,7 +1,7 @@
 // Copyright (C) 2012 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	CallClass(value, field)
+	CallClass(value, field, dateFmt = false, dateTimeFmt = false)
 		{
 		dd = Datadict(field)
 		if Boolean?(value) or dd.Base?(Field_boolean)
@@ -14,7 +14,7 @@ class
 		if false isnt fmtValue = .FormatDataToString(dd, value)
 			return fmtValue
 		if Date?(value)
-			return .fmtDate(value)
+			return .fmtDate(value, dateFmt, dateTimeFmt)
 		return .formatBasedOnDD(dd, field, value)
 		}
 
@@ -34,9 +34,16 @@ class
 		return false
 		}
 
-	fmtDate(value)
+	fmtDate(value, dateFmt, dateTimeFmt)
 		{
-		return value is value.NoTime() ? value.ShortDate() : value.ShortDateTime()
+		// date and time
+		if value isnt value.NoTime()
+			return dateTimeFmt is false
+				? value.ShortDateTime()
+				: value.Format(dateTimeFmt)
+
+		// date only
+		return dateFmt is false ? value.ShortDate() : value.Format(dateFmt)
 		}
 
 	formatBasedOnDD(dd, field, value)

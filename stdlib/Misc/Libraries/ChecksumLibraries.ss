@@ -33,22 +33,25 @@ class
 				sort path, name', record_results, cksums)
 			}
 		}
-	Calc_cksums(table, query, record_results, cksums)
+	Calc_cksums(table, query, record_results, cksums, t = false)
 		{
 		max_mod = Date.Begin()
 		cksum = Adler32()
 		if TableExists?(table)
 			{
-			QueryApply(query)
-				{ |x|
-				max_mod = Max(max_mod, x.lib_committed, x.lib_modified)
-				if x.path !~ "^/res\>"
-					x.text = x.text.Tr('\r').Trim()
-				cksum.Update(x.name.Trim())
-				cksum.Update(x.text)
-				if record_results isnt false
-					AddFile('checksum_results', x.name.RightFill(30) $ '\t\t' $
-						.fmt(Adler32(x.text)) $ '\r\n')
+			DoWithTran(t)
+				{ |tran|
+				tran.QueryApply(query)
+					{ |x|
+					max_mod = Max(max_mod, x.lib_committed, x.lib_modified)
+					if x.path !~ "^/res\>"
+						x.text = x.text.Tr('\r').Trim()
+					cksum.Update(x.name.Trim())
+					cksum.Update(x.text)
+					if record_results isnt false
+						AddFile('checksum_results', x.name.RightFill(30) $ '\t\t' $
+							.fmt(Adler32(x.text)) $ '\r\n')
+					}
 				}
 			cksums.Add(Object(lib: table, max_mod: max_mod.StdShortDateTime(),
 				cksum: .fmt(cksum.Value())))

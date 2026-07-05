@@ -17,5 +17,6 @@ Contributions:
 	(UI, attach, menu: Help, to: TestRunner)
 	(UI, attach, menu: Help, to: BookEdit)
 	(UI, attach, menu: Help, to: 'Version Control')
+	(UI, attach, menu: Help, to: 'AI Chat')
 	)
 )

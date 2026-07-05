@@ -10,7 +10,7 @@ EditComponent
 		{
 		super(@args)
 		.El.AddEventListener('keydown', .onKeyDown)
-		.El.SetAttribute(#maxlength, EditorTextLimit)
+		.El.SetAttribute(#maxlength, args.editorTextLimit)
 		}
 
 	onKeyDown(event)

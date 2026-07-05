@@ -3,6 +3,8 @@ Test
 	{
 	Test_one()
 		{
+		Assert(ReadableDuration(0) is: "0")
+		Assert(ReadableDuration(.000000001) is: "0")
 		Assert(ReadableDuration(.123) is: "123 ms")
 		Assert(ReadableDuration(1.234) is: "1.23 sec")
 		Assert(ReadableDuration(180) is: "3 min")

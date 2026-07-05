@@ -14,6 +14,13 @@ Test
 		{
 		Assert(#20030220.123456789.EndOfDay() is: #20030220.235959999)
 		}
+	Test_StartOfDay()
+		{
+		Assert(#20030220.123456789.StartOfDay() is: #20030220)
+		Assert(#20030220.StartOfDay() is: #20030220)
+		Assert(#20030220.235959999.StartOfDay() is: #20030220)
+		Assert(#20030220.123456789.StartOfDay() is: #20030220.123456789.NoTime())
+		}
 
 	Test_Replace()
 		{

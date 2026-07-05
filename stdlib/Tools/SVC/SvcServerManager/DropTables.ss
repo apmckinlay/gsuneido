@@ -21,6 +21,7 @@ class
 			.excludes.Add(@BookTables())
 		.excludes.Sort!().Unique!()
 		.dropTables(0)
+		ResetCaches()
 		}
 
 	dropTables(runs)

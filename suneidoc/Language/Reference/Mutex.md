@@ -10,8 +10,6 @@ instance.Do(block) => result
 
 A Mutex instance has a single method, Do, which runs a function or block exclusively. For a given mutex instance, if multiple threads call Do at the same time, only one at a time will run their block. The others will wait (block). mutex.Do returns the result of the block. It will timeout and throw an exception if it is unable to obtain the lock within 10 seconds.
 
-**Note**: .Synchronized is <u>not</u> reentrant. If code calls .Synchronized while in .Synchronized (in the same class) it will deadlock (and then timeout).
-
 Most built-in operations in Suneido are "atomic". However, if you need to do several operations atomically, then you can use a Mutex. For example:
 
 ``` suneido

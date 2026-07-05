@@ -15,9 +15,9 @@ CustomizableFieldDialogPropertiesEditor_FieldControl
 		.tabthrough = .FindControl('tabthrough')
 		}
 
-	Controls()
+	GetControls()
 		{
-		ctrls = super.Controls()
+		ctrls = super.GetControls()
 		ctrls.Add(Object('Static' 'Select Text Height (from ' $
 			Display(.heightRangeFrom) $ ' to ' $ Display(.heightRangeTo) $ ')'))
 		ctrls.Add(#Skip)

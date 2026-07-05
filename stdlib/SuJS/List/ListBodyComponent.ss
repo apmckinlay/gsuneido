@@ -330,15 +330,15 @@ ListBodyBaseComponent
 
 			row = .getRow(target)
 			col = .header.ToControlColIndex(Number(target.GetAttribute('data-x')))
+			shift = event.GetDefault('shiftKey', false)
+			control = event.GetDefault('ctrlKey', false)
 			.Parent.RunWhenNotFrozen()
 				{
 				if freeze?
-					.Parent.EventWithFreeze(name, row, col,
-						shift: event.shiftKey, control: event.ctrlKey,
+					.Parent.EventWithFreeze(name, row, col, :shift, :control,
 						mouseEventId: ++.mouseEventId)
 				else
-					.Parent.Event(name, row, col,
-						shift: event.shiftKey, control: event.ctrlKey,
+					.Parent.Event(name, row, col, :shift, :control,
 						mouseEventId: ++.mouseEventId)
 				}
 		default:

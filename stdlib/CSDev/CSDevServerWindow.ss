@@ -12,6 +12,7 @@ class
 			Thread(RunHttpServer)
 		// start client at end, so server has enough time to start serving
 		.StartClient('CSDevServerWindow.OpenWindow()')
+		.setSystemInfo()
 		}
 
 	initDev()
@@ -92,6 +93,12 @@ class
 		return FileExists?(.defaultExe)
 			? .defaultExe
 			: 'axon.exe'
+		}
+
+	setSystemInfo()
+		{
+		for startup in Contributions('DevServerStartup')
+			startup()
 		}
 
 	StartUnauthorizedClient()

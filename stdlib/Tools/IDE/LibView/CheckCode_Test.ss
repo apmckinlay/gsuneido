@@ -10,7 +10,7 @@ Test
 		{
 		for c in .funcs
 			Assert(.warnings('function(){' $ c[0] $ '}') is: c[1], msg: c[0])
-		for c in .classes
+		for c in .getClasses()
 			Assert(.warnings('class {    ' $ c[0] $ '}') is: c[1], msg: c[0])
 		for c in .full
 			Assert(.warnings('           ' $ c[0]) is: c[1], msg: c[0])
@@ -39,18 +39,31 @@ Test
 		('y = y = 1 + y; y',
 			#((12, 1, "ERROR: used but not initialized: y")))
 		)
-	classes: (
-		('New() { }', #())
-		('F(x){} G(x){}', #(
-			(2, 1, "WARNING: initialized but not used: x"),
-			(9, 1, "WARNING: initialized but not used: x")))
-		('F(x){} G(x){x}',
-			#((2, 1, "WARNING: initialized but not used: x")))
-		('F(x){FakeFunc(x)} G(x){x}',
-			#((5, 8, "ERROR: can't find: FakeFunc")))
-		('F(x){x} G(x){}',
-			#((10, 1, "WARNING: initialized but not used: x")))
+	getClasses()
+		{
+		classes = Object(
+			#('New() { }', #())
+			#('F(x){} G(x){}', #(
+				(2, 1, "WARNING: initialized but not used: x"),
+				(9, 1, "WARNING: initialized but not used: x")))
+			#('F(x){} G(x){x}',
+				#((2, 1, "WARNING: initialized but not used: x")))
+			#('F(x){FakeFunc(x)} G(x){x}',
+				#((5, 8, "ERROR: can't find: FakeFunc")))
+			#('F(x){x} G(x){}',
+				#((10, 1, "WARNING: initialized but not used: x")))
 		)
+
+		if BuiltDate() > #20260514
+			{
+			classes.Append(#(
+				#('Foo(x :string) :string { x }', #())
+				#('Foo(x: string|number) :object|false { x }', #())
+				#('Foo(x :string = 0, y: object = false) :string|false {y[x] }', #())
+				))
+			}
+		return classes
+		}
 	full: (
 		('NonExistent { }',
 			#((0, 11, "ERROR: can't find: NonExistent")))
@@ -103,7 +116,6 @@ Test
 		test('.Trim() isnt ""', "use .Blank?")
 		test('false is x.Find', "use .Has?")
 		test('false is x.FindIf', "use .Any?")
-		test('func(foo :bar)', "must be preceded")
 		test('false is i = x.Find', true)
 		test('false is i = x.FindIf', true)
 		test('//Date().End()', true)
@@ -143,6 +155,17 @@ Test
 
 		test("5.Times(", " use for ..")
 		test("mock.Verify.Times(", true)
+
+		if BuiltDate() < #20260514
+			return
+		test('func(foo :bar)', true) // this used to be invalid, now is an annotation
+		test('func(x :string)', true)
+		test('func(x: string)', true)
+		test('func(x: string|number)', true)
+		test('func(x :string, y :number|false)', true)
+		test('func() :bar', true)
+		test('func() :string|false', true)
+		test('1 + :bar', "must be preceded")
 		}
 	Test_extra_warning()
 		{

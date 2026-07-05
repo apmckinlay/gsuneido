@@ -9,8 +9,9 @@ LibViewAddon
 		options.Add('Move To Other Library View', 'Copy Library And Name', 'Copy Name',
 			'', 'Find References', 'Diff to Overridden', 'Diff to Original',
 			'Restore to Original', #('Restore %1'), 'Version History', '',
-			'Go To Documentation', 'Edit Documentation', 'Go To Associated Test', '',
-			'Run Associated Test', 'Debug %1', '&Run %1', '&Profile %1', '', 'Export %1')
+			'Go To Documentation', 'Edit Documentation',
+			'Go To Associated Test', 'Run Associated Test', '',
+			'Debug %1', '&Run %1', '&Profile %1', 'Review With AI', '', 'Export %1')
 		}
 
 	TabMenu_CopyLibraryAndName(tabData)
@@ -123,4 +124,10 @@ LibViewAddon
 
 	TabMenu_VersionHistory(tabData)
 		{ VersionHistoryControl(tabData.table, tabData.name) }
+
+	TabMenu_ReviewWithAI(tabData)
+		{
+		setText = "review the changes in " $ tabData.name
+		AiAgentControl(:setText)
+		}
 	}

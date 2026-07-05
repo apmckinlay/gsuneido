@@ -72,8 +72,11 @@ Controller
 		.resources.RemoveAll()
 		.resources.Append(#(Static 'ResourceCounts'))
 		for m in counts.Members().Sort!()
-			.resources.Append(
-				Object('Pair', Object('Static', m), Object('Static', String(counts[m]))))
+			.resources.Append(.buildPair(m, counts[m]))
+		}
+	buildPair(name, value)
+		{
+		return Object('Pair', Object('Static', name), Object('Static', String(value)))
 		}
 	updateSuneidoInfo()
 		{
@@ -81,9 +84,7 @@ Controller
 		.suneidoinfo.Append(#(Pair, #(Static 'Suneido.Info'), #(Static '')))
 		info = Suneido.Info().Copy().Remove('build_info').Remove('built')
 		for m in info.Sort!()
-			.suneidoinfo.Append(
-				Object('Pair', Object('Static', m),
-					Object('Static', String(Suneido.Info(m)))))
+			.suneidoinfo.Append(.buildPair(m, Suneido.Info(m)))
 		}
 	On_Inspect_Suneido()
 		{

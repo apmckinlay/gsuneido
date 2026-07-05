@@ -141,6 +141,9 @@ class
 			Object('ContextMenuList', .menu.Map(.formatMenuItem), x, y, rcExclude),
 			border: 0, style: WS.POPUP, backdropDismiss?:)
 			return 0 // dismissed
+		// ctrl was destroyed while context menu open
+		if ctrl.Empty?()
+			return false
 		return id
 		}
 

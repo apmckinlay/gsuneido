@@ -52,6 +52,8 @@ Controller
 						#(Skip 4),
 						.findByExpressionOption()
 						#(Skip 4),
+						.findByCombyOption()
+						#(Skip 4),
 						Object('Horz', .showOptions(),
 							#(Skip 80), #(Button Next), #Skip, #(Button Prev))
 						),
@@ -105,6 +107,19 @@ Controller
 				Object('EnhancedButton', command: 'Find By Expression Help',
 					image: 'questionMark_black.emf', imageColor: CLR.Inactive,
 					mouseOverImageColor: CLR.Highlight, mouseEffect:, imagePadding: .1)))
+		}
+	findByCombyOption()
+		{
+		return Object(#Pair
+			#(Static 'Comby'),
+			Object(#Horz
+				#(FieldHistory, font: '@mono', size: '+1', width: 60,
+					cue: 'use :[arg]'
+					name: 'bycomby')
+				/*#Skip
+				Object('EnhancedButton', command: 'Find By Expression Help',
+					image: 'questionMark_black.emf', imageColor: CLR.Inactive,
+					mouseOverImageColor: CLR.Highlight, mouseEffect:, imagePadding: .1)*/))
 		}
 	showOptions()
 		{
@@ -240,7 +255,8 @@ Controller
 		return data.textRepeat.Any?({ it.text isnt '' }) or
 			data.nameRepeat.Any?({ it.text isnt '' }) or
 			data.bytoken isnt '' or
-			data.byexpression isnt ''
+			data.byexpression isnt '' or
+			data.bycomby isnt ''
 			? "" : 'Please enter something to find'
 		}
 
@@ -266,7 +282,9 @@ Controller
 
 		h4 = Opt(data.byexpression, ' by expression')
 
-		return 'Find ' $ h0 $ Join(' with ', h1, h2, h3, h4) $
+		h5 = Opt(data.bycomby, ' by comby')
+
+		return 'Find ' $ h0 $ Join(' with ', h1, h2, h3, h4, h5) $
 			(data.exclude is true ? ' excluding ' : ' in ') $ data.libs
 		}
 	headerFor(repeat)

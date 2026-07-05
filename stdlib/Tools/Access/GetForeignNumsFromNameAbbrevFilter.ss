@@ -7,7 +7,8 @@ class
 	limit: 3000
 	CallClass(field, sf, operation, value = '', value2 = '')
 		{
-		if operation is ''
+		if operation is '' or
+			GetContributions('FieldsSkipGetForeignNumsFromNameAbbrev').Has?(field)
 			return false
 		if false is numField = sf.GetJoinNumField(field)
 			return false

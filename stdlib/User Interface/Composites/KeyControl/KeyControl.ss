@@ -122,6 +122,11 @@ ChooseField
 		if saveInfoName is ''
 			SuneidoLog("INFO: KeyControl doesn't have Name for KeyListView",
 				calls:, params: Object(field: .field, query: .query))
+		return .BuildDialogControl(saveInfoName)
+		}
+
+	BuildDialogControl(saveInfoName)
+		{
 		return Object(KeyListView, .query, .columns, saveInfoName, .prefix,
 			access: .access, prefixColumn: .prefixColumn, keys: .locatekeys,
 			field: .field, value: .Get(), excludeSelect: .excludeSelect,

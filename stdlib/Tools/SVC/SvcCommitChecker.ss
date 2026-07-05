@@ -16,6 +16,7 @@ class
 			.whitespace_in_name?,
 			.checkLineEnds,
 			.need_to_run_tests?,
+			.type_errors_in_local_changes?,
 			.additional_svc_checks,
 			]
 			if '' isnt msg = check(:changes, :model, :table)
@@ -186,6 +187,32 @@ class
 			: ''
 		return 'You must run all the tests successfully before sending changes' $
 			testRun $ details
+		}
+
+	type_errors_in_local_changes?(changes, model, table)
+		{
+		if table is 'Contrib' or not model.Library?(table)
+			return ''
+		errors = Object()
+		for change in changes
+			if change.type is '+' // check new records only
+				.collectTypeErrors(change, errors)
+		return Opt('Unable to send due to type errors:\r\n\t- ', errors.Join('\r\n\t- '))
+		}
+
+	collectTypeErrors(change, errors)
+		{
+		if false is rec = SvcTable(change.lib).Get(change.name)
+			return
+		// src: rec.text checks the about-to-be-pushed local version, not the db copy
+		response = TypeCheckHelper.Run(change.name, TypeCheckerMethods.Infer,
+			skipLineageOrLibName: change.lib, src: rec.text)
+		typeErrors, unused =
+			TypeCheckHelper.FormatDiagnostics(
+				response.GetDefault(#diagnostics, false), change.lib)
+		if typeErrors.NotEmpty?()
+			errors.Add(change.lib $ ':' $ change.name $ ' (' $
+				typeErrors.Join('\r\n').Ellipsis(.maxErrLength, atEnd:) $ ')')
 		}
 
 	additional_svc_checks(model)

@@ -7,10 +7,11 @@ DiffBase
 	Name: "Diff"
 	CallClass(title, listNew, listOld, titleNew, titleOld,
 		gotoButton = false, comment = false, commentBgColor = false, newOnRight? = false,
-		extraControls = #(Skip), titleNewRight = "", titleOldRight = "")
+		extraControls = #(Skip), titleNewRight = "", titleOldRight = "",
+		lib = '', recname = '')
 		{
 		Window(
-			Object(this, listNew, listOld, "", "", titleNew, titleOld, :gotoButton,
+			Object(this, listNew, listOld, lib, recname, titleNew, titleOld, :gotoButton,
 				:comment, :commentBgColor, :newOnRight?, :extraControls, :titleNewRight,
 				:titleOldRight),
 			:title, keep_placement: 'Diff2Control')

@@ -41,13 +41,8 @@ CanvasItem
 	ResetSize()
 		{
 		result = ResetSizeControl(0, Object(x1: .x1, y1: .y1, x2: .x2, y2: .y2))
-		if (result is false)
-			return
-		x1 = Number(result.x1)
-		y1 = Number(result.y1)
-		x2 = Number(result.x2)
-		y2 = Number(result.y2)
-		.sortPoints(x1, y1, x2, y2)
+		if result isnt false
+			.sortPoints(result.x1, result.y1, result.x2, result.y2)
 		}
 
 	StringToSave()

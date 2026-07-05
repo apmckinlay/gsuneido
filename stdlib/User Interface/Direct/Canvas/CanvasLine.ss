@@ -32,10 +32,10 @@ CanvasItem
 		{
 		if false is size = ResetSizeControl(0, Object(x1: .x1, y1: .y1, x2: .x2, y2: .y2))
 			return
-		.x1 = Number(size.x1)
-		.y1 = Number(size.y1)
-		.x2 = Number(size.x2)
-		.y2 = Number(size.y2)
+		.x1 = size.x1
+		.y1 = size.y1
+		.x2 = size.x2
+		.y2 = size.y2
 		}
 	StringToSave()
 		{

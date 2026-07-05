@@ -145,6 +145,10 @@ CommandParent
 		{
 		return .model.ColModel.GetSelectVals()
 		}
+	Getter_Extra_Select_vals()
+		{
+		return .view.Extra_Select_vals
+		}
 	SetSelectVals(select_vals)
 		{
 		.view.SetSelectVals(select_vals)
@@ -156,13 +160,30 @@ CommandParent
 		where = SelectRepeatControl.BuildWhere(sf, .Select_vals)
 		.SetWhere(sf.Joins(where.joinflds) $ where.where, quiet:)
 		}
-	ApplySelects()
+
+	ApplySelects(fromNew? = false)
 		{
 		sf = .GetSelectFields()
+		// At THIS point Select_vals HAS been updated from the Access side.
+		// TopFilters HAS NOT been constructed yet.
+		// CANNOT rely on top filters, as they might not GET constructed
+		// (i.e. the filters is not expanded)
 		where = SelectRepeatControl.BuildWhere(sf, .Select_vals)
 		whereStr = sf.Joins(where.joinflds) $ where.where
+
+		// At this point in time the ONLY thing we have that tells us what the
+		// selects on the subtables are is .view.extra_select_vals
+		// Access are NOT constructed when initialy entiring in list mode, do not
+		// atepmt to get their "where" - this is ONLY for when flipping.
+		if not fromNew?
+			{
+			extraWhere = .view.Select_ExtraWhere()
+			if 0 isnt extraWhere
+				whereStr $= extraWhere
+			}
 		result = .SetWhere(whereStr, quiet:)
 		.view.SelectControl_Changed()
+
 		return result
 		}
 

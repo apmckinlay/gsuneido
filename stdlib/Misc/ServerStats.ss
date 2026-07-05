@@ -91,29 +91,24 @@ class
 
 	GetLastBootTime()
 		{
-		try
-			return LocalCmds.GetLastBootTime()
-		catch (e)
-			return e
+		return .localCmd("GetLastBootTime")
 		}
 	GetCpuName()
 		{
-		try
-			return LocalCmds.GetCpuName()
-		catch (e)
-			return e
+		return .localCmd("GetCpuName")
 		}
 	getNumLogicalProcs()
 		{
-		try
-			return LocalCmds.GetLogicalProcessors()
-		catch (e)
-			return e
+		return .localCmd("GetLogicalProcessors")
 		}
 	getCpuCores()
 		{
+		return .localCmd("GetCpuCores")
+		}
+	localCmd(name)
+		{
 		try
-			return LocalCmds.GetCpuCores()
+			return LocalCmds[name]()
 		catch (e)
 			return e
 		}
