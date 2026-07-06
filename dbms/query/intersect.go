@@ -57,27 +57,34 @@ func (it *Intersect) getHeader() *Header {
 
 func (it *Intersect) getKeys() [][]string {
 	k := slc.With(it.source1.Keys(), it.source2.Keys()...)
-	return minimizeKeys(k)
+	return projectKeys(minimizeKeys(k), it.header.Columns)
 }
 
 func (it *Intersect) getIndexes() [][]string {
 	idx1 := it.source1.Indexes()
 	idx2 := it.source2.Indexes()
-	if isEmptyKey(idx1) {
-		return idx2
-	} else if isEmptyKey(idx2) {
-		return idx1
+	if isEmptyKey(idx1) && isEmptyKey(idx2) {
+		return emptyKey
 	}
-	return set.UnionFn(idx1, idx2, slices.Equal)
+	return projectIndexes(set.UnionFn(idx1, idx2, slices.Equal), it.header.Columns)
 }
 
 func (it *Intersect) getFixed() Fixed {
-	// same as Join
 	fixed, none := it.source1.Fixed().Combine(it.source2.Fixed())
 	if none {
 		it.conflict = true
 	}
-	return fixed
+	return intersectFixed(fixed, it.header.Columns)
+}
+
+func intersectFixed(fixed Fixed, cols []string) Fixed {
+	result := make(Fixed, 0, len(fixed))
+	for _, f := range fixed {
+		if slices.Contains(cols, f.col) {
+			result = append(result, f)
+		}
+	}
+	return result
 }
 
 func (it *Intersect) getNrows() (int, int) {
