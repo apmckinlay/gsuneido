@@ -27,7 +27,7 @@ func Run() int {
 	return goc.Run()
 }
 
-var _ = builtin(MessageLoop, "(hwnd = 0)")
+var _ = builtin(MessageLoop, "(hwnd = 0) :void")
 
 func MessageLoop(a Value) Value {
 	goc.MessageLoop(uintptr(ToInt(a)))

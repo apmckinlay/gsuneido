@@ -8,38 +8,38 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 )
 
-var _ = builtin(Type, "(value)")
+var _ = builtin(Type, "(value) :string")
 
 func Type(arg Value) Value {
 	return SuStr(arg.Type().String())
 }
 
-var _ = builtin(BooleanQ, "(value)")
+var _ = builtin(BooleanQ, "(value) :boolean")
 
 func BooleanQ(arg Value) Value {
 	return SuBool(arg.Type() == types.Boolean)
 }
 
-var _ = builtin(NumberQ, "(value)")
+var _ = builtin(NumberQ, "(value) :boolean")
 
 func NumberQ(arg Value) Value {
 	return SuBool(arg.Type() == types.Number)
 }
 
-var _ = builtin(StringQ, "(value)")
+var _ = builtin(StringQ, "(value) :boolean")
 
 func StringQ(arg Value) Value {
 	t := arg.Type()
 	return SuBool(t == types.String || t == types.Except)
 }
 
-var _ = builtin(DateQ, "(value)")
+var _ = builtin(DateQ, "(value) :boolean")
 
 func DateQ(arg Value) Value {
 	return SuBool(arg.Type() == types.Date)
 }
 
-var _ = builtin(ObjectQ, "(value)")
+var _ = builtin(ObjectQ, "(value) :boolean")
 
 func ObjectQ(arg Value) Value {
 	switch arg.Type() {
@@ -49,25 +49,25 @@ func ObjectQ(arg Value) Value {
 	return False
 }
 
-var _ = builtin(RecordQ, "(value)")
+var _ = builtin(RecordQ, "(value) :boolean")
 
 func RecordQ(arg Value) Value {
 	return SuBool(arg.Type() == types.Record)
 }
 
-var _ = builtin(ClassQ, "(value)")
+var _ = builtin(ClassQ, "(value) :boolean")
 
 func ClassQ(arg Value) Value {
 	return SuBool(arg.Type() == types.Class)
 }
 
-var _ = builtin(InstanceQ, "(value)")
+var _ = builtin(InstanceQ, "(value) :boolean")
 
 func InstanceQ(arg Value) Value {
 	return SuBool(arg.Type() == types.Instance)
 }
 
-var _ = builtin(FunctionQ, "(value)")
+var _ = builtin(FunctionQ, "(value) :boolean")
 
 func FunctionQ(arg Value) Value {
 	return SuBool(isFunction(arg))

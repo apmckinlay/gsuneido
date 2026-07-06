@@ -30,43 +30,43 @@ func Database(th *Thread, args []Value) Value {
 
 var databaseMethods = methods("db")
 
-var _ = staticMethod(db_Auth, "(data)")
+var _ = staticMethod(db_Auth, "(data) :boolean")
 
 func db_Auth(th *Thread, args []Value) Value {
 	return SuBool(th.Dbms().Auth(th, ToStr(args[0])))
 }
 
-var _ = staticMethod(db_Check, "()")
+var _ = staticMethod(db_Check, "() :string")
 
 func db_Check(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Check(false))
 }
 
-var _ = staticMethod(db_FullCheck, "()")
+var _ = staticMethod(db_FullCheck, "() :string")
 
 func db_FullCheck(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Check(true))
 }
 
-var _ = staticMethod(db_Connections, "()")
+var _ = staticMethod(db_Connections, "() :object")
 
 func db_Connections(th *Thread, args []Value) Value {
 	return th.Dbms().Connections()
 }
 
-var _ = staticMethod(db_CurrentSize, "()")
+var _ = staticMethod(db_CurrentSize, "() :number")
 
 func db_CurrentSize(th *Thread, args []Value) Value {
 	return IntVal(int(th.Dbms().Size()))
 }
 
-var _ = staticMethod(db_Cursors, "()")
+var _ = staticMethod(db_Cursors, "() :number")
 
 func db_Cursors(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Cursors())
 }
 
-var _ = staticMethod(db_Dump, "(table = '', to = '', publicKey = '')")
+var _ = staticMethod(db_Dump, "(table = '', to = '', publicKey = '') :string")
 
 func db_Dump(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
@@ -81,25 +81,25 @@ func db_Dump(th *Thread, args []Value) Value {
 		SuObjectOf(SuStr("Database.Dump"), args[0], args[1], args[2]))
 }
 
-var _ = staticMethod(db_Final, "()")
+var _ = staticMethod(db_Final, "() :number")
 
 func db_Final(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Final())
 }
 
-var _ = staticMethod(db_Info, "()")
+var _ = staticMethod(db_Info, "() :object")
 
 func db_Info(th *Thread, args []Value) Value {
 	return th.Dbms().Info()
 }
 
-var _ = staticMethod(db_Kill, "(sessionId)")
+var _ = staticMethod(db_Kill, "(sessionId) :number")
 
 func db_Kill(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Kill(ToStr(args[0])))
 }
 
-var _ = staticMethod(db_Load, "(table, from = '', privateKey = '', passphrase = '')")
+var _ = staticMethod(db_Load, "(table, from = '', privateKey = '', passphrase = '') :number")
 
 func db_Load(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
@@ -109,43 +109,43 @@ func db_Load(th *Thread, args []Value) Value {
 		SuObjectOf(SuStr("Database.Load"), args[0], args[1], args[2], args[3]))
 }
 
-var _ = staticMethod(db_Nonce, "()")
+var _ = staticMethod(db_Nonce, "() :string")
 
 func db_Nonce(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Nonce(th))
 }
 
-var _ = staticMethod(db_Schema, "(table)")
+var _ = staticMethod(db_Schema, "(table) :string")
 
 func db_Schema(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Schema(ToStr(args[0])))
 }
 
-var _ = staticMethod(db_SessionId, "(id = '')")
+var _ = staticMethod(db_SessionId, "(id = '') :string")
 
 func db_SessionId(th *Thread, args []Value) Value {
 	return SuStr(th.SessionId(ToStr(args[0])))
 }
 
-var _ = staticMethod(db_TempDest, "()")
+var _ = staticMethod(db_TempDest, "() :number")
 
 func db_TempDest() Value {
 	return Zero
 }
 
-var _ = staticMethod(db_Token, "()")
+var _ = staticMethod(db_Token, "() :string")
 
 func db_Token(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Token())
 }
 
-var _ = staticMethod(db_Transactions, "()")
+var _ = staticMethod(db_Transactions, "() :object")
 
 func db_Transactions(th *Thread, args []Value) Value {
 	return th.Dbms().Transactions()
 }
 
-var _ = staticMethod(db_CorruptedQ, "()")
+var _ = staticMethod(db_CorruptedQ, "() :boolean")
 
 func db_CorruptedQ(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
@@ -154,7 +154,7 @@ func db_CorruptedQ(th *Thread, args []Value) Value {
 	return th.Dbms().Exec(th, SuObjectOf(SuStr("Database.Corrupted?")))
 }
 
-var _ = staticMethod(db_Top10, "(table, column)")
+var _ = staticMethod(db_Top10, "(table, column) :object")
 
 func db_Top10(th *Thread, args []Value) Value {
 	table := ToStr(args[0])
@@ -182,7 +182,7 @@ func db_Top10(th *Thread, args []Value) Value {
 	return result
 }
 
-var _ = staticMethod(db_Distinct, "(table)")
+var _ = staticMethod(db_Distinct, "(table) :object")
 
 func db_Distinct(th *Thread, args []Value) Value {
 	table := ToStr(args[0])
@@ -226,7 +226,7 @@ func indexedColumns(indexes []schema.Index) []string {
 	return cols
 }
 
-var _ = staticMethod(db_Members, "()")
+var _ = staticMethod(db_Members, "() :object")
 
 func db_Members() Value {
 	return db_members
@@ -247,7 +247,7 @@ func (d *suDatabaseGlobal) String() string {
 	return "Database /* builtin class */"
 }
 
-var _ = builtin(DoWithoutTriggers, "(tables, block)")
+var _ = builtin(DoWithoutTriggers, "(tables, block) :unknown")
 
 func DoWithoutTriggers(th *Thread, args []Value) Value {
 	dbms := th.Dbms()

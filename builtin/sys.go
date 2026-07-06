@@ -16,13 +16,13 @@ import (
 
 var sysMem = systemMemory() // cache
 
-var _ = builtin(SystemMemory, "()")
+var _ = builtin(SystemMemory, "() :number")
 
 func SystemMemory() Value {
 	return Int64Val(int64(sysMem))
 }
 
-var _ = builtin(MemoryArena, "()")
+var _ = builtin(MemoryArena, "() :number")
 
 func MemoryArena() Value {
 	return Int64Val(int64(HeapSys()))
@@ -34,7 +34,7 @@ func HeapSys() uint64 {
 	return ms.HeapSys
 }
 
-var _ = builtin(GetCurrentDirectory, "()")
+var _ = builtin(GetCurrentDirectory, "() :string")
 
 func GetCurrentDirectory() Value {
 	dir, err := os.Getwd()
@@ -46,7 +46,7 @@ func GetCurrentDirectory() Value {
 
 // NOTE: temp file is NOT deleted automatically on exit
 // (same as cSuneido, but different from jSuneido)
-var _ = builtin(GetTempFileName, "(path, prefix)")
+var _ = builtin(GetTempFileName, "(path, prefix) :string")
 
 func GetTempFileName(path, prefix Value) Value {
 	tmpDir := ToStr(path)
@@ -67,7 +67,7 @@ func GetTempFileName(path, prefix Value) Value {
 	return SuStr(filename)
 }
 
-var _ = builtin(CreateDir, "(dirname)")
+var _ = builtin(CreateDir, "(dirname) :string|true")
 
 func CreateDir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
@@ -94,7 +94,7 @@ func CreateDir(th *Thread, args []Value) Value {
 	return True
 }
 
-var _ = builtin(EnsureDir, "(dirname)")
+var _ = builtin(EnsureDir, "(dirname) :string|true")
 
 func EnsureDir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
@@ -120,7 +120,7 @@ func EnsureDir(th *Thread, args []Value) Value {
 	return True
 }
 
-var _ = builtin(DeleteFileApi, "(filename)")
+var _ = builtin(DeleteFileApi, "(filename) :string|true")
 
 func DeleteFileApi(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
@@ -145,7 +145,7 @@ func DeleteFileApi(th *Thread, args []Value) Value {
 	return True
 }
 
-var _ = builtin(FileExistsQ, "(filename)")
+var _ = builtin(FileExistsQ, "(filename) :boolean")
 
 func FileExistsQ(arg Value) Value {
 	path := ToStr(arg)
@@ -163,7 +163,7 @@ func FileExistsQ(arg Value) Value {
 	return SuBool(err == nil && info.Mode().IsRegular())
 }
 
-var _ = builtin(DirExistsQ, "(filename)")
+var _ = builtin(DirExistsQ, "(filename) :boolean")
 
 func DirExistsQ(arg Value) Value {
 	path := ToStr(arg)
@@ -181,7 +181,7 @@ func DirExistsQ(arg Value) Value {
 	return SuBool(err == nil && info.Mode().IsDir())
 }
 
-var _ = builtin(MoveFile, "(from, to)")
+var _ = builtin(MoveFile, "(from, to) :string|true")
 
 func MoveFile(th *Thread, args []Value) Value {
 	from := ToStr(args[0])
@@ -208,7 +208,7 @@ func MoveFile(th *Thread, args []Value) Value {
 	return True
 }
 
-var _ = builtin(DeleteDir, "(dir)")
+var _ = builtin(DeleteDir, "(dir) :string|true")
 
 func DeleteDir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
@@ -243,7 +243,7 @@ func DeleteDir(th *Thread, args []Value) Value {
 	return True
 }
 
-var _ = builtin(GetMacAddresses, "()")
+var _ = builtin(GetMacAddresses, "() :object")
 
 func GetMacAddresses() Value {
 	ob := &SuObject{}
@@ -257,7 +257,7 @@ func GetMacAddresses() Value {
 	return ob
 }
 
-var _ = builtin(GetTempPath, "()")
+var _ = builtin(GetTempPath, "() :string")
 
 func GetTempPath() Value {
 	s := os.TempDir()
@@ -268,7 +268,7 @@ func GetTempPath() Value {
 	return SuStr(s)
 }
 
-var _ = builtin(OSName, "()")
+var _ = builtin(OSName, "() :string")
 
 func OSName() Value {
 	os := runtime.GOOS
@@ -276,7 +276,7 @@ func OSName() Value {
 	return SuStr(os)
 }
 
-var _ = builtin(FileSize, "(file)")
+var _ = builtin(FileSize, "(file) :number")
 
 func FileSize(th *Thread, args []Value) Value {
 	path := ToStr(args[0])

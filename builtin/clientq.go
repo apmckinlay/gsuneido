@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 )
 
-var _ = builtin(ClientQ, "()")
+var _ = builtin(ClientQ, "() :boolean")
 
 func ClientQ() Value {
 	return SuBool(options.Action == "client")

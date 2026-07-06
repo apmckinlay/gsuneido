@@ -22,7 +22,7 @@ func class_new(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return class.New(th, as)
 }
 
-var _ = method(class_BaseQ, "(class)")
+var _ = method(class_BaseQ, "(class) :boolean")
 
 func class_BaseQ(th *Thread, this Value, args []Value) Value {
 	return nilToFalse(this.(Findable).Finder(th,
@@ -34,7 +34,7 @@ func class_BaseQ(th *Thread, this Value, args []Value) Value {
 		}))
 }
 
-var _ = method(class_MethodQ, "(string)")
+var _ = method(class_MethodQ, "(string) :boolean")
 
 func class_MethodQ(th *Thread, this Value, args []Value) Value {
 	m := ToStr(args[0])
@@ -48,7 +48,7 @@ func class_MethodQ(th *Thread, this Value, args []Value) Value {
 	}))
 }
 
-var _ = method(class_MethodClass, "(string)")
+var _ = method(class_MethodClass, "(string) :false|unknown")
 
 func class_MethodClass(th *Thread, this Value, args []Value) Value {
 	m := ToStr(args[0])
@@ -62,13 +62,13 @@ func class_MethodClass(th *Thread, this Value, args []Value) Value {
 	}))
 }
 
-var _ = method(class_ReadonlyQ, "()")
+var _ = method(class_ReadonlyQ, "() :boolean")
 
 func class_ReadonlyQ(this Value) Value {
 	return True
 }
 
-var _ = method(class_StartCoverage, "(count = false)")
+var _ = method(class_StartCoverage, "(count = false) :void")
 
 func class_StartCoverage(this, a Value) Value {
 	if !options.Coverage.Load() {
@@ -78,7 +78,7 @@ func class_StartCoverage(this, a Value) Value {
 	return nil
 }
 
-var _ = method(class_StopCoverage, "()")
+var _ = method(class_StopCoverage, "() :object")
 
 func class_StopCoverage(this Value) Value {
 	return this.(interface{ StopCoverage() *SuObject }).StopCoverage()

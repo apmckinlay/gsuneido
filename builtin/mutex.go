@@ -14,7 +14,7 @@ type suMutex struct {
 	mut MutexT
 }
 
-var _ = builtin(Mutex, "()")
+var _ = builtin(Mutex, "() :unknown")
 
 func Mutex() Value {
 	return &suMutex{mut: MakeMutexT()}
@@ -22,7 +22,7 @@ func Mutex() Value {
 
 var suMutexMethods = methods("mu")
 
-var _ = method(mu_Do, "(block)")
+var _ = method(mu_Do, "(block) :unknown")
 
 func mu_Do(th *Thread, this Value, args []Value) Value {
 	sm := this.(*suMutex)

@@ -10,7 +10,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(CreateLexer, "(name)")
+var _ = builtin(CreateLexer, "(name) :number")
 
 func CreateLexer(a Value) Value {
 	rtn := goc.CreateLexer(zstrArg(a))

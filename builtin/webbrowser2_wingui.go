@@ -29,7 +29,7 @@ func (*suWebBrowser2) SetConcurrent() {
 	// ok since immutable (assuming the COM object is thread safe)
 }
 
-var _ = builtin(WebBrowser2, "(hwnd, dllPath, userDataFolder, cb)")
+var _ = builtin(WebBrowser2, "(hwnd, dllPath, userDataFolder, cb) :number|unknown")
 
 func WebBrowser2(th *Thread, args []Value) Value {
 	var iunk uintptr
@@ -47,7 +47,7 @@ func WebBrowser2(th *Thread, args []Value) Value {
 
 var suWebBrowser2Methods = methods("web2")
 
-var _ = method(web2_Release, "()")
+var _ = method(web2_Release, "() :number")
 
 func web2_Release(this Value) Value {
 	wb := this.(*suWebBrowser2)
@@ -55,7 +55,7 @@ func web2_Release(this Value) Value {
 	return intRet(rtn)
 }
 
-var _ = method(web2_Resize, "(w, h)")
+var _ = method(web2_Resize, "(w, h) :number")
 
 func web2_Resize(this Value, _w Value, _h Value) Value {
 	wb := this.(*suWebBrowser2)
@@ -65,7 +65,7 @@ func web2_Resize(this Value, _w Value, _h Value) Value {
 	return intRet(rtn)
 }
 
-var _ = method(web2_Navigate, "(s)")
+var _ = method(web2_Navigate, "(s) :number")
 
 func web2_Navigate(this Value, s Value) Value {
 	wb := this.(*suWebBrowser2)
@@ -73,7 +73,7 @@ func web2_Navigate(this Value, s Value) Value {
 	return intRet(rtn)
 }
 
-var _ = method(web2_NavigateToString, "(s)")
+var _ = method(web2_NavigateToString, "(s) :number")
 
 func web2_NavigateToString(this Value, s Value) Value {
 	wb := this.(*suWebBrowser2)
@@ -81,7 +81,7 @@ func web2_NavigateToString(this Value, s Value) Value {
 	return intRet(rtn)
 }
 
-var _ = method(web2_ExecuteScript, "(script)")
+var _ = method(web2_ExecuteScript, "(script) :number")
 
 func web2_ExecuteScript(this Value, script Value) Value {
 	wb := this.(*suWebBrowser2)
@@ -89,7 +89,7 @@ func web2_ExecuteScript(this Value, script Value) Value {
 	return intRet(rtn)
 }
 
-var _ = method(web2_GetSource, "()")
+var _ = method(web2_GetSource, "() :string")
 
 func web2_GetSource(this Value) Value {
 	wb := this.(*suWebBrowser2)
@@ -101,7 +101,7 @@ func web2_GetSource(this Value) Value {
 	return bufZstr(buf)
 }
 
-var _ = method(web2_Print, "()")
+var _ = method(web2_Print, "() :number")
 
 func web2_Print(this Value) Value {
 	wb := this.(*suWebBrowser2)
@@ -109,7 +109,7 @@ func web2_Print(this Value) Value {
 	return intRet(rtn)
 }
 
-var _ = method(web2_SetFocus, "()")
+var _ = method(web2_SetFocus, "() :number")
 
 func web2_SetFocus(this Value) Value {
 	wb := this.(*suWebBrowser2)

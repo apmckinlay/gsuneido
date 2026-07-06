@@ -5,7 +5,7 @@ package builtin
 
 import . "github.com/apmckinlay/gsuneido/core"
 
-var _ = builtin(Method, "(object, methodName)")
+var _ = builtin(Method, "(object, methodName) :false|unknown")
 
 func Method(th *Thread, args []Value) Value {
 	ob := args[0]

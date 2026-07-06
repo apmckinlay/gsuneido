@@ -10,14 +10,14 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-var _ = builtin(SeqQ, "(value)")
+var _ = builtin(SeqQ, "(value) :boolean")
 
 func SeqQ(val Value) Value {
 	_, ok := val.(*SuSequence)
 	return SuBool(ok)
 }
 
-var _ = builtin(Seq, "(from=false, to=false, by=1)")
+var _ = builtin(Seq, "(from=false, to=false, by=1) :sequence")
 
 func Seq(from, to, by Value) Value {
 	if from == False {

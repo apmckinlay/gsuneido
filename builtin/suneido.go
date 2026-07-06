@@ -19,7 +19,7 @@ import (
 
 var _ = exportMethods(&SuneidoObjectMethods, "suneido")
 
-var _ = staticMethod(suneido_Compile, "(source, errob = false)")
+var _ = staticMethod(suneido_Compile, "(source, errob = false) :unknown")
 
 func suneido_Compile(th *Thread, args []Value) Value {
 	src := ToStr(args[0])
@@ -34,7 +34,7 @@ func suneido_Compile(th *Thread, args []Value) Value {
 	return val
 }
 
-var _ = staticMethod(suneido_Parse, "(source)")
+var _ = staticMethod(suneido_Parse, "(source) :unknown")
 
 func suneido_Parse(th *Thread, args []Value) Value {
 	src := ToStr(args[0])
@@ -46,13 +46,13 @@ func suneido_Parse(th *Thread, args []Value) Value {
 	return ast
 }
 
-var _ = staticMethod(suneido_Regex, "(pattern)")
+var _ = staticMethod(suneido_Regex, "(pattern) :unknown")
 
 func suneido_Regex(arg Value) Value {
 	return SuRegex{Pat: regex.Compile(ToStr(arg))}
 }
 
-var _ = staticMethod(suneido_GoMetric, "(name = false)")
+var _ = staticMethod(suneido_GoMetric, "(name = false) :false|number|object")
 
 func suneido_GoMetric(th *Thread, args []Value) Value {
 	if args[0] == False {
@@ -78,27 +78,27 @@ func suneido_GoMetric(th *Thread, args []Value) Value {
 
 // force various kinds of errors for testing
 
-var _ = staticMethod(suneido_CrashX, "()")
+var _ = staticMethod(suneido_CrashX, "() :void")
 
 func suneido_CrashX() Value {
 	go func() { panic("Crash!") }()
 	return nil
 }
 
-var _ = staticMethod(suneido_AssertFail, "()")
+var _ = staticMethod(suneido_AssertFail, "() :void")
 
 func suneido_AssertFail() Value {
 	assert.Msg("Suneido.AssertFail").That(false)
 	return nil
 }
 
-var _ = staticMethod(suneido_ShouldNotReachHere, "()")
+var _ = staticMethod(suneido_ShouldNotReachHere, "() :void")
 
 func suneido_ShouldNotReachHere() Value {
 	panic(assert.ShouldNotReachHere())
 }
 
-var _ = staticMethod(suneido_RuntimeError, "()")
+var _ = staticMethod(suneido_RuntimeError, "() :void")
 
 var Nil []Value
 
@@ -106,21 +106,21 @@ func suneido_RuntimeError() Value {
 	return Nil[123]
 }
 
-var _ = staticMethod(suneido_StrictCompare, "(bool)")
+var _ = staticMethod(suneido_StrictCompare, "(bool) :void")
 
 func suneido_StrictCompare(x Value) Value {
 	options.StrictCompare = ToBool(x)
 	return nil
 }
 
-var _ = staticMethod(suneido_StrictCompareDb, "(bool)")
+var _ = staticMethod(suneido_StrictCompareDb, "(bool) :void")
 
 func suneido_StrictCompareDb(x Value) Value {
 	options.StrictCompareDb = ToBool(x)
 	return nil
 }
 
-var _ = staticMethod(suneido_WarningsThrow, "(arg = true)")
+var _ = staticMethod(suneido_WarningsThrow, "(arg = true) :void")
 
 func suneido_WarningsThrow(x Value) Value {
 	switch x {
@@ -134,7 +134,7 @@ func suneido_WarningsThrow(x Value) Value {
 	return nil
 }
 
-var _ = staticMethod(suneido_Info, "(name = false)")
+var _ = staticMethod(suneido_Info, "(name = false) :object|string|number")
 
 func suneido_Info(x Value) Value {
 	if x == False {
@@ -145,7 +145,7 @@ func suneido_Info(x Value) Value {
 	return InfoStr(ToStr(x))
 }
 
-var _ = method(suneido_Members, "(all = false)")
+var _ = method(suneido_Members, "(all = false) :object")
 
 func suneido_Members(this Value, all Value) Value {
 	if !ToBool(all) {
@@ -163,7 +163,7 @@ func suneido_Members(this Value, all Value) Value {
 	return SuObjectOf(mems...)
 }
 
-var _ = staticMethod(suneido_IndexUse, "()")
+var _ = staticMethod(suneido_IndexUse, "() :object")
 
 func suneido_IndexUse() Value {
 	iu := qry.PullIdxUse()
@@ -174,7 +174,7 @@ func suneido_IndexUse() Value {
 	return ob
 }
 
-var _ = staticMethod(suneido_LibraryTags, "(@args)")
+var _ = staticMethod(suneido_LibraryTags, "(@args) :void")
 
 func suneido_LibraryTags(args Value) Value {
 	ob := args.(*SuObject)

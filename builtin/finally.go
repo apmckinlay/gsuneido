@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(Finally, "(main, final)")
+var _ = builtin(Finally, "(main, final) :unknown")
 
 func Finally(th *Thread, args []Value) Value {
 	defer func() {

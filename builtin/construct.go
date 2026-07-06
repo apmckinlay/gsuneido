@@ -9,7 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(Construct, "(what, suffix='')")
+var _ = builtin(Construct, "(what, suffix='') :object|unknown")
 
 func Construct(th *Thread, args []Value) Value {
 	what := args[0]

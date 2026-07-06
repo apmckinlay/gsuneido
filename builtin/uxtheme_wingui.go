@@ -18,7 +18,7 @@ var uxtheme = MustLoadDLL("uxtheme.dll")
 // long iStateId, RECT* pRect, RECT* pClipRect) long
 var drawThemeBackground = uxtheme.MustFindProc("DrawThemeBackground").Addr()
 var _ = builtin(DrawThemeBackground,
-	"(hTheme, hdc, iPartId, iStateId, pRect, pClipRect)")
+	"(hTheme, hdc, iPartId, iStateId, pRect, pClipRect) :number")
 
 func DrawThemeBackground(a, b, c, d, e, f Value) Value {
 	rtn, _, _ := syscall.SyscallN(drawThemeBackground,
@@ -36,7 +36,7 @@ func DrawThemeBackground(a, b, c, d, e, f Value) Value {
 // long dwTextFlags2, RECT* pRect) long
 var drawThemeText = uxtheme.MustFindProc("DrawThemeText").Addr()
 var _ = builtin(DrawThemeText, "(hTheme, hdc, iPartId, iStateId, pszText, "+
-	"iCharCount, dwTextFlags, dwTextFlags2, pRect)")
+	"iCharCount, dwTextFlags, dwTextFlags2, pRect) :number")
 
 func DrawThemeText(_ *Thread, a []Value) Value {
 	rtn, _, _ := syscall.SyscallN(drawThemeText,
@@ -54,7 +54,7 @@ func DrawThemeText(_ *Thread, a []Value) Value {
 
 // dll uxtheme:SetWindowTheme(pointer hwnd, string appname, string idlist) long
 var setWindowTheme = uxtheme.MustFindProc("SetWindowTheme").Addr()
-var _ = builtin(SetWindowTheme, "(hwnd, appname, idlist)")
+var _ = builtin(SetWindowTheme, "(hwnd, appname, idlist) :number")
 
 func SetWindowTheme(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(setWindowTheme,
@@ -66,7 +66,7 @@ func SetWindowTheme(a, b, c Value) Value {
 
 // dll uxtheme:GetWindowTheme(pointer hwnd) pointer
 var getWindowTheme = uxtheme.MustFindProc("GetWindowTheme").Addr()
-var _ = builtin(GetWindowTheme, "(hwnd)")
+var _ = builtin(GetWindowTheme, "(hwnd) :number")
 
 func GetWindowTheme(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(getWindowTheme,
@@ -76,7 +76,7 @@ func GetWindowTheme(a Value) Value {
 
 // dll uxtheme:IsAppThemed() bool
 var isAppThemed = uxtheme.MustFindProc("IsAppThemed").Addr()
-var _ = builtin(IsAppThemed, "()")
+var _ = builtin(IsAppThemed, "() :boolean")
 
 func IsAppThemed() Value {
 	rtn, _, _ := syscall.SyscallN(isAppThemed)
@@ -85,7 +85,7 @@ func IsAppThemed() Value {
 
 // dll long uxtheme:CloseThemeData(pointer hTheme)
 var closeThemeData = uxtheme.MustFindProc("CloseThemeData").Addr()
-var _ = builtin(CloseThemeData, "(hTheme)")
+var _ = builtin(CloseThemeData, "(hTheme) :number")
 
 func CloseThemeData(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(closeThemeData,
@@ -96,7 +96,7 @@ func CloseThemeData(a Value) Value {
 // dll bool UxTheme:IsThemeBackgroundPartiallyTransparent(
 // pointer hTheme, long iPartId, long iStateId)
 var isThemeBackgroundPartiallyTransparent = uxtheme.MustFindProc("IsThemeBackgroundPartiallyTransparent").Addr()
-var _ = builtin(IsThemeBackgroundPartiallyTransparent, "(hTheme, iPartId, iStateId)")
+var _ = builtin(IsThemeBackgroundPartiallyTransparent, "(hTheme, iPartId, iStateId) :boolean")
 
 func IsThemeBackgroundPartiallyTransparent(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(isThemeBackgroundPartiallyTransparent,
@@ -108,7 +108,7 @@ func IsThemeBackgroundPartiallyTransparent(a, b, c Value) Value {
 
 // dll pointer uxtheme:OpenThemeData(pointer hwnd, string pszClassList)
 var openThemeData = uxtheme.MustFindProc("OpenThemeData").Addr()
-var _ = builtin(OpenThemeData, "(hwnd, pszClassList)")
+var _ = builtin(OpenThemeData, "(hwnd, pszClassList) :number")
 
 func OpenThemeData(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(openThemeData,
@@ -120,7 +120,7 @@ func OpenThemeData(a, b Value) Value {
 // dll long UxTheme:DrawThemeParentBackground(pointer hwnd, pointer hdc,
 // RECT* prc)
 var drawThemeParentBackground = uxtheme.MustFindProc("DrawThemeParentBackground").Addr()
-var _ = builtin(DrawThemeParentBackground, "(hwnd, hdc, prc)")
+var _ = builtin(DrawThemeParentBackground, "(hwnd, hdc, prc) :number")
 
 func DrawThemeParentBackground(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(drawThemeParentBackground,

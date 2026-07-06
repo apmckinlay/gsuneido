@@ -10,13 +10,13 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 )
 
-var _ = builtin(ConcurrentQ, "(value)")
+var _ = builtin(ConcurrentQ, "(value) :boolean|string")
 
 func ConcurrentQ(v Value) Value {
 	return IsConcurrent(v)
 }
 
-var _ = builtin(Object, "(@args)")
+var _ = builtin(Object, "(@args) :object")
 
 func Object(arg Value) Value {
 	return arg
@@ -26,7 +26,7 @@ func Object(arg Value) Value {
 
 var _ = exportMethods(&ObjectMethods, "ob")
 
-var _ = method(ob_Add, "(@args)")
+var _ = method(ob_Add, "(@args) :object")
 
 func ob_Add(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
@@ -49,14 +49,14 @@ func ob_Add(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return this
 }
 
-var _ = method(ob_Assocs, "(list = true, named = true)")
+var _ = method(ob_Assocs, "(list = true, named = true) :object")
 
 func ob_Assocs(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
 	list, named := iterWhich(as, args)
 	return NewSuSequence(IterAssocs(ToContainer(this), list, named))
 }
 
-var _ = method(ob_BinarySearch, "(value, block = false)")
+var _ = method(ob_BinarySearch, "(value, block = false) :number")
 
 func ob_BinarySearch(th *Thread, this Value, args []Value) Value {
 	ob := ToContainer(this).ToObject()
@@ -66,13 +66,13 @@ func ob_BinarySearch(th *Thread, this Value, args []Value) Value {
 	return IntVal(ob.BinarySearch2(th, args[0], args[1]))
 }
 
-var _ = method(ob_Copy, "()")
+var _ = method(ob_Copy, "() :object")
 
 func ob_Copy(this Value) Value {
 	return ToContainer(this).Copy()
 }
 
-var _ = method(ob_Delete, "(@args)")
+var _ = method(ob_Delete, "(@args) :object")
 
 func ob_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
@@ -91,7 +91,7 @@ func ob_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return this
 }
 
-var _ = method(ob_Erase, "(@args)")
+var _ = method(ob_Erase, "(@args) :object")
 
 func ob_Erase(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
@@ -106,13 +106,13 @@ func ob_Erase(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return this
 }
 
-var _ = method(ob_Eval, "(@args)")
+var _ = method(ob_Eval, "(@args) :unknown")
 
 func ob_Eval(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return EvalAsMethod(th, as, this, args)
 }
 
-var _ = method(ob_Eval2, "(@args)")
+var _ = method(ob_Eval2, "(@args) :object")
 
 func ob_Eval2(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := &SuObject{}
@@ -122,13 +122,13 @@ func ob_Eval2(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return ob
 }
 
-var _ = method(ob_Find, "(value)")
+var _ = method(ob_Find, "(value) :false|unknown")
 
 func ob_Find(this Value, val Value) Value {
 	return ToContainer(this).ToObject().Find(val)
 }
 
-var _ = method(ob_GetDefault, "(member, block)")
+var _ = method(ob_GetDefault, "(member, block) :unknown")
 
 func ob_GetDefault(th *Thread, this Value, args []Value) Value {
 	ob := ToContainer(this)
@@ -141,19 +141,19 @@ func ob_GetDefault(th *Thread, this Value, args []Value) Value {
 	return args[1]
 }
 
-var _ = method(ob_HasQ, "(value)")
+var _ = method(ob_HasQ, "(value) :boolean")
 
 func ob_HasQ(this Value, val Value) Value {
 	return SuBool(ToContainer(this).ToObject().Find(val) != False)
 }
 
-var _ = method(ob_Iter, "()")
+var _ = method(ob_Iter, "() :object")
 
 func ob_Iter(this Value) Value {
 	return SuIter{Iter: IterValues(ToContainer(this), true, true)}
 }
 
-var _ = method(ob_Join, "(separator='')")
+var _ = method(ob_Join, "(separator :string ='') :string")
 
 func ob_Join(this Value, arg Value) Value {
 	ob := ToContainer(this)
@@ -173,7 +173,7 @@ func ob_Join(this Value, arg Value) Value {
 	return SuStr(sb.String())
 }
 
-var _ = method(ob_Max, "()")
+var _ = method(ob_Max, "() :unknown")
 
 func ob_Max(this Value) Value {
 	iter := ToContainer(this).Iter2(true, true)
@@ -189,20 +189,20 @@ func ob_Max(this Value) Value {
 	return max
 }
 
-var _ = method(ob_Members, "(list = true, named = true)")
+var _ = method(ob_Members, "(list = true, named = true) :object")
 
 func ob_Members(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
 	list, named := iterWhich(as, args)
 	return NewSuSequence(IterMembers(ToContainer(this), list, named))
 }
 
-var _ = method(ob_MemberQ, "(member)")
+var _ = method(ob_MemberQ, "(member) :boolean")
 
 func ob_MemberQ(this Value, val Value) Value {
 	return SuBool(ToContainer(this).HasKey(val))
 }
 
-var _ = method(ob_Min, "()")
+var _ = method(ob_Min, "() :unknown")
 
 func ob_Min(this Value) Value {
 	iter := ToContainer(this).Iter2(true, true)
@@ -218,7 +218,7 @@ func ob_Min(this Value) Value {
 	return min
 }
 
-var _ = method(ob_PopFirst, "()")
+var _ = method(ob_PopFirst, "() :unknown")
 
 func ob_PopFirst(this Value) Value {
 	x := ToContainer(this).ToObject().PopFirst()
@@ -228,7 +228,7 @@ func ob_PopFirst(this Value) Value {
 	return x
 }
 
-var _ = method(ob_PopLast, "()")
+var _ = method(ob_PopLast, "() :unknown")
 
 func ob_PopLast(this Value) Value {
 	x := ToContainer(this).ToObject().PopLast()
@@ -238,34 +238,34 @@ func ob_PopLast(this Value) Value {
 	return x
 }
 
-var _ = method(ob_ReadonlyQ, "()")
+var _ = method(ob_ReadonlyQ, "() :boolean")
 
 func ob_ReadonlyQ(this Value) Value {
 	return SuBool(ToContainer(this).IsReadOnly())
 }
 
-var _ = method(ob_ReverseX, "()")
+var _ = method(ob_ReverseX, "() :object")
 
 func ob_ReverseX(this Value) Value {
 	ToContainer(this).ToObject().Reverse()
 	return this
 }
 
-var _ = method(ob_Set_default, "(value=nil)")
+var _ = method(ob_Set_default, "(value=nil) :object")
 
 func ob_Set_default(this Value, val Value) Value {
 	ToContainer(this).ToObject().SetDefault(val)
 	return this
 }
 
-var _ = method(ob_Set_readonly, "()")
+var _ = method(ob_Set_readonly, "() :object")
 
 func ob_Set_readonly(this Value) Value {
 	ToContainer(this).SetReadOnly()
 	return this
 }
 
-var _ = method(ob_Size, "(list=false,named=false)")
+var _ = method(ob_Size, "(list=false,named=false) :number")
 
 func ob_Size(this, arg1, arg2 Value) Value {
 	list := ToBool(arg1)
@@ -282,21 +282,21 @@ func ob_Size(this, arg1, arg2 Value) Value {
 	return IntVal(n)
 }
 
-var _ = method(ob_SortX, "(block = false)")
+var _ = method(ob_SortX, "(block = false) :object")
 
 func ob_SortX(th *Thread, this Value, args []Value) Value {
 	ToContainer(this).ToObject().Sort(th, args[0])
 	return this
 }
 
-var _ = method(ob_UniqueX, "()")
+var _ = method(ob_UniqueX, "() :object")
 
 func ob_UniqueX(this Value) Value {
 	ToContainer(this).ToObject().Unique()
 	return this
 }
 
-var _ = method(ob_Values, "(list = true, named = true)")
+var _ = method(ob_Values, "(list = true, named = true) :object")
 
 func ob_Values(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
 	list, named := iterWhich(as, args)
@@ -364,7 +364,7 @@ func EvalAsMethod(th *Thread, as *ArgSpec, ob Value, args []Value) Value {
 	return f.Call(th, ob, as.DropFirst())
 }
 
-var _ = method(ob_CompareAndSet, "(member, newValue, oldValue = nil)")
+var _ = method(ob_CompareAndSet, "(member, newValue, oldValue = nil) :boolean")
 
 func ob_CompareAndSet(th *Thread, this Value, args []Value) Value {
 	th.ReturnThrow = true

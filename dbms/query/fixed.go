@@ -143,8 +143,8 @@ func (fixed Fixed) RemoveFrom(cols []string) []string {
 		func(col string) bool { return fixed.Single(col) })
 }
 
-// RemoveFrom2 returns cols without the single fixed columns
-func (fixed Fixed) RemoveFrom2(cols [][]string) [][]string {
+// RemoveFromAll returns cols without the single fixed columns
+func (fixed Fixed) RemoveFromAll(cols [][]string) [][]string {
 	return slc.MapFn(cols,
 		func(cols []string) []string { return fixed.RemoveFrom(cols) })
 }

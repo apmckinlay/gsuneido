@@ -9,7 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(ErrorLog, "(string)")
+var _ = builtin(ErrorLog, "(string) :void")
 
 func ErrorLog(arg Value) Value {
 	log.Println(ToStrOrString(arg))

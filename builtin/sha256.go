@@ -21,7 +21,7 @@ type suSha256 struct {
 // The implementations are very similar.
 // Modifications to any of them should probably be done to the others.
 
-var _ = builtin(Sha256, "(@args)")
+var _ = builtin(Sha256, "(@args) :unknown|string")
 
 func Sha256(th *Thread, as *ArgSpec, args []Value) Value {
 	h := suSha256{hash: sha256.New()}
@@ -48,14 +48,14 @@ func (suSha256) Lookup(_ *Thread, method string) Value {
 
 var sha256Methods = methods("Sha256")
 
-var _ = method(Sha256_Update, "(string)")
+var _ = method(Sha256_Update, "(string) :unknown")
 
 func Sha256_Update(this, arg Value) Value {
 	io.WriteString(this.(suSha256).hash, ToStr(arg))
 	return this
 }
 
-var _ = method(Sha256_Value, "()")
+var _ = method(Sha256_Value, "() :string")
 
 func Sha256_Value(this Value) Value {
 	return this.(suSha256).value()

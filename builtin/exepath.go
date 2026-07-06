@@ -10,7 +10,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(ExePath, "()")
+var _ = builtin(ExePath, "() :string")
 
 func ExePath() Value {
 	path, err := os.Executable()

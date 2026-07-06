@@ -7,7 +7,6 @@ import (
 	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -54,8 +53,6 @@ type Table struct {
 	indexEncode bool
 	cursorMode  bool
 }
-
-var _ whereTable = (*Table)(nil)
 
 func (tbl *Table) isSingleton() bool {
 	return tbl.singleton
@@ -160,87 +157,55 @@ const ( // ???
 	colsBias   = 5
 )
 
-func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, any) {
-	idxi := 0
-	if len(index) > 0 && !tbl.singleton {
-		idxi = tbl.indexFor(index)
-		if idxi == -1 {
-			return impossible, impossible, nil
-		}
-	}
-	index = tbl.indexes[idxi]
-
-	// The first index is in physical order (after compact)
-	// so it is faster to read if the table is large.
-	rowCost := tableFast
-	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
-		rowCost = tableSlow
-	}
-	// add a slight bias against indexes with more columns
-	// this also makes optimization a little more deterministic
-	rowCost += len(index) * colsBias
-	varcost := tbl.info.Nrows * rowCost
-	trace.QueryOpt.Println("Table optimize", tbl.name, index, frac, "=",
-		Cost(frac*float64(varcost)))
-	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
-}
-
-func (tbl *Table) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton {
-		return tbl.costFor(tbl.indexes[0], float64(req.frac), 0)
+		return tbl.costFor(tbl.indexes[0], req.frac, 0)
 	}
 	switch req.Use() {
 	case ReqUnordered:
-		return tbl.costFor(tbl.indexes[0], float64(req.frac), 0)
+		return tbl.costFor(tbl.indexes[0], req.frac, 0)
 	case ReqOrdered:
 		idxi := tbl.indexFor(req.cols)
 		if idxi == -1 {
 			return impossible, impossible, nil
 		}
-		return tbl.costFor(tbl.indexes[idxi], float64(req.frac), 0)
-	case ReqLookup:
-		if idxi := slc.IndexFn(tbl.indexes, req.cols, slices.Equal); idxi != -1 {
-			return 0, Cost(req.nlookups) * tbl.lookupCostFor(idxi), tableApproach{index: req.cols}
-		}
-		best := newBestIndex()
-		for _, idx := range tbl.indexes {
-			if !lookupIndexEligible(idx, tbl.allKeys, nil) ||
-				!indexCovered(idx, req.cols, nil) {
-				continue
-			}
-			f, v, _ := tbl.costFor(idx, 0, req.nlookups)
-			best.update(idx, f, v)
-		}
-		if best.index != nil {
-			return best.fixcost, best.varcost, tableApproach{index: best.index}
-		}
-		return impossible, impossible, nil
+		return tbl.costFor(tbl.indexes[idxi], req.frac, 0)
 	case ReqGrouped:
 		best := newBestIndex()
 		for _, idx := range tbl.indexes {
-			// Table.Fixed() is always nil, so nColsUnfixed == len(req.cols)
-			if !grouped(idx, req.cols, len(req.cols), nil) {
-				continue
+			if set.StartsWithSet(idx, req.cols) {
+				f, v, _ := tbl.costFor(idx, req.frac, req.nlookups)
+				best.update(idx, f, v)
 			}
-			f, v, _ := tbl.costFor(idx, float64(req.frac), req.nlookups)
-			best.update(idx, f, v)
 		}
 		if best.index == nil {
 			return impossible, impossible, nil
 		}
 		return best.fixcost, best.varcost, tableApproach{index: best.index}
+	case ReqLookup:
+		best := newBestIndex()
+		for idxi, idx := range tbl.indexes {
+			if set.Subset(req.cols, idx) {
+				varcost := Cost(req.nlookups) * tbl.lookupCostFor(idxi)
+				best.update(idx, 0, varcost)
+			}
+		}
+		if best.index == nil {
+			return impossible, impossible, nil
+		}
+		return 0, best.varcost, tableApproach{index: best.index}
 	}
 	panic("unreachable")
 }
 
-func (tbl *Table) costFor(index []string, frac float64, nlookups int32) (Cost, Cost, any) {
+func (tbl *Table) costFor(index []string, frac float32, nlookups int32) (Cost, Cost, any) {
 	rowCost := tableFast
 	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
 		rowCost = tableSlow
 	}
 	rowCost += len(index) * colsBias
 	varcost := tbl.info.Nrows * rowCost
-	result := Cost(frac * float64(varcost))
+	result := Cost(float64(frac) * float64(varcost))
 	if nlookups > 0 {
 		idxi := slc.IndexFn(tbl.indexes, index, slices.Equal)
 		if idxi != -1 {
@@ -260,11 +225,7 @@ func (tbl *Table) indexFor(order []string) int {
 	return -1 // not found
 }
 
-func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) {
-	tbl.SetIndex(approach.(tableApproach).index)
-}
-
-func (tbl *Table) setApproach2(_ Require, approach any, _ QueryTran) {
+func (tbl *Table) setApproach(_ Require, approach any, _ QueryTran) {
 	tbl.SetIndex(approach.(tableApproach).index)
 }
 

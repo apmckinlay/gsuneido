@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-var _ = builtin(Name, "(value)")
+var _ = builtin(Name, "(value) :string")
 
 func Name(arg Value) Value {
 	if named, ok := arg.(Named); ok {

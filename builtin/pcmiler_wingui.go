@@ -37,7 +37,7 @@ func (*suPcmsrv64) Lookup(_ *Thread, method string) Value {
 
 var pcmMethods = methods("pcm")
 
-var _ = staticMethod(pcm_Members, "()")
+var _ = staticMethod(pcm_Members, "() :object")
 
 func pcm_Members() Value {
 	return SuObjectOfStrs(maps.Keys(pcmMethods))
@@ -47,7 +47,7 @@ var pcmsrv = windows.NewLazyDLL("pcmsrv64.dll")
 
 // dll long pcmsrv32:PCMSAbout(string which, buffer buf, long bufsize)
 var pcmsAbout = pcmsrv.NewProc("PCMSAbout")
-var _ = staticMethod(pcm_Version, "()")
+var _ = staticMethod(pcm_Version, "() :false|string")
 
 func pcm_Version() Value {
 	if pcmsrv.Load() != nil {
@@ -68,7 +68,7 @@ func pcm_Version() Value {
 
 // dll long pcmsrv32:PCMSAddStop(long tripId, [in] string stop)
 var pcmsAddStop = pcmsrv.NewProc("PCMSAddStop")
-var _ = staticMethod(pcm_PCMAddStop, "(tripId, stop)")
+var _ = staticMethod(pcm_PCMAddStop, "(tripId, stop) :number")
 
 func pcm_PCMAddStop(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsAddStop.Addr(),
@@ -79,7 +79,7 @@ func pcm_PCMAddStop(a, b Value) Value {
 
 // dll long pcmsrv32:PCMSCalculate(long tripId)
 var pcmsCalculate = pcmsrv.NewProc("PCMSCalculate")
-var _ = staticMethod(pcm_PCMCalculate, "(tripId)")
+var _ = staticMethod(pcm_PCMCalculate, "(tripId) :number")
 
 func pcm_PCMCalculate(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsCalculate.Addr(),
@@ -89,7 +89,7 @@ func pcm_PCMCalculate(a Value) Value {
 
 // dll long pcmsrv32:PCMSCalcTrip(long tripId, [in] string orig, [in] string dest)
 var pcmsCalcTrip = pcmsrv.NewProc("PCMSCalcTrip")
-var _ = staticMethod(pcm_PCMCalcTrip, "(tripId, orig, dest)")
+var _ = staticMethod(pcm_PCMCalcTrip, "(tripId, orig, dest) :number")
 
 func pcm_PCMCalcTrip(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsCalcTrip.Addr(),
@@ -102,7 +102,7 @@ func pcm_PCMCalcTrip(a, b, c Value) Value {
 // dll long pcmsrv32:PCMSCloseServer(long server)
 var pcmsCloseServer = pcmsrv.NewProc("PCMSCloseServer")
 
-var _ = staticMethod(pcm_PCMCloseServer, "(server)")
+var _ = staticMethod(pcm_PCMCloseServer, "(server) :number")
 
 func pcm_PCMCloseServer(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsCloseServer.Addr(),
@@ -112,7 +112,7 @@ func pcm_PCMCloseServer(a Value) Value {
 
 // dll long pcmsrv32:PCMSDeleteTrip(long tripId)
 var pcmsDeleteTrip = pcmsrv.NewProc("PCMSDeleteTrip")
-var _ = staticMethod(pcm_PCMDeleteTrip, "(tripId)")
+var _ = staticMethod(pcm_PCMDeleteTrip, "(tripId) :number")
 
 func pcm_PCMDeleteTrip(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsDeleteTrip.Addr(),
@@ -123,7 +123,7 @@ func pcm_PCMDeleteTrip(a Value) Value {
 // dll long pcmsrv32:PCMSGetMatch(long tripId,
 // long index, string buffer, long bufLen)
 var pcmsGetMatch = pcmsrv.NewProc("PCMSGetMatch")
-var _ = staticMethod(pcm_GetMatch, "(tripId, i)")
+var _ = staticMethod(pcm_GetMatch, "(tripId, i) :string")
 
 func pcm_GetMatch(a, b Value) Value {
 	const buflen = 200
@@ -144,7 +144,7 @@ var pcmsNumRptBytes = pcmsrv.NewProc("PCMSNumRptBytes")
 
 const PCM_RPT_STATE = 1
 
-var _ = staticMethod(pcm_GetRpt, "(tripId, rpt)")
+var _ = staticMethod(pcm_GetRpt, "(tripId, rpt) :false|string")
 
 func pcm_GetRpt(a, b Value) Value {
 	size, _, _ := syscall.SyscallN(pcmsNumRptBytes.Addr(),
@@ -164,7 +164,7 @@ func pcm_GetRpt(a, b Value) Value {
 
 // dll long pcmsrv32:PCMSNewTrip(long serverId)
 var pcmsNewTrip = pcmsrv.NewProc("PCMSNewTrip")
-var _ = staticMethod(pcm_PCMNewTrip, "(tripId)")
+var _ = staticMethod(pcm_PCMNewTrip, "(tripId) :number")
 
 func pcm_PCMNewTrip(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsNewTrip.Addr(),
@@ -174,7 +174,7 @@ func pcm_PCMNewTrip(a Value) Value {
 
 // dll long pcmsrv32:PCMSNumMatches(long tripId)
 var pcmsNumMatches = pcmsrv.NewProc("PCMSNumMatches")
-var _ = staticMethod(pcm_PCMNumMatches, "(tripId)")
+var _ = staticMethod(pcm_PCMNumMatches, "(tripId) :number")
 
 func pcm_PCMNumMatches(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsNumMatches.Addr(),
@@ -184,7 +184,7 @@ func pcm_PCMNumMatches(a Value) Value {
 
 // dll long pcmsrv32:PCMSOpenServer(long hInstance, long hwnd)
 var pcmsOpenServer = pcmsrv.NewProc("PCMSOpenServer")
-var _ = staticMethod(pcm_PCMOpenServer, "(tripId, hwnd)")
+var _ = staticMethod(pcm_PCMOpenServer, "(tripId, hwnd) :number")
 
 func pcm_PCMOpenServer(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsOpenServer.Addr(),
@@ -195,7 +195,7 @@ func pcm_PCMOpenServer(a, b Value) Value {
 
 // dll long pcmsrv32:PCMSIsValid(long serverId)
 var pcmsIsValid = pcmsrv.NewProc("PCMSIsValid")
-var _ = staticMethod(pcm_PCMIsValid, "(serverId)")
+var _ = staticMethod(pcm_PCMIsValid, "(serverId) :number")
 
 func pcm_PCMIsValid(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsIsValid.Addr(),
@@ -205,7 +205,7 @@ func pcm_PCMIsValid(a Value) Value {
 
 // dll void pcmsrv32:PCMSSetBordersOpen(long tripId, bool open)
 var pcmsSetBordersOpen = pcmsrv.NewProc("PCMSSetBordersOpen")
-var _ = staticMethod(pcm_PCMSetBordersOpen, "(tripId, open)")
+var _ = staticMethod(pcm_PCMSetBordersOpen, "(tripId, open) :void")
 
 func pcm_PCMSetBordersOpen(a, b Value) Value {
 	syscall.SyscallN(pcmsSetBordersOpen.Addr(),
@@ -216,7 +216,7 @@ func pcm_PCMSetBordersOpen(a, b Value) Value {
 
 // dll void pcmsrv32:PCMSSetCalcType(long tripId, long routeType)
 var pcmsSetCalcType = pcmsrv.NewProc("PCMSSetCalcType")
-var _ = staticMethod(pcm_PCMSetCalcType, "(tripId, routeType)")
+var _ = staticMethod(pcm_PCMSetCalcType, "(tripId, routeType) :void")
 
 func pcm_PCMSetCalcType(a, b Value) Value {
 	syscall.SyscallN(pcmsSetCalcType.Addr(),
@@ -227,7 +227,7 @@ func pcm_PCMSetCalcType(a, b Value) Value {
 
 // dll long pcmsrv32:PCMSLookup(long tripId, [in] string placeName, long easyMatch)
 var pcmsLookup = pcmsrv.NewProc("PCMSLookup")
-var _ = staticMethod(pcm_PCMLookup, "(tripId, placeName, easyMatch)")
+var _ = staticMethod(pcm_PCMLookup, "(tripId, placeName, easyMatch) :number")
 
 func pcm_PCMLookup(a, b, c Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsLookup.Addr(),
@@ -239,7 +239,7 @@ func pcm_PCMLookup(a, b, c Value) Value {
 
 // dll void pcmsrv32:PCMSSetMiles(long tripId)
 var pcmsSetMiles = pcmsrv.NewProc("PCMSSetMiles")
-var _ = staticMethod(pcm_PCMSetMiles, "(tripId)")
+var _ = staticMethod(pcm_PCMSetMiles, "(tripId) :number")
 
 func pcm_PCMSetMiles(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsSetMiles.Addr(),
@@ -249,7 +249,7 @@ func pcm_PCMSetMiles(a Value) Value {
 
 // dll void pcmsrv32:PCMSSetCustomMode(long tripId, bool onOff)
 var pcmsSetCustomMode = pcmsrv.NewProc("PCMSSetCustomMode")
-var _ = staticMethod(pcm_PCMSetCustomMode, "(tripId, onOff)")
+var _ = staticMethod(pcm_PCMSetCustomMode, "(tripId, onOff) :void")
 
 func pcm_PCMSetCustomMode(a, b Value) Value {
 	syscall.SyscallN(pcmsSetCustomMode.Addr(),
@@ -261,7 +261,7 @@ func pcm_PCMSetCustomMode(a, b Value) Value {
 // dll void pcmsrv32:PCMSSetCalcTypeEx(long tripId, long routeType,
 // long optFlags, long vehType)
 var pcmsSetCalcTypeEx = pcmsrv.NewProc("PCMSSetCalcTypeEx")
-var _ = staticMethod(pcm_PCMSetCalcTypeEx, "(tripId, routeType, optFlags, vehType)")
+var _ = staticMethod(pcm_PCMSetCalcTypeEx, "(tripId, routeType, optFlags, vehType) :number")
 
 func pcm_PCMSetCalcTypeEx(a, b, c, d Value) Value {
 	rtn, _, _ := syscall.SyscallN(pcmsSetCalcTypeEx.Addr(),
@@ -274,7 +274,7 @@ func pcm_PCMSetCalcTypeEx(a, b, c, d Value) Value {
 
 // dll void pcmsrv32:PCMSSetVehicleType(long tripId, bool onOff)
 var pcmsSetVehicleType = pcmsrv.NewProc("PCMSSetVehicleType")
-var _ = staticMethod(pcm_PCMSetVehicleType, "(tripId, onOff)")
+var _ = staticMethod(pcm_PCMSetVehicleType, "(tripId, onOff) :void")
 
 func pcm_PCMSetVehicleType(a, b Value) Value {
 	syscall.SyscallN(pcmsSetVehicleType.Addr(),
@@ -285,7 +285,7 @@ func pcm_PCMSetVehicleType(a, b Value) Value {
 
 // dll void pcmsrv32:PCMSSetRouteLevel(long trip, bool UseStreets)
 var pcmsSetRouteLevel = pcmsrv.NewProc("PCMSSetRouteLevel")
-var _ = staticMethod(pcm_PCMSetRouteLevel, "(tripId, onOff)")
+var _ = staticMethod(pcm_PCMSetRouteLevel, "(tripId, onOff) :void")
 
 func pcm_PCMSetRouteLevel(a, b Value) Value {
 	syscall.SyscallN(pcmsSetRouteLevel.Addr(),

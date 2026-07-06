@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(Timestamp, "()")
+var _ = builtin(Timestamp, "() :date")
 
 func Timestamp(th *Thread, args []Value) Value {
 	return th.Timestamp()

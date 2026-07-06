@@ -129,11 +129,11 @@ func TestQuery2(t *testing.T) {
 	q = q.Transform()
 	const frac = 100
 	req := NewRequire(nil, frac, 0)
-	fixcost, varcost := Optimize2(q, ReadMode, req)
+	fixcost, varcost := Optimize(q, ReadMode, req)
 	if fixcost+varcost >= 9999999999 {
 		panic("invalid query: " + q.String())
 	}
-	q = SetApproach2(q, req, tran)
+	q = SetApproach(q, req, tran)
 
 	fmt.Println("----------------")
 	fmt.Println(Strategy(q))

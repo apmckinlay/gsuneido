@@ -11,7 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
-var _ = builtin(Pipe, "()")
+var _ = builtin(Pipe, "() :void")
 
 // Pipe is a thin wrapper around the Go io.Pipe
 func Pipe(th *Thread, _ []Value) Value {
@@ -28,7 +28,7 @@ const readMax = 64 * 1024 // no advantage to larger
 
 var suPipeReaderMethods = methods("piper")
 
-var _ = method(piper_Read, "(n)")
+var _ = method(piper_Read, "(n) :false|string")
 
 func piper_Read(this Value, a Value) Value {
 	rd := this.(*suPipeReader).rd
@@ -50,14 +50,14 @@ func piper_Read(this Value, a Value) Value {
 	return SuStr("")
 }
 
-var _ = method(piper_CopyTo, "(dest, nbytes = false)")
+var _ = method(piper_CopyTo, "(dest, nbytes = false) :number")
 
 func piper_CopyTo(th *Thread, this Value, args []Value) Value {
 	rd := this.(*suPipeReader).rd
 	return CopyTo(th, rd, args[0], args[1])
 }
 
-var _ = method(piper_Close, "()")
+var _ = method(piper_Close, "() :void")
 
 func piper_Close(this Value) Value {
 	rd := this.(*suPipeReader).rd
@@ -72,7 +72,7 @@ func piper_Close(this Value) Value {
 
 var suPipeWriterMethods = methods("pipew")
 
-var _ = method(pipew_Write, "(s)")
+var _ = method(pipew_Write, "(s) :void")
 
 func pipew_Write(this Value, a Value) Value {
 	wr := this.(*suPipeWriter).wr
@@ -84,7 +84,7 @@ func pipew_Write(this Value, a Value) Value {
 	return nil
 }
 
-var _ = method(pipew_Close, "()")
+var _ = method(pipew_Close, "() :void")
 
 func pipew_Close(this Value) Value {
 	wr := this.(*suPipeWriter).wr

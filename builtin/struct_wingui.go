@@ -75,7 +75,7 @@ type sizeable interface{ Size() int }
 
 var structMethods = methods("st")
 
-var _ = method(st_Size, "()")
+var _ = method(st_Size, "() :number")
 
 func st_Size(this Value) Value {
 	return IntVal(this.(sizeable).Size())
@@ -106,7 +106,7 @@ type Struct interface {
 
 // StructModify allows modifying a struct at a given address
 // WARNING: address must be valid for type
-var _ = builtin(StructModify, "(type, address, block)")
+var _ = builtin(StructModify, "(type, address, block) :void")
 
 func StructModify(th *Thread, args []Value) Value {
 	typ, ok := args[0].(Struct)
@@ -190,7 +190,7 @@ type stNMHdr struct {
 	_        [4]byte // padding
 }
 
-var _ = builtin(NMHDR, "(address)")
+var _ = builtin(NMHDR, "(address) :false|object")
 
 func NMHDR(a Value) Value {
 	adr := ToInt(a)
@@ -216,7 +216,7 @@ type stNMTVDispInfo struct {
 	item  stTVItem
 }
 
-var _ = builtin(NMTVDISPINFO, "(address)")
+var _ = builtin(NMTVDISPINFO, "(address) :false|object")
 
 func NMTVDISPINFO(a Value) Value {
 	adr := ToInt(a)
@@ -339,7 +339,7 @@ type stNMHeader struct {
 	pitem   *stHdItem
 }
 
-var _ = builtin(NMHEADER, "(address)")
+var _ = builtin(NMHEADER, "(address) :false|object")
 
 func NMHEADER(a Value) Value {
 	adr := ToInt(a)
@@ -370,7 +370,7 @@ type stNMTreeView struct {
 	ptDrag  stPoint
 }
 
-var _ = builtin(NMTREEVIEW, "(address)")
+var _ = builtin(NMTREEVIEW, "(address) :false|object")
 
 func NMTREEVIEW(a Value) Value {
 	adr := ToInt(a)
@@ -395,7 +395,7 @@ type stNMTVKeyDown struct {
 	flags int32
 }
 
-var _ = builtin(NMTVKEYDOWN, "(address)")
+var _ = builtin(NMTVKEYDOWN, "(address) :false|object")
 
 func NMTVKEYDOWN(a Value) Value {
 	adr := ToInt(a)
@@ -494,7 +494,7 @@ type stSCNotification struct {
 	listCompletionMethod int32
 }
 
-var _ = builtin(SCNotification, "(address)")
+var _ = builtin(SCNotification, "(address) :false|object")
 
 func SCNotification(a Value) Value {
 	adr := ToInt(a)
@@ -505,7 +505,7 @@ func SCNotification(a Value) Value {
 	return fromSCNotification(scn)
 }
 
-var _ = builtin(SCNotificationText, "(address)")
+var _ = builtin(SCNotificationText, "(address) :false|object")
 
 func SCNotificationText(a Value) Value {
 	adr := ToInt(a)
@@ -556,7 +556,7 @@ type stDrawItemStruct struct {
 	itemData   uintptr
 }
 
-var _ = builtin(DRAWITEMSTRUCT, "(address)")
+var _ = builtin(DRAWITEMSTRUCT, "(address) :false|object")
 
 func DRAWITEMSTRUCT(a Value) Value {
 	adr := ToInt(a)
@@ -579,7 +579,7 @@ func DRAWITEMSTRUCT(a Value) Value {
 
 //-------------------------------------------------------------------
 
-var _ = builtin(MSG, "(address)")
+var _ = builtin(MSG, "(address) :false|object")
 
 func MSG(a Value) Value {
 	adr := ToInt(a)
@@ -599,7 +599,7 @@ func MSG(a Value) Value {
 
 //-------------------------------------------------------------------
 
-var _ = builtin(CWPRETSTRUCT, "(address)")
+var _ = builtin(CWPRETSTRUCT, "(address) :false|object")
 
 func CWPRETSTRUCT(a Value) Value {
 	adr := ToInt(a)
@@ -626,7 +626,7 @@ type stCWPRetStruct struct {
 
 //-------------------------------------------------------------------
 
-var _ = builtin(NMLVDISPINFO, "(address)")
+var _ = builtin(NMLVDISPINFO, "(address) :false|object")
 
 func NMLVDISPINFO(a Value) Value {
 	adr := ToInt(a)
@@ -659,7 +659,7 @@ type stNMLVDispInfo struct {
 
 //-------------------------------------------------------------------
 
-var _ = builtin(NMLISTVIEW, "(address)")
+var _ = builtin(NMLISTVIEW, "(address) :false|object")
 
 func NMLISTVIEW(a Value) Value {
 	adr := ToInt(a)

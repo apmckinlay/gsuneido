@@ -42,6 +42,15 @@ func (v *View) Transform() Query {
 	panic(assert.ShouldNotReachHere())
 }
 
+func (v *View) optimize(mode Mode, req Require) (
+	Cost, Cost, any) {
+	panic(assert.ShouldNotReachHere())
+}
+
+func (*Query1) setApproach(Require, any, QueryTran) {
+	panic(assert.ShouldNotReachHere())
+}
+
 func (v *View) Get(th *Thread, dir Dir) Row {
 	panic(assert.ShouldNotReachHere())
 }

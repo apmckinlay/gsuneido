@@ -16,7 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/dbms"
 )
 
-var _ = builtin(HttpsServer, `(port, app, stop = false)`)
+var _ = builtin(HttpsServer, `(port, app, stop = false) :void`)
 
 func HttpsServer(th *Thread, args []Value) Value {
 	guardSandbox("HttpsServer")

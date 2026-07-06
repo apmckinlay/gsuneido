@@ -20,9 +20,7 @@ type SemiJoin struct {
 }
 
 type semiJoinApproach struct {
-	index2 []string
-	frac2  float64
-	req2   Require
+	req2 Require
 }
 
 func NewSemiJoin(src1, src2 Query, by []string, t QueryTran) *SemiJoin {
@@ -99,30 +97,8 @@ func (sj *SemiJoin) Transform() Query {
 	return sj
 }
 
-func (sj *SemiJoin) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	fixcost1, varcost1 := Optimize(sj.source1, mode, index, frac)
-	nrows1, _ := sj.source1.Nrows()
-	read2, _ := sj.Nrows()
-	nrows2, _ := sj.source2.Nrows()
-	frac2 := float64(read2) * frac / float64(max(1, nrows2))
-	best2 := bestGrouped(sj.source2, mode, nil, frac2, sj.by)
-	if best2.index == nil {
-		return impossible, impossible, nil
-	}
-	varcost2 := Cost(frac * float64(nrows1*sj.source2.lookupCost()))
-	return fixcost1 + best2.fixcost, varcost1 + varcost2 + best2.varcost,
-		&semiJoinApproach{index2: best2.index, frac2: frac2}
-}
-
-func (sj *SemiJoin) setApproach(index []string, frac float64, approach any, tran QueryTran) {
-	ap := approach.(*semiJoinApproach)
-	sj.source1 = SetApproach(sj.source1, index, frac, tran)
-	sj.source2 = SetApproach(sj.source2, ap.index2, ap.frac2, tran)
-	sj.header = sj.source1.Header()
-}
-
-func (sj *SemiJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
-	fixcost1, varcost1 := Optimize2(sj.source1, mode, req)
+func (sj *SemiJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
+	fixcost1, varcost1 := Optimize(sj.source1, mode, req)
 	nrows1, _ := sj.source1.Nrows()
 	nrows2, _ := sj.source2.Nrows()
 	nlookups := req.LookupCount(nrows1)
@@ -136,7 +112,7 @@ func (sj *SemiJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 	}
 	frac2 := min(float32(1), float32(nlookups)/float32(max(1, nrows2)))
 	req2 := GroupedReq(sj.by, frac2, nlookups)
-	fixcost2, varcost2 := Optimize2(sj.source2, mode, req2)
+	fixcost2, varcost2 := Optimize(sj.source2, mode, req2)
 	if fixcost2+varcost2 >= impossible {
 		return impossible, impossible, nil
 	}
@@ -144,10 +120,10 @@ func (sj *SemiJoin) optimize2(mode Mode, req Require) (Cost, Cost, any) {
 		&semiJoinApproach{req2: req2}
 }
 
-func (sj *SemiJoin) setApproach2(req Require, approach any, tran QueryTran) {
+func (sj *SemiJoin) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*semiJoinApproach)
-	sj.source1 = SetApproach2(sj.source1, req, tran)
-	sj.source2 = SetApproach2(sj.source2, ap.req2, tran)
+	sj.source1 = SetApproach(sj.source1, req, tran)
+	sj.source2 = SetApproach(sj.source2, ap.req2, tran)
 	sj.header = sj.source1.Header()
 }
 

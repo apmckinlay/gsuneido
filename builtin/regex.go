@@ -9,7 +9,7 @@ import (
 
 var _ = exportMethods(&RegexMethods, "regex")
 
-var _ = method(regex_Disasm, "()")
+var _ = method(regex_Disasm, "() :string")
 
 func regex_Disasm(this Value) Value {
 	return SuStr(this.(SuRegex).Pat.String())

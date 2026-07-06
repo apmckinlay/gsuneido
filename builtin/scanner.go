@@ -18,7 +18,7 @@ type suScanner struct {
 	MayLock
 }
 
-var _ = builtin(Scanner, "(string)")
+var _ = builtin(Scanner, "(string) :unknown")
 
 func Scanner(arg Value) Value {
 	return &suScanner{lxr: *lexer.NewLexer(ToStr(arg)), name: "Scanner"}
@@ -36,13 +36,13 @@ func (*suScanner) Lookup(_ *Thread, method string) Value {
 
 var scannerMethods = methods("scan")
 
-var _ = method(scan_KeywordQ, "()")
+var _ = method(scan_KeywordQ, "() :boolean")
 
 func scan_KeywordQ(this Value) Value {
 	return SuBool(this.(*suScanner).isKeyword())
 }
 
-var _ = method(scan_Length, "()")
+var _ = method(scan_Length, "() :number")
 
 func scan_Length(this Value) Value {
 	sc := this.(*suScanner)
@@ -54,13 +54,13 @@ func scan_Length(this Value) Value {
 	return IntVal(to - int(from))
 }
 
-var _ = method(scan_Next, "()")
+var _ = method(scan_Next, "() :string|unknown")
 
 func scan_Next(this Value) Value {
 	return this.(*suScanner).next()
 }
 
-var _ = method(scan_Next2, "()")
+var _ = method(scan_Next2, "() :string|unknown")
 
 func scan_Next2(this Value) Value {
 	sc := this.(*suScanner)
@@ -74,7 +74,7 @@ func scan_Next2(this Value) Value {
 	return SuStr(sc.type2())
 }
 
-var _ = method(scan_Position, "()")
+var _ = method(scan_Position, "() :number")
 
 func scan_Position(this Value) Value {
 	sc := this.(*suScanner)
@@ -84,13 +84,13 @@ func scan_Position(this Value) Value {
 	return IntVal(sc.lxr.Position())
 }
 
-var _ = method(scan_Text, "()")
+var _ = method(scan_Text, "() :string")
 
 func scan_Text(this Value) Value {
 	return this.(*suScanner).text()
 }
 
-var _ = method(scan_Type, "()")
+var _ = method(scan_Type, "() :string")
 
 func scan_Type(this Value) Value {
 	sc := this.(*suScanner)
@@ -100,7 +100,7 @@ func scan_Type(this Value) Value {
 	return SuStr(sc.type2())
 }
 
-var _ = method(scan_Value, "()")
+var _ = method(scan_Value, "() :string")
 
 func scan_Value(this Value) Value {
 	sc := this.(*suScanner)

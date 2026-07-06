@@ -63,29 +63,16 @@ func (ti *TempIndex) Transform() Query {
 }
 
 // optimize is only used by fuzz_test.go
-// (normally TempIndex is introduced by query.go Optimize)
-func (ti *TempIndex) optimize(mode Mode, index []string, frac float64) (
-	Cost, Cost, any) {
-	fixcost, varcost := Optimize(ti.source, mode, nil, frac)
-	return fixcost, varcost, nil
-}
-
-// optimize2 is only used by fuzz_test.go
-func (ti *TempIndex) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (ti *TempIndex) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	srcReq := UnorderedReq(req.frac)
-	fixcost, varcost := Optimize2(ti.source, mode, srcReq)
+	fixcost, varcost := Optimize(ti.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
 
 // setApproach is only used by fuzz_test.go
-func (ti *TempIndex) setApproach(index []string, frac float64, app any, tran QueryTran) {
-	SetApproach(ti.source, nil, frac, tran)
-}
-
-// setApproach2 is only used by fuzz_test.go
-func (ti *TempIndex) setApproach2(req Require, _ any, tran QueryTran) {
+func (ti *TempIndex) setApproach(req Require, _ any, tran QueryTran) {
 	srcReq := UnorderedReq(req.frac)
-	SetApproach2(ti.source, srcReq, tran)
+	SetApproach(ti.source, srcReq, tran)
 }
 
 // execution --------------------------------------------------------

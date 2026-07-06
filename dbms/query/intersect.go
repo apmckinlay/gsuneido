@@ -23,7 +23,6 @@ type Intersect struct {
 
 type intersectApproach struct {
 	keyIndex   []string
-	frac2      float64
 	reverse    bool
 	req1, req2 Require
 }
@@ -138,43 +137,7 @@ func compatCopyFixed(fromFixed, toFixed Fixed, to Query, t QueryTran) Query {
 	return copyFixed(fromFixed, toFixed, to, cols, t)
 }
 
-func (it *Intersect) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	assert.That(it.disjoint == "") // eliminated by Transform
-	fixcost1, varcost1, key1, frac1 := it.cost(it.source1, it.source2, mode, index, frac)
-	fixcost2, varcost2, key2, frac2 := it.cost(it.source2, it.source1, mode, index, frac)
-	fixcost2 += outOfOrder
-	if fixcost1+varcost1 < fixcost2+varcost2 {
-		return fixcost1, varcost1, &intersectApproach{keyIndex: key1, frac2: frac1}
-	}
-	return fixcost2, varcost2, &intersectApproach{keyIndex: key2, frac2: frac2, reverse: true}
-}
-
-func (*Intersect) cost(src1, src2 Query, mode Mode, index []string, frac float64) (
-	Cost, Cost, []string, float64) {
-	// iterate source and lookup on source2
-	fixcost1, varcost1 := Optimize(src1, mode, index, frac)
-	nrows1, _ := src1.Nrows()
-	nrows2, _ := src2.Nrows()
-	lookups := int(float64(nrows1) * frac)
-	frac2 := float64(lookups) / float64(max(1, nrows2))
-	best2 := bestLookupIndex(src2, mode, lookups, frac2, nil)
-	return fixcost1 + best2.fixcost, varcost1 + best2.varcost, best2.index, frac2
-}
-
-func (it *Intersect) setApproach(index []string, frac float64, approach any,
-	tran QueryTran) {
-	ap := approach.(*intersectApproach)
-	it.keyIndex = ap.keyIndex
-	if ap.reverse {
-		it.source1, it.source2 = it.source2, it.source1
-	}
-	it.source1 = SetApproach(it.source1, index, frac, tran)
-	it.source2 = SetApproach(it.source2, it.keyIndex, ap.frac2, tran)
-	it.header = it.getHeader()
-	it.src1Only = set.Difference(it.source1.Columns(), it.source2.Columns())
-}
-
-func (it *Intersect) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (it *Intersect) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	assert.That(it.disjoint == "") // eliminated by Transform
 	fixcost1, varcost1, ap1 := it.cost2(mode, req, false)
 	fixcost2, varcost2, ap2 := it.cost2(mode, req, true)
@@ -191,11 +154,11 @@ func (it *Intersect) cost2(mode Mode, req Require, reverse bool) (Cost, Cost, *i
 	if reverse {
 		src1, src2 = src2, src1
 	}
-	fixcost1, varcost1 := Optimize2(src1, mode, req)
+	fixcost1, varcost1 := Optimize(src1, mode, req)
 	nrows1, _ := src1.Nrows()
 	nlookups := req.LookupCount(nrows1)
 	req2 := LookupReq(src2.Columns(), nlookups)
-	fc2, vc2 := Optimize2(src2, mode, req2)
+	fc2, vc2 := Optimize(src2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil
 	}
@@ -203,14 +166,14 @@ func (it *Intersect) cost2(mode Mode, req Require, reverse bool) (Cost, Cost, *i
 		&intersectApproach{keyIndex: req2.cols, req1: req, req2: req2, reverse: reverse}
 }
 
-func (it *Intersect) setApproach2(req Require, approach any, tran QueryTran) {
+func (it *Intersect) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*intersectApproach)
 	it.keyIndex = ap.keyIndex
 	if ap.reverse {
 		it.source1, it.source2 = it.source2, it.source1
 	}
-	it.source1 = SetApproach2(it.source1, ap.req1, tran)
-	it.source2 = SetApproach2(it.source2, ap.req2, tran)
+	it.source1 = SetApproach(it.source1, ap.req1, tran)
+	it.source2 = SetApproach(it.source2, ap.req2, tran)
 	it.header = it.getHeader()
 	it.src1Only = set.Difference(it.source1.Columns(), it.source2.Columns())
 }

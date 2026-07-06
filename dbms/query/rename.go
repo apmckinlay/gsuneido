@@ -168,25 +168,15 @@ func (r *Rename) Transform() Query {
 	return r
 }
 
-func (r *Rename) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	fixcost, varcost := Optimize(r.source, mode, r.renameRev(index), frac)
+func (r *Rename) optimize(mode Mode, req Require) (Cost, Cost, any) {
+	req.cols = r.renameRev(req.cols)
+	fixcost, varcost := Optimize(r.source, mode, req)
 	return fixcost, varcost, nil
 }
 
-func (r *Rename) optimize2(mode Mode, req Require) (Cost, Cost, any) {
+func (r *Rename) setApproach(req Require, _ any, tran QueryTran) {
 	req.cols = r.renameRev(req.cols)
-	fixcost, varcost := Optimize2(r.source, mode, req)
-	return fixcost, varcost, nil
-}
-
-func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran) {
-	r.source = SetApproach(r.source, r.renameRev(index), frac, tran)
-	r.header = r.getHeader()
-}
-
-func (r *Rename) setApproach2(req Require, _ any, tran QueryTran) {
-	req.cols = r.renameRev(req.cols)
-	r.source = SetApproach2(r.source, req, tran)
+	r.source = SetApproach(r.source, req, tran)
 	r.header = r.getHeader()
 }
 

@@ -46,11 +46,6 @@ func (bi *bestIndex) String() string {
 
 //-------------------------------------------------------------------
 
-// bestReq is the v2 analog of bestIndex.
-// It carries the Require actually used (not just the index),
-// so callers pass it straight to SetApproach2 without reconstruction.
-// This avoids the drift between per-candidate req construction
-// and the final req passed downstream.
 type bestReq struct {
 	req     Require
 	fixcost Cost
@@ -79,86 +74,6 @@ func (b *bestReq) found() bool {
 }
 
 //-------------------------------------------------------------------
-
-// bestGrouped finds the best index with cols (in any order) as a prefix
-// taking fixed into consideration.
-// It is used by Project, Summarize, and Join.
-func bestGrouped(source Query, mode Mode, index []string, frac float64, cols []string) bestIndex {
-	var indexes [][]string
-	if index == nil {
-		indexes = source.Indexes()
-	} else {
-		indexes = [][]string{index}
-	}
-	best := bestGrouped2(source, mode, indexes, frac, cols)
-	if index == nil {
-		fixcost, varcost := Optimize(source, mode, cols, frac)
-		best.update(cols, fixcost, varcost)
-	}
-	return best
-}
-
-func bestGrouped2(source Query, mode Mode, indexes [][]string, frac float64, cols []string) bestIndex {
-	fixed := source.Fixed()
-	nColsUnfixed := countUnfixed(cols, fixed)
-	best := newBestIndex()
-	for _, idx := range indexes {
-		if grouped(idx, cols, nColsUnfixed, fixed) {
-			fixcost, varcost := Optimize(source, mode, idx, frac)
-			best.update(idx, fixcost, varcost)
-		}
-	}
-	return best
-}
-
-// bestLookupIndex finds the best index for nrows lookup operations.
-// cols restricts candidates to those grouped by cols (for Join to-one);
-// pass nil to allow any lookup-eligible index (for Intersect, Minus, Union).
-// If no physical index qualifies, falls back to logical keys.
-func bestLookupIndex(source Query, mode Mode, nrows int, frac float64, cols []string) bestIndex {
-	fixed := source.Fixed()
-	keys := source.Keys()
-	best := newBestIndex()
-	var nColsUnfixed int
-	if cols != nil {
-		nColsUnfixed = countUnfixed(cols, fixed)
-	}
-	for _, idx := range source.Indexes() {
-		if lookupIndexEligible(idx, keys, fixed) &&
-			(cols == nil || grouped(idx, cols, nColsUnfixed, fixed)) {
-			fixcost, varcost := LookupCost(source, mode, idx, nrows, frac)
-			best.update(idx, fixcost, varcost)
-		}
-	}
-	if best.index != nil {
-		return best
-		// could check the fallback regardless, but in practice it rarely helps
-	}
-	// fallback: no qualifying physical index (e.g. system tables with nil Indexes)
-	fallbackKeys := keys
-	if cols != nil {
-		fallbackKeys = [][]string{cols}
-	}
-	for _, k := range fallbackKeys {
-		fixcost, varcost := LookupCost(source, mode, k, nrows, frac)
-		best.update(k, fixcost, varcost)
-	}
-	return best
-}
-
-func lookupIndexEligible(index []string, keys [][]string, fixed Fixed) bool {
-	for _, key := range keys {
-		nColsUnfixed := countUnfixed(key, fixed)
-		// nColsUnfixed == 0 means the key is fully fixed (singleton result),
-		// so any index is eligible. The Where must detect this as singleton
-		// so Lookup uses the Get fallback rather than forwarding sels to
-		// source.Lookup with columns that only cover a prefix of the index.
-		if nColsUnfixed == 0 || grouped(index, key, nColsUnfixed, fixed) {
-			return true
-		}
-	}
-	return false
-}
 
 func countUnfixed(cols []string, fixed Fixed) int {
 	nunfixed := 0

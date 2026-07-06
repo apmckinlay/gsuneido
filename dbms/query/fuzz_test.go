@@ -83,7 +83,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 286, 278)
+	fuzzRandomRunner.Run(t, 262, 640)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -317,7 +317,7 @@ func FuzzSummarize(f *testing.F) {
 }
 
 func TestFuzzSummarizeDebug(t *testing.T) {
-	fuzzSummarizeRunner.Run(t, 18388908088726648744, 13779681344780478899)
+	fuzzSummarizeRunner.Run(t, 16602272769697815038, 9374908162863325624)
 }
 
 func TestFuzzSummarize(t *testing.T) {
@@ -1064,69 +1064,45 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 		}
 	}()
 	reqUse := random([]string{"unordered", "ordered", "grouped", "lookup"}, ft.rnd)
-	if isEmptyKey(q.Indexes()) {
-		reqUse = "unordered"
-	}
+	indexes := q.Indexes()
 	var index []string
+	if len(indexes) == 0 || isEmptyKey(indexes) {
+		reqUse = "unordered"
+	} else if reqUse == "lookup" {
+		keyIdxs := keyIndexes(q)
+		if len(keyIdxs) > 0 {
+			index = random(keyIdxs, ft.rnd)
+		} else {
+			reqUse = "unordered"
+		}
+	} else {
+		index = random(indexes, ft.rnd)
+	}
 	var req Require
 	switch reqUse {
 	case "unordered":
 		req = UnorderedReq(1)
 	case "ordered":
-		indexes := q.Indexes()
-		if len(indexes) > 0 {
-			index = random(indexes, ft.rnd)
-		}
-		if len(index) == 0 {
-			reqUse = "unordered"
-			req = UnorderedReq(1)
-		} else {
-			req = OrderedReq(index, 1)
-		}
+		req = OrderedReq(index, 1)
 	case "grouped":
-		indexes := q.Indexes()
-		if len(indexes) > 0 {
-			index = random(indexes, ft.rnd)
-		}
-		if len(index) == 0 {
-			reqUse = "unordered"
-			req = UnorderedReq(1)
-		} else {
-			nlookups := int32(1 + ft.rnd.IntN(10))
-			frac := float32(1) / float32(1+ft.rnd.IntN(4))
-			req = GroupedReq(slices.Clone(index), frac, nlookups)
-		}
+		nlookups := int32(1 + ft.rnd.IntN(10))
+		frac := float32(1) / float32(1+ft.rnd.IntN(4))
+		req = GroupedReq(slices.Clone(index), frac, nlookups)
 	case "lookup":
-		ki := keyIndexes(q)
-		if len(ki) > 0 {
-			index = random(ki, ft.rnd)
+		for range ft.rnd.IntN(len(index)) {
+			index = set.AddUnique(index, random(q.Columns(), ft.rnd))
 		}
-		if len(index) == 0 {
-			reqUse = "ordered"
-			indexes := q.Indexes()
-			if len(indexes) > 0 {
-				index = random(indexes, ft.rnd)
-			}
-			if len(index) == 0 {
-				reqUse = "unordered"
-				req = UnorderedReq(1)
-			} else {
-				req = OrderedReq(index, 1)
-			}
-		} else {
-			nlookups := int32(1 + ft.rnd.IntN(10))
-			req = LookupReq(index, nlookups)
-		}
-
+		nlookups := int32(1 + ft.rnd.IntN(10))
+		req = LookupReq(index, nlookups)
 	}
 	q = q.Transform()
-	fixcost, varcost := Optimize2(q, ReadMode, req)
+	fixcost, varcost := Optimize(q, ReadMode, req)
 	if fixcost+varcost >= impossible {
 		// fall back to an unordered read so the test can still validate results
 		reqUse = "unordered"
 		req = UnorderedReq(1)
 		index = nil
-		fixcost, varcost = Optimize2(q, ReadMode, req)
+		fixcost, varcost = Optimize(q, ReadMode, req)
 		if fixcost+varcost >= impossible {
 			t.Fatal("impossible\n", format(0, q, 0))
 		}
@@ -1143,7 +1119,7 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	}
 	fuzzCount++
 	// fmt.Println(String(q))
-	q = SetApproach2(q, req, ft.rt)
+	q = SetApproach(q, req, ft.rt)
 	q.SetTran(ft.rt)
 
 	hdr := q.Header()
