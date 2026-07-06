@@ -110,7 +110,12 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 			isel.prefixRanges = []pointRange{{Org: org}}
 		} else {
 			assert.That(encode)
-			end := org + ixkey.Sep + ixkey.Max
+			var enc ixkey.Encoder
+			for i := range prefixLen {
+				enc.Add(perCol[index[i]][0].org.val)
+			}
+			enc.Add(ixkey.Max)
+			end := enc.String()
 			isel.prefixRanges = []pointRange{{Org: org, End: end}}
 		}
 		if prefixLen == len(index) {
