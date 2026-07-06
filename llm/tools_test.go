@@ -23,12 +23,12 @@ func TestGetViewDefinition(t *testing.T) {
 	query.DoAdmin(db, `view myview = alpha extend c = 123`, nil)
 
 	// Test view definition
-	viewDef := getViewDefinition("myview")
-	assert.This(viewDef).Is("alpha extend c = 123")
+	viewDef, _ := getSchema("myview")
+	assert.This(viewDef).Is(schemaOutput{Schema: "view myview = alpha extend c = 123"})
 
 	// Test non-existent view
-	noView := getViewDefinition("nonexistent")
-	assert.This(noView).Is("")
+	noView, _ := getSchema("nonexistent")
+	assert.This(noView).Is(schemaOutput{Schema: ""})
 }
 
 func TestSchemaToolWithView(t *testing.T) {
@@ -40,10 +40,10 @@ func TestSchemaToolWithView(t *testing.T) {
 	query.DoAdmin(db, `view myview = alpha extend c = 123`, nil)
 
 	// Test table schema
-	schema := core.GetDbms().Schema("alpha")
-	assert.This(schema).Is("alpha (a,b) key(a)")
+	schema, _ := getSchema("alpha")
+	assert.This(schema).Is(schemaOutput{Schema: "alpha (a,b) key(a)"})
 
 	// Test view definition via schema tool
-	viewDef := getViewDefinition("myview")
-	assert.This(viewDef).Is("alpha extend c = 123")
+	viewDef, _ := getSchema("myview")
+	assert.This(viewDef).Is(schemaOutput{Schema: "view myview = alpha extend c = 123"})
 }
