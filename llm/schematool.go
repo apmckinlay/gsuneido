@@ -23,31 +23,31 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		schema := core.GetDbms().Schema(table)
-		if schema == "" {
-			if viewDef := getViewDefinition(table); viewDef != "" {
-				return schemaOutput{Schema: "view " + table + " = " + viewDef}, nil
-			}
-		}
-		return schemaOutput{Schema: schema}, nil
+		return getSchema(table)
 	},
 })
 
-func getViewDefinition(name string) string {
+func getSchema(table string) (any, error) {
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	tran := th.Dbms().Transaction(false)
+	dbms := th.Dbms()
+	schema := dbms.Schema(table)
+	if schema != "" {
+		return schemaOutput{Schema: schema}, nil
+	}
+
+	tran := dbms.Transaction(false)
 	defer tran.Complete()
-	q := tran.Query(fmt.Sprintf("views where view_name = %q", name), nil)
+	q := tran.Query(fmt.Sprintf("views where view_name = %q", table), nil)
 	defer q.Close()
 	row, _ := q.Get(th, core.Next)
 	if row == nil {
-		return ""
+		return schemaOutput{Schema: ""}, fmt.Errorf("table or view not found: %s", table)
 	}
 	hdr := q.Header()
 	st := core.NewSuTran(tran, false)
 	val := row.GetVal(hdr, "view_definition", th, st)
-	return core.ToStr(val)
+	return schemaOutput{Schema: "view " + table + " = " + core.ToStr(val)}, nil
 }
 
 type schemaOutput struct {
