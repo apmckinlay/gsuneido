@@ -60,6 +60,7 @@ func TestExtendSelect(t *testing.T) {
 }
 
 func TestExtendRuleBug(t *testing.T) {
+	// r1 is a rule i.e. calculated on demand, not physically stored
 	db := heapDb()
 	db.adm("create cus (ck, c4) key(ck)")
 	db.act("insert { ck: 1, c4: 2  } into cus")
@@ -71,6 +72,7 @@ func TestExtendRuleBug(t *testing.T) {
 }
 
 func TestExtendRuleBug2(t *testing.T) {
+	// r0 is a rule i.e. calculated on demand, not physically stored
 	db := heapDb()
 	db.adm("create cus (ck, c4) key(ck)")
 	db.act("insert { ck: 1, c4: 2  } into cus")
