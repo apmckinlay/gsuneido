@@ -234,6 +234,15 @@ func CommonPrefixLen[E comparable](s, t []E) int {
 	}
 }
 
+// CommonPrefix returns the common prefix of two slices
+func CommonPrefix[E comparable](s, t []E) []E {
+	for i := 0; ; i++ {
+		if i >= len(s) || i >= len(t) || s[i] != t[i] {
+			return s[:i]
+		}
+	}
+}
+
 // HasDup returns true if the slice contains any duplicate values
 func HasDup[E comparable](list []E) bool {
 	for i := range list {
