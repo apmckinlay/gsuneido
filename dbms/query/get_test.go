@@ -496,7 +496,7 @@ func TestQueryGet(t *testing.T) {
         990101`)
 	test("((co where tnum = 100) union (co where tnum = 102)) union "+
 		"(co where tnum = 100)",
-		"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum) "+
+		"(co^(tnum) where*1 tnum is 100 union-disjoint(tnum)-merge "+
 			"(co^(tnum) where*1 tnum is 102)) "+
 			"union-lookup (co^(tnum) where*1 tnum is 100)",
 		`signed	tnum
@@ -765,8 +765,8 @@ func TestQueryGet(t *testing.T) {
 		'e'
 		'i'`)
 	test("(trans project item, date) union (trans project date, item)",
-		"trans^(item,date,id) project-seq item, date union-merge "+
-			"(trans^(item,date,id) project-seq date, item)",
+		"trans^(date,item,id) project-seq item, date union-merge "+
+			"(trans^(date,item,id) project-seq date, item)",
 		`date	item
 		960204	'mouse'
 		970101	'disk'
@@ -774,7 +774,7 @@ func TestQueryGet(t *testing.T) {
 		970201	'eraser'`)
 
 	test("(customer summarize id, count) union (customer summarize id, count)",
-		"customer^(id) summarize-seq id, count union-lookup "+
+		"customer^(id) summarize-seq id, count union-merge "+
 			"(customer^(id) summarize-seq id, count)",
 		`count	id
 		1	'a'
@@ -782,9 +782,9 @@ func TestQueryGet(t *testing.T) {
 		1	'e'
 		1	'i'`)
 	test("(trans summarize item, date, count) union (trans summarize date,item, count)",
-		"trans^(item,date,id) summarize-seq item, date, count "+
+		"trans^(date,item,id) summarize-seq item, date, count "+
 			"union-merge "+
-			"(trans^(item,date,id) summarize-seq date, item, count)",
+			"(trans^(date,item,id) summarize-seq date, item, count)",
 		`count	date	item
 		1	960204	'mouse'
 		1	970101	'disk'
@@ -798,8 +798,8 @@ func TestQueryGet(t *testing.T) {
 		'c'
 		'e'`)
 	test("(customer summarize id,count) join (hist summarize id,count) sort id",
-		"(hist^(date,item,id) summarize-map id, count join 1:1 by(id,count) "+
-			"(customer^(id) summarize-seq id, count)) tempindex(id)",
+		"customer^(id) summarize-seq id, count join 1:1 by(id,count) "+
+			"(hist^(date,item,id) summarize-map id, count tempindex(id))",
 		`count	id
 		1	'a'
 		1	'c'`)

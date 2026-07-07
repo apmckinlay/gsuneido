@@ -39,8 +39,9 @@ func (c *cache) cacheAdd(req Require, fixcost, varcost Cost, approach any) {
 func (c *cache) cacheGet(req Require) (fixcost, varcost Cost, approach any) {
 	for i := range c.entries {
 		e := &c.entries[i]
-		if slices.Equal(e.cols, req.cols) &&
-			e.frac == req.frac && e.nlookups == req.nlookups {
+		if e.use == req.use &&
+			slices.Equal(e.cols, req.cols) &&
+			e.frac == req.frac && e.nseeks == req.nseeks {
 			slc.Swap(c.entries, 0, i)
 			return c.entries[0].fixcost, c.entries[0].varcost, c.entries[0].approach
 		}

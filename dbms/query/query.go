@@ -365,7 +365,7 @@ func Setup1(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
 }
 
 func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
-	req := UnorderedReq(float32(frac))
+	req := NoneReq(float32(frac))
 	fixcost, varcost := Optimize(q, mode, req)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
@@ -380,25 +380,25 @@ func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
 // SetupKey is like Setup but it ensures a key index
 // It is used by updateAction (action.go)
 func SetupKey(q Query, mode Mode, t QueryTran) Query {
-	// we use ReqGrouped because it matches the search for a key
+	// we use ReqGroup because it matches the search for a key
 	// although we don't actually need the rows to be grouped
 	q = q.Transform()
 	best := newBestIndex()
 	for _, key := range q.Keys() {
-		f, v, _ := optimize(q, mode, GroupedReq(key, 1, 1))
+		f, v, _ := optimize(q, mode, GroupReq(key, 1, 1))
 		best.update(key, f, v)
 	}
 	if best.fixcost+best.varcost >= impossible {
 		panic("invalid query: " + String(q))
 	}
-	q = SetApproach(q, GroupedReq(best.index, 1, 1), t)
+	q = SetApproach(q, GroupReq(best.index, 1, 1), t)
 	return q
 }
 
 // SetupIdx is like Setup but specifies an index
 // e.g. to test Select or Lookup
 func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
-	req := OrderedReq(index, 1)
+	req := OrderReq(index, 1)
 	fixcost, varcost := Optimize(q, mode, req)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
@@ -436,13 +436,12 @@ func optimize(q Query, mode Mode, req Require) (
 	// this condition must match SetApproach
 	// A fastSingle node (or one whose fixed covers req.cols) trivially
 	// satisfies any require, so the qualitative aspect (cols/use) is
-	// irrelevant. Clear cols AND nlookups to produce a valid ReqUnordered —
-	// Use() asserts nlookups==0 when cols is empty, and a singleton's
-	// access cost is independent of the lookup/ordered/grouped distinction.
+	// irrelevant. Clear cols AND nseeks
 	// frac is kept as it scales the (single) row's varcost.
 	if q.fastSingle() || q.Fixed().All(req.cols) {
 		req.cols = nil
-		req.nlookups = 0
+		req.nseeks = 0
+		req.use = ReqNone
 	}
 	if fixcost, varcost, app := q.cacheGet(req); varcost >= 0 {
 		return fixcost, varcost, app
@@ -470,8 +469,8 @@ func optTempIndex(q Query, mode Mode, req Require) (
 	indexedFixCost, indexedVarCost, indexedApp := q.optimize(mode, req)
 	assert.That(indexedFixCost >= 0 && indexedVarCost >= 0)
 
-	u := req.Use()
-	if u == ReqUnordered || !tempIndexable(mode) {
+	u := req.use
+	if u == ReqNone || !tempIndexable(mode) {
 		traceQO(indexedFixCost + indexedVarCost)
 		return indexedFixCost, indexedVarCost, indexedApp
 	}
@@ -482,21 +481,21 @@ func optTempIndex(q Query, mode Mode, req Require) (
 
 	// with no index
 	noIdxOrder := req.cols
-	if u == ReqLookup {
+	if u == ReqUnique {
 		noIdxOrder = tempIndexKey(q, req.cols)
 	}
-	optTI(best, q, mode, UnorderedReq(req.frac), nrows, factorNone, noIdxOrder)
+	optTI(best, q, mode, NoneReq(req.frac), nrows, factorNone, noIdxOrder)
 
 	// with required index
 	optTI(best, q, mode, req, nrows, factorAll, req.cols)
 
 	// with "best" index
 	if bestIndex := tempIndexBest(q, req.cols); bestIndex != nil {
-		optTI(best, q, mode, OrderedReq(bestIndex, req.frac), nrows, factorPre, req.cols)
+		optTI(best, q, mode, OrderReq(bestIndex, req.frac), nrows, factorPre, req.cols)
 	}
 
-	// key-subset candidates for ReqLookup
-	if u == ReqLookup {
+	// key-subset candidates for ReqUnique
+	if u == ReqUnique {
 		fixed := q.Fixed()
 		nReqColsUnfixed := countUnfixed(req.cols, fixed)
 		for _, key := range q.Keys() {
@@ -508,17 +507,17 @@ func optTempIndex(q Query, mode Mode, req Require) (
 				continue
 			}
 			keyUnfixed := fixed.RemoveFrom(key)
-			optTI(best, q, mode, LookupReq(keyUnfixed, req.nlookups), nrows, factorAll, keyUnfixed)
+			optTI(best, q, mode, UniqueReq(keyUnfixed, req.nseeks), nrows, factorAll, keyUnfixed)
 		}
 	}
 
-	// for ReqLookup or ReqGrouped with nlookups, add per-lookup cost on temp index
-	if u == ReqLookup || (u == ReqGrouped && req.nlookups > 0) {
+	// for ReqUnique or ReqGroup with nseeks, add per-lookup cost on temp index
+	if u == ReqUnique || (u == ReqGroup && req.nseeks > 0) {
 		perLookup := Cost(400)
 		if q.SingleTable() {
 			perLookup = Cost(200)
 		}
-		best.varcost += Cost(req.nlookups) * perLookup
+		best.varcost += Cost(req.nseeks) * perLookup
 	}
 
 	tempIndexCost := best.fixcost + best.varcost
@@ -560,7 +559,7 @@ func tempIndexKey(q Query, cols []string) []string {
 }
 
 func optTI(best *bestTI, q Query, mode Mode, req Require, nrows, factor int, tiOrder []string) {
-	srcReq := OrderedReq(req.cols, 1)
+	srcReq := OrderReq(req.cols, 1)
 	srcfixcost, srcvarcost, srcapp := q.optimize(mode, srcReq)
 	assert.That(srcfixcost >= 0 && srcvarcost >= 0)
 	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, req.cols, nrows, float64(req.frac), factor)
@@ -672,13 +671,14 @@ func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 var tempIndexCount atomic.Int64
 var _ = AddInfo("query.tempindex", &tempIndexCount)
 
-// SetApproach is the v2 version of SetApproach.
-// It finalizes the chosen approach using Require instead of index.
+// SetApproach finalizes the chosen approach.
+// It also adds temp indexes where required.
 func SetApproach(q Query, req Require, tran QueryTran) Query {
 	// must match optimize's guard (see comment there)
 	if q.fastSingle() || q.Fixed().All(req.cols) {
 		req.cols = nil
-		req.nlookups = 0
+		req.nseeks = 0
+		req.use = ReqNone
 	}
 	fixcost, varcost, approach := q.cacheGet(req)
 	q.cacheClear()
@@ -688,7 +688,7 @@ func SetApproach(q Query, req Require, tran QueryTran) Query {
 	assert.That(fixcost >= 0 && varcost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
 		q.Metrics().setCost(1, app.srcfixcost, app.srcvarcost)
-		q.setApproach(OrderedReq(app.srcindex, 1), app.srcapp, tran)
+		q.setApproach(OrderReq(app.srcindex, 1), app.srcapp, tran)
 		ti := NewTempIndex(q, app.index, tran)
 		ti.setCost(float64(req.frac), fixcost, varcost)
 		tempIndexCount.Add(1)
@@ -701,12 +701,29 @@ func SetApproach(q Query, req Require, tran QueryTran) Query {
 
 // execution --------------------------------------------------------
 
-// GetNext1 is used when Lookup is implemented with Select+Get
-// to allow checking uniqueness for debugging
-func GetNext1(q Query, th *Thread) Row {
+// GetNext1 returns the next row from q if it matches sels, else nil.
+// Used when Lookup is implemented with Select+Get —
+// Select only restricts by the physical index prefix,
+// so GetNext1 verifies the row matches all of sels.
+func GetNext1(q Query, th *Thread, sels Sels) Row {
+	// this should *not* have to loop because the index should be unique
 	row := q.Get(th, Next)
-	// assert.That(row == nil || q.Get(th, Next) == nil)
-	return row
+	if row != nil {
+		debug.assert(q.Get(th, Next) == nil)
+		if singletonFilter(q.Header(), row, sels) {
+			return row
+		}
+	}
+	return nil
+}
+
+// lookupViaSelectGet implements Lookup via Select+Get,
+// verifying the row matches all sels (since Select only restricts
+// by the physical index prefix) and clearing the select afterwards.
+func lookupViaSelectGet(q Query, th *Thread, sels Sels) Row {
+	q.Select(sels)
+	defer q.Select(nil)
+	return GetNext1(q, th, sels)
 }
 
 // Query1 -----------------------------------------------------------

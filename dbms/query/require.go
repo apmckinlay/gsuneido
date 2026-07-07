@@ -6,145 +6,144 @@ package query
 import (
 	"fmt"
 
-	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/set"
+	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-//go:generate stringer -type=Use
-
-// Use specifies the type of requirement placed on a query.
+// Use specifies the type of requirement placed on index selection.
 // There is an implicit contract between the Use type and the operations
-// that can be performed on the query after SetApproach:
-//   - ReqUnordered: unordered Get, no Lookup
-//   - ReqOrdered: ordered Get, Select, no Lookup
-//   - ReqGrouped: Select + unordered Get, Lookup (requires key)
-//   - ReqLookup: Lookup (cols must contain a key), no Select, no Get
+// that can be performed:
+//   - ReqNone: unordered Get, no Lookup, no Select
+//   - ReqOrder: ordered Get, Select, no Lookup
+//   - ReqGroup: grouped Get, Select, no Lookup
+//   - ReqUnique: Lookup (cols must have an index as a subset), no Select
 //
-// Select is permitted on ReqOrdered (as well as ReqGrouped) because Select
-// filters rows while preserving iteration order — operators that rely on
-// ordered merge (e.g. Union) forward Select to sources optimized ReqOrdered.
-// Lookup is only permitted on ReqLookup. ReqGrouped is weaker than
-// ReqOrdered in that the required columns may appear in any order, whereas
-// ReqOrdered demands them as a specific ordered prefix.
-type Use int
+// ReqOrder and ReqGroup do not support Lookup
+// because they allow a longer index to be chosen
+// which will not work with Lookup.
+type Use byte
 
 const (
-	ReqUnordered Use = iota
-	ReqOrdered
-	ReqGrouped
-	ReqLookup
-	ReqConflict = -1 // only used by MergeReq
+	UsePrefix = 0b100 // cols can be a prefix of index
+	UseFull   = 0b101 // cols must be the entire index
+	UseSet    = 0b100 // cols are a set (order is not significant)
+	UseOrder  = 0b110 // cols are ordered
 )
 
+const (
+	ReqNone   Use = 0
+	ReqGroup      = UsePrefix | UseSet   // used with Select
+	ReqUnique     = UseFull | UseSet     // used with Lookup
+	ReqOrder      = UsePrefix | UseOrder // used to Get in a particular order
+)
+
+func (use Use) String() string {
+	switch use {
+	case ReqNone:
+		return "ReqNone"
+	case ReqGroup:
+		return "ReqGroup"
+	case ReqUnique:
+		return "ReqUnique"
+	case ReqOrder:
+		return "ReqOrder"
+	}
+	panic("invalid Use")
+}
+
 type Require struct {
-	cols     []string
-	frac     float32
-	nlookups int32
-} // 32 bytes
-
-func NewRequire(cols []string, frac float32, nlookups int32) Require {
-	return Require{cols: cols, frac: frac, nlookups: nlookups}
+	cols   []string
+	frac   float32
+	nseeks int32
+	use    Use
 }
 
-func UnorderedReq(frac float32) Require {
-	req := Require{frac: frac}
-	assert.That(req.Use() == ReqUnordered)
-	return req
+func NoneReq(frac float32) Require {
+	return Require{use: ReqNone, frac: frac}
 }
 
-// OrderedReq will return UnorderedReq if cols is empty
-func OrderedReq(cols []string, frac float32) Require {
+// OrderReq will return NoneReq if cols is empty
+func OrderReq(cols []string, frac float32) Require {
 	if len(cols) == 0 {
-		return UnorderedReq(frac)
+		return NoneReq(frac)
 	}
-	req := Require{cols: cols, frac: frac}
-	assert.That(req.Use() == ReqOrdered)
-	return req
+	return Require{use: ReqOrder, cols: cols, frac: frac}
 }
 
-// GroupedReq will return UnorderedReq if cols is empty
-func GroupedReq(cols []string, frac float32, nlookups int32) Require {
+// GroupReq will return NoneReq if cols is empty
+func GroupReq(cols []string, frac float32, nseeks int32) Require {
 	if len(cols) == 0 {
-		return UnorderedReq(frac)
+		return NoneReq(frac)
 	}
-	if nlookups <= 0 {
-		nlookups = 1
-	}
-	req := Require{cols: cols, frac: frac, nlookups: nlookups}
-	assert.That(req.Use() == ReqGrouped)
-	return req
+	return Require{use: ReqGroup, cols: cols, frac: frac, nseeks: nseeks}
 }
 
-// LookupReq will return UnorderedReq if cols is empty
-func LookupReq(cols []string, nlookups int32) Require {
+// UniqueReq will return NoneReq if cols is empty
+func UniqueReq(cols []string, nseeks int32) Require {
 	if len(cols) == 0 {
-		return UnorderedReq(0)
+		return NoneReq(0)
 	}
-	// Floor nlookups so a degenerate caller (e.g. empty source1 yielding
-	// LookupCount==0, or tempindex exploration under a ReqLookup parent)
-	// still produces a valid ReqLookup. With nlookups==0 Use() would derive
-	// ReqOrdered and the assert below would fail. Matches GroupedReq's floor.
-	// The cost distortion (1 seek vs 0) only arises in vacuous cases where
-	// the subtree produces no rows anyway.
-	if nlookups <= 0 {
-		nlookups = 1
-	}
-	req := Require{cols: cols, nlookups: nlookups}
-	assert.That(req.Use() == ReqLookup)
-	return req
+	return Require{use: ReqUnique, cols: cols, nseeks: nseeks}
 }
 
-func (r Require) Use() Use {
-	if len(r.cols) == 0 {
-		assert.That(r.nlookups == 0)
-		return ReqUnordered
-	}
-	if r.nlookups > 0 {
-		if r.frac > 0 {
-			return ReqGrouped
-		}
-		return ReqLookup
-	}
-	return ReqOrdered
-}
-
-// LookupCount returns how many lookups a per-row-driven downstream source
-// (Join/SemiJoin source2, Intersect/Minus source2) should expect from this
-// require. ReqLookup/ReqGrouped inherit the parent's count; scanning (ReqOrdered/
-// ReqUnordered) estimates from frac × nrows1.
-// Never derive the count from frac alone — frac=0 (pure lookup) must not
-// collapse the count to zero, since each parent lookup drives one child lookup.
-func (r Require) LookupCount(nrows1 int) int32 {
-	if r.nlookups > 0 {
-		return r.nlookups
+func (r Require) SeekCount(nrows1 int) int32 {
+	if r.nseeks > 0 {
+		return r.nseeks
 	}
 	return int32(float64(max(1, nrows1)) * float64(r.frac))
 }
 
 // SelectFrac returns the fraction of rows/groups the parent will access,
 // for scaling a downstream source's iteration varcost or its own child frac.
-// Use this — not r.frac directly — whenever a query needs the parent's
-// access fraction to build a child Require. r.frac is 0 for ReqLookup
-// (frac==0, nlookups>0), so using it naively would compute a child frac of 0,
-// collapsing a GroupedReq into ReqLookup. That breaks the implicit contract
-// - a node optimized ReqGrouped may only be Select+iterated, never Lookup.
-// Deriving from nlookups keeps the child frac > 0, preserving ReqGrouped.
-// This is the dual of LookupCount's "never derive from frac alone" warning.
-// ReqUnordered/ReqOrdered return the stored frac unchanged.
 func (r Require) SelectFrac(nrows int) float32 {
 	if r.frac > 0 {
 		return r.frac
 	}
-	if r.nlookups > 0 {
-		return min(float32(1), float32(r.nlookups)/float32(max(1, nrows)))
+	if r.nseeks > 0 {
+		return min(float32(1), float32(r.nseeks)/float32(max(1, nrows)))
 	}
 	return 1
 }
 
 func (r Require) String() string {
-	s := r.Use().String() + str.Join("(,)", r.cols)
-	if r.nlookups > 0 || r.frac > 0 {
-		s += fmt.Sprintf(" f%g n%d", r.frac, r.nlookups)
+	s := r.use.String() + str.Join("(,)", r.cols)
+	if r.frac > 0 {
+		s += fmt.Sprintf(" f%g", r.frac)
+	}
+	if r.nseeks > 0 {
+		s += fmt.Sprintf(" s%d", r.nseeks)
 	}
 	return s
+}
+
+// SatisfiedBy does not check that ReqUnique cols include a key
+func (r Require) SatisfiedBy(index []string) bool {
+	switch r.use {
+	case ReqNone:
+		return true
+	case ReqGroup:
+		return set.StartsWithSet(index, r.cols)
+	case ReqOrder:
+		return slc.HasPrefix(index, r.cols)
+	case ReqUnique:
+		return set.Subset(r.cols, index)
+	}
+	panic("invalid Require use")
+}
+
+// SatisfiedByWithFixed does not check that ReqUnique cols include a key
+func (r Require) SatisfiedByWithFixed(index []string, fixed Fixed) bool {
+	switch r.use {
+	case ReqNone:
+		return true
+	case ReqGroup:
+		nColsUnfixed := countUnfixed(r.cols, fixed)
+		return grouped(index, r.cols, nColsUnfixed, fixed)
+	case ReqOrder:
+		return ordered(index, r.cols, fixed)
+	case ReqUnique:
+		return indexCovered(index, r.cols, fixed)
+	}
+	panic("invalid Require use")
 }

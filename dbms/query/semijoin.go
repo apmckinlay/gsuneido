@@ -101,17 +101,12 @@ func (sj *SemiJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	fixcost1, varcost1 := Optimize(sj.source1, mode, req)
 	nrows1, _ := sj.source1.Nrows()
 	nrows2, _ := sj.source2.Nrows()
-	nlookups := req.LookupCount(nrows1)
-	// Floor nlookups so a degenerate parent (empty/tiny source1 yielding
-	// LookupCount==0) still builds a valid ReqGrouped. GroupedReq can't floor
-	// frac itself (frac==0 is how LookupReq is distinguished), so the caller
-	// must keep frac2 > 0. The 1-seek overestimate only matters in a vacuous
-	// case where source2 is never accessed anyway.
-	if nlookups <= 0 {
-		nlookups = 1
+	nseeks := req.SeekCount(nrows1)
+	if nseeks <= 0 {
+		nseeks = 1
 	}
-	frac2 := min(float32(1), float32(nlookups)/float32(max(1, nrows2)))
-	req2 := GroupedReq(sj.by, frac2, nlookups)
+	frac2 := min(float32(1), float32(nseeks)/float32(max(1, nrows2)))
+	req2 := GroupReq(sj.by, frac2, nseeks)
 	fixcost2, varcost2 := Optimize(sj.source2, mode, req2)
 	if fixcost2+varcost2 >= impossible {
 		return impossible, impossible, nil
@@ -164,12 +159,7 @@ func (sj *SemiJoin) Select(sels Sels) {
 
 func (sj *SemiJoin) Lookup(th *Thread, sels Sels) Row {
 	sj.nlooks++
-	row := sj.source1.Lookup(th, sels)
-	if row != nil && !sj.source2Has(th, row, Next) {
-		row = nil
-	}
-	sj.source2.Select(nil)
-	return row
+	return lookupViaSelectGet(sj, th, sels)
 }
 
 func (sj *SemiJoin) Simple(th *Thread) []Row {

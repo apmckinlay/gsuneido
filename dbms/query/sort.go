@@ -74,14 +74,14 @@ func (sort *Sort) Transform() Query {
 }
 
 func (sort *Sort) optimize(mode Mode, req Require) (Cost, Cost, any) {
-	assert.That(req.Use() == ReqUnordered)
-	srcReq := OrderedReq(sort.order, req.frac)
+	assert.That(req.use == ReqNone)
+	srcReq := OrderReq(sort.order, req.frac)
 	fixcost, varcost := Optimize(sort.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
 
 func (sort *Sort) setApproach(req Require, _ any, tran QueryTran) {
-	srcReq := OrderedReq(sort.order, req.frac)
+	srcReq := OrderReq(sort.order, req.frac)
 	sort.source = SetApproach(sort.source, srcReq, tran)
 	sort.header = sort.source.Header()
 	sort.optimized = true

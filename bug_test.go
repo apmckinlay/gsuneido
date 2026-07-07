@@ -20,26 +20,18 @@ func TestBug(t *testing.T) {
 	openDbms()
 	defer db.CloseKeepMapped()
 
-	query := `
-				(cus
-			join by(ck)
-					(ivc
-				union /*NOT DISJOINT*/
-						(ivc
-					union /*NOT DISJOINT*/
-						(ivc
-						where ik is '3'))))
-		union /*NOT DISJOINT*/
-					((cus
-				join by(ck)
-					ivc)
-			union /*NOT DISJOINT*/
-					((cus
-					where c2 <= '3')
-				join by(ck)
-					ivc))`
+	query := `((((cus leftjoin (ivc extend b2 = i2)) union (cus join ivc)) union ((cus leftjoin ivc) union (cus leftjoin (ivc extend x2 = i2)))) union (((ivc leftjoin cus) union (cus join ivc)) union (((cus leftjoin ivc) rename i4 to y0) union (ivc leftjoin cus))))`
 	th := &core.Thread{}
 	s := compile.EvalString(th, `QueryStrategy("`+query+`", formatted:)`)
 	fmt.Println(core.ToStr(s))
-	compile.EvalString(th, `QueryHash("`+query+`", details:)`)
+	
+	fmt.Println("=== QueryHash ===")
+	x := compile.EvalString(th, `QueryHash("`+query+`", details:)`)
+	fmt.Println("QueryHash result:", core.ToStr(x))
+	
+	fmt.Println("=== QueryAltHash ===")
+	y := compile.EvalString(th, `QueryAltHash("`+query+`", details:)`)
+	fmt.Println("QueryAltHash result:", core.ToStr(y))
+	
+	assert.This(x).Is(y)
 }

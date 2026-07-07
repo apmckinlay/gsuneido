@@ -85,8 +85,8 @@ func (m *Minus) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	assert.That(m.disjoint == "")
 	fixcost1, varcost1 := Optimize(m.source1, mode, req)
 	nrows1, _ := m.source1.Nrows()
-	nlookups := req.LookupCount(nrows1)
-	req2 := LookupReq(m.source2.Columns(), nlookups)
+	nseeks := req.SeekCount(nrows1)
+	req2 := UniqueReq(m.source2.Columns(), nseeks)
 	fc2, vc2 := Optimize(m.source2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil

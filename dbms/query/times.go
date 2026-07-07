@@ -79,7 +79,7 @@ func (t *Times) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		nrows1, _ := src1.Nrows()
 		fixcost1, varcost1 := Optimize(src1, mode, req)
 		fixcost2, varcost2 := Optimize(src2, mode,
-			UnorderedReq(req.frac*float32(max(1, nrows1))))
+			NoneReq(req.frac*float32(max(1, nrows1))))
 		return fixcost1 + fixcost2, varcost1 + varcost2
 	}
 	fixFwd, varFwd := opt(t.source1, t.source2)
@@ -98,7 +98,7 @@ func (t *Times) setApproach(req Require, approach any, tran QueryTran) {
 	t.source1 = SetApproach(t.source1, req, tran)
 	nrows1, _ := t.source1.Nrows()
 	t.source2 = SetApproach(t.source2,
-		UnorderedReq(req.frac*float32(max(1, nrows1))), tran)
+		NoneReq(req.frac*float32(max(1, nrows1))), tran)
 	t.header = t.getHeader()
 }
 
@@ -163,14 +163,8 @@ func (t *Times) Select(sels Sels) {
 }
 
 func (t *Times) Lookup(th *Thread, sels Sels) Row {
-	// could use source1.Lookup like (Left)Join
-	// but Times isn't used much
 	t.nlooks++
-	t.Rewind()
-	sel1, sel2 := t.splitSelect(sels)
-	t.source1.Select(sel1)
-	t.source2.Select(sel2)
-	return GetNext1(t, th)
+	return lookupViaSelectGet(t, th, sels)
 }
 
 func (t *Times) Simple(th *Thread) []Row {

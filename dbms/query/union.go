@@ -96,7 +96,7 @@ func (u *Union) String() string {
 	}
 	switch u.strat {
 	case unionMerge:
-		s += "-merge"
+		s += "-merge" //+ str.Join("(,)", u.keyIndex)
 	case unionLookup:
 		if u.disjoint == "" {
 			s += "-lookup"
@@ -232,279 +232,173 @@ func (u *Union) getFixed() Fixed {
 // optimize ---------------------------------------------------------
 
 func (u *Union) optimize(mode Mode, req Require) (Cost, Cost, any) {
-	switch req.Use() {
-	case ReqUnordered:
-		return u.optUnordered(mode, req)
-	case ReqOrdered, ReqGrouped:
-		return u.optMerge(mode, req)
-	case ReqLookup:
-		if u.disjoint != "" {
-			return u.optLookup(mode, req)
+	// try merge versus lookup
+	fcMerge, vcMerge, appMerge := u.optMerge(mode, req)
+	// The lookup strategy just concatenates source1 then source2, with no
+	// merging. For ReqUnique/ReqGroup that is only valid when disjoint if
+	// req.cols includes the disjoint column - otherwise the same req.cols
+	// values can occur on both sides (they only differ by the disjoint
+	// column) and would end up split into two non-adjacent groups/lookups
+	// instead of being combined.
+	if req.use == ReqNone ||
+		(u.disjoint != "" && (req.use == ReqUnique || req.use == ReqGroup) &&
+			slices.Contains(req.cols, u.disjoint)) {
+		fcLookup, vcLookup, appLookup := u.optLookup(mode, req)
+		if fcLookup+vcLookup < fcMerge+vcMerge {
+			return fcLookup, vcLookup, appLookup
 		}
-		// Non-disjoint: the lookup strategy's source2Has does inner
-		// Lookup calls that clobber the parent's Select state, causing
-		// duplicates. Use merge instead (optTempIndex2 wraps it for
-		// efficient lookups), matching v1 optimize(index != nil).
-		return u.optMerge(mode, req)
 	}
-	panic(assert.ShouldNotReachHere())
+	return fcMerge, vcMerge, appMerge
 }
 
-func (u *Union) optUnordered(mode Mode, req Require) (Cost, Cost, any) {
-	if u.disjoint != "" {
-		mr := UnorderedReq(req.frac)
-		fc1, vc1 := Optimize(u.source1, mode, mr)
-		fc2, vc2 := Optimize(u.source2, mode, mr)
-		return fc1 + fc2, vc1 + vc2,
-			&unionApproach{strat: unionLookup, req1: mr, req2: mr}
+func (u *Union) optLookup(mode Mode, req Require) (Cost, Cost, *unionApproach) {
+	// try forward versus reverse
+	fc, vc, app := u.optLookup2(mode, req)
+
+	u.source1, u.source2 = u.source2, u.source1
+	fcRev, vcRev, appRev := u.optLookup2(mode, req)
+	u.source1, u.source2 = u.source2, u.source1
+	fcRev += outOfOrder
+
+	if fcRev+vcRev < fc+vc {
+		appRev.reverse = true
+		return fcRev, vcRev, appRev
 	}
-	mergeFix, mergeVar, mergeApp := u.optMerge(mode, req)
-	lookupFix, lookupVar, lookupApp := u.optLookup(mode, req)
-	lookupRevFix, lookupRevVar, lookupRevApp := u.optLookupRev(mode, req)
-	return min3(
-		mergeFix, mergeVar, mergeApp,
-		lookupFix, lookupVar, lookupApp,
-		lookupRevFix, lookupRevVar, lookupRevApp)
+	return fc, vc, app
 }
 
-func (u *Union) optMerge(mode Mode, req Require) (Cost, Cost, any) {
-	if u.disjoint != "" {
-		mr := OrderedReq(req.cols, req.frac)
-		fc1, vc1 := Optimize(u.source1, mode, mr)
-		fc2, vc2 := Optimize(u.source2, mode, mr)
-		if fc1+vc1 >= impossible || fc2+vc2 >= impossible {
-			return impossible, impossible, nil
-		}
-		return fc1 + fc2, vc1 + vc2,
-			&unionApproach{keyIndex: req.cols, strat: unionMerge, req1: mr, req2: mr}
+func (u *Union) optLookup2(mode Mode, req Require) (Cost, Cost, *unionApproach) {
+	nrows1, _ := u.source1.Nrows()
+	nseeks := req.SeekCount(nrows1)
+	req1 := req
+	if req.use == ReqUnique || req.use == ReqGroup {
+		req1 = GroupReq(req.cols, req.SelectFrac(nrows1), int32(nseeks))
 	}
-	if req.Use() == ReqUnordered {
-		return u.optMergeNoOrder(mode, req)
-	}
-	return u.optMergeWithOrder(mode, req)
-}
-
-func (u *Union) optMergeNoOrder(mode Mode, req Require) (Cost, Cost, any) {
-	fixed1 := u.source1.Fixed()
-	indexes1 := u.source1.Indexes()
-	idxs1 := fixed1.RemoveFromAll(indexes1)
-	fixed2 := u.source2.Fixed()
-	indexes2 := u.source2.Indexes()
-	idxs2 := fixed2.RemoveFromAll(indexes2)
-	keys1 := fixed1.RemoveFromAll(u.source1.Keys())
-	keys2 := fixed2.RemoveFromAll(u.source2.Keys())
-	commonKeys := set.IntersectFn(keys1, keys2, set.Equal[string])
-
-	bestFixCost := impossible
-	bestVarCost := impossible
-	var bestApproach *unionApproach
-	for _, key := range commonKeys {
-		// try key itself
-		mr := OrderedReq(key, req.frac)
-		fc1, vc1 := Optimize(u.source1, mode, mr)
-		fc2, vc2 := Optimize(u.source2, mode, mr)
-		if fc1+vc1 < impossible && fc2+vc2 < impossible &&
-			fc1+vc1+fc2+vc2 < bestFixCost+bestVarCost {
-			bestFixCost = fc1 + fc2
-			bestVarCost = vc1 + vc2
-			bestApproach = &unionApproach{keyIndex: key,
-				strat: unionMerge, req1: mr, req2: mr}
-		}
-		// try index pairs
-		for i1, idx1 := range idxs1 {
-			if kp := keyPerm(idx1, key); kp != nil {
-				mr1 := OrderedReq(indexes1[i1], req.frac)
-				fc1i, vc1i := Optimize(u.source1, mode, mr1)
-				for i2, idx2 := range idxs2 {
-					if slc.HasPrefix(idx2, kp) {
-						mr2 := OrderedReq(indexes2[i2], req.frac)
-						fc2i, vc2i := Optimize(u.source2, mode, mr2)
-						if fc1i+vc1i < impossible && fc2i+vc2i < impossible &&
-							fc1i+vc1i+fc2i+vc2i < bestFixCost+bestVarCost {
-							bestFixCost = fc1i + fc2i
-							bestVarCost = vc1i + vc2i
-							bestApproach = &unionApproach{
-								keyIndex: indexes1[i1][:len(key)],
-								strat:    unionMerge, req1: mr1, req2: mr2}
-						}
-					}
-				}
-			}
-		}
-	}
-	if bestApproach == nil {
-		return impossible, impossible, nil
-	}
-	return bestFixCost, bestVarCost, bestApproach
-}
-
-func (u *Union) optMergeWithOrder(mode Mode, req Require) (Cost, Cost, any) {
-	order := req.cols
-	fixed1 := u.source1.Fixed()
-	indexes1 := u.source1.Indexes()
-	keys1 := u.source1.Keys()
-	indexes2 := u.source2.Indexes()
-	keys2 := u.source2.Keys()
-	emptyKey1 := isEmptyKey(keys1)
-	emptyKey2 := isEmptyKey(keys2)
-
-	if emptyKey1 && emptyKey2 {
-		mr := OrderedReq(nil, req.frac)
-		fc1, vc1 := Optimize(u.source1, mode, mr)
-		fc2, vc2 := Optimize(u.source2, mode, mr)
-		return fc1 + fc2, vc1 + vc2,
-			&unionApproach{strat: unionMerge, req1: mr, req2: mr}
-	}
-
-	if emptyKey1 {
-		return u.bestMergeIndex(mode, req,
-			u.source2, u.source1, indexes2, keys2, order)
-	}
-	if emptyKey2 {
-		return u.bestMergeIndex(mode, req,
-			u.source1, u.source2, indexes1, keys1, order)
-	}
-
-	bestFixCost := impossible
-	bestVarCost := impossible
-	var bestApproach *unionApproach
-
-	for _, index1 := range indexes1 {
-		if !slc.HasPrefix(index1, order) {
-			continue
-		}
-		if req.Use() == ReqGrouped {
-			nColsUnfixedReq := countUnfixed(req.cols, fixed1)
-			if !grouped(index1, req.cols, nColsUnfixedReq, fixed1) {
-				continue
-			}
-		}
-		key1 := indexContainsKey(index1, keys1)
-		if key1 == nil {
-			continue
-		}
-		keyIdx := keyPrefixOfIndex(index1, key1)
-		for _, index2 := range indexes2 {
-			if !slc.HasPrefix(index2, keyIdx) {
-				continue
-			}
-			if indexContainsKey(index2, keys2) == nil {
-				continue
-			}
-			mr1 := OrderedReq(index1, req.frac)
-			mr2 := OrderedReq(index2, req.frac)
-			fc1, vc1 := Optimize(u.source1, mode, mr1)
-			fc2, vc2 := Optimize(u.source2, mode, mr2)
-			if fc1+vc1 < impossible && fc2+vc2 < impossible &&
-				fc1+vc1+fc2+vc2 < bestFixCost+bestVarCost {
-				bestFixCost = fc1 + fc2
-				bestVarCost = vc1 + vc2
-				bestApproach = &unionApproach{keyIndex: keyIdx,
-					strat: unionMerge, req1: mr1, req2: mr2}
-			}
-		}
-	}
-	if bestApproach == nil {
-		return impossible, impossible, nil
-	}
-	return bestFixCost, bestVarCost, bestApproach
-}
-
-func (u *Union) bestMergeIndex(mode Mode, req Require,
-	srcKey, srcEmpty Query, indexes, keys [][]string, order []string) (Cost, Cost, any) {
-	bestFixCost := impossible
-	bestVarCost := impossible
-	var bestApproach *unionApproach
-	mr0 := OrderedReq(nil, req.frac)
-	fc0, vc0 := Optimize(srcEmpty, mode, mr0)
-	for _, index2 := range indexes {
-		if !slc.HasPrefix(index2, order) {
-			continue
-		}
-		key2 := indexContainsKey(index2, keys)
-		if key2 == nil {
-			continue
-		}
-		mr2 := OrderedReq(index2, req.frac)
-		fc2, vc2 := Optimize(srcKey, mode, mr2)
-		if fc0+vc0+fc2+vc2 < bestFixCost+bestVarCost {
-			bestFixCost = fc0 + fc2
-			bestVarCost = vc0 + vc2
-			var mr1, mr2s Require
-			if srcKey == u.source1 {
-				mr1 = mr2
-				mr2s = mr0
-			} else {
-				mr1 = mr0
-				mr2s = mr2
-			}
-			bestApproach = &unionApproach{keyIndex: index2,
-				strat: unionMerge, req1: mr1, req2: mr2s}
-		}
-	}
-	if bestApproach == nil {
-		return impossible, impossible, nil
-	}
-	return bestFixCost, bestVarCost, bestApproach
-}
-
-func (u *Union) optLookup(mode Mode, req Require) (Cost, Cost, any) {
-	return u.optLookupDir(mode, req, false)
-}
-
-func (u *Union) optLookupRev(mode Mode, req Require) (Cost, Cost, any) {
-	fixcost, varcost, app := u.optLookupDir(mode, req, true)
-	if ap, ok := app.(*unionApproach); ok {
-		ap.reverse = true
-		fixcost += outOfOrder
-	}
-	return fixcost, varcost, app
-}
-
-func (u *Union) optLookupDir(mode Mode, req Require, reverse bool) (Cost, Cost, any) {
-	src1, src2 := u.source1, u.source2
-	if reverse {
-		src1, src2 = src2, src1
-	}
-	nrows1, _ := src1.Nrows()
-	var req1 Require
-	switch req.Use() {
-	case ReqUnordered:
-		req1 = UnorderedReq(req.frac)
-	case ReqLookup:
-		req1 = GroupedReq(req.cols, req.SelectFrac(nrows1), req.nlookups)
-	case ReqGrouped:
-		req1 = req
-	default:
-		return impossible, impossible, nil
-	}
-	fc1, vc1 := Optimize(src1, mode, req1)
+	fc1, vc1 := Optimize(u.source1, mode, req1)
 	if fc1+vc1 >= impossible {
 		return impossible, impossible, nil
 	}
-	nlookups := req.LookupCount(nrows1)
 	if u.disjoint != "" {
-		mr2 := req1
-		fc2, vc2 := Optimize(src2, mode, mr2)
+		fc2, vc2 := Optimize(u.source2, mode, req1)
 		if fc2+vc2 >= impossible {
 			return impossible, impossible, nil
 		}
 		return fc1 + fc2, vc1 + vc2,
-			&unionApproach{strat: unionLookup,
-				req1: req1, req2: mr2, reverse: reverse}
+			&unionApproach{strat: unionLookup, req1: req1, req2: req1}
 	}
-	req2 := LookupReq(src2.Columns(), nlookups)
-	fc2, vc2 := Optimize(src2, mode, req2)
+	// else not disjoint so we need lookups on source2
+	req2 := UniqueReq(u.source2.Columns(), int32(nseeks))
+	fc2, vc2 := Optimize(u.source2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil
 	}
-	ki := req2.cols
 	return fc1 + fc2, vc1 + vc2,
-		&unionApproach{keyIndex: ki, strat: unionLookup,
-			req1: req1, req2: req2, reverse: reverse}
+		&unionApproach{strat: unionLookup, req1: req1, req2: req2, keyIndex: req2.cols}
 }
 
-func (u *Union) setApproach(_ Require, approach any, tran QueryTran) {
+func (u *Union) optMerge(mode Mode, req Require) (Cost, Cost, *unionApproach) {
+	// merge is symmetrical so we don't need to try forward and reverse
+	if u.disjoint != "" {
+		mr := OrderReq(req.cols, req.frac)
+		fc1, vc1 := Optimize(u.source1, mode, mr)
+		fc2, vc2 := Optimize(u.source2, mode, mr)
+		if fc1+vc1 < impossible && fc2+vc2 < impossible {
+			return fc1 + fc2, vc1 + vc2,
+				&unionApproach{keyIndex: req.cols, strat: unionMerge, req1: mr, req2: mr}
+		}
+	}
+	// Special case: if both sources have empty keys, allow unordered merge
+	// This matches the old optMergeWithOrder behavior
+	keys1 := u.source1.Keys()
+	keys2 := u.source2.Keys()
+	if isEmptyKey(keys1) && isEmptyKey(keys2) {
+		// With empty keys, each source has at most 1 row, so union has at most 2 rows.
+		// The merge will compare using allCols, which must satisfy the req.
+		allCols := u.allCols
+		if req.SatisfiedByWithFixed(allCols, u.source1.Fixed()) &&
+			req.SatisfiedByWithFixed(allCols, u.source2.Fixed()) {
+			mr := NoneReq(req.frac)
+			fc1, vc1 := Optimize(u.source1, mode, mr)
+			fc2, vc2 := Optimize(u.source2, mode, mr)
+			if fc1+vc1 < impossible && fc2+vc2 < impossible {
+				return fc1 + fc2, vc1 + vc2,
+					&unionApproach{strat: unionMerge, req1: mr, req2: mr}
+			}
+		}
+	}
+	type b struct {
+		order []string
+		req   Require
+	}
+	best := newBest[b]()
+	orders := u.mergeIndexes(req)
+	for _, order := range orders {
+		srcReq := OrderReq(order, req.frac)
+		fc1, vc1 := Optimize(u.source1, mode, srcReq)
+		if fc1+vc1 < impossible {
+			fc2, vc2 := Optimize(u.source2, mode, srcReq)
+			best.update(fc1+fc2, vc1+vc2, b{order: order, req: srcReq})
+		}
+	}
+	if !best.found() {
+		return impossible, impossible, nil
+	}
+	return best.fixcost, best.varcost,
+		&unionApproach{strat: unionMerge, keyIndex: best.data.order,
+			req1: best.data.req, req2: best.data.req}
+}
+
+// mergeIndexes finds orders that unionMerge can use to read both sources.
+// For each pair of source indexes, their common prefix is a candidate order
+// (both sources can physically produce it) if each source has a key covered
+// by that prefix (taking fixed into account) and the order satisfies the req.
+// It also tries bare common keys, which may require temp indexes.
+//
+// For ReqUnique (Lookup) the order must also be a key of the union RESULT,
+// not just a key of each source. Otherwise the same order values can produce
+// distinct rows from the two sources (e.g. when one source has an extra
+// extend column), and Lookup via Select+Get would return more than one row.
+// When no order qualifies, optMerge returns impossible and the optimizer
+// falls back to wrapping the union in a TempIndex.
+func (u *Union) mergeIndexes(req Require) [][]string {
+	keys := u.Keys()
+	fixed := u.Fixed()
+	fixed1 := u.source1.Fixed()
+	keys1 := u.source1.Keys()
+	indexes1 := u.source1.Indexes()
+	fixed2 := u.source2.Fixed()
+	keys2 := u.source2.Keys()
+	indexes2 := u.source2.Indexes()
+	needResultKey := req.use == ReqUnique
+	var results [][]string
+	for _, idx1 := range indexes1 {
+		for _, idx2 := range indexes2 {
+			order := slc.CommonPrefix(idx1, idx2)
+			if len(order) > 0 &&
+				hasKey(order, keys1, fixed1) &&
+				hasKey(order, keys2, fixed2) &&
+				req.SatisfiedByWithFixed(order, fixed1) &&
+				req.SatisfiedByWithFixed(order, fixed2) &&
+				(!needResultKey || hasKey(order, keys, fixed)) &&
+				!slc.ContainsFn(results, order, slices.Equal) {
+				results = append(results, order)
+			}
+		}
+	}
+	// try bare common keys, probably requiring temp indexes
+	commonKeys := set.IntersectFn(keys1, keys2, set.Equal)
+	for _, key := range commonKeys {
+		if req.SatisfiedByWithFixed(key, fixed1) &&
+			req.SatisfiedByWithFixed(key, fixed2) &&
+			(!needResultKey || hasKey(key, keys, fixed)) &&
+			!slc.ContainsFn(results, key, slices.Equal) {
+			results = append(results, key)
+		}
+	}
+	return results
+}
+
+func (u *Union) setApproach(req Require, approach any, tran QueryTran) {
 	app := approach.(*unionApproach)
 	u.strat = app.strat
 	if app.strat == 0 {
@@ -805,7 +699,6 @@ func (u *Union) getMergeDisjoint(th *Thread, dir Dir) (r Row) {
 func nothing(*Thread, Dir) Row { return nil }
 
 func (u *Union) Select(sels Sels) {
-	// fmt.Println("Union Select", cols, unpack(vals))
 	u.nsels++
 	u.state = rewound
 	u.src1get = u.source1.Get
@@ -857,9 +750,7 @@ func selConflict(srcCols []string, sels Sels) bool {
 
 func (u *Union) Lookup(th *Thread, sels Sels) Row {
 	u.nlooks++
-	u.Select(sels)
-	defer u.Select(nil) // clear select
-	return GetNext1(u, th)
+	return lookupViaSelectGet(u, th, sels)
 }
 
 func (u *Union) Simple(th *Thread) []Row {

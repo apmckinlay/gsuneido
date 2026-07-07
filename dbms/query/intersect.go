@@ -162,20 +162,20 @@ func (it *Intersect) cost2(mode Mode, req Require, reverse bool) (Cost, Cost, *i
 		src1, src2 = src2, src1
 	}
 	// Intersect.Lookup only calls src1.Lookup, so if req needs Lookup
-	// support (ReqLookup or ReqGrouped), req.cols must contain an actual
+	// support (ReqUnique or ReqGroup), req.cols must contain an actual
 	// key of src1. it.keys is the union of both sources' keys (valid for
 	// Intersect as a whole, since a key on either side is sufficient to
 	// make rows unique) but a key coming solely from src2 can't be used
 	// to satisfy Lookup through src1 - that must fall back to a temp index.
-	if use := req.Use(); use == ReqLookup || use == ReqGrouped {
+	if use := req.use; use == ReqUnique || use == ReqGroup {
 		if !hasKey(req.cols, src1.Keys(), src1.Fixed()) {
 			return impossible, impossible, nil
 		}
 	}
 	fixcost1, varcost1 := Optimize(src1, mode, req)
 	nrows1, _ := src1.Nrows()
-	nlookups := req.LookupCount(nrows1)
-	req2 := LookupReq(src2.Columns(), nlookups)
+	nseeks := req.SeekCount(nrows1)
+	req2 := UniqueReq(src2.Columns(), nseeks)
 	fc2, vc2 := Optimize(src2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil

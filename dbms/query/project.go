@@ -451,7 +451,7 @@ func (p *Project) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		fixcost, varcost := Optimize(p.source, mode, req)
 		return fixcost, varcost, &projectApproach{strat: projCopy, req: req}
 	}
-	// non-unique: merge incoming req with own ReqGrouped(p.columns)
+	// non-unique: merge incoming req with own ReqGroup(p.columns)
 	seqFix, seqVar, seqApp := p.seqCost(mode, req)
 	mapFix, mapVar, mapApp := p.mapCost(mode, req)
 	if seqFix+seqVar <= mapFix+mapVar {
@@ -464,31 +464,32 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 	fixed := p.source.Fixed()
 	nColsUnfixed := countUnfixed(p.columns, fixed)
 	nrows, _ := p.Nrows()
-	switch req.Use() {
-	case ReqUnordered:
-		srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), 1)
+	srcReq := GroupReq(p.columns, req.SelectFrac(nrows), req.nseeks)
+	switch req.use {
+	case ReqNone:
 		fixcost, varcost := Optimize(p.source, mode, srcReq)
 		return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
-	case ReqOrdered:
+	case ReqOrder:
 		if grouped(req.cols, p.columns, nColsUnfixed, fixed) {
 			fixcost, varcost := Optimize(p.source, mode, req)
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: req}
 		}
-		return impossible, impossible, nil
-	case ReqLookup:
+	case ReqUnique:
 		debug.assert(set.Equal(req.cols, p.columns)) // only key is all columns
-		// BUG Grouped can use a longer index, but that won't work for Lookup
-		srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), req.nlookups)
+		// we can use GroupReq because Lookup is implemented by Select + Get
+		srcReq := GroupReq(p.columns, req.SelectFrac(nrows), req.nseeks)
 		fixcost, varcost := Optimize(p.source, mode, srcReq)
 		return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
-	case ReqGrouped:
+	case ReqGroup:
 		if len(req.cols) == len(p.columns) {
 			debug.assert(set.Equal(req.cols, p.columns)) // only key is all columns
-			srcReq := GroupedReq(p.columns, req.SelectFrac(nrows), req.nlookups)
 			fixcost, varcost := Optimize(p.source, mode, srcReq)
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 		}
-		// requires are different ReqGrouped
+		if !eitherSubset(req.cols, p.columns) {
+			return impossible, impossible, nil
+		}
+		// requires are different ReqGroup
 		// this can't be handled with a single Require
 		// so we need to search here
 		nColsUnfixedReq := countUnfixed(req.cols, fixed)
@@ -498,9 +499,9 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 				grouped(idx, p.columns, nColsUnfixed, fixed) {
 				// source req must be ordered so it doesn't ignore column order
 				// which is necessary to satisfy both groupings
-				srcReq := OrderedReq(idx, req.SelectFrac(nrows))
+				srcReq := OrderReq(idx, req.SelectFrac(nrows))
 				f, v := Optimize(p.source, mode, srcReq)
-				v += Cost(req.nlookups) * p.source.lookupCost()
+				v += Cost(req.nseeks) * p.source.lookupCost()
 				best.update(srcReq, f, v)
 			}
 		}
@@ -508,9 +509,16 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 			return best.fixcost, best.varcost,
 				&projectApproach{strat: projSeq, req: best.req}
 		}
-		return impossible, impossible, nil
 	}
 	return impossible, impossible, nil
+}
+
+// eitherSubset returns true if x is a subset of y or y is a subset of x
+func eitherSubset(x, y []string) bool {
+	if len(x) > len(y) {
+		x, y = y, x
+	}
+	return set.Subset(x, y)
 }
 
 // mapCost estimates the cost of projMap.
@@ -521,8 +529,8 @@ func (p *Project) mapCost(mode Mode, req Require) (Cost, Cost, any) {
 	if mode != ReadMode || nrows > mapThreshold {
 		return impossible, impossible, nil
 	}
-	if req.Use() == ReqLookup {
-		req = GroupedReq(req.cols, req.SelectFrac(nrows), req.nlookups)
+	if req.use == ReqUnique {
+		req = GroupReq(req.cols, req.SelectFrac(nrows), req.nseeks)
 	}
 	srcFixcost, srcVarcost := Optimize(p.source, mode, req)
 	mapBuild := Cost(float64(nrows) * float64(req.frac) * 20)
@@ -747,9 +755,7 @@ func (p *Project) Lookup(th *Thread, sels Sels) Row {
 	if p.strat == projCopy {
 		return p.source.Lookup(th, sels)
 	}
-	p.Select(sels)
-	defer p.Select(nil) // clear
-	return GetNext1(p, th)
+	return lookupViaSelectGet(p, th, sels)
 }
 
 func (p *Project) getLookupCost() Cost {

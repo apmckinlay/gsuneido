@@ -128,7 +128,7 @@ func TestQuery2(t *testing.T) {
 	// trace.QueryOpt.Set()
 	q = q.Transform()
 	const frac = 100
-	req := NewRequire(nil, frac, 0)
+	req := NoneReq(frac)
 	fixcost, varcost := Optimize(q, ReadMode, req)
 	if fixcost+varcost >= 9999999999 {
 		panic("invalid query: " + q.String())

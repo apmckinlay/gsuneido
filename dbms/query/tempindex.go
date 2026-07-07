@@ -39,7 +39,7 @@ const derivedWarn = 8_000_000 // ??? // derivedWarn is also used by Project
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	order = src.Fixed().RemoveFrom(order)
 	if len(order) == 0 {
-		log.Println("ERROR: empty TempIndex")
+		panic("ERROR: empty TempIndex")
 	}
 	ti := TempIndex{order: order, tran: tran, selOrg: selMin, selEnd: selMax}
 	ti.source = src
@@ -64,14 +64,14 @@ func (ti *TempIndex) Transform() Query {
 
 // optimize is only used by fuzz_test.go
 func (ti *TempIndex) optimize(mode Mode, req Require) (Cost, Cost, any) {
-	srcReq := UnorderedReq(req.frac)
+	srcReq := NoneReq(req.frac)
 	fixcost, varcost := Optimize(ti.source, mode, srcReq)
 	return fixcost, varcost, nil
 }
 
 // setApproach is only used by fuzz_test.go
 func (ti *TempIndex) setApproach(req Require, _ any, tran QueryTran) {
-	srcReq := UnorderedReq(req.frac)
+	srcReq := NoneReq(req.frac)
 	SetApproach(ti.source, srcReq, tran)
 }
 

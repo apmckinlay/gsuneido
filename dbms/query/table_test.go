@@ -6,7 +6,6 @@ package query
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -14,16 +13,11 @@ import (
 func TestTableOptimize(t *testing.T) {
 	assert := assert.T(t)
 	tran := testTran{}
-
-	optimizeFor := func(tbl *Table, req Require) (Cost, Cost, any) {
-		return tbl.optimize(ReadMode, req)
-	}
-
 	test := func(table string, req Require, expected []string) {
 		t.Helper()
 		tbl := &Table{name: table}
 		tbl.SetTran(tran)
-		f, v, app := optimizeFor(tbl, req)
+		f, v, app := tbl.optimize(ReadMode, req)
 		assert.True(f+v < impossible)
 		assert.This(app.(tableApproach).index).Is(expected)
 	}
@@ -31,7 +25,7 @@ func TestTableOptimize(t *testing.T) {
 		t.Helper()
 		tbl := &Table{name: table}
 		tbl.SetTran(tran)
-		f, v, app := optimizeFor(tbl, req)
+		f, v, app := tbl.optimize(ReadMode, req)
 		assert.False(f+v < impossible)
 		assert.This(app).Is(nil)
 	}
@@ -39,207 +33,156 @@ func TestTableOptimize(t *testing.T) {
 	// table with single index: key on {a}
 	// indexes: [[a]], allKeys: [[a]]
 
-	// ReqUnordered
-	test("table", UnorderedReq(1), []string{"a"})
+	// ReqNone
+	test("table", NoneReq(1), []string{"a"})
 
-	// ReqOrdered — match
-	test("table", OrderedReq([]string{"a"}, 1), []string{"a"})
+	// ReqOrder — match
+	test("table", OrderReq([]string{"a"}, 1), []string{"a"})
 
-	// ReqOrdered — no match (b not a prefix of {a})
-	assertImpossible("table", OrderedReq([]string{"b"}, 1))
+	// ReqOrder — no match (b not a prefix of {a})
+	assertImpossible("table", OrderReq([]string{"b"}, 1))
 
-	// ReqGrouped — match
-	test("table", GroupedReq([]string{"a"}, 1, 1), []string{"a"})
+	// ReqGroup — match
+	test("table", GroupReq([]string{"a"}, 1, 1), []string{"a"})
 
-	// ReqGrouped — b not found in any index
-	assertImpossible("table", GroupedReq([]string{"b"}, 1, 1))
+	// ReqGroup — b not found in any index
+	assertImpossible("table", GroupReq([]string{"b"}, 1, 1))
 
-	// ReqLookup — {a} is a physical index
-	test("table", LookupReq([]string{"a"}, 1), []string{"a"})
+	// ReqUnique — {a} is a physical index
+	test("table", UniqueReq([]string{"a"}, 1), []string{"a"})
 
-	// ReqLookup — {b} is not a physical index, no lookup-eligible index has {b}
-	assertImpossible("table", LookupReq([]string{"b"}, 1))
+	// ReqUnique — {b} is not a physical index, no lookup-eligible index has {b}
+	assertImpossible("table", UniqueReq([]string{"b"}, 1))
 
 	// supplier: key on {supplier}, index on {city}
 	// indexes: [[supplier], [city,supplier]], allKeys: [[supplier]]
 
-	// ReqUnordered — primary index
-	test("supplier", UnorderedReq(1), []string{"supplier"})
+	// ReqNone — primary index
+	test("supplier", NoneReq(1), []string{"supplier"})
 
-	// ReqOrdered — match key
-	test("supplier", OrderedReq([]string{"supplier"}, 1), []string{"supplier"})
+	// ReqOrder — match key
+	test("supplier", OrderReq([]string{"supplier"}, 1), []string{"supplier"})
 
-	// ReqOrdered — match non-key index
-	test("supplier", OrderedReq([]string{"city", "supplier"}, 1), []string{"city", "supplier"})
+	// ReqOrder — match non-key index
+	test("supplier", OrderReq([]string{"city", "supplier"}, 1), []string{"city", "supplier"})
 
-	// ReqOrdered — no match (name not in any index)
-	assertImpossible("supplier", OrderedReq([]string{"name"}, 1))
+	// ReqOrder — no match (name not in any index)
+	assertImpossible("supplier", OrderReq([]string{"name"}, 1))
 
-	// ReqOrdered — city is a prefix of [city,supplier], so indexFor finds it
-	test("supplier", OrderedReq([]string{"city"}, 1), []string{"city", "supplier"})
+	// ReqOrder — city is a prefix of [city,supplier], so indexFor finds it
+	test("supplier", OrderReq([]string{"city"}, 1), []string{"city", "supplier"})
 
-	// ReqGrouped — {city} is grouped by [city,supplier]
-	test("supplier", GroupedReq([]string{"city"}, 1, 1), []string{"city", "supplier"})
+	// ReqGroup — {city} is grouped by [city,supplier]
+	test("supplier", GroupReq([]string{"city"}, 1, 1), []string{"city", "supplier"})
 
-	// ReqGrouped — {name} not in any index
-	assertImpossible("supplier", GroupedReq([]string{"name"}, 1, 1))
+	// ReqGroup — {name} not in any index
+	assertImpossible("supplier", GroupReq([]string{"name"}, 1, 1))
 
-	// ReqLookup — {supplier} is a physical index
-	test("supplier", LookupReq([]string{"supplier"}, 1), []string{"supplier"})
+	// ReqUnique — {supplier} is a physical index
+	test("supplier", UniqueReq([]string{"supplier"}, 1), []string{"supplier"})
 
-	// ReqLookup — {supplier} is the shortest key
-	test("supplier", LookupReq([]string{"city", "supplier"}, 1), []string{"supplier"})
+	// ReqUnique — {supplier} is the shortest key
+	test("supplier", UniqueReq([]string{"city", "supplier"}, 1), []string{"supplier"})
 
-	// ReqLookup — {city} is not a physical index and no index is both
+	// ReqUnique — {city} is not a physical index and no index is both
 	// lookup-eligible (contains a key as a prefix) AND grouped by {city}.
 	// [supplier] is lookup-eligible but not grouped by {city}.
 	// [city,supplier] is grouped by {city} but NOT lookup-eligible
 	// (key {supplier} is not a prefix of [city,supplier]).
-	assertImpossible("supplier", LookupReq([]string{"city"}, 1))
+	assertImpossible("supplier", UniqueReq([]string{"city"}, 1))
 
 	// abc: key on {b}, index on {a}, key on {c}
 	// indexes: [[b], [a,b], [c]], allKeys: [[b], [c]]
 
-	// ReqUnordered — primary index {b}
-	test("abc", UnorderedReq(1), []string{"b"})
+	// ReqNone — primary index {b}
+	test("abc", NoneReq(1), []string{"b"})
 
-	// ReqGrouped — {a} is grouped by [a,b]
-	test("abc", GroupedReq([]string{"a"}, 1, 1), []string{"a", "b"})
+	// ReqGroup — {a} is grouped by [a,b]
+	test("abc", GroupReq([]string{"a"}, 1, 1), []string{"a", "b"})
 
-	// ReqGrouped — {b} is grouped by [b] (cheapest)
-	test("abc", GroupedReq([]string{"b"}, 1, 1), []string{"b"})
+	// ReqGroup — {b} is grouped by [b] (cheapest)
+	test("abc", GroupReq([]string{"b"}, 1, 1), []string{"b"})
 
-	// ReqGrouped — {c} is grouped by [c]
-	test("abc", GroupedReq([]string{"c"}, 1, 1), []string{"c"})
+	// ReqGroup — {c} is grouped by [c]
+	test("abc", GroupReq([]string{"c"}, 1, 1), []string{"c"})
 
-	// ReqLookup — {b} is a physical index (and a key)
-	test("abc", LookupReq([]string{"b"}, 1), []string{"b"})
+	// ReqUnique — {b} is a physical index (and a key)
+	test("abc", UniqueReq([]string{"b"}, 1), []string{"b"})
 
-	// ReqLookup — {c} is a physical index (and a key)
-	test("abc", LookupReq([]string{"c"}, 1), []string{"c"})
+	// ReqUnique — {c} is a physical index (and a key)
+	test("abc", UniqueReq([]string{"c"}, 1), []string{"c"})
 
-	// ReqLookup — {a} is not a physical index. [a,b] is not
+	// ReqUnique — {a} is not a physical index. [a,b] is not
 	// lookup-eligible (key {b} is not a prefix, key {c} is not in index).
-	assertImpossible("abc", LookupReq([]string{"a"}, 1))
+	assertImpossible("abc", UniqueReq([]string{"a"}, 1))
 
 	// comp: key on {a,b,c} — single index [a,b,c], keys [[a,b,c]]
-	// ReqLookup {b,a} is not a physical index.
+	// ReqUnique {b,a} is not a physical index.
 	// [a,b,c] is lookup-eligible and has {b,a} grouped,
 	// but is not indexCovered (c is not in {b,a}).
-	assertImpossible("comp", LookupReq([]string{"b", "a"}, 1))
+	assertImpossible("comp", UniqueReq([]string{"b", "a"}, 1))
 
 	// singleton: table with empty key — all req types return indexes[0]
 	// Set up manually (no SetTran since _singleton_ is not in testSchemas).
 	singleton := &Table{}
-	singleton.name = "_singleton_"
 	singleton.indexes = [][]string{{"x"}}
 	singleton.singleton = true
 	singleton.info = &meta.Info{Nrows: 1, Size: 100}
 	for _, req := range []Require{
-		UnorderedReq(1),
-		OrderedReq([]string{"x"}, 1),
-		GroupedReq([]string{"x"}, 1, 1),
-		LookupReq([]string{"x"}, 1),
+		NoneReq(1),
+		OrderReq([]string{"x"}, 1),
+		GroupReq([]string{"x"}, 1, 1),
+		UniqueReq([]string{"x"}, 1),
 	} {
-		f, v, app := optimizeFor(singleton, req)
+		f, v, app := singleton.optimize(ReadMode, req)
 		assert.Msg(req).True(f+v < impossible)
 		assert.Msg(req).This(app.(tableApproach).index).Is([]string{"x"})
 	}
 }
 
-func TestTableOptimize_ReqLookup_indexCovered(t *testing.T) {
-	assert := assert.T(t)
-	optimizeFor := func(tbl *Table, req Require) (Cost, Cost, any) {
-		return tbl.optimize(ReadMode, req)
-	}
-	test := func(tbl *Table, req Require, expected []string) {
-		t.Helper()
-		f, v, app := optimizeFor(tbl, req)
-		assert.True(f+v < impossible)
-		assert.This(app.(tableApproach).index).Is(expected)
-	}
-	assertImpossible := func(tbl *Table, req Require) {
-		t.Helper()
-		f, v, app := optimizeFor(tbl, req)
-		assert.False(f+v < impossible)
-		assert.This(app).Is(nil)
-	}
-	newTable := func(name string, indexes, keys [][]string, nrows int) *Table {
-		tbl := &Table{name: name}
+func TestTableOptimize_UniqueReq(t *testing.T) {
+	newTable := func(indexes, keys [][]string, nrows int) *Table {
+		tbl := &Table{name: "foo"}
 		tbl.indexes = indexes
 		tbl.allKeys = keys
 		tbl.info = &meta.Info{Nrows: nrows, Size: int64(nrows * 100)}
 		return tbl
 	}
-
-	// by=(x,y), key=(y): partial lookup — indexCovered passes (y is in by)
-	tbl := newTable("xy", [][]string{{"y"}}, [][]string{{"y"}}, 100)
-	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"y"})
-
-	// by=(x,y), key=(x,y): full lookup — exact index match
-	tbl = newTable("xy2", [][]string{{"x", "y"}}, [][]string{{"x", "y"}}, 100)
-	test(tbl, LookupReq([]string{"x", "y"}, 1), []string{"x", "y"})
-
-	// by=(x,y), key=(x,y,z): should fail — indexCovered fails (z not in by)
-	tbl = newTable("xyz", [][]string{{"x", "y", "z"}}, [][]string{{"x", "y", "z"}}, 100)
-	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
-
-	// by=(x,y), index=(x,c), key=(x): fails — indexCovered fails (c not in by)
-	tbl = newTable("xc", [][]string{{"x", "c"}}, [][]string{{"x"}}, 100)
-	assertImpossible(tbl, LookupReq([]string{"x", "y"}, 1))
-
-	// by=(x,y,z), key=(y,z): picks [y,z] — indexCovered passes (y,z both in by)
-	tbl = newTable("xyz2", [][]string{{"y", "z"}}, [][]string{{"y", "z"}}, 100)
-	test(tbl, LookupReq([]string{"x", "y", "z"}, 1), []string{"y", "z"})
-}
-
-func TestTableOptimize_ReqGrouped_Lookup(t *testing.T) {
-	// Regression test: optimize with ReqGrouped(a,b) could choose index
-	// (a,b,c), then a subsequent Lookup with sels for (a,b) would panic
-	// in selOrg because it doesn't supply all columns of the index.
-	assert := assert.T(t)
-
-	// Build an isolated Table with:
-	//   key on (x)
-	//   index on (a,b,c) — non-key, Fields = (a,b,c,x) since BestKey=(x)
-	//     but we simplify Fields to (a,b,c) for this test
-	// ReqGrouped(a,b) matches (a,b,c) via StartsWithSet and it's the
-	// only matching index, so it gets chosen.
-	// Lookup with sels{a,b} should NOT panic.
-	tbl := &Table{name: "test_grouped_lookup"}
-	tbl.indexes = [][]string{{"x"}, {"a", "b", "c"}}
-	tbl.allKeys = [][]string{{"x"}, {"a", "b"}}
-	tbl.info = &meta.Info{Nrows: 100, Size: 10000}
-	tbl.keys = [][]string{{"x"}}
-	tbl.header = NewHeader([][]string{{"x", "a", "b", "c"}}, []string{"x", "a", "b", "c"})
-	tbl.schema = &Schema{
-		Columns: []string{"x", "a", "b", "c"},
-		Indexes: []Index{
-			{Mode: 'k', Columns: []string{"x"}, Fields: []string{"x"}},
-			{Mode: 'i', Columns: []string{"a", "b", "c"}, Fields: []string{"a", "b", "c", "x"},
-				BestKey: []string{"x"}},
-		},
+	test := func(tbl *Table, req Require, expected []string) {
+		t.Helper()
+		f, v, app := tbl.optimize(ReadMode, req)
+		assert.True(f+v < impossible)
+		assert.This(app.(tableApproach).index).Is(expected)
 	}
-	tbl.tran = testTran{}
+	fail := func(tbl *Table, req Require) {
+		t.Helper()
+		f, v, app := tbl.optimize(ReadMode, req)
+		assert.False(f+v < impossible)
+		assert.This(app).Is(nil)
+	}
+	var tbl *Table
 
-	// Optimize with ReqGrouped(a,b)
-	f, v, app := tbl.optimize(ReadMode, GroupedReq([]string{"a", "b"}, 1, 1))
-	assert.True(f+v < impossible)
-	chosen := app.(tableApproach).index
-	assert.This(chosen).Is([]string{"a", "b", "c"})
+	// index(x) key(x) - req(x)
+	tbl = newTable([][]string{{"x"}}, [][]string{{"x"}}, 100)
+	test(tbl, UniqueReq([]string{"x"}, 1), []string{"x"})
 
-	// Apply the chosen approach (sets tbl.iIndex, tbl.indexEncode, etc.)
-	tbl.SetIndex(chosen)
+	// index(x,y) key(x,y) - req(x,y)
+	tbl = newTable([][]string{{"x", "y"}}, [][]string{{"x", "y"}}, 100)
+	test(tbl, UniqueReq([]string{"x", "y"}, 1), []string{"x", "y"})
 
-	// Lookup with only (a,b) — this must not panic even though the
-	// optimizer chose the wider (a,b,c) index.
-	sels := Sels{{"a", Pack(SuInt(1))}, {"b", Pack(SuInt(2))}}
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Fatalf("Lookup panicked with index %v: %v", chosen, r)
-			}
-		}()
-		tbl.Lookup(nil, sels)
-	}()
+	// index(y) key(y) - req(x,y) - FAIL
+	tbl = newTable([][]string{{"y"}}, [][]string{{"y"}}, 100)
+	test(tbl, UniqueReq([]string{"x", "y"}, 1), []string{"y"})
+
+	// index(x,y,z) key(x,y,z) - req(x,y) - FAIL
+	tbl = newTable([][]string{{"x", "y", "z"}}, [][]string{{"x", "y", "z"}}, 100)
+	fail(tbl, UniqueReq([]string{"x", "y"}, 1))
+
+	// index(x,c), key=(x) - req(x,y) - FAIL
+	tbl = newTable([][]string{{"x", "c"}}, [][]string{{"x"}}, 100)
+	fail(tbl, UniqueReq([]string{"x", "y"}, 1))
+
+	// index(y,z) key(y,z) - req(x,y,z) - FAIL
+	tbl = newTable([][]string{{"y", "z"}}, [][]string{{"y", "z"}}, 100)
+	test(tbl, UniqueReq([]string{"x", "y", "z"}, 1), []string{"y", "z"})
 }

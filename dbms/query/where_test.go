@@ -608,7 +608,7 @@ func TestWhere_keyfixed(t *testing.T) {
 	q := ParseQuery("table where a=4", tran, nil)
 	q = q.Transform()
 	index := []string{"b"}
-	req := OrderedReq(index, 1)
+	req := OrderReq(index, 1)
 	Optimize(q, ReadMode, req)
 	q = SetApproach(q, req, tran)
 	assert.That(q.fastSingle())
@@ -691,7 +691,7 @@ func TestWhere_SelOrgNotFull(t *testing.T) {
 	// but (a,c) doesn't support lookups on (a,b) even with fixed
 	q = q.Transform()
 	key := []string{"a", "b"}
-	req := OrderedReq(key, 1)
+	req := OrderReq(key, 1)
 	Optimize(q, ReadMode, req)
 	q = SetApproach(q, req, tran)
 	q.Lookup(nil, Sels{{"a", Pack(SuInt(4))}, {"b", Pack(SuInt(5))}})
@@ -788,4 +788,107 @@ func countTrue(bs ...bool) int {
 		}
 	}
 	return n
+}
+
+func TestAllSingleValuePrefix(t *testing.T) {
+	assert := assert.T(t).This
+
+	// helper to create perCol map with single value spans
+	makePerCol := func(pairs ...string) map[string][]span {
+		m := make(map[string][]span)
+		for i := 0; i < len(pairs); i += 2 {
+			m[pairs[i]] = []span{valSpan(pairs[i+1])}
+		}
+		return m
+	}
+
+	// basic case: two columns with values
+	index := []string{"a", "b"}
+	perCol := makePerCol("a", "x", "b", "y")
+	prefixLen, org, ok := allSingleValuePrefix(index, true, perCol)
+	assert(ok).Is(true)
+	assert(prefixLen).Is(2)
+	assert(org).Is("x\x00\x00y")
+
+	// trailing empty field: (a="x", b="") — org is trimmed to "x"
+	perCol = makePerCol("a", "x", "b", "")
+	prefixLen, org, ok = allSingleValuePrefix(index, true, perCol)
+	assert(ok).Is(true)
+	assert(prefixLen).Is(2)
+	assert(org).Is("x") // trailing separator trimmed by Encoder.String()
+
+	// multiple trailing empty fields
+	index = []string{"a", "b", "c"}
+	perCol = makePerCol("a", "x", "b", "", "c", "")
+	prefixLen, org, ok = allSingleValuePrefix(index, true, perCol)
+	assert(ok).Is(true)
+	assert(prefixLen).Is(3)
+	assert(org).Is("x") // both trailing separators trimmed
+
+	// middle empty field (not trailing)
+	index = []string{"a", "b", "c"}
+	perCol = makePerCol("a", "x", "b", "", "c", "z")
+	prefixLen, org, ok = allSingleValuePrefix(index, true, perCol)
+	assert(ok).Is(true)
+	assert(prefixLen).Is(3)
+	assert(org).Is("x\x00\x00\x00\x00z")
+
+	// single column (no encoding)
+	index = []string{"a"}
+	perCol = makePerCol("a", "x")
+	prefixLen, org, ok = allSingleValuePrefix(index, false, perCol)
+	assert(ok).Is(true)
+	assert(prefixLen).Is(1)
+	assert(org).Is("x")
+
+	// partial prefix (b has no span)
+	index = []string{"a", "b"}
+	perCol = makePerCol("a", "x")
+	prefixLen, org, ok = allSingleValuePrefix(index, true, perCol)
+	assert(ok).Is(true)
+	assert(prefixLen).Is(1)
+	assert(org).Is("x")
+}
+
+func TestBuildIdxSelTrailingEmpty(t *testing.T) {
+	assert := assert.T(t).This
+
+	// Verify the range end construction matches Table's selEnd approach.
+	// For prefix values with trailing empty fields, the end must include
+	// the empty field separator so that keys with non-empty values are excluded.
+
+	// Case 1: trailing empty field (a="x", b="")
+	// Expected end: "x\x00\x00\x00\x00Max" (same as selEnd)
+	var enc ixkey.Encoder
+	enc.Add("x")
+	enc.Add("")
+	enc.Add(ixkey.Max)
+	end := enc.String()
+	assert(end).Is("x\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff")
+
+	// Case 2: no trailing empty (a="x", b="y")
+	enc.Add("x")
+	enc.Add("y")
+	enc.Add(ixkey.Max)
+	end = enc.String()
+	assert(end).Is("x\x00\x00y\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff")
+
+	// Case 3: multiple trailing empty (a="x", b="", c="")
+	enc.Add("x")
+	enc.Add("")
+	enc.Add("")
+	enc.Add(ixkey.Max)
+	end = enc.String()
+	assert(end).Is("x\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff")
+
+	// Verify that a key with non-empty b is excluded from the trailing-empty range
+	// Key for (a="x", b="y"): "x\x00\x00y"
+	keyWithNonEmptyB := "x\x00\x00y"
+	endTrailingEmpty := "x\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff"
+	assert(keyWithNonEmptyB > endTrailingEmpty).Is(true)
+
+	// Key for (a="x", b=""): "x" (trimmed)
+	keyWithEmptyB := "x"
+	assert(keyWithEmptyB >= "x").Is(true)
+	assert(keyWithEmptyB < endTrailingEmpty).Is(true)
 }

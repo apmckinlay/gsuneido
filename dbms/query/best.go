@@ -12,6 +12,35 @@ import (
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
+type best[T any] struct {
+	fixcost Cost
+	varcost Cost
+	data    T
+}
+
+func newBest[T any]() best[T] {
+	return best[T]{fixcost: impossible, varcost: impossible}
+}
+
+// update returns true if req is the new lowest-cost candidate.
+func (b *best[T]) update(fixcost, varcost Cost, data T) bool {
+	if fixcost+varcost < b.fixcost+b.varcost {
+		*b = best[T]{fixcost: fixcost, varcost: varcost, data: data}
+		return true
+	}
+	return false
+}
+
+func (b *best[T]) cost() Cost {
+	return b.fixcost + b.varcost
+}
+
+func (b *best[T]) found() bool {
+	return b.cost() < impossible
+}
+
+//-------------------------------------------------------------------
+
 type bestIndex struct {
 	index   []string
 	fixcost Cost

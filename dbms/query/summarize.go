@@ -101,7 +101,7 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 	su := &Summarize{hint: hint, by: by, cols: cols, ops: ops, ons: ons}
 	su.source = src
 	sort.Stable(su)
-	su.unique = hasKey(cols, src.Keys(), src.Fixed())
+	su.unique = hasKey(by, src.Keys(), src.Fixed())
 	// if single min or max, and on is a key, then we can give the whole row
 	su.wholeRow = su.minmax1() &&
 		(slc.ContainsFn(src.Keys(), ons, set.Equal[string]) || isEmptyKey(src.Keys()))
@@ -240,33 +240,31 @@ func (su *Summarize) Transform() Query {
 func (su *Summarize) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if su.source.knowExactNrows() &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
-		Optimize(su.source, mode, UnorderedReq(0))
-		return 0, 1, &summarizeApproach{strat: sumTbl, req: UnorderedReq(0)}
+		Optimize(su.source, mode, NoneReq(0))
+		return 0, 1, &summarizeApproach{strat: sumTbl, req: NoneReq(0)}
 	}
 	seqFix, seqVar, seqApp := su.seqCost(mode, req)
 	idxFix, idxVar, idxApp := su.idxCost(mode)
 	mapFix, mapVar, mapApp := su.mapCost(mode, req)
 	return min3(
-		seqFix, seqVar, seqApp, 
+		seqFix, seqVar, seqApp,
 		idxFix, idxVar, idxApp,
 		mapFix, mapVar, mapApp)
 }
 
 func (su *Summarize) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 	if len(su.by) == 0 {
-		fixcost, varcost := Optimize(su.source, mode, UnorderedReq(1))
-		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: UnorderedReq(1)}
+		fixcost, varcost := Optimize(su.source, mode, NoneReq(1))
+		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: NoneReq(1)}
 	}
 	// Computed output columns (su.cols) don't exist in the source and
-	// can't constrain a source seek. For ReqLookup they're residual — a
+	// can't constrain a source seek. For ReqUnique they're residual — a
 	// group is identified by its by columns, the computed columns are
 	// derived from it and verified by filter at runtime (like Extend).
 	// Drop them so the source sees only columns it actually has.
-	if req.Use() == ReqLookup {
-		stripped := set.Difference(req.cols, su.cols)
-		if len(stripped) != len(req.cols) {
-			req = LookupReq(stripped, req.nlookups)
-		}
+	if req.use == ReqUnique {
+		req.cols = set.Difference(req.cols, su.cols)
+		debug.assert(len(req.cols) > 0)
 	}
 	if hasKey(su.by, su.source.Keys(), su.source.Fixed()) {
 		fixcost, varcost := Optimize(su.source, mode, req)
@@ -277,28 +275,38 @@ func (su *Summarize) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 	fixed := su.source.Fixed()
 	nColsUnfixed := countUnfixed(su.by, fixed)
 	nrows, _ := su.Nrows()
-	switch req.Use() {
-	case ReqUnordered:
-		srcReq := GroupedReq(su.by, req.SelectFrac(nrows), 1)
+	srcReq := GroupReq(su.by, req.SelectFrac(nrows), req.nseeks)
+	if nColsUnfixed == 0 {
+		srcReq = NoneReq(1)
+	}
+	switch req.use {
+	case ReqNone:
 		fixcost, varcost := Optimize(su.source, mode, srcReq)
 		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
-	case ReqOrdered:
+	case ReqOrder:
 		if grouped(req.cols, su.by, nColsUnfixed, fixed) {
 			fixcost, varcost := Optimize(su.source, mode, req)
 			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: req}
 		}
-	case ReqLookup:
-		debug.assert(set.Equal(req.cols, su.by)) // only key is by columns
-		// BUG Grouped can use a longer index, but that won't work for Lookup
-		srcReq := GroupedReq(su.by, req.SelectFrac(nrows), req.nlookups)
+	case ReqUnique:
+		// by must be a key: its columns must be covered by req.cols or fixed
+		// (fixed columns of su.by need not appear in req.cols)
+		debug.assert(indexCovered(su.by, req.cols, su.Fixed()))
+		// we can use GroupReq because Lookup is implemented by Select + Get
+		srcReq := GroupReq(su.by, req.SelectFrac(nrows), req.nseeks)
 		fixcost, varcost := Optimize(su.source, mode, srcReq)
 		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
-	case ReqGrouped:
+	case ReqGroup:
 		if set.Equal(req.cols, su.by) {
-			srcReq := GroupedReq(su.by, req.SelectFrac(nrows), req.nlookups)
 			fixcost, varcost := Optimize(su.source, mode, srcReq)
 			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
 		}
+		if !eitherSubset(req.cols, su.by) {
+			return impossible, impossible, nil
+		}
+		// requires are different ReqGroup
+		// this can't be handled with a single Require
+		// so we need to search here
 		nColsUnfixedReq := countUnfixed(req.cols, fixed)
 		best := newBestReq()
 		for _, idx := range su.source.Indexes() {
@@ -306,9 +314,9 @@ func (su *Summarize) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 				grouped(idx, su.by, nColsUnfixed, fixed) {
 				// source req must be ordered so it doesn't ignore column order
 				// which is necessary to satisfy both groupings
-				srcReq := OrderedReq(idx, req.SelectFrac(nrows))
+				srcReq := OrderReq(idx, req.SelectFrac(nrows))
 				f, v := Optimize(su.source, mode, srcReq)
-				v += Cost(req.nlookups) * su.source.lookupCost()
+				v += Cost(req.nseeks) * su.source.lookupCost()
 				best.update(srcReq, f, v)
 			}
 		}
@@ -330,7 +338,7 @@ func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 	if nrows > 0 {
 		frac = 1 / float32(nrows)
 	}
-	srcReq := OrderedReq(su.ons, frac)
+	srcReq := OrderReq(su.ons, frac)
 	fixcost, varcost := Optimize(su.source, mode, srcReq)
 	return fixcost, varcost,
 		&summarizeApproach{strat: sumIdx, index: su.ons, req: srcReq}
@@ -338,11 +346,11 @@ func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 
 func (su *Summarize) mapCost(mode Mode, req Require) (Cost, Cost, any) {
 	nrows, _ := su.Nrows()
-	if req.Use() != ReqUnordered || su.hint == sumLarge ||
+	if req.use != ReqNone || su.hint == sumLarge ||
 		(nrows > mapThreshold && su.hint != sumSmall) {
 		return impossible, impossible, nil
 	}
-	srcReq := UnorderedReq(1)
+	srcReq := NoneReq(1)
 	srcFixcost, srcVarcost := Optimize(su.source, mode, srcReq)
 	fixcost := srcFixcost + srcVarcost + Cost(nrows)*20
 	return fixcost, 0, &summarizeApproach{strat: sumMap, req: srcReq}
@@ -461,9 +469,7 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 
 func (su *Summarize) Lookup(th *Thread, sels Sels) Row {
 	su.nlooks++
-	su.Select(sels)
-	defer su.Select(nil) // clear
-	return GetNext1(su, th)
+	return lookupViaSelectGet(su, th, sels)
 }
 
 func (su *Summarize) getLookupCost() Cost {

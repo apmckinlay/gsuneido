@@ -335,16 +335,16 @@ func joinopt2(src1, src2 Query, nrows func() (int, int), jt joinType,
 	}
 	nrows1, _ := src1.Nrows()
 	nrows2, _ := src2.Nrows()
-	nlookups := req.LookupCount(nrows1)
+	nseeks := req.SeekCount(nrows1)
 	var req2 Require
 	if jt.toOne() {
-		req2 = LookupReq(by, nlookups)
+		req2 = UniqueReq(by, nseeks)
 	} else {
 		read2, _ := nrows()
-		// SelectFrac (not req.frac) keeps frac2 > 0 under a ReqLookup parent
+		// SelectFrac (not req.frac) keeps frac2 > 0 under a ReqUnique parent
 		frac2 := float32(max(1, read2)) * req.SelectFrac(nrows1) /
 			float32(max(1, nrows2))
-		req2 = GroupedReq(by, frac2, nlookups)
+		req2 = GroupReq(by, frac2, nseeks)
 	}
 	fixcost2, varcost2 := Optimize(src2, mode, req2)
 	if fixcost2+varcost2 >= impossible {
@@ -521,7 +521,7 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 		jn.source1.Select(sel1)
 		defer jn.Select(nil)
 		jn.sel2 = sel2
-		return GetNext1(jn, th)
+		return GetNext1(jn, th, slc.With(sel1, sel2...))
 	}
 	row1 := jn.source1.Lookup(th, sel1)
 	if row1 == nil {
@@ -534,7 +534,7 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	} else {
 		jn.source2.Select(sel2)
 		defer jn.Select(nil)
-		row2 = GetNext1(jn.source2, th)
+		row2 = GetNext1(jn.source2, th, sel2)
 	}
 	if row2 == nil {
 		return nil
@@ -838,11 +838,7 @@ func (lj *LeftJoin) Lookup(th *Thread, sels Sels) Row {
 		// log.Println("INFO LeftJoin Lookup fallback to Select & Get")
 		lj.rewind()
 		lj.source1.Select(sel1)
-		x := lj.Get(th, Next)
-		// if x != nil { // verify unique
-		// 	assert.That(lj.Get(th, Next) == nil)
-		// }
-		return x
+		return GetNext1(lj, th, sel1)
 	}
 	row1 := lj.source1.Lookup(th, sel1)
 	if row1 == nil {

@@ -105,7 +105,7 @@ func TestOptimize(t *testing.T) {
 		"table^(a) union-merge table^(a)")
 	test("(table where a is 1) union (table where a is 2)",
 		"table^(a) where*1 a is 1 "+
-			"union-disjoint(a) (table^(a) where*1 a is 2)")
+			"union-disjoint(a)-merge (table^(a) where*1 a is 2)")
 	test("supplier where supplier > 1 sort city",
 		"supplier^(city,supplier) where supplier > 1")
 	test("supplier where supplier > 9 sort city",
@@ -255,18 +255,18 @@ func TestOptimize(t *testing.T) {
 		Panics("invalid query")
 }
 
-// TestOptimize2FastSingleLookup verifies that a ReqLookup reaching a fastSingle
+// TestOptimize2FastSingleLookup verifies that a ReqUnique reaching a fastSingle
 // node does not panic. The top-level optimize guard must normalize the req to
-// a valid ReqUnordered (clearing nlookups, since Use() asserts nlookups==0 when
+// a valid ReqNone (clearing nseeks, since Use() asserts nseeks==0 when
 // cols is empty). A singleton trivially satisfies any require.
 func TestOptimize2FastSingleLookup(t *testing.T) {
 	MakeSuTran = func(qt QueryTran) *core.SuTran { return nil }
 	q := ParseQuery("customer where id is 5", testTran{}, nil)
 	q = q.Transform()
 	assert.T(t).That(q.fastSingle())
-	// would panic at optTempIndex2's req.Use() before the guard cleared nlookups
-	fixcost, varcost := Optimize(q, ReadMode, LookupReq([]string{"id"}, 5))
+	// would panic at optTempIndex2's req.use before the guard cleared nseeks
+	fixcost, varcost := Optimize(q, ReadMode, UniqueReq([]string{"id"}, 5))
 	assert.T(t).True(fixcost+varcost < impossible)
-	q = SetApproach(q, LookupReq([]string{"id"}, 5), testTran{})
+	q = SetApproach(q, UniqueReq([]string{"id"}, 5), testTran{})
 	_ = q
 }

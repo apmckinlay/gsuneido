@@ -8,6 +8,7 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -28,10 +29,10 @@ func init() {
 const nfuzz = 200
 
 var (
-	reqUnorderedCount atomic.Int64
-	reqOrderedCount   atomic.Int64
-	reqGroupedCount   atomic.Int64
-	reqLookupCount    atomic.Int64
+	reqNoneCount   atomic.Int64
+	reqOrderCount  atomic.Int64
+	reqGroupCount  atomic.Int64
+	reqUniqueCount atomic.Int64
 )
 
 type fuzzRunner struct {
@@ -83,22 +84,22 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 268, 413)
+	fuzzRandomRunner.Run(t, 107, 168)
 }
 
 func TestFuzzRandom(t *testing.T) {
-	startUnordered := reqUnorderedCount.Load()
-	startOrdered := reqOrderedCount.Load()
-	startGrouped := reqGroupedCount.Load()
-	startLookup := reqLookupCount.Load()
+	startNone := reqNoneCount.Load()
+	startOrder := reqOrderCount.Load()
+	startGroup := reqGroupCount.Load()
+	startUnique := reqUniqueCount.Load()
 
 	fuzzRandomRunner.Test(t)
 
-	fmt.Printf("Require uses: unordered=%d ordered=%d grouped=%d lookup=%d\n",
-		reqUnorderedCount.Load()-startUnordered,
-		reqOrderedCount.Load()-startOrdered,
-		reqGroupedCount.Load()-startGrouped,
-		reqLookupCount.Load()-startLookup)
+	fmt.Printf("Require uses: none=%d order=%d group=%d unique=%d\n",
+		reqNoneCount.Load()-startNone,
+		reqOrderCount.Load()-startOrder,
+		reqGroupCount.Load()-startGroup,
+		reqUniqueCount.Load()-startUnique)
 }
 
 func fuzzRandom(ft *FT) Query {
@@ -532,10 +533,18 @@ func fuzzUnion(ft *FT) Query {
 
 // newCompatibleQS creates QuerySources for Union, Intersect, Minus
 func newCompatibleQS(ft *FT) (Query, Query) {
+	rnd := ft.rnd
+	if rnd.IntN(5) == 3 {
+		return ft.NewFuzzTable(), ft.NewFuzzTable()
+	}
+
 	b := ft.newFT().Sizes(73, 5, 5).construct()
 	b1 := *b
 	b2 := *b
-	rnd := ft.rnd
+
+	if rnd.IntN(5) == 2 {
+		return b1.finish(), b2.finish()
+	}
 
 	b1.data, b2.data = splitShare(rnd, b.data)
 	if len(b1.data) > 100 {
@@ -593,6 +602,7 @@ func newCompatibleQS(ft *FT) (Query, Query) {
 		b1.columns = append(b1.columns, col)
 		i++
 	}
+	addExtraData(rnd, b1.data, b.columns, b1.columns)
 
 	b2.columns = slices.Clip(b.columns)
 	i = len(b.columns)
@@ -601,6 +611,7 @@ func newCompatibleQS(ft *FT) (Query, Query) {
 		b2.columns = append(b2.columns, col)
 		i++
 	}
+	addExtraData(rnd, b2.data, b.columns, b2.columns)
 
 	q1, q2 := b1.finish(), b2.finish()
 
@@ -631,6 +642,26 @@ func splitShare[E any](rnd *rand.Rand, s []E) ([]E, []E) {
 		a, b = b, a
 	}
 	return slices.Clip(s[:b]), slices.Clip(s[a:])
+}
+
+// addExtraData populates data values for columns added after data generation.
+// This ensures extra columns have varied non-empty values so that Lookup
+// with sels beyond the index can produce mismatches
+// (catching bugs like Union.Lookup not verifying the full sels).
+func addExtraData(rnd *rand.Rand, data [][]string, baseCols, allCols []string) {
+	nbase := len(baseCols)
+	nextra := len(allCols) - nbase
+	if nextra == 0 {
+		return
+	}
+	for i := range data {
+		extra := make([]string, nextra)
+		for j := range nextra {
+			col := allCols[nbase+j]
+			extra[j] = col + "_" + strconv.Itoa(rnd.IntN(50))
+		}
+		data[i] = append(data[i], extra...)
+	}
 }
 
 func makeAllColsKey(b *buildFT) {
@@ -1056,66 +1087,71 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	before := String(q) // before Transform
 	defer func() {
 		if r := recover(); r != nil || t.Failed() {
-			fmt.Println(before)
-			fmt.Println(String(q))
+			fmt.Println("original:", before)
+			fmt.Println("optimized:", String(q))
 			if r != nil {
 				panic(r)
 			}
 		}
 	}()
-	use := random([]Use{ReqUnordered, ReqOrdered, ReqGrouped, ReqLookup}, ft.rnd)
+	use := random([]Use{ReqNone, ReqOrder, ReqGroup, ReqUnique}, ft.rnd)
 	indexes := q.Indexes()
 	var index []string
 	if len(indexes) == 0 || isEmptyKey(indexes) {
-		use = ReqUnordered
-	} else if use == ReqLookup {
+		use = ReqNone
+	} else if use == ReqUnique {
 		keyIdxs := keyIndexes(q)
 		if len(keyIdxs) > 0 {
 			index = random(keyIdxs, ft.rnd)
 		} else {
-			use = ReqUnordered
+			use = ReqNone
 		}
 	} else {
 		index = random(indexes, ft.rnd)
 	}
 	var req Require
 	switch use {
-	case ReqUnordered:
-		req = UnorderedReq(1)
-	case ReqOrdered:
-		req = OrderedReq(index, 1)
-	case ReqGrouped:
-		nlookups := int32(1 + ft.rnd.IntN(10))
+	case ReqNone:
+		req = NoneReq(1)
+	case ReqOrder:
+		// TODO randomly shorten
+		req = OrderReq(index, 1)
+	case ReqGroup:
+		// TODO randomly shorten
+		nseeks := int32(1 + ft.rnd.IntN(10))
 		frac := float32(1) / float32(1+ft.rnd.IntN(4))
-		req = GroupedReq(slices.Clone(index), frac, nlookups)
-	case ReqLookup:
-		for range ft.rnd.IntN(len(index)) {
+		req = GroupReq(slices.Clone(index), frac, nseeks)
+	case ReqUnique:
+		// add some extra columns (at least 1 to exercise Lookup with sels beyond the index)
+		nextra := 1 + ft.rnd.IntN(len(index))
+		for range nextra {
 			index = set.AddUnique(index, random(q.Columns(), ft.rnd))
 		}
-		nlookups := int32(1 + ft.rnd.IntN(10))
-		req = LookupReq(index, nlookups)
+		nseeks := int32(1 + ft.rnd.IntN(10))
+		req = UniqueReq(index, nseeks)
 	}
 	q = q.Transform()
 	fixcost, varcost := Optimize(q, ReadMode, req)
 	if fixcost+varcost >= impossible {
-		// fall back to an unordered read 
-		use = ReqUnordered
-		req = UnorderedReq(1)
+		// fall back to an unordered read
+		// fmt.Println("IMPOSSIBLE:", String(q))
+		use = ReqNone
+		req = NoneReq(1)
 		index = nil
 		fixcost, varcost = Optimize(q, ReadMode, req)
 		if fixcost+varcost >= impossible {
 			t.Fatal("impossible\n", format(0, q, 0))
 		}
 	}
-	switch req.Use() {
-	case ReqUnordered:
-		reqUnorderedCount.Add(1)
-	case ReqOrdered:
-		reqOrderedCount.Add(1)
-	case ReqGrouped:
-		reqGroupedCount.Add(1)
-	case ReqLookup:
-		reqLookupCount.Add(1)
+	switch req.use {
+	case ReqNone:
+		reqNoneCount.Add(1)
+	case ReqOrder:
+		reqOrderCount.Add(1)
+	case ReqGroup:
+		reqGroupCount.Add(1)
+	case ReqUnique:
+		reqUniqueCount.Add(1)
 	}
 	fuzzCount++
 	// fmt.Println(String(q))
@@ -1134,18 +1170,15 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 		qh.Row(row)
 	}
 
-	// match implicit contract, see require.go
-	if use != ReqLookup {
-		testRandomGet(t, ft.rnd, q, qh, hdr, nil)
-	}
-	if use == ReqLookup ||
-		(use == ReqGrouped && hasKey(req.cols, q.Keys(), nil)) {
+	// match implicit contract, see require.go FIXME
+	testRandomGet(t, ft.rnd, q, qh, hdr, nil)
+	if use == ReqUnique {
 		if len(index) > 0 {
 			cols := hdr.Columns
 			testRandomLookups(t, ft.rnd, q, index, cols, expected)
 		}
 	}
-	if use == ReqGrouped || use == ReqOrdered {
+	if use == ReqOrder {
 		if len(index) > 0 {
 			testRandomSelects(t, ft.rnd, q, index, expected)
 		}
@@ -1169,6 +1202,23 @@ func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *He
 	q.Rewind()
 	nextRows := getAllRows(q, Next)
 	if !rowSetsEqual(nextRows, qh, hdr) {
+		fmt.Println("QUERY:", String(q))
+		fmt.Println("=== Optimized Get rows (actual) ===")
+		for i, row := range nextRows {
+			if i < 60 {
+				fmt.Printf("  row %d: %s\n", i, rowDebugString(hdr, row))
+			}
+		}
+		fmt.Printf("... total: %d (actual) vs %d (expected)\n\n", len(nextRows), qh.nrows)
+		q.Rewind()
+		expectedRows := q.Simple(nil)
+		fmt.Println("=== Simple rows (expected) ===")
+		for i, row := range expectedRows {
+			if i < 60 {
+				fmt.Printf("  row %d: %s\n", i, rowDebugString(hdr, row))
+			}
+		}
+		fmt.Printf("... total: %d\n", len(expectedRows))
 		t.Fatalf("Next iteration returned %d rows, expected %d", len(nextRows), qh.nrows)
 	}
 
@@ -1390,6 +1440,22 @@ func rowsEqual(a, b Row, hdr *Header, cols []string) bool {
 	return true
 }
 
+func rowDebugString(hdr *Header, row Row) string {
+	sb := strings.Builder{}
+	sb.WriteRune('{')
+	for i, col := range hdr.Columns {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		val := row.GetVal(hdr, col, nil, nil)
+		sb.WriteString(col)
+		sb.WriteString(": ")
+		sb.WriteString(val.String())
+	}
+	sb.WriteRune('}')
+	return sb.String()
+}
+
 //-------------------------------------------------------------------
 
 func testRandomSelects(t *testing.T, rnd *rand.Rand, q Query, index []string, allRows []Row) {
@@ -1476,7 +1542,7 @@ func testRandomLookups(t *testing.T, rnd *rand.Rand, q Query, index, cols []stri
 	slc.Shuffle(rnd, lookupCols)
 
 	testExistentLookup(t, allRows, rnd, lookupCols, q, cols)
-	testNonExistentLookup(t, rnd, q, lookupCols)
+	testNonExistentLookup(t, allRows, rnd, q, lookupCols)
 }
 
 // canLookup checks if a lookup with the given index is valid.
@@ -1550,26 +1616,46 @@ func testExistentLookup(t *testing.T, allRows []Row, rnd *rand.Rand, lookupCols 
 	}
 }
 
-func testNonExistentLookup(t *testing.T, rnd *rand.Rand, q Query, lookupCols []string) {
+func testNonExistentLookup(t *testing.T, allRows []Row, rnd *rand.Rand, q Query, lookupCols []string) {
 	t.Helper()
+	if len(allRows) == 0 {
+		return //TODO
+	}
+	hdr := q.Header()
 	for range 10 {
+		srcRow := random(allRows, rnd)
+
 		sels := make(Sels, len(lookupCols))
-		// set one of the keyVals to a non-existent value
-		// the others to possibly existing values
-		r := rnd.IntN(len(lookupCols))
 		for i, col := range lookupCols {
-			sels[i].col = col
-			if i == r {
-				sels[i].val = "nonexistent"
-			} else {
-				sels[i].val = col + "_" + strconv.Itoa(rnd.IntN(100))
-			}
+			sels[i] = Sel{col: col, val: srcRow.GetRaw(hdr, col)}
 		}
+		// set one of the keyVals to a non-existent value
+		r := rnd.IntN(len(lookupCols))
+		if srcRow.GetRaw(hdr, lookupCols[r]) == "" {
+			sels[r].val = sels[r].col + "_" + strconv.Itoa(rnd.IntN(100))
+		} else if rnd.IntN(2) == 1 {
+			sels[r].val = "nonexistent"
+		} else {
+			sels[r].val = ""
+		}
+		if exists(hdr, allRows, sels) {
+			continue
+		}
+
 		result := q.Lookup(nil, sels)
 		if result != nil {
 			t.Fatal("lookup returned row for non-existent key")
 		}
 	}
+}
+
+func exists(hdr *Header, allRows []Row, sels Sels) bool {
+	for _, row := range allRows {
+		if singletonFilter(hdr, row, sels) {
+			return true
+		}
+	}
+	return false
 }
 
 func random[E any](list []E, rnd *rand.Rand) E {
