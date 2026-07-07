@@ -25,6 +25,10 @@ func TestEncoder(t *testing.T) {
 	enc.Add("a\x00b")
 	enc.Add("c")
 	assert(enc.String()).Is("a\x00\x01b\x00\x00c")
+	enc.Add("a")
+	enc.Add("")
+	enc.Add("")
+	assert(enc.String()).Is("a") // trailing separator trimmed
 }
 
 func TestKey(t *testing.T) {
