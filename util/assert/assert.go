@@ -239,64 +239,52 @@ func isNil(x any) bool {
 }
 
 func intEqual(x any, y any) bool {
-	var x64 int64
+	xi, xok := toInt64(x)
+	if !xok {
+		return false
+	}
+	yi, yok := toInt64(y)
+	return yok && xi == yi
+}
+
+func toInt64(x any) (int64, bool) {
 	switch x := x.(type) {
 	case int:
-		x64 = int64(x)
+		return int64(x), true
 	case uint:
-		x64 = int64(x)
+		return int64(x), true
 	case int8:
-		x64 = int64(x)
+		return int64(x), true
 	case uint8:
-		x64 = int64(x)
+		return int64(x), true
 	case int16:
-		x64 = int64(x)
+		return int64(x), true
 	case uint16:
-		x64 = int64(x)
+		return int64(x), true
 	case int32:
-		x64 = int64(x)
+		return int64(x), true
 	case uint32:
-		x64 = int64(x)
+		return int64(x), true
 	case int64:
-		x64 = int64(x)
+		return x, true
 	case uint64:
-		x64 = int64(x)
-	default:
-		return false
+		return int64(x), true
 	}
-	switch y := y.(type) {
-	case int:
-		return x64 == int64(y)
-	case uint:
-		return x64 == int64(y)
-	case int8:
-		return x64 == int64(y)
-	case uint8:
-		return x64 == int64(y)
-	case int16:
-		return x64 == int64(y)
-	case uint16:
-		return x64 == int64(y)
-	case int32:
-		return x64 == int64(y)
-	case uint32:
-		return x64 == int64(y)
-	case int64:
-		return x64 == int64(y)
-	case uint64:
-		return x64 == int64(y)
-	default:
-		return false
+	v := reflect.ValueOf(x)
+	switch v.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int(), true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return int64(v.Uint()), true
 	}
+	return 0, false
 }
 
 func show(x any) string {
 	if _, ok := x.(string); ok {
 		return fmt.Sprintf("%#v", x)
 	}
-	if r, ok := x.(rune); ok {
-		return "'" + string(r) + "'"
-	}
+
 	s1 := fmt.Sprintf("%v", x)
 	s2 := fmt.Sprintf("%#v", x)
 	if s1 != "" && s1[0] == '[' {
