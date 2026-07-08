@@ -75,7 +75,7 @@ func (fr fuzzRunner) Test(t *testing.T) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzRandom ./dbms/query/
+// go test -run '^$' -fuzz=FuzzRandom ./dbms/query
 
 var fuzzRandomRunner = fuzzRunner{build: fuzzRandom}
 
@@ -84,7 +84,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 107, 168)
+	fuzzRandomRunner.Run(t, 406, 292)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -162,7 +162,7 @@ func TestFuzzProjectNone(t *testing.T) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzTable ./dbms/query/
+// go test -run '^$' -fuzz=FuzzTable ./dbms/query
 
 var fuzzTableRunner = fuzzRunner{build: fuzzTable}
 
@@ -179,7 +179,7 @@ func TestFuzzTable(t *testing.T) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzProject ./dbms/query/
+// go test -run '^$' -fuzz=FuzzProject ./dbms/query
 
 var fuzzProjectRunner = fuzzRunner{build: fuzzProject}
 
@@ -252,7 +252,7 @@ func randomProjectCols(rnd *rand.Rand, srcCols []string, indexes [][]string) []s
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzRename ./dbms/query/
+// go test -run '^$' -fuzz=FuzzRename ./dbms/query
 
 var fuzzRenameRunner = fuzzRunner{build: fuzzRename}
 
@@ -309,7 +309,7 @@ func randomRename(rnd *rand.Rand, srcCols []string) (from, to []string) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzSummarize ./dbms/query/
+// go test -run '^$' -fuzz=FuzzSummarize ./dbms/query
 
 var fuzzSummarizeRunner = fuzzRunner{build: fuzzSummarize}
 
@@ -442,7 +442,7 @@ func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, 
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzMinus ./dbms/query/
+// go test -run '^$' -fuzz=FuzzMinus ./dbms/query
 
 var fuzzMinusRunner = fuzzRunner{build: fuzzMinus}
 
@@ -460,7 +460,7 @@ func TestFuzzMinus(t *testing.T) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzIntersect ./dbms/query/
+// go test -run '^$' -fuzz=FuzzIntersect ./dbms/query
 
 var fuzzIntersectRunner = fuzzRunner{build: fuzzIntersect}
 
@@ -482,7 +482,7 @@ func TestFuzzIntersectDebug(t *testing.T) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzUnion ./dbms/query/
+// go test -run '^$' -fuzz=FuzzUnion ./dbms/query
 
 var fuzzUnionRunner = fuzzRunner{build: fuzzUnion}
 
@@ -682,7 +682,7 @@ func makeEmptyKey(rnd *rand.Rand, qs *buildFT) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzTimes ./dbms/query/
+// go test -run '^$' -fuzz=FuzzTimes ./dbms/query
 
 var fuzzTimesRunner = fuzzRunner{build: fuzzTimes}
 
@@ -706,7 +706,7 @@ func newDisjointQS(ft *FT) (Query, Query) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzJoin ./dbms/query/
+// go test -run '^$' -fuzz=FuzzJoin ./dbms/query
 
 var fuzzJoinRunner = fuzzRunner{build: fuzzJoin}
 
@@ -859,7 +859,7 @@ func addKey(rnd *rand.Rand, b *buildFT, key []string) {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzLeftJoin ./dbms/query/
+// go test -run '^$' -fuzz=FuzzLeftJoin ./dbms/query
 
 var fuzzLeftJoinRunner = fuzzRunner{build: fuzzLeftJoin}
 
@@ -892,7 +892,7 @@ func fuzzLeftJoin(ft *FT) Query {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzSemiJoin ./dbms/query/
+// go test -run '^$' -fuzz=FuzzSemiJoin ./dbms/query
 
 var fuzzSemiJoinRunner = fuzzRunner{build: fuzzSemiJoin}
 
@@ -911,7 +911,7 @@ func fuzzSemiJoin(ft *FT) Query {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzWhere ./dbms/query/
+// go test -run '^$' -fuzz=FuzzWhere ./dbms/query
 
 var fuzzWhereRunner = fuzzRunner{build: fuzzWhere}
 
@@ -1008,7 +1008,7 @@ func randomWhereExpr(rnd *rand.Rand, cols []string, keys [][]string, indexes [][
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzExtend ./dbms/query/
+// go test -run '^$' -fuzz=FuzzExtend ./dbms/query
 
 var fuzzExtendRunner = fuzzRunner{build: fuzzExtend}
 
@@ -1054,7 +1054,7 @@ func composeFuzzExtend(ft *FT, qs Query) Query {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzTempIndex ./dbms/query/
+// go test -run '^$' -fuzz=FuzzTempIndex ./dbms/query
 
 var fuzzTempIndexRunner = fuzzRunner{build: fuzzTempIndex}
 
@@ -1114,16 +1114,16 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	case ReqNone:
 		req = NoneReq(1)
 	case ReqOrder:
-		// TODO randomly shorten
+		// randomly shorten (truncate) index keeping at least one column
+		index = index[:1+ft.rnd.IntN(len(index))]
 		req = OrderReq(index, 1)
 	case ReqGroup:
-		// TODO randomly shorten
 		nseeks := int32(1 + ft.rnd.IntN(10))
 		frac := float32(1) / float32(1+ft.rnd.IntN(4))
 		req = GroupReq(slices.Clone(index), frac, nseeks)
 	case ReqUnique:
-		// add some extra columns (at least 1 to exercise Lookup with sels beyond the index)
-		nextra := 1 + ft.rnd.IntN(len(index))
+		// add extra columns (to exercise Lookup with sels beyond the index)
+		nextra := ft.rnd.IntN(len(index))
 		for range nextra {
 			index = set.AddUnique(index, random(q.Columns(), ft.rnd))
 		}
@@ -1170,15 +1170,14 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 		qh.Row(row)
 	}
 
-	// match implicit contract, see require.go FIXME
+	// match implicit contract, see require.go
 	testRandomGet(t, ft.rnd, q, qh, hdr, nil)
 	if use == ReqUnique {
 		if len(index) > 0 {
-			cols := hdr.Columns
-			testRandomLookups(t, ft.rnd, q, index, cols, expected)
+			testRandomLookups(t, ft.rnd, q, index, expected)
 		}
 	}
-	if use == ReqOrder {
+	if use == ReqOrder || use == ReqGroup {
 		if len(index) > 0 {
 			testRandomSelects(t, ft.rnd, q, index, expected)
 		}
@@ -1537,114 +1536,44 @@ func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Hea
 
 //-------------------------------------------------------------------
 
-func testRandomLookups(t *testing.T, rnd *rand.Rand, q Query, index, cols []string, allRows []Row) {
-	lookupCols := slices.Clone(index)
-	slc.Shuffle(rnd, lookupCols)
-
-	testExistentLookup(t, allRows, rnd, lookupCols, q, cols)
-	testNonExistentLookup(t, allRows, rnd, q, lookupCols)
-}
-
-// canLookup checks if a lookup with the given index is valid.
-// The index columns must form a key (or be a subset of a key with
-// remaining key columns being fixed).
-func canLookup(keys [][]string, fixed Fixed, index []string) bool {
-	for _, key := range keys {
-		// Check if index is subset of key+fixed (no extra columns)
-		subset := true
-		for _, col := range index {
-			if !slices.Contains(key, col) && !fixed.Single(col) {
-				subset = false
-				break
-			}
-		}
-
-		if subset {
-			// Check if key is subset of index+fixed (complete key)
-			superset := true
-			for _, col := range key {
-				if !slices.Contains(index, col) && !fixed.Single(col) {
-					superset = false
-					break
-				}
-			}
-			if superset {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func testExistentLookup(t *testing.T, allRows []Row, rnd *rand.Rand, lookupCols []string, q Query, cols []string) {
+func testRandomLookups(t *testing.T, rnd *rand.Rand, q Query, index []string, allRows []Row) {
 	t.Helper()
 	if len(allRows) == 0 {
 		return
 	}
+	lookupCols := slices.Clone(index)
+	slc.Shuffle(rnd, lookupCols)
 	hdr := q.Header()
-	for range min(10, len(allRows)) {
+	cols := hdr.Columns
+	for range min(20, len(allRows)) {
 		srcRow := random(allRows, rnd)
-
 		sels := make(Sels, len(lookupCols))
 		for i, col := range lookupCols {
 			sels[i] = Sel{col: col, val: srcRow.GetRaw(hdr, col)}
 		}
-
-		result := q.Lookup(nil, sels)
-
-		if result == nil {
-			t.Fatal("lookup returned nil for existing key")
-		}
-
-		for i, col := range lookupCols {
-			if result.GetRaw(hdr, col) != sels[i].val {
-				t.Fatalf("lookup result doesn't match key: col=%s", col)
+		if rnd.IntN(2) == 0 {
+			result := q.Lookup(nil, sels)
+			if result == nil {
+				t.Fatal("lookup returned nil for existing key")
 			}
-		}
-
-		// Verify result is one of allRows
-		found := false
-		for _, ar := range allRows {
-			if rowsEqual(result, ar, hdr, cols) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Fatal("lookup result not in all rows")
-		}
-	}
-}
-
-func testNonExistentLookup(t *testing.T, allRows []Row, rnd *rand.Rand, q Query, lookupCols []string) {
-	t.Helper()
-	if len(allRows) == 0 {
-		return //TODO
-	}
-	hdr := q.Header()
-	for range 10 {
-		srcRow := random(allRows, rnd)
-
-		sels := make(Sels, len(lookupCols))
-		for i, col := range lookupCols {
-			sels[i] = Sel{col: col, val: srcRow.GetRaw(hdr, col)}
-		}
-		// set one of the keyVals to a non-existent value
-		r := rnd.IntN(len(lookupCols))
-		if srcRow.GetRaw(hdr, lookupCols[r]) == "" {
-			sels[r].val = sels[r].col + "_" + strconv.Itoa(rnd.IntN(100))
-		} else if rnd.IntN(2) == 1 {
-			sels[r].val = "nonexistent"
+			assert.That(rowsEqual(result, srcRow, hdr, cols))
 		} else {
-			sels[r].val = ""
-		}
-		if exists(hdr, allRows, sels) {
-			continue
-		}
-
-		result := q.Lookup(nil, sels)
-		if result != nil {
-			t.Fatal("lookup returned row for non-existent key")
+			// set one of the keyVals to a non-existent value
+			r := rnd.IntN(len(lookupCols))
+			if srcRow.GetRaw(hdr, lookupCols[r]) == "" {
+				sels[r].val = sels[r].col + "_" + strconv.Itoa(rnd.IntN(100))
+			} else if rnd.IntN(2) == 1 {
+				sels[r].val = "nonexistent"
+			} else {
+				sels[r].val = ""
+			}
+			result := q.Lookup(nil, sels)
+			if result != nil {
+				if exists(hdr, allRows, sels) {
+					continue
+				}
+				t.Fatal("lookup returned row for non-existent key")
+			}
 		}
 	}
 }
@@ -1663,7 +1592,7 @@ func random[E any](list []E, rnd *rand.Rand) E {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzSplitShare ./dbms/query/
+// go test -run '^$' -fuzz=FuzzSplitShare ./dbms/query
 
 func FuzzSplitShare(f *testing.F) {
 	f.Add(uint64(123), uint64(456))
@@ -1733,36 +1662,4 @@ func fuzzSplitShare(t *testing.T, rnd *rand.Rand) (part1Empty, part2Empty, part3
 	part3Empty = len1 == n
 
 	return
-}
-
-func TestCanLookup(t *testing.T) {
-	// Case 1: Index is subset of key (should be false, currently true)
-	keys := [][]string{{"a", "b"}}
-	fixed := Fixed{}
-	index := []string{"a"}
-	assert.T(t).This(canLookup(keys, fixed, index)).Is(false)
-
-	// Case 2: Index contains complete key but has extra column (should be false due to Where.Lookup restriction)
-	keys = [][]string{{"a"}}
-	fixed = Fixed{}
-	index = []string{"a", "b"}
-	assert.T(t).This(canLookup(keys, fixed, index)).Is(false)
-
-	// Case 3: Index matches key exactly (should be true)
-	keys = [][]string{{"a", "b"}}
-	fixed = Fixed{}
-	index = []string{"b", "a"}
-	assert.T(t).This(canLookup(keys, fixed, index)).Is(true)
-
-	// Case 4: Key part is fixed (should be true)
-	keys = [][]string{{"a", "b"}}
-	fixed = Fixed{{col: "b", values: []string{"1"}}}
-	index = []string{"a"}
-	assert.T(t).This(canLookup(keys, fixed, index)).Is(true)
-
-	// Case 5: Key part is fixed (should be true)
-	keys = [][]string{{"a"}}
-	fixed = Fixed{{col: "b", values: []string{"1"}}}
-	index = []string{"a", "b"}
-	assert.T(t).This(canLookup(keys, fixed, index)).Is(true)
 }
