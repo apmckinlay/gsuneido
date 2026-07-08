@@ -15,32 +15,38 @@ func TestExecTool(t *testing.T) {
 	assert := assert.T(t)
 	{
 		result, err := execTool("1 + 2 \n")
-		assert.That(err == nil)
-		assert.That(len(result.Warnings) == 0)
-		assert.This(result.Results).Is("3")
+		assert.This(err).Is(nil)
+		assert.This(len(result.Warnings)).Is(0)
+		assert.This(len(result.Results)).Is(1)
+		assert.This(result.Results[0].Value).Is("3")
+		assert.That(!result.Results[0].IsTruncated)
 	}
 	{
 		result, err := execTool("return")
-		assert.That(err == nil)
-		assert.That(len(result.Warnings) == 0)
-		assert.This(result.Results).Is("")
+		assert.This(err).Is(nil)
+		assert.This(len(result.Warnings)).Is(0)
+		assert.This(len(result.Results)).Is(0)
 	}
 	{
 		result, err := execTool("return 123")
-		assert.That(err == nil)
-		assert.That(len(result.Warnings) == 0)
-		assert.This(result.Results).Is("123")
+		assert.This(err).Is(nil)
+		assert.This(len(result.Warnings)).Is(0)
+		assert.This(len(result.Results)).Is(1)
+		assert.This(result.Results[0].Value).Is("123")
 	}
 	{
 		result, err := execTool("return 1, 'string'")
-		assert.That(err == nil)
-		assert.That(len(result.Warnings) == 0)
-		assert.This(result.Results).Is(`1, "string"`)
+		assert.This(err).Is(nil)
+		assert.This(len(result.Warnings)).Is(0)
+		assert.This(len(result.Results)).Is(2)
+		assert.This(result.Results[0].Value).Is("1")
+		assert.This(result.Results[1].Value).Is(`"string"`)
 	}
 	{
 		result, err := execTool("x = 1; y = 2")
-		assert.That(err == nil)
-		assert.This(result.Results).Is("2")
+		assert.This(err).Is(nil)
+		assert.This(len(result.Results)).Is(1)
+		assert.This(result.Results[0].Value).Is("2")
 		assert.That(strings.Contains(result.Warnings[0], "initialized but not used: x"))
 		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
 		assert.That(strings.Contains(result.Warnings[1], "initialized but not used: y"))
@@ -48,8 +54,11 @@ func TestExecTool(t *testing.T) {
 	}
 	{
 		result, err := execTool("return '" + strings.Repeat("x", 513) + "'")
-		assert.That(err == nil)
-		assert.This(result.Results).Is("String")
+		assert.This(err).Is(nil)
+		assert.This(len(result.Results)).Is(1)
+		assert.This(result.Results[0].Type).Is("String")
+		assert.That(result.Results[0].IsTruncated)
+		assert.This(len(result.Results[0].Value)).Is(maxDisplayLen + len("..."))
 	}
 	{
 		_, err := execTool("throw 'exception'")
@@ -69,7 +78,7 @@ func TestExecTool(t *testing.T) {
 	}
 	{
 		result, err := execTool("x = 1\ny = 2")
-		assert.That(err == nil)
+		assert.This(err).Is(nil)
 		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
 		assert.That(strings.Contains(result.Warnings[1], "@line:2"))
 	}
@@ -94,12 +103,12 @@ func TestExecTool(t *testing.T) {
 	})
 	{
 		result, err := execTool("Print('hello')")
-		assert.That(err == nil)
+		assert.This(err).Is(nil)
 		assert.This(result.Print).Is("hello")
 	}
 	{
 		result, err := execTool("Print('a')\nPrint('b')")
-		assert.That(err == nil)
+		assert.This(err).Is(nil)
 		assert.This(result.Print).Is("ab")
 	}
 }
@@ -108,12 +117,12 @@ func TestCheckTool(t *testing.T) {
 	assert := assert.T(t)
 	{
 		result, err := checkTool("1 + 2 \n")
-		assert.That(err == nil)
-		assert.That(len(result.Warnings) == 0)
+		assert.This(err).Is(nil)
+		assert.This(len(result.Warnings)).Is(0)
 	}
 	{
 		result, err := checkTool("x = 1; y = 2")
-		assert.That(err == nil)
+		assert.This(err).Is(nil)
 		assert.That(strings.Contains(result.Warnings[0], "initialized but not used: x"))
 		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
 		assert.That(strings.Contains(result.Warnings[1], "initialized but not used: y"))
@@ -121,11 +130,11 @@ func TestCheckTool(t *testing.T) {
 	}
 	{
 		_, err := checkTool("throw 'exception'")
-		assert.That(err == nil) // checkTool should not throw errors for exceptions in code
+		assert.This(err).Is(nil) // checkTool should not throw errors for exceptions in code
 	}
 	{
 		_, err := checkTool("x")
-		assert.That(err == nil) // checkTool should not throw errors for uninitialized variables
+		assert.This(err).Is(nil) // checkTool should not throw errors for uninitialized variables
 	}
 	{
 		_, err := checkTool("if true") // syntax error - missing block
@@ -135,7 +144,7 @@ func TestCheckTool(t *testing.T) {
 	}
 	{
 		result, err := checkTool("x = 1\ny = 2")
-		assert.That(err == nil)
+		assert.This(err).Is(nil)
 		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
 		assert.That(strings.Contains(result.Warnings[1], "@line:2"))
 	}

@@ -23,7 +23,7 @@ func TestAgentLogging(t *testing.T) {
 	defer func() { aiDir = oldDir }()
 
 	prompt := "You are a helpful assistant."
-	agent := NewAgent("", "", "test-model", prompt, func(what, data string, _ *ToolApproval) {}, func(){}, func(){})
+	agent := NewAgent("", "", "test-model", prompt, func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
 
 	// Verify prompt is stored
 	assert.T(t).This(agent.prompt).Is(prompt)
@@ -84,7 +84,7 @@ func TestAgentLogThink(t *testing.T) {
 	aiDir = tmpDir
 	defer func() { aiDir = oldDir }()
 
-	agent := NewAgent("", "", "test-model", "", func(what, data string, _ *ToolApproval) {}, func(){}, func(){})
+	agent := NewAgent("", "", "test-model", "", func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
 
 	agent.emit("think", "reasoning line")
 	agent.emit("output", "done")
@@ -104,7 +104,7 @@ func TestAgentLogThink(t *testing.T) {
 }
 
 func TestAgentClearHistory(t *testing.T) {
-	agent := NewAgent("", "", "test-model", "test prompt", func(what, data string, _ *ToolApproval) {}, func(){}, func(){})
+	agent := NewAgent("", "", "test-model", "test prompt", func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
 
 	// Add some history
 	agent.history = append(agent.history, Message{Role: "user", Content: "Hello"})
@@ -128,7 +128,7 @@ func TestAgentSetModel(t *testing.T) {
 	aiDir = tmpDir
 	defer func() { aiDir = oldDir }()
 
-	agent := NewAgent("", "", "initial-model", "test prompt", func(what, data string, _ *ToolApproval) {}, func(){}, func(){})
+	agent := NewAgent("", "", "initial-model", "test prompt", func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
 
 	// Trigger log file creation
 	agent.logMessage("user", "Hello")
@@ -176,7 +176,7 @@ What is 2+2?
 
 	// Agent has its own prompt - this should be used, not the file's
 	currentPrompt := "Current prompt"
-	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string, _ *ToolApproval) {}, func(){}, func(){})
+	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
 	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
 
@@ -228,7 +228,7 @@ Answer.
 
 	// Agent has its own prompt - this should be used, not the file's
 	currentPrompt := "Current prompt"
-	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string, _ *ToolApproval) {}, func(){}, func(){})
+	agent := NewAgent("", "", "test-model", currentPrompt, func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
 	err = agent.LoadConversation(originalFile, nil)
 	assert.T(t).This(err).Is(nil)
 
@@ -285,7 +285,7 @@ func TestAgentLoadConversationWithTools(t *testing.T) {
 	err := os.WriteFile(tmpFile, []byte(logContent), 0644)
 	assert.T(t).This(err).Is(nil)
 
-	agent := NewAgent("", "", "", "", func(what, data string, _ *ToolApproval) {}, func(){}, func(){})
+	agent := NewAgent("", "", "", "", func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
 	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
 
@@ -311,7 +311,7 @@ func TestProcessContentTextThinkTags(t *testing.T) {
 		var emitted []emission
 		agent := NewAgent("", "", "", "", func(what, data string, _ *ToolApproval) {
 			emitted = append(emitted, emission{what, data})
-		}, func(){}, func(){})
+		}, func() {}, func() {})
 		var content, reasoning strings.Builder
 		inThink := false
 		for _, chunk := range chunks {
@@ -353,21 +353,23 @@ func TestAgentEmitExecToolResult(t *testing.T) {
 		outs := []out{}
 		agent := NewAgent("", "", "", "", func(what, data string, _ *ToolApproval) {
 			outs = append(outs, out{what: what, data: data})
-		}, func(){}, func(){})
-		agent.emitExecToolResult(result)
+		}, func() {}, func() {})
+		agent.emitExecToolResults(result)
 		return outs
 	}
 
 	// with results and print
-	outs := collect(`{"code":"","warnings":[],"results":"1, 2","print":"a\nb"}`)
-	assert.T(t).This(len(outs)).Is(2)
-	assert.T(t).This(outs[0].data).Is("=> 1, 2\n")
-	assert.T(t).This(outs[1].data).Is("a\nb\n")
-
-	// no results: still emits => line
-	outs = collect(`{"code":"","warnings":[],"results":""}`)
+	outs := collect(`{"code":"","warnings":[],"results":[{"type":"Number","value":"1"},{"type":"Number","value":"2"}],"print":"a\nb"}`)
 	assert.T(t).This(len(outs)).Is(1)
-	assert.T(t).This(outs[0].data).Is("=> \n")
+	assert.T(t).This(outs[0].data).Is("```\na\nb\n=> 1, 2\n```\n\n")
+
+	// no results and no print: no output
+	outs = collect(`{"code":"","warnings":[],"results":[]}`)
+	assert.T(t).This(len(outs)).Is(0)
+
+	// truncated result is marked
+	outs = collect(`{"code":"","warnings":[],"results":[{"type":"Text","value":"abc...","is_truncated":true}],"print":""}`)
+	assert.T(t).This(outs[0].data).Is("```\n=> abc...\n```\n\n")
 }
 
 func TestToolApprovalAllowAndDeny(t *testing.T) {
@@ -392,7 +394,7 @@ func TestToolApprovalAllowAndDeny(t *testing.T) {
 
 func TestAgentWaitForApproval(t *testing.T) {
 	t.Run("allow proceeds", func(t *testing.T) {
-		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {}, func(){}, func(){})
+		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {}, func() {}, func() {})
 		approval := newToolApproval()
 		go approval.Allow("approved")
 		allowed, text, err := agent.waitForApproval(context.Background(), approval)
@@ -402,7 +404,7 @@ func TestAgentWaitForApproval(t *testing.T) {
 	})
 
 	t.Run("deny returns error", func(t *testing.T) {
-		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {}, func(){}, func(){})
+		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {}, func() {}, func() {})
 		approval := newToolApproval()
 		go approval.Deny("not now")
 		allowed, text, err := agent.waitForApproval(context.Background(), approval)
@@ -412,7 +414,7 @@ func TestAgentWaitForApproval(t *testing.T) {
 	})
 
 	t.Run("blocks until decision", func(t *testing.T) {
-		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {}, func(){}, func(){})
+		agent := NewAgent("", "", "", "", func(what, data string, approval *ToolApproval) {}, func() {}, func() {})
 		approval := newToolApproval()
 		type result struct {
 			allowed bool

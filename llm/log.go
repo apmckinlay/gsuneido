@@ -224,6 +224,10 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 			} else {
 				log.Println("parseConversation ToolResult:", err)
 			}
+		case "tool":
+			if outfn != nil {
+				outfn("tool", body, nil)
+			}
 		default:
 			log.Println("ERROR: parseConversation unknown role:", role)
 		}

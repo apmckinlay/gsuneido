@@ -5,6 +5,7 @@ package llm
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -38,11 +39,17 @@ var _ = addTool(toolSpec{
 	},
 })
 
+type execResult struct {
+	Type        string `json:"type" jsonschema:"the type of the value"`
+	Value       string `json:"value" jsonschema:"the result value (truncated if large)"`
+	IsTruncated bool   `json:"is_truncated,omitempty" jsonschema:"true if the value was truncated"`
+}
+
 type execOutput struct {
-	Code     string   `json:"code" jsonschema:"the code that was executed"`
-	Warnings []string `json:"warnings" jsonschema:"compiler warnings"`
-	Results  string   `json:"results" jsonschema:"comma separated list of return values"`
-	Print    string   `json:"print,omitempty" jsonschema:"output from Print calls"`
+	Code     string       `json:"code" jsonschema:"the code that was executed"`
+	Warnings []string     `json:"warnings" jsonschema:"compiler warnings"`
+	Results  []execResult `json:"results" jsonschema:"array of return values with type, value, and is_truncated"`
+	Print    string       `json:"print,omitempty" jsonschema:"output from Print calls"`
 }
 
 func execTool(code string) (result execOutput, err error) {
@@ -86,18 +93,18 @@ func execTool(code string) (result execOutput, err error) {
 	fn := v.(*core.SuFunc)
 
 	res := th.Call(fn)
-	results := []string{}
+	results := []execResult{}
 	if res != nil {
-		results = append(results, displayOrType(th, res))
+		results = append(results, resultItem(th, res))
 	} else if len(th.ReturnMulti) > 0 {
 		for i := len(th.ReturnMulti) - 1; i >= 0; i-- {
-			results = append(results, displayOrType(th, th.ReturnMulti[i]))
+			results = append(results, resultItem(th, th.ReturnMulti[i]))
 		}
 	}
 	result = execOutput{
 		Code:     code,
 		Warnings: warnings,
-		Results:  strings.Join(results, ", "),
+		Results:  results,
 		Print:    printBuf.String(),
 	}
 	return
@@ -131,10 +138,62 @@ func offsetToLine(src string, offset int) int {
 
 const maxDisplayLen = 512
 
-func displayOrType(th *core.Thread, val core.Value) string {
+func resultItem(th *core.Thread, val core.Value) execResult {
+	t := val.Type().String()
 	display := core.Display(th, val)
 	if len(display) > maxDisplayLen {
-		return val.Type().String()
+		return execResult{Type: t, Value: display[:maxDisplayLen] + "...",
+			IsTruncated: true}
 	}
-	return display
+	return execResult{Type: t, Value: display}
+}
+
+// formatExecToolOutput formats the JSON result of the execute tool into
+// the markdown output shown to the user. It returns an empty string when
+// there is nothing to show.
+func formatExecToolOutput(result string) string {
+	var execOut execOutput
+	if err := json.Unmarshal([]byte(result), &execOut); err != nil {
+		return "=> " + result + "\n\n"
+	}
+	if execOut.Print == "" && len(execOut.Results) == 0 {
+		return ""
+	}
+	output := "```\n"
+	if execOut.Print != "" {
+		output += execOut.Print + "\n"
+	}
+	results := formatExecToolResults(execOut.Results)
+	if results != "" {
+		if strings.Contains(results, "\n") {
+			output += "=>\n" + results + "\n"
+		} else {
+			output += "=> " + results + "\n"
+		}
+	}
+	output += "```\n\n"
+	return output
+}
+
+func formatExecToolResults(results []execResult) string {
+	if len(results) == 0 {
+		return ""
+	}
+	const singleLine = 80
+	n := 0
+	for _, r := range results {
+		n += 2 + len(r.Value)
+	}
+	sep := ", "
+	if n > singleLine {
+		sep = ",\n"
+	}
+	var sb strings.Builder
+	for i, r := range results {
+		if i > 0 {
+			sb.WriteString(sep)
+		}
+		sb.WriteString(r.Value)
+	}
+	return sb.String()
 }

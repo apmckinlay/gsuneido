@@ -5,7 +5,6 @@ package llm
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -457,14 +456,14 @@ func requireApproval(ctx context.Context, toolName, before, after string) error 
 // executeSingleToolCall executes a single tool call and logs the result
 func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 	name := strings.TrimPrefix(tc.Function.Name, "suneido_")
-	toolOutput, err := agent.toolClient.FormatToolCallForDisplay(tc)
+	callDisplay, err := agent.toolClient.FormatToolCallForDisplay(tc)
 	if err != nil {
-		toolOutput = name + " " + tc.Function.Arguments + "\n"
+		callDisplay = name + " " + tc.Function.Arguments + "\n"
 	}
-	toolOutput = ensureTrailingNewlines(toolOutput, 2)
+	callDisplay = ensureTrailingNewlines(callDisplay, 2)
 	var approvalText string
 	if agent.needsApproval(tc.Function.Name) {
-		agent.emit("tool", toolOutput)
+		agent.emit("tool", callDisplay)
 		approval := newToolApproval()
 		approvalFn := func(before, after string) (bool, error) {
 			approval.Before = before
@@ -481,14 +480,15 @@ func (agent *Agent) executeSingleToolCall(ctx context.Context, tc ToolCall) {
 		}
 		ctx = context.WithValue(ctx, approvalFnKey{}, approvalFn)
 	} else {
-		agent.emit("tool", toolOutput)
+		agent.emit("tool", callDisplay)
 	}
 	result, err := agent.toolClient.CallToolFromLLM(ctx, tc)
 	if err != nil {
 		agent.emit("tool", "ERROR: "+err.Error()+"\n\n")
 		result = "ERROR: " + err.Error()
 	} else if tc.Function.Name == "suneido_execute" {
-		agent.emitExecToolResult(result)
+		// only exec tool results are emitted to the UI
+		agent.emitExecToolResults(result)
 	}
 	if approvalText != "" {
 		result += "\nUSER FEEDBACK: " + approvalText
@@ -523,17 +523,13 @@ func (*Agent) needsApproval(toolName string) bool {
 		strings.HasPrefix(toolName, "suneido_edit_")
 }
 
-func (agent *Agent) emitExecToolResult(result string) {
-	var execOut execOutput
-	if err := json.Unmarshal([]byte(result), &execOut); err != nil {
-		agent.emit("tool", "=> "+result+"\n")
+func (agent *Agent) emitExecToolResults(result string) {
+	output := formatExecToolOutput(result)
+	if output == "" {
 		return
 	}
-	results := execOut.Results
-	agent.emit("tool", "=> "+results+"\n")
-	if execOut.Print != "" {
-		agent.emit("tool", execOut.Print+"\n")
-	}
+	agent.emit("tool", output)
+	agent.logMessage("tool", output)
 }
 
 func (agent *Agent) emit(what, data string) {
