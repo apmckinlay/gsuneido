@@ -509,8 +509,13 @@ func (ck *Check) blockAsClosure(b *ast.Block, init set) set {
 	// pass full init so nested closures can see all outer vars
 	after := ck.check(&b.Function, init, true)
 	// only merge shared vars back; non-shared block-locals stay invisible
+	// skip params - they may have shared slots (captured by inner blocks)
+	// but they belong to this block, not the outer scope
 	init = before
 	for _, name := range shared {
+		if isParam(b.Params, name) {
+			continue
+		}
 		if after.has(name) && !init.has(name) {
 			init = init.with(name)
 		}
@@ -540,6 +545,15 @@ func (ck *Check) blockAsClosure(b *ast.Block, init set) set {
 	}
 
 	return init
+}
+
+func isParam(params []ast.Param, name string) bool {
+	for _, p := range params {
+		if p.Name.ParamName() == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (ck *Check) initVar(init set, id string, pos int) set {
