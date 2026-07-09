@@ -229,11 +229,61 @@ func TestPropFold(t *testing.T) {
         ForIn(0 6
         Call(T))`)
 
-	// nary
-	test("0 + ''", "0")
-	test("'' + 0", "0")
-	test("false + ''", "0")
-	test("'' + false", "0")
+	// compile-time errors
+	xtest := func(src string) {
+		t.Helper()
+		assert.T(t).This(func() {
+			p := NewParser("function () {\n" + src + "\n}")
+			p.Function()
+		}).Panics("cannot do math on")
+	}
+	// new check: non-numeric literal with variable
+	xtest("x + 'a'")
+	xtest("x - 'a'")
+	xtest("x * 'a'")
+	xtest("x / 'a'")
+	xtest("x % 'a'")
+	xtest("x & true")
+	xtest("x | false")
+	xtest("x ^ true")
+	xtest("x << 'a'")
+	xtest("x >> 'a'")
+	// compound assignment with non-numeric literal rhs
+	xtest("x += 'a'")
+	xtest("x -= 'a'")
+	xtest("x *= 'a'")
+	xtest("x /= 'a'")
+	xtest("x %= 'a'")
+	xtest("x <<= 'a'")
+	xtest("x >>= 'a'")
+	xtest("x |= 'a'")
+	xtest("x &= 'a'")
+	xtest("x ^= 'a'")
+	// new check: unary on non-numeric literal
+	xtest("-'a'")
+	xtest("-true")
+	xtest("+true")
+	xtest("+false")
+	xtest("~true")
+	xtest("~'a'")
+	// old folding check: literal op literal
+	xtest("0 + ''")
+	xtest("'' + 0")
+	xtest("false + ''")
+	xtest("'' + false")
+	xtest("'a' + 'b'")
+	xtest("'a' - 'b'")
+	xtest("'a' * 'b'")
+	xtest("'a' / 'b'")
+	xtest("'a' % 'b'")
+	xtest("1 + 'a'")
+	xtest("'a' - 1")
+	xtest("true + 1")
+	xtest("1 + false")
+	xtest("true | 1")
+	xtest("1 & false")
+	xtest("true ^ 1")
+	xtest("0xff & '1'")
 	test("x + 0", "Nary(Add x 0)")         // keep op
 	test("x + 0 + 0 + 0", "Nary(Add x 0)") // keep op
 	test("a * 0 * b", "0")                 // short circuit

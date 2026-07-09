@@ -151,29 +151,24 @@ default: return 1
 
 // only "" and false should convert to number or integer
 
-// convert to number - folding
-"123 + ''", 123
-"123 + false", 123
-"-true" throws "can't convert true to number"
-"123 + true" throws "can't convert true to number"
-"123 + '111'" throws "can't convert String to number"
-// convert to number
-"x = 123; x + ''", 123
-"x = 123; x + false", 123
-"x = true; -x" throws "can't convert true to number"
-"x = 123; x + true" throws "can't convert true to number"
-"x = 123; x + '111'" throws "can't convert String to number"
-// convert to integer - folding
-"0xff & 0xf", 0xf
-"~true" throws "can't convert true to integer"
-"0xff & true" throws "can't convert true to integer"
-"0xff & '1'" throws "can't convert String to integer"
-"4.8 % 2" throws "can't convert number to integer"
+// runtime - math on non-numeric values (use function params to avoid compile-time detection)
+"function(x){ 123 + x }(false)", 123
+"function(x){ 123 + x }(true)" throws "can't convert true to number"
+"function(x){ 123 + x }('111')" throws "can't convert String to number"
+"function(x){ -x }(true)" throws "can't convert true to number"
+"function(x){ -x }('a')" throws "can't convert String to number"
+"function(x){ +x }(true)" throws "can't convert true to number"
+"function(x){ +x }('a')" throws "can't convert String to number"
+"function(x){ ~x }(true)" throws "can't convert true to integer"
+"function(x){ ~x }('1')" throws "can't convert String to integer"
+"function(x){ 0xff & x }(true)" throws "can't convert true to integer"
+"function(x){ 0xff & x }('1')" throws "can't convert String to integer"
+"function(x){ 1 | x }(true)" throws "can't convert true to integer"
+"function(x){ 1 ^ x }(true)" throws "can't convert true to integer"
+
 // convert to integer
-"x = 0xff; x & 0xf", 0xf
-"x = true; ~x" throws "can't convert true to integer"
-"x = 0xff; x & true" throws "can't convert true to integer"
-"x = 0xff; x & '1'" throws "can't convert String to integer"
+"0xff & 0xf", 0xf
+"4.8 % 2" throws "can't convert number to integer"
 "x = 4.8; x % 2" throws "can't convert number to integer"
 
 "s = 'hello'; s[1.2]" throws "member not found"
@@ -197,20 +192,9 @@ default: return 1
 
 // folding/optimization still type checks
 
-'0 + "123"' throws "can't convert"
-'"123" + 0' throws "can't convert"
-'x = "123"; 0 + x' throws "can't convert"
-'x = "123"; x + 0' throws "can't convert"
-
-'1 * "123"' throws "can't convert"
-'"123" * 1' throws "can't convert"
-'x = "123"; 1 * x' throws "can't convert"
-'x = "123"; x * 1' throws "can't convert"
-
-'"" $ #()' throws "can't convert"
-'#() $ ""' throws "can't convert"
-'x = #(); x $ ""' throws "can't convert"
-'x = #(); "" $ x' throws "can't convert"
+// Cat with non-convertible values at runtime (use function to avoid propfold inlining)
+'function(x){ "a" $ x }(#())' throws "can't convert"
+'function(x){ x $ "a" }(#())' throws "can't convert"
 `)
 
 var _ = Register("argument handling", `
@@ -235,15 +219,10 @@ var _ = Register("argument handling", `
 `)
 
 var _ = Register("unary plus and minus conversions", `
-"x = true; +x" throws "can't convert true to number"
-"x = false; +x", 0
-"x = true; -x" throws "can't convert true to number"
-"x = false; -x", 0
-// fold
-"+true" throws "can't convert true to number"
-"+false", 0
-"-true" throws "can't convert true to number"
-"-false", 0
+"function(x){ +x }(true)" throws "can't convert true to number"
+"function(x){ +x }(false)", 0
+"function(x){ -x }(true)" throws "can't convert true to number"
+"function(x){ -x }(false)", 0
 `)
 
 var _ = Register("calls", `
