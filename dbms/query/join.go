@@ -220,9 +220,16 @@ func (jn *Join) getIndexes() [][]string {
 	if joinRev == impossible { // for tests
 		return jn.source1.Indexes()
 	}
-	// can really only provide source.indexes() but optimize may swap.
+	// can really only provide source1.indexes() but optimize may reverse.
 	// optimize will return impossible for source2 indexes.
-	return set.UnionFn(jn.source1.Indexes(), jn.source2.Indexes(), slices.Equal)
+	idx1 := jn.source1.Indexes()
+	idx2 := jn.source2.Indexes()
+	if isEmptyKey(idx1) {
+		return idx2
+	} else if isEmptyKey(idx2) {
+		return idx1
+	}
+	return set.UnionFn(idx1, idx2, slices.Equal)
 }
 
 func (jn *Join) getKeys() [][]string {
