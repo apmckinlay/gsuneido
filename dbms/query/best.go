@@ -4,16 +4,24 @@
 package query
 
 import (
+	"math/rand/v2"
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
+// randomBest, when true, makes best.update pick uniformly at random
+// from all non-impossible candidates (reservoir sampling).
+// It is intended to be enabled by tests (e.g. fuzzing) to exercise
+// code paths that depend on plan choice.
+var randomBest bool
+
 type best[T any] struct {
 	fixcost Cost
 	varcost Cost
 	data    T
+	nseen   int // only used when randomBest is true
 }
 
 func newBest[T any]() best[T] {
@@ -22,6 +30,19 @@ func newBest[T any]() best[T] {
 
 // update returns true if req is the new lowest-cost candidate.
 func (b *best[T]) update(fixcost, varcost Cost, data T) {
+	if randomBest {
+		if fixcost+varcost >= impossible {
+			return
+		}
+		b.nseen++
+		// reservoir sampling: replace current with probability 1/nseen
+		if b.nseen == 1 || rand.IntN(b.nseen) == 0 {
+			b.fixcost = fixcost
+			b.varcost = varcost
+			b.data = data
+		}
+		return
+	}
 	if fixcost+varcost < b.fixcost+b.varcost {
 		*b = best[T]{fixcost: fixcost, varcost: varcost, data: data}
 	}

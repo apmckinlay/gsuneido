@@ -10,6 +10,50 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+func TestBestUpdateRandom(t *testing.T) {
+	defer func() { randomBest = false }()
+	randomBest = true
+
+	// impossible candidates are always ignored
+	b := newBest[int]()
+	b.update(impossible, impossible, -1)
+	assert.T(t).That(b.none())
+
+	// the first non-impossible candidate is always accepted
+	b.update(2, 3, 100)
+	assert.T(t).This(b.cost()).Is(Cost(5))
+	assert.T(t).This(b.data).Is(100)
+
+	// subsequent non-impossible candidates are selected uniformly at random
+	// run many trials, each with a fresh best, and check distribution
+	counts := map[int]int{}
+	const trials = 6000
+	for range trials {
+		bb := newBest[int]()
+		bb.update(1, 1, 1) // first
+		bb.update(1, 1, 2)
+		bb.update(1, 1, 3)
+		counts[bb.data]++
+	}
+	// expect roughly 1/3 each
+	for _, d := range []int{1, 2, 3} {
+		assert.T(t).That(counts[d] > trials/5) // sanity bound
+	}
+
+	// later (worse) candidates should also be reachable
+	sawHigher := false
+	for range 200 {
+		bb := newBest[int]()
+		bb.update(1, 1, 1)
+		bb.update(9, 9, 2)
+		if bb.data == 2 {
+			sawHigher = true
+			break
+		}
+	}
+	assert.T(t).That(sawHigher)
+}
+
 func TestMinimizeKeys(t *testing.T) {
 	test := func(keys, expected [][]string) {
 		result := minimizeKeys(keys)

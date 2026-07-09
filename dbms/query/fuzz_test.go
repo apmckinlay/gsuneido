@@ -41,9 +41,11 @@ type fuzzRunner struct {
 
 func (fr fuzzRunner) Run(t *testing.T, seed1, seed2 uint64) {
 	defer func(jr int) { joinRev = jr }(joinRev)
-	joinRev = impossible
+	joinRev = impossible // keep joins in the order created
 	defer func(ti int) { ticostAdj = ti }(ticostAdj)
-	ticostAdj = 9999999
+	ticostAdj = 9999999 // discourage temp indexes unless impossible without
+	defer func(rb bool) { randomBest = rb }(randomBest)
+	randomBest = true // choose best randomly to exercise more possibilities
 	ft := newFT(seed1, seed2)
 	defer ft.db.Close()
 	q := fr.build(ft)
