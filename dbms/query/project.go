@@ -493,7 +493,7 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 		// this can't be handled with a single Require
 		// so we need to search here
 		nColsUnfixedReq := countUnfixed(req.cols, fixed)
-		best := newBestReq()
+		best := newBest[Require]()
 		for _, idx := range p.source.Indexes() {
 			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
 				grouped(idx, p.columns, nColsUnfixed, fixed) {
@@ -502,12 +502,12 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 				srcReq := OrderReq(idx, req.SelectFrac(nrows))
 				f, v := Optimize(p.source, mode, srcReq)
 				v += Cost(req.nseeks) * p.source.lookupCost()
-				best.update(srcReq, f, v)
+				best.update(f, v, srcReq)
 			}
 		}
 		if best.found() {
 			return best.fixcost, best.varcost,
-				&projectApproach{strat: projSeq, req: best.req}
+				&projectApproach{strat: projSeq, req: best.data}
 		}
 	}
 	return impossible, impossible, nil

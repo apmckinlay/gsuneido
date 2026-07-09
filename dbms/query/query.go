@@ -383,15 +383,15 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 	// we use ReqGroup because it matches the search for a key
 	// although we don't actually need the rows to be grouped
 	q = q.Transform()
-	best := newBestIndex()
+	best := newBest[[]string]()
 	for _, key := range q.Keys() {
 		f, v, _ := optimize(q, mode, GroupReq(key, 1, 1))
-		best.update(key, f, v)
+		best.update(f, v, key)
 	}
-	if best.fixcost+best.varcost >= impossible {
+	if best.none() {
 		panic("invalid query: " + String(q))
 	}
-	q = SetApproach(q, GroupReq(best.index, 1, 1), t)
+	q = SetApproach(q, GroupReq(best.data, 1, 1), t)
 	return q
 }
 
@@ -477,21 +477,21 @@ func optTempIndex(q Query, mode Mode, req Require) (
 
 	nrows, _ := q.Nrows()
 	assert.That(nrows >= 0)
-	best := newBestApp()
+	best := newBest[tiApproach]()
 
 	// with no index
 	noIdxOrder := req.cols
 	if u == ReqUnique {
 		noIdxOrder = tempIndexKey(q, req.cols)
 	}
-	optTI(best, q, mode, NoneReq(req.frac), nrows, factorNone, noIdxOrder)
+	optTI(&best, q, mode, NoneReq(req.frac), nrows, factorNone, noIdxOrder)
 
 	// with required index
-	optTI(best, q, mode, req, nrows, factorAll, req.cols)
+	optTI(&best, q, mode, req, nrows, factorAll, req.cols)
 
 	// with "best" index
 	if bestIndex := tempIndexBest(q, req.cols); bestIndex != nil {
-		optTI(best, q, mode, OrderReq(bestIndex, req.frac), nrows, factorPre, req.cols)
+		optTI(&best, q, mode, OrderReq(bestIndex, req.frac), nrows, factorPre, req.cols)
 	}
 
 	// key-subset candidates for ReqUnique
@@ -507,7 +507,7 @@ func optTempIndex(q Query, mode Mode, req Require) (
 				continue
 			}
 			keyUnfixed := fixed.RemoveFrom(key)
-			optTI(best, q, mode, UniqueReq(keyUnfixed, req.nseeks), nrows, factorAll, keyUnfixed)
+			optTI(&best, q, mode, UniqueReq(keyUnfixed, req.nseeks), nrows, factorAll, keyUnfixed)
 		}
 	}
 
@@ -520,17 +520,17 @@ func optTempIndex(q Query, mode Mode, req Require) (
 		best.varcost += Cost(req.nseeks) * perLookup
 	}
 
-	tempIndexCost := best.fixcost + best.varcost
+	tempIndexCost := best.cost()
 	indexedCost := indexedFixCost + indexedVarCost
 	if indexedCost <= tempIndexCost {
 		traceQO("indexed", indexedCost, "<=", tempIndexCost)
 		return indexedFixCost, indexedVarCost, indexedApp
 	}
-	traceQO("tempindex", best.index, tempIndexCost, "<", indexedCost)
+	traceQO("tempindex", best.data.index, tempIndexCost, "<", indexedCost)
 	return best.fixcost, best.varcost,
-		&tempIndex{index: best.tiOrder, srcapp: best.srcapp,
-			srcindex:   best.index,
-			srcfixcost: best.srcfixcost, srcvarcost: best.srcvarcost}
+		&tempIndex{index: best.data.tiOrder, srcapp: best.data.srcapp,
+			srcindex:   best.data.index,
+			srcfixcost: best.data.srcfixcost, srcvarcost: best.data.srcvarcost}
 }
 
 // tempIndexKey finds the smallest key (by unfixed count) that's covered by cols.
@@ -558,20 +558,18 @@ func tempIndexKey(q Query, cols []string) []string {
 	return cols
 }
 
-func optTI(best *bestTI, q Query, mode Mode, req Require, nrows, factor int, tiOrder []string) {
+func optTI(best *best[tiApproach], q Query, mode Mode, req Require, nrows, factor int, tiOrder []string) {
 	srcReq := OrderReq(req.cols, 1)
 	srcfixcost, srcvarcost, srcapp := q.optimize(mode, srcReq)
 	assert.That(srcfixcost >= 0 && srcvarcost >= 0)
 	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, req.cols, nrows, float64(req.frac), factor)
-	if fixcost+varcost < best.fixcost+best.varcost {
-		best.index = req.cols
-		best.tiOrder = tiOrder
-		best.srcfixcost = srcfixcost
-		best.srcvarcost = srcvarcost
-		best.srcapp = srcapp
-		best.fixcost = fixcost
-		best.varcost = varcost
-	}
+	best.update(fixcost, varcost, tiApproach{
+		index:      req.cols,
+		tiOrder:    tiOrder,
+		srcfixcost: srcfixcost,
+		srcvarcost: srcvarcost,
+		srcapp:     srcapp,
+	})
 }
 
 //-------------------------------------------------------------------
@@ -617,18 +615,12 @@ func tempIndexBest(q Query, index []string) []string {
 	return bestIndex
 }
 
-type bestTI struct {
+type tiApproach struct {
 	index      []string
 	tiOrder    []string
 	srcfixcost Cost
 	srcvarcost Cost
 	srcapp     any
-	fixcost    Cost
-	varcost    Cost
-}
-
-func newBestApp() *bestTI {
-	return &bestTI{fixcost: impossible, varcost: impossible}
 }
 
 // tempIndex is a special approach that is added by optTempIndex

@@ -340,7 +340,7 @@ func (u *Union) optMerge(mode Mode, req Require) (Cost, Cost, *unionApproach) {
 			best.update(fc1+fc2, vc1+vc2, b{order: order, req: srcReq})
 		}
 	}
-	if !best.found() {
+	if best.none() {
 		return impossible, impossible, nil
 	}
 	return best.fixcost, best.varcost,

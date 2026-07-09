@@ -4,10 +4,8 @@
 package query
 
 import (
-	"fmt"
 	"slices"
 
-	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
@@ -23,12 +21,10 @@ func newBest[T any]() best[T] {
 }
 
 // update returns true if req is the new lowest-cost candidate.
-func (b *best[T]) update(fixcost, varcost Cost, data T) bool {
+func (b *best[T]) update(fixcost, varcost Cost, data T) {
 	if fixcost+varcost < b.fixcost+b.varcost {
 		*b = best[T]{fixcost: fixcost, varcost: varcost, data: data}
-		return true
 	}
-	return false
 }
 
 func (b *best[T]) cost() Cost {
@@ -39,67 +35,8 @@ func (b *best[T]) found() bool {
 	return b.cost() < impossible
 }
 
-//-------------------------------------------------------------------
-
-type bestIndex struct {
-	index   []string
-	fixcost Cost
-	varcost Cost
-}
-
-func newBestIndex() bestIndex {
-	return bestIndex{fixcost: impossible, varcost: impossible}
-}
-
-// update returns true if the new values are the lowest cost so far
-func (bi *bestIndex) update(index []string, fixcost, varcost Cost) bool {
-	if fixcost+varcost < bi.fixcost+bi.varcost {
-		*bi = bestIndex{index: index, fixcost: fixcost, varcost: varcost}
-		return true
-	}
-	return false
-}
-
-func (bi *bestIndex) cost() int {
-	return bi.fixcost + bi.varcost
-}
-
-func (bi *bestIndex) String() string {
-	if bi.cost() >= impossible {
-		return "impossible"
-	}
-	return fmt.Sprint("{", bi.index, " ",
-		trace.Number(bi.fixcost), " + ", trace.Number(bi.varcost),
-		" = ", trace.Number(bi.cost()), "}")
-}
-
-//-------------------------------------------------------------------
-
-type bestReq struct {
-	req     Require
-	fixcost Cost
-	varcost Cost
-}
-
-func newBestReq() bestReq {
-	return bestReq{fixcost: impossible, varcost: impossible}
-}
-
-// update returns true if req is the new lowest-cost candidate.
-func (b *bestReq) update(req Require, fixcost, varcost Cost) bool {
-	if fixcost+varcost < b.fixcost+b.varcost {
-		*b = bestReq{req: req, fixcost: fixcost, varcost: varcost}
-		return true
-	}
-	return false
-}
-
-func (b *bestReq) cost() Cost {
-	return b.fixcost + b.varcost
-}
-
-func (b *bestReq) found() bool {
-	return b.cost() < impossible
+func (b *best[T]) none() bool {
+	return !b.found()
 }
 
 //-------------------------------------------------------------------

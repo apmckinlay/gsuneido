@@ -161,17 +161,17 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton || req.use == ReqNone {
 		return tbl.costFor(tbl.indexes[0], req)
 	}
-	best := newBestIndex()
+	best := newBest[[]string]()
 	for _, idx := range tbl.indexes {
 		if req.SatisfiedBy(idx) {
 			f, v, _ := tbl.costFor(idx, req)
-			best.update(idx, f, v)
+			best.update(f, v, idx)
 		}
 	}
-	if best.index == nil {
+	if best.none() {
 		return impossible, impossible, nil
 	}
-	return best.fixcost, best.varcost, tableApproach{index: best.index}
+	return best.fixcost, best.varcost, tableApproach{index: best.data}
 }
 
 func (tbl *Table) costFor(index []string, req Require) (Cost, Cost, any) {

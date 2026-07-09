@@ -558,8 +558,11 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 		isel := w.idxSels[0]
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
-	best := newBestIndex()
-	var bestIdxSel *idxSel
+	type bestIdx struct {
+		index  []string
+		idxSel *idxSel
+	}
+	best := newBest[bestIdx]()
 	for _, idx := range w.source.Indexes() {
 		if !req.SatisfiedByWithFixed(idx, w.fixed) {
 			continue
@@ -576,15 +579,13 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 		}
 		cost := WhereCost(float64(varCost), float64(req.frac), irFrac, ifFrac, dfFrac)
 		cost += Cost(req.nseeks) * w.source.lookupCost()
-		if best.update(idx, 0, cost) {
-			bestIdxSel = isel
-		}
+		best.update(0, cost, bestIdx{index: idx, idxSel: isel})
 	}
-	if best.index == nil {
+	if best.none() {
 		return impossible, impossible, nil
 	}
-	return 0, best.varcost, &whereApproach{index: best.index,
-		cost: best.varcost, idxSel: bestIdxSel}
+	return 0, best.varcost, &whereApproach{index: best.data.index,
+		cost: best.varcost, idxSel: best.data.idxSel}
 }
 
 func (w *Where) optWhereLookup(req Require) (Cost, Cost, any) {
@@ -593,17 +594,17 @@ func (w *Where) optWhereLookup(req Require) (Cost, Cost, any) {
 		cost := w.tbl.lookupCostFor(w.tbl.indexi(isel.index))
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
-	best := newBestIndex()
+	best := newBest[[]string]()
 	for idxi, idx := range w.tbl.indexes {
 		if indexCovered(idx, req.cols, w.fixed) {
 			varcost := Cost(req.nseeks) * w.tbl.lookupCostFor(idxi)
-			best.update(idx, 0, varcost)
+			best.update(0, varcost, idx)
 		}
 	}
-	if best.index == nil {
+	if best.none() {
 		return impossible, impossible, nil
 	}
-	return 0, best.varcost, &whereApproach{index: best.index, cost: best.varcost}
+	return 0, best.varcost, &whereApproach{index: best.data, cost: best.varcost}
 }
 
 // exprFalse checks if any expressions folded to false
