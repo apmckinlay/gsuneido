@@ -264,13 +264,45 @@ ListBodyBaseComponent
 
 	DeleteRecord(rowNum, shiftTop?)
 		{
-		Assert(.rows hasMember: rowNum,
-			msg: 'VirtualListGridBodyComponent.DeleteRecord')
+		if not .rows.Member?(rowNum)
+			{
+			.debugVListRowsMismatch('DeleteRecord (37548)', Object(:rowNum, :shiftTop?))
+			return
+			}
+
 		newObserve = shiftTop? is true
 			? .deleteRowShiftTop(rowNum)
 			: .deleteRowShiftBottom(rowNum)
 		if .rows.Size() > 0
 			newObserve.Each({ .addObserver(it is #top ? .top : .bottom - 1) })
+		}
+
+	debugVListRowsMismatch(what, extraParams)
+		{
+		mergeRange = { |nums|
+			result = Object()
+			if nums.Size() isnt 0
+				{
+				start = nums[0]
+				prev = start
+				for i in 1..nums.Size()
+					{
+					cur = nums[i]
+					if cur isnt prev + 1
+						{
+						result.Add(start $ ' - ' $ prev)
+						start = cur
+						}
+					prev = cur
+					}
+				result.Add(start $ ' - ' $ prev)
+				}
+			result
+			}
+		rowsMembers = mergeRange(.rows.Members().Sort!())
+		.Parent.Event('DebugVListRowsMismatch', what,
+			Object(top: .top, bottom: .bottom,
+				:rowsMembers, rowsSize: .rows.Size()).Merge(extraParams))
 		}
 
 	deleteRowShiftTop(rowNum)

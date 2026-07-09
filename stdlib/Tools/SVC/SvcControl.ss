@@ -124,7 +124,7 @@ Controller
 				(Button 'Send Checked Local Changes...')
 				Fill)
 			#(ListStretch columns: #(svc_checked, svc_lib, svc_type, svc_date,
-				svc_local_date, svc_warning, svc_name),
+				svc_local_date, svc_warning, svc_path, svc_name),
 				noShading:,	name: 'localList', defWidth: false,
 				columnsSaveName: 'svc_local', stretchColumn: 'svc_name',
 				checkBoxColumn: 'svc_checked')
@@ -151,7 +151,7 @@ Controller
 		return #(Vert
 			(Horz Fill (Button 'Get Master Changes') Fill)
 			(ListStretch columns: #(svc_lib, svc_type, svc_who,
-				svc_master_date, svc_local_date, svc_name)
+				svc_master_date, svc_local_date, svc_path, svc_name)
 				noShading:, defWidth: false, name: 'masterList',
 				columnsSaveName: 'svc_master', stretchColumn: 'svc_name')
 			xstretch: 1,
@@ -312,6 +312,7 @@ Controller
 	asof: false
 	set_table(table)
 		{
+		.prevtable = .curtable
 		.curtable = .tableName(table)
 		.local_list.Clear()
 		.master_list.Clear()
@@ -323,6 +324,7 @@ Controller
 		if table is false or table is ''
 			{
 			.sortLocalList()
+			.showHidePathColumn()
 			return
 			}
 
@@ -333,6 +335,7 @@ Controller
 
 	createLists()
 		{
+		.showHidePathColumn()
 		for rec in .model.LocalChanges
 			.local_list.AddRow(.buildRow(rec, .localFields))
 		.sortLocalList()
@@ -345,6 +348,46 @@ Controller
 			.local_list.AddRow(.buildRow(rec, .localFields))
 			.master_list.AddRow(.buildRow(rec, .masterFields))
 			}
+		}
+
+	local_path_width: 0
+	master_path_width: 0
+	showHidePathColumn()
+		{
+		localIdx = .local_list.GetColumns().Find('svc_path')
+		masterIdx = .master_list.GetColumns().Find('svc_path')
+		if not .bookTable?(.prevtable)
+			{
+			.withColIndex(localIdx,
+				{|idx| .local_path_width = .local_list.GetColWidth(idx) })
+			.withColIndex(masterIdx,
+				{|idx| .master_path_width = .master_list.GetColWidth(idx) })
+			}
+		if .bookTable?(.curtable)
+			{
+			.withColIndex(localIdx,
+				{|idx| .local_list.SetColWidth(idx, 0) })
+			.withColIndex(masterIdx,
+				{|idx| .master_list.SetColWidth(idx, 0) })
+			}
+		else
+			{
+			.withColIndex(localIdx,
+				{|idx| .local_list.SetColWidth(idx, .local_path_width) })
+			.withColIndex(masterIdx,
+				{|idx| .master_list.SetColWidth(idx, .master_path_width) })
+			}
+		}
+
+	bookTable?(table)
+		{
+		return table isnt '' and BookTable?(table)
+		}
+
+	withColIndex(idx, block)
+		{
+		if idx isnt false
+			block(idx)
 		}
 
 	getter_sort()
@@ -372,9 +415,9 @@ Controller
 
 	baseFields: #('svc_name': 'name', 'svc_lib': 'lib')
 	localFields: #('svc_type': 'type', 'svc_date': 'modified',
-		'svc_local_date': 'committed')
+		'svc_local_date': 'committed', 'svc_path': 'path')
 	masterFields: #('svc_type': 'type', 'svc_who': 'who', 'svc_master_date': 'modified',
-		'svc_local_date': 'committed')
+		'svc_local_date': 'committed', 'svc_path': 'path')
 	conflictFields: #('svc_date': 'localModified', 'svc_who': 'who',
 		'svc_local_date': 'committed', 'svc_master_date': 'modified')
 	buildRow(rec, fields = #())
@@ -1267,6 +1310,13 @@ Controller
 		.subs.Each(#Unsubscribe)
 		if ViewExists?(.allLibView)
 			Database('drop ' $ .allLibView)
+		if .bookTable?(.curtable)
+			{
+			if false isnt localIdx = .local_list.GetColumns().Find('svc_path')
+				.local_list.SetColWidth(localIdx, .local_path_width)
+			if false isnt masterIdx = .master_list.GetColumns().Find('svc_path')
+				.master_list.SetColWidth(masterIdx, .master_path_width)
+			}
 		super.Destroy()
 		}
 	}

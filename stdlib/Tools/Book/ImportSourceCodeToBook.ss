@@ -21,6 +21,7 @@ class
 		svcTable = SvcTable(book)
 		QueryDo('delete ' $ book)
 		.importDir(svcTable, src, src)
+		.dropSvcColumns(book)
 		if origSrc.Prefix?('https://github.com/')
 			DeleteDir(src)
 		Print('Imported from "' $ origSrc $ '" to ' $ book $
@@ -109,5 +110,13 @@ class
 		svcTable.Output(importRec)
 		++.n
 		.totalSize += importRec.text.Size()
+		}
+	dropSvcColumns(book)
+		{
+		svcColumns = SvcTable.SvcColumns//.Copy()//.Add(#lib_modified)
+		existingColumns = QueryColumns(book)
+		toRemove = svcColumns.Intersect(existingColumns)
+		if not toRemove.Empty?()
+			Database('alter ' $ book $ ' drop (' $ toRemove.Join(', ') $ ')')
 		}
 	}

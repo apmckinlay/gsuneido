@@ -21,6 +21,8 @@ Singleton
 			{
 			.runningTests? = TestRunner.RunningTests?()
 			args.Each(.processChange)
+			if .resetCache? and not .runningTests?
+				.ResetCaches()
 			if .resetClass?
 				.Reset()
 			}
@@ -50,6 +52,11 @@ Singleton
 	libraryRecordChange(args)
 		{
 		.libraryChange(args)
+		}
+
+	ResetCaches()
+		{
+		SvcLibraryPath.ResetCache()
 		}
 
 	Reset()

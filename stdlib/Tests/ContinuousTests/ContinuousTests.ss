@@ -36,11 +36,13 @@ class
 				return result
 			if largeData?
 				Suneido.ValidateQueryAny1? = true
-			localtestresult = TestRunner.Run(
-				TestObserverStringLog('systems_test_log.txt', quiet:), :libs)
+			result $= .TryTypeCheckServerStart()
+			localtestresult = TestRunner.Run(TestObserverStringLog(
+				Opt(testType, '_') $ 'systems_test_log.txt', quiet:), :libs)
 			result $= localtestresult
 			if additionalServerTests?
 				{
+				result $= ServerEval('ContinuousTests.TryTypeCheckServerStart')
 				servertestresult = 'Server Ran Tests\r\n' $ TestRunner.RunOnServer(:libs)
 				result $= servertestresult
 				}
@@ -62,6 +64,19 @@ class
 			result $= "FAILURES: " $ x $ '\n' $ FormatCallStack(x.Callstack()) $ '\n'
 		.processTestResults(testType, localtestresult, servertestresult)
 		return result
+		}
+
+	TryTypeCheckServerStart()
+		{
+		try
+			{
+			// avoid overhead and prevents slow test warning
+			if TypeCheckHelper.BinaryExists?()
+				TypeCheckHelper.Server()
+			return ""
+			}
+		catch (e)
+			return "ERROR: unable to start type checker: " $ e $ "\n"
 		}
 
 	getBuiltDateInfo()

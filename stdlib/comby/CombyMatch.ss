@@ -1,6 +1,16 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
+/*
+CombyMatch is
+	- token-based
+	- structural pattern matching (Skips non-structural tokens like whitespace, comments
+		and newlines)
+	- where template holes can (:[name]) lazily capture text between literal token matches
+		and respect bracket/delimiter nesting
+The idea is based on https://comby.dev/
+*/
 class
 	{
+	MAX_HOLE_MATCHES: 100
 	CallClass(search, s)
 		{
 		items = CombyTemplate(search)
@@ -88,47 +98,55 @@ class
 	// match until meet the end of source or the close delimiter
 	matchLastHole(env, item, tokenStartIdx, tokenIdx)
 		{
-		blockLevel = 0
-		while tokenIdx < env.tokens.Size()
-			{
-			if env.tokens[tokenIdx].value in ('(', '[', '{')
-				blockLevel++
-			else if env.tokens[tokenIdx].value in (')', ']', '}')
-				{
-				blockLevel--
-				if blockLevel < 0
-					break
-				}
-			tokenIdx++
-			}
+		blockEnd = .findEndOfBlock(env, tokenIdx)
 		env.holes[item.value] = env.s[env.tokens[tokenStartIdx].start..
-			env.tokens[tokenIdx - 1].end]
-		return Object(tokenIdx - tokenStartIdx, 1)
+			env.tokens[blockEnd - 1].end]
+		return Object(blockEnd - tokenStartIdx, 1)
 		}
 
 	matchHole(env, item, tokenStartIdx, tokenIdx, itemIdx)
 		{
+		match = 0
+		.findEndOfBlock(env, tokenIdx)
+			{ |blockLevel, ti|
+			if match >= .MAX_HOLE_MATCHES
+				return false
+			if blockLevel is 0
+				{
+				match++
+				if false isnt next = .match(env, ti, itemIdx + 1)
+					{
+					env.holes[item.value] =  env.s[env.tokens[tokenStartIdx].start..
+						env.tokens[ti - 1].end]
+					return Object(next - tokenStartIdx, env.items.Size() - itemIdx)
+					}
+				}
+			}
+		return false
+		}
+
+	findEndOfBlock(env, tokenIdx, block = false)
+		{
 		blockLevel = 0
 		while tokenIdx < env.tokens.Size()
 			{
-			if blockLevel is 0 and
-				false isnt next = .match(env, tokenIdx, itemIdx + 1)
+			if block isnt false
+				block(blockLevel, tokenIdx)
+			tok = env.tokens[tokenIdx]
+			if tok.type is ''
 				{
-				env.holes[item.value] =  env.s[env.tokens[tokenStartIdx].start..
-					env.tokens[tokenIdx - 1].end]
-				return Object(next - tokenStartIdx, env.items.Size() - itemIdx)
-				}
-			if env.tokens[tokenIdx].value in ('(', '[', '{')
-				blockLevel++
-			else if env.tokens[tokenIdx].value in (')', ']', '}')
-				{
-				blockLevel--
-				if blockLevel < 0
-					break
+				if tok.value in ('(', '[', '{')
+					blockLevel++
+				else if tok.value in (')', ']', '}')
+					{
+					blockLevel--
+					if blockLevel < 0
+						break
+					}
 				}
 			tokenIdx++
 			}
-		return false
+		return tokenIdx
 		}
 
 	GetHint(search)

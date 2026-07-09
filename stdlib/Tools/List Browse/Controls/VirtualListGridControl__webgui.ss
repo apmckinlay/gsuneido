@@ -769,5 +769,25 @@ Control
 		.brushMgr = false
 		}
 
+	DebugVListRowsMismatch(what, browserStatus)
+		{
+		params = Object()
+		if .model isnt false
+			{
+			params.modelOffset = .model.Offset
+			params.modelVisibleRows = .model.VisibleRows
+			params.modelStartLast = .model.GetStartLast()
+			params.modelDataSize = .model.GetLoadedData().Size()
+			params.modelDataTop = .model.GetLoadedData().Members().Min()
+			params.modelDataBottom = .model.GetLoadedData().Members().Max()
+			params.modelBegin? = .model.Begin?()
+			params.modelEnd? = .model.End?()
+			}
+		if .loadHelper isnt false
+			params.Merge(.loadHelper.GetInfo())
+		params.Merge(browserStatus)
+		SuneidoLog('ERROR: (CAUGHT) DebugVListRowsMismatch - ' $ what, :params)
+		}
+
 	Default(@unused) {	}
 	}

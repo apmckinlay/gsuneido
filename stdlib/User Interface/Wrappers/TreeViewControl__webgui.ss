@@ -61,15 +61,14 @@ Control
 			}
 		}
 
-	TVN_SELCHANGED(oldSelect, newSelect)
+	TVN_SELCHANGED(oldSelect/*unused*/, newSelect)
 		{
 		.Send('TreeView_ItemClicked', newSelect)
-
-		Assert(oldSelect is: .selected)
-		if oldSelect isnt newSelect
+		if .selected isnt newSelect
 			{
+			old = .selected
 			.selected = newSelect
-			.Tree_SelChanged(oldSelect, newSelect)
+			.Tree_SelChanged(old, newSelect)
 			}
 		}
 

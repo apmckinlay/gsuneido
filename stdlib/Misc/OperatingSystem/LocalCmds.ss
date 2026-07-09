@@ -60,6 +60,10 @@ class
 			{
 			return .wmiQuery('Name')[0]
 			}
+		GetCpuCaption()
+			{
+			return SystemInfo.GetV2Support(.wmiQuery('Caption')[0])
+			}
 		GetLogicalProcessors()
 			{
 			logicProcessors =  .wmiQuery('NumberOfLogicalProcessors')

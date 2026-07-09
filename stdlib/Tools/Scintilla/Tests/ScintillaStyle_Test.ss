@@ -17,6 +17,11 @@ Test
 		Assert(.marks(src) is: expected, msg: src)
 		}
 
+	checkNone(src)
+		{
+		Assert(.marks(src).Has?('^') is: false, msg: src)
+		}
+
 	styleOf(src, sub)
 		{
 		return ScintillaStyle.StyleString(src)[src.Find(sub) :: sub.Size()]
@@ -78,5 +83,30 @@ Test
 			msg: 'type name should be ANNOTATION')
 		Assert(.styleOf('Foo(disabled: false) {}', 'false') is: '\x04'.Repeat(5),
 			msg: 'false should stay KEYWORD')
+		}
+
+	Test_conditionsNotColoured()
+		{
+		.checkNone("if QueryEmpty?('gl_transactions', gltran_subsys_num: t.num,\n" $
+			"\tgltran_subsys_detail_num: t.num)\n\t{\n\treturn\n\t}")
+		.checkNone('if not QueryEmpty?(query, num: t.num)\n\t{\n\t}')
+		.checkNone('while Foo(a: 1)\n\t{\n\t}')
+		.checkNone('x = Foo(a: 1)\n\t{\n\t}')
+		}
+
+	Test_definitionsNotAtStart()
+		{
+		.check('x: 5\nAdd(a: number) {}',
+			'..........^.^^^^^^....')
+		.check('Foo(a: number,\n\tb: string) {}',
+			'.....^.^^^^^^....^.^^^^^^....')
+		}
+
+	Test_unionsWithValueKeywords()
+		{
+		.check('ObjectClash(o :object|false)\n\t{\n\t}',
+			'..............^^^^^^^^^^^^^.......')
+		.check('Foo(x: object|false) :string|false {}',
+			'.....^.^^^^^^^^^^^^..^^^^^^^^^^^^^...')
 		}
 	}

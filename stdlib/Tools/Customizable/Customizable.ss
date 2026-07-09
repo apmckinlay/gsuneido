@@ -342,7 +342,7 @@ class
 		if t.Member?('customOptions')
 			{
 			customOptFn = Global(t.customOptions)
-			options = customOptFn.UpdateProperties(f.colnme, f.colpro, .lib)
+			options.Merge(customOptFn.UpdateProperties(f.colnme, f.colpro, .lib))
 			}
 
 		recName = 'Field_' $ f.colnme

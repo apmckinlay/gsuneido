@@ -32,7 +32,11 @@ Singleton
 			{
 			m = l.BeforeFirst(':').Trim()
 			if m isnt ''
+				{
+				if info.Member?(m)
+					m $= '2' // We use Caption twice
 				info[m] = l.AfterFirst(':').Trim()
+				}
 			}
 		.OSName = info.Caption.Replace('Microsoft', '').Trim()
 		.Build = info.Version
@@ -47,6 +51,40 @@ Singleton
 		if .OSVersion.Size() < 3 /*= major, minor, build*/
 			.OSVersion = .OSVersion.Copy().MergeNew(#(0, 0, 0))
 		.Bios = info.Manufacturer $ ' ' $ info.SMBIOSBIOSVersion $ ', ' $ info.ReleaseDate
+		.V2Support = .GetV2Support(info.Caption2)
+		}
+
+	GetV2Support(captionString)
+		{
+		v2Support = ''
+		try
+			v2Support = .checkV2SupportOnProcessor(captionString)
+		catch
+			v2Support = 'No - unable to parse processor caption: ' $ captionString
+		return v2Support
+		}
+
+	checkV2SupportOnProcessor(captionString)
+		{
+		archPart   = captionString.Extract("^[A-Za-z0-9]+")
+		familyPart = captionString.Extract("Family \d+")
+		modelPart  = captionString.Extract("Model \d+")
+
+		familyNum = Number(familyPart.AfterFirst(' '))
+		modelNum  = Number(modelPart.AfterFirst(' '))
+
+		if archPart is "AMD64"
+			return familyNum >= 21 /*= V2 support starts */
+				? 'Yes'
+				: 'No - ' $ captionString
+
+		if archPart is "Intel64"
+			return familyNum is 6 and /*= Only family # for intel V2 right now */
+				modelNum >= 26 /*= V2 support starts */
+				? 'Yes'
+				: 'No - ' $ captionString
+
+		return 'No - Unknown Chip: ' $ captionString
 		}
 
 	biosInfo()
@@ -66,7 +104,8 @@ Singleton
 			` | select -Property Caption,Version | Format-List; ` $
 			`Get-CIMInstance -class Win32_bios | ` $
 			`select -Property Manufacturer,SMBIOSBIOSVersion,ReleaseDate ` $
-			`| Format-List"`
+			`| Format-List; ` $
+			`Get-CimInstance Win32_Processor | select -Property Caption | Format-List"`
 		}
 
 	ShowScript()

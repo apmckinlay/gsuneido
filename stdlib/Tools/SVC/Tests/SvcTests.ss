@@ -2,28 +2,20 @@
 Test
 	{
 	LibraryCacheOverride: 	#SvcDisabledLibrariesOverride
-	BookCacheOverride: 		#SvcDisabledBooksOverride
 	MakeLibrary(@records)
 		{
 		library = super.MakeLibrary(@records)
 		.TearDownIfTablesNotExist(library $ '_master')
-		.tableCacheOverride(library, .LibraryCacheOverride)
+		MemoizeSingle.Cache().GetInit(.LibraryCacheOverride, Object).Add(library)
 		return library
 		}
 
-	tableCacheOverride(table, cache)
-		{
-		if Suneido.Member?(cache)
-			Suneido[cache].Add(table)
-		else
-			Suneido[cache] = Object(table)
-		}
-
+	BookCacheOverride: 		#SvcDisabledBooksOverride
 	MakeBook()
 		{
 		book = super.MakeBook()
 		.TearDownIfTablesNotExist(book $ '_master')
-		.tableCacheOverride(book, .BookCacheOverride)
+		MemoizeSingle.Cache().GetInit(.BookCacheOverride, Object).Add(book)
 		return book
 		}
 
@@ -43,8 +35,7 @@ Test
 			cache = .Type is 'book'
 				? SvcTests.BookCacheOverride
 				: SvcTests.LibraryCacheOverride
-			Suneido.GetDefault(cache, Object()).Remove(super.Table())
-			super.ResetSvcDisabledCache()
+			MemoizeSingle.Cache().GetDefault(cache, Object()).Remove(super.Table())
 			}
 		}
 	SvcTable(table)
@@ -168,9 +159,7 @@ Test
 
 	Teardown()
 		{
-		for cache in [.LibraryCacheOverride, .BookCacheOverride]
-			if Suneido.Member?(cache)
-				Suneido.Delete(cache)
+		MemoizeSingle.Cache().Delete(.BookCacheOverride, .LibraryCacheOverride)
 		super.Teardown()
 		}
 	}

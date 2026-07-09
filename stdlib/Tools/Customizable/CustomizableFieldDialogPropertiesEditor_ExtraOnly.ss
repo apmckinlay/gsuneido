@@ -5,4 +5,11 @@ CustomizableFieldDialogPropertiesEditor
 		{
 		return Object('Vert', #Skip)
 		}
+	Get()
+		{
+		x = super.Get()
+		x.control = Object()
+		x.format = Object()
+		return x
+		}
 	}

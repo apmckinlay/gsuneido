@@ -5,4 +5,10 @@ SvcDisabledTables
 		{
 		return BookTables()
 		}
+
+	ResetCache()
+		{
+		BookTables.ResetCache()
+		super.ResetCache()
+		}
 	}

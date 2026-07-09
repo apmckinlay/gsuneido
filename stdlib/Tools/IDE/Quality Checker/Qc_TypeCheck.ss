@@ -46,11 +46,17 @@ class
 	// we cannot check if
 	checkable?(recordData)
 		{
-		// no binary
-		if not TypeCheckHelper.BinaryExists?()
-			return false, false
 		// not compilable
 		if not Compilable?(recordData.code)
+			return false, false
+
+		// no binary
+		try
+			{
+			if not TypeCheckHelper.BinaryExists?()
+				return false, false
+			}
+		catch // sometimes this seems to throw on
 			return false, false
 
 		c = recordData.code.Compile()

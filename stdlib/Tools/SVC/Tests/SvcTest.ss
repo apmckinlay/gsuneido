@@ -14,11 +14,21 @@ SvcTests
 			[parent: 0, name: 'Two', text: 'two text'],
 			[parent: 0, name: 'Three', text: 'three text'],
 			[parent: 0, name: 'Four', text: 'four text'],
-			[parent: 0, name: 'Seven', text: 'seven text']]
+			[parent: 0, name: 'Seven', text: 'seven text'],
+			[parent: 0, name: 'TestFolder', text: '']]
 		records.Each(svcTable.Output)
+		folder = Query1(lib $ ' where name is "TestFolder" and parent is 0')
+		subrec = [parent: folder.num, name: 'Eight', test: 'eight text']
+		svcTable.Output(subrec)
+		records.Add(folder, subrec)
 		result = svc.Local_changes(lib)
 		Assert(result.Map({ it.type $ ' ' $ it.name })
-			is: #('+ Four', '+ One', '+ Seven', '+ Three', '+ Two'))
+			is: #('+ Eight','+ Four', '+ One', '+ Seven', '+ TestFolder', '+ Three',
+				'+ Two'))
+		Assert(result[0].name is: 'Eight')
+		Assert(result[0].path is: 'TestFolder')
+		Assert(result[1].name is: 'Four')
+		Assert(result[1].path is: '')
 
 		for x in records
 			Assert(svc.Put(svcTable, x.name, 'default', 'new') isDate: true)

@@ -139,14 +139,16 @@ class
 	// --- type annotation highlighting ---------------------------------------
 	// foo(x: object, y: boolean|string) :number|other { }
 
-
 	// A colon is only an annotation when it is in parameter position inside
-	// `(...)` (or return position after `)`) is followed by a type name and
-	// the list is followed by `{`
+	// `(...)` (or return position after `)`), is followed by a type name,
+	// and the list is followed by `{`. The name before `(` must start its
+	// line (or be the function keyword) so calls in conditions/expressions
+	// like `if QueryEmpty?(query, num: x)` are not read as definitions.
 	newAnnoState()
 		{
-		return Object(stack: Object(), pos: 0, patch: Object(), p1: '', curWasDot: false,
-			want: false, colon: false, active: false, pp: false, ppPending: false)
+		return Object(stack: Object(), pos: 0, patch: Object(), p1: '', nl: true,
+			defName: false, want: false, colon: false, active: false,
+			pp: false, ppPending: false)
 		}
 
 	annotationScan(an, type, scan)
@@ -155,24 +157,40 @@ class
 		pos = an.pos
 		an.pos += len
 		if not String?(type) or type in (#NEWLINE, #WHITESPACE, #COMMENT)
+			{
+			if type is #NEWLINE
+				an.nl = true
 			return
+			}
 		text = scan.Text()
-		memberCall = an.curWasDot // previous token (a name) was a `.member` access
-		an.curWasDot = an.p1 is '.'
+		defName = an.defName // previous token could be a definition name
+		prev = an.p1
+		an.defName = .annoDefName?(an, type, text, scan)
+		an.nl = false
 		an.p1 = text
 		r = Object(:pos, :len)
-		if .annoWantType(an, type, text, scan, r)
+		if .annoWantType(an, type, text, scan, r, prev)
 			return
 		if .annoAfterParen(an, type, text, r)
 			return
-		.annoToken(an, type, text, r, memberCall)
+		.annoToken(an, type, text, r, defName)
 		}
 
-	annoWantType(an, type, text, scan, r)
+	annoDefName?(an, type, text, scan)
+		{
+		if scan.Keyword?()
+			return text is 'function'
+		return type is #IDENTIFIER and an.nl is true and an.p1 isnt '.'
+		}
+
+	// value keywords count as type names only inside a union, i.e. after `|`,
+	// so `x: object|false` is all annotation but `Foo(disabled: false)` is not
+	annoWantType(an, type, text, scan, r, prev)
 		{
 		if an.want is #consume
 			{
-			if .annoType?(type, scan) or text is '|' or text is '.'
+			if .annoType?(type, scan) or text is '|' or text is '.' or
+				(prev is '|' and text in ('false', 'true'))
 				{ an.active.Add(r); return true }
 			an.want = false
 			}
@@ -209,12 +227,12 @@ class
 		return false
 		}
 
-	annoToken(an, type, text, r, memberCall)
+	annoToken(an, type, text, r, defName)
 		{
 		if type isnt ''
 			.annoStep(an, type, text)
 		else if text is '('
-			an.stack.Add(Object(pending: Object(), slot: #start, def: not memberCall))
+			an.stack.Add(Object(pending: Object(), slot: #start, def: defName))
 		else if text is ')'
 			.annoClose(an)
 		else if text is ':' and .annoParamColon?(an)
@@ -358,6 +376,7 @@ class
 		'=~':,
 		'!~':,
 		)
+
 	setFoldLevel(line, hwnd, pos, level, prev_level)
 		{
 		i = line

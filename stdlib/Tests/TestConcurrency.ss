@@ -17,7 +17,7 @@ class
 		startTime = Date()
 		do
 			{
-			.actionsPerCycle.Times(.doAction)
+			for .. .actionsPerCycle { .doAction() }
 			n += .actionsPerCycle
 			}
 			while Date().MinusSeconds(startTime) < .Duration

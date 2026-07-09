@@ -350,11 +350,12 @@ class
 			// semijoin when we have to override the base queries rename
 			selectCols = linkedBrowse.GetColumns().Copy()
 			extraRename = ""
-			for field in overrides.Members()
+			overrideRenames = overrides.GetDefault('renames', #())
+			for field in overrideRenames.Members()
 				{
 				if not selectCols.Has?(field)
 					continue
-				extraRename $= field $ " to " $ overrides[field] $ ' '
+				extraRename $= field $ " to " $ overrideRenames[field] $ ' '
 				}
 			if extraRename isnt ""
 				q $= ' rename ' $ extraRename

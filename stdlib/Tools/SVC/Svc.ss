@@ -73,7 +73,8 @@ class
 				continue
 			masterChanges.Add(Object(type: master.type, name: master.name, who: master.id,
 				modified: master.lib_committed, lib: svcTable.Table(),
-				committed: local isnt false ? local.lib_committed : ''))
+				committed: local isnt false ? local.lib_committed : '',
+				path: master.path))
 			masters[master.name] = true
 			if maxLibCommitted is "" or master.lib_committed > maxLibCommitted
 				maxLibCommitted = master.lib_committed
@@ -121,6 +122,7 @@ class
 					: ' '
 			x.lib = lib
 			x.name = svcTable.MakeName(x, clean:)
+			x.path = svcTable.GetPath(x)
 			.addLocal(x, masters, master_changes, conflicts, local_changes)
 			}
 		}
@@ -132,6 +134,7 @@ class
 		type = change.type
 		modified = change.lib_modified
 		committed = change.lib_committed
+		path = change.path
 		if masters.Member?(name)
 			{
 			masterIdxs = master_changes.FindAllIf(
@@ -156,10 +159,10 @@ class
 
 			conflicts.Add(Object(:name, localModified: modified, who: masterRec.who,
 				masterModified: masterRec.modified, localType: type,
-				:modified, masterType: masterRec.type, :lib, :sends, :committed))
+				:modified, masterType: masterRec.type, :lib, :sends, :committed, :path))
 			}
 		else
-			local_changes.Add(Object(:type, :name, :modified, :lib, :committed))
+			local_changes.Add(Object(:type, :name, :modified, :lib, :committed, :path))
 		}
 
 	Conflicts(table)

@@ -1161,11 +1161,13 @@ CommandParent
 		if not .EditMode?()
 			{
 			if false isnt debug = Suneido.GetDefault("RecordNotInEditMode", false)
+				{
 				SuneidoLog('INFO: Record Not In Edit Mode',
 					params: [firstChangeMember: debug.member],
 					calls: debug.callstack)
+				Suneido.Delete(#RecordNotInEditMode)
+				}
 			ProgrammerError("Access dirty, not in edit mode (" $ .title $ ")")
-			Suneido.Delete(#RecordNotInEditMode)
 			}
 
 		if false is .Send('AccessBeforeSaving')

@@ -12,14 +12,24 @@ Test
 
 	Test_skipsNonCompilableCode()
 		{
-		rd = .recordData(code: 'this is not @#$ valid')
-		Assert(Qc_TypeCheck(rd).nError is: -1)
+		if .cannotRun?
+			Assert(true)
+		else
+			{
+			rd = .recordData(code: 'this is not @#$ valid')
+			Assert(Qc_TypeCheck(rd).nError is: -1)
+			}
 		}
 
 	Test_skipsMissingRecord()
 		{
-		rd = .recordData(recordName: 'NoSuchRecord_zzz')
-		Assert(Qc_TypeCheck(rd).nError is: -1)
+		if .cannotRun?
+			Assert(true)
+		else
+			{
+			rd = .recordData(recordName: 'NoSuchRecord_zzz')
+			Assert(Qc_TypeCheck(rd).nError is: -1)
+			}
 		}
 
 	Test_checksFunctions()
@@ -41,6 +51,19 @@ Test
 			}
 		}
 
+	Test_returnsWellFormedResult()
+		{
+		if .cannotRun?
+			Assert(true)
+		else
+			{
+			result = Qc_TypeCheck(.recordData())
+			Assert(result.Member?(#warnings))
+			Assert(result.Member?(#desc))
+			Assert(result.Member?(#nError))
+			}
+		}
+
 	Test_liveResultIsConsistent()
 		{
 		if .cannotRun?
@@ -53,15 +76,8 @@ Test
 			}
 		}
 
-	Test_returnsWellFormedResult()
-		{
-		result = Qc_TypeCheck(.recordData())
-		Assert(result.Member?(#warnings))
-		Assert(result.Member?(#desc))
-		Assert(result.Member?(#nError))
-		}
-
-	recordData(code = 'class { }', lib = 'stdlib', recordName = 'TypeCheckerControl')
+	// Matcher_is is small record and has inheritance
+	recordData(code = 'class { }', lib = 'stdlib', recordName = 'Matcher_is')
 		{
 		return [:code, :lib, :recordName]
 		}

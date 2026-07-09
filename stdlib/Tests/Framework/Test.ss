@@ -305,9 +305,15 @@ class
 
 	MakeBook()
 		{
-		.AddTeardown(.teardown_tables)
+		.AddTeardown(.teardownBookTables)
 		BookModel.Create(book = .TempTableName())
 		return book
+		}
+
+	teardownBookTables()
+		{
+		.teardown_tables()
+		SvcDisabledBooks.ResetCache()
 		}
 
 	MakeBookRecord(book, text, path = '', extrafields = #())
@@ -603,6 +609,12 @@ class
 	GetWatchTable(watchMember)
 		{
 		return ServerSuneido.Get(watchMember, Object())
+		}
+
+	MemoizeSingleOverride(cache, value)
+		{
+		MemoizeSingle.Cache()[override = cache $ 'Override'] = value
+		.AddTeardown({ MemoizeSingle.Cache().Delete(override) })
 		}
 
 	SpyOn(target)

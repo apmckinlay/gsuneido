@@ -7,8 +7,8 @@ SvcTests
 		excluded_library = .MakeLibrary([name: 'excluded_test', lib_modified: Date()])
 		.SvcTable(book = .MakeBook())
 		.SvcTable(lib = .MakeLibrary())
-		Suneido.LibraryTablesOverride = Object(lib, excluded_library, extra_lib)
-		Suneido.BookTablesOverride = Object(book)
+		.MemoizeSingleOverride('LibraryTables', Object(lib, excluded_library, extra_lib))
+		.MemoizeSingleOverride('BookTables', Object(book))
 		.SpyOn(SvcControl.Getter_SvcExcludeLibraries).Return(Object(excluded_library))
 
 		func = SvcControl.SvcControl_changesToSend
@@ -252,12 +252,5 @@ SvcTests
 			test3lib_Rec4: "Record has syntax error(s)"))
 
 		Assert(_resultOb.svc_all_changes is: #(qualityCheck: #()))
-		}
-
-	Teardown()
-		{
-		Suneido.Delete(#LibraryTablesOverride)
-		Suneido.Delete(#BookTablesOverride)
-		super.Teardown()
 		}
 	}

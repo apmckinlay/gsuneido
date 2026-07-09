@@ -78,12 +78,10 @@ Controller
 
 		.peditor = .getPeditor()
 
-		if typeOb.GetDefault('oneWay', false)
-			return .noPropertiesCtrl()
-
 		return false is .peditor and editType is false
 			? .noPropertiesCtrl()
-			: .controls(editName:, :editType, type: typeOb.base)
+			: .controls(editName:, :editType, type: typeOb.base,
+				oneWay: typeOb.GetDefault('oneWay', false))
 		}
 
 	matchingControl(c)
@@ -108,7 +106,7 @@ Controller
 			))
 		}
 
-	controls(editName = false, editType = false, type = false)
+	controls(editName = false, editType = false, type = false, oneWay = false)
 		{
 		ob = Object()
 		ob.Add('Record')
@@ -125,7 +123,7 @@ Controller
 		else
 			vert.Add(Object('Pair' #(Static 'Name') #(Static name: 'colpro')))
 
-		if editType isnt false
+		if editType isnt false and oneWay is false
 			vert.Add(Object('Pair' #(Static 'Type') Object('ChooseFieldType'
 				filterBy: type, mandatory:, name: 'ctllbl')))
 		else

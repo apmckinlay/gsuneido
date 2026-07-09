@@ -218,4 +218,9 @@ class
 		.releaseTo = row_num + .model.Offset
 		return true
 		}
+
+	GetInfo()
+		{
+		return Object(loadedTop: .loadedTop, loadedBottom: .loadedBottom)
+		}
 	}

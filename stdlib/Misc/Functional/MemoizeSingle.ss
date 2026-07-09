@@ -7,25 +7,31 @@ class
 	CallClass()
 		{
 		name = 'MemoizeSingle_' $ Name(this)
-		if name is "MemoizeSingle_MemoizeSingle"
-			throw "MemoizeSingle must be used as a base class, not called directly"
-		if Suneido.Member?(ov = Name(this) $ 'Override')
-			result = Suneido[ov]
+		if name is 'MemoizeSingle_MemoizeSingle'
+			throw 'MemoizeSingle must be used as a base class, not called directly'
+		cache = .Cache()
+		if cache.Member?(ov = Name(this) $ 'Override')
+			result = cache[ov]
 		else
-			result = Suneido.GetInit(name, .Func)
+			result = cache.GetInit(name, .Func)
 		if Object?(result) and not result.Readonly?()
 			result = result.Copy() // won't actually copy unless updated (copy-on-write)
 		return result
 		}
+
+	cacheMember: 'MemoizeSingleCache'
+	Cache()
+		{
+		return Suneido.GetInit(.cacheMember, Object)
+		}
+
 	ResetCache()
 		{
-		name = 'MemoizeSingle_' $ Name(this)
-		Suneido.Delete(name)
+		.Cache().Delete('MemoizeSingle_' $ Name(this))
 		}
+
 	ClearAll()
 		{
-		for m in Suneido.Members().Copy()
-			if String?(m) and m.Prefix?('MemoizeSingle_')
-				Suneido.Delete(m)
+		Suneido[.cacheMember] = Object()
 		}
 	}

@@ -52,17 +52,9 @@ class
 
 	GetPath(rec, t = false)
 		{
-		path = ''
-		DoWithTran(t)
-			{|t|
-			while rec.parent isnt 0 and rec.parent isnt ''
-				{
-				if false is rec = t.Query1(.library, num: rec.parent)
-					break
-				path = rec.name $ '/' $ path
-				}
-			}
-		return path[.. -1]
+		return t is false
+			? SvcLibraryPath(.library, rec.parent)
+			: SvcLibraryPath.Get(.library, rec.parent, t)
 		}
 
 	rootPlaceholder: '<root>'

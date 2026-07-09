@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	binaryPath: "Z:/Software/TypeChecker/suneidotypes.exe"
+	binaryPath: "//server/d/Software/TypeChecker/suneidotypes.exe"
 
 	getProps(key, def = #())
 		{
@@ -27,12 +27,6 @@ class
 		return .getProps('').GetInit(#BinaryPath, .binaryPath)
 		}
 
-	// this is where the etatest1 continuous quality checks server will find binary
-	ServerBinaryPath()
-		{
-		return "//server/d//Software/TypeChecker/suneidotypes.exe"
-		}
-
 	SetBinaryPath(path)
 		{
 		if path is .BinaryPath()
@@ -46,7 +40,7 @@ class
 		{
 		if not FileExists?(.BinaryPath())
 			{
-			SuneidoLog("suneidotypes binary does not exist at " $ .BinaryPath())
+			SuneidoLog.Once("suneidotypes binary does not exist at " $ .BinaryPath())
 			return false
 			}
 		return true

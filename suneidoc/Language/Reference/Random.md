@@ -10,4 +10,4 @@ Returns a pseudo random number greater than or equal to 0 and less than the argu
 
 If no argument is given (or it's false) then the range is the maximum (1_0000_0000_0000_0000)
 
-See also: [RandomBytes](<RandomBytes.md>)
+See also: [Random.Bytes](<Random.Bytes.md>), [Random.Seed](<Random/Random.Seed.md>)

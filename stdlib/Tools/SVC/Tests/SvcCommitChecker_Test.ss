@@ -13,7 +13,8 @@ SvcTests
 		modifiedTable2 = .MakeLibrary(
 			[name: 'prev_modified', lib_modified: lastget],
 			[name: 'modified_test', lib_modified: changeAsOf])
-		Suneido.LibraryTablesOverride = [modifiedTable1, modifiedTable2, exclude_lib]
+		.MemoizeSingleOverride('LibraryTables',
+			[modifiedTable1, modifiedTable2, exclude_lib])
 		.SpyOn(SvcTable.Getter_ExcludedTables).Return([exclude_lib])
 
 		// Most recent change was a record modification
@@ -88,7 +89,7 @@ SvcTests
 	Test_delete_and_referenced?()
 		{
 		delAndRefd? = SvcCommitChecker.SvcCommitChecker_delete_and_referenced?
-		Suneido.LibraryTablesOverride = Object('Test_lib')
+		.MemoizeSingleOverride('LibraryTables', Object('Test_lib'))
 
 		// not a deletion so warning not applicable
 		recName = .TempName()
@@ -295,11 +296,5 @@ SvcTests
 		Assert(msg has: 'Quality Checker Text')
 		Assert(msg has: 'Record has syntax error(s):\r\n- error 1\r\n- error 2')
 		Assert(msg has: 'Record has the following warning(s):\r\n- warn 1\r\n- warn 2')
-		}
-
-	Teardown()
-		{
-		Suneido.Delete(#LibraryTablesOverride)
-		super.Teardown()
 		}
 	}

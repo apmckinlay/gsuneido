@@ -84,6 +84,10 @@ class
 			}
 		throw "unhandled cpuinfo"
 		}
+	GetCpuCaption()
+		{
+		return 'not implemented'
+		}
 	cpuinfo()
 		{
 		return RunPipedOutput('cat /proc/cpuinfo')

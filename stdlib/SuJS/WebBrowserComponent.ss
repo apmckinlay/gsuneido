@@ -10,6 +10,7 @@ Component
 		{
 		.CreateElement('iframe')
 		.El.SetStyle('background-color', 'white')
+		.El.SetStyle('height', '0px')
 		SuUI.GetCurrentWindow().AddEventListener('online', .online)
 		.pendingInsert = Object()
 		.El.addEventListener(#load,
