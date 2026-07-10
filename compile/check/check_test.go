@@ -269,3 +269,20 @@ func TestCheckResults(t *testing.T) {
 	test("function (f) { forever { for (j = 0; j < 5; j++) { if j > 2 break } f() } f() }",
 		"ERROR: unreachable code @74")
 }
+
+func TestCheckCodeIsDeterministic(t *testing.T) {
+	test := func(src string) {
+		t.Helper()
+		_, want := compile.Checked(nil, src)
+		for range 250 {
+			_, got := compile.Checked(nil, src)
+			assert.T(t).This(got).Is(want)
+		}
+	}
+	test("function (f) { f({ a = 1; c = 2 }); f(a, c) }")
+	test("function (f) { f() { a = 1; c = 2 }; f(a, c) }")
+	test("function () { b = { a = 1; c = 2 }; b(); b(a, c) }")
+	test("function () { b = { x = 1; y = 2; z = 3 }; b(); b(x, y, z) }")
+	test("function (f) { f({ g({ a = 1; c = 2 }); g(a, c) }); f(a, c) }")
+	test("function () { b = { a=1; c=2; d=3; e=4; g=5 }; b(); b(a,c,d,e,g) }")
+}

@@ -511,7 +511,7 @@ func (ck *Check) blockAsClosure(b *ast.Block, init set) set {
 	// only merge shared vars back; non-shared block-locals stay invisible
 	// skip params - they may have shared slots (captured by inner blocks)
 	// but they belong to this block, not the outer scope
-	init = before
+	init = before.cow()
 	for _, name := range shared {
 		if isParam(b.Params, name) {
 			continue
