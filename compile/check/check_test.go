@@ -6,6 +6,7 @@ package check_test
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -188,6 +189,21 @@ func TestCheckResults(t *testing.T) {
 	test("function (f) { while (f and (b=f)) { b() } }")
 	test("function (f) { while (f and (b=f)) { } b }",
 		"WARNING: used but possibly not initialized: b @39")
+	// or-condition aliasing: cond returns first (initTrue) and rest (initFalse)
+	// sharing the same backing array. The If case processes Then (appending to
+	// initTrue) before Else, which used to overwrite rest's elements. In the else
+	// branch of `f or (b=f)`, b IS initialized, so a "not initialized: b" warning
+	// is wrong. Loop since the underlying bug only bites when append reuses
+	// capacity rather than reallocating.
+	for i := range 100 {
+		_, results := compile.Checked(nil,
+			"function (f) { if (f or (b=f)) { c=1 } else { return b } }")
+		for _, r := range results {
+			if strings.Contains(r, "not initialized: b") {
+				t.Fatalf("iter %d: spurious %q (or-condition aliasing bug)", i, r)
+			}
+		}
+	}
 
 	// unreachable
 	test("function () { return }")
