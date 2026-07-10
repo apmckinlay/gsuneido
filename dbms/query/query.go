@@ -850,9 +850,7 @@ func strategy(q Query, indent int) string { // recursive
 	if nrows != pop {
 		cost += "/" + trace.Number(pop)
 	}
-	if m.fixcost+m.varcost > 0 {
-		cost += " " + trace.Number(m.fixcost) + "+" + trace.Number(m.varcost)
-	}
+	cost += " " + trace.Number(m.fixcost) + "+" + trace.Number(m.varcost)
 	cost += "} "
 	switch q := q.(type) {
 	case *Sort:

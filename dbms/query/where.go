@@ -273,9 +273,11 @@ func (w *Where) Nrows() (int, int) {
 
 func (w *Where) calcNrows() (int, int) {
 	assert.That(w.optInited == optInitInProgress)
-	// Note: the estimated row count should be consistent
-	// with bestIndex and WhereCost
-	// since cost is primarily driven by number of rows
+	// Note: Nrows uses wfrac directly, while WhereCost uses the per-stage
+	// fractions (prefixFrac, skipFrac, etc.) from splitFrac. These are only
+	// consistent when a dataFilter is present; otherwise the cost model is
+	// intentionally pessimistic (see splitFrac). This is acceptable since
+	// cost is used for index selection, not row estimation.
 	srcNrows, srcPop := w.source.Nrows()
 	if w.conflict || srcPop == 0 {
 		return 0, srcPop
