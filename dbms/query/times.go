@@ -76,10 +76,9 @@ func (t *Times) Transform() Query {
 
 func (t *Times) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	opt := func(src1, src2 Query) (Cost, Cost) {
-		nrows1, _ := src1.Nrows()
-		fixcost1, varcost1 := Optimize(src1, mode, req)
-		fixcost2, varcost2 := Optimize(src2, mode,
-			NoneReq(req.frac*float32(max(1, nrows1))))
+		req1, req2 := reqsForTimes(src1, src2, req)
+		fixcost1, varcost1 := Optimize(src1, mode, req1)
+		fixcost2, varcost2 := Optimize(src2, mode, req2)
 		return fixcost1 + fixcost2, varcost1 + varcost2
 	}
 	fixFwd, varFwd := opt(t.source1, t.source2)
@@ -95,11 +94,26 @@ func (t *Times) setApproach(req Require, approach any, tran QueryTran) {
 	if approach.(bool) {
 		t.source1, t.source2 = t.source2, t.source1
 	}
-	t.source1 = SetApproach(t.source1, req, tran)
-	nrows1, _ := t.source1.Nrows()
-	t.source2 = SetApproach(t.source2,
-		NoneReq(req.frac*float32(max(1, nrows1))), tran)
+	req1, req2 := reqsForTimes(t.source1, t.source2, req)
+	t.source1 = SetApproach(t.source1, req1, tran)
+	t.source2 = SetApproach(t.source2, req2, tran)
 	t.header = t.getHeader()
+}
+
+func reqsForTimes(src1, src2 Query, req Require) (Require, Require) {
+	nrows1, _ := src1.Nrows()
+	nrows2, _ := src2.Nrows()
+	var frac2 float32
+	if nrows1 == 0 {
+		frac2 = float32(1) / float32(max(1, nrows2))
+	} else {
+		frac2 = req.frac * float32(nrows1)
+	}
+	req1 := req
+	if nrows2 == 0 {
+		req1.frac = float32(1) / float32(max(1, nrows1))
+	}
+	return req1, NoneReq(frac2)
 }
 
 func (t *Times) getNrows() (int, int) {
