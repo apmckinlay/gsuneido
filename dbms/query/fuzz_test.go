@@ -697,11 +697,11 @@ func TestFuzzTimes(t *testing.T) {
 }
 
 func fuzzTimes(ft *FT) Query {
-	q1, q2 := newDisjointQS(ft)
+	q1, q2 := newTimesQS(ft)
 	return NewTimes(q1, q2)
 }
 
-func newDisjointQS(ft *FT) (Query, Query) {
+func newTimesQS(ft *FT) (Query, Query) {
 	q1 := ft.newFT().Sizes(20, 3, 3).Build()
 	q2 := ft.newFT().Sizes(20, 3, 3).Prefix("d").Build()
 	return q1, q2
