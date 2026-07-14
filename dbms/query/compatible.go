@@ -116,11 +116,3 @@ func (c1 *Compatible1) Select(sels Sels) {
 	c1.nsels++
 	c1.source1.Select(sels)
 }
-
-func (c1 *Compatible1) getLookupCost() int {
-	cost := c1.source1.lookupCost()
-	if c1.disjoint == "" {
-		cost += c1.source2.lookupCost()
-	}
-	return cost
-}

@@ -112,7 +112,6 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 	su.setNrows(su.getNrows())
 	su.rowSiz.Set(su.source.rowSize() + len(su.cols)*8) // ???
 	su.fast1.Set(src.fastSingle())
-	su.lookCost.Set(su.getLookupCost())
 	return su
 }
 
@@ -358,7 +357,7 @@ func (su *Summarize) mapCost(mode Mode, req Require) (Cost, Cost, any) {
 	// unlike Project, we don't multiply by req.frac
 	// because we have to process the entire source
 	// regardless of how much the parent needs
-	mapBuild := Cost(srcNrows)*mapCost
+	mapBuild := Cost(srcNrows) * mapCost
 	// since the map has to be built up front, we add it to fixcost
 	fixcost := srcFixcost + srcVarcost + mapBuild
 	return fixcost, 0, &summarizeApproach{strat: sumMap, req: srcReq}
@@ -478,15 +477,6 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 func (su *Summarize) Lookup(th *Thread, sels Sels) Row {
 	su.nlooks++
 	return lookupViaSelectGet(su, th, sels)
-}
-
-func (su *Summarize) getLookupCost() Cost {
-	srcCost := su.source.lookupCost()
-	if su.unique {
-		return srcCost
-	}
-	return sumGrpDiv * srcCost
-	//TODO should be 1 lookup + sumGrpDiv gets
 }
 
 //-------------------------------------------------------------------

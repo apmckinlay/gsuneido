@@ -107,7 +107,6 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	w.header = src.Header()
 	w.rowSiz.Set(src.rowSize())
 	w.singleTbl.Set(src.SingleTable())
-	w.lookCost.Set(src.lookupCost())
 	w.calcFixed()
 	if !w.conflict {
 		w.conflict = w.exprFalse()
@@ -556,8 +555,8 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 	if w.singleton {
 		// here singleton == fastSingle
 		// because source is a Table and Table keys are a subset of indexes
-		cost := w.source.lookupCost()
 		isel := w.idxSels[0]
+		cost := w.tbl.lookupCost(isel.index)
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
 	type bestIdx struct {
@@ -580,7 +579,7 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 			dfFrac = isel.dataFilterFrac
 		}
 		cost := WhereCost(float64(varCost), float64(req.frac), irFrac, ifFrac, dfFrac)
-		cost += Cost(req.nseeks) * w.source.lookupCost()
+		cost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
 		best.update(0, cost, bestIdx{index: idx, idxSel: isel})
 	}
 	if best.none() {
@@ -593,13 +592,13 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 func (w *Where) optWhereLookup(req Require) (Cost, Cost, any) {
 	if w.singleton {
 		isel := w.idxSels[0]
-		cost := w.tbl.lookupCostFor(w.tbl.indexi(isel.index))
+		cost := w.tbl.lookupCost(isel.index)
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
 	best := newBest[[]string]()
 	for idxi, idx := range w.tbl.indexes {
 		if indexCovered(idx, req.cols, w.fixed) {
-			varcost := Cost(req.nseeks) * w.tbl.lookupCostFor(idxi)
+			varcost := Cost(req.nseeks) * w.tbl.lookupCostI(idxi)
 			best.update(0, varcost, idx)
 		}
 	}

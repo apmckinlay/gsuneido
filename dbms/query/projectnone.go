@@ -113,10 +113,6 @@ func (pn *ProjectNone) setApproach(_ Require, _ any, tran QueryTran) {
 	pn.source = SetApproach(pn.source, srcReq, tran)
 }
 
-func (*ProjectNone) lookupCost() Cost {
-	return 0
-}
-
 func (pn *ProjectNone) Lookup(_ *Thread, sels Sels) Row {
 	assert.That(len(sels) == 0)
 	if pn.hasRow() {

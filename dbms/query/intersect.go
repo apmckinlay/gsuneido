@@ -41,7 +41,6 @@ func newIntersect(src1, src2 Query, t QueryTran, prevFixed1, prevFixed2 Fixed) *
 	it.setNrows(it.getNrows())
 	it.rowSiz.Set(src1.rowSize())
 	it.fast1.Set(src1.fastSingle() && src2.fastSingle())
-	it.lookCost.Set(it.getLookupCost())
 	return &it
 }
 

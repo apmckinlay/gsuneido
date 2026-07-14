@@ -115,7 +115,6 @@ func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
 		NrowsN:        1,
 		NrowsP:        1,
 		RowSizeResult: 1,
-		LookupLevels:  1,
 	}
 	src2 := &QueryMock{
 		ColumnsResult: []string{"a", "k", "d"},
@@ -126,7 +125,6 @@ func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
 		NrowsN:        1,
 		NrowsP:        1,
 		RowSizeResult: 1,
-		LookupLevels:  1,
 	}
 
 	u := NewUnion(src1, src2)
