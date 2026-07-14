@@ -935,7 +935,9 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	isels, osels := Split(cloned, sels, w.srcIndex)
 	var residual Sels
 	for _, sel := range osels {
-		if !w.fixed.Has(sel.col) {
+		// keep selectors for multi-valued fixed columns so source.Lookup
+		// can verify the specific value via singletonFilter
+		if !w.fixed.Single(sel.col) {
 			residual = append(residual, sel)
 		}
 	}

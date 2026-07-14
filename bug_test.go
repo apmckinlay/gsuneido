@@ -7,31 +7,56 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/compile"
-	"github.com/apmckinlay/gsuneido/core"
+	. "github.com/apmckinlay/gsuneido/core"
+	. "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestBug(t *testing.T) {
 	assert.TestOnlyIndividually(t)
 
-	core.Libload = libload // dependency injection
-
 	openDbms()
 	defer db.CloseKeepMapped()
 
-	query := `((((cus leftjoin (ivc extend b2 = i2)) union (cus join ivc)) union ((cus leftjoin ivc) union (cus leftjoin (ivc extend x2 = i2)))) union (((ivc leftjoin cus) union (cus join ivc)) union (((cus leftjoin ivc) rename i4 to y0) union (ivc leftjoin cus))))`
-	th := &core.Thread{}
-	s := compile.EvalString(th, `QueryStrategy("`+query+`", formatted:)`)
-	fmt.Println(core.ToStr(s))
-	
-	fmt.Println("=== QueryHash ===")
-	x := compile.EvalString(th, `QueryHash("`+query+`", details:)`)
-	fmt.Println("QueryHash result:", core.ToStr(x))
-	
-	fmt.Println("=== QueryAltHash ===")
-	y := compile.EvalString(th, `QueryAltHash("`+query+`", details:)`)
-	fmt.Println("QueryAltHash result:", core.ToStr(y))
-	
-	assert.This(x).Is(y)
+	query := `(cus leftjoin ((ivc extend c3 = ik) union ivc)) where ik is "12"`
+	th := &Thread{}
+
+	tran := db.NewReadTran()
+	q := ParseQuery(query, tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	fmt.Println("optimized:", String(q))
+
+	hdr := q.Header()
+	fmt.Println("\nheader fields:", hdr.GetFields())
+	fmt.Println("header columns:", hdr.Columns)
+
+	fmt.Println("\n--- Simple result ---")
+	simple := q.Simple(th)
+	h2 := NewQueryHasher(hdr).CheckDups()
+	for i, row := range simple {
+		h2.Row(row)
+		fmt.Printf("simple[%d]: ", i)
+		for _, fld := range hdr.GetFields() {
+			if fld != "-" {
+				fmt.Printf("%s=%q ", fld, row.GetRawVal(hdr, fld, nil, nil))
+			}
+		}
+		fmt.Println()
+	}
+
+	fmt.Println("\n--- Get result ---")
+	q.Rewind()
+	h1 := NewQueryHasher(hdr).CheckDups()
+	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+		fmt.Print("row: ")
+		for _, fld := range hdr.GetFields() {
+			if fld != "-" {
+				fmt.Printf("%s=%q ", fld, row.GetRawVal(hdr, fld, nil, nil))
+			}
+		}
+		fmt.Println()
+		h1.Row(row)
+	}
+
+	assert.This(h2.Result(true)).Is(h1.Result(true))
 }
