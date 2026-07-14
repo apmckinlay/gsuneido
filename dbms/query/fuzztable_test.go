@@ -47,8 +47,15 @@ func (ft *FT) NewFuzzTable() Query {
 	return ft.newFT().Build()
 }
 
+const (
+	ftMaxRows    = 47
+	ftMaxCols    = 31
+	ftMaxKeys    = 3
+	ftMaxIndexes = 3
+)
+
 func (ft *FT) newFT() *buildFT {
-	return &buildFT{FT: ft, maxRows: 47, maxKeys: 3, maxIndexes: 3, prefix: "c"}
+	return &buildFT{FT: ft, maxRows: ftMaxRows, maxKeys: ftMaxKeys, maxIndexes: ftMaxIndexes, prefix: "c"}
 }
 
 func (b *buildFT) Sizes(maxRows, maxKeys, maxIndexes int) *buildFT {
@@ -112,7 +119,7 @@ func (b *buildFT) finish() Query {
 }
 
 func (b *buildFT) makeColumns() {
-	ncols := 1 + b.rnd.IntN(31)
+	ncols := 1 + b.rnd.IntN(ftMaxCols)
 	b.columns = make([]string, ncols)
 	b.colIndex = make(map[string]int, ncols)
 	b.cardinality = make(map[string]int, ncols)
