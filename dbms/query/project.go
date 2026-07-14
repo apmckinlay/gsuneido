@@ -503,8 +503,8 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 				// source req must be ordered so it doesn't ignore column order
 				// which is necessary to satisfy both groupings
 				srcReq := OrderReq(idx, req.SelectFrac(nrows))
+				srcReq.nseeks = req.nseeks
 				f, v := Optimize(p.source, mode, srcReq)
-				v += Cost(req.nseeks) * p.source.lookupCost()
 				best.update(f, v, srcReq)
 			}
 		}
