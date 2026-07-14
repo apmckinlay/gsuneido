@@ -200,12 +200,14 @@ func (su *Summarize) string2() string {
 	return s.String()
 }
 
+const sumGrpDiv = 10 // ???
+
 func (su *Summarize) getNrows() (int, int) {
 	nr, pop := su.source.Nrows()
 	if len(su.by) == 0 {
 		nr = 1
 	} else if !su.unique {
-		nr /= 10 // ??? (matches lookupCost)
+		nr /= sumGrpDiv
 	}
 	return nr, pop
 }
@@ -352,7 +354,13 @@ func (su *Summarize) mapCost(mode Mode, req Require) (Cost, Cost, any) {
 	}
 	srcReq := NoneReq(1)
 	srcFixcost, srcVarcost := Optimize(su.source, mode, srcReq)
-	fixcost := srcFixcost + srcVarcost + Cost(nrows)*20
+	srcNrows, _ := su.source.Nrows()
+	// unlike Project, we don't multiply by req.frac
+	// because we have to process the entire source
+	// regardless of how much the parent needs
+	mapBuild := Cost(srcNrows)*mapCost
+	// since the map has to be built up front, we add it to fixcost
+	fixcost := srcFixcost + srcVarcost + mapBuild
 	return fixcost, 0, &summarizeApproach{strat: sumMap, req: srcReq}
 }
 
@@ -477,8 +485,8 @@ func (su *Summarize) getLookupCost() Cost {
 	if su.unique {
 		return srcCost
 	}
-	return 10 * srcCost // ??? (matches Nrows)
-	//TODO should be 1 lookup + 10 gets
+	return sumGrpDiv * srcCost
+	//TODO should be 1 lookup + sumGrpDiv gets
 }
 
 //-------------------------------------------------------------------

@@ -131,7 +131,8 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 }
 
 // hasKey returns whether cols contains a key
-// taking fixed into consideration
+// taking fixed into consideration.
+// See also [indexContainsKey]
 func hasKey(cols []string, keys [][]string, fixed Fixed) bool {
 	for _, key := range keys {
 		if indexCovered(key, cols, fixed) {
@@ -234,10 +235,12 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 	return idxs2
 }
 
+const projGrpDiv = 2 // ???
+
 func (p *Project) getNrows() (int, int) {
 	nr, pop := p.source.Nrows()
 	if !p.unique {
-		nr /= 2 // ??? (matches lookupCost)
+		nr /= projGrpDiv
 	}
 	return nr, pop
 }
@@ -521,6 +524,8 @@ func eitherSubset(x, y []string) bool {
 	return set.Subset(x, y)
 }
 
+const mapCost = 20 // ???
+
 // mapCost estimates the cost of projMap.
 // The map is built incrementally during iteration (not up front),
 // so the map build cost is added to varcost, not fixcost.
@@ -533,7 +538,8 @@ func (p *Project) mapCost(mode Mode, req Require) (Cost, Cost, any) {
 		req = GroupReq(req.cols, req.SelectFrac(nrows), req.nseeks)
 	}
 	srcFixcost, srcVarcost := Optimize(p.source, mode, req)
-	mapBuild := Cost(float64(nrows) * float64(req.frac) * 20)
+	srcNrows, _ := p.source.Nrows()
+	mapBuild := Cost(float64(srcNrows) * float64(req.frac) * mapCost)
 	return srcFixcost, srcVarcost + mapBuild,
 		&projectApproach{strat: projMap, req: req}
 }
@@ -763,7 +769,7 @@ func (p *Project) getLookupCost() Cost {
 	if p.unique {
 		return srcCost
 	}
-	return 2 * srcCost // ??? (matches Nrows)
+	return projGrpDiv * srcCost // ??? (matches Nrows)
 }
 
 func (p *Project) Simple(th *Thread) []Row {

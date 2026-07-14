@@ -445,6 +445,7 @@ func keyPrefixOfIndex(index, key []string) []string {
 
 // indexContainsKey returns a key from keys if the index contains all fields
 // of that key, otherwise nil.
+// See also [hasKey]
 func indexContainsKey(index []string, keys [][]string) []string {
 	for _, key := range keys {
 		if set.Subset(index, key) {
