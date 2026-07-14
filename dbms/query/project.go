@@ -478,9 +478,10 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: req}
 		}
 	case ReqUnique:
-		debug.assert(set.Equal(req.cols, p.columns)) // only key is all columns
+		// req.cols must cover the output key (all columns, since non-unique).
+		debug.assert(indexCovered(p.columns, req.cols, p.Fixed()))
 		// we can use GroupReq because Lookup is implemented by Select + Get
-		srcReq := GroupReq(p.columns, req.SelectFrac(nrows), req.nseeks)
+		srcReq := GroupReq(req.cols, req.SelectFrac(nrows), req.nseeks)
 		fixcost, varcost := Optimize(p.source, mode, srcReq)
 		return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 	case ReqGroup:

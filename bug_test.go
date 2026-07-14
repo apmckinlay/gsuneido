@@ -18,7 +18,14 @@ func TestBug(t *testing.T) {
 	openDbms()
 	defer db.CloseKeepMapped()
 
-	query := `(cus leftjoin ((ivc extend c3 = ik) union ivc)) where ik is "12"`
+	query := `eta_orders_assocs where etaorder_void_date is "" and
+        etaorder_status isnt "Completed"
+        rename etaequip_num_tractor to etaequip_num_tractor_mandatory
+        project etaorder_num, etaorder_order, etaequip_num_tractor_mandatory,
+            etaorder_start_date, etaorder_end_date,
+            bizpartner_num_shipper, bizpartner_num_consignee
+            /*CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/
+ 		where etaequip_num_tractor_mandatory is #20260506.085754503103`
 	th := &Thread{}
 
 	tran := db.NewReadTran()
