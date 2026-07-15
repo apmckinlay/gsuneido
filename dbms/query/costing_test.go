@@ -4,7 +4,6 @@
 package query
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 	"testing"
@@ -125,8 +124,6 @@ func TestCosting_Summarize(t *testing.T) {
 			actualCost = 1
 		case sumSeq:
 			actualCost = Cost(tbl.ngets) * rowCost(tbl.index)
-			nrows, _ := su.Nrows()
-			fmt.Println("table:", tbl.ngets, "estimated:", nrows, "actual:", su.ngets)
 		case sumIdx:
 			actualCost = rowCost(tbl.index)
 		case sumMap:
