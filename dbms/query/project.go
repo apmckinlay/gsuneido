@@ -20,16 +20,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var (
-	projCopyCount atomic.Int64
-	projSeqCount  atomic.Int64
-	projMapCount  atomic.Int64
-)
-
-var _ = AddInfo("query.project.copy", &projCopyCount)
-var _ = AddInfo("query.project.seq", &projSeqCount)
-var _ = AddInfo("query.project.map", &projMapCount)
-
 type Project struct {
 	Query1
 	results *mapType
@@ -69,6 +59,16 @@ const (
 	// The map is built incrementally (not up front), so cost is variable.
 	projMap
 )
+
+var (
+	projCopyCount atomic.Int64
+	projSeqCount  atomic.Int64
+	projMapCount  atomic.Int64
+)
+
+var _ = AddInfo("query.project.copy", &projCopyCount)
+var _ = AddInfo("query.project.seq", &projSeqCount)
+var _ = AddInfo("query.project.map", &projMapCount)
 
 func NewProject(src Query, cols []string) *Project {
 	assert.That(len(cols) > 0)

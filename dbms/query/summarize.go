@@ -19,22 +19,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var (
-	sumSeqCount      atomic.Int64
-	sumMapCount      atomic.Int64
-	sumIdxCount      atomic.Int64
-	sumTblCount      atomic.Int64
-	sumUniqueCount   atomic.Int64
-	sumWholeRowCount atomic.Int64
-)
-
-var _ = AddInfo("query.summarize.seq", &sumSeqCount)
-var _ = AddInfo("query.summarize.map", &sumMapCount)
-var _ = AddInfo("query.summarize.idx", &sumIdxCount)
-var _ = AddInfo("query.summarize.tbl", &sumTblCount)
-var _ = AddInfo("query.summarize.unique", &sumUniqueCount)
-var _ = AddInfo("query.summarize.wholerow", &sumWholeRowCount)
-
 // NOTE: Summarize should return 0 rows if the source has 0 rows.
 
 type Summarize struct {
@@ -85,6 +69,22 @@ const (
 	// sumTbl optimizes <table> summarize count
 	sumTbl
 )
+
+var (
+	sumSeqCount      atomic.Int64
+	sumMapCount      atomic.Int64
+	sumIdxCount      atomic.Int64
+	sumTblCount      atomic.Int64
+	sumUniqueCount   atomic.Int64
+	sumWholeRowCount atomic.Int64
+)
+
+var _ = AddInfo("query.summarize.seq", &sumSeqCount)
+var _ = AddInfo("query.summarize.map", &sumMapCount)
+var _ = AddInfo("query.summarize.idx", &sumIdxCount)
+var _ = AddInfo("query.summarize.tbl", &sumTblCount)
+var _ = AddInfo("query.summarize.unique", &sumUniqueCount)
+var _ = AddInfo("query.summarize.wholerow", &sumWholeRowCount)
 
 func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summarize {
 	if !set.Subset(src.Columns(), by) {

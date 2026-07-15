@@ -17,18 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var (
-	unionMergeCount    atomic.Int64
-	unionLookupCount   atomic.Int64
-	unionDisjointCount atomic.Int64
-	unionMergeDisjoint atomic.Int64
-)
-
-var _ = AddInfo("query.union.merge", &unionMergeCount)
-var _ = AddInfo("query.union.lookup", &unionLookupCount)
-var _ = AddInfo("query.union.disjoint", &unionDisjointCount)
-var _ = AddInfo("query.union.merge-disjoint", &unionMergeDisjoint)
-
 type Union struct {
 	Compatible
 	src2get   func(*Thread, Dir) Row
@@ -72,6 +60,18 @@ func (us unionStrategy) String() string {
 		return "unknown"
 	}
 }
+
+var (
+	unionMergeCount    atomic.Int64
+	unionLookupCount   atomic.Int64
+	unionDisjointCount atomic.Int64
+	unionMergeDisjoint atomic.Int64
+)
+
+var _ = AddInfo("query.union.merge", &unionMergeCount)
+var _ = AddInfo("query.union.lookup", &unionLookupCount)
+var _ = AddInfo("query.union.disjoint", &unionDisjointCount)
+var _ = AddInfo("query.union.merge-disjoint", &unionMergeDisjoint)
 
 func NewUnion(src1, src2 Query) *Union {
 	u := &Union{Compatible: *newCompatible(src1, src2)}
