@@ -234,7 +234,7 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 	return idxs2
 }
 
-const projGrpDiv = 2 // ???
+const projGrpDiv = 4 // ???
 
 func (p *Project) getNrows() (int, int) {
 	nr, pop := p.source.Nrows()

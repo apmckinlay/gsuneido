@@ -792,7 +792,7 @@ func TestQueryGet(t *testing.T) {
 		1	970201	'eraser'`)
 
 	test("(customer project id) join (hist project id)",
-		"hist^(date,item,id) project-map id join 1:1 by(id) (customer^(id) tempindex(id) project-copy id)",
+		"hist^(date,item,id) project-map id join 1:1 by(id) (customer^(id) project-copy id)",
 		`id
 		'a'
 		'c'
