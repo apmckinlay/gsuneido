@@ -56,11 +56,11 @@ func warnings(query string, q Query) int { // recursive
 			w |= unionNotDisjoint
 		}
 	case *Join:
-		if q.joinType == n_n {
+		if q.joinType == many_to_many {
 			w |= joinManyToMany
 		}
 	case *LeftJoin:
-		if q.joinType == n_n {
+		if q.joinType == many_to_many {
 			w |= joinManyToMany
 		}
 	case *Where:

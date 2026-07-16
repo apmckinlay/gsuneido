@@ -69,27 +69,27 @@ type joinApproach struct {
 type joinType int
 
 const (
-	one_one joinType = iota + 1 //lint:ignore ST1003 for clarity
-	one_n                       //lint:ignore ST1003 for clarity
-	n_one                       //lint:ignore ST1003 for clarity
-	n_n                         //lint:ignore ST1003 for clarity
+	one_to_one   joinType = iota + 1 //lint:ignore ST1003 for clarity
+	one_to_many                      //lint:ignore ST1003 for clarity
+	many_to_one                      //lint:ignore ST1003 for clarity
+	many_to_many                     //lint:ignore ST1003 for clarity
 )
 
 func (jt joinType) toOne() bool {
-	return jt == one_one || jt == n_one
+	return jt == one_to_one || jt == many_to_one
 }
 
 func (jt joinType) String() string {
 	switch jt {
 	case 0:
 		return ""
-	case one_one:
+	case one_to_one:
 		return "1:1"
-	case one_n:
+	case one_to_many:
 		return "1:n"
-	case n_one:
+	case many_to_one:
 		return "n:1"
-	case n_n:
+	case many_to_many:
 		return "n:n"
 	default:
 		panic("bad joinType")
@@ -163,13 +163,13 @@ func newJoinBase(src1, src2 Query, by []string, t QueryTran,
 	k1 := hasKey(by, src1.Keys(), src1.Fixed())
 	k2 := hasKey(by, src2.Keys(), src2.Fixed())
 	if k1 && k2 {
-		jb.joinType = one_one
+		jb.joinType = one_to_one
 	} else if k1 {
-		jb.joinType = one_n
+		jb.joinType = one_to_many
 	} else if k2 {
-		jb.joinType = n_one
+		jb.joinType = many_to_one
 	} else {
-		jb.joinType = n_n
+		jb.joinType = many_to_many
 	}
 	return jb
 }
@@ -198,7 +198,7 @@ func (jn *Join) String() string {
 func (jb *joinBase) String(op string) string {
 	if jb.optimized {
 		op += " " + jb.joinType.String()
-	} else if jb.joinType == n_n {
+	} else if jb.joinType == many_to_many {
 		op += " /*MANY TO MANY*/"
 	}
 	return op + " by" + str.Join("(,)", jb.by)
@@ -233,13 +233,13 @@ func (jn *Join) getIndexes() [][]string {
 
 func (jn *Join) getKeys() [][]string {
 	switch jn.joinType {
-	case one_one:
+	case one_to_one:
 		return set.UnionFn(jn.source1.Keys(), jn.source2.Keys(), set.Equal[string])
-	case one_n:
+	case one_to_many:
 		return jn.source2.Keys()
-	case n_one:
+	case many_to_one:
 		return jn.source1.Keys()
-	case n_n:
+	case many_to_many:
 		return jn.keypairs()
 	default:
 		panic("unknown join type")
@@ -293,10 +293,10 @@ var joinRev = 0 // tests can set to impossible to prevent reverse
 
 func (jt joinType) reverse() joinType {
 	switch jt {
-	case one_n:
-		return n_one
-	case n_one:
-		return one_n
+	case one_to_many:
+		return many_to_one
+	case many_to_one:
+		return one_to_many
 	}
 	return jt
 }
@@ -369,13 +369,13 @@ func (jn *Join) setApproach(req Require, approach any, tran QueryTran) {
 		jn.joinType = jn.joinType.reverse()
 	}
 	switch jn.joinType {
-	case one_one:
+	case one_to_one:
 		join11Count.Add(1)
-	case one_n:
+	case one_to_many:
 		join1nCount.Add(1)
-	case n_one:
+	case many_to_one:
 		joinn1Count.Add(1)
-	case n_n:
+	case many_to_many:
 		joinnnCount.Add(1)
 	}
 	jn.source1 = SetApproach(jn.source1, ap.req1, tran)
@@ -391,19 +391,19 @@ func (jn *Join) getNrows() (int, int) {
 
 func (jn *Join) nrows(n1, p1, n2, p2 int) int {
 	switch jn.joinType {
-	case one_one:
+	case one_to_one:
 		return min(n1, n2)
-	case n_one:
+	case many_to_one:
 		n1, p1, n2, p2 = n2, p2, n1, p1
 		fallthrough
-	case one_n:
+	case one_to_many:
 		p1 = max(1, p1) // avoid divide by zero
 		p2 = max(1, p2)
 		if n1 <= p1*n2/p2 { // rearranged n1/p1 <= n2/p2 (for integer math)
 			return n1 * p2 / p1
 		}
 		return n2
-	case n_n:
+	case many_to_many:
 		return (n1 * n2) / 2 // estimate half
 	default:
 		panic(assert.ShouldNotReachHere())
@@ -412,13 +412,13 @@ func (jn *Join) nrows(n1, p1, n2, p2 int) int {
 
 func (jn *Join) pop(p1, p2 int) int {
 	switch jn.joinType {
-	case one_one:
+	case one_to_one:
 		return min(p1, p2)
-	case n_one:
+	case many_to_one:
 		return p1
-	case one_n:
+	case one_to_many:
 		return p2
-	case n_n:
+	case many_to_many:
 		return (p1 * p2) / 2 // estimate half
 	default:
 		panic(assert.ShouldNotReachHere())
@@ -466,9 +466,9 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	// fmt.Println("Join row1", jn.row1)
 	// assert.That(set.Disjoint(jn.by, jn.sel2))
 	sel2 := slc.With(jn.sel2, jn.projectRow1(th, jn.row1)...)
-	if jn.joinType == n_one {
+	if jn.joinType == many_to_one {
 		jn.lookupRow = jn.cachedLookup(th, sel2)
-	} else if jn.joinType == one_one {
+	} else if jn.joinType == one_to_one {
 		jn.lookupRow = jn.source2.Lookup(th, sel2)
 	} else {
 		jn.source2.Select(sel2)
@@ -537,9 +537,9 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	}
 	var row2 Row
 	sel2 = append(sel2, jn.projectRow1(th, row1)...)
-	if jn.joinType == n_one {
+	if jn.joinType == many_to_one {
 		row2 = jn.cachedLookup(th, sel2)
-	} else if jn.joinType == one_one {
+	} else if jn.joinType == one_to_one {
 		row2 = jn.source2.Lookup(th, sel2)
 	} else {
 		jn.source2.Select(sel2)
@@ -648,9 +648,9 @@ func (lj *LeftJoin) getKeys() [][]string {
 	// can't use source2.Keys() like Join.Keys()
 	// because multiple right sides can be missing/blank
 	switch lj.joinType {
-	case one_one, n_one:
+	case one_to_one, many_to_one:
 		return lj.source1.Keys()
-	case one_n, n_n:
+	case one_to_many, many_to_many:
 		return lj.keypairs()
 	default:
 		panic("unknown join type")
@@ -726,13 +726,13 @@ func (lj *LeftJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
 func (lj *LeftJoin) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
 	switch lj.joinType {
-	case one_one:
+	case one_to_one:
 		leftJoin11Count.Add(1)
-	case one_n:
+	case one_to_many:
 		leftJoin1nCount.Add(1)
-	case n_one:
+	case many_to_one:
 		leftJoinn1Count.Add(1)
-	case n_n:
+	case many_to_many:
 		leftJoinnnCount.Add(1)
 	}
 	lj.source1 = SetApproach(lj.source1, ap.req1, tran)
@@ -749,16 +749,16 @@ func (lj *LeftJoin) getNrows() (int, int) {
 
 func (lj *LeftJoin) nrows(n1, p1, n2, p2 int) int {
 	switch lj.joinType {
-	case one_one, n_one:
+	case one_to_one, many_to_one:
 		return n1
-	case one_n:
+	case one_to_many:
 		p1 = max(1, p1) // avoid divide by zero
 		p2 = max(1, p2)
 		if n1 <= p1*n2/p2 { // rearranged n1/p1 <= n2/p2 (for integer math)
 			return n1 * p2 / p1
 		}
 		return n2
-	case n_n:
+	case many_to_many:
 		return max(n1, (n1*n2)/2) // estimate half
 	default:
 		panic(assert.ShouldNotReachHere())
@@ -767,11 +767,11 @@ func (lj *LeftJoin) nrows(n1, p1, n2, p2 int) int {
 
 func (lj *LeftJoin) pop(n1, n2 int) int {
 	switch lj.joinType {
-	case one_one, n_one:
+	case one_to_one, many_to_one:
 		return n1
-	case one_n:
+	case one_to_many:
 		return n2
-	case n_n:
+	case many_to_many:
 		return max(n1, (n1*n2)/2) // estimate half
 	default:
 		panic(assert.ShouldNotReachHere())
