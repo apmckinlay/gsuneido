@@ -390,7 +390,7 @@ func TestQueryGet(t *testing.T) {
 		200	970101	'c'	'mouse'
 		150	970201	'c'	'eraser'`)
 	test("(trans minus trans) where item = 0",
-		"trans^(date,item,id) where item is 0 minus "+
+		"trans^(item,date,id) where item is 0 minus "+
 			"(trans^(date,item,id) where item is 0)",
 		`cost	date	id	item`)
 	test("inven minus (inven where item = 'mouse')",

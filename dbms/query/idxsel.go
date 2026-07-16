@@ -51,9 +51,6 @@ func (is *idxSel) OnlyPrefix() bool {
 	return !is.HasSkipScan() && !is.indexFilter && !is.dataFilter
 }
 
-func (is *idxSel) frac() float64 {
-	return is.prefixFrac * is.skipFrac * is.indexFilterFrac * is.dataFilterFrac
-}
 func (is idxSel) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString(str.Join("(,)", is.index))

@@ -42,7 +42,6 @@ func NewSemiJoin(src1, src2 Query, by []string, t QueryTran) *SemiJoin {
 	sj.setNrows(sj.getNrows())
 	sj.rowSiz.Set(src1.rowSize())
 	sj.fast1.Set(src1.fastSingle())
-	sj.lookCost.Set(src1.lookupCost() + src2.lookupCost())
 	return sj
 }
 

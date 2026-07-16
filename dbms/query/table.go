@@ -185,7 +185,7 @@ func (tbl *Table) costFor(index []string, req Require) (Cost, Cost, any) {
 	if req.nseeks > 0 {
 		idxi := slc.IndexFn(tbl.indexes, index, slices.Equal)
 		if idxi != -1 {
-			result += Cost(req.nseeks) * tbl.lookupCostFor(idxi)
+			result += Cost(req.nseeks) * tbl.lookupCostI(idxi)
 		}
 	}
 	return 0, result, tableApproach{index: index}
@@ -218,21 +218,12 @@ func (tbl *Table) indexi(index []string) int {
 	return i
 }
 
-func (tbl *Table) lookupCost() Cost {
-	var levels int
-	if tbl.info.Indexes == nil { // tests
-		levels = 1
-		if tbl.info.Nrows > 100 {
-			levels = 2
-		}
-	} else {
-		levels = tbl.info.Indexes[0].BtreeLevels()
-		//TODO should be the actual index but we don't have it
-	}
-	return lookupCost(levels)
+func (tbl *Table) lookupCost(idx []string) Cost {
+	return tbl.lookupCostI(tbl.indexi(idx))
+
 }
 
-func (tbl *Table) lookupCostFor(i int) Cost {
+func (tbl *Table) lookupCostI(i int) Cost {
 	var levels int
 	if tbl.info.Indexes == nil { // tests
 		levels = 1
@@ -242,10 +233,6 @@ func (tbl *Table) lookupCostFor(i int) Cost {
 	} else {
 		levels = tbl.info.Indexes[i].BtreeLevels()
 	}
-	return lookupCost(levels)
-}
-
-func lookupCost(levels int) Cost {
 	return levels*800 - 300 // empirical
 }
 

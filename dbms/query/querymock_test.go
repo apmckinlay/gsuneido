@@ -27,7 +27,6 @@ type QueryMock struct {
 		Fixcost, Varcost Cost
 		Approach         any
 	}
-	LookupLevels         int
 	FastSingleResult     bool
 	SimpleResult         []Row
 	ValueGetResult       Value
@@ -142,13 +141,6 @@ func (m *QueryMock) optimize(Mode, Require) (Cost, Cost, any) {
 
 func (*QueryMock) setApproach(Require, any, QueryTran) {
 	panic("QueryMock.setApproach not implemented")
-}
-
-func (m *QueryMock) lookupCost() Cost {
-	if m.LookupLevels != 0 {
-		return lookupCost(m.LookupLevels)
-	}
-	panic("QueryMock.LookupCost LookupLevels not defined")
 }
 
 func (m *QueryMock) fastSingle() bool {

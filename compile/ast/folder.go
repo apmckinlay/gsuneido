@@ -37,8 +37,14 @@ func (f Folder) Unary(token tok.Token, expr Expr) Expr {
 }
 
 func (f Folder) foldUnary(u *Unary) Expr {
-	if c, ok := u.E.(*Constant); ok && u.Tok != tok.Div {
-		return f.constant(u.eval(c.Val))
+	if c, ok := u.E.(*Constant); ok {
+		if (u.Tok == tok.Add || u.Tok == tok.Sub || u.Tok == tok.BitNot || u.Tok == tok.Div) &&
+			c.Val.Type() != types.Number {
+			panic("cannot do math on " + c.Val.Type().String() + " literal")
+		}
+		if u.Tok != tok.Div {
+			return f.constant(u.eval(c.Val))
+		}
 	}
 	if u.Tok == tok.Not {
 		if b, ok := f.unwrap(u.E).(*Binary); ok {
@@ -75,6 +81,17 @@ func (f Folder) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
 func (f Folder) foldBinary(b *Binary) Expr {
 	lhs, lconst := b.Lhs.(*Constant)
 	rhs, rconst := b.Rhs.(*Constant)
+	if b.Tok == tok.Mod || b.Tok == tok.LShift || b.Tok == tok.RShift ||
+		b.Tok == tok.AddEq || b.Tok == tok.SubEq || b.Tok == tok.MulEq || b.Tok == tok.DivEq ||
+		b.Tok == tok.ModEq || b.Tok == tok.LShiftEq || b.Tok == tok.RShiftEq ||
+		b.Tok == tok.BitOrEq || b.Tok == tok.BitAndEq || b.Tok == tok.BitXorEq {
+		if lconst && lhs.Val.Type() != types.Number {
+			panic("cannot do math on " + lhs.Val.Type().String() + " literal")
+		}
+		if rconst && rhs.Val.Type() != types.Number {
+			panic("cannot do math on " + rhs.Val.Type().String() + " literal")
+		}
+	}
 	if lconst && !rconst && b.RawOp() {
 		// canonicalize to simplify foldRange and Binary CanEvalRaw
 		b.Lhs, b.Rhs = b.Rhs, b.Lhs
@@ -155,14 +172,19 @@ func (f Folder) foldNary(n *Nary) Expr {
 	}
 	switch n.Tok {
 	case tok.Add: // includes Sub
+		ckMath(exprs)
 		exprs = commutative(n, OpAdd, nil, Zero)
 	case tok.Mul: // includes Div
+		ckMath(exprs)
 		exprs = f.foldMul(exprs)
 	case tok.BitOr:
+		ckMath(exprs)
 		exprs = commutative(n, OpBitOr, allones, Zero)
 	case tok.BitAnd:
+		ckMath(exprs)
 		exprs = commutative(n, OpBitAnd, Zero, allones)
 	case tok.BitXor:
+		ckMath(exprs)
 		exprs = commutative(n, OpBitXor, nil, Zero)
 	case tok.Or:
 		exprs = commutative(n, or, True, False)
@@ -180,6 +202,14 @@ func (f Folder) foldNary(n *Nary) Expr {
 	}
 	n.Exprs = exprs
 	return n
+}
+
+func ckMath(exprs []Expr) {
+	for _, e := range exprs {
+		if c, ok := e.(*Constant); ok && c.Val.Type() != types.Number {
+			panic("cannot do math on " + c.Val.Type().String() + " literal")
+		}
+	}
 }
 
 func or(x, y Value) Value {

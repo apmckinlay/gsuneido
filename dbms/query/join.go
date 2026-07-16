@@ -188,7 +188,6 @@ func newJoinLike(src1, src2 Query) joinLike {
 	jl.source1, jl.source2 = src1, src2
 	jl.header = jl.getHeader()
 	jl.rowSiz.Set(jl.source1.rowSize() + jl.source2.rowSize())
-	jl.lookCost.Set(src1.lookupCost() * 2) // ???
 	return jl
 }
 

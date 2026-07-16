@@ -77,10 +77,6 @@ func (no *Nothing) setApproach(_ Require, _ any, tran QueryTran) {
 	no.tran = tran
 }
 
-func (*Nothing) lookupCost() Cost {
-	return 0
-}
-
 func (*Nothing) Lookup(*Thread, Sels) Row {
 	return nil
 }

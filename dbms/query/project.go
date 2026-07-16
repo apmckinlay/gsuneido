@@ -20,16 +20,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var (
-	projCopyCount atomic.Int64
-	projSeqCount  atomic.Int64
-	projMapCount  atomic.Int64
-)
-
-var _ = AddInfo("query.project.copy", &projCopyCount)
-var _ = AddInfo("query.project.seq", &projSeqCount)
-var _ = AddInfo("query.project.map", &projMapCount)
-
 type Project struct {
 	Query1
 	results *mapType
@@ -69,6 +59,16 @@ const (
 	// The map is built incrementally (not up front), so cost is variable.
 	projMap
 )
+
+var (
+	projCopyCount atomic.Int64
+	projSeqCount  atomic.Int64
+	projMapCount  atomic.Int64
+)
+
+var _ = AddInfo("query.project.copy", &projCopyCount)
+var _ = AddInfo("query.project.seq", &projSeqCount)
+var _ = AddInfo("query.project.map", &projMapCount)
 
 func NewProject(src Query, cols []string) *Project {
 	assert.That(len(cols) > 0)
@@ -126,12 +126,12 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p.rowSiz.Set(src.rowSize())
 	p.fast1.Set(src.fastSingle())
 	p.singleTbl.Set(src.SingleTable())
-	p.lookCost.Set(p.getLookupCost())
 	return p
 }
 
 // hasKey returns whether cols contains a key
-// taking fixed into consideration
+// taking fixed into consideration.
+// See also [indexContainsKey]
 func hasKey(cols []string, keys [][]string, fixed Fixed) bool {
 	for _, key := range keys {
 		if indexCovered(key, cols, fixed) {
@@ -234,10 +234,12 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 	return idxs2
 }
 
+const projGrpDiv = 2 // ???
+
 func (p *Project) getNrows() (int, int) {
 	nr, pop := p.source.Nrows()
 	if !p.unique {
-		nr /= 2 // ??? (matches lookupCost)
+		nr /= projGrpDiv
 	}
 	return nr, pop
 }
@@ -475,9 +477,10 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: req}
 		}
 	case ReqUnique:
-		debug.assert(set.Equal(req.cols, p.columns)) // only key is all columns
+		// req.cols must cover the output key (all columns, since non-unique).
+		debug.assert(indexCovered(p.columns, req.cols, p.Fixed()))
 		// we can use GroupReq because Lookup is implemented by Select + Get
-		srcReq := GroupReq(p.columns, req.SelectFrac(nrows), req.nseeks)
+		srcReq := GroupReq(req.cols, req.SelectFrac(nrows), req.nseeks)
 		fixcost, varcost := Optimize(p.source, mode, srcReq)
 		return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 	case ReqGroup:
@@ -500,8 +503,8 @@ func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 				// source req must be ordered so it doesn't ignore column order
 				// which is necessary to satisfy both groupings
 				srcReq := OrderReq(idx, req.SelectFrac(nrows))
+				srcReq.nseeks = req.nseeks
 				f, v := Optimize(p.source, mode, srcReq)
-				v += Cost(req.nseeks) * p.source.lookupCost()
 				best.update(f, v, srcReq)
 			}
 		}
@@ -521,6 +524,8 @@ func eitherSubset(x, y []string) bool {
 	return set.Subset(x, y)
 }
 
+const mapCost = 20 // ???
+
 // mapCost estimates the cost of projMap.
 // The map is built incrementally during iteration (not up front),
 // so the map build cost is added to varcost, not fixcost.
@@ -533,7 +538,8 @@ func (p *Project) mapCost(mode Mode, req Require) (Cost, Cost, any) {
 		req = GroupReq(req.cols, req.SelectFrac(nrows), req.nseeks)
 	}
 	srcFixcost, srcVarcost := Optimize(p.source, mode, req)
-	mapBuild := Cost(float64(nrows) * float64(req.frac) * 20)
+	srcNrows, _ := p.source.Nrows()
+	mapBuild := Cost(float64(srcNrows) * float64(req.frac) * mapCost)
 	return srcFixcost, srcVarcost + mapBuild,
 		&projectApproach{strat: projMap, req: req}
 }
@@ -756,14 +762,6 @@ func (p *Project) Lookup(th *Thread, sels Sels) Row {
 		return p.source.Lookup(th, sels)
 	}
 	return lookupViaSelectGet(p, th, sels)
-}
-
-func (p *Project) getLookupCost() Cost {
-	srcCost := p.source.lookupCost()
-	if p.unique {
-		return srcCost
-	}
-	return 2 * srcCost // ??? (matches Nrows)
 }
 
 func (p *Project) Simple(th *Thread) []Row {

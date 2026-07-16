@@ -17,18 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var (
-	unionMergeCount    atomic.Int64
-	unionLookupCount   atomic.Int64
-	unionDisjointCount atomic.Int64
-	unionMergeDisjoint atomic.Int64
-)
-
-var _ = AddInfo("query.union.merge", &unionMergeCount)
-var _ = AddInfo("query.union.lookup", &unionLookupCount)
-var _ = AddInfo("query.union.disjoint", &unionDisjointCount)
-var _ = AddInfo("query.union.merge-disjoint", &unionMergeDisjoint)
-
 type Union struct {
 	Compatible
 	src2get   func(*Thread, Dir) Row
@@ -73,13 +61,24 @@ func (us unionStrategy) String() string {
 	}
 }
 
+var (
+	unionMergeCount    atomic.Int64
+	unionLookupCount   atomic.Int64
+	unionDisjointCount atomic.Int64
+	unionMergeDisjoint atomic.Int64
+)
+
+var _ = AddInfo("query.union.merge", &unionMergeCount)
+var _ = AddInfo("query.union.lookup", &unionLookupCount)
+var _ = AddInfo("query.union.disjoint", &unionDisjointCount)
+var _ = AddInfo("query.union.merge-disjoint", &unionMergeDisjoint)
+
 func NewUnion(src1, src2 Query) *Union {
 	u := &Union{Compatible: *newCompatible(src1, src2)}
 	u.header = JoinHeaders(src1.Header(), src2.Header())
 	u.indexes = u.getIndexes()
 	u.setNrows(u.getNrows())
 	u.rowSiz.Set((u.source1.rowSize() + u.source2.rowSize()) / 2)
-	u.lookCost.Set(src1.lookupCost() + src2.lookupCost())
 	return u
 }
 
@@ -445,6 +444,7 @@ func keyPrefixOfIndex(index, key []string) []string {
 
 // indexContainsKey returns a key from keys if the index contains all fields
 // of that key, otherwise nil.
+// See also [hasKey]
 func indexContainsKey(index []string, keys [][]string) []string {
 	for _, key := range keys {
 		if set.Subset(index, key) {

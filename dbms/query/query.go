@@ -162,9 +162,6 @@ type Query interface {
 	// index and frac must match a previous optimize call
 	setApproach(req Require, approach any, tran QueryTran)
 
-	// lookupCost returns the cost of one Lookup
-	lookupCost() Cost
-
 	// fastSingle returns whether it's a fast singleton.
 	// This is mostly equivalent to whether it has an empty key().
 	// Join, Intersect, and Union return false because it depends on strategy.
@@ -204,7 +201,6 @@ type queryBase struct {
 	rowSiz    opt.Int
 	fast1     opt.Bool
 	singleTbl opt.Bool
-	lookCost  opt.Int
 	cache
 	metrics
 }
@@ -283,10 +279,6 @@ func (q *queryBase) fastSingle() bool {
 
 func (q *queryBase) SingleTable() bool {
 	return q.singleTbl.Get()
-}
-
-func (q *queryBase) lookupCost() Cost {
-	return q.lookCost.Get()
 }
 
 // Updateable is overridden by Query1
@@ -850,9 +842,7 @@ func strategy(q Query, indent int) string { // recursive
 	if nrows != pop {
 		cost += "/" + trace.Number(pop)
 	}
-	if m.fixcost+m.varcost > 0 {
-		cost += " " + trace.Number(m.fixcost) + "+" + trace.Number(m.varcost)
-	}
+	cost += " " + trace.Number(m.fixcost) + "+" + trace.Number(m.varcost)
 	cost += "} "
 	switch q := q.(type) {
 	case *Sort:

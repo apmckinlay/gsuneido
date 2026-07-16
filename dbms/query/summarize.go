@@ -19,22 +19,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var (
-	sumSeqCount      atomic.Int64
-	sumMapCount      atomic.Int64
-	sumIdxCount      atomic.Int64
-	sumTblCount      atomic.Int64
-	sumUniqueCount   atomic.Int64
-	sumWholeRowCount atomic.Int64
-)
-
-var _ = AddInfo("query.summarize.seq", &sumSeqCount)
-var _ = AddInfo("query.summarize.map", &sumMapCount)
-var _ = AddInfo("query.summarize.idx", &sumIdxCount)
-var _ = AddInfo("query.summarize.tbl", &sumTblCount)
-var _ = AddInfo("query.summarize.unique", &sumUniqueCount)
-var _ = AddInfo("query.summarize.wholerow", &sumWholeRowCount)
-
 // NOTE: Summarize should return 0 rows if the source has 0 rows.
 
 type Summarize struct {
@@ -86,6 +70,22 @@ const (
 	sumTbl
 )
 
+var (
+	sumSeqCount      atomic.Int64
+	sumMapCount      atomic.Int64
+	sumIdxCount      atomic.Int64
+	sumTblCount      atomic.Int64
+	sumUniqueCount   atomic.Int64
+	sumWholeRowCount atomic.Int64
+)
+
+var _ = AddInfo("query.summarize.seq", &sumSeqCount)
+var _ = AddInfo("query.summarize.map", &sumMapCount)
+var _ = AddInfo("query.summarize.idx", &sumIdxCount)
+var _ = AddInfo("query.summarize.tbl", &sumTblCount)
+var _ = AddInfo("query.summarize.unique", &sumUniqueCount)
+var _ = AddInfo("query.summarize.wholerow", &sumWholeRowCount)
+
 func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summarize {
 	if !set.Subset(src.Columns(), by) {
 		panic("summarize: nonexistent columns: " +
@@ -112,7 +112,6 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 	su.setNrows(su.getNrows())
 	su.rowSiz.Set(su.source.rowSize() + len(su.cols)*8) // ???
 	su.fast1.Set(src.fastSingle())
-	su.lookCost.Set(su.getLookupCost())
 	return su
 }
 
@@ -200,12 +199,14 @@ func (su *Summarize) string2() string {
 	return s.String()
 }
 
+const sumGrpDiv = 10 // ???
+
 func (su *Summarize) getNrows() (int, int) {
 	nr, pop := su.source.Nrows()
 	if len(su.by) == 0 {
 		nr = 1
 	} else if !su.unique {
-		nr /= 10 // ??? (matches lookupCost)
+		nr /= sumGrpDiv
 	}
 	return nr, pop
 }
@@ -315,8 +316,8 @@ func (su *Summarize) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 				// source req must be ordered so it doesn't ignore column order
 				// which is necessary to satisfy both groupings
 				srcReq := OrderReq(idx, req.SelectFrac(nrows))
+				srcReq.nseeks = req.nseeks
 				f, v := Optimize(su.source, mode, srcReq)
-				v += Cost(req.nseeks) * su.source.lookupCost()
 				best.update(f, v, srcReq)
 			}
 		}
@@ -352,7 +353,13 @@ func (su *Summarize) mapCost(mode Mode, req Require) (Cost, Cost, any) {
 	}
 	srcReq := NoneReq(1)
 	srcFixcost, srcVarcost := Optimize(su.source, mode, srcReq)
-	fixcost := srcFixcost + srcVarcost + Cost(nrows)*20
+	srcNrows, _ := su.source.Nrows()
+	// unlike Project, we don't multiply by req.frac
+	// because we have to process the entire source
+	// regardless of how much the parent needs
+	mapBuild := Cost(srcNrows) * mapCost
+	// since the map has to be built up front, we add it to fixcost
+	fixcost := srcFixcost + srcVarcost + mapBuild
 	return fixcost, 0, &summarizeApproach{strat: sumMap, req: srcReq}
 }
 
@@ -470,15 +477,6 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 func (su *Summarize) Lookup(th *Thread, sels Sels) Row {
 	su.nlooks++
 	return lookupViaSelectGet(su, th, sels)
-}
-
-func (su *Summarize) getLookupCost() Cost {
-	srcCost := su.source.lookupCost()
-	if su.unique {
-		return srcCost
-	}
-	return 10 * srcCost // ??? (matches Nrows)
-	//TODO should be 1 lookup + 10 gets
 }
 
 //-------------------------------------------------------------------

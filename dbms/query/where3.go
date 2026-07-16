@@ -4,8 +4,6 @@
 package query
 
 import (
-	"fmt"
-	"log"
 	"maps"
 	"math"
 
@@ -65,16 +63,6 @@ func (w *Where) perIndex(perCol map[string][]span) []*idxSel {
 		}
 		isel.skipFrac, isel.indexFilterFrac, isel.dataFilterFrac =
 			splitFrac(moreFrac, isel.HasSkipScan(), isel.indexFilter, isel.dataFilter)
-
-		// all the isels should have the same overall fraction
-		// since a Where has the same result regardless of index used
-		product := isel.prefixFrac * isel.skipFrac * isel.indexFilterFrac * isel.dataFilterFrac
-		if !sameFrac(w.wfrac, product) {
-			log.Println("ERROR: Where perIndex frac mismatch")
-			for _, is := range idxSels {
-				fmt.Println("\tisel:", is, "=", fracStr(is.frac()))
-			}
-		}
 	}
 	return idxSels
 }
@@ -436,30 +424,46 @@ func (w *Where) prefixFrac(isel *idxSel) float64 {
 	return frac
 }
 
-func splitFrac(f float64, b1, b2, b3 bool) (float64, float64, float64) {
-	n := 0
-	if b1 {
-		n++
+// splitFrac distributes the residual selectivity (f = moreFrac) across the
+// index-stage filters (skip scan, index filter) and the data filter.
+//
+// Index-stage selectivity is hard to estimate and must stay robust when f is
+// near zero (e.g. a selective or empty Where), otherwise a near-zero f would
+// collapse every stage toward zero and make skip/index-filter indexes look
+// artificially cheap, distorting index selection. So skip and index filter get
+// fixed pessimistic defaults that diminish geometrically (0.5, ~0.707, ~0.84).
+//
+// The data filter is independent of the index (it reads non-index columns), so
+// it is the natural place to absorb the residual: dataFilterFrac = f / product
+// of the index-stage fracs, clamped to 1. This keeps the component product
+// consistent with f only when a data filter is present; otherwise the product
+// is a fixed heuristic, which is acceptable since there is no data filter to
+// reconcile with.
+func splitFrac(f float64, hasSkip, hasIdxFilter, hasDataFilter bool) (float64, float64, float64) {
+	skipFrac := 1.0
+	idxFilterFrac := 1.0
+	dataFilterFrac := 1.0
+
+	frac := unknownFrac
+	if hasSkip {
+		skipFrac = frac
+		frac = math.Sqrt(frac)
 	}
-	if b2 {
-		n++
+	if hasIdxFilter {
+		idxFilterFrac = frac
+		frac = math.Sqrt(frac)
 	}
-	if b3 {
-		n++
+	if hasDataFilter {
+		dataFilterFrac = frac
 	}
-	if n == 0 {
-		return 1, 1, 1
+
+	if f > 0 && hasDataFilter {
+		activeProduct := skipFrac * idxFilterFrac
+		dataFilterFrac = f / activeProduct
+		if dataFilterFrac > 1 {
+			dataFilterFrac = 1
+		}
 	}
-	v := math.Pow(f, 1.0/float64(n))
-	r := [...]float64{1, 1, 1}
-	if b1 {
-		r[0] = v
-	}
-	if b2 {
-		r[1] = v
-	}
-	if b3 {
-		r[2] = v
-	}
-	return r[0], r[1], r[2]
+
+	return skipFrac, idxFilterFrac, dataFilterFrac
 }

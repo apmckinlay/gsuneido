@@ -24,9 +24,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
-var whereSingletonCount atomic.Int64
-var _ = AddInfo("query.where.singleton", &whereSingletonCount)
-
 // NOTE: Where source and expr should NOT be modified,
 // instead, construct a new one with NewWhere
 
@@ -95,6 +92,9 @@ type whereApproach struct {
 	cost Cost
 }
 
+var whereSingletonCount atomic.Int64
+var _ = AddInfo("query.where.singleton", &whereSingletonCount)
+
 func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	if !set.Subset(src.Columns(), expr.Columns()) {
 		panic("where: nonexistent columns: " + str.Join(", ",
@@ -107,7 +107,6 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	w.header = src.Header()
 	w.rowSiz.Set(src.rowSize())
 	w.singleTbl.Set(src.SingleTable())
-	w.lookCost.Set(src.lookupCost())
 	w.calcFixed()
 	if !w.conflict {
 		w.conflict = w.exprFalse()
@@ -273,9 +272,11 @@ func (w *Where) Nrows() (int, int) {
 
 func (w *Where) calcNrows() (int, int) {
 	assert.That(w.optInited == optInitInProgress)
-	// Note: the estimated row count should be consistent
-	// with bestIndex and WhereCost
-	// since cost is primarily driven by number of rows
+	// Note: Nrows uses wfrac directly, while WhereCost uses the per-stage
+	// fractions (prefixFrac, skipFrac, etc.) from splitFrac. These are only
+	// consistent when a dataFilter is present; otherwise the cost model is
+	// intentionally pessimistic (see splitFrac). This is acceptable since
+	// cost is used for index selection, not row estimation.
 	srcNrows, srcPop := w.source.Nrows()
 	if w.conflict || srcPop == 0 {
 		return 0, srcPop
@@ -554,8 +555,8 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 	if w.singleton {
 		// here singleton == fastSingle
 		// because source is a Table and Table keys are a subset of indexes
-		cost := w.source.lookupCost()
 		isel := w.idxSels[0]
+		cost := w.tbl.lookupCost(isel.index)
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
 	type bestIdx struct {
@@ -578,7 +579,7 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 			dfFrac = isel.dataFilterFrac
 		}
 		cost := WhereCost(float64(varCost), float64(req.frac), irFrac, ifFrac, dfFrac)
-		cost += Cost(req.nseeks) * w.source.lookupCost()
+		cost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
 		best.update(0, cost, bestIdx{index: idx, idxSel: isel})
 	}
 	if best.none() {
@@ -591,13 +592,13 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 func (w *Where) optWhereLookup(req Require) (Cost, Cost, any) {
 	if w.singleton {
 		isel := w.idxSels[0]
-		cost := w.tbl.lookupCostFor(w.tbl.indexi(isel.index))
+		cost := w.tbl.lookupCost(isel.index)
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
 	}
 	best := newBest[[]string]()
 	for idxi, idx := range w.tbl.indexes {
 		if indexCovered(idx, req.cols, w.fixed) {
-			varcost := Cost(req.nseeks) * w.tbl.lookupCostFor(idxi)
+			varcost := Cost(req.nseeks) * w.tbl.lookupCostI(idxi)
 			best.update(0, varcost, idx)
 		}
 	}
@@ -933,7 +934,9 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	isels, osels := Split(cloned, sels, w.srcIndex)
 	var residual Sels
 	for _, sel := range osels {
-		if !w.fixed.Has(sel.col) {
+		// keep selectors for multi-valued fixed columns so source.Lookup
+		// can verify the specific value via singletonFilter
+		if !w.fixed.Single(sel.col) {
 			residual = append(residual, sel)
 		}
 	}

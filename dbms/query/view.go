@@ -30,7 +30,6 @@ func NewView(name string, src Query) *View {
 	v.rowSiz.Set(src.rowSize())
 	v.fast1.Set(src.fastSingle())
 	v.singleTbl.Set(src.SingleTable())
-	v.lookCost.Set(src.lookupCost())
 	return v
 }
 

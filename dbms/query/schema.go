@@ -65,11 +65,6 @@ func (*schemaTable) optimize(_ Mode, req Require) (Cost, Cost, any) {
 func (*schemaTable) setApproach(Require, any, QueryTran) {
 }
 
-func (st *schemaTable) lookupCost() Cost {
-	// no indexes, so lookups will be handled by TempIndex
-	return 1000
-}
-
 func (*schemaTable) Lookup(*Thread, Sels) Row {
 	panic(assert.ShouldNotReachHere())
 }
