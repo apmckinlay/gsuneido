@@ -61,11 +61,11 @@ func TestLookupCacheCounters(t *testing.T) {
 	baseP := joinCacheProbes.Load()
 	baseM := joinCacheMisses.Load()
 
-	// Schema and data: ensure 1:1 join so Join uses cachedLookup path
-	doAdmin(db, "create t1 (a) key(a)")
-	act(db, "insert { a: '1' } into t1")
-	act(db, "insert { a: '2' } into t1")
-	act(db, "insert { a: '3' } into t1")
+	// Schema and data: ensure n:1 join so Join uses cachedLookup path
+	doAdmin(db, "create t1 (a, c) key(c)")
+	act(db, "insert { a: '1', c: 'a' } into t1")
+	act(db, "insert { a: '2', c: 'b' } into t1")
+	act(db, "insert { a: '3', c: 'c' } into t1")
 
 	doAdmin(db, "create t2 (a, b) key(a)")
 	act(db, "insert { a: '1', b: 'x' } into t2")

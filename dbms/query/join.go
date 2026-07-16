@@ -466,8 +466,10 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	// fmt.Println("Join row1", jn.row1)
 	// assert.That(set.Disjoint(jn.by, jn.sel2))
 	sel2 := slc.With(jn.sel2, jn.projectRow1(th, jn.row1)...)
-	if jn.joinType.toOne() {
+	if jn.joinType == n_one {
 		jn.lookupRow = jn.cachedLookup(th, sel2)
+	} else if jn.joinType == one_one {
+		jn.lookupRow = jn.source2.Lookup(th, sel2)
 	} else {
 		jn.source2.Select(sel2)
 	}
@@ -535,8 +537,10 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	}
 	var row2 Row
 	sel2 = append(sel2, jn.projectRow1(th, row1)...)
-	if jn.joinType.toOne() {
+	if jn.joinType == n_one {
 		row2 = jn.cachedLookup(th, sel2)
+	} else if jn.joinType == one_one {
+		row2 = jn.source2.Lookup(th, sel2)
 	} else {
 		jn.source2.Select(sel2)
 		defer jn.Select(nil)
