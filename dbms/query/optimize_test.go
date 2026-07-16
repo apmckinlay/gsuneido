@@ -210,9 +210,9 @@ func TestOptimize(t *testing.T) {
 		"customer^(id) leftjoin 1:1 by(id) (alias^(id) tempindex(id))")
 
 	test("inven semijoin trans",
-		"inven^(item) semijoin by(item) trans^(item,date,id)")
+		"inven^(item) semijoin 1:n by(item) trans^(item,date,id)")
 	test("customer semijoin alias",
-		"customer^(id) semijoin by(id) (alias^(id) tempindex(id))")
+		"customer^(id) semijoin 1:1 by(id) (alias^(id) tempindex(id))")
 
 	test("hist2 where date > 1 sort id",
 		"hist2^(id,date) where date > 1")

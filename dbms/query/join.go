@@ -160,18 +160,21 @@ func newJoinBase(src1, src2 Query, by []string, t QueryTran,
 	jb := joinBase{qt: t, st: MakeSuTran(t), joinLike: newJoinLike(src1, src2), prevFixed1: prevFixed1, prevFixed2: prevFixed2}
 	jb.lookupCache.SetCounters(&joinCacheProbes, &joinCacheMisses)
 	jb.by = by
+	jb.joinType = getJoinType(by, src1, src2)
+	return jb
+}
+
+func getJoinType(by []string, src1, src2 Query) joinType {
 	k1 := hasKey(by, src1.Keys(), src1.Fixed())
 	k2 := hasKey(by, src2.Keys(), src2.Fixed())
 	if k1 && k2 {
-		jb.joinType = one_to_one
+		return one_to_one
 	} else if k1 {
-		jb.joinType = one_to_many
+		return one_to_many
 	} else if k2 {
-		jb.joinType = many_to_one
-	} else {
-		jb.joinType = many_to_many
+		return many_to_one
 	}
-	return jb
+	return many_to_many
 }
 
 func fixedToExpr(col string, values []string) ast.Expr {
@@ -524,7 +527,6 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	jn.nlooks++
 	sel1, sel2 := jn.splitSelect(sels)
 	if jn.lookupFallback(sel1) {
-		// log.Println("INFO Join Lookup fallback to Select & Get")
 		jn.rewind()
 		jn.source1.Select(sel1)
 		defer jn.Select(nil)

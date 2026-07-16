@@ -4,6 +4,8 @@
 package query
 
 import (
+	"sync/atomic"
+
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -12,16 +14,35 @@ import (
 
 type SemiJoin struct {
 	Query2
-	qt         QueryTran
-	st         *SuTran
-	by         []string
-	prevFixed1 Fixed
-	prevFixed2 Fixed
+	qt          QueryTran
+	st          *SuTran
+	lookupCache lookupCache
+	by          []string
+	prevFixed1  Fixed
+	prevFixed2  Fixed
+	joinType    joinType
+	optimized   bool
 }
 
 type semiJoinApproach struct {
 	req2 Require
 }
+
+var (
+	semiJoinCacheProbes atomic.Int64
+	semiJoinCacheMisses atomic.Int64
+	semiJoin11Count     atomic.Int64
+	semiJoin1nCount     atomic.Int64
+	semiJoinn1Count     atomic.Int64
+	semiJoinnnCount     atomic.Int64
+)
+
+var _ = AddInfo("query.semijoin.cacheProbes", &semiJoinCacheProbes)
+var _ = AddInfo("query.semijoin.cacheMisses", &semiJoinCacheMisses)
+var _ = AddInfo("query.semijoin.11", &semiJoin11Count)
+var _ = AddInfo("query.semijoin.1n", &semiJoin1nCount)
+var _ = AddInfo("query.semijoin.n1", &semiJoinn1Count)
+var _ = AddInfo("query.semijoin.nn", &semiJoinnnCount)
 
 func NewSemiJoin(src1, src2 Query, by []string, t QueryTran) *SemiJoin {
 	b := set.Intersect(src1.Columns(), src2.Columns())
@@ -34,6 +55,8 @@ func NewSemiJoin(src1, src2 Query, by []string, t QueryTran) *SemiJoin {
 		panic("semijoinjoin: by must be a subset of the common columns")
 	}
 	sj := &SemiJoin{qt: t, st: MakeSuTran(t), by: by}
+	sj.lookupCache.SetCounters(&semiJoinCacheProbes, &semiJoinCacheMisses)
+	sj.joinType = getJoinType(by, src1, src2)
 	sj.source1, sj.source2 = src1, src2
 	sj.header = src1.Header()
 	sj.keys = src1.Keys()
@@ -53,12 +76,19 @@ func (sj *SemiJoin) With(src1, src2 Query) *SemiJoin {
 }
 
 func (sj *SemiJoin) String() string {
-	return "semijoin by" + str.Join("(,)", sj.by)
+	op := "semijoin"
+	if sj.optimized {
+		op += " " + sj.joinType.String()
+	} else if sj.joinType == many_to_many {
+		op += " /*MANY TO MANY*/"
+	}
+	return op + " by" + str.Join("(,)", sj.by)
 }
 
 func (sj *SemiJoin) SetTran(t QueryTran) {
 	sj.qt = t
 	sj.st = MakeSuTran(t)
+	sj.lookupCache.Reset()
 	sj.Query2.SetTran(t)
 }
 
@@ -76,6 +106,7 @@ func (sj *SemiJoin) getNrows() (int, int) {
 }
 
 func (sj *SemiJoin) Transform() Query {
+	sj.optimized = true
 	src1 := sj.source1.Transform()
 	if _, ok := src1.(*Nothing); ok {
 		return NewNothing(sj)
@@ -104,8 +135,13 @@ func (sj *SemiJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if nseeks <= 0 {
 		nseeks = 1
 	}
-	frac2 := min(float32(1), float32(nseeks)/float32(max(1, nrows2)))
-	req2 := GroupReq(sj.by, frac2, nseeks)
+	var req2 Require
+	if sj.joinType.toOne() {
+		req2 = UniqueReq(sj.by, nseeks)
+	} else {
+		frac2 := min(float32(1), float32(nseeks)/float32(max(1, nrows2)))
+		req2 = GroupReq(sj.by, frac2, nseeks)
+	}
 	fixcost2, varcost2 := Optimize(sj.source2, mode, req2)
 	if fixcost2+varcost2 >= impossible {
 		return impossible, impossible, nil
@@ -116,6 +152,16 @@ func (sj *SemiJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
 
 func (sj *SemiJoin) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*semiJoinApproach)
+	switch sj.joinType {
+	case one_to_one:
+		semiJoin11Count.Add(1)
+	case one_to_many:
+		semiJoin1nCount.Add(1)
+	case many_to_one:
+		semiJoinn1Count.Add(1)
+	case many_to_many:
+		semiJoinnnCount.Add(1)
+	}
 	sj.source1 = SetApproach(sj.source1, req, tran)
 	sj.source2 = SetApproach(sj.source2, ap.req2, tran)
 	sj.header = sj.source1.Header()
@@ -145,6 +191,11 @@ func (sj *SemiJoin) source2Has(th *Thread, row Row, dir Dir) bool {
 	for i, col := range sj.by {
 		sels[i] = Sel{col, row.GetRawVal(sj.source1.Header(), col, th, sj.st)}
 	}
+	if sj.joinType == one_to_one {
+		return sj.source2.Lookup(th, sels) != nil
+	} else if sj.joinType == many_to_one {
+		return sj.lookupCache.Lookup(th, sj.source2, sels, sj.st) != nil
+	}
 	sj.source2.Select(sels)
 	return sj.source2.Get(th, dir) != nil
 }
@@ -158,6 +209,26 @@ func (sj *SemiJoin) Select(sels Sels) {
 
 func (sj *SemiJoin) Lookup(th *Thread, sels Sels) Row {
 	sj.nlooks++
+	if sj.joinType == one_to_one || sj.joinType == many_to_one {
+		row := sj.source1.Lookup(th, sels)
+		if row == nil {
+			return nil
+		}
+		sel2 := make(Sels, len(sj.by))
+		for i, col := range sj.by {
+			sel2[i] = Sel{col, row.GetRawVal(sj.source1.Header(), col, th, sj.st)}
+		}
+		var row2 Row
+		if sj.joinType == one_to_one {
+			row2 = sj.source2.Lookup(th, sel2)
+		} else {
+			row2 = sj.lookupCache.Lookup(th, sj.source2, sel2, sj.st)
+		}
+		if row2 == nil {
+			return nil
+		}
+		return row
+	}
 	return lookupViaSelectGet(sj, th, sels)
 }
 
