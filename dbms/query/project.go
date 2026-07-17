@@ -22,7 +22,7 @@ import (
 
 type Project struct {
 	Query1
-	results *mapType
+	dedup   *mapType // used by projMap to eliminate duplicates
 	st      *SuTran
 	columns []string
 	remove  []string
@@ -659,13 +659,13 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 	p.th = th
 	defer func() { p.th = nil }()
 	if p.state == rewound {
-		if p.results == nil {
+		if p.dedup == nil {
 			hfn := func(k rowHash) uint64 { return k.hash }
 			eqfn := func(x, y rowHash) bool {
 				return x.hash == y.hash &&
 					equalCols(x.row, y.row, p.source.Header(), p.columns, p.th, p.st)
 			}
-			p.results = shmap.NewMapFuncs[rowHash, struct{}](hfn, eqfn)
+			p.dedup = shmap.NewMapFuncs[rowHash, struct{}](hfn, eqfn)
 		}
 		if dir == Prev && !p.indexed {
 			p.buildMap(th)
@@ -676,7 +676,7 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 		if row == nil {
 			break
 		}
-		oldRow, existed := p.addResult(th, row)
+		oldRow, existed := p.dedupRow(th, row)
 		if !existed || row.SameAs(oldRow) {
 			return row
 		}
@@ -710,22 +710,22 @@ func (p *Project) buildMap(th *Thread) {
 		if row == nil {
 			break
 		}
-		p.addResult(th, row)
+		p.dedupRow(th, row)
 	}
 	p.source.Rewind()
 	p.indexed = true
 }
 
-// addResult returns the old row and true if it already existed,
+// dedupRow returns the old row and true if it already existed,
 // else the new row and false
-func (p *Project) addResult(th *Thread, row Row) (Row, bool) {
+func (p *Project) dedupRow(th *Thread, row Row) (Row, bool) {
 	rh := rowHash{row: row,
 		hash: hashCols(row, p.source.Header(), p.columns, th, p.st)}
-	k, existed := p.results.GetInit(rh)
+	k, existed := p.dedup.GetInit(rh)
 	if existed {
 		return k.row, true
 	} else {
-		if !p.warned && p.results.Size() > mapWarn {
+		if !p.warned && p.dedup.Size() > mapWarn {
 			p.warned = true
 			Warning("project-map large >", mapWarn)
 		}
@@ -733,7 +733,7 @@ func (p *Project) addResult(th *Thread, row Row) (Row, bool) {
 		if !p.derivedWarned && p.derived > derivedWarn {
 			p.derivedWarned = true
 			Warning("project-map derived large >",
-				derivedWarn, "average", p.derived/p.results.Size())
+				derivedWarn, "average", p.derived/p.dedup.Size())
 		}
 		return row, false
 	}
@@ -750,8 +750,8 @@ func (p *Project) Select(sels Sels) {
 	p.nsels++
 	p.source.Select(sels)
 	p.indexed = false
-	if p.results != nil {
-		p.results.Clear()
+	if p.dedup != nil {
+		p.dedup.Clear()
 	}
 	p.rewind()
 }
