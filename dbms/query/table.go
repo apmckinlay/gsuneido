@@ -416,7 +416,8 @@ const maxSimple = 2000
 
 func (tbl *Table) Simple(*Thread) []Row {
 	// can't use info.Nrows because sizeTran overrides it for tests
-	tbl.ensureIter()
+	tbl.Select(nil)
+	tbl.Rewind()
 	rows := make([]Row, 0, 8)
 	for {
 		tbl.iter.Next(tbl.tran)
