@@ -294,6 +294,8 @@ func (a *Function) Get(_ *Thread, m Value) Value {
 			}
 		}
 		return c
+	case SuStr("returnannotation"):
+		return SuStr(a.ReturnAnnotation)
 	}
 	return get(a, m)
 }
@@ -334,6 +336,8 @@ func (a *Param) Get(_ *Thread, m Value) Value {
 		return SuBool(a.DefVal != nil)
 	case SuStr("defval"):
 		return a.DefVal
+	case SuStr("annotations"):
+		return SuStr(a.Annotations)
 	}
 	return nil
 }
