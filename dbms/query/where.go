@@ -1001,6 +1001,7 @@ func (w *Where) InCount() int {
 }
 
 func (w *Where) Simple(th *Thread) []Row {
+	w.singleSels = nil
 	ast.Unraw(w.expr)
 	w.rowCtx.Hdr = w.header
 	rows := w.source.Simple(th)
