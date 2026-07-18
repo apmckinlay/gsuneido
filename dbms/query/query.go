@@ -56,6 +56,33 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+// Query is the interface for nodes in a query tree.
+// The interface covers both optimization and execution.
+//
+// Query types form a hierarchy where nodes compose other Query nodes:
+// single-source operations (Query1) have one source, and two-source
+// operations (Query2) have two sources. Leaf nodes like Table access
+// the database directly.
+//
+// Optimization phase:
+//  - Transform() refactors the query for efficiency (bottom-up).
+//  - optimize()/caching selects the best execution strategy based on costs.
+//  - setApproach() locks in the chosen strategy and sets up for execution.
+//  - Requires/Nrows/Keys/Indexes provide metadata for cost estimation.
+//
+// Execution phase:
+//  - Get(Next/Prev) returns rows one at a time, sticking at EOF until Rewind.
+//  - Lookup(sels) returns a single matching row (optimized path).
+//  - Select(sels) restricts results to a key range (used by joins/filters).
+//  - Rewind() resets the position for re-iteration.
+//
+// Terminology:
+//  - "incoming" means calls *to* a query operation
+//  - "outgoing" means calls *from" a query operation
+// The "incoming" [Require] is the one passed to a node's
+// own optimize/setApproach (called by its parent).
+// The "outgoing" Require is the one this node passes to its children's
+// optimize/setApproach via the package-level Optimize/SetApproach.
 type Query interface {
 	// Columns is all the available columns, including derived
 	Columns() []string
@@ -119,22 +146,31 @@ type Query interface {
 
 	// Get returns the next or previous row, or nil if at end.
 	// It sticks at eof until Rewind.
+	// Rewind then Get Next returns the first row,
+	// Rewind then Get Prev returns the last row.
 	Get(th *Thread, dir Dir) Row
 
 	// Lookup returns the row matching the given key value, or nil if not found.
-	// It is used by Where and Compatible (Intersect, Minus, Union)
 	// It is valid (although not necessarily the most efficient)
-	// to implement Lookup with Select and Get
+	// to implement Lookup with Select and Get (eg. [lookupViaSelectGet])
 	// in which case it should leave the select cleared.
 	// Lookup should rewind.
+	// Incoming Lookup should be consistent with the incoming Require.
+	// Outgoing Lookup should be consistent with the outgoing Require.
+	// It is valid for Require cols to specify a superset of key columns.
+	// Lookup implementations are required to apply (filter) all the sels.
+	// Lookup generally corresponds to [UniqueReq]
 	Lookup(th *Thread, sels Sels) Row
 
 	// Select restricts the query to records matching the given packed values.
-	// It is used by Where, Join, and LeftJoin.
+	// Ultimately, a Select specifies a prefix of an index.
 	// To clear the select, use Select(nil)
 	// Select should rewind.
-	// It is only valid to call Select for the index chosen by optimize/setApproach.
-	// If index is nil, then Select should not be called.
+	// Incoming Select should be consistent with the incoming Require.
+	// Outgoing Select should be consistent with the outgoing Require.
+	// It is ok for sels to contain extra columns,
+	// BUT they will be ignored, not applied (unlike Lookup)
+	// Select generally corresponds to [GroupReq]
 	Select(sels Sels)
 
 	Header() *Header
@@ -171,7 +207,9 @@ type Query interface {
 	// Simple is simple, alternate execution method for testing.
 	// It should normally be used after just parsing,
 	// without transform or optimize.
-	// The result may be modified - do not return internal data
+	// The result may be modified - do not return internal data.
+	// Simple should work correctly regardless of query operation state,
+	// including after an aborted execution.
 	Simple(th *Thread) []Row
 
 	// ValueGet is for Suneido.ParseQuery and queryvalue.go
