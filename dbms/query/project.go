@@ -200,6 +200,8 @@ func (p *Project) String() string {
 func (p *Project) SetTran(t QueryTran) {
 	p.st = MakeSuTran(t)
 	p.source.SetTran(t)
+	// don't need to clear dedup since projMap is only used in ReadMode
+	// which doesn't use SetTran
 }
 
 // projectKeys keeps keys that are subsets of cols.
@@ -668,7 +670,7 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 			p.dedup = shmap.NewMapFuncs[rowHash, struct{}](hfn, eqfn)
 		}
 		if dir == Prev && !p.indexed {
-			p.buildMap(th)
+			p.buildDedup(th)
 		}
 	}
 	for {
@@ -704,7 +706,7 @@ func equalCols(x, y Row, hdr *Header, cols []string, th *Thread, st *SuTran) boo
 	return true
 }
 
-func (p *Project) buildMap(th *Thread) {
+func (p *Project) buildDedup(th *Thread) {
 	for {
 		row := p.source.Get(th, Next)
 		if row == nil {
@@ -752,6 +754,9 @@ func (p *Project) Select(sels Sels) {
 	p.indexed = false
 	if p.dedup != nil {
 		p.dedup.Clear()
+		p.derived = 0
+		p.derivedWarned = false
+		p.warned = false
 	}
 	p.rewind()
 }

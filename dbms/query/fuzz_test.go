@@ -903,8 +903,26 @@ func FuzzSemiJoin(f *testing.F) {
 }
 
 func TestFuzzSemiJoin(t *testing.T) {
+	start11Count := semiJoin11Count.Load()
+	start1nCount := semiJoin1nCount.Load()
+	startn1Count := semiJoinn1Count.Load()
+	startnnCount := semiJoinnnCount.Load()
+
 	fuzzSemiJoinRunner.Test(t)
+
+	fmt.Println("11:", semiJoin11Count.Load()-start11Count,
+		"1n:", semiJoin1nCount.Load()-start1nCount,
+		"n1:", semiJoinn1Count.Load()-startn1Count,
+		"nn:", semiJoinnnCount.Load()-startnnCount)
+	assert.T(t).This(semiJoin11Count.Load() - start11Count).Isnt(0)
+	assert.T(t).This(semiJoin1nCount.Load() - start1nCount).Isnt(0)
+	assert.T(t).This(semiJoinn1Count.Load() - startn1Count).Isnt(0)
+	assert.T(t).This(semiJoinnnCount.Load() - startnnCount).Isnt(0)
 	fmt.Println("no results", noResults, "/", fuzzCount)
+}
+
+func TestFuzzSemiJoinDebug(t *testing.T) {
+	fuzzSemiJoinRunner.Run(t, 18275177146248160504, 16758281424391211506)
 }
 
 func fuzzSemiJoin(ft *FT) Query {

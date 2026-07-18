@@ -212,7 +212,7 @@ func TestOptimize(t *testing.T) {
 	test("inven semijoin trans",
 		"inven^(item) semijoin 1:n by(item) trans^(item,date,id)")
 	test("customer semijoin alias",
-		"customer^(id) semijoin 1:1 by(id) (alias^(id) tempindex(id))")
+		"customer^(id) semijoin-rev 1:1 by(id) alias^(id)")
 
 	test("hist2 where date > 1 sort id",
 		"hist2^(id,date) where date > 1")
