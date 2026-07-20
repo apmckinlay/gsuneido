@@ -306,7 +306,8 @@ func (ck *Check) cond(expr ast.Expr, init set) (initTrue set, initFalse set) {
 	if expr, ok := expr.(*ast.Nary); ok {
 		if expr.Tok == tok.And || expr.Tok == tok.Or {
 			first, _ := ck.expr(expr.Exprs[0], init) // first is always done
-			rest := first.cow() // so appending to rest doesn't corrupt first
+			// so appending to rest doesn't corrupt first
+			rest := first.cow()                      
 			for _, e := range expr.Exprs[1:] {
 				rest, _ = ck.expr(e, rest) // rest are conditional
 			}
