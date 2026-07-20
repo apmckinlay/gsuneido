@@ -448,7 +448,7 @@ func TestLookupOnUniqueIndexWithEmptyFields(t *testing.T) {
 
 	tran := db.NewReadTran()
 	tbl := NewTable(tran, "tmp").(*Table)
-	tbl.SetIndex([]string{"u"}) // Use the unique index on 'u'
+	tbl.SetIndex([]string{"u"}, ReadMode) // Use the unique index on 'u'
 	hdr := tbl.Header()
 
 	// Test 1: Lookup by non-empty unique index value should work

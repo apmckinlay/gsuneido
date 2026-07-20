@@ -38,9 +38,7 @@
 package query
 
 import (
-	"fmt"
 	"math"
-	"strings"
 	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -53,7 +51,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/opt"
 	"github.com/apmckinlay/gsuneido/util/set"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // Query is the interface for nodes in a query tree.
@@ -388,9 +385,6 @@ func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
 		panic("invalid query: " + String(q))
 	}
 	q = SetApproach(q, req, t)
-	if mode == CursorMode {
-		setCursorMode(q)
-	}
 	return q, fixcost, varcost
 }
 
@@ -421,9 +415,6 @@ func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
 		panic("invalid query: " + String(q))
 	}
 	q = SetApproach(q, req, t)
-	if mode == CursorMode {
-		setCursorMode(q)
-	}
 	return q
 }
 

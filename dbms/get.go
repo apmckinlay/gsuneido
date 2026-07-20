@@ -173,7 +173,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		return row
 	}
 	if len(sels) == 0 {
-		table.SetIndex(table.Indexes()[0])
+		table.SetIndex(table.Indexes()[0], qry.ReadMode)
 		strat = "no select: " + table.String()
 		trace.QueryOpt.Println(dir, strat)
 		return false, strat, func() Row {
@@ -182,7 +182,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 	}
 	if key := findKey(table.Keys(), sels); key != nil {
 		// selecting on a key so only one record in the result
-		table.SetIndex(key)
+		table.SetIndex(key, qry.ReadMode)
 		strat = "key: " + table.String()
 		trace.QueryOpt.Println(dir, strat)
 		isels, osels := qry.Split(false, sels, key)
@@ -191,7 +191,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		}
 	}
 	if idx := findAll(table.Indexes(), sels); idx != nil {
-		table.SetIndex(idx)
+		table.SetIndex(idx, qry.ReadMode)
 		strat = "just index: " + table.String()
 		trace.QueryOpt.Println(dir, strat)
 		table.Select(sels)
@@ -204,7 +204,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		return
 	}
 	if len(indexes) == 1 {
-		table.SetIndex(indexes[0])
+		table.SetIndex(indexes[0], qry.ReadMode)
 		strat = "only " + table.String()
 		trace.QueryOpt.Println(dir, strat)
 		table.Select(sels)
@@ -225,7 +225,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 	for i, idx := range indexes {
 		tbl := *table // copy
 		tables[i] = &tbl
-		tables[i].SetIndex(idx)
+		tables[i].SetIndex(idx, qry.ReadMode)
 		tables[i].Select(sels)
 		strat += " " + str.Join("(,)", idx)
 	}

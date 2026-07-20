@@ -90,6 +90,7 @@ type whereApproach struct {
 	index []string
 	*idxSel
 	cost Cost
+	mode Mode
 }
 
 var whereSingletonCount atomic.Int64
@@ -546,18 +547,18 @@ func (w *Where) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		return fixcost, varcost, nil
 	}
 	if req.use == ReqUnique {
-		return w.optWhereLookup(req)
+		return w.optWhereLookup(mode, req)
 	}
-	return w.optWhereIdx(req)
+	return w.optWhereIdx(mode, req)
 }
 
-func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
+func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 	if w.singleton {
 		// here singleton == fastSingle
 		// because source is a Table and Table keys are a subset of indexes
 		isel := w.idxSels[0]
 		cost := w.tbl.lookupCost(isel.index)
-		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
+		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel, mode: mode}
 	}
 	type bestIdx struct {
 		index  []string
@@ -568,7 +569,7 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 		if !req.SatisfiedByWithFixed(idx, w.fixed) {
 			continue
 		}
-		_, varCost, _ := w.tbl.optimize(0, OrderReq(idx, 1.0))
+		_, varCost, _ := w.tbl.optimize(mode, OrderReq(idx, 1.0))
 		irFrac := 1.0
 		ifFrac := 1.0
 		dfFrac := w.wfrac
@@ -586,14 +587,14 @@ func (w *Where) optWhereIdx(req Require) (Cost, Cost, any) {
 		return impossible, impossible, nil
 	}
 	return 0, best.varcost, &whereApproach{index: best.data.index,
-		cost: best.varcost, idxSel: best.data.idxSel}
+		cost: best.varcost, idxSel: best.data.idxSel, mode: mode}
 }
 
-func (w *Where) optWhereLookup(req Require) (Cost, Cost, any) {
+func (w *Where) optWhereLookup(mode Mode, req Require) (Cost, Cost, any) {
 	if w.singleton {
 		isel := w.idxSels[0]
 		cost := w.tbl.lookupCost(isel.index)
-		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel}
+		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel, mode: mode}
 	}
 	best := newBest[[]string]()
 	for idxi, idx := range w.tbl.indexes {
@@ -605,7 +606,7 @@ func (w *Where) optWhereLookup(req Require) (Cost, Cost, any) {
 	if best.none() {
 		return impossible, impossible, nil
 	}
-	return 0, best.varcost, &whereApproach{index: best.data, cost: best.varcost}
+	return 0, best.varcost, &whereApproach{index: best.data, cost: best.varcost, mode: mode}
 }
 
 // exprFalse checks if any expressions folded to false
@@ -703,7 +704,7 @@ func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 		w.tbl = nil
 	} else {
 		app := approach.(*whereApproach)
-		w.tbl.SetIndex(app.index)
+		w.tbl.SetIndex(app.index, app.mode)
 		w.srcIndex = app.index
 		if app.idxSel != nil {
 			w.ixCtx.cols = app.index

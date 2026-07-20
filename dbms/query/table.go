@@ -64,6 +64,7 @@ func (tbl *Table) schemaIndexes() []Index {
 
 type tableApproach struct {
 	index []string
+	mode  Mode
 }
 
 func (tbl *Table) String() string {
@@ -159,22 +160,22 @@ const ( // ???
 
 func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton || req.use == ReqNone {
-		return tbl.costFor(tbl.indexes[0], req)
+		return tbl.costFor(tbl.indexes[0], mode, req)
 	}
 	best := newBest[[]string]()
 	for _, idx := range tbl.indexes {
 		if req.SatisfiedBy(idx) {
-			f, v, _ := tbl.costFor(idx, req)
+			f, v, _ := tbl.costFor(idx, mode, req)
 			best.update(f, v, idx)
 		}
 	}
 	if best.none() {
 		return impossible, impossible, nil
 	}
-	return best.fixcost, best.varcost, tableApproach{index: best.data}
+	return best.fixcost, best.varcost, tableApproach{index: best.data, mode: mode}
 }
 
-func (tbl *Table) costFor(index []string, req Require) (Cost, Cost, any) {
+func (tbl *Table) costFor(index []string, mode Mode, req Require) (Cost, Cost, any) {
 	rowCost := tableFast
 	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
 		rowCost = tableSlow
@@ -188,14 +189,16 @@ func (tbl *Table) costFor(index []string, req Require) (Cost, Cost, any) {
 			result += Cost(req.nseeks) * tbl.lookupCostI(idxi)
 		}
 	}
-	return 0, result, tableApproach{index: index}
+	return 0, result, tableApproach{index: index, mode: mode}
 }
 
 func (tbl *Table) setApproach(_ Require, approach any, _ QueryTran) {
-	tbl.SetIndex(approach.(tableApproach).index)
+	app := approach.(tableApproach)
+	tbl.SetIndex(app.index, app.mode)
 }
 
-func (tbl *Table) SetIndex(index []string) {
+func (tbl *Table) SetIndex(index []string, mode Mode) {
+	tbl.cursorMode = (mode == CursorMode)
 	if tbl.singleton {
 		index = tbl.allKeys[0]
 	}
