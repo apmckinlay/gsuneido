@@ -413,7 +413,13 @@ func TestTimesLookup(t *testing.T) {
 
 	tran := db.NewReadTran()
 	q := ParseQuery("tmp1 times tmp2", tran, nil)
-	q, _, _ = Setup(q, ReadMode, tran)
+	q = q.Transform()
+	req := UniqueReq([]string{"a", "x"}, 1)
+	fixcost, varcost := Optimize(q, ReadMode, req)
+	if fixcost+varcost >= impossible {
+		t.Fatal("invalid query")
+	}
+	q = SetApproach(q, req, tran)
 	test := func(a, x int, expected string) {
 		sels := Sels{{"a", Pack(SuInt(a))}, {"x", Pack(SuInt(x))}}
 		row := q.Lookup(nil, sels)
