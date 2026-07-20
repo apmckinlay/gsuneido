@@ -254,29 +254,6 @@ const (
 	eof
 )
 
-type metrics struct {
-	fixcost  Cost
-	varcost  Cost
-	costself Cost
-	frac     float64
-	ngets    int32
-	nsels    int32
-	nlooks   int32
-	tget     uint64
-	tgetself uint64
-}
-
-func (m *metrics) String() string {
-	return fmt.Sprintf("metrics{fixcost: %v varcost: %v costself: %v frac: %.2f ngets: %d nsels: %d nlooks: %d tget: %d tgetself: %d}",
-		m.fixcost, m.varcost, m.costself, m.frac, m.ngets, m.nsels, m.nlooks, m.tget, m.tgetself)
-}
-
-func (m *metrics) setCost(frac float64, fixcost, varcost Cost) {
-	m.frac = frac
-	m.fixcost = fixcost
-	m.varcost = varcost
-}
-
 func (q *queryBase) Columns() []string {
 	return q.header.Columns
 }
