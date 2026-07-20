@@ -65,20 +65,21 @@ import (
 // the database directly.
 //
 // Optimization phase:
-//  - Transform() refactors the query for efficiency (bottom-up).
-//  - optimize()/caching selects the best execution strategy based on costs.
-//  - setApproach() locks in the chosen strategy and sets up for execution.
-//  - Requires/Nrows/Keys/Indexes provide metadata for cost estimation.
+//   - Transform() refactors the query for efficiency (bottom-up).
+//   - optimize()/caching selects the best execution strategy based on costs.
+//   - setApproach() locks in the chosen strategy and sets up for execution.
+//   - Requires/Nrows/Keys/Indexes provide metadata for cost estimation.
 //
 // Execution phase:
-//  - Get(Next/Prev) returns rows one at a time, sticking at EOF until Rewind.
-//  - Lookup(sels) returns a single matching row (optimized path).
-//  - Select(sels) restricts results to a key range (used by joins/filters).
-//  - Rewind() resets the position for re-iteration.
+//   - Get(Next/Prev) returns rows one at a time, sticking at EOF until Rewind.
+//   - Lookup(sels) returns a single matching row (optimized path).
+//   - Select(sels) restricts results to a key range (used by joins/filters).
+//   - Rewind() resets the position for re-iteration.
 //
 // Terminology:
-//  - "incoming" means calls *to* a query operation
-//  - "outgoing" means calls *from" a query operation
+//   - "incoming" means calls *to* a query operation
+//   - "outgoing" means calls *from" a query operation
+//
 // The "incoming" [Require] is the one passed to a node's
 // own optimize/setApproach (called by its parent).
 // The "outgoing" Require is the one this node passes to its children's
@@ -225,6 +226,8 @@ type Query interface {
 
 var emptyKey = [][]string{{}}
 
+//-------------------------------------------------------------------
+
 // queryBase is embedded by almost all Query types
 type queryBase struct {
 	// header must be set by constructors and setApproach.
@@ -332,13 +335,20 @@ func (*queryBase) knowExactNrows() bool {
 	return false
 }
 
-// Mode is the transaction context - cursor, read, or update.
-// It affects the use of temporary indexes.
+//-------------------------------------------------------------------
+
+// Mode is the query execution context.
+// It affects the use of temporary indexes — 
+// they are only valid within a single transaction, 
+// so they are disabled for CursorMode.
 type Mode int
 
 const (
-	CursorMode Mode = iota
+	// CursorMode is used for cursor queries that span multiple transactions
+	CursorMode Mode = iota + 1
+	// ReadMode is used for read-only queries within a single transaction
 	ReadMode
+	// UpdateMode is used for updates within a single transaction
 	UpdateMode
 )
 
@@ -448,8 +458,6 @@ const outOfOrder = 10
 const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 
 //-------------------------------------------------------------------
-// new version of Optimize using Require (not used yet)
-// initially duplicates the existing one, will eventually replace it
 
 func Optimize(q Query, mode Mode, req Require) (fixcost, varcost Cost) {
 	fixcost, varcost, _ = optimize(q, mode, req)
