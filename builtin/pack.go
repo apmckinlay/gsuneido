@@ -19,7 +19,7 @@ func pack(arg Value) Value {
 	return SuStr(PackValue(arg))
 }
 
-var _ = builtin(unpack, "(string) :unknown")
+var _ = builtin(unpack, "(string :string) :unknown")
 
 func unpack(arg Value) Value {
 	defer func() {

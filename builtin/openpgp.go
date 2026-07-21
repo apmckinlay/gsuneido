@@ -41,7 +41,7 @@ func (*suOpenPGP) Lookup(_ *Thread, method string) Value {
 var openpgpMethods = methods("opgp")
 
 var _ = staticMethod(opgp_SymmetricEncrypt,
-	"(passphrase, source, toFile = false) :string|void")
+	"(passphrase :string, source :string, toFile = false) :string|void")
 
 func opgp_SymmetricEncrypt(passphrase, source, toFile Value) Value {
 	if toFile == False {
@@ -51,7 +51,7 @@ func opgp_SymmetricEncrypt(passphrase, source, toFile Value) Value {
 }
 
 var _ = staticMethod(opgp_SymmetricDecrypt,
-	"(passphrase, source, toFile = false) :string|void")
+	"(passphrase, source :string, toFile = false) :string|void")
 
 func opgp_SymmetricDecrypt(passphrase, source, toFile Value) Value {
 	if toFile == False {
@@ -61,7 +61,7 @@ func opgp_SymmetricDecrypt(passphrase, source, toFile Value) Value {
 }
 
 var _ = staticMethod(opgp_PublicEncrypt,
-	"(publicKey, source, toFile = false) :string|void")
+	"(publicKey :string, source :string, toFile = false) :string|void")
 
 func opgp_PublicEncrypt(publicKey, source, toFile Value) Value {
 	if toFile == False {
@@ -71,7 +71,7 @@ func opgp_PublicEncrypt(publicKey, source, toFile Value) Value {
 }
 
 var _ = staticMethod(opgp_PrivateDecrypt,
-	"(privateKey, passphrase, source, toFile = false) :string|void")
+	"(privateKey :string, passphrase :string, source :string, toFile = false) :string|void")
 
 func opgp_PrivateDecrypt(privateKey, passphrase, source, toFile Value) Value {
 	kp := keyPair{privateKey: ToStr(privateKey), passphrase: ToStr(passphrase)}
@@ -86,7 +86,7 @@ type keyPair struct {
 	passphrase string
 }
 
-var _ = staticMethod(opgp_KeyGen, "(name, email, passphrase) :object")
+var _ = staticMethod(opgp_KeyGen, "(name :string, email :string, passphrase :string) :object")
 
 func opgp_KeyGen(name, email, passphrase Value) Value {
 	const rsaBits = 2048
@@ -100,7 +100,7 @@ func opgp_KeyGen(name, email, passphrase Value) Value {
 	return ob
 }
 
-var _ = staticMethod(opgp_KeyId, "(key) :string")
+var _ = staticMethod(opgp_KeyId, "(key :string) :string")
 
 func opgp_KeyId(key Value) Value {
 	entity, err := openpgputil.ReadArmoredEntity(ToStr(key))
@@ -108,7 +108,7 @@ func opgp_KeyId(key Value) Value {
 	return SuStr(openpgputil.KeyIDHex(entity))
 }
 
-var _ = staticMethod(opgp_KeyEntity, "(key) :false|string")
+var _ = staticMethod(opgp_KeyEntity, "(key :string) :false|string")
 
 func opgp_KeyEntity(key Value) Value {
 	entity, err := openpgputil.ReadArmoredEntity(ToStr(key))

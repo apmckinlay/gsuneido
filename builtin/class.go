@@ -34,7 +34,7 @@ func class_BaseQ(th *Thread, this Value, args []Value) Value {
 		}))
 }
 
-var _ = method(class_MethodQ, "(string) :boolean")
+var _ = method(class_MethodQ, "(string :string) :boolean")
 
 func class_MethodQ(th *Thread, this Value, args []Value) Value {
 	m := ToStr(args[0])
@@ -48,7 +48,7 @@ func class_MethodQ(th *Thread, this Value, args []Value) Value {
 	}))
 }
 
-var _ = method(class_MethodClass, "(string) :false|unknown")
+var _ = method(class_MethodClass, "(string :string) :false|unknown")
 
 func class_MethodClass(th *Thread, this Value, args []Value) Value {
 	m := ToStr(args[0])
@@ -68,7 +68,7 @@ func class_ReadonlyQ(this Value) Value {
 	return True
 }
 
-var _ = method(class_StartCoverage, "(count = false) :void")
+var _ = method(class_StartCoverage, "(count :boolean = false) :void")
 
 func class_StartCoverage(this, a Value) Value {
 	if !options.Coverage.Load() {
