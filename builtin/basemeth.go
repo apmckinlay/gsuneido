@@ -49,7 +49,7 @@ func base_GetDefault(th *Thread, this Value, args []Value) Value {
 	return args[1]
 }
 
-var _ = method(base_MemberQ, "(string) :boolean")
+var _ = method(base_MemberQ, "(string :string) :boolean")
 
 func base_MemberQ(th *Thread, this Value, arg []Value) Value {
 	m := ToStr(arg[0])

@@ -265,7 +265,7 @@ func ob_Set_readonly(this Value) Value {
 	return this
 }
 
-var _ = method(ob_Size, "(list=false,named=false) :number")
+var _ = method(ob_Size, "(list :boolean =false,named :boolean =false) :number")
 
 func ob_Size(this, arg1, arg2 Value) Value {
 	list := ToBool(arg1)

@@ -48,7 +48,7 @@ func (suSha1) Lookup(_ *Thread, method string) Value {
 
 var sha1Methods = methods("Sha1")
 
-var _ = method(Sha1_Update, "(string) :unknown")
+var _ = method(Sha1_Update, "(string :string) :unknown")
 
 func Sha1_Update(this, arg Value) Value {
 	io.WriteString(this.(suSha1).hash, ToStr(arg))

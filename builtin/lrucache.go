@@ -14,7 +14,7 @@ type suLruCacheGlobal struct {
 }
 
 func init() {
-	ps := params("(getfn, size=10, okForResetAll?=true)")
+	ps := params("(getfn, size=10, okForResetAll? :boolean =true)")
 	Global.Builtin("LruCache", &suLruCacheGlobal{
 		SuBuiltin{Fn: lruCacheCallClass,
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}})

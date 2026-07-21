@@ -8,7 +8,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(QueryScanner, "(string) :unknown")
+var _ = builtin(QueryScanner, "(string :string) :unknown")
 
 func QueryScanner(arg Value) Value {
 	return &suScanner{name: "QueryScanner",

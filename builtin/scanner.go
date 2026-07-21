@@ -18,7 +18,7 @@ type suScanner struct {
 	MayLock
 }
 
-var _ = builtin(Scanner, "(string) :unknown")
+var _ = builtin(Scanner, "(string :string) :unknown")
 
 func Scanner(arg Value) Value {
 	return &suScanner{lxr: *lexer.NewLexer(ToStr(arg)), name: "Scanner"}

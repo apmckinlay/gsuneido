@@ -72,7 +72,7 @@ func piper_Close(this Value) Value {
 
 var suPipeWriterMethods = methods("pipew")
 
-var _ = method(pipew_Write, "(s) :void")
+var _ = method(pipew_Write, "(s :string) :void")
 
 func pipew_Write(this Value, a Value) Value {
 	wr := this.(*suPipeWriter).wr

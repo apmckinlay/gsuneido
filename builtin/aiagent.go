@@ -19,7 +19,7 @@ type suAgent struct {
 	callback Value
 }
 
-var _ = builtin(AiAgent, "(baseURL, apiKey, model, callback, prompt = '') :unknown")
+var _ = builtin(AiAgent, "(baseURL :string, apiKey :string, model :string, callback, prompt :string = '') :unknown")
 
 func AiAgent(th *Thread, args []Value) Value {
 	baseURL := ToStr(args[0])
@@ -94,14 +94,14 @@ func outputCallback(th *Thread, callback Value) func(what, data string, approval
 var agentMethods = methods("agent")
 var toolApprovalMethods = methods("toolapproval")
 
-var _ = method(toolapproval_Allow, "(text = '') :void")
+var _ = method(toolapproval_Allow, "(text :string = '') :void")
 
 func toolapproval_Allow(this Value, text Value) Value {
 	this.(*suToolApproval).approval.Allow(ToStr(text))
 	return nil
 }
 
-var _ = method(toolapproval_Deny, "(text = '') :void")
+var _ = method(toolapproval_Deny, "(text :string = '') :void")
 
 func toolapproval_Deny(this Value, text Value) Value {
 	this.(*suToolApproval).approval.Deny(ToStr(text))
@@ -120,7 +120,7 @@ func toolapproval_After(this Value) Value {
 	return SuStr(this.(*suToolApproval).approval.After)
 }
 
-var _ = method(agent_Input, "(input) :void")
+var _ = method(agent_Input, "(input :string) :void")
 
 func agent_Input(this, input Value) Value {
 	this.(*suAgent).agent.Input(ToStr(input))
@@ -134,7 +134,7 @@ func agent_Interrupt(this Value) Value {
 	return nil
 }
 
-var _ = method(agent_SetModel, "(model) :void")
+var _ = method(agent_SetModel, "(model :string) :void")
 
 func agent_SetModel(this, model Value) Value {
 	this.(*suAgent).agent.SetModel(ToStr(model))
@@ -148,7 +148,7 @@ func agent_ClearHistory(this Value) Value {
 	return nil
 }
 
-var _ = method(agent_LoadConversation, "(filename) :true")
+var _ = method(agent_LoadConversation, "(filename :string) :true")
 
 func agent_LoadConversation(th *Thread, this Value, args []Value) Value {
 	a := this.(*suAgent)

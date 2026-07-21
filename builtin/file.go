@@ -38,7 +38,7 @@ type suFile struct {
 var nFile atomic.Int32
 var _ = AddInfo("builtin.nFile", &nFile)
 
-var _ = builtin(File, "(filename, mode='r', block=false) :unknown")
+var _ = builtin(File, "(filename :string, mode :string ='r', block=false) :unknown")
 
 func File(th *Thread, args []Value) Value {
 	name := ToStr(args[0])
@@ -210,7 +210,7 @@ func file_Readline(this Value) Value {
 	return val
 }
 
-var _ = method(file_Seek, "(offset, origin='set') :void")
+var _ = method(file_Seek, "(offset, origin :string ='set') :void")
 
 func file_Seek(this, arg1, arg2 Value) Value {
 	sf := sfOpen(this)

@@ -198,7 +198,7 @@ func httpEnv_WriteHeader(this Value, a, b Value) Value {
 	return nil
 }
 
-var _ = method(httpEnv_Write, "(s) :void")
+var _ = method(httpEnv_Write, "(s :string) :void")
 
 func httpEnv_Write(this Value, a Value) Value {
 	e := this.(*suHttpEnv)

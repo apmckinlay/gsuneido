@@ -123,7 +123,7 @@ func query_Prev(th *Thread, this Value, _ []Value) Value {
 	return this.(*SuQuery).GetRec(th, Prev)
 }
 
-var _ = method(query_Output, "(record) :void")
+var _ = method(query_Output, "(record :object) :void")
 
 func query_Output(th *Thread, this Value, args []Value) Value {
 	trace.Dbms.Println("Query Output", this, args[0])
@@ -150,7 +150,7 @@ func query_RuleColumns(this Value) Value {
 	return this.(ISuQueryCursor).RuleColumns()
 }
 
-var _ = method(query_Strategy, "(formatted = false) :string")
+var _ = method(query_Strategy, "(formatted :boolean = false) :string")
 
 func query_Strategy(_ *Thread, this Value, args []Value) Value {
 	formatted := ToBool(args[0])
@@ -163,7 +163,7 @@ func query_Tree(this Value) Value {
 	return this.(ISuQueryCursor).Tree()
 }
 
-var _ = builtin(formatQuery, "(query) :string")
+var _ = builtin(formatQuery, "(query :string) :string")
 
 func formatQuery(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
@@ -198,21 +198,21 @@ func (*suQueryStatic) Lookup(th *Thread, method string) Value {
 
 var queryStaticMethods = methods("sqs")
 
-var _ = staticMethod(sqs_StripSort, "(query) :string")
+var _ = staticMethod(sqs_StripSort, "(query :string) :string")
 
 func sqs_StripSort(arg Value) Value {
 	query := ToStr(arg)
 	return SuStr(qry.StripSort(query))
 }
 
-var _ = staticMethod(sqs_GetSort, "(query) :string")
+var _ = staticMethod(sqs_GetSort, "(query :string) :string")
 
 func sqs_GetSort(arg Value) Value {
 	query := ToStr(arg)
 	return SuStr(qry.GetSort(query))
 }
 
-var _ = staticMethod(sqs_Parse, "(parse) :unknown")
+var _ = staticMethod(sqs_Parse, "(parse :string) :unknown")
 
 func sqs_Parse(th *Thread, args []Value) Value {
 	dbms, ok := th.Dbms().(*dbms.DbmsLocal)
