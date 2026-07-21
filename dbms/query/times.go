@@ -107,13 +107,19 @@ func reqsForTimes(src1, src2 Query, req Require) (Require, Require) {
 	if nrows1 == 0 {
 		frac2 = float32(1) / float32(max(1, nrows2))
 	} else {
+		// frac2 may be > 1 since we read source2 nrows1 times
 		frac2 = req.frac * float32(nrows1)
 	}
 	req1 := req
+	req2 := NoneReq(frac2)
+	if req.use == ReqUnique {
+		req1 = UniqueReq(set.Intersect(req.cols, src1.Columns()), req.nseeks)
+		req2 = UniqueReq(set.Intersect(req.cols, src2.Columns()), req.nseeks)
+	}
 	if nrows2 == 0 {
 		req1.frac = float32(1) / float32(max(1, nrows1))
 	}
-	return req1, NoneReq(frac2)
+	return req1, req2
 }
 
 func (t *Times) getNrows() (int, int) {
@@ -178,7 +184,16 @@ func (t *Times) Select(sels Sels) {
 
 func (t *Times) Lookup(th *Thread, sels Sels) Row {
 	t.nlooks++
-	return lookupViaSelectGet(t, th, sels)
+	sel1, sel2 := t.splitSelect(sels)
+	row1 := t.source1.Lookup(th, sel1)
+	if row1 == nil {
+		return nil
+	}
+	row2 := t.source2.Lookup(th, sel2)
+	if row2 == nil {
+		return nil
+	}
+	return JoinRows(row1, row2)
 }
 
 func (t *Times) Simple(th *Thread) []Row {
