@@ -312,8 +312,8 @@ func (*queryBase) knowExactNrows() bool {
 //-------------------------------------------------------------------
 
 // Mode is the query execution context.
-// It affects the use of temporary indexes — 
-// they are only valid within a single transaction, 
+// It affects the use of temporary indexes —
+// they are only valid within a single transaction,
 // so they are disabled for CursorMode.
 type Mode int
 
