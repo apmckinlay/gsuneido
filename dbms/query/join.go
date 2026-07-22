@@ -472,7 +472,7 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	if jn.joinType == many_to_one {
 		jn.lookupRow = jn.cachedLookup(th, sel2)
 	} else if jn.joinType == one_to_one {
-		jn.lookupRow = jn.source2.Lookup(th, sel2)
+		jn.lookupRow = lookup(jn.source2, th, sel2)
 	} else {
 		jn.source2.Select(sel2)
 	}
@@ -538,7 +538,7 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	if jn.joinType == many_to_one {
 		row2 = jn.cachedLookup(th, sel2)
 	} else if jn.joinType == one_to_one {
-		row2 = jn.source2.Lookup(th, sel2)
+		row2 = lookup(jn.source2, th, sel2)
 	} else {
 		jn.source2.Select(sel2)
 		defer jn.Select(nil)
@@ -788,8 +788,10 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 				return nil
 			}
 			sels := lj.projectRow1(th, lj.row1)
-			if lj.joinType.toOne() {
+			if lj.joinType == many_to_one {
 				lj.lookupRow = lj.cachedLookup(th, sels)
+			} else if lj.joinType == one_to_one {
+				lj.lookupRow = lookup(lj.source2, th, sels)
 			} else {
 				lj.source2.Select(sels)
 			}
@@ -854,8 +856,10 @@ func (lj *LeftJoin) Lookup(th *Thread, sels Sels) Row {
 	}
 	var row2 Row
 	sel := lj.projectRow1(th, row1)
-	if lj.joinType.toOne() {
+	if lj.joinType == many_to_one {
 		row2 = lj.cachedLookup(th, sel)
+	} else if lj.joinType == one_to_one {
+		row2 = lookup(lj.source2, th, sel)
 	} else {
 		lj.source2.Select(sel)
 		row2 = lj.source2.Get(th, Next)

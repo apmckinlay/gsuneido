@@ -942,7 +942,7 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 		}
 	}
 
-	row := w.source.Lookup(th, slc.With(isels, residual...))
+	row := lookup(w.source, th, slc.With(isels, residual...))
 	if !w.filter(th, row) {
 		row = nil
 	}

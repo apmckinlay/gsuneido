@@ -92,15 +92,15 @@ func TestLeftJoinCacheCounters(t *testing.T) {
 	baseP := leftJoinCacheProbes.Load()
 	baseM := leftJoinCacheMisses.Load()
 
-	// Schema and data: 1:1 (or n:1) so LeftJoin uses cachedLookup path
-	doAdmin(db, "create t1 (a) key(a)")
-	act(db, "insert { a: '1' } into t1")
-	act(db, "insert { a: '2' } into t1")
-	act(db, "insert { a: '3' } into t1")
-
-	doAdmin(db, "create t2 (a, b) key(a)")
-	act(db, "insert { a: '1', b: 'x' } into t2")
-	act(db, "insert { a: '2', b: 'y' } into t2")
+	// Schema and data: n:1 so LeftJoin uses cachedLookup path
+	doAdmin(db, "create t1 (a, b) key(a, b)")
+	act(db, "insert { a: '1', b: 'x' } into t1")
+	act(db, "insert { a: '2', b: 'y' } into t1")
+	act(db, "insert { a: '3', b: 'z' } into t1")
+	
+	doAdmin(db, "create t2 (a) key(a)")
+	act(db, "insert { a: '1' } into t2")
+	act(db, "insert { a: '2' } into t2")
 	// leave a='3' missing to exercise left side with no match
 
 	_ = queryAll(db, "t1 leftjoin t2")
@@ -110,8 +110,8 @@ func TestLeftJoinCacheCounters(t *testing.T) {
 
 	// Expect at least 3 probes (one per left row) and >=2 misses (new keys)
 	if afterP-baseP < 3 || afterM-baseM < 2 {
-		t.Fatalf("leftjoin counters too small: probes %d->%d misses %d->%d",
-			baseP, afterP, baseM, afterM)
+		t.Fatalf("leftjoin counters too small: probes %d misses->%d",
+			afterP - baseP, afterM - baseM)
 	}
 }
 

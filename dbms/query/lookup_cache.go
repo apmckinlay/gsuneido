@@ -97,11 +97,11 @@ func (lc *lookupCache) Lookup(th *Thread, q Query, sels Sels, st *SuTran) Row {
 			if lc.misses != nil {
 				lc.misses.Add(1)
 			}
-			return q.Lookup(th, Sels(k))
+			return lookup(q, th, Sels(k))
 		})
 	}
 bypass:
-	return q.Lookup(th, sels)
+	return lookup(q, th, sels)
 }
 
 // evaluatePerformance uses cache stats since Reset (hits and misses).

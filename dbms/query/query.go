@@ -724,6 +724,10 @@ func lookupViaSelectGet(q Query, th *Thread, sels Sels) Row {
 	return GetNext1(q, th, sels)
 }
 
+func lookup(q Query, th *Thread, sels Sels) Row {
+	return q.Lookup(th, sels)
+}
+
 // Query1 -----------------------------------------------------------
 
 type Query1 struct {
