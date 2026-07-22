@@ -84,12 +84,16 @@ func (c *Compatible) source2Has(th *Thread, row Row) bool {
 			return false
 		}
 	}
-	sels := make(Sels, len(c.keyIndex))
-	for i, col := range c.keyIndex {
-		sels[i].col = col
-		sels[i].val = row.GetRawVal(hdr1, col, th, c.st)
-	}
+	sels := makeSels(hdr1, row, c.keyIndex, th, c.st)
 	return c.lookupCache.Lookup(th, c.source2, sels, c.st) != nil
+}
+
+func makeSels(hdr *Header, row Row, cols []string, th *Thread, st *SuTran) Sels {
+	sels := make(Sels, len(cols))
+	for i, col := range cols {
+		sels[i] = Sel{col: col, val: row.GetRawVal(hdr, col, th, st)}
+	}
+	return sels
 }
 
 func (c *Compatible) equal(th *Thread, row1, row2 Row) bool {

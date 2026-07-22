@@ -484,11 +484,7 @@ func (jb *joinBase) cachedLookup(th *Thread, sels Sels) Row {
 }
 
 func (jb *joinBase) projectRow1(th *Thread, row Row) Sels {
-	sels := make(Sels, len(jb.by))
-	for i, col := range jb.by {
-		sels[i] = Sel{col, row.GetRawVal(jb.source1.Header(), col, th, jb.st)}
-	}
-	return sels
+	return makeSels(jb.source1.Header(), row, jb.by, th, jb.st)
 }
 
 func (jn *Join) Select(sels Sels) {

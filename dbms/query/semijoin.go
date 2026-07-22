@@ -411,18 +411,11 @@ func (sj *SemiJoin) dedupRow(row2 Row) (Row, bool) {
 }
 
 func (sj *SemiJoin) projectRow2(th *Thread, row Row) Sels {
-	sels := make(Sels, len(sj.by))
-	for i, col := range sj.by {
-		sels[i] = Sel{col, row.GetRawVal(sj.source2.Header(), col, th, sj.st)}
-	}
-	return sels
+	return makeSels(sj.source2.Header(), row, sj.by, th, sj.st)
 }
 
 func (sj *SemiJoin) source2Has(th *Thread, row Row, dir Dir) bool {
-	sels := make(Sels, len(sj.by))
-	for i, col := range sj.by {
-		sels[i] = Sel{col, row.GetRawVal(sj.source1.Header(), col, th, sj.st)}
-	}
+	sels := makeSels(sj.source1.Header(), row, sj.by, th, sj.st)
 	if sj.joinType == one_to_one {
 		return sj.source2.Lookup(th, sels) != nil
 	} else if sj.joinType == many_to_one {
