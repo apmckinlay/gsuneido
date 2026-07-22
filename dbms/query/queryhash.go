@@ -42,6 +42,7 @@ func NewQueryHasher(hdr *core.Header) *QueryHash {
 }
 
 func (qh *QueryHash) CheckDups() *QueryHash {
+	// Note: hash and equal do NOT evaluate rules
 	hfn := func(row rowHash) uint64 { return row.hash }
 	eqfn := func(x, y rowHash) bool {
 		return x.hash == y.hash && equalRow(x.row, y.row, qh.Hdr, qh.Fields)
@@ -53,7 +54,7 @@ func (qh *QueryHash) CheckDups() *QueryHash {
 func (qh *QueryHash) Row(row core.Row) uint64 {
 	hash := uint64(17)
 	for _, fld := range qh.Fields {
-		s := row.GetRawVal(qh.Hdr, fld, nil, nil)
+		s := row.GetRaw(qh.Hdr, fld)
 		hash = hash*31 + hashPacked(s)
 	}
 	if qh.rows != nil {
