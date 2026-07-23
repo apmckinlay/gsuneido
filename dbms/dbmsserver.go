@@ -592,6 +592,7 @@ func (ss *serverSession) rowResult(tbl string, hdr *Header, sendHdr bool, row Ro
 }
 
 func rowToRecord(row Row, hdr *Header) (rec Record, fields []string) {
+	// this must match cmdHeader
 	if len(row) == 1 {
 		assert.That(len(hdr.Fields) == 1)
 		return maybeSqueeze(row[0].Record, hdr)
@@ -663,6 +664,7 @@ func cmdGetOne(ss *serverSession) {
 }
 
 func cmdHeader(ss *serverSession) {
+	// this must match rowToRecord
 	hdr := ss.getQorC().Header()
 	ss.PutBool(true).PutStrs(hdr.Schema())
 }

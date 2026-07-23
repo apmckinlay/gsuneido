@@ -462,7 +462,7 @@ func (w *Where) lookup1() (string, Value) {
 }
 
 func (w *Where) leftJoinToJoin(lj *LeftJoin) bool {
-	flds := lj.source2.Header().GetFields()
+	flds := lj.source2.Header().Physical()
 	flds = set.Difference(flds, lj.by)
 	for _, e := range w.expr.Exprs {
 		if set.Subset(flds, e.Columns()) && !ast.CanBeEmpty(e) {
