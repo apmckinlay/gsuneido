@@ -52,7 +52,7 @@ func (use Use) String() string {
 	panic("invalid Use")
 }
 
-// Require specifies what a query node needs from its children 
+// Require specifies what a query node needs from its children
 // during optimization.
 // It bottoms out at Table.optimize
 // which picks the lowest-cost index satisfying the Require.
