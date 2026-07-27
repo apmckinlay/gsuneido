@@ -718,10 +718,12 @@ func (su *Summarize) Simple(th *Thread) []Row {
 	}
 	groups := make(map[string]*group)
 	for _, row := range srcRows {
-		key := ""
+		var sb strings.Builder
 		for _, col := range su.by {
-			key += row.GetRaw(hdr, col) + "\x00"
+			sb.WriteString(row.GetRaw(hdr, col))
+			sb.WriteString("\x00")
 		}
+		key := sb.String()
 		g, ok := groups[key]
 		if !ok {
 			g = &group{row: row, sums: su.newSums()}
