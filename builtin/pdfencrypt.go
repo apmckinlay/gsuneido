@@ -47,7 +47,7 @@ var pe_members = methodList(pdfEncryptMethods)
 
 // The value -1028 allows a user to print the document and use screen readers
 // while strictly prohibiting them from copying text, editing content, or modifying the page structure.
-var _ = staticMethod(pe_KeyEntries, "(userPass, ownerPass, permissions = -1028) :object")
+var _ = staticMethod(pe_KeyEntries, "(userPass :string, ownerPass :string, permissions = -1028) :object")
 
 // pe_KeyEntries generates PDF encryption dictionary entries for AES-256 (Revision: 5, Version: 5, AESV3)
 // Based on PDF 1.7 Extension Level 3 and ISO 32000-1 Algorithm 3.2a
@@ -194,7 +194,7 @@ func aesEncryptCBCZeroIV(data, key []byte) []byte {
 	return encrypted
 }
 
-var _ = staticMethod(pe_Encrypt, "(data, encryptionKey) :string")
+var _ = staticMethod(pe_Encrypt, "(data :string, encryptionKey :string) :string")
 
 func pe_Encrypt(data, encryptionKey Value) Value {
 	dataBytes, err := hex.DecodeString(ToStr(data))

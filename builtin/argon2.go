@@ -9,7 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(Argon2id, "(password, salt) :string")
+var _ = builtin(Argon2id, "(password :string, salt :string) :string")
 
 func Argon2id(a, b Value) Value {
 	password := ToStr(a)

@@ -30,7 +30,7 @@ func record_Clear(this Value) Value {
 	return nil
 }
 
-var _ = method(record_GetDeps, "(field) :string")
+var _ = method(record_GetDeps, "(field :string) :string")
 
 func record_GetDeps(this, arg Value) Value {
 	return this.(*SuRecord).GetDeps(ToStr(arg))
@@ -98,7 +98,7 @@ func record_RemoveObserver(this, arg Value) Value {
 	return SuBool(this.(*SuRecord).RemoveObserver(arg))
 }
 
-var _ = method(record_SetDeps, "(field,deps) :void")
+var _ = method(record_SetDeps, "(field :string,deps :string) :void")
 
 func record_SetDeps(this, arg1, arg2 Value) Value {
 	this.(*SuRecord).SetDeps(ToStr(arg1), ToStr(arg2))

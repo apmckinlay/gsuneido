@@ -25,7 +25,7 @@ type suRunPiped struct {
 var nRunPiped atomic.Int32
 var _ = AddInfo("builtin.nRunPiped", &nRunPiped)
 
-var _ = builtin(RunPiped, "(command, block=false) :unknown")
+var _ = builtin(RunPiped, "(command :string, block=false) :unknown")
 
 func RunPiped(th *Thread, args []Value) Value {
 	guardSandbox("RunPiped")

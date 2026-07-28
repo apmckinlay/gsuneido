@@ -12,7 +12,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
-var _ = builtin(System, "(command) :number")
+var _ = builtin(System, "(command :string) :number")
 
 func System(th *Thread, args []Value) Value {
 	guardSandbox("System")

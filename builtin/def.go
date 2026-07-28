@@ -10,7 +10,7 @@ import (
 
 // DefDef must be called to make Def available
 func DefDef() {
-	builtin(Def, "(name, definition)")
+	builtin(Def, "(name :string, definition)")
 }
 
 func Def(nameVal, val Value) Value {

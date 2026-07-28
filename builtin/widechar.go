@@ -11,7 +11,7 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
-var _ = builtin(WideCharToMultiByte, "(string, cp = 1252) :string")
+var _ = builtin(WideCharToMultiByte, "(string :string, cp = 1252) :string")
 
 func WideCharToMultiByte(s, c Value) Value {
 	// UTF-16 to 1252 or UTF-8
@@ -33,7 +33,7 @@ func WideCharToMultiByte(s, c Value) Value {
 	return SuStr(s1252)
 }
 
-var _ = builtin(MultiByteToWideChar, "(string, cp = 1252) :string")
+var _ = builtin(MultiByteToWideChar, "(string :string, cp = 1252) :string")
 
 func MultiByteToWideChar(str, cp Value) Value {
 	// 1252 or UTF-8 to UTF-16

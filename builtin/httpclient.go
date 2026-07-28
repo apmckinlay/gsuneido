@@ -19,7 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-var _ = builtin(HttpClient2, `(method, url,
+var _ = builtin(HttpClient2, `(method :string, url :string,
 	content = '', header = #(), timeout = 60, block = false) :object|void`)
 
 // HttpClient2 is a wrapper around Go net/http
@@ -59,7 +59,7 @@ func HttpClient2(th *Thread, args []Value) Value {
 	}
 }
 
-var _ = builtin(HttpsClient, `(method, url,
+var _ = builtin(HttpsClient, `(method :string, url :string,
 	content = '', header = #(), timeout = 60, block = false) :void|object`)
 
 // HttpsClient makes an HTTPS request embedded cert

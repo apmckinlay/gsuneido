@@ -38,7 +38,7 @@ func initRand(th *Thread) {
 
 var randomMethods = methods("rnd")
 
-var _ = staticMethod(rnd_Seed, "(seed) :void")
+var _ = staticMethod(rnd_Seed, "(seed :number) :void")
 
 func rnd_Seed(th *Thread, args []Value) Value {
 	seed := uint64(IfInt(args[0]))

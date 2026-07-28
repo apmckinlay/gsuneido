@@ -109,7 +109,7 @@ func seq_Iter(this Value) Value {
 	return SuIter{Iter: iter}
 }
 
-var _ = method(seq_Join, "(separator='') :string")
+var _ = method(seq_Join, "(separator :string ='') :string")
 
 func seq_Join(this, arg Value) Value {
 	iter := this.(*SuSequence).Iter()

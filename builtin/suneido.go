@@ -19,7 +19,7 @@ import (
 
 var _ = exportMethods(&SuneidoObjectMethods, "suneido")
 
-var _ = staticMethod(suneido_Compile, "(source, errob = false) :unknown")
+var _ = staticMethod(suneido_Compile, "(source :string, errob = false) :unknown")
 
 func suneido_Compile(th *Thread, args []Value) Value {
 	src := ToStr(args[0])
@@ -34,7 +34,7 @@ func suneido_Compile(th *Thread, args []Value) Value {
 	return val
 }
 
-var _ = staticMethod(suneido_Parse, "(source) :unknown")
+var _ = staticMethod(suneido_Parse, "(source :string) :unknown")
 
 func suneido_Parse(th *Thread, args []Value) Value {
 	src := ToStr(args[0])
@@ -46,7 +46,7 @@ func suneido_Parse(th *Thread, args []Value) Value {
 	return ast
 }
 
-var _ = staticMethod(suneido_Regex, "(pattern) :unknown")
+var _ = staticMethod(suneido_Regex, "(pattern :string) :unknown")
 
 func suneido_Regex(arg Value) Value {
 	return SuRegex{Pat: regex.Compile(ToStr(arg))}
@@ -106,14 +106,14 @@ func suneido_RuntimeError() Value {
 	return Nil[123]
 }
 
-var _ = staticMethod(suneido_StrictCompare, "(bool) :void")
+var _ = staticMethod(suneido_StrictCompare, "(bool :boolean) :void")
 
 func suneido_StrictCompare(x Value) Value {
 	options.StrictCompare = ToBool(x)
 	return nil
 }
 
-var _ = staticMethod(suneido_StrictCompareDb, "(bool) :void")
+var _ = staticMethod(suneido_StrictCompareDb, "(bool :boolean) :void")
 
 func suneido_StrictCompareDb(x Value) Value {
 	options.StrictCompareDb = ToBool(x)
@@ -145,7 +145,7 @@ func suneido_Info(x Value) Value {
 	return InfoStr(ToStr(x))
 }
 
-var _ = method(suneido_Members, "(all = false) :object")
+var _ = method(suneido_Members, "(all :boolean = false) :object")
 
 func suneido_Members(this Value, all Value) Value {
 	if !ToBool(all) {

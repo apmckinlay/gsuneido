@@ -20,7 +20,7 @@ type suDatabaseGlobal struct {
 func init() {
 	Global.Builtin("Database", &suDatabaseGlobal{
 		SuBuiltin{Fn: Database,
-			BuiltinParams: BuiltinParams{ParamSpec: params("(string)")}}})
+			BuiltinParams: BuiltinParams{ParamSpec: params("(string :string)")}}})
 }
 
 func Database(th *Thread, args []Value) Value {
@@ -30,7 +30,7 @@ func Database(th *Thread, args []Value) Value {
 
 var databaseMethods = methods("db")
 
-var _ = staticMethod(db_Auth, "(data) :boolean")
+var _ = staticMethod(db_Auth, "(data :string) :boolean")
 
 func db_Auth(th *Thread, args []Value) Value {
 	return SuBool(th.Dbms().Auth(th, ToStr(args[0])))
@@ -66,7 +66,7 @@ func db_Cursors(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Cursors())
 }
 
-var _ = staticMethod(db_Dump, "(table = '', to = '', publicKey = '') :string")
+var _ = staticMethod(db_Dump, "(table :string = '', to :string = '', publicKey :string = '') :string")
 
 func db_Dump(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
@@ -93,13 +93,13 @@ func db_Info(th *Thread, args []Value) Value {
 	return th.Dbms().Info()
 }
 
-var _ = staticMethod(db_Kill, "(sessionId) :number")
+var _ = staticMethod(db_Kill, "(sessionId :string) :number")
 
 func db_Kill(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Kill(ToStr(args[0])))
 }
 
-var _ = staticMethod(db_Load, "(table, from = '', privateKey = '', passphrase = '') :number")
+var _ = staticMethod(db_Load, "(table :string, from :string = '', privateKey :string = '', passphrase :string = '') :number")
 
 func db_Load(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
@@ -115,13 +115,13 @@ func db_Nonce(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Nonce(th))
 }
 
-var _ = staticMethod(db_Schema, "(table) :string")
+var _ = staticMethod(db_Schema, "(table :string) :string")
 
 func db_Schema(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Schema(ToStr(args[0])))
 }
 
-var _ = staticMethod(db_SessionId, "(id = '') :string")
+var _ = staticMethod(db_SessionId, "(id :string = '') :string")
 
 func db_SessionId(th *Thread, args []Value) Value {
 	return SuStr(th.SessionId(ToStr(args[0])))
@@ -154,7 +154,7 @@ func db_CorruptedQ(th *Thread, args []Value) Value {
 	return th.Dbms().Exec(th, SuObjectOf(SuStr("Database.Corrupted?")))
 }
 
-var _ = staticMethod(db_Top10, "(table, column) :object")
+var _ = staticMethod(db_Top10, "(table :string, column :string) :object")
 
 func db_Top10(th *Thread, args []Value) Value {
 	table := ToStr(args[0])
@@ -182,7 +182,7 @@ func db_Top10(th *Thread, args []Value) Value {
 	return result
 }
 
-var _ = staticMethod(db_Distinct, "(table) :object")
+var _ = staticMethod(db_Distinct, "(table :string) :object")
 
 func db_Distinct(th *Thread, args []Value) Value {
 	table := ToStr(args[0])
@@ -247,7 +247,7 @@ func (d *suDatabaseGlobal) String() string {
 	return "Database /* builtin class */"
 }
 
-var _ = builtin(DoWithoutTriggers, "(tables, block) :unknown")
+var _ = builtin(DoWithoutTriggers, "(tables :object, block) :unknown")
 
 func DoWithoutTriggers(th *Thread, args []Value) Value {
 	dbms := th.Dbms()

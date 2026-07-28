@@ -48,7 +48,7 @@ func (suAdler32) Lookup(_ *Thread, method string) Value {
 
 var adler32Methods = methods("adler32")
 
-var _ = method(adler32_Update, "(string) :unknown")
+var _ = method(adler32_Update, "(string :string) :unknown")
 
 func adler32_Update(this, arg Value) Value {
 	io.WriteString(this.(suAdler32).hash, ToStr(arg))

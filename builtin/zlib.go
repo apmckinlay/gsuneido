@@ -34,7 +34,7 @@ func (*suZlib) Lookup(_ *Thread, method string) Value {
 
 var zlibMethods = methods("zlib")
 
-var _ = staticMethod(zlib_Compress, "(string) :string")
+var _ = staticMethod(zlib_Compress, "(string :string) :string")
 
 func zlib_Compress(arg Value) Value {
 	s := ToStr(arg)
@@ -52,7 +52,7 @@ func zlib_Compress(arg Value) Value {
 	return SuStr(b.String())
 }
 
-var _ = staticMethod(zlib_Uncompress, "(string) :string")
+var _ = staticMethod(zlib_Uncompress, "(string :string) :string")
 
 func zlib_Uncompress(arg Value) Value {
 	data := ToStr(arg)

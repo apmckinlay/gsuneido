@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 )
 
-var _ = builtin(CoverageEnable, "(enable) :void")
+var _ = builtin(CoverageEnable, "(enable :boolean) :void")
 
 func CoverageEnable(a Value) Value {
 	options.Coverage.Store(ToBool(a))
@@ -27,7 +27,7 @@ func func_Disasm(this, a Value) Value {
 	return SuStr(DisasmMixed(fn, ToStr(a)))
 }
 
-var _ = method(func_StartCoverage, "(count = false) :void")
+var _ = method(func_StartCoverage, "(count :boolean = false) :void")
 
 func func_StartCoverage(this, a Value) Value {
 	if !options.Coverage.Load() {
