@@ -51,7 +51,7 @@ func opgp_SymmetricEncrypt(passphrase, source, toFile Value) Value {
 }
 
 var _ = staticMethod(opgp_SymmetricDecrypt,
-	"(passphrase, source :string, toFile = false) :string|void")
+	"(passphrase :string, source :string, toFile = false) :string|void")
 
 func opgp_SymmetricDecrypt(passphrase, source, toFile Value) Value {
 	if toFile == False {
