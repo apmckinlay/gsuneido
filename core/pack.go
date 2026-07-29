@@ -38,7 +38,10 @@ const (
 	PackDate
 	PackObject
 	PackRecord
-	PackForward // for query extend
+	PackForward // lazy forward reference, used by query extend:
+	// an extend col = ident where ident is not a stored field is stored
+	// as this tag followed by the target name; GetVal/GetRawVal follow
+	// it on read to resolve the referenced column.
 )
 
 type packStack []Value
