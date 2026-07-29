@@ -4,6 +4,7 @@
 package query
 
 import (
+	"math/rand/v2"
 	"strings"
 	"testing"
 
@@ -11,8 +12,8 @@ import (
 )
 
 func TestBestUpdateRandom(t *testing.T) {
-	defer func() { randomBest = false }()
-	randomBest = true
+	defer func() { randomBest = nil }()
+	randomBest = rand.New(rand.NewPCG(1, 2))
 
 	// impossible candidates are always ignored
 	b := newBest[int]()
