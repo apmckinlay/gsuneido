@@ -285,7 +285,7 @@ func (e *Extend) extendRow(th *Thread, row Row) Record {
 
 // filter checks e.sels (from Select or Lookup splitSelect)
 // against the extend record and source row.
-// It tries a fast indexed read on physical cols first; 
+// It tries a fast indexed read on physical cols first;
 // if the col is non-physical or its value is a PackForward marker
 // it falls back to GetRawVal which resolves rules and follows forwards.
 func (e *Extend) filter(rec Record, th *Thread, row Row) bool {
