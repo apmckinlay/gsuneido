@@ -254,10 +254,10 @@ func (u *Union) optimize(mode Mode, req Require) (Cost, Cost, any) {
 
 func (u *Union) optLookup(mode Mode, req Require) (Cost, Cost, *unionApproach) {
 	// try forward versus reverse
-	fc, vc, ap := u.optLookup2(mode, req)
+	fc, vc, ap := u.optLookupDir(mode, req)
 
 	u.source1, u.source2 = u.source2, u.source1
-	fcRev, vcRev, appRev := u.optLookup2(mode, req)
+	fcRev, vcRev, appRev := u.optLookupDir(mode, req)
 	u.source1, u.source2 = u.source2, u.source1
 	fcRev += outOfOrder
 
@@ -268,7 +268,7 @@ func (u *Union) optLookup(mode Mode, req Require) (Cost, Cost, *unionApproach) {
 	return fc, vc, ap
 }
 
-func (u *Union) optLookup2(mode Mode, req Require) (Cost, Cost, *unionApproach) {
+func (u *Union) optLookupDir(mode Mode, req Require) (Cost, Cost, *unionApproach) {
 	nrows1, _ := u.source1.Nrows()
 	nseeks := req.SeekCount(nrows1)
 	req1 := req

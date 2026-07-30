@@ -145,8 +145,8 @@ func compatCopyFixed(fromFixed, toFixed Fixed, to Query, t QueryTran) Query {
 
 func (it *Intersect) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	assert.That(it.disjoint == "") // eliminated by Transform
-	fixcost1, varcost1, ap1 := it.cost2(mode, req, false)
-	fixcost2, varcost2, ap2 := it.cost2(mode, req, true)
+	fixcost1, varcost1, ap1 := it.optDir(mode, req, false)
+	fixcost2, varcost2, ap2 := it.optDir(mode, req, true)
 	fixcost2 += outOfOrder
 	if fixcost1+varcost1 < fixcost2+varcost2 {
 		return fixcost1, varcost1, ap1
@@ -154,7 +154,7 @@ func (it *Intersect) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	return fixcost2, varcost2, ap2
 }
 
-func (it *Intersect) cost2(mode Mode, req Require, reverse bool) (Cost, Cost, *intersectApproach) {
+func (it *Intersect) optDir(mode Mode, req Require, reverse bool) (Cost, Cost, *intersectApproach) {
 	// iterate source and lookup on source2
 	src1, src2 := it.source1, it.source2
 	if reverse {

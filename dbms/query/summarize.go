@@ -244,16 +244,16 @@ func (su *Summarize) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		Optimize(su.source, mode, NoneReq(0))
 		return 0, 1, &summarizeApproach{strat: sumTbl, req: NoneReq(0)}
 	}
-	seqFix, seqVar, seqApp := su.seqCost(mode, req)
-	idxFix, idxVar, idxApp := su.idxCost(mode)
-	mapFix, mapVar, mapApp := su.mapCost(mode, req)
+	seqFix, seqVar, seqApp := su.optSeq(mode, req)
+	idxFix, idxVar, idxApp := su.optIdx(mode)
+	mapFix, mapVar, mapApp := su.optMap(mode, req)
 	return min3(
 		seqFix, seqVar, seqApp,
 		idxFix, idxVar, idxApp,
 		mapFix, mapVar, mapApp)
 }
 
-func (su *Summarize) seqCost(mode Mode, req Require) (Cost, Cost, any) {
+func (su *Summarize) optSeq(mode Mode, req Require) (Cost, Cost, any) {
 	if len(su.by) == 0 {
 		fixcost, varcost := Optimize(su.source, mode, NoneReq(1))
 		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: NoneReq(1)}
@@ -330,7 +330,7 @@ func (su *Summarize) seqCost(mode Mode, req Require) (Cost, Cost, any) {
 	return impossible, impossible, nil
 }
 
-func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
+func (su *Summarize) optIdx(mode Mode) (Cost, Cost, any) {
 	if !su.minmax1() {
 		return impossible, impossible, nil
 	}
@@ -345,7 +345,7 @@ func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 		&summarizeApproach{strat: sumIdx, index: su.ons, req: srcReq}
 }
 
-func (su *Summarize) mapCost(mode Mode, req Require) (Cost, Cost, any) {
+func (su *Summarize) optMap(mode Mode, req Require) (Cost, Cost, any) {
 	nrows, _ := su.Nrows()
 	if req.use != ReqNone || su.hint == sumLarge ||
 		(nrows > mapThreshold && su.hint != sumSmall) {

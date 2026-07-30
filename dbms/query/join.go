@@ -304,15 +304,15 @@ func (jt joinType) reverse() joinType {
 	return jt
 }
 
-type joinCost2 struct {
+type joinCost struct {
 	req1, req2       Require
 	fixcost, varcost Cost
 }
 
 func (jn *Join) optimize(mode Mode, req Require) (Cost, Cost, any) {
-	fwd := joinopt2(jn.source1, jn.source2, jn.Nrows, jn.joinType,
+	fwd := jn.optDir(jn.source1, jn.source2, jn.Nrows, jn.joinType,
 		mode, req, jn.by)
-	rev := joinopt2(jn.source2, jn.source1, jn.Nrows, jn.joinType.reverse(),
+	rev := jn.optDir(jn.source2, jn.source1, jn.Nrows, jn.joinType.reverse(),
 		mode, req, jn.by)
 	rev.fixcost += outOfOrder + joinRev
 	if trace.JoinOpt.On() {
@@ -336,11 +336,13 @@ func (jn *Join) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	return fwd.fixcost, fwd.varcost, approach
 }
 
-func joinopt2(src1, src2 Query, nrows func() (int, int), jt joinType,
-	mode Mode, req Require, by []string) joinCost2 {
+// optDir returns the cost of one direction (forward or reverse).
+// It deliberately does not take the receiver to avoid getting direction wrong.
+func (*joinBase) optDir(src1, src2 Query, nrows func() (int, int), jt joinType,
+	mode Mode, req Require, by []string) joinCost {
 	fixcost1, varcost1 := Optimize(src1, mode, req)
 	if fixcost1+varcost1 >= impossible {
-		return joinCost2{fixcost: impossible}
+		return joinCost{fixcost: impossible}
 	}
 	nrows1, _ := src1.Nrows()
 	nrows2, _ := src2.Nrows()
@@ -357,9 +359,9 @@ func joinopt2(src1, src2 Query, nrows func() (int, int), jt joinType,
 	}
 	fixcost2, varcost2 := Optimize(src2, mode, req2)
 	if fixcost2+varcost2 >= impossible {
-		return joinCost2{fixcost: impossible}
+		return joinCost{fixcost: impossible}
 	}
-	return joinCost2{req1: req, req2: req2,
+	return joinCost{req1: req, req2: req2,
 		fixcost: fixcost1 + fixcost2,
 		varcost: varcost1 + varcost2,
 	}
@@ -712,7 +714,7 @@ func fixedConflict(fixed1, fixed2 Fixed) bool {
 }
 
 func (lj *LeftJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
-	jc := joinopt2(lj.source1, lj.source2, lj.Nrows, lj.joinType,
+	jc := lj.optDir(lj.source1, lj.source2, lj.Nrows, lj.joinType,
 		mode, req, lj.by)
 	if jc.fixcost == impossible {
 		return impossible, impossible, nil

@@ -150,15 +150,15 @@ func (sj *SemiJoin) Transform() Query {
 }
 
 func (sj *SemiJoin) optimize(mode Mode, req Require) (Cost, Cost, any) {
-	fwdFix, fwdVar, fwdApp := sj.optimizeForward(mode, req)
-	revFix, revVar, revApp := sj.optimizeReverse(mode, req)
+	fwdFix, fwdVar, fwdApp := sj.optForward(mode, req)
+	revFix, revVar, revApp := sj.optReverse(mode, req)
 	if revFix+revVar < fwdFix+fwdVar {
 		return revFix, revVar, revApp
 	}
 	return fwdFix, fwdVar, fwdApp
 }
 
-func (sj *SemiJoin) optimizeForward(mode Mode, req Require) (Cost, Cost, any) {
+func (sj *SemiJoin) optForward(mode Mode, req Require) (Cost, Cost, any) {
 	fixcost1, varcost1 := Optimize(sj.source1, mode, req)
 	nrows1, _ := sj.source1.Nrows()
 	nrows2, _ := sj.source2.Nrows()
@@ -181,7 +181,7 @@ func (sj *SemiJoin) optimizeForward(mode Mode, req Require) (Cost, Cost, any) {
 		&semiJoinApproach{req2: req2}
 }
 
-// optimizeReverse evaluates the cost of running the semijoin in "reverse" mode,
+// optReverse evaluates the cost of running the semijoin in "reverse" mode,
 // where source2 drives the iteration instead of source1. In this strategy:
 //   - Source2 is iterated (or seeked) according to the incoming request
 //   - For each source2 row, the "by" columns are projected and used to lookup
@@ -199,7 +199,7 @@ func (sj *SemiJoin) optimizeForward(mode Mode, req Require) (Cost, Cost, any) {
 // only once. This adds overhead proportional to the number of source2 rows
 // scanned, so reverse mode is only chosen when its total cost (including
 // deduplication) is lower than forward mode.
-func (sj *SemiJoin) optimizeReverse(mode Mode, req Require) (Cost, Cost, any) {
+func (sj *SemiJoin) optReverse(mode Mode, req Require) (Cost, Cost, any) {
 	nrows2, _ := sj.source2.Nrows()
 	fixcost2, varcost2 := Optimize(sj.source2, mode, req)
 	if fixcost2+varcost2 >= impossible {

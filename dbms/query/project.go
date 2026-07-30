@@ -456,15 +456,15 @@ func (p *Project) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		return fixcost, varcost, &projectApproach{strat: projCopy, req: req}
 	}
 	// non-unique: merge incoming req with own ReqGroup(p.columns)
-	seqFix, seqVar, seqApp := p.seqCost(mode, req)
-	mapFix, mapVar, mapApp := p.mapCost(mode, req)
+	seqFix, seqVar, seqApp := p.optSeq(mode, req)
+	mapFix, mapVar, mapApp := p.optMap(mode, req)
 	if seqFix+seqVar <= mapFix+mapVar {
 		return seqFix, seqVar, seqApp
 	}
 	return mapFix, mapVar, mapApp
 }
 
-func (p *Project) seqCost(mode Mode, req Require) (Cost, Cost, any) {
+func (p *Project) optSeq(mode Mode, req Require) (Cost, Cost, any) {
 	fixed := p.source.Fixed()
 	nColsUnfixed := countUnfixed(p.columns, fixed)
 	nrows, _ := p.Nrows()
@@ -528,10 +528,10 @@ func eitherSubset(x, y []string) bool {
 
 const mapCost = 20 // ???
 
-// mapCost estimates the cost of projMap.
+// optMap estimates the cost of projMap.
 // The map is built incrementally during iteration (not up front),
 // so the map build cost is added to varcost, not fixcost.
-func (p *Project) mapCost(mode Mode, req Require) (Cost, Cost, any) {
+func (p *Project) optMap(mode Mode, req Require) (Cost, Cost, any) {
 	nrows, _ := p.Nrows()
 	if mode != ReadMode || nrows > mapThreshold {
 		return impossible, impossible, nil
