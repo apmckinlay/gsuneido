@@ -798,6 +798,11 @@ func TestSplitFrac(t *testing.T) {
 	test(.8, true, false, true, ".5", "1", "1", false)
 }
 
+func sameFrac(x, y float64) bool {
+	const epsilon = 1e-9
+	return math.Abs(x-y) < epsilon
+}
+
 func TestAllSingleValuePrefix(t *testing.T) {
 	assert := assert.T(t).This
 

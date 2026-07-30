@@ -83,7 +83,7 @@ func fuzzProjectForCosting(ft *FT) Query {
 			continue // Transform would eliminate
 		}
 
-		if indexContainsKey(projCols, b.keys) == nil {
+		if !indexContainsKey(projCols, b.keys) {
 			if slices.ContainsFunc(b.keys,
 				func(key []string) bool { return !set.Disjoint(key, projCols) }) {
 				// can't alter key fields so we can't make groups duplicate
@@ -105,6 +105,18 @@ func fuzzProjectForCosting(ft *FT) Query {
 		src := b.finish()
 		return NewProject(src, projCols)
 	}
+}
+
+// indexContainsKey returns a key from keys if the index contains all fields
+// of that key, otherwise nil.
+// See also [hasKey]
+func indexContainsKey(index []string, keys [][]string) bool {
+	for _, key := range keys {
+		if set.Subset(index, key) {
+			return true
+		}
+	}
+	return false
 }
 
 func TestCosting_Summarize(t *testing.T) {

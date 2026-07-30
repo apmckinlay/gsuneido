@@ -408,8 +408,8 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 	return q
 }
 
-// SetupIdx is like Setup but specifies an index
-// e.g. to test Select or Lookup
+// SetupIdx is like Setup but specifies an index.
+// Used to test Select or Lookup
 func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
 	req := OrderReq(index, 1)
 	fixcost, varcost := Optimize(q, mode, req)

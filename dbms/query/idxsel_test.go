@@ -40,21 +40,6 @@ func TestPointRange(t *testing.T) {
 	assert.This(pr.String()).Is("<empty>")
 }
 
-func TestPointRangeIntersect(t *testing.T) {
-	point := pointRange{Org: Pack(SuInt(5))}
-	assert.This(point.intersect(Pack(SuInt(1)), Pack(SuInt(9)))).Is(point)
-	assert.T(t).That(point.intersect(Pack(SuInt(6)), Pack(SuInt(9))).conflict())
-
-	rng := pointRange{Org: Pack(SuInt(2)), End: Pack(SuInt(8))}
-	assert.This(rng.intersect(Pack(SuInt(4)), Pack(SuInt(9)))).Is(pointRange{
-		Org: Pack(SuInt(4)), End: Pack(SuInt(8)),
-	})
-	assert.This(rng.intersect(Pack(SuInt(1)), Pack(SuInt(6)))).Is(pointRange{
-		Org: Pack(SuInt(2)), End: Pack(SuInt(6)),
-	})
-	assert.T(t).That(rng.intersect(Pack(SuInt(8)), Pack(SuInt(9))).conflict())
-}
-
 func TestIdxSelString(t *testing.T) {
 	is := idxSel{
 		index:      []string{"a", "b", "c", "d", "e"},

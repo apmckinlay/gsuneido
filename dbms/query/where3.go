@@ -81,11 +81,6 @@ func betterMinPre(a, b *idxSel) bool {
 	return a.prefixFrac < b.prefixFrac
 }
 
-func sameFrac(x, y float64) bool {
-	const epsilon = 1e-9
-	return math.Abs(x-y) < epsilon
-}
-
 func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) *idxSel {
 	encode := mode != 'k' || len(index) > 1
 	isel := idxSel{index: index, encoded: encode, mode: mode}

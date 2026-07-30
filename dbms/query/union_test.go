@@ -14,28 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-type r struct {
-	key    []string
-	i1, i2 int
-}
-type s []string
-
-func TestUnion_MergeIndexes(t *testing.T) {
-	var list []r
-	callback := func(key []string, i1, i2 int) {
-		list = append(list, r{key, i1, i2})
-	}
-	mergeIndexes(
-		[][]string{{"a", "b"}},
-		[][]string{{"b", "a", "x"}, {"a", "b"}},
-		[][]string{{"b", "a", "y"}, {"b", "z", "a"}, {"b", "a", "z"}},
-		callback)
-	assert.This(list).Is([]r{
-		{s{"a", "b"}, -1, -1},
-		{s{"a", "b"}, 0, 0},
-		{s{"a", "b"}, 0, 2}})
-}
-
 func TestUnion_MergeSwitchDir(t *testing.T) {
 	db := heapDb()
 	db.adm("create one (a) key(a)")
@@ -132,90 +110,6 @@ func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
 
 	fixcost, varcost := Optimize(u, CursorMode, OrderReq(index, 1))
 	assert.T(t).That(fixcost+varcost < impossible)
-}
-
-func TestIndexContainsKey(t *testing.T) {
-	assert := assert.T(t)
-
-	// Empty keys list
-	assert.This(indexContainsKey([]string{"a", "b"}, nil)).Is(nil)
-
-	// Index contains key
-	assert.This(indexContainsKey(
-		[]string{"a", "b", "c"},
-		[][]string{{"a", "b"}},
-	)).Is([]string{"a", "b"})
-
-	// Index doesn't contain key
-	assert.This(indexContainsKey(
-		[]string{"a", "b"},
-		[][]string{{"a", "b", "c"}},
-	)).Is(nil)
-
-	// Multiple keys, first match returned
-	assert.This(indexContainsKey(
-		[]string{"a", "b", "c"},
-		[][]string{{"d", "e"}, {"a", "c"}},
-	)).Is([]string{"a", "c"})
-}
-
-func TestKeyPrefixOfIndex(t *testing.T) {
-	assert := assert.T(t)
-	// last key field is at position 1
-	assert.This(keyPrefixOfIndex(
-		[]string{"a", "b", "c"},
-		[]string{"b", "d"},
-	)).Is([]string{"a", "b"})
-	// all index fields are in key
-	assert.This(keyPrefixOfIndex(
-		[]string{"a", "b", "c"},
-		[]string{"a", "b", "c"},
-	)).Is([]string{"a", "b", "c"})
-	// no key fields in index
-	assert.This(keyPrefixOfIndex(
-		[]string{"a", "b"},
-		[]string{"x", "y"},
-	)).Is(nil)
-}
-
-func TestKeyFieldOrder(t *testing.T) {
-	assert := assert.T(t)
-
-	// Basic case
-	assert.This(keyFieldOrder(
-		[]string{"c", "b", "a"},
-		[]string{"a", "c", "b"},
-	)).Is([]string{"c", "b", "a"})
-
-	// Key fields in different order in index
-	assert.This(keyFieldOrder(
-		[]string{"a", "x", "b"},
-		[]string{"a", "b"},
-	)).Is([]string{"a", "b"})
-
-	// Empty key
-	assert.This(keyFieldOrder(
-		[]string{"a", "b"},
-		[]string{},
-	)).Is([]string{})
-}
-
-func TestSameKeyFieldOrder(t *testing.T) {
-	assert := assert.T(t)
-
-	// Same order
-	assert.That(sameKeyFieldOrder(
-		[]string{"c", "b", "d", "a"},
-		[]string{"b", "a", "c"},
-		[]string{"c", "b", "a"},
-	))
-
-	// Different order
-	assert.That(!sameKeyFieldOrder(
-		[]string{"a", "b", "c"},
-		[]string{"a", "b", "c"},
-		[]string{"c", "b", "a"},
-	))
 }
 
 func TestUnion_StrictCompareDb(t *testing.T) {
