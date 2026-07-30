@@ -18,7 +18,7 @@ type Compatible struct {
 	disjoint    string
 	allCols     []string
 	src1Only    []string
-	keyIndex    []string
+	lookupCols  []string
 	lookupCache lookupCache
 }
 
@@ -83,8 +83,8 @@ func (c *Compatible) source2Has(th *Thread, row1 Row) bool {
 	// 		return false
 	// 	}
 	// }
-	// assert.That(slices.Equal(c.keyIndex, c.source2.Columns()))
-	sels := makeSels(hdr1, row1, c.keyIndex, th, c.st)
+	// assert.That(slices.Equal(c.lookupCols, c.source2.Columns()))
+	sels := makeSels(hdr1, row1, c.lookupCols, th, c.st)
 	row2 := c.lookupCache.Lookup(c.source2, sels, th, c.st)
 	return row2 != nil && c.equal(th, row1, row2)
 }

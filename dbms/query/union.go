@@ -34,7 +34,7 @@ type Union struct {
 }
 
 type unionApproach struct {
-	keyIndex   []string // not necessarily a key if disjoint
+	cols       []string // not necessarily a key if disjoint
 	strat      unionStrategy
 	reverse    bool
 	req1, req2 Require
@@ -96,12 +96,13 @@ func (u *Union) String() string {
 	switch u.strat {
 	case unionMerge:
 		s += "-merge"
+		// s += "^" + str.Join("(,)", u.mergeCols)
 	case unionLookup:
 		if u.disjoint == "" {
 			s += "-lookup"
+			// s += "^" + str.Join("(,)", u.lookupCols)
 		}
 	}
-	// s += "^" + str.Join("(,)", u.keyIndex)
 	return s
 }
 
@@ -293,7 +294,7 @@ func (u *Union) optLookup2(mode Mode, req Require) (Cost, Cost, *unionApproach) 
 		return impossible, impossible, nil
 	}
 	return fc1 + fc2, vc1 + vc2,
-		&unionApproach{strat: unionLookup, req1: req1, req2: req2, keyIndex: req2.cols}
+		&unionApproach{strat: unionLookup, req1: req1, req2: req2, cols: req2.cols}
 }
 
 func (u *Union) optMerge(mode Mode, req Require) (Cost, Cost, *unionApproach) {
@@ -304,11 +305,10 @@ func (u *Union) optMerge(mode Mode, req Require) (Cost, Cost, *unionApproach) {
 		fc2, vc2 := Optimize(u.source2, mode, mr)
 		if fc1+vc1 < impossible && fc2+vc2 < impossible {
 			return fc1 + fc2, vc1 + vc2,
-				&unionApproach{keyIndex: req.cols, strat: unionMerge, req1: mr, req2: mr}
+				&unionApproach{cols: req.cols, strat: unionMerge, req1: mr, req2: mr}
 		}
 	}
 	// Special case: if both sources have empty keys, allow unordered merge
-	// This matches the old optMergeWithOrder behavior
 	keys1 := u.source1.Keys()
 	keys2 := u.source2.Keys()
 	if isEmptyKey(keys1) && isEmptyKey(keys2) {
@@ -344,7 +344,7 @@ func (u *Union) optMerge(mode Mode, req Require) (Cost, Cost, *unionApproach) {
 		return impossible, impossible, nil
 	}
 	return best.fixcost, best.varcost,
-		&unionApproach{strat: unionMerge, keyIndex: best.data.order,
+		&unionApproach{strat: unionMerge, cols: best.data.order,
 			req1: best.data.req, req2: best.data.req}
 }
 
@@ -408,14 +408,17 @@ func (u *Union) setApproach(req Require, approach any, tran QueryTran) {
 		unionMergeCount.Add(1)
 		if u.disjoint != "" {
 			unionMergeDisjoint.Add(1)
+			u.mergeCols = app.cols
+		} else {
+			u.mergeCols = set.Union(app.cols, u.allCols)
 		}
-	} else {
+	} else { // unionLookup
 		unionLookupCount.Add(1)
+		u.lookupCols = app.cols
 	}
 	if u.disjoint != "" {
 		unionDisjointCount.Add(1)
 	}
-	u.keyIndex = app.keyIndex
 	if app.reverse {
 		u.source1, u.source2 = u.source2, u.source1
 	}
@@ -502,11 +505,6 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 }
 
 func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
-	if u.mergeCols == nil {
-		// compare keyIndex fields first
-		u.mergeCols = set.Union(u.keyIndex, u.allCols)
-	}
-
 	// refill row1 and row2
 	if u.state == rewound || (u.src1 && u.src2) {
 		u.get1(th, dir)
@@ -608,7 +606,7 @@ func (u *Union) getMergeDisjoint(th *Thread, dir Dir) (r Row) {
 		return JoinRows(u.empty1, u.row2)
 	}
 
-	cmp := u.compare(th, u.row1, u.row2, u.keyIndex)
+	cmp := u.compare(th, u.row1, u.row2, u.mergeCols)
 	if dir == Next {
 		if cmp <= 0 {
 			u.src1 = true

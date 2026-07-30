@@ -22,7 +22,7 @@ type Intersect struct {
 }
 
 type intersectApproach struct {
-	keyIndex   []string
+	cols       []string
 	reverse    bool
 	req1, req2 Require
 }
@@ -180,12 +180,12 @@ func (it *Intersect) cost2(mode Mode, req Require, reverse bool) (Cost, Cost, *i
 		return impossible, impossible, nil
 	}
 	return fixcost1 + fc2, varcost1 + vc2,
-		&intersectApproach{keyIndex: req2.cols, req1: req, req2: req2, reverse: reverse}
+		&intersectApproach{cols: req2.cols, req1: req, req2: req2, reverse: reverse}
 }
 
 func (it *Intersect) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*intersectApproach)
-	it.keyIndex = ap.keyIndex
+	it.lookupCols = ap.cols
 	if ap.reverse {
 		it.source1, it.source2 = it.source2, it.source1
 	}

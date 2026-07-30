@@ -18,7 +18,7 @@ type Minus struct {
 }
 
 type minusApproach struct {
-	keyIndex   []string
+	cols       []string
 	req1, req2 Require
 }
 
@@ -91,12 +91,12 @@ func (m *Minus) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		return impossible, impossible, nil
 	}
 	return fixcost1 + fc2, varcost1 + vc2,
-		&minusApproach{keyIndex: req2.cols, req1: req, req2: req2}
+		&minusApproach{cols: req2.cols, req1: req, req2: req2}
 }
 
 func (m *Minus) setApproach(req Require, approach any, tran QueryTran) {
 	ap := approach.(*minusApproach)
-	m.keyIndex = ap.keyIndex
+	m.lookupCols = ap.cols
 	m.source1 = SetApproach(m.source1, ap.req1, tran)
 	m.source2 = SetApproach(m.source2, ap.req2, tran)
 	m.header = m.source1.Header()
