@@ -57,8 +57,6 @@ loop:
 			setAction("repair")
 		case match(&args, "-server"), match(&args, "-s"):
 			setAction("server")
-		case match(&args, "-unattended"), match(&args, "-u"):
-			//TEMP for backward compatibility
 		case match(&args, "-version"), match(&args, "-v"):
 			Action = "version"
 		case match(&args, "-ignoreversion"), match(&args, "-iv"):
