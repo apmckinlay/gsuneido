@@ -38,9 +38,6 @@ const derivedWarn = 8_000_000 // ??? // derivedWarn is also used by Project
 
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	order = src.Fixed().RemoveFrom(order)
-	if len(order) == 0 {
-		panic("ERROR: empty TempIndex")
-	}
 	ti := TempIndex{order: order, tran: tran, selOrg: selMin, selEnd: selMax}
 	ti.source = src
 	ti.header = src.Header().Dup() // dup because sortlist is concurrent
@@ -124,13 +121,6 @@ func (ti *TempIndex) Lookup(th *Thread, sels Sels) Row {
 	row := ti.iter.Seek(key)
 	if row == nil || !ti.matches(row, key) {
 		return nil
-	}
-	for _, sel := range sels {
-		if !slices.Contains(ti.order, sel.col) {
-			if row.GetRawVal(ti.header, sel.col, ti.th, ti.st) != sel.val {
-				return nil
-			}
-		}
 	}
 	return row
 }

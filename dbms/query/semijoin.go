@@ -347,7 +347,7 @@ func (sj *SemiJoin) getReverse(th *Thread, dir Dir) Row {
 			sels := slc.With(sj.sels1, sj.projectRow2(th, sj.row2)...)
 			if sj.joinType == one_to_one || sj.joinType == one_to_many {
 				// no benefit to lookup cache here due to dedup
-				sj.lookupRow = lookup(sj.source1, th, sels)
+				sj.lookupRow = lookup(sj.source1, sels, th, sj.st)
 			} else { // many_to_one, many_to_many
 				sj.source1.Select(sels)
 			}
@@ -418,9 +418,9 @@ func (sj *SemiJoin) projectRow2(th *Thread, row Row) Sels {
 func (sj *SemiJoin) source2Has(th *Thread, row Row, dir Dir) bool {
 	sels := makeSels(sj.source1.Header(), row, sj.by, th, sj.st)
 	if sj.joinType == one_to_one {
-		return lookup(sj.source2, th, sels) != nil
+		return lookup(sj.source2, sels, th, sj.st) != nil
 	} else if sj.joinType == many_to_one {
-		return sj.lookupCache.Lookup(th, sj.source2, sels, sj.st) != nil
+		return sj.lookupCache.Lookup(sj.source2, sels, th, sj.st) != nil
 	}
 	sj.source2.Select(sels)
 	return sj.source2.Get(th, dir) != nil
@@ -469,9 +469,9 @@ func (sj *SemiJoin) Lookup(th *Thread, sels Sels) Row {
 		sel2 := makeSels(sj.source1.Header(), row1, sj.by, th, sj.st)
 		var row2 Row
 		if sj.joinType == one_to_one {
-			row2 = lookup(sj.source2, th, sel2)
+			row2 = lookup(sj.source2, sel2, th, sj.st)
 		} else {
-			row2 = sj.lookupCache.Lookup(th, sj.source2, sel2, sj.st)
+			row2 = sj.lookupCache.Lookup(sj.source2, sel2, th, sj.st)
 		}
 		if row2 == nil {
 			return nil

@@ -4,6 +4,7 @@
 package core
 
 import (
+	"fmt"
 	"math"
 	"strings"
 
@@ -62,7 +63,7 @@ func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 	}
 }
 
-// GetRaw handles _lower! but does NOT handle rules.
+// GetRaw handles _lower! but does NOT handle rules or PackForward.
 // It is used by SuRecord Get.
 func (row Row) GetRaw(hdr *Header, fld string) string {
 	if strings.HasSuffix(fld, "_lower!") {
@@ -366,4 +367,24 @@ func (hdr *Header) Physical() []string {
 		}
 	}
 	return result
+}
+
+// RowStr is used for debugging. It includes "" values.
+func RowStr(hdr *Header, row Row) string {
+	if row == nil {
+		return "Row(nil)"
+	}
+	cols := slices.Clone(hdr.Columns)
+	slices.Sort(cols)
+	th := &Thread{}
+	var sb strings.Builder
+	sb.WriteString("Row{")
+	sep := ""
+	for _, col := range cols {
+		val := row.GetVal(hdr, col, th, nil)
+		fmt.Fprint(&sb, sep, col, "=", val.String())
+		sep = " "
+	}
+	sb.WriteRune('}')
+	return sb.String()
 }

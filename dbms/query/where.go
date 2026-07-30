@@ -632,9 +632,8 @@ func (w *Where) optInit() {
 		// fmt.Println("idxSels", w.idxSels)
 	}
 	// detect singleton when fixed covers a key (for non-Table sources).
-	// Required so bestLookupIndex doesn't pick an index with extra columns
+	// Required so we don't pick an index with extra columns
 	// that sels can't cover at Lookup time
-	// (lookupIndexEligible allows any index when nColsUnfixed == 0).
 	if !w.singleton && !w.conflict && w.tbl == nil {
 		if slices.ContainsFunc(w.source.Keys(), w.fixed.All) {
 			w.singleton = true
@@ -813,8 +812,7 @@ func (w *Where) getFilter(th *Thread, dir Dir) Row {
 	return w.tbl.GetFilter(dir, filterFunc)
 }
 
-// filter applies the entire where expression
-// and also selectSelCols/Vals singletonFilter
+// filter applies singleSels and the entire where expression
 func (w *Where) filter(th *Thread, row Row) bool {
 	if row == nil {
 		return true
@@ -921,7 +919,8 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 		// srcIndex == nil: fixed covers a key (singleton detected in optInit),
 		// so Optimize passed index=nil and setApproach left srcIndex nil.
 		w.Rewind()
-		return GetNext1(w, th, sels)
+		row := getNext1(w, th)
+		return lookupFilter(w.Header(), row, sels, th, w.rowCtx.Tran)
 	}
 	cloned := false
 	sels = slices.Clip(sels)
@@ -932,17 +931,8 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 			cloned = true // because they're clipped, append will realloc
 		}
 	}
-	isels, osels := Split(cloned, sels, w.srcIndex)
-	var residual Sels
-	for _, sel := range osels {
-		// keep selectors for multi-valued fixed columns so source.Lookup
-		// can verify the specific value via singletonFilter
-		if !w.fixed.Single(sel.col) {
-			residual = append(residual, sel)
-		}
-	}
-
-	row := lookup(w.source, th, slc.With(isels, residual...))
+	isels, _ := Split(cloned, sels, w.srcIndex)
+	row := lookup(w.source, isels, th, w.rowCtx.Tran)
 	if !w.filter(th, row) {
 		row = nil
 	}

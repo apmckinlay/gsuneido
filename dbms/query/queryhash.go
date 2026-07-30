@@ -8,14 +8,16 @@ import (
 
 	"slices"
 
-	"github.com/apmckinlay/gsuneido/core"
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/shmap"
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
 type QueryHash struct {
-	Hdr      *core.Header
+	Hdr      *Header
 	Fields   []string
 	rows     *shmap.Map[rowHash, struct{}, shmap.Funcs[rowHash]]
 	ncols    int
@@ -24,7 +26,7 @@ type QueryHash struct {
 	hash     uint64
 }
 
-func NewQueryHasher(hdr *core.Header) *QueryHash {
+func NewQueryHasher(hdr *Header) *QueryHash {
 	qh := QueryHash{}
 	qh.Hdr = hdr
 	qh.Fields = slc.Clone(hdr.Physical())
@@ -51,11 +53,14 @@ func (qh *QueryHash) CheckDups() *QueryHash {
 	return qh
 }
 
-func (qh *QueryHash) Row(row core.Row) uint64 {
+func (qh *QueryHash) Row(row Row) uint64 {
 	hash := uint64(17)
 	for _, fld := range qh.Fields {
 		s := row.GetRaw(qh.Hdr, fld)
-		hash = hash*31 + hashPacked(s)
+		// ignore PackForward
+		if len(s) > 0 && s[0] != PackForward {
+			hash = hash*31 + hashPacked(s)
+		}
 	}
 	if qh.rows != nil {
 		rh := rowHash{row: row, hash: hash}
@@ -69,7 +74,7 @@ func (qh *QueryHash) Row(row core.Row) uint64 {
 	return hash
 }
 
-func equalRow(x, y core.Row, hdr *core.Header, cols []string) bool {
+func equalRow(x, y Row, hdr *Header, cols []string) bool {
 	for _, col := range cols {
 		if x.GetRaw(hdr, col) != y.GetRaw(hdr, col) {
 			return false
@@ -79,7 +84,7 @@ func equalRow(x, y core.Row, hdr *core.Header, cols []string) bool {
 }
 
 func hashPacked(p string) uint64 {
-	if len(p) > 0 && (p[0] == core.PackObject || p[0] == core.PackRecord) {
+	if len(p) > 0 && (p[0] == PackObject || p[0] == PackRecord) {
 		return hashObject(p)
 	}
 	return hash.FullString(p)
@@ -94,10 +99,36 @@ func hashObject(p string) uint64 {
 	return hash
 }
 
-func (qh *QueryHash) Result(details bool) core.Value {
+func (qh *QueryHash) Result(details bool) Value {
 	if details {
-		return core.SuStr(fmt.Sprintln("nrows", qh.nrows, "hash", qh.hash,
+		return SuStr(fmt.Sprintln("nrows", qh.nrows, "hash", qh.hash,
 			"ncols", qh.ncols, "hash", qh.colsHash))
 	}
-	return core.IntVal(int(qh.hash))
+	return IntVal(int(qh.hash))
+}
+
+func queryHashAll(db *db19.Database, query string) {
+	tran := db.NewReadTran()
+	q := ParseQuery(query, tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	th := &Thread{}
+
+	// fmt.Println("=== Simple ===")
+	h1 := NewQueryHasher(q.Header()).CheckDups()
+	for _, row := range q.Simple(th) {
+		// fmt.Println(row)
+		h1.Row(row)
+	}
+
+	// fmt.Println("== Get ===")
+	h2 := NewQueryHasher(q.Header()).CheckDups()
+	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+		// fmt.Println(row)
+		h2.Row(row)
+	}
+
+	// fmt.Println("optimized:", String(q))
+	// fmt.Println("Fields:", q.Header().Fields)
+	// fmt.Println("Columns:", q.Header().Columns)
+	assert.This(h2.Result(true)).Is(h1.Result(true))
 }

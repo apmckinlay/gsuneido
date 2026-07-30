@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -265,20 +265,22 @@ func TestUnionLookupBug(t *testing.T) {
 	queryHashAll(db.Database, `cus2 union (cus union cus)`)
 }
 
-func queryHashAll(db *db19.Database, query string) {
-	tran := db.NewReadTran()
-	q := ParseQuery(query, tran, nil)
-	th := &Thread{}
+func TestUnionBug(t *testing.T) {
+	db := heapDb()
+	db.adm("create cus (c1, c2, c3, c4, ck) key (ck)")
+	db.act(`insert {ck: '3', c1: "18", c2: "16", c3: '2', c4: '8'} into cus`)
+	db.act(`insert {ck: '5', c1: "14", c2: "19"} into cus`)
+	queryHashAll(db.Database,
+		`((((((cus union cus) extend r0, i4 = r0)))) union cus)`)
+}
 
-	h1 := NewQueryHasher(q.Header()).CheckDups()
-	for _, row := range q.Simple(th) {
-		h1.Row(row)
-	}
-
-	q, _, _ = Setup(q, ReadMode, tran)
-	h2 := NewQueryHasher(q.Header()).CheckDups()
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
-		h2.Row(row)
-	}
-	assert.This(h2.Result(true)).Is(h1.Result(true))
+func TestUnionBug2(t *testing.T) {
+	Global.TestDef("Rule_r", compile.Constant("function() { .x }"))
+	db := heapDb()
+	db.adm("create t1 (k, x, R) key (k)")
+	db.act(`insert {k: 1, x: 2} into t1`)
+	db.adm("create t2 (k, x, R) key (k)")
+	db.act(`insert {k: 1, x: 2} into t2`)
+	queryHashAll(db.Database,
+		`t1 extend y = r union t2`)
 }

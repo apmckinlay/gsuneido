@@ -720,7 +720,7 @@ func (su *Summarize) Simple(th *Thread) []Row {
 	for _, row := range srcRows {
 		var sb strings.Builder
 		for _, col := range su.by {
-			sb.WriteString(row.GetRaw(hdr, col))
+			sb.WriteString(row.GetRawVal(hdr, col, th, su.st))
 			sb.WriteString("\x00")
 		}
 		key := sb.String()

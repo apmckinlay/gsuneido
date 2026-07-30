@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
@@ -19,6 +20,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func init() {
@@ -86,7 +88,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 406, 292)
+	fuzzRandomRunner.Run(t, 265, 319)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -225,11 +227,12 @@ func composeFuzzProject(ft *FT, qs Query) Query {
 	if len(qs.Columns()) == 0 {
 		return qs
 	}
-	projCols := randomProjectCols(ft.rnd, qs.Columns(), qs.Indexes())
+	projCols := randomProjectCols(ft.rnd, qs.Columns(), qs.Indexes(), ft.ruleDeps)
 	return NewProject(qs, projCols)
 }
 
-func randomProjectCols(rnd *rand.Rand, srcCols []string, indexes [][]string) []string {
+func randomProjectCols(rnd *rand.Rand, srcCols []string, indexes [][]string,
+	ruleDeps map[string]string) []string {
 	// 20% of the time, choose columns that allow projSeq by selecting a prefix of an index
 	if len(srcCols) > 0 && len(indexes) > 0 && rnd.IntN(5) == 0 { // 20% chance
 		// Choose a random index
@@ -246,9 +249,22 @@ func randomProjectCols(rnd *rand.Rand, srcCols []string, indexes [][]string) []s
 	// 80% of the time, use original random selection (or when index is empty)
 	n := 1 + rnd.IntN(len(srcCols)) // 1 to all columns
 	perm := rnd.Perm(len(srcCols))
-	cols := make([]string, n)
+	cols := make([]string, 0, n)
 	for i := range n {
-		cols[i] = srcCols[perm[i]]
+		c := srcCols[perm[i]]
+		// if c is a rule, check if its dep is available
+		if dep, ok := ruleDeps[c]; ok {
+			if !slices.Contains(srcCols, dep) {
+				continue // skip this rule col since dep not available
+			}
+			cols = append(cols, c, dep)
+		} else {
+			cols = append(cols, c)
+		}
+	}
+	if len(cols) == 0 {
+		// fallback: at least one column
+		return []string{srcCols[0]}
 	}
 	return cols
 }
@@ -275,23 +291,37 @@ func fuzzRename(ft *FT) Query {
 }
 
 func composeFuzzRename(ft *FT, qs Query) Query {
-	from, to := randomRename(ft.rnd, qs.Columns())
+	from, to := randomRename(ft.rnd, qs.Columns(), qs.Header().Rules(), ft.ruleRefs)
 	return NewRename(qs, from, to)
 }
 
-func randomRename(rnd *rand.Rand, srcCols []string) (from, to []string) {
+func randomRename(rnd *rand.Rand, srcCols, ruleCols, ruleRefs []string) (from, to []string) {
 	if len(srcCols) == 0 {
 		return nil, nil
 	}
 
+	// exclude rule columns (derived, not stored) and columns referenced by rules from renaming
+	excluded := make([]string, 0, len(ruleCols)+len(ruleRefs))
+	excluded = append(excluded, ruleCols...)
+	excluded = append(excluded, ruleRefs...)
+	nonRuleCols := make([]string, 0, len(srcCols))
+	for _, col := range srcCols {
+		if !slices.Contains(excluded, col) {
+			nonRuleCols = append(nonRuleCols, col)
+		}
+	}
+	if len(nonRuleCols) == 0 {
+		return nil, nil
+	}
+
 	// Determine how many columns to rename (1 to 3)
-	n := 1 + rnd.IntN(min(3, len(srcCols)))
+	n := 1 + rnd.IntN(min(3, len(nonRuleCols)))
 
 	// Choose random columns to rename
-	perm := rnd.Perm(len(srcCols))
+	perm := rnd.Perm(len(nonRuleCols))
 	from = make([]string, n)
 	for i := range n {
-		from[i] = srcCols[perm[i]]
+		from[i] = nonRuleCols[perm[i]]
 	}
 
 	// Generate new names for the columns
@@ -461,6 +491,10 @@ func TestFuzzMinus(t *testing.T) {
 	fuzzMinusRunner.Test(t)
 }
 
+func TestFuzzMinusDebug(t *testing.T) {
+	fuzzMinusRunner.Run(t, 192, 1)
+}
+
 //-------------------------------------------------------------------
 // go test -run '^$' -fuzz=FuzzIntersect ./dbms/query
 
@@ -523,7 +557,7 @@ func TestFuzzUnion(t *testing.T) {
 }
 
 func TestFuzzUnionDebug(t *testing.T) {
-	fuzzUnionRunner.Run(t, 16648623267720352087, 5930884177317611061)
+	fuzzUnionRunner.Run(t, 192, 1)
 }
 
 func fuzzUnion(ft *FT) Query {
@@ -667,7 +701,14 @@ func addExtraData(rnd *rand.Rand, data [][]string, baseCols, allCols []string) {
 }
 
 func makeAllColsKey(b *buildFT) {
-	b.keys = [][]string{slices.Clip(b.columns)}
+	// exclude rule columns since they can't be part of a key (they're derived)
+	cols := make([]string, 0, len(b.columns))
+	for _, col := range b.columns {
+		if !slices.Contains(b.ruleCols, col) {
+			cols = append(cols, col)
+		}
+	}
+	b.keys = [][]string{cols}
 }
 
 func makeEmptyKey(rnd *rand.Rand, qs *buildFT) {
@@ -809,7 +850,22 @@ func newFuzzJoin(ft *FT) (Query, Query, []string) {
 		b1.indexes = append(b1.indexes, by)
 		b2.indexes = append(b2.indexes, by)
 	}
-	return b1.finish(), b2.finish(), by
+	// Sometimes add a shared rule column to exercise rule-in-by paths.
+	// The column name is capitalized (Jr) so it's derived (not stored),
+	// but Table.Columns() returns it uncapitalized (jr), so by uses "jr".
+	if rnd.IntN(4) == 0 {
+		ruleCol := "Jr"
+		b1.columns = append(b1.columns, ruleCol)
+		b2.columns = append(b2.columns, ruleCol)
+		b1.ruleCols = append(b1.ruleCols, ruleCol)
+		b2.ruleCols = append(b2.ruleCols, ruleCol)
+		by = append(by, "jr")
+	}
+	q1, q2 := b1.finish(), b2.finish()
+	if slices.Contains(by, "jr") {
+		Global.TestDef("Rule_jr", compile.Constant("function() { return 123 }"))
+	}
+	return q1, q2, by
 }
 
 func calcSpan(ncols int, b1, b2 *buildFT) int {
@@ -1107,6 +1163,7 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	before := String(q) // before Transform
 	defer func() {
 		if r := recover(); r != nil || t.Failed() {
+			TableInfo(q)
 			fmt.Println("original:", before)
 			fmt.Println("optimized:", String(q))
 			if r != nil {
@@ -1179,7 +1236,8 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	q.SetTran(ft.rt)
 
 	hdr := q.Header()
-	expected := q.Simple(nil)
+	th := &Thread{}
+	expected := q.Simple(th)
 	// fmt.Println("Simple", len(expected))
 	if len(expected) == 0 {
 		noResults++
@@ -1191,17 +1249,27 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	}
 
 	// match implicit contract, see require.go
-	testRandomGet(t, ft.rnd, q, qh, hdr, nil)
+	fc := &fuzzCtx{t: t, ft: ft, rnd: ft.rnd, q: q, hdr: hdr, th: th}
+	fc.testRandomGet(qh, nil)
 	if use == ReqUnique {
 		if len(index) > 0 {
-			testRandomLookups(t, ft.rnd, q, index, expected)
+			fc.testRandomLookups(index, expected)
 		}
 	}
 	if use == ReqOrder || use == ReqGroup {
 		if len(index) > 0 {
-			testRandomSelects(t, ft.rnd, q, index, expected)
+			fc.testRandomSelects(index, expected)
 		}
 	}
+}
+
+type fuzzCtx struct {
+	t   *testing.T
+	ft  *FT
+	rnd *rand.Rand
+	q   Query
+	hdr *Header
+	th  *Thread
 }
 
 func keyIndexes(q Query) [][]string {
@@ -1216,49 +1284,55 @@ func keyIndexes(q Query) [][]string {
 	return keyIndexes
 }
 
-func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *Header, sels Sels) {
+func (fc *fuzzCtx) testRandomGet(qh *QueryHash, sels Sels) {
 	// Get all rows using Next first to establish correct iteration order
-	q.Rewind()
-	nextRows := getAllRows(q, Next)
-	if !rowSetsEqual(nextRows, qh, hdr) {
-		fmt.Println("QUERY:", String(q))
+	fc.q.Rewind()
+	nextRows := getAllRows(fc.q, Next, fc.th)
+	if !rowSetsEqual(nextRows, qh, fc.hdr) {
+		fmt.Println(TableInfo(fc.q))
+		for k, v := range fc.ft.rules {
+			fmt.Println(k, "=", v)
+		}
+		fmt.Println("QUERY:", String(fc.q))
 		fmt.Println("=== Optimized Get rows (actual) ===")
 		for i, row := range nextRows {
 			if i < 60 {
-				fmt.Printf("  row %d: %s\n", i, rowDebugString(hdr, row))
+				fmt.Printf("  row %d: %s\n", i, RowStr(fc.hdr, row))
+				fmt.Println(row)
 			}
 		}
 		fmt.Printf("... total: %d (actual) vs %d (expected)\n\n", len(nextRows), qh.nrows)
-		q.Rewind()
-		expectedRows := q.Simple(nil)
+		fc.q.Rewind()
+		expectedRows := fc.q.Simple(fc.th)
 		fmt.Println("=== Simple rows (expected) ===")
 		for i, row := range expectedRows {
 			if i < 60 {
-				fmt.Printf("  row %d: %s\n", i, rowDebugString(hdr, row))
+				fmt.Printf("  row %d: %s\n", i, RowStr(fc.hdr, row))
+				fmt.Println(row)
 			}
 		}
 		fmt.Printf("... total: %d\n", len(expectedRows))
-		t.Fatalf("Next iteration returned %d rows, expected %d", len(nextRows), qh.nrows)
+		fc.t.Fatalf("Next iteration returned %d rows, expected %d", len(nextRows), qh.nrows)
 	}
 
 	// Run deterministic cursor pattern checks before random walk
-	testCursorPatterns(t, q, hdr, nextRows)
+	fc.testCursorPatterns(nextRows)
 
 	data := NewDataSource(nextRows)
 
 	// Redo the Select after getAllRows to reset indexed state for projMap
-	q.Select(sels)
+	fc.q.Select(sels)
 
 	// Do a random walk with Next/Prev using nextRows as expected
 	history := ""
 	nsteps := min(100, len(nextRows)*3)
 	for i := range nsteps {
 		// Occasionally add a Select to reset indexed flag for projMap
-		if rnd.IntN(20) == 0 { // 5% chance
+		if fc.rnd.IntN(20) == 0 { // 5% chance
 			if sels == nil {
-				q.Select(nil) // this also rewinds
+				fc.q.Select(nil) // this also rewinds
 			} else {
-				q.Rewind()
+				fc.q.Rewind()
 			}
 			data.rewind()
 		}
@@ -1266,42 +1340,42 @@ func testRandomGet(t *testing.T, rnd *rand.Rand, q Query, qh *QueryHash, hdr *He
 		pos := data.pos
 		if data.pos == dsEof {
 			history += "r"
-			q.Rewind()
+			fc.q.Rewind()
 			data.rewind()
 		}
-		dir := random([]Dir{Next, Prev}, rnd)
+		dir := random([]Dir{Next, Prev}, fc.rnd)
 		history += string(dir)
 		expectedRow := data.get(dir)
-		row := q.Get(nil, dir)
+		row := fc.q.Get(fc.th, dir)
 
 		if expectedRow == nil && row != nil {
-			t.Fatalf("random walk step %d: %c from %v: expected nil, got row\nhistory %s",
+			fc.t.Fatalf("random walk step %d: %c from %v: expected nil, got row\nhistory %s",
 				i, dir, pos, history)
 		} else if expectedRow != nil && row == nil {
-			t.Log(q)
-			t.Fatalf("random walk step %d: %c from %v: expected row, got nil\nhistory %s",
+			fc.t.Log(fc.q)
+			fc.t.Fatalf("random walk step %d: %c from %v: expected row, got nil\nhistory %s",
 				i, dir, pos, history)
 		} else if expectedRow != nil && row != nil {
-			if !hdr.EqualRows(row, expectedRow, nil, nil) {
-				t.Fatalf("random walk step %d: %c from %v: row mismatch\nhistory %s",
+			if !fc.hdr.EqualRows(row, expectedRow, nil, nil) {
+				fc.t.Fatalf("random walk step %d: %c from %v: row mismatch\nhistory %s",
 					i, dir, pos, history)
 			}
 		}
 	}
 
 	// Get all rows using Prev
-	q.Rewind()
-	prevRows := getAllRows(q, Prev)
-	if !rowSetsEqual(prevRows, qh, hdr) {
-		t.Fatalf("Prev iteration returned %d rows, expected %d", len(prevRows), qh.nrows)
+	fc.q.Rewind()
+	prevRows := getAllRows(fc.q, Prev, fc.th)
+	if !rowSetsEqual(prevRows, qh, fc.hdr) {
+		fc.t.Fatalf("Prev iteration returned %d rows, expected %d", len(prevRows), qh.nrows)
 	}
 }
 
-func getAllRows(q Query, dir Dir) []Row {
+func getAllRows(q Query, dir Dir, th *Thread) []Row {
 	q.Rewind()
 	var rows []Row
 	for {
-		row := q.Get(nil, dir)
+		row := q.Get(th, dir)
 		if row == nil {
 			break
 		}
@@ -1313,126 +1387,127 @@ func getAllRows(q Query, dir Dir) []Row {
 // testCursorPatterns runs deterministic cursor navigation patterns.
 // These are run before the random walk because failures are clearer -
 // they test specific edge cases with known expected behavior.
-func testCursorPatterns(t *testing.T, q Query, hdr *Header, nextRows []Row) {
+func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 	n := len(nextRows)
 
 	check := func(name string, row, expected Row) {
+		t := fc.t
 		t.Helper()
 		if expected == nil && row != nil {
 			t.Fatalf("%s: expected nil, got row", name)
 		} else if expected != nil && row == nil {
 			t.Fatalf("%s: expected row, got nil", name)
 		} else if expected != nil && row != nil {
-			if !hdr.EqualRows(row, expected, nil, nil) {
+			if !fc.hdr.EqualRows(row, expected, nil, nil) {
 				t.Fatalf("%s: row mismatch", name)
 			}
 		}
 	}
 
 	// Pattern 0: Rewind, Prev - should go to last row
-	q.Rewind()
-	row := q.Get(nil, Prev) // last row
+	fc.q.Rewind()
+	row := fc.q.Get(fc.th, Prev) // last row
 	if n > 0 {
 		check("Rewind, Prev", row, nextRows[n-1])
 	}
 
 	// Pattern 1: Rewind, Next, Prev - after first Next, Prev should return nil
-	q.Rewind()
-	row = q.Get(nil, Next) // first row or nil if empty
+	fc.q.Rewind()
+	row = fc.q.Get(fc.th, Next) // first row or nil if empty
 	if n > 0 {
 		check("Next,Prev: N", row, nextRows[0])
 	} else {
 		check("Next,Prev: N (empty)", row, nil)
 	}
-	row = q.Get(nil, Prev) // should be nil - nothing before first
+	row = fc.q.Get(fc.th, Prev) // should be nil - nothing before first
 	check("Next,Prev: P", row, nil)
 
 	// Pattern 2: Rewind, Prev, Next - Prev from rewind goes to last, then Next should be nil
 	if n > 0 {
-		q.Rewind()
-		row = q.Get(nil, Prev) // last row
+		fc.q.Rewind()
+		row = fc.q.Get(fc.th, Prev) // last row
 		check("Prev,Next: P", row, nextRows[n-1])
-		row = q.Get(nil, Next) // should be nil - nothing after last
+		row = fc.q.Get(fc.th, Next) // should be nil - nothing after last
 		check("Prev,Next: N", row, nil)
 	}
 	// Pattern 3: Rewind, Prev, Prev, Next, Next
 	if n >= 2 {
-		q.Rewind()
-		row = q.Get(nil, Prev) // last row (n-1)
+		fc.q.Rewind()
+		row = fc.q.Get(fc.th, Prev) // last row (n-1)
 		check("PPNN: P1", row, nextRows[n-1])
-		row = q.Get(nil, Prev) // second to last (n-2)
+		row = fc.q.Get(fc.th, Prev) // second to last (n-2)
 		check("PPNN: P2", row, nextRows[n-2])
-		row = q.Get(nil, Next) // back to last (n-1)
+		row = fc.q.Get(fc.th, Next) // back to last (n-1)
 		check("PPNN: N1", row, nextRows[n-1])
-		row = q.Get(nil, Next) // should be nil
+		row = fc.q.Get(fc.th, Next) // should be nil
 		check("PPNN: N2", row, nil)
 	}
 
 	// Pattern 4: Rewind, Next, Next, Prev, Prev
 	if n >= 2 {
-		q.Rewind()
-		row = q.Get(nil, Next) // first row (0)
+		fc.q.Rewind()
+		row = fc.q.Get(fc.th, Next) // first row (0)
 		check("NNPP: N1", row, nextRows[0])
-		row = q.Get(nil, Next) // second row (1)
+		row = fc.q.Get(fc.th, Next) // second row (1)
 		check("NNPP: N2", row, nextRows[1])
-		row = q.Get(nil, Prev) // back to first (0)
+		row = fc.q.Get(fc.th, Prev) // back to first (0)
 		check("NNPP: P1", row, nextRows[0])
-		row = q.Get(nil, Prev) // should be nil
+		row = fc.q.Get(fc.th, Prev) // should be nil
 		check("NNPP: P2", row, nil)
 	}
 
 	// Pattern 5: Next to end, past end (nil), then Prev
 	// plain stick at eof: Prev should also return nil
 	if n > 0 {
-		q.Rewind()
+		fc.q.Rewind()
 		for i := range n {
-			row = q.Get(nil, Next)
+			row = fc.q.Get(fc.th, Next)
 			check("ToEnd: N"+strconv.Itoa(i), row, nextRows[i])
 		}
-		row = q.Get(nil, Next) // past end
+		row = fc.q.Get(fc.th, Next) // past end
 		check("ToEnd: N-past", row, nil)
-		row = q.Get(nil, Prev) // plain stick: should be nil
+		row = fc.q.Get(fc.th, Prev) // plain stick: should be nil
 		check("ToEnd: P", row, nil)
 	}
 
 	// Pattern 6: Prev to beginning, past beginning (nil), then Next
 	// plain stick at eof: Next should also return nil
 	if n > 0 {
-		q.Rewind()
+		fc.q.Rewind()
 		for i := n - 1; i >= 0; i-- {
-			row = q.Get(nil, Prev)
+			row = fc.q.Get(fc.th, Prev)
 			check("ToBegin: P"+strconv.Itoa(n-1-i), row, nextRows[i])
 		}
-		row = q.Get(nil, Prev) // past beginning
+		row = fc.q.Get(fc.th, Prev) // past beginning
 		check("ToBegin: P-past", row, nil)
-		row = q.Get(nil, Next) // plain stick: should be nil
+		row = fc.q.Get(fc.th, Next) // plain stick: should be nil
 		check("ToBegin: N", row, nil)
 	}
 
 	// Pattern 7: Rewind, Next, Prev, Next - plain stick at eof after Prev
 	if n > 0 {
-		q.Rewind()
-		row = q.Get(nil, Next) // first
+		fc.q.Rewind()
+		row = fc.q.Get(fc.th, Next) // first
 		check("NPN: N1", row, nextRows[0])
-		row = q.Get(nil, Prev) // nil
+		row = fc.q.Get(fc.th, Prev) // nil
 		check("NPN: P", row, nil)
-		row = q.Get(nil, Next) // plain stick: nil
+		row = fc.q.Get(fc.th, Next) // plain stick: nil
 		check("NPN: N2", row, nil)
 	}
 
 	// Pattern 8: Rewind, Prev, Next, Prev - plain stick at eof after Next
 	if n > 0 {
-		q.Rewind()
-		row = q.Get(nil, Prev) // last
+		fc.q.Rewind()
+		row = fc.q.Get(fc.th, Prev) // last
 		check("PNP: P1", row, nextRows[n-1])
-		row = q.Get(nil, Next) // nil
+		row = fc.q.Get(fc.th, Next) // nil
 		check("PNP: N", row, nil)
-		row = q.Get(nil, Prev) // plain stick: nil
+		row = fc.q.Get(fc.th, Prev) // plain stick: nil
 		check("PNP: P2", row, nil)
 	}
 
 	// Reset for subsequent tests
-	q.Rewind()
+	fc.q.Rewind()
 }
 
 func rowSetsEqual(a []Row, qh *QueryHash, hdr *Header) bool {
@@ -1459,39 +1534,23 @@ func rowsEqual(a, b Row, hdr *Header, cols []string) bool {
 	return true
 }
 
-func rowDebugString(hdr *Header, row Row) string {
-	sb := strings.Builder{}
-	sb.WriteRune('{')
-	for i, col := range hdr.Columns {
-		if i > 0 {
-			sb.WriteString(", ")
-		}
-		val := row.GetVal(hdr, col, nil, nil)
-		sb.WriteString(col)
-		sb.WriteString(": ")
-		sb.WriteString(val.String())
-	}
-	sb.WriteRune('}')
-	return sb.String()
-}
-
 //-------------------------------------------------------------------
 
-func testRandomSelects(t *testing.T, rnd *rand.Rand, q Query, index []string, allRows []Row) {
-	t.Helper()
-	hdr := q.Header()
-	testExistentSelect(t, allRows, rnd, hdr, index, q)
-	testNonExistentSelect(t, allRows, rnd, hdr, index, q)
+func (fc *fuzzCtx) testRandomSelects(index []string, allRows []Row) {
+	fc.t.Helper()
+	hdr := fc.q.Header()
+	fc.testExistentSelect(allRows, hdr, index)
+	fc.testNonExistentSelect(allRows, hdr, index)
 }
 
-func testExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header, index []string, q Query) {
+func (fc *fuzzCtx) testExistentSelect(allRows []Row, hdr *Header, index []string) {
 	if len(allRows) == 0 {
 		return
 	}
 	for range 10 {
-		srcRow := random(allRows, rnd)
-		sels := indexSelectCriteria(rnd, srcRow, hdr, index)
-		q.Select(sels)
+		srcRow := random(allRows, fc.rnd)
+		sels := fc.indexSelectCriteria(srcRow, hdr, index)
+		fc.q.Select(sels)
 
 		qh := NewQueryHasher(hdr)
 		for _, row := range allRows {
@@ -1500,9 +1559,9 @@ func testExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header
 			}
 		}
 
-		testRandomGet(t, rnd, q, qh, hdr, sels)
+		fc.testRandomGet(qh, sels)
 
-		q.Select(nil) // clear select
+		fc.q.Select(nil) // clear select
 	}
 }
 
@@ -1523,84 +1582,78 @@ func selMatchIndex(hdr *Header, row Row, sels Sels, index []string) bool {
 }
 
 // indexSelectCriteria uses all columns of the index for select criteria.
-func indexSelectCriteria(rnd *rand.Rand, row Row, hdr *Header, index []string) Sels {
+func (fc *fuzzCtx) indexSelectCriteria(row Row, hdr *Header, index []string) Sels {
 	selCols := slices.Clone(index)
-	rnd.Shuffle(len(selCols), func(i, j int) {
+	fc.rnd.Shuffle(len(selCols), func(i, j int) {
 		selCols[i], selCols[j] = selCols[j], selCols[i]
 	})
-
-	sels := make(Sels, len(selCols))
-	for i, col := range selCols {
-		sels[i] = Sel{col: col, val: row.GetRaw(hdr, col)}
-	}
-	return sels
+	return makeSels(hdr, row, selCols, fc.th, nil)
 }
 
-func testNonExistentSelect(t *testing.T, allRows []Row, rnd *rand.Rand, hdr *Header, index []string, q Query) {
+func (fc *fuzzCtx) testNonExistentSelect(allRows []Row, hdr *Header, index []string) {
 	for range 10 {
 		// If there are no rows, use a dummy row sized to match hdr.Fields.
 		// This avoids panics when hdr.Fields references derived records (e.g. Extend).
 		srcRow := make(Row, len(hdr.Fields))
 		if len(allRows) > 0 {
-			srcRow = random(allRows, rnd)
+			srcRow = random(allRows, fc.rnd)
 		}
-		sels := indexSelectCriteria(rnd, srcRow, hdr, index)
-		sels[rnd.IntN(len(sels))].val = "nonexistent"
-		q.Select(sels)
-		if q.Get(nil, Next) != nil {
-			t.Fatal("non-existent select returned a row")
+		sels := fc.indexSelectCriteria(srcRow, hdr, index)
+		sels[fc.rnd.IntN(len(sels))].val = "nonexistent"
+		fc.q.Select(sels)
+		if fc.q.Get(fc.th, Next) != nil {
+			fc.t.Fatal("non-existent select returned a row")
 		}
-		q.Select(nil) // clear select
+		fc.q.Select(nil) // clear select
 	}
 }
 
 //-------------------------------------------------------------------
 
-func testRandomLookups(t *testing.T, rnd *rand.Rand, q Query, index []string, allRows []Row) {
-	t.Helper()
+func (fc *fuzzCtx) testRandomLookups(index []string, allRows []Row) {
+	fc.t.Helper()
 	if len(allRows) == 0 {
 		return
 	}
 	lookupCols := slices.Clone(index)
-	slc.Shuffle(rnd, lookupCols)
-	hdr := q.Header()
+	slc.Shuffle(fc.rnd, lookupCols)
+	hdr := fc.q.Header()
 	cols := hdr.Columns
 	for range min(20, len(allRows)) {
-		srcRow := random(allRows, rnd)
-		sels := make(Sels, len(lookupCols))
-		for i, col := range lookupCols {
-			sels[i] = Sel{col: col, val: srcRow.GetRaw(hdr, col)}
-		}
-		if rnd.IntN(2) == 0 {
-			result := q.Lookup(nil, sels)
+		srcRow := random(allRows, fc.rnd)
+		sels := makeSels(hdr, srcRow, lookupCols, fc.th, nil)
+		if fc.rnd.IntN(2) == 0 {
+			result := lookup(fc.q, sels, fc.th, nil)
 			if result == nil {
-				t.Fatal("lookup returned nil for existing key")
+				fmt.Println("srcRow", RowStr(hdr, srcRow))
+				fmt.Println("sels", sels)
+				fc.t.Fatal("lookup returned nil for existing key")
 			}
 			assert.That(rowsEqual(result, srcRow, hdr, cols))
 		} else {
 			// set one of the keyVals to a non-existent value
-			r := rnd.IntN(len(lookupCols))
+			r := fc.rnd.IntN(len(lookupCols))
 			if srcRow.GetRaw(hdr, lookupCols[r]) == "" {
-				sels[r].val = sels[r].col + "_" + strconv.Itoa(rnd.IntN(100))
-			} else if rnd.IntN(2) == 1 {
+				sels[r].val = sels[r].col + "_" + strconv.Itoa(fc.rnd.IntN(100))
+			} else if fc.rnd.IntN(2) == 1 {
 				sels[r].val = "nonexistent"
 			} else {
 				sels[r].val = ""
 			}
-			result := q.Lookup(nil, sels)
+			result := lookup(fc.q, sels, fc.th, nil)
 			if result != nil {
-				if exists(hdr, allRows, sels) {
+				if exists(hdr, allRows, fc.th, sels) {
 					continue
 				}
-				t.Fatal("lookup returned row for non-existent key")
+				fc.t.Fatal("lookup returned row for non-existent key")
 			}
 		}
 	}
 }
 
-func exists(hdr *Header, allRows []Row, sels Sels) bool {
+func exists(hdr *Header, allRows []Row, th *Thread, sels Sels) bool {
 	for _, row := range allRows {
-		if singletonFilter(hdr, row, sels) {
+		if lookupFilter(hdr, row, sels, th, nil) != nil {
 			return true
 		}
 	}
@@ -1682,4 +1735,75 @@ func fuzzSplitShare(t *testing.T, rnd *rand.Rand) (part1Empty, part2Empty, part3
 	part3Empty = len1 == n
 
 	return
+}
+
+//-------------------------------------------------------------------
+
+// TableInfo prints table schema details for each leaf Table in the query
+func TableInfo(q Query) string {
+	var sb strings.Builder
+	tableInfo(&sb, q)
+	return sb.String()
+}
+
+func tableInfo(sb *strings.Builder, q Query) {
+	switch q := q.(type) {
+	case q2i:
+		tableInfo(sb, q.Source())
+		tableInfo(sb, q.Source2())
+	case q1i:
+		tableInfo(sb, q.Source())
+	case *Table:
+		debugTableSchema(sb, q)
+	case *ProjectNone:
+		tableInfo(sb, q.source)
+	}
+}
+
+func debugTableSchema(sb *strings.Builder, tbl *Table) {
+	sb.WriteString(tbl.Name())
+	sb.WriteString("\n")
+	sb.WriteString(fmt.Sprintf("  columns: %s\n", str.Join(",", tbl.Columns())))
+
+	sb.WriteString("  indexes:")
+	for _, ix := range tbl.Indexes() {
+		sb.WriteString(fmt.Sprintf(" %s", str.Join("(,)", ix)))
+	}
+
+	sb.WriteString("\n  keys:")
+	for _, key := range tbl.Keys() {
+		sb.WriteString(fmt.Sprintf(" %s", str.Join("(,)", key)))
+	}
+	sb.WriteString("\n")
+}
+
+func PrintQueryData(q Query, th *Thread) {
+	switch q := q.(type) {
+	case q2i:
+		if u, ok := q.(*Union); ok {
+			fmt.Println("--- union source1 simple ---")
+			printRows(u.Source(), th)
+			fmt.Println("--- union source2 simple ---")
+			printRows(u.Source2(), th)
+		}
+		PrintQueryData(q.Source(), th)
+		PrintQueryData(q.Source2(), th)
+	case q1i:
+		PrintQueryData(q.Source(), th)
+	case *Table:
+		fmt.Println("--- table", q.Name(), "---")
+		printRows(q, th)
+	}
+}
+
+func printRows(q Query, th *Thread) {
+	hdr := q.Header()
+	q.Rewind()
+	rows := q.Simple(th)
+	for i, row := range rows {
+		fmt.Printf("  row %d: %s\n", i, RowStr(hdr, row))
+	}
+	if len(rows) == 0 {
+		fmt.Println("  (no rows)")
+	}
 }

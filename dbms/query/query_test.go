@@ -146,6 +146,7 @@ func queryAll2(q Query) string {
 	return sb.String()
 }
 
+// row2str does not include "" values
 func row2str(hdr *Header, row Row) string {
 	if row == nil {
 		return "nil"
@@ -281,17 +282,17 @@ func TestLookupOnSingleton(t *testing.T) {
 	hdr := tbl.Header()
 
 	sels := Sels{{"a", Pack(IntVal(1))}, {"b", Pack(IntVal(2))}}
-	row := tbl.Lookup(nil, sels)
+	row := lookup(tbl, sels, nil, nil)
 	assert.T(t).This(row).Is(nil)
 
 	act(db, "insert {a: 1, b: 2, c: 3} into tmp")
 	tbl = NewTable(db.NewReadTran(), "tmp")
 	// existent row
-	row = tbl.Lookup(nil, sels)
+	row = lookup(tbl, sels, nil, nil)
 	assert.T(t).This(row2str(hdr, row)).Is("a=1 b=2 c=3")
 	// nonexistent row
 	sels = Sels{{"a", Pack(IntVal(3))}, {"b", Pack(IntVal(4))}}
-	row = tbl.Lookup(nil, sels)
+	row = lookup(tbl, sels, nil, nil)
 	assert.T(t).This(row).Is(nil)
 }
 
@@ -342,6 +343,26 @@ func TestWhereSplitBug(t *testing.T) {
 		Is("a=1 b=2 hx=2")
 	assert.T(t).This(queryAll(db, "(tmp1 join (tmp2 extend hx)) where hx = 2")).
 		Is("a=1 b=2 hx=2")
+}
+
+func TestIntersectRuleBug(t *testing.T) {
+	Global.TestDef("Rule_r",
+		compile.Constant("function() { return 123 }"))
+	db := heapDb()
+	db.adm("create tmp (k, R) key(k)")
+	db.act("insert { k: 1 } into tmp")
+	s := queryAll(db.Database, "tmp intersect tmp")
+	assert.This(s).Is("k=1")
+}
+
+func TestJoinRuleBug(t *testing.T) {
+	Global.TestDef("Rule_r",
+		compile.Constant("function() { return 123 }"))
+	db := heapDb()
+	db.adm("create tmp (k, R) key(k)")
+	db.act("insert { k: 1 } into tmp")
+	s := queryAll(db.Database, "tmp join tmp")
+	assert.This(s).Is("k=1")
 }
 
 func TestJoin_splitSelect(t *testing.T) {

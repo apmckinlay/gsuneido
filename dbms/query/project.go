@@ -665,7 +665,7 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 			hfn := func(k rowHash) uint64 { return k.hash }
 			eqfn := func(x, y rowHash) bool {
 				return x.hash == y.hash &&
-					equalCols(x.row, y.row, p.source.Header(), p.columns, p.th, p.st)
+					equalCols(x.row, y.row, p.Header(), p.columns, p.th, p.st)
 			}
 			p.dedup = shmap.NewMapFuncs[rowHash, struct{}](hfn, eqfn)
 		}
@@ -690,6 +690,7 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 }
 
 func hashCols(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) uint64 {
+	assert.That(th != nil)
 	h := uint64(31)
 	for _, col := range cols {
 		x := row.GetRawVal(hdr, col, th, st)
@@ -698,6 +699,7 @@ func hashCols(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) uint6
 	return h
 }
 func equalCols(x, y Row, hdr *Header, cols []string, th *Thread, st *SuTran) bool {
+	assert.That(th != nil)
 	for _, col := range cols {
 		if x.GetRawVal(hdr, col, th, st) != y.GetRawVal(hdr, col, th, st) {
 			return false
@@ -722,7 +724,7 @@ func (p *Project) buildDedup(th *Thread) {
 // else the new row and false
 func (p *Project) dedupRow(th *Thread, row Row) (Row, bool) {
 	rh := rowHash{row: row,
-		hash: hashCols(row, p.source.Header(), p.columns, th, p.st)}
+		hash: hashCols(row, p.Header(), p.columns, th, p.st)}
 	k, existed := p.dedup.GetInit(rh)
 	if existed {
 		return k.row, true
@@ -770,6 +772,7 @@ func (p *Project) Lookup(th *Thread, sels Sels) Row {
 }
 
 func (p *Project) Simple(th *Thread) []Row {
+	assert.That(th != nil)
 	hdr := p.Header()
 	dst := 0
 	rows := p.source.Simple(th)

@@ -76,7 +76,7 @@ func (lc *lookupCache) SetCounters(probes, misses *atomic.Int64) {
 // - Increments probes for every attempted cache access.
 // - Increments misses only when the provider runs (i.e. cache insert).
 // - Uses GetPut so cache hits avoid invoking the provider function.
-func (lc *lookupCache) Lookup(th *Thread, q Query, sels Sels, st *SuTran) Row {
+func (lc *lookupCache) Lookup(q Query, sels Sels, th *Thread, st *SuTran) Row {
 	if !lc.cacheDisabled && (st == nil || !st.Updatable()) {
 		if lc.cache == nil {
 			lc.cache = lrucache.New[lookupKey, Row](cacheCapacity)
@@ -97,11 +97,11 @@ func (lc *lookupCache) Lookup(th *Thread, q Query, sels Sels, st *SuTran) Row {
 			if lc.misses != nil {
 				lc.misses.Add(1)
 			}
-			return lookup(q, th, Sels(k))
+			return lookup(q, Sels(k), th, st)
 		})
 	}
 bypass:
-	return lookup(q, th, sels)
+	return lookup(q, sels, th, st)
 }
 
 // evaluatePerformance uses cache stats since Reset (hits and misses).

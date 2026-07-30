@@ -72,20 +72,21 @@ func (c *Compatible) SetTran(t QueryTran) {
 
 // source2Has returns true if a row from source exists in source2.
 // It does Lookup on source2 using all source2 columns.
-// Since the lookup verifies all source2 columns, we only need to check
-// that source1-only columns (not in source2) are "" in the source1 row.
-func (c *Compatible) source2Has(th *Thread, row Row) bool {
+func (c *Compatible) source2Has(th *Thread, row1 Row) bool {
 	if c.disjoint != "" {
 		return false
 	}
 	hdr1 := c.source1.Header()
-	for _, col := range c.src1Only {
-		if row.GetRawVal(hdr1, col, th, c.st) != "" {
-			return false
-		}
-	}
-	sels := makeSels(hdr1, row, c.keyIndex, th, c.st)
-	return c.lookupCache.Lookup(th, c.source2, sels, c.st) != nil
+	// for _, col := range c.src1Only {
+	// 	// if x := row.GetRaw(hdr1, col); x != "" && x[0] != PackForward {
+	// 	if row.GetRawVal(hdr1, col, th, c.st) != "" {
+	// 		return false
+	// 	}
+	// }
+	// assert.That(slices.Equal(c.keyIndex, c.source2.Columns()))
+	sels := makeSels(hdr1, row1, c.keyIndex, th, c.st)
+	row2 := c.lookupCache.Lookup(c.source2, sels, th, c.st)
+	return row2 != nil && c.equal(th, row1, row2)
 }
 
 func makeSels(hdr *Header, row Row, cols []string, th *Thread, st *SuTran) Sels {

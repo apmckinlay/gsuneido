@@ -144,7 +144,14 @@ func (r Record) String() string {
 	for i := range r.Count() {
 		sb.WriteString(sep)
 		sep = ", "
-		sb.WriteString(r.GetVal(i).String())
+		s := r.GetRaw(i)
+		if len(s) > 0 && s[0] == PackForward {
+			sb.WriteString("->")
+			s = s[1:]
+		} else {
+			s = Unpack(s).String()
+		}
+		sb.WriteString(s)
 	}
 	sb.WriteString("}")
 	return sb.String()

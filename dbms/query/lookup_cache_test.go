@@ -15,7 +15,7 @@ func TestLookupCachePerformanceMonitoring(t *testing.T) {
 	q := &TestQop{} // minimal Query; Lookup returns nil via Nothing
 
 	for i := range lookupCacheCheckInterval + 50 {
-		lc.Lookup(nil, q, Sels{{"id", strconv.Itoa(i)}}, nil)
+		lc.Lookup(q, Sels{{"id", strconv.Itoa(i)}}, nil, nil)
 	}
 	assert.That(lc.cacheDisabled)
 }
@@ -26,9 +26,9 @@ func TestLookupCacheGoodPerformance(t *testing.T) {
 
 	for i := range lookupCacheCheckInterval + 50 {
 		if i%2 == 0 {
-			lc.Lookup(nil, q, Sels{{"id", "1"}}, nil)
+			lc.Lookup(q, Sels{{"id", "1"}}, nil, nil)
 		} else {
-			lc.Lookup(nil, q, Sels{{"id", "2"}}, nil)
+			lc.Lookup(q, Sels{{"id", "2"}}, nil, nil)
 		}
 	}
 	assert.That(!lc.cacheDisabled)
@@ -38,15 +38,15 @@ func TestLookupCacheOperationCounter(t *testing.T) {
 	var lc lookupCache
 	q := &TestQop{}
 
-	lc.Lookup(nil, q, Sels{{"id", "1"}}, nil)
+	lc.Lookup(q, Sels{{"id", "1"}}, nil, nil)
 	assert.That(lc.cacheOpCount == 1)
 
-	lc.Lookup(nil, q, Sels{{"id", "2"}}, nil)
+	lc.Lookup(q, Sels{{"id", "2"}}, nil, nil)
 	assert.That(lc.cacheOpCount == 2)
 
 	// Disable cache and verify counter doesn't increment
 	lc.cacheDisabled = true
-	lc.Lookup(nil, q, Sels{{"id", "3"}}, nil)
+	lc.Lookup(q, Sels{{"id", "3"}}, nil, nil)
 	assert.That(lc.cacheOpCount == 2)
 }
 
@@ -97,7 +97,7 @@ func TestLeftJoinCacheCounters(t *testing.T) {
 	act(db, "insert { a: '1', b: 'x' } into t1")
 	act(db, "insert { a: '2', b: 'y' } into t1")
 	act(db, "insert { a: '3', b: 'z' } into t1")
-	
+
 	doAdmin(db, "create t2 (a) key(a)")
 	act(db, "insert { a: '1' } into t2")
 	act(db, "insert { a: '2' } into t2")
@@ -111,7 +111,7 @@ func TestLeftJoinCacheCounters(t *testing.T) {
 	// Expect at least 3 probes (one per left row) and >=2 misses (new keys)
 	if afterP-baseP < 3 || afterM-baseM < 2 {
 		t.Fatalf("leftjoin counters too small: probes %d misses->%d",
-			afterP - baseP, afterM - baseM)
+			afterP-baseP, afterM-baseM)
 	}
 }
 
@@ -140,7 +140,7 @@ func TestCompatibleIntersectCacheCounters(t *testing.T) {
 
 	// Expect at least some activity; conservatively require >=2
 	if afterP-baseP < 2 || afterM-baseM < 2 {
-		t.Fatalf("compatible (intersect) counters too small: probes %d->%d misses %d->%d",
-			baseP, afterP, baseM, afterM)
+		t.Fatalf("compatible (intersect) counters too small: probes %d misses %d",
+			afterP-baseP, afterM-baseM)
 	}
 }

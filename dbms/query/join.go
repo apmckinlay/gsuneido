@@ -472,7 +472,7 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	if jn.joinType == many_to_one {
 		jn.lookupRow = jn.cachedLookup(th, sel2)
 	} else if jn.joinType == one_to_one {
-		jn.lookupRow = lookup(jn.source2, th, sel2)
+		jn.lookupRow = lookup(jn.source2, sel2, th, jn.st)
 	} else {
 		jn.source2.Select(sel2)
 	}
@@ -480,7 +480,7 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 }
 
 func (jb *joinBase) cachedLookup(th *Thread, sels Sels) Row {
-	return jb.lookupCache.Lookup(th, jb.source2, sels, jb.st)
+	return jb.lookupCache.Lookup(jb.source2, sels, th, jb.st)
 }
 
 func (jb *joinBase) projectRow1(th *Thread, row Row) Sels {
@@ -527,7 +527,7 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 		jn.source1.Select(sel1)
 		defer jn.Select(nil)
 		jn.sel2 = sel2
-		return GetNext1(jn, th, slc.With(sel1, sel2...))
+		return getNext1(jn, th)
 	}
 	row1 := jn.source1.Lookup(th, sel1)
 	if row1 == nil {
@@ -538,11 +538,11 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	if jn.joinType == many_to_one {
 		row2 = jn.cachedLookup(th, sel2)
 	} else if jn.joinType == one_to_one {
-		row2 = lookup(jn.source2, th, sel2)
+		row2 = lookup(jn.source2, sel2, th, jn.st)
 	} else {
 		jn.source2.Select(sel2)
 		defer jn.Select(nil)
-		row2 = GetNext1(jn.source2, th, sel2)
+		row2 = getNext1(jn.source2, th)
 	}
 	if row2 == nil {
 		return nil
@@ -791,7 +791,7 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			if lj.joinType == many_to_one {
 				lj.lookupRow = lj.cachedLookup(th, sels)
 			} else if lj.joinType == one_to_one {
-				lj.lookupRow = lookup(lj.source2, th, sels)
+				lj.lookupRow = lookup(lj.source2, sels, th, lj.st)
 			} else {
 				lj.source2.Select(sels)
 			}
@@ -848,7 +848,7 @@ func (lj *LeftJoin) Lookup(th *Thread, sels Sels) Row {
 		// log.Println("INFO LeftJoin Lookup fallback to Select & Get")
 		lj.rewind()
 		lj.source1.Select(sel1)
-		return GetNext1(lj, th, sel1)
+		return getNext1(lj, th)
 	}
 	row1 := lj.source1.Lookup(th, sel1)
 	if row1 == nil {
@@ -859,7 +859,7 @@ func (lj *LeftJoin) Lookup(th *Thread, sels Sels) Row {
 	if lj.joinType == many_to_one {
 		row2 = lj.cachedLookup(th, sel)
 	} else if lj.joinType == one_to_one {
-		row2 = lookup(lj.source2, th, sel)
+		row2 = lookup(lj.source2, sel, th, lj.st)
 	} else {
 		lj.source2.Select(sel)
 		row2 = lj.source2.Get(th, Next)

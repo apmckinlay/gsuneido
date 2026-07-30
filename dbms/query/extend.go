@@ -345,9 +345,6 @@ func (e *Extend) Lookup(th *Thread, sels Sels) Row {
 		return row
 	}
 	rec := e.extendRow(th, row)
-	if !e.filter(rec, th, row) {
-		return nil
-	}
 	return append(row, DbRec{Record: rec})
 }
 

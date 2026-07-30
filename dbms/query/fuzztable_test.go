@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -21,10 +22,13 @@ import (
 )
 
 type FT struct {
-	db      *db19.Database
-	rnd     *rand.Rand
-	nextNum int
-	rt      *db19.ReadTran
+	db       *db19.Database
+	rnd      *rand.Rand
+	nextNum  int
+	rt       *db19.ReadTran
+	rules    map[string]string
+	ruleRefs []string
+	ruleDeps map[string]string
 }
 
 type buildFT struct {
@@ -41,6 +45,7 @@ type buildFT struct {
 	cardinality map[string]int
 	data        [][]string
 	noEmptyKey  bool
+	ruleCols    []string
 }
 
 func (ft *FT) NewFuzzTable() Query {
@@ -50,11 +55,18 @@ func (ft *FT) NewFuzzTable() Query {
 const (
 	ftMaxRows    = 47
 	ftMaxCols    = 31
+	ftMaxRules   = 3
 	ftMaxKeys    = 3
 	ftMaxIndexes = 3
 )
 
 func (ft *FT) newFT() *buildFT {
+	if ft.rules == nil {
+		ft.rules = make(map[string]string)
+	}
+	if ft.ruleDeps == nil {
+		ft.ruleDeps = make(map[string]string)
+	}
 	return &buildFT{FT: ft, maxRows: ftMaxRows, maxKeys: ftMaxKeys, maxIndexes: ftMaxIndexes, prefix: "c"}
 }
 
@@ -88,7 +100,27 @@ func (b *buildFT) construct() *buildFT {
 	return b
 }
 
+func (b *buildFT) makeRules() {
+	for _, col := range b.ruleCols {
+		ruleName := "Rule_" + str.UnCapitalize(col)
+		var ruleExpr string
+		nonRuleCount := len(b.columns) - len(b.ruleCols)
+		if nonRuleCount > 0 && b.rnd.IntN(2) == 0 {
+			existingCol := b.columns[b.rnd.IntN(nonRuleCount)]
+			b.ruleRefs = append(b.ruleRefs, existingCol)
+			b.ruleDeps[str.UnCapitalize(col)] = existingCol
+			ruleExpr = "." + str.UnCapitalize(existingCol)
+		} else {
+			ruleExpr = strconv.Itoa(b.rnd.IntN(1000))
+		}
+		b.rules[ruleName] = ruleExpr
+		Global.TestDef(ruleName,
+			compile.Constant("function() { return "+ruleExpr+" }"))
+	}
+}
+
 func (b *buildFT) finish() Query {
+	b.makeRules()
 	table := "table" + strconv.Itoa(b.nextNum)
 	b.nextNum++
 	var sb strings.Builder
@@ -129,6 +161,18 @@ func (b *buildFT) makeColumns() {
 		b.colIndex[col] = i
 		b.cardinality[col] = 1 + b.rnd.IntN(1009)
 	}
+
+	if !b.noEmptyKey && b.rnd.IntN(2) == 0 {
+		nrule := 1 + b.rnd.IntN(ftMaxRules)
+		b.ruleCols = make([]string, 0, nrule)
+		for i := range nrule {
+			// capitalized so the column is derived (not stored), only from a rule
+			ruleCol := str.Capitalize(b.prefix) + "r" + strconv.Itoa(i)
+			b.ruleCols = append(b.ruleCols, ruleCol)
+			b.columns = append(b.columns, ruleCol)
+			b.colIndex[ruleCol] = len(b.columns) - 1
+		}
+	}
 }
 
 func (b *buildFT) makeKeys() {
@@ -138,8 +182,16 @@ func (b *buildFT) makeKeys() {
 		return
 	}
 	nkeys := 1 + b.rnd.IntN(b.maxKeys)
+
+	nonRuleCols := make([]string, 0, len(b.columns))
+	for _, col := range b.columns {
+		if !slices.Contains(b.ruleCols, col) {
+			nonRuleCols = append(nonRuleCols, col)
+		}
+	}
+
 	// to simplify creating unique data, keys do not overlap
-	p := b.rnd.Perm(len(b.columns))
+	p := b.rnd.Perm(len(nonRuleCols))
 	b.keys = make([][]string, 0, nkeys)
 	for range nkeys {
 		if len(p) == 0 {
@@ -149,7 +201,7 @@ func (b *buildFT) makeKeys() {
 		keylen = min(keylen, len(p))
 		key := make([]string, keylen)
 		for j := range keylen {
-			key[j] = b.columns[p[0]]
+			key[j] = nonRuleCols[p[0]]
 			p = p[1:]
 		}
 		b.keys = append(b.keys, key)
@@ -160,11 +212,20 @@ func (b *buildFT) makeIndexes() {
 	if b.emptyKey || len(b.columns) < 2 {
 		return
 	}
+	nonRuleCols := make([]string, 0, len(b.columns))
+	for _, col := range b.columns {
+		if !slices.Contains(b.ruleCols, col) {
+			nonRuleCols = append(nonRuleCols, col)
+		}
+	}
+	if len(nonRuleCols) < 2 {
+		return
+	}
 	nindexes := b.rnd.IntN(b.maxIndexes)
 	b.indexes = make([][]string, 0, nindexes)
-	maxcols := min(nindexes, len(b.columns))
+	maxcols := min(nindexes, len(nonRuleCols))
 	for ncols := 1; ncols < maxcols; ncols++ {
-		idx := set.RandPerm(b.rnd, b.columns, ncols)
+		idx := set.RandPerm(b.rnd, nonRuleCols, ncols)
 		if slc.ContainsFn(b.indexes, idx, slices.Equal) ||
 			slc.ContainsFn(b.keys, idx, containsKey) {
 			continue
@@ -190,6 +251,9 @@ func (b *buildFT) makeRowsData(nrows int) [][]string {
 		vals := make([]string, len(b.columns))
 		// generate data for all the columns
 		for j, col := range b.columns {
+			if slices.Contains(b.ruleCols, col) {
+				continue
+			}
 			vals[j] = col + "_" + strconv.Itoa(b.rnd.IntN(b.cardinality[col]))
 		}
 		// overwrite with unique values for keys
@@ -217,7 +281,10 @@ func (b *buildFT) makeRowsData(nrows int) [][]string {
 
 func (b *buildFT) dataToRecord(vals []string) Record {
 	var rb RecordBuilder
-	for _, val := range vals {
+	for i, val := range vals {
+		if i < len(b.columns) && slices.Contains(b.ruleCols, b.columns[i]) {
+			continue
+		}
 		rb.Add(SuStr(val))
 	}
 	return rb.Build()
@@ -302,24 +369,24 @@ func TestFuzzTable_Build(t *testing.T) {
 }
 
 func TestFuzzTable_makeColumns(t *testing.T) {
-	ft := testFT()
-	defer ft.db.Close()
+	for range 100 {
+		ft := testFT()
+		bf := ft.newFT()
+		bf.makeColumns()
 
-	bf := ft.newFT()
-	bf.makeColumns()
-
-	if len(bf.columns) == 0 {
-		t.Fatal("No columns generated")
-	}
-	if len(bf.columns) > 32 {
-		t.Errorf("Too many columns: %d", len(bf.columns))
-	}
-	if len(bf.colIndex) != len(bf.columns) {
-		t.Errorf("colIndex size mismatch")
-	}
-	for col, card := range bf.cardinality {
-		if card < 1 || card > 1009 {
-			t.Errorf("Invalid cardinality for %s: %d", col, card)
+		if len(bf.columns) == 0 {
+			t.Fatal("No columns generated")
+		}
+		if len(bf.columns) > ftMaxCols+ftMaxRules {
+			t.Errorf("Too many columns: %d", len(bf.columns))
+		}
+		if len(bf.colIndex) != len(bf.columns) {
+			t.Errorf("colIndex size mismatch")
+		}
+		for col, card := range bf.cardinality {
+			if card < 1 || card > 1009 {
+				t.Errorf("Invalid cardinality for %s: %d", col, card)
+			}
 		}
 	}
 }

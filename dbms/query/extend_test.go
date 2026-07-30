@@ -53,10 +53,13 @@ func TestExtendSelect(t *testing.T) {
 
 	two := Sels{{col: "ex", val: Pack(IntVal(2))}}
 	q.Select(two)
-	assert.That(q.Get(nil, Next) != nil)
+	assert.This(RowStr(q.Header(), q.Get(nil, Next))).
+		Is(`Row{abbrev='a' cnum=1 ex=2 name="axon"}`)
 	q.Select(nil)
 
-	assert.That(q.Lookup(nil, two) != nil)
+	assert.This(RowStr(q.Header(), lookup(q, two, nil, nil))).
+		Is(`Row{abbrev='a' cnum=1 ex=2 name="axon"}`)
+	assert.That(lookup(q, Sels{{col: "ex", val: Pack(IntVal(0))}}, nil, nil) == nil)
 }
 
 func TestExtendRuleBug(t *testing.T) {

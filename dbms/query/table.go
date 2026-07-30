@@ -253,11 +253,7 @@ func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
 			key = selOrg(true, fullFields, sels, true)
 		}
 	}
-	row := tbl.LookupRaw(key)
-	if row == nil || !singletonFilter(tbl.header, row, sels) {
-		return nil
-	}
-	return row
+	return tbl.LookupRaw(key)
 }
 
 func (tbl *Table) LookupRaw(key string) Row {

@@ -156,7 +156,9 @@ type Query interface {
 	// Incoming Lookup should be consistent with the incoming Require.
 	// Outgoing Lookup should be consistent with the outgoing Require.
 	// It is valid for Require cols to specify a superset of key columns.
-	// Lookup implementations are required to apply (filter) all the sels.
+	// It is ok for sels to contain extra columns,
+	// BUT they will be ignored, not applied.
+	// The originator of the sels is responsible for comparing extra columns.
 	// Lookup generally corresponds to [UniqueReq]
 	Lookup(th *Thread, sels Sels) Row
 
@@ -167,7 +169,7 @@ type Query interface {
 	// Incoming Select should be consistent with the incoming Require.
 	// Outgoing Select should be consistent with the outgoing Require.
 	// It is ok for sels to contain extra columns,
-	// BUT they will be ignored, not applied (unlike Lookup)
+	// BUT they will be ignored, not applied.
 	// Select generally corresponds to [GroupReq]
 	Select(sels Sels)
 
@@ -440,11 +442,11 @@ func optimize(q Query, mode Mode, req Require) (
 	}
 
 	// this condition must match SetApproach
-	// A fastSingle node (or one whose fixed covers req.cols) trivially
-	// satisfies any require, so the qualitative aspect (cols/use) is
-	// irrelevant. Clear cols AND nseeks
+	// A fastSingle node or ReqOrder covered by fixed
+	// trivially satisfies the requirement so we clear it.
 	// frac is kept as it scales the (single) row's varcost.
-	if q.fastSingle() || q.Fixed().All(req.cols) {
+	if q.fastSingle() ||
+		(req.use == ReqOrder && q.Fixed().All(req.cols)) {
 		req.cols = nil
 		req.nseeks = 0
 		req.use = ReqNone
@@ -673,7 +675,8 @@ var _ = AddInfo("query.tempindex", &tempIndexCount)
 // It also adds temp indexes where required.
 func SetApproach(q Query, req Require, tran QueryTran) Query {
 	// must match optimize's guard (see comment there)
-	if q.fastSingle() || q.Fixed().All(req.cols) {
+	if q.fastSingle() ||
+		(req.use == ReqOrder && q.Fixed().All(req.cols)) {
 		req.cols = nil
 		req.nseeks = 0
 		req.use = ReqNone
@@ -699,33 +702,40 @@ func SetApproach(q Query, req Require, tran QueryTran) Query {
 
 // execution --------------------------------------------------------
 
-// GetNext1 returns the next row from q if it matches sels, else nil.
-// Used when Lookup is implemented with Select+Get —
-// Select only restricts by the physical index prefix,
-// so GetNext1 verifies the row matches all of sels.
-func GetNext1(q Query, th *Thread, sels Sels) Row {
-	// this should *not* have to loop because the index should be unique
-	row := q.Get(th, Next)
-	if row != nil {
-		debug.assert(q.Get(th, Next) == nil)
-		if singletonFilter(q.Header(), row, sels) {
-			return row
-		}
-	}
-	return nil
-}
-
 // lookupViaSelectGet implements Lookup via Select+Get,
-// verifying the row matches all sels (since Select only restricts
-// by the physical index prefix) and clearing the select afterwards.
+// clearing the select afterwards.
+// Does not filter on "extra" columns
+// because sels origin is responsible for filtering.
 func lookupViaSelectGet(q Query, th *Thread, sels Sels) Row {
 	q.Select(sels)
 	defer q.Select(nil)
-	return GetNext1(q, th, sels)
+	return getNext1(q, th)
 }
 
-func lookup(q Query, th *Thread, sels Sels) Row {
-	return q.Lookup(th, sels)
+// getNext1 gets the next row from q, asserting there is only one
+func getNext1(q Query, th *Thread) Row {
+	// this does *not* need to loop because the index is unique
+	row := q.Get(th, Next)
+	debug.assert(row == nil || q.Get(th, Next) == nil)
+	return row
+}
+
+func lookup(q Query, sels Sels, th *Thread, st *SuTran) Row {
+	row := q.Lookup(th, sels)
+	return lookupFilter(q.Header(), row, sels, th, st)
+}
+
+func lookupFilter(hdr *Header, row Row, sels Sels, th *Thread, st *SuTran) Row {
+	if row != nil {
+		for _, sel := range sels {
+			x := row.GetRawVal(hdr, sel.col, th, st)
+			assert.That(len(x) == 0 || x[0] != PackForward)
+			if x != sel.val {
+				return nil
+			}
+		}
+	}
+	return row
 }
 
 // Query1 -----------------------------------------------------------

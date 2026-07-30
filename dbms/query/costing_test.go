@@ -77,7 +77,7 @@ func fuzzProjectForCosting(ft *FT) Query {
 		// truncate to make len(data) divisible by projDupDiv
 		b.data = b.data[:len(b.data)-len(b.data)%projGrpDiv]
 
-		projCols := randomProjectCols(ft.rnd, b.columns, b.indexes)
+		projCols := randomProjectCols(ft.rnd, b.columns, b.indexes, b.ruleDeps)
 
 		if set.Equal(projCols, b.columns) {
 			continue // Transform would eliminate

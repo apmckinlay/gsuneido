@@ -95,12 +95,13 @@ func (u *Union) String() string {
 	}
 	switch u.strat {
 	case unionMerge:
-		s += "-merge" //+ str.Join("(,)", u.keyIndex)
+		s += "-merge"
 	case unionLookup:
 		if u.disjoint == "" {
 			s += "-lookup"
 		}
 	}
+	// s += "^" + str.Join("(,)", u.keyIndex)
 	return s
 }
 

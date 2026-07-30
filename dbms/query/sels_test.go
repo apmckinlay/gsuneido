@@ -6,6 +6,7 @@ package query
 import (
 	"testing"
 
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -61,4 +62,9 @@ func TestSelsAll(t *testing.T) {
 	}
 	assert.T(t).This(cols).Is([]string{"a", "b"})
 	assert.T(t).This(vals).Is([]string{"1", "2"})
+}
+
+func TestSelsString(t *testing.T) {
+	sels := Sels{{"a", Pack(IntVal(1))}, {"b", Pack(IntVal(2))}}
+	assert.T(t).This(sels.String()).Is("Sels{a: 1, b: 2}")
 }
