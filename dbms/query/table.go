@@ -193,8 +193,8 @@ func (tbl *Table) costFor(index []string, mode Mode, req Require) (Cost, Cost, a
 }
 
 func (tbl *Table) setApproach(_ Require, approach any, _ QueryTran) {
-	app := approach.(tableApproach)
-	tbl.SetIndex(app.index, app.mode)
+	ap := approach.(tableApproach)
+	tbl.SetIndex(ap.index, ap.mode)
 }
 
 func (tbl *Table) SetIndex(index []string, mode Mode) {

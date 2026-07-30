@@ -254,7 +254,7 @@ func (u *Union) optimize(mode Mode, req Require) (Cost, Cost, any) {
 
 func (u *Union) optLookup(mode Mode, req Require) (Cost, Cost, *unionApproach) {
 	// try forward versus reverse
-	fc, vc, app := u.optLookup2(mode, req)
+	fc, vc, ap := u.optLookup2(mode, req)
 
 	u.source1, u.source2 = u.source2, u.source1
 	fcRev, vcRev, appRev := u.optLookup2(mode, req)
@@ -265,7 +265,7 @@ func (u *Union) optLookup(mode Mode, req Require) (Cost, Cost, *unionApproach) {
 		appRev.reverse = true
 		return fcRev, vcRev, appRev
 	}
-	return fc, vc, app
+	return fc, vc, ap
 }
 
 func (u *Union) optLookup2(mode Mode, req Require) (Cost, Cost, *unionApproach) {
@@ -399,31 +399,31 @@ func (u *Union) mergeIndexes(req Require) [][]string {
 }
 
 func (u *Union) setApproach(req Require, approach any, tran QueryTran) {
-	app := approach.(*unionApproach)
-	u.strat = app.strat
-	if app.strat == 0 {
+	ap := approach.(*unionApproach)
+	u.strat = ap.strat
+	if ap.strat == 0 {
 		u.strat = unionLookup
 	}
 	if u.strat == unionMerge {
 		unionMergeCount.Add(1)
 		if u.disjoint != "" {
 			unionMergeDisjoint.Add(1)
-			u.mergeCols = app.cols
+			u.mergeCols = ap.cols
 		} else {
-			u.mergeCols = set.Union(app.cols, u.allCols)
+			u.mergeCols = set.Union(ap.cols, u.allCols)
 		}
 	} else { // unionLookup
 		unionLookupCount.Add(1)
-		u.lookupCols = app.cols
+		u.lookupCols = ap.cols
 	}
 	if u.disjoint != "" {
 		unionDisjointCount.Add(1)
 	}
-	if app.reverse {
+	if ap.reverse {
 		u.source1, u.source2 = u.source2, u.source1
 	}
-	u.source1 = SetApproach(u.source1, app.req1, tran)
-	u.source2 = SetApproach(u.source2, app.req2, tran)
+	u.source1 = SetApproach(u.source1, ap.req1, tran)
+	u.source2 = SetApproach(u.source2, ap.req2, tran)
 	u.header = JoinHeaders(u.source1.Header(), u.source2.Header())
 	u.src1Only = set.Difference(u.source1.Columns(), u.source2.Columns())
 	u.empty1 = make(Row, len(u.source1.Header().Fields))

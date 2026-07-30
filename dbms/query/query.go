@@ -451,13 +451,13 @@ func optimize(q Query, mode Mode, req Require) (
 		req.nseeks = 0
 		req.use = ReqNone
 	}
-	if fixcost, varcost, app := q.cacheGet(req); varcost >= 0 {
-		return fixcost, varcost, app
+	if fixcost, varcost, ap := q.cacheGet(req); varcost >= 0 {
+		return fixcost, varcost, ap
 	}
-	fixcost, varcost, app := optTempIndex(q, mode, req)
+	fixcost, varcost, ap := optTempIndex(q, mode, req)
 	assert.That(fixcost >= 0 && varcost >= 0)
-	q.cacheAdd(req, fixcost, varcost, app)
-	return fixcost, varcost, app
+	q.cacheAdd(req, fixcost, varcost, ap)
+	return fixcost, varcost, ap
 }
 
 // optTempIndex determines if a TempIndex is a benefit
@@ -658,14 +658,14 @@ func tempIndexable(mode Mode) bool {
 
 func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 	fixcost3, varcost3 Cost, app3 any) (Cost, Cost, any) {
-	fixcost, varcost, app := fixcost1, varcost1, app1
+	fixcost, varcost, ap := fixcost1, varcost1, app1
 	if fixcost2+varcost2 < fixcost+varcost {
-		fixcost, varcost, app = fixcost2, varcost2, app2
+		fixcost, varcost, ap = fixcost2, varcost2, app2
 	}
 	if fixcost3+varcost3 < fixcost+varcost {
-		fixcost, varcost, app = fixcost3, varcost3, app3
+		fixcost, varcost, ap = fixcost3, varcost3, app3
 	}
-	return fixcost, varcost, app
+	return fixcost, varcost, ap
 }
 
 var tempIndexCount atomic.Int64
@@ -687,10 +687,10 @@ func SetApproach(q Query, req Require, tran QueryTran) Query {
 		panic("SetApproach: not found in cache")
 	}
 	assert.That(fixcost >= 0 && varcost >= 0)
-	if app, ok := approach.(*tempIndex); ok {
-		q.Metrics().setCost(1, app.srcfixcost, app.srcvarcost)
-		q.setApproach(OrderReq(app.srcindex, 1), app.srcapp, tran)
-		ti := NewTempIndex(q, app.index, tran)
+	if ap, ok := approach.(*tempIndex); ok {
+		q.Metrics().setCost(1, ap.srcfixcost, ap.srcvarcost)
+		q.setApproach(OrderReq(ap.srcindex, 1), ap.srcapp, tran)
+		ti := NewTempIndex(q, ap.index, tran)
 		ti.setCost(float64(req.frac), fixcost, varcost)
 		tempIndexCount.Add(1)
 		return ti

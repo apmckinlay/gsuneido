@@ -702,20 +702,20 @@ func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 		w.srcIndex = req.cols
 		w.tbl = nil
 	} else {
-		app := approach.(*whereApproach)
-		w.tbl.SetIndex(app.index, app.mode)
-		w.srcIndex = app.index
-		if app.idxSel != nil {
-			w.ixCtx.cols = app.index
-			w.ixCtx.encodes = w.tbl.IndexEncodes(app.index)
+		ap := approach.(*whereApproach)
+		w.tbl.SetIndex(ap.index, ap.mode)
+		w.srcIndex = ap.index
+		if ap.idxSel != nil {
+			w.ixCtx.cols = ap.index
+			w.ixCtx.encodes = w.tbl.IndexEncodes(ap.index)
 			w.ixExpr = w.exprsFor(w.ixCtx.cols)
-			w.idxSelBase = app.idxSel
+			w.idxSelBase = ap.idxSel
 			w.idxSelActive = w.idxSelBase
-			w.tbl.setCost(float64(req.frac)*app.idxSel.prefixFrac*app.idxSel.skipFrac,
-				0, app.cost)
+			w.tbl.setCost(float64(req.frac)*ap.idxSel.prefixFrac*ap.idxSel.skipFrac,
+				0, ap.cost)
 			w.idxSelPos = -1
 		} else {
-			w.tbl.setCost(float64(req.frac), 0, app.cost)
+			w.tbl.setCost(float64(req.frac), 0, ap.cost)
 		}
 	}
 	w.header = w.source.Header()

@@ -17,17 +17,17 @@ func TestTableOptimize(t *testing.T) {
 		t.Helper()
 		tbl := &Table{name: table}
 		tbl.SetTran(tran)
-		f, v, app := tbl.optimize(ReadMode, req)
+		f, v, ap := tbl.optimize(ReadMode, req)
 		assert.True(f+v < impossible)
-		assert.This(app.(tableApproach).index).Is(expected)
+		assert.This(ap.(tableApproach).index).Is(expected)
 	}
 	assertImpossible := func(table string, req Require) {
 		t.Helper()
 		tbl := &Table{name: table}
 		tbl.SetTran(tran)
-		f, v, app := tbl.optimize(ReadMode, req)
+		f, v, ap := tbl.optimize(ReadMode, req)
 		assert.False(f+v < impossible)
-		assert.This(app).Is(nil)
+		assert.This(ap).Is(nil)
 	}
 
 	// table with single index: key on {a}
@@ -134,9 +134,9 @@ func TestTableOptimize(t *testing.T) {
 		GroupReq([]string{"x"}, 1, 1),
 		UniqueReq([]string{"x"}, 1),
 	} {
-		f, v, app := singleton.optimize(ReadMode, req)
+		f, v, ap := singleton.optimize(ReadMode, req)
 		assert.Msg(req).True(f+v < impossible)
-		assert.Msg(req).This(app.(tableApproach).index).Is([]string{"x"})
+		assert.Msg(req).This(ap.(tableApproach).index).Is([]string{"x"})
 	}
 }
 
@@ -150,15 +150,15 @@ func TestTableOptimize_UniqueReq(t *testing.T) {
 	}
 	test := func(tbl *Table, req Require, expected []string) {
 		t.Helper()
-		f, v, app := tbl.optimize(ReadMode, req)
+		f, v, ap := tbl.optimize(ReadMode, req)
 		assert.True(f+v < impossible)
-		assert.This(app.(tableApproach).index).Is(expected)
+		assert.This(ap.(tableApproach).index).Is(expected)
 	}
 	fail := func(tbl *Table, req Require) {
 		t.Helper()
-		f, v, app := tbl.optimize(ReadMode, req)
+		f, v, ap := tbl.optimize(ReadMode, req)
 		assert.False(f+v < impossible)
-		assert.This(app).Is(nil)
+		assert.This(ap).Is(nil)
 	}
 	var tbl *Table
 
