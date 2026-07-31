@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -78,4 +79,11 @@ func TestHasKey(t *testing.T) {
 	test("", "a", false)
 	test("", "b", true)
 	test("a c", "a+b+c", true)
+}
+
+func TestProjectHeader(t *testing.T) {
+	src := NewHeader([][]string{{"a", "b", "c"}, {"d", "e"}}, []string{"a", "b", "c", "d", "e"})
+	hdr := projectHeader(src, []string{"a", "e"})
+	assert.T(t).This(hdr.Fields).Is([][]string{{"a", "-", "-"}, {"-", "e"}})
+	assert.T(t).This(hdr.Columns).Is([]string{"a", "e"})
 }

@@ -154,24 +154,27 @@ func (*Project) includeDeps(cols, srcCols []string) []string {
 }
 
 func (p *Project) getHeader() *Header {
-	srcFlds := p.source.Header().Fields
-	newflds := make([][]string, len(srcFlds))
-	for i, fs := range srcFlds {
-		newflds[i] = projectFields(fs, p.columns)
-	}
-	return NewHeader(newflds, p.columns)
+	return projectHeader(p.source.Header(), p.columns)
 }
 
-func projectFields(fs []string, pcols []string) []string {
-	flds := make([]string, len(fs))
-	for i, f := range fs {
-		if slices.Contains(pcols, f) {
-			flds[i] = f
-		} else {
-			flds[i] = "-"
+// projectHeader builds a Header with the given columns.
+// Physical fields not in cols are replaced with "-" so Fields stays
+// parallel one-to-one with the underlying records.
+func projectHeader(src *Header, cols []string) *Header {
+	srcFlds := src.Fields
+	newflds := make([][]string, len(srcFlds))
+	for i, fs := range srcFlds {
+		flds := make([]string, len(fs))
+		for j, f := range fs {
+			if slices.Contains(cols, f) {
+				flds[j] = f
+			} else {
+				flds[j] = "-"
+			}
 		}
+		newflds[i] = flds
 	}
-	return flds
+	return NewHeader(newflds, cols)
 }
 
 func (p *Project) String() string {
