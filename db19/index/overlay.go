@@ -130,7 +130,7 @@ func (ov *Overlay) RangeFrac(org, end string, nrecs, btreeNrows int) float64 {
 	}
 	btFrac := 0.0
 	if btreeNrows > 0 {
-		btFrac = ov.bt.RangeFrac(org, end, btreeNrows)
+		btFrac = ov.bt.RangeFrac(org, end)
 	}
 	if math.Abs(float64(nrecs-btreeNrows))/float64(nrecs) < 0.02 {
 		// ixbufs are < 2%

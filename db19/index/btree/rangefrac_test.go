@@ -29,7 +29,7 @@ func BenchmarkBtreeRangeFrac(b *testing.B) {
 		y := key(rng.IntN(n))
 		org := min(x, y)
 		end := max(x, y)
-		bt.RangeFrac(org, end, n)
+		bt.RangeFrac(org, end)
 	}
 }
 

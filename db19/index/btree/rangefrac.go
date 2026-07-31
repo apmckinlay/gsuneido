@@ -14,7 +14,7 @@ const smallRoot = 8 // ???
 
 // RangeFrac returns a number from 0 to 1
 // giving the fraction of the keys in the range >=org <end
-func (bt *btree) RangeFrac(org, end string, _ int) float64 {
+func (bt *btree) RangeFrac(org, end string) float64 {
 	if org >= end {
 		return 0
 	}
