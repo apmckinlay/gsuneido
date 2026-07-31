@@ -16,6 +16,12 @@ GOARM64 = v8.1
 GO_ENV = GOAMD64=$(GOAMD64) GOARM64=$(GOARM64)
 BUILD = build -v -buildvcs=true -trimpath
 
+# Set GSDBG=1 to enable dbg.Assert (//go:build dbg)
+ifdef GSDBG
+TAGS += dbg
+endif
+TAGFLAGS = $(if $(strip $(TAGS)),-tags "$(strip $(TAGS))")
+
 EXE =
 ifdef PATHEXT
 EXE = .exe
@@ -26,7 +32,7 @@ build : dbms/server.crt
 	@go version
 	CGO_ENABLED=0 \
 	$(GO_ENV) \
-	go $(BUILD) $(BUILDARGS) -o gs_$(GOOS)_$(GOARCH)$(EXE) \
+	go $(BUILD) $(BUILDARGS) $(TAGFLAGS) -o gs_$(GOOS)_$(GOARCH)$(EXE) \
 	  -ldflags "$(LDFLAGS)"
 ifeq ($(GOOS),darwin)
 	codesign --force --sign - gs_$(GOOS)_$(GOARCH)$(EXE)
@@ -36,7 +42,7 @@ race :
 	@go version
 	CGO_ENABLED=1 \
 	$(GO_ENV) \
-	go $(BUILD) -race -o gs_$(GOOS)_$(GOARCH)$(EXE) \
+	go $(BUILD) -race $(TAGFLAGS) -o gs_$(GOOS)_$(GOARCH)$(EXE) \
 	  -ldflags "$(LDFLAGS)"
 
 define BUILD_BINARY
@@ -46,7 +52,7 @@ define BUILD_BINARY
 	CGO_ENABLED=0 \
 	GOARCH=$(GOARCH) GOOS=$(GOOS) \
 	$(GO_ENV) \
-	go $(BUILD) -o $@ -ldflags "$(LDFLAGS)"
+	go $(BUILD) $(TAGFLAGS) -o $@ -ldflags "$(LDFLAGS)"
 endef
 
 gs_% : FORCE
@@ -64,7 +70,7 @@ gs_windows_amd64_gui.exe : FORCE gsuneido_windows_amd64.syso
 	@go version
 	go run cmd/deps/deps.go
 	CGO_ENABLED=1 \
-	go $(BUILD) -tags gui -ldflags "$(LDFLAGS) $(WINGUI)" -o $@
+	go $(BUILD) -tags "gui $(TAGS)" -ldflags "$(LDFLAGS) $(WINGUI)" -o $@
 
 gsuneido_windows_amd64.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows_amd64.syso res/suneido.rc
@@ -87,24 +93,24 @@ git-status :
 
 test :
 	CGO_ENABLED=0 \
-	go test -short -vet=off -timeout 30s ./...
+	go test -short -vet=off -timeout 30s $(TAGFLAGS) ./...
 	
 fulltest: build test
-	go test -run "^$$" -fuzz=FuzzRandom -fuzztime=60s ./dbms/query/
+	go test -run "^$$" -fuzz=FuzzRandom -fuzztime=60s $(TAGFLAGS) ./dbms/query/
 	./gs_$(GOOS)_$(GOARCH)$(EXE) etatests.ss	
 	./gs_$(GOOS)_$(GOARCH)$(EXE) "QueryFuzz.Cmdline(60)"	
 
 racetest :
-	go test -race -short -count=1 ./...
+	go test -race -short -count=1 $(TAGFLAGS) ./...
 
 sujs :
-	go build -ldflags "-s -w" -o sujs_$(GOOS)_$(GOARCH)$(EXE) ./cmd/sujs
+	go build $(TAGFLAGS) -ldflags "-s -w" -o sujs_$(GOOS)_$(GOARCH)$(EXE) ./cmd/sujs
 ifeq ($(GOOS),darwin)
 	codesign --force --sign - sujs_$(GOOS)_$(GOARCH)$(EXE)
 endif
 
 zap :
-	go build -ldflags "-s -w" ./cmd/zap
+	go build $(TAGFLAGS) -ldflags "-s -w" ./cmd/zap
 
 generate :
 	go generate -x ./...
@@ -121,7 +127,7 @@ gs_windows_arm64_gui.exe : FORCE gsuneido_windows_arm64.syso
 	CC=$(LLVM_MINGW)-clang \
 	CXX=$(LLVM_MINGW)-clang++ \
 	CGO_CXXFLAGS=-Wno-inconsistent-missing-override \
-	go $(BUILD) -tags gui -o gs_windows_arm64_gui.exe \
+	go $(BUILD) -tags "gui $(TAGS)" -o gs_windows_arm64_gui.exe \
 	  -ldflags "$(LDFLAGS) $(WINGUI)"
 
 gsuneido_windows_arm64.syso : res/suneido.rc res/suneido.manifest
@@ -165,6 +171,8 @@ help:
 	@echo "    run tests including fuzzing"
 	@echo "clean"
 	@echo "    remove built files"
+	@echo "GSDBG=1"
+	@echo "    enable dbg.Assert (//go:build dbg)"
 
 .PHONY : FORCE build test fulltest generate clean zap race racetest release \
     help deploy git-status both gui sujs

@@ -12,6 +12,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/shmap"
 	"github.com/apmckinlay/gsuneido/util/slc"
@@ -265,7 +266,7 @@ func (su *Summarize) optSeq(mode Mode, req Require) (Cost, Cost, any) {
 	// Drop them so the source sees only columns it actually has.
 	if req.use == ReqUnique {
 		req.cols = set.Difference(req.cols, su.cols)
-		debug.assert(len(req.cols) > 0)
+		dbg.Assert(len(req.cols) > 0)
 	}
 	if hasKey(su.by, su.source.Keys(), su.source.Fixed()) {
 		fixcost, varcost := Optimize(su.source, mode, req)
@@ -292,7 +293,7 @@ func (su *Summarize) optSeq(mode Mode, req Require) (Cost, Cost, any) {
 	case ReqUnique:
 		// by must be a key: its columns must be covered by req.cols or fixed
 		// (fixed columns of su.by need not appear in req.cols)
-		debug.assert(indexCovered(su.by, req.cols, su.Fixed()))
+		dbg.Assert(indexCovered(su.by, req.cols, su.Fixed()))
 		// we can use GroupReq because Lookup is implemented by Select + Get
 		srcReq := GroupReq(su.by, req.SelectFrac(nrows), req.nseeks)
 		fixcost, varcost := Optimize(su.source, mode, srcReq)

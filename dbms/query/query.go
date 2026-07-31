@@ -49,6 +49,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/opt"
 	"github.com/apmckinlay/gsuneido/util/set"
 )
@@ -716,7 +717,7 @@ func lookupViaSelectGet(q Query, th *Thread, sels Sels) Row {
 func getNext1(q Query, th *Thread) Row {
 	// this does *not* need to loop because the index is unique
 	row := q.Get(th, Next)
-	debug.assert(row == nil || q.Get(th, Next) == nil)
+	dbg.Assert(row == nil || q.Get(th, Next) == nil)
 	return row
 }
 
@@ -827,17 +828,4 @@ func (q2 *Query2) Source2() Query {
 // 		}
 // 	}
 // 	return vals
-// }
-
-//-------------------------------------------------------------------
-
-var debug debugT
-
-type debugT struct{}
-
-func (debugT) assert(cond bool) {
-	assert.That(cond)
-}
-
-// func (debugT) assert(cond bool) {
 // }
