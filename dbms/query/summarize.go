@@ -89,7 +89,7 @@ var _ = AddInfo("query.summarize.unique", &sumUniqueCount)
 var _ = AddInfo("query.summarize.wholerow", &sumWholeRowCount)
 
 func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summarize {
-	if !set.Subset(src.Columns(), by) {
+	if !set.HasSubset(src.Columns(), by) {
 		panic("summarize: nonexistent columns: " +
 			str.Join(", ", set.Difference(by, src.Columns())))
 	}

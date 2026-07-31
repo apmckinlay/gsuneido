@@ -75,7 +75,7 @@ func NewProject(src Query, cols []string) *Project {
 	assert.That(len(cols) > 0)
 	cols = set.Unique(cols)
 	srcCols := src.Columns()
-	if !set.Subset(srcCols, cols) {
+	if !set.HasSubset(srcCols, cols) {
 		panic("project: nonexistent column(s): " +
 			str.Join(", ", set.Difference(cols, srcCols)))
 	}
@@ -213,7 +213,7 @@ func (p *Project) SetTran(t QueryTran) {
 func projectKeys(keys [][]string, cols []string) [][]string {
 	var keys2 [][]string
 	for _, k := range keys {
-		if set.Subset(cols, k) {
+		if set.HasSubset(cols, k) {
 			keys2 = append(keys2, k)
 		}
 	}
@@ -278,7 +278,7 @@ func (p *Project) Transform() Query {
 		if len(cols) == 0 { // no summaries left
 			return newProject(q.source, p.columns).Transform()
 		}
-		if set.Subset(p.columns, q.by) {
+		if set.HasSubset(p.columns, q.by) {
 			return NewSummarize(q.source, q.hint, q.by, cols, ops, ons).Transform()
 		}
 	case *Rename:
@@ -288,17 +288,17 @@ func (p *Project) Transform() Query {
 	case *Times:
 		return NewTimes(p.splitOver(&q.Query2)).Transform()
 	case *Join:
-		if set.Subset(p.columns, q.by) {
+		if set.HasSubset(p.columns, q.by) {
 			src1, src2 := p.splitOver(&q.Query2)
 			return q.With(src1, src2).Transform()
 		}
 	case *SemiJoin:
-		if set.Subset(p.columns, q.by) {
+		if set.HasSubset(p.columns, q.by) {
 			src1 := newProject(q.source1, p.columns)
 			return q.With(src1, q.source2).Transform()
 		}
 	case *LeftJoin:
-		if set.Subset(p.columns, q.by) {
+		if set.HasSubset(p.columns, q.by) {
 			src1, src2 := p.splitOver(&q.Query2)
 			return q.With(src1, src2).Transform()
 		}
@@ -527,7 +527,7 @@ func eitherSubset(x, y []string) bool {
 	if len(x) > len(y) {
 		x, y = y, x
 	}
-	return set.Subset(x, y)
+	return set.HasSubset(x, y)
 }
 
 const mapCost = 20 // ???

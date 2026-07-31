@@ -131,7 +131,7 @@ func (r Require) SatisfiedBy(index []string) bool {
 	case ReqOrder:
 		return slc.HasPrefix(index, r.cols)
 	case ReqUnique:
-		return set.Subset(r.cols, index)
+		return set.HasSubset(r.cols, index)
 	}
 	panic("invalid Require use")
 }

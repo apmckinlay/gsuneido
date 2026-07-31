@@ -301,8 +301,8 @@ func (db *Database) schemaSubset(schema *schema.Schema) bool {
 	state := db.GetState()
 	ts := state.Meta.GetRoSchema(schema.Table)
 	if ts == nil || // table doesn't exist
-		!set.Subset(ts.Columns, schema.Columns) ||
-		!set.Subset(ts.Derived, schema.Derived) {
+		!set.HasSubset(ts.Columns, schema.Columns) ||
+		!set.HasSubset(ts.Derived, schema.Derived) {
 		return false
 	}
 	for i := range schema.Indexes {

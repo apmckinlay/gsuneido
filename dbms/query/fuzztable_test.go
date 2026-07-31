@@ -446,7 +446,7 @@ func TestFuzzTable_makeIndexes(t *testing.T) {
 }
 
 func containsKey(key, idx []string) bool {
-	return set.Subset(idx, key)
+	return set.HasSubset(idx, key)
 }
 
 func TestFuzzTable_makeData(t *testing.T) {

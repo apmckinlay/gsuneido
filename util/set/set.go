@@ -176,15 +176,14 @@ outer:
 	return z
 }
 
-// Subset returns true is y is a subset of x
-// i.e. x contains all of y
-func Subset[E comparable](x, y []E) bool {
-	if len(y) > len(x) {
+// HasSubset returns true if superset contains subset
+func HasSubset[E comparable](superset, subset []E) bool {
+	if len(subset) > len(superset) {
 		return false
 	}
 outer:
-	for _, ye := range y {
-		for _, xe := range x {
+	for _, ye := range subset {
+		for _, xe := range superset {
 			if xe == ye {
 				continue outer
 			}

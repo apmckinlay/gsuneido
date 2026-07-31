@@ -82,7 +82,7 @@ func (e *Extend) checkDependencies() {
 	for i := range e.cols {
 		if e.exprs[i] != nil {
 			ecols := e.exprs[i].Columns()
-			if !set.Subset(avail, ecols) {
+			if !set.HasSubset(avail, ecols) {
 				panic("extend: invalid column(s) in expressions: " +
 					str.Join(", ", set.Difference(ecols, avail)))
 			}

@@ -68,7 +68,7 @@ func NewSemiJoin(src1, src2 Query, by []string, t QueryTran) *SemiJoin {
 	}
 	if by == nil {
 		by = b
-	} else if !set.Subset(b, by) {
+	} else if !set.HasSubset(b, by) {
 		panic("semijoinjoin: by must be a subset of the common columns")
 	}
 	sj := &SemiJoin{qt: t, st: MakeSuTran(t), by: by}

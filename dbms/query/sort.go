@@ -22,7 +22,7 @@ type Sort struct {
 }
 
 func NewSort(src Query, reverse bool, order []string) *Sort {
-	if !set.Subset(src.Columns(), order) {
+	if !set.HasSubset(src.Columns(), order) {
 		panic("sort: nonexistent columns: " +
 			str.Join(", ", set.Difference(order, src.Columns())))
 	}

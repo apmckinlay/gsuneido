@@ -97,7 +97,7 @@ var whereSingletonCount atomic.Int64
 var _ = AddInfo("query.where.singleton", &whereSingletonCount)
 
 func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
-	if !set.Subset(src.Columns(), expr.Columns()) {
+	if !set.HasSubset(src.Columns(), expr.Columns()) {
 		panic("where: nonexistent columns: " + str.Join(", ",
 			set.Difference(expr.Columns(), src.Columns())))
 	}
@@ -345,7 +345,7 @@ func (w *Where) Transform() Query {
 		cols1 := q.source.Columns()
 		var before, after []ast.Expr
 		for _, e := range w.expr.Exprs {
-			if set.Subset(cols1, e.Columns()) {
+			if set.HasSubset(cols1, e.Columns()) {
 				before = append(before, e)
 			} else {
 				after = append(after, e)
@@ -404,7 +404,7 @@ func (w *Where) Transform() Query {
 		cols1 := q.source1.Columns()
 		var common, exprs1 []ast.Expr
 		for _, e := range w.expr.Exprs {
-			if set.Subset(cols1, e.Columns()) {
+			if set.HasSubset(cols1, e.Columns()) {
 				exprs1 = append(exprs1, e)
 			} else {
 				common = append(common, e)
@@ -465,7 +465,7 @@ func (w *Where) leftJoinToJoin(lj *LeftJoin) bool {
 	flds := lj.source2.Header().Physical()
 	flds = set.Difference(flds, lj.by)
 	for _, e := range w.expr.Exprs {
-		if set.Subset(flds, e.Columns()) && !ast.CanBeEmpty(e) {
+		if set.HasSubset(flds, e.Columns()) && !ast.CanBeEmpty(e) {
 			return true
 		}
 	}
@@ -501,11 +501,11 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 	var common, exprs1, exprs2 []ast.Expr
 	for _, e := range w.expr.Exprs {
 		used := false
-		if set.Subset(cols1, e.Columns()) {
+		if set.HasSubset(cols1, e.Columns()) {
 			exprs1 = append(exprs1, e)
 			used = true
 		}
-		if set.Subset(cols2, (e.Columns())) {
+		if set.HasSubset(cols2, (e.Columns())) {
 			if used {
 				e = replaceExpr(e, nil, nil, true) // clone
 			}
@@ -725,7 +725,7 @@ func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 func (w *Where) exprsFor(cols []string) ast.Expr {
 	var exprs []ast.Expr
 	for _, e := range w.expr.Exprs {
-		if set.Subset(cols, e.Columns()) {
+		if set.HasSubset(cols, e.Columns()) {
 			exprs = append(exprs, e)
 		}
 	}

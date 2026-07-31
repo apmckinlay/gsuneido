@@ -438,7 +438,7 @@ func Optimize(q Query, mode Mode, req Require) (fixcost, varcost Cost) {
 func optimize(q Query, mode Mode, req Require) (
 	fixcost, varcost Cost, approach any) {
 	assert.That(!math.IsNaN(float64(req.frac)) && !math.IsInf(float64(req.frac), 0))
-	if !set.Subset(q.Columns(), req.cols) {
+	if !set.HasSubset(q.Columns(), req.cols) {
 		return impossible, impossible, nil
 	}
 

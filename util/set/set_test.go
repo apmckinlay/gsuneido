@@ -40,7 +40,7 @@ func TestEqual(*testing.T) {
 func TestSubset(*testing.T) {
 	test := func(x, y string, expected bool) {
 		assert.Msg(x + " : " + y).
-			That(expected == Subset(strings.Fields(x), strings.Fields(y)))
+			That(expected == HasSubset(strings.Fields(x), strings.Fields(y)))
 	}
 	test("", "", true)
 	test("a b c", "a b c", true)

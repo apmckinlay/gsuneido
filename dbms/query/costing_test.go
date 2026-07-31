@@ -112,7 +112,7 @@ func fuzzProjectForCosting(ft *FT) Query {
 // See also [hasKey]
 func indexContainsKey(index []string, keys [][]string) bool {
 	for _, key := range keys {
-		if set.Subset(index, key) {
+		if set.HasSubset(index, key) {
 			return true
 		}
 	}

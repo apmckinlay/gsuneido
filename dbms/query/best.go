@@ -146,7 +146,7 @@ func minimizeKeys(keys [][]string) [][]string {
 outer:
 	for _, k1 := range keys {
 		for _, k2 := range keys {
-			if len(k1) > len(k2) && set.Subset(k1, k2) {
+			if len(k1) > len(k2) && set.HasSubset(k1, k2) {
 				continue outer // skip/exclude k1 - superset
 			}
 		}
