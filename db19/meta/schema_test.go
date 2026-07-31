@@ -99,7 +99,7 @@ func TestOptimizeIndexes(t *testing.T) {
 				mode = ascii.ToUpper(mode)
 			}
 			s.WriteString(" ")
-			s.WriteString(string(mode))
+			s.WriteByte(mode)
 			s.WriteString("(")
 			s.WriteString(str.Join(",", ix.Columns))
 			add := difference(ix.BestKey, ix.Columns)
@@ -145,7 +145,7 @@ func TestSetBestKeys(t *testing.T) {
 			if s.Len() > 0 {
 				s.WriteString(" ")
 			}
-			s.WriteString(string(ix.Mode))
+			s.WriteByte(ix.Mode)
 			s.WriteString("(")
 			s.WriteString(str.Join(",", ix.Columns))
 			if ix.BestKey != nil {

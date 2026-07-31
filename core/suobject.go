@@ -544,7 +544,7 @@ func (ob *SuObject) rstring2(th *Thread, buf *limitBuf, before, after string,
 
 func entstr(th *Thread, buf *limitBuf, k Value, v Value, inProgress vstack) {
 	if ks := Unquoted(k); ks != "" {
-		buf.WriteString(string(ks))
+		buf.WriteString(ks)
 	} else {
 		valstr(th, buf, k, inProgress)
 	}

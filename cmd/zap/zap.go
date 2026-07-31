@@ -48,7 +48,7 @@ func main() {
 		fmt.Println("zapped", file, "-", bytesPerSpot, "bytes at", at)
 		f.Seek(at, 0)
 		for range bytesPerSpot {
-			f.WriteString(string(rune(rand.IntN(256))))
+			f.Write([]byte{byte(rand.IntN(256))})
 		}
 	}
 }

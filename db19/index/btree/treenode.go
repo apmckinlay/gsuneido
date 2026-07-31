@@ -229,8 +229,9 @@ func (nd treeNode) String() string {
 		sb.WriteString(sep)
 		sep = " "
 		sb.WriteString(strconv.FormatUint(nd.offset(i), 10))
-		sb.WriteString(" ")
-		sb.WriteString("<" + string(nd.key(i)) + ">")
+		sb.WriteString(" <")
+		sb.Write(nd.key(i))
+		sb.WriteString(">")
 	}
 	if nd.noffs() > 0 {
 		sb.WriteString(" ")
