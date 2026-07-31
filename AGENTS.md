@@ -17,7 +17,7 @@ It uses the latest version of Go (see `/go.mod`)
 - **Comments**: Concise comments are allowed when they explain *why*, not *what*.
 
 ## Architecture & Key Files
-- **Entry Point**: `/gsuneido.go`
+- **Entry Point**: `/gsuneido.go` (see also `glossary.md`)
 - **Core** (`core/`):
   - `interp.go`: Main interpreter loop.
   - `value.go`: `Value` interface definition.
@@ -26,8 +26,7 @@ It uses the latest version of Go (see `/go.mod`)
 - **Database**:
   - `db19/`: Append-only database engine (MVCC).
   - `dbms/`: Database server and query engine (start at `dbms.go`).
-  - `dbms/query/`: Query processing and execution. 
-    (start at `query.go` and `glossary.md`)
+  - `dbms/query/`: Query processing and execution. (start at `query.go` and `glossary.md`)
 - **Suneido Source**: `.ss` files under `/stdlib/` 
 (just for reference, no easy way to run them)
 - **Database**: `suneido.db`
@@ -46,6 +45,7 @@ It uses the latest version of Go (see `/go.mod`)
   - Use `go_workspace` to understand the workspace structure.
   - Use `go_search` and `go_symbol_references` for navigation.
   - Use `go_diagnostics` to check for errors after edits.
+  - Use `gopls rename -w <file>:<line>:<col> <new_name>` to rename Go variables, functions, or types
 
 ## Code Style & Conventions
 - **Naming**: Suneido values prefixed with `Su` (SuObject, SuStr, SuInt, etc.)

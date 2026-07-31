@@ -1,5 +1,11 @@
 # Glossary
 
+action
+: a "query" that performs an action, insert, update, or delete (QueryDo)
+
+admin
+: a database administration command, e.g. create, alter, drop
+
 ap
 : usual name for a query operation "approach"
 
@@ -9,12 +15,19 @@ approach
 by
 : the usual name for the join columns of a Join/LeftJoin
 
+column
+: string name of a database column (logical) (see also field)
+
 cost
 : the estimated cost to execute a query or subquery (type Cost)
 
 disjoint
 : a column whose values differ between the two sources of a
   Compatible operation (Union/Intersect/Minus),
+
+field
+: a stored value, usually in a record (physical)
+which may be a string or a numeric index e.g. in a record (see also column)
 
 fixcost
 : the portion of the cost that is "fixed"
