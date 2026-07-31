@@ -6,6 +6,7 @@ package query
 import (
 	"fmt"
 	"log"
+	"slices"
 	"sort"
 	"strings"
 	"sync/atomic"
@@ -268,7 +269,12 @@ func (su *Summarize) optSeq(mode Mode, req Require) (Cost, Cost, any) {
 		req.cols = set.Difference(req.cols, su.cols)
 		dbg.Assert(len(req.cols) > 0)
 	}
-	if hasKey(su.by, su.source.Keys(), su.source.Fixed()) {
+	if su.unique {
+		// by is a key of the source: pass req through unchanged (like
+		// Project's projCopy). When req.use == ReqUnique, req.cols (already
+		// stripped of su.cols above) is a valid Summarize key and therefore
+		// also indexCovered by a source key, so Lookup can delegate directly
+		// to source.Lookup using those same cols.
 		fixcost, varcost := Optimize(su.source, mode, req)
 		// Setting index=by lets Select() push sels on by-columns down to
 		// the source seek; sels on computed columns are filtered at runtime.
@@ -477,6 +483,23 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 
 func (su *Summarize) Lookup(th *Thread, sels Sels) Row {
 	su.nlooks++
+	if su.unique {
+		// by is a key, so the source row uniquely determines the group,
+		// like Project Lookup does when projCopy.
+		var bySels Sels
+		for _, sel := range sels {
+			if slices.Contains(su.by, sel.col) {
+				bySels = append(bySels, sel)
+			}
+		}
+		srcRow := su.source.Lookup(th, bySels)
+		if srcRow == nil {
+			return nil
+		}
+		sums := su.newSums()
+		su.addToSums(sums, srcRow, th, su.st)
+		return su.seqRow(th, srcRow, sums)
+	}
 	return lookupViaSelectGet(su, th, sels)
 }
 
