@@ -278,3 +278,82 @@ func TestOverlayRangeFracClampLow(t *testing.T) {
 	frac := ov.RangeFrac(org, end, 1100, 1000)
 	assert.This(frac).Is(0.0)
 }
+
+// TestOverlayRangeFracMidRangeNetInsert exercises the non-clamped case
+// where btreeNrows != nrecs, so btCount must be scaled by btreeNrows
+// (not nrecs) when combined with the ixbuf delta.
+func TestOverlayRangeFracMidRangeNetInsert(t *testing.T) {
+	assert := assert.T(t)
+	store := stor.HeapStor(64 * 1024)
+	bldr := btree.NewBuilder(store)
+	for i := range 1000 {
+		key := fmt.Sprintf("b%05d", i)
+		assert.That(bldr.Add(key, uint64(i+1)))
+	}
+	bt := bldr.Finish()
+	layer := &ixbuf.T{}
+	for i := range 200 {
+		key := fmt.Sprintf("b00250x%04d", i)
+		layer.Insert(key, uint64(i+2000))
+	}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
+
+	org := "b00000"
+	end := "b00500"
+	frac := ov.RangeFrac(org, end, 1200, 1000)
+	// correct: (btFrac(~0.5)*btreeNrows(1000) + delta(200)) / nrecs(1200) ~= 0.60
+	// the pre-fix bug used nrecs instead of btreeNrows, giving ~0.667
+	assert.That(frac > 0.55 && frac < 0.65)
+}
+
+// TestOverlayRangeFracMidRangeNetDelete is the deletion counterpart of
+// TestOverlayRangeFracMidRangeNetInsert.
+func TestOverlayRangeFracMidRangeNetDelete(t *testing.T) {
+	assert := assert.T(t)
+	store := stor.HeapStor(64 * 1024)
+	bldr := btree.NewBuilder(store)
+	for i := range 1000 {
+		key := fmt.Sprintf("b%05d", i)
+		assert.That(bldr.Add(key, uint64(i+1)))
+	}
+	bt := bldr.Finish()
+	layer := &ixbuf.T{}
+	for i := range 200 {
+		key := fmt.Sprintf("b00250x%04d", i)
+		layer.Delete(key, uint64(i+2000))
+	}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
+
+	org := "b00000"
+	end := "b00500"
+	frac := ov.RangeFrac(org, end, 800, 1000)
+	// correct: (btFrac(~0.5)*btreeNrows(1000) - delta(200)) / nrecs(800) ~= 0.40
+	// the pre-fix bug used nrecs instead of btreeNrows, giving ~0.275
+	assert.That(frac > 0.35 && frac < 0.45)
+}
+
+// TestOverlayRangeFracLargeNetDeleteInRange exercises the fix to the
+// "ixbufs are small" gate: it must be symmetric so large net deletions
+// concentrated in the queried range are not skipped just because
+// btreeNrows/nrecs > 1.
+func TestOverlayRangeFracLargeNetDeleteInRange(t *testing.T) {
+	assert := assert.T(t)
+	store := stor.HeapStor(64 * 1024)
+	bldr := btree.NewBuilder(store)
+	for i := range 1000 {
+		key := fmt.Sprintf("b%05d", i)
+		assert.That(bldr.Add(key, uint64(i+1)))
+	}
+	bt := bldr.Finish()
+	layer := &ixbuf.T{}
+	for i := range 900 {
+		key := fmt.Sprintf("b00250x%04d", i)
+		layer.Delete(key, uint64(i+2000))
+	}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{layer}}
+
+	org := "b00000"
+	end := "b00500"
+	frac := ov.RangeFrac(org, end, 100, 1000)
+	assert.This(frac).Is(0.0)
+}
