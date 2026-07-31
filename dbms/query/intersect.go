@@ -13,6 +13,16 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
 
+// Intersect is a Query that intersects two sources.
+// It allows the sources to have different columns.
+// The result columns are the intersection of the source columns
+// (i.e. the common columns).
+// All columns are compared when matching rows;
+// so columns unique to either source must be "".
+// (Rules could complicate this.)
+// This means we don't need an extra deduplication step
+// like we would if we only compared common columns.
+// To get that behavior, use project on the sources before intersect.
 type Intersect struct {
 	Compatible1
 	conflict   bool
