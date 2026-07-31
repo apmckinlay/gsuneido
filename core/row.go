@@ -385,6 +385,6 @@ func RowStr(hdr *Header, row Row) string {
 		fmt.Fprint(&sb, sep, col, "=", val.String())
 		sep = " "
 	}
-	sb.WriteRune('}')
+	sb.WriteByte('}')
 	return sb.String()
 }

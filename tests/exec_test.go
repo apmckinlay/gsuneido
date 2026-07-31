@@ -171,11 +171,11 @@ func Fmt(row []string, str []bool) string {
 		sb.WriteString(sep)
 		sep = ", "
 		if str[i] {
-			sb.WriteRune('`')
+			sb.WriteByte('`')
 		}
 		sb.WriteString(s)
 		if str[i] {
-			sb.WriteRune('`')
+			sb.WriteByte('`')
 		}
 	}
 	sb.WriteString("]")

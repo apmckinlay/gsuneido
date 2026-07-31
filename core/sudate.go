@@ -347,21 +347,21 @@ func (d SuDate) Format(fmt string) string {
 			}
 		case 'a':
 			if d.Hour() < 12 {
-				sb.WriteRune('a')
+				sb.WriteByte('a')
 			} else {
-				sb.WriteRune('p')
+				sb.WriteByte('p')
 			}
 			if n > 1 {
-				sb.WriteRune('m')
+				sb.WriteByte('m')
 			}
 		case 'A', 't':
 			if d.Hour() < 12 {
-				sb.WriteRune('A')
+				sb.WriteByte('A')
 			} else {
-				sb.WriteRune('P')
+				sb.WriteByte('P')
 			}
 			if n > 1 {
-				sb.WriteRune('M')
+				sb.WriteByte('M')
 			}
 		case '\'':
 			for i++; i < fmtlen && (fmt[i] != '\''); i++ {
