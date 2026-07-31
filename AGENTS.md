@@ -26,7 +26,8 @@ It uses the latest version of Go (see `/go.mod`)
 - **Database**:
   - `db19/`: Append-only database engine (MVCC).
   - `dbms/`: Database server and query engine (start at `dbms.go`).
-  - `dbms/query/`: Query processing and execution. (start at `query.go`)
+  - `dbms/query/`: Query processing and execution. 
+    (start at `query.go` and `glossary.md`)
 - **Suneido Source**: `.ss` files under `/stdlib/` 
 (just for reference, no easy way to run them)
 - **Database**: `suneido.db`
