@@ -38,8 +38,8 @@ var _ = staticMethod(zlib_Compress, "(string :string) :string")
 
 func zlib_Compress(arg Value) Value {
 	s := ToStr(arg)
-	var b strings.Builder
-	w := zlib.NewWriter(&b)
+	var sb strings.Builder
+	w := zlib.NewWriter(&sb)
 	n, err := io.WriteString(w, s)
 	if err != nil {
 		panic("Zlib.Compress: " + err.Error())
@@ -49,7 +49,7 @@ func zlib_Compress(arg Value) Value {
 	if err != nil {
 		panic("Zlib.Compress: " + err.Error())
 	}
-	return SuStr(b.String())
+	return SuStr(sb.String())
 }
 
 var _ = staticMethod(zlib_Uncompress, "(string :string) :string")
@@ -60,14 +60,14 @@ func zlib_Uncompress(arg Value) Value {
 	if err != nil {
 		panic("Zlib.Uncompress: " + err.Error())
 	}
-	var b strings.Builder
-	n, err := io.Copy(&b, r)
+	var sb strings.Builder
+	n, err := io.Copy(&sb, r)
 	if err != nil {
 		panic("Zlib.Uncompress: " + err.Error())
 	}
 	r.Close()
-	assert.That(int(n) == len(b.String()))
-	return SuStr(b.String())
+	assert.That(int(n) == len(sb.String()))
+	return SuStr(sb.String())
 }
 
 var _ = staticMethod(zlib_Members, "() :object")

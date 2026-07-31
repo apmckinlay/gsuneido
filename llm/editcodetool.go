@@ -264,17 +264,17 @@ func applyLineEdit(oldText string, mode string, line, count int, insert string) 
 
 	insert = normalizeCRLF(insert)
 
-	var b strings.Builder
-	b.Grow(len(oldText) - (endOff - startOff) + len(insert))
-	b.WriteString(oldText[:startOff])
-	b.WriteString(insert)
+	var sb strings.Builder
+	sb.Grow(len(oldText) - (endOff - startOff) + len(insert))
+	sb.WriteString(oldText[:startOff])
+	sb.WriteString(insert)
 	if endOff < len(oldText) {
 		if insert != "" && !strings.HasSuffix(insert, "\n") && !strings.HasSuffix(insert, "\r\n") {
-			b.WriteString("\r\n")
+			sb.WriteString("\r\n")
 		}
-		b.WriteString(oldText[endOff:])
+		sb.WriteString(oldText[endOff:])
 	}
-	return b.String(), nil
+	return sb.String(), nil
 }
 
 func findFromTo(from int, to int, oldText string) (int, int, error) {
@@ -371,9 +371,9 @@ func extractContext(text string, start, end int) string {
 	}
 
 	// Build result with line numbers
-	var b strings.Builder
+	var sb strings.Builder
 	for i := contextStart; i <= contextEnd; i++ {
-		fmt.Fprintf(&b, "%4d: %s\n", i, lines[i-1])
+		fmt.Fprintf(&sb, "%4d: %s\n", i, lines[i-1])
 	}
-	return b.String()
+	return sb.String()
 }

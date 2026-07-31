@@ -55,15 +55,15 @@ func TestPropFold(t *testing.T) {
 		p := NewParser("function () {\n" + src + "\n}")
 		f := p.Function()
 		f = ast.PropFold(f) // this is what we're testing
-		var s strings.Builder
+		var sb strings.Builder
 		sep := ""
 		for _, stmt := range f.Body {
 			if stmt != nil {
-				s.WriteString(sep + stmt.String())
+				sb.WriteString(sep + stmt.String())
 				sep = "\n"
 			}
 		}
-		assert.T(t).This(s.String()).Like(expected)
+		assert.T(t).This(sb.String()).Like(expected)
 	}
 	utest := func(src string) {
 		t.Helper()

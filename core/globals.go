@@ -120,12 +120,12 @@ func (typeGlobal) add(name string, val Value) Gnum {
 
 var _ = AddInfo("core.nGlobal", func() int { return len(g.names) })
 var _ = AddInfo("core.lastGlobals", func() string {
-	var s strings.Builder
+	var sb strings.Builder
 	for i := len(g.names) - 1; i >= len(g.names)-10; i-- {
-		s.WriteString(g.names[i])
-		s.WriteString("\n")
+		sb.WriteString(g.names[i])
+		sb.WriteString("\n")
 	}
-	return s.String()
+	return sb.String()
 })
 
 // TestDef sets a global for tests.

@@ -19,12 +19,12 @@ func RandomOf(min, max int, chars string) string {
 
 func randomOf(min, max int, chars string, randIntn func(int) int) string {
 	n := min + randIntn(1+max-min)
-	var b strings.Builder
-	b.Grow(n)
+	var sb strings.Builder
+	sb.Grow(n)
 	for range n {
-		b.WriteByte(chars[randIntn(len(chars))])
+		sb.WriteByte(chars[randIntn(len(chars))])
 	}
-	return b.String()
+	return sb.String()
 }
 
 func UniqueRandom(min, max int, seed ...int64) func() string {

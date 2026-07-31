@@ -86,15 +86,15 @@ func (sels Sels) All() iter.Seq2[string, string] {
 }
 
 func (sels Sels) String() string {
-	var s strings.Builder
-	s.WriteString("Sels{")
+	var sb strings.Builder
+	sb.WriteString("Sels{")
 	sep := ""
 	for _, sel := range sels {
-		s.WriteString(sep)
-		s.WriteString(sel.col)
-		s.WriteString(": ")
-		s.WriteString(Unpack(sel.val).String())
+		sb.WriteString(sep)
+		sb.WriteString(sel.col)
+		sb.WriteString(": ")
+		sb.WriteString(Unpack(sel.val).String())
 		sep = ", "
 	}
-	return s.String() + "}"
+	return sb.String() + "}"
 }

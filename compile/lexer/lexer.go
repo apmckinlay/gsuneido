@@ -367,12 +367,12 @@ func (lxr *Lexer) quotedString(start int, quote byte) Item {
 		}
 	}
 	// have escapes so need to build new string
-	var buf strings.Builder
+	var sb strings.Builder
 	for c := lxr.read(); c != eof && c != quote; c = lxr.read() {
 		c = lxr.doesc(c)
-		buf.WriteByte(byte(c))
+		sb.WriteByte(byte(c))
 	}
-	return Item{Text: buf.String(), Pos: int32(start), Token: tok.String}
+	return Item{Text: sb.String(), Pos: int32(start), Token: tok.String}
 }
 
 func (lxr *Lexer) doesc(c byte) byte {

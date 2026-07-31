@@ -43,9 +43,9 @@ func Replace(src string, from Set, to Set) string {
 	if si == srclen {
 		return src // no changes
 	}
-	buf := strings.Builder{}
-	buf.Grow(srclen)
-	buf.WriteString(src[:si])
+	sb := strings.Builder{}
+	sb.Grow(srclen)
+	sb.WriteString(src[:si])
 
 	lastto := len(to)
 	collapse := lastto > 0 && (allbut || lastto < len(from))
@@ -56,7 +56,7 @@ scan:
 		c := src[si]
 		i := xindex(from, c, allbut, lastto)
 		if collapse && i >= lastto {
-			buf.WriteByte(to[lastto])
+			sb.WriteByte(to[lastto])
 			for {
 				si++
 				if si >= srclen {
@@ -70,13 +70,13 @@ scan:
 			}
 		}
 		if i < 0 {
-			buf.WriteByte(c)
+			sb.WriteByte(c)
 		} else if lastto >= 0 {
-			buf.WriteByte(to[i])
+			sb.WriteByte(to[i])
 		} /* else
 		delete */
 	}
-	return buf.String()
+	return sb.String()
 }
 
 func New(s string) Set {
@@ -96,10 +96,10 @@ func New(s string) Set {
 
 func expandRanges(s string) Set {
 	slen := len(s)
-	buf := strings.Builder{}
-	buf.Grow(slen)
+	sb := strings.Builder{}
+	sb.Grow(slen)
 	if s[0] == '^' {
-		buf.WriteByte('^')
+		sb.WriteByte('^')
 		s = s[1:]
 		slen--
 	}
@@ -107,14 +107,14 @@ func expandRanges(s string) Set {
 		if i+2 < slen && s[i+1] == '-' { // range
 			// need to use int to prevent 0xff from wrapping around
 			for c := int(s[i]); c <= int(s[i+2]); c++ {
-				buf.WriteByte(byte(c))
+				sb.WriteByte(byte(c))
 			}
 			i += 2
 		} else {
-			buf.WriteByte(s[i])
+			sb.WriteByte(s[i])
 		}
 	}
-	return Set(buf.String())
+	return Set(sb.String())
 }
 
 func xindex(from Set, c byte, allbut bool, lastto int) int {

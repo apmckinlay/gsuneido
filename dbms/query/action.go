@@ -83,19 +83,19 @@ type updateAction struct {
 }
 
 func (a *updateAction) String() string {
-	var s strings.Builder
-	s.WriteString("update ")
-	s.WriteString(String(a.query))
-	s.WriteString(" set ")
+	var sb strings.Builder
+	sb.WriteString("update ")
+	sb.WriteString(String(a.query))
+	sb.WriteString(" set ")
 	sep := ""
 	for i := range a.cols {
-		s.WriteString(sep)
-		s.WriteString(a.cols[i])
-		s.WriteString(" = ")
-		s.WriteString(a.exprs[i].String())
+		sb.WriteString(sep)
+		sb.WriteString(a.cols[i])
+		sb.WriteString(" = ")
+		sb.WriteString(a.exprs[i].String())
 		sep = ", "
 	}
-	return s.String()
+	return sb.String()
 }
 
 func (a *updateAction) execute(th *Thread, ut *db19.UpdateTran) int {

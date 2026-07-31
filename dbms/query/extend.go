@@ -121,19 +121,19 @@ func (e *Extend) SetTran(t QueryTran) {
 }
 
 func (e *Extend) String() string {
-	var s strings.Builder
-	s.WriteString("extend ")
+	var sb strings.Builder
+	sb.WriteString("extend ")
 	sep := ""
 	for i, c := range e.cols {
-		s.WriteString(sep)
-		s.WriteString(c)
+		sb.WriteString(sep)
+		sb.WriteString(c)
 		sep = ", "
 		if e.exprs[i] != nil {
-			s.WriteString(" = ")
-			s.WriteString(e.exprs[i].Echo())
+			sb.WriteString(" = ")
+			sb.WriteString(e.exprs[i].Echo())
 		}
 	}
-	return s.String()
+	return sb.String()
 }
 
 func (e *Extend) getRowSize() int {

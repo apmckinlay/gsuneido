@@ -15,25 +15,25 @@ func Detab(s string) string {
 		return s
 	}
 	n := len(s)
-	var buf strings.Builder
-	buf.Grow(n + n/4)
+	var sb strings.Builder
+	sb.Grow(n + n/4)
 	col := 0
 	for i := range n {
 		switch s[i] {
 		case '\t':
-			buf.WriteByte(' ')
+			sb.WriteByte(' ')
 			for col++; (col % TabWidth) != 0; col++ {
-				buf.WriteByte(' ')
+				sb.WriteByte(' ')
 			}
 		case '\r', '\n':
 			col = -1
 			fallthrough
 		default:
-			buf.WriteByte(s[i])
+			sb.WriteByte(s[i])
 			col++
 		}
 	}
-	return buf.String()
+	return sb.String()
 }
 
 // Entab converts leading spaces & tabs to tabs
@@ -44,8 +44,8 @@ func Entab(s string) string {
 	if n == 0 {
 		return s
 	}
-	var buf strings.Builder
-	buf.Grow(n)
+	var sb strings.Builder
+	sb.Grow(n)
 	for i < n { // for each line
 		// find the indent
 		col := 0
@@ -63,10 +63,10 @@ func Entab(s string) string {
 			// output the indent using tabs possibly followed by space
 			dstcol := 0
 			for ; dstcol+TabWidth <= col; dstcol += TabWidth {
-				buf.WriteByte('\t')
+				sb.WriteByte('\t')
 			}
 			for ; dstcol < col; dstcol++ {
-				buf.WriteByte(' ')
+				sb.WriteByte(' ')
 			}
 			// find the end of the current line
 			end := strings.IndexAny(s[i:], "\r\n")
@@ -78,13 +78,13 @@ func Entab(s string) string {
 			for ; j-1 > i && (s[j-1] == ' ' || s[j-1] == '\t'); j-- {
 			}
 			// copy the line
-			buf.WriteString(s[i:j])
+			sb.WriteString(s[i:j])
 			i += end
 		}
 		// copy newlines
 		for ; i < n && (s[i] == '\r' || s[i] == '\n'); i++ {
-			buf.WriteByte(s[i])
+			sb.WriteByte(s[i])
 		}
 	}
-	return buf.String()
+	return sb.String()
 }

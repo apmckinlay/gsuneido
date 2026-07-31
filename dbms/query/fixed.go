@@ -41,28 +41,28 @@ func (fixed Fixed) String() string {
 	fixed = slices.Clone(fixed) // so sort doesn't modify original
 	slices.SortFunc(fixed,
 		func(x, y Fix) int { return strings.Compare(x.col, y.col) })
-	var s strings.Builder
-	s.WriteString("[")
+	var sb strings.Builder
+	sb.WriteString("[")
 	sep := ""
 	for _, f := range fixed {
-		s.WriteString(sep)
-		s.WriteString(f.String())
+		sb.WriteString(sep)
+		sb.WriteString(f.String())
 		sep = ", "
 	}
-	return s.String() + "]"
+	return sb.String() + "]"
 }
 
 func (f Fix) String() string {
-	var s strings.Builder
-	s.WriteString(f.col)
-	s.WriteString("=(")
+	var sb strings.Builder
+	sb.WriteString(f.col)
+	sb.WriteString("=(")
 	sep := ""
 	for _, v := range f.values {
-		s.WriteString(sep)
-		s.WriteString(Unpack(v).String())
+		sb.WriteString(sep)
+		sb.WriteString(Unpack(v).String())
 		sep = ","
 	}
-	return s.String() + ")"
+	return sb.String() + ")"
 }
 
 // Combine is used by Where, Join, and Intersect.

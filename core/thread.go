@@ -293,9 +293,9 @@ func (th *Thread) TraceStack() {
 }
 
 func (th *Thread) StackString(levels int) string {
-	var b strings.Builder
-	th.printStack(&b, levels)
-	return b.String()
+	var sb strings.Builder
+	th.printStack(&sb, levels)
+	return sb.String()
 }
 
 func (th *Thread) printStack(w io.Writer, levels int) {

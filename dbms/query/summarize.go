@@ -177,27 +177,27 @@ func (su *Summarize) String() string {
 }
 
 func (su *Summarize) string2() string {
-	var s strings.Builder
+	var sb strings.Builder
 	if len(su.by) > 0 {
-		s.WriteString(" ")
-		s.WriteString(str.Join(", ", su.by))
-		s.WriteString(",")
+		sb.WriteString(" ")
+		sb.WriteString(str.Join(", ", su.by))
+		sb.WriteString(",")
 	}
 	sep := " "
 	for i := range su.cols {
-		s.WriteString(sep)
+		sb.WriteString(sep)
 		sep = ", "
 		if su.cols[i] != defaultColName(su.ops[i], su.ons[i]) {
-			s.WriteString(su.cols[i])
-			s.WriteString(" = ")
+			sb.WriteString(su.cols[i])
+			sb.WriteString(" = ")
 		}
-		s.WriteString(su.ops[i])
+		sb.WriteString(su.ops[i])
 		if su.ops[i] != "count" {
-			s.WriteString(" ")
-			s.WriteString(su.ons[i])
+			sb.WriteString(" ")
+			sb.WriteString(su.ons[i])
 		}
 	}
-	return s.String()
+	return sb.String()
 }
 
 const sumGrpDiv = 10 // ???

@@ -149,19 +149,19 @@ func optionalBool(args map[string]any, name string, def bool) (bool, error) {
 }
 
 func mdSummary(tool string, args ...string) string {
-	var b strings.Builder
-	b.WriteString("**")
-	b.WriteString(tool)
-	b.WriteString("**")
+	var sb strings.Builder
+	sb.WriteString("**")
+	sb.WriteString(tool)
+	sb.WriteString("**")
 	for _, arg := range args {
 		arg = strings.TrimSpace(arg)
 		if arg == "" {
 			continue
 		}
-		b.WriteString(" ")
-		b.WriteString(arg)
+		sb.WriteString(" ")
+		sb.WriteString(arg)
 	}
-	return b.String()
+	return sb.String()
 }
 
 func mdInline(s string) string {

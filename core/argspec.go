@@ -93,34 +93,34 @@ func (as *ArgSpec) Equal(a2 *ArgSpec) bool {
 }
 
 func (as *ArgSpec) String() string {
-	var buf strings.Builder
+	var sb strings.Builder
 	sep := ""
-	buf.WriteString("ArgSpec(")
+	sb.WriteString("ArgSpec(")
 	if as.Each >= EACH0 {
-		buf.WriteString("@")
+		sb.WriteString("@")
 		if as.Each > EACH0 {
-			buf.WriteByte('+')
-			buf.WriteString(strconv.Itoa(int(as.Each - 1)))
+			sb.WriteByte('+')
+			sb.WriteString(strconv.Itoa(int(as.Each - 1)))
 		}
 	} else {
 		for range as.Unnamed() {
-			buf.WriteString(sep)
-			buf.WriteString("?")
+			sb.WriteString(sep)
+			sb.WriteString("?")
 			sep = ", "
 		}
 		for _, i := range as.Spec {
-			buf.WriteString(sep)
+			sb.WriteString(sep)
 			if s, ok := as.Names[i].(SuStr); ok && lexer.IsIdentifier(string(s)) {
-				buf.WriteString(string(s))
+				sb.WriteString(string(s))
 			} else {
-				buf.WriteString(as.Names[i].String())
+				sb.WriteString(as.Names[i].String())
 			}
-			buf.WriteString(":")
+			sb.WriteString(":")
 			sep = ", "
 		}
 	}
-	buf.WriteString(")")
-	return buf.String()
+	sb.WriteString(")")
+	return sb.String()
 }
 
 func (as *ArgSpec) DropFirst() *ArgSpec {

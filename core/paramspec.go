@@ -83,24 +83,24 @@ var ParamSpecOptionalBlock = ParamSpec{Nparams: 1, Ndefaults: 1,
 // Value interface (except TypeName) --------------------------------
 
 func (ps *ParamSpec) String() string {
-	var buf strings.Builder
+	var sb strings.Builder
 	// easier to add "function" here and strip it in Params
 	// than to implement String in a bunch of places to add it
-	buf.WriteString("function(")
+	sb.WriteString("function(")
 	sep := ""
 	v := 0 // index into Values
 	for i := range int(ps.Nparams) {
-		buf.WriteString(sep)
-		buf.WriteString(flagsToName(ps.ParamName(i), ps.Flags[i]))
+		sb.WriteString(sep)
+		sb.WriteString(flagsToName(ps.ParamName(i), ps.Flags[i]))
 		if i >= int(ps.Nparams-ps.Ndefaults) {
-			buf.WriteString("=")
-			fmt.Fprint(&buf, ps.Values[v])
+			sb.WriteString("=")
+			fmt.Fprint(&sb, ps.Values[v])
 			v++
 		}
 		sep = ","
 	}
-	buf.WriteString(")")
-	return buf.String()
+	sb.WriteString(")")
+	return sb.String()
 }
 
 func (ps *ParamSpec) ParamName(i int) string {

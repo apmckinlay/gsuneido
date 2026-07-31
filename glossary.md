@@ -35,3 +35,6 @@ admin
 
 singleton
 : a query that selects at most one record e.g. where a key equals a value
+
+sb
+: usual name for a strings.Builder variable

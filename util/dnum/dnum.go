@@ -741,7 +741,7 @@ func (dn Dnum) Format(mask string) string {
 
 	di := e - before
 	check(di <= 0)
-	var buf strings.Builder
+	var sb strings.Builder
 	sign := n.Sign()
 	signok := (sign >= 0)
 	frac := false
@@ -749,35 +749,35 @@ func (dn Dnum) Format(mask string) string {
 		switch mc {
 		case '#':
 			if 0 <= di && di < nd {
-				buf.WriteByte(digits[di])
+				sb.WriteByte(digits[di])
 			} else if frac || di >= 0 {
-				buf.WriteByte('0')
+				sb.WriteByte('0')
 			}
 			di++
 		case ',':
 			if di > 0 {
-				buf.WriteByte(',')
+				sb.WriteByte(',')
 			}
 		case '-', '(':
 			signok = true
 			if sign < 0 {
-				buf.WriteByte(mc)
+				sb.WriteByte(mc)
 			}
 		case ')':
 			if sign < 0 {
-				buf.WriteByte(mc)
+				sb.WriteByte(mc)
 			} else {
-				buf.WriteByte(' ')
+				sb.WriteByte(' ')
 			}
 		case '.':
 			frac = true
 			fallthrough
 		default:
-			buf.WriteByte(mc)
+			sb.WriteByte(mc)
 		}
 	}
 	if !signok {
 		return "-" // negative not handled by mask
 	}
-	return buf.String()
+	return sb.String()
 }

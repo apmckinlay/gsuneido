@@ -74,11 +74,11 @@ func createDb() {
 	for _, table := range []string{"foo", "bar"} {
 		adm("create " + table + " " + schema)
 		for _, d := range data {
-			var s strings.Builder
+			var sb strings.Builder
 			for i := range d {
-				s.WriteString(columns[i] + ": '" + d[i] + `' `)
+				sb.WriteString(columns[i] + ": '" + d[i] + `' `)
 			}
-			act("insert {" + s.String() + "} into " + table)
+			act("insert {" + sb.String() + "} into " + table)
 		}
 	}
 	adm("alter bar drop (three)")

@@ -319,7 +319,7 @@ func Readline(rdr io.Reader, errPrefix string) Value {
 
 func readline(rdr io.Reader, errPrefix string) (Value, int) {
 	nr := 0
-	var buf strings.Builder
+	var sb strings.Builder
 	b := make([]byte, 1)
 	for {
 		n, err := rdr.Read(b)
@@ -328,12 +328,12 @@ func readline(rdr io.Reader, errPrefix string) (Value, int) {
 			if b[0] == '\n' {
 				break
 			}
-			if buf.Len() < MaxLine {
-				buf.WriteByte(b[0])
+			if sb.Len() < MaxLine {
+				sb.WriteByte(b[0])
 			}
 		}
 		if err == io.EOF {
-			if buf.Len() == 0 {
+			if sb.Len() == 0 {
 				return False, nr
 			}
 			break
@@ -342,7 +342,7 @@ func readline(rdr io.Reader, errPrefix string) (Value, int) {
 			panic(errPrefix + err.Error())
 		}
 	}
-	s := buf.String()
+	s := sb.String()
 	s = strings.TrimRight(s, "\r")
 	return SuStr(s), nr
 }

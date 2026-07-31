@@ -159,8 +159,8 @@ func FirstIdentity(entity *openpgp.Entity) string {
 }
 
 func serializePublic(entity *openpgp.Entity) (string, error) {
-	var s strings.Builder
-	w, err := armor.Encode(&s, openpgp.PublicKeyType, nil)
+	var sb strings.Builder
+	w, err := armor.Encode(&sb, openpgp.PublicKeyType, nil)
 	if err != nil {
 		return "", err
 	}
@@ -171,12 +171,12 @@ func serializePublic(entity *openpgp.Entity) (string, error) {
 	if err := w.Close(); err != nil {
 		return "", err
 	}
-	return s.String(), nil
+	return sb.String(), nil
 }
 
 func serializePrivate(entity *openpgp.Entity) (string, error) {
-	var s strings.Builder
-	w, err := armor.Encode(&s, openpgp.PrivateKeyType, nil)
+	var sb strings.Builder
+	w, err := armor.Encode(&sb, openpgp.PrivateKeyType, nil)
 	if err != nil {
 		return "", err
 	}
@@ -187,5 +187,5 @@ func serializePrivate(entity *openpgp.Entity) (string, error) {
 	if err := w.Close(); err != nil {
 		return "", err
 	}
-	return s.String(), nil
+	return sb.String(), nil
 }

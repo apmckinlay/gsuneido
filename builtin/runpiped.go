@@ -173,8 +173,8 @@ func limitedRead(which string, r io.Reader, arg Value) Value {
 		CheckStringSize(which, n)
 	}
 	r = io.LimitReader(r, int64(n))
-	dst := &strings.Builder{}
-	m, err := io.Copy(dst, r)
+	sb := &strings.Builder{}
+	m, err := io.Copy(sb, r)
 	if err != nil {
 		panic(which + ": " + err.Error())
 	}
@@ -184,7 +184,7 @@ func limitedRead(which string, r io.Reader, arg Value) Value {
 	if m == StringLimit {
 		panic(which + ": string limit exceeded")
 	}
-	return SuStr(dst.String())
+	return SuStr(sb.String())
 }
 
 var _ = method(runpiped_Readline, "() :false|string")

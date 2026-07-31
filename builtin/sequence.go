@@ -115,19 +115,19 @@ func seq_Join(this, arg Value) Value {
 	iter := this.(*SuSequence).Iter()
 	separator := ToStr(arg)
 	sep := ""
-	var buf strings.Builder
+	var sb strings.Builder
 	for {
 		val := iter.Next()
 		if val == nil {
 			break
 		}
-		buf.WriteString(sep)
+		sb.WriteString(sep)
 		sep = separator
 		if s, ok := val.ToStr(); ok {
-			buf.WriteString(s)
+			sb.WriteString(s)
 		} else {
-			buf.WriteString(val.String())
+			sb.WriteString(val.String())
 		}
 	}
-	return SuStr(buf.String())
+	return SuStr(sb.String())
 }

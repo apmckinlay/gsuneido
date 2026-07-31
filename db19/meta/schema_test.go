@@ -61,14 +61,14 @@ func TestSetPrimary(t *testing.T) {
 	// }
 	primary := func() string {
 		ts.setPrimary()
-		var s strings.Builder
+		var sb strings.Builder
 		for i, ix := range ts.Indexes {
 			if ix.Primary {
-				s.WriteString(",")
-				s.WriteString(strconv.Itoa(i))
+				sb.WriteString(",")
+				sb.WriteString(strconv.Itoa(i))
 			}
 		}
-		return s.String()[1:]
+		return sb.String()[1:]
 	}
 	ts.Indexes = []schema.Index{key("")}
 	assert.This(primary()).Is("0")
@@ -89,7 +89,7 @@ func TestOptimizeIndexes(t *testing.T) {
 		return schema.Index{Mode: mode, Columns: str.Split(cols, ",")}
 	}
 	str := func(ts *Schema) string {
-		var s strings.Builder
+		var sb strings.Builder
 		for _, ix := range ts.Indexes {
 			mode := ix.Mode
 			if ix.Primary {
@@ -98,18 +98,18 @@ func TestOptimizeIndexes(t *testing.T) {
 			if ix.ContainsKey {
 				mode = ascii.ToUpper(mode)
 			}
-			s.WriteString(" ")
-			s.WriteByte(mode)
-			s.WriteString("(")
-			s.WriteString(str.Join(",", ix.Columns))
+			sb.WriteString(" ")
+			sb.WriteByte(mode)
+			sb.WriteString("(")
+			sb.WriteString(str.Join(",", ix.Columns))
 			add := difference(ix.BestKey, ix.Columns)
 			if len(add) > 0 {
-				s.WriteString("+")
-				s.WriteString(str.Join(",", add))
+				sb.WriteString("+")
+				sb.WriteString(str.Join(",", add))
 			}
-			s.WriteString(")")
+			sb.WriteString(")")
 		}
-		return s.String()[1:]
+		return sb.String()[1:]
 	}
 	ts := &Schema{Schema: schema.Schema{}}
 	ts.Indexes = []schema.Index{idx('k', "a"), idx('k', "z,x"),
@@ -140,24 +140,24 @@ func TestSetBestKeys(t *testing.T) {
 		return schema.Index{Mode: mode, Columns: str.Split(cols, ",")}
 	}
 	bestKey := func(ts *Schema) string {
-		var s strings.Builder
+		var sb strings.Builder
 		for _, ix := range ts.Indexes {
-			if s.Len() > 0 {
-				s.WriteString(" ")
+			if sb.Len() > 0 {
+				sb.WriteString(" ")
 			}
-			s.WriteByte(ix.Mode)
-			s.WriteString("(")
-			s.WriteString(str.Join(",", ix.Columns))
+			sb.WriteByte(ix.Mode)
+			sb.WriteString("(")
+			sb.WriteString(str.Join(",", ix.Columns))
 			if ix.BestKey != nil {
 				add := difference(ix.BestKey, ix.Columns)
 				if len(add) > 0 {
-					s.WriteString("+")
-					s.WriteString(str.Join(",", add))
+					sb.WriteString("+")
+					sb.WriteString(str.Join(",", add))
 				}
 			}
-			s.WriteString(")")
+			sb.WriteString(")")
 		}
-		return s.String()
+		return sb.String()
 	}
 
 	// basic: one key, one index

@@ -306,22 +306,22 @@ func (rs *Ranges) String() string {
 	if rs.tree == nil {
 		return rs.leaf.String()
 	}
-	var b strings.Builder
+	var sb strings.Builder
 	for i := range rs.tree.size {
-		b.WriteString(rs.tree.slots[i].val + " =>\n")
-		b.WriteString(rs.tree.slots[i].leaf.String())
-		b.WriteString("\n")
+		sb.WriteString(rs.tree.slots[i].val + " =>\n")
+		sb.WriteString(rs.tree.slots[i].leaf.String())
+		sb.WriteString("\n")
 	}
-	return strings.TrimSpace(b.String())
+	return strings.TrimSpace(sb.String())
 }
 
 func (leaf *leafNode) String() string {
-	var b strings.Builder
+	var sb strings.Builder
 	for i := range leaf.size {
 		ls := leaf.slots[i]
-		b.WriteString(ls.from + "->" + ls.to + " ")
+		sb.WriteString(ls.from + "->" + ls.to + " ")
 	}
-	return strings.TrimSpace(b.String())
+	return strings.TrimSpace(sb.String())
 }
 
 func (ls *leafSlot) String() string {

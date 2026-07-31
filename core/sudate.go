@@ -257,11 +257,11 @@ func FromGoTime(t time.Time) SuDate {
 // Format converts the date to a string in the specified format
 func (d SuDate) Format(fmt string) string {
 	fmtlen := len(fmt)
-	var dst strings.Builder
+	var sb strings.Builder
 	add := func(i int) {
-		dst.WriteByte('0' + byte(i))
+		sb.WriteByte('0' + byte(i))
 	}
-	dst.Grow(fmtlen)
+	sb.Grow(fmtlen)
 	for i := 0; i < fmtlen; i++ {
 		n := 1
 		if ascii.IsLetter(fmt[i]) {
@@ -285,9 +285,9 @@ func (d SuDate) Format(fmt string) string {
 		case 'M':
 			mon := d.Month()
 			if n > 3 {
-				dst.WriteString(months[mon-1])
+				sb.WriteString(months[mon-1])
 			} else if n == 3 {
-				dst.WriteString(months[mon-1][0:3])
+				sb.WriteString(months[mon-1][0:3])
 			} else {
 				if n >= 2 || mon > 9 {
 					add(mon / 10)
@@ -296,9 +296,9 @@ func (d SuDate) Format(fmt string) string {
 			}
 		case 'd':
 			if n > 3 {
-				dst.WriteString(days[d.WeekDay()])
+				sb.WriteString(days[d.WeekDay()])
 			} else if n == 3 {
-				dst.WriteString(days[d.WeekDay()][0:3])
+				sb.WriteString(days[d.WeekDay()][0:3])
 			} else {
 				if n >= 2 || d.Day() > 9 {
 					add(d.Day() / 10)
@@ -347,36 +347,36 @@ func (d SuDate) Format(fmt string) string {
 			}
 		case 'a':
 			if d.Hour() < 12 {
-				dst.WriteRune('a')
+				sb.WriteRune('a')
 			} else {
-				dst.WriteRune('p')
+				sb.WriteRune('p')
 			}
 			if n > 1 {
-				dst.WriteRune('m')
+				sb.WriteRune('m')
 			}
 		case 'A', 't':
 			if d.Hour() < 12 {
-				dst.WriteRune('A')
+				sb.WriteRune('A')
 			} else {
-				dst.WriteRune('P')
+				sb.WriteRune('P')
 			}
 			if n > 1 {
-				dst.WriteRune('M')
+				sb.WriteRune('M')
 			}
 		case '\'':
 			for i++; i < fmtlen && (fmt[i] != '\''); i++ {
-				dst.WriteByte(fmt[i])
+				sb.WriteByte(fmt[i])
 			}
 		case '\\':
 			i++
-			dst.WriteByte(fmt[i])
+			sb.WriteByte(fmt[i])
 		default:
 			for ; n > 0; n-- {
-				dst.WriteByte(fmt[i])
+				sb.WriteByte(fmt[i])
 			}
 		}
 	}
-	return dst.String()
+	return sb.String()
 }
 
 var months = []string{

@@ -28,8 +28,8 @@ func Replacement(s, rep string, cap *Captures) string {
 	}
 	nr := len(rep)
 	tr := byte('E')
-	var buf strings.Builder
-	buf.Grow(nr)
+	var sb strings.Builder
+	sb.Grow(nr)
 	trcase := func(c byte) byte {
 		switch tr {
 		case 'l':
@@ -47,7 +47,7 @@ func Replacement(s, rep string, cap *Captures) string {
 	}
 	add := func(ci int) (tr byte) {
 		for i := cap[2*ci]; i < cap[2*ci+1]; i++ {
-			buf.WriteByte(trcase(s[i]))
+			sb.WriteByte(trcase(s[i]))
 		}
 		return
 	}
@@ -62,21 +62,21 @@ func Replacement(s, rep string, cap *Captures) string {
 			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 				tr = add(int(c - '0'))
 			case 'n':
-				buf.WriteByte('\n')
+				sb.WriteByte('\n')
 			case 't':
-				buf.WriteByte('\t')
+				sb.WriteByte('\t')
 			case '\\':
-				buf.WriteByte('\\')
+				sb.WriteByte('\\')
 			case '&':
-				buf.WriteByte('&')
+				sb.WriteByte('&')
 			case 'u', 'l', 'U', 'L', 'E':
 				tr = c
 			default:
-				buf.WriteByte(c) // not affected by tr ???
+				sb.WriteByte(c) // not affected by tr ???
 			}
 		} else {
-			buf.WriteByte(trcase(c))
+			sb.WriteByte(trcase(c))
 		}
 	}
-	return buf.String()
+	return sb.String()
 }
