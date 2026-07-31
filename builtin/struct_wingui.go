@@ -7,11 +7,9 @@ package builtin
 
 import (
 	"encoding/binary"
-	"strings"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
@@ -420,9 +418,9 @@ var _ = Global.Builtin("LONG",
 
 func long(_ *Thread, args []Value) Value {
 	n := getInt32(args[0], "x")
-	var sb strings.Builder
-	binary.Write(&sb, binary.LittleEndian, n)
-	return SuStr(sb.String())
+	var buf [4]byte
+	binary.LittleEndian.PutUint32(buf[:], uint32(n))
+	return SuStr(string(buf[:]))
 }
 
 //-------------------------------------------------------------------
@@ -729,13 +727,12 @@ var _ = Global.Builtin("BITMAPFILEHEADER",
 			Fn:            bmfh}}})
 
 func bmfh(_ *Thread, args []Value) Value {
-	var sb strings.Builder
-	binary.Write(&sb, binary.LittleEndian, getInt16(args[0], "bfType"))
-	binary.Write(&sb, binary.LittleEndian, getInt32(args[0], "bfSize"))
-	binary.Write(&sb, binary.LittleEndian, int32(0)) // reserved
-	binary.Write(&sb, binary.LittleEndian, getInt32(args[0], "bfOffBits"))
-	assert.That(sb.Len() == nBitMapFileHeader)
-	return SuStr(sb.String())
+	var buf [nBitMapFileHeader]byte
+	binary.LittleEndian.PutUint16(buf[0:], uint16(getInt16(args[0], "bfType")))
+	binary.LittleEndian.PutUint32(buf[2:], uint32(getInt32(args[0], "bfSize")))
+	// buf[6:10] reserved = 0
+	binary.LittleEndian.PutUint32(buf[10:], uint32(getInt32(args[0], "bfOffBits")))
+	return SuStr(string(buf[:]))
 }
 
 // NOTE: 2 byte alignment (no padding) so not compatible as Go struct
