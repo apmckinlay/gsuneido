@@ -74,20 +74,18 @@ func (c *Compatible) SetTran(t QueryTran) {
 // source2Has returns true if a row from source exists in source2.
 // It does Lookup on source2 using all source2 columns.
 func (c *Compatible) source2Has(th *Thread, row1 Row) bool {
-	if c.disjoint != "" {
-		return false
-	}
+	dbg.Assert(c.disjoint == "")
 	hdr1 := c.source1.Header()
-	// for _, col := range c.src1Only {
-	// 	// if x := row.GetRaw(hdr1, col); x != "" && x[0] != PackForward {
-	// 	if row.GetRawVal(hdr1, col, th, c.st) != "" {
-	// 		return false
-	// 	}
-	// }
+	for _, col := range c.src1Only {
+		if x := row1.GetRaw(hdr1, col); x != "" && x[0] != PackForward {
+			return false
+		}
+	}
 	dbg.Assert(set.Equal(c.lookupCols, c.source2.Columns()))
 	sels := makeSels(hdr1, row1, c.lookupCols, th, c.st)
 	row2 := c.lookupCache.Lookup(c.source2, sels, th, c.st)
-	return row2 != nil && c.equal(th, row1, row2)
+	return row2 != nil &&
+		EqualRows(hdr1, row1, c.source2.Header(), row2, c.src1Only, th, c.st)
 }
 
 func makeSels(hdr *Header, row Row, cols []string, th *Thread, st *SuTran) Sels {
