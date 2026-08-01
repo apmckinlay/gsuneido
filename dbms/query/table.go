@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -242,7 +243,7 @@ func (tbl *Table) lookupCostI(i int) Cost {
 // execution --------------------------------------------------------
 
 func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
-	assert.That(!selConflict(tbl.header.Columns, sels))
+	dbg.Assert(!selConflict(tbl.header.Columns, sels))
 	tbl.nlooks++
 	key := ""
 	if !tbl.singleton {
@@ -322,7 +323,7 @@ func (tbl *Table) Select(sels Sels) {
 		tbl.ensureIter().Range(iface.All)
 		return
 	}
-	assert.That(!selConflict(tbl.header.Columns, sels))
+	dbg.Assert(!selConflict(tbl.header.Columns, sels))
 	org, end := selKeys(tbl.indexEncode, tbl.index, sels)
 	tbl.SelectRaw(org, end)
 }

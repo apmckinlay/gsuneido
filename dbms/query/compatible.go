@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/set"
 )
 
@@ -83,7 +84,7 @@ func (c *Compatible) source2Has(th *Thread, row1 Row) bool {
 	// 		return false
 	// 	}
 	// }
-	// assert.That(slices.Equal(c.lookupCols, c.source2.Columns()))
+	dbg.Assert(set.Equal(c.lookupCols, c.source2.Columns()))
 	sels := makeSels(hdr1, row1, c.lookupCols, th, c.st)
 	row2 := c.lookupCache.Lookup(c.source2, sels, th, c.st)
 	return row2 != nil && c.equal(th, row1, row2)

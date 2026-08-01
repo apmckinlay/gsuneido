@@ -12,6 +12,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -456,7 +457,7 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 			jn.row2 = jn.source2.Get(th, dir)
 		}
 		if jn.row2 != nil {
-			// assert.That(jn.equalBy(th, jn.st, jn.row1, jn.row2))
+			dbg.Assert(jn.equalBy(th, jn.st, jn.row1, jn.row2))
 			jn.ngets++
 			return JoinRows(jn.row1, jn.row2)
 		}
@@ -469,7 +470,6 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 		return false
 	}
 	// fmt.Println("Join row1", jn.row1)
-	// assert.That(set.Disjoint(jn.by, jn.sel2))
 	sel2 := slc.With(jn.sel2, jn.projectRow1(th, jn.row1)...)
 	if jn.joinType == many_to_one {
 		jn.lookupRow = jn.cachedLookup(th, sel2)
@@ -549,7 +549,7 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	if row2 == nil {
 		return nil
 	}
-	// assert.That(jn.equalBy(th, jn.st, row1, row2))
+	dbg.Assert(jn.equalBy(th, jn.st, row1, row2))
 	return JoinRows(row1, row2)
 }
 
@@ -811,8 +811,8 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			row2 := lj.row2
 			if row2 == nil {
 				row2 = lj.empty2
-				// } else {
-				// assert.That(lj.equalBy(th, lj.st, lj.row1, row2))
+			} else {
+				dbg.Assert(lj.equalBy(th, lj.st, lj.row1, row2))
 			}
 			if lj.filter2(row2) {
 				lj.ngets++
@@ -868,8 +868,8 @@ func (lj *LeftJoin) Lookup(th *Thread, sels Sels) Row {
 	}
 	if row2 == nil {
 		row2 = lj.empty2
-		// } else {
-		// assert.That(lj.equalBy(th, lj.st, row1, row2))
+	} else {
+		dbg.Assert(lj.equalBy(th, lj.st, row1, row2))
 	}
 	if !lj.filter2(row2) {
 		return nil
