@@ -8,7 +8,6 @@ import (
 	"math/rand/v2"
 	"slices"
 	"strconv"
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -88,7 +87,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 265, 319)
+	fuzzRandomRunner.Run(t, 299, 409)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -227,7 +226,20 @@ func composeFuzzProject(ft *FT, qs Query) Query {
 	if len(qs.Columns()) == 0 {
 		return qs
 	}
-	projCols := randomProjectCols(ft.rnd, qs.Columns(), qs.Indexes(), ft.ruleDeps)
+	deps := ft.ruleDeps
+	if ext, ok := qs.(*Extend); ok && len(ext.fwd) > 0 {
+		deps = make(map[string]string, len(ft.ruleDeps)+len(ext.fwd))
+		for k, v := range ft.ruleDeps {
+			deps[k] = v
+		}
+		for i, fwd := range ext.fwd {
+			target := fwd[1:]
+			if dep, ok := ft.ruleDeps[target]; ok {
+				deps[ext.cols[i]] = dep
+			}
+		}
+	}
+	projCols := randomProjectCols(ft.rnd, qs.Columns(), qs.Indexes(), deps)
 	return NewProject(qs, projCols)
 }
 
@@ -1130,31 +1142,6 @@ func composeFuzzExtend(ft *FT, qs Query) Query {
 }
 
 //-------------------------------------------------------------------
-// go test -run '^$' -fuzz=FuzzTempIndex ./dbms/query
-
-var fuzzTempIndexRunner = fuzzRunner{build: fuzzTempIndex}
-
-func FuzzTempIndex(f *testing.F) {
-	fuzzTempIndexRunner.Fuzz(f)
-}
-
-func TestFuzzTempIndexDebug(t *testing.T) {
-	fuzzTempIndexRunner.Run(t, 493, 913)
-}
-
-func TestFuzzTempIndex(t *testing.T) {
-	fuzzTempIndexRunner.Test(t)
-}
-
-func fuzzTempIndex(ft *FT) Query {
-	q := ft.newFT().NoEmptyKey().Build()
-	cols := q.Columns()
-	n := 1 + ft.rnd.IntN(min(3, len(cols)))
-	order := set.RandPerm(ft.rnd, cols, n)
-	return NewTempIndex(q, order, ft.rt)
-}
-
-//-------------------------------------------------------------------
 
 var fuzzCount = 0
 var noResults = 0
@@ -1163,7 +1150,7 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	before := String(q) // before Transform
 	defer func() {
 		if r := recover(); r != nil || t.Failed() {
-			TableInfo(q)
+			PrintTableInfo(q)
 			fmt.Println("original:", before)
 			fmt.Println("optimized:", String(q))
 			if r != nil {
@@ -1181,7 +1168,8 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 		if len(keyIdxs) > 0 {
 			index = random(keyIdxs, ft.rnd)
 		} else {
-			use = ReqNone
+			// fallback to all columns since this must contain a key
+			index = q.Columns()
 		}
 	} else {
 		index = random(indexes, ft.rnd)
@@ -1289,7 +1277,7 @@ func (fc *fuzzCtx) testRandomGet(qh *QueryHash, sels Sels) {
 	fc.q.Rewind()
 	nextRows := getAllRows(fc.q, Next, fc.th)
 	if !rowSetsEqual(nextRows, qh, fc.hdr) {
-		fmt.Println(TableInfo(fc.q))
+		PrintTableInfo(fc.q)
 		for k, v := range fc.ft.rules {
 			fmt.Println(k, "=", v)
 		}
@@ -1625,6 +1613,10 @@ func (fc *fuzzCtx) testRandomLookups(index []string, allRows []Row) {
 		if fc.rnd.IntN(2) == 0 {
 			result := lookup(fc.q, sels, fc.th, nil)
 			if result == nil {
+				PrintTableInfo(fc.q)
+				for k, v := range fc.ft.rules {
+					fmt.Println(k, "=", v)
+				}
 				fmt.Println("srcRow", RowStr(hdr, srcRow))
 				fmt.Println("sels", sels)
 				fc.t.Fatal("lookup returned nil for existing key")
@@ -1739,42 +1731,35 @@ func fuzzSplitShare(t *testing.T, rnd *rand.Rand) (part1Empty, part2Empty, part3
 
 //-------------------------------------------------------------------
 
-// TableInfo prints table schema details for each leaf Table in the query
-func TableInfo(q Query) string {
-	var sb strings.Builder
-	tableInfo(&sb, q)
-	return sb.String()
-}
-
-func tableInfo(sb *strings.Builder, q Query) {
+// PrintTableInfo prints the table schema details for each leaf Table in the query
+func PrintTableInfo(q Query) {
 	switch q := q.(type) {
 	case q2i:
-		tableInfo(sb, q.Source())
-		tableInfo(sb, q.Source2())
+		PrintTableInfo(q.Source())
+		PrintTableInfo(q.Source2())
 	case q1i:
-		tableInfo(sb, q.Source())
+		PrintTableInfo(q.Source())
 	case *Table:
-		debugTableSchema(sb, q)
+		printTableSchema(q)
 	case *ProjectNone:
-		tableInfo(sb, q.source)
+		PrintTableInfo(q.source)
 	}
 }
 
-func debugTableSchema(sb *strings.Builder, tbl *Table) {
-	sb.WriteString(tbl.Name())
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("  columns: %s\n", str.Join(",", tbl.Columns())))
+func printTableSchema(tbl *Table) {
+	fmt.Println(tbl.Name())
+	fmt.Printf("  columns: %s\n", str.Join(",", tbl.Columns()))
 
-	sb.WriteString("  indexes:")
+	fmt.Print("  indexes:")
 	for _, ix := range tbl.Indexes() {
-		sb.WriteString(fmt.Sprintf(" %s", str.Join("(,)", ix)))
+		fmt.Printf(" %s", str.Join("(,)", ix))
 	}
 
-	sb.WriteString("\n  keys:")
+	fmt.Print("\n  keys:")
 	for _, key := range tbl.Keys() {
-		sb.WriteString(fmt.Sprintf(" %s", str.Join("(,)", key)))
+		fmt.Printf(" %s", str.Join("(,)", key))
 	}
-	sb.WriteString("\n")
+	fmt.Println()
 }
 
 func PrintQueryData(q Query, th *Thread) {

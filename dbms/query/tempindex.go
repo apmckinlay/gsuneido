@@ -9,6 +9,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
@@ -56,20 +57,17 @@ func (ti *TempIndex) String() string {
 }
 
 func (ti *TempIndex) Transform() Query {
-	return ti
+	panic(assert.ShouldNotReachHere())
 }
 
 // optimize is only used by fuzz_test.go
 func (ti *TempIndex) optimize(mode Mode, req Require) (Cost, Cost, any) {
-	srcReq := NoneReq(req.frac)
-	fixcost, varcost := Optimize(ti.source, mode, srcReq)
-	return fixcost, varcost, nil
+	panic(assert.ShouldNotReachHere())
 }
 
 // setApproach is only used by fuzz_test.go
 func (ti *TempIndex) setApproach(req Require, _ any, tran QueryTran) {
-	srcReq := NoneReq(req.frac)
-	SetApproach(ti.source, srcReq, tran)
+	panic(assert.ShouldNotReachHere())
 }
 
 // execution --------------------------------------------------------
