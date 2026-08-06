@@ -340,30 +340,6 @@ func (su *Summarize) optSeq(mode Mode, req Require) (Cost, Cost, any) {
 			fixcost, varcost := Optimize(su.source, mode, srcReq)
 			return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
 		}
-		if !eitherSubset(req.cols, su.by) {
-			return impossible, impossible, nil
-		}
-		// requires are different ReqGroup
-		// this can't be handled with a single Require
-		// so we need to search here
-		nColsUnfixedReq := countUnfixed(req.cols, fixed)
-		best := newBest[Require]()
-		for _, idx := range su.source.Indexes() {
-			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
-				grouped(idx, su.by, nColsUnfixed, fixed) {
-				// source req must be ordered so it doesn't ignore column order
-				// which is necessary to satisfy both groupings
-				srcReq := OrderReq(idx, req.SelectFrac(nrows))
-				srcReq.nseeks = req.nseeks
-				f, v := Optimize(su.source, mode, srcReq)
-				best.update(f, v, srcReq)
-			}
-		}
-		if best.found() {
-			return best.fixcost, best.varcost,
-				&summarizeApproach{strat: sumSeq, req: best.data}
-		}
-		return impossible, impossible, nil
 	}
 	return impossible, impossible, nil
 }

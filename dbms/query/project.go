@@ -495,39 +495,8 @@ func (p *Project) optSeq(mode Mode, req Require) (Cost, Cost, any) {
 			fixcost, varcost := Optimize(p.source, mode, srcReq)
 			return fixcost, varcost, &projectApproach{strat: projSeq, req: srcReq}
 		}
-		if !eitherSubset(req.cols, p.columns) {
-			return impossible, impossible, nil
-		}
-		// requires are different ReqGroup
-		// this can't be handled with a single Require
-		// so we need to search here
-		nColsUnfixedReq := countUnfixed(req.cols, fixed)
-		best := newBest[Require]()
-		for _, idx := range p.source.Indexes() {
-			if grouped(idx, req.cols, nColsUnfixedReq, fixed) &&
-				grouped(idx, p.columns, nColsUnfixed, fixed) {
-				// source req must be ordered so it doesn't ignore column order
-				// which is necessary to satisfy both groupings
-				srcReq := OrderReq(idx, req.SelectFrac(nrows))
-				srcReq.nseeks = req.nseeks
-				f, v := Optimize(p.source, mode, srcReq)
-				best.update(f, v, srcReq)
-			}
-		}
-		if best.found() {
-			return best.fixcost, best.varcost,
-				&projectApproach{strat: projSeq, req: best.data}
-		}
 	}
 	return impossible, impossible, nil
-}
-
-// eitherSubset returns true if x is a subset of y or y is a subset of x
-func eitherSubset(x, y []string) bool {
-	if len(x) > len(y) {
-		x, y = y, x
-	}
-	return set.HasSubset(x, y)
 }
 
 const mapCost = 20 // ???
