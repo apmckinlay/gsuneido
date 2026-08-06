@@ -331,7 +331,7 @@ func (su *Summarize) optSeq(mode Mode, req Require) (Cost, Cost, any) {
 		// by must be a key: its columns must be covered by req.cols or fixed
 		// (fixed columns of su.by need not appear in req.cols)
 		dbg.Assert(indexCovered(su.by, req.cols, su.Fixed()))
-		// we can use GroupReq because Lookup is implemented by Select + Get
+		// use GroupReq because Lookup is implemented by Select + Get
 		srcReq := GroupReq(su.by, req.SelectFrac(nrows), req.nseeks)
 		fixcost, varcost := Optimize(su.source, mode, srcReq)
 		return fixcost, varcost, &summarizeApproach{strat: sumSeq, req: srcReq}
