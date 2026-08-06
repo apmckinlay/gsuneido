@@ -939,11 +939,11 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	return row
 }
 
-// Split partitions flds and vals, returning sub-slices.
-// It clones the slices only if modifications are needed.
-func Split(cloned bool, sels Sels, index []string) (isels, osels Sels) {
+// Split partitions sels relative to cols, returning sub-slices.
+// It clones sels only if modifications are needed.
+func Split(cloned bool, sels Sels, cols []string) (isels, osels Sels) {
 	pivot := func(i int) bool {
-		return slices.Contains(index, sels[i].col)
+		return slices.Contains(cols, sels[i].col)
 	}
 	swap := func(i, j int) {
 		if !cloned {
