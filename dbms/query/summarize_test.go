@@ -53,6 +53,37 @@ func TestSummarizeSelectFilter(t *testing.T) {
 	assert.T(t).This(row).Is(nil)
 }
 
+func TestSummarize_ByOnConflict(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create t (a, b, c) key(a)")
+
+	tran := db.NewReadTran()
+	assert.T(t).This(func() {
+		ParseQuery("t summarize a, average a", tran, nil)
+	}).Panics("summarize: by and on columns conflict: a")
+	assert.T(t).This(func() {
+		ParseQuery("t summarize a, b, total a", tran, nil)
+	}).Panics("summarize: by and on columns conflict: a")
+}
+
+func TestSummarize_OutputColConflicts(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create t (a, count, total_a) key(a)")
+
+	tran := db.NewReadTran()
+	assert.T(t).This(func() {
+		ParseQuery("t summarize count, total count", tran, nil)
+	}).Panics("summarize: on columns conflict with output columns: count")
+	assert.T(t).This(func() {
+		ParseQuery("t summarize total_a, total a", tran, nil)
+	}).Panics("summarize: output columns conflict with by: total_a")
+	assert.T(t).This(func() {
+		ParseQuery("t summarize total a, total a", tran, nil)
+	}).Panics("summarize: duplicate output column: total_a")
+}
+
 func TestSummarize_Keys(t *testing.T) {
 	srckeys := [][]string{{"a", "b"}, {"c"}}
 	keys := projectKeys(srckeys, []string{"x", "y"})

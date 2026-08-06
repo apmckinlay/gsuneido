@@ -93,13 +93,7 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 		panic("summarize: nonexistent columns: " +
 			str.Join(", ", set.Difference(by, src.Columns())))
 	}
-	check(by)
-	check(ons)
-	for i := range len(cols) {
-		if cols[i] == "" {
-			cols[i] = defaultColName(ops[i], ons[i])
-		}
-	}
+	cols = checkSummarize(by, cols, ops, ons)
 	su := &Summarize{hint: hint, by: by, cols: cols, ops: ops, ons: ons}
 	su.source = src
 	sort.Stable(su)
@@ -117,11 +111,48 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 	return su
 }
 
+func checkSummarize(by, cols, ops, ons []string) []string {
+	check(by)
+	check(ons)
+	if conflict := set.Intersect(by, ons); len(conflict) > 0 {
+		panic("summarize: by and on columns conflict: " + str.Join(", ", conflict))
+	}
+	seen := make(map[string]struct{}, len(cols))
+	for i := range len(cols) {
+		if cols[i] == "" {
+			cols[i] = defaultColName(ops[i], ons[i])
+		}
+		if _, dup := seen[cols[i]]; dup {
+			panic("summarize: duplicate output column: " + cols[i])
+		}
+		seen[cols[i]] = struct{}{}
+	}
+	if conflict := set.Intersect(by, cols); len(conflict) > 0 {
+		panic("summarize: output columns conflict with by: " +
+			str.Join(", ", conflict))
+	}
+	if conflict := set.Intersect(nonEmpty(ons), cols); len(conflict) > 0 {
+		panic("summarize: on columns conflict with output columns: " +
+			str.Join(", ", conflict))
+	}
+	return cols
+}
+
 func defaultColName(op, on string) string {
 	if op == "count" {
 		return "count"
 	}
 	return op + "_" + on
+}
+
+func nonEmpty(cols []string) []string {
+	result := make([]string, 0, len(cols))
+	for _, c := range cols {
+		if c != "" {
+			result = append(result, c)
+		}
+	}
+	return result
 }
 
 // Len / Less / Swap implement sort.Interface

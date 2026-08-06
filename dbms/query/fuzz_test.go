@@ -87,7 +87,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 299, 409)
+	fuzzRandomRunner.Run(t, 12, 226)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -472,13 +472,62 @@ func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, 
 		ons[0] = ""
 		cols[0] = "" // use default name
 	} else {
-		for i := range nops {
-			ops[i] = random(sumOps, rnd)
-			if ops[i] == "count" {
-				ons[i] = ""
-			} else {
-				ons[i] = random(srcCols, rnd)
+		// avoid 'on' columns that conflict with 'by' (now disallowed)
+		nonByCols := set.Difference(srcCols, by)
+		// build a pool of distinct (op, on) pairs whose default output
+		// column names do not conflict with 'by' columns
+		type pair struct{ op, on string }
+		bySet := make(map[string]struct{}, len(by))
+		for _, c := range by {
+			bySet[c] = struct{}{}
+		}
+		pool := []pair(nil)
+		add := func(op, on string) {
+			if _, ok := bySet[defaultColName(op, on)]; !ok {
+				pool = append(pool, pair{op, on})
 			}
+		}
+		add("count", "")
+		for _, op := range sumOps {
+			if op == "count" {
+				continue
+			}
+			for _, on := range nonByCols {
+				add(op, on)
+			}
+		}
+		// select pairs so that no 'on' collides with a generated output name
+		selected := make([]pair, 0, nops)
+		outputNames := make(map[string]struct{}, nops)
+		selectedOns := make(map[string]struct{}, nops)
+		rnd.Shuffle(len(pool), func(i, j int) { pool[i], pool[j] = pool[j], pool[i] })
+		for _, p := range pool {
+			if len(selected) >= nops {
+				break
+			}
+			out := defaultColName(p.op, p.on)
+			if _, dup := outputNames[out]; dup {
+				continue
+			}
+			if _, conflict := selectedOns[out]; conflict {
+				continue
+			}
+			if p.on != "" {
+				if _, conflict := outputNames[p.on]; conflict {
+					continue
+				}
+			}
+			selected = append(selected, p)
+			outputNames[out] = struct{}{}
+			selectedOns[p.on] = struct{}{}
+		}
+		nops = len(selected)
+		cols = cols[:nops]
+		ops = ops[:nops]
+		ons = ons[:nops]
+		for i := range nops {
+			ops[i] = selected[i].op
+			ons[i] = selected[i].on
 			cols[i] = "" // use default name
 		}
 	}
