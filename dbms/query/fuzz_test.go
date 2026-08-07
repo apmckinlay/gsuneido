@@ -1237,6 +1237,7 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 		req = GroupReq(slices.Clone(index), frac, nseeks)
 	case ReqUnique:
 		// add extra columns (to exercise Lookup with sels beyond the index)
+		index = slices.Clip(index)
 		nextra := ft.rnd.IntN(len(index))
 		for range nextra {
 			index = set.AddUnique(index, random(q.Columns(), ft.rnd))
