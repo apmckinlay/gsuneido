@@ -717,7 +717,7 @@ func lookupViaSelectGet(q Query, th *Thread, sels Sels) Row {
 func getNext1(q Query, th *Thread) Row {
 	// this does *not* need to loop because the index is unique
 	row := q.Get(th, Next)
-	dbg.Assert(row == nil || q.Get(th, Next) == nil)
+	dbg.Assert(func() bool { return row == nil || q.Get(th, Next) == nil })
 	return row
 }
 

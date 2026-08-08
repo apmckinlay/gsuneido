@@ -7,8 +7,8 @@ package dbg
 
 import "log"
 
-func Assert(cond bool) {
-	if !cond {
+func Assert(f func() bool) {
+	if !f() {
 		log.Println("ERROR: ASSERT FAILED")
 		PrintStack()
 		panic("ASSERT FAILED")

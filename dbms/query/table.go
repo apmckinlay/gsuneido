@@ -243,7 +243,7 @@ func (tbl *Table) lookupCostI(i int) Cost {
 // execution --------------------------------------------------------
 
 func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
-	dbg.Assert(checkSels(sels, tbl.header.Columns))
+	dbg.Assert(func() bool { return checkSels(sels, tbl.header.Columns) })
 	tbl.nlooks++
 	key := ""
 	if !tbl.singleton {
@@ -332,7 +332,7 @@ func (tbl *Table) Select(sels Sels) {
 		tbl.ensureIter().Range(iface.All)
 		return
 	}
-	dbg.Assert(checkSels(sels, tbl.header.Columns))
+	dbg.Assert(func() bool { return checkSels(sels, tbl.header.Columns) })
 	org, end := selKeys(tbl.indexEncode, tbl.index, sels)
 	tbl.SelectRaw(org, end)
 }

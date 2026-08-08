@@ -5,5 +5,5 @@
 
 package dbg
 
-func Assert(cond bool) {
+func Assert(f func() bool) {
 }

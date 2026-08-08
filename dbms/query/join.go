@@ -457,7 +457,7 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 			jn.row2 = jn.source2.Get(th, dir)
 		}
 		if jn.row2 != nil {
-			dbg.Assert(jn.equalBy(th, jn.st, jn.row1, jn.row2))
+			dbg.Assert(func() bool { return jn.equalBy(th, jn.st, jn.row1, jn.row2) })
 			jn.ngets++
 			return JoinRows(jn.row1, jn.row2)
 		}
@@ -549,7 +549,7 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	if row2 == nil {
 		return nil
 	}
-	dbg.Assert(jn.equalBy(th, jn.st, row1, row2))
+	dbg.Assert(func() bool { return jn.equalBy(th, jn.st, row1, row2) })
 	return JoinRows(row1, row2)
 }
 
@@ -812,7 +812,7 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 			if row2 == nil {
 				row2 = lj.empty2
 			} else {
-				dbg.Assert(lj.equalBy(th, lj.st, lj.row1, row2))
+				dbg.Assert(func() bool { return lj.equalBy(th, lj.st, lj.row1, row2) })
 			}
 			if lj.filter2(row2) {
 				lj.ngets++
@@ -869,7 +869,7 @@ func (lj *LeftJoin) Lookup(th *Thread, sels Sels) Row {
 	if row2 == nil {
 		row2 = lj.empty2
 	} else {
-		dbg.Assert(lj.equalBy(th, lj.st, row1, row2))
+		dbg.Assert(func() bool { return lj.equalBy(th, lj.st, row1, row2) })
 	}
 	if !lj.filter2(row2) {
 		return nil

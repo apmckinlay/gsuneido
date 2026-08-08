@@ -640,8 +640,8 @@ func (u *Union) Select(sels Sels) {
 	// Select requires optimize with ReqGroup which requires unionMerge
 	// which requires req.cols and sels to be on common columns
 	// so we don't need to split sels
-	dbg.Assert(checkSels(sels, u.source1.Columns()))
-	dbg.Assert(checkSels(sels, u.source2.Columns()))
+	dbg.Assert(func() bool { return checkSels(sels, u.source1.Columns()) })
+	dbg.Assert(func() bool { return checkSels(sels, u.source2.Columns()) })
 	u.nsels++
 	u.state = rewound
 	u.src1get = u.source1.Get
@@ -690,7 +690,7 @@ func (u *Union) Lookup(th *Thread, sels Sels) Row {
 	if row2 == nil {
 		return row1
 	}
-	dbg.Assert(EqualRows(hdr, row1, hdr, row2, u.allCols, th, u.st))
+	dbg.Assert(func() bool { return EqualRows(hdr, row1, hdr, row2, u.allCols, th, u.st) })
 	return row2 // to match unionLookup
 }
 

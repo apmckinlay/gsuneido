@@ -83,7 +83,7 @@ func (c *Compatible) source2Has(th *Thread, row1 Row) bool {
 			return false
 		}
 	}
-	dbg.Assert(set.Equal(c.lookupCols, c.source2.Columns()))
+	dbg.Assert(func() bool { return set.Equal(c.lookupCols, c.source2.Columns()) })
 	sels := makeSels(hdr1, row1, c.lookupCols, th, c.st)
 	row2 := c.lookupCache.Lookup(c.source2, sels, th, c.st)
 	return row2 != nil &&
