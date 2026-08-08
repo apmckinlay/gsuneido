@@ -50,6 +50,8 @@ func newIntersect(src1, src2 Query, t QueryTran, prevFixed1, prevFixed2 Fixed) *
 	it.fixed = it.getFixed()
 	it.setNrows(it.getNrows())
 	it.rowSiz.Set(src1.rowSize())
+	// to be fast, source1 must be fastSingle
+	// but we might reverse so we don't know which will be source1
 	it.fast1.Set(src1.fastSingle() && src2.fastSingle())
 	return &it
 }
