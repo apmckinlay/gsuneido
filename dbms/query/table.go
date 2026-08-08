@@ -243,7 +243,7 @@ func (tbl *Table) lookupCostI(i int) Cost {
 // execution --------------------------------------------------------
 
 func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
-	dbg.Assert(!selConflict(tbl.header.Columns, sels))
+	dbg.Assert(checkSels(sels, tbl.header.Columns))
 	tbl.nlooks++
 	key := ""
 	if !tbl.singleton {
@@ -255,6 +255,15 @@ func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
 		}
 	}
 	return tbl.LookupRaw(key)
+}
+
+func checkSels(sels Sels, srcCols []string) bool {
+	for _, sel := range sels {
+		if !slices.Contains(srcCols, sel.col) {
+			return false
+		}
+	}
+	return true
 }
 
 func (tbl *Table) LookupRaw(key string) Row {
@@ -323,7 +332,7 @@ func (tbl *Table) Select(sels Sels) {
 		tbl.ensureIter().Range(iface.All)
 		return
 	}
-	dbg.Assert(!selConflict(tbl.header.Columns, sels))
+	dbg.Assert(checkSels(sels, tbl.header.Columns))
 	org, end := selKeys(tbl.indexEncode, tbl.index, sels)
 	tbl.SelectRaw(org, end)
 }

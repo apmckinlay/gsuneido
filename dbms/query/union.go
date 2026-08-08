@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/tsc"
@@ -233,17 +234,26 @@ func (u *Union) getFixed() Fixed {
 // optimize ---------------------------------------------------------
 
 func (u *Union) optimize(mode Mode, req Require) (Cost, Cost, any) {
+	if req.use == ReqUnique {
+		cols1 := set.Intersect(u.source1.Columns(), req.cols)
+		req1 := UniqueReq(cols1, req.nseeks)
+		fc1, vc1 := Optimize(u.source1, mode, req1)
+		cols2 := set.Intersect(u.source2.Columns(), req.cols)
+		req2 := UniqueReq(cols2, req.nseeks)
+		fc2, vc2 := Optimize(u.source2, mode, req2)
+		return fc1 + fc2, vc1 + vc2,
+			&unionApproach{strat: unionLookup, req1: req1, req2: req2,
+				cols: u.source2.Columns()}
+	}
+
 	// try merge versus lookup
 	fcMerge, vcMerge, appMerge := u.optMerge(mode, req)
-	// The lookup strategy just concatenates source1 then source2, with no
-	// merging. For ReqUnique/ReqGroup that is only valid when disjoint if
-	// req.cols includes the disjoint column - otherwise the same req.cols
-	// values can occur on both sides (they only differ by the disjoint
-	// column) and would end up split into two non-adjacent groups/lookups
-	// instead of being combined.
-	if req.use == ReqNone ||
-		(u.disjoint != "" && (req.use == ReqUnique || req.use == ReqGroup) &&
-			slices.Contains(req.cols, u.disjoint)) {
+	// unionLookup interates through source1 not in source2, followed by source2.
+	// For ReqGroup that is only valid when req.cols includes a disjoint column
+	// otherwise the same req.cols values can occur on both sides
+	// and could end up split into two non-adjacent groups
+	if req.use == ReqNone || (req.use == ReqGroup &&
+		u.disjoint != "" && slices.Contains(req.cols, u.disjoint)) {
 		fcLookup, vcLookup, appLookup := u.optLookup(mode, req)
 		if fcLookup+vcLookup < fcMerge+vcMerge {
 			return fcLookup, vcLookup, appLookup
@@ -626,36 +636,26 @@ func (u *Union) getMergeDisjoint(th *Thread, dir Dir) (r Row) {
 	}
 }
 
-func nothing(*Thread, Dir) Row { return nil }
-
 func (u *Union) Select(sels Sels) {
+	// Select requires optimize with ReqGroup which requires unionMerge
+	// which requires req.cols and sels to be on common columns
+	// so we don't need to split sels
+	dbg.Assert(checkSels(sels, u.source1.Columns()))
+	dbg.Assert(checkSels(sels, u.source2.Columns()))
 	u.nsels++
 	u.state = rewound
 	u.src1get = u.source1.Get
 	u.src2get = u.source2.Get
-	if sels == nil { // clear
-		u.source1.Select(nil)
-		u.source2.Select(nil)
-		return
-	}
-	if selConflict(u.source1.Columns(), sels) {
-		u.src1get = nothing
-	} else {
-		u.source1.Select(removeNonexistentEmpty(u.source1.Columns(), sels))
-	}
-	if selConflict(u.source2.Columns(), sels) {
-		u.src2get = nothing
-	} else {
-		u.source2.Select(removeNonexistentEmpty(u.source2.Columns(), sels))
-	}
+	u.source1.Select(sels)
+	u.source2.Select(sels)
 }
 
-func removeNonexistentEmpty(srccols []string, sels Sels) Sels {
+func selsForCols(sels Sels, srccols []string) Sels {
 	for i, sel := range sels {
-		if !slices.Contains(srccols, sel.col) && sel.val == "" {
+		if !slices.Contains(srccols, sel.col) {
 			newsels := slices.Clip(sels[:i])
 			for ; i < len(sels); i++ {
-				if slices.Contains(srccols, sels[i].col) || sels[i].val != "" {
+				if slices.Contains(srccols, sels[i].col) {
 					newsels = append(newsels, sels[i])
 				}
 			}
@@ -668,19 +668,30 @@ func removeNonexistentEmpty(srccols []string, sels Sels) Sels {
 	return sels
 }
 
-// selConflict is also used by Table
-func selConflict(srcCols []string, sels Sels) bool {
-	for _, sel := range sels {
-		if sel.val != "" && !slices.Contains(srcCols, sel.col) {
-			return true
-		}
-	}
-	return false
-}
-
 func (u *Union) Lookup(th *Thread, sels Sels) Row {
 	u.nlooks++
-	return lookupViaSelectGet(u, th, sels)
+	// We could use disjoint fixed to avoid some lookups
+	// but Extend and Where (the source of fixed)
+	// both already skip the actual lookup if fixed conflicts.
+	hdr := u.Header()
+	row1 := u.source1.Lookup(th, selsForCols(sels, u.source1.Columns()))
+	row2 := u.source2.Lookup(th, selsForCols(sels, u.source2.Columns()))
+	if row1 != nil {
+		row1 = JoinRows(row1, u.empty2)
+		row1 = lookupFilter(hdr, row1, sels, th, u.st)
+	}
+	if row2 != nil {
+		row2 = JoinRows(u.empty1, row2)
+		row2 = lookupFilter(hdr, row2, sels, th, u.st)
+	}
+	if row1 == nil {
+		return row2
+	}
+	if row2 == nil {
+		return row1
+	}
+	dbg.Assert(EqualRows(hdr, row1, hdr, row2, u.allCols, th, u.st))
+	return row2 // to match unionLookup
 }
 
 func (u *Union) Simple(th *Thread) []Row {

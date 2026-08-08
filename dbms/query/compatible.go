@@ -74,7 +74,9 @@ func (c *Compatible) SetTran(t QueryTran) {
 // source2Has returns true if a row from source exists in source2.
 // It does Lookup on source2 using all source2 columns.
 func (c *Compatible) source2Has(th *Thread, row1 Row) bool {
-	dbg.Assert(c.disjoint == "")
+	if c.disjoint != "" {
+		return false
+	}
 	hdr1 := c.source1.Header()
 	for _, col := range c.src1Only {
 		if x := row1.GetRaw(hdr1, col); x != "" && x[0] != PackForward {

@@ -87,7 +87,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 12, 226)
+	fuzzRandomRunner.Run(t, 26, 781)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -618,7 +618,7 @@ func TestFuzzUnion(t *testing.T) {
 }
 
 func TestFuzzUnionDebug(t *testing.T) {
-	fuzzUnionRunner.Run(t, 192, 1)
+	fuzzUnionRunner.Run(t, 17405568374524831280, 7327238746347608477)
 }
 
 func fuzzUnion(ft *FT) Query {

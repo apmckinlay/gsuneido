@@ -81,7 +81,7 @@ func TestExtendRuleBug2(t *testing.T) {
 	db.act("insert { ck: 1, c4: 2  } into cus")
 	assert.This(queryAll(db.Database,
 		`(((cus extend r0, a3 = c4) union (cus union cus)) where r0 is "")`)).
-		Is("c4=2 ck=1 | a3=2 c4=2 ck=1")
+		Is("a3=2 c4=2 ck=1 | c4=2 ck=1")
 }
 
 func TestExtendRuleWhereRaw(t *testing.T) {

@@ -68,17 +68,17 @@ func TestUnion_MergeSwitchDir(t *testing.T) {
 	}
 }
 
-func TestUnion_removeNonexistentEmpty(t *testing.T) {
+func TestUnion_selsForCols(t *testing.T) {
 	srccols := []string{"a", "b", "c"}
 	test := func(selsIn, selsOut Sels) {
-		assert.This(removeNonexistentEmpty(srccols, selsIn)).Is(selsOut)
+		assert.This(selsForCols(selsIn, srccols)).Is(selsOut)
 	}
 	test(nil, nil)
 	test(Sels{}, Sels{})
 	test(Sels{{"a", "1"}, {"c", "2"}, {"x", "3"}},
-		Sels{{"a", "1"}, {"c", "2"}, {"x", "3"}})
+		Sels{{"a", "1"}, {"c", "2"}})
 	test(Sels{{"a", "1"}, {"n", ""}, {"c", "2"}, {"x", "3"}},
-		Sels{{"a", "1"}, {"c", "2"}, {"x", "3"}})
+		Sels{{"a", "1"}, {"c", "2"}})
 	test(Sels{{"x", ""}, {"y", ""}}, nil)
 }
 
