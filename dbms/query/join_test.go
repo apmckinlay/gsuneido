@@ -88,22 +88,11 @@ func TestJoin_EmptyTempIndexBug(t *testing.T) {
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery(query, tran, nil)
 	idx := []string{"ck", "ik"}
-	q = setupIndex(q, ReadMode, idx, tran)
+	q = setupIndex(q, ReadMode, tran, idx)
 	// fmt.Println(Strategy(q))
 	assert.T(t).Msg("empty TempIndex").
 		That(!strings.Contains(Strategy(q), "TEMPINDEX()"))
 	q.Select(Sels{{"ck", ""}, {"ik", ""}})
-}
-
-func setupIndex(q Query, mode Mode, index []string, tran QueryTran) Query {
-	q = q.Transform()
-	req := OrderReq(index, 1)
-	fixcost, varcost := Optimize(q, mode, req)
-	if fixcost+varcost >= impossible {
-		panic("impossible")
-	}
-	q = SetApproach(q, req, tran)
-	return q
 }
 
 func TestJoin_LookupBug(t *testing.T) {

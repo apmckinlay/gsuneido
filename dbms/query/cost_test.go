@@ -104,13 +104,13 @@ func BenchmarkTableGetCost(b *testing.B) {
 			tbl := tblname(nrec, rsize)
 			tran := db.NewReadTran()
 			q = ParseQuery(tbl, tran, nil)
-			q = setupIndex(q, ReadMode, []string{"a"}, tran) // physical order
+			q = setupIndex(q, ReadMode, tran, []string{"a"}) // physical order
 			b.Run(tbl+"^a", fn)
 			q = ParseQuery(tbl, tran, nil)
-			q = setupIndex(q, ReadMode, []string{"b"}, tran) // random order
+			q = setupIndex(q, ReadMode, tran, []string{"b"}) // random order
 			b.Run(tbl+"^b", fn)
 			q = ParseQuery(tbl, tran, nil)
-			q = setupIndex(q, ReadMode, []string{"c"}, tran) // clustered
+			q = setupIndex(q, ReadMode, tran, []string{"c"}) // clustered
 			b.Run(tbl+"^c", fn)
 		}
 	}
@@ -269,7 +269,7 @@ func BenchmarkLookup(b *testing.B) {
 			sels := []Sel{{col: "a"}}
 			tran := db.NewReadTran()
 			q := ParseQuery(tbl, tran, nil)
-			q, _, _ = Setup(q, ReadMode, tran)
+			q, _, _ = SetupReq(q, ReadMode, tran, UniqueReq([]string{"a"}, 0))
 			b.Run(tbl, func(b *testing.B) {
 				successful := 0
 				for b.Loop() {

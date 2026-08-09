@@ -87,7 +87,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 975, 311)
+	fuzzRandomRunner.Run(t, 15876328570202277608, 732165589352327898)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -553,7 +553,7 @@ func TestFuzzMinus(t *testing.T) {
 }
 
 func TestFuzzMinusDebug(t *testing.T) {
-	fuzzMinusRunner.Run(t, 192, 1)
+	fuzzMinusRunner.Run(t, 11130730882175419708, 972015255346608475)
 }
 
 //-------------------------------------------------------------------
@@ -1053,7 +1053,7 @@ func fuzzSemiJoin(ft *FT) Query {
 var fuzzWhereRunner = fuzzRunner{build: fuzzWhere}
 
 func TestFuzzWhereDebug(t *testing.T) {
-	fuzzWhereRunner.Run(t, 3744581613646207506, 15911655064145860892)
+	fuzzWhereRunner.Run(t, 7662463433082426469, 16677774887705672839)
 }
 
 func FuzzWhere(f *testing.F) {

@@ -244,7 +244,6 @@ type queryBase struct {
 	singleTbl opt.Bool
 	cache
 	metrics
-	req Require
 }
 
 type state byte
@@ -309,10 +308,6 @@ func (q *queryBase) Metrics() *metrics {
 	return &q.metrics
 }
 
-func (q *queryBase) setReq(req Require) {
-	q.req = req
-}
-
 func (*queryBase) knowExactNrows() bool {
 	return false
 }
@@ -372,8 +367,7 @@ type QueryTran interface {
 // It calls Transform, Optimize, and SetApproach.
 // The resulting Query is ready for execution.
 func Setup(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
-	q = q.Transform()
-	return setup(q, mode, 1, t)
+	return SetupReq(q, mode, t, NoneReq(1))
 }
 
 // Setup1 is the same as Setup except it passes a frac of 1/nrows
@@ -383,11 +377,16 @@ func Setup1(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
 	q = q.Transform()
 	nrows, _ := q.Nrows()
 	nrows = max(1, nrows) // avoid divide by zero
-	return setup(q, mode, 1/float64(nrows), t)
+	req := NoneReq(1 / float32(nrows))
+	return setupReq(q, mode, t, req)
 }
 
-func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
-	req := NoneReq(float32(frac))
+func SetupReq(q Query, mode Mode, t QueryTran, req Require) (Query, Cost, Cost) {
+	q = q.Transform()
+	return setupReq(q, mode, t, req)
+}
+
+func setupReq(q Query, mode Mode, t QueryTran, req Require) (Query, Cost, Cost) {
 	fixcost, varcost := Optimize(q, mode, req)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + String(q))
@@ -414,15 +413,9 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 	return q
 }
 
-// SetupIdx is like Setup but specifies an index.
-// Used to test Select or Lookup
-func SetupIdx(q Query, mode Mode, t QueryTran, index []string) Query {
-	req := OrderReq(index, 1)
-	fixcost, varcost := Optimize(q, mode, req)
-	if fixcost+varcost >= impossible {
-		panic("invalid query: " + String(q))
-	}
-	q = SetApproach(q, req, t)
+// setupIndex is used for tests
+func setupIndex(q Query, mode Mode, t QueryTran, index []string) Query {
+	q, _, _ = SetupReq(q, mode, t, OrderReq(index, 1))
 	return q
 }
 
@@ -693,9 +686,6 @@ func SetApproach(q Query, req Require, tran QueryTran) Query {
 		panic("SetApproach: not found in cache")
 	}
 	assert.That(fixcost >= 0 && varcost >= 0)
-	if rs, ok := q.(interface{ setReq(Require) }); ok {
-		rs.setReq(req)
-	}
 	if ap, ok := approach.(*tempIndex); ok {
 		q.Metrics().setCost(1, ap.srcfixcost, ap.srcvarcost)
 		q.setApproach(OrderReq(ap.srcindex, 1), ap.srcapp, tran)

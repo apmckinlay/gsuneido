@@ -307,7 +307,7 @@ func TestSingleton(t *testing.T) {
 	act(db, "insert { a: 3, b: 4 } into tmp")
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery("tmp where a = 3", tran, nil)
-	q = SetupIdx(q, ReadMode, tran, []string{"b"})
+	q = setupIndex(q, ReadMode, tran, []string{"b"})
 	assert.This(String(q)).Is("tmp^(a) where*1 a is 3") // singleton
 	// reading by a, but singleton so we can Select/Lookup on b
 	bsels := Sels{{"b", Pack(SuInt(4))}}
@@ -434,13 +434,8 @@ func TestTimesLookup(t *testing.T) {
 
 	tran := db.NewReadTran()
 	q := ParseQuery("tmp1 times tmp2", tran, nil)
-	q = q.Transform()
 	req := UniqueReq([]string{"a", "x"}, 1)
-	fixcost, varcost := Optimize(q, ReadMode, req)
-	if fixcost+varcost >= impossible {
-		t.Fatal("invalid query")
-	}
-	q = SetApproach(q, req, tran)
+	q, _, _ = SetupReq(q, ReadMode, tran, req)
 	test := func(a, x int, expected string) {
 		sels := Sels{{"a", Pack(SuInt(a))}, {"x", Pack(SuInt(x))}}
 		row := q.Lookup(nil, sels)

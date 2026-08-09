@@ -20,10 +20,7 @@ func TestCosting_Table(t *testing.T) {
 	for range ncosting {
 		ft := testFT()
 		q := ft.NewFuzzTable()
-		q = q.Transform()
-		req := NoneReq(1)
-		fixcost, varcost := Optimize(q, ReadMode, req)
-		q = SetApproach(q, req, ft.rt)
+		q, fixcost, varcost := SetupReq(q, ReadMode, ft.rt, NoneReq(1))
 		q.SetTran(ft.rt)
 		iterate(q)
 		tbl := q.(*Table)
@@ -254,10 +251,7 @@ func fuzzSummarizeForCosting(ft *FT) Query {
 }
 
 func costingSetup(q Query, ft *FT) (Query, Cost, Cost) {
-	q = q.Transform()
-	req := NoneReq(1)
-	fixcost, varcost := Optimize(q, ReadMode, req)
-	q = SetApproach(q, req, ft.rt)
+	q, fixcost, varcost := SetupReq(q, ReadMode, ft.rt, NoneReq(1))
 	q.SetTran(ft.rt)
 	iterate(q)
 	return q, fixcost, varcost

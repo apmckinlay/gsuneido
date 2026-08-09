@@ -44,7 +44,7 @@ func TestExtendSelect(t *testing.T) {
 
 	// where singleton
 	q := ParseQuery("cus where cnum=1 extend ex=cnum+1", rt, nil) // expression
-	q = SetupIdx(q, ReadMode, rt, ex)
+	q = setupIndex(q, ReadMode, rt, ex)
 	assert.That(q.fastSingle())
 
 	q.Select(Sels{{col: "ex", val: Pack(IntVal(0))}})

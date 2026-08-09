@@ -329,7 +329,7 @@ func TestWhere_Select(t *testing.T) {
 	tran := db.NewReadTran()
 	q := ParseQuery(query, tran, nil)
 	cols := []string{"a", "b"}
-	q = SetupIdx(q, CursorMode, tran, cols)
+	q = setupIndex(q, CursorMode, tran, cols)
 	sels := Sels{{"a", Pack(IntVal(4))}, {"b", Pack(IntVal(5))}}
 	q.Select(sels)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6")
@@ -337,7 +337,7 @@ func TestWhere_Select(t *testing.T) {
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
 
 	q = ParseQuery(query, tran, nil)
-	q = SetupIdx(q, CursorMode, tran, cols)
+	q = setupIndex(q, CursorMode, tran, cols)
 	sels = Sels{{"a", Pack(IntVal(1))}, {"b", Pack(IntVal(2))}} // conflict
 	q.Select(sels)
 	assert.This(queryAll2(q)).Is("")
@@ -346,7 +346,7 @@ func TestWhere_Select(t *testing.T) {
 
 	// select with col not in index fields (c not in key(a,b))
 	q = ParseQuery(query, tran, nil)
-	q = SetupIdx(q, CursorMode, tran, cols)
+	q = setupIndex(q, CursorMode, tran, cols)
 	q.Select(Sels{{"a", Pack(IntVal(4))}, {"c", Pack(IntVal(6))}})
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6")
 }
@@ -471,7 +471,7 @@ func TestWhere_Select_recalcIdxSel(t *testing.T) {
 
 	tran := db.NewReadTran()
 	q := ParseQuery("table where b > 2", tran, nil)
-	q = SetupIdx(q, CursorMode, tran, []string{"a", "b", "c"})
+	q = setupIndex(q, CursorMode, tran, []string{"a", "b", "c"})
 	w := q.(*Where)
 	assert.T(t).That(w.idxSelBase != nil)
 	assert.T(t).This(w.idxSelBase.skipLen).Is(1)
@@ -609,11 +609,8 @@ func TestWhere_keyfixed(t *testing.T) {
 	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
 	tran := db.NewReadTran()
 	q := ParseQuery("table where a=4", tran, nil)
-	q = q.Transform()
 	index := []string{"b"}
-	req := OrderReq(index, 1)
-	Optimize(q, ReadMode, req)
-	q = SetApproach(q, req, tran)
+	q, _, _ = SetupReq(q, ReadMode, tran, OrderReq(index, 1))
 	assert.That(q.fastSingle())
 	th := &Thread{}
 	sels := Sels{{"b", Pack(IntVal(5))}}
@@ -692,11 +689,8 @@ func TestWhere_SelOrgNotFull(t *testing.T) {
 	// b is fixed, so index (a,c) can provide order (a,b)
 	// (a,c) and (a,b) have the same cost so Where picks the first (a,c)
 	// but (a,c) doesn't support lookups on (a,b) even with fixed
-	q = q.Transform()
 	key := []string{"a", "b"}
-	req := OrderReq(key, 1)
-	Optimize(q, ReadMode, req)
-	q = SetApproach(q, req, tran)
+	q, _, _ = SetupReq(q, ReadMode, tran, UniqueReq(key, 1))
 	q.Lookup(nil, Sels{{"a", Pack(SuInt(4))}, {"b", Pack(SuInt(5))}})
 }
 
@@ -931,10 +925,7 @@ func TestWhere_nonexistent(t *testing.T) {
 		// to zero and cause the optimizer to pick a worse index.
 		// Both existing and nonexistent parent values should select the
 		// (parent,name,num) index since parent is the leading prefix column.
-		q = q.Transform()
-		req := NoneReq(1)
-		Optimize(q, ReadMode, req)
-		q = SetApproach(q, req, tran)
+		q, _, _ = SetupReq(q, ReadMode, tran, NoneReq(1))
 		assert.T(t).That(strings.Contains(String(q), "table^(parent,name,num)"))
 	}
 	test("20")   // exists

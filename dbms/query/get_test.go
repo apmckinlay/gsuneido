@@ -27,7 +27,7 @@ func TestTableLookup(t *testing.T) {
 	test := func(query string, sels Sels, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
-		q, _, _ = Setup(q, ReadMode, testTran{})
+		q, _, _ = SetupReq(q, ReadMode, testTran{}, UniqueReq(q.Keys()[0], 1))
 		row := q.(*Table).Lookup(nil, sels)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
 	}

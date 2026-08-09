@@ -36,6 +36,7 @@ const (
 	ReqGroup      = UsePrefix | UseSet   // used with Select
 	ReqUnique     = UseFull | UseSet     // used with Lookup
 	ReqOrder      = UsePrefix | UseOrder // used to Get in a particular order
+	ReqAny        = 0xff                 // used with Table SetIndex
 )
 
 func (use Use) String() string {
@@ -48,6 +49,8 @@ func (use Use) String() string {
 		return "ReqUnique"
 	case ReqOrder:
 		return "ReqOrder"
+	case ReqAny:
+		return "ReqAny"
 	}
 	panic("invalid Use")
 }

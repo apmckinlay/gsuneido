@@ -53,6 +53,7 @@ type Table struct {
 	singleton   bool
 	indexEncode bool
 	cursorMode  bool
+	req         Require
 }
 
 func (tbl *Table) isSingleton() bool {
@@ -193,10 +194,12 @@ func (tbl *Table) costFor(index []string, mode Mode, req Require) (Cost, Cost, a
 	return 0, result, tableApproach{index: index, mode: mode}
 }
 
-func (tbl *Table) setApproach(_ Require, approach any, _ QueryTran) {
+func (tbl *Table) setApproach(req Require, approach any, _ QueryTran) {
+	tbl.req = req
 	ap := approach.(tableApproach)
 	tbl.setIndex(ap.index, ap.mode)
 }
+
 func (tbl *Table) setIndex(index []string, mode Mode) {
 	tbl.cursorMode = (mode == CursorMode)
 	if tbl.singleton {
@@ -209,10 +212,10 @@ func (tbl *Table) setIndex(index []string, mode Mode) {
 }
 
 // SetIndex sets the index used to access the table.
-// It also sets req to ReqGroup so that Select can be used afterwards.
+// It also sets req to ReqAny so that Select and Lookup can be used.
 func (tbl *Table) SetIndex(index []string, mode Mode) {
 	tbl.setIndex(index, mode)
-	tbl.req = GroupReq(index, 1, 0)
+	tbl.req = Require{use: ReqAny}
 }
 
 // IndexEncodes returns whether the index key is encoded
@@ -253,6 +256,7 @@ func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
 	tbl.nlooks++
 	key := ""
 	if !tbl.singleton {
+		assert.That(tbl.req.use == ReqUnique || tbl.req.use == ReqAny)
 		ix := &tbl.schema.Indexes[tbl.iIndex]
 		key = selOrg(tbl.indexEncode, ix.Fields, sels, true)
 		if len(ix.Ixspec.Fields2) > 0 && key == "" {
@@ -341,7 +345,8 @@ func (tbl *Table) Select(sels Sels) {
 		tbl.ensureIter().Range(iface.All)
 		return
 	}
-	assert.That(tbl.req.use == ReqGroup || tbl.req.use == ReqOrder)
+	assert.That(tbl.req.use == ReqAny ||
+		tbl.req.use == ReqGroup || tbl.req.use == ReqOrder)
 	dbg.Assert(func() bool { return checkSels(sels, tbl.header.Columns) })
 	org, end := selKeys(tbl.indexEncode, tbl.index, sels)
 	tbl.SelectRaw(org, end)
