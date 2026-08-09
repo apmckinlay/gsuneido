@@ -244,6 +244,7 @@ type queryBase struct {
 	singleTbl opt.Bool
 	cache
 	metrics
+	req Require
 }
 
 type state byte
@@ -306,6 +307,10 @@ func (*queryBase) Updateable() string {
 
 func (q *queryBase) Metrics() *metrics {
 	return &q.metrics
+}
+
+func (q *queryBase) setReq(req Require) {
+	q.req = req
 }
 
 func (*queryBase) knowExactNrows() bool {
@@ -688,6 +693,9 @@ func SetApproach(q Query, req Require, tran QueryTran) Query {
 		panic("SetApproach: not found in cache")
 	}
 	assert.That(fixcost >= 0 && varcost >= 0)
+	if rs, ok := q.(interface{ setReq(Require) }); ok {
+		rs.setReq(req)
+	}
 	if ap, ok := approach.(*tempIndex); ok {
 		q.Metrics().setCost(1, ap.srcfixcost, ap.srcvarcost)
 		q.setApproach(OrderReq(ap.srcindex, 1), ap.srcapp, tran)

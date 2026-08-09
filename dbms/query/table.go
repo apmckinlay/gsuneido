@@ -195,10 +195,9 @@ func (tbl *Table) costFor(index []string, mode Mode, req Require) (Cost, Cost, a
 
 func (tbl *Table) setApproach(_ Require, approach any, _ QueryTran) {
 	ap := approach.(tableApproach)
-	tbl.SetIndex(ap.index, ap.mode)
+	tbl.setIndex(ap.index, ap.mode)
 }
-
-func (tbl *Table) SetIndex(index []string, mode Mode) {
+func (tbl *Table) setIndex(index []string, mode Mode) {
 	tbl.cursorMode = (mode == CursorMode)
 	if tbl.singleton {
 		index = tbl.allKeys[0]
@@ -207,6 +206,13 @@ func (tbl *Table) SetIndex(index []string, mode Mode) {
 	tbl.iIndex = tbl.indexi(index)
 	tbl.indexEncode = tbl.IndexEncodes(index)
 	IdxUse(tbl.name, tbl.index)
+}
+
+// SetIndex sets the index used to access the table.
+// It also sets req to ReqGroup so that Select can be used afterwards.
+func (tbl *Table) SetIndex(index []string, mode Mode) {
+	tbl.setIndex(index, mode)
+	tbl.req = GroupReq(index, 1, 0)
 }
 
 // IndexEncodes returns whether the index key is encoded
@@ -322,6 +328,9 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string) bool) Row {
 }
 
 func (tbl *Table) Select(sels Sels) {
+	// singleton doesn't use an index range - it filters (via singletonFilter
+	// in GetFilter) after a full scan, so it supports Select regardless of
+	// tbl.req.use.
 	tbl.nsels++
 	if tbl.singleton {
 		tbl.sels = sels
@@ -332,6 +341,7 @@ func (tbl *Table) Select(sels Sels) {
 		tbl.ensureIter().Range(iface.All)
 		return
 	}
+	assert.That(tbl.req.use == ReqGroup || tbl.req.use == ReqOrder)
 	dbg.Assert(func() bool { return checkSels(sels, tbl.header.Columns) })
 	org, end := selKeys(tbl.indexEncode, tbl.index, sels)
 	tbl.SelectRaw(org, end)

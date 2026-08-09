@@ -200,11 +200,19 @@ func (sj *SemiJoin) optForward(mode Mode, req Require) (Cost, Cost, any) {
 // scanned, so reverse mode is only chosen when its total cost (including
 // deduplication) is lower than forward mode.
 func (sj *SemiJoin) optReverse(mode Mode, req Require) (Cost, Cost, any) {
-	nrows2, _ := sj.source2.Nrows()
+	if req.use == ReqUnique {
+		// Lookup never benefits from reverse: it's always just
+		// "source1.Lookup then source2Has" (see Lookup), which is
+		// exactly forward's approach and is sound for every join type.
+		// Reverse only helps choose a cheaper iteration order for Get,
+		// so it's never worth considering for a point Lookup.
+		return impossible, impossible, nil
+	}
 	fixcost2, varcost2 := Optimize(sj.source2, mode, req)
 	if fixcost2+varcost2 >= impossible {
 		return impossible, impossible, nil
 	}
+	nrows2, _ := sj.source2.Nrows()
 	nseeks := req.SeekCount(nrows2)
 	if nseeks <= 0 {
 		nseeks = 1
@@ -456,29 +464,23 @@ func (sj *SemiJoin) Select(sels Sels) {
 	sj.Rewind()
 }
 
+// Lookup uses source1.Lookup directly (source1 is always optimized with
+// the same req as the semijoin itself, see optForward, so it supports
+// Lookup whenever the semijoin does), then checks source2Has to confirm
+// the join condition. This works for all join types and, importantly,
+// never needs Select on source1, which would not be supported if source1
+// was set up for ReqUnique.
+//
+// This is always the forward approach, regardless of sj.reverse: reverse
+// only chooses a cheaper iteration order for Get, it's never chosen for
+// ReqUnique (see optReverse), so Lookup is never called while reverse.
 func (sj *SemiJoin) Lookup(th *Thread, sels Sels) Row {
 	sj.nlooks++
-	if sj.reverse {
-		return lookupViaSelectGet(sj, th, sels)
+	row1 := sj.source1.Lookup(th, sels)
+	if row1 == nil || !sj.source2Has(th, row1, Next) {
+		return nil
 	}
-	if sj.joinType == one_to_one || sj.joinType == many_to_one {
-		row1 := sj.source1.Lookup(th, sels)
-		if row1 == nil {
-			return nil
-		}
-		sel2 := makeSels(sj.source1.Header(), row1, sj.by, th, sj.st)
-		var row2 Row
-		if sj.joinType == one_to_one {
-			row2 = lookup(sj.source2, sel2, th, sj.st)
-		} else {
-			row2 = sj.lookupCache.Lookup(sj.source2, sel2, th, sj.st)
-		}
-		if row2 == nil {
-			return nil
-		}
-		return row1
-	}
-	return lookupViaSelectGet(sj, th, sels)
+	return row1
 }
 
 func (sj *SemiJoin) Simple(th *Thread) []Row {

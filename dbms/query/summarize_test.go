@@ -28,7 +28,7 @@ func TestSummarizeSelectFilter(t *testing.T) {
 
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery("test summarize a, max c", tran, nil)
-	q, _, _ = Setup(q, ReadMode, tran)
+	q = SetupKey(q, ReadMode, tran)
 
 	// Test Select with summarized column (max_c)
 	// splitSelect should pass a to source, keep max_c for filtering
