@@ -145,7 +145,13 @@ func expireTokens() {
 func expireNonces() {
 	serverConnsLock.Lock()
 	defer serverConnsLock.Unlock()
-	for _, sc := range serverConns {
+	expireNoncesLocked(serverConns)
+}
+
+// expireNoncesLocked marks fresh nonces as old and removes old nonces.
+// The caller must hold serverConnsLock.
+func expireNoncesLocked(conns map[uint32]*serverConn) {
+	for _, sc := range conns {
 		if sc.nonceOld {
 			sc.nonce = ""
 			sc.nonceOld = false

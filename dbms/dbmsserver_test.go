@@ -85,23 +85,15 @@ func TestLogWithLimitEmpty(t *testing.T) {
 // nonces
 
 func TestNonceExpiration(t *testing.T) {
-	// Mock the serverConns for testing
-	originalConns := serverConns
-	defer func() { serverConns = originalConns }()
-
-	serverConns = make(map[uint32]*serverConn)
-
 	// Test multiple connections with different nonce states
 	sc1 := &serverConn{id: 1, nonce: "fresh-nonce", nonceOld: false}
 	sc2 := &serverConn{id: 2, nonce: "", nonceOld: false}         // no nonce
 	sc3 := &serverConn{id: 3, nonce: "old-nonce", nonceOld: true} // old nonce
 
-	serverConns[1] = sc1
-	serverConns[2] = sc2
-	serverConns[3] = sc3
+	conns := map[uint32]*serverConn{1: sc1, 2: sc2, 3: sc3}
 
 	// Single expiry cycle should handle all states correctly
-	expireNonces()
+	expireNoncesLocked(conns)
 
 	// Fresh nonce should be marked as old
 	assert.T(t).This(sc1.nonce).Is("fresh-nonce")
@@ -133,29 +125,25 @@ func TestNonceConsumption(t *testing.T) {
 
 func TestNonceExpirationLifecycle(t *testing.T) {
 	// Test complete nonce lifecycle: fresh → old → deleted
-	originalConns := serverConns
-	defer func() { serverConns = originalConns }()
-
-	serverConns = make(map[uint32]*serverConn)
 	sc := &serverConn{id: 1, nonce: "test-nonce", nonceOld: false}
-	serverConns[1] = sc
+	conns := map[uint32]*serverConn{1: sc}
 
 	// Initial state: fresh nonce
 	assert.T(t).This(sc.nonce).Is("test-nonce")
 	assert.T(t).This(sc.nonceOld).Is(false)
 
 	// After 1 minute: nonce marked as old
-	expireNonces()
+	expireNoncesLocked(conns)
 	assert.T(t).This(sc.nonce).Is("test-nonce")
 	assert.T(t).This(sc.nonceOld).Is(true)
 
 	// After 2 minutes: nonce deleted
-	expireNonces()
+	expireNoncesLocked(conns)
 	assert.T(t).This(sc.nonce).Is("")
 	assert.T(t).This(sc.nonceOld).Is(false)
 
 	// After 3 minutes: no change (no nonce to process)
-	expireNonces()
+	expireNoncesLocked(conns)
 	assert.T(t).This(sc.nonce).Is("")
 	assert.T(t).This(sc.nonceOld).Is(false)
 }
