@@ -81,13 +81,25 @@ func dump(db *Database, w WriterPlus) (nTables, nViews int) {
 	defer ics.finish()
 	state := db.Persist()
 	nViews = dumpViews(state, w)
-	tables := make([]string, 0, 512)
-	for sc := range state.Meta.Tables() {
-		tables = append(tables, sc.Table)
+	type tableSize struct {
+		table string
+		nrows int
 	}
-	sort.Strings(tables)
-	for _, table := range tables {
-		dumpTable2(db, state, table, true, w, ics)
+	tables := make([]tableSize, 0, 512)
+	for sc := range state.Meta.Tables() {
+		ti := state.Meta.GetRoInfo(sc.Table)
+		tables = append(tables, tableSize{sc.Table, ti.Nrows})
+	}
+	// sort largest first to minimize load tail (like compact),
+	// tiebreak by name for deterministic output
+	sort.Slice(tables, func(i, j int) bool {
+		if tables[i].nrows != tables[j].nrows {
+			return tables[i].nrows > tables[j].nrows
+		}
+		return tables[i].table < tables[j].table
+	})
+	for _, ts := range tables {
+		dumpTable2(db, state, ts.table, true, w, ics)
 	}
 	return len(tables), nViews
 }

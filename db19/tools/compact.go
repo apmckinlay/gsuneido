@@ -53,7 +53,7 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 		schemas = append(schemas, ss)
 		nTables++
 	}
-	// sort reverse to start largest first
+	// sort largest first to minimize load tail (like dump)
 	sort.Slice(schemas, func(i, j int) bool {
 		return schemas[i].nrows > schemas[j].nrows
 	})
