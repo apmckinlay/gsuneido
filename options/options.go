@@ -63,7 +63,7 @@ var Coverage atomic.Bool
 var LibraryTags = []string{""}
 
 var Nworkers = func() int {
-	return min(8, max(1, runtime.NumCPU()-1)) // ???
+	return min(8, max(1, runtime.GOMAXPROCS(0)-1)) // ???
 }()
 
 // DbStatus should be set to one of:
