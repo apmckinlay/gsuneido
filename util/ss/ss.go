@@ -46,17 +46,25 @@ func New[T comparable](capacity int) *Sketch[T] {
 	}
 }
 
-// Add inserts one value from the stream.
+// Add inserts one value from the stream (weight 1).
 func (ss *Sketch[T]) Add(value T) {
-	ss.total++
+	ss.AddWeight(value, 1)
+}
+
+// AddWeight inserts a value with the given weight.
+func (ss *Sketch[T]) AddWeight(value T, weight uint32) {
+	if weight <= 0 {
+		panic("ss weight must be positive")
+	}
+	ss.total += int(weight)
 	if e, ok := ss.index[value]; ok {
-		e.Count++
+		e.Count += weight
 		heap.Fix(&ss.entries, int(e.idx))
 		return
 	}
 
 	if len(ss.entries) < ss.capacity {
-		e := &Entry[T]{Value: value, Count: 1}
+		e := &Entry[T]{Value: value, Count: weight}
 		heap.Push(&ss.entries, e)
 		ss.index[value] = e
 		return
@@ -67,12 +75,12 @@ func (ss *Sketch[T]) Add(value T) {
 
 	min.Value = value
 	min.Error = min.Count
-	min.Count++
+	min.Count += weight
 	ss.index[value] = min
 	heap.Fix(&ss.entries, int(min.idx))
 }
 
-// Count returns the number of Add calls.
+// Count returns the total weight added.
 func (ss *Sketch[T]) Count() int {
 	return ss.total
 }
@@ -89,7 +97,7 @@ func (ss *Sketch[T]) Len() int {
 
 // Estimate returns the tracked estimate for value.
 //
-// When ok is true, the true count is in [count-error, count].
+// When ok is true, the true count is in the range [count-error, count].
 func (ss *Sketch[T]) Estimate(value T) (count int, error int, ok bool) {
 	e, ok := ss.index[value]
 	if !ok {

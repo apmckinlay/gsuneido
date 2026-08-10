@@ -61,6 +61,35 @@ func TestEvictionBounds(t *testing.T) {
 	assert.T(t).That(c-e <= 1)
 }
 
+func TestAddWeight(t *testing.T) {
+	ss := New[string](1) // becomes 2
+	ss.AddWeight("a", 3)
+	ss.AddWeight("b", 1)
+	ss.AddWeight("a", 2)
+
+	assert.T(t).This(ss.Count()).Is(6)
+	assert.T(t).This(ss.Len()).Is(2)
+
+	c, e, ok := ss.Estimate("a")
+	assert.T(t).That(ok)
+	assert.T(t).This(c).Is(5)
+	assert.T(t).This(e).Is(0)
+
+	// new value evicts the min
+	ss.AddWeight("c", 4)
+	assert.T(t).This(ss.Count()).Is(10)
+
+	_, _, ok = ss.Estimate("b")
+	assert.T(t).That(!ok)
+
+	c, e, ok = ss.Estimate("c")
+	assert.T(t).That(ok)
+	assert.T(t).This(c).Is(5)
+	assert.T(t).This(e).Is(1)
+
+	assert.T(t).This(func() { ss.AddWeight("x", 0) }).Panics("weight")
+}
+
 func TestHeavyHitters(t *testing.T) {
 	ss := New[string](8)
 	for range 1000 {
