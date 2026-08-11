@@ -39,7 +39,11 @@ type loadJob struct {
 	size  int64
 }
 
-// LoadDatabase imports a dumped database from a file using a worker pool.
+// LoadDatabase imports a dumped database from a file.
+// Data is copied in the main thread. 
+// A worker pool builds the indexes with a task per table.
+// This means table data and indexes are interleaved.
+// This is not optimal for execution but it is faster. (e.g. 3x)
 // It returns the number of tables loaded. Errors are fatal.
 // It does NOT check foreign key data
 // because it assumes the dump was from a valid database.

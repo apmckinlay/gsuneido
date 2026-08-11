@@ -11,7 +11,9 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -25,6 +27,8 @@ import (
 // Compact cleans up old records and index nodes that are no longer in use.
 // It does this by copying live data to a new database file.
 // In the process it concurrently does a full check of the database.
+// To keep table data and indexes contiguous (not interleaved)
+// it runs primarily single threaded, only index checking is concurrent.
 func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -57,23 +61,17 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 	sort.Slice(schemas, func(i, j int) bool {
 		return schemas[i].nrows > schemas[j].nrows
 	})
-	type compactJob struct {
-		state *DbState
-		src   *Database
-		ts    *meta.Schema
-		dst   *Database
-	}
 	var wg sync.WaitGroup
-	channel := make(chan compactJob)
+	channel := make(chan indexJob, 8)
 	for range options.Nworkers {
 		wg.Go(func() {
 			for job := range channel {
-				compactTable(job.state, job.src, job.ts, job.dst)
+				CheckOtherIndex(job.store, job.tsi, job.ix, job.nrows, job.sum, false, nil)
 			}
 		})
 	}
 	for _, sc := range schemas {
-		channel <- compactJob{state: state, src: src, ts: sc.sc, dst: dst}
+		compactTable(state, src, sc.sc, dst, channel)
 	}
 	close(channel)
 	wg.Wait()
@@ -104,7 +102,15 @@ func copyViews(state *DbState, dst *Database) int {
 	return n
 }
 
-func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database) {
+type indexJob struct {
+	store *stor.Stor
+	tsi   *schema.Index
+	ix    *index.Overlay
+	nrows int
+	sum   uint64
+}
+
+func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database, channel chan<- indexJob) {
 	defer func() {
 		if e := recover(); e != nil {
 			core.Fatal(ts.Table+":", e)
@@ -125,8 +131,8 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 		n := core.RecLen(buf)
 		buf = buf[:n+cksum.Len]
 		cksum.MustCheck(buf)
-		rec := core.Record(hacks.BStoS(buf[:n]))
-		if hasdel || hasTrailingEmpty(rec) {
+		if hasdel {
+			rec := core.Record(hacks.BStoS(buf[:n]))
 			rec = squeeze(rec, ts.Columns)
 			n = len(rec)
 			off2, dstbuf = dst.Store.Alloc(n + cksum.Len)
@@ -145,7 +151,8 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 		if i == ixi {
 			continue
 		}
-		CheckOtherIndex(src.Store, &ts.Indexes[i], info.Indexes[i], nrows, sum, false, nil)
+		channel <- indexJob{store: src.Store,
+			tsi: &ts.Indexes[i], ix: info.Indexes[i], nrows: nrows, sum: sum}
 	}
 	if hasdel {
 		ts.Columns = slc.Without(ts.Columns, "-")
@@ -153,9 +160,4 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	indexes := buildIndexes(ts, list, dst, nrows, ixi)
 	ti := meta.NewInfo(ts.Table, indexes, nrows, size)
 	dst.AddNewTable(ts, ti)
-}
-
-func hasTrailingEmpty(r core.Record) bool {
-	n := r.Count()
-	return n > 0 && r.GetRaw(n-1) == ""
 }

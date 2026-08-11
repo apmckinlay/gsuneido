@@ -76,7 +76,10 @@ func createDb() {
 		for _, d := range data {
 			var sb strings.Builder
 			for i := range d {
-				sb.WriteString(columns[i] + ": '" + d[i] + `' `)
+				sb.WriteString(columns[i])
+				sb.WriteString(": '")
+				sb.WriteString(d[i])
+				sb.WriteString("' ")
 			}
 			act("insert {" + sb.String() + "} into " + table)
 		}
