@@ -122,10 +122,8 @@ func opgp_KeyEntity(key Value) Value {
 var _ = staticMethod(opgp_Members, "() :object")
 
 func opgp_Members() Value {
-	return opgp_members
+	return methodList(openpgpMethods)
 }
-
-var opgp_members = methodList(openpgpMethods)
 
 //-------------------------------------------------------------------
 

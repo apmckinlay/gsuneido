@@ -73,7 +73,5 @@ func zlib_Uncompress(arg Value) Value {
 var _ = staticMethod(zlib_Members, "() :object")
 
 func zlib_Members() Value {
-	return zlib_members
+	return methodList(zlibMethods)
 }
-
-var zlib_members = methodList(zlibMethods)

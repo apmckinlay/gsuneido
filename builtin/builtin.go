@@ -4,7 +4,7 @@
 package builtin
 
 import (
-	"maps"
+	"golang.org/x/exp/maps"
 	"reflect"
 	"runtime"
 	"slices"
@@ -176,7 +176,7 @@ func (*staticClass[E]) SetConcurrent() {
 }
 
 func methodList(m map[string]Value) Value {
-	return SuObjectOfStrs(slices.AppendSeq(make([]string, 0, len(m)), maps.Keys(m)))
+	return SuObjectOfStrs(maps.Keys(m))
 }
 
 type TypeSignature struct {

@@ -40,7 +40,7 @@ var pcmMethods = methods("pcm")
 var _ = staticMethod(pcm_Members, "() :object")
 
 func pcm_Members() Value {
-	return SuObjectOfStrs(maps.Keys(pcmMethods))
+	return methodList(pcmMethods)
 }
 
 var pcmsrv = windows.NewLazyDLL("pcmsrv64.dll")

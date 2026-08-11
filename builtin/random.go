@@ -62,10 +62,8 @@ func rnd_Bytes(arg Value) Value {
 var _ = staticMethod(rnd_Members, "() :object")
 
 func rnd_Members() Value {
-	return rnd_members
+	return methodList(randomMethods)
 }
-
-var rnd_members = methodList(randomMethods)
 
 func (r *suRandomGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := randomMethods[method]; ok {

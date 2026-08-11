@@ -140,10 +140,8 @@ func dateStatic_End() Value {
 var _ = staticMethod(dateStatic_Members, "() :object")
 
 func dateStatic_Members() Value {
-	return date_members
+	return methodList(dateStaticMethods)
 }
-
-var date_members = methodList(dateStaticMethods)
 
 var _ = exportMethods(&DateMethods, "date")
 

@@ -55,10 +55,8 @@ func newSuFtsIndex(idx *ftsearch.Index) *suFtsIndex {
 var _ = staticMethod(ftsearch_Members, "() :object")
 
 func ftsearch_Members() Value {
-	return ftsearch_members
+	return methodList(ftsearchMethods)
 }
-
-var ftsearch_members = methodList(ftsearchMethods)
 
 var _ = staticMethod(ftsearch_Tokens, "(text :string) :object")
 

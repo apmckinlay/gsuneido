@@ -229,10 +229,8 @@ func indexedColumns(indexes []schema.Index) []string {
 var _ = staticMethod(db_Members, "() :object")
 
 func db_Members() Value {
-	return db_members
+	return methodList(databaseMethods)
 }
-
-var db_members = methodList(databaseMethods)
 
 //-------------------------------------------------------------------
 

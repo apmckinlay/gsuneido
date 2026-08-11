@@ -40,10 +40,8 @@ var pdfEncryptMethods = methods("pe")
 var _ = staticMethod(pe_Members, "() :object")
 
 func pe_Members() Value {
-	return pe_members
+	return methodList(pdfEncryptMethods)
 }
-
-var pe_members = methodList(pdfEncryptMethods)
 
 // The value -1028 allows a user to print the document and use screen readers
 // while strictly prohibiting them from copying text, editing content, or modifying the page structure.

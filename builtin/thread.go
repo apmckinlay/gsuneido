@@ -174,10 +174,8 @@ func thread_Exit(th *Thread, _ []Value) Value {
 var _ = staticMethod(thread_Members, "() :object")
 
 func thread_Members() Value {
-	return thread_members
+	return methodList(threadMethods)
 }
-
-var thread_members = methodList(threadMethods)
 
 func (tg *suThreadGlobal) Lookup(th *Thread, method string) Value {
 	if f, ok := threadMethods[method]; ok {
