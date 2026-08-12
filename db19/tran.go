@@ -387,7 +387,7 @@ func needsDupCheck(ix schema.Index, rec core.Record) bool {
 	if ix.Primary {
 		return true
 	}
-	if ix.Mode == 'u' && !ix.ContainsKey && !uniqueIndexEmpty(rec, ix.Ixspec) {
+	if ix.Mode == 'u' && !uniqueIndexEmpty(rec, ix.Ixspec) {
 		return true
 	}
 	return false

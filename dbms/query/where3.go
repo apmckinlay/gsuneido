@@ -88,7 +88,11 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 	// Fast path: all prefix columns have single-value spans
 	if prefixLen, org, ok := allSingleValuePrefix(index, encode, perCol); ok {
 		isel.prefixLen = prefixLen
-		lookup := prefixLen == len(index)
+		// A unique 'u' index appends Ixspec.Fields2 (the table's best key)
+		// to the physical entry when the index value is entirely empty
+		// (to allow multiple empty entries), so a Lookup by value alone
+		// only works when the value is not empty.
+		lookup := prefixLen == len(index) && (mode != 'u' || org != "")
 		if lookup {
 			isel.prefixRanges = []pointRange{{Org: org}}
 		} else {
@@ -115,7 +119,8 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 		for i := range comp {
 			c := &comp[i]
 			if c.isPoint() {
-				lookup := len(exploded[i]) == len(index)
+				// see comment above about unique 'u' index Lookup and empty values
+				lookup := len(exploded[i]) == len(index) && (mode != 'u' || c.Org != "")
 				if !lookup {
 					assert.That(encode)
 					c.End = c.Org + ixkey.Sep + ixkey.Max

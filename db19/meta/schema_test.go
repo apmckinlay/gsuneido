@@ -95,7 +95,7 @@ func TestOptimizeIndexes(t *testing.T) {
 			if ix.Primary {
 				mode = 'K'
 			}
-			if ix.ContainsKey {
+			if ix.Mode == 'u' && ts.ContainsKey(ix.Columns) {
 				mode = ascii.ToUpper(mode)
 			}
 			sb.WriteString(" ")
@@ -117,7 +117,6 @@ func TestOptimizeIndexes(t *testing.T) {
 		idx('i', "x,y,z")}
 	ts.SetBestKeys(0)
 	ts.setPrimary()
-	ts.setContainsKey()
 	assert.This(str(ts)).Is("K(a) K(z,x) i(b+a) u(c+a) i(b,a) U(c,a) i(x,y,z)")
 
 	ts.Indexes = []schema.Index{idx('k', "a_lower!"), idx('i', "b")}
@@ -130,7 +129,6 @@ func TestOptimizeIndexes(t *testing.T) {
 
 	ts.Indexes = []schema.Index{idx('k', "a_lower!"), idx('k', "x"),
 		idx('u', "b,a"), idx('u', "b,a_lower!"), idx('u', "x_lower!")}
-	ts.setContainsKey()
 	assert.This(str(ts)).Is("k(a_lower!) k(x) U(b,a) U(b,a_lower!) u(x_lower!)")
 }
 
@@ -204,4 +202,23 @@ func TestSetBestKeys(t *testing.T) {
 	ts.Indexes = []schema.Index{idx('k', "a"), idx('u', "b")}
 	ts.SetBestKeys(0)
 	assert.This(bestKey(ts)).Is("k(a) u(b+a)")
+}
+
+func TestUniqueContainingKeyBecomesIndex(t *testing.T) {
+	assert := assert.T(t)
+	idx := func(mode byte, cols string) schema.Index {
+		return schema.Index{Mode: mode, Columns: str.Split(cols, ",")}
+	}
+	ts := &Schema{Schema: schema.Schema{
+		Columns: []string{"a", "b", "c"},
+	}}
+	// unique that contains a key -> stored as plain index
+	ts.Indexes = []schema.Index{idx('k', "a"), idx('u', "a,b"), idx('u', "c")}
+	ts.SetupNewIndexes(0)
+	assert.This(ts.Indexes[1].Mode).Is(byte('i'))
+	assert.This(ts.Indexes[1].Ixspec.Fields2).Is([]int(nil))
+	assert.This(ts.Indexes[1].Fields).Is([]string{"a", "b"})
+	// unique that does not contain a key stays 'u' with Fields2
+	assert.This(ts.Indexes[2].Mode).Is(byte('u'))
+	assert.That(len(ts.Indexes[2].Ixspec.Fields2) > 0)
 }

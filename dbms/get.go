@@ -190,6 +190,15 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 			return filter(osels, table.Lookup(th, isels))
 		}
 	}
+	if idx := findUnique(table.UniqueIndexes(), sels); idx != nil {
+		table.SetIndex(idx, qry.ReadMode)
+		strat = "unique index: " + table.String()
+		trace.QueryOpt.Println(dir, strat)
+		isels, osels := qry.Split(false, sels, idx)
+		return true, strat, func() Row {
+			return filter(osels, table.Lookup(th, isels))
+		}
+	}
 	if idx := findAll(table.Indexes(), sels); idx != nil {
 		table.SetIndex(idx, qry.ReadMode)
 		strat = "just index: " + table.String()
@@ -259,6 +268,28 @@ func findKey(keys [][]string, sels Sels) []string {
 		}
 	}
 	return nil
+}
+
+// findUnique returns a unique index that is covered by the sels,
+// with at least one non-empty value, so a Lookup is valid.
+// Unique indexes allow multiple all-empty entries (via Fields2),
+// so a Lookup with all empty values would not be unique.
+func findUnique(indexes [][]string, sels Sels) []string {
+	for _, idx := range indexes {
+		if selsSubset(sels, idx) && !allEmpty(sels, idx) {
+			return idx
+		}
+	}
+	return nil
+}
+
+func allEmpty(sels Sels, idx []string) bool {
+	for _, col := range idx {
+		if val, ok := sels.Get(col); !ok || val != "" {
+			return false
+		}
+	}
+	return true
 }
 
 // findAll returns the first index that contains all the fields

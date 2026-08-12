@@ -86,6 +86,10 @@ func fuzzProjectForCosting(ft *FT) Query {
 				// can't alter key fields so we can't make groups duplicate
 				continue
 			}
+			if hasUniqueIndexOverlap(b, projCols) {
+				// can't alter unique index fields, that would violate uniqueness
+				continue
+			}
 			projIdxs := make([]int, len(projCols))
 			for i, col := range projCols {
 				projIdxs[i] = b.colIndex[col]
@@ -102,6 +106,28 @@ func fuzzProjectForCosting(ft *FT) Query {
 		src := b.finish()
 		return NewProject(src, projCols)
 	}
+}
+
+// isSingleColUniqueIndex returns true if col by itself is a unique index.
+func isSingleColUniqueIndex(b *buildFT, col string) bool {
+	for _, idx := range b.indexes {
+		if b.uniqueIdx[indexKey(idx)] && len(idx) == 1 && idx[0] == col {
+			return true
+		}
+	}
+	return false
+}
+
+// hasUniqueIndexOverlap returns true if projCols overlaps any column
+// of a "unique index" - such columns can't be forced to duplicate values
+// without violating the table's unique index constraint.
+func hasUniqueIndexOverlap(b *buildFT, projCols []string) bool {
+	for _, idx := range b.indexes {
+		if b.uniqueIdx[indexKey(idx)] && !set.Disjoint(idx, projCols) {
+			return true
+		}
+	}
+	return false
 }
 
 // indexContainsKey returns a key from keys if the index contains all fields
@@ -195,6 +221,10 @@ func fuzzSummarizeForCosting(ft *FT) Query {
 				func(key []string) bool { return !set.Disjoint(key, by) }) {
 				continue
 			}
+			if b.uniqueIdx[indexKey(idx)] && prefixLen == len(idx) {
+				// forcing dups over the full unique index would violate it
+				continue
+			}
 			const sumDupDiv = 10
 			b.data = b.data[:len(b.data)-len(b.data)%sumDupDiv]
 			if len(b.data) == 0 {
@@ -232,6 +262,10 @@ func fuzzSummarizeForCosting(ft *FT) Query {
 			}
 			if slices.ContainsFunc(b.keys,
 				func(key []string) bool { return slices.Contains(key, col) }) {
+				continue
+			}
+			if isSingleColUniqueIndex(b, col) {
+				// forcing dups on a single-column unique index would violate it
 				continue
 			}
 			b.data = b.data[:len(b.data)-len(b.data)%sumGrpDiv]

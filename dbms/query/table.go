@@ -64,6 +64,17 @@ func (tbl *Table) schemaIndexes() []Index {
 	return tbl.schema.Indexes
 }
 
+// UniqueIndexes returns the columns of the unique ('u') indexes
+func (tbl *Table) UniqueIndexes() [][]string {
+	var result [][]string
+	for i := range tbl.schema.Indexes {
+		if tbl.schema.Indexes[i].Mode == 'u' {
+			result = append(result, tbl.schema.Indexes[i].Columns)
+		}
+	}
+	return result
+}
+
 type tableApproach struct {
 	index []string
 	mode  Mode
@@ -165,7 +176,10 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		return tbl.costFor(tbl.indexes[0], mode, req)
 	}
 	best := newBest[[]string]()
-	for _, idx := range tbl.indexes {
+	for i, idx := range tbl.indexes {
+		if req.use == ReqUnique && !tbl.uniqueForLookup(i) {
+			continue
+		}
 		if req.SatisfiedBy(idx) {
 			f, v, _ := tbl.costFor(idx, mode, req)
 			best.update(f, v, idx)
@@ -175,6 +189,13 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 		return impossible, impossible, nil
 	}
 	return best.fixcost, best.varcost, tableApproach{index: best.data, mode: mode}
+}
+
+// uniqueForLookup returns whether a Lookup on this index yields at most one row.
+// Unique 'u' indexes allow multiple all-empty entries
+// so they are not usable for Lookup.
+func (tbl *Table) uniqueForLookup(i int) bool {
+	return tbl.schema.Indexes[i].Mode != 'u'
 }
 
 func (tbl *Table) costFor(index []string, mode Mode, req Require) (Cost, Cost, any) {
@@ -219,7 +240,7 @@ func (tbl *Table) SetIndex(index []string, mode Mode) {
 }
 
 // IndexEncodes returns whether the index key is encoded
-// (multi-field or unique with Fields2)
+// (multi-field or non-key, i.e. has BestKey appended or Fields2)
 func (tbl *Table) IndexEncodes(index []string) bool {
 	return len(index) > 1 ||
 		!slc.ContainsFn(tbl.allKeys, index, set.Equal[string])
@@ -259,10 +280,9 @@ func (tbl *Table) Lookup(_ *Thread, sels Sels) Row {
 		assert.That(tbl.req.use == ReqUnique || tbl.req.use == ReqAny)
 		ix := &tbl.schema.Indexes[tbl.iIndex]
 		key = selOrg(tbl.indexEncode, ix.Fields, sels, true)
-		if len(ix.Ixspec.Fields2) > 0 && key == "" {
-			fullFields := set.Union(ix.Fields, ix.BestKey)
-			key = selOrg(true, fullFields, sels, true)
-		}
+		// unique indexes ('u') allow multiple empty entries (via Fields2)
+		// so a Lookup is only valid when the key is non-empty
+		assert.That(ix.Mode != 'u' || key != "")
 	}
 	return tbl.LookupRaw(key)
 }
@@ -277,6 +297,10 @@ func checkSels(sels Sels, srcCols []string) bool {
 }
 
 func (tbl *Table) LookupRaw(key string) Row {
+	// unique indexes ('u') allow multiple empty entries (via Fields2)
+	// so an empty key can't be used to find them by value alone;
+	// a non-empty key is fine since Fields2 is only appended to empty entries
+	assert.That(tbl.schema.Indexes[tbl.iIndex].Mode != 'u' || key != "")
 	rec := tbl.tran.Lookup(tbl.name, tbl.iIndex, key)
 	if rec == nil {
 		return nil

@@ -6,8 +6,11 @@ package dbms
 import (
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -66,6 +69,43 @@ func TestGetWhere(t *testing.T) {
 	assert.T(t).True(strings.Contains(w, "\nand "))
 }
 
+func TestFindUnique(t *testing.T) {
+	indexes := [][]string{
+		{"x"},
+		{"a", "b"},
+	}
+
+	test := func(sels Sels, expected []string) {
+		t.Helper()
+		result := findUnique(indexes, sels)
+		assert.T(t).This(result).Is(expected)
+	}
+
+	// non-empty value matches
+	test(selVals("x", "5"), []string{"x"})
+
+	// empty value does not match (Lookup would not be unique)
+	test(selVals("x", ""), nil)
+
+	// not all index columns selected
+	test(selVals("a", "1"), nil)
+
+	// exact match on multi-column index
+	test(selVals("a", "1", "b", "2"), []string{"a", "b"})
+
+	// superset of index columns
+	test(selVals("a", "1", "b", "2", "z", "3"), []string{"a", "b"})
+
+	// multi-column with one empty, one non-empty
+	test(selVals("a", "", "b", "2"), []string{"a", "b"})
+
+	// all values empty does not match
+	test(selVals("a", "", "b", ""), nil)
+
+	// no match
+	test(selVals("z", "1"), nil)
+}
+
 func TestFindKey(t *testing.T) {
 	keys := [][]string{
 		{"id"},
@@ -102,6 +142,81 @@ func selCols(cols ...string) Sels {
 		sels[i] = qry.NewSel(col, "")
 	}
 	return sels
+}
+
+func selVals(colvals ...string) Sels {
+	sels := make(Sels, len(colvals)/2)
+	for i := 0; i < len(colvals); i += 2 {
+		sels[i/2] = qry.NewSel(colvals[i], Pack(SuStr(colvals[i+1])))
+	}
+	return sels
+}
+
+// TestGetOnlyUniqueIndex verifies that get Only uses a unique ('u') index
+// for a Lookup when the selected values are non-empty.
+func TestGetOnlyUniqueIndex(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	qry.DoAdmin(db, "create tmp (k, u, data) key(k) index unique(u)", nil)
+	act := func(action string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		qry.DoAction(nil, ut, action)
+	}
+	act("insert { k: 1, u: '', data: 'first' } into tmp")
+	act("insert { k: 2, u: '', data: 'second' } into tmp")
+	act("insert { k: 3, u: 'x', data: 'third' } into tmp")
+
+	tran := db.NewReadTran()
+	defer tran.Complete()
+	th := &Thread{}
+	ob := &SuObject{}
+	ob.Set(SuStr("query"), SuStr("tmp"))
+	ob.Set(SuStr("u"), SuStr("x"))
+	row, hdr, _ := get(th, tran, ob, Only)
+	assert.T(t).Msg("get Only u=x").
+		This(AsStr(row.GetVal(hdr, "u", nil, nil))).Is("x")
+	assert.T(t).This(AsStr(row.GetVal(hdr, "k", nil, nil))).Is("3")
+
+	// verify it uses the unique index for the Lookup
+	tbl := qry.NewTable(tran, "tmp").(*qry.Table)
+	sels := Sels{qry.NewSel("u", Pack(SuStr("x")))}
+	single, strat, getfn := getIndex(th, tran, tbl, sels, Only)
+	assert.T(t).Msg("single").True(single)
+	assert.T(t).Msg("strategy").
+		True(strings.Contains(strat, "unique index"))
+	assert.T(t).Msg("lookup row").
+		This(AsStr(getfn().GetVal(tbl.Header(), "data", nil, nil))).
+		Is("third")
+}
+
+// TestGetOnlyUniqueIndexEmpty verifies that get Only with an empty value
+// on a unique index does NOT use a Lookup (it falls back to a scan),
+// and correctly reports multiple matching records as not unique.
+func TestGetOnlyUniqueIndexEmpty(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	qry.DoAdmin(db, "create tmp (k, u, data) key(k) index unique(u)", nil)
+	act := func(action string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		qry.DoAction(nil, ut, action)
+	}
+	act("insert { k: 1, u: '', data: 'first' } into tmp")
+	act("insert { k: 2, u: '', data: 'second' } into tmp")
+
+	tran := db.NewReadTran()
+	defer tran.Complete()
+	th := &Thread{}
+	tbl := qry.NewTable(tran, "tmp").(*qry.Table)
+	sels := Sels{qry.NewSel("u", Pack(SuStr("")))}
+	single, strat, getfn := getIndex(th, tran, tbl, sels, Only)
+	assert.T(t).Msg("not single").True(!single)
+	assert.T(t).Msg("strategy").
+		True(!strings.Contains(strat, "unique index"))
+	assert.T(t).Msg("lookup row").This(getfn()).Isnt(nil)
 }
 
 func TestFindAll(t *testing.T) {

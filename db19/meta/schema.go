@@ -121,13 +121,18 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 // Ixspecs sets up the ixspecs for a table's indexes.
 func (ts *Schema) Ixspecs(nold int) {
 	ts.setPrimary()
-	ts.setContainsKey()
 	for i := nold; i < len(ts.Indexes); i++ {
 		ix := &ts.Indexes[i]
 		assert.That(ix.Mode == 'k' || ix.BestKey != nil)
+		// unique index that contains a key is equivalent to a plain index
+		// (Fields2 would be empty); store as 'i' so Mode matches structure
+		if ix.Mode == 'u' && ts.ContainsKey(ix.Columns) {
+			ix.Mode = 'i'
+		}
 		switch ix.Mode {
 		case 'u':
 			cols := difference(ix.BestKey, ix.Columns)
+			assert.That(len(cols) > 0) // 'u' with empty Fields2 becomes 'i' above
 			ix.Ixspec.Fields2 = ts.colsToFlds(cols)
 			fallthrough
 		case 'k':
@@ -181,19 +186,18 @@ outer:
 	}
 }
 
-func (ts *Schema) setContainsKey() {
+// ContainsKey returns whether cols contains (is a superset of) some existing
+// key of ts, i.e. whether an index on cols would contain a key.
+// It is exported so requested schemas (from create/ensure/alter) can be
+// normalized the same way Ixspecs normalizes 'u' to 'i' - see schemaSubset.
+func (ts *Schema) ContainsKey(cols []string) bool {
 	for i := range ts.Indexes {
-		ix := &ts.Indexes[i]
-		if ix.Mode == 'u' {
-			for j := range ts.Indexes {
-				key := &ts.Indexes[j]
-				if key.Mode == 'k' && subset(ix.Columns, key.Columns) {
-					ix.ContainsKey = true
-					break
-				}
-			}
+		key := &ts.Indexes[i]
+		if key.Mode == 'k' && subset(cols, key.Columns) {
+			return true
 		}
 	}
+	return false
 }
 
 func (ts *Schema) colsToFlds(cols []string) []int {

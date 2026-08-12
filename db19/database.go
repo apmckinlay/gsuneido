@@ -310,7 +310,13 @@ func (db *Database) schemaSubset(schema *schema.Schema) bool {
 		if ix == nil {
 			return false
 		}
-		if !ix.Equal(&schema.Indexes[i]) {
+		// normalize the requested index the same way Ixspecs would
+		// (a 'u' index that contains a key is stored as 'i')
+		req := schema.Indexes[i]
+		if req.Mode == 'u' && ts.ContainsKey(req.Columns) {
+			req.Mode = 'i'
+		}
+		if !ix.Equal(&req) {
 			panic("ensure: index exists but is different")
 		}
 	}

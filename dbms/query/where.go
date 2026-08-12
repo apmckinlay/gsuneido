@@ -598,7 +598,7 @@ func (w *Where) optWhereLookup(mode Mode, req Require) (Cost, Cost, any) {
 	}
 	best := newBest[[]string]()
 	for idxi, idx := range w.tbl.indexes {
-		if indexCovered(idx, req.cols, w.fixed) {
+		if w.tbl.uniqueForLookup(idxi) && indexCovered(idx, req.cols, w.fixed) {
 			varcost := Cost(req.nseeks) * w.tbl.lookupCostI(idxi)
 			best.update(0, varcost, idx)
 		}

@@ -32,7 +32,7 @@ type Index struct {
 	Fields  []string // Fields includes BestKey for non-unique indexes
 	// BestKey is the key used to make indexes ('i' and 'u') unique.
 	// A key used as BestKey must not be dropped.
-	// BestKey must be persisted (unlike Primary and ConstainsKey)
+	// BestKey must be persisted (unlike Primary)
 	// because it affects the btrees and modifying the schema could change it.
 	BestKey []string
 	// FkToHere is other foreign keys that reference this index
@@ -43,9 +43,6 @@ type Index struct {
 	// Primary is true for keys ('k') that do not contain another key.
 	// Only primary keys need duplicate checking.
 	Primary bool
-	// ContainsKey is true for indexes ('i' and 'u') that contain a key.
-	// Unique indexes ('u') that contain a key do not need duplicate checking.
-	ContainsKey bool
 }
 
 type Fkey struct {

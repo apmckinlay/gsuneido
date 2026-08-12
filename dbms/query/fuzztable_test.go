@@ -33,15 +33,20 @@ type FT struct {
 
 type buildFT struct {
 	*FT
-	maxRows     int
-	maxKeys     int
-	maxIndexes  int
-	prefix      string
-	columns     []string
-	colIndex    map[string]int
-	emptyKey    bool
-	keys        [][]string
-	indexes     [][]string
+	maxRows    int
+	maxKeys    int
+	maxIndexes int
+	prefix     string
+	columns    []string
+	colIndex   map[string]int
+	emptyKey   bool
+	keys       [][]string
+	indexes    [][]string
+	// uniqueIdx records which indexes are "unique index" rather than plain
+	// "index", keyed by the joined column names (indexKey) so the mapping
+	// stays correct even if indexes are later split, reordered, or shared
+	// (e.g. by fuzz tests that build related tables from a common buildFT).
+	uniqueIdx   map[string]bool
 	cardinality map[string]int
 	data        [][]string
 	noEmptyKey  bool
@@ -133,6 +138,9 @@ func (b *buildFT) finish() Query {
 	}
 	for _, index := range b.indexes {
 		sb.WriteString(" index")
+		if b.uniqueIdx[indexKey(index)] {
+			sb.WriteString(" unique")
+		}
 		sb.WriteString(str.Join("(,)", index))
 	}
 	DoAdmin(b.db, sb.String(), nil)
@@ -221,8 +229,14 @@ func (b *buildFT) makeIndexes() {
 	if len(nonRuleCols) < 2 {
 		return
 	}
+	keyCols := make([]string, 0, 8)
+	for _, key := range b.keys {
+		keyCols = append(keyCols, key...)
+	}
+	var uniqueCols []string // columns already claimed by a unique index
 	nindexes := b.rnd.IntN(b.maxIndexes)
 	b.indexes = make([][]string, 0, nindexes)
+	b.uniqueIdx = make(map[string]bool)
 	maxcols := min(nindexes, len(nonRuleCols))
 	for ncols := 1; ncols < maxcols; ncols++ {
 		idx := set.RandPerm(b.rnd, nonRuleCols, ncols)
@@ -231,6 +245,16 @@ func (b *buildFT) makeIndexes() {
 			continue
 		}
 		b.indexes = append(b.indexes, idx)
+		// occasionally make it a unique index rather than a plain index.
+		// keep unique index columns disjoint from keys and from each other
+		// so generating the data (mostly unique, sometimes empty) stays simple.
+		isUnique := b.rnd.IntN(3) == 0 &&
+			set.Disjoint(idx, keyCols) &&
+			set.Disjoint(idx, uniqueCols)
+		if isUnique {
+			uniqueCols = append(uniqueCols, idx...)
+			b.uniqueIdx[indexKey(idx)] = true
+		}
 	}
 }
 
@@ -246,12 +270,34 @@ func (b *buildFT) makeData() {
 
 func (b *buildFT) makeRowsData(nrows int) [][]string {
 	x := uint16(b.rnd.Int())
+
+	keyCols := make(map[string]bool)
+	for _, key := range b.keys {
+		for _, col := range key {
+			keyCols[col] = true
+		}
+	}
+	// columns belonging to a plain (non-unique) index occasionally get
+	// empty data too, just to exercise indexes with missing values.
+	regularIndexCols := make(map[string]bool)
+	for _, index := range b.indexes {
+		if !b.uniqueIdx[indexKey(index)] {
+			for _, col := range index {
+				regularIndexCols[col] = true
+			}
+		}
+	}
+
 	data := make([][]string, nrows)
 	for i := range nrows {
 		vals := make([]string, len(b.columns))
 		// generate data for all the columns
 		for j, col := range b.columns {
 			if slices.Contains(b.ruleCols, col) {
+				continue
+			}
+			if regularIndexCols[col] && !keyCols[col] && b.rnd.IntN(10) == 0 {
+				vals[j] = "" // leave some regular index data empty
 				continue
 			}
 			vals[j] = col + "_" + strconv.Itoa(b.rnd.IntN(b.cardinality[col]))
@@ -269,6 +315,32 @@ func (b *buildFT) makeRowsData(nrows int) [][]string {
 					n >>= 4
 				} else {
 					// last column gets the rest
+					v = n
+				}
+				vals[b.colIndex[col]] = col + "_" + strconv.Itoa(int(v))
+			}
+		}
+		// overwrite with unique values for unique indexes, except sometimes
+		// leave them entirely empty - a unique index allows multiple records
+		// with no value, unlike a key.
+		for _, index := range b.indexes {
+			if !b.uniqueIdx[indexKey(index)] {
+				continue
+			}
+			if b.rnd.IntN(5) == 0 {
+				for _, col := range index {
+					vals[b.colIndex[col]] = ""
+				}
+				continue
+			}
+			n := x
+			x = bits.Shuffle16(x)
+			for k, col := range index {
+				var v uint16
+				if k < len(index)-1 {
+					v = n & 0b1111
+					n >>= 4
+				} else {
 					v = n
 				}
 				vals[b.colIndex[col]] = col + "_" + strconv.Itoa(int(v))
@@ -447,6 +519,12 @@ func TestFuzzTable_makeIndexes(t *testing.T) {
 
 func containsKey(key, idx []string) bool {
 	return set.HasSubset(idx, key)
+}
+
+// indexKey returns a stable map key for an index's columns, used to track
+// which indexes are unique independent of their position/order in a slice.
+func indexKey(idx []string) string {
+	return strings.Join(idx, ",")
 }
 
 func TestFuzzTable_makeData(t *testing.T) {

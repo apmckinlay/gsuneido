@@ -87,7 +87,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 15876328570202277608, 732165589352327898)
+	fuzzRandomRunner.Run(t, 204, 909)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -575,7 +575,7 @@ func TestFuzzIntersect(t *testing.T) {
 }
 
 func TestFuzzIntersectDebug(t *testing.T) {
-	fuzzIntersectRunner.Run(t, 14593379222670212007, 12569725037283924645)
+	fuzzIntersectRunner.Run(t, 2589483426299687519, 2295785217654783068)
 }
 
 //-------------------------------------------------------------------
@@ -1801,8 +1801,12 @@ func printTableSchema(tbl *Table) {
 	fmt.Printf("  columns: %s\n", str.Join(",", tbl.Columns()))
 
 	fmt.Print("  indexes:")
-	for _, ix := range tbl.Indexes() {
-		fmt.Printf(" %s", str.Join("(,)", ix))
+	for i, ix := range tbl.Indexes() {
+		fmt.Print(" ")
+		if tbl.schema.Indexes[i].Mode == 'u' {
+			fmt.Print("u")
+		}
+		fmt.Printf("%s", str.Join("(,)", ix))
 	}
 
 	fmt.Print("\n  keys:")

@@ -762,7 +762,7 @@ outer:
 	}
 	mustHaveKey(tsIdxs, ts)
 	ts.Indexes = tsIdxs
-	ts.Ixspecs(len(ts.Indexes)) // need to run setPrimary and setContainsKey
+	ts.Ixspecs(len(ts.Indexes)) // need to run setPrimary
 	ti.Indexes = tiIdxs
 }
 
