@@ -11,7 +11,6 @@ import (
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/core"
-	"golang.org/x/exp/maps"
 	"golang.org/x/sys/windows"
 )
 
