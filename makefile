@@ -6,7 +6,7 @@
 # The windows amd64 gui version will run on Arm Windows with emulation.
 # requires sh (and date and rm) on path (e.g. from msys2)
 
-BUILT=$(shell date "+%b %-d %Y %R")
+BUILT=$(shell date "+%b %-d %Y %H:%M")
 
 GOOS = $(shell go env GOOS)
 GOARCH = $(shell go env GOARCH)
