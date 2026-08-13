@@ -75,11 +75,36 @@ func TestCheckIndexes(t *testing.T) {
 			[]Index{{Mode: 'i', Columns: []string{}}})
 	}).Panics("index columns must not be empty")
 
+	// Test unique index that contains a key
+	assert.This(func() {
+		CheckIndexes("test", []string{"a", "b"},
+			[]Index{
+				{Mode: 'k', Columns: []string{"a"}},
+				{Mode: 'u', Columns: []string{"a", "b"}},
+			})
+	}).Panics("unique index contains key")
+
+	// Test unique index that contains a key via _lower!
+	assert.This(func() {
+		CheckIndexes("test", []string{"a", "b"},
+			[]Index{
+				{Mode: 'k', Columns: []string{"a_lower!"}},
+				{Mode: 'u', Columns: []string{"a", "b"}},
+			})
+	}).Panics("unique index contains key")
+
 	// Test valid indexes
 	CheckIndexes("test", []string{"a", "b"},
 		[]Index{
 			{Mode: 'k', Columns: []string{"a"}},
 			{Mode: 'i', Columns: []string{"b"}},
+		}) // Should not panic
+
+	// Test unique index that does not contain a key
+	CheckIndexes("test", []string{"a", "b"},
+		[]Index{
+			{Mode: 'k', Columns: []string{"a"}},
+			{Mode: 'u', Columns: []string{"b"}},
 		}) // Should not panic
 }
 
