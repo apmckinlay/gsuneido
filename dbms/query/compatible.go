@@ -93,7 +93,12 @@ func (c *Compatible) source2Has(th *Thread, row1 Row) bool {
 func makeSels(hdr *Header, row Row, cols []string, th *Thread, st *SuTran) Sels {
 	sels := make(Sels, len(cols))
 	for i, col := range cols {
-		sels[i] = Sel{col: col, val: row.GetRawVal(hdr, col, th, st)}
+		val := ""
+		// avoid running rules for columns that do not exist
+		if slices.Contains(hdr.Columns, col) {
+			val = row.GetRawVal(hdr, col, th, st)
+		}
+		sels[i] = Sel{col: col, val: val}
 	}
 	return sels
 }
