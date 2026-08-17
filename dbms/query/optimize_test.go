@@ -256,17 +256,15 @@ func TestOptimize(t *testing.T) {
 }
 
 // TestOptimize2FastSingleLookup verifies that a ReqUnique reaching a fastSingle
-// node does not panic. The top-level optimize guard must normalize the req to
-// a valid ReqNone (clearing nseeks, since Use() asserts nseeks==0 when
-// cols is empty). A singleton trivially satisfies any require.
+// node does not panic. The top-level optimize guard normalizes the req to
+// a valid ReqNone. A singleton trivially satisfies any require.
 func TestOptimize2FastSingleLookup(t *testing.T) {
 	MakeSuTran = func(qt QueryTran) *core.SuTran { return nil }
 	q := ParseQuery("customer where id is 5", testTran{}, nil)
 	q = q.Transform()
 	assert.T(t).That(q.fastSingle())
-	// would panic at optTempIndex2's req.use before the guard cleared nseeks
-	fixcost, varcost := Optimize(q, ReadMode, UniqueReq([]string{"id"}, 5))
+	req := UniqueReq([]string{"name"}, 5)
+	fixcost, varcost := Optimize(q, ReadMode, req)
 	assert.T(t).True(fixcost+varcost < impossible)
-	q = SetApproach(q, UniqueReq([]string{"id"}, 5), testTran{})
-	_ = q
+	_ = SetApproach(q, req, testTran{})
 }
