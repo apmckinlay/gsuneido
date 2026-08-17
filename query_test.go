@@ -3,17 +3,13 @@
 
 package main
 
-// import (
-// 	"testing"
+import (
+	"testing"
 
-// 	"github.com/apmckinlay/gsuneido/builtin"
-
-// 	. "github.com/apmckinlay/gsuneido/core"
-// )
-
-// func TestFuzzBug(t *testing.T) {
-// 	openDbms()
-// 	defer db.CloseKeepMapped()
+	"github.com/apmckinlay/gsuneido/builtin"
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
 
 // 	/* Schemas:
 // 	cus
@@ -34,7 +30,15 @@ package main
 //     	key (ik,bk)
 // 	*/
 
-// 	query := `(((((((ivc leftjoin bln) union (ivc join (aln union bln))) extend x0 = i1)) where ik is "")) where bk is "")`
-// 	th := &Thread{}
-// 	builtin.QueryHash(th, []Value{SuStr(query), False})
-// }
+func TestFuzzBug(t *testing.T) {
+	assert.TestOnlyIndividually(t)
+	openDbms()
+	defer db.CloseKeepMapped()
+
+	// seed: 7948325488
+	query := `((cus extend ik = c3) join ivc) join (aln union (bln union aln))`
+	th := &Thread{}
+	x := builtin.QueryHash(th, []Value{SuStr(query), True})
+	y := builtin.QueryAltHash(th, []Value{SuStr(query), True})
+	assert.This(x).Is(y)
+}
