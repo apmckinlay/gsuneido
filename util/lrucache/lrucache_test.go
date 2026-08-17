@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/shmap"
 )
 
 type testKey int
@@ -51,13 +52,13 @@ func TestLruCache(t *testing.T) {
 		n2 := lc.GetPut(k, get)
 		assert.This(n2).Is(n)
 	}
-	lc.check()
+	check(lc)
 	r := (100 * lc.hits) / 10000
 	assert.T(t).That(r > 75) // theoretically 20/25 = 80%
 }
 
 // check is used by the test
-func (lc *Cache[testKey, int]) check() {
+func check(lc *Cache[testKey, int, shmap.Meth[testKey]]) {
 	for _, ei := range lc.lru {
 		e := lc.entries[ei]
 		xi, ok := lc.hm.Get(e.key)

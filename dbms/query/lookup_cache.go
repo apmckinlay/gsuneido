@@ -17,9 +17,10 @@ import (
 // - Misses count only when the provider runs i.e. key not found (cache insert).
 // Operators (Join, LeftJoin, Compatible) set their own counters via SetCounters,
 // allowing per-operator attribution of probes/misses.
-// The cache can auto-disable based on hit rate; Reset clears state but does not re-enable.
+// The cache auto-disables based on hit rate.
+// Reset clears state but does not re-enable.
 type lookupCache struct {
-	cache         *lrucache.Cache[lookupKey, Row]
+	cache         *lrucache.Cache[lookupKey, Row, lookupHelper]
 	cacheDisabled bool          // flag to bypass cache when hit rate is too low
 	cacheOpCount  int           // operation counter for periodic evaluation
 	probes        *atomic.Int64 // optional instrumentation: incremented on each cache probe
@@ -36,10 +37,11 @@ const (
 	// little benefit from 50 to 100, but 10% better 50 to 200
 )
 
-// lookupKey is the composite key for caching lookups based on column/value pairs.
 type lookupKey Sels
 
-func (lk lookupKey) Hash() uint64 {
+type lookupHelper struct{}
+
+func (lookupHelper) Hash(lk lookupKey) uint64 {
 	h := uint64(0)
 	for _, sel := range lk {
 		h = h*131 + hash.String(sel.col)
@@ -48,20 +50,8 @@ func (lk lookupKey) Hash() uint64 {
 	return h
 }
 
-func (lk lookupKey) Equal(other any) bool {
-	if o, ok := other.(lookupKey); ok {
-		return slices.Equal(lk, o)
-	}
-	return false
-}
-
-// Reset clears the internal cache (if any) and operation counter.
-// Note: it does not re-enable a previously disabled cache.
-func (lc *lookupCache) Reset() {
-	if lc.cache != nil {
-		lc.cache.Reset()
-	}
-	lc.cacheOpCount = 0
+func (lookupHelper) Equal(x, y lookupKey) bool {
+	return slices.Equal(x, y)
 }
 
 // SetCounters configures which global counters to increment for this cache.
@@ -79,7 +69,7 @@ func (lc *lookupCache) SetCounters(probes, misses *atomic.Int64) {
 func (lc *lookupCache) Lookup(q Query, sels Sels, th *Thread, st *SuTran) Row {
 	if !lc.cacheDisabled && (st == nil || !st.Updatable()) {
 		if lc.cache == nil {
-			lc.cache = lrucache.New[lookupKey, Row](cacheCapacity)
+			lc.cache = lrucache.NewWith[lookupKey, Row](cacheCapacity, lookupHelper{})
 		}
 		lc.cacheOpCount++
 		if lc.cacheOpCount%lookupCacheCheckInterval == 0 {
@@ -106,7 +96,6 @@ bypass:
 
 // evaluatePerformance uses cache stats since Reset (hits and misses).
 // If hit rate < lookupCacheMinHitRate, the cache is disabled and deleted.
-// Reset does not re-enable; operators typically re-create per transaction.
 func (lc *lookupCache) evaluatePerformance() {
 	if lc.cache == nil {
 		return
@@ -120,4 +109,13 @@ func (lc *lookupCache) evaluatePerformance() {
 			lc.cache = nil
 		}
 	}
+}
+
+// Reset clears the internal cache (if any) and operation counter.
+// Note: it does not re-enable a previously disabled cache.
+func (lc *lookupCache) Reset() {
+	if lc.cache != nil {
+		lc.cache.Reset()
+	}
+	lc.cacheOpCount = 0
 }

@@ -109,7 +109,7 @@ func lru_GetMissRate(this Value) Value {
 type suLruCache struct {
 	ValueBase[*suLruCache]
 	Fn Value
-	Lc lrucache.Cache[Value, Value]
+	Lc lrucache.MethCache[Value, Value]
 	MayLock
 	okForResetAll bool
 }

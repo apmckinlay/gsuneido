@@ -11,29 +11,35 @@ import (
 	"github.com/apmckinlay/gsuneido/util/shmap"
 )
 
-// Cache is a fixed-capacity least-recently-used cache
-// keyed by types that have Hash and Equal methods.
-type Cache[K keyT, V any] struct {
+// Cache is a fixed-capacity least-recently-used cache.
+type Cache[K any, V any, H shmap.Helper[K]] struct {
 	lru     []uint8 // uint8 means max size of 256
 	entries []entry[K, V]
-	hm      shmap.Map[keyT, uint8, shmap.Meth[keyT]]
+	hm      shmap.Map[K, uint8, H]
 	size    int
 	hits    int
 	misses  int
 }
 
-type entry[K keyT, V any] struct {
+type entry[K any, V any] struct {
 	key K
 	val V
 }
 
-type keyT interface {
-	Hash() uint64
-	Equal(other any) bool
+type keyT = shmap.Key
+
+// MethCache is a Cache keyed by types with Hash and Equal methods.
+type MethCache[K keyT, V any] = Cache[K, V, shmap.Meth[K]]
+
+// New returns a cache sized to the nearest supported capacity >= `req`,
+// keyed by types with Hash and Equal methods.
+func New[K keyT, V any](req int) *MethCache[K, V] {
+	return NewWith[K, V](req, shmap.Meth[K]{})
 }
 
-// New returns a cache sized to the nearest supported capacity >= `req`.
-func New[K keyT, V any](req int) *Cache[K, V] {
+// NewWith returns a cache sized to the nearest supported capacity >= `req`,
+// keyed by the provided helper.
+func NewWith[K any, V any, H shmap.Helper[K]](req int, h H) *Cache[K, V, H] {
 	var sizes = []int{6, 13, 27, 55, 111, 223} // 7/8 of ^2
 	size := 223                                // max
 	for _, n := range sizes {
@@ -42,14 +48,15 @@ func New[K keyT, V any](req int) *Cache[K, V] {
 			break
 		}
 	}
-	return &Cache[K, V]{size: size,
+	return &Cache[K, V, H]{size: size,
 		lru:     make([]uint8, 0, size),
 		entries: make([]entry[K, V], 0, size),
+		hm:      *shmap.NewMap[K, uint8](h),
 	}
 }
 
 // Get returns the cached value for `key`, marking it as most recently used.
-func (lc *Cache[K, V]) Get(key K) (val V, ok bool) {
+func (lc *Cache[K, V, H]) Get(key K) (val V, ok bool) {
 	ei, ok := lc.hm.Get(key)
 	if !ok {
 		// not in cache
@@ -68,7 +75,7 @@ func (lc *Cache[K, V]) Get(key K) (val V, ok bool) {
 }
 
 // Put sets `key` to `val`, evicting the least-recently-used entry if full.
-func (lc *Cache[K, V]) Put(key K, val V) {
+func (lc *Cache[K, V, H]) Put(key K, val V) {
 	ei := len(lc.entries)
 	if ei < lc.size {
 		lc.entries = append(lc.entries, entry[K, V]{key: key, val: val})
@@ -85,7 +92,7 @@ func (lc *Cache[K, V]) Put(key K, val V) {
 }
 
 // GetPut gets `key` or computes it with `getfn` on a miss and caches the result.
-func (lc *Cache[K, V]) GetPut(key K, getfn func(key K) V) V {
+func (lc *Cache[K, V, H]) GetPut(key K, getfn func(key K) V) V {
 	val, ok := lc.Get(key)
 	if !ok {
 		val = getfn(key)
@@ -95,7 +102,7 @@ func (lc *Cache[K, V]) GetPut(key K, getfn func(key K) V) V {
 }
 
 // Entries returns an iterator over current entries.
-func (lc *Cache[K, V]) Entries() iter.Seq2[K, V] {
+func (lc *Cache[K, V, H]) Entries() iter.Seq2[K, V] {
 	return func(yield func(key K, val V) bool) {
 		for _, e := range lc.entries {
 			if !yield(e.key, e.val) {
@@ -106,12 +113,12 @@ func (lc *Cache[K, V]) Entries() iter.Seq2[K, V] {
 }
 
 // Stats returns cumulative hit/miss counts since creation or last Reset.
-func (lc *Cache[K, V]) Stats() (hits, misses int) {
+func (lc *Cache[K, V, H]) Stats() (hits, misses int) {
 	return lc.hits, lc.misses
 }
 
 // Reset clears the cache and statistics.
-func (lc *Cache[K, V]) Reset() {
+func (lc *Cache[K, V, H]) Reset() {
 	lc.hm.Clear()
 	lc.lru = lc.lru[:0]
 	clear(lc.entries)
