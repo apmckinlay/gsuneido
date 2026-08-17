@@ -4,10 +4,10 @@
 package query
 
 import (
-	"slices"
 	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/lrucache"
 )
@@ -25,6 +25,7 @@ type lookupCache struct {
 	cacheOpCount  int           // operation counter for periodic evaluation
 	probes        *atomic.Int64 // optional instrumentation: incremented on each cache probe
 	misses        *atomic.Int64 // optional instrumentation: incremented when provider runs (cache miss)
+	selsCols      []string      // first-seen column sequence; only used by checkCols in dbg builds
 }
 
 // Heuristics for auto-disable:
@@ -41,17 +42,27 @@ type lookupKey Sels
 
 type lookupHelper struct{}
 
+// Hash and Equal use only the values, not the columns,
+// because the column sequence is constant per cache.
+
 func (lookupHelper) Hash(lk lookupKey) uint64 {
 	h := uint64(0)
 	for _, sel := range lk {
-		h = h*131 + hash.String(sel.col)
 		h = h*131 + hash.String(sel.val)
 	}
 	return h
 }
 
 func (lookupHelper) Equal(x, y lookupKey) bool {
-	return slices.Equal(x, y)
+	if len(x) != len(y) {
+		return false
+	}
+	for i := range x {
+		if x[i].val != y[i].val {
+			return false
+		}
+	}
+	return true
 }
 
 // SetCounters configures which global counters to increment for this cache.
@@ -67,6 +78,7 @@ func (lc *lookupCache) SetCounters(probes, misses *atomic.Int64) {
 // - Increments misses only when the provider runs (i.e. cache insert).
 // - Uses GetPut so cache hits avoid invoking the provider function.
 func (lc *lookupCache) Lookup(q Query, sels Sels, th *Thread, st *SuTran) Row {
+	dbg.Assert(func() bool { return lc.checkCols(sels) })
 	if !lc.cacheDisabled && (st == nil || !st.Updatable()) {
 		if lc.cache == nil {
 			lc.cache = lrucache.NewWith[lookupKey, Row](cacheCapacity, lookupHelper{})
@@ -92,6 +104,27 @@ func (lc *lookupCache) Lookup(q Query, sels Sels, th *Thread, st *SuTran) Row {
 	}
 bypass:
 	return lookup(q, sels, th, st)
+}
+
+// checkCols asserts that every lookup uses the same column sequence.
+// It is only called from dbg.Assert, so it's a no-op in production builds.
+func (lc *lookupCache) checkCols(sels Sels) bool {
+	if lc.selsCols == nil {
+		lc.selsCols = make([]string, len(sels))
+		for i, sel := range sels {
+			lc.selsCols[i] = sel.col
+		}
+		return true
+	}
+	if len(lc.selsCols) != len(sels) {
+		return false
+	}
+	for i, sel := range sels {
+		if lc.selsCols[i] != sel.col {
+			return false
+		}
+	}
+	return true
 }
 
 // evaluatePerformance uses cache stats since Reset (hits and misses).
