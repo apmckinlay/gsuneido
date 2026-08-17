@@ -460,7 +460,7 @@ func optimize(q Query, mode Mode, req Require) (
 }
 
 // optTempIndex determines if a TempIndex is a benefit
-// and if it is, returns a special tempIndex approach
+// and if it is, returns a tiApproach
 // that is processed by SetApproach which creates the actual TempIndex
 func optTempIndex(q Query, mode Mode, req Require) (
 	fixcost, varcost Cost, approach any) {
@@ -476,15 +476,44 @@ func optTempIndex(q Query, mode Mode, req Require) (
 	indexedFixCost, indexedVarCost, indexedApp := q.optimize(mode, req)
 	assert.That(indexedFixCost >= 0 && indexedVarCost >= 0)
 
-	u := req.use
-	if u == ReqNone || !tempIndexable(mode) {
+	if u := req.use; u == ReqNone || !tempIndexable(mode) {
 		traceQO(indexedFixCost + indexedVarCost)
 		return indexedFixCost, indexedVarCost, indexedApp
 	}
 
+	best := optTempIndexBest(q, mode, req)
+	indexedCost := indexedFixCost + indexedVarCost
+	if indexedCost <= best.cost() {
+		traceQO("indexed", indexedCost, "<=", best.cost())
+		return indexedFixCost, indexedVarCost, indexedApp
+	}
+	traceQO("tempindex", best.data.srcOrder, best.cost(), "<", indexedCost)
+	return best.fixcost, best.varcost, &best.data
+}
+
+func tempIndexable(mode Mode) bool {
+	if mode == ReadMode {
+		return true
+	}
+	if mode == CursorMode {
+		return false
+	}
+	// else updateMode
+	return true
+	// BUG this matches jSuneido, but it is not correct.
+	// A temp index allows reading deleted or old versions of records.
+	// But there is a big performance penalty
+	// especially from the key sort added by QueryApply.
+}
+
+// optTempIndexBest evaluates the cost of building a TempIndex
+// (as an alternative to the indexed approach) and returns the best candidate.
+func optTempIndexBest(q Query, mode Mode, req Require) best[tiApproach] {
 	nrows, _ := q.Nrows()
 	assert.That(nrows >= 0)
 	best := newBest[tiApproach]()
+
+	u := req.use
 
 	// with no index
 	noIdxOrder := req.cols
@@ -493,29 +522,21 @@ func optTempIndex(q Query, mode Mode, req Require) (
 	}
 	optTI(&best, q, mode, NoneReq(req.frac), nrows, factorNone, noIdxOrder)
 
-	// with required index
-	optTI(&best, q, mode, req, nrows, factorAll, req.cols)
-
-	// with "best" index
-	if bestIndex := tempIndexBest(q, req.cols); bestIndex != nil {
-		optTI(&best, q, mode, OrderReq(bestIndex, req.frac), nrows, factorPre, req.cols)
-	}
-
-	// key-subset candidates for ReqUnique
+	// source-order strategies (required + best prefix)
 	if u == ReqUnique {
 		fixed := q.Fixed()
-		nReqColsUnfixed := countUnfixed(req.cols, fixed)
 		for _, key := range q.Keys() {
 			if !indexCovered(key, req.cols, fixed) {
 				continue
 			}
-			nKeyUnfixed := countUnfixed(key, fixed)
-			if nKeyUnfixed == 0 || nKeyUnfixed >= nReqColsUnfixed {
+			if countUnfixed(key, fixed) == 0 {
 				continue
 			}
 			keyUnfixed := fixed.RemoveFrom(key)
-			optTI(&best, q, mode, UniqueReq(keyUnfixed, req.nseeks), nrows, factorAll, keyUnfixed)
+			optTempIndexFor(&best, q, mode, req, nrows, keyUnfixed)
 		}
+	} else {
+		optTempIndexFor(&best, q, mode, req, nrows, req.cols)
 	}
 
 	// for ReqUnique or ReqGroup with nseeks, add per-lookup cost on temp index
@@ -526,18 +547,7 @@ func optTempIndex(q Query, mode Mode, req Require) (
 		}
 		best.varcost += Cost(req.nseeks) * perLookup
 	}
-
-	tempIndexCost := best.cost()
-	indexedCost := indexedFixCost + indexedVarCost
-	if indexedCost <= tempIndexCost {
-		traceQO("indexed", indexedCost, "<=", tempIndexCost)
-		return indexedFixCost, indexedVarCost, indexedApp
-	}
-	traceQO("tempindex", best.data.index, tempIndexCost, "<", indexedCost)
-	return best.fixcost, best.varcost,
-		&tempIndex{index: best.data.tiOrder, srcapp: best.data.srcapp,
-			srcindex:   best.data.index,
-			srcfixcost: best.data.srcfixcost, srcvarcost: best.data.srcvarcost}
+	return best
 }
 
 // tempIndexKey finds the smallest key (by unfixed count) that's covered by cols.
@@ -565,13 +575,16 @@ func tempIndexKey(q Query, cols []string) []string {
 	return cols
 }
 
+// optTI evaluates a single temp-index candidate: source ordered by req.cols
+// (via OrderReq inside), building a TempIndex on tiOrder, and records it in
+// best if it beats the current best.
 func optTI(best *best[tiApproach], q Query, mode Mode, req Require, nrows, factor int, tiOrder []string) {
 	srcReq := OrderReq(req.cols, 1)
 	srcfixcost, srcvarcost, srcapp := q.optimize(mode, srcReq)
 	assert.That(srcfixcost >= 0 && srcvarcost >= 0)
-	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, req.cols, nrows, float64(req.frac), factor)
+	fixcost, varcost := ticost(srcfixcost+srcvarcost, q, tiOrder, nrows, float64(req.frac), factor)
 	best.update(fixcost, varcost, tiApproach{
-		index:      req.cols,
+		srcOrder:   req.cols,
 		tiOrder:    tiOrder,
 		srcfixcost: srcfixcost,
 		srcvarcost: srcvarcost,
@@ -579,18 +592,19 @@ func optTI(best *best[tiApproach], q Query, mode Mode, req Require, nrows, facto
 	})
 }
 
-//-------------------------------------------------------------------
-
-const factorAll = 105  // ???
-const factorPre = 110  // ???
-const factorNone = 256 // ???
-
 var ticostAdj = 0 // for tests, to discourage temp indexes
 
+// ticost estimates the cost of building a TempIndex on index (tiOrder).
+// srccost is the cost of producing the source rows; factor scales the sort
+// cost depending on how well the source order matches index (factorNone =
+// unordered/full sort, factorPre = prefix/partial sort, factorAll = already
+// ordered/no sort). frac scales the per-row variable cost of the lookup.
 func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 	factor int) (Cost, Cost) {
 	fixcost := srccost + ticostAdj + 1000 // ???
-	fixcost += 100 * len(index)           // prefer fewer fields
+	// prefer fewer fields; NewTempIndex drops fixed columns from the order,
+	// so count only the fields the actual TempIndex will have
+	fixcost += 100 * len(q.Fixed().RemoveFrom(index))
 	if nrows > 0 {
 		fnrows := float64(nrows)
 		fixcost += factor * Cost(fnrows*math.Log(fnrows)) // empirical
@@ -600,6 +614,19 @@ func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 		varcost *= 2 // ???
 	}
 	return fixcost, varcost
+}
+
+// optTempIndexFor evaluates the source-order strategies for building a
+// temp index on tiOrder: source = tiOrder (factorAll), or source = the
+// longest common prefix (factorPre).
+func optTempIndexFor(best *best[tiApproach], q Query, mode Mode, req Require,
+	nrows int, tiOrder []string) {
+	// with required index
+	optTI(best, q, mode, OrderReq(tiOrder, req.frac), nrows, factorAll, tiOrder)
+	// with "best" index
+	if bestIndex := tempIndexBest(q, tiOrder); bestIndex != nil {
+		optTI(best, q, mode, OrderReq(bestIndex, req.frac), nrows, factorPre, tiOrder)
+	}
 }
 
 // tempIndexBest finds the index that has the longest common prefix.
@@ -622,38 +649,21 @@ func tempIndexBest(q Query, index []string) []string {
 	return bestIndex
 }
 
-type tiApproach struct {
-	index      []string
-	tiOrder    []string
-	srcfixcost Cost
-	srcvarcost Cost
-	srcapp     any
-}
+const factorAll = 105  // ???
+const factorPre = 110  // ???
+const factorNone = 256 // ???
 
-// tempIndex is a special approach that is added by optTempIndex
+// tiApproach is a special approach that is added by optTempIndex
 // to be used by SetApproach to insert a TempIndex when required
-type tempIndex struct {
-	index      []string
-	srcapp     any
-	srcindex   []string
+type tiApproach struct {
+	srcOrder   []string // source order
+	tiOrder    []string // temp index order
 	srcfixcost Cost
 	srcvarcost Cost
+	srcapp     any
 }
 
-func tempIndexable(mode Mode) bool {
-	if mode == ReadMode {
-		return true
-	}
-	if mode == CursorMode {
-		return false
-	}
-	// else updateMode
-	return true
-	// BUG this matches jSuneido, but it is not correct.
-	// A temp index allows reading deleted or old versions of records.
-	// But there is a big performance penalty
-	// especially from the key sort added by QueryApply.
-}
+//-------------------------------------------------------------------
 
 func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 	fixcost3, varcost3 Cost, app3 any) (Cost, Cost, any) {
@@ -686,10 +696,10 @@ func SetApproach(q Query, req Require, tran QueryTran) Query {
 		panic("SetApproach: not found in cache")
 	}
 	assert.That(fixcost >= 0 && varcost >= 0)
-	if ap, ok := approach.(*tempIndex); ok {
+	if ap, ok := approach.(*tiApproach); ok {
 		q.Metrics().setCost(1, ap.srcfixcost, ap.srcvarcost)
-		q.setApproach(OrderReq(ap.srcindex, 1), ap.srcapp, tran)
-		ti := NewTempIndex(q, ap.index, tran)
+		q.setApproach(OrderReq(ap.srcOrder, 1), ap.srcapp, tran)
+		ti := NewTempIndex(q, ap.tiOrder, tran)
 		ti.setCost(float64(req.frac), fixcost, varcost)
 		tempIndexCount.Add(1)
 		return ti
