@@ -93,14 +93,14 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 		panic("summarize: nonexistent columns: " +
 			str.Join(", ", set.Difference(by, src.Columns())))
 	}
-	cols = checkSummarize(by, cols, ops, ons)
 	su := &Summarize{hint: hint, by: by, cols: cols, ops: ops, ons: ons}
 	su.source = src
-	sort.Stable(su)
 	su.unique = hasKey(by, src.Keys(), src.Fixed())
 	// if single min or max, and on is a key, then we can give the whole row
 	su.wholeRow = su.minmax1() &&
 		(slc.ContainsFn(src.Keys(), ons, set.Equal[string]) || isEmptyKey(src.Keys()))
+	su.checkSummarize()
+	sort.Stable(su)
 	su.header = su.getHeader()
 	su.keys = projectKeys(src.Keys(), su.by)
 	su.indexes = projectIndexes(src.Indexes(), su.by)
@@ -111,31 +111,45 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 	return su
 }
 
-func checkSummarize(by, cols, ops, ons []string) []string {
-	check(by)
-	check(ons)
-	if conflict := set.Intersect(by, ons); len(conflict) > 0 {
+func (su *Summarize) minmax1() bool {
+	return len(su.by) == 0 &&
+		len(su.ops) == 1 && (su.ops[0] == "min" || su.ops[0] == "max")
+}
+
+func (su *Summarize) checkSummarize() {
+	checkLower(su.by)
+	checkLower(su.ons)
+	if conflict := set.Intersect(su.by, su.ons); len(conflict) > 0 {
 		panic("summarize: by and on columns conflict: " + str.Join(", ", conflict))
 	}
-	seen := make(map[string]struct{}, len(cols))
-	for i := range len(cols) {
-		if cols[i] == "" {
-			cols[i] = defaultColName(ops[i], ons[i])
+	seen := make(map[string]struct{}, len(su.cols))
+	for i := range len(su.cols) {
+		if su.cols[i] == "" {
+			su.cols[i] = defaultColName(su.ops[i], su.ons[i])
 		}
-		if _, dup := seen[cols[i]]; dup {
-			panic("summarize: duplicate output column: " + cols[i])
+		if _, dup := seen[su.cols[i]]; dup {
+			panic("summarize: duplicate output column: " + su.cols[i])
 		}
-		seen[cols[i]] = struct{}{}
+		seen[su.cols[i]] = struct{}{}
 	}
-	if conflict := set.Intersect(by, cols); len(conflict) > 0 {
+	if conflict := set.Intersect(su.by, su.cols); len(conflict) > 0 {
 		panic("summarize: output columns conflict with by: " +
 			str.Join(", ", conflict))
 	}
-	if conflict := set.Intersect(nonEmpty(ons), cols); len(conflict) > 0 {
-		panic("summarize: on columns conflict with output columns: " +
-			str.Join(", ", conflict))
+	// whole row output carries the source columns, so a computed column with
+	// the same name would be shadowed by a source column
+	if su.wholeRow && !set.Disjoint(su.cols, su.source.Columns()) {
+		panic("summarize: output columns conflict with source columns: " +
+			str.Join(", ", set.Intersect(su.cols, su.source.Columns())))
 	}
-	return cols
+}
+
+func checkLower(cols []string) {
+	for _, c := range cols {
+		if strings.HasSuffix(c, "_lower!") {
+			panic("can't summarize _lower! fields")
+		}
+	}
 }
 
 func defaultColName(op, on string) string {
@@ -143,16 +157,6 @@ func defaultColName(op, on string) string {
 		return "count"
 	}
 	return op + "_" + on
-}
-
-func nonEmpty(cols []string) []string {
-	result := make([]string, 0, len(cols))
-	for _, c := range cols {
-		if c != "" {
-			result = append(result, c)
-		}
-	}
-	return result
 }
 
 // Len / Less / Swap implement sort.Interface
@@ -166,19 +170,6 @@ func (su *Summarize) Swap(i, j int) {
 	su.ons[i], su.ons[j] = su.ons[j], su.ons[i]
 	su.cols[i], su.cols[j] = su.cols[j], su.cols[i]
 	su.ops[i], su.ops[j] = su.ops[j], su.ops[i]
-}
-
-func check(cols []string) {
-	for _, c := range cols {
-		if strings.HasSuffix(c, "_lower!") {
-			panic("can't summarize _lower! fields")
-		}
-	}
-}
-
-func (su *Summarize) minmax1() bool {
-	return len(su.by) == 0 &&
-		len(su.ops) == 1 && (su.ops[0] == "min" || su.ops[0] == "max")
 }
 
 func (su *Summarize) SetTran(t QueryTran) {

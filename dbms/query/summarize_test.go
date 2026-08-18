@@ -73,15 +73,30 @@ func TestSummarize_OutputColConflicts(t *testing.T) {
 	db.adm("create t (a, count, total_a) key(a)")
 
 	tran := db.NewReadTran()
-	assert.T(t).This(func() {
-		ParseQuery("t summarize count, total count", tran, nil)
-	}).Panics("summarize: on columns conflict with output columns: count")
+	// output columns and input (on) columns are independent, so a name
+	// may appear in both (here "count" is both a count output and a source
+	// column read by total)
+	ParseQuery("t summarize count, total count", tran, nil)
 	assert.T(t).This(func() {
 		ParseQuery("t summarize total_a, total a", tran, nil)
 	}).Panics("summarize: output columns conflict with by: total_a")
 	assert.T(t).This(func() {
 		ParseQuery("t summarize total a, total a", tran, nil)
 	}).Panics("summarize: duplicate output column: total_a")
+}
+
+func TestSummarize_WholeRowConflict(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create t (a, b) key(a)")
+
+	tran := db.NewReadTran()
+	assert.T(t).This(func() {
+		ParseQuery("t summarize a = min a", tran, nil)
+	}).Panics("summarize: output columns conflict with source columns: a")
+	assert.T(t).This(func() {
+		ParseQuery("t summarize b = min a", tran, nil)
+	}).Panics("summarize: output columns conflict with source columns: b")
 }
 
 func TestSummarize_Keys(t *testing.T) {
