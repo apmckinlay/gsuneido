@@ -87,7 +87,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 204, 909)
+	fuzzRandomRunner.Run(t, 181, 161)
 }
 
 func TestFuzzRandom(t *testing.T) {
