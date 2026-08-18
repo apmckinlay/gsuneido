@@ -139,8 +139,9 @@ func (ti *TempIndex) makeKey(sels Sels, full bool) []string {
 }
 
 func (ti *TempIndex) matches(row Row, key []string) bool {
+	rr := NewRowRec(row, ti.header, ti.th, ti.st)
 	for i, col := range ti.order {
-		x := row.GetRawVal(ti.header, col, ti.th, ti.st)
+		x := rr.GetRawVal(col)
 		y := key[i]
 		if x != y {
 			return false
@@ -202,9 +203,10 @@ func (ti *TempIndex) selected(row Row) bool {
 	if ti.satisfied() {
 		return true
 	}
+	rr := NewRowRec(row, ti.header, ti.th, ti.st)
 	for i, sel := range ti.selOrg {
 		col := ti.order[i]
-		x := row.GetRawVal(ti.header, col, ti.th, ti.st)
+		x := rr.GetRawVal(col)
 		if x != sel {
 			return false
 		}
@@ -268,9 +270,11 @@ func (ti *TempIndex) single() rowIter {
 }
 
 func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
+	xrr := NewRowRec(xrow, ti.header, th, ti.st)
+	yrr := NewRowRec(yrow, ti.header, th, ti.st)
 	for _, col := range ti.order {
-		x := xrow.GetRawVal(ti.header, col, th, ti.st)
-		y := yrow.GetRawVal(ti.header, col, th, ti.st)
+		x := xrr.GetRawVal(col)
+		y := yrr.GetRawVal(col)
 		if x != y {
 			return x < y
 		}
@@ -281,6 +285,7 @@ func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
 // less2 is used for Seek
 func (ti *TempIndex) less2(th *Thread, row Row, key []string) bool {
 	n := max(len(ti.order), len(key))
+	rr := NewRowRec(row, ti.header, th, ti.st)
 	for i := range n {
 		if i >= len(key) {
 			return false
@@ -288,7 +293,7 @@ func (ti *TempIndex) less2(th *Thread, row Row, key []string) bool {
 		if i >= len(ti.order) {
 			return true
 		}
-		x := row.GetRawVal(ti.header, ti.order[i], th, ti.st)
+		x := rr.GetRawVal(ti.order[i])
 		y := key[i]
 		if x != y {
 			return x < y
@@ -405,9 +410,11 @@ func (ti *TempIndex) knowExactNrows() bool {
 func (ti *TempIndex) Simple(th *Thread) []Row {
 	rows := ti.source.Simple(th)
 	slices.SortFunc(rows, func(a, b Row) int {
+		arr := NewRowRec(a, ti.header, th, ti.st)
+		brr := NewRowRec(b, ti.header, th, ti.st)
 		for _, col := range ti.order {
-			x := a.GetRawVal(ti.header, col, th, ti.st)
-			y := b.GetRawVal(ti.header, col, th, ti.st)
+			x := arr.GetRawVal(col)
+			y := brr.GetRawVal(col)
 			if x < y {
 				return -1
 			}

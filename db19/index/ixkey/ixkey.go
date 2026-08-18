@@ -369,9 +369,10 @@ func Make(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) string {
 	if len(cols) == 1 { // WARNING: only correct for keys
 		return Cklen(row.GetRawVal(hdr, cols[0], th, st))
 	}
+	rr := NewRowRec(row, hdr, th, st)
 	enc := Encoder{}
 	for _, col := range cols {
-		enc.Add(row.GetRawVal(hdr, col, th, st))
+		enc.Add(rr.GetRawVal(col))
 	}
 	return enc.String()
 }

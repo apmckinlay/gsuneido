@@ -500,11 +500,5 @@ func (sj *SemiJoin) Simple(th *Thread) []Row {
 }
 
 func (sj *SemiJoin) equalBy(th *Thread, row1, row2 Row) bool {
-	for _, col := range sj.by {
-		if row1.GetRawVal(sj.source1.Header(), col, th, sj.st) !=
-			row2.GetRawVal(sj.source2.Header(), col, th, sj.st) {
-			return false
-		}
-	}
-	return true
+	return EqualRows(sj.source1.Header(), row1, sj.source2.Header(), row2, sj.by, th, sj.st)
 }

@@ -119,9 +119,11 @@ func (sort *Sort) Simple(th *Thread) []Row {
 	}
 	rows := sort.source.Simple(th)
 	cmp := func(xrow, yrow Row) int {
+		xrr := NewRowRec(xrow, sort.header, th, nil)
+		yrr := NewRowRec(yrow, sort.header, th, nil)
 		for _, col := range sort.order {
-			x := xrow.GetRawVal(sort.header, col, th, nil)
-			y := yrow.GetRawVal(sort.header, col, th, nil)
+			x := xrr.GetRawVal(col)
+			y := yrr.GetRawVal(col)
 			if c := strings.Compare(x, y); c != 0 {
 				return c * rev
 			}

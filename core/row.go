@@ -76,6 +76,33 @@ func (row Row) GetRaw(hdr *Header, fld string) string {
 
 // GetRawVal is like GetVal (i.e. handles rules) but returns a raw/packed value.
 func (row Row) GetRawVal(hdr *Header, fld string, th *Thread, tran *SuTran) string {
+	var rec *SuRecord
+	return getRawVal(row, hdr, fld, th, tran, &rec)
+}
+
+// RowRec resolves raw values for multiple fields from a Row,
+// sharing a single lazily-built SuRecord for derived (rule) fields.
+type RowRec struct {
+	row  Row
+	hdr  *Header
+	th   *Thread
+	tran *SuTran
+	rec  *SuRecord
+}
+
+// NewRowRec returns a RowRec that shares one SuRecord for rule evaluation.
+func NewRowRec(row Row, hdr *Header, th *Thread, tran *SuTran) RowRec {
+	return RowRec{row: row, hdr: hdr, th: th, tran: tran}
+}
+
+// GetRawVal is like Row.GetRawVal but reuses the shared SuRecord
+// so rules are evaluated only once per RowRec.
+func (rr *RowRec) GetRawVal(fld string) string {
+	return getRawVal(rr.row, rr.hdr, fld, rr.th, rr.tran, &rr.rec)
+}
+
+func getRawVal(row Row, hdr *Header, fld string, th *Thread, tran *SuTran,
+	rec **SuRecord) string {
 	for {
 		if raw, ok := row.getRaw2(hdr, fld); ok {
 			if len(raw) > 0 && raw[0] == PackForward {
@@ -90,7 +117,10 @@ func (row Row) GetRawVal(hdr *Header, fld string, th *Thread, tran *SuTran) stri
 			return lowerRaw(x)
 		}
 		if hasRule(th, fld) {
-			v := SuRecordFromRow(row, hdr, "", tran).Get(th, SuStr(fld))
+			if *rec == nil {
+				*rec = SuRecordFromRow(row, hdr, "", tran)
+			}
+			v := (*rec).Get(th, SuStr(fld))
 			return Pack(v.(Packable))
 		}
 		return ""
@@ -298,16 +328,18 @@ func (hdr *Header) GetFields() []string {
 	return result
 }
 
-// EqualRows is used by Project
+// EqualRows compares two rows with the same header, by hdr.Columns
 func (hdr *Header) EqualRows(r1, r2 Row, th *Thread, st *SuTran) bool {
 	return EqualRows(hdr, r1, hdr, r2, hdr.Columns, th, st)
 }
 
-// EqualRows is used by Compatible
+// EqualRows compares two rows with possibly different headers, by cols
 func EqualRows(hdr1 *Header, r1 Row, hdr2 *Header, r2 Row, cols []string,
 	th *Thread, st *SuTran) bool {
+	rr1 := NewRowRec(r1, hdr1, th, st)
+	rr2 := NewRowRec(r2, hdr2, th, st)
 	for _, col := range cols {
-		if r1.GetRawVal(hdr1, col, th, st) != r2.GetRawVal(hdr2, col, th, st) {
+		if rr1.GetRawVal(col) != rr2.GetRawVal(col) {
 			return false
 		}
 	}

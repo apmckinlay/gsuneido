@@ -555,13 +555,7 @@ func (jn *Join) Simple(th *Thread) []Row {
 }
 
 func (jb *joinBase) equalBy(th *Thread, st *SuTran, row1, row2 Row) bool {
-	for _, f := range jb.by {
-		if row1.GetRawVal(jb.source1.Header(), f, th, st) !=
-			row2.GetRawVal(jb.source2.Header(), f, th, st) {
-			return false
-		}
-	}
-	return true
+	return EqualRows(jb.source1.Header(), row1, jb.source2.Header(), row2, jb.by, th, st)
 }
 
 // LeftJoin ---------------------------------------------------------

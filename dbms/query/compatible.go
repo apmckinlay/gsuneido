@@ -91,9 +91,10 @@ func (c *Compatible) source2Has(th *Thread, row1 Row) bool {
 }
 
 func makeSels(hdr *Header, row Row, cols []string, th *Thread, st *SuTran) Sels {
+	rr := NewRowRec(row, hdr, th, st)
 	sels := make(Sels, len(cols))
 	for i, col := range cols {
-		sels[i] = Sel{col: col, val: row.GetRawVal(hdr, col, th, st)}
+		sels[i] = Sel{col: col, val: rr.GetRawVal(col)}
 	}
 	return sels
 }

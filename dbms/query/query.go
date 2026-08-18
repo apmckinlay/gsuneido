@@ -736,8 +736,9 @@ func lookup(q Query, sels Sels, th *Thread, st *SuTran) Row {
 
 func lookupFilter(hdr *Header, row Row, sels Sels, th *Thread, st *SuTran) Row {
 	if row != nil {
+		rr := NewRowRec(row, hdr, th, st)
 		for _, sel := range sels {
-			x := row.GetRawVal(hdr, sel.col, th, st)
+			x := rr.GetRawVal(sel.col)
 			assert.That(len(x) == 0 || x[0] != PackForward)
 			if x != sel.val {
 				return nil

@@ -576,9 +576,11 @@ func (u *Union) get2(th *Thread, dir Dir) {
 }
 
 func (u *Union) compare(th *Thread, row1, row2 Row, cols []string) int {
+	rr1 := NewRowRec(row1, u.source1.Header(), th, u.st)
+	rr2 := NewRowRec(row2, u.source2.Header(), th, u.st)
 	for _, col := range cols {
-		x1 := row1.GetRawVal(u.source1.Header(), col, th, u.st)
-		x2 := row2.GetRawVal(u.source2.Header(), col, th, u.st)
+		x1 := rr1.GetRawVal(col)
+		x2 := rr2.GetRawVal(col)
 		if c := strings.Compare(x1, x2); c != 0 {
 			return c
 		}

@@ -164,8 +164,9 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 	hdr := table.Header()
 	filter := func(osels Sels, row Row) Row {
 		if row != nil {
+			rr := NewRowRec(row, hdr, th, st)
 			for col, val := range osels.All() {
-				if row.GetRawVal(hdr, col, th, st) != val {
+				if rr.GetRawVal(col) != val {
 					return nil
 				}
 			}

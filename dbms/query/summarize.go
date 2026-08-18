@@ -544,9 +544,10 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 		return nil
 	}
 	row := t.mapList[t.mapPos].row
+	rr := NewRowRec(row, su.source.Header(), th, su.st)
 	var rb RecordBuilder
 	for _, col := range su.by {
-		rb.AddRaw(row.GetRawVal(su.source.Header(), col, th, su.st))
+		rb.AddRaw(rr.GetRawVal(col))
 	}
 	ops := t.mapList[t.mapPos].ops
 	for i := range ops {
@@ -595,9 +596,11 @@ func (su *Summarize) buildMap() []mapPair {
 	}
 	if sortForTest {
 		sort.Slice(list, func(i, j int) bool {
+			rri := NewRowRec(list[i].row, hdr, su.th, su.st)
+			rrj := NewRowRec(list[j].row, hdr, su.th, su.st)
 			for _, col := range su.by {
-				xi := list[i].row.GetRawVal(hdr, col, su.th, su.st)
-				xj := list[j].row.GetRawVal(hdr, col, su.th, su.st)
+				xi := rri.GetRawVal(col)
+				xj := rrj.GetRawVal(col)
 				if xi != xj {
 					return xi < xj
 				}
@@ -668,6 +671,7 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 }
 
 func (su *Summarize) addToSums(sums []sumOp, row Row, th *Thread, st *SuTran) {
+	rr := NewRowRec(row, su.source.Header(), th, st)
 	for i := 0; i < len(su.ons); {
 		raw := "*uninit*"
 		var val Value
@@ -677,7 +681,7 @@ func (su *Summarize) addToSums(sums []sumOp, row Row, th *Thread, st *SuTran) {
 				sums[i].add("", nil, row)
 			case "list", "min", "max":
 				if raw == "*uninit*" {
-					raw = row.GetRawVal(su.source.Header(), col, th, st)
+					raw = rr.GetRawVal(col)
 				}
 				sums[i].add(raw, nil, row)
 			default: // total, average
@@ -691,9 +695,10 @@ func (su *Summarize) addToSums(sums []sumOp, row Row, th *Thread, st *SuTran) {
 }
 
 func (su *Summarize) sameBy(th *Thread, st *SuTran, row1, row2 Row) bool {
+	rr1 := NewRowRec(row1, su.source.Header(), th, st)
+	rr2 := NewRowRec(row2, su.source.Header(), th, st)
 	for _, f := range su.by {
-		if row1.GetRawVal(su.source.Header(), f, th, st) !=
-			row2.GetRawVal(su.source.Header(), f, th, st) {
+		if rr1.GetRawVal(f) != rr2.GetRawVal(f) {
 			return false
 		}
 	}
@@ -703,8 +708,9 @@ func (su *Summarize) sameBy(th *Thread, st *SuTran, row1, row2 Row) bool {
 func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 	var rb RecordBuilder
 	if !su.wholeRow {
+		rr := NewRowRec(curRow, su.source.Header(), th, su.st)
 		for _, fld := range su.by {
-			rb.AddRaw(curRow.GetRawVal(su.source.Header(), fld, th, su.st))
+			rb.AddRaw(rr.GetRawVal(fld))
 		}
 	}
 	for _, sum := range sums {
@@ -728,8 +734,9 @@ func (su *Summarize) Select(sels Sels) {
 }
 
 func (su *Summarize) filter(row Row, th *Thread) bool {
+	rr := NewRowRec(row, su.header, th, su.st)
 	for _, sel := range su.sels {
-		x := row.GetRawVal(su.header, sel.col, th, su.st)
+		x := rr.GetRawVal(sel.col)
 		if x != sel.val {
 			return false
 		}
@@ -750,8 +757,9 @@ func (su *Summarize) Simple(th *Thread) []Row {
 	groups := make(map[string]*group)
 	for _, row := range srcRows {
 		var sb strings.Builder
+		rr := NewRowRec(row, hdr, th, su.st)
 		for _, col := range su.by {
-			sb.WriteString(row.GetRawVal(hdr, col, th, su.st))
+			sb.WriteString(rr.GetRawVal(col))
 			sb.WriteString("\x00")
 		}
 		key := sb.String()

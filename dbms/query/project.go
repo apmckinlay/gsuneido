@@ -664,21 +664,17 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 
 func hashCols(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) uint64 {
 	assert.That(th != nil)
+	rr := NewRowRec(row, hdr, th, st)
 	h := uint64(31)
 	for _, col := range cols {
-		x := row.GetRawVal(hdr, col, th, st)
+		x := rr.GetRawVal(col)
 		h = 31*h + hash.String(x)
 	}
 	return h
 }
 func equalCols(x, y Row, hdr *Header, cols []string, th *Thread, st *SuTran) bool {
 	assert.That(th != nil)
-	for _, col := range cols {
-		if x.GetRawVal(hdr, col, th, st) != y.GetRawVal(hdr, col, th, st) {
-			return false
-		}
-	}
-	return true
+	return EqualRows(hdr, x, hdr, y, cols, th, st)
 }
 
 func (p *Project) buildDedup(th *Thread) {
