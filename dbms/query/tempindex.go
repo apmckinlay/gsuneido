@@ -6,6 +6,7 @@ package query
 import (
 	"log"
 	"slices"
+	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -275,8 +276,8 @@ func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
 	for _, col := range ti.order {
 		x := xrr.GetRawVal(col)
 		y := yrr.GetRawVal(col)
-		if x != y {
-			return x < y
+		if cmp := strings.Compare(x, y); cmp != 0 {
+			return cmp < 0
 		}
 	}
 	return false
@@ -295,8 +296,8 @@ func (ti *TempIndex) less2(th *Thread, row Row, key []string) bool {
 		}
 		x := rr.GetRawVal(ti.order[i])
 		y := key[i]
-		if x != y {
-			return x < y
+		if cmp := strings.Compare(x, y); cmp != 0 {
+			return cmp < 0
 		}
 	}
 	return false
