@@ -12,6 +12,7 @@ require (
 	golang.org/x/sys v0.47.0
 	golang.org/x/text v0.40.0
 	golang.org/x/time v0.15.0
+	pgregory.net/rapid v1.3.0
 )
 
 require github.com/cloudflare/circl v1.6.4 // indirect
