@@ -6,6 +6,7 @@ package ordset
 import (
 	"fmt"
 	"math/rand"
+	"slices"
 	"sort"
 	"testing"
 	"time"
@@ -54,8 +55,8 @@ func TestUnevenSplit(t *testing.T) {
 	}
 	m.checkData(t, data)
 	m = Set{}
-	for i := len(data) - 1; i >= 0; i-- {
-		m.Insert(data[i])
+	for _, d := range slices.Backward(data) {
+		m.Insert(d)
 	}
 	m.checkData(t, data)
 }

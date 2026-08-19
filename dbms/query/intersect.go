@@ -42,8 +42,8 @@ func NewIntersect(src1, src2 Query, t QueryTran) *Intersect {
 }
 
 func newIntersect(src1, src2 Query, t QueryTran, prevFixed1, prevFixed2 Fixed) *Intersect {
-	it := Intersect{qt: t, prevFixed1: prevFixed1, prevFixed2: prevFixed2}
-	it.Compatible = *newCompatible(src1, src2)
+	it := Intersect{qt: t, prevFixed1: prevFixed1, prevFixed2: prevFixed2,
+		Compatible: *newCompatible(src1, src2)}
 	it.header = it.getHeader()
 	it.keys = it.getKeys()
 	it.indexes = it.getIndexes()

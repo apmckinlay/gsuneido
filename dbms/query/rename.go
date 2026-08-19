@@ -22,7 +22,7 @@ type Rename struct {
 func NewRename(src Query, from, to []string) *Rename {
 	srcCols := src.Columns()
 	checkRename(srcCols, from, to)
-	r := &Rename{Query1: Query1{source: src}, from: from, to: to}
+	r := &Rename{source: src, from: from, to: to}
 	r.renameDependencies(srcCols)
 	r.header = r.getHeader()
 	r.keys = r.renameIndexes(src.Keys())
@@ -97,8 +97,8 @@ func (r *Rename) renameFwd(list []string) []string {
 
 func (r *Rename) renameRev(list []string) []string {
 	cloned := false
-	for i := len(r.to) - 1; i >= 0; i-- {
-		if j := slices.Index(list, r.to[i]); j != -1 {
+	for i, v := range slices.Backward(r.to) {
+		if j := slices.Index(list, v); j != -1 {
 			if !cloned {
 				list = slc.Clone(list)
 				cloned = true
@@ -210,8 +210,8 @@ func (r *Rename) knowExactNrows() bool {
 
 func (r *Rename) renameSels(sels Sels) Sels {
 	cloned := false
-	for i := len(r.to) - 1; i >= 0; i-- {
-		if j := sels.FindCol(r.to[i]); j != -1 {
+	for i, v := range slices.Backward(r.to) {
+		if j := sels.FindCol(v); j != -1 {
 			if !cloned {
 				sels = slc.Clone(sels)
 				cloned = true

@@ -228,7 +228,7 @@ func TestPropMetaReorder(t *testing.T) {
 func insertComments(t *rapid.T, src string) string {
 	lines := strings.Split(src, "\n")
 	n := rapid.IntRange(1, 4).Draw(t, "ncomments")
-	for k := 0; k < n; k++ {
+	for k := range n {
 		pos := rapid.IntRange(0, len(lines)).Draw(t, "cpos")
 		c := []string{"// comment " + fmt.Sprint(k)}
 		lines = append(lines[:pos], append(c, lines[pos:]...)...)
@@ -292,7 +292,7 @@ func TestPropMetaKLiteralReturns(t *testing.T) {
 		k := rapid.IntRange(1, 4).Draw(rt, "k")
 		lits := make([]synth.Lit, k)
 		var want DynType
-		for i := 0; i < k; i++ {
+		for i := range k {
 			lits[i] = synth.GTypeLit(rt, rapid.SampledFrom(synth.BaseTypes).Draw(rt, "krt"))
 			if i == 0 {
 				want = litDynType(lits[i])

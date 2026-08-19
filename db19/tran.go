@@ -90,7 +90,7 @@ var nextReadTran atomic.Int32
 
 func (db *Database) NewReadTran() *ReadTran {
 	state := db.GetState()
-	return &ReadTran{tran: tran{db: db, meta: state.Meta},
+	return &ReadTran{db: db, meta: state.Meta,
 		num: int(nextReadTran.Add(2))} // even
 }
 
@@ -243,8 +243,7 @@ func (db *Database) NewUpdateTran() *UpdateTran {
 		return nil
 	}
 	meta := ct.state.Meta.Mutable()
-	return &UpdateTran{ct: ct,
-		ReadTran: ReadTran{tran: tran{db: db, meta: meta}}}
+	return &UpdateTran{ct: ct, db: db, meta: meta}
 }
 
 func (t *UpdateTran) String() string {

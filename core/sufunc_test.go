@@ -10,8 +10,7 @@ import (
 )
 
 func TestSuFuncString(t *testing.T) {
-	sf := SuFunc{}
-	sf.Flags = make([]Flag, 8)
+	sf := SuFunc{Flags: make([]Flag, 8)}
 	assert.T(t).This(sf.Params()).Is("()")
 	sf.Nparams = 3
 	sf.Names = []string{"a", "b", "c"}

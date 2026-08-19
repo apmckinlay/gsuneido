@@ -4,6 +4,10 @@
 package engine
 
 import (
+	"maps"
+
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
@@ -48,9 +52,7 @@ func ConstructorExecPass(cls *ClassObject, env TypeEnv, pctx *PassCtx) bool {
 	if len(demotions) == 0 {
 		return false
 	}
-	for name, t := range demotions {
-		env.PostCtorMembers[name] = t
-	}
+	maps.Copy(env.PostCtorMembers, demotions)
 	restampMemberReads(cls, env, demotions)
 	return true
 }
@@ -648,9 +650,7 @@ func restampMemberReads(cls *ClassObject, env TypeEnv, demotions map[string]DynT
 
 func cloneTypeMap(m map[string]DynType) map[string]DynType {
 	out := make(map[string]DynType, len(m))
-	for k, v := range m {
-		out[k] = v
-	}
+	maps.Copy(out, m)
 	return out
 }
 
@@ -691,10 +691,8 @@ func containsFalse(t DynType) bool {
 		if x.IsDirty {
 			return true
 		}
-		for _, m := range x.Types {
-			if containsFalse(m) {
-				return true
-			}
+		if slices.ContainsFunc(x.Types, containsFalse) {
+			return true
 		}
 	}
 	return false

@@ -9,7 +9,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta"
-	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
@@ -209,8 +208,7 @@ type TablesLookup struct {
 }
 
 func NewTablesLookup(tran QueryTran, table string) *TablesLookup {
-	tl := TablesLookup{table: table}
-	tl.tran = tran
+	tl := TablesLookup{table: table, tran: tran}
 	return &tl
 }
 
@@ -375,10 +373,10 @@ func (cs *Columns) ensure() {
 	}
 	cs.schema = cs.tran.GetAllSchema()
 	cs.schema = append(cs.schema,
-		&meta.Schema{Schema: schema.Schema{Table: "tables", Columns: tablesFields[0]}},
-		&meta.Schema{Schema: schema.Schema{Table: "columns", Columns: columnsFields[0]}},
-		&meta.Schema{Schema: schema.Schema{Table: "indexes", Columns: indexesFields[0]}},
-		&meta.Schema{Schema: schema.Schema{Table: "views", Columns: viewsFields[0]}},
+		&meta.Schema{Table: "tables", Columns: tablesFields[0]},
+		&meta.Schema{Table: "columns", Columns: columnsFields[0]},
+		&meta.Schema{Table: "indexes", Columns: indexesFields[0]},
+		&meta.Schema{Table: "views", Columns: viewsFields[0]},
 	)
 	sort.Slice(cs.schema,
 		func(i, j int) bool { return cs.schema[i].Table < cs.schema[j].Table })

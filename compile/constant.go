@@ -311,8 +311,7 @@ func (p *Parser) class() (result Value) {
 		for _, v := range cc {
 			v.SetConcurrent()
 		}
-		return &SuClass{Base: base, Lib: p.lib, Name: p.name,
-			MemBase: MemBase{Data: cc}}
+		return &SuClass{Base: base, Lib: p.lib, Name: p.name, Data: cc}
 	}
 	return mems.(Value)
 }

@@ -53,7 +53,7 @@ func BenchmarkAssertOnExpensiveBody(b *testing.B) {
 	for b.Loop() {
 		assertOn(func() bool {
 			sum := 0
-			for j := 0; j < 1000; j++ {
+			for j := range 1000 {
 				sum += j
 			}
 			return sum > 0
@@ -65,7 +65,7 @@ func BenchmarkAssertOffExpensiveBody(b *testing.B) {
 	for b.Loop() {
 		assertOff(func() bool {
 			sum := 0
-			for j := 0; j < 1000; j++ {
+			for j := range 1000 {
 				sum += j
 			}
 			return sum > 0

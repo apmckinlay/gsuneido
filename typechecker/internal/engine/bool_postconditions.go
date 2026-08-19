@@ -4,6 +4,8 @@
 package engine
 
 import (
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 )
 
@@ -175,12 +177,7 @@ func mergeSnapshots(snaps []map[string]DynType, name string, classWide DynType) 
 }
 
 func stmtsAlwaysExit(stmts []ast.Statement) bool {
-	for _, s := range stmts {
-		if branchAlwaysExits(s) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(stmts, branchAlwaysExits)
 }
 
 func refineHelperPostcondition(call *ast.Call, sc narrowScope, polarity bool, allowMembers bool) {

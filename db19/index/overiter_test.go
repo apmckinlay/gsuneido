@@ -6,6 +6,7 @@ package index
 import (
 	"fmt"
 	"math/rand/v2"
+	"slices"
 	"sort"
 	"strconv"
 	"testing"
@@ -1072,8 +1073,8 @@ func (it *dumIter) Prev() {
 		it.state = within
 		return
 	}
-	for i := len(it.d.keys) - 1; i >= 0; i-- {
-		k := it.d.keys[i]
+	for _, k := range slices.Backward(it.d.keys) {
+
 		if k < it.cur {
 			it.cur = k
 			return
@@ -1112,11 +1113,11 @@ func TestOverIterFastPathTransition(t *testing.T) {
 
 	// Also test Prev: should see the same sequence in reverse
 	it.Rewind()
-	for i := len(expected) - 1; i >= 0; i-- {
+	for _, e := range slices.Backward(expected) {
 		it.Prev(tran)
 		assert.False(it.Eof())
 		key, _ := it.Cur()
-		assert.This(key).Is(expected[i])
+		assert.This(key).Is(e)
 	}
 	it.Prev(tran)
 	assert.True(it.Eof())

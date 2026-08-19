@@ -162,7 +162,7 @@ func BenchmarkReadMmapContiguous(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	for i := 0; i < fileSize/writeChunk; i++ {
+	for range fileSize / writeChunk {
 		_, buf := s.Alloc(writeChunk)
 		for j := range buf {
 			buf[j] = byte(j)
@@ -208,7 +208,7 @@ func BenchmarkReadMmapInterleaved(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	for i := 0; i < fileSize/writeChunk; i++ {
+	for range fileSize / writeChunk {
 		_, buf := s.Alloc(writeChunk)
 		for j := range buf {
 			buf[j] = byte(j)

@@ -20,13 +20,12 @@ func TestValidateForeignKeys(t *testing.T) {
 	m.info.Hamt = InfoHamt{}.Mutable().Freeze()
 
 	// Add target table with a key
-	target := &Schema{Schema: schema.Schema{
+	target := &Schema{
 		Table:   "target",
 		Columns: []string{"id", "name"},
 		Indexes: []schema.Index{
 			{Mode: 'k', Columns: []string{"id"}},
-		},
-	}}
+		}}
 	target.Ixspecs(len(target.Indexes))
 	targetInfo := NewInfo("target", nil, 0, 0)
 	m = m.Put(target, targetInfo)
@@ -34,15 +33,14 @@ func TestValidateForeignKeys(t *testing.T) {
 	// Test 1: Foreign key to nonexistent table
 	assert.This(func() {
 		mu := newMetaUpdate(m)
-		refTable := &Schema{Schema: schema.Schema{
+		refTable := &Schema{
 			Table:   "referring",
 			Columns: []string{"id", "target_id"},
 			Indexes: []schema.Index{
 				{Mode: 'k', Columns: []string{"id"}},
 				{Mode: 'i', Columns: []string{"target_id"},
 					Fk: schema.Fkey{Table: "nonexistent", IIndex: 0}},
-			},
-		}}
+			}}
 		refTable.Ixspecs(len(refTable.Indexes))
 		mu.putSchema(refTable)
 		mu.freeze()
@@ -51,15 +49,14 @@ func TestValidateForeignKeys(t *testing.T) {
 	// Test 2: Foreign key to nonexistent index
 	assert.This(func() {
 		mu := newMetaUpdate(m)
-		refTable := &Schema{Schema: schema.Schema{
+		refTable := &Schema{
 			Table:   "referring",
 			Columns: []string{"id", "target_id"},
 			Indexes: []schema.Index{
 				{Mode: 'k', Columns: []string{"id"}},
 				{Mode: 'i', Columns: []string{"target_id"},
 					Fk: schema.Fkey{Table: "target", Columns: []string{"nonexistent"}, IIndex: 0}},
-			},
-		}}
+			}}
 		refTable.Ixspecs(len(refTable.Indexes))
 		mu.putSchema(refTable)
 		mu.freeze()
@@ -78,15 +75,14 @@ func TestValidateForeignKeys(t *testing.T) {
 
 		// Now try to create FK to the non-key index
 		mu2 := newMetaUpdate(m2)
-		refTable := &Schema{Schema: schema.Schema{
+		refTable := &Schema{
 			Table:   "referring",
 			Columns: []string{"id", "target_name"},
 			Indexes: []schema.Index{
 				{Mode: 'k', Columns: []string{"id"}},
 				{Mode: 'i', Columns: []string{"target_name"},
 					Fk: schema.Fkey{Table: "target", Columns: []string{"name"}, IIndex: 1}},
-			},
-		}}
+			}}
 		refTable.Ixspecs(len(refTable.Indexes))
 		mu2.putSchema(refTable)
 		mu2.freeze()
@@ -104,15 +100,14 @@ func TestValidateForeignKeys(t *testing.T) {
 
 	assert.This(func() {
 		mu := newMetaUpdate(m4)
-		refTable := &Schema{Schema: schema.Schema{
+		refTable := &Schema{
 			Table:   "referring",
 			Columns: []string{"id", "target_id"},
 			Indexes: []schema.Index{
 				{Mode: 'k', Columns: []string{"id"}},
 				{Mode: 'i', Columns: []string{"target_id"},
 					Fk: schema.Fkey{Table: "target", Columns: []string{"id"}, IIndex: 1}}, // wrong IIndex - should be 0
-			},
-		}}
+			}}
 		refTable.Ixspecs(len(refTable.Indexes))
 		mu.putSchema(refTable)
 		mu.freeze()
@@ -120,15 +115,14 @@ func TestValidateForeignKeys(t *testing.T) {
 
 	// Test 5: Valid foreign key
 	mu := newMetaUpdate(m)
-	refTable := &Schema{Schema: schema.Schema{
+	refTable := &Schema{
 		Table:   "referring",
 		Columns: []string{"id", "target_id"},
 		Indexes: []schema.Index{
 			{Mode: 'k', Columns: []string{"id"}},
 			{Mode: 'i', Columns: []string{"target_id"},
 				Fk: schema.Fkey{Table: "target", Columns: []string{"id"}, IIndex: 0}},
-		},
-	}}
+		}}
 	refTable.Ixspecs(len(refTable.Indexes))
 	mu.putSchema(refTable)
 	mu.freeze() // Should not panic
@@ -143,13 +137,12 @@ func TestValidateCreateDuplicateColumn(t *testing.T) {
 	m.info.Hamt = InfoHamt{}.Mutable().Freeze()
 
 	// Add a base table
-	base := &Schema{Schema: schema.Schema{
+	base := &Schema{
 		Table:   "test",
 		Columns: []string{"a", "b"},
 		Indexes: []schema.Index{
 			{Mode: 'k', Columns: []string{"a"}},
-		},
-	}}
+		}}
 	base.Ixspecs(len(base.Indexes))
 	baseInfo := NewInfo("test", nil, 0, 0)
 	m = m.Put(base, baseInfo)
@@ -170,28 +163,26 @@ func TestValidateForeignKeyAfterRename(t *testing.T) {
 	m.info.Hamt = InfoHamt{}.Mutable().Freeze()
 
 	// Create target table
-	target := &Schema{Schema: schema.Schema{
+	target := &Schema{
 		Table:   "target",
 		Columns: []string{"id", "name"},
 		Indexes: []schema.Index{
 			{Mode: 'k', Columns: []string{"id"}},
-		},
-	}}
+		}}
 	target.Ixspecs(len(target.Indexes))
 	targetInfo := NewInfo("target", nil, 0, 0)
 	m = m.Put(target, targetInfo)
 
 	// Create referring table with explicit FK columns
 	mu := newMetaUpdate(m)
-	referring := &Schema{Schema: schema.Schema{
+	referring := &Schema{
 		Table:   "referring",
 		Columns: []string{"rid", "target_id"},
 		Indexes: []schema.Index{
 			{Mode: 'k', Columns: []string{"rid"}},
 			{Mode: 'i', Columns: []string{"target_id"},
 				Fk: schema.Fkey{Table: "target", Columns: []string{"id"}, IIndex: 0}},
-		},
-	}}
+		}}
 	referring.Ixspecs(len(referring.Indexes))
 	mu.putSchema(referring)
 	mu.putInfo(NewInfo("referring", nil, 0, 0))

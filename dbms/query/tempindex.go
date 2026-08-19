@@ -40,11 +40,11 @@ const derivedWarn = 8_000_000 // ??? // derivedWarn is also used by Project
 
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	order = src.Fixed().RemoveFrom(order)
-	ti := TempIndex{order: order, tran: tran, selOrg: selMin, selEnd: selMax}
-	ti.source = src
-	ti.header = src.Header().Dup() // dup because sortlist is concurrent
-	ti.keys = src.Keys()
-	ti.fixed = src.Fixed()
+	ti := TempIndex{order: order, tran: tran, selOrg: selMin, selEnd: selMax,
+		source: src,
+		header: src.Header().Dup(), // dup because sortlist is concurrent
+		keys:   src.Keys(),
+		fixed:  src.Fixed()}
 	ti.setNrows(src.Nrows())
 	ti.rowSiz.Set(src.rowSize())
 	ti.singleTbl.Set(src.SingleTable())

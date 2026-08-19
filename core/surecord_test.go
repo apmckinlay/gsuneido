@@ -77,7 +77,7 @@ func TestSuRecord_Concurrency(t *testing.T) {
 			}
 			return nil
 		},
-		BuiltinParams: BuiltinParams{ParamSpec: ParamSpec0}}
+		ParamSpec: ParamSpec0}
 
 	var wg sync.WaitGroup
 	run := func() {
@@ -154,13 +154,13 @@ func TestSuRecord_RuleSetConcurrentUnlock(t *testing.T) {
 			this.(*SuRecord).SetConcurrent()
 			return SuStr("a_value")
 		},
-		BuiltinParams: BuiltinParams{ParamSpec: ParamSpec0}}
+		ParamSpec: ParamSpec0}
 
 	ruleB := &SuBuiltinMethod{
 		Fn: func(th *Thread, this Value, _ []Value) Value {
 			return SuStr("b_value")
 		},
-		BuiltinParams: BuiltinParams{ParamSpec: ParamSpec0}}
+		ParamSpec: ParamSpec0}
 
 	rec.AttachRule(SuStr("a"), ruleA)
 	rec.AttachRule(SuStr("b"), ruleB)

@@ -135,7 +135,7 @@ func ensurePathParent(th *core.Thread, library, path string) (int, error) {
 	parent := 0
 	nextNum := maxLibNum(th, utran, library) + 1
 
-	for _, segment := range strings.Split(path, "/") {
+	for segment := range strings.SplitSeq(path, "/") {
 		if segment == "" {
 			continue
 		}

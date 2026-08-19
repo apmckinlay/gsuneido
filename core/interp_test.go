@@ -242,12 +242,10 @@ func BenchmarkCatChained(b *testing.B) {
 	}
 	fn := &SuFunc{
 		Code: string(code),
-		ParamSpec: ParamSpec{
-			Values: []Value{
-				SuStr("hello"),
-				SuStr(" "),
-				SuStr("world"),
-			},
+		Values: []Value{
+			SuStr("hello"),
+			SuStr(" "),
+			SuStr("world"),
 		},
 	}
 	var th Thread
@@ -267,12 +265,10 @@ func BenchmarkCatN(b *testing.B) {
 	}
 	fn := &SuFunc{
 		Code: string(code),
-		ParamSpec: ParamSpec{
-			Values: []Value{
-				SuStr("hello"),
-				SuStr(" "),
-				SuStr("world"),
-			},
+		Values: []Value{
+			SuStr("hello"),
+			SuStr(" "),
+			SuStr("world"),
 		},
 	}
 	var th Thread

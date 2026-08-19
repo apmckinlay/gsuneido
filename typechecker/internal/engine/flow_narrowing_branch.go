@@ -4,6 +4,8 @@
 package engine
 
 import (
+	"slices"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
@@ -198,12 +200,7 @@ func branchAlwaysExits(s ast.Statement) bool {
 	case *ast.Return, *ast.Throw, *ast.Break, *ast.Continue:
 		return true
 	case *ast.Compound:
-		for _, st := range x.Body {
-			if branchAlwaysExits(st) {
-				return true
-			}
-		}
-		return false
+		return slices.ContainsFunc(x.Body, branchAlwaysExits)
 	case *ast.If:
 		if x.Else == nil {
 			return false

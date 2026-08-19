@@ -4,6 +4,7 @@
 package engine
 
 import (
+	"maps"
 	"testing"
 
 	"pgregory.net/rapid"
@@ -71,9 +72,7 @@ func (w *dirtWalker) withForced(cond synth.Expr) map[string]bool {
 	if len(names) == 0 {
 		return w.forced
 	}
-	for k, v := range w.forced {
-		names[k] = v
-	}
+	maps.Copy(names, w.forced)
 	return names
 }
 
@@ -104,11 +103,7 @@ func (w *dirtWalker) exprDirt(e synth.Expr) dirtBits {
 }
 
 func cloneLocals(m map[string]dirtBits) map[string]dirtBits {
-	out := make(map[string]dirtBits, len(m))
-	for k, v := range m {
-		out[k] = v
-	}
-	return out
+	return maps.Clone(m)
 }
 
 // joinLocals merges two branch exits relative to their shared entry. locals

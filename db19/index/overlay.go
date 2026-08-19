@@ -6,6 +6,7 @@ package index
 import (
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	btree "github.com/apmckinlay/gsuneido/db19/index/btree"
@@ -106,8 +107,8 @@ func (ov *Overlay) Lookup(key string) uint64 {
 			return off &^ ixbuf.Update
 		}
 	}
-	for i := len(ov.layers) - 1; i >= 0; i-- {
-		if off := ov.layers[i].Lookup(key); off != 0 {
+	for _, v := range slices.Backward(ov.layers) {
+		if off := v.Lookup(key); off != 0 {
 			if off&ixbuf.Delete != 0 {
 				return 0 // deleted
 			}

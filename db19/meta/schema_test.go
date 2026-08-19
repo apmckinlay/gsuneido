@@ -22,13 +22,10 @@ func TestSchema(t *testing.T) {
 	randStr := str.UniqueRandom(4, 4)
 	for i := range n {
 		data[i] = randStr()
-		tbl.Put(&Schema{Schema: schema.Schema{
+		tbl.Put(&Schema{
 			Table:   data[i],
 			Columns: []string{"one", "two"},
-			Indexes: []schema.Index{
-				{Mode: 'k', Columns: []string{"one"}},
-			},
-		}})
+			Indexes: []schema.Index{{Mode: 'k', Columns: []string{"one"}}}})
 	}
 	st := stor.HeapStor(32 * 1024)
 	st.Alloc(1) // avoid offset 0

@@ -26,12 +26,12 @@ func NewSort(src Query, reverse bool, order []string) *Sort {
 		panic("sort: nonexistent columns: " +
 			str.Join(", ", set.Difference(order, src.Columns())))
 	}
-	sort := Sort{reverse: reverse}
-	sort.source = src
-	sort.order = order
-	sort.header = src.Header()
-	sort.keys = src.Keys()
-	sort.fixed = src.Fixed()
+	sort := Sort{reverse: reverse,
+		source: src,
+		order:  order,
+		header: src.Header(),
+		keys:   src.Keys(),
+		fixed:  src.Fixed()}
 	sort.setNrows(src.Nrows())
 	sort.rowSiz.Set(src.rowSize())
 	sort.fast1.Set(src.fastSingle())

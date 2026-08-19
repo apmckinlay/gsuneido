@@ -78,8 +78,7 @@ and removing empty nodes by updating their parent(s).
 */
 func (bt *btree) MergeAndSave(iter iface.IterFn) *T {
 	bt2 := *bt // copy
-	st := state{bt: &bt2}
-	st.tree = make([]treeMerge, 0, maxLevels)
+	st := state{bt: &bt2, tree: make([]treeMerge, 0, maxLevels)}
 	for {
 		key, off, ok := iter()
 		if !ok {

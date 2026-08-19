@@ -33,7 +33,7 @@ func QueryParser(src string) *Parser {
 }
 
 func newParser(lxr *Lexer, a Aspects) *Parser {
-	p := &Parser{ParserBase: ParserBase{Lxr: lxr, Aspects: a}}
+	p := &Parser{Lxr: lxr, Aspects: a}
 	p.Next()
 	return p
 }

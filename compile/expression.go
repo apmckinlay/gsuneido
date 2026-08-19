@@ -517,8 +517,7 @@ func (p *Parser) block() *ast.Block {
 		p.final["it"] = disqualified
 	}
 	p.itUsed = itUsedPrev
-	return &ast.Block{Name: p.name,
-		Function: ast.Function{Params: params, Body: body}}
+	return &ast.Block{Name: p.name, Params: params, Body: body}
 }
 
 func (p *Parser) blockParams() []ast.Param {

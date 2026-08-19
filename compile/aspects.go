@@ -82,7 +82,7 @@ type astAspects struct {
 }
 
 func (*astAspects) Symbol(s core.SuStr) ast.Expr {
-	return &ast.Symbol{Constant: ast.Constant{Val: s}}
+	return &ast.Symbol{Val: s}
 }
 
 func (*astAspects) privatize(name, _ string) string {

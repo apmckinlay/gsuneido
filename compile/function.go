@@ -129,14 +129,14 @@ func (p *Parser) annotation() string {
 		return ""
 	}
 
-	var annotation string
+	var annotation strings.Builder
 	for {
-		annotation += p.MatchIdent() + "|"
+		annotation.WriteString(p.MatchIdent() + "|")
 		if !p.MatchIf(tok.BitOr) {
 			break
 		}
 	}
-	return strings.TrimSuffix(annotation, "|")
+	return strings.TrimSuffix(annotation.String(), "|")
 }
 
 func mkParam(name string, pos, end int32, unused bool, def Value) ast.Param {

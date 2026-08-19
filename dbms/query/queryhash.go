@@ -27,9 +27,7 @@ type QueryHash struct {
 }
 
 func NewQueryHasher(hdr *Header) *QueryHash {
-	qh := QueryHash{}
-	qh.Hdr = hdr
-	qh.Fields = slc.Clone(hdr.Physical())
+	qh := QueryHash{Hdr: hdr, Fields: slc.Clone(hdr.Physical())}
 	slices.Sort(qh.Fields)
 	cols := slc.Clone(hdr.Columns)
 	slices.Sort(cols)

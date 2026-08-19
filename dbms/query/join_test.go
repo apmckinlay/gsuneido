@@ -13,10 +13,8 @@ import (
 func TestJoin_nrows(t *testing.T) {
 	test := func(n1, p1, n2, p2, expected int) {
 		t.Helper()
-		j1n := Join{}
-		j1n.joinType = one_to_many
-		jn1 := Join{}
-		jn1.joinType = many_to_one
+		j1n := Join{joinType: one_to_many}
+		jn1 := Join{joinType: many_to_one}
 		assert.T(t).Msg(n1, "/", p1, one_to_many, n2, "/", p2, "=>", expected).
 			This(j1n.nrows(n1, p1, n2, p2)).Is(expected)
 		assert.T(t).Msg(n1, "/", p1, many_to_one, n2, "/", p2, "=>", expected).

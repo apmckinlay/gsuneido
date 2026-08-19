@@ -170,13 +170,13 @@ func TestExpr_CanEvalRaw(t *testing.T) {
 func TestRawExpr(t *testing.T) {
 	Global.TestDef("Date?", &SuBuiltin1{Fn: func(arg Value) Value {
 		return SuBool(arg.Type() == types.Date)
-	}, BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1}})
+	}, ParamSpec: ParamSpec1})
 	Global.TestDef("Number?", &SuBuiltin1{Fn: func(arg Value) Value {
 		return SuBool(arg.Type() == types.Number)
-	}, BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1}})
+	}, ParamSpec: ParamSpec1})
 	Global.TestDef("String?", &SuBuiltin1{Fn: func(arg Value) Value {
 		return SuBool(arg.Type() == types.String)
-	}, BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1}})
+	}, ParamSpec: ParamSpec1})
 
 	n := 10000
 	if testing.Short() {

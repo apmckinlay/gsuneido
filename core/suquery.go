@@ -97,8 +97,7 @@ type SuQuery struct {
 }
 
 func NewSuQuery(th *Thread, tran *SuTran, query string, iquery IQuery) *SuQuery {
-	q := &SuQuery{tran: tran,
-		SuQueryCursor: SuQueryCursor{query: query, iqc: iquery}}
+	q := &SuQuery{tran: tran, query: query, iqc: iquery}
 	q.SuQueryCursor.ckActive = q.ckActive
 	return q
 }
@@ -176,7 +175,7 @@ type SuCursor struct {
 }
 
 func NewSuCursor(th *Thread, query string, icursor ICursor) *SuCursor {
-	q := &SuCursor{SuQueryCursor: SuQueryCursor{query: query, iqc: icursor}}
+	q := &SuCursor{query: query, iqc: icursor}
 	q.SuQueryCursor.ckActive = q.ckActive
 	return q
 }

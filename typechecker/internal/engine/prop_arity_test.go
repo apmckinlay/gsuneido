@@ -91,13 +91,13 @@ func actualArity(env TypeEnv, method string) []string {
 
 func doubleBindParam(msg string) string {
 	const pre = `argument "`
-	i := strings.Index(msg, pre)
-	if i < 0 {
+	_, after, ok := strings.Cut(msg, pre)
+	if !ok {
 		return "?"
 	}
-	rest := msg[i+len(pre):]
-	if j := strings.Index(rest, `"`); j >= 0 {
-		return rest[:j]
+	rest := after
+	if before, _, ok := strings.Cut(rest, `"`); ok {
+		return before
 	}
 	return "?"
 }
@@ -111,7 +111,7 @@ func genAritySig(t *rapid.T) aritySig {
 	np := rapid.IntRange(0, 3).Draw(t, "arnp")
 	params := make([]arityParam, np)
 	sawDefault := false
-	for i := 0; i < np; i++ {
+	for i := range np {
 		hasDef := sawDefault || rapid.Bool().Draw(t, "ardef")
 		if hasDef {
 			sawDefault = true // Suneido wants defaults trailing

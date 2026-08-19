@@ -498,8 +498,8 @@ func eval(src string) {
 	if result != nil {
 		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
 	} else if len(mainThread.ReturnMulti) > 0 {
-		for i := len(mainThread.ReturnMulti) - 1; i >= 0; i-- {
-			fmt.Println(WithType(mainThread.ReturnMulti[i]))
+		for _, v := range slices.Backward(mainThread.ReturnMulti) {
+			fmt.Println(WithType(v))
 		}
 	}
 }

@@ -127,8 +127,8 @@ func (sk *Sketch[T]) Query(q float64) T {
 
 	var items []weightedItem
 	weight := sk.sampleEvery
-	for h := len(sk.levels) - 1; h >= 0; h-- {
-		for _, value := range sk.levels[h] {
+	for _, v := range slices.Backward(sk.levels) {
+		for _, value := range v {
 			items = append(items, weightedItem{value, weight})
 		}
 		weight *= 2

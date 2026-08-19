@@ -86,10 +86,10 @@ func (ts *Schema) Write(w *stor.Writer) {
 }
 
 func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
-	ts := Schema{}
-	ts.Table = r.GetStr()
-	ts.Columns = r.GetStrs()
-	ts.Derived = r.GetStrs()
+	ts := Schema{
+		Table:   r.GetStr(),
+		Columns: r.GetStrs(),
+		Derived: r.GetStrs()}
 	if n := r.Get1(); n > 0 {
 		ts.Indexes = make([]schema.Index, n)
 		for i := range n {
@@ -270,11 +270,11 @@ outer:
 }
 
 func (m *Meta) newSchemaTomb(table string) *Schema {
-	return &Schema{Schema: schema.Schema{Table: table}}
+	return &Schema{Table: table}
 }
 
 func (m *Meta) newSchemaView(name, def string) *Schema {
-	return &Schema{Schema: schema.Schema{Table: "=" + name, Columns: []string{def}}}
+	return &Schema{Table: "=" + name, Columns: []string{def}}
 }
 
 func (ts *Schema) IsTomb() bool {

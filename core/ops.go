@@ -353,8 +353,7 @@ func ToSuExcept(th *Thread, e any) *SuExcept {
 		var ss SuStr
 		switch e := e.(type) {
 		case error:
-			var perr runtime.Error
-			if errors.As(e, &perr) {
+			if _, ok := errors.AsType[runtime.Error](e); ok {
 				log.Println("ERROR:", e)
 				dbg.PrintStack()
 				printSuStack(th, e)

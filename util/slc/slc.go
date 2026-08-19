@@ -7,12 +7,13 @@ package slc
 import (
 	"cmp"
 	"math/rand/v2"
+	"slices"
 	"unsafe"
 )
 
 func LastIndex[E comparable](list []E, e E) int {
-	for i := len(list) - 1; i >= 0; i-- {
-		if list[i] == e {
+	for i, l := range slices.Backward(list) {
+		if l == e {
 			return i
 		}
 	}

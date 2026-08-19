@@ -91,10 +91,8 @@ func codegen(lib, name string, fn *ast.Function, prevDef Value) Value {
 func codegen2(lib, name string, fn *ast.Function, isBlock bool,
 	prevDef Value) *SuFunc {
 	cover := options.Coverage.Load()
-	cg := cgen{fn: fn, base: fn.Base, isNew: fn.IsNewMethod,
-		isBlock: isBlock, cover: cover, prevDef: prevDef}
-	cg.Lib = lib
-	cg.Name = name
+	cg := cgen{fn: fn, base: fn.Base, isNew: fn.IsNewMethod, isBlock: isBlock,
+		cover: cover, prevDef: prevDef, Lib: lib, Name: name}
 	return cg.codegen(fn)
 }
 
@@ -175,9 +173,9 @@ func codegenClosureBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
 		base:    outercg.base,
 		isBlock: true,
 		cover:   outercg.cover,
-	}
-	cg.Lib = outercg.Lib
-	cg.Name = outercg.Name
+
+		Lib:  outercg.Lib,
+		Name: outercg.Name}
 
 	f := cg.codegen(ast)
 

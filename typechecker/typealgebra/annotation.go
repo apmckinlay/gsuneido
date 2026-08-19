@@ -51,7 +51,7 @@ func ParseAnnotation(s string) (DynType, error) {
 	}
 	var result DynType
 	var errs []string
-	for _, raw := range strings.Split(s, armSep) {
+	for raw := range strings.SplitSeq(s, armSep) {
 		name := strings.TrimSpace(raw)
 		if name == "" {
 			errs = append(errs, "empty type alternative")

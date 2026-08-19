@@ -32,9 +32,7 @@ func TestProcessConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	errs := make(chan error, threads*iterations)
 	for range threads {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range iterations {
 				got, err := Process(Request{
 					Method: "TypeInfer", Arguments: args, References: refs})
@@ -66,7 +64,7 @@ func TestProcessConcurrent(t *testing.T) {
 					}
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	close(errs)

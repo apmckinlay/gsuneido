@@ -41,7 +41,7 @@ func (c *Cache[K, E]) Get(key K) E {
 }
 
 func NewConc[K comparable, E any](getter func(key K) E) *ConcCache[K, E] {
-	return &ConcCache[K, E]{Cache: Cache[K, E]{getter: getter}}
+	return &ConcCache[K, E]{getter: getter}
 }
 
 type ConcCache[K comparable, E any] struct {

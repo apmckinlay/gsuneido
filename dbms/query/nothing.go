@@ -18,9 +18,7 @@ type Nothing struct {
 }
 
 func NewNothing(q Query) *Nothing {
-	no := Nothing{table: q.Updateable()}
-	no.header = q.Header()
-	return &no
+	return &Nothing{table: q.Updateable(), header: q.Header()}
 }
 
 var _ Query = (*Nothing)(nil)

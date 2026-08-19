@@ -46,7 +46,7 @@ type respch chan []byte
 // NewClientConn creates a new client connection.
 // This should be one to one with the underlying connection.
 func NewClientConn(rw io.ReadWriteCloser) *ClientConn {
-	m := ClientConn{conn: conn{rw: rw}, rchs: make(map[uint32]respch)}
+	m := ClientConn{rw: rw, rchs: make(map[uint32]respch)}
 	go m.conn.reader(m.client)
 	return &m
 }
@@ -65,7 +65,7 @@ var nextServerConn atomic.Uint32
 // For dbms server the handler is Workers.Submit
 func NewServerConn(rw io.ReadWriteCloser) *ServerConn {
 	connId := nextServerConn.Add(1)
-	return &ServerConn{conn: conn{rw: rw}, id: connId}
+	return &ServerConn{rw: rw, id: connId}
 }
 
 func (sc *ServerConn) Id() uint32 {
@@ -92,7 +92,7 @@ func (cc *ClientConn) NewClientSession() *ClientSession {
 	cc.lock.Lock()
 	defer cc.lock.Unlock()
 	cc.rchs[sessionId] = rch
-	return &ClientSession{cc: cc, rch: rch, ReadWrite: ReadWrite{WriteBuf: *wb}}
+	return &ClientSession{cc: cc, rch: rch, WriteBuf: *wb}
 }
 
 func (cs *ClientSession) read() []byte {

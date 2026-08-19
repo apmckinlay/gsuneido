@@ -5,6 +5,7 @@ package query
 
 import (
 	"fmt"
+	"maps"
 	"math/rand/v2"
 	"slices"
 	"strconv"
@@ -229,9 +230,7 @@ func composeFuzzProject(ft *FT, qs Query) Query {
 	deps := ft.ruleDeps
 	if ext, ok := qs.(*Extend); ok && len(ext.fwd) > 0 {
 		deps = make(map[string]string, len(ft.ruleDeps)+len(ext.fwd))
-		for k, v := range ft.ruleDeps {
-			deps[k] = v
-		}
+		maps.Copy(deps, ft.ruleDeps)
 		for i, fwd := range ext.fwd {
 			target := fwd[1:]
 			if dep, ok := ft.ruleDeps[target]; ok {

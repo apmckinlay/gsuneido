@@ -120,10 +120,7 @@ func (sj *SemiJoin) getNrows() (int, int) {
 	if n1 == 0 || n2 == 0 || p2 == 0 {
 		return 0, p1
 	}
-	est := n1 * n2 / p2
-	if est > n1 {
-		est = n1
-	}
+	est := min(n1*n2/p2, n1)
 	return est, p1
 }
 

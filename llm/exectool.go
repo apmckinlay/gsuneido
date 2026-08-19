@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -77,7 +78,7 @@ func execTool(code string) (result execOutput, err error) {
 			printBuf.WriteString(core.ToStr(s))
 			return nil
 		},
-		BuiltinParams: core.BuiltinParams{ParamSpec: core.ParamSpec1},
+		ParamSpec: core.ParamSpec1,
 	})
 	th.Suneido.Store(suneido)
 
@@ -97,8 +98,8 @@ func execTool(code string) (result execOutput, err error) {
 	if res != nil {
 		results = append(results, resultItem(th, res))
 	} else if len(th.ReturnMulti) > 0 {
-		for i := len(th.ReturnMulti) - 1; i >= 0; i-- {
-			results = append(results, resultItem(th, th.ReturnMulti[i]))
+		for _, v := range slices.Backward(th.ReturnMulti) {
+			results = append(results, resultItem(th, v))
 		}
 	}
 	result = execOutput{

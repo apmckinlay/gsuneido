@@ -112,7 +112,7 @@ func newProject(src Query, cols []string) Query {
 }
 
 func newProject2(src Query, cols []string, includeDeps bool) *Project {
-	p := &Project{Query1: Query1{source: src}}
+	p := &Project{source: src}
 	if hasKey(cols, src.Keys(), src.Fixed()) {
 		p.unique = true
 		if includeDeps {
@@ -330,14 +330,14 @@ func (p *Project) transformRename(r *Rename) Query {
 	var newFrom, newTo []string
 	from := r.from
 	to := r.to
-	for i := len(to) - 1; i >= 0; i-- {
-		ck := to[i]
+	for i, ck := range slices.Backward(to) {
+
 		if p.unique {
-			ck = strings.TrimSuffix(to[i], "_deps")
+			ck = strings.TrimSuffix(ck, "_deps")
 		}
 		if slices.Contains(p.columns, ck) || slices.Contains(newFrom, ck) {
 			newFrom = append(newFrom, from[i])
-			newTo = append(newTo, to[i])
+			newTo = append(newTo, to[i]) // not ck
 		}
 	}
 	slices.Reverse(newFrom)

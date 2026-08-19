@@ -97,7 +97,7 @@ func SuRecordFromObject(ob *SuObject) *SuRecord {
 
 func SuRecordFromRow(row Row, hdr *Header, table string, tran *SuTran) *SuRecord {
 	rec := SuRecord{ob: SuObject{defval: EmptyStr},
-		suRec: suRec{row: row, hdr: hdr, tran: tran, userow: true, status: OLD}}
+		row: row, hdr: hdr, tran: tran, userow: true, status: OLD}
 	if table != "" {
 		rec.table = table
 		rec.recoff = row[0].Off
@@ -142,14 +142,13 @@ func (r *SuRecord) Copy() Container {
 func (r *SuRecord) slice(n int) *SuRecord {
 	// keep row and hdr even if unpacked, to help ToRecord
 	return &SuRecord{
-		ob: *r.ob.slice(n),
-		suRec: suRec{
-			row:        r.row,
-			hdr:        r.safeHdr(),
-			userow:     r.userow,
-			status:     r.status,
-			dependents: r.copyDeps(),
-			invalid:    r.copyInvalid()}}
+		ob:         *r.ob.slice(n),
+		row:        r.row,
+		hdr:        r.safeHdr(),
+		userow:     r.userow,
+		status:     r.status,
+		dependents: r.copyDeps(),
+		invalid:    r.copyInvalid()}
 }
 
 func (r *SuRecord) safeHdr() *Header {
@@ -767,8 +766,7 @@ func WrapPanic(th *Thread, e any, suffix string) {
 		s := string(e.SuStr) + " (" + suffix + ")"
 		panic(&SuExcept{SuStr: SuStr(s), Callstack: e.Callstack})
 	case error:
-		var perr runtime.Error
-		if errors.As(e, &perr) {
+		if _, ok := errors.AsType[runtime.Error](e); ok {
 			dbg.PrintStack()
 			th.PrintStack()
 		}

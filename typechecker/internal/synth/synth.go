@@ -6,6 +6,8 @@ package synth
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 	"strings"
 
@@ -251,7 +253,7 @@ func genStmt(t *rapid.T, sc *genScope, depth int) Stmt {
 	default: // "assign"
 		name := fmt.Sprintf("v%d", rapid.IntRange(0, 4).Draw(t, "vidx"))
 		e := genExpr(t, sc, 2)
-		if !strContains(sc.locals, name) {
+		if !slices.Contains(sc.locals, name) {
 			sc.locals = append(sc.locals, name)
 		}
 		return Stmt{Kind: StAssign, Name: name, Expr: e}
@@ -261,7 +263,7 @@ func genStmt(t *rapid.T, sc *genScope, depth int) Stmt {
 func genStmts(t *rapid.T, sc *genScope, depth, maxStmts int) []Stmt {
 	n := rapid.IntRange(0, maxStmts).Draw(t, "nstmts")
 	out := make([]Stmt, 0, n)
-	for i := 0; i < n; i++ {
+	for range n {
 		out = append(out, genStmt(t, sc, depth))
 	}
 	return out
@@ -272,7 +274,7 @@ func genMethod(t *rapid.T, name string, members, methodNames []string) Method {
 	params := make([]Param, np)
 	paramNames := make([]string, np)
 	sawDefault := false
-	for i := 0; i < np; i++ {
+	for i := range np {
 		pn := fmt.Sprintf("p%d", i)
 		paramNames[i] = pn
 		if sawDefault || rapid.Bool().Draw(t, "hasdef") {
@@ -293,18 +295,18 @@ func GenProgram(t *rapid.T, cfg Config) Program {
 	nmem := rapid.IntRange(0, 3).Draw(t, "nmem")
 	members := make([]Member, nmem)
 	memberNames := make([]string, nmem)
-	for i := 0; i < nmem; i++ {
+	for i := range nmem {
 		n := fmt.Sprintf("f%d", i)
 		memberNames[i] = n
 		members[i] = Member{Name: n, Seed: genLit(t)}
 	}
 	nmeth := rapid.IntRange(1, 3).Draw(t, "nmeth")
 	methodNames := make([]string, nmeth)
-	for i := 0; i < nmeth; i++ {
+	for i := range nmeth {
 		methodNames[i] = fmt.Sprintf("M%d", i)
 	}
 	methods := make([]Method, nmeth)
-	for i := 0; i < nmeth; i++ {
+	for i := range nmeth {
 		methods[i] = genMethod(t, methodNames[i], memberNames, methodNames)
 	}
 	return Program{Name: "T", Members: members, Methods: methods}
@@ -378,7 +380,7 @@ func renderParams(ps []Param) string {
 }
 
 func writeIndent(b *strings.Builder, n int) {
-	for i := 0; i < n; i++ {
+	for range n {
 		b.WriteByte('\t')
 	}
 }
@@ -456,15 +458,6 @@ func Render(p *Program) string {
 	return b.String()
 }
 
-func strContains(sl []string, s string) bool {
-	for _, x := range sl {
-		if x == s {
-			return true
-		}
-	}
-	return false
-}
-
 type GType int
 
 const (
@@ -536,16 +529,10 @@ type wtScope struct {
 }
 
 func (sc *wtScope) clone() *wtScope {
-	n := make(map[string]GType, len(sc.narrowed))
-	for k, v := range sc.narrowed {
-		n[k] = v
-	}
-	a := make(map[string]bool, len(sc.assigned))
-	for k, v := range sc.assigned {
-		a[k] = v
-	}
-	return &wtScope{localTypes: sc.localTypes, assigned: a, narrowed: n,
-		Members: sc.Members, Params: sc.Params, sigs: sc.sigs}
+	return &wtScope{localTypes: sc.localTypes,
+		assigned: maps.Clone(sc.assigned),
+		narrowed: maps.Clone(sc.narrowed),
+		Members:  sc.Members, Params: sc.Params, sigs: sc.sigs}
 }
 
 // visibleLocals lists locals readable in this scope at type want.
@@ -740,7 +727,7 @@ func genTypedStmt(t *rapid.T, sc *wtScope, depth int, ret GType, allowGuard bool
 func genTypedStmts(t *rapid.T, sc *wtScope, depth, max int, ret GType, allowGuard bool) []Stmt {
 	n := rapid.IntRange(0, max).Draw(t, "wtnstmts")
 	out := make([]Stmt, 0, n)
-	for i := 0; i < n; i++ {
+	for range n {
 		out = append(out, genTypedStmt(t, sc, depth, ret, allowGuard))
 	}
 	return out
@@ -766,7 +753,7 @@ func genProgramWT(t *rapid.T) Program {
 	nmem := rapid.IntRange(0, 3).Draw(t, "wtnmem")
 	members := map[string]GType{}
 	memberList := make([]Member, nmem)
-	for i := 0; i < nmem; i++ {
+	for i := range nmem {
 		n := fmt.Sprintf("f%d", i)
 		ty := rapid.SampledFrom(BaseTypes).Draw(t, "wtmemtype")
 		members[n] = ty
@@ -774,13 +761,13 @@ func genProgramWT(t *rapid.T) Program {
 	}
 	nmeth := rapid.IntRange(1, 3).Draw(t, "wtnmeth")
 	sigs := make([]wtSig, nmeth)
-	for i := 0; i < nmeth; i++ {
+	for i := range nmeth {
 		sigs[i] = wtSig{Name: fmt.Sprintf("M%d", i),
 			nparams: rapid.IntRange(0, 2).Draw(t, "wtnparams"),
 			ret:     rapid.SampledFrom(BaseTypes).Draw(t, "wtret")}
 	}
 	methods := make([]Method, nmeth)
-	for i := 0; i < nmeth; i++ {
+	for i := range nmeth {
 		// DAG calls only (earlier methods): a self-call cycle can be valueless
 		// (M1() { return .M1() }), which voids the generator's return-type
 		// ground truth. general mode still generates recursion.
@@ -799,7 +786,7 @@ var ctorPayloads = []GType{GtNum, GtStr, GtDate, GtObj}
 func genOptionalMembers(t *rapid.T) []Member {
 	nopt := rapid.IntRange(0, 2).Draw(t, "wtnopt")
 	out := make([]Member, nopt)
-	for i := 0; i < nopt; i++ {
+	for i := range nopt {
 		out[i] = Member{Name: fmt.Sprintf("o%d", i), Seed: Lit{Kind: LitFalse},
 			Ctor:    rapid.SampledFrom([]CtorMode{CtorAlways, CtorMaybe, CtorNever}).Draw(t, "wtoptmode"),
 			Payload: rapid.SampledFrom(ctorPayloads).Draw(t, "wtoptpayload")}

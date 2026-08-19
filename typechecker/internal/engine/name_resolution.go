@@ -4,6 +4,8 @@
 package engine
 
 import (
+	"maps"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
@@ -401,9 +403,7 @@ func walkLoopFixpoint(sc scope, walkBody func(scope)) {
 		}
 		cur = next
 	}
-	for name, t := range cur {
-		sc[name] = t
-	}
+	maps.Copy(sc, cur)
 }
 
 func joinScopeInto(dst, src scope) {
@@ -430,11 +430,7 @@ func scopesEqual(a, b scope) bool {
 }
 
 func cloneScope(sc scope) scope {
-	out := make(scope, len(sc))
-	for k, v := range sc {
-		out[k] = v
-	}
-	return out
+	return maps.Clone(sc)
 }
 
 func mergeScopesN(dst scope, branches []scope) {

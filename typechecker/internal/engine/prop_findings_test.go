@@ -151,7 +151,7 @@ func TestPipelineDeterministicOnRecursiveMembers(t *testing.T) {
 	}
 `
 	first := ""
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		env := mustRun(t, src)
 		got := fmt.Sprintf("f0=%v|f1=%v|M0=%v|M1=%v|M2=%v",
 			env.Members["f0"], env.Members["f1"],

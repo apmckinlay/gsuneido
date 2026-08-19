@@ -99,7 +99,7 @@ func TestExecTool(t *testing.T) {
 			th.Call(printFn, args[0])
 			return nil
 		},
-		BuiltinParams: core.BuiltinParams{ParamSpec: core.ParamSpec1},
+		ParamSpec: core.ParamSpec1,
 	})
 	{
 		result, err := execTool("Print('hello')")

@@ -35,7 +35,7 @@ type Extend struct {
 }
 
 func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
-	e := &Extend{Query1: Query1{source: src}, cols: cols, exprs: exprs}
+	e := &Extend{source: src, cols: cols, exprs: exprs}
 	e.checkDependencies()
 	srcCols := e.source.Columns()
 	if !set.Disjoint(e.cols, srcCols) {

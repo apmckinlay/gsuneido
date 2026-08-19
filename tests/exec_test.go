@@ -70,7 +70,6 @@ var tests []registered
 func RunRegistered(t *testing.T) bool {
 	ok := true
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			if !runSource(tc.source) {
 				ok = false

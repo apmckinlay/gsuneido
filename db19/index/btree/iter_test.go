@@ -832,7 +832,6 @@ func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 	fullExpected := groups * maxWidth
 
 	for _, width := range widths {
-		width := width
 		endSuffix := startSuffix + width
 		org := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
 		end := fmt.Sprintf("%0*d", suffixWidth, endSuffix)
@@ -1058,9 +1057,9 @@ func TestSkipSeekNextGroupMultiLevel(t *testing.T) {
 	defer SetSplit(SetSplit(4)) // small split -> treeLevels >= 1
 	b := NewBuilder(stor.HeapStor(64 * 1024))
 	// Many groups spread across multiple leaf nodes so the skip crosses tree levels
-	for g := 0; g < 30; g++ {
+	for g := range 30 {
 		first := fmt.Sprintf("g%02d", g)
-		for s := 0; s < 10; s++ {
+		for s := range 10 {
 			assert.That(b.Add(ixkey.CompKey(first, fmt.Sprintf("%02d", s)), uint64(g*10+s+1)))
 		}
 	}
@@ -1084,9 +1083,9 @@ func TestSkipSeekNextGroupMultiLevel(t *testing.T) {
 func TestSkipSeekPrevGroupMultiLevel(t *testing.T) {
 	defer SetSplit(SetSplit(4)) // small split -> treeLevels >= 1
 	b := NewBuilder(stor.HeapStor(64 * 1024))
-	for g := 0; g < 30; g++ {
+	for g := range 30 {
 		first := fmt.Sprintf("g%02d", g)
-		for s := 0; s < 10; s++ {
+		for s := range 10 {
 			assert.That(b.Add(ixkey.CompKey(first, fmt.Sprintf("%02d", s)), uint64(g*10+s+1)))
 		}
 	}

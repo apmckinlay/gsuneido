@@ -4,6 +4,7 @@
 package engine
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -77,12 +78,7 @@ func eqNarrows(p synth.Program) bool {
 		if e.Kind == synth.ExBin && (e.Op == "is" || e.Op == "isnt") {
 			return true
 		}
-		for i := range e.Args {
-			if exprHas(e.Args[i]) {
-				return true
-			}
-		}
-		return false
+		return slices.ContainsFunc(e.Args, exprHas)
 	}
 	var stmtsHave func(ss []synth.Stmt) bool
 	stmtsHave = func(ss []synth.Stmt) bool {

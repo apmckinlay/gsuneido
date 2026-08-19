@@ -27,8 +27,8 @@ func NewMinus(src1, src2 Query, t QueryTran) *Minus {
 }
 
 func newMinus(src1, src2 Query, t QueryTran, prevFixed1, prevFixed2 Fixed) *Minus {
-	m := Minus{qt: t, prevFixed1: prevFixed1, prevFixed2: prevFixed2}
-	m.Compatible = *newCompatible(src1, src2)
+	m := Minus{qt: t, prevFixed1: prevFixed1, prevFixed2: prevFixed2,
+		Compatible: *newCompatible(src1, src2)}
 	m.header = src1.Header()
 	m.keys = src1.Keys()
 	m.indexes = src1.Indexes()

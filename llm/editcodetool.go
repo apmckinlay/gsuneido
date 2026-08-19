@@ -361,14 +361,8 @@ func extractContext(text string, start, end int) string {
 	}
 
 	// Calculate context range (4 lines before and after)
-	contextStart := start - 4
-	if contextStart < 1 {
-		contextStart = 1
-	}
-	contextEnd := end + 4
-	if contextEnd > len(lines) {
-		contextEnd = len(lines)
-	}
+	contextStart := max(start-4, 1)
+	contextEnd := min(end+4, len(lines))
 
 	// Build result with line numbers
 	var sb strings.Builder

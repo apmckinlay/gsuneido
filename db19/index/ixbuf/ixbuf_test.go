@@ -699,7 +699,6 @@ func BenchmarkSkipScanBreakevenVsFullScan(b *testing.B) {
 	fullExpected := groups * maxWidth
 
 	for _, width := range widths {
-		width := width
 		endSuffix := startSuffix + width
 		org := fmt.Sprintf("%0*d", suffixWidth, startSuffix)
 		end := fmt.Sprintf("%0*d", suffixWidth, endSuffix)
