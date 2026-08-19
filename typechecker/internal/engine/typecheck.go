@@ -206,6 +206,43 @@ func flagForOpLabel(opLabel string) Flag {
 	return FlagNone
 }
 
+func catCrashMember(m DynType) bool {
+	if _, ok := m.(Instance); ok {
+		return true
+	}
+	switch m {
+	case TObject, TSequence, TDate, TFunction, TBlock, TClass:
+		return true
+	}
+	return false
+}
+
+func catCrashDiag(method, opLabel string, pos int, ty DynType, badMembers []DynType) (Diagnostic, bool) {
+	for _, m := range badMembers {
+		if !catCrashMember(m) {
+			continue
+		}
+		msg := fmt.Sprintf("operator %q may fail at runtime: can't convert %v to String",
+			opLabel, m)
+		if !dynEqual(ty, m) {
+			msg += fmt.Sprintf(" (operand type %v)", ty)
+		}
+		return Diagnostic{
+			Severity: SeverityError,
+			Method:   method,
+			Pos:      pos,
+			Flag:     FlagNone,
+			Got:      []DynType{ty},
+			Msg:      msg,
+		}, true
+	}
+	return Diagnostic{}, false
+}
+
+func isCatOp(opLabel string) bool {
+	return opLabel == "$" || opLabel == "$="
+}
+
 func classifyOperand(method, opLabel string, operand ast.Expr, env TypeEnv, required DynType) (Diagnostic, bool) {
 	if operand == nil {
 		return Diagnostic{}, false
@@ -235,6 +272,11 @@ func classifyOperand(method, opLabel string, operand ast.Expr, env TypeEnv, requ
 				opLabel, required, ty),
 		}, true
 	case len(badMembers) > 0:
+		if isCatOp(opLabel) {
+			if d, ok := catCrashDiag(method, opLabel, pos, ty, badMembers); ok {
+				return d, true
+			}
+		}
 		return Diagnostic{
 			Severity: SeverityError,
 			Method:   method,
