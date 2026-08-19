@@ -14,7 +14,7 @@ import (
 
 var _ = addTool(toolSpec{
 	name:        "suneido_query",
-	description: "Execute a Suneido database query and return the results as Suneido-format text (Value.String) in a simple row/column array format (limit 100)",
+	description: "Execute a Suneido database query and return the results as Suneido-format text (Value.String) in a simple row/column array format",
 	params: []stringParam{
 		{name: "query", description: "Suneido query (e.g. 'tables sort table')", required: true},
 	},
@@ -42,6 +42,7 @@ type queryOutput struct {
 }
 
 const queryLimit = 100
+const querySizeLimit = 10000
 
 func queryTool(query string) (result queryOutput, err error) {
 	defer func() {
@@ -55,61 +56,64 @@ func queryTool(query string) (result queryOutput, err error) {
 	defer tran.Complete()
 	q := tran.Query(query, nil)
 	hdr := q.Header()
-	cols := hdr.Columns
-	var rows [][]core.Value
 	truncated := false
 	st := core.NewSuTran(tran, false)
+	nrows := 0
+	qr := querier{hdr: hdr, th: th, st: st}
+	qr.sb.WriteString("[\n")
+	qr.formatQueryHeader()
 	for row, _ := q.Get(th, core.Next); row != nil; row, _ = q.Get(th, core.Next) {
-		if len(rows) >= queryLimit {
+		nrows++
+		if nrows > queryLimit || !qr.formatQueryRow(row) {
+			qr.sb.WriteString("// too large, truncated\n")
 			truncated = true
 			break
 		}
-		vals := make([]core.Value, len(cols))
-		for i, col := range cols {
-			vals[i] = row.GetVal(hdr, col, th, st)
-		}
-		rows = append(rows, vals)
 	}
+	qr.sb.WriteString("]\n")
 	result = queryOutput{
 		Query:   query,
-		Results: formatQueryResult(cols, rows, truncated),
+		Results: qr.sb.String(),
 		HasMore: truncated,
 	}
 	return result, nil
 }
 
-func formatQueryResult(cols []string, rows [][]core.Value, truncated bool) string {
-	var sb strings.Builder
-	sb.WriteString("[\n")
-	sb.WriteString(formatQueryHeader(cols))
-	sb.WriteString("\n")
-	for _, row := range rows {
-		sb.WriteString(formatQueryRow(row))
-		sb.WriteString("\n")
-	}
-	if truncated {
-		sb.WriteString("// truncated\n")
-	}
-	sb.WriteString("]\n")
-	return sb.String()
+type querier struct {
+	hdr *core.Header
+	th  *core.Thread
+	st  *core.SuTran
+	sb  strings.Builder
 }
 
-func formatQueryHeader(cols []string) string {
-	qs := make([]string, len(cols))
-	for i, col := range cols {
-		qs[i] = strconv.Quote(col)
+func (qr *querier) formatQueryHeader() {
+	sep := "["
+	for _, col := range qr.hdr.Columns {
+		qr.sb.WriteString(sep)
+		sep = ", "
+		qr.sb.WriteString(strconv.Quote(col))
 	}
-	return "[" + strings.Join(qs, ", ") + "]"
+	qr.sb.WriteString("]\n")
 }
 
-func formatQueryRow(row []core.Value) string {
-	ss := make([]string, len(row))
-	for i, v := range row {
+func (qr *querier) formatQueryRow(row core.Row) bool {
+	sep := "["
+	for _, col := range qr.hdr.Columns {
+		v := row.GetVal(qr.hdr, col, qr.th, qr.st)
+		s := ""
 		if v == nil {
-			ss[i] = "null"
+			s = "null"
 		} else {
-			ss[i] = v.String()
+			s = v.String()
 		}
+		if qr.sb.Len()+len(s) > querySizeLimit {
+			qr.sb.WriteString("]\n")
+			return false
+		}
+		qr.sb.WriteString(sep)
+		sep = ", "
+		qr.sb.WriteString(s)
 	}
-	return "[" + strings.Join(ss, ", ") + "]"
+	qr.sb.WriteString("]\n")
+	return true
 }
