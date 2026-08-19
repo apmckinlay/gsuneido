@@ -97,7 +97,7 @@ pbt :
 	go test $(PBT_PKGS) -run TestProp -count=1 \
 	  -timeout $(PBT_TIMEOUT) -rapid.checks=$(PBT_ITERS)
 
-fulltest: build test
+fulltest: build test pbt
 	go test -run "^$$" -fuzz=FuzzRandom -fuzztime=60s ./dbms/query/
 	./gs_$(GOOS)_$(GOARCH)$(EXE) etatests.ss	
 	./gs_$(GOOS)_$(GOARCH)$(EXE) "QueryFuzz.Cmdline(60)"	
