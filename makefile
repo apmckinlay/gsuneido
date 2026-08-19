@@ -85,10 +85,18 @@ deploy : git-status gs_windows_amd64.exe gs_windows_amd64_gui.exe \
 git-status :
 	@test -z "$(shell git status --porcelain)"
 
+PBT_PKGS     = ./typechecker/internal/engine/ ./typechecker/typealgebra/
+PBT_ITERS   ?= 500
+PBT_TIMEOUT ?= 30m
+
 test :
 	CGO_ENABLED=0 \
 	go test -short -vet=off -timeout 30s ./...
-	
+
+pbt :
+	go test $(PBT_PKGS) -run TestProp -count=1 \
+	  -timeout $(PBT_TIMEOUT) -rapid.checks=$(PBT_ITERS)
+
 fulltest: build test
 	go test -run "^$$" -fuzz=FuzzRandom -fuzztime=60s ./dbms/query/
 	./gs_$(GOOS)_$(GOARCH)$(EXE) etatests.ss	
@@ -166,5 +174,5 @@ help:
 	@echo "clean"
 	@echo "    remove built files"
 
-.PHONY : FORCE build test fulltest generate clean zap race racetest release \
+.PHONY : FORCE build test pbt fulltest generate clean zap race racetest release \
     help deploy git-status both gui sujs
