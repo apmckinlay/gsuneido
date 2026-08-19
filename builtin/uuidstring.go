@@ -4,8 +4,9 @@
 package builtin
 
 import (
+	"uuid"
+
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/google/uuid"
 )
 
 var _ = builtin(UuidString, "() :string")

@@ -5,7 +5,6 @@ go 1.27
 require (
 	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/aymanbagabas/go-udiff v0.4.1
-	github.com/google/uuid v1.6.0
 	github.com/kljensen/snowball v0.10.0
 	golang.org/x/crypto v0.54.0
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
