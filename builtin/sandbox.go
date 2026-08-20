@@ -50,7 +50,7 @@ func sandboxPath(op, name string) (string, error) {
 		return name, nil
 	}
 	if filepath.IsAbs(name) {
-		return "", fmt.Errorf("%s: absolute paths disabled in sandbox", op)
+		return "", fmt.Errorf("%s: absolute paths disabled in sandbox (%s)", op, name)
 	}
 	if filepath.VolumeName(name) != "" {
 		return "", fmt.Errorf("%s: volume paths disabled in sandbox", op)
