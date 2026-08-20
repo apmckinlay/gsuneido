@@ -96,9 +96,12 @@ class
 	StripSort(query)
 		{
 		sups = QueryGetSuppressions(query)
+		sortField = query.AfterLast(' sort ').Replace('\<reverse\>', '').Trim()
 		query = QueryStripSort(query)
-		if .join? is true and query.Has?('leftjoin by')
+		j = .sf.Joins(sortField).Trim()
+		if .join? is true and j isnt '' and query.Has?(j)
 			query = query.BeforeLast('leftjoin by')
+
 		if query.Has?(' extend reverse__')
 			query = query.BeforeFirst(' extend reverse__')
 		keep = ''

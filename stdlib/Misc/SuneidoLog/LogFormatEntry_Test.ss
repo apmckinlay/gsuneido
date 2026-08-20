@@ -159,6 +159,12 @@ Test
 		ob = #(one: 1, test_passhash: 'test123', two: #(a: 'a', b: 'b'))
 		Assert(LogFormatEntry(ob)
 			is: #(one: 1, test_passhash: '***', two: #(a: 'a', b: 'b')))
+
+		ob = #(one: 1, password: #(inner: 'secret', more: 'data'))
+		Assert(LogFormatEntry(ob) is: #(one: 1, password: ('***')))
+
+		ob = #(one: 1, token: #())
+		Assert(LogFormatEntry(ob) is: #(one: 1, token: ('***')))
 		}
 
 	Test_privateData?()

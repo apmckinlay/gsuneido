@@ -107,10 +107,10 @@ Test
 				", after " $ Display(file2DateAfter) $ ";")
 
 		//deleted file
-		files_before = Object(file1)
+		files_before = Object(file1, file2)
 		files_after = Object()
 		errorStr = c(files_before, files_after)
-		Assert(errorStr like: "DELETED xxxETAfile.txt")
+		Assert(errorStr like: "DELETED xxxETAfile.txt, DELETED xxxETAfile2.txt")
 		}
 	Test_findFile()
 		{

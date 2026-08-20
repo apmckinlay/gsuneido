@@ -7,11 +7,12 @@ Contributions:
 		// don't set current directory if server
 		if CSDev?() and not Server?()
 			{
-			prevDir = GetCurrentDirectory()
-			folder = GetAppTempPath() $ 'csdevtests'
+			prevDir = false
 			try
 				{
+				folder = GetAppTempPath() $ 'csdevtests'
 				EnsureDir(folder)
+				prevDir = GetCurrentDirectory()
 				SetCurrentDirectory(folder)
 				}
 			catch (e)
@@ -24,6 +25,8 @@ Contributions:
 		{
 		if CSDev?() and not Server?()
 			{
+			if prevSettings.prevDir is false
+				return
 			SetCurrentDirectory(prevSettings.prevDir)
 			folder = GetAppTempPath() $ 'csdevtests'
 			if DirExists?(folder)

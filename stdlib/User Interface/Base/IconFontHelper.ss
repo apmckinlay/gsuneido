@@ -18,7 +18,7 @@ class
 			"starRatingImageEmpty", "starRatingImageFull", "starRatingImageHalf",
 			"refresh", "previous_flag", "next_flag", "im", "view_form", "view_list",
 			"locked", "unlocked", "invalid_lock", "valid_lock", "square", "restore",
-			"menu"),
+			"menu", "lambda"),
 		'suneido2.ttf': #(
 			"type", "select", "rounded-rectangle", "rectangle", "line", "image",
 			"ellipse", "curve", "location", "close"))

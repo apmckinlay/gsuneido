@@ -183,47 +183,60 @@ Test
 					}
 				}`])
 
-		createMethod = .SpyOn(
-			Addon_go_to_definition.Addon_go_to_definition_create_method).Return('')
-		gotoMethod = .SpyOn(Addon_go_to_definition.Addon_go_to_definition_gotoMethodLine)
+		addon = (.cl)(.fakeEditor(testClass, 131), [])
 
-		addon = Addon_go_to_definition(.fakeEditor(testClass, 131), [])
+		_createMethod = Object()
+		_gotodefMethod = Object()
 		Assert(addon.Addon_go_to_definition_gotoMethod?('.Method1', testClass),
 			msg: 'Method1')
-		Assert(gotoMethod.CallLogs()[0].method is: 'Method1')
+		Assert(_gotodefMethod[0] is: 'Method1')
 
 		Assert(addon.Addon_go_to_definition_gotoMethod?('.Method2', testClass) is: false)
-		Assert(createMethod.CallLogs()[0].method is: 'Method2')
-		Assert(gotoMethod.CallLogs()[1].method is: 'Method2')
+		Assert(_createMethod[0] is: 'Method2')
+		Assert(_gotodefMethod[0] is: 'Method2')
 
-		addon = Addon_go_to_definition(.fakeEditor(testClass, 203), [])
+		addon = (.cl)(.fakeEditor(testClass, 203), [])
 		Assert(addon.Addon_go_to_definition_gotoMethod?('.method2', testClass),
 			msg: 'method2')
-		Assert(gotoMethod.CallLogs()[2].method is: 'method2')
+		Assert(_gotodefMethod[0] is: 'method2')
 
 		Assert(addon.Addon_go_to_definition_gotoMethod?('.method3', testClass) is: false)
-		Assert(createMethod.CallLogs()[1].method is: 'method3')
-		Assert(gotoMethod.CallLogs()[3].method is: 'method3')
+		Assert(_createMethod[0] is: 'method3')
+		Assert(_gotodefMethod[0] is: 'method3')
 
-		addon = Addon_go_to_definition(.fakeEditor(testClass, 44), [])
+		addon = (.cl)(.fakeEditor(testClass, 44), [])
 		Assert(addon.Addon_go_to_definition_gotoMethod?('.fake', testClass), msg: '.fake')
 
-		addon = Addon_go_to_definition(.fakeEditor(testClass, 71), [])
+		addon = (.cl)(.fakeEditor(testClass, 71), [])
 		Assert(addon.Addon_go_to_definition_gotoMethod?('.Fakest', testClass),
 			msg: '.Fakest')
 
 		// Members / Methods defined in parent class
-		addon = Addon_go_to_definition(.fakeEditor(testClass, 23), [])
+		addon = (.cl)(.fakeEditor(testClass, 23), [])
 		Assert(addon.Addon_go_to_definition_gotoMethod?('.CallClass', testClass)
 			is: false)
 
-		addon = Addon_go_to_definition(.fakeEditor(testClass, 94, send?:), [])
+		addon = (.cl)(.fakeEditor(testClass, 94, send?:), [])
 		Assert(addon.Addon_go_to_definition_gotoMethod?('.ParentMethod', testClass),
 			msg: '.ParentMethod')
 
-		addon = Addon_go_to_definition(.fakeEditor(testClass, 94, send?:), [])
+		addon = (.cl)(.fakeEditor(testClass, 94, send?:), [])
 		Assert(addon.Addon_go_to_definition_gotoMethod?('.ParentMember', testClass)
 			msg: '.ParentMethod 2')
+		}
+
+	cl: Addon_go_to_definition
+		{
+		Addon_go_to_definition_create_method(code /*unused*/, method, pos /*unused*/)
+			{
+			_createMethod[0] = method
+			return ''
+			}
+		Addon_go_to_definition_gotoMethodLine(method, code)
+			{
+			_gotodefMethod[0] = method
+			super.Addon_go_to_definition_gotoMethodLine(method, code)
+			}
 		}
 
 	fakeEditor(text, expectedPos, send? = false)

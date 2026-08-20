@@ -34,5 +34,5 @@
 		type: 'slow', warning:)
 
 	(name: Qc_TypeCheck,
-		type: 'normal', warning:, noTests:)
+		type: 'normal', warning:)
 )

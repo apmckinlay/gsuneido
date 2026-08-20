@@ -5,7 +5,7 @@ class
 		{
 		.editModel = .model.EditModel
 		.Hwnd = .parent.Hwnd
-		.Window = Object(Hwnd: .parent.Window.Hwnd)
+		.Window = .parent.Window
 		.UniqueId = .parent.UniqueId
 		.Controller = this
 		}
@@ -36,7 +36,7 @@ class
 		row = .model.GetRecordRowNum(.rec) + .model.Offset
 		.editor = new ListEditWindow(
 			0,	readonly, .model.ColModel.FindCol(.col), row, this,
-			:custom, :customFields)
+			:custom, :customFields, cellRect: false /*unused in webgui*/)
 		return .rec
 		}
 

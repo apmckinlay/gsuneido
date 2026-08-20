@@ -104,7 +104,9 @@ Controller
 
 	loadOkay?()
 		{
-		return Suneido.ShowNewEntries.GetDefault('status', false)
+		return Suneido.Member?('ShowNewEntries')
+			? Suneido.ShowNewEntries.GetDefault('status', false)
+			: false
 		}
 
 	Destroy()

@@ -308,6 +308,7 @@ class
 		afterEachObj = .afterEachObj
 		SuUI.GetCurrentWindow().Magick(imFiles, cmd).Then(
 			{|result|
+			processErrorAndContinue = .processErrorAndContinue
 			if result.exitCode is 0
 				{
 				output = result.outputFiles[0]
@@ -316,13 +317,15 @@ class
 					sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
 					compressImg = SuUI.GetCurrentWindow().ArrayToString(sourceBytes)
 					if false is afterImageCompressed(compressImg, imageData, head, obj)
-						.processErrorAndContinue(.maxCompressedError)
+						// fall back to send as links for emails
+						processErrorAndContinue('invalid image after compressed')
 					else
 						afterEachObj(head, pdfOb, reader, f, obj, objs, trailers)
 					})
 				}
 			else
-				.processErrorAndContinue(.maxCompressedError)
+				// fall back to links for emails
+				processErrorAndContinue('compressing image failed')
 			})
 		}
 

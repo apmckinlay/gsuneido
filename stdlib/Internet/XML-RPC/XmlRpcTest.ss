@@ -58,4 +58,39 @@ Test
 '
 		Assert((new XmlRpc).Decode2(msg) is: #(''))
 		}
+	Test_Decode2_StaleValue()
+		{
+		// stale .value (from a preceding element) should not bleed
+		// into .name when Characters is not called (e.g. <name/>)
+
+		// case 1: stale number from <int>
+		msg = '<?xml version="1.0"?>' $
+			'<methodCall>' $
+			'<methodName>F</methodName>' $
+			'<params><param><value><struct>' $
+			'<member>' $
+			'<value><int>123</int></value>' $
+			'<name/>' $
+			'<value><string>test</string></value>' $
+			'</member>' $
+			'</struct></value></param></params>' $
+			'</methodCall>'
+		Assert((new XmlRpc).Decode2(msg)
+			is: #('F', #(123, "": "test")))
+
+		// case 2: stale string from <string>
+		msg = '<?xml version="1.0"?>' $
+			'<methodCall>' $
+			'<methodName>F</methodName>' $
+			'<params><param><value><struct>' $
+			'<member>' $
+			'<value><string>evil</string></value>' $
+			'<name/>' $
+			'<value><string>data</string></value>' $
+			'</member>' $
+			'</struct></value></param></params>' $
+			'</methodCall>'
+		Assert((new XmlRpc).Decode2(msg)
+			is: #('F', #("evil", "": "data")))
+		}
 	}

@@ -21,7 +21,7 @@ Controller
 			Object(.multiTypeField, width: 12, name: 'condition_return')
 			name: 'condition_horz')
 		return Object('Vert'
-			Object('Repeat', row, name: 'repeat')
+			Object('Repeat', row, maxRecords: FormulaIf.MaxBranches, name: 'repeat')
 			Object('Static' 'Else', name:'elseStatic')
 			Object(.multiTypeField, width: 12, name: 'condition_else'))
 		}
@@ -41,17 +41,21 @@ Controller
 		{
 		horz = .FindControl('condition_horz')
 		header = Object('Horz'
-			Object('Static' 'Field', name: 'fieldStatic',
-				xmin: ScaleWithDpiFactor.Reverse(horz.condition_field.Xmin)+ .skip)
-			Object('Static' 'Operator', name: 'opStatic',
-				xmin: ScaleWithDpiFactor.Reverse(horz.condition_op.Xmin)+ .skip)
-			Object('Static' 'Value', name:'valueStatic',
-				xmin: ScaleWithDpiFactor.Reverse(horz.condition_value.Xmin)+ .skip)
-			Object('Static' 'Then', name:'returnStatic',
-				xmin: ScaleWithDpiFactor.Reverse(horz.condition_return.Xmin))
+			Object('Static' 'Field', name: 'fieldStatic')
+			Object('Skip', .skip)
+			Object('Static' 'Operator', name: 'opStatic')
+			Object('Skip', .skip)
+			Object('Static' 'Value', name:'valueStatic')
+			Object('Skip', .skip)
+			Object('Static' 'Then', name:'returnStatic')
 			)
 		content = .FindControl('content')
-		content.Insert(0, header)
+		headerCtrl = content.Insert(0, header)
+		headers = headerCtrl.GetChildren()
+		headers[0/*=Field*/].CalcXminByControls(horz.condition_field)
+		headers[2/*=Operator*/].CalcXminByControls(horz.condition_op)
+		headers[4/*=Value*/].CalcXminByControls(horz.condition_value)
+		headers[6/*=Then*/].CalcXminByControls(horz.condition_return)
 		}
 
 	NewValue(@unused)

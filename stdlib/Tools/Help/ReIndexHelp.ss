@@ -6,7 +6,7 @@ class
 		if Sys.Client?()
 			return ServerEval('ReIndexHelp', table)
 		if Contributions('HelpBook').Has?(table)
-			Thread({ .checkAndGenerate(table) })
+			Thread(.checkAndGenerate, table)
 		}
 
 	checkAndGenerate(table)

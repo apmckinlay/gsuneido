@@ -3,6 +3,7 @@ Component
 	{
 	New()
 		{
+		.disabledBy = Object()
 		.ResetAccels()
 		}
 
@@ -101,7 +102,19 @@ Component
 	RegisterActiveWindow()
 		{
 		.GetContainerEl().AddEventListener('mousedown', .DoActivate, useCapture:)
+		SuRender().RegisterWindow(.UniqueId, this)
 		}
+
+	Disable(by)
+		{
+		.disabledBy.AddUnique(by)
+		}
+
+	Enable(by)
+		{
+		.disabledBy.Remove(by)
+		}
+
 	DoActivate(event, target = false)
 		{
 		if target is false
@@ -111,6 +124,9 @@ Component
 		// In this case, both windows will receive the mousedown event
 		if .windowContains?(target)
 			{
+			if .disabledBy.NotEmpty?()
+				.detectActivationOnDisabled()
+
 			if not Same?(SuRender().ActiveWindow, this) and
 				// need this to block further user actions during ListEditWindow commit
 				SuRender().ActiveWindow.Base?(ListEditWindowComponent)
@@ -122,6 +138,27 @@ Component
 				}
 			}
 		}
+
+	detectActivationOnDisabled()
+		{
+		info = Object()
+		for id in .disabledBy
+			{
+			if false is window = SuRender().GetRegisteredComponent(id)
+				info[id] = 'Component not found'
+			else
+				{
+				try
+					modal = window.AnchorEl.matches(':modal')
+				catch (e)
+					modal = e
+				info[id] = modal
+				}
+			}
+		Print('DetectActivationOnDisabled', info)
+		.Event('DetectActivationOnDisabled', info)
+		}
+
 	windowContains?(target)
 		{
 		return .findIf(target)
@@ -186,5 +223,11 @@ Component
 
 	HighlightDefaultButton(unused)
 		{
+		}
+
+	Destroy()
+		{
+		SuRender().UnRegisterWindow(.UniqueId)
+		super.Destroy()
 		}
 	}

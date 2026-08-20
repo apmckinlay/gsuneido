@@ -197,8 +197,8 @@ class
 		// for TranslateLanguage Cache
 		Suneido.CacheLanguage = ""
 
-		Suneido.User = Suneido.User_Loaded = "default"
-		Suneido.user_roles = #('admin')
+		Suneido.User = Suneido.User_Loaded = false
+		Suneido.user_roles = #()
 
 		if not Sys.Win32?()
 			{

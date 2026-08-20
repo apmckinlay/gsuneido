@@ -13,9 +13,6 @@ Component
 			outline-offset: -1px;
 			outline: 1px solid black;
 		}
-		.su-treeview-container:focus {
-			outline: none;
-		}
 		.su-treeview {
 			position: absolute;
 			top: 0px;
@@ -69,7 +66,9 @@ Component
 		{
 		LoadCssStyles('treeview-control.css', .styles)
 		.CreateElement('div', className: 'su-treeview-container')
+		.El.tabIndex = "0"
 		.El.AddEventListener('contextmenu', .contextMenu)
+		.El.AddEventListener('keydown', .keydown)
 
 		.root = CreateElement('ul', .El, className: 'su-treeview')
 		.trees = Object(.root)
@@ -135,6 +134,15 @@ Component
 			.EventWithOverlay('ContextMenu', id, event.clientX, event.clientY) })
 		event.StopPropagation()
 		event.PreventDefault()
+		}
+
+	keydown(event)
+		{
+		pressed = Object(
+			control: event.GetDefault(#ctrlKey, false),
+			shift: event.GetDefault(#shiftKey, false),
+			alt: event.GetDefault(#altKey, false))
+		.Event('TVN_KEYDOWN', event.key, pressed)
 		}
 
 	SetImage(id, image)

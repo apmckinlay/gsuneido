@@ -48,6 +48,8 @@ class
 		{
 		if Instance?(val) or Object?(val)
 			{
+			if .privateData?(member)
+				val = #('***')
 			.totalSize += String(member).Size()
 			log_ob = Object()
 			for var2 in val.Members()[.. .nestedObjectSizeLimit].Copy()

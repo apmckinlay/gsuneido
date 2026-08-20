@@ -41,7 +41,7 @@ Window
 
 	ActivateDialog()
 		{
-		JsWebSocketServer.MessageLoop()
+		SuJsWebSocketServer.MessageLoop()
 		result = .resultValue
 		.DESTROY()
 		return result

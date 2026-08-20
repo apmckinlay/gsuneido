@@ -138,6 +138,7 @@ Controller
 
 		block = option.option is 'Start' ? .copyAndRestore : .renameAndDelete
 		.forEachSelects(selects, block, option.tag)
+		PubSub.PublishConsolidate('LibraryTreeChange', force:)
 		return true
 		}
 

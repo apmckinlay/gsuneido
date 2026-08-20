@@ -36,10 +36,15 @@ class
 		return rtnTypes
 		}
 
+	MaxBranches: 126 // 126 * 2 + 1 = .maxArgs
+	maxArgs: 253
 	checkArgSize(args)
 		{
 		if args.Size() < 3/*=minimun args*/
 			throw "Formula: IF must have at least 3 arguments"
+
+		if args.Size() > .maxArgs
+			throw "Formula: IF has too many arguments"
 
 		if not args.Size().Odd?()
 			throw "Formula: IF must have odd number of arguments"

@@ -132,7 +132,7 @@ class
 				continue
 			if afterMem is false
 				{
-				errorStr $= 'DELETED ' $ file.name
+				errorStr $= 'DELETED ' $ file.name $ ', '
 				continue
 				}
 			errorStr $= "CHANGED " $ file.name $ ": "
@@ -144,7 +144,7 @@ class
 						Display(fileBefore[mem]) $ ", after " $
 						Display(fileAfter[mem]) $ "; "
 			}
-		return errorStr
+		return errorStr.RemoveSuffix(', ')
 		}
 
 	newFiles(files_after, files_before)

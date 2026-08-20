@@ -32,7 +32,7 @@ Controller
 			return
 		.qualityCtrl.Set("Running quality checker on " $ .classToCheck)
 		if .threadRunning is false
-			Thread({ .checkFunc(.lib, .classToCheck) })
+			Thread(.checkFunc, .lib, .classToCheck)
 		}
 
 	checkFunc(lib, classToCheck)

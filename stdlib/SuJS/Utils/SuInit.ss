@@ -10,12 +10,12 @@ class
 			Object?(run) ? Global(run[0])(@run.args) : (Global(run))()
 		else
 			{
-			if LastContribution('JsLogin').PostLogin(:set, :userAgent, :preAuth) is false
+			if LastContribution(#SuJsLogin).PostLogin(:set, :userAgent, :preAuth) is false
 				.exit()
 
 			SuRenderBackend().RegisterBeforeDisconnectFn(.onDisconnect)
 			PersistentWindow.Load(set)
-			if not JsLogin.NoAuth?()
+			if not SuJsLogin.NoAuth?()
 				Login.PostLoginPlugins(origCmd: '')
 			try Query1('postinit').text.Eval() // needs Eval
 			}
@@ -44,7 +44,7 @@ class
 		{
 		Sys.Init(suneidojs:)
 		user = info.user
-		Suneido.JsConnectionHost = info.host
+		Suneido.SuJsConnectionHost = info.host
 		Suneido.Merge(info)
 
 		if user is 'default'

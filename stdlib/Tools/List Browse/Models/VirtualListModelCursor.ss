@@ -218,13 +218,13 @@ class
 		if lines is 0
 			return .Pos
 
+		pos = .Pos
 		t = Timer()
 			{
 			startPos = .Pos
 			DoWithTran(.t)
 				{ |t|
 				step = lines.Sign()
-				pos = .Pos
 				end = .Pos + lines
 				action = step > 0 ? 'Next' : 'Prev'
 				// Have to do this so that consecutive cursor.Prev and cursor.Next calls

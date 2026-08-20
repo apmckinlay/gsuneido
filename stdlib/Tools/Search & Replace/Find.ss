@@ -4,26 +4,12 @@ class
 	{
 	findPat(find, options)
 		{
-		if options.expr is true
-			return .ast(find)
+		if options.comby is true
+			return find
 		else
 			return .Regex(find, options)
 		}
-	NeedAst?(options)
-		{
-		return options.expr is true
-		}
-	isAstPattern?(findpat)
-		{
-		return not String?(findpat)
-		}
-	ast(find)
-		{
-		try
-			return Tdop(find, type: 'expression')
-		catch
-			return ""
-		}
+
 	// options should be an object with regex, word, or case members
 	Regex(find, options)
 		{
@@ -35,25 +21,32 @@ class
 			rx = rx.Unescape() // allow \t, \n etc.
 		else
 			rx = "(?q)" $ rx $ "(?-q)"
+
 		if options.word is true
-			{
-			if find[0].Alpha?() or find[0] is '_' or
-				(options.regex is true and find[0] is '(')
-				rx = "\<" $ rx
-			if find[-1].AlphaNum?() or find[-1] is '_' or
-				(options.regex is true and find[-1] is ')')
-				rx = rx $ "\>"
-			}
+			rx = .handleWord(find, options, rx)
+
 		if options.case isnt true
 			rx = "(?i)" $ rx
 		return rx
 		}
+
+	handleWord(find, options, rx)
+		{
+		if find[0].Alpha?() or find[0] is '_' or
+			(options.regex is true and find[0] is '(')
+			rx = "\<" $ rx
+		if find[-1].AlphaNum?() or find[-1] is '_' or
+			(options.regex is true and find[-1] is ')')
+			rx = rx $ "\>"
+		return rx
+		}
+
 	// options should be an object with regex member
 	Replacement(replace, options)
 		{
 		if replace is ""
 			return ""
-		if options.regex is true or options.expr is true
+		if options.regex is true or options.comby is true
 			replace = replace.Unescape()
 		else
 			replace = `\=` $ replace
@@ -62,7 +55,7 @@ class
 
 	DoFind(text, from, options, prev = false)
 		{
-		_context = Object(:text, ast: options.GetDefault(#ast, false))
+		_context = Object(:text, comby: options.comby is true)
 		findpat = .findPat(options.find, options)
 		if findpat is ""
 			{ .beep(); return false }
@@ -85,11 +78,11 @@ class
 
 	findOne(i, findpat, prev = false)
 		{
-		if .isAstPattern?(findpat)
+		if _context.comby
 			{
-			if false is  _context.ast
-				return false
-			match = TdopSearch(_context.ast.Root, findpat, i, :prev)
+			match = CombyMatch(findpat, _context.text, pos: i, :prev)
+			if match isnt false
+				match = Object(Object(match.pos, match.end - match.pos))
 			}
 		else
 			{
@@ -126,34 +119,40 @@ class
 		{
 		findpat = .findPat(options.find, options)
 		if findpat is ""
-			{ .beep(); return false }
-		if false is s = .isAstPattern?(findpat) ? options.GetDefault(#ast, false) : text
-			return false
+			{ .beep(); return #() }
 		matches = Object()
 		.tryIgnoreRegexError()
 			{
-			s.ForEachMatch(findpat)
-				{|m|
-				matches.Add(m[0].Project(#(0, 1)))
+			if options.comby is true
+				{
+				for match in CombyMatch.All(findpat, text)
+					matches.Add(Object(match.pos, match.end - match.pos))
 				}
+			else
+				text.ForEachMatch(findpat)
+					{|m|
+					matches.Add(m[0].Project(#(0, 1)))
+					}
 			}
 		return matches
 		}
 
 	DoReplace(text, selected, from, to, options)
 		{
-		_context = Object(:text, ast: options.GetDefault(#ast, false))
+		_context = Object(:text, comby: options.comby is true)
 		findpat = .findPat(options.find, options)
 		if findpat is ""
 			{ .beep(); return false }
 		replacement = .Replacement(options.replace, options)
-		if .isAstPattern?(findpat)
+		if options.comby is true
 			{
 			if false is (match = .findOne(from, findpat)) or
 				match[0][0] + match[0][1] > to
 				return false
-			writer = _context.ast.GetNewWriter()
-			s = TdopReplace(writer, findpat, replacement, :from, :to)
+			result = CombyReplace(text, findpat, replacement, from, to)
+			suffix = text[to..]
+			newTo = result.Size() - suffix.Size()
+			s = result[from..newTo]
 			}
 		else
 			{

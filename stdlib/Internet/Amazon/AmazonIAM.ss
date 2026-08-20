@@ -5,18 +5,18 @@ class
 	RequestCredentials(user, accessKey/*unused*/ = '', secretKey/*unused*/ = '',
 		tags = #())
 		{
-		response = .RequestCredentialsRaw(user, tags)
+		response = .RequestCredentialsRaw(user, :tags)
 		if response is ''
 			return false
 		return .extractCredentials(response)
 		}
 
-	RequestCredentialsRaw(user, tags = #())
+	RequestCredentialsRaw(user, actions = false, tags = #())
 		{
 		if user.Blank?()
 			throw 'AmazonIAM: user must not be empty'
 
-		requestOb = .BuildRequest(user, :tags)
+		requestOb = .BuildRequest(user, :actions, :tags)
 		if not Object?(requestOb)
 			return ''
 		try
@@ -100,11 +100,12 @@ class
 			Action: 'GetFederationToken'
 			Name: String(user)
 			DurationSeconds: String(129600) /*= 36 hours*/
-			Policy: Json.Encode(
+			]
+		if actions.NotEmpty?()
+			rec.Policy = Json.Encode(
 				[Version: '2012-10-17'
 					Statement: [Object(Effect: 'Allow', Action: actions, Resource: '*')]
-				]),
-			]
+				])
 		i = 1
 		for key in tags.Members()
 			{
@@ -117,8 +118,7 @@ class
 
 	defaultActions(user)
 		{
-		actions = ['sqs:*']
-
+		actions = ['sqs:ListQueues']
 		func = OptContribution('AdditionalIAMPolicy',
 			function (@unused)  { })
 		func(user, actions)

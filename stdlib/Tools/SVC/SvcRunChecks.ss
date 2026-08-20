@@ -8,7 +8,7 @@ class
 		if masterRec is false or masterRec is #()
 			return
 
-		ThreadPool().Submit({ .threadFn(table, local_list, change, masterRec, index) })
+		SVCThreadPool().Submit({ .threadFn(table, local_list, change, masterRec, index) })
 		}
 
 	threadFn(table, local_list, change, masterRec, index)

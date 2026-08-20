@@ -18,6 +18,6 @@ class
 		if not Sys.SuneidoJs?()
 			return
 
-		JsDownload.Trigger(Paths.Basename(tempFileName), selectedFileName)
+		SuJsDownload.Trigger(Paths.Basename(tempFileName), selectedFileName)
 		}
 	}

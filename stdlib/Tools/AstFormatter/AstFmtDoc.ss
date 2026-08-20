@@ -5,6 +5,7 @@
 	line: newline or s when flat (Line ' ', Soft '', Semi '; ');
 	hard/blank: newline, never flat; cat: sequence a; nest: +1 tab on breaks;
 	group: flat if it fits; fill: pack a, breaking only where needed;
+	lead: optional break before d, taken only when that makes d fit flat;
 	root: absolute column 0 on its own line, never flattens.
  */
 class
@@ -42,10 +43,12 @@ class
 
 	Catl(docs)
 		{
-		a = docs.Filter(
-			{
-			it isnt false
-			}).Map!({ String?(it) ? [t: #text, s: it, hb: false] : it })
+		a = docs.
+			Filter(
+				{
+				it isnt false
+				}).
+			Map!({ String?(it) ? [t: #text, s: it, hb: false] : it })
 		return [t: #cat, :a, hb: a.Any?({ it.hb is true })]
 		}
 
@@ -67,6 +70,11 @@ class
 	Group(doc)
 		{
 		return [t: #group, d: doc, hb: doc.hb]
+		}
+
+	Lead(doc)
+		{
+		return [t: #lead, d: doc, hb: doc.hb]
 		}
 
 	Fill(a)

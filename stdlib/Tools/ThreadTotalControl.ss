@@ -40,7 +40,7 @@ Controller
 
 	run(calcOnserverFn, screenForTotals, name)
 		{
-		Thread({ .runCalc(calcOnserverFn, screenForTotals) }, :name)
+		Thread(.runCalc, calcOnserverFn, screenForTotals, :name)
 		}
 
 	runCalc(calcOnserverFn, screenForTotals)

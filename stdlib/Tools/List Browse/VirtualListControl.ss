@@ -137,13 +137,13 @@ CommandParent
 
 	restoreRecycledExpands(recycled)
 		{
-		if .model.ExpandModel isnt false
+		if .model isnt false and .model.ExpandModel isnt false
 			.model.ExpandModel.SetRecycledExpands(recycled)
 		}
 
 	Getter_Select_vals()
 		{
-		return .model.ColModel.GetSelectVals()
+		return .model is false ? [] : .model.ColModel.GetSelectVals()
 		}
 	Getter_Extra_Select_vals()
 		{
@@ -152,13 +152,6 @@ CommandParent
 	SetSelectVals(select_vals)
 		{
 		.view.SetSelectVals(select_vals)
-		}
-	SetDefaultSelect(defaultSel)
-		{
-		.model.ColModel.GetSelectMgr().PrependInitialSelect(defaultSel)
-		sf = .GetSelectFields()
-		where = SelectRepeatControl.BuildWhere(sf, .Select_vals)
-		.SetWhere(sf.Joins(where.joinflds) $ where.where, quiet:)
 		}
 
 	ApplySelects(fromNew? = false)
@@ -189,7 +182,7 @@ CommandParent
 
 	Refresh()
 		{
-		if not .SaveFirst()
+		if .model is false or not .SaveFirst()
 			return
 		if .model.ExpandModel isnt false
 			.model.ExpandModel.CollapseAll()

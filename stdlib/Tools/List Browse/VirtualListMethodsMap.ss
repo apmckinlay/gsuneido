@@ -32,7 +32,9 @@ function (view, args)
 		ExpandByField:,
 		GetExpandedControl:,
 		UpdateTotalSelected:,
-		On_Count:
+		On_Count:,
+		SelectFromWindow:,
+		CloseSelectFromWindow:
 		)
 
 	addonsPrefixes = #('On_VirtualListThumb', 'VirtualListThumb_', 'VirtualListGrid_',

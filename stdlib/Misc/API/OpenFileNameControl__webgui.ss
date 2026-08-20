@@ -48,7 +48,7 @@ Control
 		.Window.Result(false)
 		}
 
-	InvalidExtenstion(name)
+	InvalidExtension(name)
 		{
 		.AlertError('Open File', ExecutableExtension?.InvalidTypeMsg $ '\r\n- ' $ name)
 		.Window.Result(false)

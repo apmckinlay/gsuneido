@@ -9,7 +9,11 @@ MemoizeSingle
 	Init() // Should only be called if in a development environment
 		{
 		if .ide?()
+			{
+			Suneido.User = Suneido.User_Loaded = "default"
+			Suneido.user_roles = #('admin')
 			.rebuildSettings()
+			}
 		}
 
 	ide?()

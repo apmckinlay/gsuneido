@@ -4,6 +4,6 @@ RefactorConvert
 	Name: 'Format Code'
 	Convert(text)
 		{
-		return FormatCode(text)
+		return AstFormatter(text)
 		}
 	}

@@ -74,7 +74,7 @@ class
 		{
 		if data.show is 'records'
 			return true
-		return data.bytoken is "" and data.byexpression is "" and
+		return data.bytoken is "" and data.byexpression is "" and data.bycomby is "" and
 			not data.textRepeat.Any?({ it.text isnt '' and it.exclude isnt true })
 		}
 
@@ -171,7 +171,7 @@ class
 			list.Add('Object(#FindByExpression, name, lib_current_text, ' $
 				Display(data.byexpression) $ ', ' $ Display(hint) $ ')')
 			}
-		if data.bycomby isnt ''
+		if data.GetDefault('bycomby', '') isnt ''
 			{
 			hint = CombyMatch.GetHint(data.bycomby)
 			list.Add('Object(#FindByComby, name, lib_current_text, ' $

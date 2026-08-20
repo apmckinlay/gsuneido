@@ -80,8 +80,6 @@ Test
 	Test_SpyOnClassMethod()
 		{
 		_b = 2
-		spy1 = .SpyOn(Global('SpyTest_2.SpyTest_2_c.T'))
-		spy1.Throw("a is 1", when: { |a| a is 1 })
 		spy2 = .SpyOn(Global('SpyTest_2.B'))
 		spy2.Return("override")
 		spy3 = .SpyOn(Global('SpyTest_1'))
@@ -89,18 +87,16 @@ Test
 		spy4 = .SpyOn(Global('SpyTest_2'))
 
 		fn = Global('SpyTest_2')
-		Assert({ fn(1) } throws: "a is 1")
 		Assert(fn(2) is: "c.T: 4 - B: override - SpyTest_1: 4")
 		Assert(fn(5) is: "c.T: 7 - B: override - SpyTest_1: a + b > 5")
 
 		spy2.Close()
 		fn = Global('SpyTest_2')
-		Assert({ fn(1) } throws: "a is 1")
 		Assert(fn(2) is: "c.T: 4 - B: 4 - SpyTest_1: 4")
 		Assert(fn(5) is: "c.T: 7 - B: 10 - SpyTest_1: a + b > 5")
 
-		Assert(spy4.CallLogs() is: #((a: 1, b: 2), (a: 2, b: 2), (a: 5, b: 2),
-			(a: 1, b: 2), (a: 2, b: 2), (a: 5, b: 2)))
+		Assert(spy4.CallLogs() is: #((a: 2, b: 2), (a: 5, b: 2),
+			(a: 2, b: 2), (a: 5, b: 2)))
 		}
 
 	Test_setupInfo()

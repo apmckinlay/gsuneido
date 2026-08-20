@@ -7,10 +7,15 @@ Test
 			{
 			DoTaskWithPause_createTask(msg)
 				{
-				return new this(msg)
+				task = _env.GetInit(#TestTaskWithPause, { new this(msg) })
+				task.Ref()
+				return task
 				}
 			DoTaskWithPause_setup(msg/*unused*/) { }
-			DoTaskWithPause_cleanup() { }
+			DoTaskWithPause_cleanup()
+				{
+				_env.Delete(#TestTaskWithPause)
+				}
 			DoTaskWithPause_now(_env)
 				{
 				return env.now
@@ -18,32 +23,38 @@ Test
 			DoTaskWithPause_pause(_env)
 				{
 				env.log.Add(#Pause)
-				.DoTaskWithPause_cancel? = env.GetDefault(#cancelAt, false) is env.count
+				if env.Member?(#cancelAt)
+					.DoTaskWithPause_cancel? = env.cancelAt is env.count
+				if env.Member?(#cancelAt2)
+					.DoTaskWithPause_cancel? = env.cancelAt2 is env.count2
 				}
 			Finish(_env)
 				{
 				env.log.Add(#Finish)
+				return super.Finish()
 				}
 			}
 
+		tick = { |n| _env.now = _env.now.Plus(seconds: n) }
+
 		// 1, 2, 3, 4, #Finish
 		_env = Object(log: Object(), now: Date(), count: 0)
-		Assert(cl('Test', { _env.now = _env.now.Plus(seconds: 1); _env.count++ < 4 }))
+		Assert(cl('Test', { tick(1); _env.count++ < 4 }))
 		Assert(_env.log is: #(#Finish))
 
 		// 2, 4, 6, #Pause, 8, #Finish
 		_env = Object(log: Object(), now: Date(), count: 0)
-		Assert(cl('Test', { _env.now = _env.now.Plus(seconds: 2); _env.count++ < 4 }))
+		Assert(cl('Test', { tick(2); _env.count++ < 4 }))
 		Assert(_env.log is: #(#Pause, #Finish))
 
 		// 4, 8, #Pause, 12, 16, #Pause, #Finish
 		_env = Object(log: Object(), now: Date(), count: 0)
-		Assert(cl('Test', { _env.now = _env.now.Plus(seconds: 4); _env.count++ < 4 }))
+		Assert(cl('Test', { tick(4); _env.count++ < 4 }))
 		Assert(_env.log is: #(#Pause, #Pause, #Finish))
 
 		// 5, #Pause, 10, #Pause, 15, #Pause, 20, #Pause, #Finish
 		_env = Object(log: Object(), now: Date(), count: 0)
-		Assert(cl('Test', { _env.now = _env.now.Plus(seconds: 5); _env.count++ < 4 }))
+		Assert(cl('Test', { tick(5); _env.count++ < 4 }))
 		Assert(_env.log is: #(#Pause, #Pause, #Pause, #Pause, #Finish))
 
 		// nested
@@ -56,10 +67,10 @@ Test
 		Assert(cl('Test', {
 			_env.count2 = 0
 			cl('Test', {
-				_env.now = _env.now.Plus(seconds: 2)
+				tick(2)
 				_env.count2++ < 5
 				})
-			_env.now = _env.now.Plus(seconds: 5)
+			tick(5)
 			_env.count++ < 4 }))
 		Assert(_env.log
 			is: #(#Pause, #Finish, #Pause, #Pause, #Finish, #Pause, #Pause, #Finish,
@@ -68,7 +79,7 @@ Test
 		// throw after 2 calls
 		// 5, #Pause, 10, #Pause, #Finish
 		_env = Object(log: Object(), now: Date(), count: 0)
-		Assert({ cl('Test', { _env.now = _env.now.Plus(seconds: 5)
+		Assert({ cl('Test', { tick(5)
 			if _env.count is 2
 				throw 'test'
 			_env.count++ < 4 })} throws: 'test')
@@ -77,8 +88,21 @@ Test
 		// cancel after 3 calls
 		// 5, #Pause, 10, #Pause, 15, #Pause, #Finish
 		_env = Object(log: Object(), now: Date(), count: 0, cancelAt: 3)
-		Assert(cl('Test', { _env.now = _env.now.Plus(seconds: 5); _env.count++ < 4 })
+		Assert(cl('Test', { tick(5); _env.count++ < 4 })
 			is: false)
 		Assert(_env.log is: #(#Pause, #Pause, #Pause, #Finish))
+
+		// cance after 3 calls in nested tasks
+		// 2, 4, 6, #Pause (Throw), #Finish, #Finish
+		_env = Object(log: Object(), now: Date(), count: 0, count2: 0, cancelAt2: 3)
+		Assert(cl('Test', {
+			_env.count2 = 0
+			cl('Test', {
+				tick(2)
+				_env.count2++ < 5
+				})
+			tick(5)
+			_env.count++ < 4 }) is: false)
+		Assert(_env.log is: #(#Pause, #Finish, #Finish))
 		}
 	}

@@ -74,7 +74,7 @@ class
 		cmd2 =  `start ..\` $ exeName
 		if clientPort isnt false
 			cmd2 $= ' -w=' $ clientPort
-		cmd2 $= ' -u -c -p ' $ String(ServerPort()) $ startCode
+		cmd2 $= ' -c -p ' $ String(ServerPort()) $ startCode
 		.log('command ' $ cmd2)
 		result = System(cmd1 $ " && " $ cmd2)
 		Rlog('timeout',

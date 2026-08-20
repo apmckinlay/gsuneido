@@ -77,4 +77,22 @@ Test
 		Assert(fn('Foo__webgui_alpha', 'alpha', trials) is: 'Foo__webgui_alpha')
 		Assert(fn('Foo__webgui_trial', 'alpha', trials) is: 'Foo__webgui_alpha')
 		}
+
+	Test_SortNamesByTag()
+		{
+		fn = LibraryTags.SortNamesByTag
+
+		tags = #('', '__alpha')
+		Assert(fn(#(), :tags) is: #())
+		Assert(fn(#('Foo'), :tags) is: #('Foo'))
+		Assert(fn(#('Foo', 'Foo__alpha'), :tags) is: #('Foo__alpha', 'Foo'))
+		Assert(fn(#('Foo', 'Foo__bogus', 'Foo__alpha'), :tags)
+			is: #('Foo__alpha', 'Foo'))
+		Assert(fn(#('Foo__bogus', 'Foo__other'), :tags)
+			is: #())
+
+		tags = #('', '__trial', '__alpha')
+		Assert(fn(#('Foo', 'Foo__alpha', 'Foo__trial'), :tags)
+			is: #('Foo__alpha', 'Foo__trial', 'Foo'))
+		}
 	}

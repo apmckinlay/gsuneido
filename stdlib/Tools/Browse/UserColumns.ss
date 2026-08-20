@@ -291,14 +291,26 @@ class
 
 	removeDeletedAndNonPermissableCustom(permissableQuery, visibleCols, visibleWids)
 		{
-		nonPermissable = Customizable.GetNonPermissableFields(permissableQuery)
+		nonPermissable = .nonPermissableFields(permissableQuery)
 		for field in visibleCols.Copy()
-			if ((Customizable.DeletedField?(field) or nonPermissable.Has?(field)) and
+			if ((.deletedField?(field) or nonPermissable.Has?(field)) and
 				false isnt pos = visibleCols.Find(field))
 				{
 				visibleCols.Delete(pos)
 				visibleWids.Delete(pos)
 				}
+		}
+
+	// refactored for test
+	nonPermissableFields(permissableQuery)
+		{
+		return Customizable.GetNonPermissableFields(permissableQuery)
+		}
+
+	// refactored for test
+	deletedField?(field)
+		{
+		return Customizable.DeletedField?(field)
 		}
 
 	hide_columns(list, columns, initialized? = false)

@@ -166,7 +166,7 @@ class
 		return .runCommand(args, :retries)
 		}
 
-	GetMultiple(fileList, localPath, ftpPath)
+	GetMultiple(fileList, localPath, ftpPath, skipCopyExisting? = false)
 		{
 		Assert(.protocol.Has?('ftp'))
 		if fileList.Empty?()
@@ -177,7 +177,8 @@ class
 
 		PutFile(argsfile, files)
 
-		.copyExistingFiles(fileList, localPath)
+		if skipCopyExisting? isnt true
+			.copyExistingFiles(fileList, localPath)
 
 		result = .runCommand('-K ' $ argsfile) // read curl args from file
 		DeleteFile(argsfile)

@@ -15,7 +15,7 @@ Singleton
 		if .nThreads < .maxThreads
 			{ // haven't reached max, start another worker thread
 			++.nThreads
-			Thread({ .worker(task) })
+			Thread(.worker, task)
 			}
 		else if .queue.Size() < .maxQueue
 			{ // queue not full, add to it
@@ -55,10 +55,6 @@ Singleton
 	throwException(e) // overridden by test
 		{
 		throw e
-		}
-	ClearQueue() // note: doesn't stop running tasks
-		{
-		.queue = Object()
 		}
 	Reset()
 		{

@@ -53,9 +53,9 @@ Document_Builder
 		data = PdfFonts.StripInvalidChars(data)
 		size = font is false ? 10 : font.size
 		if ellipsis? is true
-			data = .pdfEllipsis(font, data, w)
+			data = .PdfEllipsis(font, data, w)
 		textWidth = .GetTextWidth(font, data)
-		xAdjust = .justifyAdjust(textWidth, w, justify)
+		xAdjust = .JustifyAdjust(textWidth, w, justify)
 		data = .escapeSpecialCharacters(data)
 
 		// print the text on the top of rectangle
@@ -89,7 +89,7 @@ Document_Builder
 			}
 		}
 
-	justifyAdjust(textSize, maxWidth, justify)
+	JustifyAdjust(textSize, maxWidth, justify)
 		{
 		if justify is 'left'
 			return 0
@@ -101,7 +101,7 @@ Document_Builder
 			return 0
 		}
 
-	pdfEllipsis(font, data, w)
+	PdfEllipsis(font, data, w)
 		{
 		do
 			{

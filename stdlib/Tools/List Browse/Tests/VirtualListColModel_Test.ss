@@ -301,6 +301,28 @@ Test
 		Assert(result[2] is: 'date')
 		}
 
+	Test_GetVisibleColumns()
+		{
+		mock = Mock(VirtualListColModel)
+		mock.When.GetVisibleColumns().CallThrough()
+		mock.VirtualListColModel_columns = #(a, b, c, d)
+		mock.VirtualListColModel_widths = #(100, 0, 50, 0)
+		Assert(mock.GetVisibleColumns() is: #(a, c))
+
+		mock.VirtualListColModel_widths = #(1, 2, 3, 4)
+		Assert(mock.GetVisibleColumns() is: #(a, b, c, d))
+
+		mock.VirtualListColModel_widths = #(0, 0, 0, 0)
+		Assert(mock.GetVisibleColumns() is: #())
+
+		mock.VirtualListColModel_widths = #(0, 10, 0, 0)
+		Assert(mock.GetVisibleColumns() is: #(b))
+
+		mock.VirtualListColModel_columns = #()
+		mock.VirtualListColModel_widths = #()
+		Assert(mock.GetVisibleColumns() is: #())
+		}
+
 	Teardown()
 		{
 		QueryDo('delete usercolumns

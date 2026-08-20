@@ -13,13 +13,14 @@ Controller
 		if .dir is 'Horz'
 			.setHorzXmin(args)
 
-		if true is .noInitalValue = args.GetDefault('noInitalValue', false)
-			if args.GetDefault('mandatory', false) isnt true
-				ProgrammerError('RadioButton has noInitialValue but is not mandatory')
+		.mandatory = args.GetDefault('mandatory', false)
+		.noInitialValue = args.GetDefault('noInitialValue', false)
+		if .mandatory is false and .noInitialValue is true
+			ProgrammerError('RadioButton has noInitialValue but is not mandatory')
 
 		// send initial setting to record control if there is no value
 		value = .Send("GetField", .Name)
-		if not .noInitalValue and (value is '' or value is 0)
+		if not .noInitialValue and (value is '' or value is 0)
 			.Picked(.values[0])
 		.Top = .buttons.Top
 		}
@@ -88,7 +89,7 @@ Controller
 	Set(value)
 		{
 		.value = value
-		if value is '' and not .noInitalValue
+		if value is '' and not .noInitialValue
 			return .Picked(.values[0])
 		for i in .values.Members()
 			.buttons['Rb' $ i].Set(.values[i] is value)
@@ -97,7 +98,7 @@ Controller
 	SetReadOnly(.readonly)
 		{
 		super.SetReadOnly(readonly)
-		if .readonly is false and .value is "" and not .noInitalValue
+		if .readonly is false and .value is "" and not .noInitialValue
 			.Picked(.values[0])
 		}
 	GetReadOnly()
@@ -110,20 +111,19 @@ Controller
 		}
 	Valid?()
 		{
-		if .value is ''
-			return true
-		for val in .values
-			if val is .value
-				return true
-		return false
+		return .valid?(.value, .values, .mandatory)
+		}
+	valid?(value, values, mandatory)
+		{
+		return value isnt ''
+			? values.Has?(value)
+			: mandatory isnt true
 		}
 	ValidData?(@args)
 		{
 		values = .buildValues(args)
 		value = values.Extract(0)
-		if value is ""
-			return args.GetDefault('mandatory', false) isnt true
-		return values.Has?(value)
+		return .valid?(value, values, args.GetDefault('mandatory', false))
 		}
 	Destroy()
 		{

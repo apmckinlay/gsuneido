@@ -97,18 +97,24 @@ Test
 		Assert(wordOb.ignore is: ignore)
 		}
 
+	speller: class
+		{
+		New(.typoOb, .calls) { }
+		Call(word)
+			{
+			.calls.Add([:word])
+			return .typoOb.Has?(word) ? ['typo'] : []
+			}
+		}
 	Test_collectTypos()
 		{
 		sci = new .scintilla
-		addons = AddonManager(sci, [Addon_speller:])
 
 		// NOTE: We override the Speller, so ANY errors we want to catch need to be
 		// included in the below object
 		typoOb = #(sentance, thise, eror, grammer, errirs, sintax)
-		spellerSpy = .SpyOn(Speller)
-		spellerSpy.Return(['typo'], when: { |word| typoOb.Has?(word) })
-		spellerSpy.Return([], when: { |word| not typoOb.Has?(word) })
-		spellerCalls = spellerSpy.CallLogs()
+		speller = new .speller(typoOb, spellerCalls = Object())
+		addons = AddonManager(sci, [Addon_speller: Object(:speller)])
 
 		ignore? = {|unused| false}
 		sci.Set('here is  a   sentance with  one error.')

@@ -16,6 +16,7 @@ WindowBase
 		.DoActivate()
 		SuRenderBackend().RecordAction(false, .GetWindowComponentName(), args,
 			reservation.at)
+		.parent.Window.LockActivateFocus(.parent.UniqueId)
 		}
 
 	createControl(control, readonly, custom)
@@ -83,7 +84,8 @@ WindowBase
 		// (like Status and GetField)
 		// instead of only stopping certain messages
 		msg = args[0]
-		if msg isnt 'Data' and msg isnt 'NewValue' and .parent.Member?('Controller')
+		if msg isnt 'Data' and msg isnt 'NewValue' and
+			.parent isnt false and .parent.Member?('Controller')
 			{
 			if ((msg is "GetField" or msg is "SetField") and
 				not .parent.Controller.Base?(BrowseControl))
@@ -147,6 +149,7 @@ WindowBase
 		{
 		if .Destroyed?()
 			return
+		.parent.Window.ReleaseActivateFocus()
 		super.DESTROY()
 		}
 	}

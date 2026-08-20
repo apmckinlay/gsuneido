@@ -21,13 +21,14 @@ Test
 
 	Test_customPermissions()
 		{
-		.SpyOn(Customizable.GetNonPermissableFields).Return(#(table))
-		Assert(QuerySelectColumns('tables project table') is: #())
+		mock = Mock(QuerySelectColumns)
+		mock.When.nonPermissableFields([anyArgs:]).Return(#(table))
+		Assert(mock.Eval(QuerySelectColumns.CallClass, 'tables project table') is: #())
 		}
 
 	Test_deletedCustomField()
 		{
-		table = .MakeTable('(keyColumn, column1, column2, column3, custom_555599)
+		table = .MakeTable('(keyColumn, column1, column2, column3, custom_999999)
 			key (keyColumn)')
 
 		columns = QuerySelectColumns(table)
@@ -36,16 +37,16 @@ Test
 		Assert(columns has: #column1)
 		Assert(columns has: #column2)
 		Assert(columns has: #column3)
-		Assert(columns has: #custom_555599)
+		Assert(columns has: #custom_999999)
 
-		.SpyOn(Datadict).Return(#(Internal:))
-
+		.MakeDatadict(fieldName: 'custom_999999', baseClass: 'Field_string_custom',
+			Prompt: 'DD Custom Internal', Internal:)
 		columns = QuerySelectColumns(table)
 		Assert(columns isSize: 4)
 		Assert(columns has: #keyColumn)
 		Assert(columns has: #column1)
 		Assert(columns has: #column2)
 		Assert(columns has: #column3)
-		Assert(columns hasnt: #custom_555599)
+		Assert(columns hasnt: #custom_999999)
 		}
 	}

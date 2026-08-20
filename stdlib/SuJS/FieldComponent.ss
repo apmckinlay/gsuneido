@@ -26,7 +26,8 @@ EditComponent
 			styles['text-transform'] = 'lowercase'
 		.SetStyles(styles)
 
-		if password is true
+		// ignore password char on web version
+		if password isnt false
 			.El.type = 'password'
 
 		maxChar = maxCharacters isnt false ? maxCharacters : 512
@@ -44,5 +45,10 @@ EditComponent
 		// select all text, this is useful for Browse and other controls
 		// which create fields on the fly
 		.SelectAll()
+		}
+
+	SetPasswordChar(password = false)
+		{
+		.El.type = password is false ? 'text' : 'password'
 		}
 	}

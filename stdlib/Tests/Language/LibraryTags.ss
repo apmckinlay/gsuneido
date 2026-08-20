@@ -12,6 +12,22 @@ class
 		return .split(name).tag
 		}
 
+	// Given a list of names with the same base (e.g. (Foo, Foo__alpha, Foo__webgui))
+	// returns the names whose tags are in the tag set, sorted by tag
+	// priority (highest first). Untagged names have the lowest priority.
+	SortNamesByTag(names, tags)
+		{
+		result = Object()
+		for tag in tags.Copy().Reverse!()
+			for name in names
+				if .GetTagFromName(name) is tag
+					{
+					result.Add(name)
+					break
+					}
+		return result
+		}
+
 	split(name)
 		{
 		if false isnt pos = name.FindLast('__')
@@ -87,19 +103,21 @@ class
 			}
 		}
 
-	GetTagsInUse()
+	GetTagsInUse(allowServerFallback? = false)
 		{
-		return Suneido.Info('library.tags').SafeEval()
+		tags = Suneido.Info('library.tags').SafeEval()
+
+		// #() means the client is using the server's tags
+		if allowServerFallback? and tags is #()
+			tags = ServerEval("LibraryTags.GetTagsInUse")
+
+		return tags
 		}
 
 	GetRecord(name, lib, tags = false, exclude = false)
 		{
 		if tags is false
-			{
-			// #() means the client is using the server's tags
-			if #() is tags = .GetTagsInUse()
-				tags = ServerEval(LibraryTags.GetTagsInUse)
-			}
+			tags = .GetTagsInUse(allowServerFallback?:)
 
 		for (i = tags.Size() - 1; i >= 0; i--)
 			{

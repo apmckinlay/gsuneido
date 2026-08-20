@@ -13,16 +13,24 @@ class
 
 	ForEachTable(block)
 		{
-		for lib in Libraries()
+		for lib in .libraries()
 			{
+			tables = Object()
 			for table in QueryList(lib $ ' where name > "Table_" and name < "Table_~"
 				and group is -1', 'name')
+				tables.AddUnique(LibraryTags.RemoveTagFromName(table))
+			for table in tables
 				{
 				cl = Global(table)
 				if cl.RenamedForCustomize? is false
 					block(cl)
 				}
 			}
+		}
+
+	libraries()
+		{
+		return Libraries()
 		}
 
 	List()

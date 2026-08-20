@@ -4,7 +4,6 @@ CodeViewControl
 	addons: #(
 		Addon_suneido_style: (query:),
 		Addon_wrap:,
-		Addon_brace_match: false,
 		Addon_calltips: false,
 		Addon_class_outline: false,
 		Addon_folding: false,

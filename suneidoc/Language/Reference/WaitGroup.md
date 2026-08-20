@@ -9,7 +9,7 @@
 A WaitGroup is used to wait for a group of threads to finish.
 
 Methods:
-`Thread(callable, name = "")`
+`Thread(callable, @args, name = "")`
 : Equivalent to 
 [Thread](<Thread.md>) but automatically does Add() and ensures Done() is called when the thread ends.
 

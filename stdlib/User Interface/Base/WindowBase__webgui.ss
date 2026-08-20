@@ -417,6 +417,13 @@ Control
 			: CloseWindowConfirmation(.Window.Hwnd)
 		}
 
+	DetectActivationOnDisabled(info)
+		{
+		if false isnt SuneidoLog.Once('WARNING: DetectActivationOnDisabledWindow',
+			params: Object(disabledBy: info, uniqueId: .UniqueId))
+			SuRenderBackend().DumpStatus('DetectActivationOnDisabled')
+		}
+
 	CLOSE()
 		{
 		if not .AllowCloseWindow?()

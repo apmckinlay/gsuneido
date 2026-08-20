@@ -70,15 +70,18 @@ Test
 	Test_foreachPluginLibraryRecord()
 		{
 		lib1 = .MakeLibrary(
-			[name: 'Plugin_RealValidPluginLib1', group: -1],
+			[name: 'Plugin_RealValidPluginLib1', text: 'orignal', group: -1],
+			[name: 'Plugin_RealValidPluginLib1__test1', text: '1', group: -1],
+			[name: 'Plugin_RealValidPluginLib1__test2', text: '2', group: -1],
+			[name: 'Plugin_RealValidPluginLib1__bogus', text: 'bogus', group: -1],
 			[name: 'Plugin_InvalidDeleted', group: -2],
 			[name: 'Plugin_InvalidFolder', group: 1],
 			[name: 'Plugins_InvalidName', group: 1],
 			[name: SvcTable.MaxCommitName, group: -3]
 			)
 		lib2 = .MakeLibrary(
-			[name: 'Plugin_RealValid1PluginLib2', group: -1],
-			[name: 'Plugin_RealValid2PluginLib2', group: -1],
+			[name: 'Plugin_RealValid1PluginLib2', text: 'orignal', group: -1],
+			[name: 'Plugin_RealValid2PluginLib2', text: 'orignal', group: -1],
 			[name: 'Plugin_InvalidDeleted', group: -2],
 			[name: 'Plugin_InvalidFolder', group: 1],
 			[name: SvcTable.MaxCommitName, group: -3]
@@ -87,13 +90,13 @@ Test
 
 		mock = Mock(Plugins)
 		mock.When.libraries().Return([lib1, lib2, lib3])
+		mock.When.libraryTagsInUse().Return(['', '__test0', '__test1', '__test2'])
 		mock.When.foreachPluginLibraryRecord([anyArgs:]).CallThrough()
 
 		plugins = Object()
-		mock.foreachPluginLibraryRecord({ plugins.Add(it.name) })
-		Assert(plugins isSize: 3)
-		Assert(plugins has: 'Plugin_RealValidPluginLib1')
-		Assert(plugins has: 'Plugin_RealValid1PluginLib2')
-		Assert(plugins has: 'Plugin_RealValid2PluginLib2')
+		mock.foreachPluginLibraryRecord({ plugins[it.name] = it.text })
+		Assert(plugins is: #(Plugin_RealValidPluginLib1: '2',
+			Plugin_RealValid1PluginLib2: 'orignal',
+			Plugin_RealValid2PluginLib2: 'orignal'))
 		}
 	}

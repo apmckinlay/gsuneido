@@ -481,9 +481,12 @@ ListBodyBaseComponent
 		{
 		if .contextOnly or event.button isnt 0 or .freeze is true
 			return
-		.handleMouseEvent(event, 'LBUTTONDOWN')
+
+		if .mousedown? is true // mouse already down
+			return
+		.mousedown? = true
+		.handleMouseEvent(event, 'LBUTTONDOWN', skipBlock: { .mousedown? = false })
 			{
-			.mousedown? = true
 			.StartMouseTracking(.mouseup, .mousemove)
 			}
 		}
@@ -521,15 +524,22 @@ ListBodyBaseComponent
 		.handleMouseEvent(event, 'LBUTTONDBLCLK', freeze?:)
 		}
 
-	handleMouseEvent(event, name, block = false, freeze? = false)
+	handleMouseEvent(event, name, block = false, freeze? = false,
+		skipBlock = function() {})
 		{
 		if .Destroyed?() or .expandedCtrls.Any?({ it.ctrl.El.Contains(event.target) })
+			{
+			skipBlock()
 			return
+			}
 		event.StopPropagation()
 		target = event.target
 		// target can be a Text Node when this is triggered by dragstart
 		if  not .tbody.Contains(target) or target.GetDefault(#tagName, false) is false
+			{
+			skipBlock()
 			return
+			}
 		if target.tagName is 'IMG'
 			target = target.parentElement
 		else if target.classList.Contains('su-listbody-cell-rect')
@@ -553,7 +563,7 @@ ListBodyBaseComponent
 						shift: event.shiftKey, control: event.ctrlKey,
 						mouseEventId: ++.mouseEventId)
 				}
-		default:
+		default: skipBlock()
 			}
 		}
 
@@ -895,6 +905,7 @@ ListBodyBaseComponent
 			return
 			}
 		focusedPos = .getRowPos(.focused)
+		Assert(focusedPos isnt: false)
 		y = event.clientY
 		if y < focusedPos.top // going up
 			{

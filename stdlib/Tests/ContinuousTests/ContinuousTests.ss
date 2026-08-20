@@ -20,6 +20,8 @@ class
 		result = localtestresult = servertestresult = ""
 		try
 			{
+			Suneido.User = 'default'
+			Suneido.user_roles = #("admin")
 			result = ServerEval('ContinuousTests.CreateTablesAndDemoData',
 				noData?, currency, dept?, skipTags, largeData?, sujs?)
 

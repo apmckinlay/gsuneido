@@ -16,6 +16,11 @@ EditControl
 		super(mandatory, readonly, .buildStyle(style, justify, password, upper, lower),
 			:bgndcolor, :textcolor, :hidden, :tabover, :width, height: 1, :cue,
 			:font, :size, :weight, :underline, :readOnlyBgndColor, :status)
+		if String?(password)
+			{
+			Assert(password isSize: 1)
+			.SetPasswordChar(password)
+			}
 		.MaxCharacters = maxCharacters is false
 			? .MaxCharacters
 			: maxCharacters
@@ -31,7 +36,7 @@ EditControl
 
 	buildStyle(style, justify, password, upper, lower)
 		{
-		passwordStyle = password is true ? ES.PASSWORD : 0
+		passwordStyle = password isnt false ? ES.PASSWORD : 0
 		if upper and lower
 			throw "upper and lower options cannot be used together"
 		caseStyle = upper ? ES.UPPERCASE : lower ? ES.LOWERCASE : 0
@@ -145,5 +150,21 @@ EditControl
 		{
 		maxCharacters = args.GetDefault('maxCharacters', .MaxCharacters)
 		return super.ValidData?(@args) and .ValidTextLength?(args[0], maxCharacters)
+		}
+
+	SetPasswordChar(password = false)
+		{
+		pwdChar = password is false
+			? 0
+			: password is true
+				? '*'.Asc()
+				: password.Asc()
+		.SendMessage(EM.SETPASSWORDCHAR, pwdChar, 0)
+		.Repaint()
+		}
+
+	GetPasswordChar()
+		{
+		return .SendMessage(EM.GETPASSWORDCHAR)
 		}
 	}

@@ -177,14 +177,14 @@ class
 
 	moveExactMatchesFront(matchList, prefix, prefixOrig)
 		{
-		exactMatch = false
+		exactMatches = Object()
 		matches = Object()
 		nonMatches = Object()
 		for x in matchList
 			{
 			if x.BeforeFirst(' - ') is prefixOrig
 				{
-				exactMatch = x
+				exactMatches.Add(x)
 				continue
 				}
 
@@ -195,11 +195,12 @@ class
 				nonMatches.Add(x)
 			}
 		matches.Append(nonMatches)
-		if exactMatch is false
+		if exactMatches.Empty?()
 			return matches
 
-		matches = matches.Add(exactMatch, at: 0)
-		matchList = matchList.RemoveIf({ it is exactMatch })
+		for exactMatch in exactMatches.Reverse!() // retain exact match order when adding
+			matches.Add(exactMatch, at: 0)
+		matchList = matchList.RemoveIf({ exactMatches.Has?(it) })
 		return matches.MergeUnion(matchList)
 		}
 

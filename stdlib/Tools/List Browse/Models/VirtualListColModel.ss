@@ -204,6 +204,15 @@ class
 		return .columns
 		}
 
+	GetVisibleColumns()
+		{
+		visibleCols = Object()
+		for m, col in .columns
+			if .widths[m] > 0
+				visibleCols.Add(col)
+		return visibleCols
+		}
+
 	GetOriginalColumns()
 		{
 		return .origColumns

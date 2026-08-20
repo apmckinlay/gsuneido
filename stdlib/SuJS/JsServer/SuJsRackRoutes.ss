@@ -4,21 +4,21 @@ class
 	routes: (
 		['Get', 	'/TestConnection', 		function (@unused) { return 'Okay' }],
 		['Get', 	'/Res', 				'GetBookRes'],
-		['GET',		`/runtime`,				'JsLoadRuntime'],
-		['GET',		'/load$',				'JsLoadRecord'],
-		['GET', 	'/suneidoapp', 			'JsSuneidoAPP.Handle'],
-		['GET',		'/download',			'JsDownload'],
-		['POST',	'/upload',				'JsUpload'],
-		['GET',		'/attachment',			'JsViewAttachment'],
-		['GET', 	'/$',					'JsLogin'],
-		['POST',	'/login_submit$',		'JsLogin.Auth'],
-		['POST',	'/twoFA_submit$',		'JsLogin.TwoFA'],
+		['GET',		`/runtime`,				'SuJsLoadRuntime'],
+		['GET',		'/load$',				'SuJsLoadRecord'],
+		['GET', 	'/suneidoapp', 			'SuJsSuneidoAPP.Handle'],
+		['GET',		'/download',			'SuJsDownload'],
+		['POST',	'/upload',				'SuJsUpload'],
+		['GET',		'/attachment',			'SuJsViewAttachment'],
+		['GET', 	'/$',					'SuJsLogin'],
+		['POST',	'/login_submit$',		'SuJsLogin.Auth'],
+		['POST',	'/twoFA_submit$',		'SuJsLogin.TwoFA'],
 		['GET', 	'/connect$',			function (env) {
-						WebSocketHandler(env, env.socket, JsWebSocketServer) }],
-		['GET', 	'/robots.txt', 			'JsRobotsTxt']
-		['GET', 	'/sw.js', 				'JsServiceWorker.Get']
-		['GET',		'/rally',				'JsRally']
-		['POST',	'/rally',				'JsRally']
+						WebSocketHandler(env, env.socket, SuJsWebSocketServer) }],
+		['GET', 	'/robots.txt', 			'SuJsRobotsTxt']
+		['GET', 	'/sw.js', 				'SuJsServiceWorker.Get']
+		['GET',		'/rally',				'SuJsRally']
+		['POST',	'/rally',				'SuJsRally']
 	)
 	CallClass()
 		{

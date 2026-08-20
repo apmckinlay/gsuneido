@@ -260,7 +260,7 @@ Controller
 			ChooseMany: 	{ |control| control.saveNone = false },
 			RadioButtons:
 				{ |control|
-				if control.GetDefault(#noInitalValue, false)
+				if control.GetDefault(#noInitialValue, false)
 					control.mandatory = true
 				},
 			UOM:

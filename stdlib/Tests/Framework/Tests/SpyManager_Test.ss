@@ -39,39 +39,6 @@ Test
 		if res.action is 'throw' { throw res.value }
 		}`
 
-	Test_buildCodeWithTdop()
-		{
-		fn = SpyManager.SpyManager_buildCodeWithTdop
-		source = `class
-			{
-			C: class
-				{
-				` $ .fn1 $ `
-				` $ .fn3 $ `
-				}
-			` $ .fn2 $ `
-			}`
-		expected = `class
-			{
-			C: class
-				{
-				` $ .fn1WithSpy $ `
-				` $ .fn3WithSpy $ `
-				}
-			` $ .fn2WithSpy $ `
-			}`
-		code = fn(source, #(
-			(Id: 1, Paths: ('C', 'A'), InNew?: false, Params: "(a,b=1,_c=false,_d=[])"),
-			(Id: 2, Paths: ('b'), InNew?: false, Params: "()"),
-			(Id: 3, Paths: ('C', 'C'), InNew?: false, Params: "(@args)")))
-		Assert(.removeEmptyLine(code) like: expected)
-
-		Assert({ fn(source, #((Paths: ('D')))) }
-			throws: "SpyOn cannot find specified method - D")
-		Assert({ fn(source, #((Paths: ('C', 'D')))) }
-			throws: "SpyOn cannot find specified method - C.D")
-		}
-
 	Test_buildCodeWithClassHelp()
 		{
 		fn = SpyManager.SpyManager_buildCodeWithClassHelp

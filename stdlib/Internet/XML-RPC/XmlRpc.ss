@@ -115,6 +115,7 @@ XmlContentHandler
 			.stack.Push(Object())
 		default:
 			}
+		.value = ''
 		}
 	value: ''
 	Characters(string)
@@ -142,18 +143,18 @@ XmlContentHandler
 				.stack.Top().Add(.value)
 			else
 				{
-				if .name.Number?()
+				if String?(.name) and .name.Number?()
 					.name = Number(.name)
 				.stack.Top()[.name] = .value
 				.name = false
 				}
 		case 'fault' :
 			throw 'XmlRpc: ' $ .value
-		case 'string', 'member', 'data', 'param', 'params',
+		case 'member' :
+			.name = false
+		case 'string', 'data', 'param', 'params',
 			'methodcall', 'methodresponse' :
 			// ignore
-		default :
-			throw qname $ ' not handled'
 			}
 		}
 	}

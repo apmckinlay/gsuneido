@@ -114,12 +114,12 @@ Controller
 			#(Static 'Comby'),
 			Object(#Horz
 				#(FieldHistory, font: '@mono', size: '+1', width: 60,
-					cue: 'use :[arg]'
+					cue: ':[HOLE] or :[HOLE:e]'
 					name: 'bycomby')
-				/*#Skip
-				Object('EnhancedButton', command: 'Find By Expression Help',
+				#Skip
+				Object('EnhancedButton', command: 'Find By Comby Help',
 					image: 'questionMark_black.emf', imageColor: CLR.Inactive,
-					mouseOverImageColor: CLR.Highlight, mouseEffect:, imagePadding: .1)*/))
+					mouseOverImageColor: CLR.Highlight, mouseEffect:, imagePadding: .1)))
 		}
 	showOptions()
 		{
@@ -471,6 +471,11 @@ Controller
 	On_Find_By_Expression_Help()
 		{
 		OpenBook('suneidoc', path: '/Getting Started/WorkSpace#FindByExpression')
+		}
+
+	On_Find_By_Comby_Help()
+		{
+		OpenBook('suneidoc', path: '/Getting Started/WorkSpace#FindByComby')
 		}
 
 	Destroy()

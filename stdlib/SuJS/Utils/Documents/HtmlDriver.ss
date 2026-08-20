@@ -126,7 +126,7 @@ Document_Builder
 		return EnsurePDFFont(font, oldfont)
 		}
 
-	PixelToUnit: 15 /*=twipToPixel = 1440 / 99*/
+	PixelToUnit: 15 /*=twipToPixel = 1440 / 96*/
 	afmToTwip: .02 // afm Spec uses measurements in 1 1000th PSP. This number
 				   // Converts from that measurement to Twips.
 	GetLineSpecs(font)

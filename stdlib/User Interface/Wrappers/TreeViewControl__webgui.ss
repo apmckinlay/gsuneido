@@ -3,7 +3,7 @@ Control
 	{
 	Name: 'TreeView'
 	ComponentName: 'TreeView'
-	New(readonly = false, style = 0)
+	New(.readonly = false, style = 0)
 		{
 		.ComponentArgs = Object(readonly, style)
 		.init()
@@ -303,6 +303,22 @@ Control
 	ShowContextMenu(item, x, y)
 		{
 		return .Send(#ShowContextMenu, item, x, y)
+		}
+
+	TVN_KEYDOWN(key, pressed)
+		{
+		hSelectedItem = .GetLastSelection(pressed.control)
+		if key is 'F2'
+			{
+			if not .readonly and hSelectedItem isnt 0 and not .Static?(hSelectedItem)
+				.EditLabel(hSelectedItem)
+			}
+		}
+
+	// overriden in MultiTreeViewControl
+	GetLastSelection(ctrlPressed? /*unused*/)
+		{
+		return .GetSelectedItem()
 		}
 
 	Default(@args)

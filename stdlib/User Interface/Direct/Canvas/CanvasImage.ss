@@ -161,7 +161,7 @@ CanvasItem
 
 	GetSuJSObject()
 		{
-		return Object('SuCanvasImage', .x1, .y1, .x2, .y2, Base64.Encode(.text),
+		return Object('SuJsCanvasImage', .x1, .y1, .x2, .y2, Base64.Encode(.text),
 			.aspectRatio, id: .Id)
 		}
 	ToggleLock()

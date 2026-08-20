@@ -27,15 +27,21 @@ Test
 		Assert(st.Quote("a b", "'a b'"), is: '"a b"')
 		Assert(st.Quote('say "hi"', '\'say "hi"\''), is: '\'say "hi"\'')
 		Assert(st.Quote('x', "`x`"), is: "`x`")
-		Assert(st.Quote('a\tb', '"a\\tb"'), is: '"a\\tb"')
+		Assert(st.Quote("a\tb", '"a\\tb"'), is: '"a\\tb"')
+		Assert(st.Quote("a +\nb", "'a +\nb'"), is: '"a +\nb"')
+		Assert(st.Quote("a +\nb", '"a +\nb"'), is: '"a +\nb"')
+		Assert(st.Quote("a\nb", "`a\nb`"), is: "`a\nb`") // backquote stays raw
+		Assert(st.Quote('say "hi"\nbye', '\'say "hi"\nbye\'')
+			// a " inside pins it
+			is: '\'say "hi"\nbye\'')
 		}
 
 	Test_words()
 		{
 		st = .style()
 		Assert(st.Plain?("abc du"))
-		Assert(st.Plain?('a\tb'), is: false)
-		Assert(st.Plain?('a\\b'), is: false)
+		Assert(st.Plain?("a\tb"), is: false)
+		Assert(st.Plain?("a\\b"), is: false)
 		Assert(st.BareWord?(#foo))
 		Assert(st.BareWord?("class"), is: false)
 		Assert(st.BareWord?("2x"), is: false)
@@ -53,8 +59,12 @@ Test
 		r = .stmt("y = x[0 .. n]").expr.rhs
 		Assert(st.ZeroIdx?(r.from))
 		Assert(st.ZeroIdx?(r.to), is: false)
-		Assert(st.Debug?(.stmt("Print(1)").expr))
-		Assert(st.Debug?(.stmt("f(1)").expr), is: false)
+		// a debug call at the margin keeps the margin, an indented one does not
+		dbg = .fn("x = 1\nPrint(1)\n\tPrint(2)")
+		stmts = Suneido.Parse(dbg)
+		Assert(.style(dbg).Debug?(stmts[1].expr))
+		Assert(.style(dbg).Debug?(stmts[2].expr), is: false)
+		Assert(.style(dbg).Debug?(.stmt("f(1)").expr), is: false)
 		Assert(st.Negatable?(.stmt("y = a is b").expr.rhs))
 		Assert(st.Negatable?(.stmt("y = a + b").expr.rhs), is: false)
 		Assert(st.SwitchExpr(.stmt("y = (x)").expr.rhs).type, is: #Ident)
@@ -66,6 +76,12 @@ Test
 		Assert(st.Shorthand?(.stmt("f(a: b)").expr[0]), is: false)
 		Assert(st.Simple(.stmt("y = x").expr.rhs))
 		Assert(st.Simple(.stmt("f()").expr), is: false)
+//		Assert(st.NewThis(.stmt("y = new this()").expr.rhs))
+//		Assert(st.NewThis(.stmt("y = new Foo()").expr.rhs), is: false)
+		// scalar runs align; a method (index 2) breaks the run
+		cls = Suneido.Parse(
+			"class\n\t{\n\tx: 1\n\tabcd: 2\n\tGo()" $ "\n\t\t{\n\t\t}\n\ty: 3\n\t}")
+		Assert(st.ClassAlign(cls), is: #(4, 4, false, 1))
 		}
 
 	Test_tight()
@@ -107,5 +123,52 @@ Test
 		src2 = .fn("x = #(a: 1, bb: 2)")
 		ob2 = Suneido.Parse(src2)[0].expr.rhs.value
 		Assert(AstFmtStyle(src2, AstFmtComments(src2)).Vertical?(ob2), is: false)
+		}
+
+	Test_argBreaks()
+		{
+		src = .fn("f(a, b,\n\t\tc)")
+		call = Suneido.Parse(src)[0][0]
+		st = .style(src)
+		Assert(st.ArgBrokeInSrc?(call, 1), is: false)
+		Assert(st.ArgBrokeInSrc?(call, 2))
+		Assert(st.VerticalArgs?(call, 2), is: false)
+		src2 = .fn("f(a,\n\t\tb,\n\t\tc)")
+		Assert(.style(src2).VerticalArgs?(Suneido.Parse(src2)[0][0], 2))
+		}
+
+	Test_tableColumns()
+		{
+		src = "Base\n\t{\n\tc: (\n\t\t(a: 1, b: 200),\n\t\t(a: 22, b: 3),\n\t\t" $
+			"(a: 333, b: 44))\n\t}"
+		ob = Suneido.Parse(src)[0].value
+		Assert(.style(src).TableColumns(ob, 90, 4), is: #(6, 6))
+		// too narrow for the padded row
+		Assert(.style(src).TableColumns(ob, 20, 4), is: false)
+		// mixed keys
+		src2 = "Base\n\t{\n\tc: (\n\t\t(a: 1, b: 2),\n\t\t(x: 1, y: 2),\n\t\t" $
+			"(a: 1, b: 2))\n\t}"
+		Assert(.style(src2).TableColumns(Suneido.Parse(src2)[0].value, 90, 4), is: false)
+		// fewer than 3 rows
+		src3 = "Base\n\t{\n\tc: (\n\t\t(a: 1, b: 2),\n\t\t(a: 1, b: 2))\n\t}"
+		Assert(.style(src3).TableColumns(Suneido.Parse(src3)[0].value, 90, 4), is: false)
+		// a non-scalar cell value
+		src4 = "Base\n\t{\n\tc: (\n\t\t(a: (1), b: 2),\n\t\t(a: 1, b: 2),\n\t\t" $
+			"(a: 1, b: 2))\n\t}"
+		Assert(.style(src4).TableColumns(Suneido.Parse(src4)[0].value, 90, 4), is: false)
+		}
+
+	Test_verticalNested()
+		{
+		// a nested table node has no pos of its own
+		src = "Base\n\t{\n\tc: (\n\t\t(a: 1),\n\t\t(b: 2))\n\t}"
+		ob = Suneido.Parse(src)[0].value
+		Assert(ob.pos, is: 0)
+		Assert(.style(src).Vertical?(ob))
+		// the open delimiter must break, else it stays filled
+		src2 = "Base\n\t{\n\tc: ((a: 1),\n\t\t(b: 2))\n\t}"
+		ob2 = Suneido.Parse(src2)[0].value
+		Assert(ob2.pos, is: 0)
+		Assert(.style(src2).Vertical?(ob2), is: false)
 		}
 	}

@@ -29,7 +29,7 @@ class
 			ServerEval('ExtraProcesses.StartOne', sessionId)
 			return
 			}
-		Thread({ .Run(sessionId) })
+		Thread(.Run, sessionId)
 		}
 
 	///////////////////////////////////////////////////

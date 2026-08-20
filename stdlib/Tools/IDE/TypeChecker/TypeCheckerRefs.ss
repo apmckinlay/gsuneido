@@ -26,9 +26,9 @@ class
 
 	traverse(ast, constructed, called)
 		{
-		if Type(ast) isnt 'AstNode'
+		if Type(ast) isnt #AstNode
 			return
-		if ast.type is 'Call'
+		if ast.type is #Call
 			.classifyCall(ast, constructed, called)
 		for (i = 0; false isnt c = ast.children[i]; ++i)
 			.traverse(c, constructed, called) // recursive
@@ -43,28 +43,27 @@ class
 	classifyCall(call, constructed, called)
 		{
 		fn = call.func
-		if Type(fn) isnt 'AstNode'
+		if Type(fn) isnt #AstNode
 			return
-		if fn.type is 'Mem'
+		if fn.type is #Mem
 			{
 			// both `new X(...)` and `X.Foo(...)` have a capitalized Ident
 			// receiver; anything else on a Mem is a value-method call.
-			if fn.expr.type isnt 'Ident' or not fn.expr.name.Capitalized?()
+			if fn.expr.type isnt #Ident or not fn.expr.name.Capitalized?()
 				return
 			if .newCall?(fn)
 				.bump(constructed, fn.expr.name)
 			else if not fn.expr.name.Upper?()
-				.bump(called, fn.expr.name)   // static call: Json.Encode(...)
+				.bump(called, fn.expr.name) // static call: Json.Encode(...)
 			}
-		else if fn.type is 'Ident' and fn.name.Capitalized?() and
-			not fn.name.Upper?()
+		else if fn.type is #Ident and fn.name.Capitalized?() and not fn.name.Upper?()
 			.bump(called, fn.name)
 		}
 
 	newCall?(mem)
 		{
 		m = mem.mem
-		return Type(m) is 'AstNode' and m.type is 'Constant' and m.value is '*new*'
+		return Type(m) is #AstNode and m.type is #Constant and m.value is "*new*"
 		}
 
 	bump(counts, name)

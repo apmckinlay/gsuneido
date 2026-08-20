@@ -290,7 +290,13 @@ class
 		{
 		if rec.GetDefault(#group, true)
 			return false
-		return rec.lib_committed is '' and SvcSettings.Set?() or rec.lib_modified isnt ''
+		return rec.lib_committed is '' and .svcSettingsSet?() or rec.lib_modified isnt ''
+		}
+
+	// extracted for test
+	svcSettingsSet?()
+		{
+		return SvcSettings.Set?()
 		}
 
 	Valid?(data)

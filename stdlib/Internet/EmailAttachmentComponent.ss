@@ -71,12 +71,20 @@ HtmlDivComponent
 
 	loadLibs(block)
 		{
-		SuUI.GetCurrentWindow().LoadMagick(
+		SuUI.GetCurrentWindow().LoadJsLib('magickApi.js',
 			{
-			SuUI.GetCurrentWindow().LoadPako(block,
-				{ |err| Print(LoadPakoError: err); throw err })
+			SuUI.GetCurrentWindow().LoadJsLib('pako.min.js', block,
+				{ |err|
+				EmailAttachmentComponent.CloseOverlay()
+				Print(LoadPakoError: err)
+				throw "Failed to load pako.min.js"
+				})
 			},
-			{ |err| Print(loadImageMagickError: err); throw err })
+			{ |err|
+			EmailAttachmentComponent.CloseOverlay()
+			Print(loadImageMagickError: err)
+			throw "Failed to load magickApi.js"
+			})
 		}
 
 	mergePdfs(data, list, attachmentsSize)
@@ -105,7 +113,8 @@ HtmlDivComponent
 						if m not in (0, false)
 							list.Delete(m)
 						}
-					.compressAndEmail(attachmentsSize, data, list)
+					newTotalSize = list.SumWith({ it.fileData.Size() })
+					.compressAndEmail(newTotalSize, data, list)
 					}
 			})
 		}

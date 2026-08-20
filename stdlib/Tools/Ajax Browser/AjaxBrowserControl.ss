@@ -59,7 +59,7 @@ Controller
 		}
 	Server()
 		{
-		if false isnt host = Suneido.GetDefault(#JsConnectionHost, false)
+		if false isnt host = Suneido.GetDefault(#SuJsConnectionHost, false)
 			return (Suneido.GetDefault(#isHttps?, false) ? 'https://' : 'http://') $
 				host $ '/'
 

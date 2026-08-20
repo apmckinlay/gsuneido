@@ -91,7 +91,7 @@ CanvasItem
 		{ return .name }
 	GetSuJSObject()
 		{
-		return Object('SuCanvasRoundRect', .x1, .y1, .x2, .y2, .width, .height, id: .Id)
+		return Object('SuJsCanvasRoundRect', .x1, .y1, .x2, .y2, .width, .height, id: .Id)
 		}
 	GetCoordinates()
 		{

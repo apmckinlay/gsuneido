@@ -1,9 +1,7 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	New(.width = 90, .tabWidth = 4)
-		{
-		}
+	New(.width = 90, .tabWidth = 4) { }
 
 	Render(doc)
 		{
@@ -37,6 +35,8 @@ class
 				.nl(rs, i)
 			case #group:
 				.stepGroup(rs, i, m, d, stack)
+			case #lead:
+				.stepLead(rs, i, m, d, stack)
 			case #fill:
 				.stepFill(rs, i, m, d, stack)
 			case #fillr:
@@ -99,6 +99,24 @@ class
 			stack.Add([i, #flat, d.d])
 		}
 
+	// break before d, one indent deeper, only when d then fits flat; if d must
+	// break either way, leave it here and let its own breaks do the wrapping
+	stepLead(rs, i, m, d, stack)
+		{
+		if m is #flat or .fits(.width - rs.col, [i, #flat, d.d], stack)
+			{
+			stack.Add([i, #flat, d.d])
+			return
+			}
+		if .fits(.width - (i + 1) * .tabWidth, [i + 1, #flat, d.d], stack)
+			{
+			.nl(rs, i + 1)
+			stack.Add([i + 1, #flat, d.d])
+			return
+			}
+		stack.Add([i, #break, d.d])
+		}
+
 	stepFill(rs, i, m, d, stack)
 		{
 		if m is #flat
@@ -137,7 +155,7 @@ class
 				.emit(rs, s)
 				return
 				}
-			hi = Min(.width - rs.col - 4, s.Size() - 3)/*= close quote + ' $' */
+			hi = Min(.width - rs.col - 4, s.Size() - 3) /*= close quote + ' $' */
 			for (j = hi;; --j)
 				{
 				if j < 2 // no split point: let it overflow
@@ -198,7 +216,7 @@ class
 			{
 		case #hard:
 			return 1
-		case #nest, #group, #root:
+		case #nest, #group, #root, #lead:
 			return .leads(d.d)
 		case #cat, #fill, #fillr:
 			for x in d.a
@@ -255,7 +273,7 @@ class
 				w -= d.s.Size()
 			case #hard, #blank, #root:
 				return m isnt #flat
-			case #group:
+			case #group, #lead:
 				if d.hb is true
 					return m isnt #flat
 				work.Add([i, #flat, d.d])

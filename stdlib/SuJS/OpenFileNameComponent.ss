@@ -37,13 +37,15 @@ Component
 		if .s3?
 			{
 			SuUI.GetCurrentWindow().Eval(.LoadMagickScript(cdn))
-			SuUI.GetCurrentWindow().LoadMagick(
+			SuUI.GetCurrentWindow().LoadJsLib('magickApi.js',
 				{ .uploadAll(hDrop, filter, multi) },
-				{|unused|
+				{|err|
 				.magick? = false
 				SuRender().Event(false, 'SuneidoLog', Object(
 					'ERROR: (CAUGHT) failed to load ImageMagick.js',
-					caughtMsg: 'continue uploading without rotation'))
+					caughtMsg: 'continue uploading without rotation',
+					params: Object(loadImageMagickErrorName: err.name,
+						loadImageMagickErrorMsg: err.message)))
 				.uploadAll(hDrop, filter, multi)
 				})
 			}
@@ -84,36 +86,34 @@ window.arrayToString = function(uint8Array) {
 	return result;
 }
 
-window.loadMagick = function (block, catchBlock) {
-	const importFunc = function (c, v) {
-		import("` $ cdn $ `/magickApi.js?v="` $ `+v).then(handler).catch(c);
+// REFERENCE: 'https://cdn.jsdelivr.net/npm/wasm-imagemagick/dist/bundles/magickApi.js'
+window.loadJsLib = function (jslib, block, catchBlock) {
+	const handler = function (f) {
+		if (jslib === 'magickApi.js')
+			window.magick = function (files, command) { return f.call(files, command); };
+		else if (jslib === 'pako.min.js')
+			window.pakoInflate =
+				function(str) { return arrayToString(pako.inflate(uint8Array(str))); };
+		block();
 	}
 
-	const handler = function (f) {
-		window.magick = function (files, command) { return f.call(files, command); };
-		block();
+	const importFunc = function (c, v) {
+		import("` $ cdn $ `/" + jslib + "?v="` $ `+v).then(handler).catch(c);
 	}
 
 	const catchWrapper = function (unused) {
 		setTimeout(function () {
 			console.log('Retrying to load ImageMagick');
-			importFunc(catchBlock, Date.now()) },
+			importFunc(function (err) {
+// TMP: 36596
+				import("https://dgs0nprnzsaqw.cloudfront.net/" + jslib).then(
+					handler).catch(catchBlock);
+				}, Date.now())
+			},
 			2000);
 	}
 
-	// 'https://cdn.jsdelivr.net/npm/wasm-imagemagick/dist/bundles/magickApi.js'
 	importFunc(catchWrapper, 1);
-};
-
-window.loadPako = function (block, catchBlock) {
-	// 'https://cdn.jsdelivr.net/npm/pako@latest/dist/pako.min.js'
-	import("` $ cdn $ `/pako.min.js").then(
-		function(f) {
-			window.pakoInflate = function(str) {
-				return arrayToString(pako.inflate(uint8Array(str)));
-			};
-			block();
-		}).catch(catchBlock);
 };
 
 window.downloadFile = function(filename, content) {
@@ -141,7 +141,7 @@ window.downloadFile = function(filename, content) {
 				input.accept = filter
 			if multi
 				input.multiple = 'multiple'
-			// Safari doens't popup the open file window automatically on click
+			// Safari doesn't popup the open file window automatically on click
 			if SuRender().Engine isnt 'WebKit'
 				input.SetStyle('display', 'none')
 			input.onchange = .onChange
@@ -197,7 +197,7 @@ window.downloadFile = function(filename, content) {
 				}
 			if ExecutableExtension?(file.name)
 				{
-				.Event(#InvalidExtenstion, file.name)
+				.Event(#InvalidExtension, file.name)
 				return false
 				}
 			}
@@ -346,7 +346,7 @@ window.downloadFile = function(filename, content) {
 			})
 		}
 
-	// Not use ReadableSize because Number() is not supported in Suneido.js
+	// Not using ReadableSize because Number() is not supported in Suneido.js
 	formatSize(n)
 		{
 		amountPerUnit = 1024

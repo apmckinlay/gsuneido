@@ -1,14 +1,37 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	binaryPath: "//server/d/Software/TypeChecker/suneidotypes.exe"
+	// LEGACY-TYPECHECK-BINARY
+	// the in-process checker is used as soon as the exe provides it, so a dev
+	// switches over just by updating their exe
+	// to retire the binary, delete the TypeCheckerLegacyBinary record - nothing
+	// here needs editing, the name is looked up indirectly so its absence is
+	// only reachable on an exe that has no TypeChecker
+	transport()
+		{
+		return (.useBuiltin?)() ? TypeCheckerBuiltin : Global(#TypeCheckerLegacyBinary)
+		}
+
+	// Transport is recorded here rather than in transport() so it is written
+	// once per process instead of on every call
+	useBuiltin?: MemoizeSingle
+		{
+		Func()
+			{
+			builtin? = BuiltinNames().BinarySearch?(#TypeChecker)
+			if not Suneido.Member?(#TypeCheckProperties)
+				Suneido.TypeCheckProperties = Object()
+			Suneido.TypeCheckProperties.Transport = builtin? ? #builtin : #binary
+			return builtin?
+			}
+		}
 
 	getProps(key, def = #())
 		{
 		if not Suneido.Member?(#TypeCheckProperties)
 			Suneido.TypeCheckProperties = Object()
 
-		if key is ''
+		if key is ""
 			return Suneido.TypeCheckProperties
 
 		return Suneido.TypeCheckProperties.GetDefault(key, def)
@@ -22,33 +45,39 @@ class
 		Suneido.TypeCheckProperties[key] = val
 		}
 
+	// LEGACY-TYPECHECK-BINARY
+	// false once there is no binary, which hides the picker
 	BinaryPath()
 		{
-		return .getProps('').GetInit(#BinaryPath, .binaryPath)
+		return (.transport()).Path()
 		}
 
+	// LEGACY-TYPECHECK-BINARY
 	SetBinaryPath(path)
 		{
-		if path is .BinaryPath()
-			return
-
-		.setProps(#BinaryPath, path)
-		.StopServer()
+		(.transport()).SetPath(path)
 		}
 
 	BinaryExists?()
 		{
-		if not FileExists?(.BinaryPath())
+		// never type check a live system
+		if not (.liveSystem?)()
+			return (.transport()).Available?()
+
+		return false
+		}
+
+	liveSystem?: MemoizeSingle
+		{
+		Func()
 			{
-			SuneidoLog.Once("suneidotypes binary does not exist at " $ .BinaryPath())
-			return false
+			return ServerEval("Thread.List").Any?({ it.Has?("scheduler extra process") })
 			}
-		return true
 		}
 
 	Policy()
 		{
-		.getProps('').GetInit(#Policy, TypeCheckerPolicy())
+		.getProps("").GetInit(#Policy, TypeCheckerPolicy())
 		}
 
 	SetPolicy(policy)
@@ -57,8 +86,6 @@ class
 		.setProps(#Policy, policy)
 		}
 
-	// if no long running server then spawn
-	// else reuse existing server
 	// we skip lineage checking in two particular cases if the lib is not loaded
 	// or if we are passed in a function
 	Run(className, method, policy = false, references? = true,
@@ -73,70 +100,19 @@ class
 		if policy is false
 			policy = TypeCheckerPolicy()
 		refs = references? ? .references(orderedSrc) : #()
-		request = Object(:method, arguments: orderedSrc, references: refs, config: policy)
-		request= Json.Encode(request)
-		return .send(request, :restartOnError?)
+		return (.transport()).Check(method, orderedSrc, refs, policy, :restartOnError?)
 		}
 
-	send(request, restartOnError? = true)
-		{
-		try
-			result = .callCheck(.Server(), request)
-		catch (e) //respawn and retry
-			{
-			if not restartOnError?
-				throw e
-			.StopServer()
-			result = .callCheck(.Server(), request)
-			}
-		return Json.Decode(result.GetDefault(#content, ''))
-		}
-
-	// only throws on transport failure not on a non 2XX http code
-	callCheck(port, request)
-		{
-		return Http('POST', 'http://127.0.0.1:' $ port $ '/check', request,
-			header: Object('Content-Type': 'application/json'), timeout: 120)
-		}
-
+	// LEGACY-TYPECHECK-BINARY
 	Server()
 		{
-		if .getProps('').Member?(#Server)
-			return .getProps(#Server).port
-
-		if not .BinaryExists?()
-			throw "Binary unavailable"
-
-		if not Sys.Windows?()
-			Spawn(P.WAIT, 'chmod', '+x', .BinaryPath())
-		rp = RunPiped(.BinaryPath() $ ' -serve')
-		.setProps(#Server, Object(:rp, port: .readReadyPort(rp)))
-		return .getProps(#Server).port
+		return (.transport()).Start()
 		}
 
+	// LEGACY-TYPECHECK-BINARY
 	StopServer()
 		{
-		if not .getProps('').Member?(#Server)
-			return
-
-		server = .getProps(#Server)
-		Suneido.TypeCheckProperties.Delete(#Server)
-
-		if Number?(server.GetDefault(#port, false))
-			try
-				Http.Post('http://127.0.0.1:' $ server.port $ '/shutdown', '', timeout: 5)
-
-		try
-			server.rp.Close()
-		}
-
-	readReadyPort(rp)
-		{
-		line = rp.Readline() // binary prints "READY port=NNNN" once listening
-		if not String?(line) or not line.Has?('READY port=')
-			throw 'type checker did not report READY: ' $ Display(line)
-
-		return Number(line.AfterFirst('=').Trim())
+		(.transport()).Stop()
 		}
 
 	// if skipLineageOrLibName is false, then we build the lineage via TypeCheckerLineage
@@ -145,12 +121,12 @@ class
 	OrderedSrc(className, skipLineageOrLibName = false, src = false)
 		{
 		if String?(skipLineageOrLibName)
-			return Object(Object(name: className,
-				src: src isnt false
-					? src
-					: Query1(skipLineageOrLibName, name: className, group: -1).text))
+			return [Object(name: className,
+					src: src isnt false
+						? src
+						: Query1(skipLineageOrLibName, name: className, group: -1).text)]
 
-		chains = TypeCheckerLineage(Object(className))
+		chains = TypeCheckerLineage([className])
 		chain = chains.GetDefault(className, false)
 		if chain is false
 			throw 'TypeChecker: "' $ className $ '" is not a loadable class'
@@ -212,8 +188,8 @@ class
 		// reversing the whole list yields leaf-first, line-ascending
 		errors = diagnostics.GetDefault(#errors, Object()).Reverse!()
 		warnings = diagnostics.GetDefault(#warnings, Object()).Reverse!()
-		errors.Map!({ .formatDiagnostic('ERROR', it, library) })
-		warnings.Map!({ .formatDiagnostic('WARNING', it, library) })
+		errors.Map!({ .formatDiagnostic(#ERROR, it, library) })
+		warnings.Map!({ .formatDiagnostic(#WARNING, it, library) })
 
 		return errors, warnings
 		}
@@ -222,12 +198,12 @@ class
 		{
 		if library is false
 			// control's parseDiagnosticLine strips "KIND: " then reads Class.Method:Line
-			return String(kind) $ ": " $ String(d.class) $ "." $ String(d.method) $
-				":" $ String(d.line) $ " " $ String(d.msg)
+			return String(kind) $ ": " $ String(d.class) $ '.' $ String(d.method) $ ':' $
+				String(d.line) $ ' ' $ String(d.msg)
 
 		// lead with lib:Record:line for the goto regex; keep "KIND:" after it so
 		// Addon_highlight_warnings still colors the line
-		return String(library) $ ":" $ String(d.class) $ ":" $ String(d.line) $
-			" " $ String(kind) $ ": " $ String(d.method) $ " " $ String(d.msg)
+		return String(library) $ ':' $ String(d.class) $ ':' $ String(d.line) $ ' ' $
+			String(kind) $ ": " $ String(d.method) $ ' ' $ String(d.msg)
 		}
 	}

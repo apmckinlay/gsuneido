@@ -207,7 +207,7 @@ window.suCodeBundle = {
 
 	buildCode(rec)
 		{
-		fn = JsTranslate(rec.text, rec.name, rec.lib)
+		fn = SuJsTranslate(rec.text, rec.name, rec.lib)
 		return Display(rec.name) $ ': function () { return ' $ fn $ '; },\r\n'
 		}
 
@@ -246,10 +246,10 @@ window.suCodeBundle = {
 		// records referenced in strings
 		'PrintCancelDoc', 'PrintEndDoc', 'PrintEndPage', 'PrintManager',
 		'DoTaskWithPauseClient',
-		"SuCanvasEllipse", "SuCanvasGroup", "SuCanvasImage",
-			"SuCanvasLine", "SuCanvasRect", "SuCanvasRoundRect", "SuCanvasText",
-		"SuDrawClickTracker", "SuDrawLineTracker", "SuDrawRectTracker",
-			"SuDrawSelectTracker"
+		"SuJsCanvasEllipse", "SuJsCanvasGroup", "SuJsCanvasImage",
+			"SuJsCanvasLine", "SuJsCanvasRect", "SuJsCanvasRoundRect", "SuJsCanvasText",
+		"SuJsDrawClickTracker", "SuJsDrawLineTracker", "SuJsDrawRectTracker",
+			"SuJsDrawSelectTracker"
 		"SuClipboardPasteString", "SuClipboardWriteHtml", "SuClipboardWriteString",
 		"SuFlashWindow", "SuInitClient", "SuClearFocus", "SuJsExecute", "SuOpenBook",
 		"SuSetGuiFont", "SuShutdown", "SuTaskbarUpdate",

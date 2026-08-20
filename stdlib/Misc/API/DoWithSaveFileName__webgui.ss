@@ -14,7 +14,7 @@ function (filter = "", hwnd/*unused*/ = false, flags/*unused*/ = false,
 			saveName = file isnt '' ? file : baseName
 			if not saveName.Has?('.')
 				saveName $= Opt('.', ext)
-			JsDownload.Trigger(baseName, saveName)
+			SuJsDownload.Trigger(baseName, saveName)
 			}
 		catch (err)
 			{

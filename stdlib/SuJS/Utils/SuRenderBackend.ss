@@ -4,7 +4,7 @@ class
 	Init(wsHandler, token, key)
 		{
 		Suneido.SuRenderBackend = new this(wsHandler, token, key)
-		JsSessionToken.Register(token, key)
+		SuJsSessionToken.Register(token, key)
 		}
 
 	CallClass(noThrow = false)
@@ -140,7 +140,7 @@ class
 				SuneidoLog('ERROR: BeforeDisconnect - ' $ e, params: [fn])
 			}
 		.closeReconnectSocket()
-		JsSessionToken.Unregister(.Token)
+		SuJsSessionToken.Unregister(.Token)
 		}
 
 	Close()

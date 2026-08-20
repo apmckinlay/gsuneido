@@ -14,7 +14,7 @@ SuJsTester
 	Page(env)
 		{
 		return .BasePage(env, Object('SuJsTimeoutTester.Run', args: env.queryvalues),
-			JsLoadRuntime.GetUrl("su_code_bundle.js"))
+			SuJsLoadRuntime.GetUrl("su_code_bundle.js"))
 		}
 
 	Run(name, user)

@@ -8,7 +8,7 @@ ScintillaAddon
 		line = .LineFromPosition()
 
 		text = .get()
-		s = FormatCode(text)
+		s = AstFormatter(text)
 		if s is text
 			return
 		if .SelSize() is 0

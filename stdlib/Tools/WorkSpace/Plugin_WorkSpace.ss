@@ -22,7 +22,7 @@ Contributions:
 		target: function (@unused) { QueryViewControl() })
 	(WorkSpace, Toolbar, 'AI_Agent', A,
 		target: function (@unused) { AiAgentControl() })
-	(WorkSpace, Toolbar, 'Type_Checker', Y,
+	(WorkSpace, Toolbar, 'Type_Checker', lambda,
 		target: function (@unused) { TypeCheckerGui() })
 	)
 )

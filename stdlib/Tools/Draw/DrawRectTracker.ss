@@ -131,6 +131,6 @@ DrawTracker
 		}
 	GetSuJSTracker()
 		{
-		return 'SuDrawRectTracker'
+		return 'SuJsDrawRectTracker'
 		}
 	}

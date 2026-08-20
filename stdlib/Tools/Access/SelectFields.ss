@@ -400,8 +400,7 @@ class
 		pos = 0
 		while pos < src.Size()
 			{
-			whitespace = src[pos..].Extract('^(\s*?)\S')
-			pos += whitespace.Size()
+			pos += .whitespace(src[pos..]).Size()
 			if false is first = .first(src[pos..])
 				return ob
 			if first is '('
@@ -424,6 +423,13 @@ class
 				pos += first.Size()
 			}
 		return ob
+		}
+
+	whitespace(s)
+		{
+		return String?(whitespace = s.Extract('^(\s*?)\S'))
+			? whitespace
+			: ''
 		}
 
 	reserved_match(unused, src, reserved)
@@ -473,8 +479,7 @@ class
 		src = src.Trim()
 		while src isnt ''
 			{
-			whitespace = src.Extract('^(\s*?)\S')
-			other_block(whitespace)
+			other_block(whitespace = .whitespace(src))
 			src = src[whitespace.Size() ..]
 			next = .first(src)
 			if '' isnt best = .best_match(next, src)

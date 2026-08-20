@@ -46,7 +46,8 @@ Controller
 				.view.GetSelectFields(), .view.Select_vals, 'Header',
 				option: .view.Option, title: .view.GetTitle(),
 				selChanged: .view.GetDefault('SelectChanged?', false),
-				noUserDefaultSelects?: not .colModel.UserDefaultSelectEnabled?()),
+				noUserDefaultSelects?: not .colModel.UserDefaultSelectEnabled?(),
+				defaultSaveName: .selectRepeatName),
 			)
 
 		extraFilters = .Send('Select_ExtraFilters')

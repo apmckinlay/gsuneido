@@ -15,16 +15,15 @@ class
 		client = "gsuneido"
 		if Sys.Linux?()
 			client = './' $ ExeName()
-		cmd = client $ " -c 127.0.0.1 -p " $ ServerPort() $ ' -u '
+		cmd = client $ " -c 127.0.0.1 -p " $ ServerPort() $ ' '
 
 		if type is 'TimeoutTester'
 			{
 			PutFile('AttemptingToAuthorize.txt', '')
 			timetester = SoleContribution('TimeoutTester')()
 			Global(timetester).Setup()
-			// adding timeout sleep minutes could increase amazon continous tests cost
 			cmd $= AuthorizationHandler.AddTokenToCmdLine(
-				timetester $ "(minutes: 4.6); Exit();")
+				timetester $ "(minutes: 6); Exit();")
 			}
 		else if type is 'SuJsWeb'
 			{

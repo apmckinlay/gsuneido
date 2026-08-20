@@ -4,6 +4,9 @@ FormulaBase_Test
 	Test_main()
 		{
 		fn = FormulaIf
+			{
+			FormulaIf_maxArgs: 7
+			}
 		n = FORMULATYPE.NUMBER
 		s = FORMULATYPE.STRING
 		b = FORMULATYPE.BOOLEAN
@@ -23,6 +26,8 @@ FormulaBase_Test
 		.CheckError(fn, "IF must have at least 3 arguments")
 		.CheckError(fn, [b, true], "IF must have at least 3 arguments")
 		.CheckError(fn, [b, true], [n, 1], "IF must have at least 3 arguments")
+		.CheckError(fn, [s, 'a'], [n, 1], [s, 'b'], [n, 2], [s, 'c'], [n, 3],
+			[s, 'd'], [n, 4], [n, 5], "Formula: IF has too many arguments")
 		.CheckError(fn, [b, true], [n, 1], [b, true], [n, 2],
 			"IF must have odd number of arguments")
 		.CheckError(fn, [n, 1], [n, 2], [n, 3], "IF condition must be a <Boolean>")

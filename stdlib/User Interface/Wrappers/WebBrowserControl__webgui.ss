@@ -21,7 +21,7 @@ Control
 				.browser.Act('Navigate', url)
 				return
 				}
-			res = JsSuneidoAPP(url)
+			res = SuJsSuneidoAPP(url)
 			if res isnt ''
 				{
 				.Load(res)
@@ -55,7 +55,7 @@ Control
 		if what is false
 			return
 		if what.Prefix?('MSHTML:')
-			.webview.Load(JsSuneidoAPP.Convert(what.RemovePrefix('MSHTML:')))
+			.webview.Load(SuJsSuneidoAPP.Convert(what.RemovePrefix('MSHTML:')))
 		else
 			.webview.Navigate(what)
 		}
@@ -63,7 +63,7 @@ Control
 	SetCssStyle(style)
 		{
 		.InsertAdjacentHTML(false, 'beforeend', '<style>' $
-			JsSuneidoAPP.Convert(style.Tr('\r\n')) $ '</style>')
+			SuJsSuneidoAPP.Convert(style.Tr('\r\n')) $ '</style>')
 		}
 
 	Getter_LocationURL()

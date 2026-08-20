@@ -10,35 +10,46 @@ Controller
 		"OpenRouterApiKeyForAiAgentControl"
 	modelSettingKey: "AiAgentControl_model"
 	models: #(
-		"arcee-ai/trinity-large-thinking":
-			{ context: "256K", in: .22, out: .85 },
-		"deepseek/deepseek-v4-flash":
-			{ context: "1M", in: 0.10, out: 0.20 },
-		"deepseek/deepseek-v4-pro":
-			{ context: "1M", in: 0.44, out: 0.87 },
-		"google/gemini-3.1-flash-lite":
-			{ context: "1M", in: 0.25, out: 1.50 },
+		"deepseek/deepseek-v4-flash-0731":
+			{ context: "1M", in: .09, out: .18 },
+		"deepseek/deepseek-v4-pro-0813":
+			{ context: "1M", in: .44, out: .87 },
+		"google/gemini-3.7-flash":
+			{ context: "1M", in: .38, out: 1.88 },
 		"minimax/minimax-m3":
-			{ context: "1M", in: 0.60, out: 2.40 },
+			{ context: "1M", in: .60, out: 2.40 },
 		"moonshotai/kimi-k2.7-code":
-			{ context: "256K", in: 0.75, out: 3.50 },
-		"nvidia/nemotron-3-super-120b-a12b":
-			{ context: "1M", in: 0.09, out: 0.45 },
+			{ context: "256K", in: .75, out: 3.50 },
 		"nvidia/nemotron-3-ultra-550b-a55b":
-			{ context: "1M", in: 0.50, out: 2.50 },
+			{ context: "1M", in: .50, out: 2.20 },
+		"openai/gpt-5.6-luna-pro":
+			{ context: "1M", in: .10, out: .60 },
+		"openrouter/auto-beta":
+			{ context: "1M", in: .5, out: 2 },
 		"qwen/qwen3.7-plus":
-			{ context: "1M", in: 0.32, out: 1.28 },
+			{ context: "1M", in: .32, out: 1.28 },
 		"qwen/qwen3.7-max":
 			{ context: "1M", in: 1.25, out: 3.75 },
 		"xiaomi/mimo-v2.5-pro":
-			{ context: "1M", in: 0.44, out: 0.87 },
+			{ context: "1M", in: .44, out: 0.87 },
+		"z-ai/glm-5.2":
+			{ context: "1M", in: 1.40, out: 4.40 },
 		)
-	defaultModel: "deepseek/deepseek-v4-pro"
+	defaultModel: "deepseek/deepseek-v4-pro-0813"
 
 	CallClass(setText = '')
 		{
 		DeleteOldFiles('.ai/', -7) /*= one week */
-		prompt = Query1("suneidoc", path: "/res", name: "AiPrompt").text
+		aiPrompt = TableExists?('suneidoc')
+			? Query1("suneidoc", path: "/res", name: "AiPrompt")
+			: false
+		if aiPrompt is false
+			{
+			Alert("suneidoc table not found or suneidoc /res AiPrompt not found",
+				title: .Title, flags: MB.ICONERROR)
+			return
+			}
+		prompt = aiPrompt.text
 		model = UserSettings.Get(.modelSettingKey, .defaultModel)
 		if not .models.Member?(model)
 			model = .defaultModel
@@ -62,6 +73,8 @@ Controller
 		.model = .FindControl("model")
 		.model.Set(model)
 		.vert = .Vert.VertSplit.Vert
+		if UserSettings.Get('AiAgentControl_EnterToSend', true) is true
+			.FindControl('enterToSend').Set(true)
 		.editor = .FindControl("Editor")
 		if setText isnt ''
 			.editor.Set(setText)
@@ -81,6 +94,9 @@ Controller
 					.normalButtons(),
 					#Skip,
 					#(ScintillaAddons, name: "Editor", wrap:, xstretch: 1),
+					#Skip,
+					#(Horz, Fill,
+						(CheckBox, '"Enter" key sends message', name: 'enterToSend')),
 					]
 				]
 			#(Statusbar, name: "statusbar")
@@ -118,10 +134,10 @@ Controller
 		)
 	On_modelHelp()
 		{
-		w0 = 40
-		w1 = 10
-		w2 = 6
-		w3 = 6
+		w0 = 34
+		w1 = 7
+		w2 = 5
+		w3 = 5
 		s = "Id".RightFill(w0) $ "Context".LeftFill(w1) $
 			"In".LeftFill(w2) $ "Out".LeftFill(w3) $ "\n"
 		s $= "-".Repeat(w0 + w1 + w2 + w3) $ "\n"
@@ -141,6 +157,7 @@ Controller
 		text = .userText()
 		if text is ""
 			return
+		.startTime = Date()
 		.FindControl("Send").SetEnabled(false)
 		.sending = true
 		.agent.Input(text)
@@ -156,10 +173,16 @@ Controller
 		}
 	Enter_Pressed(pressed = false)
 		{
+		if not .EnterToSend?()
+			return 0 // allow default (newline)
 		if KeyPressed?(VK.SHIFT, :pressed)
 			return 0 // allow default (newline)
 		.On_Send()
 		return false
+		}
+	EnterToSend?()
+		{
+		return .FindControl('enterToSend').Get() is true
 		}
 
 	output(what, data, approve = false)
@@ -194,14 +217,32 @@ Controller
 		try // in case the exe doesn't have Usage or Cost yet
 			{
 			// using ending spaces to avoid overlapping with the resizing handler
-			.status.Set("\t\tContext: " $ .k(.agent.Usage()) $ " / " $ contextLimit $
-				"  |  Cost: " $ .agent.Cost().Format("##.##") $ '      ' )
+			.status.Set("\t\tContext: " $ .percentUsed(.agent.Usage(), contextLimit) $
+				"  |  Cost: " $ .agent.Cost().Format("##.##") $
+				"  |  Time: " $ .formatTime(Date().MinusSeconds(.startTime)) $ '      ' )
 			}
 		}
-	k(n)
+	percentUsed(usage, contextLimit)
 		{
-		k = 1000
-		return (n / k).RoundToPrecision(2) $ "k"
+		percent = 100
+		usage = (usage / .contextTokens(contextLimit) * percent).Int()
+		return usage $ "% / " $ contextLimit
+		}
+	contextTokens(s)
+		{
+		n = Number(s.Tr("KM"))
+		return s.Suffix?("M") ? n * 1000000 : n * 1000 /*= M or K */
+		}
+	formatTime(secs)
+		{
+		oneMinute = 60
+		secs = secs.Round(0)
+		return (.fmt((secs / oneMinute).Floor(), #m) $
+			Opt(" ", .fmt((secs % oneMinute).Round(0), #s))).Trim()
+		}
+	fmt(number, unit)
+		{
+		return number is 0 ? '' : number $ unit
 		}
 
 	buttonsRowIndex: 1
@@ -285,8 +326,7 @@ Controller
 		}
 	On_Load()
 		{
-		filename = OpenFileName(filter: "Log Files (*.md)|*.md|All Files (*.*)|*.*")
-		if filename isnt ""
+		if false isnt filename = AiAgentLoadControl()
 			{
 			.FindControl("webView").Set(.page)
 			.agent.LoadConversation(filename)
@@ -604,6 +644,8 @@ page: `<!DOCTYPE html>
 		{
 		if .selectedModel isnt false
 			UserSettings.Put(.modelSettingKey, .selectedModel)
+		UserSettings.Put('AiAgentControl_EnterToSend',
+			.FindControl('enterToSend').Get())
 		.agent.Close()
 		}
 	}

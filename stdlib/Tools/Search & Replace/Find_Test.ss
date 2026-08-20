@@ -62,15 +62,13 @@ Test
 		options = [find: 'A.+?c', regex:, case:, word:]
 		Assert(fn(.text, 59, options, prev:) is: #(31, 3))
 
-		// test searching by Expression
-		ast = AstWriteManager(.text)
-		options = [find: 'abc', expr:]
-		Assert(fn(.text, 0, options) is: false)
-		options = [find: "abc", :ast, expr:]
-		Assert(fn(.text, 59, options) is: #(14, 3))
+		// test searching by Comby pattern
+		options = [find: 'abc', comby:]
+		Assert(fn(.text, 0, options) is: #(14, 3))
 		Assert(fn(.text, 15, options) is: #(52, 3))
-		options = [find: "a + b", :ast, expr:]
-		Assert(fn(.text, 0, options) is: #(20, 14))
+		// comby holes match at token/expression boundaries
+		options = [find: ":[a:e] + :[b:e]", comby:]
+		Assert(fn(.text, 0, options) is: #(20, 15))
 		}
 
 	Test_FindAll()
@@ -79,10 +77,7 @@ Test
 		options = [find: 'abc']
 		Assert(fn(.text, options) is: #((14, 3), (22, 3), (31, 3), (48, 3), (52, 3)))
 
-		ast = AstWriteManager(.text)
-		options = [find: 'abc', expr:]
-		Assert(fn(.text, options) is: false)
-		options = [find: "abc", :ast, expr:]
+		options = [find: 'abc', comby:]
 		Assert(fn(.text, options) is: #((14, 3), (52, 3)))
 		}
 
@@ -101,14 +96,14 @@ Test
 		Assert(fn(.text, `abc = 'aabcde' + Abc;`, 14, 35, options)
 			is: `abc = 'aabcde' + ABC;`)
 
-		ast = AstWriteManager(.text)
-		options = [find: 'a+b', replace: '\2 + \1', expr:]
+		// Comby replace: invalid pattern returns false
+		options = [find: 'a+b', replace: ":[b:e] + :[a:e]", comby:]
 		Assert(fn(.text, .text, 0, 59, options) is: false)
-		options = [find: 'a+b', replace: '\2 + \1', :ast, expr:]
+		// Comby replace with valid pattern
+		options = [find: ":[a:e] + :[b:e];", replace: ":[b:e] + :[a:e];", comby:]
 		Assert(fn(.text, .text, 0, 59, options)
-			like: `function () { abc = Abc + 'aabcde'; return Test_Abc(abc); }`)
+			is: `function () { abc = Abc + 'aabcde'; return Test_Abc(abc); }`)
 		Assert(fn(.text, .text, 0, 25, options) is: false)
-		Assert(fn(.text, .text, 25, 59, options) is: false)
 		}
 
 	Test_tryIgnoreRegexError()

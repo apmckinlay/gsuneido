@@ -743,7 +743,7 @@ Server: AmazonS3")
 
 		mock.When.makeRequest([anyArgs:]).Return([headker: header.Lines()[0]])
 		Assert({mock.GetBucketRegion('bucket3')}
-			throws: 'method not found: boolean.Lower')
+			throws: 'Assert FAILED: cannot determine region')
 
 		header = 'HTTP/1.1 403 Forbidden\n' $
 			'x-amz-bucket-region: us-west-2'

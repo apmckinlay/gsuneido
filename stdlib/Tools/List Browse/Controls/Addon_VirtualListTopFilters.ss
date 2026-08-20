@@ -149,6 +149,16 @@ Addon_VirtualListViewBase
 			AccessControl.GetCount(.GetTitle(), .GetQuery())
 		}
 
+	SelectFromWindow(.topFilters)
+		{
+		return .Select_Apply()
+		}
+
+	CloseSelectFromWindow()
+		{
+		.Delete(String(this).BeforeFirst("(") $ "_topFilters") // fall back to getter
+		}
+
 	Select_Apply()
 		{
 		if false is .Send('VirtualList_ApplySelect?')

@@ -66,7 +66,7 @@ _Params
 
 	afterSaveFile(report, ext, filename)
 		{
-		JsDownload.Trigger(Paths.Basename(filename), .getDefaultFileName(report, ext))
+		SuJsDownload.Trigger(Paths.Basename(filename), .getDefaultFileName(report, ext))
 		}
 
 	// overridden to avoid showing the preview window

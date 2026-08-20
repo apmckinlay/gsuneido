@@ -111,9 +111,12 @@ Controller
 		.closeDialog()
 		}
 
-	closeDialog()
+	closeDialog(noChange = false)
 		{
-		.access.Send('SelectControl_Changed')
+		if not noChange
+			.access.Send('SelectControl_Changed')
+		if .access.Base?(VirtualListViewControl)
+			.access.CloseSelectFromWindow()
 		.Window.Result("")
 		}
 
@@ -144,6 +147,8 @@ Controller
 		{
 		if false is where = .where()
 			return false
+		if .access.Base?(VirtualListViewControl)
+			return .access.SelectFromWindow(.select2)
 		return .access.SetWhere(where)
 		}
 	where()
@@ -151,7 +156,7 @@ Controller
 		// Close the select control as the access has been destroyed
 		if .access.Destroyed?()
 			{
-			.Window.Result("")
+			.closeDialog(noChange:)
 			return false
 			}
 
@@ -175,7 +180,7 @@ Controller
 		}
 	On_Cancel()
 		{
-		.Window.Result("")
+		.closeDialog(noChange:)
 		}
 
 	On_Count()

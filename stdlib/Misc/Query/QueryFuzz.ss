@@ -3,11 +3,10 @@
 class
 	{
 	tables: (
-		(cus, '(ck, c1, c2, c3, c4) key(ck)'),
-		(ivc, '(ik, i1, i2, i3, i4, ck) key(ik) index(ck) in cus'),
-		(aln, '(ik, ak, a1, a2, a3, a4) key(ik, ak)')
-		(bln, '(ik, bk, b1, b2, b3, b4) key(ik, bk)')
-		)
+		(cus, "(ck, c1, c2, c3, c4) key(ck)"),
+		(ivc, "(ik, i1, i2, i3, i4, ck) key(ik) index(ck) in cus"),
+		(aln, "(ik, ak, a1, a2, a3, a4) key(ik, ak)"),
+		(bln, "(ik, bk, b1, b2, b3, b4) key(ik, bk)"))
 	sizes: (c: 10, i: 100, a: 500, b: 1000)
 
 	Test(secs = 5)
@@ -52,21 +51,20 @@ class
 		for .. nthreads
 			wg.Thread({ .multi(secs, results) })
 		for query in QueryFuzzCorpus
-			if not .multi1(query.Tr(' \t\r\n', ' ') $ " /*corpus*/", results)
+			if not .multi1(query.Tr(" \t\r\n", ' ') $ " /*corpus*/", results)
 				break
 		wg.Wait(10 /*= time for QueryFuzzCorpus */ +
-			(secs * 1.75).Int())/*= allow for Timer running over */
+			(secs * 1.75).Int()) /*= allow for Timer running over */
 		return results
 		}
+
 	multi(secs, results)
 		{
 		start = Date()
-		while (Date().MinusSeconds(start) < secs)
-			{
+		while Date().MinusSeconds(start) < secs
 			for ..10 /*= loop for time */
 				if not .multi1(.MakeQuery(), results)
 					return
-			}
 		}
 
 	multi1(base, results)
@@ -90,34 +88,34 @@ class
 
 	Run(secs)
 		{
-		File("qfuzz.log", "w")
+		File("qfuzz.log", 'w')
 			{|f|
 			return .run(secs, { f.Writeline(it) })
 			}
 		}
+
 	RunPrint(secs)
 		{
 		return .run(secs, Print)
 		}
+
 	run(secs, write)
 		{
 		count = 0
 		for query in QueryFuzzCorpus
-			{
-			count += .run1vary(query.Tr(' \t\r\n', ' ') $ " /*corpus*/", write)
-			}
-		QueryApply('views')
+			count += .run1vary(query.Tr(" \t\r\n", ' ') $ " /*corpus*/", write)
+		QueryApply(#views)
 			{|x|
 			count += .run1(x.view_name $ " /*view*/", write)
 			}
-		Plugins().ForeachContribution('Reporter', 'queries')
-			{ |x|
+		Plugins().ForeachContribution(#Reporter, #queries)
+			{|x|
 			query = x.query
 			if query.BeforeFirst('.').GlobalName?() and
 				not Uninit?(query.BeforeFirst('.'))
 				query = Global(query)()
 			if query.Size() < 3900 /*= max line length */
-				count += .run1(query.Tr(' \t\r\n', ' ') $ " /*reporter " $ x.name $ "*/",
+				count += .run1(query.Tr(" \t\r\n", ' ') $ " /*reporter " $ x.name $ "*/",
 					write)
 			}
 		Timer(:secs)
@@ -126,6 +124,7 @@ class
 			}
 		return count
 		}
+
 	run1vary(query, write)
 		{
 		n = .run1(query, write)
@@ -133,6 +132,7 @@ class
 			n += .run1(.vary(query), write)
 		return n
 		}
+
 	nvariations: 2
 	vary(query)
 		{
@@ -141,6 +141,7 @@ class
 			#(`""`, `"3"`, `"12"`).RandVal()
 			}
 		}
+
 	run1(query, write)
 		{
 		try
@@ -155,14 +156,15 @@ class
 				return 0 // skip/ignore view that references code not in use
 			Print(query)
 			Print("    =>", e)
-			AddFile("qfuzz.err", query $ '\r\n=> ' $ e $ '\r\n')
+			AddFile("qfuzz.err", query $ "\r\n=> " $ e $ "\r\n")
 			}
 		return 0
 		}
+
 	Checker(secs)
 		{
-		if not FileExists?(gs = './gsport.exe')
-			gs = '../gsport.exe'
+		if not FileExists?(gs = "./gsport.exe")
+			gs = "../gsport.exe"
 		count = 0
 		RunPiped(gs $ ' "Print(QueryFuzz.RunPrint(' $ secs $ ')); Exit()"')
 			{|rp|
@@ -179,10 +181,11 @@ class
 		Print(count)
 		Exit()
 		}
+
 	Check(errProcess = false)
 		{
 		count = 0
-		File("qfuzz.log", "r")
+		File("qfuzz.log", 'r')
 			{|f|
 			while false isnt line = f.Readline()
 				{
@@ -192,6 +195,7 @@ class
 			}
 		return count
 		}
+
 	check(line, errProcess = false)
 		{
 		if errProcess is false
@@ -204,28 +208,30 @@ class
 			if hash isnt expected
 				errProcess(query)
 			}
-		catch(e)
-			errProcess(e $ '\r\n' $ query)
+		catch (e)
+			errProcess(e $ "\r\n" $ query)
 		}
+
 	printQueryDiff(query)
 		{
-		Print("DIFF", query)
+		Print(#DIFF, query)
 		}
 
 	MakeTables(seed = false)
 		{
 		if seed is false
-			seed = Random(9999999999) /*= large range */
+			seed = Random(9_999_999_999) /*= large range */
 		Random.Seed(seed)
 		.DropTables()
 		for x in .tables
 			{
-			Database('create ' $ x[0] $ ' ' $ x[1])
+			Database("create " $ x[0] $ ' ' $ x[1])
 			for .. .sizes[x[0][0]]
 				.MakeRec(x[0])
 			}
 		return seed
 		}
+
 	MakeRec(tbl)
 		{
 		random = 100
@@ -233,11 +239,12 @@ class
 			{
 			rec = Object()
 			for col in QueryColumns(tbl)
-				if col in ('ak', 'bk')
+				if col in (#ak, #bk)
 					rec[col] = String(Random(random)) /*= line key range */
 				else
 					rec[col] = Random(random) < 10 /*= min */
-						? "" : String(Random(2 * .sizes[col[0]]))
+						? ""
+						: String(Random(2 * .sizes[col[0]]))
 			try
 				{
 				QueryOutput(tbl, rec)
@@ -245,19 +252,20 @@ class
 				}
 			}
 		}
+
 	DropTables()
 		{
 		for x in .tables.Copy().Reverse!()
 			if TableExists?(x[0])
-				Database('drop ' $ x[0])
+				Database("drop " $ x[0])
 		}
+
 	start: (
 		cus,
-		(cus join ivc)
-		(ivc join aln)
-		(cus join (ivc join aln))
-		((cus join ivc) join aln)
-		)
+		(cus, join, ivc),
+		(ivc, join, aln),
+		(cus, join, (ivc, join, aln)),
+		((cus, join, ivc), join, aln))
 	MakeQuery()
 		{
 		q = ""
@@ -274,24 +282,26 @@ class
 			}
 		catch (e)
 			{
-			AddFile("qfuzz.err", Display(q) $ '\r\n=> ' $ e $ '\r\n')
+			AddFile("qfuzz.err", Display(q) $ "\r\n=> " $ e $ "\r\n")
 			SuneidoLog("ERROR in MakeQuery " $ e)
-			return "cus"
+			return #cus
 			}
 		}
+
 	leftjoin(q)
 		{
 		Nested.Visit(q)
-			{|x,j/*unused*/,ob/*unused*/|
-			if Object?(x) and 'join' is x.GetDefault(1, false) and
+			{|x, j/*unused*/, ob/*unused*/|
+			if Object?(x) and #join is x.GetDefault(1, false) and
 				Random(4) is 3 /*= 1/4 leftjoin */
 				{
-				x[1] = 'leftjoin'
+				x[1] = #leftjoin
 				if Random(2) is 1 /*= 1/2 the time */
 					x.Reverse!()
 				}
 			}
 		}
+
 	add_unions(q)
 		{
 		for i in ..4 /*= frequency of unions */
@@ -299,18 +309,20 @@ class
 			r = Nested.Random(q)
 			ob = r[0]
 			i = r[1]
-			if ob[i] not in ('join', 'leftjoin', 'union')
-				ob[i] = [ob[i], 'union', .copy(ob[i])]
+			if ob[i] not in (#join, #leftjoin, #union)
+				ob[i] = [ob[i], #union, .copy(ob[i])]
 			}
 		}
+
 	aln_to_bln(q)
 		{
 		Nested.Visit(q)
-			{|x,j,ob|
-			if x is 'aln' and Random(101) < 50 /*= 1/2 bln */
-				ob[j] = 'bln'
+			{|x, j, ob|
+			if x is #aln and Random(101) < 50 /*= 1/2 bln */
+				ob[j] = #bln
 			}
 		}
+
 	add_query1(q)
 		{
 		for n in ..3 /*= number of query1 */
@@ -318,10 +330,11 @@ class
 			r = Nested.Random(q)
 			ob = r[0]
 			i = r[1]
-			if ob[i] not in ('join', 'union')
+			if ob[i] not in (#join, #union)
 				ob[i] = .add_1query1(ob[i], n)
 			}
 		}
+
 	add_1query1(x, n)
 		{
 		allcols = #(ck, c1, c2, c3, c4, ik, i1, i2, i3, i4,
@@ -335,49 +348,49 @@ class
 		randomStr = 100
 		switch Random(8) /*= random selection */
 			{
-		case 0,1,2: /*= where */
+		case 0, 1, 2: /*= where */
 			col = cols.RandVal()
-			op = #('is', 'is', 'is', 'is',
-				'isnt', '<', '<=', '>', '>=').RandVal()
-			val = Random(randomStr + 1) < 25 /*= min */
-				? "" : String(Random(randomStr))
-			return '(' $ q $ ' where ' $ col $ ' ' $ op $ ' "' $
-				val $ '")' /*= range */
+			op = #(is, is, is, is,
+				isnt, '<', "<=", '>', ">=").RandVal()
+			val = Random(randomStr + 1) < 25 /*= min */ ? "" : String(Random(randomStr))
+			return '(' $ q $ " where " $ col $ ' ' $ op $ ' "' $ val $ '")' /*= range */
 		case 3: /*= extend constant */
-			return '(' $ q $ ' extend x' $ n $ ' = "' $ String(n) $ '")'
+			return '(' $ q $ " extend x" $ n $ ' = "' $ String(n) $ '")'
 		case 4: /*= extend expression */
 			e = allcols.RandVal()
 			if cols.Has?(e)
 				e = 'x' $ n
 			col = cols.RandVal()
-			return '(' $ q $ ' extend ' $ e $ ' = ' $ col $ ')'
+			return '(' $ q $ " extend " $ e $ " = " $ col $ ')'
 		case 5: /*= extend <rule> */
-			return '(' $ q $ ' extend r' $ n $ ')'
+			return '(' $ q $ " extend r" $ n $ ')'
 		case 6: /*= rename */
 			nonkey = cols.Filter({ it[1] isnt 'k' })
 			if nonkey is #()
 				return x
 			col = nonkey.RandVal()
-			return '(' $ q $ ' rename ' $ col $ ' to y' $ n $ ')'
+			return '(' $ q $ " rename " $ col $ " to y" $ n $ ')'
 		case 7: /*= remove (project) */
 			nonkey = cols.Filter({ it[1] isnt 'k' })
 			if nonkey is #()
 				return x
-			rem = nonkey.Shuffle!()[..Random(2)+1]
-			return q $ ' remove ' $ rem.Join(',') // = project
+			rem = nonkey.Shuffle!()[.. Random(2) + 1]
+			return q $ " remove " $ rem.Join(',') // = project
 			}
 		}
+
 	add_sort(q)
 		{
 		cols = QueryColumns(q)
 		if cols is #() or Random(2) is 1
 			return q // no sort
-		cols = cols.Copy().Shuffle!()[..Random(3)+1] /*= number of sort fields */
-		sort = ' sort '
-		if Random(3) /*=frequency*/ is 1
-			sort $= 'reverse '
+		cols = cols.Copy().Shuffle!()[.. Random(3) + 1] /*= number of sort fields */
+		sort = " sort "
+		if Random(3)/*=frequency*/ is 1
+			sort $= "reverse "
 		return q $ sort $ cols.Join(',')
 		}
+
 	copy(x)
 		{
 		if Object?(x)

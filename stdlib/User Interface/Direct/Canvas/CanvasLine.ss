@@ -88,7 +88,7 @@ CanvasItem
 		}
 	GetSuJSObject()
 		{
-		return Object('SuCanvasLine', .x1, .y1, .x2, .y2, id: .Id)
+		return Object('SuJsCanvasLine', .x1, .y1, .x2, .y2, id: .Id)
 		}
 	ToggleLock()
 		{

@@ -61,7 +61,8 @@ Control
 		return .Act(#SetReadOnly, .setReadOnly = readonly)
 		}
 
-	lastDirtyCallstack: ''
+	lastDirtyCallstack:	''
+	lastDirtyParams: 	''
 	SetReadOnlyLogging(name) // Extra logging for suggestion 25689, and 37312
 		{
 		try
@@ -76,7 +77,7 @@ Control
 					lastModify: .logging_lastModify,
 					modifyFocused?: .logging_focusedModify?).Merge(.lastEvents))
 			SuneidoLog('INFO: Error follow up log, last .Dirty? call stack',
-				calls: .lastDirtyCallstack)
+				calls: .lastDirtyCallstack, params: .lastDirtyParams)
 			SuRenderBackend().DumpStatus('ScintillaControl SetReadonly(true) when dirty')
 			}
 		catch (error)
@@ -110,7 +111,6 @@ Control
 		.CancelAct('Set')
 		.CancelAct('AppendText')
 		.s = EnsureCRLF(s)
-		.astWriterManager = false
 		.Act(#Set, .s)
 		.Dirty?(false)
 		}
@@ -216,7 +216,10 @@ Control
 		if dirty isnt ''
 			.dirty = dirty
 		if dirty is true
+			{
 			.lastDirtyCallstack = .callStack(limit: 15)
+			.lastDirtyParams = Object(dirty_TS: Timestamp())
+			}
 		return .dirty
 		}
 
@@ -230,11 +233,11 @@ Control
 		{
 .lastEvents['EN_CHANGE'] = Object(
 	eventId: SuRenderBackend().SuRenderBackend_eventId,
-	t: Timestamp())
-		.astWriterManager = false
+	t: dirty_TS = Timestamp())
 		.Send("EN_CHANGE")
 		.dirty = true
 		.lastDirtyCallstack = .callStack(limit: 25)
+		.lastDirtyParams = Object(:dirty_TS)
 		return 0
 		}
 
@@ -286,6 +289,9 @@ Control
 
 	SCEN_SETFOCUS()
 		{
+.lastEvents['SCEN_SETFOCUS'] = Object(
+	eventId: SuRenderBackend().SuRenderBackend_eventId,
+	t: Timestamp(), dirty?: .Dirty?())
 		.Send('Scintilla_SetFocus')
 		return 0
 		}
@@ -549,7 +555,6 @@ Control
 		toUpdate = .selection.anchor < .selection.head ? #head : #anchor
 		.selection[toUpdate] += s.Size() - (end - start)
 		.Act(#ReplaceSelFromServer, s, start, end)
-		.astWriterManager = false
 		}
 
 	SearchText()
@@ -557,17 +562,8 @@ Control
 		return .Get()
 		}
 
-	astWriterManager: false
-	Getter_AstWriterManager()
-		{
-		if .astWriterManager is false
-			try .astWriterManager = AstWriteManager(.SearchText())
-		return .astWriterManager
-		}
-
 	getter_findreplace_options()
 		{
-		.findreplacedata.ast = Find.NeedAst?(.findreplacedata) ? .AstWriterManager : false
 		return .findreplacedata
 		}
 

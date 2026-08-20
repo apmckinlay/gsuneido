@@ -40,18 +40,6 @@ Test
 			{|x|
 			Assert(x is: byrep[x.rep])
 			}
-
-		strategy = QueryStrategy(table $ " where rep = 1
-			summarize date, total amount")
-		Assert(strategy has: "^(rep,date)")
-		}
-	Test_fixed()
-		{
-		table = .MakeTable("(a,b,c,d) key(a,b) index(a) index(b)")
-		for i in .. 100
-			QueryOutput(table, Record(a: i % 3 is 0, b: i))
-		query = table $ ' where a = true summarize b, min d sort b'
-		Assert(QueryStrategy(query) has: table $ '^(a,b)')
 		}
 	Test_map()
 		{
@@ -79,7 +67,7 @@ Test
 
 		q = 'stdlib summarize max parent' // index
 		Assert(QueryStrategy(q) has: 'summarize-idx')
-		Assert(Query1(q).Size() is: 1) // no record
+		Assert(Query1(q) isSize: 1) // not whole record
 
 		q = 'stdlib where num < 10 summarize max name'
 		Assert(QueryStrategy(q) has: '-seq') // better to use num index

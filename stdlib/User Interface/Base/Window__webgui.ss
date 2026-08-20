@@ -221,8 +221,9 @@ WindowBase
 			}
 		else
 			{
-			if .focus not in (false, 0)
-				SetFocus(.focus)
+			focus = .lockedFocus isnt false ? .lockedFocus : .focus
+			if focus not in (false, 0)
+				SetFocus(focus)
 
 			.Send("Activate")
 			PubSub.Publish(#WindowActivated)
@@ -235,6 +236,17 @@ WindowBase
 		if newFocus isnt false
 			.focus = newFocus
 		super.DoActivate()
+		}
+
+	lockedFocus: false
+	LockActivateFocus(focus)
+		{
+		Assert(.lockedFocus is: false)
+		.lockedFocus = focus
+		}
+	ReleaseActivateFocus()
+		{
+		.lockedFocus = false
 		}
 
 	GetWindowTitle()

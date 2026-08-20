@@ -453,7 +453,8 @@ class
 	Once(message, calls = '', params = '', caughtMsg = '')
 		{
 		if .getMessageCount(message) is 0
-			.CallClass(message, :calls, :params, :caughtMsg)
+			return .CallClass(message, :calls, :params, :caughtMsg)
+		return false
 		}
 
 	OnceByCallstack(msg)

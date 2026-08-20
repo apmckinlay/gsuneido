@@ -128,3 +128,7 @@ Tests are not safe to run concurrently in parallel.
 ## Missing features
 - No declarations, no `var` or `val`, no enums, no operator overloading, no `goto`, `finally`, or modules.
 - No multiple inheritance; no protected members.
+
+---
+
+The Go implementation of Suneido can be found in the "gsuneido" table

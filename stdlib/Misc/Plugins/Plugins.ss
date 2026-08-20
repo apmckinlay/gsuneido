@@ -51,12 +51,28 @@ Singleton
 		}
 	foreachPluginLibraryRecord(block)
 		{
+		tags = .libraryTagsInUse()
 		for lib in .libraries()
 			{
+			groups = Object().Set_default(Object())
 			query = lib $ ' where group is -1 and name > "Plugin_" and name < "Plugin_~"
 				extend lib = ' $ Display(lib)
-			QueryApply(query, block)
+			QueryApply(query,
+				{ groups[LibraryTags.RemoveTagFromName(it.name)][it.name] = it })
+			for base, recs in groups
+				{
+				names = LibraryTags.SortNamesByTag(recs.Members(), :tags)
+				if names.Empty?()
+					continue
+				match = recs[names.First()]
+				match.name = base
+				block(match)
+				}
 			}
+		}
+	libraryTagsInUse()
+		{
+		return LibraryTags.GetTagsInUse(allowServerFallback?:)
 		}
 	libraries()
 		{

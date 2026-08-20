@@ -85,7 +85,7 @@ CanvasItem
 
 	GetSuJSObject()
 		{
-		return Object('SuCanvasRect', .x1, .y1, .x2, .y2, id: .Id)
+		return Object('SuJsCanvasRect', .x1, .y1, .x2, .y2, id: .Id)
 		}
 	ToggleLock()
 		{

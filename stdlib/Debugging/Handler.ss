@@ -5,7 +5,14 @@ class
 		{
 		if hwnd is 0
 			hwnd = GetActiveWindow()
-		if Suneido.User is 'default'
+		if Suneido.User is false
+			{
+			ErrorLog('ERROR: ' $ err $ ' - not authorized, user alerted')
+			Delay(10000 /*= similar to Fatal */, { Exit(true) })
+			MessageBox(hwnd, 'An error has occured.', 'Alert', MB.ICONERROR)
+			Exit(true)
+			}
+		else if Suneido.User is 'default'
 			.programmerError(err, hwnd, calls)
 		else
 			.userError(err, hwnd, calls)

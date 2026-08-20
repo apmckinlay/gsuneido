@@ -26,7 +26,7 @@ Controller
 
 		try
 			{
-			matches = CombyMatch(search, source)
+			matches = CombyMatch.All(search, source)
 			if matches.Size() is 0
 				results.Set('No matches found.')
 			else

@@ -22,8 +22,8 @@ class
 	resolveChain(entryCache, leaf)
 		{
 		chain = Object()
-		seen  = Object()
-		curr  = leaf
+		seen = Object()
+		curr = leaf
 		while curr isnt false and not seen.Member?(curr)
 			{
 			seen[curr] = true
@@ -38,9 +38,7 @@ class
 		}
 
 	// an object which maps class name to source stubs
-	builtinStubs: #(
-		SocketServer: #(
-			src: `class
+	builtinStubs: (SocketServer: (src: `class
 				{
 				CopyTo(dest, nbytes = false) :number { }
 				ManualClose() { }
@@ -50,10 +48,7 @@ class
 				SetTimeout(seconds) { }
 				Write(s :string) { }
 				Writeline(s :string) { }
-				}`,
-			baseName: false
-			)
-		)
+				}`, baseName: false))
 
 	ensureEntry(entryCache, name)
 		{
@@ -62,8 +57,7 @@ class
 		if .builtinStubs.Member?(name)
 			{
 			stub = .builtinStubs[name]
-			entryCache[name] = Object(:name,
-				src: stub.src, baseName: stub.baseName)
+			entryCache[name] = Object(:name, src: stub.src, baseName: stub.baseName)
 			return
 			}
 		instance = Global(name)
@@ -77,31 +71,58 @@ class
 			entryCache[name] = false
 			return
 			}
-		base = BaseClass(instance)
-		src = .normalizeOverride(.safeSourceCode(instance), Name(instance))
-		if not String?(src) or src is ''
-			{
-			entryCache[name] = false
-			return
-			}
-		entryCache[name] = Object(name: Name(instance), :src,
-			baseName: base is false ? false : Name(base))
+		.addOverrideStack(entryCache, name, instance)
 		}
 
-	normalizeOverride(src, name)
+	overrideLimit: 20
+	addOverrideStack(entryCache, key, instance)
 		{
-		// we need special handling for overridden classes `_ApControl`
+		for (i = 0; i < .overrideLimit; ++i)
+			{
+			src = .safeSourceCode(instance)
+			if not String?(src) or src is ""
+				{
+				entryCache[key] = false
+				return
+				}
+			base = .baseOf(instance)
+			if base is false or .nameOf(base) isnt .nameOf(instance)
+				{
+				entryCache[key] = Object(name: key, :src,
+					baseName: base is false ? false : .nameOf(base))
+				return
+				}
+			next = .nameOf(instance) $ "__" $ .libOf(base)
+			entryCache[key] = Object(name: key,
+				src: .retargetOverrideBase(src, .nameOf(instance), next), baseName: next)
+			key = next
+			instance = base
+			}
+		entryCache[key] = false
+		}
+
+	retargetOverrideBase(src, name, next)
+		{
 		u = '_' $ name
 		explicit = 'class[ \t]*:[ \t]*' $ u
 		if src =~ explicit
-			return src.Replace(explicit, 'class', 1)
-		return src.Replace(u, 'class', 1)
+			return src.Replace(explicit, "class : " $ next, 1)
+		return src.Replace(u, next, 1)
 		}
+
+	nameOf(instance)
+		{ return Name(instance) }
+
+	baseOf(instance)
+		{ return BaseClass(instance) }
+
+	libOf(instance)
+		{ return Display(instance).AfterFirst("/* ").BeforeFirst(' ') }
 
 	functionEntry(name)
 		{
 		src = .recordSrc(name)
-		if not String?(src) or src is ''
+		if not String?(src) or src is ""
 			return false
 		return Object(:name, :src, baseName: false)
 		}
@@ -131,14 +152,14 @@ class
 	// logs
 	safeSourceCode(instance)
 		{
-		base = Name(instance).BeforeFirst('.').BeforeFirst(' ')
+		base = .nameOf(instance).BeforeFirst('.').BeforeFirst(' ')
 		s = Display(instance)
-		lib = s.AfterFirst('/* ').BeforeFirst(' ')
-		recName = lib.Has?('__') ? base $ '__' $ lib.AfterFirst('__') : base
-		lib = lib.BeforeFirst('__')
+		lib = s.AfterFirst("/* ").BeforeFirst(' ')
+		recName = lib.Has?("__") ? base $ "__" $ lib.AfterFirst("__") : base
+		lib = lib.BeforeFirst("__")
 		if lib is "function"
-			return ''
+			return ""
 		src = .libSrc(lib, recName)
-		return src is false ? '' : src
+		return src is false ? "" : src
 		}
 	}

@@ -48,6 +48,6 @@ DrawTracker
 
 	GetSuJSTracker()
 		{
-		return 'SuDrawLineTracker'
+		return 'SuJsDrawLineTracker'
 		}
 	}

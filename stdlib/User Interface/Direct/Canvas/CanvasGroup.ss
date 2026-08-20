@@ -99,6 +99,6 @@ CanvasItem
 		items = Object()
 		for item in .items
 			items.Add(item.GetSuJSObject())
-		return Object('SuCanvasGroup', items, id: .Id)
+		return Object('SuJsCanvasGroup', items, id: .Id)
 		}
 	}

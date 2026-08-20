@@ -34,7 +34,7 @@ WrapFormat
 				{
 				result $= oline $ "\r\n"
 				oline = indent $ word.LeftTrim()
-				owidth = indent.Size() * 4 + wwidth
+				owidth = indent.Size() * 4 + wwidth /*= character width */
 				}
 			}
 		result $= oline

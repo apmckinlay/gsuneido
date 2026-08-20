@@ -432,14 +432,19 @@ SvcTests
 
 	Test_Modified?()
 		{
-		.SpyOn(SvcSettings.Set?).Return(false, true, true, true, true)
-		m = LibTreeModel.Modified?
+		testSettings = LibTreeModel
+			{
+			LibTreeModel_svcSettingsSet?() { return _setResult }
+			}
+		m = testSettings.Modified?
 
 		// No SvcSettings, record is never seen as modified
 		rec = [lib_committed: '', lib_modified: '', group: false]
+		_setResult = false
 		Assert(m(rec) is: false)
 
 		// SvcSettings are filled, record is new
+		_setResult = true
 		Assert(m(rec))
 
 		// New Record is committed
@@ -513,7 +518,6 @@ SvcTests
 	// components. These issues render work-copies borderline unusable
 	Test_DeleteItem()
 		{
-		.SpyOn(SvcTable.Publish).Return('')
 		svcTable = .setupLib([
 			[group: 0, parent: 0, num: 1, name: #Folder1],
 			[parent: 0, num: 9, name: #Rec0],

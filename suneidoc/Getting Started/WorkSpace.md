@@ -46,3 +46,14 @@ Moreover, this feature introduces enhanced flexibility to argument comparision.
 -	Named and unnamed argments can be interchanged. For example, code "**Fn(arg: 1)**" matches both "**Fn(a)**" and "**Fn(arg: a)**", but not "**Fn(arg1: a)**". Similarly, "**Fn(1)**" matches "**Fn(arg: a)**" and "**Fn(a)**"
 -	Extra named arguments in the code call are ignored. For example, code "**Fn(arg1: 1, arg2: 2)**" matches the pattern "**Fn(arg1: a)**"
 -	For additional examples, please refer to **stdlib:AstSearch_Test**
+
+<span id="FindByComby"><b>Find by Comby</b></span>
+
+You can use **Find** > **Find by Comby** to perform structural, token-based pattern matching that seamlessly handles whitespace, line breaks, and comments. Powered by [comby.dev](https://comby.dev/)
+
+### Match Syntax
+
+| Named Match | Description |
+| - | - |
+|**`:[var]`**| Template hole lazily matches any pattern while respecting bracket nesting. For example, `foo(:[x])` matches `foo` calls with zero or more arguments, such as `foo(a + b)` or `foo(bar(baz))`|
+|**`:[var:e]`**|Expression-like hole matches contiguous non-whitespace characters (e.g., `foo` or `foo.bar`), as well as contiguous character sequences that include balanced code structures like `function(foo, bar)` where internal whitespace is permitted|

@@ -31,59 +31,15 @@ Singleton
 		Assert(rec isnt: false, msg: "SpyManager can't find library record - " $ name)
 		source = rec.text
 
-		code = .useTdop?(spys)
-			? .buildCodeWithTdop(source, spys)
-			: .buildCodeWithClassHelp(source, spys)
+		Assert(not .hasNestedClass?(spys))
+		code = .buildCodeWithClassHelp(source, spys)
 
 		LibraryOverride(lib, name, code)
 		}
 
-	useTdop?(spys)
+	hasNestedClass?(spys)
 		{
-		// need Tdop to handle nested class
-		return spys.HasIf?()
-			{ |spy|
-			spy.Paths.Size() > 1
-			}
-		}
-
-	buildCodeWithTdop(source, spys)
-		{
-		tdop = Tdop(source)
-		astWriteMgr = AstWriteManager(source, tdop)
-		writer = astWriteMgr.GetNewWriter()
-		spys.Each()
-			{ |spy|
-			funcNode = .findFuncNode(tdop, spy.Paths)
-			writer.Add(funcNode[.statementListOffset], 0, .buildInsert(spy))
-			}
-		return writer.ToString()
-		}
-
-	statementListOffset: 5
-	memberListOffset: 4
-	memberContentOffset: 2
-	findFuncNode(tdop, paths)
-		{
-		curNode = tdop
-		for path in paths
-			{
-			Assert(curNode.Match(TDOPTOKEN.CLASSDEF))
-			find? = false
-			for member in curNode[.memberListOffset].Children
-				{
-				// second condition is for matching private method
-				if member[0].Value isnt path and not path.Suffix?('_' $ member[0].Value)
-					continue
-				curNode = member[.memberContentOffset]
-				find? = true
-				break
-				}
-			if find? is false
-				throw "SpyOn cannot find specified method - " $ paths.Join(".")
-			}
-		Assert(curNode.Match(TDOPTOKEN.FUNCTIONDEF))
-		return curNode
+		return spys.Any?({|spy| spy.Paths.Size() > 1})
 		}
 
 	buildInsert(spy)

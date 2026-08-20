@@ -4,7 +4,7 @@ class
 	CreateLoginToken(user, remote, host, userAgent, tfaEmail = false, run = false)
 		{
 		tokens = Suneido.GetInit(#SuLoginTokens, Object())
-		ob = JsSessionToken.CreateToken(user)
+		ob = SuJsSessionToken.CreateToken(user)
 		tokens[ob.token] = Object(:user, :remote, :host, expire: Date().Plus(minutes: 5),
 			:userAgent, token: ob.token, key: ob.key, :tfaEmail, :run)
 		return ob
@@ -43,7 +43,7 @@ class
 
 	handlerReconnect(connectid, token, wsHandler, waitResumeTimeout, env)
 		{
-		if JsSessionToken.Validate(env) is false
+		if SuJsSessionToken.Validate(env) is false
 			return 'Invalid connection'
 
 		time = Date().StdShortDateTimeSec()

@@ -67,10 +67,10 @@ Test
 		m(control = [#RadioButtons, mandatory:])
 		Assert(control.mandatory is: false)
 
-		m(control = [#RadioButtons, mandatory:, noInitalValue:])
+		m(control = [#RadioButtons, mandatory:, noInitialValue:])
 		Assert(control.mandatory)
 
-		m(control = [#RadioButtons, mandatory:, noInitalValue: false])
+		m(control = [#RadioButtons, mandatory:, noInitialValue: false])
 		Assert(control.mandatory is: false)
 
 		.testUOMOptions(m, #UOM)

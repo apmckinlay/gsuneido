@@ -9,6 +9,7 @@ Controller
 	New(list, message)
 		{
 		super(.makecontrols(message))
+		.changes = list
 		.Vert.list.Set(.buildChangeList(list))
 		.setWarningMsg(message)
 		.comment = .Vert.desc
@@ -42,6 +43,8 @@ Controller
 				(MenuButton 'Recent', name: 'recent', command: 'Recent')
 				Skip
 				(MenuButton 'Standard' (cosmetic, renamed, 'minor refactor'))
+				Skip
+				(Button 'AI Review')
 				(Skip 50)
 				Fill
 				'OkCancel')
@@ -73,6 +76,12 @@ Controller
 	On_Standard(item)
 		{
 		.comment.Set(item)
+		}
+	On_AI_Review()
+		{
+		setText = "review the changes in " $
+			.changes.Map({ it.lib $ ':' $ it.name }).Join(', ')
+		AiAgentControl(:setText)
 		}
 	getComment(item)
 		{

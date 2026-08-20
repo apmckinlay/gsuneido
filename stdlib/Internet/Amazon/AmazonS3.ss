@@ -89,10 +89,15 @@ AmazonAWS
 
 	GetBucketRegion(bucket)
 		{
+		// 301 - bucket does exist, but not in the default region (us-east-1)
+		// 403 - bucket does exist, but no permision to call HEAD
+		// 400 - bucket does not exist and bucket name too short
+		// 404 - bucket does not exist
 		res = .makeRequest('HEAD', [], '/' $ bucket,
-			expectedResponse: #('200', '301', '403'), fullResponse?:)
-		// this should throw error if region cannot be determined
+			expectedResponse: #('200', '301', '403', '400', '404'), fullResponse?:)
 		region = res.header.Extract(`(?i)x-amz-bucket-region:\s*(\S+)`)
+		// this should throw error if region cannot be determined
+		Assert(region isnt false, msg: 'cannot determine region')
 		return region.Lower()
 		}
 
@@ -117,7 +122,7 @@ AmazonAWS
 		_exceptionOnFailure = exceptionOnFailure
 		if fileTo is ''
 			fileTo = Paths.Basename(fileFrom)
-
+		Assert(fileTo isString:)
 		fileFrom = Url.EncodePreservePath(fileFrom)
 		path = '/' $ bucket $ '/' $ fileFrom
 		retVal = .makeRequest('GET', [:versionId], path, toFile: fileTo,
@@ -449,6 +454,7 @@ AmazonAWS
 		xml = .makeRequest('GET', [tagging: '1', :versionId],
 			'/' $ bucket $ '/'$ filename)
 		parsed = XmlParser(xml)
+		Assert(parsed isnt: false)
 		fileTags = Object()
 		for tag in parsed['tagset']['tag'].List() // only using booleans atm
 			fileTags[tag.key.Text()] = tag.value.Text() is 'true'
@@ -511,11 +517,33 @@ AmazonAWS
 		.DeleteFile(bucket, folder)
 		}
 
+	BucketExist?(bucket)
+		{
+		try
+			{
+			.GetBucketRegion(bucket)
+			return true
+			}
+		catch (unused, "Assert FAILED: cannot determine region")
+			return false
+		}
+
+	BucketEmpty?(bucket)
+		{
+		.ListBucketContents(bucket, region: .GetBucketLocationCached(bucket),
+			maxKeys: '1')
+			{ |unused|
+			return false
+			}
+		return true
+		}
+
 	ListBuckets()
 		{
 		content = .makeRequest('GET', [], '/')
 		response = XmlParser(content)
 		buckets = Object()
+		Assert(response isnt: false)
 		for b in response.buckets.bucket.List()
 			buckets.Add(b.name.Text())
 		return buckets
@@ -529,7 +557,7 @@ AmazonAWS
 		}
 
 	ListBucketContents(bucket, prefix = '', rawResponse = false, region = false,
-		block = false)
+		maxKeys = false, block = false)
 		{
 		// AmazonS3: The maximum number of items that can be returned is 1000
 		// if IsTruncated is true then send another request
@@ -537,6 +565,9 @@ AmazonAWS
 		// keep making these requests until the IsTruncated element has a value of false
 		fileList = Object()
 		params = [marker: '', :prefix]
+		// default max-keys is 1000
+		if maxKeys isnt false
+			params['max-keys'] = maxKeys
 		while true is .listTruncated(bucket, fileList, params, rawResponse, :region,
 			:block)
 			{
@@ -676,6 +707,7 @@ AmazonAWS
 			}
 
 		res = XmlParser(res)
+		Assert(res isnt: false)
 		for child in res.Children()
 			if child.Name() is 'error'
 				failed.Add(child['key'].Text())
@@ -684,11 +716,10 @@ AmazonAWS
 	// extrated for tests
 	throttleRetry(block)
 		{
-		Retry({
-			Retry(block, maxRetries: 3, minDelayMs: 100,
-				retryException: 'Bad HTTP Status Code (503)')
-			}, maxRetries: 3, minDelayMs: 200,
-			retryException: 'curl: (52) Empty reply from server')
+		Retry(block, maxRetries: 3, retryException: #(
+			('Bad HTTP Status Code (503)', minDelayMs: 100),
+			('curl: (52) Empty reply from server', minDelayMs: 200),
+			('curl: (35) Send failure: Connection reset by peer', minDelayMs: 100)))
 		}
 
 	cleanupFileIfFailed(retVal, fileTo)

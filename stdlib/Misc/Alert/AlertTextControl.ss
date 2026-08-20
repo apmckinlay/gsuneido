@@ -23,10 +23,10 @@ StaticControl
 				DrawText(dc, .text, -1, r = [right: xmax / 2], .flags | DT.CALCRECT)
 				if r.bottom > yThreshold
 					DrawText(dc, .text, -1, r = [right: xmax], .flags | DT.CALCRECT)
+				.Xmin = Max(r.right, xmin)
+				.Ymin = r.bottom
 				}
 			}
-		.Xmin = Max(r.right, xmin)
-		.Ymin = r.bottom
 		}
 	ERASEBKGND()
 		{ return 1 }

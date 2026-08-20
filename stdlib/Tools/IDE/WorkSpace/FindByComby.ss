@@ -10,7 +10,7 @@ class
 		if hint isnt false and not code.Has?(hint)
 			return lines
 
-		for match in CombyMatch(search, code)
+		for match in CombyMatch.All(search, code)
 			{
 			from = code.LineFromPosition(match.pos)
 			to = code.LineFromPosition(match.end - 1)

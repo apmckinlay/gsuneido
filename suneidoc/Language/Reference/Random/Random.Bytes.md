@@ -1,6 +1,6 @@
 <div style="float:right"><span class="builtin">Builtin</span></div>
 
-### RandomBytes
+### Random.Bytes
 
 ``` suneido
 (nbytes) => string

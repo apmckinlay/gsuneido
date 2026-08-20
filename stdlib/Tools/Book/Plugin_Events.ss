@@ -22,10 +22,10 @@ Contributions:
 		clientfunc: function (result)
 			{ Customizable.HandleChangesOnClient(result) })
 
-	(Events, eventfunction, name: 'CheckJsDownloadTasks',
+	(Events, eventfunction, name: 'CheckSuJsDownloadTasks',
 		serverfunc: function (user)
-			{ return JsDownload.CheckTask(user) },
+			{ return SuJsDownload.CheckTask(user) },
 		clientfunc: function (result)
-			{ JsDownload.WarnIfOutstanding(result) })
+			{ SuJsDownload.WarnIfOutstanding(result) })
 	)
 )

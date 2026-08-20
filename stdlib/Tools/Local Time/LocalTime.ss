@@ -1,106 +1,145 @@
 // Copyright (C) 2008 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	CallClass(to_state_prov, from_state_prov, to_timezone = '', from_timezone = '')
+	zoneOffsets: #(
+		HST : -10
+		AKST: -9
+		PST : -8
+		MST : -7
+		CST : -6
+		EST : -5
+		AST : -4
+		NST : -3.5)
+	hourMinutesConversion: 60
+	CallClass(stateProv, timezone)
 		{
-		curdate = Date()
-		if .cantConvert?(to_state_prov, from_state_prov)
-			return curdate
-		if to_timezone is ''
-			{
-			if not TimeZones.Member?(to_state_prov)
-				return curdate
-			else
-				to_timezone = TimeZones[to_state_prov].zone
-			}
-		if from_timezone is ''
-			{
-			if not TimeZones.Member?(from_state_prov)
-				return curdate
-			else
-				from_timezone = TimeZones[from_state_prov].zone
-			}
+		if .cantConvert?(stateProv)
+			return .defaultTime()
 
-		torec = TimeZones[to_state_prov]
-		fromrec = TimeZones[from_state_prov]
-
-		offset = .calc_offset(to_timezone, from_timezone)
-		curdate = curdate.Plus(hours: offset.hours, minutes: offset.minutes)
-
-		curdate = .calc_daylightsavings(curdate, torec, fromrec)
-
-		return curdate
+		gmtTime = .gmtTime()
+		info = .localTimeInfo(stateProv, timezone)
+		curTime = gmtTime.Plus(minutes: (info.offSetOverride) * .hourMinutesConversion)
+		if not info.nodaylightAdjustment? and .DaylightSavings?(gmtTime, timezone)
+			curTime = curTime.Plus(hours: 1)
+		return curTime
 		}
 
-	cantConvert?(to_state_prov, from_state_prov)
+	gmtTime()
 		{
-		return to_state_prov is "" or from_state_prov is "" or
-			not TimeZones.Member?(to_state_prov) or not TimeZones.Member?(from_state_prov)
+		return Date().GMTime()
 		}
 
-	calc_offset(to_timezone, from_timezone)
+	defaultTime()
 		{
-		offset_to_zone = .offset_times(to_timezone)
-		offset_to_from = .offset_times(from_timezone)
-
-		hours = minutes = 0
-		if offset_to_from.hours is offset_to_zone.hours and
-			offset_to_from.minutes is offset_to_zone.minutes
-			{
-			hours = 0
-			minutes = 0
-			}
-		else if offset_to_from.hours >= offset_to_zone.hours
-			{
-			hours = -(offset_to_from.hours - offset_to_zone.hours)
-			minutes = -(offset_to_from.minutes - offset_to_zone.minutes)
-			}
-		else if offset_to_from.hours < offset_to_zone.hours
-			{
-			hours = (offset_to_from.hours - offset_to_zone.hours).Abs()
-			minutes = offset_to_from.minutes + offset_to_zone.minutes.Abs()
-			}
-		return Object(:minutes, :hours)
+		return Date()
 		}
 
-	zoneOffsets: (
-		HST : -4
-		AKST: -3
-		PST : -2
-		MST : -1
-		CST :  0
-		EST :  1
-		AST :  2
-		NST :  2)
-
-	offset_times(zone) // based on SK as home time-zone
+	cantConvert?(stateProv)
 		{
-		hours = .zoneOffsets.GetDefault(zone, 0)
-		minutes = 0
-		if zone is "NST"
-			minutes = 30
-		return Object(:minutes, :hours)
+		return stateProv is "" or not TimeZones.Member?(stateProv)
 		}
 
-	calc_daylightsavings(curdate, torec, fromrec)
+	localTimeInfo(stateProv, timezone)
 		{
-		try
+		offSetOverride = 0
+		nodaylightAdjustment? = false
+		zoneRec = .timeZoneRec(stateProv)
+		if zoneRec.zone is timezone
 			{
-			if not DaylightSavings?(curdate) and not torec.Member?('nodaylight?') and
-				fromrec.Member?('nodaylight?')
-				return curdate.Plus(hours: 1)
-
-			if not DaylightSavings?(curdate) and not fromrec.Member?('nodaylight?') and
-				torec.Member?('nodaylight?')
-				return curdate.Plus(hours: -1)
+			offSetOverride = zoneRec.Member?('offSetOverride')
+				? zoneRec.offSetOverride
+				: .zoneOffsets[timezone]
+			nodaylightAdjustment? = zoneRec.Member?('nodaylightAdjustment?')
 			}
-		catch (e)
+		else
 			{
-			SuneidoLog('ERROR: (CAUGHT) ' $ e $ ' while trying to calc daylight saving',
-				caughtMsg: 'Displayed to user there was a problem getting local time')
-			return 'Problem getting local time'
+			offSetOverride = .hasOverride?(zoneRec, timezone)
+					? zoneRec.exceptions[timezone].offSetOverride
+					: .zoneOffsets.GetDefault(timezone,
+						.zoneOffsets[TimeZones[stateProv].zone])
+			if zoneRec.Member?('exceptions') and
+				Object?(zoneRec.exceptions) and
+				zoneRec.exceptions.Member?(timezone)
+				nodaylightAdjustment? = Object?(zoneRec.exceptions[timezone]) and
+					zoneRec.exceptions[timezone].Member?('nodaylightAdjustment?')
 			}
 
-		return curdate
+		return Object(:offSetOverride, :nodaylightAdjustment?)
 		}
+
+	timeZoneRec(stateProv)
+		{
+		return TimeZones[stateProv]
+		}
+
+	hasOverride?(zoneRec, timezone)
+		{
+		return zoneRec.Member?('exceptions') and
+			Object?(zoneRec.exceptions) and
+			zoneRec.exceptions.Member?(timezone) and
+			Object?(zoneRec.exceptions[timezone]) and
+			zoneRec.exceptions[timezone].Member?('offSetOverride')
+		}
+
+	/*
+	This is to replace the existing DaylightSavings? so that LocalTime has all it needs to
+	calculate local time. The daylight saving calculation can be accurate to seconds
+	NOTE: ALWAYS pass in GMT time for the first argument (date)
+	*/
+	DaylightSavings?(date, timezone)
+		{
+		secondSundayOfMarch = Date(date.Year() $ '0314', 'yyyyMMdd')
+		firstSundayInNovember = Date(date.Year() $ '1101', 'yyyyMMdd')
+		Assert(Date?(secondSundayOfMarch) and Date?(firstSundayInNovember))
+
+		dayOfWeek = secondSundayOfMarch.WeekDay()
+		if dayOfWeek isnt 0
+			secondSundayOfMarch = secondSundayOfMarch.Plus(days: -dayOfWeek)
+		dayOfWeek = firstSundayInNovember.WeekDay()
+		if dayOfWeek isnt 0
+			firstSundayInNovember = firstSundayInNovember.Plus(days: 7 - dayOfWeek)
+
+		dateInfo = Object(year: date.Year(), month: date.Month(), date: date.Day())
+		if .transitionDay?(dateInfo, 3 /*= March*/, secondSundayOfMarch)
+			return date >= .transitionDate(dateInfo, .forwardMap, timezone)
+		else if .transitionDay?(dateInfo, 11 /*= November*/, firstSundayInNovember)
+			return date < .transitionDate(dateInfo, .rollBackMap, timezone)
+
+		return date >= secondSundayOfMarch and date < firstSundayInNovember
+		}
+
+	transitionDay?(dateInfo, month, tranDate)
+		{
+		return dateInfo.month is month and dateInfo.date is tranDate.Day()
+		}
+
+	transitionDate(dateInfo, map, timezone)
+		{
+		return Date('#' $ Display(dateInfo.year) $
+			Display(dateInfo.month).LeftFill(2, '0') $
+			Display(dateInfo.date).LeftFill(2, '0') $ '.' $
+			map[timezone])
+		}
+
+	forwardMap: #(
+		HST:	'1200',
+		AKST:	'1100',
+		PST:	'1000',
+		MST: 	'0900',
+		CST:	'0800',
+		EST:	'0700',
+		AST:	'0600',
+		NST:	'0530'
+		)
+
+	rollBackMap: #(
+		HST:	'1200',
+		AKST:	'1000',
+		PST:	'0900',
+		MST: 	'0800',
+		CST:	'0700',
+		EST:	'0600',
+		AST:	'0500',
+		NST:	'0430'
+		)
 	}

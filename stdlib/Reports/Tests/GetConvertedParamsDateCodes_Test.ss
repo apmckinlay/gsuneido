@@ -13,9 +13,7 @@ Test
 				{
 				}`])
 
-		date = Date().Replace(hour: 1, minute: 30) // force to have a time
-		.SpyOn(DateControl.DateControl_today).Return(date)
-
+		date = _dateForTest = Date().Replace(hour: 1, minute: 30) // force to have a time
 		Assert(fn(false) is: false)
 
 		params = Record(
@@ -52,9 +50,7 @@ Test
 		.MakeLibraryRecord([name: "Field_" $ dateTimeField,
 			text: `Field_date_time { }`])
 
-		date = Date().Replace(hour: 1, minute: 30) // force to have a time
-		.SpyOn(DateControl.DateControl_today).Return(date)
-
+		date = _dateForTest = Date().Replace(hour: 1, minute: 30) // force to have a time
 		params = Record()
 		params[dateTimeField] = #(operation: "equals", value: "t")
 		paramsResult = fn(params)
@@ -100,8 +96,7 @@ Test
 		dateTimeField = .TempName()
 		.MakeLibraryRecord([name: "Field_" $ dateTimeField, text: `Field_date_time { }`])
 
-		date = Date().Replace(hour: 1, minute: 30) // force to have a time
-		.SpyOn(DateControl.DateControl_today).Return(date)
+		date = _dateForTest = Date().Replace(hour: 1, minute: 30) // force to have a time
 
 		params = Record(string_param: #(operation: "equals", value: "hello", value2: ""))
 		testFilters = Object()
@@ -135,8 +130,7 @@ Test
 		dateTimeField = .TempName()
 		.MakeLibraryRecord([name: "Field_" $ dateTimeField, text: `Field_date_time { }`])
 
-		date = Date().Replace(hour: 1, minute: 30) // force to have a time
-		.SpyOn(DateControl.DateControl_today).Return(date)
+		date = _dateForTest = Date().Replace(hour: 1, minute: 30) // force to have a time
 
 		params = Record(
 			string_param: #(operation: "equals", value: "hello", value2: ""))

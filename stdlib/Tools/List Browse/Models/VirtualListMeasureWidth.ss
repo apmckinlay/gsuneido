@@ -1,12 +1,12 @@
 // Copyright (C) 2019 Suneido Software Corp. All rights reserved worldwide.
 function (field, grid, model)
 	{
+	maxSize = false
 	WithDC(grid.Hwnd)
 		{|dc|
 		DoWithHdcObjects(dc, [grid.GetFont()])
 			{
 			model.ColModel.SetDC(dc)
-			maxSize = false
 			for (i = 0; i < model.VisibleRows; i++)
 				{
 				if false is rec = model.GetRecord(i)

@@ -48,7 +48,7 @@ ScintillaAddonForChanges
 
 	ProcessChunk(text, pos)
 		{
-		if .GetReadonly() is 1 or not Speller.Open()
+		if .GetReadonly() is 1 or not (.Speller.Open)()
 			return
 		.ClearIndicator(.indic_word, pos, text.Size())
 		.indicateTypos(.collectTypos(pos, text, .ignore?))
@@ -71,7 +71,7 @@ ScintillaAddonForChanges
 		w = .getCurrentWord(pos, ignore?)
 		if w.ignore
 			return w
-		suggestions = Speller(w.word)
+		suggestions = (.Speller)(w.word)
 		if suggestions.NotEmpty?() and suggestions[0] isnt w.word.Lower()
 			typos.Add([pos: w.org, len: w.len])
 		return w
@@ -167,9 +167,15 @@ ScintillaAddonForChanges
 		.Parent.Context_Menu = .origMenu.Copy()
 		}
 
+	// for test
+	Getter_Speller()
+		{
+		return .Speller = Speller
+		}
+
 	load_menu(word)
 		{
-		suggestions = Speller(word)
+		suggestions = (.Speller)(word)
 		if suggestions.Empty?()
 			{
 			.clear_menu()

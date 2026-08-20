@@ -58,7 +58,7 @@ class
 		libi = libs.Find(lib)
 		Assert(libs.Member?(libi))
 		for (i = libi + 1; i < libs.Size(); ++i)
-			if false isnt Query1(libs[i], :name, group: -1)
+			if not QueryEmpty?(libs[i], :name, group: -1)
 				Print("WARNING: " $ name $ " is overloaded in " $ libs[i])
 		}
 	nextNum(lib)

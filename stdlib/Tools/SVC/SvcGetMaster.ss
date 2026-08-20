@@ -3,6 +3,8 @@ class
 	{
 	New(.table, .changes, .local_list, .settings)
 		{
+		// Set Queued Time
+		.QT = Date()
 		}
 
 	CallClass(table, local_list, settings)
@@ -10,8 +12,8 @@ class
 		if .stop(local_list, table)
 			return
 
-		ThreadPool().ClearQueue() // WARNING: potentially clear other's tasks
-		if Thread.List().Any?({ it.Has?('SvcGetMaster') })
+		.SetCutOff()
+		if Thread.List().Any?({ it.Has?(.taskName) })
 			{
 			Suneido.SvcCommit_Warnings.newGetMaster = true
 			Suneido.SvcCommit_Warnings.table = table
@@ -29,7 +31,7 @@ class
 			Suneido.SvcPreCheck_ForceStop[thread.AfterFirst('SvcPreCheck')] = true
 
 		changes = .getLocalRecs(local_list)
-		ThreadPool().Submit(new this(table, changes, local_list, settings))
+		SVCThreadPool().Submit(new this(table, changes, local_list, settings))
 		}
 
 	stop(local_list, table)
@@ -57,15 +59,34 @@ class
 			Instantiate()
 		}
 
+	taskName: 'SvcGetMaster'
+	tpCutOffs: 'ThreadPoolCutOffs'
+	SetCutOff()
+		{
+		.Synchronized()
+			{
+			Suneido.GetInit(.tpCutOffs, Object())[.taskName] = Date()
+			}
+		}
+
+	GetCutOff()
+		{
+		// set is called first
+		return Suneido[.tpCutOffs].GetDefault(.taskName, Date.Begin())
+		}
+
 	run()
 		{
+		if .QT < .GetCutOff()
+			return
+
 		Thread.Name('SvcGetMaster' $ Display(Timestamp()))
 		.svc = Svc(server: .settings.svc_server, local?: .settings.svc_local?)
 		index = 0
 		for change in .changes
 			{
 			if not .local_list.Member?('Hwnd') or .forceStop()
-				return false
+				return
 			masterRec = .getMasterRec(change.lib, change.name)
 			SvcRunChecks(.table, .local_list, change, masterRec, index)
 			index++

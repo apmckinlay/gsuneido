@@ -7,7 +7,8 @@ WindowComponent
 		{
 		super(@args)
 		.AnchorEl.AddEventListener('cancel', .On_Cancel)
-		.AnchorEl.showModal();
+		.AnchorEl.showModal()
+		SuRender().DisableWindows(.UniqueId)
 		SuRender().CancelDelayedTask(id: 'any')
 		}
 
@@ -39,6 +40,7 @@ WindowComponent
 	Destroy()
 		{
 		.AnchorEl.Close()
+		SuRender().EnableWindows(.UniqueId)
 		super.Destroy()
 		}
 	}

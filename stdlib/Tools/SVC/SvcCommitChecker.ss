@@ -193,9 +193,15 @@ class
 		{
 		if table is 'Contrib' or not model.Library?(table)
 			return ''
+		if not TypeCheckHelper.BinaryExists?()
+			{
+			SuneidoLog('Type checker binary NOT found at: ' $
+				TypeCheckHelper.BinaryPath())
+			return ''
+			}
 		errors = Object()
 		for change in changes
-			if change.type is '+' // check new records only
+			if change.type is '+'
 				.collectTypeErrors(change, errors)
 		return Opt('Unable to send due to type errors:\r\n\t- ', errors.Join('\r\n\t- '))
 		}

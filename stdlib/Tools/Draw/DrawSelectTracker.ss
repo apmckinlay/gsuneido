@@ -115,6 +115,6 @@ DrawRectTracker
 		}
 	GetSuJSTracker()
 		{
-		return 'SuDrawSelectTracker'
+		return 'SuJsDrawSelectTracker'
 		}
 	}

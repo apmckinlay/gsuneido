@@ -18,8 +18,8 @@ class
 		if x is false
 			throw "Assert FAILED" $ Opt(': ', msg)
 		if x isnt true
-			throw "Assert FAILED: expected true, but it was " $ MatcherWas.DisplayValue(x) $
-				Opt('\n(', msg, ')')
+			throw "Assert FAILED: expected true, but it was " $
+				MatcherWas.DisplayValue(x) $ Opt('\n(', msg, ')')
 		}
 	assertThat(args)
 		{

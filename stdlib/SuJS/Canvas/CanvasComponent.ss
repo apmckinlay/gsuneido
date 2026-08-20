@@ -263,7 +263,8 @@ Component
 			{
 			if item.Id is id
 				return item
-			if item.Base?(SuCanvasGroup) and false isnt found = .find(item.GetItems(), id)
+			if item.Base?(SuJsCanvasGroup) and
+				false isnt found = .find(item.GetItems(), id)
 				return found
 			}
 		return false

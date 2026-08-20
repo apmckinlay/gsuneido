@@ -16,7 +16,7 @@ class
 		// occur at the same time, .Synchronized cannot enforce execution order reliably.
 		// This is because synchronization applies only within a single internal Suneido
 		// class, while multiple internal classes may be loaded and returned concurrently.
-		Global('JsSessionToken')
+		Global('SuJsSessionToken')
 
 		RackServer(app: RackRouter(SuJsRackRoutes().Append(extraRoutes)),
 			with: [RackResponseHeaders, RackContentType],

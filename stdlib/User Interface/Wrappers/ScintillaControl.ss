@@ -168,7 +168,6 @@ WndProc
 
 	EN_CHANGE()
 		{
-		.astWriterManager = false
 		.Send("EN_CHANGE")
 		return 0
 		}
@@ -384,24 +383,14 @@ WndProc
 		return .Get()
 		}
 
-	astWriterManager: false
-	Getter_AstWriterManager()
-		{
-		if .astWriterManager is false
-			try .astWriterManager = AstWriteManager(.SearchText())
-		return .astWriterManager
-		}
-
 	getter_findreplace_options()
 		{
-		.findreplacedata.ast = Find.NeedAst?(.findreplacedata) ? .AstWriterManager : false
 		return .findreplacedata
 		}
 
 	MarkAll()
 		{
-		if false is matches = Find.FindAll(.SearchText(), .findreplace_options)
-			return 0
+		matches = Find.FindAll(.SearchText(), .findreplace_options)
 		matches.Each()
 			{ |m|
 			.MarkerAdd(.LineFromPosition(m[0]), .marker_find)
@@ -615,7 +604,6 @@ WndProc
 	setMethodModifying?: false // used in SCN_MODIFIED method, see comment there
 	Set(s)
 		{
-		.astWriterManager = false
 		.setMethodModifying? = true
 		.ignoring_readonly()
 			{

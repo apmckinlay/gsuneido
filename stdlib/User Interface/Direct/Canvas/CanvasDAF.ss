@@ -206,7 +206,7 @@ CanvasItem
 
 	GetSuJSObject()
 		{
-		return Object('SuCanvasText', .x1, .y1, .x2, .y2, .display.text,
+		return Object('SuJsCanvasText', .x1, .y1, .x2, .y2, .display.text,
 			.font, .justify, .display.back, id: .Id)
 		}
 

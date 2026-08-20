@@ -95,4 +95,25 @@ Test
 			[name: 'Test4'], [name: 'Test5'], [name: 'Test6'])
 		Assert(m(1, lib) equalsSet: #(Test1, Test2, Test3, Test4, Test5, Test6))
 		}
+
+	Test_moveExactMatchesFront()
+		{
+		m = LibLocateList.LibLocateList_moveExactMatchesFront
+
+		matches = Object(
+			'Strings_Test - stdlib',
+			'Strings - stdlib',
+			'Strings_Test - (Contrib)',
+			'Strings - (Contrib)'
+			)
+		expectedResult = #(
+			'Strings - stdlib',
+			'Strings - (Contrib)'
+			'Strings_Test - stdlib',
+			'Strings_Test - (Contrib)',
+			)
+		prefix = prefixOrig = 'Strings'
+		result = m(matches, prefix, prefixOrig)
+		Assert(result is: expectedResult)
+		}
 	}

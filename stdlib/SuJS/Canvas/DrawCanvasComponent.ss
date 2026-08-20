@@ -80,7 +80,7 @@ CanvasComponent
 		_event = event
 		.dragging = true
 		pos = .getPos(event)
-		if .tracker.Base?(SuDrawRectTracker)
+		if .tracker.Base?(SuJsDrawRectTracker)
 			{
 			for item in .GetAllItems()
 				if item.IsHandle?(pos.x, pos.y)
@@ -91,7 +91,7 @@ CanvasComponent
 					.origy = pos.y
 					.tracker.ResizeDown(item, pos.x, pos.y)
 					.StartMouseTracking(.mouseup, .mousemove)
-					return 0
+					return
 					}
 			}
 		.mousemoved? = false

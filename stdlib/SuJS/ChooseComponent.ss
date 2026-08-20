@@ -43,7 +43,7 @@ HtmlDivComponent
 
 	keydown(event)
 		{
-		if .field.GetReadOnly()
+		if .Destroyed?() or .field.GetReadOnly()
 			return
 
 		if event.key in (#ArrowUp, #ArrowDown) or

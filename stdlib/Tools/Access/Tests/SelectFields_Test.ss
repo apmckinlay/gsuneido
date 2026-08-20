@@ -111,6 +111,7 @@ Test
 		}
 	Test_ScanFormula()
 		{
+		.test_ScanFormula('\r\n', '')
 		.test_ScanFormula('', '')
 		.test_ScanFormula('123 + Total Amount', '123 + totamount')
 		.test_ScanFormula('Total Amount + Total Amount Sold', 'totamount + totamount')
@@ -127,6 +128,7 @@ Test
 		}
 	Test_ScanFields()
 		{
+		Assert(.sf.ScanFields('\r\n') is: #())
 		Assert(.sf.ScanFields('') is: #())
 
 		Assert(.sf.ScanFields('123 + 456') is: #(

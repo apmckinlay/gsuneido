@@ -23,6 +23,6 @@ DrawTracker
 
 	GetSuJSTracker()
 		{
-		return 'SuDrawClickTracker'
+		return 'SuJsDrawClickTracker'
 		}
 	}

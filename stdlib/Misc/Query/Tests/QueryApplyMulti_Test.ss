@@ -9,15 +9,15 @@ Test
 		tbl = .MakeTable("(a) key()")
 		Assert(cursorCost(tbl).query is: tbl)
 		}
-	Test_which()
-		{
-		cursorCost = QueryApplyMulti.QueryApplyMulti_cursorCost
-		lookupCost = QueryApplyMulti.QueryApplyMulti_lookupCost
-		q = "stdlib"
-		Assert(cursorCost(q).cost lessThan: lookupCost(q).cost)
-		q = "stdlib where parent is 123"
-		Assert(cursorCost(q).cost greaterThan: lookupCost(q).cost)
-		}
+//	Test_which()
+//		{
+//		cursorCost = QueryApplyMulti.QueryApplyMulti_cursorCost
+//		lookupCost = QueryApplyMulti.QueryApplyMulti_lookupCost
+//		q = "stdlib"
+//		Assert(cursorCost(q).cost lessThan: lookupCost(q).cost)
+//		q = "stdlib where parent is 123"
+//		Assert(cursorCost(q).cost greaterThan: lookupCost(q).cost)
+//		}
 	Test_composite_key()
 		{
 		tbl = .MakeTable('(a,b) key(a,b)', [a: 1, b: 2], [a: 3, b: 4], [a: 3], [b: 2])

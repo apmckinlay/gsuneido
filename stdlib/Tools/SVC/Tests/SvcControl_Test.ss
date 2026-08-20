@@ -9,9 +9,19 @@ SvcTests
 		.SvcTable(lib = .MakeLibrary())
 		.MemoizeSingleOverride('LibraryTables', Object(lib, excluded_library, extra_lib))
 		.MemoizeSingleOverride('BookTables', Object(book))
-		.SpyOn(SvcControl.Getter_SvcExcludeLibraries).Return(Object(excluded_library))
 
-		func = SvcControl.SvcControl_changesToSend
+		// Use a dynamic variable to pass the excluded library into the overridden method
+		_testExclude = Object(excluded_library)
+
+		// Create a test controller subclass
+		test_ctrl = SvcControl
+			{
+			Getter_SvcExcludeLibraries() { return _testExclude }
+			}
+
+		// Use the instance or method from the test controller
+		func = test_ctrl.SvcControl_changesToSend
+
 		Assert(func() is: #())
 
 		.MakeLibraryRecord([num: 1, name: 'test_rec', text: '"testing"',

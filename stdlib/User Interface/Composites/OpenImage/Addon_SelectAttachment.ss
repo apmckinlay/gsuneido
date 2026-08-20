@@ -24,13 +24,14 @@ OpenImageAddon
 			.GetFilter(), .GetStatus(), .Parent.UseSubFolder)
 
 		try
-			if selectedfile isnt false
+			if selectedfile isnt false and not .Destroyed?()
 				{
 				.SetNewValue(.ProcessValue(selectedfile))
 				action = origFile is '' ? '' : AttachmentsManager.ReplaceAction
 				.QueueDeleteAttachment(.FullPath(), origFile, action)
 				}
-		catch(e, 'member not found')
-			SuneidoLog('Attachment control destroyed (' $ e $')')
+		catch(e)
+			ProgrammerError('On_Select_Attachment - ' $ e,
+				params: Object(:selectedfile, :origFile, destroyed: .Destroyed?()))
 		}
 	}

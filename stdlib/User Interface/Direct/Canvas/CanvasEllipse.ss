@@ -96,7 +96,7 @@ CanvasItem
 		{ return .name }
 	GetSuJSObject()
 		{
-		return Object('SuCanvasEllipse', .x1, .y1, .x2, .y2, id: .Id)
+		return Object('SuJsCanvasEllipse', .x1, .y1, .x2, .y2, id: .Id)
 		}
 	ToggleLock()
 		{

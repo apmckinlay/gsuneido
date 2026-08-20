@@ -111,7 +111,7 @@ class
 				name $ ' is still running', params: Object(:lastLog))
 			return
 			}
-		Thread({ .tryTask(task, expr) }, :name)
+		Thread(.tryTask, task, expr, :name)
 		}
 
 	loggingPrefix(task)

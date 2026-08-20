@@ -51,20 +51,20 @@ class
 		ob = SuSessionManager.CreateLoginToken(user, remote, host, userAgent, :run)
 
 		stylesheets = [
-			JsLoadRuntime.GetUrl("codemirror.css"),
-			JsLoadRuntime.GetUrl("foldgutter.css")]
+			SuJsLoadRuntime.GetUrl("codemirror.css"),
+			SuJsLoadRuntime.GetUrl("foldgutter.css")]
 		scripts = [
-			JsLoadRuntime.GetUrl("codemirror_bundle.js"),
+			SuJsLoadRuntime.GetUrl("codemirror_bundle.js"),
 			codeBundleUrl,
-			JsLoadRuntime.GetUrl("su_bundle.min.js")]
-		styles = IconFontHelper.GetFontStyles(JsLoadRuntime.GetUrl).Map(HtmlString)
+			SuJsLoadRuntime.GetUrl("su_bundle.min.js")]
+		styles = IconFontHelper.GetFontStyles(SuJsLoadRuntime.GetUrl).Map(HtmlString)
 
 		preAuth = true
-		set = LastContribution('JsLogin').GetInitSet(user)
+		set = LastContribution('SuJsLogin').GetInitSet(user)
 		onload = HtmlString(
 			'const id = "' $ Opt('[', id, ']: ') $ '";' $
 			.errorHandler $
-			JsTranslate(
+			SuJsTranslate(
 				'function () {
 					SuInitClient(set: "' $ set $ '", token: "' $ ob.token $ '", ' $
 					'preAuth: ' $ Display(preAuth) $ ')}', 'eval') $ ".call()")

@@ -141,8 +141,9 @@ class
 		sel = formula.GetSel()
 		if sel[0] isnt sel[1]
 			return
-
-		fields = selectFields.ScanFields(formula.Get().Replace('\n', '\r\n'), .reserved())
+		// Use GetWindowText directly instead of formula.Get because
+		// stdlib:EditorControl.Get() strips \r from \r\n
+		fields = selectFields.ScanFields(GetWindowText(formula.Hwnd), .reserved())
 		for field in fields
 			if sel[0] > field.pos and sel[0] < field.end
 				formula.SetSel(field.pos, field.end)

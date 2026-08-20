@@ -37,6 +37,7 @@ class
 		SuUI.GetCurrentDocument().AddEventListener('contextmenu', .disableDefaultMenu)
 		SuUI.GetCurrentWindow().AddEventListener('beforeunload', .beforeUnload)
 		SuUI.GetCurrentWindow().AddEventListener('error', .onError)
+		SuUI.GetCurrentWindow().AddEventListener('unhandledrejection', .onPromiseError)
 
 		SuUI.GetCurrentDocument().AddEventListener('contextmenu',
 			.cancelMouseTracking, useCapture:)
@@ -193,7 +194,7 @@ class
 		.heartbeat.Stop()
 		}
 
-	retryCountDown: false
+	retryCountDown: 0
 	timer: false
 	retryCount: 0
 	maxRetries: 10
@@ -348,6 +349,30 @@ class
 		{
 		id = Display(uniqueId)
 		return .components.GetDefault(id, false)
+		}
+
+	RegisterWindow(uniqueId, window)
+		{
+		.windows[uniqueId] = window
+		}
+
+	UnRegisterWindow(uniqueId)
+		{
+		.windows.Erase(uniqueId)
+		}
+
+	DisableWindows(by)
+		{
+		for id, window in .windows
+			if id isnt by
+				window.Disable(by)
+		}
+
+	EnableWindows(by)
+		{
+		for id, window in .windows
+			if id isnt by
+				window.Enable(by)
 		}
 
 	ActiveWindow: false
@@ -810,7 +835,7 @@ class
 
 		event.PreventDefault()
 		// Chrome, Safari and Firefox don't support custom message any more
-		return event.returnValue = "Are you sure you want to logout?"
+		event.returnValue = "Are you sure you want to logout?"
 		}
 
 	ignores: #('ResizeObserver loop limit exceeded',
@@ -826,8 +851,50 @@ class
 		if .ignores.Any?({ event.message =~ it })
 			return false
 
+		if .isThirdPartyError?(event)
+			{
+			SuneidoLog('ERROR (CAUGHT) - BrowserError: ' $ event.message,
+				calls: event.error.stack,
+				caughtMsg: 'Possibly external; Ignored')
+			return false
+			}
+
 		.Event(false, 'SuBrowserError',
 			[message: event.message, stack: event.error.stack])
+		return true
+		}
+
+	isThirdPartyError?(event)
+		{
+		try
+			{
+			lines = event.error.stack.Lines()
+
+			// no call stack
+			if lines.Size() <= 1
+				return false
+
+			// Translated JavaScript uses $f for generated function implementations
+			// Relevant stack formats are:
+			// Blink/Chrome: at $f (source:line:column)
+			// WebKit/Safari: $f@source:line:column
+			for line in lines
+				{
+				if line =~ `\<\$f\>` or line.Has?('su_bundle.min.js') or
+					line.Has?('su_code_bundle.js')
+					return false
+				}
+			return true
+			}
+		return false
+		}
+
+	onPromiseError(event)
+		{
+		if .socketStatus is SuSocketStatus.terminated
+			return false
+		.Event(false, 'SuBrowserError',
+			[message: event.reason.message, stack: event.reason.stack])
 		return true
 		}
 

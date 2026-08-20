@@ -3,10 +3,13 @@ Controller
 	{
 	Name: 'SelectRepeat'
 	MaxRecords: 50
-	New(.sf, select_vals, .name, .option = '', .title = '',
-		.noUserDefaultSelects? = false, .fromFilter = false, selChanged = false)
+	New(.sf, select_vals, name, .option = '', .title = '',
+		.noUserDefaultSelects? = false, .fromFilter = false, selChanged = false,
+		.defaultSaveName = false)
 		{
-		.Name = .name
+		.Name = name
+		if .defaultSaveName is false
+			.defaultSaveName = name
 		.filters = .FindControl('conditions')
 		.scroll = .FindControl('Scroll')
 		if fromFilter
@@ -101,11 +104,13 @@ Controller
 		.SetSelectApplied(true)
 		}
 
+	changed?: false
 	SetSelectApplied(applied = false)
 		{
 		if .loadButton is false
 			return
 		.Send('SelectControl_SetSelectApplied', .valid?)
+		.changed? = not applied
 		.loadButton.SetTextColor(applied ? CLR.BLACK : CLR.RED)
 		}
 
@@ -118,7 +123,7 @@ Controller
 		}
 	SelectChanged?()
 		{
-		return .loadButton.GetTextColor() is CLR.RED
+		return .changed?
 		}
 
 	FieldPrompt_GetSelectFields()
@@ -232,7 +237,7 @@ Controller
 			"Default Selects")
 			return
 
-		defaultName = .name $ '~default'
+		defaultName = .defaultSaveName $ '~default'
 		.deleteDefaultUserSelect(defaultName)
 		QueryOutput("userselects", Record(
 			userselect_user: Suneido.User,
@@ -250,7 +255,7 @@ Controller
 	On_Presets_Default_Settings_Change_My_Default()
 		{
 		if false is cur = Query1('userselects', userselect_user: Suneido.User
-			userselect_title: .name $ '~default')
+			userselect_title: .defaultSaveName $ '~default')
 			.On_Presets_Default_Settings_Set_My_Default()
 		else
 			.chooseDefaultSelect(cur.userselect_selects)
@@ -258,7 +263,7 @@ Controller
 
 	On_Presets_Default_Settings_Reset_To_My_Default()
 		{
-		defaultName = .name $ '~default'
+		defaultName = .defaultSaveName $ '~default'
 		if false isnt sel = Query1("userselects", userselect_user: Suneido.User,
 			userselect_title: defaultName)
 			{

@@ -64,16 +64,39 @@ class
 	matchHole(scan, i, result)
 		{
 		if .match?(scan, i, ':') and .match?(scan, i + 1, '[') and
-			.match?(scan, i + 2, type: #IDENTIFIER) and
-			.match?(scan, i + 3 /*=pos*/, ']')
+			.match?(scan, i + 2, type: #IDENTIFIER)
 			{
-			result.Add(Object(start: scan[i].start, end: scan[i + 3 /*=pos*/].end,
-				type: #HOLE,
-				value: scan[i + 2].value, text: ':[' $ scan[i + 2].text $ ']'))
-			return 4 /*=offset*/
-			}
 
+			if .matchExprHole?(scan, i)
+				{
+				result.Add(Object(start: scan[i].start,
+					end: scan[i + 5/*=pos*/].end,
+					type: #HOLE, expr: true,
+					value: scan[i + 2].value,
+					text: ':[' $ scan[i + 2].text $ ':e]'))
+				return 6/*=advance*/
+				}
+			// regular hole: :[name]
+			if .match?(scan, i + 3/*=pos*/, ']')
+				{
+				result.Add(Object(start: scan[i].start,
+					end: scan[i + 3/*=pos*/].end,
+					type: #HOLE,
+					value: scan[i + 2].value,
+					text: ':[' $ scan[i + 2].text $ ']'))
+				return 4/*=advance*/
+				}
+			}
 		return false
+		}
+
+	// expression hole: :[name:e]
+	matchExprHole?(scan, i)
+		{
+		return .match?(scan, i + 3/*=pos*/, ':') and
+			.match?(scan, i + 4/*=pos*/, type: #IDENTIFIER) and
+			scan[i + 4/*=pos*/].text is 'e' and
+			.match?(scan, i + 5/*=pos*/, ']')
 		}
 
 	match?(scan, i, text = false, type = '')

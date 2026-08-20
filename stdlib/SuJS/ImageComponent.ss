@@ -40,7 +40,7 @@ Component
 
 	doubleClick(event/*unused*/)
 		{
-		.Event('LBUTTONDBLCLK')
+		.EventWithOverlay('LBUTTONDBLCLK')
 		}
 
 	dragstart(event)

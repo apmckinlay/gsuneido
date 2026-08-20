@@ -7,10 +7,18 @@ class
 		{
 		task = .createTask(msg)
 		Finally({
-			while not task.Canceled?() and block()
-				task.PauseIfNeeded()
+			try
+				{
+				while not task.Canceled?() and block()
+					task.PauseIfNeeded()
+				}
+			catch (unused, 'DoTaskWithPause: CANCELED')
+				{ }
 			}, {
-			task.Finish()
+			if false is task.Finish() and task.Canceled?()
+				{
+				throw 'DoTaskWithPause: CANCELED'
+				}
 			})
 		return not task.Canceled?()
 		}
@@ -30,7 +38,7 @@ class
 		{
 		PauseIfNeeded() {}
 		Ref() {}
-		Finish() {}
+		Finish() { return true }
 		Canceled?() { return false }
 		}
 
@@ -73,7 +81,7 @@ class
 	pause()
 		{
 		SuRenderBackend().RecordAction(.UniqueId, 'Pause', args: #())
-		JsWebSocketServer.MessageLoop()
+		SuJsWebSocketServer.MessageLoop()
 		}
 
 	DonePause(.cancel?)
@@ -84,7 +92,12 @@ class
 	Finish()
 		{
 		if --.ref is 0
+			{
 			.cleanup()
+			return true
+			}
+		else
+			return false
 		}
 
 	cleanup()

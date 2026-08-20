@@ -383,7 +383,7 @@ el.scrollIntoView(` $ Display(alignToTop) $ `)`
 				}
 			}
 		if failedToDelete > 100 /*=max*/
-			SuneidoLog('WARNING: WebView2.CleanUp - Failed to delete ' $
+			SuneidoLog('WebView2.CleanUp - Failed to delete ' $
 				failedToDelete $ ' out of ' $ totalToDelete $ ' temp folders',
 				params: [:lastFailure])
 		}

@@ -482,21 +482,33 @@ Test
 		origCols = #(field1, custom1, custom_nonpermissible, custom2, customDeleted,
 			field2)
 		origWids = #(1, 2, 3, 4, 5, 6)
+
+		// 1. Test with no non-permissible fields or deleted fields
+		mock = Mock(UserColumns)
+		mock.When.nonPermissableFields([anyArgs:]).Return(#())
+		mock.When.deletedField?([anyArgs:]).Return(false)
+
 		visibleCols = origCols.Copy()
 		visibleWids = origWids.Copy()
-		f('', visibleCols, visibleWids)
+		mock.Eval(f, '', visibleCols, visibleWids)
 		Assert(visibleCols is: origCols)
 		Assert(visibleWids is: origWids)
 
-		.SpyOn(Customizable.GetNonPermissableFields).Return(#(custom_nonpermissible))
-		f('', visibleCols, visibleWids)
-		Assert(visibleCols is: #(field1, custom1, custom2, customDeleted, field2))
-		Assert(visibleWids is: #(1, 2, 4, 5, 6))
+		// 2. Test with non-permissible fields
+		mock.When.nonPermissableFields([anyArgs:]).Return(#(custom_nonpermissible))
+		mock.When.deletedField?([anyArgs:]).Return(false)
 
 		visibleCols = origCols.Copy()
 		visibleWids = origWids.Copy()
-		.SpyOn(Customizable.DeletedField?).Return(false, false, false, false, true, false)
-		f('', visibleCols, visibleWids)
+		mock.Eval(f, '', visibleCols, visibleWids)
+		Assert(visibleCols is: #(field1, custom1, custom2, customDeleted, field2))
+		Assert(visibleWids is: #(1, 2, 4, 5, 6))
+
+		// 3. Test with deleted fields
+		mock.When.deletedField?('customDeleted').Return(true)
+		visibleCols = origCols.Copy()
+		visibleWids = origWids.Copy()
+		mock.Eval(f, '', visibleCols, visibleWids)
 		Assert(visibleCols is: #(field1, custom1, custom2, field2))
 		Assert(visibleWids is: #(1, 2, 4, 6))
 		}

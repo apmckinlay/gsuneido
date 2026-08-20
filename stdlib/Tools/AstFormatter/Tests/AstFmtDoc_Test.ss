@@ -5,7 +5,7 @@ Test
 		{
 		Assert(AstFmtDoc.Text('a'), is: [t: #text, s: 'a', hb: false])
 		Assert(AstFmtDoc.Tok('a'), is: [t: #text, s: 'a', hb: false])
-		Assert(AstFmtDoc.Tok('a\nb'), is: [t: #verb, s: 'a\nb', hb:])
+		Assert(AstFmtDoc.Tok("a\nb"), is: [t: #verb, s: "a\nb", hb:])
 		Assert(AstFmtDoc.Tokc("// c"), is: [t: #text, s: "// c", hb:])
 		Assert(AstFmtDoc.Tokc("/* c */"), is: [t: #text, s: "/* c */", hb: false])
 		Assert(AstFmtDoc.Str('"s"'), is: [t: #str, s: '"s"', hb: false])
@@ -38,6 +38,13 @@ Test
 		Assert(AstFmtDoc.Nest(AstFmtDoc.Hard).hb)
 		Assert(AstFmtDoc.Fill([AstFmtDoc.Text('x'), AstFmtDoc.Hard]).hb)
 		Assert(AstFmtDoc.Root(AstFmtDoc.Text('x')).hb) // root never flattens
+		}
+
+	Test_lead()
+		{
+		Assert(AstFmtDoc.Lead(AstFmtDoc.Text('x')),
+			is: [t: #lead, d: [t: #text, s: 'x', hb: false], hb: false])
+		Assert(AstFmtDoc.Lead(AstFmtDoc.Hard).hb)
 		}
 
 	Test_combinators()

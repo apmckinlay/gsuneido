@@ -534,13 +534,21 @@ VirtualListModelTests
 
 	Test_StripSort()
 		{
+		_sf = .sf
+		cl = VirtualListSortModel
+			{
+			Getter_VirtualListSortModel_sf()
+				{
+				return _sf
+				}
+			}
 		q = `/* tableHint: ` $ .table $ ` */ ` $ .table $
 			` where a isnt "" ` $
 			`/* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/ ` $
 			`leftjoin by(vl_sort_test_num) ` $
 			`(` $ .masterTable $ ` rename vl_sort_test_name to vl_sort_test_name_ren)`
 		sort = ` sort vl_sort_test_num`
-		result = VirtualListSortModel.StripSort(q $ sort)
+		result = cl.StripSort(q $ sort)
 		Assert(result
 			is: `/* tableHint: ` $ .table $ ` */ ` $ .table $
 			` where a isnt "" /* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/ ` $
@@ -548,8 +556,29 @@ VirtualListModelTests
 			`(` $ .masterTable $ ` rename vl_sort_test_name to vl_sort_test_name_ren)`,
 			msg: 'join false')
 
-		cl = VirtualListSortModel { VirtualListSortModel_join?: true }
-		result = cl.StripSort(q)
+		cl = VirtualListSortModel
+			{
+			Getter_VirtualListSortModel_sf()
+				{
+				return _sf
+				}
+			VirtualListSortModel_join?: true
+			}
+		q = `/* tableHint: ` $ .table $ ` */ ` $ .table $
+			` where a isnt "" ` $
+			`/* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/ ` $
+			`leftjoin by(vl_sort_test_num) ` $
+			`(` $ .masterTable $
+				` project vl_sort_test_num, vl_sort_test_name, vl_sort_test_abbrev)`
+		sort = ` sort vl_sort_test_name`
+		result = cl.StripSort(q $ sort)
+		Assert(result
+			is: `/* tableHint: ` $ .table $ ` */ ` $ .table $
+			` where a isnt "" ` $
+			`/* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/`, msg: 'join true')
+
+		sort = ` sort reverse vl_sort_test_name`
+		result = cl.StripSort(q $ sort)
 		Assert(result
 			is: `/* tableHint: ` $ .table $ ` */ ` $ .table $
 			` where a isnt "" ` $
@@ -557,7 +586,7 @@ VirtualListModelTests
 
 		query = 'tables /* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/ ' $
 			'extend reverse__nrows sort table'
-		result = VirtualListSortModel.StripSort(query)
+		result = cl.StripSort(query)
 		Assert(result is: 'tables /* CHECKQUERY SUPPRESS: PROJECT NOT UNIQUE*/',
 			msg: 'reverse__')
 		}

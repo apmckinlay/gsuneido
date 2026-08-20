@@ -56,7 +56,7 @@ Controller
 				Skip
 				(CheckBox, 'Regex', tip: "Regular expression", name: "regex")
 				Skip
-				(CheckBox, 'Expr', tip: "Expression", name: "expr")
+				(CheckBox, 'Comby', tip: "Comby pattern", name: "comby")
 				Skip)
 			(Skip 2))
 		)

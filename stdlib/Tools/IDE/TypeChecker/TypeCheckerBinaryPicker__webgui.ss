@@ -1,5 +1,8 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
-function (path)
+// LEGACY-TYPECHECK-BINARY: false path means there is no binary, so render nothing
+function(path)
 	{
-	return Object('Field', set: path, name: 'TypeCheckerBinary', width: 50)
+	return path is false
+		? #Skip
+		: [#Field, set: path, name: #TypeCheckerBinary, width: 50]
 	}

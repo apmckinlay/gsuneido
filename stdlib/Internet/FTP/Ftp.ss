@@ -17,9 +17,10 @@ class
 		}
 
 	// only implemented GetMultiple/DeleteMultiple/DirMultiple for Curl
-	GetMultiple(fileList, folderPath, receivingPath)
+	GetMultiple(fileList, folderPath, receivingPath, skipCopyExisting? = false)
 		{
-		return .ftp.GetMultiple(fileList, folderPath, receivingPath)
+		return .ftp.GetMultiple(fileList, folderPath, receivingPath,
+			:skipCopyExisting?)
 		}
 
 	DeleteMultiple(fileList, receivingPath, notFromRoot = false)

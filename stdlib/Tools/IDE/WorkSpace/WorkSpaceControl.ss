@@ -75,7 +75,7 @@ Controller
 						)
 					Tab: ' Workspace ')
 				Object('FindInLibraries' Tab: ' Find '),
-				:selectedTabColor, :selectedTabBold, orientation: 'right')
+				:selectedTabColor, :selectedTabBold, border: 0, orientation: 'right')
 			#Statusbar
 			)
 		}

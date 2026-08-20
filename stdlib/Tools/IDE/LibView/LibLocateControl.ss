@@ -23,6 +23,11 @@ Controller
 		{
 		return .value
 		}
+	Set(value)
+		{
+		.AutoChoose.Set(value)
+		.AutoChoose.Escape() // close the list
+		}
 	SetFocus() // called by LibView
 		{
 		.AutoChoose.SetFocus()

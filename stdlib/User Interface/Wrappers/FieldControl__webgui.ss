@@ -6,7 +6,7 @@ EditControl
 	MaxCharacters: 512
 	New(width = 20, status = "", readonly = false,
 		font = "", size = "", weight = "", underline = false,
-		password = false, justify = "LEFT", style /*unused*/ = 0,
+		.password = false, justify = "LEFT", style /*unused*/ = 0,
 		set = false, mandatory = false, .trim = true,
 		bgndcolor = "", textcolor = "", hidden = false, tabover = false,
 		cue = false, readOnlyBgndColor = false, acceptDrop /*unused*/= false,
@@ -97,5 +97,15 @@ EditControl
 		{
 		maxCharacters = args.GetDefault('maxCharacters', .MaxCharacters)
 		return super.ValidData?(@args) and .ValidTextLength?(args[0], maxCharacters)
+		}
+
+	SetPasswordChar(.password = false)
+		{
+		.Act('SetPasswordChar', :password)
+		}
+
+	GetPasswordChar()
+		{
+		return .password is false ? 0 : '*'
 		}
 	}

@@ -1,17 +1,19 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 AstFmtDoc
 	{
-	New(src)
+	New(.src)
 		{
 		toks = Object()
-		scan = Scanner(src)
+		scan = Scanner(.src)
 		while scan isnt scan.Next2()
 			toks.Add([kind: scan.Type(), text: scan.Text(), end: scan.Position()])
 		.toks = toks
-		.spans = toks.Filter(
-			{
-			it.kind is #COMMENT
-			}).Map!({ [start: it.end - it.text.Size(), end: it.end] })
+		.spans = toks.
+			Filter(
+				{
+				it.kind is #COMMENT
+				}).
+			Map!({ [start: it.end - it.text.Size(), end: it.end] })
 		}
 
 	CommentIn?(from, to)
@@ -37,7 +39,7 @@ AstFmtDoc
 					docs.Add(pend)
 					docs.Add(.Text(' '))
 					}
-				pend = .suppress?(tok.text, unusedParam) ? false : .Tokc(tok.text)
+				pend = .suppress?(tok.text, unusedParam) ? false : .comment(tok)
 				}
 			else if tok.kind is #NEWLINE and pend isnt false
 				{
@@ -56,7 +58,7 @@ AstFmtDoc
 
 	// Trailing consumes comments before pos, and after pos up to the next
 	// code token; a blank line in the source sets curr.blank for the next item
-	Trailing(curr, pos, parentEnd = 9999999, allowBlank = false, unusedParam = false)
+	Trailing(curr, pos, parentEnd = 9_999_999, allowBlank = false, unusedParam = false)
 		{
 		docs = Object()
 		nl = false
@@ -70,12 +72,14 @@ AstFmtDoc
 				if not .suppress?(tok.text, unusedParam)
 					{
 					// annotations hug their token: x/*unused*/, 2/*=EtchedLine*/
-					hug = tok.text is "/*unused*/" or tok.text.Prefix?("/*=")
+					// a space after the = means prose, not an annotation
+					hug = tok.text is "/*unused*/" or
+						(tok.text.Prefix?("/*=") and not tok.text.Prefix?("/*= "))
 					if nl
 						docs.Add(.Hard)
 					else if not hug
 						docs.Add(.Text(' '))
-					docs.Add(.Tokc(tok.text))
+					docs.Add(.comment(tok))
 					}
 				}
 			else if tok.kind is #NEWLINE
@@ -93,6 +97,16 @@ AstFmtDoc
 		return .Catl(docs)
 		}
 
+	// consume trivia up to the next code token - for closes whose node has no
+	// usable end position (Function nodes have end 0)
+	LeadingToCode(curr)
+		{
+		for (j = curr.i; j < .toks.Size(); ++j)
+			if .toks[j].kind not in (#COMMENT, #NEWLINE, #WHITESPACE)
+				return .Leading(curr, .toks[j].end - .toks[j].text.Size())
+		return .Leading(curr, 9_999_999)
+		}
+
 	SkipTo(curr, pos) // advance the cursor silently, e.g. past verbatim slices
 		{
 		while curr.done < pos and curr.i < .toks.Size()
@@ -100,6 +114,32 @@ AstFmtDoc
 			curr.done = .toks[curr.i].end
 			++curr.i
 			}
+		}
+
+	EmptyBraces?(curr, pos)
+		{
+		for (j = curr.i; j < .toks.Size(); ++j)
+			{
+			tok = .toks[j]
+			if tok.end <= pos or tok.kind in (#NEWLINE, #WHITESPACE)
+				continue
+			return tok.text is '}'
+			}
+		return false
+		}
+
+	// a // comment written at the left margin stays there - the margin is
+	// deliberate, e.g. commented-out code keeping its own indentation
+	comment(tok)
+		{
+		d = .Tokc(tok.text)
+		return tok.text.Prefix?("//") and .margin?(tok) ? .Root(d) : d
+		}
+
+	margin?(tok)
+		{
+		start = tok.end - tok.text.Size()
+		return start is 0 or .src[start-1] is '\n'
 		}
 
 	blank?(s)

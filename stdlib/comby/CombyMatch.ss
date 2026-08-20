@@ -11,12 +11,22 @@ The idea is based on https://comby.dev/
 class
 	{
 	MAX_HOLE_MATCHES: 100
-	CallClass(search, s)
+	CallClass(search, s, pos = 0, prev = false)
 		{
 		items = CombyTemplate(search)
 		if items.Size() is 0
-			return #()
+			return false
 
+		tokens = .buildTokens(s)
+		env = Object(:s, :tokens, :items, holes: Object())
+
+		return prev is false
+			? .findNext(env, pos)
+			: .findPrev(env, pos)
+		}
+
+	buildTokens(s)
+		{
 		tokens = Object()
 		scan = Scanner(s)
 		start = 0
@@ -26,27 +36,70 @@ class
 				value: scan.Value()))
 			start = scan.Position()
 			}
+		return tokens
+		}
 
+	findNext(env, pos)
+		{
+		tokens = env.tokens
+		i = 0
+		while i < tokens.Size() and tokens[i].start < pos
+			i++
+		while i < tokens.Size()
+			{
+			env.holes = Object()
+			if false isnt next = .match(env, i, 0)
+				return Object(pos: tokens[i].start, end: tokens[next - 1].end,
+					holes: env.holes)
+			i++
+			}
+		return false
+		}
+
+	findPrev(env, pos)
+		{
+		tokens = env.tokens
+		i = tokens.Size() - 1
+		while i >= 0 and tokens[i].end > pos
+			i--
+		while i >= 0
+			{
+			env.holes = Object()
+			if false isnt next = .match(env, i, 0)
+				{
+				if tokens[next - 1].end <= pos
+					return Object(pos: tokens[i].start,
+						end: tokens[next - 1].end,
+						holes: env.holes)
+				}
+			i--
+			}
+		return false
+		}
+
+	All(search, s)
+		{
+		items = CombyTemplate(search)
+		if items.Size() is 0
+			return #()
+
+		tokens = .buildTokens(s)
 		i = 0
 		results = Object()
 		env = Object(:s, :tokens, :items, holes: Object())
-		while i < tokens.Size()
+		while false isnt next = .findNext(env, i)
 			{
-			if false is next = .match(env, i, 0)
-				i++
-			else
-				{
-				results.Add(Object(pos: tokens[i].start, end: tokens[next - 1].end,
-					holes: env.holes))
-				env.holes = Object()
-				i = next
-				}
+			results.Add(next)
+			i = next.end
 			}
 		return results
 		}
 
 	match(env, tokenStartIdx, itemStartIdx)
 		{
+		if itemStartIdx >= env.items.Size()
+			return false
+
 		i = tokenStartIdx
 		j = itemStartIdx
 		while j < env.items.Size()
@@ -79,11 +132,12 @@ class
 		if item.type is #HOLE
 			{
 			if not env.items.Member?(itemIdx + 1)
-				return .matchLastHole(env, item, tokenStartIdx, tokenIdx)
+				return .matchLastHole(env, item, tokenStartIdx, tokenIdx,
+					expr?: item.GetDefault(#expr, false))
 			else
-				return .matchHole(env, item, tokenStartIdx, tokenIdx, itemIdx)
+				return .matchHole(env, item, tokenStartIdx, tokenIdx, itemIdx,
+					expr?: item.GetDefault(#expr, false))
 			}
-
 		return item.value is env.tokens[tokenStartIdx].value ? Object(1, 1) : false
 		}
 
@@ -96,18 +150,20 @@ class
 		}
 
 	// match until meet the end of source or the close delimiter
-	matchLastHole(env, item, tokenStartIdx, tokenIdx)
+	matchLastHole(env, item, tokenStartIdx, tokenIdx, expr? = false)
 		{
-		blockEnd = .findEndOfBlock(env, tokenIdx)
+		blockEnd = .findEndOfBlock(env, tokenIdx, :expr?)
+		if blockEnd is tokenIdx
+			return false
 		env.holes[item.value] = env.s[env.tokens[tokenStartIdx].start..
 			env.tokens[blockEnd - 1].end]
 		return Object(blockEnd - tokenStartIdx, 1)
 		}
 
-	matchHole(env, item, tokenStartIdx, tokenIdx, itemIdx)
+	matchHole(env, item, tokenStartIdx, tokenIdx, itemIdx, expr? = false)
 		{
 		match = 0
-		.findEndOfBlock(env, tokenIdx)
+		.findEndOfBlock(env, tokenIdx, :expr?)
 			{ |blockLevel, ti|
 			if match >= .MAX_HOLE_MATCHES
 				return false
@@ -125,13 +181,16 @@ class
 		return false
 		}
 
-	findEndOfBlock(env, tokenIdx, block = false)
+	findEndOfBlock(env, tokenIdx, expr? = false, block = false)
 		{
 		blockLevel = 0
+		tok = false
 		while tokenIdx < env.tokens.Size()
 			{
 			if block isnt false
 				block(blockLevel, tokenIdx)
+
+			prevTok = tok
 			tok = env.tokens[tokenIdx]
 			if tok.type is ''
 				{
@@ -144,9 +203,23 @@ class
 						break
 					}
 				}
+			else if .endExpr?(expr?, blockLevel, tok, prevTok)
+				break
 			tokenIdx++
 			}
 		return tokenIdx
+		}
+
+	endExpr?(expr?, blockLevel, tok, prevTok)
+		{
+		if expr? isnt true or blockLevel isnt 0
+			return false
+		if tok.type in (#WHITESPACE, #COMMENT)
+			return true
+		if tok.type is #NEWLINE
+			return not (prevTok isnt false and prevTok.type is '' and
+				prevTok.value is '.')
+		return false
 		}
 
 	GetHint(search)
