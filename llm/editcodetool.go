@@ -264,6 +264,7 @@ func applyLineEdit(oldText string, mode string, line, count int, insert string) 
 	}
 
 	insert = normalizeCRLF(insert)
+	insert = addMissingIndent(insert, lineIndent(oldText, line))
 
 	var sb strings.Builder
 	sb.Grow(len(oldText) - (endOff - startOff) + len(insert))
@@ -322,6 +323,42 @@ func findFromTo(from int, to int, oldText string) (int, int, error) {
 		return 0, 0, fmt.Errorf("line %d out of bounds for %d lines", from, line)
 	}
 	return startOff, endOff, nil
+}
+
+// lineIndent returns the leading whitespace (tabs/spaces) of the given
+// 1-based line, or "" if the line is out of range or has no indentation.
+func lineIndent(text string, line int) string {
+	start := 0
+	for l := 1; l < line; l++ {
+		i := strings.IndexByte(text[start:], '\n')
+		if i == -1 {
+			return ""
+		}
+		start += i + 1
+	}
+	end := start
+	for end < len(text) && (text[end] == ' ' || text[end] == '\t') {
+		end++
+	}
+	return text[start:end]
+}
+
+// addMissingIndent prepends indent to insert when the first line of insert has
+// no leading whitespace, so it matches the indentation of the surrounding code.
+func addMissingIndent(insert, indent string) string {
+	if insert == "" || indent == "" {
+		return insert
+	}
+	before, _, ok := strings.Cut(insert, "\n")
+	first := insert
+	if ok {
+		first = before
+	}
+	first = strings.TrimSuffix(first, "\r")
+	if first != "" && first[0] != ' ' && first[0] != '\t' {
+		return indent + insert
+	}
+	return insert
 }
 
 func normalizeCRLF(s string) string {

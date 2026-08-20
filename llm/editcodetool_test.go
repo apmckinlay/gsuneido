@@ -153,6 +153,79 @@ func TestEditCodeTool(t *testing.T) {
 	th3.Close()
 }
 
+func TestApplyLineEditAutoIndent(t *testing.T) {
+	assert := assert.T(t)
+
+	oldText := strings.Join([]string{
+		"function()",
+		"\t{",
+		"\treturn 1",
+		"\t}",
+	}, "\n")
+
+	// replace_lines: match the indentation of the first replaced line
+	newText, err := applyLineEdit(oldText, "replace_lines", 3, 1, "return 2")
+	assert.That(err == nil)
+	assert.This(newText).Is(strings.Join([]string{
+		"function()",
+		"\t{",
+		"\treturn 2\r",
+		"\t}",
+	}, "\n"))
+
+	// insert_before: match the indentation of the following line
+	newText, err = applyLineEdit(oldText, "insert_before", 3, 0, "// inserted")
+	assert.That(err == nil)
+	assert.This(newText).Is(strings.Join([]string{
+		"function()",
+		"\t{",
+		"\t// inserted\r",
+		"\treturn 1",
+		"\t}",
+	}, "\n"))
+
+	// insert_after: match the indentation of the preceding line
+	newText, err = applyLineEdit(oldText, "insert_after", 3, 0, "// after")
+	assert.That(err == nil)
+	assert.This(newText).Is(strings.Join([]string{
+		"function()",
+		"\t{",
+		"\treturn 1",
+		"\t// after\r",
+		"\t}",
+	}, "\n"))
+
+	// already-indented first line is left unchanged
+	newText, err = applyLineEdit(oldText, "replace_lines", 3, 1, "  return 2")
+	assert.That(err == nil)
+	assert.This(newText).Is(strings.Join([]string{
+		"function()",
+		"\t{",
+		"  return 2\r",
+		"\t}",
+	}, "\n"))
+
+	// top-level line with no indentation gets no extra indentation
+	newText, err = applyLineEdit(oldText, "replace_lines", 1, 1, "function()")
+	assert.That(err == nil)
+	assert.This(newText).Is(strings.Join([]string{
+		"function()\r",
+		"\t{",
+		"\treturn 1",
+		"\t}",
+	}, "\n"))
+}
+
+func TestLineIndent(t *testing.T) {
+	assert := assert.T(t)
+	text := "function()\n\t{\n  \treturn 1\n\t}"
+	assert.This(lineIndent(text, 1)).Is("")
+	assert.This(lineIndent(text, 2)).Is("\t")
+	assert.This(lineIndent(text, 3)).Is("  \t")
+	assert.This(lineIndent(text, 4)).Is("\t")
+	assert.This(lineIndent(text, 5)).Is("")
+}
+
 func TestValidateEditModeArgs(t *testing.T) {
 	assert := assert.T(t)
 
