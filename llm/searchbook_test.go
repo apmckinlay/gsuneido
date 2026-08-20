@@ -39,13 +39,13 @@ func TestSearchBookTool(t *testing.T) {
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(4)
 	assert.This(res.Matches[0].Path).Is("/Introduction")
-	assert.This(res.Matches[0].Lines).Is([]string{"0001: intro text"})
+	assert.This(res.Matches[0].Lines).Is([]string{"[   1]intro text"})
 	assert.This(res.Matches[1].Path).Is("/MultiMatch")
-	assert.This(res.Matches[1].Lines).Is([]string{"0001: line one has text", "0002: line two has text"})
+	assert.This(res.Matches[1].Lines).Is([]string{"[   1]line one has text", "[   2]line two has text"})
 	assert.This(res.Matches[2].Path).Is("/Reference")
-	assert.This(res.Matches[2].Lines).Is([]string{"0001: ref text"})
+	assert.This(res.Matches[2].Lines).Is([]string{"[   1]ref text"})
 	assert.This(res.Matches[3].Path).Is("/Reference/Date/FormatEn")
-	assert.This(res.Matches[3].Lines).Is([]string{"0001: format text"})
+	assert.This(res.Matches[3].Lines).Is([]string{"[   1]format text"})
 
 	// search by path - sorted by path, name
 	res, err = searchBook("mybook", "Reference", "", false)
@@ -84,7 +84,7 @@ func TestSearchBookTool(t *testing.T) {
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(1)
 	assert.This(res.Matches[0].Path).Is("/MultiMatch")
-	assert.This(res.Matches[0].Lines).Is([]string{"0001: line one has text", "0002: line two has text"})
+	assert.This(res.Matches[0].Lines).Is([]string{"[   1]line one has text", "[   2]line two has text"})
 	assert.This(res.Matches[0].HasMore).Is(false)
 }
 
@@ -109,13 +109,13 @@ func TestSearchBookLinesLimit(t *testing.T) {
 	assert.This(len(res.Matches)).Is(1)
 	assert.This(len(res.Matches[0].Lines)).Is(5)
 	assert.This(res.Matches[0].HasMore).Is(true)
-	assert.This(res.Matches[0].Lines[0]).Is("0001: line1 match")
-	assert.This(res.Matches[0].Lines[4]).Is("0005: line5 match")
+	assert.This(res.Matches[0].Lines[0]).Is("[   1]line1 match")
+	assert.This(res.Matches[0].Lines[4]).Is("[   5]line5 match")
 }
 
 func TestBookMatchLine(t *testing.T) {
 	assert := assert.T(t)
 	// Test addLineNumbers directly
 	result := addLineNumbers("matching line here", 5)
-	assert.This(result).Is("0005: matching line here")
+	assert.This(result).Is("[   5]matching line here")
 }

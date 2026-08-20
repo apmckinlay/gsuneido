@@ -25,6 +25,7 @@ This tool is the preferred way to edit existing code.
 - For deletions with replace_lines: Set 'code' to an empty string
 - Always call suneido_read_code before this to ensure line numbers are current
 - Do NOT include line numbers in the replacement code, just the code itself
+- Preserve the exact indentation (leading tabs/spaces) of the lines being edited
 `,
 	params: []stringParam{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
@@ -32,7 +33,7 @@ This tool is the preferred way to edit existing code.
 		{name: "mode", description: "Operation mode: 'insert_before', 'insert_after', or 'replace_lines'", required: true, kind: paramString},
 		{name: "line", description: "Line number (1-based)", required: true, kind: paramNumber},
 		{name: "count", description: "Number of lines to replace (only for replace_lines mode)", required: false, kind: paramNumber},
-		{name: "code", description: "Replacement code", required: true, kind: paramString},
+		{name: "code", description: "Replacement code, preserving the original indentation (leading tabs/spaces)", required: true, kind: paramString},
 	},
 	summarize: func(args map[string]any) string {
 		line := argInt(args, "line", 0)
@@ -367,7 +368,7 @@ func extractContext(text string, start, end int) string {
 	// Build result with line numbers
 	var sb strings.Builder
 	for i := contextStart; i <= contextEnd; i++ {
-		fmt.Fprintf(&sb, "%4d: %s\n", i, lines[i-1])
+		fmt.Fprintf(&sb, "[%4d]%s\n", i, lines[i-1])
 	}
 	return sb.String()
 }

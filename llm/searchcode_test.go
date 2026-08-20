@@ -38,7 +38,7 @@ func TestSearchTool(t *testing.T) {
 
 	res, err := searchCode("stdlib", "Foo", "return 1", false, false)
 	assert.That(err == nil)
-	assert.This(res.Matches).Is([]codeMatch{{Library: "stdlib", Name: "Foo", Path: "", Lines: []string{"0001: function(){return 1}"}}})
+	assert.This(res.Matches).Is([]codeMatch{{Library: "stdlib", Name: "Foo", Path: "", Lines: []string{"[   1]function(){return 1}"}}})
 
 	_, err = searchCode("STDLIB", "FOO", "RETURN 1", false, false)
 	assert.That(err != nil)
@@ -50,15 +50,15 @@ func TestSearchTool(t *testing.T) {
 
 	res, err = searchCode("app", "Foo.*", "return 3", false, false)
 	assert.That(err == nil)
-	assert.This(res.Matches).Is([]codeMatch{{Library: "app", Name: "FooApp", Path: "", Lines: []string{"0001: function(){return 3}"}}})
+	assert.This(res.Matches).Is([]codeMatch{{Library: "app", Name: "FooApp", Path: "", Lines: []string{"[   1]function(){return 3}"}}})
 
 	res, err = searchCode("", "", "return", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{
-		{Library: "stdlib", Name: "Bar", Path: "", Lines: []string{"0001: function(){return 2}"}},
-		{Library: "stdlib", Name: "Foo", Path: "", Lines: []string{"0001: function(){return 1}"}},
-		{Library: "app", Name: "FooApp", Path: "", Lines: []string{"0001: function(){return 3}"}},
-		{Library: "app", Name: "SearchTarget", Path: "Folder", Lines: []string{"0001: function(){return \"hello\"}"}},
+		{Library: "stdlib", Name: "Bar", Path: "", Lines: []string{"[   1]function(){return 2}"}},
+		{Library: "stdlib", Name: "Foo", Path: "", Lines: []string{"[   1]function(){return 1}"}},
+		{Library: "app", Name: "FooApp", Path: "", Lines: []string{"[   1]function(){return 3}"}},
+		{Library: "app", Name: "SearchTarget", Path: "Folder", Lines: []string{"[   1]function(){return \"hello\"}"}},
 	})
 	assert.That(!res.HasMore)
 

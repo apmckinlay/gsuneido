@@ -122,10 +122,10 @@ func TestSliceCode(t *testing.T) {
 func TestAddLineNumbers(t *testing.T) {
 	assert := assert.T(t)
 	result := addLineNumbers("a\nb\nc", 1)
-	assert.This(result).Is("0001: a\n0002: b\n0003: c")
+	assert.This(result).Is("[   1]a\n[   2]b\n[   3]c")
 
 	result = addLineNumbers("a\nb\nc", 10)
-	assert.This(result).Is("0010: a\n0011: b\n0012: c")
+	assert.This(result).Is("[  10]a\n[  11]b\n[  12]c")
 
 	result = addLineNumbers("", 1)
 	assert.This(result).Is("")

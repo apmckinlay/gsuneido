@@ -14,8 +14,10 @@ import (
 )
 
 var _ = addTool(toolSpec{
-	name:        "suneido_read_code",
-	description: "Get the source code from a library for a specific name",
+	name: "suneido_read_code",
+	description: "Get the source code from a library for a specific name. " +
+		"The code after the line number prefix (e.g. '[   4]') is the exact source, " +
+		"including leading tabs used for indentation.",
 	params: []stringParam{
 		{name: "library", description: "Name of the library (e.g. 'stdlib')", required: true, kind: paramString},
 		{name: "name", description: "Name of the definition (e.g. 'Alert')", required: true, kind: paramString},
@@ -190,15 +192,15 @@ func addLineNumbers(text string, startLine int) string {
 	var sb strings.Builder
 
 	// Pre-allocate memory to avoid multiple re-allocations.
-	// 4 digits + colon + space = 6 extra chars per line.
+	// bracket + 4 digits + bracket = 6 extra chars per line.
 	sb.Grow(len(text) + (len(lines) * 6))
 
 	for i, line := range lines {
 		// Calculate the actual line number based on the offset
 		actualLineNum := startLine + i
 
-		// Use %04d for fixed 4-digit zero padding
-		fmt.Fprintf(&sb, "%04d: %s", actualLineNum, line)
+		// [%4d] space-pads so leading zeros are never mistaken for digits
+		fmt.Fprintf(&sb, "[%4d]%s", actualLineNum, line)
 
 		// Add newline back except for the very last line
 		if i < len(lines)-1 {
