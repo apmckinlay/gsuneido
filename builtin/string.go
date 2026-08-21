@@ -76,21 +76,6 @@ func string_Asc(this Value) Value {
 	return SuInt(int(s[0]))
 }
 
-// TODO remove after we switch to Suneido.Compile (after jSuneido is gone)
-var _ = method(string_Compile, "(errob = false) :unknown")
-
-func string_Compile(th *Thread, this Value, args []Value) Value {
-	if args[0] == False {
-		return compile.Constant(ToStr(this))
-	}
-	ob := ToContainer(args[0])
-	val, checks := compile.Checked(th, ToStr(this))
-	for _, w := range checks {
-		ob.Add(SuStr(w))
-	}
-	return val
-}
-
 var _ = method(string_Count, "(string :string) :number")
 
 func string_Count(this, arg Value) Value {
