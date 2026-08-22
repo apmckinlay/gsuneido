@@ -33,8 +33,14 @@ func NamedConstant(lib, name, src string, prevDef Value) Value {
 }
 
 func Checked(th *Thread, src string) (Value, []string) {
+	return CheckedNamed("", src, th)
+}
+
+// CheckedNamed compiles a Suneido constant with checking and a name
+func CheckedNamed(name, src string, th *Thread) (Value, []string) {
 	// can't do AST check after compile because that would miss nested functions
 	p := CheckParser(src, th)
+	p.name = name
 	v := p.constant()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")

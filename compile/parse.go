@@ -28,6 +28,12 @@ func AstParser(src string) *Parser {
 	return newParser(NewLexer(src), &astAspects{})
 }
 
+func AstParserNamed(name, src string) *Parser {
+	p := newParser(NewLexer(src), &astAspects{})
+	p.name = name
+	return p
+}
+
 func QueryParser(src string) *Parser {
 	return newParser(NewQueryLexer(src), &actionAspects{})
 }
