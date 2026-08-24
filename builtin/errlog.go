@@ -9,6 +9,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 )
 
+// DEPRECATED = remove after 2023-08-23 replaced by Suneido.ErrorLog
+
 var _ = builtin(ErrorLog, "(string) :void")
 
 func ErrorLog(arg Value) Value {

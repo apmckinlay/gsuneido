@@ -4,6 +4,7 @@
 package builtin
 
 import (
+	"log"
 	"runtime/metrics"
 	"slices"
 
@@ -19,7 +20,7 @@ import (
 
 var _ = exportMethods(&SuneidoObjectMethods, "suneido")
 
-var _ = staticMethod(suneido_Compile, 
+var _ = staticMethod(suneido_Compile,
 	"(source :string, errob = false, name :string = '') :unknown")
 
 func suneido_Compile(th *Thread, args []Value) Value {
@@ -205,3 +206,10 @@ func suneido_LibraryTags(args Value) Value {
 var _ = AddInfo("library.tags", func() string {
 	return SuObjectOfStrs(options.LibraryTags).String()
 })
+
+var _ = staticMethod(suneido_ErrorLog, "(string) :void")
+
+func suneido_ErrorLog(arg Value) Value {
+	log.Println(ToStrOrString(arg))
+	return nil
+}
