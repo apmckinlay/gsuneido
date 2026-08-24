@@ -265,7 +265,7 @@ m = c.F(); m()', 123
 m = c().F(); m()', 123
 
 'c = class { F(a,b) { } }
-m = c.F; m.Params()', '"(a,b)"'
+m = c.F; m.Params()', '"(a, b)"'
 
 'c = class { F(a,b) { } }
 c.F is c.F'

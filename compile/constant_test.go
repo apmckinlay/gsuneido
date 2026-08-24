@@ -223,10 +223,10 @@ func TestConstantFunction(t *testing.T) {
 		}
 	}
 	test("function () {}", "Function", "function()")
-	test("function (a,b,c) {}", "Function", "function(a,b,c)")
+	test("function (a,b,c) {}", "Function", "function(a, b, c)")
 	test("function (@args) {}", "Function", "function(@args)")
-	test("function (a,b=1,c=2) {}", "Function", "function(a,b=1,c=2)")
-	test("function (a,_b,_c=false) {}", "Function", "function(a,_b,_c=false)")
+	test("function (a,b=1,c=2) {}", "Function", "function(a, b = 1, c = 2)")
+	test("function (a,_b,_c=false) {}", "Function", "function(a, _b, _c = false)")
 }
 
 func TestConstantFunctionErrors(t *testing.T) {

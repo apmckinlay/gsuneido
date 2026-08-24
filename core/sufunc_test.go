@@ -14,11 +14,11 @@ func TestSuFuncString(t *testing.T) {
 	assert.T(t).This(sf.Params()).Is("()")
 	sf.Nparams = 3
 	sf.Names = []string{"a", "b", "c"}
-	assert.T(t).This(sf.Params()).Is("(a,b,c)")
+	assert.T(t).This(sf.Params()).Is("(a, b, c)")
 	sf.Names = []string{"a", "b", "c"}
 	sf.Ndefaults = 1
 	sf.Values = []Value{SuInt(123)}
-	assert.T(t).This(sf.Params()).Is("(a,b,c=123)")
+	assert.T(t).This(sf.Params()).Is("(a, b, c = 123)")
 }
 
 func TestVarName(t *testing.T) {

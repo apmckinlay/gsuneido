@@ -58,6 +58,13 @@ type ParamSpec struct {
 
 	// Signature is used for fast matching of simple Argspec to ParamSpec
 	Signature byte
+
+	// ParamAnnotations holds the annotation string for each parameter,
+	// parallel to Flags and Names. nil means no annotations.
+	ParamAnnotations []string
+
+	// ReturnAnnotation is the return type annotation string.
+	ReturnAnnotation string
 }
 
 // Flag is a bit set of parameter options
@@ -92,14 +99,23 @@ func (ps *ParamSpec) String() string {
 	for i := range int(ps.Nparams) {
 		sb.WriteString(sep)
 		sb.WriteString(flagsToName(ps.ParamName(i), ps.Flags[i]))
+		if ps.ParamAnnotations != nil && i < len(ps.ParamAnnotations) &&
+			ps.ParamAnnotations[i] != "" {
+			sb.WriteString(" :")
+			sb.WriteString(ps.ParamAnnotations[i])
+		}
 		if i >= int(ps.Nparams-ps.Ndefaults) {
-			sb.WriteString("=")
+			sb.WriteString(" = ")
 			fmt.Fprint(&sb, ps.Values[v])
 			v++
 		}
-		sep = ","
+		sep = ", "
 	}
 	sb.WriteString(")")
+	if ps.ReturnAnnotation != "" {
+		sb.WriteString(" :")
+		sb.WriteString(ps.ReturnAnnotation)
+	}
 	return sb.String()
 }
 

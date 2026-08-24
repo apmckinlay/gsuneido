@@ -242,6 +242,7 @@ var tok2op = [tok.Ntokens]op.Opcode{
 
 func (cg *cgen) function(fn *ast.Function) {
 	cg.params(fn.Params)
+	cg.ReturnAnnotation = fn.ReturnAnnotation
 	cg.chainNew(fn)
 	stmts := fn.Body
 	cg.firstStatement = true
@@ -253,13 +254,19 @@ func (cg *cgen) function(fn *ast.Function) {
 
 func (cg *cgen) params(params []ast.Param) {
 	cg.Nparams = uint8(len(params))
-	for _, p := range params {
+	for i, p := range params {
 		name, flags := param(p.Name.Name)
 		if flags == AtParam && len(params) != 1 {
 			panic("@param must be the only parameter")
 		}
 		cg.Names = append(cg.Names, name) // no duplicate reuse
 		cg.Flags = append(cg.Flags, flags)
+		if p.Annotations != "" && flags != AtParam {
+			if cg.ParamAnnotations == nil {
+				cg.ParamAnnotations = make([]string, len(params))
+			}
+			cg.ParamAnnotations[i] = p.Annotations
+		}
 		if p.DefVal != nil {
 			cg.Ndefaults++
 			cg.Values = append(cg.Values, p.DefVal) // no duplicate reuse

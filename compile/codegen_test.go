@@ -601,6 +601,30 @@ func TestBlock(t *testing.T) {
 	assert(disasm(fn)).Is("Closure, {LoadLoad a x^, Add, Store b}")
 }
 
+func TestAnnotations(t *testing.T) {
+	test := func(src string) {
+		t.Helper()
+		ast := parseFunction(src + "{}")
+		fn := codegen("", "", ast, nil).(*SuFunc)
+		actual := fn.ParamSpec.String()
+		assert.T(t).This(actual).Is(src)
+		}
+	// param annotations
+	test("function(x :string)")
+	test("function(x :string, y :number)")
+	test("function(x, y :number)")
+	// return annotation
+	test("function() :string")
+	test("function() :string|number")
+	// both param and return annotations
+	test("function(x :string) :number")
+	test("function(a :Foo, b :Bar|Baz) :string")
+	// no annotations
+	test("function(a, b)")
+	// @param (parser gives it "object" annotation, should not display)
+	test("function(@args)")
+}
+
 // parseFunction parses a function and returns an AST for it
 func parseFunction(src string) *ast.Function {
 	p := NewParser(src)
