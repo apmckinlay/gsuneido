@@ -286,7 +286,8 @@ func TestParseStatements(t *testing.T) {
 		var sb strings.Builder
 		sep := ""
 		for _, stmt := range stmts {
-			sb.WriteString(sep + stmt.String())
+			sb.WriteString(sep)
+			sb.WriteString(stmt.String())
 			sep = "\n"
 		}
 		assert.T(t).This(sb.String()).Like(expected)

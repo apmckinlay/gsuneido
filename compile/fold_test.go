@@ -59,7 +59,8 @@ func TestPropFold(t *testing.T) {
 		sep := ""
 		for _, stmt := range f.Body {
 			if stmt != nil {
-				sb.WriteString(sep + stmt.String())
+				sb.WriteString(sep)
+				sb.WriteString(stmt.String())
 				sep = "\n"
 			}
 		}

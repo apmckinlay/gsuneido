@@ -301,9 +301,11 @@ type Nary struct {
 
 func (a *Nary) String() string {
 	var sb strings.Builder
-	sb.WriteString("Nary(" + a.Tok.String())
+	sb.WriteString("Nary(")
+	sb.WriteString(a.Tok.String())
 	for _, e := range a.Exprs {
-		sb.WriteString(" " + e.String())
+		sb.WriteString(" ")
+		sb.WriteString(e.String())
 	}
 	return sb.String() + ")"
 }
@@ -315,7 +317,8 @@ func (a *Nary) Echo() string {
 	var sb strings.Builder
 	sb.WriteString(a.Exprs[0].Echo())
 	for _, e := range a.Exprs[1:] {
-		sb.WriteString(tokEcho[a.Tok] + e.Echo())
+		sb.WriteString(tokEcho[a.Tok])
+		sb.WriteString(e.Echo())
 	}
 	return sb.String()
 }
@@ -417,10 +420,13 @@ type In struct {
 
 func (a *In) String() string {
 	var sb strings.Builder
-	sb.WriteString("In(" + a.E.String() + " [")
+	sb.WriteString("In(")
+	sb.WriteString(a.E.String())
+	sb.WriteString(" [")
 	sep := ""
 	for _, e := range a.Exprs {
-		sb.WriteString(sep + e.String())
+		sb.WriteString(sep)
+		sb.WriteString(e.String())
 		sep = " "
 	}
 	return sb.String() + "])"
@@ -435,7 +441,8 @@ func (a *In) echo() string {
 	sb.WriteString(" in (")
 	sep := ""
 	for _, e := range a.Exprs {
-		sb.WriteString(sep + e.Echo())
+		sb.WriteString(sep)
+		sb.WriteString(e.Echo())
 		sep = ", "
 	}
 	return sb.String() + ")"
@@ -488,19 +495,23 @@ type Call struct {
 
 func (a *Call) String() string {
 	var sb strings.Builder
-	sb.WriteString("Call(" + a.Fn.String())
+	sb.WriteString("Call(")
+	sb.WriteString(a.Fn.String())
 	for _, arg := range a.Args {
-		sb.WriteString(" " + arg.String())
+		sb.WriteString(" ")
+		sb.WriteString(arg.String())
 	}
 	return sb.String() + ")"
 }
 
 func (a *Call) Echo() string {
 	var sb strings.Builder
-	sb.WriteString(a.Fn.Echo() + "(")
+	sb.WriteString(a.Fn.Echo())
+	sb.WriteString("(")
 	sep := ""
 	for _, arg := range a.Args {
-		sb.WriteString(sep + arg.Echo())
+		sb.WriteString(sep)
+		sb.WriteString(arg.Echo())
 		sep = ", "
 	}
 	return sb.String() + ")"
@@ -571,10 +582,13 @@ func (a *Function) String() string {
 
 func (a *Function) str(which string) string {
 	var sb strings.Builder
-	sb.WriteString(which + "(" + params(a.Params))
+	sb.WriteString(which)
+	sb.WriteString("(")
+	sb.WriteString(params(a.Params))
 	for _, stmt := range a.Body {
 		if stmt != nil {
-			sb.WriteString("\n\t" + stmt.String())
+			sb.WriteString("\n\t")
+			sb.WriteString(stmt.String())
 		}
 	}
 	return sb.String() + ")"
@@ -587,7 +601,8 @@ func params(ps []Param) string {
 		if sep == "" && p.String() == "this" {
 			continue
 		}
-		sb.WriteString(sep + p.String())
+		sb.WriteString(sep)
+		sb.WriteString(p.String())
 		sep = ","
 	}
 	return sb.String()
@@ -701,7 +716,8 @@ func (a *Compound) String() string {
 	sb.WriteString("{\n")
 	for _, stmt := range a.Body {
 		if stmt != nil {
-			sb.WriteString(stmt.String() + "\n")
+			sb.WriteString(stmt.String())
+			sb.WriteString("\n")
 		}
 	}
 	return sb.String() + "}"
@@ -867,7 +883,8 @@ func (a *For) String() string {
 	sb.WriteString("For(")
 	sep := ""
 	for _, e := range a.Init {
-		sb.WriteString(sep + e.String())
+		sb.WriteString(sep)
+		sb.WriteString(e.String())
 		sep = ","
 	}
 	sb.WriteString("; ")
@@ -877,7 +894,8 @@ func (a *For) String() string {
 	sb.WriteString("; ")
 	sep = ""
 	for _, e := range a.Inc {
-		sb.WriteString(sep + e.String())
+		sb.WriteString(sep)
+		sb.WriteString(e.String())
 		sep = ","
 	}
 	return sb.String() + "\n" + a.Body.String() + ")"
@@ -963,7 +981,8 @@ func (a *MultiAssign) String() string {
 	var sb strings.Builder
 	sb.WriteString("MultiAssign(")
 	for _, e := range a.Lhs {
-		sb.WriteString(e.Echo() + " ")
+		sb.WriteString(e.Echo())
+		sb.WriteString(" ")
 	}
 	return sb.String() + a.Rhs.String() + ")"
 }
@@ -994,9 +1013,11 @@ type Case struct {
 
 func (a *Switch) String() string {
 	var sb strings.Builder
-	sb.WriteString("Switch(" + a.E.String())
+	sb.WriteString("Switch(")
+	sb.WriteString(a.E.String())
 	for _, c := range a.Cases {
-		sb.WriteString("\n" + c.String())
+		sb.WriteString("\n")
+		sb.WriteString(c.String())
 	}
 	if a.Default != nil {
 		if len(a.Default) == 0 {
@@ -1004,7 +1025,8 @@ func (a *Switch) String() string {
 		}
 		for _, stmt := range a.Default {
 			if stmt != nil {
-				sb.WriteString("\n" + stmt.String())
+				sb.WriteString("\n")
+				sb.WriteString(stmt.String())
 			}
 		}
 	}
@@ -1016,12 +1038,14 @@ func (a *Case) String() string {
 	sb.WriteString("Case(")
 	sep := ""
 	for _, e := range a.Exprs {
-		sb.WriteString(sep + e.String())
+		sb.WriteString(sep)
+		sb.WriteString(e.String())
 		sep = ","
 	}
 	for _, stmt := range a.Body {
 		if stmt != nil {
-			sb.WriteString("\n" + stmt.String())
+			sb.WriteString("\n")
+			sb.WriteString(stmt.String())
 		}
 	}
 	sb.WriteString(")")

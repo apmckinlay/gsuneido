@@ -131,7 +131,8 @@ func (p *Parser) annotation() string {
 
 	var annotation strings.Builder
 	for {
-		annotation.WriteString(p.MatchIdent() + "|")
+		annotation.WriteString(p.MatchIdent())
+		annotation.WriteString("|")
 		if !p.MatchIf(tok.BitOr) {
 			break
 		}
