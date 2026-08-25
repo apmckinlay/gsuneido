@@ -111,7 +111,7 @@ func (ss *Sketch[T]) Estimate(value T) (count int, error int, ok bool) {
 func (ss *Sketch[T]) Top() []*Entry[T] {
 	// temporarily reorder the entries (breaking the heap)
 	slices.SortFunc(ss.entries, func(a, b *Entry[T]) int {
-		return -cmp.Compare(a.Count-a.Error, b.Count-a.Error)
+		return -cmp.Compare(a.Count-a.Error, b.Count-b.Error)
 	})
 	topLen := min(ss.capacity/2, len(ss.entries))
 	top := slices.Clone(ss.entries[:topLen])
