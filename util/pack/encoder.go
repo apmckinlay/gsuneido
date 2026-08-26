@@ -39,14 +39,14 @@ func (e *Encoder) Put(b []byte) *Encoder {
 	return e
 }
 
-// Put1 appends one or more bytes (or a byte slice)
+// Put1 appends one byte value
 func (e *Encoder) Put1(b byte) *Encoder {
 	e.buf = e.buf[:len(e.buf)+1]
 	e.buf[len(e.buf)-1] = b
 	return e
 }
 
-// Put2 appends one or more bytes (or a byte slice)
+// Put2 appends two byte values
 func (e *Encoder) Put2(a, b byte) *Encoder {
 	e.buf = e.buf[:len(e.buf)+2]
 	e.buf[len(e.buf)-2] = a
@@ -54,7 +54,7 @@ func (e *Encoder) Put2(a, b byte) *Encoder {
 	return e
 }
 
-// Put4 appends one or more bytes (or a byte slice)
+// Put4 appends four byte values
 func (e *Encoder) Put4(a, b, c, d byte) *Encoder {
 	e.buf = e.buf[:len(e.buf)+4]
 	e.buf[len(e.buf)-4] = a
