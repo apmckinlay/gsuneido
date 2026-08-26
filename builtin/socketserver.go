@@ -153,18 +153,18 @@ func (sm *suServerMaster) connect(name string, conn net.Conn) {
 		client:     client,
 	}
 	defer sc.close()
-	t := NewThread(nil)
-	t.Name = str.BeforeFirst(t.Name, " ") + " " + name
-	if f := sc.Lookup(t, "Run"); f != nil {
-		threads.add(t)
+	th := NewThread(nil)
+	th.Name = str.BeforeFirst(th.Name, " ") + " " + name
+	if f := sc.Lookup(th, "Run"); f != nil {
+		threads.add(th)
 		defer func() {
-			t.Close()
-			threads.remove(t.Num)
+			th.Close()
+			threads.remove(th.Num)
 			if e := recover(); e != nil {
-				LogUncaught(t, "SocketServer", e)
+				LogUncaught(th, "SocketServer", e)
 			}
 		}()
-		f.Call(t, sc, &ArgSpec0)
+		f.Call(th, sc, &ArgSpec0)
 	}
 }
 
