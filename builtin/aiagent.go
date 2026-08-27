@@ -78,7 +78,7 @@ func outputCallback(th *Thread, callback Value) func(what, data string, approval
 	return func(what, data string, approval *llm.ToolApproval) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Println("ERROR agent callback: ", err)
+				log.Println("ERROR: agent callback: ", err)
 				panic(err)
 			}
 		}()
