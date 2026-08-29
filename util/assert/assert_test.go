@@ -17,6 +17,8 @@ func TestAssert(t *testing.T) {
 	assert.Nil(nil)
 	assert.This(123).Is(123)
 	assert.This(byte(123)).Is(int64(123))
+	assert.This(float32(1.5)).Is(1.5)
+	assert.This(2.5).Is(float32(2.5))
 	assert.This(nil).Is(nil)
 	assert.This([]byte(nil)).Is(nil)
 	assert.This(func() { panic("a test err") }).Panics("test")

@@ -152,7 +152,8 @@ type value struct {
 
 // Is gives an error if the given expected values are not the same
 // as the actual values supplied to This.
-// Accepts as equivalent: different nils and different int types.
+// Accepts as equivalent: different nils, different int types,
+// and different float types.
 // Compares floats via string forms.
 // Uses an Equal method if available on the expected value.
 // Finally, uses reflect.DeepEqual.
@@ -202,15 +203,10 @@ func Is(actual, expected any) bool {
 	if isNil(expected) && isNil(actual) {
 		return true
 	}
-	if a, ok := actual.(float64); ok {
-		if e, ok := expected.(float64); ok {
-			if strconv.FormatFloat(a, 'e', 15, 64) ==
-				strconv.FormatFloat(e, 'e', 15, 64) {
-				return true
-			}
-		}
+	if floatEqual(actual, expected) {
+		return true
 	}
-	if intEqual(expected, actual) {
+	if intEqual(actual, expected) {
 		return true
 	}
 	type equal interface {
@@ -224,6 +220,33 @@ func Is(actual, expected any) bool {
 		return true
 	}
 	return false
+}
+
+func floatEqual(x any, y any) bool {
+	xf, xok := toFloat64(x)
+	if !xok {
+		return false
+	}
+	yf, yok := toFloat64(y)
+	if !yok {
+		if yi, yok := toInt64(y); yok {
+			yf = float64(yi)
+		} else {
+			return false
+		}
+	}
+	return strconv.FormatFloat(xf, 'e', 9, 32) ==
+		strconv.FormatFloat(yf, 'e', 9, 32)
+}
+
+func toFloat64(x any) (float64, bool) {
+	switch x := x.(type) {
+	case float32:
+		return float64(x), true
+	case float64:
+		return x, true
+	}
+	return 0, false
 }
 
 func isNil(x any) bool {
