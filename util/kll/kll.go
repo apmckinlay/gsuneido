@@ -118,32 +118,7 @@ func (sk *Sketch[T]) Query(q float64) T {
 	if q < 0.0 || q > 1.0 {
 		panic("out of range")
 	}
-
-	// Collect all items with their weights
-	type weightedItem struct {
-		value  T
-		weight int
-	}
-
-	var items []weightedItem
-	weight := sk.sampleEvery
-	for _, v := range slices.Backward(sk.levels) {
-		for _, value := range v {
-			items = append(items, weightedItem{value, weight})
-		}
-		weight *= 2
-	}
-	assert.That(len(items) > 0)
-
-	// Sort items by value
-	slices.SortFunc(items, func(a, b weightedItem) int {
-		if a.value < b.value {
-			return -1
-		} else if a.value > b.value {
-			return 1
-		}
-		return 0
-	})
+	items := sk.sortedItems()
 
 	// Find the item at the target rank
 	targetRank := int(float64(sk.count) * q)
@@ -158,4 +133,73 @@ func (sk *Sketch[T]) Query(q float64) T {
 
 	// If we get here, return the last item
 	return items[len(items)-1].value
+}
+
+// Quantiles returns n approximate quantile estimates, equally spaced.
+// Quantile i is at q = i/(n-1), as in Query.
+// It is more efficient than calling Query n times because it sorts
+// the sketch values only once.
+func (sk *Sketch[T]) Quantiles(n int) []T {
+	if sk.count == 0 {
+		panic("no data")
+	}
+	if n <= 0 {
+		panic("out of range")
+	}
+	if n == 1 {
+		return []T{sk.Query(0.5)}
+	}
+	items := sk.sortedItems()
+
+	target := make([]int, n)
+	for i := range n {
+		target[i] = int(float64(sk.count) * (float64(i) / float64(n-1)))
+	}
+	result := make([]T, n)
+
+	currentRank := 0
+	qi := 0
+	for _, item := range items {
+		currentRank += item.weight
+		for qi < n && currentRank >= target[qi] {
+			result[qi] = item.value
+			qi++
+		}
+	}
+
+	// pad with the last item if the total weight is less than count
+	last := items[len(items)-1].value
+	for qi < n {
+		result[qi] = last
+		qi++
+	}
+	return result
+}
+
+type weightedItem[T cmp.Ordered] struct {
+	value  T
+	weight int
+}
+
+// sortedItems collects all items with their weights and sorts them by value
+func (sk *Sketch[T]) sortedItems() []weightedItem[T] {
+	var items []weightedItem[T]
+	weight := sk.sampleEvery
+	for _, v := range slices.Backward(sk.levels) {
+		for _, value := range v {
+			items = append(items, weightedItem[T]{value, weight})
+		}
+		weight *= 2
+	}
+	assert.That(len(items) > 0)
+
+	slices.SortFunc(items, func(a, b weightedItem[T]) int {
+		if a.value < b.value {
+			return -1
+		} else if a.value > b.value {
+			return 1
+		}
+		return 0
+	})
+	return items
 }
