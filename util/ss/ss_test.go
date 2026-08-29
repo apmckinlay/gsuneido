@@ -5,6 +5,7 @@ package ss
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -116,4 +117,20 @@ func TestHeavyHitters(t *testing.T) {
 
 	total := 1000 + 200 + 200
 	assert.T(t).This(ss.Count()).Is(total)
+}
+
+func TestTopMinDoesNotModifySketch(t *testing.T) {
+	sk := New[string](8)
+	for i, v := range []string{"a", "bb", "ccc", "dddd", "e", "ff",
+		"ggg", "hhhh", "i", "jj", "kkk", "llll"} {
+		for range i + 1 { // varied counts so sort order differs from heap order
+			sk.Add(v)
+		}
+	}
+	before := slices.Clone(sk.entries)
+	top1 := sk.TopMin(0)
+	assert.T(t).That(slices.Equal(before, sk.entries))
+	top2 := sk.TopMin(0)
+	assert.T(t).That(slices.Equal(before, sk.entries))
+	assert.T(t).That(slices.Equal(top1, top2))
 }
