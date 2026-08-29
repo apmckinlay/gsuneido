@@ -172,7 +172,7 @@ func (si *smi) PackSize(*uint64) int {
 	return SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.PackSize(nil)
 }
 
-func (si *smi) PackSize2(*uint64, packStack) int {
+func (si *smi) PackSize2(*uint64, PackStack) int {
 	return si.PackSize(nil)
 }
 

@@ -127,7 +127,7 @@ func (SuBool) PackSize(*uint64) int {
 	return 1
 }
 
-func (SuBool) PackSize2(*uint64, packStack) int {
+func (SuBool) PackSize2(*uint64, PackStack) int {
 	return 1
 }
 

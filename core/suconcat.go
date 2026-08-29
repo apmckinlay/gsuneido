@@ -183,7 +183,7 @@ func (c SuConcat) PackSize(*uint64) int {
 	return 1 + c.n
 }
 
-func (c SuConcat) PackSize2(*uint64, packStack) int {
+func (c SuConcat) PackSize2(*uint64, PackStack) int {
 	return c.PackSize(nil)
 }
 

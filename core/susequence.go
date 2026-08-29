@@ -214,6 +214,6 @@ func (seq *SuSequence) Pack(hash *uint64, buf *pack.Encoder) {
 	seq.instantiate().Pack(hash, buf)
 }
 
-func (seq *SuSequence) PackSize2(hash *uint64, stack packStack) int {
+func (seq *SuSequence) PackSize2(hash *uint64, stack PackStack) int {
 	return seq.instantiate().PackSize2(hash, stack)
 }

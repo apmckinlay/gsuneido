@@ -952,7 +952,7 @@ func (r *SuRecord) PackSize(hash *uint64) int {
 	return r.ToObject().PackSize(hash)
 }
 
-func (r *SuRecord) PackSize2(hash *uint64, stack packStack) int {
+func (r *SuRecord) PackSize2(hash *uint64, stack PackStack) int {
 	return r.ToObject().PackSize2(hash, stack)
 }
 

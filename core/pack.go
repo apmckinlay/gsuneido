@@ -20,7 +20,7 @@ type Packable interface {
 	// object/record set hash to detect nested changes.
 	PackSize(hash *uint64) int
 	// PackSize2 is used by object/record to handle nesting
-	PackSize2(hash *uint64, stack packStack) int
+	PackSize2(hash *uint64, stack PackStack) int
 	// Pack appends the value to the Encoder
 	Pack(hash *uint64, buf *pack.Encoder)
 }
@@ -44,9 +44,9 @@ const (
 	// it on read to resolve the referenced column.
 )
 
-type packStack []Value
+type PackStack []Value
 
-func newPackStack() packStack {
+func newPackStack() PackStack {
 	// initialSize should handle almost all cases without further allocation
 	const initialSize = 16
 	return make([]Value, 0, initialSize)
@@ -54,7 +54,7 @@ func newPackStack() packStack {
 
 const nestingLimit = 16
 
-func (ps *packStack) push(x Value) {
+func (ps *PackStack) push(x Value) {
 	if len(*ps) >= nestingLimit {
 		panic("object nesting overflow")
 	}

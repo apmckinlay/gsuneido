@@ -298,7 +298,7 @@ func (ss SuStr) PackSize(*uint64) int {
 	return 1 + len(ss)
 }
 
-func (ss SuStr) PackSize2(*uint64, packStack) int {
+func (ss SuStr) PackSize2(*uint64, PackStack) int {
 	return ss.PackSize(nil)
 }
 

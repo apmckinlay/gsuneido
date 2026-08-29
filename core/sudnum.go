@@ -149,7 +149,7 @@ func (dn SuDnum) PackSize(*uint64) int {
 	return 10
 }
 
-func (dn SuDnum) PackSize2(*uint64, packStack) int {
+func (dn SuDnum) PackSize2(*uint64, PackStack) int {
 	return dn.PackSize(nil)
 }
 

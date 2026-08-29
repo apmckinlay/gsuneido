@@ -795,7 +795,7 @@ func (SuDate) PackSize(*uint64) int {
 	return 9
 }
 
-func (SuDate) PackSize2(*uint64, packStack) int {
+func (SuDate) PackSize2(*uint64, PackStack) int {
 	return 9
 }
 

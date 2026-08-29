@@ -211,7 +211,7 @@ func (p Packed) PackSize(*uint64) int {
 	return len(p)
 }
 
-func (p Packed) PackSize2(*uint64, packStack) int {
+func (p Packed) PackSize2(*uint64, PackStack) int {
 	return len(p)
 }
 
@@ -231,7 +231,7 @@ const maxRecordLen = 1_000_000
 
 func (b *RecordBuilder) Build() Record {
 	hash := uint64(17)
-	var stack packStack
+	var stack PackStack
 	if len(b.vals) > MaxValues {
 		panic("too many values for record")
 	}

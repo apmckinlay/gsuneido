@@ -38,7 +38,7 @@ func (SuTimestamp) PackSize(*uint64) int {
 	return 10
 }
 
-func (SuTimestamp) PackSize2(*uint64, packStack) int {
+func (SuTimestamp) PackSize2(*uint64, PackStack) int {
 	return 10
 }
 

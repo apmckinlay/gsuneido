@@ -98,7 +98,7 @@ func (si SuInt64) PackSize(*uint64) int {
 	return packSizeInt(si.int64)
 }
 
-func (si SuInt64) PackSize2(*uint64, packStack) int {
+func (si SuInt64) PackSize2(*uint64, PackStack) int {
 	return packSizeInt(si.int64)
 }
 
