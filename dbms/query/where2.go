@@ -26,15 +26,15 @@ Expressions that can be applied to an index:
 */
 
 type span struct {
-	// org is inclusive (>=)
+	// org is the lower bound: > val if inc, else >= val
 	org side
-	// end is exclusive (<)
+	// end is the upper bound: <= val if inc, else < val
 	end side
 }
 
 type side struct {
 	val string
-	inc bool
+	inc bool // whether to increment, affects inclusive/exclusive
 }
 
 // perField returns the spans for each field, or nil if there is a conflict.
