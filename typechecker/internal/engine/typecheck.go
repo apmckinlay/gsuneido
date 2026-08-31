@@ -248,7 +248,21 @@ func classifyOperand(method, opLabel string, operand ast.Expr, env TypeEnv, requ
 		return Diagnostic{}, false
 	}
 	ty := env.GetType(operand)
-	if ty == nil || ty == TVoid {
+	if ty == nil {
+		return Diagnostic{}, false
+	}
+	if ty == TVoid {
+		if isCallExpr(operand) {
+			return Diagnostic{
+				Severity:   SeverityError,
+				Method:     method,
+				Pos:        nodePos(operand),
+				Got:        []DynType{ty},
+				Confidence: 1,
+				Msg: fmt.Sprintf("operator %q: operand is a call that returns "+
+					`no value - throws "no return value" at runtime`, opLabel),
+			}, true
+		}
 		return Diagnostic{}, false
 	}
 	members, dirty := decomposeForCheck(ty)
@@ -297,6 +311,14 @@ func classifyOperand(method, opLabel string, operand ast.Expr, env TypeEnv, requ
 		}, true
 	}
 	return Diagnostic{}, false
+}
+
+func isCallExpr(e ast.Expr) bool {
+	if ep, ok := e.(*ast.ExprPos); ok {
+		e = ep.Expr
+	}
+	_, ok := e.(*ast.Call)
+	return ok
 }
 
 func nodePos(n ast.Node) int {
