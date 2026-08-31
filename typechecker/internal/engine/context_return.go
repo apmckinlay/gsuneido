@@ -148,6 +148,8 @@ func reachStmt(n ast.Node, overrides map[string]DynType, env TypeEnv, acc *DynTy
 	case *ast.Return:
 		addReturnType(x, env, acc)
 		return true
+	case *ast.Throw:
+		return true // terminates the path without contributing a return type
 	case *ast.Compound:
 		return reachStmtList(x.Body, overrides, env, acc)
 	case *ast.If:
@@ -178,7 +180,8 @@ func reachStmtList(stmts []ast.Statement, overrides map[string]DynType, env Type
 
 func inferBodyReturnReachable(fn *ast.Function, overrides map[string]DynType, env TypeEnv) DynType {
 	var result DynType
-	if !reachStmtList(fn.Body, overrides, env, &result) {
+	terminated := reachStmtList(fn.Body, overrides, env, &result)
+	if !terminated {
 		if es, ok := lastExprStmt(fn.Body); ok {
 			result = mergeReturn(result, env.GetType(es.E))
 		}
@@ -188,6 +191,10 @@ func inferBodyReturnReachable(fn *ast.Function, overrides map[string]DynType, en
 	}
 	if result != nil {
 		return result
+	}
+	if terminated {
+		// missing values do not claim TVoid
+		return TUnknown
 	}
 	return TVoid
 }

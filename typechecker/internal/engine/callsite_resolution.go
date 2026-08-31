@@ -269,7 +269,7 @@ func dispatchThisCall(name string, args []ast.Arg, env TypeEnv, annotations Anno
 			return callDispatch{Kind: dispatchSilent, Returns: ct, Method: name}
 		}
 	}
-	if t := env.LookupReturn(name); t != TUnknown && t != TVoid {
+	if t := env.LookupReturn(name); t != TUnknown {
 		return callDispatch{Kind: dispatchSilent, Returns: t, Method: name}
 	}
 	if env.ThisType != nil {
@@ -300,7 +300,7 @@ func dispatchGlobalStatic(class, name string, args []ast.Arg, env TypeEnv, annot
 
 func dispatchInstance(inst Instance, name string, env TypeEnv) callDispatch {
 	if inst.Class == env.ClassName {
-		if t := env.LookupReturn(name); t != TUnknown && t != TVoid {
+		if t := env.LookupReturn(name); t != TUnknown {
 			return callDispatch{Kind: dispatchSilent, Returns: t, Method: name, Receiver: inst}
 		}
 	}
