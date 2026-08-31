@@ -120,8 +120,8 @@ func (sk *Sketch[T]) Query(q float64) T {
 	}
 	items := sk.sortedItems()
 
-	// Find the item at the target rank
-	targetRank := int(float64(sk.count) * q)
+	// Find the item at the target rank (1-indexed)
+	targetRank := 1 + int(float64(sk.count-1)*q+0.5)
 	currentRank := 0
 
 	for _, item := range items {
@@ -143,17 +143,14 @@ func (sk *Sketch[T]) Quantiles(n int) []T {
 	if sk.count == 0 {
 		panic("no data")
 	}
-	if n <= 0 {
-		panic("out of range")
-	}
-	if n == 1 {
-		return []T{sk.Query(0.5)}
+	if n < 2 {
+		panic("Quantiles minimum number of values is 2")
 	}
 	items := sk.sortedItems()
 
 	target := make([]int, n)
 	for i := range n {
-		target[i] = int(float64(sk.count) * (float64(i) / float64(n-1)))
+		target[i] = 1 + int(float64(sk.count-1)*float64(i)/float64(n-1)+0.5)
 	}
 	result := make([]T, n)
 
