@@ -1,0 +1,1485 @@
+<title>Suneido Typechecker Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&amp;family=IBM+Plex+Mono&amp;display=swap">
+<style>
+:root {
+  --bg: #ffffff;
+  --ink: #1f2a33;
+  --muted: #5b6770;
+  --rule: #d9dee3;
+  --code-bg: #f3f5f7;
+  --accent: #0b6e73;
+  --err: #b42318;
+  --warn: #8a5a00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181c;
+    --ink: #e4e8ec;
+    --muted: #9aa5ae;
+    --rule: #2c353d;
+    --code-bg: #1d2329;
+    --accent: #5cc3c1;
+    --err: #ff8a80;
+    --warn: #e0b45c;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181c;
+  --ink: #e4e8ec;
+  --muted: #9aa5ae;
+  --rule: #2c353d;
+  --code-bg: #1d2329;
+  --accent: #5cc3c1;
+  --err: #ff8a80;
+  --warn: #e0b45c;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+main { max-width: 72ch; margin: 0 auto; padding: 2rem 1.25rem 5rem; }
+h1, h2, h3, h4 { line-height: 1.2; text-wrap: balance; margin: 2.2em 0 0.5em; }
+h1 { font-size: 2rem; margin-top: 0; }
+h2 { font-size: 1.5rem; border-bottom: 1px solid var(--rule); padding-bottom: 0.25em; }
+h3 { font-size: 1.15rem; }
+h4 { font-size: 1rem; }
+p, ul, ol, dl { margin: 0 0 1em; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code, pre, kbd {
+  font-family: "IBM Plex Mono", ui-monospace, Consolas, "Courier New", monospace;
+  font-size: 0.92em;
+}
+code { background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 3px; }
+pre { background: var(--code-bg); padding: 0.75rem 1rem; overflow-x: auto; border-radius: 4px; }
+pre code { background: none; padding: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 0.95em; }
+.tbl { overflow-x: auto; margin: 0 0 1.25em; }
+th, td { text-align: left; vertical-align: top; padding: 0.4em 0.6em; border-bottom: 1px solid var(--rule); }
+th { color: var(--muted); font-weight: 600; font-size: 0.85em; letter-spacing: 0.04em; text-transform: uppercase; }
+dt { font-weight: 600; margin-top: 1em; }
+dd { margin: 0.25em 0 0 1.25em; }
+.muted { color: var(--muted); }
+.err, .warn { font-weight: 600; font-size: 0.8em; letter-spacing: 0.04em; text-transform: uppercase; }
+.err { color: var(--err); }
+.warn { color: var(--warn); }
+.toc { font-size: 0.95em; }
+.toc ol { padding-left: 1.25em; }
+.ref { color: var(--muted); font-size: 0.85em; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 3em 0; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+<main>
+<h1>Suneido Typechecker Guide</h1>
+
+<p>This guide explains what the Suneido static typechecker reports, why it reports it, and what to change. It is written for two readers: a developer who sees an error or warning in the IDE and wants to know what it means, and a developer who wants to understand how the checker arrives at its answers and why it is sometimes wrong. Everything here describes the checker as it behaves today; where the checker is known to be wrong or limited, the guide says so and gives a workaround.</p>
+
+<nav class="toc">
+<ol>
+<li><a href="#s1">What the checker is and how to run it</a>
+  <ol>
+  <li><a href="#s1-checks">What it checks and what it produces</a></li>
+  <li><a href="#s1-api">Calling it from Suneido</a></li>
+  <li><a href="#s1-confidence">The confidence prefix and the confidence filter</a></li>
+  <li><a href="#s1-config">Configuration keys</a></li>
+  <li><a href="#s1-lineage">Base classes must be arguments, base-first</a></li>
+  <li><a href="#s1-failures">The three ways a run can fail</a></li>
+  </ol></li>
+<li><a href="#s2">Reading a type</a>
+  <ol>
+  <li><a href="#s2-primitives">The primitive types</a></li>
+  <li><a href="#s2-unions">Instances, unions and <code>?</code></a></li>
+  <li><a href="#s2-sentinel">The <code>false</code> sentinel idiom</a></li>
+  <li><a href="#s2-annotations">Writing an annotation</a></li>
+  </ol></li>
+<li><a href="#s3">How types are inferred</a>
+  <ol>
+  <li><a href="#s3-members">Members and the four meanings of <code>false</code></a></li>
+  <li><a href="#s3-params">Parameters</a></li>
+  <li><a href="#s3-locals">Locals</a></li>
+  <li><a href="#s3-builtins">Calls to builtins</a></li>
+  <li><a href="#s3-own">Calls to your own methods and classes</a></li>
+  <li><a href="#s3-context">Context-sensitive returns</a></li>
+  <li><a href="#s3-demotion">Constructor demotion of <code>: false</code> members</a></li>
+  <li><a href="#s3-assert">Assert ground truths in <code>New</code></a></li>
+  <li><a href="#s3-returns">Return types, implicit returns and <code>return throw</code></a></li>
+  </ol></li>
+<li><a href="#s4">Narrowing</a>
+  <ol>
+  <li><a href="#s4-yes">What narrows</a></li>
+  <li><a href="#s4-no">What does not narrow</a></li>
+  <li><a href="#s4-kills">What kills a refinement</a></li>
+  <li><a href="#s4-workaround">The canonical workaround: capture into a local</a></li>
+  </ol></li>
+<li><a href="#s5">Every diagnostic</a>
+  <ol>
+  <li><a href="#s5-operators">Operators</a></li>
+  <li><a href="#s5-boolean">Boolean contexts</a></li>
+  <li><a href="#s5-receivers">Method calls on a receiver</a></li>
+  <li><a href="#s5-arguments">Argument types</a></li>
+  <li><a href="#s5-arity">Argument counts</a></li>
+  <li><a href="#s5-members">Members, subscripts, ranges, iteration and calls on values</a></li>
+  <li><a href="#s5-returns">Return contracts and annotations</a></li>
+  <li><a href="#s5-asserts">Assert ground truths</a></li>
+  <li><a href="#s5-internal">Internal errors</a></li>
+  </ol></li>
+<li><a href="#s6">Behaviours that surprise people</a>
+  <ol>
+  <li><a href="#s6-printing">Printing, ordering and confidence</a></li>
+  <li><a href="#s6-false">Seeding, <code>false</code> and returns</a></li>
+  <li><a href="#s6-members">Members, the constructor and the two views</a></li>
+  <li><a href="#s6-calls">Calls and dispatch</a></li>
+  <li><a href="#s6-narrowing">Narrowing</a></li>
+  <li><a href="#s6-assert">Assert</a></li>
+  <li><a href="#s6-args">Requirements, arity and capabilities</a></li>
+  <li><a href="#s6-api">The API and the harness</a></li>
+  <li><a href="#s6-annotations">Annotations</a></li>
+  </ol></li>
+<li><a href="#s7">Known bugs and limits</a>
+  <ol>
+  <li><a href="#s7-bugs">Bugs</a></li>
+  <li><a href="#s7-gaps">Gaps in narrowing and inference</a></li>
+  <li><a href="#s7-harness">Harness limits</a></li>
+  </ol></li>
+<li><a href="#s8">For maintainers</a>
+  <ol>
+  <li><a href="#s8-passes">The pass order</a></li>
+  <li><a href="#s8-files">Where each behaviour lives</a></li>
+  <li><a href="#s8-probe">Running a probe and the test helpers</a></li>
+  <li><a href="#s8-errata">Documentation errata</a></li>
+  </ol></li>
+</ol>
+</nav>
+
+<h2 id="s1">What the checker is and how to run it</h2>
+
+<h3 id="s1-checks">What it checks and what it produces</h3>
+
+<p>The typechecker is a static analysis of Suneido source. It checks one class (or one function) at a time, together with that class's base classes and a set of <em>references</em>: other classes and functions that the class calls, supplied so their return types can be resolved. It does not run any code. It reads the source, infers a type for every parameter, local variable, member and method return, and then checks the code against those types and against a table of builtin signatures.</p>
+
+<p>For each class it produces two things:</p>
+
+<ul>
+<li><strong>Types.</strong> For every method, a type for each parameter and local and a <code>$return</code> type; for the class, a type for each member written as a literal in the class body. Types are printed as strings such as <code>number</code>, <code>false|string</code> or <code>?|object</code> (see <a href="#s2">Reading a type</a>).</li>
+<li><strong>Diagnostics.</strong> A list of <span class="err">Errors</span> and a list of <span class="warn">Warnings</span>, each with the class, method, position (line and column), a message, and, for some, a configuration flag.</li>
+</ul>
+
+<p>The checker never changes its inferred types because of a check failure. If it decides <code>x = "a" + 1</code> is wrong it still types <code>x</code> as <code>number</code>, because <code>+</code> always yields a number, and reports the operand separately. Inference and checking are independent.</p>
+
+<h3 id="s1-api">Calling it from Suneido</h3>
+
+<p>The builtin class <code>TypeChecker</code> has four methods:</p>
+
+<div class="tbl"><table>
+<tr><th>Call</th><th>Returns</th></tr>
+<tr><td><code>TypeChecker.Infer(arguments, references = #(), config = #())</code></td><td>a result object with types and diagnostics</td></tr>
+<tr><td><code>TypeChecker.Annotate(arguments, references = #(), config = #())</code></td><td>the same result object, but each entry of <code>result</code> is the source with inferred types spliced in as annotations and comments</td></tr>
+<tr><td><code>TypeChecker.Annotations()</code></td><td>the effective builtin signature table as a list of <code>#(kind:, receiver:, class:, name:, sig:)</code> objects</td></tr>
+<tr><td><code>TypeChecker.RegisterSignatures(list)</code></td><td>the number of entries accepted into the Suneido-side signature layer; replaces that whole layer; <code>#()</code> clears it</td></tr>
+</table></div>
+
+<p><code>arguments</code> and <code>references</code> are lists. Each element is either a source string (the class is then named <code>Class0</code>, <code>Class1</code>, ... by position) or an object <code>#(src: "class { ... }", name: "Foo")</code>. The name matters: it is how references are found when the checked code says <code>new Foo()</code> or <code>Foo.Bar()</code>, and it is the <code>class</code> reported on every diagnostic. Named members of the outer list are ignored. Passing something that is not an object throws <code>can't convert String to Object</code>; an element that is neither a string nor an object with <code>src</code> throws <code>TypeChecker.Infer: arguments[i]: must be a string or an object with src</code>.</p>
+
+<p>The result object looks like this:</p>
+
+<pre><code>#(method: "TypeInfer",                 // or "TypeAnnotate"
+  result: (                            // one entry per argument, in order
+      #(methods: #(Foo: #(x: "number", s: "string", $return: "false|string"),
+                   New: #()),
+        members: #(items: "false|object", count: "number")),
+      ...),
+  diagnostics: #(
+      errors:   ( #(class: "Foo", method: "Bar", pos: 122, line: 7, col: 3,
+                    msg: "[0.90] operator \"+\" expects number, got string"), ... ),
+      warnings: ( #(class: "Foo", method: "Bar", pos: 40, line: 3, col: 9,
+                    msg: "[0.20] operator \"$\" expects string, got number",
+                    flag: "strictStringConcat"), ... )),
+  version: Built)</code></pre>
+
+<p>A few details of the result: <code>$return</code> is absent when the return type could not be determined; parameters, locals and members whose type is unknown are omitted; <code>members</code> lists only members that are written as literals in the class body (a member that exists only because <code>New</code> assigns it never appears); a local's type is the union of every type it had anywhere in the method; <code>line</code> and <code>col</code> are 1-based and <code>col</code> counts bytes, so a tab is one column; a diagnostic with no position lands at line 1, column 1; <code>flag</code> is present only on the two configurable families. A function passed as an argument appears as a single method named after the argument.</p>
+
+<p><strong>The IDE path.</strong> The IDE does not call <code>TypeChecker.Infer</code> directly. <code>TypeCheckHelper.Run(name, TypeCheckerMethods.Infer)</code> (and <code>TypeCheckHelper.Check</code>) build the class's lineage base-first (<code>TypeCheckHelper.OrderedSrc</code>, via <code>TypeCheckerLineage</code>), collect references from every <code>new X</code>, <code>X(...)</code> and <code>X.Foo(...)</code> name in the source (each reference chain also base-first), and hand both to <code>TypeCheckerBuiltin.Check</code>. That in turn loads the Suneido-side signature layer once per process (<code>TypeCheckerSignatures()</code>, which calls <code>RegisterSignatures</code> with the stdlib table) and calls <code>TypeChecker.Infer(orderedSrc, refs, TypeCheckerPolicy())</code>. The policy is:</p>
+
+<pre><code>TypeCheckerPolicy()  =&gt;  #(strictCrossTypeCompares: #warn,
+                            strictStringConcat: #off,
+                            confidence: "&gt;=0.70")</code></pre>
+
+<p>The consequence of that policy is discussed in the next section: in the IDE you only ever see diagnostics scoring 0.70 or higher, which is every ordinary error and exactly one kind of warning. To see everything, run <code>TypeChecker.Infer</code> yourself with <code>config: #(confidence: 'all')</code>.</p>
+
+<h3 id="s1-confidence">The confidence prefix and the confidence filter</h3>
+
+<p>Every message starts with a bracketed confidence between 0 and 1, for example <code>[0.90] method "Size" on `x` not applicable to receiver of type string</code>. The prefix is part of the message string; anything that matches message text must strip it. The examples in this guide omit it unless the value matters.</p>
+
+<p>The score is not a measure of evidence; it is a fixed ladder decided by which kind of diagnostic this is:</p>
+
+<div class="tbl"><table>
+<tr><th>Score</th><th>Which diagnostics</th></tr>
+<tr><td>1.00</td><td>the internal-error diagnostic only</td></tr>
+<tr><td>0.90</td><td>every ordinary error: return contracts, receiver mismatches, argument types, argument counts, member access, static members, Assert conflicts, boolean contexts, and operator errors whose operand is a single type</td></tr>
+<tr><td>0.75</td><td>the "is passed on to ... which requires" error (an inferred requirement)</td></tr>
+<tr><td>0.70</td><td>the "passed both positionally and by name" warning; operator errors whose operand is a clean union such as <code>number|string</code></td></tr>
+<tr><td>0.40</td><td>operator errors whose operand is a dirty type such as <code>?|number</code></td></tr>
+<tr><td>0.35</td><td>every ordinary warning: guesses, "cannot prove" argument and return warnings, annotation typos, discarded named arguments</td></tr>
+<tr><td>0.25</td><td>the operator "cannot prove" warning and the dirty-union receiver warning</td></tr>
+<tr><td>0.20</td><td>anything carrying a configuration flag (<code>strictStringConcat</code>, <code>strictCrossTypeCompares</code>), even when the configuration has promoted it to an error</td></tr>
+</table></div>
+
+<p>Two things follow. First, 0.90 on a return, callsite, arity or boolean error means "an unflagged error", not "certain": only operator checks look at the shape of the operand when scoring, so <code>return type false|number|object not assignable to declared number</code> is 0.90 while the same union under <code>+</code> is 0.70. Second, under the IDE policy <code>&gt;=0.70</code> the flagged families are invisible whatever their configured level, and so are the 0.40 operator errors on dirty types and all 0.35 and 0.25 warnings.</p>
+
+<p>The <code>confidence</code> configuration value accepts <code>all</code> (or blank, or absent) for no filter, or an operator and a number: <code>&gt;=0.70</code>, <code>&lt;=0.5</code>, <code>==0.9</code>, <code>=0.9</code>, <code>&gt;0.5</code>, <code>&lt;0.5</code>. A bare number means <code>&gt;=</code>. Anything else fails the whole call with <code>config.confidence: invalid threshold "high" (want e.g. "&gt;=0.70")</code>. Diagnostics are sorted by confidence descending; within one confidence they are in argument order, then by <em>method name</em>, then statement order. They are not in line order.</p>
+
+<h3 id="s1-config">Configuration keys</h3>
+
+<div class="tbl"><table>
+<tr><th>Key</th><th>Values</th><th>Default</th><th>Effect</th></tr>
+<tr><td><code>strictStringConcat</code></td><td><code>off</code>, <code>warn</code>, <code>error</code></td><td><code>error</code></td><td>applied to the "<code>$</code> expects string" diagnostics (including the guessed variant): <code>off</code> drops them, <code>warn</code> or <code>error</code> sets their severity to that level, overriding what the checker chose</td></tr>
+<tr><td><code>strictCrossTypeCompares</code></td><td><code>off</code>, <code>warn</code>, <code>error</code></td><td><code>warn</code></td><td>the same for the "comparison falls back to Suneido's cross-type ordering" diagnostic</td></tr>
+<tr><td><code>confidence</code></td><td><code>all</code>, blank, or <code>&lt;op&gt;&lt;number&gt;</code> as above</td><td>no filter</td><td>keeps only diagnostics whose score passes</td></tr>
+</table></div>
+
+<p>Values may be symbols, strings or numbers; they are all converted to strings. A bad value fails the whole call: <code>config.strictStringConcat: invalid level "yes" (want off|warn|error)</code>. A misspelt <em>key</em> is silently ignored and the default applies, so <code>strictStringConcats: #off</code> changes nothing and raises no error.</p>
+
+<h3 id="s1-lineage">Base classes must be arguments, base-first</h3>
+
+<p>The checker keeps one shared environment for all the arguments in a call. Each argument is checked in order, and everything it publishes (member types, method return types, guessed-value taint, Assert facts) stays in the environment for the arguments that follow. This is how inheritance works: when you check <code>Derived</code>, you pass <code>#(Base, Derived)</code> as arguments, in that order, and <code>Derived</code>'s calls to <code>.M()</code> and <code>super.M()</code> resolve through what <code>Base</code> published.</p>
+
+<p>Three rules follow, and all of them fail silently when broken:</p>
+
+<ul>
+<li>The lineage must be in <code>arguments</code>, base-first. Reversing the order loses inheritance. Putting the base in <code>references</code> instead of <code>arguments</code> also loses it: both <code>.M()</code> and <code>super.M()</code> come back unknown.</li>
+<li>Unrelated classes in one call contaminate each other. With arguments <code>#(A, B)</code> where <code>A = class { x: "s" }</code> and <code>B = class { Bar() { return .x } }</code>, <code>B.Bar</code> is reported as returning <code>string</code>, although <code>B</code> alone has no <code>x</code>. Check one class (with its lineage) per call; <code>TypeCheckHelper.OrderedSrc</code> does exactly that.</li>
+<li>References are pre-digested once and are never re-run. A reference sees the references before it (so reference chains must also be base-first), but a reference never sees the arguments, and a class that appears in both lists is resolved through the reference version when other code calls it.</li>
+</ul>
+
+<h3 id="s1-failures">The three ways a run can fail</h3>
+
+<div class="tbl"><table>
+<tr><th>Failure</th><th>What you see</th></tr>
+<tr><td>an <strong>argument</strong> does not parse (including a parse-time constant-fold failure such as <code>1 - "s"</code>)</td><td>the whole call throws <code>TypeChecker.Infer: &lt;Name&gt;: &lt;parser message&gt;</code>; no argument gets a result, not even the ones that parsed</td></tr>
+<tr><td>a <strong>reference</strong> does not parse, or the checker crashes while digesting it</td><td>nothing; the reference silently vanishes and calls into it resolve as unknown</td></tr>
+<tr><td>the checker crashes while checking argument <em>k</em></td><td>that argument's result is empty (or, for <code>Annotate</code>, the unmodified source); one error <code>[1.00] typechecker internal error: &lt;Name&gt;: &lt;panic&gt;</code> with an empty method and position 0 (line 1, column 1); later arguments are still checked</td></tr>
+</table></div>
+
+<h2 id="s2">Reading a type</h2>
+
+<h3 id="s2-primitives">The primitive types</h3>
+
+<div class="tbl"><table>
+<tr><th>Type</th><th>Meaning</th></tr>
+<tr><td><code>unknown</code></td><td>no information at all; a value the checker could not type. Printed only when it stands alone.</td></tr>
+<tr><td><code>void</code></td><td>a method that returns nothing (a bare <code>return</code>, or no return at all). It fits every declared type and passes every member and operator check, but see <a href="#s7-bugs">BUG 3</a> for method calls on it.</td></tr>
+<tr><td><code>boolean</code></td><td>either <code>true</code> or <code>false</code>; also what <code>true|false</code> collapses to.</td></tr>
+<tr><td><code>false</code></td><td>exactly the value <code>false</code>. This is its own type because so much Suneido code uses <code>false</code> to mean "no value".</td></tr>
+<tr><td><code>true</code></td><td>exactly the value <code>true</code>.</td></tr>
+<tr><td><code>number</code></td><td>any number. Every arithmetic operator yields <code>number</code> whatever its operands.</td></tr>
+<tr><td><code>string</code></td><td>any string, including symbols. <code>$</code> always yields <code>string</code>.</td></tr>
+<tr><td><code>date</code></td><td>a date value.</td></tr>
+<tr><td><code>function</code></td><td>a function value (<code>function () { }</code>).</td></tr>
+<tr><td><code>block</code></td><td>a block value (<code>{|x| ... }</code>).</td></tr>
+<tr><td><code>class</code></td><td>a class value.</td></tr>
+<tr><td><code>object</code></td><td>an object or record. <code>record</code> is accepted in annotations as another spelling of <code>object</code>; it is not a separate type.</td></tr>
+<tr><td><code>sequence</code></td><td>a lazy sequence such as the result of <code>Seq</code>.</td></tr>
+</table></div>
+
+<p>The only subtype relations are <code>false</code> and <code>true</code> below <code>boolean</code>, and <code>sequence</code> and <code>class</code> below <code>object</code>. There is no numeric tower, no "non-empty string", and no relation between instances.</p>
+
+<h3 id="s2-unions">Instances, unions and <code>?</code></h3>
+
+<p><strong>Instances.</strong> A capitalised name such as <code>Foo</code> or <code>Control</code> means "an instance of exactly that class". Instances are compared by name only: an instance of a subclass does not fit <code>Control</code>, and <code>Foo</code> does not fit <code>object</code>. Instances come from <code>new Foo()</code>, from calling a class that has no <code>CallClass</code>, and from annotations. Calling a method on an instance whose class is not in the references is silently unknown.</p>
+
+<p><strong>Unions.</strong> <code>a|b</code> means "either". Arms are printed sorted alphabetically, so <code>false|string</code> and <code>Alpha|Zed|number|string</code> (capitalised instances sort before lowercase primitives). Two or more of <code>true</code>, <code>false</code>, <code>boolean</code> collapse to <code>boolean</code>, so a <code>false</code> sentinel that is ever assigned <code>true</code> stops being a sentinel. <code>Foo|object</code> stays as written; nothing is absorbed.</p>
+
+<p><strong><code>?</code> means "or something the checker could not determine".</strong> A type containing <code>?</code> is called <em>dirty</em>. It is printed first, not last, because <code>?</code> sorts before every letter: <code>?|false</code>, <code>?|number|string</code>, <code>?|object</code>. A dirty type says "I saw these arms, and there may be others". When there are no known arms at all the type is simply <code>unknown</code>; <code>?</code> never appears alone.</p>
+
+<p>Dirt matters for what the checker says. On a dirty value most checks downgrade to a "cannot prove" warning at 0.25 or 0.35 instead of an error, and the IDE policy hides those. There are three exceptions you will notice: a boolean context (<code>if x</code>) ignores dirt and reports a full 0.90 error if any known arm is not boolean; a member or subscript access on a dirty receiver is not checked at all; and an argument whose type is pure <code>unknown</code> is silently accepted while a dirty union argument gets a warning.</p>
+
+<h3 id="s2-sentinel">The <code>false</code> sentinel idiom</h3>
+
+<p>Many builtins are declared as returning <code>false|something</code>: <code>Query1</code> and <code>QueryFirst</code> return <code>false|object</code>, <code>.Find</code> returns <code>false|number</code>, and <code>.GetDefault(k, false)</code> follows its default. A member written as <code>items: false</code> and a parameter written as <code>x = false</code> carry the same idea. The checker takes the <code>false</code> arm literally: <code>rec.name</code> on a <code>false|object</code> is an error (<code>member "name" on `rec` not readable on at least one path of union receiver false|object; no members on false</code>), and <code>n + 1</code> on <code>false|number</code> is an error. The large majority of errors in real code are this shape: a <code>false|X</code> value used as if it could not be <code>false</code>. The whole of <a href="#s4">Narrowing</a> is about how to tell the checker that it cannot be <code>false</code> here.</p>
+
+<h3 id="s2-annotations">Writing an annotation</h3>
+
+<p>Parameters and returns take annotations in the source:</p>
+
+<pre><code>Foo(x :string|false, count :number = 0) :object
+    {
+    ...
+    }</code></pre>
+
+<p>The rules:</p>
+
+<ul>
+<li>The text after <code>:</code> is split on <code>|</code>. Each arm is a builtin type name or a class name.</li>
+<li>Builtin names are case-insensitive: <code>string</code>, <code>String</code> and <code>STRING</code> all mean <code>string</code>; <code>record</code> and <code>Record</code> mean <code>object</code>.</li>
+<li>A name that starts with a capital letter and is not a builtin name means an instance of exactly that class: <code>:Control</code> accepts a <code>Control</code> and rejects every subclass. <code>?</code> and <code>!</code> are allowed in the name, so <code>:Foo?</code> is legal.</li>
+<li>A parameter's default must fit its annotation. <code>x :string = false</code> is an error (<code>param "x" default has type false, annotation says string</code>); write <code>x :string|false = false</code>.</li>
+<li>A dot-parameter can be annotated too: <code>New(.flag :boolean = false)</code>.</li>
+</ul>
+
+<p>Typos are only warnings, and that is the trap. <code>x :strin</code> produces a 0.35 warning (hidden by the IDE policy) and the parameter is then treated as unannotated, so the guesses you were trying to remove persist and nothing says why. <code>x :string|strin</code> produces the same warning and a dirty type <code>?|string</code>, which turns every later check on <code>x</code> into a "cannot prove" warning. <code>:string||number</code> (an empty alternative) warns and simply drops the empty arm. The word <code>unknown</code> is a legal arm and warns about nothing: <code>:unknown|string</code> is <code>?|string</code>. In a return annotation the same typo makes the method behave as unannotated. When you add an annotation and the diagnostics do not change, check its spelling with <code>confidence: 'all'</code> before looking anywhere else.</p>
+
+<p>Members cannot be annotated in the class body (a <code>:type</code> there would collide with the <code>name: value</code> syntax). <code>TypeChecker.Annotate</code> therefore writes member types as comments, <code>items: false /* :: false|object */</code>, and writes an inferred type it cannot spell natively (any dirty type) as a comment too: <code>/* ?|string */</code>, <code>/* -&gt; ?|number */</code> for a return.</p>
+
+<h2 id="s3">How types are inferred</h2>
+
+<p>The checker runs a sequence of passes over the class: it seeds types from literals and annotations, resolves calls and assignments to a fixed point, executes <code>New</code> abstractly to see which <code>false</code> sentinels are always replaced, applies the guards in each method (narrowing), and only then runs the checks. The subsections below describe the rules a Suneido programmer can observe; the pass order itself is listed in <a href="#s8-passes">For maintainers</a>.</p>
+
+<h3 id="s3-members">Members and the four meanings of <code>false</code></h3>
+
+<p>A member's type starts from its literal in the class body and grows with every assignment to it anywhere in the class. The starting type depends on how the literal is spelled, and <code>false</code> in particular means four different things:</p>
+
+<div class="tbl"><table>
+<tr><th>Spelling</th><th>Starting type</th><th>Why</th></tr>
+<tr><td><code>flag: false</code> (lowercase, private)</td><td><code>false</code>, exact</td><td>private sentinels are kept exact so the constructor can prove they are replaced</td></tr>
+<tr><td><code>Flag: false</code> (capitalised, public)</td><td><code>?|false</code></td><td>public members can be assigned from outside the class, so the checker widens them</td></tr>
+<tr><td><code>Flag: true</code> / <code>flag: true</code></td><td><code>boolean</code> / <code>true</code></td><td>same widening rule</td></tr>
+<tr><td><code>Foo(.flag = false)</code> (dot-parameter with a default, any case)</td><td><code>?|false</code>, and the parameter local gets the same type</td><td>a dot-parameter default is widened regardless of case</td></tr>
+<tr><td><code>Foo(.flag :false)</code> (annotated dot-parameter)</td><td><code>false</code>, exact</td><td>annotations are never widened</td></tr>
+<tr><td><code>Foo(.model)</code> (no default, no annotation)</td><td>nothing: the member is not widened and the local takes the member's literal type</td><td>see <a href="#s7-gaps">GAP 2</a></td></tr>
+<tr><td><code>x: 42</code>, <code>s: "hi"</code>, <code>d: #20200101</code>, <code>ob: #(1,2)</code>, <code>c: class{}</code>, <code>f: function(){}</code></td><td><code>number</code>, <code>string</code>, <code>date</code>, <code>object</code>, <code>class</code>, <code>function</code></td><td>literal values; a <code>function</code> member is treated as a method</td></tr>
+<tr><td><code>s: "a" $ "b"</code>, <code>n: -1</code></td><td><code>string</code>, <code>number</code></td><td>the operator's result type</td></tr>
+</table></div>
+
+<p>After seeding, every literal <code>.m = e</code> or <code>this.m = e</code> anywhere in any method unions the concrete arms of <code>e</code>'s type into the member, regardless of control flow. An assignment inside a branch counts the same as one at the top of <code>New</code>. Three things do not count: compound assignment (<code>.count $= "x"</code>, <code>.n++</code>), subscript assignment (<code>this[k] = e</code>), and nested assignment (<code>.a.b = e</code>). A member that is never written as a literal and only ever assigned values of unknown type has no type at all and is absent from the result. If, after calls have been resolved, some assignment to a typed member still has an unknown right-hand side, the member becomes dirty: <code>?|false|object</code>.</p>
+
+<p>Two consequences worth remembering. A private <code>x: false</code> that is assigned <code>true</code> anywhere becomes <code>boolean</code>, and after that <code>if .x isnt false</code> narrows to <code>true</code>, not to a useful value. And the member only ever grows: if a value is assigned from a call whose receiver resolves late, the checker's first guess for that call is unioned in and never removed (the "member ratchet", <a href="#s6-false">CB-30</a>).</p>
+
+<h3 id="s3-params">Parameters</h3>
+
+<div class="tbl"><table>
+<tr><th>Parameter</th><th>Type</th></tr>
+<tr><td><code>x :number</code></td><td><code>number</code>, from the annotation</td></tr>
+<tr><td><code>x :string = 0</code></td><td><code>string</code>, plus the error <code>param "x" default has type number, annotation says string</code></td></tr>
+<tr><td><code>x :string = false</code></td><td>the same error; write <code>x :string|false = false</code></td></tr>
+<tr><td><code>x :strin</code></td><td>a warning; then treated as unannotated</td></tr>
+<tr><td><code>x :string|strin</code></td><td>a warning; <code>?|string</code></td></tr>
+<tr><td><code>x = false</code></td><td><code>false</code>, exact (not widened, unlike a dot-parameter)</td></tr>
+<tr><td><code>x = 5</code>, <code>x = "s"</code></td><td><code>number</code>, <code>string</code></td></tr>
+<tr><td><code>@args</code></td><td><code>object</code></td></tr>
+<tr><td><code>x</code> (nothing)</td><td>no type; every use of <code>x</code> is <code>unknown</code> until a guard says otherwise</td></tr>
+<tr><td><code>_x</code></td><td>treated as having a default for argument-count purposes</td></tr>
+</table></div>
+
+<p>An unannotated parameter with no default stays unknown for the whole method; nothing about how it is used (<code>p.Size()</code>, <code>p + 1</code>) types it. The one exception is a <em>requirement</em>: if a bare, never-assigned parameter is passed directly as an argument to a callee whose corresponding parameter has a single known primitive type, the checker records that requirement and reports callers that violate it (see the "is passed on to" diagnostic in <a href="#s5-arguments">Argument types</a>). Any <code>p is false</code> or <code>p isnt false</code> in the body cancels the requirement for <code>p</code>.</p>
+
+<h3 id="s3-locals">Locals</h3>
+
+<p>Locals are typed by a flow-insensitive walk of each method, one statement after another:</p>
+
+<div class="tbl"><table>
+<tr><th>Construct</th><th>Rule</th></tr>
+<tr><td><code>x = 1; x = "s"</code></td><td>last write wins: after the second line <code>x</code> is <code>string</code></td></tr>
+<tr><td><code>x = 0; if c { x = "s" }</code></td><td>branches union: <code>number|string</code> after the <code>if</code>; without an <code>else</code> the entry type is one of the routes</td></tr>
+<tr><td><code>x = false; if c { x = "s" } else { x = 1 }</code></td><td><code>number|string</code>; the entry type is dropped because both routes assign</td></tr>
+<tr><td><code>switch</code></td><td>cases union; without a <code>default</code> the entry type is kept</td></tr>
+<tr><td><code>try ... catch (e)</code></td><td>the catch body sees the entry type unioned with the end-of-try type; <code>e</code> is <code>string</code></td></tr>
+<tr><td>any loop</td><td>the body is walked up to four times, unioning with the entry type each time, so a read inside the loop sees the widest type the variable takes anywhere in the loop</td></tr>
+<tr><td><code>for (i = 0; ...)</code></td><td><code>i</code> is <code>number</code>, also after the loop</td></tr>
+<tr><td><code>for c in s</code></td><td><code>c</code> is <code>string</code> only when <code>s</code> is exactly <code>string</code>; <code>for k, v in ...</code>, iteration over an object, and <code>for i in a .. b</code> leave the variable unknown</td></tr>
+<tr><td><code>x = v</code> with <code>v</code> unknown, then <code>if c { x = 1 }</code></td><td><code>?|number</code>: a join with an unknown arm is dirty, not unknown</td></tr>
+<tr><td><code>count $= "x"</code>, <code>s++</code></td><td>the local takes the operator's result type (<code>string</code>, <code>number</code>) even if the operator was rejected</td></tr>
+<tr><td><code>{|b| ... }</code></td><td>the block body is walked in the enclosing scope; block parameters are not scoped (<a href="#s7-bugs">BUG 2</a>)</td></tr>
+<tr><td><code>function () { ... }</code></td><td>never walked; no types and no diagnostics inside</td></tr>
+<tr><td><code>.x</code> / <code>this.x</code> read</td><td>the member's class-wide type (after constructor demotion, outside <code>New</code>)</td></tr>
+<tr><td><code>Global.x</code> read</td><td>the reference class's literal member, <code>Getter_</code>, or method, walking its bases</td></tr>
+<tr><td><code>ob.x</code> read</td><td>never typed</td></tr>
+</table></div>
+
+<p>The reported type of a local in the result object is the union of every type it took in the method, so a variable that is narrowed in one branch still shows the full union, and a name reused for two purposes shows both.</p>
+
+<h3 id="s3-builtins">Calls to builtins</h3>
+
+<p>Builtin methods and functions are typed from a signature table. The table has two layers: the executable's own declarations (326 entries in a console build, 668 in the GUI build, which is why checking from a console REPL under-reports Win32 records), and a Suneido layer that <code>TypeChecker.RegisterSignatures</code> replaces wholesale, which the stdlib fills through <code>TypeCheckerSignatures()</code>. An entry in the Suneido layer with the same name and receiver overrides the executable's entry. Overloads are per receiver type: <code>Size</code> is declared once for <code>string</code> and once for <code>object</code>, with possibly different return types.</p>
+
+<p>When the receiver's type is known, the call is matched against the overloads for that receiver: a match gives the declared return type; overloads exist but none accepts the receiver gives the error <code>method "Sort!" on `s` not applicable to receiver of type string</code>; no overload with that name at all is silent (the checker assumes an open world: it could be a user-defined method it cannot see). A union receiver is dispatched arm by arm: if every arm has an overload the returns are unioned; if some arm has none you get <code>not applicable on at least one path of union receiver object|string; no overload for string</code>. If any arm is an instance of a class it cannot resolve, the whole call is silently unknown.</p>
+
+<p><strong>Guessing when the receiver is unknown.</strong> If the receiver has no type at all (an unannotated parameter, a value from an unresolved call), the checker scans the table by method name alone:</p>
+
+<div class="tbl"><table>
+<tr><th>Overloads named <code>M</code></th><th>Result</th><th>Warning</th></tr>
+<tr><td>none</td><td>unknown</td><td><code>no built-in method "M" on `x` and receiver type unknown</code></td></tr>
+<tr><td>exactly one</td><td>that overload's return, and its signature is used for argument and count checks</td><td><code>receiver type unknown; assuming built-in "M" on object</code></td></tr>
+<tr><td>several, all returning the same type</td><td>that type</td><td><code>receiver type unknown; "M" has multiple overloads agreeing on return number</code></td></tr>
+<tr><td>several, returning different types</td><td>the dirty union of all of them, e.g. <code>?|object|string</code></td><td><code>receiver type unknown; "M" has ambiguous overloads with differing returns (folded to ?|object|string)</code></td></tr>
+</table></div>
+
+<p>These are warnings rather than errors because the type is a guess: the receiver might be a user class with a method of the same name. The guess is remembered ("taint"): a local assigned directly from a guessed call is itself guessed, and any later error whose evidence is a guessed value is downgraded to a warning with the suffix <code>(type guessed from builtin overloads; receiver unknown)</code> or <code>(type guessed from builtin overloads)</code>. Taint travels only through plain assignment, parentheses and ranges; it stops at any operator, so <code>v = p.Size() + 1</code> is not guessed and a later misuse of <code>v</code> is a full error. Taint is never removed, even if the variable is reassigned. The one exception to the downgrade is <code>$</code>: under the default <code>strictStringConcat: error</code> the guessed <code>$</code> warning is promoted back to an error, at confidence 0.20. The IDE policy turns that family off.</p>
+
+<p>A few free functions are special. <code>Number(...)</code>, <code>String(...)</code>, <code>Object(...)</code>, <code>Record(...)</code>, <code>Display(...)</code> and <code>Type(...)</code> return their obvious type. <code>Date(...)</code> with a constant argument is evaluated at check time: <code>Date("2024-01-01")</code> and <code>Date(year: 2024, month: 13, day: 1)</code> (which normalises) are <code>date</code>; <code>Date(year: 3500)</code> is <code>false</code>; <code>Date()</code> is <code>date</code>; <code>Date(x)</code> with a non-constant argument is <code>date|false</code>. A free builtin declared as returning <code>T|void</code> with a parameter named <code>block</code> (such as <code>Dir</code>) returns <code>void</code> when a block is supplied and <code>T</code> otherwise. A free builtin is never mistaken for a method or vice versa: <code>x.Object()</code> with <code>x</code> unknown warns <code>no built-in method "Object"</code>.</p>
+
+<h3 id="s3-own">Calls to your own methods and classes</h3>
+
+<dl>
+<dt><code>.M(...)</code> or <code>this.M(...)</code></dt>
+<dd>First, if <code>M</code> is a method of this class, the context-sensitive return (next subsection). Otherwise the return that <code>M</code> published earlier in this run, which includes a base class passed as an earlier argument. If that is unknown or <code>void</code>, and the class is named <code>Strings</code>, <code>Numbers</code>, <code>Dates</code>, <code>Objects</code> or <code>Records</code>, the call is dispatched as a builtin on that receiver type. Otherwise the builtin table is scanned by name exactly as for an unknown receiver, but silently: the result is guessed (downstream errors become warnings) and no "assuming built-in" warning is printed. A <code>void</code> own method therefore falls through to the scan and can pick up an unrelated builtin's return.</dd>
+<dt><code>super.M(...)</code></dt>
+<dd>The return published by the <em>previous argument</em> in the call, if it is not unknown or <code>void</code>. With no previous argument, unknown.</dd>
+<dt><code>new X(...)</code></dt>
+<dd>Always an instance of <code>X</code>, with no lookup at all, so a misspelt class name gives a confident instance of a class that does not exist. Only the argument-count check consults the reference (and only <code>X</code>'s own <code>New</code>, not an inherited one).</dd>
+<dt><code>X(...)</code></dt>
+<dd>If <code>X</code> is a reference with its own <code>CallClass</code>, that method's return (chosen by the call's arguments when a summary applies, otherwise the <em>seed view</em>, below). If <code>CallClass</code> is inherited from a base in the reference chain, the same but marked guessed. If nothing in the chain defines <code>CallClass</code>, an instance of <code>X</code>. If <code>X</code> is not a reference but a free builtin exists, that builtin. Otherwise silently unknown: a bare call to an unknown name never produces a diagnostic. A reference is preferred over a builtin of the same name.</dd>
+<dt><code>X.M(...)</code></dt>
+<dd>Any capitalised identifier is treated as a global class here, even a local variable named <code>Foo</code>. The builtin static table (<code>Date.Begin</code>, <code>Zlib.Members</code>) is consulted first, then the reference's summary, then the reference's seed view of <code>M</code>. Otherwise silently unknown.</dd>
+<dt><code>x.M(...)</code> where <code>x</code> is an instance of <code>C</code></dt>
+<dd>If <code>C</code> is the class being checked, its own published return. Otherwise the reference <code>C</code>'s instance view of <code>M</code>, looked up on <code>C</code> alone: an inherited method is not found even when the base is also a reference. Unknown methods on instances are always silent.</dd>
+<dt><code>(expr)(...)</code>, <code>fns[0]()</code>, <code>x[k](...)</code></dt>
+<dd>Not typed and not checked.</dd>
+</dl>
+
+<p><strong>The seed view and the instance view.</strong> When <code>New</code> provably replaces a private <code>: false</code> member (<a href="#s3-demotion">demotion</a>), the class publishes two return types for every method: the <em>instance view</em>, computed after demotion, and the <em>seed view</em>, snapshotted before it. Calls on an instance (<code>(new Widget()).Foo()</code>) use the instance view; calls through the class (<code>Widget.Foo()</code>, bare <code>Widget()</code>) use the seed view, on the reasoning that a static call never ran <code>New</code>. For</p>
+
+<pre><code>Widget = class { x: false  New() { .x = "init" }  Foo() { return .x } }</code></pre>
+
+<p><code>(new Widget()).Foo()</code> is <code>string</code> and <code>Widget.Foo()</code> is <code>false|string</code>. The seed view exists only when something was demoted, and it is taken before narrowing, so adding a guard inside <code>Foo</code> fixes instance callers but not static callers.</p>
+
+<h3 id="s3-context">Context-sensitive returns</h3>
+
+<p>When a method calls another method of the same class, the callee's return is re-evaluated with the actual arguments, but the only thing the arguments are used for is deciding <code>if p is false</code> and <code>if p isnt false</code> branches. For</p>
+
+<pre><code>get(x = false)
+    {
+    if x is false
+        return "default"
+    return x
+    }</code></pre>
+
+<p><code>.get()</code> is <code>string</code> because the argument is the default <code>false</code> and the second path is dead. <code>.get(5)</code> is <em>not</em> <code>number</code>: the first path is dead, but the expression <code>x</code> on the second path keeps the type it has class-wide, so the answer is <code>?|string</code>. The same holds for a ternary body. Only the literal <code>false</code> decides; <code>if x is true</code>, <code>if x is ""</code>, <code>if x is 0</code>, <code>if not x</code> and <code>Boolean?(x)</code> are never decided, and the override is by name, so reassigning <code>x</code> in the body does not change the decision. A caller writing <code>.get(5) + 1</code> therefore gets <code>operator "+" expects number, got ?|string</code>, an error (at 0.40, because the operand is dirty), even though the runtime returns 5.</p>
+
+<p>Across classes (<code>Foo(...)</code> through <code>CallClass</code>, <code>Foo.M(...)</code>, and function references) a simpler <em>summary</em> is used: the first parameter whose return differs when it is <code>false</code> versus not <code>false</code> becomes the discriminator, and the call site picks the arm by whether that argument is provably <code>false</code> or provably not. For <code>Timer(secs = false)</code> returning a number when <code>secs</code> is false and a string otherwise: <code>Timer()</code> is <code>number</code>, <code>Timer(secs: 1)</code> and <code>Timer(0, 1, 2)</code> are <code>string</code>, <code>Timer(secs: s)</code> and <code>Timer(@a)</code> are <code>number|string</code>. Only one parameter per method is summarised: with <code>F(a = false, b = false)</code> guarded on both, <code>F(1)</code> and <code>F(1, 2)</code> both give the union, and only the discriminator's argument matters.</p>
+
+<h3 id="s3-demotion">Constructor demotion of <code>: false</code> members</h3>
+
+<p>A private member seeded <code>x: false</code> keeps the <code>false</code> arm in every method unless the checker can prove <code>New</code> always replaces it. When it can, every read of <code>.x</code> outside <code>New</code> is retyped with the <code>false</code> arm removed. This is what makes the common idiom</p>
+
+<pre><code>class
+    {
+    items: false
+    New()
+        {
+        .items = Object()
+        }
+    Add(x)
+        {
+        .items.Add(x)      // items is object here, not false|object
+        }
+    }</code></pre>
+
+<p>check cleanly. All of the following must hold for a member to be demoted:</p>
+
+<ul>
+<li>The member is private (lowercase). Public members are never demoted.</li>
+<li>Its literal contains <code>false</code> (<code>x: false</code>).</li>
+<li>Abstract execution of <code>New</code> ends with the member holding a type that has no <code>false</code> in it, on every path.</li>
+<li>No assignment to the member anywhere in the class, in any method, has a right-hand side that could be <code>false</code>. An <em>unknown</em> right-hand side counts as "could be false", so <code>Set(v) { .x = v }</code> with an untyped <code>v</code> blocks demotion for the whole class, as does <code>Reset() { .x = false }</code>, and so does <code>Set(v = false) { if v isnt false { .x = v } }</code> because this test is made before narrowing.</li>
+<li>The class-wide type minus <code>false</code> is not empty. The demoted type is the class-wide type with <code>false</code> removed, not the type <code>New</code> computed. If the only value ever statically assigned is <code>false</code> the demotion is dropped even when <code>New</code> proved otherwise:
+<pre><code>class
+    {
+    x: false
+    New() { .init(5) }
+    init(v = false) { .x = v }     // v is typed by its default: false
+    Get() { return .x + 1 }        // operator "+" expects number, got false
+    }</code></pre></li>
+</ul>
+
+<p>What the abstract execution of <code>New</code> understands: parameters have the type of their default (so <code>New(n = 5) { .x = n }</code> demotes to <code>number</code> and <code>New(n = false) { .x = n }</code> never demotes); a helper is followed only when called as a bare statement <code>.setup()</code> with positional arguments (<code>.x = .setup()</code>, <code>if .setup()</code>, <code>.init(v: 5)</code> do not execute the helper); <code>if</code>, <code>switch</code> and <code>try</code> are joined across their branches, so a <code>switch</code> needs a <code>default</code> that also assigns and a <code>try</code> needs the <code>catch</code> to assign too; loop bodies contribute nothing, even <code>do { .x = 5 } while (false)</code>; <code>return throw</code> and <code>throw</code> end the path, but a plain <code>return</code> does not; <code>if .x is &lt;literal&gt;</code> is decided against the literal seed, so <code>if .x is 5 { return }; .x = 5</code> demotes (the early return is treated as impossible); <code>this[expr] = ...</code> anywhere reachable cancels every demotion in the class; inherited methods are never followed. Recursion is cut rather than joined.</p>
+
+<h3 id="s3-assert">Assert ground truths in <code>New</code></h3>
+
+<p>An <code>Assert(cond)</code> inside <code>New</code> with exactly one positional argument pins a private member's type for the whole class: <code>Assert(Object?(.items))</code> makes <code>.items</code> an <code>object</code> everywhere, and every assignment to <code>.items</code> in every method, including assignments earlier in <code>New</code>, is then checked against the pin. This works for private members and for private inline-init parameters (<code>New(.items)</code>), at any depth inside <code>New</code> (inside an <code>if</code>, a loop, a block), and the condition is always taken as true regardless of where it sits. The condition grammar is the narrowing grammar: <code>Object?(.x)</code>, <code>Type(.x) is "Object"</code>, <code>.x is 5</code>, <code>.x isnt false</code>, <code>not</code>, <code>and</code>, <code>or</code>.</p>
+
+<p>What does <em>not</em> pin: <code>Assert(cond, msg: "...")</code> (two arguments), every matcher form (<code>Assert(.x isObject:)</code>, <code>Assert(.x is: 5)</code>), public members, and <code>Assert(.x isnt false)</code> when <code>.x</code> is only ever <code>false</code> (there is nothing left to pin). An <code>isnt false</code> assert on a dirty member pins a dirty type. A pin overwrites the member's accumulated type, so a wrong Assert silently retypes every read, and later assignments of other types are reported rather than widening the member. Two asserts in <code>New</code> that cannot be merged, or an assert in another method that contradicts the pin, produce a conflict error positioned at the losing assert. Outside <code>New</code>, an <code>Assert</code> statement narrows the rest of its block (see <a href="#s4-yes">What narrows</a>) but pins nothing.</p>
+
+<h3 id="s3-returns">Return types, implicit returns and <code>return throw</code></h3>
+
+<div class="tbl"><table>
+<tr><th>Body</th><th>Published return</th></tr>
+<tr><td><code>Foo() :T { ... }</code></td><td><code>T</code>, verbatim, whatever the body does; each <code>return e</code> is checked against <code>T</code>; a bare <code>return</code> is silent</td></tr>
+<tr><td><code>return 1</code> and <code>return "x"</code></td><td><code>number|string</code></td></tr>
+<tr><td><code>if c return; return 5</code></td><td><code>number|void</code>: a bare <code>return</code> contributes <code>void</code></td></tr>
+<tr><td><code>if c return 1</code> and nothing after</td><td><code>number</code>: falling off the end contributes nothing</td></tr>
+<tr><td><code>Lit() { 5 }</code>, <code>Trailing() { x = 5 }</code>, <code>New() { .x = 5 }</code></td><td><code>number</code>: when no path definitely returns, the last top-level expression statement is the implicit return, and an assignment is an expression</td></tr>
+<tr><td><code>Tail() { if true { 5 } }</code></td><td><code>void</code>: only the last top-level statement counts</td></tr>
+<tr><td><code>Nothing() { }</code>, <code>Ret() { return }</code></td><td><code>void</code></td></tr>
+<tr><td><code>Always() { return throw "x" }</code></td><td><code>void</code>: <code>return throw</code> is not a return (<a href="#s7-bugs">BUG 4</a>)</td></tr>
+<tr><td><code>if x is false return "d"; return x</code> with <code>x = false</code></td><td><code>string</code>: the second path is pruned because <code>x</code> is exactly <code>false</code></td></tr>
+</table></div>
+
+<p>Two traps. A declared return is published even when the body contradicts it, so callers of a wrongly annotated method inherit the lie and only the method itself gets the error. And the declared return is checked only against explicit <code>return e</code> statements: <code>Foo() :string { 42 }</code> and <code>Bar() :string { x = 42 }</code> are silent. When a class and its base are checked together, a return annotation on the base's <code>Foo</code> also binds an unannotated <code>Foo</code> in the derived class.</p>
+
+<h2 id="s4">Narrowing</h2>
+
+<p>Narrowing is how a guard changes the type of a variable or member for the code the guard protects. It is the mechanism that clears most <code>false|X</code> errors, and most of the checker's surprises are cases where a guard that reads clearly to a person does not narrow. This section lists what narrows, what does not, and what undoes a narrowing.</p>
+
+<h3 id="s4-yes">What narrows</h3>
+
+<p>A narrowing <em>target</em> is a local variable (through parentheses and an inline assignment, <code>if Object?(x = f())</code>) or a member written as <code>.name</code> or <code>this.name</code>. Nothing else is a target: <code>ob.x</code>, <code>ob[i]</code>, <code>Global.x</code>, <code>x.y.z</code> are never narrowed.</p>
+
+<div class="tbl"><table>
+<tr><th>Guard</th><th>In the true branch</th><th>In the false branch</th></tr>
+<tr><td><code>Number?(x)</code>, <code>String?(x)</code>, <code>Object?(x)</code>, <code>Record?(x)</code>, <code>Date?(x)</code>, <code>Boolean?(x)</code>, <code>Class?(x)</code>, <code>Function?(x)</code> (also admits <code>block</code>), ...</td><td>toward that type</td><td>that type removed</td></tr>
+<tr><td><code>Type(x) is "Number"</code> etc. (<code>"Function"</code> is <code>function</code> only)</td><td>toward</td><td>removed</td></tr>
+<tr><td><code>Type(x) isnt "Number"</code></td><td>removed</td><td>toward</td></tr>
+<tr><td><code>x is false</code>, <code>x is true</code></td><td>toward <code>false</code> / <code>true</code></td><td><code>false</code> / <code>true</code> removed</td></tr>
+<tr><td><code>x isnt false</code>, <code>x isnt true</code></td><td>removed</td><td>toward</td></tr>
+<tr><td><code>x is 5</code>, <code>x is ""</code>, <code>x is #20200101</code></td><td>toward <code>number</code> / <code>string</code> / <code>date</code> (rarely useful; see below)</td><td>nothing</td></tr>
+<tr><td><code>not c</code></td><td>polarity flipped</td><td>flipped</td></tr>
+<tr><td><code>a and b</code></td><td>both applied, in order</td><td>only what every operand proves</td></tr>
+<tr><td><code>a or b</code></td><td>only what every operand proves</td><td>both applied</td></tr>
+<tr><td><code>.ready?()</code> as the whole condition, where <code>ready?</code> is a private method containing a literal <code>return true</code> / <code>return false</code></td><td>the member facts that held at every <code>return true</code></td><td>the facts at every <code>return false</code></td></tr>
+</table></div>
+
+<p>Besides <code>if</code>, the guard applies to the condition of <code>while</code> and <code>for</code> loops (inside the body), to the arms of <code>?:</code>, and to the cases of a bare <code>switch</code> / <code>switch (true)</code> (locals only, one expression per case). Early exit works: after <code>if not Object?(x) return</code> (or <code>throw</code>, <code>break</code>, <code>continue</code>, or a braced block ending in one of those), <code>x</code> is <code>object</code> for the rest of the enclosing block. An <code>if</code>/<code>else</code> whose two arms both exit also counts as an exit.</p>
+
+<p>Two more sources. Assigning a narrower value installs the narrowing: after <code>x = Object()</code> the local is <code>object</code> even if it was <code>false|object</code> before, and the same holds for <code>.m = Object()</code> (the value must be strictly narrower than the variable's pre-narrowing type; see <a href="#s7-gaps">GAP 1</a>). And an <code>Assert</code> written as a statement in a statement list narrows the rest of that list: <code>Assert(Object?(x))</code>, <code>Assert(x isnt: false)</code>, <code>Assert(x isObject:)</code>, <code>Assert(x isType: "Number")</code>, with or without <code>msg:</code>. This works in any method, not only in <code>New</code>; it must be a statement of a block, not the sole unbraced body of an <code>if</code>.</p>
+
+<p>Narrowing toward a type always produces a clean type: <code>?|string</code> under <code>Object?(x)</code> becomes <code>object</code>. Narrowing away keeps dirt: under <code>not Object?(x)</code> it stays <code>?|string</code>. Narrowing a plain <code>false</code> away from <code>false</code> leaves nothing known: <code>Foo(x = false) { if x isnt false return x }</code> publishes a dirty return, so every downstream check is a "cannot prove" warning rather than an error. A contradictory guard does not produce an "unreachable" diagnostic; it silently retypes: <code>x :number; if String?(x) return x</code> publishes <code>number|string</code>.</p>
+
+<h3 id="s4-no">What does not narrow</h3>
+
+<ul>
+<li><strong>Truthiness.</strong> <code>if x</code> narrows nothing, and is itself an error unless <code>x</code> is boolean. <code>if x is true</code> silences the boolean-context error but narrows toward <code>true</code>, which on <code>false|string</code> is a contradiction retype, not a useful fact.</li>
+<li><strong><code>isnt</code> against anything but <code>true</code>/<code>false</code>.</strong> <code>x isnt ""</code>, <code>x isnt 5</code>, <code>x isnt -1</code> do nothing. A <code>""</code> or <code>-1</code> sentinel cannot be discharged, because there is no "non-empty string" or "non-negative number" type; use a <code>false</code> sentinel instead. <code>x is ""</code> does narrow toward <code>string</code>, which is usually a no-op and occasionally a harmful retype.</li>
+<li><strong><code>else if</code> chains with an exit.</strong> <code>if P { x = e } else if Q { return }</code> narrows nothing after the chain, and bracing the inner test does not help; hoist the test to the same level as the use (<a href="#s7-gaps">GAP 4</a>).</li>
+<li><strong><code>switch</code> on members.</strong> <code>switch { case Object?(.x): return .x }</code> still reads <code>false|object</code>; only locals narrow inside a bare switch, a case with two expressions narrows nothing, and nothing established inside a switch flows out of it. A <code>switch (x)</code> on a local narrows each case toward the literal's type.</li>
+<li><strong>Members through an inline assignment.</strong> <code>if false is (x = .Maybe())</code> refines <code>x</code>; <code>if false is .x = .Maybe()</code> refines nothing.</li>
+<li><strong>Other people's members.</strong> <code>Object?(ob.y)</code>, <code>ob.Method?(k)</code>, <code>x in (...)</code>, <code>x =~ p</code>, <code>x &lt; 0</code>.</li>
+<li><strong>Blocks and <code>try</code>.</strong> Both are transparent: the code inside is walked in the same scope with no join, so a throw-guard inside <code>try</code> narrows the code after the <code>catch</code> that swallows the throw, and a narrowed outer <code>x</code> also retypes a block parameter of the same name.</li>
+<li><strong>A predicate helper that returns a comparison.</strong> <code>noKeys?() { return .lockedKeys is false }</code> exports nothing. The helper must contain literal <code>return true</code> and <code>return false</code> statements, be private, be called as the whole condition (<code>if .noKeys?()</code>, not <code>if .noKeys?() is true</code>), and helpers do not chain.</li>
+</ul>
+
+<h3 id="s4-kills">What kills a refinement</h3>
+
+<ul>
+<li><strong>Assignment.</strong> <code>x = e</code> replaces the fact with <code>e</code>'s type when that is narrower, and otherwise deletes it. <code>x += 1</code>, <code>x $= "s"</code>, <code>x++</code> always delete it.</li>
+<li><strong>Loops.</strong> Nothing proven inside a loop body survives past the loop, and a <code>break</code>/<code>continue</code> guard inside a loop narrows nothing after it. A local written anywhere in the loop body (except <code>x = x</code>) loses its guard for the whole body, even when the write preserves the type: after <code>if not Number?(x) return</code>, a loop containing <code>x += 1</code> warns <code>operator "+=" operand has type ?|number</code> inside the loop.</li>
+<li><strong>Calls, for members only.</strong> A local is never affected by a call. A member fact survives a call unless the call is <em>opaque</em> or the callee (transitively, through this class's own methods) assigns that member. Opaque calls are: any call to a method this class does not define itself, which means <strong>every inherited method</strong>; <code>super.M()</code>; a call through a computed callee (<code>(.fns[k])()</code>); and any call that passes bare <code>this</code> as an argument (<code>x.Do(this)</code>), which also makes the calling method opaque to its callers. Free calls and calls on other receivers (<code>Global(1)</code>, <code>ob.Foo()</code>) never kill anything. Even a killed member is salvaged as "its class-wide type minus <code>false</code>" unless some method somewhere assigns it a value that could be <code>false</code> or is untyped (<code>Clear() { .m = false }</code>, <code>.m = SomeUnresolvedCall()</code>), in which case it goes back to the class-wide type. The salvage turns <code>boolean</code> into <code>true</code>.</li>
+<li><strong>Leaving an <code>if</code>.</strong> A fact that held before an <code>if</code> survives it only if every route through the <code>if</code> keeps some fact about the name. Kills inside a loop body, a switch case, a ternary arm or a block argument do not propagate back out.</li>
+</ul>
+
+<h3 id="s4-workaround">The canonical workaround: capture into a local</h3>
+
+<p>Because locals survive calls and members do not, the reliable shape is to copy the member into a local once, right after the guard, and use the local:</p>
+
+<pre><code>Save()
+    {
+    if not Object?(.items)
+        return
+    items = .items             // items : object, and stays object
+    .Refresh()                 // inherited: would have killed the .items fact
+    for x in items
+        ...
+    }</code></pre>
+
+<p>The same idea applies to values from builtins: <code>rec = Query1(...)</code>, then <code>if rec is false return</code>, and use <code>rec</code>. When the guard cannot be placed at the use, narrow once at a boundary instead: a lazy accessor <code>list() { if .items is false { .items = Object() }; return .items }</code> (the assignment installs the narrowing), or one <code>lookup(num) :object</code> that throws on a miss and is the only place the sentinel is examined.</p>
+
+<h2 id="s5">Every diagnostic</h2>
+
+<p>This section has one entry for every message the checker can produce, grouped by what the message is about. Each entry shows the message as it appears (without the confidence prefix; the confidence is given in the severity line), what it means, why the checker concluded it, and what to change. Placeholders in angle brackets stand for the actual names and types. The advice follows a fixed ladder for the <code>false|X</code> family, which accounts for most real errors: remove the optional value at its source (assign the member unconditionally in <code>New</code>, give the parameter a real default); otherwise handle the miss with an exiting branch, preferably by moving up a guard that already exists lower down; otherwise narrow once at a boundary (a lazy accessor, or a single lookup that throws). Reach for <code>Assert</code> last.</p>
+
+<h3 id="s5-operators">Operators</h3>
+
+<h4><code>operator "+" expects number, got false|number</code></h4>
+<p><span class="err">Error</span> at 0.90 when the operand is a single type, 0.70 when it is a clean union such as <code>false|number</code>, 0.40 when it is dirty. For <code>$</code> and <code>$=</code> the diagnostic carries the <code>strictStringConcat</code> flag: its severity is whatever that key is set to (default <code>error</code>; the IDE policy sets <code>off</code>, which removes it) and its confidence is 0.20.</p>
+<p><strong>What it means.</strong> An operand of <code>+ - * / % &amp; | ^ &lt;&lt; &gt;&gt;</code>, of their <code>=</code> forms, of <code>++ -- ~</code> or unary <code>-</code> is not a number; or an operand of <code>$</code> / <code>$=</code> is not a string. The type shown is the operand's whole type; the arm that does not fit is the problem.</p>
+<p><strong>Why the checker says it.</strong> Every arithmetic operator requires numbers on both sides and <code>$</code> requires strings; each operand is checked on its own against that table, and a union fails if any arm fails. A compound assignment checks both sides, so <code>s += "x"</code> on a string produces two errors, one per operand, and afterwards <code>s</code> is typed <code>number</code> (the operator's result), so a later <code>s++</code> is silent and a later <code>s $ "y"</code> is a new error.</p>
+<p><strong>What to do.</strong> When the type is <code>false|number</code> (a <code>= false</code> default, <code>.Find</code>, a <code>: false</code> member) the value really can be <code>false</code> here as far as the checker can tell: move an existing <code>if n is false return</code> above the use, or change the default to <code>0</code> and treat that as a behaviour change. For <code>$</code> with a number or date, use <code>Display(x)</code> or <code>String(x)</code>. If you believe the type is simply wrong, run <code>TypeChecker.Annotate</code> to see where it came from; a misspelt annotation on a parameter makes the parameter unannotated and is the most common cause.</p>
+
+<h4><code>operator "$" expects string, got number (type guessed from builtin overloads; receiver unknown)</code></h4>
+<p><span class="warn">Warning</span> at 0.35 for arithmetic operators. For <code>$</code> and <code>$=</code> it is flagged <code>strictStringConcat</code>, so under the default <code>error</code> level it is promoted to an <span class="err">Error</span> at 0.20; the IDE policy removes it.</p>
+<p><strong>What it means.</strong> The same operand problem, but the operand's type came from a by-name guess: a method was called on an unknown receiver and the checker picked the builtin overloads' return, then that value (or a local assigned from it) reached this operator.</p>
+<p><strong>Why the checker says it.</strong> A guessed type is evidence, not proof, so the check is downgraded. <code>$</code> is the exception because the configuration level overrides the severity the checker chose.</p>
+<p><strong>What to do.</strong> Give the receiver a real type (annotate the parameter it came from). If the guess was right, apply the fix from the previous entry.</p>
+
+<h4><code>operator "$" may fail at runtime: can't convert object to String (operand type false|object)</code></h4>
+<p><span class="err">Error</span> at 0.90 / 0.70 / 0.40 by the operand's shape. Not flagged: it survives <code>strictStringConcat: off</code>.</p>
+<p><strong>What it means.</strong> One arm of the operand is an object, record, sequence, date, function, block, class or class instance, and <code>$</code> on such a value throws at run time. The message names only the first such arm; the <code>(operand type ...)</code> suffix shows the whole type when it differs.</p>
+<p><strong>Why the checker says it.</strong> This is a predicted runtime exception, not a style rule, which is why it is unflagged and full severity even when string concatenation checking is turned off.</p>
+<p><strong>What to do.</strong> <code>Display(x)</code>, <code>String(x)</code> or a <code>Format</code> call. When the type is <code>false|object</code> from a query, guard the <code>false</code> first and display the object.</p>
+
+<h4><code>operator "+" operand has type ?|number cannot prove it is number</code></h4>
+<p><span class="warn">Warning</span> at 0.25. Never flagged, so it survives <code>strictStringConcat: off</code> for <code>$</code> too. Hidden by the IDE policy.</p>
+<p><strong>What it means.</strong> Every arm the checker knows about fits, but the type is dirty (or completely unknown), so there may be an arm it does not know about.</p>
+<p><strong>Why the checker says it.</strong> Dirt is an honest "could not determine"; the checker neither accuses nor absolves.</p>
+<p><strong>What to do.</strong> Usually nothing. If you want the warning gone, remove the dirt at its source: annotate the parameter, or narrow with a predicate (<code>Number?(x)</code>), which produces a clean type, rather than with <code>x isnt false</code> on a plain <code>false</code>, which produces an unknown.</p>
+
+<h4><code>comparison "&lt;" between number and string falls back to Suneido's cross-type ordering (bool &lt; number &lt; string &lt; date &lt; object); relying on this tiebreaker is error-prone and not recommended when operand types are statically known - add runtime type checks on the operands or use Suneido.StrictCompare</code></h4>
+<p><span class="warn">Warning</span> by default (<code>strictCrossTypeCompares: warn</code>; <code>error</code> promotes it), flagged, confidence 0.20. Hidden by the IDE policy.</p>
+<p><strong>What it means.</strong> A <code>&lt; &lt;= &gt; &gt;=</code> comparison whose two operands are single, known types of different kinds: the result depends on Suneido's ordering between kinds rather than on the values.</p>
+<p><strong>Why the checker says it.</strong> Both operand types are known and differ in rank. It is not reported when either side is a union, an instance, unknown, void, or a function, block or class (those have no rank). <code>n &lt; true</code> does warn.</p>
+<p><strong>What to do.</strong> Convert one operand so both have the same type, or leave it if the ordering is intended.</p>
+
+<h3 id="s5-boolean">Boolean contexts</h3>
+
+<h4><code>if condition expects boolean, got number|string</code></h4>
+<p><span class="err">Error</span> at 0.90.</p>
+<p><strong>What it means.</strong> A condition must be <code>true</code> or <code>false</code>, and the checker found an arm that is neither. The context name is one of <code>if condition</code>, <code>while condition</code>, <code>do-while condition</code>, <code>for condition</code>, <code>?: condition</code>, <code>operator "And" operand</code>, <code>operator "Or" operand</code>, <code>operator "Not" operand</code>; the last three use the parser's token names, not the Suneido spellings. One diagnostic per context, naming the whole type.</p>
+<p><strong>Why the checker says it.</strong> Truthiness is not a Suneido concept, so <code>if x</code> on a <code>false|object</code> is an error. This check deliberately ignores dirt: <code>if x</code> with <code>x : ?|number</code> is a full 0.90 error, while a pure unknown condition is assumed boolean and <code>?|false</code> passes because <code>false</code> is boolean. Each operand of <code>and</code> / <code>or</code> is checked separately, so <code>if a and b</code> with a string and a number gives two operand errors and no <code>if condition</code> error.</p>
+<p><strong>What to do.</strong> For a sentinel, <code>if x isnt false</code>, which also narrows <code>x</code>. For a value that should be boolean, <code>if x is true</code> silences the check but narrows nothing useful. Do not use <code>if x isnt ""</code> expecting a narrowing; it narrows nothing.</p>
+
+<h4><code>operator "Not" operand expects boolean, got false|object (type guessed from builtin overloads; receiver unknown)</code></h4>
+<p><span class="warn">Warning</span> at 0.35.</p>
+<p><strong>What it means.</strong> The same, but the condition's type is a guess (for example <code>not x.Match("a")</code> with <code>x</code> unknown: the only <code>Match</code> overload returns <code>false|object</code>). A guess-based receiver warning usually accompanies it.</p>
+<p><strong>What to do.</strong> Type the receiver; then decide as above.</p>
+
+<h3 id="s5-receivers">Method calls on a receiver</h3>
+
+<h4><code>method "Sort!" on `s` not applicable to receiver of type string</code></h4>
+<p><span class="err">Error</span> at 0.90; <span class="warn">Warning</span> at 0.35 with the suffix <code>(receiver type guessed from builtin overloads)</code> when the receiver's type was guessed.</p>
+<p><strong>What it means.</strong> The signature table has overloads named <code>Sort!</code>, and none of them accepts a <code>string</code>. The backticked part echoes the receiver expression.</p>
+<p><strong>Why the checker says it.</strong> Dispatch matched the receiver type against every overload of that name and found nothing. It is never reported for <code>this</code>, <code>super</code> or class instances, and never when no overload of that name exists at all (an unknown name is assumed to be a user method). A receiver of type <code>void</code> also lands here (see <a href="#s7-bugs">BUG 3</a>).</p>
+<p><strong>What to do.</strong> Look at where the receiver's type came from. If it is a genuine misuse, fix the code. If the receiver is <code>void</code> because it came from a reference whose every exit is <code>return throw</code>, see BUG 3.</p>
+
+<h4><code>method "Size" on `x` not applicable on at least one path of union receiver false|object; no overload for false</code></h4>
+<p><span class="err">Error</span> at 0.90; <span class="warn">Warning</span> at 0.35 with the guessed suffix.</p>
+<p><strong>What it means.</strong> The receiver may be one of several types and at least one of them (listed after <code>no overload for</code>) has no such method. This is the classic <code>false</code> sentinel error.</p>
+<p><strong>Why the checker says it.</strong> A union receiver is dispatched arm by arm; a clean union with a bad arm is an error. Note the asymmetry: if any arm is an instance of a class the checker cannot resolve, the whole call is silently unknown instead.</p>
+<p><strong>What to do.</strong> Guard the sentinel before the call (<code>if x is false return</code>) and, if the receiver is a member, capture it into a local first because an intervening call to an inherited method would discard the guard. If the guard already exists lower down, move it up. If the value is a member set in <code>New</code>, make the assignment unconditional so the constructor demotion removes the <code>false</code> arm.</p>
+
+<h4><code>method "Size" on `x` not applicable on at least one path of union receiver ?|number|string; no overload for number (receiver union contains ?; unknown arms not checked)</code></h4>
+<p><span class="warn">Warning</span> at 0.25.</p>
+<p><strong>What it means.</strong> The receiver is dirty; among the known arms at least one has the method and at least one does not.</p>
+<p><strong>Why the checker says it.</strong> Because the receiver is uncertain the checker will not commit to an error. Two neighbouring cases behave differently and can look inconsistent: a dirty receiver whose known arms are <em>all</em> bad (<code>?|number</code>) is silent, and a dirty receiver whose known arms are all good (<code>?|string</code>) resolves to a clean return with no diagnostic at all, so a downstream <code>+ 1</code> on that result is a full error rather than a "cannot prove" warning.</p>
+<p><strong>What to do.</strong> Type the receiver at its source, or guard with a predicate.</p>
+
+<h4><code>no built-in method "TotallyMadeUp" on `x` and receiver type unknown</code></h4>
+<p><span class="warn">Warning</span> at 0.35.</p>
+<p><strong>What it means.</strong> The receiver has no type and the signature table has no method of that name. It is either a method of a user class the checker cannot see, or a typo.</p>
+<p><strong>Why the checker says it.</strong> With no receiver type the checker can only scan by name, and the scan found nothing. A free builtin of that name does not count as a method: <code>x.Object()</code> warns here.</p>
+<p><strong>What to do.</strong> Annotate the receiver with its class (<code>x :Foo</code>) so the call resolves through the reference for <code>Foo</code>; or fix the name.</p>
+
+<h4><code>receiver type unknown; assuming built-in "Sort!" on object</code></h4>
+<p><span class="warn">Warning</span> at 0.35.</p>
+<p><strong>What it means.</strong> The receiver has no type; exactly one builtin overload is named <code>Sort!</code>, so the checker assumes the receiver is that overload's type and uses its signature for the return type and for argument and count checks.</p>
+<p><strong>Why the checker says it.</strong> It is a guess: a user class could define its own <code>Sort!</code>. The result is marked guessed, so every later diagnostic whose evidence is this value is a warning rather than an error. The same scan is applied silently to <code>.M()</code> when this class has no method <code>M</code>.</p>
+<p><strong>What to do.</strong> Add a true annotation at the source of the receiver. A capitalised annotation names an exact class.</p>
+
+<h4><code>receiver type unknown; "Size" has multiple overloads agreeing on return number</code></h4>
+<p><span class="warn">Warning</span> at 0.35.</p>
+<p><strong>What it means.</strong> Several overloads share the name and all return the same type, so the return is usable, but no signature is bound: argument and count checks are skipped for this call.</p>
+<p><strong>What to do.</strong> As above.</p>
+
+<h4><code>receiver type unknown; "Map" has ambiguous overloads with differing returns (folded to ?|object|string)</code></h4>
+<p><span class="warn">Warning</span> at 0.35.</p>
+<p><strong>What it means.</strong> The overloads disagree; the call's type is the dirty union of all their returns.</p>
+<p><strong>Why the checker says it.</strong> With no receiver type there is no way to choose. Beware of assigning such a value to a member: the concrete arms of this guess are unioned into the member and are never removed, even when the receiver is resolved on a later pass (see <a href="#s6-false">CB-30</a>).</p>
+<p><strong>What to do.</strong> Annotate the receiver. If the value must go into a member, wrap it in the intended constructor (<code>.path = String(x.Replace(...))</code>).</p>
+
+<h3 id="s5-arguments">Argument types</h3>
+
+<h4><code>argument "x": type string not assignable to declared number</code></h4>
+<p><span class="err">Error</span> at 0.90; <span class="warn">Warning</span> at 0.35 with the suffix <code>(type guessed from builtin overloads)</code> when the signature or the argument was guessed.</p>
+<p><strong>What it means.</strong> The callee's parameter <code>x</code> has a declared type (an annotation on your own method, or a builtin signature) and the argument has an arm that does not fit it.</p>
+<p><strong>Why the checker says it.</strong> The argument's arms are checked one by one against the declared type. Not checked: an argument whose type is completely unknown (silent, not even a warning); arguments after an <code>@args</code> argument; callees declared with a lone <code>@args</code>; a positional argument whose slot is also given by name (the named one wins at run time and is the one checked). A named argument's diagnostic sits on the argument; a positional argument's diagnostic sits at the start of the enclosing statement (or the enclosing condition or ternary arm).</p>
+<p><strong>What to do.</strong> Narrow at the call site (guard the sentinel, convert the value). Widen the callee's annotation only if its body actually handles the extra type.</p>
+
+<h4><code>argument `0` to Bar has type number, but "x" is passed on to Scanner which requires string</code></h4>
+<p><span class="err">Error</span> at 0.75; <span class="warn">Warning</span> at 0.35 with the guessed suffix.</p>
+<p><strong>What it means.</strong> <code>Bar</code> has no annotation on <code>x</code>, but it passes <code>x</code> straight to <code>Scanner</code>, whose parameter is declared <code>string</code>; the checker inferred that <code>x</code> must be a string and this call violates it. The backticked part echoes the argument text (truncated to 40 characters). The callee named after <code>passed on to</code> is the root of the chain, not the next hop: with <code>Outer(b) { .Inner(b) }</code> and <code>Inner(a) { Scanner(a) }</code>, the error at <code>.Outer(0)</code> says <code>Scanner</code> and never mentions <code>Inner</code>.</p>
+<p><strong>Why the checker says it.</strong> A requirement is inferred only in a narrow situation: the parameter is bare, never assigned, has no default, is not a <code>.</code>, <code>@</code> or <code>_</code> parameter, is passed directly (not <code>p + 1</code>, not <code>p.Size()</code>, not <code>.F(x: p)</code>), the callee's signature is not a guess, and the callee's parameter is a single known primitive (unions and class instances never produce one; <code>false</code>, <code>true</code> and <code>date</code> do). Any <code>x is false</code> or <code>x isnt false</code> anywhere in the body cancels the requirement for <code>x</code>. Two different demands on one parameter cancel each other silently and permanently. The 0.75 reflects that the requirement is inferred.</p>
+<p><strong>What to do.</strong> Fix the caller, or annotate the parameter in <code>Bar</code> explicitly; that turns this into the declared-type message and lets you widen deliberately.</p>
+
+<h4><code>argument "x": type ?|false contains unknown, cannot prove assignable to declared number</code></h4>
+<p><span class="warn">Warning</span> at 0.35.</p>
+<p><strong>What it means.</strong> The known arms fit, but the argument is dirty. Silent when the parameter's type was inferred rather than declared (a guess on a guess).</p>
+<p><strong>What to do.</strong> Usually nothing; otherwise remove the dirt at its source.</p>
+
+<h4><code>named argument "bogus" matches no parameter of F and is discarded at runtime</code></h4>
+<p><span class="warn">Warning</span> at 0.35.</p>
+<p><strong>What it means.</strong> A named argument that the callee does not declare. Suneido drops it silently at run time, so this is often a misspelt name. Not reported for the name <code>block</code> (a trailing <code>{ }</code> is passed as <code>block:</code>), for guessed signatures, or for non-string names. The argument-count check ignores such arguments entirely.</p>
+<p><strong>What to do.</strong> Fix the name.</p>
+
+<h3 id="s5-arity">Argument counts</h3>
+
+<h4><code>too many arguments to foo: 2 given, takes at most 1</code></h4>
+<p><span class="err">Error</span> at 0.90; <span class="warn">Warning</span> at 0.35 when the call or its receiver was guessed.</p>
+<p><strong>What it means.</strong> More positional arguments than the callee declares. Only the count is reported; missing-argument and double-binding checks are skipped for that call.</p>
+<p><strong>Why the checker says it.</strong> The callee's signature is known. Which callees have a known signature depends on the call shape: <code>.m()</code>, <code>super.m()</code>, <code>super(...)</code> and bare <code>Foo(...)</code> look up the method through the base chain; <code>new Foo(...)</code>, <code>Foo.m(...)</code> and <code>inst.m(...)</code> look only at the class's own methods, so <code>new Derived(1, 2)</code> with <code>New(a)</code> on the base is unchecked while <code>Derived(1, 2)</code> errors; <code>new this(...)</code> in a class that has a base but no own <code>New</code> is unchecked. Any <code>@</code> argument disables the check; so does a callee declared as <code>(@args)</code>. A parameter written <code>_x</code> counts as having a default. A trailing <code>{ }</code> block is the named argument <code>block</code> and never counts as positional.</p>
+<p><strong>What to do.</strong> An ordinary bug: fix the call.</p>
+
+<h4><code>argument "y" to add is passed both positionally and by name; the named value overrides the positional one (this may be confusing)</code></h4>
+<p><span class="warn">Warning</span> at 0.70. This is the only warning that passes the IDE policy.</p>
+<p><strong>What it means.</strong> <code>.add(1, 2, y: 4)</code> on <code>add(x, y)</code>: <code>y</code> receives 2 positionally and 4 by name; at run time the named value wins. <code>.B(1) { }</code> on <code>B(block)</code> triggers it too, because the block is the named argument <code>block</code>.</p>
+<p><strong>What to do.</strong> Remove one of the two.</p>
+
+<h4><code>missing argument to foo: x</code> / <code>missing arguments to F: a, b</code></h4>
+<p><span class="err">Error</span> at 0.90; <span class="warn">Warning</span> at 0.35 when guessed.</p>
+<p><strong>What it means.</strong> Parameters without a default that were supplied neither positionally nor by name, in declaration order. <code>.F() { }</code> on <code>F(x)</code> reports <code>x</code> missing because the block is <code>block:</code>, not a positional argument.</p>
+<p><strong>What to do.</strong> An ordinary bug: fix the call.</p>
+
+<h3 id="s5-members">Members, subscripts, ranges, iteration and calls on values</h3>
+
+<h4><code>member "name" on `x` not readable on receiver of type false</code></h4>
+<p><span class="err">Error</span> at 0.90; <span class="warn">Warning</span> at 0.35 with the suffix <code>(receiver type guessed from builtin overloads)</code>.</p>
+<p><strong>What it means.</strong> The subject is one of <code>member "name"</code>, <code>subscript</code>, <code>range</code>, <code>iteration</code> or <code>call</code>, the verb one of <code>readable</code>, <code>writable</code>, <code>applicable</code>, and the receiver's type does not support that operation. What supports what:</p>
+<div class="tbl"><table>
+<tr><th>Type</th><th>read member / subscript</th><th>write member / subscript</th><th>range <code>[a..b]</code></th><th><code>for x in</code></th><th>call <code>x()</code></th></tr>
+<tr><td><code>object</code></td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td></tr>
+<tr><td><code>string</code></td><td>yes</td><td>no</td><td>yes</td><td>yes</td><td>yes</td></tr>
+<tr><td><code>sequence</code></td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>no</td></tr>
+<tr><td><code>number</code>, <code>date</code></td><td>yes</td><td>no</td><td>no</td><td>no</td><td>no</td></tr>
+<tr><td><code>function</code>, <code>block</code>, <code>class</code></td><td>yes</td><td>no</td><td>no</td><td>no</td><td>yes</td></tr>
+<tr><td>a class instance <code>Foo</code></td><td>yes</td><td>yes</td><td>no</td><td>no</td><td>yes (always, whether or not the class defines <code>Call</code>)</td></tr>
+<tr><td><code>boolean</code>, <code>false</code>, <code>true</code></td><td>no</td><td>no</td><td>no</td><td>no</td><td>no</td></tr>
+<tr><td><code>void</code></td><td>yes</td><td>yes</td><td>yes</td><td>yes</td><td>yes</td></tr>
+</table></div>
+<p><strong>Why the checker says it.</strong> The receiver's type is a single known type from the table. Not checked at all: receivers that are <code>this</code>, <code>super</code> or a global name; dirty or unknown receivers; a member that is the target of a call (<code>x.M()</code> goes to the method check instead); <code>for i in a..b</code>. <code>rec.n += 1</code> is checked as a read, not a write. The index expression of a subscript and the bounds of a range are never checked.</p>
+<p><strong>What to do.</strong> For <code>false</code>: the sentinel ladder (guard, move the guard up, capture into a local, lazy accessor). For an instance that the class does iterate over (it defines <code>Iter</code>): the checker does not know that; capture into a local typed by a builtin, or accept the error.</p>
+
+<h4><code>member "name" on `rec` not readable on at least one path of union receiver false|object; no members on false</code></h4>
+<p><span class="err">Error</span> at 0.90; <span class="warn">Warning</span> at 0.35 when guessed.</p>
+<p><strong>What it means.</strong> The union form of the previous entry. The note after the semicolon is one of <code>no members on X</code>, <code>X has no writable members</code>, <code>X is not rangeable</code>, <code>X is not callable</code>, <code>X is not iterable</code>, listing the bad arms. This is the message for <code>rec.name</code> on a <code>Query1</code> result that was not checked for <code>false</code>.</p>
+<p><strong>What to do.</strong> Guard the <code>false</code> arm before the access, preferably with an exiting branch: <code>if rec is false return</code>.</p>
+
+<h4><code>no member "Foo" on class Bar</code></h4>
+<p><span class="err">Error</span> at 0.90.</p>
+<p><strong>What it means.</strong> A read of <code>Bar.Foo</code> (not a call) where <code>Bar</code> is a reference and neither it nor any base defines a data member <code>Foo</code>, a method <code>Foo</code>, a <code>Getter_Foo</code> or a generic <code>Getter_</code>.</p>
+<p><strong>Why the checker says it.</strong> The whole chain of <code>Bar</code> was available as references and none of it exposes the name. The check is silent when <code>Bar</code> or any of its bases is not a reference, and it never checks the class's own static members (<code>T.x</code> inside <code>T</code>). One known false positive: <code>new X(...)</code> inside a ternary arm, an <code>if</code>/<code>while</code> condition, a <code>for ... in</code> header or a <code>switch</code> case reports <code>no member "*new*" on class X</code> at line 1, column 1 (<a href="#s7-bugs">BUG 1</a>).</p>
+<p><strong>What to do.</strong> An ordinary bug unless it is the <code>*new*</code> case; for that, use <code>if</code>/<code>else</code> or assign the <code>new</code> to a local first.</p>
+
+<h3 id="s5-returns">Return contracts and annotations</h3>
+
+<h4><code>return type string not assignable to declared number</code></h4>
+<p><span class="err">Error</span> at 0.90, positioned at the <code>return</code>.</p>
+<p><strong>What it means.</strong> The method is annotated <code>:number</code> and this <code>return e</code> has an arm that does not fit.</p>
+<p><strong>Why the checker says it.</strong> A declared return is a contract checked at every explicit <code>return e</code> after narrowing. A bare <code>return</code> is silent (<code>void</code> fits everything), <code>return throw</code> is ignored, and an implicit trailing expression is not checked at all (<code>Foo() :string { 42 }</code> is silent). If a base class checked in the same call declares <code>Foo() :number</code>, an unannotated <code>Foo</code> in the derived class is held to that contract too. Confidence is 0.90 regardless of the shape of the returned type: <code>false|number|object</code> against <code>number</code> is 0.90 here where the same union under <code>+</code> would be 0.70.</p>
+<p><strong>What to do.</strong> Narrow before returning, or correct the annotation. Remember the annotation is published to callers verbatim even when the body contradicts it.</p>
+
+<h4><code>return type ?|string contains unknown cannot prove it is assignable to declared string</code></h4>
+<p><span class="warn">Warning</span> at 0.35.</p>
+<p><strong>What it means.</strong> The known arms fit but the returned value is dirty. Common after <code>if x isnt false return x</code> on a plain <code>false</code> parameter, which leaves <code>x</code> unknown.</p>
+<p><strong>What to do.</strong> Narrow with a predicate instead, or give the parameter an annotation with the intended arms.</p>
+
+<h4><code>return annotation "strin": unknown type name "strin"</code></h4>
+<p><span class="warn">Warning</span> at 0.35. Several problems are joined with <code>; </code>; the other possible text is <code>empty type alternative</code>.</p>
+<p><strong>What it means.</strong> An arm of the return annotation is neither a builtin type name nor a capitalised class name. The method is then treated as unannotated (if every arm is bad) or given a dirty type (if only some are). An empty alternative (<code>:string||number</code>) is dropped and the type stays clean.</p>
+<p><strong>What to do.</strong> Fix the spelling. This warning is hidden by the IDE policy, so when an annotation seems to have no effect, check it with <code>confidence: 'all'</code>.</p>
+
+<h4><code>param "x" annotation "string|strin": unknown type name "strin"</code></h4>
+<p><span class="warn">Warning</span> at 0.35.</p>
+<p><strong>What it means.</strong> The same for a parameter annotation. A single bad arm makes the parameter unannotated; a partly bad union makes it dirty (<code>?|string</code>), which turns every later check on it into a "cannot prove" warning and stops <code>Annotate</code> from rewriting it.</p>
+<p><strong>What to do.</strong> Fix the spelling.</p>
+
+<h4><code>param "x" default has type false, annotation says string</code></h4>
+<p><span class="err">Error</span> at 0.90, positioned at the parameter.</p>
+<p><strong>What it means.</strong> The default value does not fit the annotation.</p>
+<p><strong>What to do.</strong> Include the default's type: <code>x :string|false = false</code>.</p>
+
+<h3 id="s5-asserts">Assert ground truths</h3>
+
+<h4><code>conflicting Assert ground truths for member .x: number asserted in New, string asserted in New</code></h4>
+<p><span class="err">Error</span> at 0.90, positioned at the losing assert.</p>
+<p><strong>What it means.</strong> Two <code>Assert</code> statements pin the same private member to types that cannot be merged, or an <code>Assert</code> in another method contradicts the pin made in <code>New</code>. Compatible asserts (equal, narrower, or fitting) merge silently.</p>
+<p><strong>What to do.</strong> Keep one of them.</p>
+
+<h4><code>member .x is a object ground truth (Assert in New), cannot assign false|object</code></h4>
+<p><span class="err">Error</span> at 0.90, positioned at the assignment.</p>
+<p><strong>What it means.</strong> <code>New</code> contains <code>Assert(Object?(.x))</code> (or another single-argument assert about <code>.x</code>), so <code>.x</code> is pinned to <code>object</code> everywhere, and this assignment gives it a value with an arm that does not fit. Dirty or unknown arms of the assigned value are ignored.</p>
+<p><strong>Why the checker says it.</strong> Every assignment to a pinned member in every method is checked, including assignments in <code>New</code> that come <em>before</em> the assert. So <code>.x = .find(); Assert(.x isnt false)</code> with <code>find</code> returning <code>false|object</code> errors on the line above the assert: adding the assert added an error.</p>
+<p><strong>What to do.</strong> Assert a type the assignments actually satisfy, or narrow the assigned value first (<code>if v isnt false .x = v</code> is accepted because the check runs after narrowing). If you reached for <code>Assert</code> to clear a <code>false|object</code> error, prefer the other rungs first: an unconditional assignment in <code>New</code>, a lazy accessor, or a guard at the use.</p>
+
+<h3 id="s5-internal">Internal errors</h3>
+
+<h4><code>typechecker internal error: Foo: &lt;panic text&gt;</code></h4>
+<p><span class="err">Error</span> at 1.00, with an empty method and position 0 (line 1, column 1).</p>
+<p><strong>What it means.</strong> The checker itself crashed while checking this argument. The argument's result is empty (for <code>Annotate</code>, the source is returned unchanged); later arguments are still checked, in an environment that the crashed run may have left half-updated.</p>
+<p><strong>What to do.</strong> Report it with the source that triggered it. Nothing in your code is being diagnosed.</p>
+
+<h2 id="s6">Behaviours that surprise people</h2>
+
+<p>These are the checker's behaviours that most often make a developer say "why did it say that?". Each item keeps its number from the study's catalogue (<code>CB-n</code> in <code>MASTER.md</code>) so the two can be cross-referenced. Items that are only visible from inside the Go code are omitted.</p>
+
+<h3 id="s6-printing">Printing, ordering and confidence</h3>
+
+<dl>
+<dt>CB-1: <code>?</code> prints first, not last</dt>
+<dd>A dirty type renders as <code>?|false</code>, <code>?|number|string</code>, <code>?|Ca|Cb</code> in every message and in <code>Infer</code> output. Arms are sorted by character code and <code>?</code> sorts before every letter. Older documentation that shows <code>number|string|?</code> is wrong.</dd>
+
+<dt>CB-2: any flagged diagnostic scores 0.20, even after promotion to an error</dt>
+<dd><code>n $ "x"</code> with a number <code>n</code> reports <code>[0.20] operator "$" expects string, got number</code> as an error ranked below every plain 0.35 warning; <code>strictCrossTypeCompares: error</code> yields <code>[0.20]</code> errors. Confidence looks at the flag before the severity. Under the IDE policy <code>&gt;=0.70</code> the <code>warn</code> and <code>error</code> settings for both flags are indistinguishable (both invisible); only <code>off</code> is observable. Lower the threshold (<code>confidence: 'all'</code>) to see them.</dd>
+
+<dt>CB-3: confidence depends on which check caught the problem, not on the evidence</dt>
+<dd><pre><code>Foo(c) { x = c is 1 ? "s" : 5    return x + 1 }      // error [0.70]
+Baz(c) { x = c is 1 ? "s" : #()  return x.Sort!() }  // error [0.90]</code></pre>
+Only the operator checks look at the operand's shape when scoring; return, callsite, arity, member, static and boolean errors are 0.90 by omission. Treat 0.90 on those as "unscored", not "certain".</dd>
+
+<dt>CB-4: a guess becomes an error by configuration</dt>
+<dd><code>Bar(p) { v = p.Size()  return v $ "x" }</code> produces <code>[0.20] operator "$" expects string, got number (type guessed from builtin overloads; receiver unknown)</code> as an <em>error</em>: the checker emitted a warning, and the default <code>strictStringConcat: error</code> rewrote its severity. <code>strictStringConcat: off</code> removes it; the unflagged "cannot prove" warning for dirty operands survives either way.</dd>
+
+<dt>CB-5: guessedness is invisible to the confidence score</dt>
+<dd>A "type guessed" warning scores exactly 0.35 like any other warning; only the message suffix tells you it was a guess.</dd>
+
+<dt>CB-6: the <code>[0.90] </code> prefix is part of the message</dt>
+<dd>Any code that matches message text must strip <code>[d.dd] </code>; the internal error reads <code>[1.00] typechecker internal error: ...</code>.</dd>
+
+<dt>CB-7: columns count bytes, and unknown positions land at 1:1</dt>
+<dd>A tab is one column and a multi-byte character several. <code>no member "*new*"</code> and other position-less diagnostics appear at line 1, column 1; the internal error has line and column 0.</dd>
+
+<dt>CB-8: diagnostics within a class are ordered by method name, not by line</dt>
+<dd>For methods in source order <code>Z, A, M</code> the list comes out <code>A, M, Z</code>. The sort is by confidence, then argument order, then method name, then statement order.</dd>
+
+<dt>CB-9: duplicate diagnostics are normal</dt>
+<dd><code>.M1((p0.Number?()), (p0.Number?()))</code> reports the same record twice; a guessed call gives both an "assuming built-in" warning and, if the count is wrong, a count warning at the same position. Nothing de-duplicates.</dd>
+
+<dt>CB-10: a dirty type in a boolean context is a full 0.90 error</dt>
+<dd><code>if x</code> with <code>x : ?|number</code> gives <code>[0.90] if condition expects boolean, got ?|number</code>, while the same value under <code>+</code> is a 0.25 warning and as a receiver is silent. The boolean check discards dirt; only a pure unknown is assumed boolean, and <code>?|false</code> passes. Write <code>if x isnt false</code>.</dd>
+
+<dt>CB-11: positional-argument diagnostics point at the statement, not the argument</dt>
+<dd><code>return 1 + .F("s", 1)</code> reports at the start of the <code>return</code>; inside a ternary arm or an <code>if</code> condition the anchor is that arm or condition. Only named arguments carry their own position. Argument-count diagnostics use the same anchor.</dd>
+
+<dt>CB-12: boolean-context labels use the parser's token names</dt>
+<dd><code>operator "Not" operand expects boolean</code>, <code>operator "And" operand ...</code>, <code>operator "Or" operand ...</code>, whereas operand checks use the Suneido spellings (<code>"+"</code>, <code>"$"</code>).</dd>
+
+<dt>CB-15: three checks, three policies for ignorance</dt>
+<dd>An unknown operand under <code>+</code> gets a "cannot prove" warning; a pure-unknown <em>argument</em> is silent while a dirty-union argument warns; a dirty receiver at a member or subscript access is silent.</dd>
+
+<dt>CB-16: the <code>$</code>-crash message names one arm only</dt>
+<dd><code>"x" $ f</code> with <code>f : false|object</code> reports <code>can't convert object to String (operand type false|object)</code> and never mentions <code>false</code>: the message stops at the first arm that can crash.</dd>
+
+<dt>CB-18: the <code>confidence</code> filter grammar is wider than documented, and <code>==</code> is an exact comparison</dt>
+<dd><code>=</code>, <code>&lt;=</code> and <code>&gt;</code> are accepted; a bare number means <code>&gt;=</code>; <code>==0.9</code> works only because the ladder's values are exact.</dd>
+</dl>
+
+<h3 id="s6-false">Seeding, <code>false</code> and returns</h3>
+
+<dl>
+<dt>CB-19: <code>false</code> means four different things depending on where it is written</dt>
+<dd><code>flag: false</code> is <code>false</code>; <code>Flag: false</code> is <code>?|false</code>; <code>Foo(.flag = false)</code> is <code>?|false</code> even for a lowercase member (and the parameter local too); <code>Foo(.flag :false)</code> is <code>false</code>. Public literals and every dot-parameter default are widened; annotations never are. Pick the spelling whose type you want; the exact <code>false</code> is the one the constructor can demote.</dd>
+
+<dt>CB-20: <code>true|false</code> is <code>boolean</code>, so a sentinel that is ever assigned <code>true</code> loses its sentinel reading</dt>
+<dd>A private <code>x: false</code> plus <code>.x = true</code> somewhere makes <code>.x</code> a <code>boolean</code>; <code>.x isnt false</code> then narrows to <code>true</code> rather than to a real value. A public <code>x: true</code> is <code>boolean</code> from the start.</dd>
+
+<dt>CB-21: capitalised dot-parameters write the wrong member name</dt>
+<dd><code>Foo(.Name = 0)</code> types a member <code>name</code> while <code>.Name = "s"</code> types a member <code>Name</code>, giving two entries (<code>name = number</code>, <code>Name = string</code>) where the run-time member is <code>Name</code>.</dd>
+
+<dt>CB-22: a dot-parameter without a default never widens its member (GAP 2)</dt>
+<dd><code>SetModel(.model)</code> records nothing about <code>model</code>; the local is seeded from the member's literal type (typically <code>false</code>), so <code>.model.Foo()</code> in other methods keeps erroring. The longhand <code>SetModel(model) { .model = model }</code> widens the member to <code>?|false</code> but, because the assigned value is untyped, still blocks constructor demotion. Accept the dirt or annotate the parameter.</dd>
+
+<dt>CB-23: compound assignment and <code>++</code>/<code>--</code> on members never change the member's type</dt>
+<dd><code>count: 0; Inc() { .count $= "x" }</code> leaves <code>count</code> a <code>number</code>. Locals behave differently: <code>count $= "x"</code> makes the local a <code>string</code>.</dd>
+
+<dt>CB-24: <code>Foo(x :string = false)</code> is an error</dt>
+<dd><code>param "x" default has type false, annotation says string</code> at 0.90. Write <code>x :string|false = false</code>.</dd>
+
+<dt>CB-25: a member assigned only untyped values does not exist</dt>
+<dd><code>Set(v) { .x = v }</code> with no <code>x:</code> literal gives <code>x</code> no type at all; it is absent from the result and every read is unknown. <code>New(.Width)</code> with no default records nothing either. Absence in the result is not evidence that the member does not exist.</dd>
+
+<dt>CB-26: a half-bad annotation silently becomes dirt; a fully bad one becomes "unannotated"</dt>
+<dd><code>x :string|strin</code> gives one 0.35 warning and <code>x : ?|string</code>, so every later check on <code>x</code> degrades to "cannot prove" and <code>Annotate</code> will not rewrite it. <code>x :strin</code> warns and the default value's type silently takes over. <code>Foo() :strin</code> warns and the method behaves as unannotated. Fix the spelling.</dd>
+
+<dt>CB-27: return annotations are inherited by name across a lineage</dt>
+<dd>A base <code>Foo() :number</code> checked in the same call makes a derived, unannotated <code>Foo() { return "x" }</code> publish <code>number</code> <em>and</em> report <code>return type string not assignable to declared number</code>.</dd>
+
+<dt>CB-28: a derived class literal overwrites the base's accumulated member type</dt>
+<dd>Base <code>x: 0</code> plus <code>.x = "s"</code> gives <code>number|string</code>; a derived <code>x: false</code> then resets it to <code>false</code>, losing the base's assignment sites.</dd>
+
+<dt>CB-29: capitalisation is a type-level switch</dt>
+<dd>Public members are widened, never Assert-pinned and never demoted; a public predicate helper <code>Ready?()</code> exports no postcondition, so renaming <code>ready?</code> to <code>Ready?</code> can turn a clean method into an error; a class named <code>Strings</code>, <code>Numbers</code>, <code>Dates</code>, <code>Objects</code> or <code>Records</code> retypes <code>this</code>.</dd>
+
+<dt>CB-30: the member ratchet: a member never shrinks past its first-pass guess</dt>
+<dd><pre><code>New() { x = .Compute()  .path = x.Replace("a", "b") }   // Compute resolves one pass late
+Get() { return .path.BeforeLast("/") }
+// error [0.90] method "BeforeLast" on `this.path` not applicable on at least one
+//   path of union receiver date|object|string</code></pre>
+On the first pass <code>x</code> is unknown, so <code>Replace</code> is guessed from all its overloads as <code>?|date|object|string</code>; the concrete arms are unioned into <code>.path</code> and are never removed once <code>x</code> resolves to <code>string</code>. The error blames the read, and nothing says the arms came from a guess. Wrap the assignment (<code>.path = String(x.Replace(...))</code>) or type <code>x</code> at its source.</dd>
+
+<dt>CB-31: checking never degrades inference, so a rejected compound assignment retypes the target</dt>
+<dd><code>s += "x"</code> on a string gives two errors (one per operand, both quoting <code>"+="</code>), and afterwards <code>s</code> is <code>number</code>: <code>s++</code> two lines later is silent and a later <code>s $ "y"</code> is a new error. <code>x = false; x += 1</code> publishes <code>number</code>.</dd>
+
+<dt>CB-32: a trailing expression is an implicit return, and a trailing assignment counts</dt>
+<dd><code>Trailing() { x = 5 }</code> publishes <code>number</code>; <code>New() { .x = 5 }</code> publishes <code>number</code> (<code>Annotate</code> writes <code>New() :number</code>); <code>Foo() { .Save() }</code> publishes whatever <code>.Save()</code> returns; <code>Tail() { if true { 5 } }</code> is <code>void</code>.</dd>
+
+<dt>CB-33: <code>return throw</code> is not a return; a method with only that publishes <code>void</code> (BUG 4)</dt>
+<dd>A <code>:number</code> method whose only exit is <code>return throw</code> is silently fine, and <code>x = Catch({...})</code> against such a reference gives <code>x</code> the type <code>void</code>, which then triggers CB-60.</dd>
+
+<dt>CB-34: an annotated return is not checked against the implicit trailing expression</dt>
+<dd><code>Foo() :string { 42 }</code> and <code>Bar() :string { x = 42 }</code> publish <code>string</code> with no diagnostic; only an explicit <code>return 42</code> is reported.</dd>
+
+<dt>CB-35: falling off the end is not <code>void</code></dt>
+<dd><code>if c return 1</code> with nothing after publishes <code>number</code>, but <code>if c return; return 1</code> publishes <code>number|void</code>. "May not return" is visible only when a bare <code>return</code> is written.</dd>
+
+<dt>CB-36: a declared return is published even when the body contradicts it</dt>
+<dd>Callers of a wrongly annotated method inherit the lie; only the annotated method itself gets the error.</dd>
+</dl>
+
+<h3 id="s6-members">Members, the constructor and the two views</h3>
+
+<dl>
+<dt>CB-37: <code>Infer</code>'s member type and the type used at read sites disagree by design</dt>
+<dd><code>x: false; New() { .x = 5 }; Get() { return .x }</code> reports <code>members: x: false|number</code> and <code>Get $return: number</code>; <code>Annotate</code> writes <code>x: false /* :: false|number */</code> and <code>Get() :number</code>. The member listing is the seed view (with <code>false</code>); the demotion is applied to reads in every method except <code>New</code>.</dd>
+
+<dt>CB-38: calling through the class and through an instance give different return types</dt>
+<dd><code>Widget.Foo()</code> and bare <code>Widget()</code> resolve to the pre-constructor seed view <code>false|string</code>; <code>(new Widget()).Foo()</code> resolves to <code>string</code>; a <code>:string</code> caller of the static form errors. The reasoning: a static call never ran <code>New</code>.</dd>
+
+<dt>CB-39: the seed view exists only when something was demoted, and it is a pre-narrowing snapshot</dt>
+<dd>Two references differing only in whether <code>New</code> assigns a sentinel produce differently shaped results. <code>Foo() { if .x is false return "d"; return .x }</code> publishes <code>string</code> as its instance return but <code>false|string</code> as its seed return, so adding a guard inside <code>Foo</code> fixes <code>(new W()).Foo()</code> callers but not <code>W.Foo()</code> callers.</dd>
+
+<dt>CB-40: the demoted type is the class-wide type minus <code>false</code>, not what <code>New</code> computed</dt>
+<dd><pre><code>class { x: false
+New() { .init(5) }
+init(v = false) { .x = v }      // v's type is its default: false
+Get() { return .x + 1 } }       // error [0.90] operator "+" expects number, got false</code></pre>
+Execution proved <code>number</code>, but removing <code>false</code> from the class-wide type <code>false</code> leaves nothing, so the demotion is dropped. Assign a typed value (<code>Number(v)</code>) or annotate <code>v</code>.</dd>
+
+<dt>CB-41: a parameter's default is its type during constructor execution</dt>
+<dd><code>New(n = 5) { .x = n }</code> demotes <code>.x</code> to <code>number</code> although <code>new T(false)</code> is legal; <code>New(n = false) { .x = n }</code> never demotes.</dd>
+
+<dt>CB-42: helpers are followed only as bare statements, and named arguments are ignored</dt>
+<dd><code>.setup()</code> as a statement demotes <code>.y</code>, but <code>.x = .setup()</code>, <code>if .setup() ...</code> and <code>.a(.b())</code> do not execute <code>setup</code>; <code>.init(v: 5)</code> behaves like <code>.init()</code>. Meanwhile the "no method assigns it false" gate looks inside every helper, so a helper can block a demotion but only sometimes cause one.</dd>
+
+<dt>CB-43: the "no false assignment anywhere" gate is class-wide, pre-narrowing, and treats unknown as "maybe false"</dt>
+<dd><code>Set(v) { .x = v }</code> (untyped <code>v</code>), <code>Set(v = false) { if v isnt false { .x = v } }</code> or <code>Reset() { .x = false }</code> anywhere blocks demotion of <code>.x</code> for the whole class, even when <code>New</code> calls <code>.Set(5)</code>. Assign call results (<code>Object()</code>) rather than parameters in helpers, and keep <code>false</code> assignments out of the class.</dd>
+
+<dt>CB-44: loops never contribute to demotion; <code>switch</code> needs a <code>default</code>; <code>try</code> needs the <code>catch</code> to assign too</dt>
+<dd><code>for (...) { .x = 5 }</code> and even <code>do { .x = 5 } while (false)</code> never demote; <code>switch (k) { case 1: .x = 5 }</code> never, but with <code>default: .x = 6</code> yes; <code>try { .x = 5 } catch { }</code> no, <code>catch { .x = 6 }</code> yes.</dd>
+
+<dt>CB-45: <code>return throw</code> in <code>New</code> is divergence; plain <code>return</code> is not</dt>
+<dd><code>if f is 1 { return throw "x" }; .x = 5</code> still demotes; <code>if f is 1 { return }; .x = 5</code> does not.</dd>
+
+<dt>CB-46: <code>if .x is &lt;literal&gt;</code> inside <code>New</code> is decided against the literal seed</dt>
+<dd><code>if .x is 5 { return }; .x = 5</code> demotes because the early return is treated as impossible (<code>.x</code> is <code>false</code> at that point). The "init if unset" idiom <code>if .columns is cols return</code> works for the same reason, but a genuine early return compared with a non-boolean value is silently pruned.</dd>
+
+<dt>CB-47: <code>this[expr] = ...</code> anywhere reachable from <code>New</code> cancels every demotion in the class, silently</dt>
+<dd>Assign through a named member instead, or accept the <code>false</code> arms.</dd>
+
+<dt>CB-48: inherited methods are never followed by the constructor execution</dt>
+<dd>A subclass calling <code>.Init()</code> defined in the base gets no demotion from it (and, unlike own helpers, the base's assignments do not block one either).</dd>
+
+<dt>CB-49: the result's <code>members</code> lists only literal class members</dt>
+<dd><code>.items = Object()</code> in <code>New</code> with no <code>items:</code> literal never shows in the result or in <code>Annotate</code>, though it is typed and used for checking.</dd>
+
+<dt>CB-50: a local's reported type is the union of every type it took, and may be stale</dt>
+<dd>With <code>get(x = false) { return x is false ? "default" : x }</code>, <code>Foo() { a = .get(); b = .get(5); return a $ b }</code> reports <code>a = string</code>, <code>b = string</code> while <code>Annotate</code> shows the call nodes as <code>?|string</code>. A variable narrowed in a branch still shows the full union; a name reused for two purposes shows both types.</dd>
+</dl>
+
+<h3 id="s6-calls">Calls and dispatch</h3>
+
+<dl>
+<dt>CB-51: argument binding prunes <code>if p is/isnt false</code> branches and nothing else</dt>
+<dd><code>.get(5)</code> on <code>get(x = false) { if x is false return "d"; return x }</code> is <code>?|string</code>, never <code>number</code>; a ternary body gives <code>?|string</code> for both <code>.get()</code> and <code>.get(5)</code>; a caller doing <code>.get(5) + 1</code> errors while the runtime returns 5.</dd>
+
+<dt>CB-52: a method's own published return can widen when narrowing runs</dt>
+<dd>The ternary above goes from <code>string</code> to <code>?|string</code> once narrowing has typed the <code>false</code>-arm read as unknown.</dd>
+
+<dt>CB-53: the override is by name and ignores reassignment; only the literal <code>false</code> decides</dt>
+<dd><code>get(x = false) { x = false; if x is false return "d"; return 1 }</code> called as <code>.get(5)</code> gives <code>number</code> (the runtime returns <code>"d"</code>). <code>if x is true</code>, <code>is ''</code>, <code>is 0</code>, <code>not x</code>, <code>Boolean?(x)</code> are never decided; <code>isnt false</code> is.</dd>
+
+<dt>CB-54: only the first discriminating parameter is summarised for cross-class calls</dt>
+<dd><code>F(a = false, b = false)</code> guarded on both: <code>F(1)</code> and <code>F(1, 2)</code> both give <code>object|string</code>; <code>F(b: 2)</code> gives <code>number</code>.</dd>
+
+<dt>CB-55: <code>this.M()</code> returns need the base as an argument; signatures do not</dt>
+<dd><code>Parent { Foo() { return .Bar() } }</code> with <code>Parent</code> only in references gives <code>Foo</code> unknown, yet <code>.Bar(1, 2, 3)</code> reports <code>too many arguments to Bar: 3 given, takes at most 0</code>. Put the lineage in the arguments.</dd>
+
+<dt>CB-56: instances have no inheritance and no builtins at dispatch</dt>
+<dd><code>d = new Derived(); d.Val()</code> with <code>Val</code> on <code>Base</code> is silently unknown even with <code>Base</code> and <code>Derived</code> both as references; <code>inst.Size()</code> is unknown; <code>Derived.Val()</code> likewise. Static <em>member</em> reads do walk the bases; method calls do not.</dd>
+
+<dt>CB-57: an instance arm silences a whole union receiver</dt>
+<dd><code>x : false|Foo</code>, <code>x.Size()</code> is silent while <code>false|object</code>.<code>Size()</code> is a 0.90 error; <code>Foo|string</code> receivers produce no call diagnostics for any method, yet <code>x.name</code> (a member access, checked per arm) still errors.</dd>
+
+<dt>CB-58: a <code>false</code> sentinel in a clean union is a hard error on any method call</dt>
+<dd><code>false|string</code>.<code>Size()</code> gives <code>[0.90] ... no overload for false</code>, even when the <code>false</code> arm came from a builtin's declared return and the code guarded it in a way narrowing does not understand. Test with <code>isnt false</code> first, or capture into a local.</dd>
+
+<dt>CB-59: dirty union receivers: "some good arm" warns, "all known arms bad" is silent, and the result drops the dirt</dt>
+<dd><code>?|number|string</code>.<code>Size()</code> warns at 0.25; <code>?|number</code>.<code>Size()</code> says nothing; <code>?|string</code>.<code>Size()</code> is a clean <code>number</code> with no diagnostic and no bound signature, so a downstream <code>+ 1</code> is a 0.90 error rather than a "cannot prove" warning. Adding a good arm makes the checker louder.</dd>
+
+<dt>CB-60: <code>void</code> receivers mismatch (BUG 3), and <code>void</code> is vacuous everywhere else</dt>
+<dd><code>x = Catch({ 1 })</code> with a <code>return throw</code>-only reference gives <code>[0.90] method "Size" on `x` not applicable to receiver of type void</code>, while <code>x.name</code>, <code>x + 1</code>, <code>if x</code> and <code>s.Has?(x)</code> on the same <code>x</code> are silent. A <code>void</code> value only arises from a reference whose returns are all <code>return throw</code>.</dd>
+
+<dt>CB-61: any capitalised identifier is a global class at a call site</dt>
+<dd><code>Foo.Bar()</code> where <code>Foo</code> is a local variable is dispatched as a static call on a class <code>Foo</code> and never sees the local's type. Consistent with Suneido naming, but a local named with a capital will not be typed.</dd>
+
+<dt>CB-62: <code>new X()</code> never consults the references</dt>
+<dd>A misspelt class name yields a confident instance of <code>X</code>; only the argument-count check looks <code>X</code> up (and only its own <code>New</code>).</dd>
+
+<dt>CB-63: bare <code>Foo()</code> prefers a reference class over a builtin of the same name, never diagnoses an unknown name, and marks inherited <code>CallClass</code> results as guessed without saying so</dt>
+<dd><code>Unknown(...)</code> is silently unknown; <code>Sub()</code> inheriting <code>CallClass</code> from a base is typed but every downstream check is a warning, with no "this was a guess" message; whether <code>Contributions("X")</code> is an instance depends on which references you supplied.</dd>
+
+<dt>CB-64: a published <code>void</code> return is invisible to <code>this.M()</code> and <code>super.M()</code> dispatch</dt>
+<dd><code>.Nothing()</code> where <code>Nothing() { }</code> falls through to the builtin by-name scan and may pick up an unrelated builtin's return (GAP 8's <code>Match</code> collision).</dd>
+
+<dt>CB-65: the <code>this.M()</code> fallback scan is guessed but silent</dt>
+<dd><code>.Find(5)</code> in a class with no <code>Find</code> is <code>?|false|number</code> with no "assuming built-in" warning, yet the taint propagates and downstream checks are warnings.</dd>
+
+<dt>CB-66: union receivers lose their signature when the arms use different overloads</dt>
+<dd><code>x : string|object</code>, <code>x.Size()</code> resolves to <code>number</code> but no signature is bound, so no argument or count check runs for that call; the same for the "agreeing" and "ambiguous" guesses.</dd>
+
+<dt>CB-67: guess taint stops at any operator and is never cleared</dt>
+<dd><code>v = p.Size() + 1; v $ "x"</code> errors at full severity while <code>v = p.Size(); v $ "x"</code> is the guess warning; <code>v = p.Size(); v = 5; return v $ "x"</code> still reports the guessed variant; <code>v = (p.Size())</code> and <code>v = p.Size()[1..2]</code> are tainted.</dd>
+
+<dt>CB-68: the <code>Date</code> special case applies only to the bare identifier</dt>
+<dd><code>Date.Begin()</code> is a static signature, <code>x.Date()</code> a method scan, <code>Date(x)</code> with an unprovable argument is <code>date|false</code>; <code>Date(year: 2024, month: 13, day: 1)</code> is a valid <code>date</code>, <code>Date(year: 3500, ...)</code> is <code>false</code>.</dd>
+
+<dt>CB-69: a call on an expression callee is invisible</dt>
+<dd><code>(cond ? f : g)()</code>, <code>fns[0]()</code>, <code>x.y[0]()</code> get no type and no diagnostics.</dd>
+
+<dt>CB-70: signature loading is all-or-nothing and silently keeps the old table</dt>
+<dd>One bad entry in <code>RegisterSignatures</code> throws and the previously published table stays in force; a caller ignoring the exception keeps checking against stale signatures. The table is process-global; the last registration wins.</dd>
+
+<dt>CB-71: a method whose annotation fails to parse silently loses its signature</dt>
+<dd>Calls to it get no argument or count checks (the parse error is reported separately as a 0.35 warning).</dd>
+
+<dt>CB-72: block form counts any positional value at the <code>block</code> slot as "the block"</dt>
+<dd><code>Dir("x", false, false, 5)</code> is typed <code>void</code>.</dd>
+
+<dt>CB-74: a free builtin never masquerades as a method, and vice versa</dt>
+<dd><code>x.Object()</code> with <code>x</code> unknown gives <code>no built-in method "Object" on `x` and receiver type unknown</code>; <code>x.Query1('q')</code> warns while <code>Query1('q')</code> resolves.</dd>
+
+<dt>CB-75: a class named <code>Strings</code>, <code>Numbers</code>, <code>Dates</code>, <code>Objects</code> or <code>Records</code> retypes <code>this</code>; <code>Strings2</code> or <code>Strings__webgui</code> does not</dt>
+<dd>The name must match exactly.</dd>
+</dl>
+
+<h3 id="s6-narrowing">Narrowing</h3>
+
+<dl>
+<dt>CB-76: assignment from a narrowed name copies the narrowing only when the narrowed type is a subset of the un-narrowed one (GAP 1)</dt>
+<dd><pre><code>Foo(item = false) { if not Object?(item) return; menuItem = item; return menuItem }   // menuItem: false</code></pre>
+The same code with <code>item :false|object</code>, a dot-parameter <code>.item = false</code>, or <code>item = .Maybe()</code> answers <code>object</code>. A plain <code>= false</code> parameter is exactly <code>false</code>; narrowing it away from <code>false</code> leaves unknown, and unknown is not "narrower" than <code>false</code>, so the assignment keeps the seed. Assign from an expression that <em>is</em> the wanted type, or annotate the parameter.</dd>
+
+<dt>CB-77: <code>if x isnt false</code> on a plain <code>false</code> value yields unknown, not "non-false"</dt>
+<dd><code>Foo(x = false) { if x isnt false return x }</code> publishes a dirty type; downstream everything is dirty: no errors, only "cannot prove" warnings. The same for a public <code>.X isnt false</code> on <code>?|false</code>.</dd>
+
+<dt>CB-78: contradictory guards retype instead of flagging</dt>
+<dd><code>x :number; if String?(x) return x</code> publishes <code>number|string</code>; <code>x :false|string; if x is true return x</code> publishes <code>true</code>; <code>String?(x) and Number?(x)</code> narrows to <code>number</code> (the last conjunct wins); <code>Type(x) is "Broski"</code> is a silent no-op. There is no notion of an unreachable branch.</dd>
+
+<dt>CB-79: kills propagate back only out of <code>if</code></dt>
+<dd><code>if not Number?(.x) return; for i in #(1) .x = false; return .x</code> publishes <code>number|string</code>: a refinement destroyed inside a loop body, a switch case, a ternary arm or a block passed to a call survives in the enclosing scope.</dd>
+
+<dt>CB-80: facts never escape a loop body, and a <code>break</code>/<code>continue</code> guard inside a loop does not narrow after it</dt>
+<dd><code>for (...) { if false isnt dir = .Maybe() break }; dir.Trim()</code> leaves <code>dir : false|string</code>.</dd>
+
+<dt>CB-81: a local written anywhere in a loop body loses its guard for the whole body, even when the write preserves the type</dt>
+<dd><code>if not Number?(x) return; for ... x += 1</code> warns <code>operator "+=" operand has type ?|number</code> inside the loop, and <code>return x</code> after the loop is the stale pre-loop <code>number</code>; <code>x = x</code> is the only exempt write.</dd>
+
+<dt>CB-82: <code>try</code>/<code>catch</code> and blocks are transparent</dt>
+<dd><code>try { if not Number?(x) throw "no" } catch (e) {} return x</code> publishes <code>number</code>: the throw-guard narrows past the <code>catch</code> that swallows it. A guarded outer <code>x</code> also retypes reads of a same-named block parameter.</dd>
+
+<dt>CB-83: <code>else if</code> with an assignment/exit combination never narrows afterwards (GAP 4)</dt>
+<dd><code>if P x = e else if Q return</code> leaves nothing narrowed after; bracing the inner test does not help. Hoist the tested <code>if</code> to the same level as the use.</dd>
+
+<dt>CB-84: members are never narrowed by <code>switch</code>, and a case with two expressions narrows nothing</dt>
+<dd><code>switch { case Object?(.x): return .x }</code> still reads <code>false|object</code>; <code>case Number?(x), String?(x):</code> narrows nothing although <code>if ... or ...</code> does; nothing merges back after a switch.</dd>
+
+<dt>CB-85: inline assignment is a narrowing target for locals but not for members</dt>
+<dd><code>if false is (x = .Maybe())</code> refines <code>x</code>; <code>if false is .x = .Maybe()</code> refines nothing.</dd>
+
+<dt>CB-86: <code>isnt</code> narrows only for boolean literals; <code>is</code> narrows for any literal; <code>Type(x) isnt "S"</code> subtracts (GAP 5)</dt>
+<dd><code>x is ""</code> narrows toward <code>string</code> (usually a no-op, sometimes a harmful retype); <code>x isnt ""</code> and <code>x isnt 5</code> do nothing; the <code>''</code> sentinel cannot be discharged because <code>string</code> has no "non-empty" subtype. Use a <code>false</code> sentinel, not <code>''</code> or <code>-1</code> (GAP 9).</dd>
+
+<dt>CB-87: truthiness never narrows</dt>
+<dd><code>if x</code> is not a narrowing source (and is an error unless <code>x</code> is boolean).</dd>
+
+<dt>CB-88: "any call on <code>this</code> invalidates a member refinement" is overstated (GAP 7); inherited methods are the real culprit</dt>
+<dd><code>.other()</code> (which writes only <code>count</code>), <code>.Chain()</code>, <code>Global(1)</code>, <code>ob.Foo()</code> keep a narrowed <code>.items</code>; <code>.PassThis(1)</code> where <code>PassThis(x) { x.Do(this) }</code>, <code>super.Foo()</code> via a helper, <code>(.fns[k])()</code>, and <code>.NotDefined()</code> (any inherited method) kill it. Even a killed member survives as "class-wide minus <code>false</code>" unless some method assigns it a false-containing or untyped value (<code>Clear() { .m = false }</code>, <code>.m = SomeUnresolvedCall()</code>). The workaround is to capture into a local: locals are never invalidated by calls.</dd>
+
+<dt>CB-89: the salvaged type after a call is wider than the guard, and turns <code>boolean</code> into <code>true</code></dt>
+<dd><code>if Number?(.x) { .f() ... }</code> where <code>.f</code> may touch <code>.x</code>: <code>.x</code> becomes, say, <code>number|object</code> (the class-wide type minus <code>false</code>).</dd>
+
+<dt>CB-90: boolean postconditions need a private helper with a literal <code>return true</code>/<code>return false</code>, called directly as the whole condition (GAP 6)</dt>
+<dd><code>noKeys?() { return .lockedKeys is false }</code> exports nothing; the if/return-literal form does; <code>Uppercase?</code> helpers never export; <code>if .hasKeys?() is true</code> discards it; helpers calling helpers do not chain; a helper that calls a member-writing method before <code>return true</code> loses the fact if any method assigns that member <code>false</code>. Use the if/return-literal form, or hand the value back from the helper.</dd>
+
+<dt>CB-91: the no-else join treats a sentinel's negative region as empty</dt>
+<dd><code>p = false; if p is false p = 5; return p</code> publishes <code>number</code> (a caller passing <code>p = "x"</code> is invisible); with <code>p :false|string</code> it publishes <code>number|string</code>.</dd>
+
+<dt>CB-92: <code>x is false ? A : x</code> on a plain <code>false</code> value is dirty</dt>
+<dd><code>Set(children = false) { .children = children is false ? Object() : children }</code> passes the call-site check only because the result is <code>?|object</code>, not because it is clean.</dd>
+
+<dt>CB-94: the local-typing pass has its own mini early-exit narrowing</dt>
+<dd><code>Foo(x = false) { if x is false return; return x }</code> publishes <code>?|void</code>; <code>if x is false return 0; y = x</code> can differ from <code>if not Number?(x) return 0; y = x</code>; the effect reaches every later read including inside loops, where the main narrowing drops its own facts. Only <code>if &lt;local&gt; is &lt;true|false&gt;</code> with a diverging then-branch and no else.</dd>
+
+<dt>CB-95: <code>Assert</code> narrows only as a statement in a statement list</dt>
+<dd><code>if c Assert(Number?(x))</code> (no braces) refines nothing; <code>{ Assert(Number?(x)) }</code> refines the rest of that block; <code>Assert(a and b)</code> refines both while <code>Assert(a or b)</code> merges; <code>Assert(x isnt: 5)</code> and <code>Assert(x isSize: 3)</code> do nothing. This works in any method, not only <code>New</code> (GAP 3 as originally written is wrong).</dd>
+
+<dt>CB-96: <code>Function?</code> admits <code>block</code>; <code>Type(x) is "Function"</code> does not</dt>
+<dd>Use the predicate when blocks are acceptable.</dd>
+
+<dt>CB-97: narrowing toward drops dirt; narrowing away keeps it</dt>
+<dd><code>x : ?|string</code> under <code>Object?(x)</code> becomes a clean <code>object</code>; under <code>not Object?(x)</code> it stays <code>?|string</code>.</dd>
+
+<dt>CB-99: <code>new X(...)</code> in a ternary arm (or any condition position) reports <code>no member "*new*" on class X</code> at line 1 (BUG 1)</dt>
+<dd><code>c = p is 1 ? new Ref(1) : new Ref(2)</code> gives two errors at 1:1; <code>for m in Ref.Members()</code>, <code>if Ref.Members()</code>, <code>while ...</code> and <code>switch ... case Global.M():</code> also hit it when <code>M</code> is not a data member, method or <code>Getter_</code> of the reference. Use <code>if</code>/<code>else</code>, or assign to a local first.</dd>
+
+<dt>CB-100: block parameters are not scoped; nested <code>function</code> literals are never walked (BUG 2)</dt>
+<dd><code>b = 5; f = {|b| b $ "x"}</code> gives <code>operator "$" expects string, got number</code>; <code>f = function() { return 1 + "s" }</code> gives no diagnostic at all. Rename the block parameter.</dd>
+
+<dt>CB-101: reads inside a loop see the widest loop-carried type; the cap of four iterations is silent</dt>
+<dd><code>s = ""; while c { s = s.Size() }</code> reports <code>not applicable on at least one path</code> for the <code>number|string</code> receiver inside the loop.</dd>
+
+<dt>CB-102: join semantics are hybrid</dt>
+<dd>Sequential last-write-wins; branches and loops union; <code>if</code> without <code>else</code> and <code>switch</code> without <code>default</code> keep the entry type; <code>catch</code> sees entry plus end-of-try; there is no "possibly unassigned" arm (a variable first assigned inside one branch simply has that branch's type afterwards); an unknown in one arm makes a dirty union, not unknown.</dd>
+
+<dt>CB-103: <code>for</code> variables are unknown except over an exact string</dt>
+<dd><code>for c in "abc"</code> gives <code>string</code>; <code>for k, v in "abc"</code>, <code>for x in ob</code>, <code>for i in 0 .. n</code> give unknown.</dd>
+
+<dt>CB-104: <code>this.member</code> reads are typed only from the member table</dt>
+<dd>A method name read without a call (<code>.Helper</code>) is unknown; <code>local.member</code> is never typed.</dd>
+
+<dt>CB-105: a contradictory guard splits reads from assignments</dt>
+<dd><code>f0: false; if false is .f0 return false; return .f0</code> publishes dirty <code>?|false</code>, but <code>x = .f0; return x</code> publishes clean <code>false</code>: a read applies the refinement unconditionally, an assignment accepts it only when it is narrower.</dd>
+
+<dt>CB-106: carrying a guarded parameter out of its guard dirties the return</dt>
+<dd><code>v0 = 1; if Number?(p0) { v0 = p0 }; return v0</code> is dirty: at the join the guarded fact degrades to the pre-narrowing one.</dd>
+
+<dt>CB-108: <code>x.Do(this)</code> makes the calling method opaque for member-write analysis, transitively</dt>
+<dd>Every method that calls it loses all member refinements at that call; <code>x.Do(.items)</code> does not count as an escape.</dd>
+
+<dt>CB-109: an untyped right-hand side anywhere counts as "assigned false"</dt>
+<dd>One <code>.m = SomeUnresolvedCall()</code> in any method turns every member-touching or opaque call into a hard kill of <code>.m</code>'s refinement, and blocks its demotion.</dd>
+</dl>
+
+<h3 id="s6-assert">Assert</h3>
+
+<dl>
+<dt>CB-110: <code>Assert(cond, msg: "...")</code> and every matcher form pin nothing in <code>New</code>; <code>Assert(cond)</code> pins</dt>
+<dd><code>Assert(.items, isObject:)</code>, <code>Assert(x isNumber:)</code>, <code>Assert(.x is: 5)</code> are not ground truths although they narrow locally.</dd>
+
+<dt>CB-111: an <code>Assert</code> anywhere inside <code>New</code> is class-wide, with no reachability or polarity</dt>
+<dd>Inside an <code>if</code>, a loop, a <code>try</code>, or a block literal passed to another method, the condition is applied as true regardless.</dd>
+
+<dt>CB-112: Assert pins are checked against assignments that precede the Assert in <code>New</code>, and an <code>isnt false</code> assert on a dirty seed pins a dirty type (GAP 3's true half)</dt>
+<dd><code>.x = .find(); Assert(.x isnt false)</code> with <code>find : false|object</code> pins <code>object</code> and errors on the previous line: <code>member .x is a object ground truth (Assert in New), cannot assign false|object</code>. Adding an Assert can add an error.</dd>
+
+<dt>CB-113: <code>Assert(.x isnt false)</code> pins nothing when <code>.x</code> is only <code>false</code>, but pins when the union has other arms</dt>
+<dd>Whether it is a ground truth depends on what <em>other</em> methods assign.</dd>
+
+<dt>CB-114: pinning overwrites the accumulated type; a wrong assert silently retypes every read</dt>
+<dd>After the pin, assignments of other types are reported rather than widening the member.</dd>
+
+<dt>CB-115: conflict errors sit at the losing assert, and a conflict inside <code>New</code> blames <code>New</code> twice</dt>
+<dd><code>... number asserted in New, string asserted in New</code>.</dd>
+
+<dt>CB-116: inline-init public parameters never pin, even via the local name</dt>
+<dd><code>New(.Width) { Assert(Number?(Width)) }</code> pins nothing (and records no member at all).</dd>
+
+<dt>CB-117: recursion in the constructor execution is cut, not joined</dt>
+<dd><code>init(n) { .x = 5; if n is 0 { .init(1) } }</code> demotes; a recursive helper assigning <code>false</code> only in its recursive frame is caught by the class-wide gate, not by execution.</dd>
+
+<dt>CB-118: "assign it unconditionally in <code>New</code>" silently fails in several situations</dt>
+<dd>When the member is public, when any other method assigns it <code>false</code> or an untyped value, or when the assignment sits in a loop, a <code>switch</code> without <code>default</code> or a <code>try</code>. The rule is: private member, and no method may assign it <code>false</code> or an untyped value.</dd>
+</dl>
+
+<h3 id="s6-args">Requirements, arity and capabilities</h3>
+
+<dl>
+<dt>CB-119: inferred requirements are much narrower than "infer from uses"</dt>
+<dd>Only a bare, never-assigned, non-defaulted, non-<code>.</code>/<code>@</code>/<code>_</code> parameter passed <em>directly</em> to a non-guessed callee whose matching parameter is a single known primitive produces one; <code>p.Size()</code>, <code>p + 1</code>, <code>p.name</code>, a callee parameter annotated <code>string|number</code> or with an instance type, or <code>.F(x: p)</code> produce nothing. A demand <em>is</em> taken from <code>false</code>, <code>true</code> and <code>date</code> annotations.</dd>
+
+<dt>CB-120: any <code>x is/isnt false</code> in the body cancels requirements for <code>x</code> everywhere, including uses before the test; the cutoff for other parameters is positional</dt>
+<dd><code>x is ""</code> and <code>x is 0</code> do not count.</dd>
+
+<dt>CB-121: requirement messages name the root callee, not the next hop</dt>
+<dd><code>Outer(b) { .Inner(b) }</code>, <code>Inner(a) { Scanner(a) }</code>: the error at <code>.Outer(0)</code> reads <code>"b" is passed on to Scanner</code>; <code>Inner</code> is never mentioned. Static callees show as <code>Lib.Wrap</code>, own methods as plain <code>Bar</code>.</dd>
+
+<dt>CB-122: a requirement conflict is permanent and silent</dt>
+<dd>Two disagreeing demands make the slot unconstrained forever; callers with either type are accepted; no diagnostic says "used as both string and number".</dd>
+
+<dt>CB-124: argument-count resolution is asymmetric about inheritance</dt>
+<dd><code>.m()</code>, <code>super.m()</code> and bare <code>Foo(...)</code> walk the base chain; <code>new Foo(...)</code>, <code>Foo.m(...)</code> and <code>inst.m(...)</code> use own methods only (<code>new Derived(1, 2)</code> with <code>New(a)</code> on <code>Base</code> is unchecked while <code>Derived(1, 2)</code> errors; <code>d.M(1, 2)</code> on an inherited <code>M</code> is unchecked); <code>new this(...)</code> on a class with a base and no own <code>New</code> is unchecked even when the base's <code>New</code> is loaded, whereas <code>super(...)</code> in the same class is checked.</dd>
+
+<dt>CB-125: named arguments that match nothing: two checks, two verdicts</dt>
+<dd>The count check ignores them; the argument check warns, except for <code>block</code> and guessed signatures, so <code>x.Sort!(bogus: 1)</code> with unknown <code>x</code> is silent. A trailing <code>{ }</code> is the named argument <code>block</code> and never counts positionally: <code>.F() { }</code> on <code>F(x)</code> is <code>missing argument to F: x</code>; <code>.B(1) { }</code> on <code>B(block)</code> is the double-bind warning.</dd>
+
+<dt>CB-126: <code>in</code>, subscripts and range bounds have no operand checks at all</dt>
+<dd><code>s in (1, 2)</code>, <code>ob[true]</code>, <code>ob[#(1)]</code> are silent (only the receiver is checked); <code>is</code>, <code>isnt</code>, <code>=~</code>, <code>!~</code> are silent by design; cross-type <code>&lt;</code> warns only for two ranked single types (<code>false|number</code> silent, <code>n &lt; true</code> warns, <code>class</code>/<code>function</code>/<code>block</code> unranked).</dd>
+
+<dt>CB-127: an instance is "callable" without checking for a <code>Call</code> method, and never rangeable or iterable even when the class defines <code>Iter</code></dt>
+<dd><code>for y in x</code> with <code>x</code> an instance of <code>T</code> is <code>iteration on `x` not applicable on receiver of type T</code>.</dd>
+
+<dt>CB-128: member checks skip <code>this</code>/<code>super</code>/global receivers and every dirty receiver, and report <code>rec.n += 1</code> as a read</dt>
+<dd>So <code>.items.Add(x)</code> is never reported as a member access problem on <code>this</code>; the method call check handles it.</dd>
+</dl>
+
+<h3 id="s6-api">The API and the harness</h3>
+
+<dl>
+<dt>CB-129: one environment for the whole batch: unrelated arguments contaminate each other (HARNESS 4, broader than described)</dt>
+<dd><pre><code>// arguments: (A, B)
+A = class { x: "s" }
+B = class { Bar() { return .x } }   // reported $return: string; B alone has nothing</code></pre>
+<code>.Val()</code> and <code>super.Val()</code> resolve to whatever the <em>previous argument</em> published, related or not; member types, returns, guess taint, Assert facts and requirement conflicts all leak; only diagnostics are cleared between arguments. Check one class (with its lineage base-first) per call, as <code>TypeCheckHelper.OrderedSrc</code> does.</dd>
+
+<dt>CB-130: a base supplied only as a reference gives no inheritance</dt>
+<dd><code>Derived</code> as the argument with <code>Base</code> only in references: both <code>.Val()</code> and <code>super.Val()</code> are unknown; reversing the arguments (<code>Derived</code> then <code>Base</code>) silently loses inheritance too.</dd>
+
+<dt>CB-131: a name in both references and arguments: the reference wins for callers</dt>
+<dd>The argument is checked with its own body, but <code>(new Counter()).Value()</code> elsewhere resolves through the reference version.</dd>
+
+<dt>CB-132: three failure modes, three surfaces</dt>
+<dd>One unparsable argument (including a parse-time constant-fold failure like <code>1 - "s"</code>) kills the whole request as an exception; an unparsable reference vanishes silently; a crash inside the checker becomes a <code>[1.00]</code> diagnostic at line 1 and later arguments continue.</dd>
+
+<dt>CB-133: unknown config keys are silently ignored; values are strictly validated</dt>
+<dd>A typo such as <code>strictStringConcats</code> yields no error and the default <code>error</code> level.</dd>
+
+<dt>CB-134: <code>RegisterSignatures</code> returns the layer size, not the table size; <code>Annotations()</code> returns the effective table</dt>
+<dd><code>Annotations().Size()</code> grows by the number of <em>new</em> names. Passing a single registration object instead of a list now throws <code>expected a list of signatures, got a single signature - wrap it in a list, ...</code>; before that fix it silently registered nothing and wiped the Suneido layer (BUG 6).</dd>
+
+<dt>CB-135: <code>record</code> and <code>object</code> are the same receiver</dt>
+<dd>Two registrations differing only in that collide (<code>duplicate registration object.Zr</code>); an <code>object</code> entry in the Suneido layer overrides a <code>record</code> entry in the executable's layer.</dd>
+
+<dt>CB-136: the console signature table is 326 entries; the GUI build has 668 (HARNESS 5)</dt>
+<dd>Typechecking from a console REPL or the bridge under-reports Win32 records. <code>go run -tags gui ./cmd/dumpsigs</code> prints the GUI table; register the difference.</dd>
+
+<dt>CB-138: a function source is checked as a shim class</dt>
+<dd>Diagnostics for a function argument carry the argument's name as the <code>method</code>; a function calling itself by name resolves only if it is also given as a reference.</dd>
+
+<dt>CB-139: <code>Annotate</code> writes <code>/* -&gt; unknown */</code> and <code>/* -&gt; ?|number */</code> on returns, annotates only identifiers and calls, can land mid-expression, and positions diagnostics against the input</dt>
+<dd><code>y /* object */.Size() /* number */</code>; <code>.m</code> reads, literals, binary expressions and <code>for</code> variables are never annotated; a respelled declaration keeps the author's arm order while an inferred one is sorted (<code>Pick(s :string|false) :false|string</code>); a multi-line declared annotation is left alone.</dd>
+
+<dt>CB-143: <code>_Parent { }</code> cannot be parsed by the checker (HARNESS 2)</dt>
+<dd>The override-stack idiom (a record named <code>_Name</code> whose class has base <code>_Name</code>) panics in the parser as <code>invalid reference to _Parent</code>; as a reference it silently vanishes, and a lineage that reaches it is silently truncated.</dd>
+
+<dt>CB-149: static member checking is silent in three easy-to-misread cases and blind to the class's own statics</dt>
+<dd>The class is not among the references; a base on the chain is unresolved; the class or a base has a generic <code>Getter_</code>; and <code>T.x</code> inside <code>T</code> is never checked.</dd>
+</dl>
+
+<h3 id="s6-annotations">Annotations</h3>
+
+<dl>
+<dt>CB-153: <code>unknown</code> is a legal, silent annotation arm; <code>?</code> is the same type plus a warning; neither can be written back</dt>
+<dd><code>:unknown|string</code> is <code>?|string</code> silently; <code>:string|?</code> is the identical type plus <code>unknown type name "?"</code>; <code>Annotate</code> leaves a comment for both.</dd>
+
+<dt>CB-154: capitalised builtin names are builtins, not classes</dt>
+<dd><code>:String</code> is <code>string</code>, <code>:Strings</code> is an instance of a class <code>Strings</code>, <code>:Record</code> is <code>object</code>. An instance of a class literally named <code>String</code> (from <code>new String(...)</code>) prints as <code>string</code> but is not the builtin type.</dd>
+
+<dt>CB-155: instances are opaque names: no inheritance, so <code>:Control</code> rejects a subclass</dt>
+<dd>Non-ASCII initial letters are rejected as annotation arms.</dd>
+
+<dt>CB-156: a respelled annotation keeps your order and duplicates; an inferred one is sorted</dt>
+<dd><code>Annotate</code> rewrites <code>: String | False</code> to <code>:string|false</code>, while the inferred comment for the same value prints <code>false|string</code>; <code>record</code> stays <code>record</code>.</dd>
+
+<dt>CB-158: <code>void</code> is an ordinary union arm and a universal fit</dt>
+<dd><code>string|void</code> is a legal, printable type (written back as <code>:string|void</code>); a <code>void</code> operand or return is silent at every fit-based check, and only receiver dispatch (CB-60) disagrees.</dd>
+
+<dt>CB-159: empty alternatives are dropped, not dirtied</dt>
+<dd><code>:string||number</code> and <code>:string | </code> produce clean types plus a warning; an unknown name produces a dirty type plus a warning.</dd>
+
+<dt>CB-160: the same annotation typo is a warning in class source but fatal in <code>RegisterSignatures</code></dt>
+<dd>One bad signature fails the whole registration call.</dd>
+
+<dt>CB-161: a trailing <code>|</code> or a newline before the type defeats <code>Annotate</code>'s respelling</dt>
+<dd><code>x :a|b|</code> and <code>x:\n\tnumber</code> are left alone by <code>Annotate</code> though the checker still reads a type from them; <code>:Foo?</code> is a valid class annotation.</dd>
+
+<dt>CB-163: arithmetic result types ignore operands</dt>
+<dd><code>+</code> is always <code>number</code>, <code>$</code> always <code>string</code>; <code>x = "a" + 1</code> types <code>x</code> as <code>number</code> and reports the operand; dirt is laundered by any operator.</dd>
+</dl>
+
+<h2 id="s7">Known bugs and limits</h2>
+
+<p>The checker's own bug list (<code>typechecker/BUGSTC.md</code>) was re-examined by the study; the entries below are the corrected versions, with the precise trigger for each and the workaround that actually works.</p>
+
+<h3 id="s7-bugs">Bugs</h3>
+
+<dl>
+<dt>BUG 1: <code>new X(...)</code> in a ternary or a condition reports <code>no member "*new*" on class X</code> at line 1</dt>
+<dd><strong>Trigger.</strong> <code>X</code> is a reference and the <code>new X(...)</code> (or a call <code>X.M()</code> where <code>M</code> is not a data member, method or <code>Getter_</code> of <code>X</code>'s chain) sits in a position the parser wraps specially: a ternary condition or arm, an <code>if</code>/<code>while</code>/<code>do-while</code> condition, a <code>for ... in</code> header, or a <code>switch</code> case value. <code>c = p is 1 ? new Ref(1) : new Ref(2)</code> gives two errors at 1:1. The same call as a plain statement or <code>return</code> is fine. <strong>Why.</strong> The static-member check walks the syntax tree in a way that skips the wrapped call, so it sees the synthetic <code>*new*</code> member as a plain read with no position. <strong>Workaround.</strong> Use <code>if</code>/<code>else</code> instead of <code>?:</code>, or assign the <code>new</code> to a local first.</dd>
+
+<dt>BUG 2: a block parameter is shadowed by an outer variable of the same name, and nested functions are unchecked</dt>
+<dd><strong>Trigger.</strong> <code>b = 5; f = {|b| b $ "x"}</code> reports <code>operator "$" expects string, got number</code>: the block body is typed in the enclosing scope and block parameters are not scoped. <code>f = function() { return 1 + "s" }</code> is never looked at. <strong>Workaround.</strong> Rename the block parameter.</dd>
+
+<dt>BUG 3: a method call on a <code>void</code> value is an error</dt>
+<dd><strong>Trigger.</strong> <code>x = Catch({ ... })</code> where the referenced <code>Catch</code>'s every exit is <code>return throw</code>, so its return is <code>void</code> (BUG 4); then <code>x.Size()</code> gives <code>[0.90] method "Size" on `x` not applicable to receiver of type void</code>. Everything else on the same <code>x</code> (<code>x.name</code>, <code>x + 1</code>, <code>if x</code>, passing it as an argument) is silent, because <code>void</code> fits everything except a method receiver. The bug list names the member-access check; it is actually method dispatch. A <code>void</code> value only arises from a <em>reference</em>; an own method's <code>void</code> return is dispatched as unknown. <strong>Workaround.</strong> Give the referenced function a normal return on some path, or leave it out of the references so the call is silently unknown.</dd>
+
+<dt>BUG 4: <code>return throw</code> is not a return; a method with only that publishes <code>void</code></dt>
+<dd><strong>Trigger.</strong> <code>Always() { return throw "x" }</code> is <code>void</code>; a <code>:number</code> method whose only exit is <code>return throw</code> is silently accepted; callers of such a reference get <code>void</code> and then BUG 3. This is deliberate (inside <code>New</code>, <code>return throw</code> is treated as ending the path). <strong>Workaround.</strong> As for BUG 3.</dd>
+
+<dt>BUG 5: <code>Infer</code> and <code>Annotate</code> disagreed on a member type</dt>
+<dd>The suspected cause, a member that never shrinks past its first-pass guess, is real (<a href="#s6-false">CB-30</a>). The disagreement itself could not be reproduced: both methods run the identical analysis, so the two runs must have been given different inputs (a different lineage, reference set or argument order).</dd>
+
+<dt>BUG 6: <code>TypeChecker.Annotations()</code> did not report the registered layer</dt>
+<dd>Fixed: <code>Annotations()</code> now returns the effective table in a form <code>RegisterSignatures</code> accepts, and passing a single object instead of a list throws instead of silently clearing the layer.</dd>
+</dl>
+
+<h3 id="s7-gaps">Gaps in narrowing and inference</h3>
+
+<dl>
+<dt>GAP 1: assignment from a narrowed variable takes the declared type, not the narrowed one</dt>
+<dd><strong>Trigger.</strong> Only when the guard <em>replaces</em> a single-type baseline rather than selecting arms from a union: a plain <code>item = false</code> parameter, a <code>p = 0</code> parameter, a local typed by a literal. <code>Foo(item = false) { if not Object?(item) return; menuItem = item; return menuItem }</code> gives <code>menuItem : false</code>. With <code>item :false|object</code>, a dot-parameter <code>.item = false</code>, or <code>item = .Maybe()</code>, the assignment takes <code>object</code>. <strong>Workaround.</strong> Annotate the parameter with the arms it can hold, or assign from an expression that is the wanted type.</dd>
+
+<dt>GAP 2: a dot-parameter without a default does not widen the member</dt>
+<dd><strong>Trigger.</strong> <code>SetModel(.model)</code>. <strong>Workaround.</strong> <code>SetModel(model) { .model = model }</code> widens the member to <code>?|false</code>; it still blocks constructor demotion because the assigned value is untyped. Annotating the parameter fixes both.</dd>
+
+<dt>GAP 3: "<code>Assert</code> narrows only in <code>New</code>, only for members" is wrong as stated</dt>
+<dd>A statement-level <code>Assert</code> narrows locals and members for the rest of its block in any method. The two true observations behind it: <code>Assert(cond, msg: ...)</code> and every matcher form pin nothing class-wide in <code>New</code> (only a single-argument <code>Assert(cond)</code> does), and a pin in <code>New</code> is checked against assignments made <em>before</em> it, so <code>.source = .find(); Assert(.source isnt false)</code> with a <code>false|object</code> finder errors on the assignment. <strong>Workaround.</strong> Use the single-argument form for a ground truth; narrow the assigned value before assigning, or use a lazy accessor instead of an Assert.</dd>
+
+<dt>GAP 4: an <code>else if</code> chain that mixes an assignment and an exit does not narrow afterwards</dt>
+<dd><strong>Trigger.</strong> <code>if P { x = e } else if Q { return }</code>; bracing the inner test does not help. <strong>Workaround.</strong> Hoist the test to the same level as the use.</dd>
+
+<dt>GAP 5: only <code>true</code>/<code>false</code> sentinels can be discharged</dt>
+<dd><code>x isnt ""</code> and <code>x isnt -1</code> narrow nothing; <code>x is ""</code> narrows toward <code>string</code> (rarely useful); <code>Type(x) isnt "S"</code> does subtract. <strong>Workaround.</strong> Use <code>false</code> as the sentinel (GAP 9 is the <code>-1</code> shape of the same problem).</dd>
+
+<dt>GAP 6: a predicate method does not narrow its caller, except in one shape</dt>
+<dd><strong>Trigger.</strong> The helper returns a comparison (<code>noKeys?() { return .lockedKeys is false }</code>), or is public, or is compared (<code>if .h?() is true</code>), or calls another helper. <strong>Works when</strong> the helper is private, contains literal <code>return true</code> and <code>return false</code>, and is the whole condition. <strong>Workaround.</strong> Rewrite in that shape, or return the value itself and test it at the call site.</dd>
+
+<dt>GAP 7: "any call on <code>this</code> invalidates a member refinement" is overstated</dt>
+<dd><strong>Trigger.</strong> A call to a method this class does not define itself (every inherited method), <code>super.M()</code>, a computed callee, a call passing bare <code>this</code>, or a call that (transitively through own methods) writes the member. Calls to own methods that do not touch the member, free calls and calls on other receivers keep the refinement. After a kill the member is salvaged as its class-wide type minus <code>false</code> unless some method assigns it a false-containing or untyped value. <strong>Workaround.</strong> Capture into a local right after the guard; locals are never invalidated by calls.</dd>
+
+<dt>GAP 8: an untyped parameter fed to <code>Replace</code>/<code>Tr</code>/<code>Find</code> folds to <code>?|date|object|string</code></dt>
+<dd>The by-name scan unions every overload's return. Downstream uses get "cannot prove" warnings; on a guessed receiver a boolean-context problem is a warning, not an error. <strong>Workaround.</strong> Annotate the parameter.</dd>
+
+<dt>GAP 10 and GAP 11: declared returns and <code>false</code> in arithmetic</dt>
+<dd>A declared return is a hard contract at 0.90 even against <code>false|number|object</code>, where the same union under <code>+</code> is 0.70; <code>false|number</code> under <code>+</code> or <code>Max</code>-style arithmetic is an error at 0.70. Both are the checker working as designed; the lesson is the confidence asymmetry (<a href="#s6-printing">CB-3</a>).</dd>
+</dl>
+
+<h3 id="s7-harness">Harness limits</h3>
+
+<dl>
+<dt>The console signature table is smaller than the GUI one (HARNESS 5)</dt>
+<dd>A console build knows 326 builtin signatures; the GUI build knows 668. Checking from a console REPL or the bridge reports fewer problems (and more "no built-in method" guesses) on Win32-related records than the IDE does. <strong>Workaround.</strong> <code>go run -tags gui ./cmd/dumpsigs</code> prints the GUI table as a literal that <code>RegisterSignatures</code> accepts; register the difference.</dd>
+
+<dt>Desktop and <code>__webgui</code> worlds are checked as one (BUG 7, HARNESS 1, 6, 7)</dt>
+<dd>The checker resolves references purely by the names it is given; it has no notion of which world a record belongs to, and a class named <code>Strings__webgui</code> does not get the <code>Strings</code> treatment. The harness must supply the <code>__webgui</code> variants under their plain names when checking a <code>__webgui</code> chain. Related harness-side limits: references are resolved through <code>Global()</code>, a chain built from the stdlib table alone is blind to non-stdlib bases, and the lineage is read from loaded classes. These are properties of <code>TypeCheckHelper</code>, not of the checker.</dd>
+
+<dt><code>_Name</code> override records cannot be parsed (HARNESS 2)</dt>
+<dd>A record that overrides <code>Name</code> by extending <code>_Name</code> makes the checker's parser panic (<code>invalid reference to _Name</code>). As an argument the call throws; as a reference it silently vanishes; a lineage that reaches such a base is silently truncated there. <strong>Workaround.</strong> None for the record as written; check the classes above and below it separately.</dd>
+
+<dt>References are not transitive, and instance dispatch never walks bases (HARNESS 3)</dt>
+<dd>The harness collects references one level deep. Even when a base is supplied, <code>(new Derived()).Val()</code> with <code>Val</code> defined on <code>Base</code> is unknown, because instance calls look only at the named class. <strong>Workaround.</strong> None; such calls are silently untyped.</dd>
+
+<dt>One batch call cross-contaminates its arguments (HARNESS 4)</dt>
+<dd>See <a href="#s1-lineage">Base classes must be arguments, base-first</a>. The harness checks one lineage per call for this reason.</dd>
+</dl>
+
+<h2 id="s8">For maintainers</h2>
+
+<p>This section points at the code. Paths are relative to the <code>gsuneido</code> repository; <code>engine/</code> abbreviates <code>typechecker/internal/engine/</code>. The deep material, with line numbers, probe outputs and the reasoning behind every claim in this guide, is in <code>typechecker-study/MASTER.md</code> and the per-subsystem notes under <code>typechecker-study/notes/</code>.</p>
+
+<h3 id="s8-passes">The pass order</h3>
+
+<p><code>RunPipeline</code> in <code>engine/pipeline.go</code> runs the following over one class, in this order:</p>
+
+<ol>
+<li><code>WithClass</code> + <code>buildMethodSigs</code>: scope the shared environment to this class and build its own method signatures from annotations; abstract stubs (a body that is exactly one <code>throw</code>) are skipped and methods whose annotations fail to parse are silently dropped.</li>
+<li><code>DateNarrowingPass</code>: evaluate <code>Date(...)</code> calls with constant arguments to <code>date</code> or <code>false</code>.</li>
+<li><code>LocalInference</code>: seed member types from literals, parameter types from annotations and defaults, and stamp every literal, operator, ternary and range node.</li>
+<li><code>NameResolutionPass</code>, <code>MemberAssignmentPass</code>, <code>ReturnUnionPass</code>: the flow-insensitive scope walk, the member backfill from every <code>.m = e</code>, and the first publication of returns.</li>
+<li><strong>Fixpoint 1</strong> (up to 64 rounds): <code>CallsiteResolutionPass</code>, <code>SuperCallsiteResolutionPass</code>, <code>NameResolutionPass</code>, <code>MemberAssignmentPass</code>, <code>ReturnUnionPass</code>. Calls, locals, members and returns feed each other until nothing changes. Running the member backfill inside this loop is the cause of the member ratchet.</li>
+<li><code>MemberDirtyPass</code>: a member assigned a still-unknown value becomes dirty. <code>MemberAssignmentPass</code> is deliberately never re-run after this point.</li>
+<li><code>NameResolutionPass</code>, <code>ReturnUnionPass</code>: re-stamp reads with the dirtied members.</li>
+<li><code>AssertMemberPass</code>; if it pinned anything, <code>NameResolutionPass</code> and <code>ReturnUnionPass</code> again.</li>
+<li><code>ConstructorExecPass</code>; if it demoted anything, <code>CaptureSeedReturns</code> (the seed view is born here and only here), <code>CallsiteResolutionPass</code>, <code>ReturnUnionPass</code>.</li>
+<li><strong>Fixpoint 2</strong> (up to 64 rounds): <code>FlowNarrowingPass</code>, <code>RefreshTrinaryTypes</code>, <code>CallsiteResolutionPass</code>, <code>SuperCallsiteResolutionPass</code>, <code>clearReturnDiagnostics</code>, <code>ReturnUnionPass</code>. <code>NameResolutionPass</code> is intentionally omitted because it would undo the narrowing; that is also why the locals reported by <code>Infer</code> can be stale.</li>
+<li><code>GuessTaintPass</code>: propagate guessedness through plain assignments.</li>
+<li><code>RequirementPass</code> (up to 64 sweeps): infer parameter requirements from direct pass-through.</li>
+<li><code>AssertAssignmentCheckPass</code>, <code>TypeCheckPass</code>, <code>BooleanConditionCheckPass</code>, <code>CallsiteCheckPass</code>, <code>ArityCheckPass</code>, <code>StaticMemberCheckPass</code>, <code>CapabilityCheckPass</code>: the checks. Order-independent among themselves.</li>
+<li><code>ComputeSummaries</code>: the per-method <code>ReturnSummary</code> used for cross-class discrimination.</li>
+</ol>
+
+<p>Both fixpoints stop when a string signature of <code>Nodes</code>, <code>Params</code>, <code>Returns</code>, <code>Members</code>, <code>PostCtorMembers</code> and <code>PreCtorReturns</code> stops changing; at the 64-round cap they return silently with the last state. Bound signatures and guessed flags are not in the signature. Two further capped loops: the reference registry's phase B re-runs <code>CallsiteResolutionPass</code> + <code>RequirementPass</code> over every reference up to 64 times (it does not re-run <code>ReturnUnionPass</code>, so reference return types depend on reference order while requirements do not), and <code>NameResolutionPass</code> walks each loop body at most 4 times. Only <code>AssertMemberPass</code>, <code>ConstructorExecPass</code> and <code>RequirementPass</code> ever report "changed".</p>
+
+<h3 id="s8-files">Where each behaviour lives</h3>
+
+<div class="tbl"><table>
+<tr><th>Behaviour</th><th>File</th></tr>
+<tr><td>the public <code>Process</code> entry, the two signature layers, config parsing, per-argument recover, line/column</td><td><code>typechecker/session.go</code></td></tr>
+<tr><td>the <code>confidence</code> filter grammar, ranking, the <code>[0.90] </code> prefix</td><td><code>typechecker/confidence.go</code></td></tr>
+<tr><td>the confidence ladder; flag levels overwriting severity</td><td><code>typechecker/diagnostics/confidence.go</code>, <code>filter.go</code>, <code>config.go</code></td></tr>
+<tr><td>the type lattice, union folding, the <code>?</code>-first printing</td><td><code>typechecker/typealgebra/typealgebra.go</code>, <code>annotation.go</code></td></tr>
+<tr><td>annotation parsing, case-insensitive names, <code>record</code> alias, the typo behaviour</td><td><code>typechecker/typealgebra/annotation.go</code></td></tr>
+<tr><td>operator result types (<code>+</code> is always <code>number</code>)</td><td><code>typechecker/typealgebra/ops.go</code></td></tr>
+<tr><td>registration objects, layering, <code>record</code>/<code>object</code> collision, signature-string parsing</td><td><code>typechecker/annotations/register.go</code>, <code>sigparse.go</code></td></tr>
+<tr><td>the Suneido-visible <code>TypeChecker</code> class and result marshalling</td><td><code>builtin/typechecker.go</code></td></tr>
+<tr><td>the executable's own signatures becoming the base layer</td><td><code>builtin/typesigs.go</code>; <code>cmd/dumpsigs</code> prints the effective table</td></tr>
+<tr><td>the shared environment, seed/instance views, static member lookup</td><td><code>engine/environment.go</code></td></tr>
+<tr><td>reference registry, phase B fixpoint, silent reference failures</td><td><code>engine/registry.go</code></td></tr>
+<tr><td>member seeding, <code>widenBool</code>, parameter typing, ternary typing</td><td><code>engine/local_inference.go</code></td></tr>
+<tr><td>scope walk, joins, the 4-iteration loop cap, unscoped blocks, mini early-exit narrowing</td><td><code>engine/name_resolution.go</code></td></tr>
+<tr><td>member backfill and the dirty pass</td><td><code>engine/member_assign.go</code></td></tr>
+<tr><td>the <code>dispatchCall</code> decision tree, by-name guessing, union receivers</td><td><code>engine/callsite_resolution.go</code></td></tr>
+<tr><td><code>super.M()</code> from the previous argument</td><td><code>engine/super_callsite_resolution.go</code></td></tr>
+<tr><td>context-sensitive returns, <code>ReturnSummary</code>, implicit trailing returns, <code>return throw</code></td><td><code>engine/context_return.go</code>, <code>return_union.go</code></td></tr>
+<tr><td>block form (<code>Dir</code> with and without a block)</td><td><code>engine/block_form.go</code></td></tr>
+<tr><td>constant <code>Date(...)</code> evaluation</td><td><code>engine/date_narrowing.go</code></td></tr>
+<tr><td>constructor execution and demotion gates</td><td><code>engine/constructor_exec.go</code></td></tr>
+<tr><td>Assert ground truths and their assignment check</td><td><code>engine/assertion_inference.go</code></td></tr>
+<tr><td>narrowing: sources, operators, branches, switch, invalidation, Assert statements</td><td><code>engine/flow_narrowing.go</code>, <code>flow_narrowing_refine.go</code>, <code>flow_narrowing_branch.go</code>, <code>flow_narrowing_switch.go</code></td></tr>
+<tr><td>member write sets and opaque calls</td><td><code>engine/member_writes.go</code></td></tr>
+<tr><td>boolean postconditions of private predicate helpers</td><td><code>engine/bool_postconditions.go</code></td></tr>
+<tr><td>guess taint</td><td><code>engine/guess_taint.go</code></td></tr>
+<tr><td>inferred requirements</td><td><code>engine/requirement_inference.go</code></td></tr>
+<tr><td>operator operand checks, the <code>$</code>-crash rule, cross-type compares</td><td><code>engine/typecheck.go</code></td></tr>
+<tr><td>boolean-context check</td><td><code>engine/boolean_condition_check.go</code></td></tr>
+<tr><td>receiver and argument checks</td><td><code>engine/callsite_check.go</code></td></tr>
+<tr><td>argument counts and the callee-shape table</td><td><code>engine/arity_check.go</code></td></tr>
+<tr><td>static member reads (BUG 1's walk)</td><td><code>engine/static_member.go</code></td></tr>
+<tr><td>member/subscript/range/iteration/call capability table</td><td><code>engine/capability_check.go</code></td></tr>
+<tr><td>the <code>Infer</code> output projection (locals as unions of stamps, literal members only)</td><td><code>engine/profile.go</code></td></tr>
+<tr><td>the <code>Annotate</code> rewriter</td><td><code>typechecker/internal/annotate/annotate.go</code></td></tr>
+</table></div>
+
+<h3 id="s8-probe">Running a probe and the test helpers</h3>
+
+<p>To check what the public API does with a piece of source, build a scratch Go module outside the repository with a <code>replace</code> directive pointing at it and a blank import of <code>builtin</code> so its <code>init()</code> publishes the console signature table:</p>
+
+<pre><code>// go.mod:  module probe
+//          require github.com/apmckinlay/gsuneido v0.0.0
+//          replace github.com/apmckinlay/gsuneido =&gt; C:/Users/apatel/Desktop/typeChecker/gsuneido
+import (
+    _ "github.com/apmckinlay/gsuneido/builtin"
+    "github.com/apmckinlay/gsuneido/typechecker"
+)
+res, err := typechecker.Process(typechecker.Request{
+    Method:     "TypeInfer",           // or "TypeAnnotate"
+    Arguments:  []typechecker.SourceEntry{{Name: "T", Src: src}},
+    References: refs,                  // base-first
+    Config:     map[string]string{"confidence": "all"},
+})</code></pre>
+
+<p>Build with <code>GOFLAGS=-mod=mod</code>. Use <code>confidence: "all"</code> or you will not see the 0.20 flagged and 0.35 guessed diagnostics. The console table has 326 entries (no <code>string.Trim</code>, no Win32); add missing signatures with <code>typechecker.RegisterSignatures([]annotations.Registration{...})</code>, or dump the GUI set with <code>go run -tags gui ./cmd/dumpsigs</code>.</p>
+
+<p>Engine unit tests drive <code>RunPipeline</code> directly on one class, with no filtering, no confidence and no flag handling, and the builtin signature table is <em>empty</em> unless the test installs one. The helpers in <code>engine/helpers_test.go</code>: <code>runPasses(src, name)</code> (parse and run in a fresh environment), <code>runPassesWith</code> (seed registry maps first), <code>runPassesWithClasses</code> / <code>runPassesWithClassViews</code> / <code>runPassesWithStatics</code> (seed instance, seed and static views), <code>runPassesWithRefSrcs</code> / <code>runPassesWithRefList</code> (build a real registry from reference sources), <code>mustRun</code>, and <code>withSigs(t, Reg{Kind, Receiver, Class, Name, Sig})</code> in <code>sigs_test.go</code>, which must run before <code>runPasses</code> and is restored on cleanup. Diagnostic predicates: <code>hasDiag(env, method, sev, substr)</code>, <code>errOn</code>, <code>errorCount</code>, <code>hasNotApplicableError</code>, <code>hasOperatorError</code> (matches only <code>"expects number"</code>); <code>countDiagsWith</code> and <code>hasMemberNotFound</code> are hard-coded to a method named <code>Foo</code>. Type predicates: <code>unionContains</code>, <code>isUnionOf</code> (ignores dirt). A minimal experiment:</p>
+
+<pre><code>func TestMyProbe(t *testing.T) {
+    withSigs(t, Reg{Receiver: "string", Name: "Size", Sig: "() :number"})
+    _, env := runPasses(`class { Foo(s: string) { return s.Size() $ "!" } }`, "T")
+    t.Log(env.Returns["Foo"], *env.Diagnostics)
+}</code></pre>
+
+<p>Run subsets with <code>go test ./typechecker/internal/engine -run 'TestNarrow' -count=1 -v</code> and the whole package with <code>go test ./typechecker/...</code>. Property tests (<code>engine/prop_*_test.go</code>) pin the doctrines: no error at a guessed position, every published type in normal form, determinism across runs, well-typed generated programs produce no error, and the arity model. Four recorded <code>.fail</code> regressions under <code>engine/testdata/rapid/</code> replay on every run.</p>
+
+<h3 id="s8-errata">Documentation errata</h3>
+
+<p>The study found the following statements in <code>typechecker/TYPING_RULES.md</code> to be wrong or overstated; each row gives the correction so the file can be fixed.</p>
+
+<div class="tbl"><table>
+<tr><th>Section</th><th>Claim</th><th>Correction</th></tr>
+<tr><td>0</td><td>no program-wide constraint solve</td><td>the reference registry's phase B is a small cross-class fixpoint over <code>CallsiteResolutionPass</code> + <code>RequirementPass</code></td></tr>
+<tr><td>1</td><td><code>void</code> passes every capability check vacuously; nothing inhabits it</td><td>true for fits and capabilities, but receiver dispatch has no void rule (BUG 3); <code>void</code> is an ordinary union arm; falling off the end adds no <code>void</code>, only a bare <code>return</code> does</td></tr>
+<tr><td>1.1</td><td><code>?</code> sorts last; five dirt sources</td><td><code>?</code> sorts first; also dirt from <code>isnt false</code> on a bare boolean, a join with an unknown arm, a half-bad annotation, a constructor join with a missing key</td></tr>
+<tr><td>1.3</td><td>an unrecognised lowercase name is a warning</td><td>any non-capitalised non-builtin arm errors; the same error is fatal in <code>RegisterSignatures</code>; a single-arm typo makes the parameter unannotated; <code>unknown</code> is a silent legal arm</td></tr>
+<tr><td>2</td><td>what the environment carries</td><td>omits <code>PostCtorMembers</code>, <code>PreCtorReturns</code>, <code>Summaries</code>, <code>CallSigs</code>, date proofs, <code>ReqConflicts</code></td></tr>
+<tr><td>4</td><td><code>typeFits</code> adds only the unknown rules</td><td>also nil on either side fits, and it has no <code>void</code> rule</td></tr>
+<tr><td>4.2</td><td>a guess can never be more than a warning; two deviating sites; 0.70 on multi-arm unions</td><td>the flag filter promotes the guessed <code>$</code> warning to an error; a third deviation skips pure-unknown arguments; 0.70 only where <code>Got</code> is attached (operator checks and one callsite warning)</td></tr>
+<tr><td>4.3</td><td>two guess sources</td><td>four: also unresolved base chains and the silent <code>this.m()</code> scan</td></tr>
+<tr><td>5.2</td><td>the widen rule</td><td>dot-parameter widening also sets the parameter's local type; the annotation form is exact</td></tr>
+<tr><td>5.3</td><td><code>MemberAssignmentPass</code> is not re-run or dirt would re-enter</td><td>it strips dirt itself; the observable reason is Assert pins (unresolved); the member ratchet is undocumented</td></tr>
+<tr><td>5.4</td><td>Assert is as strong as an annotation</td><td>exactly one positional argument; private only; any depth and polarity; dirty pins; pre-Assert assignments in <code>New</code> are checked</td></tr>
+<tr><td>5.5</td><td>method bodies read <code>PostCtorMembers</code></td><td><code>PostCtorMembers</code> is read by nobody; demotion is delivered by <code>restampMemberReads</code>; four extra gates; demoted type is <code>removeFalse(Members)</code>; the seed view is undocumented</td></tr>
+<tr><td>7.1, 11.6</td><td>a dirty receiver never matches a signature</td><td>unreachable branch; dirty unions dispatch per arm and resolve (<code>?|string</code>.<code>Size()</code> is a clean <code>number</code>)</td></tr>
+<tr><td>7.3</td><td>bare <code>Foo(...)</code></td><td><code>summaryReturn</code> is consulted before the seed return; <code>ClassKnown</code> gates the branch</td></tr>
+<tr><td>7.5</td><td>instance receivers</td><td>no base-chain walk, always silent; <code>this.m()</code> skips void; <code>super.m()</code> is filled from the previous argument</td></tr>
+<tr><td>7.6</td><td>all-good dirty union is Matched</td><td>Silent, not Matched; the folded return drops dirt; an instance arm aborts the union</td></tr>
+<tr><td>7.7</td><td>returns are re-inferred under the argument binding</td><td>the binding decides only <code>if p is/isnt false</code>; expression stamps are class-wide; <code>ReturnSummary</code> is undocumented</td></tr>
+<tr><td>8.1</td><td>narrowing operators</td><td>toward always yields a clean type; away on an all-matching union returns it unchanged (or unknown if all boolean); <code>Type(x) isnt "S"</code> subtracts</td></tr>
+<tr><td>8.2</td><td>the matcher row</td><td>syntax is <code>Assert(x matcher:)</code>; also <code>is:</code>, <code>isnt:</code> (booleans only), <code>isType:</code>, <code>isInt*</code>, <code>any*</code>, <code>isCallable</code>; must be a statement in a list; inline assignment targets are locals only</td></tr>
+<tr><td>8.3</td><td><code>x = e</code> installs a narrower type</td><td>measured against the un-narrowed stamp; wholesale replacement is not narrower (GAP 1); <code>try</code>/<code>catch</code> and blocks are transparent</td></tr>
+<tr><td>8.4</td><td>kills mirror merging; switch applies the same discipline</td><td>kills propagate out of <code>if</code> only; switch has no join and never narrows members</td></tr>
+<tr><td>8.5</td><td><code>hasCache?() { return .cache isnt false }</code> exports a postcondition</td><td>that shape exports nothing; needs literal <code>return true/false</code>, private, direct call, no chaining</td></tr>
+<tr><td>8.6</td><td>opaque when the callee is unresolved</td><td>also every inherited method, <code>super</code>, computed callees, bare <code>this</code> as an argument</td></tr>
+<tr><td>9.3</td><td>dirt ignored in boolean contexts</td><td>a dirty union with a concrete non-boolean arm is a 0.90 error; labels use token names</td></tr>
+<tr><td>9.4</td><td>instances callable when the class defines <code>Call</code></td><td>unconditionally callable</td></tr>
+<tr><td>9.5</td><td>arity resolution</td><td><code>new Foo</code>, <code>Foo.m</code>, <code>inst.m</code> own-only; <code>new this</code> with a base and no own <code>New</code> unchecked</td></tr>
+<tr><td>9.6</td><td>argument checks</td><td>pure-unknown argument silent; dirty and inferred silent; positional-argument position is the statement</td></tr>
+<tr><td>9.8</td><td>requirements</td><td>single clean primitives only; whole-body cancel versus positional cutoff; silent conflicts; only guessed calls excluded</td></tr>
+<tr><td>9.10</td><td>implicit return</td><td>the trailing expression is unioned in; a trailing assignment counts; the contract is not checked against it</td></tr>
+<tr><td>9.12</td><td>every pass runs under a recover</td><td>per argument (and per reference), not per pass</td></tr>
+<tr><td>9.13</td><td>filter grammar</td><td>also <code>=</code>, <code>&lt;=</code>, <code>&gt;</code>; blank means all; ordering is by method name</td></tr>
+<tr><td>10</td><td>each class's returns become the next one's <code>ParentReturns</code></td><td>the accumulated returns of all earlier arguments</td></tr>
+<tr><td>12</td><td>public interface</td><td>an argument parse failure aborts the whole request; a reference parse failure is silent; one shared environment; the lineage must be in the arguments; <code>RegisterSignatures</code> returns the layer size; <code>record</code> and <code>object</code> collide; unknown config keys are ignored</td></tr>
+</table></div>
+
+<p>Corrections to <code>typechecker/BUGSTC.md</code>: BUG 1's cause is the wrapped call being skipped, not the <code>for-in</code> header; BUG 3 lives in receiver dispatch, not the capability check; BUG 5's ratchet is real but the Infer/Annotate disagreement is not reproducible; BUG 6 is fixed; GAP 1 triggers only when the guard replaces a single-type baseline; GAP 2's longhand still blocks demotion; GAP 3 is refuted as stated (its true observations are the matcher/<code>msg:</code> forms and the pre-Assert check); GAP 5 is half right (<code>is ''</code> narrows, <code>isnt ''</code> does not, <code>Type() isnt</code> subtracts); GAP 6 works for private helpers with literal boolean returns; GAP 7 is overstated (only opaque calls and write-set hits, with salvage); HARNESS 4 is broader than described (types, returns, super, taint, asserts and conflicts all leak).</p>
+
+<p>Corrections to <code>typechecker/AI_TYPEFIX_PROMPT.md</code>: <code>if x is true</code> silences the boolean check but narrows nothing useful; the prompt should show a <code>?</code> type and say that diagnostics on <code>?</code> types are already warnings; rung 1 for members needs "private, and no method may assign it <code>false</code> or an untyped value"; the predicate-helper rung is killed by any opaque call; the <code>Assert</code> rung can add an error on an earlier assignment; the <code>$</code>-crash message names one arm, not <code>object/date</code>; a typo in an added annotation is a hidden 0.35 warning that leaves the parameter unannotated; under the default policy every flagged <code>$</code> diagnostic is invisible, so the advice about <code>strictStringConcat</code> is moot there.</p>
+
+<p class="muted">Source of truth for this guide: <code>typechecker-study/MASTER.md</code> (synthesised 2026-08-27 from the notes in <code>typechecker-study/notes/</code> and <code>OWN-NOTES.md</code>), which carries the file and line citations and the recorded probe results behind every statement made here.</p>
+</main>
