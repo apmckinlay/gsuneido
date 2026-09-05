@@ -9,7 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-// Int is an optional int stored in a single byte.
+// Int is an optional int stored in a single int.
 // The zero value is valid but not set.
 // The actual value 0 is stored as math.MinInt
 type Int struct {
