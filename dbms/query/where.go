@@ -29,8 +29,13 @@ import (
 
 type Where struct {
 	Query1
-	t         QueryTran
-	colSels   map[string][]span // from NewWhere, result of perField
+	t QueryTran
+
+	// results of perField, called by NewWhere
+	colSels       map[string][]span
+	unspanable    []string
+	dataExprCount int // count of where exprs not tied to a single column
+
 	mergedBuf map[string][]span // reusable buffer for mergedPerCol
 	// tbl will be set if the source is a table, nil otherwise
 	tbl *Table
@@ -115,7 +120,8 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	if !w.conflict {
 		fields := w.source.Header().Physical()
 		w.expr.CanEvalRaw(fields)
-		w.colSels = perField(w.expr.Exprs, fields)
+		w.colSels, w.unspanable, w.dataExprCount =
+			perField(w.expr.Exprs, fields)
 		// fmt.Println("colSels", w.colSels)
 		w.conflict = (w.colSels == nil)
 	}
@@ -285,11 +291,12 @@ func (w *Where) calcNrows() (int, int) {
 	if w.singleton {
 		return 1, srcPop
 	}
-	if len(w.idxSels) == 0 {
-		return int(math.Round(float64(srcNrows) * unknownFrac)), srcPop
+	frac := w.wfrac
+	if len(w.idxSels) == 0 && w.tbl == nil { // perIndex was not run
+		frac = unknownFrac
 	}
-	est := int(math.Round(w.wfrac * float64(srcNrows)))
-	return est, srcPop
+	est := int(math.Round(frac * float64(srcNrows)))
+	return max(1, est), srcPop
 }
 
 func (w *Where) Transform() Query {
@@ -572,14 +579,14 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 		_, varCost, _ := w.tbl.optimize(mode, OrderReq(idx, 1.0))
 		irFrac := 1.0
 		ifFrac := 1.0
-		dfFrac := w.wfrac
+		df := true
 		isel := w.getIdxSel(idx)
 		if isel != nil {
-			irFrac = isel.prefixFrac * isel.skipFrac
+			irFrac = isel.indexRangeFrac
 			ifFrac = isel.indexFilterFrac
-			dfFrac = isel.dataFilterFrac
+			df = isel.hasDataFilter
 		}
-		cost := WhereCost(float64(varCost), float64(req.frac), irFrac, ifFrac, dfFrac)
+		cost := WhereCost(float64(varCost), float64(req.frac), irFrac, ifFrac, df)
 		cost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
 		best.update(0, cost, bestIdx{index: idx, idxSel: isel})
 	}
@@ -628,7 +635,12 @@ func (w *Where) optInit() {
 	w.optInited = optInitInProgress
 	w.tbl, _ = w.source.(*Table)
 	if !w.conflict && w.tbl != nil {
-		w.idxSels = w.perIndex(w.colSels)
+		if weight, _ := w.source.Nrows(); weight > 0 {
+			for col := range w.colSels {
+				w.t.HotColsAdd(w.tbl.Name()+"."+col, weight)
+			}
+		}
+		w.idxSels = w.perIndex()
 		// fmt.Println("idxSels", w.idxSels)
 	}
 	// detect singleton when fixed covers a key (for non-Table sources).
@@ -648,7 +660,7 @@ func (w *Where) optInit() {
 	w.optInited = optInitYes
 }
 
-func WhereCost(cost, inFrac, irFrac, ifFrac, dfFrac float64) Cost {
+func WhereCost(cost, inFrac, irFrac, ifFrac float64, df bool) Cost {
 	// Model the cost of reading via a particular index.
 	// We have 3 potential filter stages:
 	// 1. Index Range (irFrac)
@@ -672,7 +684,7 @@ func WhereCost(cost, inFrac, irFrac, ifFrac, dfFrac float64) Cost {
 	// because you still have to read everything
 
 	// apply inFrac
-	if ifFrac < 1 || dfFrac < 1 {
+	if ifFrac < 1 || df {
 		inFrac = .25 + (.75 * inFrac) // pessimistic guard
 	}
 	cost *= inFrac
@@ -711,8 +723,7 @@ func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 			w.ixExpr = w.exprsFor(w.ixCtx.cols)
 			w.idxSelBase = ap.idxSel
 			w.idxSelActive = w.idxSelBase
-			w.tbl.setCost(float64(req.frac)*ap.idxSel.prefixFrac*ap.idxSel.skipFrac,
-				0, ap.cost)
+			w.tbl.setCost(float64(req.frac)*ap.idxSel.indexRangeFrac, 0, ap.cost)
 			w.idxSelPos = -1
 		} else {
 			w.tbl.setCost(float64(req.frac), 0, ap.cost)

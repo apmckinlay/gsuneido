@@ -20,6 +20,10 @@ func NewEncoder(size int) *Encoder {
 	return &Encoder{make([]byte, 0, size)}
 }
 
+func NewEncBuf(buf []byte) *Encoder {
+	return &Encoder{buf: buf}
+}
+
 // String returns the accumulated data as a string.
 func (e *Encoder) String() string {
 	s := hacks.BStoS(e.buf)

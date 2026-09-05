@@ -38,3 +38,4 @@ sujs_windows_*
 temp/
 cmd/sujs/sujs
 **/testdata/rapid/
+hotcols.txt

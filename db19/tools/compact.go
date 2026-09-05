@@ -11,6 +11,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/hot"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -18,6 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
@@ -33,6 +35,7 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("compact failed: %v", e)
+			dbg.PrintStack()
 		}
 	}()
 	src, err := OpenDb(dbfile, stor.Read, false)
@@ -43,6 +46,9 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 	defer func() { dst.Close(); os.Remove(tmpfile) }()
 
 	state := src.GetState()
+	busy := hot.LoadBusy()
+	stats := make(hot.StatsTally)
+
 	type schemaSize struct {
 		sc    *meta.Schema
 		nrows int
@@ -71,10 +77,14 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 		})
 	}
 	for _, sc := range schemas {
-		compactTable(state, src, sc.sc, dst, channel)
+		if sc.sc.Table == StatsTableName {
+			continue
+		}
+		compactTable(state, src, sc.sc, dst, channel, busy, stats)
 	}
 	close(channel)
 	wg.Wait()
+	createStatsTable(dst, stats)
 	dst.GetState().Write()
 	newSize = dst.Store.Size()
 	dst.Close()
@@ -110,7 +120,7 @@ type indexJob struct {
 	sum   uint64
 }
 
-func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database, channel chan<- indexJob) {
+func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database, channel chan<- indexJob, busy hot.Busy, stats hot.StatsTally) {
 	defer func() {
 		if e := recover(); e != nil {
 			core.Fatal(ts.Table+":", e)
@@ -120,6 +130,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 	hasdel := ts.HasDeleted()
 	info := state.Meta.GetRoInfo(ts.Table)
 	ixi := info.SmallestKeyIndex(ts.Indexes)
+	statsCols := buildStatsCols(ts.Table, ts.Columns, busy, stats)
 	sum := uint64(0)
 	size := int64(0)
 	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
@@ -131,8 +142,9 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 		n := core.RecLen(buf)
 		buf = buf[:n+cksum.Len]
 		cksum.MustCheck(buf)
+		rec := core.Record(hacks.BStoS(buf[:n]))
+		addStats(rec, statsCols)
 		if hasdel {
-			rec := core.Record(hacks.BStoS(buf[:n]))
 			rec = squeeze(rec, ts.Columns)
 			n = len(rec)
 			off2, dstbuf = dst.Store.Alloc(n + cksum.Len)
@@ -159,5 +171,82 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 	}
 	indexes := buildIndexes(ts, list, dst, nrows, ixi)
 	ti := meta.NewInfo(ts.Table, indexes, nrows, size)
+	dst.AddNewTable(ts, ti)
+}
+
+type statsCol struct {
+	idx int
+	sc  *hot.StatsColumn
+}
+
+func buildStatsCols(table string, cols []string,
+	busy hot.Busy, stats hot.StatsTally) []statsCol {
+	busyCols := busy[table]
+	if len(busyCols) == 0 {
+		return nil
+	}
+	ht, ok := stats[table]
+	if !ok {
+		ht = make(hot.StatsTable)
+		stats[table] = ht
+	}
+	for _, col := range busyCols {
+		if _, ok := ht[col]; !ok {
+			ht[col] = &hot.StatsColumn{}
+		}
+	}
+	colIdx := make(map[string]int, len(cols))
+	for i, col := range cols {
+		if col != "-" {
+			colIdx[col] = i
+		}
+	}
+	var statsCols []statsCol
+	for _, col := range busyCols {
+		if i, ok := colIdx[col]; ok {
+			statsCols = append(statsCols, statsCol{idx: i, sc: ht[col]})
+		}
+	}
+	if len(statsCols) == 0 {
+		return nil
+	}
+	sort.Slice(statsCols,
+		func(i, j int) bool { return statsCols[i].idx < statsCols[j].idx })
+	return statsCols
+}
+
+func addStats(rec core.Record, stats []statsCol) {
+	for _, e := range stats {
+		val := rec.GetRaw(e.idx)
+		e.sc.Add(val)
+	}
+}
+
+func createStatsTable(dst *Database, stats hot.StatsTally) {
+	stats.Complete()
+	var rb core.RecordBuilder
+	rb.Add(stats)
+	bi := rb.PreBuild()
+	n := bi.Size() + cksum.Len
+	off, buf := dst.Store.Alloc(n)
+	rec := rb.BuildInto(buf[:0], bi)
+	cksum.Update(buf)
+
+	ts := &meta.Schema{
+		Table:   StatsTableName,
+		Columns: []string{"data"},
+		Indexes: []schema.Index{{Mode: 'k'}}}
+	ts.SetupIndexes()
+
+	ix := &ts.Indexes[0]
+	key := ix.Ixspec.Key(rec)
+	bldr := dst.BtreeBuilder()
+	if !bldr.Add(key, off) {
+		panic("cannot build " + StatsTableName + " index")
+	}
+	bt := bldr.Finish()
+	ov := index.OverlayFor(bt)
+
+	ti := meta.NewInfo(ts.Table, []*index.Overlay{ov}, 1, int64(bi.Size()))
 	dst.AddNewTable(ts, ti)
 }

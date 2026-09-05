@@ -230,26 +230,48 @@ func (b *RecordBuilder) Trim() *RecordBuilder {
 const maxRecordLen = 1_000_000
 
 func (b *RecordBuilder) Build() Record {
+	bi := b.PreBuild()
+	return b.BuildInto(make([]byte, 0, bi.size), bi)
+}
+
+type BuildInfo struct {
+	size  int
+	sizes []int
+	hash  uint64
+}
+
+func (bi BuildInfo) Size() int {
+	return bi.size
+}
+
+func (b *RecordBuilder) PreBuild() BuildInfo {
 	hash := uint64(17)
 	var stack PackStack
 	if len(b.vals) > MaxValues {
 		panic("too many values for record")
 	}
 	if len(b.vals) == 0 {
-		return Record("\x00")
+		return BuildInfo{size: 1}
 	}
 	sizes := make([]int, len(b.vals))
 	for i, v := range b.vals {
 		sizes[i] = v.PackSize2(&hash, stack)
 	}
-	length := b.recSize(sizes)
-	if length > maxRecordLen {
-		panic(fmt.Sprintf("record too large (%d > %d)", length, maxRecordLen))
+	size := b.recSize(sizes)
+	if size > maxRecordLen {
+		panic(fmt.Sprintf("record too large (%d > %d)", size, maxRecordLen))
 	}
-	buf := pack.NewEncoder(length)
-	b.build(&hash, buf, length, sizes)
-	//assert.That(len(buf.String()) == length)
-	return Record(buf.String())
+	return BuildInfo{size: size, sizes: sizes, hash: hash}
+}
+
+func (b *RecordBuilder) BuildInto(buf []byte, bi BuildInfo) Record {
+	e := pack.NewEncBuf(buf)
+	if bi.size == 1 {
+		e.Put1(0)
+	} else {
+		b.build(&bi.hash, e, bi.size, bi.sizes)
+	}
+	return Record(e.String())
 }
 
 func (b *RecordBuilder) recSize(sizes []int) int {

@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/hot"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -47,6 +48,9 @@ type Database struct {
 
 	closed    atomic.Bool
 	corrupted atomic.Bool
+
+	stats hot.Stats
+	busy  hot.BusyTally
 }
 
 const magic = "gsndo004"
@@ -54,6 +58,10 @@ const magicBase = "gsndo"
 const tailSize = 8 // len(shutdown/corrupt)
 const shutdown = "\x2b\xc1\x85\x63\x8d\x71\x65\x6d"
 const corrupt = "\xff\xff\xff\xff\xff\xff\xff\xff"
+
+// StatsTableName is the name of the system table that stores persistent
+// column statistics used by the query optimizer.
+const StatsTableName = "_stats_"
 
 // CreateDatabase creates an empty database in the named file.
 // NOTE: The returned Database does not have a checker.
@@ -128,6 +136,7 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 			return nil, err
 		}
 	}
+	db.stats = ReadStats(db)
 	return db, nil
 }
 
@@ -666,4 +675,49 @@ func OffToRecCk(store *stor.Stor, off uint64) core.Record {
 	size := core.RecLen(buf)
 	cksum.MustCheck(buf[:size+cksum.Len])
 	return core.Record(hacks.BStoS(buf[:size]))
+}
+
+// ReadStats reads the record stored in the stats table by compact.go
+// and hotdata.go and returns the parsed HotInfo.
+func ReadStats(db *Database) hot.Stats {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("ERROR ReadStats:", r)
+		}
+	}()
+	rt := db.NewReadTran()
+	defer rt.Abort()
+	ti := rt.GetInfo(StatsTableName)
+	if ti == nil || ti.Nrows == 0 {
+		return nil
+	}
+	iter := rt.IndexIter(StatsTableName, 0)
+	iter.Next(rt)
+	if iter.Eof() {
+		return nil
+	}
+	off := iter.CurOff()
+	rec := rt.GetRecord(off)
+	data := rec.GetStr(0)
+	if len(data) == 0 {
+		return nil
+	}
+	return hot.UnpackStats(data)
+}
+
+// HotColsAdd adds a column with a given weight to the hot columns tracker.
+func (db *Database) HotColsAdd(col string, weight int) {
+	db.busy.Add(col, weight)
+}
+
+// StatsRangeFrac returns the fraction of rows in the range,
+// from the stats, or false if there are no stats for the column.
+func (db *Database) StatsRangeFrac(table, col, from, to string) (float64, bool) {
+	return db.stats.RangeFrac(table, col, from, to)
+}
+
+// StatsPointFrac returns the fraction of rows equal to value,
+// from the stats, or false if there are no stats for the column.
+func (db *Database) StatsPointFrac(table, col, value string) (float64, bool) {
+	return db.stats.PointFrac(table, col, value)
 }

@@ -4,6 +4,7 @@
 package query
 
 import (
+	"cmp"
 	"maps"
 	"math"
 
@@ -12,7 +13,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/set"
 )
 
 const unknownFrac = .5
@@ -22,65 +22,100 @@ const unknownFrac = .5
 // Its input (perCol) is the result of perField (where2.go).
 // Its output is used by Nrows, bestIndex, and finally Get.
 // It sets w.singleton if the where selects a single row.
-func (w *Where) perIndex(perCol map[string][]span) []*idxSel {
-	var minPreFrac *idxSel
+func (w *Where) perIndex() []*idxSel {
+	colFracs := w.getColFracs(w.colSels)
 	idxSels := make([]*idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
+	minFrac := 1.0
 	for i := range indexes {
 		schix := &indexes[i]
-		isel := w.buildIdxSel(schix.Fields, schix.Mode, perCol)
+		isel := w.buildIdxSel(schix.Fields, schix.Mode, w.colSels)
 		if isel.singleton {
 			w.singleton = true
 			return []*idxSel{isel}
 		}
-		if len(isel.prefixRanges) > 0 || isel.indexFilter {
-			isel.prefixFrac = w.prefixFrac(isel)
-			if minPreFrac == nil || betterMinPre(isel, minPreFrac) {
-				minPreFrac = isel
-			}
-			idxSels = append(idxSels, isel)
+		if len(isel.prefixRanges) == 0 {
+			continue
 		}
+		// calculate fracs
+		isel.prefixFrac = w.prefixFrac(isel)
+		frac := isel.calcFracs(colFracs, w.colSels, w.unspanable, w.dataExprCount)
+		if frac < minFrac {
+			minFrac = frac
+		}
+
+		idxSels = append(idxSels, isel)
 	}
 	if len(idxSels) == 0 {
-		w.wfrac = unknownFrac
+		// use a dummy idxSel so we can use calcFracs
+		isel := &idxSel{}
+		w.wfrac = isel.calcFracs(colFracs, w.colSels, w.unspanable, w.dataExprCount)
 		return nil
 	}
-
-	// now we have minPreFrac we can calculate the other fractions
-	// if minPreFrac is prefix only then that is the overall selectivity
-	w.wfrac = minPreFrac.prefixFrac
-	if !minPreFrac.OnlyPrefix() {
-		w.wfrac *= unknownFrac
-	}
-
-	for _, isel := range idxSels {
-		if isel.OnlyPrefix() || isel.prefixFrac < w.wfrac {
-			isel.prefixFrac = w.wfrac
-		}
-		moreFrac := 1.0
-		if w.wfrac < isel.prefixFrac {
-			moreFrac = w.wfrac / isel.prefixFrac
-		}
-		isel.skipFrac, isel.indexFilterFrac, isel.dataFilterFrac =
-			splitFrac(moreFrac, isel.HasSkipScan(), isel.indexFilter, isel.dataFilter)
-	}
+	w.wfrac = minFrac
 	return idxSels
 }
 
-// betterMinPre returns true if a should replace b as minPreFrac.
-// OnlyPrefix always wins (btree-derived fraction is more reliable).
-// Within the same kind, lower prefixFrac wins.
-// Rationale: OnlyPrefix means it covers the entire Where expression.
-// This means it should be the most selective (within btree probe accuracy).
-// No other idxSel should be significantly better
-// unless there is an error somewhere.
-func betterMinPre(a, b *idxSel) bool {
-	if a.OnlyPrefix() != b.OnlyPrefix() {
-		return a.OnlyPrefix()
-	}
-	return a.prefixFrac < b.prefixFrac
+//-------------------------------------------------------------------
+
+type colFrac struct {
+	col  string
+	frac float64
 }
 
+// returns a list of colFracs for perCol, sorted by frac
+func (w *Where) getColFracs(perCol map[string][]span) []colFrac {
+	var colFracs []colFrac
+	for col := range perCol {
+		if frac, ok := w.colStatsFrac(w.tbl.Name(), col, perCol[col]); ok {
+			colFracs = append(colFracs, colFrac{col: col, frac: frac})
+		}
+	}
+	slices.SortFunc(colFracs, func(x, y colFrac) int {
+		return cmp.Compare(x.frac, y.frac)
+	})
+	return colFracs
+}
+
+// colStatsFrac returns the estimated fraction of rows matching any of the
+// spans for col, or false if there are no stats for the column.
+func (w *Where) colStatsFrac(table, col string, spans []span) (float64, bool) {
+	frac := 0.0
+	for _, sp := range spans {
+		var f float64
+		var ok bool
+		if sp.isValue() {
+			f, ok = w.t.StatsPointFrac(table, col, sp.org.val)
+		} else {
+			f, ok = w.t.StatsRangeFrac(table, col,
+				statsBound(sp.org), statsBound(sp.end))
+		}
+		if !ok {
+			return 0, false
+		}
+		frac += f
+	}
+	// cap the sum of the spans (each span fraction is already in [0,1])
+	return min(frac, 1.0), true
+}
+
+// statsBound adjusts a span bound to the [from, to) semantics
+// of StatsRangeFrac. For org, inc means exclusive (>);
+// for end, inc means inclusive (<=); in both cases
+// appending "\x00" gives the correct boundary (cf. valRaw).
+func statsBound(x side) string {
+	if x.inc {
+		return x.val + "\x00"
+	}
+	return x.val
+}
+
+//-------------------------------------------------------------------
+
+// buildIdxSel constructs an idxSel describing how to use one index:
+// prefix point/ranges from leading column equalities, a skip scan range
+// on a later column, and any residual index/data filters.
+// It does not do anything with selectivity fracs.
 func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) *idxSel {
 	encode := mode != 'k' || len(index) > 1
 	isel := idxSel{index: index, encoded: encode, mode: mode}
@@ -133,18 +168,14 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 	}
 
 	// skip scan range
-	if encode {
+	if len(index) > 1 {
 		isel.skipStart, isel.skipLen, isel.skipRange =
 			skipScanSuffix(perCol, isel.index, max(1, isel.prefixLen))
-		if isel.prefixLen == 0 && isel.skipLen > 0 {
-			isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
-		}
 	}
 
-	// more filters
-	isel.indexFilter, isel.dataFilter = w.moreFilters(index, &isel)
-	if len(isel.prefixRanges) == 0 && isel.indexFilter {
-		// filter-only index selection needs a range for execution
+	if len(isel.prefixRanges) == 0 &&
+		(isel.skipLen > 0 || w.hasIndexFilter(index, &isel)) {
+		// need a range for execution
 		isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
 	}
 
@@ -337,6 +368,7 @@ func (x side) valRaw() string {
 // Skip scan only supports a single contiguous range.
 // If the first column has multiple spans (e.g. in-list), skip this position.
 // If a later column has multiple spans, truncate the spans there.
+// NOTE: skip scan only applies to multi-column indexes, so we can assume encoding.
 func skipScanSuffix(perCol map[string][]span, idx []string, prefixLen int) (
 	start, size int, sr pointRange) {
 	for i := prefixLen; i < len(idx); i++ {
@@ -369,39 +401,30 @@ func skipScanSuffix(perCol map[string][]span, idx []string, prefixLen int) (
 	return
 }
 
-// moreFilters returns estimated selectivity fractions for expressions
-// not already handled by the prefix points/ranges and skip scan.
-// indexFilter covers expressions on index columns, dataFilter on non-index columns.
-func (w *Where) moreFilters(index []string, isel *idxSel) (bool, bool) {
-	unconstrained := index[isel.prefixLen:]
-	if isel.skipStart > 0 {
-		unconstrained = index[isel.prefixLen:isel.skipStart]
-		unconstrained = append(slices.Clip(unconstrained),
-			index[isel.skipStart+isel.skipLen:]...)
-	}
-	indexFilter := false
-	dataFilter := false
-	for _, e := range w.expr.Exprs {
-		exprCols := e.Columns()
-		if len(exprCols) == 0 || !set.HasSubset(index, exprCols) {
-			dataFilter = true
-		} else if !set.Disjoint(exprCols, unconstrained) {
-			// e.g. index(a,b) where a>1 and F(a,b)
-			// F(a,b) overlaps unconstrained (b)
-			// so we know it is in addition to the range/skip
-			indexFilter = true
-		} else if _, sp := exprToSpans(e, index); sp == nil {
-			// e.g. index(a) where a=1 and F(a)
-			// F(a) is not a span
-			// so we know it is in addition to the range/skip
-			indexFilter = true
+// hasIndexFilter returns whether there are residual expressions on index
+// columns not already handled by the prefix points/ranges and skip scan.
+func (w *Where) hasIndexFilter(index []string, isel *idxSel) bool {
+	for i, col := range index {
+		// skip prefix and skip scan columns
+		if i < isel.prefixLen ||
+			(i >= isel.skipStart && i < isel.skipStart+isel.skipLen) {
+			continue
+		}
+		if _, ok := w.colSels[col]; ok {
+			return true
+		}
+		if slices.Contains(w.unspanable, col) {
+			return true
 		}
 	}
-	return indexFilter, dataFilter
+	return false
 }
 
 //-------------------------------------------------------------------
 
+// prefixFrac estimates the fraction of rows matched by the index prefix
+// points/ranges: each point contributes ~0.5/nrows (assuming ~50% existence),
+// ranges use the btree's RangeFrac, summed and clamped to 1.
 func (w *Where) prefixFrac(isel *idxSel) float64 {
 	iIndex := w.tbl.indexi(isel.index)
 	npoints := 0
@@ -424,46 +447,95 @@ func (w *Where) prefixFrac(isel *idxSel) float64 {
 	return frac
 }
 
-// splitFrac distributes the residual selectivity (f = moreFrac) across the
-// index-stage filters (skip scan, index filter) and the data filter.
-//
-// Index-stage selectivity is hard to estimate and must stay robust when f is
-// near zero (e.g. a selective or empty Where), otherwise a near-zero f would
-// collapse every stage toward zero and make skip/index-filter indexes look
-// artificially cheap, distorting index selection. So skip and index filter get
-// fixed pessimistic defaults that diminish geometrically (0.5, ~0.707, ~0.84).
-//
-// The data filter is independent of the index (it reads non-index columns), so
-// it is the natural place to absorb the residual: dataFilterFrac = f / product
-// of the index-stage fracs, clamped to 1. This keeps the component product
-// consistent with f only when a data filter is present; otherwise the product
-// is a fixed heuristic, which is acceptable since there is no data filter to
-// reconcile with.
-func splitFrac(f float64, hasSkip, hasIdxFilter, hasDataFilter bool) (float64, float64, float64) {
-	skipFrac := 1.0
-	idxFilterFrac := 1.0
-	dataFilterFrac := 1.0
-
-	frac := unknownFrac
-	if hasSkip {
-		skipFrac = frac
+// damp is a helper for applying exponential dampening to column fractions
+// to account for dependence (overlap) between columns.
+func damp(i int, frac float64) float64 {
+	for range i {
 		frac = math.Sqrt(frac)
 	}
-	if hasIdxFilter {
-		idxFilterFrac = frac
-		frac = math.Sqrt(frac)
+	return frac
+}
+
+// calcFracs calculates the selectivity of each stage (index range and filter).
+// The prefix columns are covered by prefixFrac (from the btree probe), so they
+// are excluded here to avoid double counting. This is used for costing in [WhereCost].
+func (isel *idxSel) calcFracs(colFracs []colFrac, perCol map[string][]span,
+	unspanable []string, dataExprCount int) float64 {
+	const (
+		iRange = iota
+		iFilter
+		dFilter
+	)
+	type stageFrac struct {
+		stage int
+		frac  float64
 	}
-	if hasDataFilter {
-		dataFilterFrac = frac
+	var fracs []stageFrac
+	// prefixFrac is from the btree probe, more reliable than column stats
+	if isel.prefixLen > 0 {
+		fracs = append(fracs, stageFrac{iRange, isel.prefixFrac})
 	}
 
-	if f > 0 && hasDataFilter {
-		activeProduct := skipFrac * idxFilterFrac
-		dataFilterFrac = f / activeProduct
-		if dataFilterFrac > 1 {
-			dataFilterFrac = 1
+	for col := range perCol {
+		i := slices.Index(isel.index, col)
+		if i >= 0 && i < isel.prefixLen {
+			continue // covered by prefixFrac
+		}
+		frac := getColFrac(colFracs, col)
+		stage := dFilter
+		if i >= 0 {
+			stage = iFilter
+			if i >= isel.skipStart && i < isel.skipStart+isel.skipLen {
+				stage = iRange
+			}
+		}
+		fracs = append(fracs, stageFrac{stage, frac})
+	}
+
+	for _, col := range unspanable {
+		stage := dFilter
+		if slices.Contains(isel.index, col) {
+			stage = iFilter
+		}
+		fracs = append(fracs, stageFrac{stage, unknownFrac})
+	}
+
+	for range dataExprCount {
+		fracs = append(fracs, stageFrac{dFilter, unknownFrac})
+	}
+
+	// sort by stage and then frac (range first, most selective first)
+	slices.SortFunc(fracs, func(x, y stageFrac) int {
+		return cmp.Or(cmp.Compare(x.stage, y.stage), cmp.Compare(x.frac, y.frac))
+	})
+	// group by stage, applying damp
+	sfs := [3]float64{1, 1, 1}
+	for i, sf := range fracs {
+		sfs[sf.stage] *= damp(i, sf.frac)
+	}
+	// assign to isel
+	isel.indexRangeFrac = sfs[iRange]
+	isel.indexFilterFrac = sfs[iFilter]
+	isel.hasDataFilter = sfs[dFilter] != 1
+
+	// overall frac
+	// sort by just frac (most selective first)
+	slices.SortFunc(fracs, func(x, y stageFrac) int {
+		return cmp.Compare(x.frac, y.frac)
+	})
+	frac := 1.0
+	for i, sf := range fracs {
+		frac *= damp(i, sf.frac)
+	}
+	return frac
+}
+
+// getColFrac is a helper for calcFracs to get the selectivity of a column
+func getColFrac(colFracs []colFrac, col string) float64 {
+	for _, cf := range colFracs {
+		if cf.col == col {
+			return cf.frac
 		}
 	}
-
-	return skipFrac, idxFilterFrac, dataFilterFrac
+	return unknownFrac
 }

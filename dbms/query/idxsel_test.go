@@ -51,30 +51,25 @@ func TestIdxSelString(t *testing.T) {
 		skipStart:       1,
 		skipLen:         1,
 		skipRange:       pointRange{Org: Pack(SuInt(3)), End: Pack(SuInt(6))},
-		skipFrac:        .6,
-		indexFilter:     true,
+		indexRangeFrac:  .25,
 		indexFilterFrac: .5,
-		dataFilter:      true,
-		dataFilterFrac:  .5,
+		hasDataFilter:      true,
 	}
 	assert.T(t).This(is.String()).
-		Is("(a,b,c,d,e) a: <1 | 2..4> +b: <3..6> = pre: .25 skp: .6 idx: .5 dat: .5")
+		Is("(a,b,c,d,e) a: <1 | 2..4> +b: <3..6> = pr: .25 if: .5 df")
 
 	is = idxSel{
-		index:      []string{"a", "b", "c"},
-		prefixFrac: 1,
+		index: []string{"a", "b", "c"},
 	}
-	assert.T(t).This(is.String()).Is("(a,b,c) = pre: 1")
+	assert.T(t).This(is.String()).Is("(a,b,c) =")
 
 	is = idxSel{
-		index:      []string{"a", "b", "c"},
-		prefixFrac: .33,
-		prefixLen:  2,
-		prefixRanges: []pointRange{
-			{Org: Pack(SuInt(7))},
-		},
+		index:          []string{"a", "b", "c"},
+		prefixFrac:     .33,
+		prefixLen:      2,
+		prefixRanges:   []pointRange{{Org: Pack(SuInt(7))}},
 	}
-	assert.T(t).This(is.String()).Is("(a,b,c) a,b: <7> = pre: .33")
+	assert.T(t).This(is.String()).Is("(a,b,c) a,b: <7> = pr: .33")
 
 	is = idxSel{
 		index:      []string{"a", "b", "c"},
@@ -83,24 +78,25 @@ func TestIdxSelString(t *testing.T) {
 		prefixRanges: []pointRange{
 			{Org: Pack(SuInt(1)), End: ixkey.Max},
 		},
-		skipStart: 2,
-		skipLen:   1,
-		skipRange: pointRange{Org: Pack(SuInt(5))},
-		skipFrac:  .5,
+		skipStart:      2,
+		skipLen:        1,
+		skipRange:      pointRange{Org: Pack(SuInt(5))},
+		indexRangeFrac: .3,
 	}
-	assert.T(t).This(is.String()).Is("(a,b,c) a: <1..max> +c: <5> = pre: .2 skp: .5")
+	assert.T(t).This(is.String()).Is("(a,b,c) a: <1..max> +c: <5> = pr: .2 ir: .3")
 
 	// encoded
 	is = idxSel{
 		index:      []string{"a", "b"},
 		encoded:    true,
-		prefixFrac: .1,
+		prefixFrac: .2,
 		prefixLen:  1,
 		prefixRanges: []pointRange{{
 			Org: ixkey.CompKey(Pack(SuInt(1)), Pack(SuStr("x"))),
 			End: ixkey.CompKey(Pack(SuInt(2)), Pack(SuStr("z")))}},
+		indexRangeFrac: .1,
 	}
-	assert.T(t).This(is.String()).Is("(a,b) a: <1,'x'..2,'z'> = pre: .1")
+	assert.T(t).This(is.String()).Is("(a,b) a: <1,'x'..2,'z'> = pr: .2 ir: .1")
 }
 
 func TestFracStr(t *testing.T) {

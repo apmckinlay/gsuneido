@@ -77,6 +77,18 @@ func (t *tran) GetStore() *stor.Stor {
 	return t.db.Store
 }
 
+func (t *tran) HotColsAdd(col string, weight int) {
+	t.db.busy.Add(col, weight)
+}
+
+func (t *tran) StatsRangeFrac(table, col, from, to string) (float64, bool) {
+	return t.db.StatsRangeFrac(table, col, from, to)
+}
+
+func (t *tran) StatsPointFrac(table, col, value string) (float64, bool) {
+	return t.db.StatsPointFrac(table, col, value)
+}
+
 //-------------------------------------------------------------------
 
 type ReadTran struct {

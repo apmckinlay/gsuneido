@@ -24,31 +24,30 @@ type idxSel struct {
 	// prefix points/ranges
 	prefixLen    int
 	prefixRanges []pointRange
-	prefixFrac   float64
+	prefixFrac   float64 // from index probe
 
 	// skip scan range
 	skipStart int // 0 means no skip scan; indexes into fields
 	skipLen   int
 	skipRange pointRange
-	skipFrac  float64
 
-	// indexFilter is where expressions on index columns
-	// that are not covered by prefix or skip ranges
-	indexFilter     bool
+	// hasDataFilter is where expressions that are not covered by the index
+	hasDataFilter bool
+
+	// indexRangeFrac is the fraction of the index
+	// that is selected by the prefix and skip pointRange
+	// It reduces the amount of the index that must be iterated.
+	// indexRangeFrac includes prefixFrac
+	indexRangeFrac float64
+
+	// indexFilterFrac is the fraction of the index
+	// that is selected by the indexFilter
+	// It reduces the number of data rows that need to be filtered.
 	indexFilterFrac float64
-
-	// dataFilter is where expressions
-	// that are not covered by the index
-	dataFilter     bool
-	dataFilterFrac float64
 }
 
 func (is *idxSel) HasSkipScan() bool {
 	return is.skipStart > 0
-}
-
-func (is *idxSel) OnlyPrefix() bool {
-	return !is.HasSkipScan() && !is.indexFilter && !is.dataFilter
 }
 
 func (is idxSel) String() string {
@@ -70,7 +69,9 @@ func (is idxSel) String() string {
 			}
 			sep = " | "
 		}
-		sb.WriteString(">")
+		if sep != " <" {
+			sb.WriteString(">")
+		}
 	}
 	if is.singleton {
 		sb.WriteString(" = singleton")
@@ -87,20 +88,22 @@ func (is idxSel) String() string {
 			}
 			sb.WriteString(">")
 		}
-		// fractions
-		sb.WriteString(" = pre: ")
-		sb.WriteString(fracStr(is.prefixFrac))
-		if is.skipStart > 0 {
-			sb.WriteString(" skp: ")
-			sb.WriteString(fracStr(is.skipFrac))
+		sb.WriteString(" =")
+		if is.prefixLen > 0 {
+			sb.WriteString(" pr: ")
+			sb.WriteString(fracStr(is.prefixFrac))
 		}
-		if is.indexFilter {
-			sb.WriteString(" idx: ")
+		if is.indexRangeFrac != 0 && is.indexRangeFrac != 1 &&
+			is.indexRangeFrac != is.prefixFrac {
+			sb.WriteString(" ir: ")
+			sb.WriteString(fracStr(is.indexRangeFrac))
+		}
+		if is.indexFilterFrac != 0 && is.indexFilterFrac != 1 {
+			sb.WriteString(" if: ")
 			sb.WriteString(fracStr(is.indexFilterFrac))
 		}
-		if is.dataFilter {
-			sb.WriteString(" dat: ")
-			sb.WriteString(fracStr(is.dataFilterFrac))
+		if is.hasDataFilter {
+			sb.WriteString(" df")
 		}
 	}
 	return sb.String()

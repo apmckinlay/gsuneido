@@ -361,6 +361,9 @@ type QueryTran interface {
 	Read(string, int, string, string)
 	IndexIter(table string, iIndex int) index.IndexIter
 	Num() int
+	HotColsAdd(col string, weight int)
+	StatsRangeFrac(table, col, from, to string) (float64, bool)
+	StatsPointFrac(table, col, value string) (float64, bool)
 }
 
 // Setup prepares a parsed query for execution.
