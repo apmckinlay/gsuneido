@@ -40,7 +40,7 @@ type loadJob struct {
 }
 
 // LoadDatabase imports a dumped database from a file.
-// Data is copied in the main thread. 
+// Data is copied in the main thread.
 // A worker pool builds the indexes with a task per table.
 // This means table data and indexes are interleaved.
 // This is not optimal for execution but it is faster. (e.g. 3x)
