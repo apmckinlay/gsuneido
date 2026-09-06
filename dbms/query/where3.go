@@ -19,17 +19,17 @@ const unknownFrac = .5
 
 // perIndex returns an idxSel for each usable index.
 // It is called by optInit (which is called on-demand by several methods)
-// Its input (perCol) is the result of perField (where2.go).
+// Its input (colSpans) is the result of perField (where2.go).
 // Its output is used by Nrows, bestIndex, and finally Get.
 // It sets w.singleton if the where selects a single row.
 func (w *Where) perIndex() []*idxSel {
-	colFracs := w.getColFracs(w.colSels)
+	colFracs := w.getColFracs(w.colSpans)
 	idxSels := make([]*idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
 	minFrac := 1.0
 	for i := range indexes {
 		schix := &indexes[i]
-		isel := w.buildIdxSel(schix.Fields, schix.Mode, w.colSels)
+		isel := w.buildIdxSel(schix.Fields, schix.Mode, w.colSpans)
 		if isel.singleton {
 			w.singleton = true
 			return []*idxSel{isel}
@@ -39,7 +39,7 @@ func (w *Where) perIndex() []*idxSel {
 		}
 		// calculate fracs
 		isel.prefixFrac = w.prefixFrac(isel)
-		frac := isel.calcFracs(colFracs, w.colSels, w.unspanable, w.dataExprCount)
+		frac := isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
 		if frac < minFrac {
 			minFrac = frac
 		}
@@ -49,7 +49,7 @@ func (w *Where) perIndex() []*idxSel {
 	if len(idxSels) == 0 {
 		// use a dummy idxSel so we can use calcFracs
 		isel := &idxSel{}
-		w.wfrac = isel.calcFracs(colFracs, w.colSels, w.unspanable, w.dataExprCount)
+		w.wfrac = isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
 		return nil
 	}
 	w.wfrac = minFrac
@@ -63,11 +63,11 @@ type colFrac struct {
 	frac float64
 }
 
-// returns a list of colFracs for perCol, sorted by frac
-func (w *Where) getColFracs(perCol map[string][]span) []colFrac {
+// returns a list of colFracs for colSpans, sorted by frac
+func (w *Where) getColFracs(colSpans map[string][]span) []colFrac {
 	var colFracs []colFrac
-	for col := range perCol {
-		if frac, ok := w.colStatsFrac(w.tbl.Name(), col, perCol[col]); ok {
+	for col := range colSpans {
+		if frac, ok := w.colStatsFrac(w.tbl.Name(), col, colSpans[col]); ok {
 			colFracs = append(colFracs, colFrac{col: col, frac: frac})
 		}
 	}
@@ -116,12 +116,12 @@ func statsBound(x side) string {
 // prefix point/ranges from leading column equalities, a skip scan range
 // on a later column, and any residual index/data filters.
 // It does not do anything with selectivity fracs.
-func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span) *idxSel {
+func (w *Where) buildIdxSel(index []string, mode byte, colSpans map[string][]span) *idxSel {
 	encode := mode != 'k' || len(index) > 1
 	isel := idxSel{index: index, encoded: encode, mode: mode}
 
 	// Fast path: all prefix columns have single-value spans
-	if prefixLen, org, ok := allSingleValuePrefix(index, encode, perCol); ok {
+	if prefixLen, org, ok := allSingleValuePrefix(index, encode, colSpans); ok {
 		isel.prefixLen = prefixLen
 		// A unique 'u' index appends Ixspec.Fields2 (the table's best key)
 		// to the physical entry when the index value is entirely empty
@@ -134,7 +134,7 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 			assert.That(encode)
 			var enc ixkey.Encoder
 			for i := range prefixLen {
-				enc.Add(perCol[index[i]][0].org.val)
+				enc.Add(colSpans[index[i]][0].org.val)
 			}
 			enc.Add(ixkey.Max)
 			end := enc.String()
@@ -147,7 +147,7 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 			}
 			return &isel
 		}
-	} else if idxSpans := indexSpans(index, perCol); len(idxSpans) > 0 {
+	} else if idxSpans := indexSpans(index, colSpans); len(idxSpans) > 0 {
 		// prefix range
 		exploded := explodeIndexSpans(idxSpans, [][]span{nil})
 		comp := makePointRanges(encode, exploded)
@@ -170,11 +170,11 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 	// skip scan range
 	if len(index) > 1 {
 		isel.skipStart, isel.skipLen, isel.skipRange =
-			skipScanSuffix(perCol, isel.index, max(1, isel.prefixLen))
+			skipScanSuffix(colSpans, isel.index, max(1, isel.prefixLen))
 	}
 
 	if len(isel.prefixRanges) == 0 &&
-		(isel.skipLen > 0 || w.hasIndexFilter(index, &isel)) {
+		(isel.skipLen > 0 || w.hasIndexFilter(index, colSpans, &isel)) {
 		// need a range for execution
 		isel.prefixRanges = []pointRange{{Org: ixkey.Min, End: ixkey.Max}}
 	}
@@ -185,14 +185,14 @@ func (w *Where) buildIdxSel(index []string, mode byte, perCol map[string][]span)
 // allSingleValuePrefix checks if all prefix columns have exactly one value span.
 // If so, it encodes the values directly and returns (prefixLen, org, true).
 // Otherwise returns (0, "", false).
-func allSingleValuePrefix(index []string, encode bool, perCol map[string][]span) (int, string, bool) {
+func allSingleValuePrefix(index []string, encode bool, colSpans map[string][]span) (int, string, bool) {
 	prefixLen := 0
 	for i, col := range index {
-		colSpans := perCol[col]
-		if colSpans == nil {
+		cs := colSpans[col]
+		if cs == nil {
 			break
 		}
-		if len(colSpans) != 1 || !colSpans[0].isValue() {
+		if len(cs) != 1 || !cs[0].isValue() {
 			return 0, "", false
 		}
 		prefixLen = i + 1
@@ -202,11 +202,11 @@ func allSingleValuePrefix(index []string, encode bool, perCol map[string][]span)
 	}
 	var org string
 	if !encode {
-		org = perCol[index[0]][0].org.val
+		org = colSpans[index[0]][0].org.val
 	} else {
 		var enc ixkey.Encoder
 		for i := 0; i < prefixLen; i++ {
-			enc.Add(perCol[index[i]][0].org.val)
+			enc.Add(colSpans[index[i]][0].org.val)
 		}
 		org = enc.String()
 	}
@@ -216,7 +216,7 @@ func allSingleValuePrefix(index []string, encode bool, perCol map[string][]span)
 // recalcIdxSel rebuilds the idxSel for the current index using merged
 // where+select constraints. Returns (isel, conflict).
 func (w *Where) recalcIdxSel(index []string, mode byte, sels Sels) (*idxSel, bool) {
-	merged, conflict := w.mergedPerCol(index, sels)
+	merged, conflict := w.mergeColSpans(index, sels)
 	if conflict {
 		return &idxSel{}, true
 	}
@@ -224,44 +224,44 @@ func (w *Where) recalcIdxSel(index []string, mode byte, sels Sels) (*idxSel, boo
 	return isel, false
 }
 
-// mergedPerCol builds a perCol map from w.colSels intersected with equality
+// mergeColSpans builds a colSpans map from w.colSpans intersected with equality
 // spans for the select cols that appear in the current index.
 // Returns (nil, true) if the intersection results in a conflict.
-func (w *Where) mergedPerCol(index []string, sels Sels) (map[string][]span, bool) {
-	if w.mergedBuf == nil {
-		w.mergedBuf = make(map[string][]span, len(w.colSels)+len(sels))
+func (w *Where) mergeColSpans(index []string, sels Sels) (map[string][]span, bool) {
+	if w.mergeSpans == nil {
+		w.mergeSpans = make(map[string][]span, len(w.colSpans)+len(sels))
 	} else {
-		clear(w.mergedBuf)
+		clear(w.mergeSpans)
 	}
-	maps.Copy(w.mergedBuf, w.colSels)
+	maps.Copy(w.mergeSpans, w.colSpans)
 	for _, sel := range sels {
 		if !slices.Contains(index, sel.col) {
 			continue
 		}
 		eq := []span{valSpan(sel.val)}
-		if existing := w.mergedBuf[sel.col]; existing != nil {
+		if existing := w.mergeSpans[sel.col]; existing != nil {
 			result := intersectSpans(existing, eq)
 			if result == nil {
 				return nil, true // conflict
 			}
-			w.mergedBuf[sel.col] = result
+			w.mergeSpans[sel.col] = result
 		} else {
-			w.mergedBuf[sel.col] = eq
+			w.mergeSpans[sel.col] = eq
 		}
 	}
-	return w.mergedBuf, false
+	return w.mergeSpans, false
 }
 
 // indexSpans returns the spans for an index
-func indexSpans(idx []string, perCol map[string][]span) [][]span {
+func indexSpans(idx []string, colSpans map[string][]span) [][]span {
 	idxSpans := make([][]span, 0, len(idx))
 	for i := range idx {
-		colSpans := perCol[idx[i]]
-		if colSpans == nil {
+		cs := colSpans[idx[i]]
+		if cs == nil {
 			break
 		}
-		idxSpans = append(idxSpans, colSpans)
-		if hasRange(colSpans) {
+		idxSpans = append(idxSpans, cs)
+		if hasRange(cs) {
 			break // can't have anything after a range
 		}
 	}
@@ -369,10 +369,10 @@ func (x side) valRaw() string {
 // If the first column has multiple spans (e.g. in-list), skip this position.
 // If a later column has multiple spans, truncate the spans there.
 // NOTE: skip scan only applies to multi-column indexes, so we can assume encoding.
-func skipScanSuffix(perCol map[string][]span, idx []string, prefixLen int) (
+func skipScanSuffix(colSpans map[string][]span, idx []string, prefixLen int) (
 	start, size int, sr pointRange) {
 	for i := prefixLen; i < len(idx); i++ {
-		spans := indexSpans(idx[i:], perCol)
+		spans := indexSpans(idx[i:], colSpans)
 		if len(spans) == 0 {
 			continue
 		}
@@ -403,14 +403,14 @@ func skipScanSuffix(perCol map[string][]span, idx []string, prefixLen int) (
 
 // hasIndexFilter returns whether there are residual expressions on index
 // columns not already handled by the prefix points/ranges and skip scan.
-func (w *Where) hasIndexFilter(index []string, isel *idxSel) bool {
+func (w *Where) hasIndexFilter(index []string, colSpans map[string][]span, isel *idxSel) bool {
 	for i, col := range index {
 		// skip prefix and skip scan columns
 		if i < isel.prefixLen ||
 			(i >= isel.skipStart && i < isel.skipStart+isel.skipLen) {
 			continue
 		}
-		if _, ok := w.colSels[col]; ok {
+		if _, ok := colSpans[col]; ok {
 			return true
 		}
 		if slices.Contains(w.unspanable, col) {
@@ -459,7 +459,7 @@ func damp(i int, frac float64) float64 {
 // calcFracs calculates the selectivity of each stage (index range and filter).
 // The prefix columns are covered by prefixFrac (from the btree probe), so they
 // are excluded here to avoid double counting. This is used for costing in [WhereCost].
-func (isel *idxSel) calcFracs(colFracs []colFrac, perCol map[string][]span,
+func (isel *idxSel) calcFracs(colFracs []colFrac, colSpans map[string][]span,
 	unspanable []string, dataExprCount int) float64 {
 	const (
 		iRange = iota
@@ -476,7 +476,7 @@ func (isel *idxSel) calcFracs(colFracs []colFrac, perCol map[string][]span,
 		fracs = append(fracs, stageFrac{iRange, isel.prefixFrac})
 	}
 
-	for col := range perCol {
+	for col := range colSpans {
 		i := slices.Index(isel.index, col)
 		if i >= 0 && i < isel.prefixLen {
 			continue // covered by prefixFrac

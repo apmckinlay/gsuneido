@@ -42,25 +42,23 @@ type side struct {
 // It depends on CanEvalRaw already being done.
 // The third return value is the count of expressions with no columns or multiple columns.
 func perField(exprs []ast.Expr, fields []string) (map[string][]span, []string, int) {
-	result := make(map[string][]span)
+	colSpans := make(map[string][]span)
 	var unspanable []string
 	var dataExprCount int
 	for _, expr := range exprs {
 		if col, espans := exprToSpans(expr, fields); espans != nil {
-			x := intersectSpans(result[col], espans)
+			x := intersectSpans(colSpans[col], espans)
 			if x == nil {
 				return nil, nil, 0 // conflict
 			}
-			result[col] = x
+			colSpans[col] = x
+		} else if len(expr.Columns()) == 1 {
+			unspanable = append(unspanable, expr.Columns()[0])
 		} else {
-			if len(expr.Columns()) == 1 {
-				unspanable = append(unspanable, expr.Columns()[0])
-			} else {
-				dataExprCount++
-			}
+			dataExprCount++
 		}
 	}
-	return result, unspanable, dataExprCount
+	return colSpans, unspanable, dataExprCount
 }
 
 // exprToSpans returns the spans for an expression, or nil if not indexable

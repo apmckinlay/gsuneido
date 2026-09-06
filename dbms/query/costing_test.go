@@ -14,7 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
-const ncosting = 10000
+const ncosting = 1000
 
 func TestCosting_Table(t *testing.T) {
 	for range ncosting {

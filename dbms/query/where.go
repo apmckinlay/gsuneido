@@ -32,11 +32,11 @@ type Where struct {
 	t QueryTran
 
 	// results of perField, called by NewWhere
-	colSels       map[string][]span
+	colSpans      map[string][]span
 	unspanable    []string
 	dataExprCount int // count of where exprs not tied to a single column
 
-	mergedBuf map[string][]span // reusable buffer for mergedPerCol
+	mergeSpans map[string][]span // reusable map for mergeColSpans
 	// tbl will be set if the source is a table, nil otherwise
 	tbl *Table
 	// idxSel is for the chosen index
@@ -120,10 +120,8 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	if !w.conflict {
 		fields := w.source.Header().Physical()
 		w.expr.CanEvalRaw(fields)
-		w.colSels, w.unspanable, w.dataExprCount =
-			perField(w.expr.Exprs, fields)
-		// fmt.Println("colSels", w.colSels)
-		w.conflict = (w.colSels == nil)
+		w.colSpans, w.unspanable, w.dataExprCount = perField(w.expr.Exprs, fields)
+		w.conflict = (w.colSpans == nil)
 	}
 	return w
 }
@@ -181,7 +179,7 @@ func (w *Where) exprsToFixed() (fixed Fixed, conflict bool) {
 }
 
 func addFixed(fixed Fixed, e ast.Expr) (Fixed, bool) {
-	// MAYBE: handle OR, could use colSels
+	// MAYBE: handle OR, could use colSpans
 	if b, ok := e.(*ast.Binary); ok && (b.Tok == tok.Is || b.Tok == tok.Lte) {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
 			if c, ok := b.Rhs.(*ast.Constant); ok {
@@ -636,7 +634,7 @@ func (w *Where) optInit() {
 	w.tbl, _ = w.source.(*Table)
 	if !w.conflict && w.tbl != nil {
 		if weight, _ := w.source.Nrows(); weight > 0 {
-			for col := range w.colSels {
+			for col := range w.colSpans {
 				w.t.HotColsAdd(w.tbl.Name()+"."+col, weight)
 			}
 		}

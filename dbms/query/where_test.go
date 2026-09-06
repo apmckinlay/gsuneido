@@ -27,7 +27,7 @@ func TestWhere_perField(t *testing.T) {
 		actualUnspanable := "conflict"
 		actualDataExprCount := 0
 		if !w.conflict {
-			actualCols = fmt.Sprint(w.colSels)[3:]
+			actualCols = fmt.Sprint(w.colSpans)[3:]
 			actualUnspanable = fmt.Sprint(w.unspanable)
 			actualDataExprCount = w.dataExprCount
 		}
@@ -278,6 +278,9 @@ func TestWhere_perIndex(t *testing.T) {
 		"(a,b,c) +c: <1..1,max> = ir: .5 (b,a,c) +c: <1..1,max> = ir: .5", .5)
 	test("comp2 where a is 1 and b is 2",
 		"(a,b,c) a,b: <1,2..1,2,max> = pr: .01 (b,a,c) b,a: <2,1..2,1,max> = pr: .01", .01)
+
+	test("ixftab where c is 8",
+		"(b,c,a) +c: <8..8,max> = ir: .5", .5)
 }
 
 func TestWhere_stats_wfrac(t *testing.T) {
@@ -457,96 +460,71 @@ func TestWhere_fixed(t *testing.T) {
 	test("a in (1,2) and a in (3,4)", "[]")
 }
 
-func TestWhere_indexes(t *testing.T) {
-	db := heapDb()
-	defer db.Close()
-	test := func(schema, where, colSels, idxSels string) {
-		const table = "twi"
-		t.Helper()
-		db.adm("create " + table + " " + schema)
-		defer db.adm("drop " + table)
-		tran := db.NewReadTran()
-		w := ParseQuery(table+" where "+where, tran, nil).(*Where)
-		actual := "conflict"
-		if !w.conflict {
-			actual = fmt.Sprint(w.colSels)[3:]
-		}
-		assert.T(t).This(actual).Is(colSels)
-
-		w.optInit()
-		assert.T(t).This(fmt.Sprint(w.idxSels)).Is(idxSels)
-	}
-	test("(a,b,c) key(a)", "a = 1", "[a:[1]]", "[(a) a: <1> = singleton]")
-}
-
-func TestWhere_ixfilter(t *testing.T) {
-	q := ParseQuery("ixftab where c=8", testTran{}, nil)
-	q, _, _ = Setup(q, ReadMode, testTran{})
-	assert.This(Strategy2(q)).Like(`
-		ixftab^(b,c,a)
-		where c is 8`)
-}
-
-func TestWhere_idxSel_plus_indexFilter(t *testing.T) {
+func TestWhere_skipScan(t *testing.T) {
 	db := heapDb()
 	defer db.Close()
 	db.adm("create table (a,b,c) key(a,b,c)")
-	db.act("insert { a: 1, b: 1, c: 2 } into table")
-	db.act("insert { a: 2, b: 1, c: 2 } into table")
-	db.act("insert { a: 2, b: 2, c: 3 } into table")
-	db.act("insert { a: 3, b: 1, c: 2 } into table")
-	db.act("insert { a: 4, b: 1, c: 1 } into table")
-
-	tran := db.NewReadTran()
-	q := ParseQuery("table where a > 1 and c = 2", tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
-	w, ok := q.(*Where)
-	assert.T(t).That(ok)
-	assert.T(t).That(w.idxSelBase != nil)
-	assert.T(t).That(w.idxSelBase.prefixLen == 1)
-	assert.T(t).That(w.ixExpr != nil)
-	assert.This(queryAll2(q)).Is("a=2 b=1 c=2 | a=3 b=1 c=2")
-}
-
-func TestWhere_skipScan_pure(t *testing.T) {
-	db := heapDb()
-	defer db.Close()
-	db.adm("create table (a,b) key(a,b)")
 	for a := range 3 {
-		for b := range 10 {
-			db.act(fmt.Sprintf("insert { a: %d, b: %d } into table", a+1, b+1))
-		}
-	}
-
-	tran := db.NewReadTran()
-	q := ParseQuery("table where b = 5", tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
-	w := q.(*Where)
-	assert.T(t).This(fmt.Sprint(w.idxSelBase)).
-		Is("(a,b) +b: <5..5,max> = ir: .5")
-	assert.This(queryAll2(q)).Is("a=1 b=5 | a=2 b=5 | a=3 b=5")
-}
-
-func TestWhere_skipScan_idxSel(t *testing.T) {
-	db := heapDb()
-	defer db.Close()
-	db.adm("create table (a,b) key(a,b)")
-	for a := range 5 {
 		for b := range 5 {
-			db.act(fmt.Sprintf("insert { a: %d, b: %d } into table", a+1, b+1))
+			for c := range 2 {
+				db.act(fmt.Sprintf("insert { a: %d, b: %d, c: %d } into table",
+					a+1, b+1, c+1))
+			}
 		}
 	}
+	test := func(query, idxSel, result string) {
+		t.Helper()
+		tran := db.NewReadTran()
+		q := ParseQuery(query, tran, nil)
+		q, _, _ = Setup(q, CursorMode, tran)
+		w := q.(*Where)
+		assert.T(t).This(w.idxSelBase.String()).Is(idxSel)
+		assert.This(queryAll2(q)).Is(result)
+	}
 
-	tran := db.NewReadTran()
-	q := ParseQuery("table where a > 2 and b = 3", tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
-	w, ok := q.(*Where)
-	assert.T(t).That(ok)
-	assert.T(t).That(w.idxSelBase != nil)
-	assert.T(t).That(w.idxSelBase.prefixLen == 1)
-	// assert.T(t).That(w.skipScan)
-	// assert.T(t).That(w.skipPrefixLen == 1)
-	assert.This(queryAll2(q)).Is("a=3 b=3 | a=4 b=3 | a=5 b=3")
+	// pure prefix, no skip scan
+	test("table where a is 2",
+		"(a,b,c) a: <2..2,max> = pr: .33",
+		"a=2 b=1 c=1 | a=2 b=1 c=2 | a=2 b=2 c=1 | a=2 b=2 c=2 | "+
+			"a=2 b=3 c=1 | a=2 b=3 c=2 | a=2 b=4 c=1 | a=2 b=4 c=2 | "+
+			"a=2 b=5 c=1 | a=2 b=5 c=2")
+	test("table where a = 2 and b >= 4",
+		"(a,b,c) a,b: <2,4..2,max> = pr: .13",
+			"a=2 b=4 c=1 | a=2 b=4 c=2 | a=2 b=5 c=1 | a=2 b=5 c=2")
+
+	// pure skip scan, no prefix
+	test("table where b = 5",
+		"(a,b,c) +b: <5..5,max> = ir: .5",
+		"a=1 b=5 c=1 | a=1 b=5 c=2 | a=2 b=5 c=1 | a=2 b=5 c=2 | "+
+			"a=3 b=5 c=1 | a=3 b=5 c=2")
+	test("table where b = 5 and c = 2",
+		"(a,b,c) +b,c: <5,2..5,2,max> = ir: .35",
+		"a=1 b=5 c=2 | a=2 b=5 c=2 | a=3 b=5 c=2")
+
+	// prefix + skip on adjacent column
+	test("table where a > 1 and b = 3",
+		"(a,b,c) a: <1,max..max> +b: <3..3,max> = pr: .67 ir: .41",
+		"a=2 b=3 c=1 | a=2 b=3 c=2 | a=3 b=3 c=1 | a=3 b=3 c=2")
+
+	// prefix + range skip on non-adjacent column (gap)
+	test("table where a > 1 and c > 1",
+		"(a,b,c) a: <1,max..max> +c: <1,max..max> = pr: .67 ir: .41",
+		"a=2 b=1 c=2 | a=2 b=2 c=2 | a=2 b=3 c=2 | a=2 b=4 c=2 | "+
+			"a=2 b=5 c=2 | a=3 b=1 c=2 | a=3 b=2 c=2 | a=3 b=3 c=2 | "+
+			"a=3 b=4 c=2 | a=3 b=5 c=2")
+
+	// empty string skip scan (verifies encoding edge case)
+	db.adm("create strtab (name, path) key(name, path)")
+	for i := range 5 {
+		name := fmt.Sprintf("n%02d", i)
+		db.act(fmt.Sprintf("insert { name: '%s', path: '' } into strtab", name))
+		for j := range 3 {
+			db.act(fmt.Sprintf("insert { name: '%s', path: '/x%02d' } into strtab", name, j))
+		}
+	}
+	test("strtab where path = ''",
+		"(name,path) +path: <..'',max> = ir: .5",
+		"name=n00 | name=n01 | name=n02 | name=n03 | name=n04")
 }
 
 func TestWhere_Select_recalcIdxSel(t *testing.T) {
@@ -575,7 +553,7 @@ func TestWhere_Select_recalcIdxSel(t *testing.T) {
 // TestWhere_Select_conflict tests that Select with a value conflicting with
 // the where range constraint sets a no-scan conflict marker (not a full scan).
 // where a > 1 means a is NOT fixed, so selectFixed doesn't catch a=0;
-// the conflict must be detected in mergedPerCol / recalcIdxSel.
+// the conflict must be detected in mergeColSpans / recalcIdxSel.
 func TestWhere_Select_conflict(t *testing.T) {
 	setup := func(where string) *Where {
 		t.Helper()
@@ -595,84 +573,9 @@ func TestWhere_Select_conflict(t *testing.T) {
 	// fast-path: first select a=2 (non-conflict), then a=0 conflicts
 	w = setup("a > 1")
 	w.Select(Sels{{"a", Pack(SuInt(2))}})
-	assert.T(t).Msg("non-conflict selOrg").That(!w.selConflict)
+	assert.T(t).Msg("non-conflict").That(!w.selConflict)
 	w.Select(Sels{{"a", Pack(SuInt(0))}}) // conflict
-	assert.T(t).Msg("reRange conflict").This(w.selConflict)
-}
-
-func TestWhere_skipScan_gap(t *testing.T) {
-	db := heapDb()
-	defer db.Close()
-	db.adm("create table (a,b,c) key(a,b,c)")
-	for b := range 3 {
-		db.act(fmt.Sprintf("insert { a: 1, b: %d, c: 5 } into table", b+1))
-		db.act(fmt.Sprintf("insert { a: 1, b: %d, c: 6 } into table", b+1))
-	}
-	db.act("insert { a: 2, b: 1, c: 5 } into table")
-
-	tran := db.NewReadTran()
-	q := ParseQuery("table where a = 1 and c = 5", tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
-	w, ok := q.(*Where)
-	assert.T(t).That(ok)
-	assert.T(t).That(w.idxSelBase != nil)
-	assert.T(t).That(w.idxSelBase.prefixLen == 1)
-	// assert.T(t).That(w.skipScan)
-	// assert.T(t).That(w.skipPrefixLen == 2)
-	assert.This(queryAll2(q)).Is("a=1 b=1 c=5 | a=1 b=2 c=5 | a=1 b=3 c=5")
-}
-
-func TestWhere_skipScan_emptyString(t *testing.T) {
-	db := heapDb()
-	defer db.Close()
-	db.adm("create sktest3 (name, path) key(name, path)")
-	const n = 50
-	for i := range n {
-		name := fmt.Sprintf("n%02d", i)
-		db.act(fmt.Sprintf("insert { name: '%s', path: '' } into sktest3", name))
-		for j := range 20 {
-			db.act(fmt.Sprintf("insert { name: '%s', path: '/x%02d' } into sktest3", name, j))
-		}
-	}
-
-	tran := db.NewReadTran()
-	q := ParseQuery("sktest3 where path = ''", tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
-	// w, ok := q.(*Where)
-	// assert.T(t).That(ok)
-	// assert.T(t).That(w.skipScan)
-	// assert.T(t).That(w.skipPrefixLen == 1)
-	th := &Thread{}
-	count := 0
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
-		count++
-	}
-	assert.T(t).This(count).Is(n)
-}
-
-// TestWhere_skipScan_rangeQuery simulates a query like start_date <= X and end_date >= X
-// on a (start, end) index with an extra key field appended for uniqueness.
-// Uses SuDate values to match TestQueryBug2 row types.
-func TestWhere_skipScan_rangeQuery(t *testing.T) {
-	db := heapDb()
-	defer db.Close()
-	db.adm("create events (num, start, end) key(num) index(start, end)")
-	// (start, end, num) events sorted by start, end, num:
-	db.act("insert { num: 3, start: #20260318, end: #20260320 } into events")
-	db.act("insert { num: 4, start: #20260320, end: #20260320 } into events")
-	db.act("insert { num: 2, start: #20260320, end: #20260327 } into events")
-	db.act("insert { num: 1, start: #20260327, end: #20260327 } into events")
-
-	tran := db.NewReadTran()
-	// Query: start <= #20260320 and end >= #20260320 => should match num=3,4,2
-	q := ParseQuery("events where start <= #20260320 and end >= #20260320", tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
-	th := &Thread{}
-	count := 0
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
-		count++
-	}
-	assert.T(t).This(count).Is(3)
+	assert.T(t).Msg("conflict").This(w.selConflict)
 }
 
 func TestWhere_bug(t *testing.T) {
@@ -929,8 +832,8 @@ func TestWhere_CalcFracs(t *testing.T) {
 func TestWhere_AllSingleValuePrefix(t *testing.T) {
 	assert := assert.T(t).This
 
-	// helper to create perCol map with single value spans
-	makePerCol := func(pairs ...string) map[string][]span {
+	// helper to create colSpans map with single value spans
+	makeColSpans := func(pairs ...string) map[string][]span {
 		m := make(map[string][]span)
 		for i := 0; i < len(pairs); i += 2 {
 			m[pairs[i]] = []span{valSpan(pairs[i+1])}
@@ -940,47 +843,47 @@ func TestWhere_AllSingleValuePrefix(t *testing.T) {
 
 	// basic case: two columns with values
 	index := []string{"a", "b"}
-	perCol := makePerCol("a", "x", "b", "y")
-	prefixLen, org, ok := allSingleValuePrefix(index, true, perCol)
+	colSpans := makeColSpans("a", "x", "b", "y")
+	prefixLen, org, ok := allSingleValuePrefix(index, true, colSpans)
 	assert(ok).Is(true)
 	assert(prefixLen).Is(2)
 	assert(org).Is("x\x00\x00y")
 
 	// trailing empty field: (a="x", b="") — org is trimmed to "x"
-	perCol = makePerCol("a", "x", "b", "")
-	prefixLen, org, ok = allSingleValuePrefix(index, true, perCol)
+	colSpans = makeColSpans("a", "x", "b", "")
+	prefixLen, org, ok = allSingleValuePrefix(index, true, colSpans)
 	assert(ok).Is(true)
 	assert(prefixLen).Is(2)
 	assert(org).Is("x") // trailing separator trimmed by Encoder.String()
 
 	// multiple trailing empty fields
 	index = []string{"a", "b", "c"}
-	perCol = makePerCol("a", "x", "b", "", "c", "")
-	prefixLen, org, ok = allSingleValuePrefix(index, true, perCol)
+	colSpans = makeColSpans("a", "x", "b", "", "c", "")
+	prefixLen, org, ok = allSingleValuePrefix(index, true, colSpans)
 	assert(ok).Is(true)
 	assert(prefixLen).Is(3)
 	assert(org).Is("x") // both trailing separators trimmed
 
 	// middle empty field (not trailing)
 	index = []string{"a", "b", "c"}
-	perCol = makePerCol("a", "x", "b", "", "c", "z")
-	prefixLen, org, ok = allSingleValuePrefix(index, true, perCol)
+	colSpans = makeColSpans("a", "x", "b", "", "c", "z")
+	prefixLen, org, ok = allSingleValuePrefix(index, true, colSpans)
 	assert(ok).Is(true)
 	assert(prefixLen).Is(3)
 	assert(org).Is("x\x00\x00\x00\x00z")
 
 	// single column (no encoding)
 	index = []string{"a"}
-	perCol = makePerCol("a", "x")
-	prefixLen, org, ok = allSingleValuePrefix(index, false, perCol)
+	colSpans = makeColSpans("a", "x")
+	prefixLen, org, ok = allSingleValuePrefix(index, false, colSpans)
 	assert(ok).Is(true)
 	assert(prefixLen).Is(1)
 	assert(org).Is("x")
 
 	// partial prefix (b has no span)
 	index = []string{"a", "b"}
-	perCol = makePerCol("a", "x")
-	prefixLen, org, ok = allSingleValuePrefix(index, true, perCol)
+	colSpans = makeColSpans("a", "x")
+	prefixLen, org, ok = allSingleValuePrefix(index, true, colSpans)
 	assert(ok).Is(true)
 	assert(prefixLen).Is(1)
 	assert(org).Is("x")
