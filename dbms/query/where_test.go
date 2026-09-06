@@ -963,3 +963,24 @@ func TestWhere_nonexistent(t *testing.T) {
 	test("20")   // exists
 	test("9999") // nonexistent
 }
+
+func TestWhere_singleton_lookup(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c,d) key(a,b)")
+	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
+	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
+	tran := db.NewReadTran()
+	// where clause matches full key => singleton
+	q := ParseQuery("table where a=1 and b=2", tran, nil)
+	key := []string{"a", "b"}
+	q, _, _ = SetupReq(q, ReadMode, tran, UniqueReq(key, 1))
+	w := q.(*Where)
+	assert.T(t).That(w.singleton)
+	assert.T(t).This(w.idxSelBase.String()).Is("(a,b) a,b: <1,2> = singleton")
+	th := &Thread{}
+	sels := Sels{{"a", Pack(SuInt(1))}, {"b", Pack(SuInt(2))}}
+	row := q.Lookup(th, sels)
+	hdr := q.Header()
+	assert.This(row2str(hdr, row)).Is("a=1 b=2 c=3 d=4")
+}

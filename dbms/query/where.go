@@ -596,11 +596,6 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 }
 
 func (w *Where) optWhereLookup(mode Mode, req Require) (Cost, Cost, any) {
-	if w.singleton {
-		isel := w.idxSels[0]
-		cost := w.tbl.lookupCost(isel.index)
-		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel, mode: mode}
-	}
 	best := newBest[[]string]()
 	for idxi, idx := range w.tbl.indexes {
 		if w.tbl.uniqueForLookup(idxi) && indexCovered(idx, req.cols, w.fixed) {
