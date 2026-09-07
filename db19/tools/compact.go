@@ -11,10 +11,10 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	. "github.com/apmckinlay/gsuneido/db19"
-	"github.com/apmckinlay/gsuneido/db19/hot"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
+	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -46,8 +46,8 @@ func Compact(dbfile string) (nTables, nViews int, oldSize, newSize uint64, err e
 	defer func() { dst.Close(); os.Remove(tmpfile) }()
 
 	state := src.GetState()
-	busy := hot.LoadBusy()
-	stats := make(hot.StatsTally)
+	busy := stats.LoadBusy()
+	stats := make(stats.StatsTally)
 
 	type schemaSize struct {
 		sc    *meta.Schema
@@ -120,7 +120,7 @@ type indexJob struct {
 	sum   uint64
 }
 
-func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database, channel chan<- indexJob, busy hot.Busy, stats hot.StatsTally) {
+func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database, channel chan<- indexJob, busy stats.Busy, stats stats.StatsTally) {
 	defer func() {
 		if e := recover(); e != nil {
 			core.Fatal(ts.Table+":", e)
@@ -176,23 +176,23 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 
 type statsCol struct {
 	idx int
-	sc  *hot.StatsColumn
+	sc  *stats.StatsColumn
 }
 
 func buildStatsCols(table string, cols []string,
-	busy hot.Busy, stats hot.StatsTally) []statsCol {
+	busy stats.Busy, tally stats.StatsTally) []statsCol {
 	busyCols := busy[table]
 	if len(busyCols) == 0 {
 		return nil
 	}
-	ht, ok := stats[table]
+	ht, ok := tally[table]
 	if !ok {
-		ht = make(hot.StatsTable)
-		stats[table] = ht
+		ht = make(stats.StatsTable)
+		tally[table] = ht
 	}
 	for _, col := range busyCols {
 		if _, ok := ht[col]; !ok {
-			ht[col] = &hot.StatsColumn{}
+			ht[col] = &stats.StatsColumn{}
 		}
 	}
 	colIdx := make(map[string]int, len(cols))
@@ -222,7 +222,7 @@ func addStats(rec core.Record, stats []statsCol) {
 	}
 }
 
-func createStatsTable(dst *Database, stats hot.StatsTally) {
+func createStatsTable(dst *Database, stats stats.StatsTally) {
 	stats.Complete()
 	var rb core.RecordBuilder
 	rb.Add(stats)

@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package hot
+package stats
 
 import (
 	"fmt"
@@ -60,7 +60,7 @@ func TestStatsPack(t *testing.T) {
 	stats.Complete()
 	data := core.Pack(stats)
 	assert.This(data[0]).Is(core.PackString)
-	// DecodeStats expects the data without the leading PackString tag
+	// UnpackStats expects the data without the leading PackString tag
 	// (in production Record.GetStr strips it)
 	decoded := UnpackStats(data[1:])
 

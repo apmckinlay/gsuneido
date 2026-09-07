@@ -14,8 +14,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/db19/hot"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -285,22 +285,22 @@ func TestWhere_perIndex(t *testing.T) {
 
 func TestWhere_stats_wfrac(t *testing.T) {
 	pack := func(s string) string { return Pack(SuStr(s)) }
-	stats := hot.Stats{
+	stats := stats.Stats{
 		"customer": {
 			Count: 100,
-			Columns: map[string]hot.ColStats{
+			Columns: map[string]stats.ColStats{
 				"name": {
 					Cardinality: 5,
 					Quantiles: []string{
 						pack("a"), pack("c"), pack("m"), pack("s")},
-					Tops:     []hot.Top{{Value: pack("joe"), Frac: .25}},
+					Tops:     []stats.Top{{Value: pack("joe"), Frac: .25}},
 					TailFrac: .75,
 				},
 				"city": {
 					Cardinality: 4,
 					Quantiles: []string{
 						pack("a"), pack("c"), pack("m"), pack("s")},
-					Tops:     []hot.Top{{Value: pack("paris"), Frac: .3}},
+					Tops:     []stats.Top{{Value: pack("paris"), Frac: .3}},
 					TailFrac: .7,
 				},
 			},

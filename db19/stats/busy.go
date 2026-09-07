@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package hot
+package stats
 
 import (
 	"bufio"
@@ -26,9 +26,9 @@ type BusyTally struct {
 
 const busySize = 100               // AI recommendation
 const busyInterval = 2 * time.Hour // ???
-const busyFile = "hotcols.txt"
+const busyFile = "busycols.txt"
 
-// Add adds a column with a given weight to the hot columns tracker
+// Add adds a column with a given weight to the BusyTally
 func (bt *BusyTally) Add(col string, weight int) {
 	bt.lock.Lock()
 	if bt.busy == nil {
@@ -53,10 +53,10 @@ func (bt *BusyTally) Add(col string, weight int) {
 // Save writes the busy columns to a file
 func (bt *BusyTally) Save() {
 	bt.lock.Lock()
-	hot := bt.busy
+	busy := bt.busy
 	bt.busy = ss.New[string](busySize)
 	bt.lock.Unlock()
-	if hot == nil || hot.Len() == 0 {
+	if busy == nil || busy.Len() == 0 {
 		return
 	}
 	f, err := os.OpenFile(busyFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -66,7 +66,7 @@ func (bt *BusyTally) Save() {
 	}
 	defer f.Close()
 	w := bufio.NewWriter(f)
-	for _, e := range hot.Top() {
+	for _, e := range busy.Top() {
 		fmt.Fprintf(w, "%d\t%s\n", e.Count, e.Value)
 	}
 	if err := w.Flush(); err != nil {
@@ -83,7 +83,7 @@ func LoadBusy() Busy {
 	f, err := os.Open(busyFile)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			log.Println("ERROR: reading hotcols:", err)
+			log.Println("ERROR: reading", busyFile, ":", err)
 		}
 		return nil
 	}
@@ -111,7 +111,7 @@ func LoadBusy() Busy {
 		counts[col] += count
 	}
 	if err := scanner.Err(); err != nil {
-		log.Println("ERROR: reading hotcols:", err)
+		log.Println("ERROR: reading", busyFile, ":", err)
 		return nil
 	}
 	type kv struct {

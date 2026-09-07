@@ -12,12 +12,12 @@ import (
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/db19/hot"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
+	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -49,8 +49,8 @@ type Database struct {
 	closed    atomic.Bool
 	corrupted atomic.Bool
 
-	stats hot.Stats
-	busy  hot.BusyTally
+	stats stats.Stats
+	busy  stats.BusyTally
 }
 
 const magic = "gsndo004"
@@ -678,8 +678,8 @@ func OffToRecCk(store *stor.Stor, off uint64) core.Record {
 }
 
 // ReadStats reads the record stored in the stats table by compact.go
-// and hotdata.go and returns the parsed HotInfo.
-func ReadStats(db *Database) hot.Stats {
+// and returns the parsed Stats.
+func ReadStats(db *Database) stats.Stats {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("ERROR ReadStats:", r)
@@ -702,11 +702,11 @@ func ReadStats(db *Database) hot.Stats {
 	if len(data) == 0 {
 		return nil
 	}
-	return hot.UnpackStats(data)
+	return stats.UnpackStats(data)
 }
 
-// HotColsAdd adds a column with a given weight to the hot columns tracker.
-func (db *Database) HotColsAdd(col string, weight int) {
+// BusyAdd adds a column with a given weight to the BusyTally.
+func (db *Database) BusyAdd(col string, weight int) {
 	db.busy.Add(col, weight)
 }
 
