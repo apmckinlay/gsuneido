@@ -132,10 +132,7 @@ New()
 }
 M0(p0)
 {
-if (String?(p0))
-{
 .f = p0
-}
 return 0
 } }`, false},
 	}

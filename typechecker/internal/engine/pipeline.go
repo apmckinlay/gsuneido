@@ -42,6 +42,7 @@ var _ = [...]Pass{
 	FlowNarrowingPass,
 	GuessTaintPass,
 	LocalInference,
+	LocalNarrowingPass,
 	MemberAssignmentPass,
 	MemberDirtyPass,
 	NameResolutionPass,
@@ -112,6 +113,7 @@ func RunPipeline(cls *ClassObject, env TypeEnv, pctx *PassCtx,
 
 	LocalInference(cls, env, pctx)
 	NameResolutionPass(cls, env, pctx)
+	LocalNarrowingPass(cls, env, pctx)
 	MemberAssignmentPass(cls, env, pctx)
 	ReturnUnionPass(cls, env, pctx)
 
@@ -119,6 +121,7 @@ func RunPipeline(cls *ClassObject, env TypeEnv, pctx *PassCtx,
 		CallsiteResolutionPass(cls, env, pctx)
 		SuperCallsiteResolutionPass(cls, env, pctx)
 		NameResolutionPass(cls, env, pctx)
+		LocalNarrowingPass(cls, env, pctx)
 		MemberAssignmentPass(cls, env, pctx)
 		ReturnUnionPass(cls, env, pctx)
 	})
