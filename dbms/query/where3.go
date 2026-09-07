@@ -71,9 +71,6 @@ func (w *Where) getColFracs(colSpans map[string][]span) []colFrac {
 			colFracs = append(colFracs, colFrac{col: col, frac: frac})
 		}
 	}
-	slices.SortFunc(colFracs, func(x, y colFrac) int {
-		return cmp.Compare(x.frac, y.frac)
-	})
 	return colFracs
 }
 
@@ -401,15 +398,11 @@ func skipScanSuffix(colSpans map[string][]span, idx []string, prefixLen int) (
 	return
 }
 
-// hasIndexFilter returns whether there are residual expressions on index
-// columns not already handled by the prefix points/ranges and skip scan.
+// hasIndexFilter is only called when there is no prefix or skip scan.
+// It checks for any other filters on the index columns.
 func (w *Where) hasIndexFilter(index []string, colSpans map[string][]span, isel *idxSel) bool {
-	for i, col := range index {
-		// skip prefix and skip scan columns
-		if i < isel.prefixLen ||
-			(i >= isel.skipStart && i < isel.skipStart+isel.skipLen) {
-			continue
-		}
+	assert.That(isel.prefixLen == 0 && isel.skipLen == 0)
+	for _, col := range index {
 		if _, ok := colSpans[col]; ok {
 			return true
 		}
@@ -509,14 +502,17 @@ func (isel *idxSel) calcFracs(colFracs []colFrac, colSpans map[string][]span,
 		return cmp.Or(cmp.Compare(x.stage, y.stage), cmp.Compare(x.frac, y.frac))
 	})
 	// group by stage, applying damp
-	sfs := [3]float64{1, 1, 1}
+	sfs := [2]float64{1, 1}
 	for i, sf := range fracs {
-		sfs[sf.stage] *= damp(i, sf.frac)
+		if sf.stage == dFilter {
+			isel.hasDataFilter = true
+		} else {
+			sfs[sf.stage] *= damp(i, sf.frac)
+		}
 	}
 	// assign to isel
 	isel.indexRangeFrac = sfs[iRange]
 	isel.indexFilterFrac = sfs[iFilter]
-	isel.hasDataFilter = sfs[dFilter] != 1
 
 	// overall frac
 	// sort by just frac (most selective first)
