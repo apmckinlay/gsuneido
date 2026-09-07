@@ -490,7 +490,7 @@ func TestWhere_skipScan(t *testing.T) {
 			"a=2 b=5 c=1 | a=2 b=5 c=2")
 	test("table where a = 2 and b >= 4",
 		"(a,b,c) a,b: <2,4..2,max> = pr: .13",
-			"a=2 b=4 c=1 | a=2 b=4 c=2 | a=2 b=5 c=1 | a=2 b=5 c=2")
+		"a=2 b=4 c=1 | a=2 b=4 c=2 | a=2 b=5 c=1 | a=2 b=5 c=2")
 
 	// pure skip scan, no prefix
 	test("table where b = 5",
