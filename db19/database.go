@@ -710,14 +710,6 @@ func (db *Database) BusyAdd(col string, weight int) {
 	db.busy.Add(col, weight)
 }
 
-// StatsRangeFrac returns the fraction of rows in the range,
-// from the stats, or false if there are no stats for the column.
-func (db *Database) StatsRangeFrac(table, col, from, to string) (float64, bool) {
-	return db.stats.RangeFrac(table, col, from, to)
-}
-
-// StatsPointFrac returns the fraction of rows equal to value,
-// from the stats, or false if there are no stats for the column.
-func (db *Database) StatsPointFrac(table, col, value string) (float64, bool) {
-	return db.stats.PointFrac(table, col, value)
+func (db *Database) Stats() stats.Stats {
+	return db.stats
 }

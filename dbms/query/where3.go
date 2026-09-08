@@ -82,9 +82,9 @@ func (w *Where) colStatsFrac(table, col string, spans []span) (float64, bool) {
 		var f float64
 		var ok bool
 		if sp.isValue() {
-			f, ok = w.t.StatsPointFrac(table, col, sp.org.val)
+			f, ok = w.t.Stats().PointFrac(table, col, sp.org.val)
 		} else {
-			f, ok = w.t.StatsRangeFrac(table, col,
+			f, ok = w.t.Stats().RangeFrac(table, col,
 				statsBound(sp.org), statsBound(sp.end))
 		}
 		if !ok {
@@ -97,7 +97,7 @@ func (w *Where) colStatsFrac(table, col string, spans []span) (float64, bool) {
 }
 
 // statsBound adjusts a span bound to the [from, to) semantics
-// of StatsRangeFrac. For org, inc means exclusive (>);
+// of stats RangeFrac. For org, inc means exclusive (>);
 // for end, inc means inclusive (<=); in both cases
 // appending "\x00" gives the correct boundary (cf. valRaw).
 func statsBound(x side) string {

@@ -18,6 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
+	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
@@ -81,12 +82,8 @@ func (t *tran) HotColsAdd(col string, weight int) {
 	t.db.busy.Add(col, weight)
 }
 
-func (t *tran) StatsRangeFrac(table, col, from, to string) (float64, bool) {
-	return t.db.StatsRangeFrac(table, col, from, to)
-}
-
-func (t *tran) StatsPointFrac(table, col, value string) (float64, bool) {
-	return t.db.StatsPointFrac(table, col, value)
+func (t *tran) Stats() stats.Stats {
+	return t.db.Stats()
 }
 
 //-------------------------------------------------------------------

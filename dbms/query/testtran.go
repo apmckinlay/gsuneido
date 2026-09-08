@@ -253,10 +253,6 @@ func (t testTran) Num() int {
 func (t testTran) HotColsAdd(string, int) {
 }
 
-func (t testTran) StatsRangeFrac(table, col, from, to string) (float64, bool) {
-	return t.stats.RangeFrac(table, col, from, to)
-}
-
-func (t testTran) StatsPointFrac(table, col, value string) (float64, bool) {
-	return t.stats.PointFrac(table, col, value)
+func (t testTran) Stats() stats.Stats {
+	return t.stats
 }
