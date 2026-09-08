@@ -145,7 +145,9 @@ func TestQueryGet(t *testing.T) {
 		'cnum'	0	'cus'
 		'cnum'	1	'task'
 		'column'	1	'columns'
+		'column'	1	'dbstats'
 		'columns'	1	'indexes'
+		'common'	4	'dbstats'
 		'cost'	2	'trans'
 		'cost'	3	'hist'
 		'cost'	3	'hist2'
@@ -153,6 +155,7 @@ func TestQueryGet(t *testing.T) {
 		'date'	0	'hist'
 		'date'	0	'hist2'
 		'date'	3	'trans'
+		'distinct'	2	'dbstats'
 		'field'	2	'columns'
 		'fkcolumns'	4	'indexes'
 		'fkmode'	5	'indexes'
@@ -173,9 +176,11 @@ func TestQueryGet(t *testing.T) {
 		'name2'	1	'alias'
 		'nrows'	1	'tables'
 		'qty'	1	'inven'
+		'quantiles'	3	'dbstats'
 		'signed'	1	'co'
 		'supplier'	0	'supplier'
 		'table'	0	'columns'
+		'table'	0	'dbstats'
 		'table'	0	'indexes'
 		'table'	0	'tables'
 		'tnum'	0	'co'
@@ -186,6 +191,7 @@ func TestQueryGet(t *testing.T) {
 	test("tables",
 		"tables",
 		`nrows	table	totalsize
+		0	'dbstats'	0
 		0	'views'	0
 		2	'alias'	25
 		3	'hist2'	68
@@ -198,9 +204,9 @@ func TestQueryGet(t *testing.T) {
 		4	'supplier'	128
 		4	'trans'	92
 		8	'task'	95
-		15	'tables'	0
 		16	'indexes'	0
-		44	'columns'	0`)
+		16	'tables'	0
+		49	'columns'	0`)
 	test("customer",
 		"customer^(id)",
 		`city	id	name

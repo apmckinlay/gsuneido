@@ -145,6 +145,16 @@ func (his *History) ValueGet(key Value) Value {
 	return qryBase(his, key)
 }
 
+func (st *StatsTable) ValueGet(key Value) Value {
+	switch key {
+	case SuStr("type"):
+		return SuStr("table")
+	case SuStr("name"):
+		return SuStr("dbstats")
+	}
+	return qryBase(st, key)
+}
+
 func (no *Nothing) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):

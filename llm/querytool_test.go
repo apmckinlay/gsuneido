@@ -26,9 +26,10 @@ func TestQueryTool(t *testing.T) {
 	assert.That(err == nil)
 	assert.This(result.Results).Is("[\n" +
 		"[\"table\", \"nrows\", \"totalsize\"]\n" +
-		"[\"columns\", 14, 0]\n" +
+		"[\"columns\", 19, 0]\n" +
+		"[\"dbstats\", 0, 0]\n" +
 		"[\"indexes\", 0, 0]\n" +
-		"[\"tables\", 4, 0]\n" +
+		"[\"tables\", 5, 0]\n" +
 		"[\"views\", 0, 0]\n" +
 		"]\n")
 }

@@ -32,6 +32,8 @@ func NewTable(t QueryTran, name string) Query {
 		tbl = &Views{}
 	case "history":
 		tbl = &History{}
+	case "dbstats":
+		tbl = &StatsTable{}
 	default:
 		tbl = &Table{name: name}
 	}

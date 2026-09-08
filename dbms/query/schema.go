@@ -9,7 +9,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tsc"
 )
@@ -187,12 +189,17 @@ func (ts *Tables) ensure() {
 	views.SetTran(ts.tran)
 	nviews, _ := views.Nrows()
 
+	stats := StatsTable{}
+	stats.SetTran(ts.tran)
+	nstats, _ := stats.Nrows()
+
 	ts.info = append(ts.info,
-		// +4 for tables, columns, indexes, views
-		&meta.Info{Table: "tables", Nrows: len(ts.info) + 4},
+		// +5 for tables, columns, indexes, views, dbstats
+		&meta.Info{Table: "tables", Nrows: len(ts.info) + 5},
 		&meta.Info{Table: "columns", Nrows: ncols},
 		&meta.Info{Table: "indexes", Nrows: nidxs},
 		&meta.Info{Table: "views", Nrows: nviews},
+		&meta.Info{Table: "dbstats", Nrows: nstats},
 	)
 	sort.Slice(ts.info,
 		func(i, j int) bool { return ts.info[i].Table < ts.info[j].Table })
@@ -377,6 +384,7 @@ func (cs *Columns) ensure() {
 		&meta.Schema{Table: "columns", Columns: columnsFields[0]},
 		&meta.Schema{Table: "indexes", Columns: indexesFields[0]},
 		&meta.Schema{Table: "views", Columns: viewsFields[0]},
+		&meta.Schema{Table: "dbstats", Columns: statsFields[0]},
 	)
 	sort.Slice(cs.schema,
 		func(i, j int) bool { return cs.schema[i].Table < cs.schema[j].Table })
@@ -672,4 +680,149 @@ func (his *History) Get(_ *Thread, dir Dir) Row {
 	rec := rb.Build()
 	his.ngets++
 	return Row{DbRec{Record: rec}}
+}
+
+//-------------------------------------------------------------------
+
+type StatsTable struct {
+	schemaTable
+	stats  stats.Stats
+	tables []string
+	si     int
+	ci     int
+	nrows  int
+}
+
+func (*StatsTable) String() string {
+	return "dbstats"
+}
+
+func (st *StatsTable) Transform() Query {
+	return st
+}
+
+func (*StatsTable) Keys() [][]string {
+	return [][]string{{"table", "column"}}
+}
+
+var statsFields = [][]string{{"table", "column", "distinct", "quantiles", "common"}}
+
+func (*StatsTable) Columns() []string {
+	return statsFields[0]
+}
+
+func (*StatsTable) Header() *Header {
+	return NewHeader(statsFields, statsFields[0])
+}
+
+func (st *StatsTable) Nrows() (int, int) {
+	st.ensure()
+	return st.nrows, st.nrows
+}
+
+func (st *StatsTable) SetTran(tran QueryTran) {
+	st.tran = tran
+	st.stats = nil
+}
+
+func (st *StatsTable) Rewind() {
+	st.si = -1
+	st.state = rewound
+}
+
+func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
+	defer func(t uint64) { st.tget += tsc.Read() - t }(tsc.Read())
+	st.ensure()
+	if st.state == eof {
+		return nil
+	}
+	var table, col string
+	var cs stats.ColStats
+	if dir == Next {
+		if st.state == rewound {
+			st.si, st.ci = 0, -1
+		}
+		st.ci++
+		for st.si >= len(st.tables) ||
+			st.ci >= len(st.stats[st.tables[st.si]].Columns) {
+			st.si++
+			if st.si >= len(st.tables) {
+				st.state = eof
+				return nil
+			}
+			st.ci = 0
+		}
+	} else { // Prev
+		if st.state == rewound {
+			st.si = len(st.tables)
+			st.ci = 0
+		}
+		st.ci--
+		for st.ci < 0 {
+			st.si--
+			if st.si < 0 {
+				st.state = eof
+				return nil
+			}
+			st.ci = len(st.stats[st.tables[st.si]].Columns) - 1
+		}
+	}
+	table = st.tables[st.si]
+	cols := sortedCols(st.stats[table])
+	col = cols[st.ci]
+	cs = st.stats[table].Columns[col]
+	st.state = within
+	var rb RecordBuilder
+	rb.Add(SuStr(table))
+	rb.Add(SuStr(col))
+	rb.Add(IntVal(cs.Cardinality))
+	rb.Add(formatQuantiles(cs.Quantiles))
+	rb.Add(formatTops(cs.Tops))
+	rec := rb.Build()
+	st.ngets++
+	return Row{DbRec{Record: rec}}
+}
+
+func sortedCols(ts stats.TableStats) []string {
+	cols := make([]string, 0, len(ts.Columns))
+	for col := range ts.Columns {
+		cols = append(cols, col)
+	}
+	sort.Strings(cols)
+	return cols
+}
+
+func formatQuantiles(quantiles []string) *SuObject {
+	parts := &SuObject{}
+	for _, q := range quantiles {
+		parts.Add(Unpack(q))
+	}
+	return parts
+}
+
+func formatTops(tops []stats.Top) *SuObject {
+	parts := &SuObject{}
+	for _, t := range tops {
+		part := &SuObject{}
+		part.Add(SuDnum{Dnum: dnum.FromFloat(t.Frac)})
+		part.Add(Unpack(t.Value))
+		parts.Add(part)
+	}
+	return parts
+}
+
+func (st *StatsTable) ensure() {
+	if st.stats != nil {
+		return
+	}
+	st.stats = st.tran.Stats()
+	st.tables = make([]string, 0, len(st.stats))
+	for table := range st.stats {
+		st.tables = append(st.tables, table)
+	}
+	sort.Strings(st.tables)
+	st.nrows = 0
+	for _, table := range st.tables {
+		st.nrows += len(st.stats[table].Columns)
+	}
 }
