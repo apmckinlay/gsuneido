@@ -126,14 +126,16 @@ func LoadBusy() Busy {
 		return items[i].count > items[j].count
 	})
 	result := make(Busy)
+	n := 0
 	for _, item := range items {
+		if n++; n > busySize {
+			break
+		}
 		table, col, ok := strings.Cut(item.key, ".")
 		if !ok {
 			continue
 		}
-		if len(result[table]) < busySize {
-			result[table] = append(result[table], col)
-		}
+		result[table] = append(result[table], col)
 	}
 	return result
 }
