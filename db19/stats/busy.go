@@ -90,9 +90,9 @@ func LoadBusy() Busy {
 	defer func() {
 		f.Close()
 		if err := os.Remove(busyFile); err != nil {
-			log.Println("ERROR can't remove " + busyFile + ":", err)
+			log.Println("ERROR can't remove "+busyFile+":", err)
 			if err := os.Truncate(busyFile, 0); err != nil {
-				log.Println("ERROR can't truncate " + busyFile + ":", err)
+				log.Println("ERROR can't truncate "+busyFile+":", err)
 			}
 		}
 	}()

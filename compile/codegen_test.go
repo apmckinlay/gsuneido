@@ -608,7 +608,7 @@ func TestAnnotations(t *testing.T) {
 		fn := codegen("", "", ast, nil).(*SuFunc)
 		actual := fn.ParamSpec.String()
 		assert.T(t).This(actual).Is(src)
-		}
+	}
 	// param annotations
 	test("function(x :string)")
 	test("function(x :string, y :number)")

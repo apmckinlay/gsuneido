@@ -196,14 +196,13 @@ func FlowNarrowingPass(cls *ClassObject, env TypeEnv, pctx *PassCtx) bool {
 // itself. Runs after every NameResolutionPass that precedes a
 // MemberAssignmentPass, since name resolution re-stamps flow-insensitively.
 //
-// ```suneido
-// dirty: true
-// Dirty?(dirty = "") {
-//     if Boolean?(dirty)
-//         .dirty = dirty    // RHS stamped boolean, not string, when
-//     }                     // MemberAssignmentPass unions it into .dirty
+//	dirty: true
 //
-// ```
+//	Dirty?(dirty = "")
+//		{
+//	    if Boolean?(dirty)
+//	        .dirty = dirty    // RHS stamped boolean, not string, when
+//		}                     // MemberAssignmentPass unions it into .dirty
 func LocalNarrowingPass(cls *ClassObject, env TypeEnv, pctx *PassCtx) bool {
 	for _, fn := range cls.SortedMethods {
 		walkBlock(fn.Body, env, initialNarrowScope(fn, env, true))
