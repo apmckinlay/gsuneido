@@ -333,7 +333,7 @@ type PackableValue interface {
 	Packable
 }
 
-// IntVal returns an SuInt if it fits, else a SuDnum
+// IntVal returns an SuInt if it fits, else an SuInt64
 func IntVal(n int) PackableValue {
 	if MinSuInt <= n && n <= MaxSuInt {
 		return SuInt(n)
@@ -341,7 +341,7 @@ func IntVal(n int) PackableValue {
 	return SuInt64{int64: int64(n)}
 }
 
-// Int64Val returns an SuInt if it fits, else a SuDnum
+// Int64Val returns an SuInt if it fits, else an SuInt64
 func Int64Val(n int64) PackableValue {
 	if MinSuInt < n && n < MaxSuInt {
 		return SuInt(int(n))
