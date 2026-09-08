@@ -155,7 +155,12 @@ func (w *Where) buildIdxSel(index []string, mode byte, colSpans map[string][]spa
 				lookup := len(exploded[i]) == len(index) && (mode != 'u' || c.Org != "")
 				if !lookup {
 					assert.That(encode)
-					c.End = c.Org + ixkey.Sep + ixkey.Max
+					var enc ixkey.Encoder
+					for _, f := range exploded[i] {
+						enc.Add(f.org.val)
+					}
+					enc.Add(ixkey.Max)
+					c.End = enc.String()
 				}
 			}
 		}
@@ -391,7 +396,13 @@ func skipScanSuffix(colSpans map[string][]span, idx []string, prefixLen int) (
 		pr := makePointRanges(true, [][]span{sp})[0]
 		if pr.isPoint() {
 			// convert point to range
-			pr.End = pr.Org + ixkey.Sep + ixkey.Max
+			// can't just add max to Org because it's trimmed
+			var enc ixkey.Encoder
+			for _, s := range sp {
+				enc.Add(s.org.val)
+			}
+			enc.Add(ixkey.Max)
+			pr.End = enc.String()
 		}
 		return i, len(spans), pr
 	}

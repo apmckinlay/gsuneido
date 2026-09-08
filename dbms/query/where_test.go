@@ -281,6 +281,14 @@ func TestWhere_perIndex(t *testing.T) {
 
 	test("ixftab where c is 8",
 		"(b,c,a) +c: <8..8,max> = ir: .5", .5)
+
+	// prefix bug
+	test("comp where a in ('', '1') and b is ''",
+		"(a,b,c) a,b: <..'','',max | '1'..'1','',max> = pr: .11", .11)
+
+	// skip scan bug
+	test("comp where b = '' and c = ''",
+		"(a,b,c) +b,c: <..'','',max> = ir: .35", d(.5, .5))
 }
 
 func TestWhere_stats_wfrac(t *testing.T) {
@@ -983,4 +991,100 @@ func TestWhere_singleton_lookup(t *testing.T) {
 	row := q.Lookup(th, sels)
 	hdr := q.Header()
 	assert.This(row2str(hdr, row)).Is("a=1 b=2 c=3 d=4")
+}
+
+func TestWhere_indexRanges(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c,d,e,f) key(a,b,c,d,e,f)")
+	vals := []string{"", "1"}
+	for _, a := range vals {
+		for _, b := range vals {
+			for _, c := range vals {
+				for _, d := range vals {
+					for _, e := range vals {
+						for _, f := range vals {
+							db.act(fmt.Sprintf(
+								`insert 
+								{ a: %q, b: %q, c: %q, d: %q, e: %q, f: %q } 
+								into table`, a, b, c, d, e, f))
+						}
+					}
+				}
+			}
+		}
+	}
+	for _, a := range vals {
+		for _, b := range vals {
+			query := fmt.Sprintf("table where a is %q and b is %q", a, b)
+			db.queryCompare(t, query)
+		}
+	}
+	for _, d := range vals {
+		for _, e := range vals {
+			query := fmt.Sprintf("table where d is %q and e is %q", d, e)
+			db.queryCompare(t, query)
+		}
+	}
+	for _, a := range vals {
+		for _, b := range vals {
+			for _, d := range vals {
+				for _, e := range vals {
+					query := fmt.Sprintf(
+						"table where a is %q and b is %q and d is %q and e is %q",
+						a, b, d, e)
+					db.queryCompare(t, query)
+				}
+			}
+		}
+	}
+}
+
+func (hdb *heapdb) queryCompare(t *testing.T, query string) {
+	db := hdb.Database
+	tran := db.NewReadTran()
+	q := ParseQuery(query, tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+
+	th := &Thread{}
+	hdr := q.Header()
+
+	simple := q.Simple(th)
+	hs := NewQueryHasher(hdr).CheckDups()
+	for _, row := range simple {
+		hs.Row(row)
+	}
+
+	q.Rewind()
+	hg := NewQueryHasher(hdr).CheckDups()
+	var get []Row
+	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+		hg.Row(row)
+		get = append(get, row)
+	}
+
+	if hg.Result(true) == hs.Result(true) {
+		return
+	}
+
+	fmt.Println("optimized:", String(q))
+	for i, row := range simple {
+		fmt.Printf("simple[%d]: ", i)
+		for _, fld := range hdr.GetFields() {
+			if fld != "-" {
+				fmt.Printf("%s=%q ", fld, row.GetRawVal(hdr, fld, nil, nil))
+			}
+		}
+		fmt.Println()
+	}
+	for i, row := range get {
+		fmt.Printf("Get[%d]: ", i)
+		for _, fld := range hdr.GetFields() {
+			if fld != "-" {
+				fmt.Printf("%s=%q ", fld, row.GetRawVal(hdr, fld, nil, nil))
+			}
+		}
+		fmt.Println()
+	}
+	assert.T(t).This(hg.Result(true)).Is(hs.Result(true))
 }
