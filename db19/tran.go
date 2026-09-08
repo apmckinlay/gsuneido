@@ -78,7 +78,7 @@ func (t *tran) GetStore() *stor.Stor {
 	return t.db.Store
 }
 
-func (t *tran) HotColsAdd(col string, weight int) {
+func (t *tran) BusyAdd(col string, weight int) {
 	t.db.busy.Add(col, weight)
 }
 

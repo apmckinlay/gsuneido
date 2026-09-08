@@ -10,13 +10,13 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestHotcolsAdd(t *testing.T) {
-	var hc BusyTally
-	hc.Add("a", 1000)
-	hc.Add("b", 2000)
-	hc.Add("a", 3000)
-	assert.T(t).This(hc.busy.Count()).Is(6000)
-	assert.T(t).This(hc.busy.Len()).Is(2)
+func TestBusyAdd(t *testing.T) {
+	var bt BusyTally
+	bt.Add("a", 1000)
+	bt.Add("b", 2000)
+	bt.Add("a", 3000)
+	assert.T(t).This(bt.busy.Count()).Is(6000)
+	assert.T(t).This(bt.busy.Len()).Is(2)
 }
 
 func TestHotcolsSaveLoad(t *testing.T) {

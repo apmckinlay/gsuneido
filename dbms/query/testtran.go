@@ -250,7 +250,7 @@ func (t testTran) Num() int {
 	return 0
 }
 
-func (t testTran) HotColsAdd(string, int) {
+func (t testTran) BusyAdd(string, int) {
 }
 
 func (t testTran) Stats() stats.Stats {

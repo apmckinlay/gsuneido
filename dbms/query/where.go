@@ -634,7 +634,7 @@ func (w *Where) optInit() {
 	if !w.conflict && w.tbl != nil {
 		if weight, _ := w.source.Nrows(); weight > 0 {
 			for col := range w.colSpans {
-				w.t.HotColsAdd(w.tbl.Name()+"."+col, weight)
+				w.t.BusyAdd(w.tbl.Name()+"."+col, weight)
 			}
 		}
 		w.idxSels = w.perIndex()

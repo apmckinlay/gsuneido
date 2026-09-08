@@ -362,7 +362,7 @@ type QueryTran interface {
 	Read(string, int, string, string)
 	IndexIter(table string, iIndex int) index.IndexIter
 	Num() int
-	HotColsAdd(col string, weight int)
+	BusyAdd(col string, weight int)
 	Stats() stats.Stats
 }
 
