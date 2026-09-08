@@ -88,6 +88,9 @@ func joinNoElseLocals(x *ast.If, env TypeEnv, sc narrowScope) {
 }
 
 func joinNoElseMembers(x *ast.If, env TypeEnv, sc narrowScope) {
+	if sc.localsOnly {
+		return
+	}
 	assignedM := topLevelAssignedMembers(x.Then)
 	if len(assignedM) == 0 {
 		return

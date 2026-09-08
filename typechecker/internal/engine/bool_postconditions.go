@@ -36,7 +36,7 @@ func ComputeBoolPostconditions(cls *ClassObject, env TypeEnv,
 			continue
 		}
 		c := &postCollector{env: env}
-		sc := initialNarrowScope(fn, env)
+		sc := initialNarrowScope(fn, env, false)
 		sc.memberAssignedFalse = assignedFalse
 		sc.writes = writes
 		sc.postHook = c.collect

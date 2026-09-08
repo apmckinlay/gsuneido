@@ -290,7 +290,7 @@ func storeRefinement(sc narrowScope, tgt narrowTarget, t DynType, allowMembers b
 		return
 	}
 	if tgt.isMember {
-		if !allowMembers {
+		if !allowMembers || sc.localsOnly {
 			return
 		}
 		sc.Members.prove(tgt.name, t)

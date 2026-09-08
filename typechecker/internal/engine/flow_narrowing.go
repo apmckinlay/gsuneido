@@ -55,6 +55,7 @@ type narrowScope struct {
 	writes              *classMemberWrites
 	postconds           boolPostconds
 	postHook            func(*ast.Return, narrowScope)
+	localsOnly          bool // LocalNarrowingPass: never refine or read members
 }
 
 func (s narrowScope) kind(members bool) refinements {
@@ -79,6 +80,7 @@ func (s narrowScope) clone() narrowScope {
 	c.writes = s.writes                           // shared, read-only
 	c.postconds = s.postconds                     // shared, read-only
 	c.postHook = s.postHook                       // shared, read-only
+	c.localsOnly = s.localsOnly
 	return c
 }
 
@@ -178,7 +180,7 @@ func FlowNarrowingPass(cls *ClassObject, env TypeEnv, pctx *PassCtx) bool {
 	writes := ComputeMemberWrites(cls)
 	postconds := ComputeBoolPostconditions(cls, env, assignedFalse, writes)
 	for _, fn := range cls.SortedMethods {
-		sc := initialNarrowScope(fn, env)
+		sc := initialNarrowScope(fn, env, false)
 		sc.memberAssignedFalse = assignedFalse
 		sc.writes = writes
 		sc.postconds = postconds
@@ -187,14 +189,37 @@ func FlowNarrowingPass(cls *ClassObject, env TypeEnv, pctx *PassCtx) bool {
 	return false
 }
 
-func initialNarrowScope(fn *ast.Function, env TypeEnv) narrowScope {
+// LocalNarrowingPass applies guards to locals only, so the member backfill
+// that follows it sees the value a guarded assignment can actually carry.
+// Members are neither read nor refined: their types are still growing at
+// this point, and depending on them here would feed the growth back into
+// itself. Runs after every NameResolutionPass that precedes a
+// MemberAssignmentPass, since name resolution re-stamps flow-insensitively.
+//
+// ```suneido
+// dirty: true
+// Dirty?(dirty = "") {
+//     if Boolean?(dirty)
+//         .dirty = dirty    // RHS stamped boolean, not string, when
+//     }                     // MemberAssignmentPass unions it into .dirty
+//
+// ```
+func LocalNarrowingPass(cls *ClassObject, env TypeEnv, pctx *PassCtx) bool {
+	for _, fn := range cls.SortedMethods {
+		walkBlock(fn.Body, env, initialNarrowScope(fn, env, true))
+	}
+	return false
+}
+
+func initialNarrowScope(fn *ast.Function, env TypeEnv, localsOnly bool) narrowScope {
 	sc := newNarrowScope(len(fn.Params) + 8)
+	sc.localsOnly = localsOnly
 	for i := range fn.Params {
 		p := &fn.Params[i]
 		name := p.Name.ParamName()
 		if t, ok := env.Params[p]; ok {
 			sc.Locals.setType(name, t)
-		} else if len(p.Name.Name) > 0 && p.Name.Name[0] == '.' {
+		} else if !localsOnly && len(p.Name.Name) > 0 && p.Name.Name[0] == '.' {
 			if t, ok := env.LookupMember(name); ok {
 				sc.Locals.setType(name, t)
 			}
@@ -380,6 +405,9 @@ func narrowEqAssign(x *ast.Binary, env TypeEnv, sc narrowScope) {
 		}
 	} else if name, mem, ok := unwrapThisMember(x.Lhs); ok {
 		delete(sc.Members, name)
+		if sc.localsOnly {
+			return
+		}
 		rhsT := env.GetType(x.Rhs)
 		lhsT := env.GetType(mem)
 		if isNarrower(rhsT, lhsT) {

@@ -336,3 +336,20 @@ func TestTypeAnnotateIsIdempotent(t *testing.T) {
 		[]SourceEntry{{"Adder", once}}).Results[0].(string)
 	a.This(twice).Is(once)
 }
+
+// the reported shape: a `""` default on a Boolean?-guarded parameter must not
+// leak string into the member through the guarded assignment
+func TestInferMemberUnderPredicateGuardIgnoresParamDefault(t *testing.T) {
+	withSigs(t) // no builtin signatures needed
+	ti := inferOne(t, nil, "C", `class {
+		dirty: true
+		Dirty?(dirty = "") {
+			if Boolean?(dirty)
+				.dirty = dirty
+			return .dirty
+		}
+	}`)
+	assert.T(t).This(ti.Members["dirty"]).Is("boolean")
+	assert.T(t).This(ti.Methods["Dirty?"]["$return"]).Is("boolean")
+	assert.T(t).This(ti.Methods["Dirty?"]["dirty"]).Is("string")
+}
