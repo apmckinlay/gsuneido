@@ -993,6 +993,39 @@ func TestWhere_singleton_lookup(t *testing.T) {
 	assert.This(row2str(hdr, row)).Is("a=1 b=2 c=3 d=4")
 }
 
+func TestWhere_indexFilter_point(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c) key(a,b)")
+	db.act("insert { a: 1, b: 2, c: 3 } into table")
+	tran := db.NewReadTran()
+	q := ParseQuery("table where a is 1 and b is 2 and a + b > 100", tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	th := &Thread{}
+	// singleton: row is only reachable by a full-key point lookup, but the
+	// indexFilter (a + b > 100) must still reject it
+	assert.T(t).That(q.Get(th, Next) == nil)
+	q.Rewind()
+	assert.T(t).That(len(q.Simple(th)) == 0)
+	q.Select(Sels{{"a", Pack(SuInt(1))}, {"b", Pack(SuInt(2))}})
+	assert.T(t).That(q.Get(th, Next) == nil)
+}
+
+func TestWhere_Simple_filter(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (a,b,c) key(a)")
+	db.act("insert { a: 1, b: 2, c: 3 } into table")
+	db.act("insert { a: 2, b: 3, c: 4 } into table")
+	tran := db.NewReadTran()
+	q := ParseQuery("table where a is 5", tran, nil)
+	q, _, _ = Setup(q, ReadMode, tran)
+	th := &Thread{}
+	// Simple reads all source rows without any index restriction, so the
+	// where expression must still be applied
+	assert.T(t).That(len(q.Simple(th)) == 0)
+}
+
 func TestWhere_indexRanges(t *testing.T) {
 	db := heapDb()
 	defer db.Close()

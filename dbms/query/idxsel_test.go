@@ -4,6 +4,7 @@
 package query
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
@@ -103,4 +104,19 @@ func TestFracStr(t *testing.T) {
 	assert.T(t).This(fracStr(.33333)).Is(".33")
 	assert.T(t).This(fracStr(.00123)).Is(".0012")
 	assert.T(t).This(fracStr(10)).Is("10")
+}
+
+func TestRangeCols(t *testing.T) {
+	test := func(index []string, prefixLen, skipStart, skipLen int, expected string) {
+		t.Helper()
+		is := &idxSel{index: index, prefixLen: prefixLen,
+			skipStart: skipStart, skipLen: skipLen}
+		assert.T(t).This(fmt.Sprint(is.RangeCols())).Is(expected)
+	}
+	test(nil, 0, 0, 0, "[]")
+	test([]string{"a", "b", "c"}, 1, 0, 0, "[a]")
+	test([]string{"a", "b", "c"}, 0, 1, 1, "[b]")
+	test([]string{"a", "b", "c", "d"}, 1, 2, 1, "[a c]")
+	test([]string{"a", "b", "c", "d"}, 1, 2, 2, "[a c d]")
+	test([]string{"a", "b", "c"}, 1, 1, 2, "[a b c]")
 }

@@ -50,6 +50,16 @@ func (is *idxSel) HasSkipScan() bool {
 	return is.skipStart > 0
 }
 
+func (is *idxSel) RangeCols() []string {
+	var cols []string
+	for i, col := range is.index {
+		if i < is.prefixLen || (i >= is.skipStart && i < is.skipStart+is.skipLen) {
+			cols = append(cols, col)
+		}
+	}
+	return cols
+}
+
 func (is idxSel) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString(str.Join("(,)", is.index))
