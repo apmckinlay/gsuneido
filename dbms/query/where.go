@@ -793,10 +793,8 @@ func (w *Where) Get(th *Thread, dir Dir) Row {
 func (w *Where) get(th *Thread, dir Dir) Row {
 	if w.idxSelActive == nil {
 		w.nIn++
-		if w.tbl == nil {
-			return w.source.Get(th, dir)
-		}
-		return w.getFilter(th, dir)
+		assert.That(w.indexFilter == nil)
+		return w.source.Get(th, dir)
 	}
 	// loop over the prefix index ranges/points
 	for {
