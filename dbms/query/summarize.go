@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/set"
@@ -35,10 +36,10 @@ type Summarize struct {
 	sels Sels
 	summarizeApproach
 	wholeRow bool
-	state
-	unique bool
-	hint   sumHint
-	th     *Thread
+	state    iface.State
+	unique   bool
+	hint     sumHint
+	th       *Thread
 }
 
 type summarizeApproach struct {
@@ -395,7 +396,7 @@ func (su *Summarize) setApproach(_ Require, approach any, tran QueryTran) {
 		assert.ShouldNotReachHere()
 	}
 	su.source = SetApproach(su.source, su.summarizeApproach.req, tran)
-	su.state = rewound
+	su.state = iface.Rewound
 	su.header = su.getHeader()
 }
 
@@ -420,21 +421,21 @@ func (su *Summarize) getColumns() []string {
 
 func (su *Summarize) Rewind() {
 	su.source.Rewind()
-	su.state = rewound
+	su.state = iface.Rewound
 }
 
 func (su *Summarize) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { su.tget += tsc.Read() - t }(tsc.Read())
-	if su.state == eof {
+	if su.state.Eof() {
 		return nil
 	}
 	for {
 		row := su.get(th, su, dir)
 		if row == nil {
-			su.state = eof
+			su.state = iface.Eof
 			return nil
 		}
-		su.state = within
+		su.state = iface.Within
 		if su.filter(row, th) {
 			su.ngets++
 			return row
@@ -443,10 +444,10 @@ func (su *Summarize) Get(th *Thread, dir Dir) Row {
 }
 
 func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
-	if su.state == within {
+	if su.state.Within() {
 		return nil
 	}
-	su.state = within
+	su.state = iface.Within
 	nr, _ := su.source.Nrows()
 	if nr == 0 {
 		return nil
@@ -457,10 +458,10 @@ func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
 }
 
 func getIdx(th *Thread, su *Summarize, _ Dir) Row {
-	if su.state == within {
+	if su.state.Within() {
 		return nil
 	}
-	su.state = within
+	su.state = iface.Within
 	dir := Prev // max
 	if str.EqualCI(su.ops[0], "min") {
 		dir = Next
@@ -516,9 +517,9 @@ type mapPair struct {
 func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 	su.th = th
 	defer func() { su.th = nil }()
-	if su.state == rewound {
+	if su.state.Rewound() {
 		assert.That(!su.wholeRow)
-		su.state = within // before buildMap (Get loop might call getMap again)
+		su.state = iface.Within // before buildMap (Get loop might call getMap again)
 		t.mapList = su.buildMap()
 		if dir == Next {
 			t.mapPos = -1
@@ -612,8 +613,8 @@ type sumSeqT struct {
 }
 
 func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
-	if su.state == rewound {
-		su.state = within // clear before source.Get (filter loop might call getSeq again)
+	if su.state.Rewound() {
+		su.state = iface.Within // clear before source.Get (filter loop might call getSeq again)
 		t.sums = su.newSums()
 		t.curDir = dir
 		t.curRow = nil
@@ -721,7 +722,7 @@ func (su *Summarize) Select(sels Sels) {
 	isels, osels := Split(false, sels, su.index)
 	su.sels = osels
 	su.source.Select(isels)
-	su.state = rewound
+	su.state = iface.Rewound
 }
 
 func (su *Summarize) filter(row Row, th *Thread) bool {

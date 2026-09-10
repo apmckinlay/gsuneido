@@ -27,11 +27,11 @@ type OverIter struct {
 	table   string
 	// We need to keep our own curKey/Off independent of the source iterators
 	// because new source iterators may be returned by the callback.
-	curKey string
-	iters  []iterT
-	iIndex int
-	curOff uint64
-	state
+	curKey  string
+	iters   []iterT
+	iIndex  int
+	curOff  uint64
+	state   iface.State
 	lastDir dir
 	// fastIdx is the index of the winning iterator from the last minIter/maxIter.
 	// -1 means no fast path is available.
@@ -42,27 +42,6 @@ type OverIter struct {
 	secondMax string
 	// number of leading fields treated as prefix in skip-scan mode
 	skipStart int
-}
-
-type state byte
-
-const (
-	rewound state = iota
-	within
-	eof
-)
-
-func (s state) String() string {
-	switch s {
-	case rewound:
-		return "rewound"
-	case within:
-		return "within"
-	case eof:
-		return "eof"
-	default:
-		panic("unknown state")
-	}
 }
 
 type dir int8
@@ -83,11 +62,11 @@ func NewOverIter(table string, iIndex int) *OverIter {
 }
 
 func (oi *OverIter) Eof() bool {
-	return oi.state == eof
+	return oi.state.Eof()
 }
 
 func (oi *OverIter) HasCur() bool {
-	return oi.state != eof && oi.state != rewound
+	return oi.state.Within()
 }
 
 func (oi *OverIter) Cur() (string, uint64) {
@@ -101,10 +80,10 @@ func (oi *OverIter) CurOff() uint64 {
 }
 
 func (oi *OverIter) checkHasCur() {
-	if oi.state == eof {
+	if oi.state.Eof() {
 		panic("OverIter Cur eof")
 	}
-	if oi.state == rewound {
+	if oi.state.Rewound() {
 		panic("OverIter Cur rewound")
 	}
 	if oi.curOff&ixbuf.Delete != 0 {
@@ -115,7 +94,7 @@ func (oi *OverIter) checkHasCur() {
 func (oi *OverIter) Range(rng Range) {
 	oi.rng = rng
 	oi.skipStart = 0
-	oi.state = rewound
+	oi.state = iface.Rewound
 	for _, it := range oi.iters {
 		it.Range(rng)
 	}
@@ -129,7 +108,7 @@ func (oi *OverIter) SkipScan(prefixRng Range, suffixRng Range, skipStart int) {
 	oi.rng = prefixRng
 	oi.skipRng = suffixRng
 	oi.skipStart = skipStart
-	oi.state = rewound
+	oi.state = iface.Rewound
 	for _, it := range oi.iters {
 		it.SkipScan(prefixRng, suffixRng, skipStart)
 	}
@@ -139,15 +118,15 @@ func (oi *OverIter) SkipScan(prefixRng Range, suffixRng Range, skipStart int) {
 
 func (oi *OverIter) Next(t oiTran) {
 	// NOTE: keep this code in sync with Prev
-	if oi.state == eof {
+	if oi.state.Eof() {
 		return // stick at eof
 	}
 	prevKey := oi.curKey
 
 	modified := oi.update(t)
-	if oi.state == rewound {
+	if oi.state.Rewound() {
 		oi.all(iterT.Next)
-		oi.state = within
+		oi.state = iface.Within
 		prevKey = oi.rng.Org
 		oi.fastIdx = -1
 	} else if oi.canFast(modified, next) && oi.fastNext(t, prevKey) {
@@ -161,7 +140,7 @@ func (oi *OverIter) Next(t oiTran) {
 	if found {
 		t.Read(oi.table, oi.iIndex, prevKey, oi.curKey)
 	} else {
-		oi.state = eof
+		oi.state = iface.Eof
 		t.Read(oi.table, oi.iIndex, prevKey, oi.rng.End)
 	}
 	oi.lastDir = next
@@ -320,16 +299,16 @@ func (oi *OverIter) minIter() (bool, string, uint64) {
 
 func (oi *OverIter) Prev(t oiTran) {
 	// NOTE: keep this code in sync with Next
-	if oi.state == eof {
+	if oi.state.Eof() {
 		return // stick at eof
 	}
 
 	prevKey := oi.curKey
 
 	modified := oi.update(t)
-	if oi.state == rewound {
+	if oi.state.Rewound() {
 		oi.all(iterT.Prev)
-		oi.state = within
+		oi.state = iface.Within
 		prevKey = oi.rng.End
 		oi.fastIdx = -1
 	} else if oi.canFast(modified, prev) && oi.fastPrev(t, prevKey) {
@@ -343,7 +322,7 @@ func (oi *OverIter) Prev(t oiTran) {
 	if found {
 		t.Read(oi.table, oi.iIndex, oi.curKey, prevKey)
 	} else {
-		oi.state = eof
+		oi.state = iface.Eof
 		t.Read(oi.table, oi.iIndex, oi.rng.Org, prevKey)
 	}
 	oi.lastDir = prev
@@ -465,7 +444,7 @@ func (oi *OverIter) maxIter() (bool, string, uint64) {
 
 func (oi *OverIter) Rewind() {
 	oi.all(iterT.Rewind)
-	oi.state = rewound
+	oi.state = iface.Rewound
 	oi.curKey = ""
 	oi.curOff = 0
 	oi.fastIdx = -1

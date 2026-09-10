@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
@@ -29,7 +30,7 @@ type TempIndex struct {
 	order  []string
 	selOrg []string
 	selEnd []string
-	state
+	state  iface.State
 }
 
 var selMin []string
@@ -82,7 +83,7 @@ func (ti *TempIndex) Rewind() {
 	if ti.iter != nil {
 		ti.iter.Rewind()
 	}
-	ti.state = rewound
+	ti.state = iface.Rewound
 }
 
 func (ti *TempIndex) Select(sels Sels) {
@@ -155,14 +156,14 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { ti.tget += tsc.Read() - t }(tsc.Read())
 	ti.th = th
 	defer func() { ti.th = nil }()
-	if ti.conflict() || ti.state == eof {
+	if ti.conflict() || ti.state.Eof() {
 		return nil
 	}
 	if ti.iter == nil {
 		ti.iter = ti.makeIndex()
 	}
 	var row Row
-	if ti.state == rewound {
+	if ti.state.Rewound() {
 		if dir == Next {
 			row = ti.iter.Seek(ti.selOrg)
 		} else { // Prev
@@ -172,12 +173,12 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 			}
 			row = ti.iter.Get(dir)
 		}
-		ti.state = within
+		ti.state = iface.Within
 	} else {
 		row = ti.iter.Get(dir)
 	}
 	if row == nil || !ti.selected(row) {
-		ti.state = eof
+		ti.state = iface.Eof
 		return nil
 	}
 	ti.ngets++

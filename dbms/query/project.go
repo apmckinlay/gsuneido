@@ -11,6 +11,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/hash"
@@ -30,7 +31,7 @@ type Project struct {
 	prevRow Row
 	curRow  Row
 	projectApproach
-	state
+	state         iface.State
 	unique        bool
 	indexed       bool
 	warned        bool
@@ -541,14 +542,14 @@ func (p *Project) Rewind() {
 }
 
 func (p *Project) rewind() {
-	p.state = rewound
+	p.state = iface.Rewound
 	p.curRow = nil
 	p.prevRow = nil
 }
 
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { p.tget += tsc.Read() - t }(tsc.Read())
-	if p.state == eof {
+	if p.state.Eof() {
 		return nil
 	}
 	var row Row
@@ -563,10 +564,10 @@ func (p *Project) Get(th *Thread, dir Dir) Row {
 		panic(assert.ShouldNotReachHere())
 	}
 	if row != nil {
-		p.state = within
+		p.state = iface.Within
 		p.ngets++
 	} else {
-		p.state = eof
+		p.state = iface.Eof
 	}
 	return row
 }
@@ -583,7 +584,7 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 				p.curRow = nil
 				return nil
 			}
-			if p.state == rewound || p.curRow == nil ||
+			if p.state.Rewound() || p.curRow == nil ||
 				!p.header.EqualRows(row, p.curRow, th, p.st) {
 				p.prevRow = p.curRow
 				p.curRow = row
@@ -595,7 +596,7 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// i.e. output when next record is different
 		// (to get the same records as NEXT)
 
-		if p.state == rewound || (p.prevRow == nil && p.prevDir == Next) {
+		if p.state.Rewound() || (p.prevRow == nil && p.prevDir == Next) {
 			p.prevRow = p.source.Get(th, dir)
 		}
 		p.prevDir = dir
@@ -633,7 +634,7 @@ type rowHash struct {
 func (p *Project) getMap(th *Thread, dir Dir) Row {
 	p.th = th
 	defer func() { p.th = nil }()
-	if p.state == rewound {
+	if p.state.Rewound() {
 		if p.dedup == nil {
 			hfn := func(k rowHash) uint64 { return k.hash }
 			eqfn := func(x, y rowHash) bool {

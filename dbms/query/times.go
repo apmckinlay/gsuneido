@@ -5,6 +5,7 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
@@ -14,8 +15,8 @@ import (
 
 type Times struct {
 	joinLike
-	row1 Row
-	state
+	row1  Row
+	state iface.State
 }
 
 func NewTimes(src1, src2 Query) *Times {
@@ -131,42 +132,42 @@ func (t *Times) getNrows() (int, int) {
 // execution --------------------------------------------------------
 
 func (t *Times) Rewind() {
-	t.state = rewound
+	t.state = iface.Rewound
 	t.source1.Rewind()
 	t.source2.Rewind()
 }
 
 func (t *Times) Get(th *Thread, dir Dir) Row {
 	defer func(t0 uint64) { t.tget += tsc.Read() - t0 }(tsc.Read())
-	if t.state == eof {
+	if t.state.Eof() {
 		return nil
 	}
 	row2 := t.source2.Get(th, dir)
-	if t.state == rewound {
-		t.state = within
+	if t.state.Rewound() {
+		t.state = iface.Within
 		t.row1 = t.source1.Get(th, dir)
 		if t.row1 == nil || row2 == nil {
-			t.state = eof
+			t.state = iface.Eof
 			return nil
 		}
 	}
 	if row2 != nil && t.row1 == nil {
 		t.row1 = t.source1.Get(th, dir)
 		if t.row1 == nil {
-			t.state = eof
+			t.state = iface.Eof
 			return nil
 		}
 	}
 	if row2 == nil {
 		t.row1 = t.source1.Get(th, dir)
 		if t.row1 == nil {
-			t.state = eof
+			t.state = iface.Eof
 			return nil
 		}
 		t.source2.Rewind()
 		row2 = t.source2.Get(th, dir)
 		if row2 == nil {
-			t.state = eof
+			t.state = iface.Eof
 			return nil
 		}
 	}

@@ -182,18 +182,10 @@ func next(src *uint32, mod uint32) int {
 
 //-------------------------------------------------------------------
 
-type state byte
-
-const (
-	rewound state = iota
-	within
-	eof
-)
-
 type oracleIter struct {
-	data []KeyOff
-	cur  int
-	state
+	data  []KeyOff
+	cur   int
+	state iface.State
 }
 
 func newOracle(keys []KeyOff, prefixRng, suffixRng iface.Range,
@@ -210,15 +202,15 @@ func newOracle(keys []KeyOff, prefixRng, suffixRng iface.Range,
 }
 
 func (it *oracleIter) Rewind() {
-	it.cur, it.state = 0, rewound
+	it.cur, it.state = 0, iface.Rewound
 }
 
 func (it *oracleIter) HasCur() bool {
-	return it.state == within
+	return it.state.Within()
 }
 
 func (it *oracleIter) Eof() bool {
-	return it.state == eof
+	return it.state.Eof()
 }
 
 func (it *oracleIter) Cur() (string, uint64) {
@@ -226,40 +218,40 @@ func (it *oracleIter) Cur() (string, uint64) {
 }
 
 func (it *oracleIter) Next() {
-	if it.state == eof {
+	if it.state.Eof() {
 		return
 	}
 	if len(it.data) == 0 {
-		it.state = eof
+		it.state = iface.Eof
 		return
 	}
-	if it.state == rewound {
+	if it.state.Rewound() {
 		it.cur = 0
-		it.state = within
+		it.state = iface.Within
 		return
 	}
 	if it.cur+1 >= len(it.data) {
-		it.state = eof
+		it.state = iface.Eof
 		return
 	}
 	it.cur++
 }
 
 func (it *oracleIter) Prev() {
-	if it.state == eof {
+	if it.state.Eof() {
 		return
 	}
 	if len(it.data) == 0 {
-		it.state = eof
+		it.state = iface.Eof
 		return
 	}
-	if it.state == rewound {
+	if it.state.Rewound() {
 		it.cur = len(it.data) - 1
-		it.state = within
+		it.state = iface.Within
 		return
 	}
 	if it.cur == 0 {
-		it.state = eof
+		it.state = iface.Eof
 		return
 	}
 	it.cur--

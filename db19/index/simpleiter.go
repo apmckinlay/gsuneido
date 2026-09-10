@@ -25,9 +25,9 @@ type IndexIter interface {
 // with a single btree (no layers/mut).
 // It does not track reads and avoids unnecessary key allocations.
 type SimpleIter struct {
-	t  oiTran
-	it iface.Iter
-	state
+	t     oiTran
+	it    iface.Iter
+	state iface.State
 }
 
 // NewSimpleIter creates an optimized iterator for read-only btree iteration.
@@ -42,18 +42,18 @@ func NewSimpleIter(t oiTran, ov *Overlay) IndexIter {
 		return &SimpleIter{
 			t:     t,
 			it:    it,
-			state: rewound,
+			state: iface.Rewound,
 		}
 	}
 	return nil
 }
 
 func (si *SimpleIter) Eof() bool {
-	return si.state == eof
+	return si.state.Eof()
 }
 
 func (si *SimpleIter) HasCur() bool {
-	return si.state != eof && si.state != rewound
+	return si.state.Within()
 }
 
 func (si *SimpleIter) Cur() (string, uint64) {
@@ -67,21 +67,21 @@ func (si *SimpleIter) CurOff() uint64 {
 }
 
 func (si *SimpleIter) checkHasCur() {
-	if si.state == eof {
+	if si.state.Eof() {
 		panic("SimpleIter eof")
 	}
-	if si.state == rewound {
+	if si.state.Rewound() {
 		panic("SimpleIter rewound")
 	}
 }
 
 func (si *SimpleIter) Range(rng Range) {
-	si.state = rewound
+	si.state = iface.Rewound
 	si.it.Range(rng)
 }
 
 func (si *SimpleIter) SkipScan(prefixRng Range, suffixRng Range, skipStart int) {
-	si.state = rewound
+	si.state = iface.Rewound
 	si.it.SkipScan(prefixRng, suffixRng, skipStart)
 }
 
@@ -89,15 +89,15 @@ func (si *SimpleIter) Next(t oiTran) {
 	if t.Num() != si.t.Num() {
 		panic("SimpleIter tran changed")
 	}
-	if si.state == eof {
+	if si.state.Eof() {
 		return // stick at eof
 	}
-	if si.state == rewound {
-		si.state = within
+	if si.state.Rewound() {
+		si.state = iface.Within
 	}
 	si.it.Next()
 	if si.it.Eof() {
-		si.state = eof
+		si.state = iface.Eof
 	}
 }
 
@@ -105,19 +105,19 @@ func (si *SimpleIter) Prev(t oiTran) {
 	if t.Num() != si.t.Num() {
 		panic("SimpleIter tran changed")
 	}
-	if si.state == eof {
+	if si.state.Eof() {
 		return // stick at eof
 	}
-	if si.state == rewound {
-		si.state = within
+	if si.state.Rewound() {
+		si.state = iface.Within
 	}
 	si.it.Prev()
 	if si.it.Eof() {
-		si.state = eof
+		si.state = iface.Eof
 	}
 }
 
 func (si *SimpleIter) Rewind() {
 	si.it.Rewind()
-	si.state = rewound
+	si.state = iface.Rewound
 }

@@ -79,3 +79,29 @@ func (r Range) String() string {
 	}
 	return fmt.Sprintf("%s=>%s", r.Org, r.End)
 }
+
+// State represents the state of an iterator.
+type State byte
+
+const (
+	Rewound State = iota
+	Within
+	Eof
+)
+
+func (s State) Rewound() bool { return s == Rewound }
+func (s State) Within() bool  { return s == Within }
+func (s State) Eof() bool     { return s == Eof }
+
+func (s State) String() string {
+	switch s {
+	case Rewound:
+		return "rewound"
+	case Within:
+		return "within"
+	case Eof:
+		return "eof"
+	default:
+		panic("unknown state")
+	}
+}

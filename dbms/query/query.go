@@ -247,14 +247,6 @@ type queryBase struct {
 	metrics
 }
 
-type state byte
-
-const (
-	rewound state = iota
-	within
-	eof
-)
-
 func (q *queryBase) Columns() []string {
 	return q.header.Columns
 }

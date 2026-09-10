@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/shmap"
 	"github.com/apmckinlay/gsuneido/util/slc"
@@ -28,7 +29,7 @@ type SemiJoin struct {
 	reverse     bool
 	sels1       Sels // from incoming Select, added to source1 probe in reverse mode
 
-	revState      state
+	revState      iface.State
 	indexed       bool
 	row2          Row
 	lookupRow     Row
@@ -265,7 +266,7 @@ func (sj *SemiJoin) Rewind() {
 	sj.source2.Rewind()
 	sj.row2 = nil
 	sj.lookupRow = nil
-	sj.revState = rewound
+	sj.revState = iface.Rewound
 	// NOTE: sj.dedup and sj.indexed are NOT reset here - like Project,
 	// the dedup map remains valid for the underlying data across Rewind,
 	// only the cursor position (state) is reset.
@@ -274,14 +275,14 @@ func (sj *SemiJoin) Rewind() {
 func (sj *SemiJoin) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { sj.tget += tsc.Read() - t }(tsc.Read())
 	if sj.reverse {
-		if sj.revState == eof {
+		if sj.revState.Eof() {
 			return nil
 		}
 		row := sj.getReverse(th, dir)
 		if row != nil {
-			sj.revState = within
+			sj.revState = iface.Within
 		} else {
-			sj.revState = eof
+			sj.revState = iface.Eof
 		}
 		return row
 	}
@@ -329,7 +330,7 @@ func (sj *SemiJoin) getReverse(th *Thread, dir Dir) Row {
 			}
 			sj.dedup = shmap.NewMapFuncs[rowHash, struct{}](hfn, eqfn)
 		}
-		if sj.revState == rewound && dir == Prev && !sj.indexed {
+		if sj.revState.Rewound() && dir == Prev && !sj.indexed {
 			sj.buildDedup(th)
 		}
 	}

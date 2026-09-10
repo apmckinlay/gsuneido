@@ -11,6 +11,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/set"
@@ -31,7 +32,7 @@ type Union struct {
 	src2      bool
 	prevDir   Dir
 	src1      bool
-	state
+	state     iface.State
 }
 
 type unionApproach struct {
@@ -438,7 +439,7 @@ func (u *Union) setApproach(req Require, approach any, tran QueryTran) {
 	u.src1Only = set.Difference(u.source1.Columns(), u.source2.Columns())
 	u.empty1 = make(Row, len(u.source1.Header().Fields))
 	u.empty2 = make(Row, len(u.source2.Header().Fields))
-	u.state = rewound
+	u.state = iface.Rewound
 	u.src1get = u.source1.Get
 	u.src2get = u.source2.Get
 }
@@ -448,12 +449,12 @@ func (u *Union) setApproach(req Require, approach any, tran QueryTran) {
 func (u *Union) Rewind() {
 	u.source1.Rewind()
 	u.source2.Rewind()
-	u.state = rewound
+	u.state = iface.Rewound
 }
 
 func (u *Union) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { u.tget += tsc.Read() - t }(tsc.Read())
-	if u.state == eof {
+	if u.state.Eof() {
 		return nil
 	}
 	var row Row
@@ -470,16 +471,16 @@ func (u *Union) Get(th *Thread, dir Dir) Row {
 		panic(assert.ShouldNotReachHere())
 	}
 	if row != nil {
-		u.state = within
+		u.state = iface.Within
 		u.ngets++
 	} else {
-		u.state = eof
+		u.state = iface.Eof
 	}
 	return row
 }
 
 func (u *Union) getLookup(th *Thread, dir Dir) Row {
-	if u.state == rewound {
+	if u.state.Rewound() {
 		u.src1 = (dir == Next)
 	}
 	var row Row
@@ -516,7 +517,7 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 
 func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 	// refill row1 and row2
-	if u.state == rewound || (u.src1 && u.src2) {
+	if u.state.Rewound() || (u.src1 && u.src2) {
 		u.get1(th, dir)
 		u.get2(th, dir)
 	} else if u.src1 {
@@ -590,7 +591,7 @@ func (u *Union) compare(th *Thread, row1, row2 Row, cols []string) int {
 
 func (u *Union) getMergeDisjoint(th *Thread, dir Dir) (r Row) {
 	// refill row1 and row2
-	if u.state == rewound {
+	if u.state.Rewound() {
 		u.get1(th, dir)
 		u.get2(th, dir)
 	} else if u.src1 {
@@ -645,7 +646,7 @@ func (u *Union) Select(sels Sels) {
 	dbg.Assert(func() bool { return checkSels(sels, u.source1.Columns()) })
 	dbg.Assert(func() bool { return checkSels(sels, u.source2.Columns()) })
 	u.nsels++
-	u.state = rewound
+	u.state = iface.Rewound
 	u.src1get = u.source1.Get
 	u.src2get = u.source2.Get
 	u.source1.Select(sels)

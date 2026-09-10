@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/itertest"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -1021,17 +1022,17 @@ func (d *dummy) Delete(key string) {
 // }
 
 type dumIter struct {
-	d   *dummy
-	cur string
-	state
+	d     *dummy
+	cur   string
+	state iface.State
 }
 
 func (it *dumIter) Rewind() {
-	it.state = rewound
+	it.state = iface.Rewound
 }
 
 func (it *dumIter) Eof() bool {
-	return it.state == eof
+	return it.state.Eof()
 }
 
 func (it *dumIter) Cur() string {
@@ -1039,16 +1040,16 @@ func (it *dumIter) Cur() string {
 }
 
 func (it *dumIter) Next() {
-	if it.state == eof {
+	if it.state.Eof() {
 		return
 	}
-	if it.state == rewound {
+	if it.state.Rewound() {
 		if len(it.d.keys) == 0 {
-			it.state = eof
+			it.state = iface.Eof
 			return
 		}
 		it.cur = it.d.keys[0]
-		it.state = within
+		it.state = iface.Within
 		return
 	}
 	for _, k := range it.d.keys {
@@ -1057,20 +1058,20 @@ func (it *dumIter) Next() {
 			return
 		}
 	}
-	it.state = eof
+	it.state = iface.Eof
 }
 
 func (it *dumIter) Prev() {
-	if it.state == eof {
+	if it.state.Eof() {
 		return
 	}
-	if it.state == rewound {
+	if it.state.Rewound() {
 		if len(it.d.keys) == 0 {
-			it.state = eof
+			it.state = iface.Eof
 			return
 		}
 		it.cur = it.d.keys[len(it.d.keys)-1]
-		it.state = within
+		it.state = iface.Within
 		return
 	}
 	for _, k := range slices.Backward(it.d.keys) {
@@ -1080,7 +1081,7 @@ func (it *dumIter) Prev() {
 			return
 		}
 	}
-	it.state = eof
+	it.state = iface.Eof
 }
 
 // TestOverIterFastPathTransition verifies that the fast path fires for a long run

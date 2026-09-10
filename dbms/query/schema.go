@@ -9,6 +9,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stats"
@@ -22,8 +23,8 @@ import (
 
 type schemaTable struct {
 	cache
-	tran QueryTran
-	state
+	tran  QueryTran
+	state iface.State
 	metrics
 }
 
@@ -168,31 +169,31 @@ func (ts *Tables) SetTran(tran QueryTran) {
 
 func (ts *Tables) Rewind() {
 	ts.i = -1
-	ts.state = rewound
+	ts.state = iface.Rewound
 }
 
 func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { ts.tget += tsc.Read() - t }(tsc.Read())
 	ts.ensure()
-	if ts.state == eof {
+	if ts.state.Eof() {
 		return nil
 	}
 	if dir == Next {
-		if ts.state == rewound {
+		if ts.state.Rewound() {
 			ts.i = -1
 		}
 		ts.i++
 	} else { // Prev
-		if ts.state == rewound {
+		if ts.state.Rewound() {
 			ts.i = len(ts.info)
 		}
 		ts.i--
 	}
 	if ts.i < 0 || len(ts.info) <= ts.i {
-		ts.state = eof
+		ts.state = iface.Eof
 		return nil
 	}
-	ts.state = within
+	ts.state = iface.Within
 	ts.ngets++
 	return ts.row(ts.info[ts.i])
 }
@@ -317,33 +318,33 @@ func (cs *Columns) SetTran(tran QueryTran) {
 
 func (cs *Columns) Rewind() {
 	cs.si = -1
-	cs.state = rewound
+	cs.state = iface.Rewound
 }
 
 func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { cs.tget += tsc.Read() - t }(tsc.Read())
 	cs.ensure()
-	if cs.state == eof {
+	if cs.state.Eof() {
 		return nil
 	}
 	var col string
 	var fld int
 	for {
 		if dir == Next {
-			if cs.state == rewound {
+			if cs.state.Rewound() {
 				cs.si, cs.ci = 0, -1
 			}
 			cs.ci++
 			for cs.ci >= len(cs.schema[cs.si].Columns)+len(cs.schema[cs.si].Derived) {
 				cs.si++
 				if cs.si >= len(cs.schema) {
-					cs.state = eof
+					cs.state = iface.Eof
 					return nil
 				}
 				cs.ci = 0
 			}
 		} else { // Prev
-			if cs.state == rewound {
+			if cs.state.Rewound() {
 				cs.si = len(cs.schema)
 				cs.ci = 0
 			}
@@ -351,7 +352,7 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 			for cs.ci < 0 {
 				cs.si--
 				if cs.si < 0 {
-					cs.state = eof
+					cs.state = iface.Eof
 					return nil
 				}
 				cs.ci = len(cs.schema[cs.si].Columns) + len(cs.schema[cs.si].Derived) - 1
@@ -362,7 +363,7 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 			break
 		}
 	}
-	cs.state = within
+	cs.state = iface.Within
 	cs.ngets++
 	schema := cs.schema[cs.si]
 	return cs.row(schema.Table, col, fld)
@@ -484,31 +485,31 @@ func (is *Indexes) SetTran(tran QueryTran) {
 }
 
 func (is *Indexes) Rewind() {
-	is.state = rewound
+	is.state = iface.Rewound
 }
 
 func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { is.tget += tsc.Read() - t }(tsc.Read())
 	is.ensure()
-	if is.state == eof {
+	if is.state.Eof() {
 		return nil
 	}
 	if dir == Next {
-		if is.state == rewound {
+		if is.state.Rewound() {
 			is.si, is.ci = 0, 0
 		} else {
 			is.ci++
 			if is.ci >= len(is.schema[is.si].Indexes) {
 				is.si++
 				if is.si >= len(is.schema) {
-					is.state = eof
+					is.state = iface.Eof
 					return nil
 				}
 				is.ci = 0
 			}
 		}
 	} else { // Prev
-		if is.state == rewound {
+		if is.state.Rewound() {
 			is.si = len(is.schema) - 1
 			is.ci = len(is.schema[is.si].Indexes) - 1
 		} else {
@@ -516,14 +517,14 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 			if is.ci < 0 {
 				is.si--
 				if is.si < 0 {
-					is.state = eof
+					is.state = iface.Eof
 					return nil
 				}
 				is.ci = len(is.schema[is.si].Indexes) - 1
 			}
 		}
 	}
-	is.state = within
+	is.state = iface.Within
 	schema := is.schema[is.si]
 	is.ngets++
 	return is.row(schema.Table, &schema.Indexes[is.ci])
@@ -622,30 +623,30 @@ func (vs *Views) SetTran(tran QueryTran) {
 
 func (vs *Views) Rewind() {
 	vs.i = -2
-	vs.state = rewound
+	vs.state = iface.Rewound
 }
 
 func (vs *Views) Get(_ *Thread, dir Dir) Row {
 	vs.ensure()
-	if vs.state == eof {
+	if vs.state.Eof() {
 		return nil
 	}
 	if dir == Next {
-		if vs.state == rewound {
+		if vs.state.Rewound() {
 			vs.i = -2
 		}
 		vs.i += 2
 	} else { // Prev
-		if vs.state == rewound {
+		if vs.state.Rewound() {
 			vs.i = len(vs.views)
 		}
 		vs.i -= 2
 	}
 	if vs.i < 0 || len(vs.views) <= vs.i {
-		vs.state = eof
+		vs.state = iface.Eof
 		return nil
 	}
-	vs.state = within
+	vs.state = iface.Within
 	return vs.row(vs.views[vs.i], vs.views[vs.i+1])
 }
 
@@ -726,15 +727,15 @@ func (his *History) SetTran(tran QueryTran) {
 }
 
 func (his *History) Rewind() {
-	his.state = rewound
+	his.state = iface.Rewound
 }
 
 func (his *History) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { his.tget += tsc.Read() - t }(tsc.Read())
-	if his.state == eof {
+	if his.state.Eof() {
 		return nil
 	}
-	if his.state == rewound {
+	if his.state.Rewound() {
 		his.off = 0
 	}
 	var state *db19.DbState
@@ -744,10 +745,10 @@ func (his *History) Get(_ *Thread, dir Dir) Row {
 		state = db19.PrevState(his.tran.GetStore(), his.off)
 	}
 	if state == nil {
-		his.state = eof
+		his.state = iface.Eof
 		return nil
 	}
-	his.state = within
+	his.state = iface.Within
 	his.off = state.Off
 	var rb RecordBuilder
 	rb.Add(SuDateFromUnixMilli(state.Asof))
@@ -809,19 +810,19 @@ func (st *StatsTable) SetTran(tran QueryTran) {
 
 func (st *StatsTable) Rewind() {
 	st.si = -1
-	st.state = rewound
+	st.state = iface.Rewound
 }
 
 func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { st.tget += tsc.Read() - t }(tsc.Read())
 	st.ensure()
-	if st.state == eof {
+	if st.state.Eof() {
 		return nil
 	}
 	var table, col string
 	var cs stats.ColStats
 	if dir == Next {
-		if st.state == rewound {
+		if st.state.Rewound() {
 			st.si, st.ci = 0, -1
 		}
 		st.ci++
@@ -829,13 +830,13 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 			st.ci >= len(st.stats[st.tables[st.si]].Columns) {
 			st.si++
 			if st.si >= len(st.tables) {
-				st.state = eof
+				st.state = iface.Eof
 				return nil
 			}
 			st.ci = 0
 		}
 	} else { // Prev
-		if st.state == rewound {
+		if st.state.Rewound() {
 			st.si = len(st.tables)
 			st.ci = 0
 		}
@@ -843,7 +844,7 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 		for st.ci < 0 {
 			st.si--
 			if st.si < 0 {
-				st.state = eof
+				st.state = iface.Eof
 				return nil
 			}
 			st.ci = len(st.stats[st.tables[st.si]].Columns) - 1
@@ -853,7 +854,7 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 	cols := sortedCols(st.stats[table])
 	col = cols[st.ci]
 	cs = st.stats[table].Columns[col]
-	st.state = within
+	st.state = iface.Within
 	st.ngets++
 	return st.row(table, col, cs)
 }

@@ -452,7 +452,7 @@ func TestIterRange(t *testing.T) {
 	it := ib.Iterator().(*Iterator)
 	test := func(fn func(), expected string) {
 		fn()
-		assert.That(it.state == within)
+		assert.That(it.state.Within())
 		assert.This(it.cur.key).Is(expected)
 	}
 	test(it.Next, "a")
