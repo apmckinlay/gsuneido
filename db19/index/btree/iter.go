@@ -14,7 +14,7 @@ type Iterator struct {
 	bt        *btree
 	rng       Range
 	skipRng   Range               // suffix range used by skip-scan mode
-	skipStart int                 // number of prefix fields
+	skipStart int                 // start of the skip scan fields
 	tree      [maxLevels]treeIter // tree[0] is root
 	leaf      leafIter
 	state     iterState

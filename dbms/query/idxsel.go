@@ -27,7 +27,7 @@ type idxSel struct {
 	prefixFrac   float64 // from index probe
 
 	// skip scan range
-	skipStart int // 0 means no skip scan; indexes into fields
+	skipStart int // indexes into fields
 	skipLen   int
 	skipRange pointRange
 
