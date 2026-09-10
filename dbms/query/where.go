@@ -313,8 +313,6 @@ func (w *Where) Transform() Query {
 	switch q := src.(type) {
 	case *Nothing:
 		return NewNothing(w)
-	case *Tables:
-		return w.tablesLookup(q)
 	case *Where:
 		// combine consecutive where's
 		exprs := slc.With(q.expr.Exprs, w.expr.Exprs...)
@@ -440,34 +438,6 @@ func (w *Where) transform(src Query) Query {
 		return NewWhere(src, w.expr, w.t)
 	}
 	return w
-}
-
-func (w *Where) tablesLookup(tables *Tables) Query {
-	// Optimize: tables where table = <string>
-	// This is to handle the speed issue from heavy use of TableExists?.
-	// It could be more general.
-	col, val := w.lookup1()
-	if col != "table" {
-		return w
-	}
-	s, ok := val.ToStr()
-	if !ok {
-		return NewNothing(w)
-	}
-	return NewTablesLookup(tables.tran, s)
-}
-
-func (w *Where) lookup1() (string, Value) {
-	if len(w.expr.Exprs) == 1 {
-		if b, ok := w.expr.Exprs[0].(*ast.Binary); ok && b.Tok == tok.Is {
-			if id, ok := b.Lhs.(*ast.Ident); ok {
-				if c, ok := b.Rhs.(*ast.Constant); ok {
-					return id.Name, c.Val
-				}
-			}
-		}
-	}
-	return "", nil
 }
 
 func (w *Where) leftJoinToJoin(lj *LeftJoin) bool {

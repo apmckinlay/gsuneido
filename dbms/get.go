@@ -64,10 +64,7 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	}
 	row := q.Get(th, d)
 	if dir == Only || dir == Any {
-		if w, ok := q.(*qry.Where); ok && w.InCount() > slow[dir] &&
-			!(strings.HasPrefix(query, "columns") ||
-				strings.HasPrefix(query, "indexes") ||
-				strings.HasPrefix(query, "views")) {
+		if w, ok := q.(*qry.Where); ok && w.InCount() > slow[dir] {
 			Warning(dir, "slow:", w.InCount(), query)
 		}
 	}
@@ -94,14 +91,29 @@ func getQuery(ob *SuObject) string {
 	return ""
 }
 
+type iTable interface {
+	qry.Query
+	Name() string
+	UniqueIndexes() [][]string
+	SetIndex(index []string, mode qry.Mode)
+	Clone() *qry.Table
+}
+
+var _ iTable = (*qry.Table)(nil)
+var _ iTable = (*qry.Tables)(nil)
+var _ iTable = (*qry.Columns)(nil)
+var _ iTable = (*qry.Indexes)(nil)
+var _ iTable = (*qry.Views)(nil)
+var _ iTable = (*qry.StatsTable)(nil)
+
 // fastGet returns a nil Header to indicate it was not applicable
 func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir) (row Row, hdr *Header, strarg string) {
 	strarg = query
 	table := qry.JustTable(query)
-	if table == "" || tran.GetInfo(table) == nil { // could be a view
+	if table == "" || tran.GetView(table) != "" {
 		return
 	}
-	tbl, ok := qry.NewTable(tran, table).(*qry.Table)
+	tbl, ok := qry.NewTable(tran, table).(iTable)
 	if !ok {
 		return
 	}
@@ -131,7 +143,7 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 	panic(assert.ShouldNotReachHere())
 }
 
-func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, sels Sels, dir Dir) (Row, *Header) {
+func getLookup(th *Thread, tran qry.QueryTran, table iTable, sels Sels, dir Dir) (Row, *Header) {
 	single, _, getfn := getIndex(th, tran, table, sels, dir)
 	if getfn == nil {
 		return nil, nil
@@ -145,7 +157,7 @@ func getLookup(th *Thread, tran qry.QueryTran, table *qry.Table, sels Sels, dir 
 	return row, table.Header()
 }
 
-func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, sels Sels, dir Dir) (row Row, hdr *Header) {
+func getExists(th *Thread, tran qry.QueryTran, table iTable, sels Sels, dir Dir) (row Row, hdr *Header) {
 	_, _, getfn := getIndex(th, tran, table, sels, dir)
 	if getfn == nil {
 		return nil, nil
@@ -157,7 +169,7 @@ func getExists(th *Thread, tran qry.QueryTran, table *qry.Table, sels Sels, dir 
 	return nil, existsHdr
 }
 
-func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
+func getIndex(th *Thread, tran qry.QueryTran, table iTable,
 	sels Sels, dir Dir) (single bool, strat string,
 	getfn func() Row) {
 	st := qry.MakeSuTran(tran)
@@ -174,7 +186,11 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		return row
 	}
 	if len(sels) == 0 {
-		table.SetIndex(table.Indexes()[0], qry.ReadMode)
+		indexes := table.Indexes()
+		if len(indexes) == 0 {
+			return // eg. schema table, let the normal path handle it
+		}
+		table.SetIndex(indexes[0], qry.ReadMode)
 		strat = "no select: " + table.String()
 		trace.QueryOpt.Println(dir, strat)
 		return false, strat, func() Row {
@@ -231,10 +247,9 @@ func getIndex(th *Thread, tran qry.QueryTran, table *qry.Table,
 		}
 	}
 	strat = "multiple indexes: " + table.Name()
-	tables := make([]*qry.Table, len(indexes))
+	tables := make([]iTable, len(indexes))
 	for i, idx := range indexes {
-		tbl := *table // copy
-		tables[i] = &tbl
+		tables[i] = table.Clone()
 		tables[i].SetIndex(idx, qry.ReadMode)
 		tables[i].Select(sels)
 		strat += " " + str.Join("(,)", idx)

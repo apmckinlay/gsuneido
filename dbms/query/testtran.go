@@ -80,6 +80,10 @@ func (testTran) GetSchema(table string) *Schema {
 	return nil
 }
 
+func (testTran) HasTable(table string) bool {
+	return testSchemas[table] != nil
+}
+
 var testInfo = map[string]*meta.Info{
 	"alias":   {Nrows: 20, Size: 1000},
 	"task":    {Nrows: 200, Size: 20000},

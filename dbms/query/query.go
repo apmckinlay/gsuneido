@@ -347,6 +347,7 @@ type Cost = int
 
 type QueryTran interface {
 	GetSchema(table string) *schema.Schema
+	HasTable(table string) bool
 	GetInfo(table string) *meta.Info
 	GetAllInfo() []*meta.Info
 	GetAllSchema() []*meta.Schema

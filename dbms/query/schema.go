@@ -4,11 +4,13 @@
 package query
 
 import (
+	"slices"
 	"sort"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -66,10 +68,6 @@ func (*schemaTable) optimize(_ Mode, req Require) (Cost, Cost, any) {
 func (*schemaTable) setApproach(Require, any, QueryTran) {
 }
 
-func (*schemaTable) Lookup(*Thread, Sels) Row {
-	panic(assert.ShouldNotReachHere())
-}
-
 func (*schemaTable) Select(Sels) {
 	assert.ShouldNotReachHere()
 }
@@ -90,6 +88,39 @@ func (st *schemaTable) Metrics() *metrics {
 	return &st.metrics
 }
 
+func (*schemaTable) Clone() *Table {
+	panic("can't clone schema table")
+}
+
+func (*schemaTable) SetIndex(index []string, mode Mode) {
+}
+
+func (*schemaTable) UniqueIndexes() [][]string {
+	return nil
+}
+
+// schemaTableNames are the virtual schema tables.
+// Note: indexes does not include them.
+var schemaTableNames = []string{"tables", "columns", "indexes", "views", "dbstats"}
+
+// schemaTableCols returns the columns of a virtual schema table,
+// or nil if table is not one.
+func schemaTableCols(table string) []string {
+	switch table {
+	case "tables":
+		return tablesFields[0]
+	case "columns":
+		return columnsFields[0]
+	case "indexes":
+		return indexesFields[0]
+	case "views":
+		return viewsFields[0]
+	case "dbstats":
+		return statsFields[0]
+	}
+	return nil
+}
+
 //-------------------------------------------------------------------
 
 type Tables struct {
@@ -99,6 +130,10 @@ type Tables struct {
 }
 
 func (*Tables) String() string {
+	return "tables"
+}
+
+func (*Tables) Name() string {
 	return "tables"
 }
 
@@ -205,50 +240,18 @@ func (ts *Tables) ensure() {
 		func(i, j int) bool { return ts.info[i].Table < ts.info[j].Table })
 }
 
-//-------------------------------------------------------------------
-
-// TablesLookup is used to optimize lookups on tables.
-// It is inserted by Where Transform.
-type TablesLookup struct {
-	Tables
-	table string
-}
-
-func NewTablesLookup(tran QueryTran, table string) *TablesLookup {
-	tl := TablesLookup{table: table, tran: tran}
-	return &tl
-}
-
-func (tl *TablesLookup) String() string {
-	return "tables(" + tl.table + ")"
-}
-
-func (*TablesLookup) Nrows() (int, int) {
-	return 1, 1
-}
-
-func (tl *TablesLookup) Transform() Query {
-	return tl
-}
-
-func (tl *TablesLookup) Get(*Thread, Dir) Row {
-	defer func(t uint64) { tl.tget += tsc.Read() - t }(tsc.Read())
-	if tl.state != eof {
-		tl.state = eof
-		switch tl.table {
-		case "tables", "columns", "indexes", "views":
-			var rb RecordBuilder
-			rb.Add(SuStr(tl.table))
-			rec := rb.Build()
-			tl.ngets++
-			return Row{DbRec{Record: rec}}
-		default:
-			ti := tl.tran.GetInfo(tl.table)
-			if ti != nil {
-				tl.ngets++
-				return tl.row(ti)
-			}
-		}
+func (ts *Tables) Lookup(th *Thread, sels Sels) Row {
+	table := ToStr(Unpack(sels.MustGet("table")))
+	if schemaTableCols(table) != nil {
+		var rb RecordBuilder
+		rb.Add(SuStr(table))
+		rec := rb.Build()
+		ts.ngets++
+		return Row{DbRec{Record: rec}}
+	}
+	if ti := ts.tran.GetInfo(table); ti != nil {
+		ts.ngets++
+		return ts.row(ti)
 	}
 	return nil
 }
@@ -264,6 +267,10 @@ type Columns struct {
 }
 
 func (*Columns) String() string {
+	return "columns"
+}
+
+func (*Columns) Name() string {
 	return "columns"
 }
 
@@ -356,13 +363,17 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 		}
 	}
 	cs.state = within
+	cs.ngets++
 	schema := cs.schema[cs.si]
+	return cs.row(schema.Table, col, fld)
+}
+
+func (*Columns) row(table, col string, fld int) Row {
 	var rb RecordBuilder
-	rb.Add(SuStr(schema.Table))
+	rb.Add(SuStr(table))
 	rb.Add(SuStr(col))
 	rb.Add(IntVal(fld))
 	rec := rb.Build()
-	cs.ngets++
 	return Row{DbRec{Record: rec}}
 }
 
@@ -379,16 +390,41 @@ func (cs *Columns) ensure() {
 		return
 	}
 	cs.schema = cs.tran.GetAllSchema()
-	cs.schema = append(cs.schema,
-		&meta.Schema{Table: "tables", Columns: tablesFields[0]},
-		&meta.Schema{Table: "columns", Columns: columnsFields[0]},
-		&meta.Schema{Table: "indexes", Columns: indexesFields[0]},
-		&meta.Schema{Table: "views", Columns: viewsFields[0]},
-		&meta.Schema{Table: "dbstats", Columns: statsFields[0]},
-	)
+	for _, name := range schemaTableNames {
+		cs.schema = append(cs.schema,
+			&meta.Schema{Table: name, Columns: schemaTableCols(name)})
+	}
 	sort.Slice(cs.schema,
 		func(i, j int) bool { return cs.schema[i].Table < cs.schema[j].Table })
 	cs.nrows = cs.getNrows()
+}
+
+func (cs *Columns) Lookup(th *Thread, sels Sels) Row {
+	table := ToStr(Unpack(sels.MustGet("table")))
+	column := ToStr(Unpack(sels.MustGet("column")))
+	if cols := schemaTableCols(table); cols != nil {
+		// virtual schema table, not in the meta schema
+		if i := slices.Index(cols, column); i >= 0 {
+			return cs.row(table, column, i)
+		}
+		return nil
+	}
+	if !cs.tran.HasTable(table) {
+		return nil
+	}
+	if column == "-" {
+		return nil // not included in the columns table
+	}
+	ts := cs.tran.GetSchema(table)
+	fld := -1
+	if i := slices.Index(ts.Columns, column); i >= 0 {
+		fld = i
+	} else if !slices.ContainsFunc(ts.Derived,
+		// Derived are stored capitalized but reported uncapitalized
+		func(d string) bool { return str.UnCapitalize(d) == column }) {
+		return nil
+	}
+	return cs.row(table, column, fld)
 }
 
 //-------------------------------------------------------------------
@@ -403,6 +439,10 @@ type Indexes struct {
 }
 
 func (*Indexes) String() string {
+	return "indexes"
+}
+
+func (*Indexes) Name() string {
 	return "indexes"
 }
 
@@ -485,9 +525,13 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	}
 	is.state = within
 	schema := is.schema[is.si]
+	is.ngets++
+	return is.row(schema.Table, &schema.Indexes[is.ci])
+}
+
+func (is *Indexes) row(table string, idx *schema.Index) Row {
 	var rb RecordBuilder
-	rb.Add(SuStr(schema.Table))
-	idx := schema.Indexes[is.ci]
+	rb.Add(SuStr(table))
 	rb.Add(SuStr(str.Join(",", idx.Columns)))
 	switch idx.Mode {
 	case 'k':
@@ -505,7 +549,6 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 		rb.Add(SuInt(int(idx.Fk.Mode)))
 	}
 	rec := rb.Build()
-	is.ngets++
 	return Row{DbRec{Record: rec}}
 }
 
@@ -519,6 +562,19 @@ func (is *Indexes) ensure() {
 	is.nrows = is.getNrows()
 }
 
+func (is *Indexes) Lookup(th *Thread, sels Sels) Row {
+	table := ToStr(Unpack(sels.MustGet("table")))
+	cols := ToStr(Unpack(sels.MustGet("columns")))
+	if !is.tran.HasTable(table) {
+		return nil // note: indexes does not include the virtual schema tables
+	}
+	ts := is.tran.GetSchema(table)
+	if idx := ts.FindIndex(str.Split(cols, ",")); idx != nil {
+		return is.row(table, idx)
+	}
+	return nil
+}
+
 //-------------------------------------------------------------------
 
 type Views struct {
@@ -528,6 +584,10 @@ type Views struct {
 }
 
 func (*Views) String() string {
+	return "views"
+}
+
+func (*Views) Name() string {
 	return "views"
 }
 
@@ -586,9 +646,13 @@ func (vs *Views) Get(_ *Thread, dir Dir) Row {
 		return nil
 	}
 	vs.state = within
+	return vs.row(vs.views[vs.i], vs.views[vs.i+1])
+}
+
+func (vs *Views) row(name, def string) Row {
 	var rb RecordBuilder
-	rb.Add(SuStr(vs.views[vs.i]))   // name
-	rb.Add(SuStr(vs.views[vs.i+1])) // definition
+	rb.Add(SuStr(name))
+	rb.Add(SuStr(def))
 	rec := rb.Build()
 	return Row{DbRec{Record: rec}}
 }
@@ -614,6 +678,14 @@ func (vs *Views) Swap(i, j int) {
 	vs.views[i+1], vs.views[j+1] = vs.views[j+1], vs.views[i+1]
 }
 
+func (vs *Views) Lookup(th *Thread, sels Sels) Row {
+	name := ToStr(Unpack(sels.MustGet("view_name")))
+	if def := vs.tran.GetView(name); def != "" {
+		return vs.row(name, def)
+	}
+	return nil
+}
+
 //-------------------------------------------------------------------
 
 type History struct {
@@ -624,6 +696,8 @@ type History struct {
 func (*History) String() string {
 	return "history"
 }
+
+// Name deliberately not implemented so dbms.get doesn't try to do Lookup
 
 func (his *History) Transform() Query {
 	return his
@@ -682,6 +756,10 @@ func (his *History) Get(_ *Thread, dir Dir) Row {
 	return Row{DbRec{Record: rec}}
 }
 
+func (his *History) Lookup(th *Thread, sels Sels) Row {
+	panic("not implemented")
+}
+
 //-------------------------------------------------------------------
 
 type StatsTable struct {
@@ -694,6 +772,10 @@ type StatsTable struct {
 }
 
 func (*StatsTable) String() string {
+	return "dbstats"
+}
+
+func (*StatsTable) Name() string {
 	return "dbstats"
 }
 
@@ -772,6 +854,11 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 	col = cols[st.ci]
 	cs = st.stats[table].Columns[col]
 	st.state = within
+	st.ngets++
+	return st.row(table, col, cs)
+}
+
+func (*StatsTable) row(table string, col string, cs stats.ColStats) Row {
 	var rb RecordBuilder
 	rb.Add(SuStr(table))
 	rb.Add(SuStr(col))
@@ -779,7 +866,6 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 	rb.Add(formatQuantiles(cs.Quantiles))
 	rb.Add(formatTops(cs.Tops))
 	rec := rb.Build()
-	st.ngets++
 	return Row{DbRec{Record: rec}}
 }
 
@@ -825,4 +911,16 @@ func (st *StatsTable) ensure() {
 	for _, table := range st.tables {
 		st.nrows += len(st.stats[table].Columns)
 	}
+}
+
+func (st *StatsTable) Lookup(th *Thread, sels Sels) Row {
+	table := ToStr(Unpack(sels.MustGet("table")))
+	column := ToStr(Unpack(sels.MustGet("column")))
+	stats := st.tran.Stats()
+	if ts, ok := stats[table]; ok {
+		if cs, ok := ts.Columns[column]; ok {
+			return st.row(table, column, cs)
+		}
+	}
+	return nil
 }

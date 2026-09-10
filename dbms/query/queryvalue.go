@@ -95,16 +95,6 @@ func (ts *Tables) ValueGet(key Value) Value {
 	return qryBase(ts, key)
 }
 
-func (tl *TablesLookup) ValueGet(key Value) Value {
-	switch key {
-	case SuStr("type"):
-		return SuStr("tablelookup")
-	case SuStr("name"):
-		return SuStr(tl.table)
-	}
-	return qryBase(tl, key)
-}
-
 func (cs *Columns) ValueGet(key Value) Value {
 	switch key {
 	case SuStr("type"):

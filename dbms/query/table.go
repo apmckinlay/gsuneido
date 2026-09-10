@@ -58,6 +58,11 @@ type Table struct {
 	req         Require
 }
 
+func (tbl *Table) Clone() *Table {
+	tbl2 := *tbl
+	return &tbl2
+}
+
 func (tbl *Table) isSingleton() bool {
 	return tbl.singleton
 }

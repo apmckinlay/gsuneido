@@ -30,9 +30,6 @@ func TestTransform(t *testing.T) {
 
 	test("table", "")
 
-	// TablesLookup
-	test("tables where table is 'foo'", "tables(foo)")
-
 	test("table rename a to x, c to y", "")
 	test("table remove c, d, e",
 		"table project a, b")

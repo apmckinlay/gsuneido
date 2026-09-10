@@ -40,6 +40,11 @@ func (t *tran) GetSchema(table string) *schema.Schema {
 	return &t.getSchema(table).Schema
 }
 
+// HasTable returns true if the table exists (not a view or tombstone)
+func (t *tran) HasTable(table string) bool {
+	return t.meta.GetRoSchema(table) != nil
+}
+
 func (t *tran) getSchema(table string) *meta.Schema {
 	if ts := t.meta.GetRoSchema(table); ts != nil {
 		return ts
