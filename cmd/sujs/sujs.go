@@ -4,7 +4,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -53,8 +55,9 @@ func main() {
 		"--window-size=1510,1024",
 	)
 	setSysProcAttr(browserCmd)
-	browserCmd.Stdout = logFile
-	browserCmd.Stderr = logFile
+	browserOut := &prefixWriter{prefix: "[browser] ", w: logFile}
+	browserCmd.Stdout = browserOut
+	browserCmd.Stderr = browserOut
 	if err = browserCmd.Start(); err != nil {
 		log.Fatal("failed to start browser:", err)
 	}
@@ -149,4 +152,24 @@ var browsers = []string{
 	// Arc
 	"arc",
 	"arc.exe",
+}
+
+// prefixWriter wraps an io.Writer and prepends a prefix to each line.
+type prefixWriter struct {
+	prefix string
+	w      io.Writer
+}
+
+func (pw *prefixWriter) Write(p []byte) (int, error) {
+	scanner := bufio.NewScanner(strings.NewReader(string(p)))
+	n := 0
+	for scanner.Scan() {
+		line := pw.prefix + scanner.Text() + "\n"
+		wn, err := io.WriteString(pw.w, line)
+		n += wn
+		if err != nil {
+			return n, err
+		}
+	}
+	return n, nil
 }
