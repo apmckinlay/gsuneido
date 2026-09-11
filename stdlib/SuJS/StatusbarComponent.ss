@@ -13,10 +13,10 @@ StatusComponent
 		{
 		parts = text.Split('\t').Set_default('')
 		.El.innerHTML =
-			'<span>' $ XmlEntityEncode(parts[0]) $ '</span>' $
-			'<span style="flex:1;text-align:center">' $
+			'<span style="white-space:pre;">' $ XmlEntityEncode(parts[0]) $ '</span>' $
+			'<span style="flex:1;text-align:center;white-space:pre;">' $
 				XmlEntityEncode(parts[1]) $ '</span>' $
-			'<span style="text-align:right; margin-right: .5em;">' $
+			'<span style="text-align:right;white-space:pre;">' $
 				XmlEntityEncode(parts[2]) $ '</span>'
 		}
 	}

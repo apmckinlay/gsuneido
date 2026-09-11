@@ -19,55 +19,66 @@ Test
 
 	test(s)
 		{
-		("function (x, y, z) {\n" $ s $ "\n}").Compile()
+		Suneido.Compile("function (x, y, z) {\n" $ s $ "\n}")
 		}
 
 	Test_warnings()
 		{
-		test = function (s, expected)
+		test = function(s, expected)
 			{
 			s = "function () { " $ s $ " }"
-			s.Compile(warnings = Object())
+			Suneido.Compile(s, warnings = Object())
 			Assert(warnings is: expected)
 			}
 		test("", #())
-		test("xyz", #("ERROR: used but not initialized: xyz @14"))
+		test(#xyz, #("ERROR: used but not initialized: xyz @14"))
 		test("_xyz", #())
 		test("_xyz = 123", #())
 		test("xyz = 0", #("WARNING: initialized but not used: xyz @14"))
-		test("Not__Defined", #("ERROR: can't find: Not__Defined @14"))
+		test(#Not__Defined, #("ERROR: can't find: Not__Defined @14"))
 		}
 
 	Test_cant_find()
 		{
 		.MakeLibraryRecord(#(name: CompileTestFunc,
-			text: 'function () { _CompileTestFunc() }'))
-		Assert({ Global('CompileTestFunc') } throws: "can't find")
+			text: "function () { _CompileTestFunc() }"))
+		Assert({ Global(#CompileTestFunc) } throws: "can't find")
 		}
 
 	Test_invalid_reference()
 		{
-		Assert({ .test("_Control") } throws: 'invalid reference to _Control')
+		Assert({ .test("_Control") } throws: "invalid reference to _Control")
 
 		.MakeLibraryRecord(#(name: CompileTestFunc2,
-			text: 'function () { _Not_defined() }'))
-		Assert({ Global('CompileTestFunc2') }
+			text: "function () { _Not_defined() }"))
+		Assert({ Global(#CompileTestFunc2) }
 			throws: "invalid reference to _Not_defined")
 		}
 
 	Test_trailing_block_bug()
 		{
 		Seq(3).Map({|x| x + 1 })
-		Seq(3).Map() {|x| x + 1 }
-		Seq(3).Map() /* - */ {|x| x + 1 }
 		Seq(3).Map()
-			{|x| x + 1 }
-		Seq(3).Map() // comment
-			{|x| x + 1 }
-		'Seq(3).Map()
+			{|x|
+			x + 1
+			}
+		Seq(3).Map()
+			{|/* - */ x|
+			x + 1
+			}
+		Seq(3).Map()
+			{|x|
+			x + 1
+			}
+		Seq(3).Map()
+			{|// comment
+				x|
+			x + 1
+			}
+		"Seq(3).Map()
 			// comment
 
 			// comment
-			{|x| x + 1 }'.Eval() // using Eval to handle old exe
+			{|x| x + 1 }".Eval() // using Eval to handle old exe
 		}
 	}

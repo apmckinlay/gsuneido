@@ -1,16 +1,16 @@
 // Copyright (C) 2019 Axon Development Corporation All rights reserved worldwide.
 Control
 	{
-	Name:		"ListBox"
-	ComponentName: "ListBox"
-	Xmin: 		100
-	Xstretch: 	1
-	Ymin: 		100
-	Ystretch: 	1
+	Name:          #ListBox
+	ComponentName: #ListBox
+	Xmin:          100
+	Xstretch:      1
+	Ymin:          100
+	Ystretch:      1
 
 	New(@args)
 		{
-		.sort = args.GetDefault("sort", false)
+		.sort = args.GetDefault(#sort, false)
 
 		if args.Size(list:) is 1 and Object?(args[0])
 			args = args[0]
@@ -21,18 +21,18 @@ Control
 
 		.ComponentArgs = Object(
 			multicolumn: args.GetDefault(#multicolumn, false),
-			font: args.GetDefault(#font, ''),
-			size: args.GetDefault(#size, ''),
-			weight: args.GetDefault(#weight, ''))
+			font: args.GetDefault(#font, ""),
+			size: args.GetDefault(#size, ""),
+			weight: args.GetDefault(#weight, ""))
 		}
 
-	n: 0
+	n:             0
 	maxCharacters: 250
 	AddItem(s, n = false)
 		{
 		s = String(s)[.. .maxCharacters]
 		i = .insertString(s)
-		if (n is false)
+		if n is false
 			.SetData(i, .n++)
 		else
 			.SetData(i, n)
@@ -43,11 +43,9 @@ Control
 		item = Object(:s)
 		at = i isnt false
 			? i
-			: .sort is false
-				? .items.Size()
-				: .items.BinarySearch(item, By(#s))
+			: .sort is false ? .items.Size() : .items.BinarySearch(item, By(#s))
 		.items.Add(item, :at)
-		.Act('InsertItem', s, at)
+		.Act(#InsertItem, s, at)
 		return at
 		}
 
@@ -60,13 +58,13 @@ Control
 	curSel: false
 	LBN_DBLCLK(.curSel)
 		{
-		.Send("ListBoxDoubleClick", .curSel)
+		.Send(#ListBoxDoubleClick, .curSel)
 		return 0
 		}
 
 	SELCHANGE(.curSel)
 		{
-		.Send("ListBoxSelect", .curSel)
+		.Send(#ListBoxSelect, .curSel)
 		return 0
 		}
 
@@ -88,7 +86,7 @@ Control
 			{
 			// WARNING: this will mess up .n
 			.items.Delete(i)
-			.Act('DeleteItem', i)
+			.Act(#DeleteItem, i)
 			}
 		}
 
@@ -107,7 +105,7 @@ Control
 			.curSel = false
 		else
 			.curSel = i
-		.Act('SetCurSel', i)
+		.Act(#SetCurSel, i)
 		}
 
 	GetCurSel()
@@ -143,11 +141,16 @@ Control
 	GetText(i)
 		{
 		if i is LB.ERR or not .items.Member?(i)
-			return ''
+			return ""
 		return .items[i].s
 		}
 
 	SetColumnWidth(@unused) { }
+
+	GetHorizontalExtent()
+		{
+		return 0
+		}
 
 	FindString(text)
 		{
@@ -159,6 +162,6 @@ Control
 	CONTEXTMENU(x, y, i)
 		{
 		.SetCurSel(i)
-		.Send("ListBox_ContextMenu", x, y)
+		.Send(#ListBox_ContextMenu, x, y)
 		}
 	}

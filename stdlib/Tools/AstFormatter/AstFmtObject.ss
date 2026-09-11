@@ -1,5 +1,6 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 // object, record, class and function/param shapes for AstFormatter
+// BuiltDate > 20260820
 AstFmtCore
 	{
 	Object(node, ctx, curr)
@@ -36,8 +37,23 @@ AstFmtCore
 			// the close delimiter gets its own line, indented with the members
 			return .Cat(pre $ delims[0],
 				.Nest(.Cat(.Hard, .Seq(docs, .Hard), .Hard, close)), delims[1])
+		if .leadingFunc?(node)
+			// a function hugging the open delimiter has its head at the
+			// delimiter's column; nesting it too would double-indent its body
+			{
+			rest = docs.Size() is 1
+				? false
+				: .Nest(.Cat(.memberSep(node, 1), .fillMembers(node, docs, from: 1)))
+			return .Group(.Cat(pre $ delims[0], docs[0], rest, close, delims[1]))
+			}
 		return .Group(
 			.Cat(pre $ delims[0], .Nest(.fillMembers(node, docs)), close, delims[1]))
+		}
+
+	leadingFunc?(node)
+		{
+		m = node[0]
+		return Type(m.value) is #AstNode and m.value.type is #Function
 		}
 
 	memberDocs(node, mctx, curr, pad)
@@ -55,16 +71,21 @@ AstFmtCore
 		return docs
 		}
 
-	fillMembers(node, docs)
+	fillMembers(node, docs, from = 0)
 		{
 		a = Object()
-		for (i = 0; i < docs.Size(); ++i)
+		for (i = from; i < docs.Size(); ++i)
 			{
-			if i > 0
-				a.Add(.brokeInSrc?(node, i) ? .Hard : .Line)
+			if i > from
+				a.Add(.memberSep(node, i))
 			a.Add(docs[i])
 			}
 		return .Fill(a)
+		}
+
+	memberSep(node, i)
+		{
+		return .brokeInSrc?(node, i) ? .Hard : .Line
 		}
 
 	brokeInSrc?(node, i)
@@ -88,7 +109,8 @@ AstFmtCore
 
 	memberValue(m, ctx, curr, src, pad, parts)
 		{
-		if Type(m.value) is #AstNode and src isnt false and src.Has?('`')
+		if Type(m.value) is #AstNode and src isnt false and
+			(src.Has?('`') or (m.value.pos is false and src.Has?('\n')))
 			{
 			if m.named
 				parts.Add(.Cat(.constant(m.key, ctx, curr), ": "))
@@ -163,9 +185,10 @@ AstFmtCore
 		return split is true ? .StrTok(x, q) : .Tok(q)
 		}
 
-	StrTok(x, s) // splittable with $ when it stayed a plain quoted literal
+	StrTok(x/*unused*/,
+		s) // splittable with $ when the literal text is printable one-line ascii
 		{
-		return s[0] in ('"', "'") and .Style.Plain?(x) ? .Str(s) : .Tok(s)
+		return s[0] in ('"', "'") and s[1..-1].Tr(" -~") is "" ? .Str(s) : .Tok(s)
 		}
 
 	Class(node, ctx, curr)
@@ -212,7 +235,7 @@ AstFmtCore
 		// piece would be re-quoted (and its layout lost); backquoted text
 		// must never be touched, so emit the whole value verbatim
 		s = .Style.MemberSrc(m, keyed:)
-		if s isnt false and s.Has?('`')
+		if s isnt false and (s.Has?('`') or (m.value.pos is false and s.Has?('\n')))
 			{
 			.Cm.SkipTo(curr, m.end)
 			return .Cat(.constant(m.key, ctx, curr), ": ", .Tok(s))
@@ -243,7 +266,8 @@ AstFmtCore
 		{
 		p = .Params(node.params, ctx, curr, "()")
 		t1 = .Cm.Trailing(curr, node.pos1)
-		return .Cat(p, t1, .FuncBody(node, ctx, curr, pos2: node.pos2, lead: .Line))
+		return .Cat(p, .annotation(AstNodeGetDefault(node, #returnannotation)), t1,
+			.FuncBody(node, ctx, curr, pos2: node.pos2, lead: .Line))
 		}
 
 	Block(node, ctx, curr)
@@ -274,10 +298,15 @@ AstFmtCore
 	Param(node, ctx, curr)
 		{
 		parts = [.Text(node.name)]
-		if node.hasdef
-			{
+		ann = .paramAnnotation(node)
+		// the comments must come out before the annotation, else a relocated
+		// /*unused*/ no longer hugs the name and stops being recognized
+		if ann isnt false or node.hasdef
 			parts.Add(.Cm.Trailing(curr, node.pos + node.name.Size(),
 				unusedParam: node.name is #unused))
+		parts.Add(ann)
+		if node.hasdef
+			{
 			parts.Add(.Text(" = "))
 			s = node.pos in (0, false) or node.end in (0, false)
 				? false
@@ -285,5 +314,20 @@ AstFmtCore
 			parts.Add(.constant(node.defval, ctx, curr, :s))
 			}
 		return .Catl(parts)
+		}
+
+	// the parser reports "object" for an @ param, but an @ param cannot be
+	// annotated in source, so it must never be given one back
+	paramAnnotation(node)
+		{
+		return node.name.Prefix?('@')
+			? false
+			: .annotation(AstNodeGetDefault(node, #annotations))
+		}
+
+	// the parser normalizes "a | b" to "a|b"; emit it as ") :a|b" / "x :a|b"
+	annotation(ann)
+		{
+		return ann is "" ? false : " :" $ ann
 		}
 	}

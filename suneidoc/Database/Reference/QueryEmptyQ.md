@@ -29,10 +29,12 @@ Calls with just a table name in the first argument, and named arguments for the 
 
 
 See also:
+[MustQuery1](<MustQuery1.md>),
 [Query1](<Query1.md>),
 [QueryFirst](<QueryFirst.md>),
 [QueryLast](<QueryLast.md>),
 [Query.Strategy1](<Query/Query.Strategy1.md>),
+[transaction.MustQuery1](<Transaction/transaction.MustQuery1.md>),
 [transaction.Query1](<Transaction/transaction.Query1.md>),
 [transaction.QueryEmpty?](<Transaction/transaction.QueryEmpty?.md>),
 [transaction.QueryFirst](<Transaction/transaction.QueryFirst.md>),

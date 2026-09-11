@@ -1,5 +1,5 @@
 // Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
-function (filename, limit = false)
+function(filename, limit = false)
 	{
 	max = 10_000_000
 	Assert(limit is false or (Number?(limit) and limit < max))

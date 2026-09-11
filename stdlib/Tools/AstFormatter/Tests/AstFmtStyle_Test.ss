@@ -31,8 +31,7 @@ Test
 		Assert(st.Quote("a +\nb", "'a +\nb'"), is: '"a +\nb"')
 		Assert(st.Quote("a +\nb", '"a +\nb"'), is: '"a +\nb"')
 		Assert(st.Quote("a\nb", "`a\nb`"), is: "`a\nb`") // backquote stays raw
-		Assert(st.Quote('say "hi"\nbye', '\'say "hi"\nbye\'')
-			// a " inside pins it
+		Assert(st.Quote('say "hi"\nbye', '\'say "hi"\nbye\'') // a " inside pins it
 			is: '\'say "hi"\nbye\'')
 		}
 
@@ -170,5 +169,16 @@ Test
 		ob2 = Suneido.Parse(src2)[0].value
 		Assert(ob2.pos, is: 0)
 		Assert(.style(src2).Vertical?(ob2), is: false)
+		}
+
+	Test_chainBreak()
+		{
+		st = .style()
+		Assert(st.ChainBreak?(.stmt("a.b(x)").expr), is: false)
+		Assert(st.ChainBreak?(.stmt("a.b.c(y)").expr),
+			is: false) // member access, not a call
+		Assert(st.ChainBreak?(.stmt("a.b(x).c(y)").expr))
+		Assert(st.ChainBreak?(.stmt("f(x).g(y)").expr))
+		Assert(st.ChainBreak?(.stmt("Object().Add(x)").expr))
 		}
 	}

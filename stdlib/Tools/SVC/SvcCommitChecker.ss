@@ -17,53 +17,48 @@ class
 			.checkLineEnds,
 			.need_to_run_tests?,
 			.type_errors_in_local_changes?,
-			.additional_svc_checks,
-			]
-			if '' isnt msg = check(:changes, :model, :table)
+			.additional_svc_checks]
+			if "" isnt msg = check(:changes, :model, :table)
 				return msg
-		return ''
+		return ""
 		}
 
 	table_selected?(table)
 		{
-		return table is false
-			? "Please select a library or book"
-			: ''
+		return table is false ? "Please select a library or book" : ""
 		}
 
 	have_all_master_changes?(changes, model, table)
 		{
-		if table is "svc_all_changes"
+		if table is #svc_all_changes
 			return false is model.NoMasterChangesInLibs?(changes)
 				? "Please get the master changes from selected libraries before sending"
-				: ''
+				: ""
 		else
 			return model.MasterChanges.NotEmpty?()
 				? "Please get the master changes before sending"
-				: ''
+				: ""
 		}
 
 	Local_changes_up_to_date?(model, table)
 		{
 		return model.LocalChangeNeedsUpdate?(table, log:)
-			? 'Local Changes are not up to date, please refresh'
-			:  ''
+			? "Local Changes are not up to date, please refresh"
+			: ""
 		}
 
 	have_checkmarked_local_changes?(changes)
 		{
-		return changes.Empty?()
-			? 'Please checkmark the local changes to send'
-			: ''
+		return changes.Empty?() ? "Please checkmark the local changes to send" : ""
 		}
 
 	errors_in_local_changes?(changes, table)
 		{
-		if table is 'Contrib'
-			return ''
+		if table is #Contrib
+			return ""
 		errors = Object()
 		changes.Each({ .collectErrors(it, errors) })
-		return Opt('Unable to send selected changes:\r\n\t- ', errors.Join('\r\n\t- '))
+		return Opt("Unable to send selected changes:\r\n\t- ", errors.Join("\r\n\t- "))
 		}
 
 	maxErrLength: 100
@@ -76,19 +71,19 @@ class
 		if results.errors.Empty?()
 			return
 
-		error = results.errors.Join('\r\n').Ellipsis(.maxErrLength, atEnd:)
-		errors.Add(change.lib $ ':' $ change.name $ ' (' $ error $ ')')
+		error = results.errors.Join("\r\n").Ellipsis(.maxErrLength, atEnd:)
+		errors.Add(change.lib $ ':' $ change.name $ " (" $ error $ ')')
 		}
 
 	checkRecord(change)
 		{
 		if Record?(CodeState.InvalidRec(change.lib, change.name))
-			return #(errors: ('invalid'), warnings: ())
+			return #(errors: (invalid), warnings: ())
 
 		results = Object(errors: Object(), warnings: Object())
 		for line in SvcTable(change.lib).Check(change.name, change.type)
-			if line.Prefix?('WARNING: ')
-				results.warnings.Add(line.RemovePrefix('WARNING: '))
+			if line.Prefix?("WARNING: ")
+				results.warnings.Add(line.RemovePrefix("WARNING: "))
 			else
 				results.errors.Add(line)
 		return results
@@ -97,15 +92,16 @@ class
 	whitespace_in_name?(model, changes, table)
 		{
 		if not model.Library?(table)
-			return ''
+			return ""
 
 		recordsWithSpace = Object()
 		for change in changes
-			if change.type is '+' and change.name =~ '\s'
+			if change.type is '+' and change.name =~ "\s"
 				recordsWithSpace.Add(change.name)
 
-		return recordsWithSpace.Empty?() ? '' :
-			'Record "' $ recordsWithSpace.Join('", "') $
+		return recordsWithSpace.Empty?()
+			? ""
+			: 'Record "' $ recordsWithSpace.Join('", "') $
 				'" contains whitespace in the name'
 		}
 
@@ -113,13 +109,13 @@ class
 	checkLineEnds(model, changes, table)
 		{
 		if not .libraryCheck?(model, table)
-			return ''
+			return ""
 		invalidRecords = Object()
 		for change in changes
 			{
 			if invalidRecords.Size() is .maxAllowedRecs
 				{
-				invalidRecords.Add('Too many record to display')
+				invalidRecords.Add("Too many record to display")
 				break
 				}
 			if change.type isnt '-'
@@ -127,14 +123,15 @@ class
 				name = change.name
 				lib = change.lib
 				if CheckCode.HasInvalidLineEnd?(:lib, :name)
-					invalidRecords.Add(lib $ ":" $ name)
+					invalidRecords.Add(lib $ ':' $ name)
 				}
 			}
 		return invalidRecords.Empty?()
-			? ''
-			: 'Following record(s) uses non-standard line ending characters:\n\t' $
-				invalidRecords.Join('\n\t')
+			? ""
+			: "Following record(s) uses non-standard line ending characters:\n\t" $
+				invalidRecords.Join("\n\t")
 		}
+
 	// extracted for Test override
 	libraryCheck?(model, table)
 		{
@@ -144,23 +141,23 @@ class
 	need_to_run_tests?(model, changes, table)
 		{
 		if not model.Library?(table)
-			return ''
+			return ""
 
-		forceTestsFn = OptContribution('SvcForceTests?', function (@unused) {return true})
+		forceTestsFn = OptContribution(#SvcForceTests?, function(@unused) { return true })
 		if forceTestsFn(changes.Map({ it.name })) is false
-			return ''
+			return ""
 
-		lastLocalChange = [what: 'N/A', when: Date.Begin(), how: 'SVC']
+		lastLocalChange = [what: "N/A", when: Date.Begin(), how: #SVC]
 		lastTestRun = TestRunner.LastSuccess()
 		return .last_library_change(lastLocalChange) > lastTestRun
 			? .libraryChangeMessage(lastLocalChange, lastTestRun)
-			: ''
+			: ""
 		}
 
 	last_library_change(lastLocalChange)
 		{
 		for lib in LibraryTables().Difference(SvcTable.ExcludedTables)
-			if false isnt x = QueryLast(lib $ ' sort lib_modified')
+			if false isnt x = QueryLast(lib $ " sort lib_modified")
 				.checkLastGet(x, lib, lastLocalChange)
 		return lastLocalChange.when
 		}
@@ -169,8 +166,8 @@ class
 		{
 		if Date?(x.lib_modified) and x.lib_modified > llc.when
 			{
-			llc.how = x.group is -2 ? 'deleted' : 'modified'
-			llc.what = lib $ ': ' $ x.name
+			llc.how = x.group is -2 ? #deleted : #modified
+			llc.what = lib $ ": " $ x.name
 			llc.when = x.lib_modified
 			}
 		}
@@ -178,32 +175,45 @@ class
 	libraryChangeMessage(lastLocalChange, lastTestRun)
 		{
 		how = lastLocalChange.how
-		details = how isnt 'SVC'
-			? '\n\nLast record ' $ how $ ':\n\t- ' $ lastLocalChange.what $
-				'\n\t- Date: ' $ lastLocalChange.when.ShortDateTime()
-			: ''
+		details = how isnt #SVC
+			? "\n\nLast record " $ how $ ":\n\t- " $ lastLocalChange.what $
+				"\n\t- Date: " $ lastLocalChange.when.ShortDateTime()
+			: ""
 		testRun = lastTestRun isnt Date.Begin()
-			? '\n\nLast successful test: ' $ lastTestRun.ShortDateTime()
-			: ''
-		return 'You must run all the tests successfully before sending changes' $
+			? "\n\nLast successful test: " $ lastTestRun.ShortDateTime()
+			: ""
+		return "You must run all the tests successfully before sending changes" $
 			testRun $ details
 		}
 
 	type_errors_in_local_changes?(changes, model, table)
 		{
-		if table is 'Contrib' or not model.Library?(table)
-			return ''
+		if table is #Contrib or not model.Library?(table)
+			return ""
 		if not TypeCheckHelper.BinaryExists?()
 			{
-			SuneidoLog('Type checker binary NOT found at: ' $
-				TypeCheckHelper.BinaryPath())
-			return ''
+			SuneidoLog(
+				"Type checker binary NOT found at: " $ TypeCheckHelper.BinaryPath())
+			return ""
 			}
 		errors = Object()
 		for change in changes
-			if change.type is '+'
+			if .newRecord?(change)
 				.collectTypeErrors(change, errors)
-		return Opt('Unable to send due to type errors:\r\n\t- ', errors.Join('\r\n\t- '))
+		return Opt("Unable to send due to type errors:\r\n\t- ", errors.Join("\r\n\t- "))
+		}
+
+	newRecord?(change)
+		{
+		if change.type isnt '+'
+			return false
+		base = LibraryTags.RemoveTagFromName(change.name)
+		return base is change.name or not .recordExists?(change.lib, base)
+		}
+
+	recordExists?(lib, name)
+		{
+		return SvcTable(lib).Get(name) isnt false
 		}
 
 	collectTypeErrors(change, errors)
@@ -217,8 +227,8 @@ class
 			TypeCheckHelper.FormatDiagnostics(
 				response.GetDefault(#diagnostics, false), change.lib)
 		if typeErrors.NotEmpty?()
-			errors.Add(change.lib $ ':' $ change.name $ ' (' $
-				typeErrors.Join('\r\n').Ellipsis(.maxErrLength, atEnd:) $ ')')
+			errors.Add(change.lib $ ':' $ change.name $ " (" $
+				typeErrors.Join("\r\n").Ellipsis(.maxErrLength, atEnd:) $ ')')
 		}
 
 	additional_svc_checks(model)
@@ -239,10 +249,10 @@ class
 			return
 		try
 			row = local_list.GetRow(index)
-		catch (unused, 'member not found')
+		catch (unused, "member not found")
 			return
 
-		library = id.BeforeFirst('__#')
+		library = id.BeforeFirst("__#")
 		cacheMember = library $ '_' $ change.lib $ '_' $ change.name
 		if Suneido.SvcCommit_Warnings.errMap[cacheMember] isnt #()
 			{
@@ -264,7 +274,7 @@ class
 
 		results = .checkRecord(change)
 		.setStatus(row, cacheMember, .getStatus(large, quality, results))
-		if '' isnt msg = .formatMsg(large, quality, results)
+		if "" isnt msg = .formatMsg(large, quality, results)
 			Suneido.SvcCommit_Warnings.msgMap[change.lib $ '_' $ change.name] = msg
 		.repaintList(local_list)
 		}
@@ -272,15 +282,15 @@ class
 	checkLargeRecord(change, local, library)
 		{
 		if large = change.type isnt '-' and local.text.Size() > 100.Kb() /*= max text */
-			Suneido.SvcCommit_Warnings[library].largeCheck.
-				AddUnique(Object(lib: change.lib, name: change.name))
+			Suneido.SvcCommit_Warnings[library].largeCheck.AddUnique(Object(
+					lib: change.lib, name: change.name))
 		return large
 		}
 
 	checkCodeQuality(change, local, masterRec, library)
 		{
 		// could take a while to check code quality
-		if '' isnt quality = .verifyCodeQuality(change, local, masterRec)
+		if "" isnt quality = .verifyCodeQuality(change, local, masterRec)
 			{
 			qualityCheckOb = Object(lib: change.lib, name: change.name, results: quality)
 			Suneido.SvcCommit_Warnings[library].qualityCheck.AddUnique(qualityCheckOb)
@@ -292,7 +302,7 @@ class
 		{
 		return checkRecord.errors.NotEmpty?()
 			? .error
-			: large or quality isnt '' or checkRecord.warnings.NotEmpty?()
+			: large or quality isnt "" or checkRecord.warnings.NotEmpty?()
 				? .warning
 				: .pass
 		}
@@ -319,8 +329,8 @@ class
 
 	stopRunning?(id, index, local_list)
 		{
-		return not local_list.Member?('Hwnd') or
-			.forceStop?(id) or (index > local_list.GetNumRows() - 1)
+		return not local_list.Member?(#Hwnd) or .forceStop?(id) or
+			(index > local_list.GetNumRows() - 1)
 		}
 
 	checkDeleted(change, library, row, cacheMember)
@@ -330,18 +340,19 @@ class
 		else
 			{
 			Suneido.SvcCommit_Warnings[library].referencedDeleted.AddUnique(change)
-			Suneido.SvcCommit_Warnings.msgMap[change.lib $ '_' $ change.name] =
-				'Deleted but referenced!'
+			Suneido.SvcCommit_Warnings.msgMap[change.lib $ '_' $
+				change.name] = "Deleted but referenced!"
 			.setStatus(row, cacheMember, .warning)
 			}
 		}
 
 	repaintList(local_list)
 		{
-		if local_list.Member?('Hwnd') and
+		if local_list.Member?(#Hwnd) and
 			local_list.CompareAndSet(#Repainter, false, true) // temp set to true
-			local_list.Repainter = Defer({
-				if local_list.Member?('Hwnd')
+			local_list.Repainter = Defer(
+				{
+				if local_list.Member?(#Hwnd)
 					local_list.Repaint()
 				local_list.Repainter = false
 				})
@@ -349,7 +360,7 @@ class
 
 	forceStop?(id)
 		{
-		return Suneido.GetDefault('SvcPreCheck_ForceStop', #()).GetDefault(id, false)
+		return Suneido.GetDefault(#SvcPreCheck_ForceStop, #()).GetDefault(id, false)
 		}
 
 	getter_warning()
@@ -377,23 +388,23 @@ class
 		{
 		msgOb = Object()
 		if large
-			msgOb.Add('Record is over size limit (100 kb)')
+			msgOb.Add("Record is over size limit (100 kb)")
 		msgOb.Add(quality)
 
-		join = '\r\n- '
+		join = "\r\n- "
 		if checkRecord.errors.NotEmpty?()
-			msgOb.Add('Record has syntax error(s)' $
-				(checkRecord.errors[0] isnt 'invalid'
+			msgOb.Add("Record has syntax error(s)" $
+				(checkRecord.errors[0] isnt "invalid"
 					? ':' $ join $ checkRecord.errors.Join(join)
-					: ''))
-		msgOb.Add(Opt('Record has the following warning(s):' $ join,
+					: ""))
+		msgOb.Add(Opt("Record has the following warning(s):" $ join,
 			checkRecord.warnings.Join(join)))
-		return msgOb.Remove('').Join('\r\n')
+		return msgOb.Remove("").Join("\r\n")
 		}
 
 	delete_and_referenced?(name, type, lib)
 		{
-		if type isnt '-' or lib is 'Contrib'
+		if type isnt '-' or lib is #Contrib
 			return false
 		name = LibraryTags.RemoveTagFromName(name)
 		if not name.GlobalName?()
@@ -416,15 +427,15 @@ class
 	extra_check(changes)
 		{
 		msgs = Object()
-		for contrib in Contributions('Svc_ExtraChecks')
+		for contrib in Contributions(#Svc_ExtraChecks)
 			msgs.Add(contrib(:changes))
 		return msgs.Join('\n')
 		}
 
 	ProcessWarnings(library, changes = false)
 		{
-		if not Suneido.Member?('SvcCommit_Warnings')
-			return ''
+		if not Suneido.Member?(#SvcCommit_Warnings)
+			return ""
 
 		largeCheck = Suneido.SvcCommit_Warnings[library].largeCheck
 		qualityCheck = Suneido.SvcCommit_Warnings[library].qualityCheck
@@ -433,24 +444,35 @@ class
 		if changes isnt false
 			{
 			checkedChanges = changes.Copy().Map({ it.lib $ ':' $ it.name })
-			largeCheck = largeCheck.Copy().RemoveIf({
-				not checkedChanges.Has?(it.lib $ ':' $ it.name) })
-			qualityCheck = qualityCheck.Copy().RemoveIf({
-				not checkedChanges.Has?(it.lib $ ':' $ it.name) })
-			referencedDeleted = referencedDeleted.Copy().RemoveIf({
-				not checkedChanges.Has?(it.lib $ ':' $ it.name) })
+			largeCheck = largeCheck.
+				Copy().
+				RemoveIf(
+					{
+					not checkedChanges.Has?(it.lib $ ':' $ it.name)
+					})
+			qualityCheck = qualityCheck.
+				Copy().
+				RemoveIf(
+					{
+					not checkedChanges.Has?(it.lib $ ':' $ it.name)
+					})
+			referencedDeleted = referencedDeleted.
+				Copy().
+				RemoveIf(
+					{
+					not checkedChanges.Has?(it.lib $ ':' $ it.name)
+					})
 			}
 
 		referencedDeleted = referencedDeleted.Empty?()
-			? ''
-			: "REFERENCES FOUND TO:\r\n" $ referencedDeleted.
-				Map({ it.type $ it.lib $ ':' $ it.name }).Join('\r\n')
+			? ""
+			: "REFERENCES FOUND TO:\r\n" $
+				referencedDeleted.Map({ it.type $ it.lib $ ':' $ it.name }).Join("\r\n")
 
-		return Opt('Record(s) larger than 100K: \n',
+		return Opt("Record(s) larger than 100K: \n",
 				largeCheck.Map({ it.lib $ ':' $ it.name }).Join('\n').Trim(), '\n') $
-			Opt('Record(s) with quality issues: \n',
+			Opt("Record(s) with quality issues: \n",
 				qualityCheck.Map({ it.results }).Join().Trim(), '\n') $
-			Opt(referencedDeleted, '\n') $
-			.extra_check(changes)
+			Opt(referencedDeleted, '\n') $ .extra_check(changes)
 		}
 	}

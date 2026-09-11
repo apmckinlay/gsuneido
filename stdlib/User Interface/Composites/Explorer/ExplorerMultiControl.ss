@@ -36,16 +36,16 @@ view can support:
 */
 PassthruController
 	{
-	Name: "Explorer"
-	redirs: #(On_Cut, On_Copy, On_Paste, On_Delete, On_Select_All, On_Undo, On_Redo)
+	Name: #Explorer
+	redirs: (On_Cut, On_Copy, On_Paste, On_Delete, On_Select_All, On_Undo, On_Redo)
 	New(.modelClass, view, .extraTabMenu = false, .besideTabs = false, .treeArgs = false)
 		{
 		.viewCtrl = view.Copy()
 		.tree = .FindControl(#TreeView)
 		.tabsCtrl = .FindControl(#Tabs)
 		.tabsCtrl.SetImageList(.imageHandler.ImageResources)
-		.Search_vals = Record()
-		.sub = PubSub.Subscribe('Redir_SendToEditors', .sendToEditors)
+		.Search_vals = []
+		.sub = PubSub.Subscribe(#Redir_SendToEditors, .sendToEditors)
 		}
 
 	New2()
@@ -62,14 +62,19 @@ PassthruController
 		}
 
 	ResetTheme()
-		{ .imageHandler.ResetTheme() }
+		{
+		.imageHandler.ResetTheme()
+		}
 
 	viewClass: ExplorerAdapterControl
 		{
-		Name: 'PlaceholderCtrl'
+		Name:   #PlaceholderCtrl
 		Editor: false
 		Dummy?: true
-		Default(@unused) { return false }
+		Default(@unused)
+			{
+			return false
+			}
 		}
 
 	Getter_View()
@@ -80,42 +85,51 @@ PassthruController
 		}
 
 	TabConstructed?(idx)
-		{ return .tabsCtrl.Constructed?(idx) }
+		{
+		return .tabsCtrl.Constructed?(idx)
+		}
 
 	Getter_Tabs()
-		{ return .tabsCtrl.Tab }
+		{
+		return .tabsCtrl.Tab
+		}
 
 	Getter_Tree()
-		{ return .tree }
+		{
+		return .tree
+		}
 
 	Getter_Model()
-		{ return .model }
+		{
+		return .model
+		}
 
 	Getter_CurItem()
-		{ return .curitem }
+		{
+		return .curitem
+		}
 
 	Getter_ImageHandler()
-		{ return .imageHandler }
+		{
+		return .imageHandler
+		}
 
-	Menu:
-		(
+	Menu: (
 		("&File",
-			("New &Folder", "Create a new folder")
-			("New &Item", "Create a new document")
-			("&Delete Item", "Delete the selected item or folder")
-			""
-			("Print...", "Print the current item")
-			""
-			("&Close", "Close this window")
-			)
-		("&Edit",
-			("&Undo\tCtrl+Z", "Undo the last action")
-			("&Redo", "Redo the last action")
+			("New &Folder", "Create a new folder"),
+			("New &Item", "Create a new document"),
+			("&Delete Item", "Delete the selected item or folder"),
 			"",
-			("Cu&t\tCtrl+X", "Cut the selected text to the clipboard")
-			("&Copy\tCtrl+C", "Copy the selected text to the clipboard")
-			("&Paste\tCtrl+V", "Insert the contents of the clipboard")
-			)
+			("Print...", "Print the current item"),
+			"",
+			("&Close", "Close this window")),
+		("&Edit",
+			("&Undo\tCtrl+Z", "Undo the last action"),
+			("&Redo", "Redo the last action"),
+			"",
+			("Cu&t\tCtrl+X", "Cut the selected text to the clipboard"),
+			("&Copy\tCtrl+C", "Copy the selected text to the clipboard"),
+			("&Paste\tCtrl+V", "Insert the contents of the clipboard")),
 		("&Help",
 			"&Users Manual\tF1",
 			"",
@@ -123,37 +137,39 @@ PassthruController
 		)
 	Controls()
 		{
-		selectedTabColor = IDESettings.Get('ide_selected_tab_color', false)
-		selectedTabBold = IDESettings.Get('ide_selected_tab_bold', true)
-		return Object(
-			'HorzSplit',
-			Object('Vert',
-				Object('ExplorerMultiTree').MergeNew(.treeArgs),
+		selectedTabColor = IDESettings.Get(#ide_selected_tab_color, false)
+		selectedTabBold = IDESettings.Get(#ide_selected_tab_bold, true)
+		return [
+			#HorzSplit,
+			[#Vert,
+				[#ExplorerMultiTree].MergeNew(.treeArgs),
 				#(Skip, 4)
-				xmin: 150, xstretch: 1),
-			Object('Vert',
-				Object('Tabs',
+				xmin: 150, xstretch: 1],
+			[#Vert,
+				[#Tabs,
 					close_button: .imageHandler.CloseButton,
-					scrollTabs: IDESettings.Get('ide_scroll_tabs', true),
+					scrollTabs: IDESettings.Get(#ide_scroll_tabs, true),
 					border: 0, extraControl: .besideTabs, :selectedTabColor,
-					:selectedTabBold),
-			xstretch: 6))
+					:selectedTabBold],
+				xstretch: 6]]
 		}
 
 	On_New_Folder()
-		{ .NewItem(true) }
+		{
+		.NewItem(true)
+		}
 
 	On_New_Item()
-		{ .NewItem(false) }
+		{
+		.NewItem(false)
+		}
 
-	NewItem(container?, name = #New, text = '')
+	NewItem(container?, name = #New, text = "")
 		{
 		if .curitem is false
 			return
 
-		parent = .Container?(.curitem)
-			? .curitem
-			: .tabsCtrl.GetTabData().parent
+		parent = .Container?(.curitem) ? .curitem : .tabsCtrl.GetTabData().parent
 		if false is item = .tree.AddNewItem(parent, container?, :name, :text)
 			return
 
@@ -165,7 +181,9 @@ PassthruController
 		}
 
 	editable?(item)
-		{ return .model.Method?(#Editable?) ? .model.Editable?(item) : false }
+		{
+		return .model.Method?(#Editable?) ? .model.Editable?(item) : false
+		}
 
 	On_Delete_Item(confirm = true, allowLibraryDelete? = false)
 		{
@@ -184,7 +202,7 @@ PassthruController
 			else
 				.delitem(selitem)
 			}
-		.CloseTabs({ |i| .keepTab?(i) })
+		.CloseTabs({|i| .keepTab?(i) })
 		if libraryDeleted?
 			.Reset()
 		.invalidateViews()
@@ -196,8 +214,9 @@ PassthruController
 			return false
 		else if .Static?(.curitem) and not allowLibraryDelete?
 			{
-			.AlertInfo('Delete Library', 'To delete libraries:\n\n' $
-				'Right-Click a library folder, and select Delete > Delete Library')
+			.AlertInfo("Delete Library",
+				"To delete libraries:\n\n" $
+					"Right-Click a library folder, and select Delete > Delete Library")
 			return false
 			}
 		return true
@@ -213,15 +232,17 @@ PassthruController
 	confirmDeleteChildren(item)
 		{
 		deleting = .Static?(item) ? #library : #folder
-		msg = 'If you delete the ' $ deleting $ ' "' $ .getname(item).Tr('()') $
+		msg = "If you delete the " $ deleting $ ' "' $ .getname(item).Tr("()") $
 			'", all the records it contains will also be deleted.\r\n\r\n'
 		if deleting is #library
-			msg $= 'Library deletions are not staged for Version Control\r\n\r\n'
-		return YesNo(msg $ 'Continue?', 'Confirm Delete', .Window.Hwnd, MB.ICONWARNING)
+			msg $= "Library deletions are not staged for Version Control\r\n\r\n"
+		return YesNo(msg $ "Continue?", "Confirm Delete", .Window.Hwnd, MB.ICONWARNING)
 		}
 
 	On_Save()
-		{ .updateTabs() }
+		{
+		.updateTabs()
+		}
 
 	deleting: false
 	delitem(item)
@@ -232,13 +253,19 @@ PassthruController
 		}
 
 	getname(item)
-		{ return .tree.GetName(item) }
+		{
+		return .tree.GetName(item)
+		}
 
 	getnum(item)
-		{ return .tree.GetParam(item) }
+		{
+		return .tree.GetParam(item)
+		}
 
 	updateTabs()
-		{ .forEachConstructedTab({ .update(.tabsCtrl.GetTabData(it).item) }) }
+		{
+		.forEachConstructedTab({ .update(.tabsCtrl.GetTabData(it).item) })
+		}
 
 	forEachConstructedTab(block)
 		{
@@ -248,7 +275,9 @@ PassthruController
 		}
 
 	SaveCode_AfterChange()
-		{ .update(.curitem) }
+		{
+		.update(.curitem)
+		}
 
 	update(item)
 		{
@@ -281,9 +310,7 @@ PassthruController
 		if not .TabConstructed?(idx)
 			return false
 		view = .tabsCtrl.GetControl(idx)
-		return not view.GetDefault(#Dummy?, false)
-			? view
-			: false
+		return not view.GetDefault(#Dummy?, false) ? view : false
 		}
 
 	syncTabDetails(idx, data, view)
@@ -306,24 +333,26 @@ PassthruController
 		}
 
 	TreeView_KeyboardNavigation(olditem)
-		{ .selectTreeItemDelayed(olditem) }
+		{
+		.selectTreeItemDelayed(olditem)
+		}
 
-	delay: 			500 /* = 1/2 of a second */
-	timer: 			false
-	lastNewitem: 	false
-	firstOlditem: 	false
+	delay:        500 /* = 1/2 of a second */
+	timer:        false
+	lastNewitem:  false
+	firstOlditem: false
 	selectTreeItemDelayed(olditem)
 		{
 		if .timer is false
 			.firstOlditem = olditem
-		.timer = .Delay(.delay, uniqueID: 'keyboardNavigation')
+		.timer = .Delay(.delay, uniqueID: #keyboardNavigation)
 			{
 			.selectTreeItem(.firstOlditem, .lastNewitem, focusTree?:)
 			.timer = .lastNewitem = .firstOlditem = false
 			}
 		}
 
-	SelectTreeItem(olditem, newitem)	// From TreeView control
+	SelectTreeItem(olditem, newitem) // From TreeView control
 		{
 		.lastNewitem = newitem
 		if not .resetting and not .tabsChanging? and .timer is false
@@ -356,18 +385,14 @@ PassthruController
 		}
 
 	moveTab?()
-		{ return IDESettings.Get('ide_move_tab', true) }
+		{
+		return IDESettings.Get(#ide_move_tab, true) is true
+		}
 
 	itemData(item)
 		{
-		if item is false or false is data = .model.Get(num = .getnum(item))
+		if item is false or false is data = .modelGet(item)
 			return false
-
-		/* Sudo tree items won't have real "nums" provided by the model, for example:
-		- LibTreeModel > Library root folders (IE: stdlib)
-		- SchemaModel > Never provides "num" as it does not coincide to anything
-		*/
-		data.num = data.GetDefault('num', num)
 		data.item = item
 		data.parent = .tree.GetParent(item)
 		data.tooltip = data.path = .Getpath(item)
@@ -376,24 +401,29 @@ PassthruController
 		return data
 		}
 
+	modelGet(item)
+		{
+		return .model.Get(.getnum(item), name: .getname(item))
+		}
+
 	displayName(table, name)
-		{ return .model.Method?(#DisplayName) ? .model.DisplayName(table, name) : name }
+		{
+		return .model.Method?(#DisplayName) ? .model.DisplayName(table, name) : name
+		}
 
 	imageDetails(data)
 		{
 		data.theme = data.GetDefault(#group, true)
 			? .folderImage(data, .recordModified?(data))
-			: .valid?(data)
-				? .recordModified?(data)
-					? #Modified
-					: #Document
-				: #Invalid
+			: .valid?(data) ? .recordModified?(data) ? #Modified : #Document : #Invalid
 		data.image = .imageHandler[data.theme]
 		.imageHandler.SetTheme(data, data.theme)
 		}
 
 	recordModified?(data)
-		{ return .model.Method?(#Modified?) ? .model.Modified?(data) : false }
+		{
+		return .model.Method?(#Modified?) ? .model.Modified?(data) : false
+		}
 
 	folderImage(data, modified?)
 		{
@@ -402,10 +432,14 @@ PassthruController
 		}
 
 	valid?(data)
-		{ return .model.Method?(#Valid?) ? .model.Valid?(data) : true }
+		{
+		return .model.Method?(#Valid?) ? .model.Valid?(data) : true
+		}
 
 	readonly?(item, viewCtrl)
-		{ return viewCtrl.GetDefault(#readonly, false) or not .editable?(.getnum(item)) }
+		{
+		return viewCtrl.GetDefault(#readonly, false) or not .editable?(.getnum(item))
+		}
 
 	TabControl_SelChanging()
 		{
@@ -413,7 +447,7 @@ PassthruController
 		return false
 		}
 
-	prevView: false
+	prevView:      false
 	tabsChanging?: false
 	TabsControl_SelectTab()
 		{
@@ -436,7 +470,7 @@ PassthruController
 			.View.Editor.UPDATEUI()
 
 		if not .resetting
-			.CloseTabs({ |i| .keepTab?(i) })
+			.CloseTabs({|i| .keepTab?(i) })
 		.prevView = .View.Copy()
 		.tabsChanging? = false
 		}
@@ -445,18 +479,18 @@ PassthruController
 		{
 		data = .tabsCtrl.GetTabData(i)
 		return i isnt .tabsCtrl.GetSelected() and .Send(#CloseTab?, data) is true
-			? ''
+			? ""
 			: .tree.ItemExists?(data.item)
 		}
 
-	Refresh(records)
 	// warning - if dirty and called prior to save, changes are lost. This is on purpose
+	Refresh(records)
 		{
 		refreshed? = false
 		// Copy to ensure each open ExplorerMultiControl refreshes properly
 		recs = records.Copy()
 		.Tabs.ForEachTab()
-			{ |data, idx|
+			{|data, idx|
 			if recs.Empty?()
 				break
 			recIdx = recs.FindIf({ it.name is data.name and it.table is data.table })
@@ -481,7 +515,9 @@ PassthruController
 		}
 
 	synced?(tabData, savedData)
-		{ return .model.Method?(#Synced?) ? .model.Synced?(tabData, savedData) : true }
+		{
+		return .model.Method?(#Synced?) ? .model.Synced?(tabData, savedData) : true
+		}
 
 	refreshTab(idx, data)
 		{
@@ -512,7 +548,7 @@ PassthruController
 
 	GotoPath(path, skipFolder? = false)
 		{
-		if false is item = .getItem(path.Split("/"), skipFolder?)
+		if false is item = .getItem(path.Split('/'), skipFolder?)
 			return false
 		if .curitem is item
 			return true
@@ -528,7 +564,7 @@ PassthruController
 		{
 		item = false
 		list = .tree.GetChildren(TVI.ROOT)
-		for (i = 0; i < path.Size(); i++)
+		for (i = 0; i < path.Size(); i += 1)
 			if false isnt item = .gotoPathItem(list, path, i, skipFolder?)
 				{
 				.tree.ExpandItem(item)
@@ -561,7 +597,9 @@ PassthruController
 		}
 
 	Getpath(item)
-		{ return .tree.Path(item) }
+		{
+		return .tree.Path(item)
+		}
 
 	Rename(item, name)
 		{
@@ -574,7 +612,7 @@ PassthruController
 			tabData = Object(tooltip: path, :path, :tabname, :name)
 			.tabsCtrl.SetTabData(tab, tabData, name: tabname)
 			.View.SetState(.View.GetState())
-			.View.Set(.model.Get(.getnum(item)))
+			.View.Set(.modelGet(item))
 			}
 		.invalidateViews()
 		return 0
@@ -587,10 +625,14 @@ PassthruController
 		}
 
 	Explorer_Get()
-		{ return .Get() }
+		{
+		return .Get()
+		}
 
 	Get() // gets the current view
-		{ return .model.Get(.getnum(.curitem)) }
+		{
+		return .modelGet(.curitem)
+		}
 
 	Children?(item)
 		{
@@ -600,22 +642,13 @@ PassthruController
 		}
 
 	Container?(item)
-		{ return .model.Container?(.getnum(item)) }
+		{
+		return .model.Container?(.getnum(item))
+		}
 
 	Static?(item)
-		{ return .model.Static?(.getnum(item)) }
-
-	GetTreeModel(num)	// Recursive
 		{
-		obj = .model.Get(num, origText?:).Copy()
-		if obj.group
-			{
-			// If it is a parent...
-			obj.subitems = Object()
-			for child in .model.Children(num)
-				obj.subitems.Add(.GetTreeModel(child.num))
-			}
-		return obj
+		return .model.Static?(.getnum(item))
 		}
 
 	TabContextMenu(x, y, hover = false)
@@ -638,19 +671,19 @@ PassthruController
 
 	tabMenuOb(tab)
 		{
-		name = ''
+		name = ""
 		menu = Object()
 		if .tabsCtrl.GetTabCount() > 0
-			menu.Add('Close &All')
+			menu.Add("Close &All")
 		if .reopen?()
-			menu.Add('&Reopen %1')
+			menu.Add("&Reopen %1")
 		if menu.Size() is 0
 			return false
 		if tab isnt false
 			{
 			name = .tabsCtrl.TabName(tab)
-			menu.Add('&Close %1', 'Close Others', 'Close to the Right', at: 0)
-			menu.Add('')
+			menu.Add("&Close %1", "Close Others", "Close to the Right", at: 0)
+			menu.Add("")
 			if Object?(.extraTabMenu)
 				menu.Add(@.extraTabMenu)
 			}
@@ -663,9 +696,8 @@ PassthruController
 			{
 			Object?(it)
 				? .translateMenuOb(it, name)
-				: TranslateLanguage(it, it.Prefix?('&Reopen')
-					? Paths.Basename(.last_closed.Tr('()'))
-					: name)
+				: TranslateLanguage(it,
+					it.Prefix?("&Reopen") ? Paths.Basename(.last_closed.Tr("()")) : name)
 			}
 		}
 
@@ -673,23 +705,23 @@ PassthruController
 		{
 		// Ensure tab changes are committed before carrying out context option
 		.updateTabs()
-		switch option = tabmenu[i-1].Tr('&').Replace(' %1', '')
+		switch option = tabmenu[i-1].Tr('&').Replace(" %1", "")
 			{
-		case 'Close' :
+		case #Close:
 			.Tab_Close(tab)
-		case 'Close Others' :
-			.CloseTabs({ |i| i is tab })
-		case 'Close to the Right' :
-			.CloseTabs({ |i| i is tab }, closeToRight?:)
-		case 'Close All' :
+		case "Close Others":
+			.CloseTabs({|i| i is tab })
+		case "Close to the Right":
+			.CloseTabs({|i| i is tab }, closeToRight?:)
+		case "Close All":
 			.CloseTabs()
-		case 'Reopen' :
+		case #Reopen:
 			.GotoPath(.last_closed)
 			.last_closed = false
 		default:
-			tabData = .tabsCtrl.GetTabData(tab, '')
+			tabData = .tabsCtrl.GetTabData(tab, "")
 			tabData.idx = tab
-			.Send('TabMenu_' $ option.Tr('&|" '), tabData)
+			.Send("TabMenu_" $ option.Tr('&|" '), tabData)
 			}
 		}
 
@@ -698,22 +730,26 @@ PassthruController
 		if .last_closed is false
 			return false
 		for (i = 0; i < .tabsCtrl.GetTabCount(); ++i)
-			if .last_closed is .tabsCtrl.GetTabData(i, '').path
+			if .last_closed is .tabsCtrl.GetTabData(i, "").path
 				return false
 		return true
 		}
 
 	Tab_AllowDrag()
-		{ return not .moveTab?() }
+		{
+		return not .moveTab?()
+		}
 
 	Tab_Close(tab)
-		{ .closeTab(tab) }
+		{
+		.closeTab(tab)
+		}
 
 	last_closed: false
 	closeTab(i, skipCollapse? = false)
 		{
 		data = .tabsCtrl.GetTabData(i)
-		.last_closed = data.path is false ? '' : data.path
+		.last_closed = data.path is false ? "" : data.path
 		.update(data.item)
 		.tabsCtrl.Remove(.adjustTabsForClosing(i))
 		if .tabsCtrl.NoCtrls?()
@@ -742,14 +778,14 @@ PassthruController
 			.tree.EnsureVisible(.curitem)
 		}
 
-	CloseTabs(ignoreTab = function(i /*unused*/) { false }, closeToRight? = false)
+	CloseTabs(ignoreTab = function(i/*unused*/) { false }, closeToRight? = false)
 		{
 		// ignoreTab:
 		//		returns true: 	Do not close tab,
 		//		returns false: 	Close tab
 		//		returns '': 	Close tab, do not collapse folders
 		tabClosed? = false
-		for (i = .tabsCtrl.GetTabCount() - 1; i >= 0; i--)
+		for (i = .tabsCtrl.GetTabCount() - 1; i >= 0; i -= 1)
 			{
 			ignore = ignoreTab(:i)
 			if ignore is true
@@ -771,7 +807,7 @@ PassthruController
 		// Collapse all nodes whose hierarchies don't involve open tabs
 		collapsethis? = false is .tabsCtrl.FindTabBy(#parent, parent)
 		.tree.ForEachChild(parent)
-			{ |x|
+			{|x|
 			collapse = .collapsenode(x)
 			if collapse and .Container?(x)
 				.tree.ExpandItem(x, true)
@@ -781,23 +817,33 @@ PassthruController
 		}
 
 	getter_curitem()
-		{ return .tabsCtrl.GetTabData().item }
+		{
+		return .tabsCtrl.GetTabData().item
+		}
 
 	CloseActiveTab()
-		{ .closeTab(.tabsCtrl.GetSelected()) }
+		{
+		.closeTab(.tabsCtrl.GetSelected())
+		}
 
 	GetSelected()
-		{ return .curitem }
+		{
+		return .curitem
+		}
 
 	RootSelected?()
-		{ return .tree.GetParent(.curitem) is 0 }
+		{
+		return .tree.GetParent(.curitem) is 0
+		}
 
 	resetting: false
-	Reset(model = false)
+	Reset(model = false, view = false)
 		{
 		.resetting = true
 		if model isnt false
 			.modelClass = model
+		if view isnt false
+			.viewCtrl = view.Copy()
 		.tree.Reset(.model = Construct(.modelClass))
 		.resetTabs()
 		.resetting = false
@@ -820,9 +866,7 @@ PassthruController
 
 	syncTab(idx, tabData, pathLookup? = false)
 		{
-		item = not pathLookup?
-			? tabData.item
-			: .findTabItem(tabData.path)
+		item = not pathLookup? ? tabData.item : .findTabItem(tabData.path)
 		if false is savedData = .itemData(item) // Record has been deleted
 			.closeTab(idx, skipCollapse?:)
 		else if not .synced?(tabData, savedData) // Record has been modified
@@ -840,7 +884,7 @@ PassthruController
 			return false
 		if false is item = .getItem(pathOb)
 			{
-			pathOb[0] = pathOb[0].Has?('(') ? pathOb[0].Tr('()') : '(' $ pathOb[0] $ ')'
+			pathOb[0] = pathOb[0].Has?('(') ? pathOb[0].Tr("()") : '(' $ pathOb[0] $ ')'
 			if false is item = .getItem(pathOb)
 				return false
 			}
@@ -849,9 +893,9 @@ PassthruController
 
 	RestoreState(state)
 		{
-		if false isnt tabs = state.GetDefault('tabs', false)
-			.restoreTabs(tabs, state.GetDefault('activeTabPath', false))
-		if state.Member?('splitterpos')
+		if false isnt tabs = state.GetDefault(#tabs, false)
+			.restoreTabs(tabs, state.GetDefault(#activeTabPath, false))
+		if state.Member?(#splitterpos)
 			.HorzSplit.SetSplit(state.splitterpos)
 		}
 
@@ -866,7 +910,7 @@ PassthruController
 			{
 			.noSelect = it isnt activeTabPath
 			if false is .GotoPath(it)
-				.Send('Explorer_RestoreTab', it)
+				.Send(#Explorer_RestoreTab, it)
 			}
 		.noSelect = false
 		// Handling for when the "activeTabPath" no longer associates with a record
@@ -879,7 +923,7 @@ PassthruController
 		{
 		tabs = Object()
 		.Tabs.ForEachTab()
-			{ |tab, idx|
+			{|tab, idx|
 			if not all? and idx is 10 /*= 10 most recent tabs*/
 				break
 			if skipFolder? and tab.group is true
@@ -890,7 +934,9 @@ PassthruController
 		}
 
 	ForeachTab(block)
-		{ .forEachConstructedTab({ block(.tabsCtrl.GetControl(it)) }) }
+		{
+		.forEachConstructedTab({ block(.tabsCtrl.GetControl(it)) })
+		}
 
 	Destroy()
 		{

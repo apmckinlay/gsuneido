@@ -1,59 +1,58 @@
 // Copyright (C) 2012 Suneido Software Corp. All rights reserved worldwide.
 CommandParent
 	{
-	Xmin: 300
-	Ymin: 200
-	Name:		'VirtualList'
-	ComponentName: 'VirtualList'
-	model: 		false
-	view: 		false
-	Commands:	()
+	Xmin:          300
+	Ymin:          200
+	Name:          #VirtualList
+	ComponentName: #VirtualList
+	model:         false
+	view:          false
+	Commands: ()
 
 	New(query = false, .columns = #(), .columnsSaveName = false,
-		.headerSelectPrompt = false, menu = false, .startLast = false,
-		headerMenu = false, readonly = false, filterBy = false,
-		.hideCustomColumns? = false, .mandatoryFields = #(), .enableMultiSelect = false,
-		.checkBoxColumn = false, .checkBoxAmountField = false, .lockFields = #(),
-		.disableSelectFilter = false, .sortSaveName = false,
-		thinBorder = false, .protectField = false, .validField = false,
-		.title = false, .disableCheckSortLimit? = false,
+		.headerSelectPrompt = false, menu = false, .startLast = false, headerMenu = false,
+		readonly = false, filterBy = false, .hideCustomColumns? = false,
+		.mandatoryFields = #(), .enableMultiSelect = false, .checkBoxColumn = false,
+		.checkBoxAmountField = false, .lockFields = #(), .disableSelectFilter = false,
+		.sortSaveName = false, thinBorder = false, .protectField = false,
+		.validField = false, .title = false, .disableCheckSortLimit? = false,
 		.option = false, historyFields = false, titleLeftCtrl = false, .nextNum = false,
 		.excludeSelectFields = #(), .loadAll? = false, .extraFmts = false,
 		hdrCornerCtrl = false, expandExcludeFields = #(), addons = #(), .keyField = false,
-		.stickyFields = false, .enableUserDefaultSelect = false, .stretchColumn = false,
-		.filtersOnTop = false, select = #(), .saveQuery = false,
-		.hideColumnsNotSaved? = false, enableDeleteBar = false, .linked? = false,
-		.preventCustomExpand? = false, switchToForm = false, .defaultColumns = false,
-		.asof = false, .useQuery = 'auto', excludeCustomize? = false,
-		.warningField = false)
+		.stickyFields = false, .stretchColumn = false, .filtersOnTop = false,
+		select = #(), .saveQuery = false, .hideColumnsNotSaved? = false,
+		enableDeleteBar = false, .linked? = false, .preventCustomExpand? = false,
+		switchToForm = false, .defaultColumns = false, .asof = false, .useQuery = #auto,
+		excludeCustomize? = false, .warningField = false)
 		{
-		super(Object('VirtualListView', menu, .headerSelectPrompt, headerMenu,
+		super([#VirtualListView, menu, .headerSelectPrompt, headerMenu,
 			readonly, filterBy, .checkBoxColumn, checkBoxAmountField, disableSelectFilter,
 			thinBorder, .protectField, .validField, .title,
 			.option, historyFields, titleLeftCtrl, :hdrCornerCtrl, :expandExcludeFields,
 			:addons, filtersOnTop: .filtersOnTop, :select, :enableDeleteBar,
-			linked?: .linked?, :preventCustomExpand?, :switchToForm, :excludeCustomize?))
+			linked?: .linked?, :preventCustomExpand?, :switchToForm, :excludeCustomize?])
 		.view = .VirtualListView
 		.baseQuery = query
 
-		if query isnt false and query isnt ''
+		if query isnt false and query isnt ""
 			.SetQuery(query, columns, asof)
 
-		if .protectField isnt false and false isnt .Send("VirtualList_NeedValidation?")
+		if .protectField isnt false and false isnt .Send(#VirtualList_NeedValidation?)
 			{
 			.needValidation? = true
 			.Window.AddValidationItem(this)
 			}
 		if .protectField isnt false // editable
 			.Commands = #(
-				("New",		"Ctrl+N")
-				("Edit",	"Alt+E")
-				("Select",	"Alt+S"))
+				(New, "Ctrl+N"),
+				(Edit, "Alt+E"),
+				(Select, "Alt+S")
+				)
 		}
 
-	selectName: ''
-	SetQuery(query, columns = #(), filters = false, customKey = false,
-		selectName = '', .asof = false, .useQuery = 'auto')
+	selectName: ""
+	SetQuery(query, columns = #(), filters = false, customKey = false, selectName = "",
+		.asof = false, .useQuery = #auto, _accessGoTo? = false)
 		{
 		where = .VirtualListView.SetFilter(filters)
 		recycled = .recycleExpands()
@@ -72,6 +71,9 @@ CommandParent
 
 		useExpandModel? = not .preventCustomExpand? or
 			.VirtualListView.VirtualListGrid_Expand([]) isnt 0
+		enableUserDefaultSelect = .filtersOnTop and not accessGoTo?
+		if true is .Send(#VirtualList_BeforeApplySelect, "", checkIfCustomQuery:)
+			enableUserDefaultSelect = false
 		.model = VirtualListModel(query, .startLast, columns, .columnsSaveName,
 			.headerSelectPrompt, where, .hideCustomColumns?, .mandatoryFields,
 			.checkBoxColumn, .checkBoxAmountField, sortSaveName: .sortSaveName,
@@ -80,19 +82,19 @@ CommandParent
 			nextNum: .nextNum, disableCheckSortLimit?: .disableCheckSortLimit?,
 			excludeSelectFields: .excludeSelectFields, loadAll?: .loadAll?,
 			extraFmts: .extraFmts, :customKey, keyField: .keyField,
-			stickyFields: .stickyFields, enableUserDefaultSelect:.enableUserDefaultSelect,
+			stickyFields: .stickyFields, :enableUserDefaultSelect,
 			disableSelectFilter: .disableSelectFilter, stretchColumn: .stretchColumn,
 			enableMultiSelect: .enableMultiSelect, saveQuery: .saveQuery,
 			hideColumnsNotSaved?: .hideColumnsNotSaved?, linked?: .linked?,
 			:useExpandModel?, option: .option, defaultColumns: .defaultColumns, :asof,
 			useQuery: .useQuery, warningField: .warningField, :sortOb)
-		.Send('RegisterLinkedBrowse', this, .Name)
-		if selectName isnt ''
+		.Send(#RegisterLinkedBrowse, this, .Name)
+		if selectName isnt ""
 			.selectName = selectName
 
 		.restoreRecycledExpands(recycled)
 		if .model.EditModel.Editable?() and
-			.Send('VirtualList_CustomizeColumnAllowHideMandatory?') isnt true
+			.Send(#VirtualList_CustomizeColumnAllowHideMandatory?) isnt true
 			.model.ColModel.AddMissingMandatoryCols()
 		.view.SetModel(.model, .selectName)
 		}
@@ -101,9 +103,9 @@ CommandParent
 		{
 		if .sortableList?()
 			{
-			if false isnt .Send('VirtualList_SaveSort?') and .sortSaveName is false and
+			if false isnt .Send(#VirtualList_SaveSort?) and .sortSaveName is false and
 				customKey isnt false
-				.sortSaveName = customKey $ ' Sort'
+				.sortSaveName = customKey $ " Sort"
 			}
 		else
 			.disableCheckSortLimit? = true
@@ -111,7 +113,7 @@ CommandParent
 
 	sortableList?()
 		{
-		return .filtersOnTop is true and .Send('VirtualList_DisableSort?') isnt true
+		return .filtersOnTop is true and .Send(#VirtualList_DisableSort?) isnt true
 		}
 
 	recycleExpands()
@@ -128,7 +130,7 @@ CommandParent
 		if customKey isnt false
 			return customKey
 
-		customKey = .Send('VirtualList_GetCustomKey')
+		customKey = .Send(#VirtualList_GetCustomKey)
 		if customKey not in (0, false)
 			return customKey
 
@@ -145,10 +147,12 @@ CommandParent
 		{
 		return .model is false ? [] : .model.ColModel.GetSelectVals()
 		}
+
 	Getter_Extra_Select_vals()
 		{
 		return .view.Extra_Select_vals
 		}
+
 	SetSelectVals(select_vals)
 		{
 		.view.SetSelectVals(select_vals)
@@ -198,7 +202,7 @@ CommandParent
 
 	Valid?()
 		{
-		if false is .Send("VirtualList_ExtraValid")
+		if false is .Send(#VirtualList_ExtraValid)
 			return false
 
 		return .view.Valid?()
@@ -221,7 +225,7 @@ CommandParent
 			.view.On_VirtualListThumb_ArrowSelect()
 		}
 
-	Redir(msg, ctrl = 'focus')
+	Redir(msg, ctrl = #focus)
 		{
 		.view.Redir(msg, ctrl)
 		}
@@ -240,7 +244,7 @@ CommandParent
 	Default(@args)
 		{
 		event = args[0]
-		.view[event](@+1 args)
+		.view[event](@+1args)
 		}
 
 	ConfirmDestroy()

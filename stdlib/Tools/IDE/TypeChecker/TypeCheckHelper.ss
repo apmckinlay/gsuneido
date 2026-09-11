@@ -179,19 +179,28 @@ class
 		return references
 		}
 
-	FormatDiagnostics(diagnostics, library = false)
+	FormatDiagnostics(diagnostics, library = false, record = false)
 		{
 		if diagnostics is false or not Object?(diagnostics)
 			return #(), #()
 
 		// checker emits base-first, line-descending within each class;
 		// reversing the whole list yields leaf-first, line-ascending
-		errors = diagnostics.GetDefault(#errors, Object()).Reverse!()
-		warnings = diagnostics.GetDefault(#warnings, Object()).Reverse!()
+		errors = .forRecord(diagnostics.GetDefault(#errors, #()), record).Reverse!()
+		warnings = .forRecord(diagnostics.GetDefault(#warnings, #()), record).Reverse!()
 		errors.Map!({ .formatDiagnostic(#ERROR, it, library) })
 		warnings.Map!({ .formatDiagnostic(#WARNING, it, library) })
 
 		return errors, warnings
+		}
+
+	// compare the class exactly - filtering the formatted lines on a
+	// library $ ':' $ record prefix also matches record__webgui and record_Test
+	// copying is the point of the false branch too: Reverse!/Map! below would
+	// otherwise reverse the caller's diagnostics and replace them with strings
+	forRecord(diags, record)
+		{
+		return record is false ? diags.Copy() : diags.Filter({ it.class is record })
 		}
 
 	formatDiagnostic(kind, d, library)

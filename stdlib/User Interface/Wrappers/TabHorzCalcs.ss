@@ -1,8 +1,8 @@
 // Copyright (C) 2023 Axon Development Corporation All rights reserved worldwide.
 TabCalcs
 	{
-	ScrollNextImage: 'right'
-	ScrollPrevImage: 'left'
+	ScrollNextImage: #right
+	ScrollPrevImage: #left
 	FontOrientation: 0
 	New(@args)
 		{
@@ -70,11 +70,11 @@ TabCalcs
 
 	baseRenderRect(prevEnd, width)
 		{
-		rect = Record()
-		rect.AttachRule(#left, function(){ this.start })
-		rect.AttachRule(#right, function(){ this.end })
-		rect.AttachRule(#tipX, function(){ this.start })
-		rect.AttachRule(#tipY, function(){ this.bottom })
+		rect = []
+		rect.AttachRule(#left, function() { this.start })
+		rect.AttachRule(#right, function() { this.end })
+		rect.AttachRule(#tipX, function() { this.start })
+		rect.AttachRule(#tipY, function() { this.bottom })
 		rect.start = prevEnd
 		rect.end = prevEnd + width
 		return rect
@@ -108,10 +108,9 @@ TabCalcs
 		rect = Object(left: 0, top: 0, right: wLarge, bottom: hLarge)
 		return Object(
 			baseRound: rect,
-			baseFill: [right: rect.right, bottom: rect.bottom]
+			baseFill: [right: rect.right, bottom: rect.bottom],
 			ellipseSize: ellipse = (hLarge * .rectCurve).Ceiling(),
-			eraseSize: ellipse >> 1,
-			)
+			eraseSize: ellipse >> 1)
 		}
 
 	drawSpecsBottom(wLarge, hLarge)
@@ -128,12 +127,12 @@ TabCalcs
 
 	linePointsTop()
 		{
-		return [x1: 0, y1: .Ymin - 1, x2: .W -1, y2: .Ymin - 1]
+		return [x1: 0, y1: .Ymin - 1, x2: .W - 1, y2: .Ymin - 1]
 		}
 
 	linePointsBottom()
 		{
-		return [x1: 0, y1: 0, x2: .W -1, y2: 0]
+		return [x1: 0, y1: 0, x2: .W - 1, y2: 0]
 		}
 
 	textPosTop(tab, selectedTab)
@@ -147,7 +146,7 @@ TabCalcs
 		{
 		padding = .ImageWidth(tab.image) + .PaddingSide
 		pos = Object(
-			x: tab.renderRect.left + padding
+			x: tab.renderRect.left + padding,
 			y: tab.renderRect.top)
 		if not selectedTab and tab.renderWidth is tab.width
 			pos.x += tab.textBoldOffset
@@ -161,7 +160,7 @@ TabCalcs
 		return textRect
 		}
 
-	Resize?(w, h /*unused*/)
+	Resize?(w, h/*unused*/)
 		{
 		return w isnt .W
 		}

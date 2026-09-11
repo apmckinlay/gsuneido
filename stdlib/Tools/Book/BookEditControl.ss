@@ -1,24 +1,25 @@
 // Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
 Controller
 	{
-	Title: "BookEdit"
-	New(.table = '')
+	Title: #BookEdit
+	New(.table = "")
 		{
 		.initBook()
-		.Clipformat = RegisterClipboardFormat('Suneido_BOOKEDIT')
+		.Clipformat = RegisterClipboardFormat(#Suneido_BOOKEDIT)
 
 		.subs = [
-			PubSub.Subscribe('BookTreeChange', .reset)
-			PubSub.Subscribe('BookRecordChange', .refresh)
-			]
+			PubSub.Subscribe(#BookTreeChange, .reset),
+			PubSub.Subscribe(#BookRecordChange, .refresh)]
 		}
 
 	CanPaste?()
-		{ return IsClipboardFormatAvailable(.Clipformat) }
+		{
+		return IsClipboardFormatAvailable(.Clipformat)
+		}
 
 	initBook()
 		{
-		if not Suneido.Member?("EditBooks")
+		if not Suneido.Member?(#EditBooks)
 			Suneido.EditBooks = Object()
 		Suneido.EditBooks[.table] = this
 		}
@@ -26,31 +27,40 @@ Controller
 	Controls()
 		{
 		.contentType = BookContent.Type(.table)
-		toolbar = Object("Toolbar"
-			"New_Item", "Delete_Item" "",
-			"Undo", "Redo", "", "Cut", "Copy", "Paste", "",
-			"Refresh", "Run", "",
-			"Find", "",
-			"Find_in_Folders", "Find_Next_in_Folders", "Find_Previous_in_Folders",
-			"")
-		if .contentType is #html
-			toolbar.Add("H1", "H2", "H3", "H4", "P", "LI", "DT", "DD", "PRE", "")
-		toolbar.Add("Bold", "Italic", "Underline", "Code", "Link", "Add_Image_Tag",
-			"Goto", ""
-			"Find_References_to_Current", "Version_History")
-		extraAddons = .contentType is #html
+		return [#Vert,
+			[#Horz,
+				[#Toolbar].Append(.buildToolbarButtons(.contentType)),
+				[#BookEditLocate, .table], #(Skip, small:)],
+			#(EtchedLine, before: 0),
+			[#ExplorerMulti,
+				[#BookEditModel, .table],
+				.buildExplorerView(.contentType),
+				treeArgs: [inorder:]],
+			ystretch: 1]
+		}
+
+	buildToolbarButtons(type)
+		{
+		buttons = [#New_Item, #Delete_Item, "",
+			#Undo, #Redo, "", #Cut, #Copy, #Paste, "",
+			#Refresh, #Run, "",
+			#Find, "",
+			#Find_in_Folders, #Find_Next_in_Folders, #Find_Previous_in_Folders,
+			""]
+		if type is #html
+			buttons.Add(#H1, #H2, #H3, #H4, 'P', #LI, #DT, #DD, #PRE, "")
+		buttons.Add(#Bold, #Italic, #Underline, #Code, #Link, #Add_Image_Tag,
+			#Goto, "",
+			#Find_References_to_Current, #Version_History)
+		return buttons
+		}
+
+	buildExplorerView(type)
+		{
+		extraAddons = type is #html
 			? #()
 			: #(Addon_html_edit: false, Addon_md_edit:, Addon_html: false, Addon_md:)
-		return Object('Vert',
-			Object('Horz'
-				toolbar,
-				Object("BookEditLocate", .table) #(Skip small:)),
-			#(EtchedLine before: 0),
-			Object('ExplorerMulti',
-				Object('BookEditModel', .table),
-				Object('BookEditSplit', :extraAddons),
-				treeArgs: [inorder:]),
-			ystretch: 1)
+		return [#BookEditSplit, :extraAddons]
 		}
 
 	reset(args)
@@ -67,8 +77,8 @@ Controller
 			.Explorer.Refresh(refresh)
 		}
 
-	viewRedirs: #(Status, MenuSelect)
-	editorRedirs: #(On_Find, On_Find_Next, On_Find_Previous, On_Replace,
+	viewRedirs: (Status, MenuSelect)
+	editorRedirs: (On_Find, On_Find_Next, On_Find_Previous, On_Replace,
 		On_Go_To_Definition, On_Link, On_Add_Paragraph_Tags, On_H1, On_H2,
 		On_H3, On_H4, On_P, On_LI, On_DT, On_DD, On_PRE, On_Bold, On_Italic,
 		On_Underline, On_Code, On_Add_Image_Tag)
@@ -84,76 +94,74 @@ Controller
 		.editorRedirs.Each(.DeleteRedir)
 		}
 
-	Commands:
-		(
-		(Close,				"",				"Close this window")
-		(New_Item, 			"",				"Add a new help item", New_Folder)
-		(Delete_Item, 		"",				"Delete selected help item", delete_item)
+	Commands: (
+		(Close, "", "Close this window"),
+		(New_Item, "", "Add a new help item", New_Folder),
+		(Delete_Item, "", "Delete selected help item", delete_item),
 
-		(Set_Order,			"Ctrl+Alt+O",	"Set the item's \"order\" field")
-		(Unorder_Children,	"Ctrl+Alt+U",	"Set order of all item's children to ''")
+		(Set_Order, "Ctrl+Alt+O", "Set the item's \"order\" field"),
+		(Unorder_Children, "Ctrl+Alt+U", "Set order of all item's children to ''"),
 		(Renumber_Children, "Ctrl+Alt+R",
-			"Reset the order of all item's children to whole numbers.")
+			"Reset the order of all item's children to whole numbers."),
 
+		(Import_Image, "", "Import an image file"),
+		(Export_Image, "", "Export an image file"),
+		(Export_Multiple_Html_Files,
+			"", "Export HTML pages to individual files"),
+		(Export_Single_Html_File,
+			"", "Export HTML pages to one large file"),
+		(Refresh, F5, Refresh),
 
-		(Import_Image		""				"Import an image file")
-		(Export_Image		""				"Export an image file")
-		(Export_Multiple_Html_Files
-							""				"Export HTML pages to individual files")
-		(Export_Single_Html_File
-							""				"Export HTML pages to one large file")
-		(Refresh,			"F5",			"Refresh")
+		(Undo, "Ctrl+Z", "Undo the last action"),
+		(Redo, "Ctrl+Y", "Redo the last action"),
+		(Cut, "Ctrl+X", "Cut the selected text to the clipboard"),
+		(Copy, "Ctrl+C", "Copy the selected text to the clipboard"),
+		(Paste, "Ctrl+V", "Insert the contents of the clipboard"),
+		(Delete, Del, "Delete the selected text or next character"),
 
-		(Undo,				"Ctrl+Z",		"Undo the last action")
-		(Redo,				"Ctrl+Y",		"Redo the last action")
-		(Cut,				"Ctrl+X",		"Cut the selected text to the clipboard")
-		(Copy,				"Ctrl+C",		"Copy the selected text to the clipboard")
-		(Paste,				"Ctrl+V",		"Insert the contents of the clipboard")
-		(Delete,			"Del",			"Delete the selected text or next character")
+		(Find, "Ctrl+F", "Find text in the current item"),
+		(Find_Next, F3,
+			"Find the next occurrence in the current item"),
+		(Find_Previous, "Shift+F3",
+			"Find the previous occurrence in the current item"),
+		(Replace, "Ctrl+H", "Find and replace text in the current item"),
 
-		(Find,				"Ctrl+F",		"Find text in the current item")
-		(Find_Next,			"F3",
-			"Find the next occurrence in the current item")
-		(Find_Previous,		"Shift+F3",
-			"Find the previous occurrence in the current item")
-		(Replace,			"Ctrl+H",		"Find and replace text in the current item")
-
-		(Bold,				"Ctrl+B",		"Add bold tags around the selected text")
-		(Italic, 			"Ctrl+I",		"Add italic tags around the selected text")
-		(Underline, 		"Ctrl+U",		"Add underline tags around the selected text")
-		(Code,				"Ctrl+Alt+C",	"Add code tags around the selected text")
-		(Link,				"Alt+L",		"Link")
-		(Locate,			"Ctrl+L",		"Locate")
+		(Bold, "Ctrl+B", "Add bold tags around the selected text"),
+		(Italic, "Ctrl+I", "Add italic tags around the selected text"),
+		(Underline, "Ctrl+U", "Add underline tags around the selected text"),
+		(Code, "Ctrl+Alt+C", "Add code tags around the selected text"),
+		(Link, "Alt+L", Link),
+		(Locate, "Ctrl+L", Locate),
 		(Add_Paragraph_Tags, "",
-			"Add paragraph tags and remove line breaks", "P")
-		(Add_Image_Tag,		"Ctrl+Alt+I", 	"Insert image tag", I)
-		(H1					"Ctrl+F1",		"", '1')
-		(H2					"Ctrl+F2",		"", '2')
-		(H3					"Ctrl+F3",		"", '3')
-		(H4					"Ctrl+F4",		"", '4')
-		(Goto				"Ctrl+G", 		"Go to the selected record", G)
-		(P					"Ctrl+P",		"", P)
-		(LI					"Ctrl+Alt+L",	"", L)
-		(DT					"Ctrl+Alt+T",	"", T)
-		(DD					"Ctrl+Alt+D",	"", D)
-		(PRE				"Ctrl+Alt+P",	"", R)
+			"Add paragraph tags and remove line breaks", P),
+		(Add_Image_Tag, "Ctrl+Alt+I", "Insert image tag", I),
+		(H1, "Ctrl+F1", "", '1'),
+		(H2, "Ctrl+F2", "", '2'),
+		(H3, "Ctrl+F3", "", '3'),
+		(H4, "Ctrl+F4", "", '4'),
+		(Goto, "Ctrl+G", "Go to the selected record", G),
+		(P, "Ctrl+P", "", P),
+		(LI, "Ctrl+Alt+L", "", L),
+		(DT, "Ctrl+Alt+T", "", T),
+		(DD, "Ctrl+Alt+D", "", D),
+		(PRE, "Ctrl+Alt+P", "", R),
 
-		(Find_in_Folders,	"Shift+Ctrl+F",	"Find text in book")
-		(Find_Next_in_Folders,		"",
-			"Find next occurrence in book", Find_Next)
-		(Find_Previous_in_Folders,	"",
-			"Find previous occurrence in book", Find_Previous)
+		(Find_in_Folders, "Shift+Ctrl+F", "Find text in book"),
+		(Find_Next_in_Folders, "",
+			"Find next occurrence in book", Find_Next),
+		(Find_Previous_in_Folders, "",
+			"Find previous occurrence in book", Find_Previous),
 
-		(Import_Records,	"",				"Import records from a text file into a book")
-		(Export_Record,		"",				"Append current record to a text file")
-		(Insert_File,		"",				"Insert a text file")
-		(Run,				"F9",			"Run selected text", '!')
-		(Open Book)
-		(Build How To Index)
-		(Build Ftsearch Index)
-		(Users_Manual,		"F1")
-		(Version_History, 				"", 			"Version History", H)
-		(Find_References_to_Current, 	"Ctrl+R",		"Find References to Current", R)
+		(Import_Records, "", "Import records from a text file into a book"),
+		(Export_Record, "", "Append current record to a text file"),
+		(Insert_File, "", "Insert a text file"),
+		(Run, F9, "Run selected text", '!'),
+		(Open, Book),
+		(Build, How, To, Index),
+		(Build, Ftsearch, Index),
+		(Users_Manual, F1),
+		(Version_History, "", "Version History", H),
+		(Find_References_to_Current, "Ctrl+R", "Find References to Current", R)
 		)
 
 	Menu()
@@ -162,44 +170,45 @@ Controller
 			"&New Item", "&Delete Item", "",
 			"Import Ima&ge...", "Export Image...", "",
 			"Export &Single Html File...", "Export &Multiple Html Files...", "",
-			"&Import Records..." "&Export Record...", "",
+			"&Import Records...", "&Export Record...", "",
 			"&Build How To Index", "Build Ftsearch Index", "",
-			"&Close"
-			)
+			"&Close")
 		edit = #("&Edit",
 			"&Undo", "&Redo", "", "Cu&t", "&Copy", "&Paste", "&Delete", "",
 			"&Find...", "Find &Next", "Find &Previous", "R&eplace...", "",
 			"Find &in Folders", "Find Next in Folders", "Find Previous in Folders", "",
-			"&Insert File..."
-			)
-		format = Object("F&ormat")
+			"&Insert File...")
+		format = ["F&ormat"]
 		if .contentType is #html
-			format.Add("H&1", "H&2", "H&3", "H&4", "&P", "LI", "D&T", "D&D", "P&RE", "")
+			format.Add("H&1", "H&2", "H&3", "H&4", "&P", #LI, "D&T", "D&D", "P&RE", "")
 		format.Add("&Bold", "&Italic", "&Underline", "&Code", "&Link", "Add Image Tag")
 		if .contentType is #html
 			format.Add("", "&Add Paragraph Tags")
-		tools = #("&Tools"
-			"Refresh", "",
+		tools = #("&Tools",
+			Refresh, "",
 			"Set &Order...", "Unorder Children", "&Renumber Children", "",
-			"Run", "Open Book"
-			)
-		return Object(file, edit, format, tools)
+			Run, "Open Book")
+		return [file, edit, format, tools]
 		}
 
 	On_Context_New()
-		{ .Explorer.On_New_Folder() }
+		{
+		.Explorer.On_New_Folder()
+		}
 
 	On_New_Item()
-		{ .Explorer.On_New_Folder() }
+		{
+		.Explorer.On_New_Folder()
+		}
 
 	On_Delete_Item()
 		{
 		if .Editor is false
 			return
-		if '' is msg = .View.Deletable?()
+		if "" is msg = .View.Deletable?()
 			.Explorer.On_Delete_Item()
 		else
-			.AlertInfo('BookEdit', msg)
+			.AlertInfo(#BookEdit, msg)
 		}
 
 	On_Refresh()
@@ -213,7 +222,7 @@ Controller
 
 	On_Insert_File()
 		{
-		if '' isnt (filename = OpenFileName(title: 'Insert File')) and
+		if "" isnt (filename = OpenFileName(title: "Insert File")) and
 			false isnt (text = GetFile(filename))
 			.Editor.Paste(text)
 		}
@@ -231,7 +240,9 @@ Controller
 
 		order = BookEditOrderControl(.Window.Hwnd, oldorder: x.order)
 		QueryApply1(.table, num: .Tree.GetParam(.Explorer.CurItem))
-			{ .updateOrder(it, order, it.Transaction()) }
+			{
+			.updateOrder(it, order, it.Transaction())
+			}
 		.Tree.SortChildren(.Tree.GetParent(.Explorer.CurItem))
 		}
 
@@ -244,23 +255,23 @@ Controller
 	On_Unorder_Children()
 		{
 		// Set the order of all an item's children to 0
-		if false is sel = .getSelected('Unorder Children')
+		if false is sel = .getSelected("Unorder Children")
 			return
 
 		Transaction(update:)
-			{ |t|
+			{|t|
 			if sel is -1
 				path = ""
 			else
 				{
 				if false is x = t.Query1(.table, num: sel)
 					return
-				path = x.path $ "/" $ x.name
+				path = x.path $ '/' $ x.name
 				}
 
 			t.QueryApply(.table $ ' where path is "' $ path $ '" and order isnt ""')
-				{ |x|
-				.updateOrder(x, '', t)
+				{|x|
+				.updateOrder(x, "", t)
 				}
 			}
 		}
@@ -268,13 +279,13 @@ Controller
 	getSelected(title)
 		{
 		if false is sel = .Tree.GetParam(.Explorer.CurItem)
-			.AlertError(title, 'Please select an item.')
+			.AlertError(title, "Please select an item.")
 		return sel
 		}
 
 	On_Renumber_Children()
 		{
-		if false is sel = .getSelected('Renumber Children')
+		if false is sel = .getSelected("Renumber Children")
 			return
 		if sel is -1
 			path = ""
@@ -285,45 +296,45 @@ Controller
 			}
 		order = 0
 		colIncrement = 10
-		QueryApplyMulti(.table $ ' where path is ' $ Display(path) $
-			' and order isnt "" sort path, order, name', update:)
-			{ |x|
+		QueryApplyMulti(
+			.table $ " where path is " $ Display(path) $
+				' and order isnt "" sort path, order, name', update:)
+			{|x|
 			if ((x.order / colIncrement).Int() isnt (order / colIncrement).Int())
 				order = (x.order / colIncrement).Int() * colIncrement
 			if x.order isnt order
 				.updateOrder(x, order, x.Transaction())
 			endOfColumnOrder = 9
 			smallIncrement = .001
-			order += (order % colIncrement is endOfColumnOrder ? smallIncrement : 1)
+			order += (order%colIncrement is endOfColumnOrder ? smallIncrement : 1)
 			}
 		}
 
 	On_Run()
-		// post:	attempts to Eval the contents of the current selection
-		{
+		{ // post:	attempts to Eval the contents of the current selection
 		// redirect printing to console
 		prevPrint = Suneido.Print
 		Suneido.Print = .Print
 		// perform run
-
-		if .Editor is false or '' is sel = .Editor.GetSelText().Trim()
+		if .Editor is false or "" is sel = .Editor.GetSelText().Trim()
 			return
 		try
 			Print(sel.Eval()) // needs Eval
 		catch (x)
-			.AlertError('Run Error', x)
+			.AlertError("Run Error", x)
 		Suneido.Print = prevPrint
 		}
 
 	On_Open_Book()
-		{ BookControl(.table) }
+		{
+		BookControl(.table)
+		}
 
 	Print(s)
-		// pre:	s is a string
+		{ // pre:	s is a string
 		// post:	if a console for this exists, s is appended to this' console ELSE
 		//		a console for this is created and s is appended to it
-		{
-		if Suneido.GetDefault('Console', false) is false
+		if Suneido.GetDefault(#Console, false) is false
 			Window(#(Console), x: 0, y: 0, w: .35, h: .5)
 		Suneido.Console.Append(s)
 		}
@@ -332,24 +343,26 @@ Controller
 		{
 		.Save()
 		if #() isnt bad = BookHowToIndex(.table)
-			.AlertError('Build How To Index',
-				'bad <!-- option: name(s):\n    ' $ bad.Join('\n    '))
+			.AlertError("Build How To Index",
+				"bad <!-- option: name(s):\n    " $ bad.Join("\n    "))
 		}
 
 	On_Build_Ftsearch_Index()
 		{
-		msg = ''
-		title = 'Build Ftsearch Index'
+		msg = ""
+		title = "Build Ftsearch Index"
 		Working(title)
 			{
 			msg = ServerEval(`IndexHelp`, .table)
 			}
-		if '' isnt msg
+		if "" isnt msg
 			.AlertInfo(title, msg)
 		}
 
 	Save()
-		{ .Explorer.On_Save() }
+		{
+		.Explorer.On_Save()
+		}
 
 	Inactivate()
 		{
@@ -358,17 +371,18 @@ Controller
 		}
 
 	Goto(address)
-		{ .Explorer.GotoPath("Help" $ ((address =~ "^/") ? "" : "/") $ address) }
+		{
+		.Explorer.GotoPath("Help" $ ((address =~ "^/") ? "" : '/') $ address)
+		}
 
 	On_Import_Image()
 		{
 		path = .getSelectedPathOrRes()
-		if path.AfterFirst('/res') isnt '' and
-				false is ImportImageIntoSubfolder(.Window.Hwnd, path)
-			path = '/res'
+		if path.AfterFirst("/res") isnt "" and
+			false is ImportImageIntoSubfolder(.Window.Hwnd, path)
+			path = "/res"
 
-		files = OpenFileName(title: 'Import Image',
-			multi:, hwnd: .Window.Hwnd,
+		files = OpenFileName(title: "Import Image", multi:, hwnd: .Window.Hwnd,
 			filter: "Image Files (*.png;*.jpg;*.gif;*.bmp;*.emf;*.svg)" $
 				"\x00*.png;*.jpg;*.gif;*.bmp;*.emf;*.svg\x00All Files (*.*)\x00*.*")
 		if files is #()
@@ -387,11 +401,9 @@ Controller
 	getSelectedPathOrRes()
 		{
 		x = .Explorer.Get()
-		path = x is false
-			? ''
-			: x.GetDefault(#path, '')
+		path = x is false ? "" : x.GetDefault(#path, "")
 		if path isnt "/res" and not path.Prefix?("/res/")
-			return '/res'
+			return "/res"
 		else if not x.name.Has?('.') // if no '.' assume folder
 			path $= '/' $ x.name
 		return path
@@ -399,49 +411,49 @@ Controller
 
 	EnsureResFolderExists(table)
 		{
-		if QueryEmpty?(table, path: '', name: 'res')
-			QueryOutput(table, [path: '', name: 'res', num: NextTableNum(table)])
+		if QueryEmpty?(table, path: "", name: #res)
+			QueryOutput(table, [path: "", name: #res, num: NextTableNum(table)])
 		}
 
 	On_Export_Image()
 		{
 		if .Explorer.RootSelected?()
 			{
-			.AlertError('Export Image', "Can't export root folder")
+			.AlertError("Export Image", "Can't export root folder")
 			return
 			}
 		selected = .Explorer.GetSelected()
 		path = .Explorer.Getpath(selected)
-		name = path[path.FindLast("/") - path.Size() + 1 ..]
+		name = path[path.FindLast('/') - path.Size() + 1 ..]
 		// strip tablename and record name off path
-		path = path[.table.Size()..][.. -(name.Size() + 1)]
+		path = path[.table.Size() ..][.. -(name.Size() + 1)]
 		DoWithSaveFileName(
-			hwnd:	.Window.Hwnd,
-			flags:	OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR,
-			title:	"Export Image to",
+			hwnd: .Window.Hwnd,
+			flags: OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR,
+			title: "Export Image to",
 			file: name)
-			{ |filename|
+			{|filename|
 			PutFile(filename, .Explorer.Get().text)
 			}
 		}
 
 	On_Export_Multiple_Html_Files()
 		{
-		if false isnt dir = Ask('Directory', 'Export Html', .Window.Hwnd,
-			#(FieldHistory name: 'BookExport', selectFirst:))
+		if false isnt dir = Ask(#Directory, "Export Html", .Window.Hwnd,
+			#(FieldHistory, name: BookExport, selectFirst:))
 			BookExport(.table, dir)
 		}
 
 	On_Export_Single_Html_File()
 		{
 		DoWithSaveFileName(
-			hwnd:	.Window.Hwnd,
-			flags:	OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.OVERWRITEPROMPT |
+			hwnd: .Window.Hwnd,
+			flags: OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.OVERWRITEPROMPT |
 				OFN.NOCHANGEDIR,
-			title:	"Export to",
+			title: "Export to",
 			filter: "HTML Files (*.htm)\x00*.htm\x00All Files (*.*)\x00*.*\x00",
-			ext: 'htm')
-			{ |filename|
+			ext: #htm)
+			{|filename|
 			BookExportOne(.table, filename)
 			}
 		}
@@ -450,7 +462,7 @@ Controller
 		{
 		if .Explorer.RootSelected?()
 			{
-			.AlertError('Export Record', "Can't export root folder")
+			.AlertError("Export Record", "Can't export root folder")
 			return
 			}
 		path = .Explorer.Getpath(.Explorer.GetSelected())
@@ -459,7 +471,7 @@ Controller
 		path = path.RemovePrefix(.table).BeforeLast('/')
 		DoWithSaveFileName(hwnd: .Window.Hwnd, title: "Export (append) to",
 			flags: OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR)
-			{ |filename|
+			{|filename|
 			LibIO.Export(.table, name, filename, path, interactive:)
 			}
 		}
@@ -467,13 +479,13 @@ Controller
 	On_Import_Records()
 		{
 		filename = OpenFileName(hwnd: .Window.Hwnd, title: "Import from")
-		if filename isnt ''
+		if filename isnt ""
 			LibIO.Import(filename, .table, interactive:)
 		}
 
-	names: #()
+	names: ()
 	names_i: 0
-	find: false
+	find:    false
 	On_Find_in_Folders()
 		{
 		if .find is false
@@ -483,7 +495,7 @@ Controller
 		.names = Object()
 		.names_i = -1
 		Transaction(read:)
-			{ |t|
+			{|t|
 			.search(t, Find.Regex(.find.name, .find), Find.Regex(.find.find, .find))
 			}
 		.On_Find_Next_in_Folders()
@@ -492,13 +504,11 @@ Controller
 	// TODO search with single query, then sort by path (not recursive)
 	search(t, name, text, path = "") // recursive
 		{
-		t.QueryApply(.table $ " where path is " $ Display(path) $
-			" sort order, name")
-			{ |x|
-			path = x.path $ "/" $ x.name
-			if (not BookResource?(path) and
-				(name is '' or x.name =~ name) and
-				(text is '' or x.text =~ text))
+		t.QueryApply(.table $ " where path is " $ Display(path) $ " sort order, name")
+			{|x|
+			path = x.path $ '/' $ x.name
+			if not BookResource?(path) and (name is "" or x.name =~ name) and
+				(text is "" or x.text =~ text)
 				.names.Add(path)
 			.search(t, name, text, path) // do children (if any)
 			}
@@ -526,27 +536,30 @@ Controller
 		}
 
 	On_Goto()
-		{ .GotoHelp(.getCurrentLink()) }
-
+		{
+		.GotoHelp(.getCurrentLink())
+		}
 
 	On_Locate()
-		{ .BookEditLocate.SetFocus() }
+		{
+		.BookEditLocate.SetFocus()
+		}
 
 	GotoHelp(text)
 		{
 		text = text.Tr('"').Trim()
 		text = text.Has?('/')
-			? .table $ '/' $ text.RemovePrefix('suneido:').RemovePrefix('/').
-				RemovePrefix(.table $ '/')
-			:.table $ '/res/' $ text
+			? .table $ '/' $
+				text.RemovePrefix("suneido:").RemovePrefix('/').RemovePrefix(.table $ '/')
+			: .table $ "/res/" $ text
 		.Explorer.GotoPath(text)
 		}
 
 	getCurrentLink()
 		{
 		if .Editor is false
-			return ''
-		if '' isnt text = .Editor.GetSelText()
+			return ""
+		if "" isnt text = .Editor.GetSelText()
 			return text
 		return .FindLinkedHelpPage()
 		}
@@ -554,19 +567,19 @@ Controller
 	FindLinkedHelpPage(select? = false)
 		{
 		if .Editor is false
-			return ''
+			return ""
 		pos = .Editor.GetCurrentPos()
 		lastChar = .Editor.GetSelect().cpMax
-		if .Editor.GetAt(lastChar) in ("=", '(', ';')
-			return ''
+		if .Editor.GetAt(lastChar) in ('=', '(', ';')
+			return ""
 		if .Editor.GetAt(pos) in ('"', "'")
 			pos = .Editor.GetSelect().cpMin
 		if false is org = .findLink(pos, -1)
-			return ''
+			return ""
 		if false is end = .findLink(pos, +1)
-			return ''
+			return ""
 		if org >= end
-			return ''
+			return ""
 		if select?
 			.Editor.SetSelect(org, end - org + 1)
 		return .Editor.GetRange(org, end + 1)
@@ -586,25 +599,35 @@ Controller
 	On_Version_History()
 		{
 		if .Explorer.RootSelected?()
-			.AlertInfo(.Title, 'No version history for book root')
+			.AlertInfo(.Title, "No version history for book root")
 		else
 			VersionHistoryControl(.CurrentTable(), .CurrentName())
 		}
 
 	On_Find_References_to_Current()
-		{ FindReferencesControl(.CurrentName()) }
+		{
+		FindReferencesControl(.CurrentName())
+		}
 
 	Getter_Explorer()
-		{ return .Explorer = .Vert.Explorer }
+		{
+		return .Explorer = .Vert.Explorer
+		}
 
 	Getter_View()
-		{ return .Explorer.View }
+		{
+		return .Explorer.View
+		}
 
 	Getter_Editor()
-		{ return .View is false ? false : .View.Editor }
+		{
+		return .View is false ? false : .View.Editor
+		}
 
 	Getter_Tree()
-		{ return .Tree = .Explorer.Tree }
+		{
+		return .Tree = .Explorer.Tree
+		}
 
 	Getter_BookEditLocate()
 		{
@@ -612,17 +635,23 @@ Controller
 		}
 
 	ModelTable()
-		{ return .Explorer.Model.GetTable() }
+		{
+		return .Explorer.Model.GetTable()
+		}
 
 	CurrentTable()
-		{ return .View.CurrentTable() }
+		{
+		return .View.CurrentTable()
+		}
 
 	CurrentName()
-		{ return .View.CurrentName() }
+		{
+		return .View.CurrentName()
+		}
 
 	BraceMatch_AdditionalBraces()
 		{
-		return '<>'
+		return "<>"
 		}
 
 	// TODO: handle VertSplit too
@@ -636,9 +665,14 @@ Controller
 	SetState(state)
 		{
 		stateTable = state.GetDefault(#table, false)
-		if .table is '' and stateTable isnt false
+		if .table is "" and stateTable isnt false
 			{
-			.Explorer.Reset(Object(BookEditModel, .table = stateTable))
+			.table = stateTable
+			.contentType = BookContent.Type(.table)
+			if false isnt toolbar = .FindControl(#Toolbar)
+				toolbar.SetButtons(.buildToolbarButtons(.contentType))
+			.Explorer.Reset([BookEditModel, .table],
+				.buildExplorerView(.contentType))
 			.BookEditLocate.SetTable(stateTable)
 			}
 		if .table is stateTable

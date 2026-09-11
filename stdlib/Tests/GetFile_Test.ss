@@ -10,7 +10,8 @@ Test
 		Assert(GetFile(file) is: s)
 		Assert(GetFile(file, 10) is: "Now is the")
 		Assert(GetFile(file, 1000) is: s)
-		AddFile(file, "bye")
+		AddFile(file, #bye)
 		Assert(GetFile(file) is: s $ "bye")
+		Assert({ GetFile(file, 10_000_000 + 1) } throws:)
 		}
 	}

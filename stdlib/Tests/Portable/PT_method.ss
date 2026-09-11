@@ -16,8 +16,9 @@ class
 			Print("\tgot: " $ Display(result))
 		return ok
 		}
+
 	toValue(str?, args, i)
 		{
-		return str?[i] ? args[i] : args[i].Compile()
+		return str?[i] ? args[i] : Suneido.Compile(args[i])
 		}
 	}

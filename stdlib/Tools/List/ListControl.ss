@@ -309,6 +309,15 @@ WndProc
 		if rows > 1
 			.ScrollRowToView(rows - 1)
 		}
+	SelectAndScrollToCenter(row)
+		{
+		lines = .GetNumVisibleRows()
+		up = Max((row - (lines / 2)).Int(), 0)
+		down = Min((row + (lines / 2)).Int(), .Get().Size() - 1)
+		.SetSelection(row)
+		.ScrollRowToView(up)
+		.ScrollRowToView(down)
+		}
 	DoWithCurrentVScrollPos(block)
 		{
 		savedVScrollPos = .rowOffset

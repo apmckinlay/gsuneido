@@ -2,7 +2,7 @@
 function(s)
 	{
 	try
-		s.Compile()
+		Suneido.Compile(s)
 	catch
 		return false
 	return true

@@ -8,10 +8,9 @@ This is why the majority of values are set during: On_Customize
 */
 Controller
 	{
-	Controls: #('EnhancedButton', command: 'Customize', image: 'custom_screen.emf',
-		mouseEffect:, imagePadding: .1, tip: 'Customize')
-	New(.disable_default = false)
-		{ }
+	Controls: (EnhancedButton, command: Customize, image: "gear.emf",
+		mouseEffect:, imagePadding: .1, tip: Customize)
+	New(.disable_default = false) { }
 
 	Startup()
 		{
@@ -29,23 +28,23 @@ Controller
 
 	customized?()
 		{
-		customKey = .Send('GetAccessCustomKey')
-		return Customizable.IsCustomized?(.Send('GetQuery')) or
+		customKey = .Send(#GetAccessCustomKey)
+		return Customizable.IsCustomized?(.Send(#GetQuery)) or
 			CustomizeField.IsCustomized?(customKey)
 		}
 
 	On_Customize()
 		{
-		if false is .Send('Access_Save')
+		if false is .Send(#Access_Save)
 			return
 
-		query = .Send('GetQuery')
+		query = .Send(#GetQuery)
 		Assert(query isnt 0)
 		table = QueryGetTable(query)
 		.collectTabs(.Window, tabs = Object())
 		customizable = .getCustomizable(table)
 
-		key = .Send('GetAccessCustomKey')
+		key = .Send(#GetAccessCustomKey)
 		sfOb = Object(
 			cols: .getCustomizeFieldsCols(tabs, query, key, customizable),
 			excludeFields: .excludeFields())
@@ -53,7 +52,7 @@ Controller
 			:customizable,
 			tabs: .customDlgTabs(tabs),
 			disable_default: .disable_default,
-			allowCustomTabs: .Send('AllowCustomTabs?') is true)
+			allowCustomTabs: .Send(#AllowCustomTabs?) is true)
 
 		.refresh(dirty)
 		}
@@ -72,15 +71,15 @@ Controller
 		{
 		tabFields = Object()
 		tabs.Each({ tabFields.MergeUnion(it.CollectFields(customizable)) })
-		cols = QueryColumns(query).
-			Filter({ .findHeaderControl(it) isnt false or tabFields.Has?(it) })
+		cols = QueryColumns(
+			query).Filter({ .findHeaderControl(it) isnt false or tabFields.Has?(it) })
 
 		if key isnt false
-			cols.MergeUnion(
-				QueryList('customizable_fields where custfield_name is ' $ Display(key),
-					'custfield_field'))
+			cols.MergeUnion(QueryList("customizable_fields where custfield_name is " $
+					Display(key),
+				#custfield_field))
 
-		if Object?(extra = .Send('CustomizeFields_ExtraFields'))
+		if Object?(extra = .Send(#CustomizeFields_ExtraFields))
 			cols.MergeUnion(extra)
 		return cols
 		}
@@ -92,24 +91,24 @@ Controller
 
 	excludeFields()
 		{
-		excludeFields = .Send('GetExcludeSelectFields')
+		excludeFields = .Send(#GetExcludeSelectFields)
 		return excludeFields isnt 0
-			? excludeFields.Filter({ Datadict(it).Control[0] not in ('Key', 'Id') })
+			? excludeFields.Filter({ Datadict(it).Control[0] not in (#Key, #Id) })
 			: Object()
 		}
 
 	getCustomizable(table)
 		{
-		if 0 is name = .Send('GetCustomizableName')
+		if 0 is name = .Send(#GetCustomizableName)
 			name = false
-		if 0 is customKey = .Send('GetAccessCustomKey')
-			customKey = ''
+		if 0 is customKey = .Send(#GetAccessCustomKey)
+			customKey = ""
 		return Customizable(table, name, :customKey)
 		}
 
 	customDlgTabs(tabs)
 		{
-		all_tabs = Object('Header')
+		all_tabs = [#Header]
 		tabs.Each({ all_tabs.MergeUnion(it.GetAllTabNames()) })
 		custom_tabs = .getCustomTabs(tabs)
 		return [:all_tabs, :custom_tabs]
@@ -119,9 +118,9 @@ Controller
 		{
 		custom_tabs = Object()
 		tabs.Each({ custom_tabs.MergeUnion(it.CustomizableTabs()) })
-		if false isnt ctrl = .findHeaderControl('Customizable')
+		if false isnt ctrl = .findHeaderControl(#Customizable)
 			{
-			customHeader = ctrl.TabName is false ? 'Header' : ctrl.TabName
+			customHeader = ctrl.TabName is false ? #Header : ctrl.TabName
 			if customHeader isnt CustomizeExpandControl.LayoutName
 				custom_tabs.Remove(customHeader).Add(customHeader, at: 0)
 			}
@@ -131,7 +130,7 @@ Controller
 	refresh(dirty)
 		{
 		if not Object?(dirty) or dirty.screen or dirty.fields
-			.Send('BookRefresh')
+			.Send(#BookRefresh)
 		else
 			.updateImage()
 		}

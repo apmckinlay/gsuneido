@@ -1,7 +1,7 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	title: "Auto Format and Send"
+	title: "Formatting Tools"
 	CallClass(libview)
 		{
 		libview.Save()
@@ -9,14 +9,8 @@ class
 		name = libview.CurrentName()
 		svcTable = SvcTable(lib)
 
-		if OptContribution(#CheckUpdateBuildTime, function() { return false })()
-			.alert("Sending code during potential update building time\r\n")
-
 		if lib is "" or name is "" or false is rec = svcTable.Get(name)
 			return .alert("No current record to format")
-
-		if "" isnt why = .unsendable(rec)
-			return .alert(name $ ' ' $ why)
 
 		if false is formatted = .format(name, rec.text)
 			return false
@@ -27,14 +21,26 @@ class
 		if not AstFmtEquals?(rec.text, formatted)
 			return .alert(
 				"Formatting would change the code, not just the layout.\n" $
-					"Nothing was sent - please report this.", warn:)
+					"Nothing was done - please report this.", warn:)
+
+		// when nothing is committed only format locally
+		if "" isnt why = .unsendable(rec)
+			{
+			.applyLocally(libview, name, formatted)
+			return .alert(name $ ' ' $ why $ " so it was formatted locally")
+			}
+
+		if OptContribution(#CheckUpdateBuildTime, function() { return false })()
+			.alert("Sending code during potential update building time\r\n")
 
 		if false is settings = SvcSettings()
 			return .alert("Invalid version control settings")
 
 		result = .run(
-			Object(:settings, :svcTable, :lib, :name, :formatted, oldText: rec.text),
+			Object(:settings, :svcTable, :lib, :name, :formatted, :libview,
+				oldText: rec.text),
 			libview.Window.Hwnd)
+
 		SvcSocketClient().Close()
 
 		return result
@@ -55,7 +61,7 @@ class
 				config.name $ " changed while the dialog was open - nothing was" $
 					" done.\nPlease run Auto Format and Send again.", warn:)
 		if choice.send isnt true
-			return .apply(config.svcTable, config.name, config.formatted)
+			return .applyLocally(config.libview, config.name, config.formatted)
 
 		config.userid = choice.userid
 		config.desc = choice.desc
@@ -83,7 +89,7 @@ class
 		{
 		svc = .connect(settings)
 		if String?(svc)
-			return "Offline from version control - you can still apply locally with OK"
+			return "Offline from version control - you can still format locally"
 
 		if svc.Outstanding?([lib])
 			return lib $ " has changes from others that you have not got" $
@@ -107,10 +113,9 @@ class
 	unsendable(rec)
 		{
 		if rec.lib_committed is ""
-			return "is a new record - send it with Version Control first"
+			return "is a new record,"
 		if rec.lib_modified isnt ""
-			return "has unsent changes - send them with Version Control first," $
-				" so that only formatting is committed here"
+			return "has unsent changes,"
 		return ""
 		}
 
@@ -130,7 +135,7 @@ class
 
 	confirm: Controller
 		{
-		Title: "Auto Format and Send"
+		Title: "Formatting Tools"
 		New(config)
 			{
 			super(.layout(config))
@@ -138,6 +143,60 @@ class
 			.sendBtn = .FindControl(#Send_Changes)
 			.warn = .FindControl(#warning)
 			.setBlocked(config.blocked)
+			.showTodos(config)
+			}
+
+		showTodos(config)
+			{
+			panes = .FindControl(#Diff).ListControls()
+			.setTodo(#todoCurrent, config, panes[0].Get())
+			.setTodo(#todoFormatted, config, panes[1].Get())
+			}
+
+		setTodo(ctrlName, config, text)
+			{
+			if false is ctrl = .FindControl(ctrlName)
+				return
+			ctrl.SetWordChars(
+				"_0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ?!:")
+			ctrl.Set(.todos(config.lib, config.name, text).Join('\n'))
+			}
+
+		Width: 90
+		TabWidth: 4
+		todos(lib, recName, text)
+			{
+			result = Object()
+			lines = text.Lines()
+			for (i = 0; i < lines.Size(); ++i)
+				{
+				line = lines[i].Tr('\r')
+				tag = lib $ ':' $ recName $ ':' $ (i + 1) $ ' '
+				if line =~ `/[*/] *[A-Z][A-Z][A-Z]+`
+					result.Add(tag $ line.Trim())
+				else if .Width < w = line.Replace('\t', ' '.Repeat(.TabWidth)).Size()
+					result.Add(tag $ "LONG LINE (" $ w $ ') ' $ line.Trim())
+				}
+			return result
+			}
+
+		Scintilla_DoubleClick(source)
+			{
+			if source isnt .FindControl(#todoCurrent) and
+				source isnt .FindControl(#todoFormatted)
+				return // ignore double clicks in the diff panes themselves
+			if false is row = .todoRow(source.GetLine())
+				return
+			for pane in .FindControl(#Diff).ListControls()
+				pane.GotoLine(row)
+			}
+
+		todoRow(text)
+			{
+			try
+				return Number(text.BeforeFirst(' ').AfterLast(':')) - 1
+			catch
+				return false
 			}
 
 		setBlocked(blocked)
@@ -179,8 +238,20 @@ class
 				[#Diff2, config.oldText, config.formatted, config.lib, name, #Current,
 					#Formatted],
 				#Skip,
+				[#Horz,
+					[#Vert,
+						[#Static, "Todo - Current", name: #todoTitleCurrent],
+						[#TodoOutput, name: #todoCurrent, readonly:, ymin: 90,
+							ystretch: .25]],
+					#Skip,
+					[#Vert,
+						[#Static, "Todo - Formatted", name: #todoTitleFormatted],
+						[#TodoOutput, name: #todoFormatted, readonly:, ymin: 90,
+							ystretch: .25]]],
+				#Skip,
 				[#Horz, #Fill,
-					[#Button, #OK, tip: "Update " $ name $ " locally without sending"],
+					[#Button, "Format Locally", command: #OK,
+						tip: "Update " $ name $ " locally without sending"],
 					#Skip, [#Button, #Cancel, tip: "Close without changing anything"]]
 				xmin: 900]
 			}
@@ -235,6 +306,19 @@ class
 			{
 			.Window.Result(false)
 			}
+		}
+
+	// paste through the editor, so that Ctrl+Z can undo the formatting
+	applyLocally(libview, name, formatted)
+		{
+		if libview.CurrentName() isnt name
+			return .apply(SvcTable(libview.CurrentTable()), name, formatted)
+		editor = libview.Editor
+		line = editor.LineFromPosition()
+		editor.PasteOverAll(formatted)
+		editor.GotoLine(line)
+		libview.Save()
+		return true
 		}
 
 	apply(svcTable, name, formatted)

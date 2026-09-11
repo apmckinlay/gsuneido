@@ -12,8 +12,8 @@ If you need to store several items, consider grouping them into an object so you
 
 |     |     |     |
 | --- | --- | --- |
-| [Suneido.AssertFail](<Suneido/Suneido.AssertFail.md>) | [Suneido.LibraryTags](<Suneido/Suneido.LibraryTags.md>) | [Suneido.ShouldNotReachHere](<Suneido/Suneido.ShouldNotReachHere.md>) |
+| [Suneido.AssertFail](<Suneido/Suneido.AssertFail.md>) | [Suneido.Info](<Suneido/Suneido.Info.md>) | [Suneido.RuntimeError](<Suneido/Suneido.RuntimeError.md>) |
+| [Suneido.Compile](<Suneido/Suneido.Compile.md>) | [Suneido.LibraryTags](<Suneido/Suneido.LibraryTags.md>) | [Suneido.ShouldNotReachHere](<Suneido/Suneido.ShouldNotReachHere.md>) |
 | [Suneido.Crash!](<Suneido/Suneido.Crash!.md>) | [Suneido.Parse](<Suneido/Suneido.Parse.md>) | [Suneido.StrictCompare](<Suneido/Suneido.StrictCompare.md>) |
 | [Suneido.GoMetric](<Suneido/Suneido.GoMetric.md>) | [Suneido.Regex](<Suneido/Suneido.Regex.md>) | [Suneido.WarningsThrow](<Suneido/Suneido.WarningsThrow.md>) |
-| [Suneido.Info](<Suneido/Suneido.Info.md>) | [Suneido.RuntimeError](<Suneido/Suneido.RuntimeError.md>) |
 

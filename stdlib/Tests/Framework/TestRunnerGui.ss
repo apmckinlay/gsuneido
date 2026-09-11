@@ -798,12 +798,7 @@ Controller
 		}
 	Overview_Click(row)
 		{
-		lines = .list.GetNumVisibleRows()
-		up = Max((row - (lines / 2)).Int(), 0)
-		down = Min((row + (lines / 2)).Int(), .list.Get().Size() - 1)
-		.list.SetSelection(row)
-		.list.ScrollRowToView(up)
-		.list.ScrollRowToView(down)
+		.list.SelectAndScrollToCenter(row)
 		}
 	Resize(x, y, w, h)
 		{

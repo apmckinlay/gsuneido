@@ -1,4 +1,5 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
+// BuiltDate > 20260820
 class
 	{
 	CallClass(org, fmt)
@@ -123,7 +124,9 @@ class
 
 	funcEq(org, fmt)
 		{
-		return .paramsEq(org.params, fmt.params) and .childrenEq(org, fmt)
+		return AstNodeGetDefault(org,
+				#returnannotation) is AstNodeGetDefault(fmt, #returnannotation) and
+			.paramsEq(org.params, fmt.params) and .childrenEq(org, fmt)
 		}
 
 	forInEq(org, fmt)
@@ -342,7 +345,8 @@ class
 
 	paramEq(x, y)
 		{
-		if x is false or y is false or x.name isnt y.name or x.hasdef isnt y.hasdef
+		if x is false or y is false or x.name isnt y.name or x.hasdef isnt y.hasdef or
+			AstNodeGetDefault(x, #annotations) isnt AstNodeGetDefault(y, #annotations)
 			return false
 		// hasdef matches here, so only the default value is left to compare
 		return x.hasdef is false or .Eq(x.defval, y.defval)

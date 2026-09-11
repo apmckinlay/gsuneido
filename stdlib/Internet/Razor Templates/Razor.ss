@@ -12,40 +12,45 @@ class
 		{
 		src = .Translate(template)
 		Dbg("SOURCE:\n" $ src.RightTrim() $ "\n-------")
-		fn = ("function () {\ns = ''\n" $ src $ "\n }").Compile()
+		fn = Suneido.Compile("function () {\ns = ''\n" $ src $ "\n }")
 		return context.Eval(fn)
 		}
+
 	Translate(template)
 		{
 		template = template.Trim()
 		if template is ""
 			return ""
-		dest = new .dest
+		dest = new .dest()
 		RazorHtml(dest, template)
 		return dest.Output
 		}
+
 	dest: class
 		{
 		Output: ""
 		Html(s)
 			{
-			Dbg('>>>html': Display(s))
-			.Output $= 's $= ' $ Display(s) $ '\n'
+			Dbg(">>>html": Display(s))
+			.Output $= "s $= " $ Display(s) $ '\n'
 			}
+
 		Expr(s) // html encoded
 			{
-			Dbg('>>>expr': Display(s))
-			.Output $= 's $= H(' $ s $ ')\n'
+			Dbg(">>>expr": Display(s))
+			.Output $= "s $= H(" $ s $ ")\n"
 			}
+
 		Code(s)
 			{
-			Dbg('>>>code': Display(s))
+			Dbg(">>>code": Display(s))
 			if s isnt ""
 				.Output $= s $ '\n'
 			}
+
 		CodeFragment(s)
 			{
-			Dbg('>>>frag': Display(s))
+			Dbg(">>>frag": Display(s))
 			.Output $= s
 			}
 		}

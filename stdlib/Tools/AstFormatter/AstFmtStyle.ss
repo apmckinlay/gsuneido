@@ -370,7 +370,8 @@ class
 	// cannot fit on one line
 	ChainBreak?(node)
 		{
-		return .DottedCall?(node) and .DottedCall?(node.func.expr)
+		return .DottedCall?(node) and
+			(.DottedCall?(node.func.expr) or node.func.expr.type is #Call)
 		}
 
 	DottedCall?(e)

@@ -1,12 +1,10 @@
 // Copyright (C) 2020 Axon Development Corporation All rights reserved worldwide.
 class
 	{
-	loadedTop: false
+	loadedTop:    false
 	loadedBottom: false
-	rowsPerLoad: 10
-	New(.grid, .model, .convertFn, .saveAndCollapseRelease)
-		{
-		}
+	rowsPerLoad:  10
+	New(.grid, .model, .convertFn, .saveAndCollapseRelease) { }
 
 	InitLoad()
 		{
@@ -34,7 +32,7 @@ class
 		if .loadedTop is false or .loadedBottom is false
 			return
 		data = .model.GetLoadedData()
-		for (i = .loadedTop; i <= .loadedBottom; i++)
+		for (i = .loadedTop; i <= .loadedBottom; i += 1)
 			block(i, data[i])
 		}
 
@@ -56,26 +54,26 @@ class
 			{
 			offset = -(.rowsPerLoad + .model.Offset - .loadedTop)
 			.updateOffset(offset)
-			.loadUp(row-1, dataBatch)
+			.loadUp(row - 1, dataBatch)
 			.grid.Act(#AddBatch, dataBatch,
-				newTop: .loadedTop, topEnded?: .model.Begin?()
-				newBottom: false, bottomEnded?: false
-				loadOnTop?:)
+				newTop: .loadedTop, topEnded?: .model.Begin?(),
+				newBottom: false, bottomEnded?: false, loadOnTop?:)
 			}
 		else if row is .loadedBottom
 			{
-			offset = .rowsPerLoad +
-				Max(0, .loadedBottom - .model.Offset - .model.VisibleRows)
+			offset =
+				.rowsPerLoad + Max(0, .loadedBottom - .model.Offset - .model.VisibleRows)
 			.updateOffset(offset)
-			.loadDown(row+1, dataBatch)
+			.loadDown(row + 1, dataBatch)
 			.grid.Act(#AddBatch, dataBatch,
 				newTop: false, topEnded?: false,
-				newBottom: .loadedBottom, bottomEnded?: .model.End?()
+				newBottom: .loadedBottom, bottomEnded?: .model.End?(),
 				loadOnTop?: false)
 			}
 		else
-			SuRenderBackend().AddLog(Object('LoadFrom Failed',
-				:row, top: .loadedTop, bottom: .loadedBottom))
+			SuRenderBackend().
+				AddLog(["LoadFrom Failed",
+						:row, top: .loadedTop, bottom: .loadedBottom])
 		}
 
 	loadUp(i, dataBatch)
@@ -163,28 +161,27 @@ class
 	updateTopBottom(shiftTop?)
 		{
 		if shiftTop? is true
-			{
 			if .loadedTop is false
 				.loadedTop = .loadedBottom = -1
 			else
-				.loadedTop--
-			}
+				.loadedTop -= 1
+		else if .loadedBottom is false
+			.loadedTop = .loadedBottom = 0
 		else
-			{
-			if .loadedBottom is false
-				.loadedTop = .loadedBottom = 0
-			else
-				.loadedBottom++
-			}
+			.loadedBottom += 1
 		}
 
 	DeleteRecord(rowNum)
 		{
+		if rowNum < .loadedTop or rowNum > .loadedBottom
+			.grid.DebugVListRowsMismatch(
+				"DeleteRecord from VirtualListLoadAdapter (37548)", Object(:rowNum))
+
 		shiftTop? = .model.GetStartLast()
 		if shiftTop? is true
-			.loadedTop++
+			.loadedTop += 1
 		else
-			.loadedBottom--
+			.loadedBottom -= 1
 		if .loadedTop > .loadedBottom // empty
 			.loadedTop = .loadedBottom = false
 		.grid.Act(#DeleteRecord, rowNum, shiftTop?)

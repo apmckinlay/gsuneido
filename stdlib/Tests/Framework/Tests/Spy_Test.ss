@@ -1,4 +1,5 @@
 // Copyright (C) 2018 Suneido Software Corp. All rights reserved worldwide.
+// BuiltDate > 20260823
 Test
 	{
 	src1: "function (a, b = 1)
@@ -38,12 +39,12 @@ Test
 		}`
 	Setup()
 		{
-		.MakeLibraryRecord([name: "SpyTest_1", text: .src1])
-		.MakeLibraryRecord([name: "SpyTest_2", text: .src2])
-		.MakeLibraryRecord([name: "SpyTest_3?", text: .src3])
-		.MakeLibraryRecord([name: "SpyTest_4", text: .src3])
-		.MakeLibraryRecord([name: "SpyTest_4__trial", text: .src3])
-		.MakeLibraryRecord([name: "SpyTest_5", text: .src4])
+		.MakeLibraryRecord([name: #SpyTest_1, text: .src1])
+		.MakeLibraryRecord([name: #SpyTest_2, text: .src2])
+		.MakeLibraryRecord([name: #SpyTest_3?, text: .src3])
+		.MakeLibraryRecord([name: #SpyTest_4, text: .src3])
+		.MakeLibraryRecord([name: #SpyTest_4__trial, text: .src3])
+		.MakeLibraryRecord([name: #SpyTest_5, text: .src4])
 		}
 
 	Test_SpyOnFunction()
@@ -52,25 +53,26 @@ Test
 		Assert(fn(1) is: 2)
 
 		spy = .SpyOn(fn)
-		spy.Return("case 1", when: { |a, b| a + b > 5 })
-		spy.Throw("case 2", when: function (a, b) { a + b is 5 })
-		spy.Return("case 3 - 1", "case 3 - 2", when: { |a, b| a + b > 0 })
-		spy.ReturnNothing(when: { |a, b| a + b is 0 })
+		spy.Return("case 1", when: {|a, b| a+b > 5 })
+		spy.Throw("case 2", when: function(a, b) { a+b is 5 })
+		spy.Return("case 3 - 1", "case 3 - 2", when: {|a, b| a+b > 0 })
+		spy.ReturnNothing(when: {|a, b| a+b is 0 })
 
 		fn = Global(#SpyTest_1)
-		Assert(fn(5) is: 'case 1')
-		Assert({ fn(4) } throws: 'case 2')
-		Assert(fn(3) is: 'case 3 - 1')
-		Assert(fn(2) is: 'case 3 - 2')
+		Assert(fn(5) is: "case 1")
+		Assert({ fn(4) } throws: "case 2")
+		Assert(fn(3) is: "case 3 - 1")
+		Assert(fn(2) is: "case 3 - 2")
 		Assert({ fn(1) } throws:)
 		fn(-1) // no return value
-		Assert({ _ = fn(-1) } throws: 'no return value')
+		Assert({ unused = fn(-1) } throws: "no return value")
 		Assert(fn(-1, -2) is: -3)
 
 		callLogs = spy.CallLogs()
 		Assert(callLogs isSize: 8)
-		Assert(callLogs is: #((a: 5, b: 1), (a: 4, b: 1), (a: 3, b: 1), (a: 2, b: 1),
-			(a: 1, b: 1), (a: -1, b: 1), (a: -1, b: 1), (a: -1, b: -2)))
+		Assert(callLogs
+			is: #((a: 5, b: 1), (a: 4, b: 1), (a: 3, b: 1), (a: 2, b: 1),
+				(a: 1, b: 1), (a: -1, b: 1), (a: -1, b: 1), (a: -1, b: -2)))
 
 		spy.Close()
 		fn = Global(#SpyTest_1)
@@ -80,88 +82,89 @@ Test
 	Test_SpyOnClassMethod()
 		{
 		_b = 2
-		spy2 = .SpyOn(Global('SpyTest_2.B'))
-		spy2.Return("override")
-		spy3 = .SpyOn(Global('SpyTest_1'))
-		spy3.Return("a + b > 5", when: { |a, b| a + b > 5 })
-		spy4 = .SpyOn(Global('SpyTest_2'))
+		spy2 = .SpyOn(Global("SpyTest_2.B"))
+		spy2.Return(#override)
+		spy3 = .SpyOn(Global(#SpyTest_1))
+		spy3.Return("a + b > 5", when: {|a, b| a+b > 5 })
+		spy4 = .SpyOn(Global(#SpyTest_2))
 
-		fn = Global('SpyTest_2')
+		fn = Global(#SpyTest_2)
 		Assert(fn(2) is: "c.T: 4 - B: override - SpyTest_1: 4")
 		Assert(fn(5) is: "c.T: 7 - B: override - SpyTest_1: a + b > 5")
 
 		spy2.Close()
-		fn = Global('SpyTest_2')
+		fn = Global(#SpyTest_2)
 		Assert(fn(2) is: "c.T: 4 - B: 4 - SpyTest_1: 4")
 		Assert(fn(5) is: "c.T: 7 - B: 10 - SpyTest_1: a + b > 5")
 
-		Assert(spy4.CallLogs() is: #((a: 2, b: 2), (a: 5, b: 2),
-			(a: 2, b: 2), (a: 5, b: 2)))
+		Assert(spy4.CallLogs()
+			is: #((a: 2, b: 2), (a: 5, b: 2),
+				(a: 2, b: 2), (a: 5, b: 2)))
 		}
 
 	Test_setupInfo()
 		{
 		fakeSpy = Spy
 			{
-			Spy_registerSpy() {}
+			Spy_registerSpy() { }
 			}
-		spy1 = fakeSpy(Global("SpyTest_2"))
+		spy1 = fakeSpy(Global(#SpyTest_2))
 		Assert(Display(spy1.Target) is: "SpyTest_2.CallClass /* Test_lib method */")
-		Assert(spy1.Name is: "SpyTest_2")
-		Assert(spy1.Paths is: #("CallClass"))
+		Assert(spy1.Name is: #SpyTest_2)
+		Assert(spy1.Paths is: #(CallClass))
 		Assert(not spy1.InNew?)
-		Assert(spy1.Lib is: "Test_lib")
+		Assert(spy1.Lib is: #Test_lib)
 		Assert(spy1.Method?)
-		Assert(spy1.Params is: '(a,_b=1)')
+		Assert(spy1.Params is: "(a, _b = 1)")
 
-		spy2 = fakeSpy(Global("SpyTest_3?"))
+		spy2 = fakeSpy(Global(#SpyTest_3?))
 		target = "SpyTest_3?.CallClass /* Test_lib method */"
 		Assert(Display(spy2.Target) is: target)
-		Assert(spy2.Name is: "SpyTest_3?")
-		Assert(spy2.Paths is: #("CallClass"))
-		Assert(not spy1.InNew? )
-		Assert(spy2.Lib is: "Test_lib")
+		Assert(spy2.Name is: #SpyTest_3?)
+		Assert(spy2.Paths is: #(CallClass))
+		Assert(not spy1.InNew?)
+		Assert(spy2.Lib is: #Test_lib)
 		Assert(spy2.Method?)
-		Assert(spy2.Params is: '()')
+		Assert(spy2.Params is: "()")
 
-		spy3 = fakeSpy(Global("SpyTest_4"))
-		target = LibraryTags.GetTagsInUse().Has?('__trial')
+		spy3 = fakeSpy(Global(#SpyTest_4))
+		target = LibraryTags.GetTagsInUse().Has?("__trial")
 			? "SpyTest_4.CallClass /* Test_lib__trial method */"
 			: "SpyTest_4.CallClass /* Test_lib method */"
 		Assert(Display(spy3.Target) is: target)
-		Assert(spy3.Name is: "SpyTest_4")
-		Assert(spy3.Paths is: #("CallClass"))
-		Assert(not spy1.InNew? )
-		Assert(spy3.Lib is: "Test_lib")
+		Assert(spy3.Name is: #SpyTest_4)
+		Assert(spy3.Paths is: #(CallClass))
+		Assert(not spy1.InNew?)
+		Assert(spy3.Lib is: #Test_lib)
 		Assert(spy3.Method?)
-		Assert(spy3.Params is: '()')
+		Assert(spy3.Params is: "()")
 
 		spy4 = fakeSpy(Global("SpyTest_5.New"))
-		Assert(spy4.Paths is: #("New"))
+		Assert(spy4.Paths is: #(New))
 		Assert(spy4.InNew?)
 		}
 
 	Test_CallClass()
 		{
-		.SpyOn(Xml).Return('<body></body>')
-		Assert(Xml(#(abc: 'test')) is: '<body></body>')
+		.SpyOn(Xml).Return("<body></body>")
+		Assert(Xml(#(abc: test)) is: "<body></body>")
 
 		// QueryCost.CallClass and GetContributions.CallClass are defined in Memoize
 		// testing spy to not override Memoize.CallClass
-		.SpyOn(GetContributions).Return(#('return from GetContributions'))
-		result = QueryCost('stdlib')
+		.SpyOn(GetContributions).Return(#("return from GetContributions"))
+		result = QueryCost(#stdlib)
 		Assert(result hasMember: #nrecs)
 		}
 
 	Test_New()
 		{
 		spy = .SpyOn(Global("SpyTest_5.New"))
-		Assert({ spy.Return('return') }
-			throws: 'Spy.Return is not allowed on .New method; use .ReturnNothing')
-		spy.Throw('a > 5', when: { |a| a > 5 })
-		spy.ReturnNothing(when: { |a| a is 5 })
-		Assert({ new (Global('SpyTest_5'))(4) } throws: 'from New')
-		new (Global('SpyTest_5'))(5)
-		Assert({ new (Global('SpyTest_5'))(6) } throws: 'a > 5')
+		Assert({ spy.Return(#return) }
+			throws: "Spy.Return is not allowed on .New method; use .ReturnNothing")
+		spy.Throw("a > 5", when: {|a| a > 5 })
+		spy.ReturnNothing(when: {|a| a is 5 })
+		Assert({ new (Global(#SpyTest_5))(4) } throws: "from New")
+		new (Global(#SpyTest_5))(5)
+		Assert({ new (Global(#SpyTest_5))(6) } throws: "a > 5")
 		}
 	}

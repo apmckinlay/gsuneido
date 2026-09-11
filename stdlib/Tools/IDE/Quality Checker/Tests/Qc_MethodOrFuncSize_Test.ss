@@ -2,8 +2,7 @@
 Test
 	{
 	arr_classes: (
-		(code:
-"// Copyright (C) 2013 Suneido Software Corp. All rights reserved worldwide.
+		(code: "// Copyright (C) 2013 Suneido Software. All rights reserved worldwide.
 class
 	{
 	N: 8 // block size (number of lines)------------------
@@ -127,23 +126,22 @@ class
 	PubMeth9(){}
 	PubMeth10(){}
 	}",
-		warnings: (warnings: ([name: "stdlib:className:5 - 61 lines in CallClass"]),
-			desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 2),
-		fullWarnings: (warnings: ([name: "61 lines in CallClass"],
-				[name: "21 lines in process1"],
-				[name: "11 lines in hash"],
-				[name: "7 lines in Detect"],
-				[name: "7 lines in process"],
-				[name: "6 lines in output"],
-				[name: "1 lines in PubMeth7"],
-				[name: "1 lines in PubMeth8"],
-				[name: "1 lines in PubMeth9"],
-				[name: "1 lines in PubMeth10"]),
-			desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 2),
-		lineWarnings: ((5))),
+			warnings: (warnings: ([name: "stdlib:className:5 - 61 lines in CallClass"]),
+				desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 2),
+			fullWarnings: (warnings: ([name: "61 lines in CallClass"],
+					[name: "21 lines in process1"],
+					[name: "11 lines in hash"],
+					[name: "7 lines in Detect"],
+					[name: "7 lines in process"],
+					[name: "6 lines in output"],
+					[name: "1 lines in PubMeth7"],
+					[name: "1 lines in PubMeth8"],
+					[name: "1 lines in PubMeth9"],
+					[name: "1 lines in PubMeth10"]),
+				desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 2),
+			lineWarnings: ((5))),
 
-	(code:
-"// Copyright (C) 2005 Suneido Software Corp. All rights reserved worldwide.copyright
+		(code: "// Copyright (C) 2005 Suneido Software. All rights reserved worldwide.
 	//
 			// with comment
 // pass in an object for warnings and/or size_warnings to get those results
@@ -201,7 +199,7 @@ class
 		x
 		x
 		try
-			code.Compile(w)
+			Suneido.Compile(code)
 		catch (err)
 			{
 			line = err.Prefix?('syntax error at line ')
@@ -367,25 +365,24 @@ class
 	privMeth9(){}
 	privMeth10(){}
 	}",
-		warnings: (warnings: ([name: "stdlib:className:73 - 61 lines in skip?"],
-				[name: "stdlib:className:134 - 61 lines in isWeb?"],
-				[name: "stdlib:className:30 - 41 lines in compile"]),
-			desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 0),
-		fullWarnings: (warnings: ([name: "61 lines in skip?"],
-				[name: "61 lines in isWeb?"],
-				[name: "41 lines in compile"],
-				[name: "21 lines in CallClass"],
-				[name: "12 lines in check_line_lengths"],
-				[name: "6 lines in check_method_sizes"],
-				[name: "5 lines in check_sizes"],
-				[name: "1 lines in PubMeth8"],
-				[name: "1 lines in privMeth9"],
-				[name: "1 lines in privMeth10"]),
-			desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 0),
-		lineWarnings: ((73), (134), (30))),
+			warnings: (warnings: ([name: "stdlib:className:73 - 61 lines in skip?"],
+					[name: "stdlib:className:134 - 61 lines in isWeb?"],
+					[name: "stdlib:className:30 - 41 lines in compile"]),
+				desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 0),
+			fullWarnings: (warnings: ([name: "61 lines in skip?"],
+					[name: "61 lines in isWeb?"],
+					[name: "41 lines in compile"],
+					[name: "21 lines in CallClass"],
+					[name: "12 lines in check_line_lengths"],
+					[name: "6 lines in check_method_sizes"],
+					[name: "5 lines in check_sizes"],
+					[name: "1 lines in PubMeth8"],
+					[name: "1 lines in privMeth9"],
+					[name: "1 lines in privMeth10"]),
+				desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 0),
+			lineWarnings: ((73), (134), (30))),
 
-	(code:
-"// Copyright (C) 2003 Suneido Software Corp. All rights reserved worldwide.
+		(code: "// Copyright (C) 2003 Suneido Software. All rights reserved worldwide.
 Controller
 	{
 	Title: 'Refactor'
@@ -423,38 +420,40 @@ Controller
 	PubMeth10(){ }
 
 	}",
-		warnings: (warnings: (), desc: "", rating: 5),
-		fullWarnings: (warnings: ([name: "5 lines in New"],
-				[name: "5 lines in init"],
-				[name: "5 lines in controls"],
-				[name: "5 lines in Edit_Change"],
-				[name: "4 lines in On_OK"],
-				[name: "1 lines in PubMeth6"],
-				[name: "1 lines in PubMeth7"],
-				[name: "1 lines in PubMeth8"],
-				[name: "1 lines in PubMeth9"],
-				[name: "1 lines in PubMeth10"]),
-			desc: "Method sizes - Rating not affected -> Limit to 40 lines", rating: 5),
-		lineWarnings: ()),
+			warnings: (warnings: (), desc: "", rating: 5),
+			fullWarnings: (warnings: ([name: "5 lines in New"],
+					[name: "5 lines in init"],
+					[name: "5 lines in controls"],
+					[name: "5 lines in Edit_Change"],
+					[name: "4 lines in On_OK"],
+					[name: "1 lines in PubMeth6"],
+					[name: "1 lines in PubMeth7"],
+					[name: "1 lines in PubMeth8"],
+					[name: "1 lines in PubMeth9"],
+					[name: "1 lines in PubMeth10"]),
+				desc: "Method sizes - Rating not affected -> Limit to 40 lines",
+				rating: 5),
+			lineWarnings: ()),
 
-	(code: "class
+		(code: "class
 	{
 	}",
-		warnings: (warnings: (), desc: "", rating: 5),
-		fullWarnings: (warnings: (),
-			desc: "No methods found to check method sizes", rating: 5),
-		lineWarnings: ()),
+			warnings: (warnings: (), desc: "", rating: 5),
+			fullWarnings: (warnings: (),
+				desc: "No methods found to check method sizes", rating: 5),
+			lineWarnings: ()),
 
-	(code: "function ()
+		(code: "function ()
 	{
 	return 1
 	}",
-		warnings: (warnings: (), desc: "", rating: 5),
-		fullWarnings: (warnings: ([name: "4 lines in function"]),
-			desc: "Method sizes - Rating not affected -> Limit to 40 lines", rating: 5),
-		lineWarnings: ()),
+			warnings: (warnings: (), desc: "", rating: 5),
+			fullWarnings: (warnings: ([name: "4 lines in function"]),
+				desc: "Method sizes - Rating not affected -> Limit to 40 lines",
+				rating: 5),
+			lineWarnings: ()),
 
-	(code: "//hello
+		(code: "//hello
 // test comment
 function ()
 	{
@@ -505,27 +504,27 @@ function ()
 	x
 	return 1
 	}",
-		warnings: (warnings: ([name: "stdlib:className:3 - 49 lines in function"]),
-			desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 0),
-		fullWarnings: (warnings: ([name: "49 lines in function"]),
-			desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 0),
-		lineWarnings: ((3)))
-	)
+			warnings: (warnings: ([name: "stdlib:className:3 - 49 lines in function"]),
+				desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 0),
+			fullWarnings: (warnings: ([name: "49 lines in function"]),
+				desc: "Method sizes - Rating affected -> Limit to 40 lines", rating: 0),
+			lineWarnings: ((3)))
+		)
 
 	Test_MethodOrFuncSize()
 		{
-		recordData = Record(recordName: "className", lib: "stdlib")
+		recordData = [recordName: #className, lib: #stdlib]
 		for test in .arr_classes
 			{
 			recordData.code = test.code
 			warnings = Qc_MethodOrFuncSize(recordData, minimizeOutput?:)
-			lineWarnings = warnings.Extract('lineWarnings')
+			lineWarnings = warnings.Extract(#lineWarnings)
 			Assert(warnings is: test.warnings)
 			Assert(lineWarnings is: test.lineWarnings)
 
 			fullWarnings = Qc_MethodOrFuncSize(recordData, lineWarnings,
 				minimizeOutput?: false)
-			lineWarnings = fullWarnings.Extract('lineWarnings')
+			lineWarnings = fullWarnings.Extract(#lineWarnings)
 			Assert(fullWarnings is: test.fullWarnings)
 			Assert(lineWarnings isSize: 0)
 			}

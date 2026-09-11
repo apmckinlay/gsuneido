@@ -31,12 +31,17 @@ Addon_VirtualListViewBase
 		Reporter()
 		}
 
+	On_Context_Reporter_Forms()
+		{
+		Reporter(printMode:, addButtons:, reporterMode: #form)
+		}
+
 	On_Context_Reason_Protected()
 		{
 		rec = .GetContextMenu().ContextRec
 		query = .Model.GetQuery()
-		ListCustomize.ReasonProtected(
-			rec, .Model.EditModel.ProtectField , .GetGridHwnd(), query, foreignKeyUsage?:)
+		ListCustomize.ReasonProtected(rec, .Model.EditModel.ProtectField, .GetGridHwnd(),
+			query, foreignKeyUsage?:)
 		}
 
 	On_Context_Reset_Columns()
@@ -46,8 +51,8 @@ Addon_VirtualListViewBase
 
 	On_Context_Customize_Columns()
 		{
-		.Model.ColModel.CustomizeColumns(
-			.Parent, .Model.GetQuery(), .Model.EditModel.Editable?())
+		.Model.ColModel.CustomizeColumns(.Parent, .Model.GetQuery(),
+			.Model.EditModel.Editable?())
 		.Grid.ScrollToLeft()
 		}
 
@@ -55,8 +60,8 @@ Addon_VirtualListViewBase
 		{
 		if .SaveFirst() is false
 			return true
-		if 0 is subTitle = .Send('VirtualList_GetSubTitle')
-			subTitle = ''
+		if 0 is subTitle = .Send(#VirtualList_GetSubTitle)
+			subTitle = ""
 		if .Model.ColModel.Customize(.Parent, .Model.GetQuery(), :subTitle)
 			{
 			.Repaint(keepPos?:)
@@ -69,11 +74,11 @@ Addon_VirtualListViewBase
 		if .SaveFirst() is false
 			return true
 		query = .Model.GetQuery()
-		if 0 is defaultExpandLayout = .Send('VirtualList_DefaultExpandLayout')
-			defaultExpandLayout = ''
+		if 0 is defaultExpandLayout = .Send(#VirtualList_DefaultExpandLayout)
+			defaultExpandLayout = ""
 		if .Model.ExpandModel.Customize(query, .ExpandColumns(), defaultExpandLayout,
 			.GetAccessCustomKey())
-			.Send('BookRefresh')
+			.Send(#BookRefresh)
 		}
 
 	On_Context_Global(item)

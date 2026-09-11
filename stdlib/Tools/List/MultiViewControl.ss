@@ -1,25 +1,25 @@
 // Copyright (C) 2018 Suneido Software Corp. All rights reserved worldwide.
 CommandParent
 	{
-	Name: 'MultiView'
+	Name:         #MultiView
 
 	constructed?: false
 	New(.args, .accessArgs, .listArgs, .accessGoTo? = false, defaultMode = 0,
 		.embedded = false)
 		{
 		super(.layout(args))
-		.modeSaveName = args.option $ '_ListMode'
+		.modeSaveName = args.option $ "_ListMode"
 		.query = args[0]
-		.access = .FindControl('Access')
-		.list = .FindControl('VirtualList')
-		.flip = .FindControl('Flip')
-		.total = .FindControl('ThreadTotal')
-		.locate = .access.FindControl('Locate')
-		.access.Redir('On_Flip_To_List', this)
-		.list.Redir('On_Flip_To_Access', this)
+		.access = .FindControl(#Access)
+		.list = .FindControl(#VirtualList)
+		.flip = .FindControl(#Flip)
+		.total = .FindControl(#ThreadTotal)
+		.locate = .access.FindControl(#Locate)
+		.access.Redir(#On_Flip_To_List, this)
+		.list.Redir(#On_Flip_To_Access, this)
 		.constructed? = true
 
-		userSetting = UserSettings.Get(.modeSaveName, 'none') // false is accessmode
+		userSetting = UserSettings.Get(.modeSaveName, #none) // false is accessmode
 		if .embedded
 			{
 			.list.Commands = #()
@@ -29,7 +29,7 @@ CommandParent
 
 		.initFlip(userSetting, defaultMode)
 		.initSelects(args)
-		if false isnt highlight = args.GetDefault('highlightrows', false)
+		if false isnt highlight = args.GetDefault(#highlightrows, false)
 			.list.HighlightValues(@highlight)
 		}
 
@@ -37,15 +37,15 @@ CommandParent
 		{
 		if accessGoTo?
 			.accessGoTo? = true
-		if (not .accessGoTo? and
-			(userSetting is true or (userSetting is 'none' and defaultMode is .listMode)))
+		if not .accessGoTo? and
+			(userSetting is true or (userSetting is #none and defaultMode is .listMode))
 			.flipToList(fromNew?:)
 		}
 
 	initSelects(args)
 		{
-		selectName = AccessSelectMgr.DefaultSelectName(
-			this, args.GetDefault('title', ''), .query)
+		selectName =
+			AccessSelectMgr.DefaultSelectName(this, args.GetDefault(#title, ""), .query)
 		.access.SetSelectMgr(selectName, .accessArgs)
 		if .embedded
 			return
@@ -87,7 +87,7 @@ CommandParent
 		{
 		// Distinguishes between messages sent from the MultiView Virtual List and a VL
 		// inside an AccessControl. Assumes that any VL in an access will be named
-		if args.source.Base?(VirtualListControl) and args.source.Name isnt 'VirtualList'
+		if args.source.Base?(VirtualListControl) and args.source.Name isnt #VirtualList
 			return .Send(@args)
 		return super.Msg(args)
 		}
@@ -97,14 +97,14 @@ CommandParent
 		{
 		if permission isnt false and AccessPermissions(permission) isnt true
 			{
-			.AlertInfo(.access.GetTitle(), 'You do not have permission for this option')
+			.AlertInfo(.access.GetTitle(), "You do not have permission for this option")
 			return
 			}
 
-		if not .SaveFor('Print ' $ reportClass.AccessTitle $ ' on')
+		if not .SaveFor("Print " $ reportClass.AccessTitle $ " on")
 			return
 
-		args = Object(data is false ? .GetData(source) : data)
+		args = [data is false ? .GetData(source) : data]
 		if additionalArgs isnt false
 			args.Merge(additionalArgs)
 		ToolDialog(.Window.Hwnd, reportClass(@args))
@@ -112,65 +112,60 @@ CommandParent
 			.Refresh()
 		}
 
-	Commands: #(
-		#('Flip', 'Alt+A')
-		)
+	Commands: ((Flip, "Alt+A"))
 
-	layout(args, _accessGoTo? = false)
+	layout(args)
 		{
 		.accessArgs = args.Copy().Merge(.accessArgs)
 		.accessArgs.fromMultiView = true
 		.listArgs = args.Copy().Merge(.listArgs)
 
-		access = .accessArgs.Copy().Add('Access', at: 0)
-		list = .listArgs.Copy().Add('VirtualList', at: 0)
+		access = .accessArgs.Copy().Add(#Access, at: 0)
+		list = .listArgs.Copy().Add(#VirtualList, at: 0)
 		// setting up VL with empty query / columns so we only do 1 query when setting up
-		list[1] = ''
+		list[1] = ""
 		list.columns = #()
-		list.enableUserDefaultSelect = not accessGoTo?
-		if .embedded
-			list.enableUserDefaultSelect = false
-
-		list.titleLeftCtrl = .flipButton(highlighted: 0, command: 'Flip_To_Access')
+		list.titleLeftCtrl = .flipButton(highlighted: 0, command: #Flip_To_Access)
 		list.switchToForm = true
-		if not .listArgs.Member?('filtersOnTop')
+		if not .listArgs.Member?(#filtersOnTop)
 			list.filtersOnTop = true
-		access.titleLeftCtrl = .flipButton(highlighted: 1, command: 'Flip_To_List')
+		access.titleLeftCtrl = .flipButton(highlighted: 1, command: #Flip_To_List)
 		.ensureDefaultCols()
-		totalLayout = .listArgs.Extract('totalLayout', #())
+		totalLayout = .listArgs.Extract(#totalLayout, #())
 		if Object?(totalLayout) and not totalLayout.Empty?()
-			list = Object('Vert', list, totalLayout)
+			list = [#Vert, list, totalLayout]
 
-		return Object('Flip', access, list)
+		return [#Flip, access, list]
 		}
 
 	flipButton(highlighted, command)
 		{
 		tip = not .embedded
-			? 'switch between list and form view (Alt+A)'
-			: 'access this record in form view (Alt+A)'
-		return Object('Border',
-			Object('EnhancedButton',
-				image: Object('view_list.emf', 'view_form.emf', :highlighted),
-				mouseEffect:, imagePadding: .1, :command, :tip),
-			border: 6)
+			? "switch between list and form view (Alt+A)"
+			: "access this record in form view (Alt+A)"
+		return [#Border,
+			[#EnhancedButton,
+				image: ["view_list.emf", "view_form.emf", :highlighted], mouseEffect:,
+				imagePadding: .1, :command, :tip],
+			border: 6]
 		}
+
 	ensureDefaultCols()
 		{
-		Assert(.listArgs hasMember: 'option')
-		Assert(.listArgs hasMember: 'title')
-		Assert(.listArgs hasMember: 'defaultColumns')
-		if not .listArgs.Member?('columns')
+		Assert(.listArgs hasMember: #option)
+		Assert(.listArgs hasMember: #title)
+		Assert(.listArgs hasMember: #defaultColumns)
+		if not .listArgs.Member?(#columns)
 			.listArgs.columns = QuerySelectColumns(.listArgs[0]).
 				RemoveIf(Internal?).
-				Difference(.listArgs.GetDefault('excludeSelectFields', #()))
+				Difference(.listArgs.GetDefault(#excludeSelectFields, #()))
 		}
 
 	AccessGoto(field, value, wrapper = false)
 		{
 		.access.AccessGoto(field, value)
 		if wrapper isnt false
-			wrapper.Redir('On_Flip', this)
+			wrapper.Redir(#On_Flip, this)
 		}
 
 	GotoRecord(field, value)
@@ -199,12 +194,12 @@ CommandParent
 	// START - Methods to handle common operations on both list and access
 	Access_NewRecord(data)
 		{
-		return .Send('MultiView_NewRecord', data)
+		return .Send(#MultiView_NewRecord, data)
 		}
 
 	VirtualList_NewRowAdded(rec)
 		{
-		return .Send('MultiView_NewRecord', rec)
+		return .Send(#MultiView_NewRecord, rec)
 		}
 
 	SetEditMode(source = false)
@@ -235,7 +230,7 @@ CommandParent
 
 	GetSelectedRecords()
 		{
-		return .accessMode?() ? Object(.access.GetData()) : .list.GetSelectedRecords()
+		return .accessMode?() ? [.access.GetData()] : .list.GetSelectedRecords()
 		}
 
 	Refresh()
@@ -278,7 +273,9 @@ CommandParent
 		}
 
 	AccessMode?()
-		{ return .accessMode?() }
+		{
+		return .accessMode?()
+		}
 
 	GetCurrentModeCtrl()
 		{
@@ -344,15 +341,14 @@ CommandParent
 	accessMode?()
 		{
 		if .embedded and .flip.GetCurrent() is .accessMode
-			ProgrammerError('Embedded MultiView should never be in Access Mode')
-		return  .flip.GetCurrent() is .accessMode
+			ProgrammerError("Embedded MultiView should never be in Access Mode")
+		return .flip.GetCurrent() is .accessMode
 		}
+
 	// END - Methods to handle common operations on both list and access - End
-
-
 	On_Flip()
 		{
-		if false is .Send('AllowFlip?')
+		if false is .Send(#AllowFlip?)
 			return
 
 		if .accessMode?()
@@ -367,8 +363,8 @@ CommandParent
 			.flipToList()
 		}
 
-	listMode: 1
-	newRecordsSinceFlip: false
+	listMode:                 1
+	newRecordsSinceFlip:      false
 	modifiedRecordsSinceFlip: false
 	flipToList(fromNew? = false)
 		{
@@ -377,7 +373,7 @@ CommandParent
 		else
 			.reloadModifiedRecords(fromNew?)
 		.flip.SetCurrent(.listMode)
-		.Defer(uniqueID: 'listSetFocus')
+		.Defer(uniqueID: #listSetFocus)
 			{
 			// ensure the default focus does not go to Access Locate,
 			// which would cause the screen to freeze when pressing up/down arrow keys
@@ -387,7 +383,7 @@ CommandParent
 		.newRecordsSinceFlip = false
 		if not fromNew?
 			{
-			.Send('MultiView_EnterListMode', list: .list)
+			.Send(#MultiView_EnterListMode, list: .list)
 			.redirToList()
 			}
 		NotesControl.UpdateStatus(.list)
@@ -423,8 +419,7 @@ CommandParent
 			return false
 
 		return .access.Select_vals isnt .prevSelVal or
-			.access.SubTables_Select_vals() isnt .prevExtraSelVal or
-			.newRecordsSinceFlip
+			.access.SubTables_Select_vals() isnt .prevExtraSelVal or .newRecordsSinceFlip
 		}
 
 	reloadModifiedRecords(fromNew?)
@@ -452,14 +447,14 @@ CommandParent
 		// excludeCustomize? can be set in args, accessArgs, or listArgs, (setting the
 		// controls accordingly). If .accessArgs has "excludeCustomize?: true",
 		// then Customizable is NOT required.
-		if .accessArgs.GetDefault('excludeCustomize?', false)
+		if .accessArgs.GetDefault(#excludeCustomize?, false)
 			return
 
-		if .listArgs.GetDefault('protectField', false) is false
+		if .listArgs.GetDefault(#protectField, false) is false
 			return
 
-		if not .access.AllowCustomTabs?() and false is .access.FindControl('Customizable')
-			ProgrammerError('Multiview Access is not Customizable')
+		if not .access.AllowCustomTabs?() and false is .access.FindControl(#Customizable)
+			ProgrammerError("Multiview Access is not Customizable")
 		}
 
 	VirtualList_SwitchToForm()
@@ -472,13 +467,13 @@ CommandParent
 		empty? = .list.GetLoadedData().Empty?()
 		if not .list.SaveOutstandingChanges()
 			{
-			.AlertInfo(.access.GetTitle(), 'Please correct the highlighted line.')
+			.AlertInfo(.access.GetTitle(), "Please correct the highlighted line.")
 			return
 			}
 		rec = false
 		if not empty? and false is rec = .list.GetSelectedRecord()
 			{
-			.AlertInfo(.access.GetTitle(), 'Please select a line')
+			.AlertInfo(.access.GetTitle(), "Please select a line")
 			return
 			}
 		goToField = .getGoToField()
@@ -511,16 +506,16 @@ CommandParent
 	flip_AccessGoTo(empty?, key, rec)
 		{
 		if empty? or rec is false or
-			0 is accessInfo = .Send('MultiView_EmbeddedAccessInfo', rec)
+			0 is accessInfo = .Send(#MultiView_EmbeddedAccessInfo, rec)
 			return
 
 		AccessGoTo(accessInfo.accessScreen, key, rec[key], .Window.Hwnd,
-			defaultSelect: accessInfo.defaultSelect, onDestroy:	.list.Refresh)
+			defaultSelect: accessInfo.defaultSelect, onDestroy: .list.Refresh)
 		return
 		}
 
-	accessMode: 0
-	prevSelVal: false
+	accessMode:      0
+	prevSelVal:      false
 	prevExtraSelVal: false
 	flipToAccess()
 		{
@@ -554,18 +549,18 @@ CommandParent
 	// START - Common Message Handlers
 	VirtualList_BeforeSave(@args)
 		{
-		return .Send('MultiView_BeforeSave', args)
+		return .Send(#MultiView_BeforeSave, args)
 		}
 
 	AccessBeforeSave(@args)
 		{
 		args.data = .access.GetData()
-		return .Send('MultiView_BeforeSave', args)
+		return .Send(#MultiView_BeforeSave, args)
 		}
 
 	VirtualList_RecordChange(member, record)
 		{
-		.Send('MultiView_RecordChange', member, record)
+		.Send(#MultiView_RecordChange, member, record)
 		}
 
 	Access_RecordChange(members)
@@ -574,17 +569,17 @@ CommandParent
 		// NOTE: Careful with converting Access to MultiView.
 		// In Access, members are all in one Object, in multiview it will be a string.
 		for member in members
-			.Send('MultiView_RecordChange', member, record)
+			.Send(#MultiView_RecordChange, member, record)
 		}
 
 	Access_ConfirmDestroy()
 		{
-		.Send('MultiView_ConfirmDestroy')
+		.Send(#MultiView_ConfirmDestroy)
 		}
 
 	VirtualList_AfterField(field, value, data)
 		{
-		.Send('MultiView_AfterField', field, value, data)
+		.Send(#MultiView_AfterField, field, value, data)
 		}
 
 	Access_AfterField(field, value)
@@ -593,30 +588,30 @@ CommandParent
 			return
 
 		data = .access.GetData()
-		.Send('MultiView_AfterField', field, value, data)
+		.Send(#MultiView_AfterField, field, value, data)
 		}
 
 	AccessBeforeSaving()
 		{
 		data = .access.GetData()
-		.Send('MultiView_BeforeSaving', data)
+		.Send(#MultiView_BeforeSaving, data)
 		}
 
 	VirtualList_BeforeSave_PreTran(rec)
 		{
-		.Send('MultiView_BeforeSaving', rec)
+		.Send(#MultiView_BeforeSaving, rec)
 		}
 
 	Access_AllowDelete()
 		{
-		return .Send('MultiView_AllowDelete', .access.GetData())
+		return .Send(#MultiView_AllowDelete, .access.GetData())
 		}
 
 	VirtualList_AllowDelete(rec)
 		{
 		if .accessMode?()
 			return false
-		return .Send('MultiView_AllowDelete', rec)
+		return .Send(#MultiView_AllowDelete, rec)
 		}
 
 	VirtualList_AllowInsert()
@@ -629,33 +624,33 @@ CommandParent
 		if .accessMode?()
 			return false
 
-		return false isnt .Send('MultiView_AllowNewRecord')
+		return false isnt .Send(#MultiView_AllowNewRecord)
 		}
 
 	AccessBeforeDelete(t)
 		{
-		.Send('MultiView_BeforeDelete', .access.GetData(), t)
+		.Send(#MultiView_BeforeDelete, .access.GetData(), t)
 		}
 
 	VirtualList_BeforeDelete(data, t)
 		{
-		.Send('MultiView_BeforeDelete', data, t)
+		.Send(#MultiView_BeforeDelete, data, t)
 		}
 
 	AccessAfterSave(t)
 		{
-		.Send('MultiView_AfterSave', .access.GetData(), t)
+		.Send(#MultiView_AfterSave, .access.GetData(), t)
 		.orig = .access.GetOriginal().Copy()
 		}
 
 	VirtualList_AfterSave(data, t)
 		{
-		.Send('MultiView_AfterSave', data, t)
+		.Send(#MultiView_AfterSave, data, t)
 		}
 
 	VirtualList_AfterSaving(record)
 		{
-		.Send('MultiView_AfterSaving', record)
+		.Send(#MultiView_AfterSaving, record)
 		}
 
 	SelectControl_Changed()
@@ -669,8 +664,10 @@ CommandParent
 			.access.SetSelectVals(.list.Select_vals.Copy())
 		}
 
-	VirtualList_BeforeApplySelect(@unused)
+	VirtualList_BeforeApplySelect(where/*unused*/, checkIfCustomQuery = false)
 		{
+		if checkIfCustomQuery
+			return false
 		.access.SetSelectVals(.list.Select_vals.Copy())
 		return true
 		}
@@ -682,7 +679,7 @@ CommandParent
 
 	AccessAfterSaving()
 		{
-		.Send('MultiView_AfterSaving', newRec = .access.GetData())
+		.Send(#MultiView_AfterSaving, newRec = .access.GetData())
 		.list.ReplaceRecord(.orig, newRec) // reload if loaded; also handles key update
 		.modifiedRecordsSinceFlip = true
 		}
@@ -695,12 +692,12 @@ CommandParent
 
 	Access_SetRecord(x, source)
 		{
-		.Send('MultiView_ItemSelected', x, ctrl: source)
+		.Send(#MultiView_ItemSelected, x, ctrl: source)
 		}
 
 	VirtualList_ItemSelected(rec, source)
 		{
-		.Send('MultiView_ItemSelected', rec, ctrl: source)
+		.Send(#MultiView_ItemSelected, rec, ctrl: source)
 		}
 
 	VirtualList_AfterChanged(saved)
@@ -722,32 +719,32 @@ CommandParent
 		{
 		linkedBrowses = .access.GetLinkedBrowseTabs()
 		for idx in linkedBrowses.Members().Sort!()
-			{
 			block(linkedBrowses[idx])
-			}
 		}
 
 	VirtualList_ExtraFilters()
 		{
 		selects = Object()
 		AccessSubtables.Layout(.access)
-			{ |control, linkedName, saveName|
+			{|control, linkedName, saveName|
 			selects.Add(Object(:linkedName, :saveName, :control))
 			}
 		return selects
-	}
+		}
 
 	VirtualList_ExtraWhere(selectControls = false)
 		{
 		return .access.SubTables_Where(selectControls)
 		}
+
 	VirtualList_ExtraConditions()
 		{
 		return #()
 		}
+
 	Access_BeforeRecord(rec)
 		{
-		.Send('MultiView_BeforeRecord', rec)
+		.Send(#MultiView_BeforeRecord, rec)
 		}
 
 	VirtualList_ExtraSetupRecordFn()
@@ -757,10 +754,10 @@ CommandParent
 
 	HandleBeforeRecord(rec)
 		{
-		.Send('MultiView_BeforeRecord', rec)
+		.Send(#MultiView_BeforeRecord, rec)
 		}
-	// END - Common Message Handlers
 
+	// END - Common Message Handlers
 	Destroy()
 		{
 		if not .accessGoTo? and not .embedded

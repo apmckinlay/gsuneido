@@ -1281,6 +1281,14 @@ Control
 			.Act('ScrollColToView', col)
 		}
 
+	SelectAndScrollToCenter(row)
+		{
+		if .hideContent is true
+			return
+		.SetSelection(row)
+		.Act('ScrollRowToCenter', row)
+		}
+
 	DoWithCurrentVScrollPos(block)
 		{
 		.Act('SaveVScrollPos')

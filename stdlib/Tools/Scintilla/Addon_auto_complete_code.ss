@@ -3,7 +3,7 @@
 // TODO change defaultMethods to most common instead of all basic
 Addon_auto_complete
 	{
-	minWordSize: 3
+	minWordSize:  3
 	scanInterval: 5 // scan at most every this many seconds
 
 	Init()
@@ -14,6 +14,7 @@ Addon_auto_complete
 		.lastIdleAfterChange = Date()
 		.paramsCache = Object()
 		}
+
 	AutoComplete(word)
 		{
 		if word.Has?('.')
@@ -21,12 +22,14 @@ Addon_auto_complete
 		else
 			.autocomplete_word(word)
 		}
+
 	AutocShow(word/*unused*/, matches)
 		{
 		// override Addon_auto_complete and pass 0 as word length
 		// this is to get around Scintilla wanting an exact prefix match
 		.SCIAutocShow(0, matches)
 		}
+
 	autocomplete_method(word)
 		{
 		methods = Object()
@@ -40,6 +43,7 @@ Addon_auto_complete
 
 		.AutoShow(word, .Matches(methods, word))
 		}
+
 	thisMembers(word)
 		{
 		if word is ""
@@ -61,7 +65,7 @@ Addon_auto_complete
 
 	buildParamMatchCandidates(word)
 		{
-		if word !~ '^[a-z]'
+		if word !~ "^[a-z]"
 			return []
 
 		if false is paramList = .getParamList()
@@ -78,7 +82,7 @@ Addon_auto_complete
 		if caller[0] is '.'
 			{
 			caller = caller[1..]
-			name = .Send("CurrentName")
+			name = .Send(#CurrentName)
 			if not caller.Capitalized?()
 				caller = name $ '_' $ caller
 			caller = name $ '.' $ caller
@@ -97,30 +101,28 @@ Addon_auto_complete
 		catch
 			return false
 
-		if Type(value) not in ("Class", "Method", "Function")
+		if Type(value) not in (#Class, #Method, #Function)
 			return false
 
 		if Type(value) is #Class
-			{
-			if false isnt c = value.MethodClass('CallClass')
+			if false isnt c = value.MethodClass(#CallClass)
 				value = c.CallClass
-			else if false isnt c = value.MethodClass('New')
+			else if false isnt c = value.MethodClass(#New)
 				value = c.New
 			else
 				return false
-			}
 
 		params = value.Params()
-		fakeFunc = 'function' $ params $ '{}'
+		fakeFunc = "function" $ params $ "{}"
 		try
 			{
-			ast = Tdop(fakeFunc)
+			ast = Suneido.Parse(fakeFunc)
 			list = Object()
-			if ast[2].Token is TDOPTOKEN.PAREM_AT
-				list.Add(ast[2][1].Value)
-			else
-				for param in ast[2].Children
-					list.Add(param[1].Value)
+			for (i = 0; i < ast.params.size; ++i)
+				{
+				name = ast.params[i].name
+				list.Add(name[0] is '@' ? name[1..] : name)
+				}
 			return list
 			}
 		catch
@@ -168,7 +170,7 @@ Addon_auto_complete
 		{
 		text = .Get()
 		.text_names = .getTextNames(text)
-		if LibRecordType(text) is 'class'
+		if LibRecordType(text) is "class"
 			{
 			.private_members = ClassHelp.PrivateMembers(text)
 			.public_members = ClassHelp.PublicMembers(text)
@@ -177,6 +179,7 @@ Addon_auto_complete
 		else
 			.private_members = .public_members = .all_members = #()
 		}
+
 	getTextNames(text)
 		{
 		words = Object()
@@ -196,7 +199,7 @@ Addon_auto_complete
 			{
 			if false is range = ClassHelp.MethodRange(text, pos)
 				return false
-			text = text[range.from..range.to]
+			text = text[range.from .. range.to]
 			pos -= range.from
 			}
 
@@ -212,12 +215,10 @@ Addon_auto_complete
 		while scan isnt scan.Next() and scan.Position() <= pos
 			{
 			if inBody?
-				{
 				if scan.Ahead() is '('
 					stack.Push(.handleLParen(scan))
 				else if scan.Token() is ')'
 					stack.Pop()
-				}
 			inBody? = inBody? or scan.Token() is '{'
 			}
 

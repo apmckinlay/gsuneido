@@ -25,7 +25,7 @@ class
 		{
 		lts = Object()
 		for lib in libs
-			lts.Add(new TreeModel(lib.Tr('()')))
+			lts.Add(new TreeModel(lib.Tr("()")))
 		return lts
 		}
 
@@ -37,23 +37,24 @@ class
 	Create(library)
 		{
 		TreeModel.Create(library)
-		.database("alter " $ library $
-			" create (text, lib_invalid_text, lib_modified) " $
+		.database("alter " $ library $ " create (text, lib_invalid_text, lib_modified) " $
 			" key (name, group)")
 		SvcDisabledLibraries.ResetCache()
 		}
 
 	database(q)
-		{ Database(q) }
+		{
+		Database(q)
+		}
 
-	libNumFactor: 100000
+	libNumFactor: 100_000
 	Children(parent)
 		{
 		if parent is 0
 			{
 			items = Object()
 			for lib in .libs.Members()
-				items.Add(Object(name: .libs[lib], group: true, num: .libNum(lib)))
+				items.Add(Object(name: .libs[lib], group:, num: .libNum(lib)))
 			return items
 			}
 		else
@@ -119,15 +120,15 @@ class
 		lib = .lib(num)
 		if 0 is num %= .libNumFactor // Library root item
 			{
-			table = name = .libs[lib].Tr('()')
-			return [:name, :table, group:]
+			table = name = .libs[lib].Tr("()")
+			return [:name, :table, group:, :num]
 			}
 
 		if false is item = .lts[lib].Get(num)
 			return false
 
-		item.keyNum = item.num 		// Original record num (key value)
-		item.num += .libNum(lib)	// Mangled record num (syncs with the TreeView)
+		item.keyNum = item.num // Original record num (key value)
+		item.num += .libNum(lib) // Mangled record num (syncs with the TreeView)
 		item.parent += .libNum(lib)
 		if item.group is false
 			.setItemText(item, origText?)
@@ -136,8 +137,8 @@ class
 
 	DisplayName(table, name)
 		{
-		table = table.Tr('()')
-		if '' is name = name.Tr('()')
+		table = table.Tr("()")
+		if "" is name = name.Tr("()")
 			name = table // Library folders do not have "name" set
 		return Libraries().Has?(table) ? name : '(' $ name $ ')'
 		}
@@ -145,15 +146,17 @@ class
 	setItemText(item, origText?)
 		{
 		// Add a beforeText value on select to compare code changes
-		if item.lib_before_text is '' and item.lib_modified is '' and
-			item.lib_committed isnt ''
+		if item.lib_before_text is "" and item.lib_modified is "" and
+			item.lib_committed isnt ""
 			item.lib_before_text = item.text
 		if not origText?
 			item.text = item.lib_current_text
 		}
 
 	Save(x)
-		{ .codeState.Save(x) }
+		{
+		.codeState.Save(x)
+		}
 
 	Update(x)
 		{
@@ -198,7 +201,7 @@ class
 	move(x, newParent, fromTable, toTable, t) // Recursive
 		{
 		DoWithTran(t, update:)
-			{ |t|
+			{|t|
 			x.group
 				? .moveFolder(x, newParent, fromTable, toTable, t)
 				: .moveItem(x, newParent, fromTable, toTable, t)
@@ -224,14 +227,14 @@ class
 		for child in children
 			.move(child, x.num, fromTable, toTable, t)
 		if tableMove
-			t.QueryDo('delete ' $ fromTable.Table() $ ' where num is ' $ origNum)
+			t.QueryDo("delete " $ fromTable.Table() $ " where num is " $ origNum)
 		x.group = true
 		}
 
 	childrenToMove(svcTable, parent, t)
 		{
 		children = Object()
-		t.QueryApply(svcTable.Table() $ ' where group >= -1 and parent is ' $ parent)
+		t.QueryApply(svcTable.Table() $ " where group >= -1 and parent is " $ parent)
 			{
 			if not it.group = it.group > -1
 				it.lib_before_path = svcTable.GetPath(it, t)
@@ -264,7 +267,7 @@ class
 		children = Object()
 		.collectChildren(libname, rec.num, children, svcTable = SvcTable(libname))
 		QueryApply1(libname, num: rec.num)
-			{ |folder|
+			{|folder|
 			folder.name = newName
 			folder.Update()
 			children.Each({ svcTable.Move(it, it.parent, folder.Transaction()) })
@@ -279,7 +282,7 @@ class
 				.collectChildren(libname, rec.num, children, svcTable)
 			else if rec.group is -1
 				{
-				if rec.lib_before_path is ''
+				if rec.lib_before_path is ""
 					rec.lib_before_path = svcTable.GetPath(rec)
 				children.Add(rec)
 				}
@@ -290,7 +293,7 @@ class
 		{
 		if rec.GetDefault(#group, true)
 			return false
-		return rec.lib_committed is '' and .svcSettingsSet?() or rec.lib_modified isnt ''
+		return rec.lib_committed is "" and .svcSettingsSet?() or rec.lib_modified isnt ""
 		}
 
 	// extracted for test
@@ -301,7 +304,7 @@ class
 
 	Valid?(data)
 		{
-		return data.lib_invalid_text is ''
+		return data.lib_invalid_text is ""
 		}
 
 	Synced?(rec, savedRec)
@@ -335,25 +338,25 @@ class
 
 	deleteFolder(lib, num, tree)
 		{
-		QueryAll(lib $ ' where parent is ' $ num $ ' and group >= -1').Each()
+		QueryAll(lib $ " where parent is " $ num $ " and group >= -1").Each()
 			{
 			.deleteItem(lib, it.num, it.name, it.group isnt -1, tree)
 			}
-		QueryDo('delete ' $ lib $ ' where num is ' $ num)
+		QueryDo("delete " $ lib $ " where num is " $ num)
 		}
 
 	deleteLibrary(lib, libname)
 		{
-		if #stdlib is libname = libname.Tr('()')
-			return Alert('Cannot delete stdlib', 'Delete Library', 0, MB.ICONERROR)
+		if #stdlib is libname = libname.Tr("()")
+			return Alert("Cannot delete stdlib", "Delete Library", 0, MB.ICONERROR)
 		if Libraries().Has?(libname)
 			ServerEval(#Unuse, libname)
-		.database('drop ' $ libname)
+		.database("drop " $ libname)
 		.libs.Delete(lib)
 		.lts.Delete(lib)
 		ResetCaches()
 		LibraryTags.Reset()
-		SvcTable.Publish(#TreeChange, type: 'lib')
+		SvcTable.Publish(#TreeChange, type: #lib)
 		}
 
 	Nextnum(parent)
@@ -423,7 +426,7 @@ class
 		x = .lts[lib].EnsureUnique(x)
 		x.parent = parent
 		if x.name isnt origName
-			x.lib_committed = ''
+			x.lib_committed = ""
 		return x
 		}
 	}

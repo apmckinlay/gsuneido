@@ -1,19 +1,20 @@
 // Copyright (C) 2019 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	typeMap: #(
-		0x1: #TEXT,
-		0x2: #BINARY,
-		0x8: #CLOSE,
-		0x9: #PING,
-		0xA: #PONG,
+	typeMap: (
+		1: TEXT,
+		2: BINARY,
+		8: CLOSE,
+		9: PING,
+		10: PONG,
 		TEXT: 0x1,
 		BINARY: 0x2,
 		CLOSE: 0x8,
 		PING: 0x9,
-		PONG: 0xA)
-	closed?: false
-	Id: false
+		PONG: 0xA
+		)
+	closed?:   false
+	Id:        false
 	DBClosed?: false
 	CallClass(env, socket, appHandler)
 		{
@@ -21,26 +22,28 @@ class
 		return instance.Run()
 		}
 
-	New(.env, .socket, .appHandler) {}
+	New(.env, .socket, .appHandler) { }
 
 	Run()
 		{
 		if .handShake() is false
-			return Object('BadRequest', Object(), '')
+			return [#BadRequest, Object(), ""]
 
 		.Id = Timestamp()
 
 		open = false
 		try
-			open = (.appHandler.App)(
-				.env.Copy().Append(Object(type: #OPEN, body: '', wsHandler: this)))
+			open = (.appHandler.App)(.env.
+					Copy().
+					Append(Object(type: #OPEN, body: "", wsHandler: this)))
 		catch (e)
 			.errorHandler(e)
 
 		if open isnt true
 			{
-			if .closed? isnt true and open isnt 'close'
-				try .CloseSocket(reason: String?(open) ? open : 'Initilization failed')
+			if .closed? isnt true and open isnt #close
+				try
+					.CloseSocket(reason: String?(open) ? open : "Initilization failed")
 			return .disconnect()
 			}
 
@@ -48,23 +51,23 @@ class
 		return .disconnect()
 		}
 
-GetLevel()
-	{
-	return .level
-	}
+	GetLevel()
+		{
+		return .level
+		}
 
-	QUITLOOP: 'WebSocket Handler: QUIT_LOOP'
-	level: 0
+	QUITLOOP: "WebSocket Handler: QUIT_LOOP"
+	level:    0
 	Loop()
 		{
-		.level++
+		.level += 1
 		forever
 			{
 			req = .env.Copy()
 			try
 				{
 				req = req.Merge(.receive().Add(this, at: #wsHandler))
-				switch (req.type)
+				switch req.type
 					{
 				case #TEXT, #BINARY:
 					(.appHandler.App)(req)
@@ -77,10 +80,8 @@ GetLevel()
 				.errorCount = 0
 				}
 			catch (e)
-				{
 				if .errorHandler(e, req)
 					return
-				}
 			}
 		}
 
@@ -97,18 +98,18 @@ GetLevel()
 		if e is .QUITLOOP
 			{
 			Assert(.level greaterThan: 1) // to detect Loop problems
-			.level--
+			.level -= 1
 			return true
 			}
-		stop? = ++.errorCount >= 3 /*=max consecutive errors*/
-		.log("WebSocket Handler" $ (stop? ? ' (closing)' : '') $ ": " $ e, params: req)
+		stop? = ++.errorCount >= 3/*=max consecutive errors*/
+		.log("WebSocket Handler" $ (stop? ? " (closing)" : "") $ ": " $ e, params: req)
 		return stop?
 		}
 
-	Terminate(reason = false, e = false)
+	Terminate(reason = false, e = false, calls = "")
 		{
 		if e isnt false
-			.log(e)
+			.log(e, :calls)
 		if reason isnt false
 			.CloseSocket(:reason)
 		.disconnect()
@@ -116,29 +117,30 @@ GetLevel()
 		throw "After Thread.Exit(). Should not be here"
 		}
 
-	log(e, params = "")
+	log(e, params = "", calls = "")
 		{
 		try
-			SuneidoLog('ERROR (CAUGHT): ' $ e, :params, caughtMsg: 'needs attention')
+			SuneidoLog("ERROR (CAUGHT): " $ e, :params, :calls,
+				caughtMsg: "needs attention")
 		catch (err)
 			{
-			s = e $ ' (err: ' $ err $ ')'
-			if Type(e) is 'Except'
-				s $= '\r\n' $ e.Callstack().Map({ Display(it.fn) }).Join('\r\n')
+			s = e $ " (err: " $ err $ ')'
+			if Type(e) is #Except
+				s $= "\r\n" $ e.Callstack().Map({ Display(it.fn) }).Join("\r\n")
 			ErrorLog(s)
 			}
 		}
 
 	handShake()
 		{
-		if not .env.Member?('sec_websocket_key')
+		if not .env.Member?(#sec_websocket_key)
 			return false
 
-		key = .env['sec_websocket_key']
+		key = .env.sec_websocket_key
 		accept = Base64.Encode(Sha1(key $ "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"))
 		HttpSend(.socket, "HTTP/1.1 101 Switching Protocols",
-			[Upgrade: 'websocket', Connection: 'Upgrade', Sec_WebSocket_Accept: accept],
-			'')
+			[Upgrade: #websocket, Connection: #Upgrade, Sec_WebSocket_Accept: accept],
+			"")
 		return true
 		}
 
@@ -174,19 +176,19 @@ GetLevel()
 	read(n)
 		{
 		if false is result = .socket.Read(n)
-			throw 'socket.Read: unexpected EOF'
+			throw "socket.Read: unexpected EOF"
 		return result
 		}
 
 	calcPayloadLen(payloadLen)
 		{
-		if payloadLen < 126 /*=magic number for 16 bits*/
+		if payloadLen < 126/*=magic number for 16 bits*/
 			return payloadLen
 
-		if payloadLen is 126 /*=magic number for 16 bits*/
+		if payloadLen is 126/*=magic number for 16 bits*/
 			return (.readByte() << 8) + .readByte()
 
-		if payloadLen is 127 /*=magic number for 64 bits*/
+		if payloadLen is 127/*=magic number for 64 bits*/
 			{
 			len = 0
 			for .. 8
@@ -201,8 +203,8 @@ GetLevel()
 		e = false
 		if not .closed?
 			{
-			if req.body.Has?('CloudFlare')
-				throw 'lost connection' // to trigger reconnect
+			if req.body.Has?(#CloudFlare)
+				throw "lost connection" // to trigger reconnect
 
 			try
 				{
@@ -210,16 +212,14 @@ GetLevel()
 				.close(req.body)
 				}
 			catch (err)
-				{
 				// ignore connection error since we are already in closing
 				if not .connectionError?(err)
-					e = 'WebSocketHandler.handleClose - ' $ err
-				}
+					e = "WebSocketHandler.handleClose - " $ err
 			}
 		.Terminate(:e)
 		}
 
-	CloseSocket(code = 1000, reason = '')
+	CloseSocket(code = 1000, reason = "")
 		{
 		body = (code >> 8).Chr() $ (code & 0xff).Chr() $ reason
 		.close(body)
@@ -243,7 +243,7 @@ GetLevel()
 			return
 
 		contents = args[1..]
-		head = (0x80 /*=FIN*/ + .typeMap[type]).Chr() $
+		head = (0x80/*=FIN*/ + .typeMap[type]).Chr() $
 			.calcSendPayloadLen(contents.SumWith(#Size))
 		.socket.Write(head)
 		for content in contents
@@ -252,24 +252,24 @@ GetLevel()
 
 	calcSendPayloadLen(len)
 		{
-		if len < 126 /*=magic number for 7 bits*/
+		if len < 126/*=magic number for 7 bits*/
 			return len.Chr()
 
-		if len < 65536	/*=max 16 bits unsigned*/
-			return 126.Chr() $ (len >> 8).Chr() $ (len & 0xff).Chr() /*=magic*/
+		if len < 65_536/*=max 16 bits unsigned*/
+			return 126.Chr() $ (len >> 8).Chr() $ (len & 0xff).Chr()/*=magic*/
 
 		ob = Object()
 		for i in .. 8 /*=8 bytes*/
 			{
-			ob[7 - i] = len & 0xff /*=8 bytes*/
+			ob[7-i] = len & 0xff/*=8 bytes*/
 			len >>= 8
 			}
-		return 127.Chr() $ ob.Map(#Chr).Join() /*=magic number for 64 bits*/
+		return 127.Chr() $ ob.Map(#Chr).Join()/*=magic number for 64 bits*/
 		}
 
 	connectionError?(e)
 		{
-		return e.Has?('lost connection') or e.Prefix?('socket')
+		return e.Has?("lost connection") or e.Prefix?(#socket)
 		}
 
 	InternalError?(e)
@@ -277,9 +277,7 @@ GetLevel()
 		return .connectionError?(e) or e is .QUITLOOP
 		}
 
-	SetSocket(.socket)
-		{
-		}
+	SetSocket(.socket) { }
 
 	GetSocket()
 		{

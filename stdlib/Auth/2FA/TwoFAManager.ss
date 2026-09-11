@@ -4,7 +4,7 @@ class
 	Generate(user, sessionId, tmpPass? = false)
 		{
 		if Sys.Client?()
-			return ServerEval('TwoFAManager.Generate', user, sessionId)
+			return ServerEval("TwoFAManager.Generate", user, sessionId)
 
 		ob = .getVars()
 		.removeExpired(ob)
@@ -23,7 +23,7 @@ class
 					}
 				}
 			}
-		.log('Generate OTP failed (.tokens size: ' $ ob.tokens.Size() $ ')',
+		.log("Generate OTP failed (.tokens size: " $ ob.tokens.Size() $ ')',
 			params: [:user, :sessionId])
 		return false
 		}
@@ -33,11 +33,11 @@ class
 		return Date().Plus(minutes: 10)
 		}
 
-	SystemSessionId: 'system'
+	SystemSessionId: #system
 	Auth(user, sessionId, otp)
 		{
 		if Sys.Client?()
-			return ServerEval('TwoFAManager.Auth', user, sessionId, otp)
+			return ServerEval("TwoFAManager.Auth", user, sessionId, otp)
 
 		ob = .getVars()
 		.removeExpired(ob)
@@ -52,7 +52,7 @@ class
 	Invalidate(otp)
 		{
 		if Sys.Client?()
-			return ServerEval('TwoFAManager.Invalidate', otp)
+			return ServerEval("TwoFAManager.Invalidate", otp)
 
 		ob = .getVars()
 
@@ -64,15 +64,15 @@ class
 
 	getVars()
 		{
-		Suneido.GetInit('TwoFAManager',
-			{ Object(tokens: Object(), expires: Object(), inRemove?: false) })
+		Suneido.GetInit(#TwoFAManager,
+		{ Object(tokens: Object(), expires: Object(), inRemove?: false) })
 		}
 
-	codeLength: 6 /*=two FA code works with users existing password so it can be shorter*/
-	codeChars: '0123456789'
+	codeLength: 6/*=two FA code works with users existing password so it can be shorter*/
+	codeChars:  "0123456789"
 	passLength: 8 /*= seems sufficiently secure for a temporary password with the delay
 			protection against brute force attacks in validation */
-	passChars: "abcdefghijklmnopqrstuvwxyz"
+	passChars:  #abcdefghijklmnopqrstuvwxyz
 	GenerateOTP(tmpPass? = false)
 		{
 		length = tmpPass? ? .passLength : .codeLength
@@ -104,21 +104,19 @@ class
 
 	log(msg, params = "")
 		{
-		SuneidoLog('TwoFAManager: ERROR - ' $ msg, calls:, :params)
+		SuneidoLog("TwoFAManager: ERROR - " $ msg, calls:, :params)
 		}
 
-	SendEmail(otp, from, to, recipient, type = 'code')
+	SendEmail(otp, from, to, recipient, type = #code)
 		{
-		if false is email = GetContributions('TwoFAEmailMessage').GetDefault(type, false)
+		if false is email = GetContributions(#TwoFAEmailMessage).GetDefault(type, false)
 			return false
-		msg = email.message.
-			Replace('<recipient>', recipient).
-			Replace('<otp>', otp)
+		msg = email.message.Replace("<recipient>", recipient).Replace("<otp>", otp)
 		return BookSendEmail(0, from, to, MimeText(msg).Subject(email.subject), quiet?:)
 		}
 
 	IsAuthEmail?(subject)
 		{
-		return GetContributions('TwoFAEmailMessage').Any?({ it.subject is subject })
+		return GetContributions(#TwoFAEmailMessage).Any?({ it.subject is subject })
 		}
 	}

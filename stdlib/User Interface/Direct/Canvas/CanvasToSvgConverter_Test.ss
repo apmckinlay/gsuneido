@@ -3,6 +3,7 @@ Test
 	{
 	Test_one()
 		{
+		_dpi = 1
 		logo = .TempName()
 		letterHeadOb = .letterhead()
 		items = DrawControl.BuildItems(letterHeadOb)

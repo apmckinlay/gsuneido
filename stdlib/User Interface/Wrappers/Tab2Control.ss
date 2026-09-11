@@ -1,11 +1,11 @@
 // Copyright (C) 2019 Suneido Software Corp. All rights reserved worldwide.
 WndProc
 	{
-	Name: 'Tab'
+	Name:     #Tab
 	Xstretch: 1
 	New(@tabs)
 		{
-		.CreateWindow('SuBtnfaceArrow', '', WS.VISIBLE, exStyle: WS_EX.CONTROLPARENT)
+		.CreateWindow(#SuBtnfaceArrow, "", WS.VISIBLE, exStyle: WS_EX.CONTROLPARENT)
 		.SubClass()
 		.initDefaults(tabs)
 		.initExtraControl(tabs)
@@ -21,17 +21,15 @@ WndProc
 		// Initialize generic instance members
 		.staticTabs = tabs.GetDefault(#staticTabs, #())
 		.closeImage = tabs.GetDefault(#close_button, false) isnt false
-			? Object(ImageResource(#close), CLR.BLACK)
+			? [ImageResource(#close), CLR.BLACK]
 			: false
-		.fitTabs = tabs.GetDefault(#scrollTabs, false)
-			? .scrollTabs
-			: .shrinkTabs
+		.fitTabs = tabs.GetDefault(#scrollTabs, false) ? .scrollTabs : .shrinkTabs
 		if false is .selectedTabColor = tabs.GetDefault(#selectedTabColor, false)
 			.selectedTabColor = CLR.Highlight
 
 		// Initialize the TabCalcs class
 		orientation = tabs.orientation
-		selectedWeight = tabs.GetDefault(#selectedTabBold, true) ? FW.BOLD : ''
+		selectedWeight = tabs.GetDefault(#selectedTabBold, true) ? FW.BOLD : ""
 		.calcClass = orientation in (#left, #right)
 			? new TabVertCalcs(controller: this, :orientation, :selectedWeight)
 			: new TabHorzCalcs(controller: this, :orientation, :selectedWeight)
@@ -47,6 +45,7 @@ WndProc
 				Ymin: 0
 				Xmin: 0
 				Default(@unused) { }
+
 				GetChildren() { return Object() }
 				}
 		.Ymin = Max(.Ymin, .extraControl.Ymin + 1 /*= bottom line*/)
@@ -68,7 +67,7 @@ WndProc
 	initTab(i, tabName, data = false, image = -1, prevTab = false)
 		{
 		if data is false
-			data = Object(tooltip: '')
+			data = Object(tooltip: "")
 		tab = Object(hide?: false, :data, image: .baseImage(tabName, image))
 		if prevTab is false
 			prevTab = .prevTab(i)
@@ -81,9 +80,7 @@ WndProc
 		if image is -1
 			image = false
 		baseImage = .staticTabs.Has?(tabName) ? image : .closeImage
-		return image isnt false and .imageList isnt false
-			? .imageList[image]
-			: baseImage
+		return image isnt false and .imageList isnt false ? .imageList[image] : baseImage
 		}
 
 	prevTab(i)
@@ -102,8 +99,8 @@ WndProc
 		.brushes[CLR.lightblue] = .selectedTopBrush = CreateSolidBrush(CLR.lightblue)
 		.brushes[CLR.highlightblue] = .hoverBgBrush = CreateSolidBrush(CLR.highlightblue)
 		.brushes[CLR.ButtonFace] = .unselectedBgBrush = CreateSolidBrush(CLR.ButtonFace)
-		.brushes[COLOR.TRIDSHADOW] = .borderPen =
-			CreatePen(PS.SOLID, 0, GetSysColor(COLOR.TRIDSHADOW))
+		.brushes[COLOR.TRIDSHADOW] =
+			.borderPen = CreatePen(PS.SOLID, 0, GetSysColor(COLOR.TRIDSHADOW))
 		}
 
 	getter_brushes()
@@ -114,29 +111,29 @@ WndProc
 	initToolTips()
 		{
 		.Map = Object()
-		.Map[TTN.SHOW] = 'TTN_SHOW'
+		.Map[TTN.SHOW] = #TTN_SHOW
 		.tip = .Construct(ToolTipControl)
 		.tip.SendMessage(TTM.SETMAXTIPWIDTH, 0, 400) /*= tip max width */
-		.tip.SendMessage(TTM.SETDELAYTIME, TTDT.AUTOPOP, 30000) /*= tip delay time*/
+		.tip.SendMessage(TTM.SETDELAYTIME, TTDT.AUTOPOP, 30_000) /*= tip delay time*/
 		.tip.Activate(false)
 		.tip.AddTool(.Hwnd, LPSTR_TEXTCALLBACK)
 		.tip.SetFont(StdFonts.Mono())
 		.SetRelay(.tip.RelayEvent)
 		}
 
-	tabButton: false
-	defaultTip: 'Add Tab'
+	tabButton:  false
+	defaultTip: "Add Tab"
 	addTabButton(args)
 		{
 		buttonTip = args.GetDefault(#buttonTip, .defaultTip)
 		if args.GetDefault(#addTabButton?, false) or buttonTip isnt .defaultTip
-			.tabButton = .constructButton('expand.emf', buttonTip)
+			.tabButton = .constructButton("expand.emf", buttonTip)
 		}
 
 	constructButton(image, tip, target = false)
 		{
-		button = .Construct(Object('EnhancedButton', :image, command: tip,
-			imagePadding: 0.15, mouseEffect:, :tip))
+		button = .Construct([#EnhancedButton, :image, command: tip,
+			imagePadding: 0.15, mouseEffect:, :tip])
 		if target
 			button.SetCommandTarget(this)
 		return button
@@ -193,7 +190,7 @@ WndProc
 		{
 		preAllocated = .extraControl.Xmin + .calcClass.PaddingSide
 		if .tabButton isnt false
-			preAllocated  += .calcClass.ButtonSize + .calcClass.PaddingSide
+			preAllocated += .calcClass.ButtonSize + .calcClass.PaddingSide
 		return .navButtonSize() + preAllocated
 		}
 
@@ -210,7 +207,7 @@ WndProc
 	shrinkTabs(w)
 		{
 		if .navigationButtons.Empty?()
-			.navigationButtons.Add(.constructButton('arrow_down', 'Go to Tab', target:))
+			.navigationButtons.Add(.constructButton(#arrow_down, "Go to Tab", target:))
 		.shrink(.availableSpace(w))
 		}
 
@@ -223,15 +220,15 @@ WndProc
 		{
 		items = .tabItems.
 			Map2({|m, v| [idx: m, width: v.width] }).
-				Filter({ it.width > 0 }).
-				Add([idx: false, width: 0])
+			Filter({ it.width > 0 }).
+			Add([idx: false, width: 0])
 		over = .tabItems.SumWith({ it.width }) - availableSpace
 		rank = items.Members().Sort!({|x, y| items[x].width >= items[y].width })
-		for (i = 1; i < rank.Size() and over > 0; i++)
+		for (i = 1; i < rank.Size() and over > 0; i += 1)
 			{
-			diff = items[rank[i - 1]].width - items[rank[i]].width
-			sub = (diff * i <= over) ? diff : (over / i).Ceiling()
-			for (j = 0; j < i; j++)
+			diff = items[rank[i-1]].width - items[rank[i]].width
+			sub = (diff*i <= over) ? diff : (over / i).Ceiling()
+			for (j = 0; j < i; j += 1)
 				{
 				.tabItems[items[rank[j]].idx].renderWidth -= sub
 				over -= sub
@@ -244,9 +241,9 @@ WndProc
 		{
 		if .navigationButtons.Empty?()
 			.navigationButtons.Add(
-				.constructButton(.calcClass.ScrollNextImage, 'Next', target:, navButton:),
-				.constructButton(.calcClass.ScrollPrevImage, 'Previous',
-					target:, navButton:))
+				.constructButton(.calcClass.ScrollNextImage, #Next, target:, navButton:),
+				.constructButton(.calcClass.ScrollPrevImage, #Previous, target:,
+					navButton:))
 		.scroll(.availableSpace(w))
 		}
 
@@ -288,9 +285,7 @@ WndProc
 
 	hideTab?(i, firstTab, start, imageWidth, availableSpace)
 		{
-		return i >= firstTab
-			? 2 * imageWidth + start > availableSpace
-			: true
+		return i >= firstTab ? 2*imageWidth + start > availableSpace : true
 		}
 
 	destroyNavigationButtons()
@@ -345,8 +340,8 @@ WndProc
 		.navigationButtons.Each({ pos -= .calcClass.ResizeButton(it, pos) })
 		}
 
-	hoverIdx: 		false
-	selectedIdx: 	-1
+	hoverIdx:    false
+	selectedIdx: -1
 	PAINT()
 		{
 		hdc = BeginPaint(.Hwnd, ps = Object())
@@ -396,9 +391,7 @@ WndProc
 		{
 		brush = selectedTab
 			? .selectedBgBrush
-			: .hoverIdx is i
-				? .hoverBgBrush
-				: .unselectedBgBrush
+			: .hoverIdx is i ? .hoverBgBrush : .unselectedBgBrush
 		rc = Rect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
 		Image.PaintWithAntialias(hdc, rc.GetWidth(), rc.GetHeight(), rc)
 			{|hdcLarge, wLarge, hLarge|
@@ -478,9 +471,11 @@ WndProc
 
 	getTabFromXY(x, y)
 		{
-		return .tabItems.FindIf({
+		return .tabItems.FindIf(
+			{
 			x >= it.renderRect.left and x <= it.renderRect.right and
-			y >= it.renderRect.top and y <= it.renderRect.bottom })
+				y >= it.renderRect.top and y <= it.renderRect.bottom
+			})
 		}
 
 	draggingTab(i, x, y)
@@ -501,9 +496,7 @@ WndProc
 		// i can be false when dragging outside of the tab bar or over "vacant" space
 		// - IE: In between the last tab and the tab navigation buttons
 		if i is false
-			i = previous?
-				? Max(.draggedIdx - 1, 0)
-				: Min(.draggedIdx + 1, .lastTabIdx())
+			i = previous? ? Max(.draggedIdx - 1, 0) : Min(.draggedIdx + 1, .lastTabIdx())
 		if dragTab? = .dragTab?(check, previous?, .tabItems[i], draggedTab)
 			.dragTab(i, previous?)
 		return dragTab?
@@ -511,8 +504,7 @@ WndProc
 
 	dragRequired?(i, check, draggedTab)
 		{
-		return i isnt .draggedIdx and
-			check < draggedTab.renderRect.start or
+		return i isnt .draggedIdx and check < draggedTab.renderRect.start or
 			check > draggedTab.renderRect.end
 		}
 
@@ -567,7 +559,7 @@ WndProc
 	repaintRect(i)
 		{
 		if .tabItems.Member?(i) and .tabItems[i].Member?(#renderRect)
-			InvalidateRect(.Hwnd, .calcClass.InvalidateRect(i, .tabItems[i]) true)
+			InvalidateRect(.Hwnd, .calcClass.InvalidateRect(i, .tabItems[i]), true)
 		}
 
 	setCloseImage(i)
@@ -583,8 +575,8 @@ WndProc
 	setTipText()
 		{
 		tab = .tabItems[.hoverIdx]
-		tip = tab.GetDefault(#data, []).GetDefault(#tooltip, '')
-		if tip is '' and not .tabFullyVisible?(tab)
+		tip = tab.GetDefault(#data, []).GetDefault(#tooltip, "")
+		if tip is "" and not .tabFullyVisible?(tab)
 			tip = tab.tabName
 		.tip.UpdateTipText(.Hwnd, tip)
 		.tip.Activate(true)
@@ -623,8 +615,8 @@ WndProc
 		if tab.image is false or tab.image isnt .closeImage
 			return false
 		posOb = .calcClass.ImageRect(tab)
-		return x >= posOb.left and x <= posOb.right and
-			y >= posOb.top and y <= posOb.bottom
+		return x >= posOb.left and x <= posOb.right and y >= posOb.top and
+			y <= posOb.bottom
 		}
 
 	goto(clicked)
@@ -712,7 +704,8 @@ WndProc
 		.tip.AdjustRect(false, tab.renderRect.Copy())
 		ClientToScreen(.Hwnd, p = [x: tab.renderRect.tipX, y: tab.renderRect.tipY])
 		SetWindowPos(NMHDR(lParam).hwndFrom, 0,
-			p.x, p.y, 0, 0, // rect
+			p.x, p.y, 0,
+			0, // rect
 			SWP.NOACTIVATE | SWP.NOSIZE | SWP.NOZORDER)
 		return true
 		}
@@ -757,7 +750,7 @@ WndProc
 	remove(i)
 		{
 		if i < .selectedIdx or .selectedIdx is .lastTabIdx()
-			.selectedIdx--
+			.selectedIdx -= 1
 		if i is .hoverIdx
 			.hoverIdx = false
 		.tabItems.Delete(i)
@@ -770,8 +763,7 @@ WndProc
 		}
 
 	imageList: false
-	SetImageList(.imageList)
-		{ }
+	SetImageList(.imageList) { }
 
 	SetImage(i, image)
 		{
@@ -812,8 +804,7 @@ WndProc
 		}
 
 	// Prevents tabs from being disabled
-	SetReadOnly(unused)
-		{ }
+	SetReadOnly(unused) { }
 
 	// Read-only is not applicable to tabs
 	GetReadOnly()
@@ -853,8 +844,7 @@ WndProc
 			}
 		return [
 			first: first is false ? 0 : first,
-			last:   last is false ? .lastTabIdx() : last
-			]
+			last: last is false ? .lastTabIdx() : last]
 		}
 
 	On_Next()
@@ -886,12 +876,12 @@ WndProc
 
 	Destroy()
 		{
-if .Destroyed?()
-	{
-	calls = GetCallStack(limit: 99)
-	calls = FormatCallStack(calls, levels: 99)
-	SuneidoLog('INFO: 36376 Already Destroyed Extra Logging: ', :calls)
-	}
+		if .Destroyed?()
+			{
+			calls = GetCallStack(limit: 99)
+			calls = FormatCallStack(calls, levels: 99)
+			SuneidoLog("INFO: 36376 Already Destroyed Extra Logging: ", :calls)
+			}
 		.brushes.Each(DeleteObject)
 		.brushes.Delete(all:)
 		if .calcClass isnt false

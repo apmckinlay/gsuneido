@@ -10,13 +10,12 @@ class
 			msg: "t.QueryApply should not have update: argument")
 		readonly = args.Extract(#readonly, false)
 		if .Update?() and not readonly
-			{
 			if false isnt (newquery = QueryAddKeySort(args.query))
 				args.query = newquery
-			else if Suneido.User is 'default'
-				SuneidoLog("t.QueryApply failed to add key sort, " $
-					"consider removing sort or specifying readonly:", calls:)
-			}
+			else if Suneido.User is #default
+				SuneidoLog(
+					"t.QueryApply failed to add key sort, " $
+						"consider removing sort or specifying readonly:", calls:)
 		args.block = {|q|
 			while false isnt x = q[dir]()
 				try
@@ -24,10 +23,11 @@ class
 				catch (e, "block:")
 					if e is "block:break"
 						break
-					// else block:continue ... so continue
+			// else block:continue ... so continue
 			}
 		.Query(@args)
 		}
+
 	QueryApply1(@args)
 		{
 		Assert(args.Extract(#update, "") is "",
@@ -39,74 +39,86 @@ class
 		if false isnt x = .Query1(@args)
 			block(x)
 		}
+
 	QueryAccum(query, accum, block) // DEPRECATED
 		{
 		.QueryApply(query)
-			{ |x|
+			{|x|
 			accum = block(accum, x)
 			}
 		return accum
 		}
+
 	QueryOutput(query, record)
 		{
 		.Query(query)
-			{ |q|
+			{|q|
 			q.Output(record)
 			}
 		}
+
 	QueryDo(@args)
 		{
 		result = .Query(@args)
-		if (not Number?(result))
+		if not Number?(result)
 			throw "QueryDo: not a request"
 		return result
 		}
+
 	SeekQuery(query)
 		{
 		return SeekQuery(this, query)
 		}
+
 	QueryMax(query, field, default = false)
 		{
-		x = .Query1(QueryStripSort(query) $ ' summarize max ' $ field)
-		return x is false ? default : x['max_' $ field]
+		x = .Query1(QueryStripSort(query) $ " summarize max " $ field)
+		return x is false ? default : x["max_" $ field]
 		}
+
 	QueryMin(query, field, default = false)
 		{
-		x = .Query1(QueryStripSort(query) $ ' summarize min ' $ field)
-		return x is false ? default : x['min_' $ field]
+		x = .Query1(QueryStripSort(query) $ " summarize min " $ field)
+		return x is false ? default : x["min_" $ field]
 		}
+
 	QueryCount(query)
 		{
-		x = .Query1(QueryStripSort(query) $ '\nsummarize count')
+		x = .Query1(QueryStripSort(query) $ "\nsummarize count")
 		return x is false ? 0 : x.count
 		}
+
 	QueryTotal(query, field)
 		{
-		x = .Query1(QueryStripSort(query) $ '\nsummarize total ' $ field)
-		return x is false ? 0 : x['total_' $ field]
+		x = .Query1(QueryStripSort(query) $ "\nsummarize total " $ field)
+		return x is false ? 0 : x["total_" $ field]
 		}
+
 	QueryAverage(query, field)
 		{
-		x = .Query1(QueryStripSort(query) $ '\nsummarize average ' $ field)
-		return x is false ? false : x['average_' $ field]
+		x = .Query1(QueryStripSort(query) $ "\nsummarize average " $ field)
+		return x is false ? false : x["average_" $ field]
 		}
+
 	QueryList(query, field)
 		{
-		x = .Query1(QueryStripSort(query) $ '\nsummarize list ' $ field)
-		return x is false ? [] : x['list_' $ field]
+		x = .Query1(QueryStripSort(query) $ "\nsummarize list " $ field)
+		return x is false ? [] : x["list_" $ field]
 		}
+
 	Query1Cached(@args)
 		{
-		cache = .Data().GetInit(#Query1Cache,
-			{ LruCache({ .Query1(@it) }, 100) }) /*= cache size */
+		cache = .Data().
+			GetInit(#Query1Cache, { LruCache({ .Query1(@it) }, 100) }) /*= cache size */
 		return cache.Get(args)
 		}
+
 	QueryAll(@args)
 		{
 		NameArgs(args, #(query, limit), #(false))
 		limit = args.Extract(#limit)
 		Assert(limit is false or Number?(limit),
-			'QueryAll limit must be a number, got: ' $ limit)
+			"QueryAll limit must be a number, got: " $ limit)
 		sort = #()
 		reverse = false
 		if limit is false
@@ -119,8 +131,7 @@ class
 			args.query = QueryStripSort(args.query)
 			}
 		list = Object()
-		args.block =
-			{|q|
+		args.block = {|q|
 			while false isnt x = q.Next()
 				if Number?(limit) and list.Size() >= limit
 					break
@@ -137,10 +148,9 @@ class
 
 	QueryRange(query, field)
 		{
-		query = QueryStripSort(query) $ ' summarize min ' $ field $ ', max ' $ field
+		query = QueryStripSort(query) $ " summarize min " $ field $ ", max " $ field
 		x = .Query1(query)
-		return x is false ? false :
-			Object(min: x['min_' $ field], max: x['max_' $ field])
+		return x is false ? false : Object(min: x["min_" $ field], max: x["max_" $ field])
 		}
 
 	QueryEmpty?(@args)
@@ -152,11 +162,11 @@ class
 		{
 		query = args[0]
 		if QueryStripSort(query) isnt query
-			ProgrammerError('QueryAny1 does not take a query with a sort')
+			ProgrammerError("QueryAny1 does not take a query with a sort")
 
 		fields = args.Delete(0)
 		// will check that the values are the same on up to 10 records
-		if Suneido.GetDefault('ValidateQueryAny1?', false) is true
+		if Suneido.GetDefault(#ValidateQueryAny1?, false) is true
 			{
 			count = 0
 			orig = false
@@ -173,5 +183,13 @@ class
 
 		rec = .QueryFirst(query $ " /* CHECKQUERY SUPPRESS: SORT REQUIRED */")
 		return rec is false ? false : rec.Project(fields)
+		}
+
+	MustQuery1(@args)
+		{
+		x = .Query1(@args)
+		if x is false
+			throw "MustQuery1: expected record, got false"
+		return x
 		}
 	}

@@ -11,33 +11,31 @@ MemoizeSingle
 		QueryApply('customizable where table_name isnt "" and hidden? isnt true')
 			{
 			table = GetTableName(it.name)
-			if '' is table or table is it.name
+			if "" is table or table is it.name
 				continue
-			name = prefix $ table $ ' > ' $ it.tab
-			sources[name] = Object('Reporter', 'queries', :name,
+			name = prefix $ table $ " > " $ it.tab
+			sources[name] = [#Reporter, #queries, :name,
 				auth: Customizable.AuthPath(table, it.tab),
-				tables: Object(it.name, it.table_name),
+				tables: [it.name, it.table_name],
 				query: .query(it.table_name, it.name, masterKeys),
 				exclude: #(),
-				bookLocation: false)
+				bookLocation: false]
 			}
 		return sources
 		}
 
 	query(custTable, masterTable, masterKeys)
 		{
-		project = .tableKeys(masterTable, masterKeys).Join(', ')
+		project = .tableKeys(masterTable, masterKeys).Join(", ")
 		fkfield = .foreignKey(custTable)
-		return custTable $
-			' rename custtable_FK to ' $ fkfield $
-			', custtable_num to custtable_num_new' $
-			' join by(' $ fkfield $ ') (' $ masterTable $ ' project ' $ project $ ')'
+		return custTable $ " rename custtable_FK to " $ fkfield $
+			", custtable_num to custtable_num_new" $ " join by(" $ fkfield $ ") (" $
+			masterTable $ " project " $ project $ ')'
 		}
 
 	foreignKey(custTable) // Extracted for tests
 		{
-		return Query1('indexes where table is ' $ Display(custTable) $
-			' and columns is #custtable_FK').fkcolumns
+		return Query1(#indexes, table: custTable, columns: #custtable_FK).fkcolumns
 		}
 
 	// tableKeys is hopefully a temporary method. The eventual end goal is to include
@@ -50,13 +48,13 @@ MemoizeSingle
 		tableKeys = Object()
 		.queryKeys(masterTable).Each()
 			{
-			keys = it.Tr('()').Split(',').Map('Trim')
-			tableKeys.MergeUnion(keys.Filter({ not it.Suffix?('_lower!') }))
+			keys = it.Tr("()").Split(',').Map(#Trim)
+			tableKeys.MergeUnion(keys.Filter({ not it.Suffix?("_lower!") }))
 			}
-		if false isnt numField = tableKeys.FindOne({ it.Suffix?('_num') })
+		if false isnt numField = tableKeys.FindOne({ it.Suffix?("_num") })
 			{
-			tableKeys.Remove(numField.Replace('_num', '_name'))
-			tableKeys.Remove(numField.Replace('_num', '_abbrev'))
+			tableKeys.Remove(numField.Replace("_num", "_name"))
+			tableKeys.Remove(numField.Replace("_num", "_abbrev"))
 			}
 
 		return masterKeys[masterTable] = tableKeys
@@ -70,7 +68,7 @@ MemoizeSingle
 	ResetCache()
 		{
 		if Sys.Client?()
-			ServerEval('CustomTableDataSources.ResetCache')
+			ServerEval("CustomTableDataSources.ResetCache")
 		else
 			super.ResetCache()
 		}

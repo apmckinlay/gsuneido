@@ -20,7 +20,7 @@ class
 			case #verb:
 				.stepVerb(rs, i, d)
 			case #str:
-				.stepStr(rs, i, d)
+				.stepStr(rs, i, d, stack)
 			case #cat:
 				a = d.a
 				for (j = a.Size() - 1; j >= 0; --j)
@@ -31,7 +31,9 @@ class
 				.stepRoot(rs, d, stack)
 			case #line:
 				.stepLine(rs, i, m, d)
-			case #hard, #blank:
+			case #hard:
+				.stepHard(rs, i)
+			case #blank:
 				.nl(rs, i)
 			case #group:
 				.stepGroup(rs, i, m, d, stack)
@@ -49,7 +51,11 @@ class
 	stepText(rs, i, d)
 		{
 		if rs.eolc and d.s isnt ""
+			{
 			.nl(rs, i)
+			if d.s.Blank?() // a separator has no place at the start of a line
+				return
+			}
 		.emit(rs, d.s)
 		if d.hb is true // a // comment: nothing else may join this line
 			rs.eolc = true
@@ -64,11 +70,52 @@ class
 			rs.col = d.s.AfterLast('\n').Size()
 		}
 
-	stepStr(rs, i, d)
+	stepStr(rs, i, d, stack)
 		{
 		if rs.eolc
 			.nl(rs, i)
-		.emitStr(rs, d.s, i)
+		.emitStr(rs, d.s, i, .tailWidth(stack))
+		}
+
+	tailWidth(stack)
+		{
+		work = Object()
+		si = stack.Size()
+		w = 0
+		forever
+			{
+			if w > .width
+				return w
+			if work.Empty?()
+				{
+				if --si < 0
+					return w
+				x = stack[si]
+				}
+			else
+				x = work.PopLast()
+			m = x[1]
+			d = x[2]
+			switch d.t
+				{
+			case #text, #str:
+				w += d.s.Size()
+				if d.hb is true // a // comment ends the line
+					return w
+			case #cat, #fill, #fillr:
+				a = d.a
+				for (j = a.Size() - 1; j >= 0; --j)
+					work.Add([x[0], m, a[j]])
+			case #nest, #group, #lead:
+				work.Add([x[0], m, d.d])
+			case #line:
+				if m isnt #flat
+					return w
+				w += d.s.Size()
+			default: // verb, hard, blank, root
+				return w
+				}
+			}
 		}
 
 	stepRoot(rs, d, stack)
@@ -79,6 +126,17 @@ class
 			rs.col = 0
 			}
 		stack.Add([0, #break, d.d])
+		}
+
+	stepHard(rs, i)
+		{
+		if rs.pend is false or rs.out is ""
+			.nl(rs, i)
+		else
+			{
+			rs.pend = i
+			rs.col = i * .tabWidth
+			}
 		}
 
 	stepLine(rs, i, m, d)
@@ -100,7 +158,8 @@ class
 		}
 
 	// break before d, one indent deeper, only when d then fits flat; if d must
-	// break either way, leave it here and let its own breaks do the wrapping
+	// break either way, lead anyway when even its shortest possible first line
+	// would overflow here
 	stepLead(rs, i, m, d, stack)
 		{
 		if m is #flat or .fits(.width - rs.col, [i, #flat, d.d], stack)
@@ -112,6 +171,13 @@ class
 			{
 			.nl(rs, i + 1)
 			stack.Add([i + 1, #flat, d.d])
+			return
+			}
+		if not .fits(.width - rs.col, [i, #break, d.d], stack, minimal:) and
+			.fits(.width - (i + 1) * .tabWidth, [i + 1, #break, d.d], stack, minimal:)
+			{
+			.nl(rs, i + 1)
+			stack.Add([i + 1, #break, d.d])
 			return
 			}
 		stack.Add([i, #break, d.d])
@@ -145,12 +211,12 @@ class
 
 	// emit a plain quoted literal, splitting after a word boundary with a
 	// trailing $ when it cannot fit; the pieces continue one indent deeper
-	emitStr(rs, s, i)
+	emitStr(rs, s, i, tail = 0)
 		{
 		q = s[0]
 		forever
 			{
-			if rs.col + s.Size() <= .width
+			if rs.col + s.Size() + tail <= .width
 				{
 				.emit(rs, s)
 				return
@@ -232,7 +298,7 @@ class
 
 	// does the first line fit in w columns? pure: scans the unrendered doc,
 	// continuing into the pending stack, until a newline or overflow
-	fits(w, item, stack)
+	fits(w, item, stack, minimal = false)
 		{
 		work = [item]
 		si = stack.Size()
@@ -274,9 +340,10 @@ class
 			case #hard, #blank, #root:
 				return m isnt #flat
 			case #group, #lead:
-				if d.hb is true
+				// minimal walks on to the first break instead of stopping here
+				if d.hb is true and minimal isnt true
 					return m isnt #flat
-				work.Add([i, #flat, d.d])
+				work.Add([i, minimal is true ? m : #flat, d.d])
 				}
 			}
 		}

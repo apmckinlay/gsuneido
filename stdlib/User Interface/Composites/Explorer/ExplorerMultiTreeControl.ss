@@ -29,7 +29,9 @@ MultiTreeViewControl
 	// .Model can be reconstructed multiple times in ExplorerMultiControl.
 	// As a result, we need to ALWAYS point to the ExplorerMultiControl.Model directrly
 	getter_model()
-		{ return .Controller.Model }
+		{
+		return .Controller.Model
+		}
 
 	getter_imageHandler()
 		{
@@ -40,7 +42,9 @@ MultiTreeViewControl
 		}
 
 	getter_contextMenu()
-		{ return .contextMenu = ExplorerMultiTreeContextMenu(.Controller, .readonly) }
+		{
+		return .contextMenu = ExplorerMultiTreeContextMenu(.Controller, .readonly)
+		}
 
 	DragMove(dragging, target, last? = false)
 		{
@@ -53,15 +57,20 @@ MultiTreeViewControl
 		if target is oldParent = .GetParent(item)
 			return
 		if .ChildOfParent?(target, item)
-			return .AlertError('Invalid Move',
-				'Cannot move parent folder into sub folder')
+			return .AlertError("Invalid Move",
+				"Cannot move parent folder into sub folder")
 		if last?
 			.SelectItem(oldParent)
-		x = .model.Get(.GetParam(item))
+		x = .modelGet(item)
 		.DeleteItem(item)
 		.model.Move(x, .GetParam(target))
 		if last?
 			.postMove(x.name, target, oldParent)
+		}
+
+	modelGet(item)
+		{
+		return .model.Get(.GetParam(item), name: .GetName(item))
 		}
 
 	postMove(movedName, newParent, oldParent)
@@ -93,10 +102,10 @@ MultiTreeViewControl
 				.addChildItem(item, child)
 		else
 			{
-			for child in children	// folders
+			for child in children // folders
 				if child.group
 					.addItem(item, child.name, child.num, container?:)
-			for child in children   // item
+			for child in children // item
 				if not child.group
 					.addChildItem(item, child)
 			}
@@ -104,12 +113,14 @@ MultiTreeViewControl
 		}
 
 	childrenToAdd(num, prexistingChildren)
-		{ return .model.Children(num).RemoveIf({ prexistingChildren.Has?(it.num) }) }
+		{
+		return .model.Children(num).RemoveIf({ prexistingChildren.Has?(it.num) })
+		}
 
 	addChildItem(item, child)
 		{
-		modified = child.GetDefault(#lib_modified, '')
-		committed = child.GetDefault(#lib_committed, '')
+		modified = child.GetDefault(#lib_modified, "")
+		committed = child.GetDefault(#lib_committed, "")
 		container? = .model.Container?(child.num)
 		return .addItem(item, child.name, child.num, container?, :modified, :committed)
 		}
@@ -123,7 +134,7 @@ MultiTreeViewControl
 
 	setFolderImage(item, open)
 		{
-		folderRec = .model.Get(.GetParam(item)).Set_default('')
+		folderRec = .modelGet(item).Set_default("")
 		.SetImage(item, .folderImage(folderRec, open))
 		}
 
@@ -146,7 +157,7 @@ MultiTreeViewControl
 		{
 		s = .GetName(item)
 		while 0 isnt item = .GetParent(item)
-			s = .GetName(item) $ "/" $ s
+			s = .GetName(item) $ '/' $ s
 		return s
 		}
 
@@ -170,7 +181,7 @@ MultiTreeViewControl
 			.ExpandItem(parent, collapse:)
 		}
 
-	DragCopy(dragging, target, fromtree = true, last? = true)		// Recursive
+	DragCopy(dragging, target, fromtree = true, last? = true) // Recursive
 		{
 		if fromtree
 			{
@@ -182,7 +193,7 @@ MultiTreeViewControl
 			}
 		else
 			htarget = false
-		x = .model.Get(dragging, origText?:)
+		x = .model.Get(dragging, name: .GetName(dragging))
 		oldparent = x.num
 		x.parent = target
 		.model.EnsureUnique(x)
@@ -211,19 +222,19 @@ MultiTreeViewControl
 
 	Rename(item, name)
 		{
-		x = .model.Get(.GetParam(item))
+		x = .modelGet(item)
 		if name is x.name
 			return 0
 		result = true
 		try
 			.model.Rename(x, name)
 		catch (e)
-			result = KeyException.Translate(e, 'Rename')
+			result = KeyException.Translate(e, #Rename)
 		if result isnt true
 			{
 			msg = "can't rename " $ x.name $ " to " $ name $
-				Opt(' (', result is false ? '' : result, ')')
-			Alert(msg, title: 'Rename', flags: MB.ICONERROR)
+				Opt(" (", result is false ? "" : result, ')')
+			Alert(msg, title: #Rename, flags: MB.ICONERROR)
 			return 0
 			}
 		.SetName(item, name)
@@ -232,7 +243,7 @@ MultiTreeViewControl
 		return 1
 		}
 
-	addItem(parent, name, num, container?, modified = '', committed = '')
+	addItem(parent, name, num, container?, modified = "", committed = "")
 		{
 		// Add item to tree
 		image = .image(container?, num, modified, committed)
@@ -243,7 +254,7 @@ MultiTreeViewControl
 		{
 		// Add item to tree
 		return container?
-			? .folderImage([:num, :lib_modified, :lib_committed, group: true])
+			? .folderImage([:num, :lib_modified, :lib_committed, group:])
 			: .documentImage([:num, :lib_modified, :lib_committed, group: false])
 		}
 
@@ -264,11 +275,13 @@ MultiTreeViewControl
 		}
 
 	recordModified?(data)
-		{ return .model.Method?(#Modified?) ? .model.Modified?(data) : false }
+		{
+		return .model.Method?(#Modified?) ? .model.Modified?(data) : false
+		}
 
 	AddNewItem(parent, container?, name, text)
 		{
-		x = Record(parent: .GetParam(parent), :name, group: container?, :text)
+		x = [parent: .GetParam(parent), :name, group: container?, :text]
 		if not .model.NewItem(.model.EnsureUnique(x))
 			return false
 		.ExpandItem(parent)
@@ -283,20 +296,22 @@ MultiTreeViewControl
 	findnum(parent, num)
 		{
 		.ForEachChild(parent)
-			{ |item|
+			{|item|
 			if .GetParam(item) is num
-				{
 				return item
-				}
 			}
 		return NULL
 		}
 
 	SortChildren(parent)
-		{ super.SortChildren(parent, .compareFunc) }
+		{
+		super.SortChildren(parent, .compareFunc)
+		}
 
-	compareFunc(lParam1, lParam2, lParamSort /*unused*/)
-		{ return .model.TreeSort(lParam1, lParam2) }
+	compareFunc(lParam1, lParam2, lParamSort/*unused*/)
+		{
+		return .model.TreeSort(lParam1, lParam2)
+		}
 
 	Insert(target, itemOb, table)
 		{
@@ -328,8 +343,8 @@ MultiTreeViewControl
 
 	buildInsertRecord(hItem, itemOb, table)
 		{
-		rec = itemOb.Set_default('').Copy()
-		rec.lib_committed = ''
+		rec = itemOb.Set_default("").Copy()
+		rec.lib_committed = ""
 		rec.parent = .GetParam(hItem)
 		rec.path = .Path(hItem).AfterFirst(table $ '/')
 		rec.lib_modified = Date()
@@ -345,9 +360,11 @@ MultiTreeViewControl
 		}
 
 	ShowContextMenu(item, x, y)
-		{ return .contextMenu.ShowTreeContextMenu(item, x, y) }
+		{
+		return .contextMenu.ShowTreeContextMenu(item, x, y)
+		}
 
-	NM_KILLFOCUS(lParam /*unused*/)
+	NM_KILLFOCUS(lParam/*unused*/)
 		{
 		.UnselectAll(.Controller.CurItem)
 		return 0

@@ -2,9 +2,9 @@
 class
 	{
 	//The extensions for the types of files that can be merged
-	extensions: #("pdf", "jpg", "jpeg")
-	compress: false
-	compressed?: false
+	extensions: (pdf, jpg, jpeg)
+	compress:         false
+	compressed?:      false
 
 	/* Creates a PDF with the given filename by merging together the given list of
 	*  attachments which is an object.
@@ -19,14 +19,14 @@ class
 	*  Returns: An object that contains a list of files that couldn't be merged/compressed
 	*/
 	afterMergedAsync: false
-	encrypt: false
-	cleanupFiles: #()
+	encrypt:          false
+	cleanupFiles: ()
 	CallClass(files, saveFileName, compress = false, maxCompressedFileSizeInMb = false,
-		filesData = false, afterMergedAsync = false,
-		userPassword = false, ownerPassword = false)
+		filesData = false, afterMergedAsync = false, userPassword = false,
+		ownerPassword = false)
 		{
-		if files.Size() is 0 or (files.Size() is 1 and files[0] is saveFileName and
-			userPassword is false)
+		if files.Size() is 0 or
+			(files.Size() is 1 and files[0] is saveFileName and userPassword is false)
 			return Object()
 		if compress and maxCompressedFileSizeInMb isnt false
 			Assert(files.Size() is 1)
@@ -42,8 +42,8 @@ class
 	*		.newfile: The filename of the new file being created
 	*/
 	New(.files, .newfile, .compress = false, maxCompressedFileSizeInMb = false,
-		.filesData = false, .afterMergedAsync = false,
-		userPassword = false, ownerPassword = false)
+		.filesData = false, .afterMergedAsync = false, userPassword = false,
+		ownerPassword = false)
 		{
 		.maxMerge = Objects.SizeLimit
 		.maxCompressedFileSize = maxCompressedFileSizeInMb isnt false
@@ -121,9 +121,9 @@ class
 		return false
 		}
 
-	trackInvalidFile(file, reason = 'invalid')
+	trackInvalidFile(file, reason = #invalid)
 		{
-		.InvalidFiles.Add(file $ Opt(' (', reason, ')'))
+		.InvalidFiles.Add(file $ Opt(" (", reason, ')'))
 		}
 
 	copyFile(from, to)
@@ -172,7 +172,7 @@ class
 			filename = .files[.fileIndex]
 			if .fileSize(filename) is 0
 				{
-				.trackInvalidFile(filename, 'empty file')
+				.trackInvalidFile(filename, "empty file")
 				return
 				}
 			fileData = .getFileContent(filename)
@@ -184,9 +184,7 @@ class
 			.getFileObAsync(filename, fileData)
 			}
 		catch (err)
-			{
 			.processErrorAndContinue(err)
-			}
 		}
 
 	processErrorAndContinue(err)
@@ -202,14 +200,17 @@ class
 		{
 		cmd = ImageMagick.GetResolutionCmd()
 		sourceBytes = SuUI.GetCurrentWindow().Uint8Array(fileData)
-		imFiles = Object(Object(name: 'src.jpg', content: sourceBytes))
-		SuUI.GetCurrentWindow().Magick(imFiles, cmd).Then(
-			{|result1|
-			if result1.exitCode is 0
-				.convertJpgToPdfAsync(result1, imFiles, file)
-			else
-				.processErrorAndContinue(result1.stderr[0])
-			})
+		imFiles = [Object(name: "src.jpg", content: sourceBytes)]
+		SuUI.
+			GetCurrentWindow().
+			Magick(imFiles, cmd).
+			Then(
+				{|result1|
+				if result1.exitCode is 0
+					.convertJpgToPdfAsync(result1, imFiles, file)
+				else
+					.processErrorAndContinue(result1.stderr[0])
+				})
 		return false
 		}
 
@@ -218,24 +219,30 @@ class
 		output = result1.stdout[0].Tr('"')
 		letterSize = ImageMagick.LetterSize(output)
 		cmd = ImageMagick.ConvertToPdfCmd(letterSize)
-		SuUI.GetCurrentWindow().Magick(imFiles, cmd).Then(
-			{ |result2|
-			if result2.exitCode is 0
-				.afterJpgToPdf(result2.outputFiles[0], file)
-			else
-				.processErrorAndContinue(result2.stderr[0])
-			})
+		SuUI.
+			GetCurrentWindow().
+			Magick(imFiles, cmd).
+			Then(
+				{|result2|
+				if result2.exitCode is 0
+					.afterJpgToPdf(result2.outputFiles[0], file)
+				else
+					.processErrorAndContinue(result2.stderr[0])
+				})
 		}
 
 	afterJpgToPdf(output, file)
 		{
 		resultFile = SuUI.GetCurrentWindow().File(output, MimeTypes.pdf)
-		resultFile.ArrayBuffer().Then({|arrayBuffer|
-			sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
-			convertPDF = SuUI.GetCurrentWindow().ArrayToString(sourceBytes)
-			.filesData[.fileIndex].fileData = convertPDF
-			.getFileObAsync(file, convertPDF)
-			})
+		resultFile.
+			ArrayBuffer().
+			Then(
+				{|arrayBuffer|
+				sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
+				convertPDF = SuUI.GetCurrentWindow().ArrayToString(sourceBytes)
+				.filesData[.fileIndex].fileData = convertPDF
+				.getFileObAsync(file, convertPDF)
+				})
 		}
 
 	getFileObAsync(file, fileData)
@@ -245,14 +252,14 @@ class
 		reader = new PdfReader(:fileData)
 		if fileData.Size() is 0
 			{
-			.processErrorAndContinue('empty file')
+			.processErrorAndContinue("empty file")
 			return
 			}
 		.fileClass(file, 'r', :fileData)
 			{|f|
 			if not .isValidPdf(reader, f)
 				{
-				.processErrorAndContinue('Invalid pdf')
+				.processErrorAndContinue("Invalid pdf")
 				return
 				}
 
@@ -280,7 +287,7 @@ class
 			}
 
 		head = obj.head
-		if 0 is Number(head.Extract('(^|[\[' $ .ws $ '])([0-9]+)', 2))
+		if 0 is Number(head.Extract("(^|[\[" $ .ws $ "])([0-9]+)", 2))
 			{
 			.afterEachObj(head, pdfOb, reader, f, obj, objs, trailers)
 			return
@@ -297,56 +304,63 @@ class
 
 	compressImageAsync(head, pdfOb, reader, f, obj, objs = #(), trailers = #())
 		{
-		type = 'jpg'
+		type = #jpg
 		imageData = reader.ExtractStream(obj)
 		options = ImageMagick.GetOption(type,
 			extraOptions: Object(colorSpace: .imageObjectColorSpace(head)))
 		cmd = ImageMagick.BuildCompressionCmd(type, options)
 		sourceBytes = SuUI.GetCurrentWindow().Uint8Array(imageData)
-		imFiles = Object(Object(name: 'src.jpg', content: sourceBytes))
+		imFiles = [Object(name: "src.jpg", content: sourceBytes)]
 		afterImageCompressed = .afterImageCompressed
 		afterEachObj = .afterEachObj
-		SuUI.GetCurrentWindow().Magick(imFiles, cmd).Then(
-			{|result|
-			processErrorAndContinue = .processErrorAndContinue
-			if result.exitCode is 0
-				{
-				output = result.outputFiles[0]
-				resultFile = SuUI.GetCurrentWindow().File(output, "image/jpeg")
-				resultFile.ArrayBuffer().Then({|arrayBuffer|
-					sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
-					compressImg = SuUI.GetCurrentWindow().ArrayToString(sourceBytes)
-					if false is afterImageCompressed(compressImg, imageData, head, obj)
-						// fall back to send as links for emails
-						processErrorAndContinue('invalid image after compressed')
-					else
-						afterEachObj(head, pdfOb, reader, f, obj, objs, trailers)
-					})
-				}
-			else
-				// fall back to links for emails
-				processErrorAndContinue('compressing image failed')
-			})
+		SuUI.
+			GetCurrentWindow().
+			Magick(imFiles, cmd).
+			Then(
+				{|result|
+				processErrorAndContinue = .processErrorAndContinue
+				if result.exitCode is 0
+					{
+					output = result.outputFiles[0]
+					resultFile = SuUI.GetCurrentWindow().File(output, "image/jpeg")
+					resultFile.
+						ArrayBuffer().
+						Then(
+							{|arrayBuffer|
+							sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
+							compressImg =
+								SuUI.GetCurrentWindow().ArrayToString(sourceBytes)
+							if false is
+								afterImageCompressed(compressImg, imageData, head, obj)
+								// fall back to send as links for emails
+								processErrorAndContinue("invalid image after compressed")
+							else
+								afterEachObj(head, pdfOb, reader, f, obj, objs, trailers)
+							})
+					}
+				else
+					// fall back to links for emails
+					processErrorAndContinue("compressing image failed")
+				})
 		}
 
 	afterEachObj(head, pdfOb, reader, f, obj, objs = #(), trailers = #())
 		{
 		.afterObjCompressed(head, pdfOb, reader, f, obj, objs, trailers)
-		.pdfObIndex++
+		.pdfObIndex += 1
 		if .pdfObIndex isnt objs.Size()
-			{
 			if .pdfObIndex % 500 is 0 /*= use timeout to avoid stack overflow */
-				{
-				SuUI.GetCurrentWindow().SetTimeout({
-					try
-						.processOneObjectAsync(pdfOb, reader, f, objs, trailers)
-					catch (err)
-						.processErrorAndContinue(err)
-					}, 0)
-				}
+				SuUI.
+					GetCurrentWindow().
+					SetTimeout(
+						{
+						try
+							.processOneObjectAsync(pdfOb, reader, f, objs, trailers)
+						catch (err)
+							.processErrorAndContinue(err)
+						}, 0)
 			else
 				.processOneObjectAsync(pdfOb, reader, f, objs, trailers)
-			}
 		else
 			.afterAllObjectProcessed(pdfOb, trailers)
 		}
@@ -364,9 +378,7 @@ class
 			}
 
 		try
-			{
 			.processFileAfterCompressed(pdfOb)
-			}
 		catch (err)
 			{
 			.trackInvalidFile(pdfOb.filename, err)
@@ -379,7 +391,7 @@ class
 
 	afterOneFileMerged()
 		{
-		.fileIndex++
+		.fileIndex += 1
 		if .fileIndex isnt .files.Size()
 			{
 			.mergeOneAsync()
@@ -411,17 +423,17 @@ class
 		return false
 		}
 
-	LimitError: 'too many files'
+	LimitError: "too many files"
 	processError(file, err)
 		{
-		reason = 'invalid'
+		reason = #invalid
 		if stop? = (err is .LimitError or err is PdfReader.LimitError)
-			reason = 'last file attempted, ' $ err
-		else if err is 'Secured pdf'
-			reason = 'SECURED'
-		else if not err.Prefix?('File:')
-			SuneidoLog('ERRATIC: (CAUGHT) Unable to merge - ' $ err, params: [:file],
-				caughtMsg: 'internal', calls:)
+			reason = "last file attempted, " $ err
+		else if err is "Secured pdf"
+			reason = #SECURED
+		else if not err.Prefix?("File:")
+			SuneidoLog("ERRATIC: (CAUGHT) Unable to merge - " $ err, params: [:file],
+				caughtMsg: #internal, calls:)
 		.trackInvalidFile(file, reason)
 		return stop?
 		}
@@ -443,14 +455,14 @@ class
 			throw .LimitError
 		}
 
-	maxCompressedError: 'compressed file size over maximum'
+	maxCompressedError: "compressed file size over maximum"
 	getBody(filename)
 		{
 		if .isJpg?(filename) and false is filename = .jpgToPdf(filename)
 			return false
 		if .fileSize(filename) is 0
 			{
-			.trackInvalidFile(filename, 'empty file')
+			.trackInvalidFile(filename, "empty file")
 			return false
 			}
 
@@ -488,7 +500,7 @@ class
 			return true
 		if .compressed? isnt true
 			{
-			.trackInvalidFile(filename, 'file has nothing compressible')
+			.trackInvalidFile(filename, "file has nothing compressible")
 			return false
 			}
 		if .overCompressionLimit?(.fileSize(filename) - .totalImageSizeReduction)
@@ -523,7 +535,7 @@ class
 		}
 
 	filesData: false
-	fileClass(file, mode = 'r', fileData = false, block = function(unused){})
+	fileClass(file, mode = 'r', fileData = false, block = function(unused) { })
 		{
 		if .filesData isnt false
 			{
@@ -541,20 +553,18 @@ class
 	getter_filestorage()
 		{
 		// so suneido.js does not need to load FileStorage record onto browser
-		return Global('FileStorage')
+		return Global(#FileStorage)
 		}
 
 	memoryFile: class
 		{
-		CallClass(file, mode /*unused*/ = '', fileData = false, block = false)
+		CallClass(file, mode/*unused*/ = "", fileData = false, block = false)
 			{
 			f = new this(file, fileData)
 			block(f)
 			}
 
-		New(.file, .fileData)
-			{
-			}
+		New(.file, .fileData) { }
 
 		Write(s)
 			{
@@ -590,7 +600,7 @@ class
 
 			s = obj.head
 
-			if 0 is Number(s.Extract('(^|[\[' $ .ws $ '])([0-9]+)', 2))
+			if 0 is Number(s.Extract("(^|[\[" $ .ws $ "])([0-9]+)", 2))
 				continue
 
 			.updateLinearized(s, pdfOb)
@@ -620,14 +630,12 @@ class
 
 	afterObjCompressed(s, pdfOb, reader, f, obj, objs = #(), trailers = #())
 		{
-		if s.Has?('ObjStm')
+		if s.Has?(#ObjStm)
 			try
 				pdfOb.objs.Append(.convertStream(s,
 					reader.FileRead(f, obj.streamStart, obj.streamEnd), objs))
 			catch (e)
-				throw .securedPdf?(objs, trailers)
-					? 'Secured pdf'
-					: e
+				throw .securedPdf?(objs, trailers) ? "Secured pdf" : e
 		else
 			{
 			PdfMergerEncrypt.EncryptObj(obj, reader, f, .encrypt, .cleanupFiles)
@@ -657,11 +665,11 @@ class
 
 	securedPdf?(objs, trailers)
 		{
-		return (objs.Any?({ it.head.Has?('/Encrypt') }) or
-			trailers.Any?({ it.head.Has?('/Encrypt') }))
+		return (objs.Any?({ it.head.Has?("/Encrypt") }) or
+			trailers.Any?({ it.head.Has?("/Encrypt") }))
 		}
 
-	updateNumObj(pdfOb, s = '')
+	updateNumObj(pdfOb, s = "")
 		{
 		largestObj = definedSize = 0
 		pdfOb.objs.Each({ largestObj = Max(.objSize(it), largestObj) })
@@ -672,7 +680,7 @@ class
 
 	objSize(obj)
 		{
-		return Number(obj.head.Tr(.ws, ' ').BeforeFirst(' 0'))
+		return Number(obj.head.Tr(.ws, ' ').BeforeFirst(" 0"))
 		}
 
 	updateLinearized(s, pdfOb)
@@ -684,14 +692,13 @@ class
 
 	updateSuneidoFormat(s, pdfOb)
 		{
-		pdfOb.suneidoFormat = pdfOb.suneidoFormat or
-			s.Has?("/Producer (Suneido PDF Generator)")
+		pdfOb.suneidoFormat =
+			pdfOb.suneidoFormat or s.Has?("/Producer (Suneido PDF Generator)")
 		}
 
 	handleImageCompression(obj, head, reader, f)
 		{
-		if .compress is true and
-			.compressibleImageObject?(head) and
+		if .compress is true and .compressibleImageObject?(head) and
 			false is .compressImage(obj, reader, f, head)
 			return false
 		return true
@@ -700,26 +707,26 @@ class
 	compressibleImageObject?(head)
 		{
 		head = head.Tr(" \t\r\n").Lower()
-		filter = head.AfterFirst('/filter')
-		if filter.Prefix?("[")
-			filter = filter.BeforeFirst("]")
+		filter = head.AfterFirst("/filter")
+		if filter.Prefix?('[')
+			filter = filter.BeforeFirst(']')
 		else
 			{
-			filter = filter.AfterFirst("/")
-			if filter.Has?('>>')
+			filter = filter.AfterFirst('/')
+			if filter.Has?(">>")
 				filter = filter.BeforeFirst(">>")
 			if filter.Has?('/')
-				filter = filter.BeforeFirst("/")
+				filter = filter.BeforeFirst('/')
 			}
-		return head.Has?('/subtype/image') and filter.Tr("^a-z") is 'dctdecode'
+		return head.Has?("/subtype/image") and filter.Tr("^a-z") is #dctdecode
 		}
 
-	additionalEntries: #(SMask)
+	additionalEntries: (SMask)
 	compressImage(obj, reader, f, head)
 		{
-		baseImageFileName = GetAppTempPath() $ Display(Timestamp()).Tr('#.')
-		imgFileName = baseImageFileName $ '.jpg'
-		compressedImgFileName = baseImageFileName $ '_compressed.jpg'
+		baseImageFileName = GetAppTempPath() $ Display(Timestamp()).Tr("#.")
+		imgFileName = baseImageFileName $ ".jpg"
+		compressedImgFileName = baseImageFileName $ "_compressed.jpg"
 		.cleanupFiles.Add(imgFileName)
 		.cleanupFiles.Add(compressedImgFileName)
 		reader.ExtractStreamToJPG(f, obj, imgFileName)
@@ -759,12 +766,12 @@ class
 		colorSpace = jpeg.GetColorSpace()
 		head = PdfDriver.BuildImageObjectHead(width, height, colorSpace, newLength,
 			additionalEntries: .getAdditionalEntries(head))
-		obj.head = obj.head.BeforeFirst('<<') $ head $ obj.head.AfterLast('>>')
+		obj.head = obj.head.BeforeFirst("<<") $ head $ obj.head.AfterLast(">>")
 		// there must be a newline after "stream"
-		if obj.head.Suffix?('stream')
+		if obj.head.Suffix?(#stream)
 			obj.head $= '\n'
-		obj.Delete('streamStart')
-		obj.Delete('streamEnd')
+		obj.Delete(#streamStart)
+		obj.Delete(#streamEnd)
 		if .afterMergedAsync isnt false
 			obj.streamData = compressedImg
 		else
@@ -794,7 +801,7 @@ class
 
 	imageObjectColorSpace(head)
 		{
-		cs = head.Tr('\r\n').Lower().AfterFirst('colorspace').Trim()
+		cs = head.Tr("\r\n").Lower().AfterFirst(#colorspace).Trim()
 		firstChar = cs[0]
 		if firstChar is `/`
 			return .getColorSpace1(cs.AfterFirst(`/`))
@@ -805,7 +812,7 @@ class
 		else if cs.Prefix?(`<<`)
 			return .getColorSpace2(cs, `<<`, `>>`)
 
-		return 'nomatch'
+		return #nomatch
 		}
 
 	getColorSpace1(cs)
@@ -825,7 +832,7 @@ class
 		{
 		for trailer in trailers
 			{
-			if trailer.head.Has?('/Encrypt')
+			if trailer.head.Has?("/Encrypt")
 				throw "Secured pdf"
 			.updateNumObj(pdfOb, trailer.head)
 			}
@@ -834,29 +841,29 @@ class
 	convertStream(segment, stream, objs)
 		{
 		start = segment.Match("/Type[" $ .ws $ "]*/ObjStm")[0][0]
-		headerStart = segment.FindLast('<<', start)
-		headerEnd = segment.Find('>>', start)
-		header = segment[headerStart .. headerEnd]
+		headerStart = segment.FindLast("<<", start)
+		headerEnd = segment.Find(">>", start)
+		header = segment[headerStart..headerEnd]
 		first = Number(header.Extract("/First[" $ .ws $ "]+([0-9]+)"))
 		n = Number(header.Extract("/N[" $ .ws $ "]+([0-9]+)"))
 		// pdf format is stream begins after first \n after keyword stream
 		// Zlib.Uncompress only handles "/Filter /FlateDecode"
-		stream = header.Has?('/Filter')
-			? .unzip(stream.AfterFirst("\n"), header, objs)	// don't need to trim
-			: stream.AfterFirst("\n").RemoveSuffix("\n")
-		indexes = stream[.. first].Tr(.ws, " ").Split(" ").Map(Number)
+		stream = header.Has?("/Filter")
+			? .unzip(stream.AfterFirst('\n'), header, objs) // don't need to trim
+			: stream.AfterFirst('\n').RemoveSuffix('\n')
+		indexes = stream[..first].Tr(.ws, ' ').Split(' ').Map(Number)
 		indexes.Add(0) // Unused, just a placeholder
 		indexes.Add(stream.Size())
 		objects = Object()
-		for (i = 0; i < n; i++)
+		for (i = 0; i < n; i += 1)
 			{
-			objNum = indexes[i * 2]
-			objStart = indexes[i * 2 + 1] + first
-			objEnd = indexes[i * 2 + 3/*=offset*/] + first // Start of next object
+			objNum = indexes[i*2]
+			objStart = indexes[i*2 + 1] + first
+			objEnd = indexes[i*2 + 3/*=offset*/] + first // Start of next object
 			objects[i] = Object(
-				head: '\n' $ objNum $ " 0 obj\n" $ stream[objStart .. objEnd] $
-					"\nendobj\n"
-				tail: '')
+				head: '\n' $ objNum $ " 0 obj\n" $ stream[objStart..objEnd] $
+					"\nendobj\n",
+				tail: "")
 			PdfMergerEncrypt.EncryptHead(objects[i], .encrypt)
 			}
 		return objects
@@ -875,21 +882,19 @@ class
 				return SuUI.GetCurrentWindow().PakoInflate(str[..len])
 				}
 			catch (err)
-				{
-				SuRender().Event(false, 'SuneidoLog',
-					Object('INFO: cannot get stream length, fall back to string trimming',
-						params: [:header, :err]))
-				}
+				SuRender().Event(false, #SuneidoLog,
+					["INFO: cannot get stream length, fall back to string trimming",
+						params: [:header, :err]])
 
 			try
-				return SuUI.GetCurrentWindow().PakoInflate(str.RemoveSuffix('\r\n'))
+				return SuUI.GetCurrentWindow().PakoInflate(str.RemoveSuffix("\r\n"))
 			try
 				return SuUI.GetCurrentWindow().PakoInflate(str.RemoveSuffix('\n'))
 			try
 				return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\n'))
 			try // when stream ends with \n\r
 				return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\r'))
-			return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim('\r\n'))
+			return SuUI.GetCurrentWindow().PakoInflate(str.RightTrim("\r\n"))
 			}
 		return Zlib.Uncompress(str)
 		}
@@ -899,12 +904,12 @@ class
 		if 0 isnt len = Number(header.Extract("/Length[" $ .ws $ "]+([0-9]+)(/|$)"))
 			return len
 		// handles when length points to another object
-		if 0 is lenObjNum = Number(header.Extract(
-			"/Length[" $ .ws $ "]+([0-9]+)[" $ .ws $ "]+"))
-			throw 'invalid length object'
+		if 0 is lenObjNum =
+			Number(header.Extract("/Length[" $ .ws $ "]+([0-9]+)[" $ .ws $ "]+"))
+			throw "invalid length object"
 		if 0 > lenObjIdx = .findObj(lenObjNum, objs)
-			throw 'cannot find length object ' $ String(lenObjNum)
-		return Number(objs[lenObjIdx].head.AfterFirst('obj').BeforeLast('endobj').Trim())
+			throw "cannot find length object " $ String(lenObjNum)
+		return Number(objs[lenObjIdx].head.AfterFirst(#obj).BeforeLast(#endobj).Trim())
 		}
 
 	handleLinearized(pdfOb)
@@ -929,7 +934,7 @@ class
 			.totalObj = pdfOb.numObj
 			.kids = .getSuneidoFormatKids(pdfOb)
 			.totalPages = pdfOb.pageCount
-			.parent = `/Parent ` $ pdfOb.pages.BeforeFirst(" ")
+			.parent = `/Parent ` $ pdfOb.pages.BeforeFirst(' ')
 			.mergedOb.Add(pdfOb)
 			}
 		else
@@ -938,16 +943,16 @@ class
 
 	fetchPagesInfo(pdfOb)
 		{
-		if false is catalog = pdfOb.objs.FindIf({|obj| obj.head.Has?("/Catalog")})
+		if false is catalog = pdfOb.objs.FindIf({|obj| obj.head.Has?("/Catalog") })
 			throw "Root page node not found"
 		pdfOb.catalog = catalog
-		pdfOb.pages = pdfOb.objs[catalog].head.
-			Extract("/Pages[" $ .ws $ "]+([0-9]+[" $ .ws $ "]+0[" $ .ws $ "]+R)")
-		pagesObjNum = pdfOb.pages.Extract('^[0-9]+')
+		pdfOb.pages = pdfOb.objs[catalog].head.Extract("/Pages[" $ .ws $ "]+([0-9]+[" $
+				.ws $ "]+0[" $ .ws $ "]+R)")
+		pagesObjNum = pdfOb.pages.Extract("^[0-9]+")
 
 		i = .findObj(pagesObjNum, pdfOb.objs)
 		if i < 0
-			throw 'PDFMerger - cannot find the start of page tree object'
+			throw "PDFMerger - cannot find the start of page tree object"
 		pdfOb.pagesPos = i
 
 		pdfOb.pageCount =
@@ -956,9 +961,9 @@ class
 
 	findObj(objNum, objs)
 		{
-		for (i = objs.Size() - 1; i >= 0; i--)
-			if objs[i].head =~ '^[' $ .ws $ ']' $ objNum $
-				'[' $ .ws $ ']+0[' $ .ws $ ']+obj'
+		for (i = objs.Size() - 1; i >= 0; i -= 1)
+			if objs[i].head =~
+				"^[" $ .ws $ ']' $ objNum $ '[' $ .ws $ "]+0[" $ .ws $ "]+obj"
 				break
 		return i
 		}
@@ -975,25 +980,27 @@ class
 	getSuneidoFormatKids(pdfOb)
 		{
 		return pdfOb.objs[pdfOb.pagesPos].head.
-			AfterFirst('/Kids').AfterFirst('[').BeforeFirst(']').Trim()
+			AfterFirst("/Kids").
+			AfterFirst('[').
+			BeforeFirst(']').
+			Trim()
 		}
 
 	// The basic format for the start of Suneido Pdf files
 	headerFormat: "%PDF-1.3\n%\xe9\xe9\xe9\xe9\n"
-	bodyFormat: #("\n1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj",
+	bodyFormat: ("\n1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj",
 		"\n2 0 obj\n<</Type /Pages /Kids [] /Count 0>>\nendobj",
 		"\n3 0 obj\n<< /Producer (Suneido PDF Generator) >>\nendobj")
 	convertBodyToSuneidoFormat(pdfOb)
 		{
-		firstPdf = Object(
-			numObj: 3,
-			linearized?: false,
-			suneidoFormat: true,
-			catalog: 0,
-			pages: '2 0 R',
+		firstPdf = Object(numObj: 3,
+			linearized?: false, suneidoFormat:, catalog: 0,
+			pages: "2 0 R",
 			pagesPos: 1,
-			objs: .bodyFormat.Map({
-				PdfMergerEncrypt.EncryptHead(Object(head: it, tail: ""), .encrypt) }))
+			objs: .bodyFormat.Map(
+				{
+				PdfMergerEncrypt.EncryptHead(Object(head: it, tail: ""), .encrypt)
+				}))
 		.mergedOb.Add(firstPdf)
 		.totalObj = 3
 		.kids = ""
@@ -1018,7 +1025,7 @@ class
 		.cleanUpBody(pdfOb)
 		.totalObj += pdfOb.numObj
 		.totalPages += pdfOb.pageCount
-		.kids $= " " $ pdfOb.pages
+		.kids $= ' ' $ pdfOb.pages
 		.mergedOb.Add(pdfOb)
 		}
 
@@ -1037,19 +1044,17 @@ class
 		{
 		ws = .ws
 		for obj in pdfOb.objs
-			{
-			obj.head = obj.head.Replace(
-				"(^|[\[" $ .ws $ "])[0-9]+[" $ .ws $ "]+0[" $ .ws $ "]+(obj|\<R\>)",
+			obj.head = obj.head.Replace("(^|[\[" $ .ws $ "])[0-9]+[" $ .ws $ "]+0[" $
+				.ws $ "]+(obj|\<R\>)",
 				{|s|
-				idx = Number(s.BeforeLast('0').Trim(ws $ "["))
+				idx = Number(s.BeforeLast('0').Trim(ws $ '['))
 				idx += numObj1
-				str = s[0].Number?() ? '' : s[0]
-				str $= idx $ ' 0' $ s.AfterLast('0')
+				str = s[0].Number?() ? "" : s[0]
+				str $= idx $ " 0" $ s.AfterLast('0')
 				})
-			}
 		}
 
-	ws: '\x00\x09\x0A\x0C\x0D\x20' // see pdf reference 1.7 > table 3.1
+	ws: "\x00\x09\x0A\x0C\x0D\x20" // see pdf reference 1.7 > table 3.1
 	updateParentRef(pdfOb)
 		{
 		oldPagesObj = pdfOb.objs[pdfOb.pagesPos].head
@@ -1074,10 +1079,10 @@ class
 		{
 		pagesPos = .mergedOb[0].pagesPos
 		// only replace the root node 'kids'
-		str = .mergedOb[0].objs[pagesPos].head.
-			Replace("/Count [0-9]+", "/Count " $ .totalPages, 1)
-		str = str.BeforeFirst('/Kids') $
-			'/Kids [' $ .kids $ ']' $ str.AfterFirst('/Kids').AfterFirst(']')
+		str = .mergedOb[0].objs[pagesPos].head.Replace("/Count [0-9]+",
+			"/Count " $ .totalPages, 1)
+		str = str.BeforeFirst("/Kids") $ "/Kids [" $ .kids $ ']' $
+			str.AfterFirst("/Kids").AfterFirst(']')
 		.mergedOb[0].objs[pagesPos].head = str
 		}
 
@@ -1092,15 +1097,16 @@ class
 		if .encrypt isnt false
 			{
 			.encrypt.num = .totalObj + 1
-			.mergedOb.Last().objs.Add(Object(head: "\n" $ .encrypt.num $ " 0 obj\n" $
-				.encrypt.keyEntry $ "\nendobj", tail: ""))
+			.mergedOb.Last().objs.Add(Object(
+					head: '\n' $ .encrypt.num $ " 0 obj\n" $ .encrypt.keyEntry $
+						"\nendobj", tail: ""))
 			.totalObj += 1
 			}
 		locs = .calcLocations(.mergedOb)
 		firstPdf = .mergedOb[0]
 		rootIdx = firstPdf.catalog
 		s = firstPdf.objs[rootIdx].head
-		root = s[1..s.Find(' ', 1)]
+		root = s[1 .. s.Find(' ', 1)]
 		encryptDict = .encrypt is false
 			? ""
 			: "/Encrypt " $ .encrypt.num $ " 0 R" $ .encrypt.trailerID
@@ -1122,20 +1128,25 @@ class
 		objectLocs = Object()
 		objectLocs.Add(0) //entry for object 0
 		for pdfOb in mergedOb
-			{
 			for obj in pdfOb.objs
 				{
 				s = obj.head
-				idx = Number(s[1..s.Find(' ', 1)])
+				idx = Number(s[1 .. s.Find(' ', 1)])
 				objectLocs[idx] = pos
 				streamSize = .getStreamSize(obj)
 				pos += obj.head.Size() + obj.tail.Size() + streamSize
 				}
-			}
 		.totalLength = pos
-		for (i = 1; i <= .totalObj; i++)
-			if not objectLocs.Member?(i)
-				objectLocs[i] = .totalLength
+
+		// build empty node chain list
+		next = 0
+		for (i = .totalObj; i >= 0; i -= 1)
+			if not objectLocs.Member?(i) or objectLocs[i] is 0
+				{
+				objectLocs[i] = Object(next_empty_node: next)
+				next = i
+				}
+
 		return objectLocs
 		}
 
@@ -1152,28 +1163,32 @@ class
 	*  Outputs the current merged PDF to a file with the name specified in the
 	*  constructor.
 	*/
-	buf: ''
+	buf:     ""
 	bufSize: 0
 	finish()
 		{
 		if not .InvalidFiles.Empty?()
 			return
-		overwrite = .filesData is false and .mergedOb.HasIf?(
-			{|pdfOb|
-			pdfOb.Member?(#filename) and
-			Paths.Basename(pdfOb.filename) is Paths.Basename(.newfile)
-			})
-		tmp = overwrite ? GetAppTempFullFileName("pdf") : .newfile
+		overwrite = .filesData is false and
+			.mergedOb.HasIf?(
+				{|pdfOb|
+				pdfOb.Member?(#filename) and
+					Paths.Basename(pdfOb.filename) is Paths.Basename(.newfile)
+				})
+		tmp = overwrite ? GetAppTempFullFileName(#pdf) : .newfile
 
 		outputToTmp = .outputToTmp
-		.runWithCatch(tmp) { outputToTmp(tmp) }
+		.runWithCatch(tmp)
+			{
+			outputToTmp(tmp)
+			}
 		if .InvalidFiles.Empty?() and overwrite
 			.copyFile(tmp, .newfile)
 		}
 
 	outputToTmp(tmp)
 		{
-		.fileClass(tmp, 'w', fileData: '')
+		.fileClass(tmp, 'w', fileData: "")
 			{|f|
 			.writeWithBuf(f, .headerFormat)
 			for pdfOb in .mergedOb
@@ -1247,17 +1262,16 @@ class
 	InvalidFilesMsg(invalidFiles)
 		{
 		if invalidFiles.Empty?()
-			return ''
+			return ""
 
 		lastFile = invalidFiles.Last()
-		if lastFile.Has?(' (last file attempted, ')
-			return 'Unable to merge files into one PDF:\r\n\r\n' $
-				invalidFiles.Join('\r\n') $
-				'\r\n\r\nPlease review the above list and adjust accordingly.'
+		if lastFile.Has?(" (last file attempted, ")
+			return "Unable to merge files into one PDF:\r\n\r\n" $
+				invalidFiles.Join("\r\n") $
+				"\r\n\r\nPlease review the above list and adjust accordingly."
 
-		return 'Unable to append the following attachments to PDF:\n\n' $
-			invalidFiles.Join('\n') $
-			'\n\nPlease check if they are corrupted or secured.'
+		return "Unable to append the following attachments to PDF:\n\n" $
+			invalidFiles.Join('\n') $ "\n\nPlease check if they are corrupted or secured."
 		}
 
 	/* filterFiles

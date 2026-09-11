@@ -53,8 +53,8 @@ PdfTest
 		// Test object number 0 is handled
 		body = "%PDF-1.3\n%encoded\n1 0 obj <</Type /Catalog /Pages 2 0  R>>\nendobj\n" $
 			"0 0 obj\n<</Size 58/Root 33 0 R/Info " $
-				"1 0 R/ID[<7058466DE1806F2DAC7A64228AFDFF39>" $
-				"<7058466DE1806F2DAC7A64228AFDFF39>]>>\nendobj\n" $
+			"1 0 R/ID[<7058466DE1806F2DAC7A64228AFDFF39>" $
+			"<7058466DE1806F2DAC7A64228AFDFF39>]>>\nendobj\n" $
 			"2 0 obj <</Type /Pages /Kids [18 0 R 22 0 R 31 0 R ] /Count 3>>\nendobj\n" $
 			"3 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
 			"/WinAnsiEncoding >>\nendobj\r"
@@ -201,7 +201,6 @@ PdfTest
 //			"(endstream stream\nScanned endobj 10 0 obj by \r\nTEST\n" $
 //			"endstream) Tj ET\nendstream\nendobj"
 //		.assertOffsetObjNums(body, expected, numObj1)
-
 //		//Testing "10 0 obj" inside of text stream
 //		body = "%PDF-1.3\n%encoded\n1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
 //			"3 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
@@ -239,43 +238,40 @@ PdfTest
 		}
 
 	body1: "%PDF-1.3\n%encoded\n1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
-			"2 0 obj <</Type /Pages /Kids [4 0 R 6 0 R ] /Count 2>>\nendobj\n" $
-			"8 0 obj << /Producer (Suneido PDF Generator) >>\nendobj" $
-			"3 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
-			"/WinAnsiEncoding >>\nendobj\n" $
-			"4 0 obj<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " $
-			"/Contents [5 0 R] /Resources<<\n/Font <<\n/F1 3 0 R>>>>>>\nendobj\n" $
-			"5 0 obj\n<</Length 6 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
-			"endstream\nendobj\n" $
-			"6 0 obj<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " $
-			"/Contents [7 0 R] /Resources<<\n/Font <<\n/F1 3 0 R>>>>>>\nendobj\n" $
-			"7 0 obj\n<</Length 7 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
-			"endstream\nendobj\n%comments\ntrailer <</Size 9/Root 1 0 R>> "
+		"2 0 obj <</Type /Pages /Kids [4 0 R 6 0 R ] /Count 2>>\nendobj\n" $
+		"8 0 obj << /Producer (Suneido PDF Generator) >>\nendobj" $
+		"3 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
+		"/WinAnsiEncoding >>\nendobj\n" $
+		"4 0 obj<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [5 0 R] /Resources<<\n/Font <<\n/F1 3 0 R>>>>>>\nendobj\n" $
+		"5 0 obj\n<</Length 6 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
+		"endstream\nendobj\n" $
+		"6 0 obj<</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [7 0 R] /Resources<<\n/Font <<\n/F1 3 0 R>>>>>>\nendobj\n" $
+		"7 0 obj\n<</Length 7 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
+		"endstream\nendobj\n%comments\ntrailer <</Size 9/Root 1 0 R>> "
 
 	body2: "%PDF-1.3\n%encoded\n4 0 obj <</Type /Catalog /Pages 3 0 R>>\nendobj\n" $
-			"3 0 obj <</Type /Pages /Kids [2 0 R 6 0 R ] /Count 2>>\nendobj\n" $
-			"1 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
-			"/WinAnsiEncoding >>\nendobj\n" $
-			"2 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
-			"/Contents [5 0 R] /Resources<<\n/Font <<\n/F1 1 0 R>>>>>>\nendobj\n" $
-			"5 0 obj\n<</Length 6 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
-			"endstream\nendobj\n" $
-			"6 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
-			"/Contents [7 0 R] /Resources<<\n/Font <<\n/F1 1 0 R>>>>>>\nendobj\n" $
-			"7 0 obj\n<</Length 7 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
-			"endstream\nendobj\n" $
-			"8 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
-			"trailer <</Size 9/Root 4 0 R>> "
-
+		"3 0 obj <</Type /Pages /Kids [2 0 R 6 0 R ] /Count 2>>\nendobj\n" $
+		"1 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
+		"/WinAnsiEncoding >>\nendobj\n" $
+		"2 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [5 0 R] /Resources<<\n/Font <<\n/F1 1 0 R>>>>>>\nendobj\n" $
+		"5 0 obj\n<</Length 6 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
+		"endstream\nendobj\n" $
+		"6 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [7 0 R] /Resources<<\n/Font <<\n/F1 1 0 R>>>>>>\nendobj\n" $
+		"7 0 obj\n<</Length 7 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
+		"endstream\nendobj\n" $
+		"8 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
+		"trailer <</Size 9/Root 4 0 R>> "
 
 	Test_appendBody()
 		{
 		//Tests when the documents have different order of catalog and pages
 		//and both have multiple pages
-		expected = "\n1 0 obj <</Type /Catalog /Pages 2 0 R>>\n" $
-			"endobj\n" $
-			"2 0 obj <</Type /Pages /Kids [4 0 R 6 0 R ] /Count 2>>\n" $
-			"endobj\n" $
+		expected = "\n1 0 obj <</Type /Catalog /Pages 2 0 R>>\n" $ "endobj\n" $
+			"2 0 obj <</Type /Pages /Kids [4 0 R 6 0 R ] /Count 2>>\n" $ "endobj\n" $
 			"8 0 obj << /Producer (Suneido PDF Generator) >>\nendobj" $
 			"3 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
 			"/WinAnsiEncoding >>\nendobj\n" $
@@ -313,38 +309,49 @@ PdfTest
 		}
 
 	body2R: "%PDF-1.3\r%encoded\r4 0 obj <</Type /Catalog /Pages 3 0 R>>\rendobj\r" $
-			"3 0 obj <</Type /Pages /Kids [2 0 R 6 0 R ] /Count 2>>\rendobj\r" $
-			"1 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
-			"/WinAnsiEncoding >>\rendobj\r" $
-			"2 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
-			"/Contents [5 0 R] /Resources<<\r/Font <<\r/F1 1 0 R>>>>>>\rendobj\r" $
-			"5 0 obj\r<</Length 6 0 R /Filter /FlateDecode>>\rstream\rcompressed\r" $
-			"endstream\rendobj\r" $
-			"6 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
-			"/Contents [7 0 R] /Resources<<\r/Font <<\r/F1 1 0 R>>>>>>\rendobj\r" $
-			"7 0 obj\r<</Length 7 0 R /Filter /FlateDecode>>\rstream\rcompressed\r" $
-			"endstream\rendobj\n" $
-			"8 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
-			"trailer <</Size 9/Root 4 0 R>> "
+		"3 0 obj <</Type /Pages /Kids [2 0 R 6 0 R ] /Count 2>>\rendobj\r" $
+		"1 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
+		"/WinAnsiEncoding >>\rendobj\r" $
+		"2 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [5 0 R] /Resources<<\r/Font <<\r/F1 1 0 R>>>>>>\rendobj\r" $
+		"5 0 obj\r<</Length 6 0 R /Filter /FlateDecode>>\rstream\rcompressed\r" $
+		"endstream\rendobj\r" $
+		"6 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [7 0 R] /Resources<<\r/Font <<\r/F1 1 0 R>>>>>>\rendobj\r" $
+		"7 0 obj\r<</Length 7 0 R /Filter /FlateDecode>>\rstream\rcompressed\r" $
+		"endstream\rendobj\n" $
+		"8 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
+		"trailer <</Size 9/Root 4 0 R>> "
 	body2RN: "%PDF-1.3\r\n%encoded\r\n4 0 obj <</Type /Catalog /Pages 3 0 R>>\r\n" $
-			"endobj\r\n" $
-			"3 0 obj <</Type /Pages /Kids [2 0 R 6 0 R ] /Count 2>>\r\nendobj\r\n" $
-			"1 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
-			"/WinAnsiEncoding >>\r\nendobj\r\n" $
-			"2 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
-			"/Contents [5 0 R] /Resources<<\r\n/Font <<\r\n/F1 1 0 R>>>>>>\r\n" $
-			"endobj\r\n" $
-			"5 0 obj\r\n<</Length 6 0 R /Filter /FlateDecode>>\r\nstream\r\n" $
-			"compressed\r\n" $
-			"endstream\r\nendobj\r\n" $
-			"6 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
-			"/Contents [7 0 R] /Resources<<\r\n/Font <<\r\n/F1 1 0 R>>>>>>\r\n" $
-			"endobj\r\n" $
-			"7 0 obj\r\n<</Length 7 0 R /Filter /FlateDecode>>\r\nstream\r\n" $
-			"compressed\r\n" $
-			"endstream\r\nendobj\r\n" $
-			"8 0 obj << /Producer (Suneido PDF Generator) >>\r\nendobj\r\n" $
-			"trailer <</Size 9/Root 4 0 R>>\r\n"
+		"endobj\r\n" $
+		"3 0 obj <</Type /Pages /Kids [2 0 R 6 0 R ] /Count 2>>\r\nendobj\r\n" $
+		"1 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
+		"/WinAnsiEncoding >>\r\nendobj\r\n" $
+		"2 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [5 0 R] /Resources<<\r\n/Font <<\r\n/F1 1 0 R>>>>>>\r\n" $
+		"endobj\r\n" $ "5 0 obj\r\n<</Length 6 0 R /Filter /FlateDecode>>\r\nstream\r\n" $
+		"compressed\r\n" $ "endstream\r\nendobj\r\n" $
+		"6 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [7 0 R] /Resources<<\r\n/Font <<\r\n/F1 1 0 R>>>>>>\r\n" $
+		"endobj\r\n" $ "7 0 obj\r\n<</Length 7 0 R /Filter /FlateDecode>>\r\nstream\r\n" $
+		"compressed\r\n" $ "endstream\r\nendobj\r\n" $
+		"8 0 obj << /Producer (Suneido PDF Generator) >>\r\nendobj\r\n" $
+		"trailer <</Size 9/Root 4 0 R>>\r\n"
+	bodyEmptyNode: "%PDF-1.3\r\n%encoded\r\n4 0 obj <</Type /Catalog /Pages 3 0 R>>\r\n" $
+		"endobj\r\n" $
+		"3 0 obj <</Type /Pages /Kids [2 0 R 6 0 R ] /Count 2>>\r\nendobj\r\n" $
+		"1 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding " $
+		"/WinAnsiEncoding >>\r\nendobj\r\n" $
+		"2 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [5 0 R] /Resources<<\r\n/Font <<\r\n/F1 1 0 R>>>>>>\r\n" $
+		"endobj\r\n" $ "5 0 obj\r\n<</Length 6 0 R /Filter /FlateDecode>>\r\nstream\r\n" $
+		"compressed\r\n" $ "endstream\r\nendobj\r\n" $
+		"6 0 obj<</Type /Page /Parent 3 0 R /MediaBox [0 0 612 792] " $
+		"/Contents [7 0 R] /Resources<<\r\n/Font <<\r\n/F1 1 0 R>>>>>>\r\n" $
+		"endobj\r\n" $ "7 0 obj\r\n<</Length 7 0 R /Filter /FlateDecode>>\r\nstream\r\n" $
+		"compressed\r\n" $ "endstream\r\nendobj\r\n" $
+		"11 0 obj << /Producer (Suneido PDF Generator) >>\r\nendobj\r\n" $
+		"trailer <</Size 12/Root 4 0 R>>\r\n"
 
 	Test_calcLocations()
 		{
@@ -353,24 +360,30 @@ PdfTest
 
 		//Test out of order objects and when there is a reference to the object
 		//before the object
-		expected = Object(0, 125, 221, 63, 16, 343, 425, 547, 629)
-		Assert(method(Object(.ReadPdf(.body2, merger))) is: expected)
+		expected = [#(next_empty_node: 0), 125, 221, 63, 16, 343, 425, 547, 629]
+		Assert(method([.ReadPdf(.body2, merger)]) is: expected)
 
 		//Test with carriage returns
-		expected = Object(0, 125, 221, 63, 16, 343, 425, 547, 629)
-		Assert(method(Object(.ReadPdf(.body2R, merger))) is: expected)
+		expected = [#(next_empty_node: 0), 125, 221, 63, 16, 343, 425, 547, 629]
+		Assert(method([.ReadPdf(.body2R, merger)]) is: expected)
 
 		//Test with carriage returns and newlines
 		//The merged pdf will only keep one close to opening tag
-		expected = Object(0, 127, 224, 64, 16, 349, 436, 561, 648)
-		Assert(method(Object(.ReadPdf(.body2RN, merger))) is: expected)
+		expected = [#(next_empty_node: 0), 127, 224, 64, 16, 349, 436, 561, 648]
+		Assert(method([.ReadPdf(.body2RN, merger)]) is: expected)
+
+		//Test with carriage returns and newlines
+		//The merged pdf will only keep one close to opening tag
+		expected = [#(next_empty_node: 8), 127, 224, 64, 16, 349, 436, 561,
+			#(next_empty_node: 9), #(next_empty_node: 10), #(next_empty_node: 0), 648]
+		merger.PdfMerger_totalObj = 11
+		Assert(method([.ReadPdf(.bodyEmptyNode, merger)]) is: expected)
 		}
 
 	Test_buildXRef()
 		{
 		//Test when objects are not ordered
-		expected = "xref\n0 9\n" $
-			"0000000000 65535 f \n0000000125 00000 n \n" $
+		expected = "xref\n0 9\n" $ "0000000000 65535 f \n0000000125 00000 n \n" $
 			"0000000221 00000 n \n0000000063 00000 n \n0000000016 00000 n \n" $
 			"0000000343 00000 n \n0000000425 00000 n \n0000000547 00000 n \n" $
 			"0000000629 00000 n \n" $
@@ -378,8 +391,7 @@ PdfTest
 		.assertBuiltXRef(.body2, expected)
 
 		//Test with carriage returns
-		expected = "xref\n0 9\n" $
-			"0000000000 65535 f \n0000000125 00000 n \n" $
+		expected = "xref\n0 9\n" $ "0000000000 65535 f \n0000000125 00000 n \n" $
 			"0000000221 00000 n \n0000000063 00000 n \n0000000016 00000 n \n" $
 			"0000000343 00000 n \n0000000425 00000 n \n0000000547 00000 n \n" $
 			"0000000629 00000 n \n" $
@@ -387,8 +399,7 @@ PdfTest
 		.assertBuiltXRef(.body2R, expected)
 
 		//Test with carriage returns and newlines
-		expected = "xref\n0 9\n" $
-			"0000000000 65535 f \n0000000127 00000 n \n" $
+		expected = "xref\n0 9\n" $ "0000000000 65535 f \n0000000127 00000 n \n" $
 			"0000000224 00000 n \n0000000064 00000 n \n0000000016 00000 n \n" $
 			"0000000349 00000 n \n0000000436 00000 n \n0000000561 00000 n \n" $
 			"0000000648 00000 n \n" $
@@ -422,7 +433,7 @@ PdfTest
 		Assert(method(files) is: expected)
 		files = #(` C:\Users\name\Documents\data.csv  `,
 			`C:\Users\name\Documents\new.PDF`, `C:\Users\name\Documents\new.jpg`,
-			 `new.JPG`, `\Pictures\old.png`)
+			`new.JPG`, `\Pictures\old.png`)
 		expected = #(`C:\Users\name\Documents\new.PDF`,
 			`C:\Users\name\Documents\new.jpg`, `new.JPG`)
 		Assert(method(files) is: expected)
@@ -434,11 +445,11 @@ PdfTest
 		// Data that ends with a tab
 		data = "\n36 0 obj\r<</Filter/FlateDecode/First 5/Length 60/N 1/Type/ObjStm>>" $
 			"stream" $
-		stream = "\r\n" $
-			Zlib.Compress("39 0 <</ProcSet[/PDF/ImageC]/XObject<</Im0 37 0 R>>>>")
-		expected = "\n39 0 obj\n<</ProcSet[/PDF/ImageC]/XObject<</Im0 37 0 R" $
-			">>>>\nendobj\n"
-		Assert(method(data, stream, #()) is: Object(Object(head: expected, tail:'')))
+			stream = "\r\n" $
+				Zlib.Compress("39 0 <</ProcSet[/PDF/ImageC]/XObject<</Im0 37 0 R>>>>")
+		expected =
+			"\n39 0 obj\n<</ProcSet[/PDF/ImageC]/XObject<</Im0 37 0 R" $ ">>>>\nendobj\n"
+		Assert(method(data, stream, #()) is: [Object(head: expected, tail: "")])
 
 		// object with long property text
 		data = "\n36 0 obj\r<</Filter/FlateDecode/First 5/Length 60/N 1/Type/ObjStm>>" $
@@ -457,18 +468,19 @@ PdfTest
 			"<</Filter/FlateDecode/First 5/Length 57/N 1/Type/ObjStm>>stream\r\n" $
 			Zlib.Compress("24 0 <</Count 3/Kids[28 0 R 1 0 R 4 0 R]/Type/Pages>>") $
 			"\nendstream\nendobj\n"
-		expected = "\n24 0 obj\n<</Count 3/Kids[28 0 R 1 0 R 4 0 R]/Type/Pages>>" $
-			"\nendobj"
+		expected =
+			"\n24 0 obj\n<</Count 3/Kids[28 0 R 1 0 R 4 0 R]/Type/Pages>>" $ "\nendobj"
 		Assert(.PdfObToString(.ReadPdf(data), data) like: expected)
 
 		// Object number info has newline delimiters
 		data = "\n2 0 obj\n<</Length 12 0 R/Filter/FlateDecode/Type/ObjStm/N 4" $
 			"/First 20>>\nstream\n" $
 			Zlib.Compress("1 0\n9 32\n6 71\n3 161\n" $
-			"[/PDF/ImageB/ImageC/ImageI/Text]<</ProcSet 1 0 R/XObject<</I0 4 0 R>>>>" $
-			"<</Type/Page/Parent 3 0 R/Contents 7 0 R/Resources 9 0 R" $
-			"/MediaBox[0 0 609.8824 799.3469]>><</Type/Pages/Count 1/Kids[ 6 0 R]>>") $
-			"\nendstream\nendobj\n"
+				"[/PDF/ImageB/ImageC/ImageI/Text]" $
+				"<</ProcSet 1 0 R/XObject<</I0 4 0 R>>>>" $
+				"<</Type/Page/Parent 3 0 R/Contents 7 0 R/Resources 9 0 R" $
+				"/MediaBox[0 0 609.8824 799.3469]>>" $
+				"<</Type/Pages/Count 1/Kids[ 6 0 R]>>") $ "\nendstream\nendobj\n"
 		expected = "\n1 0 obj\n[/PDF/ImageB/ImageC/ImageI/Text]\nendobj\n" $
 			"\n9 0 obj\n<</ProcSet 1 0 R/XObject<</I0 4 0 R>>>>\nendobj\n" $
 			"\n6 0 obj\n<</Type/Page/Parent 3 0 R/Contents 7 0 R/Resources 9 0 R" $
@@ -476,8 +488,7 @@ PdfTest
 			"\n3 0 obj\n<</Type/Pages/Count 1/Kids[ 6 0 R]>>\nendobj"
 		Assert(.PdfObToString(.ReadPdf(data), data) like: expected)
 
-		data = "\n2 0 obj\n<</Length 12 0 R /Type/ObjStm/N 4" $
-			"/First 20>>\nstream\n" $
+		data = "\n2 0 obj\n<</Length 12 0 R /Type/ObjStm/N 4" $ "/First 20>>\nstream\n" $
 			"1 0\n9 32\n6 71\n3 161\n" $
 			"[/PDF/ImageB/ImageC/ImageI/Text]<</ProcSet 1 0 R/XObject<</I0 4 0 R>>>>" $
 			"<</Type/Page/Parent 3 0 R/Contents 7 0 R/Resources 9 0 R" $
@@ -528,8 +539,7 @@ PdfTest
 			"/Contents [7 0 R] /Resources<<\n/Font <<\n/F1 3 0 R>>>>>>\nendobj\n" $
 			"7 0 obj\n<</Length 7 0 R /Filter /FlateDecode>>\nstream\ncompressed\n" $
 			"endstream\nendobj\n%comments\ntrailer <</Size 8/Root 1 0 R>> "
-		expected =
-			"\n1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
+		expected = "\n1 0 obj\n<</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
 			"2 0 obj\n<</Type /Pages /Kids [] /Count 0>>\nendobj\n" $
 			"3 0 obj\n<< /Producer (Suneido PDF Generator) >>\nendobj\n" $
 			"5 0 obj\n<</Parent 2 0 R/Type /Pages /Kids [7 0 R 9 0 R ] /Count 2>>\n" $
@@ -549,18 +559,18 @@ PdfTest
 		pdfOb = .ReadPdf(data)
 		merger.PdfMerger_convertBodyToSuneidoFormat(pdfOb)
 
-		s = .PdfObToString(merger.PdfMerger_mergedOb[0], '')
+		s = .PdfObToString(merger.PdfMerger_mergedOb[0], "")
 		s $= .PdfObToString(merger.PdfMerger_mergedOb[1], data)
 		Assert(s like: expected)
 		Assert(merger.PdfMerger_totalObj is: 10)
-		Assert(merger.PdfMerger_kids is: ' 5 0 R')
+		Assert(merger.PdfMerger_kids is: " 5 0 R")
 		Assert(merger.PdfMerger_totalPages is: 2)
 		Assert(merger.PdfMerger_parent is: "/Parent 2")
 		}
 
 	Test_updateParentRef()
 		{
-		merger = .PdfMerger('/Parent 10')
+		merger = .PdfMerger("/Parent 10")
 		body = "%PDF-1.3\n%\xe9\xe9\xe9\xe9\n" $
 			"1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
 			"2 0 obj <</Type /Pages /Kids [] /Count 0>>\nendobj\n" $
@@ -593,8 +603,7 @@ PdfTest
 			"1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
 			"3 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
 			"5 0 obj <</Parent 2 0 R/Type /Pages /Kids [7 0 R 9 0 R ] /Count 2>>\n" $
-			"endobj\n" $
-			"2 0 obj <</Type /Pages /Kids [5 0 R] /Count 1>>\nendobj\n"
+			"endobj\n" $ "2 0 obj <</Type /Pages /Kids [5 0 R] /Count 1>>\nendobj\n"
 		expected = "\n1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
 			"3 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
 			"5 0 obj <</Parent 2 0 R/Type /Pages /Kids [7 0 R 9 0 R ] /Count 2>>\n" $
@@ -614,22 +623,19 @@ PdfTest
 
 	Test_updateParentRef_overriding_page_count()
 		{
-		merger = .PdfMerger('/Parent 10')
+		merger = .PdfMerger("/Parent 10")
 		//Test the overriding page count
 		body = "%PDF-1.3\n%\xe9\xe9\xe9\xe9\n" $
 			"1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
 			"3 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
 			"5 0 obj <</Parent 2 0 R/Type /Pages /Kids [7 0 R 9 0 R ] /Count 2>>\n" $
-			"endobj\n" $
-			"2 0 obj <</Type /Pages /Kids [5 0 R] /Count 1>>\nendobj\n" $
+			"endobj\n" $ "2 0 obj <</Type /Pages /Kids [5 0 R] /Count 1>>\nendobj\n" $
 			"3 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
 			"2 0 obj <</Type /Pages /Kids [5 0 R 14 0 R] /Count 3>>\nendobj\n"
-		expected = "\n" $
-			"1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
+		expected = '\n' $ "1 0 obj <</Type /Catalog /Pages 2 0 R>>\nendobj\n" $
 			"3 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
 			"5 0 obj <</Parent 2 0 R/Type /Pages /Kids [7 0 R 9 0 R ] /Count 2>>\n" $
-			"endobj\n" $
-			"2 0 obj <</Type /Pages /Kids [5 0 R] /Count 1>>\nendobj\n" $
+			"endobj\n" $ "2 0 obj <</Type /Pages /Kids [5 0 R] /Count 1>>\nendobj\n" $
 			"3 0 obj << /Producer (Suneido PDF Generator) >>\nendobj\n" $
 			"2 0 obj <</Parent 10 0 R/Type /Pages /Kids [5 0 R 14 0 R] /Count 3>>" $
 			"\nendobj"
@@ -658,11 +664,11 @@ PdfTest
 		expected = bodyBeforeKids $ kids $ "] /Count 4>>\n" $ bodyAfterKids
 		.assertUpdatesPages(kids, 4, expected)
 
-		kids = Seq(1, 400).Map({ it $ ' 0 R' }).Join(' ')
+		kids = Seq(1, 400).Map({ it $ " 0 R" }).Join(' ')
 		expected = bodyBeforeKids $ kids $ "] /Count 400>>\n" $ bodyAfterKids
 		.assertUpdatesPages(kids, 400, expected)
 
-		kids  = Seq(1, 420).Map({ it $ ' 0 R' }).Join(' ')
+		kids = Seq(1, 420).Map({ it $ " 0 R" }).Join(' ')
 		expected = bodyBeforeKids $ kids $ "] /Count 420>>\n" $ bodyAfterKids
 		.assertUpdatesPages(kids, 420, expected)
 		}
@@ -683,23 +689,23 @@ PdfTest
 		{
 		fn = PdfMerger.PdfMerger_isJpg?
 
-		Assert(fn('not_a_jpg.pdf') is: false)
-		Assert(fn('not_a.jpg.pdf') is: false)
-		Assert(fn('not_a.jpeg.pdf') is: false)
-		Assert(fn('not_a.gif') is: false)
-		Assert(fn('is_a.jpg'))
-		Assert(fn('is_a.jpeg'))
-		Assert(fn('is_a.pdf.jpg'))
-		Assert(fn('is_a.pdf.jpeg'))
+		Assert(fn("not_a_jpg.pdf") is: false)
+		Assert(fn("not_a.jpg.pdf") is: false)
+		Assert(fn("not_a.jpeg.pdf") is: false)
+		Assert(fn("not_a.gif") is: false)
+		Assert(fn("is_a.jpg"))
+		Assert(fn("is_a.jpeg"))
+		Assert(fn("is_a.pdf.jpg"))
+		Assert(fn("is_a.pdf.jpeg"))
 		}
 
 	Test_empty_file()
 		{
-		file1 = .TempTableName() $ '.pdf'
-		file2 = .TempTableName() $ '.pdf'
+		file1 = .TempTableName() $ ".pdf"
+		file2 = .TempTableName() $ ".pdf"
 		invalidFiles = PdfMerger([file1, file2], .TempTableName())
-		Assert(invalidFiles[0] endsWith: '(invalid)')
-		Assert(invalidFiles[1] endsWith: '(invalid)')
+		Assert(invalidFiles[0] endsWith: "(invalid)")
+		Assert(invalidFiles[1] endsWith: "(invalid)")
 		}
 
 	Test_compressibleImageObject?()
@@ -738,7 +744,8 @@ PdfTest
 /BitsPerComponent 8 /Filter /DCTDecode
 >>
 stream"))
-		Assert(m("<< /Length 8 0 R /Type /XObject /Subtype /Image /Width 1654
+		Assert(
+			m("<< /Length 8 0 R /Type /XObject /Subtype /Image /Width 1654
 /Height 2338 /Interpolate true /ColorSpace 9 0 R /Intent /Perceptual
 /BitsPerComponent 8 /Filter /FlateDecode/DCTDecode/otherDecode/other2Decode
 >>
@@ -749,8 +756,8 @@ stream") is: false)
 		{
 		m = PdfMerger.PdfMerger_getStreamSize
 		Assert(m(#()) is: 0)
-		Assert(m(#(streamSize: 8767, otherStuff: 'stuff')) is: 8767)
-		Assert(m(#(a:'a', streamStart: 111, b: 'b', streamEnd: 156)) is: 45)
+		Assert(m(#(streamSize: 8767, otherStuff: stuff)) is: 8767)
+		Assert(m(#(a: a, streamStart: 111, b: b, streamEnd: 156)) is: 45)
 		}
 
 	Test_imageObjectColorSpace()
@@ -763,7 +770,7 @@ stream") is: false)
 /Length 13 0 R
 /Filter [/ASCII85Decode /DCTDecode]
 >>`
-		Assert(fun(header) is: 'devicergb')
+		Assert(fun(header) is: #devicergb)
 
 		header = `<<
 /Type /XObject
@@ -775,7 +782,7 @@ stream") is: false)
 /BitsPerComponent 8
 /ColorSpace /DeviceRGB
 >>`
-		Assert(fun(header) is: 'devicergb')
+		Assert(fun(header) is: #devicergb)
 
 		header = `<< % Attributes dictionary
 /Subtype /NChannel
@@ -798,7 +805,7 @@ stream") is: false)
 /Length 13 0 R
 /Filter [/ASCII85Decode /DCTDecode]
 >>`
-		Assert(fun(header) is: ' /cs12 12 0 r ')
+		Assert(fun(header) is: " /cs12 12 0 r ")
 
 		header = `<< /Width 76
 /Height 99
@@ -808,7 +815,7 @@ stream") is: false)
 /Filter [/ASCII85Decode /DCTDecode]
 /ColorSpace << /Cs12 12 0 R >>
 >>`
-		Assert(fun(header) is: ' /cs12 12 0 r ')
+		Assert(fun(header) is: " /cs12 12 0 r ")
 
 		header = `<< /Type /XObject
 /Subtype /Image
@@ -819,7 +826,7 @@ stream") is: false)
 /Length 105278
 /Filter /ASCII85Decode
 >>`
-		Assert(fun(header) is: '10 0 r')
+		Assert(fun(header) is: "10 0 r")
 
 		header = `<< /Type /XObject
 /Subtype /Image
@@ -830,7 +837,7 @@ stream") is: false)
 /Filter /ASCII85Decode
 /ColorSpace 10 0 R
 >>`
-		Assert(fun(header) is: '10 0 r')
+		Assert(fun(header) is: "10 0 r")
 		}
 
 	Test_getStreamLength()
@@ -846,16 +853,16 @@ stream") is: false)
 		Assert(fn(header, #()) is: 152)
 
 		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length hello/Pattern/XStep 16`
-		Assert({ fn(header, #()) } throws: 'invalid length object')
+		Assert({ fn(header, #()) } throws: "invalid length object")
 
 		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length 152 0 R`
-		Assert(fn(header, Object(Object(head: '\n152 0 obj\n333\nendobj'))) is: 333)
+		Assert(fn(header, [Object(head: "\n152 0 obj\n333\nendobj")]) is: 333)
 
 		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length 152 0 R/Pattern/XStep 16`
-		Assert(fn(header, Object(Object(head: '\n152 0 obj\n333\nendobj'))) is: 333)
+		Assert(fn(header, [Object(head: "\n152 0 obj\n333\nendobj")]) is: 333)
 
 		header = `/BBox[0 0 16 16]/Filter/FlateDecode/Length 152 0 R/Pattern/XStep 16`
-		Assert({ fn(header, Object(Object(head: '\n1 0 obj\n333\nendobj'))) }
-			throws: 'cannot find length object 152')
+		Assert({ fn(header, [Object(head: "\n1 0 obj\n333\nendobj")]) }
+			throws: "cannot find length object 152")
 		}
 	}

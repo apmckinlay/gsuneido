@@ -17,6 +17,11 @@ conflicts if they are also in the master changes.
 Put(), Remove(), and Restore() accesses local and/or server to respectively send a change,
 send a deletion, and restore a local record.
 
+SendLocalChanges() sends a list of changes, chaining asof so that anyone else sending
+part way through aborts the rest. Each change goes through SvcAutoFormat first, which
+may commit the record's original text formatted, so that formatting and code changes
+never end up in the same commit.
+
 UpdateLibrary() is called when getting master changes. When multiple master changes are
 being got, all changes are ignored except the last one, unless it's an add. The ignored
 changes are still printed. If multiple changes of type " " were sent without any ending
@@ -27,9 +32,7 @@ class
 	{
 	New(server = false, local? = false)
 		{
-		.svc = local? is true or server is false or server is ''
-			? SvcCore()
-			: SvcClient()
+		.svc = local? is true or server is false or server is "" ? SvcCore() : SvcClient()
 		}
 
 	master_changes: false
@@ -43,7 +46,7 @@ class
 		.local_changes = changes.local_changes
 		}
 
-	GetChanges(table, asof = '')
+	GetChanges(table, asof = "")
 		{
 		masters = Object()
 		master_changes = Object()
@@ -65,7 +68,7 @@ class
 
 	masterChanges(svcTable, masterChanges, masters, masterlist)
 		{
-		maxLibCommitted = ''
+		maxLibCommitted = ""
 		for master in masterlist
 			{
 			local = svcTable.Get(master.name)
@@ -73,7 +76,7 @@ class
 				continue
 			masterChanges.Add(Object(type: master.type, name: master.name, who: master.id,
 				modified: master.lib_committed, lib: svcTable.Table(),
-				committed: local isnt false ? local.lib_committed : '',
+				committed: local isnt false ? local.lib_committed : "",
 				path: master.path))
 			masters[master.name] = true
 			if maxLibCommitted is "" or master.lib_committed > maxLibCommitted
@@ -113,13 +116,9 @@ class
 	modifiedLocalChanges(svcTable, masters, master_changes, conflicts, local_changes)
 		{
 		lib = svcTable.Table()
-		QueryApply(svcTable.ModifiedQuery() $ ' remove text')
-			{ |x|
-			x.type = svcTable.Deleted?(x)
-				? '-'
-				: x.lib_committed is ''
-					? '+'
-					: ' '
+		QueryApply(svcTable.ModifiedQuery() $ " remove text")
+			{|x|
+			x.type = svcTable.Deleted?(x) ? '-' : x.lib_committed is "" ? '+' : ' '
 			x.lib = lib
 			x.name = svcTable.MakeName(x, clean:)
 			x.path = svcTable.GetPath(x)
@@ -137,8 +136,7 @@ class
 		path = change.path
 		if masters.Member?(name)
 			{
-			masterIdxs = master_changes.FindAllIf(
-				{ it.name is name and it.lib is lib })
+			masterIdxs = master_changes.FindAllIf({ it.name is name and it.lib is lib })
 
 			masterRec = master_changes[masterIdxs.Last()]
 			sends = Object()
@@ -155,7 +153,7 @@ class
 
 			// Sort because merging needs to check if a delete
 			// is the last modification
-			sends.Sort!({ |x,y| x.masterModified < y.masterModified })
+			sends.Sort!({|x, y| x.masterModified < y.masterModified })
 
 			conflicts.Add(Object(:name, localModified: modified, who: masterRec.who,
 				masterModified: masterRec.modified, localType: type,
@@ -181,7 +179,7 @@ class
 		{
 		.changes(table)
 		list = .masterlist.Values()
-		list.Sort!({ |x,y| x.lib_committed < y.lib_committed })
+		list.Sort!({|x, y| x.lib_committed < y.lib_committed })
 		return list
 		}
 
@@ -220,10 +218,9 @@ class
 		x.name = svcTable.MakeName(x)
 		x.comment = comment
 		x.path = svcTable.GetPath(x)
-		if x.lib_before_hash is '' and Date?(x.lib_committed)
-			x.lib_before_hash = .Hash(x.lib_before_text is ''
-				? x.text
-				: x.lib_before_text)
+		if x.lib_before_hash is "" and Date?(x.lib_committed)
+			x.lib_before_hash = .Hash(
+				x.lib_before_text is "" ? x.text : x.lib_before_text)
 
 		// Can't do it all in one transaction because Put creates master table
 		// and suneido doesn't allow schema changes while outstanding transactions
@@ -232,11 +229,11 @@ class
 		Transaction(update:)
 			{|t|
 			x = svcTable.Get(name, t)
-			x.lib_modified = ''
+			x.lib_modified = ""
 			x.lib_committed = result
 			x.lib_before_hash = .Hash(x.text)
-			x.lib_before_text = ''
-			x.lib_before_path = ''
+			x.lib_before_text = ""
+			x.lib_before_path = ""
 			svcTable.Update(x, t)
 			}
 		svcTable.SetMaxCommitted(result)
@@ -272,7 +269,7 @@ class
 			return
 
 		discrepancies = svcTable.Compare(local, master)
-		if discrepancies.Has?(#text) and local.lib_modified isnt ''
+		if discrepancies.Has?(#text) and local.lib_modified isnt ""
 			discrepancies.Remove(#text)
 		if not discrepancies.Empty?()
 			.recordDiscrepency(table, name, discrepancies)
@@ -296,14 +293,14 @@ class
 
 	recordDiscrepency(table, name, discrepancies)
 		{
-		msgOb = Object('Unexpected discrepancy detected:')
+		msgOb = ["Unexpected discrepancy detected:"]
 		textMatches? = not discrepancies.Has?(#text)
-		discrepancies.Map!({ '    ' $ it })
+		discrepancies.Map!({ "    " $ it })
 		msgOb.Add(@discrepancies)
-		msgOb.Add('\nPlease verify the record\'s integrity via\nSvc : ' $
-			table $ ' > Compare')
+		msgOb.Add(
+			'\nPlease verify the record\'s integrity via\nSvc : ' $ table $ " > Compare")
 		flags = textMatches? ? MB.ICONWARNING : MB.ICONERROR
-		Alert(msgOb.Join('\n'), title: 'Restore ' $ table $ ':' $ name, :flags)
+		Alert(msgOb.Join('\n'), title: "Restore " $ table $ ':' $ name, :flags)
 		}
 
 	GetBefore(table, name, when)
@@ -329,13 +326,14 @@ class
 	MissingTest?(lib, name)
 		{
 		name = name.RightTrim('?')
-		return .Get(lib, name $ '_Test') is false and .Get(lib, name $ 'Test') is false
+		return .Get(lib, name $ "_Test") is false and .Get(lib, name $ "Test") is false
 		}
 
 	UpdateLibrary(master_changes, mergeConflictFn = false)
 		{
-		changes = .MostRecentChanges(master_changes).Values().
-			Sort!({ |x,y| x.name < y.name })
+		changes = .MostRecentChanges(master_changes).
+			Values().
+			Sort!({|x, y| x.name < y.name })
 		feedbackob = Object()
 		.processChanges(changes, mergeConflictFn, feedbackob)
 		.ProcessFeedbackOb(feedbackob)
@@ -351,9 +349,9 @@ class
 			changeType = .getPrefix(rec.type, svcTable.Get(rec.name))
 			printVal = .processChange(svcTable, rec, changeType, mergeConflictFn)
 			desc = rec.name $ Opt(' ', printVal.lib_committed) $ Opt(' ', printVal.id) $
-				Opt(' - ', printVal.comment)
+				Opt(" - ", printVal.comment)
 			feedbackob.Add(Object(:changeType, lib: svcTable.Table(), name: desc,
-				prefix: '<<<'))
+				prefix: "<<<"))
 			svcTable.SetMaxCommitted(printVal.lib_committed)
 			LibUnload(rec.name)
 			}
@@ -386,7 +384,7 @@ class
 			{
 			mergeConflictFn(lib, name)
 			printVal = .GetOld(lib, name, Date.End())
-			printVal.comment = 'MERGED LOCAL WITH: ' $ printVal.comment
+			printVal.comment = "MERGED LOCAL WITH: " $ printVal.comment
 			}
 		else
 			{
@@ -424,8 +422,8 @@ class
 			svcTable = .changeTable(svcTable, it.table)
 			svcTable.Remove(it.name, deleted: svcTable.Get(it.name, deleted:) isnt false)
 			feedbackob.Add(Object(changeType: ' ', lib: it.table,
-				name: it.name $ ' (only existed in the local table)',
-				prefix: 'Deleted:'))
+				name: it.name $ " (only existed in the local table)",
+				prefix: "Deleted:"))
 			}
 		}
 
@@ -445,10 +443,10 @@ class
 		{
 		local? = local isnt false
 		if not local? and type is ' '
-			type = '+' 	// Never got original record, treat this as a new record
+			type = '+' // Never got original record, treat this as a new record
 		else if local? and type is '+'
-			type = ' ' 	// Record exists locally, treat this as a change
-		return type 	// Deletions ('-') are always treated as deletions
+			type = ' ' // Record exists locally, treat this as a change
+		return type // Deletions ('-') are always treated as deletions
 		}
 
 	addMasterChange(svcTable, name, modified)
@@ -471,14 +469,14 @@ class
 			old = svcTable.Get(name, t)
 			x = .Get(lib, name)
 			old.lib_committed = x.lib_committed
-			old.lib_modified = ''
+			old.lib_modified = ""
 			old.text = x.text
 			old.name = x.name
 			old.path = x.path
 			old.lib_before_hash = .Hash(x.text)
-			old.lib_before_text = ''
-			old.lib_before_path = ''
-			old.lib_invalid_text = ''
+			old.lib_before_text = ""
+			old.lib_before_path = ""
+			old.lib_invalid_text = ""
 			svcTable.Update(old, t)
 			return x
 			}
@@ -493,12 +491,12 @@ class
 	// To stop tests from kicking in contributions
 	deleteRecordContrib(table, name)
 		{
-		(OptContribution('SvcDeleteRecord', function (@unused) { }))(table, name)
+		(OptContribution(#SvcDeleteRecord, function(@unused) { }))(table, name)
 		}
 
 	Library?(table)
 		{
-		return SvcTable(table).Type is 'lib'
+		return SvcTable(table).Type is #lib
 		}
 
 	CheckSvcStatus()
@@ -506,13 +504,20 @@ class
 		return .svc.CheckSvcStatus()
 		}
 
+	autoFormat(svcTable, name, userid, asof, feedbackob)
+		{
+		return SvcAutoFormat.BeforeSend(this, svcTable, name, userid, asof, feedbackob)
+		}
+
 	SendLocalChanges(changes, desc, userid, asof = false,
-		afterEachSendingFn = function (@unused) {})
+		afterEachSendingFn = function(@unused) { })
 		{
 		// As of 29331, if called from SvcControl this situation is not possible.
 		// However, adding handling encase this is ever called from a different location
 		if changes.Empty?()
 			return true
+		if asof is false
+			asof = .SvcTime()
 		svcTable = lib = false
 		feedbackob = Object()
 		for change in changes
@@ -520,30 +525,48 @@ class
 			svcTable = .changeTable(svcTable, lib = change.lib)
 			type = change.type
 			name = change.name
+			if type isnt '-'
+				if false is asof = .autoFormat(svcTable, name, userid, asof, feedbackob)
+					return .sendFailed(feedbackob, type, lib, name)
 			method = type is '-' ? .Remove : .Put
 			if false is asof = (method)(svcTable, name, userid, desc, asof)
-				{
-				feedbackob.Add(Object(changeType: type, :lib, :name, failed?:))
-				return false
-				}
-			feedbackob.Add(Object(changeType: type, :lib, :name, prefix: '>>>'))
+				return .sendFailed(feedbackob, type, lib, name)
+			feedbackob.Add(Object(changeType: type, :lib, :name, prefix: ">>>"))
 			afterEachSendingFn(name, lib)
 			}
 		.ProcessFeedbackOb(feedbackob)
 		return true
 		}
+
+	sendFailed(feedbackob, type, lib, name)
+		{
+		feedbackob.Add(Object(changeType: type, :lib, :name, failed?:))
+		.ProcessFeedbackOb(feedbackob)
+		.alertSendFailed(lib, name)
+		return false
+		}
+
+	alertSendFailed(lib, name)
+		{
+		if TestRunner.RunningTests?()
+			return
+		AlertError("Failed to send " $ lib $ ':' $ name $
+			"\r\n\r\nAnything listed before it in the output has been sent.")
+		}
+
 	ProcessFeedbackOb(ob)
 		{
 		for item in ob
-			Print(.buildMsg(item.GetDefault('changeType', ''),
-				item.GetDefault('lib', ''), item.GetDefault('name', ''),
-				item.GetDefault('prefix', ''), item.GetDefault('failed?', false)))
+			Print(.buildMsg(item.GetDefault(#changeType, ""),
+				item.GetDefault(#lib, ""), item.GetDefault(#name, ""),
+				item.GetDefault(#prefix, ""), item.GetDefault(#failed?, false)))
 		}
-	buildMsg(changeType, lib, name, prefix = '', failed? = false)
+
+	buildMsg(changeType, lib, name, prefix = "", failed? = false)
 		{
 		msg = prefix $ changeType $ lib $ ':' $ name
 		if failed?
-			msg = '!!! ' $ msg $ ' FAILED !!!'
+			msg = "!!! " $ msg $ " FAILED !!!"
 		return msg
 		}
 

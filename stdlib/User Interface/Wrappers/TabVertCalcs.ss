@@ -1,8 +1,8 @@
 // Copyright (C) 2023 Axon Development Corporation All rights reserved worldwide.
 TabCalcs
 	{
-	ScrollNextImage: 'down'
-	ScrollPrevImage: 'up'
+	ScrollNextImage: #down
+	ScrollPrevImage: #up
 	New(@args)
 		{
 		super(@.processArgs(args))
@@ -70,11 +70,11 @@ TabCalcs
 
 	baseRenderRect(prevEnd)
 		{
-		rect = Record()
-		rect.AttachRule(#top, function(){ this.start })
-		rect.AttachRule(#bottom, function(){ this.end })
-		rect.AttachRule(#tipX, function(){ this.right })
-		rect.AttachRule(#tipY, function(){ this.start })
+		rect = []
+		rect.AttachRule(#top, function() { this.start })
+		rect.AttachRule(#bottom, function() { this.end })
+		rect.AttachRule(#tipX, function() { this.right })
+		rect.AttachRule(#tipY, function() { this.start })
 		rect.start = prevEnd
 		return rect
 		}
@@ -102,7 +102,7 @@ TabCalcs
 		return specs
 		}
 
-	eraseSize: 30
+	eraseSize:   30
 	ellipseSize: 60
 	baseDrawSpecs(wLarge, hLarge)
 		{
@@ -118,7 +118,7 @@ TabCalcs
 		specs = .baseDrawSpecs(wLarge, hLarge)
 		erase = wLarge - .eraseSize + 5 /*= padding*/
 		specs.overrideRect = [left: 0, top: 0, right: erase, bottom: hLarge]
-		specs.overrideFill = [left: -1, top: 1,	right: erase, bottom: hLarge - 1]
+		specs.overrideFill = [left: -1, top: 1, right: erase, bottom: hLarge - 1]
 		return specs
 		}
 
@@ -136,7 +136,7 @@ TabCalcs
 	textPosLeft(tab, selectedTab)
 		{
 		pos = Object(
-			x: tab.renderRect.left + .PaddingTop - 2
+			x: tab.renderRect.left + .PaddingTop - 2,
 			y: tab.renderRect.bottom - .textPadding(tab))
 		if not selectedTab and tab.width is tab.renderWidth
 			pos.y -= tab.textBoldOffset
@@ -152,14 +152,14 @@ TabCalcs
 	textPosRight(tab, selectedTab)
 		{
 		pos = Object(
-			x: tab.renderRect.right - .PaddingTop + 2
+			x: tab.renderRect.right - .PaddingTop + 2,
 			y: tab.renderRect.top + .textPadding(tab))
 		if not selectedTab and tab.width is tab.renderWidth
 			pos.y += tab.textBoldOffset
 		return pos
 		}
 
-	Resize?(w /*unused*/, h)
+	Resize?(w/*unused*/, h)
 		{
 		return h isnt .H
 		}
@@ -173,8 +173,8 @@ TabCalcs
 		{
 		if xstretch
 			ProgrammerError(
-				'Controls with Xstretch should not be used with vertical tabs',
-				caughtMsg: 'developer error')
+				"Controls with Xstretch should not be used with vertical tabs",
+				caughtMsg: "developer error")
 		extraControl.Resize(.extraControlX, ctrlPos, .W - .PaddingSide, ctrlSize)
 		}
 

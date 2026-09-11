@@ -3,10 +3,11 @@ class
 	{
 	Decode(s)
 		{
-		return s.Tr('+', ' ').
+		return s.
+			Tr('+', ' ').
 			Replace("%[0-9A-Fa-f][0-9A-Fa-f]",
-				{ |s|
-				('0x' $ s[1 ..]).Compile().Chr()
+				{|s|
+				Suneido.Compile(("0x" $ s[1..])).Chr()
 				})
 		}
 
@@ -16,14 +17,14 @@ class
 
 		url = .extractScheme(url, ob)
 
-		i = url.Find1of('/?#')
+		i = url.Find1of("/?#")
 		ob.host = url[..i]
 		url = url[i..]
 
-		i = ob.host.FindRx(':(\d+)$')
+		i = ob.host.FindRx(":(\d+)$")
 		if i < ob.host.Size()
 			{
-			ob.port = Number(ob.host[i+1..])
+			ob.port = Number(ob.host[i+1 ..])
 			ob.host = ob.host[..i]
 			}
 
@@ -31,24 +32,24 @@ class
 		if i < ob.host.Size()
 			{
 			ob.user = ob.host[..i]
-			ob.host = ob.host[i+1..]
+			ob.host = ob.host[i+1 ..]
 			}
 
 		i = url.Find('#')
 		if i < url.Size()
 			{
-			ob.fragment = url[i+1..]
+			ob.fragment = url[i+1 ..]
 			url = url[..i]
 			}
 
-		if url isnt ''
+		if url isnt ""
 			{
 			ob.path = ob.basepath = url
 			i = url.Find('?')
 			if i < url.Size()
 				{
 				ob.basepath = url[..i]
-				ob.query = url[i+1..]
+				ob.query = url[i+1 ..]
 				}
 			}
 
@@ -57,15 +58,15 @@ class
 
 	extractScheme(url, ob)
 		{
-		if url isnt mailto = url.RemovePrefix('mailto:')
+		if url isnt mailto = url.RemovePrefix("mailto:")
 			{
-			ob.scheme = 'mailto'
+			ob.scheme = #mailto
 			return mailto
 			}
-		if url.Has?('://')
+		if url.Has?("://")
 			{
-			ob.scheme = url.BeforeFirst('://')
-			return url.AfterFirst('://')
+			ob.scheme = url.BeforeFirst("://")
+			return url.AfterFirst("://")
 			}
 		return url
 		}
@@ -79,7 +80,7 @@ class
 			if i >= t.Size()
 				values.Add(.convert(t))
 			else
-				values[.convert(t[.. i])] = .convert(t[i + 1 ..])
+				values[.convert(t[..i])] = .convert(t[i+1 ..])
 			}
 		return values
 		}
@@ -135,7 +136,7 @@ class
 
 	EncodeValues(query)
 		{
-		s = ''
+		s = ""
 		for x in query.Values(list:)
 			s $= '&' $ .EncodeQueryValue(x)
 		for m in query.Members(named:).Sort!()
@@ -146,12 +147,12 @@ class
 	EncodeQueryValue(s)
 		{
 		s = String(s)
-		result = ''
-		notok = '^-_.~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
-		while s isnt ''
+		result = ""
+		notok = "^-_.~0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		while s isnt ""
 			{
 			i = s.Find1of(notok)
-			result $= s[.. i]
+			result $= s[..i]
 			if i >= s.Size()
 				return result
 			result $= .encodeChar(s[i])

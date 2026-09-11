@@ -1,13 +1,13 @@
 // Copyright (C) 2021 Axon Development Corporation All rights reserved worldwide.
 Component
 	{
-	Font: ""
-	Size: ""
-	Weight: "normal"
+	Font:   ""
+	Size:   ""
+	Weight: #normal
 	Underline: true
-	Italic: false
+	Italic:   false
 	Xstretch: false
-	styles: `
+	styles:   `
 		.su-html-ahref {
 			color: blue;
 			cursor: pointer;
@@ -15,10 +15,15 @@ Component
 		.su-html-ahref:hover {
 			color: highlight;
 		}`
-	New(text)
+	New(text, hrefOnBrowser = false)
 		{
-		LoadCssStyles('su-html-ahref.css', .styles)
-		.CreateElement('a', :text, className: 'su-html-ahref')
+		LoadCssStyles("su-html-ahref.css", .styles)
+		.CreateElement('a', :text, className: "su-html-ahref")
+		if hrefOnBrowser isnt false
+			{
+			.El.href = hrefOnBrowser
+			.El.target = "_blank"
+			}
 
 		.SetFont(.Font, .Size, .Weight, .Underline, .Italic)
 		metrics = SuRender().GetTextMetrics(.El, text)
@@ -26,11 +31,11 @@ Component
 		.Ymin = .Ymin isnt 0 ? .Ymin : metrics.height
 		.SetMinSize()
 
-		.El.AddEventListener('click', .click)
+		.El.AddEventListener(#click, .click)
 		}
 
 	click()
 		{
-		.Event('LBUTTONUP')
+		.Event(#LBUTTONUP)
 		}
 	}

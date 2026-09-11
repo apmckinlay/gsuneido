@@ -5,17 +5,17 @@ AmazonAWS
 
 	Host(region = false)
 		{
-		return 's3.' $ (region is false ? .region : region) $ '.amazonaws.com'
+		return "s3." $ (region is false ? .region : region) $ ".amazonaws.com"
 		}
 
 	ContentType()
 		{
-		return 'multipart/form-data'
+		return "multipart/form-data"
 		}
 
 	Service()
 		{
-		return 's3'
+		return #s3
 		}
 
 	CanonicalQueryString(params)
@@ -25,21 +25,21 @@ AmazonAWS
 
 	PayloadHash(unused)
 		{
-		return 'UNSIGNED-PAYLOAD'
+		return "UNSIGNED-PAYLOAD"
 		}
 
-	region: 'us-east-1'
-	makeRequest(call, params, path, toFile = '', fromFile = '', expectedResponse = '200',
-		policy = '', fullResponse? = false, content = '', extraHeaders = #(),
-		region = false, limitRate = '')
+	region: "us-east-1"
+	makeRequest(call, params, path, toFile = "", fromFile = "", expectedResponse = "200",
+		policy = "", fullResponse? = false, content = "", extraHeaders = #(),
+		region = false, limitRate = "")
 		{
 		region = region is false ? .region : region
 		params = AmazonAWS.UrlEncodeValues(params)
-		url = 'https://' $ .Host(region) $ path $ Opt('?', params)
+		url = "https://" $ .Host(region) $ path $ Opt('?', params)
 		extraHeaders = extraHeaders.Copy()
-		extraHeaders.X_Amz_Content_Sha256 = .PayloadHash('')
+		extraHeaders.X_Amz_Content_Sha256 = .PayloadHash("")
 		extraHeaders.X_Amz_Security_Token = .SecurityToken()
-		if policy isnt ''
+		if policy isnt ""
 			extraHeaders.X_Amz_Acl = policy.AfterLast(':')
 		if false is header = .signRequest(call, region, params, path, extraHeaders)
 			return false
@@ -62,11 +62,11 @@ AmazonAWS
 		// creating a "Folder" on amazon involves putting an empty object
 		// need to handle content/fromFile being empty
 		// canonical still needs to use "PUT"
-		return #("EMPTYPUT": "PUT").GetDefault(call, call)
+		return #(EMPTYPUT: PUT).GetDefault(call, call)
 		}
 
-	https(call, url, toFile = '', fromFile = '', header = #(), content = '',
-		limitRate = '')
+	https(call, url, toFile = "", fromFile = "", header = #(), content = "",
+		limitRate = "")
 		{
 		return Https(call, url, :content, :toFile, :fromFile, :header,
 			timeoutConnect: 60, :limitRate)
@@ -79,7 +79,7 @@ AmazonAWS
 			Func(bucket)
 				{
 				attBucket = AttachmentS3Bucket.Info()
-				if attBucket.bucket is bucket and attBucket.region isnt ''
+				if attBucket.bucket is bucket and attBucket.region isnt ""
 					return attBucket.region
 
 				return AmazonS3.GetBucketRegion(bucket)
@@ -93,15 +93,15 @@ AmazonAWS
 		// 403 - bucket does exist, but no permision to call HEAD
 		// 400 - bucket does not exist and bucket name too short
 		// 404 - bucket does not exist
-		res = .makeRequest('HEAD', [], '/' $ bucket,
-			expectedResponse: #('200', '301', '403', '400', '404'), fullResponse?:)
+		res = .makeRequest(#HEAD, [], '/' $ bucket,
+			expectedResponse: #("200", "301", "403", "400", "404"), fullResponse?:)
 		region = res.header.Extract(`(?i)x-amz-bucket-region:\s*(\S+)`)
 		// this should throw error if region cannot be determined
-		Assert(region isnt false, msg: 'cannot determine region')
+		Assert(region isnt false, msg: "cannot determine region")
 		return region.Lower()
 		}
 
-	CopyFile(bucketFrom, fileFrom, bucketTo, fileTo, policy = '')
+	CopyFile(bucketFrom, fileFrom, bucketTo, fileTo, policy = "")
 		{
 		region = .GetBucketLocationCached(bucketTo)
 		fileFrom = Url.EncodePreservePath(fileFrom)
@@ -109,43 +109,43 @@ AmazonAWS
 		path = '/' $ bucketTo $ '/' $ fileTo
 		extraHeaders = Object()
 		extraHeaders.X_Amz_Copy_Source = '/' $ bucketFrom $ '/' $ fileFrom
-		return false isnt .makeRequest(
-			'EMPTYPUT', [], path, :region, :extraHeaders, :policy)
+		return false isnt
+			.makeRequest(#EMPTYPUT, [], path, :region, :extraHeaders, :policy)
 		}
 
-	GetFile(bucket, fileFrom, fileTo = "", exceptionOnFailure = false, versionId = '',
+	GetFile(bucket, fileFrom, fileTo = "", exceptionOnFailure = false, versionId = "",
 		region = false)
 		{
 		// normally failures are automatically logged and false is returned,
 		// the exceptionOnFailure option allows the calling application to handle an
 		// exception when the request fails
 		_exceptionOnFailure = exceptionOnFailure
-		if fileTo is ''
+		if fileTo is ""
 			fileTo = Paths.Basename(fileFrom)
 		Assert(fileTo isString:)
 		fileFrom = Url.EncodePreservePath(fileFrom)
 		path = '/' $ bucket $ '/' $ fileFrom
-		retVal = .makeRequest('GET', [:versionId], path, toFile: fileTo,
+		retVal = .makeRequest(#GET, [:versionId], path, toFile: fileTo,
 			:region) isnt false
 		.cleanupFileIfFailed(retVal, fileTo)
 		return retVal
 		}
 
-	PresignUrl(bucket, fileFrom, region = false, method = 'GET', download? = false)
+	PresignUrl(bucket, fileFrom, region = false, method = #GET, download? = false)
 		{
 		path = '/' $ bucket $ '/' $ Url.EncodePreservePath(fileFrom)
 		region = region is false ? .GetBucketLocationCached(bucket) : region
-		return AmazonV4Signing(this, .mapSignedAction(method), region, '', path,
+		return AmazonV4Signing(this, .mapSignedAction(method), region, "", path,
 			#()).PresignUrl(.Host(region), :download?)
 		}
 
 	PutFileContent(bucket, fileName, content)
 		{
-		return false isnt .makeRequest('PUT', [], '/' $ bucket $ '/' $ fileName, :content)
+		return false isnt .makeRequest(#PUT, [], '/' $ bucket $ '/' $ fileName, :content)
 		}
 
-	PutFile(bucket, fileFrom, fileTo = '', policy = '', region = false,
-		allowEmpty? = false, limitRate = '', failIfExists? = false)
+	PutFile(bucket, fileFrom, fileTo = "", policy = "", region = false,
+		allowEmpty? = false, limitRate = "", failIfExists? = false)
 		{
 		if false is fileTo = .validateAndGetFileTo(fileFrom, fileTo, allowEmpty?)
 			return false
@@ -155,20 +155,20 @@ AmazonAWS
 		// if in request will change where curl stores the file prior to sending
 		extraHeaders = Object()
 		if failIfExists?
-			extraHeaders['If-None-Match'] = "*"
-		return false isnt
-			.makeRequest('PUT', [], path, toFile: '', fromFile: fileFrom, :policy,
-				:region, :limitRate, :extraHeaders)
+			extraHeaders["If-None-Match"] = '*'
+		return false isnt .makeRequest(#PUT, [], path, toFile: "", fromFile: fileFrom,
+			:policy,
+			:region, :limitRate, :extraHeaders)
 		}
 
 	validateAndGetFileTo(fileFrom, fileTo, allowEmpty? = false)
 		{
 		if not .validFile?(fileFrom, allowEmpty?)
 			{
-			.addToLog('PUT', fileFrom $ ' File does not exist or File is empty')
+			.addToLog(#PUT, fileFrom $ " File does not exist or File is empty")
 			return false
 			}
-		if fileTo is ''
+		if fileTo is ""
 			fileTo = Paths.Basename(fileFrom)
 		fileTo = Url.EncodePreservePath(fileTo)
 		return fileTo
@@ -179,22 +179,22 @@ AmazonAWS
 		return FileExists?(fileFrom) and (allowEmpty? or FileSize(fileFrom) isnt 0)
 		}
 
-	DeleteFile(bucket, filename, versionId = [])
+	DeleteFile(bucket, filename, versionId = #{})
 		{
-		Assert(filename isnt: '')
-		Assert(filename isString: true)
+		Assert(filename isnt: "")
+		Assert(filename isString:)
 		region = .GetBucketLocationCached(bucket)
 		path = '/' $ bucket $ '/' $ Url.EncodePreservePath(filename)
-		return .makeRequest('DELETE', versionId, path, expectedResponse: '204',
+		return .makeRequest(#DELETE, versionId, path, expectedResponse: "204",
 			:region) isnt false
 		}
 
-	ListBucketFolderFiles(bucket, folder = '')
+	ListBucketFolderFiles(bucket, folder = "")
 		{
 		// only show files at the current level (do not return files in any subfolders)
 		// * Currently only handles one folder level.
 		files = .ListBucketFiles(bucket, folder)
-		return folder isnt '' ? files : files.Filter( { not it.Has?('/') })
+		return folder isnt "" ? files : files.Filter({ not it.Has?('/') })
 		}
 
 	Dir(bucket, dir, details = false)
@@ -202,37 +202,40 @@ AmazonAWS
 		dir = .formatDirPath(dir)
 		region = AmazonS3.GetBucketLocationCached(bucket)
 		if not details
-			return .mimicExeDir(
-				dir, AmazonS3.ListBucketFiles(bucket, dir, :region), details)
+			return .mimicExeDir(dir, AmazonS3.ListBucketFiles(bucket, dir, :region),
+				details)
 
-		return .mimicExeDir(
-			dir, AmazonS3.ListBucketContents(bucket, dir, :region), details)
+		return .mimicExeDir(dir, AmazonS3.ListBucketContents(bucket, dir, :region),
+			details)
 		}
 
 	formatDirPath(dir)
 		{
 		dir = Paths.ToStd(dir)
-		Assert(not dir.Suffix?('/'), msg: 'only accept *, *.* or file listing')
-		dir = dir.Replace('(?q)/*.*(?-q)$', '/').Replace('(?q)/*(?-q)$', '/')
-		Assert(dir hasnt: '*', msg: 'wildcards are not handled')
-		Assert(dir hasnt: '?', msg: 'wildcards are not handled')
+		Assert(not dir.Suffix?('/'), msg: "only accept *, *.* or file listing")
+		dir = dir.Replace("(?q)/*.*(?-q)$", '/').Replace("(?q)/*(?-q)$", '/')
+		Assert(dir hasnt: '*', msg: "wildcards are not handled")
+		Assert(dir hasnt: '?', msg: "wildcards are not handled")
 		return dir
 		}
 
 	// Match the result of Dir call in the same format we would get from the Exe
 	mimicExeDir(dir, fileList, details)
 		{
-		if dir isnt '' and not dir.Suffix?('/')
+		if dir isnt "" and not dir.Suffix?('/')
 			return .dirOne(dir, fileList, details)
 
 		if not details
-			return fileList.Map(
-				{
-				path = it.RemovePrefix(dir)
-				if path.Has?('/')
-					path = path.BeforeFirst('/') $ '/'
-				path
-				}).UniqueValues().Remove('')
+			return fileList.
+				Map(
+					{
+					path = it.RemovePrefix(dir)
+					if path.Has?('/')
+						path = path.BeforeFirst('/') $ '/'
+					path
+					}).
+				UniqueValues().
+				Remove("")
 
 		formattedfileList = Object()
 		for f in fileList
@@ -257,11 +260,13 @@ AmazonAWS
 		if not details
 			return fileList.Filter({ it is file }).Map!(.dirFileName)
 
-		return fileList.Filter({ it.key is file }).
-			Map!({
+		return fileList.
+			Filter({ it.key is file }).
+			Map!(
+				{
 				it.key = .dirFileName(it.key)
 				.formatDirOb(it)
-			})
+				})
 		}
 
 	dirFileName(file)
@@ -274,14 +279,14 @@ AmazonAWS
 		return Object(
 			name: f.key,
 			date: f.last_modified,
-			size: size is false ? Number(f.size.Tr(' bytes')) : size)
+			size: size is false ? Number(f.size.Tr(" bytes")) : size)
 		}
 
-	ListBucketFiles(bucket, prefix = '', region = false)
+	ListBucketFiles(bucket, prefix = "", region = false)
 		{
 		return .ListBucketContents(bucket, prefix, :region).
-			Map({it.key}).
-			RemoveIf({it.Suffix?('/')}) // remove subfolders
+			Map({ it.key }).
+			RemoveIf({ it.Suffix?('/') }) // remove subfolders
 		}
 
 	FileExist?(bucket, file, region = false)
@@ -304,10 +309,10 @@ AmazonAWS
 			}
 		// Throw a different error if list is finally empty
 		if list.Empty?()
-			throw 'Could not get file list for ' $ file
+			throw "Could not get file list for " $ file
 		if false is f = list.FindOne({ it.key is file })
-			throw file $ ' does not exist'
-		return Number(f.size.Tr(' bytes'))
+			throw file $ " does not exist"
+		return Number(f.size.Tr(" bytes"))
 		}
 
 	// extracted for testing
@@ -315,29 +320,29 @@ AmazonAWS
 		{
 		if i is 0
 			return
-		Thread.Sleep(200 /*=interval*/)
+		Thread.Sleep(200/*=interval*/)
 		}
 
 	DeleteBucket(bucket)
 		{
 		region = .GetBucketLocationCached(bucket)
-		return false isnt .makeRequest('DELETE', [], '/' $ bucket,
-			expectedResponse: '204', :region)
+		return false isnt .makeRequest(#DELETE, [], '/' $ bucket,
+			expectedResponse: "204", :region)
 		}
 
 	CreateBucket(bucket, region = false)
 		{
-		fromFile = GetAppTempFullFileName('amazons3')
-		content = ''
+		fromFile = GetAppTempFullFileName(#amazons3)
+		content = ""
 		// If you don't specify a Region, the bucket is created in the
 		// US East (N. Virginia) Region (us-east-1) by default.
-		if region isnt false and region isnt 'us-east-1'
+		if region isnt false and region isnt "us-east-1"
 			content = '<CreateBucketConfiguration ' $
 				'xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
 				<LocationConstraint>' $ region $ '</LocationConstraint>
 				</CreateBucketConfiguration >'
 		PutFile(fromFile, content)
-		result = .makeRequest('PUT', [], '/' $ bucket, :fromFile)
+		result = .makeRequest(#PUT, [], '/' $ bucket, :fromFile)
 		DeleteFile(fromFile)
 		return result isnt false
 		}
@@ -358,34 +363,33 @@ AmazonAWS
 	PutBucketCors(bucket, region, cors = false)
 		{
 		content = cors is false ? .defaultCors : cors
-		extraHeaders = Object('Content-MD5': Base64.Encode(Md5(content)))
-		return '' is .makeRequest(
-			'PUT', ['cors': '1'], '/' $ bucket, :content, :region, :extraHeaders)
+		extraHeaders = Object("Content-MD5": Base64.Encode(Md5(content)))
+		return "" is .makeRequest(#PUT, [cors: '1'], '/' $ bucket, :content, :region,
+			:extraHeaders)
 		}
 
 	GetBucketCors(bucket)
 		{
 		region = .GetBucketLocationCached(bucket)
-		return .makeRequest('GET', ['cors': '1'], '/' $ bucket, :region)
+		return .makeRequest(#GET, [cors: '1'], '/' $ bucket, :region)
 		}
 
-	PutBucketVersioning(bucket, region = false, status = 'Enabled')
+	PutBucketVersioning(bucket, region = false, status = #Enabled)
 		{
-		Assert(status in ('Enabled', 'Suspended'))
+		Assert(status in (#Enabled, #Suspended))
 		if region is false
 			region = .GetBucketLocationCached(bucket)
 		content = `<VersioningConfiguration ` $
-			`xmlns="http://s3.amazonaws.com/doc/2006-03-01/">` $
-			`<Status>` $ status $ `</Status>` $
-			`</VersioningConfiguration>`
-		return '' is .makeRequest('PUT', ['versioning': '1'], '/' $ bucket,
+			`xmlns="http://s3.amazonaws.com/doc/2006-03-01/">` $ `<Status>` $ status $
+			`</Status>` $ `</VersioningConfiguration>`
+		return "" is .makeRequest(#PUT, [versioning: '1'], '/' $ bucket,
 			:content, :region)
 		}
 
 	GetBucketVersioning(bucket)
 		{
 		region = .GetBucketLocationCached(bucket)
-		return .makeRequest('GET', ['versioning': '1'], '/' $ bucket, :region)
+		return .makeRequest(#GET, [versioning: '1'], '/' $ bucket, :region)
 		}
 
 	lifeCycleRule: `<Rule>` $
@@ -401,31 +405,30 @@ AmazonAWS
 		if region is false
 			region = .GetBucketLocationCached(bucket)
 		rules = rules is false ? .lifeCycleRule : rules
-		content = `<LifeCycleConfiguration>` $
-			rules $ `</LifeCycleConfiguration>`
-		extraHeaders = Object('Content-MD5': Base64.Encode(Md5(content)))
-		return '' is .makeRequest('PUT', ['lifecycle': '1'], '/' $ bucket,
+		content = `<LifeCycleConfiguration>` $ rules $ `</LifeCycleConfiguration>`
+		extraHeaders = Object("Content-MD5": Base64.Encode(Md5(content)))
+		return "" is .makeRequest(#PUT, [lifecycle: '1'], '/' $ bucket,
 			:content, :region, :extraHeaders)
 		}
 
 	GetBucketLifecycleConfig(bucket)
 		{
 		region = .GetBucketLocationCached(bucket)
-		return .makeRequest('GET', ['lifecycle': '1'], '/' $ bucket, :region)
+		return .makeRequest(#GET, [lifecycle: '1'], '/' $ bucket, :region)
 		}
 
 	PutBucketPolicy(bucket, region, policy)
 		{
 		if region is false
 			region = .GetBucketLocationCached(bucket)
-		return '' is .makeRequest('PUT', ['policy': '1'], '/' $ bucket,
-			content: policy, :region, expectedResponse: '204')
+		return "" is .makeRequest(#PUT, [policy: '1'], '/' $ bucket,
+			content: policy, :region, expectedResponse: "204")
 		}
 
 	GetBucketPolicy(bucket)
 		{
 		region = .GetBucketLocationCached(bucket)
-		return .makeRequest('GET', ['policy': '1'], '/' $ bucket, :region)
+		return .makeRequest(#GET, [policy: '1'], '/' $ bucket, :region)
 		}
 
 	CreateFolder(bucket, folder)
@@ -433,14 +436,14 @@ AmazonAWS
 		Assert(folder endsWith: '/')
 		path = '/' $ bucket $ '/' $ Url.EncodePreservePath(folder)
 		return false isnt
-			.makeRequest('EMPTYPUT', [], path, extraHeaders: #(Content_Length: 0))
+			.makeRequest(#EMPTYPUT, [], path, extraHeaders: #(Content_Length: 0))
 		}
 
-	ListBucketFileVersions(bucket, prefix = '', rawResponse = false)
+	ListBucketFileVersions(bucket, prefix = "", rawResponse = false)
 		{
 		fileList = Object()
-		params = [marker: '', :prefix, versions: '1']
-		while true is .listTruncated(bucket, fileList, params, rawResponse, 'version')
+		params = [marker: "", :prefix, versions: '1']
+		while true is .listTruncated(bucket, fileList, params, rawResponse, #version)
 			{
 			last = fileList.Last()
 			params.marker = last.key
@@ -448,67 +451,65 @@ AmazonAWS
 		return fileList
 		}
 
-	GetFileTagging(bucket, filename, versionId = '')
+	GetFileTagging(bucket, filename, versionId = "")
 		{
 		filename = Url.EncodePreservePath(filename)
-		xml = .makeRequest('GET', [tagging: '1', :versionId],
-			'/' $ bucket $ '/'$ filename)
+		xml = .makeRequest(#GET, [tagging: '1', :versionId],
+			'/' $ bucket $ '/' $ filename)
 		parsed = XmlParser(xml)
 		Assert(parsed isnt: false)
 		fileTags = Object()
-		for tag in parsed['tagset']['tag'].List() // only using booleans atm
-			fileTags[tag.key.Text()] = tag.value.Text() is 'true'
+		for tag in parsed.tagset.tag.List() // only using booleans atm
+			fileTags[tag.key.Text()] = tag.value.Text() is "true"
 		return fileTags
 		}
 
 	GetFileContents(bucket, filename)
 		{
 		filename = Url.EncodePreservePath(filename)
-		result = .makeRequest('GET', [], '/' $ bucket $ '/'$ filename)
+		result = .makeRequest(#GET, [], '/' $ bucket $ '/' $ filename)
 		return result
 		}
 
 	xmlHeader: '<?xml version="1.0" encoding="UTF-8"?>
 		<PLACEHOLDER xmlns="http://s3.amazonaws.com/doc/2006-03-01/">'
-	PutFileTagging(bucket, filename, tags, versionId = '')
+	PutFileTagging(bucket, filename, tags, versionId = "")
 		{
 		filename = Url.EncodePreservePath(filename)
-		xml = .xmlHeader.Replace('PLACEHOLDER', 'Tagging') $ '<TagSet>'
+		xml = .xmlHeader.Replace("PLACEHOLDER", "Tagging") $ "<TagSet>"
 		for tag in tags.Members()
-			{
 			xml $= '<Tag>
 				<Key>' $ tag $ '</Key>
 				<Value>' $ tags[tag] $ '</Value>
 			</Tag>'
-			}
-		xml $= '</TagSet></Tagging>'
-		return .makeRequest('PUT', [tagging: '1', :versionId],
-			'/' $ bucket $ '/'$ filename, content: xml)
-
+		xml $= "</TagSet></Tagging>"
+		return .makeRequest(#PUT, [tagging: '1', :versionId],
+			'/' $ bucket $ '/' $ filename, content: xml)
 		}
 
 	ArchivedDBDaysKept: 5
 	RestoreArchivedFile(bucket, filename, versionId)
 		{
 		filename = Url.EncodePreservePath(filename)
-		xml = .xmlHeader.Replace('PLACEHOLDER', 'RestoreRequest') $
-			'<Days>' $ Display(.ArchivedDBDaysKept) $ '</Days></RestoreRequest>'
+		xml = .xmlHeader.Replace("PLACEHOLDER", "RestoreRequest") $ "<Days>" $
+			Display(.ArchivedDBDaysKept) $ "</Days></RestoreRequest>"
 
-		return .makeRequest('POST', [restore: '1', :versionId],
-			'/' $ bucket $ '/'$ filename, content: xml, expectedResponse: #('200', '202'))
+		return .makeRequest(#POST, [restore: '1', :versionId],
+			'/' $ bucket $ '/' $ filename, content: xml,
+			expectedResponse: #("200", "202"))
 		}
 
-	ObjectMetaData(bucket, filename, versionId = '')
+	ObjectMetaData(bucket, filename, versionId = "")
 		{
 		filename = Url.EncodePreservePath(filename)
-		return .makeRequest('HEAD', [:versionId], '/' $ bucket $ '/'$ filename,
+		return .makeRequest(#HEAD, [:versionId], '/' $ bucket $ '/' $ filename,
 			fullResponse?:).header
 		}
 
 	CheckObjectTagging(bucket, key, versionId)
 		{
 		key = Url.EncodePreservePath(key)
-		return .makeRequest('GET', [tagging: '1', :versionId], '/' $ bucket $ '/'$ key)
+		return .makeRequest(#GET, [tagging: '1', :versionId], '/' $ bucket $ '/' $ key)
 		}
 
 	DeleteFolder(bucket, folder)
@@ -532,7 +533,7 @@ AmazonAWS
 		{
 		.ListBucketContents(bucket, region: .GetBucketLocationCached(bucket),
 			maxKeys: '1')
-			{ |unused|
+			{|unused|
 			return false
 			}
 		return true
@@ -540,7 +541,7 @@ AmazonAWS
 
 	ListBuckets()
 		{
-		content = .makeRequest('GET', [], '/')
+		content = .makeRequest(#GET, [], '/')
 		response = XmlParser(content)
 		buckets = Object()
 		Assert(response isnt: false)
@@ -549,14 +550,14 @@ AmazonAWS
 		return buckets
 		}
 
-	ListBucketFolders(bucket, prefix = '')
+	ListBucketFolders(bucket, prefix = "")
 		{
 		return .ListBucketContents(bucket, prefix).
 			Map({ it.key }).
-			RemoveIf({ not it.Suffix?('/')}) // remove files
+			RemoveIf({ not it.Suffix?('/') }) // remove files
 		}
 
-	ListBucketContents(bucket, prefix = '', rawResponse = false, region = false,
+	ListBucketContents(bucket, prefix = "", rawResponse = false, region = false,
 		maxKeys = false, block = false)
 		{
 		// AmazonS3: The maximum number of items that can be returned is 1000
@@ -564,10 +565,10 @@ AmazonAWS
 		// with the marker parameter set to the last item returned by the previous request
 		// keep making these requests until the IsTruncated element has a value of false
 		fileList = Object()
-		params = [marker: '', :prefix]
+		params = [marker: "", :prefix]
 		// default max-keys is 1000
 		if maxKeys isnt false
-			params['max-keys'] = maxKeys
+			params["max-keys"] = maxKeys
 		while true is .listTruncated(bucket, fileList, params, rawResponse, :region,
 			:block)
 			{
@@ -577,10 +578,10 @@ AmazonAWS
 		return fileList
 		}
 
-	listTruncated(bucket, fileList, params, rawResponse, xmlContent = 'contents',
+	listTruncated(bucket, fileList, params, rawResponse, xmlContent = #contents,
 		region = false, block = false)
 		{
-		if false is content = .makeRequest('GET', params, '/' $ bucket $ '/', :region)
+		if false is content = .makeRequest(#GET, params, '/' $ bucket $ '/', :region)
 			return false
 
 		if false is response = .getResponse(content)
@@ -599,8 +600,8 @@ AmazonAWS
 				owner: file.owner.displayname.Text(),
 				:size, :last_modified)
 
-			.addXmlTypeIfNotEmpty(file, fileOb, 'storageclass', 'storage')
-			.addXmlTypeIfNotEmpty(file, fileOb, 'versionid', 'versionId')
+			.addXmlTypeIfNotEmpty(file, fileOb, #storageclass, #storage)
+			.addXmlTypeIfNotEmpty(file, fileOb, #versionid, #versionId)
 
 			if block isnt false
 				block(fileOb)
@@ -615,17 +616,17 @@ AmazonAWS
 			response = XmlParser(content)
 		catch (err)
 			{
-			.addToLog("LIST", 'listTruncated - ' $ err, content, params: Locals(0))
+			.addToLog(#LIST, "listTruncated - " $ err, content, params: Locals(0))
 			return false
 			}
-		if response is false or response is ''
+		if response is false or response is ""
 			return false
 		return response
 		}
 
 	addXmlTypeIfNotEmpty(file, fileOb, type, member)
 		{
-		if file[type].Text() isnt ''
+		if file[type].Text() isnt ""
 			fileOb[member] = file[type].Text()
 		}
 
@@ -633,14 +634,14 @@ AmazonAWS
 		{
 		if rawResponse
 			return dateStr
-		if false isnt date = Date(dateStr.Replace('.000Z', '').Trim())
+		if false isnt date = Date(dateStr.Replace(".000Z", "").Trim())
 			return date.GMTimeToLocal()
-		return ''
+		return ""
 		}
 
-	throttle(action, block, expectedResponse = '200', fullResponse? = false)
+	throttle(action, block, expectedResponse = "200", fullResponse? = false)
 		{
-		resultOb = false
+		resultOb = params = false
 		try
 			.throttleRetry()
 				{
@@ -648,15 +649,14 @@ AmazonAWS
 				params = Locals(3) /*= call levels up to throttle */
 				status = .checkResponseAndLog(action, resultOb, expectedResponse, params)
 				return status is true
-					? fullResponse?
-						? resultOb
-						: resultOb.GetDefault(#content, '').Trim()
+					? fullResponse? ? resultOb : resultOb.GetDefault(#content, "").Trim()
 					: false
 				}
 		catch (err, "Retry failed")
 			{
-			detail = resultOb is false ? ''
-				: resultOb.header $ '\r\n\r\n' $ resultOb.GetDefault(#content, '')
+			detail = resultOb is false
+				? ""
+				: resultOb.header $ "\r\n\r\n" $ resultOb.GetDefault(#content, "")
 			.addToLog(action, err, detail, params)
 			return false
 			}
@@ -670,8 +670,9 @@ AmazonAWS
 			if false is .DeleteFile(bucket, file)
 				failed.Add(file)
 
-		return failed.Empty?() ? ""
-			: "Deleting files from Amazon S3 failed:\n\n\t" $ failed.Join(', ')
+		return failed.Empty?()
+			? ""
+			: "Deleting files from Amazon S3 failed:\n\n\t" $ failed.Join(", ")
 		}
 
 	deleteFileLimit: 1000
@@ -682,24 +683,24 @@ AmazonAWS
 			.deleteFiles(bucket, files[i :: .deleteFileLimit], failed)
 
 		return failed.Empty?()
-			? ''
-			: 'Deleting files from Amazon S3 failed:\n\n\t' $ failed.Join(', ')
+			? ""
+			: "Deleting files from Amazon S3 failed:\n\n\t" $ failed.Join(", ")
 		}
 
 	deleteFiles(bucket, files, failed)
 		{
-		content = .xmlHeader.Replace('PLACEHOLDER', 'Delete')
+		content = .xmlHeader.Replace(#PLACEHOLDER, #Delete)
 		for file in files
 			{
-			Assert(file isnt: '')
-			Assert(file isString: true)
+			Assert(file isnt: "")
+			Assert(file isString:)
 			content $= `<Object><Key>` $ file $ `</Key></Object>`
 			}
-		content $= '</Delete>'
+		content $= "</Delete>"
 
 		region = .GetBucketLocationCached(bucket)
-		extraHeaders = Object('Content-MD5': Base64.Encode(Md5(content)))
-		if false is res = .makeRequest('POST', ['delete': '1'], '/' $ bucket, :content,
+		extraHeaders = Object("Content-MD5": Base64.Encode(Md5(content)))
+		if false is res = .makeRequest(#POST, [delete: '1'], '/' $ bucket, :content,
 			:region, :extraHeaders)
 			{
 			failed.Append(files)
@@ -709,17 +710,19 @@ AmazonAWS
 		res = XmlParser(res)
 		Assert(res isnt: false)
 		for child in res.Children()
-			if child.Name() is 'error'
-				failed.Add(child['key'].Text())
+			if child.Name() is #error
+				failed.Add(child.key.Text())
 		}
 
 	// extrated for tests
 	throttleRetry(block)
 		{
-		Retry(block, maxRetries: 3, retryException: #(
-			('Bad HTTP Status Code (503)', minDelayMs: 100),
-			('curl: (52) Empty reply from server', minDelayMs: 200),
-			('curl: (35) Send failure: Connection reset by peer', minDelayMs: 100)))
+		Retry(block, maxRetries: 3,
+			retryException: #(
+				("Bad HTTP Status Code (503)", minDelayMs: 100),
+				("curl: (52) Empty reply from server", minDelayMs: 200),
+				("curl: (35) Send failure: Connection reset by peer", minDelayMs: 100)
+				))
 		}
 
 	cleanupFileIfFailed(retVal, fileTo)
@@ -729,43 +732,43 @@ AmazonAWS
 		DeleteFile(fileTo)
 		}
 
-	checkResponseAndLog(action, resultOb, expectedResponse = '200', params = '')
+	checkResponseAndLog(action, resultOb, expectedResponse = "200", params = "")
 		{
 		try
 			code = Http.ResponseCode(resultOb.header)
-		catch (e, 'Invalid HTTP response code')
+		catch (e, "Invalid HTTP response code")
 			code = e
 
 		if code is expectedResponse or
 			Object?(expectedResponse) and expectedResponse.Has?(code)
 			return true
-		if action is 'GET' and code is '404'
+		if action is #GET and code is "404"
 			return false
-		msg = 'Bad HTTP Status Code (' $ code $ ')'
+		msg = "Bad HTTP Status Code (" $ code $ ')'
 		// 503 is either 'SlowDown' or 'ServiceUnavailable' - in both cases
 		// amazon requsts reducing the request rate (switch to Exponential Fallback)
-		if code is '503'
+		if code is "503"
 			throw msg
-		detail = resultOb.header $ '\r\n\r\n' $ resultOb.GetDefault(#content, '')
+		detail = resultOb.header $ "\r\n\r\n" $ resultOb.GetDefault(#content, "")
 		.addToLog(action, msg, detail, params)
 		return false
 		}
 
-	addToLog(action, msg, detail = '', params = '', _secureLogging = false)
+	addToLog(action, msg, detail = "", params = "", _secureLogging = false)
 		{
 		if Object?(params)
 			params = params.Copy().Delete(#resultOb, #result)
 		if .exceptionInsteadOfLog?()
-			throw 'AmazonS3 - ' $ action $ ': ' $ msg
-		SuneidoLog('ERRATIC: AmazonS3 - ' $ action $ ': ' $ msg, calls:,
-			:params, switch_prefix_limit: 5)
+			throw "AmazonS3 - " $ action $ ": " $ msg
+		SuneidoLog("ERRATIC: AmazonS3 - " $ action $ ": " $ msg, calls:, :params,
+			switch_prefix_limit: 5)
 
 		// can't be sure what "secure" data might be in msg or detail so don't log.
 		if secureLogging
 			return
 
-		path = GetContributions('LogPaths').GetDefault('amazonS3', 'logs/amazonS3log')
-		log = action $ ' > ' $ msg $ Opt('\r\n', detail.Trim()) $ '\r\n'
+		path = GetContributions(#LogPaths).GetDefault(#amazonS3, "logs/amazonS3log")
+		log = action $ " > " $ msg $ Opt("\r\n", detail.Trim()) $ "\r\n"
 		.Log(path, log)
 		}
 
@@ -776,7 +779,7 @@ AmazonAWS
 		return false
 		}
 
-	PutMultipartFile(bucket, fileFrom, fileTo = '', region = false)
+	PutMultipartFile(bucket, fileFrom, fileTo = "", region = false)
 		{
 		if false is fileTo = .validateAndGetFileTo(fileFrom, fileTo)
 			return false
@@ -797,16 +800,16 @@ AmazonAWS
 		region = region is false ? .GetBucketLocationCached(bucket) : region
 		if content is false
 			{
-			content = .notificationConfig.Replace('ID_PLACEHOLDER', id)
-			content = content.Replace('ARN_PLACEHOLDER', arn)
+			content = .notificationConfig.Replace(#ID_PLACEHOLDER, id)
+			content = content.Replace(#ARN_PLACEHOLDER, arn)
 			}
-		return '' is .makeRequest(
-			'PUT', ['notification': '1'], '/' $ bucket, :content, :region)
+		return "" is
+			.makeRequest(#PUT, [notification: '1'], '/' $ bucket, :content, :region)
 		}
 
 	GetNotificationConfig(bucket)
 		{
 		region = .GetBucketLocationCached(bucket)
-		return .makeRequest('GET', ['notification': '1'], '/' $ bucket, :region)
+		return .makeRequest(#GET, [notification: '1'], '/' $ bucket, :region)
 		}
 	}

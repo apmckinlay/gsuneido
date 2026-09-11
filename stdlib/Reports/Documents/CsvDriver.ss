@@ -12,21 +12,24 @@ Document_Builder
 		return File(.filename, mode: 'w')
 		}
 
-	PlainText?() { return true }
+	PlainText?()
+		{
+		return true
+		}
 
 	Process(fmt)
 		{
 		if not Instance?(fmt)
 			return
 		str = fmt.ExportCSV().Trim()
-		if str isnt ''
+		if str isnt ""
 			.file.Writeline(str)
 		}
 
 	Finish(status)
 		{
 		.file.Close()
-		if status is ReportStatus.NODATA
+		if status is ReportStatus.NODATA or status is ReportStatus.ABORT
 			DeleteFile(.filename)
 		return status
 		}

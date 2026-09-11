@@ -97,6 +97,24 @@ AstFmtDoc
 		return .Catl(docs)
 		}
 
+	// comments after a separator, on its source line, stay with it ahead of
+	// any break so an annotation is not orphaned: x or /*= max*/ then newline
+	SameLine(curr)
+		{
+		docs = Object()
+		while curr.i < .toks.Size()
+			{
+			tok = .toks[curr.i]
+			if tok.kind not in (#COMMENT, #WHITESPACE)
+				break
+			++curr.i
+			curr.done = tok.end
+			if tok.kind is #COMMENT
+				docs.Add(.Text(' '), .comment(tok))
+			}
+		return .Catl(docs)
+		}
+
 	// consume trivia up to the next code token - for closes whose node has no
 	// usable end position (Function nodes have end 0)
 	LeadingToCode(curr)

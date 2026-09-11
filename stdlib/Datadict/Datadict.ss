@@ -11,16 +11,14 @@ class
 
 		return getMembers isnt false
 			? .ddValues(dd, getMembers)
-			: .inject?(dd)
-				? .Cache(name)
-				: dd
+			: .inject?(dd) ? .Cache(name) : dd
 		}
 
 	ddValues(dd, members)
 		{
-		if members.Has?('Control') or members.Has?('Format')
-			throw 'Cannot get Control or Format. ' $
-				'Get whole datadict to ensure any injects are included'
+		if members.Has?(#Control) or members.Has?(#Format)
+			throw "Cannot get Control or Format. " $
+				"Get whole datadict to ensure any injects are included"
 		ob = Object()
 		for mem in members
 			if dd.Member?(mem)
@@ -30,7 +28,7 @@ class
 
 	Cache(name)
 		{
-		if not Suneido.Member?('DatadictCache')
+		if not Suneido.Member?(#DatadictCache)
 			.init()
 		return Suneido.DatadictCache.Get(name)
 		}
@@ -44,33 +42,33 @@ class
 
 	Unload(name)
 		{
-		if name.Prefix?("Field_") and
+		if name.Prefix?(#Field_) and
 			false isnt cache = Suneido.GetDefault(#DatadictCache, false)
 			cache.Reset()
 		}
 
 	getDDForUndefinedField(fieldname)
 		{
-		for func in #(total max min average)
-			if fieldname.Prefix?(func $ "_")
+		for func in #(total, max, min, average)
+			if fieldname.Prefix?(func $ '_')
 				{
 				d = .getDDForSummarizeField(fieldname, func)
 				return .changePrompt(d,
-					{ |origPrompt| func.Capitalize() $ " " $ origPrompt })
+				{|origPrompt| func.Capitalize() $ ' ' $ origPrompt })
 				}
 		if fieldname =~ "_\d+$"
 			return Datadict(fieldname.BeforeLast('_'))
-		if fieldname.Suffix?('_lower!')
+		if fieldname.Suffix?("_lower!")
 			{
 			d = Datadict(fieldname.BeforeLast('_'))
-			return .changePrompt(d, { |origPrompt| origPrompt $ '*' })
+			return .changePrompt(d, {|origPrompt| origPrompt $ '*' })
 			}
 		return Field_string
 		}
 
 	changePrompt(d, fn)
 		{
-		d = Class?(d) ? new d : d.Copy()
+		d = Class?(d) ? new d() : d.Copy()
 		for m in #(Prompt, Heading, SelectPrompt)
 			if d.Member?(m)
 				d[m] = fn(d[m])
@@ -79,10 +77,10 @@ class
 
 	getDDForSummarizeField(fieldname, func)
 		{
-		dd = Datadict(fieldname.AfterFirst("_"))
-		if func in ('total', 'average') and not dd.Base?(Field_number)
+		dd = Datadict(fieldname.AfterFirst('_'))
+		if func in (#total, #average) and not dd.Base?(Field_number)
 			{
-			newDD = new Field_number
+			newDD = new Field_number()
 			for m in #(Prompt, Heading, SelectPrompt)
 				if dd.Member?(m)
 					newDD[m] = dd[m]
@@ -93,21 +91,26 @@ class
 
 	inject?(dd)
 		{
-		return Class?(dd) and dd.Members(all:).HasIf?(
-			{ it.Prefix?('Control_') or it.Prefix?('Format_') or
-				it.Prefix?('SelectControl_') })
+		return Class?(dd) and
+			dd.
+				Members(all:).
+				HasIf?(
+					{
+					it.Prefix?(#Control_) or it.Prefix?(#Format_) or
+						it.Prefix?(#SelectControl_)
+					})
 		}
 
 	injectMembers(name)
 		{
-		dd = new (Global(name))
+		dd = new (Global(name))()
 		ddMembers = dd.Members(all:)
 		for type in #(Format, Control, SelectControl)
 			{
 			if dd.Member?(type)
 				dd[type] = dd[type].Copy()
-			for mem in ddMembers.Filter({ it.Prefix?(type $ "_") })
-				dd[type][mem.AfterFirst(type $ "_")] = dd.Val_or_func(mem)
+			for mem in ddMembers.Filter({ it.Prefix?(type $ '_') })
+				dd[type][mem.AfterFirst(type $ '_')] = dd.Val_or_func(mem)
 			}
 		return dd
 		}
@@ -123,13 +126,13 @@ class
 
 	Prompt(field, excludeTags = #(Internal), logAsError = true)
 		{
-		ddMembers = Object('Prompt').Append(excludeTags)
+		ddMembers = [#Prompt].Append(excludeTags)
 		ddVals = .CallClass(field, ddMembers)
 		.checkAndLogTags(ddVals, field, excludeTags, logAsError)
-		if ddVals.Member?("Prompt")
+		if ddVals.Member?(#Prompt)
 			return ddVals.Prompt
 
-		.logError('no Prompt for: ', field, logAsError)
+		.logError("no Prompt for: ", field, logAsError)
 		return field
 		}
 
@@ -137,18 +140,18 @@ class
 		{
 		// Capital/digit/multiple words prefix presumed intentional shortcut around datadicts
 		if not (field =~ "^[[:upper:]|[:digit:]]") and not field.Has?(' ')
-			{
 			if logAsError
 				.programmerError(err $ field)
 			else
-				.suneiodlog('INFO: ' $ err $ field)
-			}
+				.suneidolog("INFO: " $ err $ field)
 		}
+
 	programmerError(msg) // for tests
 		{
 		ProgrammerError(msg)
 		}
-	suneiodlog(msg) // for tests
+
+	suneidolog(msg) // for tests
 		{
 		SuneidoLog.Once(msg, calls:)
 		}
@@ -160,8 +163,8 @@ class
 			if .recentlyDeletedCustomField?(tag, field)
 				return
 
-			msg = field $ ' should have been excluded due to tag: ' $ tag
-			.logError(msg, '', :logAsError)
+			msg = field $ " should have been excluded due to tag: " $ tag
+			.logError(msg, "", :logAsError)
 			}
 		}
 
@@ -179,7 +182,7 @@ class
 			not Customizable.CustomField?(field, includeDeleted:)
 			return false
 
-		lastDelete = Datadict(field, #(LastDelete)).GetDefault('LastDelete', false)
+		lastDelete = Datadict(field, #(LastDelete)).GetDefault(#LastDelete, false)
 		if lastDelete is false
 			return false
 
@@ -188,63 +191,59 @@ class
 
 	PromptOrHeading(field, excludeTags = #(Internal), logAsError = true)
 		{
-		ddMembers = Object('Prompt', 'Heading', 'SelectPrompt').Append(excludeTags)
+		ddMembers = [#Prompt, #Heading, #SelectPrompt].Append(excludeTags)
 		ddVals = .CallClass(field, ddMembers)
 		.checkAndLogTags(ddVals, field, excludeTags, logAsError)
 
-		promptOrHeading = ddVals.Member?("Prompt") and ddVals.Prompt isnt ""
+		promptOrHeading = ddVals.Member?(#Prompt) and ddVals.Prompt isnt ""
 			? ddVals.Prompt
-			: ddVals.Member?("Heading")
+			: ddVals.Member?(#Heading)
 				? ddVals.Heading
-				: ddVals.Member?('SelectPrompt')
-					? ddVals.SelectPrompt
-					: field
+				: ddVals.Member?(#SelectPrompt) ? ddVals.SelectPrompt : field
 
-		if promptOrHeading is field or promptOrHeading is ''
-			.logError('no PromptOrHeading for: ', field, logAsError)
+		if promptOrHeading is field or promptOrHeading is ""
+			.logError("no PromptOrHeading for: ", field, logAsError)
 		return TranslateLanguage(promptOrHeading)
 		}
 
 	Heading(field, excludeTags = #(Internal), logAsError = true)
 		{
-		ddMembers = Object('Heading', 'Prompt').Append(excludeTags)
+		ddMembers = [#Heading, #Prompt].Append(excludeTags)
 		ddVals = .CallClass(field, ddMembers)
 		.checkAndLogTags(ddVals, field, excludeTags, logAsError)
 
-		heading = ddVals.Member?("Heading")
+		heading = ddVals.Member?(#Heading)
 			? ddVals.Heading
-			: ddVals.Member?("Prompt")
-				? ddVals.Prompt
-				: field
+			: ddVals.Member?(#Prompt) ? ddVals.Prompt : field
 
-		if heading is field or heading is ''
-			.logError('no Heading for: ', field, logAsError)
+		if heading is field or heading is ""
+			.logError("no Heading for: ", field, logAsError)
 		return TranslateLanguage(heading)
 		}
 
 	SelectPrompt(field, excludeTags = #(Internal, ExcludeSelect), logAsError = true)
 		{
-		ddMembers = Object('SelectPrompt', 'Prompt', 'Heading').Append(excludeTags)
+		ddMembers = [#SelectPrompt, #Prompt, #Heading].Append(excludeTags)
 		ddVals = .CallClass(field, ddMembers)
 		.checkAndLogTags(ddVals, field, excludeTags, logAsError)
 
-		selectPrompt = ddVals.Member?("SelectPrompt")
+		selectPrompt = ddVals.Member?(#SelectPrompt)
 			? ddVals.SelectPrompt
-			: ddVals.Member?('Prompt') and ddVals.Prompt isnt ""
+			: ddVals.Member?(#Prompt) and ddVals.Prompt isnt ""
 				? ddVals.Prompt
-				: ddVals.Member?('Heading') and ddVals.Heading isnt ""
+				: ddVals.Member?(#Heading) and ddVals.Heading isnt ""
 					? ddVals.Heading
 					: field
 
-		if selectPrompt is field or selectPrompt is ''
-			.logError('no SelectPrompt for: ', field, logAsError)
+		if selectPrompt is field or selectPrompt is ""
+			.logError("no SelectPrompt for: ", field, logAsError)
 		return selectPrompt
 		}
 
 	// The purpose of GetFieldPrompt is to handle duplicate custom field prompts.
 	GetFieldPrompt(field, promptList = #(), excludeTags = #(Internal), logAsError = true)
 		{
-		if field.Prefix?('custom_')
+		if field.Prefix?(#custom_)
 			{
 			prompt = .Prompt(field, :excludeTags, :logAsError)
 			if not promptList.Has?(prompt)
@@ -262,7 +261,7 @@ class
 			if promptList.Has?(prompt)
 				{
 				duplicateField = promptList.Find(prompt)
-				if duplicateField.Prefix?('custom_')
+				if duplicateField.Prefix?(#custom_)
 					{
 					selectPrompt = .SelectPrompt(duplicateField, :logAsError)
 					if selectPrompt isnt prompt
@@ -272,8 +271,8 @@ class
 						continue
 						}
 					}
-				if not (col.Prefix?('custom_') and duplicateField.Prefix?('custom_'))
-					.suneidologOnce('ERROR: Duplicate Prompt: ' $ col $ ' & ' $
+				if not (col.Prefix?(#custom_) and duplicateField.Prefix?(#custom_))
+					.suneidologOnce("ERROR: Duplicate Prompt: " $ col $ " & " $
 						promptList.Find(prompt))
 				}
 			promptList[col] = prompt

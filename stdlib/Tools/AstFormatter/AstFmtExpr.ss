@@ -84,8 +84,18 @@ AstFmtObject
 			LShift: "<<", RShift: ">>", Lt: '<', Lte: "<=", Gt: '>', Gte: ">=")
 		looser = node.op in (#Is, #Isnt, #Match, #MatchNot, #Lt, #Lte, #Gt, #Gte)
 		l = looser ? .opnd(node.lhs, ectx, curr) : .Fmt(node.lhs, ectx, curr)
+		// a comment after the operator stays with it, ahead of any break
+		after = tight ? false : .Cm.SameLine(curr)
 		r = looser ? .opnd(node.rhs, ectx, curr) : .Fmt(node.rhs, ectx, curr)
-		return .Cat(l, tight ? op[node.op] : ' ' $ op[node.op] $ ' ', r)
+		if tight
+			return .Cat(l, op[node.op], r)
+		// Lead, not Line: the break is taken only when it lets the right side fit,
+		// so a = b = c = expr breaks once instead of into a staircase
+		sep = .Cat(' ' $ op[node.op], after, ' ')
+		// a ternary reads better broken at its own ? : than at the operator
+		if Type(node.rhs) is #AstNode and node.rhs.type is #Trinary
+			return .Cat(l, sep, r)
+		return .Cat(l, sep, .Lead(r))
 		}
 
 	opnd(e, ctx, curr, min = 0) // precedence-based spacing: AstFmtStyle Tight?/Nprec
@@ -120,7 +130,8 @@ AstFmtObject
 		for (i = 1; i < node.size; ++i)
 			{
 			st = .signedTerm(cfg.op, node[i])
-			parts.Add(cfg.tight ? .Text(st.sep) : .Cat(' ' $ st.sep, .Line))
+			parts.Add(
+				cfg.tight ? .Text(st.sep) : .Cat(' ' $ st.sep, .Cm.SameLine(curr), .Line))
 			parts.Add(st.fold
 				? .Fmt(st.node, cfg.ectx, curr)
 				: .opnd(st.node, cfg.ectx, curr, min: cfg.p))
@@ -213,10 +224,17 @@ AstFmtObject
 			: ctx
 		dot = ctx.chain is true
 			? .Cat('.', .Soft, node.mem.value)
-			: .Text('.' $ node.mem.value)
+			: .privateIdiom?(node)
+				? .Cat('.', .Lead(.Text(node.mem.value)))
+				: .Text('.' $ node.mem.value)
 		if .showDot?(node, ctx)
 			return .Cat(.Fmt(node.expr, ectx, curr), dot)
 		return .Cat(.Cm.Leading(curr, node.dotpos), '.' $ node.mem.value)
+		}
+
+	privateIdiom?(node)
+		{
+		return node.expr.type is #Ident and node.mem.value.Prefix?(node.expr.name $ '_')
 		}
 
 	// show the receiver + dot unless it is an implicit `this.` (then just `.x`),
@@ -333,8 +351,12 @@ AstFmtObject
 		{
 		docs = Object()
 		for (i = 0; i <= last; ++i)
-			docs.Add(.argDoc(node[i], ctx, curr,
-				i is last or not .Style.ArgComma?(node[i], node[i+1]) ? "" : ','))
+			{
+			d = .argDoc(node[i], ctx, curr,
+				i is last or not .Style.ArgComma?(node[i], node[i+1]) ? "" : ',')
+			// a comment after the comma stays with it, ahead of any break
+			docs.Add(i is last ? d : .Cat(d, .Cm.SameLine(curr)))
+			}
 		return docs
 		}
 
@@ -348,7 +370,7 @@ AstFmtObject
 				parts.Add(.Nest(.Cat(.Style.LeadBreak?(node[0]) ? .Hard : false,
 					.Seq(docs, .Hard))))
 			else // a sole argument only earns the lead break if it then fits flat,
-			 if // so Lead sits outside the arg-list nest and supplies its own
+			if // so Lead sits outside the arg-list nest and supplies its own
 			lead and not block and docs.Size() is 1
 				parts.Add(.Lead(docs[0]))
 			else

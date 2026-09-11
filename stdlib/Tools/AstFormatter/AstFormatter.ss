@@ -44,7 +44,7 @@ AstFmtStmt
 		{
 		.Src = src
 		ast = Suneido.Parse(src)
-		if Type(ast) isnt #AstNode // simple constant record e.g. a number
+		if Type(ast) isnt #AstNode or ast.pos is false
 			return .Rtrim(src) $ '\n'
 		.Cm = AstFmtComments(src)
 		.Style = AstFmtStyle(src, .Cm)
@@ -69,4 +69,3 @@ AstFmtStmt
 		return .Tok(.Src[node.pos .. node.end])
 		}
 	}
-

@@ -1,10 +1,19 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
+// BuiltDate > 20260820
 Test
 	{
 	Test_golden()
 		{
 		.same(AstFormatter(.src(.unfmt())), .fmt())
 		.same(AstFormatter(.src(.fmt())), .fmt()) // formatter must be a fixpoint
+		}
+
+	//		AstFmtMainRecord_Test.ViewDiff()
+	ViewDiff()
+		{
+		src = .src(.unfmt())
+		Diff2CodeControl("AstFormatter golden fixture", src, AstFormatter(src),
+			#Unformatted, #Formatted, #stdlib, #AstFmtMainRecord_Test)
 		}
 
 	src(lines)
@@ -23,6 +32,11 @@ Test
 		}
 
 	unfmt()
+		{
+		return .unfmtA().Add(@.unfmtB()).Add(@.unfmtC())
+		}
+
+	unfmtA()
 		{
 		return [
 			"// AstFormatter golden fixture deliberately badly formatted.",
@@ -52,6 +66,15 @@ Test
 			"  Colors: #(red, green, blue, cyan, magenta, yellow, black, white, gray, " $
 				"brown, pink)",
 			"",
+			"  // a function leading a constant nests from the delimiter, not twice;",
+			"  // a function that follows another member still nests twice",
+			"  Hook: (function (x, y) {",
+			"\t\treturn x + y",
+			"  })",
+			"  Pair: (1, function (x) {",
+			"\t\treturn x",
+			"  })",
+			"",
 			"  // an empty body hugs the signature",
 			"  Reset() {}",
 			"",
@@ -60,14 +83,16 @@ Test
 			"\tthis.total = 0 // explicit this on a lowercase member is kept",
 			"  }",
 			"",
-			"  // a break the author wrote between arguments is kept, the other gaps fill",
+			"  // a break the author wrote between arguments is kept, the other gaps " $
+				"fill",
 			"  Calc(x, y) {",
 			"\ttotal = Sum(first_argument, second_argument,",
 			"\t  third_argument, fourth_argument)",
 			"\tvertical = Sum(one,",
 			"\t  two,",
 			"\t  three)",
-			"\tfilled = Sum(alpha_argument, beta_argument, gamma_argument, delta_argument, epsilon_arg)",
+			"\tfilled = Sum(alpha_argument, beta_argument, gamma_argument, " $
+				"delta_argument, epsilon_arg)",
 			"\treturn total + vertical + filled ;",
 			"  }",
 			"",
@@ -117,7 +142,8 @@ Test
 			"",
 			"  // a chain of dotted calls breaks all or nothing",
 			"  Clean(s) {",
-			"\treturn s.Replace('&lt;', '<').Replace('&gt;', '>').Replace('&amp;', '&').Trim().Upper()",
+			"\treturn s.Replace('&lt;', '<').Replace('&gt;', '>').Replace('&amp;', " $
+				"'&').Trim().Upper()",
 			"  }",
 			"",
 			"  // switch drops the parens around its subject",
@@ -130,6 +156,21 @@ Test
 			"\tdefault:",
 			"\t  return #other",
 			"\t}",
+			"  }"]
+		}
+
+	unfmtB()
+		{
+		return [
+			"",
+			"  // a long assignment breaks at the = once, not into a staircase",
+			"  // a ternary keeps its own ? : break instead of the = break",
+			"  Grade(node, ctx, curr) {",
+			"\tfirstResult.results.grade = secondResult.results.grade = grade = " $
+				"ComputeGrade(firstResult.results, secondResult.results)",
+			"\td = ctx.lastStatement is true ? .FormatNode(node.expr, ctx) : " $
+				".FormatExpr(node.expr, ctx)",
+			"\treturn grade",
 			"  }",
 			"",
 			"  // a debug statement at the margin stays there, an indented one does not",
@@ -149,9 +190,23 @@ Test
 			"\t\t})",
 			"  }",
 			"",
+			"  // a comment after ( or the author's own break before a block argument",
+			"  // is one line break, not a blank line",
+			"  Deferred() {",
+			"\t.Defer( // need defer to get outside sandbox",
+			"\t  {",
+			"\t\t.updateStatus()",
+			"\t  })",
+			"\tAssert(",
+			"\t  {",
+			"\t\t.updateStatus()",
+			"\t  } throws: 'sandbox')",
+			"  }",
+			"",
 			"  // a long string splits at a word boundary, ? : lead the continuation",
 			"  Message(n) {",
-			'\treturn n > 0 ? "this is a fairly long message that will not fit on one single line at all and so it has to be split" : ""',
+			'\treturn n > 0 ? "this is a fairly long message that will not fit on one ' $
+				'single line at all and so it has to be split" : ""',
 			"  }",
 			"",
 			"  // a nested table written one per line keeps its shape",
@@ -202,7 +257,8 @@ Test
 			"\treturn 1",
 			"  }",
 			"",
-			"  // brackets keep the type: all named is a Record, any unnamed is an Object",
+			"  // brackets keep the type: all named is a Record, any unnamed is an " $
+				"Object",
 			"  Tables() {",
 			"\trec = Record(a: 1, b: 2)",
 			"\tob = Object(1, 2, 3)",
@@ -217,7 +273,24 @@ Test
 			"",
 			"  // and / or end the line; not (a is b) is left exactly as written",
 			"  Ready?(a, b, c) {",
-			"\treturn a.Something?() and b.SomethingElse?() and c.YetAnotherThing?() and not (a is b)",
+			"\treturn a.Something?() and b.SomethingElse?() and c.YetAnotherThing?() " $
+				"and not (a is b)",
+			"  }",
+			"",
+			"  // a comment after a line-ending operator stays on that line",
+			"  Full?(row, tender) {",
+			"\treturn row.Size() is 5 or /*= max per row*/",
+			"\t  row.Size() is tender.etaordertender_attachments.Size()",
+			"  }",
+			"",
+			"  // a type annotation normalizes to name :type and ) :type",
+			"  Cvt(n:number, s : string | number, f :boolean = false) : object|unknown {",
+			"\treturn n",
+			"  }",
+			"",
+			"  // /*unused*/ keeps hugging the name, ahead of the annotation",
+			"  Ignore(a /*unused*/ : string, b) : void {",
+			"\treturn b",
 			"  }",
 			"",
 			"  // an annotation hugs its token",
@@ -226,10 +299,108 @@ Test
 			"//x = 0",
 			"\treturn x",
 			"  }",
+			"",
+			"  // the receiver and method of a call cannot break, so an assignment",
+			"  // whose RHS is one long call with a block argument has to break after",
+			"  // the = even though the block makes the RHS unable to fit flat there",
+			"removeTicketFields(ticket)",
+			"\t\t{",
+			"\t\tclearFields = Ti_CopyTicket.ClearFieldsList.Copy().",
+			"\t\t\tMergeUnion(Object(#ti_valid, #tiproj_num_ticket, #ti_ticket,",
+			"\t\t\t\t#ti_booking_number_new, 'ti_num_new', 'etarate_id'",
+			"\t\t\t\t#tiproj_bid?, #ti_void_date, #ti_void_user, #ti_date_modified,",
+			"\t\t\t\t#bizuser_user_modified, #tiproj_created_on, #ti_rate_renamed,",
+			"\t\t\t\t#ti_quantity_renamed, #ti_amount, #ti_net_amount,",
+			"\t\t\t\t#ti_num_renamed, #ti_exchgrate_default,",
+			"\t\t\t\t#ti_booking_number_renamed, #ti_gl_date))",
+			"\t\tfor mem in clearFields.MergeUnion(ticket.config_clearfields)",
+			"\t\t\tticket.Delete(mem)",
+			"",
+			"\t\tfor taxField in #('etaorder_taxcodes', " $
+				"'etaorder_taxcodes_fuel_surcharge_default')",
+			"\t\t\t{",
+			"\t\t\tif clearFields.Has?(taxField)",
+			"\t\t\t\tticket[taxField] = 'None'",
+			"\t\t\telse",
+			"\t\t\t\tticket.Delete(taxField) // use BP default",
+			"\t\t\t}",
+			"",
+			"\t\tconfigRemoveFields = ticket.config_clearfields",
+			"\t\tticket.ti_skip_biz_default_fields =",
+			"\t\t\tTi_TicketBizDefaultsControl.DefaultFields.",
+			"\t\t\t\tFindAllIf( { configRemoveFields.Has?(it) })",
+			"",
+			"\t\t}"]
+		}
+
+	unfmtC()
+		{
+		return [
+			"",
+			"  // a multi-line $ chain in a constant is kept as written",
+			'  Template: "alpha beta " $',
+			'\t\t"gamma.',
+			"",
+			'Delta epsilon zeta.  " $',
+			'\t\t"eta theta"',
+			"",
+			"  // a test reaching a private method by its mangled name keeps the break " $
+				"after the dot",
+			"  Private(message, clientname) {",
+			"\tfn = " $
+				"Bank_Reconciliation_List.Bank_Reconciliation_List_output_OverrideProtectHistory",
+			"\tAssert(ClientStatus_SwitchErrorsToWarnings." $
+				"ClientStatus_SwitchErrorsToWarnings_getSlowTests(message, clientname) " $
+				"is: #())",
+			"\treturn fn",
+			"  }",
+			"",
+			"  // the closers after a string count against the width",
+			"  Closers() {",
+			"\tmsgOb = Object(",
+			"\t  bizPartnersPrinted: Object(),",
+			'\t  "Billing Comments": Object(',
+			"\t\tcolumns: #(),",
+			'\t\tdesc: "Only Billing Comments for customers not printed in other ' $
+				'sections"))',
+			"\treturn msgOb",
+			"  }",
+			"",
+			"  // a string with escapes still splits at a space",
+			"  Escapes() {",
+			"\treturn " $
+				'"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" $ ' $
+				'"h4\\r\\nyy yy yy yy yy yy yy yy yy yy yy yy yy yy yy yy yy yy yy yy ' $
+				'yy yy yy yy yy yy ==\\r\\n"',
+			"  }",
+			"",
+			"  // comments written above else stay above it",
+			"  Comments(a, lock_result) {",
+			"\tif a",
+			"\t  b()",
+			"\t// if the lock was renewed, but LockManager did not find the previous " $
+				"lock",
+			'\t// (i.e. "this" session went to sleep and another user went in and out ' $
+				"of edit",
+			"\telse if lock_result is 'lock_expired_but_renewed'",
+			"\t  c()",
+			"  }",
+			"",
+			"  // a call on a call is a chain: it breaks after the dot",
+			"  Chain(t) {",
+			"\treturn In_Costing(#fifo, #20020101, 1, t, location: .loc1)." $
+				"Process(Record(intran_num: 1, inv_num: #fifo, intran_date: #20020101, " $
+				"intran_quantity: 12)).cost",
+			"  }",
 			'}']
 		}
 
 	fmt()
+		{
+		return .fmtA().Add(@.fmtB()).Add(@.fmtC())
+		}
+
+	fmtA()
 		{
 		return [
 			"// AstFormatter golden fixture deliberately badly formatted.",
@@ -257,7 +428,20 @@ Test
 			"\t\t)",
 			"",
 			"\t// not broken by the author, so it reflows to the width",
-			"\tColors: (red, green, blue, cyan, magenta, yellow, black, white, gray, brown, pink)",
+			"\tColors: (red, green, blue, cyan, magenta, yellow, black, white, gray, " $
+				"brown, pink)",
+			"",
+			"\t// a function leading a constant nests from the delimiter, not twice;",
+			"\t// a function that follows another member still nests twice",
+			"\tHook: (function(x, y)",
+			"\t\t{",
+			"\t\treturn x + y",
+			"\t\t})",
+			"\tPair: (1,",
+			"\t\tfunction(x)",
+			"\t\t\t{",
+			"\t\t\treturn x",
+			"\t\t\t})",
 			"",
 			"\t// an empty body hugs the signature",
 			"\tReset() { }",
@@ -268,7 +452,8 @@ Test
 			"\t\tthis.total = 0 // explicit this on a lowercase member is kept",
 			"\t\t}",
 			"",
-			"\t// a break the author wrote between arguments is kept, the other gaps fill",
+			"\t// a break the author wrote between arguments is kept, the other gaps " $
+				"fill",
 			"\tCalc(x, y)",
 			"\t\t{",
 			"\t\ttotal = Sum(first_argument, second_argument,",
@@ -276,7 +461,8 @@ Test
 			"\t\tvertical = Sum(one,",
 			"\t\t\ttwo,",
 			"\t\t\tthree)",
-			"\t\tfilled = Sum(alpha_argument, beta_argument, gamma_argument, delta_argument,",
+			"\t\tfilled = Sum(alpha_argument, beta_argument, gamma_argument, " $
+				"delta_argument,",
 			"\t\t\tepsilon_arg)",
 			"\t\treturn total + vertical + filled",
 			"\t\t}",
@@ -326,7 +512,8 @@ Test
 			"\t\treturn a $ b $ c $ d $ e $ f",
 			"\t\t}",
 			"",
-			"\t// catch (unused) drops the variable, a zero range index drops, ?true:false folds",
+			"\t// catch (unused) drops the variable, a zero range index drops, " $
+				"?true:false folds",
 			"\tLoad(s)",
 			"\t\t{",
 			"\t\ttry",
@@ -359,6 +546,23 @@ Test
 			"\t\tdefault:",
 			"\t\t\treturn #other",
 			"\t\t\t}",
+			"\t\t}"]
+		}
+
+	fmtB()
+		{
+		return [
+			"",
+			"\t// a long assignment breaks at the = once, not into a staircase",
+			"\t// a ternary keeps its own ? : break instead of the = break",
+			"\tGrade(node, ctx, curr)",
+			"\t\t{",
+			"\t\tfirstResult.results.grade = secondResult.results.grade =",
+			"\t\t\tgrade = ComputeGrade(firstResult.results, secondResult.results)",
+			"\t\td = ctx.lastStatement is true",
+			"\t\t\t? .FormatNode(node.expr, ctx)",
+			"\t\t\t: .FormatExpr(node.expr, ctx)",
+			"\t\treturn grade",
 			"\t\t}",
 			"",
 			"\t// a debug statement at the margin stays there, an indented one does not",
@@ -382,11 +586,26 @@ Test
 			"\t\t\t})",
 			"\t\t}",
 			"",
+			"\t// a comment after ( or the author's own break before a block argument",
+			"\t// is one line break, not a blank line",
+			"\tDeferred()",
+			"\t\t{",
+			"\t\t.Defer(// need defer to get outside sandbox",
+			"\t\t\t{",
+			"\t\t\t.updateStatus()",
+			"\t\t\t})",
+			"\t\tAssert(",
+			"\t\t\t{",
+			"\t\t\t.updateStatus()",
+			"\t\t\t} throws: #sandbox)",
+			"\t\t}",
+			"",
 			"\t// a long string splits at a word boundary, ? : lead the continuation",
 			"\tMessage(n)",
 			"\t\t{",
 			"\t\treturn n > 0",
-			'\t\t\t? "this is a fairly long message that will not fit on one single line at " $',
+			'\t\t\t? "this is a fairly long message that will not fit on one single ' $
+				'line at " $',
 			'\t\t\t\t"all and so it has to be split"',
 			'\t\t\t: ""',
 			"\t\t}",
@@ -439,7 +658,8 @@ Test
 			"\t\treturn 1",
 			"\t\t}",
 			"",
-			"\t// brackets keep the type: all named is a Record, any unnamed is an Object",
+			"\t// brackets keep the type: all named is a Record, any unnamed is an " $
+				"Object",
 			"\tTables()",
 			"\t\t{",
 			"\t\trec = [a: 1, b: 2]",
@@ -457,8 +677,28 @@ Test
 			"\t// and / or end the line; not (a is b) is left exactly as written",
 			"\tReady?(a, b, c)",
 			"\t\t{",
-			"\t\treturn a.Something?() and b.SomethingElse?() and c.YetAnotherThing?() and",
+			"\t\treturn a.Something?() and b.SomethingElse?() and c.YetAnotherThing?() " $
+				"and",
 			"\t\t\tnot (a is b)",
+			"\t\t}",
+			"",
+			"\t// a comment after a line-ending operator stays on that line",
+			"\tFull?(row, tender)",
+			"\t\t{",
+			"\t\treturn row.Size() is 5 or /*= max per row*/",
+			"\t\t\trow.Size() is tender.etaordertender_attachments.Size()",
+			"\t\t}",
+			"",
+			"\t// a type annotation normalizes to name :type and ) :type",
+			"\tCvt(n :number, s :string|number, f :boolean = false) :object|unknown",
+			"\t\t{",
+			"\t\treturn n",
+			"\t\t}",
+			"",
+			"\t// /*unused*/ keeps hugging the name, ahead of the annotation",
+			"\tIgnore(a/*unused*/ :string, b) :void",
+			"\t\t{",
+			"\t\treturn b",
 			"\t\t}",
 			"",
 			"\t// an annotation hugs its token",
@@ -467,6 +707,109 @@ Test
 			"// this margin comment is commented out code, kept at column 0",
 			"//x = 0",
 			"\t\treturn x",
+			"\t\t}",
+			"",
+			"\t// the receiver and method of a call cannot break, so an assignment",
+			"\t// whose RHS is one long call with a block argument has to break after",
+			"\t// the = even though the block makes the RHS unable to fit flat there",
+			"\tremoveTicketFields(ticket)",
+			"\t\t{",
+			"\t\tclearFields = Ti_CopyTicket.ClearFieldsList.",
+			"\t\t\tCopy().",
+			"\t\t\tMergeUnion([#ti_valid, #tiproj_num_ticket, #ti_ticket,",
+			"\t\t\t\t\t#ti_booking_number_new, #ti_num_new, #etarate_id,",
+			"\t\t\t\t\t#tiproj_bid?, #ti_void_date, #ti_void_user, #ti_date_modified,",
+			"\t\t\t\t\t#bizuser_user_modified, #tiproj_created_on, #ti_rate_renamed,",
+			"\t\t\t\t\t#ti_quantity_renamed, #ti_amount, #ti_net_amount,",
+			"\t\t\t\t\t#ti_num_renamed, #ti_exchgrate_default,",
+			"\t\t\t\t\t#ti_booking_number_renamed, #ti_gl_date])",
+			"\t\tfor mem in clearFields.MergeUnion(ticket.config_clearfields)",
+			"\t\t\tticket.Delete(mem)",
+			"",
+			"\t\tfor taxField in #(etaorder_taxcodes, " $
+				"etaorder_taxcodes_fuel_surcharge_default)",
+			"\t\t\t{",
+			"\t\t\tif clearFields.Has?(taxField)",
+			"\t\t\t\tticket[taxField] = #None",
+			"\t\t\telse",
+			"\t\t\t\tticket.Delete(taxField) // use BP default",
+			"\t\t\t}",
+			"",
+			"\t\tconfigRemoveFields = ticket.config_clearfields",
+			"\t\tticket.ti_skip_biz_default_fields =",
+			"\t\t\tTi_TicketBizDefaultsControl.DefaultFields.FindAllIf(",
+			"\t\t\t\t{",
+			"\t\t\t\tconfigRemoveFields.Has?(it)",
+			"\t\t\t\t})",
+			"\t\t}"]
+		}
+
+	fmtC()
+		{
+		return [
+			"",
+			"\t// a multi-line $ chain in a constant is kept as written",
+			'\tTemplate: "alpha beta " $',
+			'\t\t"gamma.',
+			"",
+			'Delta epsilon zeta.  " $',
+			'\t\t"eta theta"',
+			"",
+			"\t// a test reaching a private method by its mangled name keeps the break " $
+				"after the dot",
+			"\tPrivate(message, clientname)",
+			"\t\t{",
+			"\t\tfn = Bank_Reconciliation_List.",
+			"\t\t\tBank_Reconciliation_List_output_OverrideProtectHistory",
+			"\t\tAssert(",
+			"\t\t\tClientStatus_SwitchErrorsToWarnings.",
+			"\t\t\t\tClientStatus_SwitchErrorsToWarnings_getSlowTests(message, " $
+				"clientname)",
+			"\t\t\tis: #())",
+			"\t\treturn fn",
+			"\t\t}",
+			"",
+			"\t// the closers after a string count against the width",
+			"\tClosers()",
+			"\t\t{",
+			"\t\tmsgOb = Object(",
+			"\t\t\tbizPartnersPrinted: Object(),",
+			'\t\t\t"Billing Comments": Object(',
+			"\t\t\t\tcolumns: #(),",
+			'\t\t\t\tdesc: "Only Billing Comments for customers not printed in other " $',
+			'\t\t\t\t\t"sections"))',
+			"\t\treturn msgOb",
+			"\t\t}",
+			"",
+			"\t// a string with escapes still splits at a space",
+			"\tEscapes()",
+			"\t\t{",
+			"\t\treturn " $
+				'"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" $',
+			'\t\t\t"h4\\r\\nyy yy yy yy yy yy yy yy yy yy yy yy yy yy yy yy yy yy yy ' $
+				'yy yy yy " $',
+			'\t\t\t"yy yy yy yy ==\\r\\n"',
+			"\t\t}",
+			"",
+			"\t// comments written above else stay above it",
+			"\tComments(a, lock_result)",
+			"\t\t{",
+			"\t\tif a",
+			"\t\t\tb()",
+			"\t\t// if the lock was renewed, but LockManager did not find the previous " $
+				"lock",
+			'\t\t// (i.e. "this" session went to sleep and another user went in and ' $
+				"out of edit",
+			"\t\telse if lock_result is #lock_expired_but_renewed",
+			"\t\t\tc()",
+			"\t\t}",
+			"",
+			"\t// a call on a call is a chain: it breaks after the dot",
+			"\tChain(t)",
+			"\t\t{",
+			"\t\treturn In_Costing(#fifo, #20020101, 1, t, location: .loc1).",
+			"\t\t\tProcess([intran_num: 1, inv_num: #fifo, intran_date: #20020101,",
+			"\t\t\t\t\tintran_quantity: 12]).cost",
 			"\t\t}",
 			"\t}"]
 		}

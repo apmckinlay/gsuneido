@@ -1,9 +1,9 @@
 // Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
 AccessBase
 	{
-	Name: "Access1"
-	New(.query, control = false, title = false,
-		validField = false, .protectField = false, .option = 'Access')
+	Name: #Access1
+	New(.query, control = false, title = false, validField = false, .protectField = false,
+		.option = #Access)
 		{
 		super(.makecontrols(query, control, title))
 		.data = .Vert.TitleScroll.Control
@@ -15,12 +15,12 @@ AccessBase
 		.load_record()
 		.attachmentsManager = AttachmentsManager(.query, Object())
 		}
-	Commands:
-		(
-		("Edit",	"Alt+E")
-		("Restore",	"Alt+R")
-		("NextTab",	"Ctrl+Tab")
-		("PrevTab",	"Shift+Ctrl+Tab")
+
+	Commands: (
+		(Edit, "Alt+E"),
+		(Restore, "Alt+R"),
+		(NextTab, "Ctrl+Tab"),
+		(PrevTab, "Shift+Ctrl+Tab")
 		)
 	makecontrols(query, control, title)
 		{
@@ -30,35 +30,35 @@ AccessBase
 		.query_columns = QueryColumns(query)
 		if control is false
 			{
-			control = Object('Vert')
+			control = [#Vert]
 			for field in .query_columns
 				control.Add(field)
 			}
-		return Object('Vert'
-			Object('TitleScroll', title, Object('Record', control)),
-			#(Horz
-				(EnhancedButton text: 'Edit' tip: 'Alt+E' xmin: 80
-					buttonStyle:, mouseEffect:)
-				(Button 'Restore' tip: 'Alt+R' xmin: 80))
-			'Status')
+		return [#Vert,
+			[#TitleScroll, title, [#Record, control]],
+			#(Horz,
+				(EnhancedButton, text: Edit, tip: "Alt+E", xmin: 80,
+					buttonStyle:, mouseEffect:),
+				(Button, Restore, tip: "Alt+R", xmin: 80)),
+			#Status]
 		}
 
 	get_plugins()
 		{
 		.afterfield_plugins = Object().Set_default(#())
-		Plugins().ForeachContribution('Access1', false)
-			{ |x|
+		Plugins().ForeachContribution(#Access1, false)
+			{|x|
 			if x[2] isnt .option
 				continue
 			x = x.Copy() // so plugins can store stuff in it
 			if String?(x.func)
-				x.func = x.func.Compile()
+				x.func = Suneido.Compile(x.func)
 			fields = Object?(x.fields) ? x.fields : (x.fields)()
 			for f in fields
 				{
 				if not .query_columns.Has?(f)
 					throw "invalid Access plugin field: " $ f
-				if x[1] is 'AfterField'
+				if x[1] is #AfterField
 					.afterfield_plugins[f].Add(x)
 				else
 					throw "invalid Access plugin"
@@ -75,7 +75,7 @@ AccessBase
 				for x in .afterfield_plugins[field]
 					(x.func)(field, value, .Window.Hwnd, .query, .GetData())
 
-			.Send("Access1_AfterField", field, value)
+			.Send(#Access1_AfterField, field, value)
 			}
 		}
 
@@ -109,29 +109,31 @@ AccessBase
 
 	On_Restore()
 		{
-		.NotifyObservers("restore")
+		.NotifyObservers(#restore)
 		.load_record()
 		.lock.Unlock()
 		if .nextnumControl isnt false
 			.nextnumControl.RestoreNextNumber()
-		.Send("Access1_Restore")
+		.Send(#Access1_Restore)
 		.attachmentsManager.ProcessQueue(restore?:)
 		}
+
 	load_record()
 		{
-		.NotifyObservers('before_setdata')
+		.NotifyObservers(#before_setdata)
 		x = Query1(.query)
-		.Send('Access_BeforeRecord', x)
+		.Send(#Access_BeforeRecord, x)
 		.setdata(x)
-		.NotifyObservers('setdata')
+		.NotifyObservers(#setdata)
 		.Data.SetReadOnly(true)
 		.edit_button.Pushed?(false)
 		}
+
 	setdata(x)
 		{
 		.new_record? = x is false
 		if x is false
-			x = Record()
+			x = []
 		.original_record = x.Copy()
 		if .ValidField isnt false
 			x[.ValidField]
@@ -139,8 +141,9 @@ AccessBase
 			x[.protectField]
 		.Data.Set(x)
 		.Status.SetValid()
-		.Status.Set('')
+		.Status.Set("")
 		}
+
 	On_Edit()
 		{
 		if ReadOnlyAccess(this) is true
@@ -182,7 +185,7 @@ AccessBase
 		if not .selectPromptText(field)
 			{
 			field.SetFocus()
-			field.TopDown('On_Select_All')
+			field.TopDown(#On_Select_All)
 			}
 
 		if Sys.SuneidoJs?() // js scrolls to the focused field automatically
@@ -190,6 +193,7 @@ AccessBase
 
 		.Delay(500, .scrollToView) /*= 1/2 second */
 		}
+
 	scrollToView()
 		{
 		scroll = .Vert.TitleScroll.Vert.Scroll
@@ -233,16 +237,19 @@ AccessBase
 		{
 		return not .Data.GetReadOnly()
 		}
+
 	SetEditMode()
 		{
 		if not .EditMode?()
 			.On_Edit()
 		return .EditMode?()
 		}
+
 	Access1_Save()
 		{
 		.Save()
 		}
+
 	Save()
 		{
 		if not .Data.Dirty?()
@@ -254,24 +261,25 @@ AccessBase
 		if .save() is false
 			return false
 
-		.NotifyObservers('after_save')
+		.NotifyObservers(#after_save)
 		.original_record = Query1(.query)
 		.Data.SetReadOnly(true)
 		.lock.Unlock()
 		.edit_button.Pushed?(false)
 		.Data.Dirty?(false)
-		.Send('Access1AfterSaving')
+		.Send(#Access1AfterSaving)
 		.new_record? = false
 		.attachmentsManager.ProcessQueue()
 		return true
 		}
+
 	save()
 		{
 		try
 			return KeyExceptionTransaction()
-				{ |t|
-				if false is .Send('AccessBeforeSave', :t) or
-					false is .NotifyObservers('save', t)
+				{|t|
+				if false is .Send(#AccessBeforeSave, :t) or
+					false is .NotifyObservers(#save, t)
 					{
 					if not t.Ended?()
 						t.Rollback()
@@ -282,11 +290,13 @@ AccessBase
 		catch (unused, "interrupt: KeyException")
 			return false
 		}
+
 	save_output(t)
 		{
 		t.QueryOutput(.query, .Data.Get())
 		return true
 		}
+
 	save_update(t)
 		{
 		x = t.Query1(.query)
@@ -295,16 +305,19 @@ AccessBase
 		x.Update(.Data.Get())
 		return true
 		}
+
 	ChangeQuery(.query)
 		{
 		.query_columns = QueryColumns(query)
 		.load_record()
 		}
+
 	QueueDeleteAttachmentFile(newFile, oldFile, name, action)
 		{
-		return .attachmentsManager.QueueDeleteFile(
-			newFile, oldFile, .GetData(), name, action)
+		return .attachmentsManager.QueueDeleteFile(newFile, oldFile, .GetData(), name,
+			action)
 		}
+
 	Destroy()
 		{
 		.lock.Unlock()

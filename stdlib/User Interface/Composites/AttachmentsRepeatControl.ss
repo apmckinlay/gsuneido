@@ -2,25 +2,30 @@
 RepeatControl
 	{
 	PerRow: 5
-	New(type = '', reorderOnly = false, hideLabel? = false)
+	New(type = "", reorderOnly = false, hideLabel? = false)
 		{
 		super(.layout(type, reorderOnly, hideLabel?), no_minus:, noPlus: reorderOnly)
 		}
+
 	layout(type, reorderOnly, hideLabel?)
 		{
-		imgCtrl = reorderOnly ? 'OpenImage' : 'OpenImageWithLabels'
-		return Object('Horz'
-			Object('Pane' Object(imgCtrl, :hideLabel?, :type, :reorderOnly,
-				name: 'attachment0')),
-			Object('Pane' Object(imgCtrl, :hideLabel?, :type, :reorderOnly,
-				name: 'attachment1'))
-			Object('Pane' Object(imgCtrl, :hideLabel?, :type, :reorderOnly,
-				name: 'attachment2'))
-			Object('Pane' Object(imgCtrl, :hideLabel?, :type, :reorderOnly,
-				name: 'attachment3'))
-			Object('Pane' Object(imgCtrl, :hideLabel?, :type, :reorderOnly,
-				name: 'attachment4'))
-			)
+		imgCtrl = reorderOnly ? #OpenImage : #OpenImageWithLabels
+		return [#Horz,
+			[#Pane,
+				[imgCtrl, :hideLabel?, :type, :reorderOnly,
+					name: #attachment0]],
+			[#Pane,
+				[imgCtrl, :hideLabel?, :type, :reorderOnly,
+					name: #attachment1]],
+			[#Pane,
+				[imgCtrl, :hideLabel?, :type, :reorderOnly,
+					name: #attachment2]],
+			[#Pane,
+				[imgCtrl, :hideLabel?, :type, :reorderOnly,
+					name: #attachment3]],
+			[#Pane,
+				[imgCtrl, :hideLabel?, :type, :reorderOnly,
+					name: #attachment4]]]
 		}
 
 	GetRowHeight(reorderOnly = false, hideLabel? = false)
@@ -29,9 +34,9 @@ RepeatControl
 			? OpenImageControl.Xmin
 			: OpenImageWithLabelsControl.ImageHeight +
 				(hideLabel?
-					? 0 :
-					OpenImageWithLabelsControl.TextHeight + 2/*=EtchedLine*/)
-		return height + (1 + GetSystemMetrics(SM.CYEDGE)) * 2/*from PaneControl*/
+					? 0
+					: OpenImageWithLabelsControl.TextHeight + 2/*=EtchedLine*/)
+		return height + (1 + GetSystemMetrics(SM.CYEDGE)) * 2 /*from PaneControl*/
 		}
 
 	ImageDropFileList(files, source)
@@ -53,7 +58,7 @@ RepeatControl
 				fileProc = source.ProcessValue(fileProc)
 			.put(data, dest, fileProc)
 			currentSource = .sourceFromIndex(dest)
-			currentSource.QueueDeleteAttachment(currentSource.FullPath(), '')
+			currentSource.QueueDeleteAttachment(currentSource.FullPath(), "")
 			dest++
 			}
 		return true
@@ -68,10 +73,11 @@ RepeatControl
 		{
 		row = (i / .PerRow).Int()
 		if row >= data.Size()
-			return ''
+			return ""
 		col = i % .PerRow
-		return data[row]['attachment' $ col]
+		return data[row]["attachment" $ col]
 		}
+
 	put(data, i, value)
 		{
 		row = (i / .PerRow).Int()
@@ -81,12 +87,12 @@ RepeatControl
 			.AppendRow(rec)
 			}
 		col = i % .PerRow
-		data[row]['attachment' $ col] = value
+		data[row]["attachment" $ col] = value
 		}
 
-	dragging: false
+	dragging:              false
 	switchedImageControls: false
-	src: false
+	src:                   false
 	ImageStartDrag(source)
 		{
 		.src = .getIndex(source)
@@ -109,7 +115,7 @@ RepeatControl
 		.put(data, .src, "")
 		if "" isnt OpenImageWithLabelsControl.SplitFile(.get(data, dest))
 			.shiftAttachments(.src, dest, data)
-		else if "" is OpenImageWithLabelsControl.SplitLabel(file)["labels"]
+		else if "" is OpenImageWithLabelsControl.SplitLabel(file).labels
 			file = source.ProcessValue(file)
 		.put(data, dest, file)
 		}
@@ -123,13 +129,13 @@ RepeatControl
 		if dest < src
 			{
 			emptySlot = .firstEmptySlot(data, dest)
-			for(i = emptySlot; i > dest; i--)
+			for (i = emptySlot; i > dest; i -= 1)
 				.put(data, i, .get(data, i - 1))
 			}
 		else
 			{
 			emptySlot = .firstEmptySlot(data, dest, true)
-			for(i = emptySlot; i < dest; i++)
+			for (i = emptySlot; i < dest; i += 1)
 				.put(data, i, .get(data, i + 1))
 			}
 		}
@@ -141,7 +147,7 @@ RepeatControl
 		while not OpenImageWithLabelsControl.SplitFile(.get(data, emptySlot)).Blank?()
 			{
 			emptySlot = emptySlot + increment
-			Assert(emptySlot >= 0, 'firstEmptySlot result less than 0')
+			Assert(emptySlot >= 0, "firstEmptySlot result less than 0")
 			}
 		return emptySlot
 		}
@@ -166,7 +172,7 @@ RepeatControl
 		{
 		if .switchedImageControls
 			{
-			source.FindControl('image').Dragging = .dragging
+			source.FindControl(#image).Dragging = .dragging
 			.switchedImageControls = false
 			}
 		}
@@ -182,7 +188,7 @@ RepeatControl
 			file = source.ProcessValue(file) // adds existing labels
 
 		.put(data, dest, file)
-		source.QueueDeleteAttachment(source.FullPath(), '')
+		source.QueueDeleteAttachment(source.FullPath(), "")
 		return true
 		}
 
@@ -205,9 +211,9 @@ RepeatControl
 		if row >= (rows = .GetRows()).Size()
 			{
 			data = .getRowsData()
-			.put(data, index, '') // Construct an extra row
+			.put(data, index, "") // Construct an extra row
 			}
-		col = index - row * 5
+		col = index - row * .PerRow
 		sourceRow = rows[row]
 		source = sourceRow.FindControl("attachment" $ col)
 		return source

@@ -3,10 +3,10 @@ Test
 	{
 	fakeTabControl: class
 		{
-		Ymin: 			0
-		Selected: 		0
-		TrimChar:		'~'
-		TrimChars:		1
+		Ymin:      0
+		Selected:  0
+		TrimChar:  '~'
+		TrimChars: 1
 		GetSelected()
 			{
 			return .Selected
@@ -15,7 +15,7 @@ Test
 
 	spy()
 		{
-		.SpyOn(TabCalcs.TabCalcs_initFont).Return('')
+		.SpyOn(TabCalcs.TabCalcs_initFont).Return("")
 		.SpyOn(TabCalcs.ImageDimensions).Return([width: 10, height: 10])
 		.SpyOn(ScaleWithDpiFactor).Return(6)
 		}
@@ -37,7 +37,7 @@ Test
 	Test_top()
 		{
 		.spy()
-		calcCl = TabHorzCalcs(new .fakeTabControl, orientation: 'top')
+		calcCl = TabHorzCalcs(new .fakeTabControl(), orientation: #top)
 
 		calcCl.Resize(w = 200, 20)
 		Assert(calcCl.TabBarSize is: w)
@@ -45,7 +45,7 @@ Test
 		Assert(calcCl.TabHorzCalcs_extraControlY is: 0)
 
 		// Tab render values
-		.setTextMetrics(tab = Object(tabName: 'Tab1', hide?: false, data: false, image:))
+		.setTextMetrics(tab = Object(tabName: #Tab1, hide?: false, data: false, image:))
 		calcCl.CalcRenderRect(0, tab, 0)
 		Assert(tab.renderRect.start is: 0)
 		Assert(tab.renderRect.top is: 1)
@@ -120,7 +120,7 @@ Test
 	Test_bottom()
 		{
 		.spy()
-		calcCl = TabHorzCalcs(new .fakeTabControl, orientation: 'bottom')
+		calcCl = TabHorzCalcs(new .fakeTabControl(), orientation: #bottom)
 
 		calcCl.Resize(w = 200, 20)
 		Assert(calcCl.TabBarSize is: w)
@@ -128,7 +128,7 @@ Test
 		Assert(calcCl.TabHorzCalcs_extraControlY is: 1)
 
 		// Tab render values
-		.setTextMetrics(tab = Object(tabName: 'Tab1', hide?: false, data: false, image:))
+		.setTextMetrics(tab = Object(tabName: #Tab1, hide?: false, data: false, image:))
 		calcCl.CalcRenderRect(0, tab, 0)
 		Assert(tab.renderRect.start is: 0)
 		Assert(tab.renderRect.top is: 0)
@@ -203,17 +203,17 @@ Test
 	Test_Resize?()
 		{
 		.spy()
-		calcCl = TabHorzCalcs(new .fakeTabControl, orientation: 'bottom')
+		calcCl = TabHorzCalcs(new .fakeTabControl(), orientation: #bottom)
 
 		// .W is initialized to false
-		Assert(calcCl.Resize?(false, 'unused - h') is: false)
-		Assert(calcCl.Resize?(0, 'unused - h'))
+		Assert(calcCl.Resize?(false, "unused - h") is: false)
+		Assert(calcCl.Resize?(0, "unused - h"))
 
 		calcCl.Resize(200, 20)
-		Assert(calcCl.Resize?(0, 'unused - h'))
-		Assert(calcCl.Resize?(199, 'unused - h'))
-		Assert(calcCl.Resize?(200, 'unused - h') is: false)
-		Assert(calcCl.Resize?(201, 'unused - h'))
+		Assert(calcCl.Resize?(0, "unused - h"))
+		Assert(calcCl.Resize?(199, "unused - h"))
+		Assert(calcCl.Resize?(200, "unused - h") is: false)
+		Assert(calcCl.Resize?(201, "unused - h"))
 		}
 
 	Test_ResizeExtraControl()
@@ -223,13 +223,13 @@ Test
 		extraCtrl.When.Resize([anyArgs:]).Do({ })
 
 		// Horizontal tabs top
-		calcCl = TabHorzCalcs(new .fakeTabControl, orientation: 'top')
+		calcCl = TabHorzCalcs(new .fakeTabControl(), orientation: #top)
 		calcCl.Resize(200, 20)
 		calcCl.ResizeExtraControl(extraCtrl, ctrlPos: 5, ctrlSize: 50)
 		extraCtrl.Verify.Resize(5, 0, 50, 19)
 
 		// Horizontal tabs bottom
-		calcCl = TabHorzCalcs(new .fakeTabControl, orientation: 'bottom')
+		calcCl = TabHorzCalcs(new .fakeTabControl(), orientation: #bottom)
 		calcCl.Resize(200, 20)
 		calcCl.ResizeExtraControl(extraCtrl, ctrlPos: 5, ctrlSize: 50)
 		extraCtrl.Verify.Resize(5, 1, 50, 19)
@@ -242,13 +242,13 @@ Test
 		button.When.Resize([anyArgs:]).Do({ })
 
 		// Horizontal tabs top
-		calcCl = TabHorzCalcs(new .fakeTabControl, orientation: 'top')
+		calcCl = TabHorzCalcs(new .fakeTabControl(), orientation: #top)
 		calcCl.Resize(200, 20)
 		calcCl.ResizeButton(button, 10)
 		button.Verify.Resize(10, 5, 4, 4)
 
 		// Horizontal tabs bottom
-		calcCl = TabHorzCalcs(new .fakeTabControl, orientation: 'bottom')
+		calcCl = TabHorzCalcs(new .fakeTabControl(), orientation: #bottom)
 		calcCl.Resize(200, 20)
 		calcCl.ResizeButton(button, 10)
 		button.Verify.Resize(10, 1, 4, 4)
@@ -257,7 +257,7 @@ Test
 	Test_TabDragSpecs()
 		{
 		.spy()
-		calcCl = TabHorzCalcs(new .fakeTabControl, orientation: 'bottom')
+		calcCl = TabHorzCalcs(new .fakeTabControl(), orientation: #bottom)
 		calcCl.Resize(w = 200, 20)
 		Assert(calcCl.TabBarSize is: w)
 

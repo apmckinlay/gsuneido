@@ -30,8 +30,8 @@
 */
 ExplorerAdapterControl
 	{
-	Name: 	CodeView
-	BaseAddons: #(
+	Name: #CodeView
+	BaseAddons: (
 		Addon_suneido_style:,
 		Addon_indent_guides:,
 		Addon_brace_match:,
@@ -49,28 +49,27 @@ ExplorerAdapterControl
 		Addon_flag:,
 		Addon_scroll_zoom:
 		)
-	redirMethods: #()
-	New(.data = #(table: '', name: '', text: ''), addons = #()
-		divider = #HorzSplit, xstretch = 3, ystretch = 1, ide = true, .readonly = false)
+	redirMethods: ()
+	New(.data = #(table: "", name: "", text: ""), addons = #(), divider = #HorzSplit,
+		xstretch = 3, ystretch = 1, ide = true, .readonly = false)
 		{
 		super(.controls(divider, addons, ide, xstretch, ystretch), #text)
 		}
 
-	Exterior:			codeViewExterior
-	TopLeft:			codeViewTopLeft
-	TopRight:			codeViewTopRight
-	BottomLeft:			codeViewBotLeft
-	BottomRight:		codeViewBotRight
+	Exterior:    #codeViewExterior
+	TopLeft:     #codeViewTopLeft
+	TopRight:    #codeViewTopRight
+	BottomLeft:  #codeViewBotLeft
+	BottomRight: #codeViewBotRight
 	Getter_InjectPoints()
 		{
 		return .InjectPoints = [
-			editor: 	.TopLeft,
-			exterior: 	.Exterior,
-			topLeft: 	.TopLeft,
-			topRight: 	.TopRight,
-			bottomLeft: .BottomLeft
-			bottomRight: .BottomRight
-			]
+			editor: .TopLeft,
+			exterior: .Exterior,
+			topLeft: .TopLeft,
+			topRight: .TopRight,
+			bottomLeft: .BottomLeft,
+			bottomRight: .BottomRight]
 		}
 
 	/*vvvvvvvvvv Control Building Start vvvvvvvvv*/
@@ -92,14 +91,12 @@ ExplorerAdapterControl
 		{
 		editorAddons = .BaseAddons.Copy()
 		for addon, state in addons
-			{
 			if state is true
 				editorAddons[addon] = state
 			else if state is false
 				editorAddons.Delete(addon)
 			else if Object?(state)
 				.overwriteAddon(addon, state, editorAddons)
-			}
 		return editorAddons
 		}
 
@@ -127,7 +124,9 @@ ExplorerAdapterControl
 		}
 
 	buildEditor(addons, ide)
-		{ return Object(ScintillaAddonsControl, IDE: ide).MergeNew(addons) }
+		{
+		return [ScintillaAddonsControl, IDE: ide].MergeNew(addons)
+		}
 
 	buildControls(divider)
 		{
@@ -138,9 +137,7 @@ ExplorerAdapterControl
 		pairB = pairs.pairB
 		interior = pairA.NotEmpty?() and pairB.NotEmpty?()
 			? [divider, pairA, pairB, name: .primarySplit]
-			: pairA.NotEmpty?()
-				? pairA
-				: pairB
+			: pairA.NotEmpty?() ? pairA : pairB
 		return interior
 		}
 
@@ -155,7 +152,7 @@ ExplorerAdapterControl
 
 	addAddonControls(injectPoint, baseControl, _injectAddons)
 		{
-		addonControls = Object().Set_default('')
+		addonControls = Object().Set_default("")
 		addons = injectAddons.Filter({ it.Inject is injectPoint })
 		addons.Each({ it.Controls(addonControls) })
 		if .skipGroup?(baseControl, addonControls, addons)
@@ -165,7 +162,9 @@ ExplorerAdapterControl
 		}
 
 	editorControl(name, _xstretch, _ystretch)
-		{ return [#Horz, .editor, :xstretch, :ystretch, :name, editorGroup?:] }
+		{
+		return [#Horz, .editor, :xstretch, :ystretch, :name, editorGroup?:]
+		}
 
 	skipGroup?(baseControl, addonControls, addons)
 		{
@@ -176,7 +175,9 @@ ExplorerAdapterControl
 		}
 
 	RequiredGroups()
-		{ return Object(.InjectPoints.editor, .InjectPoints.exterior) }
+		{
+		return [.InjectPoints.editor, .InjectPoints.exterior]
+		}
 
 	buildPairs(divider, topLeft, topRight, botLeft, botRight)
 		{
@@ -208,19 +209,20 @@ ExplorerAdapterControl
 		control.editorPair? = editorPair?
 		return control
 		}
-	/*^^^^^^^^^^^^ Control Building Start ^^^^^^^^^^^*/
 
 	/*vvvvv Editor Addon Helper Methods Start vvvvv*/
 	addonRedirs()
-		{ return .Editor.CollectFromAddons(#Addon_RedirMethods).Flatten().UniqueValues() }
+		{
+		return .Editor.CollectFromAddons(#Addon_RedirMethods).Flatten().UniqueValues()
+		}
 
 	Default(@args)
 		{
 		if .redirMethods.Has?(args[0])
 			.send(@args)
 		else
-			SuneidoLog('ERROR: (CAUGHT) CodeView, undefined method: ' $ args[0],
-				params: args[1 ..], caughtMsg: 'development error')
+			SuneidoLog("ERROR: (CAUGHT) CodeView, undefined method: " $ args[0],
+				params: args[1..], caughtMsg: "development error")
 		}
 
 	Msg(args)
@@ -238,9 +240,11 @@ ExplorerAdapterControl
 		}
 
 	addonReady?(addon)
-		{ return addon.Method?(#AddonReady?) ? addon.AddonReady?() : true }
-	/*^^^^^ Editor Addon Helper Methods End ^^^^^*/
+		{
+		return addon.Method?(#AddonReady?) ? addon.AddonReady?() : true
+		}
 
+	/*vvvvvvvvvvv General Methods Start vvvvvvvvvvv*/
 	Startup()
 		{
 		.InitialSet(.data)
@@ -251,8 +255,8 @@ ExplorerAdapterControl
 
 	InitialSet(data)
 		{
-		.Table = data.GetDefault(#table, '')
-		.RecName = data.GetDefault(#name, '')
+		.Table = data.GetDefault(#table, "")
+		.RecName = data.GetDefault(#name, "")
 		.Set(data)
 		.send(#InitialSet)
 		}
@@ -271,37 +275,59 @@ ExplorerAdapterControl
 		}
 
 	GetSplit(split = #subSplitA)
-		{ return .FindControl(this[.Name $ #Control_ $ split]) }
+		{
+		return .FindControl(this[.Name $ #Control_ $ split])
+		}
 
 	Getter_Editor()
-		{ return .Editor = .FindControl(#Editor) }
+		{
+		return .Editor = .FindControl(#Editor)
+		}
 
 	GetChild()
-		{ return .Editor }
+		{
+		return .Editor
+		}
 
 	CurrentPosition()
-		{ return .Editor.GetCurrentPos() }
+		{
+		return .Editor.GetCurrentPos()
+		}
 
 	CurrentLine()
-		{ return .Editor.LineFromPosition(.CurrentPosition()) }
+		{
+		return .Editor.LineFromPosition(.CurrentPosition())
+		}
 
 	GetFirstVisibleLine()
-		{ return .Editor.GetFirstVisibleLine() }
+		{
+		return .Editor.GetFirstVisibleLine()
+		}
 
 	SetFirstVisibleLine(pos)
-		{ .Editor.SetFirstVisibleLine(pos) }
+		{
+		.Editor.SetFirstVisibleLine(pos)
+		}
 
 	CurrentTable()
-		{ return .Table }
+		{
+		return .Table
+		}
 
 	CurrentName()
-		{ return .RecName }
+		{
+		return .RecName
+		}
 
 	Valid?()
-		{ return .Editor.Valid?() }
+		{
+		return .Editor.Valid?()
+		}
 
 	SetReadOnly(.readonly)
-		{ .Editor.SetReadOnly(.readonly) }
+		{
+		.Editor.SetReadOnly(.readonly)
+		}
 
 	EN_CHANGE()
 		{
@@ -310,11 +336,17 @@ ExplorerAdapterControl
 		}
 
 	editorModified()
-		{ .Send(#SaveCode_AfterChange) }
+		{
+		.Send(#SaveCode_AfterChange)
+		}
 
 	AfterSave()
-		{ .send(#AfterSave) }
+		{
+		.send(#AfterSave)
+		}
 
 	Invalidate()
-		{ .send(#Invalidate) }
+		{
+		.send(#Invalidate)
+		}
 	}

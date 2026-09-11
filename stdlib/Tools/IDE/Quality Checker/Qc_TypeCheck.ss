@@ -10,10 +10,11 @@ class
 		libName = recordData.lib
 		recName = recordData.recordName
 		qc_warnings = .collectWarnings(libName, recName, function?, recordData.code)
-		desc = qc_warnings.NotEmpty?() ? 'Type Check' : ''
+		desc = qc_warnings.NotEmpty?() ? "Type Check" : ""
 		// TC_ERROR implies type checker errors not a type checking error
-		nError = qc_warnings.Filter({ it.name.Prefix?('TC_ERROR') }).Size() > 0
-			? -1 : qc_warnings.Size()
+		nError = qc_warnings.Filter({ it.name.Prefix?(#TC_ERROR) }).Size() > 0
+			? -1
+			: qc_warnings.Size()
 		return Object(warnings: qc_warnings, :desc, :nError)
 		}
 
@@ -31,14 +32,12 @@ class
 			result = TypeCheckHelper.Run(recName, TypeCheckerMethods.Infer,
 				:skipLineageOrLibName, src: code)
 			errors, unused = TypeCheckHelper.FormatDiagnostics(
-				result.diagnostics, library: libName)
-			// only keep warnings for this record
-			prfx = libName $ ":" $ recName
-			for error in errors.Filter({ it.Prefix?(prfx) })
+				result.diagnostics, library: libName, record: recName)
+			for error in errors
 				qc_warnings.Add([name: error])
 			}
 		catch (e)
-			qc_warnings.Add([name: 'TC_ERROR: ' $ String(e)])
+			qc_warnings.Add([name: "TC_ERROR: " $ String(e)])
 
 		return qc_warnings
 		}
@@ -52,20 +51,19 @@ class
 
 		// no binary
 		try
-			{
 			if not TypeCheckHelper.BinaryExists?()
 				return false, false
-			}
-		catch // sometimes this seems to throw on
+		catch
+			// sometimes this seems to throw on
 			return false, false
 
-		c = recordData.code.Compile()
+		c = Suneido.Compile(recordData.code)
 		func? = Function?(c)
 		return Class?(c) or func?, func?
 		}
 
 	emptyResult()
 		{
-		return Object(warnings: #(), desc: '', nError: -1, rating: false)
+		return Object(warnings: #(), desc: "", nError: -1, rating: false)
 		}
 	}

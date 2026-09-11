@@ -1,18 +1,19 @@
 // Copyright (C) 2012 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	menu: #()
-	headerMenu: #()
+	menu: ()
+	headerMenu: ()
 	recMenu: false
 
 	New(menu = false, headerMenu = false, .recMenu = false, .addCurrentMenu? = false,
 		.addGlobalMenu? = false)
 		{
-		.defaultHeaderMenus = Object("Reset Columns", "", "Print...", "Reporter...")
+		.defaultHeaderMenus =
+			["Reset Columns", "", "Print...", "Reporter...", "Reporter Forms..."]
 
-		if Suneido.User is 'default'
-			.defaultHeaderMenus.Add('', 'Go To QueryView',
-				'Inspect Control', 'Copy Field Name', 'Go To Field Definition')
+		if Suneido.User is #default
+			.defaultHeaderMenus.Add("", "Go To QueryView",
+				"Inspect Control", "Copy Field Name", "Go To Field Definition")
 		if menu isnt false
 			.menu = menu
 		if headerMenu isnt false
@@ -23,7 +24,7 @@ class
 		{
 		if model.ExpandModel isnt false
 			{
-			layoutOb = view.Send('VirtualList_Expand', [])
+			layoutOb = view.Send(#VirtualList_Expand, [])
 			if 0 isnt layoutOb
 				{
 				if model.ExpandModel.CustomizableExpand?(layoutOb)
@@ -41,27 +42,27 @@ class
 
 	AddCustomize()
 		{
-		if not .defaultHeaderMenus.Has?('Customize...')
-			.defaultHeaderMenus.Add('Customize...', at: 0)
+		if not .defaultHeaderMenus.Has?("Customize...")
+			.defaultHeaderMenus.Add("Customize...", at: 0)
 		}
 
 	AddCustomizeColumn(columnsSaveName)
 		{
 		if columnsSaveName isnt false and
-			not .defaultHeaderMenus.Has?('Customize Columns...')
-			.defaultHeaderMenus.Add('Customize Columns...', at: 0)
+			not .defaultHeaderMenus.Has?("Customize Columns...")
+			.defaultHeaderMenus.Add("Customize Columns...", at: 0)
 		}
 
 	AddCustomizeExpand()
 		{
-		if not .defaultHeaderMenus.Has?('Customize Expand...')
-			.defaultHeaderMenus.Add('Customize Expand...', at: 0)
+		if not .defaultHeaderMenus.Has?("Customize Expand...")
+			.defaultHeaderMenus.Add("Customize Expand...", at: 0)
 		}
 
-	ContextRec: false
-	ContextCol: false
+	ContextRec:    false
+	ContextCol:    false
 	ContextRowNum: false
-	contextColumns: #()
+	contextColumns: ()
 
 	SetContext(rec, col, columns, row_num = false)
 		{
@@ -84,13 +85,11 @@ class
 
 	ShowMenu(view, rec, col, row_num, point)
 		{
-		if 0 isnt menu = view.Send("VirtualList_BuildContextMenu", :rec)
-			{
+		if 0 isnt menu = view.Send(#VirtualList_BuildContextMenu, :rec)
 			if rec is false
 				.SetHeaderMenu(menu)
 			else
 				.SetMenu(menu)
-			}
 		model = view.GetModel()
 		.SetContext(rec, col, model.ColModel.GetColumns(), row_num)
 		.Show(view, point.x, point.y)
@@ -109,7 +108,7 @@ class
 			: .menu.Copy()
 		.addToMenu(m, extraMenu, pos: m.Find(""))
 		if .controlEditable?(control)
-			.addToMenu(m, Object("New"))
+			.addToMenu(m, [#New])
 		if .ContextRec isnt false and .controlEditable?(control)
 			{
 			selectedCount = control.GetSelectedRecords().Size()
@@ -118,10 +117,10 @@ class
 		if .addGlobalMenu? is true
 			{
 			if m.NotEmpty?()
-				.addToMenu(m, Object(""))
-			.addToMenu(m, Object(.recMenu.Global, "Global"))
+				.addToMenu(m, [""])
+			.addToMenu(m, [.recMenu.Global, #Global])
 			}
-		if control.GetHeaderSelectPrompt() isnt 'no_prompts'
+		if control.GetHeaderSelectPrompt() isnt #no_prompts
 			.addFormatMenu(m)
 		return m
 		}
@@ -135,10 +134,10 @@ class
 		{
 		if selectedCount is 1
 			{
-			.addToMenu(m, Object("Edit Field"), pos: 0)
+			.addToMenu(m, ["Edit Field"], pos: 0)
 			if .addCurrentMenu? isnt false
 				for cMenu in .recMenu.Current
-					.addToMenu(m, Object(cMenu))
+					.addToMenu(m, [cMenu])
 			}
 		}
 
@@ -159,12 +158,12 @@ class
 			return
 
 		fmt = Datadict(.ContextCol).Format[0]
-		if not fmt.Suffix?('Format')
-			fmt $= 'Format'
+		if not fmt.Suffix?(#Format)
+			fmt $= #Format
 		fmt = Global(fmt)
-		if fmt.Method?('List_ExtraContext')
+		if fmt.Method?(#List_ExtraContext)
 			if false isnt contextExtra = fmt.List_ExtraContext()
-				menu.Append(Object("", contextExtra))
+				menu.Append(["", contextExtra])
 		}
 
 	Inspect()
@@ -176,7 +175,7 @@ class
 
 	HandlePluginOption(option, ctrl)
 		{
-		option = option.AfterFirst('On_Context_').Replace('_', ' ')
+		option = option.AfterFirst(#On_Context_).Replace('_', ' ')
 		if .recMenu isnt false and .recMenu.Current.Has?(option)
 			{
 			.recMenu.On_Current(option, .ContextRec, ctrl)
@@ -194,7 +193,7 @@ class
 	RedirectContextMenu(view, args)
 		{
 		event = args[0]
-		if event.Prefix?('On_Context_')
+		if event.Prefix?(#On_Context_)
 			{
 			if view.Addons.Send(event)
 				return
@@ -204,6 +203,6 @@ class
 				item: args.item)
 			}
 		else
-			throw 'method not handled: ' $ Display(args)
+			throw "method not handled: " $ Display(args)
 		}
 	}

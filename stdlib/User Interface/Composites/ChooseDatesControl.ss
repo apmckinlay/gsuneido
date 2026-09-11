@@ -1,36 +1,46 @@
 // Copyright (C) 2002 Suneido Software Corp. All rights reserved worldwide.
 ChooseField
 	{
-	Name: ChooseDates
-	dates: ""
+	Name: #ChooseDates
 	New(mandatory = false, .protectBeforeField = "")
 		{
-		super(#('Field', readonly:), :mandatory)
+		super(#(Field, readonly:), :mandatory)
 		}
+
 	Getter_DialogControl()
 		{
-		return Object(MonthCalDatesDialog, .Get(),
-			protectBefore: .Send('GetField', .protectBeforeField))
+		return [MonthCalDatesDialog, .Get(),
+			protectBefore: .Send(#GetField, .protectBeforeField)]
 		}
+
+	getter_dates()
+		{
+		return .dates = Object()
+		}
+
 	Get()
 		{
-		return .dates is "" or .dates.Empty?() ? '' : .dates.Join(',')
+		return .dates.Join(',')
 		}
+
 	Set(val)
 		{
 		.dates = Object()
-		format_date = ''
+		formattedDates = Object()
 		for date in val.Split(',')
 			{
 			.dates.Add(date)
-			format_date $= Date(date).ShortDate() $ ","
+			Assert(Date?(d = Date(date)))
+			formattedDates.Add(d.ShortDate())
 			}
-		.Field.Set(format_date[.. -1])
+		.Field.Set(formattedDates.Join(','))
 		}
+
 	Valid?()
 		{
 		return .Field.Get().Split(',').Every?({ Date(it) isnt false })
 		}
+
 	GetReadOnly()
 		{
 		return false

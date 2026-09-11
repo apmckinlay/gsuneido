@@ -1,14 +1,14 @@
 // Copyright (C) 2000 Suneido Software Corp. All rights reserved worldwide.
 Hwnd
 	{
-	Name: "ToolTips"
+	Name: #ToolTips
 	New()
 		{
 		.CreateWindow(TOOLTIPS_CLASS, "",
 			WS.POPUP | TTS.NOPREFIX | TTS.ALWAYSTIP,
 			WS_EX.TRANSPARENT)
 
-		.SendMessage(TTM.SETMAXTIPWIDTH, 0, 600) /*=tip max width, also handles newlines*/
+		.SendMessage(TTM.SETMAXTIPWIDTH, 0, 600)/*=tip max width, also handles newlines*/
 
 		// Without SetWindowPos, TreeView tooltip would
 		// bring the parent window to the top when inactive
@@ -16,9 +16,9 @@ Hwnd
 			SWP.NOMOVE | SWP.NOSIZE | SWP.NOACTIVATE)
 
 		.Map = Object()
-		.Map[TTN.SHOW] = 'TTN_SHOW'
-		.Map[TTN.POP] = 'TTN_POP'
-		.Map[TTN.GETDISPINFO] = 'TTN_GETDISPINFO'
+		.Map[TTN.SHOW] = #TTN_SHOW
+		.Map[TTN.POP] = #TTN_POP
+		.Map[TTN.GETDISPINFO] = #TTN_GETDISPINFO
 		}
 
 	// Windows sends notifications to parent/owner
@@ -53,9 +53,8 @@ Hwnd
 			if .Window.HwndMap.Member?(hwndTool)
 				return .Window.HwndMap[hwndTool].Notify(TTN.GETDISPINFO, lParam)
 			}
-		// On the other hand, if the flag isn't set, we should reflect the
-		// message to our parent window.
-		else
+		else // On the other hand, if the flag isn't set, we should reflect the
+			// message to our parent window.
 			{
 			hwndParent = .Parent.Hwnd
 			if .Window.HwndMap.Member?(hwndParent)
@@ -63,13 +62,17 @@ Hwnd
 			}
 		return 0
 		}
+
 	TTN_POP(lParam)
 		{
 		if .observer.Method?(#ToolTip_Pop)
 			.observer.ToolTip_Pop(:lParam)
 		return 0
 		}
-	observer: class{}
+
+	observer: class
+		{
+		}
 	Observer(ob)
 		{
 		.observer = ob
@@ -78,7 +81,7 @@ Hwnd
 	AddTool(hwnd, text, id = 0, flags = 0, lParam = 0, rect = false)
 		{
 		if .Destroyed?()
-			return
+			return false
 		// can't use TTF.SUBCLASS
 		// because if control SubClass's as well
 		// Windows leaks something
@@ -94,17 +97,17 @@ Hwnd
 			rect = Object()
 			}
 		ti = Object(
-			cbSize:		TOOLINFO.Size()
-			uFlags:		flags
-			hwnd:		hwnd
-			uId:		id
-			rect:		rect
-			lpszText:	text
-			lParam: 	lParam
-			)
+			cbSize: TOOLINFO.Size(),
+			uFlags: flags,
+			:hwnd,
+			uId: id,
+			:rect,
+			lpszText: text,
+			:lParam)
 		f = text is LPSTR_TEXTCALLBACK ? SendMessageTOOLINFO2 : SendMessageTOOLINFO
 		return 0 isnt f(.Hwnd, TTM.ADDTOOL, 0, ti)
 		}
+
 	RemoveTool(hwnd, id = false)
 		{
 		if not .Member?(#Hwnd)
@@ -112,12 +115,12 @@ Hwnd
 		// if id not specified, then assumes tool is on hwnd
 		// if AddTool specified rect, then must specify id of 0
 		ti = Object(
-			cbSize:	TOOLINFO.Size()
-			hwnd:	hwnd
-			uId:	id is false ? hwnd : id
-			)
+			cbSize: TOOLINFO.Size(),
+			:hwnd,
+			uId: id is false ? hwnd : id)
 		SendMessageTOOLINFO(.Hwnd, TTM.DELTOOL, 0, ti)
 		}
+
 	RemoveAllTools()
 		{
 		if .Destroyed?()
@@ -142,69 +145,78 @@ Hwnd
 		for ti in tools.Reverse!()
 			SendMessageTOOLINFO2(.Hwnd, TTM.DELTOOL, 0, ti)
 		Assert(.GetToolCount() is: 0)
-		return k
 		}
+
 	RelayEvent(hwnd, message, wParam, lParam)
 		{
 		if .Destroyed?()
 			return // destroyed
-		ClientToScreen(hwnd, pt = Object(x: LOSWORD(lParam) y: HISWORD(lParam)))
+		ClientToScreen(hwnd, pt = Object(x: LOSWORD(lParam), y: HISWORD(lParam)))
 		msg = Object(
-			hwnd:		hwnd
-			message:	message
-			lParam:		lParam
-			wParam:		wParam
-			time:		GetTickCount()
-			pt:			pt
-			)
+			:hwnd,
+			:message,
+			:lParam,
+			:wParam,
+			time: GetTickCount(),
+			:pt)
 		SendMessageMSG(.Hwnd, TTM.RELAYEVENT, 0, msg)
 		}
+
 	GetToolCount()
 		{
 		return .SendMessage(TTM.GETTOOLCOUNT)
 		}
+
 	Pop()
 		{
 		.SendMessage(TTM.POP)
 		}
+
 	Popup()
 		{
 		.SendMessage(TTM.POPUP)
 		}
+
 	Activate(activate? = true)
 		{
 		.SendMessage(TTM.ACTIVATE, activate?)
 		}
+
 	MaxTipLength: 3000
 	UpdateTipText(hwnd, text, id = false)
 		{
 		ti = Object(
-			cbSize:	TOOLINFO.Size()
-			uFlags: id is false ? TTF.IDISHWND : 0
-			hwnd:	hwnd
-			uId:	id is false ? hwnd : id
-			hinst:	0
-			lpszText: TranslateLanguage(text).Ellipsis(.MaxTipLength, true)
-			)
+			cbSize: TOOLINFO.Size(),
+			uFlags: id is false ? TTF.IDISHWND : 0,
+			:hwnd,
+			uId: id is false ? hwnd : id,
+			hinst: 0,
+			lpszText: TranslateLanguage(text).Ellipsis(.MaxTipLength, true))
 		SendMessageTOOLINFO(.Hwnd, TTM.UPDATETIPTEXT, 0, ti)
 		}
+
 	AdjustRect(fLarger, rect)
 		{
 		SendMessageRect(.Hwnd, TTM.ADJUSTRECT, fLarger, rect)
 		}
+
 	TrackActivate(hwnd, id = false, activate? = true)
 		{
 		ti = Object(
-			cbSize: TOOLINFO.Size()
-			uFlags: id is false ? TTF.IDISHWND : 0
-			hwnd:   hwnd
-			uId:    id is false ? hwnd : id
-			)
+			cbSize: TOOLINFO.Size(),
+			uFlags: id is false ? TTF.IDISHWND : 0,
+			:hwnd,
+			uId: id is false ? hwnd : id)
 		SendMessageTOOLINFO(.Hwnd, TTM.TRACKACTIVATE, activate? ? 1 : 0, ti)
 		}
-	TrackPosition(x, y)
-		{ SendMessage(.Hwnd, TTM.TRACKPOSITION, 0, MAKELONG(x, y)) }
-	GetReadOnly()			// read-only not applicable to tooltip
-		{ return true }
-	}
 
+	TrackPosition(x, y)
+		{
+		SendMessage(.Hwnd, TTM.TRACKPOSITION, 0, MAKELONG(x, y))
+		}
+
+	GetReadOnly() // read-only not applicable to tooltip
+		{
+		return true
+		}
+	}

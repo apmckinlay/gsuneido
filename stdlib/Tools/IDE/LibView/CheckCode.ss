@@ -15,10 +15,12 @@ class
 			return true
 		return (new this(lib, name, code, results))()
 		}
+
 	New(.lib, .name, .code, .results)
 		{
 		.exclude = Sys.Win32?() ? #() : Win32BuiltinNames
 		}
+
 	Call()
 		{
 		if .skip?()
@@ -32,10 +34,12 @@ class
 		else
 			return true
 		}
+
 	skip?()
 		{
 		return .code is "" or .IsWeb?(.name)
 		}
+
 	IsWeb?(name)
 		{
 		return String?(name) and name =~ "(?i)\.(js|css)$"
@@ -44,10 +48,10 @@ class
 	compile_checks()
 		{
 		results = Object()
-		// need to handle _Name because string.Compile won't accept it
+		// need to handle _Name because Suneido.Compile won't accept it
 		code = RemoveUnderscoreRecordName(.name, .code, results)
 		try
-			code.Compile(results)
+			Suneido.Compile(code, results)
 		catch (err)
 			{
 			if err.Prefix?("can't LoadLibrary")
@@ -69,7 +73,7 @@ class
 		.process_compile_checks(results)
 		}
 
-	errors?: false
+	errors?:   false
 	warnings?: false
 	result(msg, pos = 0, len = 0, line = false)
 		{
@@ -94,15 +98,18 @@ class
 					continue
 				pos = Number(w.AfterLast('@'))
 				token = w.AfterLast(':').BeforeFirst('@').Trim()
-				msg = w.BeforeFirst(' @')
+				msg = w.BeforeFirst(" @")
 				}
 			else // number from RemoveUnderscoreRecordName
 				{
 				pos = w.Abs()
 				scan = Scanner(.code[pos..])
 				token = scan.Next()
-				if token is "unused" or // built-in on gSuneido
-					.code[pos + token.Size() ..].LeftTrim().Prefix?('/*unused*/')
+				if token is #unused or
+					// built-in on gSuneido
+						.code[pos + token.Size() ..].
+						LeftTrim().
+						Prefix?("/*unused*/")
 					continue
 				if token.Capitalized?()
 					{
@@ -111,13 +118,13 @@ class
 					}
 				else
 					msg = (w < 0 // make messages consistent with gSuneido
-						? "WARNING: initialized but not used: "
-						: "ERROR: used but not initialized: ") $ token
+							? "WARNING: initialized but not used: "
+							: "ERROR: used but not initialized: ") $ token
 				}
 			if token[0] is '_'
 				{ // from RemoveUnderscoreRecordName
 				if libInUse and not .check_underscore_name(token)
-					.result('ERROR: invalid use of: ' $ token, pos, token.Size())
+					.result("ERROR: invalid use of: " $ token, pos, token.Size())
 				}
 			else
 				.result(msg, pos, token.Size())
@@ -128,17 +135,14 @@ class
 		{
 		if not w.Prefix?("ERROR: can't find:")
 			return false
-		return libInUse
-			? .exclude.Any?({ w.Has?(it) })
-			: true
+		return libInUse ? .exclude.Any?({ w.Has?(it) }) : true
 		}
 
 	check_global(token, libInUse)
 		{
 		try
 			Global(token)
-		catch(e)
-			{
+		catch (e)
 			if e.Has?("can't LoadLibrary")
 				return "WARNING: " $ token $ " can't load library"
 			else if e.Prefix?("error loading")
@@ -149,7 +153,6 @@ class
 					: "" // ignore if lib not in use
 			else
 				return "ERROR: " $ token $ e
-			}
 		return "ERROR: can't find: " $ token
 		}
 
@@ -168,10 +171,12 @@ class
 
 		return .prev_def(.name, .lib, .libraries)
 		}
+
 	getter_libraries()
 		{
 		return .libraries = Libraries() // once only
 		}
+
 	prev_def(name, lib, libs)
 		{
 		if false is i = libs.Find(lib)
@@ -188,19 +193,20 @@ class
 		.ast()
 		.lineEnds()
 		}
+
 	lineEnds()
 		{
 		if .lib is false or .name is false
 			return
 
 		if .HasInvalidLineEnd?(.lib, .name)
-			.result('WARNING: saved record uses non-standard line ending characters')
+			.result("WARNING: saved record uses non-standard line ending characters")
 		}
 
 	HasInvalidLineEnd?(lib, name)
 		{
 		rec = Query1(lib, group: -1, :name)
-		return rec isnt false and rec.text =~ '[^\r][\n]'
+		return rec isnt false and rec.text =~ "[^\r][\n]"
 		}
 
 	regex()
@@ -211,14 +217,15 @@ class
 				{
 				pos = it[0][0]
 				len = it[0][1]
-				if bad.Member?('filter') and (bad.filter)(:code, :pos, :len, name: .name)
+				if bad.Member?(#filter) and (bad.filter)(:code, :pos, :len, name: .name)
 					continue
 				msg = (bad.GetDefault(#warning, false) ? "WARNING" : "ERROR") $
-					": use of " $ code[pos :: len].Tr(' \t\r\n', ' ').Trim() $
-					Opt(' - ', bad[1])
+					": use of " $ code[pos::len].Tr(" \t\r\n", ' ').Trim() $
+					Opt(" - ", bad[1])
 				.result(msg, pos, len)
 				}
 		}
+
 	remove_ignored(code)
 		{
 		// need to keep exact same code size so offsets match original
@@ -226,15 +233,16 @@ class
 		// can't use Tr instead of Replace because of collapsing
 		return ScannerMap(code)
 			{|prev2/*unused*/, prev/*unused*/, token, next/*unused*/|
-			if token.Prefix?('//')
-				token = '//' $ token[2..].Replace('\S', '-')
-			else if token.Prefix?('/*') and token.Tr(' ') isnt '/*unused*/'
-				token = '/*' $ token[2..-2].Replace('\S', '-') $ '*/'
-			else if token[0] in ('"', "'", "`")
-				token = token[0] $ token[1..-1].Replace('\S', '-') $ token[-1]
+			if token.Prefix?("//")
+				token = "//" $ token[2..].Replace("\S", '-')
+			else if token.Prefix?("/*") and token.Tr(' ') isnt "/*unused*/"
+				token = "/*" $ token[2..-2].Replace("\S", '-') $ "*/"
+			else if token[0] in ('"', "'", '`')
+				token = token[0] $ token[1..-1].Replace("\S", '-') $ token[-1]
 			token
 			}
 		}
+
 	// Warning: if using backquotes, you can't use \t, \n, etc.
 	bad: (
 		(`Date\(\).(Begin|End)\>`, 				'use Date.Begin/End()'),
@@ -256,14 +264,6 @@ class
 		(`[^.]\<Getter_[a-z]\w+?\(`				"invalid getter",				warning:)
 		(`^\s*?(\$|and|or|is|isnt)\>[^:]`, "should be at end of previous line",	warning:)
 		(`\<super.New\>`,						"should probably be just super(...)")
-		(`[^.]\<[a-z]\w*: ?[a-z]\w*\>([^:?.\[\(]|$)`,	"use :name shortcut",	warning:,
-			filter: function (code, pos, len)
-				{
-				s = code[pos :: len][1..]
-				name = s.BeforeFirst(':')
-				return s.Extract(`: ?([a-z]\w*)`) isnt name or
-					code[pos + len - 1 ..].FirstLine() !~ `^\s*(,|\)|$)`
-				})
 		(`catch ?\(unused\)`,					"omit (unused)", 				warning:)
 		(`:[a-zA-Z]\w*`,						"must be preceded by ( or comma",
 			filter: function(code, pos)
@@ -343,9 +343,10 @@ class
 			hint = AstSearch.GetHint(bad[0])
 			skipFn? = hint is false
 				? false
-				: { |node, parents/*unused*/|
+				: {|node, parents/*unused*/|
 					node.pos not in (0, false) and
-						not code[node.pos..node.end].Has?(hint) }
+						not code[node.pos .. node.end].Has?(hint)
+					}
 			if String?(results = AstSearch(codeAst, bad[0], :skipFn?))
 				{
 				.result(results, 0, 0)
@@ -355,11 +356,11 @@ class
 			results.Each()
 				{
 				len = it.end - it.pos
-				if bad.Member?('filter') and (bad.filter)(.code, it.pos, len)
+				if bad.Member?(#filter) and (bad.filter)(.code, it.pos, len)
 					continue
 				msg = (bad.GetDefault(#warning, false) ? "WARNING" : "ERROR") $
-					": use of " $ .code[it.pos .. it.end].Tr(' \t\r\n', ' ').Trim() $
-					Opt(' - ', bad[1])
+					": use of " $ .code[it.pos .. it.end].Tr(" \t\r\n", ' ').Trim() $
+					Opt(" - ", bad[1])
 				.result(msg, it.pos, len)
 				}
 			}
@@ -371,7 +372,7 @@ class
 			codeAst = Suneido.Parse(code)
 		catch
 			return false
-		return Type(codeAst) isnt 'AstNode' ? false : codeAst
+		return Type(codeAst) isnt #AstNode ? false : codeAst
 		}
 
 	badAst: (
@@ -382,7 +383,7 @@ class
 		("ServerEval('Sys.Linux?')",
 			"use Sys.LinuxServer?()"),
 		("ServerEval('Timestamp')",
-			"unnecessary"),
+			unnecessary),
 		("QueryFirst(q) is false",
 			"use QueryEmpty?", warning:),
 		("QueryFirst(q) isnt false",
@@ -394,6 +395,6 @@ class
 		("DeleteFile(f) is false",
 			"use: isnt true"),
 		("DeleteFile(f) isnt false",
-			"use: is true"),
+			"use: is true")
 		)
 	}

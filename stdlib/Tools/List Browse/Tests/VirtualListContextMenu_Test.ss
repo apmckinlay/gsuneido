@@ -4,16 +4,18 @@ Test
 	Setup()
 		{
 		.old_user = Suneido.User
-		Suneido.User = 'test'
+		Suneido.User = #test
 
 		.fieldName = .TempName()
-		.MakeLibraryRecord([name: .fieldName $ 'Format', text: `class {
+		.MakeLibraryRecord([name: .fieldName $ "Format",
+				text: `class {
 			List_ExtraContext()
 				{
 				return 'Special Format ContextMenu'
 				}
 			}`],
-			[name: "Field_" $ .fieldName, text: `Field_num {
+			[name: "Field_" $ .fieldName,
+				text: `Field_num {
 				Prompt: "Special Field"
 				Format: (` $ .fieldName $ `) }`])
 		}
@@ -24,16 +26,17 @@ Test
 		control = Mock()
 		control.Addons = class
 			{
-			Collect(unused) { return  #() }
+			Collect(unused) { return #() }
 			}
 		.SpyOn(RecordMenuManager.RecordMenuManager_setMenu).Return(false)
-		control.When.GetHeaderSelectPrompt().Return('prompts')
+		control.When.GetHeaderSelectPrompt().Return(#prompts)
 		recMenu = RecordMenuManager(false, false, false, control)
 
 		control.When.Editable?().Return(false)
 		control.When.GetCheckBoxField().Return(false)
-		Assert(menu.VirtualListContextMenu_buildMenu(control, Object("Test"))
-			is: Object("Reset Columns", "Test", "", "Print...", "Reporter..."))
+		Assert(menu.VirtualListContextMenu_buildMenu(control, [#Test])
+			is: ["Reset Columns", #Test, "",
+				"Print...", "Reporter...", "Reporter Forms..."])
 
 		menu.ContextRec = []
 		control.When.Editable?().Return(true)
@@ -45,31 +48,33 @@ Test
 		Assert(menu.VirtualListContextMenu_buildMenu(control)
 			is: #(New))
 
-		menu2 = VirtualListContextMenu(#(), :recMenu, addCurrentMenu?:,
-			addGlobalMenu?:)
+		menu2 = VirtualListContextMenu(#(), :recMenu, addCurrentMenu?:, addGlobalMenu?:)
 		menu2.ContextRec = []
 		menu2.ContextCol = .fieldName
 
 		control.When.GetSelectedRecords().Return(#(1))
 		Assert(menu.VirtualListContextMenu_buildMenu(control)
-			is:  #("Edit Field", "New"))
+			is: #("Edit Field", New))
 		// default record menu + current menu + global menu + format menu
 		Assert(menu2.VirtualListContextMenu_buildMenu(control)
-			is: Object("Edit Field", "New",
-				"Save", "Print...", "", "Restore", "", "Delete", #("Delete"), "", "Global"
-				Object('Reporter...', 'Summarize...', 'CrossTable...', 'Export...'),
-				"", "Special Format ContextMenu"))
+			is: ["Edit Field", #New,
+				#Save, "Print...", "", #Restore, "", #Delete, #(Delete), "", #Global,
+				["Reporter...", "Reporter Forms...", "Summarize...",
+					"CrossTable...", "Export..."], "", "Special Format ContextMenu"])
 
 		menu.ContextRec = false
 		menu2.ContextRec = false
-		menu2.ContextCol = ''
+		menu2.ContextCol = ""
 		control.When.GetSelectedRecords().Return(#())
 		Assert(menu.VirtualListContextMenu_buildMenu(control)
-			is: Object("Reset Columns", "", "Print...", "Reporter...", "New"))
+			is: ["Reset Columns", "", "Print...", "Reporter...",
+				"Reporter Forms...", #New])
 		// default header menu + only global menu
 		Assert(menu2.VirtualListContextMenu_buildMenu(control)
-			is: Object("Reset Columns", "", "Print...", "Reporter...", "New", "", "Global"
-				Object('Reporter...', 'Summarize...', 'CrossTable...', 'Export...')))
+			is: ["Reset Columns", "", "Print...", "Reporter...",
+				"Reporter Forms...", #New, "", #Global,
+				["Reporter...", "Reporter Forms...", "Summarize...",
+					"CrossTable...", "Export..."]])
 		}
 
 	Teardown()

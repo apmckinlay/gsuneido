@@ -5,22 +5,22 @@ ListBodyBaseComponent
 	New(.parentEl, .header)
 		{
 		.scrollContainerEl = .Parent.El
-		LoadCssStyles('vlist-body-control.css', VirtualListBodyStyles)
-		.tbody = CreateElement('tbody', parentEl, 'su-vlistbody su-vshadinglist')
+		LoadCssStyles("vlist-body-control.css", VirtualListBodyStyles)
+		.tbody = CreateElement(#tbody, parentEl, "su-vlistbody su-vshadinglist")
 
 		.data = Object()
 
-		.tbody.AddEventListener('mousedown', .mousedown)
-		.tbody.AddEventListener('mousemove', .mousemove)
-		.tbody.AddEventListener('dblclick', .doubleClick)
-		.tbody.AddEventListener('contextmenu', .contextMenu)
+		.tbody.AddEventListener(#mousedown, .mousedown)
+		.tbody.AddEventListener(#mousemove, .mousemove)
+		.tbody.AddEventListener(#dblclick, .doubleClick)
+		.tbody.AddEventListener(#contextmenu, .contextMenu)
 
-		.observer = SuUI.MakeWebObject('IntersectionObserver',
+		.observer = SuUI.MakeWebObject(#IntersectionObserver,
 			.observerFn,
-			Object(root: .scrollContainerEl/*, rootMargin: '100px 0px 100px 0px'*/))
+			Object(root: .scrollContainerEl /*, rootMargin: '100px 0px 100px 0px'*/))
 		.observerStatus = Object()
 
-		.deleteMark = IconFontHelper.GetCode('delete')
+		.deleteMark = IconFontHelper.GetCode(#delete)
 
 		.expandedCtrls = Object()
 		.recycledExpands = Object()
@@ -30,7 +30,7 @@ ListBodyBaseComponent
 		{
 		for entry in entries
 			{
-			row = Number(entry.target.GetAttribute('data-y'))
+			row = Number(entry.target.GetAttribute("data-y"))
 			if not .observerStatus.Member?(row) // has been removed
 				continue
 
@@ -40,7 +40,7 @@ ListBodyBaseComponent
 				continue
 
 			.removeObserver(row)
-			.Parent.Event('VirtualListGridComponent_Load', row)
+			.Parent.Event(#VirtualListGridComponent_Load, row)
 			Print(:row)
 			}
 		}
@@ -48,23 +48,20 @@ ListBodyBaseComponent
 	addObserver(rowIdx)
 		{
 		Assert(.rows hasMember: rowIdx,
-			msg: 'VirtualListGridBodyComponent.addObserver')
+			msg: "VirtualListGridBodyComponent.addObserver")
 
 		rowRect = .rows[rowIdx].GetBoundingClientRect()
 		viewRect = .scrollContainerEl.GetBoundingClientRect()
 		if rowRect.height is 0 or // invisible
-			rowRect.top > viewRect.bottom or
-			rowRect.bottom < viewRect.top
+			rowRect.top > viewRect.bottom or rowRect.bottom < viewRect.top
 			{
 			.observer.Observe(.rows[rowIdx])
-			.observerStatus[rowIdx] = ''
+			.observerStatus[rowIdx] = ""
 			}
 		else
-			{
 			// Wait for the finish of all the actions
 			// in case the rowIdx is outdated due to insert or delete
 			.addDelayedLoad(.rows[rowIdx], .Parent)
-			}
 		}
 
 	delayedLoads: false
@@ -74,8 +71,8 @@ ListBodyBaseComponent
 			.delayedLoads = Object()
 		delay = SuDelayed(0)
 			{
-			parent.Event('VirtualListGridComponent_Load',
-				Number(row.GetAttribute('data-y')))
+			parent.Event(#VirtualListGridComponent_Load,
+				Number(row.GetAttribute("data-y")))
 			}
 		.delayedLoads.Add(delay)
 		}
@@ -92,7 +89,7 @@ ListBodyBaseComponent
 	removeObserver(rowIdx)
 		{
 		Assert(.rows hasMember: rowIdx,
-			msg: 'VirtualListGridBodyComponent.removeObserver')
+			msg: "VirtualListGridBodyComponent.removeObserver")
 		.observer.Unobserve(.rows[rowIdx])
 		.observerStatus.Delete(rowIdx)
 		}
@@ -104,31 +101,31 @@ ListBodyBaseComponent
 
 	Reset()
 		{
-		.tbody.innerText = ''
+		.tbody.innerText = ""
 		.prepareFillRow()
 
 		.rows = Object()
 		.top = .bottom = 0
 		}
 
-	FillRowY: 999999
+	FillRowY: 999_999
 	prepareFillRow()
 		{
-		.fillRow = CreateElement('tr', .tbody)
-		.fillRow.SetStyle('height', '100%')
-		.SetCellAttributes(.fillRow, y: .FillRowY, type: 'fill-row')
+		.fillRow = CreateElement(#tr, .tbody)
+		.fillRow.SetStyle(#height, "100%")
+		.SetCellAttributes(.fillRow, y: .FillRowY, type: "fill-row")
 
-		td = CreateElement('td', .fillRow)
-		td.SetStyle('width', '100%')
-		.SetCellAttributes(td, x: 0, type: 'mark-cell')
+		td = CreateElement(#td, .fillRow)
+		td.SetStyle(#width, "100%")
+		.SetCellAttributes(td, x: 0, type: "mark-cell")
 
 		.header.ForEachHeadCol()
-			{ |col|
-			td = CreateElement('td', .fillRow)
-			.SetCellAttributes(td, x: col, type: 'fill-cell')
+			{|col|
+			td = CreateElement(#td, .fillRow)
+			.SetCellAttributes(td, x: col, type: "fill-cell")
 			}
-		el = CreateElement('td', .fillRow)
-		.SetCellAttributes(el, x: .header.GetColsNum(), type: 'fill-cell')
+		el = CreateElement(#td, .fillRow)
+		.SetCellAttributes(el, x: .header.GetColsNum(), type: "fill-cell")
 		}
 
 	ClearData()
@@ -156,7 +153,7 @@ ListBodyBaseComponent
 		.setHighlight(.rows[row], record.vl_brush)
 
 		.header.ForEachHeadCol()
-			{ |col, field|
+			{|col, field|
 			.updateDataCell(row, col, record[field])
 			}
 		if keepPos?
@@ -176,12 +173,12 @@ ListBodyBaseComponent
 		{
 		if color isnt false
 			{
-			row.classList.Add('su-vlistbody-row-highlighted')
-			row.style.setProperty('--su-vlistbody-row-color',
+			row.classList.Add("su-vlistbody-row-highlighted")
+			row.style.setProperty("--su-vlistbody-row-color",
 				ToCssColor(color))
 			}
 		else
-			row.classList.Remove('su-vlistbody-row-highlighted')
+			row.classList.Remove("su-vlistbody-row-highlighted")
 		}
 
 	setMarkColValue(row, td, record)
@@ -190,7 +187,7 @@ ListBodyBaseComponent
 			td.textContent = .deleteMark.Chr()
 		else
 			{
-			td.textContent = ''
+			td.textContent = ""
 			if .expandAttachedRow is row
 				AttachElement(.expandDiv, td, false)
 			}
@@ -209,46 +206,46 @@ ListBodyBaseComponent
 	insertRowShiftTop(row, record)
 		{
 		addObserver? = .clearObserver(row, -1)
-		for (i = .top; i <= row and i < .bottom; i++)
+		for (i = .top; i <= row and i < .bottom; i += 1)
 			{
-			.rows[i - 1] = .rows[i]
-			.data[i - 1] = .data[i]
-			.SetCellAttributes(.rows[i - 1], y: i - 1)
+			.rows[i-1] = .rows[i]
+			.data[i-1] = .data[i]
+			.SetCellAttributes(.rows[i-1], y: i - 1)
 			.updateExpandRow(i, i - 1)
 			}
 		fragment = SuUI.GetCurrentDocument().CreateDocumentFragment()
 		.addData(record, row, fragment)
-		.tbody.InsertBefore(fragment, row is .bottom - 1 ? .fillRow : .rows[row + 1])
+		.tbody.InsertBefore(fragment, row is .bottom - 1 ? .fillRow : .rows[row+1])
 
 		if .observerStatus.Member?(.top)
 			{
 			.observerStatus[.top - 1] = .observerStatus[.top]
 			.observerStatus.Delete(.top)
 			}
-		.top--
+		.top -= 1
 		return addObserver?
 		}
 
 	insertRowShiftBottom(row, record)
 		{
 		addObserver? = .clearObserver(row)
-		for (i = .bottom - 1; i >= row; i--)
+		for (i = .bottom - 1; i >= row; i -= 1)
 			{
-			.rows[i + 1] = .rows[i]
-			.data[i + 1] = .data[i]
-			.SetCellAttributes(.rows[i + 1], y: i + 1)
+			.rows[i+1] = .rows[i]
+			.data[i+1] = .data[i]
+			.SetCellAttributes(.rows[i+1], y: i + 1)
 			.updateExpandRow(i, i + 1)
 			}
 		fragment = SuUI.GetCurrentDocument().CreateDocumentFragment()
 		.addData(record, row, fragment)
-		.tbody.InsertBefore(fragment, row is .bottom ? .fillRow : .rows[row + 1])
+		.tbody.InsertBefore(fragment, row is .bottom ? .fillRow : .rows[row+1])
 
 		if .observerStatus.Member?(.bottom - 1)
 			{
 			.observerStatus[.bottom] = .observerStatus[.bottom - 1]
 			.observerStatus.Delete(.bottom - 1)
 			}
-		.bottom++
+		.bottom += 1
 		return addObserver?
 		}
 
@@ -266,7 +263,7 @@ ListBodyBaseComponent
 		{
 		if not .rows.Member?(rowNum)
 			{
-			.debugVListRowsMismatch('DeleteRecord (37548)', Object(:rowNum, :shiftTop?))
+			.debugVListRowsMismatch("DeleteRecord (37548)", Object(:rowNum, :shiftTop?))
 			return
 			}
 
@@ -279,7 +276,7 @@ ListBodyBaseComponent
 
 	debugVListRowsMismatch(what, extraParams)
 		{
-		mergeRange = { |nums|
+		mergeRange = {|nums|
 			result = Object()
 			if nums.Size() isnt 0
 				{
@@ -288,21 +285,22 @@ ListBodyBaseComponent
 				for i in 1..nums.Size()
 					{
 					cur = nums[i]
-					if cur isnt prev + 1
+					if cur isnt prev+1
 						{
-						result.Add(start $ ' - ' $ prev)
+						result.Add(start $ " - " $ prev)
 						start = cur
 						}
 					prev = cur
 					}
-				result.Add(start $ ' - ' $ prev)
+				result.Add(start $ " - " $ prev)
 				}
 			result
 			}
 		rowsMembers = mergeRange(.rows.Members().Sort!())
-		.Parent.Event('DebugVListRowsMismatch', what,
+		.Parent.Event(#DebugVListRowsMismatch, what,
 			Object(top: .top, bottom: .bottom,
-				:rowsMembers, rowsSize: .rows.Size()).Merge(extraParams))
+					:rowsMembers, rowsSize: .rows.Size()).
+				Merge(extraParams))
 		}
 
 	deleteRowShiftTop(rowNum)
@@ -320,16 +318,16 @@ ListBodyBaseComponent
 			}
 
 		.rows[rowNum].Remove()
-		for (i = rowNum; i > .top; i--)
+		for (i = rowNum; i > .top; i -= 1)
 			{
-			.rows[i] = .rows[i - 1]
-			.data[i] = .data[i - 1]
+			.rows[i] = .rows[i-1]
+			.data[i] = .data[i-1]
 			.SetCellAttributes(.rows[i], y: i)
 			.updateExpandRow(i - 1, i)
 			}
 		.rows.Erase(.top)
 		.data.Erase(.top)
-		.top++
+		.top += 1
 		return newObserve
 		}
 
@@ -348,16 +346,16 @@ ListBodyBaseComponent
 			}
 
 		.rows[rowNum].Remove()
-		for (i = rowNum; i < .bottom - 1; i++)
+		for (i = rowNum; i < .bottom - 1; i += 1)
 			{
-			.rows[i] = .rows[i + 1]
-			.data[i] = .data[i + 1]
+			.rows[i] = .rows[i+1]
+			.data[i] = .data[i+1]
 			.SetCellAttributes(.rows[i], y: i)
 			.updateExpandRow(i + 1, i)
 			}
 		.rows.Erase(.bottom - 1)
 		.data.Erase(.bottom - 1)
-		.bottom--
+		.bottom -= 1
 		return newObserve
 		}
 
@@ -366,8 +364,8 @@ ListBodyBaseComponent
 		// ClearData will be called
 		}
 
-	top: 0
-	bottom: 0 // exclusive
+	top:            0
+	bottom:         0 // exclusive
 	lastLoadOnTop?: false
 	AddBatch(batch, newTop, topEnded?, newBottom, bottomEnded?, loadOnTop? = false)
 		{
@@ -378,9 +376,7 @@ ListBodyBaseComponent
 			: false
 		fragment = SuUI.GetCurrentDocument().CreateDocumentFragment()
 		for m in batch.Members().Sort!()
-			{
 			.addData(batch[m], m, fragment)
-			}
 		if loadOnTop?
 			AttachElement(fragment, .tbody, 0)
 		else
@@ -399,6 +395,7 @@ ListBodyBaseComponent
 		.atBottom? = (.lastLoadOnTop? or .scrollContainerEl.scrollTop isnt 0) and
 			.isInViewWithinParent(.fillRow, .scrollContainerEl)
 		}
+
 	AfterResize()
 		{
 		if .atBottom?
@@ -411,8 +408,8 @@ ListBodyBaseComponent
 
 	isInViewWithinParent(child, parent)
 		{
-		childRect = child.GetBoundingClientRect();
-		parentRect = parent.GetBoundingClientRect();
+		childRect = child.GetBoundingClientRect()
+		parentRect = parent.GetBoundingClientRect()
 
 		return childRect.bottom > parentRect.top and childRect.top < parentRect.bottom
 		}
@@ -450,18 +447,18 @@ ListBodyBaseComponent
 		if container is false
 			container = .tbody
 
-		row = CreateElement('tr', container)
-		.SetCellAttributes(row, y: rowIdx, type: 'data-row')
-		.SetStyles(Object('line-height': .GetRowHeight() $ 'px'), row)
+		row = CreateElement(#tr, container)
+		.SetCellAttributes(row, y: rowIdx, type: "data-row")
+		.SetStyles(Object("line-height": .GetRowHeight() $ "px"), row)
 
 		.setHighlight(row, rec.vl_brush)
 
-		row.innerHTML = .BuildRowContent(rec, .header, 'su-vlistbody-cell')
-		.AddTipListener(row, 'su-vlistbody-cell')
+		row.innerHTML = .BuildRowContent(rec, .header, "su-vlistbody-cell")
+		.AddTipListener(row, "su-vlistbody-cell")
 
-		.setMarkColValue(row, row.QuerySelector('td'), rec)
-		row.AddEventListener('mouseenter', .mouseEnterRow)
-		row.AddEventListener('mouseleave', .mouseLeaveRow)
+		.setMarkColValue(row, row.QuerySelector(#td), rec)
+		row.AddEventListener(#mouseenter, .mouseEnterRow)
+		row.AddEventListener(#mouseleave, .mouseLeaveRow)
 		.rows[rowIdx] = row
 		}
 
@@ -475,7 +472,8 @@ ListBodyBaseComponent
 		{
 		return .rows[row].children.item(col)
 		}
-	mousedown? : false
+
+	mousedown?:   false
 	mouseEventId: 0
 	mousedown(event)
 		{
@@ -485,7 +483,7 @@ ListBodyBaseComponent
 		if .mousedown? is true // mouse already down
 			return
 		.mousedown? = true
-		.handleMouseEvent(event, 'LBUTTONDOWN', skipBlock: { .mousedown? = false })
+		.handleMouseEvent(event, #LBUTTONDOWN, skipBlock: { .mousedown? = false })
 			{
 			.StartMouseTracking(.mouseup, .mousemove)
 			}
@@ -496,17 +494,17 @@ ListBodyBaseComponent
 		{
 		if .dragging is true
 			{
-			.tbody.classList.Remove('su-vlist-dragging')
+			.tbody.classList.Remove("su-vlist-dragging")
 			if .focused isnt .origFocused
-				.Parent.Event('MoveRow', .origFocused, .focused)
+				.Parent.Event(#MoveRow, .origFocused, .focused)
 			}
-		.mousedown? = false
 		.origFocused = .focused = .dragging = false
 		.StopMouseTracking()
-		.handleMouseEvent(event, 'LBUTTONUP')
+		.handleMouseEvent(event, #LBUTTONUP)
 		// Freeze to avoid sending the duplicate the mousedown and mouseup events
 		// when double clicking. Somehow, dblclick doesn't fire when double clicking
 		// the rect type cell without this.
+		.mousedown? = false
 		.freeze = true
 		SuDelayed(100/*=cooldown*/, .releaseFreeze)
 		}
@@ -521,11 +519,11 @@ ListBodyBaseComponent
 		if .contextOnly
 			return
 
-		.handleMouseEvent(event, 'LBUTTONDBLCLK', freeze?:)
+		.handleMouseEvent(event, #LBUTTONDBLCLK, freeze?:)
 		}
 
 	handleMouseEvent(event, name, block = false, freeze? = false,
-		skipBlock = function() {})
+		skipBlock = function() { })
 		{
 		if .Destroyed?() or .expandedCtrls.Any?({ it.ctrl.El.Contains(event.target) })
 			{
@@ -535,23 +533,23 @@ ListBodyBaseComponent
 		event.StopPropagation()
 		target = event.target
 		// target can be a Text Node when this is triggered by dragstart
-		if  not .tbody.Contains(target) or target.GetDefault(#tagName, false) is false
+		if not .tbody.Contains(target) or target.GetDefault(#tagName, false) is false
 			{
 			skipBlock()
 			return
 			}
-		if target.tagName is 'IMG'
+		if target.tagName is #IMG
 			target = target.parentElement
-		else if target.classList.Contains('su-listbody-cell-rect')
+		else if target.classList.Contains("su-listbody-cell-rect")
 			target = target.parentElement
 
-		switch (target.GetAttribute('data-type'))
+		switch target.GetAttribute("data-type")
 			{
-		case 'cell', 'empty-cell', 'fill-cell':
+		case #cell, "empty-cell", "fill-cell":
 			if block isnt false
 				block()
 			row = .getRow(target)
-			col = .header.ToControlColIndex(Number(target.GetAttribute('data-x')))
+			col = .header.ToControlColIndex(Number(target.GetAttribute("data-x")))
 			.Parent.RunWhenNotFrozen()
 				{
 				if freeze?
@@ -563,30 +561,31 @@ ListBodyBaseComponent
 						shift: event.shiftKey, control: event.ctrlKey,
 						mouseEventId: ++.mouseEventId)
 				}
-		default: skipBlock()
+		default:
+			skipBlock()
 			}
 		}
 
 	getRow(target)
 		{
-		if target.tagName is 'DIV'
+		if target.tagName is #DIV
 			target = target.parentElement
-		if target.tagName is 'TD'
+		if target.tagName is #TD
 			target = target.parentElement
-		return Number(target.GetAttribute('data-y'))
+		return Number(target.GetAttribute("data-y"))
 		}
 
 	SelectRow(row)
 		{
 		Assert(.data hasMember: row,
-			msg: 'VirtualListGridBodyComponent.SelectRow')
-		.rows[row].classList.Add('su-vlistbody-row-selected')
+			msg: "VirtualListGridBodyComponent.SelectRow")
+		.rows[row].classList.Add("su-vlistbody-row-selected")
 		}
 
 	DeSelectRow(row)
 		{
 		if .rows.Member?(row)
-			.rows[row].classList.Remove('su-vlistbody-row-selected')
+			.rows[row].classList.Remove("su-vlistbody-row-selected")
 		}
 
 	AllowContextOnly(allow)
@@ -600,13 +599,13 @@ ListBodyBaseComponent
 			return
 		headerHeight = .header.GetOffsetHeight()
 		rowHeight = rowEl.offsetHeight
-		rowOffsetTop =rowEl.offsetTop
+		rowOffsetTop = rowEl.offsetTop
 		scrollTop = .scrollContainerEl.scrollTop
 		scrollHeight = .scrollContainerEl.clientHeight
 
-		if scrollTop + headerHeight > rowOffsetTop
+		if scrollTop+headerHeight > rowOffsetTop
 			.scrollContainerEl.scrollTop = rowOffsetTop - headerHeight
-		else if scrollTop + scrollHeight < rowOffsetTop + rowHeight
+		else if scrollTop+scrollHeight < rowOffsetTop+rowHeight
 			.scrollContainerEl.scrollTop = rowOffsetTop + rowHeight - scrollHeight
 		}
 
@@ -617,7 +616,7 @@ ListBodyBaseComponent
 		scrollWidth = .scrollContainerEl.clientWidth
 		if scrollLeft > colRect.left
 			.scrollContainerEl.scrollLeft = colRect.left
-		else if scrollLeft + scrollWidth < colRect.left + colRect.width
+		else if scrollLeft+scrollWidth < colRect.left + colRect.width
 			.scrollContainerEl.scrollLeft = colRect.left + colRect.width - scrollWidth
 		}
 
@@ -631,7 +630,7 @@ ListBodyBaseComponent
 		if releaseTop? is true
 			{
 			.removeObserver(.top)
-			for (i = .top; i <= releaseTo; i++)
+			for (i = .top; i <= releaseTo; i += 1)
 				{
 				.rows[i].Remove()
 				.rows.Erase(i)
@@ -643,7 +642,7 @@ ListBodyBaseComponent
 		else
 			{
 			.removeObserver(.bottom - 1)
-			for (i = .bottom - 1; i >= releaseTo; i--)
+			for (i = .bottom - 1; i >= releaseTo; i -= 1)
 				{
 				.rows[i].Remove()
 				.rows.Erase(i)
@@ -657,14 +656,14 @@ ListBodyBaseComponent
 	contextMenu(event)
 		{
 		target = event.target
-		switch (target.GetAttribute('data-type'))
+		switch target.GetAttribute("data-type")
 			{
-		case 'cell', 'empty-cell', 'mark-cell', 'fill-cell':
+		case #cell, "empty-cell", "mark-cell", "fill-cell":
 			row = .getRow(target)
-			col =  .header.ToControlColIndex(Number(target.GetAttribute('data-x')))
+			col = .header.ToControlColIndex(Number(target.GetAttribute("data-x")))
 			.Parent.RunWhenNotFrozen()
 				{
-				.Parent.EventWithOverlay('CONTEXTMENU', event.clientX, event.clientY,
+				.Parent.EventWithOverlay(#CONTEXTMENU, event.clientX, event.clientY,
 					:row, :col)
 				}
 		default:
@@ -675,28 +674,27 @@ ListBodyBaseComponent
 
 	VirtualListExpand_ContructAt(rowIdx, ctrl, rows = false)
 		{
-		expandRow = CreateElement('tr')
-		.SetCellAttributes(expandRow, y: rowIdx, type: 'expanded-row')
+		expandRow = CreateElement(#tr)
+		.SetCellAttributes(expandRow, y: rowIdx, type: "expanded-row")
 
-		markCell = CreateElement('td', expandRow)
-		.SetCellAttributes(markCell, x: 0, type: 'expand-mark-cell')
+		markCell = CreateElement(#td, expandRow)
+		.SetCellAttributes(markCell, x: 0, type: "expand-mark-cell")
 		.createEditButton(markCell)
 
-		td = CreateElement('td', expandRow)
-		td.SetAttribute('colspan', '9999')
-		insertBefore = not .rows.Member?(rowIdx + 1)
-			? .fillRow
-			: .rows[rowIdx + 1]
+		td = CreateElement(#td, expandRow)
+		td.SetAttribute(#colspan, "9999")
+		insertBefore = not .rows.Member?(rowIdx + 1) ? .fillRow : .rows[rowIdx+1]
 		.tbody.InsertBefore(expandRow, insertBefore)
 
-		.rows[rowIdx].SetAttribute('data-expanded', '')
+		.rows[rowIdx].SetAttribute("data-expanded", "")
 
 		c = .construct(ctrl, td)
-		.SetStyles(Object('overflow': 'auto', 'user-select': 'text'), td)
-		.SetStyles(Object(
-			'position': 'absolute',
-			'top': '0px',
-			'left': '0px'), c.El)
+		.SetStyles(Object(overflow: #auto, "user-select": #text), td)
+		.SetStyles(
+			Object(
+				position: #absolute,
+				top: "0px",
+				left: "0px"), c.El)
 		DoStartup(c)
 
 		.expandedCtrls[rowIdx] = [ctrl: c, :expandRow, recordRow: .rows[rowIdx], :rows]
@@ -707,15 +705,15 @@ ListBodyBaseComponent
 		{
 		if .showEditButton? is false
 			return
-		edit = CreateElement('div', markCell, className: 'su-vlist-edit-button')
-		edit.innerText = IconFontHelper.GetCode('edit').Chr()
-		edit.AddEventListener('click', .editClicked)
+		edit = CreateElement(#div, markCell, className: "su-vlist-edit-button")
+		edit.innerText = IconFontHelper.GetCode(#edit).Chr()
+		edit.AddEventListener(#click, .editClicked)
 		}
 
 	editClicked(event)
 		{
 		row = .getRow(event.target)
-		.Parent.Event('ExpandButton_EditClicked', row)
+		.Parent.Event(#ExpandButton_EditClicked, row)
 		event.StopPropagation()
 		}
 
@@ -732,7 +730,7 @@ ListBodyBaseComponent
 		c = .Construct(ctrl)
 		.Delete(#TargetEl)
 		if c.Xstretch > 0
-			c.SetStyles(#(width: '100%'))
+			c.SetStyles(#(width: "100%"))
 		return c
 		}
 
@@ -750,13 +748,11 @@ ListBodyBaseComponent
 	remove(uniqueId)
 		{
 		if false is i = .expandedCtrls.FindIf({ it.ctrl.UniqueId is uniqueId })
-			{
 			throw "cannot find the expanded control to recycle: " $ Display(uniqueId)
-			}
 		ctrl = .expandedCtrls[i].ctrl
 		.expandedCtrls[i].ctrl.El.Remove()
 		.expandedCtrls[i].expandRow.Remove()
-		.expandedCtrls[i].recordRow.RemoveAttribute('data-expanded')
+		.expandedCtrls[i].recordRow.RemoveAttribute("data-expanded")
 		.expandedCtrls.Erase(i)
 		return ctrl
 		}
@@ -774,18 +770,16 @@ ListBodyBaseComponent
 	VirtualListExpandEditPushed(updates)
 		{
 		for row in updates.Members()
-			{
-			if updates[row] is 'hidden'
-				.expandedCtrls[row].expandRow.SetAttribute('data-editing', 'disabled')
+			if updates[row] is #hidden
+				.expandedCtrls[row].expandRow.SetAttribute("data-editing", #disabled)
 			else if updates[row] is true
-				.expandedCtrls[row].expandRow.SetAttribute('data-editing', 'true')
+				.expandedCtrls[row].expandRow.SetAttribute("data-editing", "true")
 			else
-				.expandedCtrls[row].expandRow.RemoveAttribute('data-editing')
-			}
+				.expandedCtrls[row].expandRow.RemoveAttribute("data-editing")
 		}
 
 	showEditButton?: true
-	SetShowEditButton?(.showEditButton?) {}
+	SetShowEditButton?(.showEditButton?) { }
 
 	MeasureWidth(i)
 		{
@@ -803,7 +797,7 @@ ListBodyBaseComponent
 	HideCol(col)
 		{
 		for row in .rows
-			row.children.item(col).SetStyle('display', 'none')
+			row.children.item(col).SetStyle(#display, #none)
 		}
 
 	Recalc()
@@ -811,31 +805,30 @@ ListBodyBaseComponent
 		for ctrl in .expandedCtrls
 			{
 			if ctrl.rows isnt false
-				ctrl.ctrl.BottomUp(#OverrideHeight, (.GetRowHeight() * ctrl.rows ))
+				ctrl.ctrl.BottomUp(#OverrideHeight, (.GetRowHeight() * ctrl.rows))
 			ctrl.ctrl.BottomUp(#Recalc)
-			ctrl.ctrl.El.parentElement.SetStyle('height',
-				(ctrl.rows isnt false
-					? .GetRowHeight() * ctrl.rows
-					: ctrl.ctrl.Ymin) + 8 /*=padding*/ $ 'px')
+			ctrl.ctrl.El.parentElement.SetStyle(#height,
+				(ctrl.rows isnt false ? .GetRowHeight() * ctrl.rows : ctrl.ctrl.Ymin) +
+						8/*=padding*/ $ "px")
 			}
 		}
 
-	expandDiv: false
+	expandDiv:         false
 	expandAttachedRow: false
-	expandButtons: false
-	showSwitch: false
+	expandButtons:     false
+	showSwitch:        false
 	SetExpandButtons(buttons)
 		{
 		.expandButtons = Object()
-		.expandDiv = CreateElement('div', className: 'su-vlist-expand-buttons')
+		.expandDiv = CreateElement(#div, className: "su-vlist-expand-buttons")
 		.showSwitch = true
 		for button in buttons
 			{
-			el = CreateElement('span', .expandDiv, className: 'su-vlist-expand-button')
+			el = CreateElement(#span, .expandDiv, className: "su-vlist-expand-button")
 			el.textContent = Number?(button[1]) ? button[1].Chr() : button[1][1].Chr()
-			el.SetAttribute('data-cmd', button[0])
-			el.SetAttribute('translate', 'no')
-			el.AddEventListener('click', .expandButtonClicked)
+			el.SetAttribute("data-cmd", button[0])
+			el.SetAttribute(#translate, #no)
+			el.AddEventListener(#click, .expandButtonClicked)
 			.expandButtons.Add(Object(:el, :button))
 			}
 		}
@@ -844,7 +837,7 @@ ListBodyBaseComponent
 		{
 		if .expandAttachedRow is false
 			return
-		cmd = event.target.GetAttribute('data-cmd')
+		cmd = event.target.GetAttribute("data-cmd")
 		.Parent.EventWithOverlay(cmd, .expandAttachedRow)
 		}
 
@@ -852,7 +845,7 @@ ListBodyBaseComponent
 		{
 		if .expandDiv is false
 			return
-		target= event.target
+		target = event.target
 		row = .getRow(target)
 		if .data[row].vl_deleted is true
 			return
@@ -873,8 +866,8 @@ ListBodyBaseComponent
 //		.expandAttachedRow = false
 		}
 
-	dragging: false
-	focused: false
+	dragging:                false
+	focused:                 false
 	DistanceToShowSwitchBtn: 100
 	mousemove(event)
 		{
@@ -888,7 +881,7 @@ ListBodyBaseComponent
 			for item in .expandButtons
 				{
 				alwaysDisplay? = item.button.GetDefault(#alwaysDisplay?, false)
-				item.el.SetStyle('display', alwaysDisplay? or show? ? '' : 'none')
+				item.el.SetStyle(#display, alwaysDisplay? or show? ? "" : #none)
 				}
 			.showSwitch = show?
 			}
@@ -910,7 +903,6 @@ ListBodyBaseComponent
 		if y < focusedPos.top // going up
 			{
 			if false isnt previousPos = .getRowPos(.focused - 1)
-				{
 				if previousPos.top <= y and y <= (previousPos.top + .GetRowHeight())
 					{
 					// .swapRows doesn't handle moving the expand ctrl
@@ -919,12 +911,9 @@ ListBodyBaseComponent
 					.updateExpandRow(.focused - 1, .focused)
 					.focused = .focused - 1
 					}
-				}
 			}
 		else if y > focusedPos.bottom // going down
-			{
 			if false isnt nextPos = .getRowPos(.focused + 1)
-				{
 				if nextPos.bottom >= y and y >= (nextPos.bottom - .GetRowHeight())
 					{
 					// .swapRows doesn't handle moving the expand ctrl
@@ -933,8 +922,6 @@ ListBodyBaseComponent
 					.updateExpandRow(.focused + 1, .focused)
 					.focused = .focused + 1
 					}
-				}
-			}
 		}
 
 	getRowPos(index)
@@ -964,13 +951,13 @@ ListBodyBaseComponent
 		{
 		.SetCellAttributes(.rows[from], y: to)
 		.SetCellAttributes(.rows[to], y: from)
-		if to - from is 1
+		if to-from is 1
 			.tbody.InsertBefore(.rows[to], .rows[from])
 		else
 			{
 			.tbody.InsertBefore(.rows[from], .rows[to])
 			.tbody.InsertBefore(.rows[to],
-				from + 1 >= .getNumRows() ? .fillRow : .rows[from + 1])
+				from+1 >= .getNumRows() ? .fillRow : .rows[from+1])
 			}
 		.data.Swap(from, to)
 		.rows.Swap(from, to)
@@ -982,7 +969,7 @@ ListBodyBaseComponent
 			{
 			.dragging = true
 			.origFocused = .focused = focused
-			.tbody.classList.Add('su-vlist-dragging')
+			.tbody.classList.Add("su-vlist-dragging")
 			}
 		}
 

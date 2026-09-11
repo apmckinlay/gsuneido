@@ -3,15 +3,24 @@ Test
 	{
 	Test_Base?()
 		{
-		class11 = class {}
-		class2 = ObjectTestClass { }
+		class11 = class
+			{
+			}
+		class2 = ObjectTestClass
+			{
+			}
 		Assert(class2.Base?(ObjectTestClass))
 		Assert(class2.Base?(class11) is: false)
 		}
+
 	Test_Base()
 		{
-		class11 = class {}
-		class2 = ObjectTestClass { }
+		class11 = class
+			{
+			}
+		class2 = ObjectTestClass
+			{
+			}
 		ob = ObjectTestClass()
 		ob2 = class2()
 		ob3 = class11()
@@ -19,9 +28,12 @@ Test
 		Assert(ob2.Base() is: class2)
 		Assert(ob3.Base() is: class11)
 		}
+
 	Test_Method()
 		{
-		otc = ObjectTestClass { }
+		otc = ObjectTestClass
+			{
+			}
 		for x in [ObjectTestClass, otc, ObjectTestClass(), otc()]
 			{
 			Assert(x.Method?(#Public_method))
@@ -30,22 +42,31 @@ Test
 			Assert(x.MethodClass(#Public_member) is: false)
 			}
 		}
+
 	Test_MethodClass()
 		{
-		class2 = ObjectTestClass { method2() { } Public_method2() { } }
+		class2 = ObjectTestClass
+			{
+			method2() { }
+
+			Public_method2() { }
+			}
 		ob = class2()
-		Assert(ob.MethodClass("method1") is: false)
-		Assert(ob.MethodClass("Public_method") is: ObjectTestClass)
-		Assert(ob.MethodClass("method2") is: false)
-		Assert(ob.MethodClass("Public_method2") is: class2)
-		Assert(ob.MethodClass("non_existent") is: false)
+		Assert(ob.MethodClass(#method1) is: false)
+		Assert(ob.MethodClass(#Public_method) is: ObjectTestClass)
+		Assert(ob.MethodClass(#method2) is: false)
+		Assert(ob.MethodClass(#Public_method2) is: class2)
+		Assert(ob.MethodClass(#non_existent) is: false)
 		}
+
 	Test_AutoMethod()
 		{
 		c = class
 			{
 			New() { .X = 456 }
+
 			F() { .X }
+
 			X: 123
 			}
 		m = 'F'
@@ -63,24 +84,25 @@ Test
 		c = class
 			{
 			}
-		Assert({ c.F() } throws: 'method not found')
+		Assert({ c.F() } throws: "method not found")
 
 		c = class
 			{
 			F() { return 123 }
+
 			Default(@args) { return args }
 			}
 		Assert(c.F() is: 123)
 		Assert(c.X() is: #(X))
 		Assert(c.X(1, 2, a: 3, b: 4) is: #(X, 1, 2, a: 3, b: 4))
 		}
+
 	Test_GetDefault()
 		{
 		c = class
 			{
 			X: 123
-			Getter_Y()
-				{ return 456 }
+			Getter_Y() { return 456 }
 			}
 		x = c()
 		Assert(x.GetDefault(#nonexistent, 123) is: 123)
@@ -105,6 +127,7 @@ Test
 		Assert(c.GetDefault(#X, { ++n; 123 + 456 }) is: 123)
 		Assert(n is: 1)
 		}
+
 	Test_Getter2()
 		{
 		c = class
@@ -120,16 +143,26 @@ Test
 			}
 		ob = c()
 		Assert(ob.a is: 123)
-		Assert(ob.GetDefault(#a, false) is: 123 msg: 'GetDefault')
-		Assert(ob.GetDefault(#b, false) is: false msg: 'GetDefault no value')
+		Assert(ob.GetDefault(#a, false) is: 123, msg: #GetDefault)
+		Assert(ob.GetDefault(#b, false) is: false, msg: "GetDefault no value")
 		}
+
 	Test_Getter_()
 		{
 		c = class
 			{
 			X: 123
-			Getter_Y() { return 456 } // will never be used
-			Getter_(m) { return m } // has priority
+			Getter_Y()
+				{
+				return 456
+				// will never be used
+				}
+
+			Getter_(m)
+				{
+				return m
+				// has priority
+				}
 			}
 		ob = c()
 		Assert(ob.X is: 123)
@@ -143,12 +176,11 @@ Test
 		c1 = class
 			{
 			A: 123
-			Getter_X()
-				{ return .A }
-			getter_x()
-				{ return 789 }
-			F()
-				{ return .x }
+			Getter_X() { return .A }
+
+			getter_x() { return 789 }
+
+			F() { return .x }
 			}
 		ob = c1()
 		ob.A = 456
@@ -158,8 +190,7 @@ Test
 		c2 = class
 			{
 			A: 123
-			Getter_(unused)
-				{ return .A }
+			Getter_(unused) { return .A }
 			}
 		ob = c2()
 		ob.A = 456
@@ -172,25 +203,31 @@ Test
 
 	Test_class_members_must_be_named()
 		{
-		Assert({ "class { x }".Compile() } throws: "class members must be named")
+		Assert({ Suneido.Compile("class { x }") } throws: "class members must be named")
 		}
+
 	Test_arguments_to_New()
 		{
-		c = class { New(a/*unused*/,b/*unused*/,c/*unused*/) { } }
-		c(1,2,3)
-		c(@[1,2,3])
-		new c(1,2,3)
-		new c(@[1,2,3])
+		c = class
+			{
+			New(a/*unused*/, b/*unused*/, c/*unused*/) { }
+			}
+		c(1, 2, 3)
+		c(@[1, 2, 3])
+		new c(1, 2, 3)
+		new c(@[1, 2, 3])
 		Assert({ c() } throws: "missing argument")
 		Assert({ c(@[]) } throws: "missing argument")
-		Assert({ c(1,2,3,4) } throws: "too many arguments")
-		Assert({ c(@[1,2,3,4]) } throws: "too many arguments")
+		Assert({ c(1, 2, 3, 4) } throws: "too many arguments")
+		Assert({ c(@[1, 2, 3, 4]) } throws: "too many arguments")
 		Assert({ new c() } throws: "missing argument")
 		Assert({ new c(@[]) } throws: "missing argument")
-		Assert({ new c(1,2,3,4) } throws: "too many arguments")
-		Assert({ new c(@[1,2,3,4]) } throws: "too many arguments")
+		Assert({ new c(1, 2, 3, 4) } throws: "too many arguments")
+		Assert({ new c(@[1, 2, 3, 4]) } throws: "too many arguments")
 
-		c = class { }
+		c = class
+			{
+			}
 		c()
 		c(a: 1)
 		c(@[])
@@ -199,46 +236,53 @@ Test
 		new c(a: 1)
 		new c(@[])
 		new c(@[a: 1])
-		Assert({ c(1,2,3) } throws: "too many arguments")
-		Assert({ c(@[1,2,3]) } throws: "too many arguments")
-		Assert({ new c(1,2,3) } throws: "too many arguments")
-		Assert({ new c(@[1,2,3]) } throws: "too many arguments")
+		Assert({ c(1, 2, 3) } throws: "too many arguments")
+		Assert({ c(@[1, 2, 3]) } throws: "too many arguments")
+		Assert({ new c(1, 2, 3) } throws: "too many arguments")
+		Assert({ new c(@[1, 2, 3]) } throws: "too many arguments")
 		}
+
 	Test_equals()
 		{
 		// a class is only equal to itself
-		c = class { }
+		c = class
+			{
+			}
 		Assert(c is: c)
-		Assert(c isnt: class { })
+		Assert(c
+			isnt: class
+				{
+				})
 		// instances are equal if same class and members
 		c = class
 			{
 			UseDeepEquals: true
-			New(.x) {}
+			New(.x) { }
 			}
 		i1 = c(123)
 		i2 = c(123)
 		Assert(i1 is: i2)
 		}
+
 	Test_ToString()
 		{
-		c = class {
+		c = class
+			{
 			New(x, y) { .x = x; .y = y }
-			ToString() { 'c(x:' $ Display(.x) $ ', y: ' $ Display(.y) $ ')' } }
-		x = c(12, c(34, 'abc'))
+
+			ToString() { "c(x:" $ Display(.x) $ ", y: " $ Display(.y) $ ')' }
+			}
+		x = c(12, c(34, #abc))
 		Assert(Display(x) is: 'c(x:12, y: c(x:34, y: "abc"))')
 		}
+
 	Test_ToString2()
 		{
 		c = class
 			{
-			New(.x)
-				{
-				}
-			ToString()
-				{
-				return "MyClass(" $ .x $ ')'
-				}
+			New(.x) { }
+
+			ToString() { return "MyClass(" $ .x $ ')' }
 			}
 		x = c(123)
 		Assert(Display(x) is: "MyClass(123)")
@@ -255,40 +299,46 @@ Test
 
 		c = class
 			{
-			ToString()
-				{
-				return #()
-				}
+			ToString() { return #() }
 			}
 		x = c()
 		Assert({ Display(x) } throws: "ToString should return a string")
 		}
+
 	Test_method_not_found()
 		{
 		Assert({ Stack.FooBar() } throws: "method not found: class.FooBar")
 		Assert({ Stack().FooBar() } throws: "method not found: instance.FooBar")
 		Assert({ Object().FooBar() } throws: "method not found: object.FooBar")
-		Assert({ Record().FooBar() } throws: "method not found: record.FooBar")
+		Assert({ [].FooBar() } throws: "method not found: record.FooBar")
 		}
+
 	Test_instance_of_instance()
 		{
-		c = class { }
-		x = new c
-		Assert({ new x } throws: "can't create instance of instance")
+		c = class
+			{
+			}
+		x = new c()
+		Assert({ new x() } throws: "can't create instance of instance")
 		}
+
 	Test_inherit_Objects_methods()
 		{
-		Assert(class{X: 123}.Val_or_func("X") is: 123)
+		Assert(
+			class
+				{
+				X: 123
+				}.Val_or_func('X') is: 123)
 		}
+
 	Test_Synchronized_Unload()
 		{
 		// can't really tell if this is "working" without inserting debugging in gSuneido
 		// but at least we can make sure it doesn't throw an error
-
 		// instance
-		.Synchronized({})
+		.Synchronized({ })
 		Unload(#ClassTest)
-		.Synchronized({})
+		.Synchronized({ })
 
 		// class = this
 		ClassTest.SynchTest()
@@ -299,10 +349,11 @@ Test
 			}
 		c.F()
 		}
+
 	SynchTest()
 		{
-		.Synchronized({})
+		.Synchronized({ })
 		Unload(#ClassTest)
-		.Synchronized({})
+		.Synchronized({ })
 		}
 	}

@@ -3,10 +3,10 @@ Test
 	{
 	fakeTabControl: class
 		{
-		Ymin: 			0
-		Selected: 		0
-		TrimChar:		'~'
-		TrimChars:		1
+		Ymin:      0
+		Selected:  0
+		TrimChar:  '~'
+		TrimChars: 1
 		GetSelected()
 			{
 			return .Selected
@@ -15,7 +15,7 @@ Test
 
 	spy()
 		{
-		.SpyOn(TabCalcs.TabCalcs_initFont).Return('')
+		.SpyOn(TabCalcs.TabCalcs_initFont).Return("")
 		.SpyOn(TabCalcs.ImageDimensions).Return([width: 10, height: 10])
 		.SpyOn(ScaleWithDpiFactor).Return(6)
 		}
@@ -37,7 +37,7 @@ Test
 	Test_left()
 		{
 		.spy()
-		calcCl = TabVertCalcs(new .fakeTabControl, orientation: 'left')
+		calcCl = TabVertCalcs(new .fakeTabControl(), orientation: #left)
 
 		calcCl.Resize(20, h = 200)
 		Assert(calcCl.TabBarSize is: h)
@@ -46,7 +46,7 @@ Test
 		Assert(calcCl.TabVertCalcs_buttonOffset is: 0)
 
 		// Tab render values
-		.setTextMetrics(tab = Object(tabName: 'Tab1', hide?: false, data: false, image:))
+		.setTextMetrics(tab = Object(tabName: #Tab1, hide?: false, data: false, image:))
 		calcCl.CalcRenderRect(0, tab, 0)
 		Assert(tab.renderRect.start is: 0)
 		Assert(tab.renderRect.top is: 0)
@@ -121,7 +121,7 @@ Test
 	Test_right()
 		{
 		.spy()
-		calcCl = TabVertCalcs(new .fakeTabControl, orientation: 'right')
+		calcCl = TabVertCalcs(new .fakeTabControl(), orientation: #right)
 
 		calcCl.Resize(20, h = 200)
 		Assert(calcCl.TabBarSize is: h)
@@ -130,7 +130,7 @@ Test
 		Assert(calcCl.TabVertCalcs_buttonOffset is: -2)
 
 		// Tab render values
-		.setTextMetrics(tab = Object(tabName: 'Tab1', hide?: false, data: false, image:))
+		.setTextMetrics(tab = Object(tabName: #Tab1, hide?: false, data: false, image:))
 		calcCl.CalcRenderRect(0, tab, 0)
 		Assert(tab.renderRect.start is: 0)
 		Assert(tab.renderRect.top is: 0)
@@ -204,16 +204,16 @@ Test
 	Test_Resize?()
 		{
 		.spy()
-		calcCl = TabVertCalcs(new .fakeTabControl, orientation: 'left')
+		calcCl = TabVertCalcs(new .fakeTabControl(), orientation: #left)
 
 		// .H is initialized to false
-		Assert(calcCl.Resize?('unused - w', false) is: false)
-		Assert(calcCl.Resize?('unused - w', 0))
+		Assert(calcCl.Resize?("unused - w", false) is: false)
+		Assert(calcCl.Resize?("unused - w", 0))
 
 		calcCl.Resize(20, 200)
-		Assert(calcCl.Resize?('unused - w', 199))
-		Assert(calcCl.Resize?('unused - w', 200) is: false)
-		Assert(calcCl.Resize?('unused - w', 201))
+		Assert(calcCl.Resize?("unused - w", 199))
+		Assert(calcCl.Resize?("unused - w", 200) is: false)
+		Assert(calcCl.Resize?("unused - w", 201))
 		}
 
 	Test_ResizeExtraControl()
@@ -221,10 +221,10 @@ Test
 		.spy()
 		extraCtrl = Mock()
 		extraCtrl.When.Resize([anyArgs:]).Do({ })
-		programmerErrors = .SpyOn(ProgrammerError).Return('').CallLogs()
+		programmerErrors = .SpyOn(ProgrammerError).Return("").CallLogs()
 
 		// Vertical tabs left
-		calcCl = TabVertCalcs(new .fakeTabControl, orientation: 'left')
+		calcCl = TabVertCalcs(new .fakeTabControl(), orientation: #left)
 		calcCl.Resize(20, 200)
 		calcCl.ResizeExtraControl(extraCtrl, ctrlPos: 5, ctrlSize: 50)
 		extraCtrl.Verify.Resize(-1, 5, 13, 50)
@@ -234,7 +234,7 @@ Test
 		Assert(programmerErrors isSize: 1)
 
 		// Vertical tabs right
-		calcCl = TabVertCalcs(new .fakeTabControl, orientation: 'right')
+		calcCl = TabVertCalcs(new .fakeTabControl(), orientation: #right)
 		calcCl.Resize(20, 200)
 		calcCl.ResizeExtraControl(extraCtrl, ctrlPos: 5, ctrlSize: 50)
 		extraCtrl.Verify.Resize(1, 5, 13, 50)
@@ -251,13 +251,13 @@ Test
 		button.When.Resize([anyArgs:]).Do({ })
 
 		// Vertical tabs left
-		calcCl = TabVertCalcs(new .fakeTabControl, orientation: 'left')
+		calcCl = TabVertCalcs(new .fakeTabControl(), orientation: #left)
 		calcCl.Resize(20, 200)
 		calcCl.ResizeButton(button, 10)
 		button.Verify.Resize(5, 10, 4, 4)
 
 		// Vertical tabs right
-		calcCl = TabVertCalcs(new .fakeTabControl, orientation: 'right')
+		calcCl = TabVertCalcs(new .fakeTabControl(), orientation: #right)
 		calcCl.Resize(20, 200)
 		calcCl.ResizeButton(button, 10)
 		button.Verify.Resize(3, 10, 4, 4)
@@ -266,7 +266,7 @@ Test
 	Test_TabDragSpecs()
 		{
 		.spy()
-		calcCl = TabVertCalcs(new .fakeTabControl, orientation: 'left')
+		calcCl = TabVertCalcs(new .fakeTabControl(), orientation: #left)
 		calcCl.Resize(20, h = 200)
 		Assert(calcCl.TabBarSize is: h)
 

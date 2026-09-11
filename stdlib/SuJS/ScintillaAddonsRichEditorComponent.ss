@@ -6,44 +6,45 @@ ScintillaAddonsComponent
 		super(@args)
 		.states = Object(bold: false, italic: false, underline: false, strikeout: false)
 		.marks = Object()
-		.AddEventListenerToCM('cursorActivity', .onCursorActivity)
-		.AddEventListenerToCM('update', .onUpdate)
+		.AddEventListenerToCM(#cursorActivity, .onCursorActivity)
+		.AddEventListenerToCM(#update, .onUpdate)
 		}
 
 	pendingStyles: false
 	pendingUpdate: false
 	styles: (
-		bold: ['font-weight: normal;', 'font-weight: bold;'],
-		italic: ['font-style: normal;', 'font-style: italic;'],
-		line: ['text-decoration-line: none;',
-			'text-decoration-line: underline;',
-			'text-decoration-line: line-through;',
-			'text-decoration-line: underline line-through;'])
+		bold: ["font-weight: normal;", "font-weight: bold;"],
+		italic: ["font-style: normal;", "font-style: italic;"],
+		line: ["text-decoration-line: none;",
+			"text-decoration-line: underline;",
+			"text-decoration-line: line-through;",
+			"text-decoration-line: underline line-through;"]
+		)
 
 	On_Bold()
 		{
-		.update('bold')
+		.update(#bold)
 		}
 
 	On_Italic()
 		{
-		.update('italic')
+		.update(#italic)
 		}
 
 	On_Underline()
 		{
-		.update('underline')
+		.update(#underline)
 		}
 
 	On_Strikeout()
 		{
-		.update('strikeout')
+		.update(#strikeout)
 		}
 
 	update(state)
 		{
-		from = .CM.GetCursor("from")
-		to = .CM.GetCursor("to")
+		from = .CM.GetCursor(#from)
+		to = .CM.GetCursor(#to)
 
 		if .comparePos(from, to) is 0
 			{
@@ -56,7 +57,7 @@ ScintillaAddonsComponent
 			}
 
 		.states[state] = not .states[state]
-		if state in ('bold', 'italic')
+		if state in (#bold, #italic)
 			.updateBoldItalic(state, from, to)
 		else
 			.updateLine(state, from, to)
@@ -64,6 +65,7 @@ ScintillaAddonsComponent
 		.Event(#UpdateButtons, .states)
 		.Event(#ScintillaRichEditor_UpdateStyleObject, .getStyles())
 		.Event(#EN_CHANGE)
+		.Event(#SCN_MODIFIED, [modificationType: SC.MOD_CHANGESTYLE])
 		}
 
 	updateBoldItalic(state, from, to)
@@ -85,7 +87,7 @@ ScintillaAddonsComponent
 		for style in styles
 			{
 			idx = 0
-			if state is 'underline'
+			if state is #underline
 				{
 				idx |= .states[state] is true ? 1 : 0
 				idx |= style.style.strikeout ? 2 : 0
@@ -102,8 +104,8 @@ ScintillaAddonsComponent
 
 	On_ResetFont()
 		{
-		from = .CM.GetCursor("from")
-		to = .CM.GetCursor("to")
+		from = .CM.GetCursor(#from)
+		to = .CM.GetCursor(#to)
 
 		.states = Object(bold: false, italic: false, underline: false, strikeout: false)
 		css = .styles.bold[0] $ .styles.italic[0] $ .styles.line[0]
@@ -112,11 +114,12 @@ ScintillaAddonsComponent
 		.Event(#UpdateButtons, .states)
 		.Event(#ScintillaRichEditor_UpdateStyleObject, .getStyles())
 		.Event(#EN_CHANGE)
+		.Event(#SCN_MODIFIED, [modificationType: SC.MOD_CHANGESTYLE])
 		}
 
 	onCursorActivity(@unused)
 		{
-		pos = .CM.GetCursor("from")
+		pos = .CM.GetCursor(#from)
 
 		if .pendingStyles isnt false
 			{
@@ -132,7 +135,7 @@ ScintillaAddonsComponent
 		{
 		marks = .getMarks(at: pos)
 		bold = italic = underline = strikeout = false
-		for (i = marks.Size() - 1; i >= 0; i--)
+		for (i = marks.Size() - 1; i >= 0; i -= 1)
 			{
 			markPos = marks[i].Find()
 			if .comparePos(markPos.from, pos) is 0
@@ -155,35 +158,27 @@ ScintillaAddonsComponent
 
 	checkBold(css)
 		{
-		return .check(css, 'bold')
+		return .check(css, #bold)
 		}
 
 	checkItalic(css)
 		{
-		return .check(css, 'italic')
+		return .check(css, #italic)
 		}
 
 	check(css, state)
 		{
-		return css.Has?(.styles[state][1])
-			? 1
-			: css.Has?(.styles[state][0])
-				? 0
-				: false
+		return css.Has?(.styles[state][1]) ? 1 : css.Has?(.styles[state][0]) ? 0 : false
 		}
 
 	checkUnderline(css)
 		{
-		return css.Has?('text-decoration-line')
-			? css.Has?('underline') ? 1 : 0
-			: false
+		return css.Has?("text-decoration-line") ? css.Has?(#underline) ? 1 : 0 : false
 		}
 
 	checkStrikeout(css)
 		{
-		return css.Has?('text-decoration-line')
-			? css.Has?('line-through') ? 1 : 0
-			: false
+		return css.Has?("text-decoration-line") ? css.Has?("line-through") ? 1 : 0 : false
 		}
 
 	// OnChange and onUpdate are to handle the case where styles are (un)selected without
@@ -206,7 +201,7 @@ ScintillaAddonsComponent
 
 	buildCss()
 		{
-		css = ''
+		css = ""
 		if .hasStyle?(#bold, .pendingStyles.states)
 			css $= .styles.bold[.pendingStyles.states.bold ? 1 : 0]
 
@@ -237,7 +232,7 @@ ScintillaAddonsComponent
 			return
 
 		from = .pendingUpdate.from
-		to = .CM.GetCursor("to")
+		to = .CM.GetCursor(#to)
 		css = .pendingUpdate.css
 		.pendingUpdate = false
 		.addMark(from, to, css, addToHistory: false)
@@ -246,14 +241,14 @@ ScintillaAddonsComponent
 
 	isAddText?(changeObj)
 		{
-		return changeObj.text.Size() >= 1 and
-			changeObj.removed.Size() is 1 and changeObj.removed[0] is ""
+		return changeObj.text.Size() >= 1 and changeObj.removed.Size() is 1 and
+			changeObj.removed[0] is ""
 		}
 
 	comparePos(pos1, pos2)
 		{
-		ob1 = Object(pos1.line, pos1.ch)
-		ob2 = Object(pos2.line, pos2.ch)
+		ob1 = [pos1.line, pos1.ch]
+		ob2 = [pos2.line, pos2.ch]
 		if ob1 < ob2
 			return -1
 		return ob1 is ob2 ? 0 : 1
@@ -265,7 +260,7 @@ ScintillaAddonsComponent
 			{
 			for ob in styleObject
 				{
-				css = ''
+				css = ""
 
 				if ob.style.bold is true
 					css $= .styles.bold[1]
@@ -288,26 +283,26 @@ ScintillaAddonsComponent
 	getStyles(range = false)
 		{
 		s = .Get()
-		if s is ''
+		if s is ""
 			return #()
 
-		range = .getRange(range,  s)
+		range = .getRange(range, s)
 		start = range.start
 		end = range.end
 
 		marks = .getMarks(:range)
-		styles = Object(Object(from: start, to: end,
-			style: Object(bold: false, italic: false,
-				underline: false, strikeout: false)))
+		styles = [Object(from: start, to: end,
+				style: Object(bold: false, italic: false,
+					underline: false, strikeout: false))]
 
-		for (i = marks.Size() - 1; i >= 0; i--)
+		for (i = marks.Size() - 1; i >= 0; i -= 1)
 			{
-			if marks[i].css is ''
+			if marks[i].css is ""
 				continue
 			style = Object(
 				bold: .checkBold(marks[i].css),
 				italic: .checkItalic(marks[i].css),
-				underline: .checkUnderline(marks[i].css)
+				underline: .checkUnderline(marks[i].css),
 				strikeout: .checkStrikeout(marks[i].css))
 			pos = .getPos(marks[i])
 			from = .comparePos(pos.from, start) is -1 ? start : pos.from
@@ -329,8 +324,8 @@ ScintillaAddonsComponent
 
 		start = [line: 0, ch: 0]
 		lines = s.Lines()
-		if s.Suffix?('\r\n')
-			lines.Add('')
+		if s.Suffix?("\r\n")
+			lines.Add("")
 		end = [line: lines.Size() - 1, ch: lines.Last().Size()]
 		return Object(:start, :end)
 		}
@@ -341,8 +336,8 @@ ScintillaAddonsComponent
 		for mark in .marks
 			{
 			res = false
-			if mark.css isnt '' and
-				mark.css =~ 'text-decoration-line|font-weight|font-style' and
+			if mark.css isnt "" and
+				mark.css =~ "text-decoration-line|font-weight|font-style" and
 				false isnt pos = .getPos(mark)
 				res = .include?(at, range, pos)
 			if res is true
@@ -377,9 +372,8 @@ ScintillaAddonsComponent
 	findFromStyle(from, styles)
 		{
 		styleFrom = 0
-		while styleFrom < styles.Size() and
-			.comparePos(styles[styleFrom].to, from) <= 0
-			styleFrom++
+		while styleFrom < styles.Size() and .comparePos(styles[styleFrom].to, from) <= 0
+			styleFrom += 1
 		Assert(styleFrom isnt: styles.Size())
 		if .comparePos(styles[styleFrom].from, from) isnt 0
 			{
@@ -394,9 +388,8 @@ ScintillaAddonsComponent
 	findToStyle(startStyle, to, styles)
 		{
 		styleTo = startStyle
-		while styleTo < styles.Size() and
-			.comparePos(styles[styleTo].to, to) is -1
-			styleTo++
+		while styleTo < styles.Size() and .comparePos(styles[styleTo].to, to) is -1
+			styleTo += 1
 		Assert(styleTo isnt: styles.Size())
 		if .comparePos(styles[styleTo].to, to) isnt 0
 			{
@@ -410,15 +403,13 @@ ScintillaAddonsComponent
 
 	updateStyles(styleFrom, styleTo, style, styles)
 		{
-		for (n = styleFrom; n <= styleTo; n++)
-			{
+		for (n = styleFrom; n <= styleTo; n += 1)
 			for m in style.Members()
 				{
 				if style[m] is false or styles[n].style[m] isnt false
 					continue
 				styles[n].style[m] = style[m]
 				}
-			}
 		}
 
 	formatAndMergeStyles(styles)

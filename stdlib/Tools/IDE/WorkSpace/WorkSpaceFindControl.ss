@@ -3,23 +3,23 @@ PassthruController
 	{
 	New()
 		{
-		.field = .FindControl('text')
-		.selectExclude = .FindControl('exclude')
-		.selectCase = .FindControl('case')
-		.selectWord = .FindControl('word')
-		.selectRegex = .FindControl('regex')
+		.field = .FindControl(#text)
+		.selectExclude = .FindControl(#exclude)
+		.selectCase = .FindControl(#case)
+		.selectWord = .FindControl(#word)
+		.selectRegex = .FindControl(#regex)
 		}
 
 	Controls()
 		{
-		return Object('Horz'
-			Object('FieldHistory', font: '@mono', size: '+1', width: 30,
-				field: Object('AutoAction', list: .actionList)
-				name: 'text') #Skip
-			#(CheckBox, "Exclude"	tabover:, name: 'exclude') #Skip
-			#(CheckBox, "Case" 		tabover:, name: "case") #Skip
-			#(CheckBox, "Word" 		tabover:, name: "word") #Skip
-			#(CheckBox, "Regex" 	tabover:, name: "regex"))
+		return [#Horz,
+			[#FieldHistory, font: "@mono", size: "+1", width: 30,
+				field: [#AutoAction, list: .actionList],
+				name: #text], #Skip,
+			#(CheckBox, Exclude, tabover:, name: exclude), #Skip,
+			#(CheckBox, Case, tabover:, name: case), #Skip,
+			#(CheckBox, Word, tabover:, name: word), #Skip,
+			#(CheckBox, Regex, tabover:, name: regex)]
 		}
 
 	listCanceled?: false
@@ -29,9 +29,9 @@ PassthruController
 			return #()
 
 		list = Object()
-		.buildList(.suggestRegex?(text), .selectRegex.Get(), 'regex', list)
-		.buildList(.suggestCase?(text), .selectCase.Get(), 'case', list)
-		.buildList(.suggestWord?(text), .selectWord.Get(), 'word', list)
+		.buildList(.suggestRegex?(text), .selectRegex.Get(), #regex, list)
+		.buildList(.suggestCase?(text), .selectCase.Get(), #case, list)
+		.buildList(.suggestWord?(text), .selectWord.Get(), #word, list)
 		return list
 		}
 
@@ -39,27 +39,27 @@ PassthruController
 		{
 		if suggest is current
 			return
-		list.Add('Toggle ' $ target.Capitalize() $ ': ' $ Display(suggest))
+		list.Add("Toggle " $ target.Capitalize() $ ": " $ Display(suggest))
 		}
 
 	GetListForEmpty()
 		{
 		return .selectExclude.Get() or .selectCase.Get() or .selectWord.Get() or
 			.selectRegex.Get()
-			? #('Clear all')
+			? #("Clear all")
 			: #()
 		}
 
 	SelectAction(action, source)
 		{
-		if action is 'Clear all'
+		if action is "Clear all"
 			{
 			.clearAll()
 			return
 			}
 
 		targetName = action.AfterFirst(' ').BeforeFirst(':').Lower()
-		value = action.AfterFirst(': ').SafeEval()
+		value = action.AfterFirst(": ").SafeEval()
 		target = .FindControl(targetName)
 		if target isnt false and value isnt target.Get()
 			{
@@ -69,7 +69,7 @@ PassthruController
 
 		newList = .actionList(.field.Get())
 		if newList.NotEmpty?()
-			.Defer({ source.OpenList(newList) }, uniqueID: "openList")
+			.Defer({ source.OpenList(newList) }, uniqueID: #openList)
 		}
 
 	clearAll()
@@ -92,7 +92,7 @@ PassthruController
 		.listCanceled? = true
 		}
 
-	prev: ''
+	prev: ""
 	Edit_Change(source)
 		{
 		text = .field.Get()
@@ -101,13 +101,14 @@ PassthruController
 		.prev = text
 
 		.updateHilite()
-		.Send("Edit_Change", :source)
+		.Send(#Edit_Change, :source)
 		}
+
 	NewValue(value, source)
 		{
 		if source in (.selectCase, .selectRegex)
 			.updateHilite()
-		.Send("NewValue", value, :source)
+		.Send(#NewValue, value, :source)
 		}
 
 	suggestRegex?(text)
@@ -115,15 +116,11 @@ PassthruController
 		if text.Blank?()
 			return false
 
-		if not text.Has1of?('.?*+^$|') and
-			text !~ `\\d|\\D|\\s|\\S|\\w|\\W|\[:|\\<|\\>`
+		if not text.Has1of?(".?*+^$|") and text !~ `\\d|\\D|\\s|\\S|\\w|\\W|\[:|\\<|\\>`
 			return false
 
-		try
-			{
-			Tdop(text, type: 'expression', symbols: WorkSpaceFindSymbols())
+		if .isExpr?(text)
 			return false
-			}
 
 		try
 			{
@@ -138,9 +135,19 @@ PassthruController
 		return true
 		}
 
+	isExpr?(text)
+		{
+		try
+			{
+			Suneido.Compile("function () { a = " $ text $ " }")
+			return text !~ `^(.+?\|)+.+$`
+			}
+		return false
+		}
+
 	suggestCase?(text)
 		{
-		return text =~ '[A-Z]'
+		return text =~ "[A-Z]"
 		}
 
 	suggestWord?(text)
@@ -174,7 +181,7 @@ PassthruController
 	setColor(ctrl, hilite)
 		{
 		ctrl.SetColor(hilite ? CLR.purple : CLR.BLACK)
-		ctrl.SetFont(weight: hilite ? 'bold' : '')
+		ctrl.SetFont(weight: hilite ? #bold : "")
 		ctrl.Repaint()
 		}
 	}

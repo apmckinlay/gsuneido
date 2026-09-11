@@ -430,6 +430,17 @@ ListBodyBaseComponent
 			.scrollContainerEl.scrollTop = rowOffsetTop + rowHeight - scrollHeight
 		}
 
+	ScrollRowToCenter(row)
+		{
+		Assert(.rows hasMember: row, msg: 'ListBodyComponent.ScrollRowToCenter')
+		headerHeight = .header.GetOffsetHeight()
+		rowHeight = .rows[row].offsetHeight
+		rowOffsetTop = .rows[row].offsetTop
+		scrollHeight = .scrollContainerEl.clientHeight
+		// center of visible region is (headerHeight + scrollHeight) / 2
+		.scrollContainerEl.scrollTop = rowOffsetTop + rowHeight / 2 -
+			(headerHeight + scrollHeight) / 2
+		}
 	ScrollColToView(col)
 		{
 		colRect = .header.GetColRect(col)

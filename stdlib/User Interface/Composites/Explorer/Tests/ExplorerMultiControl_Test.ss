@@ -14,7 +14,7 @@ Test
 
 		// Ignore block dictates that all tabs should be ignored
 		mock = .mockCloseTabs()
-		mock.CloseTabs({|i| i < 5})
+		mock.CloseTabs({|i| i < 5 })
 		mock.Verify.Never().closeTab(0, skipCollapse?:)
 		mock.Verify.Never().closeTab(1, skipCollapse?:)
 		mock.Verify.Never().closeTab(2, skipCollapse?:)
@@ -23,7 +23,7 @@ Test
 
 		// Ignore block dictates that all even tabs should be ignored
 		mock = .mockCloseTabs()
-		mock.CloseTabs({|i| i % 2 isnt 0})
+		mock.CloseTabs({|i| i%2 isnt 0 })
 		mock.Verify.closeTab(0, skipCollapse?:)
 		mock.Verify.Never().closeTab(1, skipCollapse?:)
 		mock.Verify.closeTab(2, skipCollapse?:)
@@ -32,7 +32,7 @@ Test
 
 		// Ignore block dictates that all even tabs should be ignored
 		mock = .mockCloseTabs()
-		mock.CloseTabs({|i| i % 2 is 0})
+		mock.CloseTabs({|i| i%2 is 0 })
 		mock.Verify.Never().closeTab(0, skipCollapse?:)
 		mock.Verify.closeTab(1, skipCollapse?:)
 		mock.Verify.Never().closeTab(2, skipCollapse?:)
@@ -46,9 +46,15 @@ Test
 		mock.When.CloseTabs([anyArgs:]).CallThrough()
 		mock.When.closeTab([anyArgs:]).Return(true)
 		mock.When.collapsenode([anyArgs:]).Return(true)
-		mock.ExplorerMultiControl_tabsCtrl = class {
+		mock.ExplorerMultiControl_tabsCtrl = class
+			{
 			GetTabCount() { return 5 }
-			NoCtrls?() { return true } // avoids calling .tree methods
+
+			NoCtrls?()
+				{
+				// avoids calling .tree methods
+				return true
+				}
 			}
 		return mock
 		}

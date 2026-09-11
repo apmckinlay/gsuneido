@@ -22,9 +22,9 @@ affect these methods.
 */
 class
 	{
-	PaddingTop: 		5
-	PaddingSide: 		7
-	New(.controller, .selectedWeight = '', .trimChar = '.', .trimChars = 3)
+	PaddingTop:  5
+	PaddingSide: 7
+	New(.controller, .selectedWeight = "", .trimChar = '.', .trimChars = 3)
 		{
 		.initFont()
 		.imageSize = .controller.Ymin
@@ -43,7 +43,7 @@ class
 
 	Font(selectedTab? = false)
 		{
-		weight = selectedTab? ? .selectedWeight : ''
+		weight = selectedTab? ? .selectedWeight : ""
 		return .fonts.GetInit(weight, { .createFont(weight, .FontOrientation) })
 		}
 
@@ -64,9 +64,7 @@ class
 
 	W: false
 	H: false
-	Resize(.W, .H)
-		{
-		}
+	Resize(.W, .H) { }
 
 	CalcRenderRect(i, tab, prevEnd, tabName = false)
 		{
@@ -139,7 +137,7 @@ class
 
 	CalcTextSpecs(tab, selectedTab)
 		{
-		if '' is text = .fitText(tab, selectedTab)
+		if "" is text = .fitText(tab, selectedTab)
 			return false
 		specs = (.TextPos)(tab, selectedTab)
 		specs.text = text
@@ -164,16 +162,15 @@ class
 		{
 		allocatedSpace = .PaddingSide
 		count = 0
-		calc = {
-			|charSize|
-			if availableSpace <= allocatedSpace + charSize
+		calc = {|charSize|
+			if availableSpace <= allocatedSpace+charSize
 				break
 			allocatedSpace += charSize
 			count++
 			}
 
 		// Calculate the first character to ensure it is displayed as long as possible
-		charSizes[.. 1].Each(calc)
+		charSizes[..1].Each(calc)
 		tabNameChars = count
 
 		// Calculate how many trim characters fit given the remaining space
@@ -183,10 +180,10 @@ class
 
 		// Calculate how many tab name characters fit given the remaining space
 		count = 0
-		charSizes[1 ..].Each(calc)
+		charSizes[1..].Each(calc)
 		tabNameChars += count
 
-		return tab.tabName[:: tabNameChars] $ .trimChar.Repeat(trimChars)
+		return tab.tabName[::tabNameChars] $ .trimChar.Repeat(trimChars)
 		}
 
 	trimCharOb(charSize)

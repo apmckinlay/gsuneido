@@ -1,21 +1,21 @@
 <div style="float:right"><span class="builtin">Builtin</span></div>
 
-#### string.Compile
+#### Suneido.Compile
 
 ``` suneido
-(object = false) => value
+Suneido.Compile(source, errob = false) => value
 ```
 
-Compiles the string, which must be a constant (e.g. number, function, class). Preferable to [string.Eval](<string.Eval.md>) because it does not execute arbitrary code.
+Compiles the string, which must be a constant (e.g. number, function, class). Preferable to [string.Eval](<../String/string.Eval.md>) because it does not execute arbitrary code.
 
 For example:
 
 ``` suneido
-"function () { }".Compile()
+Suneido.Compile("function() { }")
     => /* function */
 ```
 
-If an object is supplied as an argument then the offsets of "warnings" (e.g. uninitialized variables) are added to it. This is used by CheckCode which is used by [LibraryView](<../../../Tools/LibraryView.md>) to show mistakes.
+If an errob object is supplied as an argument then the offsets of "warnings" (e.g. uninitialized variables) are added to it. This is used by CheckCode which is used by [LibraryView](<../../../Tools/LibraryView.md>) to show mistakes.
 
 **Note**: Compile may be slower when asking for warnings (by supplying an object argument) because it may load library records as part of determining whether global names are defined.
 
@@ -37,4 +37,4 @@ text = scanner.Text()
 ```
 
 See also:
-[string.Eval](<string.Eval.md>)
+[string.Eval](<../String/string.Eval.md>)

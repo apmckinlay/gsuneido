@@ -1,38 +1,39 @@
 // Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.
 CustomizableFieldDialogPropertiesEditor
 	{
-	RangeFrom: 10
-	RangeTo: 40
-	MaxItems: 300
+	RangeFrom:    10
+	RangeTo:      40
+	MaxItems:     300
 	DefaultWidth: 10
-	Format: 'Text'
+	Format:       #Text
 
 	New()
 		{
-		.field_width = .FindControl('field_width')
-		.list = .FindControl('items')
-		.tooltip = .FindControl('tooltip')
-		.status = .FindControl('Status')
+		.field_width = .FindControl(#field_width)
+		.list = .FindControl(#items)
+		.tooltip = .FindControl(#tooltip)
+		.status = .FindControl(#Status)
 		}
 
 	GetControls()
 		{
-		return Object('Vert',
+		return [#Vert,
 			#Skip,
-			Object('Static' 'Select Text Width (from ' $ Display(.RangeFrom) $
-				' to ' $ Display(.RangeTo) $ ')'),
+			[#Static,
+				"Select Text Width (from " $ Display(.RangeFrom) $ " to " $
+					Display(.RangeTo) $ ')'],
 			#Skip,
-			Object('Number' rangefrom: .RangeFrom, rangeto: .RangeTo,
-				set: .DefaultWidth, name: 'field_width'),
+			[#Number rangefrom: .RangeFrom, rangeto: .RangeTo,
+				set: .DefaultWidth, name: #field_width],
 			#Skip,
-			Object('Static' 'Please enter items to choose from'),
-			Object('List' columns: #('Items'), data: #(), name: 'items',
-				defWidth: 380, headerSelectPrompt: 'no_prompts'),
+			[#Static, "Please enter items to choose from"],
+			[#List columns: #(Items), data: #(), name: #items,
+				defWidth: 380, headerSelectPrompt: #no_prompts],
 			#Status,
 			#Skip,
-			Object('Static' 'Tooltip'),
+			[#Static, #Tooltip],
 			#Skip,
-			Object('Field' name: 'tooltip'))
+			[#Field name: #tooltip]]
 		}
 
 	Valid?()
@@ -54,18 +55,18 @@ CustomizableFieldDialogPropertiesEditor
 	GetValidMsg(list)
 		{
 		if list.Size() < 2
-			return 'Should have at least two options to choose from'
+			return "Should have at least two options to choose from"
 		else if list.Size() > .MaxItems
-			return 'Cannot have more than ' $ .MaxItems $ ' items\n\n' $
+			return "Cannot have more than " $ .MaxItems $ " items\n\n" $
 				'Use the "Text, from custom table" type if you need more items\n\n' $
-				'Please contact Axon for assistance'
+				"Please contact Axon for assistance"
 		return ""
 		}
 
 	setStatusBar(msg)
 		{
-		normal = msg is ''
-		invalid = msg isnt ''
+		normal = msg is ""
+		invalid = msg isnt ""
 		.status.Set(msg, :invalid, :normal)
 		}
 
@@ -81,29 +82,29 @@ CustomizableFieldDialogPropertiesEditor
 		width = .field_width.Get()
 		status = .tooltip.Get()
 		x.control = Object(list: .getList(), :width, :status)
-		x.format = Object(.Format, :width)
+		x.format = [.Format, :width]
 		return x
 		}
 
 	Set(object)
 		{
 		super.Set(object)
-		list = object.GetDefault('Control_list', #())
+		list = object.GetDefault(#Control_list, #())
 		data = list.Map({ Object(Items: it) })
 		.list.Set(data)
-		.field_width.Set(object.GetDefault('Control_width', .DefaultWidth))
-		.tooltip.Set(object.GetDefault('Control_status', ''))
+		.field_width.Set(object.GetDefault(#Control_width, .DefaultWidth))
+		.tooltip.Set(object.GetDefault(#Control_status, ""))
 		}
 
 	ConvertFieldType_CustomKey(fieldOb, data)
 		{
 		try
 			.outputTableAndValues(fieldOb.colnme, fieldOb.custpe, data.control.list)
-		catch(err)
+		catch (err)
 			{
-			SuneidoLog('ERROR: (CAUGHT) - Converting Choose List to Custom Key: ' $ err,
-				params: Object(fieldOb, data),
-				caughtMsg: 'no msg given; field did not convert; may need attention')
+			SuneidoLog("ERROR: (CAUGHT) - Converting Choose List to Custom Key: " $ err,
+				params: [fieldOb, data],
+				caughtMsg: "no msg given; field did not convert; may need attention")
 			return false
 			}
 		return Object(control: Object(customField: fieldOb.colnme), format: Object())
@@ -111,11 +112,11 @@ CustomizableFieldDialogPropertiesEditor
 
 	outputTableAndValues(field, prompt, list)
 		{
-		if not TableExists?(table = field $ '_table')
-			CustomFieldControl_CustomTable(field, prompt, 'configlib')
+		if not TableExists?(table = field $ "_table")
+			CustomFieldControl_CustomTable(field, prompt, #configlib)
 		for desc in list
 			if false is Query1(table, name: desc)
-				QueryOutput(table, Record(name: desc))
+				QueryOutput(table, [name: desc])
 		}
 
 	List_Deletions()
@@ -125,6 +126,6 @@ CustomizableFieldDialogPropertiesEditor
 
 	List_AfterEdit()
 		{
-		return .validateListItems()
+		.validateListItems()
 		}
 	}

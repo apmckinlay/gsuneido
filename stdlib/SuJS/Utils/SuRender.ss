@@ -5,18 +5,20 @@ class
 		{
 		Suneido.SuRender = new this(token)
 		}
+
 	CallClass()
 		{
 		return Suneido.SuRender
 		}
-	connectid: 0
-	socketStatus: 0
-	mousemoveCB: false
-	mouseupCB: false
-	delayedTask: false
+
+	connectid:     0
+	socketStatus:  0
+	mousemoveCB:   false
+	mouseupCB:     false
+	delayedTask:   false
 	delayedTaskId: 0
-	nextAck: false
-	initialized: false
+	nextAck:       false
+	initialized:   false
 	New(.token)
 		{
 		.socketStatus = SuSocketStatus.init
@@ -32,26 +34,30 @@ class
 
 		.connect([:token, connectid: .connectid])
 
-		SuUI.GetCurrentDocument().AddEventListener('keydown', .keydown, useCapture:)
-		SuUI.GetCurrentDocument().AddEventListener('keydown', .keydown2)
-		SuUI.GetCurrentDocument().AddEventListener('contextmenu', .disableDefaultMenu)
-		SuUI.GetCurrentWindow().AddEventListener('beforeunload', .beforeUnload)
-		SuUI.GetCurrentWindow().AddEventListener('error', .onError)
-		SuUI.GetCurrentWindow().AddEventListener('unhandledrejection', .onPromiseError)
+		SuUI.GetCurrentDocument().AddEventListener(#keydown, .keydown, useCapture:)
+		SuUI.GetCurrentDocument().AddEventListener(#keydown, .keydown2)
+		SuUI.GetCurrentDocument().AddEventListener(#contextmenu, .disableDefaultMenu)
+		SuUI.GetCurrentWindow().AddEventListener(#beforeunload, .beforeUnload)
+		SuUI.GetCurrentWindow().AddEventListener(#error, .onError)
+		SuUI.GetCurrentWindow().AddEventListener(#unhandledrejection, .onPromiseError)
 
-		SuUI.GetCurrentDocument().AddEventListener('contextmenu',
-			.cancelMouseTracking, useCapture:)
-		SuUI.GetCurrentWindow().AddEventListener("dragstart", .cancelMouseTracking)
-		SuUI.GetCurrentDocument().AddEventListener("visibilitychange",
-			.onvisibilitychange)
+		SuUI.
+			GetCurrentDocument().
+			AddEventListener(#contextmenu,
+				.cancelMouseTracking, useCapture:)
+		SuUI.GetCurrentWindow().AddEventListener(#dragstart, .cancelMouseTracking)
+		SuUI.
+			GetCurrentDocument().
+			AddEventListener(#visibilitychange,
+				.onvisibilitychange)
 
-		.resizeObserver = SuUI.MakeWebObject('ResizeObserver', .onResize)
+		.resizeObserver = SuUI.MakeWebObject(#ResizeObserver, .onResize)
 		.resizeObserver.Observe(SuUI.GetCurrentDocument().body)
 
-		SuUI.GetCurrentDocument().AddEventListener('mousemove', .mousemove)
-		SuUI.GetCurrentDocument().AddEventListener('mouseup', .mouseup)
+		SuUI.GetCurrentDocument().AddEventListener(#mousemove, .mousemove)
+		SuUI.GetCurrentDocument().AddEventListener(#mouseup, .mouseup)
 
-		Global('SuKillTimer') // preload the record
+		Global(#SuKillTimer) // preload the record
 
 		// this is to disable file drag and drop on the page
 		// ImageComponent handles file drag and drop by its own
@@ -69,44 +75,43 @@ class
 
 	connect(query)
 		{
-		host = (SuUI.GetCurrentWindow())['location']['hostname']
-		port = (SuUI.GetCurrentWindow())['location']['port']
-		.ws = SuUI.WebSocketClient((IsHttps?() ? `wss://` : `ws://`) $
-			host $ ':' $ port $ `/connect` $ Url.BuildQuery(query))
+		host = (SuUI.GetCurrentWindow()).location.hostname
+		port = (SuUI.GetCurrentWindow()).location.port
+		.ws = SuUI.WebSocketClient((IsHttps?() ? `wss://` : `ws://`) $ host $ ':' $ port $
+			`/connect` $ Url.BuildQuery(query))
 		.ws.AddEventListener(#open, .open)
 		.ws.AddEventListener(#message, .message)
 		.ws.AddEventListener(#close, .close)
 		.ws.AddEventListener(#error, .error)
-		.logWS('create')
+		.logWS(#create)
 		}
 
 	logWS(event)
 		{
-		event = event $ ' (' $ .connectid $ ')'
+		event = event $ " (" $ .connectid $ ')'
 		.recorder.Add(#ws, event)
 		Print(event)
 		}
 
-	Engine: 'unknown'
+	Engine: #unknown
 	init()
 		{
-		SuUI.GetCurrentDocument().body.style.SetProperty(
-			'--su-color-buttonface', ToCssColor(CLR.ButtonFace))
-		SuUI.GetCurrentDocument().body.style.SetProperty(
-			'background-color', 'darkgray')
+		SuUI.GetCurrentDocument().body.style.SetProperty("--su-color-buttonface",
+			ToCssColor(CLR.ButtonFace))
+		SuUI.GetCurrentDocument().body.style.SetProperty("background-color", #darkgray)
 		.SetWindowHeaderColor()
 
-		userAgent = (SuUI.GetCurrentWindow())['navigator']['userAgent']
-		if userAgent.Has?('Chrome')
-			.Engine = 'Blink'
-		else if userAgent.Has?('AppleWebKit')
-			.Engine = 'WebKit'
+		userAgent = (SuUI.GetCurrentWindow()).navigator.userAgent
+		if userAgent.Has?(#Chrome)
+			.Engine = #Blink
+		else if userAgent.Has?(#AppleWebKit)
+			.Engine = #WebKit
 		}
 
 	SetWindowHeaderColor(color = false)
 		{
-		SuUI.GetCurrentDocument().body.style.SetProperty(
-			'--su-color-windowheader', ToCssColor(color is false ? 'lightgray': color))
+		SuUI.GetCurrentDocument().body.style.SetProperty("--su-color-windowheader",
+			ToCssColor(color is false ? #lightgray : color))
 		}
 
 	disableDefaultMenu(event)
@@ -154,28 +159,26 @@ class
 
 	close(event)
 		{
-		.logWS('close ' $ event.code $ Opt(' ', event.reason))
+		.logWS("close " $ event.code $ Opt(' ', event.reason))
 		Print(close: event)
 		++.connectid
 		.pause()
 		reason = event.reason
-		if event.code is 1006/*=Abnormal Closure*/ or
-			reason.Has?('CloudFlare')
-			{
+		if event.code is 1006/*=Abnormal Closure*/ or reason.Has?(#CloudFlare)
 			if .retryCount < .maxRetries
 				{
 				.tryReconnect()
 				return
 				}
 			else
-				reason = 'Reached maximum reconnect retries' $ Opt('(', reason, ')')
-			}
+				reason = "Reached maximum reconnect retries" $ Opt('(', reason, ')')
 
 		.socketStatus = SuSocketStatus.terminated
-		SuUI.GetCurrentWindow().Alert(
-			event.code isnt 1006/*=Abnormal Closure*/ and reason is ''
-				? "You are logged out"
-				: "Lost connection")
+		SuUI.
+			GetCurrentWindow().
+			Alert(event.code isnt 1006/*=Abnormal Closure*/ and reason is ""
+					? "You are logged out"
+					: "Lost connection")
 
 		.Reload()
 		}
@@ -183,10 +186,10 @@ class
 	Reload()
 		{
 		href = SuUI.GetCurrentWindow().location.href
-		if not href.Has?('preauth=true')
+		if not href.Has?("preauth=true")
 			SuUI.GetCurrentWindow().location.Reload()
 		else
-			SuUI.GetCurrentWindow().location = href.BeforeFirst('/?')
+			SuUI.GetCurrentWindow().location = href.BeforeFirst("/?")
 		}
 
 	pause()
@@ -195,9 +198,9 @@ class
 		}
 
 	retryCountDown: 0
-	timer: false
-	retryCount: 0
-	maxRetries: 10
+	timer:          false
+	retryCount:     0
+	maxRetries:     10
 	tryReconnect()
 		{
 		.socketStatus = SuSocketStatus.reconnecting
@@ -217,9 +220,10 @@ class
 		{
 		if .retryCountDown > 0
 			{
-			.overlay.SetMsg('Network problems, trying to reconnect in ' $
-				.retryCountDown $ ' sec(s)', id: #reconnect)
-			.retryCountDown--
+			.overlay.SetMsg(
+				"Network problems, trying to reconnect in " $ .retryCountDown $ " sec(s)",
+				id: #reconnect)
+			.retryCountDown -= 1
 			return
 			}
 		if .timer isnt false
@@ -228,7 +232,7 @@ class
 			.timer = false
 			}
 		.showReconnecting()
-		.retryCount++
+		.retryCount += 1
 		.connect([token: .token, reconnect:, connectid: .connectid])
 		}
 
@@ -236,7 +240,7 @@ class
 		{
 		// Not show the message in the first try
 		if 0 isnt .retryCount
-			.overlay.SetMsg('Network problems, reconnecting...', id: #reconnect)
+			.overlay.SetMsg("Network problems, reconnecting...", id: #reconnect)
 		}
 
 	closeReconnecting()
@@ -248,19 +252,20 @@ class
 		{
 		.socketStatus = SuSocketStatus.error
 		.pause()
-		.logWS('error')
+		.logWS(#error)
 		}
 
 	NotAllowDragAndDrop(window)
 		{
-		window.AddEventListener("dragenter", .dragDropHandler)
-		window.AddEventListener("dragover", .dragDropHandler)
-		window.AddEventListener("drop", .dragDropHandler)
+		window.AddEventListener(#dragenter, .dragDropHandler)
+		window.AddEventListener(#dragover, .dragDropHandler)
+		window.AddEventListener(#drop, .dragDropHandler)
 		}
+
 	dragDropHandler(event)
 		{
 		event.PreventDefault()
-		event.dataTransfer.dropEffect = "none"
+		event.dataTransfer.dropEffect = #none
 		}
 
 	RegisterIframe(el)
@@ -276,13 +281,13 @@ class
 	freezeIframes()
 		{
 		for iframe in .iframes
-			iframe.SetStyle('pointer-events', 'none')
+			iframe.SetStyle("pointer-events", #none)
 		}
 
 	restoreIframes()
 		{
 		for iframe in .iframes
-			iframe.SetStyle('pointer-events', '')
+			iframe.SetStyle("pointer-events", "")
 		}
 
 	lastMoveEvent: false
@@ -392,8 +397,9 @@ class
 		if .ActiveWindow is false or .ActiveWindow.Destroyed?()
 			return
 
-		if event.key is 'Escape' and (.ActiveWindow.Base?(ModalWindowComponent) or
-			.ActiveWindow.Base?(ListEditWindowComponent))
+		if event.key is #Escape and
+			(.ActiveWindow.Base?(ModalWindowComponent) or
+				.ActiveWindow.Base?(ListEditWindowComponent))
 			{
 			.ActiveWindow.On_Cancel()
 			event.PreventDefault()
@@ -423,9 +429,9 @@ class
 		{
 		if .ActiveWindow is false or .ActiveWindow.Destroyed?()
 			return
-		if event.key isnt 'Enter'
+		if event.key isnt #Enter
 			return
-		if event.target.tagName in ('BUTTON', 'TEXTAREA')
+		if event.target.tagName in (#BUTTON, #TEXTAREA)
 			return
 		.ActiveWindow.CallDefaultButton()
 		}
@@ -440,9 +446,9 @@ class
 		.keydownListeners.Remove(block)
 		}
 
-	eventId: 0
+	eventId:      0
 	overlayEvent: false
-	freezeEvent: false
+	freezeEvent:  false
 	Event(uniqueId, event, args, showOverlay? = false, freeze? = false)
 		{
 		if showOverlay? is true
@@ -484,14 +490,15 @@ class
 			{
 			if .ws.readyState isnt 1
 				{
-				if .ws.readyState is 0 /*=CONNECTING*/ and .sendLog? is true
+				if .ws.readyState is 0/*=CONNECTING*/ and .sendLog? is true
 					{
 					.sendLog? = false
-					.Event(false, 'SuneidoLog', Object(
-						'ERROR: (CAUGHT) sending events when ws is in CONNECTING',
-						params: [state: .ws.readyState, :s],
-						calls: .recorder.Get().Map(EventRecorder.Format).Join('\r\n'),
-						caughtMsg: 'for debug 34395'))
+					.Event(false, #SuneidoLog,
+						[
+							"ERROR: (CAUGHT) sending events when ws is in CONNECTING",
+							params: [state: .ws.readyState, :s],
+							calls: .recorder.Get().Map(EventRecorder.Format).Join("\r\n"),
+							caughtMsg: "for debug 34395"])
 					}
 				return false
 				}
@@ -504,7 +511,7 @@ class
 			}
 
 		if .socketStatus is SuSocketStatus.terminated
-			Print('socket terminated': s)
+			Print("socket terminated": s)
 
 		return false
 		}
@@ -522,7 +529,7 @@ class
 		{
 		.connectingTimer = false
 		.showConnecting? = true
-		.overlay.Show(id: #connecting, msg: 'Working...')
+		.overlay.Show(id: #connecting, msg: "Working...")
 		}
 
 	closeConnecting()
@@ -575,7 +582,7 @@ class
 
 	open()
 		{
-		.logWS('open')
+		.logWS(#open)
 		}
 
 	connected()
@@ -598,9 +605,7 @@ class
 	ackEvent(id)
 		{
 		if .eventToAck.Empty?() or .eventToAck[0].id > id // processed event - ignore
-			{
 			return false
-			}
 
 		if .eventToAck[0].id < id // missing event response
 			{
@@ -615,14 +620,14 @@ class
 
 	ErrorLog(s)
 		{
-		.Event(false, #ErrorLog, [s $ ' (from browser)'])
+		.Event(false, #ErrorLog, [s $ " (from browser)"])
 		}
 
 	message(event)
 		{
 		if not .initialized
 			{
-			Print('Message skipped')
+			Print("Message skipped")
 			return
 			}
 
@@ -632,17 +637,15 @@ class
 
 			if response[0] is SuMessageFormatter.Type.CONNECTED
 				{
-				.logWS('connected ' $ response[1])
+				.logWS("connected " $ response[1])
 				if response[1] is .connectid
 					.connected()
 				}
 			else if response[0] is SuMessageFormatter.Type.OVERLAY
-				{
 				if response[2/*=hide*/] is false
 					.overlay.Show(#working, msg: response[1/*=msg*/], level: 50)
 				else
 					.overlay.Close(#working)
-				}
 			else
 				{
 				eventId = response[1]
@@ -672,7 +675,7 @@ class
 		catch (e)
 			{
 			.overlayEvent = .freezeEvent = .delayedTask = false
-			.Event(false, 'SuBrowserError', [message: e, stack: e.Callstack()])
+			.Event(false, #SuBrowserError, [message: e, stack: e.Callstack()])
 			}
 		}
 
@@ -693,9 +696,9 @@ class
 		return id
 		}
 
-	CancelDelayedTask(id = 'any')
+	CancelDelayedTask(id = #any)
 		{
-		if id isnt 'any' and (.delayedTask is false or .delayedTask.id isnt id)
+		if id isnt #any and (.delayedTask is false or .delayedTask.id isnt id)
 			return
 		.delayedTask = false
 		}
@@ -709,9 +712,7 @@ class
 				continue
 
 			if action.uniqueId is false
-				{
 				Global(action.action)(@action.args)
-				}
 			else
 				{
 				id = Display(action.uniqueId)
@@ -734,12 +735,10 @@ class
 	debug36105(action, id, uniqueId)
 		{
 		nearbys = Object()
-		for (i = -5; i <= 5/*=upper*/; i++)
-			{
+		for (i = -5; i <= 5/*=upper*/; i += 1)
 			if .components.Member?(Display(uniqueId + i))
-				nearbys.Add(Display(.components[Display(uniqueId + i)]) $
-					' - ' $ (uniqueId + i))
-			}
+				nearbys.Add(
+					Display(.components[Display(uniqueId + i)]) $ " - " $ (uniqueId + i))
 
 		all = Object()
 		for m in .components.Members()
@@ -756,19 +755,18 @@ class
 			:componentMax,
 			componentNearbys: nearbys]
 
-		.Event(false, 'Debug36105', Object(action, params, all))
+		.Event(false, #Debug36105, [action, params, all])
 		}
 
 	canvas: false
 	GetTextMetrics(el, text)
 		{
 		if .canvas is false
-			.canvas = CreateElement('canvas')
+			.canvas = CreateElement(#canvas)
 
-		context = .canvas.GetContext('2d')
-		context.font = SuUI.GetCurrentWindow().
-			GetComputedStyle(el).
-			GetPropertyValue('font')
+		context = .canvas.GetContext("2d")
+		context.font =
+			SuUI.GetCurrentWindow().GetComputedStyle(el).GetPropertyValue(#font)
 		width = height = 0
 		ascent = 0
 		descent = 0
@@ -803,10 +801,10 @@ class
 		if .scrollbarWidth isnt false
 			return .scrollbarWidth
 
-		outer = CreateElement('div', parent: SuUI.GetCurrentDocument().body)
-		outer.SetStyle('visibility', 'hidden')
-		outer.SetStyle('overflow', 'scroll')
-		inner = CreateElement('div', parent: outer)
+		outer = CreateElement(#div, parent: SuUI.GetCurrentDocument().body)
+		outer.SetStyle(#visibility, #hidden)
+		outer.SetStyle(#overflow, #scroll)
+		inner = CreateElement(#div, parent: outer)
 		.scrollbarWidth = outer.offsetWidth - inner.offsetWidth
 		outer.Remove()
 		return .scrollbarWidth
@@ -818,6 +816,7 @@ class
 		.dropFilesList[.hDrop] = files
 		return .hDrop++
 		}
+
 	GetDropFiles(hDrop)
 		{
 		dropFiles = .dropFilesList.GetDefault(hDrop, false)
@@ -829,8 +828,7 @@ class
 	beforeUnload(event)
 		{
 		if .socketStatus is SuSocketStatus.init or
-			.socketStatus is SuSocketStatus.terminated or
-			.DisableUnloadAlert?
+			.socketStatus is SuSocketStatus.terminated or .DisableUnloadAlert?
 			return
 
 		event.PreventDefault()
@@ -838,11 +836,10 @@ class
 		event.returnValue = "Are you sure you want to logout?"
 		}
 
-	ignores: #('ResizeObserver loop limit exceeded',
-		'ResizeObserver loop completed with undelivered notifications.',
+	ignores: ("ResizeObserver loop limit exceeded",
+		"ResizeObserver loop completed with undelivered notifications.",
 		// from stands AdBlocker
-		'Cannot redefine property: googletag',
-		)
+		"Cannot redefine property: googletag")
 	onError(event)
 		{
 		if .socketStatus is SuSocketStatus.terminated
@@ -853,13 +850,13 @@ class
 
 		if .isThirdPartyError?(event)
 			{
-			SuneidoLog('ERROR (CAUGHT) - BrowserError: ' $ event.message,
+			SuneidoLog("ERROR (CAUGHT) - BrowserError: " $ event.message,
 				calls: event.error.stack,
-				caughtMsg: 'Possibly external; Ignored')
+				caughtMsg: "Possibly external; Ignored")
 			return false
 			}
 
-		.Event(false, 'SuBrowserError',
+		.Event(false, #SuBrowserError,
 			[message: event.message, stack: event.error.stack])
 		return true
 		}
@@ -879,11 +876,9 @@ class
 			// Blink/Chrome: at $f (source:line:column)
 			// WebKit/Safari: $f@source:line:column
 			for line in lines
-				{
-				if line =~ `\<\$f\>` or line.Has?('su_bundle.min.js') or
-					line.Has?('su_code_bundle.js')
+				if line =~ `\<\$f\>` or line.Has?("su_bundle.min.js") or
+					line.Has?("su_code_bundle.js")
 					return false
-				}
 			return true
 			}
 		return false
@@ -893,14 +888,15 @@ class
 		{
 		if .socketStatus is SuSocketStatus.terminated
 			return false
-		.Event(false, 'SuBrowserError',
-			[message: event.reason.message, stack: event.reason.stack])
+		.Event(false, #SuBrowserError,
+			[message: event.reason.message,
+				stack: event.reason.GetDefault(#stack, #UNKNOWN)])
 		return true
 		}
 
 	ActivateWindow(id)
 		{
-		.Event(false, 'WindowActivate', [id], showOverlay?:)
+		.Event(false, #WindowActivate, [id], showOverlay?:)
 		}
 
 	Shutdown()

@@ -135,7 +135,10 @@ Controller
 	// THIS is currently called from  Addon_VirtualListTopFilters.Select_Apply
 	Where(selectFields)
 		{
-		where = .FindControl('Header').Where()
+		// if filters are invalid this returns false
+		// Calling code handles false
+		if false is where = .FindControl('Header').Where()
+			return false
 		x = selectFields.Joins(where.joinflds) $ where.where
 		x $= .Send('Select_ExtraWhere', .selectControls)
 		return x

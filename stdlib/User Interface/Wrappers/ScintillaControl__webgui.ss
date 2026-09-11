@@ -1,30 +1,30 @@
 // Copyright (C) 2020 Axon Development Corporation All rights reserved worldwide.
 Control
 	{
-	Name:		"Editor"
-	ComponentName:	"Scintilla"
+	Name:            #Editor
+	ComponentName:   #Scintilla
 	DefaultFontSize: 11
 	Unsortable: true
 
-	New(style/*unused*/ = 0, .readonly = false, lexer/*unused*/ = 'NULL',
-		wrap = false, set = false, margin/*unused*/ = 12,
-		exStyle/*unused*/ = 0, height = false, .tabthrough = false)
+	New(style/*unused*/ = 0, .readonly = false, lexer/*unused*/ = #NULL, wrap = false,
+		set = false, margin/*unused*/ = 12, exStyle/*unused*/ = 0, height = false,
+		.tabthrough = false)
 		{
 		.setReadOnly = .readonly
 		widths = #(tab: 4, scroll: 10)
 		.SetTABWIDTH(widths.tab)
 		.SetWrap(wrap)
-		.Send("Data")
+		.Send(#Data)
 
 		.Map = Object()
 		if set isnt false
 			.Defer({ .Set(set) })
 
-		.findreplacedata = Record()
+		.findreplacedata = []
 
-		.ComponentArgs = Object(readonly, height, tabthrough)
+		.ComponentArgs = [readonly, height, tabthrough]
 
-.lastEvents = Object().Set_default(Object())
+		.lastEvents = Object().Set_default(Object())
 		}
 
 	BaseStyling()
@@ -37,6 +37,7 @@ Control
 		{
 		.Act(#SetlineWrapping, wrap)
 		}
+
 	GetWrapMode()
 		{
 		return .wrap is true ? SC.WRAP_WORD : SC.WRAP_NONE
@@ -47,11 +48,13 @@ Control
 		{
 		return .readonly is true or .setReadOnly is true
 		}
+
 	// used by Addon_speller
 	GetReadonly()
 		{
 		return .GetReadOnly() ? 1 : 0
 		}
+
 	SetReadOnly(readonly = true)
 		{
 		if .readonly
@@ -61,27 +64,28 @@ Control
 		return .Act(#SetReadOnly, .setReadOnly = readonly)
 		}
 
-	lastDirtyCallstack:	''
-	lastDirtyParams: 	''
+	lastDirtyCallstack: ""
+	lastDirtyParams:    ""
 	SetReadOnlyLogging(name) // Extra logging for suggestion 25689, and 37312
 		{
 		try
 			{
-			SuneidoLog('ERROR: ScintillaControl SetReadonly(true) when dirty',
+			SuneidoLog("ERROR: ScintillaControl SetReadonly(true) when dirty",
 				calls: .callStack(),
 				params: Object(
-					:name,
-					dirty: .dirty,
-					modify: .GetModify(),
-					alreadyReadOnly: .GetReadOnly()
-					lastModify: .logging_lastModify,
-					modifyFocused?: .logging_focusedModify?).Merge(.lastEvents))
-			SuneidoLog('INFO: Error follow up log, last .Dirty? call stack',
+						:name,
+						dirty: .dirty,
+						modify: .GetModify(),
+						alreadyReadOnly: .GetReadOnly(),
+						lastModify: .logging_lastModify,
+						modifyFocused?: .logging_focusedModify?).
+					Merge(.lastEvents))
+			SuneidoLog("INFO: Error follow up log, last .Dirty? call stack",
 				calls: .lastDirtyCallstack, params: .lastDirtyParams)
-			SuRenderBackend().DumpStatus('ScintillaControl SetReadonly(true) when dirty')
+			SuRenderBackend().DumpStatus("ScintillaControl SetReadonly(true) when dirty")
 			}
 		catch (error)
-			SuneidoLog('ERROR: ScintillaControl.SetReadOnlyLogging encountered an error',
+			SuneidoLog("ERROR: ScintillaControl.SetReadOnlyLogging encountered an error",
 				calls:, params: Object(:error, :name))
 		}
 
@@ -89,11 +93,13 @@ Control
 		{
 		RemoveAssertsFromCallStack(calls = GetCallStack(:limit))
 		// Remove redundant / unnecessary broadcast/send loop
-		return FormatCallStack(calls, levels: limit).Lines().
+		return FormatCallStack(calls, levels: limit).
+			Lines().
 			RemoveIf(
 				{
-				it.Has?('Container.Broadcast ') or it.Has?('Container.SetReadOnly ')
-				}).Join('\n')
+				it.Has?("Container.Broadcast ") or it.Has?("Container.SetReadOnly ")
+				}).
+			Join('\n')
 		}
 
 	GETREADONLY()
@@ -101,29 +107,32 @@ Control
 		return .GetReadOnly() ? 1 : 0
 		}
 
-	s: ''
+	s: ""
 	Get()
 		{
 		return .s
 		}
+
 	Set(s)
 		{
-		.CancelAct('Set')
-		.CancelAct('AppendText')
+		.CancelAct(#Set)
+		.CancelAct(#AppendText)
 		.s = EnsureCRLF(s)
 		.Act(#Set, .s)
 		.Dirty?(false)
 		}
+
 	Scintilla_UpdateValue(change)
 		{
-		.s = .s[..change.from] $ change.text $ .s[change.to..]
+		.s = .s[.. change.from] $ change.text $ .s[change.to ..]
 		}
 
-	wordchars: 'zyxwvutsrqponmlkjihgfedcba_ZYXWVUTSRQPONMLKJIHGFEDCBA?9876543210!'
+	wordchars: "zyxwvutsrqponmlkjihgfedcba_ZYXWVUTSRQPONMLKJIHGFEDCBA?9876543210!"
 	SetWordChars(.wordchars)
 		{
 		.Act(#SetWordChars, wordchars)
 		}
+
 	GetWordChars()
 		{
 		return .wordchars
@@ -147,7 +156,7 @@ Control
 		curPos = .GetCurrentPos()
 		lineNum = .LineFromPosition(curPos)
 		start = .PositionFromLine(lineNum)
-		firstNonWS = .Get().Find1of('^ \t', pos: start)
+		firstNonWS = .Get().Find1of("^ \t", pos: start)
 		.SetSelect(curPos > firstNonWS ? firstNonWS : start)
 		}
 
@@ -210,10 +219,10 @@ Control
 		}
 
 	dirty: false
-	Dirty?(dirty = '')
+	Dirty?(dirty = "")
 		{
 		Assert(dirty is true or dirty is false or dirty is "")
-		if dirty isnt ''
+		if Boolean?(dirty)
 			.dirty = dirty
 		if dirty is true
 			{
@@ -231,31 +240,32 @@ Control
 
 	EN_CHANGE()
 		{
-.lastEvents['EN_CHANGE'] = Object(
-	eventId: SuRenderBackend().SuRenderBackend_eventId,
-	t: dirty_TS = Timestamp())
-		.Send("EN_CHANGE")
+		.lastEvents.EN_CHANGE = Object(
+			eventId: SuRenderBackend().SuRenderBackend_eventId,
+			t: dirty_TS = Timestamp())
+		.Send(#EN_CHANGE)
 		.dirty = true
 		.lastDirtyCallstack = .callStack(limit: 25)
 		.lastDirtyParams = Object(:dirty_TS)
 		return 0
 		}
 
-	logging_lastModify: false
+	logging_lastModify:     false
 	logging_focusedModify?: false
 	SCN_MODIFIED(lParam)
 		{
 		try
 			.logging_lastModify = SCNotification(lParam).modificationType
-		catch(error)
-			.logging_lastModify = 'Failed to get modification type: ' $ error
+		catch (error)
+			.logging_lastModify = "Failed to get modification type: " $ error
 		.logging_focusedModify? = .HasFocus?()
-.lastEvents['SCN_MODIFIED'] = Object(
-	eventId: SuRenderBackend().SuRenderBackend_eventId,
-	t: Timestamp(), readonly: .GetReadOnly(), focus: .HasFocus?(), dirty?: .Dirty?())
+		.lastEvents.SCN_MODIFIED = Object(
+			eventId: SuRenderBackend().SuRenderBackend_eventId,
+			t: Timestamp(), readonly: .GetReadOnly(), focus: .HasFocus?(),
+			dirty?: .Dirty?())
 		// .Paste may change the value without having the focus in the field
 		if .GetReadOnly() is false and not .HasFocus?() and .Dirty?()
-			.Send("NewValue", .Get())
+			.Send(#NewValue, .Get())
 		}
 
 	SetMethodModifying?()
@@ -265,20 +275,20 @@ Control
 
 	LBUTTONUP(pos)
 		{
-		.Send('Scintilla_LButtonUp', pos)
+		.Send(#Scintilla_LButtonUp, pos)
 		}
 
-	Scintilla_SetValue() {}
+	Scintilla_SetValue() { }
 
 	SCEN_KILLFOCUS()
 		{
-.lastEvents['SCEN_KILLFOCUS'] = Object(
-	eventId: SuRenderBackend().SuRenderBackend_eventId,
-	t: Timestamp(), dirty?: .Dirty?())
+		.lastEvents.SCEN_KILLFOCUS = Object(
+			eventId: SuRenderBackend().SuRenderBackend_eventId,
+			t: Timestamp(), dirty?: .Dirty?())
 		.closePopup()
-		.Send('Scintilla_KillFocus')
-		if (.Dirty?())
-			.Send("NewValue", .Get())
+		.Send(#Scintilla_KillFocus)
+		if .Dirty?()
+			.Send(#NewValue, .Get())
 		return 0
 		}
 
@@ -289,10 +299,10 @@ Control
 
 	SCEN_SETFOCUS()
 		{
-.lastEvents['SCEN_SETFOCUS'] = Object(
-	eventId: SuRenderBackend().SuRenderBackend_eventId,
-	t: Timestamp(), dirty?: .Dirty?())
-		.Send('Scintilla_SetFocus')
+		.lastEvents.SCEN_SETFOCUS = Object(
+			eventId: SuRenderBackend().SuRenderBackend_eventId,
+			t: Timestamp(), dirty?: .Dirty?())
+		.Send(#Scintilla_SetFocus)
 		return 0
 		}
 
@@ -301,7 +311,7 @@ Control
 		.SCEN_SETFOCUS()
 		}
 
-	selection: #(anchor: 0, head: 0)
+	selection: (anchor: 0, head: 0)
 	SU_UPDATESELECT(.selection)
 		{
 		.selection.head
@@ -309,9 +319,7 @@ Control
 		}
 
 	firstVisibleLine: 0
-	SU_SYNCFIRSTVISIBLELINE(.firstVisibleLine)
-		{
-		}
+	SU_SYNCFIRSTVISIBLELINE(.firstVisibleLine) { }
 
 	GetFirstVisibleLine()
 		{
@@ -321,59 +329,70 @@ Control
 	SetFirstVisibleLine(line, centerInScreen? = false)
 		{
 		.firstVisibleLine = line
-		.Act('SetFirstVisibleLine', line, :centerInScreen?)
+		.Act(#SetFirstVisibleLine, line, :centerInScreen?)
 		}
 
-	LinesOnScreen() { return 0 }
+	LinesOnScreen()
+		{
+		return 0
+		}
 
 	GetSelectionStart()
 		{
 		return Min(.selection.anchor, .selection.head)
 		}
+
 	GetSelectionEnd()
 		{
 		return Max(.selection.anchor, .selection.head)
 		}
+
 	SelSize()
 		{
 		return .GetSelectionEnd() - .GetSelectionStart()
 		}
+
 	GetSelText()
 		{
 		sel = .GetSelect()
 		return .GetRange(sel.cpMin, sel.cpMax)
 		}
+
 	GetSelect()
 		{
 		return Object(
 			cpMin: .GetSelectionStart(),
 			cpMax: .GetSelectionEnd())
 		}
+
 	SetSelect(i, n = 0)
 		{
 		.selection = Object(anchor: i, head: i + n)
 		.SetSel(i, i + n)
 		}
+
 	SetVisibleSelect(i, n)
 		{
 		.EnsureRangeVisible(i, i + n)
 		.SetSelect(i, n)
 		}
+
 	AddSelection(head, anchor)
 		{
 		.SU_UPDATESELECT([:anchor, :head])
-		.Act('AddSel', head, anchor)
+		.Act(#AddSel, head, anchor)
 		}
+
 	DoWithCurrentPos(block)
 		{
-		.Act('SavePos')
+		.Act(#SavePos)
 		block()
-		.Act('RestorePos')
+		.Act(#RestorePos)
 		}
 
 	SCN_DOUBLECLICK()
 		{
-		.Send('Scintilla_DoubleClick')
+		.Send(#Scintilla_DoubleClick)
 		}
 
 	GetCurrentPos()
@@ -399,11 +418,11 @@ Control
 		.s.ForEach1of('\n')
 			{
 			if curLine is line
-				return .s[prevPos..it - 1]
-			curLine++
+				return .s[prevPos .. it-1]
+			curLine += 1
 			prevPos = it + 1
 			}
-		return .s[prevPos...s.Size()]
+		return .s[prevPos .. .s.Size()]
 		}
 
 	LineFromPosition(pos = false)
@@ -459,9 +478,7 @@ Control
 		return .s.Size()
 		}
 
-	UPDATEUI()
-		{
-		}
+	UPDATEUI() { }
 
 	On_Find()
 		{
@@ -474,9 +491,9 @@ Control
 
 	DoFind(x)
 		{
-		if x is 'prev'
+		if x is #prev
 			return .On_Find_Previous()
-		else if x is 'next'
+		else if x is #next
 			return .On_Find_Next()
 		}
 
@@ -484,6 +501,7 @@ Control
 		{
 		return .findAndMatch()
 		}
+
 	On_Find_Previous()
 		{
 		return .findAndMatch(prev:)
@@ -492,14 +510,14 @@ Control
 	findAndMatch(prev = false)
 		{
 		getSelect = prev is false ? .GetSelect().cpMax : .GetSelect().cpMin
-		if false is match =
-			Find.DoFind(.SearchText(), getSelect, .findreplace_options, :prev)
+		if false is
+			match = Find.DoFind(.SearchText(), getSelect, .findreplace_options, :prev)
 			{
-			.Send('UpdateOccurrence', num: 0, count: 0)
+			.Send(#UpdateOccurrence, num: 0, count: 0)
 			return false
 			}
 		findOb = .numOfMatch(match)
-		.Send('UpdateOccurrence', num: findOb.num, count: findOb.count)
+		.Send(#UpdateOccurrence, num: findOb.num, count: findOb.count)
 		.SetVisibleSelect(match[0], match[1])
 		return true
 		}
@@ -519,7 +537,7 @@ Control
 			.findreplace_options)
 			return false
 		.ReplaceSelFromServer(s)
-		if .findreplacedata.replaceIn is "Selection"
+		if .findreplacedata.replaceIn is #Selection
 			{
 			size_after = .GetTextLength()
 			.SetSelect(sel.cpMin, sel.cpMax - sel.cpMin + (size_after - size))
@@ -532,15 +550,15 @@ Control
 		sel = .GetSelect()
 		size = .GetTextLength()
 		line = .GetFirstVisibleLine()
-		if .findreplacedata.replaceIn isnt "Selection" // whole file
+		if .findreplacedata.replaceIn isnt #Selection // whole file
 			.SelectAllFromServer()
 		curSel = .GetSelect()
-		if false is	s = Find.DoReplace(.SearchText(), .GetSelText(),
+		if false is s = Find.DoReplace(.SearchText(), .GetSelText(),
 			curSel.cpMin, curSel.cpMax, .findreplace_options)
 			return
 		.ReplaceSelFromServer(s)
 		.SetFirstVisibleLine(line)
-		if (.findreplacedata.replaceIn is "Selection")
+		if .findreplacedata.replaceIn is #Selection
 			{
 			size_after = .GetTextLength()
 			.SetSelect(sel.cpMin, sel.cpMax - sel.cpMin + (size_after - size))
@@ -571,10 +589,12 @@ Control
 		{
 		.find_selected(.On_Find_Next)
 		}
+
 	On_Find_Prev_Selected()
 		{
 		.find_selected(.On_Find_Previous)
 		}
+
 	find_selected(nextprev)
 		{
 		sel = .GetSelect()
@@ -588,12 +608,11 @@ Control
 		.findreplacedata.case = true
 		.findreplacedata.regex = false
 		.findreplacedata.word = sel.cpMin is sel.cpMax
-		.Send("FindBar_OpenFindBar")
+		.Send(#FindBar_OpenFindBar)
 		nextprev()
 		}
 
-	Context_Menu: (
-		"&Undo\tCtrl+Z", "&Redo\tCtrl+Y", "",
+	Context_Menu: ("&Undo\tCtrl+Z", "&Redo\tCtrl+Y", "",
 		"Cu&t\tCtrl+X", "&Copy\tCtrl+C", "&Paste\tCtrl+V", "&Delete", "",
 		"Select &All\tCtrl+A", "Find...\tCtrl+F")
 	ContextMenu(x, y)
@@ -611,21 +630,45 @@ Control
 		}
 
 	On_Context_Cut()
-		{ .On_Cut() }
+		{
+		.On_Cut()
+		}
+
 	On_Context_Copy()
-		{ .On_Copy() }
+		{
+		.On_Copy()
+		}
+
 	On_Context_Paste()
-		{ .On_Paste() }
+		{
+		.On_Paste()
+		}
+
 	On_Context_Undo()
-		{ .On_Undo() }
+		{
+		.On_Undo()
+		}
+
 	On_Context_Redo()
-		{ .On_Redo() }
+		{
+		.On_Redo()
+		}
+
 	On_Context_Delete()
-		{ .On_Delete() }
+		{
+		.On_Delete()
+		}
+
 	On_Context_Select_All()
-		{ .On_Select_All() }
+		{
+		.On_Select_All()
+		}
+
 	On_Context_Find()
-		{ .On_Find() }
+		{
+		.On_Find()
+		}
+
 	SelectCurrentWord()
 		{
 		// TODO handle cursor at start of word
@@ -643,39 +686,45 @@ Control
 		{
 		if .GetReadOnly() is true
 			return
-		.Act('CUT')
+		.Act(#CUT)
 		}
+
 	On_Copy()
 		{
-		.Act('COPY')
+		.Act(#COPY)
 		}
+
 	On_Paste()
 		{
 		if .GetReadOnly() is true
 			return
-		.Act('PASTE')
+		.Act(#PASTE)
 		}
+
 	On_Undo()
 		{
 		if .GetReadOnly() is true
 			return
-		.Act('UNDO')
+		.Act(#UNDO)
 		}
+
 	On_Redo()
 		{
 		if .GetReadOnly() is true
 			return
-		.Act('REDO')
+		.Act(#REDO)
 		}
+
 	On_Delete()
 		{
 		if .GetReadOnly() is true
 			return
-		.Act('DELETE')
+		.Act(#DELETE)
 		}
+
 	On_Select_All()
 		{
-		.Act('SELECTALL')
+		.Act(#SELECTALL)
 		}
 
 	SelectAllFromServer()
@@ -693,7 +742,7 @@ Control
 	PasteOverAll(s)
 		{
 		.On_Select_All()
-		.Act('Paste', s)
+		.Act(#Paste, s)
 		.SetSelect(0)
 		}
 
@@ -701,10 +750,10 @@ Control
 		{
 		if .GetReadOnly() is true
 			return
-		.Act('Paste', s)
+		.Act(#Paste, s)
 		}
 
-	listctrl: false
+	listctrl:    false
 	autocPrefix: 0
 	SCIAutocShow(.autocPrefix, matches)
 		{
@@ -737,7 +786,7 @@ Control
 
 	syncAutocStatus(open)
 		{
-		.Act('SyncAutocStatus', open)
+		.Act(#SyncAutocStatus, open)
 		}
 
 	AUTOC_KEYDOWN(key)
@@ -745,7 +794,7 @@ Control
 		if .listctrl is false
 			return
 
-		switch (key)
+		switch key
 			{
 		case #ArrowDown:
 			.listctrl.Down()
@@ -815,7 +864,7 @@ Control
 	Destroy()
 		{
 		.closePopup()
-		.Send("NoData")
+		.Send(#NoData)
 		super.Destroy()
 		}
 	}

@@ -25,7 +25,7 @@ AstFmtExpr
 	TryCatch(node, ctx, curr)
 		{
 		parts = [.Text(#try)]
-		parts.Add(.Cm.Trailing(curr, node.pos + 3))/*= "try".Size() */
+		parts.Add(.Cm.Trailing(curr, node.pos + 3)) /*= "try".Size() */
 		parts.Add(
 			.ctlBody(node.try, ctx, curr, guard: node.catch is false ? false : #Catch))
 		if false isnt c = node.catch
@@ -51,12 +51,12 @@ AstFmtExpr
 		forever
 			{
 			c = .cond(node.cond, ctx, curr)
-			parts.Add(
-				.Cat("if ", c,
-					.ctlBody(node.t, ctx, curr, guard: node.f is false ? false : #Else)))
+			parts.Add(.Cat("if ", c,
+				.ctlBody(node.t, ctx, curr, guard: node.f is false ? false : #Else)))
 			if node.f is false
 				break
 			parts.Add(.Hard)
+			parts.Add(.Cm.Leading(curr, node.elseend - #else.Size()))
 			parts.Add(.Text(#else))
 			parts.Add(.Cm.Trailing(curr, node.elseend))
 			f = node.f
@@ -138,12 +138,10 @@ AstFmtExpr
 		{
 		vals = Object()
 		for (j = 0; j < c.size; ++j)
-			{
-			if j > 0
-				vals.Add(.Text(", "))
 			vals.Add(.Fmt(c[j], ctx, curr))
-			}
-		return .Cat("case ", .Catl(vals), ':')
+		// two levels of nest so a wrapped label is not mistaken for the case body,
+		// which sits one level in from the label
+		return .Group(.Cat("case ", .Nest(.Nest(.Fillsep(vals, .Cat(',', .Line)))), ':'))
 		}
 
 	caseBody(parts, body, ctx, curr)

@@ -10,6 +10,8 @@ class
 		// A Suneido.js server is acting as a server even if the exe is in standalone
 		Sys.SetServer()
 		LibraryTags.AddMode('webgui')
+		Suneido.User = 'none'
+		Suneido.user_roles = #("none")
 
 		// Preload the class to prevent duplicate token issues caused by concurrent
 		// .CreateToken calls. If the class code isn't already loaded and multiple calls

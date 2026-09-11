@@ -19,14 +19,14 @@ class
 		}
 
 	InErrorHandler: false
-	pageVisible?: false
+	pageVisible?:   false
 	New(.WSHandler, .Token, .Key)
 		{
 		.controls = Object()
 		.status = Object().Set_default(false)
 
-		.timeoutMin = Database.Info().GetDefault(#timeoutMin, 240/*= 4 hrs*/)
-		.overrideProc =  Object()
+		.timeoutMin = Database.Info().GetDefault(#timeoutMin, 240 /*= 4 hrs*/)
+		.overrideProc = Object()
 		.beforeDisconnectFn = Object()
 		.LastEvent(Date())
 		.WindowManager = WindowManager()
@@ -51,19 +51,19 @@ class
 			{
 			events = .eventRecorder.Get()
 			actionToAckN = .actionToAck.Size()
-			s = msg $ '\r\n'
-			s $= 'Token: ' $ Base64.Decode(.Token) $ '\r\n'
-			s $= 'ActionToAckN: ' $ actionToAckN $ '\r\n'
-			s $= 'Events (' $ events.Size() $ '):\r\n'
+			s = msg $ "\r\n"
+			s $= "Token: " $ Base64.Decode(.Token) $ "\r\n"
+			s $= "ActionToAckN: " $ actionToAckN $ "\r\n"
+			s $= "Events (" $ events.Size() $ "):\r\n"
 			for event in events
-				s $= EventRecorder.Format(event) $ '\r\n'
+				s $= EventRecorder.Format(event) $ "\r\n"
 
-			if false isnt path = GetContributions('LogPaths').GetDefault(#sujslog, false)
+			if false isnt path = GetContributions(#LogPaths).GetDefault(#sujslog, false)
 				Rlog(path, s, multi_line:)
 			}
 		catch (e)
-			SuneidoLog('ERROR: (CAUGHT) SuRenderBackend.DumpStatus - ' $ e,
-				params: [:msg], caughtMsg: 'For debugging only')
+			SuneidoLog("ERROR: (CAUGHT) SuRenderBackend.DumpStatus - " $ e,
+				params: [:msg], caughtMsg: "For debugging only")
 		}
 
 	id: 1
@@ -115,6 +115,7 @@ class
 		if socket isnt false
 			.checkReconnect? = true
 		}
+
 	closeReconnectSocket()
 		{
 		if .reconnectSocket isnt false
@@ -133,11 +134,11 @@ class
 	BeforeDisconnect()
 		{
 		.beforeDisconnectFn.Each()
-			{ |fn|
+			{|fn|
 			try
 				fn()
 			catch (e)
-				SuneidoLog('ERROR: BeforeDisconnect - ' $ e, params: [fn])
+				SuneidoLog("ERROR: BeforeDisconnect - " $ e, params: [fn])
 			}
 		.closeReconnectSocket()
 		SuJsSessionToken.Unregister(.Token)
@@ -150,13 +151,11 @@ class
 
 		master = false
 		for w in Suneido.Persistent.Windows
-			{
 			if w.Master? isnt false and .controls.Member?(w.UniqueId)
 				{
 				master = w
 				break
 				}
-			}
 		if master isnt false
 			master.DESTROY()
 		}
@@ -177,17 +176,17 @@ class
 		return result
 		}
 
-check(ob)
-	{
-	if Object?(ob)
-		for item in ob
-			if .check(item) is true
-				{
-				SuneidoLog('item', params: item)
-				return true
-				}
-	return Class?(ob) or Instance?(ob)
-	}
+	check(ob)
+		{
+		if Object?(ob)
+			for item in ob
+				if .check(item) is true
+					{
+					SuneidoLog(#item, params: item)
+					return true
+					}
+		return Class?(ob) or Instance?(ob)
+		}
 
 	Status()
 		{
@@ -203,10 +202,10 @@ check(ob)
 		.eventRecorder.Add(#event, args)
 		.processAck(args[2])
 
-		if false isnt response = .actionToAck.GetDefault(args[1]/*eventId*/, false)
+		if false isnt response = .actionToAck.GetDefault(args[1], /*eventId*/ false)
 			return response.result
 		.eventId = args[1]
-		switch (args[0])
+		switch args[0]
 			{
 		case SuMessageFormatter.Type.UpdateStatus:
 			.status[args[3/*=member*/]] = args[4/*=value*/]
@@ -238,11 +237,11 @@ check(ob)
 		{
 		if .connectionValid?(ack, eventId) is false
 			{
-			SuneidoLog('INFO: Invalid reconnect detected',
+			SuneidoLog("INFO: Invalid reconnect detected",
 				params: [:ack, :eventId, mostRecentAck: .mostRecentAck,
 					actionToAck: .actionToAck.Members()])
-			.DumpStatus('Invalid reconnect detected')
-			.Terminate(reason: 'Reconnect is invalid')
+			.DumpStatus("Invalid reconnect detected")
+			.Terminate(reason: "Reconnect is invalid")
 			}
 		.checkReconnect? = false
 		}
@@ -268,14 +267,13 @@ check(ob)
 	checkTimeout()
 		{
 		if Date().MinusMinutes(.LastEvent()) > .timeoutMin
-			Finally(
-				{ SuneidoLog(.TimedOutMsg $ Thread.Name()) },
-				{ .Terminate(reason: 'Disconnected due to lack of activity') })
+			Finally({ SuneidoLog(.TimedOutMsg $ Thread.Name()) },
+			{ .Terminate(reason: "Disconnected due to lack of activity") })
 		}
 
 	syncVisibility(state)
 		{
-		.pageVisible? = state is 'visible'
+		.pageVisible? = state is #visible
 		.WSHandler.GetSocket().SetTimeout(.pageVisible? ? 3 : 75/*=timeout*/)
 		}
 
@@ -288,14 +286,13 @@ check(ob)
 			.CallProc(uniqueId, event, args)
 		}
 
-	CallProc(uniqueId, event, args = [])
+	CallProc(uniqueId, event, args = #{})
 		{
-		for (i = .overrideProc.GetDefault(uniqueId, #()).Size() - 1; i >= 0; i--)
+		for (i = .overrideProc.GetDefault(uniqueId, #()).Size() - 1; i >= 0; i -= 1)
 			if ((.overrideProc[uniqueId][i])(uniqueId, event, args) is false)
 				return
 
 		if false isnt control = .controls.GetDefault(uniqueId, false)
-			{
 			if control.Method?(event)
 				{
 				// RunSuJsWebTest and DoTaskWithPause__webgui register as a control
@@ -306,7 +303,6 @@ check(ob)
 					_hwnd = 0
 				(.controls[uniqueId][event])(@args)
 				}
-			}
 		}
 
 	ReserveAction()
@@ -343,7 +339,7 @@ check(ob)
 		{
 		if false is at = .actions.FindIf({ it.Member?(#reserved?) })
 			return
-		.CancelAllAfter(at-1)
+		.CancelAllAfter(at - 1)
 		}
 
 	RecordAction(uniqueId, action, args, at = false)
@@ -362,25 +358,25 @@ check(ob)
 		{
 		try
 			.actions.Add(ob)
-		catch (e/*unused*/, 'object too large')
+		catch (e/*unused*/, "object too large")
 			{
 			actions = .actions
 			.actions = Object()
 			.logObjectTooLarge(actions)
-			.Terminate(reason: 'Fatal')
+			.Terminate(reason: #Fatal)
 			}
 		}
 
 	logObjectTooLarge(actions, warn = false)
 		{
-		LogErrors('SuRenderBackend.logObjectTooLarge')
+		LogErrors("SuRenderBackend.logObjectTooLarge")
 			{
 			temp = Object().Set_default(0)
 			for action in actions
 				{
 				if action.Member?(#reserved?)
 					continue
-				temp[action.Project(#('uniqueId', 'action'))]++
+				temp[action.Project(#(uniqueId, action))]++
 				}
 			stats = Object()
 			for m in temp.Members()
@@ -394,9 +390,10 @@ check(ob)
 					it.name = c.Name
 					}
 				}
-			msg = 'Suneido.js action list too large'
-			SuneidoLog((warn ? 'WARNING' : 'ERROR') $ ' - ' $ msg $
-				' (' $ ReadableSize(actions.Size()) $ ')',
+			msg = "Suneido.js action list too large"
+			SuneidoLog(
+				(warn ? "WARNING" : "ERROR") $ " - " $ msg $ " (" $
+					ReadableSize(actions.Size()) $ ')',
 				:params, calls:)
 			.DumpStatus(msg)
 			}
@@ -404,11 +401,13 @@ check(ob)
 
 	CancelAction(uniqueId, action, block = false)
 		{
-		for toCancel in .actions.Filter({
+		for toCancel in .actions.Filter(
+			{
 			not it.Member?(#reserved?) and not it.Member?(#canceled) and
-			(uniqueId is #ignore or it.uniqueId is uniqueId) and
-			it.action is action and
-			(block is false or block(it.args)) })
+				(uniqueId is #ignore or it.uniqueId is uniqueId) and
+				(Object?(action) ? action.Has?(it.action) : it.action is action) and
+				(block is false or block(it.args))
+			})
 			{
 			toCancel.canceled = true
 			toCancel.args = false
@@ -417,13 +416,14 @@ check(ob)
 
 	CancelAllAfter(at)
 		{
-		.actions = .actions[..at+1]
+		.actions = .actions[.. at+1]
 		}
 
 	Overlay(msg, hide = false)
 		{
-		.WSHandler.Send(#BINARY, Pack(SuMessageFormatter.FormatResponse(
-			SuMessageFormatter.Type.OVERLAY, arg1: msg, arg2: hide)))
+		.WSHandler.Send(#BINARY,
+			Pack(SuMessageFormatter.FormatResponse(SuMessageFormatter.Type.OVERLAY,
+				arg1: msg, arg2: hide)))
 		}
 
 	Terminate(@args) /*usage: reason = false, e = false */

@@ -18,15 +18,21 @@ class
 		{
 		// need the win32 check because this is called by DrawItem.BuildItems
 		// which is called by demo data when it's running generate invoice reports
-		return .ScaleBy = Sys.Win32?() ? GetDpiFactor() : 1
+		return .ScaleBy = Sys.Win32?() ? .getDpiFactor() : 1
 		}
+
+	getDpiFactor(_dpi = false)
+		{
+		return dpi is false ? GetDpiFactor() : dpi
+		}
+
 	Paint()
 		{
 		}
 	handleBoundary: 3
 	HandleBoundary()
 		{
-		return .handleBoundary * GetDpiFactor()
+		return .handleBoundary * .getDpiFactor()
 		}
 	PaintHandles(hdc)
 		{

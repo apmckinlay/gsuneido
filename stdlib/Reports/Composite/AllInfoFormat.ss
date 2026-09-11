@@ -58,12 +58,12 @@ Format
 		for (i = 1; i <= .maxInfoFields; ++i)
 			{
 			field = .prefix $ 'info' $ i
-			if data.Member?(field)
+			if Object?(data) and data.Member?(field)
 				{
 				j = data[field].Find(':')
 				prompt = data[field][.. j + 1]
 				info = data[field][j + 2 ..]
-				csv $= prompt $ info $ ' '
+				csv $= prompt $ ' ' $ info $ ' '
 				}
 			}
 		return .CSVExportString(csv)

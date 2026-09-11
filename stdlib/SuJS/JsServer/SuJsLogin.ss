@@ -6,96 +6,112 @@ class
 		if Sys.Win32?()
 			return .notSupport
 
-		userAgent = env.GetDefault('user_agent', 'UNKNOWN')
+		userAgent = env.GetDefault(#user_agent, #UNKNOWN)
 		context = [
 			toYear: Date().Year(),
-			domain: '@axonsoft.com',
-			favIcon: '/Res?name=win-favicon.ico',
-			manifest: '/Res?name=WindowsManifest.json',
-			logo: '/Res?name=login-axonswoosh.svg',
-			touchIcon: '',
-			extraOnLoad: '']
+			domain: "@axonsoft.com",
+			favIcon: "/Res?name=win-favicon.ico",
+			manifest: "/Res?name=WindowsManifest.json",
+			logo: "/Res?name=login-axonswoosh.svg",
+			touchIcon: "",
+			extraOnLoad: ""]
 
-		if userAgent.Has?('Mac OS X')
+		if userAgent.Has?("Mac OS X")
 			{
-			context.favIcon = '/Res?name=apple-favicon.ico'
+			context.favIcon = "/Res?name=apple-favicon.ico"
 			context.touchIcon = HtmlString(.touchIcon)
-			context.manifest = '/Res?name=AppleManifest.json'
+			context.manifest = "/Res?name=AppleManifest.json"
 			}
 
 		if .NoAuth?()
 			{
-			result = .loginSuccess('default',
-				env.GetDefault('x_forwarded_for', env.remote_user),
+			result = .loginSuccess(#default,
+				env.GetDefault(#x_forwarded_for, env.remote_user),
 				env.host,
-				userAgent,
-				preAuth:)
-			context.extraOnLoad = HtmlString('doLogin(' $ result[2] $ ')')
-			result[2] = '<!DOCTYPE html>' $ Razor(SuJsLoginTemplate, context)
+				userAgent, preAuth:)
+			context.extraOnLoad = HtmlString("doLogin(" $ result[2] $ ')')
+			result[2] = "<!DOCTYPE html>" $ Razor(SuJsLoginTemplate, context)
 			return result
 			}
 
-		return '<!DOCTYPE html>' $ Razor(SuJsLoginTemplate, context)
+		return "<!DOCTYPE html>" $ Razor(SuJsLoginTemplate, context)
 		}
 
-	userTable: 'users'
+	userTable: #users
 	NoAuth?()
 		{
 		return not TableExists?(.userTable) or QueryEmpty?(.userTable)
 		}
 
-	touchIcon : `<link rel="apple-touch-icon" ` $
+	touchIcon: `<link rel="apple-touch-icon" ` $
 		`type="image/png" sizes="180x180" href="/Res?name=apple-touch-icon.png">`
 
-	notSupport: '<!DOCTYPE html>
+	notSupport: "<!DOCTYPE html>
 		<html>
 			<body>
 				suneido.js is not supported on Win32 server (or in standalone mode).
 			</body>
-		</html>'
+		</html>"
 
 	Auth(env)
 		{
 		.delay()
-		remote = env.GetDefault('x_forwarded_for', env.remote_user)
+		remote = env.GetDefault(#x_forwarded_for, env.remote_user)
 		host = env.host
 		try
 			data = Json.Decode(env.body)
 		catch (e)
 			{
-			SuneidoLog('ERROR: (CAUGHT) Issue during login attempt: ' $ e, params: env,
-				caughtMsg: 'Stopped failed login - User sent back to login screen')
+			SuneidoLog("ERROR: (CAUGHT) Issue during login attempt: " $ e, params: env,
+				caughtMsg: "Stopped failed login - User sent back to login screen")
 			return .error("Invalid Request, please log in again")
 			}
 		if not .validParams?(data)
 			return .error("Invalid Request, please log in again")
-		user = data.GetDefault(#user, '')
-		userAgent = data.GetDefault(#user_agent, 'UNKNOWN')
-		password = data.GetDefault(#password, '')
+		user = data.GetDefault(#user, "")
+		userAgent = data.GetDefault(#user_agent, #UNKNOWN)
+		password = data.GetDefault(#password, "")
 		forgotPassword = data.GetDefault(#forgotPassword, false)
+		newuser = data.GetDefault(#newuserreset, "")
 		preauth = data.GetDefault(#preauth, false)
 
+		// check if already an authorized session
 		if false isnt result = .preAuth(env, user, remote, host, userAgent, preauth)
 			return result
 
-		if '' isnt msg = .loginClass.ForgotPassword(user, forgotPassword)
-			return .error(msg)
+		userRec = .loginClass.GetUserRec(user)
 
-		if false is userRec = .loginClass.GetUserRec(user)
+		// Avoid calling .TwoFA if userRec is false
+		if userRec is false and newuser is true
+			return .error(.loginClass.NotNewUserMessage)
+
+		// forgot password
+		msg = .loginClass.ForgotPassword(user, forgotPassword)
+		if String?(msg) and msg isnt ""
+			return .error(msg)
+		if msg is true
+			{
+			// display a fake TwoFA message
+			if userRec is false
+				return Json.Encode(
+					[step2:, msg: .loginClass.TwoFAMessage(email: "", send?:, :user)])
+
+			// This call handles both ForgotPassword and New User options
+			if false isnt result = .checkTwoFA(userRec, data, .hasCookie?(user, env),
+				Object(:remote, :host))
+				return result
+			}
+
+		if userRec is false or .authUser(userRec, password) is false
 			{
 			.delay(1.SecondsInMs()) // slow down brute force attack
-			return .error('Incorrect user name', extra: #(focus: 'user'))
+			if newuser isnt true
+				return .error("Invalid user name or password", extra: #(focus: user))
 			}
 
 		if false isnt result = .checkTwoFA(userRec, data, .hasCookie?(user, env),
 			Object(:remote, :host))
 			return result
-
-		if .authUser(userRec, password) is false
-			{
-			.delay(1.SecondsInMs()) // slow down brute force attack
-			return .error('Incorrect password', extra: #(focus: 'password'))
-			}
 
 		return .loginSuccess(user, remote, host, userAgent)
 		}
@@ -116,15 +132,15 @@ class
 			return false
 		if false is .validatePreauthToken(env)
 			return .error("Session has expired, please log in again")
-		else if user is ''
+		else if user is ""
 			return .error("Missing username, please log in again")
 		else
 			return .loginSuccess(user, remote, host, userAgent, preAuth:)
 		}
 
-	allowedParams: #("user", "preauth", "user_agent", "book", "code",
-		"password", "newuserreset", "forgotPassword", "email", "remote", "host", "from",
-		"step2", "sessionId", "msg")
+	allowedParams: (user, preauth, user_agent, book, code,
+		password, newuserreset, forgotPassword, email, remote, host, from,
+		step2, sessionId, msg)
 	validParams?(data)
 		{
 		if not Object?(data)
@@ -161,7 +177,7 @@ class
 
 	hasCookie?(user, env)
 		{
-		if env.Member?('cookie')
+		if env.Member?(#cookie)
 			{
 			key = StringXor(user, .key).ToHex()
 			return env.cookie.Has?(key $ '=')
@@ -170,68 +186,74 @@ class
 		}
 
 	loginSuccess(user, remote, host, userAgent, extraCookies = #(), preAuth = false,
-		tfaEmail= false)
+		tfaEmail = false)
 		{
-		if '' isnt err = .loginClass.AfterLoginSuccess(user)
+		if "" isnt err = .loginClass.AfterLoginSuccess(user)
 			return .error(err)
 
 		ob = SuSessionManager.CreateLoginToken(user, remote, host, userAgent, tfaEmail)
 		bundles = [
-			[tag: 'link', rel: "stylesheet",
+			[tag: #link, rel: #stylesheet,
 				href: SuJsLoadRuntime.GetUrl("codemirror.css")],
-			[tag: 'link', rel: "stylesheet",
+			[tag: #link, rel: #stylesheet,
 				href: SuJsLoadRuntime.GetUrl("foldgutter.css")],
-			[tag: 'script', src: SuJsLoadRuntime.GetUrl("codemirror_bundle.js")],
-			[tag: 'script', src: SuJsLoadRuntime.GetUrl("su_code_bundle.js")],
-			[tag: 'script', src: SuJsLoadRuntime.GetUrl("su_bundle.min.js")]]
-		bundles.Append(IconFontHelper.GetFontStyles(SuJsLoadRuntime.GetUrl).
-			Map({ [tag: 'style', innerText: it] }))
+			[tag: #script, src: SuJsLoadRuntime.GetUrl("codemirror_bundle.js")],
+			[tag: #script, src: SuJsLoadRuntime.GetUrl("su_code_bundle.js")],
+			[tag: #script, src: SuJsLoadRuntime.GetUrl("su_bundle.min.js")]]
+		bundles.Append(IconFontHelper.
+			GetFontStyles(SuJsLoadRuntime.GetUrl).
+			Map({ [tag: #style, innerText: it] }))
 		set = .loginClass.GetInitSet(user)
-		return ['OK',
-			['Set-Cookie': Object(.buildSessionCookie(ob, host)).
-				MergeUnion(extraCookies)],
+		return [#OK,
+			["Set-Cookie": [.buildSessionCookie(ob, host)].MergeUnion(extraCookies)],
 			Json.Encode([sources: bundles,
 				onload: SuJsTranslate(
-					'function () {
+						'function () {
 						SuInitClient(set: "' $ set $ '", token: "' $ ob.token $ '", ' $
-						'preAuth: ' $ Display(preAuth) $ ')}', 'eval') $ ".call()"])]
+						'preAuth: ' $ Display(preAuth) $ ')}', "eval") $ ".call()"])]
 		}
 
 	buildSessionCookie(token, host)
 		{
-		secure = host.Prefix?('localhost') or host.Prefix?('127.0.0.1') ? '' : ' Secure;'
-		return token.token $ '=' $ token.key $ '; Path=/;' $ secure $ ' HttpOnly'
+		secure = host.Prefix?(#localhost) or host.Prefix?("127.0.0.1") ? "" : " Secure;"
+		return token.token $ '=' $ token.key $ "; Path=/;" $ secure $ " HttpOnly"
 		}
 
 	TwoFA(env)
 		{
 		.delay()
 		data = Json.Decode(env.body)
-		user = data.GetDefault(#user, '')
-		userAgent = data.GetDefault(#user_agent, 'UNKNOWN')
+		user = data.GetDefault(#user, "")
+		userAgent = data.GetDefault(#user_agent, #UNKNOWN)
 
 		if not .validParams?(data)
 			return .error("Invalid Request")
 		if not data.Member?(#remote) or not data.Member?(#host)
-			return .error('Invalid session')
+			{
+			// Fake TwoFA Response to prevent skimming for valid user names
+			if data.GetDefault(#forgotPassword, false) is true and data.Member?(#code)
+				return .error("Invalid code")
+			return .error("Invalid session")
+			}
 
 		if true isnt result = .twoFAAuth(data, user)
 			return result
 
-		password = data.GetDefault(#password, '')
+		password = data.GetDefault(#password, "")
 		if false is userRec = .loginClass.GetUserRec(user)
 			{
 			.delay(1.SecondsInMs()) // slow down brute force attack
-			return .error('Incorrect user name', extra: #(focus: 'user', back:))
+			return .error("Invalid user name or password",
+				extra: #(focus: user, back:))
 			}
 
 		if .authUser(userRec, password) is false and
 			not .loginClass.AllowAuthFailure?(user)
-			return .error('Invalid user name or password',
-				extra: #(focus: 'password', back:))
+			return .error("Invalid user name or password",
+				extra: #(focus: user, back:))
 
-		if user is 'default'
-			SuneidoLog('WARNING: user logged in as default',
+		if user is #default
+			SuneidoLog("WARNING: user logged in as default",
 				params: data.Project(#host, #remote))
 
 		return .loginSuccess(user, data.remote, data.host, userAgent,
@@ -240,23 +262,23 @@ class
 
 	twoFAAuth(data, user)
 		{
-		sessionId = data.GetDefault(#sessionId, '')
-		otp = data.GetDefault(#code, '').Trim()
+		sessionId = data.GetDefault(#sessionId, "")
+		otp = data.GetDefault(#code, "").Trim()
 
 		if TwoFAManager.Auth(user, sessionId, otp) is false
-			return .error('Invalid code', extra: #(focus: 'code', form: '3'))
+			return .error("Invalid code", extra: #(focus: code, form: '3'))
 
 		TwoFAManager.Invalidate(otp)
 		return true
 		}
 
-	key: 'suneido.js'
+	key: "suneido.js"
 	buildCookie(user)
 		{
 		key = StringXor(user, .key).ToHex()
 		expires = Date().Plus(days: 14).InternetFormat()
-		return key $ '=' $ Base64.Encode(expires) $ '; Expires=' $ expires $
-			'; Path=/login_submit; Secure; HttpOnly'
+		return key $ '=' $ Base64.Encode(expires) $ "; Expires=" $ expires $
+			"; Path=/login_submit; Secure; HttpOnly"
 		}
 
 	error(msg, extra = #())
@@ -271,6 +293,6 @@ class
 
 	getter_loginClass()
 		{
-		return LastContribution('SuJsLogin')
+		return LastContribution(#SuJsLogin)
 		}
 	}

@@ -33,6 +33,7 @@ class
 			throw e
 			}
 		}
+
 	New(from_file, to_query, fields = false, header = true, .convertCaps = false)
 		{
 		.From_file = from_file
@@ -41,25 +42,32 @@ class
 		.Fields = fields
 		.Header? = header is true
 		}
-	Header?: false
+
+	Header?:     false
 	convertCaps: false
-	DateFmt() { return false }
+	DateFmt()
+		{
+		return false
+		}
+
 	Import()
 		{
 		try
 			{
 			.Before()
-			if (.Header?)
+			if .Header?
 				.Header()
 			.DoImport()
 			}
-		catch (err, 'File: Readline: line too long')
-			.readlineFailure(err)
+		catch (unused, "File: Readline: line too long")
+			.readlineFailure()
 		}
 
 	DoImport()
 		{
-		while (.ImportEach()) {}
+		while .ImportEach()
+			{
+			}
 		}
 
 	ImportEach()
@@ -75,8 +83,10 @@ class
 		return true
 		}
 
-	BeforeOutputLine(x /*unused*/)
-		{ /* do nothing */ }
+	BeforeOutputLine(x/*unused*/)
+		{ /* do nothing */
+		}
+
 	ConvertRecord(x, dateFmt)
 		{
 		// WARNING: The new rec doen't have deps inheritted, so it may cause inconsistent
@@ -84,7 +94,7 @@ class
 		//			its value is modified by encode/conversion (see suggestion 28861).
 		//			Could apply the conversion on the original x directly if the
 		//			original x is a record.
-		rec = Record()
+		rec = []
 		for field in .getRecordFields(x)
 			{
 			rec[field] = x[field]
@@ -96,7 +106,7 @@ class
 			// Datadict returns Field_String if it cannot find "field".
 			// Therefore IF dd is Field_String and "field" isn't "string",
 			// we need to convert the field value manually (done via DefaultConversion)
-			if dd is Field_string and field isnt 'string'
+			if dd is Field_string and field isnt #string
 				.DefaultConversion(rec, field)
 			else
 				{
@@ -104,7 +114,7 @@ class
 				.EncodeConversion(dd, rec, field)
 				}
 
-			if x[field] isnt "" and (field.Has?('_abbrev') or field.Has?('_name'))
+			if x[field] isnt "" and (field.Has?("_abbrev") or field.Has?("_name"))
 				.LookupNumField(rec, field)
 			}
 		return rec
@@ -115,7 +125,7 @@ class
 	getRecordFields(x)
 		{
 		fields = x.Members()
-		normal = { not (it.Suffix?('_num') or it.Has?('_num_')) }
+		normal = { not (it.Suffix?("_num") or it.Has?("_num_")) }
 		return fields.SortWith!(normal)
 		}
 
@@ -124,21 +134,25 @@ class
 		if Number?(rec[field])
 			.roundNumericValues(rec, field, dd)
 
-		if Date?(rec[field]) and dd.Member?('Control') and
-			(dd.Control[0] is 'ChooseDate' or
-			dd.Control[0] is 'ChooseDateControl')
+		if .dateField?(rec, field, dd)
 			rec[field] = rec[field].NoTime()
 
 		// apply proper case if applicable, can't use GetDefault on dd class
-		if .convertCaps and dd.Member?('ProperCase?') and dd.ProperCase?
+		if .convertCaps and dd.Member?(#ProperCase?) and dd.ProperCase?
 			.convertToProperCase(rec, field)
 
 		rec[field] = .ConvertAbbrev(field, rec[field])
 		}
 
+	dateField?(rec, field, dd)
+		{
+		return Date?(rec[field]) and dd.Member?(#Control) and
+			(dd.Control[0] is #ChooseDate or dd.Control[0] is #ChooseDateControl)
+		}
+
 	roundNumericValues(rec, field, dd)
 		{
-		mask = dd.Control.Member?('mask') ? dd.Control.mask : false
+		mask = dd.Control.Member?(#mask) ? dd.Control.mask : false
 		if mask is false
 			return
 
@@ -149,18 +163,18 @@ class
 
 	convertToProperCase(rec, field)
 		{
-		if (rec[field] is "")
+		if rec[field] is ""
 			return
 
 		orig = rec[field]
 		// not CapitalizeWords if string is already mixed case
-		if not (orig =~ "[A-Z]" and orig =~"[a-z]")
+		if not (orig =~ "[A-Z]" and orig =~ "[a-z]")
 			rec[field] = rec[field].CapitalizeWords()
 		}
 
 	ConvertAbbrev(field, value)
 		{
-		if not field.Has?('_abbrev') or value is "" or .nonLowerAbbrevField?(field)
+		if not field.Has?("_abbrev") or value is "" or .nonLowerAbbrevField?(field)
 			return value
 
 		return value.Lower()
@@ -168,13 +182,13 @@ class
 
 	nonLowerAbbrevField?(field)
 		{
-		return Datadict(field, #(NonLowerAbbrev?)).GetDefault('NonLowerAbbrev?', false)
+		return Datadict(field, #(NonLowerAbbrev?)).GetDefault(#NonLowerAbbrev?, false)
 		}
 
 	DefaultConversion(rec, field)
 		{
 		// don't convert name and abbrev fields or the lookup for the num will fail
-		if not field.Has?('_abbrev') and not field.Has?('_name')
+		if not field.Has?("_abbrev") and not field.Has?("_name")
 			rec[field] = ConvertNumeric(rec[field])
 		}
 
@@ -184,46 +198,48 @@ class
 	AllowInvalidLookupVals: false
 	LookupNumField(x, field, allowEmpty? = false, filter = "")
 		{
-		numfield = field.Replace('_name|_abbrev', '_num')
+		numfield = field.Replace("_name|_abbrev", "_num")
 		lookupVal = x[field]
-		if lookupVal is '' and allowEmpty? is true
+		if lookupVal is "" and allowEmpty? is true
 			{
-			x[numfield] = ''
+			x[numfield] = ""
 			return
 			}
 
 		if false is y = FindForeignRecWithAbbrevNameOrNum(x, field, :filter)
 			{
-			if Datadict(numfield).Control.GetDefault('allowOther', false) is true or
+			if Datadict(numfield).Control.GetDefault(#allowOther, false) is true or
 				.AllowInvalidLookupVals
 				x[numfield] = lookupVal
 			return
 			}
-		x[numfield] = y[field.BeforeFirst("_") $ '_num']
+		x[numfield] = y[field.BeforeFirst('_') $ "_num"]
 		}
-	Before()
-		{ }
-	Header()
-		{ }
-	Import1(line /*unused*/)
+
+	Before() { }
+
+	Header() { }
+
+	Import1(line/*unused*/)
 		{
 		throw "Import1 not defined"
 		}
+
 	readLineLimit: 4000
 	Getline()
 		{
 		bTell = .Tf.Tell()
 		line = .Tf.Readline()
 		if .readLineLimit < (.Tf.Tell() - bTell)
-			throw 'File: Readline: line too long'
+			throw "File: Readline: line too long"
 		return line
 		}
 
 	AlertOnReadLineFailure: false
-	readlineFailure(err, type = 'ERROR: (CAUGHT) ')
+	readlineFailure()
 		{
 		if .AlertOnReadLineFailure
-			Alert('Invalid file - line length exceeded maximum', title: 'Load',
+			Alert("Invalid file - line length exceeded maximum", title: #Load,
 				flags: MB.ICONERROR)
 		}
 
@@ -232,13 +248,15 @@ class
 		{
 		return .t
 		}
+
 	t: false
 	Output(x)
 		{
 		// start a new transaction every 100 records
-		if (.N++ % 100 is 0) /*= new transaction threshold */
+		threshold = 100
+		if .N++ % threshold is 0
 			{
-			if (.t isnt false)
+			if .t isnt false
 				.t.Complete()
 			.t = Transaction(update:)
 			.q = .t.Query(.To_query)
@@ -253,19 +271,20 @@ class
 				}
 			catch (err, "*duplicate key")
 				.Make_unique(x, .To_query, err)
-			if (++count > 100) /*= output attempt threshold */
+			if ++count > threshold
 				throw "error during import"
 			}
 		}
+
 	Make_unique(x, query, err)
 		{
 		key = err.Extract("key: ([a-zA-Z0-9_]+!?)")
-		if key.Suffix?('_lower!')
+		if key.Suffix?("_lower!")
 			key = .getActualKey(key, query)
 
 		// if key is a "_name" field and key is empty, try abbrev
-		abbrev = x[key[.. -4] $ "abbrev"] /*= trimming name*/
-		if (x[key] is "" and key =~ "_name$" and abbrev isnt "")
+		abbrev = x[key[..-4] $ "abbrev"] /*= trimming name*/
+		if x[key] is "" and key =~ "_name$" and abbrev isnt ""
 			{
 			x[key] = abbrev
 			return
@@ -275,7 +294,7 @@ class
 		catch
 			throw err
 		pattern = "\*([0-9]+)$"
-		if (keyvalue =~ pattern)
+		if keyvalue =~ pattern
 			x[key] = keyvalue.Replace(pattern,
 				'*' $ String(Number(keyvalue.Extract(pattern)) + 1))
 		else
@@ -284,7 +303,7 @@ class
 
 	getActualKey(lowerKey, query)
 		{
-		origKey = lowerKey.BeforeFirst('_lower!')
+		origKey = lowerKey.BeforeFirst("_lower!")
 		for key in QueryKeys(query)
 			if key.Prefix?(origKey) and key isnt lowerKey
 				return key

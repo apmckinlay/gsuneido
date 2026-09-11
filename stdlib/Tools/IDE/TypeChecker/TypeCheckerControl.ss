@@ -9,10 +9,9 @@ PassthruController
 		{
 		super(.buildLayout())
 		if false isnt tabs = .FindControl(#Tabs)
-			tabs.SetImageList(
-				[.tabImageSpec("checkmark.emf", CLR.ButtonGreen),
-					.tabImageSpec("triangle-warning.emf", CLR.WarnColor),
-					.tabImageSpec("cross.emf", CLR.ErrorColor)])
+			tabs.SetImageList([.tabImageSpec("checkmark.emf", CLR.ButtonGreen),
+				.tabImageSpec("triangle-warning.emf", CLR.WarnColor),
+				.tabImageSpec("cross.emf", CLR.ErrorColor)])
 		.Defer(.annotate) // so users dont need to click Check the first time around
 		.sub = PubSub.Subscribe(#LibraryRecordChange, .refreshIfStale)
 		}
@@ -67,9 +66,8 @@ PassthruController
 			{
 			i -= 1
 			x = .orderedSrc[i]
-			tabs.Add(
-				[#CodeView data: [text: x.src, name: x.name, table: .lib], Tab: x.name,
-					readonly:])
+			tabs.Add([#CodeView data: [text: x.src, name: x.name, table: .lib],
+				Tab: x.name, readonly:])
 			}
 		}
 
@@ -125,7 +123,7 @@ PassthruController
 		{
 		skipLineageOrLibName = false
 		src = Query1Cached(.lib, name: .rec, group: -1).text
-		if not Libraries().Has?(.lib) or Function?(src.Compile())
+		if not Libraries().Has?(.lib) or Function?(Suneido.Compile(src))
 			skipLineageOrLibName = .lib
 
 		return skipLineageOrLibName
@@ -166,11 +164,10 @@ PassthruController
 			{
 			names = .orderedSrc.Map({ it.name }).Join(", ")
 			msg_limit = 200
-			AlertError(
-				"suneidotypes: failed to decode response\n\n" $ "Exception:\n" $
-					String(e) $ "\n\n" $ "Request method: " $ method $ "\n" $
-					"Request sources: " $ names $ "\n\n" $ "Response:\n" $
-					String(response[..msg_limit]))
+			AlertError("suneidotypes: failed to decode response\n\n" $ "Exception:\n" $
+				String(e) $ "\n\n" $ "Request method: " $ method $ '\n' $
+				"Request sources: " $ names $ "\n\n" $ "Response:\n" $
+				String(response[..msg_limit]))
 			}
 		}
 
@@ -237,7 +234,7 @@ PassthruController
 			return
 
 		errors, warnings = TypeCheckHelper.FormatDiagnostics(diagnostics)
-		dctrl.Set(Opt(errors.Join("\n"), "\n") $ warnings.Join("\n"))
+		dctrl.Set(Opt(errors.Join('\n'), '\n') $ warnings.Join('\n'))
 		}
 
 	Scintilla_DoubleClick(source)

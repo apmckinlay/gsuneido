@@ -3,7 +3,7 @@
 #### transaction.Query1
 
 ``` suneido
-(query [, field: value ...]) => record
+(query [, field: value ...]) => record or false
 ```
 
 Returns the single record from the given query. Returns false if the query does not contain any records. Throws an exception if there is more than one record.
@@ -24,11 +24,13 @@ Calls with just a table name in the first argument, and named arguments for the 
 
 
 See also:
+[MustQuery1](<../MustQuery1.md>),
 [Query1](<../Query1.md>),
 [QueryEmpty?](<../QueryEmpty?.md>),
 [QueryFirst](<../QueryFirst.md>),
 [QueryLast](<../QueryLast.md>),
 [Query.Strategy1](<../Query/Query.Strategy1.md>),
+[transaction.MustQuery1](<transaction.MustQuery1.md>),
 [transaction.QueryEmpty?](<transaction.QueryEmpty?.md>),
 [transaction.QueryFirst](<transaction.QueryFirst.md>),
 [transaction.QueryLast](<transaction.QueryLast.md>)

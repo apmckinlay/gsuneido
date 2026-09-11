@@ -20,18 +20,19 @@ Test
 		Assert(formatTime(60.4) is: "1m")
 		Assert(formatTime(60.5) is: "1m 1s")
 		}
-Test_percentUsed()
+
+	Test_percentUsed()
 		{
 		percentUsed = AiAgentControl.AiAgentControl_percentUsed
 		Assert(percentUsed(0, "1M") is: "0% / 1M")
 		Assert(percentUsed(1, "1M") is: "0% / 1M")
-		Assert(percentUsed(500000, "1M") is: "50% / 1M")
-		Assert(percentUsed(999999, "1M") is: "99% / 1M")
-		Assert(percentUsed(1000000, "1M") is: "100% / 1M")
-		Assert(percentUsed(12345678, "1M") is: "1234% / 1M")
-		Assert(percentUsed(128000, "256K") is: "50% / 256K")
+		Assert(percentUsed(500_000, "1M") is: "50% / 1M")
+		Assert(percentUsed(991_234, "1M") is: "99% / 1M")
+		Assert(percentUsed(1_000_000, "1M") is: "100% / 1M")
+		Assert(percentUsed(12_341_111, "1M") is: "1234% / 1M")
+		Assert(percentUsed(128_000, "256K") is: "50% / 256K")
 		// 129280/256000*100 == 50.5% -> Int() truncates to 50 (round would be 51)
-		Assert(percentUsed(129280, "256K") is: "50% / 256K")
-		Assert(percentUsed(256000, "256K") is: "100% / 256K")
+		Assert(percentUsed(129_000, "256K") is: "50% / 256K")
+		Assert(percentUsed(256_000, "256K") is: "100% / 256K")
 		}
 	}
