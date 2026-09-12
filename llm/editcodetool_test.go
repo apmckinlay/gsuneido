@@ -156,27 +156,30 @@ func TestEditCodeTool(t *testing.T) {
 func TestApplyLineEditAutoIndent(t *testing.T) {
 	assert := assert.T(t)
 
-	oldText := strings.Join([]string{
+	check := func(oldText, mode string, line, count int, code, expected string) {
+		t.Helper()
+		newText, err := applyLineEdit(oldText, mode, line, count, code)
+		assert.That(err == nil)
+		assert.This(newText).Is(expected)
+	}
+	join := func(lines ...string) string { return strings.Join(lines, "\r\n") }
+
+	// LF text: the indentation of the first replaced line is preserved
+	lfText := strings.Join([]string{
 		"function()",
 		"\t{",
 		"\treturn 1",
 		"\t}",
 	}, "\n")
 
-	// replace_lines: match the indentation of the first replaced line
-	newText, err := applyLineEdit(oldText, "replace_lines", 3, 1, "return 2")
-	assert.That(err == nil)
-	assert.This(newText).Is(strings.Join([]string{
+	check(lfText, "replace_lines", 3, 1, "return 2", strings.Join([]string{
 		"function()",
 		"\t{",
 		"\treturn 2\r",
 		"\t}",
 	}, "\n"))
 
-	// insert_before: match the indentation of the following line
-	newText, err = applyLineEdit(oldText, "insert_before", 3, 0, "// inserted")
-	assert.That(err == nil)
-	assert.This(newText).Is(strings.Join([]string{
+	check(lfText, "insert_before", 3, 0, "// inserted", strings.Join([]string{
 		"function()",
 		"\t{",
 		"\t// inserted\r",
@@ -184,10 +187,7 @@ func TestApplyLineEditAutoIndent(t *testing.T) {
 		"\t}",
 	}, "\n"))
 
-	// insert_after: match the indentation of the preceding line
-	newText, err = applyLineEdit(oldText, "insert_after", 3, 0, "// after")
-	assert.That(err == nil)
-	assert.This(newText).Is(strings.Join([]string{
+	check(lfText, "insert_after", 3, 0, "// after", strings.Join([]string{
 		"function()",
 		"\t{",
 		"\treturn 1",
@@ -196,9 +196,7 @@ func TestApplyLineEditAutoIndent(t *testing.T) {
 	}, "\n"))
 
 	// already-indented first line is left unchanged
-	newText, err = applyLineEdit(oldText, "replace_lines", 3, 1, "  return 2")
-	assert.That(err == nil)
-	assert.This(newText).Is(strings.Join([]string{
+	check(lfText, "replace_lines", 3, 1, "  return 2", strings.Join([]string{
 		"function()",
 		"\t{",
 		"  return 2\r",
@@ -206,24 +204,89 @@ func TestApplyLineEditAutoIndent(t *testing.T) {
 	}, "\n"))
 
 	// top-level line with no indentation gets no extra indentation
-	newText, err = applyLineEdit(oldText, "replace_lines", 1, 1, "function()")
-	assert.That(err == nil)
-	assert.This(newText).Is(strings.Join([]string{
+	check(lfText, "replace_lines", 1, 1, "function()", strings.Join([]string{
 		"function()\r",
 		"\t{",
 		"\treturn 1",
 		"\t}",
 	}, "\n"))
+
+	// CRLF nested block: indentation follows the insertion point, so code
+	// inserted between a block opener and its body lines up with the body,
+	// and code inserted before a dedent lines up with the dedented line.
+	crlfText := join(
+		"\tif x",
+		"\t\tPrint(x)",
+		"\tPrint(y)")
+
+	check(crlfText, "insert_before", 1, 0, "start",
+		join("\tstart", "\tif x", "\t\tPrint(x)", "\tPrint(y)"))
+	check(crlfText, "insert_before", 2, 0, "mid",
+		join("\tif x", "\t\tmid", "\t\tPrint(x)", "\tPrint(y)"))
+	check(crlfText, "insert_before", 3, 0, "end",
+		join("\tif x", "\t\tPrint(x)", "\tend", "\tPrint(y)"))
+
+	check(crlfText, "insert_after", 1, 0, "after1",
+		join("\tif x", "\t\tafter1", "\t\tPrint(x)", "\tPrint(y)"))
+	check(crlfText, "insert_after", 2, 0, "after2",
+		join("\tif x", "\t\tPrint(x)", "\tafter2", "\tPrint(y)"))
+
+	// no following line falls back to the preceding line's indentation, and
+	// a separator is added because crlfText has no trailing newline
+	check(crlfText, "insert_after", 3, 0, "after3",
+		join("\tif x", "\t\tPrint(x)", "\tPrint(y)", "\tafter3")+"\r\n")
+
+	check(crlfText, "replace_lines", 1, 1, "if z",
+		join("\tif z", "\t\tPrint(x)", "\tPrint(y)"))
+	check(crlfText, "replace_lines", 2, 1, "Print(x)",
+		join("\tif x", "\t\tPrint(x)", "\tPrint(y)"))
+	check(crlfText, "replace_lines", 3, 1, "Print(z)",
+		join("\tif x", "\t\tPrint(x)", "\tPrint(z)")+"\r\n")
+
+	check(crlfText, "replace_lines", 1, 2, "replace",
+		join("\treplace", "\tPrint(y)"))
+	check(crlfText, "replace_lines", 2, 2, "replace",
+		join("\tif x", "\t\treplace")+"\r\n")
+
+	// explicit indentation is not modified
+	check(crlfText, "replace_lines", 2, 1, "\tPrint(z)",
+		join("\tif x", "\tPrint(z)", "\tPrint(y)"))
 }
 
-func TestLineIndent(t *testing.T) {
+func TestLineIndentAfter(t *testing.T) {
 	assert := assert.T(t)
 	text := "function()\n\t{\n  \treturn 1\n\t}"
-	assert.This(lineIndent(text, 1)).Is("")
-	assert.This(lineIndent(text, 2)).Is("\t")
-	assert.This(lineIndent(text, 3)).Is("  \t")
-	assert.This(lineIndent(text, 4)).Is("\t")
-	assert.This(lineIndent(text, 5)).Is("")
+
+	after := func(txt string, line int) string {
+		t.Helper()
+		s, _ := lineIndentAfter(txt, line)
+		return s
+	}
+	assert.This(after(text, 1)).Is("")
+	assert.This(after(text, 2)).Is("\t")
+	assert.This(after(text, 3)).Is("  \t")
+	assert.This(after(text, 4)).Is("\t")
+	assert.This(after(text, 5)).Is("")
+
+	// skips blank lines
+	text2 := "function()\n\n\n\t{\n\treturn 1\n\t}"
+	assert.This(after(text2, 1)).Is("")
+	assert.This(after(text2, 2)).Is("\t")
+	assert.This(after(text2, 3)).Is("\t")
+
+	// no non-blank line at or after the given line
+	_, ok := lineIndentAfter(text, 6)
+	assert.That(!ok)
+
+	// lineIndentBefore falls back to the preceding non-blank line
+	before := func(line int) string {
+		t.Helper()
+		s, _ := lineIndentBefore(text, line)
+		return s
+	}
+	assert.This(before(4)).Is("\t")
+	assert.This(before(5)).Is("\t")
+	assert.This(before(1)).Is("")
 }
 
 func TestValidateEditModeArgs(t *testing.T) {

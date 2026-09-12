@@ -264,11 +264,15 @@ func applyLineEdit(oldText string, mode string, line, count int, insert string) 
 	}
 
 	insert = normalizeCRLF(insert)
-	insert = addMissingIndent(insert, lineIndent(oldText, line))
+	insert = addMissingIndent(insert, indentContext(oldText, mode, line))
 
 	var sb strings.Builder
-	sb.Grow(len(oldText) - (endOff - startOff) + len(insert))
+	sb.Grow(len(oldText) - (endOff - startOff) + len(insert) + 2)
 	sb.WriteString(oldText[:startOff])
+	if insert != "" && startOff > 0 && oldText[startOff-1] != '\n' &&
+		!strings.HasPrefix(insert, "\r\n") {
+		sb.WriteString("\r\n")
+	}
 	sb.WriteString(insert)
 	if endOff < len(oldText) {
 		if insert != "" && !strings.HasSuffix(insert, "\n") && !strings.HasSuffix(insert, "\r\n") {
@@ -325,22 +329,63 @@ func findFromTo(from int, to int, oldText string) (int, int, error) {
 	return startOff, endOff, nil
 }
 
-// lineIndent returns the leading whitespace (tabs/spaces) of the given
-// 1-based line, or "" if the line is out of range or has no indentation.
-func lineIndent(text string, line int) string {
-	start := 0
-	for l := 1; l < line; l++ {
-		i := strings.IndexByte(text[start:], '\n')
-		if i == -1 {
-			return ""
-		}
-		start += i + 1
+// indentContext returns the indentation to apply to inserted code. It matches
+// the first non-blank line at the insertion point (the following line for
+// insert_after, the target line otherwise), falling back to the closest
+// preceding non-blank line when no non-blank line follows.
+func indentContext(text, mode string, line int) string {
+	start := line
+	if mode == "insert_after" {
+		start = line + 1
 	}
-	end := start
-	for end < len(text) && (text[end] == ' ' || text[end] == '\t') {
+	if indent, ok := lineIndentAfter(text, start); ok {
+		return indent
+	}
+	indent, _ := lineIndentBefore(text, start-1)
+	return indent
+}
+
+// lineIndentAfter returns the leading whitespace of the first non-blank line
+// at or after the given 1-based line number, and whether such a line exists.
+func lineIndentAfter(text string, line int) (string, bool) {
+	if line < 1 {
+		return "", false
+	}
+	lines := strings.Split(text, "\n")
+	for l := line; l <= len(lines); l++ {
+		if indent, ok := indentOf(lines[l-1]); ok {
+			return indent, true
+		}
+	}
+	return "", false
+}
+
+// lineIndentBefore returns the leading whitespace of the first non-blank line
+// at or before the given 1-based line number.
+func lineIndentBefore(text string, line int) (string, bool) {
+	lines := strings.Split(text, "\n")
+	if line > len(lines) {
+		line = len(lines)
+	}
+	for l := line; l >= 1; l-- {
+		if indent, ok := indentOf(lines[l-1]); ok {
+			return indent, true
+		}
+	}
+	return "", false
+}
+
+// indentOf returns the leading whitespace of line if it is not blank.
+func indentOf(line string) (string, bool) {
+	line = strings.TrimRight(line, "\r")
+	if strings.TrimSpace(line) == "" {
+		return "", false
+	}
+	end := 0
+	for end < len(line) && (line[end] == ' ' || line[end] == '\t') {
 		end++
 	}
-	return text[start:end]
+	return line[:end], true
 }
 
 // addMissingIndent prepends indent to insert when the first line of insert has
