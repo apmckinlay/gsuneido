@@ -44,33 +44,7 @@ var _ = method(wg_Thread, "(@args) :void")
 
 func wg_Thread(th *Thread, this Value, args []Value) Value {
 	wg := this.(*suWaitGroup)
-	ob := args[0].(*SuObject)
-	ob.SetConcurrent()
-	var fn Value
-	if block := ob.NamedGet(SuStr("block")); block != nil {
-		fn = block
-		ob.Delete(th, SuStr("block"))
-	} else {
-		fn = ob.ListGet(0)
-		ob.Delete(th, Zero)
-	}
-	NoteThreadClosure(fn)
-	t2 := NewThread(th)
-	if name := ob.NamedGet(SuStr("name")); name != nil {
-		threadName(t2, name)
-		ob.Delete(th, SuStr("name"))
-	}
-	threads.add(t2)
-	wg.wg.Go(func() {
-		defer func() {
-			t2.Close()
-			threads.remove(t2.Num)
-			if e := recover(); e != nil {
-				LogUncaught(t2, "Thread", e)
-			}
-		}()
-		t2.CallEach(fn, ob)
-	})
+	startThread(th, args, &wg.wg)
 	return nil
 }
 

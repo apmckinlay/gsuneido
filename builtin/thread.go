@@ -20,9 +20,7 @@ type suThreadGlobal struct {
 
 func init() {
 	Global.Builtin("Thread", &suThreadGlobal{
-		SuBuiltin{Fn: threadCallClass,
-			BuiltinParams: BuiltinParams{
-				ParamSpec: params("(@args)")}}})
+		SuBuiltin{Fn: threadCallClass, ParamSpec: params("(@args)")}})
 }
 
 type threadList struct {
@@ -51,6 +49,11 @@ func (ts *threadList) count() int {
 }
 
 func threadCallClass(th *Thread, args []Value) Value {
+	startThread(th, args, nil)
+	return nil
+}
+
+func startThread(th *Thread, args []Value, wg *sync.WaitGroup) {
 	ob := args[0].(*SuObject)
 	ob.SetConcurrent()
 	var fn Value
@@ -68,6 +71,9 @@ func threadCallClass(th *Thread, args []Value) Value {
 		ob.Delete(th, SuStr("name"))
 	}
 	threads.add(t2)
+	if wg != nil {
+		wg.Add(1) // after setup so a panic doesn't leak a count
+	}
 	go func() {
 		defer func() {
 			t2.Close()
@@ -75,10 +81,12 @@ func threadCallClass(th *Thread, args []Value) Value {
 			if e := recover(); e != nil {
 				LogUncaught(t2, "Thread", e)
 			}
+			if wg != nil {
+				wg.Done()
+			}
 		}()
 		t2.CallEach(fn, ob)
 	}()
-	return nil
 }
 
 var threadMethods = methods("thread")
