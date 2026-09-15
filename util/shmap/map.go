@@ -403,8 +403,8 @@ func (m *Map[K, V, H]) Iter() func() (K, V, bool) {
 	}
 }
 
-// Copy makes a shallow copy of the map
-func (m *Map[K, V, H]) Copy() *Map[K, V, H] {
+// Clone makes a shallow copy of the map
+func (m *Map[K, V, H]) Clone() *Map[K, V, H] {
 	newMap := *m
 	newMap.groups = slices.Clone(m.groups)
 	return &newMap

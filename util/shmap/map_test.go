@@ -48,7 +48,7 @@ func TestRandom(t *testing.T) {
 	// 	"average", float64(nPutProbes)/float64(nPuts))
 	// fmt.Println("nGets", nGets, "nProbes", nGetProbes,
 	// 	"average", float64(nGetProbes)/float64(nGets))
-	m2 := m.Copy()
+	m2 := m.Clone()
 	m2.check()
 	// m2.summary()
 }

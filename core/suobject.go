@@ -475,7 +475,7 @@ func (ob *SuObject) mustBeMutable() {
 		// two threads could (rarely) get in here at the same time
 		// (on different objects, since we lock)
 		ob.list = slc.Clone(ob.list)
-		ob.named = *ob.named.Copy()
+		ob.named = *ob.named.Clone()
 		// must do this last because if count goes to zero
 		// then another thread could modify
 		ob.copyCount.Add(-1)
