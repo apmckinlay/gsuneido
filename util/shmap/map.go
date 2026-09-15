@@ -382,7 +382,6 @@ func (m *Map[K, V, H]) Iter() func() (K, V, bool) {
 		return func() (k K, v V, ok bool) { return }
 	}
 	gi := 0
-	grp := &m.groups[0]
 	i := -1
 	return func() (k K, v V, ok bool) {
 		if gi >= len(m.groups) {
@@ -394,8 +393,8 @@ func (m *Map[K, V, H]) Iter() func() (K, V, bool) {
 				if gi++; gi >= len(m.groups) {
 					return
 				}
-				grp = &m.groups[gi]
 			}
+			grp := &m.groups[gi]
 			c := uint8(grp.control >> (i * 8))
 			if c&0x80 != 0 {
 				return grp.keys[i], grp.vals[i], true
