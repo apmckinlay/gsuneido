@@ -3,12 +3,10 @@
 
 package core
 
-// Shared holds the shared variable storage for closures.
-// It supports concurrent access when the concurrent flag is set.
-type Shared struct {
-	values []Value
-	MayLock
-}
+import (
+	"sync"
+	"sync/atomic"
+)
 
 // Frame is the context for a function/method/block invocation.
 type Frame struct {
@@ -50,13 +48,18 @@ func (fr *Frame) moveLocalsToShared() {
 	}
 	localNames := fr.fn.Names[:fr.fn.Nstack]
 	sharedNames := fr.fn.Names[fr.fn.Nstack:]
+	wrote := false
 	for j, sname := range sharedNames {
 		for i, lname := range localNames {
 			if lname == sname {
 				fr.shared.values[j] = fr.locals[i]
+				wrote = true
 				break
 			}
 		}
+	}
+	if wrote && fr.shared.concurrent {
+		fr.shared.modified.Store(true)
 	}
 }
 
@@ -156,6 +159,9 @@ func (fr *Frame) getSetSharedSlot(idx int, val Value,
 	if fr.shared.Lock() {
 		defer fr.shared.Unlock()
 	}
+	if fr.shared.concurrent {
+		fr.shared.modified.Store(true)
+	}
 	i := idx - SharedSlotStart
 	orig := fr.shared.values[i]
 	if orig == nil {
@@ -174,5 +180,51 @@ func (fr *Frame) setSharedSlot(idx int, val Value) {
 	if fr.shared.Lock() {
 		defer fr.shared.Unlock()
 	}
+	if fr.shared.concurrent {
+		fr.shared.modified.Store(true)
+	}
 	fr.shared.values[idx-SharedSlotStart] = val
+}
+
+// Shared holds the shared variable storage for closures.
+// It supports concurrent access when the concurrent flag is set.
+type Shared struct {
+	values []Value
+	MayLock
+	// seenMu guards seen and warned
+	seenMu sync.Mutex
+	// seen maps a block's SuFunc to the first SuClosure instance
+	// dispatched to a thread with this Shared. A second, different
+	// instance of the same SuFunc means the block was created in a loop
+	// and its instances share the variable. Different SuFunc's sharing
+	// the variables (e.g. separate blocks) are not flagged.
+	seen map[*SuFunc]*SuClosure
+	// warned is set after emitting a warning for this Shared so the
+	// warning is only given once.
+	warned bool
+	// modified is set if a shared variable is assigned while concurrent.
+	// A closure running on another thread may then change or observe the
+	// value between uses, e.g. a loop variable captured by a deferred block.
+	modified atomic.Bool
+}
+
+// noteThread records a closure being dispatched to another thread.
+// It returns true if this is a repeat instance of a block (created in a
+// loop) whose shared variables have been modified.
+func (sh *Shared) noteThread(c *SuClosure) bool {
+	sh.seenMu.Lock()
+	defer sh.seenMu.Unlock()
+	if sh.seen == nil {
+		sh.seen = make(map[*SuFunc]*SuClosure)
+	}
+	prev, ok := sh.seen[c.SuFunc]
+	if !ok {
+		sh.seen[c.SuFunc] = c
+		return false
+	}
+	if prev == c || sh.warned || !sh.modified.Load() {
+		return false
+	}
+	sh.warned = true
+	return true
 }

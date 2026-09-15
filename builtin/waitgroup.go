@@ -54,6 +54,7 @@ func wg_Thread(th *Thread, this Value, args []Value) Value {
 		fn = ob.ListGet(0)
 		ob.Delete(th, Zero)
 	}
+	NoteThreadClosure(fn)
 	t2 := NewThread(th)
 	if name := ob.NamedGet(SuStr("name")); name != nil {
 		threadName(t2, name)

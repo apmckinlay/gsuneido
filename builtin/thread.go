@@ -61,6 +61,7 @@ func threadCallClass(th *Thread, args []Value) Value {
 		fn = ob.ListGet(0)
 		ob.Delete(th, Zero)
 	}
+	NoteThreadClosure(fn)
 	t2 := NewThread(th)
 	if name := ob.NamedGet(SuStr("name")); name != nil {
 		threadName(t2, name)

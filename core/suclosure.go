@@ -39,6 +39,18 @@ func (c *SuClosure) Call(th *Thread, this Value, as *ArgSpec) Value {
 	return th.invokeClosure(fn, this, c)
 }
 
+// NoteThreadClosure records a closure that is being dispatched to another
+// thread (e.g. by the Thread builtin). It warns if the same block was
+// created in a loop and has shared variables modified for concurrent use.
+// It ignores non-closures.
+func NoteThreadClosure(fn Value) {
+	if c, ok := fn.(*SuClosure); ok && c.shared != nil &&
+		c.shared.noteThread(c) {
+		Warning("thread closure captures modified variable - unpredictable value:",
+			c.String())
+	}
+}
+
 func (*SuClosure) Type() types.Type {
 	return types.Block
 }

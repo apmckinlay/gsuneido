@@ -4,14 +4,100 @@
 package core_test
 
 import (
-	"fmt"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 
 	"github.com/apmckinlay/gsuneido/compile"
 )
+
+// makeWarningsThrow makes any Warning panic so it can be asserted with Panics.
+// It returns a func that restores the previous setting.
+// Normal usage: defer makeWarningsThrow()()
+func makeWarningsThrow() func() {
+	prev := options.WarningsThrow.Load()
+	options.WarningsThrow.Store(options.AllWarningsThrow)
+	return func() { options.WarningsThrow.Store(prev) }
+}
+
+func TestClosure_LoopSharedModifiedWarning(t *testing.T) {
+	// a block created in a loop, its instances sharing a variable that is
+	// reassigned, and dispatched to threads
+	src := `function () {
+		fs = []
+		n = 1
+		for (i = 0; i < 2; ++i)
+			fs.Add({ n })
+		mod = {|x| n = x }
+		return [fs, mod]
+	}`
+	fn := compile.Constant(src)
+	var th Thread
+	v := th.Call(fn)
+	v.SetConcurrent()
+	ob := v.(interface{ ListGet(int) Value })
+	fs := ob.ListGet(0).(interface{ ListGet(int) Value })
+
+	defer makeWarningsThrow()()
+
+	// reassign the shared variable while concurrent
+	th.Call(ob.ListGet(1), SuInt(2))
+
+	// dispatching the same block a second time warns
+	NoteThreadClosure(fs.ListGet(0))
+	assert.T(t).This(func() { NoteThreadClosure(fs.ListGet(1)) }).
+		Panics("thread closure")
+
+	// but the warning is only given once
+	NoteThreadClosure(fs.ListGet(1))
+}
+
+func TestClosure_SeparateSharedNoWarning(t *testing.T) {
+	// separate blocks sharing a variable are not the loop case
+	src := `function () {
+		n = 0
+		a = { n += 3 }
+		b = { n += 2 }
+		return [a, b]
+	}`
+	fn := compile.Constant(src)
+	var th Thread
+	v := th.Call(fn)
+	v.SetConcurrent()
+	ob := v.(interface{ ListGet(int) Value })
+
+	defer makeWarningsThrow()()
+
+	th.Call(ob.ListGet(0)) // modifies the shared variable while concurrent
+
+	// each block is dispatched, but they are different blocks, must not warn
+	NoteThreadClosure(ob.ListGet(0))
+	NoteThreadClosure(ob.ListGet(1))
+}
+
+func TestClosure_LoopSharedUnmodifiedNoWarning(t *testing.T) {
+	// QueryFuzz-like: a block created in a loop dispatched to threads
+	// but without reassigning the shared variables
+	src := `function () {
+		fs = []
+		for (i = 0; i < 2; ++i)
+			fs.Add({ i })
+		fs
+	}`
+	fn := compile.Constant(src)
+	var th Thread
+	v := th.Call(fn)
+	v.SetConcurrent()
+	fs := v.(interface{ ListGet(int) Value })
+
+	defer makeWarningsThrow()()
+
+	// the same block dispatched twice, but nothing is reassigned, must not warn
+	NoteThreadClosure(fs.ListGet(0))
+	NoteThreadClosure(fs.ListGet(1))
+}
 
 func TestClosure_rule(t *testing.T) {
 	src := `function () {
@@ -80,7 +166,7 @@ func TestClosure_observer2(t *testing.T) {
     }`
 
 	f := compile.Constant(src)
-	fmt.Println(DisasmOps(f.(*SuFunc)))
+	// fmt.Println(DisasmOps(f.(*SuFunc)))
 	var th Thread
 	result := th.Call(f)
 	assert.This(result).Is(SuStr("bar"))
