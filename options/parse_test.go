@@ -100,6 +100,9 @@ func TestParse(t *testing.T) {
 	test("-v", "version")
 	test("-version", "version")
 
+	test("-s -w", "error should not specify web port for server")
+	test("-s -web=1234", "error should not specify web port for server")
+
 	test("-w", "web")
 	test("-web", "web")
 	test("-w=1234", "web=1234")

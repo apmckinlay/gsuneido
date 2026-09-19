@@ -4,7 +4,6 @@
 package options
 
 import (
-	"log"
 	"math/bits"
 	"strconv"
 	"strings"
@@ -100,7 +99,7 @@ loop:
 		Port = "3147"
 	}
 	if WebServer && Action == "server" {
-		log.Println("ERROR: should not specify web port for server")
+		error("should not specify web port for server")
 	}
 	CmdLine = remainder(args)
 }
