@@ -116,3 +116,76 @@ func TestCreateCodeTool(t *testing.T) {
 	tran3.Complete()
 	th3.Close()
 }
+
+func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
+	assert := assert.T(t)
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db.CheckerSync()
+	db19.StartConcur(db, 50*time.Millisecond)
+	dbmsLocal := dbms.NewDbmsLocal(db)
+	core.GetDbms = func() core.IDbms { return dbmsLocal }
+
+	dbmsLocal.Admin("create stdlib (name, text, path, lib_before_text, lib_before_path, lib_modified, lib_committed, group, num, parent) key(num) key(name, group)", nil)
+
+	th := core.NewThread(core.MainThread)
+	tran := dbmsLocal.Transaction(true)
+	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', path: 'A/B', lib_before_text: '', lib_before_path: '', lib_modified: #20200101, lib_committed: #20240203, group: -1, num: 42, parent: 7 } into stdlib")
+	assert.This(n).Is(1)
+	tran.Complete()
+	th.Close()
+
+	ctx := context.WithValue(context.Background(), approvalFnKey{}, func(before, after string) (bool, error) {
+		return true, nil
+	})
+
+	// Soft-delete the record
+	_, err := deleteCodeTool(ctx, "stdlib", "Foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Verify it's soft-deleted (group = -2)
+	th2 := core.NewThread(core.MainThread)
+	tran2 := dbmsLocal.Transaction(false)
+	q := tran2.Query("stdlib where group = -2 and name = 'Foo'", nil)
+	row, _ := q.Get(th2, core.Next)
+	assert.That(row != nil)
+	tran2.Complete()
+	th2.Close()
+
+	// Re-create the definition
+	res, err := createCodeTool(ctx, "stdlib", "", "Foo", "function() { return 1 }")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.This(res.Library).Is("stdlib")
+	assert.This(res.Name).Is("Foo")
+
+	// Verify restoration: fields preserved, only text/lib_modified updated
+	th3 := core.NewThread(core.MainThread)
+	defer th3.Close()
+	tran3 := dbmsLocal.Transaction(false)
+	q2 := tran3.Query("stdlib where group = -1 and name = 'Foo'", nil)
+	hdr := q2.Header()
+	row2, _ := q2.Get(th3, core.Next)
+	assert.That(row2 != nil)
+
+	st := core.NewSuTran(tran3, false)
+	assert.This(core.ToStr(row2.GetVal(hdr, "text", th3, st))).Is("function() { return 1 }")
+	assert.This(row2.GetVal(hdr, "group", th3, st)).Is(core.IntVal(-1))
+	n, _ = row2.GetVal(hdr, "num", th3, st).IfInt()
+	assert.This(n).Is(42) // num preserved
+	p, _ := row2.GetVal(hdr, "parent", th3, st).IfInt()
+	assert.This(p).Is(7) // parent preserved
+	assert.That(row2.GetVal(hdr, "lib_modified", th3, st) != nil) // modified updated
+	assert.This(row2.GetVal(hdr, "lib_committed", th3, st).String()).Is("#20240203") // committed preserved
+	assert.This(core.ToStr(row2.GetVal(hdr, "lib_before_text", th3, st))).Is("function(){}") // before_text set from old text
+	assert.This(core.ToStr(row2.GetVal(hdr, "path", th3, st))).Is("A/B") // path preserved
+
+	// Verify no duplicate (soft-deleted record should be gone)
+	q3 := tran3.Query("stdlib where group = -2 and name = 'Foo'", nil)
+	row3, _ := q3.Get(th3, core.Next)
+	assert.That(row3 == nil)
+
+	tran3.Complete()
+}

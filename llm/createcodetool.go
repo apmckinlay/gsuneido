@@ -6,6 +6,7 @@ package llm
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -80,15 +81,57 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 		warnings = []string{}
 	}
 
-	// Check if definition already exists
-	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
+	// Check if definition already exists (active or soft-deleted)
+	query := fmt.Sprintf("%s where (group = -1 or group = -2) and name = %q", library, name)
 	rtran := th.Dbms().Transaction(false)
 	rq := rtran.Query(query, nil)
+	hdr := rq.Header()
 	row, _ := rq.Get(th, core.Next)
-	rtran.Complete()
 	if row != nil {
-		return createCodeOutput{}, fmt.Errorf("definition already exists: %s", name)
+		st := core.NewSuTran(rtran, false)
+		groupVal := row.GetVal(hdr, "group", th, st)
+		group, _ := groupVal.IfInt()
+		if group == -1 {
+			rtran.Complete()
+			return createCodeOutput{}, fmt.Errorf("definition already exists: %s", name)
+		}
+		// Soft-deleted: restore by updating in place (like edit)
+		off := row[0].Off
+		vals := make(map[string]string, len(hdr.Fields[0]))
+		for _, f := range hdr.Fields[0] {
+			vals[f] = row.GetRawVal(hdr, f, th, st)
+		}
+		rtran.Complete()
+
+		oldText := core.ToStr(core.Unpack(vals["text"]))
+		if err := requireApproval(ctx, "createCodeTool", oldText, code); err != nil {
+			return createCodeOutput{}, err
+		}
+
+		vals["group"] = core.PackValue(core.SuInt(-1))
+		vals["text"] = core.PackValue(core.SuStr(code))
+		vals["lib_modified"] = core.PackValue(core.Now())
+		if slices.Contains(hdr.Fields[0], "lib_before_text") {
+			if v := vals["lib_before_text"]; v == "" {
+				vals["lib_before_text"] = core.PackValue(core.SuStr(oldText))
+			}
+		}
+
+		utran := th.Dbms().Transaction(true)
+		newRec := buildRecord(hdr, vals)
+		utran.Update(th, library, off, newRec)
+		if conflict := utran.Complete(); conflict != "" {
+			return createCodeOutput{}, fmt.Errorf("transaction conflict: %s", conflict)
+		}
+
+		core.Global.Unload(name)
+		return createCodeOutput{
+			Library:  library,
+			Name:     name,
+			Warnings: warnings,
+		}, nil
 	}
+	rtran.Complete()
 
 	if err := requireApproval(ctx, "createCodeTool", "", code); err != nil {
 		return createCodeOutput{}, err
