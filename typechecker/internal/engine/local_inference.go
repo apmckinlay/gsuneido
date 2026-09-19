@@ -35,7 +35,7 @@ func LocalInference(cls *ClassObject, env TypeEnv, pctx *PassCtx) bool {
 		if fn.ReturnAnnotation != "" {
 			if t, err := ParseTypeAnnotation(fn.ReturnAnnotation); err != nil {
 				env.Report(&Diagnostic{
-					Severity: SeverityWarning,
+					Severity: SeverityError,
 					Method:   name,
 					Pos:      int(fn.Pos1),
 					Msg:      fmt.Sprintf("return %v", err),
@@ -103,7 +103,7 @@ func paramAnnotationType(p *ast.Param, fnName string, env TypeEnv) (DynType, boo
 	t, err := ParseTypeAnnotation(p.Annotations)
 	if err != nil {
 		env.Report(&Diagnostic{
-			Severity: SeverityWarning,
+			Severity: SeverityError,
 			Method:   fnName,
 			Pos:      int(p.Name.Pos),
 			Msg:      fmt.Sprintf("param %q %v", p.Name.ParamName(), err),

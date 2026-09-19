@@ -2279,6 +2279,22 @@ func TestParseAnnotationEmptyAlternativeIsError(t *testing.T) {
 	a.That(err != nil)
 }
 
+func TestInvalidAnnotationTypeNameParamIsError(t *testing.T) {
+	a := assert.T(t)
+	_, env := runPasses(`class {
+		Foo(x: numbr) { return x }
+	}`, "T")
+	a.That(hasDiag(env, "Foo", SeverityError, `unknown type name "numbr"`))
+}
+
+func TestInvalidAnnotationTypeNameReturnIsError(t *testing.T) {
+	a := assert.T(t)
+	_, env := runPasses(`class {
+		Foo() : numbr { return 1 }
+	}`, "T")
+	a.That(hasDiag(env, "Foo", SeverityError, `unknown type name "numbr"`))
+}
+
 func TestAnnotationParamOverridesDefaultValueType(t *testing.T) {
 	a := assert.T(t)
 	_, env := runPasses(`class {
