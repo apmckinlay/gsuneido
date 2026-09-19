@@ -48,6 +48,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
+		code = normalizeCRLF(code)
 		return createCodeTool(ctx, library, path, name, code)
 	},
 })
