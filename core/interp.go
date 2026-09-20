@@ -631,6 +631,9 @@ loop:
 			base := th.sp - int(argSpec.Nargs)
 			result := f.Call(th, nil, argSpec)
 			th.sp = base
+			if oc == op.CallFuncDiscard {
+				th.ReturnMulti = th.ReturnMulti[:0]
+			}
 			if th.ReturnThrow {
 				// NOTE: this should be kept in sync with CallMeth & Finally
 				th.ReturnThrow = false // default is to clear the flag
@@ -691,6 +694,9 @@ loop:
 					// fmt.Println(strings.Repeat("   ", t.fp+1), f)
 					result := f.Call(th, this, argSpec)
 					th.sp = base
+					if oc == op.CallMethDiscard {
+						th.ReturnMulti = th.ReturnMulti[:0]
+					}
 					if th.ReturnThrow {
 						// NOTE: this code should be kept in sync with CallFunc
 						th.ReturnThrow = false // default is to clear the flag

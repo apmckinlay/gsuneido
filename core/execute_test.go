@@ -60,6 +60,22 @@ func TestMulti(t *testing.T) {
 		return a is 12 and b is 34
 	}`)
 	assert.This(th.Call(f)).Is(True)
+	
+	f = compile.Constant(`function () {
+		f = function() { return 1,2 }
+		g = function() { return /* nothing */ }
+		f()
+		x, y = g()
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("multiple return/assign mismatch")
+	
+	f = compile.Constant(`function () {
+		f = function() { return 1,2 }
+		g = function() { return 0 }
+		f()
+		x, y = g()
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("multiple return/assign mismatch")
 }
 
 func TestInRange(t *testing.T) {
