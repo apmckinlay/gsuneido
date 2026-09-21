@@ -128,6 +128,11 @@ func TestCodegen(t *testing.T) {
 	test("return @args", "Load args, ReturnSpread")
 	test("return @f()", "Load f, CallFuncNilOk (), ReturnSpread")
 
+	test("f() { return 1, 2 }",
+		"Closure, {One, Int 2, BlockReturnMulti 2, Load f}, CallFuncNilOk (block:)")
+	test("f() { return @Object() }",
+		"Closure, {Global Object, CallFuncNilOk (), BlockReturnSpread, Load f}, CallFuncNilOk (block:)")
+
 	test("throw 'fubar'", "Value 'fubar', Throw")
 
 	test("f()", "Load f, CallFuncNilOk ()")
@@ -168,15 +173,6 @@ func TestCodegen(t *testing.T) {
 	test("new c", "LoadValue c '*new*', CallMethNilOk ()")
 	test("new c()", "LoadValue c '*new*', CallMethNilOk ()")
 	test("new c(1)", "Load c, One, Value '*new*', CallMethNilOk (?)")
-
-	xtest := func(src, expected string) {
-		t.Helper()
-		classNum.Store(0)
-		ast := parseFunction("function () {\n" + src + "\n}")
-		assert.This(func() { codegen("", "", ast, nil) }).Panics(expected)
-	}
-	xtest("b = { return 1, 2, 3 }", "not allowed")
-	xtest("b = { return @Object(1, 2) }", "not allowed")
 }
 
 func TestCodegen_OverloadedGlobalRef(t *testing.T) {

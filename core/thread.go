@@ -94,7 +94,7 @@ type thread1 struct {
 
 	Rand *rand.Rand
 
-	// ReturnMulti is used by op.ReturnMulti, op.PushReturn, op.Gather
+	// ReturnMulti is used to return multiple values
 	ReturnMulti []Value
 }
 

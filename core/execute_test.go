@@ -341,3 +341,110 @@ func TestReturnSpread(t *testing.T) {
 	}`)
 	assert.This(func() { th.Call(f) }).Panics("return @ requires an object")
 }
+
+func TestBlockReturnMulti(t *testing.T) {
+	var th Thread
+
+	// multiple return values from a directly called block
+	f := compile.Constant(`function () {
+		inner = function() { blk = { return 12, 34 }; blk(); 123 }
+		a, b = inner()
+		return a is 12 and b is 34
+	}`)
+	assert.This(th.Call(f)).Is(True)
+
+	// multiple return values from a block called by a builtin
+	f = compile.Constant(`function () {
+		inner = function() { #(1).Eval({ return 12, 34 }) }
+		a, b = inner()
+		return a is 12 and b is 34
+	}`)
+	assert.This(th.Call(f)).Is(True)
+
+	// multiple return values from a block called from another function
+	// with try/catch (like stdlib Each) which must not catch block returns
+	f = compile.Constant(`function () {
+		inner = function() {
+			each = function(ob, blk) {
+				for x in ob
+					try
+						blk(x)
+					catch (e, "block:")
+						if e is "block:break"
+							break
+				}
+			each(Object(1), { |x| return 12, 34 })
+			}
+		a, b = inner()
+		return a is 12 and b is 34
+	}`)
+	assert.This(th.Call(f)).Is(True)
+
+	// direct call returns nil (like return 1,2,3)
+	f = compile.Constant(`function () {
+		inner = function() { blk = { return 0, 1, "" }; blk(); 123 }
+		return inner()
+	}`)
+	assert.This(th.Call(f)).Is(nil)
+	assert.This(th.ReturnMulti).Is([]Value{EmptyStr, One, Zero}) // reverse
+
+	// gathered with @ob =
+	f = compile.Constant(`function () {
+		inner = function() { blk = { return 12, 34 }; blk(); 123 }
+		@ob = inner()
+		return ob
+	}`)
+	assert.This(th.Call(f)).Is(SuObjectOf(SuInt(12), SuInt(34)))
+
+	// multiple return values from a nested block
+	f = compile.Constant(`function () {
+		inner = function() {
+			blk = { b2 = { return 12, 34 }; b2(); 123 }
+			blk()
+			}
+		a, b = inner()
+		return a is 12 and b is 34
+	}`)
+	assert.This(th.Call(f)).Is(True)
+}
+
+func TestBlockReturnSpread(t *testing.T) {
+	var th Thread
+
+	// multiple values
+	f := compile.Constant(`function () {
+		inner = function() { blk = { return @Object(10, 20) }; blk(); 123 }
+		a, b = inner()
+		return a is 10 and b is 20
+	}`)
+	assert.This(th.Call(f)).Is(True)
+
+	// single value
+	f = compile.Constant(`function () {
+		inner = function() { blk = { return @Object(42) }; blk(); 123 }
+		return inner()
+	}`)
+	assert.This(th.Call(f)).Is(SuInt(42))
+	assert.That(len(th.ReturnMulti) == 0)
+
+	// empty object - bare return
+	f = compile.Constant(`function () {
+		inner = function() { blk = { return @Object() }; blk(); 123 }
+		return inner()
+	}`)
+	assert.This(th.Call(f)).Is(nil)
+
+	// error: named members
+	f = compile.Constant(`function () {
+		inner = function() { blk = { return @Object(a: 1) }; blk(); 123 }
+		inner()
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("return @ cannot include named members")
+
+	// error: not an object
+	f = compile.Constant(`function () {
+		inner = function() { blk = { return @123 }; blk(); 123 }
+		inner()
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("return @ requires an object")
+}

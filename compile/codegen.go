@@ -402,22 +402,24 @@ func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
 		panic("New cannot return a value")
 	}
 	if node.ReturnSpread {
-		if cg.isBlock {
-			panic("return @ob not allowed from a block")
-		}
 		cg.expr2(node.Exprs[0], callNilOk)
-		cg.emit(op.ReturnSpread)
+		if cg.isBlock {
+			cg.emit(op.BlockReturnSpread)
+		} else {
+			cg.emit(op.ReturnSpread)
+		}
 		return
 	}
 	if len(node.Exprs) > 1 {
-		if cg.isBlock {
-			panic("multiple return values not allowed from a block")
-		}
 		assert.That(!node.ReturnThrow)
 		for _, e := range node.Exprs {
 			cg.expr2(e, callNoNil)
 		}
-		cg.emit(op.ReturnMulti, byte(len(node.Exprs)))
+		if cg.isBlock {
+			cg.emit(op.BlockReturnMulti, byte(len(node.Exprs)))
+		} else {
+			cg.emit(op.ReturnMulti, byte(len(node.Exprs)))
+		}
 		return
 	}
 	var expr ast.Expr

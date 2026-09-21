@@ -259,6 +259,12 @@ const (
 	BlockReturn
 	// BlockReturnNil pushes nil and then does BlockReturn
 	BlockReturnNil
+	// BlockReturnMulti <uint8> returns multiple values from the stack
+	// like ReturnMulti, but from a block i.e. does BlockReturn
+	BlockReturnMulti
+	// BlockReturnSpread returns the values from an object like ReturnSpread,
+	// but from a block i.e. does BlockReturn
+	BlockReturnSpread
 
 	// combination op codes -----------------------------------------
 
