@@ -121,7 +121,7 @@ func decideCond(cond ast.Expr, overrides map[string]DynType, env TypeEnv) condVe
 }
 
 func addReturnType(r *ast.Return, env TypeEnv, acc *DynType) {
-	if r.ReturnThrow {
+	if r.ReturnThrow || r.ReturnSpread {
 		return
 	}
 	var ty DynType

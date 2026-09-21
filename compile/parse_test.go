@@ -311,6 +311,9 @@ func TestParseStatements(t *testing.T) {
 
 	test("return throw 123", "ReturnThrow(123)")
 
+	test("return @ob", "ReturnSpread(ob)")
+	test("return @Object(1, 2)", "ReturnSpread(Call(Object 1 2))")
+
 	test("forever\na", "Forever(a)")
 
 	// while

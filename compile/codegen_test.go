@@ -125,6 +125,9 @@ func TestCodegen(t *testing.T) {
 
 	test("return 1, 2, 3", "One, Int 2, Int 3, ReturnMulti 3")
 
+	test("return @args", "Load args, ReturnSpread")
+	test("return @f()", "Load f, CallFuncNilOk (), ReturnSpread")
+
 	test("throw 'fubar'", "Value 'fubar', Throw")
 
 	test("f()", "Load f, CallFuncNilOk ()")
@@ -173,6 +176,7 @@ func TestCodegen(t *testing.T) {
 		assert.This(func() { codegen("", "", ast, nil) }).Panics(expected)
 	}
 	xtest("b = { return 1, 2, 3 }", "not allowed")
+	xtest("b = { return @Object(1, 2) }", "not allowed")
 }
 
 func TestCodegen_OverloadedGlobalRef(t *testing.T) {

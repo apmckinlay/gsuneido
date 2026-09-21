@@ -240,6 +240,12 @@ const (
 	// ReturnMulti <uint8> returns multiple values from the stack.
 	// It is used by multiple return.
 	ReturnMulti
+	// ReturnSpread returns the values from an object.
+	// If the object has named members, it panics.
+	// If the object is empty, it returns nil.
+	// If the object has one value, it returns that value.
+	// If the object has multiple values, it returns them as multiple values.
+	ReturnSpread
 
 	// blocks -------------------------------------------------------
 

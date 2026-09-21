@@ -464,6 +464,8 @@ func (a *Return) Get(_ *Thread, m Value) Value {
 		return a.Exprs[0].(Value)
 	case SuStr("throw"):
 		return SuBool(a.ReturnThrow)
+	case SuStr("spread"):
+		return SuBool(a.ReturnSpread)
 	}
 	return stmtGet(a, m)
 }

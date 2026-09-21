@@ -47,7 +47,7 @@ func collectReturns(n ast.Node, env TypeEnv, acc *DynType) {
 	if n == nil {
 		return
 	}
-	if r, ok := n.(*ast.Return); ok && !r.ReturnThrow {
+	if r, ok := n.(*ast.Return); ok && !r.ReturnThrow && !r.ReturnSpread {
 		var ty DynType
 		if len(r.Exprs) == 0 {
 			ty = TVoid
@@ -77,7 +77,7 @@ func checkReturnsIn(n ast.Node, name string, env TypeEnv, declared DynType) {
 	if n == nil {
 		return
 	}
-	if r, ok := n.(*ast.Return); ok && !r.ReturnThrow {
+	if r, ok := n.(*ast.Return); ok && !r.ReturnThrow && !r.ReturnSpread {
 		var ty DynType
 		if len(r.Exprs) == 0 {
 			ty = TVoid

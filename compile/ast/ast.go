@@ -759,13 +759,17 @@ func (a *If) Children(fn func(Node) Node) {
 type Return struct {
 	Exprs []Expr
 	stmtNodeT
-	ReturnThrow bool
+	ReturnThrow  bool
+	ReturnSpread bool
 }
 
 func (a *Return) String() string {
 	s := "Return("
 	if a.ReturnThrow {
 		s = "ReturnThrow("
+	}
+	if a.ReturnSpread {
+		s = "ReturnSpread("
 	}
 	sep := ""
 	for _, e := range a.Exprs {

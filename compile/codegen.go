@@ -401,6 +401,14 @@ func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
 	if cg.isNew && len(node.Exprs) > 0 {
 		panic("New cannot return a value")
 	}
+	if node.ReturnSpread {
+		if cg.isBlock {
+			panic("return @ob not allowed from a block")
+		}
+		cg.expr2(node.Exprs[0], callNilOk)
+		cg.emit(op.ReturnSpread)
+		return
+	}
 	if len(node.Exprs) > 1 {
 		if cg.isBlock {
 			panic("multiple return values not allowed from a block")

@@ -89,26 +89,27 @@ func _() {
 	_ = x[ReturnNil-78]
 	_ = x[ReturnThrow-79]
 	_ = x[ReturnMulti-80]
-	_ = x[Closure-81]
-	_ = x[BlockBreak-82]
-	_ = x[BlockContinue-83]
-	_ = x[BlockReturn-84]
-	_ = x[BlockReturnNil-85]
-	_ = x[LoadValue-86]
-	_ = x[ValueCallMethNoNil-87]
-	_ = x[ValueGet-88]
-	_ = x[LoadLoad-89]
-	_ = x[ThisValue-90]
-	_ = x[StorePop-91]
-	_ = x[ThisLoad-92]
-	_ = x[GetValue-93]
-	_ = x[PopLoad-94]
-	_ = x[GlobalCallFuncNoNil-95]
+	_ = x[ReturnSpread-81]
+	_ = x[Closure-82]
+	_ = x[BlockBreak-83]
+	_ = x[BlockContinue-84]
+	_ = x[BlockReturn-85]
+	_ = x[BlockReturnNil-86]
+	_ = x[LoadValue-87]
+	_ = x[ValueCallMethNoNil-88]
+	_ = x[ValueGet-89]
+	_ = x[LoadLoad-90]
+	_ = x[ThisValue-91]
+	_ = x[StorePop-92]
+	_ = x[ThisLoad-93]
+	_ = x[GetValue-94]
+	_ = x[PopLoad-95]
+	_ = x[GlobalCallFuncNoNil-96]
 }
 
-const _Opcode_name = "NopPopIntValueTrueFalseZeroOneMinusOneMaxIntEmptyStrPushReturnGatherLoadStoreLoadStoreDyloadGlobalGetPutGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatCatNMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusInRangeOrAndBoolQMarkInCoverJumpJumpTrueJumpFalseJumpIsJumpIsntJumpLtIterIter2ForInForIn2ForRangeForRangeVarThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilReturnThrowReturnMultiClosureBlockBreakBlockContinueBlockReturnBlockReturnNilLoadValueValueCallMethNoNilValueGetLoadLoadThisValueStorePopThisLoadGetValuePopLoadGlobalCallFuncNoNil"
+const _Opcode_name = "NopPopIntValueTrueFalseZeroOneMinusOneMaxIntEmptyStrPushReturnGatherLoadStoreLoadStoreDyloadGlobalGetPutGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatCatNMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusInRangeOrAndBoolQMarkInCoverJumpJumpTrueJumpFalseJumpIsJumpIsntJumpLtIterIter2ForInForIn2ForRangeForRangeVarThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilReturnThrowReturnMultiReturnSpreadClosureBlockBreakBlockContinueBlockReturnBlockReturnNilLoadValueValueCallMethNoNilValueGetLoadLoadThisValueStorePopThisLoadGetValuePopLoadGlobalCallFuncNoNil"
 
-var _Opcode_index = [...]uint16{0, 3, 6, 9, 14, 18, 23, 27, 30, 38, 44, 52, 62, 68, 72, 77, 86, 92, 98, 101, 104, 110, 117, 125, 129, 131, 135, 140, 148, 150, 153, 155, 158, 161, 164, 167, 171, 174, 177, 180, 189, 199, 204, 210, 216, 222, 225, 234, 244, 251, 253, 256, 260, 265, 267, 272, 276, 284, 293, 299, 307, 313, 317, 322, 327, 333, 341, 352, 357, 360, 365, 380, 393, 406, 421, 434, 447, 452, 458, 467, 478, 489, 496, 506, 519, 530, 544, 553, 571, 579, 587, 596, 604, 612, 620, 627, 646}
+var _Opcode_index = [...]uint16{0, 3, 6, 9, 14, 18, 23, 27, 30, 38, 44, 52, 62, 68, 72, 77, 86, 92, 98, 101, 104, 110, 117, 125, 129, 131, 135, 140, 148, 150, 153, 155, 158, 161, 164, 167, 171, 174, 177, 180, 189, 199, 204, 210, 216, 222, 225, 234, 244, 251, 253, 256, 260, 265, 267, 272, 276, 284, 293, 299, 307, 313, 317, 322, 327, 333, 341, 352, 357, 360, 365, 380, 393, 406, 421, 434, 447, 452, 458, 467, 478, 489, 501, 508, 518, 531, 542, 556, 565, 583, 591, 599, 608, 616, 624, 632, 639, 658}
 
 func (i Opcode) String() string {
 	idx := int(i) - 0

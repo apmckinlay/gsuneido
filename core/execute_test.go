@@ -296,3 +296,48 @@ func TestAtAssign(t *testing.T) {
 	result = th.Call(f)
 	assert.T(t).This(result).Is(SuObjectOf(SuInt(1), SuInt(2), SuInt(3)))
 }
+
+func TestReturnSpread(t *testing.T) {
+	var th Thread
+
+	// empty object - bare return
+	f := compile.Constant(`function () {
+		return @Object()
+	}`)
+	assert.This(th.Call(f)).Is(nil)
+	assert.That(len(th.ReturnMulti) == 0)
+
+	// single value
+	f = compile.Constant(`function () {
+		return @Object(42)
+	}`)
+	assert.This(th.Call(f)).Is(SuInt(42))
+	assert.That(len(th.ReturnMulti) == 0)
+
+	// multiple values - direct call returns nil (like return 1,2,3)
+	f = compile.Constant(`function () {
+		return @Object(0, 1, "")
+	}`)
+	assert.This(th.Call(f)).Is(nil)
+	assert.This(th.ReturnMulti).Is([]Value{EmptyStr, One, Zero}) // reverse
+
+	// multiple values with assignment
+	f = compile.Constant(`function () {
+		fn = function() { return @Object(10, 20, 30) }
+		a, b, c = fn()
+		return a is 10 and b is 20 and c is 30
+	}`)
+	assert.This(th.Call(f)).Is(True)
+
+	// error: named members
+	f = compile.Constant(`function () {
+		return @Object(a: 1)
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("return @ cannot include named members")
+
+	// error: not an object
+	f = compile.Constant(`function () {
+		return @123
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("return @ requires an object")
+}

@@ -59,7 +59,7 @@ func hasLiteralBoolReturn(fn *ast.Function) bool {
 		if n == nil || found {
 			return
 		}
-		if r, ok := n.(*ast.Return); ok && !r.ReturnThrow && len(r.Exprs) == 1 {
+		if r, ok := n.(*ast.Return); ok && !r.ReturnThrow && !r.ReturnSpread && len(r.Exprs) == 1 {
 			if _, ok := returnLiteralPolarity(r); ok {
 				found = true
 				return

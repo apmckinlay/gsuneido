@@ -564,12 +564,14 @@ func (p *Parser) returnStmt() *ast.Return {
 	if p.newline || p.MatchIf(tok.Semicolon) || p.Token == tok.RCurly {
 		return &ast.Return{}
 	}
-	returnThrow := false
 	if p.MatchIf(tok.Throw) {
 		return &ast.Return{Exprs: []Expr{p.trailingExpr()}, ReturnThrow: true}
 	}
+	if p.MatchIf(tok.At) {
+		return &ast.Return{Exprs: []Expr{p.trailingExpr()}, ReturnSpread: true}
+	}
 	exprs := p.returnExprs()
-	return &ast.Return{Exprs: exprs, ReturnThrow: returnThrow}
+	return &ast.Return{Exprs: exprs}
 }
 
 func (p *Parser) returnExprs() []ast.Expr {
