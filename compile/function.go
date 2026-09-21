@@ -466,12 +466,18 @@ func (p *Parser) isForIn() bool {
 func (p *Parser) forIn() *ast.ForIn {
 	parens := p.MatchIf(tok.LParen)
 	id := p.Text
+	if !isLocal(id) {
+		p.Error("for-in variable must be a local variable")
+	}
 	p.final[id] = disqualified
 	pos := p.Pos
 	p.MatchIdent()
 	var var2 ast.Ident
 	if p.MatchIf(tok.Comma) {
 		var2.Name = p.Text
+		if !isLocal(var2.Name) {
+			p.Error("for-in variable must be a local variable")
+		}
 		p.final[var2.Name] = disqualified
 		var2.Pos = p.Pos
 		p.MatchIdent()
@@ -615,6 +621,9 @@ func (p *Parser) tryStmt() *ast.TryCatch {
 	if p.MatchIf(tok.Catch) {
 		if p.MatchIf(tok.LParen) {
 			catchVar = p.Text
+			if !isLocal(catchVar) {
+				p.Error("catch variable must be a local variable")
+			}
 			p.final[catchVar] = disqualified
 			varPos = p.Pos
 			unused = p.unusedAhead()
