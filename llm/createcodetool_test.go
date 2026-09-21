@@ -174,13 +174,19 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 	assert.This(core.ToStr(row2.GetVal(hdr, "text", th3, st))).Is("function() { return 1 }")
 	assert.This(row2.GetVal(hdr, "group", th3, st)).Is(core.IntVal(-1))
 	n, _ = row2.GetVal(hdr, "num", th3, st).IfInt()
-	assert.This(n).Is(42) // num preserved
+	// num preserved
+	assert.This(n).Is(42)
 	p, _ := row2.GetVal(hdr, "parent", th3, st).IfInt()
-	assert.This(p).Is(7) // parent preserved
-	assert.That(row2.GetVal(hdr, "lib_modified", th3, st) != nil) // modified updated
-	assert.This(row2.GetVal(hdr, "lib_committed", th3, st).String()).Is("#20240203") // committed preserved
-	assert.This(core.ToStr(row2.GetVal(hdr, "lib_before_text", th3, st))).Is("function(){}") // before_text set from old text
-	assert.This(core.ToStr(row2.GetVal(hdr, "path", th3, st))).Is("A/B") // path preserved
+	// parent preserved
+	assert.This(p).Is(7)
+	// modified updated
+	assert.That(row2.GetVal(hdr, "lib_modified", th3, st) != nil)
+	// committed preserved
+	assert.This(row2.GetVal(hdr, "lib_committed", th3, st).String()).Is("#20240203")
+	// before_text set from old text
+	assert.This(core.ToStr(row2.GetVal(hdr, "lib_before_text", th3, st))).Is("function(){}")
+	// path preserved
+	assert.This(core.ToStr(row2.GetVal(hdr, "path", th3, st))).Is("A/B")
 
 	// Verify no duplicate (soft-deleted record should be gone)
 	q3 := tran3.Query("stdlib where group = -2 and name = 'Foo'", nil)
