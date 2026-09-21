@@ -235,6 +235,21 @@ func (p *Parser) statement() (result ast.Statement) {
 	case tok.Continue:
 		p.Next()
 		return p.semi(&ast.Continue{})
+	case tok.At:
+		p.Next()
+		if !p.Token.IsIdent() || !isLocal(p.Text) {
+			p.Error("expecting local variable name after @")
+		}
+		id := &ast.Ident{Name: p.Text}
+		id.SetPos(p.Pos, p.EndPos)
+		p.Next()
+		p.Match(tok.Eq)
+		rhs := p.Expression()
+		if _, ok := rhs.(*ast.Call); !ok {
+			p.Error("@var = requires a call")
+		}
+		p.final[id.Name] = disqualified
+		return p.semi(&ast.AtAssign{Lhs: id, Rhs: rhs})
 	default:
 		exprs := p.exprList()
 		if len(exprs) == 1 {

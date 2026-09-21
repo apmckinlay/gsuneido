@@ -202,6 +202,9 @@ func (ss *scopes) statement(stmt Statement, vars map[string]int16, fn *Function)
 			ss.addVar(id.Name, vars)
 		}
 		ss.expr(stmt.Rhs, vars, fn)
+	case *AtAssign:
+		ss.addVar(stmt.Lhs.(*Ident).Name, vars)
+		ss.expr(stmt.Rhs, vars, fn)
 	case *Throw:
 		ss.expr(stmt.E, vars, fn)
 	case *TryCatch:

@@ -104,6 +104,12 @@ func (f *fold) children(node Node) {
 		f.childExpr(&node.Rhs)
 		f.values = save
 		return
+	case *AtAssign:
+		f.lvalue = node.Lhs.(*Ident).Name
+		f.childExpr(&node.Lhs)
+		f.childExpr(&node.Rhs)
+		f.values = save
+		return
 	case *Throw:
 		f.childExpr(&node.E)
 		f.values = save

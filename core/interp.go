@@ -4,6 +4,8 @@
 package core
 
 import (
+	"slices"
+
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	op "github.com/apmckinlay/gsuneido/core/opcodes"
 	"github.com/apmckinlay/gsuneido/util/tsc"
@@ -188,6 +190,7 @@ func (th *Thread) interp() (ret Value) {
 		}
 		// return value (ret) tells run we're catching
 		ret = OpCatch(th, e, catchPat)
+		th.ClearReturnMulti()
 	}()
 
 loop:
@@ -577,14 +580,26 @@ loop:
 			th.Pop() // discard the normal nil return value
 			n := fetchUint8()
 			rm := th.ReturnMulti
-			th.ReturnMulti = th.ReturnMulti[:0]
 			if n != len(rm) {
 				panic("multiple return/assign mismatch")
 			}
 			for i := range n {
 				th.Push(rm[i])
 			}
-			clear(th.ReturnMulti[:cap(th.ReturnMulti)])
+			th.ClearReturnMulti()
+		case op.Gather:
+			result := th.Pop()
+			rm := th.ReturnMulti
+			ob := &SuObject{}
+			if result != nil {
+				ob.Add(result)
+			} else if len(rm) > 0 {
+				for _, v := range slices.Backward(rm) {
+					ob.Add(v)
+				}
+				th.ClearReturnMulti()
+			}
+			th.Push(ob)
 		case op.Try:
 			fr.catchJump = fr.ip + fetchInt16()
 			fr.catchSp = th.sp
@@ -632,7 +647,7 @@ loop:
 			result := f.Call(th, nil, argSpec)
 			th.sp = base
 			if oc == op.CallFuncDiscard {
-				th.ReturnMulti = th.ReturnMulti[:0]
+				th.ClearReturnMulti()
 			}
 			if th.ReturnThrow {
 				// NOTE: this should be kept in sync with CallMeth & Finally
@@ -695,7 +710,7 @@ loop:
 					result := f.Call(th, this, argSpec)
 					th.sp = base
 					if oc == op.CallMethDiscard {
-						th.ReturnMulti = th.ReturnMulti[:0]
+						th.ClearReturnMulti()
 					}
 					if th.ReturnThrow {
 						// NOTE: this code should be kept in sync with CallFunc
@@ -731,7 +746,7 @@ loop:
 				}
 			}
 		// avoid range check on switch at the cost of a larger jump table
-		case 0, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255:
+		case 0, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255:
 			Fatal("invalid op code:", int(oc))
 		}
 	}

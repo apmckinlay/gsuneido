@@ -43,6 +43,9 @@ const (
 	// PushReturn <uint8> pushes multiple return values onto the stack.
 	// It is used by multiple assignment.
 	PushReturn
+	// Gather creates an object from call return values.
+	// It is used by @var = call.
+	Gather
 
 	// load and store -----------------------------------------------
 

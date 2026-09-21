@@ -384,6 +384,8 @@ func (cg *cgen) statement(node ast.Statement, labels *Labels, lastStmt bool) {
 		cg.exprStmt(node.E, lastStmt)
 	case *ast.MultiAssign:
 		cg.multiAssign(node)
+	case *ast.AtAssign:
+		cg.atAssign(node, lastStmt)
 	default:
 		panic("unexpected statement type " + fmt.Sprintf("%T", node))
 	}
@@ -656,6 +658,16 @@ func (cg *cgen) multiAssign(node *ast.MultiAssign) {
 	cg.emit(op.PushReturn, byte(len(refs)))
 	for _, ref := range refs {
 		cg.store(ref)
+		cg.emit(op.Pop)
+	}
+}
+
+func (cg *cgen) atAssign(node *ast.AtAssign, lastStmt bool) {
+	ref := cg.lvalue(node.Lhs)
+	cg.call(node.Rhs.(*ast.Call), callNilOk)
+	cg.emit(op.Gather)
+	cg.store(ref)
+	if !lastStmt {
 		cg.emit(op.Pop)
 	}
 }

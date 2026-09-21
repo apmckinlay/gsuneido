@@ -295,6 +295,11 @@ func TestParseStatements(t *testing.T) {
 	test("x=123;;", "Binary(Eq x 123)\n{}")
 	test("a, b, c = f()", "MultiAssign(a b c Call(f))")
 
+	// @var = call
+	test("@a = f()", "AtAssign(a Call(f))")
+	test("@a = f(1, 2)", "AtAssign(a Call(f 1 2))")
+	test("@result = a.f()", "AtAssign(result Call(Mem(a 'f')))")
+
 	// return
 	test("return", "Return()")
 	test("return 123", "Return(123)")
@@ -395,4 +400,6 @@ func TestParseStatements(t *testing.T) {
 	xtest("throw 1+2 3+4", "syntax error")
 	xtest("return throw", "syntax error")
 	xtest("return throw 1, 2, 3", "syntax error")
+	xtest("@X = F()", "expecting local variable")
+	xtest("@x = 123", "requires a call")
 }

@@ -190,6 +190,10 @@ func (ck *Check) statement(
 			}
 		}
 		init, _ = ck.expr(stmt.Rhs, init)
+	case *ast.AtAssign:
+		id := stmt.Lhs.(*ast.Ident)
+		init = ck.initVar(init, id.Name, int(id.Pos))
+		init, _ = ck.expr(stmt.Rhs, init)
 	case *ast.Throw:
 		init, _ = ck.expr(stmt.E, init)
 		exit = true

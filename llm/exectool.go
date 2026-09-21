@@ -101,6 +101,7 @@ func execTool(code string) (result execOutput, err error) {
 		for _, v := range slices.Backward(th.ReturnMulti) {
 			results = append(results, resultItem(th, v))
 		}
+		th.ClearReturnMulti()
 	}
 	result = execOutput{
 		Code:     code,

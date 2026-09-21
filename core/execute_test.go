@@ -60,7 +60,7 @@ func TestMulti(t *testing.T) {
 		return a is 12 and b is 34
 	}`)
 	assert.This(th.Call(f)).Is(True)
-	
+
 	f = compile.Constant(`function () {
 		f = function() { return 1,2 }
 		g = function() { return /* nothing */ }
@@ -68,7 +68,7 @@ func TestMulti(t *testing.T) {
 		x, y = g()
 	}`)
 	assert.This(func() { th.Call(f) }).Panics("multiple return/assign mismatch")
-	
+
 	f = compile.Constant(`function () {
 		f = function() { return 1,2 }
 		g = function() { return 0 }
@@ -254,4 +254,45 @@ func TestSuClassDefaultGet(t *testing.T) {
 	}`)
 	th := &Thread{}
 	assert.This(th.Call(f).String()).Is("Default(X /* method */")
+}
+
+func TestAtAssign(t *testing.T) {
+	var th Thread
+
+	// multiple return values
+	f := compile.Constant(`function () {
+		f = function() { return 12, 34 }
+		@ob = f()
+		return ob
+	}`)
+	result := th.Call(f)
+	assert.T(t).This(result).Is(SuObjectOf(SuInt(12), SuInt(34)))
+
+	// single return value
+	f = compile.Constant(`function () {
+		f = function() { return 42 }
+		@ob = f()
+		return ob
+	}`)
+	result = th.Call(f)
+	assert.T(t).This(result).Is(SuObjectOf(SuInt(42)))
+
+	// no return value
+	f = compile.Constant(`function () {
+		f = function() { }
+		@ob = f()
+		return ob
+	}`)
+	result = th.Call(f)
+	assert.T(t).This(result).Is(&SuObject{})
+
+	// method call
+	f = compile.Constant(`function () {
+		obj = class { F() { return 1, 2, 3 } }
+		instance = obj()
+		@ob = instance.F()
+		return ob
+	}`)
+	result = th.Call(f)
+	assert.T(t).This(result).Is(SuObjectOf(SuInt(1), SuInt(2), SuInt(3)))
 }

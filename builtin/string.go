@@ -114,6 +114,7 @@ func string_Eval2(th *Thread, this Value, args []Value) Value {
 		for _, val := range slices.Backward(th.ReturnMulti) {
 			ob.Add(val)
 		}
+		th.ClearReturnMulti()
 	}
 	return ob
 }

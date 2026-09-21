@@ -94,7 +94,7 @@ type thread1 struct {
 
 	Rand *rand.Rand
 
-	// ReturnMulti is used by op.ReturnMulti and op.PushReturn
+	// ReturnMulti is used by op.ReturnMulti, op.PushReturn, op.Gather
 	ReturnMulti []Value
 }
 
@@ -161,6 +161,13 @@ func (th *Thread) Reset() {
 	th.thread1 = thread1{} // zero it
 	th.Name = str.BeforeFirst(th.Name, " ")
 	th.Suneido.Store(nil)
+	th.ClearReturnMulti()
+}
+
+// ClearReturnMulti clears and resets ReturnMulti to release references.
+func (th *Thread) ClearReturnMulti() {
+	clear(th.ReturnMulti)
+	th.ReturnMulti = th.ReturnMulti[:0]
 }
 
 func (th *Thread) Session() string {

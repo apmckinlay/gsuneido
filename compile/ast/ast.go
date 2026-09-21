@@ -1068,6 +1068,21 @@ func (a *Switch) Children(fn func(Node) Node) {
 	}
 }
 
+type AtAssign struct {
+	stmtNodeT
+	Lhs Expr // *Ident
+	Rhs Expr // *Call
+}
+
+func (a *AtAssign) String() string {
+	return "AtAssign(" + a.Lhs.String() + " " + a.Rhs.String() + ")"
+}
+
+func (a *AtAssign) Children(fn func(Node) Node) {
+	childExpr(fn, &a.Lhs)
+	childExpr(fn, &a.Rhs)
+}
+
 type ExprPos struct {
 	SuAstNode
 	Expr

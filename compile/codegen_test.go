@@ -75,6 +75,12 @@ func TestCodegen(t *testing.T) {
 	test("a = b", "Load b, Store a")
 	test("a,b = f()",
 		"Load f, CallFuncNilOk (), PushReturn 2, StorePop a, StorePop b")
+	test("@a = f()",
+		"Load f, CallFuncNilOk (), Gather, Store a")
+	test("@a = f(1, 2)",
+		"One, Int 2, Load f, CallFuncNilOk (?, ?), Gather, Store a")
+	test("@a = f(); b",
+		"Load f, CallFuncNilOk (), Gather, StorePop a, Load b")
 	test("_dyn = 123", "Int 123, Store _dyn")
 	test("++_x", "One, Dyload _x, Pop, LoadStore _x AddEq")
 	test("_x += 1", "One, Dyload _x, Pop, LoadStore _x AddEq")
@@ -166,7 +172,7 @@ func TestCodegen(t *testing.T) {
 		ast := parseFunction("function () {\n" + src + "\n}")
 		assert.This(func() { codegen("", "", ast, nil) }).Panics(expected)
 	}
-	xtest("b = { return 1, 2, 3}", "not allowed")
+	xtest("b = { return 1, 2, 3 }", "not allowed")
 }
 
 func TestCodegen_OverloadedGlobalRef(t *testing.T) {
