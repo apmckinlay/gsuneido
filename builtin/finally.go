@@ -21,6 +21,7 @@ func Finally(th *Thread, args []Value) Value {
 			returnThrow := th.ReturnThrow
 			th.ReturnThrow = false
 			result := th.Call(args[1])
+			th.ClearReturnMulti()
 			// the following should match interp op.Call*
 			if th.ReturnThrow {
 				th.ReturnThrow = false
