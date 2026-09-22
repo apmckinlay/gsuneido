@@ -78,6 +78,48 @@ func TestMulti(t *testing.T) {
 	assert.This(func() { th.Call(f) }).Panics("multiple return/assign mismatch")
 }
 
+func TestTrinaryDiscardMulti(t *testing.T) {
+	assert := assert.T(t)
+	var th Thread
+
+	// make sure that a trinary discards ReturnMulti properly
+
+	// with op.Return
+	f := compile.Constant(`function () {
+		multi = function() { return 1, 2 }
+		inner = function(multi, cond) {
+			cond ? multi() : 0
+			return 5
+		}
+		a, b = inner(multi, true)
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("multiple return/assign mismatch")
+
+	// with op.BlockReturn
+	f = compile.Constant(`function () {
+		multi = function() { return 1, 2 }
+		inner = function(multi, cond) {
+			cond ? multi() : 0
+			#(111).Eval({ return 5 })
+		}
+		a, b = inner(multi, true)
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("multiple return/assign mismatch")
+
+	// with op.Gather
+	f = compile.Constant(`function () {
+		multi = function() { return 1, 2 }
+		inner = function(multi, cond) {
+			cond ? multi() : 0
+			#(111).Eval({ return })
+		}
+		@ob = inner(multi, true)
+		return ob
+	}`)
+	assert.This(th.Call(f)).Is(&SuObject{})
+	assert.That(len(th.ReturnMulti) == 0)
+}
+
 func TestInRange(t *testing.T) {
 	options.StrictCompare = true
 	defer func() {

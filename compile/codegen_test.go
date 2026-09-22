@@ -306,11 +306,10 @@ func TestControl(t *testing.T) {
 		0: Load a
         2: QMark 12
         5: Load b
-        7: CallFuncNilOk ()
+        7: CallFuncDiscard ()
         9: Jump 16
         12: Load c
-		14: CallFuncNilOk ()
-		16: Pop`)
+		14: CallFuncDiscard ()`)
 
 	test("(a ? b : c)", `
 		0: Load a
@@ -321,19 +320,21 @@ func TestControl(t *testing.T) {
 
 	test("a ? b : c;;", `
 		0: Load a
-        2: QMark 10
+        2: QMark 11
         5: Load b
-        7: Jump 12
-        10: Load c
-        12: Pop`)
+        7: Pop
+        8: Jump 14
+        11: Load c
+        13: Pop`)
 
 	test("(a ? b : c);;", `
 		0: Load a
-        2: QMark 10
+        2: QMark 11
         5: Load b
-        7: Jump 12
-        10: Load c
-        12: Pop`)
+        7: Pop
+        8: Jump 14
+        11: Load c
+        13: Pop`)
 
 	test("return a ? b : c", `
 		0: Load a
