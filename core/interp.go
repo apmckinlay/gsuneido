@@ -183,6 +183,7 @@ func (th *Thread) interp() (ret Value) {
 			if th.blockReturnFrame != fr {
 				panic(e) // not our block, rethrow
 			}
+			th.blockReturnFrame = nil
 			return // normal return
 		}
 		if fr.catchJump == 0 {
