@@ -19,26 +19,40 @@ type suRunPiped struct {
 	w       io.WriteCloser
 	r       io.ReadCloser
 	cmd     *exec.Cmd
-	command string
+	cmdargs []string
 }
 
 var nRunPiped atomic.Int32
 var _ = AddInfo("builtin.nRunPiped", &nRunPiped)
 
-var _ = builtin(RunPiped, "(command :string, block=false) :unknown")
+var _ = builtin(RunPiped, "(@args) :unknown")
 
-func RunPiped(th *Thread, args []Value) Value {
+func RunPiped(th *Thread, as *ArgSpec, args []Value) Value {
 	guardSandbox("RunPiped")
-	command := ToStr(args[0])
-	cmdargs := SplitCommand(command)
-	cmd := exec.Command(cmdargs[0])
+	iter := NewArgsIter(as, args)
+	var cmdargs []string
+	var block Value
+	for k, v := iter(); v != nil; k, v = iter() {
+		if k == nil {
+			cmdargs = append(cmdargs, ToStr(v))
+		} else if ToStr(k) == "block" {
+			block = v
+		}
+	}
+	cmdline := ""
+	if len(cmdargs) == 1 {
+		cmdline = cmdargs[0]
+		cmdargs = SplitCommand(cmdargs[0])
+	}
+	if len(cmdargs) == 0 {
+		panic("usage: RunPiped(@args)")
+	}
+	cmd := exec.Command(cmdargs[0], cmdargs[1:]...)
 	if errors.Is(cmd.Err, exec.ErrDot) {
 		cmd.Err = nil
 	}
 	if runtime.GOOS == "windows" {
-		cmdSetup(cmd, command, true)
-	} else {
-		cmd.Args = cmdargs
+		cmdSetup(cmd, cmdline, false)
 	}
 	w, err := cmd.StdinPipe()
 	if err != nil {
@@ -54,14 +68,14 @@ func RunPiped(th *Thread, args []Value) Value {
 	if err != nil {
 		panic("Runpiped: failed to start: " + err.Error())
 	}
-	rp := &suRunPiped{command: command, cmd: cmd, w: w, r: r}
+	rp := &suRunPiped{cmdargs: cmdargs, cmd: cmd, w: w, r: r}
 	nRunPiped.Add(1)
-	if args[1] == False {
+	if block == False || block == nil {
 		return rp
 	}
 	// block form
 	defer rp.close()
-	return th.Call(args[1], rp)
+	return th.Call(block, rp)
 }
 
 func SplitCommand(s string) []string {
@@ -105,7 +119,7 @@ func (rp *suRunPiped) close() {
 var _ Value = (*suRunPiped)(nil)
 
 func (rp *suRunPiped) String() string {
-	return "RunPiped(" + rp.command + ")"
+	return "RunPiped(" + rp.cmdargs[0] + ")"
 }
 
 func (rp *suRunPiped) Equal(other any) bool {
