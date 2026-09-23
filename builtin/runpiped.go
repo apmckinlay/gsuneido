@@ -52,7 +52,7 @@ func RunPiped(th *Thread, as *ArgSpec, args []Value) Value {
 		cmd.Err = nil
 	}
 	if runtime.GOOS == "windows" {
-		cmdSetup(cmd, cmdline, false)
+		cmdSetup(cmd, cmdline, true)
 	}
 	w, err := cmd.StdinPipe()
 	if err != nil {
