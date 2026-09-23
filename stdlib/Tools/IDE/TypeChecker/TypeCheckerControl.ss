@@ -1,10 +1,19 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 PassthruController
 	{
-	Title:      "Suneido Type Checker"
-	binaryPath: ""
+	Title: "Type Checker"
 	orderedSrc: ()
 	tabImages: (ok: 0, warn: 1, error: 2)
+	CallClass(libview)
+		{
+		if BuiltDate() < #20260819
+			{
+			Alert("Type Checker requires BuiltDate > 2026-08-19")
+			return
+			}
+		Window([#TypeChecker, libview], keep_placement:)
+		}
+
 	New(.libview)
 		{
 		super(.buildLayout())
@@ -47,14 +56,10 @@ PassthruController
 
 		.buildTabs(tabs = [#Tabs, close_button: false])
 
-		.binaryPath = TypeCheckHelper.BinaryPath()
-		return [#Vert, tabs,
-			[#Horz,
-				[#Record,
-					[#Vert,
-						[#Pair, [#Static, "TypeChecker Binary"],
-							TypeCheckerBinaryPicker(.binaryPath)], #Skip]],
-				[#Button, #Check], [#Skip, xstretch: 1], [#Button, #Policy], [#Skip]],
+		return [#Vert,
+			tabs,
+			[#Horz, #Skip, [#Button, #Check], #Skip, #Fill, [#Button, #Policy], #Skip],
+			#Skip,
 			[#TodoOutput name: #diagnostics, readonly:],
 			[#Horz, [#Skip, medium:], [#Static, "", name: #timeElapsed, xstretch: 1]]]
 		}
@@ -82,11 +87,6 @@ PassthruController
 
 	On_Check()
 		{
-		if false isnt browse = .FindControl(#TypeCheckerBinary)
-			{
-			.binaryPath = browse.Get()
-			TypeCheckHelper.SetBinaryPath(.binaryPath)
-			}
 		.annotate()
 		}
 
@@ -135,13 +135,6 @@ PassthruController
 			return
 		.ensureConstructed(tctrl)
 
-		if not TypeCheckHelper.BinaryExists?()
-			{
-			.AlertError("Type Checker",
-				"Binary not found at:\n" $ TypeCheckHelper.BinaryPath())
-			return
-			}
-
 		// response is in the same order as the request: base->child->...->grandchild.
 		// tabs are in the opposite order (leaf-first), so reverse-index when splicing.
 		response = ""
@@ -164,10 +157,9 @@ PassthruController
 			{
 			names = .orderedSrc.Map({ it.name }).Join(", ")
 			msg_limit = 200
-			AlertError("suneidotypes: failed to decode response\n\n" $ "Exception:\n" $
-				String(e) $ "\n\n" $ "Request method: " $ method $ '\n' $
-				"Request sources: " $ names $ "\n\n" $ "Response:\n" $
-				String(response[..msg_limit]))
+			AlertError("Type checker failed\n\n" $ "Exception:\n" $ String(e) $ "\n\n" $
+				"Request method: " $ method $ '\n' $ "Request sources: " $ names $
+				"\n\n" $ "Response:\n" $ String(response[..msg_limit]))
 			}
 		}
 
@@ -278,7 +270,6 @@ PassthruController
 
 	Destroy()
 		{
-		TypeCheckHelper.StopServer()
 		if .Member?(#sub)
 			.sub.Unsubscribe()
 		super.Destroy()

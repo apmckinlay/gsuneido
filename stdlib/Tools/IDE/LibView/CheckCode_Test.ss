@@ -58,12 +58,11 @@ Test
 			#("F(x){x} G(x){}",
 				((10, 1, "WARNING: initialized but not used: x")))]
 
-		if BuiltDate() > #20260514
-			classes.Append(#(
-				("Foo(x :string) :string { x }", ()),
-				("Foo(x: string|number) :object|false { x }", ()),
-				("Foo(x :string = 0, y: object = false) :string|false {y[x] }", ())
-				))
+		classes.Append(#(
+			("Foo(x :string) :string { x }", ()),
+			("Foo(x: string|number) :object|false { x }", ()),
+			("Foo(x :string = 0, y: object = false) :string|false {y[x] }", ())
+			))
 		return classes
 		}
 
@@ -158,8 +157,6 @@ Test
 		test("5.Times(", " use for ..")
 		test("mock.Verify.Times(", true)
 
-		if BuiltDate() < #20260514
-			return
 		test("func(foo :bar)", true) // this used to be invalid, now is an annotation
 		test("func(x :string)", true)
 		test("func(x: string)", true)

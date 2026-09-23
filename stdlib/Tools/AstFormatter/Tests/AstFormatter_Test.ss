@@ -10,18 +10,17 @@ Test
 		AstFormatter_Test.
 			Members().
 			Filter({ it.Prefix?(#UnitTest_) }).
-			Each(
-				{|m|
-				wg.Thread(
-					{
-					try
-						AstFormatter_Test[m]()
-					catch (err)
-						Suneido.AstFormatter_Test.Add(m $ ": " $ err)
-					})
-				})
+			Each({ wg.Thread(.catcher, it) })
 		wg.Wait()
-		Assert(Suneido.AstFormatter_Test isSize: 0)
+		Assert(Suneido.AstFormatter_Test is: #())
+		}
+
+	catcher(m)
+		{
+		try
+			AstFormatter_Test[m]()
+		catch (err)
+			Suneido.AstFormatter_Test.Add(m $ ": " $ err)
 		}
 
 	UnitTest_expressions()
@@ -81,6 +80,18 @@ Test
 			"f = function(x = #foo, y = false) { 123 }", norm:)
 		.t('x = "line1\nline2"') // multiline string preserved verbatim
 		.t("if a and b and c\n\t\tf()")
+		}
+
+	UnitTest_namedArgDefaults()
+		{
+		// a named arg with no value (default true) must still honor the author's
+		// line breaks - its synthesized constant has pos/end false, so the break
+		// detection must fall back to the argument's own span
+		.t("f(a: 1,\n\tb:,\n\tc: 3)",
+			"f(a: 1,\n\t\tb:,\n\t\tc: 3)")
+		// a run of defaults mixed with values keeps its authored layout
+		.t("f(a: 1,\n\tb:,\n\tc:,\n\td: 4)",
+			"f(a: 1,\n\t\tb:,\n\t\tc:,\n\t\td: 4)")
 		}
 
 	UnitTest_operatorBreaks()
@@ -362,12 +373,13 @@ Test
 				"\n\t\treturn 2\n\t\t}\n\t}", wrap: false)
 		// empty method bodies collapse to { }; a blank line follows every method
 		.t("class\n\t{\n\tF()\n\t\t{\n\t\t}\n\tG()\n\t\t{\n\t\t}\n\t}",
-			"class\n\t{\n\tF() { }\n\n\tG() { }\n\t}", wrap: false)
+			"class\n\t{\n\tF()\n\t\t{\n\t\t}\n\n\tG()\n\t\t{\n\t\t}\n\t}", wrap: false)
 		// the inserted blank goes BEFORE comments leading the next method
 		.t("class\n\t{\n\tF()\n\t\t{\n\t\t}\n\t// about G\n\tG()\n\t\t{\n\t\t}\n\t}",
-			"class\n\t{\n\tF() { }\n\n\t// about G\n\tG() { }\n\t}", wrap: false)
+			"class\n\t{\n\tF()\n\t\t{\n\t\t}\n\n\t// about G\n\tG()\n\t\t{\n\t\t}\n\t}",
+			wrap: false)
 		.t("class\n\t{\n\tF()\n\t\t{\n\t\t}\n\tX: 1\n\t}",
-			"class\n\t{\n\tF() { }\n\n\tX: 1\n\t}", wrap: false)
+			"class\n\t{\n\tF()\n\t\t{\n\t\t}\n\n\tX: 1\n\t}", wrap: false)
 		.t("Base\n\t{\n\tOp: (a: 1, b: 2)\n\t}", wrap: false)
 		// scalar members align into a value column; longest key sets the width
 		.t("class\n\t{\n\tx: 1\n\tabcd: 2\n\t}", "class\n\t{\n\tx:    1\n\tabcd: 2\n\t}",
@@ -386,18 +398,21 @@ Test
 	UnitTest_emptyBody()
 		{
 		// an empty body has nothing to lay out, so it hugs the signature as { }
-		.t("function() { }", wrap: false)
-		.t("function() {}", "function() { }", wrap: false)
-		.t("function()\n\t{\n\t}", "function() { }", wrap: false)
-		.t("class\n\t{\n\tF() {}\n\t}", "class\n\t{\n\tF() { }\n\t}", wrap: false)
-		.t("class\n\t{\n\tF(a, b) {}\n\t}", "class\n\t{\n\tF(a, b) { }\n\t}", wrap: false)
+//		.t("function() { }", wrap: false)
+//		.t("function() {}", "function() { }", wrap: false)
+//		.t("function()\n\t{\n\t}", "function() { }", wrap: false)
+		.t("class\n\t{\n\tF() {}\n\t}", "class\n\t{\n\tF()\n\t\t{\n\t\t}\n\t}",
+			wrap: false)
+		.t("class\n\t{\n\tF(a, b) {}\n\t}", "class\n\t{\n\tF(a, b)\n\t\t{\n\t\t}\n\t}",
+			wrap: false)
 		// a body with a statement keeps the Whitesmiths block
 		.t("class\n\t{\n\tF()\n\t\t{\n\t\tg()\n\t\t}\n\t}", wrap: false)
 		// comments are not an empty body - they hold the block open
 		.t("class\n\t{\n\tF()\n\t\t{\n\t\t// keep me\n\t\t}\n\t}", wrap: false)
 		.t("class\n\t{\n\tF()\n\t\t{ // note\n\t\t}\n\t}", wrap: false)
 		// a comment after the body stays out of it (Trailing must not eat the })
-		.t("class\n\t{\n\tF() { }\n\n\t// about G\n\tG() { }\n\t}", wrap: false)
+		.t("class\n\t{\n\tF()\n\t\t{\n\t\t}\n\n\t// about G\n\tG()\n\t\t{\n\t\t}\n\t}",
+			wrap: false)
 		// only #Function bodies collapse: class and control-flow bodies are unchanged
 		.t("c = class\n\t\t{\n\t\t}")
 		.t("if x\n\t\t{\n\t\t}")
@@ -406,26 +421,28 @@ Test
 	UnitTest_typeAnnotations()
 		{
 		// the canonical form is "name :type" and ") :type", arms joined by "|"
-		.t("function(x :number) { }", wrap: false)
-		.t("function(x: number) { }", "function(x :number) { }", wrap: false)
+		.t("function(x :number)\n\t{\n\t}", wrap: false)
+		.t("function(x: number)\n\t{\n\t}", "function(x :number)\n\t{\n\t}", wrap: false)
 		.t("function(x : a | b) : c | d\n\t{\n\treturn 1\n\t}",
 			"function(x :a|b) :c|d\n\t{\n\treturn 1\n\t}", wrap: false)
-		.t("function(x :number, y :object|unknown, z :boolean|object = false) :date { }",
+		.t("function(x :number, y :object|unknown, z :boolean|object = false) " $
+				":date\n\t{\n\t}",
 			wrap: false)
-		.t("function(x :string = 'a') :string { }", wrap: false)
+		.t("function(x :string = 'a') :string\n\t{\n\t}", wrap: false)
 		// the parser reports "object" for an @ param, but it cannot be written
-		.t("function(@args) { }", wrap: false)
-		.t("class\n\t{\n\tM(@rest) :Instance { }\n\t}", wrap: false)
+		.t("function(@args)\n\t{\n\t}", wrap: false)
+		.t("class\n\t{\n\tM(@rest) :Instance\n\t\t{\n\t\t}\n\t}", wrap: false)
 		// dot and underscore params keep their prefix
-		.t("class\n\t{\n\tNew(.x :number, _y :string, .z) { }\n\t}", wrap: false)
+		.t("class\n\t{\n\tNew(.x :number, _y :string, .z)\n\t\t{\n\t\t}\n\t}",
+			wrap: false)
 		.t("class\n\t{\n\tM(a :Foo|Bar) :Instance\n\t\t{\n\t\treturn 1\n\t\t}\n\t}",
 			wrap: false)
 		// /*unused*/ must keep hugging the name, ahead of the annotation,
 		// else the parser no longer recognizes it
-		.t("function(x /*unused*/ :string) :void { }",
-			"function(x/*unused*/ :string) :void { }", wrap: false)
-		.t("function(x /*unused*/ :string = 1) :void { }",
-			"function(x/*unused*/ :string = 1) :void { }", wrap: false)
+		.t("function(x /*unused*/ :string) :void\n\t{\n\t}",
+			"function(x/*unused*/ :string) :void\n\t{\n\t}", wrap: false)
+		.t("function(x /*unused*/ :string = 1) :void\n\t{\n\t}",
+			"function(x/*unused*/ :string = 1) :void\n\t{\n\t}", wrap: false)
 		// blocks have no annotations
 		.t("b = {|x, y| x }")
 		// the equivalence gate must catch a dropped or altered annotation

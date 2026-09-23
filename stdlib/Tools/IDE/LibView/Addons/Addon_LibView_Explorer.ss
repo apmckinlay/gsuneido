@@ -2,7 +2,9 @@
 LibViewAddon
 	{
 	Commands(cmds)
-		{ cmds.Add(#(Diff_Item_to, '', 'Compare with a previous version from history')) }
+		{
+		cmds.Add(#(Diff_Item_to, "", "Compare with a previous version from history"))
+		}
 
 	Ctrl()
 		{
@@ -10,29 +12,29 @@ LibViewAddon
 		.TabMenuOptions(tabMenu)
 		return Object(
 			order: 5,
-			ctrl: Object(#ExplorerMulti,
+			ctrl: [#ExplorerMulti,
 				#LibTreeModel,
 				#(LibViewView),
 				treeArgs: [multi?:],
-				extraTabMenu: tabMenu))
+				extraTabMenu: tabMenu])
 		}
 
 	Init()
-		{ .Redir('On_Inspect') }
-
-	Explorer_RestoreTab(path)
 		{
-		pathOb = path.Split('/')
+		.Redir(#On_Inspect)
+		}
+
+	Explorer_RestoreTab(tabOb)
+		{
+		pathOb = tabOb.path.Split('/')
 		if pathOb.Empty?()
 			return
-		pathOb[0] = .toggleUsed(pathOb[0], used?: .Libs().Has?(pathOb[0].Tr('()')))
-		.Explorer.GotoPath(pathOb.Join('/'))
+		pathOb[0] = .toggleUsed(pathOb[0], used?: .Libs().Has?(pathOb[0].Tr("()")))
+		.Explorer.GotoPath(pathOb.Join('/'), skipFolder?: not tabOb.group)
 		}
 
 	toggleUsed(text, used?)
 		{
-		return used?
-			? text.Tr('()')
-			: text =~ '^\(.*\)$' ? text : '(' $ text $ ')'
+		return used? ? text.Tr("()") : text =~ "^\(.*\)$" ? text : '(' $ text $ ')'
 		}
 	}

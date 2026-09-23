@@ -4,40 +4,28 @@ class
 	FromLibView(libview)
 		{
 		libview.Save()
-		observer = .CallClass(libview.Explorer.GetTabsPaths(all?:), libview)
+		observer = .CallClass(libview.Explorer.GetTabsPaths(), libview)
 		libview.AlertTestResult(observer)
 		}
 
-	CallClass(paths, libview)
+	CallClass(tabsOb, libview)
 		{
-		tests = [].Set_default([])
-		for path in paths
-			{
-			name = LibraryTags.RemoveTagFromName(path.AfterLast('/').Tr('?'))
-			if name.Suffix?('Test')
-				tests.AddUnique(name)
-			else
-				{
-				tests.AddUnique(name $ 'Test')
-				tests.AddUnique(name $ '_Test')
-				}
-			}
-
+		tests = .tests(tabsOb)
 		observer = new TestObserverString(quiet:)
 		if tests.Empty?()
 			{
-			observer.Output('No Tests Selected')
+			observer.Output("No Tests Selected")
 			return observer
 			}
 
-		libview.Editor.SendToAddons('On_BeforeAllTests')
+		libview.Editor.SendToAddons(#On_BeforeAllTests)
 		for lib in Libraries()
 			{
 			for name in tests.Copy()
 				if .RunTest?(lib, name)
 					{
 					LibViewRunTest(libview.Editor, lib, name)
-						{ |unused|
+						{|unused|
 						CodeState.RunCurrentCode(lib, name, { .runTest(name, observer) })
 						observer.ClearFailed()
 						true
@@ -47,15 +35,34 @@ class
 			if tests.Empty?()
 				break
 			}
-		libview.Editor.SendToAddons('On_AfterAllTests')
+		libview.Editor.SendToAddons(#On_AfterAllTests)
 		return observer
+		}
+
+	tests(tabsOb)
+		{
+		tests = [].Set_default([])
+		for tabOb in tabsOb
+			{
+			if tabOb.group
+				continue
+			name = LibraryTags.RemoveTagFromName(tabOb.path.AfterLast('/').Tr('?'))
+			if name.Suffix?(#Test)
+				tests.AddUnique(name)
+			else
+				{
+				tests.AddUnique(name $ "Test")
+				tests.AddUnique(name $ "_Test")
+				}
+			}
+		return tests
 		}
 
 	RunTest?(lib, name)
 		{
 		if not Libraries().Has?(lib)
 			return false // unused library
-		if name is "" or name is "Test" and lib is "stdlib"
+		if name is "" or name is #Test and lib is #stdlib
 			return false // stdlib:Test is a helper class for tests, not a test class
 		if QueryEmpty?(lib, :name, group: -1)
 			return false // folder or record no longer exists
@@ -65,16 +72,16 @@ class
 	runTest(name, observer)
 		{
 		x = false
-		resultPat = '\d tests? (SUCCEEDED|FAILED)'
+		resultPat = "\d tests? (SUCCEEDED|FAILED)"
 		try
 			x = Global(name)
 		catch (e)
 			if e isnt "can't find " $ name
 				{
 				observer.BeforeTest(name)
-				observer.BeforeMethod('Global')
-				observer.Error('unused', e $ '\r\n')
-				observer.AfterTest('unused', 0, 0, 0)
+				observer.BeforeMethod(#Global)
+				observer.Error(#unused, e $ "\r\n")
+				observer.AfterTest(#unused, 0, 0, 0)
 				}
 		if x isnt false and Class?(x) and x.Base?(Test)
 			{

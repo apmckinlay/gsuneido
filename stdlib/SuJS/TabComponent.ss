@@ -1,9 +1,21 @@
 // Copyright (C) 2019 Axon Development Corporation All rights reserved worldwide.
+/* Element hierarchy
+.su-tab-control              (root)
+	.su-tab-container        (.tabEl) — flex row; .su-tab-top/bottom/left/right/scroll
+	|-	.su-tab-viewport     (.viewportEl) — scroll window
+		|-	.su-tab-row      (.viewportRowEl) — absolute flex strip that actually scrolls
+			|-	.hiddenTab   (display:none; width probe)
+			|-	.su-tab × N
+				|-	imageEl  (optional close/custom icon)
+				|-	.su-tab-text  (.textEl) — clipped label
+			|-	.su-tab-button   (expand/tab-list dropdown)
+	|-	.su-tab-extra        (optional user-supplied control at the end)
+*/
 Component
 	{
-	Name: 'Tab'
+	Name: #Tab
 	ContextMenu: true
-	styles: '
+	styles:       "
 		.su-tab-control {
 			position: relative;
 		}
@@ -15,6 +27,18 @@ Component
 			width: 100%;
 			height: 100%;
 			box-sizing: border-box;
+		}
+		.su-tab-viewport {
+			position: relative;
+			overflow: hidden;
+			flex-grow: 1;
+		}
+		.su-tab-row {
+			position: absolute;
+			top: 0px;
+			display: flex;
+			width: 100%;
+			height: 100%;
 		}
 		.su-tab-container.su-tab-top {
 			border-bottom: 1px solid lightgrey;
@@ -38,6 +62,9 @@ Component
 			align-items: baseline;
 			overflow: hidden;
 			font-weight: normal;
+		}
+		.su-tab-scroll .su-tab {
+			overflow: visible;
 		}
 		.su-tab-top .su-tab {
 			border-top: 1px solid lightgrey;
@@ -106,29 +133,34 @@ Component
 		.su-tab-extra {
 			order: 999;
 			flex-grow: 1;
-		}'
-	tabButton: false
-	dropButton: false
-	showingDropButton: false
+		}"
+	tabButton:    false
 	extraControl: false
-	New(.close_button = false, orientation = 'top', tabButton = false,
-		extraControl = false, .staticTabs = #())
+	New(.close_button = false, orientation = #top, tabButton = false,
+		extraControl = false, .staticTabs = #(), .scrollTabs = false)
 		{
-		LoadCssStyles('su_tabs.css', .styles)
+		LoadCssStyles("su_tabs.css", .styles)
 		.tabs = Object()
+		.buttons = Object()
 		.closeImage = close_button isnt false
 			? [char: IconFontHelper.GetCode(#close).Chr(),
-				font: 'suneido2', color: 'darkgrey']
+				font: #suneido2, color: #darkgrey]
 			: -1
 
-		.CreateElement('div', className: 'su-tab-control')
-		.TargetEl = .tabEl = CreateElement('div', .El, 'su-tab-container')
+		.CreateElement(#div, className: "su-tab-control")
+		.TargetEl = .tabEl = CreateElement(#div, .El, "su-tab-container")
+
+		if .scrollTabs is true
+			.tabEl.classList.Add("su-tab-scroll")
+
+		.viewportEl = CreateElement(#div, .tabEl, "su-tab-viewport")
+		.viewportRowEl = CreateElement(#div, .viewportEl, "su-tab-row")
 		.initHiddenTab()
-		if orientation in ('left', 'right')
+		if orientation in (#left, #right)
 			{
 			.vertical = true
-			.tabEl.classList.Add(orientation is 'right' ? 'su-tab-right' : 'su-tab-left')
-			.SetStyles(#('flex-direction': 'column', 'order': '100'), .tabEl)
+			.tabEl.classList.Add(orientation is #right ? "su-tab-right" : "su-tab-left")
+			.SetStyles(#("flex-direction": column, order: "100"), .viewportRowEl)
 
 			.Ystretch = 1
 			.Xstretch = 0
@@ -136,25 +168,17 @@ Component
 		else
 			{
 			.vertical = false
-			.tabEl.classList.Add(orientation is 'bottom' ? 'su-tab-bottom' : 'su-tab-top')
+			.tabEl.classList.Add(orientation is #bottom ? "su-tab-bottom" : "su-tab-top")
 			.Xstretch = 1
 			}
 
-		if tabButton isnt false
-			{
-			.tabButton = CreateElement('div', .tabEl, className: 'su-tab-button')
-			.tabButton.SetAttribute('translate', 'no')
-			.tabButton.title = tabButton
-			.tabButton.textContent = IconFontHelper.GetCode('expand.emf').Chr()
-			.tabButton.AddEventListener('click', .onTabButton)
-			}
+		.initTabButton(tabButton)
 
 		if extraControl isnt false
 			{
 			.extraControl = .Construct(extraControl)
-			.extraControl.El.classList.Add('su-tab-extra')
+			.extraControl.El.classList.Add("su-tab-extra")
 			}
-
 
 		.initSize()
 		.initResizeObserver()
@@ -163,14 +187,14 @@ Component
 	initHiddenTab()
 		{
 		// for calculate tab width
-		.hiddenTab = CreateElement('div', .tabEl, className: 'su-tab selected')
-		.hiddenTab.SetStyle('display', 'none')
+		.hiddenTab = CreateElement(#div, .viewportRowEl, className: "su-tab selected")
+		.hiddenTab.SetStyle(#display, #none)
 		}
 
 	initSize()
 		{
 		metrics = SuRender().GetTextMetrics(.tabEl, 'M')
-		.Xmin = .Ymin = Max(metrics.height + 12 /*=padding + border*/,
+		.Xmin = .Ymin = Max(metrics.height + 12/*=padding + border*/,
 			.extraControl is false ? 0 : .extraControl.Ymin)
 		.SetMinSize()
 		.updateWidth()
@@ -178,14 +202,71 @@ Component
 
 	initResizeObserver()
 		{
-		.resizeObserver = SuUI.MakeWebObject('ResizeObserver', .onResize)
+		.resizeObserver = SuUI.MakeWebObject(#ResizeObserver, .onResize)
 		.resizeObserver.Observe(.tabEl)
+		}
+
+	initTabButton(tabButton)
+		{
+		if tabButton isnt false
+			{
+			.tabButton = CreateElement(#div, .viewportRowEl, className: "su-tab-button")
+			.tabButton.SetAttribute(#translate, #no)
+			.tabButton.title = tabButton
+			.tabButton.textContent = IconFontHelper.GetCode("expand.emf").Chr()
+			.tabButton.AddEventListener(#click, .onTabButton)
+			}
 		}
 
 	onTabButton(event)
 		{
-		.EventWithOverlay('ButtonClicked', event.target.title,
+		.EventWithOverlay(#ButtonClicked, event.target.title,
 			Object(x: event.clientX, y: event.clientY))
+		}
+
+	onScrollPrevious()
+		{
+		if false is leftTab = .findLeftTab()
+			return
+
+		if leftTab is 0
+			return
+
+		prev = .tabs[leftTab-1]
+		.viewportRowEl.SetStyle(#left, -prev.el.offsetLeft $ "px")
+		}
+
+	onScrollNext()
+		{
+		if false is leftTab = .findLeftTab()
+			return
+
+		width = .vertical
+			? SuRender.GetClientRect(.viewportEl).height
+			: SuRender.GetClientRect(.viewportEl).width
+
+		if .w + .viewportRowEl.offsetLeft <= width
+			return // already displaying all tabs from cur to the end
+
+		if false is next = .tabs.GetDefault(leftTab + 1, false)
+			return
+
+		.viewportRowEl.SetStyle(#left, -next.el.offsetLeft $ "px")
+		}
+
+	restoreScroll()
+		{
+		if .scrollTabs is true
+			.viewportRowEl.SetStyle(#left, "0px")
+		}
+
+	findLeftTab()
+		{
+		offset = .viewportRowEl.offsetLeft
+		for (i = 0; i < .tabs.Size(); i += 1)
+			if offset + .tabs[i].el.offsetLeft >= 0
+				return i
+		return false
 		}
 
 	onResize(@unused)
@@ -193,76 +274,103 @@ Component
 		width = .vertical
 			? SuRender.GetClientRect(.tabEl).height
 			: SuRender.GetClientRect(.tabEl).width
+
 		if .w > width
+			.showDropScrollButton()
+		else
+			.hideDropScrollButton()
+		.restoreScroll()
+		}
+
+	showDropScrollButton()
+		{
+		if .buttons.NotEmpty?()
+			return
+
+		if .scrollTabs is false
 			{
-			if .showingDropButton is true
-				return
-			if .dropButton is false
-				{
-				.dropButton = CreateElement('div', className: 'su-tab-button')
-				.dropButton.SetAttribute('translate', 'no')
-				.dropButton.title = 'Go to Tab'
-				.dropButton.innerHTML = '&nbsp;'/*arrow_down in suneido font*/
-				.dropButton.AddEventListener('click', .onTabButton)
-				}
-			.tabEl.AppendChild(.dropButton)
-			.showingDropButton = true
+			dropButton = .createButton("Go to Tab",
+				"&nbsp;" /*arrow_down in suneido font*/,
+				.onTabButton)
+			.tabEl.AppendChild(dropButton)
+			.buttons.Add(dropButton)
 			}
 		else
 			{
-			if .showingDropButton is false
-				return
-			.dropButton.Remove()
-			.showingDropButton = false
+			prevButton = .createButton(#Previous, '.', .onScrollPrevious)
+			.tabEl.AppendChild(prevButton)
+			.buttons.Add(prevButton)
+			nextButton = .createButton(#Next, '/', .onScrollNext)
+			.tabEl.AppendChild(nextButton)
+			.buttons.Add(nextButton)
 			}
+		}
+
+	hideDropScrollButton()
+		{
+		if .buttons.Empty?()
+			return
+
+		.buttons.Each({ it.Remove() })
+		.buttons.Delete(all:)
+		}
+
+	createButton(title, icon, cb)
+		{
+		button = CreateElement(#div, className: "su-tab-button")
+		button.SetAttribute(#translate, #no)
+		button.title = title
+		button.innerHTML = icon
+		button.AddEventListener(#click, cb)
+		return button
 		}
 
 	OnContextMenu(event)
 		{
 		i = .tabs.FindIf({ it.textEl is event.target })
-		.RunWhenNotFrozen({
-			.EventWithFreeze('ContextMenu', event.clientX, event.clientY, i) })
+		.RunWhenNotFrozen(
+			{
+			.EventWithFreeze(#ContextMenu, event.clientX, event.clientY, i)
+			})
 		event.StopPropagation()
 		event.PreventDefault()
 		}
 
 	Insert(i, text, data, image, id)
 		{
-		el = CreateElement('div', className: 'su-tab')
-		textEl = CreateElement('div', el, className: 'su-tab-text')
+		el = CreateElement(#div, className: "su-tab")
+		textEl = CreateElement(#div, el, className: "su-tab-text")
 		textEl.textContent = text
 		if .vertical
 			{
-			el.SetStyle('writing-mode', 'vertical-lr')
-			el.SetStyle('text-orientation', 'upfront')
+			el.SetStyle("writing-mode", "vertical-lr")
+			el.SetStyle("text-orientation", #upfront)
 			}
 		item = Object(:text, :data, image: .baseImage(text, image), :id, :el, :textEl)
 		if i is .tabs.Size()
 			{
 			if .tabButton is false
-				.tabEl.AppendChild(el)
+				.viewportRowEl.AppendChild(el)
 			else
-				.tabEl.InsertBefore(el, .tabButton)
+				.viewportRowEl.InsertBefore(el, .tabButton)
 			.tabs.Add(item)
 			}
 		else
 			{
-			.tabEl.InsertBefore(el, .tabs[i].el)
+			.viewportRowEl.InsertBefore(el, .tabs[i].el)
 			.tabs.Add(item, at: i)
 			}
 
 		.addImageEl(item)
-		el.AddEventListener('mouseenter', .eventFactory(.onMouseEnter, item))
-		el.AddEventListener('mouseleave', .eventFactory(.onMouseLeave, item))
-		el.AddEventListener('click', .eventFactory(.click, item, #Click))
+		el.AddEventListener(#mouseenter, .eventFactory(.onMouseEnter, item))
+		el.AddEventListener(#mouseleave, .eventFactory(.onMouseLeave, item))
+		el.AddEventListener(#click, .eventFactory(.click, item, #Click))
 		.updateWidth()
 		}
 
 	baseImage(text, image)
 		{
-		baseImage = image isnt -1 or .staticTabs.Has?(text)
-			? image
-			: .closeImage
+		baseImage = image isnt -1 or .staticTabs.Has?(text) ? image : .closeImage
 		mouseOverImage = .closeImage isnt -1 and not .staticTabs.Has?(text)
 			? .closeImage
 			: image
@@ -273,8 +381,8 @@ Component
 		{
 		if -1 is imageOb = item.image.baseImage
 			return
-		el = CreateElement('div', item.el, at: 0)
-		el.SetAttribute('translate', 'no')
+		el = CreateElement(#div, item.el, at: 0)
+		el.SetAttribute(#translate, #no)
 		el.textContent = imageOb.char
 		.SetStyles(.imageStyle(imageOb), el)
 		if item.image.Any?({ it is .closeImage })
@@ -285,12 +393,12 @@ Component
 	imageStyle(imageOb)
 		{
 		return Object(
-			'font-family': imageOb.font,
-			'font-style': 'normal',
-			'font-weight': 'normal',
-			'margin-right': '5px',
-			'user-select': 'none',
-			'color': ToCssColor(imageOb.GetDefault(#color, #inherit)))
+			"font-family": imageOb.font,
+			"font-style": #normal,
+			"font-weight": #normal,
+			"margin-right": "5px",
+			"user-select": #none,
+			color: ToCssColor(imageOb.GetDefault(#color, #inherit)))
 		}
 
 	onMouseEnter(item)
@@ -299,10 +407,12 @@ Component
 			.updateImage(imageEl, item.image.mouseOverImage)
 
 		target = item.textEl
-		if target.offsetWidth < target.scrollWidth
-			target.SetAttribute('title', item.text)
+		if "" isnt tooltip = item.data.GetDefault(#tooltip, "")
+			target.SetAttribute(#title, tooltip)
+		else if target.offsetWidth < target.scrollWidth
+			target.SetAttribute(#title, item.text)
 		else
-			target.RemoveAttribute('title')
+			target.RemoveAttribute(#title)
 		}
 
 	onMouseLeave(item)
@@ -320,9 +430,7 @@ Component
 	Remove(i)
 		{
 		if .tabs[i] is .selected
-			{
 			.selected = false
-			}
 		.tabs[i].el.Remove()
 		.tabs.Delete(i)
 		.updateWidth()
@@ -340,7 +448,7 @@ Component
 	eventFactory(@args)
 		{
 		fn = args[0]
-		return { |event|
+		return {|event|
 			args.event = event
 			fn(@+1args)
 			}
@@ -384,13 +492,13 @@ Component
 		.updateWidth(i)
 		}
 
+	w: -1
 	updateWidth(tabChanged = false)
 		{
 		if tabChanged isnt false
 			.tabs[tabChanged].Delete(#width)
 		w = 1
 		for tab in .tabs
-			{
 			if tab.Member?(#width)
 				w += tab.width
 			else
@@ -398,20 +506,23 @@ Component
 				textWidth = Max(
 					SuRender().GetTextMetrics(.hiddenTab, tab.textEl.textContent).width,
 					SuRender().GetTextMetrics(tab.textEl, tab.textEl.textContent).width)
-				tab.textEl.SetStyle(.vertical ? 'height' : 'width', textWidth $ 'px')
+				tab.textEl.SetStyle(.vertical ? #height : #width, textWidth $ "px")
 				width = textWidth + 10/*=padding left and right*/ + 1/*=border*/
 				if tab.Member?(#imageEl)
 					width += SuRender().
-						GetTextMetrics(tab.imageEl, tab.imageEl.textContent).width +
+							GetTextMetrics(tab.imageEl, tab.imageEl.textContent).width +
 						5/*=padding right*/
 				tab.width = width
 				w += width
 				}
-			}
 		if .tabButton isnt false
 			w += SuRender().GetTextMetrics(.tabButton, .tabButton.textContent).width +
 				10/*=padding*/
-		.w = w
+		if .w isnt w
+			{
+			.w = w
+			.onResize()
+			}
 		}
 
 	Destroy()

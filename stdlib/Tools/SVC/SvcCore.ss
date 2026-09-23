@@ -13,14 +13,16 @@ for the change.
 class
 	{
 	Exists?(table)
-		{ return TableExists?(table $ '_master') }
+		{
+		return TableExists?(table $ "_master")
+		}
 
-	AllMasterChanges(table, since, to = '')
+	AllMasterChanges(table, since, to = "")
 		{
 		if not .Exists?(table)
 			return Object()
-		return QueryAll(table $ '_master where lib_committed > ' $ Display(since) $
-			(to is '' ? '' : ' where lib_committed < ' $ Display(to)) $ ' remove text')
+		return QueryAll(table $ "_master where lib_committed > " $ Display(since) $
+			(to is "" ? "" : " where lib_committed < " $ Display(to)) $ " remove text")
 		}
 
 	ListAllChanges(since, dir = false)
@@ -30,7 +32,7 @@ class
 			.ensureDir(dir)
 		for master_table in .masterTableList()
 			{
-			tablename = master_table.RemoveSuffix('_master')
+			tablename = master_table.RemoveSuffix("_master")
 			reclist = .tableChanges(since, master_table)
 
 			for recname in reclist.Members()
@@ -53,13 +55,13 @@ class
 	// refactored so we can test
 	masterTableList()
 		{
-		return QueryList('tables where table.Suffix?("_master")', 'table')
+		return QueryList('tables where table.Suffix?("_master")', #table)
 		}
 
-	tableChanges(since, table, queryextra = '')
+	tableChanges(since, table, queryextra = "")
 		{
-		master_changes = QueryAll(table $ ' where lib_committed > ' $ Display(since) $
-			queryextra $ ' extend modified = lib_committed sort lib_committed')
+		master_changes = QueryAll(table $ " where lib_committed > " $ Display(since) $
+			queryextra $ " extend modified = lib_committed sort lib_committed")
 		return Svc.MostRecentChanges(master_changes)
 		}
 
@@ -76,36 +78,36 @@ class
 			return
 
 		// need to tweek this if a book
-		if type is "book"
+		if type is #book
 			rec = .bookInfo(rec)
 
-		.export(filename, rec, dir $ '/' $ filename, type is "book" ? rec.path : false)
+		.export(filename, rec, dir $ '/' $ filename, type is #book ? rec.path : false)
 		}
 
 	addToDeletes(dir, filename, recname)
 		{
-		AddFile(dir $ '/deleted.txt', filename $ ', ' $ recname $ '\r\n')
+		AddFile(dir $ "/deleted.txt", filename $ ", " $ recname $ "\r\n")
 		}
 
 	MasterType(table)
 		{
 		type = false
-		columns = QueryColumns(table $ '_master')
-		if columns.Has?('svc_library')
-			type = 'lib'
-		else if columns.Has?('svc_book')
-			type = 'book'
+		columns = QueryColumns(table $ "_master")
+		if columns.Has?(#svc_library)
+			type = #lib
+		else if columns.Has?(#svc_book)
+			type = #book
 		return type
 		}
 
 	bookInfo(rec)
 		{
 		rec.name = rec.name.AfterFirst(rec.path $ '/')
-		if rec.text.Prefix?('Order:')
+		if rec.text.Prefix?("Order:")
 			{
 			ob = rec.text.Lines()
-			rec.order = ob[0].AfterFirst('Order: ')
-			rec.text = rec.text.AfterFirst(ob[0] $ '\n\n')
+			rec.order = ob[0].AfterFirst("Order: ")
+			rec.text = rec.text.AfterFirst(ob[0] $ "\n\n")
 			return rec
 			}
 		return rec
@@ -120,8 +122,8 @@ class
 		{
 		if not .Exists?(table)
 			return false
-		x = QueryLast(table $ '_master where name = ' $ Display(name) $
-			' sort lib_committed')
+		x = QueryLast(
+			table $ "_master where name = " $ Display(name) $ " sort lib_committed")
 		return x is false or x.type is '-' ? false : x
 		}
 
@@ -140,8 +142,8 @@ class
 		{
 		if not .Exists?(table)
 			return false
-		x = QueryLast(table $ '_master where name = ' $ Display(name) $
-			' sort lib_committed')
+		x = QueryLast(
+			table $ "_master where name = " $ Display(name) $ " sort lib_committed")
 		return x is false or x.type isnt '-' ? false : x
 		}
 
@@ -165,12 +167,12 @@ class
 		rec.type = .Get(table, rec.name) is false ? '+' : ' '
 		rec.lib_committed = Timestamp()
 		rec.lib_after_hash = Svc.Hash(rec.text)
-		if true isnt result = .EnsureMaster(master = table $ '_master', type)
+		if true isnt result = .EnsureMaster(master = table $ "_master", type)
 			return result
 
 		QueryOutput(master, rec)
 
-		.svcHooks(master, 'Put')
+		.svcHooks(master, #Put)
 		SvcSyncServer.ResetCache()
 		return rec.lib_committed
 		}
@@ -178,15 +180,16 @@ class
 	lastCommit(table)
 		{
 		return .Exists?(table)
-			? QueryMax(table $ '_master', 'lib_committed', Date.Begin())
+			? QueryMax(table $ "_master", #lib_committed, Date.Begin())
 			: Date.Begin()
 		}
 
 	EnsureMaster(master, type)
 		{
 		if not #(lib, book).Has?(type)
-			return 'ERR ensuring master table: ' $ master $ ', invalid type: ' $ type
-		typeColumn = type is 'lib' ? 'svc_library' : 'svc_book'
+			return SvcSocketClient.ErrorPrefix $ "ensuring master table: " $ master $
+				", invalid type: " $ type
+		typeColumn = type is #lib ? #svc_library : #svc_book
 		Database('ensure ' $ master $
 			' (name, path, text, lib_committed, id, comment, type, lib_before_hash,
 				lib_after_hash,'  $ typeColumn $')
@@ -197,20 +200,21 @@ class
 
 	svcHooks(master, type)
 		{
-		for f in Contributions('SvcCommitHooks')
+		for f in Contributions(#SvcCommitHooks)
 			f(master, type)
 		}
 
 	Remove(table, name, id, asof, comment)
 		{
 		if not .Exists?(table)
-			return 'ERR table: ' $ table $ ' does not exist in Svc, remove ignored'
+			return SvcSocketClient.ErrorPrefix $ "table: " $ table $
+				" does not exist in Svc, remove ignored"
 		if .lastCommit(table) > asof
 			return false // Someone else has sent changes, stop SvcClient send
 
 		rec = [:name, lib_committed: Timestamp(), :id, :comment, type: '-']
-		QueryOutput(master = table $ '_master', rec)
-		.svcHooks(master, 'Remove')
+		QueryOutput(master = table $ "_master", rec)
+		.svcHooks(master, #Remove)
 		SvcSyncServer.ResetCache()
 
 		return rec.lib_committed
@@ -218,9 +222,7 @@ class
 
 	GetBefore(table, name, when)
 		{
-		return .Exists?(table)
-			? QueryFirst(.getbefore_query(table, name, when))
-			: false
+		return .Exists?(table) ? QueryFirst(.getbefore_query(table, name, when)) : false
 		}
 
 	Get10Before(table, name, when)
@@ -228,7 +230,7 @@ class
 		list = Object()
 		if .Exists?(table)
 			QueryApply(.getbefore_query(table, name, when))
-				{ |x|
+				{|x|
 				list.Add(x)
 				if list.Size() >= 10 /*= requested list size */
 					break
@@ -247,9 +249,7 @@ class
 
 	GetChecksums(table, from, to)
 		{
-		return .Exists?(table)
-			? SvcSyncServer(table $ '_master', from, to)
-			: Object()
+		return .Exists?(table) ? SvcSyncServer(table $ "_master", from, to) : Object()
 		}
 
 	// this should only happen when library doesn't have folder,
@@ -258,7 +258,7 @@ class
 		{
 		if not .Exists?(table)
 			return false
-		master = table $ '_master'
+		master = table $ "_master"
 		return QueryEmpty?('(' $ master $
 			' where lib_committed > ' $ Display(localMaxLibCommitted) $
 			' and lib_committed <= ' $ Display(savedMaxLibCommitted) $
@@ -272,15 +272,16 @@ class
 		{
 		if not .Exists?(table)
 			return Object()
-		master = table $ '_master'
-		masterItem = QueryFirst(master $ ' where name is ' $ Display(name) $
-			' sort lib_committed')
+		master = table $ "_master"
+		masterItem =
+			QueryFirst(master $ " where name is " $ Display(name) $ " sort lib_committed")
 		if masterItem is false or "" is beforeHash = masterItem.lib_before_hash
 			return Object()
 		lib_committed = masterItem.lib_committed
-		return QueryList(master $ ' where name isnt ' $ Display(name) $
-			' and lib_committed < ' $ Display(lib_committed) $
-			' and lib_after_hash is ' $ Display(beforeHash), 'name')
+		return QueryList(
+			master $ " where name isnt " $ Display(name) $ " and lib_committed < " $
+				Display(lib_committed) $ " and lib_after_hash is " $ Display(beforeHash),
+			#name)
 		}
 
 	SvcTime()
@@ -312,5 +313,40 @@ class
 		cksum = cksumOb[0]
 		cksum.lib = table
 		return cksum
+		}
+
+	AllowEditCommit(table, name, committed, id)
+		{
+		return (false is masterRec = .GetOld(table, name, committed))
+			? "Unable to find master commit record"
+			: .allowEditCommit(id, masterRec)
+		}
+
+	allowEditCommit(id, masterRec)
+		{
+		if not masterRec.id.Split(',').Map!({ it.Trim() }).Has?(id)
+			return "Cannot edit commits you did not contribute to"
+		if masterRec.lib_committed < cutOff = .SvcTime().Minus(hours: 1)
+			return "Cannot edit commits prior to server: " $ cutOff.ShortDateTime()
+		return ""
+		}
+
+	UpdateComment(table, name, committed, comment, id)
+		{
+		try
+			if .Exists?(table)
+				QueryApply1(table $ "_master", :name, lib_committed: committed)
+					{
+					if "" isnt msg = .allowEditCommit(id, it)
+						throw msg
+					if comment.Blank?()
+						throw "Comment cannot be empty"
+					it.comment = comment
+					it.Update()
+					return ""
+					}
+		catch (error)
+			return error
+		return "Unable to find master commit record"
 		}
 	}

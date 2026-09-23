@@ -658,8 +658,7 @@ Controller
 	GetState()
 		{
 		return Object(splitterpos: .Explorer.HorzSplit.GetSplit(),
-			tabs: .Explorer.GetTabsPaths(), table: .table,
-			activeTabPath: .Explorer.Getpath(.Explorer.CurItem))
+			tabsOb: .Explorer.PersistentTabs(), table: .table)
 		}
 
 	SetState(state)

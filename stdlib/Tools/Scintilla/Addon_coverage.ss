@@ -5,8 +5,9 @@ ScintillaAddon
 	New(@args)
 		{
 		super(@args)
-		.sub = PubSub.Subscribe('LibraryRecordChange', .reset)
+		.sub = PubSub.Subscribe(#LibraryRecordChange, .reset)
 		}
+
 	Init()
 		{
 		.covered = Object()
@@ -19,23 +20,23 @@ ScintillaAddon
 		.SetMargins(.marginId + 1)
 		.SetMarginTypeN(.marginId, SC.MARGIN_RTEXT)
 
-		defaultFore = .GetSchemeColor('defaultFore')
+		defaultFore = .GetSchemeColor(#defaultFore)
 		.coveredStyle = SC.STYLE_LASTPREDEFINED + 1
 		.uncoveredStyle = SC.STYLE_LASTPREDEFINED + 2
 		.DefineStyle(.coveredStyle, defaultFore,
-			back: .dark ? RGB(71,87,45) : RGB(225,240,225) /*= dark green */)
+			back: .dark ? RGB(71, 87, 45) : RGB(225, 240, 225) /*= dark green */)
 		.DefineStyle(.uncoveredStyle, defaultFore,
-			back: .dark ? RGB(123,0,11) : RGB(255,225,225) /*= red */)
+			back: .dark ? RGB(123, 0, 11) : RGB(255, 225, 225) /*= red */)
 		}
 
 	getter_dark()
 		{
-		return .dark = .GetSchemeColor('defaultBack') < 0xdddddd
+		return .dark = .GetSchemeColor(#defaultBack) < 0xdd_dddd
 		}
 
 	ContextMenu()
 		{
-		return #('Remove Coverage Markers\tF6')
+		return #("Remove Coverage Markers\tF6")
 		}
 
 	On_Remove_Coverage_Markers()
@@ -52,38 +53,41 @@ ScintillaAddon
 			.reset()
 		}
 
-	coveredLevel: 		85
-	nonCoveredLevel: 	86
+	coveredLevel:    85
+	nonCoveredLevel: 86
 	Styling()
 		{
-		dark = .GetSchemeColor('defaultBack') < 0xdddddd
+		dark = .GetSchemeColor(#defaultBack) < 0xdd_dddd
 		box = dark ? INDIC.HIDDEN : INDIC.FULLBOX
 		mark = dark ? SC.MARK_BACKGROUND : SC.MARK_VLINE
 		return [[level: .coveredLevel,
-				marker: [mark, back: dark ? RGB(71,87,45) : CLR.green], /*= dark green */
+				marker: [mark,
+					back: dark ? RGB(71, 87, 45) : CLR.green], /*= dark green */
 				indicator: [box, fore: CLR.green, back: CLR.green]],
 			[level: .nonCoveredLevel,
-				marker: [mark, back: dark ? RGB(123,0,11) : CLR.red], /*= dark red */
+				marker: [mark, back: dark ? RGB(123, 0, 11) : CLR.red], /*= dark red */
 				indicator: [box, fore: CLR.red, back: CLR.red]]]
 		}
 
 	On_BeforeAllTests()
 		{
-		.Send('Save')
-		.Send('ForceEntabAll')
+		.Send(#Save)
+		.Send(#ForceEntabAll)
 		.reset()
 		CoverageEnable(true)
-		for item in .Send('GetTabsPaths', all?:, skipFolder?:)
+		for tabOb in .Send(#GetTabsPaths)
 			{
-			lib = item.BeforeFirst('/')
-			name = item.AfterLast('/')
+			if tabOb.group
+				continue
+			lib = tabOb.path.BeforeFirst('/')
+			name = tabOb.path.AfterLast('/')
 			.startCoverageAndTest(lib, name)
 			}
 		}
 
 	startCoverageAndTest(lib, name)
 		{
-		if name.Suffix?('Test')
+		if name.Suffix?(#Test)
 			{
 			.startCoverage(lib, name)
 			if false isnt recordName = .getNonTest(name)
@@ -115,16 +119,15 @@ ScintillaAddon
 
 	skip?(lib, name)
 		{
-
-		if name is '' // for stdlib:Test record
+		if name is "" // for stdlib:Test record
 			return true
 
 		tables = Libraries()
 		if false is libPos = tables.Find(lib)
 			return true
 
-		for lib in tables[libPos+1..]
-			if false isnt Query1(lib, :name, group: -1)
+		for lib in tables[libPos+1 ..]
+			if not QueryEmpty?(lib, :name, group: -1)
 				return true
 
 		if .verifyName(name) is false
@@ -135,9 +138,9 @@ ScintillaAddon
 
 	getNonTest(name)
 		{
-		if not name.Suffix?('Test')
+		if not name.Suffix?(#Test)
 			return false
-		nonTest = name.RemoveSuffix("Test").RemoveSuffix('_')
+		nonTest = name.RemoveSuffix(#Test).RemoveSuffix('_')
 		if false isnt found = .verifyName(nonTest)
 			return found
 		return .verifyName(nonTest $ '?')
@@ -149,7 +152,7 @@ ScintillaAddon
 			return false
 		if not Function?(fn) and not Class?(fn)
 			return false
-		if Type(fn).Has?("Builtin")
+		if Type(fn).Has?(#Builtin)
 			return false
 		return name
 		}
@@ -162,14 +165,12 @@ ScintillaAddon
 			return fn
 			}
 		catch (unused, "can't find|error loading|Assert FAILED: Global invalid")
-			{
 			return false
-			}
 		}
 
 	getTestName(name)
 		{
-		test = name $ '_Test'
+		test = name $ "_Test"
 		if false isnt .global(name)
 			return test
 		return false
@@ -177,7 +178,7 @@ ScintillaAddon
 
 	getTestName2(name)
 		{
-		test = name $ 'Test'
+		test = name $ "Test"
 		if false isnt .global(test)
 			return test
 		return false
@@ -191,7 +192,7 @@ ScintillaAddon
 			name = id.AfterFirst(':')
 			c = .coverage[id] = Global(name).StopCoverage()
 			for m in c.Members().Sort!()
-				.coverageSorted[id].Add(Object(m, c[m]))
+				.coverageSorted[id].Add([m, c[m]])
 			names.AddUnique(name)
 			}
 		CoverageEnable(false)
@@ -204,14 +205,14 @@ ScintillaAddon
 
 	getter_coverage()
 		{
-		if not Suneido.Member?('coverage')
+		if not Suneido.Member?(#coverage)
 			Suneido.coverage = Object().Set_default(Object().Set_default(0))
 		return Suneido.coverage
 		}
 
 	getter_coverageSorted()
 		{
-		if not Suneido.Member?('coverageSorted')
+		if not Suneido.Member?(#coverageSorted)
 			Suneido.coverageSorted = Object().Set_default(Object())
 		return Suneido.coverageSorted
 		}
@@ -235,7 +236,7 @@ ScintillaAddon
 			}
 
 		.SetMarginWidthN(.marginId, ScaleWithDpiFactor(48/*=width*/))
-		.SetMarginBackN(.marginId, CLR.red /*.GetSchemeColor('defaultBack')*/)
+		.SetMarginBackN(.marginId, CLR.red) /*.GetSchemeColor('defaultBack')*/
 		code = .Get()
 		pre = 0
 		preLine = -1
@@ -270,22 +271,22 @@ ScintillaAddon
 		{
 		try
 			{
-			name = .Send('CurrentName')
-			lib = .Send('CurrentTable')
+			name = .Send(#CurrentName)
+			lib = .Send(#CurrentTable)
 			}
-		catch(unused, '*socket connection timeout')
+		catch (unused, "*socket connection timeout")
 			return false
 		return lib $ ':' $ name
 		}
 
 	getMarginText(c)
 		{
-		return c >= 65535 ? '>=64k' : String(c) /*= max 65535 */
+		return c >= 65_535 ? ">=64k" : String(c) /*= max 65535 */
 		}
 
 	rollBackBlanks(code, start, pre)
 		{
-		for (; start >= 0 and start > pre; start--)
+		for (; start >= 0 and start > pre; start -= 1)
 			if code[start-1] not in ('\t', ' ')
 				break
 		return start

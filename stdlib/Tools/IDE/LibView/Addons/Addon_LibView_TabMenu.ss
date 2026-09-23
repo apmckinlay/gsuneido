@@ -2,16 +2,18 @@
 LibViewAddon
 	{
 	CloseTab(tab = 0)
-		{ .Explorer.Tab_Close(tab) }
+		{
+		.Explorer.Tab_Close(tab)
+		}
 
 	TabMenuOptions(options)
 		{
-		options.Add('Move To Other Library View', 'Copy Library And Name', 'Copy Name',
-			'', 'Find References', 'Diff to Overridden', 'Diff to Original',
-			'Restore to Original', #('Restore %1'), 'Version History', '',
-			'Go To Documentation', 'Edit Documentation',
-			'Go To Associated Test', 'Run Associated Test', '',
-			'Debug %1', '&Run %1', '&Profile %1', 'Review With AI', '', 'Export %1')
+		options.Add("Move To Other Library View", "Copy Library And Name", "Copy Name",
+			"", "Find References", "Diff to Overridden", "Diff to Original",
+			"Restore to Original", #("Restore %1"), "Version History", "",
+			"Go To Documentation", "Edit Documentation",
+			"Go To Associated Test", "Run Associated Test", "",
+			"Debug %1", "&Run %1", "&Profile %1", "Review With AI", "", "Export %1")
 		}
 
 	TabMenu_CopyLibraryAndName(tabData)
@@ -22,16 +24,20 @@ LibViewAddon
 		}
 
 	TabMenu_CopyName(tabData)
-		{ ClipboardWriteString(tabData.name is '' ? tabData.table : tabData.name) }
+		{
+		ClipboardWriteString(tabData.name is "" ? tabData.table : tabData.name)
+		}
 
 	TabMenu_Debug(tabData)
-		{ LibView_DebugTest(.Parent, tabData.table, tabData.name) }
+		{
+		LibView_DebugTest(.Parent, tabData.table, tabData.name)
+		}
 
 	TabMenu_EditDocumentation(tabData)
 		{
 		if false isnt page = QueryFirst('suneidoc
 			where name is ' $ Display(tabData.name) $ ' sort path')
-			OpenBook('suneidoc', 'suneidoc' $ page.path  $ '/' $ page.name, bookedit?:)
+			OpenBook(#suneidoc, "suneidoc" $ page.path $ '/' $ page.name, bookedit?:)
 		}
 
 	TabMenu_Export(tabData)
@@ -41,7 +47,9 @@ LibViewAddon
 		}
 
 	TabMenu_FindReferences(tabData)
-		{ FindReferencesControl(tabData.name) }
+		{
+		FindReferencesControl(tabData.name)
+		}
 
 	TabMenu_DifftoOverridden(tabData)
 		{
@@ -51,17 +59,19 @@ LibViewAddon
 
 	TabMenu_DifftoOriginal(tabData)
 		{
-		if DiffToOriginalControl(tabData.table, tabData.name) is 'Restore'
+		if DiffToOriginalControl(tabData.table, tabData.name) is #Restore
 			SvcTable(tabData.table).Restore(tabData.name)
 		}
 
 	TabMenu_Restore(tabData)
-		{ SvcTable(tabData.table).Restore(tabData.name) }
+		{
+		SvcTable(tabData.table).Restore(tabData.name)
+		}
 
 	TabMenu_GoToAssociatedTest(tabData)
 		{
 		name = LibraryTags.RemoveTagFromName(tabData.name.Tr('?'))
-		items = Object(name $ 'Test', name $ '_Test')
+		items = [name $ "Test", name $ "_Test"]
 		libs = Libraries()
 		list = #()
 		for item in items
@@ -70,12 +80,14 @@ LibViewAddon
 			if not list.Empty?()
 				break
 			}
-		name = list.Empty?() ? name $ '_Test' : list[0].AfterLast('/')
+		name = list.Empty?() ? name $ "_Test" : list[0].AfterLast('/')
 		GotoLibView(name, .Editor, :libs, libview: .Parent, path: tabData.path)
 		}
 
 	TabMenu_GoToDocumentation(tabData)
-		{ GotoDocumentation(tabData.name) }
+		{
+		GotoDocumentation(tabData.name)
+		}
 
 	Tab_SupportSeparate?()
 		{
@@ -96,34 +108,39 @@ LibViewAddon
 			? .Editor.GetFirstVisibleLine() + .Editor.LinesOnScreen() / 2
 			: 0
 		.CloseTab(tabData.idx)
-		libview = GotoPersistentWindow('LibViewControl',
+		libview = GotoPersistentWindow(#LibViewControl,
 			LibViewControl, except: .Window.Hwnd)
-		libview.GotoPathLine(tabData.path.Tr('()'), line)
+		libview.GotoPathLine(tabData.path.Tr("()"), line, skipFolder?: not tabData.group)
 		if .Explorer.Tabs.Count() is 0
 			.On_Close()
 		}
 
 	TabMenu_Run(unused)
-		{ .Try_run("all") }
+		{
+		.Try_run(#all)
+		}
 
 	TabMenu_Profile(tabData)
 		{
-		if tabData.name.Suffix?("Test")
+		if tabData.name.Suffix?(#Test)
 			RunWithProfile()
-				{ TestRunner.Run1(tabData.name, observer: TestObserver) }
+				{
+				TestRunner.Run1(tabData.name, observer: TestObserver)
+				}
 		else
-			.Try_run('all', quiet?:,
-				wrapper: function (block){ return { RunWithProfile(block); #() }})
+			.Try_run(#all, quiet?:,
+				wrapper: function(block) { return { RunWithProfile(block); #() } })
 		}
 
 	TabMenu_RunAssociatedTest(tabData)
 		{
-		observer = RunAssociatedTests([tabData.table $ '/' $ tabData.name], .Parent)
-		.AlertTestResult(observer)
+		.AlertTestResult(RunAssociatedTests([tabData], .Parent))
 		}
 
 	TabMenu_VersionHistory(tabData)
-		{ VersionHistoryControl(tabData.table, tabData.name) }
+		{
+		VersionHistoryControl(tabData.table, tabData.name)
+		}
 
 	TabMenu_ReviewWithAI(tabData)
 		{

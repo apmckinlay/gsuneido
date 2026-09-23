@@ -25,23 +25,23 @@ It does not modify any code.
 */
 Controller
 	{
-	Name: 'Svc'
-	Title: 'Version Control'
+	Name:  #Svc
+	Title: "Version Control"
 	CallClass()
 		{
 		SvcSocketClient().RetryState()
-		GotoPersistentWindow('SvcControl', SvcControl)
+		GotoPersistentWindow(#SvcControl, SvcControl)
 		}
 
 	New(table = false)
 		{
-		.local_list = .FindControl('localList')
+		.local_list = .FindControl(#localList)
 		.local_list.SetReadOnly(true, grayOut: false)
-		.master_list = .FindControl('masterList')
+		.master_list = .FindControl(#masterList)
 		.master_list.SetReadOnly(true, grayOut: false)
-		.table_list = .FindControl('table')
-		.user = .FindControl('user')
-		.display = .FindControl('svc_display')
+		.table_list = .FindControl(#table)
+		.user = .FindControl(#user)
+		.display = .FindControl(#svc_display)
 
 		.model = new SvcModel()
 		.setSettings()
@@ -53,30 +53,26 @@ Controller
 		.set_table(table)
 
 		.subs = [
-			PubSub.Subscribe('LibraryTreeChange', .treeChanged)
-			PubSub.Subscribe('LibraryRecordChange', .runChecksFresh)
-			PubSub.Subscribe('SvcSettings_ConnectionModified', .setSettings)
-			PubSub.Subscribe('SvcSocketClient_StateChanged',
-				{ .Defer(.On_Refresh, uniqueID: 'svccontrol_refresh') })
-			]
+			PubSub.Subscribe(#LibraryTreeChange, .treeChanged),
+			PubSub.Subscribe(#LibraryRecordChange, .runChecksFresh),
+			PubSub.Subscribe(#SvcSettings_ConnectionModified, .setSettings),
+			PubSub.Subscribe(#SvcSocketClient_StateChanged,
+			{ .Defer(.On_Refresh, uniqueID: #svccontrol_refresh) })]
 		}
 
 	Controls()
 		{
 		fixedymin = 230
-		return Object('Vert',
+		return [#Vert,
 			.headerHorz(),
-			#(Skip 5)
-			Object('VertSplit'
-				Object('FixedYmin', fixedymin,
-					Object('HorzEven',
+			#(Skip, 5),
+			[#VertSplit,
+				[#FixedYmin, fixedymin,
+					[#HorzEven,
 						.localVert(),
 						.masterVert(),
-						ystretch: 1))
-				// use Vert to allow changing control
-				Object('FixedYmin', fixedymin, "SvcDisplay")
-				)
-			)
+						ystretch: 1]], // use Vert to allow changing control
+				[#FixedYmin, fixedymin, #SvcDisplay]]]
 		}
 
 	skipChecks?: false
@@ -90,72 +86,74 @@ Controller
 		SvcGetMaster(.curtable, .local_list, .settings)
 		}
 
-	listSeperator: '*'
+	listSeparator: '*'
 	headerHorz()
 		{
-		hdrCtrls = Object(#Toolbar, #Refresh, #Test_Runner, #Get_All_Master_Changes).
-			RemoveIf({ OptContribution('SvcExcludeControls', #()).Has?(it) })
-		return Object('Horz'
-			Object('Vert'
-				#(EtchedLine before: 0)
-				Object('Horz'
-					'Skip'
-					#(Pair
-						(Static User)
-						(Field name: user width: 15)
-						name: 'UserPair')
-					'Skip', 'Skip',
-					Object('Pair'
-						#(Static 'Library/Book')
-						Object('ChooseList', .tables(), width: 17, name: 'table',
-							listSeparator: .listSeperator)
-						name: 'TablePair')
-					'Skip', 'Skip'
-					)
-				xstretch: 0)
+		hdrCtrls = [#Toolbar, #Refresh, #Test_Runner, #Get_All_Master_Changes].
+			RemoveIf({ OptContribution(#SvcExcludeControls, #()).Has?(it) })
+		return [#Horz,
+			[#Vert,
+				#(EtchedLine, before: 0),
+				[#Horz,
+					#Skip,
+					#(Pair,
+						(Static, User),
+						(Field, name: user, width: 15),
+						name: UserPair),
+					#Skip, #Skip,
+					[#Pair,
+						#(Static, "Library/Book"),
+						[#ChooseList, .tables(), width: 17, name: #table,
+							listSeparator: .listSeparator]
+						name: #TablePair],
+					#Skip, #Skip]
+				xstretch: 0],
 			hdrCtrls,
-			'SvcSettingsIcons')
+			#SvcSettingsIcons]
 		}
+
 	localVert()
 		{
-		return Object('Vert'
-			#(Horz
-				Fill
-				(Button 'Send Checked Local Changes...')
-				Fill)
-			#(ListStretch columns: #(svc_checked, svc_lib, svc_type, svc_date,
-				svc_local_date, svc_warning, svc_path, svc_name),
-				noShading:,	name: 'localList', defWidth: false,
-				columnsSaveName: 'svc_local', stretchColumn: 'svc_name',
-				checkBoxColumn: 'svc_checked')
-			#(Skip 3)
-			#(HorzEqual pad: 0
-				Skip
-				(Button 'All')
-				Skip
-				(Button 'None')
-				Fill Skip
-				(Button 'Export' tip: 'Export checked records')
-				Skip
-				(Button 'Copy To' tip: 'Copy checked records to another library')
-				Fill Skip
-				(Button 'Compare'
-					tip: 'Compare local copy to version control master (Alt+C)')
+		return [#Vert,
+			#(Horz,
+				Fill,
+				(Button, "Send Checked Local Changes..."),
+				Fill),
+			#(ListStretch,
+				columns: (svc_checked, svc_lib, svc_type, svc_date,
+					svc_local_date, svc_warning, svc_path, svc_name),
+				noShading:, name: localList, defWidth: false,
+				columnsSaveName: svc_local, stretchColumn: svc_name,
+				checkBoxColumn: svc_checked),
+			#(Skip, 3),
+			#(HorzEqual, pad: 0,
+				Skip,
+				(Button, All),
+				Skip,
+				(Button, None),
+				Fill, Skip,
+				(Button, Export, tip: "Export checked records"),
+				Skip,
+				(Button, "Copy To", tip: "Copy checked records to another library"),
+				Fill, Skip,
+				(Button, Compare,
+					tip: "Compare local copy to version control master (Alt+C)"),
 				Skip)
 			xstretch: 1,
-			name: 'Local')
+			name: #Local]
 		}
 
 	masterVert()
 		{
-		return #(Vert
-			(Horz Fill (Button 'Get Master Changes') Fill)
-			(ListStretch columns: #(svc_lib, svc_type, svc_who,
-				svc_master_date, svc_local_date, svc_path, svc_name)
-				noShading:, defWidth: false, name: 'masterList',
-				columnsSaveName: 'svc_master', stretchColumn: 'svc_name')
+		return #(Vert,
+			(Horz, Fill, (Button, "Get Master Changes"), Fill),
+			(ListStretch,
+				columns: (svc_lib, svc_type, svc_who,
+					svc_master_date, svc_local_date, svc_path, svc_name),
+				noShading:, defWidth: false, name: masterList,
+				columnsSaveName: svc_master, stretchColumn: svc_name),
 			xstretch: 1,
-			name: 'Master')
+			name: Master)
 		}
 
 	getListSelected(list)
@@ -166,37 +164,39 @@ Controller
 	tables()
 		{
 		return SvcSettings.Set?()
-			? .formattedLibraryNames().Add('').Add(@.formattedBookNames())
+			? .formattedLibraryNames().Add("").Add(@.formattedBookNames())
 			: []
 		}
 
 	formattedLibraryNames()
 		{
 		libraryTables = .libraryTables()
-		libraries = libraryTables.Copy().
-			Filter({ it.BeforeFirst(.listSeperator) isnt '' and it isnt .allLibAlias })
+		libraries = libraryTables.
+			Copy().
+			Filter({ it.BeforeFirst(.listSeparator) isnt "" and it isnt .allLibAlias })
 		if .formatTableList(libraries, libraryTables, SvcDisabledLibraries())
-			libraryTables[0] = .allLibAlias $ .listSeperator
+			libraryTables[0] = .allLibAlias $ .listSeparator
 		return libraryTables
 		}
 
 	libraryTables()
 		{
-		newLibs = .addHeading('Local Libraries', SvcDisabledLibraries())
-		usedLibs = .addHeading('Used Libraries', .svcLibraries.Copy()).Remove(@newLibs)
-		unusedLibs = .addHeading('Unused Libraries',
+		newLibs = .addHeading("Local Libraries", SvcDisabledLibraries())
+		usedLibs = .addHeading("Used Libraries", .svcLibraries.Copy()).Remove(@newLibs)
+		unusedLibs = .addHeading("Unused Libraries",
 			.svcLibraryTables.Copy().Remove(@usedLibs).Remove(@newLibs).SortWith!(#Lower))
-		libraries = [.allLibAlias].Add('').Add(@usedLibs)
+		libraries = [.allLibAlias].Add("").Add(@usedLibs)
 		if newLibs.NotEmpty?()
-			libraries.Add('').Add(@newLibs)
+			libraries.Add("").Add(@newLibs)
 		if unusedLibs.NotEmpty?()
-			libraries.Add('').Add(@unusedLibs)
+			libraries.Add("").Add(@unusedLibs)
 		return libraries
 		}
 
 	addHeading(heading, list)
 		{
-		heading = .listSeperator $ ' ' $ heading $ ' ' $ .listSeperator
+		sep = .listSeparator.Repeat(3) /*= distinct mark */
+		heading = sep $ ' ' $ heading $ ' ' $ sep
 		if list.NotEmpty?()
 			list.Add(heading, at: 0)
 		return list
@@ -230,7 +230,7 @@ Controller
 				{
 				if not localTables.Has?(table)
 					formatted? = true
-				tableList.Replace(table, table $ .listSeperator)
+				tableList.Replace(table, table $ .listSeparator)
 				}
 		return formatted?
 		}
@@ -238,17 +238,17 @@ Controller
 	formattedBookNames()
 		{
 		bookTables = .bookTables()
-		books = bookTables.Copy().Filter({ it.BeforeFirst(.listSeperator) isnt '' })
+		books = bookTables.Copy().Filter({ it.BeforeFirst(.listSeparator) isnt "" })
 		.formatTableList(books, bookTables, SvcDisabledBooks())
 		return bookTables
 		}
 
 	bookTables()
 		{
-		newBooks = .addHeading('Local Books', SvcDisabledBooks())
-		books = .addHeading('Books', BookTables()).Remove(@newBooks)
+		newBooks = .addHeading("Local Books", SvcDisabledBooks())
+		books = .addHeading(#Books, BookTables()).Remove(@newBooks)
 		if newBooks.NotEmpty?()
-			books.Add('').Add(@newBooks)
+			books.Add("").Add(@newBooks)
 		return books
 		}
 
@@ -263,33 +263,31 @@ Controller
 	Commands()
 		{
 		return #(
-			#(Refresh, "F5"),
-			#(Close, "", "Close the Window"),
-			#(Users_Manual, "F1"),
-			#(Test_Runner, "Alt+T", "Open a Test Runner window", "T"),
-			#(Get_All_Master_Changes, "Alt+G", "", "G"),
-			#(Compare, "Alt+C", "Compare local copy to version control master", "C"))
+			(Refresh, F5),
+			(Close, "", "Close the Window"),
+			(Users_Manual, F1),
+			(Test_Runner, "Alt+T", "Open a Test Runner window", T),
+			(Get_All_Master_Changes, "Alt+G", "", G),
+			(Compare, "Alt+C", "Compare local copy to version control master", C)
+			)
 		}
 
-	Menu:
-		(
-		("&File",
+	Menu: (("&File",
 			"&Settings...",
 			"&Refresh",
 			"Compare...",
 			"",
 			"&Get All Master Changes",
 			"",
-			"&Close")
-		)
+			"&Close"))
 
-	curtable: ''
+	curtable: ""
 	NewValue(value, source)
 		{
-		if source.Name isnt 'table'
+		if source.Name isnt #table
 			return
 
-		value = source.Valid?() ? value : ''
+		value = source.Valid?() ? value : ""
 		tableName = .tableName(value)
 		if tableName is .curtable
 			return
@@ -302,11 +300,7 @@ Controller
 
 	tableName(table)
 		{
-		return table isnt false
-			? table is .allLibAlias
-				? .allLibView
-				: table
-			: ''
+		return table isnt false ? table is .allLibAlias ? .allLibView : table : ""
 		}
 
 	asof: false
@@ -318,10 +312,10 @@ Controller
 		.master_list.Clear()
 		.model.Clear()
 		.curSelection = false
-		table = table is false ? '' : table
-		.Window.SetTitle(.Title = 'Version Control' $ Opt(' - ', table.Trim('()')))
+		table = table is false ? "" : table
+		.Window.SetTitle(.Title = "Version Control" $ Opt(" - ", table.Trim("()")))
 
-		if table is false or table is ''
+		if table is false or table is ""
 			{
 			.sortLocalList()
 			.showHidePathColumn()
@@ -350,38 +344,36 @@ Controller
 			}
 		}
 
-	local_path_width: 0
+	local_path_width:  0
 	master_path_width: 0
 	showHidePathColumn()
 		{
-		localIdx = .local_list.GetColumns().Find('svc_path')
-		masterIdx = .master_list.GetColumns().Find('svc_path')
+		localIdx = .local_list.GetColumns().Find(#svc_path)
+		masterIdx = .master_list.GetColumns().Find(#svc_path)
 		if not .bookTable?(.prevtable)
 			{
 			.withColIndex(localIdx,
-				{|idx| .local_path_width = .local_list.GetColWidth(idx) })
+			{|idx| .local_path_width = .local_list.GetColWidth(idx) })
 			.withColIndex(masterIdx,
-				{|idx| .master_path_width = .master_list.GetColWidth(idx) })
+			{|idx| .master_path_width = .master_list.GetColWidth(idx) })
 			}
 		if .bookTable?(.curtable)
 			{
-			.withColIndex(localIdx,
-				{|idx| .local_list.SetColWidth(idx, 0) })
-			.withColIndex(masterIdx,
-				{|idx| .master_list.SetColWidth(idx, 0) })
+			.withColIndex(localIdx, {|idx| .local_list.SetColWidth(idx, 0) })
+			.withColIndex(masterIdx, {|idx| .master_list.SetColWidth(idx, 0) })
 			}
 		else
 			{
 			.withColIndex(localIdx,
-				{|idx| .local_list.SetColWidth(idx, .local_path_width) })
+			{|idx| .local_list.SetColWidth(idx, .local_path_width) })
 			.withColIndex(masterIdx,
-				{|idx| .master_list.SetColWidth(idx, .master_path_width) })
+			{|idx| .master_list.SetColWidth(idx, .master_path_width) })
 			}
 		}
 
 	bookTable?(table)
 		{
-		return table isnt '' and BookTable?(table)
+		return table isnt "" and BookTable?(table)
 		}
 
 	withColIndex(idx, block)
@@ -392,18 +384,18 @@ Controller
 
 	getter_sort()
 		{
-		return .sort = UserSettings.Get('VersionControl-SortLocal')
+		return .sort = UserSettings.Get("VersionControl-SortLocal")
 		}
 
 	sortLocalList()
 		{
-		if .sort is false or .sort is ''
+		if .sort is false or .sort is ""
 			return
-		sortField = .sort.RemovePrefix('reverse ')
+		sortField = .sort.RemovePrefix("reverse ")
 		if false is sortIndex = .local_list.GetColumns().Find(sortField)
 			return
 		sortIndex += 1
-		if .sort.Prefix?('reverse ')
+		if .sort.Prefix?("reverse ")
 			sortIndex = -sortIndex
 		.local_list.SetSortCol(sortIndex)
 		}
@@ -413,13 +405,13 @@ Controller
 		.sort = .local_list.GetSort(nonMarkExtraCol?:)
 		}
 
-	baseFields: #('svc_name': 'name', 'svc_lib': 'lib')
-	localFields: #('svc_type': 'type', 'svc_date': 'modified',
-		'svc_local_date': 'committed', 'svc_path': 'path')
-	masterFields: #('svc_type': 'type', 'svc_who': 'who', 'svc_master_date': 'modified',
-		'svc_local_date': 'committed', 'svc_path': 'path')
-	conflictFields: #('svc_date': 'localModified', 'svc_who': 'who',
-		'svc_local_date': 'committed', 'svc_master_date': 'modified')
+	baseFields: (svc_name: name, svc_lib: lib)
+	localFields: (svc_type: type, svc_date: modified,
+		svc_local_date: committed, svc_path: path)
+	masterFields: (svc_type: type, svc_who: who, svc_master_date: modified,
+		svc_local_date: committed, svc_path: path)
+	conflictFields: (svc_date: localModified, svc_who: who,
+		svc_local_date: committed, svc_master_date: modified)
 	buildRow(rec, fields = #())
 		{
 		ob = Object()
@@ -431,28 +423,39 @@ Controller
 		}
 
 	On_Settings()
-		{ SvcSettings(openDialog:) }
+		{
+		SvcSettings(openDialog:)
+		}
 
 	On_Test_Runner()
 		{
 		TestRunnerGui()
 		}
+
 	On_All()
-		{ .checkAll(true) }
+		{
+		.checkAll(true)
+		}
+
 	On_None()
-		{ .checkAll(false) }
+		{
+		.checkAll(false)
+		}
+
 	checkAll(check?)
 		{
 		for row in .local_list.Get()
 			row.svc_checked = check?
 		.local_list.Repaint()
 		}
+
 	toggleCheck(list, row)
 		{
 		data = list.GetRow(row)
 		data.svc_checked = data.svc_checked isnt true
 		list.RepaintRow(row)
 		}
+
 	List_SingleClick(row, col, source)
 		{
 		if row is false
@@ -462,32 +465,32 @@ Controller
 			return 0
 			}
 
-		if 'svc_checked' is source.GetCol(col)
+		if #svc_checked is source.GetCol(col)
 			.toggleCheck(source, row)
 		return 0
 		}
+
 	List_DoubleClick(row, col, source)
 		{
 		if row is false
 			return 1
 
-		list = source.Name is 'localList'
-			? .local_list
-			: .master_list
+		list = source.Name is #localList ? .local_list : .master_list
 
 		rec = list.GetRow(row)
 		lib = rec.svc_lib
 		name = rec.svc_name
 		line = .display.GetGoToLine()
 
-		msg = .getWarnings()['msgMap'][lib $ '_' $ name]
-		if msg isnt #() and list.GetCol(col) is 'svc_warning'
-			.AlertInfo('SVC Checking Status', msg)
+		msg = .getWarnings().msgMap[lib $ '_' $ name]
+		if msg isnt #() and list.GetCol(col) is #svc_warning
+			.AlertInfo("SVC Checking Status", msg)
 		else
 			GoToDefinition(name, lib, line)
 
 		return 1
 		}
+
 	curSelection: false
 	List_Selection(selection, source)
 		{
@@ -500,7 +503,7 @@ Controller
 		.master_list.ClearHighlight()
 		.local_list.ClearHighlight()
 
-		if source.Name is 'masterList'
+		if source.Name is #masterList
 			.masterListSelection(selection)
 		else
 			.localListSelection(selection)
@@ -513,8 +516,9 @@ Controller
 		sel = .master_list.GetRow(selection)
 
 		.highlightSelected(.local_list, sel)
-		if .master_list.Get().CountIf(
-			{ it.svc_name is sel.svc_name and it.svc_lib is sel.svc_lib }) > 1
+		if .master_list.
+			Get().
+			CountIf({ it.svc_name is sel.svc_name and it.svc_lib is sel.svc_lib }) > 1
 			.display.Display(sel.svc_name, sel.svc_lib, sel.svc_type, showComment:,
 				masterNewer?:, lib_committed: sel.svc_master_date)
 		else
@@ -538,8 +542,8 @@ Controller
 			}
 
 		changeOb = sel.svc_type is '%' ? .model.Conflicts : .model.LocalChanges
-		sel.svc_date = .model.
-			UpdateLocalModified(sel.svc_name, sel.svc_lib, changeOb, sel.svc_date)
+		sel.svc_date =
+			.model.UpdateLocalModified(sel.svc_name, sel.svc_lib, changeOb, sel.svc_date)
 		if sel.svc_type is '%'
 			{
 			.local_list.SetRow(selection, sel)
@@ -576,7 +580,7 @@ Controller
 		if rec is false
 			return true
 		// If the record has no actual changes, refresh the list to remove it
-		if sel.svc_date is '' and sel.svc_type isnt '-' and sel.svc_type isnt '+'
+		if sel.svc_date is "" and sel.svc_type isnt '-' and sel.svc_type isnt '+'
 			return true
 		return false
 		}
@@ -585,10 +589,12 @@ Controller
 		{
 		.List_Selection(.curSelection, .curSource)
 		}
+
 	Activate()
 		{
 		.refreshIfCurrentChanged()
 		}
+
 	refreshIfCurrentChanged()
 		{
 		if .curSelection is false or .curSource is false
@@ -604,12 +610,13 @@ Controller
 		else if sel.svc_type is '%'
 			{
 			// Only refresh conflict records if the local record is updated
-			localIdx = .local_list.Get().
+			localIdx = .local_list.
+				Get().
 				FindIf({ it.svc_name is sel.svc_name and it.svc_lib is sel.svc_lib })
 			if localIdx isnt false
 				.refreshCurrent(.local_list.GetRow(localIdx), [localIdx], .local_list)
 			}
-		else if sourceName isnt 'masterList'
+		else if sourceName isnt #masterList
 			.refreshCurrent(sel, .curSelection, .curSource)
 		}
 
@@ -626,14 +633,15 @@ Controller
 		{
 		if false is list = .FindControl(sourceName)
 			return
-		if false isnt idx = list.Get().
+		if false isnt idx = list.
+			Get().
 			FindIf({ it.svc_name is sel.svc_name and it.svc_lib is sel.svc_lib })
 			list.SetSelection(idx)
 		}
+
 	getRowFromList(list, name, lib)
 		{
-		return list.Get().FindIf(
-			{ it.svc_name is name and it.svc_lib is lib })
+		return list.Get().FindIf({ it.svc_name is name and it.svc_lib is lib })
 		}
 
 	refreshCurrent(sel, selections, source)
@@ -647,12 +655,13 @@ Controller
 
 	List_ContextMenu(x, y, source)
 		{
-		if source.Name isnt 'localList'
+		if source.Name isnt #localList
 			return 0
 
 		ContextMenu(#("Go To Definition", "Export Record", "Find References",
-			"Version History", "Review With AI", "",
-			"Restore", #(Restore))).ShowCall(this, x, y)
+				"Version History", "Review With AI", "",
+				Restore, (Restore))).
+			ShowCall(this, x, y)
 		}
 
 	On_Copy_To()
@@ -693,12 +702,12 @@ Controller
 
 			if not .model.Restore(name, change.lib, change.type)
 				{
-				Alert("Can't restore " $ name, title: 'Restore', flags: MB.ICONERROR)
+				Alert("Can't restore " $ name, title: #Restore, flags: MB.ICONERROR)
 				return
 				}
 
 			.previousSelected = #()
-			Print('Restored', change.lib $ ':' $ name)
+			Print(#Restored, change.lib $ ':' $ name)
 			}
 		.On_Refresh(skipChecks:)
 		.skipChecks? = true
@@ -731,8 +740,8 @@ Controller
 		{
 		if false is changes = .getHighlightedCheckNotEmpty()
 			return
-		setText = "review the changes in " $
-			changes.Map({ it.lib $ ':' $ it.name }).Join(', ')
+		setText =
+			"review the changes in " $ changes.Map({ it.lib $ ':' $ it.name }).Join(", ")
 		AiAgentControl(:setText)
 		}
 
@@ -740,11 +749,13 @@ Controller
 		{
 		.move_conflict('#')
 		}
+
 	On_Use_Master()
 		{
 		.move_conflict()
 		.setTableList()
 		}
+
 	move_conflict(prefix = ' ')
 		{
 		result = .getSelectedRecs()
@@ -763,9 +774,9 @@ Controller
 			recAdded.Each()
 				{
 				.master_list.AddRow(Object(
-					svc_type: it.type
+					svc_type: it.type,
 					svc_name: rec.svc_name,
-					svc_who: it.type is '#' ? '' : it.who,
+					svc_who: it.type is '#' ? "" : it.who,
 					svc_lib: rec.svc_lib,
 					svc_master_date: it.modified,
 					svc_local_date: rec.svc_local_date))
@@ -778,10 +789,11 @@ Controller
 		.display.Reset()
 		.curSelection = false
 		}
+
 	getSelectedRecs()
 		{
 		recs = Object()
-		for list in Object(.local_list, .master_list)
+		for list in [.local_list, .master_list]
 			{
 			if ((selection = list.GetSelection()).Empty?())
 				continue
@@ -794,7 +806,7 @@ Controller
 
 	On_Get_Master_Changes(skipChecks = false)
 		{
-		if .curtable is ''
+		if .curtable is ""
 			{
 			.info("Please choose a Library/Book")
 			return 0
@@ -827,14 +839,14 @@ Controller
 		{
 		// Highlight first conflict
 		conflict = conflicts[0] // grab first conflict
-		if false isnt row = .getRowFromList(.local_list, conflict.name ,conflict.lib)
+		if false isnt row = .getRowFromList(.local_list, conflict.name, conflict.lib)
 			{
 			.local_list.ScrollRowToView(row)
 			.local_list.SetSelection(row)
 			}
 		}
 
-	treeChanged?: 	false
+	treeChanged?: false
 	treeChanged()
 		{
 		.treeChanged? = true
@@ -853,7 +865,7 @@ Controller
 	setSettings()
 		{
 		.model.SetSettings(.settings = SvcSettings.Get())
-		if .settings isnt false and .settings.svc_user isnt '' and .user.Get() is ''
+		if .settings isnt false and .settings.svc_user isnt "" and .user.Get() is ""
 			.user.Set(.settings.svc_user)
 		.On_Refresh()
 		}
@@ -878,12 +890,12 @@ Controller
 
 	PostGetChanges()
 		{
-		Contributions('Svc_PostGetChanges').Each()
+		Contributions(#Svc_PostGetChanges).Each()
 			{
 			try
 				it(.curtable)
 			catch (e)
-				SuneidoLog('ERROR: SVC Post Get Changes encountered: ' $ e, params: [it])
+				SuneidoLog("ERROR: SVC Post Get Changes encountered: " $ e, params: [it])
 			}
 		}
 
@@ -899,8 +911,8 @@ Controller
 		return .model
 		}
 
-	allLibView: 'svc_all_changes'
-	allLibAlias: 'All VC Libraries'
+	allLibView:  #svc_all_changes
+	allLibAlias: "All VC Libraries"
 	On_Get_All_Master_Changes()
 		{
 		if .table_list.GetList().Empty?()
@@ -954,16 +966,16 @@ Controller
 			{
 			if not allLibs?
 				table = conflicts[0]
-			.AlertError('Conflicts',
-				'Please resolve conflicts in:\n\n' $ conflicts.Join('\n'))
+			.AlertError(#Conflicts,
+				"Please resolve conflicts in:\n\n" $ conflicts.Join('\n'))
 			}
 		if not tosend.Empty?()
 			{
-			tables = .tables().Map({ it.BeforeFirst(.listSeperator) })
+			tables = .tables().Map({ it.BeforeFirst(.listSeparator) })
 			tosend.SortWith!({ tables.Find(it) })
 			if not allLibs?
 				table = tosend[0]
-			Print("Changes to send in: " $ tosend.Join(', '))
+			Print("Changes to send in: " $ tosend.Join(", "))
 			Alert("You have changes to send in:\n\n" $ tosend.Join('\n'),
 				"Local Changes", flags: MB.ICONINFORMATION)
 			}
@@ -995,8 +1007,8 @@ Controller
 			Alert("Someone has sent new changes.\n" $
 					"Please refresh and get the changes (and test with them)\n" $
 					"before sending your changes.",
-					title: 'Send Checked Local Changes',
-					flags: MB.ICONINFORMATION)
+				title: "Send Checked Local Changes",
+				flags: MB.ICONINFORMATION)
 			return
 			}
 
@@ -1011,12 +1023,12 @@ Controller
 
 	PostSendChanges()
 		{
-		Contributions('Svc_PostSendChanges').Each()
+		Contributions(#Svc_PostSendChanges).Each()
 			{
 			try
 				it(.curtable)
 			catch (e)
-				SuneidoLog('ERROR: SVC Post Send Changes encountered: ' $ e, params: [it])
+				SuneidoLog("ERROR: SVC Post Send Changes encountered: " $ e, params: [it])
 			}
 		}
 
@@ -1056,15 +1068,15 @@ Controller
 
 	clearError(memVals)
 		{
-		.handleClear('errMap')
-			{ |m|
+		.handleClear(#errMap)
+			{|m|
 			memVals.Any?({ m.Suffix?(it) })
 			}
 		}
 
 	clearMsg(memVals)
 		{
-		.handleClear('msgMap')
+		.handleClear(#msgMap)
 			{
 			memVals.Has?(it)
 			}
@@ -1081,11 +1093,13 @@ Controller
 		{
 		warnings = .getWarnings()
 		for mem in warnings[.getCurTable()].Members()
-			{
 			warnings[.getCurTable()][mem].RemoveIf(
-				{ |rec| sentChanges.Any?({ it.Project(#(lib, name)) is
-					rec.Project(#(lib, name)) }) })
-			}
+				{|rec|
+				sentChanges.Any?(
+					{
+					it.Project(#(lib, name)) is rec.Project(#(lib, name))
+					})
+				})
 		}
 
 	getWarnings()
@@ -1098,31 +1112,31 @@ Controller
 		return .curtable
 		}
 
-	warnings: ''
+	warnings: ""
 	checksPassed?()
 		{
-		if .curtable is ''
+		if .curtable is ""
 			{
-			.info('Please choose a Library/Book')
+			.info("Please choose a Library/Book")
 			return false
 			}
 
 		.changes = .getLocalChecked()
 		if .changes.Empty?()
 			{
-			.info('Please checkmark the local changes to send')
+			.info("Please checkmark the local changes to send")
 			return false
 			}
 
 		if not .mandatory_checks(.changes)
 			return false // abort send
 
-		.warnings = ''
+		.warnings = ""
 		if not .model.Library?(.curtable)
 			return true
 
 		if false is RetryBool(2 /*= maxRetries*/, 1000 /*= min sleep ms*/,
-			{ .checkThreadStopped?() })
+		{ .checkThreadStopped?() })
 			{
 			.alertThreadRunning()
 			return false
@@ -1133,29 +1147,33 @@ Controller
 
 	checkThreadStopped?()
 		{
-		return 'Thread_Running' isnt
+		return #Thread_Running isnt
 			.warnings = SvcRunChecks.GetPreCheckResults(.curtable, changes: .changes)
 		}
 
 	alertThreadRunning()
 		{
-		.AlertInfo('Send Checked Local Changes', 'Checking is still running!\n' $
-				'Please try again!')
+		.AlertInfo("Send Checked Local Changes",
+			"Checking is still running!\n" $ "Please try again!")
 		}
 
 	afterEachSend(name, lib)
 		{
-		.local_list.DeleteRows(.local_list.Get().FindIf({
-			it.svc_name is name and it.svc_lib is lib }))
+		.local_list.DeleteRows(.local_list.
+			Get().
+			FindIf(
+				{
+				it.svc_name is name and it.svc_lib is lib
+				}))
 		++.nSent
 		}
-	// Send mandatory checks ===================================================
 
+	// Send mandatory checks ===================================================
 	mandatory_checks(changes)
 		{
 		scc = new SvcCommitChecker()
 		for check in [scc.MandatoryChecks, .have_user?]
-			if '' isnt msg = check(:changes, model: .model, table: .curtable)
+			if "" isnt msg = check(:changes, model: .model, table: .curtable)
 				{
 				.AlertWarn("Send Changes", msg)
 				return false // abort send
@@ -1165,9 +1183,7 @@ Controller
 
 	have_user?()
 		{
-		return .user.Get() is ""
-			? 'Please enter user(s)'
-			: ''
+		return .user.Get() is "" ? "Please enter user(s)" : ""
 		}
 
 	//==========================================================================
@@ -1187,12 +1203,12 @@ Controller
 			return
 
 		sel = .local_list.GetRow(selected)
-		if '' is table = sel.svc_lib
+		if "" is table = sel.svc_lib
 			return
 
-		if '' isnt fileName = SaveFileName(hwnd: .Window.Hwnd,
-			flags:	OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR,
-			title:	"Export (append) to")
+		if "" isnt fileName = SaveFileName(hwnd: .Window.Hwnd,
+			flags: OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR,
+			title: "Export (append) to")
 			.exportOne(table, sel.svc_name, fileName, sel.svc_type is '-')
 		}
 
@@ -1213,9 +1229,9 @@ Controller
 			return
 			}
 		DoWithSaveFileName(hwnd: .Window.Hwnd,
-			flags:	OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR,
-			title:	"Export (append) " $ checked.Size() $ " records to")
-			{ |fileName|
+			flags: OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR,
+			title: "Export (append) " $ checked.Size() $ " records to")
+			{|fileName|
 			for record in checked
 				.exportOne(record.lib, record.name, fileName, record.type is '-')
 			}
@@ -1223,15 +1239,21 @@ Controller
 
 	getLocalChecked()
 		{
-		return .local_list.Get().Filter({ it.svc_checked is true }).Map({
-			Object(name: it.svc_name, lib: it.svc_lib, type: it.svc_type )})
+		return .local_list.
+			Get().
+			Filter({ it.svc_checked is true }).
+			Map(
+				{
+				Object(name: it.svc_name, lib: it.svc_lib, type: it.svc_type)
+				})
 		}
 
 	getHighlighted()
 		{
-		return .local_list.GetSelection().
+		return .local_list.
+			GetSelection().
 			Map({ .local_list.GetRow(it) }).
-			Map({ Object(name: it.svc_name, lib: it.svc_lib, type: it.svc_type )})
+			Map({ Object(name: it.svc_name, lib: it.svc_lib, type: it.svc_type) })
 		}
 
 	exportOne(table, name, fileName, delete = false)
@@ -1244,19 +1266,24 @@ Controller
 			}
 		LibIO.Export(table, name, fileName, path, :delete, interactive:)
 		}
-	previousSelected: #()
+
+	previousSelected: ()
 	On_Refresh(skipChecks = false)
 		{
 		.treeChanged? = false
 		SvcSocketClient().RetryState()
 		.setTableList()
-		.previousSelected = .getLocalChecked().Copy().Map({
-			Object(name: it.name, lib: it.lib) })
-		if .curtable is ''
+		.previousSelected = .getLocalChecked().
+			Copy().
+			Map(
+				{
+				Object(name: it.name, lib: it.lib)
+				})
+		if .curtable is ""
 			{
 			.asof = false
 			.model.Clear()
-			.table_list.Set('')
+			.table_list.Set("")
 			}
 		else if .table_list.Valid?()
 			.set_table(.curtable is .allLibView ? .allLibAlias : .curtable)
@@ -1268,9 +1295,9 @@ Controller
 
 	On_Compare()
 		{
-		if .curtable is ''
+		if .curtable is ""
 			{
-			.info('Please choose a Library to compare')
+			.info("Please choose a Library to compare")
 			return
 			}
 		if .curtable is .allLibView
@@ -1287,34 +1314,34 @@ Controller
 		tosend = .changesToSend()
 		if table is .allLibAlias or tosend.Empty?() or tosend is [table]
 			return true
-		return YesNo("You still have changes to send in:\n\n" $
-			'     ' $ tosend.Join(', ') $ '\n\n' $
-			'Close anyway?')
+		return YesNo("You still have changes to send in:\n\n" $ "     " $
+			tosend.Join(", ") $ "\n\n" $ "Close anyway?")
 		}
 
 	changesToSend()
 		{
-		return .SvcLibraryTables().Filter(.hasChanges).
+		return .SvcLibraryTables().
+			Filter(.hasChanges).
 			MergeUnion(BookTables().Filter(.hasChanges))
 		}
 
 	hasChanges(table)
 		{
-		return not QueryEmpty?(SvcTable(table).ModifiedQuery() $ ' remove text')
+		return not QueryEmpty?(SvcTable(table).ModifiedQuery() $ " remove text")
 		}
 
 	Destroy()
 		{
-		if .sort isnt false and .sort isnt ''
-			UserSettings.Put('VersionControl-SortLocal', .sort)
+		if .sort isnt false and .sort isnt ""
+			UserSettings.Put("VersionControl-SortLocal", .sort)
 		.subs.Each(#Unsubscribe)
 		if ViewExists?(.allLibView)
-			Database('drop ' $ .allLibView)
+			Database("drop " $ .allLibView)
 		if .bookTable?(.curtable)
 			{
-			if false isnt localIdx = .local_list.GetColumns().Find('svc_path')
+			if false isnt localIdx = .local_list.GetColumns().Find(#svc_path)
 				.local_list.SetColWidth(localIdx, .local_path_width)
-			if false isnt masterIdx = .master_list.GetColumns().Find('svc_path')
+			if false isnt masterIdx = .master_list.GetColumns().Find(#svc_path)
 				.master_list.SetColWidth(masterIdx, .master_path_width)
 			}
 		super.Destroy()

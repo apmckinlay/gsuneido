@@ -11,7 +11,7 @@ to locate the command-interpreter.
 
 System returns the value that is returned by the command interpreter. Normally a return value of 0 (zero) means success, and -1 indicates an error.
 
-If the return value is not 0 (zero) it is [return-throw](<../Statements/return.md>), i.e. if the result is not used it will throw an exception. (as of BuiltDate 2025-01-16)
+If the return value is not 0 (zero) it is [return-throw](<../Statements/return.md>), i.e. if the result is not used it will throw an exception.
 
 For example:
 

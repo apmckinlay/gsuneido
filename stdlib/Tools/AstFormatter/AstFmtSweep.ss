@@ -128,7 +128,7 @@ class
 			{
 			o = Object()
 			outputs.Add(o)
-			wg.Thread(Bind(.check, batch, o, width, checkWarnings), name: #AstFmtSweep)
+			wg.Thread(.check, batch, o, width, checkWarnings, name: #AstFmtSweep)
 			}
 		.showProgress(wg, outputs, records.Size(), started, out)
 		verdicts = Object()

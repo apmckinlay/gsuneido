@@ -16,6 +16,7 @@ Test
 			Assert(.ob.x is: .out[0])
 			}
 		}
+
 	thread(i)
 		{
 		.out.Add(.ob.GetInit(#x, { i }))

@@ -3,15 +3,16 @@ class
 	{
 	Class?(text) // NOTE: only checks start - not complete syntax
 		{
-		return LibRecordType(text) is 'class'
+		return LibRecordType(text) is "class"
 		}
+
 	global_pat: "^_?[[:upper:]]"
 	SuperClass(text)
 		{
 		scan = ScannerWithContext(text)
 		if scan is token = scan.Next()
 			return false
-		if token is 'class' and scan.Ahead() is ':'
+		if token is "class" and scan.Ahead() is ':'
 			{
 			scan.Next()
 			if scan.Ahead() =~ .global_pat
@@ -21,30 +22,36 @@ class
 			return token
 		return false
 		}
+
 	AddMethod(text, pos, method)
 		{
 		pos = .AfterMethod(text, pos)
 		return .add_method(text, pos, method)
 		}
+
 	AddMethodAtEnd(text, method)
 		{
 		pos = text.FindLast('}')
-		while text[pos - 1] is ' ' or text[pos - 1] is '\t'
+		while text[pos-1] is ' ' or text[pos-1] is '\t'
 			--pos
 		return .add_method(text, pos, method)
 		}
+
 	add_method(text, pos, method)
 		{
-		return text[.. pos] $ '\t' $ method $ '\r\n' $ text[pos..]
+		return text[..pos] $ '\t' $ method $ "\r\n" $ text[pos..]
 		}
+
 	AfterMethod(text, pos)
 		{
 		return .MethodRange(text, pos).to
 		}
+
 	AdvanceToNewline(text, pos)
 		{
 		return pos + text[pos..].Find('\n') + 1
 		}
+
 	MethodRange(text, pos)
 		{
 		nest = 0
@@ -60,18 +67,19 @@ class
 			}
 		return false
 		}
+
 	MethodName(text, pos)
 		{
 		if pos <= text.Find('{')
 			return false
 		range = ClassHelp.MethodRange(text, pos)
-		token = Scanner(text[range.from..]).Next()
-		if not String?(token) or token !~ '^[[:alpha:]][_[:alnum:]]*[?!]?$'
+		token = Scanner(text[range.from ..]).Next()
+		if not String?(token) or token !~ "^[[:alpha:]][_[:alnum:]]*[?!]?$"
 			return false
 		return token
 		}
 
-	Locals(text, cond = function (unused) { true })
+	Locals(text, cond = function(unused) { true })
 		{
 		vars = Object()
 		scanner = ScannerWithContext(text)
@@ -80,64 +88,63 @@ class
 				vars.AddUnique(token)
 		return vars
 		}
+
 	local?(scanner, token)
 		{
-		return scanner.Type() is #IDENTIFIER and
-			token[0].Lower?() and not scanner.Keyword?() and
-			scanner.Ahead() isnt ':' and
+		return scanner.Type() is #IDENTIFIER and token[0].Lower?() and
+			not scanner.Keyword?() and scanner.Ahead() isnt ':' and
 			scanner.Prev() isnt '.' and scanner.Prev() isnt '#'
 		}
+
 	LocalsInputs(text)
 		{
 		return .Locals(text, .not_assignment?)
 		}
+
 	not_assignment?(scanner)
 		{
 		return scanner.Ahead() isnt '='
 		}
+
 	LocalsModified(text)
 		{
 		return .Locals(text, .modified?)
 		}
+
 	modified?(scanner)
 		{
 		prev = scanner.Prev()
 		ahead = scanner.Ahead()
-		return prev is '++' or prev is '--' or
-			ahead is '++' or ahead is '--' or
-			ahead is '=' or ahead =~ '[^=]='
+		return prev is "++" or prev is "--" or ahead is "++" or ahead is "--" or
+			ahead is '=' or ahead =~ "[^=]="
 		}
+
 	LocalsAssigned(text)
-		// pre: text includes the parenthesized parameters
-		{
+		{ // pre: text includes the parenthesized parameters
 		params = Object()
 		end = .RetrieveParamsList(text.AfterFirst('('), params)
 		locals = .Locals(text[end..], .assignment?)
 		return params.MergeUnion(locals)
 		}
+
 	RetrieveParamsList(text, vars)
 		{
 		scanner = Scanner(text)
 		inAnnotation? = false
 		while scanner isnt token = scanner.Next()
 			{
-			if BuiltDate() > #20260514
-				{
-				if inAnnotation?
-					{
-					if token in (',', '=', ')')
-						inAnnotation? = false
-					else
-						continue
-					}
-				if not inAnnotation? and token is ':'
-					{
-					inAnnotation? = true
+			if inAnnotation?
+				if token in (',', '=', ')')
+					inAnnotation? = false
+				else
 					continue
-					}
+			if not inAnnotation? and token is ':'
+				{
+				inAnnotation? = true
+				continue
 				}
 			if scanner.Type() is #IDENTIFIER
-				vars.Add(token.Replace('^_').UnCapitalize())
+				vars.Add(token.Replace("^_").UnCapitalize())
 			else
 				{
 				if token is '=' // default value
@@ -148,6 +155,7 @@ class
 			}
 		return scanner.Position()
 		}
+
 	skipDefault(scanner, token)
 		{
 		nest = 0
@@ -158,10 +166,10 @@ class
 				return token
 			nest = .nesting(nest, token)
 
-			if '' is function? = .tokenIsFunction?(token, nest, function?)
-				return ''
+			if "" is function? = .tokenIsFunction?(token, nest, function?)
+				return ""
 			}
-		return ''
+		return ""
 		}
 
 	tokenIsFunction?(token, nest, function?)
@@ -169,11 +177,11 @@ class
 		if token in (')', '}', ']')
 			{
 			if nest <= 0 and function? is false
-				return ''
+				return ""
 			if function? is true
 				return false
 			}
-		else if token is 'function'
+		else if token is "function"
 			return true
 		return function?
 		}
@@ -183,7 +191,7 @@ class
 		// TODO: handle more than two block arguments
 		return scanner.Ahead() is '=' or
 			(scanner.Prev() is '|' or scanner.Ahead() is '|') or
-			(scanner.Prev() is 'for' or scanner.Ahead() is 'in')
+			(scanner.Prev() is #for or scanner.Ahead() is #in)
 		}
 
 	Methods(text)
@@ -196,7 +204,7 @@ class
 			else if scanner.Ahead() is ':'
 				{
 				scanner.Next()
-				if scanner.Ahead() is 'function'
+				if scanner.Ahead() is "function"
 					{
 					scanner.Next()
 					list.Add(token)
@@ -240,7 +248,7 @@ class
 			else if scanner.Ahead() is ':'
 				{
 				scanner.Next()
-				if scanner.Ahead() is 'function'
+				if scanner.Ahead() is "function"
 					{
 					scanner.Next()
 					classMembers.Add(token)
@@ -286,11 +294,10 @@ class
 		do
 			{
 			if token in ('{', '[', '(')
-				nest++
+				nest += 1
 			else if token in ('}', ']', ')')
-				nest--
-			}
-			while ((scan isnt token = scan.Next()) and nest isnt 0)
+				nest -= 1
+			} while ((scan isnt token = scan.Next()) and nest isnt 0)
 		return text[.. scan.Position()]
 		}
 
@@ -321,8 +328,8 @@ class
 		return classVariables
 		}
 
-	validTokensBeforePeriod: #('=', ';', '(', "is", "if", "isnt", "else", "{", ",", ":",
-		"return", "or", "and")
+	validTokensBeforePeriod: ('=', ';', '(', is, if, isnt, else, '{', ',', ':',
+		return, or, and)
 	classVariablesInMethodBody(text, classVariables, find = false)
 		{
 		startPoint = text.Find('{') + 1
@@ -336,9 +343,9 @@ class
 			curKeyword? = scan.Keyword?()
 			if scan.Type() in (#WHITESPACE, #COMMENT)
 				continue
-			if (.classVariableOneLine(token, prevKeyword?, prev2Token, prev3Token) or
+			if .classVariableOneLine(token, prevKeyword?, prev2Token, prev3Token) or
 				.classVariableMultipleLines(token, prevKeyword?, prev2Token, prev3Token,
-					prev4Token))
+					prev4Token)
 				{
 				if find is prevToken
 					return prevPos + startPoint
@@ -364,8 +371,8 @@ class
 	classVariableMultipleLines(token, prevKeyword?, prev2Token, prev3Token, prev4Token)
 		{
 		return token is '=' and prevKeyword? is false and prev2Token.Has?('\n') and
-			prev3Token is '.' and (.validTokensBeforePeriod.Has?(prev4Token) or
-			prev4Token.Has?('\n'))
+			prev3Token is '.' and
+			(.validTokensBeforePeriod.Has?(prev4Token) or prev4Token.Has?('\n'))
 		}
 
 	MethodRanges(text)
@@ -399,7 +406,7 @@ class
 		else if scanner.Ahead() is ':'
 			{
 			scanner.Next()
-			if scanner.Ahead() is 'function'
+			if scanner.Ahead() is "function"
 				return [name: token, from: pos]
 			}
 		return method
@@ -407,20 +414,24 @@ class
 
 	MethodSizes(text)
 		{
-		if LibRecordType(text) is 'function'
-			return Object([lines: .nonWhiteLineCount(text),
-				from: ScannerFind(text, 'function')])
+		if LibRecordType(text) is "function"
+			return [[lines: .nonWhiteLineCount(text),
+					from: ScannerFind(text, "function")]]
 		return .MethodRanges(text).Each()
 			{|x|
 			x.lines = .nonWhiteLineCount(text[x.from .. x.to])
 			}
 		}
+
 	nonWhiteLineCount(code)
 		{
-		nonblank = function (line)
-			{ not line.Blank?() }
+		nonblank = function(line)
+			{
+			not line.Blank?()
+			}
 		return .removeComments(code).Lines().Filter(nonblank).Count()
 		}
+
 	removeComments(src)
 		{
 		dst = ""
@@ -429,18 +440,18 @@ class
 			if tok is #COMMENT
 				// need to keep newline in case there was text
 				// on the same line before /* or after */
-				dst $= scan.Text().Tr('^\n')
+				dst $= scan.Text().Tr("^\n")
 			else
 				dst $= scan.Text()
 		return dst
 		}
 
-	nesting(nest,  token)
+	nesting(nest, token)
 		{
 		if #('{', '(', '[').Has?(token)
-			nest++
+			nest += 1
 		else if #('}', ')', ']').Has?(token)
-			nest--
+			nest -= 1
 		return nest
 		}
 
@@ -455,6 +466,7 @@ class
 				block(scanner, token)
 			}
 		}
+
 	FindMethod(text, name)
 		{
 		.foreach_member(text)
@@ -464,10 +476,11 @@ class
 			}
 		return false
 		}
+
 	FindBaseMethod(lib, name, text, method_name)
 		{
 		x = Object(:lib, :name, :text)
-		webgui? = LibraryTags.GetTagFromName(name).Has?('__webgui')
+		webgui? = LibraryTags.GetTagFromName(name).Has?("__webgui")
 		while false isnt base = .SuperClass(x.text)
 			{
 			if false is (x = .find_base(x.lib, x.name, base, webgui?)) or
@@ -478,37 +491,40 @@ class
 			}
 		return false
 		}
+
 	find_base(lib, name, base, webgui?)
 		{
 		libs = .libraries()
 		if base.Prefix?('_')
 			{
 			base = base[1..]
-			if name.Has?('__webgui')
+			if name.Has?("__webgui")
 				{
 				x = .getRecord(lib, base)
 				return x isnt false ? Object(:lib, name: x.name, text: x.text) : false
 				}
 			libs = libs[.. libs.Find(lib)]
 			}
-		tags = LibraryTags.BuildTags(.trials(), webgui? ? [#webgui] : #()).
-			Map({ '__' $ it }).
-			Add('', at: 0)
+		tags = LibraryTags.
+			BuildTags(.trials(), webgui? ? [#webgui] : #()).
+			Map({ "__" $ it }).
+			Add("", at: 0)
 		for lib in libs.Reverse!()
 			if false isnt x = .getRecord(lib, base, :tags)
-				{
 				return Object(:lib, name: x.name, text: x.text)
-				}
 		return false
 		}
+
 	trials()
 		{
 		return LastContribution(#LibraryTags_Trials)
 		}
-	getRecord(lib, name, tags = #(''))
+
+	getRecord(lib, name, tags = #(""))
 		{
 		return LibraryTags.GetRecord(name, lib, :tags)
 		}
+
 	libraries()
 		{
 		return Libraries()
@@ -551,9 +567,10 @@ class
 				.add_members(list, Global(base), base)
 		return list.Sort!().Unique!()
 		}
+
 	PublicMembersOfName(name)
 		{
-		if name is "Suneido"
+		if name is #Suneido
 			return Suneido.Members(all:).Sort!().Unique!() // includes methods
 		list = []
 		word = name.Has?('.') ? name.AfterLast('.') : name
@@ -561,6 +578,7 @@ class
 			.add_members(list, Global(name), word)
 		return list.Sort!().Unique!()
 		}
+
 	add_members(list, x, name) // recursive
 		{
 		name $= '_'

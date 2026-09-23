@@ -29,7 +29,7 @@ Spawn(P.NOWAIT, "notepad", "tmp.txt")
 
 The return value from a synchronous Spawn (P.WAIT) is the exit status of the process (0 usually means the process terminated normally). The return value from an asynchronous Spawn (P.NOWAIT) is the process id (or -1 if it fails to start the process).
 
-For P.WAIT, if the return value is not 0 (zero) it is [return-throw](<../Statements/return.md>), i.e. if the result is not used it will throw an exception. (as of BuiltDate 2025-01-16)
+For P.WAIT, if the return value is not 0 (zero) it is [return-throw](<../Statements/return.md>), i.e. if the result is not used it will throw an exception.
 
 **Note:** On Windows, if you use Spawn to run a console program (rather than a gui program) it will open a console window. If you don't want this, use [RunPiped](<RunPiped.md>)
 

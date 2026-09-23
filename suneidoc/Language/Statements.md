@@ -2,6 +2,7 @@
 
 |     |
 | --- |
+| [Gather Assignment](<Statements/Gather Assignment.md>) |
 | [Multiple Assignment](<Statements/Multiple Assignment.md>) |
 | [Overview](<Statements/Overview.md>) |
 | [if](<Statements/if.md>) |

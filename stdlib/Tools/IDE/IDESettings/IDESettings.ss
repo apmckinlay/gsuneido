@@ -1,36 +1,42 @@
 // Copyright (C) 2020 Suneido Software Corp. All rights reserved worldwide.
 MemoizeSingle
 	{
-	table: ide_settings
-	Columns: #(ide_logfont, ide_scifont, ide_qc_enabled, ide_color_scheme, ide_move_tab
-		ide_book_auto_refresh, ide_show_line_numbers, ide_show_whitespace,
-		ide_show_annotations, ide_show_fold_margin, ide_scroll_tabs,
+	table: #ide_settings
+	Columns: (// General Settings
+		ide_logfont, ide_scifont, ide_color_scheme, ide_qc_enabled,
+		// Book Edit Settings
+		ide_book_auto_refresh,
+		// Scintilla Settings
+		ide_show_line_numbers, ide_show_whitespace,
+		ide_show_annotations, ide_show_fold_margin,
+		// Tab Settings
+		ide_move_tab, ide_tab_persistent_limit, ide_scroll_tabs,
 		ide_selected_tab_bold, ide_selected_tab_color)
 	Init() // Should only be called if in a development environment
 		{
 		if .ide?()
 			{
-			Suneido.User = Suneido.User_Loaded = "default"
-			Suneido.user_roles = #('admin')
+			Suneido.User = Suneido.User_Loaded = #default
+			Suneido.user_roles = #(admin)
 			.rebuildSettings()
 			}
 		}
 
 	ide?()
 		{
-		return Suneido.GetDefault(#Persistent, #(Set: '')).Set is #IDE
+		return Suneido.GetDefault(#Persistent, #(Set: "")).Set is #IDE
 		}
 
 	// Rebuild unpackable, unsaveable values. Also recalculates as needed
-	settingsMap: #(
+	settingsMap: (
 		ide_logfont: function(value)
 			{
 			if value.Member?(#fontPtSize)
 				value.lfHeight = StdFonts.LfSize(value.fontPtSize)
 			SetGuiFont(value.Copy())
 			return value
-			}
-		ide_scifont: function (value)
+			},
+		ide_scifont: function(value)
 			{
 			if value.Member?(#fontPtSize)
 				value.lfHeight = StdFonts.LfSize(value.fontPtSize)
@@ -40,7 +46,7 @@ MemoizeSingle
 	rebuildSettings()
 		{
 		for setting, fn in .settingsMap
-			if '' isnt orig = .Get(setting)
+			if "" isnt orig = .Get(setting)
 				if orig isnt value = fn(Object?(orig) ? orig.Copy() : orig)
 					.setValue(setting, value)
 		.ResetCache()
@@ -62,22 +68,22 @@ MemoizeSingle
 			if false isnt settings = Query1(.table)
 				result = settings
 		catch (e)
-			if not e.Has?('nonexistent table')
-				SuneidoLog('ERROR: (CAUGHT) IDESettings - ' $ e)
+			if not e.Has?("nonexistent table")
+				SuneidoLog("ERROR: (CAUGHT) IDESettings - " $ e)
 		return result
 		}
 
 	Ensure()
 		{
-		Database('ensure ' $ .table $  ' (' $ .Columns.Join(', ') $ ') key()')
+		Database("ensure " $ .table $ " (" $ .Columns.Join(", ") $ ") key()")
 		if QueryEmpty?(.table)
 			QueryOutput(.table, [])
 		removeColumns = QueryColumns(.table).Difference(.Columns)
 		if not removeColumns.Empty?()
-			Database('alter ' $ .table $ ' drop (' $ removeColumns.Join(', ') $ ')')
+			Database("alter " $ .table $ " drop (" $ removeColumns.Join(", ") $ ')')
 		}
 
-	Get(setting, defaultVal = '')
+	Get(setting, defaultVal = "")
 		{
 		return .ide?() ? IDESettings().GetDefault(setting, defaultVal) : defaultVal
 		}
@@ -86,8 +92,8 @@ MemoizeSingle
 		{
 		if not .ide?()
 			{
-			SuneidoLog('ERROR: IDESettings are not loaded, cannot set: ' $ setting $
-				', to: ' $ Display(value))
+			SuneidoLog("ERROR: IDESettings are not loaded, cannot set: " $ setting $
+				", to: " $ Display(value))
 			return
 			}
 		if .settingsMap.Member?(setting)

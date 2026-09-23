@@ -3,9 +3,10 @@ class
 	{
 	New(routesList)
 		{
-		.routes = routesList.
-			Map({ NameArgs(it.Copy(), #(method, pat, app)) }).Instantiate()
+		.routes =
+			routesList.Map({ NameArgs(it.Copy(), #(method, pat, app)) }).Instantiate()
 		}
+
 	Call(env)
 		{
 		if false is route = .find_route(env)
@@ -13,8 +14,9 @@ class
 // turning off the logging until the authentication is fixed (36289) because http attacks
 // will kick this in and we don't want that
 // SuneidoLog('can not find route', params: env)
-			return ['404 page not found', #(),
-				'page not found (method ' $ env.method $ ', path: ' $ env.path $ ')']
+			env.connection = #close // to avoid cross-connection contamination
+			return ["404 page not found", #(),
+				"page not found (method " $ env.method $ ", path: " $ env.path $ ')']
 			}
 
 		app = route.app
@@ -22,9 +24,13 @@ class
 			app = Global(app)
 		return app(:env)
 		}
+
 	find_route(env)
 		{
-		return .routes.FindOne({ env.method =~ ('^' $ it.method.Upper() $ '$') and
-			env.path =~ ('^' $ it.pat $ '\>') })
+		return .routes.FindOne(
+			{
+			env.method =~ ('^' $ it.method.Upper() $ '$') and
+				env.path =~ ('^' $ it.pat $ "\>")
+			})
 		}
 	}

@@ -1,9 +1,9 @@
 // Copyright (C) 2019 Axon Development Corporation All rights reserved worldwide.
 Control
 	{
-	Name: 'Tab'
-	ComponentName: 'Tab'
-	Xstretch: 1
+	Name:          #Tab
+	ComponentName: #Tab
+	Xstretch:      1
 
 	New(@tabs)
 		{
@@ -24,12 +24,13 @@ Control
 			close_button: tabs.GetDefault(#close_button, false),
 			orientation: tabs.GetDefault(#orientation, #top),
 			staticTabs: tabs.GetDefault(#staticTabs, #()),
-			extraControl: .extraControl is false ? false : .extraControl.GetLayout())
+			extraControl: .extraControl is false ? false : .extraControl.GetLayout(),
+			scrollTabs: tabs.GetDefault(#scrollTabs, false))
 
 		.addTabButton(tabs)
 		}
 
-	defaultTip: 'Add Tab'
+	defaultTip: "Add Tab"
 	addTabButton(args)
 		{
 		buttonTip = args.GetDefault(#buttonTip, .defaultTip)
@@ -55,7 +56,7 @@ Control
 
 	ContextMenu(x, y, hover)
 		{
-		return hover is false ? 0 : .Send("TabContextMenu", x, y, hover)
+		return hover is false ? 0 : .Send(#TabContextMenu, x, y, hover)
 		}
 
 	tabId: 0
@@ -68,7 +69,8 @@ Control
 		{
 		id = .nextId()
 		image = .images.Member?(image) ? .images[image] : -1
-		.Act('Insert', i, text, data, image, id)
+		.Act(#Insert, i, text, Object(tooltip: data.GetDefault(#tooltip, "")),
+			image, id)
 		.tabs.Add(Object(:id, :text, :image, :data), at: i)
 		}
 
@@ -80,8 +82,8 @@ Control
 	Remove(i)
 		{
 		if i < .selected or .selected is .tabs.Size() - 1
-			.selected--
-		.Act('Remove', i)
+			.selected -= 1
+		.Act(#Remove, i)
 		.tabs.Delete(i)
 		return true
 		}
@@ -89,7 +91,7 @@ Control
 	selected: -1
 	Select(i)
 		{
-		.Act('Select', .selected = i)
+		.Act(#Select, .selected = i)
 		}
 
 	Move(i, newPos)
@@ -110,7 +112,7 @@ Control
 
 	SetText(i, text)
 		{
-		.Act('SetText', i, text)
+		.Act(#SetText, i, text)
 		.tabs[i].text = text
 		}
 
@@ -119,13 +121,15 @@ Control
 		return .tabs[i].text
 		}
 
-	images: #()
-	SetImageList(.images) {}
+	images: ()
+	SetImageList(.images)
+		{
+		}
 
 	SetImage(i, img)
 		{
 		image = .images.Member?(img) ? .images[img] : -1
-		.Act('SetImage', i, image)
+		.Act(#SetImage, i, image)
 		.tabs[i].image = image
 		}
 
@@ -142,7 +146,6 @@ Control
 	SetData(i, data)
 		{
 		.tabs[i].data = data
-
 		}
 
 	ForEachTab(block)
@@ -153,7 +156,7 @@ Control
 
 	Tab_Close(i)
 		{
-		.Send('Tab_Close', i)
+		.Send(#Tab_Close, i)
 		}
 
 	Click(i)
@@ -163,15 +166,15 @@ Control
 
 	goto(clicked)
 		{
-		if clicked is false or true is .Send('TabControl_SelChanging')
+		if clicked is false or true is .Send(#TabControl_SelChanging)
 			return 0
 
 		if clicked is .selected
-			.Send('TabClick', clicked)
+			.Send(#TabClick, clicked)
 		else
 			{
-			.Act('DoTabChange', .selected = clicked, true)
-			.Send('SelectTab', clicked)
+			.Act(#DoTabChange, .selected = clicked, true)
+			.Send(#SelectTab, clicked)
 			}
 		return 0
 		}

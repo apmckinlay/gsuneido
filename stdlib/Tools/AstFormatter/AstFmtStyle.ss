@@ -1,7 +1,9 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 class
 	{
-	New(.src, .cm) { }
+	New(.src, .cm)
+		{
+		}
 
 	Unbrace(node, guard)
 		{
@@ -193,9 +195,16 @@ class
 	// descending to the outermost positioned descendants
 	ArgBrokeInSrc?(node, i)
 		{
+		// Argument nodes carry pos/end even when their expr doesn't (e.g. a
+		// named arg with no value synthesizes a constant with pos: false), so
+		// fall back to the argument's own span when descending finds nothing
 		if false is e = .spanEnd(node[i-1].expr)
+			e = node[i-1].end
+		if false is e
 			return false
 		if false is s = .spanStart(node[i].expr)
+			s = node[i].pos
+		if false is s
 			return false
 		// a block argument always gets a line of its own, so the break before it
 		// is the formatter's, not the author's - counting it would make the next

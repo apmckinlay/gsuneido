@@ -4,6 +4,7 @@
 | --- |
 | [Introduction](<Database/Introduction.md>) |
 | [System Tables](<Database/System Tables.md>) |
+| [Statistics](<Database/Statistics.md>) |
 | [Transactions](<Database/Transactions.md>) |
 | [Administration](<Database/Administration.md>) |
 | [Queries](<Database/Queries.md>) |

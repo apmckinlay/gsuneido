@@ -37,10 +37,10 @@
 				libview.Save() // for diff to current
 				Window([#QualityChecker, libview], w: 800, h: 1000, keep_placement:)
 				}),
-		(LibView, Tools, Type_Checker, "", "",
+		(LibView, Tools, Type_Checker, "",
 			target: function(libview)
 				{
-				Window([#TypeChecker, libview])
+				TypeCheckerControl(libview)
 				}),
 		(LibView, Tools, Version_Control_Settings, "",
 			target: function()

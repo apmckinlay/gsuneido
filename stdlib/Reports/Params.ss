@@ -2,72 +2,72 @@
 // On_Preview, On_Print, On_Page_Setup can be called as static methods
 Controller
 	{
-	Title: 'Report'
+	Title: #Report
 	New(@report)
 		{
 		super(.Controls(report))
 		.Ensure()
-		.validField = .report.Member?('validField') ? .report.validField : false
-		.setParams = .report.Member?('SetParams') ? .report.SetParams : Object()
+		.validField = .report.Member?(#validField) ? .report.validField : false
+		.setParams = .report.Member?(#SetParams) ? .report.SetParams : Object()
 		.loadParams(.report)
 		}
-	Ensure(table = 'params')
+
+	Ensure(table = #params)
 		{
 		Database("ensure " $ table $
 			" (user, report, params, report_options, params_TS)
 			index(report)
 			key (user,report)")
 		}
+
 	Controls(report)
 		{
 		.report = report
-		if (not report.Member?('Params'))
-			report.Params = 'Skip'
-		.disableFieldProtects = report.GetDefault('disableFieldProtectRules', false)
-		pageCount = report.GetDefault('pageCount', false)
-		return Object('Vert',
-			'Skip',
+		if not report.Member?(#Params)
+			report.Params = #Skip
+		.disableFieldProtects = report.GetDefault(#disableFieldProtectRules, false)
+		pageCount = report.GetDefault(#pageCount, false)
+		return [#Vert,
+			#Skip,
 			.body(report),
-			'Skip',
-			.ParamsButtons(.reporter?(report), .export?(report), pageCount)
-			'Skip')
+			#Skip,
+			.ParamsButtons(.reporter?(report), .export?(report), pageCount),
+			#Skip]
 		}
+
 	body(report)
 		{
 		params = report.Params
-		trim = Object?(params)
-			? params.GetDefault('trim', true)
-			: true
+		trim = Object?(params) ? params.GetDefault(#trim, true) : true
 		chooseLayout = .ChooseLayoutControl(.report)
-		if Object?(params) and params.Flatten().Has?('ParamsChooseLayout')
-			chooseLayout = ''
-		paramsVert = ['Vert',
-			['Horz', params, 'Fill',
-				['Vert', ParamsLogo(report), chooseLayout, xstretch: 0]]
-			name: 'paramContainer']
+		if Object?(params) and params.Flatten().Has?(#ParamsChooseLayout)
+			chooseLayout = ""
+		paramsVert = [#Vert,
+			[#Horz, params, #Fill,
+				[#Vert, ParamsLogo(report), chooseLayout, xstretch: 0]]
+			name: #paramContainer]
 
-		params = ['Scroll', paramsVert, :trim, xmin: 700, ymin: 350]
-		noPresets? = .report.GetDefault('NoPresets', false)
-		if .report.Member?('title')
-			params = Object('Vert',
-				Object('Horz', 'Skip'
-					Object('TitleNotes', .report.title,
-						extra: .report.Member?("name") and noPresets? is false
-							? ['Presets', .report.name, .report.title,
-								saveCtrlsOnly:]
-							: #(Skip 0))),
-				#(Skip 5), params)
-		return Object('Record', params,
-			disableFieldProtectRules: .disableFieldProtects)
+		params = [#Scroll, paramsVert, :trim, xmin: 700, ymin: 350]
+		noPresets? = .report.GetDefault(#NoPresets, false)
+		if .report.Member?(#title)
+			params = [#Vert,
+				[#Horz, #Skip,
+					[#TitleNotes, .report.title,
+						extra: .report.Member?(#name) and noPresets? is false
+							? [#Presets, .report.name, .report.title, saveCtrlsOnly:]
+							: #(Skip, 0)]],
+				#(Skip, 5), params]
+		return [#Record, params,
+			disableFieldProtectRules: .disableFieldProtects]
 		}
 
 	HelpButton_HelpPage()
 		{
 		book_option = 0
-		if false is currentbook = Suneido.GetDefault('CurrentBook', false)
+		if false is currentbook = Suneido.GetDefault(#CurrentBook, false)
 			return book_option
 		option = .Name
-		if .report.Member?('HelpOption')
+		if .report.Member?(#HelpOption)
 			option = .report.HelpOption
 		if false isnt rec = QueryFirstBookOption(currentbook, option)
 			book_option = rec.path $ '/' $ rec.name
@@ -78,7 +78,7 @@ Controller
 		{
 		return .hasCustomLayouts?(report)
 			? [#ParamsChooseLayout, report.name, xstretch]
-			: ''
+			: ""
 		}
 
 	hasCustomLayouts?(report)
@@ -94,9 +94,8 @@ Controller
 	reporter?(report)
 		{
 		return ((report.Member?(0) and Object?(report[0])) and
-			(report[0][0] is 'ReporterFormat' or
-				report[0][0] is ReporterFormat or
-				report[0][0] is 'ReporterCanvasFormat' or
+			(report[0][0] is #ReporterFormat or report[0][0] is ReporterFormat or
+				report[0][0] is #ReporterCanvasFormat or
 				report[0][0] is ReporterCanvasFormat))
 		}
 
@@ -106,7 +105,7 @@ Controller
 			return false
 
 		rpt = .getReportFormat(report)
-		return Class?(rpt) and rpt.Member?('Export') and rpt.Export isnt false
+		return Class?(rpt) and rpt.Member?(#Export) and rpt.Export isnt false
 		}
 
 	getReportFormat(report)
@@ -115,55 +114,57 @@ Controller
 		if Object?(rpt) and rpt.Member?(0)
 			rpt = rpt[0]
 		if String?(rpt)
-			rpt = Global(rpt.Suffix?('Format') ? rpt : rpt $ 'Format')
+			rpt = Global(rpt.Suffix?(#Format) ? rpt : rpt $ "Format")
 		return rpt
 		}
 
 	ExtraButtons: ()
-	Buttons: #(Print, Preview, PDF)
+	Buttons: (Print, Preview, PDF)
 	buttonPad: false
-	PreviewButtons: #(Print, PDF)
+	PreviewButtons: (Print, PDF)
 	ParamsButtons(reporter_link, export = false, pageCount = false)
 		{
-		ob = Object(.buttonFormat(), 'Skip')
+		ob = [.buttonFormat(), #Skip]
 
 		.addParamButtons(ob, .Buttons)
 		if export
 			.addParamButtons(ob, #(Export))
 		.addParamButtons(ob, .ExtraButtons)
 		if pageCount
-			ob.Add(#(Button 'Page Count'), 'Skip')
-		ob.Add(Object('Button' 'Page Setup', pad: .buttonPad),
-			'Skip',
-			#(CheckBox 'Print Lines' name: print_lines,
-				tip: 'Print lines between records'),
-			'Skip',
-			reporter_link is true ?
-				#(LinkButton name: 'Reporter' command: 'ReporterReport') : '')
+			ob.Add(#(Button, "Page Count"), #Skip)
+		ob.Add([#Button, "Page Setup", pad: .buttonPad],
+			#Skip,
+			#(CheckBox, "Print Lines", name: print_lines,
+				tip: "Print lines between records"),
+			#Skip,
+			reporter_link is true
+				? #(LinkButton, name: Reporter, command: ReporterReport)
+				: "")
 		ob.pad = 10
-		return Object('Vert' ob name: 'generate_msg')
+		return [#Vert, ob name: #generate_msg]
 		}
 
 	buttonFormat()
 		{
 		allButtons = .Buttons.Copy().Append(.ExtraButtons)
 		char = allButtons.MaxWith({|x| x.Size() }).Size()
-		if char> 15 and allButtons.Size() > 5 /*= more than 5 buttons and
+		if char > 15 and allButtons.Size() > 5 /*= more than 5 buttons and
 			the largest button char > 15, switch to Horz */
 			{
 			.buttonPad = 40
-			return 'Horz'
+			return #Horz
 			}
-		return 'HorzEqual'
+		return #HorzEqual
 		}
 
 	addParamButtons(ob, buttons)
 		{
 		for button in buttons
 			{
-			buttonCtrl = button.Has?("PDF")
-				? Object('PDFButton' button) : Object('Button' button, pad: .buttonPad)
-			ob.Add(buttonCtrl, 'Skip')
+			buttonCtrl = button.Has?(#PDF)
+				? [#PDFButton, button]
+				: [#Button, button, pad: .buttonPad]
+			ob.Add(buttonCtrl, #Skip)
 			.PreviewButtons = .PreviewButtons.Copy().AddUnique(button)
 			}
 		}
@@ -177,7 +178,7 @@ Controller
 	params_valid?(silent = false)
 		{
 		msg = ""
-		if (.validField isnt false)
+		if .validField isnt false
 			{
 			params = .Vert.Data.Get()
 			msg = params[.validField]
@@ -187,26 +188,28 @@ Controller
 		.Vert.Data.Dirty?(true)
 		if ((invalid_fields = .Vert.Data.Valid()) isnt true)
 			{
-			if (msg isnt "")
+			if msg isnt ""
 				msg $= "\n\n"
 			msg $= invalid_fields
 			}
-		if (msg isnt "")
+		if msg isnt ""
 			{
-			if (not silent)
+			if not silent
 				.AlertWarn("Invalid Parameter(s)", msg)
 			return false
 			}
 		return true
 		}
+
 	DisablePreviewDialog() // called by ReportCheck
 		{
-		if .report.GetDefault('previewDialog', false)
+		if .report.GetDefault(#previewDialog, false)
 			.report.previewDialog = false
 		}
+
 	On_Preview(@report)
 		{
-		if (Object?(.report))
+		if Object?(.report)
 			report = .report
 
 		if not .paramsWindowValid?(report)
@@ -218,7 +221,7 @@ Controller
 		.checkAndResetParams(report)
 		.setPreviewParams(report)
 
-		report.paramsdata.ReportDestination = 'preview'
+		report.paramsdata.ReportDestination = #preview
 		.SetExtraParamsData(report.paramsdata)
 		.add_print_lines(report.paramsdata)
 
@@ -230,7 +233,7 @@ Controller
 			.deleteDC(pdc)
 			return false
 			}
-		if report.GetDefault('pageCountOnly', false)
+		if report.GetDefault(#pageCountOnly, false)
 			return .previewForPageCount(report, pdc)
 		w = .runPreview(report, pdc)
 		return w // is this used? could be either dialog result or a Window ???
@@ -238,7 +241,7 @@ Controller
 
 	setPreviewParams(report)
 		{
-		if not report.Member?('PreviewParams')
+		if not report.Member?(#PreviewParams)
 			return
 		preParams = report.PreviewParams
 		for field in preParams.Members()
@@ -249,8 +252,8 @@ Controller
 	On_Page_Count()
 		{
 		.report.pageCountOnly = true
-		if Number?(pages = .On_Preview(.report))  // won't be number if params invalid
-			.AlertInfo('Page Count', 'Estimated Pages: ' $ pages)
+		if Number?(pages = .On_Preview(.report)) // won't be number if params invalid
+			.AlertInfo("Page Count", "Estimated Pages: " $ pages)
 		.report.pageCountOnly = false
 		}
 
@@ -267,8 +270,9 @@ Controller
 
 	buildPreviewWindowForPageCount(report, pdc)
 		{
-		return Window(Object(PreviewControl, report, this,
-			extraButtons: .PreviewButtons, :pdc), show: false)
+		return Window(
+			[PreviewControl, report, this,
+				extraButtons: .PreviewButtons, :pdc], show: false)
 		}
 
 	runPreview(report, pdc)
@@ -277,26 +281,28 @@ Controller
 			? .PreviewButtons.Copy().AddUnique(#Export)
 			: .PreviewButtons
 
-		if (report.Member?('previewDialog') and report.previewDialog is true)
+		if report.Member?(#previewDialog) and report.previewDialog is true
 			{
-			keep_size = 'Print Preview Dialog'
-			if report.Member?('PreviewParams') and report.Member?('name')
-				keep_size $= ' - ' $ report.name
-			w = ModalWindow(Object("Preview", report, this, :extraButtons, :pdc),
-				:keep_size, useDefaultSize:,
-				onDestroy: {
-					.onDestroyModalPreview()
-					.deleteDC(pdc)
+			keep_size = "Print Preview Dialog"
+			if report.Member?(#PreviewParams) and report.Member?(#name)
+				keep_size $= " - " $ report.name
+			w = ModalWindow([#Preview, report, this, :extraButtons, :pdc],
+			:keep_size, useDefaultSize:,
+			onDestroy:
+				{
+				.onDestroyModalPreview()
+				.deleteDC(pdc)
 				})
 			}
 		else
 			{
-			w = Window(Object(PreviewControl, report, this, :extraButtons, :pdc),
-				keep_placement:, useDefaultSize:,
-				excludeModalWindow: .closeDialog?() ? .Window : false,
-				onDestroy: {
-					.checkNoPage()
-					.deleteDC(pdc)
+			w = Window([PreviewControl, report, this, :extraButtons, :pdc],
+			keep_placement:, useDefaultSize:,
+			excludeModalWindow: .closeDialog?() ? .Window : false,
+			onDestroy:
+				{
+				.checkNoPage()
+				.deleteDC(pdc)
 				})
 			.closeDialog()
 			}
@@ -305,8 +311,8 @@ Controller
 
 	addFilterIfSlowQuery(report)
 		{
-		if report.Member?('suppressSlowQuery')
-			report.Delete('suppressSlowQuery')
+		if report.Member?(#suppressSlowQuery)
+			report.Delete(#suppressSlowQuery)
 		if false is fieldPrompt = .getSlowQueryFilterFieldPrompt(report)
 			return false
 
@@ -317,31 +323,31 @@ Controller
 		queryState = Object(sortCol: false, presets: Object())
 		filterFields = fieldPrompt.GetFields()
 		if false isnt SlowQuery.Validate(query, filterFields, after: false, :queryState,
-			indexes: report.GetDefault('slowQueryIndexes', false))
+			indexes: report.GetDefault(#slowQueryIndexes, false))
 			return false
 
-		if not queryState.Member?('filter')
+		if not queryState.Member?(#filter)
 			{
 			report.suppressSlowQuery = true
 			// user didn't pick a filter from suggestion window, keep running report
 			return false
 			}
 
-		SlowQuery.AddParamsIndexedFilter(
-			queryState.filter, .Vert.Data, report.slowQueryFilter)
+		SlowQuery.AddParamsIndexedFilter(queryState.filter, .Vert.Data,
+			report.slowQueryFilter)
 		return true
 		}
 
 	getSlowQueryFilterFieldPrompt(report)
 		{
-		if false is report.GetDefault('slowQueryFilter', false)
+		if false is report.GetDefault(#slowQueryFilter, false)
 			return false
 
-		if report.GetDefault('previewWindow', false)
+		if report.GetDefault(#previewWindow, false)
 			return false
 		if false is filters = .FindControl(report.slowQueryFilter)
 			return false
-		if false is fieldPrompt = filters.FindControl('condition_field')
+		if false is fieldPrompt = filters.FindControl(#condition_field)
 			return false
 		if not .paramsScreen?(this)
 			return false
@@ -362,10 +368,12 @@ Controller
 		if fmt.Base?(ObjectFormat)
 			return false
 
-		_report = new ParamsReportClassForQuery
+		_report = new ParamsReportClassForQuery()
 		_report.Params = report.paramsdata
 		fmtInstance = new ParamsFormatClassForQuery(fmt)
 		fmtInstance.Params = report.paramsdata
+// ISSUE 38099 - passing original paramsdata down
+		fmtInstance.OrigParams = .origparams
 		return fmtInstance.Query()
 		}
 
@@ -385,9 +393,7 @@ Controller
 		}
 
 	noPage: false
-	SetNoPage(.noPage = true)
-		{
-		}
+	SetNoPage(.noPage = true) { }
 
 	CloseDialog(report)
 		{
@@ -413,7 +419,7 @@ Controller
 
 	closeDialog?()
 		{
-		return .Member?("Window") and .Window.Method?("Result")
+		return .Member?(#Window) and .Window.Method?(#Result)
 		}
 
 	verifyDevMode(report)
@@ -421,27 +427,27 @@ Controller
 		x = .Get_devmode(report)
 		hdm = .globalAllocData(x.devmode)
 		hwnd = .hwnd(report)
-		if hdm is 0 or x.devnames is ''
-			{
+		if hdm is 0 or x.devnames is ""
 			if false is hdm = .useDefaultPrinter(x, hwnd)
 				return false
-			}
 		if false is pdc = .update_pdc(hdm, x, report, fromPreview?:)
 			{
 			hdm = .useDefaultPrinter(x, hwnd)
 			if hdm is false or false is pdc = .update_pdc(hdm, x, report)
 				return false
 			}
-		if (hdm isnt 0)
+		if hdm isnt 0
 			GlobalFree(hdm)
 		return pdc
 		}
+
 	globalAllocData(str)
 		{
 		if str is ""
 			return 0
 		return GlobalAllocData(str)
 		}
+
 	useDefaultPrinter(x, hwnd)
 		{
 		pd = Object(
@@ -449,7 +455,7 @@ Controller
 			hwndOwner: hwnd,
 			Flags: PD.RETURNDEFAULT | PD.NOPAGENUMS,
 			nCopies: 1,
-			nStartPage: 0xFFFFFFFF)
+			nStartPage: 0xFFFF_FFFF)
 
 		if PrintDlgEx(pd) isnt 0 or pd.hDevMode is 0 or pd.hDevNames is 0
 			{
@@ -466,24 +472,24 @@ Controller
 
 	add_print_lines(paramsdata)
 		{
-		if not paramsdata.Member?('PrintLines')
+		if not paramsdata.Member?(#PrintLines)
 			{
-			ctrl = .FindControl('print_lines')
+			ctrl = .FindControl(#print_lines)
 			paramsdata.PrintLines = ctrl is false ? false : ctrl.Get()
 			}
 		}
 
 	On_Print(@report)
 		{
-		if (Object?(.report))
+		if Object?(.report)
 			report = .report
 
 		if not .paramsWindowValid?(report)
 			return
 
-		fromPreview? = report.GetDefault("from_preview", false)
+		fromPreview? = report.GetDefault(#from_preview, false)
 		.checkAndResetParams(report)
-		report.paramsdata.ReportDestination = 'printer'
+		report.paramsdata.ReportDestination = #printer
 		.SetExtraParamsData(report.paramsdata)
 		.add_print_lines(report.paramsdata)
 		if not fromPreview? and true is .addFilterIfSlowQuery(report)
@@ -541,14 +547,14 @@ Controller
 			{
 			.free(pd)
 			if result is false and CommDlgExtendedError() is 0
-				return false// user cancelled
+				return false // user cancelled
 
 			QueryApply1(.devmode_query(.devmode_reportname(report)))
 				{
-				it.devnames = it.devmode = ''
+				it.devnames = it.devmode = ""
 				it.Update()
 				}
-			.AlertError("Print", .printerError)
+			.AlertError(#Print, .printerError)
 			return false
 			}
 		return pd
@@ -558,7 +564,7 @@ Controller
 		"\nThis might be caused by printer driver or connection issue" $
 		"\nThe invalid printer settings are cleaned up for this report" $
 		"\nPlease choose the Page Setup and print again"
-	invalidDc: 'invalid dc'
+	invalidDc: "invalid dc"
 	printDlgAndValid(pd)
 		{
 		try
@@ -567,10 +573,10 @@ Controller
 			if result isnt 0 or pd.dwResultAction isnt 1 or pd.hDevNames is 0
 				return false
 			}
-		catch(err, "win32 exception: ACCESS_VIOLATION")
+		catch (err, "win32 exception: ACCESS_VIOLATION")
 			{
-			SuneidoLog('ERRATIC: ' $ err)
-			.AlertError("Print", .printerError)
+			SuneidoLog("ERRATIC: " $ err)
+			.AlertError(#Print, .printerError)
 			return false
 			}
 
@@ -590,6 +596,7 @@ Controller
 		GlobalUnlock(hDevMode)
 		return dc
 		}
+
 	devnamesDevice(s)
 		{
 		deviceOffset = s[2].Asc() + 256 * s[3].Asc() /*= offsets in DEVNAMES */
@@ -598,39 +605,39 @@ Controller
 
 	paramsWindowValid?(report)
 		{
-		if not this.Member?("Vert") or report.Member?("from_preview")
+		if not .Member?(#Vert) or report.Member?(#from_preview)
 			return true
 		return .params_valid?()
 		}
 
-	SetExtraParamsData(paramsData /*unused*/)
-		{
-		}
+	SetExtraParamsData(paramsData/*unused*/) { }
 
 	On_Export(@report)
 		{
 		if Object?(.report)
 			report = .report
 
-		if '' isnt msg = .validExport(report)
+		if "" isnt msg = .validExport(report)
 			{
-			.AlertWarn('Export', msg)
+			.AlertWarn(#Export, msg)
 			return
 			}
 
 		if false is filename = Dialog.DoWithWindowsDisabled(
-			{ .getSaveFileName(report, 'csv') }, .hwnd(report))
+			{
+			.getSaveFileName(report, #csv)
+			}, .hwnd(report))
 			return
 
 		result = false
-		if true isnt msg = CatchFileAccessErrors(filename,
-			{ result = .SaveCSV(filename, report) })
-			.AlertInfo('Export', msg)
+		if true isnt
+			msg = CatchFileAccessErrors(filename, { result = .SaveCSV(filename, report) })
+			.AlertInfo(#Export, msg)
 
 		if result isnt true
 			return
 
-		.afterSaveFile(report, 'csv', filename)
+		.afterSaveFile(report, #csv, filename)
 		.CloseDialog(report)
 		}
 
@@ -639,13 +646,11 @@ Controller
 	//		IE: getReportFormat returns a class
 	validExport(report)
 		{
-		export = .getReportFormat(report).GetDefault('Export', false)
+		export = .getReportFormat(report).GetDefault(#Export, false)
 		if not Function?(export)
-			return export isnt true
-				? 'Export is not supported for this report'
-				: ''
+			return export isnt true ? "Export is not supported for this report" : ""
 
-		if not report.GetDefault('from_preview', false)
+		if not report.GetDefault(#from_preview, false)
 			.checkAndResetParams(report)
 
 		return (export)(report.paramsdata)
@@ -656,9 +661,9 @@ Controller
 		if report is false
 			report = .report
 
-		fromPreview? = report.GetDefault("from_preview", false)
+		fromPreview? = report.GetDefault(#from_preview, false)
 		.checkAndResetParams(report)
-		report.paramsdata.ReportDestination = 'csv'
+		report.paramsdata.ReportDestination = #csv
 		.SetExtraParamsData(report.paramsdata)
 		if not fromPreview? and true is .addFilterIfSlowQuery(report)
 			return false
@@ -674,18 +679,18 @@ Controller
 
 	RunWithNoOutput(@report)
 		{
-		if (Object?(.report))
+		if Object?(.report)
 			report = .report
-		if (this.Member?("Vert"))
+		if .Member?(#Vert)
 			{
-			if (not .params_valid?())
+			if not .params_valid?()
 				return false
 			report.paramsdata = .Vert.Data.GetControlData()
 			.update_params(report)
 			}
-		else if not report.Member?('paramsdata')
-			report.paramsdata = Record()
-		report.paramsdata.ReportDestination = 'nooutput'
+		else if not report.Member?(#paramsdata)
+			report.paramsdata = []
+		report.paramsdata.ReportDestination = #nooutput
 		.SetExtraParamsData(report.paramsdata)
 		.add_print_lines(report.paramsdata)
 		status = Report(@report).Run()
@@ -695,11 +700,11 @@ Controller
 
 	hwnd(report)
 		{
-		params_window = this.Member?("Window") ? .Window.Hwnd : GetActiveWindow()
-		if (report.Member?("previewWindow"))
+		params_window = .Member?(#Window) ? .Window.Hwnd : GetActiveWindow()
+		if report.Member?(#previewWindow)
 			{
 			params_window = report.previewWindow
-			report.Delete("previewWindow")
+			report.Delete(#previewWindow)
 			}
 		return params_window
 		}
@@ -710,12 +715,14 @@ Controller
 			report = .report
 
 		if false is filename = Dialog.DoWithWindowsDisabled(
-			{ .getSaveFileName(report, 'pdf') }, .hwnd(report))
+			{
+			.getSaveFileName(report, #pdf)
+			}, .hwnd(report))
 			return
 
-		if false is .CreatePdfWithEmailAttachments(report, filename, compress?: 'auto')
+		if false is .CreatePdfWithEmailAttachments(report, filename, compress?: #auto)
 			return
-		.afterSaveFile(report, 'pdf', filename)
+		.afterSaveFile(report, #pdf, filename)
 
 		.CloseDialog(report)
 		}
@@ -740,7 +747,7 @@ Controller
 				if String?(fileSize = EmailAttachment.CalculateTotal(
 					result.mergeableFiles.AddUnique(filename)))
 					{
-					.deleteFile(filename, 'Could not clean up PDF temp file')
+					.deleteFile(filename, "Could not clean up PDF temp file")
 					.alertError(quiet?, fileSize)
 					return .returnVal(quiet?, fileSize)
 					}
@@ -760,8 +767,8 @@ Controller
 		return unmergeableFiles
 		}
 
-	beforeMerge(report /*unused*/, mergeableFiles /*unused*/, filename /*unused*/,
-		compress? /*unused*/)
+	beforeMerge(report/*unused*/, mergeableFiles/*unused*/, filename/*unused*/,
+		compress?/*unused*/)
 		{
 		return true
 		}
@@ -769,7 +776,7 @@ Controller
 	deleteFile(filename, msg)
 		{
 		if true isnt result = DeleteFile(filename)
-			SuneidoLog('ERRATIC: ' $ msg, params: Object(:result, :filename), calls:)
+			SuneidoLog("ERRATIC: " $ msg, params: Object(:result, :filename), calls:)
 		}
 
 	alertError(quiet?, msg)
@@ -785,14 +792,14 @@ Controller
 
 	mergePdf?(alwaysMerge?, report)
 		{
-		return alwaysMerge? or report.paramsdata.GetDefault("merge_pdf?", false) is true
+		return alwaysMerge? or report.paramsdata.GetDefault(#merge_pdf?, false) is true
 		}
 
 	afterSaveFile(report/*unused*/, ext, filename)
 		{
-		if ext isnt 'pdf'
+		if ext isnt #pdf
 			return
-		ShellExecute(.WindowHwnd(), 'open', filename, fMask: SEE_MASK.ASYNCOK)
+		ShellExecute(.WindowHwnd(), #open, filename, fMask: SEE_MASK.ASYNCOK)
 		}
 
 	mergePdf(filename, mergeableFiles, compress)
@@ -802,18 +809,18 @@ Controller
 		mergeableFiles.Add(filename, at: 0)
 		if "" isnt msg = EmailAttachment.AttachmentFilesExist(mergeableFiles)
 			{
-			.deleteFile(filename, 'Could not clean up PDF temp file')
+			.deleteFile(filename, "Could not clean up PDF temp file")
 			return "Append Attachments to PDF Failed, " $ msg
 			}
 
 		invalidFiles = #()
-		Working('Generating PDF...')
+		Working("Generating PDF...")
 			{
 			invalidFiles = PdfMerger(mergeableFiles, filename, :compress)
 			}
 		if not invalidFiles.Empty?()
 			{
-			.deleteFile(filename, 'Could not clean up PDF temp file')
+			.deleteFile(filename, "Could not clean up PDF temp file")
 			return PdfMerger.InvalidFilesMsg(invalidFiles)
 			}
 		return true
@@ -821,28 +828,24 @@ Controller
 
 	orderAttachments(report, quiet? = false)
 		{
-		files = report.paramsdata.GetDefault('EmailAttachments', #())
+		files = report.paramsdata.GetDefault(#EmailAttachments, #())
 		invalidFiles = Object()
 		if .hasInvalidEmailAttachment?(files, :invalidFiles)
-			{
-			return quiet?
-				? "Unable to merge files: " $ invalidFiles.Join(', ')
-				: false
-			}
+			return quiet? ? "Unable to merge files: " $ invalidFiles.Join(", ") : false
 
 		mergeableFiles = PdfMerger.FilterFiles(files)
 		unmergeableFiles = files.Difference(mergeableFiles)
 		if quiet? or mergeableFiles.Size() <= 1
 			return Object(:mergeableFiles, :unmergeableFiles)
 
-		if report.paramsdata.GetDefault("merge_pdf_reorder?", false) and
+		if report.paramsdata.GetDefault(#merge_pdf_reorder?, false) and
 			false is mergeableFiles = ReorderAttachments(.hwnd(report), mergeableFiles)
 			return false
 
 		return Object(:mergeableFiles, :unmergeableFiles)
 		}
 
-	InvalidMergeFile: 'Params_InvalidMergeFile: '
+	InvalidMergeFile: "Params_InvalidMergeFile: "
 	hasInvalidEmailAttachment?(emailAttachments, invalidFiles = false)
 		{
 		mems = emailAttachments.FindAllIf({ it.Prefix?(.InvalidMergeFile) })
@@ -865,18 +868,21 @@ Controller
 			title: "Save " $ ext.Upper() $ " file as",
 			filter: ext.Upper() $ " Files (*." $ ext $ ")\x00*." $ ext $
 				"\x00All Files (*.*)\x00*.*",
-			ext: "." $ ext,
+			ext: '.' $ ext,
 			file: .getDefaultFileName(report, ext))
 			return false
 		return filename
 		}
+
 	getDefaultFileName(report, ext)
 		{
-		default_name = report.GetDefault('title', 'report') $ ' ' $
-			Date().Format("yyyy-MM-dd HHmmss") $ "." $ ext
-		return default_name.Tr(CheckFileName.InvalidChars).
+		default_name = report.GetDefault("title", "report") $ ' ' $
+			Date().Format("yyyy-MM-dd HHmmss") $ '.' $ ext
+		return default_name.
+			Tr(CheckFileName.InvalidChars).
 			Tr(CheckFileName.InvalidFileChars)
 		}
+
 	On_PDF_Email_as_attachment(@report)
 		{
 		if Object?(.report)
@@ -888,21 +894,22 @@ Controller
 			subject = .emailPdfSubject(subject)
 		EmailAttachment(hwnd, :subject)
 			{
-			filename = .pdfName(GetAppTempFullFileName("su"))
+			filename = .pdfName(GetAppTempFullFileName(#su))
 			if false is .pdf(report, filename) or
 				.hasInvalidEmailAttachment?(.EmailAttachments(report))
 				filename = false
 
 			rptResult = Object(:filename,
-				attachFileName: .getDefaultFileName(report, 'pdf')
-				attachments: .EmailAttachments(report)
-				merge_pdf?: report.paramsdata.GetDefault("merge_pdf?", false) is true)
-			if report.paramsdata.Member?('EmailSubject')
+				attachFileName: .getDefaultFileName(report, #pdf),
+				attachments: .EmailAttachments(report),
+				merge_pdf?: report.paramsdata.GetDefault(#merge_pdf?, false) is true)
+			if report.paramsdata.Member?(#EmailSubject)
 				rptResult.EmailSubject = report.paramsdata.EmailSubject
 			rptResult
 			}
 		.CloseDialog(report)
 		}
+
 	emailPdfSubject(subject)
 		{
 		prefixPattern = "^(Print|Generate) "
@@ -912,21 +919,22 @@ Controller
 	pdfName(filename)
 		{
 		extension = filename.AfterLast('.')
-		return filename.RemoveSuffix('.' $ extension) $ '.pdf'
+		return filename.RemoveSuffix('.' $ extension) $ ".pdf"
 		}
 
 	SavePDF(filename) // called by ReportCheck
 		{
 		.pdf(false, filename)
 		}
+
 	pdf(report, filename, quiet? = false)
 		{
-		if (Object?(.report))
+		if Object?(.report)
 			report = .report
 
-		fromPreview? = report.GetDefault("from_preview", false)
+		fromPreview? = report.GetDefault(#from_preview, false)
 		.checkAndResetParams(report)
-		report.paramsdata.ReportDestination = 'pdf'
+		report.paramsdata.ReportDestination = #pdf
 		.SetExtraParamsData(report.paramsdata)
 		.add_print_lines(report.paramsdata)
 
@@ -936,7 +944,7 @@ Controller
 			return false
 
 		result = msg = false
-		Working('Creating PDF', :quiet?)
+		Working("Creating PDF", :quiet?)
 			{
 			msg = CatchFileAccessErrors(filename)
 				{
@@ -950,48 +958,50 @@ Controller
 
 		if not quiet? and String?(errMsg)
 			{
-			.AlertInfo("PDF", errMsg)
+			.AlertInfo(#PDF, errMsg)
 			return false
 			}
 		return errMsg
 		}
 
+// ISSUE 38099 - user ending up with param value set empty, but there
+// should NOT be a way out of the screen in that state. checking if something
+// when we handle params is wiping it out.
+	origparams: false
 	checkAndResetParams(report)
 		{
-		if report.Member?('EmailAttachments')
+		if report.Member?(#EmailAttachments)
 			report.EmailAttachments = Object()
-		if (this.Member?("Vert"))
-			{
+		if .Member?(#Vert)
 			// don't reset params if from preview
-			if (not report.Member?("from_preview"))
+			if not report.Member?(#from_preview)
 				{
 				report.paramsdata = .Vert.Data.GetControlData()
+				.origparams = report.paramsdata.Copy()
 				report.paramsdata.lastRan = Timestamp()
 				.update_params(report)
 				}
 			else
-				report.Delete("from_preview")
-			}
-		else if not report.Member?('paramsdata')
-			report.paramsdata = Record()
+				report.Delete(#from_preview)
+		else if not report.Member?(#paramsdata)
+			report.paramsdata = []
 		}
 
 	EmailAttachments(report)
 		{
-		return report.Member?('EmailAttachments')
-			? report.EmailAttachments
-			: Object()
+		return report.Member?(#EmailAttachments) ? report.EmailAttachments : Object()
 		}
+
 	HasIndividualReport?()
 		{
-		return not _report.Params.GetDefault('EmailAttachments', #()).Empty?()
+		return not _report.Params.GetDefault(#EmailAttachments, #()).Empty?()
 		}
 
 	PrintPDF(report, filename, quiet? = false)
 		{
 		if quiet?
 			{
-			if '' is msg = Report.GetStatusMsg(Report(@report).PrintPDF(filename, true))
+			if "" is msg = Report.GetStatusMsg(Report(@report).PrintPDF(filename, true))
 				return true
 			return msg
 			}
@@ -1000,10 +1010,8 @@ Controller
 
 	newPRINTDLG(hwnd, report)
 		{
-		pagenums = report.GetDefault("noPageRange", false) is true
-			? PD.NOPAGENUMS : 0
-		return Object(
-			lStructSize: PRINTDLGEX.Size(),
+		pagenums = report.GetDefault(#noPageRange, false) is true ? PD.NOPAGENUMS : 0
+		return Object(lStructSize: PRINTDLGEX.Size(),
 			hwndOwner: hwnd,
 			Flags: PD.USEDEVMODECOPIESANDCOLLATE | PD.NOSELECTION | PD.NOCURRENTPAGE |
 				pagenums,
@@ -1012,16 +1020,17 @@ Controller
 			nPageRanges: 1, nMaxPageRanges: 1,
 			lpPageRanges: Object(nToPage: 1, nFromPage: 1),
 			nCopies: 1,
-			nStartPage: 0xFFFFFFFF)
+			nStartPage: 0xFFFF_FFFF)
 		}
+
 	uom: 1000 // defined by PSD.INTHOUSANDTHSOFINCHES flag
 	On_Page_Setup(@report)
 		{
-		if (Object?(.report))
+		if Object?(.report)
 			report = .report
-		hwndOwner = this.Member?('Window')
+		hwndOwner = .Member?(#Window)
 			? .Window.Hwnd
-			: report.Member?('hwndOwner') ? report.hwndOwner : 0
+			: report.Member?(#hwndOwner) ? report.hwndOwner : 0
 		psd = .initPageSetupDlg(hwndOwner)
 		x = .Get_devmode(report)
 		psd.hDevMode = .globalAllocData(x.devmode)
@@ -1034,7 +1043,7 @@ Controller
 		if not PageSetupDlg(psd) or psd.hDevNames is 0
 			{
 			.free(psd)
-			if (CommDlgExtendedError() is 0)
+			if CommDlgExtendedError() is 0
 				return // user cancelled
 			if false is psd = .tryWithoutDevmode(hwndOwner, psd)
 				return
@@ -1052,6 +1061,7 @@ Controller
 
 		.checkReportSize(report)
 		}
+
 	initPageSetupDlg(hwndOwner)
 		{
 		return Object(
@@ -1059,6 +1069,7 @@ Controller
 			:hwndOwner,
 			Flags: PSD.INTHOUSANDTHSOFINCHES + PSD.MARGINS)
 		}
+
 	tryWithoutDevmode(hwndOwner, psd)
 		{
 		// failed so try again without devmode
@@ -1066,47 +1077,47 @@ Controller
 		if not PageSetupDlg(psd) or psd.hDevNames is 0
 			{
 			.free(psd)
-			if (CommDlgExtendedError() isnt 0)
+			if CommDlgExtendedError() isnt 0
 				.AlertError("Page Setup Error",
 					"Unable to start Print Dialog, " $
-					"please ensure you have a printer set up correctly.")
+						"please ensure you have a printer set up correctly.")
 			return false
 			}
 		return psd
 		}
+
 	On_ReporterReport()
 		{
-		reporterMode = 'simple'
-		rpt_name = .report.name.Replace('Reporter Report - ', 'Reporter - ')
+		reporterMode = #simple
+		rpt_name = .report.name.Replace("Reporter Report - ", "Reporter - ")
 		if .report.Member?(0) and Object?(.report[0])
-			{
-			if .report[0][0] in ('ReporterFormat', 'ReporterCanvasFormat')
+			if .report[0][0] in (#ReporterFormat, #ReporterCanvasFormat)
 				{
 				rpt_name = .report[0][1]
-				reporterMode = .report[0][0] is 'ReporterCanvasFormat'
-					? 'form'
-					: 'simple'
+				reporterMode = .report[0][0] is #ReporterCanvasFormat ? #form : #simple
 				}
-			}
 
 		hwnd = GetActiveWindow()
-		Reporter(printMode: true, addButtons: true,
-			rpt: rpt_name, title: .report.title,
-			onDestroy: { .refresh_reporter_params(rpt_name, hwnd) },
-			:reporterMode)
+		Reporter(printMode:, addButtons:, rpt: rpt_name, title: .report.title,
+		onDestroy: { .refresh_reporter_params(rpt_name, hwnd) },
+		:reporterMode)
 		}
+
 	refresh_reporter_params(rpt_name, hwnd)
 		{
-		if false is rec = Query1("params", report: rpt_name)
+		if false is rec = Query1(#params, report: rpt_name)
 			{
-			PubSub.Publish('BrowserRedir_' $ hwnd, 'GoBack')
+			PubSub.Publish("BrowserRedir_" $ hwnd, #GoBack)
 			return
 			}
-		if false is .Member?('Vert')
+		if false is .Member?(#Vert)
 			return
 		parent = .Vert
 		children = parent.GetChildren()
-		i = children.FindIf() {|c| c.Name is 'Data' }
+		i = children.FindIf()
+			{|c|
+			c.Name is #Data
+			}
 		parent.Remove(i)
 		new_report_text = ReporterModel(rec.report).BuildReportText()
 		parent.Insert(i, .body(new_report_text))
@@ -1122,33 +1133,37 @@ Controller
 
 	On_sensitive_file_content_warning()
 		{
-		Alert('Generated file may contain sensitive information.\nPlease ensure ' $
-			'it is getting saved to a secure location.\n' $
-			'You may want to consider removing the file once it has been processed',
-			'Warning', flags: MB.ICONWARNING)
+		Alert(
+			"Generated file may contain sensitive information.\nPlease ensure " $
+				"it is getting saved to a secure location.\n" $
+				"You may want to consider removing the file once it has been processed",
+			#Warning, flags: MB.ICONWARNING)
 		}
 
 	free(psd)
 		{
-		if (psd.hDevNames isnt 0)
+		if psd.hDevNames isnt 0
 			GlobalFree(psd.hDevNames)
-		if (psd.hDevMode isnt 0)
+		if psd.hDevMode isnt 0
 			GlobalFree(psd.hDevMode)
 		psd.hDevNames = psd.hDevMode = 0 // prevent double free
 		}
+
 	Get_devmode(report)
 		{
 		x = false
-		if (report.Member?("name"))
-			try x = Query1(.devmode_query(.devmode_reportname(report)))
+		if report.Member?(#name)
+			try
+				x = Query1(.devmode_query(.devmode_reportname(report)))
 
 		if x isnt false
 			return x
 
-		return report.GetDefault('default_orientation', 'Portrait') is 'Landscape'
-			? Record(width: 11, height: 8.5, left: .5, right: .5, top: .5, bottom: .5)
-			: Record(width: 8.5, height: 11, left: .5, right: .5, top: .5, bottom: .5)
+		return report.GetDefault(#default_orientation, #Portrait) is #Landscape
+			? [width: 11, height: 8.5, left: .5, right: .5, top: .5, bottom: .5]
+			: [width: 8.5, height: 11, left: .5, right: .5, top: .5, bottom: .5]
 		}
+
 	devmode_query(reportname)
 		{
 		.Ensure_devmode()
@@ -1156,6 +1171,7 @@ Controller
 			where computer = " $ Display(.devmode_save_name()) $
 			" and report = " $ Display(reportname)
 		}
+
 	Ensure_devmode()
 		{
 		Database("ensure devmode
@@ -1163,15 +1179,16 @@ Controller
 				top, width, devmode_TS)
 			key (computer,report)")
 		}
+
 	update_params(report)
 		{
-		if not report.Member?("name") or (report.Member?('NoSaveLoadParams') and
-			report.NoSaveLoadParams is true)
+		if not report.Member?(#name) or
+			(report.Member?(#NoSaveLoadParams) and report.NoSaveLoadParams is true)
 			return
 		x = Query1(.params_query(report.name))
 		report_options = x is false ? #() : x.report_options
-		lastRan = x is false ? '' : x.params.GetDefault('lastRan', '')
-		if false is report.paramsdata.Member?('lastRan')
+		lastRan = x is false ? "" : x.params.GetDefault(#lastRan, "")
+		if false is report.paramsdata.Member?(#lastRan)
 			report.paramsdata.lastRan = lastRan
 
 		params = report.paramsdata.Copy()
@@ -1179,28 +1196,31 @@ Controller
 		RetryTransaction()
 			{|t|
 			t.QueryDo("delete " $ .params_query(report.name))
-			t.QueryOutput("params", Object(
-				user: Suneido.User,
-				report: report.name,
-				:params,
-				:report_options))
+			t.QueryOutput(#params,
+				Object(
+					user: Suneido.User,
+					report: report.name,
+					:params,
+					:report_options))
 			}
 		}
+
 	RemoveIgnoreFields(rec)
 		{
 		for f in rec.Copy().Members()
-			if rec[f] isnt '' and true is
-				Datadict(f, getMembers: #(ParamsNoSave)).GetDefault('ParamsNoSave', false)
+			if rec[f] isnt "" and
+				true is Datadict(f, getMembers: #(ParamsNoSave)).
+					GetDefault(#ParamsNoSave, false)
 				rec.Delete(f)
 		}
+
 	loadParams(report)
 		{
-		if not report.Member?("name")
+		if not report.Member?(#name)
 			return
 
 		// get saved params and merge with report params
-		if ((report.Member?('NoSaveLoadParams') and
-			report.NoSaveLoadParams is true) or
+		if ((report.Member?(#NoSaveLoadParams) and report.NoSaveLoadParams is true) or
 			(false is x = Query1(.params_query(report.name))))
 			x = Object(params: Object())
 
@@ -1211,12 +1231,12 @@ Controller
 		.setParams(x)
 
 		// have to do RecordControl.Set so that observer gets set up
-		.Vert.Data.Set(Record())
-		for (field in x.params.Members())
+		.Vert.Data.Set([])
+		for field in x.params.Members()
 			.Vert.Data.SetField(field, x.params[field])
 
-		if x.params.GetDefault('PrintLines', false) is true and
-			false isnt ctrl = .FindControl('print_lines')
+		if x.params.GetDefault(#PrintLines, false) is true and
+			false isnt ctrl = .FindControl(#print_lines)
 			ctrl.Set(true)
 
 		.checkReportSize(report)
@@ -1227,48 +1247,46 @@ Controller
 		if not .reporter?(report)
 			return
 
-		rpt_name = report.name.Replace('Reporter Report - ', 'Reporter - ')
-		.setMsg(Opt('Alignment Warning: ',
+		rpt_name = report.name.Replace("Reporter Report - ", "Reporter - ")
+		.setMsg(Opt("Alignment Warning: ",
 			CheckReportPageSize(rpt_name, .Get_devmode(report))))
 		}
 
 	setMsg(msg)
 		{
-		if false is paramsContainer = .FindControl('paramContainer')
+		if false is paramsContainer = .FindControl(#paramContainer)
 			return
 
-		msgCtrl = paramsContainer.FindControl('paramMsg')
-		if msg isnt ''
+		msgCtrl = paramsContainer.FindControl(#paramMsg)
+		if msg isnt ""
 			{
 			if msgCtrl is false
-				msgCtrl = paramsContainer.Append(
-					Object('Static', textStyle: 'warn', name: 'paramMsg'))
+				msgCtrl =
+					paramsContainer.Append([#Static, textStyle: #warn, name: #paramMsg])
 			msgCtrl.Set(msg)
 			}
 		else
 			paramsContainer.Remove(
-				paramsContainer.GetChildren().FindIf({|c| c.Name is 'paramMsg' }))
+				paramsContainer.GetChildren().FindIf({|c| c.Name is #paramMsg }))
 		}
 
 	Record_NewValue(field, value)
 		{
-		if .report.Member?('AfterField')
+		if .report.Member?(#AfterField)
 			(.report.AfterField)(field, value, data: .Vert.Data.Get())
 
-		if field is 'params_report_layout'
-			{
-			if false isnt rec = Query1('report_layout_designs', rptdesign_name: value,
+		if field is #params_report_layout
+			if false isnt rec = Query1(#report_layout_designs, rptdesign_name: value,
 				report: .report.name)
 				if Object?(rec.rptdesign_layout)
 					for m, v in rec.rptdesign_layout
 						if .Vert.Data.HasControl?(m)
 							.Vert.Data.SetField(m, v)
-			}
 		}
 
 	setFilterDefaults(report, x)
 		{
-		if report.Member?('SetFilterDefaults')
+		if report.Member?(#SetFilterDefaults)
 			.BuildFilters(report.SetFilterDefaults, x.params)
 		}
 
@@ -1282,8 +1300,8 @@ Controller
 				if false is .repeatConditionExists(filterName, field, Object(:params))
 					{
 					pos = filterDefaults[filterName].Find(field)
-					ob = Record(condition_field: field)
-					ob[field] = #(operation: "", value: '')
+					ob = [condition_field: field]
+					ob[field] = #(operation: "", value: "")
 					params[filterName].Add(ob, at: pos)
 					}
 				}
@@ -1291,28 +1309,27 @@ Controller
 
 	setLayoutDefault(x)
 		{
-		if false is layoutCtrl = .FindControl('ParamsChooseLayout')
+		if false is layoutCtrl = .FindControl(#ParamsChooseLayout)
 			return
-		rptMem = 'params_report_layout'
+		rptMem = #params_report_layout
 		rptName = layoutCtrl.ReportName
 		if ReportLayoutDesign.Customizable?(rptName)
-			x.params[rptMem] = ReportLayoutDesign.DefaultValue(
-				rptName, x.params.GetDefault(rptMem, ''))
+			x.params[rptMem] =
+				ReportLayoutDesign.DefaultValue(rptName, x.params.GetDefault(rptMem, ""))
 		}
 
 	setParams(x)
 		{
-		for (field in .setParams.Members())
-			if (.setParams[field] isnt #())
-				{
-				if String?(field) and field.Suffix?('Filters')
+		for field in .setParams.Members()
+			if .setParams[field] isnt #()
+				if String?(field) and field.Suffix?(#Filters)
 					.addRepeatCondition(field, .setParams[field], x)
 				else
 					x.params[field] = .setParams[field]
-				}
-		if .report.Member?('AfterSet')
+		if .report.Member?(#AfterSet)
 			(.report.AfterSet)(x.params)
 		}
+
 	addRepeatCondition(filterName, repeatOb, x)
 		{
 		if not x.params.Member?(filterName) or not Object?(x.params[filterName])
@@ -1336,37 +1353,36 @@ Controller
 			where user is " $ Display(Suneido.User) $
 			" and report is " $ Display(reportname)
 		}
+
 	update_pdc(hdm, x, report, fromPreview? = false)
 		{
-		if report.Member?('name')
+		if report.Member?(#name)
 			{
 			reportname = .devmode_reportname(report)
 			devmode_save_name = .devmode_save_name()
 			RetryTransaction()
 				{|t|
-				t.QueryDo('delete ' $ .devmode_query(reportname))
+				t.QueryDo("delete " $ .devmode_query(reportname))
 				x.report = reportname
 				x.computer = devmode_save_name
-				t.QueryOutput('devmode', x)
+				t.QueryOutput(#devmode, x)
 				}
 			}
 
-		if (hdm is 0)
+		if hdm is 0
 			{
 			.invalidPrinterError()
 			return false
 			}
 
 		try
-			{
 			if 0 is pdc = .createDC(x.devnames, hdm)
 				{
 				if not fromPreview?
 					.invalidPrinterError()
 				return false
 				}
-			}
-		catch(err /*unused*/)
+		catch (err/*unused*/)
 			{
 			if not fromPreview?
 				.invalidPrinterError()
@@ -1374,6 +1390,7 @@ Controller
 			}
 		return pdc
 		}
+
 	invalidPrinterError()
 		{
 		// Windows Vista & 7 Do not have a Select Printer Option
@@ -1382,27 +1399,29 @@ Controller
 		// could we not just replicate that behavior?)
 		.AlertWarn("Invalid Printer", "Please open Page Setup and click OK")
 		}
+
 	devmode_save_name()
 		{
 		return Sys.SuneidoJs?() is false and WTS_GetSessionId() is 0
 			? GetComputerName()
 			: Suneido.User
 		}
+
 	devmode_reportname(report)
 		{
-		return report.Member?('devmode_name') ? report.devmode_name : report.name
+		return report.Member?(#devmode_name) ? report.devmode_name : report.name
 		}
+
 	Destroy()
 		{
 		.ClearFocus()
-		if (this.Member?("Vert") and this.Member?("Params_report") and
-			.params_valid?(silent:))
+		if .Member?(#Vert) and .Member?(#Params_report) and .params_valid?(silent:)
 			{
 			.report.paramsdata = .Vert.Data.GetControlData()
 			.add_print_lines(.report.paramsdata)
 			.update_params(.report)
 			}
-		.report.GetDefault('onDestroy', function(){})()
+		.report.GetDefault(#onDestroy, function() { })()
 		super.Destroy()
 		}
 	}

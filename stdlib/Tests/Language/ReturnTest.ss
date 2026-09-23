@@ -1,7 +1,9 @@
 // Copyright (C) 2015 Suneido Software Corp. All rights reserved worldwide.
 Test
 	{
-	NoRet() { }
+	NoRet()
+		{
+		}
 
 	Test_passthrough()
 		{
@@ -13,19 +15,7 @@ Test
 
 		f = function()
 			{
-			(ReturnTest.NoRet())
-			}
-		f()
-
-		f = function()
-			{
 			return ReturnTest.NoRet()
-			}
-		f()
-
-		f = function()
-			{
-			return (ReturnTest.NoRet())
 			}
 		f()
 
@@ -35,22 +25,9 @@ Test
 			}
 		Assert({ f() } throws: "no return value")
 
-		f = function()
-			{
-			(unused = ReturnTest.NoRet())
-			}
-		Assert({ f() } throws: "no return value")
-
 		f = function(cond)
 			{
 			cond ? ReturnTest.NoRet() : ReturnTest.NoRet()
-			}
-		f(true)
-		f(false)
-
-		f = function(cond)
-			{
-			(cond ? ReturnTest.NoRet() : ReturnTest.NoRet())
 			}
 		f(true)
 		f(false)
@@ -64,13 +41,6 @@ Test
 
 		f = function(cond)
 			{
-			return (cond ? ReturnTest.NoRet() : ReturnTest.NoRet())
-			}
-		f(true)
-		f(false)
-
-		f = function(cond)
-			{
 			unused = cond ? ReturnTest.NoRet() : ReturnTest.NoRet()
 			}
 		Assert({ f(true) } throws: "no return value")
@@ -78,22 +48,7 @@ Test
 
 		f = function(cond)
 			{
-			unused = (cond ? ReturnTest.NoRet() : ReturnTest.NoRet())
-			}
-		Assert({ f(true) } throws: "no return value")
-		Assert({ f(false) } throws: "no return value")
-
-		f = function(cond)
-			{
 			cond ? ReturnTest.NoRet() : ReturnTest.NoRet()
-			123
-			}
-		f(true)
-		f(false)
-
-		f = function(cond)
-			{
-			(cond ? ReturnTest.NoRet() : ReturnTest.NoRet())
 			123
 			}
 		f(true)
@@ -140,5 +95,17 @@ Test
 		{
 		.rt(#error)
 		return
+		}
+
+	Test_return_call()
+		{
+		none = function() { return }
+		single = function() { return 123 }
+		multi = function() { return 1, 2, 3 }
+		thru = function(fn) { return fn() }
+		Assert(#().Eval2(none) is: #())
+		Assert(thru(single) is: 123)
+		a,b,c = thru(multi)
+		Assert([a, b, c] is: [1, 2, 3])
 		}
 	}

@@ -25,13 +25,14 @@ CodeViewControl
 		{
 		data.text = data.type is #table
 			? .tableText(data.name)
-			: data.type is #view ? .viewText(data.name) : .columnText(data.name)
+			: data.type is #view ? .viewText(data.name) : .columnText(data)
 		super.InitialSet(data)
 		}
 
 	tableText(table)
 		{
-		return Schema(table) $ .tableForeignKeys(table) $ .tableCode(table)
+		return Schema(table) $ .tableForeignKeys(table) $ .tableCode(table) $
+			.tableStats(table)
 		}
 
 	tableForeignKeys(table)
@@ -68,7 +69,7 @@ CodeViewControl
 				}
 			}
 		return Opt("\r\nTriggers\r\n\t", triggers.Join("\r\n\t"), "\r\n") $
-			Opt("\r\nTable Definitions\r\n\t", classes.Join("\r\n\t"))
+			Opt("\r\nTable Definitions\r\n\t", classes.Join("\r\n\t"), "\r\n")
 		}
 
 	viewText(view)
@@ -80,9 +81,41 @@ CodeViewControl
 			QueryStrategyAndWarnings(view)
 		}
 
-	columnText(column)
+	columnText(data)
 		{
-		return .columnDatadict(column) $ .columnRule(column)
+		return .columnDatadict(data.name) $ .columnRule(data.name) $
+			.columnStats(data.table, data.name)
+		}
+
+	tableStats(table)
+		{
+		rows = .statsRows(table)
+		if rows.Empty?()
+			return ""
+		return "\r\nStatistics (see column details)\r\n\t" $
+			rows.Map({ it.column }).Join("\r\n\t") $ "\r\n"
+		}
+
+	columnStats(table, column)
+		{
+		if false is x = .statsRows(table).FindOne({ it.column is column })
+			return ""
+		s = "\r\nStatistics\r\n"
+		s $= "distinct: " $ x.distinct $ "\r\n"
+		s $= "common: " $
+			x.common.
+				Map({ Display(it[1]) $ " (" $ it[0].DecimalToPercent(1) $ "%)" }).
+				Join(", ") $ "\r\n"
+		s $= "quantiles: " $ x.quantiles.Map(Display).Join(", ") $ "\r\n"
+		return s
+		}
+
+	statsRows(table)
+		{
+		try
+			return QueryAll("dbstats where table is " $ Display(table) $ " sort column")
+		catch
+			return #()
 		}
 
 	columnDatadict(column)

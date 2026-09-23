@@ -23,7 +23,7 @@ NOTE: Although objects can be stored in the database, they will not sort properl
 
 ### Query Optimization
 
-Query optimization has two main phases. The first phase applies some standard transformations to the query that are almost always advantageous. For example, moving where's towards tables and combining adjacent operations. In the second phase, operations choose appropriate strategies, indexes, and temporary indexes based on estimated costs. Data sizes are estimated using the indexes. Some operations have multiple strategies (e.g. project) they can use, other operations (e.g. rename) have only a single strategy.
+Query optimization has two main phases. The first phase applies some standard transformations to the query that are almost always advantageous. For example, moving where's towards tables and combining adjacent operations. In the second phase, operations choose appropriate strategies, indexes, and temporary indexes based on estimated costs. Data sizes are estimated using the indexes and the statistics gathered by compact for the most used table columns. Some operations have multiple strategies (e.g. project) they can use, other operations (e.g. rename) have only a single strategy.
 
 ### Rules
 

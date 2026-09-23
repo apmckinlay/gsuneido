@@ -20,19 +20,18 @@ Addon_LibView_Explorer provides the core components:
 */
 ExplorerAppsControl
 	{
-	Title: 	'LibraryView'
-	Addons: #(/* Override this object to customize the LibView's addons */)
+	Title: #LibraryView
+	Addons: () /* Override this object to customize the LibView's addons */
 	New()
 		{
-		.Clipformat = RegisterClipboardFormat('Suneido_LIBVIEW')
+		.Clipformat = RegisterClipboardFormat(#Suneido_LIBVIEW)
 
-		.addons.Send('Init')
-		.PluginTools({|cmd, target| .Redir('On_' $ cmd, .adapt(target, this)) })
+		.addons.Send(#Init)
+		.PluginTools({|cmd, target| .Redir("On_" $ cmd, .adapt(target, this)) })
 
 		.subs = [
-			PubSub.Subscribe('LibraryTreeChange', .reset)
-			PubSub.Subscribe('LibraryRecordChange', .refresh)
-			]
+			PubSub.Subscribe(#LibraryTreeChange, .reset),
+			PubSub.Subscribe(#LibraryRecordChange, .refresh)]
 		}
 
 	/*
@@ -45,10 +44,10 @@ ExplorerAppsControl
 	BuildCommands(sequenced? = false)
 		{
 		inst = .addons isnt false ? .addons : .addonsManager()
-		inst.Send('Commands', cmds = Object())
-		.PluginTools({|cmd, icon, shortcut| cmds.Add([cmd, shortcut, '', icon]) })
+		inst.Send(#Commands, cmds = Object())
+		.PluginTools({|cmd, icon, shortcut| cmds.Add([cmd, shortcut, "", icon]) })
 		if not sequenced?
-			cmds.Map!({ it.Member?('seq') ? it.Copy().Delete('seq') : it })
+			cmds.Map!({ it.Member?(#seq) ? it.Copy().Delete(#seq) : it })
 		return cmds
 		}
 
@@ -56,11 +55,12 @@ ExplorerAppsControl
 	Controls()
 		{
 		.addons = .addonsManager()
-		ctrls = Object('Vert')
-		.addons.Collect('Ctrl').
+		ctrls = [#Vert]
+		.addons.
+			Collect(#Ctrl).
 			Sort!({|x, y| x.order < y.order }).
 			Each({ ctrls.Add(it.ctrl) })
-		return Object('Horz', #(Skip 4), ctrls, #(Skip 4))
+		return [#Horz, #(Skip, 4), ctrls, #(Skip, 4)]
 		}
 
 	addonsManager()
@@ -75,11 +75,11 @@ ExplorerAppsControl
 
 	PluginTools(block)
 		{
-		Plugins().ForeachContribution('LibView', 'Tools')
+		Plugins().ForeachContribution(#LibView, #Tools)
 			{|c|
 			cmd = c[2] /*= command */
 			icon = c[3] /*= icon */
-			shortcut = c.GetDefault(4, '') /*= shortcut */
+			shortcut = c.GetDefault(4, "") /*= shortcut */
 			block(:cmd, :icon, :shortcut, target: c.target)
 			}
 		}
@@ -96,7 +96,7 @@ ExplorerAppsControl
 
 	ResetAddons()
 		{
-		.addons.Send('Init')
+		.addons.Send(#Init)
 		}
 
 	Default(@args) // used by context menu
@@ -117,19 +117,29 @@ ExplorerAppsControl
 		}
 
 	Getter_Explorer()
-		{ return .Explorer = .FindControl('Explorer') }
+		{
+		return .Explorer = .FindControl(#Explorer)
+		}
 
 	Getter_View()
-		{ return .Explorer.View }
+		{
+		return .Explorer.View
+		}
 
 	Getter_Editor()
-		{ return .View is false ? false : .View.Editor }
+		{
+		return .View is false ? false : .View.Editor
+		}
 
 	Getter_Libs()
-		{ return Libraries() }
+		{
+		return Libraries()
+		}
 
 	More_commands()
-		{ return .BuildCommands() }
+		{
+		return .BuildCommands()
+		}
 
 	Menu()
 		{
@@ -138,28 +148,44 @@ ExplorerAppsControl
 		}
 
 	Menu_Use_Library()
-		{ return LibraryTables().Difference(Libraries()).Sort!() }
+		{
+		return LibraryTables().Difference(Libraries()).Sort!()
+		}
 
 	Menu_Unuse_Library()
-		{ return Libraries().Remove('stdlib') }
+		{
+		return Libraries().Remove(#stdlib)
+		}
 
 	AllowRootDelete?()
-		{ return true }
+		{
+		return true
+		}
 
 	CurrentTable()
-		{ return .View.CurrentTable() }
+		{
+		return .View.CurrentTable()
+		}
 
 	CurrentName()
-		{ return .View.CurrentName() }
+		{
+		return .View.CurrentName()
+		}
 
 	CurrentLibView()
-		{ return this }
+		{
+		return this
+		}
 
 	CloseTab?(data)
-		{ return data.group and IDESettings.Get(#ide_move_tab, true) }
+		{
+		return data.group and IDESettings.Get(#ide_move_tab, true)
+		}
 
 	Save()
-		{ .Explorer.On_Save() }
+		{
+		.Explorer.On_Save()
+		}
 
 	ResetCtrls() // Called via LibView Addons
 		{
@@ -172,7 +198,7 @@ ExplorerAppsControl
 		{
 		.Explorer.ForeachTab()
 			{|tab|
-			editor = tab.FindControl('Editor')
+			editor = tab.FindControl(#Editor)
 			if editor.Get() isnt editor.Get().Entab()
 				{
 				pos = editor.GetCurrentPos()
@@ -192,7 +218,7 @@ ExplorerAppsControl
 		if .Explorer.ResetControls(force: args.Any?({ it.force }))
 			SvcCommitChecker.ClearPreCheck()
 		else
-			.Explorer.ForeachTab({ |view| view.Invalidate() })
+			.Explorer.ForeachTab({|view| view.Invalidate() })
 
 		if QcIsEnabled()
 			Qc_ContinuousChecks.ResetCache()
@@ -200,25 +226,27 @@ ExplorerAppsControl
 
 	AlertTestResult(observer)
 		{
-		alert = observer.HasError?() ? 'AlertError' : 'AlertInfo'
-		if observer.Result isnt ''
-			this[alert]('Run Test', observer.Result)
-		return observer.HasError?() ? observer.Result.FirstLine() : ''
+		alert = observer.HasError?() ? #AlertError : #AlertInfo
+		if observer.Result isnt ""
+			this[alert]("Run Test", observer.Result)
+		return observer.HasError?() ? observer.Result.FirstLine() : ""
 		}
 
 	Locate(item)
 		{
 		name = item.AfterFirst(':')
-		libs = Object(item.BeforeFirst(':'))
+		libs = [item.BeforeFirst(':')]
 		paths = Gotofind(:name, :libs, exact:)
 		// exact match in one library should return, at most, one match
 		if paths.Size() is 1
-			.Explorer_RestoreTab(paths[0])
+			.Explorer_RestoreTab([path: paths[0], group: false])
 		.focusEditor()
 		}
 
 	LocateEscape()
-		{ .focusEditor() }
+		{
+		.focusEditor()
+		}
 
 	focusEditor() // Extracted for tests
 		{
@@ -230,13 +258,12 @@ ExplorerAppsControl
 		{
 		return Object(splitterpos: .CtrlHorzSplit(.Explorer),
 			outline_split: .CtrlHorzSplit(.View),
-			tabs: .Explorer.GetTabsPaths(),
-			activeTabPath: .Explorer.Getpath(.Explorer.CurItem))
+			tabsOb: .Explorer.PersistentTabs())
 		}
 
 	CtrlHorzSplit(ctrl, splitData = false)
 		{
-		if ctrl is false or false is split = ctrl.FindControl('HorzSplit')
+		if ctrl is false or false is split = ctrl.FindControl(#HorzSplit)
 			return #(0, 0)
 
 		if splitData isnt false
@@ -248,15 +275,19 @@ ExplorerAppsControl
 		{
 		if not resetting
 			.Explorer.RestoreState(statedata)
-		if statedata.Member?('outline_split')
+		if statedata.Member?(#outline_split)
 			.CtrlHorzSplit(.View, statedata.outline_split)
 		}
 
 	CanPaste?()
-		{ return IsClipboardFormatAvailable(.Clipformat) }
+		{
+		return IsClipboardFormatAvailable(.Clipformat)
+		}
 
 	Goto_GetPath()
-		{ return .Explorer.Getpath(.Explorer.GetSelected()).BeforeLast('/') }
+		{
+		return .Explorer.Getpath(.Explorer.GetSelected()).BeforeLast('/')
+		}
 
 	GotoMethodLine(method) // called by GotoLibView
 		{
@@ -264,8 +295,8 @@ ExplorerAppsControl
 		if false is pos = ClassHelp.FindMethod(text, method)
 			{
 			if method[0].Upper?() and
-				false isnt x = ClassHelp.FindBaseMethod(
-					.CurrentTable(), .CurrentName(), text, method)
+				false isnt x = ClassHelp.FindBaseMethod(.CurrentTable(), .CurrentName(),
+					text, method)
 				return .GotoBaseMethod(x.lib, x.name, method)
 			if false is pos = ClassHelp.FindDotDeclarations(text, method)
 				return false
@@ -290,9 +321,7 @@ ExplorerAppsControl
 	formatPath(path)
 		{
 		lib = path.BeforeFirst('/')
-		return not Libraries().Has?(lib)
-			? '(' $ lib $ ')/' $ path.AfterFirst('/')
-			: path
+		return not Libraries().Has?(lib) ? '(' $ lib $ ")/" $ path.AfterFirst('/') : path
 		}
 
 	GotoPathLine(path, line, skipFolder? = false) // called by GotoLibView
@@ -301,7 +330,7 @@ ExplorerAppsControl
 			.gotoLine(line - 1)
 		}
 
-	Try_run(which, block = false, quiet? = false, wrapper = function (b){ return b })
+	Try_run(which, block = false, quiet? = false, wrapper = function(b) { return b })
 		{
 		if block is false
 			{
@@ -310,25 +339,27 @@ ExplorerAppsControl
 			}
 
 		// LibraryRecordChange runs in the delayed publish subscriber
-		.Defer(uniqueID: 'LibView_Try_run')
+		.Defer(uniqueID: #LibView_Try_run)
 			{
 			result = .runBlock(wrapper(block))
 			.setViewStatusWithResults(result, which, .View)
 			}
 		}
+
 	runBlock(block)
 		{
 		blockResult = #()
-		err = ''
+		err = ""
 		try
 			blockResult = block()
 		catch (e)
 			err = e
 		return Object(:blockResult, :err)
 		}
+
 	setViewStatusWithResults(result, which, view)
 		{
-		if result.err isnt ''
+		if result.err isnt ""
 			view.Status("Run: run " $ which $ " failed: " $ result.err, invalid:)
 		else
 			{
@@ -353,17 +384,17 @@ ExplorerAppsControl
 		return result
 		}
 
-	run_test(x /*unused*/, quiet? = false)
+	run_test(x/*unused*/, quiet? = false)
 		{
 		name = .CurrentName()
 		lib = .CurrentTable()
-		.Editor.SendToAddons('On_BeforeAllTests')
+		.Editor.SendToAddons(#On_BeforeAllTests)
 		LibViewRunTest(.Editor, lib, name)
 			{
 			observer = it.RunTest(name, quiet:)
 			}
-		.Editor.SendToAddons('On_AfterAllTests')
-		if not quiet? and '' isnt result = .AlertTestResult(observer)
+		.Editor.SendToAddons(#On_AfterAllTests)
+		if not quiet? and "" isnt result = .AlertTestResult(observer)
 			throw result
 		else if observer.HasError?()
 			throw observer.Result.FirstLine()
@@ -371,12 +402,11 @@ ExplorerAppsControl
 		}
 
 	Print(s)
-		// pre:	s is a string
+		{ // pre:	s is a string
 		// post:	if a console for this exists, s is appended to this' console ELSE
 		//		a console for this is created and s is appended to it
-		{
 		r = GetWorkArea()
-		if not (Suneido.Member?('Console') and Suneido.Console isnt false)
+		if not (Suneido.Member?(#Console) and Suneido.Console isnt false)
 			Window(#(Console), x: r.left, y: r.top, w: .35, h: .5)
 		Suneido.Console.Append(s)
 		}
@@ -395,17 +425,17 @@ ExplorerAppsControl
 		path = path.Split('/')
 
 		item = false
-		for (i = 0; i < path.Size(); i++)
+		for (i = 0; i < path.Size(); i += 1)
 			{
 			if list.Empty?()
 				return
 			item = false
 			for child in list
 				if path[i] is tree.GetName(child)
-				{
-				item = child
-				break
-				}
+					{
+					item = child
+					break
+					}
 			if item isnt false
 				list = tree.GetChildren(item)
 			}
@@ -422,9 +452,9 @@ ExplorerAppsControl
 			lib = .CurrentTable()
 		if name is false
 			name = .CurrentName()
-		DoWithSaveFileName(title: 'Export (append) to', hwnd: .Window.Hwnd,
+		DoWithSaveFileName(title: "Export (append) to", hwnd: .Window.Hwnd,
 			flags: OFN.PATHMUSTEXIST | OFN.HIDEREADONLY | OFN.NOCHANGEDIR)
-			{ |fileName|
+			{|fileName|
 			LibIO.Export(lib, name, fileName, interactive:)
 			}
 		}
@@ -432,7 +462,7 @@ ExplorerAppsControl
 	Destroy()
 		{
 		.subs.Each(#Unsubscribe)
-		.addons.Send('Destroy')
+		.addons.Send(#Destroy)
 		super.Destroy()
 		}
 	}

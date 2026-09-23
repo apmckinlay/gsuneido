@@ -27,27 +27,45 @@ Component
 			0% { transform: rotate(0deg); }
 			100% { transform: rotate(360deg); }
 		}`
-	New(filter, hDrop = false, multi = false, .fileSizeLimit = 10, .s3? = false, cdn = '')
+	New(filter, hDrop = false, multi = false, .fileSizeLimit = 10, .s3? = false, cdn = "")
 		{
-		LoadCssStyles('su-loader.css', .styles)
-		.CreateElement('div', className: 'su-loader-container')
-		.loader = CreateElement('div', .El, className: 'su-loader')
+		LoadCssStyles("su-loader.css", .styles)
+		.CreateElement(#div, className: "su-loader-container")
+		.loader = CreateElement(#div, .El, className: "su-loader")
 		SuUI.GetCurrentWindow().Eval(.initFileCount())
 
 		if .s3?
 			{
 			SuUI.GetCurrentWindow().Eval(.LoadMagickScript(cdn))
-			SuUI.GetCurrentWindow().LoadJsLib('magickApi.js',
-				{ .uploadAll(hDrop, filter, multi) },
-				{|err|
-				.magick? = false
-				SuRender().Event(false, 'SuneidoLog', Object(
-					'ERROR: (CAUGHT) failed to load ImageMagick.js',
-					caughtMsg: 'continue uploading without rotation',
-					params: Object(loadImageMagickErrorName: err.name,
-						loadImageMagickErrorMsg: err.message)))
-				.uploadAll(hDrop, filter, multi)
-				})
+			SuUI.
+				GetCurrentWindow().
+				LoadJsLib("magickApi.js", { .uploadAll(hDrop, filter, multi) },
+					{|err|
+					.magick? = false
+					SuRender().
+						Event(false, #SuneidoLog,
+							[
+								"ERROR: (CAUGHT) failed to load ImageMagick.js from " $
+									"fallback source",
+								caughtMsg: "continue uploading without rotation",
+								params: Object(loadImageMagickErrorName: err.name,
+									loadImageMagickErrorMsg: err.message)])
+					logs = SuUI.GetCurrentWindow().GetLoadLog()
+					if Object?(logs) and logs.NotEmpty?()
+						{
+						for m in logs.Members()
+							try
+								SuRender().
+									Event(false, #SuneidoLog,
+										[
+											"ERROR: (CAUGHT) failed to load " $
+												"ImageMagick.js from " $ "main source",
+											caughtMsg: "loading from main source failed",
+											params: logs[m].logErr])
+						SuUI.GetCurrentWindow().ResetLoadLog()
+						}
+					.uploadAll(hDrop, filter, multi)
+					})
 			}
 		else
 			.uploadAll(hDrop, filter, multi)
@@ -55,7 +73,7 @@ Component
 
 	LoadMagickScript(cdn)
 		{
-		Assert(cdn isnt '')
+		Assert(cdn isnt "")
 		return `if (!window.magick) {
 window.uint8Array = function (arrayBuffer) {
 	if(typeof(arrayBuffer) !== 'string')
@@ -86,6 +104,48 @@ window.arrayToString = function(uint8Array) {
 	return result;
 }
 
+window.getLoadLog = function () {
+	window.loadLog = window.loadLog || {};
+	return window.loadLog;
+}
+
+window.setLoadLog = function (id, err) {
+	const log = window.getLoadLog();
+	log[id] = {logErr: err};
+}
+
+window.resetLoadLog = function () {
+	window.loadLog = {};
+}
+
+async function diagnoseImageMagick(url) {
+	try {
+		const response = await fetch(url, {
+			cache: "no-store"
+		});
+
+		const text = await response.text();
+
+		window.setLoadLog("ImageMagickFetch", {
+			ok: response.ok,
+			status: response.status,
+			statusText: response.statusText,
+			responseText: text.slice(0, 200),
+			url: response.url,
+			type: response.type,
+			contentType: response.headers.get("content-type"),
+			contentLength: response.headers.get("content-length")
+		});
+	} catch (err) {
+		window.setLoadLog("ImageMagickFetchFailed", {
+			url: url,
+			name: err?.name,
+			message: err?.message,
+			stack: err?.stack
+		});
+	}
+}
+
 // REFERENCE: 'https://cdn.jsdelivr.net/npm/wasm-imagemagick/dist/bundles/magickApi.js'
 window.loadJsLib = function (jslib, block, catchBlock) {
 	const handler = function (f) {
@@ -101,7 +161,10 @@ window.loadJsLib = function (jslib, block, catchBlock) {
 		import("` $ cdn $ `/" + jslib + "?v="` $ `+v).then(handler).catch(c);
 	}
 
-	const catchWrapper = function (unused) {
+	const catchWrapper = async function (unused) {
+		if (jslib === 'magickApi.js') {
+			await diagnoseImageMagick("` $ cdn $ `/" + jslib + "?v=1");
+		}
 		setTimeout(function () {
 			console.log('Retrying to load ImageMagick');
 			importFunc(function (err) {
@@ -113,6 +176,7 @@ window.loadJsLib = function (jslib, block, catchBlock) {
 			2000);
 	}
 
+	window.resetLoadLog();
 	importFunc(catchWrapper, 1);
 };
 
@@ -128,28 +192,28 @@ window.downloadFile = function(filename, content) {
 	URL.revokeObjectURL(link.href);
 };
 }`
-	}
+		}
 
 	uploadAll(hDrop, filter, multi)
 		{
 		.uploadTasks = Object()
 		if hDrop is false
 			{
-			input = CreateElement('input', .El)
-			input.type = 'file'
-			if filter isnt ''
+			input = CreateElement(#input, .El)
+			input.type = #file
+			if filter isnt ""
 				input.accept = filter
 			if multi
-				input.multiple = 'multiple'
+				input.multiple = #multiple
 			// Safari doesn't popup the open file window automatically on click
-			if SuRender().Engine isnt 'WebKit'
-				input.SetStyle('display', 'none')
+			if SuRender().Engine isnt #WebKit
+				input.SetStyle(#display, #none)
 			input.onchange = .onChange
 			input.Click()
 			}
 		else if false isnt files = SuRender().GetDropFiles(hDrop)
 			.upload(files)
-	}
+		}
 
 	onChange(event)
 		{
@@ -166,17 +230,17 @@ window.downloadFile = function(filename, content) {
 		for i in ...fileCount
 			{
 			file = files.Item(i)
-			msgEl = CreateElement('div', .El)
-			fileNameEl = CreateElement('div', .El)
-			fileNameEl.innerText = file.name $ ' (' $ .formatSize(file.size) $ ')'
+			msgEl = CreateElement(#div, .El)
+			fileNameEl = CreateElement(#div, .El)
+			fileNameEl.innerText = file.name $ " (" $ .formatSize(file.size) $ ')'
 			try
 				.send(file, msgEl)
 			catch (e)
-				.updateMsg(msgEl, e, color: 'red')
+				.updateMsg(msgEl, e, color: #red)
 			}
 		}
 
-	maxFileNameLength: 180  // longer file names may cause certain operations to fail
+	maxFileNameLength: 180 // longer file names may cause certain operations to fail
 	validateFiles?(files)
 		{
 		for i in ..files.length
@@ -209,8 +273,8 @@ window.downloadFile = function(filename, content) {
 		if .s3?
 			.sendToS3(file, msgEl)
 		else
-			.sendFile(file, msgEl, "/upload" $
-				Url.BuildQuery([file.name, token: SuRender().GetToken()]))
+			.sendFile(file, msgEl,
+				"/upload" $ Url.BuildQuery([file.name, token: SuRender().GetToken()]))
 		}
 
 	initFileCount()
@@ -225,37 +289,43 @@ window.downloadFile = function(filename, content) {
 				}`
 		}
 
-	sendFile(file, msgEl, url, method = 'POST')
+	sendFile(file, msgEl, url, method = #POST)
 		{
-		xhr = SuUI.MakeWebObject('XMLHttpRequest')
-		.uploadTasks[file.name] = Object([:xhr])
-		xhr.upload.AddEventListener("progress",
-			{ |event|
+		xhr = SuUI.MakeWebObject(#XMLHttpRequest)
+		.uploadTasks[file.name] = [[:xhr]]
+		xhr.upload.AddEventListener(#progress,
+			{|event|
 			if .El isnt false
 				{
-				percent =  (event.loaded / event.total).DecimalToPercent(0)
-				.updateMsg(msgEl, 'Uploading...' $ String(percent).LeftFill(2, '0') $ '%')
+				percent = (event.loaded / event.total).DecimalToPercent(0)
+				.updateMsg(msgEl, "Uploading..." $ String(percent).LeftFill(2, '0') $ '%')
 				}
 			})
-		xhr.AddEventListener('readystatechange', { |event/*unused*/|
+		xhr.AddEventListener(#readystatechange,
+			{|event/*unused*/|
 			if .El isnt false and xhr.readyState is 4/*=DONE*/
 				{
 				if xhr.status is HttpResponseCodes.OK
 					{
-					.updateMsg(msgEl, 'success', color: 'green')
+					.updateMsg(msgEl, #success, color: #green)
 					.getSaveName(method, url, file, xhr)
 					}
 				else if xhr.status is HttpResponseCodes.BadRequest
-					.updateMsg(msgEl, xhr.response, color: 'red', file: file.name)
+					.updateMsg(msgEl, xhr.response, color: #red, file: file.name)
 				// 0: cors preflight request failed, like permission or credential expired
-				else if xhr.status is 0 or xhr.status is 412/*= Precondition Failed*/
-					.updateMsg(msgEl, 'upload failed', color: 'red', file: file.name)
+				else if xhr.status is 0 or xhr.status is 412 /*= Precondition Failed*/
+					.updateMsg(msgEl, "upload failed", color: #red, file: file.name)
 
 				if SuUI.GetCurrentWindow().GetFileCount() is .fileCount
 					{
 					SuUI.GetCurrentWindow().ClearFileCount()
-					results = .uploadTasks.Values().Filter({
-						it.Member?('saveName') }).Map({ it.saveName })
+					results = .uploadTasks.
+						Values().
+						Filter(
+							{
+							it.Member?(#saveName)
+							}).
+						Map({ it.saveName })
 
 					if not results.Empty?()
 						.Event(#UploadFinished, results)
@@ -264,17 +334,19 @@ window.downloadFile = function(filename, content) {
 			})
 		xhr.Open(method, url)
 		ext = file.name.AfterLast('.').Lower()
-		xhr.SetRequestHeader('Content-Type',
-			MimeTypes.GetDefault(ext, 'application/octet-stream'))
+		xhr.SetRequestHeader("Content-Type",
+			MimeTypes.GetDefault(ext, "application/octet-stream"))
 		xhr.Send(file)
 		}
 
 	getSaveName(method, url, file, xhr)
 		{
-		if method is 'PUT'
+		if method is #PUT
 			{
-			filename = SuUI.GetCurrentWindow().Eval('decodeURIComponent("' $
-				Url.Split(url).basepath.AfterFirst('/').AfterFirst('/') $ '")')
+			filename = SuUI.
+				GetCurrentWindow().
+				Eval('decodeURIComponent("' $
+						Url.Split(url).basepath.AfterFirst('/').AfterFirst('/') $ '")')
 			.uploadTasks[file.name].saveName = filename
 			}
 		else
@@ -284,27 +356,26 @@ window.downloadFile = function(filename, content) {
 	magick?: true
 	sendToS3(file, msgEl)
 		{
-		if file.name.AfterLast('.').Lower() in ('jpg', 'jpeg') and .magick? is true
+		if file.name.AfterLast('.').Lower() in (#jpg, #jpeg) and .magick? is true
 			.rotateAndSend(file, msgEl)
 		else
 			.signedUpload(file, msgEl)
 		}
 
-	signedUpload(file, msgEl, uploadFile = '')
+	signedUpload(file, msgEl, uploadFile = "")
 		{
-		suXhr = SuUI.MakeWebObject('XMLHttpRequest')
+		suXhr = SuUI.MakeWebObject(#XMLHttpRequest)
 		if not uploadFile.Blank?()
-			.uploadTasks[uploadFile] = Object([xhr: suXhr])
-		suXhr.open('POST', "/upload" $
-			Url.BuildQuery([file.name, token: SuRender().GetToken(), s3:]))
-		suXhr.AddEventListener('readystatechange', { |event/*unused*/|
+			.uploadTasks[uploadFile] = [[xhr: suXhr]]
+		suXhr.open(#POST,
+			"/upload" $ Url.BuildQuery([file.name, token: SuRender().GetToken(), s3:]))
+		suXhr.AddEventListener(#readystatechange,
+			{|event/*unused*/|
 			if .El isnt false and suXhr.readyState is 4/*=DONE*/
-				{
-				if suXhr.response isnt 'invalid credential'
-					.sendFile(file, msgEl, suXhr.response, 'PUT')
+				if suXhr.response isnt "invalid credential"
+					.sendFile(file, msgEl, suXhr.response, #PUT)
 				else
-					.updateMsg(msgEl, 'upload failed - invalid credential', color: 'red')
-				}
+					.updateMsg(msgEl, "upload failed - invalid credential", color: #red)
 			})
 		suXhr.Send()
 		}
@@ -312,69 +383,79 @@ window.downloadFile = function(filename, content) {
 	rotateAndSend(file, msgEl)
 		{
 		uploadFn = .signedUpload
-		file.ArrayBuffer().Then({|arrayBuffer|
-			sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
-			files = Object(Object( name: 'src.jpg', content: sourceBytes ))
-			// \\n is required for stdout
-			orientCmd = ['identify', '-format', '"%[EXIF:Orientation]\\n"', 'src.jpg']
-			SuUI.GetCurrentWindow().Magick(files, orientCmd).Then(
-				{|orientRes|
-				stdout = orientRes.stdout[0].Tr('"')
-				if stdout not in ('1','')
-					{
-					command = ["convert", "src.jpg", "-auto-orient", file.name]
-					SuUI.GetCurrentWindow().Magick(files, command).Then(
-						{ |result|
-						if result.exitCode is 0
+		file.
+			ArrayBuffer().
+			Then(
+				{|arrayBuffer|
+				sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
+				files = [Object(name: "src.jpg", content: sourceBytes)]
+				// \\n is required for stdout
+				orientCmd = [#identify, "-format", '"%[EXIF:Orientation]\\n"', "src.jpg"]
+				SuUI.
+					GetCurrentWindow().
+					Magick(files, orientCmd).
+					Then(
+						{|orientRes|
+						stdout = orientRes.stdout[0].Tr('"')
+						if stdout not in ('1', "")
 							{
-							output = result.outputFiles[0]
-							resultFile = SuUI.GetCurrentWindow().File(output, file.type)
+							command = [#convert, "src.jpg", "-auto-orient", file.name]
+							SuUI.
+								GetCurrentWindow().
+								Magick(files, command).
+								Then(
+									{|result|
+									if result.exitCode is 0
+										{
+										output = result.outputFiles[0]
+										resultFile = SuUI.
+											GetCurrentWindow().
+											File(output, file.type)
+										}
+									else
+										resultFile = file
+									uploadFn(resultFile, msgEl, file.name)
+									})
 							}
 						else
-							resultFile = file
-						uploadFn(resultFile, msgEl, file.name)
+							uploadFn(file, msgEl, file.name)
+						}).
+					Catch(
+						{|unused|
+						uploadFn(file, msgEl, file.name)
 						})
-					}
-				else
-					{
-					uploadFn(file, msgEl, file.name)
-					}
-				}).Catch(
-					{|unused|
-					uploadFn(file, msgEl, file.name)
-					})
-			})
+				})
 		}
 
 	// Not using ReadableSize because Number() is not supported in Suneido.js
 	formatSize(n)
 		{
 		amountPerUnit = 1024
-		for unit in #('', kb, mb, gb, tb)
+		for unit in #("", kb, mb, gb, tb)
 			{
 			if n < amountPerUnit
 				return n.Round(1) $ Opt(' ', unit)
 			n /= amountPerUnit
 			}
-		return n.Round(2) $ ' pb'
+		return n.Round(2) $ " pb"
 		}
 
-	updateMsg(el, msg, color = 'black', file = '')
+	updateMsg(el, msg, color = #black, file = "")
 		{
 		if .El is false
 			return
 
 		el.innerText = msg
-		el.SetStyle('color', color)
-		if color is 'red'
+		el.SetStyle(#color, color)
+		if color is #red
 			{
-			.loader.SetStyle('display', 'none')
+			.loader.SetStyle(#display, #none)
 			.abort(file)
 			}
 		}
 
-	uploadTasks: #()
-	abort(file = '')
+	uploadTasks: ()
+	abort(file = "")
 		{
 		if not file.Blank?()
 			{
@@ -384,9 +465,7 @@ window.downloadFile = function(filename, content) {
 
 		for task in .uploadTasks
 			if not task.Member?(#saveName)
-				{
 				task[0].xhr.Abort()
-				}
 		}
 
 	Destroy()

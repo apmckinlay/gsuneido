@@ -12,5 +12,5 @@ function(filename, limit = false)
 		return false
 	if s isnt false and limit is false and s.Size() is max
 		throw "GetFile bigger than 10mb from " $ filename
-	return s is false ? "" : s
+	return String?(s) ? s : ""
 	}

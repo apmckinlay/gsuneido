@@ -172,7 +172,7 @@ Test
 		m = d.Month()
 		data = .parse_data[m]
 		for (m = 1; m <= 12; ++m)
-			Assert(Date(.parse_data[m][0] $ ' 1').Year() is: y + data[m],
+			Assert(Date!(Date, .parse_data[m][0] $ ' 1').Year() is: y + data[m],
 				msg: "for " $ .parse_data[m][0] $ ' 1')
 		}
 	parse_data: (

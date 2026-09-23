@@ -1,45 +1,44 @@
 // Copyright (C) 2018 Axon Development Corporation All rights reserved worldwide.
 class
 	{
-	Xmin:		0
-	Xstretch:	false
-	Ymin:		0
-	Ystretch:	false
-	Left:		0
-	Name:		""
-	Custom: 	false
-	UniqueId:	false
-	MaxHeight:	99999
+	Xmin:        0
+	Xstretch:    false
+	Ymin:        0
+	Ystretch:    false
+	Left:        0
+	Name:        ""
+	Custom:      false
+	UniqueId:    false
+	MaxHeight:   99_999
 	ContextMenu: false
 
 	New()
 		{
 		.New2()
 		}
+
 	New2()
 		{
 		.Parent = _parent
 		.ParentEl = _parent.Member?(#TargetEl) ? _parent.TargetEl : _parent.El
-		.Controller = _parent.Base?(HtmlDivComponent)
-			? _parent
-			: _parent.Controller
+		.Controller = _parent.Base?(HtmlDivComponent) ? _parent : _parent.Controller
 		.Window = _parent.Window
 
-		.Xmin = _ctrlspec.GetDefault("xmin", .Xmin)
-		.Ymin = _ctrlspec.GetDefault("ymin", .Ymin)
+		.Xmin = _ctrlspec.GetDefault(#xmin, .Xmin)
+		.Ymin = _ctrlspec.GetDefault(#ymin, .Ymin)
 		.Left = .Left
-		if (_ctrlspec.Member?("xstretch"))
+		if _ctrlspec.Member?(#xstretch)
 			.Xstretch = _ctrlspec.xstretch
-		if (_ctrlspec.Member?("ystretch"))
+		if _ctrlspec.Member?(#ystretch)
 			.Ystretch = _ctrlspec.ystretch
-		if (_ctrlspec.Member?("name"))
+		if _ctrlspec.Member?(#name)
 			.Name = _ctrlspec.name
 		.InitUniqueId()
 		}
 
 	InitUniqueId()
 		{
-		if (_ctrlspec.Member?("uniqueId"))
+		if _ctrlspec.Member?(#uniqueId)
 			.UniqueId = _ctrlspec.uniqueId
 		if .UniqueId isnt false
 			SuRender().Register(.UniqueId, this)
@@ -64,9 +63,12 @@ class
 		{
 		if .UniqueId is false
 			{
-			SuRender().Event(false, 'SuneidoLog', Object(
-				'WARNING: Component sent an event when .UniqueId is false',
-				params: [destroyed?: .Destroyed?(), this: Display(this)].Merge(args)))
+			SuRender().
+				Event(false, #SuneidoLog,
+					[
+						"WARNING: Component sent an event when .UniqueId is false",
+						params: [destroyed?: .Destroyed?(), this: Display(this)].
+							Merge(args)])
 			return
 			}
 		event = args[0]
@@ -76,7 +78,7 @@ class
 
 	UnsupportedFeature(message)
 		{
-		.Event('AlertInfo', 'Unsupported Browser Feature', message)
+		.Event(#AlertInfo, "Unsupported Browser Feature", message)
 		}
 
 	delayedTaskId: false
@@ -98,19 +100,21 @@ class
 		.El = el
 		.El.Control(this)
 		.El.Window(.Window)
-		.El.SetAttribute('su-control', Display(this))
-		.El.SetAttribute('su-name', .Name)
-		.El.SetAttribute('su-unique-id', Display(.UniqueId))
-		.El.AddEventListener('focus', .OnFocus)
-		.El.AddEventListener('blur', .OnBlur)
+		.El.SetAttribute("su-control", Display(this))
+		.El.SetAttribute("su-name", .Name)
+		.El.SetAttribute("su-unique-id", Display(.UniqueId))
+		.El.AddEventListener(#focus, .OnFocus)
+		.El.AddEventListener(#blur, .OnBlur)
 		if .ContextMenu is true
-			.El.AddEventListener('contextmenu', .OnContextMenu)
+			.El.AddEventListener(#contextmenu, .OnContextMenu)
 		}
 
 	OnContextMenu(event)
 		{
-		.RunWhenNotFrozen({
-			.EventWithOverlay('ContextMenu', event.clientX, event.clientY) })
+		.RunWhenNotFrozen(
+			{
+			.EventWithOverlay(#ContextMenu, event.clientX, event.clientY)
+			})
 		event.StopPropagation()
 		event.PreventDefault()
 		}
@@ -137,12 +141,13 @@ class
 		if .El is false
 			return
 		if Number?(.Xmin)
-			.El.SetStyle('min-width', .Xmin $ 'px')
+			.El.SetStyle("min-width", .Xmin $ "px")
 		if Number?(.Ymin)
-			.El.SetStyle('min-height', .Ymin $ 'px')
+			.El.SetStyle("min-height", .Ymin $ "px")
 		if Number?(.MaxHeight)
-			.El.SetStyle('max-height', .MaxHeight $ 'px')
+			.El.SetStyle("max-height", .MaxHeight $ "px")
 		}
+
 	SetStyles(styles, el = false)
 		{
 		if el is false
@@ -152,21 +157,20 @@ class
 		for style, value in styles
 			el.SetStyle(style, value)
 		}
-	SetFont(font = "", size = "", weight = "",
-		underline = false, italic = false, strikeout = false, el = false)
+
+	SetFont(font = "", size = "", weight = "", underline = false, italic = false,
+		strikeout = false, el = false)
 		{
 		if el is false
 			el = .El
 		if font isnt ""
 			el.SetStyle("font-family", .FontFamily(font))
 		if size isnt ""
-			{
 			el.SetStyle("font-size", .ConvertSize(size))
-			}
 		if weight isnt ""
-			el.SetStyle("font-weight", weight)
+			el.SetStyle("font-weight", StdFonts.Weight(weight))
 		if italic is true
-			el.SetStyle("font-style", "italic")
+			el.SetStyle("font-style", #italic)
 		decoration = ""
 		if underline is true
 			decoration $= "underline "
@@ -175,20 +179,23 @@ class
 		if decoration isnt ""
 			el.SetStyle("text-decoration", decoration)
 		}
+
 	// Based on StdFonts
-	fontMap: #(Ui: "Arial", Mono: "monospace", Serif: "Georgia", Sans: "Verdana")
+	fontMap: (Ui: Arial, Mono: monospace, Serif: Georgia, Sans: Verdana)
 	FontFamily(font)
 		{
 		if font.Prefix?('@')
 			font = .fontMap.GetDefault(font[1..].Capitalize(), font[1..])
-		return '' $ font $ '' $ Opt(', ', SuFontOb.GetDefault(font, ''))
+		return "" $ font $ "" $ Opt(", ", SuFontOb.GetDefault(font, ""))
 		}
+
 	ConvertSize(size)
 		{
 		return String?(size)
-			? .calcSize(size) / 10 /*=10%*/ + 1 $ "em"
+			? .calcSize(size) / 10/*=10%*/ + 1 $ "em"
 			: -StdFontsSize.LfSize(size, WinDefaultDpi) $ "px"
 		}
+
 	calcSize(sizeStr)
 		{
 		sign = 1
@@ -199,11 +206,14 @@ class
 			}
 		size = 0
 		for i in ..sizeStr.Size()
-			size = size * 10/*=10*/ + sizeStr[i].Asc() - '0'.Asc()
+			size = size*10/*=10*/ + sizeStr[i].Asc() - '0'.Asc()
 		return sign * size
 		}
 
-	CalcXminByControls(@unused) { }
+	CalcXminByControls(@unused)
+		{
+		}
+
 	DoCalcXminByControls(plusCtrls, minusCtrls)
 		{
 		return .calcXminByControls(plusCtrls) - .calcXminByControls(minusCtrls)
@@ -226,37 +236,43 @@ class
 		{
 		return .hidden
 		}
+
 	SetHidden(hidden)
 		{
 		.hidden = hidden
 		.SetVisible(.GetVisible())
 		}
-	prevDisplay: 'initial'
+
+	prevDisplay: #initial
 	SetVisible(visible)
 		{
 		visible = not .GetHidden() and visible
 		el = .Member?(#GetContainerEl) ? .GetContainerEl() : .El
-		if el.GetStyle("display") isnt 'none'
+		if el.GetStyle(#display) isnt #none
 			if visible
 				return
 			else
-				.prevDisplay = el.GetStyle("display")
-		el.SetStyle("display", visible ? .prevDisplay : 'none')
+				.prevDisplay = el.GetStyle(#display)
+		el.SetStyle(#display, visible ? .prevDisplay : #none)
 		}
+
 	GetVisible()
 		{
 		el = .Member?(#GetContainerEl) ? .GetContainerEl() : .El
-		return el.GetStyle("display") isnt 'none'
+		return el.GetStyle(#display) isnt #none
 		}
+
 	SkipSetFocus: false
 	SetFocus()
 		{
 		.El.Focus()
 		}
+
 	ClearFocus()
 		{
 		.El.Blur()
 		}
+
 	GetEnabled()
 		{
 		try
@@ -264,24 +280,28 @@ class
 		catch
 			return true
 		}
+
 	SetEnabled(enabled)
 		{
 		if .GetEnabled() isnt enabled
 			.El.disabled = not enabled
 		}
+
 	GetReadOnly()
 		{
 		return false
 		}
+
 	SetReadOnly(unused)
-		{ }
+		{
+		}
 
 	Construct(@x)
 		{
 		x = .build(x)
 		_parent = this
 		_ctrlspec = x
-		ctrl = Construct(x, "Component")
+		ctrl = Construct(x, #Component)
 		if String?(ctrl.Name) and ctrl.Name isnt ""
 			this[ctrl.Name] = ctrl
 		return ctrl
@@ -303,11 +323,11 @@ class
 
 	AddToolTip(tip, el = false)
 		{
-		if tip in (false, '')
+		if tip in (false, "")
 			return
 		if el is false
 			el = .El
-		el.SetAttribute('title', tip)
+		el.SetAttribute(#title, tip)
 		}
 
 	// send a message to controller
@@ -315,7 +335,7 @@ class
 		{
 		if not .Member?(#Controller)
 			return 0 // destroyed
-		if not args.Member?('source')
+		if not args.Member?(#source)
 			args.source = this
 		return .Controller.Msg(args)
 		}
@@ -330,14 +350,12 @@ class
 	call_target(target, msg, args)
 		{
 		if Function?(target)
-			return target(@+1 args)
+			return target(@+1args)
 		if Instance?(target) or Class?(target)
-			{
 			if target.Method?(msg)
-				return target[msg](@+1 args)
+				return target[msg](@+1args)
 			else if target.Method?(#Recv)
 				return target.Recv(@args)
-			}
 		return 0
 		}
 
@@ -353,14 +371,14 @@ class
 		{
 		return Object()
 		}
+
 	FindControl(name, exclude = false)
 		{
 		for c in .GetChildren()
 			{
 			if exclude isnt false and c.Base?(exclude)
 				continue
-			if c.Name is name or
-				false isnt (c = c.FindControl(name, :exclude))
+			if c.Name is name or false isnt (c = c.FindControl(name, :exclude))
 				return c
 			}
 		return false
@@ -371,13 +389,14 @@ class
 		for c in .GetChildren()
 			c.BottomUp(@args)
 		if .Method?(args[0])
-			this[args[0]](@+1 args)
+			this[args[0]](@+1args)
 		return
 		}
+
 	TopDown(@args)
 		{
 		if .Method?(args[0])
-			this[args[0]](@+1 args)
+			this[args[0]](@+1args)
 		for c in .GetChildren()
 			c.TopDown(@args)
 		return
@@ -437,7 +456,7 @@ class
 
 	GetControlFromEl(el)
 		{
-		while (el isnt false)
+		while el isnt false
 			{
 			id = false
 			try
@@ -491,7 +510,7 @@ class
 		.Xmin = w
 		.Ymin = h
 		.SetMinSize()
-		.SetStyles(Object(width: w $ 'px', height: h $ 'px'))
+		.SetStyles(Object(width: w $ "px", height: h $ "px"))
 		}
 
 	GetDimension()
@@ -519,7 +538,7 @@ class
 
 	Destroyed?()
 		{
-		return not .Member?('Window')
+		return not .Member?(#Window)
 		}
 
 	Destroy()

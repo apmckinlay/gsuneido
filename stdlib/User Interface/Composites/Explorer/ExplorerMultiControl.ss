@@ -893,44 +893,42 @@ PassthruController
 
 	RestoreState(state)
 		{
-		if false isnt tabs = state.GetDefault(#tabs, false)
-			.restoreTabs(tabs, state.GetDefault(#activeTabPath, false))
+		if ((tabsOb = state.GetDefault(#tabsOb, #())).NotEmpty?())
+			.restoreTabs(tabsOb)
 		if state.Member?(#splitterpos)
 			.HorzSplit.SetSplit(state.splitterpos)
 		}
 
-	restoreTabs(tabs, activeTabPath)
+	restoreTabs(tabsOb)
 		{
-		if .moveTab?() and activeTabPath isnt false
+		for tabOb in tabsOb
 			{
-			tabs.Remove(activeTabPath)
-			tabs.Add(activeTabPath, at: 0)
-			}
-		tabs.Each()
-			{
-			.noSelect = it isnt activeTabPath
-			if false is .GotoPath(it)
-				.Send(#Explorer_RestoreTab, it)
+			.noSelect = not tabOb.active?
+			if false is .GotoPath(tabOb.path, skipFolder?: not tabOb.group)
+				.Send(#Explorer_RestoreTab, tabOb)
 			}
 		.noSelect = false
-		// Handling for when the "activeTabPath" no longer associates with a record
+		// Handling for when the active tab no longer associates with a restored tab
 		if .tabsCtrl.GetControl() is false and .tabsCtrl.GetTabCount() isnt 0
 			.tabsCtrl.Select(0)
 		.tree.SelectItem(.curitem)
 		}
 
-	GetTabsPaths(all? = false, skipFolder? = false)
+	GetTabsPaths()
 		{
 		tabs = Object()
 		.Tabs.ForEachTab()
-			{|tab, idx|
-			if not all? and idx is 10 /*= 10 most recent tabs*/
-				break
-			if skipFolder? and tab.group is true
-				continue
-			tabs.Add(tab.path)
+			{|tab, idx/*unused*/|
+			tabs.Add([path: tab.path, group: tab.group, active?: tab.item is .curitem])
 			}
 		return tabs
+		}
+
+	PersistentTabs()
+		{
+		limit = IDESettings.Get(#ide_tab_persistent_limit, defaultVal: 10)
+		tabs = .GetTabsPaths()
+		return limit is false ? tabs : tabs[..limit]
 		}
 
 	ForeachTab(block)

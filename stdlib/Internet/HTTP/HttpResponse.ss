@@ -6,17 +6,18 @@ class
 		.ResponseCode(200) /*= OK */
 		.headers = Object()
 		}
-	fields: ('Date', 'Cache-Control', 'Last-Modified', 'Content-Type',
-		'Content-Disposition', 'Expires', 'ETag', 'Location', 'Server',
-		'Content-Encoding', 'Connection', 'Access-Control-Allow-Origin',
-		'Access-Control-Allow-Methods', 'Access-Control-Allow-Headers', 'Set-Cookie',
-		'Retry-After')
+
+	fields: (Date, "Cache-Control", "Last-Modified", "Content-Type",
+		"Content-Disposition", Expires, ETag, Location, Server,
+		"Content-Encoding", Connection, "Access-Control-Allow-Origin",
+		"Access-Control-Allow-Methods", "Access-Control-Allow-Headers", "Set-Cookie",
+		"Retry-After")
 
 	ResponseHeaderField(field, value, headers)
 		{
 		field = field.Tr('_', '-')
 		if not .fields.Has?(field)
-			throw "HttpResponse: method not found: " $ field
+			throw "HttpResponse: unknown field: " $ field
 		if value isnt false
 			{
 			if Date?(value)
@@ -49,7 +50,7 @@ class
 		header = Object()
 		header.Add("HTTP/1.0 " $ .ResponseCode())
 		for member in .headers.Members().Sort!()
-			header.Add(member $ ': ' $ .headers[member])
-		sc.Writeline(header.Join('\r\n'))
+			header.Add(member $ ": " $ .headers[member])
+		sc.Writeline(header.Join("\r\n"))
 		}
 	}

@@ -1,19 +1,19 @@
 // Copyright (C) 2020 Axon Development Corporation All rights reserved worldwide.
 ScintillaControl
 	{
-	Height: 		7		// = Determines how many lines before scrolling is required
-	Width:			60		// = Determines how many characters can fit on a line
-	CHANGE_IDLE: 	500 	// .5 sec
-	readonly: 		false
-	addons:			false
-	IDE: 			false
-	ComponentName:	"ScintillaAddons"
+	Height:        7 // = Determines how many lines before scrolling is required
+	Width:         60 // = Determines how many characters can fit on a line
+	CHANGE_IDLE:   500 // .5 sec
+	readonly:      false
+	addons:        false
+	IDE:           false
+	ComponentName: #ScintillaAddons
 	New(@args)
 		{
 		super(@.processArgs(args))
 
 		.styleManager = ScintillaAddonsLineStyles(this)
-		.scheme = args.GetDefault(#scheme, '')
+		.scheme = args.GetDefault(#scheme, "")
 		.readonly = args.GetDefault(#readonly, false)
 
 		.setupAddons(args)
@@ -21,7 +21,7 @@ ScintillaControl
 		.setupFont(args)
 
 		.ComponentArgs.Add(
-			args.GetDefault(#width, .Width/*=default width*/),
+			args.GetDefault(#width, .Width)/*=default width*/,
 			args.GetDefault(#xmin, false),
 			args.GetDefault(#ymin, false))
 
@@ -30,7 +30,7 @@ ScintillaControl
 
 	processArgs(args)
 		{
-		.commandManager = new ScintillaAddonsCommandManager
+		.commandManager = new ScintillaAddonsCommandManager()
 		.IDE = args.GetDefault(#IDE, .IDE)
 		return args
 		}
@@ -48,11 +48,11 @@ ScintillaControl
 			"&Copy\tCtrl+C", "&Paste\tCtrl+V", "&Delete", ""]
 		misc = ["Select &All\tCtrl+A", "Find...\tCtrl+F"]
 		addonMenu = .addons.Collect(#ContextMenu)
-		addonMenu.Filter({ it.Size() is 1 }).Each({ misc.Add( it[0]) })
-		.Context_Menu.Add(@misc.SortWith!({ it.Replace('\.\.\.') }))
+		addonMenu.Filter({ it.Size() is 1 }).Each({ misc.Add(it[0]) })
+		.Context_Menu.Add(@misc.SortWith!({ it.Replace("\.\.\.") }))
 		addonMenu.Filter({ it.Size() > 1 }).Each({ .Context_Menu.Add("").Add(@it) })
 		.commandManager.Set(.Context_Menu)
-		.Act('SetAddonCommands', .commandManager.GetCommands())
+		.Act(#SetAddonCommands, .commandManager.GetCommands())
 		}
 
 	setupFont(args)
@@ -65,10 +65,10 @@ ScintillaControl
 			fontArgs.GetDefault(#italic, false))
 		}
 
-	scheme: ''
+	scheme: ""
 	GetSchemeColor(colorName)
 		{
-return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
+		return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 //		return not Object?(.scheme)
 //			? IDE_ColorScheme.GetColor(colorName, .scheme)
 //			: .scheme.Member?(colorName)
@@ -85,13 +85,13 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 	EN_CHANGE()
 		{
 		.ResetTimers()
-		.Send('EditorChange')
+		.Send(#EditorChange)
 		return super.EN_CHANGE()
 		}
 
 	Enter_Pressed(pressed = false)
 		{
-		.Send('Enter_Pressed', :pressed)
+		.Send(#Enter_Pressed, :pressed)
 		}
 
 	Backspace_Pressed()
@@ -118,13 +118,13 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 			this[method]()
 			return 0
 			}
-		return 'callsuper'
+		return #callsuper
 		}
 
 	Scintilla_SetValue()
 		{
 		.ResetTimers()
-		.Send('EditorChange')
+		.Send(#EditorChange)
 		}
 
 	UPDATEUI()
@@ -136,7 +136,7 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 		{
 		i = ContextMenu(.Context_Menu).ShowCall(this, x, y)
 		if i > 0
-			.addons.Send("ContextMenuChoice", i - 1)
+			.addons.Send(#ContextMenuChoice, i - 1)
 		if i is false or i <= 0
 			.EnsureSelect()
 		return 0
@@ -147,7 +147,16 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 		.changeIdle.Reset()
 		}
 
-	fakeTimer: class { Reset(){ } Kill(){ } }
+	fakeTimer: class
+		{
+		Reset()
+			{
+			}
+
+		Kill()
+			{
+			}
+		}
 	getter_changeIdle()
 		{
 		if .addons is false or .readonly
@@ -160,8 +169,7 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 	SCN_MODIFIED(lParam)
 		{
 		scn = SCNotification(lParam)
-		if 0 isnt (scn.modificationType &
-			(SC.MOD_DELETETEXT | SC.MOD_INSERTTEXT))
+		if 0 isnt (scn.modificationType & (SC.MOD_DELETETEXT | SC.MOD_INSERTTEXT))
 			.addons.Send(#Modified, scn)
 		return super.SCN_MODIFIED(lParam)
 		}
@@ -188,30 +196,42 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 
 	// START: Redirects to ScintillaAddonsLineStyles
 	ForEachMarkerByLevel(type, block)
-		{ .styleManager.ForEachMarkerByLevel(type, block) }
+		{
+		.styleManager.ForEachMarkerByLevel(type, block)
+		}
 
 	GetMarkerTypes()
-		{ return .styleManager.MarkerTypes }
+		{
+		return .styleManager.MarkerTypes
+		}
 
 	GetMarkerColor(i)
-		{ return .styleManager.MarkerColor(i) }
+		{
+		return .styleManager.MarkerColor(i)
+		}
 
-	MarkerIdx(level, type = 'default')
-		{ return .styleManager.MarkerIdx(level, type) }
+	MarkerIdx(level, type = #default)
+		{
+		return .styleManager.MarkerIdx(level, type)
+		}
 
 	IndicatorIdx(level)
-		{ return .styleManager.IndicatorIdx(level) }
+		{
+		return .styleManager.IndicatorIdx(level)
+		}
 
-	IndicatorAtPos?(pos /*unused*/)
-		{ return false }
+	IndicatorAtPos?(pos/*unused*/)
+		{
+		return false
 //		{ return .styleManager.IndicatorAtPos?(pos) }
-	// END: Redirects to ScintillaAddonsLineStyles
+		// END: Redirects to ScintillaAddonsLineStyles
+		}
 
 	Default(@args) // used by context menu
 		{
-		if args[0].Prefix?('On_') and .addons isnt false
+		if args[0].Prefix?(#On_) and .addons isnt false
 			{
-			args[0] = args[0].Replace("^On_Context_", "On_")
+			args[0] = args[0].Replace("^On_Context_", #On_)
 			return .addons.Send(@args)
 			}
 		else
@@ -220,9 +240,9 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 
 	Recv(@args) // used by redirected accelerator keys
 		{
-		if .addons isnt false and args[0].Prefix?('On_')
+		if .addons isnt false and args[0].Prefix?(#On_)
 			{
-			args[0] = args[0].Replace("^On_Context_", "On_")
+			args[0] = args[0].Replace("^On_Context_", #On_)
 			return .addons.Send(@args)
 			}
 		return false
@@ -231,15 +251,16 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 	MakeSummary()
 		{
 		text = .Get()
-		summary = text.BeforeFirst('\n').Trim()[.. 60] /*= summary size*/
+		summary = text.BeforeFirst('\n').Trim()[..60] /*= summary size*/
 		if text.Size() > summary.Size()
-			summary $= '...'
+			summary $= "..."
 		return summary
 		}
 
 	SetReadOnlyLogging(name)
 		{
-		try name $= ' - ' $ .Controller.Name
+		try
+			name $= " - " $ .Controller.Name
 		super.SetReadOnlyLogging(name)
 		}
 
@@ -277,14 +298,21 @@ return IDE_ColorScheme.DefaultStyle.GetDefault(colorName, false)
 			++end
 		return org < end ? .GetRange(org, end) : ""
 		}
+
 	getter_wordChars()
 		{
 		return .wordChars = .GetWordChars() // once only
 		}
 
+	On_Copy()
+		{
+		super.On_Copy()
+		.addons.Send(#On_Copy)
+		}
+
 	ResetAddons()
 		{
-		.markerCount = 1	// Set to 1 because of the Marker inside of this class
+		.markerCount = 1 // Set to 1 because of the Marker inside of this class
 		.addons.Send(#Init)
 		}
 

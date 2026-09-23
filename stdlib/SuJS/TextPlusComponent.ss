@@ -2,28 +2,28 @@
 Component
 	{
 	disabled: false
-	label: false
+	label:    false
 	New(.text = "", lefttext = false, .font = "", .size = "", .weight = "",
-		.readonly = false, tip = "", hidden = false, tabover = false, .align = 'center')
+		.readonly = false, tip = "", hidden = false, tabover = false, .align = #center)
 		{
 		if .text isnt ""
 			{
-			.CreateElement('div')
-			.input = CreateElement('input', .El)
+			.CreateElement(#div)
+			.input = CreateElement(#input, .El)
 			id = .text $ Suneido.GetInit(#SuneidoJS_UI_Num, 0)
-			Suneido.SuneidoJS_UI_Num++
+			Suneido.SuneidoJS_UI_Num += 1
 			.input.id = id
-			.label = CreateElement("label", .El, at: lefttext ? 0 : 1)
+			.label = CreateElement(#label, .El, at: lefttext ? 0 : 1)
 			.label.innerHTML = .text
 			.label.htmlFor = id
 			}
 		else
 			{
-			.CreateElement('input')
+			.CreateElement(#input)
 			.input = .El
 			.input.Control(this)
 			.input.Window(.Window)
-			.input.SetStyle('align-self', .align)
+			.input.SetStyle("align-self", .align)
 			}
 		.input.type = .InputType
 		.setMargin(lefttext)
@@ -33,13 +33,19 @@ Component
 		if size isnt ""
 			{
 			size = .ConvertSize(size)
-			.input.SetStyle('height', size)
-			.input.SetStyle('width', size)
+			.input.SetStyle(#height, size)
+			.input.SetStyle(#width, size)
 			}
 		.updateStyle()
 		.Recalc()
-		.input.AddEventListener('click', .Toggle)
+		.input.AddEventListener(#click, .Toggle)
+		.input.AddEventListener(#mousedown, .mousedown)
 		.AddToolTip(tip)
+		}
+
+	mousedown(event)
+		{
+		event.PreventDefault()
 		}
 
 	Resize(w, h)
@@ -47,17 +53,17 @@ Component
 		super.Resize(w, h)
 		// stretch the input so that it will cover the whole listedit area and capture
 		// the focus and click events
-		.input.SetStyle('width', w $ 'px')
-		.input.SetStyle('height', h * .6/*=smaller*/ $ 'px')
-		.input.SetStyle('vertical-align', 'text-bottom')
+		.input.SetStyle(#width, w $ "px")
+		.input.SetStyle(#height, h*.6/*=smaller*/ $ "px")
+		.input.SetStyle("vertical-align", "text-bottom")
 		}
 
 	setMargin(lefttext)
 		{
-		.input.SetStyle('margin-top', '0')
-		.input.SetStyle('margin-bottom', '0')
-		.input.SetStyle(lefttext ? 'margin-left' : 'margin-right', '5px')
-		.input.SetStyle(lefttext ? 'margin-right' : 'margin-left', '0')
+		.input.SetStyle("margin-top", '0')
+		.input.SetStyle("margin-bottom", '0')
+		.input.SetStyle(lefttext ? "margin-left" : "margin-right", "5px")
+		.input.SetStyle(lefttext ? "margin-right" : "margin-left", '0')
 		}
 
 	Recalc()
@@ -89,21 +95,23 @@ Component
 	DoToggle()
 		{
 		.value = .value isnt true
-		.EventWithOverlay('Toggle')
+		.EventWithOverlay(#Toggle)
 		.input.checked = .value is true
 		}
 
-	readonly: false
+	readonly:     false
 	set_readonly: false
 	GetReadOnly()
 		{
 		return .readonly or .set_readonly
 		}
+
 	SetReadOnly(ro)
 		{
 		.set_readonly = ro
 		.updateStyle()
 		}
+
 	SetEnabled(enabled)
 		{
 		.disabled = not enabled
@@ -115,17 +123,19 @@ Component
 		{
 		disabled? = .readonly or .set_readonly or .disabled
 		if disabled? isnt .styleDisabled?
-			.input.SetStyle('opacity', .styleDisabled? = disabled? ? '0.5' : '')
+			.input.SetStyle(#opacity, .styleDisabled? = disabled? ? "0.5" : "")
 		}
 
 	SetFocus()
 		{
 		.input.Focus()
 		}
+
 	ClearFocus()
 		{
 		.input.Blur()
 		}
+
 	HasFocus?()
 		{
 		return SuUI.GetCurrentDocument().activeElement is .input
@@ -135,6 +145,7 @@ Component
 		{
 		return .value is true
 		}
+
 	Set(value)
 		{
 		if value is .value
@@ -146,7 +157,7 @@ Component
 
 	SetColor(color)
 		{
-		.El.SetStyle('color', ToCssColor(color))
+		.El.SetStyle(#color, ToCssColor(color))
 		}
 
 	GetText()
@@ -157,6 +168,6 @@ Component
 	// for HighlightControl
 	FindControl(name)
 		{
-		return name is 'Static' ? this : false
+		return name is #Static ? this : false
 		}
 	}

@@ -1,19 +1,23 @@
 // Copyright (C) 2026 Suneido Software Corp. All rights reserved worldwide.
 Controller
 	{
-	Title: #TypeCheckRunner
-	binaryPath: ""
+	Title:   #TypeCheckRunner
 	symPass: ""
 	symFail: 'X'
 	symWarn: '!'
 	symSkip: '?'
 	CallClass()
 		{
+		if BuiltDate() < #20260819
+			{
+			Alert("Type Checker requires BuiltDate > 2026-08-19")
+			return
+			}
 		GotoPersistentWindow(#TypeCheckerGui, TypeCheckerGui)
 		}
 
-	maxThreads: 16
-	workerTimeoutSecs: 86400 // WaitGroup returns the instant all workers finish
+	maxThreads:        16
+	workerTimeoutSecs: 86_400 // WaitGroup returns the instant all workers finish
 	New(lib = "")
 		{
 		super(.controls())
@@ -48,26 +52,26 @@ Controller
 	controls()
 		{
 		libs = Libraries().Add("(All)", at: 0)
-		.binaryPath = TypeCheckHelper.BinaryPath()
-		return [#Vert, [#Horz, #Skip, .top(libs)],
+		return [#Vert,
+			.top(libs),
 			[#Horz,
 				[#ListStretch, columns: .columns, stretchColumn: #typecheckrunner_name,
 					columnsSaveName: #TypeCheckerGui],
 				[#OverviewBar, name: #ovbar, priorityColor: CLR.ErrorColor]],
-			.totalsRow(), #Statusbar]
+			.totalsRow(),
+			#Statusbar]
 		}
 
 	top(libs)
 		{
-		row1 = [#Horz, [#ChooseList, libs], #Skip, #(Button, "Run All"), #Skip,
+		return [#Horz, #Skip,
+			[#ChooseList, libs], #Skip, #(Button, "Run All"), #Skip,
 			#(Button, Continue, tip: "Run from selected"), #Skip, #(Button, "Run Failed"),
 			#Skip, #(Button, Policy, tip: "Configure strictness levels"), #Skip,
 			#(Pair, (Static, Threads),
 				(Field, name: thread_count, width: 3,
 					tip: "Concurrent checks (1 = sequential)")), #Skip,
 			#(CheckBox, "Stop on Error", name: stop_on_error), #Skip]
-		row2 = [#Horz, #(Static, "Binary "), TypeCheckerBinaryPicker(.binaryPath), #Skip]
-		return [#Flow, [row1, row2], skip: 0]
 		}
 
 	totalsRow()
@@ -178,8 +182,6 @@ Controller
 	// ----- run buttons ------------------------------------------------
 	On_Run_All()
 		{
-		if not .syncBinaryPath()
-			return
 		if .libs.Get() is ""
 			.libs.Set("(All)")
 		// set_lib + run_list must run together so run_list sees the
@@ -263,22 +265,9 @@ Controller
 		return Min(Max(n.Int(), 1), .maxThreads)
 		}
 
-	syncBinaryPath()
-		{
-		if false isnt browse = .FindControl(#TypeCheckerBinary)
-			TypeCheckHelper.SetBinaryPath(browse.Get())
-		if not TypeCheckHelper.BinaryExists?()
-			{
-			.AlertError("Type Checker",
-				"Binary not found at:\n" $ TypeCheckHelper.BinaryPath())
-			return false
-			}
-		return true
-		}
-
 	run_list(runlist)
 		{
-		if .libs.Get() is "" or not .syncBinaryPath()
+		if .libs.Get() is ""
 			return
 		.reset()
 		for i in runlist
@@ -313,20 +302,8 @@ Controller
 			}
 		}
 
-	// Coordinator thread. Warms the shared server and the global class table
-	// (single-threaded, so concurrent Global() loads can't contend), then fans
-	// the rows out across nThreads workers. The UI thread is untouched it just
-	// polls Suneido.typecheckUi as before.
 	runOnWorker(runlist, data, nThreads, ui)
 		{
-		try
-			TypeCheckHelper.Server()
-		catch (e)
-			{
-			ui.startupError = String(e)
-			ui.state = #failed
-			return
-			}
 		.prefetchLineage(data, runlist)
 		ui.state = #running
 		if nThreads <= 1
@@ -402,14 +379,10 @@ Controller
 			}
 		}
 
-	// ----- binary lifecycle -------------------------------------------
-	// the shared -serve process is owned by TypeCheckHelper and stays warm
-	// across runs; we just hand it our pre-resolved lineage chain.
-	invokeBinary(className)
+	invokeChecker(className)
 		{
 		method = TypeCheckerMethods.Infer
-		return TypeCheckHelper.Run(className, method, policy: TypeCheckHelper.Policy(),
-			restartOnError?: false)
+		return TypeCheckHelper.Run(className, method, policy: TypeCheckHelper.Policy())
 		}
 
 	// ----- per-row execution ------------------------------------------
@@ -421,7 +394,7 @@ Controller
 		elapsed = Timer()
 			{
 			try
-				response = .invokeBinary(rec.typecheckrunner_name)
+				response = .invokeChecker(rec.typecheckrunner_name)
 			catch (e)
 				err = String(e)
 			}
@@ -432,7 +405,7 @@ Controller
 		}
 
 	// Each row checks one class with its full base chain prepended, so
-	// the binary may emit diagnostics tagged to bases too. Filter to
+	// the checker may emit diagnostics tagged to bases too. Filter to
 	// the leaf class so bases only count when their own row runs.
 	applyResponse(data, i, response, elapsed, ui)
 		{
@@ -446,7 +419,7 @@ Controller
 		.stageRowUpdate(i, verdict, ui)
 		}
 
-	// reached when the class can't be loaded for lineage, or the binary/HTTP
+	// reached when the class can't be loaded for lineage
 	// call throws neither is a real type error, so don't count toward errs
 	// and don't trip stop-on-error
 	markSkipped(data, i, elapsed, ui)
@@ -555,7 +528,7 @@ Controller
 		if ui.GetDefault(#startupError, false) isnt false
 			{
 			.AlertError(#TypeChecker,
-				"failed to start binary in serve mode:\n" $ ui.startupError)
+				"failed to start type checker:\n" $ ui.startupError)
 			.SetEnabled(true)
 			return
 			}
@@ -705,7 +678,6 @@ Controller
 			Suneido.typecheckUi.stopRequested = true // let live workers exit
 			Suneido.Delete(#typecheckUi) // dont pollute the global object
 			}
-		TypeCheckHelper.StopServer()
 		super.Destroy()
 		}
 	}

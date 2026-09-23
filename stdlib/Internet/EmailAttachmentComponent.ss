@@ -3,19 +3,18 @@ HtmlDivComponent
 	{
 	SendEmail(filename, data, from, to, info)
 		{
-		msg = data.GetDefault('mergeOnly?', false)
-			? 'Downloading pdf'
-			: 'Sending email...'
-		SuRender().Overlay.Show('emailAttachment', msg)
+		msg = data.GetDefault(#mergeOnly?, false) ? "Downloading pdf" : "Sending email..."
+		SuRender().Overlay.Show(#emailAttachment, msg)
 		data.info = info
 		data.from = from
 		data.to = to
-		SuUI.GetCurrentWindow().Eval(OpenFileNameComponent.LoadMagickScript(
-			info.externalCDN))
-		extraAttachments = data.GetDefault('preSignedAtttachments', #()).Copy().
-			Add(filename, at: 0)
+		SuUI.
+			GetCurrentWindow().
+			Eval(OpenFileNameComponent.LoadMagickScript(info.externalCDN))
+		extraAttachments =
+			data.GetDefault(#preSignedAtttachments, #()).Copy().Add(filename, at: 0)
 		list = Object()
-		fileInfo = Object(counter: 0, err: '', size: extraAttachments.Size())
+		fileInfo = Object(counter: 0, err: "", size: extraAttachments.Size())
 		for attach in extraAttachments
 			.download(attach, list, data, fileInfo)
 		}
@@ -23,36 +22,37 @@ HtmlDivComponent
 	download(attach, list, data, fileInfo)
 		{
 		path = .getFileName(attach)
-		name =  Paths.Basename(path)
-		item = Object(fileContent: '', compressed: '', :name, :path, url: attach)
+		name = Paths.Basename(path)
+		item = Object(fileContent: "", compressed: "", :name, :path, url: attach)
 		list.Add(item)
 		.downloadAttch(item, list, data, fileInfo)
 		}
 
 	downloadAttch(item, list, data, fileInfo)
 		{
-		xhr = SuUI.MakeWebObject('XMLHttpRequest')
+		xhr = SuUI.MakeWebObject(#XMLHttpRequest)
 		item.xhr = xhr
 		item.type = item.name.Lower().AfterLast('.')
-		xhr.AddEventListener('readystatechange', { |event/*unused*/|
+		xhr.AddEventListener(#readystatechange,
+			{|event/*unused*/|
 			if xhr.readyState is 4/*=DONE*/
 				{
 				if xhr.status is HttpResponseCodes.OK
 					{
 					item.fileContent = xhr.response
-					if list.Every?({ it.fileContent isnt '' })
+					if list.Every?({ it.fileContent isnt "" })
 						.allDownloaded(list, data)
 					}
-				else if String(xhr.status)[0] in ('4','5') or xhr.status is 0
+				else if String(xhr.status)[0] in ('4', '5') or xhr.status is 0
 					fileInfo.err $= "Cannot find file: " $ item.name $ '\n'
 				if ++fileInfo.counter is fileInfo.size and not fileInfo.err.Blank?()
 					.alertErr(fileInfo.err)
 				}
 			})
-		xhr.Open('GET', item.url)
-		xhr.SetRequestHeader('Content-Type',
-			MimeTypes.GetDefault(item.type, 'application/octet-stream'))
-		xhr.responseType = "arraybuffer"
+		xhr.Open(#GET, item.url)
+		xhr.SetRequestHeader("Content-Type",
+			MimeTypes.GetDefault(item.type, "application/octet-stream"))
+		xhr.responseType = #arraybuffer
 		xhr.Send()
 		}
 
@@ -71,20 +71,26 @@ HtmlDivComponent
 
 	loadLibs(block)
 		{
-		SuUI.GetCurrentWindow().LoadJsLib('magickApi.js',
-			{
-			SuUI.GetCurrentWindow().LoadJsLib('pako.min.js', block,
-				{ |err|
+		SuUI.
+			GetCurrentWindow().
+			LoadJsLib("magickApi.js",
+				{
+				SuUI.
+					GetCurrentWindow().
+					LoadJsLib("pako.min.js", block,
+						{|err|
+						EmailAttachmentComponent.CloseOverlay()
+						Print(LoadPakoError: err)
+						SuUI.GetCurrentWindow().ResetLoadLog()
+						throw "Failed to load pako.min.js"
+						})
+				},
+				{|err|
 				EmailAttachmentComponent.CloseOverlay()
-				Print(LoadPakoError: err)
-				throw "Failed to load pako.min.js"
+				Print(loadImageMagickError: err)
+				SuUI.GetCurrentWindow().ResetLoadLog()
+				throw "Failed to load magickApi.js"
 				})
-			},
-			{ |err|
-			EmailAttachmentComponent.CloseOverlay()
-			Print(loadImageMagickError: err)
-			throw "Failed to load magickApi.js"
-			})
 		}
 
 	mergePdfs(data, list, attachmentsSize)
@@ -100,32 +106,35 @@ HtmlDivComponent
 			mergeableFiles.Add(list.FindOne({ f.Suffix?(it.path) }))
 		mergedFile = Object()
 		PdfMerger(data.mergeableFiles, mergedFile,
-			compress: data.GetDefault('compress?', false)
-			filesData: mergeableFiles, afterMergedAsync: { |invalidFiles|
-				if not invalidFiles.Empty?()
-					.alertErr(PdfMerger.InvalidFilesMsg(invalidFiles))
-				else
+		compress: data.GetDefault(#compress?, false),
+		filesData: mergeableFiles,
+		afterMergedAsync:
+			{|invalidFiles|
+			if not invalidFiles.Empty?()
+				.alertErr(PdfMerger.InvalidFilesMsg(invalidFiles))
+			else
+				{
+				list[0].fileData = mergedFile.fileData
+				for f in data.mergeableFiles
 					{
-					list[0].fileData = mergedFile.fileData
-					for f in data.mergeableFiles
-						{
-						m = list.FindIf({ f.Suffix?(it.path) })
-						if m not in (0, false)
-							list.Delete(m)
-						}
-					newTotalSize = list.SumWith({ it.fileData.Size() })
-					.compressAndEmail(newTotalSize, data, list)
+					m = list.FindIf({ f.Suffix?(it.path) })
+					if m not in (0, false)
+						list.Delete(m)
 					}
+				newTotalSize = list.SumWith({ it.fileData.Size() })
+				.compressAndEmail(newTotalSize, data, list)
+				}
 			})
 		}
 
 	compressAndEmail(attachmentsSize, data, list)
 		{
-		if data.GetDefault('mergeOnly?', false)
+		if data.GetDefault(#mergeOnly?, false)
 			{
 			.CloseOverlay()
-			SuUI.GetCurrentWindow().DownloadFile(
-				data.attachFileName, data.listAttachments[0].fileData)
+			SuUI.
+				GetCurrentWindow().
+				DownloadFile(data.attachFileName, data.listAttachments[0].fileData)
 			return
 			}
 
@@ -143,7 +152,7 @@ HtmlDivComponent
 	compressOne(list, compressIdx, data)
 		{
 		item = list[compressIdx]
-		if item.type is 'pdf'
+		if item.type is #pdf
 			{
 			.compressIfPDF(item, data, compressIdx, list)
 			return
@@ -161,58 +170,56 @@ HtmlDivComponent
 	compressIfPDF(item, data, compressIdx, list)
 		{
 		compressedFile = Object()
-		PdfMerger(Object(item.path), compressedFile, compress:,
-			maxCompressedFileSizeInMb: EmailMimeMaxSizeInMb(),
-			filesData: Object(item)
-			afterMergedAsync: { |invalidFiles|
-				if not .compressionValid(invalidFiles)
-					{
-					if invalidFiles[0].Has?("compressed file size over maximum") and
-						data.merge_pdf? is true
-						.sendMergedPdfAsLink(data, item)
-					else
-						.emailAsLinks(data)
-					}
+		PdfMerger([item.path], compressedFile, compress:,
+		maxCompressedFileSizeInMb: EmailMimeMaxSizeInMb(),
+		filesData: [item],
+		afterMergedAsync:
+			{|invalidFiles|
+			if not .compressionValid(invalidFiles)
+				if invalidFiles[0].Has?("compressed file size over maximum") and
+					data.merge_pdf? is true
+					.sendMergedPdfAsLink(data, item)
 				else
-					{
-					item.compressed = compressedFile.Empty?()
-						? item.fileData
-						: compressedFile.fileData
-					.compressNext(item, compressIdx, list, data)
-					}
+					.emailAsLinks(data)
+			else
+				{
+				item.compressed = compressedFile.Empty?()
+					? item.fileData
+					: compressedFile.fileData
+				.compressNext(item, compressIdx, list, data)
+				}
 			})
 		}
 
 	compressionValid(invalidFiles)
 		{
-		return invalidFiles.Empty?() or invalidFiles[0].Has?('nothing compressible')
+		return invalidFiles.Empty?() or invalidFiles[0].Has?("nothing compressible")
 		}
 
 	sendMergedPdfAsLink(data, item)
 		{
-		xhr = SuUI.MakeWebObject('XMLHttpRequest')
-		xhr.AddEventListener('readystatechange', { |event/*unused*/|
+		xhr = SuUI.MakeWebObject(#XMLHttpRequest)
+		xhr.AddEventListener(#readystatechange,
+			{|event/*unused*/|
 			if xhr.readyState is 4/*=DONE*/
-				{
 				if xhr.status is HttpResponseCodes.OK
 					{
-					data.attachments.RemoveIf({ it.Prefix?('(APPEND) ') })
+					data.attachments.RemoveIf({ it.Prefix?("(APPEND) ") })
 					data.origFileName = data.mergedPdfName
 					.emailAsLinks(data)
 					}
 				// 0: cors preflight request failed, like permission or credential expired
-				else if String(xhr.status)[0] in ('4','5') or xhr.status is 0
+				else if String(xhr.status)[0] in ('4', '5') or xhr.status is 0
 					.alertErr("There was a problem sending the e-mail. " $
 						"Please try again later.")
-				}
 			})
-		xhr.Open('PUT', data.mergedPdfLink)
-		xhr.SetRequestHeader('Content-Type', MimeTypes.pdf)
+		xhr.Open(#PUT, data.mergedPdfLink)
+		xhr.SetRequestHeader("Content-Type", MimeTypes.pdf)
 
 		arrary = SuUI.GetCurrentWindow().Uint8Array(item.fileData)
-		blob = SuUI.MakeWebObject('Blob', [arrary], [type: 'application/pdf'])
-		file = SuUI.GetCurrentWindow().File(
-			[:blob, name: data.mergedPdfName], MimeTypes.pdf)
+		blob = SuUI.MakeWebObject(#Blob, [arrary], [type: "application/pdf"])
+		file =
+			SuUI.GetCurrentWindow().File([:blob, name: data.mergedPdfName], MimeTypes.pdf)
 		xhr.Send(file)
 		}
 
@@ -221,33 +228,33 @@ HtmlDivComponent
 		type = item.type
 		cmd = ImageMagick.BuildCompressionCmd(type, options)
 		sourceBytes = SuUI.GetCurrentWindow().Uint8Array(item.fileContent)
-		files = Object(Object(name: 'src.' $ type, content: sourceBytes))
-		SuUI.GetCurrentWindow().Magick(files, cmd).Then(
-			{|result|
-			if result.exitCode is 0
-				{
-				.imageCompressed(list, compressIdx, result, item, data)
-				}
-			else
-				{
-				item.compressed = item.fileData
-				.compressNext(item, compressIdx, list, data)
-				}
-			}).Catch(
-			{ |err|
-			Print(compressError: err)
-			.emailAsLinks(data)
-			})
+		files = [Object(name: "src." $ type, content: sourceBytes)]
+		SuUI.
+			GetCurrentWindow().
+			Magick(files, cmd).
+			Then(
+				{|result|
+				if result.exitCode is 0
+					.imageCompressed(list, compressIdx, result, item, data)
+				else
+					{
+					item.compressed = item.fileData
+					.compressNext(item, compressIdx, list, data)
+					}
+				}).
+			Catch(
+				{|err|
+				Print(compressError: err)
+				.emailAsLinks(data)
+				})
 		}
 
 	// does not actually compress, just named compress for consistancy
 	compressOther(item, compressIdx, list, data)
 		{
 		// Pretend we compressed the file.
-		if item.Member?('fileData')
-			{
+		if item.Member?(#fileData)
 			item.compressed = item.fileData
-			}
 		else
 			{
 			sourceBytes = SuUI.GetCurrentWindow().Uint8Array(item.fileContent)
@@ -261,63 +268,67 @@ HtmlDivComponent
 	imageCompressed(list, compressIdx, result, item, data)
 		{
 		output = result.outputFiles[0]
-		resultFile = SuUI.GetCurrentWindow().File(output,
-			MimeTypes.GetDefault(item.type, 'application/octet-stream'))
-		resultFile.ArrayBuffer().Then({|arrayBuffer|
-			sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
-			content = SuUI.GetCurrentWindow().ArrayToString(sourceBytes)
-			item.compressed = content
-			.compressNext(item, compressIdx, list, data)
-			})
+		resultFile = SuUI.
+			GetCurrentWindow().
+			File(output,
+				MimeTypes.GetDefault(item.type, "application/octet-stream"))
+		resultFile.
+			ArrayBuffer().
+			Then(
+				{|arrayBuffer|
+				sourceBytes = SuUI.GetCurrentWindow().Uint8Array(arrayBuffer)
+				content = SuUI.GetCurrentWindow().ArrayToString(sourceBytes)
+				item.compressed = content
+				.compressNext(item, compressIdx, list, data)
+				})
 		}
 
 	compressNext(item, compressIdx, list, data)
 		{
 		// track total size of the attachments, if > 7MB, send as links
 		if ((.totalSize += item.compressed.Size()) > EmailMimeMaxSizeInMb().Mb())
-			{
 			if data.merge_pdf? is true
 				.sendMergedPdfAsLink(data, list[0])
 			else
 				.emailAsLinks(data)
-			}
-		else
-			{
-			if compressIdx isnt list.Size() - 1 // process next file
-				.compressOne(list, compressIdx + 1, data)
-			else // if at end of list, send
-				.sendEmailIfAllCompressed(data)
-			}
+		else if compressIdx isnt list.Size() - 1 // process next file
+			.compressOne(list, compressIdx + 1, data)
+		else // if at end of list, send
+			.sendEmailIfAllCompressed(data)
 		}
 
 	emailAsLinks(data)
 		{
 		.CloseOverlay()
 		newData = data.Copy()
-		newData.Delete('listAttachments')
-		newData.Delete('mergeableFiles')
-		newData.Delete('preSignedAtttachments')
-		newData.Delete('historyLinks')
-		if newData.GetDefault('emailSent', false)
+		newData.Delete(#listAttachments)
+		newData.Delete(#mergeableFiles)
+		newData.Delete(#preSignedAtttachments)
+		newData.Delete(#historyLinks)
+		if newData.GetDefault(#emailSent, false)
 			return
 		data.emailSent = true
-		SuRender().Event(false, 'EmailAttachment.EmailAsLinks',
-			Object(newData, data.origFileName, data.listAttachments[0].name, 0))
+		SuRender().
+			Event(false, "EmailAttachment.EmailAsLinks",
+				[newData, data.origFileName, data.listAttachments[0].name, 0])
 		}
 
 	sendEmailIfAllCompressed(data)
 		{
-		if data.listAttachments.Every?({ it.compressed isnt '' })
+		if data.listAttachments.Every?({ it.compressed isnt "" })
 			.sendEmail(data)
 		}
 
 	getFileName(url)
 		{
-		if url.Prefix?('download?')
-			return SuUI.GetCurrentWindow().Eval('decodeURIComponent("' $
-				url.AfterLast('&saveName=') $ '")')
-		return SuUI.GetCurrentWindow().Eval('decodeURIComponent("' $
-			Url.Split(url).basepath.AfterFirst('/').AfterFirst('/') $ '")')
+		if url.Prefix?(#download?)
+			return SuUI.
+				GetCurrentWindow().
+				Eval('decodeURIComponent("' $ url.AfterLast("&saveName=") $ '")')
+		return SuUI.
+			GetCurrentWindow().
+			Eval('decodeURIComponent("' $
+					Url.Split(url).basepath.AfterFirst('/').AfterFirst('/') $ '")')
 		}
 
 	sendEmail(data)
@@ -331,11 +342,10 @@ HtmlDivComponent
 			msg.AttachFile(file.name, fileContent: file.compressed)
 		if not _sendError.Empty?()
 			{
-			err = 'Please fix the following issues and try again\n'
+			err = "Please fix the following issues and try again\n"
 			err $= _sendError.Join('\n')
 			.alertErr(err)
-			SuRender().Event(false, 'BookLog' Object(
-				'Emailing Attachment(s) failed: ' $ err))
+			SuRender().Event(false, #BookLog, ["Emailing Attachment(s) failed: " $ err])
 			return
 			}
 
@@ -363,37 +373,40 @@ HtmlDivComponent
 
 	sendHistory(fileName, compressed, uploadHistory, data, mime, retry? = false)
 		{
-		xhr = SuUI.MakeWebObject('XMLHttpRequest')
+		xhr = SuUI.MakeWebObject(#XMLHttpRequest)
 		uploadHistory[fileName] = false
-		xhr.AddEventListener('readystatechange', { |event/*unused*/|
+		xhr.AddEventListener(#readystatechange,
+			{|event/*unused*/|
 			if xhr.readyState is 4/*=DONE*/
 				{
 				tmpName = data.historyLinks[fileName].tmpName
 				if xhr.status is HttpResponseCodes.OK
 					uploadHistory[fileName] = tmpName
-				else if String(xhr.status)[0] in ('4','5') or xhr.status is 0
-					{
+				else if String(xhr.status)[0] in ('4', '5') or xhr.status is 0
 					if retry?
 						uploadHistory[fileName] =
-							tmpName $ '_errorcode_' $ xhr.status $ '_att_failed'
+							tmpName $ "_errorcode_" $ xhr.status $ "_att_failed"
 					else
 						{
 						sendHistory = .sendHistory
-						SuUI.GetCurrentWindow().SetTimeout({
-							sendHistory(fileName, compressed,
-								uploadHistory, data, mime, retry?:)
-							}, 100) /*= delay */
+						SuUI.
+							GetCurrentWindow().
+							SetTimeout(
+								{
+								sendHistory(fileName, compressed,
+									uploadHistory, data, mime, retry?:)
+								}, 100) /*= delay */
 						}
-					}
 				if not uploadHistory.Has?(false)
 					.saveEmailLog(uploadHistory, data, mime)
-			}})
-		xhr.Open('PUT', data.historyLinks[fileName].url)
+				}
+			})
+		xhr.Open(#PUT, data.historyLinks[fileName].url)
 		ext = fileName.AfterLast('.').Lower()
-		mimeType = MimeTypes.GetDefault(ext, 'application/octet-stream')
-		xhr.SetRequestHeader('Content-Type', mimeType)
+		mimeType = MimeTypes.GetDefault(ext, "application/octet-stream")
+		xhr.SetRequestHeader("Content-Type", mimeType)
 		arrary = SuUI.GetCurrentWindow().Uint8Array(compressed)
-		blob = SuUI.MakeWebObject('Blob', [arrary], [type: mimeType])
+		blob = SuUI.MakeWebObject(#Blob, [arrary], [type: mimeType])
 		file = SuUI.GetCurrentWindow().File([:blob, name: fileName], mimeType)
 		xhr.Send(file)
 		}
@@ -401,26 +414,29 @@ HtmlDivComponent
 	saveEmailLog(uploadHistory, data, mime)
 		{
 		extraAttach = uploadHistory.Values()
-		failed = extraAttach.Filter({ it.Suffix?('_att_failed') })
+		failed = extraAttach.Filter({ it.Suffix?("_att_failed") })
 		if not failed.Empty?()
-			SuneidoLog('ERROR: (CAUGHT) Failed to upload attachments for email history',
+			SuneidoLog("ERROR: (CAUGHT) Failed to upload attachments for email history",
 				params: uploadHistory,
 				caughtMsg: "uploading retried; the email was sent successfully")
-		succeeded = extraAttach.Filter({ not it.Suffix?('_att_failed') })
+		succeeded = extraAttach.Filter({ not it.Suffix?("_att_failed") })
 		pdfNames = [uploaded?:, extraAttach: succeeded]
-		SuRender().Event(false, 'LogEmailString', [data.from, data.to,
-			mime.ToString(skipFiles:), :pdfNames, quiet?:])
+		SuRender().
+			Event(false, #LogEmailString,
+				[data.from, data.to,
+					mime.ToString(skipFiles:), :pdfNames, quiet?:])
 		}
 
 	alertErr(msg)
 		{
 		.CloseOverlay()
-		SuRender().Event(false, 'Alert',
-			Object(msg, 'Email Attachment: Not Sent', flags: MB.ICONERROR))
+		SuRender().
+			Event(false, #Alert,
+				[msg, "Email Attachment: Not Sent", flags: MB.ICONERROR])
 		}
 
 	CloseOverlay()
 		{
-		SuRender().Overlay.Close('emailAttachment')
+		SuRender().Overlay.Close(#emailAttachment)
 		}
 	}

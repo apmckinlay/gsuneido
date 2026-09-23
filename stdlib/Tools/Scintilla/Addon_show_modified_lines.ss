@@ -1,11 +1,11 @@
 // Copyright (C) 2018 Suneido Software Corp. All rights reserved worldwide.
 ScintillaAddonForThreadTasks
 	{
-	AddonName: 		'ShowModifiedLines'
-	markerType: 	'diff'
-	addLevel: 		28
-	modifyLevel: 	29
-	deleteLevel: 	27
+	AddonName:   #ShowModifiedLines
+	markerType:  #diff
+	addLevel:    28
+	modifyLevel: 29
+	deleteLevel: 27
 	Init()
 		{
 		super.Init()
@@ -13,6 +13,7 @@ ScintillaAddonForThreadTasks
 		.marker_add = .MarkerIdx(level: .addLevel, type: .markerType)
 		.marker_modify = .MarkerIdx(level: .modifyLevel, type: .markerType)
 		.marker_delete = .MarkerIdx(level: .deleteLevel, type: .markerType)
+		.trialTags = LastContribution(#Svc_TrialTags).Members().Map({ "__" $ it })
 		}
 
 	init()
@@ -25,15 +26,14 @@ ScintillaAddonForThreadTasks
 		{
 		.init()
 		return [
-			.buildMarker('add', level: .addLevel),
-			.buildMarker('modify', level: .modifyLevel),
-			.buildMarker('delete', top: '000', level: .deleteLevel)
-			]
+			.buildMarker(#add, level: .addLevel),
+			.buildMarker(#modify, level: .modifyLevel),
+			.buildMarker(#delete, top: "000", level: .deleteLevel)]
 		}
 
-	buildMarker(type, top = '001', bottom = '001', level = 0)
+	buildMarker(type, top = "001", bottom = "001", level = 0)
 		{
-		rep = (.width / 3).Int()  /*= modified line uses 1/3 of the marker bar */
+		rep = (.width / 3).Int() /*= modified line uses 1/3 of the marker bar */
 		top = top.Map({ it.Repeat(rep) }).RightFill(.width, top[-1])
 		bottom = bottom.Map({ it.Repeat(rep) }).RightFill(.width, bottom[-1])
 		marker = `/* XPM */
@@ -47,13 +47,13 @@ ScintillaAddonForThreadTasks
 			/* <Pixels> */`
 		marker $= ('"' $ top $ '",\r\n').Repeat(.halfHeight)
 		marker $= ('"' $ bottom $ '",\r\n').Repeat(.halfHeight)
-		marker = marker.RemoveSuffix(',\r\n') $ `};`
+		marker = marker.RemoveSuffix(",\r\n") $ `};`
 		return [:level, marker: [marker, back: .GetSchemeColor(type), type: .markerType]]
 		}
 
 	getRGBString(color)
 		{
-		hex = color.Hex().LeftFill(6/*= rgb hex string*/, '0')
+		hex = color.Hex().LeftFill(6 /*= rgb hex string*/, '0')
 		return hex[-2..] $ hex[2::2] $ hex[::2]
 		}
 
@@ -70,15 +70,26 @@ ScintillaAddonForThreadTasks
 		else
 			.rec = Query1(SvcTable(.table).NameQuery(.name))
 
-		if .rec isnt false and .rec.lib_before_text is ''
-			.rec.lib_before_text = .rec.text
+		if .rec isnt false
+			{
+			// For uncommitted trial/alpha records, fall back to the committed base
+			// record so the diff has a real "before" to compare against.
+			if .trialTags.Has?(LibraryTags.GetTagFromName(.name)) and
+				.rec.lib_committed is "" and
+				false isnt orig = Query1(
+					SvcTable(.table).NameQuery(LibraryTags.RemoveTagFromName(.name)))
+				.rec = orig
+
+			if .rec.lib_before_text is ""
+				.rec.lib_before_text = .rec.text
+			}
 		return not .invalid?(.rec)
 		}
 
 	invalid?(rec)
 		{
-		return rec is false or not rec.Member?('lib_committed') or
-			rec.lib_committed is "" or not rec.Member?('lib_before_text') or
+		return rec is false or not rec.Member?(#lib_committed) or
+			rec.lib_committed is "" or not rec.Member?(#lib_before_text) or
 			(rec.lib_modified isnt "" and rec.lib_before_text is "")
 		}
 
@@ -92,23 +103,24 @@ ScintillaAddonForThreadTasks
 		{
 		try
 			{
-			.name = .Send('CurrentName')
-			.table = .Send('CurrentTable')
+			.name = .Send(#CurrentName)
+			.table = .Send(#CurrentTable)
 			}
-		catch(unused, '*socket connection timeout')
+		catch (unused, "*socket connection timeout")
 			return false
-		return .name not in (0,'') and .table not in (0,'')
+		return .name not in (0, "") and .table not in (0, "")
 		}
 
-	prevChangedLines: #()
+	prevChangedLines: ()
 	ThreadFn(startTime)
 		{
 		changedLines = .getChangedLines(.rec.lib_before_text, .text)
 		if .IsOutdatedRecord(startTime) or .prevChangedLines.EqualSet?(changedLines)
 			return
 
-		.Defer(Bind(.markers, startTime, changedLines), uniqueID: 'modified_lines')
+		.Defer(Bind(.markers, startTime, changedLines), uniqueID: #modified_lines)
 		}
+
 	markers(startTime, changedLines)
 		{
 		if not .Destroyed?() and not .IsOutdatedRecord(startTime)
@@ -125,8 +137,8 @@ ScintillaAddonForThreadTasks
 		deleteCount = 0
 		while i < .diffs.Size()
 			{
-			if .diffs[i][1] is "<"
-				deleteCount++
+			if .diffs[i][1] is '<'
+				deleteCount += 1
 			.diffs[i].Add(i - deleteCount)
 			i++
 			}
@@ -146,11 +158,11 @@ ScintillaAddonForThreadTasks
 		lineIndex = 3
 		for line in changedLines
 			{
-			if line[1] is "#" and line[0] is line[2]
+			if line[1] is '#' and line[0] is line[2]
 				continue
-			if line[1] is "<"
+			if line[1] is '<'
 				.addMarker(line[lineIndex], .marker_delete)
-			else if line[1] is ">"
+			else if line[1] is '>'
 				.addMarker(line[lineIndex], .marker_add)
 			else
 				.addMarker(line[lineIndex], .marker_modify)
@@ -175,7 +187,7 @@ ScintillaAddonForThreadTasks
 
 	ContextMenu()
 		{
-		return #('Show Original Lines\tCtrl+O')
+		return #("Show Original Lines\tCtrl+O")
 		}
 
 	On_Show_Original_Lines()
@@ -185,7 +197,7 @@ ScintillaAddonForThreadTasks
 		result = .findPrevLines()
 		if result is false
 			return
-		ToolDialog(0, Object(.popup, result.prevLines, result.localLineHeight, this),
+		ToolDialog(0, [.popup, result.prevLines, result.localLineHeight, this],
 			keep_size: false, border: 0)
 		}
 
@@ -197,9 +209,9 @@ ScintillaAddonForThreadTasks
 		first = .LineFromPosition(sel.cpMin)
 		last = .LineFromPosition(sel.cpMax)
 		localLineHeight = last - first + 1
-		prevLines = ''
+		prevLines = ""
 		lineIndex = 3
-		for (i = first; i < .diffs.Size(); i++)
+		for (i = first; i < .diffs.Size(); i += 1)
 			{
 			localLineNumber = .diffs[i][lineIndex]
 			if localLineNumber > last
@@ -218,12 +230,13 @@ ScintillaAddonForThreadTasks
 		Title: "Original Lines"
 		New(.prevLines, localLineHeight, .scintillaAddon)
 			{
-			super(Object('Vert' Object('DisplayCode',
-				set: prevLines,
-				height: Min(30/*=min*/,
-					Max(prevLines.Lines().Size(), localLineHeight)),
-				width: 100)
-				#(Horz Fill (MenuButton 'Restore' ('Restore')) Fill)))
+			super([#Vert,
+				[#DisplayCode,
+					set: prevLines,
+					height: Min(30/*=min*/,
+						Max(prevLines.Lines().Size(), localLineHeight)),
+					width: 100],
+				#(Horz, Fill, (MenuButton, Restore, (Restore)), Fill)])
 			}
 
 		On_Restore_Restore()

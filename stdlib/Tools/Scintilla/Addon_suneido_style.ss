@@ -1,15 +1,15 @@
 // Copyright (C) 2009 Suneido Software Corp. All rights reserved worldwide.Append
 Addon_base_style
 	{
-	Name: 'suneido'
+	Name: #suneido
 	//Styles(itemToColour: (color: "colourToColourAs", bold: bolds the itemToColour))
-	Styles: (comment: (color: "comment"),
-			number: (color: "number"),
-			string: (color: "string"),
-			keyword: (color: "keyword", bold:),
-			operator: (color: "operator", bold:),
-			whitespace: (color: "whitespace"),
-			annotation: (color: "annotation", italic:))
+	Styles: (comment: (color: comment),
+		number: (color: number),
+		string: (color: string),
+		keyword: (color: keyword, bold:),
+		operator: (color: operator, bold:),
+		whitespace: (color: whitespace),
+		annotation: (color: annotation, italic:))
 
 	Init()
 		{
@@ -20,20 +20,18 @@ Addon_base_style
 	DefaultStyles()
 		{
 		return Object(
-			DEFAULT:	'',
-			COMMENT:	'color:' $
-				ToCssColor(IDE_ColorScheme.GetColor('comment', 'default')),
-			NUMBER:		'color:' $
-				ToCssColor(IDE_ColorScheme.GetColor('number', 'default')),
-			STRING:		'color:' $
-				ToCssColor(IDE_ColorScheme.GetColor('string', 'default')),
-			KEYWORD:	'font-weight:bold; color:' $
-				ToCssColor(IDE_ColorScheme.GetColor('keyword', 'default')),
-			OPERATOR:	'font-weight:bold; color:' $
-				ToCssColor(IDE_ColorScheme.GetColor('operator', 'default')),
-			ANNOTATION:	'color:' $
-				ToCssColor(IDE_ColorScheme.GetColor('annotation', 'default')),
-			WHITESPACE:	'')
+			DEFAULT: "",
+			COMMENT: "color:" $
+				ToCssColor(IDE_ColorScheme.GetColor("comment", "default")),
+			NUMBER: "color:" $ ToCssColor(IDE_ColorScheme.GetColor("number", "default")),
+			STRING: "color:" $ ToCssColor(IDE_ColorScheme.GetColor("string", "default")),
+			KEYWORD: "font-weight:bold; color:" $
+				ToCssColor(IDE_ColorScheme.GetColor("keyword", "default")),
+			OPERATOR: "font-weight:bold; color:" $
+				ToCssColor(IDE_ColorScheme.GetColor("operator", "default")),
+			ANNOTATION: "color:" $
+				ToCssColor(IDE_ColorScheme.GetColor("annotation", "default")),
+			WHITESPACE: "")
 		}
 
 	On_Copy()
@@ -42,29 +40,28 @@ Addon_base_style
 		if s.Size() is 0
 			return
 		ss = .BuildWithStyles(s, .copyStyles)
-		ClipboardWriteHtml(ss, add?:)
+		ClipboardWriteHtml(ss, add?:, text: s)
 		}
 
 	wrap(s, style)
 		{
-		if style is ''
+		if style is ""
 			return s
-		return '<span style="' $ style $ '">' $ XmlEntityEncode(s) $ '</span>'
+		return '<span style="' $ style $ '">' $ XmlEntityEncode(s) $ "</span>"
 		}
 
 	BuildWithStyles(s, styles)
 		{
 		s = s.Detab()
 		scan = Scanner(s)
-		prev = ''
+		prev = ""
 		ss = `<pre style="line-height:normal;">`
 		do
 			{
 			type = scan.Next2()
 			style = ScintillaStyle.TokenStyle(type, scan, prev, s, styles)
 			ss $= .wrap(scan.Text(), style)
-			}
-		while scan isnt type
-		ss $= '</pre>'
+			} while scan isnt type
+		ss $= "</pre>"
 		}
 	}

@@ -7,15 +7,17 @@ WndProc
 		.border = ScaleWithDpiFactor(border)
 		.cmdmap = Object().Set_default("")
 		.rcmdmap = Object().Set_default(false)
-		.mapcmd("On_OK", ID.OK)
-		.mapcmd("On_Cancel", ID.CANCEL)
+		.mapcmd(#On_OK, ID.OK)
+		.mapcmd(#On_Cancel, ID.CANCEL)
 		.Window = .Controller = this
 		.HwndMap = Object()
 		.move_observers = Object()
-		Suneido.OpenWindows = Suneido.GetDefault('OpenWindows', 0) + 1
+		Suneido.OpenWindows = Suneido.GetDefault(#OpenWindows, 0) + 1
 		}
+
 	New2()
-		{ }
+		{
+		}
 
 	// title can be set in multiple ways, in order of precedence:
 	// - argument to Window or Dialog e.g. Dialog(... title: ...)
@@ -45,12 +47,10 @@ WndProc
 			{
 			parentHwnd = GetActiveWindow()
 			if ((GetWindowLong(parentHwnd, GWL.STYLE) & WS.POPUP) isnt 0)
-				{
 				// use GetAncestor (instead of GetParent) to exclude OWNER windows
 				// since OWNER WINDOW is an overlapped or pop-up window,
 				// and they are destroyed when another window takes focus
 				parentHwnd = GetAncestor(parentHwnd, GA.PARENT)
-				}
 			}
 		else
 			parentHwnd = GetAncestor(parentHwnd, GA.ROOT)
@@ -73,11 +73,13 @@ WndProc
 			.restoreKeepSize(parentHwnd, title, control, keep_size)
 		.center(parentHwnd)
 		}
+
 	DefaultSize()
 		{
 		dpiFactor = GetDpiFactor()
 		return Object(w: 1024 * dpiFactor, h: 768 * dpiFactor)
 		}
+
 	center(parentHwnd) // used by Dialog and ModalWindow
 		{
 		parentRect = .parentRect(parentHwnd)
@@ -90,22 +92,21 @@ WndProc
 		// ensure it's all visible
 		// order is significant if bigger than work area
 		wr = GetWorkArea(parentRect)
-		if (left + width > wr.right)
+		if left+width > wr.right
 			left = wr.right - width
-		if (left < wr.left)
+		if left < wr.left
 			left = wr.left
-		if (top + height > wr.bottom)
+		if top+height > wr.bottom
 			top = wr.bottom - height
-		if (top < wr.top)
+		if top < wr.top
 			top = wr.top
 		.SetWinPos(left, top)
 		return Object(:left, :top)
 		}
+
 	parentRect(parentHwnd)
 		{
-		return parentHwnd is 0
-			? GetWorkArea()
-			: GetWindowRect(parentHwnd)
+		return parentHwnd is 0 ? GetWorkArea() : GetWindowRect(parentHwnd)
 		}
 
 	nextcmdnum: 102
@@ -113,36 +114,39 @@ WndProc
 		{
 		method = .cmd_to_method(cmd)
 		// if a number has already been assigned, return it
-		if (.rcmdmap[method] isnt false)
+		if .rcmdmap[method] isnt false
 			return .rcmdmap[method]
 		cmdnum = .nextcmdnum++
 		.mapcmd(method, cmdnum)
 		return cmdnum
 		}
+
 	mapcmd(method, cmdnum)
 		{
 		.rcmdmap[method] = cmdnum
 		.cmdmap[cmdnum] = method
 		}
+
 	Cmdmap(num)
 		{
 		return .cmdmap[num]
 		}
+
 	cmd_to_method(cmd)
 		{
-		cmd = cmd.BeforeFirst("\t")
+		cmd = cmd.BeforeFirst('\t')
 		return "On_" $ ToIdentifier(cmd)
 		}
+
 	COMMAND(wParam, lParam) /*internal*/
 		{
 		id = LOWORD(wParam)
-		if (lParam is NULL or
-			(HIWORD(wParam) is 0 and id isnt 0))
+		if lParam is NULL or (HIWORD(wParam) is 0 and id isnt 0)
 			{
-			if (.cmdmap.Member?(id))
+			if .cmdmap.Member?(id)
 				{
 				cmd = .cmdmap[id]
-				if (cmd.Suffix?("_button"))
+				if cmd.Suffix?("_button")
 					return super.COMMAND(wParam, lParam)
 				// menu or accelerator command
 				if IsWindowEnabled(.Hwnd)
@@ -152,18 +156,20 @@ WndProc
 			}
 		return super.COMMAND(wParam, lParam)
 		}
+
 	Send(@args)
 		{
 		args.source = this
-		if (not .Member?('Ctrl'))
+		if not .Member?(#Ctrl)
 			return 0
 		return .Ctrl.Msg(args)
 		}
+
 	Msg(args) /*internal*/
 		{
 		msg = args[0]
-		if (.Method?(msg))
-			return this[msg](@+1 args)
+		if .Method?(msg)
+			return this[msg](@+1args)
 		else
 			return 0
 		}
@@ -187,17 +193,19 @@ WndProc
 		if not IsWindow(parentHwnd)
 			return
 
-		if Object?(openBooks = Suneido.GetDefault('OpenBooks', false))
+		if Object?(openBooks = Suneido.GetDefault(#OpenBooks, false))
 			if false isnt w = openBooks.FindOne({ .parentBook?(parentHwnd, it) })
 				{
 				// Disable parent's Close for 1 second to avoid accidental close
 				menu = GetSystemMenu(parentHwnd, false)
 				EnableMenuItem(menu, SC_CLOSE, MF.BYCOMMAND | MF.GRAYED)
 				// Check for false because it will be false after the first kill
-				if w.GetDefault('DisableCloseTimer', false) isnt false
+				if w.GetDefault(#DisableCloseTimer, false) isnt false
 					w.DisableCloseTimer.Kill()
 				w.DisableCloseTimer = Delay(.disableCloseDelay)
-					{ EnableMenuItem(menu, SC_CLOSE, MF.BYCOMMAND) }
+					{
+					EnableMenuItem(menu, SC_CLOSE, MF.BYCOMMAND)
+					}
 				}
 		}
 
@@ -215,7 +223,7 @@ WndProc
 		if String?(control)
 			control = Global(control $ "Control")
 		.commands = Object()
-		if not control.Member?("Commands")
+		if not control.Member?(#Commands)
 			return
 		cmds = control.Commands
 		if Function?(cmds)
@@ -236,16 +244,20 @@ WndProc
 				id: .Mapcmd(cmd[0]))
 		return .SetupAccels(cmds)
 		}
-	Commands()
-		{ return .commands }
 
-	// accelerator stuff =============================================
+	Commands()
+		{
+		return .commands
+		// accelerator stuff =============================================
+		}
+
 	haccel: 0
 	accels: ""
 	getter_accelGroups()
 		{
 		return .accelGroups = Object()
 		}
+
 	SetupAccels(cmds)
 		{
 		newGroup = Object()
@@ -260,14 +272,16 @@ WndProc
 		.SetAccels()
 		return newGroup
 		}
+
 	AddAccel(name, s)
 		{
 		id = .Mapcmd(name)
-		.commands[name] = Object(help: '', bitmap: '', accel: s, :id)
+		.commands[name] = Object(help: "", bitmap: "", accel: s, :id)
 		accelInfo = .make_accel(s, id)
-		.accelGroups.Add(Object(accelInfo))
+		.accelGroups.Add([accelInfo])
 		.accels $= accelInfo.accel
 		}
+
 	make_accel(s, cmd)
 		{
 		ctrl = alt = shift = false
@@ -295,7 +309,7 @@ WndProc
 			ac.fVirt |= FVIRTKEY
 			ac.key = VK[u]
 			}
-		else if s.Size() is 1 and ' ' <= s and s <= "~"
+		else if s.Size() is 1 and ' ' <= s and s <= '~'
 			{
 			if ((ac.fVirt & FSHIFT) is 0)
 				s = s.Lower()
@@ -307,11 +321,13 @@ WndProc
 			return Object(accel: "", id: cmd, :ctrl, :alt, :shift, key: "")
 		return Object(accel: ACCEL(ac), id: cmd, :ctrl, :alt, :shift, key: ac.key)
 		}
+
 	RestoreAccels(accels)
 		{
 		.accelGroups.Remove(accels)
 		.SetAccels()
 		}
+
 	QueryAccel(key, ctrl, alt, shift)
 		{
 		for group in .accelGroups
@@ -321,12 +337,14 @@ WndProc
 					return item.id
 		return false
 		}
+
 	ResetAccels()
 		{
 		if .haccel isnt 0
 			DestroyAcceleratorTable(.haccel)
 		.haccel = 0
 		}
+
 	SetAccels()
 		{
 		.ResetAccels()
@@ -343,6 +361,7 @@ WndProc
 			SetWindowLongPtr(.Hwnd, GWL.USERDATA, .haccel)
 			}
 		}
+
 	buildAccel()
 		{
 		.accels = ""
@@ -350,20 +369,23 @@ WndProc
 			for item in group
 				.accels $= item.accel
 		}
-	// end of accelerator stuff ======================================
 
+	// end of accelerator stuff ======================================
 	GetChildren()
 		{
 		return [.Ctrl]
 		}
+
 	SetTitle(text)
 		{
 		SetWindowText(.Hwnd, text)
 		}
+
 	GetTitle()
 		{
 		return GetWindowText(.Hwnd)
 		}
+
 	AddToTitle(text)
 		{
 		SetWindowText(.Hwnd, text $ " - " $ .Ctrl.Title)
@@ -377,6 +399,7 @@ WndProc
 			return
 		.refreshTimer = Defer(.refresh)
 		}
+
 	refreshTimer: false
 	killRefresh()
 		{
@@ -385,6 +408,7 @@ WndProc
 		.refreshTimer.Kill()
 		.refreshTimer = false
 		}
+
 	refresh()
 		{
 		.refreshTimer = false
@@ -395,6 +419,7 @@ WndProc
 		.SIZE(rc.right | (rc.bottom << 16))
 		.resizeToMin()
 		}
+
 	// run the delayed refresh before ShowWindow/UpdateWindow to avoid flickering
 	RunPendingRefresh()
 		{
@@ -411,9 +436,10 @@ WndProc
 		{
 		.Ctrl.SetReadOnly(readonly)
 		}
+
 	GETMINMAXINFO(lParam)
 		{
-		if not .Member?('Ctrl')
+		if not .Member?(#Ctrl)
 			return 1
 		GetClientRect(.Hwnd, cr = Object())
 		if cr.right is 0 and cr.bottom is 0
@@ -433,6 +459,7 @@ WndProc
 			}
 		return 0
 		}
+
 	Resize_Ctrl()
 		{
 		// kludge because Eta_Orders BeforeSave does SelectTab
@@ -440,44 +467,51 @@ WndProc
 			return
 		.Ctrl.Resize(.x, .y, .w, .h)
 		}
+
 	SIZE(lParam)
 		{
-		if (not .Member?('Ctrl'))
+		if not .Member?(#Ctrl)
 			return 0
 		x = y = .border
 		w = LOWORD(lParam) - 2 * .border
 		h = HIWORD(lParam) - 2 * .border
-		if (.Ctrl.Xstretch is false)
+		if .Ctrl.Xstretch is false
 			w = .Ctrl.Xmin
-		if (.Ctrl.Ystretch is false)
+		if .Ctrl.Ystretch is false
 			h = .Ctrl.Ymin
 		.Ctrl.Resize(.x = x, .y = y, .w = w, .h = h)
 		return 0
 		}
+
 	EXITSIZEMOVE()
 		{
 		.RemStyle(WS.CLIPCHILDREN)
 		return 1 // or 0, no idea
 		}
+
 	ENTERSIZEMOVE()
 		{
 		.AddStyle(WS.CLIPCHILDREN)
 		return 1 // or 0, no idea
 		}
+
 	ObserveMove(fn)
 		{
 		.move_observers.Add(fn)
 		}
+
 	ObserveMoveRemove(fn)
 		{
 		.move_observers.Remove(fn)
 		}
+
 	WINDOWPOSCHANGING()
 		{
 		for observer in .move_observers
 			observer()
 		return 0
 		}
+
 	MOVING(lParam)
 		{
 		// snap to edges of work area
@@ -500,6 +534,7 @@ WndProc
 			}
 		return 0
 		}
+
 	resizeToMin()
 		{
 		if not .Member?(#Ctrl)
@@ -510,7 +545,8 @@ WndProc
 		GetClientRect(.Hwnd, cr = Object())
 		cr.w = cr.right - cr.left
 		cr.h = cr.bottom - cr.top
-		if xmin > cr.w or ymin > cr.h or // control bigger than window
+		if xmin > cr.w or ymin > cr.h or
+			// control bigger than window
 			not .ctrlStretchable()
 			{
 			if .ctrlStretchable()
@@ -524,6 +560,7 @@ WndProc
 			.SetWinSize(w, h)
 			}
 		}
+
 	ctrlStretchable()
 		{
 		return .Ctrl.Xstretch > 0 or .Ctrl.Ystretch > 0
@@ -532,14 +569,16 @@ WndProc
 	validationItems: false
 	AddValidationItem(item)
 		{
-		if (.validationItems is false)
+		if .validationItems is false
 			.validationItems = Object()
 		.validationItems.Add(item)
 		}
+
 	RemoveValidationItem(item)
 		{
 		.validationItems.RemoveIf({ Same?(it, item) })
 		}
+
 	GetValidationItems()
 		{
 		return .validationItems
@@ -558,19 +597,23 @@ WndProc
 		{
 		.tips.AddTool(hwnd, tip, :rect)
 		}
+
 	RemoveTip(hwnd)
 		{
 		.tips.RemoveTool(hwnd)
 		}
+
 	Tips()
 		{
 		return .tips
 		}
+
 	getter_tips()
 		{
 		.tips? = true
 		return .tips = .Construct(ToolTipControl) // once only
 		}
+
 	NewTips()
 		{
 		if not .tips?
@@ -579,23 +622,22 @@ WndProc
 		.tips = .Construct(ToolTipControl)
 		}
 
-	keep_size: false
-	window_info: false
+	keep_size:        false
+	window_info:      false
 	orig_window_info: false
 	restoreKeepSize(parentHwnd, title, ctrlspec, keep_size)
 		{
 		if keep_size is false
-			return false
+			return
 		.keep_size = String?(keep_size) and keep_size isnt ""
 			? keep_size
 			: .keepSizeName(ctrlspec, title)
-		if .keep_size is false or
-			false is info = KeyListViewInfo.Get(.keep_size)
-			return false
+		if .keep_size is false or false is info = KeyListViewInfo.Get(.keep_size)
+			return
 		.window_info = info.window_info
 		.orig_window_info = info.window_info.Copy()
 		if not .window_info.Member?(#w)
-			return false
+			return
 
 		// Only valid parentHwnd can be passed into getWorkArea()
 		if IsWindow(parentHwnd)
@@ -607,15 +649,17 @@ WndProc
 			.SetWinSize(width, height)
 			}
 		}
+
 	keepSizeName(ctrlspec, title)
 		{
-		result = ''
+		result = ""
 		if Object?(ctrlspec) and ctrlspec.Member?(0) and String?(ctrlspec[0])
 			result = ctrlspec[0]
-		if title isnt '' and title isnt false
-			result = result isnt '' ? (result $ " - " $ title) : title
-		return result isnt '' ? result : false
+		if title isnt "" and title isnt false
+			result = result isnt "" ? (result $ " - " $ title) : title
+		return result isnt "" ? result : false
 		}
+
 	RequiredWindowSize()
 		{
 		xmin = .Ctrl.Xmin + 2 * .border
@@ -630,10 +674,12 @@ WndProc
 		dh = wr.h - cr.h
 		return Object(w: xmin + dw, h: ymin + dh)
 		}
+
 	getWorkArea(parentHwnd)
 		{
 		return GetWorkArea(GetWindowRect(parentHwnd))
 		}
+
 	saveKeepSize()
 		{
 		if .keep_size is false
@@ -653,11 +699,11 @@ WndProc
 
 	AllowCloseWindow?()
 		{
-		if false is .Send("Ok_to_CloseWindow?")
+		if false is .Send(#Ok_to_CloseWindow?)
 			return false
 
 		// Check validation on the window
-		if .Send('ConfirmDestroy') is false
+		if .Send(#ConfirmDestroy) is false
 			return false
 
 		if .validationItems is false
@@ -675,7 +721,7 @@ WndProc
 
 	discardUnsavedChanges(item)
 		{
-		return (item.Method?('CloseWindowConfirmation') and
+		return (item.Method?(#CloseWindowConfirmation) and
 			not item.CloseWindowConfirmation())
 			? false
 			: CloseWindowConfirmation(.Window.Hwnd)
@@ -685,8 +731,9 @@ WndProc
 		{
 		if not .AllowCloseWindow?()
 			return 0 // meaning we handled it so don't do default DestroyWindow
-		return 'callsuper'
+		return #callsuper
 		}
+
 	destroying: false
 	DESTROY()
 		{
@@ -700,13 +747,20 @@ WndProc
 		.saveKeepSize()
 		if .tips?
 			.tips.Destroy()
-		if .Member?('Ctrl')
+		if .Member?(#Ctrl)
 			.Ctrl.Destroy()
 		if --Suneido.OpenWindows is 0
 			Image.DestroyAllInMemory()
-		return 'callsuper'
+		return #callsuper
 		}
 
-	DoActivate(@unused) { throw "Suneido.js only" }
-	UnregisterWindow(@unused) { throw "Suneido.js only" }
+	DoActivate(@unused)
+		{
+		throw "Suneido.js only"
+		}
+
+	UnregisterWindow(@unused)
+		{
+		throw "Suneido.js only"
+		}
 	}

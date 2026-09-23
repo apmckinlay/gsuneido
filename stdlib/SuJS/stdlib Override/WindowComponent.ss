@@ -157,19 +157,17 @@ WindowBaseComponent
 		new this(@args)
 		}
 
-	AnchorElement: 'div'
-	New(control, title = false,
-		x/*unused*/ = false, y/*unused*/ = false,
-		w/*unused*/ = false, h/*unused*/ = false,
-		exStyle/*unused*/ = 0, style = 0, wndclass/*unused*/ = "SuBtnfaceArrow",
-		.show = true, .newset = false, .exitOnClose = false,
-		.keep_placement = false, .border = 0, .onDestroy/*unused*/ = false,
-		parentHwnd = 0, useDefaultSize/*unused*/ = false, menubar = #())
+	AnchorElement: #div
+	New(control, title = false, x/*unused*/ = false, y/*unused*/ = false,
+		w/*unused*/ = false, h/*unused*/ = false, exStyle/*unused*/ = 0, style = 0,
+		wndclass/*unused*/ = #SuBtnfaceArrow, .show = true, .newset = false,
+		.exitOnClose = false, .keep_placement = false, .border = 0,
+		.onDestroy/*unused*/ = false, parentHwnd = 0, useDefaultSize/*unused*/ = false,
+		menubar = #())
 		{
 		.xmin0 = .Xmin
 		.ymin0 = .Ymin
-		LoadCssStyles('su_window.css', .styles)
-
+		LoadCssStyles("su_window.css", .styles)
 
 		.ParentEl = parentHwnd is 0
 			? SuUI.GetCurrentDocument().body
@@ -181,13 +179,12 @@ WindowBaseComponent
 			className: "su-window-anchor"))
 		if style is 0
 			style = WS.OVERLAPPEDWINDOW
-		.containerEl = .setupEl(CreateElement('div', .AnchorEl,
+		.containerEl = .setupEl(CreateElement(#div, .AnchorEl,
 			className: "su-window-container"))
 		.setupHeader(title, style)
 		.setupMenubar(menubar)
-		.El = .setupEl(CreateElement('div', .containerEl))
-		.SetStyles(Object('padding': border $ 'px', 'box-sizing': 'border-box'))
-
+		.El = .setupEl(CreateElement(#div, .containerEl))
+		.SetStyles(Object(padding: border $ "px", "box-sizing": "border-box"))
 
 		.Ctrl = .Construct(control)
 
@@ -223,12 +220,14 @@ WindowBaseComponent
 		.defaultButton = SuRender().GetRegisteredComponent(uniqueId)
 		.HighlightDefaultButton(true)
 		}
+
 	CallDefaultButton()
 		{
 		if .defaultButton is false or .defaultButton.GetEnabled() is false
 			return
 		.defaultButton.CLICKED()
 		}
+
 	HighlightDefaultButton(highlight?)
 		{
 		if .defaultButton is false or .defaultButton.GetEnabled() is false
@@ -236,50 +235,50 @@ WindowBaseComponent
 		.defaultButton.Highlight(highlight?)
 		}
 
-	headerEl: false
-	titleEl: false
-	buttonsEl: false
-	minimizeEl: false
-	maximizeEl: false
-	closeEl: false
-	headerHeight: 32
+	headerEl:         false
+	titleEl:          false
+	buttonsEl:        false
+	minimizeEl:       false
+	maximizeEl:       false
+	closeEl:          false
+	headerHeight:     32
 	DisableMinimize?: false
-	NonClientHeight: 0
+	NonClientHeight:  0
 	setupHeader(.title, style)
 		{
 		if ((style & WS.POPUP) isnt 0)
 			return
 
-		.headerEl = CreateElement('div', .containerEl, className: "su-window-header")
-		.titleEl = CreateElement('div', .headerEl, className:  "su-window-title")
+		.headerEl = CreateElement(#div, .containerEl, className: "su-window-header")
+		.titleEl = CreateElement(#div, .headerEl, className: "su-window-title")
 		if .title isnt false
 			.titleEl.innerHTML = .title
 
-		.buttonsEl = CreateElement('div', .headerEl, className: 'su-window-buttons')
-		.buttonsEl.SetAttribute('translate', 'no')
+		.buttonsEl = CreateElement(#div, .headerEl, className: "su-window-buttons")
+		.buttonsEl.SetAttribute(#translate, #no)
 		if ((style & WS.MINIMIZEBOX) isnt 0 and .DisableMinimize? is false)
 			{
-			.minimizeEl = CreateElement('div', .buttonsEl, className: "su-window-button")
-			.minimizeEl.textContent = IconFontHelper.GetCode('collapse').Chr()
-			.minimizeEl.AddEventListener('click', .MINIMIZE)
+			.minimizeEl = CreateElement(#div, .buttonsEl, className: "su-window-button")
+			.minimizeEl.textContent = IconFontHelper.GetCode(#collapse).Chr()
+			.minimizeEl.AddEventListener(#click, .MINIMIZE)
 			}
 		if ((style & WS.MAXIMIZEBOX) isnt 0)
 			{
-			.maximizeEl = CreateElement('div', .buttonsEl, className: "su-window-button")
-			.maximizeEl.textContent = IconFontHelper.GetCode('square').Chr()
-			.maximizeEl.AddEventListener('click', .MAXIMIZE)
-			.headerEl.AddEventListener('dblclick', .doubleClick)
+			.maximizeEl = CreateElement(#div, .buttonsEl, className: "su-window-button")
+			.maximizeEl.textContent = IconFontHelper.GetCode(#square).Chr()
+			.maximizeEl.AddEventListener(#click, .MAXIMIZE)
+			.headerEl.AddEventListener(#dblclick, .doubleClick)
 			}
 		if ((style & WS.SYSMENU) isnt 0)
 			{
-			.closeEl = CreateElement('div', .buttonsEl, className: "su-window-close")
-			.closeEl.textContent = IconFontHelper.GetCode('delete').Chr()
-			.closeEl.AddEventListener('click', .CLOSE)
+			.closeEl = CreateElement(#div, .buttonsEl, className: "su-window-close")
+			.closeEl.textContent = IconFontHelper.GetCode(#delete).Chr()
+			.closeEl.AddEventListener(#click, .CLOSE)
 			}
 		.headerEl.Window(this)
-		.headerEl.AddEventListener('mousedown', .moveMouseDown)
-		.headerEl.AddEventListener('contextmenu', .headerContextMenu)
-		.NonClientHeight += 1.5 /*=hearder height*/
+		.headerEl.AddEventListener(#mousedown, .moveMouseDown)
+		.headerEl.AddEventListener(#contextmenu, .headerContextMenu)
+		.NonClientHeight += 1.5/*=hearder height*/
 		}
 
 	style: 0
@@ -291,8 +290,10 @@ WindowBaseComponent
 			close: .closeEl isnt false)
 		extra = .snapMgr.ContextMenu
 		.RunWhenNotFrozen(
-			{ .EventWithOverlay('HeaderContextMenu', status, extra,
-				event.clientX, event.clientY) })
+			{
+			.EventWithOverlay(#HeaderContextMenu, status, extra,
+				event.clientX, event.clientY)
+			})
 		event.StopPropagation()
 		event.PreventDefault()
 		}
@@ -303,17 +304,17 @@ WindowBaseComponent
 		if menubar.Empty?()
 			return
 
-		.menuEl = CreateElement('div', .containerEl, className: 'su-window-menubar')
+		.menuEl = CreateElement(#div, .containerEl, className: "su-window-menubar")
 		for menu in menubar
 			{
-			el = CreateElement('div', .menuEl, className: 'su-window-menu-item')
+			el = CreateElement(#div, .menuEl, className: "su-window-menu-item")
 			el.textContent = menu
-			el.AddEventListener('click', .eventFactory(el, menu, .onMenubar))
-			el.AddEventListener('focus', .menuFocus)
+			el.AddEventListener(#click, .eventFactory(el, menu, .onMenubar))
+			el.AddEventListener(#focus, .menuFocus)
 			el.tabIndex = "-1"
 			}
 		.menuEl.Window(this)
-		.NonClientHeight += 1.5 /*=menubar height*/
+		.NonClientHeight += 1.5/*=menubar height*/
 		}
 
 	menuFocus(event)
@@ -322,13 +323,13 @@ WindowBaseComponent
 		try
 			el = event.relatedTarget
 		if false isnt control = .GetControlFromEl(el)
-			.Event('SyncPrevMenuFocus', control.UniqueId)
+			.Event(#SyncPrevMenuFocus, control.UniqueId)
 		}
 
 	onMenubar(el, menu, event/*unused*/)
 		{
 		r = SuRender.GetClientRect(el)
-		.RunWhenNotFrozen({ .EventWithOverlay('MenuBar', menu, r.left, r.bottom) })
+		.RunWhenNotFrozen({ .EventWithOverlay(#MenuBar, menu, r.left, r.bottom) })
 		}
 
 	ExtraContextCall(args)
@@ -338,14 +339,13 @@ WindowBaseComponent
 
 	moveMouseDown(event)
 		{
-		if event.target is .maximizeEl or
-			event.target is .minimizeEl or
-			event.target is .closeEl or
-			event.button isnt 0
+		if event.target is .maximizeEl or event.target is .minimizeEl or
+			event.target is .closeEl or event.button isnt 0
 			return
 
 		.origPos = .curPos = Object(x: event.x, y: event.y)
 		.StartMouseTracking(.moveMouseUp, .moveMouseMove)
+		event.PreventDefault()
 		}
 
 	moveMouseMove(event)
@@ -368,7 +368,7 @@ WindowBaseComponent
 		if event.x < viewportRect.left or event.x > viewportRect.right
 			return
 		diff = event.x - .curPos.x
-		.containerEl.SetStyle(#left, (containerRect.left + diff) $ 'px')
+		.containerEl.SetStyle(#left, (containerRect.left + diff) $ "px")
 		}
 
 	moveVert(event, containerRect, viewportRect)
@@ -376,7 +376,7 @@ WindowBaseComponent
 		if event.y < viewportRect.top or event.y > viewportRect.bottom
 			return
 		diff = event.y - .curPos.y
-		.containerEl.SetStyle(#top, (containerRect.top + diff) $ 'px')
+		.containerEl.SetStyle(#top, (containerRect.top + diff) $ "px")
 		}
 
 	moveMouseUp(event/*unused*/)
@@ -390,7 +390,7 @@ WindowBaseComponent
 		.StopMouseTracking()
 		}
 
-	resizes: #()
+	resizes: ()
 	setupResize(style)
 		{
 		.resizes = Object()
@@ -415,26 +415,27 @@ WindowBaseComponent
 			.makeResize([#left, #bottom])
 			}
 		.El.className = "su-window-content"
-		.Ctrl.SetStyles(#(width: '100%', height: '100%'))
+		.Ctrl.SetStyles(#(width: "100%", height: "100%"))
 		}
 
 	makeResize(sides)
 		{
-		el = CreateElement('div', .containerEl,
-			className: 'su-window-' $ sides.Join('-') $ '-resize')
-		el.AddEventListener('mousedown', .eventFactory(el, sides, .resizeMouseDown))
+		el = CreateElement(#div, .containerEl,
+			className: "su-window-" $ sides.Join('-') $ "-resize")
+		el.AddEventListener(#mousedown, .eventFactory(el, sides, .resizeMouseDown))
 		.resizes.Add(el)
 		}
 
 	eventFactory(el, sides, handler)
 		{
-		return { |event| handler(el, sides, event) }
+		return {|event| handler(el, sides, event) }
 		}
 
 	getter_snapMgr()
 		{
 		return SuRender().SnapManager
 		}
+
 	GetResizes()
 		{
 		return .resizes
@@ -442,10 +443,11 @@ WindowBaseComponent
 
 	curPos: false
 	dirs: (
-		left: 	[#x, -1],
-		right:	[#x, 1],
-		top:	[#y, -1],
-		bottom:	[#y, 1])
+		left: [x, -1],
+		right: [x, 1],
+		top: [y, -1],
+		bottom: [y, 1]
+		)
 	resizeMouseDown(el, sides, event)
 		{
 		if event.target isnt el or event.button isnt 0
@@ -454,6 +456,7 @@ WindowBaseComponent
 		for side in sides
 			.curPos[.dirs[side][0]] = event[.dirs[side][0]]
 		.StartMouseTracking(.resizeMouseUp, .eventFactory(el, sides, .resizeMouseMove))
+		event.PreventDefault()
 		}
 
 	resizeMouseMove(el/*unused*/, sides, event)
@@ -491,10 +494,10 @@ WindowBaseComponent
 
 		if .snapMgr.HorzResize(newWidth, this) isnt true
 			{
-			.containerEl.SetStyle('width', '')
-			.El.SetStyle('width', newWidth $ 'px')
+			.containerEl.SetStyle(#width, "")
+			.El.SetStyle(#width, newWidth $ "px")
 			if side is #left
-				.containerEl.SetStyle('left', pos $ 'px')
+				.containerEl.SetStyle(#left, pos $ "px")
 			}
 		return true
 		}
@@ -507,9 +510,9 @@ WindowBaseComponent
 		if newHeight < .Ctrl.Ymin
 			return false
 
-		.El.SetStyle('height', newHeight $ 'px')
+		.El.SetStyle(#height, newHeight $ "px")
 		if side is #top
-			.containerEl.SetStyle('top', pos $ 'px')
+			.containerEl.SetStyle(#top, pos $ "px")
 		return true
 		}
 
@@ -565,21 +568,20 @@ WindowBaseComponent
 
 	CLOSE()
 		{
-		.RunWhenNotFrozen({ .EventWithFreeze('CLOSE') })
+		.RunWhenNotFrozen({ .EventWithFreeze(#CLOSE) })
 		}
 
 	doubleClick(event)
 		{
-		if event.target is .maximizeEl or
-			event.target is .minimizeEl or
+		if event.target is .maximizeEl or event.target is .minimizeEl or
 			event.target is .closeEl
 			return
 		.MAXIMIZE()
 		}
 
-	State: 0 // = WindowPlacement.normal
+	State:         0 // = WindowPlacement.normal
 	previousState: 0
-	windowRect: false
+	windowRect:    false
 	MAXIMIZE(forceRestore? = false)
 		{
 		if .State isnt WindowPlacement.normal or forceRestore? is true
@@ -595,12 +597,12 @@ WindowBaseComponent
 		.SetState(WindowPlacement.maximized)
 		.snapMgr.Remove(this)
 		.SetStyles(
-			Object(left: '0px', top: '0px', width: '100%',
-				height: 'calc(100% - (' $ SuRender().Taskbar.GetTaskbarHeight() $ '))'),
+			Object(left: "0px", top: "0px", width: "100%",
+				height: "calc(100% - (" $ SuRender().Taskbar.GetTaskbarHeight() $ "))"),
 			.containerEl)
 		.SetStyles(
-			Object(width: '100%', height: 'calc(100% - ' $ .NonClientHeight $ 'em)'))
-		.resizes.Each({ it.SetStyle('display', 'none') })
+			Object(width: "100%", height: "calc(100% - " $ .NonClientHeight $ "em)"))
+		.resizes.Each({ it.SetStyle(#display, #none) })
 		}
 
 	MINIMIZE()
@@ -609,9 +611,9 @@ WindowBaseComponent
 			return
 		.SetState(WindowPlacement.minimized)
 		.snapMgr.Remove(this)
-		.SetStyles(#(display: 'none'), .containerEl)
+		.SetStyles(#(display: none), .containerEl)
 		.syncWindowPlacement()
-		.EventWithOverlay('AfterMinimized')
+		.EventWithOverlay(#AfterMinimized)
 		}
 
 	UpdateMaximize()
@@ -620,7 +622,7 @@ WindowBaseComponent
 			return
 		.SetStyles(
 			Object(
-				height: 'calc(100% - (' $ SuRender().Taskbar.GetTaskbarHeight() $ '))'),
+				height: "calc(100% - (" $ SuRender().Taskbar.GetTaskbarHeight() $ "))"),
 			.containerEl)
 		}
 
@@ -636,11 +638,12 @@ WindowBaseComponent
 			top = Max(Min(.windowRect.top, viewPort.bottom - height), 0)
 		if left is false
 			left = Max(Min(.windowRect.left, viewPort.right - width), 0)
-		.SetStyles(Object(left: left $ 'px', top: top $ 'px', right: '',
-			width: '', height: ''), .containerEl)
-		.SetStyles(Object(width: width $ 'px',
-			height: 'calc(' $ height $ 'px - ' $ .NonClientHeight $ 'em)'))
-		.resizes.Each({ it.SetStyle('display', 'initial') })
+		.SetStyles(
+			Object(left: left $ "px", top: top $ "px", right: "",
+				width: "", height: ""), .containerEl)
+		.SetStyles(Object(width: width $ "px",
+			height: "calc(" $ height $ "px - " $ .NonClientHeight $ "em)"))
+		.resizes.Each({ it.SetStyle(#display, #initial) })
 		}
 
 	getViewPort()
@@ -657,8 +660,9 @@ WindowBaseComponent
 		.previousState = .State
 		.State = state
 		if .maximizeEl isnt false
-			.maximizeEl.textContent = IconFontHelper.GetCode(
-				state isnt WindowPlacement.normal ? 'restore' : 'square').Chr()
+			.maximizeEl.textContent = IconFontHelper.
+				GetCode(state isnt WindowPlacement.normal ? #restore : #square).
+				Chr()
 		}
 
 	updateWindowRect()
@@ -671,8 +675,8 @@ WindowBaseComponent
 	getWindowRect()
 		{
 		windowRect = SuRender.GetClientRect(.containerEl)
-		windowRect.width -= 2 /*=border*/
-		windowRect.height -= 2 /*=border*/
+		windowRect.width -= 2/*=border*/
+		windowRect.height -= 2/*=border*/
 		return windowRect
 		}
 
@@ -704,7 +708,7 @@ WindowBaseComponent
 		if .State is WindowPlacement.minimized
 			{
 			.SetState(.previousState)
-			.SetStyles(#(display: 'initial'), .containerEl)
+			.SetStyles(#(display: initial), .containerEl)
 			.syncWindowPlacement()
 			}
 		if .State isnt WindowPlacement.normal

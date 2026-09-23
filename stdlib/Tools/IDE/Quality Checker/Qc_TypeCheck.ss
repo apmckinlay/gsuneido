@@ -49,14 +49,6 @@ class
 		if not Compilable?(recordData.code)
 			return false, false
 
-		// no binary
-		try
-			if not TypeCheckHelper.BinaryExists?()
-				return false, false
-		catch
-			// sometimes this seems to throw on
-			return false, false
-
 		c = Suneido.Compile(recordData.code)
 		func? = Function?(c)
 		return Class?(c) or func?, func?

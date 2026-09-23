@@ -71,15 +71,14 @@ AstFmtDoc
 
 	FuncBody(node, ctx, curr, extra = false, pos2 = false, lead = false)
 		{
-		empty = .emptyFunc?(node, curr, pos2)
-		single = empty or .Single?(node, ctx)
+		single = .Single?(node, ctx)
 		bctx = .With(ctx, [constant: false, noSym: false, singleLine:])
 		br = single ? .Line : .Hard
 		sep = single ? .Semi : .Hard
 		parts = [.bodyHead(single, lead), .Text('{')]
 		if extra isnt false
 			parts.Add(extra)
-		.bodyOpen(parts, curr, empty, pos2)
+		.bodyOpen(parts, curr, pos2)
 		stmts = .StmtDocs(node, bctx, curr, allowBlank: not single)
 		.bodyStmts(parts, stmts, br, sep)
 		parts.Add(br)
@@ -98,12 +97,15 @@ AstFmtDoc
 		return lead is false ? .Soft : lead
 		}
 
-	bodyOpen(parts, curr, empty, pos2)
+	bodyOpen(parts, curr, pos2)
 		{
-		if empty // Trailing would run past the close when { } are on one line
-			.Cm.SkipTo(curr, pos2)
-		else if pos2 isnt false
-			parts.Add(.Cm.Trailing(curr, pos2))
+		if pos2 isnt false
+			// Trailing would run past the close when { } are on one line,
+			// so skip to the open brace instead of consuming past it
+			if .Cm.EmptyBraces?(curr, pos2)
+				.Cm.SkipTo(curr, pos2)
+			else
+				parts.Add(.Cm.Trailing(curr, pos2))
 		}
 
 	bodyStmts(parts, stmts, br, sep)
@@ -113,13 +115,6 @@ AstFmtDoc
 			parts.Add(j is 0 ? br : sep)
 			parts.Add(stmts[j])
 			}
-		}
-
-	// an empty body has nothing to lay out, so it hugs the signature as { }
-	emptyFunc?(node, curr, pos2)
-		{
-		return node.type is #Function and node[0] is false and pos2 isnt false and
-			.Cm.EmptyBraces?(curr, pos2)
 		}
 
 	Single?(node, ctx)

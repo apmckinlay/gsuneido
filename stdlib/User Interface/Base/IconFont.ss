@@ -2,7 +2,6 @@
 // NOTE: To add new icons, see https://appserver.internal.axonsoft.com:8088/Wiki?UpdateSuneidoIconFont
 Singleton
 	{
-
 	New()
 		{
 		.map = Object()

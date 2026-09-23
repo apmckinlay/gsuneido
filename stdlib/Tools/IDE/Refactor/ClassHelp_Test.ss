@@ -13,14 +13,15 @@ Test
 		Assert(ClassHelp.Class?("_Fred { }"))
 		Assert(ClassHelp.Class?(.text))
 		}
+
 	Test_Base()
 		{
 		Assert(ClassHelp.SuperClass("class { }") is: false)
-		Assert(ClassHelp.SuperClass("class : Fred { }") is: "Fred")
-		Assert(ClassHelp.SuperClass("Fred { }") is: "Fred")
+		Assert(ClassHelp.SuperClass("class : Fred { }") is: #Fred)
+		Assert(ClassHelp.SuperClass("Fred { }") is: #Fred)
 		}
-	text:
-"class
+
+	text:   "class
 	{
 	Zero: 123
 	One()
@@ -36,8 +37,7 @@ Test
 		three stuff
 		}
 	}"
-	method:
-"Added()
+	method: "Added()
 	{
 	added stuff
 	}"
@@ -45,126 +45,141 @@ Test
 	Test_AdvanceToNewline()
 		{
 		Assert(ClassHelp.AdvanceToNewline(.text, .text.Find('}'))
-			is: .text.Find('\tTwo'))
+			is: .text.Find("\tTwo"))
 		}
+
 	Test_AfterMethod()
 		{
-		Assert(ClassHelp.AfterMethod(.text, .text.Find('one'))
-			is: .text.Find('\tTwo'))
+		Assert(ClassHelp.AfterMethod(.text, .text.Find(#one))
+			is: .text.Find("\tTwo"))
 		}
+
 	Test_AddMethod()
 		{
-		Assert(ClassHelp.AddMethod(.text, .text.Find('one'), .method)
-			is: .text.Replace('\tTwo', '\t' $ .method $ '\r\n\tTwo'))
+		Assert(ClassHelp.AddMethod(.text, .text.Find(#one), .method)
+			is: .text.Replace("\tTwo", '\t' $ .method $ "\r\n\tTwo"))
 
-		Assert(ClassHelp.AddMethod(.text, .text.Find('three stuff'), .method)
-			is: .text.Replace('^\t}', '\t' $ .method $ '\r\n\t}'))
+		Assert(ClassHelp.AddMethod(.text, .text.Find("three stuff"), .method)
+			is: .text.Replace("^\t}", '\t' $ .method $ "\r\n\t}"))
 		}
+
 	Test_AddMethodAtEnd()
 		{
 		Assert(ClassHelp.AddMethodAtEnd(.text, .method)
-			is: .text.Replace('^\t}', '\t' $ .method $ '\r\n\t}'))
+			is: .text.Replace("^\t}", '\t' $ .method $ "\r\n\t}"))
 		}
+
 	Test_MethodRange()
 		{
-		Assert(ClassHelp.MethodRange(.text, .text.Find("one"))
-			is: Object(from: .text.Find("One"), to: .text.Find("\tTwo")))
-		Assert(ClassHelp.MethodRange(.text, .text.Find("two"))
-			is: Object(from: .text.Find("Two") + 5, to: .text.Find("\tthree")))
+		Assert(ClassHelp.MethodRange(.text, .text.Find(#one))
+			is: Object(from: .text.Find(#One), to: .text.Find("\tTwo")))
+		Assert(ClassHelp.MethodRange(.text, .text.Find(#two))
+			is: Object(from: .text.Find(#Two) + 5, to: .text.Find("\tthree")))
 		Assert(ClassHelp.MethodRange(.text, .text.Find("three stuff"))
-			is: Object(from: .text.Find("three"), to: .text.Size() - 2))
+			is: Object(from: .text.Find(#three), to: .text.Size() - 2))
 		}
+
 	Test_MethodName()
 		{
 		Assert(ClassHelp.MethodName(.text, 0) is: false)
-		Assert(ClassHelp.MethodName(.text, .text.Find('one')) is: 'One')
-		Assert(ClassHelp.MethodName(.text, .text.Find('three stuff')) is: 'three')
+		Assert(ClassHelp.MethodName(.text, .text.Find(#one)) is: #One)
+		Assert(ClassHelp.MethodName(.text, .text.Find("three stuff")) is: #three)
 		}
+
 	Test_Locals()
 		{
-		Assert(ClassHelp.Locals('') is: #())
+		Assert(ClassHelp.Locals("") is: #())
 
-		text = 'Func(a, b: c) { ++a for one in two ++three }'
+		text = "Func(a, b: c) { ++a for one in two ++three }"
 		Assert(ClassHelp.Locals(text) is: #(a, c, one, two, three))
 		}
+
 	Test_LocalsInputs()
 		{
-		Assert(ClassHelp.LocalsInputs('') is: #())
+		Assert(ClassHelp.LocalsInputs("") is: #())
 
 		text = "a; ++b; c(d); e--; f = g; h += i"
 		Assert(ClassHelp.LocalsInputs(text) is: #(a, b, c, d, e, g, h, i))
 		}
+
 	Test_LocalsModified()
 		{
-		Assert(ClassHelp.LocalsModified('') is: #())
+		Assert(ClassHelp.LocalsModified("") is: #())
 
 		text = "a; ++b; c(d); e--; f = g; h += i"
 		Assert(ClassHelp.LocalsModified(text) is: #(b, e, f, h))
 		}
+
 	Test_LocalsAssigned()
 		{
-		Assert(ClassHelp.LocalsModified('') is: #())
+		Assert(ClassHelp.LocalsModified("") is: #())
 
 		text = "method(a, b) { c = 0; fn(d); ++e; f = 1; for g in h { |i,j| } }"
 		Assert(ClassHelp.LocalsAssigned(text) is: #(a, b, c, f, g, i, j))
 		}
+
 	Test_Methods()
 		{
-		Assert(ClassHelp.Methods('') is: #())
+		Assert(ClassHelp.Methods("") is: #())
 
 		Assert(ClassHelp.Methods(.text) is: #(One, Two, three))
 		}
+
 	Test_FindMethod()
 		{
-		text =
-			'class
+		text = "class
 				{
 				One()
 					{ two = 1 }
 				two()
 					{ }
-				}'
-		Assert(ClassHelp.FindMethod(text, 'xx') is: false)
-		Assert(ClassHelp.FindMethod(text, 'One') is: text.Find('One()'))
-		Assert(ClassHelp.FindMethod(text, 'two') is: text.Find('two()'))
+				}"
+		Assert(ClassHelp.FindMethod(text, #xx) is: false)
+		Assert(ClassHelp.FindMethod(text, #One) is: text.Find("One()"))
+		Assert(ClassHelp.FindMethod(text, #two) is: text.Find("two()"))
 		}
+
 	ch: ClassHelp
 		{
 		ClassHelp_libraries()
-			{ return _libs.Copy() }
+			{
+			return _libs.Copy()
+			}
+
 		ClassHelp_trials()
-			{ return #(tag) }
+			{
+			return #(tag)
+			}
 		}
 	Test_FindBaseMethod()
 		{
 		lib1 = .MakeLibrary(
-			[name: 'ATestRecord', text: 'class { Foo() { 1 } }'],
-			[name: 'ATestRecord__webgui', text: 'class { Foo() { 2 } }'],
-			[name: 'ATestRecord__webgui_tag', text: 'class { Foo() { 3 }}'])
-		lib2 = .MakeLibrary(
-			[name: 'ATestRecord', text: '_ATestRecord {}'])
+			[name: #ATestRecord, text: "class { Foo() { 1 } }"],
+			[name: #ATestRecord__webgui, text: "class { Foo() { 2 } }"],
+			[name: #ATestRecord__webgui_tag, text: "class { Foo() { 3 }}"])
+		lib2 = .MakeLibrary([name: #ATestRecord, text: "_ATestRecord {}"])
 		lib3 = .MakeLibrary(
-			[name: 'CTestRecord', text: 'ATestRecord { Bar() { .Foo() }'],
-			[name: 'CTestRecord__webgui', text: '_CTestRecord { Baz() {} }'])
+			[name: #CTestRecord, text: "ATestRecord { Bar() { .Foo() }"],
+			[name: #CTestRecord__webgui, text: "_CTestRecord { Baz() {} }"])
 
 		_libs = [lib1, lib2, lib3]
 		fn = .ch.FindBaseMethod
 
-		Assert(fn(lib1, 'BTestRecord', '', 'Foo') is: false)
-		Assert(fn(lib2, 'ATestRecord', '_ATestRecord {}', 'Foo')
-			is: Object(lib: lib1, name: 'ATestRecord'))
-		Assert(fn(lib2, 'ATestRecord', '_ATestRecord {}', 'Missing') is: false)
+		Assert(fn(lib1, #BTestRecord, "", #Foo) is: false)
+		Assert(fn(lib2, #ATestRecord, "_ATestRecord {}", #Foo)
+			is: Object(lib: lib1, name: #ATestRecord))
+		Assert(fn(lib2, #ATestRecord, "_ATestRecord {}", #Missing) is: false)
 
-		Assert(fn(lib3, 'CTestRecord', 'ATestRecord {}', 'Foo')
-			is: Object(lib: lib1, name: 'ATestRecord'))
-		Assert(fn(lib3, 'CTestRecord', 'ATestRecord {}', 'Missing') is: false)
-		Assert(fn(lib3, 'CTestRecord__webgui', '_CTestRecord {}', 'Bar')
-			is: Object(lib: lib3, name: 'CTestRecord'))
-		Assert(fn(lib3, 'CTestRecord__webgui', '_CTestRecord {}', 'Foo')
-			is: Object(lib: lib1, name: 'ATestRecord__webgui_tag'))
+		Assert(fn(lib3, #CTestRecord, "ATestRecord {}", #Foo)
+			is: Object(lib: lib1, name: #ATestRecord))
+		Assert(fn(lib3, #CTestRecord, "ATestRecord {}", #Missing) is: false)
+		Assert(fn(lib3, #CTestRecord__webgui, "_CTestRecord {}", #Bar)
+			is: Object(lib: lib3, name: #CTestRecord))
+		Assert(fn(lib3, #CTestRecord__webgui, "_CTestRecord {}", #Foo)
+			is: Object(lib: lib1, name: #ATestRecord__webgui_tag))
 		}
-	memberstext:
-		"class
+
+	memberstext: "class
 			{
 			foo() { x.far = 456; x = 2 }
 			Bar() { .bar = 123; .y }
@@ -176,31 +191,35 @@ Test
 		Assert(ClassHelp.PrivateMembers("") is: #())
 		Assert(ClassHelp.PrivateMembers(.memberstext) is: #(bar, foo, foobar))
 		}
+
 	Test_PublicMembers()
 		{
 		Assert(ClassHelp.PublicMembers("") is: #())
 		Assert(ClassHelp.PublicMembers(.memberstext) is: #(Bar, Z))
 		text = "Point { Foo: 123 bar: 456 }"
 		mems = ClassHelp.PublicMembers(text)
-		Assert(mems has: "Foo")
-		Assert(mems has: "GetX")
-		Assert(mems hasnt: "bar")
-		Assert(mems hasnt: "x")
-		Assert(mems hasnt: "Point_x")
+		Assert(mems has: #Foo)
+		Assert(mems has: #GetX)
+		Assert(mems hasnt: #bar)
+		Assert(mems hasnt: 'x')
+		Assert(mems hasnt: #Point_x)
 		}
+
 	Test_PublicMembersOfName()
 		{
-		mems = ClassHelp.PublicMembersOfName('ClassHelp_Test')
-		Assert(mems has: "Test_PublicMembersOfName")
-		Assert(mems hasnt: "memberstext")
-		Assert(ClassHelp_Test.Members() has: "ClassHelp_Test_memberstext")
-		Assert(mems hasnt: "ClassHelp_Test_memberstext")
+		mems = ClassHelp.PublicMembersOfName(#ClassHelp_Test)
+		Assert(mems has: #Test_PublicMembersOfName)
+		Assert(mems hasnt: #memberstext)
+		Assert(ClassHelp_Test.Members() has: #ClassHelp_Test_memberstext)
+		Assert(mems hasnt: #ClassHelp_Test_memberstext)
 		}
+
 	Test_MethodRanges()
 		{
 		Assert(ClassHelp.MethodRanges("class { One() { fred } Two() { joe } }")
-			is: #([name: "One", to: 22, from: 11], [name: "Two", to: 36, from: 26]))
+			is: #([name: One, to: 22, from: 11], [name: Two, to: 36, from: 26]))
 		}
+
 	Test_MethodSizes()
 		{
 		text = "// comment
@@ -223,62 +242,71 @@ Test
 					}
 				}"
 		sizes = ClassHelp.MethodSizes(text)
-		sizes.Each { it.Delete(#from, #to) }
+		sizes.Each()
+			{
+			it.Delete(#from, #to)
+			}
 		Assert(sizes is: #([name: One, lines: 3], [name: two, lines: 4]))
 		}
+
 	Test_nonWhiteLineCount()
 		{
 		f = ClassHelp.ClassHelp_nonWhiteLineCount
-		Assert(f('') is: 0)
+		Assert(f("") is: 0)
 		Assert(f('x') is: 1)
-		Assert(f('x
-			y') is: 2)
-		Assert(f('x
+		Assert(
+			f("x
+			y") is: 2)
+		Assert(
+			f("x
 
-			y') is: 2)
-		Assert(f('x
+			y") is: 2)
+		Assert(
+			f("x
 			// comment
-			y') is: 2)
-		Assert(f('x
+			y") is: 2)
+		Assert(
+			f("x
 			/* comment */
-			y') is: 2)
-		Assert(f('x
+			y") is: 2)
+		Assert(
+			f("x
 			/*
 			comment
 			*/
-			y') is: 2)
-		Assert(f('x /*
+			y") is: 2)
+		Assert(
+			f("x /*
 			comment
-			*/ y') is: 2)
+			*/ y") is: 2)
 		}
+
 	Test_RetrieveParamsList()
 		{
-		test = function (text, expected)
+		test = function(text, expected)
 			{
-			body = '{ x }'
+			body = "{ x }"
 			text $= body
 			pos = ClassHelp.RetrieveParamsList(text, actual = Object())
 			Assert(actual is: expected)
 			Assert(text[pos..] is: body)
 			}
-		test('()', #())
-		test('(a,b,c)', #(a,b,c))
-		test('(a,b,c)', #(a,b,c))
-		test('(.a, _b, ._c, .Dad, parentHwnd)', #(a, b, c, dad, parentHwnd))
-		test('(a = 1, b = (2), c = (1, (2), 3))', #(a,b,c))
-		test('(a = function() {return true}, b = 2)', #(a, b))
+		test("()", #())
+		test("(a,b,c)", #(a, b, c))
+		test("(a,b,c)", #(a, b, c))
+		test("(.a, _b, ._c, .Dad, parentHwnd)", #(a, b, c, dad, parentHwnd))
+		test("(a = 1, b = (2), c = (1, (2), 3))", #(a, b, c))
+		test("(a = function() {return true}, b = 2)", #(a, b))
 
 		// type annotations: must not add type names as phantom params
-		if BuiltDate() < #20260514
-			return
-		test('(x :string)', #(x))
-		test('(x: string)', #(x))
-		test('(x: string|number)', #(x))
-		test('(x :string, y: number)', #(x, y))
-		test('(x: string = 0)', #(x))
-		test('(x: string = 0, y :object = false)', #(x, y))
-		test('(x: string|number = 0, y :object|false = false)', #(x, y))
-		test('(x :object = false)', #(x))
+		test("(x :string)", #(x))
+		test("(x: string)", #(x))
+		test("(x: string|number)", #(x))
+		test("(x :string, y: number)", #(x, y))
+		test("(x: string = 0)", #(x))
+		test("(x: string = 0, y :object = false)", #(x, y))
+		test("(x: string|number = 0, y :object|false = false)", #(x, y))
+		test("(x :object = false)", #(x))
 		}
 
 	Test_AllClassMembers()
@@ -317,13 +345,11 @@ Test
 		))`
 		calculatedMembersList = ClassHelp.AllClassMembers(test)
 		Assert(calculatedMembersList.Members()
-			equalsSet: #("y:", "New", "MyMethod1", "myMethod2",
+			equalsSet: #("y:", New, MyMethod1, myMethod2,
 				"myVal1:", "myVal2:", "myVal3:"))
 		Assert(ClassHelp.AllClassMembers(testTwo).Members()
 			equalsSet: #("Params:", "name:", "printParams:", "title:"))
 		}
-
-
 
 	Test_classMemberDotDeclarations()
 		{
@@ -345,14 +371,15 @@ Test
 		}
 	}"
 		classVariables = Object()
-		calculatedResult = ClassHelp.ClassHelp_classMemberDotDeclarations(
-			test, classVariables, 'M')
-		Assert(calculatedResult is: #('myVal1:', 'myVal2:', 'myVal3:'))
+		calculatedResult =
+			ClassHelp.ClassHelp_classMemberDotDeclarations(test, classVariables, 'M')
+		Assert(calculatedResult is: #("myVal1:", "myVal2:", "myVal3:"))
 
-		Assert(ClassHelp.ClassHelp_classVariablesInMethodBody(
-			test, classVariables, 'M', find: 'myVal1')
+		Assert(ClassHelp.ClassHelp_classVariablesInMethodBody(test, classVariables, 'M',
+				find: #myVal1)
 			is: 159)
 		}
+
 	Test_classVariablesInMethodBody()
 		{
 		test = "(.shouldNotFlag, .a, .b, .d)
@@ -387,9 +414,11 @@ Test
 			}"
 		classVariables = Object()
 		ClassHelp.ClassHelp_classVariablesInMethodBody(test, classVariables, 'M')
-		Assert(classVariables is:  #("x:", "a:", "i:", "legit:", "c:", "v:", "n:", "s:",
-			"call1:", "call2:", "myVal1:", "myVal6:", "myVal7:", "myVal19:", "myVal11:",
-			"yy:", "zz:", "myVal14:"))
+		Assert(classVariables
+			is: #("x:", "a:", "i:", "legit:", "c:", "v:", "n:", "s:",
+				"call1:", "call2:", "myVal1:", "myVal6:", "myVal7:", "myVal19:",
+				"myVal11:",
+				"yy:", "zz:", "myVal14:"))
 
 		test1 = "()
 			{
@@ -426,14 +455,13 @@ Test
 			}"
 		classVariables = Object()
 		ClassHelp.ClassHelp_classMemberDeclaresInParamsMethod(test, classVariables, 'M')
-		Assert(classVariables is: #('x:', 'myVal4:', 'y:'))
+		Assert(classVariables is: #("x:", "myVal4:", "y:"))
 
-		Assert(ClassHelp.ClassHelp_classMemberDeclaresInParamsMethod(
-			test, classVariables, 'M', find: 'x')
+		Assert(ClassHelp.ClassHelp_classMemberDeclaresInParamsMethod(test, classVariables,
+				'M', find: 'x')
 			is: 3)
-		Assert(ClassHelp.ClassHelp_classMemberDeclaresInParamsMethod(
-			test, classVariables, 'M', find: 'y')
+		Assert(ClassHelp.ClassHelp_classMemberDeclaresInParamsMethod(test, classVariables,
+				'M', find: 'y')
 			is: 28)
 		}
-
 	}
