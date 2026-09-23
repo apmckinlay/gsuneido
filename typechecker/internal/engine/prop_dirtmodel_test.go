@@ -353,7 +353,7 @@ func TestDirtModelKnownCases(t *testing.T) {
 					{Kind: synth.StIf, Expr: fnPredOn(synth.GtNum, synth.Expr{Kind: synth.ExVar, Name: "p0"}), Body: []synth.Stmt{
 						{Kind: synth.StMemberAssign, Name: "f0",
 							Expr: synth.Expr{Kind: synth.ExBin, Op: "+", Args: []synth.Expr{
-								synth.Expr{Kind: synth.ExVar, Name: "p0"}, litNumExpr(1)}}},
+								{Kind: synth.ExVar, Name: "p0"}, litNumExpr(1)}}},
 					}},
 					ret(litNumExpr(1)),
 				}},
