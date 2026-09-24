@@ -441,13 +441,16 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 			handlePending(p.Constant(True), endPos)
 			name := p.MatchIdent()
 			named(SuStr(name), &ast.Ident{Name: name, Pos: pos}, pos, p.EndPos)
+		} else if name, ok := p.argNameAhead(); ok {
+			handlePending(p.Constant(True), endPos)
+			pending = name
+			pendingPos = pos
 		} else {
-			expr := p.Expression() // could be name or value
-			if name := p.argname(expr); name != nil && p.MatchIf(tok.Colon) {
-				handlePending(p.Constant(True), endPos)
-				pending = name // it's a name but don't know value yet
-				pendingPos = pos
-			} else if pending != nil {
+			expr := p.Expression() // can only be a value now
+			if p.Token == tok.Colon {
+				p.Error("invalid argument name (must be a single identifier or literal)")
+			}
+			if pending != nil {
 				handlePending(expr, p.EndPos)
 			} else {
 				unnamed(expr)
@@ -467,14 +470,46 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 	return args
 }
 
-func (p *Parser) argname(expr ast.Expr) Value {
-	if id, ok := expr.(*ast.Ident); ok {
-		return SuStr(id.Name)
+// argNameAhead handles name: where the name is a single
+// Ident, String, or Number token followed by a colon.
+// It also handles negative numbers and dates (prefix Number Colon).
+func (p *Parser) argNameAhead() (Value, bool) {
+	next := p.Lxr.AheadSkip(0).Token
+	nameAhead := next == tok.Colon ||
+		((p.Token == tok.Sub || p.Token == tok.Hash) && next == tok.Number &&
+			p.Lxr.AheadSkip(1).Token == tok.Colon)
+	if !nameAhead {
+		return nil, false
 	}
-	if c, ok := expr.(*ast.Constant); ok {
-		return c.Val
+	var name Value
+	if p.Token.IsIdent() {
+		name = SuStr(p.Text)		
+	} else {
+		switch p.Token{
+		case tok.String:
+			name = SuStr(p.Text)
+		case tok.Number:
+			name = NumFromString(p.Text) // mirror p.number()
+		case tok.Sub:
+			p.Next()
+			name = NumFromString("-" + p.Text) // mirror p.number()
+		case tok.True:
+			name = True
+		case tok.False:
+			name = False
+		case tok.Hash:
+			p.Next()
+			name = DateFromLiteral(p.Text)
+			if name == NilDate {
+				p.Error("bad date literal ", p.Text)
+			}
+		default:
+			return nil, false
+		}
 	}
-	return nil
+	p.Next()
+	p.Match(tok.Colon)
+	return name, true
 }
 
 func (p *Parser) record() ast.Expr {

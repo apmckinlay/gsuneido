@@ -406,3 +406,69 @@ func TestParseStatements(t *testing.T) {
 	xtest("@X = F()", "expecting local variable")
 	xtest("@x = 123", "requires a call")
 }
+
+func TestArgumentName(t *testing.T) {
+	core.DefaultSingleQuotes = true
+	defer func() { core.DefaultSingleQuotes = false }()
+	parseExpr := func(p *Parser) ast.Expr {
+		t.Helper()
+		p.className = ""
+		p.InitFuncInfo()
+		result := p.Expression()
+		assert.T(t).This(p.Token).Is(tok.Eof)
+		return result
+	}
+	test := func(astParse bool, src string, expected string) {
+		t.Helper()
+		var p *Parser
+		if astParse {
+			p = AstParser(src)
+		} else {
+			p = NewParser(src)
+		}
+		expr := parseExpr(p)
+		actual := expr.String()
+		assert.T(t).This(actual).Like(expected)
+	}
+	xtest := func(astParse bool, src string, expected string) {
+		t.Helper()
+		var p *Parser
+		if astParse {
+			p = AstParser(src)
+		} else {
+			p = NewParser(src)
+		}
+		err := assert.Catch(func() { parseExpr(p) })
+		if actual, ok := err.(string); ok {
+			if !strings.Contains(actual, expected) {
+				t.Errorf("\n%#v\nexpect: %#v\nactual: %#v", src, expected, actual)
+			}
+		} else {
+			t.Error("unexpected:", err)
+		}
+	}
+	for _, astParse := range []bool{false, true} {		
+		test(astParse, `Object(ab: 123)`, "Call(Object ab:123)")
+		test(astParse, `Object("ab": 123)`, "Call(Object ab:123)")
+		test(astParse, `Object(1: x)`, "Call(Object 1:x)")
+		test(astParse, `Object(-1: x)`, "Call(Object -1:x)")
+		test(astParse, `Object(true: x)`, "Call(Object true:x)")
+		test(astParse, `Object(false: x)`, "Call(Object false:x)")
+		test(astParse, "f(a\n: 1)", "Call(f a:1)")
+		test(astParse, `f(:x)`, "Call(f x:x)")
+		test(astParse, `f(a: b ? c : d)`, "Call(f a:Trinary(b c d))")
+		test(astParse, `f(x ? y : z)`, "Call(f Trinary(x y z))")
+		test(astParse, `f(a:, b: 2)`, "Call(f a:true b:2)")
+		test(astParse, `f(#20001223: 123)`, "Call(f #20001223:123)")
+
+		xtest(astParse, `Object("a" $ "b": 123)`, "invalid argument name")
+		xtest(astParse, `Object(x $ "b": 123)`, "invalid argument name")
+		xtest(astParse, `Object(#(1,2): x)`, "invalid argument name")
+		xtest(astParse, `Object(1 + 2: x)`, "invalid argument name")
+		xtest(astParse, `Object(Date.Begin: x)`, "invalid argument name")
+		xtest(astParse, `Object(#sym: 123)`, "invalid argument name")
+		xtest(astParse, `f(#20009999: 123)`, "bad date literal")
+	}
+	test(false, `f("a" $ "b")`, "Call(f 'ab')")
+	test(true, `f("a" $ "b")`, "Call(f Nary(Cat 'a' 'b'))")
+}
