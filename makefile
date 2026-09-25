@@ -49,18 +49,18 @@ define BUILD_BINARY
 	go $(BUILD) -o $@ -ldflags "$(LDFLAGS)"
 endef
 
-gs_% : FORCE
+gs_% : FORCE dbms/server.crt
 	$(call BUILD_BINARY)
 ifeq ($(GOOS),darwin)
 	codesign --force --sign - $@
 endif
 
-gs_%.exe : FORCE
+gs_%.exe : FORCE dbms/server.crt
 	$(call BUILD_BINARY)
 
 WINGUI = -X main.mode=gui -H windowsgui
 	
-gs_windows_amd64_gui.exe : FORCE gsuneido_windows_amd64.syso
+gs_windows_amd64_gui.exe : FORCE gsuneido_windows_amd64.syso dbms/server.crt
 	@go version
 	go run cmd/deps/deps.go
 	CGO_ENABLED=1 \
@@ -79,7 +79,7 @@ deploy : git-status gs_windows_amd64.exe gs_windows_amd64_gui.exe \
 	cp gs_windows_amd64.exe deploy/gsport.exe
 	cp gs_windows_amd64_gui.exe deploy/gsuneido.exe
 	mv gs_linux_amd64 gs_linux_arm64 deploy
-	@echo Remember to tag the release and to update stdlib and suneidoc
+	rm -f dbms/server.crt dbms/server.key
 
 # NOTE: requires test e.g. from msys
 git-status :
@@ -123,7 +123,7 @@ clean :
 # for cross compiling on Arm Mac for Arm Windows
 LLVM_MINGW = /Users/andrew/apps/llvm-mingw/bin/aarch64-w64-mingw32
 
-gs_windows_arm64_gui.exe : FORCE gsuneido_windows_arm64.syso
+gs_windows_arm64_gui.exe : FORCE gsuneido_windows_arm64.syso dbms/server.crt
 	CGO_ENABLED=1 \
 	GOARCH=arm64 GOOS=windows \
 	CC=$(LLVM_MINGW)-clang \
