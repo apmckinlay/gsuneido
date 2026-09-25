@@ -20,6 +20,12 @@ var BlockBreak = BuiltinSuExcept("block:break")
 var BlockContinue = BuiltinSuExcept("block:continue")
 var BlockReturn = BuiltinSuExcept("block return")
 
+// binops is indexed by compound operator number (LoadStore/GetPut operand >> 1)
+var binops = [...]func(x, y Value) Value{
+	OpAdd, OpSub, OpCat, OpMul, OpDiv, OpMod,
+	OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor,
+}
+
 // invoke sets up a Frame and runs an [SuFunc].
 // The stack must already be in the form required by the function (massaged)
 // WARNING: invoke does not pop the stack, the caller is responsible for that.
@@ -257,10 +263,7 @@ loop:
 		case op.LoadStore:
 			i := fetchUint8()
 			n := fetchUint8()
-			op := []func(x, y Value) Value{
-				OpAdd, OpSub, OpCat, OpMul, OpDiv, OpMod,
-				OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n>>1]
-			th.stack[th.sp-1] = fr.getSetSlot(i, th.stack[th.sp-1], op, n&1 != 0)
+			th.stack[th.sp-1] = fr.getSetSlot(i, th.stack[th.sp-1], binops[n>>1], n&1 != 0)
 		case op.Dyload:
 			i := fetchUint8()
 			val := fr.getSlot(i)
@@ -364,13 +367,10 @@ loop:
 			th.Push(val)
 		case op.GetPut:
 			n := fetchUint8()
-			op := []func(x, y Value) Value{
-				OpAdd, OpSub, OpCat, OpMul, OpDiv, OpMod,
-				OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n>>1]
 			val := th.Pop()
 			m := th.Pop()
 			ob := th.Pop()
-			th.Push(ob.GetPut(th, m, val, op, n&1 != 0))
+			th.Push(ob.GetPut(th, m, val, binops[n>>1], n&1 != 0))
 		case op.RangeTo:
 			j := ToInt(th.Pop())
 			i := ToIndex(th.Pop())
