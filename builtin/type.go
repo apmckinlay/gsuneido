@@ -10,8 +10,20 @@ import (
 
 var _ = builtin(Type, "(value) :string")
 
+// typeNameVals caches the Value for each Type name to avoid
+// allocating a new SuStr (convTstring) on every call
+var typeNameVals = buildTypeNameVals()
+
+func buildTypeNameVals() [types.N]Value {
+	var a [types.N]Value
+	for i := range a {
+		a[i] = SuStr(types.Type(i).String())
+	}
+	return a
+}
+
 func Type(arg Value) Value {
-	return SuStr(arg.Type().String())
+	return typeNameVals[arg.Type()]
 }
 
 var _ = builtin(BooleanQ, "(value) :boolean")
