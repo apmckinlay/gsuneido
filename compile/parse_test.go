@@ -447,7 +447,7 @@ func TestArgumentName(t *testing.T) {
 			t.Error("unexpected:", err)
 		}
 	}
-	for _, astParse := range []bool{false, true} {		
+	for _, astParse := range []bool{false, true} {
 		test(astParse, `Object(ab: 123)`, "Call(Object ab:123)")
 		test(astParse, `Object("ab": 123)`, "Call(Object ab:123)")
 		test(astParse, `Object(1: x)`, "Call(Object 1:x)")
