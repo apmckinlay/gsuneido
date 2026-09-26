@@ -1140,7 +1140,7 @@ func (cg *cgen) call(node *ast.Call, ct calltype) {
 // generates code to push the arguments and returns an ArgSpec index
 func (cg *cgen) args(args []ast.Arg) int {
 	if len(args) == 1 {
-		if args[0].Name == SuStr("@") {
+		if args[0].Name == SuStr1("@") {
 			cg.expr(args[0].E)
 			return AsEach
 		} else if args[0].Name == SuStr("@+1") {

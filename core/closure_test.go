@@ -264,8 +264,8 @@ func TestClosure_CallstackLocals1(t *testing.T) {
 	var th Thread
 	result := th.Call(f, Zero, One)
 	ob := &SuObject{}
-	ob.Set(SuStr("x"), Zero)
-	ob.Set(SuStr("y"), SuStr("shadowed"))
+	ob.Set(SuStr1("x"), Zero)
+	ob.Set(SuStr1("y"), SuStr("shadowed"))
 	assert.This(result).Is(ob)
 }
 

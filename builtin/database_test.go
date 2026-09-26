@@ -43,7 +43,7 @@ func TestDatabase_Top10(t *testing.T) {
 
 	th := &Thread{}
 	th.SetDbms(dbms.NewDbmsLocal(db))
-	v := db_Top10(th, []Value{SuStr("tmp"), SuStr("c")})
+	v := db_Top10(th, []Value{SuStr("tmp"), SuStr1("c")})
 	ob := v.(*SuObject)
 
 	assert.T(t).This(ob.Size()).Is(10)
@@ -68,7 +68,7 @@ func TestDatabase_Distinct(t *testing.T) {
 	v := db_Distinct(th, []Value{SuStr("tmp")})
 	ob := v.(*SuObject)
 
-	assert.T(t).This(ToInt(ob.Get(nil, SuStr("a")))).Is(3)
-	assert.T(t).This(ToInt(ob.Get(nil, SuStr("b")))).Is(2)
-	assert.T(t).This(ToInt(ob.Get(nil, SuStr("c")))).Is(2)
+	assert.T(t).This(ToInt(ob.Get(nil, SuStr1("a")))).Is(3)
+	assert.T(t).This(ToInt(ob.Get(nil, SuStr1("b")))).Is(2)
+	assert.T(t).This(ToInt(ob.Get(nil, SuStr1("c")))).Is(2)
 }

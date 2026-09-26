@@ -600,7 +600,7 @@ func argspec(args []Arg) *ArgSpec {
 		return &ArgSpec0
 	}
 	if len(args) == 1 {
-		if args[0].Name == SuStr("@") {
+		if args[0].Name == SuStr1("@") {
 			return &ArgSpecEach0
 		} else if args[0].Name == SuStr("@+1") {
 			return &ArgSpecEach1

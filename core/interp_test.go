@@ -244,7 +244,7 @@ func BenchmarkCatChained(b *testing.B) {
 		Code: string(code),
 		Values: []Value{
 			SuStr("hello"),
-			SuStr(" "),
+			SuStr1(" "),
 			SuStr("world"),
 		},
 	}
@@ -267,7 +267,7 @@ func BenchmarkCatN(b *testing.B) {
 		Code: string(code),
 		Values: []Value{
 			SuStr("hello"),
-			SuStr(" "),
+			SuStr1(" "),
 			SuStr("world"),
 		},
 	}

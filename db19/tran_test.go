@@ -197,7 +197,7 @@ func TestGetIndexI(*testing.T) {
 	it.Next(ut) // output wasn't visible through r/o info
 	assert.That(!it.Eof())
 	key, _ := it.Cur()
-	assert.This(core.Unpack(key)).Is(core.SuStr("1"))
+	assert.This(core.Unpack(key)).Is(core.SuStr1("1"))
 	ut.Commit()
 
 	db.MustCheck()

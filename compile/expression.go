@@ -384,7 +384,7 @@ func (p *Parser) arguments(opening tok.Token) []ast.Arg {
 	return args
 }
 
-var atArg = SuStr("@")
+var atArg = SuStr1("@")
 var at1Arg = SuStr("@+1")
 var blockArg = SuStr("block")
 

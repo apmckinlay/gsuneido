@@ -216,8 +216,8 @@ func fromPoint(pt *stPoint, ob Value) Value {
 	if ob == nil {
 		ob = &SuObject{}
 	}
-	ob.Put(nil, SuStr("x"), IntVal(int(pt.x)))
-	ob.Put(nil, SuStr("y"), IntVal(int(pt.y)))
+	ob.Put(nil, SuStr1("x"), IntVal(int(pt.x)))
+	ob.Put(nil, SuStr1("y"), IntVal(int(pt.y)))
 	return ob
 }
 

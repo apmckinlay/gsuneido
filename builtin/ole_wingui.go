@@ -27,7 +27,7 @@ func CreateStreamOnHGlobal(a, b, c Value) Value {
 		intArg(a),
 		boolArg(b),
 		uintptr(unsafe.Pointer(&x)))
-	c.Put(nil, SuStr("x"), IntVal(int(x)))
+	c.Put(nil, SuStr1("x"), IntVal(int(x)))
 	return intRet(rtn)
 }
 
@@ -59,7 +59,7 @@ func OleLoadPicture(a, b, c, d, e Value) Value {
 		boolArg(c),
 		uintptr(unsafe.Pointer(guid)),
 		uintptr(unsafe.Pointer(&p)))
-	e.Put(nil, SuStr("x"), IntVal(int(p)))
+	e.Put(nil, SuStr1("x"), IntVal(int(p)))
 	return intRet(rtn)
 }
 

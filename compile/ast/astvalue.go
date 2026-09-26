@@ -112,9 +112,9 @@ func (a *Trinary) Get(_ *Thread, m Value) Value {
 		return SuStr("Trinary")
 	case SuStr("cond"):
 		return a.Cond.(Value)
-	case SuStr("t"):
+	case SuStr1("t"):
 		return a.T.(Value)
-	case SuStr("f"):
+	case SuStr1("f"):
 		return a.F.(Value)
 	}
 	return falsePos(a, m)
@@ -381,9 +381,9 @@ func (a *If) Get(_ *Thread, m Value) Value {
 		return SuStr("If")
 	case SuStr("cond"):
 		return a.Cond.(Value)
-	case SuStr("t"):
+	case SuStr1("t"):
 		return a.Then.(Value)
-	case SuStr("f"):
+	case SuStr1("f"):
 		if a.Else == nil {
 			return False
 		}

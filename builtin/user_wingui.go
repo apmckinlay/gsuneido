@@ -1750,8 +1750,8 @@ func ClientToScreen(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(clientToScreen,
 		intArg(a),
 		uintptr(unsafe.Pointer(pt)))
-	b.Put(nil, SuStr("x"), IntVal(int(pt.x)))
-	b.Put(nil, SuStr("y"), IntVal(int(pt.y)))
+	b.Put(nil, SuStr1("x"), IntVal(int(pt.x)))
+	b.Put(nil, SuStr1("y"), IntVal(int(pt.y)))
 	return boolRet(rtn)
 }
 
@@ -1992,7 +1992,7 @@ func GetWindowThreadProcessId(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(getWindowThreadProcessId,
 		intArg(a),
 		uintptr(unsafe.Pointer(&pid)))
-	b.Put(nil, SuStr("x"), IntVal(int(pid)))
+	b.Put(nil, SuStr1("x"), IntVal(int(pid)))
 	return boolRet(rtn)
 }
 

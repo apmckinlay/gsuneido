@@ -28,7 +28,7 @@ func TestStrConvert(t *testing.T) {
 func TestStringGet(t *testing.T) {
 	var v Value = SuStr("hello")
 	v = v.Get(nil, SuInt(1))
-	assert.T(t).This(v).Is(Value(SuStr("e")))
+	assert.T(t).This(v).Is(Value(SuStr1("e")))
 }
 
 func TestPanics(t *testing.T) {

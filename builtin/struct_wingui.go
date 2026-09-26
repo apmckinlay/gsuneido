@@ -533,8 +533,8 @@ func fromSCNotification(scn *stSCNotification) *SuObject {
 	ob.Put(nil, SuStr("foldLevelPrev"), IntVal(int(scn.foldLevelPrev)))
 	ob.Put(nil, SuStr("margin"), IntVal(int(scn.margin)))
 	ob.Put(nil, SuStr("listType"), IntVal(int(scn.listType)))
-	ob.Put(nil, SuStr("x"), IntVal(int(scn.x)))
-	ob.Put(nil, SuStr("y"), IntVal(int(scn.y)))
+	ob.Put(nil, SuStr1("x"), IntVal(int(scn.x)))
+	ob.Put(nil, SuStr1("y"), IntVal(int(scn.y)))
 	ob.Put(nil, SuStr("token"), IntVal(int(scn.token)))
 	ob.Put(nil, SuStr("updated"), IntVal(int(scn.updated)))
 	return ob

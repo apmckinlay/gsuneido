@@ -62,8 +62,8 @@ func TestGetWhere(t *testing.T) {
 
 	// Multiple fields - check structure
 	obj4 := &SuObject{}
-	obj4.Set(SuStr("a"), SuInt(1))
-	obj4.Set(SuStr("b"), SuInt(2))
+	obj4.Set(SuStr1("a"), SuInt(1))
+	obj4.Set(SuStr1("b"), SuInt(2))
 	w := getWhere(obj4)
 	assert.T(t).True(strings.HasPrefix(w, "where "))
 	assert.T(t).True(strings.Contains(w, "\nand "))
@@ -173,7 +173,7 @@ func TestGetOnlyUniqueIndex(t *testing.T) {
 	th := &Thread{}
 	ob := &SuObject{}
 	ob.Set(SuStr("query"), SuStr("tmp"))
-	ob.Set(SuStr("u"), SuStr("x"))
+	ob.Set(SuStr1("u"), SuStr1("x"))
 	row, hdr, _ := get(th, tran, ob, Only)
 	assert.T(t).Msg("get Only u=x").
 		This(AsStr(row.GetVal(hdr, "u", nil, nil))).Is("x")
