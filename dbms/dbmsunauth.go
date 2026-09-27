@@ -99,10 +99,6 @@ func (du *DbmsUnauth) Nonce(th *Thread) string {
 	return du.dbms.Nonce(th)
 }
 
-func (du *DbmsUnauth) Run(*Thread, string) Value {
-	panic(notauth)
-}
-
 func (du *DbmsUnauth) Schema(string) string {
 	panic(notauth)
 }

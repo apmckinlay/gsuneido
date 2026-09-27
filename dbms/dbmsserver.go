@@ -834,12 +834,6 @@ func cmdRewind(ss *serverSession) {
 	ss.PutBool(true)
 }
 
-func cmdRun(ss *serverSession) {
-	s := ss.GetStr()
-	v := ss.sc.dbms.Run(ss.thread, s)
-	ss.PutResult(v)
-}
-
 func cmdSessionId(ss *serverSession) {
 	s := ss.GetStr()
 	if s != "" {
@@ -929,7 +923,6 @@ var cmds = []command{ // order must match commmands.go
 	cmdReadCount,
 	cmdAction,
 	cmdRewind,
-	cmdRun,
 	cmdSessionId,
 	cmdSize,
 	cmdTimestamp,

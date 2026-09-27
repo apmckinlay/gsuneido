@@ -222,12 +222,6 @@ func (ms *muxSession) Nonce(*Thread) string {
 	return ms.GetStr_()
 }
 
-func (ms *muxSession) Run(_ *Thread, code string) Value {
-	ms.PutCmd(commands.Run).PutStr(code)
-	ms.Request()
-	return ms.ValueResult()
-}
-
 func (ms *muxSession) Schema(table string) string {
 	return ToStr(ms.Exec(nil, SuObjectOf(SuStr("Database.Schema"), SuStr(table))))
 }

@@ -7,7 +7,6 @@ package commands
 
 type Command byte
 
-// command values must match jSuneido
 const (
 	Abort Command = iota
 	Admin
@@ -38,7 +37,6 @@ const (
 	ReadCount
 	Action
 	Rewind
-	Run
 	SessionId
 	Size
 	Timestamp

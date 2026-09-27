@@ -11,7 +11,6 @@ import (
 
 	"slices"
 
-	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19"
@@ -259,12 +258,6 @@ func (*DbmsLocal) Log(s string) {
 func (*DbmsLocal) Nonce(th *Thread) string {
 	th.Nonce = Nonce()
 	return th.Nonce
-}
-
-func (*DbmsLocal) Run(th *Thread, s string) Value {
-	defer UseMainSuneido(th)()
-	trace.Dbms.Println("Run", s)
-	return compile.EvalString(th, s)
 }
 
 func (dbms *DbmsLocal) Schema(table string) string {

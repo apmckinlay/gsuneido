@@ -37,26 +37,26 @@ func _() {
 	_ = x[ReadCount-26]
 	_ = x[Action-27]
 	_ = x[Rewind-28]
-	_ = x[Run-29]
-	_ = x[SessionId-30]
-	_ = x[Size-31]
-	_ = x[Timestamp-32]
-	_ = x[Token-33]
-	_ = x[Transaction-34]
-	_ = x[Transactions-35]
-	_ = x[Update-36]
-	_ = x[WriteCount-37]
-	_ = x[EndSession-38]
-	_ = x[Asof-39]
+	_ = x[SessionId-29]
+	_ = x[Size-30]
+	_ = x[Timestamp-31]
+	_ = x[Token-32]
+	_ = x[Transaction-33]
+	_ = x[Transactions-34]
+	_ = x[Update-35]
+	_ = x[WriteCount-36]
+	_ = x[EndSession-37]
+	_ = x[Asof-38]
 }
 
-const _Command_name = "AbortAdminAuthCheckCloseCommitConnectionsCursorCursorsEraseExecStrategyFinalGetGetOneHeaderInfoKeysKillLibGetLibrariesLogNonceOrderOutputQueryReadCountActionRewindRunSessionIdSizeTimestampTokenTransactionTransactionsUpdateWriteCountEndSessionAsof"
+const _Command_name = "AbortAdminAuthCheckCloseCommitConnectionsCursorCursorsEraseExecStrategyFinalGetGetOneHeaderInfoKeysKillLibGetLibrariesLogNonceOrderOutputQueryReadCountActionRewindSessionIdSizeTimestampTokenTransactionTransactionsUpdateWriteCountEndSessionAsof"
 
-var _Command_index = [...]uint8{0, 5, 10, 14, 19, 24, 30, 41, 47, 54, 59, 63, 71, 76, 79, 85, 91, 95, 99, 103, 109, 118, 121, 126, 131, 137, 142, 151, 157, 163, 166, 175, 179, 188, 193, 204, 216, 222, 232, 242, 246}
+var _Command_index = [...]uint8{0, 5, 10, 14, 19, 24, 30, 41, 47, 54, 59, 63, 71, 76, 79, 85, 91, 95, 99, 103, 109, 118, 121, 126, 131, 137, 142, 151, 157, 163, 172, 176, 185, 190, 201, 213, 219, 229, 239, 243}
 
 func (i Command) String() string {
-	if i >= Command(len(_Command_index)-1) {
+	idx := int(i) - 0
+	if i < 0 || idx >= len(_Command_index)-1 {
 		return "Command(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _Command_name[_Command_index[i]:_Command_index[i+1]]
+	return _Command_name[_Command_index[idx]:_Command_index[idx+1]]
 }

@@ -396,12 +396,6 @@ func string_Reverse(this Value) Value {
 	return SuStr(hacks.BStoS(s))
 }
 
-var _ = method(string_ServerEval, "() :unknown")
-
-func string_ServerEval(th *Thread, this Value, args []Value) Value {
-	return th.Dbms().Run(th, ToStr(this))
-}
-
 var _ = method(string_Size, "() :number")
 
 func string_Size(this Value) Value {

@@ -31,7 +31,7 @@ type IDbms interface {
 	DisableTrigger(table string)
 	EnableTrigger(table string)
 
-	// Exec is used by the new style ServerEval(...)
+	// Exec is used by ServerEval(...)
 	Exec(th *Thread, args Value) Value
 
 	// Final returns the current number of final transactions
@@ -61,9 +61,6 @@ type IDbms interface {
 
 	// Nonce returns a random string from the server
 	Nonce(*Thread) string
-
-	// Run is used by the old style string.ServerEval()
-	Run(th *Thread, code string) Value
 
 	Schema(table string) string
 
