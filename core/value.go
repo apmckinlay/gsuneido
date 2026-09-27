@@ -268,6 +268,7 @@ func ToContainer(x Value) Container {
 	panic("can't convert " + x.Type().String() + " to Object")
 }
 
+// ToBool returns true or false or panics if not a boolean
 func ToBool(x Value) bool {
 	if x == True {
 		return true
