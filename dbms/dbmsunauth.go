@@ -28,7 +28,7 @@ Auth Flow
 12. app Auth sets up permissions (for tables and ServerEval whitelist)
 13. for developers, the app Auth can grant permission to alter permissions later
 14. if app Auth fails (e.g. throws exception) permissions are cleared (defer)
-15. once app Auth returns true, permissions are sealed (except for developer exception)
+15. once app Auth returns true, permissions are moved to serverConn
 */
 
 func Unauth(dbms *DbmsLocal) IDbms {
@@ -64,7 +64,7 @@ func (du *DbmsUnauth) Auth(th *Thread, data Value) (result bool) {
 			th.SetDbms(prev)
 		}
 	}()
-	result = auth(th, data)
+	result, _ = auth(th, data)
 	if result {
 		StandaloneDbms.Store(du.dbms)
 	}
@@ -75,13 +75,22 @@ func (du *DbmsUnauth) Auth(th *Thread, data Value) (result bool) {
 var authLimiter = rate.NewLimiter(rate.Limit(4), 1)
 var authContext = context.Background()
 
-func auth(th *Thread, data Value) bool {
+func auth(th *Thread, data Value) (result bool, perms *Perms) {
 	authLimiter.Wait(authContext)
 	authFn := Global.FindName(th, "Auth")
 	if authFn == nil {
-		return false
+		return false, nil
 	}
-	return ToBool(th.CallEach(authFn, data))
+	// the app Auth sets up permissions with Perm.ServerEval
+	th.SetPerms(&Perms{})
+	defer func() {
+		th.SetPerms(nil) // clear perms from thread, caller takes ownership
+	}()
+	result = ToBool(th.CallEach(authFn, data))
+	if result {
+		perms = th.Perms()
+	}
+	return result, perms
 }
 
 func (du *DbmsUnauth) Check(bool) string {

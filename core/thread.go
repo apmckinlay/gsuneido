@@ -94,6 +94,9 @@ type thread1 struct {
 
 	// ReturnMulti is used to return multiple values
 	ReturnMulti []Value
+
+	// perms hold the permissions temporarily during Auth
+	perms *Perms
 }
 
 // thread2 is the non-reset-able part of Thread
@@ -178,6 +181,14 @@ func (th *Thread) SetSession(s string) {
 
 func (th *Thread) SetSviews(sv *Sviews) {
 	th.sv = sv
+}
+
+func (th *Thread) SetPerms(p *Perms) {
+	th.perms = p
+}
+
+func (th *Thread) Perms() *Perms {
+	return th.perms
 }
 
 // Push pushes a value onto the value stack.

@@ -112,10 +112,14 @@ func (dbms *DbmsLocal) Dump(table, to, publicKey string) string {
 	return ""
 }
 
+func execName(v Value) string {
+	return ToStr(ToContainer(v).ListGet(0))
+}
+
 func (*DbmsLocal) Exec(th *Thread, v Value) Value {
 	defer UseMainSuneido(th)()
 	trace.Dbms.Println("Exec", v)
-	fname := ToStr(ToContainer(v).ListGet(0))
+	fname := execName(v)
 	if before, after, ok := strings.Cut(fname, "."); ok {
 		ob := Global.GetName(th, before)
 		m := after

@@ -48,12 +48,12 @@ type serverConn struct {
 	sessions   map[uint32]*serverSession // the sessions on this connection
 	remoteAddr string
 	Sviews
-	idleCount    int          // guarded by serverConnsLock
-	sessionsLock sync.Mutex   // guards sessions
-	logSize      atomic.Int32 // cumulative size of logged data in bytes
-	authTries    atomic.Int32 // sessions share the connection so must be atomic
-	// id is primarily used as a key to store the set of connections in a map
-	id uint32
+	idleCount    int                   // guarded by serverConnsLock
+	sessionsLock sync.Mutex            // guards sessions
+	logSize      atomic.Int32          // cumulative size of logged data in bytes
+	authTries    atomic.Int32          // sessions share the connection so must be atomic
+	id           uint32                // id is used as a key to store connections in a map
+	perms        atomic.Pointer[Perms] // set up by Auth e.g. the ServerEval whitelist
 }
 
 // serverSession handles one client session.
@@ -412,9 +412,10 @@ func cmdAuth(ss *serverSession) {
 	if _, ok := ss.sc.dbms.(*DbmsUnauth); !ok {
 		panic("already authorized")
 	}
-	result := auth(ss.thread, data)
+	result, perms := auth(ss.thread, data)
 	if result {
 		ss.sc.authTries.Store(0)
+		ss.sc.perms.Store(perms)
 		ss.sc.dbms = ss.sc.dbms.(*DbmsUnauth).dbms // remove DbmsUnauth
 	}
 	ss.PutBool(true).PutBool(result)
@@ -521,6 +522,10 @@ func cmdErase(ss *serverSession) {
 
 func cmdExec(ss *serverSession) {
 	ob := ss.GetVal()
+	fname := execName(ob)
+	if p := ss.sc.perms.Load(); p == nil || !p.ServerEvalAllowed(fname) {
+		panic("ServerEval: not permitted: " + fname)
+	}
 	v := ss.sc.dbms.Exec(ss.thread, ob)
 	ss.PutResult(v)
 }

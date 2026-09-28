@@ -38,6 +38,7 @@ var sigClass = map[string]string{
 	"opgp":        "OpenPGP",
 	"pcm":         "Pcmsrv64",
 	"pe":          "PdfEncrypt",
+	"perm":        "Perm",
 	"rnd":         "Random",
 	"sqs":         "Query",
 	"suneido":     "Suneido",
