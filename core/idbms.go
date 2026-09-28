@@ -10,7 +10,7 @@ type IDbms interface {
 	Admin(string, *Sviews)
 
 	// Auth authorizes the connection with the server
-	Auth(*Thread, string) bool
+	Auth(*Thread, Value) bool
 
 	// Check checks the database like -check
 	// It returns "" or an error message.
@@ -59,9 +59,6 @@ type IDbms interface {
 	// Log writes to the server's error.log
 	Log(string)
 
-	// Nonce returns a random string from the server
-	Nonce(*Thread) string
-
 	Schema(table string) string
 
 	// SessionId sets and/or returns the session id for the current connection
@@ -72,9 +69,6 @@ type IDbms interface {
 
 	// Timestamp returns a guaranteed unique date/time
 	Timestamp() SuDate
-
-	// Token returns data to use with Auth
-	Token() string
 
 	// Transaction starts a transaction
 	Transaction(update bool) ITran
@@ -87,9 +81,6 @@ type IDbms interface {
 
 	// Use adds a library to those in use
 	Use(lib string) bool
-
-	// Unwrap removes DbmsUnauth if DbmsAuth
-	Unwrap() IDbms
 }
 
 // ITran is the interface to a dbms transaction,

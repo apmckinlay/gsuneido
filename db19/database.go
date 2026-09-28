@@ -651,12 +651,6 @@ func (db *Database) Closed() bool {
 	return db.closed.Load()
 }
 
-func (db *Database) HaveUsers() bool {
-	rt := db.NewReadTran()
-	ti := rt.GetInfo("users")
-	return ti != nil && ti.Nrows > 0
-}
-
 //-------------------------------------------------------------------
 
 func IndexKey(store *stor.Stor, is *ixkey.Spec, recoff uint64) string {

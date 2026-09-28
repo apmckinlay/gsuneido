@@ -3,14 +3,45 @@
 
 package dbms
 
-import . "github.com/apmckinlay/gsuneido/core"
+import (
+	"context"
+
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/atomics"
+	"golang.org/x/time/rate"
+)
+
+/*
+Auth Flow
+---------
+1. client connects to server
+2. client connection starts out with no permissions
+3. the server rejects all requests except for loading code
+4. clients gets name and password from user using login dialog
+5. client calls Database.Auth
+6. auth request goes to server
+7. server rate limits Auth calls, max of 3 tries, then disconnect
+8. server calls application defined Auth function
+9. app Auth grants itself read permission to user/password table
+10. app Auth verifies user and password, return false on fail
+11. app Auth grants itself read permission to permission table
+12. app Auth sets up permissions (for tables and ServerEval whitelist)
+13. for developers, the app Auth can grant permission to alter permissions later
+14. if app Auth fails (e.g. throws exception) permissions are cleared (defer)
+15. once app Auth returns true, permissions are sealed (except for developer exception)
+*/
 
 func Unauth(dbms *DbmsLocal) IDbms {
 	return &DbmsUnauth{dbms: dbms}
 }
 
+// StandaloneDbms is the current dbms for standalone mode.
+// It starts as an unauth wrapper and is replaced by DbmsLocal on auth.
+// Needs atomic because Auth runs on a different thread than GetDbms callers.
+var StandaloneDbms atomics.Intfc[IDbms]
+
 // DbmsUnauth is a wrapper for DbmsLocal for unauthorized client connections.
-// Only allows Auth, LibGet, Libraries, Nonce, SessionId, and Use
+// Only allows LibGet, Libraries, SessionId, and Use
 type DbmsUnauth struct {
 	dbms *DbmsLocal
 }
@@ -23,8 +54,34 @@ func (du *DbmsUnauth) Admin(string, *Sviews) {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Auth(th *Thread, data string) bool {
-	return du.dbms.Auth(th, data)
+func (du *DbmsUnauth) Auth(th *Thread, data Value) (result bool) {
+	// This is only used by standalone mode.
+	// Give the thread the unwrapped dbms since the app Auth may query the db.
+	// Restore it if the app Auth fails or throws.
+	prev := th.SetDbms(du.dbms)
+	defer func() {
+		if !result {
+			th.SetDbms(prev)
+		}
+	}()
+	result = auth(th, data)
+	if result {
+		StandaloneDbms.Store(du.dbms)
+	}
+	return result
+}
+
+// authLimiter limits the rate of authentication attempts
+var authLimiter = rate.NewLimiter(rate.Limit(4), 1)
+var authContext = context.Background()
+
+func auth(th *Thread, data Value) bool {
+	authLimiter.Wait(authContext)
+	authFn := Global.FindName(th, "Auth")
+	if authFn == nil {
+		return false
+	}
+	return ToBool(th.CallEach(authFn, data))
 }
 
 func (du *DbmsUnauth) Check(bool) string {
@@ -95,10 +152,6 @@ func (du *DbmsUnauth) Log(s string) {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Nonce(th *Thread) string {
-	return du.dbms.Nonce(th)
-}
-
 func (du *DbmsUnauth) Schema(string) string {
 	panic(notauth)
 }
@@ -112,10 +165,6 @@ func (du *DbmsUnauth) Size() uint64 {
 }
 
 func (du *DbmsUnauth) Timestamp() SuDate {
-	panic(notauth)
-}
-
-func (du *DbmsUnauth) Token() string {
 	panic(notauth)
 }
 
@@ -133,11 +182,4 @@ func (du *DbmsUnauth) Unuse(lib string) bool {
 
 func (du *DbmsUnauth) Use(lib string) bool {
 	return du.dbms.Use(lib)
-}
-
-func (du *DbmsUnauth) Unwrap() IDbms {
-	if DbmsAuth { // for standalone
-		return du.dbms
-	}
-	return du
 }

@@ -354,8 +354,12 @@ func openDbms() {
 	db19.StartTimestamps()
 	db19.StartConcur(db, persistInterval())
 	dbmsLocal = dbms.NewDbmsLocal(db)
-	DbmsAuth = options.Action == "server" || mode != "gui" || !db.HaveUsers()
-	GetDbms = getDbms
+	if options.Action == "server" {
+		GetDbms = func() IDbms { return dbmsLocal }
+	} else {
+		dbms.StandaloneDbms.Store(dbms.Unauth(dbmsLocal))
+		GetDbms = func() IDbms { return dbms.StandaloneDbms.Load() }
+	}
 	exit.Add("close database", func() {
 		exit.Progress("database closing")
 		db.CloseKeepMapped() // keep mapped to avoid errors during shutdown
@@ -404,13 +408,6 @@ func persistInterval() time.Duration {
 		d = 10 * time.Second
 	}
 	return d
-}
-
-func getDbms() IDbms {
-	if DbmsAuth {
-		return dbmsLocal
-	}
-	return dbms.Unauth(dbmsLocal)
 }
 
 // func checkState() {

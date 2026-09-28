@@ -30,28 +30,26 @@ func _() {
 	_ = x[LibGet-19]
 	_ = x[Libraries-20]
 	_ = x[Log-21]
-	_ = x[Nonce-22]
-	_ = x[Order-23]
-	_ = x[Output-24]
-	_ = x[Query-25]
-	_ = x[ReadCount-26]
-	_ = x[Action-27]
-	_ = x[Rewind-28]
-	_ = x[SessionId-29]
-	_ = x[Size-30]
-	_ = x[Timestamp-31]
-	_ = x[Token-32]
-	_ = x[Transaction-33]
-	_ = x[Transactions-34]
-	_ = x[Update-35]
-	_ = x[WriteCount-36]
-	_ = x[EndSession-37]
-	_ = x[Asof-38]
+	_ = x[Order-22]
+	_ = x[Output-23]
+	_ = x[Query-24]
+	_ = x[ReadCount-25]
+	_ = x[Action-26]
+	_ = x[Rewind-27]
+	_ = x[SessionId-28]
+	_ = x[Size-29]
+	_ = x[Timestamp-30]
+	_ = x[Transaction-31]
+	_ = x[Transactions-32]
+	_ = x[Update-33]
+	_ = x[WriteCount-34]
+	_ = x[EndSession-35]
+	_ = x[Asof-36]
 }
 
-const _Command_name = "AbortAdminAuthCheckCloseCommitConnectionsCursorCursorsEraseExecStrategyFinalGetGetOneHeaderInfoKeysKillLibGetLibrariesLogNonceOrderOutputQueryReadCountActionRewindSessionIdSizeTimestampTokenTransactionTransactionsUpdateWriteCountEndSessionAsof"
+const _Command_name = "AbortAdminAuthCheckCloseCommitConnectionsCursorCursorsEraseExecStrategyFinalGetGetOneHeaderInfoKeysKillLibGetLibrariesLogOrderOutputQueryReadCountActionRewindSessionIdSizeTimestampTransactionTransactionsUpdateWriteCountEndSessionAsof"
 
-var _Command_index = [...]uint8{0, 5, 10, 14, 19, 24, 30, 41, 47, 54, 59, 63, 71, 76, 79, 85, 91, 95, 99, 103, 109, 118, 121, 126, 131, 137, 142, 151, 157, 163, 172, 176, 185, 190, 201, 213, 219, 229, 239, 243}
+var _Command_index = [...]uint8{0, 5, 10, 14, 19, 24, 30, 41, 47, 54, 59, 63, 71, 76, 79, 85, 91, 95, 99, 103, 109, 118, 121, 126, 132, 137, 146, 152, 158, 167, 171, 180, 191, 203, 209, 219, 229, 233}
 
 func (i Command) String() string {
 	idx := int(i) - 0

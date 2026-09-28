@@ -47,24 +47,8 @@ func (dbms *DbmsLocal) Admin(admin string, sv *Sviews) {
 	qry.DoAdmin(dbms.db, admin, sv)
 }
 
-func (dbms *DbmsLocal) Auth(th *Thread, s string) bool {
-	if DbmsAuth {
-		panic("already authorized")
-	}
-	if !auth(th, s) {
-		return false
-	}
-	DbmsAuth = true
-	th.SetDbms(dbms) // not strictly necessary, removes unauth wrap
+func (dbms *DbmsLocal) Auth(th *Thread, data Value) bool {
 	return true
-}
-
-func auth(th *Thread, s string) bool {
-	if AuthUser(th, s, th.Nonce) {
-		th.Nonce = ""
-		return true
-	}
-	return AuthToken(s)
 }
 
 func (dbms *DbmsLocal) Check(full bool) string {
@@ -255,11 +239,6 @@ func (*DbmsLocal) Log(s string) {
 	log.Println(s)
 }
 
-func (*DbmsLocal) Nonce(th *Thread) string {
-	th.Nonce = Nonce()
-	return th.Nonce
-}
-
 func (dbms *DbmsLocal) Schema(table string) string {
 	return dbms.db.Schema(table)
 }
@@ -277,10 +256,6 @@ func (dbms *DbmsLocal) Size() uint64 {
 
 func (*DbmsLocal) Timestamp() SuDate {
 	return db19.Timestamp()
-}
-
-func (*DbmsLocal) Token() string {
-	return Token()
 }
 
 func (dbms *DbmsLocal) Transaction(update bool) ITran {
@@ -339,10 +314,6 @@ func (dbms *DbmsLocal) updateLibraries(fn func(libs []string) []string) bool {
 	}
 	dbms.badlibs.Store(false) // reset logging
 	return slices.Equal(oldlibs, dbms.libraries.Swap(newlibs))
-}
-
-func (dbms *DbmsLocal) Unwrap() IDbms {
-	return dbms
 }
 
 func (dbms *DbmsLocal) FormatQuery(query string) string {

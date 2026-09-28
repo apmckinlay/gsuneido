@@ -50,8 +50,7 @@ type serverConn struct {
 	idleCount    int          // guarded by serverConnsLock
 	sessionsLock sync.Mutex   // guards sessions
 	logSize      atomic.Int32 // cumulative size of logged data in bytes
-	nonce        string       // for authentication, shared across sessions
-	nonceOld     bool         // for two-phase expiration like tokens
+	authTries    atomic.Int32 // sessions share the connection so must be atomic
 	// id is primarily used as a key to store the set of connections in a map
 	id uint32
 }
@@ -111,8 +110,6 @@ func background() {
 	for {
 		time.Sleep(backgroundInterval)
 		idleCheck()
-		expireTokens()
-		expireNonces()
 	}
 }
 
@@ -126,37 +123,6 @@ func idleCheck() {
 		if sc.idleCount > options.TimeoutMinutes {
 			sc.serverLog("closing idle connection")
 			sc.close()
-		}
-	}
-}
-
-func expireTokens() {
-	tokensLock.Lock()
-	defer tokensLock.Unlock()
-	for token, old := range tokens {
-		if old {
-			delete(tokens, token)
-		} else {
-			tokens[token] = true // mark it as old
-		}
-	}
-}
-
-func expireNonces() {
-	serverConnsLock.Lock()
-	defer serverConnsLock.Unlock()
-	expireNoncesLocked(serverConns)
-}
-
-// expireNoncesLocked marks fresh nonces as old and removes old nonces.
-// The caller must hold serverConnsLock.
-func expireNoncesLocked(conns map[uint32]*serverConn) {
-	for _, sc := range conns {
-		if sc.nonceOld {
-			sc.nonce = ""
-			sc.nonceOld = false
-		} else if sc.nonce != "" {
-			sc.nonceOld = true
 		}
 	}
 }
@@ -187,9 +153,7 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn, config *tls.Config) {
 	msc := mux.NewServerConn(tlsConn)
 	sc := &serverConn{dbms: dbms, id: msc.Id(), conn: tlsConn, remoteAddr: addr,
 		sessions: make(map[uint32]*serverSession)}
-	if dbms.db.HaveUsers() {
-		sc.dbms = &DbmsUnauth{dbms: dbms}
-	}
+	sc.dbms = &DbmsUnauth{dbms: dbms}
 	serverConnsLock.Lock()
 	serverConns[sc.id] = sc
 	serverConnsLock.Unlock()
@@ -420,26 +384,26 @@ func cmdAdmin(ss *serverSession) {
 	ss.PutBool(true)
 }
 
+const maxAuthTries = 3
+
 func cmdAuth(ss *serverSession) {
-	s := ss.GetStr()
+	data := ss.GetVal() // consume even if closing so request's Remaining assert passes
+	// prevent brute force attacks
+	if ss.sc.authTries.Add(1) > maxAuthTries {
+		serverConnsLock.Lock()
+		defer serverConnsLock.Unlock()
+		ss.sc.close()
+		return
+	}
 	if _, ok := ss.sc.dbms.(*DbmsUnauth); !ok {
 		panic("already authorized")
 	}
-	result := ss.auth(s)
+	result := auth(ss.thread, data)
 	if result {
+		ss.sc.authTries.Store(0)
 		ss.sc.dbms = ss.sc.dbms.(*DbmsUnauth).dbms // remove DbmsUnauth
 	}
 	ss.PutBool(true).PutBool(result)
-}
-
-func (ss *serverSession) auth(s string) bool {
-	nonce := ss.sc.nonce
-	ss.sc.nonce = ""
-	ss.sc.nonceOld = false
-	if AuthUser(ss.thread, s, nonce) {
-		return true
-	}
-	return AuthToken(s)
 }
 
 func cmdAsof(ss *serverSession) {
@@ -770,12 +734,6 @@ func (sc *serverConn) limitLog(s string) string {
 	return ""
 }
 
-func cmdNonce(ss *serverSession) {
-	ss.sc.nonce = Nonce()
-	ss.sc.nonceOld = false
-	ss.PutBool(true).PutStr_(ss.sc.nonce)
-}
-
 func cmdOrder(ss *serverSession) {
 	order := ss.getQorC().Order()
 	ss.PutBool(true).PutStrs(order)
@@ -859,11 +817,6 @@ func cmdTimestamp(ss *serverSession) {
 	ss.PutBool(true).PutVal(ts)
 }
 
-func cmdToken(ss *serverSession) {
-	tok := Token()
-	ss.PutBool(true).PutStr(tok)
-}
-
 func cmdTransaction(ss *serverSession) {
 	update := ss.GetBool()
 	tran := ss.sc.dbms.Transaction(update)
@@ -916,7 +869,6 @@ var cmds = []command{ // order must match commmands.go
 	cmdLibGet,
 	cmdLibraries,
 	cmdLog,
-	cmdNonce,
 	cmdOrder,
 	cmdOutput,
 	cmdQuery,
@@ -926,7 +878,6 @@ var cmds = []command{ // order must match commmands.go
 	cmdSessionId,
 	cmdSize,
 	cmdTimestamp,
-	cmdToken,
 	cmdTransaction,
 	cmdTransactions,
 	cmdUpdate,

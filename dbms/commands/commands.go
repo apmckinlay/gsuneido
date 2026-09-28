@@ -30,7 +30,6 @@ const (
 	LibGet
 	Libraries
 	Log
-	Nonce
 	Order
 	Output
 	Query
@@ -40,7 +39,6 @@ const (
 	SessionId
 	Size
 	Timestamp
-	Token
 	Transaction
 	Transactions
 	Update

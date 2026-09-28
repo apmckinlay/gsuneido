@@ -51,11 +51,8 @@ func (ms *muxSession) Admin(admin string, _ *Sviews) {
 	ms.Request()
 }
 
-func (ms *muxSession) Auth(th *Thread, s string) bool {
-	if s == "" {
-		return false
-	}
-	ms.PutCmd(commands.Auth).PutStr(s)
+func (ms *muxSession) Auth(th *Thread, data Value) bool {
+	ms.PutCmd(commands.Auth).PutVal(data)
 	ms.Request()
 	if ms.GetBool() {
 		if options.Mode == "gui" {
@@ -216,12 +213,6 @@ func (ms *muxSession) Libraries() []string {
 	return ms.GetStrs()
 }
 
-func (ms *muxSession) Nonce(*Thread) string {
-	ms.PutCmd(commands.Nonce)
-	ms.Request()
-	return ms.GetStr_()
-}
-
 func (ms *muxSession) Schema(table string) string {
 	return ToStr(ms.Exec(nil, SuObjectOf(SuStr("Database.Schema"), SuStr(table))))
 }
@@ -249,12 +240,6 @@ func (ms *muxSession) Timestamp() SuDate {
 	return ms.GetVal().(SuDate)
 }
 
-func (ms *muxSession) Token() string {
-	ms.PutCmd(commands.Token)
-	ms.Request()
-	return ms.GetStr()
-}
-
 func (ms *muxSession) Transaction(update bool) ITran {
 	ms.PutCmd(commands.Transaction).PutBool(update)
 	ms.Request()
@@ -279,10 +264,6 @@ func (ms *muxSession) Use(lib string) bool {
 	}
 	panic("can't Use('" + lib + "')\n" +
 		"When client-server, only the server can Use")
-}
-
-func (ms *muxSession) Unwrap() IDbms {
-	return ms
 }
 
 func (ms *muxSession) getHdr() *Header {

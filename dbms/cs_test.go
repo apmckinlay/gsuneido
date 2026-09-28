@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -23,6 +24,9 @@ import (
 
 func TestClientServer(*testing.T) {
 	// trace.Set(int(trace.ClientServer))
+	Global.TestDef("Auth",
+		compile.Constant("function (@args) { return true }"))
+	defer Global.UnloadAll()
 	options.BuiltDate = "Dec 29 2020 12:34"
 	db := db19.CreateDb(stor.HeapStor(8192))
 	dbmsLocal := NewDbmsLocal(db)
@@ -50,6 +54,7 @@ func TestClientServer(*testing.T) {
 	}
 	c := NewDbmsClient(tlsConn)
 	ses := c.NewSession()
+	ses.Auth(&Thread{}, &SuObject{})
 	args := SuObjectOf(SuStr("tables sort table"))
 	ses.Get(nil, args, Next)
 

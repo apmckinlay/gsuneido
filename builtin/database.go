@@ -30,10 +30,10 @@ func Database(th *Thread, args []Value) Value {
 
 var databaseMethods = methods("db")
 
-var _ = staticMethod(db_Auth, "(data :string) :boolean")
+var _ = staticMethod(db_Auth, "(@args)")
 
 func db_Auth(th *Thread, args []Value) Value {
-	return SuBool(th.Dbms().Auth(th, ToStr(args[0])))
+	return SuBool(th.Dbms().Auth(th, args[0]))
 }
 
 var _ = staticMethod(db_Check, "() :string")
@@ -109,12 +109,6 @@ func db_Load(th *Thread, args []Value) Value {
 		SuObjectOf(SuStr("Database.Load"), args[0], args[1], args[2], args[3]))
 }
 
-var _ = staticMethod(db_Nonce, "() :string")
-
-func db_Nonce(th *Thread, args []Value) Value {
-	return SuStr(th.Dbms().Nonce(th))
-}
-
 var _ = staticMethod(db_Schema, "(table :string) :string")
 
 func db_Schema(th *Thread, args []Value) Value {
@@ -131,12 +125,6 @@ var _ = staticMethod(db_TempDest, "() :number")
 
 func db_TempDest() Value {
 	return Zero
-}
-
-var _ = staticMethod(db_Token, "() :string")
-
-func db_Token(th *Thread, args []Value) Value {
-	return SuStr(th.Dbms().Token())
 }
 
 var _ = staticMethod(db_Transactions, "() :object")
