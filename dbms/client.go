@@ -23,6 +23,12 @@ import (
 //go:embed server.crt
 var ServerCert []byte
 
+//go:embed client.crt
+var ClientCert []byte
+
+//go:embed client.key
+var ClientKey []byte
+
 var VersionMismatch func(string) // injected by gsuneido.go
 
 func ConnectClient(addr string, port string) net.Conn {
@@ -41,20 +47,30 @@ func ConnectClient(addr string, port string) net.Conn {
 		cantConnect(errmsg)
 	}
 	// Upgrade to TLS after successful hello
+	tlsConn := tls.Client(conn, clientTLSConfig())
+	if err := tlsConn.Handshake(); err != nil {
+		cantConnect("TLS handshake failed: " + err.Error())
+	}
+	return tlsConn
+}
+
+// clientTLSConfig pins the server via the embedded server cert
+// and identifies this client via the embedded client key pair.
+func clientTLSConfig() *tls.Config {
 	caCertPool := x509.NewCertPool()
 	ok := caCertPool.AppendCertsFromPEM(ServerCert)
 	if !ok {
 		cantConnect("Failed to append embedded cert to pool")
 	}
-	config := &tls.Config{
-		RootCAs:    caCertPool,
-		ServerName: "localhost", // Must match CN or SAN
+	cert, err := tls.X509KeyPair(ClientCert, ClientKey)
+	if err != nil {
+		cantConnect("Failed to load embedded client key pair: " + err.Error())
 	}
-	tlsConn := tls.Client(conn, config)
-	if err := tlsConn.Handshake(); err != nil {
-		cantConnect("TLS handshake failed: " + err.Error())
+	return &tls.Config{
+		RootCAs:      caCertPool,
+		ServerName:   "localhost", // Must match CN or SAN
+		Certificates: []tls.Certificate{cert},
 	}
-	return tlsConn
 }
 
 // dialWithRetry does DialTimeout with a retry

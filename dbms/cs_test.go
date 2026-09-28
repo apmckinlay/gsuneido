@@ -7,6 +7,7 @@ package dbms
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -32,23 +33,13 @@ func TestClientServer(*testing.T) {
 	dbmsLocal := NewDbmsLocal(db)
 	p1, p2 := net.Pipe()
 	workers = mux.NewWorkers(doRequest)
-	cert, err := tls.X509KeyPair(ServerCert, ServerKey)
-	if err != nil {
-		panic(err)
-	}
-	serverConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	}
-	go newServerConn(dbmsLocal, p1, serverConfig)
+	go newServerConn(dbmsLocal, p1, serverTLSConfig())
 	// Exchange hello over plain connection
 	errmsg := checkHello(p2)
 	assert.This(errmsg).Is("")
 	p2.Write(hello())
 	// Upgrade client side to TLS
-	clientConfig := &tls.Config{
-		InsecureSkipVerify: true, // For testing with self-signed cert
-	}
-	tlsConn := tls.Client(p2, clientConfig)
+	tlsConn := tls.Client(p2, clientTLSConfig())
 	if err := tlsConn.Handshake(); err != nil {
 		panic(err)
 	}
@@ -63,6 +54,71 @@ func TestClientServer(*testing.T) {
 	ses2.Close()
 
 	time.Sleep(25 * time.Millisecond)
+}
+
+func TestTLSPinning(t *testing.T) {
+	assert := assert.T(t)
+	// with the expected certs on both ends, the connection is established
+	assert.That(tryHandshake(serverTLSConfig(), clientTLSConfig()))
+	// a client without a client certificate (i.e. built before mutual
+	// pinning was added) is rejected by the server
+	assert.That(!tryHandshake(serverTLSConfig(), oldClientConfig()))
+	// a client with a certificate the server does not trust is rejected
+	serverPair, err := tls.X509KeyPair(ServerCert, ServerKey)
+	assert.That(err == nil)
+	assert.That(!tryHandshake(serverTLSConfig(), &tls.Config{
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{serverPair},
+	}))
+	// a server with a certificate the client does not trust is rejected
+	clientPair, err := tls.X509KeyPair(ClientCert, ClientKey)
+	assert.That(err == nil)
+	assert.That(!tryHandshake(&tls.Config{
+		Certificates: []tls.Certificate{clientPair},
+	}, clientTLSConfig()))
+}
+
+// oldClientConfig is like clientTLSConfig but without a client certificate
+func oldClientConfig() *tls.Config {
+	caCertPool := x509.NewCertPool()
+	ok := caCertPool.AppendCertsFromPEM(ServerCert)
+	if !ok {
+		panic("failed to append embedded cert to pool")
+	}
+	return &tls.Config{
+		RootCAs:    caCertPool,
+		ServerName: "localhost",
+	}
+}
+
+// tryHandshake attempts a TLS handshake over TCP loopback.
+// It returns true only if both ends accept the connection.
+// Both ends must be checked because, with TLS 1.3, a client can finish
+// its own handshake before the server has validated its certificate.
+// It uses TCP rather than net.Pipe so a rejected handshake can't deadlock
+// on writing the alert.
+func tryHandshake(serverConfig, clientConfig *tls.Config) bool {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	assert.That(err == nil)
+	defer l.Close()
+	srvErr := make(chan error, 1)
+	go func() {
+		conn, err := l.Accept()
+		if err != nil {
+			srvErr <- err
+			return
+		}
+		sconn := tls.Server(conn, serverConfig)
+		srvErr <- sconn.Handshake()
+		sconn.Close()
+	}()
+	conn, err := net.Dial("tcp", l.Addr().String())
+	assert.That(err == nil)
+	cconn := tls.Client(conn, clientConfig)
+	err = cconn.Handshake()
+	serr := <-srvErr
+	cconn.Close()
+	return err == nil && serr == nil
 }
 
 var A atomic.Bool

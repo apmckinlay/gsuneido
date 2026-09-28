@@ -30,6 +30,8 @@ suneido.dbd
 !stdlib/**/*.ss
 server.crt
 server.key
+client.crt
+client.key
 *.in
 sujs_darwin_*
 sujs_linux_*

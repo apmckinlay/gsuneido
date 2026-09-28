@@ -8,6 +8,7 @@ package dbms
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	_ "embed"
 	"fmt"
 	"io"
@@ -80,13 +81,7 @@ var ServerKey []byte
 // Server listens and accepts connections. It never returns.
 func Server(dbms *DbmsLocal) {
 	workers = mux.NewWorkers(doRequest)
-	cert, err := tls.X509KeyPair(ServerCert, ServerKey)
-	if err != nil {
-		Fatal("Failed to load embedded key pair:", err)
-	}
-	config := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	}
+	config := serverTLSConfig()
 	// Listen for plain TCP connection to handle version mismatch
 	l, err := net.Listen("tcp", ":"+options.Port)
 	if err != nil {
@@ -103,6 +98,25 @@ func Server(dbms *DbmsLocal) {
 		}
 		// start a new goroutine to avoid blocking
 		go newServerConn(dbms, conn, config)
+	}
+}
+
+// serverTLSConfig pins the client via the embedded client cert
+// and identifies this server via the embedded server key pair.
+func serverTLSConfig() *tls.Config {
+	cert, err := tls.X509KeyPair(ServerCert, ServerKey)
+	if err != nil {
+		Fatal("Failed to load embedded key pair:", err)
+	}
+	clientCAPool := x509.NewCertPool()
+	ok := clientCAPool.AppendCertsFromPEM(ClientCert)
+	if !ok {
+		Fatal("Failed to append embedded client cert to pool")
+	}
+	return &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    clientCAPool,
 	}
 }
 

@@ -79,7 +79,7 @@ deploy : git-status gs_windows_amd64.exe gs_windows_amd64_gui.exe \
 	cp gs_windows_amd64.exe deploy/gsport.exe
 	cp gs_windows_amd64_gui.exe deploy/gsuneido.exe
 	mv gs_linux_amd64 gs_linux_arm64 deploy
-	rm -f dbms/server.crt dbms/server.key
+	rm -f dbms/server.crt dbms/server.key dbms/client.crt dbms/client.key
 
 # NOTE: requires test e.g. from msys
 git-status :
@@ -123,7 +123,7 @@ clean :
 # for cross compiling on Arm Mac for Arm Windows
 LLVM_MINGW = /Users/andrew/apps/llvm-mingw/bin/aarch64-w64-mingw32
 
-gs_windows_arm64_gui.exe : FORCE gsuneido_windows_arm64.syso dbms/server.crt
+gs_windows_arm64_gui.exe : FORCE gsuneido_windows_arm64.syso dbms/server.crt dbms/client.crt
 	CGO_ENABLED=1 \
 	GOARCH=arm64 GOOS=windows \
 	CC=$(LLVM_MINGW)-clang \
@@ -138,7 +138,10 @@ gsuneido_windows_arm64.syso : res/suneido.rc res/suneido.manifest
 dbms/server.crt :
 	openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
 		-keyout dbms/server.key -out dbms/server.crt -subj "/CN=internal-api" \
-		-addext "subjectAltName = DNS:localhost,IP:127.0.0.1"
+		-addext "subjectAltName = DNS:localhost,IP:127.0.0.1" --quiet
+	openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+		-keyout dbms/client.key -out dbms/client.crt -subj "/CN=internal-api-client" \
+		-addext "basicConstraints=critical,CA:TRUE" --quiet
 
 release:
 	./gsuneido -dump stdlib
