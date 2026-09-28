@@ -41,6 +41,17 @@ func perm_ServerEval(th *Thread, args []Value) Value {
 	return nil
 }
 
+var _ = staticMethod(perm_Table, "(table :string, rights :string) :void")
+
+func perm_Table(th *Thread, args []Value) Value {
+	perms := th.Perms()
+	if perms == nil {
+		panic("Perm.Table can only be called from Auth")
+	}
+	perms.AddTable(ToStr(args[0]), ToStr(args[1]))
+	return nil
+}
+
 var _ = staticMethod(perm_Members, "() :object")
 
 func perm_Members() Value {
