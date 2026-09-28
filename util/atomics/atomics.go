@@ -21,6 +21,8 @@ func (as *String) Load() string {
 	return x.(string)
 }
 
+//-------------------------------------------------------------------
+
 type Value[T any] struct {
 	v atomic.Value
 }
@@ -40,4 +42,22 @@ func (a *Value[T]) Load() T {
 
 func (a *Value[T]) Swap(new T) T {
 	return a.v.Swap(new).(T)
+}
+
+//-------------------------------------------------------------------
+
+type Intfc[T any] struct {
+	av Value[box[T]]
+}
+
+type box[T any] struct {
+	v T
+}
+
+func (a *Intfc[T]) Store(v T) {
+	a.av.Store(box[T]{v: v})
+}
+
+func (a *Intfc[T]) Load() T {
+	return a.av.Load().v
 }
