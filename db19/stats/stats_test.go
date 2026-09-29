@@ -140,6 +140,33 @@ func TestStatsPackUnaddedColumn(t *testing.T) {
 	assert.T(t).This(len(decoded)).Is(0)
 }
 
+func TestStatsPackMixedColumns(t *testing.T) {
+	// a table where one column has data and another has none
+	// (e.g. busy column that no longer exists in the schema)
+	tally := StatsTally{
+		"foo": StatsTable{
+			"one":         &StatsColumn{},
+			"nonexistent": &StatsColumn{},
+		},
+	}
+	for range 10 {
+		tally["foo"]["one"].Add("val")
+	}
+	tally.Complete()
+	data := core.Pack(tally)
+	assert.T(t).This(tally.PackSize(nil)).Is(len(data))
+
+	// the empty column must be dropped, not written with no data
+	decoded := UnpackStats(data[1:])
+	assert.T(t).This(len(decoded)).Is(1)
+	foo, ok := decoded["foo"]
+	assert.That(ok)
+	assert.T(t).This(foo.Count).Is(10)
+	assert.T(t).This(len(foo.Columns)).Is(1)
+	_, ok = foo.Columns["one"]
+	assert.That(ok)
+}
+
 func TestStatsPackEmpty(t *testing.T) {
 	empty := StatsTally{}
 	empty.Complete()
