@@ -91,16 +91,7 @@ func (stats StatsTally) PackSize(*uint64) int {
 	}
 	size := 1 // PackString
 	for table, st := range stats {
-		cols := make([]string, 0, len(st))
-		for col := range st {
-			cols = append(cols, col)
-		}
-
-		count := 0
-		// all cols should have the same count, so we just use the first one
-		if kll := st[cols[0]].kll; kll != nil {
-			count = kll.Count()
-		}
+		cols, count := filterStatsCols(st)
 		if count == 0 {
 			continue
 		}
@@ -143,16 +134,7 @@ func (stats StatsTally) Pack(hash *uint64, e *pack.Encoder) {
 	}
 	e.Put1(core.PackString) // so we can put it in a record in a table
 	for table, st := range stats {
-		cols := make([]string, 0, len(st))
-		for col := range st {
-			cols = append(cols, col)
-		}
-
-		count := 0
-		// all cols should have the same count, so we just use the first one
-		if kll := st[cols[0]].kll; kll != nil {
-			count = kll.Count()
-		}
+		cols, count := filterStatsCols(st)
 		if count == 0 {
 			continue
 		}
@@ -179,6 +161,21 @@ func (stats StatsTally) Pack(hash *uint64, e *pack.Encoder) {
 			}
 		}
 	}
+}
+
+// filterStatsCols returns the columns with data (kll != nil) and the count.
+// Columns with no data (e.g. busy column no longer in schema) are excluded.
+func filterStatsCols(st StatsTable) ([]string, int) {
+	cols := make([]string, 0, len(st))
+	for col, sc := range st {
+		if sc.kll != nil {
+			cols = append(cols, col)
+		}
+	}
+	if len(cols) == 0 {
+		return nil, 0
+	}
+	return cols, st[cols[0]].kll.Count()
 }
 
 // Stats holds the statistical information.
