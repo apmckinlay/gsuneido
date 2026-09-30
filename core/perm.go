@@ -3,60 +3,79 @@
 
 package core
 
+import "sync"
+
 // Perms holds the permissions for a connection.
 // It is set up one time only by the application's Auth function
-// (using Perm.ServerEval) and then moved to serverConn.
+// and then moved to serverConn.
+// Tables created at runtime are added with all rights.
 type Perms struct {
 	serverEval map[string]struct{}
-	tablePerms map[string]int
-	allowAll   bool
+	table      map[string]TablePerm
+	lock       sync.Mutex // guards table
+	schema     SchemaPerm
 }
 
+type SchemaPerm byte
+
 const (
-	PermRead   = 1 << iota // r
-	PermAdd                // a
-	PermUpdate             // u
-	PermDelete             // d
-	PermSchema             // s
+	PermCreate SchemaPerm = 1 // allows creating tables and columns
+	PermUpdate            = 3 // includes create
 )
 
+type TablePerm byte
+
+const (
+	PermRead  TablePerm = 1
+	PermWrite           = 3 // includes read
+)
+
+func (p *Perms) SetSchema(rights string) {
+	if p == nil {
+		return
+	}
+	var sp SchemaPerm
+	switch rights {
+	case "":
+		sp = 0
+	case "create":
+		sp = PermCreate
+	case "update":
+		sp = PermUpdate
+	default:
+		panic("invalid schema rights")
+	}
+	p.schema = sp
+}
+
 // AddTable adds a table and its associated rights to the permissions.
-// Rights must be an ordered subset of "rauds" and is converted to a bit set.
 func (p *Perms) AddTable(table string, rights string) {
-	match := func(c byte, p int) int {
-		if len(rights) > 0 && rights[0] == c {
-			rights = rights[1:]
-			return p
-		}
-		return 0
+	if p == nil {
+		return
 	}
-	var bits int
-	if rights == "*" {
-		bits = PermRead | PermAdd | PermUpdate | PermDelete | PermSchema
-	} else {
-		bits = match('r', PermRead) |
-			match('a', PermAdd) |
-			match('u', PermUpdate) |
-			match('d', PermDelete) |
-			match('s', PermSchema)
-		if len(rights) != 0 {
-			panic("invalid table rights")
-		}
+	var tp TablePerm
+	switch rights {
+	case "":
+		tp = 0
+	case "read":
+		tp = PermRead
+	case "write":
+		tp = PermWrite
+	default:
+		panic("invalid table rights")
 	}
-	if p.tablePerms == nil {
-		p.tablePerms = make(map[string]int)
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	if p.table == nil {
+		p.table = make(map[string]TablePerm)
 	}
-	p.tablePerms[table] = bits
+	p.table[table] = tp
 }
 
 // AddServerEval adds name to the whitelist of function names
 // that ServerEval is allowed to execute on the server.
 // Use "*" to allow all functions.
 func (p *Perms) AddServerEval(name string) {
-	if name == "*" {
-		p.allowAll = true
-		return
-	}
 	if p.serverEval == nil {
 		p.serverEval = make(map[string]struct{})
 	}
@@ -64,20 +83,39 @@ func (p *Perms) AddServerEval(name string) {
 }
 
 // ServerEvalAllowed returns whether name may be used with ServerEval.
-// With no whitelist, nothing is allowed.
 func (p *Perms) ServerEvalAllowed(name string) bool {
-	if p.allowAll {
+	if p == nil {
 		return true
 	}
-	_, ok := p.serverEval[name]
+	if _, ok := p.serverEval[name]; ok {
+		return true
+	}
+	_, ok := p.serverEval["*"]
 	return ok
 }
 
 // TableActAllowed returns whether the given action is allowed on the table.
-func (p *Perms) TableActAllowed(table string, action int) bool {
-	bits, ok := p.tablePerms[table]
-	if !ok {
-		return false
+// If the table has no specific rights, the fallback rights added with "*" apply.
+func (p *Perms) TableActAllowed(table string, action TablePerm) bool {
+	if p == nil {
+		return true
 	}
-	return bits&action != 0
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	bits, ok := p.table[table]
+	if !ok {
+		bits, ok = p.table["*"]
+		if !ok {
+			return false
+		}
+	}
+	return bits&action == action
+}
+
+// SchemaActAllowed returns whether the given action is allowed on the schema.
+func (p *Perms) SchemaActAllowed(action SchemaPerm) bool {
+	if p == nil {
+		return true
+	}
+	return p.schema&action == action
 }

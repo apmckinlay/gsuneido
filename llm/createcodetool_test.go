@@ -23,7 +23,7 @@ func TestCreateCodeTool(t *testing.T) {
 	dbmsLocal := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
-	dbmsLocal.Admin("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)", nil)
+	dbmsLocal.AdminTest("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)")
 
 	ctx := context.WithValue(context.Background(), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
@@ -53,7 +53,7 @@ func TestCreateCodeTool(t *testing.T) {
 
 	// Verify create via direct query: num, parent, text, lib_modified
 	th0 := core.NewThread(core.MainThread)
-	tran0 := dbmsLocal.Transaction(false)
+	tran0 := dbmsLocal.Transaction(false, nil)
 	q0 := tran0.Query("stdlib where group = -1 and name = 'Foo'", nil)
 	hdr0 := q0.Header()
 	row0, _ := q0.Get(th0, core.Next)
@@ -87,7 +87,7 @@ func TestCreateCodeTool(t *testing.T) {
 	}
 
 	th3 := core.NewThread(core.MainThread)
-	tran3 := dbmsLocal.Transaction(false)
+	tran3 := dbmsLocal.Transaction(false, nil)
 	st3 := core.NewSuTran(tran3, false)
 
 	qf1 := tran3.Query("stdlib where group = 0 and name = 'A'", nil)
@@ -125,10 +125,10 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 	dbmsLocal := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
-	dbmsLocal.Admin("create stdlib (name, text, path, lib_before_text, lib_before_path, lib_modified, lib_committed, group, num, parent) key(num) key(name, group)", nil)
+	dbmsLocal.AdminTest("create stdlib (name, text, path, lib_before_text, lib_before_path, lib_modified, lib_committed, group, num, parent) key(num) key(name, group)")
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true)
+	tran := dbmsLocal.Transaction(true, nil)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', path: 'A/B', lib_before_text: '', lib_before_path: '', lib_modified: #20200101, lib_committed: #20240203, group: -1, num: 42, parent: 7 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
@@ -146,7 +146,7 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 
 	// Verify it's soft-deleted (group = -2)
 	th2 := core.NewThread(core.MainThread)
-	tran2 := dbmsLocal.Transaction(false)
+	tran2 := dbmsLocal.Transaction(false, nil)
 	q := tran2.Query("stdlib where group = -2 and name = 'Foo'", nil)
 	row, _ := q.Get(th2, core.Next)
 	assert.That(row != nil)
@@ -164,7 +164,7 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 	// Verify restoration: fields preserved, only text/lib_modified updated
 	th3 := core.NewThread(core.MainThread)
 	defer th3.Close()
-	tran3 := dbmsLocal.Transaction(false)
+	tran3 := dbmsLocal.Transaction(false, nil)
 	q2 := tran3.Query("stdlib where group = -1 and name = 'Foo'", nil)
 	hdr := q2.Header()
 	row2, _ := q2.Get(th3, core.Next)

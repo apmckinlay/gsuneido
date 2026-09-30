@@ -66,7 +66,7 @@ func TestLoadFkey(t *testing.T) {
 	assert.TestOnlyIndividually(t)
 	db := CreateDb(stor.HeapStor(8192))
 	doAdmin := func(cmd string) {
-		query.DoAdmin(db, cmd, nil)
+		query.DoAdminTest(db, cmd)
 	}
 	doAdmin("create tmp (a) key(a)")
 	doAdmin("create tmp2 (k, a) key(k) index(a) in tmp")

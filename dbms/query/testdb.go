@@ -31,11 +31,11 @@ func heapDb() heapdb {
 }
 
 func (hdb heapdb) adm(admin string) {
-	DoAdmin(hdb.Database, admin, nil)
+	DoAdminTest(hdb.Database, admin)
 }
 
 func (hdb heapdb) act(act string) {
-	ut := hdb.NewUpdateTran()
+	ut := hdb.NewUpdateTran(nil)
 	defer ut.Commit()
 	DoAction(nil, ut, act)
 }

@@ -50,7 +50,7 @@ var _ IDbms = (*DbmsUnauth)(nil)
 
 const notauth = "not authorized"
 
-func (du *DbmsUnauth) Admin(string, *Sviews) {
+func (du *DbmsUnauth) Admin(string, *Sviews, *Perms) {
 	panic(notauth)
 }
 
@@ -105,7 +105,7 @@ func (du *DbmsUnauth) Connections() Value {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Cursor(string, *Sviews) ICursor {
+func (du *DbmsUnauth) Cursor(string, *Sviews, *Perms) ICursor {
 	panic(notauth)
 }
 
@@ -177,7 +177,7 @@ func (du *DbmsUnauth) Timestamp() SuDate {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Transaction(bool) ITran {
+func (du *DbmsUnauth) Transaction(bool, *Perms) ITran {
 	panic(notauth)
 }
 

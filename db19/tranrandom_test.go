@@ -76,8 +76,8 @@ func TestRandomSingleThreadTransactions(t *testing.T) {
 	testData := initializeTestData(db, numRecords)
 
 	//	runRandomTransactions(db, testData, 10_000)
-	t1 := db.NewUpdateTran()
-	t2 := db.NewUpdateTran()
+	t1 := db.NewUpdateTran(nil)
+	t2 := db.NewUpdateTran(nil)
 	key := 5
 	r1 := t1.Lookup("test_table", 0, intKey(key))
 	off1 := r1.Off
@@ -118,7 +118,7 @@ func initializeTestData(db *Database, numRecords int) *RandomTestData {
 		mirrorData: make([]int, numRecords),
 		numRecords: numRecords,
 	}
-	ut := db.NewUpdateTran()
+	ut := db.NewUpdateTran(nil)
 	for i := range numRecords {
 		ut.Output(nil, "test_table", int2rec(i, 0))
 		testData.mirrorData[i] = 0
@@ -148,7 +148,7 @@ func performRandomTransaction(db *Database, testData *RandomTestData) (success b
 		}
 	}()
 
-	ut := db.NewUpdateTran()
+	ut := db.NewUpdateTran(nil)
 	if ut == nil {
 		return false
 	}
@@ -208,7 +208,7 @@ func intKey(key int) string {
 
 func verifyData(t *testing.T, db *Database, testData *RandomTestData) {
 	// Read all records from database
-	rt := db.NewReadTran()
+	rt := db.NewReadTran(nil)
 
 	dbSum := 0
 	mirrorSum := 0

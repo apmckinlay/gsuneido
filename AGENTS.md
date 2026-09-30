@@ -13,8 +13,10 @@ It uses the latest version of Go (see `/go.mod`)
 **Database**: Immutable append-only with MVCC and relational algebra query language.
 
 ## Critical Rules
-- **IMPORTANT**: Do not overwrite or delete `gsuneido.exe` or `suneido.db`.
+- **IMPORTANT**: Do not overwrite or delete `suneido.db`.
+- **IMPORTANT**: Assume there are existing uncommitted changes. Do not restore or reset or anything else that might lose the changes.
 - **Comments**: Concise comments are allowed when they explain *why*, not *what*.
+- use the read tool to read code and the edit tool to edit code (do not use sed)
 
 ## Architecture & Key Files
 - **Entry Point**: `/gsuneido.go` (see also `glossary.md`)
@@ -36,7 +38,6 @@ It uses the latest version of Go (see `/go.mod`)
 
 ## Testing
 - **IMPORTANT** Run tests after making changes: go test -short -timeout=30s ./... (changes can affect other packages so it is preferable to run all the tests, not just one package)
-- **IMPORTANT** Do not change directories with cd to run tests
 - **IMPORTANT** When running `go test` include: `-short -timeout=30s`
 - **linting** use `go fmt` and `go vet`
 

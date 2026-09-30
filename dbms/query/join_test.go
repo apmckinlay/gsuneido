@@ -53,7 +53,7 @@ func TestJoin_SelectFixedBug(t *testing.T) {
 		where ck is "" `
 	joinRev = impossible
 	defer func() { joinRev = 0 }()
-	tran := sizeTran{db.NewReadTran()}
+	tran := sizeTran{db.NewReadTran(nil)}
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	// TODO: tempindex(bk) may not be needed once Where is migrated to v2
@@ -83,7 +83,7 @@ func TestJoin_EmptyTempIndexBug(t *testing.T) {
 			(ivc where ik is 4 and ck is ""))`
 	joinRev = impossible
 	defer func() { joinRev = 0 }()
-	tran := sizeTran{db.NewReadTran()}
+	tran := sizeTran{db.NewReadTran(nil)}
 	q := ParseQuery(query, tran, nil)
 	idx := []string{"ck", "ik"}
 	q = setupIndex(q, ReadMode, tran, idx)

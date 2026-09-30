@@ -20,7 +20,7 @@ func Transaction(th *Thread, args []Value) Value {
 	} else {
 		update = !ToBool(args[0])
 	}
-	itran := th.Dbms().Transaction(update)
+	itran := th.Dbms().Transaction(update, nil)
 	st := NewSuTran(itran, update)
 	if args[2] == False {
 		return st

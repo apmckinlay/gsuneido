@@ -22,10 +22,10 @@ func TestSearchBookTool(t *testing.T) {
 	dbmsLocal := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
-	dbmsLocal.Admin("create mybook (name, path, text, order) key(name, path)", nil)
+	dbmsLocal.AdminTest("create mybook (name, path, text, order) key(name, path)")
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true)
+	tran := dbmsLocal.Transaction(true, nil)
 	tran.Action(th, "insert { name: 'Introduction', path: '', text: 'intro text', order: 1 } into mybook")
 	tran.Action(th, "insert { name: 'Reference', path: '', text: 'ref text', order: 2 } into mybook")
 	tran.Action(th, "insert { name: 'Date', path: '/Reference', text: 'date functions', order: 2 } into mybook")
@@ -96,10 +96,10 @@ func TestSearchBookLinesLimit(t *testing.T) {
 	dbmsLocal := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
-	dbmsLocal.Admin("create testbook (name, path, text, order) key(name, path)", nil)
+	dbmsLocal.AdminTest("create testbook (name, path, text, order) key(name, path)")
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true)
+	tran := dbmsLocal.Transaction(true, nil)
 	// Create a document with 8 matching lines (more than linesLimit of 5)
 	tran.Action(th, "insert { name: 'ManyMatches', path: '', text: 'line1 match\nline2 match\nline3 match\nline4 match\nline5 match\nline6 match\nline7 match\nline8 match', order: 1 } into testbook")
 	tran.Complete()

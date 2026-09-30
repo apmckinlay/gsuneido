@@ -99,6 +99,9 @@ func (tbl *Table) Name() string {
 }
 
 func (tbl *Table) SetTran(t QueryTran) {
+	if tbl.tran != t {
+		t.CheckPerm(tbl.name, PermRead)
+	}
 	tbl.tran = t
 	schema := t.GetSchema(tbl.name)
 	if schema == nil {

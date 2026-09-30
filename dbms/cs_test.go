@@ -25,8 +25,12 @@ import (
 
 func TestClientServer(*testing.T) {
 	// trace.Set(int(trace.ClientServer))
-	Global.TestDef("Auth",
-		compile.Constant("function (@args) { return true }"))
+	Global.TestDef("Auth", &SuBuiltinRaw{
+		Fn: func(th *Thread, as *ArgSpec, args []Value) Value {
+			th.Perms().AddTable("tables", "read")
+			return True
+		},
+		ParamSpec: ParamSpecAt})
 	defer Global.UnloadAll()
 	options.BuiltDate = "Dec 29 2020 12:34"
 	db := db19.CreateDb(stor.HeapStor(8192))

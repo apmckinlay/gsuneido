@@ -175,7 +175,7 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn, config *tls.Config) {
 }
 
 func serverVersionMismatch(dbms *DbmsLocal, conn net.Conn) {
-	rt := dbms.db.NewReadTran()
+	rt := dbms.db.NewReadTran(nil)
 	def := dbms.LibGet1(rt, "stdlib", "VersionMismatch", nil)
 	if len(def) > 2 {
 		Fatal("VersionMismatch must have a single definition")
@@ -394,7 +394,7 @@ func cmdAction(ss *serverSession) {
 
 func cmdAdmin(ss *serverSession) {
 	s := ss.GetStr()
-	ss.sc.dbms.Admin(s, &ss.sc.Sviews)
+	ss.sc.dbms.Admin(s, &ss.sc.Sviews, ss.sc.perms.Load())
 	ss.PutBool(true)
 }
 
@@ -477,7 +477,8 @@ func cmdCommit(ss *serverSession) {
 }
 
 func cmdConnections(ss *serverSession) {
-	ss.PutBool(true).PutVal(connections())
+	val := ss.sc.dbms.Connections()
+	ss.PutBool(true).PutVal(val)
 }
 
 func connections() *SuObject {
@@ -496,7 +497,7 @@ func connections() *SuObject {
 
 func cmdCursor(ss *serverSession) {
 	query := ss.GetStr()
-	q := ss.sc.dbms.Cursor(query, &ss.sc.Sviews)
+	q := ss.sc.dbms.Cursor(query, &ss.sc.Sviews, ss.sc.perms.Load())
 	num := int(lastNum.Add(1))
 	ss.cursors[num] = q
 	ss.PutBool(true).PutInt(num)
@@ -642,13 +643,12 @@ func cmdGetOne(ss *serverSession) {
 	}
 	tran, _ := ss.getTran()
 	query := ss.GetVal()
-	var g func(*Thread, Value, Dir) (Row, *Header, string)
 	if tran == nil {
-		g = ss.sc.dbms.Get
-	} else {
-		g = tran.Get
+		// no transaction, create a read transaction with the connection's perms
+		tran = ss.sc.dbms.Transaction(false, ss.sc.perms.Load())
+		defer tran.Complete()
 	}
-	row, hdr, tbl := g(ss.thread, query, dir)
+	row, hdr, tbl := tran.Get(ss.thread, query, dir)
 	ss.rowResult(tbl, hdr, true, row)
 }
 
@@ -686,7 +686,7 @@ func cmdKeys(ss *serverSession) {
 
 func cmdKill(ss *serverSession) {
 	sessionId := ss.GetStr()
-	n := kill(sessionId)
+	n := ss.sc.dbms.Kill(sessionId)
 	ss.PutBool(true).PutInt(n)
 }
 
@@ -838,7 +838,7 @@ func cmdTimestamp(ss *serverSession) {
 
 func cmdTransaction(ss *serverSession) {
 	update := ss.GetBool()
-	tran := ss.sc.dbms.Transaction(update)
+	tran := ss.sc.dbms.Transaction(update, ss.sc.perms.Load())
 	tn := tran.Num()
 	ss.trans[tn] = tran
 	ss.PutBool(true).PutInt(tn)

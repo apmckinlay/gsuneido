@@ -46,7 +46,7 @@ func (dc *dbmsClient) NewSession() *muxSession {
 
 var _ IDbms = (*muxSession)(nil)
 
-func (ms *muxSession) Admin(admin string, _ *Sviews) {
+func (ms *muxSession) Admin(admin string, _ *Sviews, _ *Perms) {
 	ms.PutCmd(commands.Admin).PutStr(admin)
 	ms.Request()
 }
@@ -119,7 +119,7 @@ func (ms *muxSession) Connections() Value {
 	return ms.GetVal().(*SuObject)
 }
 
-func (ms *muxSession) Cursor(query string, _ *Sviews) ICursor {
+func (ms *muxSession) Cursor(query string, _ *Sviews, _ *Perms) ICursor {
 	ms.PutCmd(commands.Cursor).PutStr(query)
 	ms.Request()
 	cn := ms.GetInt()
@@ -240,7 +240,7 @@ func (ms *muxSession) Timestamp() SuDate {
 	return ms.GetVal().(SuDate)
 }
 
-func (ms *muxSession) Transaction(update bool) ITran {
+func (ms *muxSession) Transaction(update bool, _ *Perms) ITran {
 	ms.PutCmd(commands.Transaction).PutBool(update)
 	ms.Request()
 	tn := ms.GetInt()

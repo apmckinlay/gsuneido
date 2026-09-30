@@ -27,8 +27,17 @@ import (
 )
 
 type tran struct {
-	db   *Database
-	meta *meta.Meta
+	db    *Database
+	meta  *meta.Meta
+	perms *core.Perms
+}
+
+// CheckPerm panics if the transaction's permissions do not allow action on table.
+// Nil permissions (tests, standalone) means no enforcement.
+func (t *tran) CheckPerm(table string, action core.TablePerm) {
+	if !t.perms.TableActAllowed(table, action) {
+		panic("not authorized: " + table)
+	}
 }
 
 // GetInfo returns read-only Info for the table or nil if not found
@@ -102,9 +111,9 @@ type ReadTran struct {
 
 var nextReadTran atomic.Int32
 
-func (db *Database) NewReadTran() *ReadTran {
+func (db *Database) NewReadTran(perms *core.Perms) *ReadTran {
 	state := db.GetState()
-	return &ReadTran{db: db, meta: state.Meta,
+	return &ReadTran{db: db, perms: perms, meta: state.Meta,
 		num: int(nextReadTran.Add(2))} // even
 }
 
@@ -168,6 +177,7 @@ func (t *ReadTran) Lookup(table string, iIndex int, key string) *core.DbRec {
 // for read-only transactions with a single btree (no layers).
 // Otherwise, it returns OverIter.
 func (t *ReadTran) IndexIter(table string, iIndex int) index.IndexIter {
+	t.CheckPerm(table, core.PermRead)
 	ti := t.meta.GetRoInfo(table)
 	if ti == nil {
 		panic("nonexistent table: " + table)
@@ -250,14 +260,14 @@ type UpdateTran struct {
 	writeCount int
 }
 
-func (db *Database) NewUpdateTran() *UpdateTran {
+func (db *Database) NewUpdateTran(perms *core.Perms) *UpdateTran {
 	db.ckOpen()
 	ct := db.ck.StartTran()
 	if ct == nil {
 		return nil
 	}
 	meta := ct.state.Meta.Mutable()
-	return &UpdateTran{ct: ct, db: db, meta: meta}
+	return &UpdateTran{ct: ct, db: db, perms: perms, meta: meta}
 }
 
 func (t *UpdateTran) String() string {
@@ -323,6 +333,7 @@ func (t *UpdateTran) Lookup(table string, iIndex int, key string) *core.DbRec {
 
 // IndexIter on UpdateTran always returns an OverIter
 func (t *UpdateTran) IndexIter(table string, iIndex int) index.IndexIter {
+	t.CheckPerm(table, core.PermRead)
 	return index.NewOverIter(table, iIndex)
 }
 
@@ -341,6 +352,7 @@ func (t *UpdateTran) write() {
 }
 
 func (t *UpdateTran) Output(th *core.Thread, table string, rec core.Record) {
+	t.CheckPerm(table, core.PermWrite)
 	if t.db.corrupted.Load() {
 		return // prevent appending to database
 	}
@@ -439,6 +451,11 @@ func (t *ReadTran) fkeyOutputExists(table string, iIndex int, key string) bool {
 }
 
 func (t *UpdateTran) Delete(th *core.Thread, table string, off uint64) {
+	t.CheckPerm(table, core.PermWrite)
+	t.delete(th, table, off)
+}
+
+func (t *UpdateTran) delete(th *core.Thread, table string, off uint64) {
 	trace.Dbms.Println("tran Delete", table, off)
 	t.write()
 	ts := t.getSchema(table)
@@ -555,7 +572,7 @@ func (t *UpdateTran) fkeyDeleteCascade(th *core.Thread, ts *meta.Schema, i int, 
 			iter := t.cascadeRange(fkth, encoded, key, len(ix.Columns))
 			ft := fkeyTran{t}
 			for iter.Next(ft); !iter.Eof(); iter.Next(ft) {
-				t.Delete(th, fkth.Table, iter.CurOff())
+				t.delete(th, fkth.Table, iter.CurOff())
 			}
 		}
 	}
@@ -581,6 +598,7 @@ func (fkeyTran) Read(string, int, string, string) {
 }
 
 func (t *UpdateTran) Update(th *core.Thread, table string, oldoff uint64, newrec core.Record) uint64 {
+	t.CheckPerm(table, core.PermWrite)
 	t.write()
 	return t.update(th, table, oldoff, newrec, true)
 }

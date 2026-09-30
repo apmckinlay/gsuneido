@@ -26,7 +26,7 @@ func TestSummarizeSelectFilter(t *testing.T) {
 	act(db, "insert { a: 3, b: 2, c: 30 } into test")
 	act(db, "insert { a: 4, b: 2, c: 25 } into test")
 
-	tran := sizeTran{db.NewReadTran()}
+	tran := sizeTran{db.NewReadTran(nil)}
 	q := ParseQuery("test summarize a, max c", tran, nil)
 	q = SetupKey(q, ReadMode, tran)
 
@@ -58,7 +58,7 @@ func TestSummarize_ByOnConflict(t *testing.T) {
 	defer db.Close()
 	db.adm("create t (a, b, c) key(a)")
 
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	assert.T(t).This(func() {
 		ParseQuery("t summarize a, average a", tran, nil)
 	}).Panics("summarize: by and on columns conflict: a")
@@ -72,7 +72,7 @@ func TestSummarize_OutputColConflicts(t *testing.T) {
 	defer db.Close()
 	db.adm("create t (a, count, total_a) key(a)")
 
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	// output columns and input (on) columns are independent, so a name
 	// may appear in both (here "count" is both a count output and a source
 	// column read by total)
@@ -90,7 +90,7 @@ func TestSummarize_WholeRowConflict(t *testing.T) {
 	defer db.Close()
 	db.adm("create t (a, b) key(a)")
 
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	assert.T(t).This(func() {
 		ParseQuery("t summarize a = min a", tran, nil)
 	}).Panics("summarize: output columns conflict with source columns: a")

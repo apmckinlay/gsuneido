@@ -24,7 +24,7 @@ func init() {
 }
 
 func Database(th *Thread, args []Value) Value {
-	th.Dbms().Admin(ToStr(args[0]), th.Sviews())
+	th.Dbms().Admin(ToStr(args[0]), th.Sviews(), nil)
 	return nil
 }
 
@@ -148,7 +148,7 @@ func db_Top10(th *Thread, args []Value) Value {
 	table := ToStr(args[0])
 	column := ToStr(args[1])
 
-	tran := th.Dbms().Transaction(false)
+	tran := th.Dbms().Transaction(false, nil)
 	defer tran.Complete()
 
 	sk := ss.New[string](128)
@@ -174,7 +174,7 @@ var _ = staticMethod(db_Distinct, "(table :string) :object")
 
 func db_Distinct(th *Thread, args []Value) Value {
 	table := ToStr(args[0])
-	t := th.Dbms().Transaction(false)
+	t := th.Dbms().Transaction(false, nil)
 	defer t.Complete()
 	rt := t.(*dbms.ReadTranLocal).ReadTran
 	cols := indexedColumns(rt.GetSchema(table).Indexes)

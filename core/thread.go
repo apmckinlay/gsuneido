@@ -187,6 +187,8 @@ func (th *Thread) SetPerms(p *Perms) {
 	th.perms = p
 }
 
+// Perms is only valid during Auth for building the permissions
+// NOT for general use.
 func (th *Thread) Perms() *Perms {
 	return th.perms
 }

@@ -32,7 +32,7 @@ type Schema = schema.Schema
 type Index = schema.Index
 
 type Admin interface {
-	execute(*db19.Database, *Sviews)
+	execute(*db19.Database, *Sviews, *Perms)
 	String() string
 }
 

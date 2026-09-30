@@ -64,10 +64,10 @@ func createDb() {
 		return core.NewSuTran(nil, true)
 	}
 	adm := func(admin string) {
-		query.DoAdmin(db, admin, nil)
+		query.DoAdminTest(db, admin)
 	}
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		query.DoAction(nil, ut, act)
 	}

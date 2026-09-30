@@ -13,24 +13,16 @@ func TestPermsTable(t *testing.T) {
 	assert := assert.T(t)
 	var p Perms
 
-	p.AddTable("foo", "rauds")
-	assert.This(p.tablePerms["foo"]).Is(PermRead | PermAdd | PermUpdate | PermDelete | PermSchema)
+	p.AddTable("foo", "write")
+	assert.This(p.table["foo"]).Is(PermWrite)
 
-	p.AddTable("bar", "ru")
-	assert.This(p.tablePerms["bar"]).Is(PermRead | PermUpdate)
+	p.AddTable("bar", "read")
+	assert.This(p.table["bar"]).Is(PermRead)
 
 	p.AddTable("baz", "")
-	assert.This(p.tablePerms["baz"]).Is(0)
+	assert.This(p.table["baz"]).Is(0)
 
-	assert.This(func() {
-		p.AddTable("x", "rx")
-	}).Panics("invalid table rights")
-	assert.This(func() {
-		p.AddTable("x", "rar")
-	}).Panics("invalid table rights")
-	assert.This(func() {
-		p.AddTable("x", "z")
-	}).Panics("invalid table rights")
+	assert.This(func() { p.AddTable("x", "update") }).Panics("invalid table rights")
 }
 
 func TestPermsServerEval(t *testing.T) {

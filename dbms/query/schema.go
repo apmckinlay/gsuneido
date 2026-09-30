@@ -163,6 +163,7 @@ func (ts *Tables) Nrows() (int, int) {
 }
 
 func (ts *Tables) SetTran(tran QueryTran) {
+	tran.CheckPerm("tables", PermRead)
 	ts.tran = tran
 	ts.info = nil
 }
@@ -213,20 +214,16 @@ func (ts *Tables) ensure() {
 	}
 	ts.info = ts.tran.GetAllInfo()
 
-	cols := Columns{}
-	cols.SetTran(ts.tran)
+	cols := Columns{tran: ts.tran}
 	ncols, _ := cols.Nrows()
 
-	idxs := Indexes{}
-	idxs.SetTran(ts.tran)
+	idxs := Indexes{tran: ts.tran}
 	nidxs, _ := idxs.Nrows()
 
-	views := Views{}
-	views.SetTran(ts.tran)
+	views := Views{tran: ts.tran}
 	nviews, _ := views.Nrows()
 
-	stats := StatsTable{}
-	stats.SetTran(ts.tran)
+	stats := StatsTable{tran: ts.tran}
 	nstats, _ := stats.Nrows()
 
 	ts.info = append(ts.info,
@@ -312,6 +309,7 @@ func (cs *Columns) getNrows() int {
 }
 
 func (cs *Columns) SetTran(tran QueryTran) {
+	tran.CheckPerm("columns", PermRead)
 	cs.tran = tran
 	cs.schema = nil
 }
@@ -480,6 +478,7 @@ func (is *Indexes) getNrows() int {
 }
 
 func (is *Indexes) SetTran(tran QueryTran) {
+	tran.CheckPerm("indexes", PermRead)
 	is.tran = tran
 	is.schema = nil
 }
@@ -617,6 +616,7 @@ func (vs *Views) Nrows() (int, int) {
 }
 
 func (vs *Views) SetTran(tran QueryTran) {
+	tran.CheckPerm("views", PermRead)
 	vs.tran = tran
 	vs.views = nil
 }
@@ -723,6 +723,7 @@ func (his *History) Nrows() (int, int) {
 }
 
 func (his *History) SetTran(tran QueryTran) {
+	tran.CheckPerm("history", PermRead)
 	his.tran = tran
 }
 
@@ -804,6 +805,7 @@ func (st *StatsTable) Nrows() (int, int) {
 }
 
 func (st *StatsTable) SetTran(tran QueryTran) {
+	tran.CheckPerm("dbstats", PermRead)
 	st.tran = tran
 	st.stats = nil
 }

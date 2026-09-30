@@ -19,8 +19,8 @@ func TestGetViewDefinition(t *testing.T) {
 	db := db19.CreateDb(stor.HeapStor(8192))
 	d := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return d }
-	query.DoAdmin(db, `create alpha (a, b) key(a)`, nil)
-	query.DoAdmin(db, `view myview = alpha extend c = 123`, nil)
+	query.DoAdminTest(db, `create alpha (a, b) key(a)`)
+	query.DoAdminTest(db, `view myview = alpha extend c = 123`)
 
 	// Test view definition
 	viewDef, _ := getSchema("myview")
@@ -36,8 +36,8 @@ func TestSchemaToolWithView(t *testing.T) {
 	db := db19.CreateDb(stor.HeapStor(8192))
 	d := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return d }
-	query.DoAdmin(db, `create alpha (a, b) key(a)`, nil)
-	query.DoAdmin(db, `view myview = alpha extend c = 123`, nil)
+	query.DoAdminTest(db, `create alpha (a, b) key(a)`)
+	query.DoAdminTest(db, `view myview = alpha extend c = 123`)
 
 	// Test table schema
 	schema, _ := getSchema("alpha")

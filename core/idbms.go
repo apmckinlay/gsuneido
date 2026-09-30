@@ -6,8 +6,9 @@ package core
 // IDbms is the interface to the dbms package.
 // The two implementations, DbmsLocal and DbmsClient, are in the dbms package
 type IDbms interface {
-	// Admin executes a schema change (create, alter, drop)
-	Admin(string, *Sviews)
+	// Admin executes a schema change (create, alter, drop).
+	// perms authorize the change; nil means no enforcement.
+	Admin(string, *Sviews, *Perms)
 
 	// Auth authorizes the connection with the server
 	Auth(*Thread, Value) bool
@@ -22,8 +23,9 @@ type IDbms interface {
 	// Connections returns a list of the current server connections
 	Connections() Value
 
-	// Cursor is like a query but independent of any one transaction
-	Cursor(query string, sv *Sviews) ICursor
+	// Cursor is like a query but independent of any one transaction.
+	// perms authorize the transaction used to plan it; nil means no enforcement.
+	Cursor(query string, sv *Sviews, perms *Perms) ICursor
 
 	// Cursors returns the current number of cursors
 	Cursors() int
@@ -70,8 +72,9 @@ type IDbms interface {
 	// Timestamp returns a guaranteed unique date/time
 	Timestamp() SuDate
 
-	// Transaction starts a transaction
-	Transaction(update bool) ITran
+	// Transaction starts a transaction.
+	// perms authorize actions through the transaction; nil means no enforcement.
+	Transaction(update bool, perms *Perms) ITran
 
 	// Transactions returns a list of the outstanding transactions
 	Transactions() *SuObject

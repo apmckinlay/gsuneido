@@ -107,7 +107,7 @@ func editCodeTool(ctx context.Context, library, name, mode string, line, count i
 	}
 
 	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
-	rtran := th.Dbms().Transaction(false)
+	rtran := th.Dbms().Transaction(false, nil)
 	rq := rtran.Query(query, nil)
 	hdr := rq.Header()
 	row, _ := rq.Get(th, core.Next)
@@ -185,7 +185,7 @@ func editCodeTool(ctx context.Context, library, name, mode string, line, count i
 	vals["text"] = core.PackValue(core.SuStr(newText))
 	vals["lib_modified"] = core.PackValue(core.Now())
 
-	utran := th.Dbms().Transaction(true)
+	utran := th.Dbms().Transaction(true, nil)
 	newRec := buildRecord(hdr, vals)
 	utran.Update(th, library, off, newRec)
 	if conflict := utran.Complete(); conflict != "" {

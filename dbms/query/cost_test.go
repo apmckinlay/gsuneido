@@ -67,7 +67,7 @@ func createData(db *db19.Database, nrecs, rsize int) {
 		if i%cGroupSize == 0 {
 			cgroup = rand.Intn(ngroups)
 		}
-		t := db.NewUpdateTran()
+		t := db.NewUpdateTran(nil)
 		var rb RecordBuilder
 		rb.Add(IntVal(i))                              // a: in order
 		rb.Add(IntVal(int(bits.Shuffle32(uint32(i))))) // b: random
@@ -102,7 +102,7 @@ func BenchmarkTableGetCost(b *testing.B) {
 	for _, nrec := range nrecs {
 		for _, rsize := range rsizes {
 			tbl := tblname(nrec, rsize)
-			tran := db.NewReadTran()
+			tran := db.NewReadTran(nil)
 			q = ParseQuery(tbl, tran, nil)
 			q = setupIndex(q, ReadMode, tran, []string{"a"}) // physical order
 			b.Run(tbl+"^a", fn)
@@ -129,7 +129,7 @@ func BenchmarkTempindex(b *testing.B) {
 	for _, nrec := range nrecs {
 		for _, rsize := range rsizes {
 			tbl := tblname(nrec, rsize)
-			tran := db.NewReadTran()
+			tran := db.NewReadTran(nil)
 			q := ParseQuery(tbl+" sort "+tbl+"_c", tran, nil)
 			q, _, _ = Setup(q, ReadMode, tran)
 			ti := q.(*Sort).source.(*TempIndex)
@@ -166,7 +166,7 @@ func BenchmarkTempindexScan(b *testing.B) {
 	for _, nrec := range nrecs {
 		for _, rsize := range rsizes {
 			tbl := tblname(nrec, rsize)
-			tran := db.NewReadTran()
+			tran := db.NewReadTran(nil)
 			q := ParseQuery(tbl+" sort "+tbl+"_c", tran, nil)
 			q, _, _ = Setup(q, ReadMode, tran)
 			ti := q.(*Sort).source.(*TempIndex)
@@ -209,7 +209,7 @@ func BenchmarkTempindexCreate(b *testing.B) {
 		return nil
 	}
 	th := &Thread{}
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	for _, nrec := range nrecs {
 		for _, rsize := range rsizes {
 			tbl := tblname(nrec, rsize)
@@ -237,7 +237,7 @@ func BenchmarkTempindexCreate(b *testing.B) {
 			}
 			// measure extend overhead
 			{
-				tran := db.NewReadTran()
+				tran := db.NewReadTran(nil)
 				q := ParseQuery(tbl+" extend x="+tbl+"_a", tran, nil)
 				q, _, _ = Setup(q, ReadMode, tran)
 				b.Run(tbl+"/extend", func(b *testing.B) {
@@ -267,7 +267,7 @@ func BenchmarkLookup(b *testing.B) {
 		for _, rsize := range rsizes {
 			tbl := tblname(nrec, rsize)
 			sels := []Sel{{col: "a"}}
-			tran := db.NewReadTran()
+			tran := db.NewReadTran(nil)
 			q := ParseQuery(tbl, tran, nil)
 			q, _, _ = SetupReq(q, ReadMode, tran, UniqueReq([]string{"a"}, 0))
 			b.Run(tbl, func(b *testing.B) {

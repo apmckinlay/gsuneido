@@ -6,9 +6,17 @@
 package dbms
 
 import (
+	"crypto/tls"
+	"net"
 	"strings"
 	"testing"
+	"time"
 
+	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/dbms/mux"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -80,4 +88,71 @@ func TestLogWithLimitEmpty(t *testing.T) {
 	result = sc.limitLog("hello")
 	assert.This(result).Is("hello")
 	assert.This(sc.logSize.Load()).Is(int32(7)) // 1 + (5 + 1) = 7
+}
+
+func TestNewServerConnUnauthorized(t *testing.T) {
+	assert := assert.T(t)
+
+	options.BuiltDate = "Dec 29 2020 12:34"
+	db := db19.CreateDb(stor.HeapStor(8192))
+	dbmsLocal := NewDbmsLocal(db)
+	p1, p2 := net.Pipe()
+	workers = mux.NewWorkers(doRequest)
+	go newServerConn(dbmsLocal, p1, serverTLSConfig())
+	errmsg := checkHello(p2)
+	assert.This(errmsg).Is("")
+	p2.Write(hello())
+	tlsConn := tls.Client(p2, clientTLSConfig())
+	if err := tlsConn.Handshake(); err != nil {
+		panic(err)
+	}
+	c := NewDbmsClient(tlsConn)
+	ses := c.NewSession()
+
+	// Without Auth, the connection is unauthorized and Get should be rejected
+	assert.This(func() {
+		args := SuObjectOf(SuStr("tables sort table"))
+		ses.Get(nil, args, Next)
+	}).Panics("not authorized")
+
+	time.Sleep(25 * time.Millisecond)
+}
+
+func TestUnauthCmds(t *testing.T) {
+	assert := assert.T(t)
+
+	sc := &serverConn{dbms: &DbmsUnauth{}}
+	ss := &serverSession{sc: sc}
+
+	// Commands that route through ss.sc.dbms should panic with "not authorized"
+	ss.SetBuf([]byte{0}) // empty string (varint size 0)
+	assert.This(func() { cmdAdmin(ss) }).Panics(notauth)
+
+	ss.SetBuf([]byte{0}) // bool false
+	assert.This(func() { cmdCheck(ss) }).Panics(notauth)
+
+	assert.This(func() { cmdConnections(ss) }).Panics(notauth)
+
+	ss.SetBuf([]byte{0}) // empty string (varint size 0)
+	assert.This(func() { cmdCursor(ss) }).Panics(notauth)
+
+	assert.This(func() { cmdFinal(ss) }).Panics(notauth)
+
+	assert.This(func() { cmdInfo(ss) }).Panics(notauth)
+
+	ss.SetBuf([]byte{0}) // empty string
+	assert.This(func() { cmdKill(ss) }).Panics(notauth)
+
+	// Encode a non-empty string for Log (varint 1 + "x" = 0x02 0x78)
+	ss.SetBuf([]byte{0x02, 'x'})
+	assert.This(func() { cmdLog(ss) }).Panics(notauth)
+
+	assert.This(func() { cmdSize(ss) }).Panics(notauth)
+
+	assert.This(func() { cmdTimestamp(ss) }).Panics(notauth)
+
+	ss.SetBuf([]byte{0}) // bool false
+	assert.This(func() { cmdTransaction(ss) }).Panics(notauth)
+
+	assert.This(func() { cmdTransactions(ss) }).Panics(notauth)
 }

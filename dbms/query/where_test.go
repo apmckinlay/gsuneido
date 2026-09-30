@@ -427,7 +427,7 @@ func TestWhere_Select(t *testing.T) {
 	db.act("insert { a: 9, b: 0, c: 3 } into lin")
 
 	query := "lin where b = 5"
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	q := ParseQuery(query, tran, nil)
 	cols := []string{"a", "b"}
 	q = setupIndex(q, CursorMode, tran, cols)
@@ -482,7 +482,7 @@ func TestWhere_skipScan(t *testing.T) {
 	}
 	test := func(query, idxSel, result string) {
 		t.Helper()
-		tran := db.NewReadTran()
+		tran := db.NewReadTran(nil)
 		q := ParseQuery(query, tran, nil)
 		q, _, _ = Setup(q, CursorMode, tran)
 		w := q.(*Where)
@@ -545,7 +545,7 @@ func TestWhere_Select_recalcIdxSel(t *testing.T) {
 		}
 	}
 
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	q := ParseQuery("table where b > 2", tran, nil)
 	q = setupIndex(q, CursorMode, tran, []string{"a", "b", "c"})
 	w := q.(*Where)
@@ -594,7 +594,7 @@ func TestWhere_bug(t *testing.T) {
 	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
 	db.act("insert { a: 7, b: 5, c: 8, d: 9 } into table")
 	db.act("insert { a: 9, b: 0, c: 3, d: 4 } into table")
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	q := ParseQuery("table where a=1 and b=2 and c=3", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	assert.This(Strategy2(q)).Like(`
@@ -608,7 +608,7 @@ func TestWhere_keyfixed(t *testing.T) {
 	db.adm("create table (a,b,c,d) key(a)")
 	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
 	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	q := ParseQuery("table where a=4", tran, nil)
 	index := []string{"b"}
 	q, _, _ = SetupReq(q, ReadMode, tran, OrderReq(index, 1))
@@ -685,7 +685,7 @@ func TestWhere_SelOrgNotFull(t *testing.T) {
 	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
 	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
 	db.act("insert { a: 7, b: 5, c: 8, d: 9 } into table")
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	q := ParseQuery("table where b=5", tran, nil)
 	// b is fixed, so index (a,c) can provide order (a,b)
 	// (a,c) and (a,b) have the same cost so Where picks the first (a,c)
@@ -959,7 +959,7 @@ func TestWhere_nonexistent(t *testing.T) {
 
 	test := func(parent string) {
 		t.Helper()
-		tran := db.NewReadTran()
+		tran := db.NewReadTran(nil)
 		q := ParseQuery("table where group >= -1 and parent = "+parent, tran, nil)
 		// Regression: a nonexistent prefix point must not collapse wfrac
 		// to zero and cause the optimizer to pick a worse index.
@@ -978,7 +978,7 @@ func TestWhere_singleton_lookup(t *testing.T) {
 	db.adm("create table (a,b,c,d) key(a,b)")
 	db.act("insert { a: 1, b: 2, c: 3, d: 4 } into table")
 	db.act("insert { a: 4, b: 5, c: 6, d: 7 } into table")
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	// where clause matches full key => singleton
 	q := ParseQuery("table where a=1 and b=2", tran, nil)
 	key := []string{"a", "b"}
@@ -998,7 +998,7 @@ func TestWhere_indexFilter_point(t *testing.T) {
 	defer db.Close()
 	db.adm("create table (a,b,c) key(a,b)")
 	db.act("insert { a: 1, b: 2, c: 3 } into table")
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	q := ParseQuery("table where a is 1 and b is 2 and a + b > 100", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	th := &Thread{}
@@ -1017,7 +1017,7 @@ func TestWhere_Simple_filter(t *testing.T) {
 	db.adm("create table (a,b,c) key(a)")
 	db.act("insert { a: 1, b: 2, c: 3 } into table")
 	db.act("insert { a: 2, b: 3, c: 4 } into table")
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	q := ParseQuery("table where a is 5", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	th := &Thread{}
@@ -1075,7 +1075,7 @@ func TestWhere_indexRanges(t *testing.T) {
 
 func (hdb *heapdb) queryCompare(t *testing.T, query string) {
 	db := hdb.Database
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 

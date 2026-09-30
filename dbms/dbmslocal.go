@@ -42,9 +42,15 @@ func NewDbmsLocal(db *db19.Database) *DbmsLocal {
 
 var _ IDbms = (*DbmsLocal)(nil)
 
-func (dbms *DbmsLocal) Admin(admin string, sv *Sviews) {
+func (dbms *DbmsLocal) Admin(admin string, sv *Sviews, perms *Perms) {
 	trace.Dbms.Println("Admin", admin)
-	qry.DoAdmin(dbms.db, admin, sv)
+	qry.DoAdmin(dbms.db, admin, sv, perms)
+}
+
+// AdminTest executes an admin command with no permission checking.
+// It is used by tests that aren't exercising permissions.
+func (dbms *DbmsLocal) AdminTest(admin string) {
+	dbms.Admin(admin, nil, nil)
 }
 
 func (dbms *DbmsLocal) Auth(th *Thread, data Value) bool {
@@ -62,8 +68,13 @@ func (*DbmsLocal) Connections() Value {
 	return connections()
 }
 
-func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
-	tran := dbms.db.NewReadTran()
+// Cursor builds a cursor using perms for the transaction it is planned with.
+// Without perms, a cursor that (due to a bug) used its build transaction
+// instead of the transaction passed to Get would escape permission checks,
+// because nil perms means allow all. Passing the connection's perms makes
+// that failure mode fail closed.
+func (dbms *DbmsLocal) Cursor(query string, sv *Sviews, perms *Perms) ICursor {
+	tran := dbms.db.NewReadTran(perms)
 	q, fixcost, varcost := buildQuery(query, tran, sv, qry.CursorMode)
 	trace.Query.Println("cursor", fixcost+varcost, "-", query)
 	return cursorLocal{queryLocal{
@@ -136,7 +147,7 @@ func (dbms *DbmsLocal) Final() int {
 // Get handles QueryFirst, QueryLast, Query1, QueryEmpty?
 func (dbms *DbmsLocal) Get(
 	th *Thread, query Value, dir Dir) (Row, *Header, string) {
-	tran := dbms.db.NewReadTran()
+	tran := dbms.db.NewReadTran(nil)
 	defer tran.Complete()
 	return get(th, tran, query, dir)
 }
@@ -180,7 +191,7 @@ func (dbms *DbmsLocal) LibGet(name string) []string {
 	}()
 
 	defs := make([]string, 0, 4)
-	rt := dbms.db.NewReadTran()
+	rt := dbms.db.NewReadTran(nil)
 	libs := dbms.libraries.Load()
 	for _, lib := range libs {
 		defs = dbms.LibGet1(rt, lib, name, defs)
@@ -262,12 +273,13 @@ func (*DbmsLocal) Timestamp() SuDate {
 	return db19.Timestamp()
 }
 
-func (dbms *DbmsLocal) Transaction(update bool) ITran {
+func (dbms *DbmsLocal) Transaction(update bool, perms *Perms) ITran {
 	if update {
-		t := dbms.db.NewUpdateTran()
+		t := dbms.db.NewUpdateTran(perms)
 		return &UpdateTranLocal{UpdateTran: t}
 	}
-	return &ReadTranLocal{ReadTran: dbms.db.NewReadTran()}
+	t := dbms.db.NewReadTran(perms)
+	return &ReadTranLocal{ReadTran: t}
 }
 
 // Transactions only returns the update transactions
@@ -304,7 +316,7 @@ func (dbms *DbmsLocal) Use(lib string) bool {
 }
 
 func (dbms *DbmsLocal) checkLibrary(lib string) {
-	rt := dbms.db.NewReadTran()
+	rt := dbms.db.NewReadTran(nil)
 	if rt.GetIndex(lib, libKey) == nil || rt.ColToFld(lib, "text") == -1 {
 		panic("Use: invalid library: " + lib)
 	}
@@ -321,7 +333,7 @@ func (dbms *DbmsLocal) updateLibraries(fn func(libs []string) []string) bool {
 }
 
 func (dbms *DbmsLocal) FormatQuery(query string) string {
-	t := dbms.db.NewReadTran()
+	t := dbms.db.NewReadTran(nil)
 	defer t.Complete()
 	return qry.Format(t, query)
 }

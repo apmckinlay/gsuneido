@@ -23,10 +23,10 @@ func TestDeleteCodeTool(t *testing.T) {
 	dbmsLocal := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
-	dbmsLocal.Admin("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)", nil)
+	dbmsLocal.AdminTest("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)")
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true)
+	tran := dbmsLocal.Transaction(true, nil)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', lib_before_text: '', lib_modified: #20200101, group: -1, num: 1, parent: 0 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
@@ -63,7 +63,7 @@ func TestDeleteCodeTool(t *testing.T) {
 	// verify delete
 	th2 := core.NewThread(core.MainThread)
 	defer th2.Close()
-	tran2 := dbmsLocal.Transaction(false)
+	tran2 := dbmsLocal.Transaction(false, nil)
 	q := tran2.Query("stdlib where group = -1 and name = 'Foo'", nil)
 	row, _ := q.Get(th2, core.Next)
 	assert.That(row == nil)
@@ -79,10 +79,10 @@ func TestDeleteCodeTool_SoftDeleteCommitted(t *testing.T) {
 	dbmsLocal := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
-	dbmsLocal.Admin("create stdlib (name, text, path, lib_before_text, lib_before_path, lib_modified, lib_committed, group, num, parent) key(num) key(name, group)", nil)
+	dbmsLocal.AdminTest("create stdlib (name, text, path, lib_before_text, lib_before_path, lib_modified, lib_committed, group, num, parent) key(num) key(name, group)")
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true)
+	tran := dbmsLocal.Transaction(true, nil)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', path: 'A/B', lib_before_text: '', lib_before_path: '', lib_modified: #20200101, lib_committed: #20240203, group: -1, num: 1, parent: 0 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
@@ -102,7 +102,7 @@ func TestDeleteCodeTool_SoftDeleteCommitted(t *testing.T) {
 
 	th2 := core.NewThread(core.MainThread)
 	defer th2.Close()
-	tran2 := dbmsLocal.Transaction(false)
+	tran2 := dbmsLocal.Transaction(false, nil)
 
 	q1 := tran2.Query("stdlib where group = -1 and name = 'Foo'", nil)
 	row1, _ := q1.Get(th2, core.Next)

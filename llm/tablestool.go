@@ -43,7 +43,7 @@ func tablesTool(prefix string) (output tablesOutput, err error) {
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	tran := th.Dbms().Transaction(false)
+	tran := th.Dbms().Transaction(false, nil)
 	defer tran.Complete()
 
 	q := tran.Query(tablesQuery(prefix), nil)

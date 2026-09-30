@@ -51,7 +51,7 @@ func codeFoldersTool(library, path string) (codeFoldersOutput, error) {
 	if err := validateLibrary(th, library); err != nil {
 		return codeFoldersOutput{}, err
 	}
-	tran := th.Dbms().Transaction(false)
+	tran := th.Dbms().Transaction(false, nil)
 	defer tran.Complete()
 	st := core.NewSuTran(tran, false)
 

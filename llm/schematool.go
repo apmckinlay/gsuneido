@@ -36,7 +36,7 @@ func getSchema(table string) (any, error) {
 		return schemaOutput{Schema: schema}, nil
 	}
 
-	tran := dbms.Transaction(false)
+	tran := dbms.Transaction(false, nil)
 	defer tran.Complete()
 	q := tran.Query(fmt.Sprintf("views where view_name = %q", table), nil)
 	defer q.Close()

@@ -40,11 +40,11 @@ func TestQueryToolSizeLimit(t *testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbms := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbms }
-	dbms.Admin("create big (k, a) key(k)", nil)
+	dbms.AdminTest("create big (k, a) key(k)")
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	tran := dbms.Transaction(true)
+	tran := dbms.Transaction(true, nil)
 	xs := strings.Repeat("x", 1500)
 	for i := range 10 {
 		n := tran.Action(th, fmt.Sprintf("insert { k: %d, a: %q } into big", i, xs))
@@ -73,11 +73,11 @@ func TestQueryToolRowLimit(t *testing.T) {
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbms := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbms }
-	dbms.Admin("create many (k) key(k)", nil)
+	dbms.AdminTest("create many (k) key(k)")
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	tran := dbms.Transaction(true)
+	tran := dbms.Transaction(true, nil)
 	for i := range 150 {
 		n := tran.Action(th, fmt.Sprintf("insert { k: %d } into many", i))
 		assert.This(n).Is(1)

@@ -19,9 +19,9 @@ func TestTablesTool(t *testing.T) {
 	db := db19.CreateDb(stor.HeapStor(8192))
 	dbms := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbms }
-	query.DoAdmin(db, `create alpha (a, b) key(a)`, nil)
-	query.DoAdmin(db, `create beta (x, y) key(x)`, nil)
-	query.DoAdmin(db, `create gamma (m, n) key(m)`, nil)
+	query.DoAdminTest(db, `create alpha (a, b) key(a)`)
+	query.DoAdminTest(db, `create beta (x, y) key(x)`)
+	query.DoAdminTest(db, `create gamma (m, n) key(m)`)
 
 	output, err := tablesTool("")
 	assert.That(err == nil)

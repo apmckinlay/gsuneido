@@ -14,7 +14,7 @@ var _ = builtin(QueryAlt, "(@args) :object")
 func QueryAlt(th *Thread, as *ArgSpec, args []Value) Value {
 	query, _ := extractQuery(th, &queryParams, as, args)
 	// this will only work if dbms is local
-	t := th.Dbms().Transaction(false).(*dbms.ReadTranLocal).ReadTran
+	t := th.Dbms().Transaction(false, nil).(*dbms.ReadTranLocal).ReadTran
 	q := qry.ParseQuery(query, t, nil)
 	hdr := q.Header()
 	rows := q.Simple(th)
@@ -33,7 +33,7 @@ func QueryAltHash(th *Thread, args []Value) Value {
 		/* CHECKQUERY SUPPRESS: UNION NOT DISJOINT */
 		/* CHECKQUERY SUPPRESS: JOIN MANY TO MANY */`
 	details := ToBool(args[1])
-	t := th.Dbms().Transaction(false).(*dbms.ReadTranLocal).ReadTran
+	t := th.Dbms().Transaction(false, nil).(*dbms.ReadTranLocal).ReadTran
 	q := qry.ParseQuery(query, t, nil)
 	qh := qry.NewQueryHasher(q.Header())
 	rows := q.Simple(th)

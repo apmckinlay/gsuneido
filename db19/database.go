@@ -367,7 +367,7 @@ func (db *Database) buildIndexes(table string,
 	if len(newIdxs) == 0 {
 		return nil
 	}
-	rt := db.NewReadTran()
+	rt := db.NewReadTran(nil)
 	ti := rt.meta.GetRoInfo(table)
 	if ti.Nrows == 0 {
 		return nil
@@ -679,7 +679,7 @@ func ReadStats(db *Database) stats.Stats {
 			log.Println("ERROR ReadStats:", r)
 		}
 	}()
-	rt := db.NewReadTran()
+	rt := db.NewReadTran(nil)
 	defer rt.Abort()
 	ti := rt.GetInfo(StatsTableName)
 	if ti == nil || ti.Nrows == 0 {

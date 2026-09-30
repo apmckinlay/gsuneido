@@ -20,17 +20,17 @@ func TestCodeTool(t *testing.T) {
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	// Create stdlib table
-	dbmsLocal.Admin("create stdlib (name, text, lib_before_text, group) key(name, group)", nil)
+	dbmsLocal.AdminTest("create stdlib (name, text, lib_before_text, group) key(name, group)")
 
 	// Insert a record
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true)
+	tran := dbmsLocal.Transaction(true, nil)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', lib_before_text: '', group: -1 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
 
 	// Verify insert
-	rt := dbmsLocal.Transaction(false)
+	rt := dbmsLocal.Transaction(false, nil)
 	q := rt.Query("stdlib", nil)
 	row, _ := q.Get(th, core.Next)
 	assert.That(row != nil)

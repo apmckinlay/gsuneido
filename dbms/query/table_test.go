@@ -6,9 +6,79 @@ package query
 import (
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
+
+type tableSetTran struct {
+	QueryTran
+	schema *Schema
+	info   *meta.Info
+	checks int
+	deny   bool
+}
+
+func (tr *tableSetTran) CheckPerm(string, core.TablePerm) {
+	tr.checks++
+	if tr.deny {
+		panic("not authorized")
+	}
+}
+
+func (tr *tableSetTran) GetSchema(string) *Schema  { return tr.schema }
+func (tr *tableSetTran) GetInfo(string) *meta.Info { return tr.info }
+
+func TestTableSetTran(t *testing.T) {
+	a := assert.T(t)
+	tr := &tableSetTran{
+		schema: &Schema{Columns: []string{"a"},
+			Indexes: []Index{{Mode: 'k'}}},
+		info: &meta.Info{Nrows: 1, Size: 100},
+	}
+	tbl := &Table{name: "tmp"}
+	tbl.SetTran(tr)
+	header := tbl.header
+	a.This(tr.checks).Is(1)
+	a.True(tbl.singleton)
+	a.This(tbl.rowSize()).Is(100)
+
+	check := func(info *meta.Info, rowSize int) {
+		t.Helper()
+		tr.info = info
+		tbl.SetTran(tr)
+		a.This(tr.checks).Is(1)
+		a.True(tbl.header == header)
+		a.True(tbl.info == info)
+		a.This(tbl.rowSize()).Is(rowSize)
+	}
+	check(&meta.Info{Nrows: 2, Size: 300}, 150)
+	tr.info.Size = 400
+	check(tr.info, 200)
+	tr.info.Nrows = 0
+	check(tr.info, 0)
+
+	tr2 := &tableSetTran{schema: tr.schema, info: tr.info, deny: true}
+	a.This(func() { tbl.SetTran(tr2) }).Panics("not authorized")
+	a.True(tbl.tran == tr)
+	tr2.deny = false
+	tbl.SetTran(tr2)
+	a.This(tr2.checks).Is(2)
+	a.True(tbl.tran == tr2)
+	a.True(tbl.header == header)
+
+	tr2.schema = &Schema{Columns: []string{"a", "b"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"a"}, Fields: []string{"a"}}}}
+	tbl.SetTran(tr2)
+	a.This(tr2.checks).Is(2)
+	a.True(tbl.header != header)
+	a.This(tbl.header.Columns).Is([]string{"a", "b"})
+	a.This(tbl.keys).Is([][]string{{"a"}})
+	a.False(tbl.singleton)
+
+	tr2.schema = nil
+	a.This(func() { tbl.SetTran(tr2) }).Panics("nonexistent table: tmp")
+}
 
 func TestTableOptimize(t *testing.T) {
 	assert := assert.T(t)

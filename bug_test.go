@@ -28,7 +28,7 @@ func TestBug(t *testing.T) {
  		where etaequip_num_tractor_mandatory is #20260506.085754503103`
 	th := &Thread{}
 
-	tran := db.NewReadTran()
+	tran := db.NewReadTran(nil)
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	fmt.Println("optimized:", String(q))

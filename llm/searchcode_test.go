@@ -23,12 +23,12 @@ func TestSearchTool(t *testing.T) {
 	dbmsLocal := dbms.NewDbmsLocal(dd)
 	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
-	dbmsLocal.Admin("create stdlib (name, text, group, parent, num, lib_modified) key(num) key(name, group) index(parent, name) index(group)", nil)
-	dbmsLocal.Admin("create app (name, text, group, parent, num, lib_modified) key(num) key(name, group) index(parent, name) index(group)", nil)
+	dbmsLocal.AdminTest("create stdlib (name, text, group, parent, num, lib_modified) key(num) key(name, group) index(parent, name) index(group)")
+	dbmsLocal.AdminTest("create app (name, text, group, parent, num, lib_modified) key(num) key(name, group) index(parent, name) index(group)")
 	assert.That(dbmsLocal.Use("app"))
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true)
+	tran := dbmsLocal.Transaction(true, nil)
 	tran.Action(th, "insert { name: 'Foo', text: 'function(){return 1}', group: -1, parent: 0, num: 1 } into stdlib")
 	tran.Action(th, "insert { name: 'Bar', text: 'function(){return 2}', group: -1, parent: 0, num: 2 } into stdlib")
 	tran.Action(th, "insert { name: 'FooApp', text: 'function(){return 3}', group: -1, parent: 0, num: 3 } into app")

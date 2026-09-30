@@ -84,6 +84,9 @@ func (testTran) HasTable(table string) bool {
 	return testSchemas[table] != nil
 }
 
+func (testTran) CheckPerm(string, TablePerm) {
+}
+
 var testInfo = map[string]*meta.Info{
 	"alias":   {Nrows: 20, Size: 1000},
 	"task":    {Nrows: 200, Size: 20000},

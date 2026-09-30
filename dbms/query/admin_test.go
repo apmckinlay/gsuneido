@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -16,7 +17,7 @@ import (
 const tmpschema = "(a,b,c,d) key(a) index(b,c)"
 
 func doAdmin(db *db19.Database, cmd string) {
-	DoAdmin(db, cmd, nil)
+	DoAdminTest(db, cmd)
 }
 
 func createTestDb() *db19.Database {
@@ -26,6 +27,108 @@ func createTestDb() *db19.Database {
 	db19.StartConcur(db, 50*time.Millisecond)
 	doAdmin(db, "create tmp "+tmpschema)
 	return db
+}
+
+func TestAdminPerm(t *testing.T) {
+	assert := assert.T(t)
+	db := createTestDb()
+	defer db.Close()
+
+	// schema "create" only allows creating tables and adding columns
+	perms := &core.Perms{}
+	perms.SetSchema("create")
+	assert.This(perms.SchemaActAllowed(core.PermCreate)).Is(true)
+	assert.This(perms.SchemaActAllowed(core.PermUpdate)).Is(false)
+
+	// create permission allows adding columns
+	DoAdmin(db, "alter tmp create (x)", nil, perms)
+	DoAdmin(db, "ensure tmp (y)", nil, perms)
+
+	// ensure may restate existing indexes and keys
+	DoAdmin(db, "ensure tmp (a,b,c,d,x,y) key(a) index(b,c)", nil, perms)
+
+	// but not add new indexes or keys
+	assert.This(func() {
+		DoAdmin(db, "ensure tmp (z) index(z)", nil, perms)
+	}).Panics("not authorized: tmp")
+	assert.This(func() {
+		DoAdmin(db, "ensure tmp (z) key(z)", nil, perms)
+	}).Panics("not authorized: tmp")
+
+	// adding indexes or keys with alter requires update permission
+	assert.This(func() {
+		DoAdmin(db, "alter tmp create (z) index(z)", nil, perms)
+	}).Panics("not authorized")
+	assert.This(func() {
+		DoAdmin(db, "alter tmp create (z) key(z)", nil, perms)
+	}).Panics("not authorized")
+
+	// other schema changes require update permission
+	assert.This(func() {
+		DoAdmin(db, "alter tmp rename x to z", nil, perms)
+	}).Panics("not authorized")
+	assert.This(func() {
+		DoAdmin(db, "alter tmp drop (x)", nil, perms)
+	}).Panics("not authorized")
+	assert.This(func() {
+		DoAdmin(db, "rename tmp to tmp2", nil, perms)
+	}).Panics("not authorized")
+	assert.This(func() {
+		DoAdmin(db, "drop tmp", nil, perms)
+	}).Panics("not authorized")
+	assert.This(func() {
+		DoAdmin(db, "view v = tmp", nil, perms)
+	}).Panics("not authorized")
+
+	// no schema permission denies everything
+	none := &core.Perms{}
+	assert.This(none.SchemaActAllowed(core.PermCreate)).Is(false)
+	assert.This(func() {
+		DoAdmin(db, "alter tmp create (q)", nil, none)
+	}).Panics("not authorized")
+	assert.This(func() {
+		DoAdmin(db, "create brandnew (k) key(k)", nil, none)
+	}).Panics("not authorized")
+	assert.This(func() {
+		DoAdmin(db, "ensure brandnew (k) key(k)", nil, none)
+	}).Panics("not authorized")
+
+	// creating a table grants all rights to that table
+	DoAdmin(db, "create other (k) key(k)", nil, perms)
+	assert.This(perms.TableActAllowed("other", core.PermWrite)).Is(true)
+	assert.This(perms.TableActAllowed("other", core.PermRead)).Is(true)
+	DoAdmin(db, "ensure brandnew (k) key(k)", nil, perms)
+	assert.This(perms.TableActAllowed("brandnew", core.PermWrite)).Is(true)
+
+	// write includes read, but read does not include write
+	none.AddTable("t", "read")
+	assert.This(none.TableActAllowed("t", core.PermRead)).Is(true)
+	assert.This(none.TableActAllowed("t", core.PermWrite)).Is(false)
+	none.AddTable("rw", "write")
+	assert.This(none.TableActAllowed("rw", core.PermRead)).Is(true)
+	assert.This(none.TableActAllowed("rw", core.PermWrite)).Is(true)
+	// no rights for an unknown table
+	assert.This(none.TableActAllowed("unknown", core.PermRead)).Is(false)
+
+	// "*" is a fallback for tables with no specific rights
+	wild := &core.Perms{}
+	wild.AddTable("*", "read")
+	assert.This(wild.TableActAllowed("anything", core.PermRead)).Is(true)
+	assert.This(wild.TableActAllowed("anything", core.PermWrite)).Is(false)
+
+	// update permission includes create and allows update schema changes
+	update := &core.Perms{}
+	update.SetSchema("update")
+	assert.This(update.SchemaActAllowed(core.PermCreate)).Is(true)
+	assert.This(update.SchemaActAllowed(core.PermUpdate)).Is(true)
+	DoAdmin(db, "alter tmp rename x to z", nil, update)
+	DoAdmin(db, "alter tmp drop (z)", nil, update)
+	DoAdmin(db, "view v = tmp", nil, update)
+	DoAdmin(db, "alter brandnew create (j) index(j)", nil, update)
+	DoAdmin(db, "drop other", nil, update)
+	DoAdmin(db, "rename tmp to tmp2", nil, update)
+
+	db.MustCheck()
 }
 
 func TestCreateDropBug(t *testing.T) {
@@ -298,7 +401,7 @@ func TestFkey(t *testing.T) {
 	schemas := map[string]string{}
 	check := func() {
 		t.Helper()
-		rt := db.NewReadTran()
+		rt := db.NewReadTran(nil)
 		for table, schema := range schemas {
 			assert.T(t).This(db.Schema(table)).Is(schema)
 			if schema == "" {
@@ -479,7 +582,7 @@ func TestNoColumns(*testing.T) {
 }
 
 func act(db *db19.Database, act string) {
-	ut := db.NewUpdateTran()
+	ut := db.NewUpdateTran(nil)
 	defer ut.Commit()
 	n := DoAction(nil, ut, act)
 	assert.This(n).Is(1)
