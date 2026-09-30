@@ -56,7 +56,7 @@ func TestIntfcStoreLoad(t *testing.T) {
 	got := a.Load()
 	assert.T(t).This(got).Is(val)
 	assert.T(t).This(got.Foo()).Is("hello")
-	
+
 	val = testImpl2{s: "world"}
 	a.Store(val)
 	got = a.Load()
