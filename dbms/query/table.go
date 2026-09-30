@@ -100,12 +100,17 @@ func (tbl *Table) Name() string {
 
 func (tbl *Table) SetTran(t QueryTran) {
 	tbl.tran = t
-	tbl.schema = t.GetSchema(tbl.name)
-	if tbl.schema == nil {
+	schema := t.GetSchema(tbl.name)
+	if schema == nil {
 		panic("nonexistent table: " + tbl.name)
 	}
+	// Update transactions can mutate info without changing its pointer.
 	tbl.info = t.GetInfo(tbl.name)
 	tbl.rowSiz.Set(tbl.getRowSize())
+	if schema == tbl.schema {
+		return
+	}
+	tbl.schema = schema
 
 	cols := make([]string, 0, len(tbl.schema.Columns)+len(tbl.schema.Derived))
 	for _, col := range tbl.schema.Columns {
@@ -120,6 +125,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 
 	idxs := make([][]string, 0, len(tbl.schema.Indexes))
 	keys := make([][]string, 0, 1)
+	tbl.singleton = false
 	for i := range tbl.schema.Indexes {
 		ix := &tbl.schema.Indexes[i]
 		idxs = append(idxs, ix.Fields)
