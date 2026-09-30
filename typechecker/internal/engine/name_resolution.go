@@ -166,7 +166,15 @@ func walkIf(x *ast.If, env TypeEnv, sc scope) {
 		elseSc = cloneScope(sc)
 		walkNode(x.Else, env, elseSc)
 	}
-	mergeScopesN(sc, []scope{thenSc, elseSc})
+
+	branches := make([]scope, 0, 2)
+	if !leavesFunction(x.Then) {
+		branches = append(branches, thenSc)
+	}
+	if !leavesFunction(x.Else) {
+		branches = append(branches, elseSc)
+	}
+	mergeScopesN(sc, branches)
 }
 
 func walkSwitch(sw *ast.Switch, env TypeEnv, sc scope) {
@@ -184,19 +192,66 @@ func walkSwitch(sw *ast.Switch, env TypeEnv, sc scope) {
 		for _, stmt := range sw.Cases[i].Body {
 			walkNode(stmt, env, armSc)
 		}
-		armScopes = append(armScopes, armSc)
+		if !stmtsLeaveFunction(sw.Cases[i].Body) {
+			armScopes = append(armScopes, armSc)
+		}
 	}
 	if sw.Default != nil {
 		defSc := cloneScope(sc)
 		for _, stmt := range sw.Default {
 			walkNode(stmt, env, defSc)
 		}
-		armScopes = append(armScopes, defSc)
+		if !stmtsLeaveFunction(sw.Default) {
+			armScopes = append(armScopes, defSc)
+		}
 	} else {
 		// no-default fall-through preserves entry-state types
 		armScopes = append(armScopes, sc)
 	}
 	mergeScopesN(sc, armScopes)
+}
+
+// leavesFunction is like branchAlwaysExits but only counts return and throw.
+// A branch that can break or continue still carries its types on to the
+// rest of the loop, so it must stay in the merge.
+func leavesFunction(s ast.Statement) bool {
+	switch x := s.(type) {
+	case *ast.Return, *ast.Throw:
+		return true
+	case *ast.Compound:
+		return stmtsLeaveFunction(x.Body)
+	case *ast.If:
+		return leavesFunction(x.Then) && leavesFunction(x.Else)
+	}
+	return false
+}
+
+func stmtsLeaveFunction(stmts []ast.Statement) bool {
+	for _, s := range stmts {
+		if leavesFunction(s) {
+			return true
+		}
+		if mayJumpOut(s) {
+			return false // e.g. { x = "s"; if cond break; return }
+		}
+	}
+	return false
+}
+
+func mayJumpOut(n ast.Node) bool {
+	switch n.(type) {
+	case *ast.Break, *ast.Continue:
+		return true
+	case *ast.While, *ast.DoWhile, *ast.For, *ast.ForIn, *ast.Forever,
+		*ast.Block, *ast.Function:
+		return false // own loop, or a closure where break throws
+	}
+	found := false
+	n.Children(func(c ast.Node) ast.Node {
+		found = found || mayJumpOut(c)
+		return c
+	})
+	return found
 }
 
 func walkTryCatch(tc *ast.TryCatch, env TypeEnv, sc scope) {

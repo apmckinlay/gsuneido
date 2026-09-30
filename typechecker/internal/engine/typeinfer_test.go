@@ -7140,3 +7140,80 @@ func TestContradictionGuardReadVsAssign(t *testing.T) {
 	a.That(u.Contains(TFalse))
 	a.This(env.Returns["ViaLocal"]).Is(TFalse)
 }
+
+func TestIfReturnBranchNotMergedAfter(t *testing.T) {
+	a := assert.T(t)
+	_, env := runPasses(`class {
+		Sum(items) {
+			total = 0
+			if items.Size() is 0
+				{
+				total = "n/a"
+				return total
+				}
+			for item in items
+				total += item
+			return total
+		}
+		Then(c) {
+			x = 5
+			if c { x = "s"; throw "bad" }
+			return x
+		}
+		Else(c) {
+			if c { x = 5 } else { x = "s"; throw "bad" }
+			return x
+		}
+	}`, "T")
+	a.This(errorCount(env, "Sum")).Is(0)
+	a.This(env.Returns["Then"]).Is(TNumber)
+	a.This(env.Returns["Else"]).Is(TNumber)
+}
+
+func TestSwitchThrowArmNotMergedAfter(t *testing.T) {
+	a := assert.T(t)
+	_, env := runPasses(`class {
+		Pick(c) {
+			x = 5
+			switch (c)
+				{
+			case 1:
+				x = "s"
+				throw "bad"
+			default:
+				}
+			return x
+		}
+	}`, "T")
+	a.This(env.Returns["Pick"]).Is(TNumber)
+}
+
+func TestIfBreakBranchStillMerged(t *testing.T) {
+	a := assert.T(t)
+	// break and continue leave the if but not the loop,
+	// so their types must still reach the code after the loop
+	_, env := runPasses(`class {
+		Break(ob) {
+			x = 5
+			for y in ob
+				if y { x = "s"; break }
+			return x
+		}
+		Continue(ob) {
+			x = 5
+			for y in ob
+				if y { x = "s"; continue }
+			return x
+		}
+		BreakFirst(ob) {
+			x = 5
+			for y in ob
+				if y { x = "s"; if y is 2 break; return 0 }
+			return x
+		}
+	}`, "T")
+	a.That(isUnionOf(env.Returns["Break"], TNumber, TString))
+	a.That(isUnionOf(env.Returns["Continue"], TNumber, TString))
+	a.That(isUnionOf(env.Returns["BreakFirst"], TNumber, TString))
+}
+
