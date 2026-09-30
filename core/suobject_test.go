@@ -301,8 +301,8 @@ func TestSuObject_BinarySearch2_SetConcurrentUnlock(t *testing.T) {
 			ob.SetConcurrent() // flip shouldLock false -> true during released read lock
 			return False
 		},
-		BuiltinParams: BuiltinParams{ParamSpec: ParamSpec{
-			Nparams: 2, Signature: ^Sig2, Flags: []Flag{0, 0}}}}
+
+		Nparams: 2, Signature: ^Sig2, Flags: []Flag{0, 0}}
 
 	th := &Thread{}
 	ob.BinarySearch2(th, SuInt(3), lt)
