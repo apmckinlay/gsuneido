@@ -14,8 +14,8 @@ type Container interface {
 	Slice(n int) Container
 	DeleteAll()
 	Insert(at int, val Value)
-	Erase(th *Thread, key Value) bool
-	Delete(th *Thread, key Value) bool
+	Erase(th *Thread, key Value) Value
+	Delete(th *Thread, key Value) Value
 	GetIfPresent(th *Thread, key Value) Value
 	IsReadOnly() bool
 	SetReadOnly()

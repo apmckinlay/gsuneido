@@ -275,19 +275,19 @@ func (ob *SuObject) ckSize() {
 
 // Delete removes a key.
 // If in the list, following list values are shifted over.
-func (ob *SuObject) Delete(_ *Thread, key Value) bool {
+// Returns the old value, or nil if not found.
+func (ob *SuObject) Delete(_ *Thread, key Value) Value {
 	ob.Lock()
 	defer ob.Unlock()
 	return ob.delete(key)
 }
-func (ob *SuObject) delete(key Value) bool {
+func (ob *SuObject) delete(key Value) Value {
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
-		ob.listDelete(i)
-		return true
+		return ob.listDelete(i)
 	}
-	_, ok := ob.named.Del(key)
-	return ok
+	v, _ := ob.named.Del(key)
+	return v
 }
 
 func (ob *SuObject) listDelete(i int) Value {
@@ -300,12 +300,13 @@ func (ob *SuObject) listDelete(i int) Value {
 
 // Erase removes a key.
 // If in the list, following list values are NOT shifted over.
-func (ob *SuObject) Erase(_ *Thread, key Value) bool {
+// Returns the old value, or nil if not found.
+func (ob *SuObject) Erase(_ *Thread, key Value) Value {
 	ob.Lock()
 	defer ob.Unlock()
 	return ob.erase(key)
 }
-func (ob *SuObject) erase(key Value) bool {
+func (ob *SuObject) erase(key Value) Value {
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		// migrate following list elements to named
@@ -313,11 +314,12 @@ func (ob *SuObject) erase(key Value) bool {
 			ob.named.Put(IntVal(j), ob.list[j])
 			ob.list[j] = nil // aid garbage collection
 		}
+		x := ob.list[i]
 		ob.list = ob.list[:i]
-		return true
+		return x
 	}
-	_, ok := ob.named.Del(key)
-	return ok
+	v, _ := ob.named.Del(key)
+	return v
 }
 
 func (ob *SuObject) PopFirst() Value {

@@ -122,6 +122,21 @@ func ob_Eval2(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return ob
 }
 
+var _ = method(ob_Extract, "(mem, default = nil)")
+
+func ob_Extract(th *Thread, this Value, args []Value) Value {
+	ob := ToContainer(this)
+	// use a single Delete so this is atomic
+	old := ob.Delete(th, args[0])
+	if old == nil {
+		if args[1] == nil {
+			MemberNotFound(args[0])
+		}
+		return args[1]
+	}
+	return old
+}
+
 var _ = method(ob_Find, "(value) :false|unknown")
 
 func ob_Find(this Value, val Value) Value {

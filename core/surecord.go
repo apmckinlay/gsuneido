@@ -358,33 +358,29 @@ func (r *SuRecord) IsNew() bool {
 	return r.status == NEW
 }
 
-func (r *SuRecord) Delete(th *Thread, key Value) bool {
+func (r *SuRecord) Delete(th *Thread, key Value) Value {
 	return r.delete(th, key, r.ob.delete)
 }
 
-func (r *SuRecord) Erase(th *Thread, key Value) bool {
+func (r *SuRecord) Erase(th *Thread, key Value) Value {
 	return r.delete(th, key, r.ob.erase)
 }
 
-func (r *SuRecord) delete(th *Thread, key Value, fn func(Value) bool) bool {
+func (r *SuRecord) delete(th *Thread, key Value, fn func(Value) Value) Value {
 	r.Lock()
 	defer r.Unlock()
 	r.ensureDeps()
 	r.ob.mustBeMutable()
-	// have to unpack
-	// because we have no way to delete from row
 	r.toObject()
-	// have to remove row
-	// because we assume if field is missing from object we can use row data
 	r.row = nil
-	if fn(key) {
+	v := fn(key)
+	if v != nil {
 		if keystr, ok := key.ToStr(); ok {
 			r.invalidateDependents(keystr)
 			r.callObservers(th, keystr)
 		}
-		return true
 	}
-	return false
+	return v
 }
 
 func (r *SuRecord) ListSize() int {
