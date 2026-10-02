@@ -3,7 +3,11 @@
 
 package core
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/apmckinlay/gsuneido/core/trace"
+)
 
 // Perms holds the permissions for a connection.
 // It is set up one time only by the application's Auth function
@@ -23,12 +27,26 @@ const (
 	PermUpdate            = 3 // includes create
 )
 
+func (sp SchemaPerm) String() string {
+	return map[SchemaPerm]string{
+		0:          "",
+		PermCreate: "create",
+		PermUpdate: "update"}[sp]
+}
+
 type TablePerm byte
 
 const (
 	PermRead  TablePerm = 1
 	PermWrite           = 3 // includes read
 )
+
+func (tp TablePerm) String() string {
+	return map[TablePerm]string{
+		0:         "",
+		PermRead:  "read",
+		PermWrite: "write"}[tp]
+}
 
 func (p *Perms) SetSchema(rights string) {
 	if p == nil {
@@ -100,6 +118,7 @@ func (p *Perms) TableActAllowed(table string, action TablePerm) bool {
 	if p == nil {
 		return true
 	}
+	tracePerm(table, action)
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	bits, ok := p.table[table]
@@ -118,4 +137,21 @@ func (p *Perms) SchemaActAllowed(action SchemaPerm) bool {
 		return true
 	}
 	return p.schema&action == action
+}
+
+var permSeen sync.Map
+
+func tracePerm(table string, act TablePerm) {
+	if !trace.Perm.On() {
+		return
+	}
+	s := act.String() + "\t" + table
+	if _, loaded := permSeen.LoadOrStore(s, true); loaded {
+		return
+	}
+	trace.Perm.Println(s)
+}
+
+func init() {
+	trace.Set(int(trace.Perm))
 }

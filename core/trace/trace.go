@@ -18,7 +18,6 @@ import (
 
 type what int
 
-// var cur = ClientServer
 var cur atomics.Value[what]
 
 func Set(w int) int {
@@ -53,6 +52,8 @@ const (
 	Dbms    // used
 
 	Defer
+
+	Perm // used
 )
 
 func (w what) String() string {
@@ -78,6 +79,7 @@ func (w what) String() string {
 		JoinOpt:      "JOINOPT ",
 		Dbms:         "DBMS ",
 		Defer:        "DEFER ",
+		Perm:         "PERM ",
 	}[w]
 }
 
