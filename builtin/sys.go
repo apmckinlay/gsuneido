@@ -19,13 +19,13 @@ var sysMem = systemMemory() // cache
 var _ = builtin(SystemMemory, "() :number")
 
 func SystemMemory() Value {
-	return Int64Val(int64(sysMem))
+	return IntVal(sysMem)
 }
 
 var _ = builtin(MemoryArena, "() :number")
 
 func MemoryArena() Value {
-	return Int64Val(int64(HeapSys()))
+	return IntVal(HeapSys())
 }
 
 func HeapSys() uint64 {
@@ -295,5 +295,5 @@ func FileSize(th *Thread, args []Value) Value {
 		}
 		panic("FileSize: " + err.Error())
 	}
-	return Int64Val(info.Size())
+	return IntVal(info.Size())
 }

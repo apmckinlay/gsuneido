@@ -78,25 +78,25 @@ func newGoCallback(nargs, i int) uintptr {
 		cb := &cb2s[i]
 		return syscall.NewCallback(func(a, b uintptr) uintptr {
 			return cb.callv(
-				IntVal(int(a)),
-				IntVal(int(b)))
+				IntVal(a),
+				IntVal(b))
 		})
 	case 3:
 		cb := &cb3s[i]
 		return syscall.NewCallback(func(a, b, c uintptr) uintptr {
 			return cb.callv(
-				IntVal(int(a)),
-				IntVal(int(b)),
-				IntVal(int(c)))
+				IntVal(a),
+				IntVal(b),
+				IntVal(c))
 		})
 	case 4:
 		cb := &cb4s[i]
 		return syscall.NewCallback(func(a, b, c, d uintptr) uintptr {
 			return cb.callv(
-				IntVal(int(a)),
-				IntVal(int(b)),
-				IntVal(int(c)),
-				IntVal(int(d)))
+				IntVal(a),
+				IntVal(b),
+				IntVal(c),
+				IntVal(d))
 		})
 	}
 	panic(assert.ShouldNotReachHere())
@@ -105,10 +105,10 @@ func newGoCallback(nargs, i int) uintptr {
 func wndProcCall(a, b, c, d uintptr) uintptr {
 	if fn, ok := hwndToCb[a]; ok {
 		return call(MainThread, fn,
-			IntVal(int(a)),
-			IntVal(int(b)),
-			IntVal(int(c)),
-			IntVal(int(d)))
+			IntVal(a),
+			IntVal(b),
+			IntVal(c),
+			IntVal(d))
 	}
 	log.Fatalln("FATAL: WndProc callback missing hwnd")
 	return 0

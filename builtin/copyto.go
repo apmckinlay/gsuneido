@@ -25,7 +25,7 @@ func CopyTo(th *Thread, src io.Reader, to, nbytes Value) Value {
 
 	var n int64
 	if nbytes != False {
-		n = ToInt64(nbytes)
+		n = int64(ToInt(nbytes))
 		if n < 0 {
 			panic("CopyTo: nbytes cannot be negative")
 		}
@@ -38,5 +38,5 @@ func CopyTo(th *Thread, src io.Reader, to, nbytes Value) Value {
 	if nbytes != False && nw != n {
 		th.ReturnThrow = true
 	}
-	return Int64Val(nw)
+	return IntVal(nw)
 }

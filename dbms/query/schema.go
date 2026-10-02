@@ -203,7 +203,7 @@ func (*Tables) row(info *meta.Info) Row {
 	var rb RecordBuilder
 	rb.Add(SuStr(info.Table))
 	rb.Add(IntVal(info.Nrows))
-	rb.Add(Int64Val(int64(info.Size)))
+	rb.Add(IntVal(info.Size))
 	rec := rb.Build()
 	return Row{DbRec{Record: rec}}
 }
@@ -752,7 +752,7 @@ func (his *History) Get(_ *Thread, dir Dir) Row {
 	his.state = iface.Within
 	his.off = state.Off
 	var rb RecordBuilder
-	rb.Add(SuDateFromUnixMilli(state.Asof))
+	rb.Add(SuDateFromUnixMilli(int(state.Asof)))
 	rec := rb.Build()
 	his.ngets++
 	return Row{DbRec{Record: rec}}

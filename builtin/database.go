@@ -57,7 +57,7 @@ func db_Connections(th *Thread, args []Value) Value {
 var _ = staticMethod(db_CurrentSize, "() :number")
 
 func db_CurrentSize(th *Thread, args []Value) Value {
-	return IntVal(int(th.Dbms().Size()))
+	return IntVal(th.Dbms().Size())
 }
 
 var _ = staticMethod(db_Cursors, "() :number")
@@ -165,7 +165,7 @@ func db_Top10(th *Thread, args []Value) Value {
 
 	result := &SuObject{}
 	for _, e := range top {
-		result.Set(Unpack(e.Value), IntVal(int(e.Count-e.Error)))
+		result.Set(Unpack(e.Value), IntVal(e.Count-e.Error))
 	}
 	return result
 }
@@ -191,7 +191,7 @@ func db_Distinct(th *Thread, args []Value) Value {
 	}
 	ob := &SuObject{}
 	for i, col := range cols {
-		ob.Set(SuStr(col), Int64Val(int64(sketches[i].Count())))
+		ob.Set(SuStr(col), IntVal(sketches[i].Count()))
 	}
 	return ob
 }

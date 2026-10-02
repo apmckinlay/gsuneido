@@ -16,7 +16,7 @@ import (
 // SuInt64 is a 64-bit signed integer Value
 type SuInt64 struct {
 	ValueBase[SuInt64]
-	int64
+	n int
 }
 
 // Value interface
@@ -32,7 +32,7 @@ func (si SuInt64) Compare(other Value) int {
 		return cmp * 2
 	}
 	if i2, ok := SuIntToInt(other); ok {
-		return cmp.Compare(si.int64, int64(i2))
+		return cmp.Compare(si.n, i2)
 	}
 	dn, _ := si.ToDnum()
 	return dnum.Compare(dn, other.(SuDnum).Dnum)
@@ -40,11 +40,11 @@ func (si SuInt64) Compare(other Value) int {
 
 func (si SuInt64) Equal(other any) bool {
 	if i2, ok := SuIntToInt(other); ok {
-		return si.int64 == int64(i2)
+		return si.n == i2
 	}
 	if dn, ok := other.(SuDnum); ok {
 		if i2, ok := dn.IfInt(); ok {
-			return si.int64 == int64(i2)
+			return si.n == i2
 		}
 	}
 	return false
@@ -52,7 +52,7 @@ func (si SuInt64) Equal(other any) bool {
 
 // Hash must give consistent results for equal SuInt, SuInt64, and SuDnum
 func (si SuInt64) Hash() uint64 {
-	return hashInt64(si.int64)
+	return hashInt(int(si.n))
 }
 
 func (si SuInt64) Hash2() uint64 {
@@ -60,7 +60,7 @@ func (si SuInt64) Hash2() uint64 {
 }
 
 func (si SuInt64) IfInt() (int, bool) {
-	return int(si.int64), true
+	return int(si.n), true
 }
 
 func (si SuInt64) Lookup(th *Thread, method string) Value {
@@ -72,15 +72,15 @@ func (si SuInt64) SetConcurrent() {
 }
 
 func (si SuInt64) String() string {
-	return strconv.FormatInt(si.int64, 10)
+	return strconv.FormatInt(int64(si.n), 10)
 }
 
 func (si SuInt64) ToDnum() (dnum.Dnum, bool) {
-	return dnum.FromInt(si.int64), true
+	return dnum.FromInt(int(si.n)), true
 }
 
 func (si SuInt64) ToInt() (int, bool) {
-	return int(si.int64), true
+	return int(si.n), true
 }
 
 func (si SuInt64) ToStr() (string, bool) {
@@ -96,18 +96,18 @@ func (si SuInt64) Type() types.Type {
 var _ Packable = SuInt(0)
 
 func (si SuInt64) PackSize(*uint64) int {
-	return packSizeInt(si.int64)
+	return packSizeInt(int(si.n))
 }
 
 func (si SuInt64) PackSize2(*uint64, PackStack) int {
-	return packSizeInt(si.int64)
+	return packSizeInt(int(si.n))
 }
 
 func (si SuInt64) Pack(_ *uint64, enc *pack.Encoder) {
-	packInt(si.int64, enc)
+	packInt(int(si.n), enc)
 }
 
-func packSizeInt(n int64) int {
+func packSizeInt(n int) int {
 	u := uint64(n)
 	if u == 0 {
 		return 1
@@ -135,7 +135,7 @@ func packSizeInt(n int64) int {
 	return size
 }
 
-func packInt(n int64, enc *pack.Encoder) {
+func packInt(n int, enc *pack.Encoder) {
 	u := uint64(n)
 	xor := byte(0)
 	if n < 0 {
@@ -193,5 +193,5 @@ func unpackInt(s string, sign, exp int8, xor byte) Value {
 	return IntVal(n)
 }
 
-var PackedMinInt64 = Pack(SuInt64{int64: math.MinInt64})
-var PackedMaxInt64 = Pack(SuInt64{int64: math.MaxInt64})
+var PackedMinInt64 = Pack(SuInt64{n: math.MinInt64})
+var PackedMaxInt64 = Pack(SuInt64{n: math.MaxInt64})

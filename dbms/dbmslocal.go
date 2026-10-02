@@ -154,8 +154,8 @@ func (dbms *DbmsLocal) Get(
 
 func (dbms *DbmsLocal) Info() Value {
 	ob := &SuObject{}
-	ob.Set(SuStr("currentSize"), Int64Val(int64(dbms.db.Size())))
-	ob.Set(SuStr("timeoutMin"), IntVal(int(options.TimeoutMinutes)))
+	ob.Set(SuStr("currentSize"), IntVal(dbms.db.Size()))
+	ob.Set(SuStr("timeoutMin"), IntVal(options.TimeoutMinutes))
 	return ob
 }
 

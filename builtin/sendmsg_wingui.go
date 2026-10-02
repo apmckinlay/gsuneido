@@ -119,7 +119,7 @@ func SendMessageTcitem(a, b, c, d Value) Value {
 	if n > 0 {
 		d.Put(nil, SuStr("pszText"), bufZstr(buf))
 	}
-	d.Put(nil, SuStr("iImage"), IntVal(int(tci.iImage)))
+	d.Put(nil, SuStr("iImage"), IntVal(tci.iImage))
 	return intRet(rtn)
 }
 
@@ -229,18 +229,18 @@ func SendMessageTreeItem(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(&tvi)))
-	d.Put(nil, SuStr("mask"), IntVal(int(tvi.mask)))
-	d.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
-	d.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
-	d.Put(nil, SuStr("stateMask"), IntVal(int(tvi.stateMask)))
+	d.Put(nil, SuStr("mask"), IntVal(tvi.mask))
+	d.Put(nil, SuStr("hItem"), IntVal(tvi.hItem))
+	d.Put(nil, SuStr("state"), IntVal(tvi.state))
+	d.Put(nil, SuStr("stateMask"), IntVal(tvi.stateMask))
 	if n != 0 {
 		d.Put(nil, SuStr("pszText"), bufZstr(buf))
 	}
-	d.Put(nil, SuStr("cchTextMax"), IntVal(int(tvi.cchTextMax)))
-	d.Put(nil, SuStr("iImage"), IntVal(int(tvi.iImage)))
-	d.Put(nil, SuStr("iSelectedImage"), IntVal(int(tvi.iSelectedImage)))
-	d.Put(nil, SuStr("cChildren"), IntVal(int(tvi.cChildren)))
-	d.Put(nil, SuStr("lParam"), IntVal(int(tvi.lParam)))
+	d.Put(nil, SuStr("cchTextMax"), IntVal(tvi.cchTextMax))
+	d.Put(nil, SuStr("iImage"), IntVal(tvi.iImage))
+	d.Put(nil, SuStr("iSelectedImage"), IntVal(tvi.iSelectedImage))
+	d.Put(nil, SuStr("cChildren"), IntVal(tvi.cChildren))
+	d.Put(nil, SuStr("lParam"), IntVal(tvi.lParam))
 	return intRet(rtn)
 }
 
@@ -309,7 +309,7 @@ func SendMessageSBPART(a, b, c, d Value) Value {
 		intArg(c),
 		uintptr(unsafe.Pointer(unsafe.SliceData(p))))
 	for i := range np {
-		ob.Put(nil, SuInt(i), IntVal(int(p[i])))
+		ob.Put(nil, SuInt(i), IntVal(p[i]))
 	}
 	return intRet(rtn)
 }
@@ -382,18 +382,18 @@ func toHdItem(ob Value) stHdItem {
 }
 
 func fromHdItem(hdi *stHdItem, ob Value) Value {
-	ob.Put(nil, SuStr("mask"), IntVal(int(hdi.mask)))
-	ob.Put(nil, SuStr("cxy"), IntVal(int(hdi.cxy)))
+	ob.Put(nil, SuStr("mask"), IntVal(hdi.mask))
+	ob.Put(nil, SuStr("cxy"), IntVal(hdi.cxy))
 	// pszText must be handled by caller
-	ob.Put(nil, SuStr("hbm"), IntVal(int(hdi.hbm)))
-	ob.Put(nil, SuStr("cchTextMax"), IntVal(int(hdi.cchTextMax)))
-	ob.Put(nil, SuStr("fmt"), IntVal(int(hdi.fmt)))
-	ob.Put(nil, SuStr("lParam"), IntVal(int(hdi.lParam)))
-	ob.Put(nil, SuStr("iImage"), IntVal(int(hdi.iImage)))
-	ob.Put(nil, SuStr("iOrder"), IntVal(int(hdi.iOrder)))
-	ob.Put(nil, SuStr("type"), IntVal(int(hdi.typ)))
-	ob.Put(nil, SuStr("pvFilter"), IntVal(int(hdi.pvFilter)))
-	ob.Put(nil, SuStr("state"), IntVal(int(hdi.state)))
+	ob.Put(nil, SuStr("hbm"), IntVal(hdi.hbm))
+	ob.Put(nil, SuStr("cchTextMax"), IntVal(hdi.cchTextMax))
+	ob.Put(nil, SuStr("fmt"), IntVal(hdi.fmt))
+	ob.Put(nil, SuStr("lParam"), IntVal(hdi.lParam))
+	ob.Put(nil, SuStr("iImage"), IntVal(hdi.iImage))
+	ob.Put(nil, SuStr("iOrder"), IntVal(hdi.iOrder))
+	ob.Put(nil, SuStr("type"), IntVal(hdi.typ))
+	ob.Put(nil, SuStr("pvFilter"), IntVal(hdi.pvFilter))
+	ob.Put(nil, SuStr("state"), IntVal(hdi.state))
 	return ob
 }
 
@@ -427,8 +427,8 @@ func SendMessageHDHITTESTINFO(a, b, c, d Value) Value {
 		intArg(c),
 		uintptr(unsafe.Pointer(&ht)))
 	d.Put(nil, SuStr("pt"), fromPoint(&ht.pt, nil))
-	d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
-	d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
+	d.Put(nil, SuStr("flags"), IntVal(ht.flags))
+	d.Put(nil, SuStr("iItem"), IntVal(ht.iItem))
 	return intRet(rtn)
 }
 
@@ -452,8 +452,8 @@ func SendMessageTreeHitTest(a, b, c, d Value) Value {
 		intArg(c),
 		uintptr(unsafe.Pointer(&ht)))
 	d.Put(nil, SuStr("pt"), fromPoint(&ht.pt, nil))
-	d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
-	d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
+	d.Put(nil, SuStr("flags"), IntVal(ht.flags))
+	d.Put(nil, SuStr("iItem"), IntVal(ht.iItem))
 	return intRet(rtn)
 }
 
@@ -476,7 +476,7 @@ func SendMessageTabHitTest(a, b, c, d Value) Value {
 		intArg(c),
 		uintptr(unsafe.Pointer(&ht)))
 	d.Put(nil, SuStr("pt"), fromPoint(&ht.pt, nil))
-	d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
+	d.Put(nil, SuStr("flags"), IntVal(ht.flags))
 	return intRet(rtn)
 }
 
@@ -533,7 +533,7 @@ func SendMessageListItem(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(li)))
-	d.Put(nil, SuStr("lParam"), IntVal(int(li.lParam)))
+	d.Put(nil, SuStr("lParam"), IntVal(li.lParam))
 	return intRet(rtn)
 }
 
@@ -618,7 +618,7 @@ func SendMessageListColumnOrder(a, b, c, d Value) Value {
 		intArg(c),
 		uintptr(unsafe.Pointer(unsafe.SliceData(p))))
 	for i := range n {
-		colsob.Put(nil, IntVal(i), IntVal(int(p[i])))
+		colsob.Put(nil, IntVal(i), IntVal(p[i]))
 	}
 	return intRet(rtn)
 }
@@ -638,8 +638,8 @@ func SendMessageLVHITTESTINFO(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(&ht)))
-	d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
-	d.Put(nil, SuStr("iSubItem"), IntVal(int(ht.iSubItem)))
+	d.Put(nil, SuStr("iItem"), IntVal(ht.iItem))
+	d.Put(nil, SuStr("iSubItem"), IntVal(ht.iSubItem))
 	return intRet(rtn)
 }
 
@@ -678,14 +678,14 @@ func toSystemTime(ob Value) stSystemTime {
 }
 
 func SYSTEMTIMEtoOb(st *stSystemTime, ob Value) Value {
-	ob.Put(nil, SuStr("wYear"), IntVal(int(st.wYear)))
-	ob.Put(nil, SuStr("wMonth"), IntVal(int(st.wMonth)))
-	ob.Put(nil, SuStr("wDayOfWeek"), IntVal(int(st.wDayOfWeek)))
-	ob.Put(nil, SuStr("wDay"), IntVal(int(st.wDay)))
-	ob.Put(nil, SuStr("wHour"), IntVal(int(st.wHour)))
-	ob.Put(nil, SuStr("wMinute"), IntVal(int(st.wMinute)))
-	ob.Put(nil, SuStr("wSecond"), IntVal(int(st.wSecond)))
-	ob.Put(nil, SuStr("wMilliseconds"), IntVal(int(st.wMilliseconds)))
+	ob.Put(nil, SuStr("wYear"), IntVal(st.wYear))
+	ob.Put(nil, SuStr("wMonth"), IntVal(st.wMonth))
+	ob.Put(nil, SuStr("wDayOfWeek"), IntVal(st.wDayOfWeek))
+	ob.Put(nil, SuStr("wDay"), IntVal(st.wDay))
+	ob.Put(nil, SuStr("wHour"), IntVal(st.wHour))
+	ob.Put(nil, SuStr("wMinute"), IntVal(st.wMinute))
+	ob.Put(nil, SuStr("wSecond"), IntVal(st.wSecond))
+	ob.Put(nil, SuStr("wMilliseconds"), IntVal(st.wMilliseconds))
 	return ob
 }
 

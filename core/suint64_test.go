@@ -16,7 +16,7 @@ import (
 
 func TestPackInt(t *testing.T) {
 	//   9223372036854775807
-	x := int64(9200000000000000000)
+	x := 9200000000000000000
 	enc := pack.NewEncoder(100)
 	packInt(x, enc)
 	p := enc.String()
@@ -24,7 +24,7 @@ func TestPackInt(t *testing.T) {
 	if x != y {
 		fmt.Println(x)
 		if -9999_9999_9999_9999 < x && x < 9999_9999_9999_9999 {
-			fmt.Printf("old %x\n", Pack(SuDnum{Dnum: dnum.FromInt(int64(x))}))
+			fmt.Printf("old %x\n", Pack(SuDnum{Dnum: dnum.FromInt(x)}))
 		}
 		fmt.Printf("new %x\n", p)
 		fmt.Println(y)
@@ -94,7 +94,7 @@ func FuzzPackUnpackInt(f *testing.F) {
 		f.Add(n * 123)
 	}
 	f.Fuzz(func(t *testing.T, i int) {
-		x := int64(i)
+		x := i
 		packSize := packSizeInt(x)
 		enc := pack.NewEncoder(32)
 		packInt(x, enc)
@@ -104,7 +104,7 @@ func FuzzPackUnpackInt(f *testing.F) {
 			fmt.Println(x)
 			fmt.Println("packSize", packSize)
 			if -9999_9999_9999_9999 < x && x < 9999_9999_9999_9999 {
-				fmt.Printf("old %x\n", Pack(SuDnum{Dnum: dnum.FromInt(int64(x))}))
+				fmt.Printf("old %x\n", Pack(SuDnum{Dnum: dnum.FromInt(x)}))
 			}
 			fmt.Printf("new %x\n", packed)
 			fmt.Println("unpackInt", y)
@@ -113,7 +113,7 @@ func FuzzPackUnpackInt(f *testing.F) {
 	})
 } // go test -fuzz=FuzzPackUnpackInt -run=FuzzPackUnpackInt ./core
 
-func unpackInt64(s string) int64 {
+func unpackInt64(s string) int {
 	if len(s) <= 1 {
 		return 0
 	}
@@ -124,13 +124,13 @@ func unpackInt64(s string) int64 {
 		xor = 0xff
 	}
 	exp := int8(s[1] ^ 0x80 ^ xor)
-	return int64(ToInt(unpackInt(s, sign, exp, xor)))
+	return ToInt(unpackInt(s, sign, exp, xor))
 }
 
 func BenchmarkPackInt(b *testing.B) {
 	for b.Loop() {
 		enc := pack.NewEncoder(30)
-		n := rand.Int64()
+		n := rand.Int()
 		packInt(n, enc)
 		unpackInt64(enc.String())
 	}

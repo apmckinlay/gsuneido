@@ -393,7 +393,7 @@ func (t *UpdateTran) Output(th *core.Thread, table string, rec core.Record) {
 		}
 	}()
 	ti.Nrows++
-	ti.Size += int64(n)
+	ti.Size += n
 	t.db.CallTrigger(th, t, table, "", rec)
 }
 
@@ -460,7 +460,7 @@ func (t *UpdateTran) delete(th *core.Thread, table string, off uint64) {
 	t.write()
 	ts := t.getSchema(table)
 	rec := t.GetRecord(off)
-	n := int64(rec.Len())
+	n := rec.Len()
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
 		is := ts.Indexes[i].Ixspec
@@ -639,8 +639,8 @@ func (t *UpdateTran) update(th *core.Thread, table string, oldoff uint64, newrec
 	}
 	t.ck(t.db.ck.Update(t.ct, table, oldoff, oldkeys, newkeys))
 	ti = t.getRwInfo(table)
-	d := int64(len(newrec)) - int64(len(oldrec))
-	assert.That(int64(ti.Size)+d > 0)
+	d := len(newrec) - len(oldrec)
+	assert.That(ti.Size+d > 0)
 	ti.Size = ti.Size + d
 	func() {
 		defer func() {

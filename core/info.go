@@ -29,9 +29,9 @@ func InfoStr(name string) Value {
 	case *int:
 		return IntVal(*x)
 	case *atomic.Int64:
-		return Int64Val(x.Load())
+		return IntVal(x.Load())
 	case *atomic.Int32:
-		return IntVal(int(x.Load()))
+		return IntVal(x.Load())
 	case *string:
 		return SuStr(*x)
 	case Value:

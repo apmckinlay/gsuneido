@@ -7216,4 +7216,3 @@ func TestIfBreakBranchStillMerged(t *testing.T) {
 	a.That(isUnionOf(env.Returns["Continue"], TNumber, TString))
 	a.That(isUnionOf(env.Returns["BreakFirst"], TNumber, TString))
 }
-

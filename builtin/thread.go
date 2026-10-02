@@ -149,9 +149,9 @@ func thread_Profile(th *Thread, args []Value) Value {
 	for f, c := range calls {
 		ob := &SuObject{}
 		ob.Set(SuStr("name"), SuStr(f.String()))
-		ob.Set(SuStr("calls"), IntVal(int(c)))
-		ob.Set(SuStr("total"), Int64Val(int64(total[f])))
-		ob.Set(SuStr("self"), Int64Val(int64(self[f])))
+		ob.Set(SuStr("calls"), IntVal(c))
+		ob.Set(SuStr("total"), IntVal(total[f]))
+		ob.Set(SuStr("self"), IntVal(self[f]))
 		prof.Add(ob)
 	}
 	return prof

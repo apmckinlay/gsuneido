@@ -171,7 +171,7 @@ func GlobalFree(a Value) Value {
 var _ = builtin(MulDiv, "(x, y, z) :number")
 
 func MulDiv(a, b, c Value) Value {
-	return IntVal(int(int64(ToInt(a)) * int64(ToInt(b)) / int64(ToInt(c))))
+	return IntVal(ToInt(a) * ToInt(b) / ToInt(c))
 }
 
 // dll bool Kernel32:CloseHandle(pointer handle)
@@ -314,7 +314,7 @@ func writefile(f Value, buf unsafe.Pointer, size Value, written Value) Value {
 		uintptr(n),
 		uintptr(unsafe.Pointer(&w)),
 		0)
-	written.Put(nil, SuStr1("x"), IntVal(int(w)))
+	written.Put(nil, SuStr1("x"), IntVal(w))
 	return boolRet(rtn)
 }
 

@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"runtime/metrics"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +32,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/system"
 	// sync "github.com/sasha-s/go-deadlock"
 )
+
+// only allow building on 64 bit systems
+type _ [strconv.IntSize - 64]byte
 
 var builtDate = "Jan 23 2023 12:34" // set by: go build -ldflags "-X main.builtDate=..."
 var mode = ""                       // set by: go build -ldflags "-X main.mode=gui"

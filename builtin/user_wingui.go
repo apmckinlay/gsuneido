@@ -342,7 +342,7 @@ func BeginPaint(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(beginPaint,
 		intArg(a),
 		uintptr(unsafe.Pointer(ps)))
-	b.Put(nil, SuStr("hdc"), IntVal(int(ps.hdc)))
+	b.Put(nil, SuStr("hdc"), IntVal(ps.hdc))
 	b.Put(nil, SuStr("fErase"), SuBool(ps.fErase != 0))
 	b.Put(nil, SuStr("rcPaint"),
 		fromRect(&ps.rcPaint, b.Get(nil, SuStr("rcPaint"))))
@@ -543,7 +543,7 @@ func GetMonitorInfoApi(a, b Value) Value {
 		uintptr(unsafe.Pointer(&mi)))
 	b.Put(nil, SuStr("rcMonitor"), fromRect(&mi.rcMonitor, nil))
 	b.Put(nil, SuStr("rcWork"), fromRect(&mi.rcWork, nil))
-	b.Put(nil, SuStr("dwFlags"), IntVal(int(mi.dwFlags)))
+	b.Put(nil, SuStr("dwFlags"), IntVal(mi.dwFlags))
 	return boolRet(rtn)
 }
 
@@ -565,11 +565,11 @@ func GetScrollInfo(a, b, c Value) Value {
 		intArg(a),
 		intArg(b),
 		uintptr(unsafe.Pointer(&si)))
-	c.Put(nil, SuStr("nMin"), IntVal(int(si.nMin)))
-	c.Put(nil, SuStr("nMax"), IntVal(int(si.nMax)))
-	c.Put(nil, SuStr("nPage"), IntVal(int(si.nPage)))
-	c.Put(nil, SuStr("nPos"), IntVal(int(si.nPos)))
-	c.Put(nil, SuStr("nTrackPos"), IntVal(int(si.nTrackPos)))
+	c.Put(nil, SuStr("nMin"), IntVal(si.nMin))
+	c.Put(nil, SuStr("nMax"), IntVal(si.nMax))
+	c.Put(nil, SuStr("nPage"), IntVal(si.nPage))
+	c.Put(nil, SuStr("nPos"), IntVal(si.nPos))
+	c.Put(nil, SuStr("nTrackPos"), IntVal(si.nTrackPos))
 	return boolRet(rtn)
 }
 
@@ -635,8 +635,8 @@ func GetWindowPlacement(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(getWindowPlacement,
 		intArg(a),
 		uintptr(unsafe.Pointer(&wp)))
-	b.Put(nil, SuStr("flags"), IntVal(int(wp.flags)))
-	b.Put(nil, SuStr("showCmd"), IntVal(int(wp.showCmd)))
+	b.Put(nil, SuStr("flags"), IntVal(wp.flags))
+	b.Put(nil, SuStr("showCmd"), IntVal(wp.showCmd))
 	b.Put(nil, SuStr("ptMinPosition"), fromPoint(&wp.ptMinPosition, nil))
 	b.Put(nil, SuStr("ptMaxPosition"), fromPoint(&wp.ptMaxPosition, nil))
 	b.Put(nil, SuStr("rcNormalPosition"),
@@ -1088,7 +1088,7 @@ func SPI_GetFocusBorderHeight() Value {
 		0,
 		uintptr(unsafe.Pointer(&p)),
 		0)
-	return IntVal(int(p))
+	return IntVal(p)
 }
 
 var _ = builtin(SPI_GetWheelScrollLines, "() :number")
@@ -1101,7 +1101,7 @@ func SPI_GetWheelScrollLines() Value {
 		0,
 		uintptr(unsafe.Pointer(&p)),
 		0)
-	return IntVal(int(p))
+	return IntVal(p)
 }
 
 var _ = builtin(SPI_GetWorkArea, "() :object")
@@ -1170,7 +1170,7 @@ func DefWindowProc(a, b, c, d Value) Value {
 var _ = builtin(GetDefWindowProc, "() :number")
 
 func GetDefWindowProc() Value {
-	return IntVal(int(defWindowProc))
+	return IntVal(defWindowProc)
 }
 
 // dll User32:GetKeyState(long key) short
@@ -1750,8 +1750,8 @@ func ClientToScreen(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(clientToScreen,
 		intArg(a),
 		uintptr(unsafe.Pointer(pt)))
-	b.Put(nil, SuStr1("x"), IntVal(int(pt.x)))
-	b.Put(nil, SuStr1("y"), IntVal(int(pt.y)))
+	b.Put(nil, SuStr1("x"), IntVal(pt.x))
+	b.Put(nil, SuStr1("y"), IntVal(pt.y))
 	return boolRet(rtn)
 }
 
@@ -1992,7 +1992,7 @@ func GetWindowThreadProcessId(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(getWindowThreadProcessId,
 		intArg(a),
 		uintptr(unsafe.Pointer(&pid)))
-	b.Put(nil, SuStr1("x"), IntVal(int(pid)))
+	b.Put(nil, SuStr1("x"), IntVal(pid))
 	return boolRet(rtn)
 }
 

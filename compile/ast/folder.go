@@ -10,7 +10,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
@@ -159,7 +158,7 @@ func (f Folder) foldIn(in *In) Expr {
 	return f.constant(False)
 }
 
-var allones Value = SuDnum{Dnum: dnum.FromInt(0xffffffff)}
+var allones Value = IntVal(-1)
 
 func (f Folder) Nary(token tok.Token, exprs []Expr) Expr {
 	return f.foldNary(&Nary{Tok: token, Exprs: exprs})

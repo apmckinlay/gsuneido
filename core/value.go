@@ -11,6 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"golang.org/x/exp/constraints"
 	// sync "github.com/sasha-s/go-deadlock"
 )
 
@@ -33,16 +34,16 @@ type Value interface {
 	// Note: strings will have quotes and be escaped
 	String() string
 
-	// AsStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string
+	// AsStr converts SuBool, SuInt, SuInt64, SuDnum, SuStr, SuConcat, SuExcept to string
 	AsStr() (string, bool)
 
 	// ToStr converts SuStr, SuConcat, SuExcept to string
 	ToStr() (string, bool)
 
-	// ToInt converts false (SuBool), "" (SuStr), SuInt, SuDnum to int
+	// ToInt converts false (SuBool), "" (SuStr), SuInt, SuInt64, SuDnum to int
 	ToInt() (int, bool)
 
-	// IfInt converts SuInt, SuDnum to int
+	// IfInt converts SuInt, SuInt64, SuDnum to int
 	IfInt() (int, bool)
 
 	// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum
@@ -133,7 +134,7 @@ var NilVal Value
 func NumFromString(s string) Value {
 	if len(s) > 2 && s[0] == '0' && s[1] == 'x' {
 		if n, err := strconv.ParseUint(s, 0, 64); err == nil {
-			return IntVal(int(n))
+			return IntVal(n)
 		}
 	}
 	base := 10
@@ -141,7 +142,7 @@ func NumFromString(s string) Value {
 		base = 0
 	}
 	if n, err := strconv.ParseInt(s, base, 64); err == nil {
-		return IntVal(int(n))
+		return IntVal(n)
 	}
 	return SuDnum{Dnum: dnum.FromStr(s)}
 }
@@ -204,14 +205,6 @@ func ToInt(x Value) int {
 	panic("can't convert " + ErrType(x) + " to integer")
 }
 
-// ToInt64 does ToDnum and ToInt64 and panics if it fails
-func ToInt64(x Value) int64 {
-	if i, ok := ToDnum(x).ToInt64(); ok {
-		return i
-	}
-	panic("can't convert " + ErrType(x) + " to integer")
-}
-
 // IfInt converts SuInt, SuDnum to int.
 // Calls Value.IfInt and panics if it fails
 func IfInt(x Value) int {
@@ -228,7 +221,7 @@ func SuIntToInt(x any) (int, bool) {
 		return si.toInt(), true
 	}
 	if si, ok := x.(SuInt64); ok {
-		return int(si.int64), true
+		return int(si.n), true
 	}
 	return 0, false
 }
@@ -335,19 +328,11 @@ type PackableValue interface {
 }
 
 // IntVal returns an SuInt if it fits, else an SuInt64
-func IntVal(n int) PackableValue {
-	if MinSuInt <= n && n <= MaxSuInt {
-		return SuInt(n)
-	}
-	return SuInt64{int64: int64(n)}
-}
-
-// Int64Val returns an SuInt if it fits, else an SuInt64
-func Int64Val(n int64) PackableValue {
-	if MinSuInt < n && n < MaxSuInt {
+func IntVal[T constraints.Integer](n T) PackableValue {
+	if MinSuInt <= int(n) && int(n) <= MaxSuInt {
 		return SuInt(int(n))
 	}
-	return SuInt64{int64: int64(n)}
+	return SuInt64{n: int(n)}
 }
 
 // MayLock can be embedded to provide locking.

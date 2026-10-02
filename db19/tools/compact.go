@@ -132,7 +132,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 	ixi := info.SmallestKeyIndex(ts.Indexes)
 	statsCols := buildStatsCols(ts.Table, ts.Columns, busy, stats)
 	sum := uint64(0)
-	size := int64(0)
+	size := 0
 	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
 	var off2 uint64
 	var dstbuf []byte
@@ -155,7 +155,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 			copy(dstbuf, buf)
 		}
 		list.Add(off2)
-		size += int64(n)
+		size += n
 	})
 	list.Finish()
 	assert.That(nrows == info.Nrows)
@@ -247,6 +247,6 @@ func createStatsTable(dst *Database, stats stats.StatsTally) {
 	bt := bldr.Finish()
 	ov := index.OverlayFor(bt)
 
-	ti := meta.NewInfo(ts.Table, []*index.Overlay{ov}, 1, int64(bi.Size()))
+	ti := meta.NewInfo(ts.Table, []*index.Overlay{ov}, 1, bi.Size())
 	dst.AddNewTable(ts, ti)
 }

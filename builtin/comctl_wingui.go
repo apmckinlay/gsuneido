@@ -193,8 +193,8 @@ func ImageList_GetImageInfo(a, b, c Value) Value {
 		intArg(a),
 		intArg(b),
 		uintptr(unsafe.Pointer(&ii)))
-	c.Put(nil, SuStr("hbmImage"), IntVal(int(ii.hbmImage)))
-	c.Put(nil, SuStr("hbmMask"), IntVal(int(ii.hbmMask)))
+	c.Put(nil, SuStr("hbmImage"), IntVal(ii.hbmImage))
+	c.Put(nil, SuStr("hbmMask"), IntVal(ii.hbmMask))
 	c.Put(nil, SuStr("rcImage"),
 		fromRect(&ii.rcImage, c.Get(nil, SuStr("rcImage"))))
 	return boolRet(rtn)

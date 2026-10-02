@@ -202,42 +202,42 @@ func (d SuDate) MinusDays(other SuDate) int {
 	return (int)(d.jday() - other.jday())
 }
 
-func (d SuDate) jday() int64 {
+func (d SuDate) jday() int {
 	return julianDayNumber(d.Year(), d.Month(), d.Day())
 }
 
 // julianDayNumber returns the time's Julian Day Number
 // relative to the epoch 12:00 January 1, 4713 BC, Monday.
 // NOTE: based on Go time package code
-func julianDayNumber(year, month, day int) int64 {
-	a := int64(14-month) / 12
-	y := int64(year) + 4800 - a
-	m := int64(month) + 12*a - 3
-	return int64(day) + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
+func julianDayNumber(year, month, day int) int {
+	a := int(14-month) / 12
+	y := int(year) + 4800 - a
+	m := int(month) + 12*a - 3
+	return int(day) + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
 }
 
 // MinusMs returns the difference between two Dates in milliseconds
 //
 // WARNING: doing this around daylight savings changes may be problematic
-func (d SuDate) MinusMs(other SuDate) int64 {
+func (d SuDate) MinusMs(other SuDate) int {
 	if d.date == other.date {
 		return d.timeAsMs() - other.timeAsMs()
 	}
 	return d.UnixMilli() - other.UnixMilli()
 }
 
-func (d SuDate) timeAsMs() int64 {
-	return int64(d.Millisecond()) +
-		int64(1000)*int64(d.Second()+60*(d.Minute()+60*d.Hour()))
+func (d SuDate) timeAsMs() int {
+	return int(d.Millisecond()) +
+		int(1000)*int(d.Second()+60*(d.Minute()+60*d.Hour()))
 }
 
 // UnixMilli returns the time in milliseconds since 1 Jan 1970
-func (d SuDate) UnixMilli() int64 {
-	return d.ToGoTime().UnixMilli()
+func (d SuDate) UnixMilli() int {
+	return int(d.ToGoTime().UnixMilli())
 }
 
-func SuDateFromUnixMilli(t int64) SuDate {
-	return FromGoTime(time.UnixMilli(t))
+func SuDateFromUnixMilli(t int) SuDate {
+	return FromGoTime(time.UnixMilli(int64(t)))
 }
 
 func (d SuDate) ToGoTime() time.Time {

@@ -106,7 +106,7 @@ func check( /*cond*/ bool) {
 }
 
 // FromInt returns a Dnum for an int
-func FromInt(n int64) Dnum {
+func FromInt(n int) Dnum {
 	if n == 0 {
 		return Zero
 	}
@@ -121,8 +121,8 @@ func FromInt(n int64) Dnum {
 	return dn
 }
 
-func reversible(n int64, dn Dnum) bool {
-	n2, ok := dn.ToInt64()
+func reversible(n int, dn Dnum) bool {
+	n2, ok := dn.ToInt()
 	return ok && n2 == n
 }
 
@@ -139,7 +139,7 @@ func FromFloat(f float64) Dnum {
 		panic("dnum.FromFloat can't convert NaN")
 	}
 
-	n := int64(f)
+	n := int(f)
 	if f == float64(n) {
 		return FromInt(n)
 	}
@@ -427,39 +427,30 @@ func (dn Dnum) ToFloat() float64 {
 	return g * e
 }
 
-// ToInt64 converts a Dnum to an int64, returning whether it was convertible
-func (dn Dnum) ToInt64() (int64, bool) {
+// ToInt converts a Dnum to an int, returning whether it was convertible
+func (dn Dnum) ToInt() (int, bool) {
 	if dn.sign == 0 {
 		return 0, true
 	}
 	if dn.sign != signNegInf && dn.sign != signPosInf {
 		if 0 < dn.exp && dn.exp < digitsMax &&
 			(dn.coef%pow10[digitsMax-dn.exp]) == 0 { // usual case
-			return int64(dn.sign) * int64(dn.coef/pow10[digitsMax-dn.exp]), true
+			return int(dn.sign) * int(dn.coef/pow10[digitsMax-dn.exp]), true
 		}
 		if dn.exp == digitsMax {
-			return int64(dn.sign) * int64(dn.coef), true
+			return int(dn.sign) * int(dn.coef), true
 		}
 		if dn.exp == digitsMax+1 {
-			return int64(dn.sign) * (int64(dn.coef) * 10), true
+			return int(dn.sign) * (int(dn.coef) * 10), true
 		}
 		if dn.exp == digitsMax+2 {
-			return int64(dn.sign) * (int64(dn.coef) * 100), true
+			return int(dn.sign) * (int(dn.coef) * 100), true
 		}
-		if dn.exp == digitsMax+3 && dn.coef < math.MaxInt64/1000 {
-			return int64(dn.sign) * (int64(dn.coef) * 1000), true
+		if dn.exp == digitsMax+3 && dn.coef <= math.MaxInt/1000 {
+			return int(dn.sign) * (int(dn.coef) * 1000), true
 		}
 	}
 	return 0, false
-}
-
-func (dn Dnum) ToInt() (int, bool) {
-	// if int is int64, this is a nop
-	n, ok := dn.ToInt64()
-	if !ok || int64(int(n)) != n {
-		return 0, false
-	}
-	return int(n), true
 }
 
 // Sign returns -1 for negative, 0 for zero, and +1 for positive

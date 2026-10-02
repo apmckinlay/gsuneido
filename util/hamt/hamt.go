@@ -415,7 +415,7 @@ func (ht Hamt[K, E]) Write(st *stor.Stor, prevOff uint64, lastMod int) uint64 {
 	off, buf := st.Alloc(size)
 	w := stor.NewWriter(buf)
 	w.Put3(size)
-	w.Put5(int64(prevOff))
+	w.Put5(int(prevOff))
 	w.Put4(int(ck))
 	for it := range ht.All() {
 		if lastMod != All || !it.IsTomb() {

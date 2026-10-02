@@ -192,9 +192,9 @@ func (c *astContainer) Get(_ *Thread, m Value) Value {
 	case SuStr("pos"):
 		return IntVal(c.GetPos())
 	case SuStr("pos1"):
-		return IntVal(int(c.pos1))
+		return IntVal(c.pos1)
 	case SuStr("pos2"):
-		return IntVal(int(c.pos2))
+		return IntVal(c.pos2)
 	case SuStr("end"):
 		return IntVal(c.GetEnd())
 	case SuStr("children"):
@@ -238,9 +238,9 @@ func (kv *keyVal) Get(_ *Thread, m Value) Value {
 	case SuStr("value"):
 		return kv.val
 	case SuStr("pos"):
-		return IntVal(int(kv.pos))
+		return IntVal(kv.pos)
 	case SuStr("end"):
-		return IntVal(int(kv.end))
+		return IntVal(kv.end)
 	case SuStr("children"):
 		if kv.key == nil {
 			return ast.NewChildren([]Value{kv.val})

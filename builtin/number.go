@@ -44,8 +44,6 @@ func numFromString(s string) Value {
 	return NumFromString(s)
 }
 
-
-
 var _ = exportMethods(&NumMethods, "num")
 
 var _ = method(num_Binary, "() :string")
@@ -227,7 +225,7 @@ func toFloat(v Value) float64 {
 func fromFloat(f float64) Value {
 	n := int64(f)
 	if f == float64(n) {
-		return Int64Val(n)
+		return IntVal(n)
 	}
 	return SuDnum{Dnum: dnum.FromFloat(f)}
 }

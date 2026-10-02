@@ -10,5 +10,5 @@ import (
 var _ = builtin(Hash, "(value) :number")
 
 func Hash(arg Value) Value {
-	return Int64Val(int64(arg.Hash()))
+	return IntVal(arg.Hash())
 }

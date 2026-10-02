@@ -68,5 +68,5 @@ func WTS_GetSessionId() Value {
 	}
 	data := *(*int32)(toptr(buf))
 	WTSFreeMemory(buf)
-	return IntVal(int(data))
+	return IntVal(data)
 }

@@ -215,7 +215,7 @@ func TestTableOptimize_UniqueReq(t *testing.T) {
 		tbl := &Table{name: "foo"}
 		tbl.indexes = indexes
 		tbl.allKeys = keys
-		tbl.info = &meta.Info{Nrows: nrows, Size: int64(nrows * 100)}
+		tbl.info = &meta.Info{Nrows: nrows, Size: nrows * 100}
 		schemaIndexes := make([]Index, len(indexes))
 		for i, idx := range indexes {
 			schemaIndexes[i] = Index{Columns: idx}

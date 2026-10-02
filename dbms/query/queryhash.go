@@ -102,7 +102,7 @@ func (qh *QueryHash) Result(details bool) Value {
 		return SuStr(fmt.Sprintln("nrows", qh.nrows, "hash", qh.hash,
 			"ncols", qh.ncols, "hash", qh.colsHash))
 	}
-	return IntVal(int(qh.hash))
+	return IntVal(qh.hash)
 }
 
 func queryHashAll(db *db19.Database, query string) {

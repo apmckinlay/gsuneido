@@ -247,17 +247,17 @@ func variantToSu(v *stVariant) Value {
 	case VT_BOOL:
 		result = SuBool(v.val != 0)
 	case VT_I2:
-		result = IntVal(int(int16(v.val)))
+		result = IntVal(int16(v.val))
 	case VT_I4:
-		result = IntVal(int(int32(v.val)))
+		result = IntVal(int32(v.val))
 	case VT_I8:
-		result = IntVal(int(v.val))
+		result = IntVal(v.val)
 	case VT_UI2:
-		result = IntVal(int(uint16(v.val)))
+		result = IntVal(uint16(v.val))
 	case VT_UI4:
-		result = IntVal(int(uint32(v.val)))
+		result = IntVal(uint32(v.val))
 	case VT_UI8:
-		result = IntVal(int(v.val))
+		result = IntVal(v.val)
 	case VT_BSTR:
 		result = SuStr(bstrToString(v))
 		VariantClear(v)

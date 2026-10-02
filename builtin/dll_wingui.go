@@ -78,11 +78,11 @@ func intArg(arg Value) uintptr {
 }
 
 func intRet(rtn uintptr) Value {
-	return IntVal(int(rtn))
+	return IntVal(rtn)
 }
 
 func int32Ret(rtn uintptr) Value {
-	return IntVal(int(int32(rtn)))
+	return IntVal(int32(rtn))
 }
 
 func getBool(ob Value, mem string) BOOL {
@@ -203,10 +203,10 @@ func fromRect(r *stRect, ob Value) Value {
 	} else if ob.Equal(Zero) {
 		return ob
 	}
-	ob.Put(nil, SuStr("left"), IntVal(int(r.left)))
-	ob.Put(nil, SuStr("top"), IntVal(int(r.top)))
-	ob.Put(nil, SuStr("right"), IntVal(int(r.right)))
-	ob.Put(nil, SuStr("bottom"), IntVal(int(r.bottom)))
+	ob.Put(nil, SuStr("left"), IntVal(r.left))
+	ob.Put(nil, SuStr("top"), IntVal(r.top))
+	ob.Put(nil, SuStr("right"), IntVal(r.right))
+	ob.Put(nil, SuStr("bottom"), IntVal(r.bottom))
 	return ob
 }
 
@@ -216,8 +216,8 @@ func fromPoint(pt *stPoint, ob Value) Value {
 	if ob == nil {
 		ob = &SuObject{}
 	}
-	ob.Put(nil, SuStr1("x"), IntVal(int(pt.x)))
-	ob.Put(nil, SuStr1("y"), IntVal(int(pt.y)))
+	ob.Put(nil, SuStr1("x"), IntVal(pt.x))
+	ob.Put(nil, SuStr1("y"), IntVal(pt.y))
 	return ob
 }
 

@@ -37,3 +37,18 @@ func TestSuInt(t *testing.T) {
 	assert.True(s10.Equal(d10))
 	assert.This(s10.Hash()).Is(d10.Hash())
 }
+
+func TestSuDnumLargeIntSymmetric(t *testing.T) {
+	dn := SuDnum{Dnum: dnum.FromStr("1.234567890123457e18")}
+	si64 := SuInt64{n: 1234567890123456789}
+	assert.False(dn.Equal(si64))
+	assert.False(si64.Equal(dn))
+}
+
+func TestSuDnumLargeIntHashConsistent(t *testing.T) {
+	si64 := SuInt64{n: 9999999999999999}
+	dn := SuDnum{Dnum: dnum.FromInt(9999999999999999)}
+	assert.True(si64.Equal(dn))
+	assert.True(dn.Equal(si64))
+	assert.This(si64.Hash()).Is(dn.Hash())
+}

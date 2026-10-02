@@ -218,7 +218,7 @@ func file_Seek(this, arg1, arg2 Value) Value {
 		panic("File: Seek: invalid with mode 'a'")
 	}
 	sf.reset()
-	offset := ToInt64(arg1)
+	offset := int64(ToInt(arg1))
 	switch ToStr(arg2) {
 	case "set":
 		//
@@ -244,7 +244,7 @@ func file_Size(this Value) Value {
 	if sf.w != nil {
 		sf.w.Flush()
 	}
-	return Int64Val(sf.size())
+	return IntVal(sf.size())
 }
 
 var _ = method(file_Tell, "() :number")
@@ -256,9 +256,9 @@ func file_Tell(this Value) Value {
 		if err != nil {
 			panic("File: " + err.Error())
 		}
-		return Int64Val(off)
+		return IntVal(off)
 	}
-	return Int64Val(sf.tell)
+	return IntVal(sf.tell)
 }
 
 var _ = method(file_Write, "(string) :string")

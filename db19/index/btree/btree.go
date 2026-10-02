@@ -83,7 +83,7 @@ func (bt *btree) TreeLevels() int {
 }
 
 func (bt *btree) Write(w *stor.Writer) {
-	w.Put5(int64(bt.root)).Put1(bt.treeLevels)
+	w.Put5(int(bt.root)).Put1(bt.treeLevels)
 }
 
 func Read(st *stor.Stor, r *stor.Reader, nrows int) *T {

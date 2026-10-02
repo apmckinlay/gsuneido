@@ -41,7 +41,7 @@ func GetDiskFreeSpace(arg Value) Value {
 	if rtn == 0 {
 		panic("GetDiskFreeSpace: " + e.Error())
 	}
-	return Int64Val(n)
+	return IntVal(n)
 }
 
 type stMemoryStatusEx struct {

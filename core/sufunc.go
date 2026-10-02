@@ -154,7 +154,7 @@ func (f *SuFunc) coverToOb(ob *SuObject, counts bool) {
 		}
 		var v Value
 		if counts {
-			v = IntVal(int(f.cover[i]))
+			v = IntVal(f.cover[i])
 		} else {
 			if f.cover[i>>4]&(1<<(i&15)) == 0 {
 				v = False

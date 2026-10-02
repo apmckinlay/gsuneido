@@ -24,7 +24,7 @@ func init() {
 func Random(th *Thread, args []Value) Value {
 	initRand(th)
 	if args[0] == False {
-		return Int64Val(th.Rand.Int64())
+		return IntVal(th.Rand.Int())
 	}
 	limit := IfInt(args[0])
 	return IntVal(th.Rand.IntN(limit))

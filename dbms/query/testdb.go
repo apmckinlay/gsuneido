@@ -145,6 +145,6 @@ func (t sizeTran) GetInfo(table string) *meta.Info {
 	if table == "trans" || table == "hist" || table == "hist2" {
 		ti.Nrows = 10_000
 	}
-	ti.Size = int64(ti.Nrows) * 100
+	ti.Size = ti.Nrows * 100
 	return &ti
 }

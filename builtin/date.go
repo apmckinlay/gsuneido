@@ -263,5 +263,5 @@ func dayOfWeek(x Value) int {
 var _ = builtin(UnixTime, "() :number")
 
 func UnixTime() Value {
-	return IntVal(int(time.Now().Unix()))
+	return IntVal(time.Now().Unix())
 }

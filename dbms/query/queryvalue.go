@@ -60,17 +60,17 @@ func qryBase(q Query, key Value) Value {
 		m := q.Metrics()
 		return IntVal(m.fixcost + m.varcost)
 	case SuStr("costself"):
-		return IntVal(int(q.Metrics().costself))
+		return IntVal(q.Metrics().costself)
 	case SuStr("tget"):
-		return Int64Val(int64(q.Metrics().tget))
+		return IntVal(q.Metrics().tget)
 	case SuStr("tgetself"):
-		return Int64Val(int64(q.Metrics().tgetself))
+		return IntVal(q.Metrics().tgetself)
 	case SuStr("ngets"):
-		return IntVal(int(q.Metrics().ngets))
+		return IntVal(q.Metrics().ngets)
 	case SuStr("nsels"):
-		return IntVal(int(q.Metrics().nsels))
+		return IntVal(q.Metrics().nsels)
 	case SuStr("nlooks"):
-		return IntVal(int(q.Metrics().nlooks))
+		return IntVal(q.Metrics().nlooks)
 	}
 	return nil
 }

@@ -74,13 +74,13 @@ func (st *SuTran) Asof(val Value) Value {
 		if !ok {
 			panic("transaction.Asof requires a date")
 		}
-		asof = d.UnixMilli()
+		asof = int64(d.UnixMilli())
 	}
 	asof = st.itran.Asof(asof)
 	if asof == 0 {
 		return False
 	}
-	return SuDateFromUnixMilli(asof)
+	return SuDateFromUnixMilli(int(asof))
 }
 
 func (st *SuTran) Complete() {

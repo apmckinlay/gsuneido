@@ -22,9 +22,9 @@ type Info struct {
 	Table      string
 	Indexes    []*index.Overlay
 	Nrows      int
-	Size       int64
+	Size       int
 	BtreeNrows int
-	BtreeSize  int64
+	BtreeSize  int
 	// Deltas tracks the count & size changes per layer
 	// parallel to the Indexes Overlay layers.
 	// Deltas + BtreeNrows/Size should equal Nrows/Size
@@ -39,10 +39,10 @@ type Info struct {
 
 type Delta struct {
 	Nrows int
-	Size  int64
+	Size  int
 }
 
-func NewInfo(table string, indexes []*index.Overlay, nrows int, size int64) *Info {
+func NewInfo(table string, indexes []*index.Overlay, nrows int, size int) *Info {
 	return &Info{Table: table, Indexes: indexes, Deltas: []Delta{{}},
 		Nrows: nrows, Size: size, BtreeNrows: nrows, BtreeSize: size}
 }

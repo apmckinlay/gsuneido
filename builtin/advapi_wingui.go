@@ -26,7 +26,7 @@ func RegOpenKeyEx(a, b, c, d, e Value) Value {
 		intArg(c),
 		intArg(d),
 		uintptr(unsafe.Pointer(&result)))
-	e.Put(nil, SuStr1("x"), IntVal(int(result)))
+	e.Put(nil, SuStr1("x"), IntVal(result))
 	return intRet(rtn)
 }
 
@@ -57,7 +57,7 @@ func RegCreateKeyEx(_ *Thread, a []Value) Value {
 		0, // lpSecurityAttributes - always null
 		uintptr(unsafe.Pointer(&result)),
 		0) // lpdwDisposition - always null
-	a[7].Put(nil, SuStr1("x"), IntVal(int(result)))
+	a[7].Put(nil, SuStr1("x"), IntVal(result))
 	return intRet(rtn)
 }
 
@@ -76,7 +76,7 @@ func RegQueryValueEx(a, b, c, d, e, f Value) Value {
 		0, // lpType - NULL
 		uintptr(unsafe.Pointer(&data)),
 		uintptr(unsafe.Pointer(&cbData)))
-	e.Put(nil, SuStr1("x"), IntVal(int(data)))
+	e.Put(nil, SuStr1("x"), IntVal(data))
 	return intRet(rtn)
 }
 

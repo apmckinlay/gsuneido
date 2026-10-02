@@ -62,7 +62,7 @@ func (si *smi) IfInt() (int, bool) {
 }
 
 func (si *smi) ToDnum() (dnum.Dnum, bool) {
-	return dnum.FromInt(int64(ToInt(si))), true
+	return dnum.FromInt(ToInt(si)), true
 }
 
 func (*smi) ToContainer() (Container, bool) {
@@ -105,15 +105,15 @@ const phi64 = 0x9e3779b97f4a7c15
 
 // Hash must give consistent results for equal SuInt, SuInt64, and SuDnum
 func (si *smi) Hash() uint64 {
-	return hashInt64(int64(si.toInt()))
+	return hashInt(si.toInt())
 }
 
 func (si *smi) Hash2() uint64 {
 	return si.Hash()
 }
 
-// hashInt64 is the common hash function for SuInt, SuInt64, and SuDnum
-func hashInt64(n int64) uint64 {
+// hashInt is the common hash function for SuInt, SuInt64, and SuDnum
+func hashInt(n int) uint64 {
 	return uint64(n) * phi64
 }
 
@@ -175,7 +175,7 @@ func (*smi) SetConcurrent() {
 var _ Packable = SuInt(0)
 
 func (si *smi) PackSize(*uint64) int {
-	return SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.PackSize(nil)
+	return SuDnum{Dnum: dnum.FromInt(si.toInt())}.PackSize(nil)
 }
 
 func (si *smi) PackSize2(*uint64, PackStack) int {
@@ -183,5 +183,5 @@ func (si *smi) PackSize2(*uint64, PackStack) int {
 }
 
 func (si *smi) Pack(hash *uint64, buf *pack.Encoder) {
-	SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.Pack(hash, buf)
+	SuDnum{Dnum: dnum.FromInt(si.toInt())}.Pack(hash, buf)
 }

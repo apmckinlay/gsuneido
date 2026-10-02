@@ -5,7 +5,6 @@ package mux
 
 import (
 	"fmt"
-	"math"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
@@ -287,7 +286,6 @@ func (rb *ReadBuf) GetChar() byte {
 // GetInt reads a zig zag encoded varint
 func (rb *ReadBuf) GetInt() int {
 	n := rb.GetInt64()
-	assert.That(int64(math.MinInt) <= n && n <= int64(math.MaxInt))
 	trace.ClientServer.Println("    <-", n)
 	return int(n)
 }

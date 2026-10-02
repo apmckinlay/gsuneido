@@ -36,7 +36,7 @@ type loadJob struct {
 	list  *slBuilder
 	ts    *meta.Schema
 	nrecs int
-	size  int64
+	size  int
 }
 
 // LoadDatabase imports a dumped database from a file.
@@ -198,7 +198,7 @@ func tableSchema(db *Database, schem string) *meta.Schema {
 
 // loadTable1 reads the data
 func loadTable1(db *Database, r *bufio.Reader, schema string) (
-	nrows int, size int64, list *sortlist.Builder[uint64]) {
+	nrows int, size int, list *sortlist.Builder[uint64]) {
 	trace(schema)
 	if strings.HasPrefix(schema, "views ") {
 		return loadViews(db, r, schema), 0, nil
@@ -214,7 +214,7 @@ func loadTable1(db *Database, r *bufio.Reader, schema string) (
 // loadTable2 builds the indexes.
 // It is multi-threaded when loading an entire database
 func loadTable2(db *Database, ts *meta.Schema,
-	nrows int, size int64, list *slBuilder, overwrite bool) {
+	nrows int, size int, list *slBuilder, overwrite bool) {
 	// dump ensures that index 0 is the physical sort order
 	indexes := buildIndexes(ts, list, db, nrows, 0)
 	ti := meta.NewInfo(ts.Table, indexes, nrows, size)
@@ -238,7 +238,7 @@ func readLinePrefixed(r *bufio.Reader, pre string) string {
 }
 
 func readRecords(in *bufio.Reader, store *stor.Stor, list *slBuilder) (
-	nrecs int, size int64) {
+	nrecs int, size int) {
 	intbuf := make([]byte, 4)
 	for { // each record
 		_, err := io.ReadFull(in, intbuf)
@@ -256,7 +256,7 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *slBuilder) (
 		cksum.Update(buf)
 		list.Add(off)
 		nrecs++
-		size += int64(n)
+		size += n
 	}
 	return nrecs, size
 }

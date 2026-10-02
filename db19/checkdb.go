@@ -140,14 +140,14 @@ func checkTable2(tcs *tableCheckers, table string, full bool) {
 	}
 }
 
-func checkFirstIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, full bool) (int, int64, uint64) {
+func checkFirstIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, full bool) (int, int, uint64) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic(&errCorrupt{err: e, ixcols: ix.Columns})
 		}
 	}()
 	sum := uint64(0)
-	size := int64(0)
+	size := 0
 	var buf []byte
 	var n int
 	ov.CheckMerged()
@@ -156,7 +156,7 @@ func checkFirstIndex(st *stor.Stor, ix *schema.Index, ov *index.Overlay, full bo
 		buf = st.Data(off)
 		n = core.RecLen(buf)
 		cksum.MustCheck(buf[:n+cksum.Len])
-		size += int64(n)
+		size += n
 	}
 	var ck any = base
 	if full {

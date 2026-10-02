@@ -24,7 +24,7 @@ func GetDiskFreeSpace(arg Value) Value {
 		panic("GetDiskFreeSpace: " + err.Error())
 	}
 	freeBytes := stat.Bavail * uint64(stat.Bsize)
-	return Int64Val(int64(freeBytes))
+	return IntVal(freeBytes)
 }
 
 var _ = builtin(CopyFile, "(from :string, to :string, failIfExists :boolean) :string|true")

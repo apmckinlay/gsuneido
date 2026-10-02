@@ -131,7 +131,7 @@ func OpLeftShift(x Value, y Value) Value {
 
 func OpRightShift(x Value, y Value) Value {
 	result := uint(ToInt(x)) >> ToInt(y)
-	return IntVal(int(result))
+	return IntVal(result)
 }
 
 func OpBitOr(x Value, y Value) Value {

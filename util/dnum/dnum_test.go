@@ -108,11 +108,11 @@ func Test_getExp(t *testing.T) {
 
 func Test_FromToInt(t *testing.T) {
 	assert := assert.T(t)
-	test := func(x int64) {
-		n, ok := FromInt(x).ToInt64()
+	test := func(x int) {
+		n, ok := FromInt(x).ToInt()
 		assert.True(ok)
 		assert.This(n).Is(x)
-		n, ok = FromInt(-x).ToInt64()
+		n, ok = FromInt(-x).ToInt()
 		assert.True(ok)
 		assert.This(n).Is(-x)
 	}
@@ -142,9 +142,9 @@ func Test_FromInt(t *testing.T) {
 func Test_ToInt(t *testing.T) {
 	test := func(n int) {
 		t.Helper()
-		n2, ok := FromInt(int64(n)).ToInt()
+		n2, ok := FromInt(n).ToInt()
 		if !ok {
-			t.Error("ToInt", n, FromInt(int64(n)), "failed")
+			t.Error("ToInt", n, FromInt(n), "failed")
 		} else if n2 != n {
 			t.Error("expected:", n, "got:", n2)
 		}
@@ -154,6 +154,30 @@ func Test_ToInt(t *testing.T) {
 	test(-1)
 	test(math.MinInt32)
 	test(math.MaxInt32)
+}
+
+func Test_ToIntBoundary(t *testing.T) {
+	for _, s := range []string{
+		"9.223372036854775e18",
+		"-9.223372036854775e18",
+		"9223372036854775000",
+		"-9223372036854775000",
+	} {
+		dn := FromStr(s)
+		n, ok := dn.ToInt()
+		if !ok {
+			t.Errorf("ToInt %s failed", s)
+			continue
+		}
+		if FromInt(n) != dn {
+			t.Errorf("ToInt round trip mismatch: %s => %d => %s",
+				s, n, FromInt(n))
+		}
+	}
+	_, ok := FromStr("9.223372036854776e18").ToInt()
+	if ok {
+		t.Error("ToInt should reject 9.223372036854776e18")
+	}
 }
 
 func Test_FromToFloat(t *testing.T) {
