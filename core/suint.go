@@ -103,12 +103,18 @@ func (*smi) RangeLen(int, int) Value {
 
 const phi64 = 0x9e3779b97f4a7c15
 
+// Hash must give consistent results for equal SuInt, SuInt64, and SuDnum
 func (si *smi) Hash() uint64 {
-	return uint64(si.toInt()) * phi64
+	return hashInt64(int64(si.toInt()))
 }
 
 func (si *smi) Hash2() uint64 {
 	return si.Hash()
+}
+
+// hashInt64 is the common hash function for SuInt, SuInt64, and SuDnum
+func hashInt64(n int64) uint64 {
+	return uint64(n) * phi64
 }
 
 func (si *smi) Equal(other any) bool {

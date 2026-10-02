@@ -50,8 +50,9 @@ func (si SuInt64) Equal(other any) bool {
 	return false
 }
 
+// Hash must give consistent results for equal SuInt, SuInt64, and SuDnum
 func (si SuInt64) Hash() uint64 {
-	return uint64(si.int64) * phi64
+	return hashInt64(si.int64)
 }
 
 func (si SuInt64) Hash2() uint64 {

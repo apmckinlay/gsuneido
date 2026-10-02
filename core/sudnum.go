@@ -41,10 +41,10 @@ func (dn SuDnum) String() string {
 	return dn.Dnum.String()
 }
 
+// Hash must give consistent results for equal SuInt, SuInt64, and SuDnum
 func (dn SuDnum) Hash() uint64 {
-	if n, ok := dn.ToInt64(); ok && MinSuInt <= n && n <= MaxSuInt {
-		// must give the same hash as SuInt
-		return uint64(n) * phi64
+	if n, ok := dn.ToInt64(); ok {
+		return hashInt64(n)
 	}
 	return dn.Dnum.Hash()
 }
