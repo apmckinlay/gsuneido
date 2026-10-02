@@ -154,8 +154,8 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 		"text":         core.PackValue(core.SuStr(code)),
 		"lib_modified": core.PackValue(now),
 		"group":        core.PackValue(core.SuInt(-1)),
-		"num":          core.PackValue(core.SuInt(maxNum + 1)),
-		"parent":       core.PackValue(core.SuInt(parent)),
+		"num":          core.PackValue(core.IntVal(maxNum + 1)),
+		"parent":       core.PackValue(core.IntVal(parent)),
 	})
 	iq.Output(th, rec)
 	if conflict := utran.Complete(); conflict != "" {

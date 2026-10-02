@@ -160,7 +160,7 @@ func ftsIndex_Search(this, query, scores Value) Value {
 	for i, ds := range docScores {
 		if scors {
 			ob := &SuObject{}
-			ob.Set(SuStr("id"), SuInt(ds.DocId))
+			ob.Set(SuStr("id"), IntVal(ds.DocId))
 			ob.Set(SuStr("score"), SuDnum{Dnum: dnum.FromFloat(ds.Score)})
 			list[i] = ob
 		} else {

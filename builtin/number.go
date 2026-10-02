@@ -44,8 +44,7 @@ func numFromString(s string) Value {
 	return NumFromString(s)
 }
 
-var minNarrow = dnum.FromInt(MinSuInt)
-var maxNarrow = dnum.FromInt(MaxSuInt)
+
 
 var _ = exportMethods(&NumMethods, "num")
 
@@ -66,9 +65,8 @@ var _ = method(num_Int, "() :number")
 
 func num_Int(this Value) Value {
 	dn := ToDnum(this).Trunc()
-	if dnum.Compare(dn, minNarrow) >= 0 && dnum.Compare(dn, maxNarrow) <= 0 {
-		n, _ := dn.ToInt()
-		return SuInt(n)
+	if n, ok := dn.ToInt(); ok {
+		return IntVal(n)
 	}
 	return SuDnum{Dnum: dn}
 }
@@ -229,10 +227,7 @@ func toFloat(v Value) float64 {
 func fromFloat(f float64) Value {
 	n := int64(f)
 	if f == float64(n) {
-		if MinSuInt <= n && n <= MaxSuInt {
-			return SuInt(int(n))
-		}
-		return SuDnum{Dnum: dnum.FromInt(n)}
+		return Int64Val(n)
 	}
 	return SuDnum{Dnum: dnum.FromFloat(f)}
 }
