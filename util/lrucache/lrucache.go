@@ -65,11 +65,11 @@ func (lc *Cache[K, V, H]) Get(key K) (val V, ok bool) {
 	}
 	// in cache
 	lc.hits++
-	li := bytes.IndexByte(lc.lru, uint8(ei))
+	li := bytes.IndexByte(lc.lru, ei)
 	if li < lc.size-lc.size/8 {
 		// move to the newest (the end)
 		copy(lc.lru[li:], lc.lru[li+1:])
-		lc.lru[len(lc.lru)-1] = uint8(ei)
+		lc.lru[len(lc.lru)-1] = ei
 	}
 	return lc.entries[ei].val, true
 }

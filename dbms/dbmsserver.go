@@ -559,7 +559,7 @@ func (ss *serverSession) getQorTC() (tbl string, hdr *Header, row Row) {
 func (ss *serverSession) getDir() Dir {
 	dir := Dir(ss.GetByte())
 	trace.ClientServer.Println("    <-", string(dir))
-	return Dir(dir)
+	return dir
 }
 
 const maxRec = 1024 * 1024 // 1 mb

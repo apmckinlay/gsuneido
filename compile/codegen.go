@@ -278,7 +278,7 @@ func (cg *cgen) chainNew(fn *ast.Function) {
 	if !fn.IsNewMethod || hasSuperCall(fn.Body) || cg.base <= 0 {
 		return
 	}
-	cg.savePos(int(fn.Position()))
+	cg.savePos(fn.Position())
 	cg.emit(op.This)
 	cg.emitValue(SuStr("New"))
 	cg.emitUint16(op.Super, cg.base)

@@ -73,7 +73,7 @@ func TestSuRecord_Concurrency(t *testing.T) {
 			case 0:
 				return this.Get(th, randCol())
 			case 1:
-				this.Put(th, randCol(), SuStr(randCol()))
+				this.Put(th, randCol(), randCol())
 			}
 			return nil
 		},
@@ -87,7 +87,7 @@ func TestSuRecord_Concurrency(t *testing.T) {
 			case 0:
 				getrec().Get(th, randCol())
 			case 1:
-				getrec().Put(th, randCol(), SuStr(randCol()))
+				getrec().Put(th, randCol(), randCol())
 			case 2:
 				r := NewSuRecord()
 				r.SetConcurrent()

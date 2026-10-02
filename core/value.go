@@ -221,7 +221,7 @@ func SuIntToInt(x any) (int, bool) {
 		return si.toInt(), true
 	}
 	if si, ok := x.(SuInt64); ok {
-		return int(si.n), true
+		return si.n, true
 	}
 	return 0, false
 }

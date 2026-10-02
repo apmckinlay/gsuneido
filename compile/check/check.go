@@ -628,7 +628,7 @@ func (ck *Check) process(params []ast.Param, init set) {
 			if pos := paramPos(params, id); pos >= 0 {
 				at = pos
 			} else if pos, ok := ck.AllInit[id]; ok {
-				at = int(pos)
+				at = pos
 			}
 			ck.CheckResult(at, "WARNING: initialized but not used: "+id)
 		}

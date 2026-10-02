@@ -151,8 +151,8 @@ func genCriteria(x uint32) (nfields, preLen int, preRng iface.Range, sufRng ifac
 	}
 	rem := next(&x, 2)
 
-	nfields = int(preEq + preCond + gap + sufEq + sufCond + rem)
-	preLen = int(preEq + preCond + gap)
+	nfields = preEq + preCond + gap + sufEq + sufCond + rem
+	preLen = preEq + preCond + gap
 
 	preRng = makeRange(&x, preEq, preCond)
 	sufRng = makeRange(&x, sufEq, sufCond)
@@ -175,7 +175,7 @@ func makeRange(x *uint32, eq, cond int) iface.Range {
 }
 
 func next(src *uint32, mod uint32) int {
-	result := *src % uint32(mod)
+	result := *src % mod
 	*src /= mod
 	return int(result)
 }

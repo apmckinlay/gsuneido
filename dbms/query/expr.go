@@ -213,7 +213,7 @@ func replaceExpr(expr Expr, from []string, to []Expr, clone bool) Expr {
 		if e.Tok == tok.And || e.Tok == tok.Or {
 			// short-circuit to avoid folding sub-expressions that would panic
 			// e.g. ('' isnt '') and ('' > 0) should stop at false, not eval '' > 0
-			zero := Value(False)
+			zero := False
 			if e.Tok == tok.Or {
 				zero = True
 			}

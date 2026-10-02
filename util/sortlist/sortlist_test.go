@@ -105,7 +105,7 @@ func test(nitems int) {
 
 	bldr = NewUnsorted(z)
 	for j := 1; j <= nitems; j++ {
-		bldr.Add(int(j))
+		bldr.Add(j)
 	}
 	list = bldr.Finish()
 	assert.This(list.size).Is(nitems)
@@ -114,7 +114,7 @@ func test(nitems int) {
 
 	less := func(x int, key []string) bool {
 		y, _ := strconv.Atoi(key[0])
-		return x < int(y)
+		return x < y
 	}
 	it := list.Iter(less)
 	it.Seek([]string{"0"})
@@ -188,12 +188,12 @@ func TestIterEmpty(t *testing.T) {
 func TestIterOne(t *testing.T) {
 	b := NewUnsorted(z)
 	for i := range blockSize {
-		b.Add(int(i + 1))
+		b.Add(i + 1)
 	}
 	list := b.Finish() // empty
 	less := func(x int, key []string) bool {
 		y, _ := strconv.Atoi(key[0])
-		return x < int(y)
+		return x < y
 	}
 	it := list.Iter(less)
 	it.Seek([]string{"0"})
@@ -204,12 +204,12 @@ func TestIterOne(t *testing.T) {
 func TestIter(t *testing.T) {
 	b := NewSorting(z, lt)
 	for j := 1; j <= 10; j++ {
-		b.Add(int(j))
+		b.Add(j)
 	}
 	list := b.Finish()
 	less := func(x int, key []string) bool {
 		y, _ := strconv.Atoi(key[0])
-		return x < int(y)
+		return x < y
 	}
 	const eof = -1
 	it := list.Iter(less)
@@ -219,7 +219,7 @@ func TestIter(t *testing.T) {
 			assert.Msg(expected, "should be eof").That(it.Eof())
 		} else {
 			assert.Msg(expected, "should not be eof").That(!it.Eof())
-			assert.This(it.Cur()).Is(int(expected))
+			assert.This(it.Cur()).Is(expected)
 		}
 	}
 	testNext := func(expected int) { it.Next(); t.Helper(); test(expected) }
@@ -261,12 +261,12 @@ func TestIter(t *testing.T) {
 func TestIterSeek(t *testing.T) {
 	b := NewSorting(z, lt)
 	for j := 2; j <= 20; j += 2 {
-		b.Add(int(j))
+		b.Add(j)
 	}
 	list := b.Finish()
 	less := func(x int, key []string) bool {
 		y, _ := strconv.Atoi(key[0])
-		return x < int(y)
+		return x < y
 	}
 	it := list.Iter(less)
 	it.Seek([]string{"5"})

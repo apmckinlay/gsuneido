@@ -15,7 +15,7 @@ import (
 func TestSuInt(t *testing.T) {
 	assert := assert.T(t)
 	test := func(n int) {
-		assert.This(SuInt(n).toInt()).Is(int(n))
+		assert.This(SuInt(n).toInt()).Is(n)
 	}
 	test(0)
 	test(12345)

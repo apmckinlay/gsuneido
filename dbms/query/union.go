@@ -284,7 +284,7 @@ func (u *Union) optLookupDir(mode Mode, req Require) (Cost, Cost, *unionApproach
 	nseeks := req.SeekCount(nrows1)
 	req1 := req
 	if req.use == ReqUnique || req.use == ReqGroup {
-		req1 = GroupReq(req.cols, req.SelectFrac(nrows1), int32(nseeks))
+		req1 = GroupReq(req.cols, req.SelectFrac(nrows1), nseeks)
 	}
 	fc1, vc1 := Optimize(u.source1, mode, req1)
 	if fc1+vc1 >= impossible {
@@ -299,7 +299,7 @@ func (u *Union) optLookupDir(mode Mode, req Require) (Cost, Cost, *unionApproach
 			&unionApproach{strat: unionLookup, req1: req1, req2: req1}
 	}
 	// else not disjoint so we need lookups on source2
-	req2 := UniqueReq(u.source2.Columns(), int32(nseeks))
+	req2 := UniqueReq(u.source2.Columns(), nseeks)
 	fc2, vc2 := Optimize(u.source2, mode, req2)
 	if fc2+vc2 >= impossible {
 		return impossible, impossible, nil

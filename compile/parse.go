@@ -172,7 +172,7 @@ func (p *ParserBase) MustMatch(token tok.Token) {
 func (p *ParserBase) Next() {
 	p.newline = false
 	p.Item = p.Lxr.Next()
-	p.EndPos = int32(p.Item.Pos)
+	p.EndPos = p.Item.Pos
 	for {
 		if p.Token == tok.Newline {
 			if p.Lxr.AheadSkip(0).Token != tok.QMark {

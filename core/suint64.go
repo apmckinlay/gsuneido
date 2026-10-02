@@ -52,7 +52,7 @@ func (si SuInt64) Equal(other any) bool {
 
 // Hash must give consistent results for equal SuInt, SuInt64, and SuDnum
 func (si SuInt64) Hash() uint64 {
-	return hashInt(int(si.n))
+	return hashInt(si.n)
 }
 
 func (si SuInt64) Hash2() uint64 {
@@ -60,7 +60,7 @@ func (si SuInt64) Hash2() uint64 {
 }
 
 func (si SuInt64) IfInt() (int, bool) {
-	return int(si.n), true
+	return si.n, true
 }
 
 func (si SuInt64) Lookup(th *Thread, method string) Value {
@@ -76,11 +76,11 @@ func (si SuInt64) String() string {
 }
 
 func (si SuInt64) ToDnum() (dnum.Dnum, bool) {
-	return dnum.FromInt(int(si.n)), true
+	return dnum.FromInt(si.n), true
 }
 
 func (si SuInt64) ToInt() (int, bool) {
-	return int(si.n), true
+	return si.n, true
 }
 
 func (si SuInt64) ToStr() (string, bool) {
@@ -96,15 +96,15 @@ func (si SuInt64) Type() types.Type {
 var _ Packable = SuInt(0)
 
 func (si SuInt64) PackSize(*uint64) int {
-	return packSizeInt(int(si.n))
+	return packSizeInt(si.n)
 }
 
 func (si SuInt64) PackSize2(*uint64, PackStack) int {
-	return packSizeInt(int(si.n))
+	return packSizeInt(si.n)
 }
 
 func (si SuInt64) Pack(_ *uint64, enc *pack.Encoder) {
-	packInt(int(si.n), enc)
+	packInt(si.n, enc)
 }
 
 func packSizeInt(n int) int {

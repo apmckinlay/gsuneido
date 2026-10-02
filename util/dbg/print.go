@@ -30,7 +30,7 @@ func PrintSlice(s []byte) {
 		elipsis = " ..."
 	}
 	fmt.Printf("%x%s\n", s, elipsis)
-	for _, b := range []byte(s) {
+	for _, b := range s {
 		if b < 32 || 126 < b {
 			b = ' '
 		}

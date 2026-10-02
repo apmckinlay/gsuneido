@@ -32,7 +32,7 @@ func TestWithout(t *testing.T) {
 	assert := assert.T(t).This
 	assert(Without([]string{}, "five")).Is([]string{})
 	list := []string{"one", "two", "three", "two", "four"}
-	assert(Without(list, "five")).Is([]string(list))
+	assert(Without(list, "five")).Is(list)
 	assert(Without(list, "one")).Is([]string{"two", "three", "two", "four"})
 	assert(Without(list, "two")).Is([]string{"one", "three", "four"})
 	assert(Without(list, "four")).Is([]string{"one", "two", "three", "two"})

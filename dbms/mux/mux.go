@@ -86,7 +86,7 @@ type ClientSession struct {
 
 // NewClientSession returns a new ClientSession
 func (cc *ClientConn) NewClientSession() *ClientSession {
-	sessionId := uint32(cc.nextSession.Add(1))
+	sessionId := cc.nextSession.Add(1)
 	rch := make(respch, 1)
 	wb := newWriteBuf(&cc.conn, sessionId)
 	cc.lock.Lock()

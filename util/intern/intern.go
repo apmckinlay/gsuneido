@@ -66,7 +66,7 @@ func String(s string) string {
 }
 
 func add(s string) entry {
-	if int(next)+len(s) > chunkSize {
+	if next+len(s) > chunkSize {
 		chunks = append(chunks, &chunkType{})
 		next = 0
 	}

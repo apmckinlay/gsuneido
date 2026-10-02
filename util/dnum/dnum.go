@@ -299,14 +299,14 @@ func (r *reader) cur() byte {
 	if r.i >= len(r.s) {
 		return 0
 	}
-	return byte(r.s[r.i])
+	return r.s[r.i]
 }
 
 func (r *reader) prev() byte {
 	if r.i == 0 {
 		return 0
 	}
-	return byte(r.s[r.i-1])
+	return r.s[r.i-1]
 }
 
 func (r *reader) len() int {

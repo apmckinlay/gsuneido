@@ -363,7 +363,7 @@ func (su *Summarize) optMap(mode Mode, req Require) (Cost, Cost, any) {
 	// unlike Project, we don't multiply by req.frac
 	// because we have to process the entire source
 	// regardless of how much the parent needs
-	mapBuild := Cost(srcNrows) * mapCost
+	mapBuild := srcNrows * mapCost
 	// since the map has to be built up front, we add it to fixcost
 	fixcost := srcFixcost + srcVarcost + mapBuild
 	return fixcost, 0, &summarizeApproach{strat: sumMap, req: srcReq}

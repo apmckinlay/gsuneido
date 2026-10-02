@@ -92,7 +92,7 @@ func divide128(dividendHi, dividendLo, divisor uint64) uint64 {
 	u2 := tmp1 & longMask // low half
 
 	// u2,u1 is the MIDDLE 64 bits of the dividend
-	tmp2 := mulsub(uint32(u2), uint32(u1), uint32(v1), uint32(v0), q1)
+	tmp2 := mulsub(uint32(u2), u1, uint32(v1), uint32(v0), q1)
 	var q0, rtmp2 uint64
 	if v1 == 1 {
 		q0 = tmp2

@@ -293,7 +293,7 @@ func costingSetup(q Query, ft *FT) (Query, Cost, Cost) {
 
 // rowCost matches the per-get cost used by Table.costFor
 func rowCost(index []string) Cost {
-	return tableFast + Cost(len(index))*colsBias
+	return tableFast + len(index)*colsBias
 }
 
 func iterate(q Query) {

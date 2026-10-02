@@ -361,7 +361,7 @@ func (lxr *Lexer) quotedString(start int, quote byte) Item {
 			return it(tok.Error, start, "missing closing quote")
 		} else if src[i] == '\\' {
 			break
-		} else if src[i] == byte(quote) {
+		} else if src[i] == quote {
 			lxr.si += i + 1
 			return it(tok.String, start, strings.Clone(src[:i])) // no escapes
 		}
@@ -370,7 +370,7 @@ func (lxr *Lexer) quotedString(start int, quote byte) Item {
 	var sb strings.Builder
 	for c := lxr.read(); c != eof && c != quote; c = lxr.read() {
 		c = lxr.doesc(c)
-		sb.WriteByte(byte(c))
+		sb.WriteByte(c)
 	}
 	return Item{Text: sb.String(), Pos: int32(start), Token: tok.String}
 }

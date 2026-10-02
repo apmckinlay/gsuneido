@@ -157,7 +157,7 @@ func (tbl *Table) getRowSize() int {
 	if tbl.info.Nrows == 0 {
 		return 0
 	}
-	return int(tbl.info.Size) / tbl.info.Nrows
+	return tbl.info.Size / tbl.info.Nrows
 }
 
 func (tbl *Table) Transform() Query {

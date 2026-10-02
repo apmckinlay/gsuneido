@@ -349,7 +349,7 @@ func TestIteratorBasic(t *testing.T) {
 		assert.T(t).That(it.HasCur())
 		assert.T(t).That(!it.Eof())
 
-		key := string(it.Key())
+		key := it.Key()
 		expected := fmt.Sprintf("%04d", i)
 		assert.T(t).This(key).Is(expected)
 		assert.T(t).This(it.Offset()).Is(uint64(i))
@@ -378,7 +378,7 @@ func TestIteratorRange(t *testing.T) {
 	i := 0
 	for it.Next(); !it.Eof(); it.Next() {
 		assert.T(t).That(i < len(expectedKeys)) // shouldn't go beyond expected
-		key := string(it.Key())
+		key := it.Key()
 		assert.T(t).This(key).Is(expectedKeys[i])
 		assert.T(t).This(it.Offset()).Is(uint64(20 + i))
 		i++
@@ -401,7 +401,7 @@ func TestIteratorRangeEdgeCases(t *testing.T) {
 	i := 0
 	for it.Next(); !it.Eof(); it.Next() {
 		assert.T(t).That(i < len(expected))
-		key := string(it.Key())
+		key := it.Key()
 		assert.T(t).This(key).Is(expected[i])
 		i++
 	}
@@ -415,20 +415,20 @@ func TestIteratorSeek(t *testing.T) {
 	// Test seek to exact key
 	it.Seek("0050")
 	assert.T(t).That(it.HasCur())
-	key := string(it.Key())
+	key := it.Key()
 	assert.T(t).This(key).Is("0050")
 	assert.T(t).This(it.Offset()).Is(uint64(50))
 
 	// Test seek to non-existent key (should find next one)
 	it.SeekAll("0055a") // between 55 and 56
 	assert.T(t).That(it.HasCur())
-	key = string(it.Key())
+	key = it.Key()
 	assert.T(t).This(key).Is("0056")
 
 	// Test seek past end
 	it.SeekAll("9999")
 	assert.T(t).That(it.HasCur())
-	key = string(it.Key())
+	key = it.Key()
 	assert.T(t).This(key).Is("0099")
 }
 
@@ -442,7 +442,7 @@ func TestIteratorSeekWithRange(t *testing.T) {
 	// Seek within range
 	it.Seek("0025")
 	assert.T(t).That(it.HasCur())
-	key := string(it.Key())
+	key := it.Key()
 	assert.T(t).This(key).Is("0025")
 
 	// Seek outside range (should set EOF)
@@ -453,7 +453,7 @@ func TestIteratorSeekWithRange(t *testing.T) {
 	// Seek before range start (should go to range start)
 	it.Seek("10")
 	if it.HasCur() {
-		key = string(it.Key())
+		key = it.Key()
 		assert.T(t).That(key >= "0020") // should be at or after range start
 	}
 }
@@ -528,7 +528,7 @@ func TestIteratorRewind(t *testing.T) {
 
 	// Should start from beginning again
 	it.Next()
-	key := string(it.Key())
+	key := it.Key()
 	assert.T(t).This(key).Is("0000")
 }
 

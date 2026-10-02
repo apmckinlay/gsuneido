@@ -180,7 +180,7 @@ func NormalizeDate(yr int, mon int, day int, hr int, min int, sec int, ms int) S
 func (d SuDate) AddMs(ms int) SuDate {
 	assert.That(0 < ms && ms < 100)
 	orig := d
-	if int(d.Millisecond())+ms < 1000 {
+	if d.Millisecond()+ms < 1000 {
 		d.time += uint32(ms) // fast path
 		return d
 	}
@@ -199,7 +199,7 @@ func (d SuDate) WeekDay() int {
 
 // MinusDays returns the difference between two Dates in days
 func (d SuDate) MinusDays(other SuDate) int {
-	return (int)(d.jday() - other.jday())
+	return d.jday() - other.jday()
 }
 
 func (d SuDate) jday() int {
@@ -210,10 +210,10 @@ func (d SuDate) jday() int {
 // relative to the epoch 12:00 January 1, 4713 BC, Monday.
 // NOTE: based on Go time package code
 func julianDayNumber(year, month, day int) int {
-	a := int(14-month) / 12
-	y := int(year) + 4800 - a
-	m := int(month) + 12*a - 3
-	return int(day) + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
+	a := (14 - month) / 12
+	y := year + 4800 - a
+	m := month + 12*a - 3
+	return day + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
 }
 
 // MinusMs returns the difference between two Dates in milliseconds
@@ -227,8 +227,8 @@ func (d SuDate) MinusMs(other SuDate) int {
 }
 
 func (d SuDate) timeAsMs() int {
-	return int(d.Millisecond()) +
-		int(1000)*int(d.Second()+60*(d.Minute()+60*d.Hour()))
+	return d.Millisecond() +
+		int(1000)*(d.Second()+60*(d.Minute()+60*d.Hour()))
 }
 
 // UnixMilli returns the time in milliseconds since 1 Jan 1970
@@ -619,12 +619,12 @@ func ParseDate(s string, order string) SuDate {
 func nextWord(s string, si int) string {
 	dst := []byte{}
 	for ; si < len(s) && ascii.IsLetter(s[si]); si++ {
-		dst = append(dst, byte(ascii.ToLower(s[si])))
+		dst = append(dst, ascii.ToLower(s[si]))
 	}
 	if len(dst) == 0 {
 		return ""
 	}
-	dst[0] = byte(ascii.ToUpper(dst[0]))
+	dst[0] = ascii.ToUpper(dst[0])
 	return string(dst)
 }
 
@@ -644,7 +644,7 @@ func getSyspat(order string, datePatterns []string) []byte {
 	for oi := 0; oi < len(order) && i < 3; oi++ {
 		oc = order[oi]
 		if oc != prev && (oc == 'y' || oc == 'M' || oc == 'd') {
-			syspat[i] = byte(ascii.ToLower(oc))
+			syspat[i] = ascii.ToLower(oc)
 			i++
 		}
 		prev = oc
@@ -671,7 +671,7 @@ func ampmAhead(s string, i int) bool {
 		i++
 		s0 = get(s, i)
 	}
-	s0 = byte(ascii.ToLower(s0))
+	s0 = ascii.ToLower(s0)
 	return (s0 == 'a' || s0 == 'p') &&
 		ascii.ToLower(get(s, i+1)) == 'm'
 }

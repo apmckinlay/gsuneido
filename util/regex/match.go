@@ -95,7 +95,7 @@ func (pat Pattern) match(s string, start int, cap *Captures, fixed bool) bool {
 		if start != 0 {
 			return false // one pass is always left anchored
 		}
-		return Pattern(pat[piStart+1:]).onePass(s, cap)
+		return pat[piStart+1:].onePass(s, cap)
 	case opLiteralSubstr, opLiteralPrefix, opLiteralSuffix, opLiteralEqual:
 		return pat.literalMatch(op, s, start, cap, fixed)
 	}
