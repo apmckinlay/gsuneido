@@ -3,7 +3,7 @@
 
 package core
 
-// WARNING: reflect.DeepEqual (tests) does not work correctly with SuInt
+// WARNING: reflect.DeepEqual (tests) does not work correctly with SuInt16
 // For pointers it compares what they point to
 // Which for smi is always zero
 // As a partial fix, smi's from -127 to 127 are set to themselves
@@ -32,13 +32,13 @@ func init() {
 	// this is so that reflect.DeepEquals doesn't think small smi's are equal
 	// (for tests)
 	for i := -127; i < 127; i++ {
-		*SuInt(i) = smi(i) // +1 to avoid zero
+		*SuInt16(i) = smi(i)
 	}
 }
 
-// SuInt converts an int to *smi which implements Value
+// SuInt16 converts an int to *smi which implements Value
 // will panic if out of int16 range
-func SuInt(n int) *smi {
+func SuInt16(n int) *smi {
 	offset := n - math.MinInt16
 	return &smispace[offset] // will panic if out of range
 }
@@ -101,9 +101,7 @@ func (*smi) RangeLen(int, int) Value {
 	panic("number does not support range")
 }
 
-const phi64 = 0x9e3779b97f4a7c15
-
-// Hash must give consistent results for equal SuInt, SuInt64, and SuDnum
+// Hash must give consistent results for equal SuInt16, SuInt64, and SuDnum
 func (si *smi) Hash() uint64 {
 	return hashInt(si.toInt())
 }
@@ -112,7 +110,9 @@ func (si *smi) Hash2() uint64 {
 	return si.Hash()
 }
 
-// hashInt is the common hash function for SuInt, SuInt64, and SuDnum
+const phi64 = 0x9e3779b97f4a7c15
+
+// hashInt is the common hash function for SuInt16, SuInt64, and SuDnum
 func hashInt(n int) uint64 {
 	return uint64(n) * phi64
 }
@@ -172,7 +172,7 @@ func (*smi) SetConcurrent() {
 
 // TODO: avoid conversion to Dnum
 
-var _ Packable = SuInt(0)
+var _ Packable = SuInt16(0)
 
 func (si *smi) PackSize(*uint64) int {
 	return SuDnum{Dnum: dnum.FromInt(si.toInt())}.PackSize(nil)

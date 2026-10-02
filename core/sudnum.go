@@ -41,7 +41,7 @@ func (dn SuDnum) String() string {
 	return dn.Dnum.String()
 }
 
-// Hash must give consistent results for equal SuInt, SuInt64, and SuDnum
+// Hash must give consistent results for equal SuInt16, SuInt64, and SuDnum
 func (dn SuDnum) Hash() uint64 {
 	if n, ok := dn.IfInt(); ok {
 		return hashInt(n)

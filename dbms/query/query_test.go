@@ -310,13 +310,13 @@ func TestSingleton(t *testing.T) {
 	q = setupIndex(q, ReadMode, tran, []string{"b"})
 	assert.This(String(q)).Is("tmp^(a) where*1 a is 3") // singleton
 	// reading by a, but singleton so we can Select/Lookup on b
-	bsels := Sels{{"b", Pack(SuInt(4))}}
+	bsels := Sels{{"b", Pack(SuInt16(4))}}
 	q.Select(bsels)
 	assert.This(queryAll2(q)).Is("a=3 b=4")
 	hdr := q.Header()
 	assert.This(row2str(hdr, q.Lookup(nil, bsels))).Is("a=3 b=4")
 
-	bsels = Sels{{"b", Pack(SuInt(2))}}
+	bsels = Sels{{"b", Pack(SuInt16(2))}}
 	q.Select(bsels)
 	assert.This(queryAll2(q)).Is("")
 	assert.This(q.Lookup(nil, bsels)).Is(nil)
@@ -437,7 +437,7 @@ func TestTimesLookup(t *testing.T) {
 	req := UniqueReq([]string{"a", "x"}, 1)
 	q, _, _ = SetupReq(q, ReadMode, tran, req)
 	test := func(a, x int, expected string) {
-		sels := Sels{{"a", Pack(SuInt(a))}, {"x", Pack(SuInt(x))}}
+		sels := Sels{{"a", Pack(SuInt16(a))}, {"x", Pack(SuInt16(x))}}
 		row := q.Lookup(nil, sels)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
 	}

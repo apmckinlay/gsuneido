@@ -12,11 +12,11 @@ import (
 )
 
 func TestDiv(t *testing.T) {
-	q := OpDiv(SuInt(999), SuInt(3))
+	q := OpDiv(SuInt16(999), SuInt16(3))
 	xi, xok := SuIntToInt(q)
 	assert.T(t).This(xok).Is(true)
 	assert.T(t).This(xi).Is(333)
-	q = OpDiv(SuInt(1), SuInt(3))
+	q = OpDiv(SuInt16(1), SuInt16(3))
 	_ = q.(SuDnum)
 }
 
@@ -25,7 +25,7 @@ func TestBool(t *testing.T) {
 	assert.T(t).That(SuBool(false) == False)
 }
 func TestIndex(t *testing.T) {
-	assert.T(t).This(ToIndex(SuInt(123))).Is(123)
+	assert.T(t).This(ToIndex(SuInt16(123))).Is(123)
 	assert.T(t).This(ToIndex(SuDnum{Dnum: dnum.FromInt(123)})).Is(123)
 }
 

@@ -50,7 +50,7 @@ func (si SuInt64) Equal(other any) bool {
 	return false
 }
 
-// Hash must give consistent results for equal SuInt, SuInt64, and SuDnum
+// Hash must give consistent results for equal SuInt16, SuInt64, and SuDnum
 func (si SuInt64) Hash() uint64 {
 	return hashInt(si.n)
 }
@@ -93,7 +93,7 @@ func (si SuInt64) Type() types.Type {
 
 // Packable interface -----------------------------------------------
 
-var _ Packable = SuInt(0)
+var _ Packable = SuInt16(0)
 
 func (si SuInt64) PackSize(*uint64) int {
 	return packSizeInt(si.n)

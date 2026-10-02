@@ -277,7 +277,7 @@ func isAtArg(arg *ast.Arg) bool {
 }
 
 // a named argument's name is a Value, not a string - `f(1: x)` parses and gives
-// Arg{Name: SuInt(1)}. The runtime matches names against the SuStr param names,
+// Arg{Name: SuInt16(1)}. The runtime matches names against the SuStr param names,
 // so a non-string name binds to no parameter. ok=false means there is nothing to
 // look up.
 func argName(arg *ast.Arg) (string, bool) {

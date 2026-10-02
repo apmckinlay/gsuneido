@@ -254,7 +254,7 @@ func BenchmarkInterp2(b *testing.B) {
 	var th Thread
 	for b.Loop() {
 		result := th.Call(fn)
-		if !result.Equal(SuInt(4950)) {
+		if !result.Equal(SuInt16(4950)) {
 			panic("wrong result " + result.String())
 		}
 	}
@@ -264,7 +264,7 @@ func BenchmarkCall(b *testing.B) {
 	f := Global.GetName(nil, "Type")
 	as := &ArgSpec1
 	th := &Thread{}
-	th.Push(SuInt(123))
+	th.Push(SuInt16(123))
 	for b.Loop() {
 		f.Call(th, nil, as)
 	}
@@ -308,7 +308,7 @@ func TestAtAssign(t *testing.T) {
 		return ob
 	}`)
 	result := th.Call(f)
-	assert.T(t).This(result).Is(SuObjectOf(SuInt(12), SuInt(34)))
+	assert.T(t).This(result).Is(SuObjectOf(SuInt16(12), SuInt16(34)))
 
 	// single return value
 	f = compile.Constant(`function () {
@@ -317,7 +317,7 @@ func TestAtAssign(t *testing.T) {
 		return ob
 	}`)
 	result = th.Call(f)
-	assert.T(t).This(result).Is(SuObjectOf(SuInt(42)))
+	assert.T(t).This(result).Is(SuObjectOf(SuInt16(42)))
 
 	// no return value
 	f = compile.Constant(`function () {
@@ -336,7 +336,7 @@ func TestAtAssign(t *testing.T) {
 		return ob
 	}`)
 	result = th.Call(f)
-	assert.T(t).This(result).Is(SuObjectOf(SuInt(1), SuInt(2), SuInt(3)))
+	assert.T(t).This(result).Is(SuObjectOf(SuInt16(1), SuInt16(2), SuInt16(3)))
 }
 
 func TestReturnSpread(t *testing.T) {
@@ -353,7 +353,7 @@ func TestReturnSpread(t *testing.T) {
 	f = compile.Constant(`function () {
 		return @Object(42)
 	}`)
-	assert.This(th.Call(f)).Is(SuInt(42))
+	assert.This(th.Call(f)).Is(SuInt16(42))
 	assert.That(len(th.ReturnMulti) == 0)
 
 	// multiple values - direct call returns nil (like return 1,2,3)
@@ -436,7 +436,7 @@ func TestBlockReturnMulti(t *testing.T) {
 		@ob = inner()
 		return ob
 	}`)
-	assert.This(th.Call(f)).Is(SuObjectOf(SuInt(12), SuInt(34)))
+	assert.This(th.Call(f)).Is(SuObjectOf(SuInt16(12), SuInt16(34)))
 
 	// multiple return values from a nested block
 	f = compile.Constant(`function () {
@@ -466,7 +466,7 @@ func TestBlockReturnSpread(t *testing.T) {
 		inner = function() { blk = { return @Object(42) }; blk(); 123 }
 		return inner()
 	}`)
-	assert.This(th.Call(f)).Is(SuInt(42))
+	assert.This(th.Call(f)).Is(SuInt16(42))
 	assert.That(len(th.ReturnMulti) == 0)
 
 	// empty object - bare return

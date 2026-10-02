@@ -33,13 +33,13 @@ func TestSummarizeSelectFilter(t *testing.T) {
 	// Test Select with summarized column (max_c)
 	// splitSelect should pass a to source, keep max_c for filtering
 	// Should filter to only row where a=2 and max_c = 20
-	sels := Sels{{"a", Pack(SuInt(2))}, {"max_c", Pack(SuInt(20))}}
+	sels := Sels{{"a", Pack(SuInt16(2))}, {"max_c", Pack(SuInt16(20))}}
 	q.Select(sels)
 	row := q.Get(nil, Next)
 	assert.T(t).That(row != nil)
 	hdr := q.Header()
-	assert.T(t).This(row.GetVal(hdr, "a", nil, nil)).Is(SuInt(2))
-	assert.T(t).This(row.GetVal(hdr, "max_c", nil, nil)).Is(SuInt(20))
+	assert.T(t).This(row.GetVal(hdr, "a", nil, nil)).Is(SuInt16(2))
+	assert.T(t).This(row.GetVal(hdr, "max_c", nil, nil)).Is(SuInt16(20))
 
 	// Should not get another row
 	row = q.Get(nil, Next)
@@ -47,7 +47,7 @@ func TestSummarizeSelectFilter(t *testing.T) {
 
 	// Test with wrong max_c - should return nil
 	q.Select(nil) // clear
-	sels[1].val = Pack(SuInt(999))
+	sels[1].val = Pack(SuInt16(999))
 	q.Select(sels)
 	row = q.Get(nil, Next)
 	assert.T(t).This(row).Is(nil)

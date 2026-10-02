@@ -238,7 +238,7 @@ func ChooseColor(a Value) Value {
 	ccs := a.Get(nil, SuStr("custColors"))
 	if ccs != nil {
 		for i := range nCustColors {
-			if x := ccs.Get(nil, SuInt(i)); x != nil {
+			if x := ccs.Get(nil, SuInt16(i)); x != nil {
 				custColors[i] = int32(ToInt(x))
 			}
 		}
@@ -260,7 +260,7 @@ func ChooseColor(a Value) Value {
 	a.Put(nil, SuStr("flags"), IntVal(cc.flags))
 	if ccs != nil {
 		for i := range custColors {
-			ccs.Put(nil, SuInt(i), IntVal(custColors[i]))
+			ccs.Put(nil, SuInt16(i), IntVal(custColors[i]))
 		}
 	}
 	return boolRet(rtn)

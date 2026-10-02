@@ -18,7 +18,7 @@ import (
 // Value is a value visible to Suneido programmers
 // The naming convention is to use a prefix of "Su"
 // - SuBoolean
-// - SuInt, SuDnum - numbers
+// - SuInt16, SuDnum - numbers
 // - SuStr, SuConcat, SuExcept - strings
 // - SuDate
 // - SuObject, SuRecord, SuSequence - objects
@@ -34,19 +34,19 @@ type Value interface {
 	// Note: strings will have quotes and be escaped
 	String() string
 
-	// AsStr converts SuBool, SuInt, SuInt64, SuDnum, SuStr, SuConcat, SuExcept to string
+	// AsStr converts SuBool, SuInt16, SuInt64, SuDnum, SuStr, SuConcat, SuExcept to string
 	AsStr() (string, bool)
 
 	// ToStr converts SuStr, SuConcat, SuExcept to string
 	ToStr() (string, bool)
 
-	// ToInt converts false (SuBool), "" (SuStr), SuInt, SuInt64, SuDnum to int
+	// ToInt converts false (SuBool), "" (SuStr), SuInt16, SuInt64, SuDnum to int
 	ToInt() (int, bool)
 
-	// IfInt converts SuInt, SuInt64, SuDnum to int
+	// IfInt converts SuInt16, SuInt64, SuDnum to int
 	IfInt() (int, bool)
 
-	// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum
+	// ToDnum converts false (SuBool), "" (SuStr), SuInt16, SuDnum to Dnum
 	ToDnum() (dnum.Dnum, bool)
 
 	// ToContainer converts object,record,sequence to a Container
@@ -102,7 +102,7 @@ type Ord int
 // must match types
 const (
 	ordBool Ord = iota
-	ordNum      // SuInt, SuDnum
+	ordNum      // SuInt16, SuDnum
 	ordStr      // SuStr, SuConcat, SuExcept
 	ordDate
 	ordObject
@@ -129,7 +129,7 @@ func (o Ord) String() string {
 
 var NilVal Value
 
-// NumFromString converts a string to an SuInt or SuDnum.
+// NumFromString converts a string to an SuInt16 or SuDnum.
 // It will panic for invalid input.
 func NumFromString(s string) Value {
 	if len(s) > 2 && s[0] == '0' && s[1] == 'x' {
@@ -169,7 +169,7 @@ type Named interface {
 	GetName() string
 }
 
-// AsStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string.
+// AsStr converts SuBool, SuInt16, SuDnum, SuStr, SuConcat, SuExcept to string.
 // Calls Value.AsStr and panics if it fails
 func AsStr(x Value) string {
 	if s, ok := x.AsStr(); ok {
@@ -196,7 +196,7 @@ func ToStrOrString(x Value) string {
 	return x.String()
 }
 
-// ToInt converts false (SuBool), "" (SuStr), SuInt, SuDnum to int.
+// ToInt converts false (SuBool), "" (SuStr), SuInt16, SuDnum to int.
 // Calls Value.ToInt and panics if it fails
 func ToInt(x Value) int {
 	if i, ok := x.ToInt(); ok {
@@ -205,7 +205,7 @@ func ToInt(x Value) int {
 	panic("can't convert " + ErrType(x) + " to integer")
 }
 
-// IfInt converts SuInt, SuDnum to int.
+// IfInt converts SuInt16, SuDnum to int.
 // Calls Value.IfInt and panics if it fails
 func IfInt(x Value) int {
 	if i, ok := x.IfInt(); ok {
@@ -226,7 +226,7 @@ func SuIntToInt(x any) (int, bool) {
 	return 0, false
 }
 
-// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum.
+// ToDnum converts false (SuBool), "" (SuStr), SuInt16, SuDnum to Dnum.
 // Calls Value.ToDnum and panics if it fails
 func ToDnum(x Value) dnum.Dnum {
 	if dn, ok := x.ToDnum(); ok {
@@ -327,10 +327,10 @@ type PackableValue interface {
 	Packable
 }
 
-// IntVal returns an SuInt if it fits, else an SuInt64
+// IntVal returns an SuInt16 if it fits, else an SuInt64
 func IntVal[T constraints.Integer](n T) PackableValue {
 	if MinSuInt <= int(n) && int(n) <= MaxSuInt {
-		return SuInt(int(n))
+		return SuInt16(int(n))
 	}
 	return SuInt64{n: int(n)}
 }

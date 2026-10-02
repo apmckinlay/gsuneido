@@ -81,8 +81,8 @@ func TestExprEval(t *testing.T) {
 
 func mkrow() (Row, *Header) {
 	rb := RecordBuilder{}
-	rb.Add(SuInt(4))     // x
-	rb.Add(SuInt(5))     // y
+	rb.Add(SuInt16(4))     // x
+	rb.Add(SuInt16(5))     // y
 	rb.Add(SuStr("foo")) // s
 	rb.Add(SuStr("bar")) // t
 	rec := rb.Build()

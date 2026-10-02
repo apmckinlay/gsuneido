@@ -73,7 +73,7 @@ func string_Asc(this Value) Value {
 	if s == "" {
 		return Zero
 	}
-	return SuInt(int(s[0]))
+	return SuInt16(int(s[0]))
 }
 
 var _ = method(string_Count, "(string :string) :number")
@@ -295,7 +295,7 @@ func string_Match(th *Thread, this Value, args []Value) Value {
 	for i := 0; i < len(cap); i += 2 {
 		org, end := int(cap[i]), int(cap[i+1])
 		if org >= 0 {
-			ob.Set(SuInt(i/2), SuObjectOf(IntVal(org), IntVal(end-org)))
+			ob.Set(SuInt16(i/2), SuObjectOf(IntVal(org), IntVal(end-org)))
 		}
 	}
 	return ob

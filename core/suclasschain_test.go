@@ -37,11 +37,11 @@ func TestSuClassChain_instance(t *testing.T) {
 	assert.This(i.Parents()).Is([]*SuClass{a, b, c})
 	b = def("B", "class { F() { false }}")
 	x := call(i, "x.F()")
-	assert.This(x).Is(SuInt(123))
+	assert.This(x).Is(SuInt16(123))
 
 	m := call(i, "x.F") // bound method
 	x = call(m, "x()")
-	assert.This(x).Is(SuInt(123))
+	assert.This(x).Is(SuInt16(123))
 
 	i = NewInstance(th, a) // new capture with new B
 	assert.This(i.Parents()).Is([]*SuClass{a, b})
@@ -64,13 +64,13 @@ func TestSuClassChain_overload_instance(t *testing.T) {
 	a := def("etalib", "A", "class : _A { }", b)
 	i := NewInstance(th, a)
 	assert.This(i.Parents()).Is([]*SuClass{a, b, c})
-	assert.This(call(i, "x.F()")).Is(SuInt(123))
+	assert.This(call(i, "x.F()")).Is(SuInt16(123))
 	Global.UnloadAll()
-	assert.This(call(i, "x.F()")).Is(SuInt(123))
+	assert.This(call(i, "x.F()")).Is(SuInt16(123))
 
 	m := call(i, "x.F") // bound method
 	x := call(m, "x()")
-	assert.This(x).Is(SuInt(123))
+	assert.This(x).Is(SuInt16(123))
 }
 
 func TestSuClassChain_overload_method(t *testing.T) {
@@ -99,7 +99,7 @@ func TestSuClassChain_overload_method(t *testing.T) {
 		return a, nil
 	}
 	x := compile.EvalString(th, "A.M()")
-	assert.This(x).Is(SuInt(246))
+	assert.This(x).Is(SuInt16(246))
 }
 
 func TestSuClassChain_overload_bound(t *testing.T) {
@@ -129,7 +129,7 @@ func TestSuClassChain_overload_bound(t *testing.T) {
 		return a, nil
 	}
 	x := compile.EvalString(th, "A.M()")
-	assert.This(x).Is(SuInt(246))
+	assert.This(x).Is(SuInt16(246))
 }
 
 func TestSuClassChain_equal(t *testing.T) {
@@ -182,7 +182,7 @@ func TestSuClassChain_getter_default(t *testing.T) {
 	_ = NewInstance(th, a)
 	ccFoo := a.GetParents()
 	assert.That(ccFoo != nil)
-	assert.This(call(ccFoo, "x.Foo")).Is(SuInt(111))
+	assert.This(call(ccFoo, "x.Foo")).Is(SuInt16(111))
 	assert.This(call(ccFoo, "x.Baz()")).Is(SuStr("d-Baz"))
 
 	_ = def("ChainGetB",
@@ -195,7 +195,7 @@ func TestSuClassChain_getter_default(t *testing.T) {
 	assert.That(ccGet != nil)
 	assert.This(call(ccGet, "x.Bar")).Is(SuStr("g-Bar"))
 	assert.This(call(ccGet, "x.Baz()")).Is(SuStr("d2-Baz"))
-	assert.This(call(ccFoo, "x.Foo")).Is(SuInt(111))
+	assert.This(call(ccFoo, "x.Foo")).Is(SuInt16(111))
 	assert.This(call(ccFoo, "x.Baz()")).Is(SuStr("d-Baz"))
 
 	_ = def("ChainGetB",
@@ -234,7 +234,7 @@ func TestSuClassChain_super(t *testing.T) {
 		return a, nil
 	}
 	x := compile.EvalString(th, "A.M()")
-	assert.This(x).Is(SuInt(246))
+	assert.This(x).Is(SuInt16(246))
 }
 
 func TestSuClassChain_callclass(t *testing.T) {
@@ -264,5 +264,5 @@ func TestSuClassChain_callclass(t *testing.T) {
 		return a, nil
 	}
 	x := compile.EvalString(th, "A.M()")
-	assert.This(x).Is(SuInt(14))
+	assert.This(x).Is(SuInt16(14))
 }

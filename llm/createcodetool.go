@@ -108,7 +108,7 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 			return createCodeOutput{}, err
 		}
 
-		vals["group"] = core.PackValue(core.SuInt(-1))
+		vals["group"] = core.PackValue(core.SuInt16(-1))
 		vals["text"] = core.PackValue(core.SuStr(code))
 		vals["lib_modified"] = core.PackValue(core.Now())
 		if slices.Contains(hdr.Fields[0], "lib_before_text") {
@@ -153,7 +153,7 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 		"name":         core.PackValue(core.SuStr(name)),
 		"text":         core.PackValue(core.SuStr(code)),
 		"lib_modified": core.PackValue(now),
-		"group":        core.PackValue(core.SuInt(-1)),
+		"group":        core.PackValue(core.SuInt16(-1)),
 		"num":          core.PackValue(core.IntVal(maxNum + 1)),
 		"parent":       core.PackValue(core.IntVal(parent)),
 	})

@@ -20,17 +20,17 @@ func TestPackToStr(t *testing.T) {
 	assert.This(packToStr(string([]byte{PackMinus}))).Is("PackMinus")
 	assert.This(packToStr(string([]byte{PackDate}))).Is("PackDate")
 	assert.This(packToStr(string([]byte{PackDate + 1}))).Is("PackDate+1")
-	assert.This(packToStr(Pack(SuInt(123)))).Is("123")
+	assert.This(packToStr(Pack(SuInt16(123)))).Is("123")
 	assert.This(packToStr(Pack(SuStr("abc")))).Is("'abc'")
 }
 
 func TestPointRange(t *testing.T) {
-	pr := pointRange{Org: Pack(SuInt(5))}
+	pr := pointRange{Org: Pack(SuInt16(5))}
 	assert.T(t).That(pr.isPoint())
 	assert.T(t).That(!pr.isRange())
 	assert.This(pr.String()).Is("5")
 
-	pr = pointRange{Org: Pack(SuInt(2)), End: Pack(SuInt(7))}
+	pr = pointRange{Org: Pack(SuInt16(2)), End: Pack(SuInt16(7))}
 	assert.T(t).That(!pr.isPoint())
 	assert.T(t).That(pr.isRange())
 	assert.This(pr.String()).Is("2..7")
@@ -47,11 +47,11 @@ func TestIdxSelString(t *testing.T) {
 		prefixFrac: .25,
 		prefixLen:  1,
 		prefixRanges: []pointRange{
-			{Org: Pack(SuInt(1))},
-			{Org: Pack(SuInt(2)), End: Pack(SuInt(4))}},
+			{Org: Pack(SuInt16(1))},
+			{Org: Pack(SuInt16(2)), End: Pack(SuInt16(4))}},
 		skipStart:       1,
 		skipLen:         1,
-		skipRange:       pointRange{Org: Pack(SuInt(3)), End: Pack(SuInt(6))},
+		skipRange:       pointRange{Org: Pack(SuInt16(3)), End: Pack(SuInt16(6))},
 		indexRangeFrac:  .25,
 		indexFilterFrac: .5,
 		hasDataFilter:   true,
@@ -68,7 +68,7 @@ func TestIdxSelString(t *testing.T) {
 		index:        []string{"a", "b", "c"},
 		prefixFrac:   .33,
 		prefixLen:    2,
-		prefixRanges: []pointRange{{Org: Pack(SuInt(7))}},
+		prefixRanges: []pointRange{{Org: Pack(SuInt16(7))}},
 	}
 	assert.T(t).This(is.String()).Is("(a,b,c) a,b: <7> = pr: .33")
 
@@ -77,11 +77,11 @@ func TestIdxSelString(t *testing.T) {
 		prefixFrac: .2,
 		prefixLen:  1,
 		prefixRanges: []pointRange{
-			{Org: Pack(SuInt(1)), End: ixkey.Max},
+			{Org: Pack(SuInt16(1)), End: ixkey.Max},
 		},
 		skipStart:      2,
 		skipLen:        1,
-		skipRange:      pointRange{Org: Pack(SuInt(5))},
+		skipRange:      pointRange{Org: Pack(SuInt16(5))},
 		indexRangeFrac: .3,
 	}
 	assert.T(t).This(is.String()).Is("(a,b,c) a: <1..max> +c: <5> = pr: .2 ir: .3")
@@ -93,8 +93,8 @@ func TestIdxSelString(t *testing.T) {
 		prefixFrac: .2,
 		prefixLen:  1,
 		prefixRanges: []pointRange{{
-			Org: ixkey.CompKey(Pack(SuInt(1)), Pack(SuStr("x"))),
-			End: ixkey.CompKey(Pack(SuInt(2)), Pack(SuStr("z")))}},
+			Org: ixkey.CompKey(Pack(SuInt16(1)), Pack(SuStr("x"))),
+			End: ixkey.CompKey(Pack(SuInt16(2)), Pack(SuStr("z")))}},
 		indexRangeFrac: .1,
 	}
 	assert.T(t).This(is.String()).Is("(a,b) a: <1,'x'..2,'z'> = pr: .2 ir: .1")

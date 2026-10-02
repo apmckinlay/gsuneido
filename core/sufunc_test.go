@@ -17,7 +17,7 @@ func TestSuFuncString(t *testing.T) {
 	assert.T(t).This(sf.Params()).Is("(a, b, c)")
 	sf.Names = []string{"a", "b", "c"}
 	sf.Ndefaults = 1
-	sf.Values = []Value{SuInt(123)}
+	sf.Values = []Value{SuInt16(123)}
 	assert.T(t).This(sf.Params()).Is("(a, b, c = 123)")
 }
 

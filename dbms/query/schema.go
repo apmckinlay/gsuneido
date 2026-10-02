@@ -546,7 +546,7 @@ func (is *Indexes) row(table string, idx *schema.Index) Row {
 	if idx.Fk.Table != "" {
 		rb.Add(SuStr(idx.Fk.Table))
 		rb.Add(SuStr(str.Join(",", idx.Fk.Columns)))
-		rb.Add(SuInt(int(idx.Fk.Mode)))
+		rb.Add(SuInt16(int(idx.Fk.Mode)))
 	}
 	rec := rb.Build()
 	return Row{DbRec{Record: rec}}

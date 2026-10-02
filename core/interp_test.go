@@ -17,7 +17,7 @@ func TestInterp(t *testing.T) {
 		result := th.Call(fn)
 		assert.T(t).This(result).Is(expected)
 	}
-	test(SuInt(8), byte(op.Int), 0, 3, byte(op.Int), 0, 5, byte(op.Add), byte(op.Return))
+	test(SuInt16(8), byte(op.Int), 0, 3, byte(op.Int), 0, 5, byte(op.Add), byte(op.Return))
 }
 
 func TestCatchMatch(t *testing.T) {
@@ -57,13 +57,13 @@ func BenchmarkJit(b *testing.B) {
 	for b.Loop() {
 		th.Reset()
 		result := jitfn(th)
-		if !result.Equal(SuInt(4950)) {
+		if !result.Equal(SuInt16(4950)) {
 			panic("wrong result")
 		}
 	}
 }
 
-var hundred = SuInt(100)
+var hundred = SuInt16(100)
 
 func jitfn(th *Thread) Value {
 	th.sp += 2
@@ -82,7 +82,7 @@ func jitfn(th *Thread) Value {
 func BenchmarkTranspile(b *testing.B) {
 	for b.Loop() {
 		result := transpilefn()
-		if !result.Equal(SuInt(4950)) {
+		if !result.Equal(SuInt16(4950)) {
 			panic("wrong result")
 		}
 	}
@@ -104,7 +104,7 @@ func transpilefn() Value {
 func BenchmarkSpecialize(b *testing.B) {
 	for b.Loop() {
 		result := specialized()
-		if !result.Equal(SuInt(4950)) {
+		if !result.Equal(SuInt16(4950)) {
 			panic("wrong result")
 		}
 	}
@@ -120,7 +120,7 @@ func specialized() Value {
 			break
 		}
 	}
-	return SuInt(sum)
+	return SuInt16(sum)
 }
 
 var r Value

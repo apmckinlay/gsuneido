@@ -16,7 +16,7 @@ func TestNumValHash(t *testing.T) {
 	vals := []int{0, 1, -1, 100, -100, 12345, -12345,
 		math.MinInt16, math.MaxInt16}
 	for _, n := range vals {
-		si := SuInt(n)
+		si := SuInt16(n)
 		si64 := SuInt64{n: n}
 		dn := SuDnum{Dnum: dnum.FromInt(n)}
 		assert.True(si.Equal(si64))
@@ -26,7 +26,7 @@ func TestNumValHash(t *testing.T) {
 		assert.This(si64.Hash()).Is(hash)
 		assert.This(dn.Hash()).Is(hash)
 	}
-	// values outside SuInt range but within Dnum's 16-digit precision
+	// values outside SuInt16 range but within Dnum's 16-digit precision
 	vals = []int{1 << 20, -(1 << 20), math.MaxInt32, math.MinInt32,
 		1e12, -1e12, 9999999999999999, -9999999999999999}
 	for _, n := range vals {

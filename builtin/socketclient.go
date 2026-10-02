@@ -34,7 +34,7 @@ func SocketClient(th *Thread, args []Value) Value {
 	ipaddr += ":" + strconv.Itoa(port)
 	var c net.Conn
 	var e error
-	toc := time.Duration(ToInt(OpMul(args[3], SuInt(1000)))) * time.Millisecond
+	toc := time.Duration(ToInt(OpMul(args[3], SuInt16(1000)))) * time.Millisecond
 	if toc <= 0 {
 		c, e = net.Dial("tcp", ipaddr)
 	} else {

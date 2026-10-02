@@ -21,13 +21,13 @@ func TestBuilder(t *testing.T) {
 	assert(rec.GetRaw(0)).Is("one")
 
 	b = RecordBuilder{}
-	b.Add(SuInt(123))
+	b.Add(SuInt16(123))
 	b.Add(SuStr("foobar"))
 
 	rec = b.Build()
 	assert(rec.mode()).Is(type8)
 	assert(rec.Count()).Is(2)
-	assert(rec.GetVal(0)).Is(SuInt(123))
+	assert(rec.GetVal(0)).Is(SuInt16(123))
 	assert(rec.GetVal(1)).Is(SuStr("foobar"))
 
 	s := strings.Repeat("helloworld", 30)
@@ -71,7 +71,7 @@ func TestTruncate(t *testing.T) {
 	r2 = r.Truncate(0)
 	assert.That(r2 == r)
 
-	b.Add(SuInt(123))
+	b.Add(SuInt16(123))
 	b.Add(SuStr("hello world"))
 	b.Add(SuBool(true))
 	r = b.Build()

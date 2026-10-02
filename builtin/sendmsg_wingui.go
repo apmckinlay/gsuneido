@@ -309,7 +309,7 @@ func SendMessageSBPART(a, b, c, d Value) Value {
 		intArg(c),
 		uintptr(unsafe.Pointer(unsafe.SliceData(p))))
 	for i := range np {
-		ob.Put(nil, SuInt(i), IntVal(p[i]))
+		ob.Put(nil, SuInt16(i), IntVal(p[i]))
 	}
 	return intRet(rtn)
 }

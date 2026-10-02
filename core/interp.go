@@ -240,7 +240,7 @@ loop:
 		case op.EmptyStr:
 			th.Push(EmptyStr)
 		case op.Int:
-			th.Push(SuInt(fetchInt16()))
+			th.Push(SuInt16(fetchInt16()))
 		case op.Value:
 			th.Push(fr.fn.Values[fetchUint8()])
 		case op.LoadLoad:

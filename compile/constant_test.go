@@ -20,14 +20,14 @@ func TestConstant(t *testing.T) {
 	}
 	test("true", True)
 	test("false", False)
-	test("0", SuInt(0))
-	test("-123", SuInt(-123))
-	test("+456", SuInt(456))
-	test("0xff", SuInt(255))
-	test("-0x1", SuInt(-1))
+	test("0", SuInt16(0))
+	test("-123", SuInt16(-123))
+	test("+456", SuInt16(456))
+	test("0xff", SuInt16(255))
+	test("-0x1", SuInt16(-1))
 	test("0xfffff", SuDnum{Dnum: dnum.FromInt(0xfffff)})
 	test("-0xfffff", SuDnum{Dnum: dnum.FromInt(-0xfffff)})
-	test("0377", SuInt(377)) // Suneido does not support octal literals
+	test("0377", SuInt16(377)) // Suneido does not support octal literals
 	test("'hi wo'", SuStr("hi wo"))
 	test("#foo", SuStr("foo"))
 	test("/* comment */ true", True)

@@ -18,7 +18,7 @@ func TestArgs(t *testing.T) {
 	setStack := func(nums ...int) {
 		th.Reset()
 		for _, n := range nums {
-			th.Push(SuInt(n))
+			th.Push(SuInt16(n))
 		}
 	}
 	ckStack := func(vals ...int) {
@@ -70,7 +70,7 @@ func TestArgs(t *testing.T) {
 
 	// 1 arg => 2 params with 1 default
 	f = &ParamSpec{Nparams: 2, Flags: []Flag{0, 0},
-		Ndefaults: 1, Values: []Value{SuInt(22)}}
+		Ndefaults: 1, Values: []Value{SuInt16(22)}}
 	as = &ArgSpec1
 	setStack(11)
 	th.Args(f, as)
@@ -122,13 +122,13 @@ func TestArgs(t *testing.T) {
 
 	// @list
 	th.Reset()
-	th.Push(SuObjectOf(SuInt(1), SuInt(2), SuInt(3), SuInt(4)))
+	th.Push(SuObjectOf(SuInt16(1), SuInt16(2), SuInt16(3), SuInt16(4)))
 	th.Args(f, as)
 	ckStack(1, 2, 3, 4)
 
 	// @+1 list
 	th.Reset()
-	th.Push(SuObjectOf(SuInt(1), SuInt(2), SuInt(3), SuInt(4), SuInt(5)))
+	th.Push(SuObjectOf(SuInt16(1), SuInt16(2), SuInt16(3), SuInt16(4), SuInt16(5)))
 	th.Args(f, &ArgSpecEach1)
 	ckStack(2, 3, 4, 5)
 
@@ -137,7 +137,7 @@ func TestArgs(t *testing.T) {
 		Names: []string{"a"}}
 	as = &ArgSpecEach0
 	th.Reset()
-	th.Push(SuObjectOf(SuInt(123)))
+	th.Push(SuObjectOf(SuInt16(123)))
 	th.Args(f, as)
 	ckStack(123)
 
@@ -154,10 +154,10 @@ func TestArgs(t *testing.T) {
 
 func makeOb() *SuObject {
 	var ob SuObject
-	ob.Add(SuInt(11))
-	ob.Add(SuInt(22))
-	ob.Set(SuStr1("a"), SuInt(33))
-	ob.Set(SuStr1("b"), SuInt(44))
+	ob.Add(SuInt16(11))
+	ob.Add(SuInt16(22))
+	ob.Set(SuStr1("a"), SuInt16(33))
+	ob.Set(SuStr1("b"), SuInt16(44))
 	return &ob
 }
 

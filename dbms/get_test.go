@@ -62,8 +62,8 @@ func TestGetWhere(t *testing.T) {
 
 	// Multiple fields - check structure
 	obj4 := &SuObject{}
-	obj4.Set(SuStr1("a"), SuInt(1))
-	obj4.Set(SuStr1("b"), SuInt(2))
+	obj4.Set(SuStr1("a"), SuInt16(1))
+	obj4.Set(SuStr1("b"), SuInt16(2))
 	w := getWhere(obj4)
 	assert.T(t).True(strings.HasPrefix(w, "where "))
 	assert.T(t).True(strings.Contains(w, "\nand "))
@@ -301,7 +301,7 @@ func TestFormatFieldsVals(t *testing.T) {
 	test(Sels{qry.NewSel("name", Pack(SuStr("John")))}, `name: "John"`)
 
 	// Multiple fields
-	test(Sels{qry.NewSel("name", Pack(SuStr("John"))), qry.NewSel("age", Pack(SuInt(30)))}, `name: "John", age: 30`)
+	test(Sels{qry.NewSel("name", Pack(SuStr("John"))), qry.NewSel("age", Pack(SuInt16(30)))}, `name: "John", age: 30`)
 
 	// Empty
 	test(Sels{}, "")

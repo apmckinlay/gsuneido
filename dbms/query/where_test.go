@@ -406,7 +406,7 @@ func TestFracPos(t *testing.T) {
 		t.Helper()
 		var enc ixkey.Encoder
 		for _, d := range digits {
-			enc.Add(Pack(SuInt(d)))
+			enc.Add(Pack(SuInt16(d)))
 		}
 		key := enc.String()
 		f := tt.fracPos(key, true)
@@ -575,14 +575,14 @@ func TestWhere_Select_conflict(t *testing.T) {
 
 	// full recalc path: first select, a=0 conflicts with where a>1
 	w := setup("a > 1")
-	w.Select(Sels{{"a", Pack(SuInt(0))}})
+	w.Select(Sels{{"a", Pack(SuInt16(0))}})
 	assert.T(t).Msg("recalc conflict").That(w.selConflict)
 
 	// fast-path: first select a=2 (non-conflict), then a=0 conflicts
 	w = setup("a > 1")
-	w.Select(Sels{{"a", Pack(SuInt(2))}})
+	w.Select(Sels{{"a", Pack(SuInt16(2))}})
 	assert.T(t).Msg("non-conflict").That(!w.selConflict)
-	w.Select(Sels{{"a", Pack(SuInt(0))}}) // conflict
+	w.Select(Sels{{"a", Pack(SuInt16(0))}}) // conflict
 	assert.T(t).Msg("conflict").This(w.selConflict)
 }
 
@@ -692,7 +692,7 @@ func TestWhere_SelOrgNotFull(t *testing.T) {
 	// but (a,c) doesn't support lookups on (a,b) even with fixed
 	key := []string{"a", "b"}
 	q, _, _ = SetupReq(q, ReadMode, tran, UniqueReq(key, 1))
-	q.Lookup(nil, Sels{{"a", Pack(SuInt(4))}, {"b", Pack(SuInt(5))}})
+	q.Lookup(nil, Sels{{"a", Pack(SuInt16(4))}, {"b", Pack(SuInt16(5))}})
 }
 
 func TestWhere_Cost(t *testing.T) {
@@ -987,7 +987,7 @@ func TestWhere_singleton_lookup(t *testing.T) {
 	assert.T(t).That(w.singleton)
 	assert.T(t).This(w.idxSelBase.String()).Is("(a,b) a,b: <1,2> = singleton")
 	th := &Thread{}
-	sels := Sels{{"a", Pack(SuInt(1))}, {"b", Pack(SuInt(2))}}
+	sels := Sels{{"a", Pack(SuInt16(1))}, {"b", Pack(SuInt16(2))}}
 	row := q.Lookup(th, sels)
 	hdr := q.Header()
 	assert.This(row2str(hdr, row)).Is("a=1 b=2 c=3 d=4")
@@ -1007,7 +1007,7 @@ func TestWhere_indexFilter_point(t *testing.T) {
 	assert.T(t).That(q.Get(th, Next) == nil)
 	q.Rewind()
 	assert.T(t).That(len(q.Simple(th)) == 0)
-	q.Select(Sels{{"a", Pack(SuInt(1))}, {"b", Pack(SuInt(2))}})
+	q.Select(Sels{{"a", Pack(SuInt16(1))}, {"b", Pack(SuInt16(2))}})
 	assert.T(t).That(q.Get(th, Next) == nil)
 }
 

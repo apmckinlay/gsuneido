@@ -15,8 +15,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func ExampleSuInt() {
-	v := SuInt(123)
+func ExampleSuInt16() {
+	v := SuInt16(123)
 	fmt.Printf("%d %s\n", v.toInt(), v.String())
 	// Output: 123 123
 }
@@ -27,12 +27,12 @@ func TestStrConvert(t *testing.T) {
 
 func TestStringGet(t *testing.T) {
 	var v Value = SuStr("hello")
-	v = v.Get(nil, SuInt(1))
+	v = v.Get(nil, SuInt16(1))
 	assert.T(t).This(v).Is(SuStr1("e"))
 }
 
 func TestPanics(t *testing.T) {
-	v := SuInt(123)
+	v := SuInt16(123)
 	assert.T(t).This(v.Get(nil, v)).Is(nil)
 	ob := &SuObject{}
 	assert.T(t).This(func() { ToInt(ob) }).Panics("can't convert object to integer")
@@ -44,18 +44,18 @@ func TestCompare(t *testing.T) {
 		False, True,
 		SuDnum{Dnum: dnum.NegInf},
 		SuDnum{Dnum: dnum.FromStr("-1e99")},
-		SuInt(-123), SuDnum{Dnum: dnum.FromStr("-.1")},
-		SuInt(0), SuDnum{Dnum: dnum.FromStr(".1")},
-		SuInt(123), SuDnum{Dnum: dnum.FromStr("1e99")},
+		SuInt16(-123), SuDnum{Dnum: dnum.FromStr("-.1")},
+		SuInt16(0), SuDnum{Dnum: dnum.FromStr(".1")},
+		SuInt16(123), SuDnum{Dnum: dnum.FromStr("1e99")},
 		SuDnum{Dnum: dnum.PosInf},
 		EmptyStr, SuStr("bar"), SuStr("foo"), SuStr("foobar"),
 		DateFromLiteral("#20000101"), DateFromLiteral("#20000102"),
 		DateFromLiteral("#20000201"), DateFromLiteral("#20010101"),
 		&SuObject{},
-		SuObjectOf(SuInt(1)),
-		SuObjectOf(SuInt(2)),
-		SuObjectOf(SuInt(3), SuInt(3)),
-		SuObjectOf(SuInt(3), SuInt(4)),
+		SuObjectOf(SuInt16(1)),
+		SuObjectOf(SuInt16(2)),
+		SuObjectOf(SuInt16(3), SuInt16(3)),
+		SuObjectOf(SuInt16(3), SuInt16(4)),
 	}
 
 	for i := 1; i < len(vals); i++ {
@@ -89,7 +89,7 @@ func TestIfStr(t *testing.T) {
 	}
 	xtest(True)
 	xtest(False)
-	xtest(Zero)   // SuInt
+	xtest(Zero)   // SuInt16
 	xtest(MaxInt) // SuDnum
 	xtest(&SuObject{})
 
@@ -139,7 +139,7 @@ func TestIfInt(t *testing.T) {
 		assert.True(ok)
 		assert.This(got).Is(expected)
 	}
-	test(Zero, 0)            // SuInt
+	test(Zero, 0)            // SuInt16
 	test(MaxInt, 2147483647) // SuDnum
 }
 
@@ -160,7 +160,7 @@ func TestToInt(t *testing.T) {
 		assert.True(ok)
 		assert.This(got).Is(expected)
 	}
-	test(Zero, 0)            // SuInt
+	test(Zero, 0)            // SuInt16
 	test(MaxInt, 2147483647) // SuDnum
 	test(False, 0)
 	test(EmptyStr, 0)

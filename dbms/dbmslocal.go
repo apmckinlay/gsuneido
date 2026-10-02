@@ -225,7 +225,7 @@ func (dbms *DbmsLocal) LibGet1(rt *db19.ReadTran, lib, name string, defs []strin
 	for _, tag := range options.LibraryTags {
 		nametag := name + tag
 		rb.Add(Pack(SuStr(nametag)))
-		rb.Add(Pack(SuInt(-1)))
+		rb.Add(Pack(SuInt16(-1)))
 		key := rb.String()
 		off := ix.Lookup(key)
 		if off != 0 {

@@ -88,7 +88,7 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	utran := th.Dbms().Transaction(true, nil)
 	action := "deleted"
 	if softDelete {
-		vals["group"] = core.PackValue(core.SuInt(-2))
+		vals["group"] = core.PackValue(core.SuInt16(-2))
 		vals["lib_modified"] = core.PackValue(core.Now())
 
 		if slices.Contains(hdr.Fields[0], "lib_before_text") {

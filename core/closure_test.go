@@ -43,7 +43,7 @@ func TestClosure_LoopSharedModifiedWarning(t *testing.T) {
 	defer makeWarningsThrow()()
 
 	// reassign the shared variable while concurrent
-	th.Call(ob.ListGet(1), SuInt(2))
+	th.Call(ob.ListGet(1), SuInt16(2))
 
 	// dispatching the same block a second time warns
 	NoteThreadClosure(fs.ListGet(0))
@@ -111,7 +111,7 @@ func TestClosure_rule(t *testing.T) {
 	f := compile.Constant(src)
 	var th Thread
 	result := th.Call(f)
-	assert.This(result).Is(SuInt(1))
+	assert.This(result).Is(SuInt16(1))
 }
 
 func TestClosure_return(t *testing.T) {
@@ -139,7 +139,7 @@ func TestClosure_nested(t *testing.T) {
 	// fmt.Println(DisasmOps(f.(*SuFunc)))
 	var th Thread
 	result := th.Call(f)
-	assert.This(result).Is(SuInt(6))
+	assert.This(result).Is(SuInt16(6))
 }
 
 func TestClosure_observer1(t *testing.T) {
@@ -314,15 +314,15 @@ func TestClosure_CallstackLocals3(t *testing.T) {
 	f := compile.Constant(src)
 	var th Thread
 	cs := th.Call(f, Zero)
-	assert.T(t).This(cs.Get(nil, SuInt(0)).Get(nil, SuStr("locals")).String()).
+	assert.T(t).This(cs.Get(nil, SuInt16(0)).Get(nil, SuStr("locals")).String()).
 		Is("#(x: 3)")
-	assert.T(t).This(cs.Get(nil, SuInt(1)).Get(nil, SuStr("locals")).String()).
+	assert.T(t).This(cs.Get(nil, SuInt16(1)).Get(nil, SuStr("locals")).String()).
 		Is("#(x: 3, b4: /* closure */)")
-	assert.T(t).This(cs.Get(nil, SuInt(2)).Get(nil, SuStr("locals")).String()).
+	assert.T(t).This(cs.Get(nil, SuInt16(2)).Get(nil, SuStr("locals")).String()).
 		Is("#(b3: /* closure */)")
-	assert.T(t).This(cs.Get(nil, SuInt(3)).Get(nil, SuStr("locals")).String()).
+	assert.T(t).This(cs.Get(nil, SuInt16(3)).Get(nil, SuStr("locals")).String()).
 		Is("#(x: 1, b2: /* closure */)")
-	assert.T(t).This(cs.Get(nil, SuInt(4)).Get(nil, SuStr("locals")).String()).
+	assert.T(t).This(cs.Get(nil, SuInt16(4)).Get(nil, SuStr("locals")).String()).
 		Is("#(x: 0, b1: /* closure */)")
 }
 

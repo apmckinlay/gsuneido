@@ -100,7 +100,7 @@ func BenchmarkFast(b *testing.B) {
 	}
 	args := &SuObject{}
 	args.Add(SuStr("stdlib"))
-	args.Set(SuStr("num"), SuInt(2))
+	args.Set(SuStr("num"), SuInt16(2))
 	for b.Loop() {
 		dbmsLocal.Get(MainThread, args, Only)
 	}

@@ -22,9 +22,9 @@ import (
 )
 
 var (
-	Zero     Value = SuInt(0)
-	One      Value = SuInt(1)
-	MinusOne Value = SuInt(-1)
+	Zero     Value = SuInt16(0)
+	One      Value = SuInt16(1)
+	MinusOne Value = SuInt16(-1)
 	MaxInt   Value = SuDnum{Dnum: dnum.FromInt(math.MaxInt32)}
 	Inf      Value = SuDnum{Dnum: dnum.PosInf}
 	NegInf   Value = SuDnum{Dnum: dnum.NegInf}
