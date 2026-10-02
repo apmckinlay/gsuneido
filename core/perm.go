@@ -24,7 +24,7 @@ type SchemaPerm byte
 
 const (
 	PermCreate SchemaPerm = 1 // allows creating tables and columns
-	PermUpdate            = 3 // includes create
+	PermUpdate SchemaPerm = 3 // includes create
 )
 
 func (sp SchemaPerm) String() string {
@@ -38,7 +38,7 @@ type TablePerm byte
 
 const (
 	PermRead  TablePerm = 1
-	PermWrite           = 3 // includes read
+	PermWrite TablePerm = 3 // includes read
 )
 
 func (tp TablePerm) String() string {

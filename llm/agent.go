@@ -191,7 +191,7 @@ func (agent *Agent) request(input string) {
 	agent.cancel = cancel
 	defer cancel()
 
-	if agent.sandboxMode == false {
+	if !agent.sandboxMode {
 		agent.EnableSandbox()
 		agent.mu.Lock()
 		agent.sandboxMode = true
