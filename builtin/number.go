@@ -97,25 +97,31 @@ func num_Hex(this Value) Value {
 var _ = method(num_Round, "(number) :number")
 
 func num_Round(this, arg Value) Value {
-	x := ToDnum(this)
-	r := ToInt(arg)
-	return SuDnum{Dnum: x.Round(r, dnum.HalfUp)}
+	return round(this, arg, dnum.HalfUp)
 }
 
 var _ = method(num_RoundUp, "(number) :number")
 
 func num_RoundUp(this, arg Value) Value {
-	x := ToDnum(this)
-	r := ToInt(arg)
-	return SuDnum{Dnum: x.Round(r, dnum.Up)}
+	return round(this, arg, dnum.Up)
 }
 
 var _ = method(num_RoundDown, "(number) :number")
 
 func num_RoundDown(this, arg Value) Value {
-	x := ToDnum(this)
+	return round(this, arg, dnum.Down)
+}
+
+func round(this, arg Value, mode dnum.RoundingMode) Value {
 	r := ToInt(arg)
-	return SuDnum{Dnum: x.Round(r, dnum.Down)}
+	dn := ToDnum(this).Round(r, mode)
+	if r == 0 {
+		if n, ok := dn.ToInt(); ok {
+			return IntVal(n)
+		}
+		panic("number.Round(0) should return an integer")
+	}
+	return SuDnum{Dnum: dn}
 }
 
 // float methods
