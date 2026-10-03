@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/core"
@@ -58,6 +59,8 @@ const magicBase = "gsndo"
 const tailSize = 8 // len(shutdown/corrupt)
 const shutdown = "\x2b\xc1\x85\x63\x8d\x71\x65\x6d"
 const corrupt = "\xff\xff\xff\xff\xff\xff\xff\xff"
+
+const maxTables = 4000
 
 // StatsTableName is the name of the system table that stores persistent
 // column statistics used by the query optimizer.
@@ -227,6 +230,13 @@ func (db *Database) unlockSchema() {
 }
 
 func (db *Database) create(state *DbState, schema *schema.Schema) {
+	nTables := 0
+	for range state.Meta.Tables() {
+		nTables++
+	}
+	if nTables >= maxTables {
+		panic("too many tables (limit " + strconv.Itoa(maxTables) + ")")
+	}
 	schema.Check()
 	ts := &meta.Schema{Schema: *schema}
 	ts.SetupIndexes()
