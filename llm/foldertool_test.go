@@ -25,7 +25,7 @@ func TestCodeFoldersTool(t *testing.T) {
 	dbmsLocal.AdminTest("create stdlib (name, text, group, parent, num) key(num) key(name, group) index(parent, name) index(group)")
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true, nil)
+	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	tran.Action(th, "insert { name: 'Folder1', group: 0, parent: 0, num: 1 } into stdlib")
 	tran.Action(th, "insert { name: 'Folder2', group: 0, parent: 0, num: 2 } into stdlib")
 	tran.Action(th, "insert { name: 'Sub', group: 1, parent: 1, num: 3 } into stdlib")

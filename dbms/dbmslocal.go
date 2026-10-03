@@ -47,10 +47,10 @@ func (dbms *DbmsLocal) Admin(admin string, sv *Sviews, perms *Perms) {
 	qry.DoAdmin(dbms.db, admin, sv, perms)
 }
 
-// AdminTest executes an admin command with no permission checking.
+// AdminTest executes an admin command with all permissions.
 // It is used by tests that aren't exercising permissions.
 func (dbms *DbmsLocal) AdminTest(admin string) {
-	dbms.Admin(admin, nil, nil)
+	dbms.Admin(admin, nil, AllPerms)
 }
 
 func (dbms *DbmsLocal) Auth(th *Thread, data Value) bool {
@@ -69,10 +69,8 @@ func (*DbmsLocal) Connections() Value {
 }
 
 // Cursor builds a cursor using perms for the transaction it is planned with.
-// Without perms, a cursor that (due to a bug) used its build transaction
-// instead of the transaction passed to Get would escape permission checks,
-// because nil perms means allow all. Passing the connection's perms makes
-// that failure mode fail closed.
+// Passing the connection's perms also protects against accidentally using
+// the build transaction instead of the transaction passed to Get.
 func (dbms *DbmsLocal) Cursor(query string, sv *Sviews, perms *Perms) ICursor {
 	tran := dbms.db.NewReadTran(perms)
 	q, fixcost, varcost := buildQuery(query, tran, sv, qry.CursorMode)
@@ -147,7 +145,7 @@ func (dbms *DbmsLocal) Final() int {
 // Get handles QueryFirst, QueryLast, Query1, QueryEmpty?
 func (dbms *DbmsLocal) Get(
 	th *Thread, query Value, dir Dir) (Row, *Header, string) {
-	tran := dbms.db.NewReadTran(nil)
+	tran := dbms.db.NewReadTran(AllPerms)
 	defer tran.Complete()
 	return get(th, tran, query, dir)
 }
@@ -191,7 +189,7 @@ func (dbms *DbmsLocal) LibGet(name string) []string {
 	}()
 
 	defs := make([]string, 0, 4)
-	rt := dbms.db.NewReadTran(nil)
+	rt := dbms.db.NewReadTran(AllPerms)
 	libs := dbms.libraries.Load()
 	for _, lib := range libs {
 		defs = dbms.LibGet1(rt, lib, name, defs)
@@ -316,7 +314,7 @@ func (dbms *DbmsLocal) Use(lib string) bool {
 }
 
 func (dbms *DbmsLocal) checkLibrary(lib string) {
-	rt := dbms.db.NewReadTran(nil)
+	rt := dbms.db.NewReadTran(AllPerms)
 	if rt.GetIndex(lib, libKey) == nil || rt.ColToFld(lib, "text") == -1 {
 		panic("Use: invalid library: " + lib)
 	}
@@ -333,7 +331,7 @@ func (dbms *DbmsLocal) updateLibraries(fn func(libs []string) []string) bool {
 }
 
 func (dbms *DbmsLocal) FormatQuery(query string) string {
-	t := dbms.db.NewReadTran(nil)
+	t := dbms.db.NewReadTran(AllPerms)
 	defer t.Complete()
 	return qry.Format(t, query)
 }

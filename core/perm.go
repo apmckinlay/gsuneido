@@ -20,6 +20,13 @@ type Perms struct {
 	schema     SchemaPerm
 }
 
+// AllPerms is the shared, read-only permission set for trusted operations.
+var AllPerms = &Perms{
+	serverEval: map[string]struct{}{"*": {}},
+	table:      map[string]TablePerm{"*": PermWrite},
+	schema:     PermUpdate,
+}
+
 type SchemaPerm byte
 
 const (
@@ -49,7 +56,7 @@ func (tp TablePerm) String() string {
 }
 
 func (p *Perms) SetSchema(rights string) {
-	if p == nil {
+	if p == AllPerms {
 		return
 	}
 	var sp SchemaPerm
@@ -68,7 +75,7 @@ func (p *Perms) SetSchema(rights string) {
 
 // AddTable adds a table and its associated rights to the permissions.
 func (p *Perms) AddTable(table string, rights string) {
-	if p == nil {
+	if p == AllPerms {
 		return
 	}
 	var tp TablePerm
@@ -94,6 +101,12 @@ func (p *Perms) AddTable(table string, rights string) {
 // that ServerEval is allowed to execute on the server.
 // Use "*" to allow all functions.
 func (p *Perms) AddServerEval(name string) {
+	if p == AllPerms {
+		return
+	}
+	if p == nil {
+		return
+	}
 	if p.serverEval == nil {
 		p.serverEval = make(map[string]struct{})
 	}
@@ -103,7 +116,7 @@ func (p *Perms) AddServerEval(name string) {
 // ServerEvalAllowed returns whether name may be used with ServerEval.
 func (p *Perms) ServerEvalAllowed(name string) bool {
 	if p == nil {
-		return true
+		return false
 	}
 	if _, ok := p.serverEval[name]; ok {
 		return true
@@ -116,9 +129,11 @@ func (p *Perms) ServerEvalAllowed(name string) bool {
 // If the table has no specific rights, the fallback rights added with "*" apply.
 func (p *Perms) TableActAllowed(table string, action TablePerm) bool {
 	if p == nil {
-		return true
+		return false
 	}
-	tracePerm(table, action)
+	if p != AllPerms {
+		tracePerm(table, action)
+	}
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	bits, ok := p.table[table]
@@ -134,7 +149,7 @@ func (p *Perms) TableActAllowed(table string, action TablePerm) bool {
 // SchemaActAllowed returns whether the given action is allowed on the schema.
 func (p *Perms) SchemaActAllowed(action SchemaPerm) bool {
 	if p == nil {
-		return true
+		return false
 	}
 	return p.schema&action == action
 }

@@ -28,7 +28,7 @@ func TestSearchTool(t *testing.T) {
 	assert.That(dbmsLocal.Use("app"))
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true, nil)
+	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	tran.Action(th, "insert { name: 'Foo', text: 'function(){return 1}', group: -1, parent: 0, num: 1 } into stdlib")
 	tran.Action(th, "insert { name: 'Bar', text: 'function(){return 2}', group: -1, parent: 0, num: 2 } into stdlib")
 	tran.Action(th, "insert { name: 'FooApp', text: 'function(){return 3}', group: -1, parent: 0, num: 3 } into app")

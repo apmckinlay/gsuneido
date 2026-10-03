@@ -15,7 +15,7 @@ import (
 )
 
 // TestPermCursor checks that a cursor enforces the permissions of the
-// transaction it is used with, not the perms-less transaction it is created with.
+// transaction it is used with, not the unrestricted transaction it is created with.
 func TestPermCursor(t *testing.T) {
 	a := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
@@ -23,11 +23,11 @@ func TestPermCursor(t *testing.T) {
 	defer db.Close()
 	d := NewDbmsLocal(db)
 	d.AdminTest("create tmp (k, data) key(k)")
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(AllPerms)
 	qry.DoAction(&Thread{}, ut, "insert { k: 1, data: 'x' } into tmp")
 	ut.Commit()
 
-	cur := d.Cursor("tmp", nil, nil)
+	cur := d.Cursor("tmp", nil, AllPerms)
 
 	// the tran used to fetch has no read permission
 	deny := db.NewReadTran(&Perms{})
@@ -55,6 +55,9 @@ func TestPermCursorBuild(t *testing.T) {
 	d.AdminTest("create tmp (k, data) key(k)")
 
 	// the build transaction carries the connection's perms
+	a.This(func() {
+		d.Cursor("tmp", nil, nil)
+	}).Panics("not authorized: tmp")
 	a.This(func() {
 		d.Cursor("tmp", nil, &Perms{})
 	}).Panics("not authorized: tmp")

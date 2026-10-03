@@ -44,7 +44,7 @@ func TestQueryToolSizeLimit(t *testing.T) {
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	tran := dbms.Transaction(true, nil)
+	tran := dbms.Transaction(true, core.AllPerms)
 	xs := strings.Repeat("x", 1500)
 	for i := range 10 {
 		n := tran.Action(th, fmt.Sprintf("insert { k: %d, a: %q } into big", i, xs))
@@ -77,7 +77,7 @@ func TestQueryToolRowLimit(t *testing.T) {
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	tran := dbms.Transaction(true, nil)
+	tran := dbms.Transaction(true, core.AllPerms)
 	for i := range 150 {
 		n := tran.Action(th, fmt.Sprintf("insert { k: %d } into many", i))
 		assert.This(n).Is(1)

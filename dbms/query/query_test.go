@@ -126,7 +126,7 @@ func TestForeignKeyDeleteCascade(t *testing.T) {
 }
 
 func queryAll(db *db19.Database, query string) string {
-	tran := sizeTran{db.NewReadTran(nil)}
+	tran := sizeTran{db.NewReadTran(AllPerms)}
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	// fmt.Println(format(0, q, 0))
@@ -201,7 +201,7 @@ func TestExtendAllRules(*testing.T) {
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	db := testDb()
 	defer db.Close()
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery("cus extend Foo, n=1, Bar", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	assert.That(!q.SingleTable())
@@ -242,7 +242,7 @@ func TestWhereLowerIndex(t *testing.T) {
 	act(db, "insert {a: '6', b: '7'} into t1")
 	act(db, "insert {a: '7', b: '7'} into t1")
 	db.Persist()
-	rt := db.NewReadTran(nil)
+	rt := db.NewReadTran(AllPerms)
 	q := ParseQuery("t1 where b_lower! = '8'", rt, nil)
 	q, _, _ = Setup(q, ReadMode, rt)
 	assert.T(t).This(String(q)).Is("t1^(b_lower!,a) where b_lower! is '8'")
@@ -278,7 +278,7 @@ func TestLookupOnSingleton(t *testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	doAdmin(db, "create tmp (a,b,c) key()")
-	tbl := NewTable(db.NewReadTran(nil), "tmp")
+	tbl := NewTable(db.NewReadTran(AllPerms), "tmp")
 	hdr := tbl.Header()
 
 	sels := Sels{{"a", Pack(IntVal(1))}, {"b", Pack(IntVal(2))}}
@@ -286,7 +286,7 @@ func TestLookupOnSingleton(t *testing.T) {
 	assert.T(t).This(row).Is(nil)
 
 	act(db, "insert {a: 1, b: 2, c: 3} into tmp")
-	tbl = NewTable(db.NewReadTran(nil), "tmp")
+	tbl = NewTable(db.NewReadTran(AllPerms), "tmp")
 	// existent row
 	row = lookup(tbl, sels, nil, nil)
 	assert.T(t).This(row2str(hdr, row)).Is("a=1 b=2 c=3")
@@ -305,7 +305,7 @@ func TestSingleton(t *testing.T) {
 	doAdmin(db, "create tmp (a,b) key(a) key(b)")
 	act(db, "insert { a: 1, b: 2 } into tmp")
 	act(db, "insert { a: 3, b: 4 } into tmp")
-	tran := sizeTran{db.NewReadTran(nil)}
+	tran := sizeTran{db.NewReadTran(AllPerms)}
 	q := ParseQuery("tmp where a = 3", tran, nil)
 	q = setupIndex(q, ReadMode, tran, []string{"b"})
 	assert.This(String(q)).Is("tmp^(a) where*1 a is 3") // singleton
@@ -432,7 +432,7 @@ func TestTimesLookup(t *testing.T) {
 	act(db, "insert { x: 5, y: 6 } into tmp2")
 	act(db, "insert { x: 7, y: 8 } into tmp2")
 
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery("tmp1 times tmp2", tran, nil)
 	req := UniqueReq([]string{"a", "x"}, 1)
 	q, _, _ = SetupReq(q, ReadMode, tran, req)
@@ -456,7 +456,7 @@ func TestWhereMatchOnUniqueIndexWithEmptyFields(t *testing.T) {
 	db.act("insert { k: 2, u: '', data: 'second' } into tmp")
 	db.act("insert { k: 3, u: 'x', data: 'third' } into tmp")
 
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery("tmp where u =~ 'x'", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 
@@ -470,7 +470,7 @@ func TestSummarizeWhere(t *testing.T) {
 	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	doAdmin(db, "create tmp (a, b) key(a) key(b)")
 	for i := range 1000 {
-		t := db.NewUpdateTran(nil)
+		t := db.NewUpdateTran(AllPerms)
 		var rb RecordBuilder
 		rb.Add(IntVal(i))
 		rb.Add(IntVal(i))
@@ -479,7 +479,7 @@ func TestSummarizeWhere(t *testing.T) {
 	}
 	db.Persist() // flush to btree so RangeFrac works
 	strategy := func(query string) string {
-		rt := db.NewReadTran(nil)
+		rt := db.NewReadTran(AllPerms)
 		q := ParseQuery(query, rt, nil)
 		q, _, _ = Setup(q, ReadMode, rt)
 		return String(q)

@@ -22,7 +22,7 @@ func TestDatabase_Top10(t *testing.T) {
 	defer db.Close()
 
 	qry.DoAdminTest(db, "create tmp (id, c) key(id)")
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(AllPerms)
 	id := 1
 	for range 25 {
 		qry.DoAction(nil, ut,
@@ -57,7 +57,7 @@ func TestDatabase_Distinct(t *testing.T) {
 	defer db.Close()
 
 	qry.DoAdminTest(db, "create tmp (a, b, c) key(a) index(b,c)")
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(AllPerms)
 	qry.DoAction(nil, ut, "insert { a: 1, b: 'x', c: 10 } into tmp")
 	qry.DoAction(nil, ut, "insert { a: 2, b: 'x', c: 20 } into tmp")
 	qry.DoAction(nil, ut, "insert { a: 3, b: 'y', c: 20 } into tmp")

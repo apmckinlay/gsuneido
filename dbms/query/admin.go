@@ -16,13 +16,13 @@ func DoAdmin(db *db19.Database, cmd string, sv *Sviews, perms *Perms) {
 }
 
 func DoAdminTest(db *db19.Database, cmd string) {
-	DoAdmin(db, cmd, nil, nil)
+	DoAdmin(db, cmd, nil, AllPerms)
 }
 
 // checkSchemaPerm panics unless the permissions allow the schema change.
 // PermSchema only allows creating tables and adding columns
 // (create, alter ... create, ensure), not other schema changes.
-// Nil permissions means no checking.
+// Nil permissions deny all schema changes.
 func checkSchemaPerm(perms *Perms, action SchemaPerm) {
 	if !perms.SchemaActAllowed(action) {
 		panic("not authorized")
@@ -84,7 +84,7 @@ func (a *ensureAdmin) execute(db *db19.Database, _ *Sviews, perms *Perms) {
 		}
 	}
 	db.Ensure(&a.Schema)
-	if ts == nil {
+	if ts == nil && perms != AllPerms {
 		perms.AddTable(a.Table, "write")
 	}
 }

@@ -219,7 +219,7 @@ func sqs_Parse(th *Thread, args []Value) Value {
 	if !ok {
 		panic("Query.Parse requires a local database")
 	}
-	t := dbms.Transaction(false, nil)
+	t := dbms.Transaction(false, AllPerms)
 	defer t.Complete()
 	query := ToStr(args[0])
 	q := qry.JustParse(t.(qry.QueryTran), query)

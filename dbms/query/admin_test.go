@@ -131,6 +131,26 @@ func TestAdminPerm(t *testing.T) {
 	db.MustCheck()
 }
 
+func TestAdminNilPerms(t *testing.T) {
+	assert := assert.T(t)
+	db := createTestDb()
+	defer db.Close()
+	assert.This(func() {
+		DoAdmin(db, "create denied (k) key(k)", nil, nil)
+	}).Panics("not authorized")
+	assert.This(func() {
+		DoAdmin(db, "ensure denied (k) key(k)", nil, nil)
+	}).Panics("not authorized")
+	assert.This(func() {
+		DoAdmin(db, "drop tmp", nil, nil)
+	}).Panics("not authorized")
+
+	DoAdmin(db, "create allowed (k) key(k)", nil, core.AllPerms)
+	DoAdmin(db, "ensure alsoallowed (k) key(k)", nil, core.AllPerms)
+	DoAdmin(db, "ensure allowed (x)", nil, core.AllPerms)
+	db.MustCheck()
+}
+
 func TestCreateDropBug(t *testing.T) {
 	store := stor.HeapStor(8192)
 	db := db19.CreateDb(store)
@@ -401,7 +421,7 @@ func TestFkey(t *testing.T) {
 	schemas := map[string]string{}
 	check := func() {
 		t.Helper()
-		rt := db.NewReadTran(nil)
+		rt := db.NewReadTran(core.AllPerms)
 		for table, schema := range schemas {
 			assert.T(t).This(db.Schema(table)).Is(schema)
 			if schema == "" {
@@ -582,7 +602,7 @@ func TestNoColumns(*testing.T) {
 }
 
 func act(db *db19.Database, act string) {
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	defer ut.Commit()
 	n := DoAction(nil, ut, act)
 	assert.This(n).Is(1)

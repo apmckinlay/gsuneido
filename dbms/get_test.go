@@ -160,7 +160,7 @@ func TestGetOnlyUniqueIndex(t *testing.T) {
 	defer db.Close()
 	qry.DoAdminTest(db, "create tmp (k, u, data) key(k) index unique(u)")
 	act := func(action string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran(AllPerms)
 		defer ut.Commit()
 		qry.DoAction(nil, ut, action)
 	}
@@ -168,7 +168,7 @@ func TestGetOnlyUniqueIndex(t *testing.T) {
 	act("insert { k: 2, u: '', data: 'second' } into tmp")
 	act("insert { k: 3, u: 'x', data: 'third' } into tmp")
 
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	defer tran.Complete()
 	th := &Thread{}
 	ob := &SuObject{}
@@ -200,14 +200,14 @@ func TestGetOnlyUniqueIndexEmpty(t *testing.T) {
 	defer db.Close()
 	qry.DoAdminTest(db, "create tmp (k, u, data) key(k) index unique(u)")
 	act := func(action string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran(AllPerms)
 		defer ut.Commit()
 		qry.DoAction(nil, ut, action)
 	}
 	act("insert { k: 1, u: '', data: 'first' } into tmp")
 	act("insert { k: 2, u: '', data: 'second' } into tmp")
 
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	defer tran.Complete()
 	th := &Thread{}
 	tbl := qry.NewTable(tran, "tmp").(*qry.Table)
@@ -314,7 +314,7 @@ func TestGetSchema(t *testing.T) {
 	qry.DoAdminTest(db, "create tmp (k, u, data, Foo) key(k) index unique(u)")
 	qry.DoAdminTest(db, "view myview = tmp")
 
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	defer tran.Complete()
 	th := &Thread{}
 
@@ -384,7 +384,7 @@ func TestGetSchemaNoSels(t *testing.T) {
 	defer db.Close()
 	qry.DoAdminTest(db, "create tmp (k, u, data) key(k) index unique(u)")
 
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	defer tran.Complete()
 	th := &Thread{}
 

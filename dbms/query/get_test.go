@@ -87,7 +87,7 @@ func TestQueryGet(t *testing.T) {
 	}
 	test := func(query, strategy, expected string) {
 		t.Helper()
-		tran := sizeTran{db.NewReadTran(nil)}
+		tran := sizeTran{db.NewReadTran(AllPerms)}
 		q := ParseQuery(query, tran, nil)
 		_, hasSort := q.(*Sort)
 

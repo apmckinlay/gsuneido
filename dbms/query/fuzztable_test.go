@@ -147,14 +147,14 @@ func (b *buildFT) finish() Query {
 	// fmt.Println(sb.String())
 
 	// output the data
-	ut := b.db.NewUpdateTran(nil)
+	ut := b.db.NewUpdateTran(AllPerms)
 	for _, vals := range b.data {
 		ut.Output(nil, table, b.dataToRecord(vals))
 	}
 	b.db.CommitMerge(ut)
 
 	// recreate read tran so it includes the new table
-	b.rt = b.db.NewReadTran(nil)
+	b.rt = b.db.NewReadTran(AllPerms)
 	return NewTable(b.rt, table)
 }
 
@@ -423,7 +423,7 @@ func TestFuzzTable_Build(t *testing.T) {
 	defer ft.db.Close()
 
 	q := ft.newFT().Sizes(10, 2, 2).Prefix("col_").Build()
-	q.SetTran(ft.db.NewReadTran(nil))
+	q.SetTran(ft.db.NewReadTran(AllPerms))
 	hdr := q.Header()
 	if len(hdr.Columns) == 0 {
 		t.Error("Table has no columns")

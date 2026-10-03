@@ -33,7 +33,7 @@ func TestQuery(t *testing.T) {
 	MakeSuTran = func(qt QueryTran) *SuTran {
 		return nil
 	}
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	s := `bln join by(ik,b2) ((ivc where ik is "") leftjoin by(ck) (cus extend b2 = c1))`
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
@@ -121,7 +121,7 @@ func TestQuery2(t *testing.T) {
 	MakeSuTran = func(qt QueryTran) *SuTran {
 		return nil
 	}
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	s := `aln where ik is "67" sort ik`
 	q := ParseQuery(s, tran, nil)
 	// trace.QueryOpt.Set()
@@ -142,7 +142,7 @@ func BenchmarkProject_Old(b *testing.B) {
 	MakeSuTran = func(qt QueryTran) *SuTran {
 		return nil
 	}
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery("gl_transactions", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	data := make([]Row, 0, 1000)
@@ -170,7 +170,7 @@ func BenchmarkProject_Hmap(b *testing.B) {
 	MakeSuTran = func(qt QueryTran) *SuTran {
 		return nil
 	}
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery("gl_transactions", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	data := make([]Row, 0, 1000)
@@ -252,7 +252,7 @@ func TestSimple(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	fmt.Println("----------------")
 	fmt.Println(Format(tran, s))
 	fmt.Println("----------------")

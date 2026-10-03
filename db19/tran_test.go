@@ -51,7 +51,7 @@ func TestConcurrent(t *testing.T) {
 
 	db.MustCheck()
 	var nout = nclients * ntrans
-	rt := db.NewReadTran(nil)
+	rt := db.NewReadTran(core.AllPerms)
 	ti := rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
@@ -84,7 +84,7 @@ func TestTran(t *testing.T) {
 	}
 	db.persist(&execPersistSingle{}, false)
 	db.MustCheck()
-	rt := db.NewReadTran(nil)
+	rt := db.NewReadTran(core.AllPerms)
 	ti := rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
@@ -93,7 +93,7 @@ func TestTran(t *testing.T) {
 	db, err = OpenDb("tmp.db", stor.Read, true)
 	ck(err)
 	db.MustCheck()
-	rt = db.NewReadTran(nil)
+	rt = db.NewReadTran(core.AllPerms)
 	ti = rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
@@ -121,7 +121,7 @@ var recnum atomic.Int32
 
 func output1(db *Database) *UpdateTran {
 	n := recnum.Add(1)
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	data := (strconv.Itoa(int(n)) + "transaction")[:12]
 	ut.Output(nil, "mytable", mkrec(data, "data"))
 	return ut
@@ -146,8 +146,8 @@ func TestExclusive(*testing.T) {
 	db.CheckerSync()
 
 	createTbl(db)
-	ut2 := db.NewUpdateTran(nil)
-	ut := db.NewUpdateTran(nil)
+	ut2 := db.NewUpdateTran(core.AllPerms)
+	ut := db.NewUpdateTran(core.AllPerms)
 	db.RunExclusive("mytable", func() {})
 	assert.This(db.ck.Output(ut.ct, "mytable", []string{""})).Is(false)
 	assert.This(ut.ct.failure.Load()).Is("conflict with exclusive (mytable)")
@@ -155,7 +155,7 @@ func TestExclusive(*testing.T) {
 	assert.This(db.ck.Output(ut2.ct, "mytable", []string{""})).Is(false)
 	assert.This(ut2.ct.failure.Load()).Is("conflict with exclusive (mytable)")
 
-	ut = db.NewUpdateTran(nil)
+	ut = db.NewUpdateTran(core.AllPerms)
 	assert.That(db.ck.Output(ut.ct, "mytable", []string{""}))
 	ut.Commit()
 }
@@ -177,8 +177,8 @@ func TestOutputDupConflict(*testing.T) {
 	db := CreateDb(stor.HeapStor(8192))
 	db.CheckerSync()
 	createTbl(db)
-	t1 := db.NewUpdateTran(nil)
-	t2 := db.NewUpdateTran(nil)
+	t1 := db.NewUpdateTran(core.AllPerms)
+	t2 := db.NewUpdateTran(core.AllPerms)
 	t1.Output(nil, "mytable", mkrec("1"))
 	assert.This(func() { t2.Output(nil, "mytable", mkrec("1")) }).
 		Panics("conflicted")
@@ -189,7 +189,7 @@ func TestGetIndexI(*testing.T) {
 	StartConcur(db, 50*time.Millisecond)
 	createTbl(db)
 
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	it := index.NewOverIter("mytable", 0)
 	it.Next(ut)                           // incorrectly got r/o info
 	ut.Output(nil, "mytable", mkrec("1")) // updates r/w info
@@ -208,11 +208,11 @@ func TestGetIndexI2(t *testing.T) {
 	StartConcur(db, 50*time.Millisecond)
 	createTbl(db)
 
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	ut.GetIndexI("mytable", 0) // creates mut's
 	ut.Commit()                // moves mut's to layers but does not merge
 
-	ut = db.NewUpdateTran(nil)
+	ut = db.NewUpdateTran(core.AllPerms)
 	ut.Output(nil, "mytable", mkrec("1")) // merges wrong layer
 	ut.Commit()
 
@@ -225,12 +225,12 @@ func TestUpdateUpdateSameBug(t *testing.T) {
 	createTbl(db)
 
 	// Insert initial record with known size and get its offset
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	initialRec := mkrec("short", "data") // small record
 	ut.Output(nil, "mytable", initialRec)
 	ut.Commit()
 
-	ut = db.NewUpdateTran(nil)
+	ut = db.NewUpdateTran(core.AllPerms)
 
 	ts := ut.getSchema("mytable")
 	key := ts.Indexes[0].Ixspec.Key(initialRec)
@@ -258,12 +258,12 @@ func TestUpdateDeleteSameBug(t *testing.T) {
 	StartConcur(db, 50*time.Millisecond)
 	createTbl(db)
 
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	initialRec := mkrec("delete", "data") // small record
 	ut.Output(nil, "mytable", initialRec)
 	ut.Commit()
 
-	ut = db.NewUpdateTran(nil)
+	ut = db.NewUpdateTran(core.AllPerms)
 
 	ts := ut.getSchema("mytable")
 	key := ts.Indexes[0].Ixspec.Key(initialRec)
@@ -295,13 +295,13 @@ func TestRangesBug(t *testing.T) {
 		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"a"}}},
 	})
 
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	ut.Output(nil, "tmp", mkrec("1", "2"))
 	ut.Output(nil, "tmp", mkrec("", "3"))
 	ut.Commit()
 
-	t1 := db.NewUpdateTran(nil)
-	t2 := db.NewUpdateTran(nil)
+	t1 := db.NewUpdateTran(core.AllPerms)
+	t2 := db.NewUpdateTran(core.AllPerms)
 
 	// read record where a = ""
 	ts := t1.getSchema("tmp")
@@ -341,7 +341,7 @@ func TestCursorDeleteBehavior(t *testing.T) {
 	})
 
 	// Insert records with k values 0-5
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	for i := range 6 {
 		ut.Output(nil, "testtable", mkrec(strconv.Itoa(i)))
 	}
@@ -352,7 +352,7 @@ func TestCursorDeleteBehavior(t *testing.T) {
 
 	// Helper function equivalent to next() closure
 	next := func() int {
-		rt := db.NewReadTran(nil)
+		rt := db.NewReadTran(core.AllPerms)
 		iter.Next(rt)
 		if iter.Eof() {
 			return -1
@@ -370,7 +370,7 @@ func TestCursorDeleteBehavior(t *testing.T) {
 	assert.T(t).Msg("third next").This(next()).Is(2)
 
 	// Go back one record using Prev
-	ut = db.NewUpdateTran(nil)
+	ut = db.NewUpdateTran(core.AllPerms)
 	iter.Prev(ut)
 	if !iter.Eof() {
 		_, off := iter.Cur()
@@ -397,13 +397,34 @@ func TestPerm(t *testing.T) {
 	createTbl(db)
 
 	rec := mkrec("one", "data")
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	ut.Output(nil, "mytable", rec)
 	ut.Commit()
 
-	ut = db.NewUpdateTran(nil)
+	ut = db.NewUpdateTran(core.AllPerms)
 	key := ut.getSchema("mytable").Indexes[0].Ixspec.Key(rec)
 	off := ut.Lookup("mytable", 0, key).Off
+	ut.Abort()
+
+	// nil permissions deny permission-checked reads and writes
+	rt := db.NewReadTran(nil)
+	assert.This(func() {
+		rt.IndexIter("mytable", 0)
+	}).Panics("not authorized: mytable")
+	rt.Abort()
+	ut = db.NewUpdateTran(nil)
+	assert.This(func() {
+		ut.IndexIter("mytable", 0)
+	}).Panics("not authorized: mytable")
+	assert.This(func() {
+		ut.Output(nil, "mytable", mkrec("two", "data"))
+	}).Panics("not authorized: mytable")
+	assert.This(func() {
+		ut.Update(nil, "mytable", off, mkrec("one", "changed"))
+	}).Panics("not authorized: mytable")
+	assert.This(func() {
+		ut.Delete(nil, "mytable", off)
+	}).Panics("not authorized: mytable")
 	ut.Abort()
 
 	// no permission for the table denies read (via IndexIter) and write
@@ -472,8 +493,8 @@ func TestFkeyCascadeDeleteNoPerm(t *testing.T) {
 		},
 	})
 
-	// insert parent and child with full access (nil perms)
-	ut := db.NewUpdateTran(nil)
+	// insert parent and child with explicit full access
+	ut := db.NewUpdateTran(core.AllPerms)
 	ut.Output(nil, "hdr", mkrec("1", "b1"))
 	ut.Output(nil, "lin", mkrec("1", "e1", "f1"))
 	ut.Commit()
@@ -488,7 +509,7 @@ func TestFkeyCascadeDeleteNoPerm(t *testing.T) {
 	ut.Commit()
 
 	// cascade should have deleted lin despite no permission
-	rt := db.NewReadTran(nil)
+	rt := db.NewReadTran(core.AllPerms)
 	ti := rt.GetInfo("lin")
 	assert.T(t).This(ti.Nrows).Is(0)
 	db.MustCheck()
@@ -504,7 +525,7 @@ func TestCombineBug(t *testing.T) {
 		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"k"}}},
 	})
 
-	ut := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(core.AllPerms)
 	ut.Output(nil, "testtable", mkrec("2"))
 	ts := ut.getSchema("testtable")
 	key := ts.Indexes[0].Ixspec.Key(mkrec("2"))
@@ -512,18 +533,18 @@ func TestCombineBug(t *testing.T) {
 	db.Persist()
 
 	// Delete the record in a separate transaction
-	ut = db.NewUpdateTran(nil)
+	ut = db.NewUpdateTran(core.AllPerms)
 	dbRec := ut.Lookup("testtable", 0, key)
 	ut.Delete(nil, "testtable", dbRec.Off)
 	ut.Commit()
 
 	// Re-output the record in a separate transaction
-	ut = db.NewUpdateTran(nil)
+	ut = db.NewUpdateTran(core.AllPerms)
 	ut.Output(nil, "testtable", mkrec("2"))
 	ut.Commit()
 
 	// All in one transaction, delete, re-output, delete
-	ut = db.NewUpdateTran(nil)
+	ut = db.NewUpdateTran(core.AllPerms)
 	// First delete
 	dbRec = ut.Lookup("testtable", 0, key)
 	ut.Delete(nil, "testtable", dbRec.Off)

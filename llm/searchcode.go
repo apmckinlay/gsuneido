@@ -95,7 +95,7 @@ func searchCode(library, nameRx, codeRx string, caseSensitive, modified bool) (r
 		}
 	}
 
-	tran := th.Dbms().Transaction(false, nil)
+	tran := th.Dbms().Transaction(false, core.AllPerms)
 	defer tran.Complete()
 	st := core.NewSuTran(tran, false)
 	folderCache := make(map[int]folderInfo)

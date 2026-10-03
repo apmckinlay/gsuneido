@@ -106,7 +106,7 @@ func (qh *QueryHash) Result(details bool) Value {
 }
 
 func queryHashAll(db *db19.Database, query string) {
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	th := &Thread{}

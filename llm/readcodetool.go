@@ -94,7 +94,7 @@ func readCodeTool(library, name string, startLine int, numLines int, plain bool)
 	}
 
 	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
-	tran := th.Dbms().Transaction(false, nil)
+	tran := th.Dbms().Transaction(false, core.AllPerms)
 	defer tran.Complete()
 	q := tran.Query(query, nil)
 	hdr := q.Header()

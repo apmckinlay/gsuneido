@@ -67,7 +67,7 @@ func createDb() {
 		query.DoAdminTest(db, admin)
 	}
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran(core.AllPerms)
 		defer ut.Commit()
 		query.DoAction(nil, ut, act)
 	}

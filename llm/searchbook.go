@@ -67,7 +67,7 @@ func searchBook(book, pathRx, textRx string, caseSensitive bool) (searchBookOutp
 
 	th := core.NewThread(core.MainThread)
 	defer th.Close()
-	tran := th.Dbms().Transaction(false, nil)
+	tran := th.Dbms().Transaction(false, core.AllPerms)
 	defer tran.Complete()
 	st := core.NewSuTran(tran, false)
 

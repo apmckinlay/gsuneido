@@ -25,7 +25,7 @@ func TestSearchBookTool(t *testing.T) {
 	dbmsLocal.AdminTest("create mybook (name, path, text, order) key(name, path)")
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true, nil)
+	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	tran.Action(th, "insert { name: 'Introduction', path: '', text: 'intro text', order: 1 } into mybook")
 	tran.Action(th, "insert { name: 'Reference', path: '', text: 'ref text', order: 2 } into mybook")
 	tran.Action(th, "insert { name: 'Date', path: '/Reference', text: 'date functions', order: 2 } into mybook")
@@ -99,7 +99,7 @@ func TestSearchBookLinesLimit(t *testing.T) {
 	dbmsLocal.AdminTest("create testbook (name, path, text, order) key(name, path)")
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true, nil)
+	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	// Create a document with 8 matching lines (more than linesLimit of 5)
 	tran.Action(th, "insert { name: 'ManyMatches', path: '', text: 'line1 match\nline2 match\nline3 match\nline4 match\nline5 match\nline6 match\nline7 match\nline8 match', order: 1 } into testbook")
 	tran.Complete()

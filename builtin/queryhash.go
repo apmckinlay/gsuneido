@@ -16,7 +16,7 @@ func QueryHash(th *Thread, args []Value) Value {
 		/* CHECKQUERY SUPPRESS: UNION NOT DISJOINT */
 		/* CHECKQUERY SUPPRESS: JOIN MANY TO MANY */`
 	details := ToBool(args[1])
-	tran := th.Dbms().Transaction(false, nil)
+	tran := th.Dbms().Transaction(false, AllPerms)
 	defer tran.Complete()
 	q := tran.Query(query, nil)
 	// fmt.Println(q.Strategy(true))

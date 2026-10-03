@@ -55,7 +55,7 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	}
 
 	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
-	rtran := th.Dbms().Transaction(false, nil)
+	rtran := th.Dbms().Transaction(false, core.AllPerms)
 	rq := rtran.Query(query, nil)
 	hdr := rq.Header()
 	row, _ := rq.Get(th, core.Next)
@@ -85,7 +85,7 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 		return deleteCodeOutput{}, err
 	}
 
-	utran := th.Dbms().Transaction(true, nil)
+	utran := th.Dbms().Transaction(true, core.AllPerms)
 	action := "deleted"
 	if softDelete {
 		vals["group"] = core.PackValue(core.SuInt16(-2))

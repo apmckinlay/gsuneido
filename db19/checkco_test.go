@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"golang.org/x/time/rate"
@@ -67,7 +68,7 @@ func mergeSink() chan todo {
 var nCommit, nConflict atomic.Int32
 
 func randTran(db *Database) {
-	t := db.NewUpdateTran(nil)
+	t := db.NewUpdateTran(core.AllPerms)
 	nActions := rand.Intn(20)
 	for range nActions {
 		randAction(db.ck, t.ct)

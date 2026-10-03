@@ -29,7 +29,7 @@ func init() {
 // 	db19.StartConcur(db, 5*time.Millisecond)
 // 	act := func(act string) int {
 // 		// time.Sleep(1 * time.Microsecond)
-// 		ut := db.NewUpdateTran(nil)
+// 		ut := db.NewUpdateTran(AllPerms)
 // 		defer ut.Commit()
 // 		return DoAction(nil, ut, act, nil)
 // 	}
@@ -45,7 +45,7 @@ func init() {
 // 		// fmt.Println(i)
 // 		act("delete Test_lib")
 // 		act("insert { name: 'One', group: -1, num: 99999 } into Test_lib")
-// 		// db.NewReadTran(nil).GetInfo("tmp").Indexes[0].Print()
+// 		// db.NewReadTran(AllPerms).GetInfo("tmp").Indexes[0].Print()
 // 		// time.Sleep(time.Microsecond)
 // 		act("insert { name: 'Two', group: -1, num: 99998 } into Test_lib")
 // 		n := act("delete Test_lib")
@@ -57,7 +57,7 @@ func TestDeleteBug(*testing.T) {
 	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Second)
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran(AllPerms)
 		defer ut.Commit()
 		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
@@ -78,7 +78,7 @@ func TestDeleteSynch(*testing.T) {
 	db := db19.CreateDb(stor.HeapStor(8192))
 	db.CheckerSync()
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran(AllPerms)
 		DoAction(nil, ut, act)
 		db.CommitMerge(ut)
 	}

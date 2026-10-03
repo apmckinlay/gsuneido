@@ -44,3 +44,30 @@ func TestPermsServerEval(t *testing.T) {
 	assert.True(p2.ServerEvalAllowed("anything"))
 	assert.True(p2.ServerEvalAllowed("F1"))
 }
+
+func TestPermsNil(t *testing.T) {
+	assert := assert.T(t)
+	test := func(p *Perms) {
+		assert.False(p.TableActAllowed("foo", PermRead))
+		assert.False(p.TableActAllowed("foo", PermWrite))
+		assert.False(p.SchemaActAllowed(PermCreate))
+		assert.False(p.SchemaActAllowed(PermUpdate))
+		assert.False(p.ServerEvalAllowed("F1"))
+	}
+	test(nil)
+	test(&Perms{})
+}
+
+func TestAllPerms(t *testing.T) {
+	assert := assert.T(t)
+	assert.True(AllPerms.TableActAllowed("foo", PermRead))
+	assert.True(AllPerms.TableActAllowed("bar", PermWrite))
+	assert.True(AllPerms.SchemaActAllowed(PermCreate))
+	assert.True(AllPerms.SchemaActAllowed(PermUpdate))
+	assert.True(AllPerms.ServerEvalAllowed("F1"))
+	AllPerms.AddTable("foo", "")
+	AllPerms.SetSchema("")
+	AllPerms.AddServerEval("F2")
+	assert.This(len(AllPerms.table)).Is(1)
+	assert.This(len(AllPerms.serverEval)).Is(1)
+}

@@ -35,7 +35,7 @@ func (hdb heapdb) adm(admin string) {
 }
 
 func (hdb heapdb) act(act string) {
-	ut := hdb.NewUpdateTran(nil)
+	ut := hdb.NewUpdateTran(AllPerms)
 	defer ut.Commit()
 	DoAction(nil, ut, act)
 }

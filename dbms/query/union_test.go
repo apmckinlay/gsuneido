@@ -28,7 +28,7 @@ func TestUnion_MergeSwitchDir(t *testing.T) {
 	db.act("insert { a: 7 } into one")
 	db.act("insert { a: 8 } into two")
 	db.act("insert { a: 9 } into two")
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery("one union two", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	// fmt.Println(Format(q))

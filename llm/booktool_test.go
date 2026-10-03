@@ -26,7 +26,7 @@ func TestBookTool(t *testing.T) {
 	dbmsLocal.AdminTest("create mybook (name, path, text, order) key(name, path)")
 
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true, nil)
+	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	tran.Action(th, "insert { name: 'Introduction', path: '', text: 'intro text', order: 1 } into mybook")
 	tran.Action(th, "insert { name: 'Reference', path: '', text: 'ref text', order: 2 } into mybook")
 	tran.Action(th, "insert { name: 'res', path: '', text: 'res text', order: 3 } into mybook")

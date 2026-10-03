@@ -24,13 +24,13 @@ func TestCodeTool(t *testing.T) {
 
 	// Insert a record
 	th := core.NewThread(core.MainThread)
-	tran := dbmsLocal.Transaction(true, nil)
+	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', lib_before_text: '', group: -1 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
 
 	// Verify insert
-	rt := dbmsLocal.Transaction(false, nil)
+	rt := dbmsLocal.Transaction(false, core.AllPerms)
 	q := rt.Query("stdlib", nil)
 	row, _ := q.Get(th, core.Next)
 	assert.That(row != nil)

@@ -39,7 +39,7 @@ func TestExtendSelect(t *testing.T) {
 	MakeSuTran = func(qt QueryTran) *SuTran {
 		return nil
 	}
-	rt := db.NewReadTran(nil)
+	rt := db.NewReadTran(AllPerms)
 	ex := []string{"ex"}
 
 	// where singleton
@@ -128,7 +128,7 @@ func TestExtendForwardBug(t *testing.T) {
 	MakeSuTran = func(qt QueryTran) *SuTran {
 		return nil
 	}
-	tran := db.NewReadTran(nil)
+	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery(`((ivc join (bln where b1 is "")) leftjoin ((cus union (cus extend r1)) extend b1 = r1))`, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	for row := q.Get(nil, Next); row != nil; row = q.Get(nil, Next) {
