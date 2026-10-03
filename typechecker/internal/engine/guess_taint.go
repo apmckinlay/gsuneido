@@ -8,9 +8,10 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
-// guessed calls carry a clean type, so the guess would otherwise leak through
-// locals. this pass taints locals assigned from an guessed call (or an alias
-// of one) so check passes can cap findings on them at warning.
+// GuessTaintPass taints locals assigned from an guessed call (or an alias of one) 
+// so check passes can cap findings on them at warning.
+// Guessed calls carry a clean type, so the guess would otherwise leak through
+// locals.
 //
 // ```suneido
 // v = p.Size()      // Number is a guess -> v tainted

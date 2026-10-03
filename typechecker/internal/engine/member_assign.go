@@ -8,9 +8,9 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
-// backfills env.Members from `.foo = ...` assignments. must run after
-// NameResolutionPass so RHS nodes are typed. multi-site assignments are
-// unioned - up to the programmer to avoid wide unions.
+// MemberAssignmentPass backfills env.Members from `.foo = ...` assignments. 
+// must run after NameResolutionPass so RHS nodes are typed. 
+// multi-site assignments are unioned - up to the programmer to avoid wide unions.
 //
 // ```suneido
 //
@@ -70,9 +70,9 @@ func collectThisAssignments(n ast.Node, env TypeEnv) {
 	})
 }
 
-// runs once after the main loop. by now all resolvable callsites have
-// concrete types, so a still-TUnknown RHS is unknown
-// mark the member dirty.
+// MemberDirtyPass runs once after the main loop. 
+// by now all resolvable callsites have concrete types, 
+// so a still-TUnknown RHS is unknown mark the member dirty.
 //
 // ```suneido
 //

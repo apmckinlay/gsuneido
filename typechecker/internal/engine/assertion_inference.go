@@ -10,7 +10,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
-// treats `Assert(cond)` whose condition constrains a class
+// AssertMemberPass treats `Assert(cond)` whose condition constrains a class
 // member as a class-wide ground truth
 //
 // ```suneido
@@ -21,7 +21,7 @@ import (
 //	}
 //
 // ```
-
+//
 // ```suneido
 // New() { Assert(Number?(.count)) }
 //

@@ -27,7 +27,7 @@ func SetAnnotations(set AnnotationSet) {
 	builtinAnnotations.Store(&set)
 }
 
-// shared, not copied - passes only read it, which
+// Annotations is shared, not copied - passes only read it, which
 // TestPropSharedAnnotationsNotMutated enforces. Tables are immutable once
 // published; SetAnnotations replaces the pointer atomically. Empty until
 // signatures are registered - in the exe, builtin pushes its own

@@ -17,6 +17,8 @@ func ClassStaticMemberTypes(cls *ClassObject) map[string]DynType {
 	return out
 }
 
+// StaticMemberCheckPass checks for static member access errors.
+//
 // ```suneido
 // b = Config.Timeout
 //

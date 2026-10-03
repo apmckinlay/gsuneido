@@ -8,6 +8,8 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
+// RequirementPass is the main requirement pass, which iterates over all methods.
+//
 // soundness: a demand is only taken from a clean primitive on a non-guessed
 // signature, only for a param the method never reassigns, and only where the
 // arg's own type is still unknown (a narrowing-guarded use proves nothing

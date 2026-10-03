@@ -296,6 +296,7 @@ func computeSummary(fn *ast.Function, env TypeEnv) ReturnSummary {
 	return ReturnSummary{}
 }
 
+// ComputeSummaries computes return type summaries for all methods in the class.
 // ```suneido
 // Get(x = false) { return x is false ? "default" : x }
 // .Get()

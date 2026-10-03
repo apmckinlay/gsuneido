@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 )
 
+// ArityCheckPass checks for missing or extra arguments to method calls.
 // ```suneido
 // Foo(a, b = 1) { }
 // .Foo()

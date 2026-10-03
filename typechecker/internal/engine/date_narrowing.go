@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core"
 )
 
+// DateNarrowingPass is a pass to narrow the types of Date() calls.
 // ```suneido
 // d = Date('#20240101')
 //

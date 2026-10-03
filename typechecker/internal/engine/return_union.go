@@ -9,6 +9,8 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 )
 
+// ReturnUnionPass is a pass that collects return types for each method,
+//
 // `Foo() : T1 | T2` annotations are hard contracts. when present, the
 // annotation is what gets published (so callers see the declared shape,
 // not whatever the body actually returned), and every `return expr` is

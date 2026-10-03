@@ -12,7 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/typechecker/typealgebra"
 )
 
-// collects and types simple class literals for a given class
+// LocalInference collects and types simple class literals for a given class
 func LocalInference(cls *ClassObject, env TypeEnv, pctx *PassCtx) bool {
 	// these are simple members for which we can 100% know the types like
 	// ```suneido

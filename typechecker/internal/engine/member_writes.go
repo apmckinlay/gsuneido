@@ -18,6 +18,8 @@ type methodWrites struct {
 	opaque  bool
 }
 
+// ComputeMemberWrites computes the set of class members that are written in each method.
+//
 // ```suneido
 // if .x isnt false
 //

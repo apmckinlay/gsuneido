@@ -26,7 +26,8 @@ func (r Registries) Seed(env *TypeEnv) {
 	env.ClassMethodSigs = r.Sigs
 }
 
-// refs must arrive base-first; a ref that panics is skipped silently
+// BuildReferenceRegistry - refs must arrive base-first;
+// a ref that panics is skipped silently
 func BuildReferenceRegistry(refs []RefSource) Registries {
 	r := Registries{
 		Returns:   make(map[string]map[string]DynType, len(refs)),

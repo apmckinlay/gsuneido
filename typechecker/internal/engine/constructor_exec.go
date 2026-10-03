@@ -12,6 +12,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
+// ConstructorExecPass checks constructors
 // ```suneido
 //
 //	class {

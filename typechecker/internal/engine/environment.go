@@ -36,7 +36,7 @@ type stores struct {
 	ReqConflicts     map[string]bool
 }
 
-// the value part holds only the per-class scope; copying a TypeEnv scopes it
+// TypeEnv value part holds only the per-class scope; copying a TypeEnv scopes it
 // to a class without touching what other copies see
 type TypeEnv struct {
 	*stores
@@ -280,7 +280,7 @@ func (env TypeEnv) LookupMember(name string) (DynType, bool) {
 	return ty, ok
 }
 
-// overwrites any existing value
+// SeedMember overwrites any existing value
 func (env TypeEnv) SeedMember(name string, ty DynType) {
 	env.Members[name] = ty
 }
@@ -307,12 +307,12 @@ func (env TypeEnv) PublishReturn(method string, ty DynType) {
 	env.Returns[method] = ty
 }
 
-// independent copy
+// SnapshotReturns returns an independent copy
 func (env TypeEnv) SnapshotReturns() map[string]DynType {
 	return maps.Clone(env.Returns)
 }
 
-// independent copy
+// SnapshotSummaries returns an independent copy
 func (env TypeEnv) SnapshotSummaries() map[string]ReturnSummary {
 	return maps.Clone(env.Summaries)
 }

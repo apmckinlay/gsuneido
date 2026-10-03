@@ -10,6 +10,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
+// CapabilityCheckPass is a pass that checks for capability violations.
 // ```suneido
 // Query1(.q).name
 //

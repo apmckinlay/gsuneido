@@ -16,6 +16,7 @@ type boolPost struct {
 
 type boolPostconds map[string]*boolPost
 
+// ComputeBoolPostconditions computes the postconditions for boolean functions
 // ```suneido
 // hasCache?() { return .cache isnt false }
 // Get() { if .hasCache?() { return .cache.Size() } }
