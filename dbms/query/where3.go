@@ -463,7 +463,7 @@ func damp(i int, frac float64) float64 {
 // calcFracs calculates the selectivity of each stage (index range and filter).
 // The prefix columns are covered by prefixFrac (from the btree probe), so they
 // are excluded here to avoid double counting. This is used for costing in [WhereCost].
-func (isel *idxSel) calcFracs(colFracs []colFrac, colSpans map[string][]span,
+func (is *idxSel) calcFracs(colFracs []colFrac, colSpans map[string][]span,
 	unspanable []string, dataExprCount int) float64 {
 	const (
 		iRange = iota
@@ -476,20 +476,20 @@ func (isel *idxSel) calcFracs(colFracs []colFrac, colSpans map[string][]span,
 	}
 	var fracs []stageFrac
 	// prefixFrac is from the btree probe, more reliable than column stats
-	if isel.prefixLen > 0 {
-		fracs = append(fracs, stageFrac{iRange, isel.prefixFrac})
+	if is.prefixLen > 0 {
+		fracs = append(fracs, stageFrac{iRange, is.prefixFrac})
 	}
 
 	for col := range colSpans {
-		i := slices.Index(isel.index, col)
-		if i >= 0 && i < isel.prefixLen {
+		i := slices.Index(is.index, col)
+		if i >= 0 && i < is.prefixLen {
 			continue // covered by prefixFrac
 		}
 		frac := getColFrac(colFracs, col)
 		stage := dFilter
 		if i >= 0 {
 			stage = iFilter
-			if i >= isel.skipStart && i < isel.skipStart+isel.skipLen {
+			if i >= is.skipStart && i < is.skipStart+is.skipLen {
 				stage = iRange
 			}
 		}
@@ -498,7 +498,7 @@ func (isel *idxSel) calcFracs(colFracs []colFrac, colSpans map[string][]span,
 
 	for _, col := range unspanable {
 		stage := dFilter
-		if slices.Contains(isel.index, col) {
+		if slices.Contains(is.index, col) {
 			stage = iFilter
 		}
 		fracs = append(fracs, stageFrac{stage, unknownFrac})
@@ -516,14 +516,14 @@ func (isel *idxSel) calcFracs(colFracs []colFrac, colSpans map[string][]span,
 	sfs := [2]float64{1, 1}
 	for i, sf := range fracs {
 		if sf.stage == dFilter {
-			isel.hasDataFilter = true
+			is.hasDataFilter = true
 		} else {
 			sfs[sf.stage] *= damp(i, sf.frac)
 		}
 	}
 	// assign to isel
-	isel.indexRangeFrac = sfs[iRange]
-	isel.indexFilterFrac = sfs[iFilter]
+	is.indexRangeFrac = sfs[iRange]
+	is.indexFilterFrac = sfs[iFilter]
 
 	// overall frac
 	// sort by just frac (most selective first)

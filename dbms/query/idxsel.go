@@ -60,7 +60,7 @@ func (is *idxSel) RangeCols() []string {
 	return cols
 }
 
-func (is idxSel) String() string {
+func (is *idxSel) String() string {
 	sb := &strings.Builder{}
 	sb.WriteString(str.Join("(,)", is.index))
 

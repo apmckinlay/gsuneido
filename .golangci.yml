@@ -28,6 +28,7 @@ linters:
         - "-ST1017" # condition order
         - "-QF1001" # De Morgan's law
         - "-QF1008" # could remove embedded field from selector
+        - "-QF1003" # could use tagged switch
     custom:
       immutablecheck:
         type: "module"
