@@ -19,6 +19,7 @@ import (
 )
 
 const maxColumns = 1000
+const maxIndexes = 100
 
 type Schema struct {
 	Table string
@@ -178,6 +179,9 @@ func (ix *Index) Equal(iy *Index) bool {
 }
 
 func (sc *Schema) Check() {
+	if len(sc.Indexes) > maxIndexes {
+		panic("too many indexes in " + sc.Table + " (limit " + strconv.Itoa(maxIndexes) + ")")
+	}
 	sc.checkColumns()
 	sc.checkDerived()
 	sc.checkForKey()
