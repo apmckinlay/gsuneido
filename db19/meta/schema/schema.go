@@ -5,6 +5,7 @@
 package schema
 
 import (
+	"strconv"
 	"strings"
 
 	"slices"
@@ -16,6 +17,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+const maxColumns = 1000
 
 type Schema struct {
 	Table string
@@ -182,6 +185,9 @@ func (sc *Schema) Check() {
 }
 
 func (sc *Schema) checkColumns() {
+	if len(sc.Columns) > maxColumns {
+		panic("too many columns in " + sc.Table + " (limit " + strconv.Itoa(maxColumns) + ")")
+	}
 	n := len(sc.Columns)
 	for i := range n {
 		assert.That(sc.Columns[i] != "")
