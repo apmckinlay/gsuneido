@@ -8,7 +8,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
-// GuessTaintPass taints locals assigned from an guessed call (or an alias of one) 
+// GuessTaintPass taints locals assigned from an guessed call (or an alias of one)
 // so check passes can cap findings on them at warning.
 // Guessed calls carry a clean type, so the guess would otherwise leak through
 // locals.

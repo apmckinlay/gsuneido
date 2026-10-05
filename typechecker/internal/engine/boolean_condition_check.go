@@ -10,7 +10,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
-// BooleanConditionCheckPass runs after FlowNarrowingPass 
+// BooleanConditionCheckPass runs after FlowNarrowingPass
 // so narrowed condition types are visible.
 // ```suneido
 // if .count

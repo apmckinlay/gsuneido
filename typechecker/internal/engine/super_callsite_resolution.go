@@ -7,7 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 )
 
-// SuperCallsiteResolutionPass resolves super callsites 
+// SuperCallsiteResolutionPass resolves super callsites
 // to their return types in the parent class.
 //
 // ```suneido
