@@ -43,7 +43,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return searchCode(library, nameRx, codeRx, caseSensitive, modified)
+		return searchCode(ctx, library, nameRx, codeRx, caseSensitive, modified)
 	},
 })
 
@@ -62,13 +62,13 @@ type codeMatch struct {
 
 const searchLimit = 100
 
-func searchCode(library, nameRx, codeRx string, caseSensitive, modified bool) (result searchCodeOutput, err error) {
+func searchCode(ctx context.Context, library, nameRx, codeRx string, caseSensitive, modified bool) (result searchCodeOutput, err error) {
 	nameRx = strings.TrimSpace(nameRx)
 	if nameRx == "" && codeRx == "" && !modified {
 		return searchCodeOutput{}, fmt.Errorf("name or code is required (unless modified is true)")
 	}
 
-	th := core.NewThread(core.MainThread)
+	th := toolThread(ctx)
 	defer th.Close()
 	allLibs := th.Dbms().Libraries()
 	library = strings.TrimSpace(library)
@@ -95,7 +95,7 @@ func searchCode(library, nameRx, codeRx string, caseSensitive, modified bool) (r
 		}
 	}
 
-	tran := th.Dbms().Transaction(false, core.AllPerms)
+	tran := th.Dbms().Transaction(false, th.Perms())
 	defer tran.Complete()
 	st := core.NewSuTran(tran, false)
 	folderCache := make(map[int]folderInfo)

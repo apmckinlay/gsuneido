@@ -25,7 +25,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return tablesTool(prefix)
+		return tablesTool(ctx, prefix)
 	},
 })
 
@@ -34,16 +34,16 @@ type tablesOutput struct {
 	HasMore bool     `json:"has_more,omitempty" jsonschema:"True when additional tables were truncated"`
 }
 
-func tablesTool(prefix string) (output tablesOutput, err error) {
+func tablesTool(ctx context.Context, prefix string) (output tablesOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("tables failed: %v", r)
 		}
 	}()
 
-	th := core.NewThread(core.MainThread)
+	th := toolThread(ctx)
 	defer th.Close()
-	tran := th.Dbms().Transaction(false, core.AllPerms)
+	tran := th.Dbms().Transaction(false, th.Perms())
 	defer tran.Complete()
 
 	q := tran.Query(tablesQuery(prefix), nil)

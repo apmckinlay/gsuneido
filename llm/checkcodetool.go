@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/apmckinlay/gsuneido/compile"
-	"github.com/apmckinlay/gsuneido/core"
 )
 
 var _ = addTool(toolSpec{
@@ -24,7 +23,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return checkTool(code)
+		return checkTool(ctx, code)
 	},
 })
 
@@ -33,7 +32,7 @@ type checkCodeOutput struct {
 	Warnings []string `json:"warnings" jsonschema:"Compiler warnings"`
 }
 
-func checkTool(code string) (result checkCodeOutput, err error) {
+func checkTool(ctx context.Context, code string) (result checkCodeOutput, err error) {
 	var savedCode string
 	defer func() {
 		if r := recover(); r != nil {
@@ -42,7 +41,7 @@ func checkTool(code string) (result checkCodeOutput, err error) {
 		}
 	}()
 
-	th := core.NewThread(core.MainThread)
+	th := toolThread(ctx)
 	defer th.Close()
 
 	src := funcWrap(code)

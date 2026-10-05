@@ -11,7 +11,7 @@ var _ = builtin(Cursor, "(@args) :unknown")
 
 func Cursor(th *Thread, as *ArgSpec, args []Value) Value {
 	query, args := extractQuery(th, &queryBlockParams, as, args)
-	icursor := th.Dbms().Cursor(query, nil, AllPerms)
+	icursor := th.Dbms().Cursor(query, nil, th.Perms())
 	c := NewSuCursor(th, query, icursor)
 	if args[1] == False {
 		return c

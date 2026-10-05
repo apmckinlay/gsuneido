@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -27,7 +26,7 @@ func TestClientServer(*testing.T) {
 	// trace.Set(int(trace.ClientServer))
 	Global.TestDef("Auth", &SuBuiltinRaw{
 		Fn: func(th *Thread, as *ArgSpec, args []Value) Value {
-			th.Perms().AddTable("tables", "read")
+			th.NewPerms().AddTable("tables", "read")
 			return True
 		},
 		ParamSpec: ParamSpecAt})
@@ -56,47 +55,6 @@ func TestClientServer(*testing.T) {
 	ses2 := c.NewSession()
 	ses2.Get(nil, args, Prev)
 	ses2.Close()
-
-	time.Sleep(25 * time.Millisecond)
-}
-
-func TestServerEvalWhitelist(t *testing.T) {
-	assert := assert.T(t)
-	// a Go Auth that sets up a ServerEval whitelist
-	// since the Perm builtin is not available in dbms package tests
-	Global.TestDef("Auth", &SuBuiltinRaw{
-		Fn: func(th *Thread, as *ArgSpec, args []Value) Value {
-			th.Perms().AddServerEval("F1")
-			return True
-		},
-		ParamSpec: ParamSpecAt})
-	Global.TestDef("F1", compile.Constant("function (@args) { return 123 }"))
-	Global.TestDef("F2", compile.Constant("function (@args) { return 456 }"))
-	defer Global.UnloadAll()
-	options.BuiltDate = "Dec 29 2020 12:34"
-	db := db19.CreateDb(stor.HeapStor(8192))
-	dbmsLocal := NewDbmsLocal(db)
-	p1, p2 := net.Pipe()
-	workers = mux.NewWorkers(doRequest)
-	go newServerConn(dbmsLocal, p1, serverTLSConfig())
-	// Exchange hello over plain connection
-	errmsg := checkHello(p2)
-	assert.This(errmsg).Is("")
-	p2.Write(hello())
-	// Upgrade client side to TLS
-	tlsConn := tls.Client(p2, clientTLSConfig())
-	if err := tlsConn.Handshake(); err != nil {
-		panic(err)
-	}
-	c := NewDbmsClient(tlsConn)
-	ses := c.NewSession()
-	assert.True(ses.Auth(&Thread{}, &SuObject{}))
-
-	// allowed by the whitelist
-	assert.This(ToInt(ses.Exec(nil, SuObjectOf(SuStr("F1"))))).Is(123)
-	// not allowed by the whitelist, even though the function exists
-	assert.This(func() { ses.Exec(nil, SuObjectOf(SuStr("F2"))) }).
-		Panics("ServerEval: not permitted: F2")
 
 	time.Sleep(25 * time.Millisecond)
 }

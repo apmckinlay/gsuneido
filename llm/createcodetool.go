@@ -66,7 +66,7 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 	}
 	path = normalizeFolderPath(path)
 
-	th := core.NewThread(core.MainThread)
+	th := toolThread(ctx)
 	defer th.Close()
 
 	if err := validateLibrary(th, library); err != nil {
@@ -83,7 +83,7 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 
 	// Check if definition already exists (active or soft-deleted)
 	query := fmt.Sprintf("%s where (group = -1 or group = -2) and name = %q", library, name)
-	rtran := th.Dbms().Transaction(false, core.AllPerms)
+	rtran := th.Dbms().Transaction(false, th.Perms())
 	rq := rtran.Query(query, nil)
 	hdr := rq.Header()
 	row, _ := rq.Get(th, core.Next)
@@ -117,7 +117,7 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 			}
 		}
 
-		utran := th.Dbms().Transaction(true, core.AllPerms)
+		utran := th.Dbms().Transaction(true, th.Perms())
 		newRec := buildRecord(hdr, vals)
 		utran.Update(th, library, off, newRec)
 		if conflict := utran.Complete(); conflict != "" {
@@ -145,7 +145,7 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 	now := core.Now()
 
 	// Get max num to assign a unique num to the new record
-	utran := th.Dbms().Transaction(true, core.AllPerms)
+	utran := th.Dbms().Transaction(true, th.Perms())
 	maxNum := maxLibNum(th, utran, library)
 	iq := utran.Query(library, nil)
 	ihdr := iq.Header()
@@ -175,7 +175,7 @@ func ensurePathParent(th *core.Thread, library, path string) (int, error) {
 		return 0, nil
 	}
 
-	utran := th.Dbms().Transaction(true, core.AllPerms)
+	utran := th.Dbms().Transaction(true, th.Perms())
 	parent := 0
 	nextNum := maxLibNum(th, utran, library) + 1
 

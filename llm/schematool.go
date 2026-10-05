@@ -23,12 +23,12 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return getSchema(table)
+		return getSchema(ctx, table)
 	},
 })
 
-func getSchema(table string) (any, error) {
-	th := core.NewThread(core.MainThread)
+func getSchema(ctx context.Context, table string) (any, error) {
+	th := toolThread(ctx)
 	defer th.Close()
 	dbms := th.Dbms()
 	schema := dbms.Schema(table)
@@ -36,7 +36,7 @@ func getSchema(table string) (any, error) {
 		return schemaOutput{Schema: schema}, nil
 	}
 
-	tran := dbms.Transaction(false, core.AllPerms)
+	tran := dbms.Transaction(false, th.Perms())
 	defer tran.Complete()
 	q := tran.Query(fmt.Sprintf("views where view_name = %q", table), nil)
 	defer q.Close()

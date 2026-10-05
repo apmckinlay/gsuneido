@@ -5,8 +5,6 @@ package llm
 
 import (
 	"context"
-
-	"github.com/apmckinlay/gsuneido/core"
 )
 
 // libraries
@@ -17,7 +15,9 @@ var _ = addTool(toolSpec{
 		return mdSummary("Libraries")
 	},
 	handler: func(ctx context.Context, args map[string]any) (any, error) {
-		libs := core.GetDbms().Libraries()
+		th := toolThread(ctx)
+		defer th.Close()
+		libs := th.Dbms().Libraries()
 		return librariesOutput{Libraries: libs}, nil
 	},
 })

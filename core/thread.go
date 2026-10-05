@@ -95,7 +95,10 @@ type thread1 struct {
 	// ReturnMulti is used to return multiple values
 	ReturnMulti []Value
 
-	// perms hold the permissions temporarily during Auth
+	// newPerms is used to construct permissions during Auth.
+	newPerms *Perms
+
+	// permissions for this thread
 	perms *Perms
 }
 
@@ -124,7 +127,7 @@ var threadNum atomic.Int32
 
 // NewThread creates a new thread.
 // It is primarily used for user initiated threads.
-// Internal threads can just use a zero Thread.
+// If parent is nil the new thread will not have any permissions.
 func NewThread(parent *Thread) *Thread {
 	th := setup(&Thread{})
 	if parent != nil {
@@ -133,6 +136,7 @@ func NewThread(parent *Thread) *Thread {
 			th.Suneido.Store(suneido)
 		}
 		th.sv = parent.sv
+		th.perms = parent.perms
 	}
 	return th
 }
@@ -187,10 +191,17 @@ func (th *Thread) SetPerms(p *Perms) {
 	th.perms = p
 }
 
-// Perms is only valid during Auth for building the permissions
-// NOT for general use.
 func (th *Thread) Perms() *Perms {
 	return th.perms
+}
+
+func (th *Thread) SetNewPerms(p *Perms) {
+	th.newPerms = p
+}
+
+// NewPerms is only valid during Auth while building permissions.
+func (th *Thread) NewPerms() *Perms {
+	return th.newPerms
 }
 
 // Push pushes a value onto the value stack.

@@ -33,7 +33,7 @@ var permMethods = methods("perm")
 var _ = staticMethod(perm_ServerEval, "(name :string) :void")
 
 func perm_ServerEval(th *Thread, args []Value) Value {
-	perms := th.Perms()
+	perms := th.NewPerms()
 	if perms == nil {
 		panic("Permit.ServerEval can only be called from Auth")
 	}
@@ -46,7 +46,7 @@ func perm_ServerEval(th *Thread, args []Value) Value {
 var _ = staticMethod(perm_Table, "(table :string, rights :string) :void")
 
 func perm_Table(th *Thread, args []Value) Value {
-	perms := th.Perms()
+	perms := th.NewPerms()
 	if perms == nil {
 		panic("Permit.Table can only be called from Auth")
 	}
@@ -60,11 +60,33 @@ func perm_Table(th *Thread, args []Value) Value {
 var _ = staticMethod(perm_Schema, "(rights :string) :void")
 
 func perm_Schema(th *Thread, args []Value) Value {
-	perms := th.Perms()
+	perms := th.NewPerms()
 	if perms == nil {
 		panic("Permit.Schema can only be called from Auth")
 	}
 	perms.SetSchema(ToStr(args[0]))
+	return nil
+}
+
+var _ = staticMethod(perm_All, "() :void")
+
+func perm_All(th *Thread, _ []Value) Value {
+	perms := th.NewPerms()
+	if perms == nil {
+		panic("Permit.All can only be called from Auth")
+	}
+	perms.All()
+	return nil
+}
+
+var _ = staticMethod(perm_None, "() :void")
+
+func perm_None(th *Thread, _ []Value) Value {
+	perms := th.NewPerms()
+	if perms == nil {
+		panic("Permit.None can only be called from Auth")
+	}
+	perms.None()
 	return nil
 }
 

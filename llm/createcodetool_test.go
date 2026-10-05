@@ -25,7 +25,7 @@ func TestCreateCodeTool(t *testing.T) {
 
 	dbmsLocal.AdminTest("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)")
 
-	ctx := context.WithValue(context.Background(), approvalFnKey{}, func(before, after string) (bool, error) {
+	ctx := context.WithValue(testToolContext(), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
 	})
 
@@ -68,7 +68,7 @@ func TestCreateCodeTool(t *testing.T) {
 	th0.Close()
 
 	// Verify create via codeTool
-	cr, err := readCodeTool("stdlib", "Foo", 1, codeLineLimit, true)
+	cr, err := readCodeTool(ctx, "stdlib", "Foo", 1, codeLineLimit, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 	tran.Complete()
 	th.Close()
 
-	ctx := context.WithValue(context.Background(), approvalFnKey{}, func(before, after string) (bool, error) {
+	ctx := context.WithValue(testToolContext(), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
 	})
 

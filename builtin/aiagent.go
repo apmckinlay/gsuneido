@@ -34,7 +34,7 @@ func AiAgent(th *Thread, args []Value) Value {
 	a := &suAgent{
 		th:       t2,
 		callback: callback,
-		agent: llm.NewAgent(baseURL, apiKey, model, prompt,
+		agent: llm.NewAgent(th, baseURL, apiKey, model, prompt,
 			outputCallback(t2, callback), EnableSandbox, DisableSandbox),
 	}
 	return a

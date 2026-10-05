@@ -35,7 +35,7 @@ func TestSearchBookTool(t *testing.T) {
 	tran.Complete()
 
 	// search by text - matches "text" in intro text, ref text, format text, and MultiMatch
-	res, err := searchBook("mybook", "", "text", false)
+	res, err := searchBook(testToolContext(), "mybook", "", "text", false)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(4)
 	assert.This(res.Matches[0].Path).Is("/Introduction")
@@ -48,7 +48,7 @@ func TestSearchBookTool(t *testing.T) {
 	assert.This(res.Matches[3].Lines).Is([]string{"[   1]format text"})
 
 	// search by path - sorted by path, name
-	res, err = searchBook("mybook", "Reference", "", false)
+	res, err = searchBook(testToolContext(), "mybook", "Reference", "", false)
 	assert.That(err == nil)
 	paths := make([]string, len(res.Matches))
 	for i, m := range res.Matches {
@@ -57,7 +57,7 @@ func TestSearchBookTool(t *testing.T) {
 	assert.This(paths).Is([]string{"/Reference", "/Reference/Array", "/Reference/Date", "/Reference/Date/FormatEn"})
 
 	// search by both path and text - sorted by path, name
-	res, err = searchBook("mybook", "Reference", "functions", false)
+	res, err = searchBook(testToolContext(), "mybook", "Reference", "functions", false)
 	assert.That(err == nil)
 	paths = make([]string, len(res.Matches))
 	for i, m := range res.Matches {
@@ -66,21 +66,21 @@ func TestSearchBookTool(t *testing.T) {
 	assert.This(paths).Is([]string{"/Reference/Array", "/Reference/Date"})
 
 	// case insensitive (default)
-	res, err = searchBook("mybook", "", "TEXT", false)
+	res, err = searchBook(testToolContext(), "mybook", "", "TEXT", false)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(4)
 
 	// case sensitive
-	res, err = searchBook("mybook", "", "TEXT", true)
+	res, err = searchBook(testToolContext(), "mybook", "", "TEXT", true)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(0)
 
 	// both path and text required
-	_, err = searchBook("mybook", "", "", false)
+	_, err = searchBook(testToolContext(), "mybook", "", "", false)
 	assert.That(err != nil)
 
 	// multiple matching lines in same document
-	res, err = searchBook("mybook", "MultiMatch", "text", false)
+	res, err = searchBook(testToolContext(), "mybook", "MultiMatch", "text", false)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(1)
 	assert.This(res.Matches[0].Path).Is("/MultiMatch")
@@ -104,7 +104,7 @@ func TestSearchBookLinesLimit(t *testing.T) {
 	tran.Action(th, "insert { name: 'ManyMatches', path: '', text: 'line1 match\nline2 match\nline3 match\nline4 match\nline5 match\nline6 match\nline7 match\nline8 match', order: 1 } into testbook")
 	tran.Complete()
 
-	res, err := searchBook("testbook", "", "match", false)
+	res, err := searchBook(testToolContext(), "testbook", "", "match", false)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(1)
 	assert.This(len(res.Matches[0].Lines)).Is(5)

@@ -37,7 +37,7 @@ func TestBookTool(t *testing.T) {
 	tran.Complete()
 
 	// root children (path not supplied)
-	res, err := bookTool("mybook", "")
+	res, err := bookTool(testToolContext(), "mybook", "")
 	assert.That(err == nil)
 	assert.This(res.Book).Is("mybook")
 	assert.This(res.Path).Is("")
@@ -47,7 +47,7 @@ func TestBookTool(t *testing.T) {
 	assert.That(!slices.Contains(children, "res"))
 
 	// root children (path supplied)
-	res, err = bookTool("mybook", "/")
+	res, err = bookTool(testToolContext(), "mybook", "/")
 	assert.That(err == nil)
 	assert.This(res.Book).Is("mybook")
 	assert.This(res.Path).Is("")
@@ -57,7 +57,7 @@ func TestBookTool(t *testing.T) {
 	assert.That(!slices.Contains(children, "res"))
 
 	// text and children, sorted by order then name
-	res, err = bookTool("mybook", "Reference")
+	res, err = bookTool(testToolContext(), "mybook", "Reference")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("ref text")
 	children = res.Children
@@ -66,14 +66,14 @@ func TestBookTool(t *testing.T) {
 	assert.This(children[1]).Is("Date")
 
 	// also works with leading /
-	res, err = bookTool("mybook", "/Reference")
+	res, err = bookTool(testToolContext(), "mybook", "/Reference")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("ref text")
 	children = res.Children
 	assert.This(len(children)).Is(2)
 
 	// deeper path
-	res, err = bookTool("mybook", "Reference/Date")
+	res, err = bookTool(testToolContext(), "mybook", "Reference/Date")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("date text")
 	children = res.Children
@@ -81,17 +81,17 @@ func TestBookTool(t *testing.T) {
 	assert.This(children[0]).Is("FormatEn")
 
 	// leaf with no children
-	res, err = bookTool("mybook", "Reference/Date/FormatEn")
+	res, err = bookTool(testToolContext(), "mybook", "Reference/Date/FormatEn")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("format text")
 	assert.This(len(res.Children)).Is(0)
 
-	res, err = bookTool("mybook", "res")
+	res, err = bookTool(testToolContext(), "mybook", "res")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("")
 	assert.This(len(res.Children)).Is(0)
 
-	res, err = bookTool("mybook", "res/Images")
+	res, err = bookTool(testToolContext(), "mybook", "res/Images")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("")
 	assert.This(len(res.Children)).Is(0)

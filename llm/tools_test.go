@@ -4,6 +4,7 @@
 package llm
 
 import (
+	"context"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/core"
@@ -14,6 +15,16 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+func testToolThread() *core.Thread {
+	th := core.NewThread(nil)
+	th.SetPerms(core.AllPerms)
+	return th
+}
+
+func testToolContext() context.Context {
+	return context.WithValue(context.Background(), toolThreadKey{}, testToolThread())
+}
+
 func TestGetViewDefinition(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
@@ -23,11 +34,11 @@ func TestGetViewDefinition(t *testing.T) {
 	query.DoAdminTest(db, `view myview = alpha extend c = 123`)
 
 	// Test view definition
-	viewDef, _ := getSchema("myview")
+	viewDef, _ := getSchema(testToolContext(), "myview")
 	assert.This(viewDef).Is(schemaOutput{Schema: "view myview = alpha extend c = 123"})
 
 	// Test non-existent view
-	noView, _ := getSchema("nonexistent")
+	noView, _ := getSchema(testToolContext(), "nonexistent")
 	assert.This(noView).Is(schemaOutput{Schema: ""})
 }
 
@@ -40,10 +51,10 @@ func TestSchemaToolWithView(t *testing.T) {
 	query.DoAdminTest(db, `view myview = alpha extend c = 123`)
 
 	// Test table schema
-	schema, _ := getSchema("alpha")
+	schema, _ := getSchema(testToolContext(), "alpha")
 	assert.This(schema).Is(schemaOutput{Schema: "alpha (a,b) key(a)"})
 
 	// Test view definition via schema tool
-	viewDef, _ := getSchema("myview")
+	viewDef, _ := getSchema(testToolContext(), "myview")
 	assert.This(viewDef).Is(schemaOutput{Schema: "view myview = alpha extend c = 123"})
 }

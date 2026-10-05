@@ -36,7 +36,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return execTool(code)
+		return execTool(ctx, code)
 	},
 })
 
@@ -53,7 +53,7 @@ type execOutput struct {
 	Print    string       `json:"print,omitempty" jsonschema:"output from Print calls"`
 }
 
-func execTool(code string) (result execOutput, err error) {
+func execTool(ctx context.Context, code string) (result execOutput, err error) {
 	var savedCode string
 	var th *core.Thread
 	defer func() {
@@ -68,7 +68,7 @@ func execTool(code string) (result execOutput, err error) {
 		}
 	}()
 
-	th = core.NewThread(core.MainThread)
+	th = toolThread(ctx)
 	defer th.Close()
 
 	var printBuf strings.Builder

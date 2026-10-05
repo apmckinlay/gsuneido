@@ -22,7 +22,7 @@ func TestQueryTool(t *testing.T) {
 	dbms := dbms.NewDbmsLocal(db)
 	core.GetDbms = func() core.IDbms { return dbms }
 
-	result, err := queryTool("tables")
+	result, err := queryTool(testToolContext(), "tables")
 	assert.That(err == nil)
 	assert.This(result.Results).Is("[\n" +
 		"[\"table\", \"nrows\", \"totalsize\"]\n" +
@@ -52,7 +52,7 @@ func TestQueryToolSizeLimit(t *testing.T) {
 	}
 	tran.Complete()
 
-	result, err := queryTool("big")
+	result, err := queryTool(testToolContext(), "big")
 	assert.That(err == nil)
 	assert.That(result.HasMore)
 	head := "[\n[\"k\", \"a\"]\n" +
@@ -84,7 +84,7 @@ func TestQueryToolRowLimit(t *testing.T) {
 	}
 	tran.Complete()
 
-	result, err := queryTool("many sort k")
+	result, err := queryTool(testToolContext(), "many sort k")
 	assert.That(err == nil)
 	assert.That(result.HasMore)
 	head := "[\n[\"k\"]\n[0]\n[1]\n[2]\n[3]\n[4]\n[5]\n[6]\n[7]\n[8]\n[9]\n"

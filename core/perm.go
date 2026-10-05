@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/apmckinlay/gsuneido/core/trace"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // Perms holds the permissions for a connection.
@@ -104,13 +105,30 @@ func (p *Perms) AddServerEval(name string) {
 	if p == AllPerms {
 		return
 	}
-	if p == nil {
-		return
-	}
 	if p.serverEval == nil {
 		p.serverEval = make(map[string]struct{})
 	}
 	p.serverEval[name] = struct{}{}
+}
+
+func (p *Perms) None() {
+	assert.That(p != AllPerms)
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.serverEval = nil
+	p.table = nil
+	p.schema = 0
+}
+
+func (p *Perms) All() {
+	if p == AllPerms {
+		return
+	}
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	p.serverEval = map[string]struct{}{"*": {}}
+	p.table = map[string]TablePerm{"*": PermWrite}
+	p.schema = PermUpdate
 }
 
 // ServerEvalAllowed returns whether name may be used with ServerEval.
@@ -165,8 +183,4 @@ func tracePerm(table string, act TablePerm) {
 		return
 	}
 	trace.Perm.Println(s)
-}
-
-func init() {
-	trace.Set(int(trace.Perm))
 }

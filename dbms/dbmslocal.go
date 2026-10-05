@@ -145,7 +145,7 @@ func (dbms *DbmsLocal) Final() int {
 // Get handles QueryFirst, QueryLast, Query1, QueryEmpty?
 func (dbms *DbmsLocal) Get(
 	th *Thread, query Value, dir Dir) (Row, *Header, string) {
-	tran := dbms.db.NewReadTran(AllPerms)
+	tran := dbms.db.NewReadTran(th.Perms())
 	defer tran.Complete()
 	return get(th, tran, query, dir)
 }
@@ -330,8 +330,8 @@ func (dbms *DbmsLocal) updateLibraries(fn func(libs []string) []string) bool {
 	return slices.Equal(oldlibs, dbms.libraries.Swap(newlibs))
 }
 
-func (dbms *DbmsLocal) FormatQuery(query string) string {
-	t := dbms.db.NewReadTran(AllPerms)
+func (dbms *DbmsLocal) FormatQuery(query string, perms *Perms) string {
+	t := dbms.db.NewReadTran(perms)
 	defer t.Complete()
 	return qry.Format(t, query)
 }

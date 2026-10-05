@@ -9,12 +9,16 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/dbms"
+	"github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestToolClientGetTools(t *testing.T) {
-	resetToolSpecsForTests()
-	defer resetToolSpecsForTests()
+	resetToolSpecsForTests(t)
 	_ = addTool(toolSpec{
 		name:        "test_tool",
 		description: "A test tool",
@@ -26,7 +30,7 @@ func TestToolClientGetTools(t *testing.T) {
 		},
 	})
 
-	client, err := NewToolClient()
+	client, err := NewToolClient(testToolThread())
 	assert.T(t).This(err, nil)
 	defer client.Close()
 
@@ -36,8 +40,7 @@ func TestToolClientGetTools(t *testing.T) {
 }
 
 func TestToolClientCallTool(t *testing.T) {
-	resetToolSpecsForTests()
-	defer resetToolSpecsForTests()
+	resetToolSpecsForTests(t)
 	_ = addTool(toolSpec{
 		name:        "echo",
 		description: "Echo back the input",
@@ -53,7 +56,7 @@ func TestToolClientCallTool(t *testing.T) {
 		},
 	})
 
-	client, err := NewToolClient()
+	client, err := NewToolClient(testToolThread())
 	assert.T(t).This(err, nil)
 	defer client.Close()
 
@@ -63,8 +66,7 @@ func TestToolClientCallTool(t *testing.T) {
 }
 
 func TestToolClientCallToolFromLLM(t *testing.T) {
-	resetToolSpecsForTests()
-	defer resetToolSpecsForTests()
+	resetToolSpecsForTests(t)
 	_ = addTool(toolSpec{
 		name:        "add",
 		description: "Add two numbers",
@@ -78,7 +80,7 @@ func TestToolClientCallToolFromLLM(t *testing.T) {
 		},
 	})
 
-	client, err := NewToolClient()
+	client, err := NewToolClient(testToolThread())
 	assert.T(t).This(err, nil)
 	defer client.Close()
 
@@ -97,8 +99,7 @@ func TestToolClientCallToolFromLLM(t *testing.T) {
 }
 
 func TestToolClientCallToolStructuredResult(t *testing.T) {
-	resetToolSpecsForTests()
-	defer resetToolSpecsForTests()
+	resetToolSpecsForTests(t)
 	_ = addTool(toolSpec{
 		name: "obj",
 		summarize: func(args map[string]any) string {
@@ -108,7 +109,7 @@ func TestToolClientCallToolStructuredResult(t *testing.T) {
 			return map[string]any{"ok": true}, nil
 		},
 	})
-	client, err := NewToolClient()
+	client, err := NewToolClient(testToolThread())
 	assert.T(t).This(err, nil)
 	defer client.Close()
 
@@ -122,8 +123,7 @@ func TestToolClientCallToolStructuredResult(t *testing.T) {
 }
 
 func TestToolClientFormatToolCallForDisplay(t *testing.T) {
-	resetToolSpecsForTests()
-	defer resetToolSpecsForTests()
+	resetToolSpecsForTests(t)
 	_ = addTool(toolSpec{
 		name: "suneido_demo",
 		summarize: func(args map[string]any) string {
@@ -134,7 +134,7 @@ func TestToolClientFormatToolCallForDisplay(t *testing.T) {
 		},
 	})
 
-	client, err := NewToolClient()
+	client, err := NewToolClient(testToolThread())
 	assert.T(t).This(err, nil)
 	defer client.Close()
 
@@ -154,8 +154,7 @@ func TestToolClientFormatToolCallForDisplay(t *testing.T) {
 }
 
 func TestToolClientFormatToolCallForDisplayDefault(t *testing.T) {
-	resetToolSpecsForTests()
-	defer resetToolSpecsForTests()
+	resetToolSpecsForTests(t)
 	_ = addTool(toolSpec{
 		name: "suneido_demo",
 		summarize: func(args map[string]any) string {
@@ -168,7 +167,7 @@ func TestToolClientFormatToolCallForDisplayDefault(t *testing.T) {
 		},
 	})
 
-	client, err := NewToolClient()
+	client, err := NewToolClient(testToolThread())
 	assert.T(t).This(err, nil)
 	defer client.Close()
 
@@ -188,7 +187,89 @@ func TestToolClientFormatToolCallForDisplayDefault(t *testing.T) {
 	assert.T(t).True(strings.Contains(result, "b"))
 }
 
-func resetToolSpecsForTests() {
+func TestToolClientPermissions(t *testing.T) {
+	assert := assert.T(t)
+	db := db19.CreateDb(stor.HeapStor(8192))
+	defer db.Close()
+	d := dbms.NewDbmsLocal(db)
+	prevGetDbms := core.GetDbms
+	defer func() { core.GetDbms = prevGetDbms }()
+	core.GetDbms = func() core.IDbms { return d }
+
+	query.DoAdminTest(db, "create public (a) key(a)")
+	query.DoAdminTest(db, "create private (a) key(a)")
+	perms := &core.Perms{}
+	perms.AddTable("public", "read")
+	parent := core.NewThread(nil)
+	parent.SetPerms(perms)
+	parent.SetNewPerms(core.AllPerms)
+	client, err := NewToolClient(parent)
+	assert.This(err).Is(nil)
+	defer client.Close()
+	assert.That(client.thread != parent)
+	assert.This(client.thread.NewPerms()).Is(nil)
+
+	// Register a thread-aware query primitive without importing builtin,
+	// which imports llm. It exercises the execute tool's execution permissions.
+	oldRead := core.Global.GetIfPresent("LlmTestRead")
+	defer core.Global.TestDef("LlmTestRead", oldRead)
+	core.Global.TestDef("LlmTestRead", &core.SuBuiltinRaw{
+		Fn: func(th *core.Thread, _ *core.ArgSpec, args []core.Value) core.Value {
+			tran := th.Dbms().Transaction(false, th.Perms())
+			defer tran.Complete()
+			q := tran.Query(core.ToStr(args[0]), nil)
+			defer q.Close()
+			q.Get(th, core.Next)
+			return core.True
+		},
+		ParamSpec: core.ParamSpec1,
+	})
+	ctx := context.Background()
+	_, err = client.CallTool(ctx, "suneido_query", map[string]any{"query": "public"})
+	assert.This(err).Is(nil)
+	_, err = client.CallTool(ctx, "suneido_query", map[string]any{"query": "private"})
+	assert.That(err != nil)
+	assert.That(strings.Contains(err.Error(), "not authorized: private"))
+	_, err = client.CallTool(ctx, "suneido_execute", map[string]any{"code": "LlmTestRead('public')"})
+	assert.This(err).Is(nil)
+	_, err = client.CallTool(ctx, "suneido_execute", map[string]any{"code": "LlmTestRead('private')"})
+	assert.That(err != nil)
+	assert.That(strings.Contains(err.Error(), "not authorized: private"))
+}
+
+func TestToolClientDefaultPermissions(t *testing.T) {
+	assert := assert.T(t)
+	db := db19.CreateDb(stor.HeapStor(8192))
+	defer db.Close()
+	d := dbms.NewDbmsLocal(db)
+	query.DoAdminTest(db, "create private (a) key(a)")
+	oldGetDbms := core.GetDbms
+	defer func() { core.GetDbms = oldGetDbms }()
+	core.GetDbms = func() core.IDbms { return d }
+	parent := core.NewThread(nil)
+	parent.SetDbms(d)
+	client, err := NewToolClient(parent)
+	assert.This(err).Is(nil)
+	defer client.Close()
+	ctx := context.Background()
+	_, err = client.CallTool(ctx, "suneido_query", map[string]any{"query": "private"})
+	assert.That(err != nil)
+	assert.That(strings.Contains(err.Error(), "not authorized: private"))
+
+	missing, err := NewToolClient(nil)
+	assert.This(err).Is(nil)
+	defer missing.Close()
+	_, err = missing.CallTool(ctx, "suneido_query", map[string]any{"query": "private"})
+	assert.That(err != nil)
+	assert.That(strings.Contains(err.Error(), "not authorized: private"))
+	_, err = queryTool(ctx, "private")
+	assert.That(err != nil)
+	assert.That(strings.Contains(err.Error(), "not authorized: private"))
+}
+
+func resetToolSpecsForTests(t *testing.T) {
+	saved := toolSpecs
+	t.Cleanup(func() { toolSpecs = saved })
 	toolSpecs = nil
 }
 

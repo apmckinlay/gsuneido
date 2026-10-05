@@ -7,6 +7,7 @@ import (
 	"context"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/atomics"
 	"golang.org/x/time/rate"
 )
@@ -64,9 +65,10 @@ func (du *DbmsUnauth) Auth(th *Thread, data Value) (result bool) {
 			th.SetDbms(prev)
 		}
 	}()
-	result, _ = auth(th, data)
+	result, perms := auth(th, data)
 	if result {
-		StandaloneDbms.Store(du.dbms)
+		th.SetPerms(perms)
+		StandaloneDbms.Store(du.dbms) // unwrap
 	}
 	return result
 }
@@ -75,22 +77,25 @@ func (du *DbmsUnauth) Auth(th *Thread, data Value) (result bool) {
 var authLimiter = rate.NewLimiter(rate.Limit(4), 1)
 var authContext = context.Background()
 
-func auth(th *Thread, data Value) (result bool, perms *Perms) {
+func auth(th *Thread, data Value) (bool, *Perms) {
 	authLimiter.Wait(authContext)
 	authFn := Global.FindName(th, "Auth")
 	if authFn == nil {
 		return false, nil
 	}
-	// the app Auth sets up permissions with Perm.ServerEval
-	th.SetPerms(&Perms{})
+	assert.That(th.Perms() == nil)
+	perms := &Perms{}
+	th.SetPerms(perms)
+	th.SetNewPerms(perms)
 	defer func() {
-		th.SetPerms(nil) // clear perms from thread, caller takes ownership
+		th.SetPerms(nil)
+		th.SetNewPerms(nil)
 	}()
-	result = ToBool(th.CallEach(authFn, data))
-	if result {
-		perms = th.Perms()
+	result := ToBool(th.CallEach(authFn, data))
+	if !result {
+		return false, nil
 	}
-	return result, perms
+	return true, perms
 }
 
 func (du *DbmsUnauth) Check(bool) string {

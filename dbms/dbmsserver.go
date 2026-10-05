@@ -228,6 +228,8 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	ss.WriteBuf = wb
 	th.SetSession(ss.sessionId.Load())
 	th.SetSviews(&sc.Sviews)
+	th.SetPerms(sc.perms.Load())
+	defer th.SetPerms(nil) // workers serve different connections
 	ss.thread = th
 	ss.request()
 }
@@ -394,7 +396,7 @@ func cmdAction(ss *serverSession) {
 
 func cmdAdmin(ss *serverSession) {
 	s := ss.GetStr()
-	ss.sc.dbms.Admin(s, &ss.sc.Sviews, ss.sc.perms.Load())
+	ss.sc.dbms.Admin(s, &ss.sc.Sviews, ss.thread.Perms())
 	ss.PutBool(true)
 }
 
@@ -409,14 +411,15 @@ func cmdAuth(ss *serverSession) {
 		ss.sc.close()
 		return
 	}
-	if _, ok := ss.sc.dbms.(*DbmsUnauth); !ok {
+	dbmsUnauth, ok := ss.sc.dbms.(*DbmsUnauth)
+	if !ok {
 		panic("already authorized")
 	}
 	result, perms := auth(ss.thread, data)
 	if result {
 		ss.sc.authTries.Store(0)
 		ss.sc.perms.Store(perms)
-		ss.sc.dbms = ss.sc.dbms.(*DbmsUnauth).dbms // remove DbmsUnauth
+		ss.sc.dbms = dbmsUnauth.dbms // remove DbmsUnauth
 	}
 	ss.PutBool(true).PutBool(result)
 }
@@ -497,7 +500,7 @@ func connections() *SuObject {
 
 func cmdCursor(ss *serverSession) {
 	query := ss.GetStr()
-	q := ss.sc.dbms.Cursor(query, &ss.sc.Sviews, ss.sc.perms.Load())
+	q := ss.sc.dbms.Cursor(query, &ss.sc.Sviews, ss.thread.Perms())
 	num := int(lastNum.Add(1))
 	ss.cursors[num] = q
 	ss.PutBool(true).PutInt(num)
@@ -524,7 +527,7 @@ func cmdErase(ss *serverSession) {
 func cmdExec(ss *serverSession) {
 	ob := ss.GetVal()
 	fname := execName(ob)
-	if p := ss.sc.perms.Load(); !p.ServerEvalAllowed(fname) {
+	if p := ss.thread.Perms(); !p.ServerEvalAllowed(fname) {
 		panic("ServerEval: not permitted: " + fname)
 	}
 	v := ss.sc.dbms.Exec(ss.thread, ob)
@@ -645,7 +648,7 @@ func cmdGetOne(ss *serverSession) {
 	query := ss.GetVal()
 	if tran == nil {
 		// no transaction, create a read transaction with the connection's perms
-		tran = ss.sc.dbms.Transaction(false, ss.sc.perms.Load())
+		tran = ss.sc.dbms.Transaction(false, ss.thread.Perms())
 		defer tran.Complete()
 	}
 	row, hdr, tbl := tran.Get(ss.thread, query, dir)
@@ -838,7 +841,7 @@ func cmdTimestamp(ss *serverSession) {
 
 func cmdTransaction(ss *serverSession) {
 	update := ss.GetBool()
-	tran := ss.sc.dbms.Transaction(update, ss.sc.perms.Load())
+	tran := ss.sc.dbms.Transaction(update, ss.thread.Perms())
 	tn := tran.Num()
 	ss.trans[tn] = tran
 	ss.PutBool(true).PutInt(tn)

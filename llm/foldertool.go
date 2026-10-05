@@ -33,7 +33,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return codeFoldersTool(library, path)
+		return codeFoldersTool(ctx, library, path)
 	},
 })
 
@@ -45,13 +45,13 @@ type codeFoldersOutput struct {
 
 const codeFolderLimit = 400
 
-func codeFoldersTool(library, path string) (codeFoldersOutput, error) {
-	th := core.NewThread(core.MainThread)
+func codeFoldersTool(ctx context.Context, library, path string) (codeFoldersOutput, error) {
+	th := toolThread(ctx)
 	defer th.Close()
 	if err := validateLibrary(th, library); err != nil {
 		return codeFoldersOutput{}, err
 	}
-	tran := th.Dbms().Transaction(false, core.AllPerms)
+	tran := th.Dbms().Transaction(false, th.Perms())
 	defer tran.Complete()
 	st := core.NewSuTran(tran, false)
 

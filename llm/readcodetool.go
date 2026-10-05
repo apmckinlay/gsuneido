@@ -54,7 +54,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return readCodeTool(library, name, startLine, numLines, plain)
+		return readCodeTool(ctx, library, name, startLine, numLines, plain)
 	},
 })
 
@@ -73,7 +73,7 @@ type readCodeOutput struct {
 
 const codeLineLimit = 500
 
-func readCodeTool(library, name string, startLine int, numLines int, plain bool) (readCodeOutput, error) {
+func readCodeTool(ctx context.Context, library, name string, startLine int, numLines int, plain bool) (readCodeOutput, error) {
 	if !isValidName(name) {
 		return readCodeOutput{}, fmt.Errorf("invalid name: %s", name)
 	}
@@ -87,14 +87,14 @@ func readCodeTool(library, name string, startLine int, numLines int, plain bool)
 		return readCodeOutput{}, fmt.Errorf("num_lines must be <= %d", codeLineLimit)
 	}
 
-	th := core.NewThread(core.MainThread)
+	th := toolThread(ctx)
 	defer th.Close()
 	if err := validateLibrary(th, library); err != nil {
 		return readCodeOutput{}, err
 	}
 
 	query := fmt.Sprintf("%s where group = -1 and name = %q", library, name)
-	tran := th.Dbms().Transaction(false, core.AllPerms)
+	tran := th.Dbms().Transaction(false, th.Perms())
 	defer tran.Complete()
 	q := tran.Query(query, nil)
 	hdr := q.Header()

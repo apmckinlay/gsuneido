@@ -167,7 +167,7 @@ var _ = builtin(formatQuery, "(query :string) :string")
 
 func formatQuery(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
-		return SuStr(dbms.FormatQuery(ToStr(args[0])))
+		return SuStr(dbms.FormatQuery(ToStr(args[0]), th.Perms()))
 	}
 	return th.Dbms().Exec(th, SuObjectOf(SuStr("FormatQuery"), args[0]))
 }
@@ -219,7 +219,7 @@ func sqs_Parse(th *Thread, args []Value) Value {
 	if !ok {
 		panic("Query.Parse requires a local database")
 	}
-	t := dbms.Transaction(false, AllPerms)
+	t := dbms.Transaction(false, th.Perms())
 	defer t.Complete()
 	query := ToStr(args[0])
 	q := qry.JustParse(t.(qry.QueryTran), query)

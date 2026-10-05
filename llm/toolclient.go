@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"runtime/debug"
 	"strings"
+
+	"github.com/apmckinlay/gsuneido/core"
 )
 
 // Tool represents a tool definition for LLM function calling.
@@ -55,12 +57,16 @@ type localTool struct {
 
 // ToolClient provides a direct local interface to tool handlers.
 type ToolClient struct {
+	thread      *core.Thread
 	tools       []localTool
 	openAITools []Tool
 }
 
 // NewToolClient creates a direct local tool client.
-func NewToolClient() (*ToolClient, error) {
+// A nil parent denies permissions, even when standalone defaults are trusted.
+func NewToolClient(parent *core.Thread) (*ToolClient, error) {
+	// Capture before asynchronous work; never read the executing caller again.
+	thread := core.NewThread(parent)
 	tools := make([]localTool, 0, len(toolSpecs))
 	openAITools := make([]Tool, 0, len(toolSpecs))
 	for _, spec := range toolSpecs {
@@ -84,7 +90,14 @@ func NewToolClient() (*ToolClient, error) {
 			},
 		})
 	}
-	return &ToolClient{tools: tools, openAITools: openAITools}, nil
+	return &ToolClient{thread: thread, tools: tools, openAITools: openAITools}, nil
+}
+
+type toolThreadKey struct{}
+
+func toolThread(ctx context.Context) *core.Thread {
+	parent, _ := ctx.Value(toolThreadKey{}).(*core.Thread)
+	return core.NewThread(parent)
 }
 
 func (c *ToolClient) getTool(name string) (localTool, bool) {
@@ -112,6 +125,7 @@ func (c *ToolClient) CallTool(ctx context.Context, name string, args map[string]
 	if !ok {
 		return "", fmt.Errorf("call tool: unknown tool %q", name)
 	}
+	ctx = context.WithValue(ctx, toolThreadKey{}, c.thread)
 	out, err := callToolHandler(ctx, t, args)
 	if err != nil {
 		return "", err

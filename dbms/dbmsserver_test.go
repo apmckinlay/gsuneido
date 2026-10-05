@@ -122,7 +122,7 @@ func TestUnauthCmds(t *testing.T) {
 	assert := assert.T(t)
 
 	sc := &serverConn{dbms: &DbmsUnauth{}}
-	ss := &serverSession{sc: sc}
+	ss := &serverSession{sc: sc, thread: &Thread{}}
 
 	// Commands that route through ss.sc.dbms should panic with "not authorized"
 	ss.SetBuf([]byte{0}) // empty string (varint size 0)

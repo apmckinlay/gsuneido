@@ -40,7 +40,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return searchBook(book, pathRx, textRx, caseSensitive)
+		return searchBook(ctx, book, pathRx, textRx, caseSensitive)
 	},
 })
 
@@ -57,7 +57,7 @@ type bookMatch struct {
 
 const linesLimit = 5
 
-func searchBook(book, pathRx, textRx string, caseSensitive bool) (searchBookOutput, error) {
+func searchBook(ctx context.Context, book, pathRx, textRx string, caseSensitive bool) (searchBookOutput, error) {
 	if strings.TrimSpace(pathRx) == "" && strings.TrimSpace(textRx) == "" {
 		return searchBookOutput{}, fmt.Errorf("path or text is required")
 	}
@@ -65,9 +65,9 @@ func searchBook(book, pathRx, textRx string, caseSensitive bool) (searchBookOutp
 		return searchBookOutput{}, fmt.Errorf("invalid book name: %s", book)
 	}
 
-	th := core.NewThread(core.MainThread)
+	th := toolThread(ctx)
 	defer th.Close()
-	tran := th.Dbms().Transaction(false, core.AllPerms)
+	tran := th.Dbms().Transaction(false, th.Perms())
 	defer tran.Complete()
 	st := core.NewSuTran(tran, false)
 

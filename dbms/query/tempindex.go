@@ -236,7 +236,8 @@ type singleIter struct {
 }
 
 func (ti *TempIndex) single() rowIter {
-	var th2 Thread // separate thread because sortlist runs in the background
+	th2 := NewThread(ti.th) // sortlist runs in the background
+	defer th2.Close()
 	xrow := Row{DbRec{}}
 	yrow := Row{DbRec{}}
 	b := sortlist.NewSorting(
@@ -244,7 +245,7 @@ func (ti *TempIndex) single() rowIter {
 		func(x, y DbRec) bool {
 			xrow[0] = x
 			yrow[0] = y
-			return ti.less(&th2, xrow, yrow)
+			return ti.less(th2, xrow, yrow)
 		})
 	nrows := 0
 	warned := false
@@ -338,11 +339,12 @@ type multiIter struct {
 }
 
 func (ti *TempIndex) multi() rowIter {
-	var th2 Thread // separate thread because sortlist runs in the background
+	th2 := NewThread(ti.th) // sortlist runs in the background
+	defer th2.Close()
 	b := sortlist.NewSorting(
 		func(row Row) bool { return row == nil },
 		func(xrow, yrow Row) bool {
-			return ti.less(&th2, xrow, yrow)
+			return ti.less(th2, xrow, yrow)
 		})
 	nrows := 0
 	warned := false

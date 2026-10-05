@@ -31,7 +31,7 @@ var _ = addTool(toolSpec{
 			return nil, err
 		}
 		path := optionalString(args, "path")
-		return bookTool(book, path)
+		return bookTool(ctx, book, path)
 	},
 })
 
@@ -42,7 +42,7 @@ type readBookOutput struct {
 	Children []string `json:"children" jsonschema:"Child topic names at this path"`
 }
 
-func bookTool(book, path string) (readBookOutput, error) {
+func bookTool(ctx context.Context, book, path string) (readBookOutput, error) {
 	if !lexer.IsIdentifier(book) {
 		return readBookOutput{}, fmt.Errorf("invalid book name: %s", book)
 	}
@@ -59,9 +59,9 @@ func bookTool(book, path string) (readBookOutput, error) {
 			Children: []string{},
 		}, nil
 	}
-	th := core.NewThread(core.MainThread)
+	th := toolThread(ctx)
 	defer th.Close()
-	tran := th.Dbms().Transaction(false, core.AllPerms)
+	tran := th.Dbms().Transaction(false, th.Perms())
 	defer tran.Complete()
 	st := core.NewSuTran(tran, false)
 

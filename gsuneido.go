@@ -107,6 +107,7 @@ func main() {
 		if mode == "gui" {
 			Fatal("Please use gsport for server mode")
 		}
+		mainThread.SetPerms(AllPerms)
 		runServer()
 	case "dump":
 		t := time.Now()
@@ -493,7 +494,9 @@ func eval(src string) {
 	fn := v.(*SuFunc)
 	// fmt.Println(DisasmMixed(fn, src))
 
+	perms := mainThread.Perms()
 	mainThread.Reset()
+	mainThread.SetPerms(perms)
 	mainThread.SetSviews(&sviews)
 	result := mainThread.Call(fn)
 	if result != nil {

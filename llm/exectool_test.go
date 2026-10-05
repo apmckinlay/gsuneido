@@ -14,7 +14,7 @@ import (
 func TestExecTool(t *testing.T) {
 	assert := assert.T(t)
 	{
-		result, err := execTool("1 + 2 \n")
+		result, err := execTool(testToolContext(), "1 + 2 \n")
 		assert.This(err).Is(nil)
 		assert.This(len(result.Warnings)).Is(0)
 		assert.This(len(result.Results)).Is(1)
@@ -22,20 +22,20 @@ func TestExecTool(t *testing.T) {
 		assert.That(!result.Results[0].IsTruncated)
 	}
 	{
-		result, err := execTool("return")
+		result, err := execTool(testToolContext(), "return")
 		assert.This(err).Is(nil)
 		assert.This(len(result.Warnings)).Is(0)
 		assert.This(len(result.Results)).Is(0)
 	}
 	{
-		result, err := execTool("return 123")
+		result, err := execTool(testToolContext(), "return 123")
 		assert.This(err).Is(nil)
 		assert.This(len(result.Warnings)).Is(0)
 		assert.This(len(result.Results)).Is(1)
 		assert.This(result.Results[0].Value).Is("123")
 	}
 	{
-		result, err := execTool("return 1, 'string'")
+		result, err := execTool(testToolContext(), "return 1, 'string'")
 		assert.This(err).Is(nil)
 		assert.This(len(result.Warnings)).Is(0)
 		assert.This(len(result.Results)).Is(2)
@@ -43,7 +43,7 @@ func TestExecTool(t *testing.T) {
 		assert.This(result.Results[1].Value).Is(`"string"`)
 	}
 	{
-		result, err := execTool("x = 1; y = 2")
+		result, err := execTool(testToolContext(), "x = 1; y = 2")
 		assert.This(err).Is(nil)
 		assert.This(len(result.Results)).Is(1)
 		assert.This(result.Results[0].Value).Is("2")
@@ -53,7 +53,7 @@ func TestExecTool(t *testing.T) {
 		assert.That(strings.Contains(result.Warnings[1], "@line:1"))
 	}
 	{
-		result, err := execTool("return '" + strings.Repeat("x", 513) + "'")
+		result, err := execTool(testToolContext(), "return '"+strings.Repeat("x", 513)+"'")
 		assert.This(err).Is(nil)
 		assert.This(len(result.Results)).Is(1)
 		assert.This(result.Results[0].Type).Is("String")
@@ -61,23 +61,23 @@ func TestExecTool(t *testing.T) {
 		assert.This(len(result.Results[0].Value)).Is(maxDisplayLen + len("..."))
 	}
 	{
-		_, err := execTool("throw 'exception'")
+		_, err := execTool(testToolContext(), "throw 'exception'")
 		assert.That(strings.Contains(err.Error(), `execute error: "exception"`))
 		assert.That(strings.Contains(err.Error(), "\n"))
 	}
 	{
-		_, err := execTool("x")
+		_, err := execTool(testToolContext(), "x")
 		assert.That(strings.Contains(err.Error(), "execute error: uninitialized variable: x"))
 		assert.That(strings.Contains(err.Error(), "\n"))
 	}
 	{
-		_, err := execTool("if true") // syntax error - missing block
+		_, err := execTool(testToolContext(), "if true") // syntax error - missing block
 		assert.That(err != nil)
 		assert.That(strings.Contains(err.Error(), "execute error: syntax error"))
 		assert.That(strings.Contains(err.Error(), "@line:2")) // error at closing }
 	}
 	{
-		result, err := execTool("x = 1\ny = 2")
+		result, err := execTool(testToolContext(), "x = 1\ny = 2")
 		assert.This(err).Is(nil)
 		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
 		assert.That(strings.Contains(result.Warnings[1], "@line:2"))
@@ -102,12 +102,12 @@ func TestExecTool(t *testing.T) {
 		ParamSpec: core.ParamSpec1,
 	})
 	{
-		result, err := execTool("Print('hello')")
+		result, err := execTool(testToolContext(), "Print('hello')")
 		assert.This(err).Is(nil)
 		assert.This(result.Print).Is("hello")
 	}
 	{
-		result, err := execTool("Print('a')\nPrint('b')")
+		result, err := execTool(testToolContext(), "Print('a')\nPrint('b')")
 		assert.This(err).Is(nil)
 		assert.This(result.Print).Is("ab")
 	}
@@ -116,12 +116,12 @@ func TestExecTool(t *testing.T) {
 func TestCheckTool(t *testing.T) {
 	assert := assert.T(t)
 	{
-		result, err := checkTool("1 + 2 \n")
+		result, err := checkTool(testToolContext(), "1 + 2 \n")
 		assert.This(err).Is(nil)
 		assert.This(len(result.Warnings)).Is(0)
 	}
 	{
-		result, err := checkTool("x = 1; y = 2")
+		result, err := checkTool(testToolContext(), "x = 1; y = 2")
 		assert.This(err).Is(nil)
 		assert.That(strings.Contains(result.Warnings[0], "initialized but not used: x"))
 		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
@@ -129,21 +129,21 @@ func TestCheckTool(t *testing.T) {
 		assert.That(strings.Contains(result.Warnings[1], "@line:1"))
 	}
 	{
-		_, err := checkTool("throw 'exception'")
+		_, err := checkTool(testToolContext(), "throw 'exception'")
 		assert.This(err).Is(nil) // checkTool should not throw errors for exceptions in code
 	}
 	{
-		_, err := checkTool("x")
+		_, err := checkTool(testToolContext(), "x")
 		assert.This(err).Is(nil) // checkTool should not throw errors for uninitialized variables
 	}
 	{
-		_, err := checkTool("if true") // syntax error - missing block
+		_, err := checkTool(testToolContext(), "if true") // syntax error - missing block
 		assert.That(err != nil)
 		assert.That(strings.Contains(err.Error(), "check error: syntax error"))
 		assert.That(strings.Contains(err.Error(), "@line:2")) // error at closing }
 	}
 	{
-		result, err := checkTool("x = 1\ny = 2")
+		result, err := checkTool(testToolContext(), "x = 1\ny = 2")
 		assert.This(err).Is(nil)
 		assert.That(strings.Contains(result.Warnings[0], "@line:1"))
 		assert.That(strings.Contains(result.Warnings[1], "@line:2"))

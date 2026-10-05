@@ -33,27 +33,27 @@ func TestCodeFoldersTool(t *testing.T) {
 	tran.Action(th, "insert { name: 'Child', group: -1, parent: 1, num: 5, text: 'function(){}' } into stdlib")
 	tran.Complete()
 
-	res, err := codeFoldersTool("stdlib", "")
+	res, err := codeFoldersTool(testToolContext(), "stdlib", "")
 	assert.That(err == nil)
 	assert.This(res.Library).Is("stdlib")
 	assert.This(res.Path).Is("")
 	assert.This(res.Children).Is([]string{"Folder1/", "Folder2/", "Leaf"})
 
-	res, err = codeFoldersTool("stdlib", "Folder1")
+	res, err = codeFoldersTool(testToolContext(), "stdlib", "Folder1")
 	assert.That(err == nil)
 	assert.This(res.Path).Is("Folder1")
 	assert.This(res.Children).Is([]string{"Child", "Sub/"})
 
-	res, err = codeFoldersTool("stdlib", "Folder1/")
+	res, err = codeFoldersTool(testToolContext(), "stdlib", "Folder1/")
 	assert.That(err == nil)
 	assert.This(res.Path).Is("Folder1")
 	assert.This(res.Children).Is([]string{"Child", "Sub/"})
 
-	_, err = codeFoldersTool("stdlib", "Leaf")
+	_, err = codeFoldersTool(testToolContext(), "stdlib", "Leaf")
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("path segment is not a folder: Leaf")
 
-	_, err = codeFoldersTool("stdlib", "Missing")
+	_, err = codeFoldersTool(testToolContext(), "stdlib", "Missing")
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("path not found: Missing")
 }

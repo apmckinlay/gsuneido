@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/apmckinlay/gsuneido/core"
 )
 
 type Agent struct {
@@ -77,9 +79,10 @@ func (a *ToolApproval) Wait(ctx context.Context) (approvalDecision, error) {
 }
 
 // NewAgent creates an agent.
+// The caller's execution context is captured before any asynchronous work.
 // prompt is optional.
-func NewAgent(baseURL, apiKey, model, prompt string, outfn OutFn, enableSandbox, disableSandbox func()) *Agent {
-	toolClient, err := NewToolClient()
+func NewAgent(parent *core.Thread, baseURL, apiKey, model, prompt string, outfn OutFn, enableSandbox, disableSandbox func()) *Agent {
+	toolClient, err := NewToolClient(parent)
 	if err != nil {
 		panic("NewAgent: " + err.Error())
 	}

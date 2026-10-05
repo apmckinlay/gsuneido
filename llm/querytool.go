@@ -31,7 +31,7 @@ var _ = addTool(toolSpec{
 		if err != nil {
 			return nil, err
 		}
-		return queryTool(qs)
+		return queryTool(ctx, qs)
 	},
 })
 
@@ -44,15 +44,15 @@ type queryOutput struct {
 const queryLimit = 100
 const querySizeLimit = 10000
 
-func queryTool(query string) (result queryOutput, err error) {
+func queryTool(ctx context.Context, query string) (result queryOutput, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("query failed: %v", r)
 		}
 	}()
-	th := core.NewThread(core.MainThread)
+	th := toolThread(ctx)
 	defer th.Close()
-	tran := th.Dbms().Transaction(false, core.AllPerms)
+	tran := th.Dbms().Transaction(false, th.Perms())
 	defer tran.Complete()
 	q := tran.Query(query, nil)
 	hdr := q.Header()

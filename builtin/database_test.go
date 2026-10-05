@@ -42,6 +42,7 @@ func TestDatabase_Top10(t *testing.T) {
 	ut.Commit()
 
 	th := &Thread{}
+	th.SetPerms(AllPerms)
 	th.SetDbms(dbms.NewDbmsLocal(db))
 	v := db_Top10(th, []Value{SuStr("tmp"), SuStr1("c")})
 	ob := v.(*SuObject)
@@ -64,6 +65,7 @@ func TestDatabase_Distinct(t *testing.T) {
 	ut.Commit()
 
 	th := &Thread{}
+	th.SetPerms(AllPerms)
 	th.SetDbms(dbms.NewDbmsLocal(db))
 	v := db_Distinct(th, []Value{SuStr("tmp")})
 	ob := v.(*SuObject)
