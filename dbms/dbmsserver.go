@@ -402,24 +402,26 @@ func cmdAdmin(ss *serverSession) {
 
 const maxAuthTries = 3
 
+var authLimiter = rate.NewLimiter(rate.Limit(4), 1)
+var authContext = context.Background()
+
 func cmdAuth(ss *serverSession) {
 	data := ss.GetVal() // consume even if closing so request's Remaining assert passes
 	// prevent brute force attacks
+	authLimiter.Wait(authContext)
 	if ss.sc.authTries.Add(1) > maxAuthTries {
 		serverConnsLock.Lock()
 		defer serverConnsLock.Unlock()
 		ss.sc.close()
 		return
 	}
-	dbmsUnauth, ok := ss.sc.dbms.(*DbmsUnauth)
-	if !ok {
-		panic("already authorized")
-	}
-	result, perms := auth(ss.thread, data)
+	result := ss.sc.dbms.Auth(ss.thread, data)
 	if result {
 		ss.sc.authTries.Store(0)
-		ss.sc.perms.Store(perms)
-		ss.sc.dbms = dbmsUnauth.dbms // remove DbmsUnauth
+		ss.sc.perms.Store(ss.thread.Perms())
+		if du, ok := ss.sc.dbms.(*DbmsUnauth); ok {
+			ss.sc.dbms = du.dbms
+		}
 	}
 	ss.PutBool(true).PutBool(result)
 }

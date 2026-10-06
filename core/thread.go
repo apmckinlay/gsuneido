@@ -187,8 +187,10 @@ func (th *Thread) SetSviews(sv *Sviews) {
 	th.sv = sv
 }
 
-func (th *Thread) SetPerms(p *Perms) {
+func (th *Thread) SetPerms(p *Perms) *Perms {
+	prev := th.perms
 	th.perms = p
+	return prev
 }
 
 func (th *Thread) Perms() *Perms {

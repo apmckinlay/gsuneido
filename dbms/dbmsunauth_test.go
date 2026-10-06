@@ -17,50 +17,27 @@ func TestNewPerms(t *testing.T) {
 	assert := assert.T(t)
 	defer Global.UnloadAll()
 
-	// success - perms are moved to serverConn
-	Global.TestDef("Auth", compile.Constant("function (@args) { return true }"))
-	th := &Thread{}
-	result, perms := auth(th, &SuObject{})
-	assert.True(result)
-	assert.That(perms != nil)
-	assert.That(th.Perms() == nil)
-	assert.That(th.NewPerms() == nil)
-
 	// failure - perms are discarded
 	Global.TestDef("Auth", compile.Constant("function (@args) { return false }"))
-	th = &Thread{}
-	result, perms = auth(th, &SuObject{})
+	th := &Thread{}
+	dbms := &DbmsUnauth{dbms: &DbmsLocal{}}
+	result := dbms.Auth(th, &SuObject{})
 	assert.False(result)
-	assert.That(perms == nil)
 	assert.That(th.Perms() == nil)
 	assert.That(th.NewPerms() == nil)
 
 	// throw - perms are discarded and the error propagates
 	Global.TestDef("Auth", compile.Constant("function (@args) { Nope() }"))
 	th = &Thread{}
-	assert.This(func() { auth(th, &SuObject{}) }).Panics("can't find Nope")
+	assert.This(func() { dbms.Auth(th, &SuObject{}) }).Panics("can't find Nope")
 	assert.That(th.Perms() == nil)
 	assert.That(th.NewPerms() == nil)
-}
 
-func TestNewPermsRestore(t *testing.T) {
-	assert := assert.T(t)
-	defer Global.UnloadAll()
-	th := &Thread{}
-	test := func(fn Value, success bool) {
-		Global.TestDef("Auth", fn)
-		result, perms := auth(th, &SuObject{})
-		assert.This(result).Is(success)
-		assert.That((perms != nil) == success)
-		assert.That(th.Perms() == nil)
-		assert.That(th.NewPerms() == nil)
-	}
-	test(compile.Constant("function (@args) { return true }"), true)
-	test(compile.Constant("function (@args) { return false }"), false)
-
-	Global.TestDef("Auth", compile.Constant("function (@args) { Nope() }"))
-	assert.This(func() { auth(th, &SuObject{}) }).Panics("can't find Nope")
-	assert.That(th.Perms() == nil)
+	// success - perms are kept on the thread
+	Global.TestDef("Auth", compile.Constant("function (@args) { return true }"))
+	result = dbms.Auth(th, &SuObject{})
+	assert.True(result)
+	assert.That(th.Perms() != nil)
 	assert.That(th.NewPerms() == nil)
 }
 

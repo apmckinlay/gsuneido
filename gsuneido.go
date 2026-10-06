@@ -53,7 +53,7 @@ var help = `options:
 	-v[ersion]
 	-w[eb][=#] (default -port + 1)`
 
-// dbmsLocal is set if running with a local/standalone database.
+// dbmsLocal is set if running with a local database i.e. server or standalone
 var dbmsLocal *dbms.DbmsLocal
 var mainThread Thread
 var sviews Sviews

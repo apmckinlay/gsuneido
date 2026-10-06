@@ -53,8 +53,21 @@ func (dbms *DbmsLocal) AdminTest(admin string) {
 	dbms.Admin(admin, nil, AllPerms)
 }
 
-func (dbms *DbmsLocal) Auth(th *Thread, data Value) bool {
-	return true
+func (*DbmsLocal) Auth(th *Thread, data Value) (result bool) {
+	authFn := Global.FindName(th, "Auth")
+	if authFn == nil {
+		return false
+	}
+	perms := &Perms{}
+	th.SetNewPerms(perms)
+	prev := th.SetPerms(perms)
+	defer func() {
+		if !result {
+			th.SetPerms(prev)
+		}
+		th.SetNewPerms(nil)
+	}()
+	return ToBool(th.CallEach(authFn, data))
 }
 
 func (dbms *DbmsLocal) Check(full bool) string {

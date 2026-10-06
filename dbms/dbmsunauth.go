@@ -4,12 +4,8 @@
 package dbms
 
 import (
-	"context"
-
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/atomics"
-	"golang.org/x/time/rate"
 )
 
 /*
@@ -56,7 +52,6 @@ func (du *DbmsUnauth) Admin(string, *Sviews, *Perms) {
 }
 
 func (du *DbmsUnauth) Auth(th *Thread, data Value) (result bool) {
-	// This is only used by standalone mode.
 	// Give the thread the unwrapped dbms since the app Auth may query the db.
 	// Restore it if the app Auth fails or throws.
 	prev := th.SetDbms(du.dbms)
@@ -65,37 +60,11 @@ func (du *DbmsUnauth) Auth(th *Thread, data Value) (result bool) {
 			th.SetDbms(prev)
 		}
 	}()
-	result, perms := auth(th, data)
+	result = du.dbms.Auth(th, data)
 	if result {
-		th.SetPerms(perms)
 		StandaloneDbms.Store(du.dbms) // unwrap
 	}
 	return result
-}
-
-// authLimiter limits the rate of authentication attempts
-var authLimiter = rate.NewLimiter(rate.Limit(4), 1)
-var authContext = context.Background()
-
-func auth(th *Thread, data Value) (bool, *Perms) {
-	authLimiter.Wait(authContext)
-	authFn := Global.FindName(th, "Auth")
-	if authFn == nil {
-		return false, nil
-	}
-	assert.That(th.Perms() == nil)
-	perms := &Perms{}
-	th.SetPerms(perms)
-	th.SetNewPerms(perms)
-	defer func() {
-		th.SetPerms(nil)
-		th.SetNewPerms(nil)
-	}()
-	result := ToBool(th.CallEach(authFn, data))
-	if !result {
-		return false, nil
-	}
-	return true, perms
 }
 
 func (du *DbmsUnauth) Check(bool) string {
