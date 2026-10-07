@@ -13,6 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
+	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/atomics"
 	"github.com/apmckinlay/gsuneido/util/slc"
@@ -81,18 +82,51 @@ func (sc *ServerConn) Run(h handler) {
 type ClientSession struct {
 	cc  *ClientConn
 	rch respch
+	// used is only accessed by the goroutine using this session,
+	// which is the same assumption as WriteBuf.
+	used bool
 	ReadWrite
 }
 
-// NewClientSession returns a new ClientSession
+// NewClientSession returns a new ClientSession.
+// The WriteBuf, session id, and response channel are allocated lazily
+// on first use (see PutCmd) so sessions that are created but never used
+// cost nothing on the client or the server.
 func (cc *ClientConn) NewClientSession() *ClientSession {
-	sessionId := cc.nextSession.Add(1)
-	rch := make(respch, 1)
-	wb := newWriteBuf(&cc.conn, sessionId)
+	return &ClientSession{cc: cc}
+}
+
+// PutCmd lazily initializes the session, then writes a command.
+func (cs *ClientSession) PutCmd(cmd commands.Command) *WriteBuf {
+	cs.initSession()
+	return cs.WriteBuf.PutCmd(cmd)
+}
+
+// initSession allocates the session id and registers the response channel.
+// The lock guards the shared rchs map, not cs.used.
+func (cs *ClientSession) initSession() {
+	if cs.used {
+		return
+	}
+	cc := cs.cc
 	cc.lock.Lock()
 	defer cc.lock.Unlock()
-	cc.rchs[sessionId] = rch
-	return &ClientSession{cc: cc, rch: rch, WriteBuf: *wb}
+	sessionId := cc.nextSession.Add(1)
+	cs.rch = make(respch, 1)
+	cs.WriteBuf = *newWriteBuf(&cc.conn, sessionId)
+	cc.rchs[sessionId] = cs.rch
+	cs.used = true
+}
+
+// EndSession ends the session. If the session was never used
+// (no command was written) nothing is sent, since the server has
+// no session state to clean up.
+func (cs *ClientSession) EndSession() {
+	if !cs.used {
+		return
+	}
+	cs.PutCmd(commands.EndSession)
+	cs.WriteBuf.EndMsg()
 }
 
 // NewClientSession creates a new ClientSession on the same connection

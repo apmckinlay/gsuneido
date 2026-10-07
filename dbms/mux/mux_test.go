@@ -35,6 +35,7 @@ func TestMux(t *testing.T) {
 	var wg sync.WaitGroup
 	clientThread := func() {
 		session := client.NewClientSession()
+		session.initSession() // raw writes below bypass PutCmd
 		for range nmsgs {
 			a := str.Random(1, 100)
 			b := str.Random(1, 2*bufSize)
@@ -50,4 +51,32 @@ func TestMux(t *testing.T) {
 	}
 	wg.Wait()
 	assert.T(t).This(n.Load()).Is(nmsgs * nthreads)
+}
+
+func TestLazySession(t *testing.T) {
+	p1, _ := net.Pipe()
+	client := NewClientConn(p1)
+	session := client.NewClientSession()
+
+	// a new session allocates nothing
+	assert.T(t).That(!session.used)
+	assert.T(t).That(session.id == 0)
+	assert.T(t).That(session.WriteBuf.buf == nil)
+	assert.T(t).That(len(client.rchs) == 0)
+
+	// ending an unused session sends nothing and allocates nothing
+	session.EndSession()
+	assert.T(t).That(client.nextSession.Load() == 0)
+	assert.T(t).That(len(client.rchs) == 0)
+
+	// the first command allocates the session id, buffer, and channel
+	session.PutCmd(0)
+	assert.T(t).That(session.used)
+	assert.T(t).That(session.id == 1)
+	assert.T(t).That(session.WriteBuf.buf != nil)
+	assert.T(t).That(len(client.rchs) == 1)
+
+	// a later command does not allocate again
+	session.PutCmd(0)
+	assert.T(t).That(client.nextSession.Load() == 1)
 }

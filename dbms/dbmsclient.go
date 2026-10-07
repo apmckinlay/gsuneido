@@ -114,8 +114,7 @@ func (ms *muxSession) Check(full bool) string {
 }
 
 func (ms *muxSession) CloseConn() {
-	ms.PutCmd(commands.EndSession)
-	ms.EndMsg()
+	ms.EndSession()
 }
 
 func (ms *muxSession) Connections() Value {
