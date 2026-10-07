@@ -54,7 +54,6 @@ var help = `options:
 	-w[eb][=#] (default -port + 1)`
 
 var mainThread Thread
-var sviews Sviews
 
 var _ = AddInfo("windows.errlog", &options.ErrorLog)
 
@@ -95,7 +94,7 @@ func main() {
 
 	Libload = libload // dependency injection
 	mainThread.Name = "main"
-	mainThread.SetSviews(&sviews)
+	mainThread.SetSviews(new(Sviews))
 	MainThread = &mainThread
 
 	switch options.Action {
@@ -484,9 +483,10 @@ func eval(src string) {
 	// fmt.Println(DisasmMixed(fn, src))
 
 	perms := mainThread.Perms()
+	sviews := mainThread.Sviews()
 	mainThread.Reset()
 	mainThread.SetPerms(perms)
-	mainThread.SetSviews(&sviews)
+	mainThread.SetSviews(sviews)
 	result := mainThread.Call(fn)
 	if result != nil {
 		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
