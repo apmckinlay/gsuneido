@@ -65,7 +65,7 @@ func startThread(th *Thread, args []Value, wg *sync.WaitGroup) {
 		ob.Delete(th, Zero)
 	}
 	NoteThreadClosure(fn)
-	t2 := NewThread(th)
+	t2 := th.NewChild()
 	if name := ob.NamedGet(SuStr("name")); name != nil {
 		threadName(t2, name)
 		ob.Delete(th, SuStr("name"))

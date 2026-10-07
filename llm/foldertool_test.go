@@ -20,11 +20,10 @@ func TestCodeFoldersTool(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create stdlib (name, text, group, parent, num) key(num) key(name, group) index(parent, name) index(group)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	tran.Action(th, "insert { name: 'Folder1', group: 0, parent: 0, num: 1 } into stdlib")
 	tran.Action(th, "insert { name: 'Folder2', group: 0, parent: 0, num: 2 } into stdlib")
@@ -33,27 +32,27 @@ func TestCodeFoldersTool(t *testing.T) {
 	tran.Action(th, "insert { name: 'Child', group: -1, parent: 1, num: 5, text: 'function(){}' } into stdlib")
 	tran.Complete()
 
-	res, err := codeFoldersTool(testToolContext(), "stdlib", "")
+	res, err := codeFoldersTool(testToolContext(dbmsLocal), "stdlib", "")
 	assert.That(err == nil)
 	assert.This(res.Library).Is("stdlib")
 	assert.This(res.Path).Is("")
 	assert.This(res.Children).Is([]string{"Folder1/", "Folder2/", "Leaf"})
 
-	res, err = codeFoldersTool(testToolContext(), "stdlib", "Folder1")
+	res, err = codeFoldersTool(testToolContext(dbmsLocal), "stdlib", "Folder1")
 	assert.That(err == nil)
 	assert.This(res.Path).Is("Folder1")
 	assert.This(res.Children).Is([]string{"Child", "Sub/"})
 
-	res, err = codeFoldersTool(testToolContext(), "stdlib", "Folder1/")
+	res, err = codeFoldersTool(testToolContext(dbmsLocal), "stdlib", "Folder1/")
 	assert.That(err == nil)
 	assert.This(res.Path).Is("Folder1")
 	assert.This(res.Children).Is([]string{"Child", "Sub/"})
 
-	_, err = codeFoldersTool(testToolContext(), "stdlib", "Leaf")
+	_, err = codeFoldersTool(testToolContext(dbmsLocal), "stdlib", "Leaf")
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("path segment is not a folder: Leaf")
 
-	_, err = codeFoldersTool(testToolContext(), "stdlib", "Missing")
+	_, err = codeFoldersTool(testToolContext(dbmsLocal), "stdlib", "Missing")
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("path not found: Missing")
 }

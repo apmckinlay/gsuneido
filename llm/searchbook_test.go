@@ -20,11 +20,10 @@ func TestSearchBookTool(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create mybook (name, path, text, order) key(name, path)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	tran.Action(th, "insert { name: 'Introduction', path: '', text: 'intro text', order: 1 } into mybook")
 	tran.Action(th, "insert { name: 'Reference', path: '', text: 'ref text', order: 2 } into mybook")
@@ -35,7 +34,7 @@ func TestSearchBookTool(t *testing.T) {
 	tran.Complete()
 
 	// search by text - matches "text" in intro text, ref text, format text, and MultiMatch
-	res, err := searchBook(testToolContext(), "mybook", "", "text", false)
+	res, err := searchBook(testToolContext(dbmsLocal), "mybook", "", "text", false)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(4)
 	assert.This(res.Matches[0].Path).Is("/Introduction")
@@ -48,7 +47,7 @@ func TestSearchBookTool(t *testing.T) {
 	assert.This(res.Matches[3].Lines).Is([]string{"[   1]format text"})
 
 	// search by path - sorted by path, name
-	res, err = searchBook(testToolContext(), "mybook", "Reference", "", false)
+	res, err = searchBook(testToolContext(dbmsLocal), "mybook", "Reference", "", false)
 	assert.That(err == nil)
 	paths := make([]string, len(res.Matches))
 	for i, m := range res.Matches {
@@ -57,7 +56,7 @@ func TestSearchBookTool(t *testing.T) {
 	assert.This(paths).Is([]string{"/Reference", "/Reference/Array", "/Reference/Date", "/Reference/Date/FormatEn"})
 
 	// search by both path and text - sorted by path, name
-	res, err = searchBook(testToolContext(), "mybook", "Reference", "functions", false)
+	res, err = searchBook(testToolContext(dbmsLocal), "mybook", "Reference", "functions", false)
 	assert.That(err == nil)
 	paths = make([]string, len(res.Matches))
 	for i, m := range res.Matches {
@@ -66,21 +65,21 @@ func TestSearchBookTool(t *testing.T) {
 	assert.This(paths).Is([]string{"/Reference/Array", "/Reference/Date"})
 
 	// case insensitive (default)
-	res, err = searchBook(testToolContext(), "mybook", "", "TEXT", false)
+	res, err = searchBook(testToolContext(dbmsLocal), "mybook", "", "TEXT", false)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(4)
 
 	// case sensitive
-	res, err = searchBook(testToolContext(), "mybook", "", "TEXT", true)
+	res, err = searchBook(testToolContext(dbmsLocal), "mybook", "", "TEXT", true)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(0)
 
 	// both path and text required
-	_, err = searchBook(testToolContext(), "mybook", "", "", false)
+	_, err = searchBook(testToolContext(dbmsLocal), "mybook", "", "", false)
 	assert.That(err != nil)
 
 	// multiple matching lines in same document
-	res, err = searchBook(testToolContext(), "mybook", "MultiMatch", "text", false)
+	res, err = searchBook(testToolContext(dbmsLocal), "mybook", "MultiMatch", "text", false)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(1)
 	assert.This(res.Matches[0].Path).Is("/MultiMatch")
@@ -94,17 +93,16 @@ func TestSearchBookLinesLimit(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create testbook (name, path, text, order) key(name, path)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	// Create a document with 8 matching lines (more than linesLimit of 5)
 	tran.Action(th, "insert { name: 'ManyMatches', path: '', text: 'line1 match\nline2 match\nline3 match\nline4 match\nline5 match\nline6 match\nline7 match\nline8 match', order: 1 } into testbook")
 	tran.Complete()
 
-	res, err := searchBook(testToolContext(), "testbook", "", "match", false)
+	res, err := searchBook(testToolContext(dbmsLocal), "testbook", "", "match", false)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(1)
 	assert.This(len(res.Matches[0].Lines)).Is(5)

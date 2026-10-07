@@ -16,45 +16,43 @@ import (
 )
 
 func testToolThread() *core.Thread {
-	th := core.NewThread(nil)
-	th.SetPerms(core.AllPerms)
-	return th
+	return core.NewThread(nil, core.AllPerms)
 }
 
-func testToolContext() context.Context {
-	return context.WithValue(context.Background(), toolThreadKey{}, testToolThread())
+func testToolContext(dbms core.IDbms) context.Context {
+	th := testToolThread()
+	th.SetDbms(dbms)
+	return context.WithValue(context.Background(), toolThreadKey{}, th)
 }
 
 func TestGetViewDefinition(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
-	d := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return d }
+	dbmsLocal := dbms.NewDbmsLocal(db)
 	query.DoAdminTest(db, `create alpha (a, b) key(a)`)
 	query.DoAdminTest(db, `view myview = alpha extend c = 123`)
 
 	// Test view definition
-	viewDef, _ := getSchema(testToolContext(), "myview")
+	viewDef, _ := getSchema(testToolContext(dbmsLocal), "myview")
 	assert.This(viewDef).Is(schemaOutput{Schema: "view myview = alpha extend c = 123"})
 
 	// Test non-existent view
-	noView, _ := getSchema(testToolContext(), "nonexistent")
+	noView, _ := getSchema(testToolContext(dbmsLocal), "nonexistent")
 	assert.This(noView).Is(schemaOutput{Schema: ""})
 }
 
 func TestSchemaToolWithView(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
-	d := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return d }
+	dbmsLocal := dbms.NewDbmsLocal(db)
 	query.DoAdminTest(db, `create alpha (a, b) key(a)`)
 	query.DoAdminTest(db, `view myview = alpha extend c = 123`)
 
 	// Test table schema
-	schema, _ := getSchema(testToolContext(), "alpha")
+	schema, _ := getSchema(testToolContext(dbmsLocal), "alpha")
 	assert.This(schema).Is(schemaOutput{Schema: "alpha (a,b) key(a)"})
 
 	// Test view definition via schema tool
-	viewDef, _ := getSchema(testToolContext(), "myview")
+	viewDef, _ := getSchema(testToolContext(dbmsLocal), "myview")
 	assert.This(viewDef).Is(schemaOutput{Schema: "view myview = alpha extend c = 123"})
 }

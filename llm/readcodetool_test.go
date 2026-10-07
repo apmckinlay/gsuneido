@@ -17,13 +17,12 @@ func TestCodeTool(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	// Create stdlib table
 	dbmsLocal.AdminTest("create stdlib (name, text, lib_before_text, group) key(name, group)")
 
 	// Insert a record
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', lib_before_text: '', group: -1 } into stdlib")
 	assert.This(n).Is(1)
@@ -37,7 +36,7 @@ func TestCodeTool(t *testing.T) {
 	rt.Complete()
 
 	// Test codeTool
-	res, err := readCodeTool(testToolContext(), "stdlib", "Foo", 1, codeLineLimit, true)
+	res, err := readCodeTool(testToolContext(dbmsLocal), "stdlib", "Foo", 1, codeLineLimit, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +49,7 @@ func TestCodeTool(t *testing.T) {
 	assert.This(res.Diff).Is(nil)
 
 	// Test start_line past end
-	res, err = readCodeTool(testToolContext(), "stdlib", "Foo", 2, codeLineLimit, true)
+	res, err = readCodeTool(testToolContext(dbmsLocal), "stdlib", "Foo", 2, codeLineLimit, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,22 +60,22 @@ func TestCodeTool(t *testing.T) {
 	assert.That(res.Diff == nil)
 
 	// Test invalid library
-	_, err = readCodeTool(testToolContext(), "nonexistent", "Foo", 1, codeLineLimit, true)
+	_, err = readCodeTool(testToolContext(dbmsLocal), "nonexistent", "Foo", 1, codeLineLimit, true)
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("library not found: nonexistent")
 
 	// Test invalid name
-	_, err = readCodeTool(testToolContext(), "stdlib", "invalid name", 1, codeLineLimit, true)
+	_, err = readCodeTool(testToolContext(dbmsLocal), "stdlib", "invalid name", 1, codeLineLimit, true)
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("invalid name: invalid name")
 
 	// Test invalid start_line
-	_, err = readCodeTool(testToolContext(), "stdlib", "Foo", 0, codeLineLimit, true)
+	_, err = readCodeTool(testToolContext(dbmsLocal), "stdlib", "Foo", 0, codeLineLimit, true)
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("start_line must be >= 1")
 
 	// Test not found
-	_, err = readCodeTool(testToolContext(), "stdlib", "NonExistent", 1, codeLineLimit, true)
+	_, err = readCodeTool(testToolContext(dbmsLocal), "stdlib", "NonExistent", 1, codeLineLimit, true)
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("code not found for: NonExistent in stdlib")
 }

@@ -138,11 +138,11 @@ func (sm *suServerMaster) listen(th *Thread, name string, port int) {
 				port, name)
 			return
 		}
-		go sm.connect(name, conn, th.Perms()) // goroutine per connection
+		go sm.connect(name, conn, th.Perms(), th.Dbms().New()) // goroutine per connection
 	}
 }
 
-func (sm *suServerMaster) connect(name string, conn net.Conn, perms *Perms) {
+func (sm *suServerMaster) connect(name string, conn net.Conn, perms *Perms, dbms IDbms) {
 	nSocketServerConn.Add(1)
 	client := suSocketClient{
 		conn: conn.(*net.TCPConn), rdr: bufio.NewReader(conn),
@@ -153,8 +153,7 @@ func (sm *suServerMaster) connect(name string, conn net.Conn, perms *Perms) {
 		client:     client,
 	}
 	defer sc.close()
-	th := NewThread(nil)
-	th.SetPerms(perms)
+	th := NewThread(dbms, perms)
 	th.Name = str.BeforeFirst(th.Name, " ") + " " + name
 	if f := sc.Lookup(th, "Run"); f != nil {
 		threads.add(th)

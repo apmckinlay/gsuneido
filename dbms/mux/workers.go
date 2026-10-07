@@ -59,7 +59,7 @@ func (ws *Workers) worker(t task) {
 	defer nWorker.Add(-1)
 	// each worker has its own WriteBuf and Thread
 	wb := newWriteBuf(nil, 0)
-	th := core.NewThread(nil)
+	th := core.NewThread(nil, nil)
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR: worker panic:", e)

@@ -28,7 +28,7 @@ func AiAgent(th *Thread, args []Value) Value {
 	callback := args[3]
 	prompt := ToStr(args[4])
 	callback.SetConcurrent()
-	t2 := NewThread(th)
+	t2 := th.NewChild()
 	th.Call(callback, SuStr(model), EmptyStr)
 
 	a := &suAgent{

@@ -21,13 +21,12 @@ func TestSearchTool(t *testing.T) {
 	dd.CheckerSync()
 	db19.StartConcur(dd, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(dd)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create stdlib (name, text, group, parent, num, lib_modified) key(num) key(name, group) index(parent, name) index(group)")
 	dbmsLocal.AdminTest("create app (name, text, group, parent, num, lib_modified) key(num) key(name, group) index(parent, name) index(group)")
 	assert.That(dbmsLocal.Use("app"))
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	tran.Action(th, "insert { name: 'Foo', text: 'function(){return 1}', group: -1, parent: 0, num: 1 } into stdlib")
 	tran.Action(th, "insert { name: 'Bar', text: 'function(){return 2}', group: -1, parent: 0, num: 2 } into stdlib")
@@ -36,23 +35,23 @@ func TestSearchTool(t *testing.T) {
 	tran.Action(th, "insert { name: 'SearchTarget', text: 'function(){return \"hello\"}', group: -1, parent: 4, num: 5 } into app")
 	tran.Complete()
 
-	res, err := searchCode(testToolContext(), "stdlib", "Foo", "return 1", false, false)
+	res, err := searchCode(testToolContext(dbmsLocal), "stdlib", "Foo", "return 1", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{{Library: "stdlib", Name: "Foo", Path: "", Lines: []string{"[   1]function(){return 1}"}}})
 
-	_, err = searchCode(testToolContext(), "STDLIB", "FOO", "RETURN 1", false, false)
+	_, err = searchCode(testToolContext(dbmsLocal), "STDLIB", "FOO", "RETURN 1", false, false)
 	assert.That(err != nil)
 	assert.That(strings.Contains(err.Error(), "library not found"))
 
-	_, err = searchCode(testToolContext(), "STDLIB", "FOO", "RETURN 1", true, false)
+	_, err = searchCode(testToolContext(dbmsLocal), "STDLIB", "FOO", "RETURN 1", true, false)
 	assert.That(err != nil)
 	assert.That(strings.Contains(err.Error(), "library not found"))
 
-	res, err = searchCode(testToolContext(), "app", "Foo.*", "return 3", false, false)
+	res, err = searchCode(testToolContext(dbmsLocal), "app", "Foo.*", "return 3", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{{Library: "app", Name: "FooApp", Path: "", Lines: []string{"[   1]function(){return 3}"}}})
 
-	res, err = searchCode(testToolContext(), "", "", "return", false, false)
+	res, err = searchCode(testToolContext(dbmsLocal), "", "", "return", false, false)
 	assert.That(err == nil)
 	assert.This(res.Matches).Is([]codeMatch{
 		{Library: "stdlib", Name: "Bar", Path: "", Lines: []string{"[   1]function(){return 2}"}},
@@ -62,17 +61,17 @@ func TestSearchTool(t *testing.T) {
 	})
 	assert.That(!res.HasMore)
 
-	_, err = searchCode(testToolContext(), "", "", "", false, false)
+	_, err = searchCode(testToolContext(dbmsLocal), "", "", "", false, false)
 	assert.That(err != nil)
 
 	// empty name and code is allowed when modified is true
-	res, err = searchCode(testToolContext(), "", "", "", false, true)
+	res, err = searchCode(testToolContext(dbmsLocal), "", "", "", false, true)
 	assert.That(err == nil)
 	assert.This(len(res.Matches)).Is(0)
 
 	// builtin name not in library returns specific error
 	core.Global.Builtin("ABuiltin", core.Zero)
-	_, err = searchCode(testToolContext(), "", "ABuiltin", "", false, false)
+	_, err = searchCode(testToolContext(dbmsLocal), "", "ABuiltin", "", false, false)
 	assert.That(err != nil)
 	assert.This(err.Error()).Is("ABuiltin is built-in")
 }

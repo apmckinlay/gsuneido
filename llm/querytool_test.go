@@ -20,9 +20,8 @@ func TestQueryTool(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
 	dbms := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbms }
 
-	result, err := queryTool(testToolContext(), "tables")
+	result, err := queryTool(testToolContext(dbms), "tables")
 	assert.That(err == nil)
 	assert.This(result.Results).Is("[\n" +
 		"[\"table\", \"nrows\", \"totalsize\"]\n" +
@@ -38,13 +37,12 @@ func TestQueryToolSizeLimit(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
-	dbms := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbms }
-	dbms.AdminTest("create big (k, a) key(k)")
+	dbmsLocal := dbms.NewDbmsLocal(db)
+	dbmsLocal.AdminTest("create big (k, a) key(k)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	defer th.Close()
-	tran := dbms.Transaction(true, core.AllPerms)
+	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	xs := strings.Repeat("x", 1500)
 	for i := range 10 {
 		n := tran.Action(th, fmt.Sprintf("insert { k: %d, a: %q } into big", i, xs))
@@ -52,7 +50,7 @@ func TestQueryToolSizeLimit(t *testing.T) {
 	}
 	tran.Complete()
 
-	result, err := queryTool(testToolContext(), "big")
+	result, err := queryTool(testToolContext(dbmsLocal), "big")
 	assert.That(err == nil)
 	assert.That(result.HasMore)
 	head := "[\n[\"k\", \"a\"]\n" +
@@ -71,20 +69,19 @@ func TestQueryToolRowLimit(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)
-	dbms := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbms }
-	dbms.AdminTest("create many (k) key(k)")
+	dbmsLocal := dbms.NewDbmsLocal(db)
+	dbmsLocal.AdminTest("create many (k) key(k)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	defer th.Close()
-	tran := dbms.Transaction(true, core.AllPerms)
+	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	for i := range 150 {
 		n := tran.Action(th, fmt.Sprintf("insert { k: %d } into many", i))
 		assert.This(n).Is(1)
 	}
 	tran.Complete()
 
-	result, err := queryTool(testToolContext(), "many sort k")
+	result, err := queryTool(testToolContext(dbmsLocal), "many sort k")
 	assert.That(err == nil)
 	assert.That(result.HasMore)
 	head := "[\n[\"k\"]\n[0]\n[1]\n[2]\n[3]\n[4]\n[5]\n[6]\n[7]\n[8]\n[9]\n"

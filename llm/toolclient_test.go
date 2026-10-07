@@ -191,17 +191,13 @@ func TestToolClientPermissions(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
 	defer db.Close()
-	d := dbms.NewDbmsLocal(db)
-	prevGetDbms := core.GetDbms
-	defer func() { core.GetDbms = prevGetDbms }()
-	core.GetDbms = func() core.IDbms { return d }
+	dbmsLocal := dbms.NewDbmsLocal(db)
 
 	query.DoAdminTest(db, "create public (a) key(a)")
 	query.DoAdminTest(db, "create private (a) key(a)")
 	perms := &core.Perms{}
 	perms.AddTable("public", "read")
-	parent := core.NewThread(nil)
-	parent.SetPerms(perms)
+	parent := core.NewThread(dbmsLocal, perms)
 	parent.SetNewPerms(core.AllPerms)
 	client, err := NewToolClient(parent)
 	assert.This(err).Is(nil)
@@ -241,13 +237,9 @@ func TestToolClientDefaultPermissions(t *testing.T) {
 	assert := assert.T(t)
 	db := db19.CreateDb(stor.HeapStor(8192))
 	defer db.Close()
-	d := dbms.NewDbmsLocal(db)
+	dbmsLocal := dbms.NewDbmsLocal(db)
 	query.DoAdminTest(db, "create private (a) key(a)")
-	oldGetDbms := core.GetDbms
-	defer func() { core.GetDbms = oldGetDbms }()
-	core.GetDbms = func() core.IDbms { return d }
-	parent := core.NewThread(nil)
-	parent.SetDbms(d)
+	parent := core.NewThread(dbmsLocal, nil)
 	client, err := NewToolClient(parent)
 	assert.This(err).Is(nil)
 	defer client.Close()
@@ -256,13 +248,16 @@ func TestToolClientDefaultPermissions(t *testing.T) {
 	assert.That(err != nil)
 	assert.That(strings.Contains(err.Error(), "not authorized: private"))
 
-	missing, err := NewToolClient(nil)
+	missingParent := core.NewThread(dbmsLocal, nil)
+	missing, err := NewToolClient(missingParent)
 	assert.This(err).Is(nil)
 	defer missing.Close()
 	_, err = missing.CallTool(ctx, "suneido_query", map[string]any{"query": "private"})
 	assert.That(err != nil)
 	assert.That(strings.Contains(err.Error(), "not authorized: private"))
-	_, err = queryTool(ctx, "private")
+	noPermsThread := core.NewThread(dbmsLocal, nil)
+	ctxWithDbms := context.WithValue(ctx, toolThreadKey{}, noPermsThread)
+	_, err = queryTool(ctxWithDbms, "private")
 	assert.That(err != nil)
 	assert.That(strings.Contains(err.Error(), "not authorized: private"))
 }

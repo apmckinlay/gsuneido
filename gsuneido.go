@@ -53,8 +53,6 @@ var help = `options:
 	-v[ersion]
 	-w[eb][=#] (default -port + 1)`
 
-// dbmsLocal is set if running with a local database i.e. server or standalone
-var dbmsLocal *dbms.DbmsLocal
 var mainThread Thread
 var sviews Sviews
 
@@ -108,7 +106,7 @@ func main() {
 			Fatal("Please use gsport for server mode")
 		}
 		mainThread.SetPerms(AllPerms)
-		runServer()
+		runServer() // does not return
 	case "dump":
 		t := time.Now()
 		if options.Arg == "" {
@@ -191,7 +189,7 @@ func main() {
 	case "client":
 		if options.WebServer {
 			options.DbStatus.Store("")
-			startHttpStatus()
+			startHttpStatus(nil)
 		}
 		dbms.VersionMismatch = versionMismatch
 		// deliberately nil to tell libload to rely on the server
@@ -216,22 +214,20 @@ func main() {
 		}
 		Exit(0)
 	}()
-	// dependency injection of GetDbms
 	if options.Action == "client" {
 		conn := dbms.ConnectClient(options.Arg, options.Port)
 		client := dbms.NewDbmsClient(conn)
-		GetDbms = func() IDbms {
-			return client.NewSession()
-		}
+		mainThread.SetDbms(client.NewSession())
 		if mode == "gui" {
 			log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
 			sendErrorLog(mainThread.Dbms(), mainThread.SessionId(""))
 		}
-	} else {
-		openDbms()
+	} else { // standalone
+		dbmsLocal := openDbms()
+		mainThread.SetDbms(dbms.Unauth(dbmsLocal))
 		if options.WebServer {
 			options.DbStatus.Store("")
-			startHttpStatus()
+			startHttpStatus(dbmsLocal)
 		}
 	}
 	if mode == "gui" {
@@ -308,8 +304,9 @@ func sendErrorLog(d IDbms, sessionId string) {
 
 // runServer does not return
 func runServer() {
-	openDbms()
-	startHttpStatus()
+	dbmsLocal := openDbms()
+	mainThread.SetDbms(dbmsLocal)
+	startHttpStatus(dbmsLocal)
 	run("Init()")
 	options.DbStatus.Store("")
 	exit.Add("stop server", stopServer)
@@ -324,15 +321,13 @@ func stopServer() {
 	exit.Progress("server stopped")
 }
 
-var db *db19.Database
-
-func openDbms() {
+func openDbms() *dbms.DbmsLocal {
 	startstop := mode != "gui" && !isTerminal(os.Stderr)
 	if startstop {
 		log.Println("start")
 	}
 	var err error
-	db, err = db19.OpenDatabase("suneido.db")
+	db, err := db19.OpenDatabase("suneido.db")
 	if errors.Is(err, fs.ErrNotExist) {
 		runCommandLine()
 		exit.Exit(0)
@@ -358,13 +353,6 @@ func openDbms() {
 	}
 	db19.StartTimestamps()
 	db19.StartConcur(db, persistInterval())
-	dbmsLocal = dbms.NewDbmsLocal(db)
-	if options.Action == "server" {
-		GetDbms = func() IDbms { return dbmsLocal }
-	} else {
-		dbms.StandaloneDbms.Store(dbms.Unauth(dbmsLocal))
-		GetDbms = func() IDbms { return dbms.StandaloneDbms.Load() }
-	}
 	exit.Add("close database", func() {
 		exit.Progress("database closing")
 		db.CloseKeepMapped() // keep mapped to avoid errors during shutdown
@@ -377,6 +365,7 @@ func openDbms() {
 		}
 	})
 	// go checkState()
+	return dbms.NewDbmsLocal(db)
 }
 
 func heapInUse() uint64 {

@@ -229,6 +229,7 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	th.SetSession(ss.sessionId.Load())
 	th.SetSviews(&sc.Sviews)
 	th.SetPerms(sc.perms.Load())
+	th.SetDbms(sc.dbms)
 	defer th.SetPerms(nil) // workers serve different connections
 	ss.thread = th
 	ss.request()

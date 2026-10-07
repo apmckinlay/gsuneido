@@ -41,9 +41,6 @@ func permsTestSetup(t *testing.T) *Thread {
 			t.QueryDo('insert {id: 42} into builtin_perm_private')
 			}
 		}`))
-	old := GetDbms
-	GetDbms = func() IDbms { return d }
-	t.Cleanup(func() { GetDbms = old })
 	p := &Perms{}
 	p.AddTable("builtin_perm_public", "write")
 	th.SetPerms(p)

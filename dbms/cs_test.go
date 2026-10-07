@@ -54,7 +54,7 @@ func TestClientServer(*testing.T) {
 
 	ses2 := c.NewSession()
 	ses2.Get(nil, args, Prev)
-	ses2.Close()
+	ses2.CloseConn()
 
 	time.Sleep(25 * time.Millisecond)
 }

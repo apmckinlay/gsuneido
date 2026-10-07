@@ -78,18 +78,17 @@ func TestEditCodeTool(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function()\n\t{\n\treturn 1\n\t}', lib_before_text: '', lib_modified: #20200101, group: -1, num: 1, parent: 0 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
 	th.Close()
 
-	ctx := context.WithValue(testToolContext(), approvalFnKey{}, func(before, after string) (bool, error) {
+	ctx := context.WithValue(testToolContext(dbmsLocal), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
 	})
 
@@ -114,7 +113,7 @@ func TestEditCodeTool(t *testing.T) {
 	assert.This(res.Library).Is("stdlib")
 	assert.This(res.Name).Is("Foo")
 
-	th2 := core.NewThread(core.MainThread)
+	th2 := core.NewThread(dbmsLocal, nil)
 	tran2 := dbmsLocal.Transaction(false, core.AllPerms)
 	q2 := tran2.Query("stdlib where group = -1 and name = 'Foo'", nil)
 	hdr2 := q2.Header()
@@ -140,7 +139,7 @@ func TestEditCodeTool(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	th3 := core.NewThread(core.MainThread)
+	th3 := core.NewThread(dbmsLocal, nil)
 	tran3 := dbmsLocal.Transaction(false, core.AllPerms)
 	q3 := tran3.Query("stdlib where group = -1 and name = 'Foo'", nil)
 	hdr3 := q3.Header()

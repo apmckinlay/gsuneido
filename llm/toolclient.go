@@ -63,10 +63,9 @@ type ToolClient struct {
 }
 
 // NewToolClient creates a direct local tool client.
-// A nil parent denies permissions, even when standalone defaults are trusted.
 func NewToolClient(parent *core.Thread) (*ToolClient, error) {
 	// Capture before asynchronous work; never read the executing caller again.
-	thread := core.NewThread(parent)
+	thread := parent.NewChild()
 	tools := make([]localTool, 0, len(toolSpecs))
 	openAITools := make([]Tool, 0, len(toolSpecs))
 	for _, spec := range toolSpecs {
@@ -97,7 +96,7 @@ type toolThreadKey struct{}
 
 func toolThread(ctx context.Context) *core.Thread {
 	parent, _ := ctx.Value(toolThreadKey{}).(*core.Thread)
-	return core.NewThread(parent)
+	return parent.NewChild()
 }
 
 func (c *ToolClient) getTool(name string) (localTool, bool) {

@@ -32,12 +32,11 @@ import (
 
 func TestFuzzBug(t *testing.T) {
 	assert.TestOnlyIndividually(t)
-	openDbms()
-	defer db.CloseKeepMapped()
+	localDbms := openDbms()
 
 	// seed: 7948325488
 	query := `((cus extend ik = c3) join ivc) join (aln union (bln union aln))`
-	th := &Thread{}
+	th := NewThread(localDbms, AllPerms)
 	x := builtin.QueryHash(th, []Value{SuStr(query), True})
 	y := builtin.QueryAltHash(th, []Value{SuStr(query), True})
 	assert.This(x).Is(y)

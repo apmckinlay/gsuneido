@@ -95,6 +95,11 @@ func (cc *ClientConn) NewClientSession() *ClientSession {
 	return &ClientSession{cc: cc, rch: rch, WriteBuf: *wb}
 }
 
+// NewClientSession creates a new ClientSession on the same connection
+func (cs *ClientSession) NewClientSession() *ClientSession {
+	return cs.cc.NewClientSession()
+}
+
 func (cs *ClientSession) read() []byte {
 	return <-cs.rch
 }

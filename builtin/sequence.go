@@ -12,7 +12,8 @@ import (
 var _ = builtin(Sequence, "(iter) :sequence")
 
 func Sequence(th *Thread, args []Value) Value {
-	return NewSuSequence(&wrapIter{it: args[0], th: th, perms: th.Perms()})
+	return NewSuSequence(&wrapIter{it: args[0], th: th,
+		perms: th.Perms(), dbms: th.Dbms()})
 }
 
 // wrapIter adapts a Suneido iterator (a class with Next,Dup,Infinite)
@@ -25,6 +26,7 @@ type wrapIter struct {
 	th         *Thread
 	suneido    *SuneidoObject
 	perms      *Perms
+	dbms       IDbms
 	concurrent bool
 }
 
@@ -43,7 +45,7 @@ func (wi *wrapIter) Infinite() (result bool) {
 func (wi *wrapIter) Dup() Iter {
 	it := wi.call("Dup")
 	return &wrapIter{it: it, th: wi.th, suneido: wi.suneido,
-		perms: wi.perms, concurrent: wi.concurrent}
+		perms: wi.perms, dbms: wi.dbms, concurrent: wi.concurrent}
 }
 
 func (wi *wrapIter) SetConcurrent() {
@@ -65,10 +67,9 @@ func (wi *wrapIter) IsConcurrent() Value {
 func (wi *wrapIter) call(method string) Value {
 	th := wi.th
 	if wi.concurrent { // concurrent
-		th = NewThread(nil)
+		th = NewThread(wi.dbms.New(), wi.perms)
 		th.Name = "*internal*"
 		th.Suneido.Store(wi.suneido)
-		th.SetPerms(wi.perms)
 		defer th.Close()
 	}
 	return th.CallLookup(wi.it, method)

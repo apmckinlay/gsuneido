@@ -16,7 +16,7 @@ func TestThreadPerms(t *testing.T) {
 	p.AddTable("allowed", "read")
 	parent.SetPerms(p)
 	parent.SetNewPerms(p)
-	child := NewThread(parent)
+	child := parent.NewChild()
 	assert.That(child.Perms() == p)
 	assert.That(child.NewPerms() == nil)
 	assert.True(child.Perms().TableActAllowed("allowed", PermRead))
@@ -25,5 +25,4 @@ func TestThreadPerms(t *testing.T) {
 	assert.That(parent.Perms() == nil)
 	assert.That(parent.NewPerms() == nil)
 	assert.That(child.Perms() == p)
-	assert.That(NewThread(nil).Perms() == nil)
 }

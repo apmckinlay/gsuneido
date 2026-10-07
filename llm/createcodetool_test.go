@@ -21,11 +21,10 @@ func TestCreateCodeTool(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)")
 
-	ctx := context.WithValue(testToolContext(), approvalFnKey{}, func(before, after string) (bool, error) {
+	ctx := context.WithValue(testToolContext(dbmsLocal), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
 	})
 
@@ -52,7 +51,7 @@ func TestCreateCodeTool(t *testing.T) {
 	assert.This(res.Name).Is("Foo")
 
 	// Verify create via direct query: num, parent, text, lib_modified
-	th0 := core.NewThread(core.MainThread)
+	th0 := core.NewThread(dbmsLocal, nil)
 	tran0 := dbmsLocal.Transaction(false, core.AllPerms)
 	q0 := tran0.Query("stdlib where group = -1 and name = 'Foo'", nil)
 	hdr0 := q0.Header()
@@ -86,7 +85,7 @@ func TestCreateCodeTool(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	th3 := core.NewThread(core.MainThread)
+	th3 := core.NewThread(dbmsLocal, nil)
 	tran3 := dbmsLocal.Transaction(false, core.AllPerms)
 	st3 := core.NewSuTran(tran3, false)
 
@@ -123,18 +122,17 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create stdlib (name, text, path, lib_before_text, lib_before_path, lib_modified, lib_committed, group, num, parent) key(num) key(name, group)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', path: 'A/B', lib_before_text: '', lib_before_path: '', lib_modified: #20200101, lib_committed: #20240203, group: -1, num: 42, parent: 7 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
 	th.Close()
 
-	ctx := context.WithValue(testToolContext(), approvalFnKey{}, func(before, after string) (bool, error) {
+	ctx := context.WithValue(testToolContext(dbmsLocal), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
 	})
 
@@ -145,7 +143,7 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 	}
 
 	// Verify it's soft-deleted (group = -2)
-	th2 := core.NewThread(core.MainThread)
+	th2 := core.NewThread(dbmsLocal, nil)
 	tran2 := dbmsLocal.Transaction(false, core.AllPerms)
 	q := tran2.Query("stdlib where group = -2 and name = 'Foo'", nil)
 	row, _ := q.Get(th2, core.Next)
@@ -162,7 +160,7 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 	assert.This(res.Name).Is("Foo")
 
 	// Verify restoration: fields preserved, only text/lib_modified updated
-	th3 := core.NewThread(core.MainThread)
+	th3 := core.NewThread(dbmsLocal, nil)
 	defer th3.Close()
 	tran3 := dbmsLocal.Transaction(false, core.AllPerms)
 	q2 := tran3.Query("stdlib where group = -1 and name = 'Foo'", nil)

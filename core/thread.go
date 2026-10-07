@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/core/trace"
-	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/atomics"
 	"github.com/apmckinlay/gsuneido/util/cache"
@@ -125,20 +124,28 @@ type thread2 struct {
 
 var threadNum atomic.Int32
 
-// NewThread creates a new thread.
-// It is primarily used for user initiated threads.
-// If parent is nil the new thread will not have any permissions.
-func NewThread(parent *Thread) *Thread {
+// NewThread creates a new thread with the given dbms and perms
+func NewThread(dbms IDbms, perms *Perms) *Thread {
 	th := setup(&Thread{})
-	if parent != nil {
-		if suneido := parent.Suneido.Load(); suneido != nil {
-			suneido.SetConcurrent()
-			th.Suneido.Store(suneido)
-		}
-		th.sv = parent.sv
-		th.perms = parent.perms
-	}
+	th.dbms = dbms
+	th.perms = perms
 	return th
+}
+
+// NewChild creates a new child thread
+// with the parent's suneido, sv, perms, and dbms
+func (th *Thread) NewChild() *Thread {
+	child := setup(&Thread{})
+	if suneido := th.Suneido.Load(); suneido != nil {
+		suneido.SetConcurrent()
+		child.Suneido.Store(suneido)
+	}
+	child.sv = th.sv
+	child.perms = th.perms
+	if th.dbms != nil {
+		child.dbms = th.dbms.New()
+	}
+	return child
 }
 
 func setup(th *Thread) *Thread {
@@ -362,24 +369,17 @@ func (th *Thread) SetDbms(dbms IDbms) IDbms {
 	return prev
 }
 
-// GetDbms requires dependency injection
-var GetDbms = func() IDbms { panic("no dbms") }
-
 func (th *Thread) Dbms() IDbms {
 	if th.dbms == nil {
-		th.dbms = GetDbms()
-		if s := th.session.Load(); s != "" {
-			// session id was set before connecting
-			th.dbms.SessionId(th, s)
-		}
+		panic("thread does not have dbms")
 	}
 	return th.dbms
 }
 
-// Close closes the thread's dbms connection (if it has one)
+// Close closes the thread's dbms connection
 func (th *Thread) Close() {
-	if th.dbms != nil && options.Action == "client" {
-		th.dbms.Close()
+	if th.dbms != nil {
+		th.dbms.CloseConn()
 		th.dbms = nil
 	}
 }
@@ -388,14 +388,7 @@ func (th *Thread) SessionId(id string) string {
 	if id != "" && th == MainThread {
 		log.SetPrefix(id + " ")
 	}
-	if th.dbms == nil {
-		// don't create a connection just to get/set the session id
-		if id != "" {
-			th.SetSession(id)
-		}
-		return th.Session()
-	}
-	return th.dbms.SessionId(th, id)
+	return th.Dbms().SessionId(th, id)
 }
 
 func (th *Thread) Regex(x Value) regex.Pattern {

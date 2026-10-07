@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/dbms"
 	. "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -15,8 +16,7 @@ import (
 func TestBug(t *testing.T) {
 	assert.TestOnlyIndividually(t)
 
-	openDbms()
-	defer db.CloseKeepMapped()
+	localDbms := openDbms()
 
 	query := `eta_orders_assocs where etaorder_void_date is "" and
         etaorder_status isnt "Completed"
@@ -28,7 +28,7 @@ func TestBug(t *testing.T) {
  		where etaequip_num_tractor_mandatory is #20260506.085754503103`
 	th := &Thread{}
 
-	tran := db.NewReadTran(AllPerms)
+	tran := localDbms.Transaction(false, AllPerms).(*dbms.ReadTranLocal)
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	fmt.Println("optimized:", String(q))

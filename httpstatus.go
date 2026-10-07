@@ -25,11 +25,13 @@ import (
 
 var httpServer *http.Server
 
-func startHttpStatus() {
+func startHttpStatus(dbmsLocal *dbms.DbmsLocal) {
 	if httpServer != nil {
 		return // already started
 	}
-	http.HandleFunc("/", httpStatus)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		httpStatus(w, dbmsLocal)
+	})
 	http.HandleFunc("/metrics/", httpMetrics)
 	http.HandleFunc("/info/", httpInfo)
 	port := "3148"
@@ -49,7 +51,7 @@ func startHttpStatus() {
 	}()
 }
 
-func httpStatus(w http.ResponseWriter, _ *http.Request) {
+func httpStatus(w http.ResponseWriter, dbmsLocal *dbms.DbmsLocal) {
 	io.WriteString(w,
 		`<html>
 		<head>
@@ -58,12 +60,12 @@ func httpStatus(w http.ResponseWriter, _ *http.Request) {
 		</head>
 		<body>
 		<h1>Suneido Server Monitor</h1>
-		`+body()+`
+		`+body(dbmsLocal)+`
 		</body>
 		</html>`)
 }
 
-func body() string {
+func body(dbmsLocal *dbms.DbmsLocal) string {
 	extra := ""
 	switch options.DbStatus.Load() {
 	case "starting":
@@ -82,7 +84,7 @@ func body() string {
 		threads()
 	if dbmsLocal != nil {
 		s += `<p>Database: ` + mb(dbmsLocal.Size()) + `
-		` + trans() + `
+		` + trans(dbmsLocal) + `
 		` + dbms.Conns()
 	}
 	return s + `<p><a href="info/">Suneido Info</a> &nbsp;&nbsp;
@@ -115,7 +117,7 @@ func threads() string {
 	return sb.String()
 }
 
-func trans() string {
+func trans(dbmsLocal *dbms.DbmsLocal) string {
 	list := dbmsLocal.Transactions()
 	n := list.Size()
 	var sb strings.Builder

@@ -20,7 +20,6 @@ var done chan struct{}
 
 func main() {
 	th := &core.Thread{}
-	th.SetPerms(core.AllPerms)
 	agent := llm.NewAgent(th, "https://openrouter.ai/api/v1",
 		os.Getenv("OPENROUTER_API_KEY"), model, "", outfn, func() {}, func() {})
 	reader := bufio.NewReader(os.Stdin)

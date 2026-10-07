@@ -4,8 +4,14 @@
 package core
 
 // IDbms is the interface to the dbms package.
-// The two implementations, DbmsLocal and DbmsClient, are in the dbms package
+// The implementations are in the dbms package
+// (DbmsLocal, DbmsUnauth, DbmsClient, and muxSession)
 type IDbms interface {
+	// New returns an IDbms suitable for a new thread based on this one.
+	// DbmsLocal and DbmsUnauth return themselves (safe to share).
+	// muxSession creates a new multiplexed session.
+	New() IDbms
+
 	// Admin executes a schema change (create, alter, drop).
 	// perms authorize the change; nil denies all.
 	Admin(string, *Sviews, *Perms)
@@ -17,8 +23,8 @@ type IDbms interface {
 	// It returns "" or an error message.
 	Check(full bool) string
 
-	// Close ends a dbms connection
-	Close()
+	// CloseConn ends a dbms connection
+	CloseConn()
 
 	// Connections returns a list of the current server connections
 	Connections() Value

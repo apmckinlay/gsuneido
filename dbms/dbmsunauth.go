@@ -5,7 +5,6 @@ package dbms
 
 import (
 	. "github.com/apmckinlay/gsuneido/core"
-	"github.com/apmckinlay/gsuneido/util/atomics"
 )
 
 /*
@@ -32,11 +31,6 @@ func Unauth(dbms *DbmsLocal) IDbms {
 	return &DbmsUnauth{dbms: dbms}
 }
 
-// StandaloneDbms is the current dbms for standalone mode.
-// It starts as an unauth wrapper and is replaced by DbmsLocal on auth.
-// Needs atomic because Auth runs on a different thread than GetDbms callers.
-var StandaloneDbms atomics.Intfc[IDbms]
-
 // DbmsUnauth is a wrapper for DbmsLocal for unauthorized client connections.
 // Only allows LibGet, Libraries, SessionId, and Use
 type DbmsUnauth struct {
@@ -60,23 +54,23 @@ func (du *DbmsUnauth) Auth(th *Thread, data Value) (result bool) {
 			th.SetDbms(prev)
 		}
 	}()
-	result = du.dbms.Auth(th, data)
-	if result {
-		StandaloneDbms.Store(du.dbms) // unwrap
-	}
-	return result
+	return du.dbms.Auth(th, data)
 }
 
 func (du *DbmsUnauth) Check(bool) string {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Close() {
-	du.dbms.Close()
+func (du *DbmsUnauth) CloseConn() {
+	du.dbms.CloseConn()
 }
 
 func (du *DbmsUnauth) Connections() Value {
 	panic(notauth)
+}
+
+func (du *DbmsUnauth) New() IDbms {
+	return du
 }
 
 func (du *DbmsUnauth) Cursor(string, *Sviews, *Perms) ICursor {

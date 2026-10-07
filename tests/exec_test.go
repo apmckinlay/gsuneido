@@ -10,6 +10,7 @@ import (
 
 	lex "github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/dbms"
 
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
@@ -187,7 +188,7 @@ func init() {
 
 func execute(args []string, _ []bool) bool {
 	src := "function () {\n" + args[0] + "\n}"
-	var th Thread
+	th := NewThread(dbms.Unauth(nil), nil)
 	expected := "**notfalse**"
 	if len(args) > 1 {
 		expected = args[1]

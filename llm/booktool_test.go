@@ -21,11 +21,10 @@ func TestBookTool(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create mybook (name, path, text, order) key(name, path)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	tran.Action(th, "insert { name: 'Introduction', path: '', text: 'intro text', order: 1 } into mybook")
 	tran.Action(th, "insert { name: 'Reference', path: '', text: 'ref text', order: 2 } into mybook")
@@ -37,7 +36,7 @@ func TestBookTool(t *testing.T) {
 	tran.Complete()
 
 	// root children (path not supplied)
-	res, err := bookTool(testToolContext(), "mybook", "")
+	res, err := bookTool(testToolContext(dbmsLocal), "mybook", "")
 	assert.That(err == nil)
 	assert.This(res.Book).Is("mybook")
 	assert.This(res.Path).Is("")
@@ -47,7 +46,7 @@ func TestBookTool(t *testing.T) {
 	assert.That(!slices.Contains(children, "res"))
 
 	// root children (path supplied)
-	res, err = bookTool(testToolContext(), "mybook", "/")
+	res, err = bookTool(testToolContext(dbmsLocal), "mybook", "/")
 	assert.That(err == nil)
 	assert.This(res.Book).Is("mybook")
 	assert.This(res.Path).Is("")
@@ -57,7 +56,7 @@ func TestBookTool(t *testing.T) {
 	assert.That(!slices.Contains(children, "res"))
 
 	// text and children, sorted by order then name
-	res, err = bookTool(testToolContext(), "mybook", "Reference")
+	res, err = bookTool(testToolContext(dbmsLocal), "mybook", "Reference")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("ref text")
 	children = res.Children
@@ -66,14 +65,14 @@ func TestBookTool(t *testing.T) {
 	assert.This(children[1]).Is("Date")
 
 	// also works with leading /
-	res, err = bookTool(testToolContext(), "mybook", "/Reference")
+	res, err = bookTool(testToolContext(dbmsLocal), "mybook", "/Reference")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("ref text")
 	children = res.Children
 	assert.This(len(children)).Is(2)
 
 	// deeper path
-	res, err = bookTool(testToolContext(), "mybook", "Reference/Date")
+	res, err = bookTool(testToolContext(dbmsLocal), "mybook", "Reference/Date")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("date text")
 	children = res.Children
@@ -81,17 +80,17 @@ func TestBookTool(t *testing.T) {
 	assert.This(children[0]).Is("FormatEn")
 
 	// leaf with no children
-	res, err = bookTool(testToolContext(), "mybook", "Reference/Date/FormatEn")
+	res, err = bookTool(testToolContext(dbmsLocal), "mybook", "Reference/Date/FormatEn")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("format text")
 	assert.This(len(res.Children)).Is(0)
 
-	res, err = bookTool(testToolContext(), "mybook", "res")
+	res, err = bookTool(testToolContext(dbmsLocal), "mybook", "res")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("")
 	assert.This(len(res.Children)).Is(0)
 
-	res, err = bookTool(testToolContext(), "mybook", "res/Images")
+	res, err = bookTool(testToolContext(dbmsLocal), "mybook", "res/Images")
 	assert.That(err == nil)
 	assert.This(res.Text).Is("")
 	assert.This(len(res.Children)).Is(0)

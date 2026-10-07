@@ -47,16 +47,9 @@ func TestStandalonePerms(t *testing.T) {
 	defer db.Close()
 	local := NewDbmsLocal(db)
 	unauth := Unauth(local)
-	prevDbms := StandaloneDbms.Load()
-	prevGetDbms := GetDbms
-	defer func() {
-		StandaloneDbms.Store(prevDbms)
-		GetDbms = prevGetDbms
-		Global.UnloadAll()
-	}()
-	StandaloneDbms.Store(unauth)
-	GetDbms = func() IDbms { return StandaloneDbms.Load() }
-	th := NewThread(nil)
+	defer Global.UnloadAll()
+	th := &Thread{}
+	th.SetDbms(unauth)
 	assert.That(th.Dbms() == unauth)
 	assert.That(th.Perms() == nil)
 	Global.TestDef("Auth", &SuBuiltinRaw{

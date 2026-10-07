@@ -81,6 +81,10 @@ func (*DbmsLocal) Connections() Value {
 	return connections()
 }
 
+func (dbms *DbmsLocal) New() IDbms {
+	return dbms // ok to reuse, thread-safe
+}
+
 // Cursor builds a cursor using perms for the transaction it is planned with.
 // Passing the connection's perms also protects against accidentally using
 // the build transaction instead of the transaction passed to Get.
@@ -347,6 +351,10 @@ func (dbms *DbmsLocal) FormatQuery(query string, perms *Perms) string {
 	t := dbms.db.NewReadTran(perms)
 	defer t.Complete()
 	return qry.Format(t, query)
+}
+
+func (dbms *DbmsLocal) CloseConn() {
+	// nop for DbmsLocal
 }
 
 func (dbms *DbmsLocal) Close() {

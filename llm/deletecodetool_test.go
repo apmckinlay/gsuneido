@@ -21,18 +21,17 @@ func TestDeleteCodeTool(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create stdlib (name, text, lib_before_text, lib_modified, group, num, parent) key(num) key(name, group)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', lib_before_text: '', lib_modified: #20200101, group: -1, num: 1, parent: 0 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
 	th.Close()
 
-	ctx := context.WithValue(testToolContext(), approvalFnKey{}, func(before, after string) (bool, error) {
+	ctx := context.WithValue(testToolContext(dbmsLocal), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
 	})
 
@@ -61,7 +60,7 @@ func TestDeleteCodeTool(t *testing.T) {
 	assert.This(res.Action).Is("deleted")
 
 	// verify delete
-	th2 := core.NewThread(core.MainThread)
+	th2 := core.NewThread(dbmsLocal, nil)
 	defer th2.Close()
 	tran2 := dbmsLocal.Transaction(false, core.AllPerms)
 	q := tran2.Query("stdlib where group = -1 and name = 'Foo'", nil)
@@ -77,18 +76,17 @@ func TestDeleteCodeTool_SoftDeleteCommitted(t *testing.T) {
 	db.CheckerSync()
 	db19.StartConcur(db, 50*time.Millisecond)
 	dbmsLocal := dbms.NewDbmsLocal(db)
-	core.GetDbms = func() core.IDbms { return dbmsLocal }
 
 	dbmsLocal.AdminTest("create stdlib (name, text, path, lib_before_text, lib_before_path, lib_modified, lib_committed, group, num, parent) key(num) key(name, group)")
 
-	th := core.NewThread(core.MainThread)
+	th := core.NewThread(dbmsLocal, nil)
 	tran := dbmsLocal.Transaction(true, core.AllPerms)
 	n := tran.Action(th, "insert { name: 'Foo', text: 'function(){}', path: 'A/B', lib_before_text: '', lib_before_path: '', lib_modified: #20200101, lib_committed: #20240203, group: -1, num: 1, parent: 0 } into stdlib")
 	assert.This(n).Is(1)
 	tran.Complete()
 	th.Close()
 
-	ctx := context.WithValue(testToolContext(), approvalFnKey{}, func(before, after string) (bool, error) {
+	ctx := context.WithValue(testToolContext(dbmsLocal), approvalFnKey{}, func(before, after string) (bool, error) {
 		return true, nil
 	})
 
@@ -100,7 +98,7 @@ func TestDeleteCodeTool_SoftDeleteCommitted(t *testing.T) {
 	assert.This(res.Name).Is("Foo")
 	assert.This(res.Action).Is("soft-deleted")
 
-	th2 := core.NewThread(core.MainThread)
+	th2 := core.NewThread(dbmsLocal, nil)
 	defer th2.Close()
 	tran2 := dbmsLocal.Transaction(false, core.AllPerms)
 
