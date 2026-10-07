@@ -18,7 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-const maxColumns = 1000
+const maxColumns = 2000
 const maxIndexes = 100
 
 type Schema struct {
