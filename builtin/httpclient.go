@@ -86,6 +86,9 @@ func HttpsClient(th *Thread, args []Value) Value {
 	}
 	method := ToStr(args[0])
 	url := ToStr(args[1])
+	if len(url) < 8 || !strings.EqualFold(url[:8], "https://") {
+		panic("HttpsClient: URL must start with 'https://', got " + url)
+	}
 	var rdr io.Reader
 	if isFunction(args[2]) {
 		rdr = &reader{th: th, fn: args[2]}
