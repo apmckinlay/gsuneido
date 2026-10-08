@@ -7,6 +7,7 @@ package builtin
 
 import (
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"log"
@@ -24,7 +25,16 @@ func HttpsServer(th *Thread, args []Value) Value {
 	if err != nil {
 		log.Fatalf("ERROR: Failed to load embedded key pair: %v", err)
 	}
-	tlsConfig := &tls.Config{Certificates: []tls.Certificate{cert}}
+	clientCAPool := x509.NewCertPool()
+	if !clientCAPool.AppendCertsFromPEM(dbms.ClientCert) {
+		log.Fatalf("ERROR: Failed to append embedded client cert to pool")
+	}
+	// mutual TLS: only accept clients that present the embedded client cert
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    clientCAPool,
+	}
 	port := ToInt(args[0])
 	addr := fmt.Sprint(":", port)
 	server := &http.Server{

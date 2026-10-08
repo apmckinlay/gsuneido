@@ -62,7 +62,7 @@ func HttpClient2(th *Thread, args []Value) Value {
 var _ = builtin(HttpsClient, `(method :string, url :string,
 	content = '', header = #(), timeout = 60, block = false) :void|object`)
 
-// HttpsClient makes an HTTPS request embedded cert
+// HttpsClient makes an HTTPS request using the embedded cert
 func HttpsClient(th *Thread, args []Value) Value {
 	guardSandbox("HttpsClient")
 	caCertPool := x509.NewCertPool()
@@ -70,9 +70,14 @@ func HttpsClient(th *Thread, args []Value) Value {
 	if !ok {
 		panic("Failed to append embedded cert to pool")
 	}
+	cert, err := tls.X509KeyPair(dbms.ClientCert, dbms.ClientKey)
+	if err != nil {
+		panic("Failed to load embedded client key pair: " + err.Error())
+	}
 	config := &tls.Config{
-		RootCAs:    caCertPool,
-		ServerName: "localhost", // Must match CN or SAN
+		RootCAs:      caCertPool,
+		ServerName:   "localhost", // Must match CN or SAN
+		Certificates: []tls.Certificate{cert},
 	}
 	client := &http.Client{
 		Transport: &http.Transport{
