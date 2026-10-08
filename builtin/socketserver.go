@@ -156,11 +156,11 @@ func (sm *suServerMaster) connect(name string, conn net.Conn, ctx ThreadContext)
 	}
 	defer sc.close()
 	th := ctx.NewThread()
+	defer th.Close()
 	th.Name = str.BeforeFirst(th.Name, " ") + " " + name
 	if f := sc.Lookup(th, "Run"); f != nil {
 		threads.add(th)
 		defer func() {
-			th.Close()
 			threads.remove(th.Num)
 			if e := recover(); e != nil {
 				LogUncaught(th, "SocketServer", e)

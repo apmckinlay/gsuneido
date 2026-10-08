@@ -195,7 +195,6 @@ func setup(th *Thread) *Thread {
 
 // Invalidate is used by workers to help detect use of thread after request
 func (th *Thread) Invalidate() {
-	th.session.Store("INVALID")
 	th.sp = math.MaxInt
 	th.fp = math.MaxInt
 }
