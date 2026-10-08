@@ -133,19 +133,53 @@ func NewThread(dbms IDbms, perms *Perms) *Thread {
 }
 
 // NewChild creates a new child thread
-// with the parent's suneido, sv, perms, and dbms
+// with the parent's suneido, sviews, perms, and dbms
 func (th *Thread) NewChild() *Thread {
-	child := setup(&Thread{})
-	if suneido := th.Suneido.Load(); suneido != nil {
-		suneido.SetConcurrent()
-		child.Suneido.Store(suneido)
+	return th.Context().NewThread()
+}
+
+// ThreadContext is the session-scoped state carried over to a new thread.
+// Capture it on the originating thread before starting another goroutine.
+type ThreadContext struct {
+	Suneido *SuneidoObject
+	Perms   *Perms
+	Dbms    IDbms
+	Sviews  *Sviews
+}
+
+// Context returns the thread's session context.
+// It has no side effects so it can be called more than once.
+func (th *Thread) Context() ThreadContext {
+	return ThreadContext{
+		Suneido: th.Suneido.Load(),
+		Perms:   th.perms,
+		Dbms:    th.dbms,
+		Sviews:  th.sv,
 	}
-	child.sv = th.sv
-	child.perms = th.perms
-	if th.dbms != nil {
-		child.dbms = th.dbms.New()
+}
+
+// NewThread creates a new thread carrying this context.
+// The dbms is cloned so each thread has its own.
+func (ctx ThreadContext) NewThread() *Thread {
+	th := setup(&Thread{})
+	ctx.SetConcurrent()
+	if ctx.Suneido != nil {
+		th.Suneido.Store(ctx.Suneido)
 	}
-	return child
+	th.perms = ctx.Perms
+	th.sv = ctx.Sviews
+	if ctx.Dbms != nil {
+		th.dbms = ctx.Dbms.New()
+	}
+	return th
+}
+
+// SetConcurrent marks the context's Suneido as concurrent.
+// It must be called on the originating thread before sharing.
+func (ctx ThreadContext) SetConcurrent() {
+	if ctx.Suneido != nil {
+		ctx.Suneido.SetConcurrent()
+	}
 }
 
 func setup(th *Thread) *Thread {

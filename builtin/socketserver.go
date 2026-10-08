@@ -124,6 +124,8 @@ func (sm *suServerMaster) listen(th *Thread, name string, port int) {
 		th.CallThis(fn, sm, &killer{kill: func() { ln.Close() }})
 	}
 	defer ln.Close()
+	ctx := th.Context()
+	ctx.SetConcurrent() // mark before sharing with the connection goroutines
 	for {
 		socketServerLimiter.Wait(socketServerContext)
 		conn, err := ln.Accept()
@@ -138,11 +140,11 @@ func (sm *suServerMaster) listen(th *Thread, name string, port int) {
 				port, name)
 			return
 		}
-		go sm.connect(name, conn, th.Perms(), th.Dbms().New()) // goroutine per connection
+		go sm.connect(name, conn, ctx) // goroutine per connection
 	}
 }
 
-func (sm *suServerMaster) connect(name string, conn net.Conn, perms *Perms, dbms IDbms) {
+func (sm *suServerMaster) connect(name string, conn net.Conn, ctx ThreadContext) {
 	nSocketServerConn.Add(1)
 	client := suSocketClient{
 		conn: conn.(*net.TCPConn), rdr: bufio.NewReader(conn),
@@ -153,7 +155,7 @@ func (sm *suServerMaster) connect(name string, conn net.Conn, perms *Perms, dbms
 		client:     client,
 	}
 	defer sc.close()
-	th := NewThread(dbms, perms)
+	th := ctx.NewThread()
 	th.Name = str.BeforeFirst(th.Name, " ") + " " + name
 	if f := sc.Lookup(th, "Run"); f != nil {
 		threads.add(th)
