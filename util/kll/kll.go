@@ -84,9 +84,12 @@ func (sk *Sketch[T]) compact(h int) {
 	}
 	dst := sk.levels[h-1]
 
+	// pick one of each adjacent pair, using the random parity to decide
+	// whether the unpaired last element (when the length is odd) is kept,
+	// as in KLL; always dropping it biases the sketch low and loses the max
 	which := rand.IntN(2)
-	for i := 1; i < len(src); i += 2 {
-		dst = append(dst, src[i-which])
+	for i := which; i < len(src); i += 2 {
+		dst = append(dst, src[i])
 	}
 	sk.levels[h] = src[:0]
 	sk.levels[h-1] = dst
@@ -95,10 +98,10 @@ func (sk *Sketch[T]) compact(h int) {
 func (sk *Sketch[T]) compactInPlace(h int) {
 	src := sk.levels[h]
 	slices.Sort(src)
-	write := 0
 	which := rand.IntN(2)
-	for i := 1; i < len(src); i += 2 {
-		src[write] = src[i-which]
+	write := 0
+	for i := which; i < len(src); i += 2 {
+		src[write] = src[i]
 		write++
 	}
 	sk.levels[h] = src[:write]
