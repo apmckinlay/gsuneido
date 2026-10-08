@@ -125,6 +125,37 @@ func TestQuantiles4(t *testing.T) {
 	fmt.Println(qs[50:])
 }
 
+func TestQuantilesUnique(t *testing.T) {
+	sk := New[int]()
+	n := 100_000
+	for i := range n {
+		sk.Insert(i)
+	}
+	qs := sk.Quantiles(51)
+	// compaction used to always drop the unpaired last element, biasing the
+	// sketch low and padding the top quantiles with the same (maximum) value
+	assert.That(qs[len(qs)-2] < qs[len(qs)-1])
+	for i := 1; i < len(qs); i++ {
+		assert.Msg(i).That(qs[i-1] <= qs[i])
+	}
+	for i, v := range qs {
+		expected := i * (n - 1) / (len(qs) - 1)
+		assert.Msg(i, v, expected).That(ints.Abs(v-expected) < n/50)
+	}
+}
+
+func TestWeightConservation(t *testing.T) {
+	sk := New[int]()
+	for i := range 100_000 {
+		sk.Insert(i)
+	}
+	total := 0
+	for _, item := range sk.sortedItems() {
+		total += item.weight
+	}
+	assert.Msg(total, sk.Count()).That(ints.Abs(total-sk.Count()) < sk.Count()/50)
+}
+
 func TestLarge(t *testing.T) {
 	sk := New[int]()
 	for range 1_000_000 {
