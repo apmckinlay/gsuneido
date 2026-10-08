@@ -29,7 +29,7 @@ func HttpsServer(th *Thread, args []Value) Value {
 	addr := fmt.Sprint(":", port)
 	server := &http.Server{
 		Addr:      addr,
-		Handler:   &HttpHandler{th: th, app: args[1]},
+		Handler:   newHttpHandler(th, args[1]),
 		TLSConfig: tlsConfig,
 	}
 	if ob, ok := args[2].ToContainer(); ok {

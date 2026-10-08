@@ -26,7 +26,7 @@ func HttpServer(th *Thread, args []Value) Value {
 	addr := fmt.Sprint(":", port)
 	server := &http.Server{
 		Addr:    addr,
-		Handler: &HttpHandler{th: th, app: args[1]}}
+		Handler: newHttpHandler(th, args[1])}
 	if ob, ok := args[2].ToContainer(); ok {
 		ob.Put(th, SuStr("stop"), &suStopper{server: server})
 	}
@@ -37,16 +37,34 @@ func HttpServer(th *Thread, args []Value) Value {
 	return nil
 }
 
+// HttpHandler serves requests, each in its own thread, since
+// net/http handles each connection in a separate goroutine
+// and a Thread must not be shared between goroutines.
 type HttpHandler struct {
-	th  *Thread
+	ctx ThreadContext
 	app Value
+}
+
+// newHttpHandler captures the calling thread's context and marks the
+// shared app and Suneido state as concurrent before it is shared with
+// the per-request threads started by net/http.
+func newHttpHandler(th *Thread, app Value) *HttpHandler {
+	ctx := th.Context()
+	ctx.SetConcurrent()
+	app.SetConcurrent()
+	return &HttpHandler{ctx: ctx, app: app}
 }
 
 var argSpecEnv = &ArgSpec{Nargs: 1,
 	Spec: []byte{0}, Names: []Value{SuStr("env")}}
 
 func (h *HttpHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
+	th := h.ctx.NewThread()
+	th.Name += " HttpServer " + rq.Method + " " + rq.URL.Path
+	threads.add(th)
 	defer func() {
+		th.Close()
+		threads.remove(th.Num)
 		if r := recover(); r != nil {
 			http.Error(rw, fmt.Sprint("ERROR: ", r),
 				http.StatusInternalServerError) // 500
@@ -55,7 +73,7 @@ func (h *HttpHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 
 	rw.Header().Set("Server", "Suneido")
 	env := &suHttpEnv{rq: rq, rw: rw}
-	result := h.th.PushCall(h.app, nil, argSpecEnv, env) // CALL THE APP
+	result := th.PushCall(h.app, nil, argSpecEnv, env) // CALL THE APP
 	if env.done {
 		return
 	}
