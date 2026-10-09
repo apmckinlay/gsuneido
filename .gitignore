@@ -28,8 +28,8 @@ suneido.dbd
 *.zip
 *.ss
 !stdlib/**/*.ss
-server.crt
-server.key
+*.crt
+*.key
 *.in
 sujs_darwin_*
 sujs_linux_*
