@@ -26,7 +26,7 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-// sameStr avoids allocation from converting SuStr to value
+// sameStr avoids allocation from converting SuStr to Value interface
 func sameStr(x Value, s string) Value {
 	if ss, ok := x.(SuStr); ok && hacks.SameString(s, string(ss)) {
 		return x
