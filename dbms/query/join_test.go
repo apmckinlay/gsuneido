@@ -108,19 +108,3 @@ func TestJoin_LookupBug(t *testing.T) {
 			project a)`
 	assert.This(queryAll(db.Database, query)).Is("a=1")
 }
-
-// func rowstr(hdr *Header, row Row) string {
-// 	if row == nil {
-// 		return "nil"
-// 	}
-// 	var sb strings.Builder
-// 	sep := ""
-// 	for _, col := range hdr.Columns {
-// 		val := row.GetVal(hdr, col, nil, nil)
-// 		if val != EmptyStr {
-// 			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
-// 			sep = " "
-// 		}
-// 	}
-// 	return sb.String()
-// }
