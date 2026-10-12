@@ -77,6 +77,29 @@ func StrCat(parts ...string) Value {
 	return CatSuStrP(parts...)
 }
 
+// strRangeTo applies Suneido's range indexing to v (whose string is s).
+// It returns v itself if the range covers the whole string.
+func strRangeTo(v Value, s string, from int, to int) Value {
+	size := len(s)
+	from = prepFrom(from, size)
+	to = prepTo(from, to, size)
+	if from == 0 && to == size {
+		return v
+	}
+	return StrVal(s[from:to])
+}
+
+// strRangeLen is like strRangeTo but for from/length indexing.
+func strRangeLen(v Value, s string, from int, n int) Value {
+	size := len(s)
+	from = prepFrom(from, size)
+	n = prepLen(n, size-from)
+	if from == 0 && n == size {
+		return v
+	}
+	return StrVal(s[from : from+n])
+}
+
 // iterator
 
 type stringIter struct {

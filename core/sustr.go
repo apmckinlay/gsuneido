@@ -205,23 +205,11 @@ func (SuStr) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
 }
 
 func (ss SuStr) RangeTo(from int, to int) Value {
-	size := len(ss)
-	from = prepFrom(from, size)
-	to = prepTo(from, to, size)
-	if from == 0 && to == size {
-		return ss
-	}
-	return StrVal(string(ss)[from:to])
+	return strRangeTo(ss, string(ss), from, to)
 }
 
 func (ss SuStr) RangeLen(from int, n int) Value {
-	size := len(ss)
-	from = prepFrom(from, size)
-	n = prepLen(n, size-from)
-	if from == 0 && n == size {
-		return ss
-	}
-	return StrVal(string(ss)[from : from+n])
+	return strRangeLen(ss, string(ss), from, n)
 }
 
 func (ss SuStr) Hash() uint64 {

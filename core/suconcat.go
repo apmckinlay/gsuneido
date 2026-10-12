@@ -120,15 +120,11 @@ func (c SuConcat) Get(_ *Thread, key Value) Value {
 }
 
 func (c SuConcat) RangeTo(from int, to int) Value {
-	from = prepFrom(from, c.n)
-	to = prepTo(from, to, c.n)
-	return StrVal(c.toStr()[from:to])
+	return strRangeTo(c, c.toStr(), from, to)
 }
 
 func (c SuConcat) RangeLen(from int, n int) Value {
-	from = prepFrom(from, c.n)
-	n = prepLen(n, c.n-from)
-	return StrVal(c.toStr()[from : from+n])
+	return strRangeLen(c, c.toStr(), from, n)
 }
 
 func (c SuConcat) Hash() uint64 {

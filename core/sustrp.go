@@ -95,23 +95,11 @@ func (*SuStrP) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value
 }
 
 func (sp *SuStrP) RangeTo(from int, to int) Value {
-	size := sp.Len()
-	from = prepFrom(from, size)
-	to = prepTo(from, to, size)
-	if from == 0 && to == size {
-		return sp
-	}
-	return StrVal(sp.toStr()[from:to])
+	return strRangeTo(sp, sp.toStr(), from, to)
 }
 
 func (sp *SuStrP) RangeLen(from int, n int) Value {
-	size := sp.Len()
-	from = prepFrom(from, size)
-	n = prepLen(n, size-from)
-	if from == 0 && n == size {
-		return sp
-	}
-	return StrVal(sp.toStr()[from : from+n])
+	return strRangeLen(sp, sp.toStr(), from, n)
 }
 
 func (sp *SuStrP) Hash() uint64 {
