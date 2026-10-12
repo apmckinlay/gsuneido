@@ -89,8 +89,8 @@ func BenchmarkTranspile(b *testing.B) {
 }
 
 func transpilefn() Value {
-	sum := Zero
-	i := Zero
+	sum := Value(Zero)
+	i := Value(Zero)
 	for {
 		sum = OpAdd(sum, i) // sum += i
 		i = OpAdd(i, One)   // ++i

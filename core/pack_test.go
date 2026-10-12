@@ -106,7 +106,7 @@ func TestPackedCmpLower(t *testing.T) {
 
 func BenchmarkPack(b *testing.B) {
 	for b.Loop() {
-		bench = Pack(emptyStr)
+		bench = Pack(EmptyStr)
 	}
 }
 

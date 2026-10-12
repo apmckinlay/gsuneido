@@ -34,7 +34,7 @@ var G Value
 
 func BenchmarkCat(b *testing.B) {
 	for b.Loop() {
-		s := EmptyStr
+		s := Value(EmptyStr)
 		for range 10000 {
 			s = OpCat(s, abc)
 		}

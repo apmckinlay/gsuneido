@@ -23,15 +23,15 @@ import (
 )
 
 var (
-	Zero     Value = SuInt16(0)
-	One      Value = SuInt16(1)
-	MinusOne Value = SuInt16(-1)
-	MaxInt   Value = SuDnum{Dnum: dnum.FromInt(math.MaxInt32)}
-	Inf      Value = SuDnum{Dnum: dnum.PosInf}
-	NegInf   Value = SuDnum{Dnum: dnum.NegInf}
-	True     Value = SuBool(true)
-	False    Value = SuBool(false)
-	EmptyStr Value = NewSuStrP("")
+	Zero     = SuInt16(0)
+	One      = SuInt16(1)
+	MinusOne = SuInt16(-1)
+	MaxInt   = SuDnum{Dnum: dnum.FromInt(math.MaxInt32)}
+	Inf      = SuDnum{Dnum: dnum.PosInf}
+	NegInf   = SuDnum{Dnum: dnum.NegInf}
+	True     = SuBool(true)
+	False    = SuBool(false)
+	EmptyStr = NewSuStrP("")
 )
 
 func OpIs(x Value, y Value) Value {

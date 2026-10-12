@@ -535,9 +535,9 @@ func (is *Indexes) row(table string, idx *schema.Index) Row {
 	rb.Add(SuStr(str.Join(",", idx.Columns)))
 	switch idx.Mode {
 	case 'k':
-		rb.Add(True.(Packable))
+		rb.Add(True)
 	case 'i':
-		rb.Add(False.(Packable))
+		rb.Add(False)
 	case 'u':
 		rb.Add(SuStr("u"))
 	default:

@@ -66,7 +66,7 @@ func TestCompare(t *testing.T) {
 
 	// move EmptyStr to the beginning for packed ordering
 	vals = slices.DeleteFunc(vals, func(v Value) bool { return IsEmptyStr(v) })
-	vals = slices.Insert(vals, 0, EmptyStr)
+	vals = slices.Insert(vals, 0, Value(EmptyStr))
 
 	for i, x := range vals {
 		xp := Pack(x.(Packable))

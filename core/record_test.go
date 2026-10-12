@@ -91,8 +91,8 @@ func TestTruncate(t *testing.T) {
 	r2 = r.Truncate(2)
 	assert.This(r2.String()).Is(`{123, "hello world"}`)
 
-	b.Add(emptyStr)
-	b.Add(emptyStr)
+	b.Add(EmptyStr)
+	b.Add(EmptyStr)
 	r = b.Build()
 	r2 = r.Truncate(4)
 	assert.This(r2.String()).Is(`{123, "hello world", true}`)

@@ -405,8 +405,8 @@ func idIs(e Expr) (*Ident, Expr) {
 
 func (f Folder) foldMul(exprs []Expr) []Expr {
 	// extract and combine constants
-	mul := One
-	div := One
+	mul := Value(One)
+	div := Value(One)
 	dst := 0
 	for _, e := range exprs {
 		if ud := unaryDivConst(e); ud != nil {

@@ -68,11 +68,6 @@ func (ps *PackStack) push(x Value) {
 
 // Note: no pop required because of passing slice by value
 
-var emptyStr = EmptyStr.(*SuStrP)
-var boolTrue = True.(SuBool)
-var boolFalse = False.(SuBool)
-var zeroNum = Zero.(*smi)
-
 var PackedTrue = string([]byte{PackTrue})
 var PackedFalse = string([]byte{PackFalse})
 var packedZero = string([]byte{PackPlus})
@@ -83,13 +78,13 @@ var packedZero = string([]byte{PackPlus})
 // (e.g. object) is modified between/during PackSize and Pack.
 func Pack(x Packable) string {
 	switch x {
-	case emptyStr:
+	case EmptyStr:
 		return ""
-	case boolTrue:
+	case True:
 		return PackedTrue
-	case boolFalse:
+	case False:
 		return PackedFalse
-	case zeroNum:
+	case Zero:
 		return packedZero
 	}
 	hash1 := uint64(17)

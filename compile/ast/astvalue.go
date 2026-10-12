@@ -639,7 +639,7 @@ func get[T nodeVal](node T, m Value) Value {
 		return node
 	}
 	if i, ok := m.ToInt(); ok {
-		child := False
+		child := Value(False)
 		node.Children(func(nd Node) Node {
 			if i == 0 {
 				child = nd.(Value)

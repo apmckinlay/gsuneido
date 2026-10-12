@@ -191,7 +191,7 @@ func (b *RecordBuilder) Add(p Packable) *RecordBuilder {
 // AddRaw appends a string containing an already packed value
 func (b *RecordBuilder) AddRaw(s string) *RecordBuilder {
 	if s == "" {
-		b.Add(emptyStr)
+		b.Add(EmptyStr)
 	} else {
 		b.Add(Packed(s))
 	}
