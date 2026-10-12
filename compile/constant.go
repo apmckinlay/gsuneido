@@ -62,7 +62,7 @@ func (p *Parser) constant() Value {
 	case tok.String:
 		return p.string()
 	case tok.Symbol:
-		s := SuStr(p.Text)
+		s := StrVal(p.Text)
 		p.Next()
 		return s
 	case tok.Add:
@@ -107,7 +107,7 @@ func (p *Parser) constant() Value {
 			}
 			s := p.Text
 			p.Next()
-			return SuStr(s)
+			return StrVal(s)
 		}
 	}
 	panic(p.Error("invalid constant, unexpected " + p.Item.String()))
@@ -127,7 +127,7 @@ func (p *Parser) string() Value {
 	s := p.Text
 	p.Match(tok.String)
 	if !p.moreStr() {
-		return SuStr(s) // normal case
+		return StrVal(s) // normal case
 	}
 	strs := []string{s}
 	for p.moreStr() {
@@ -233,11 +233,11 @@ func (p *Parser) member(closing tok.Token, base Gnum) (k Value, v Value) {
 		if f, ok := fn.(*SuFunc); ok {
 			f.ClassName = p.className
 		}
-		return SuStr(name), fn
+		return StrVal(name), fn
 	}
 	if p.MatchIf(tok.Colon) { // named
 		if inClass {
-			m = SuStr(p.privatizeDef(m))
+			m = StrVal(p.privatizeDef(m))
 		}
 		if p.Token == tok.Comma || p.Token == tok.Semicolon || p.Token == closing {
 			return m, True
@@ -254,11 +254,10 @@ func (p *Parser) member(closing tok.Token, base Gnum) (k Value, v Value) {
 }
 
 func (p *Parser) privatizeDef(m Value) string {
-	ss, ok := m.(SuStr)
+	name, ok := m.ToStr()
 	if !ok {
 		p.Error("class member names must be strings")
 	}
-	name := string(ss)
 	if strings.HasPrefix(name, "Getter_") &&
 		len(name) > 7 && !ascii.IsUpper(name[7]) {
 		p.Error("invalid getter (" + name + ")")

@@ -19,6 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util/strp"
 )
 
 var (
@@ -30,7 +31,7 @@ var (
 	NegInf   Value = SuDnum{Dnum: dnum.NegInf}
 	True     Value = SuBool(true)
 	False    Value = SuBool(false)
-	// EmptyStr defined in sustr.go
+	EmptyStr Value = NewSuStrP("")
 )
 
 func OpIs(x Value, y Value) Value {
@@ -175,7 +176,7 @@ func OpUnaryPlus(x Value) Value {
 	if x.Type() == types.Number {
 		return x
 	}
-	if x == EmptyStr || x == False {
+	if IsEmptyStr(x) || x == False {
 		return Zero
 	}
 	panic("can't convert " + ErrType(x) + " to number")
@@ -185,54 +186,52 @@ func OpUnaryMinus(x Value) Value {
 	if xi, ok := SuIntToInt(x); ok {
 		return IntVal(-xi)
 	}
-	if x == EmptyStr || x == False {
+	if IsEmptyStr(x) || x == False {
 		return Zero
 	}
 	return SuDnum{Dnum: ToDnum(x).Neg()}
 }
 
 func OpCat(x, y Value) Value {
-	if ssx, ok := x.(SuStr); ok {
-		if ssy, ok := y.(SuStr); ok {
-			return cat2(string(ssx), string(ssy))
+	// not worth splitting the slow path into a separate function
+	if xp, ok := x.(*SuStrP); ok {
+		if yp, ok := y.(*SuStrP); ok {
+			xs := xp.toStr() // inlined
+			ys := yp.toStr() // inlined
+			if len(xs)+len(ys) < strp.MaxLen {
+				// normal fast path
+				return CatSuStrP(xs, ys) // inlined
+			}
 		}
 	}
-	return cat3(x, y)
-}
-
-func cat2(xs, ys string) Value {
-	const LARGE = 256 // ??? exact value not critical
-
-	if len(xs)+len(ys) < LARGE {
-		return SuStr(xs + ys)
-	}
-	if len(xs) == 0 {
-		return SuStr(ys)
-	}
-	if len(ys) == 0 {
-		return SuStr(xs)
-	}
-	return NewSuConcat().Add(xs).Add(ys)
-}
-
-func cat3(x, y Value) Value {
-	var result Value
-	if xc, ok := x.(SuConcat); ok {
-		result = xc.Add(AsStr(y))
-	} else {
-		result = cat2(AsStr(x), AsStr(y))
-	}
 	if xe, ok := x.(*SuExcept); ok {
-		return &SuExcept{SuStr: SuStr(AsStr(result)), Callstack: xe.Callstack}
+		return xe.Concat(string(xe.SuStr), AsStr(y))
 	}
 	if ye, ok := y.(*SuExcept); ok {
-		return &SuExcept{SuStr: SuStr(AsStr(result)), Callstack: ye.Callstack}
+		return ye.Concat(AsStr(x), string(ye.SuStr))
 	}
-	return result
+	if c, ok := x.(SuConcat); ok {
+		return c.Add(AsStr(y))
+	}
+	xs := AsStr(x)
+	ys := AsStr(y)
+	if len(xs) + len(ys) > strp.MaxLen {
+		return NewSuConcat().Add(xs).Add(ys)
+	}
+	return CatSuStrP(xs, ys)
 }
 
+// OpCatN concatenates multiple strings
 func OpCatN(th *Thread, count int) Value {
 	values := th.stack[th.sp-count : th.sp]
+	// stack-backed for the common small case, heap only when count is large
+	var local [8]string
+	var parts []string
+	if count <= len(local) {
+		parts = local[:count]
+	} else {
+		parts = make([]string, count)
+	}
 	totalLen := 0
 	var firstExcept *SuExcept
 	for i, v := range values {
@@ -241,25 +240,28 @@ func OpCatN(th *Thread, count int) Value {
 				firstExcept = xe
 			}
 		}
-		if ss, ok := v.(SuStr); ok {
-			totalLen += len(ss)
-		} else {
-			ss = SuStr(AsStr(v))
-			values[i] = ss
-			totalLen += len(ss)
-		}
+		s := AsStr(v)
+		parts[i] = s
+		totalLen += len(s)
+	}
+	th.sp -= count // pop
+	if firstExcept == nil && totalLen < strp.MaxLen {
+		// build the small-string (SuStrP) directly to avoid a temporary []byte
+		return (*SuStrP)(strp.Concat(parts...))
+	}
+	if totalLen > StringLimit {
+		panic(fmt.Sprint("concatenate: string > ", StringLimit))
 	}
 	result := make([]byte, totalLen)
 	pos := 0
-	for _, v := range values {
-		pos += copy(result[pos:], string(v.(SuStr)))
+	for _, s := range parts {
+		pos += copy(result[pos:], s)
 	}
-	th.sp -= count // pop
-	resultStr := SuStr(hacks.BStoS(result))
+	resultStr := hacks.BStoS(result)
 	if firstExcept != nil {
-		return &SuExcept{SuStr: resultStr, Callstack: firstExcept.Callstack}
+		return &SuExcept{SuStr: SuStr(resultStr), Callstack: firstExcept.Callstack}
 	}
-	return resultStr
+	return StrVal(resultStr)
 }
 
 func OpMatch(th *Thread, x Value, y Value) SuBool {

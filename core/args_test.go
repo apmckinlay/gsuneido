@@ -156,8 +156,8 @@ func makeOb() *SuObject {
 	var ob SuObject
 	ob.Add(SuInt16(11))
 	ob.Add(SuInt16(22))
-	ob.Set(SuStr1("a"), SuInt16(33))
-	ob.Set(SuStr1("b"), SuInt16(44))
+	ob.Set(StrVal("a"), SuInt16(33))
+	ob.Set(StrVal("b"), SuInt16(44))
 	return &ob
 }
 

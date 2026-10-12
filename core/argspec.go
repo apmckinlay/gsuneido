@@ -110,8 +110,8 @@ func (as *ArgSpec) String() string {
 		}
 		for _, i := range as.Spec {
 			sb.WriteString(sep)
-			if s, ok := as.Names[i].(SuStr); ok && lexer.IsIdentifier(string(s)) {
-				sb.WriteString(string(s))
+			if s, ok := as.Names[i].ToStr(); ok && lexer.IsIdentifier(s) {
+				sb.WriteString(s)
 			} else {
 				sb.WriteString(as.Names[i].String())
 			}

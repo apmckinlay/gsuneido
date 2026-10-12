@@ -52,7 +52,7 @@ func MultiByteToWideChar(str, cp Value) Value {
 	if err != nil {
 		panic("MultiByteToWideChar " + err.Error())
 	}
-	return SuStr(utf16 + "\x00\x00")
+	return StrCat(utf16, "\x00\x00")
 }
 
 const (

@@ -56,7 +56,7 @@ func num_Binary(this Value) Value {
 var _ = method(num_Chr, "() :string")
 
 func num_Chr(this Value) Value {
-	return SuStr1s[ToInt(this)&0xff]
+	return SuStrP1(byte(ToInt(this)))
 }
 
 var _ = method(num_Int, "() :number")

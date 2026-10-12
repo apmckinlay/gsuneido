@@ -90,30 +90,17 @@ func TestEscape(t *testing.T) {
 	}
 }
 
-func TestSuStr1(t *testing.T) {
-	for i := range 256 {
-		assert.This(string(SuStr1s[i].(SuStr))[0]).Is(i)
-	}
-	test := func(s string) {
-		assert.This(SuStr1(s)).Is(SuStr(s))
-	}
-	test("")
-	test("x")
-	test("foo")
-}
-
 var M Value
+var S = "hello"
 
 func BenchmarkSuStr(b *testing.B) {
-	s := "x"
 	for b.Loop() {
-		M = SuStr(s)
+		M = SuStr(S)
 	}
 }
 
-func BenchmarkSuStr1(b *testing.B) {
-	s := "x"
+func BenchmarkStrVal(b *testing.B) {
 	for b.Loop() {
-		M = SuStr1(s)
+		M = StrVal(S)
 	}
 }

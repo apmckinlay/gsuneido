@@ -274,13 +274,15 @@ func (cg *cgen) params(params []ast.Param) {
 	}
 }
 
+var strNew = StrVal("New")
+
 func (cg *cgen) chainNew(fn *ast.Function) {
 	if !fn.IsNewMethod || hasSuperCall(fn.Body) || cg.base <= 0 {
 		return
 	}
 	cg.savePos(fn.Position())
 	cg.emit(op.This)
-	cg.emitValue(SuStr("New"))
+	cg.emitValue(strNew)
 	cg.emitUint16(op.Super, cg.base)
 	if len(fn.Body) > 0 {
 		cg.emitUint8(op.CallMethDiscard, 0)
@@ -484,6 +486,8 @@ func (cg *cgen) ifStmt(node *ast.If, labels *Labels) {
 	}
 }
 
+var strUnhandled = StrVal("unhandled switch value")
+
 func (cg *cgen) switchStmt(node *ast.Switch, labels *Labels) {
 	cg.expr(node.E)
 	end := -1
@@ -506,7 +510,7 @@ func (cg *cgen) switchStmt(node *ast.Switch, labels *Labels) {
 	if node.Default != nil { // specifically nil and not len 0
 		cg.statements(node.Default, labels)
 	} else {
-		cg.emitValue(SuStr("unhandled switch value"))
+		cg.emitValue(strUnhandled)
 		cg.emit(op.Throw)
 	}
 	cg.placeLabel(end)
@@ -622,7 +626,7 @@ func (cg *cgen) forRange(node *ast.ForIn) {
 func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) {
 	cg.coverEmit = false
 	catch := cg.emitJump(op.Try, -1)
-	cg.emitMore(byte(cg.value(SuStr(node.CatchFilter))))
+	cg.emitMore(byte(cg.value(StrVal(node.CatchFilter))))
 	cg.statement(node.Try, labels, false)
 	after := cg.emitJump(op.Catch, -1)
 	cg.placeLabel(catch)
@@ -875,8 +879,8 @@ func (cg *cgen) binary(node *ast.Binary) {
 		}
 	case tok.Match, tok.MatchNot:
 		if rhs, ok := node.Rhs.(*ast.Constant); ok {
-			if s, ok := rhs.Val.(SuStr); ok {
-				rhs.Val = SuRegex{Pat: regex.Compile(string(s))}
+			if s, ok := rhs.Val.ToStr(); ok {
+				rhs.Val = SuRegex{Pat: regex.Compile(s)}
 			}
 		}
 		fallthrough
@@ -1030,16 +1034,19 @@ func (cg *cgen) emitValue(val Value) {
 		cg.emit(op.True)
 	} else if val == False {
 		cg.emit(op.False)
-	} else if val == Zero {
-		cg.emit(op.Zero)
-	} else if val == One {
-		cg.emit(op.One)
-	} else if val == MinusOne {
-		cg.emit(op.MinusOne)
-	} else if val == EmptyStr {
+	} else if IsEmptyStr(val) {
 		cg.emit(op.EmptyStr)
 	} else if i, ok := SuIntToInt(val); ok && math.MinInt16 < i && i <= math.MaxInt16 {
-		cg.emitInt16(op.Int, i)
+		switch i {
+		case 0:
+			cg.emit(op.Zero)
+		case 1:
+			cg.emit(op.One)
+		case -1:
+			cg.emit(op.MinusOne)
+		default:
+			cg.emitInt16(op.Int, i)
+		}
 	} else {
 		cg.emitUint8(op.Value, cg.value(val))
 	}
@@ -1089,7 +1096,7 @@ func (cg *cgen) store(ref int) {
 
 var superNew = &ast.Mem{
 	E: &ast.Ident{Name: "super"},
-	M: &ast.Constant{Val: SuStr("New")}}
+	M: &ast.Constant{Val: strNew}}
 
 func (cg *cgen) call(node *ast.Call, ct calltype) {
 	fn := node.Fn
@@ -1120,7 +1127,7 @@ func (cg *cgen) call(node *ast.Call, ct calltype) {
 	argspec := cg.args(node.Args)
 	if method {
 		if fn != superNew {
-			if c, ok := mem.M.(*ast.Constant); ok && c.Val == SuStr("New") {
+			if c, ok := mem.M.(*ast.Constant); ok && StrOrEmpty(c.Val) == "New" {
 				panic("can't explicitly call New method")
 			}
 		}
@@ -1140,10 +1147,11 @@ func (cg *cgen) call(node *ast.Call, ct calltype) {
 // generates code to push the arguments and returns an ArgSpec index
 func (cg *cgen) args(args []ast.Arg) int {
 	if len(args) == 1 {
-		if args[0].Name == SuStr1("@") {
+		switch args[0].NameStr() {
+		case "@":
 			cg.expr(args[0].E)
 			return AsEach
-		} else if args[0].Name == SuStr("@+1") {
+		case "@+1":
 			cg.expr(args[0].E)
 			return AsEach1
 		}

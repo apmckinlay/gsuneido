@@ -4,7 +4,6 @@
 package core
 
 import (
-	"bytes"
 	"cmp"
 	"fmt"
 	"strings"
@@ -76,13 +75,9 @@ func (c SuConcat) Add(s string) SuConcat {
 	return SuConcat{buf: buf, n: c.n + len(s)}
 }
 
-func (c SuConcat) Iter() Iter {
-	return &stringIter{s: c.toStr()}
-}
-
 // Value interface --------------------------------------------------
 
-var _ Value = (*SuConcat)(nil)
+var _ Value = SuConcat{}
 
 func (c SuConcat) ToInt() (int, bool) {
 	return 0, c.n == 0
@@ -111,6 +106,14 @@ func (c SuConcat) String() string {
 	return escapeStr(c.toStr(), 0)
 }
 
+func (c SuConcat) Display(th *Thread) string {
+	q := 0
+	if th != nil {
+		q = th.Quote
+	}
+	return escapeStr(c.toStr(), q)
+}
+
 // Get returns the character at a given index
 func (c SuConcat) Get(_ *Thread, key Value) Value {
 	return strGet(c.toStr(), key)
@@ -119,13 +122,13 @@ func (c SuConcat) Get(_ *Thread, key Value) Value {
 func (c SuConcat) RangeTo(from int, to int) Value {
 	from = prepFrom(from, c.n)
 	to = prepTo(from, to, c.n)
-	return SuStr1(c.toStr()[from:to])
+	return StrVal(c.toStr()[from:to])
 }
 
 func (c SuConcat) RangeLen(from int, n int) Value {
 	from = prepFrom(from, c.n)
 	n = prepLen(n, c.n-from)
-	return SuStr1(c.toStr()[from : from+n])
+	return StrVal(c.toStr()[from : from+n])
 }
 
 func (c SuConcat) Hash() uint64 {
@@ -137,16 +140,10 @@ func (c SuConcat) Hash2() uint64 {
 }
 
 func (c SuConcat) Equal(other any) bool {
-	// check string first assuming more common than concat
-	if s2, ok := other.(SuStr); ok {
-		// according to benchmark, this doesn't allocate
-		return c.n == len(s2) && c.toStr() == string(s2)
-	}
-	if c2, ok := other.(SuConcat); ok {
-		return c.n == c2.n && bytes.Equal(c.buf.bs[:c.n], c2.buf.bs[:c.n])
-	}
-	if se, ok := other.(*SuExcept); ok {
-		return c.toStr() == string(se.SuStr)
+	if v, ok := other.(Value); ok {
+		if s, ok := v.ToStr(); ok {
+			return c.toStr() == s
+		}
 	}
 	return false
 }
@@ -164,8 +161,7 @@ func (c SuConcat) Compare(other Value) int {
 }
 
 func (c SuConcat) Call(th *Thread, this Value, as *ArgSpec) Value {
-	ss := SuStr(c.toStr())
-	return ss.Call(th, this, as)
+	return stringCall(th, as, c.toStr())
 }
 
 func (SuConcat) Lookup(th *Thread, method string) Value {
@@ -191,4 +187,10 @@ func (c SuConcat) Pack(_ *uint64, buf *pack.Encoder) {
 	if c.n > 0 {
 		buf.Put1(PackString).Put(c.buf.bs[:c.n])
 	}
+}
+
+// iterator
+
+func (c SuConcat) Iter() Iter {
+	return &stringIter{s: c.toStr()}
 }

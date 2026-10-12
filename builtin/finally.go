@@ -25,7 +25,7 @@ func Finally(th *Thread, args []Value) Value {
 			// the following should match interp op.Call*
 			if th.ReturnThrow {
 				th.ReturnThrow = false
-				if result != EmptyStr && result != True {
+				if !IsEmptyStr(result) && result != True {
 					if s, ok := result.ToStr(); ok {
 						panic(s)
 					}

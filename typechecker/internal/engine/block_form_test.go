@@ -52,7 +52,7 @@ func TestBlockFormReturnGuards(t *testing.T) {
 	withBlock := []Param{{Name: "path"}, {Name: "block"}}
 	noBlock := []Param{{Name: "path"}}
 	blockArg := []ast.Arg{{Name: core.SuStr("block")}}
-	spread := []ast.Arg{{Name: core.SuStr1("@")}}
+	spread := []ast.Arg{{Name: core.StrVal("@")}}
 
 	tests := []struct {
 		name string

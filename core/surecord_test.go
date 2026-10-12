@@ -17,7 +17,7 @@ func TestSuRecord(t *testing.T) {
 	r := new(SuRecord)
 	assert.T(t).This(r.Type()).Is(types.Record)
 	assert.T(t).This(r.String()).Is("[]")
-	r.Set(SuStr1("a"), SuInt16(123))
+	r.Set(StrVal("a"), SuInt16(123))
 	assert.T(t).This(r.String()).Is("[a: 123]")
 }
 
@@ -91,14 +91,14 @@ func TestSuRecord_Concurrency(t *testing.T) {
 			case 2:
 				r := NewSuRecord()
 				r.SetConcurrent()
-				r.AttachRule(SuStr1("c"), rule)
-				r.AttachRule(SuStr1("d"), rule)
+				r.AttachRule(StrVal("c"), rule)
+				r.AttachRule(StrVal("d"), rule)
 				setrec(r)
 			case 3:
 				r := SuRecordFromRow(row, SimpleHeader(cols), "", nil)
 				r.SetConcurrent()
-				r.AttachRule(SuStr1("c"), rule)
-				r.AttachRule(SuStr1("d"), rule)
+				r.AttachRule(StrVal("c"), rule)
+				r.AttachRule(StrVal("d"), rule)
 				setrec(r)
 			case 4:
 				r := getrec().Copy().(*SuRecord)
@@ -162,8 +162,8 @@ func TestSuRecord_RuleSetConcurrentUnlock(t *testing.T) {
 		},
 		ParamSpec: ParamSpec0}
 
-	rec.AttachRule(SuStr1("a"), ruleA)
-	rec.AttachRule(SuStr1("b"), ruleB)
+	rec.AttachRule(StrVal("a"), ruleA)
+	rec.AttachRule(StrVal("b"), ruleB)
 
 	hdr := SimpleHeader([]string{"a", "b"})
 	th := &Thread{}

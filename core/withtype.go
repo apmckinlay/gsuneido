@@ -22,7 +22,7 @@ func WithType(x Value) string {
 		s = fmt.Sprint(x)
 	}
 	if x.Type() != types.Boolean {
-		if _, ok := x.(SuStr); !ok {
+		if _, ok := x.ToStr(); !ok {
 			t := fmt.Sprintf("%T", x)
 			t = strings.TrimPrefix(t, "runtime.")
 			if strings.HasPrefix(t, "*runtime.") {

@@ -34,10 +34,10 @@ type Value interface {
 	// Note: strings will have quotes and be escaped
 	String() string
 
-	// AsStr converts SuBool, SuInt16, SuInt64, SuDnum, SuStr, SuConcat, SuExcept to string
+	// AsStr converts SuBool, SuInt16, SuInt64, SuDnum, and strings to string
 	AsStr() (string, bool)
 
-	// ToStr converts SuStr, SuConcat, SuExcept to string
+	// ToStr converts SuStrP, SuStr, SuConcat, SuExcept to string
 	ToStr() (string, bool)
 
 	// ToInt converts false (SuBool), "" (SuStr), SuInt16, SuInt64, SuDnum to int
@@ -103,7 +103,7 @@ type Ord int
 const (
 	ordBool Ord = iota
 	ordNum      // SuInt16, SuDnum
-	ordStr      // SuStr, SuConcat, SuExcept
+	ordStr      // SuStr, SuStrP, SuConcat, SuExcept
 	ordDate
 	ordObject
 	ordOther
@@ -169,7 +169,7 @@ type Named interface {
 	GetName() string
 }
 
-// AsStr converts SuBool, SuInt16, SuDnum, SuStr, SuConcat, SuExcept to string.
+// AsStr converts SuBool, SuInt16, SuDnum, and strings to string.
 // Calls Value.AsStr and panics if it fails
 func AsStr(x Value) string {
 	if s, ok := x.AsStr(); ok {
@@ -178,7 +178,7 @@ func AsStr(x Value) string {
 	panic("can't convert " + x.Type().String() + " to String")
 }
 
-// ToStr converts SuStr, SuConcat, SuExcept to string.
+// ToStr converts SuStr, SuStrP, SuConcat, SuExcept to string.
 // Calls Value.ToStr and panics if it fails
 func ToStr(x Value) string {
 	if s, ok := x.ToStr(); ok {

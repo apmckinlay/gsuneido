@@ -157,7 +157,7 @@ func row2str(hdr *Header, row Row) string {
 	sep := ""
 	for _, col := range cols {
 		val := row.GetVal(hdr, col, nil, nil)
-		if val != EmptyStr {
+		if !IsEmptyStr(val) {
 			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
 			sep = " "
 		}

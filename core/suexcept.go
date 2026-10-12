@@ -3,7 +3,11 @@
 
 package core
 
-import "github.com/apmckinlay/gsuneido/core/types"
+import (
+	"fmt"
+
+	"github.com/apmckinlay/gsuneido/core/types"
+)
 
 type SuExcept struct {
 	Callstack *SuObject
@@ -17,6 +21,13 @@ func BuiltinSuExcept(s string) *SuExcept {
 
 func NewSuExcept(th *Thread, s SuStr) *SuExcept {
 	return &SuExcept{SuStr: s, Callstack: th.Callstack()}
+}
+
+func (e *SuExcept) Concat(x, y string) *SuExcept {
+	if len(x)+len(y) > StringLimit {
+		panic(fmt.Sprint("concatenate: string > ", StringLimit))
+	}
+	return &SuExcept{SuStr: SuStr(x + y), Callstack: e.Callstack}
 }
 
 // SuValue interface ------------------------------------------------

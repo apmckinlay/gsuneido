@@ -68,7 +68,7 @@ func (ps *PackStack) push(x Value) {
 
 // Note: no pop required because of passing slice by value
 
-var emptyStr = EmptyStr.(SuStr)
+var emptyStr = EmptyStr.(*SuStrP)
 var boolTrue = True.(SuBool)
 var boolFalse = False.(SuBool)
 var zeroNum = Zero.(*smi)
@@ -115,7 +115,7 @@ func Unpack(s string) Value {
 	case PackTrue:
 		return True
 	case PackString:
-		return SuStr(s[1:])
+		return StrVal(s[1:])
 	case PackDate:
 		return UnpackDate(s)
 	case PackPlus, PackMinus:

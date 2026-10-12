@@ -81,7 +81,7 @@ type astAspects struct {
 	nilChecker
 }
 
-func (*astAspects) Symbol(s core.SuStr) ast.Expr {
+func (*astAspects) Symbol(s core.Value) ast.Expr {
 	return &ast.Symbol{Val: s}
 }
 

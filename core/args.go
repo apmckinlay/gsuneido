@@ -92,7 +92,7 @@ func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 		// named members may overwrite unnamed (same as when passed individually)
 		for i := range int(ps.Nparams) {
-			if x := ob.GetIfPresent(th, SuStr(ps.ParamName(i))); x != nil {
+			if x := ob.GetIfPresent(th, StrVal(ps.ParamName(i))); x != nil {
 				args[i] = x
 			}
 		}
@@ -110,7 +110,7 @@ func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		// move applicable named args back to correct position
 		for si, ni := range as.Spec {
 			for i := range int(ps.Nparams) {
-				if as.Names[ni] == SuStr(ps.ParamName(i)) {
+				if s, ok := as.Names[ni].ToStr(); ok && s == ps.ParamName(i) {
 					args[i] = tmp[si]
 				}
 			}

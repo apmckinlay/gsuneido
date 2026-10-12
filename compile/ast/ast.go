@@ -398,8 +398,8 @@ func (a *Mem) String() string {
 func (a *Mem) Echo() string {
 	s := a.E.Echo()
 	if c, ok := a.M.(*Constant); ok {
-		if cs, ok := c.Val.(SuStr); ok && lexer.IsIdentifier(string(cs)) {
-			return s + "." + string(cs)
+		if cs, ok := c.Val.ToStr(); ok && lexer.IsIdentifier(cs) {
+			return s + "." + cs
 		}
 	}
 	return s + "[" + a.M.Echo() + "]"
@@ -531,11 +531,19 @@ type Arg struct {
 	TwoPos
 }
 
+// NameStr returns the argument name, or "" if unnamed or not a string.
+func (a *Arg) NameStr() string {
+	if a.Name == nil {
+		return ""
+	}
+	return StrOrEmpty(a.Name)
+}
+
 func (a *Arg) String() string {
 	s := ""
 	if a.Name != nil {
-		if ks, ok := a.Name.(SuStr); ok && lexer.IsIdentifier(string(ks)) {
-			s += string(ks) + ":"
+		if ks, ok := a.Name.ToStr(); ok && lexer.IsIdentifier(ks) {
+			s += ks + ":"
 		} else {
 			s += a.Name.String() + ":"
 		}
@@ -546,8 +554,8 @@ func (a *Arg) String() string {
 func (a *Arg) Echo() string {
 	s := ""
 	if a.Name != nil {
-		if ks, ok := a.Name.(SuStr); ok && lexer.IsIdentifier(string(ks)) {
-			s += string(ks) + ":"
+		if ks, ok := a.Name.ToStr(); ok && lexer.IsIdentifier(ks) {
+			s += ks + ":"
 		} else {
 			s += a.Name.String() + ":"
 		}

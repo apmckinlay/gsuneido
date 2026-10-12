@@ -260,8 +260,8 @@ func (a *Binary) eval(th *Thread, lhs, rhs Value) Value {
 func strictCompare(x Value, y Value) int {
 	cmp := x.Compare(y)
 	if (cmp&3) == 2 && options.StrictCompareDb &&
-		((x == EmptyStr && Order(y) < OrdStr) ||
-			(y == EmptyStr && Order(x) < OrdStr)) {
+		((IsEmptyStr(x) && Order(y) < OrdStr) ||
+			(IsEmptyStr(y) && Order(x) < OrdStr)) {
 		panic(fmt.Sprint("StrictCompareDb: ", x, " <=> ", y))
 	}
 	return cmp
@@ -600,9 +600,10 @@ func argspec(args []Arg) *ArgSpec {
 		return &ArgSpec0
 	}
 	if len(args) == 1 {
-		if args[0].Name == SuStr1("@") {
+		switch args[0].NameStr() {
+		case "@":
 			return &ArgSpecEach0
-		} else if args[0].Name == SuStr("@+1") {
+		case "@+1":
 			return &ArgSpecEach1
 		}
 	}
@@ -659,11 +660,11 @@ func CanBeEmpty(e Expr) bool {
 		}
 		switch e.Tok {
 		case tok.Is:
-			return c.Val == EmptyStr
+			return IsEmptyStr(c.Val)
 		case tok.Isnt:
-			return c.Val != EmptyStr
+			return !IsEmptyStr(c.Val)
 		case tok.Lt:
-			return c.Val != EmptyStr
+			return !IsEmptyStr(c.Val)
 		case tok.Lte:
 			return true
 		case tok.Gt:
@@ -678,7 +679,7 @@ func CanBeEmpty(e Expr) bool {
 			return true
 		}
 		for _, e := range e.Exprs {
-			if c, ok := e.(*Constant); !ok || c.Val == EmptyStr {
+			if c, ok := e.(*Constant); !ok || IsEmptyStr(c.Val) {
 				return true
 			}
 		}

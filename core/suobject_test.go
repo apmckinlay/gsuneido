@@ -55,7 +55,7 @@ func TestSuObjectString(t *testing.T) {
 	ob = SuObject{}
 	ob.Set(EmptyStr, False)
 	assert.T(t).This(ob.String()).Is("#('': false)")
-	ob.Set(SuStr1("a"), True)
+	ob.Set(StrVal("a"), True)
 	assert.T(t).This(ob.Show()).Is("#('': false, a:)")
 	ob.Add(True)
 	assert.T(t).This(ob.Show()).Is("#(true, '': false, a:)")
@@ -169,9 +169,9 @@ func TestSuObjectEquals(t *testing.T) {
 	eq(t, x, y)
 
 	a := &SuObject{}
-	a.Set(SuStr1("a"), SuStr("aa"))
+	a.Set(StrVal("a"), StrVal("aa"))
 	b := &SuObject{}
-	b.Set(SuStr1("x"), SuStr("aa"))
+	b.Set(StrVal("x"), StrVal("aa"))
 	neq(t, a, b)
 }
 
@@ -191,7 +191,7 @@ func TestSuObjectSlice(t *testing.T) {
 	ob.Add(SuInt16(12))
 	ob.Add(SuInt16(34))
 	ob.Add(SuInt16(56))
-	ob.Set(SuStr1("a"), SuInt16(123))
+	ob.Set(StrVal("a"), SuInt16(123))
 	assert.This(ob.String()).Is("#(12, 34, 56, a: 123)")
 	ob2 := ob.Slice(0)
 	assert.True(ob.Equal(ob2))
@@ -228,9 +228,9 @@ func TestSuObjectPack(t *testing.T) {
 	check()
 	ob.Add(SuInt16(2))
 	check()
-	ob.Set(SuStr1("a"), SuInt16(3))
+	ob.Set(StrVal("a"), SuInt16(3))
 	check()
-	ob.Set(SuStr1("b"), SuInt16(4))
+	ob.Set(StrVal("b"), SuInt16(4))
 	check()
 	ob.Add(SuStr(strings.Repeat("helloworld", 100)))
 }
@@ -238,7 +238,7 @@ func TestSuObjectPack(t *testing.T) {
 func TestSuObjectPack2(t *testing.T) {
 	ob := &SuObject{}
 	ob.Add(One)
-	ob.Set(SuStr1("a"), SuInt16(2))
+	ob.Set(StrVal("a"), SuInt16(2))
 	buf := Pack(ob)
 	expected := []byte{6, 1, 3, PackPlus, 129, 10, 1, 2, PackString, 97, 3,
 		PackPlus, 129, 20}
@@ -314,7 +314,7 @@ func BenchmarkGetPut(b *testing.B) {
 		x.Set(SuStr(m), SuInt16(123))
 	}
 	for b.Loop() {
-		x.GetPut(nil, SuStr1("a"), One, F, false)
+		x.GetPut(nil, StrVal("a"), One, F, false)
 	}
 }
 

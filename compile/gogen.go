@@ -322,7 +322,7 @@ func (g *ggen) value(val Value) {
 		g.Add("One")
 	} else if val == MinusOne {
 		g.Add("MinusOne")
-	} else if val == EmptyStr {
+	} else if IsEmptyStr(val) {
 		g.Add("EmptyStr")
 	} else if f, ok := val.(*SuFunc); ok {
 		g.Add(f.Code) //TODO needs to be SuBuiltin with ParamSpec

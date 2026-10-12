@@ -156,7 +156,7 @@ func agent_LoadConversation(th *Thread, this Value, args []Value) Value {
 		outputCallback(a.th, a.callback))
 	if err != nil {
 		th.ReturnThrow = true
-		return SuStr("LoadConversation: " + err.Error())
+		return StrCat("LoadConversation: ", err.Error())
 	}
 	return True
 }

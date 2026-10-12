@@ -24,6 +24,6 @@ func SHCreateStreamOnFile(a, b, c Value) Value {
 		uintptr(unsafe.Pointer(zstrArg(a))),
 		intArg(b),
 		uintptr(unsafe.Pointer(&p)))
-	c.Put(nil, SuStr1("x"), IntVal(p))
+	c.Put(nil, StrVal("x"), IntVal(p))
 	return intRet(rtn)
 }

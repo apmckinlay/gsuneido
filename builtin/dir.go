@@ -107,7 +107,7 @@ func dirEntries(path string, justfiles, details bool) iter.Seq[Value] {
 					if ent.IsDir() {
 						suffix = "/"
 					}
-					var entry Value = SuStr(ent.Name() + suffix)
+					var entry = StrCat(ent.Name(), suffix)
 					if details {
 						info, err := ent.Info()
 						if err != nil {

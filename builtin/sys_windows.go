@@ -75,12 +75,12 @@ func CopyFile(th *Thread, args []Value) Value {
 		fromPath, err := sandboxPath("CopyFile", from)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("CopyFile: " + err.Error())
+			return StrCat("CopyFile: ", err.Error())
 		}
 		toPath, err := sandboxPath("CopyFile", to)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("CopyFile: " + err.Error())
+			return StrCat("CopyFile: ", err.Error())
 		}
 		args = []Value{SuStr(fromPath), SuStr(toPath), args[2]}
 	}
@@ -90,7 +90,7 @@ func CopyFile(th *Thread, args []Value) Value {
 		boolArg(args[2]))
 	if rtn == 0 {
 		th.ReturnThrow = true
-		return SuStr("CopyFile: " + e.Error())
+		return StrCat("CopyFile: ", e.Error())
 	}
 	return True
 }

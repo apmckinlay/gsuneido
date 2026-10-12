@@ -98,7 +98,7 @@ func AddFontMemResourceEx(a, b, c, d Value) Value {
 		uintptr(cjSize),
 		0,
 		uintptr(unsafe.Pointer(&numFonts)))
-	d.Put(nil, SuStr1("x"), IntVal(numFonts))
+	d.Put(nil, StrVal("x"), IntVal(numFonts))
 	return intRet(rtn)
 }
 

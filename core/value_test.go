@@ -28,7 +28,7 @@ func TestStrConvert(t *testing.T) {
 func TestStringGet(t *testing.T) {
 	var v Value = SuStr("hello")
 	v = v.Get(nil, SuInt16(1))
-	assert.T(t).This(v).Is(SuStr1("e"))
+	assert.T(t).This(v).Is(StrVal("e"))
 }
 
 func TestPanics(t *testing.T) {
@@ -65,7 +65,7 @@ func TestCompare(t *testing.T) {
 	}
 
 	// move EmptyStr to the beginning for packed ordering
-	vals = slices.DeleteFunc(vals, func(v Value) bool { return v == EmptyStr })
+	vals = slices.DeleteFunc(vals, func(v Value) bool { return IsEmptyStr(v) })
 	vals = slices.Insert(vals, 0, EmptyStr)
 
 	for i, x := range vals {

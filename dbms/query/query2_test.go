@@ -77,8 +77,8 @@ func TestQuery(t *testing.T) {
 // 	sep := ""
 // 	for _, col := range hdr.Columns {
 // 		val := row.GetVal(hdr, col, nil, nil)
-// 		if val != EmptyStr {
-// 			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
+// 		if s := AsStr(val); s != "" {
+// 			fmt.Fprint(&sb, sep, col, "=", s)
 // 			sep = " "
 // 		}
 // 	}

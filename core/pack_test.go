@@ -13,12 +13,12 @@ import (
 
 func TestPack(t *testing.T) {
 	cv := NewSuConcat().Add("foo").Add("bar")
-	values := []Packable{SuBool(false), SuBool(true), SuStr(""), SuStr("foo"), cv,
-		SuInt16(0), SuInt16(1), SuInt16(-1), dv("123.456"), dv(".1"), dv("-1e22"),
+	values := []Value{False, True, EmptyStr, SuStr("foo"), cv,
+		Zero, One, SuInt16(-1), dv("123.456"), dv(".1"), dv("-1e22"),
 		dv("1234"), dv("12345678"), dv("123456789012"), dv("1234567890123456"),
 		dv("1e-22")}
 	for _, v := range values {
-		assert.T(t).This(Unpack(Pack(v))).Is(v)
+		assert.T(t).This(Unpack(Pack(v.(Packable)))).Is(v)
 	}
 }
 

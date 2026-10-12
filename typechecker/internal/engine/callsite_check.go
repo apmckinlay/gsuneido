@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	"github.com/apmckinlay/gsuneido/core"
 )
 
 func CallsiteCheckPass(cls *ClassObject, env TypeEnv, pctx *PassCtx) bool {
@@ -267,13 +266,8 @@ func matchParam(sig *Signature, arg *ast.Arg, index int) *Param {
 // ```
 // see compile/expression.go's argList handling.
 func isAtArg(arg *ast.Arg) bool {
-	if arg.Name == nil {
-		return false
-	}
-	if s, ok := arg.Name.(core.SuStr); ok {
-		return string(s) == "@" || string(s) == "@+1"
-	}
-	return false
+	name := arg.NameStr()
+	return name == "@" || name == "@+1"
 }
 
 // a named argument's name is a Value, not a string - `f(1: x)` parses and gives

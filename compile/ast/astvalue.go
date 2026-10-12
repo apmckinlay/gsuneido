@@ -17,104 +17,104 @@ import (
 // expressions ------------------------------------------------------
 
 func (a *Ident) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Ident")
-	case SuStr("name"):
+	case "name":
 		return SuStr(a.Name)
-	case SuStr("pos"):
+	case "pos":
 		return IntVal(a.GetPos())
-	case SuStr("end"):
+	case "end":
 		return IntVal(a.GetEnd())
 	}
 	return noChildren(m)
 }
 
 func noChildren(m Value) Value {
-	if m == SuStr("children") {
+	if StrOrEmpty(m) == "children" {
 		return children{}
 	}
 	return nil
 }
 
 func (a *Symbol) Get(th *Thread, m Value) Value {
-	if m == SuStr("symbol") {
+	if StrOrEmpty(m) == "symbol" {
 		return True
 	}
 	return a.Constant.Get(th, m)
 }
 
 func (a *Constant) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Constant")
-	case SuStr("symbol"):
+	case "symbol":
 		return False
-	case SuStr("value"):
+	case "value":
 		return a.Val
-	case SuStr("pos"):
+	case "pos":
 		return IntVal(a.GetPos())
-	case SuStr("end"):
+	case "end":
 		return IntVal(a.GetEnd())
-	case SuStr("children"):
+	case "children":
 		return children{list: []Value{a.Val}}
 	}
 	return nil
 }
 
 func falsePos(a Node, m Value) Value {
-	switch m {
-	case SuStr("pos"):
+	switch StrOrEmpty(m) {
+	case "pos":
 		return False
-	case SuStr("end"):
+	case "end":
 		return False
-	case SuStr("children"):
+	case "children":
 		return newChildren(a)
 	}
 	return nil
 }
 
 func (a *Unary) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Unary")
-	case SuStr("op"):
+	case "op":
 		return SuStr(a.Tok.String())
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
-	case SuStr("children"):
+	case "children":
 		return newChildren(a)
-	case SuStr("pos"):
+	case "pos":
 		return IntVal(a.GetPos())
-	case SuStr("end"):
+	case "end":
 		return IntVal(a.GetEnd())
 	}
 	return nil
 }
 
 func (a *Binary) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Binary")
-	case SuStr("op"):
+	case "op":
 		return SuStr(a.Tok.String())
-	case SuStr("lhs"):
+	case "lhs":
 		return a.Lhs.(Value)
-	case SuStr("rhs"):
+	case "rhs":
 		return a.Rhs.(Value)
 	}
 	return falsePos(a, m)
 }
 
 func (a *Trinary) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Trinary")
-	case SuStr("cond"):
+	case "cond":
 		return a.Cond.(Value)
-	case SuStr1("t"):
+	case "t":
 		return a.T.(Value)
-	case SuStr1("f"):
+	case "f":
 		return a.F.(Value)
 	}
 	return falsePos(a, m)
@@ -124,56 +124,56 @@ func (a *Nary) Get(_ *Thread, m Value) Value {
 	if r := get(a, m); r != nil {
 		return r
 	}
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Nary")
-	case SuStr("op"):
+	case "op":
 		return SuStr(a.Tok.String())
 	}
 	return falsePos(a, m)
 }
 
 func (a *RangeTo) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("RangeTo")
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
-	case SuStr("from"):
+	case "from":
 		return nilToFalse(a.From)
-	case SuStr("to"):
+	case "to":
 		return nilToFalse(a.To)
 	}
 	return falsePos(a, m)
 }
 
 func (a *RangeLen) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("RangeLen")
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
-	case SuStr("from"):
+	case "from":
 		return nilToFalse(a.From)
-	case SuStr("len"):
+	case "len":
 		return nilToFalse(a.Len)
 	}
 	return falsePos(a, m)
 }
 
 func (a *InRange) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("InRange")
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
-	case SuStr("from"):
+	case "from":
 		return nilToFalse(a.Org)
-	case SuStr("to"):
+	case "to":
 		return nilToFalse(a.End)
-	case SuStr("fromToken"):
+	case "fromToken":
 		return SuStr(strings.TrimSpace(tokEcho[a.OrgTok]))
-	case SuStr("toToken"):
+	case "toToken":
 		return SuStr(strings.TrimSpace(tokEcho[a.EndTok]))
 	}
 	return falsePos(a, m)
@@ -187,26 +187,26 @@ func nilToFalse(node Node) Value {
 }
 
 func (a *Mem) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Mem")
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
-	case SuStr("mem"):
+	case "mem":
 		return a.M.(Value)
-	case SuStr("dotpos"):
+	case "dotpos":
 		return IntVal(a.DotPos)
 	}
 	return falsePos(a, m)
 }
 
 func (a *In) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("In")
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
-	case SuStr("size"):
+	case "size":
 		return IntVal(len(a.Exprs))
 	}
 	if i, ok := m.ToInt(); ok {
@@ -219,14 +219,14 @@ func (a *In) Get(_ *Thread, m Value) Value {
 }
 
 func (a *Call) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Call")
-	case SuStr("func"):
+	case "func":
 		return a.Fn.(Value)
-	case SuStr("size"):
+	case "size":
 		return IntVal(len(a.Args))
-	case SuStr("end"):
+	case "end":
 		return zeroToFalse(int(a.End))
 	}
 	if i, ok := m.ToInt(); ok {
@@ -239,19 +239,19 @@ func (a *Call) Get(_ *Thread, m Value) Value {
 }
 
 func (a *Arg) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Argument")
-	case SuStr("name"):
+	case "name":
 		if a.Name == nil {
 			return False
 		}
 		return a.Name
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
-	case SuStr("pos"):
+	case "pos":
 		return zeroToFalse(a.GetPos())
-	case SuStr("end"):
+	case "end":
 		return zeroToFalse(a.GetEnd())
 	}
 	return nil
@@ -265,28 +265,28 @@ func zeroToFalse(n int) Value {
 }
 
 func (a *Block) Get(th *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Block")
 	}
 	return a.Function.Get(th, m)
 }
 
 func (a *Function) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Function")
-	case SuStr("params"):
+	case "params":
 		return Params{Params: a.Params}
-	case SuStr("pos"):
+	case "pos":
 		return IntVal(a.GetPos())
-	case SuStr("pos1"):
+	case "pos1":
 		return IntVal(a.Pos1)
-	case SuStr("pos2"):
+	case "pos2":
 		return IntVal(a.Pos2)
-	case SuStr("end"):
+	case "end":
 		return IntVal(a.GetEnd())
-	case SuStr("children"):
+	case "children":
 		c := newChildren(a)
 		for i := range a.Params {
 			if a.Params[i].DefVal != nil {
@@ -294,21 +294,21 @@ func (a *Function) Get(_ *Thread, m Value) Value {
 			}
 		}
 		return c
-	case SuStr("returnannotation"):
+	case "returnannotation":
 		return SuStr(a.ReturnAnnotation)
 	}
 	return get(a, m)
 }
 
 func (a Params) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Params")
-	case SuStr("size"):
+	case "size":
 		return IntVal(len(a.Params))
-	case SuStr("pos"):
+	case "pos":
 		return False
-	case SuStr("end"):
+	case "end":
 		return False
 	}
 	if i, ok := m.ToInt(); ok {
@@ -321,22 +321,22 @@ func (a Params) Get(_ *Thread, m Value) Value {
 }
 
 func (a *Param) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Param")
-	case SuStr("pos"):
+	case "pos":
 		return IntVal(a.GetPos())
-	case SuStr("end"):
+	case "end":
 		return IntVal(a.GetEnd())
-	case SuStr("name"):
+	case "name":
 		return SuStr(a.Name.Name)
-	case SuStr("unused"):
+	case "unused":
 		return SuBool(a.Unused)
-	case SuStr("hasdef"):
+	case "hasdef":
 		return SuBool(a.DefVal != nil)
-	case SuStr("defval"):
+	case "defval":
 		return a.DefVal
-	case SuStr("annotations"):
+	case "annotations":
 		return SuStr(a.Annotations)
 	}
 	return nil
@@ -345,20 +345,20 @@ func (a *Param) Get(_ *Thread, m Value) Value {
 // statements -------------------------------------------------------
 
 func stmtGet(a Statement, m Value) Value {
-	switch m {
-	case SuStr("pos"):
+	switch StrOrEmpty(m) {
+	case "pos":
 		return IntVal(a.GetPos())
-	case SuStr("end"):
+	case "end":
 		return IntVal(a.GetEnd())
 	}
 	return get(a.(nodeVal), m)
 }
 
 func (a *ExprStmt) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("ExprStmt")
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
 	}
 	return stmtGet(a, m)
@@ -368,52 +368,52 @@ func (a *Compound) Get(_ *Thread, m Value) Value {
 	if r := get(a, m); r != nil {
 		return r
 	}
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Compound")
 	}
 	return stmtGet(a, m)
 }
 
 func (a *If) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("If")
-	case SuStr("cond"):
+	case "cond":
 		return a.Cond.(Value)
-	case SuStr1("t"):
+	case "t":
 		return a.Then.(Value)
-	case SuStr1("f"):
+	case "f":
 		if a.Else == nil {
 			return False
 		}
 		return a.Else.(Value)
-	case SuStr("elseend"):
+	case "elseend":
 		return IntVal(a.ElseEnd)
 	}
 	return stmtGet(a, m)
 }
 
 func (a *Switch) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Switch")
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
-	case SuStr("size"):
+	case "size":
 		return IntVal(len(a.Cases))
-	case SuStr("pos1"):
+	case "pos1":
 		return IntVal(a.Pos1)
-	case SuStr("pos2"):
+	case "pos2":
 		return IntVal(a.Pos2)
-	case SuStr("posdef"):
+	case "posdef":
 		return IntVal(a.PosDef)
-	case SuStr("def"):
+	case "def":
 		if a.Default == nil {
 			return False
 		}
 		return &Compound{Body: a.Default}
-	case SuStr("children"):
+	case "children":
 		return newChildren(a)
 	}
 	if i, ok := m.ToInt(); ok {
@@ -426,16 +426,16 @@ func (a *Switch) Get(_ *Thread, m Value) Value {
 }
 
 func (a *Case) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Case")
-	case SuStr("size"):
+	case "size":
 		return IntVal(len(a.Exprs))
-	case SuStr("body"):
+	case "body":
 		return &Compound{Body: a.Body}
-	case SuStr("pos"):
+	case "pos":
 		return IntVal(a.GetPos())
-	case SuStr("end"):
+	case "end":
 		return IntVal(a.GetEnd())
 	}
 	if i, ok := m.ToInt(); ok {
@@ -451,10 +451,10 @@ func (a *Return) Get(_ *Thread, m Value) Value {
 	if r := get(a, m); r != nil {
 		return r
 	}
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Return")
-	case SuStr("expr"):
+	case "expr":
 		if len(a.Exprs) == 0 {
 			return False
 		}
@@ -462,9 +462,9 @@ func (a *Return) Get(_ *Thread, m Value) Value {
 			panic("return.expr does not handle multiple expressions")
 		}
 		return a.Exprs[0].(Value)
-	case SuStr("throw"):
+	case "throw":
 		return SuBool(a.ReturnThrow)
-	case SuStr("spread"):
+	case "spread":
 		return SuBool(a.ReturnSpread)
 	}
 	return stmtGet(a, m)
@@ -474,41 +474,41 @@ func (a *MultiAssign) Get(_ *Thread, m Value) Value {
 	if r := get(a, m); r != nil {
 		return r
 	}
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("MultiAssign")
-	case SuStr("rhs"):
+	case "rhs":
 		return a.Rhs.(Value)
 	}
 	return stmtGet(a, m)
 }
 
 func (a *Throw) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Throw")
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
 	}
 	return stmtGet(a, m)
 }
 
 func (a *TryCatch) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("TryCatch")
-	case SuStr("try"):
+	case "try":
 		return a.Try.(Value)
-	case SuStr("catchend"):
+	case "catchend":
 		return IntVal(a.CatchEnd)
-	case SuStr("catch"):
+	case "catch":
 		return nilToFalse(a.Catch)
-	case SuStr("catchvar"):
+	case "catchvar":
 		if a.Catch == nil || a.CatchVar.Name == "" {
 			return False
 		}
 		return &a.CatchVar
-	case SuStr("catchpat"):
+	case "catchpat":
 		if a.Catch == nil || a.CatchFilter == "" {
 			return False
 		}
@@ -518,102 +518,102 @@ func (a *TryCatch) Get(_ *Thread, m Value) Value {
 }
 
 func (a *Forever) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Forever")
-	case SuStr("body"):
+	case "body":
 		return a.Body.(Value)
 	}
 	return stmtGet(a, m)
 }
 
 func (a *ForIn) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("ForIn")
-	case SuStr("var"):
+	case "var":
 		return SuStr(a.Var.Name)
-	case SuStr("var2"):
+	case "var2":
 		return SuStr(a.Var2.Name)
-	case SuStr("expr"):
+	case "expr":
 		return a.E.(Value)
-	case SuStr("expr2"):
+	case "expr2":
 		return a.E2.(Value)
-	case SuStr("body"):
+	case "body":
 		return a.Body.(Value)
 	}
 	return stmtGet(a, m)
 }
 
 func (a *For) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("For")
-	case SuStr("init"):
+	case "init":
 		ob := &SuObject{}
 		for _, e := range a.Init {
 			ob.Add(e.(Value))
 		}
 		return ob
-	case SuStr("cond"):
+	case "cond":
 		return nilToFalse(a.Cond)
-	case SuStr("inc"):
+	case "inc":
 		ob := &SuObject{}
 		for _, e := range a.Inc {
 			ob.Add(e.(Value))
 		}
 		return ob
-	case SuStr("body"):
+	case "body":
 		return a.Body.(Value)
 	}
 	return stmtGet(a, m)
 }
 
 func (a *While) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("While")
-	case SuStr("cond"):
+	case "cond":
 		return a.Cond.(Value)
-	case SuStr("body"):
+	case "body":
 		return a.Body.(Value)
 	}
 	return stmtGet(a, m)
 }
 
 func (a *DoWhile) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("DoWhile")
-	case SuStr("cond"):
+	case "cond":
 		return a.Cond.(Value)
-	case SuStr("body"):
+	case "body":
 		return a.Body.(Value)
 	}
 	return stmtGet(a, m)
 }
 
 func (a *Break) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Break")
 	}
 	return stmtGet(a, m)
 }
 
 func (a *Continue) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Continue")
 	}
 	return stmtGet(a, m)
 }
 
 func (a *ExprPos) Get(t *Thread, m Value) Value {
-	switch m {
-	case SuStr("pos"):
+	switch StrOrEmpty(m) {
+	case "pos":
 		return IntVal(a.Pos)
-	case SuStr("end"):
+	case "end":
 		return IntVal(a.End)
 	}
 	return a.Expr.Get(t, m)
@@ -627,14 +627,15 @@ type nodeVal interface {
 }
 
 func get[T nodeVal](node T, m Value) Value {
-	if m == SuStr("size") {
+	switch StrOrEmpty(m) {
+	case "size":
 		n := 0
 		node.Children(func(nd Node) Node {
 			n++
 			return nd
 		})
 		return IntVal(n)
-	} else if m == SuStr("children") {
+	case "children":
 		return node
 	}
 	if i, ok := m.ToInt(); ok {

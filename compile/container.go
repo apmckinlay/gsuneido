@@ -46,7 +46,7 @@ func (cgMaker) mkClass(_ string) container {
 	return classBuilder{}
 }
 func (cgMaker) mkConcat(strs []string) Value {
-	return SuStr(strings.Join(strs, ""))
+	return StrVal(strings.Join(strs, ""))
 }
 
 func (cgMaker) set(c container, key, val Value, pos, end int32) {
@@ -68,15 +68,15 @@ func (c classBuilder) Add(Value) {
 }
 
 func (c classBuilder) HasKey(m Value) bool {
-	if s, ok := m.(SuStr); ok {
-		_, ok = c[string(s)]
+	if s, ok := m.ToStr(); ok {
+		_, ok = c[s]
 		return ok
 	}
 	panic("class member names must be strings")
 }
 
 func (c classBuilder) Set(m, v Value) {
-	c[string(m.(SuStr))] = v
+	c[ToStr(m)] = v
 }
 
 //-------------------------------------------------------------------
@@ -182,22 +182,22 @@ func (c *astContainer) String() string {
 }
 
 func (c *astContainer) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr(c.which)
-	case SuStr("base"):
+	case "base":
 		return SuStr(c.base)
-	case SuStr("size"):
+	case "size":
 		return IntVal(len(c.kv))
-	case SuStr("pos"):
+	case "pos":
 		return IntVal(c.GetPos())
-	case SuStr("pos1"):
+	case "pos1":
 		return IntVal(c.pos1)
-	case SuStr("pos2"):
+	case "pos2":
 		return IntVal(c.pos2)
-	case SuStr("end"):
+	case "end":
 		return IntVal(c.GetEnd())
-	case SuStr("children"):
+	case "children":
 		list := make([]Value, len(c.kv))
 		for i := range c.kv {
 			list[i] = &c.kv[i]
@@ -228,20 +228,20 @@ func (kv *keyVal) String() string {
 }
 
 func (kv *keyVal) Get(_ *Thread, m Value) Value {
-	switch m {
-	case SuStr("type"):
+	switch StrOrEmpty(m) {
+	case "type":
 		return SuStr("Member")
-	case SuStr("named"):
+	case "named":
 		return SuBool(kv.key != nil)
-	case SuStr("key"):
+	case "key":
 		return kv.key
-	case SuStr("value"):
+	case "value":
 		return kv.val
-	case SuStr("pos"):
+	case "pos":
 		return IntVal(kv.pos)
-	case SuStr("end"):
+	case "end":
 		return IntVal(kv.end)
-	case SuStr("children"):
+	case "children":
 		if kv.key == nil {
 			return ast.NewChildren([]Value{kv.val})
 		} else {

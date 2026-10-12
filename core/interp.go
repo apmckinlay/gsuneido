@@ -313,8 +313,8 @@ loop:
 			ob := th.Pop()
 			val := ob.Get(th, m)
 			if val == nil {
-				if ss, ok := m.(SuStr); ok {
-					val = ob.Lookup(th, string(ss))
+				if s, ok := m.ToStr(); ok {
+					val = ob.Lookup(th, s)
 					if val != nil {
 						val = NewSuMethod(ob, val)
 					}
@@ -348,8 +348,8 @@ loop:
 			ob := th.Pop()
 			val := ob.Get(th, m)
 			if val == nil {
-				if ss, ok := m.(SuStr); ok {
-					val = ob.Lookup(th, string(ss))
+				if s, ok := m.ToStr(); ok {
+					val = ob.Lookup(th, s)
 					if val != nil {
 						val = NewSuMethod(ob, val)
 					}
@@ -603,7 +603,7 @@ loop:
 		case op.Try:
 			fr.catchJump = fr.ip + fetchInt16()
 			fr.catchSp = th.sp
-			catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
+			catchPat = ToStr(fr.fn.Values[fetchUint8()])
 		case op.Catch:
 			fr.ip += fetchInt16()
 			fr.catchJump = 0 // no longer catching
@@ -664,7 +664,7 @@ loop:
 				// NOTE: this should be kept in sync with CallMeth & Finally
 				th.ReturnThrow = false // default is to clear the flag
 				if oc == op.CallFuncDiscard {
-					if result != EmptyStr && result != True {
+					if !IsEmptyStr(result) && result != True {
 						if s, ok := result.ToStr(); ok {
 							panic(s)
 						}
@@ -727,7 +727,7 @@ loop:
 						// NOTE: this code should be kept in sync with CallFunc
 						th.ReturnThrow = false // default is to clear the flag
 						if oc == op.CallMethDiscard {
-							if result != EmptyStr && result != True {
+							if !IsEmptyStr(result) && result != True {
 								if s, ok := result.ToStr(); ok {
 									panic(s)
 								}

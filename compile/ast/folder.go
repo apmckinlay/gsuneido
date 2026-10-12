@@ -27,7 +27,7 @@ func (Folder) constant(val Value) Expr {
 	return &Constant{Val: val}
 }
 
-func (Folder) Symbol(s SuStr) Expr {
+func (Folder) Symbol(s Value) Expr {
 	return &Constant{Val: s}
 }
 
@@ -476,7 +476,7 @@ func foldCat(exprs []Expr) []Expr {
 			dst++
 		} else {
 			copy := *exprs[first].(*Constant)
-			copy.Val = SuStr(AsStr(copy.Val) + AsStr(c.Val))
+			copy.Val = StrCat(AsStr(copy.Val), AsStr(c.Val))
 			exprs[first] = &copy
 		}
 	}
@@ -495,10 +495,10 @@ func (Folder) foldCall(c *Call) Expr {
 	case *Mem:
 		if e, ok := fn.E.(*Ident); ok && e.Name == "Date" {
 			if c, ok := fn.M.(*Constant); ok {
-				switch c.Val {
-				case SuStr("Begin"):
+				switch StrOrEmpty(c.Val) {
+				case "Begin":
 					return &dateBegin
-				case SuStr("End"):
+				case "End":
 					return &dateEnd
 				}
 			}

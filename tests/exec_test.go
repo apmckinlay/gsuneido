@@ -206,12 +206,12 @@ func execute(args []string, _ []bool) bool {
 		} else if es, ok := e.(string); ok {
 			actual = SuStr(es)
 			success = strings.Contains(es, args[2])
-		} else if ss, ok := e.(SuStr); ok {
-			actual = ss
-			success = strings.Contains(string(ss), args[2])
 		} else if se, ok := e.(*SuExcept); ok {
 			actual = se.SuStr
 			success = strings.Contains(string(se.SuStr), args[2])
+		} else if s, ok := valStr(e); ok {
+			actual = e.(Value)
+			success = strings.Contains(s, args[2])
 		} else {
 			actual = SuStr(fmt.Sprintf("%#v", e))
 			success = false
@@ -233,4 +233,13 @@ func execute(args []string, _ []bool) bool {
 		fmt.Printf("\tgot: %s  expected: %s\n", WithType(actual), expected)
 	}
 	return success
+}
+
+func valStr(x any) (string, bool) {
+	if x, ok := x.(Value); ok {
+		if s, ok := x.ToStr(); ok {
+			return s, true
+		}
+	}
+	return "", false
 }

@@ -106,7 +106,7 @@ func (p *Parser) params(inClass bool) []ast.Param {
 				wasString := p.Token == tok.String || p.Token == tok.Symbol
 				defs = true
 				def := p.constant()
-				if _, ok := def.(SuStr); ok && !wasString {
+				if _, ok := def.ToStr(); ok && !wasString {
 					p.Error("parameter defaults must be constants")
 				}
 				addParam(name, pos, unused, def, annotation)

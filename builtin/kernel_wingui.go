@@ -314,7 +314,7 @@ func writefile(f Value, buf unsafe.Pointer, size Value, written Value) Value {
 		uintptr(n),
 		uintptr(unsafe.Pointer(&w)),
 		0)
-	written.Put(nil, SuStr1("x"), IntVal(w))
+	written.Put(nil, StrVal("x"), IntVal(w))
 	return boolRet(rtn)
 }
 

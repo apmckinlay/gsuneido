@@ -187,7 +187,7 @@ func addFixed(fixed Fixed, e ast.Expr) (Fixed, bool) {
 	if b, ok := e.(*ast.Binary); ok && (b.Tok == tok.Is || b.Tok == tok.Lte) {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
 			if c, ok := b.Rhs.(*ast.Constant); ok {
-				if b.Tok == tok.Is || c.Val == EmptyStr {
+				if b.Tok == tok.Is || IsEmptyStr(c.Val) {
 					return fixedAnd(fixed, id.Name, c.Val)
 				}
 			}

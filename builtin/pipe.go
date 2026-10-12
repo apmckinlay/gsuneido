@@ -47,7 +47,7 @@ func piper_Read(this Value, a Value) Value {
 		}
 		panic(fmt.Sprint("Pipe.Read: ", err))
 	}
-	return SuStr("")
+	return EmptyStr
 }
 
 var _ = method(piper_CopyTo, "(dest, nbytes = false) :number")

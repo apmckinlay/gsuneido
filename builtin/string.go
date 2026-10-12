@@ -26,12 +26,13 @@ import (
 	"golang.org/x/text/encoding/charmap"
 )
 
-// sameStr avoids allocation from converting SuStr to Value interface
+// sameStr returns x when its string contents equal s,
+// avoiding an allocation when the result is unchanged.
 func sameStr(x Value, s string) Value {
-	if ss, ok := x.(SuStr); ok && hacks.SameString(s, string(ss)) {
+	if t, ok := x.ToStr(); ok && s == t {
 		return x
 	}
-	return SuStr(s)
+	return StrVal(s)
 }
 
 var _ = exportMethods(&StringMethods, "string")
@@ -260,7 +261,7 @@ func string_MapN(th *Thread, this Value, args []Value) Value {
 	sb.Grow(len(s)) // ???
 	for i := 0; i < len(s); i += n {
 		end := min(i+n, len(s))
-		val := th.Call(block, SuStr1(s[i:end]))
+		val := th.Call(block, StrVal(s[i:end]))
 		if val != nil {
 			sb.WriteString(AsStr(val))
 			CheckStringSize("MapN", sb.Len())
@@ -413,7 +414,7 @@ func string_Split(this, arg Value) Value {
 		// split bytes
 		v := make([]Value, len(s))
 		for i := range len(s) {
-			v[i] = SuStr1s[s[i]]
+			v[i] = StrVal1(s[i])
 		}
 		return SuObjectOf(v...)
 	}
@@ -507,7 +508,7 @@ func string_UpperQ(this Value) Value {
 }
 
 func replace(th *Thread, s string, patarg Value, reparg Value, count int) string {
-	if count <= 0 || (patarg == EmptyStr && reparg == EmptyStr) {
+	if count <= 0 || (IsEmptyStr(patarg) && IsEmptyStr(reparg)) {
 		return s
 	}
 	pat := th.Regex(patarg)
@@ -538,7 +539,7 @@ func replace(th *Thread, s string, patarg Value, reparg Value, count int) string
 			r = regex.Replacement(s, rep, cap)
 		} else {
 			r = s[pos:end]
-			v := th.Call(reparg, SuStr1(r))
+			v := th.Call(reparg, StrVal(r))
 			if v != nil {
 				r = AsStr(v)
 			}

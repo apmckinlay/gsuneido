@@ -11,7 +11,7 @@ import (
 type Token = tokens.Token
 
 type Builder interface {
-	Symbol(s SuStr) Expr
+	Symbol(s Value) Expr
 	Unary(tok Token, expr Expr) Expr
 	Binary(lhs Expr, tok Token, rhs Expr) Expr
 	Trinary(cond Expr, t Expr, f Expr) Expr
@@ -25,7 +25,7 @@ type Factory struct{}
 
 var _ Builder = (*Factory)(nil)
 
-func (Factory) Symbol(s SuStr) Expr {
+func (Factory) Symbol(s Value) Expr {
 	return &Constant{Val: s}
 }
 func (Factory) Unary(tok Token, expr Expr) Expr {

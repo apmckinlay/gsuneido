@@ -45,7 +45,7 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 				e = &ast.Ident{Name: "this", Pos: pos, Implicit: true}
 				id = p.privatizeRef(id)
 			}
-			e = &ast.Mem{E: e, M: p.Constant(SuStr(id)), DotPos: pos}
+			e = &ast.Mem{E: e, M: p.Constant(StrVal(id)), DotPos: pos}
 			if p.Token == tok.LCurly && !p.expectingCompound { // a.F { }
 				e = p.Call(e, p.arguments(p.Token), 0)
 			}
@@ -225,11 +225,11 @@ func (p *Parser) atom() (result ast.Expr) {
 	switch token := p.Token; token {
 	case tok.String:
 		// don't call p.constant() because it allows concatenation
-		s := SuStr(p.Text)
+		s := StrVal(p.Text)
 		p.Next()
 		return p.Constant(s)
 	case tok.Symbol:
-		s := SuStr(p.Text)
+		s := StrVal(p.Text)
 		p.Next()
 		return p.Symbol(s)
 	case tok.True, tok.False, tok.Number, tok.Hash:
@@ -284,7 +284,7 @@ func (p *Parser) atom() (result ast.Expr) {
 		} else {
 			args = []ast.Arg{}
 		}
-		expr = &ast.Mem{E: expr, M: p.Constant(SuStr("*new*"))}
+		expr = &ast.Mem{E: expr, M: p.Constant(_new_)}
 		return p.Call(expr, args, 0)
 	default:
 		if p.Token.IsIdent() {
@@ -314,6 +314,8 @@ func (p *Parser) atom() (result ast.Expr) {
 	}
 	panic(p.Error("unexpected " + p.Item.String()))
 }
+
+var _new_ = StrVal("*new*")
 
 // noName assigns names to anonymous functions and classes.
 // Usage: defer p.noName()()
@@ -384,9 +386,9 @@ func (p *Parser) arguments(opening tok.Token) []ast.Arg {
 	return args
 }
 
-var atArg = SuStr1("@")
-var at1Arg = SuStr("@+1")
-var blockArg = SuStr("block")
+var atArg = StrVal("@")
+var at1Arg = StrVal("@+1")
+var blockArg = StrVal("block")
 
 func (p *Parser) atArgument() []ast.Arg {
 	which := atArg
@@ -440,7 +442,7 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 			}
 			handlePending(p.Constant(True), endPos)
 			name := p.MatchIdent()
-			named(SuStr(name), &ast.Ident{Name: name, Pos: pos}, pos, p.EndPos)
+			named(StrVal(name), &ast.Ident{Name: name, Pos: pos}, pos, p.EndPos)
 		} else if name, ok := p.argNameAhead(); ok {
 			handlePending(p.Constant(True), endPos)
 			pending = name
@@ -483,11 +485,11 @@ func (p *Parser) argNameAhead() (Value, bool) {
 	}
 	var name Value
 	if p.Token.IsIdent() {
-		name = SuStr(p.Text)
+		name = StrVal(p.Text)
 	} else {
 		switch p.Token {
 		case tok.String:
-			name = SuStr(p.Text)
+			name = StrVal(p.Text)
 		case tok.Number:
 			name = NumFromString(p.Text) // mirror p.number()
 		case tok.Sub:

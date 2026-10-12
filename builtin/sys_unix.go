@@ -36,12 +36,12 @@ func CopyFile(th *Thread, args []Value) Value {
 		fromPath, err := sandboxPath("CopyFile", from)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("CopyFile: " + err.Error())
+			return StrCat("CopyFile: ", err.Error())
 		}
 		toPath, err := sandboxPath("CopyFile", to)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("CopyFile: " + err.Error())
+			return StrCat("CopyFile: ", err.Error())
 		}
 		from = fromPath
 		to = toPath
@@ -51,13 +51,13 @@ func CopyFile(th *Thread, args []Value) Value {
 
 	srcFile, err := os.Open(from)
 	if err != nil {
-		return SuStr("CopyFile: " + err.Error())
+		return StrCat("CopyFile: ", err.Error())
 	}
 	defer srcFile.Close()
 
 	fi, err := srcFile.Stat()
 	if err != nil {
-		return SuStr("CopyFile: " + err.Error())
+		return StrCat("CopyFile: ", err.Error())
 	}
 
 	flags := os.O_WRONLY | os.O_CREATE
@@ -68,7 +68,7 @@ func CopyFile(th *Thread, args []Value) Value {
 	}
 	destFile, err := os.OpenFile(to, flags, fi.Mode())
 	if err != nil {
-		return SuStr("CopyFile: " + err.Error())
+		return StrCat("CopyFile: ", err.Error())
 	}
 	defer destFile.Close()
 	// needed when the destination is on a Samba network drive
@@ -78,7 +78,7 @@ func CopyFile(th *Thread, args []Value) Value {
 
 	_, err = io.Copy(destFile, srcFile)
 	if err != nil {
-		return SuStr("CopyFile: " + err.Error())
+		return StrCat("CopyFile: ", err.Error())
 	}
 
 	destFile.Close()

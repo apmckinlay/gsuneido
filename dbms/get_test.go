@@ -62,8 +62,8 @@ func TestGetWhere(t *testing.T) {
 
 	// Multiple fields - check structure
 	obj4 := &SuObject{}
-	obj4.Set(SuStr1("a"), SuInt16(1))
-	obj4.Set(SuStr1("b"), SuInt16(2))
+	obj4.Set(StrVal("a"), SuInt16(1))
+	obj4.Set(StrVal("b"), SuInt16(2))
 	w := getWhere(obj4)
 	assert.T(t).True(strings.HasPrefix(w, "where "))
 	assert.T(t).True(strings.Contains(w, "\nand "))
@@ -173,7 +173,7 @@ func TestGetOnlyUniqueIndex(t *testing.T) {
 	th := &Thread{}
 	ob := &SuObject{}
 	ob.Set(SuStr("query"), SuStr("tmp"))
-	ob.Set(SuStr1("u"), SuStr1("x"))
+	ob.Set(StrVal("u"), StrVal("x"))
 	row, hdr, _ := get(th, tran, ob, Only)
 	assert.T(t).Msg("get Only u=x").
 		This(AsStr(row.GetVal(hdr, "u", nil, nil))).Is("x")
@@ -211,7 +211,7 @@ func TestGetOnlyUniqueIndexEmpty(t *testing.T) {
 	defer tran.Complete()
 	th := &Thread{}
 	tbl := qry.NewTable(tran, "tmp").(*qry.Table)
-	sels := Sels{qry.NewSel("u", Pack(SuStr("")))}
+	sels := Sels{qry.NewSel("u", "")}
 	single, strat, getfn := getIndex(th, tran, tbl, sels, Only)
 	assert.T(t).Msg("not single").True(!single)
 	assert.T(t).Msg("strategy").

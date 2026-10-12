@@ -38,6 +38,17 @@ func TestBuilder(t *testing.T) {
 
 }
 
+func TestBuilderTrimEmptyStrings(t *testing.T) {
+	assert := assert.T(t).This
+	var b RecordBuilder
+	b.Add(SuStr("xyz"))
+	b.Add(NewSuStrP(""))
+	b.Add(NewSuConcat())
+	b.Trim()
+	assert(len(b.vals)).Is(1)
+	assert(b.Build().Count()).Is(1)
+}
+
 func TestLength(t *testing.T) {
 	assert := assert.T(t).This
 	assert(tblength(0, 0)).Is(1)
@@ -80,8 +91,8 @@ func TestTruncate(t *testing.T) {
 	r2 = r.Truncate(2)
 	assert.This(r2.String()).Is(`{123, "hello world"}`)
 
-	b.Add(SuStr(""))
-	b.Add(SuStr(""))
+	b.Add(emptyStr)
+	b.Add(emptyStr)
 	r = b.Build()
 	r2 = r.Truncate(4)
 	assert.This(r2.String()).Is(`{123, "hello world", true}`)

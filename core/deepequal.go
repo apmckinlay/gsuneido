@@ -223,7 +223,7 @@ func ydeInstance(y *SuInstance, stack *[]Value, size int) (todo []Value, sizesEq
 	start := n - size
 	for i := range size {
 		p := &(*stack)[start+i]
-		*p = y.Data[string((*p).(SuStr))]
+		*p = y.Data[ToStr(*p)]
 	}
 	return (*stack)[start:], true
 }

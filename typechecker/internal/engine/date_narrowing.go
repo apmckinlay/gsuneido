@@ -76,11 +76,7 @@ func proveDateCall(call *ast.Call) dateProof {
 		}
 		var idx int
 		if a.Name != nil {
-			name, ok := a.Name.(core.SuStr)
-			if !ok {
-				return dateUnprovable
-			}
-			idx, ok = dateArgSlot[string(name)]
+			idx, ok = dateArgSlot[a.NameStr()]
 			if !ok {
 				return dateUnprovable
 			}

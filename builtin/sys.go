@@ -75,7 +75,7 @@ func CreateDir(th *Thread, args []Value) Value {
 		p, err := sandboxPath("CreateDir", path)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("CreateDir: " + err.Error())
+			return StrCat("CreateDir: ", err.Error())
 		}
 		path = p
 	}
@@ -83,13 +83,13 @@ func CreateDir(th *Thread, args []Value) Value {
 	if errors.Is(err, os.ErrExist) {
 		if info, err2 := os.Stat(path); err2 == nil && info.Mode().IsDir() {
 			// not return-throw
-			return SuStr("CreateDir " + path + ": already exists")
+			return StrCat("CreateDir ", path, ": already exists")
 		}
 		err = errors.New(path + ": exists but is not a directory")
 	}
 	if err != nil {
 		th.ReturnThrow = true
-		return SuStr("CreateDir: " + err.Error())
+		return StrCat("CreateDir: ", err.Error())
 	}
 	return True
 }
@@ -102,7 +102,7 @@ func EnsureDir(th *Thread, args []Value) Value {
 		p, err := sandboxPath("EnsureDir", path)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("EnsureDir: " + err.Error())
+			return StrCat("EnsureDir: ", err.Error())
 		}
 		path = p
 	}
@@ -115,7 +115,7 @@ func EnsureDir(th *Thread, args []Value) Value {
 	}
 	if err != nil {
 		th.ReturnThrow = true
-		return SuStr("EnsureDir: " + err.Error())
+		return StrCat("EnsureDir: ", err.Error())
 	}
 	return True
 }
@@ -128,19 +128,19 @@ func DeleteFileApi(th *Thread, args []Value) Value {
 		p, err := sandboxPath("DeleteFileApi", path)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("DeleteFileApi: " + err.Error())
+			return StrCat("DeleteFileApi: ", err.Error())
 		}
 		path = p
 	}
 	err := deleteFile(path) // see sys_unix.go and sys_windows.go
 	if errors.Is(err, os.ErrNotExist) {
 		// not return-throw
-		return SuStr("DeleteFileApi: " + path + " does not exist")
+		return StrCat("DeleteFileApi: ", path, " does not exist")
 		// WARNING: application code may depend on "does not exist"
 	}
 	if err != nil {
 		th.ReturnThrow = true
-		return SuStr("DeleteFileApi " + path + ": " + err.Error())
+		return StrCat("DeleteFileApi ", path, ": ", err.Error())
 	}
 	return True
 }
@@ -190,12 +190,12 @@ func MoveFile(th *Thread, args []Value) Value {
 		fromPath, err := sandboxPath("MoveFile", from)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("MoveFile: " + err.Error())
+			return StrCat("MoveFile: ", err.Error())
 		}
 		toPath, err := sandboxPath("MoveFile", to)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("MoveFile: " + err.Error())
+			return StrCat("MoveFile: ", err.Error())
 		}
 		from = fromPath
 		to = toPath
@@ -203,7 +203,7 @@ func MoveFile(th *Thread, args []Value) Value {
 	err := os.Rename(from, to)
 	if err != nil {
 		th.ReturnThrow = true
-		return SuStr("MoveFile: " + err.Error())
+		return StrCat("MoveFile: ", err.Error())
 	}
 	return True
 }
@@ -216,7 +216,7 @@ func DeleteDir(th *Thread, args []Value) Value {
 		p, err := sandboxPath("DeleteDir", path)
 		if err != nil {
 			th.ReturnThrow = true
-			return SuStr("DeleteDir: " + err.Error())
+			return StrCat("DeleteDir: ", err.Error())
 		}
 		path = p
 		if path == sandboxRoot {
@@ -230,15 +230,15 @@ func DeleteDir(th *Thread, args []Value) Value {
 	}
 	th.ReturnThrow = true
 	if err != nil {
-		return SuStr("DeleteDir: " + err.Error())
+		return StrCat("DeleteDir: ", err.Error())
 	}
 	if !info.Mode().IsDir() {
-		return SuStr("DeleteDir: " + path + " not a directory")
+		return StrCat("DeleteDir: ", path, " not a directory")
 	}
 	path = strings.TrimRight(path, `/\`)
 	err = os.RemoveAll(path)
 	if err != nil {
-		return SuStr("DeleteDir: " + err.Error())
+		return StrCat("DeleteDir: ", err.Error())
 	}
 	return True
 }

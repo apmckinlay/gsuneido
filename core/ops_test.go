@@ -71,19 +71,49 @@ func join(this Value, arg Value) Value {
 }
 
 func TestOpCatN(t *testing.T) {
-	test := func(values ...string) {
+	test := func(values ...Value) {
 		t.Helper()
 		th := &Thread{}
-		var expected strings.Builder
+		expected := ""
 		for _, v := range values {
-			th.Push(SuStr(v))
-			expected.WriteString(v)
+			th.Push(v)
+			expected += AsStr(v)
 		}
 		result := OpCatN(th, len(values))
-		assert.T(t).This(result).Is(SuStr(expected.String()))
+		assert.T(t).This(ToStr(result)).Is(expected)
 	}
-	test("hello", " ", "world")
-	test("a", "b", "c", "d")
-	test("x", "", "y", "", "z")
-	test("a", "b", "c", "d", "e", "f")
+	test(SuStr("hello"), SuStr(" "), SuStr("world"))
+	test(SuStr("a"), SuStr("b"), SuStr("c"), SuStr("d"))
+	test(SuStr("x"), SuStr(""), SuStr("y"), SuStr(""), SuStr("z"))
+	test(SuStr("count="), SuInt16(42), SuStr(" name="), SuStr("Fred"), SuStr(" flag="), True)
+	test(SuStr("a"), SuStr("b"), SuStr("c"), SuStr("d"), SuStr("e"), SuStr("f"),
+		SuStr("g"), SuStr("h"), SuStr("i"), SuStr("j"), SuStr("k"), SuStr("l"))
+}
+
+func BenchmarkOpCatN(b *testing.B) {
+	cases := []struct {
+		name   string
+		values []Value
+	}{
+		{"strings", []Value{SuStr("hello"), SuStr("cruel"), SuStr("world"),
+			SuStr("and"), SuStr("all"), SuStr("who"), SuStr("live")}},
+		{"mixed", []Value{SuStr("count="), SuInt16(42), SuStr(" name="),
+			SuStr("Fred"), SuStr(" flag="), True}},
+	}
+	run := func(b *testing.B, op func(*Thread, int) Value, values []Value) {
+		b.ReportAllocs()
+		for b.Loop() {
+			th := &Thread{}
+			for _, v := range values {
+				th.Push(v)
+			}
+			G = op(th, len(values))
+		}
+	}
+	for _, c := range cases {
+		values := c.values
+		b.Run(c.name+"/OpCatN", func(b *testing.B) {
+			run(b, OpCatN, values)
+		})
+	}
 }

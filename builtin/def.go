@@ -14,9 +14,9 @@ func DefDef() {
 }
 
 func Def(nameVal, val Value) Value {
-	name := string(nameVal.(SuStr))
-	if ss, ok := val.(SuStr); ok {
-		val = compile.NamedConstant("Def", name, string(ss), nil)
+	name := ToStr(nameVal)
+	if s, ok := val.ToStr(); ok {
+		val = compile.NamedConstant("Def", name, s, nil)
 	}
 	Global.TestDef(name, val)
 	return val
