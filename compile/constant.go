@@ -62,7 +62,7 @@ func (p *Parser) constant() Value {
 	case tok.String:
 		return p.string()
 	case tok.Symbol:
-		s := StrVal(p.Text)
+		s := InternStrVal(p.Text)
 		p.Next()
 		return s
 	case tok.Add:
@@ -107,7 +107,7 @@ func (p *Parser) constant() Value {
 			}
 			s := p.Text
 			p.Next()
-			return StrVal(s)
+			return InternStrVal(s)
 		}
 	}
 	panic(p.Error("invalid constant, unexpected " + p.Item.String()))
@@ -233,11 +233,11 @@ func (p *Parser) member(closing tok.Token, base Gnum) (k Value, v Value) {
 		if f, ok := fn.(*SuFunc); ok {
 			f.ClassName = p.className
 		}
-		return StrVal(name), fn
+		return InternStrVal(name), fn
 	}
 	if p.MatchIf(tok.Colon) { // named
 		if inClass {
-			m = StrVal(p.privatizeDef(m))
+			m = InternStrVal(p.privatizeDef(m))
 		}
 		if p.Token == tok.Comma || p.Token == tok.Semicolon || p.Token == closing {
 			return m, True

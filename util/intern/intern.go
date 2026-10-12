@@ -2,79 +2,73 @@
 // Governed by the MIT license found in the LICENSE file.
 
 // package intern stores a set of strings.
+// Each string is separately allocated in strp format
+// (length prefixed) so it can be used directly as a Go string
+// or as a *SuStrP, sharing the same bytes.
 // NOTE: strings are never removed or garbage collected (other than Clear)
 package intern
 
 import (
 	"strings"
 	"sync"
-	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/shmap"
+	"github.com/apmckinlay/gsuneido/util/strp"
 )
-
-const chunkSize = 64 * 1024 // 64 kb to match int16 offset
 
 var (
-	htbl shmap.Map[entry, struct{}, helper]
-	// chunks holds the actual strings
-	chunks []*chunkType = []*chunkType{{}}
-	// next offset in current chunk
-	next int
-	lock sync.Mutex
+	htbl shmap.Map[*byte, struct{}, helper]
+	lock       sync.Mutex
+	bytesAlloc int
 )
-
-type chunkType [chunkSize]byte
-
-type entry struct {
-	size   uint8
-	chunk  uint8
-	offset uint16
-}
-
-func (e entry) str() string {
-	return unsafe.String(&chunks[e.chunk][e.offset], e.size)
-}
 
 type helper struct{}
 
-func (helper) Hash(e entry) uint64 {
-	return hash.String(e.str())
+func (helper) Hash(p *byte) uint64 {
+	return hash.String(strp.String(p))
 }
 
-func (helper) Equal(e1, e2 entry) bool {
-	return e1.str() == e2.str()
+func (helper) Equal(x, y *byte) bool {
+	return strp.String(x) == strp.String(y)
 }
 
-// String returns a copy of the string in its private storage.
-// If the string doesn't exist yet, it is added.
-// Strings longer than 256 bytes are just cloned every time, not stored.
+// lookup supports probing the table with a Go string
+type lookup struct{}
+
+func (lookup) Hash(s string) uint64 {
+	return hash.String(s)
+}
+
+func (lookup) Equal(s string, p *byte) bool {
+	return s == strp.String(p)
+}
+
+// String returns the interned copy of s.
+// Strings longer than strp.MaxLen are cloned but not stored.
 func String(s string) string {
-	if len(s) >= 256 {
-		return strings.Clone(s)
+	if p := StrP(s); p != nil {
+		return strp.String(p)
+	}
+	return strings.Clone(s)
+}
+
+// StrP returns a length-prefixed pointer to interned storage for s.
+// It returns nil if len(s) > strp.MaxLen.
+// The returned pointer remains valid even after Clear.
+func StrP(s string) *byte {
+	if len(s) > strp.MaxLen {
+		return nil
 	}
 	lock.Lock()
 	defer lock.Unlock()
-	e := add(s)
-	k, exists := htbl.GetInit(e)
-	if !exists {
-		return e.str()
+	if p, ok := htbl.GetKeyAs(s, lookup{}); ok {
+		return p
 	}
-	next -= int(e.size) // undo the add
-	return k.str()
-}
-
-func add(s string) entry {
-	if next+len(s) > chunkSize {
-		chunks = append(chunks, &chunkType{})
-		next = 0
-	}
-	ci := len(chunks) - 1
-	copy(chunks[ci][next:], s)
-	offset := next
-	next += len(s)
-	return entry{size: uint8(len(s)), chunk: uint8(ci), offset: uint16(offset)}
+	p := strp.From(s)
+	htbl.Put(p, struct{}{})
+	bytesAlloc += len(s) + 1
+	return p
 }
 
 // Count returns the number of unique strings stored
@@ -86,7 +80,9 @@ func Count() int {
 
 // Bytes returns the total allocated size of the strings
 func Bytes() int {
-	return (len(chunks)-1)*chunkSize + next
+	lock.Lock()
+	defer lock.Unlock()
+	return bytesAlloc
 }
 
 // Clear discards all the strings and starts fresh
@@ -94,14 +90,5 @@ func Clear() {
 	lock.Lock()
 	defer lock.Unlock()
 	htbl.Clear()
-	chunks = []*chunkType{{}}
-	next = 0
-
-}
-
-// Recent returns the most recently added strings (for debugging)
-func Recent() string {
-	lock.Lock()
-	defer lock.Unlock()
-	return string(chunks[len(chunks)-1][max(0, next-256):next])
+	bytesAlloc = 0
 }

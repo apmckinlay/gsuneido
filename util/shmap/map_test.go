@@ -53,6 +53,53 @@ func TestRandom(t *testing.T) {
 	// m2.summary()
 }
 
+// hashStr is a deterministic hash for lookup tests
+func hashStr(s string) uint64 {
+	h := uint64(1469598103934665603)
+	for i := range len(s) {
+		h ^= uint64(s[i])
+		h *= 1099511628211
+	}
+	return h
+}
+
+// queryKey is a distinct type used to look up stored string keys
+type queryKey string
+
+type strLookup struct{}
+
+func (strLookup) Hash(q queryKey) uint64          { return hashStr(string(q)) }
+func (strLookup) Equal(q queryKey, k string) bool { return string(q) == k }
+
+func TestGetKeyAs(t *testing.T) {
+	m := NewMapFuncs[string, int](
+		func(s string) uint64 { return hashStr(s) },
+		func(a, b string) bool { return a == b })
+	m.Put("hello", 1)
+	m.Put("world", 2)
+	for i := range 100 {
+		s := fmt.Sprintf("key%d", i)
+		m.Put(s, i)
+	}
+	m.check()
+
+	// returns the stored key, found by a different type
+	k, ok := m.GetKeyAs(queryKey("hello"), strLookup{})
+	assert.This(ok).Is(true)
+	assert.This(k).Is("hello")
+
+	// not found
+	_, ok = m.GetKeyAs(queryKey("nope"), strLookup{})
+	assert.This(ok).Is(false)
+
+	// empty map
+	empty := NewMapFuncs[string, int](
+		func(s string) uint64 { return hashStr(s) },
+		func(a, b string) bool { return a == b })
+	_, ok = empty.GetKeyAs(queryKey("hello"), strLookup{})
+	assert.This(ok).Is(false)
+}
+
 func TestIter(t *testing.T) {
 	m := NewMapInt[int, int]()
 	gm := make(map[int]int)

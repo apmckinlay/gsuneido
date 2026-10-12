@@ -97,3 +97,15 @@ func TestStringHash(t *testing.T) {
 		}
 	}
 }
+
+func TestInternStrVal(t *testing.T) {
+	// interned names share storage instead of copying into SuStrP
+	a := InternStrVal("hello").(*SuStrP)
+	b := InternStrVal("hello").(*SuStrP)
+	assert.That(a == b)
+
+	// too long to intern falls back to SuStr
+	long := InternStrVal(strings.Repeat("x", strp.MaxLen+1))
+	_, ok := long.(SuStr)
+	assert.That(ok)
+}

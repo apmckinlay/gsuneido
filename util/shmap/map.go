@@ -134,6 +134,42 @@ func (m *Map[K, V, H]) Get(k K) (v V, ok bool) {
 	}
 }
 
+// LookupHelper is used by GetKeyAs to look up a stored key of type K
+// using a query key of a different type Q.
+// Hash must return the same value for query keys that Equal any given stored key.
+type LookupHelper[Q, K any] interface {
+	Hash(Q) uint64
+	Equal(Q, K) bool
+}
+
+// GetKeyAs is like Get but looks up using a query key of a different type Q
+// and returns the stored key. It allows lookups without constructing a K,
+// e.g. probing a set of length-prefixed strings with a Go string.
+func (m *Map[K, V, H]) GetKeyAs[Q any, L LookupHelper[Q, K]](q Q, h L) (K, bool) {
+	if m.count == 0 {
+		var zero K
+		return zero, false
+	}
+	hash := h.Hash(q)
+	h2 := uint8(hash & 0x7f)
+	seq := makeProbeSeq(hash>>7, uint64(len(m.groups)-1))
+	for ; ; seq = seq.next() {
+		grp := &m.groups[seq.offset]
+		b := findByte(grp.control, h2|0x80)
+		for b != 0 {
+			i := b.first()
+			if h.Equal(q, grp.keys[i]) {
+				return grp.keys[i], true
+			}
+			b = b.dropFirst()
+		}
+		if anyEmpty(grp.control) {
+			var zero K
+			return zero, false
+		}
+	}
+}
+
 func (m *Map[K, V, H]) search(k K) (uint8, probeSeq) {
 	h := m.help.Hash(k)
 	h1 := h >> 7

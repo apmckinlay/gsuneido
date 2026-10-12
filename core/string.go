@@ -6,6 +6,7 @@ package core
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/util/intern"
 	"github.com/apmckinlay/gsuneido/util/strp"
 )
 
@@ -51,6 +52,17 @@ func StrVal(s string) Value {
 		return SuStr(s)
 	}
 	return NewSuStrP(s)
+}
+
+// InternStrVal returns a Value for s whose bytes are shared with the intern
+// table, so an interned name is not copied into a separate SuStrP.
+// It is intended for compiler names (identifiers, symbols, member names).
+// Strings too long to intern fall back to SuStr.
+func InternStrVal(s string) Value {
+	if p := intern.StrP(s); p != nil {
+		return (*SuStrP)(p)
+	}
+	return SuStr(s)
 }
 
 // StrCat concatenates Go strings to a Suneido Value.

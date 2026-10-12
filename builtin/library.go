@@ -64,5 +64,3 @@ func LibraryOverrideClear() Value {
 var _ = AddInfo("intern.count", intern.Count)
 
 var _ = AddInfo("intern.bytes", intern.Bytes)
-
-var _ = AddInfo("intern.recent", intern.Recent)

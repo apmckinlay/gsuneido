@@ -45,7 +45,7 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 				e = &ast.Ident{Name: "this", Pos: pos, Implicit: true}
 				id = p.privatizeRef(id)
 			}
-			e = &ast.Mem{E: e, M: p.Constant(StrVal(id)), DotPos: pos}
+			e = &ast.Mem{E: e, M: p.Constant(InternStrVal(id)), DotPos: pos}
 			if p.Token == tok.LCurly && !p.expectingCompound { // a.F { }
 				e = p.Call(e, p.arguments(p.Token), 0)
 			}
@@ -229,7 +229,7 @@ func (p *Parser) atom() (result ast.Expr) {
 		p.Next()
 		return p.Constant(s)
 	case tok.Symbol:
-		s := StrVal(p.Text)
+		s := InternStrVal(p.Text)
 		p.Next()
 		return p.Symbol(s)
 	case tok.True, tok.False, tok.Number, tok.Hash:
@@ -442,7 +442,7 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 			}
 			handlePending(p.Constant(True), endPos)
 			name := p.MatchIdent()
-			named(StrVal(name), &ast.Ident{Name: name, Pos: pos}, pos, p.EndPos)
+			named(InternStrVal(name), &ast.Ident{Name: name, Pos: pos}, pos, p.EndPos)
 		} else if name, ok := p.argNameAhead(); ok {
 			handlePending(p.Constant(True), endPos)
 			pending = name
@@ -485,7 +485,7 @@ func (p *Parser) argNameAhead() (Value, bool) {
 	}
 	var name Value
 	if p.Token.IsIdent() {
-		name = StrVal(p.Text)
+		name = InternStrVal(p.Text)
 	} else {
 		switch p.Token {
 		case tok.String:
