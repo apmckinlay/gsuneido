@@ -27,7 +27,7 @@ func (mb *MemBase) AddMembersTo(ob *SuObject) {
 		defer mb.lock.Unlock()
 	}
 	for m := range mb.Data {
-		ob.Add(SuStr(m))
+		ob.Add(StrVal(m))
 	}
 }
 
@@ -64,7 +64,7 @@ func (mb *MemBase) Iter2(bool, bool) func() (Value, Value) {
 	// can't use iter.Pull2 because it requires calling stop
 	data := make([]Value, 0, 2*len(mb.Data)) // snapshot
 	for k, v := range mb.Data {
-		data = append(data, SuStr(k), v)
+		data = append(data, StrVal(k), v)
 	}
 	i := 0
 	return func() (Value, Value) {

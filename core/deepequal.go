@@ -206,7 +206,7 @@ func xdeInstance(x *SuInstance, stack *[]Value) (todo []Value, size int) {
 		(*stack)[i] = v
 		// temporarily store the member
 		// where ydeInstance will replace it with its value
-		(*stack)[i+size] = SuStr(k)
+		(*stack)[i+size] = StrVal(k)
 		i++
 	}
 	return (*stack)[start : start+size], size

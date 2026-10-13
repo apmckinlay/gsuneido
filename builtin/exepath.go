@@ -18,5 +18,5 @@ func ExePath() Value {
 		panic("ExePath " + err.Error())
 	}
 	path = strings.ReplaceAll(path, "\\", "/")
-	return SuStr(path)
+	return StrVal(path)
 }

@@ -201,19 +201,19 @@ func (hr *suHttpResponse) Get(_ *Thread, k Value) Value {
 	case "status":
 		return IntVal(hr.resp.StatusCode)
 	case "proto":
-		return SuStr(hr.resp.Proto)
+		return StrVal(hr.resp.Proto)
 	case "header": // DEPRECATED
 		var sb strings.Builder
 		fmt.Fprintln(&sb, hr.resp.Proto, hr.resp.Status)
 		hr.resp.Header.Write(&sb)
-		return SuStr(sb.String())
+		return StrVal(sb.String())
 	case "content", "body":
-		return SuStr(hr.body)
+		return StrVal(hr.body)
 	default:
 		key = strings.ReplaceAll(key, "_", "-")
 		v := hr.resp.Header[key]
 		if len(v) == 1 {
-			return SuStr(v[0])
+			return StrVal(v[0])
 		} else if len(v) > 1 {
 			return SuObjectOfStrs(v)
 		}
@@ -234,7 +234,7 @@ func resp_Read(this Value, a Value) Value {
 	buf := make([]byte, n)
 	nr, err := rdr.Read(buf)
 	if nr > 0 {
-		return SuStr(hacks.BStoS(buf[:nr]))
+		return StrVal(hacks.BStoS(buf[:nr]))
 	}
 	if err != nil {
 		if err == io.EOF {

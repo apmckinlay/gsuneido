@@ -61,8 +61,8 @@ func SendMessageTextOut(a, b, c, d Value) Value {
 		intArg(c),
 		uintptr(unsafe.Pointer(&buf[0])))
 	ob := &SuObject{}
-	ob.Put(nil, SuStr("text"), bufZstr(buf))
-	ob.Put(nil, SuStr("result"), intRet(rtn))
+	ob.Put(nil, StrVal("text"), bufZstr(buf))
+	ob.Put(nil, StrVal("result"), intRet(rtn))
 	return ob
 }
 
@@ -117,9 +117,9 @@ func SendMessageTcitem(a, b, c, d Value) Value {
 		intArg(c),
 		uintptr(unsafe.Pointer(&tci)))
 	if n > 0 {
-		d.Put(nil, SuStr("pszText"), bufZstr(buf))
+		d.Put(nil, StrVal("pszText"), bufZstr(buf))
 	}
-	d.Put(nil, SuStr("iImage"), IntVal(tci.iImage))
+	d.Put(nil, StrVal("iImage"), IntVal(tci.iImage))
 	return intRet(rtn)
 }
 
@@ -154,7 +154,7 @@ func SendMessageTextRange(a, b, c, d, e Value) Value {
 		intArg(b),
 		0,
 		uintptr(unsafe.Pointer(&tr)))
-	return SuStr(hacks.BStoS(buf[:n]))
+	return StrVal(hacks.BStoS(buf[:n]))
 }
 
 var _ = builtin(SendMessageTOOLINFO, "(hwnd, msg, wParam, lParam) :number")
@@ -229,18 +229,18 @@ func SendMessageTreeItem(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(&tvi)))
-	d.Put(nil, SuStr("mask"), IntVal(tvi.mask))
-	d.Put(nil, SuStr("hItem"), IntVal(tvi.hItem))
-	d.Put(nil, SuStr("state"), IntVal(tvi.state))
-	d.Put(nil, SuStr("stateMask"), IntVal(tvi.stateMask))
+	d.Put(nil, StrVal("mask"), IntVal(tvi.mask))
+	d.Put(nil, StrVal("hItem"), IntVal(tvi.hItem))
+	d.Put(nil, StrVal("state"), IntVal(tvi.state))
+	d.Put(nil, StrVal("stateMask"), IntVal(tvi.stateMask))
 	if n != 0 {
-		d.Put(nil, SuStr("pszText"), bufZstr(buf))
+		d.Put(nil, StrVal("pszText"), bufZstr(buf))
 	}
-	d.Put(nil, SuStr("cchTextMax"), IntVal(tvi.cchTextMax))
-	d.Put(nil, SuStr("iImage"), IntVal(tvi.iImage))
-	d.Put(nil, SuStr("iSelectedImage"), IntVal(tvi.iSelectedImage))
-	d.Put(nil, SuStr("cChildren"), IntVal(tvi.cChildren))
-	d.Put(nil, SuStr("lParam"), IntVal(tvi.lParam))
+	d.Put(nil, StrVal("cchTextMax"), IntVal(tvi.cchTextMax))
+	d.Put(nil, StrVal("iImage"), IntVal(tvi.iImage))
+	d.Put(nil, StrVal("iSelectedImage"), IntVal(tvi.iSelectedImage))
+	d.Put(nil, StrVal("cChildren"), IntVal(tvi.cChildren))
+	d.Put(nil, StrVal("lParam"), IntVal(tvi.lParam))
 	return intRet(rtn)
 }
 
@@ -267,7 +267,7 @@ func SendMessageTreeInsert(a, b, c, d Value) Value {
 		hParent:      getUintptr(d, "hParent"),
 		hInsertAfter: getUintptr(d, "hInsertAfter"),
 	}
-	item := d.Get(nil, SuStr("item"))
+	item := d.Get(nil, StrVal("item"))
 	tvins.item.stTVItem = stTVItem{
 		mask:           getUint32(item, "mask"),
 		hItem:          getUintptr(item, "hItem"),
@@ -294,14 +294,14 @@ func SendMessageSBPART(a, b, c, d Value) Value {
 	np := ToInt(c)
 	p := make([]int32, np)
 	var ob Container
-	if parts := d.Get(nil, SuStr("parts")); parts != nil {
+	if parts := d.Get(nil, StrVal("parts")); parts != nil {
 		ob = ToContainer(parts)
 		for i := range min(np, ob.ListSize()) {
 			p[i] = int32(ToInt(ob.ListGet(i)))
 		}
 	} else {
 		ob = &SuObject{}
-		d.Put(nil, SuStr("parts"), ob)
+		d.Put(nil, StrVal("parts"), ob)
 	}
 	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),
@@ -336,8 +336,8 @@ func SendMessageMSG(a, b, c, d Value) Value {
 var _ = builtin(SendMessageHditem, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageHditem(a, b, c, d Value) Value {
-	pszTextGiven := d.Get(nil, SuStr("pszText")) != nil
-	cchTextMaxGiven := d.Get(nil, SuStr("cchTextMax")) != nil
+	pszTextGiven := d.Get(nil, StrVal("pszText")) != nil
+	cchTextMaxGiven := d.Get(nil, StrVal("cchTextMax")) != nil
 	if pszTextGiven && cchTextMaxGiven {
 		panic("SendMessageHditem: pszText and cchTextMax cannot be used together")
 	}
@@ -357,8 +357,8 @@ func SendMessageHditem(a, b, c, d Value) Value {
 		uintptr(unsafe.Pointer(&hdi)))
 	fromHdItem(&hdi, d)
 	if cchTextMaxGiven {
-		d.Put(nil, SuStr("pszText"), ptrZstr(hdi.pszText, int(cchTextMax)))
-		ToContainer(d).Delete(nil, SuStr("cchTextMax"))
+		d.Put(nil, StrVal("pszText"), ptrZstr(hdi.pszText, int(cchTextMax)))
+		ToContainer(d).Delete(nil, StrVal("cchTextMax"))
 		runtime.KeepAlive(hdi.pszText)
 	}
 	return intRet(rtn)
@@ -382,18 +382,18 @@ func toHdItem(ob Value) stHdItem {
 }
 
 func fromHdItem(hdi *stHdItem, ob Value) Value {
-	ob.Put(nil, SuStr("mask"), IntVal(hdi.mask))
-	ob.Put(nil, SuStr("cxy"), IntVal(hdi.cxy))
+	ob.Put(nil, StrVal("mask"), IntVal(hdi.mask))
+	ob.Put(nil, StrVal("cxy"), IntVal(hdi.cxy))
 	// pszText must be handled by caller
-	ob.Put(nil, SuStr("hbm"), IntVal(hdi.hbm))
-	ob.Put(nil, SuStr("cchTextMax"), IntVal(hdi.cchTextMax))
-	ob.Put(nil, SuStr("fmt"), IntVal(hdi.fmt))
-	ob.Put(nil, SuStr("lParam"), IntVal(hdi.lParam))
-	ob.Put(nil, SuStr("iImage"), IntVal(hdi.iImage))
-	ob.Put(nil, SuStr("iOrder"), IntVal(hdi.iOrder))
-	ob.Put(nil, SuStr("type"), IntVal(hdi.typ))
-	ob.Put(nil, SuStr("pvFilter"), IntVal(hdi.pvFilter))
-	ob.Put(nil, SuStr("state"), IntVal(hdi.state))
+	ob.Put(nil, StrVal("hbm"), IntVal(hdi.hbm))
+	ob.Put(nil, StrVal("cchTextMax"), IntVal(hdi.cchTextMax))
+	ob.Put(nil, StrVal("fmt"), IntVal(hdi.fmt))
+	ob.Put(nil, StrVal("lParam"), IntVal(hdi.lParam))
+	ob.Put(nil, StrVal("iImage"), IntVal(hdi.iImage))
+	ob.Put(nil, StrVal("iOrder"), IntVal(hdi.iOrder))
+	ob.Put(nil, StrVal("type"), IntVal(hdi.typ))
+	ob.Put(nil, StrVal("pvFilter"), IntVal(hdi.pvFilter))
+	ob.Put(nil, StrVal("state"), IntVal(hdi.state))
 	return ob
 }
 
@@ -426,9 +426,9 @@ func SendMessageHDHITTESTINFO(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(&ht)))
-	d.Put(nil, SuStr("pt"), fromPoint(&ht.pt, nil))
-	d.Put(nil, SuStr("flags"), IntVal(ht.flags))
-	d.Put(nil, SuStr("iItem"), IntVal(ht.iItem))
+	d.Put(nil, StrVal("pt"), fromPoint(&ht.pt, nil))
+	d.Put(nil, StrVal("flags"), IntVal(ht.flags))
+	d.Put(nil, StrVal("iItem"), IntVal(ht.iItem))
 	return intRet(rtn)
 }
 
@@ -451,9 +451,9 @@ func SendMessageTreeHitTest(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(&ht)))
-	d.Put(nil, SuStr("pt"), fromPoint(&ht.pt, nil))
-	d.Put(nil, SuStr("flags"), IntVal(ht.flags))
-	d.Put(nil, SuStr("iItem"), IntVal(ht.iItem))
+	d.Put(nil, StrVal("pt"), fromPoint(&ht.pt, nil))
+	d.Put(nil, StrVal("flags"), IntVal(ht.flags))
+	d.Put(nil, StrVal("iItem"), IntVal(ht.iItem))
 	return intRet(rtn)
 }
 
@@ -475,8 +475,8 @@ func SendMessageTabHitTest(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(&ht)))
-	d.Put(nil, SuStr("pt"), fromPoint(&ht.pt, nil))
-	d.Put(nil, SuStr("flags"), IntVal(ht.flags))
+	d.Put(nil, StrVal("pt"), fromPoint(&ht.pt, nil))
+	d.Put(nil, StrVal("flags"), IntVal(ht.flags))
 	return intRet(rtn)
 }
 
@@ -533,7 +533,7 @@ func SendMessageListItem(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(li)))
-	d.Put(nil, SuStr("lParam"), IntVal(li.lParam))
+	d.Put(nil, StrVal("lParam"), IntVal(li.lParam))
 	return intRet(rtn)
 }
 
@@ -602,10 +602,10 @@ var _ = builtin(SendMessageListColumnOrder, "(hwnd, msg, wParam, lParam) :number
 func SendMessageListColumnOrder(a, b, c, d Value) Value {
 	n := ToInt(c)
 	p := make([]int32, n)
-	colsob := d.Get(nil, SuStr("order"))
+	colsob := d.Get(nil, StrVal("order"))
 	if colsob == nil {
 		colsob = &SuObject{}
-		d.Put(nil, SuStr("order"), colsob)
+		d.Put(nil, StrVal("order"), colsob)
 	}
 	for i := range n {
 		if x := colsob.Get(nil, IntVal(i)); x != nil {
@@ -638,8 +638,8 @@ func SendMessageLVHITTESTINFO(a, b, c, d Value) Value {
 		intArg(b),
 		intArg(c),
 		uintptr(unsafe.Pointer(&ht)))
-	d.Put(nil, SuStr("iItem"), IntVal(ht.iItem))
-	d.Put(nil, SuStr("iSubItem"), IntVal(ht.iSubItem))
+	d.Put(nil, StrVal("iItem"), IntVal(ht.iItem))
+	d.Put(nil, StrVal("iSubItem"), IntVal(ht.iSubItem))
 	return intRet(rtn)
 }
 
@@ -678,14 +678,14 @@ func toSystemTime(ob Value) stSystemTime {
 }
 
 func SYSTEMTIMEtoOb(st *stSystemTime, ob Value) Value {
-	ob.Put(nil, SuStr("wYear"), IntVal(st.wYear))
-	ob.Put(nil, SuStr("wMonth"), IntVal(st.wMonth))
-	ob.Put(nil, SuStr("wDayOfWeek"), IntVal(st.wDayOfWeek))
-	ob.Put(nil, SuStr("wDay"), IntVal(st.wDay))
-	ob.Put(nil, SuStr("wHour"), IntVal(st.wHour))
-	ob.Put(nil, SuStr("wMinute"), IntVal(st.wMinute))
-	ob.Put(nil, SuStr("wSecond"), IntVal(st.wSecond))
-	ob.Put(nil, SuStr("wMilliseconds"), IntVal(st.wMilliseconds))
+	ob.Put(nil, StrVal("wYear"), IntVal(st.wYear))
+	ob.Put(nil, StrVal("wMonth"), IntVal(st.wMonth))
+	ob.Put(nil, StrVal("wDayOfWeek"), IntVal(st.wDayOfWeek))
+	ob.Put(nil, StrVal("wDay"), IntVal(st.wDay))
+	ob.Put(nil, StrVal("wHour"), IntVal(st.wHour))
+	ob.Put(nil, StrVal("wMinute"), IntVal(st.wMinute))
+	ob.Put(nil, StrVal("wSecond"), IntVal(st.wSecond))
+	ob.Put(nil, StrVal("wMilliseconds"), IntVal(st.wMilliseconds))
 	return ob
 }
 
@@ -706,8 +706,8 @@ var _ = builtin(SendMessageSTRange, "(hwnd, msg, wParam, lParam) :number")
 
 func SendMessageSTRange(a, b, c, d Value) Value {
 	str := SystemTimeRange{
-		min: toSystemTime(d.Get(nil, SuStr("min"))),
-		max: toSystemTime(d.Get(nil, SuStr("max"))),
+		min: toSystemTime(d.Get(nil, StrVal("min"))),
+		max: toSystemTime(d.Get(nil, StrVal("max"))),
 	}
 	rtn, _, _ := syscall.SyscallN(sendMessage,
 		intArg(a),

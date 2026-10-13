@@ -224,7 +224,7 @@ func (d *defaultAdapter) String() string {
 }
 
 func (d *defaultAdapter) Call(th *Thread, this Value, as *ArgSpec) Value {
-	method := SuStr(d.method)
+	method := StrVal(d.method)
 	if as.Each >= EACH0 {
 		args := ToContainer(th.Pop()).Slice(int(as.Each) - 1)
 		args.Insert(0, method)

@@ -43,7 +43,7 @@ func HttpsServer(th *Thread, args []Value) Value {
 		TLSConfig: tlsConfig,
 	}
 	if ob, ok := args[2].ToContainer(); ok {
-		ob.Put(th, SuStr("stop"), &suStopper{server: server})
+		ob.Put(th, StrVal("stop"), &suStopper{server: server})
 	}
 	if err := server.ListenAndServeTLS("", ""); err != nil &&
 		!errors.Is(err, http.ErrServerClosed) {

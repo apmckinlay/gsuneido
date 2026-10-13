@@ -10,5 +10,5 @@ var _ = builtin(display, "(value, quotes=0) :string")
 func display(th *Thread, args []Value) Value {
 	defer func(q int) { th.Quote = q }(th.Quote)
 	th.Quote = ToInt(args[1])
-	return SuStr(Display(th, args[0]))
+	return StrVal(Display(th, args[0]))
 }

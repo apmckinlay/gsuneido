@@ -51,7 +51,7 @@ func (f *SuFunc) Call(th *Thread, this Value, as *ArgSpec) Value {
 			} else { // privatize
 				name = f.ClassName + "_" + name
 			}
-			this.Put(th, SuStr(name), args[i])
+			this.Put(th, StrVal(name), args[i])
 		}
 	}
 	return th.invoke(f, this)

@@ -17,7 +17,7 @@ func global(th *Thread, args []Value) Value {
 	for s != "" {
 		var mem string
 		mem, s = str.Cut(s, '.')
-		if val = val.Get(th, SuStr(mem)); val == nil {
+		if val = val.Get(th, StrVal(mem)); val == nil {
 			panic("Global: " + mem + " not found")
 		}
 	}

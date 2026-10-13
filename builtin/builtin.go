@@ -4,11 +4,12 @@
 package builtin
 
 import (
-	"golang.org/x/exp/maps"
 	"reflect"
 	"runtime"
 	"slices"
 	"strings"
+
+	"golang.org/x/exp/maps"
 
 	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/core"
@@ -160,7 +161,7 @@ func params(s string) ParamSpec {
 	s = strings.ReplaceAll(s, "nil", "'nil'")
 	fn := compile.Constant("function " + s + " {}").(*SuFunc)
 	for i := range int(fn.ParamSpec.Ndefaults) {
-		if fn.Values[i].Equal(SuStr("nil")) {
+		if fn.Values[i].Equal(StrVal("nil")) {
 			fn.Values[i] = nil
 		}
 	}

@@ -82,7 +82,7 @@ func CopyFile(th *Thread, args []Value) Value {
 			th.ReturnThrow = true
 			return StrCat("CopyFile: ", err.Error())
 		}
-		args = []Value{SuStr(fromPath), SuStr(toPath), args[2]}
+		args = []Value{StrVal(fromPath), StrVal(toPath), args[2]}
 	}
 	rtn, _, e := syscall.SyscallN(copyFile,
 		uintptr(unsafe.Pointer(zstrArg(args[0]))),
@@ -115,7 +115,7 @@ var setFileAttributesA = kernel32.MustFindProc("SetFileAttributesA").Addr()
 const access_denied = 5
 
 func deleteFile(filename string) error {
-	file := zstrArg(SuStr(filename))
+	file := zstrArg(StrVal(filename))
 	rtn, _, e := syscall.SyscallN(deleteFileA,
 		uintptr(unsafe.Pointer(file)))
 	if rtn == 0 && e == access_denied {

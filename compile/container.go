@@ -107,7 +107,7 @@ func (astMaker) mkClass(base string) container {
 func (astMaker) mkConcat(strs []string) Value {
 	exprs := make([]ast.Expr, len(strs))
 	for i, s := range strs {
-		exprs[i] = &ast.Constant{Val: SuStr(s)}
+		exprs[i] = &ast.Constant{Val: StrVal(s)}
 	}
 	return &ast.Nary{Tok: tokens.Cat, Exprs: exprs}
 }
@@ -184,9 +184,9 @@ func (c *astContainer) String() string {
 func (c *astContainer) Get(_ *Thread, m Value) Value {
 	switch StrOrEmpty(m) {
 	case "type":
-		return SuStr(c.which)
+		return StrVal(c.which)
 	case "base":
-		return SuStr(c.base)
+		return StrVal(c.base)
 	case "size":
 		return IntVal(len(c.kv))
 	case "pos":
@@ -230,7 +230,7 @@ func (kv *keyVal) String() string {
 func (kv *keyVal) Get(_ *Thread, m Value) Value {
 	switch StrOrEmpty(m) {
 	case "type":
-		return SuStr("Member")
+		return StrVal("Member")
 	case "named":
 		return SuBool(kv.key != nil)
 	case "key":

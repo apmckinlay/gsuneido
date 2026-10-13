@@ -41,8 +41,8 @@ func ssCallClass(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 
 func ssArgs(th *Thread, as *ArgSpec, this Value, args []Value) (
 	name, port Value, as2 *ArgSpec) {
-	name = this.Get(th, SuStr("Name"))
-	port = this.Get(th, SuStr("Port"))
+	name = this.Get(th, StrVal("Name"))
+	port = this.Get(th, StrVal("Port"))
 	ai := NewArgsIter(as, args)
 	k, v := ai()
 	if v != nil && k == nil {
@@ -58,9 +58,9 @@ func ssArgs(th *Thread, as *ArgSpec, this Value, args []Value) (
 	spec := make([]byte, 0, n)
 	nargs := byte(0)
 	for ; v != nil; k, v = ai() { // copy remaining args, extracting name & port
-		if SuStr("name").Equal(k) {
+		if StrVal("name").Equal(k) {
 			name = v
-		} else if SuStr("port").Equal(k) {
+		} else if StrVal("port").Equal(k) {
 			port = v
 		} else {
 			nargs++
@@ -75,13 +75,13 @@ func ssArgs(th *Thread, as *ArgSpec, this Value, args []Value) (
 		nargs++
 		th.Push(name)
 		spec = append(spec, byte(len(names)))
-		names = append(names, SuStr("Name"))
+		names = append(names, StrVal("Name"))
 	}
 	if port != nil {
 		nargs++
 		th.Push(port)
 		spec = append(spec, byte(len(names)))
-		names = append(names, SuStr("Port"))
+		names = append(names, StrVal("Port"))
 	}
 	as2 = &ArgSpec{Nargs: nargs, Names: names, Spec: spec}
 	if port == nil {
@@ -211,7 +211,7 @@ var _ = method(sockserv_RemoteUser, "() :string")
 func sockserv_RemoteUser(this Value) Value {
 	sc := this.(*suServerConnect)
 	addr := sc.client.conn.RemoteAddr().String()
-	return SuStr(str.BeforeLast(addr, ":"))
+	return StrVal(str.BeforeLast(addr, ":"))
 }
 
 var _ = method(sockserv_ManualClose, "() :void")

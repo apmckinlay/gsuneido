@@ -281,8 +281,8 @@ func cachedFolderInfo(th *core.Thread, tran core.ITran, st *core.SuTran, library
 }
 
 func fetchFolderInfo(th *core.Thread, tran core.ITran, st *core.SuTran, library string, num int) (folderInfo, error) {
-	folderArgs := core.SuObjectOf(core.SuStr(library))
-	folderArgs.Set(core.SuStr("num"), core.IntVal(num))
+	folderArgs := core.SuObjectOf(core.StrVal(library))
+	folderArgs.Set(core.StrVal("num"), core.IntVal(num))
 	folder, fhdr, _ := tran.Get(th, folderArgs, core.Only)
 	if folder == nil {
 		return folderInfo{}, fmt.Errorf("folder not found: %d", num)

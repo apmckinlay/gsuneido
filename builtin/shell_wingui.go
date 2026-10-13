@@ -60,7 +60,7 @@ func DragQueryFile(a, b Value) Value {
 		intArg(b),
 		uintptr(unsafe.Pointer(&buf[0])),
 		n+1)
-	return SuStr(hacks.BStoS(buf[:n]))
+	return StrVal(hacks.BStoS(buf[:n]))
 }
 
 var _ = builtin(DragQueryFileCount, "(hDrop) :number")

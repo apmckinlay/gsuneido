@@ -76,9 +76,9 @@ func pe_KeyEntries(th *Thread, args []Value) Value {
 	trailerID := fmt.Sprintf("/ID [<%x> <%x>]", fileID, fileID)
 
 	ob := &SuObject{}
-	ob.Set(SuStr("keyEntry"), SuStr(encryptDict))
-	ob.Set(SuStr("trailerID"), SuStr(trailerID))
-	ob.Set(SuStr("encryptionKey"), SuStr(hex.EncodeToString(encryptionKey)))
+	ob.Set(StrVal("keyEntry"), StrVal(encryptDict))
+	ob.Set(StrVal("trailerID"), StrVal(trailerID))
+	ob.Set(StrVal("encryptionKey"), StrVal(hex.EncodeToString(encryptionKey)))
 	return ob
 }
 
@@ -210,7 +210,7 @@ func pe_Encrypt(data, encryptionKey Value) Value {
 	}
 
 	str := pdfEncryptAESBytes(dataBytes, fileKeyBytes)
-	return SuStr(hex.EncodeToString(str))
+	return StrVal(hex.EncodeToString(str))
 }
 
 func pdfEncryptAESBytes(b, key []byte) []byte {

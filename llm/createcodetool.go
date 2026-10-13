@@ -109,11 +109,11 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 		}
 
 		vals["group"] = core.PackValue(core.SuInt16(-1))
-		vals["text"] = core.PackValue(core.SuStr(code))
+		vals["text"] = core.PackValue(core.StrVal(code))
 		vals["lib_modified"] = core.PackValue(core.Now())
 		if slices.Contains(hdr.Fields[0], "lib_before_text") {
 			if v := vals["lib_before_text"]; v == "" {
-				vals["lib_before_text"] = core.PackValue(core.SuStr(oldText))
+				vals["lib_before_text"] = core.PackValue(core.StrVal(oldText))
 			}
 		}
 
@@ -150,8 +150,8 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 	iq := utran.Query(library, nil)
 	ihdr := iq.Header()
 	rec := buildRecord(ihdr, map[string]string{
-		"name":         core.PackValue(core.SuStr(name)),
-		"text":         core.PackValue(core.SuStr(code)),
+		"name":         core.PackValue(core.StrVal(name)),
+		"text":         core.PackValue(core.StrVal(code)),
 		"lib_modified": core.PackValue(now),
 		"group":        core.PackValue(core.SuInt16(-1)),
 		"num":          core.PackValue(core.IntVal(maxNum + 1)),
@@ -200,7 +200,7 @@ func ensurePathParent(th *core.Thread, library, path string) (int, error) {
 		iq := utran.Query(library, nil)
 		ihdr := iq.Header()
 		rec := buildRecord(ihdr, map[string]string{
-			"name":         core.PackValue(core.SuStr(segment)),
+			"name":         core.PackValue(core.StrVal(segment)),
 			"lib_modified": core.PackValue(core.Now()),
 			"group":        core.PackValue(core.IntVal(parent)),
 			"num":          core.PackValue(core.IntVal(nextNum)),
@@ -218,9 +218,9 @@ func ensurePathParent(th *core.Thread, library, path string) (int, error) {
 }
 
 func lookupFolder(th *core.Thread, tran core.ITran, library string, parent int, name string) (int, bool, bool, error) {
-	folderArgs := core.SuObjectOf(core.SuStr(library))
-	folderArgs.Set(core.SuStr("group"), core.IntVal(parent))
-	folderArgs.Set(core.SuStr("name"), core.SuStr(name))
+	folderArgs := core.SuObjectOf(core.StrVal(library))
+	folderArgs.Set(core.StrVal("group"), core.IntVal(parent))
+	folderArgs.Set(core.StrVal("name"), core.StrVal(name))
 	row, hdr, _ := tran.Get(th, folderArgs, core.Only)
 	if row != nil {
 		num, err := intValue(row.GetVal(hdr, "num", th, nil), "num")
@@ -230,10 +230,10 @@ func lookupFolder(th *core.Thread, tran core.ITran, library string, parent int, 
 		return num, true, false, nil
 	}
 
-	leafArgs := core.SuObjectOf(core.SuStr(library))
-	leafArgs.Set(core.SuStr("group"), core.IntVal(-1))
-	leafArgs.Set(core.SuStr("parent"), core.IntVal(parent))
-	leafArgs.Set(core.SuStr("name"), core.SuStr(name))
+	leafArgs := core.SuObjectOf(core.StrVal(library))
+	leafArgs.Set(core.StrVal("group"), core.IntVal(-1))
+	leafArgs.Set(core.StrVal("parent"), core.IntVal(parent))
+	leafArgs.Set(core.StrVal("name"), core.StrVal(name))
 	leaf, _, _ := tran.Get(th, leafArgs, core.Only)
 	return 0, false, leaf != nil, nil
 }

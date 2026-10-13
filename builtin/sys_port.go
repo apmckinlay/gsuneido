@@ -23,7 +23,7 @@ func GetComputerName() Value {
 	if err != nil {
 		panic("GetComputerName: " + err.Error())
 	}
-	return SuStr(name)
+	return StrVal(name)
 }
 
 func CallbacksCount() int {

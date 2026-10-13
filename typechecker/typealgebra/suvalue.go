@@ -11,7 +11,7 @@ import (
 )
 
 func opString(val core.Value) string {
-	op := val.Get(nil, core.SuStr("op"))
+	op := val.Get(nil, core.StrVal("op"))
 	if op == nil {
 		return ""
 	}
@@ -41,7 +41,7 @@ func DynTypeOfSuValue(val core.Value) DynType {
 	case types.Boolean:
 		return TBoolean
 	case types.AstNode:
-		if t := val.Get(nil, core.SuStr("type")); t != nil {
+		if t := val.Get(nil, core.StrVal("type")); t != nil {
 			tystr := strings.Trim(t.String(), "\"")
 			switch tystr {
 			case "Object", "Record":

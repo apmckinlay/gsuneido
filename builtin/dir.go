@@ -117,9 +117,9 @@ func dirEntries(path string, justfiles, details bool) iter.Seq[Value] {
 							panic(fmt.Sprint("Dir: ", err))
 						}
 						ob := &SuObject{}
-						ob.Set(SuStr("name"), entry)
-						ob.Set(SuStr("size"), IntVal(info.Size()))
-						ob.Set(SuStr("date"), FromGoTime(info.ModTime()))
+						ob.Set(StrVal("name"), entry)
+						ob.Set(StrVal("size"), IntVal(info.Size()))
+						ob.Set(StrVal("date"), FromGoTime(info.ModTime()))
 						entry = ob
 					}
 					if !yield(entry) {

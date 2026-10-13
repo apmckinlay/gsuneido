@@ -493,7 +493,7 @@ func connections() *SuObject {
 	for _, sc := range serverConns {
 		sc.sessionsLock.Lock()
 		for _, ss := range sc.sessions {
-			list.Add(SuStr(ss.sessionId.Load()))
+			list.Add(StrVal(ss.sessionId.Load()))
 		}
 		sc.sessionsLock.Unlock()
 	}

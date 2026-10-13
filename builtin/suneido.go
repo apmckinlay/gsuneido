@@ -35,7 +35,7 @@ func suneido_Compile(th *Thread, args []Value) Value {
 	ob := ToContainer(args[1])
 	val, checks := compile.CheckedNamed(name, src, th)
 	for _, w := range checks {
-		ob.Add(SuStr(w))
+		ob.Add(StrVal(w))
 	}
 	return val
 }
@@ -66,7 +66,7 @@ func suneido_GoMetric(th *Thread, args []Value) Value {
 		all := metrics.All()
 		ob := SuObject{}
 		for _, d := range all {
-			ob.Add(SuStr(d.Name))
+			ob.Add(StrVal(d.Name))
 		}
 		return &ob
 	}
@@ -165,7 +165,7 @@ func suneido_Members(this Value, all Value) Value {
 		mems = append(mems, v)
 	}
 	for k := range SuneidoObjectMethods {
-		mems = append(mems, SuStr(k))
+		mems = append(mems, StrVal(k))
 	}
 	return SuObjectOf(mems...)
 }
@@ -176,7 +176,7 @@ func suneido_IndexUse() Value {
 	iu := qry.PullIdxUse()
 	ob := &SuObject{}
 	for k, v := range iu {
-		ob.Set(SuStr(k), IntVal(v))
+		ob.Set(StrVal(k), IntVal(v))
 	}
 	return ob
 }

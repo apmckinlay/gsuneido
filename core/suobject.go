@@ -85,7 +85,7 @@ func SuObjectOf(args ...Value) *SuObject {
 func SuObjectOfStrs(strs []string) *SuObject {
 	list := make([]Value, len(strs))
 	for i, s := range strs {
-		list[i] = SuStr(s)
+		list[i] = StrVal(s)
 	}
 	return NewSuObject(list)
 }
@@ -886,7 +886,7 @@ func (ob *SuObject) ToRecord(th *Thread, hdr *Header) Record {
 			ts = th.Timestamp()
 			rb.Add(ts)
 		} else {
-			x := ob.NamedGet(SuStr(f))
+			x := ob.NamedGet(StrVal(f))
 			if x == nil {
 				rb.AddRaw("")
 			} else {
@@ -895,7 +895,7 @@ func (ob *SuObject) ToRecord(th *Thread, hdr *Header) Record {
 		}
 	}
 	if tsField != "" && !ob.readonly {
-		ob.set(SuStr(tsField), ts)
+		ob.set(StrVal(tsField), ts)
 	}
 	return rb.Trim().Build()
 }

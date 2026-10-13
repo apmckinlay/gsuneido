@@ -198,7 +198,7 @@ func limitedRead(which string, r io.Reader, arg Value) Value {
 	if m == StringLimit {
 		panic(which + ": string limit exceeded")
 	}
-	return SuStr(sb.String())
+	return StrVal(sb.String())
 }
 
 var _ = method(runpiped_Readline, "() :false|string")

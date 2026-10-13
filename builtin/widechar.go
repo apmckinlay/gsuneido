@@ -23,14 +23,14 @@ func WideCharToMultiByte(s, c Value) Value {
 		panic("WideCharToMultiByte " + err.Error())
 	}
 	if codePage(c) == cpUtf8 {
-		return SuStr(utf8)
+		return StrVal(utf8)
 	}
 	encoder := charmap.Windows1252.NewEncoder()
 	s1252, err := encoder.String(utf8)
 	if err != nil {
 		panic("WideCharToMultiByte 1252 " + err.Error())
 	}
-	return SuStr(s1252)
+	return StrVal(s1252)
 }
 
 var _ = builtin(MultiByteToWideChar, "(string :string, cp = 1252) :string")

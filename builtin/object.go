@@ -31,7 +31,7 @@ var _ = method(ob_Add, "(@args) :object")
 func ob_Add(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
 	iter := NewArgsIter(as, args)
-	if at := getNamed(as, args, SuStr("at")); at != nil {
+	if at := getNamed(as, args, StrVal("at")); at != nil {
 		if i, ok := at.IfInt(); ok {
 			addAt(ob, i, iter)
 		} else {
@@ -76,7 +76,7 @@ var _ = method(ob_Delete, "(@args) :object")
 
 func ob_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
-	if all := getNamed(as, args, SuStr("all")); all == True {
+	if all := getNamed(as, args, StrVal("all")); all == True {
 		ob.DeleteAll()
 	} else {
 		iter := NewArgsIter(as, args)
@@ -185,7 +185,7 @@ func ob_Join(this Value, arg Value) Value {
 		sep = separator
 		sb.WriteString(ToStrOrString(v))
 	}
-	return SuStr(sb.String())
+	return StrVal(sb.String())
 }
 
 var _ = method(ob_Max, "() :unknown")
@@ -356,9 +356,9 @@ func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {
 		if k == nil {
 			panic("usage: () or (list:) or (named:)")
 		}
-		if k.Equal(SuStr("list")) {
+		if k.Equal(StrVal("list")) {
 			list = true
-		} else if k.Equal(SuStr("named")) {
+		} else if k.Equal(StrVal("named")) {
 			named = true
 		}
 	}

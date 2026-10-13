@@ -54,7 +54,7 @@ var ArgSpec4 = ArgSpec{Nargs: 4, Signature: Sig4}
 var ArgSpecEach0 = ArgSpec{Nargs: 1, Each: EACH0}
 var ArgSpecEach1 = ArgSpec{Nargs: 1, Each: EACH1}
 var ArgSpecBlock = ArgSpec{Nargs: 1,
-	Spec: []byte{0}, Names: []Value{SuStr("block")}}
+	Spec: []byte{0}, Names: []Value{StrVal("block")}}
 
 var StdArgSpecs = [...]ArgSpec{
 	ArgSpec0,

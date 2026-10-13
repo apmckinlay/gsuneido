@@ -73,7 +73,7 @@ func execTool(ctx context.Context, code string) (result execOutput, err error) {
 
 	var printBuf strings.Builder
 	suneido := core.Suneido.Clone()
-	suneido.Set(core.SuStr("Print"), &core.SuBuiltin1{
+	suneido.Set(core.StrVal("Print"), &core.SuBuiltin1{
 		Fn: func(s core.Value) core.Value {
 			printBuf.WriteString(core.ToStr(s))
 			return nil

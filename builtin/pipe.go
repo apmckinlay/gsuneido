@@ -39,7 +39,7 @@ func piper_Read(this Value, a Value) Value {
 	buf := make([]byte, n)
 	nr, err := rd.Read(buf)
 	if nr > 0 {
-		return SuStr(hacks.BStoS(buf[:nr]))
+		return StrVal(hacks.BStoS(buf[:nr]))
 	}
 	if err != nil {
 		if err == io.EOF {

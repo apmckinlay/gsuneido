@@ -12,5 +12,5 @@ import (
 var _ = builtin(UuidString, "() :string")
 
 func UuidString() Value {
-	return SuStr(uuid.New().String())
+	return StrVal(uuid.New().String())
 }

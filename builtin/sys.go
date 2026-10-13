@@ -41,7 +41,7 @@ func GetCurrentDirectory() Value {
 	if err != nil {
 		panic("GetCurrentDirectory: " + err.Error())
 	}
-	return SuStr(dir)
+	return StrVal(dir)
 }
 
 // NOTE: temp file is NOT deleted automatically on exit
@@ -64,7 +64,7 @@ func GetTempFileName(path, prefix Value) Value {
 	filename := f.Name()
 	f.Close()
 	filename = strings.ReplaceAll(filename, `\`, `/`)
-	return SuStr(filename)
+	return StrVal(filename)
 }
 
 var _ = builtin(CreateDir, "(dirname :string) :string|true")
@@ -221,7 +221,7 @@ func DeleteDir(th *Thread, args []Value) Value {
 		path = p
 		if path == sandboxRoot {
 			th.ReturnThrow = true
-			return SuStr("DeleteDir: sandbox root not allowed")
+			return StrVal("DeleteDir: sandbox root not allowed")
 		}
 	}
 	info, err := os.Stat(path)
@@ -250,7 +250,7 @@ func GetMacAddresses() Value {
 	if intfcs, err := net.Interfaces(); err == nil {
 		for _, intfc := range intfcs {
 			if s := string(intfc.HardwareAddr); s != "" {
-				ob.Add(SuStr(s))
+				ob.Add(StrVal(s))
 			}
 		}
 	}
@@ -265,7 +265,7 @@ func GetTempPath() Value {
 	if !strings.HasSuffix(s, "/") {
 		s += "/"
 	}
-	return SuStr(s)
+	return StrVal(s)
 }
 
 var _ = builtin(OSName, "() :string")
@@ -273,7 +273,7 @@ var _ = builtin(OSName, "() :string")
 func OSName() Value {
 	os := runtime.GOOS
 	os = strings.Replace(os, "darwin", "macos", 1)
-	return SuStr(os)
+	return StrVal(os)
 }
 
 var _ = builtin(FileSize, "(file :string) :number")

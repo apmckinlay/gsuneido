@@ -98,15 +98,15 @@ func resolveFolderParent(th *core.Thread, tran core.ITran, library, path string)
 }
 
 func folderNum(th *core.Thread, tran core.ITran, library string, parent int, name string) (int, error) {
-	folderArgs := core.SuObjectOf(core.SuStr(library))
-	folderArgs.Set(core.SuStr("group"), core.IntVal(parent))
-	folderArgs.Set(core.SuStr("name"), core.SuStr(name))
+	folderArgs := core.SuObjectOf(core.StrVal(library))
+	folderArgs.Set(core.StrVal("group"), core.IntVal(parent))
+	folderArgs.Set(core.StrVal("name"), core.StrVal(name))
 	row, hdr, _ := tran.Get(th, folderArgs, core.Only)
 	if row == nil {
-		leafArgs := core.SuObjectOf(core.SuStr(library))
-		leafArgs.Set(core.SuStr("group"), core.IntVal(-1))
-		leafArgs.Set(core.SuStr("parent"), core.IntVal(parent))
-		leafArgs.Set(core.SuStr("name"), core.SuStr(name))
+		leafArgs := core.SuObjectOf(core.StrVal(library))
+		leafArgs.Set(core.StrVal("group"), core.IntVal(-1))
+		leafArgs.Set(core.StrVal("parent"), core.IntVal(parent))
+		leafArgs.Set(core.StrVal("name"), core.StrVal(name))
 		leaf, _, _ := tran.Get(th, leafArgs, core.Only)
 		if leaf != nil {
 			return 0, fmt.Errorf("path segment is not a folder: %s", name)

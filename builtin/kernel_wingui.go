@@ -28,7 +28,7 @@ func GetComputerName() Value {
 	if rtn == 0 {
 		return EmptyStr
 	}
-	return SuStr(string(buf[:n]))
+	return StrVal(string(buf[:n]))
 }
 
 // dll Kernel32:GetModuleHandle(instring name) pointer
@@ -52,7 +52,7 @@ func GetLocaleInfo(a, b Value) Value {
 		intArg(b),
 		uintptr(unsafe.Pointer(&buf[0])),
 		uintptr(bufsize))
-	return SuStr(string(buf[:rtn-1]))
+	return StrVal(string(buf[:rtn-1]))
 }
 
 // dll Kernel32:GetProcAddress(pointer hModule, [in] string procName) pointer
@@ -140,7 +140,7 @@ func GlobalData(a Value) Value {
 	assert.That(p != 0)
 	defer globalunlock(hm)
 	buf := unsafe.Slice((*byte)(unsafe.Pointer(p)), n) //nolint
-	return SuStr(string(buf))
+	return StrVal(string(buf))
 }
 
 // dll Kernel32:GlobalUnlock(pointer handle) bool

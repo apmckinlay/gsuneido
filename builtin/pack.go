@@ -16,7 +16,7 @@ func packSize(arg Value) Value {
 var _ = builtin(pack, "(value) :string")
 
 func pack(arg Value) Value {
-	return SuStr(PackValue(arg))
+	return StrVal(PackValue(arg))
 }
 
 var _ = builtin(unpack, "(string :string) :unknown")

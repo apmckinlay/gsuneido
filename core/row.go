@@ -53,10 +53,10 @@ func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 			base := fld[:len(fld)-7]
 			x, _ := row.getRaw2(hdr, base)
 			val := Unpack(x)
-			return SuStr(str.ToLower(ToStr(val)))
+			return StrVal(str.ToLower(ToStr(val)))
 		}
 		if hasRule(th, fld) {
-			return SuRecordFromRow(row, hdr, "", tran).Get(th, SuStr(fld))
+			return SuRecordFromRow(row, hdr, "", tran).Get(th, StrVal(fld))
 		}
 		return EmptyStr
 	}
@@ -120,7 +120,7 @@ func getRawVal(row Row, hdr *Header, fld string, th *Thread, tran *SuTran,
 			if *rec == nil {
 				*rec = SuRecordFromRow(row, hdr, "", tran)
 			}
-			v := (*rec).Get(th, SuStr(fld))
+			v := (*rec).Get(th, StrVal(fld))
 			return Pack(v.(Packable))
 		}
 		return ""

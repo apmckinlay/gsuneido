@@ -172,7 +172,7 @@ func date_MinusSeconds(this Value, val Value) Value {
 var _ = method(date_FormatEn, "(format :string) :string")
 
 func date_FormatEn(this, arg Value) Value {
-	return SuStr(toDate(this).Format(ToStr(arg)))
+	return StrVal(toDate(this).Format(ToStr(arg)))
 }
 
 var _ = method(date_GetLocalGMTBias, "() :number")

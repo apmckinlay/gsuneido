@@ -828,7 +828,7 @@ func (q2 *Query2) Source2() Query {
 // 	vals := make([]Value, len(packed))
 // 	for i, p := range packed {
 // 		if p == ixkey.Max {
-// 			vals[i] = SuStr("<max>")
+// 			vals[i] = StrVal("<max>")
 // 		} else {
 // 			vals[i] = Unpack(p)
 // 		}

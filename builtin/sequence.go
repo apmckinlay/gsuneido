@@ -126,5 +126,5 @@ func seq_Join(this, arg Value) Value {
 			sb.WriteString(val.String())
 		}
 	}
-	return SuStr(sb.String())
+	return StrVal(sb.String())
 }

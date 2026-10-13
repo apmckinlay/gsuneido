@@ -111,25 +111,25 @@ func GetTextMetrics(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(getTextMetrics,
 		intArg(a),
 		uintptr(unsafe.Pointer(&tm)))
-	b.Put(nil, SuStr("Height"), IntVal(tm.Height))
-	b.Put(nil, SuStr("Ascent"), IntVal(tm.Ascent))
-	b.Put(nil, SuStr("Descent"), IntVal(tm.Descent))
-	b.Put(nil, SuStr("InternalLeading"), IntVal(tm.InternalLeading))
-	b.Put(nil, SuStr("ExternalLeading"), IntVal(tm.ExternalLeading))
-	b.Put(nil, SuStr("AveCharWidth"), IntVal(tm.AveCharWidth))
-	b.Put(nil, SuStr("MaxCharWidth"), IntVal(tm.MaxCharWidth))
-	b.Put(nil, SuStr("Italic"), IntVal(tm.Italic))
-	b.Put(nil, SuStr("Underlined"), IntVal(tm.Underlined))
-	b.Put(nil, SuStr("StruckOut"), IntVal(tm.StruckOut))
-	b.Put(nil, SuStr("FirstChar"), IntVal(tm.FirstChar))
-	b.Put(nil, SuStr("LastChar"), IntVal(tm.LastChar))
-	b.Put(nil, SuStr("DefaultChar"), IntVal(tm.DefaultChar))
-	b.Put(nil, SuStr("BreakChar"), IntVal(tm.BreakChar))
-	b.Put(nil, SuStr("PitchAndFamily"), IntVal(tm.PitchAndFamily))
-	b.Put(nil, SuStr("CharSet"), IntVal(tm.CharSet))
-	b.Put(nil, SuStr("Overhang"), IntVal(tm.Overhang))
-	b.Put(nil, SuStr("DigitizedAspectX"), IntVal(tm.DigitizedAspectX))
-	b.Put(nil, SuStr("DigitizedAspectY"), IntVal(tm.DigitizedAspectY))
+	b.Put(nil, StrVal("Height"), IntVal(tm.Height))
+	b.Put(nil, StrVal("Ascent"), IntVal(tm.Ascent))
+	b.Put(nil, StrVal("Descent"), IntVal(tm.Descent))
+	b.Put(nil, StrVal("InternalLeading"), IntVal(tm.InternalLeading))
+	b.Put(nil, StrVal("ExternalLeading"), IntVal(tm.ExternalLeading))
+	b.Put(nil, StrVal("AveCharWidth"), IntVal(tm.AveCharWidth))
+	b.Put(nil, StrVal("MaxCharWidth"), IntVal(tm.MaxCharWidth))
+	b.Put(nil, StrVal("Italic"), IntVal(tm.Italic))
+	b.Put(nil, StrVal("Underlined"), IntVal(tm.Underlined))
+	b.Put(nil, StrVal("StruckOut"), IntVal(tm.StruckOut))
+	b.Put(nil, StrVal("FirstChar"), IntVal(tm.FirstChar))
+	b.Put(nil, StrVal("LastChar"), IntVal(tm.LastChar))
+	b.Put(nil, StrVal("DefaultChar"), IntVal(tm.DefaultChar))
+	b.Put(nil, StrVal("BreakChar"), IntVal(tm.BreakChar))
+	b.Put(nil, StrVal("PitchAndFamily"), IntVal(tm.PitchAndFamily))
+	b.Put(nil, StrVal("CharSet"), IntVal(tm.CharSet))
+	b.Put(nil, StrVal("Overhang"), IntVal(tm.Overhang))
+	b.Put(nil, StrVal("DigitizedAspectX"), IntVal(tm.DigitizedAspectX))
+	b.Put(nil, StrVal("DigitizedAspectY"), IntVal(tm.DigitizedAspectY))
 	return boolRet(rtn)
 }
 
@@ -240,7 +240,7 @@ func GetTextFace(a Value) Value {
 		intArg(a),
 		bufsize,
 		uintptr(unsafe.Pointer(&buf[0])))
-	return SuStr(string(buf[:n]))
+	return StrVal(string(buf[:n]))
 }
 
 // dll long Gdi32:SetBkMode(pointer hdc, long mode)
@@ -818,17 +818,17 @@ func GetGlyphOutline(a, b, c, d, e, f, g Value) Value {
 	var gm stGlyphMetrics
 	m2 := stMat2{
 		eM11: stFixed{
-			fract: getInt16(g.Get(nil, SuStr("eM11")), "fract"),
-			value: getInt16(g.Get(nil, SuStr("eM11")), "value")},
+			fract: getInt16(g.Get(nil, StrVal("eM11")), "fract"),
+			value: getInt16(g.Get(nil, StrVal("eM11")), "value")},
 		eM12: stFixed{
-			fract: getInt16(g.Get(nil, SuStr("eM12")), "fract"),
-			value: getInt16(g.Get(nil, SuStr("eM12")), "value")},
+			fract: getInt16(g.Get(nil, StrVal("eM12")), "fract"),
+			value: getInt16(g.Get(nil, StrVal("eM12")), "value")},
 		eM21: stFixed{
-			fract: getInt16(g.Get(nil, SuStr("eM21")), "fract"),
-			value: getInt16(g.Get(nil, SuStr("eM21")), "value")},
+			fract: getInt16(g.Get(nil, StrVal("eM21")), "fract"),
+			value: getInt16(g.Get(nil, StrVal("eM21")), "value")},
 		eM22: stFixed{
-			fract: getInt16(g.Get(nil, SuStr("eM22")), "fract"),
-			value: getInt16(g.Get(nil, SuStr("eM22")), "value")},
+			fract: getInt16(g.Get(nil, StrVal("eM22")), "fract"),
+			value: getInt16(g.Get(nil, StrVal("eM22")), "value")},
 	}
 	rtn, _, _ := syscall.SyscallN(getGlyphOutline,
 		intArg(a),
@@ -838,12 +838,12 @@ func GetGlyphOutline(a, b, c, d, e, f, g Value) Value {
 		0,
 		0,
 		uintptr(unsafe.Pointer(&m2)))
-	d.Put(nil, SuStr("gmBlackBoxX"), IntVal(gm.gmBlackBoxX))
-	d.Put(nil, SuStr("gmBlackBoxY"), IntVal(gm.gmBlackBoxY))
-	d.Put(nil, SuStr("gmptGlyphOrigin"),
-		fromPoint(&gm.gmptGlyphOrigin, d.Get(nil, SuStr("gmptGlyphOrigin"))))
-	d.Put(nil, SuStr("gmCellIncX"), IntVal(gm.gmCellIncX))
-	d.Put(nil, SuStr("gmCellIncY"), IntVal(gm.gmCellIncY))
+	d.Put(nil, StrVal("gmBlackBoxX"), IntVal(gm.gmBlackBoxX))
+	d.Put(nil, StrVal("gmBlackBoxY"), IntVal(gm.gmBlackBoxY))
+	d.Put(nil, StrVal("gmptGlyphOrigin"),
+		fromPoint(&gm.gmptGlyphOrigin, d.Get(nil, StrVal("gmptGlyphOrigin"))))
+	d.Put(nil, StrVal("gmCellIncX"), IntVal(gm.gmCellIncX))
+	d.Put(nil, StrVal("gmCellIncY"), IntVal(gm.gmCellIncY))
 	return intRet(rtn)
 }
 
@@ -991,9 +991,9 @@ func GetObjectBrush(a Value) Value {
 		return False
 	}
 	ob := &SuObject{}
-	ob.Put(nil, SuStr("lbStyle"), IntVal(lb.lbStyle))
-	ob.Put(nil, SuStr("lbColor"), IntVal(lb.lbColor))
-	ob.Put(nil, SuStr("lbHatch"), IntVal(lb.lbHatch))
+	ob.Put(nil, StrVal("lbStyle"), IntVal(lb.lbStyle))
+	ob.Put(nil, StrVal("lbColor"), IntVal(lb.lbColor))
+	ob.Put(nil, StrVal("lbHatch"), IntVal(lb.lbHatch))
 	return ob
 }
 
@@ -1009,12 +1009,12 @@ func GetObjectBitmap(a Value) Value {
 		return False
 	}
 	ob := &SuObject{}
-	ob.Put(nil, SuStr("bmType"), IntVal(bm.bmType))
-	ob.Put(nil, SuStr("bmWidth"), IntVal(bm.bmWidth))
-	ob.Put(nil, SuStr("bmHeight"), IntVal(bm.bmHeight))
-	ob.Put(nil, SuStr("bmWidthBytes"), IntVal(bm.bmWidthBytes))
-	ob.Put(nil, SuStr("bmPlanes"), IntVal(bm.bmPlanes))
-	ob.Put(nil, SuStr("bmBitsPixel"), IntVal(bm.bmBitsPixel))
+	ob.Put(nil, StrVal("bmType"), IntVal(bm.bmType))
+	ob.Put(nil, StrVal("bmWidth"), IntVal(bm.bmWidth))
+	ob.Put(nil, StrVal("bmHeight"), IntVal(bm.bmHeight))
+	ob.Put(nil, StrVal("bmWidthBytes"), IntVal(bm.bmWidthBytes))
+	ob.Put(nil, StrVal("bmPlanes"), IntVal(bm.bmPlanes))
+	ob.Put(nil, StrVal("bmBitsPixel"), IntVal(bm.bmBitsPixel))
 	// bmBits not used
 	return ob
 }
@@ -1051,7 +1051,7 @@ var _ = builtin(GetDIBits,
 	"(hdc, hbmp, uStartScan, cScanLines, lpvBits, lpbi, uUsage) :number")
 
 func GetDIBits(a, b, c, d, e, f, g Value) Value {
-	hdr := f.Get(nil, SuStr("bmiHeader"))
+	hdr := f.Get(nil, StrVal("bmiHeader"))
 	bmih := toBitMapInfoHeader(hdr)
 	rtn, _, _ := syscall.SyscallN(getDIBits,
 		intArg(a),
@@ -1061,11 +1061,11 @@ func GetDIBits(a, b, c, d, e, f, g Value) Value {
 		intArg(e),
 		uintptr(unsafe.Pointer(bmih)),
 		intArg(g))
-	hdr.Put(nil, SuStr("biSizeImage"), IntVal(bmih.biSizeImage))
-	hdr.Put(nil, SuStr("biXPelsPerMeter"), IntVal(bmih.biXPelsPerMeter))
-	hdr.Put(nil, SuStr("biYPelsPerMeter"), IntVal(bmih.biYPelsPerMeter))
-	hdr.Put(nil, SuStr("biClrUsed"), IntVal(bmih.biClrUsed))
-	hdr.Put(nil, SuStr("biClrImportant"), IntVal(bmih.biClrImportant))
+	hdr.Put(nil, StrVal("biSizeImage"), IntVal(bmih.biSizeImage))
+	hdr.Put(nil, StrVal("biXPelsPerMeter"), IntVal(bmih.biXPelsPerMeter))
+	hdr.Put(nil, StrVal("biYPelsPerMeter"), IntVal(bmih.biYPelsPerMeter))
+	hdr.Put(nil, StrVal("biClrUsed"), IntVal(bmih.biClrUsed))
+	hdr.Put(nil, StrVal("biClrImportant"), IntVal(bmih.biClrImportant))
 	return intRet(rtn)
 }
 

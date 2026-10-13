@@ -279,7 +279,7 @@ func (r *SuRecord) toObject() *SuObject {
 		for ri, rf := range r.hdr.Fields {
 			for fi, f := range rf {
 				if f != "-" && !strings.HasSuffix(f, "_deps") {
-					key := SuStr(f)
+					key := StrVal(f)
 					if !r.ob.hasKey(key) {
 						if raw := r.row[ri].GetRaw(fi); raw != "" {
 							if len(raw) > 0 && raw[0] == PackForward {
@@ -405,7 +405,7 @@ func (r *SuRecord) rowSize() int {
 	for ri, rf := range r.hdr.Fields {
 		for fi, f := range rf {
 			if f != "-" && !strings.HasSuffix(f, "_deps") {
-				key := SuStr(f)
+				key := StrVal(f)
 				if !r.ob.hasKey(key) {
 					if val := r.row[ri].GetRaw(fi); val != "" {
 						n++
@@ -556,7 +556,7 @@ func (r *SuRecord) callObservers2(th *Thread, key string) {
 				func() {
 					r.Unlock() // can't hold lock while calling observer
 					defer r.Lock()
-					th.PushCall(ofn, r, argSpecMember, SuStr(key))
+					th.PushCall(ofn, r, argSpecMember, StrVal(key))
 				}()
 			}(ofn, key)
 		}
@@ -564,7 +564,7 @@ func (r *SuRecord) callObservers2(th *Thread, key string) {
 }
 
 var argSpecMember = &ArgSpec{Nargs: 1,
-	Spec: []byte{0}, Names: []Value{SuStr("member")}}
+	Spec: []byte{0}, Names: []Value{StrVal("member")}}
 
 type activeObserver struct {
 	obs Value
@@ -632,7 +632,7 @@ func (r *SuRecord) getFromRow(key string) Value {
 		}
 		val := Unpack(raw)
 		if !r.ob.readonly {
-			r.ob.set(SuStr(key), val) // cache unpacked value
+			r.ob.set(StrVal(key), val) // cache unpacked value
 		}
 		return val
 	}
@@ -642,7 +642,7 @@ func (r *SuRecord) getFromRow(key string) Value {
 // deps is used by ToRecord to create the dependencies for a field
 // but without unpacking if it's in the row
 func (r *SuRecord) deps(th *Thread, key string) {
-	result := r.ob.getIfPresent(SuStr(key))
+	result := r.ob.getIfPresent(StrVal(key))
 	if th != nil {
 		if ar := th.rules.top(); ar.rec == r { // identity (not Equal)
 			r.addDependent(ar.key, key)
@@ -665,7 +665,7 @@ func (r *SuRecord) deps(th *Thread, key string) {
 // using the already packed value from the row when possible.
 // It does not add dependencies or handle special fields (e.g. _lower!)
 func (r *SuRecord) getPacked(th *Thread, key string) string {
-	result := r.ob.getIfPresent(SuStr(key)) // NOTE: ob.getIfPresent
+	result := r.ob.getIfPresent(StrVal(key)) // NOTE: ob.getIfPresent
 	packed := ""
 	if result == nil && r.row != nil { // even if !r.userow
 		if s := r.row.GetRaw(r.hdr, key); s != "" {
@@ -705,9 +705,9 @@ func (r *SuRecord) addDependent(from, to string) {
 func (r *SuRecord) getSpecial(key string) Value {
 	if strings.HasSuffix(key, "_lower!") {
 		basekey := key[0 : len(key)-7]
-		if val := r.getIfPresent(nil, SuStr(basekey)); val != nil {
+		if val := r.getIfPresent(nil, StrVal(basekey)); val != nil {
 			if vs, ok := val.ToStr(); ok {
-				val = SuStr(str.ToLower(vs))
+				val = StrVal(str.ToLower(vs))
 			}
 			return val
 		}
@@ -727,7 +727,7 @@ func (r *SuRecord) callRule(th *Thread, key string) Value {
 	r.trace("call rule", key)
 	val := r.catchRule(th, rule, key)
 	if val != nil && !r.ob.readonly {
-		r.ob.set(SuStr(key), val)
+		r.ob.set(StrVal(key), val)
 	}
 	return val
 }
@@ -848,7 +848,7 @@ func (r *SuRecord) GetDeps(key string) Value {
 			}
 		}
 	}
-	return SuStr(sb.String())
+	return StrVal(sb.String())
 }
 
 func (r *SuRecord) SetDeps(key, deps string) {
@@ -921,7 +921,7 @@ func (r *SuRecord) ToRecord(th *Thread, hdr *Header) Record {
 		}
 	}
 	if tsField != "" && !r.isReadOnly() {
-		r.ob.set(SuStr(tsField), ts) // NOTE: ob.set
+		r.ob.set(StrVal(tsField), ts) // NOTE: ob.set
 	}
 	return rb.Trim().Build()
 }
@@ -1011,12 +1011,12 @@ func (r *SuRecord) trace(args ...any) {
 //-------------------------------------------------------------------
 
 func makeFwdRule(f string) Value {
-	return fwdrule{field: SuStr(f)}
+	return fwdrule{field: StrVal(f)}
 }
 
 type fwdrule struct {
 	ValueBase[fwdrule]
-	field SuStr
+	field Value
 }
 
 func (r fwdrule) Call(th *Thread, this Value, _ *ArgSpec) Value {

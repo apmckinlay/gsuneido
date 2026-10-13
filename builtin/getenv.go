@@ -12,5 +12,5 @@ import (
 var _ = builtin(Getenv, "(string :string) :string")
 
 func Getenv(arg Value) Value {
-	return SuStr(os.Getenv(ToStr(arg)))
+	return StrVal(os.Getenv(ToStr(arg)))
 }

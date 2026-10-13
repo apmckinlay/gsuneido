@@ -342,12 +342,12 @@ func BeginPaint(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(beginPaint,
 		intArg(a),
 		uintptr(unsafe.Pointer(ps)))
-	b.Put(nil, SuStr("hdc"), IntVal(ps.hdc))
-	b.Put(nil, SuStr("fErase"), SuBool(ps.fErase != 0))
-	b.Put(nil, SuStr("rcPaint"),
-		fromRect(&ps.rcPaint, b.Get(nil, SuStr("rcPaint"))))
-	b.Put(nil, SuStr("fRestore"), SuBool(ps.fRestore != 0))
-	b.Put(nil, SuStr("fIncUpdate"), SuBool(ps.fIncUpdate != 0))
+	b.Put(nil, StrVal("hdc"), IntVal(ps.hdc))
+	b.Put(nil, StrVal("fErase"), SuBool(ps.fErase != 0))
+	b.Put(nil, StrVal("rcPaint"),
+		fromRect(&ps.rcPaint, b.Get(nil, StrVal("rcPaint"))))
+	b.Put(nil, StrVal("fRestore"), SuBool(ps.fRestore != 0))
+	b.Put(nil, StrVal("fIncUpdate"), SuBool(ps.fIncUpdate != 0))
 	return intRet(rtn)
 }
 
@@ -541,9 +541,9 @@ func GetMonitorInfoApi(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(getMonitorInfo,
 		intArg(a),
 		uintptr(unsafe.Pointer(&mi)))
-	b.Put(nil, SuStr("rcMonitor"), fromRect(&mi.rcMonitor, nil))
-	b.Put(nil, SuStr("rcWork"), fromRect(&mi.rcWork, nil))
-	b.Put(nil, SuStr("dwFlags"), IntVal(mi.dwFlags))
+	b.Put(nil, StrVal("rcMonitor"), fromRect(&mi.rcMonitor, nil))
+	b.Put(nil, StrVal("rcWork"), fromRect(&mi.rcWork, nil))
+	b.Put(nil, StrVal("dwFlags"), IntVal(mi.dwFlags))
 	return boolRet(rtn)
 }
 
@@ -565,11 +565,11 @@ func GetScrollInfo(a, b, c Value) Value {
 		intArg(a),
 		intArg(b),
 		uintptr(unsafe.Pointer(&si)))
-	c.Put(nil, SuStr("nMin"), IntVal(si.nMin))
-	c.Put(nil, SuStr("nMax"), IntVal(si.nMax))
-	c.Put(nil, SuStr("nPage"), IntVal(si.nPage))
-	c.Put(nil, SuStr("nPos"), IntVal(si.nPos))
-	c.Put(nil, SuStr("nTrackPos"), IntVal(si.nTrackPos))
+	c.Put(nil, StrVal("nMin"), IntVal(si.nMin))
+	c.Put(nil, StrVal("nMax"), IntVal(si.nMax))
+	c.Put(nil, StrVal("nPage"), IntVal(si.nPage))
+	c.Put(nil, StrVal("nPos"), IntVal(si.nPos))
+	c.Put(nil, StrVal("nTrackPos"), IntVal(si.nTrackPos))
 	return boolRet(rtn)
 }
 
@@ -635,11 +635,11 @@ func GetWindowPlacement(a, b Value) Value {
 	rtn, _, _ := syscall.SyscallN(getWindowPlacement,
 		intArg(a),
 		uintptr(unsafe.Pointer(&wp)))
-	b.Put(nil, SuStr("flags"), IntVal(wp.flags))
-	b.Put(nil, SuStr("showCmd"), IntVal(wp.showCmd))
-	b.Put(nil, SuStr("ptMinPosition"), fromPoint(&wp.ptMinPosition, nil))
-	b.Put(nil, SuStr("ptMaxPosition"), fromPoint(&wp.ptMaxPosition, nil))
-	b.Put(nil, SuStr("rcNormalPosition"),
+	b.Put(nil, StrVal("flags"), IntVal(wp.flags))
+	b.Put(nil, StrVal("showCmd"), IntVal(wp.showCmd))
+	b.Put(nil, StrVal("ptMinPosition"), fromPoint(&wp.ptMinPosition, nil))
+	b.Put(nil, StrVal("ptMaxPosition"), fromPoint(&wp.ptMaxPosition, nil))
+	b.Put(nil, StrVal("rcNormalPosition"),
 		fromRect(&wp.rcNormalPosition, nil))
 	return boolRet(rtn)
 }
@@ -768,7 +768,7 @@ func GetMenuItemInfoText(a, b Value) Value {
 	if rtn == 0 {
 		return False
 	}
-	return SuStr(string(buf[:n-1])) // -1 to omit nul terminator
+	return StrVal(string(buf[:n-1])) // -1 to omit nul terminator
 }
 
 // dll User32:SetMenuItemInfo(pointer hMenu, long uItem, long fByPosition,
@@ -1829,8 +1829,8 @@ func DrawTextExOut(a, b, c, d, e Value) Value {
 		uintptr(unsafe.Pointer(drawTextParams(e))))
 	fromRect(r, c)
 	ob := &SuObject{}
-	ob.Put(nil, SuStr("text"), bufZstr(buf))
-	ob.Put(nil, SuStr("result"), intRet(rtn))
+	ob.Put(nil, StrVal("text"), bufZstr(buf))
+	ob.Put(nil, StrVal("result"), intRet(rtn))
 	return ob
 }
 

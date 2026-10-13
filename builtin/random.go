@@ -56,7 +56,7 @@ func rnd_Bytes(arg Value) Value {
 	}
 	buf := make([]byte, n)
 	crypto.Read(buf)
-	return SuStr(hacks.BStoS(buf))
+	return StrVal(hacks.BStoS(buf))
 }
 
 var _ = staticMethod(rnd_Members, "() :object")

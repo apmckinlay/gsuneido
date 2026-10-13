@@ -50,20 +50,20 @@ func PrintDlg(a Value) Value {
 	}
 	rtn, _, _ := syscall.SyscallN(printDlg,
 		uintptr(unsafe.Pointer(&pd)))
-	a.Put(nil, SuStr("hwndOwner"), IntVal(pd.hwndOwner))
-	a.Put(nil, SuStr("hDevMode"), IntVal(pd.hDevMode))
-	a.Put(nil, SuStr("hDevNames"), IntVal(pd.hDevNames))
-	a.Put(nil, SuStr("hDC"), IntVal(pd.hDC))
-	a.Put(nil, SuStr("Flags"), IntVal(pd.Flags))
-	a.Put(nil, SuStr("nFromPage"), IntVal(pd.nFromPage))
-	a.Put(nil, SuStr("nToPage"), IntVal(pd.nToPage))
-	a.Put(nil, SuStr("nMinPage"), IntVal(pd.nMinPage))
-	a.Put(nil, SuStr("nMaxPage"), IntVal(pd.nMaxPage))
-	a.Put(nil, SuStr("nCopies"), IntVal(pd.nCopies))
-	a.Put(nil, SuStr("hInstance"), IntVal(pd.hInstance))
-	a.Put(nil, SuStr("lCustData"), IntVal(pd.lCustData))
-	a.Put(nil, SuStr("hPrintTemplate"), IntVal(pd.hPrintTemplate))
-	a.Put(nil, SuStr("hSetupTemplate"), IntVal(pd.hSetupTemplate))
+	a.Put(nil, StrVal("hwndOwner"), IntVal(pd.hwndOwner))
+	a.Put(nil, StrVal("hDevMode"), IntVal(pd.hDevMode))
+	a.Put(nil, StrVal("hDevNames"), IntVal(pd.hDevNames))
+	a.Put(nil, StrVal("hDC"), IntVal(pd.hDC))
+	a.Put(nil, StrVal("Flags"), IntVal(pd.Flags))
+	a.Put(nil, StrVal("nFromPage"), IntVal(pd.nFromPage))
+	a.Put(nil, StrVal("nToPage"), IntVal(pd.nToPage))
+	a.Put(nil, StrVal("nMinPage"), IntVal(pd.nMinPage))
+	a.Put(nil, StrVal("nMaxPage"), IntVal(pd.nMaxPage))
+	a.Put(nil, StrVal("nCopies"), IntVal(pd.nCopies))
+	a.Put(nil, StrVal("hInstance"), IntVal(pd.hInstance))
+	a.Put(nil, StrVal("lCustData"), IntVal(pd.lCustData))
+	a.Put(nil, StrVal("hPrintTemplate"), IntVal(pd.hPrintTemplate))
+	a.Put(nil, StrVal("hSetupTemplate"), IntVal(pd.hSetupTemplate))
 	return boolRet(rtn)
 }
 
@@ -114,21 +114,21 @@ func PageSetupDlg(a Value) Value {
 	}
 	rtn, _, _ := syscall.SyscallN(pageSetupDlg,
 		uintptr(unsafe.Pointer(&psd)))
-	a.Put(nil, SuStr("hwndOwner"), IntVal(psd.hwndOwner))
-	a.Put(nil, SuStr("hDevMode"), IntVal(psd.hDevMode))
-	a.Put(nil, SuStr("hDevNames"), IntVal(psd.hDevNames))
-	a.Put(nil, SuStr("Flags"), IntVal(psd.Flags))
-	a.Put(nil, SuStr("ptPaperSize"),
-		fromPoint(&psd.ptPaperSize, a.Get(nil, SuStr("ptPaperSize"))))
-	a.Put(nil, SuStr("rtMinMargin"),
-		fromRect(&psd.rtMinMargin, a.Get(nil, SuStr("rtMinMargin"))))
-	a.Put(nil, SuStr("rtMargin"),
-		fromRect(&psd.rtMargin, a.Get(nil, SuStr("rtMargin"))))
-	a.Put(nil, SuStr("hInstance"), IntVal(psd.hInstance))
-	a.Put(nil, SuStr("lCustData"), IntVal(psd.lCustData))
-	a.Put(nil, SuStr("lpfnPageSetupHook"), IntVal(psd.lpfnPageSetupHook))
-	a.Put(nil, SuStr("lpfnPagePaintHook"), IntVal(psd.lpfnPagePaintHook))
-	a.Put(nil, SuStr("hPageSetupTemplate"), IntVal(psd.hPageSetupTemplate))
+	a.Put(nil, StrVal("hwndOwner"), IntVal(psd.hwndOwner))
+	a.Put(nil, StrVal("hDevMode"), IntVal(psd.hDevMode))
+	a.Put(nil, StrVal("hDevNames"), IntVal(psd.hDevNames))
+	a.Put(nil, StrVal("Flags"), IntVal(psd.Flags))
+	a.Put(nil, StrVal("ptPaperSize"),
+		fromPoint(&psd.ptPaperSize, a.Get(nil, StrVal("ptPaperSize"))))
+	a.Put(nil, StrVal("rtMinMargin"),
+		fromRect(&psd.rtMinMargin, a.Get(nil, StrVal("rtMinMargin"))))
+	a.Put(nil, StrVal("rtMargin"),
+		fromRect(&psd.rtMargin, a.Get(nil, StrVal("rtMargin"))))
+	a.Put(nil, StrVal("hInstance"), IntVal(psd.hInstance))
+	a.Put(nil, StrVal("lCustData"), IntVal(psd.lCustData))
+	a.Put(nil, StrVal("lpfnPageSetupHook"), IntVal(psd.lpfnPageSetupHook))
+	a.Put(nil, StrVal("lpfnPagePaintHook"), IntVal(psd.lpfnPagePaintHook))
+	a.Put(nil, StrVal("hPageSetupTemplate"), IntVal(psd.hPageSetupTemplate))
 	return boolRet(rtn)
 }
 
@@ -160,7 +160,7 @@ func GetSaveFileName(a Value) Value {
 	rtn, _, _ := syscall.SyscallN(getSaveFileName,
 		uintptr(unsafe.Pointer(ofn)))
 	if rtn != 0 {
-		a.Put(nil, SuStr("file"), bufZstr(buf))
+		a.Put(nil, StrVal("file"), bufZstr(buf))
 	}
 	return boolRet(rtn)
 }
@@ -178,7 +178,7 @@ func GetOpenFileName(a Value) Value {
 		if i == -1 {
 			i = len(buf) - 2
 		}
-		a.Put(nil, SuStr("file"), SuStr(string(buf[:i+2])))
+		a.Put(nil, StrVal("file"), StrVal(string(buf[:i+2])))
 	}
 	return boolRet(rtn)
 }
@@ -186,7 +186,7 @@ func GetOpenFileName(a Value) Value {
 func buildOPENFILENAME(a Value) (*stOpenFileName, []byte) {
 	bufsize := getInt(a, "maxFile")
 	buf := make([]byte, bufsize)
-	copy(buf, ToStr(a.Get(nil, SuStr("file"))))
+	copy(buf, ToStr(a.Get(nil, StrVal("file"))))
 	ofn := &stOpenFileName{
 		structSize: int32(nOpenFileName),
 		hwndOwner:  getUintptr(a, "hwndOwner"),
@@ -235,7 +235,7 @@ var _ = builtin(ChooseColor, "(x) :boolean")
 
 func ChooseColor(a Value) Value {
 	var custColors CustColors
-	ccs := a.Get(nil, SuStr("custColors"))
+	ccs := a.Get(nil, StrVal("custColors"))
 	if ccs != nil {
 		for i := range nCustColors {
 			if x := ccs.Get(nil, SuInt16(i)); x != nil {
@@ -256,8 +256,8 @@ func ChooseColor(a Value) Value {
 	}
 	rtn, _, _ := syscall.SyscallN(chooseColor,
 		uintptr(unsafe.Pointer(&cc)))
-	a.Put(nil, SuStr("rgbResult"), IntVal(cc.rgbResult))
-	a.Put(nil, SuStr("flags"), IntVal(cc.flags))
+	a.Put(nil, StrVal("rgbResult"), IntVal(cc.rgbResult))
+	a.Put(nil, StrVal("flags"), IntVal(cc.flags))
 	if ccs != nil {
 		for i := range custColors {
 			ccs.Put(nil, SuInt16(i), IntVal(custColors[i]))
@@ -289,7 +289,7 @@ var chooseFont = comdlg32.MustFindProc("ChooseFontA").Addr()
 var _ = builtin(ChooseFont, "(cf) :boolean")
 
 func ChooseFont(a Value) Value {
-	lfob := a.Get(nil, SuStr("lpLogFont"))
+	lfob := a.Get(nil, StrVal("lpLogFont"))
 	lf := stLogFont{
 		lfHeight:         getInt32(lfob, "lfHeight"),
 		lfWidth:          getInt32(lfob, "lfWidth"),
@@ -325,21 +325,21 @@ func ChooseFont(a Value) Value {
 	}
 	rtn, _, _ := syscall.SyscallN(chooseFont,
 		uintptr(unsafe.Pointer(&cf)))
-	lfob.Put(nil, SuStr("lfHeight"), IntVal(lf.lfHeight))
-	lfob.Put(nil, SuStr("lfWidth"), IntVal(lf.lfWidth))
-	lfob.Put(nil, SuStr("lfEscapement"), IntVal(lf.lfEscapement))
-	lfob.Put(nil, SuStr("lfOrientation"), IntVal(lf.lfOrientation))
-	lfob.Put(nil, SuStr("lfWeight"), IntVal(lf.lfWeight))
-	lfob.Put(nil, SuStr("lfItalic"), IntVal(lf.lfItalic))
-	lfob.Put(nil, SuStr("lfUnderline"), IntVal(lf.lfUnderline))
-	lfob.Put(nil, SuStr("lfStrikeOut"), IntVal(lf.lfStrikeOut))
-	lfob.Put(nil, SuStr("lfCharSet"), IntVal(lf.lfCharSet))
-	lfob.Put(nil, SuStr("lfOutPrecision"), IntVal(lf.lfOutPrecision))
-	lfob.Put(nil, SuStr("lfClipPrecision"), IntVal(lf.lfClipPrecision))
-	lfob.Put(nil, SuStr("lfQuality"), IntVal(lf.lfQuality))
-	lfob.Put(nil, SuStr("lfPitchAndFamily"), IntVal(lf.lfPitchAndFamily))
-	lfob.Put(nil, SuStr("lfPitchAndFamily"), IntVal(lf.lfPitchAndFamily))
-	lfob.Put(nil, SuStr("lfFaceName"), bufZstr(lf.lfFaceName[:]))
+	lfob.Put(nil, StrVal("lfHeight"), IntVal(lf.lfHeight))
+	lfob.Put(nil, StrVal("lfWidth"), IntVal(lf.lfWidth))
+	lfob.Put(nil, StrVal("lfEscapement"), IntVal(lf.lfEscapement))
+	lfob.Put(nil, StrVal("lfOrientation"), IntVal(lf.lfOrientation))
+	lfob.Put(nil, StrVal("lfWeight"), IntVal(lf.lfWeight))
+	lfob.Put(nil, StrVal("lfItalic"), IntVal(lf.lfItalic))
+	lfob.Put(nil, StrVal("lfUnderline"), IntVal(lf.lfUnderline))
+	lfob.Put(nil, StrVal("lfStrikeOut"), IntVal(lf.lfStrikeOut))
+	lfob.Put(nil, StrVal("lfCharSet"), IntVal(lf.lfCharSet))
+	lfob.Put(nil, StrVal("lfOutPrecision"), IntVal(lf.lfOutPrecision))
+	lfob.Put(nil, StrVal("lfClipPrecision"), IntVal(lf.lfClipPrecision))
+	lfob.Put(nil, StrVal("lfQuality"), IntVal(lf.lfQuality))
+	lfob.Put(nil, StrVal("lfPitchAndFamily"), IntVal(lf.lfPitchAndFamily))
+	lfob.Put(nil, StrVal("lfPitchAndFamily"), IntVal(lf.lfPitchAndFamily))
+	lfob.Put(nil, StrVal("lfFaceName"), bufZstr(lf.lfFaceName[:]))
 	return boolRet(rtn)
 }
 
@@ -387,7 +387,7 @@ func PrintDlgEx(a Value) Value {
 		nStartPage:          getInt32(a, "nStartPage"),
 		dwResultAction:      getInt32(a, "dwResultAction"),
 	}
-	prob := a.Get(nil, SuStr("lpPageRanges"))
+	prob := a.Get(nil, StrVal("lpPageRanges"))
 	var pr *stPrintPageRange
 	if prob != nil {
 		pr = &stPrintPageRange{
@@ -400,25 +400,25 @@ func PrintDlgEx(a Value) Value {
 	}
 	rtn, _, _ := syscall.SyscallN(printDlgEx,
 		uintptr(unsafe.Pointer(&pd)))
-	a.Put(nil, SuStr("hwndOwner"), IntVal(pd.hwndOwner))
-	a.Put(nil, SuStr("hDevMode"), IntVal(pd.hDevMode))
-	a.Put(nil, SuStr("hDevNames"), IntVal(pd.hDevNames))
-	a.Put(nil, SuStr("hDC"), IntVal(pd.hDC))
-	a.Put(nil, SuStr("Flags"), IntVal(pd.Flags))
-	a.Put(nil, SuStr("Flags2"), IntVal(pd.Flags2))
-	a.Put(nil, SuStr("ExclusionFlags"), IntVal(pd.ExclusionFlags))
-	a.Put(nil, SuStr("nPageRanges"), IntVal(pd.nPageRanges))
-	a.Put(nil, SuStr("nMaxPageRanges"), IntVal(pd.nMaxPageRanges))
+	a.Put(nil, StrVal("hwndOwner"), IntVal(pd.hwndOwner))
+	a.Put(nil, StrVal("hDevMode"), IntVal(pd.hDevMode))
+	a.Put(nil, StrVal("hDevNames"), IntVal(pd.hDevNames))
+	a.Put(nil, StrVal("hDC"), IntVal(pd.hDC))
+	a.Put(nil, StrVal("Flags"), IntVal(pd.Flags))
+	a.Put(nil, StrVal("Flags2"), IntVal(pd.Flags2))
+	a.Put(nil, StrVal("ExclusionFlags"), IntVal(pd.ExclusionFlags))
+	a.Put(nil, StrVal("nPageRanges"), IntVal(pd.nPageRanges))
+	a.Put(nil, StrVal("nMaxPageRanges"), IntVal(pd.nMaxPageRanges))
 	if prob != nil {
-		prob.Put(nil, SuStr("nFromPage"), IntVal(pr.nFromPage))
-		prob.Put(nil, SuStr("nToPage"), IntVal(pr.nToPage))
+		prob.Put(nil, StrVal("nFromPage"), IntVal(pr.nFromPage))
+		prob.Put(nil, StrVal("nToPage"), IntVal(pr.nToPage))
 	}
-	a.Put(nil, SuStr("nMinPage"), IntVal(pd.nMinPage))
-	a.Put(nil, SuStr("nMaxPage"), IntVal(pd.nMaxPage))
-	a.Put(nil, SuStr("nCopies"), IntVal(pd.nCopies))
-	a.Put(nil, SuStr("hInstance"), IntVal(pd.hInstance))
-	a.Put(nil, SuStr("nStartPage"), IntVal(pd.nStartPage))
-	a.Put(nil, SuStr("dwResultAction"), IntVal(pd.dwResultAction))
+	a.Put(nil, StrVal("nMinPage"), IntVal(pd.nMinPage))
+	a.Put(nil, StrVal("nMaxPage"), IntVal(pd.nMaxPage))
+	a.Put(nil, StrVal("nCopies"), IntVal(pd.nCopies))
+	a.Put(nil, StrVal("hInstance"), IntVal(pd.hInstance))
+	a.Put(nil, StrVal("nStartPage"), IntVal(pd.nStartPage))
+	a.Put(nil, StrVal("dwResultAction"), IntVal(pd.dwResultAction))
 	return intRet(rtn)
 }
 

@@ -40,7 +40,7 @@ func instance_Copy(this Value) Value {
 var _ = method(instance_Delete, "(@args) :unknown")
 
 func instance_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
-	if all := getNamed(as, args, SuStr("all")); all == True {
+	if all := getNamed(as, args, StrVal("all")); all == True {
 		this.(*SuInstance).Clear()
 	} else {
 		iter := NewArgsIter(as, args)

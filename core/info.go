@@ -33,12 +33,12 @@ func InfoStr(name string) Value {
 	case *atomic.Int32:
 		return IntVal(x.Load())
 	case *string:
-		return SuStr(*x)
+		return StrVal(*x)
 	case Value:
 	case func() int:
 		return IntVal(x())
 	case func() string:
-		return SuStr(x())
+		return StrVal(x())
 	case func() Value:
 		return x()
 	}

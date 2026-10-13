@@ -180,9 +180,9 @@ func editCodeTool(ctx context.Context, library, name, mode string, line, count i
 	}
 
 	if core.ToStr(core.Unpack(vals["lib_before_text"])) == "" {
-		vals["lib_before_text"] = core.PackValue(core.SuStr(oldText))
+		vals["lib_before_text"] = core.PackValue(core.StrVal(oldText))
 	}
-	vals["text"] = core.PackValue(core.SuStr(newText))
+	vals["text"] = core.PackValue(core.StrVal(newText))
 	vals["lib_modified"] = core.PackValue(core.Now())
 
 	utran := th.Dbms().Transaction(true, th.Perms())

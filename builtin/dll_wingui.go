@@ -86,7 +86,7 @@ func int32Ret(rtn uintptr) Value {
 }
 
 func getBool(ob Value, mem string) BOOL {
-	x := ob.Get(nil, SuStr(mem))
+	x := ob.Get(nil, StrVal(mem))
 	if x == nil || !ToBool(x) {
 		return 0
 	}
@@ -94,7 +94,7 @@ func getBool(ob Value, mem string) BOOL {
 }
 
 func getInt(ob Value, mem string) int {
-	x := ob.Get(nil, SuStr(mem))
+	x := ob.Get(nil, StrVal(mem))
 	if x == nil || x.Equal(False) {
 		return 0
 	}
@@ -128,7 +128,7 @@ func getInt16(ob Value, mem string) int16 {
 
 // getZstr returns a nul terminated copy of a string member.
 func getZstr(ob Value, mem string) *byte {
-	x := ob.Get(nil, SuStr(mem))
+	x := ob.Get(nil, StrVal(mem))
 	if x == nil || x.Equal(Zero) || x.Equal(False) {
 		return nil
 	}
@@ -143,7 +143,7 @@ func bufZstr(buf []byte) SuStr {
 	if i := bytes.IndexByte(buf, 0); i >= 0 {
 		buf = buf[:i]
 	}
-	return SuStr(string(buf))
+	return StrVal(string(buf))
 }
 
 // ptrZstr copies a nul terminated string from *byte.
@@ -156,13 +156,13 @@ func ptrZstr(p *byte, n int) Value {
 	if i := slices.Index(src, 0); i >= 0 {
 		src = src[:i]
 	}
-	return SuStr(string(src))
+	return StrVal(string(src))
 }
 
 // getZstrBs copies the string into the byte slice and adds a nul terminator.
 // If the string is too long, the excess is ignored
 func getZstrBs(ob Value, mem string, dst []byte) {
-	src := ToStr(ob.Get(nil, SuStr(mem)))
+	src := ToStr(ob.Get(nil, StrVal(mem)))
 	if len(src) > len(dst)-1 {
 		src = src[:len(dst)-1]
 	}
@@ -189,7 +189,7 @@ func getRect(ob Value, mem string) stRect {
 	if ob == nil {
 		return stRect{}
 	}
-	x := ob.Get(nil, SuStr(mem))
+	x := ob.Get(nil, StrVal(mem))
 	if x == nil {
 		return stRect{}
 	}
@@ -203,10 +203,10 @@ func fromRect(r *stRect, ob Value) Value {
 	} else if ob.Equal(Zero) {
 		return ob
 	}
-	ob.Put(nil, SuStr("left"), IntVal(r.left))
-	ob.Put(nil, SuStr("top"), IntVal(r.top))
-	ob.Put(nil, SuStr("right"), IntVal(r.right))
-	ob.Put(nil, SuStr("bottom"), IntVal(r.bottom))
+	ob.Put(nil, StrVal("left"), IntVal(r.left))
+	ob.Put(nil, StrVal("top"), IntVal(r.top))
+	ob.Put(nil, StrVal("right"), IntVal(r.right))
+	ob.Put(nil, StrVal("bottom"), IntVal(r.bottom))
 	return ob
 }
 
@@ -225,7 +225,7 @@ func getPoint(ob Value, mem string) stPoint {
 	if ob == nil {
 		return stPoint{}
 	}
-	x := ob.Get(nil, SuStr(mem))
+	x := ob.Get(nil, StrVal(mem))
 	if x == nil || x.Equal(Zero) {
 		return stPoint{}
 	}
@@ -246,7 +246,7 @@ func getUintptr(ob Value, mem string) uintptr {
 }
 
 func getCallback(th *Thread, ob Value, mem string, nargs int) uintptr {
-	fn := ob.Get(nil, SuStr(mem))
+	fn := ob.Get(nil, StrVal(mem))
 	if fn == nil {
 		return 0
 	}

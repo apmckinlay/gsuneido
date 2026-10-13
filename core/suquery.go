@@ -40,7 +40,7 @@ func (qc *SuQueryCursor) Columns() Value {
 	ob := &SuObject{}
 	for _, col := range hdr.Columns {
 		if !strings.HasSuffix(col, "_deps") {
-			ob.Add(SuStr(col))
+			ob.Add(StrVal(col))
 		}
 	}
 	return ob
@@ -67,14 +67,14 @@ func (qc *SuQueryCursor) RuleColumns() Value {
 	hdr := qc.iqc.Header()
 	ob := &SuObject{}
 	for _, col := range hdr.Rules() {
-		ob.Add(SuStr(col))
+		ob.Add(StrVal(col))
 	}
 	return ob
 }
 
 func (qc *SuQueryCursor) Strategy(formatted bool) Value {
 	qc.ckActive()
-	return SuStr(qc.iqc.Strategy(formatted))
+	return StrVal(qc.iqc.Strategy(formatted))
 }
 
 func (qc *SuQueryCursor) Tree() Value {

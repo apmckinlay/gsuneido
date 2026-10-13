@@ -37,9 +37,9 @@ func (n SuQueryNode) Get(_ *Thread, key Value) Value {
 func qryBase(q Query, key Value) Value {
 	switch StrOrEmpty(key) {
 	case "string":
-		return SuStr(q.String())
+		return StrVal(q.String())
 	case "String":
-		return SuStr(String(q))
+		return StrVal(String(q))
 	case "nrows":
 		n, _ := q.Nrows()
 		return IntVal(n)
@@ -78,9 +78,9 @@ func qryBase(q Query, key Value) Value {
 func (tbl *Table) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("table")
+		return StrVal("table")
 	case "name":
-		return SuStr(tbl.name)
+		return StrVal(tbl.name)
 	}
 	return qryBase(tbl, key)
 }
@@ -88,9 +88,9 @@ func (tbl *Table) ValueGet(key Value) Value {
 func (ts *Tables) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("table")
+		return StrVal("table")
 	case "name":
-		return SuStr("tables")
+		return StrVal("tables")
 	}
 	return qryBase(ts, key)
 }
@@ -98,9 +98,9 @@ func (ts *Tables) ValueGet(key Value) Value {
 func (cs *Columns) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("table")
+		return StrVal("table")
 	case "name":
-		return SuStr("columns")
+		return StrVal("columns")
 	}
 	return qryBase(cs, key)
 }
@@ -108,9 +108,9 @@ func (cs *Columns) ValueGet(key Value) Value {
 func (is *Indexes) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("table")
+		return StrVal("table")
 	case "name":
-		return SuStr("indexes")
+		return StrVal("indexes")
 	}
 	return qryBase(is, key)
 }
@@ -118,9 +118,9 @@ func (is *Indexes) ValueGet(key Value) Value {
 func (vs *Views) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("table")
+		return StrVal("table")
 	case "name":
-		return SuStr("views")
+		return StrVal("views")
 	}
 	return qryBase(vs, key)
 }
@@ -128,9 +128,9 @@ func (vs *Views) ValueGet(key Value) Value {
 func (his *History) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("table")
+		return StrVal("table")
 	case "name":
-		return SuStr("history")
+		return StrVal("history")
 	}
 	return qryBase(his, key)
 }
@@ -138,9 +138,9 @@ func (his *History) ValueGet(key Value) Value {
 func (st *StatsTable) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("table")
+		return StrVal("table")
 	case "name":
-		return SuStr("dbstats")
+		return StrVal("dbstats")
 	}
 	return qryBase(st, key)
 }
@@ -148,7 +148,7 @@ func (st *StatsTable) ValueGet(key Value) Value {
 func (no *Nothing) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("nothing")
+		return StrVal("nothing")
 	}
 	return qryBase(no, key)
 }
@@ -156,7 +156,7 @@ func (no *Nothing) ValueGet(key Value) Value {
 func (pn *ProjectNone) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("projectNone")
+		return StrVal("projectNone")
 	}
 	return qryBase(pn, key)
 }
@@ -176,7 +176,7 @@ func query1(q Query, key Value) Value {
 func (e *Extend) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("extend")
+		return StrVal("extend")
 	}
 	return query1(e, key)
 }
@@ -184,7 +184,7 @@ func (e *Extend) ValueGet(key Value) Value {
 func (p *Project) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("project")
+		return StrVal("project")
 	}
 	return query1(p, key)
 }
@@ -192,7 +192,7 @@ func (p *Project) ValueGet(key Value) Value {
 func (r *Rename) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("rename")
+		return StrVal("rename")
 	}
 	return query1(r, key)
 }
@@ -200,7 +200,7 @@ func (r *Rename) ValueGet(key Value) Value {
 func (sort *Sort) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("sort")
+		return StrVal("sort")
 	}
 	return query1(sort, key)
 }
@@ -208,7 +208,7 @@ func (sort *Sort) ValueGet(key Value) Value {
 func (su *Summarize) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("summarize")
+		return StrVal("summarize")
 	}
 	return query1(su, key)
 }
@@ -216,7 +216,7 @@ func (su *Summarize) ValueGet(key Value) Value {
 func (ti *TempIndex) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("tempindex")
+		return StrVal("tempindex")
 	}
 	return query1(ti, key)
 }
@@ -224,7 +224,7 @@ func (ti *TempIndex) ValueGet(key Value) Value {
 func (w *Where) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("where")
+		return StrVal("where")
 	case "expr":
 		return w.expr
 	}
@@ -234,9 +234,9 @@ func (w *Where) ValueGet(key Value) Value {
 func (v *View) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("view")
+		return StrVal("view")
 	case "name":
-		return SuStr(v.name)
+		return StrVal(v.name)
 	}
 	return query1(v, key)
 }
@@ -260,7 +260,7 @@ func query2(q Query, key Value) Value {
 func (u *Union) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("union")
+		return StrVal("union")
 	}
 	return query2(u, key)
 }
@@ -268,7 +268,7 @@ func (u *Union) ValueGet(key Value) Value {
 func (it *Intersect) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("intersect")
+		return StrVal("intersect")
 	}
 	return query2(it, key)
 }
@@ -276,7 +276,7 @@ func (it *Intersect) ValueGet(key Value) Value {
 func (m *Minus) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("minus")
+		return StrVal("minus")
 	}
 	return query2(m, key)
 }
@@ -284,7 +284,7 @@ func (m *Minus) ValueGet(key Value) Value {
 func (t *Times) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("times")
+		return StrVal("times")
 	}
 	return query2(t, key)
 }
@@ -292,7 +292,7 @@ func (t *Times) ValueGet(key Value) Value {
 func (jn *Join) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("join")
+		return StrVal("join")
 	}
 	return query2(jn, key)
 }
@@ -300,7 +300,7 @@ func (jn *Join) ValueGet(key Value) Value {
 func (lj *LeftJoin) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("leftjoin")
+		return StrVal("leftjoin")
 	}
 	return query2(lj, key)
 }
@@ -308,7 +308,7 @@ func (lj *LeftJoin) ValueGet(key Value) Value {
 func (sj *SemiJoin) ValueGet(key Value) Value {
 	switch StrOrEmpty(key) {
 	case "type":
-		return SuStr("semijoin")
+		return StrVal("semijoin")
 	}
 	return query2(sj, key)
 }

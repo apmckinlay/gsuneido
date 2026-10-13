@@ -117,7 +117,7 @@ func (a *updateAction) execute(th *Thread, ut *db19.UpdateTran) int {
 		ctx.Row = row
 		r := SuRecordFromRow(row, hdr, table, tran)
 		for i, col := range a.cols {
-			r.Put(th, SuStr(col), a.exprs[i].Eval(&ctx))
+			r.Put(th, StrVal(col), a.exprs[i].Eval(&ctx))
 		}
 		newrec := r.ToRecord(th, hdr)
 		prev = ut.Update(th, table, row[0].Off, newrec)

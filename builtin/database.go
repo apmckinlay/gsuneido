@@ -39,13 +39,13 @@ func db_Auth(th *Thread, args []Value) Value {
 var _ = staticMethod(db_Check, "() :string")
 
 func db_Check(th *Thread, args []Value) Value {
-	return SuStr(th.Dbms().Check(false))
+	return StrVal(th.Dbms().Check(false))
 }
 
 var _ = staticMethod(db_FullCheck, "() :string")
 
 func db_FullCheck(th *Thread, args []Value) Value {
-	return SuStr(th.Dbms().Check(true))
+	return StrVal(th.Dbms().Check(true))
 }
 
 var _ = staticMethod(db_Connections, "() :object")
@@ -73,12 +73,12 @@ func db_Dump(th *Thread, args []Value) Value {
 		err := dbms.Dump(ToStr(args[0]), ToStr(args[1]), ToStr(args[2]))
 		if err != "" {
 			th.ReturnThrow = true
-			return SuStr(strings.Replace(err, "dump", "Database.Dump", 1))
+			return StrVal(strings.Replace(err, "dump", "Database.Dump", 1))
 		}
 		return EmptyStr
 	}
 	return th.Dbms().Exec(th,
-		SuObjectOf(SuStr("Database.Dump"), args[0], args[1], args[2]))
+		SuObjectOf(StrVal("Database.Dump"), args[0], args[1], args[2]))
 }
 
 var _ = staticMethod(db_Final, "() :number")
@@ -106,19 +106,19 @@ func db_Load(th *Thread, args []Value) Value {
 		return IntVal(dbms.Load(ToStr(args[0]), ToStr(args[1]), ToStr(args[2]), ToStr(args[3])))
 	}
 	return th.Dbms().Exec(th,
-		SuObjectOf(SuStr("Database.Load"), args[0], args[1], args[2], args[3]))
+		SuObjectOf(StrVal("Database.Load"), args[0], args[1], args[2], args[3]))
 }
 
 var _ = staticMethod(db_Schema, "(table :string) :string")
 
 func db_Schema(th *Thread, args []Value) Value {
-	return SuStr(th.Dbms().Schema(ToStr(args[0])))
+	return StrVal(th.Dbms().Schema(ToStr(args[0])))
 }
 
 var _ = staticMethod(db_SessionId, "(id :string = '') :string")
 
 func db_SessionId(th *Thread, args []Value) Value {
-	return SuStr(th.SessionId(ToStr(args[0])))
+	return StrVal(th.SessionId(ToStr(args[0])))
 }
 
 var _ = staticMethod(db_TempDest, "() :number")
@@ -139,7 +139,7 @@ func db_CorruptedQ(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
 		return SuBool(dbms.Corrupted())
 	}
-	return th.Dbms().Exec(th, SuObjectOf(SuStr("Database.Corrupted?")))
+	return th.Dbms().Exec(th, SuObjectOf(StrVal("Database.Corrupted?")))
 }
 
 var _ = staticMethod(db_Top10, "(table :string, column :string) :object")
@@ -191,7 +191,7 @@ func db_Distinct(th *Thread, args []Value) Value {
 	}
 	ob := &SuObject{}
 	for i, col := range cols {
-		ob.Set(SuStr(col), IntVal(sketches[i].Count()))
+		ob.Set(StrVal(col), IntVal(sketches[i].Count()))
 	}
 	return ob
 }

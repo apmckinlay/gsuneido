@@ -12,7 +12,7 @@ var _ = builtin(Name, "(value) :string")
 
 func Name(arg Value) Value {
 	if named, ok := arg.(Named); ok {
-		return SuStr(str.AfterFirst(named.GetName(), ":"))
+		return StrVal(str.AfterFirst(named.GetName(), ":"))
 	}
 	return EmptyStr
 }

@@ -218,7 +218,7 @@ func (ms *muxSession) Libraries() []string {
 }
 
 func (ms *muxSession) Schema(table string) string {
-	return ToStr(ms.Exec(nil, SuObjectOf(SuStr("Database.Schema"), SuStr(table))))
+	return ToStr(ms.Exec(nil, SuObjectOf(StrVal("Database.Schema"), StrVal(table))))
 }
 
 func (ms *muxSession) SessionId(th *Thread, id string) string {

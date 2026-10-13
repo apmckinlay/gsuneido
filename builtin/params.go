@@ -17,5 +17,5 @@ var _ = method(params_Params, "() :string")
 
 func params_Params(this Value) Value {
 	fn := this.(paramsable)
-	return SuStr(fn.Params())
+	return StrVal(fn.Params())
 }

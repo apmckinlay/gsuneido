@@ -71,7 +71,7 @@ func scan_Next2(this Value) Value {
 	if sc.item.Token == tokens.Eof {
 		return sc
 	}
-	return SuStr(sc.type2())
+	return StrVal(sc.type2())
 }
 
 var _ = method(scan_Position, "() :number")
@@ -97,7 +97,7 @@ func scan_Type(this Value) Value {
 	if sc.Lock() {
 		defer sc.Unlock()
 	}
-	return SuStr(sc.type2())
+	return StrVal(sc.type2())
 }
 
 var _ = method(scan_Value, "() :string")
@@ -107,7 +107,7 @@ func scan_Value(this Value) Value {
 	if sc.Lock() {
 		defer sc.Unlock()
 	}
-	return SuStr(sc.item.Text)
+	return StrVal(sc.item.Text)
 }
 
 func (sc *suScanner) next() Value {
@@ -128,7 +128,7 @@ func (sc *suScanner) text() Value {
 	src := sc.lxr.Source()
 	from := sc.item.Pos
 	to := sc.lxr.Position()
-	return SuStr(src[from:to])
+	return StrVal(src[from:to])
 }
 
 // type2 caller must lock

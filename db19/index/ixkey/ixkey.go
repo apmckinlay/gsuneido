@@ -285,7 +285,7 @@ func DecodeValues(comp string) []Value {
 	for i, p := range parts {
 		s := strings.ReplaceAll(p, "\x00\x01", "\x00")
 		if s == Max {
-			result[i] = SuStr("<max>")
+			result[i] = StrVal("<max>")
 		} else {
 			result[i] = Unpack(s)
 		}

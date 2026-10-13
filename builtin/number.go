@@ -50,7 +50,7 @@ var _ = method(num_Binary, "() :string")
 
 func num_Binary(this Value) Value {
 	n := ToInt(this)
-	return SuStr(strconv.FormatUint(uint64(n), 2))
+	return StrVal(strconv.FormatUint(uint64(n), 2))
 }
 
 var _ = method(num_Chr, "() :string")
@@ -74,7 +74,7 @@ var _ = method(num_Format, "(mask :string) :string")
 func num_Format(this, arg Value) Value {
 	x := ToDnum(this)
 	mask := ToStr(arg)
-	return SuStr(x.Format(mask))
+	return StrVal(x.Format(mask))
 }
 
 var _ = method(num_Frac, "() :number")
@@ -91,7 +91,7 @@ var _ = method(num_Hex, "() :string")
 
 func num_Hex(this Value) Value {
 	n := ToInt(this)
-	return SuStr(strconv.FormatUint(uint64(n), 16))
+	return StrVal(strconv.FormatUint(uint64(n), 16))
 }
 
 var _ = method(num_Round, "(number) :number")

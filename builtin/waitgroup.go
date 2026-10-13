@@ -66,7 +66,7 @@ func wg_Wait(th *Thread, this Value, args []Value) Value {
 		return True // completed normally
 	case <-time.After(time.Duration(timeout) * time.Second):
 		th.ReturnThrow = true
-		return SuStr("WaitGroup: timeout")
+		return StrVal("WaitGroup: timeout")
 	}
 }
 

@@ -22,5 +22,5 @@ func sunAPP(url string) (result string) {
 		MainThread.RestoreState(state)
 	}()
 	f := Global.GetName(MainThread, "SuneidoAPP")
-	return ToStr(MainThread.Call(f, SuStr(url)))
+	return ToStr(MainThread.Call(f, StrVal(url)))
 }

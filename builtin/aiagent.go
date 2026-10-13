@@ -29,7 +29,7 @@ func AiAgent(th *Thread, args []Value) Value {
 	prompt := ToStr(args[4])
 	callback.SetConcurrent()
 	t2 := th.NewChild()
-	th.Call(callback, SuStr(model), EmptyStr)
+	th.Call(callback, StrVal(model), EmptyStr)
 
 	a := &suAgent{
 		th:       t2,
@@ -83,11 +83,11 @@ func outputCallback(th *Thread, callback Value) func(what, data string, approval
 			}
 		}()
 		if approval == nil {
-			th.Call(callback, SuStr(what), SuStr(data))
+			th.Call(callback, StrVal(what), StrVal(data))
 			return
 		}
 		ta := &suToolApproval{approval: approval}
-		th.Call(callback, SuStr(what), SuStr(data), ta)
+		th.Call(callback, StrVal(what), StrVal(data), ta)
 	}
 }
 
@@ -111,13 +111,13 @@ func toolapproval_Deny(this Value, text Value) Value {
 var _ = method(toolapproval_Before, "() :string")
 
 func toolapproval_Before(this Value) Value {
-	return SuStr(this.(*suToolApproval).approval.Before)
+	return StrVal(this.(*suToolApproval).approval.Before)
 }
 
 var _ = method(toolapproval_After, "() :string")
 
 func toolapproval_After(this Value) Value {
-	return SuStr(this.(*suToolApproval).approval.After)
+	return StrVal(this.(*suToolApproval).approval.After)
 }
 
 var _ = method(agent_Input, "(input :string) :void")

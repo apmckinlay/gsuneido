@@ -11,5 +11,5 @@ import (
 var _ = builtin(Cmdline, "() :string")
 
 func Cmdline() Value {
-	return SuStr(options.CmdLine)
+	return StrVal(options.CmdLine)
 }

@@ -63,5 +63,5 @@ func md5_Value(this Value) Value {
 
 func (h suMd5) value() Value {
 	var buf [md5.Size]byte
-	return SuStr(string(h.hash.Sum(buf[0:0])))
+	return StrVal(string(h.hash.Sum(buf[0:0])))
 }

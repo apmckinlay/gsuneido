@@ -296,9 +296,9 @@ func (th *Thread) Callstack() *SuObject {
 	for i := th.fp - 1; i >= 0; i-- {
 		fr := th.frames[i]
 		call := &SuObject{}
-		call.Set(SuStr("fn"), fr.fn)
-		call.Set(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip-1)))
-		call.Set(SuStr("locals"), th.locals(i))
+		call.Set(StrVal("fn"), fr.fn)
+		call.Set(StrVal("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip-1)))
+		call.Set(StrVal("locals"), th.locals(i))
 		cs.Add(call)
 		if cs.Size() > 50 {
 			break
@@ -315,7 +315,7 @@ func (th *Thread) locals(i int) *SuObject {
 	fr := th.frames[i]
 	locals := &SuObject{}
 	if fr.this != nil {
-		locals.Set(SuStr("this"), fr.this)
+		locals.Set(StrVal("this"), fr.this)
 	}
 	if fr.fn != nil {
 		for i, v := range fr.locals {
@@ -325,7 +325,7 @@ func (th *Thread) locals(i int) *SuObject {
 			if se, ok := v.(*SuExcept); ok {
 				v = se.SuStr
 			}
-			locals.Set(SuStr(fr.fn.VarName(i)), v)
+			locals.Set(StrVal(fr.fn.VarName(i)), v)
 		}
 		if fr.shared != nil {
 			nsharedNames := len(fr.fn.Names) - int(fr.fn.Nstack)
@@ -346,7 +346,7 @@ func (th *Thread) locals(i int) *SuObject {
 					// type assertion to concrete type should be fast
 					v = se.SuStr
 				}
-				locals.Set(SuStr(name), v)
+				locals.Set(StrVal(name), v)
 			}
 		}
 	}
@@ -383,7 +383,7 @@ func PrintStack(cs *SuObject) {
 	}
 	for i := range cs.ListSize() {
 		frame := cs.ListGet(i)
-		fn := frame.Get(nil, SuStr("fn"))
+		fn := frame.Get(nil, StrVal("fn"))
 		fmt.Fprintln(os.Stderr, fn)
 	}
 }

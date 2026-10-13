@@ -22,9 +22,9 @@ var _ = method(func_Disasm, "(source = false) :string")
 func func_Disasm(this, a Value) Value {
 	fn := this.(*SuFunc)
 	if a == False {
-		return SuStr(DisasmOps(fn))
+		return StrVal(DisasmOps(fn))
 	}
-	return SuStr(DisasmMixed(fn, ToStr(a)))
+	return StrVal(DisasmMixed(fn, ToStr(a)))
 }
 
 var _ = method(func_StartCoverage, "(count :boolean = false) :void")

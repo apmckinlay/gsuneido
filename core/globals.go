@@ -88,7 +88,7 @@ func GetBuiltinNames() []Value {
 	names := make([]Value, len(g.builtins))
 	i := 0
 	for gn := range g.builtins {
-		names[i] = SuStr(Global.Name(gn))
+		names[i] = StrVal(Global.Name(gn))
 		i++
 	}
 	return names

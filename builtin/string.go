@@ -92,7 +92,7 @@ func string_Detab(this Value) Value {
 var _ = method(string_Entab, "() :string")
 
 func string_Entab(this Value) Value {
-	return SuStr(tabs.Entab(ToStr(this)))
+	return StrVal(tabs.Entab(ToStr(this)))
 }
 
 var _ = method(string_Eval, "() :unknown")
@@ -142,7 +142,7 @@ func string_Extract(th *Thread, this Value, args []Value) Value {
 	if pos == -1 {
 		return EmptyStr
 	}
-	return SuStr(s[pos:end])
+	return StrVal(s[pos:end])
 }
 
 var _ = method(string_Find, "(string :string, pos=0) :number")
@@ -215,7 +215,7 @@ func string_FromUtf8(this Value) Value {
 	if err != nil {
 		panic("string.FromUtf8 " + err.Error())
 	}
-	return SuStr(s)
+	return StrVal(s)
 }
 
 var _ = method(string_HasQ, "(string :string) :boolean")
@@ -267,7 +267,7 @@ func string_MapN(th *Thread, this Value, args []Value) Value {
 			CheckStringSize("MapN", sb.Len())
 		}
 	}
-	return SuStr(sb.String())
+	return StrVal(sb.String())
 }
 
 var _ = method(string_Match, "(pattern, pos=false, prev :boolean =false) :false|object")
@@ -321,7 +321,7 @@ func string_NthLine(this, arg Value) Value {
 	for j > i && s[j-1] == '\r' {
 		j--
 	}
-	return SuStr(s[i:j])
+	return StrVal(s[i:j])
 }
 
 var _ = method(string_NumberQ, "() :boolean")
@@ -370,7 +370,7 @@ func string_Repeat(this, arg Value) Value {
 	s := ToStr(this)
 	n := max(0, ToInt(arg))
 	CheckStringSize("Repeat", len(s)*n)
-	return SuStr(strings.Repeat(s, n))
+	return StrVal(strings.Repeat(s, n))
 }
 
 var _ = method(string_Replace, "(pattern, block = '', count = false) :string")
@@ -394,7 +394,7 @@ func string_Reverse(this Value) Value {
 		lo++
 		hi--
 	}
-	return SuStr(hacks.BStoS(s))
+	return StrVal(hacks.BStoS(s))
 }
 
 var _ = method(string_Size, "() :number")
@@ -424,7 +424,7 @@ func string_Split(this, arg Value) Value {
 	}
 	vals := make([]Value, len(strs))
 	for i, str := range strs {
-		vals[i] = SuStr(str)
+		vals[i] = StrVal(str)
 	}
 	return NewSuObject(vals)
 }
@@ -439,7 +439,7 @@ var _ = method(string_ToHex, "() :string")
 
 func string_ToHex(this Value) Value {
 	s := ToStr(this)
-	return SuStr(hex.EncodeToString(hacks.Stobs(s)))
+	return StrVal(hex.EncodeToString(hacks.Stobs(s)))
 }
 
 var _ = method(string_FromHex, "() :string")
@@ -450,7 +450,7 @@ func string_FromHex(this Value) Value {
 	if err != nil {
 		panic("string.FromHex invalid hex string")
 	}
-	return SuStr(hacks.BStoS(b))
+	return StrVal(hacks.BStoS(b))
 }
 
 var _ = method(string_ToUtf8, "() :string")
@@ -462,7 +462,7 @@ func string_ToUtf8(this Value) Value {
 	if err != nil {
 		panic("string.ToUtf8 " + err.Error())
 	}
-	return SuStr(utf8)
+	return StrVal(utf8)
 }
 
 var _ = method(string_Tr, "(from :string, to :string ='') :string")
@@ -484,7 +484,7 @@ func string_Unescape(this Value) Value {
 		c, i = str.Doesc(s, i)
 		sb.WriteByte(c)
 	}
-	return SuStr(sb.String())
+	return StrVal(sb.String())
 }
 
 var _ = method(string_Upper, "() :string")

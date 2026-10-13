@@ -14,7 +14,7 @@ func Libraries(th *Thread, args []Value) Value {
 	list := th.Dbms().Libraries()
 	var ob SuObject
 	for _, s := range list {
-		ob.Add(SuStr(s))
+		ob.Add(StrVal(s))
 	}
 	return &ob
 }

@@ -95,8 +95,8 @@ func opgp_KeyGen(name, email, passphrase Value) Value {
 	ck(err)
 
 	ob := &SuObject{}
-	ob.Set(SuStr("public"), SuStr(publicKey))
-	ob.Set(SuStr("private"), SuStr(privateKey))
+	ob.Set(StrVal("public"), StrVal(publicKey))
+	ob.Set(StrVal("private"), StrVal(privateKey))
 	return ob
 }
 
@@ -105,7 +105,7 @@ var _ = staticMethod(opgp_KeyId, "(key :string) :string")
 func opgp_KeyId(key Value) Value {
 	entity, err := openpgputil.ReadArmoredEntity(ToStr(key))
 	ck(err)
-	return SuStr(openpgputil.KeyIDHex(entity))
+	return StrVal(openpgputil.KeyIDHex(entity))
 }
 
 var _ = staticMethod(opgp_KeyEntity, "(key :string) :false|string")
@@ -114,7 +114,7 @@ func opgp_KeyEntity(key Value) Value {
 	entity, err := openpgputil.ReadArmoredEntity(ToStr(key))
 	ck(err)
 	if name := openpgputil.FirstIdentity(entity); name != "" {
-		return SuStr(name)
+		return StrVal(name)
 	}
 	return False
 }
@@ -133,7 +133,7 @@ func opgpStr[T any](key T, source Value, f encdec[T]) Value {
 	src := strings.NewReader(ToStr(source))
 	dst := new(bytes.Buffer)
 	f(key, src, dst)
-	return SuStr(dst.String())
+	return StrVal(dst.String())
 }
 
 func opgpFile[T any](key T, fromFile, toFile Value, f encdec[T]) Value {

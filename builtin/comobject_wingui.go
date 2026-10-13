@@ -259,7 +259,7 @@ func variantToSu(v *stVariant) Value {
 	case VT_UI8:
 		result = IntVal(v.val)
 	case VT_BSTR:
-		result = SuStr(bstrToString(v))
+		result = StrVal(bstrToString(v))
 		VariantClear(v)
 	case VT_DISPATCH:
 		result = &suCOMObject{ptr: uintptr(v.val), idisp: true}

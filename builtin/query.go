@@ -167,9 +167,9 @@ var _ = builtin(formatQuery, "(query :string) :string")
 
 func formatQuery(th *Thread, args []Value) Value {
 	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
-		return SuStr(dbms.FormatQuery(ToStr(args[0]), th.Perms()))
+		return StrVal(dbms.FormatQuery(ToStr(args[0]), th.Perms()))
 	}
-	return th.Dbms().Exec(th, SuObjectOf(SuStr("FormatQuery"), args[0]))
+	return th.Dbms().Exec(th, SuObjectOf(StrVal("FormatQuery"), args[0]))
 }
 
 //-------------------------------------------------------------------
@@ -202,14 +202,14 @@ var _ = staticMethod(sqs_StripSort, "(query :string) :string")
 
 func sqs_StripSort(arg Value) Value {
 	query := ToStr(arg)
-	return SuStr(qry.StripSort(query))
+	return StrVal(qry.StripSort(query))
 }
 
 var _ = staticMethod(sqs_GetSort, "(query :string) :string")
 
 func sqs_GetSort(arg Value) Value {
 	query := ToStr(arg)
-	return SuStr(qry.GetSort(query))
+	return StrVal(qry.GetSort(query))
 }
 
 var _ = staticMethod(sqs_Parse, "(parse :string) :unknown")
@@ -230,5 +230,5 @@ var _ = staticMethod(sqs_Strategy1, "(@args) :string")
 
 func sqs_Strategy1(th *Thread, args []Value) Value {
 	_, _, s := th.Dbms().Get(th, args[0], Strat)
-	return SuStr(s)
+	return StrVal(s)
 }

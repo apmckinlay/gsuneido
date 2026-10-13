@@ -188,7 +188,7 @@ func file_Read(this, arg Value) Value {
 	if err != nil {
 		panic("File: Read: " + err.Error())
 	}
-	return SuStr(hacks.BStoS(buf))
+	return StrVal(hacks.BStoS(buf))
 }
 
 var _ = method(file_CopyTo, "(dest, nbytes = false) :number")
@@ -344,7 +344,7 @@ func readline(rdr io.Reader, errPrefix string) (Value, int) {
 	}
 	s := sb.String()
 	s = strings.TrimRight(s, "\r")
-	return SuStr(s), nr
+	return StrVal(s), nr
 }
 
 // appender is a workaround for a Windows bug

@@ -28,7 +28,7 @@ func HttpServer(th *Thread, args []Value) Value {
 		Addr:    addr,
 		Handler: newHttpHandler(th, args[1])}
 	if ob, ok := args[2].ToContainer(); ok {
-		ob.Put(th, SuStr("stop"), &suStopper{server: server})
+		ob.Put(th, StrVal("stop"), &suStopper{server: server})
 	}
 	if err := server.ListenAndServe(); err != nil &&
 		!errors.Is(err, http.ErrServerClosed) {
@@ -56,7 +56,7 @@ func newHttpHandler(th *Thread, app Value) *HttpHandler {
 }
 
 var argSpecEnv = &ArgSpec{Nargs: 1,
-	Spec: []byte{0}, Names: []Value{SuStr("env")}}
+	Spec: []byte{0}, Names: []Value{StrVal("env")}}
 
 func (h *HttpHandler) ServeHTTP(rw http.ResponseWriter, rq *http.Request) {
 	th := h.ctx.NewThread()
@@ -110,23 +110,23 @@ func (e *suHttpEnv) Get(_ *Thread, k Value) Value {
 	key := ToStr(k)
 	switch key {
 	case "method":
-		return SuStr(e.rq.Method)
+		return StrVal(e.rq.Method)
 	case "path":
-		return SuStr(e.rq.URL.Path)
+		return StrVal(e.rq.URL.Path)
 	case "query":
-		return SuStr(e.rq.URL.RawQuery)
+		return StrVal(e.rq.URL.RawQuery)
 	case "queryvalues":
 		if e.qv == nil {
 			qv := &SuObject{}
 			for k, v := range e.rq.URL.Query() {
 				if len(v) == 1 {
 					if v[0] == "" {
-						qv.Add(SuStr(k))
+						qv.Add(StrVal(k))
 					} else {
-						qv.Set(SuStr(k), SuStr(v[0]))
+						qv.Set(StrVal(k), StrVal(v[0]))
 					}
 				} else {
-					qv.Set(SuStr(k), SuObjectOfStrs(v))
+					qv.Set(StrVal(k), SuObjectOfStrs(v))
 				}
 			}
 			e.qv = qv
@@ -141,17 +141,17 @@ func (e *suHttpEnv) Get(_ *Thread, k Value) Value {
 			}
 			e.body = sb.String()
 		}
-		return SuStr(e.body)
+		return StrVal(e.body)
 	case "socket": // temporary backwards compatible with RackServer
 		return e // not really the socket, but handles Read, Write, and CopyTo
 	case "remote_user":
 		addr := e.rq.RemoteAddr
-		return SuStr(str.BeforeLast(addr, ":"))
+		return StrVal(str.BeforeLast(addr, ":"))
 	default:
 		key = strings.ReplaceAll(key, "_", "-")
 		v := e.rq.Header[key]
 		if len(v) == 1 {
-			return SuStr(v[0])
+			return StrVal(v[0])
 		} else if len(v) > 1 {
 			return SuObjectOfStrs(v)
 		} else {
@@ -187,7 +187,7 @@ func httpEnv_Read(this Value, a Value) Value {
 	buf := make([]byte, n)
 	nr, err := rd.Read(buf)
 	if nr > 0 {
-		return SuStr(hacks.BStoS(buf[:nr]))
+		return StrVal(hacks.BStoS(buf[:nr]))
 	}
 	if err != nil {
 		if err == io.EOF {

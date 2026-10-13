@@ -84,7 +84,7 @@ func (c *ClassObject) SortedMethods(yield func(string, *ast.Function) bool) {
 
 func getValue(val core.Value, key string) core.Value {
 	defer func() { _ = recover() }()
-	return val.Get(nil, core.SuStr(key))
+	return val.Get(nil, core.StrVal(key))
 }
 
 func (c *ClassObject) Lineage(r ClassResolver) []*ClassObject {

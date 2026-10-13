@@ -62,7 +62,7 @@ func pcm_Version() Value {
 	if i := bytes.IndexAny(buf, ".\x00"); i >= 0 {
 		buf = buf[:i]
 	}
-	return SuStr(string(buf))
+	return StrVal(string(buf))
 }
 
 // dll long pcmsrv32:PCMSAddStop(long tripId, [in] string stop)

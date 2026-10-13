@@ -63,5 +63,5 @@ func Sha1_Value(this Value) Value {
 
 func (h suSha1) value() Value {
 	var buf [sha1.Size]byte
-	return SuStr(string(h.hash.Sum(buf[0:0])))
+	return StrVal(string(h.hash.Sum(buf[0:0])))
 }

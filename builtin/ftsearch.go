@@ -68,7 +68,7 @@ func ftsearch_Tokens(text Value) Value {
 		if token == "" {
 			break
 		}
-		tokens = append(tokens, SuStr(token))
+		tokens = append(tokens, StrVal(token))
 	}
 	return SuObjectOf(tokens...)
 }
@@ -160,8 +160,8 @@ func ftsIndex_Search(this, query, scores Value) Value {
 	for i, ds := range docScores {
 		if scors {
 			ob := &SuObject{}
-			ob.Set(SuStr("id"), IntVal(ds.DocId))
-			ob.Set(SuStr("score"), SuDnum{Dnum: dnum.FromFloat(ds.Score)})
+			ob.Set(StrVal("id"), IntVal(ds.DocId))
+			ob.Set(StrVal("score"), SuDnum{Dnum: dnum.FromFloat(ds.Score)})
 			list[i] = ob
 		} else {
 			list[i] = IntVal(ds.DocId)
@@ -195,5 +195,5 @@ var _ = method(ftsIndex_WordInfo, "(word :string) :string")
 
 func ftsIndex_WordInfo(this, word Value) Value {
 	sfi := this.(*suFtsIndex)
-	return SuStr(sfi.get().WordInfo(ToStr(word)))
+	return StrVal(sfi.get().WordInfo(ToStr(word)))
 }

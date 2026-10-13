@@ -49,7 +49,7 @@ func zlib_Compress(arg Value) Value {
 	if err != nil {
 		panic("Zlib.Compress: " + err.Error())
 	}
-	return SuStr(sb.String())
+	return StrVal(sb.String())
 }
 
 var _ = staticMethod(zlib_Uncompress, "(string :string) :string")
@@ -67,7 +67,7 @@ func zlib_Uncompress(arg Value) Value {
 	}
 	r.Close()
 	assert.That(int(n) == len(sb.String()))
-	return SuStr(sb.String())
+	return StrVal(sb.String())
 }
 
 var _ = staticMethod(zlib_Members, "() :object")

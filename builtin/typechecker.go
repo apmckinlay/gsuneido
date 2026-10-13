@@ -81,7 +81,7 @@ func registrationEntries(v Value) []annotations.Registration {
 				"TypeChecker.RegisterSignatures: signatures[%d]: must be an object", i))
 		}
 		field := func(key string) string {
-			val := e.GetIfPresent(nil, SuStr(key))
+			val := e.GetIfPresent(nil, StrVal(key))
 			if val == nil {
 				return ""
 			}
@@ -131,10 +131,10 @@ func runTypeChecker(method, meth string, arguments, references, config Value) Va
 		panic("TypeChecker." + meth + ": " + err.Error())
 	}
 	ob := &SuObject{}
-	ob.Put(nil, SuStr("method"), SuStr(res.Method))
-	ob.Put(nil, SuStr("result"), resultsOb(res.Results, meth))
-	ob.Put(nil, SuStr("diagnostics"), diagnosticsOb(res.Diagnostics))
-	ob.Put(nil, SuStr("version"), SuStr(options.BuiltStr()))
+	ob.Put(nil, StrVal("method"), StrVal(res.Method))
+	ob.Put(nil, StrVal("result"), resultsOb(res.Results, meth))
+	ob.Put(nil, StrVal("diagnostics"), diagnosticsOb(res.Diagnostics))
+	ob.Put(nil, StrVal("version"), StrVal(options.BuiltStr()))
 	return ob
 }
 
@@ -154,11 +154,11 @@ func sourceEntries(v Value, meth, kind string) []typechecker.SourceEntry {
 			panic(fmt.Sprintf("TypeChecker.%s: %s[%d]: must be a string or an object with src",
 				meth, kind, i))
 		}
-		src := e.GetIfPresent(nil, SuStr("src"))
+		src := e.GetIfPresent(nil, StrVal("src"))
 		if src == nil {
 			panic(fmt.Sprintf("TypeChecker.%s: %s[%d]: missing src", meth, kind, i))
 		}
-		if nm := e.GetIfPresent(nil, SuStr("name")); nm != nil && ToStr(nm) != "" {
+		if nm := e.GetIfPresent(nil, StrVal("name")); nm != nil && ToStr(nm) != "" {
 			name = ToStr(nm)
 		}
 		entries[i] = typechecker.SourceEntry{Name: name, Src: ToStr(src)}
@@ -187,7 +187,7 @@ func resultsOb(results []any, meth string) Value {
 		case typechecker.TypeInfo:
 			ob.Add(typeInfoOb(r))
 		case string:
-			ob.Add(SuStr(r))
+			ob.Add(StrVal(r))
 		default:
 			panic(fmt.Sprintf("TypeChecker.%s: unexpected result type %T", meth, r))
 		}
@@ -198,26 +198,26 @@ func resultsOb(results []any, meth string) Value {
 func typeInfoOb(ti typechecker.TypeInfo) Value {
 	meths := &SuObject{}
 	for name, methods := range ti.Methods {
-		meths.Put(nil, SuStr(name), typeMapOb(methods))
+		meths.Put(nil, StrVal(name), typeMapOb(methods))
 	}
 	ob := &SuObject{}
-	ob.Put(nil, SuStr("methods"), meths)
-	ob.Put(nil, SuStr("members"), typeMapOb(ti.Members))
+	ob.Put(nil, StrVal("methods"), meths)
+	ob.Put(nil, StrVal("members"), typeMapOb(ti.Members))
 	return ob
 }
 
 func typeMapOb(m map[string]string) Value {
 	ob := &SuObject{}
 	for k, v := range m {
-		ob.Put(nil, SuStr(k), SuStr(v))
+		ob.Put(nil, StrVal(k), StrVal(v))
 	}
 	return ob
 }
 
 func diagnosticsOb(ds typechecker.DiagnosticSet) Value {
 	ob := &SuObject{}
-	ob.Put(nil, SuStr("errors"), diagListOb(ds.Errors))
-	ob.Put(nil, SuStr("warnings"), diagListOb(ds.Warnings))
+	ob.Put(nil, StrVal("errors"), diagListOb(ds.Errors))
+	ob.Put(nil, StrVal("warnings"), diagListOb(ds.Warnings))
 	return ob
 }
 
@@ -225,14 +225,14 @@ func diagListOb(ds []typechecker.ResultDiagnostic) Value {
 	ob := &SuObject{}
 	for _, d := range ds {
 		e := &SuObject{}
-		e.Put(nil, SuStr("class"), SuStr(d.Class))
-		e.Put(nil, SuStr("method"), SuStr(d.Method))
-		e.Put(nil, SuStr("pos"), IntVal(d.Pos))
-		e.Put(nil, SuStr("line"), IntVal(d.Line))
-		e.Put(nil, SuStr("col"), IntVal(d.Col))
-		e.Put(nil, SuStr("msg"), SuStr(d.Msg))
+		e.Put(nil, StrVal("class"), StrVal(d.Class))
+		e.Put(nil, StrVal("method"), StrVal(d.Method))
+		e.Put(nil, StrVal("pos"), IntVal(d.Pos))
+		e.Put(nil, StrVal("line"), IntVal(d.Line))
+		e.Put(nil, StrVal("col"), IntVal(d.Col))
+		e.Put(nil, StrVal("msg"), StrVal(d.Msg))
 		if flag := d.Flag.String(); flag != "" { // omitted when there is none
-			e.Put(nil, SuStr("flag"), SuStr(flag))
+			e.Put(nil, StrVal("flag"), StrVal(flag))
 		}
 		ob.Add(e)
 	}
@@ -247,10 +247,10 @@ func builtinSignaturesOb() Value {
 		builtinSignatures = &SuObject{}
 		for _, ts := range builtinTypeSignatures {
 			e := &SuObject{}
-			e.Put(nil, SuStr("kind"), SuStr(ts.Kind))
-			e.Put(nil, SuStr("prefix"), SuStr(ts.Prefix))
-			e.Put(nil, SuStr("name"), SuStr(ts.Name))
-			e.Put(nil, SuStr("sig"), SuStr(ts.Sig))
+			e.Put(nil, StrVal("kind"), StrVal(ts.Kind))
+			e.Put(nil, StrVal("prefix"), StrVal(ts.Prefix))
+			e.Put(nil, StrVal("name"), StrVal(ts.Name))
+			e.Put(nil, StrVal("sig"), StrVal(ts.Sig))
 			builtinSignatures.Add(e)
 		}
 		builtinSignatures.SetReadOnly()

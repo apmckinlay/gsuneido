@@ -14,7 +14,7 @@ var _ = builtin(ServerIP, "() :string")
 
 func ServerIP() Value {
 	if options.Action == "client" {
-		return SuStr(options.Arg)
+		return StrVal(options.Arg)
 	}
 	return EmptyStr
 }

@@ -57,18 +57,18 @@ func startThread(th *Thread, args []Value, wg *sync.WaitGroup) {
 	ob := args[0].(*SuObject)
 	ob.SetConcurrent()
 	var fn Value
-	if block := ob.NamedGet(SuStr("block")); block != nil {
+	if block := ob.NamedGet(StrVal("block")); block != nil {
 		fn = block
-		ob.Delete(th, SuStr("block"))
+		ob.Delete(th, StrVal("block"))
 	} else {
 		fn = ob.ListGet(0)
 		ob.Delete(th, Zero)
 	}
 	NoteThreadClosure(fn)
 	t2 := th.NewChild()
-	if name := ob.NamedGet(SuStr("name")); name != nil {
+	if name := ob.NamedGet(StrVal("name")); name != nil {
 		threadName(t2, name)
-		ob.Delete(th, SuStr("name"))
+		ob.Delete(th, StrVal("name"))
 	}
 	threads.add(t2)
 	if wg != nil {
@@ -104,7 +104,7 @@ func thread_Name(th *Thread, args []Value) Value {
 	if args[0] != False {
 		threadName(th, args[0])
 	}
-	return SuStr(th.Name)
+	return StrVal(th.Name)
 }
 
 func threadName(th *Thread, name Value) {
@@ -126,7 +126,7 @@ func thread_List() Value {
 	threads.lock.Lock()
 	defer threads.lock.Unlock()
 	for _, t := range threads.list {
-		ob.Add(SuStr(t.Name))
+		ob.Add(StrVal(t.Name))
 	}
 	return ob
 }
@@ -148,10 +148,10 @@ func thread_Profile(th *Thread, args []Value) Value {
 	prof := &SuObject{}
 	for f, c := range calls {
 		ob := &SuObject{}
-		ob.Set(SuStr("name"), SuStr(f.String()))
-		ob.Set(SuStr("calls"), IntVal(c))
-		ob.Set(SuStr("total"), IntVal(total[f]))
-		ob.Set(SuStr("self"), IntVal(self[f]))
+		ob.Set(StrVal("name"), StrVal(f.String()))
+		ob.Set(StrVal("calls"), IntVal(c))
+		ob.Set(StrVal("total"), IntVal(total[f]))
+		ob.Set(StrVal("self"), IntVal(self[f]))
 		prof.Add(ob)
 	}
 	return prof

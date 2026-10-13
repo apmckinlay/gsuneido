@@ -99,7 +99,7 @@ func hashObject(p string) uint64 {
 
 func (qh *QueryHash) Result(details bool) Value {
 	if details {
-		return SuStr(fmt.Sprintln("nrows", qh.nrows, "hash", qh.hash,
+		return StrVal(fmt.Sprintln("nrows", qh.nrows, "hash", qh.hash,
 			"ncols", qh.ncols, "hash", qh.colsHash))
 	}
 	return IntVal(qh.hash)

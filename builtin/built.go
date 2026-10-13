@@ -13,7 +13,7 @@ import (
 var _ = builtin(Built, "() :string")
 
 func Built() Value {
-	return SuStr(options.BuiltStr())
+	return StrVal(options.BuiltStr())
 }
 
 var _ = AddInfo("built", func() string {

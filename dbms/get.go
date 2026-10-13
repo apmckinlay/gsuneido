@@ -85,7 +85,7 @@ var existsHdr = SimpleHeader([]string{"x"})
 func getQuery(ob *SuObject) string {
 	if ob.ListSize() >= 1 {
 		return ToStr(ob.ListGet(0))
-	} else if q := ob.NamedGet(SuStr("query")); q != nil {
+	} else if q := ob.NamedGet(StrVal("query")); q != nil {
 		return ToStr(q)
 	}
 	return ""
