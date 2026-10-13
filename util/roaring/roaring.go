@@ -91,7 +91,9 @@ func free(blk []uint16) {
 
 func alloc() []uint16 {
 	if p := blocks.Get(); p != nil {
-		return unsafe.Slice(p.(*uint16), 4096)
+		blk := unsafe.Slice(p.(*uint16), 4096)
+		clear(blk) // recycled array data is not zeroed
+		return blk
 	}
 	return make([]uint16, 4096)
 }

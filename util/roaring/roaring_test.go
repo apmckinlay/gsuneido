@@ -88,6 +88,26 @@ func TestBitOperations(t *testing.T) {
 	assert.T(t).This(hasBit(blk, 65534)).Is(false)
 }
 
+func TestRecycleClearsBlock(t *testing.T) {
+	b := &Bitmap{}
+
+	// first conversion frees an array block into the pool
+	for i := range uint64(4200) {
+		b.Add(i)
+	}
+	// second conversion reuses the pooled block; stale bits must not leak in
+	for i := range uint64(4200) {
+		b.Add(65536 + i)
+	}
+
+	for i := range uint64(4200) {
+		assert.T(t).This(b.Has(65536 + i)).Is(true)
+	}
+	for i := uint64(4200); i < 1<<16; i++ {
+		assert.T(t).This(b.Has(65536 + i)).Is(false)
+	}
+}
+
 func BenchmarkAdd(b *testing.B) {
 	limit := 16 * 64 * 1024
 	rnd := func() uint64 {
