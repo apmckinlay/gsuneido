@@ -48,7 +48,7 @@ func StrVal1(c byte) Value {
 
 // StrVal converts a Go string to a Suneido Value.
 func StrVal(s string) Value {
-	if len(s) >= strp.MaxFromGo {
+	if len(s) > strp.MaxFromGo {
 		return SuStr(s)
 	}
 	return NewSuStrP(s)
