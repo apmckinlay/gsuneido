@@ -34,3 +34,39 @@ func TestBloom(t *testing.T) {
 		assert.That(bf.Test(n))
 	}
 }
+
+const benchN = 1_000_000
+
+// benchValue produces 32 bit values on the fly so the benchmarks share the
+// same value domain without allocating a large slice.
+func benchValue(i uint64) uint64 {
+	return mix(i) & (1<<32 - 1)
+}
+
+// mix is the splitmix64 finalizer.
+func mix(h uint64) uint64 {
+	h += 0x9e3779b97f4a7c15
+	h = (h ^ (h >> 30)) * 0xbf58476d1ce4e5b9
+	h = (h ^ (h >> 27)) * 0x94d049bb133111eb
+	return h ^ (h >> 31)
+}
+
+func BenchmarkBuild(b *testing.B) {
+	bf := New(Calc(benchN, .01))
+	for i := uint64(0); b.Loop(); i++ {
+		if i%benchN == 0 {
+			bf = New(Calc(benchN, .01))
+		}
+		bf.Add(benchValue(i))
+	}
+}
+
+func BenchmarkProbe(b *testing.B) {
+	bf := New(Calc(benchN, .01))
+	for i := uint64(0); i < benchN; i++ {
+		bf.Add(benchValue(i))
+	}
+	for i := uint64(0); b.Loop(); i++ {
+		bf.Test(benchValue(i % benchN))
+	}
+}

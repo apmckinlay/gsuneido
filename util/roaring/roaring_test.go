@@ -108,6 +108,38 @@ func TestRecycleClearsBlock(t *testing.T) {
 	}
 }
 
+// The Build/Probe benchmarks mirror util/blkbloom, generating 32 bit values
+// on the fly with mix (no large slice).
+const benchN = 1_000_000
+
+func mix(h uint64) uint64 {
+	h += 0x9e3779b97f4a7c15
+	h = (h ^ (h >> 30)) * 0xbf58476d1ce4e5b9
+	h = (h ^ (h >> 27)) * 0x94d049bb133111eb
+	return h ^ (h >> 31)
+}
+
+func benchValue(i uint64) uint64 {
+	return mix(i) & (1<<32 - 1)
+}
+
+func BenchmarkBuild(b *testing.B) {
+	bm := &Bitmap{}
+	for i := uint64(0); b.Loop(); i++ {
+		bm.Add(benchValue(i))
+	}
+}
+
+func BenchmarkProbe(b *testing.B) {
+	bm := &Bitmap{}
+	for i := range uint64(benchN) {
+		bm.Add(benchValue(i))
+	}
+	for i := uint64(0); b.Loop(); i++ {
+		bm.Has(benchValue(i))
+	}
+}
+
 func BenchmarkAdd(b *testing.B) {
 	limit := 16 * 64 * 1024
 	rnd := func() uint64 {
