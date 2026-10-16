@@ -757,6 +757,120 @@ func TestWhere_Damp(t *testing.T) {
 	}
 }
 
+func TestWhere_Cost2(t *testing.T) {
+	test := func(nrows int, inFrac, ir1, if1, ir2, if2 float64, df bool, fix, variable Cost) {
+		t.Helper()
+		f, v := WhereCost2(nrows, 100_000, 100_000, inFrac, ir1, if1, ir2, if2, df)
+		assert.T(t).This(f).Is(fix)
+		assert.T(t).This(v).Is(variable)
+	}
+	test(1000, 1, 1, 1, 1, 1, false, 26_500, 104_500)
+	test(1000, .5, 1, 1, 1, 1, false, 26_500, 52_250)
+	test(1000, .5, 1, 1, 1, 1, true, 26_500, 65_313)
+	test(1000, 1, .1, 1, 1, 1, false, 3_550, 32_500)
+	test(1000, .5, .1, 1, 1, 1, false, 3_550, 20_313)
+	test(1000, 1, .1, .5, .2, .5, true, 3_275, 6_165)
+	test(1000, 1, .1, 1, .1, 1, false, 3_550, 4_980) // square-root dampening
+	test(1000, 1, .2, 1, .1, 1, false, 6_100, 6_028)
+	test(1000, 1, .1, 1, .2, 1, false, 3_550, 8_478)
+	test(1000, 1, .1, 1, 0, 1, false, 3_550, 0)
+	test(1000, 0, .1, 1, 1, 1, true, 0, 0)
+	test(2000, 1, .1, 1, 1, 1, false, 4_100, 37_000)
+	test(0, 1, .1, 1, 1, 1, false, 3_000, 28_000)
+	test(1, 1, .5, .5, 1, 1, false, 11_001, 40_005)
+}
+
+func TestWhere_twoIndexes(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create table (id,a,b,c) key(id) index(a) index(b)")
+	for i := range 100 {
+		db.act(fmt.Sprintf("insert {id: %d, a: %d, b: %d, c: %d} into table",
+			i, i%10, 99-i, i%2))
+	}
+	tran := db.NewReadTran(AllPerms)
+	defer tran.Complete()
+	th := &Thread{}
+	test := func(where string, req Require, bitmap bool, expected []int) *Where {
+		t.Helper()
+		w := ParseQuery("table where "+where, tran, nil).(*Where)
+		_, _, ap := w.optimize(ReadMode, req)
+		w.setApproach(req, ap, tran)
+		assert.T(t).This(w.bloomSel != nil).Is(bitmap)
+		assert.T(t).That(w.singleton || req.SatisfiedByWithFixed(w.srcIndex, w.fixed))
+		get := func(dir Dir) []int {
+			w.Rewind()
+			var ids []int
+			for row := w.Get(th, dir); row != nil; row = w.Get(th, dir) {
+				ids = append(ids, ToInt(row.GetVal(w.Header(), "id", th, nil)))
+			}
+			return ids
+		}
+		assert.T(t).This(get(Next)).Is(expected)
+		reverse := slices.Clone(expected)
+		slices.Reverse(reverse)
+		assert.T(t).This(get(Prev)).Is(reverse)
+		w.Rewind()
+		return w
+	}
+	expected := []int{91, 81, 71, 61, 51, 41, 31, 21, 11, 1}
+	w := test("a = 1", OrderReq([]string{"b"}, 1), true, expected)
+	assert.T(t).That(int(w.tbl.ngets) >= 2*len(expected) && w.tbl.ngets < 200)
+	assert.T(t).That(w.dataFilter != nil)
+	// Admit every offset to ensure the final filter rejects false positives.
+	for _, row := range ParseQuery("table", tran, nil).Simple(th) {
+		w.bloom.Add(row[0].Off)
+	}
+	var ids []int
+	for row := w.Get(th, Next); row != nil; row = w.Get(th, Next) {
+		ids = append(ids, ToInt(row.GetVal(w.Header(), "id", th, nil)))
+	}
+	assert.T(t).This(ids).Is(expected)
+	bitmap := w.bloom
+	w.Rewind()
+	w.SetTran(tran)
+	assert.T(t).This(w.bloom).Is(bitmap)
+	assert.T(t).That(w.Get(th, Next) != nil)
+	w.Select(Sels{{"b", Pack(IntVal(18))}})
+	assert.T(t).This(row2str(w.Header(), w.Get(th, Next))).Is("a=1 b=18 c=1 id=81")
+	assert.T(t).This(w.Get(th, Next)).Is(nil)
+	w.Select(Sels{{"b", Pack(IntVal(17))}})
+	assert.T(t).This(w.Get(th, Next)).Is(nil)
+	w.Select(nil)
+	assert.T(t).This(queryAll2(w)).Is(queryAll2(test("a = 1", GroupReq([]string{"b"}, 1, 5), false, expected)))
+
+	test("a = 1 and b >= 50 and c = 1", OrderReq([]string{"b"}, 1), true,
+		[]int{41, 31, 21, 11, 1})
+	test("a in (1,3)", OrderReq([]string{"b"}, 1), true,
+		[]int{93, 91, 83, 81, 73, 71, 63, 61, 53, 51, 43, 41, 33, 31, 23, 21, 13, 11, 3, 1})
+	test("a = 1 and c = 0", OrderReq([]string{"b"}, 1), true, nil)
+	test("id in (1,11,12) and id % 10 = 1", OrderReq([]string{"b"}, 1), true,
+		[]int{11, 1})
+	test("a = 1", NoneReq(1), false, []int{1, 11, 21, 31, 41, 51, 61, 71, 81, 91})
+	test("id = 1", OrderReq([]string{"b"}, 1), false, []int{1})
+	for _, mode := range []Mode{ReadMode, UpdateMode, CursorMode} {
+		w := ParseQuery("table where a < 9", tran, nil).(*Where)
+		_, _, ap := w.optimize(mode, OrderReq([]string{"b"}, .01))
+		assert.T(t).This(ap.(*whereApproach).bloomSel).Is(nil)
+		_, _, ap = w.optimize(mode, UniqueReq([]string{"id"}, 1))
+		assert.T(t).This(ap.(*whereApproach).bloomSel).Is(nil)
+		w = ParseQuery("table where a = 1", tran, nil).(*Where)
+		_, _, ap = w.optimize(mode, OrderReq([]string{"b"}, 1))
+		assert.T(t).This(ap.(*whereApproach).bloomSel != nil).Is(mode != CursorMode)
+		_, _, ap = w.optimize(mode, GroupReq([]string{"b"}, 1, 5))
+		assert.T(t).This(ap.(*whereApproach).bloomSel).Is(nil)
+	}
+
+	db.act("insert {id: 101, a: 1, b: 0, c: 1} into table")
+	tran2 := db.NewReadTran(AllPerms)
+	defer tran2.Complete()
+	w.SetTran(tran2)
+	assert.T(t).This(w.bloom).Is(nil)
+	w.Rewind()
+	assert.T(t).This(queryAll2(w)).Is("a=1 b=0 c=1 id=101 | " +
+		queryAll2(test("a = 1", OrderReq([]string{"b"}, 1), true, expected)))
+}
+
 func TestWhere_CalcFracs(t *testing.T) {
 	pc := func(cols ...string) map[string][]span {
 		m := make(map[string][]span, len(cols))
@@ -1071,6 +1185,61 @@ func TestWhere_indexRanges(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestWhere_rangeBitmap(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create t (k, a, b) key(k) index(a) index(b)")
+	const rangeN = 20000
+	values := make([][2]int, rangeN)
+	r := rand.New(rand.NewPCG(1, 2))
+	for k := range rangeN {
+		values[k] = [2]int{r.IntN(rangeN), r.IntN(rangeN)}
+		db.act(fmt.Sprintf("insert {k: %d, a: %d, b: %d} into t",
+			k, values[k][0], values[k][1]))
+	}
+	tran := db.NewReadTran(AllPerms)
+	defer tran.Complete()
+	// Selective ranges save enough record reads to offset bitmap construction.
+	test := func(thresh int, bitmap bool) {
+		t.Helper()
+		q := fmt.Sprintf("t where a > %d and b > %d", thresh, thresh)
+		q2, _, _ := Setup(ParseQuery(q, tran, nil), ReadMode, tran)
+		w := q2.(*Where)
+		assert.T(t).Msg(q).This(w.bloomSel != nil).Is(bitmap)
+		expected := make(map[int]bool)
+		for k, v := range values {
+			if v[0] > thresh && v[1] > thresh {
+				expected[k] = true
+			}
+		}
+		th := &Thread{}
+		for row := w.Get(th, Next); row != nil; row = w.Get(th, Next) {
+			k := ToInt(row.GetVal(w.Header(), "k", th, nil))
+			assert.T(t).That(expected[k])
+			delete(expected, k)
+		}
+		assert.T(t).This(len(expected)).Is(0)
+	}
+	test(0, false)
+	test(5000, false)
+	test(10000, false)
+	test(15000, true)
+	test(19000, true)
+	// The more selective Bloom index must win in either index position.
+	testBloom := func(a, b int, bloomIndex string) {
+		t.Helper()
+		q := fmt.Sprintf("t where a > %d and b > %d", a, b)
+		q2, _, _ := Setup(ParseQuery(q, tran, nil), ReadMode, tran)
+		w := q2.(*Where)
+		if w.bloomSel == nil {
+			t.Fatalf("%s: expected Bloom index", q)
+		}
+		assert.T(t).Msg(q).This(w.bloomSel.index[0]).Is(bloomIndex)
+	}
+	testBloom(18800, 19000, "b")
+	testBloom(19000, 18800, "a")
 }
 
 func (hdb *heapdb) queryCompare(t *testing.T, query string) {

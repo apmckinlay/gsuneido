@@ -18,6 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/blkbloom"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -42,6 +43,10 @@ type Where struct {
 	// idxSel is for the chosen index
 	idxSelBase   *idxSel
 	idxSelActive *idxSel
+	bloomSel     *idxSel
+	bloomFilter  ast.Expr
+	bloomCtx     ixContext
+	bloom        blkbloom.Bloom
 	selConflict  bool      // conflict from Select
 	expr         *ast.Nary // And
 
@@ -95,8 +100,9 @@ const (
 type whereApproach struct {
 	index []string
 	*idxSel
-	cost Cost
-	mode Mode
+	bloomSel *idxSel
+	cost     Cost
+	mode     Mode
 }
 
 var whereSingletonCount atomic.Int64
@@ -131,6 +137,9 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 }
 
 func (w *Where) SetTran(t QueryTran) {
+	if w.t != t {
+		w.bloom = nil
+	}
 	w.t = t
 	w.source.SetTran(t)
 	w.rowCtx.Tran = nil
@@ -138,6 +147,9 @@ func (w *Where) SetTran(t QueryTran) {
 
 func (w *Where) String() string {
 	s := "where"
+	if w.bloomSel != nil {
+		s += "+" + str.Join("(,)", w.bloomSel.index)
+	}
 	if w.conflict {
 		s += " /*NOTHING*/"
 		if w.optimized {
@@ -540,10 +552,12 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel, mode: mode}
 	}
 	type bestIdx struct {
-		index  []string
-		idxSel *idxSel
+		index    []string
+		idxSel   *idxSel
+		bloomSel *idxSel
 	}
 	best := newBest[bestIdx]()
+	nrows, _ := w.tbl.Nrows()
 	for _, idx := range w.source.Indexes() {
 		if !req.SatisfiedByWithFixed(idx, w.fixed) {
 			continue
@@ -561,12 +575,30 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 		cost := WhereCost(float64(varCost), float64(req.frac), irFrac, ifFrac, df)
 		cost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
 		best.update(0, cost, bestIdx{index: idx, idxSel: isel})
+		// Cursors would have to rebuild the bloom on each transaction change.
+		// Group Selects may read too little to justify a full bloom build.
+		if mode == CursorMode || req.use == ReqGroup {
+			continue
+		}
+		for _, bloomSel := range w.idxSels {
+			if slices.Equal(idx, bloomSel.index) {
+				continue
+			}
+			_, bloomCost, _ := w.tbl.costFor(bloomSel.index, mode, NoneReq(1))
+			fixcost, varcost := WhereCost2(nrows, float64(bloomCost), float64(varCost),
+				float64(req.frac), bloomSel.indexRangeFrac, bloomSel.indexFilterFrac,
+				irFrac, ifFrac, df)
+			varcost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
+			best.update(fixcost, varcost,
+				bestIdx{index: idx, idxSel: isel, bloomSel: bloomSel})
+		}
 	}
 	if best.none() {
 		return impossible, impossible, nil
 	}
-	return 0, best.varcost, &whereApproach{index: best.data.index,
-		cost: best.varcost, idxSel: best.data.idxSel, mode: mode}
+	return best.fixcost, best.varcost, &whereApproach{index: best.data.index,
+		cost: best.fixcost + best.varcost, idxSel: best.data.idxSel,
+		bloomSel: best.data.bloomSel, mode: mode}
 }
 
 func (w *Where) optWhereLookup(mode Mode, req Require) (Cost, Cost, any) {
@@ -659,6 +691,34 @@ func WhereCost(cost, inFrac, irFrac, ifFrac float64, df bool) Cost {
 	return int(math.Round(cost))
 }
 
+// WhereCost2 separates the full Bloom filter build from the second scan.
+func WhereCost2(nrows int, cost1, cost2, inFrac, irFrac1, ifFrac1, irFrac2, ifFrac2 float64,
+	df bool) (Cost, Cost) {
+	if inFrac == 0 {
+		return 0, 0
+	}
+	fixcost := Cost(math.Round(.2 * cost1 * irFrac1))
+	nOffsets := float64(nrows) * irFrac1 * ifFrac1
+	// Preserve the average cost of 5 units, with the measured Add/Has
+	// ratio of 5.5 ns to 4.5 ns.
+	const bloomAddCost, bloomHasCost = 5.5, 4.5
+	fixcost += 1000 + Cost(math.Round(bloomAddCost*nOffsets))
+	// Dampen the less selective filter to account for dependence, as in calcFracs.
+	if irFrac2 > 0 {
+		frac1, frac2 := irFrac1*ifFrac1, irFrac2*ifFrac2
+		frac := min(frac1, frac2) * damp(1, max(frac1, frac2))
+		ifFrac2 = frac / irFrac2
+	}
+	varcost := WhereCost(cost2, inFrac, irFrac2, ifFrac2, df)
+	if ifFrac2 < 1 || df {
+		inFrac = .25 + .75*inFrac // same pessimistic guard as WhereCost
+	}
+	// Has runs before the main index filter, even for offsets it rejects.
+	nProbes := float64(nrows) * irFrac2 * inFrac
+	varcost += Cost(math.Round(bloomHasCost * nProbes))
+	return fixcost, varcost
+}
+
 func (w *Where) getIdxSel(index []string) *idxSel {
 	for _, isel := range w.idxSels {
 		if slices.Equal(index, isel.index) {
@@ -684,13 +744,28 @@ func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 		ap := approach.(*whereApproach)
 		w.tbl.SetIndex(ap.index, ap.mode)
 		w.srcIndex = ap.index
-		if ap.idxSel != nil {
+		w.bloomSel = ap.bloomSel
+		w.bloom = nil
+		isel := ap.idxSel
+		if w.bloomSel != nil {
+			w.bloomCtx = ixContext{cols: w.bloomSel.index,
+				encodes: w.tbl.IndexEncodes(w.bloomSel.index)}
+			w.bloomFilter, _ = w.splitExpr(w.bloomSel)
+			if isel == nil {
+				isel = &idxSel{index: ap.index,
+					encoded:      w.tbl.IndexEncodes(ap.index),
+					mode:         w.tbl.schema.Indexes[w.tbl.iIndex].Mode,
+					prefixRanges: []pointRange{pointRange(iface.All)}, indexRangeFrac: 1}
+			}
+		}
+		if isel != nil {
 			w.ixCtx.cols = ap.index
 			w.ixCtx.encodes = w.tbl.IndexEncodes(ap.index)
-			w.idxSelBase = ap.idxSel
+			w.idxSelBase = isel
 			w.idxSelActive = w.idxSelBase
-			w.indexFilter, w.dataFilter = w.splitExpr(ap.index)
-			w.tbl.setCost(float64(req.frac)*ap.idxSel.indexRangeFrac, 0, ap.cost)
+			// Bloom filters have false positives, so retain their expressions.
+			w.indexFilter, w.dataFilter = w.splitExpr(isel)
+			w.tbl.setCost(float64(req.frac)*isel.indexRangeFrac, 0, ap.cost)
 			w.idxSelPos = -1
 		} else {
 			w.tbl.setCost(float64(req.frac), 0, ap.cost)
@@ -700,8 +775,8 @@ func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 	w.rowCtx.Hdr = w.header
 }
 
-func (w *Where) splitExpr(index []string) (indexFilter, dataFilter ast.Expr) {
-	is := w.idxSelBase
+func (w *Where) splitExpr(is *idxSel) (indexFilter, dataFilter ast.Expr) {
+	index := is.index
 	// fmt.Println("idxSel:", is)
 	rangeCols := is.RangeCols()
 	// fmt.Println("rangeCols:", rangeCols)
@@ -743,6 +818,9 @@ func (w *Where) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { w.tget += tsc.Read() - t }(tsc.Read())
 	if w.selConflict || w.eof {
 		return nil
+	}
+	if w.bloomSel != nil && w.bloom == nil {
+		w.buildBitmap(th)
 	}
 	// apply the non-indexed filtering
 	for {
@@ -791,6 +869,7 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 			// (only if the key exists, otherwise it may be malformed garbage
 			// from sels that the index expression cannot evaluate)
 			if row := w.tbl.LookupRaw(w.curPtrng.Org); row != nil &&
+				(w.bloom == nil || w.bloom.Has(row[0].Off)) &&
 				(w.indexFilter == nil || w.ixFilter(th, w.curPtrng.Org)) {
 				w.nIn++
 				return row
@@ -807,13 +886,44 @@ func (w *Where) ixFilter(th *Thread, key string) bool {
 }
 
 func (w *Where) getFilter(th *Thread, dir Dir) Row {
-	var filterFunc func(string) bool
-	if w.indexFilter != nil {
-		filterFunc = func(key string) bool {
-			return w.ixFilter(th, key)
+	var filterFunc func(string, uint64) bool
+	if w.indexFilter != nil || w.bloom != nil {
+		filterFunc = func(key string, off uint64) bool {
+			return (w.bloom == nil || w.bloom.Has(off)) &&
+				(w.indexFilter == nil || w.ixFilter(th, key))
 		}
 	}
 	return w.tbl.GetFilter(dir, filterFunc)
+}
+
+func (w *Where) buildBitmap(th *Thread) {
+	tbl := w.tbl.Clone()
+	tbl.iter = nil // the bloom scan must not move the ordered scan's cursor
+	tbl.SetIndex(w.bloomSel.index, ReadMode)
+	nrows, _ := tbl.Nrows()
+	sizeHint := int(math.Ceil(float64(nrows) * w.bloomSel.indexRangeFrac *
+		w.bloomSel.indexFilterFrac))
+	bloom := blkbloom.New(sizeHint)
+	w.bloomCtx.th = th
+	defer func() { w.bloomCtx.th = nil }()
+	for _, pr := range w.bloomSel.prefixRanges {
+		if pr.isPoint() {
+			tbl.SelectRaw(pr.Org, pr.Org+"\x00")
+		} else if w.bloomSel.skipLen > 0 {
+			tbl.SelectSkipScan(iface.Range(pr), iface.Range(w.bloomSel.skipRange),
+				w.bloomSel.skipStart)
+		} else {
+			tbl.SelectRaw(pr.Org, pr.End)
+		}
+		tbl.GetFilter(Next, func(key string, off uint64) bool {
+			w.bloomCtx.key = key
+			if w.bloomFilter == nil || w.bloomFilter.Eval(&w.bloomCtx) == True {
+				bloom.Add(off)
+			}
+			return false // only offsets are needed, not data records
+		})
+	}
+	w.bloom = bloom
 }
 
 // filter applies singleSels and the dataFilter expression

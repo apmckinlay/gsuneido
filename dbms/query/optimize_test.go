@@ -109,7 +109,7 @@ func TestOptimize(t *testing.T) {
 	test("supplier where supplier > 1 sort city",
 		"supplier^(city,supplier) where supplier > 1")
 	test("supplier where supplier > 9 sort city",
-		"supplier^(city,supplier) where supplier > 9")
+		"supplier^(city,supplier) where+(supplier) supplier > 9")
 
 	test("table project a",
 		"table^(a) project-copy a")

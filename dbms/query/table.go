@@ -338,7 +338,7 @@ func (tbl *Table) Get(_ *Thread, dir Dir) Row {
 	return tbl.GetFilter(dir, nil)
 }
 
-func (tbl *Table) GetFilter(dir Dir, filter func(key string) bool) Row {
+func (tbl *Table) GetFilter(dir Dir, filter func(key string, off uint64) bool) Row {
 	defer func(t uint64) { tbl.tget += tsc.Read() - t }(tsc.Read())
 	tbl.ensureIter()
 	for {
@@ -353,7 +353,7 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string) bool) Row {
 		var off uint64
 		if filter != nil {
 			key, o := tbl.iter.Cur()
-			if !filter(key) {
+			if !filter(key, o) {
 				continue
 			}
 			off = o
