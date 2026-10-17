@@ -30,6 +30,25 @@ func heapDb() heapdb {
 	return heapdb{stor: stor, Database: db}
 }
 
+// syncHeapDb is like heapDb but uses a synchronous checker so that index
+// merges happen deterministically. The concurrent merger's batching varies
+// with timing, which changes btree node layouts and therefore index range
+// cost estimates (see RangeFrac). Callers that assert on a specific plan
+// should use this to keep costs reproducible.
+// Use with CommitMerge.
+func syncHeapDb() heapdb {
+	stor := stor.HeapStor(8192)
+	db := db19.CreateDb(stor)
+	db.CheckerSync()
+	db19.MakeSuTran = func(ut *db19.UpdateTran) *SuTran {
+		return NewSuTran(nil, true)
+	}
+	MakeSuTran = func(qt QueryTran) *SuTran {
+		return nil
+	}
+	return heapdb{stor: stor, Database: db}
+}
+
 func (hdb heapdb) adm(admin string) {
 	DoAdminTest(hdb.Database, admin)
 }

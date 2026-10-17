@@ -1188,16 +1188,26 @@ func TestWhere_indexRanges(t *testing.T) {
 }
 
 func TestWhere_rangeBitmap(t *testing.T) {
-	db := heapDb()
+	db := syncHeapDb()
 	defer db.Close()
 	db.adm("create t (k, a, b) key(k) index(a) index(b)")
 	const rangeN = 20000
 	values := make([][2]int, rangeN)
 	r := rand.New(rand.NewPCG(1, 2))
-	for k := range rangeN {
-		values[k] = [2]int{r.IntN(rangeN), r.IntN(rangeN)}
-		db.act(fmt.Sprintf("insert {k: %d, a: %d, b: %d} into t",
-			k, values[k][0], values[k][1]))
+	// Merge synchronously so index cost estimates don't vary with the timing
+	// of the background merger (which would make the plan choice flaky).
+	const batch = 5000 // writeMax is 10000 per transaction
+	for start := 0; start < rangeN; start += batch {
+		ut := db.NewUpdateTran(AllPerms)
+		for k := start; k < start+batch && k < rangeN; k++ {
+			values[k] = [2]int{r.IntN(rangeN), r.IntN(rangeN)}
+			var rb RecordBuilder
+			rb.Add(IntVal(k))
+			rb.Add(IntVal(values[k][0]))
+			rb.Add(IntVal(values[k][1]))
+			ut.Output(nil, "t", rb.Build())
+		}
+		db.CommitMerge(ut)
 	}
 	tran := db.NewReadTran(AllPerms)
 	defer tran.Complete()
