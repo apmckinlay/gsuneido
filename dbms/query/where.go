@@ -675,8 +675,8 @@ func WhereCost(cost, inFrac, irFrac, ifFrac float64, df bool) Cost {
 	cost *= irFrac
 
 	// index filter
-	indexCost := .2 * cost
-	dataCost := .8 * cost * ifFrac
+	indexCost := whereIndexFrac * cost
+	dataCost := whereDataFrac * cost * ifFrac
 	cost = indexCost + dataCost
 
 	// data filter (dfFrac) does NOT affect cost (other than pessimism)
@@ -684,7 +684,7 @@ func WhereCost(cost, inFrac, irFrac, ifFrac float64, df bool) Cost {
 
 	// apply inFrac
 	if ifFrac < 1 || df {
-		inFrac = .25 + (.75 * inFrac) // pessimistic guard
+		inFrac = wherePessimisticGuard(inFrac)
 	}
 	cost *= inFrac
 
@@ -697,12 +697,9 @@ func WhereCost2(nrows int, cost1, cost2, inFrac, irFrac1, ifFrac1, irFrac2, ifFr
 	if inFrac == 0 {
 		return 0, 0
 	}
-	fixcost := Cost(math.Round(.2 * cost1 * irFrac1))
+	fixcost := Cost(math.Round(whereIndexFrac * cost1 * irFrac1))
 	nOffsets := float64(nrows) * irFrac1 * ifFrac1
-	// Preserve the average cost of 5 units, with the measured Add/Has
-	// ratio of 5.5 ns to 4.5 ns.
-	const bloomAddCost, bloomHasCost = 5.5, 4.5
-	fixcost += 1000 + Cost(math.Round(bloomAddCost*nOffsets))
+	fixcost += bloomBaseCost + Cost(math.Round(bloomAddCost*nOffsets))
 	// Dampen the less selective filter to account for dependence, as in calcFracs.
 	if irFrac2 > 0 {
 		frac1, frac2 := irFrac1*ifFrac1, irFrac2*ifFrac2
@@ -711,7 +708,7 @@ func WhereCost2(nrows int, cost1, cost2, inFrac, irFrac1, ifFrac1, irFrac2, ifFr
 	}
 	varcost := WhereCost(cost2, inFrac, irFrac2, ifFrac2, df)
 	if ifFrac2 < 1 || df {
-		inFrac = .25 + .75*inFrac // same pessimistic guard as WhereCost
+		inFrac = wherePessimisticGuard(inFrac)
 	}
 	// Has runs before the main index filter, even for offsets it rejects.
 	nProbes := float64(nrows) * irFrac2 * inFrac

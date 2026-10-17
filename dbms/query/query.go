@@ -335,8 +335,6 @@ func (mode Mode) String() string {
 	}
 }
 
-type Cost = int
-
 type QueryTran interface {
 	GetSchema(table string) *schema.Schema
 	HasTable(table string) bool
@@ -415,13 +413,6 @@ func setupIndex(q Query, mode Mode, t QueryTran, index []string) Query {
 	q, _, _ = SetupReq(q, mode, t, OrderReq(index, 1))
 	return q
 }
-
-// outOfOrder is added when we reverse sources.
-// This discourages reversing the order without a good reason
-// which makes tests and debugging easier.
-const outOfOrder = 10
-
-const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 
 //-------------------------------------------------------------------
 
@@ -517,7 +508,7 @@ func optTempIndexBest(q Query, mode Mode, req Require) best[tiApproach] {
 	if u == ReqUnique {
 		noIdxOrder = tempIndexKey(q, req.cols)
 	}
-	optTI(&best, q, mode, NoneReq(req.frac), nrows, factorNone, noIdxOrder)
+	optTI(&best, q, mode, NoneReq(req.frac), nrows, tiNoneCost, noIdxOrder)
 
 	// source-order strategies (required + best prefix)
 	if u == ReqUnique {
@@ -538,9 +529,9 @@ func optTempIndexBest(q Query, mode Mode, req Require) best[tiApproach] {
 
 	// for ReqUnique or ReqGroup with nseeks, add per-lookup cost on temp index
 	if u == ReqUnique || (u == ReqGroup && req.nseeks > 0) {
-		perLookup := Cost(400)
+		perLookup := tiMultiLookupCost
 		if q.SingleTable() {
-			perLookup = Cost(200)
+			perLookup = tiSingleLookupCost
 		}
 		best.varcost += Cost(req.nseeks) * perLookup
 	}
@@ -598,31 +589,32 @@ var ticostAdj = 0 // for tests, to discourage temp indexes
 // ordered/no sort). frac scales the per-row variable cost of the lookup.
 func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 	factor int) (Cost, Cost) {
-	fixcost := srccost + ticostAdj + 1000 // ???
+	fixcost := srccost + ticostAdj + tiBaseCost
 	// prefer fewer fields; NewTempIndex drops fixed columns from the order,
 	// so count only the fields the actual TempIndex will have
-	fixcost += 100 * len(q.Fixed().RemoveFrom(index))
+	fixcost += tiFieldCost * len(q.Fixed().RemoveFrom(index))
 	if nrows > 0 {
 		fnrows := float64(nrows)
 		fixcost += factor * Cost(fnrows*math.Log(fnrows)) // empirical
 	}
-	varcost := Cost(frac * float64(nrows) * 100) // ???
-	if !q.SingleTable() {
-		varcost *= 2 // ???
+	readCost := tiMultiReadCost
+	if q.SingleTable() {
+		readCost = tiSingleReadCost
 	}
+	varcost := Cost(frac * float64(nrows * readCost))
 	return fixcost, varcost
 }
 
 // optTempIndexFor evaluates the source-order strategies for building a
-// temp index on tiOrder: source = tiOrder (factorAll), or source = the
-// longest common prefix (factorPre).
+// temp index on tiOrder: source = tiOrder (tiAllStepCost), 
+// or source = the longest common prefix (tiPreStepCost).
 func optTempIndexFor(best *best[tiApproach], q Query, mode Mode, req Require,
 	nrows int, tiOrder []string) {
 	// with required index
-	optTI(best, q, mode, OrderReq(tiOrder, req.frac), nrows, factorAll, tiOrder)
+	optTI(best, q, mode, OrderReq(tiOrder, req.frac), nrows, tiAllCost, tiOrder)
 	// with "best" index
 	if bestIndex := tempIndexBest(q, tiOrder); bestIndex != nil {
-		optTI(best, q, mode, OrderReq(bestIndex, req.frac), nrows, factorPre, tiOrder)
+		optTI(best, q, mode, OrderReq(bestIndex, req.frac), nrows, tiPreCost, tiOrder)
 	}
 }
 
@@ -645,10 +637,6 @@ func tempIndexBest(q Query, index []string) []string {
 	}
 	return bestIndex
 }
-
-const factorAll = 105  // ???
-const factorPre = 110  // ???
-const factorNone = 256 // ???
 
 // tiApproach is a special approach that is added by optTempIndex
 // to be used by SetApproach to insert a TempIndex when required

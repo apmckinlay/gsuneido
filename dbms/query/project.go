@@ -241,8 +241,6 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 	return idxs2
 }
 
-const projGrpDiv = 4 // ???
-
 func (p *Project) getNrows() (int, int) {
 	nr, pop := p.source.Nrows()
 	if !p.unique {
@@ -448,12 +446,6 @@ func (p *Project) Updateable() string {
 
 // optimize ---------------------------------------------------------
 
-// mapThreshold and mapWarn are used by Project and Summarize
-const (
-	mapThreshold = 10000 // used by optimize
-	mapWarn      = 20000
-)
-
 func (p *Project) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if p.unique {
 		// no dedup needed — pass req through unchanged
@@ -499,8 +491,6 @@ func (p *Project) optSeq(mode Mode, req Require) (Cost, Cost, any) {
 	}
 	return impossible, impossible, nil
 }
-
-const mapCost = 20 // ???
 
 // optMap estimates the cost of projMap.
 // The map is built incrementally during iteration (not up front),

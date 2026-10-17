@@ -180,13 +180,6 @@ func (tbl *Table) SingleTable() bool {
 	return true
 }
 
-const ( // ???
-	tableFast  = 150
-	tableSlow  = 300
-	tableLarge = 4_000_000
-	colsBias   = 5
-)
-
 func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton || req.use == ReqNone {
 		return tbl.costFor(tbl.indexes[0], mode, req)
@@ -216,10 +209,10 @@ func (tbl *Table) uniqueForLookup(i int) bool {
 
 func (tbl *Table) costFor(index []string, mode Mode, req Require) (Cost, Cost, any) {
 	rowCost := tableFast
-	if tbl.info.Size > tableLarge && !slices.Equal(index, tbl.indexes[0]) {
+	if tbl.info.Size >= tableLarge && !slices.Equal(index, tbl.indexes[0]) {
 		rowCost = tableSlow
 	}
-	rowCost += len(index) * colsBias
+	rowCost += len(index) * tableColCost
 	varcost := tbl.info.Nrows * rowCost
 	result := Cost(float64(req.frac) * float64(varcost))
 	if req.nseeks > 0 {
@@ -283,7 +276,7 @@ func (tbl *Table) lookupCostI(i int) Cost {
 	} else {
 		levels = tbl.info.Indexes[i].BtreeLevels()
 	}
-	return levels*800 - 300 // empirical
+	return tableLookupCost(levels)
 }
 
 // execution --------------------------------------------------------

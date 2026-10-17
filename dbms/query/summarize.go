@@ -224,8 +224,6 @@ func (su *Summarize) string2() string {
 	return sb.String()
 }
 
-const sumGrpDiv = 10 // ???
-
 func (su *Summarize) getNrows() (int, int) {
 	nr, pop := su.source.Nrows()
 	if len(su.by) == 0 {
