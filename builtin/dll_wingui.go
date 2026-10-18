@@ -139,7 +139,7 @@ func getZstr(ob Value, mem string) *byte {
 }
 
 // bufZstr converts a byte slice containing a nul terminated string to SuStr.
-func bufZstr(buf []byte) SuStr {
+func bufZstr(buf []byte) Value {
 	if i := bytes.IndexByte(buf, 0); i >= 0 {
 		buf = buf[:i]
 	}
