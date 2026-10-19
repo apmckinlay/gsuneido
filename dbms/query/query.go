@@ -601,12 +601,12 @@ func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 	if q.SingleTable() {
 		readCost = tiSingleReadCost
 	}
-	varcost := Cost(frac * float64(nrows * readCost))
+	varcost := Cost(frac * float64(nrows*readCost))
 	return fixcost, varcost
 }
 
 // optTempIndexFor evaluates the source-order strategies for building a
-// temp index on tiOrder: source = tiOrder (tiAllStepCost), 
+// temp index on tiOrder: source = tiOrder (tiAllStepCost),
 // or source = the longest common prefix (tiPreStepCost).
 func optTempIndexFor(best *best[tiApproach], q Query, mode Mode, req Require,
 	nrows int, tiOrder []string) {

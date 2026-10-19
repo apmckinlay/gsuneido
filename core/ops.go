@@ -215,7 +215,7 @@ func OpCat(x, y Value) Value {
 	}
 	xs := AsStr(x)
 	ys := AsStr(y)
-	if len(xs) + len(ys) > strp.MaxLen {
+	if len(xs)+len(ys) > strp.MaxLen {
 		return NewSuConcat().Add(xs).Add(ys)
 	}
 	return CatSuStrP(xs, ys)

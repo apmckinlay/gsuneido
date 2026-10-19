@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	htbl shmap.Map[*byte, struct{}, helper]
+	htbl       shmap.Map[*byte, struct{}, helper]
 	lock       sync.Mutex
 	bytesAlloc int
 )
