@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/slc"
@@ -40,10 +41,82 @@ func TestData(t *testing.T) {
 	}
 }
 
+func TestOffsetOf(t *testing.T) {
+	hs := HeapStor(64)
+	check := func(p *byte, expected Offset, found bool) {
+		t.Helper()
+		offset, ok := hs.OffsetOf(p)
+		assert.T(t).This(ok).Is(found)
+		assert.T(t).This(offset).Is(expected)
+	}
+	check(nil, 0, false)
+	for range 20 {
+		offset, buf := hs.Alloc(48)
+		for i := range buf {
+			check(&buf[i], offset+uint64(i), true)
+		}
+	}
+	// Older chunks remain indexed after extension.
+	check(&hs.Data(0)[0], 0, true)
+	other := HeapStor(64)
+	_, buf := other.Alloc(64)
+	check(&buf[0], 0, false)
+}
+
+func TestOffsetOfUnaligned(t *testing.T) {
+	buf := make([]byte, 256)
+	base := uintptr(unsafe.Pointer(unsafe.SliceData(buf)))
+	start := int((-base) & 63)
+	buf = buf[start:]
+	// The middle bucket contains two full chunks and the short final chunk.
+	chunks := [][]byte{buf[16:80], buf[112:176], buf[88:96]}
+	hs := NewStor(nil, 64, 136, chunks)
+	for c, chunk := range chunks {
+		for i := range chunk {
+			offset, ok := hs.OffsetOf(&chunk[i])
+			assert.T(t).This(ok).Is(true)
+			assert.T(t).This(offset).Is(c*64 + i)
+		}
+	}
+	checkMissing := func(p *byte) {
+		t.Helper()
+		_, ok := hs.OffsetOf(p)
+		assert.T(t).This(ok).Is(false)
+	}
+	checkMissing(nil)
+	checkMissing(&buf[15])
+	checkMissing(&buf[80])
+	checkMissing(&buf[96])
+	checkMissing(&buf[176])
+}
+
+func TestOffsetOfConcurrent(t *testing.T) {
+	hs := HeapStor(4096)
+	_, first := hs.Alloc(1)
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Go(func() {
+			for range 1000 {
+				offset, buf := hs.Alloc(128)
+				got, ok := hs.OffsetOf(&buf[127])
+				assert.T(t).This(ok).Is(true)
+				assert.T(t).This(got).Is(offset + 127)
+				got, ok = hs.OffsetOf(&first[0])
+				assert.T(t).This(ok).Is(true)
+				assert.T(t).This(got).Is(0)
+			}
+		})
+	}
+	wg.Wait()
+}
+
 func TestMmapRead(t *testing.T) {
 	ms, _ := MmapStor("stor_test.go", Read) // use code as test file
 	buf := ms.Data(0)
 	assert.T(t).This(string(buf[:12])).Is("// Copyright")
+	offset, ok := ms.OffsetOf(&buf[len(buf)-1])
+	assert.T(t).This(ok).Is(true)
+	assert.T(t).This(offset).Is(len(buf) - 1)
 	ms.Close(true)
 }
 
@@ -54,6 +127,9 @@ func TestMmapWrite(t *testing.T) {
 	for i := range N {
 		buf[i] = byte(i)
 	}
+	offset, ok := ms.OffsetOf(&buf[N-1])
+	assert.T(t).This(ok).Is(true)
+	assert.T(t).This(offset).Is(N - 1)
 	ms.Close(true)
 
 	ms, _ = MmapStor("stor_test.tmp", Update)

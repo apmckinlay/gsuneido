@@ -21,6 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/exit"
@@ -46,6 +47,10 @@ type Stor struct {
 	// chunks must be initialized up to size,
 	// with at least one chunk if size is 0
 	chunks atomic.Value // [][]byte
+	// chunkAddrs maps address high bits to immutable pairs of full chunks.
+	chunkAddrs sync.Map // uintptr -> [2]chunkAddr
+	// A short final read-only chunk can share a bucket with two full chunks.
+	partialChunk chunkAddr // initialized by NewStor, never changed
 	// chunksize must be a power of two and must be initialized
 	chunksize uint64
 	// shift must be initialized to match chunksize
@@ -69,6 +74,11 @@ type Stor struct {
 	flushChan chan struct{}
 }
 
+type chunkAddr struct {
+	base, end uintptr
+	offset    Offset
+}
+
 // closedSize needs to allow room to be incremented.
 // NOTE: check for >= closedSize, not equals.
 const closedSize = math.MaxUint64 / 2
@@ -77,6 +87,15 @@ func NewStor(impl storage, chunksize uint64, size uint64, chunks [][]byte) *Stor
 	shift := bits.TrailingZeros(uint(chunksize))
 	assert.That(1<<shift == chunksize) // chunksize must be power of 2
 	stor := &Stor{impl: impl, chunksize: chunksize, shift: shift}
+	for i, chunk := range chunks {
+		if uint64(len(chunk)) < chunksize {
+			assert.That(i == len(chunks)-1 && len(chunk) > 0)
+			base := uintptr(unsafe.Pointer(unsafe.SliceData(chunk)))
+			stor.partialChunk = chunkAddr{base, base + uintptr(len(chunk)), uint64(i) << shift}
+		} else {
+			stor.indexChunk(i, chunk)
+		}
+	}
 	stor.size.Store(size)
 	stor.chunks.Store(chunks)
 	last := int64(len(chunks) - 1)
@@ -134,7 +153,9 @@ func (s *Stor) extend(allocChunk int64) {
 	if int(allocChunk)+1 < len(chunks) {
 		return // another thread beat us to it
 	}
-	chunks = append(chunks, s.impl.Get(int(allocChunk+1))) // potentially slow
+	chunk := s.impl.Get(int(allocChunk + 1)) // potentially slow
+	s.indexChunk(int(allocChunk+1), chunk)
+	chunks = append(chunks, chunk)
 	s.chunks.Store(chunks)
 	// set size to start of chunk, to handle straddle
 	s.size.Store(uint64(allocChunk+1) << s.shift)
@@ -154,6 +175,43 @@ func (s *Stor) Data(offset Offset) []byte {
 	chunks := s.chunks.Load().([][]byte)
 	c := chunks[chunk]
 	return c[offset&(s.chunksize-1):]
+}
+
+// indexChunk is called during initialization or with s.lock held.
+func (s *Stor) indexChunk(i int, chunk []byte) {
+	assert.That(uint64(len(chunk)) == s.chunksize)
+	base := uintptr(unsafe.Pointer(unsafe.SliceData(chunk)))
+	desc := chunkAddr{base, base + uintptr(len(chunk)), uint64(i) << s.shift}
+	for key, last := base>>s.shift, (desc.end-1)>>s.shift; key <= last; key++ {
+		var pair [2]chunkAddr
+		if value, ok := s.chunkAddrs.Load(key); ok {
+			pair = value.([2]chunkAddr)
+		}
+		if pair[0].end == 0 {
+			pair[0] = desc
+		} else {
+			assert.That(pair[1].end == 0)
+			pair[1] = desc
+		}
+		s.chunkAddrs.Store(key, pair)
+	}
+}
+
+// OffsetOf returns the storage offset of p, or false if p is not in a chunk.
+// The pointer must not refer to storage that has been unmapped.
+func (s *Stor) OffsetOf(p *byte) (Offset, bool) {
+	addr := uintptr(unsafe.Pointer(p))
+	if value, ok := s.chunkAddrs.Load(addr >> s.shift); ok {
+		for _, desc := range value.([2]chunkAddr) {
+			if desc.base <= addr && addr < desc.end {
+				return desc.offset + uint64(addr-desc.base), true
+			}
+		}
+	}
+	if desc := s.partialChunk; desc.base <= addr && addr < desc.end {
+		return desc.offset + uint64(addr-desc.base), true
+	}
+	return 0, false
 }
 
 func (s *Stor) offsetToChunk(offset Offset) int {
