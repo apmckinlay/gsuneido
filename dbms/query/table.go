@@ -311,10 +311,10 @@ func (tbl *Table) LookupRaw(key string) Row {
 	// a non-empty key is fine since Fields2 is only appended to empty entries
 	assert.That(tbl.schema.Indexes[tbl.iIndex].Mode != 'u' || key != "")
 	rec := tbl.tran.Lookup(tbl.name, tbl.iIndex, key)
-	if rec == nil {
+	if rec == "" {
 		return nil
 	}
-	return Row{*rec}
+	return Row{rec}
 }
 
 func (tbl *Table) Output(th *Thread, rec Record) {
@@ -354,7 +354,7 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string, off uint64) bool) R
 			off = tbl.iter.CurOff()
 		}
 		rec := tbl.tran.GetRecord(off)
-		row := Row{DbRec{Record: rec, Off: off}}
+		row := Row{rec}
 		if tbl.singleton &&
 			!singletonFilter(tbl.header, row, tbl.sels) {
 			return nil
@@ -483,7 +483,7 @@ func (tbl *Table) Simple(*Thread) []Row {
 		}
 		off := tbl.iter.CurOff()
 		rec := tbl.tran.GetRecord(off)
-		row := Row{DbRec{Record: rec, Off: off}}
+		row := Row{rec}
 		rows = append(rows, row)
 		assert.That(len(rows) < maxSimple)
 	}

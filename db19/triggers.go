@@ -52,7 +52,7 @@ func suRec(rec Record, hdr *Header, tran *SuTran) Value {
 	if rec == "" {
 		return False
 	}
-	return SuRecordFromRow(Row{DbRec{Record: rec}}, hdr, "", tran)
+	return SuRecordFromRow(Row{rec}, hdr, "", tran, 0)
 }
 
 func (t *triggers) call2(th *Thread, tran *SuTran, table string,

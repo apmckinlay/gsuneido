@@ -31,14 +31,12 @@ type Project struct {
 	prevRow Row
 	curRow  Row
 	projectApproach
-	state         iface.State
-	unique        bool
-	indexed       bool
-	warned        bool
-	derivedWarned bool
-	prevDir       Dir
-	derived       int
-	th            *Thread
+	state   iface.State
+	unique  bool
+	indexed bool
+	warned  bool
+	prevDir Dir
+	th      *Thread
 }
 
 type mapType = shmap.Map[rowHash, struct{}, shmap.Funcs[rowHash]]
@@ -693,12 +691,6 @@ func (p *Project) dedupRow(th *Thread, row Row) (Row, bool) {
 			p.warned = true
 			Warning("project-map large >", mapWarn)
 		}
-		p.derived += row.Derived()
-		if !p.derivedWarned && p.derived > derivedWarn {
-			p.derivedWarned = true
-			Warning("project-map derived large >",
-				derivedWarn, "average", p.derived/p.dedup.Size())
-		}
 		return row, false
 	}
 }
@@ -716,8 +708,6 @@ func (p *Project) Select(sels Sels) {
 	p.indexed = false
 	if p.dedup != nil {
 		p.dedup.Clear()
-		p.derived = 0
-		p.derivedWarned = false
 		p.warned = false
 	}
 	p.rewind()

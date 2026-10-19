@@ -205,7 +205,7 @@ func (*Tables) row(info *meta.Info) Row {
 	rb.Add(IntVal(info.Nrows))
 	rb.Add(IntVal(info.Size))
 	rec := rb.Build()
-	return Row{DbRec{Record: rec}}
+	return Row{rec}
 }
 
 func (ts *Tables) ensure() {
@@ -245,7 +245,7 @@ func (ts *Tables) Lookup(th *Thread, sels Sels) Row {
 		rb.Add(SuStr(table))
 		rec := rb.Build()
 		ts.ngets++
-		return Row{DbRec{Record: rec}}
+		return Row{rec}
 	}
 	if ti := ts.tran.GetInfo(table); ti != nil {
 		ts.ngets++
@@ -373,7 +373,7 @@ func (*Columns) row(table, col string, fld int) Row {
 	rb.Add(SuStr(col))
 	rb.Add(IntVal(fld))
 	rec := rb.Build()
-	return Row{DbRec{Record: rec}}
+	return Row{rec}
 }
 
 func columnOrDerived(schema *meta.Schema, i int) (string, int) {
@@ -549,7 +549,7 @@ func (is *Indexes) row(table string, idx *schema.Index) Row {
 		rb.Add(SuInt16(int(idx.Fk.Mode)))
 	}
 	rec := rb.Build()
-	return Row{DbRec{Record: rec}}
+	return Row{rec}
 }
 
 func (is *Indexes) ensure() {
@@ -655,7 +655,7 @@ func (vs *Views) row(name, def string) Row {
 	rb.Add(SuStr(name))
 	rb.Add(SuStr(def))
 	rec := rb.Build()
-	return Row{DbRec{Record: rec}}
+	return Row{rec}
 }
 
 func (vs *Views) ensure() {
@@ -755,7 +755,7 @@ func (his *History) Get(_ *Thread, dir Dir) Row {
 	rb.Add(SuDateFromUnixMilli(int(state.Asof)))
 	rec := rb.Build()
 	his.ngets++
-	return Row{DbRec{Record: rec}}
+	return Row{rec}
 }
 
 func (his *History) Lookup(th *Thread, sels Sels) Row {
@@ -869,7 +869,7 @@ func (*StatsTable) row(table string, col string, cs stats.ColStats) Row {
 	rb.Add(formatQuantiles(cs.Quantiles))
 	rb.Add(formatTops(cs.Tops))
 	rec := rb.Build()
-	return Row{DbRec{Record: rec}}
+	return Row{rec}
 }
 
 func sortedCols(ts stats.TableStats) []string {

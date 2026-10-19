@@ -111,16 +111,17 @@ func (a *updateAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	prev := uint64(0)
 	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
 		// avoid getting stuck on the same record
-		if row[0].Off == prev {
+		off := db19.RecToOff(ut.GetStore(), row[0])
+		if off == prev {
 			continue
 		}
 		ctx.Row = row
-		r := SuRecordFromRow(row, hdr, table, tran)
+		r := SuRecordFromRow(row, hdr, table, tran, off)
 		for i, col := range a.cols {
 			r.Put(th, StrVal(col), a.exprs[i].Eval(&ctx))
 		}
 		newrec := r.ToRecord(th, hdr)
-		prev = ut.Update(th, table, row[0].Off, newrec)
+		prev = ut.Update(th, table, off, newrec)
 		n++
 	}
 	return n
@@ -146,21 +147,13 @@ func (a *deleteAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	n := 0
 	prev := uint64(0)
 	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
-		if row[0].Off == prev {
+		off := db19.RecToOff(ut.GetStore(), row[0])
+		if off == prev {
 			continue
 		}
-		prev = row[0].Off
-		ut.Delete(th, table, row[0].Off)
+		prev = off
+		ut.Delete(th, table, off)
 		n++
 	}
 	return n
-
-	// offs := []uint64{}
-	// for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
-	// 	offs = append(offs, row[0].Off)
-	// }
-	// for _, off := range offs {
-	// 	ut.Delete(table, off)
-	// }
-	// return len(offs)
 }

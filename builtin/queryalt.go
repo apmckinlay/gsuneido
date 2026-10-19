@@ -20,7 +20,7 @@ func QueryAlt(th *Thread, as *ArgSpec, args []Value) Value {
 	rows := q.Simple(th)
 	ob := &SuObject{}
 	for _, row := range rows {
-		ob.Add(SuRecordFromRow(row, hdr, "", nil))
+		ob.Add(SuRecordFromRow(row, hdr, "", nil, 0))
 	}
 	return ob
 }

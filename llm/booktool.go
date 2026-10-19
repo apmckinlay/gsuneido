@@ -96,7 +96,7 @@ func bookText(th *core.Thread, tran core.ITran, st *core.SuTran,
 		book, dir, name)
 	q := tran.Query(query, nil)
 	hdr := q.Header()
-	row, _ := q.Get(th, core.Next)
+	row, _, _ := q.Get(th, core.Next)
 	if row == nil {
 		return "", nil
 	}
@@ -123,7 +123,7 @@ func bookChildren(th *core.Thread, tran core.ITran, st *core.SuTran,
 		book, path)
 	q := tran.Query(query, nil)
 	hdr := q.Header()
-	for row, _ := q.Get(th, core.Next); row != nil; row, _ = q.Get(th, core.Next) {
+	for row, _, _ := q.Get(th, core.Next); row != nil; row, _, _ = q.Get(th, core.Next) {
 		val := row.GetVal(hdr, "name", th, st)
 		if val == nil {
 			continue

@@ -21,16 +21,30 @@ func TestSuRecord(t *testing.T) {
 	assert.T(t).This(r.String()).Is("[a: 123]")
 }
 
+func TestSuRecordFromRowOffset(t *testing.T) {
+	var rb RecordBuilder
+	row := Row{rb.Build()}
+	hdr := SimpleHeader(nil)
+	test := func(table string, off, expected uint64) {
+		t.Helper()
+		r := SuRecordFromRow(row, hdr, table, nil, off)
+		assert.T(t).This(r.recoff).Is(expected)
+		assert.T(t).This(r.table).Is(table)
+	}
+	test("tmp", 123, 123)
+	test("tmp", 0, 0)
+	test("", 123, 0)
+}
+
 func TestSuRecord_ReadonlyUnpack(t *testing.T) {
 	b := RecordBuilder{}
 	b.Add(SuInt16(123))
 	b.Add(SuStr("foobar"))
 	rec := b.Build()
-	dbrec := DbRec{Record: rec}
-	row := Row{dbrec}
+	row := Row{rec}
 
 	hdr := NewHeader([][]string{{"num", "str"}}, []string{"num", "str"})
-	surec := SuRecordFromRow(row, hdr, "", nil)
+	surec := SuRecordFromRow(row, hdr, "", nil, 0)
 
 	assert.T(t).This(surec.Get(nil, SuStr("str"))).Is(SuStr("foobar"))
 	surec.SetReadOnly()
@@ -51,7 +65,7 @@ func TestSuRecord_Concurrency(t *testing.T) {
 	rb := RecordBuilder{}
 	rb.Add(randCol())
 	rb.Add(randCol())
-	row := Row{DbRec{Record: rb.Build()}}
+	row := Row{rb.Build()}
 	getrec, setrec := func() (func() *SuRecord, func(*SuRecord)) {
 		rec := NewSuRecord()
 		rec.SetConcurrent()
@@ -95,7 +109,7 @@ func TestSuRecord_Concurrency(t *testing.T) {
 				r.AttachRule(StrVal("d"), rule)
 				setrec(r)
 			case 3:
-				r := SuRecordFromRow(row, SimpleHeader(cols), "", nil)
+				r := SuRecordFromRow(row, SimpleHeader(cols), "", nil, 0)
 				r.SetConcurrent()
 				r.AttachRule(StrVal("c"), rule)
 				r.AttachRule(StrVal("d"), rule)

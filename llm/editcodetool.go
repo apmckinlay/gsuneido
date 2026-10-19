@@ -110,13 +110,12 @@ func editCodeTool(ctx context.Context, library, name, mode string, line, count i
 	rtran := th.Dbms().Transaction(false, th.Perms())
 	rq := rtran.Query(query, nil)
 	hdr := rq.Header()
-	row, _ := rq.Get(th, core.Next)
+	row, _, off := rq.Get(th, core.Next)
 	if row == nil {
 		rtran.Complete()
 		return editCodeOutput{}, fmt.Errorf("code not found for: %s in %s", name, library)
 	}
 
-	off := row[0].Off
 	st := core.NewSuTran(rtran, false)
 	vals := make(map[string]string, len(hdr.Fields[0]))
 	for _, f := range hdr.Fields[0] {

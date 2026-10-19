@@ -105,7 +105,7 @@ func benchSetup() (Expr, *RowContext) {
 	ctx := &RowContext{
 		Th:  &Thread{},
 		Hdr: SimpleHeader(testFlds),
-		Row: []DbRec{{Record: rec}},
+		Row: Row{rec},
 	}
 	return e, ctx
 }
@@ -193,7 +193,7 @@ func TestRawExpr(t *testing.T) {
 	ctx := &RowContext{
 		Th:  &Thread{},
 		Hdr: SimpleHeader(testFlds),
-		Row: []DbRec{{Record: rec}},
+		Row: Row{rec},
 	}
 	var expr Expr
 	defer func() {

@@ -251,7 +251,7 @@ func TestMaxEntry(t *testing.T) {
 		enc.Add(s)
 	}).Panics("index entry too large")
 	assert.T(t).This(func() {
-		row := Row{DbRec{Record: rec}}
+		row := Row{rec}
 		cols := []string{"x"}
 		hdr := SimpleHeader(cols)
 		Make(row, hdr, cols, nil, nil)
@@ -259,7 +259,7 @@ func TestMaxEntry(t *testing.T) {
 	assert.T(t).This(func() {
 		s := strings.Repeat("x", maxEntry-1)
 		rec := mkrec(s, s)
-		row := Row{DbRec{Record: rec}}
+		row := Row{rec}
 		cols := []string{"x", "y"}
 		hdr := SimpleHeader(cols)
 		Make(row, hdr, cols, nil, nil)

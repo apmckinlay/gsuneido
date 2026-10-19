@@ -215,7 +215,7 @@ func (t testTran) fracPos(key string, decode bool) float64 {
 	return f
 }
 
-func (t testTran) Lookup(_ string, _ int, key string) *DbRec {
+func (t testTran) Lookup(_ string, _ int, key string) Record {
 	// WARNING: assumes key columns match table columns
 	var vals []string
 	if strings.Contains(key, "\x00\x00") {
@@ -227,7 +227,7 @@ func (t testTran) Lookup(_ string, _ int, key string) *DbRec {
 	for _, v := range vals {
 		rb.AddRaw(v)
 	}
-	return &DbRec{Record: rb.Build()}
+	return rb.Build()
 }
 
 func (t testTran) Output(*Thread, string, Record) {

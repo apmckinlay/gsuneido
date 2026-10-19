@@ -174,7 +174,7 @@ func TestGetOnlyUniqueIndex(t *testing.T) {
 	ob := &SuObject{}
 	ob.Set(SuStr("query"), SuStr("tmp"))
 	ob.Set(StrVal("u"), StrVal("x"))
-	row, hdr, _ := get(th, tran, ob, Only)
+	row, hdr, _, _ := get(th, tran, ob, Only)
 	assert.T(t).Msg("get Only u=x").
 		This(AsStr(row.GetVal(hdr, "u", nil, nil))).Is("x")
 	assert.T(t).This(AsStr(row.GetVal(hdr, "k", nil, nil))).Is("3")
@@ -326,7 +326,7 @@ func TestGetSchema(t *testing.T) {
 		for _, sel := range sels {
 			ob.Set(SuStr(sel[0]), SuStr(sel[1]))
 		}
-		row, hdr, _ := get(th, tran, ob, Only)
+		row, hdr, _, _ := get(th, tran, ob, Only)
 		return row, hdr
 	}
 	val := func(row Row, hdr *Header, col string) string {
@@ -392,7 +392,7 @@ func TestGetSchemaNoSels(t *testing.T) {
 		t.Helper()
 		ob := &SuObject{}
 		ob.Add(SuStr(table))
-		row, hdr, _ := get(th, tran, ob, dir)
+		row, hdr, _, _ := get(th, tran, ob, dir)
 		assert.T(t).Msg(table, " ", dir, " hdr").This(hdr != nil).Is(exists)
 		assert.T(t).Msg(table, " ", dir, " row").This(row != nil).Is(exists)
 	}

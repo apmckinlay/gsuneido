@@ -95,12 +95,12 @@ func SuRecordFromObject(ob *SuObject) *SuRecord {
 		ob: SuObject{list: ob.list, named: ob.named, defval: EmptyStr}}
 }
 
-func SuRecordFromRow(row Row, hdr *Header, table string, tran *SuTran) *SuRecord {
+func SuRecordFromRow(row Row, hdr *Header, table string, tran *SuTran, off uint64) *SuRecord {
 	rec := SuRecord{ob: SuObject{defval: EmptyStr},
 		row: row, hdr: hdr, tran: tran, userow: true, status: OLD}
 	if table != "" {
 		rec.table = table
-		rec.recoff = row[0].Off
+		rec.recoff = off
 	}
 	return &rec
 }

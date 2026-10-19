@@ -55,7 +55,7 @@ func TestCreateCodeTool(t *testing.T) {
 	tran0 := dbmsLocal.Transaction(false, core.AllPerms)
 	q0 := tran0.Query("stdlib where group = -1 and name = 'Foo'", nil)
 	hdr0 := q0.Header()
-	row0, _ := q0.Get(th0, core.Next)
+	row0, _, _ := q0.Get(th0, core.Next)
 	assert.That(row0 != nil)
 	st0 := core.NewSuTran(tran0, false)
 	assert.This(core.ToStr(row0.GetVal(hdr0, "text", th0, st0))).Is("function() { return 1 }")
@@ -91,7 +91,7 @@ func TestCreateCodeTool(t *testing.T) {
 
 	qf1 := tran3.Query("stdlib where group = 0 and name = 'A'", nil)
 	hf1 := qf1.Header()
-	rf1, _ := qf1.Get(th3, core.Next)
+	rf1, _, _ := qf1.Get(th3, core.Next)
 	assert.That(rf1 != nil)
 	f1num, _ := rf1.GetVal(hf1, "num", th3, st3).ToInt()
 	assert.This(core.ToStr(rf1.GetVal(hf1, "text", th3, st3))).Is("")
@@ -99,7 +99,7 @@ func TestCreateCodeTool(t *testing.T) {
 
 	qf2 := tran3.Query("stdlib where group = "+core.IntVal(f1num).String()+" and name = 'B'", nil)
 	hf2 := qf2.Header()
-	rf2, _ := qf2.Get(th3, core.Next)
+	rf2, _, _ := qf2.Get(th3, core.Next)
 	assert.That(rf2 != nil)
 	f2num, _ := rf2.GetVal(hf2, "num", th3, st3).ToInt()
 	assert.This(core.ToStr(rf2.GetVal(hf2, "text", th3, st3))).Is("")
@@ -107,7 +107,7 @@ func TestCreateCodeTool(t *testing.T) {
 
 	qb := tran3.Query("stdlib where group = -1 and name = 'Bar'", nil)
 	hb := qb.Header()
-	rb, _ := qb.Get(th3, core.Next)
+	rb, _, _ := qb.Get(th3, core.Next)
 	assert.That(rb != nil)
 	bparent, _ := rb.GetVal(hb, "parent", th3, st3).ToInt()
 	assert.This(bparent).Is(f2num)
@@ -146,7 +146,7 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 	th2 := core.NewThread(dbmsLocal, nil)
 	tran2 := dbmsLocal.Transaction(false, core.AllPerms)
 	q := tran2.Query("stdlib where group = -2 and name = 'Foo'", nil)
-	row, _ := q.Get(th2, core.Next)
+	row, _, _ := q.Get(th2, core.Next)
 	assert.That(row != nil)
 	tran2.Complete()
 	th2.Close()
@@ -165,7 +165,7 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 	tran3 := dbmsLocal.Transaction(false, core.AllPerms)
 	q2 := tran3.Query("stdlib where group = -1 and name = 'Foo'", nil)
 	hdr := q2.Header()
-	row2, _ := q2.Get(th3, core.Next)
+	row2, _, _ := q2.Get(th3, core.Next)
 	assert.That(row2 != nil)
 
 	st := core.NewSuTran(tran3, false)
@@ -188,7 +188,7 @@ func TestCreateCodeTool_RestoreSoftDeleted(t *testing.T) {
 
 	// Verify no duplicate (soft-deleted record should be gone)
 	q3 := tran3.Query("stdlib where group = -2 and name = 'Foo'", nil)
-	row3, _ := q3.Get(th3, core.Next)
+	row3, _, _ := q3.Get(th3, core.Next)
 	assert.That(row3 == nil)
 
 	tran3.Complete()

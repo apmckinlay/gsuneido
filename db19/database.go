@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync/atomic"
+	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -665,6 +666,15 @@ func (db *Database) Closed() bool {
 
 func IndexKey(store *stor.Stor, is *ixkey.Spec, recoff uint64) string {
 	return is.Key(OffToRec(store, recoff))
+}
+
+// RecToOff returns the database offset of rec, or zero for a derived record.
+func RecToOff(store *stor.Stor, rec core.Record) uint64 {
+	if rec == "" {
+		return 0
+	}
+	off, _ := store.OffsetOf(unsafe.StringData(string(rec)))
+	return off
 }
 
 func OffToRec(store *stor.Stor, off uint64) core.Record {

@@ -346,7 +346,7 @@ type QueryTran interface {
 	GetView(string) string
 	GetStore() *stor.Stor
 	RangeFrac(table string, iIndex int, org, end string) float64
-	Lookup(table string, iIndex int, key string) *DbRec
+	Lookup(table string, iIndex int, key string) Record
 	Output(th *Thread, table string, rec Record)
 	GetIndexI(table string, iIndex int) *index.Overlay
 	GetRecord(off uint64) Record

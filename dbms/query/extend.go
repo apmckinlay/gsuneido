@@ -255,7 +255,7 @@ func (e *Extend) Get(th *Thread, dir Dir) Row {
 		rec := e.extendRow(th, row)
 		if e.filter(rec, th, row) {
 			e.ngets++
-			return append(row, DbRec{Record: rec})
+			return append(row, rec)
 		}
 	}
 }
@@ -279,7 +279,7 @@ func (e *Extend) extendRow(th *Thread, row Row) Record {
 				rb.AddRaw(f)
 			} else {
 				// incrementally build record so extends can see previous ones
-				e.ctx.Row = append(row, DbRec{Record: rb.Build()})
+				e.ctx.Row = append(row, rb.Build())
 				val := expr.Eval(&e.ctx)
 				rb.Add(val.(Packable))
 			}
@@ -303,7 +303,7 @@ func (e *Extend) filter(rec Record, th *Thread, row Row) bool {
 		}
 		if j == -1 || (len(x) > 0 && x[0] == PackForward) {
 			if extrow == nil {
-				extrow = append(row, DbRec{Record: rec})
+				extrow = append(row, rec)
 			}
 			x = extrow.GetRawVal(e.header, sel.col, th, e.ctx.Tran)
 		}
@@ -350,7 +350,7 @@ func (e *Extend) Lookup(th *Thread, sels Sels) Row {
 		return row
 	}
 	rec := e.extendRow(th, row)
-	return append(row, DbRec{Record: rec})
+	return append(row, rec)
 }
 
 func (e *Extend) splitSelect(sels Sels) Sels {
@@ -372,7 +372,7 @@ func (e *Extend) Simple(th *Thread) []Row {
 	rows := e.source.Simple(th)
 	if e.hasExprs {
 		for i, row := range rows {
-			rows[i] = append(row, DbRec{Record: e.extendRow(th, row)})
+			rows[i] = append(row, e.extendRow(th, row))
 		}
 	}
 	return rows

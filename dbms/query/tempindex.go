@@ -18,7 +18,7 @@ import (
 )
 
 // TempIndex is inserted by SetApproach as required.
-// It builds a sortlist of either DbRec or Row.
+// It builds a sortlist of either Record or Row.
 // Keys are not constructed for the index or Lookup/Select
 // so there are no size limits.
 type TempIndex struct {
@@ -232,17 +232,17 @@ func (ti *TempIndex) conflict() bool {
 // we can store the single record directly in the sortlist.
 
 type singleIter struct {
-	iter *sortlist.Iter[DbRec]
+	iter *sortlist.Iter[Record]
 }
 
 func (ti *TempIndex) single() rowIter {
 	th2 := ti.th.NewChild() // sortlist runs in the background
 	defer th2.Close()
-	xrow := Row{DbRec{}}
-	yrow := Row{DbRec{}}
+	xrow := Row{""}
+	yrow := Row{""}
 	b := sortlist.NewSorting(
-		func(x DbRec) bool { return x == DbRec{} },
-		func(x, y DbRec) bool {
+		func(x Record) bool { return x == "" },
+		func(x, y Record) bool {
 			xrow[0] = x
 			yrow[0] = y
 			return ti.less(th2, xrow, yrow)
@@ -265,7 +265,7 @@ func (ti *TempIndex) single() rowIter {
 		log.Println("temp index large =", nrows)
 	}
 	// NOTE: the closure captures ti not ti.th
-	lt := func(rec DbRec, key []string) bool {
+	lt := func(rec Record, key []string) bool {
 		xrow[0] = rec
 		return ti.less2(ti.th, xrow, key)
 	}
@@ -349,7 +349,6 @@ func (ti *TempIndex) multi() rowIter {
 	nrows := 0
 	warned := false
 	derived := 0
-	derivedWarned := false
 	for {
 		row := ti.source.Get(ti.th, Next)
 		if row == nil {
@@ -359,12 +358,6 @@ func (ti *TempIndex) multi() rowIter {
 		if nrows > tempindexWarn && !warned {
 			Warning("temp index large >", tempindexWarn)
 			warned = true
-		}
-		derived += row.Derived()
-		if derived > derivedWarn && !derivedWarned {
-			Warning("temp index derived large >", derivedWarn,
-				"average", derived/nrows)
-			derivedWarned = true
 		}
 		b.Add(row)
 	}

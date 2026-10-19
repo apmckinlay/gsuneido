@@ -4,6 +4,7 @@
 package core
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -15,10 +16,24 @@ func TestGetRaw(*testing.T) {
 	rb.Add(SuStr("hello"))
 	rb.Add(SuStr("Hello World"))
 	rec := rb.Build()
-	row := Row{DbRec{Record: rec}}
+	row := Row{rec}
 	assert.This(row.GetRaw(hdr, "one")).Is(Pack(SuStr("hello")))
 	assert.This(row.GetRaw(hdr, "two")).Is(Pack(SuStr("Hello World")))
 	assert.This(row.GetRaw(hdr, "two_lower!")).Is(Pack(SuStr("hello world")))
+}
+
+func TestRowSameAs(t *testing.T) {
+	rec := new(RecordBuilder).Add(SuStr("hello")).Build()
+	copy := Record(strings.Clone(string(rec)))
+	test := func(row, other Row, expected bool) {
+		t.Helper()
+		assert.T(t).This(row.SameAs(other)).Is(expected)
+	}
+	test(Row{rec, ""}, Row{copy, ""}, true)
+	test(Row{rec}, Row{copy, ""}, false)
+	test(Row{rec}, Row{"\x00"}, false)
+	test(Row{""}, Row{"\x00"}, false)
+	test(nil, Row{}, true)
 }
 
 func BenchmarkRow_GetRawVal(b *testing.B) {

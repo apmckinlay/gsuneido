@@ -64,7 +64,7 @@ func TestDeleteCodeTool(t *testing.T) {
 	defer th2.Close()
 	tran2 := dbmsLocal.Transaction(false, core.AllPerms)
 	q := tran2.Query("stdlib where group = -1 and name = 'Foo'", nil)
-	row, _ := q.Get(th2, core.Next)
+	row, _, _ := q.Get(th2, core.Next)
 	assert.That(row == nil)
 	tran2.Complete()
 	th2.Close()
@@ -103,12 +103,12 @@ func TestDeleteCodeTool_SoftDeleteCommitted(t *testing.T) {
 	tran2 := dbmsLocal.Transaction(false, core.AllPerms)
 
 	q1 := tran2.Query("stdlib where group = -1 and name = 'Foo'", nil)
-	row1, _ := q1.Get(th2, core.Next)
+	row1, _, _ := q1.Get(th2, core.Next)
 	assert.That(row1 == nil)
 
 	q2 := tran2.Query("stdlib where group = -2 and name = 'Foo'", nil)
 	hdr2 := q2.Header()
-	row2, _ := q2.Get(th2, core.Next)
+	row2, _, _ := q2.Get(th2, core.Next)
 	assert.That(row2 != nil)
 
 	st := core.NewSuTran(tran2, false)

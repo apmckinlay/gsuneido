@@ -31,7 +31,7 @@ func TestCodeTool(t *testing.T) {
 	// Verify insert
 	rt := dbmsLocal.Transaction(false, core.AllPerms)
 	q := rt.Query("stdlib", nil)
-	row, _ := q.Get(th, core.Next)
+	row, _, _ := q.Get(th, core.Next)
 	assert.That(row != nil)
 	rt.Complete()
 

@@ -58,7 +58,7 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	rtran := th.Dbms().Transaction(false, th.Perms())
 	rq := rtran.Query(query, nil)
 	hdr := rq.Header()
-	row, _ := rq.Get(th, core.Next)
+	row, _, off := rq.Get(th, core.Next)
 	if row == nil {
 		rtran.Complete()
 		return deleteCodeOutput{}, fmt.Errorf("code not found for: %s in %s", name, library)
@@ -77,7 +77,6 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 		}
 	}
 
-	off := row[0].Off
 	rtran.Complete()
 
 	existingCode := core.ToStr(core.Unpack(vals["text"]))

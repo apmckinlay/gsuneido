@@ -101,13 +101,13 @@ func folderNum(th *core.Thread, tran core.ITran, library string, parent int, nam
 	folderArgs := core.SuObjectOf(core.StrVal(library))
 	folderArgs.Set(core.StrVal("group"), core.IntVal(parent))
 	folderArgs.Set(core.StrVal("name"), core.StrVal(name))
-	row, hdr, _ := tran.Get(th, folderArgs, core.Only)
+	row, hdr, _, _ := tran.Get(th, folderArgs, core.Only)
 	if row == nil {
 		leafArgs := core.SuObjectOf(core.StrVal(library))
 		leafArgs.Set(core.StrVal("group"), core.IntVal(-1))
 		leafArgs.Set(core.StrVal("parent"), core.IntVal(parent))
 		leafArgs.Set(core.StrVal("name"), core.StrVal(name))
-		leaf, _, _ := tran.Get(th, leafArgs, core.Only)
+		leaf, _, _, _ := tran.Get(th, leafArgs, core.Only)
 		if leaf != nil {
 			return 0, fmt.Errorf("path segment is not a folder: %s", name)
 		}
@@ -130,7 +130,7 @@ func codeFolderChildren(th *core.Thread, tran core.ITran, st *core.SuTran, libra
 	query := fmt.Sprintf("%s where parent = %d and group >= -1 sort name", library, parent)
 	q := tran.Query(query, nil)
 	hdr := q.Header()
-	for row, _ := q.Get(th, core.Next); row != nil; row, _ = q.Get(th, core.Next) {
+	for row, _, _ := q.Get(th, core.Next); row != nil; row, _, _ = q.Get(th, core.Next) {
 		if len(children) >= codeFolderLimit {
 			children = append(children, "...")
 			break

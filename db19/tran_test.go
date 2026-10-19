@@ -219,6 +219,33 @@ func TestGetIndexI2(t *testing.T) {
 	db.MustCheck()
 }
 
+func TestLookupEmptyRecord(t *testing.T) {
+	db := CreateDb(stor.HeapStor(8192))
+	defer db.Close()
+	db.CheckerSync()
+	createTbl(db)
+
+	rt := db.NewReadTran(core.AllPerms)
+	assert.T(t).This(rt.Lookup("mytable", 0, "")).Is(core.Record(""))
+	ut := db.NewUpdateTran(core.AllPerms)
+	assert.T(t).This(ut.Lookup("mytable", 0, "")).Is(core.Record(""))
+	assert.T(t).This(ut.ReadCount()).Is(1)
+	ut.Output(nil, "mytable", mkrec())
+	rec := ut.Lookup("mytable", 0, "")
+	assert.T(t).This(rec).Is(core.Record("\x00"))
+	assert.T(t).That(RecToOff(db.Store, rec) != 0)
+	db.CommitMerge(ut)
+
+	rt = db.NewReadTran(core.AllPerms)
+	assert.T(t).This(rt.Lookup("mytable", 0, "")).Is(core.Record("\x00"))
+	assert.T(t).This(rt.Lookup("mytable", 0, "missing")).Is(core.Record(""))
+	ut = db.NewUpdateTran(core.AllPerms)
+	assert.T(t).This(ut.Lookup("mytable", 0, "")).Is(core.Record("\x00"))
+	assert.T(t).This(ut.Lookup("mytable", 0, "missing")).Is(core.Record(""))
+	assert.T(t).This(ut.ReadCount()).Is(2)
+	ut.Abort()
+}
+
 func TestUpdateUpdateSameBug(t *testing.T) {
 	db := CreateDb(stor.HeapStor(8192))
 	StartConcur(db, 50*time.Millisecond)
@@ -235,10 +262,10 @@ func TestUpdateUpdateSameBug(t *testing.T) {
 	ts := ut.getSchema("mytable")
 	key := ts.Indexes[0].Ixspec.Key(initialRec)
 	dbRec := ut.Lookup("mytable", 0, key)
-	if dbRec == nil {
+	if dbRec == "" {
 		t.Fatal("Failed to find inserted record")
 	}
-	recordOffset := dbRec.Off
+	recordOffset := RecToOff(db.Store, dbRec)
 
 	// first update
 	firstUpdateRec := mkrec("short", "much_longer_data_string_here")
@@ -268,10 +295,10 @@ func TestUpdateDeleteSameBug(t *testing.T) {
 	ts := ut.getSchema("mytable")
 	key := ts.Indexes[0].Ixspec.Key(initialRec)
 	dbRec := ut.Lookup("mytable", 0, key)
-	if dbRec == nil {
+	if dbRec == "" {
 		t.Fatal("Failed to find inserted record")
 	}
-	recordOffset := dbRec.Off
+	recordOffset := RecToOff(db.Store, dbRec)
 
 	// first update
 	updateRec := mkrec("delete", "update")
@@ -307,18 +334,18 @@ func TestRangesBug(t *testing.T) {
 	ts := t1.getSchema("tmp")
 	emptyKey := ts.Indexes[0].Ixspec.Key(mkrec("", ""))
 	dbRec := t1.Lookup("tmp", 0, emptyKey)
-	assert.T(t).That(dbRec != nil)
+	assert.T(t).That(dbRec != "")
 
 	// update tmp where a = 1 set a = 11
 	oneKey := ts.Indexes[0].Ixspec.Key(mkrec("1", ""))
 	dbRec1 := t1.Lookup("tmp", 0, oneKey)
-	assert.T(t).That(dbRec1 != nil)
-	t1.Update(nil, "tmp", dbRec1.Off, mkrec("11", "2"))
+	assert.T(t).That(dbRec1 != "")
+	t1.Update(nil, "tmp", RecToOff(db.Store, dbRec1), mkrec("11", "2"))
 
 	// update tmp where a = "" set a = 9
 	dbRec2 := t2.Lookup("tmp", 0, emptyKey)
-	assert.T(t).That(dbRec2 != nil)
-	t2.Update(nil, "tmp", dbRec2.Off, mkrec("9", "3"))
+	assert.T(t).That(dbRec2 != "")
+	t2.Update(nil, "tmp", RecToOff(db.Store, dbRec2), mkrec("9", "3"))
 
 	// wait till pending actions are done, with a low priority blocking request
 	db.ck.Transactions()
@@ -403,7 +430,7 @@ func TestPerm(t *testing.T) {
 
 	ut = db.NewUpdateTran(core.AllPerms)
 	key := ut.getSchema("mytable").Indexes[0].Ixspec.Key(rec)
-	off := ut.Lookup("mytable", 0, key).Off
+	off := RecToOff(db.Store, ut.Lookup("mytable", 0, key))
 	ut.Abort()
 
 	// nil permissions deny permission-checked reads and writes
@@ -464,7 +491,7 @@ func TestPerm(t *testing.T) {
 	two := mkrec("two", "data")
 	ut.Output(nil, "mytable", two)
 	twoKey := ut.getSchema("mytable").Indexes[0].Ixspec.Key(two)
-	off2 := ut.Lookup("mytable", 0, twoKey).Off
+	off2 := RecToOff(db.Store, ut.Lookup("mytable", 0, twoKey))
 	off3 := ut.Update(nil, "mytable", off2, mkrec("two", "changed"))
 	ut.Delete(nil, "mytable", off3)
 	ut.Abort()
@@ -504,7 +531,7 @@ func TestFkeyCascadeDeleteNoPerm(t *testing.T) {
 	perms.AddTable("hdr", "write")
 	ut = db.NewUpdateTran(perms)
 	hdrKey := ut.getSchema("hdr").Indexes[0].Ixspec.Key(mkrec("1", "b1"))
-	off := ut.Lookup("hdr", 0, hdrKey).Off
+	off := RecToOff(db.Store, ut.Lookup("hdr", 0, hdrKey))
 	ut.Delete(nil, "hdr", off)
 	ut.Commit()
 
@@ -535,7 +562,7 @@ func TestCombineBug(t *testing.T) {
 	// Delete the record in a separate transaction
 	ut = db.NewUpdateTran(core.AllPerms)
 	dbRec := ut.Lookup("testtable", 0, key)
-	ut.Delete(nil, "testtable", dbRec.Off)
+	ut.Delete(nil, "testtable", RecToOff(db.Store, dbRec))
 	ut.Commit()
 
 	// Re-output the record in a separate transaction
@@ -547,12 +574,12 @@ func TestCombineBug(t *testing.T) {
 	ut = db.NewUpdateTran(core.AllPerms)
 	// First delete
 	dbRec = ut.Lookup("testtable", 0, key)
-	ut.Delete(nil, "testtable", dbRec.Off)
+	ut.Delete(nil, "testtable", RecToOff(db.Store, dbRec))
 	// Re-output the same record
 	ut.Output(nil, "testtable", mkrec("2"))
 	// Look up the newly output record and delete it again
 	dbRec2 := ut.Lookup("testtable", 0, key)
-	ut.Delete(nil, "testtable", dbRec2.Off)
+	ut.Delete(nil, "testtable", RecToOff(db.Store, dbRec2))
 	ut.Commit()
 
 	db.MustCheck()

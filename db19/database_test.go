@@ -6,10 +6,31 @@ package db19
 import (
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
+
+func TestRecToOff(t *testing.T) {
+	store := stor.HeapStor(64)
+	defer store.Close(true)
+	store.Alloc(1) // database offsets reserve zero
+	test := func(rec core.Record) {
+		t.Helper()
+		off, buf := store.Alloc(len(rec))
+		copy(buf, rec)
+		stored := OffToRec(store, off)
+		assert.T(t).This(stored).Is(rec)
+		assert.T(t).This(RecToOff(store, stored)).Is(off)
+		assert.T(t).This(RecToOff(store, rec)).Is(uint64(0))
+	}
+	test(mkrec("one", "two"))
+	test(core.Record("\x00"))
+	store.Alloc(64)
+	test(mkrec("later chunk"))
+	assert.T(t).This(RecToOff(store, "")).Is(uint64(0))
+}
 
 func TestDatabaseDropTable(t *testing.T) {
 	db := CreateDb(stor.HeapStor(16 * 1024))

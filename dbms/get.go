@@ -9,6 +9,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
+	"github.com/apmckinlay/gsuneido/db19"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -18,7 +19,7 @@ type Sels = qry.Sels
 
 var slow = map[Dir]int{Only: 100, Any: 2000}
 
-func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string) {
+func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, string, uint64) {
 	defer UseMainSuneido(th)()
 
 	// for dir == Strat
@@ -31,7 +32,11 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 		(dir == Strat && qry.GetSort(query) == "") {
 		query = qry.StripSort(query)
 		if row, hdr, s := fastGet(th, tran, query, ob, dir); hdr != nil {
-			return row, hdr, s
+			var off uint64
+			if row != nil {
+				off = db19.RecToOff(tran.GetStore(), row[0])
+			}
+			return row, hdr, s, off
 		}
 	}
 	if where := getWhere(ob); where != "" {
@@ -55,7 +60,7 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 		n, _ := q.Nrows()
 		return existsRow, existsHdr, fmt.Sprint(qry.Strategy(q), "\n",
 			"[nrecs~ ", trace.Number(n),
-			" cost~ ", trace.Number(fixcost+varcost), "]")
+			" cost~ ", trace.Number(fixcost+varcost), "]"), 0
 	}
 	trace.Query.Println(dir, fixcost+varcost, "-", query)
 	d := dir
@@ -69,17 +74,17 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 		}
 	}
 	if row == nil {
-		return nil, nil, ""
+		return nil, nil, "", 0
 	} else if dir == Any {
-		return existsRow, existsHdr, ""
+		return existsRow, existsHdr, "", 0
 	}
 	if dir == Only && !single(q) && q.Get(th, Next) != nil {
 		panic("Query1 not unique: " + query)
 	}
-	return row, q.Header(), q.Updateable()
+	return row, q.Header(), q.Updateable(), db19.RecToOff(tran.GetStore(), row[0])
 }
 
-var existsRow Row = []DbRec{{Record: "x"}}
+var existsRow = Row{"x"}
 var existsHdr = SimpleHeader([]string{"x"})
 
 func getQuery(ob *SuObject) string {

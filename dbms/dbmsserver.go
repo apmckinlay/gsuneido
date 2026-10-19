@@ -542,21 +542,21 @@ func cmdFinal(ss *serverSession) {
 }
 
 func cmdGet(ss *serverSession) {
-	tbl, hdr, row := ss.getQorTC()
-	ss.rowResult(tbl, hdr, false, row)
+	tbl, hdr, row, off := ss.getQorTC()
+	ss.rowResult(tbl, hdr, false, row, off)
 }
 
-func (ss *serverSession) getQorTC() (tbl string, hdr *Header, row Row) {
+func (ss *serverSession) getQorTC() (tbl string, hdr *Header, row Row, off uint64) {
 	dir := ss.getDir()
 	t, _ := ss.getTran()
 	if t == nil {
 		q := ss.getQuery()
 		hdr = q.Header()
-		row, tbl = q.Get(ss.thread, dir)
+		row, tbl, off = q.Get(ss.thread, dir)
 	} else {
 		c := ss.getCursor()
 		hdr = c.Header()
-		row, tbl = c.Get(ss.thread, t, dir)
+		row, tbl, off = c.Get(ss.thread, t, dir)
 	}
 	return
 }
@@ -569,7 +569,7 @@ func (ss *serverSession) getDir() Dir {
 
 const maxRec = 1024 * 1024 // 1 mb
 
-func (ss *serverSession) rowResult(tbl string, hdr *Header, sendHdr bool, row Row) {
+func (ss *serverSession) rowResult(tbl string, hdr *Header, sendHdr bool, row Row, off uint64) {
 	if row == nil {
 		ss.PutBool(true).PutBool(false)
 	} else {
@@ -577,7 +577,7 @@ func (ss *serverSession) rowResult(tbl string, hdr *Header, sendHdr bool, row Ro
 		if len(rec) > maxRec {
 			panic("result too large")
 		}
-		ss.PutBool(true).PutBool(true).PutInt(int(row[0].Off))
+		ss.PutBool(true).PutBool(true).PutInt(int(off))
 		if sendHdr {
 			ss.PutStrs(hdr.AppendDerived(flds))
 		}
@@ -590,7 +590,7 @@ func rowToRecord(row Row, hdr *Header) (rec Record, fields []string) {
 	// this must match cmdHeader
 	if len(row) == 1 {
 		assert.That(len(hdr.Fields) == 1)
-		return maybeSqueeze(row[0].Record, hdr)
+		return maybeSqueeze(row[0], hdr)
 	}
 	var rb RecordBuilder
 	fields = hdr.GetFields()
@@ -653,8 +653,8 @@ func cmdGetOne(ss *serverSession) {
 		tran = ss.sc.dbms.Transaction(false, ss.thread.Perms())
 		defer tran.Complete()
 	}
-	row, hdr, tbl := tran.Get(ss.thread, query, dir)
-	ss.rowResult(tbl, hdr, true, row)
+	row, hdr, tbl, off := tran.Get(ss.thread, query, dir)
+	ss.rowResult(tbl, hdr, true, row, off)
 }
 
 func cmdHeader(ss *serverSession) {

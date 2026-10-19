@@ -62,7 +62,7 @@ func queryTool(ctx context.Context, query string) (result queryOutput, err error
 	qr := querier{hdr: hdr, th: th, st: st}
 	qr.sb.WriteString("[\n")
 	qr.formatQueryHeader()
-	for row, _ := q.Get(th, core.Next); row != nil; row, _ = q.Get(th, core.Next) {
+	for row, _, _ := q.Get(th, core.Next); row != nil; row, _, _ = q.Get(th, core.Next) {
 		nrows++
 		if nrows > queryLimit || !qr.formatQueryRow(row) {
 			qr.sb.WriteString("// too large, truncated\n")

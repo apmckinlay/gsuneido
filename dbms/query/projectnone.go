@@ -131,7 +131,7 @@ func (*ProjectNone) Output(*Thread, Record) {
 	panic("can't Output to ProjectNone")
 }
 
-var pnRow = Row{DbRec{Record: Record("")}}
+var pnRow = Row{""}
 
 func (pn *ProjectNone) Get(_ *Thread, _ Dir) Row {
 	if !pn.done {

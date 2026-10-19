@@ -80,9 +80,9 @@ func TestRandomSingleThreadTransactions(t *testing.T) {
 	t2 := db.NewUpdateTran(AllPerms)
 	key := 5
 	r1 := t1.Lookup("test_table", 0, intKey(key))
-	off1 := r1.Off
+	off1 := RecToOff(db.Store, r1)
 	r2 := t2.Lookup("test_table", 0, intKey(key))
-	off2 := r2.Off
+	off2 := RecToOff(db.Store, r2)
 	newRecord := int2rec(key, 123)
 	t1.Update(nil, "test_table", off1, newRecord)
 	t2.Update(nil, "test_table", off2, newRecord)
@@ -162,7 +162,7 @@ func performRandomTransaction(db *Database, testData *RandomTestData) (success b
 	for i, key := range sample.Take(n, testData.numRecords) {
 		keys[i] = key
 		rec := ut.Lookup("test_table", 0, intKey(key))
-		offsets[i] = rec.Off
+		offsets[i] = RecToOff(db.Store, rec)
 		if i == n-1 || rand.IntN(2) == 1 {
 			if i == n-1 {
 				change = -sum

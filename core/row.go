@@ -19,15 +19,9 @@ import (
 )
 
 // Row is the result of database queries.
-// It is a list of DbRec so that operations e.g. join
+// It is a list of Record so that operations e.g. join
 // can avoid building new records.
-type Row []DbRec
-
-// DbRec is a Record along with its offset
-type DbRec struct {
-	Record
-	Off uint64
-}
+type Row []Record
 
 func JoinRows(row1, row2 Row) Row {
 	return slc.With(row1, row2...)
@@ -56,7 +50,7 @@ func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 			return StrVal(str.ToLower(ToStr(val)))
 		}
 		if hasRule(th, fld) {
-			return SuRecordFromRow(row, hdr, "", tran).Get(th, StrVal(fld))
+			return SuRecordFromRow(row, hdr, "", tran, 0).Get(th, StrVal(fld))
 		}
 		return EmptyStr
 	}
@@ -118,7 +112,7 @@ func getRawVal(row Row, hdr *Header, fld string, th *Thread, tran *SuTran,
 		}
 		if hasRule(th, fld) {
 			if *rec == nil {
-				*rec = SuRecordFromRow(row, hdr, "", tran)
+				*rec = SuRecordFromRow(row, hdr, "", tran, 0)
 			}
 			v := (*rec).Get(th, StrVal(fld))
 			return Pack(v.(Packable))
@@ -163,13 +157,13 @@ func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	if row[at.Reci].Record != "" { // not empty side of union
+	if row[at.Reci] != "" { // not empty side of union
 		return row[at.Reci].GetRaw(int(at.Fldi)), true
 	}
 	// handle nil records from Union
 	n := min(len(row), len(hdr.Fields))
 	for reci := int(at.Reci + 1); reci < n; reci++ {
-		if row[reci].Record != "" {
+		if row[reci] != "" {
 			if fldi := slices.Index(hdr.Fields[reci], fld); fldi >= 0 {
 				return row[reci].GetRaw(fldi), true
 			}
@@ -178,39 +172,18 @@ func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
 	return "", false
 }
 
-// SameAs returns true if the db records have the same Off's
-// and derived records (with Off == 0) are equal.
+// SameAs returns true if the component records have equal contents.
 // WARNING: this is not general equality, for that see EqualRows.
 func (row Row) SameAs(row2 Row) bool {
 	if len(row) != len(row2) {
 		return false
 	}
 	for i := range row {
-		if (row[i].Off == 0) != (row2[i].Off == 0) {
+		if row[i] != row2[i] {
 			return false
-		}
-		if row[i].Off == 0 {
-			if row[i].Record != row2[i].Record {
-				return false
-			}
-		} else {
-			if row[i].Off != row2[i].Off {
-				return false
-			}
 		}
 	}
 	return true
-}
-
-// Derived returns the total size of the non-database records (with no offset)
-func (row Row) Derived() int {
-	n := 0
-	for _, dbrec := range row {
-		if dbrec.Off == 0 { // derived record e.g. from extend or summarize
-			n += len(dbrec.Record)
-		}
-	}
-	return n
 }
 
 //-------------------------------------------------------------------

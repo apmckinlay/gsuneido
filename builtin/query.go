@@ -31,17 +31,17 @@ func QueryLast(th *Thread, args []Value) Value {
 }
 
 func queryOne(th *Thread, args Value, dir Dir) Value {
-	row, hdr, table := th.Dbms().Get(th, args, dir)
+	row, hdr, table, off := th.Dbms().Get(th, args, dir)
 	if row == nil {
 		return False
 	}
-	return SuRecordFromRow(row, hdr, table, nil) // no transaction
+	return SuRecordFromRow(row, hdr, table, nil, off) // no transaction
 }
 
 var _ = builtin(QueryEmptyQ, "(@args) :boolean")
 
 func QueryEmptyQ(th *Thread, args []Value) Value {
-	row, _, _ := th.Dbms().Get(th, args[0], Any)
+	row, _, _, _ := th.Dbms().Get(th, args[0], Any)
 	return SuBool(row == nil)
 }
 
@@ -229,6 +229,6 @@ func sqs_Parse(th *Thread, args []Value) Value {
 var _ = staticMethod(sqs_Strategy1, "(@args) :string")
 
 func sqs_Strategy1(th *Thread, args []Value) Value {
-	_, _, s := th.Dbms().Get(th, args[0], Strat)
+	_, _, s, _ := th.Dbms().Get(th, args[0], Strat)
 	return StrVal(s)
 }

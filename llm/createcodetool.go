@@ -86,7 +86,7 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 	rtran := th.Dbms().Transaction(false, th.Perms())
 	rq := rtran.Query(query, nil)
 	hdr := rq.Header()
-	row, _ := rq.Get(th, core.Next)
+	row, _, off := rq.Get(th, core.Next)
 	if row != nil {
 		st := core.NewSuTran(rtran, false)
 		groupVal := row.GetVal(hdr, "group", th, st)
@@ -96,7 +96,6 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 			return createCodeOutput{}, fmt.Errorf("definition already exists: %s", name)
 		}
 		// Soft-deleted: restore by updating in place (like edit)
-		off := row[0].Off
 		vals := make(map[string]string, len(hdr.Fields[0]))
 		for _, f := range hdr.Fields[0] {
 			vals[f] = row.GetRawVal(hdr, f, th, st)
@@ -221,7 +220,7 @@ func lookupFolder(th *core.Thread, tran core.ITran, library string, parent int, 
 	folderArgs := core.SuObjectOf(core.StrVal(library))
 	folderArgs.Set(core.StrVal("group"), core.IntVal(parent))
 	folderArgs.Set(core.StrVal("name"), core.StrVal(name))
-	row, hdr, _ := tran.Get(th, folderArgs, core.Only)
+	row, hdr, _, _ := tran.Get(th, folderArgs, core.Only)
 	if row != nil {
 		num, err := intValue(row.GetVal(hdr, "num", th, nil), "num")
 		if err != nil {
@@ -234,7 +233,7 @@ func lookupFolder(th *core.Thread, tran core.ITran, library string, parent int, 
 	leafArgs.Set(core.StrVal("group"), core.IntVal(-1))
 	leafArgs.Set(core.StrVal("parent"), core.IntVal(parent))
 	leafArgs.Set(core.StrVal("name"), core.StrVal(name))
-	leaf, _, _ := tran.Get(th, leafArgs, core.Only)
+	leaf, _, _, _ := tran.Get(th, leafArgs, core.Only)
 	return 0, false, leaf != nil, nil
 }
 
@@ -243,7 +242,7 @@ func maxLibNum(th *core.Thread, tran core.ITran, library string) int {
 	q := tran.Query(library+" summarize max num", nil)
 	hdr := q.Header()
 	st := core.NewSuTran(tran, false)
-	row, _ := q.Get(th, core.Next)
+	row, _, _ := q.Get(th, core.Next)
 	if row == nil {
 		return 0
 	}

@@ -163,14 +163,14 @@ func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 
 	return idx.RangeFrac(org, end, info.Nrows, info.BtreeNrows)
 }
 
-// Lookup returns the DbRec for a key, or nil if not found
-func (t *ReadTran) Lookup(table string, iIndex int, key string) *core.DbRec {
+// Lookup returns the Record for a key, or "" if not found
+func (t *ReadTran) Lookup(table string, iIndex int, key string) core.Record {
 	idx := t.meta.GetRoInfo(table).Indexes[iIndex]
 	off := idx.Lookup(key)
 	if off == 0 {
-		return nil
+		return ""
 	}
-	return &core.DbRec{Off: off, Record: t.GetRecord(off)}
+	return t.GetRecord(off)
 }
 
 // IndexIter returns a SimpleIter
@@ -325,8 +325,8 @@ func (t *UpdateTran) num() int {
 	return t.ct.start
 }
 
-// Lookup returns the DbRec for a key, or nil if not found
-func (t *UpdateTran) Lookup(table string, iIndex int, key string) *core.DbRec {
+// Lookup returns the Record for a key, or "" if not found
+func (t *UpdateTran) Lookup(table string, iIndex int, key string) core.Record {
 	t.Read(table, iIndex, key, key)
 	return t.ReadTran.Lookup(table, iIndex, key)
 }

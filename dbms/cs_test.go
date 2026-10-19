@@ -22,18 +22,32 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestClientServer(*testing.T) {
+func TestClientServer(t *testing.T) {
 	// trace.Set(int(trace.ClientServer))
 	Global.TestDef("Auth", &SuBuiltinRaw{
 		Fn: func(th *Thread, as *ArgSpec, args []Value) Value {
 			th.NewPerms().AddTable("tables", "read")
+			th.Perms().AddTable("tmp", "read")
 			return True
 		},
 		ParamSpec: ParamSpecAt})
 	defer Global.UnloadAll()
 	options.BuiltDate = "Dec 29 2020 12:34"
 	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
 	dbmsLocal := NewDbmsLocal(db)
+	dbmsLocal.AdminTest("create tmp (k) key(k)")
+	var rb RecordBuilder
+	rb.Add(One)
+	ut := db.NewUpdateTran(AllPerms)
+	ut.Output(nil, "tmp", rb.Build())
+	ut.Commit()
+	th := &Thread{}
+	th.SetPerms(AllPerms)
+	getArgs := SuObjectOf(SuStr("tmp"))
+	_, _, _, expectedOff := dbmsLocal.Get(th, getArgs, Only)
+	assert.T(t).That(expectedOff != 0)
 	p1, p2 := net.Pipe()
 	workers = mux.NewWorkers(doRequest)
 	go newServerConn(dbmsLocal, p1, serverTLSConfig())
@@ -51,6 +65,33 @@ func TestClientServer(*testing.T) {
 	ses.Auth(&Thread{}, &SuObject{})
 	args := SuObjectOf(SuStr("tables sort table"))
 	ses.Get(nil, args, Next)
+
+	check := func(row Row, hdr *Header, table string, off uint64) {
+		t.Helper()
+		assert.T(t).This(table).Is("tmp")
+		assert.T(t).This(off).Is(expectedOff)
+		assert.T(t).This(row.GetVal(hdr, "k", nil, nil)).Is(One)
+	}
+	check(ses.Get(nil, getArgs, Only))
+	tran := ses.Transaction(false, nil)
+	check(tran.Get(nil, getArgs, Only))
+	q := tran.Query("tmp", nil)
+	hdr := q.Header()
+	row, table, off := q.Get(nil, Next)
+	check(row, hdr, table, off)
+	row, _, off = q.Get(nil, Next)
+	assert.T(t).This(row).Is(nil)
+	assert.T(t).This(off).Is(uint64(0))
+	q.Close()
+	cur := ses.Cursor("tmp", nil, nil)
+	hdr = cur.Header()
+	row, table, off = cur.Get(nil, tran, Next)
+	check(row, hdr, table, off)
+	row, _, off = cur.Get(nil, tran, Next)
+	assert.T(t).This(row).Is(nil)
+	assert.T(t).This(off).Is(uint64(0))
+	cur.Close()
+	assert.T(t).This(tran.Complete()).Is("")
 
 	ses2 := c.NewSession()
 	ses2.Get(nil, args, Prev)

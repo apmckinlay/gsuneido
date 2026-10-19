@@ -12,6 +12,25 @@ import (
 	"github.com/apmckinlay/gsuneido/util/bits"
 )
 
+func TestTempIndexEmptyRecord(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create tmp () key()")
+	ut := db.NewUpdateTran(AllPerms)
+	ut.Output(nil, "tmp", new(RecordBuilder).Build())
+	ut.Commit()
+	tran := db.NewReadTran(AllPerms)
+	defer tran.Complete()
+	source, _, _ := Setup(ParseQuery("tmp", tran, nil), ReadMode, tran)
+	ti := NewTempIndex(source, nil, tran)
+	th := &Thread{}
+	assert.T(t).This(ti.Get(th, Next)).Is(Row{"\x00"})
+	assert.T(t).This(ti.Get(th, Next)).Is(nil)
+	ti.Rewind()
+	assert.T(t).This(ti.Get(th, Prev)).Is(Row{"\x00"})
+	assert.T(t).This(ti.Get(th, Prev)).Is(nil)
+}
+
 // orderKind is the order in which mockSource generates rows (a, b).
 type orderKind int
 
@@ -59,14 +78,13 @@ func (s *mockSource) Get(*Thread, Dir) Row {
 		var rb RecordBuilder
 		rb.Add(IntVal(a))
 		rb.Add(IntVal(b))
-		return Row{DbRec{Record: rb.Build(), Off: 1}}
+		return Row{rb.Build()}
 	}
 	// multi: a and b are in separate records (like a join)
 	var rb1, rb2 RecordBuilder
 	rb1.Add(IntVal(a))
 	rb2.Add(IntVal(b))
-	return Row{DbRec{Record: rb1.Build(), Off: 1},
-		DbRec{Record: rb2.Build(), Off: 1}}
+	return Row{rb1.Build(), rb2.Build()}
 }
 
 func newMockSource(cols []string, nrows int, kind orderKind, single bool) *mockSource {

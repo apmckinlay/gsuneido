@@ -204,10 +204,10 @@ func (t *benchReadTran) GetRecord(off uint64) Record {
 	return rec
 }
 
-func (t *benchReadTran) Lookup(table string, index int, key string) *DbRec {
+func (t *benchReadTran) Lookup(table string, index int, key string) Record {
 	rec := t.QueryTran.Lookup(table, index, key)
-	if rec != nil {
-		t.consume(rec.Record)
+	if rec != "" {
+		t.consume(rec)
 	}
 	return rec
 }
@@ -353,7 +353,7 @@ func drainBenchPlan(w *Where, th *Thread, limit int) benchResult {
 	var result benchResult
 	for row := w.Get(th, Next); row != nil; row = w.Get(th, Next) {
 		result.rows++
-		result.sum += row[0].Off
+		result.sum += db19.RecToOff(w.t.GetStore(), row[0])
 		if limit > 0 && result.rows == limit {
 			break
 		}

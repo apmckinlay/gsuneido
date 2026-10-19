@@ -15,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
@@ -161,7 +162,7 @@ func (dbms *DbmsLocal) Final() int {
 
 // Get handles QueryFirst, QueryLast, Query1, QueryEmpty?
 func (dbms *DbmsLocal) Get(
-	th *Thread, query Value, dir Dir) (Row, *Header, string) {
+	th *Thread, query Value, dir Dir) (Row, *Header, string, uint64) {
 	tran := dbms.db.NewReadTran(th.Perms())
 	defer tran.Complete()
 	return get(th, tran, query, dir)
@@ -389,14 +390,14 @@ type ReadTranLocal struct {
 	*db19.ReadTran
 }
 
-func (t ReadTranLocal) Get(th *Thread, query Value, dir Dir) (Row, *Header, string) {
+func (t ReadTranLocal) Get(th *Thread, query Value, dir Dir) (Row, *Header, string, uint64) {
 	return get(th, t.ReadTran, query, dir)
 }
 
 func (t ReadTranLocal) Query(query string, sv *Sviews) IQuery {
 	q, fixcost, varcost := buildQuery(query, t.ReadTran, sv, qry.ReadMode)
 	trace.Query.Println(fixcost+varcost, "-", query)
-	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.ReadMode}
+	return queryLocal{Query: q, store: t.GetStore(), cost: fixcost + varcost, mode: qry.ReadMode}
 }
 
 func (t ReadTranLocal) Action(*Thread, string) int {
@@ -409,7 +410,7 @@ type UpdateTranLocal struct {
 	*db19.UpdateTran
 }
 
-func (t UpdateTranLocal) Get(th *Thread, query Value, dir Dir) (Row, *Header, string) {
+func (t UpdateTranLocal) Get(th *Thread, query Value, dir Dir) (Row, *Header, string, uint64) {
 	return get(th, t.UpdateTran, query, dir)
 }
 
@@ -420,7 +421,7 @@ func (t UpdateTranLocal) Output(th *Thread, table string, rec Record) {
 func (t UpdateTranLocal) Query(query string, sv *Sviews) IQuery {
 	q, fixcost, varcost := buildQuery(query, t.UpdateTran, sv, qry.UpdateMode)
 	trace.Query.Println("update", fixcost+varcost, "-", query)
-	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.UpdateMode}
+	return queryLocal{Query: q, store: t.GetStore(), cost: fixcost + varcost, mode: qry.UpdateMode}
 }
 
 func (t UpdateTranLocal) Action(th *Thread, action string) int {
@@ -454,9 +455,10 @@ func UseMainSuneido(th *Thread) func() {
 type queryLocal struct {
 	// Query is embedded so most methods are "inherited" directly
 	qry.Query
-	keys []string // cache
-	cost qry.Cost
-	mode qry.Mode
+	store *stor.Stor
+	keys  []string // cache
+	cost  qry.Cost
+	mode  qry.Mode
 }
 
 func (q queryLocal) Keys() []string {
@@ -492,14 +494,17 @@ func (q queryLocal) Order() []string {
 // Get does Rewind when it hits eof, so Next and Prev wrap around
 // SuQuery converts this to sticking at eof unidirectionally.
 // And the underlying OverIter just sticks at eof regardless of direction.
-func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
+func (q queryLocal) Get(th *Thread, dir Dir) (Row, string, uint64) {
 	defer UseMainSuneido(th)()
 	row := q.Query.Get(th, dir)
+	var off uint64
 	if row == nil {
 		// this is required for SuQuery to stick at eof unidirectionally
 		q.Query.Rewind()
+	} else {
+		off = db19.RecToOff(q.store, row[0])
 	}
-	return row, q.Query.Updateable()
+	return row, q.Query.Updateable(), off
 }
 
 func (q queryLocal) Output(th *Thread, rec Record) {
@@ -521,7 +526,8 @@ type cursorLocal struct {
 	queryLocal
 }
 
-func (q cursorLocal) Get(th *Thread, t ITran, dir Dir) (Row, string) {
+func (q cursorLocal) Get(th *Thread, t ITran, dir Dir) (Row, string, uint64) {
 	q.Query.SetTran(t.(qry.QueryTran))
+	q.store = t.(qry.QueryTran).GetStore()
 	return q.queryLocal.Get(th, dir)
 }

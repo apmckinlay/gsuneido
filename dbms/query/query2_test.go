@@ -229,8 +229,8 @@ func TestHeader_Union(t *testing.T) {
 	hdr := JoinHeaders(hdr1, hdr2)
 	rec1 := new(RecordBuilder).Add(IntVal(1)).Add(IntVal(2)).Add(IntVal(3)).Build()
 	rec2 := new(RecordBuilder).Add(IntVal(11)).Add(IntVal(33)).Build()
-	row1 := Row{DbRec{Record: rec1}, DbRec{}}
-	row2 := Row{DbRec{}, DbRec{Record: rec2}}
+	row1 := Row{rec1, ""}
+	row2 := Row{"", rec2}
 
 	th := &Thread{}
 	assert.This(row1.GetVal(hdr, "one", th, nil)).Is(IntVal(1))

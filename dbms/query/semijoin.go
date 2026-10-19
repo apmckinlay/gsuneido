@@ -29,15 +29,13 @@ type SemiJoin struct {
 	reverse     bool
 	sels1       Sels // from incoming Select, added to source1 probe in reverse mode
 
-	revState      iface.State
-	indexed       bool
-	row2          Row
-	lookupRow     Row
-	dedup         *mapType
-	warned        bool
-	derived       int
-	derivedWarned bool
-	th            *Thread
+	revState  iface.State
+	indexed   bool
+	row2      Row
+	lookupRow Row
+	dedup     *mapType
+	warned    bool
+	th        *Thread
 }
 
 type semiJoinApproach struct {
@@ -408,12 +406,6 @@ func (sj *SemiJoin) dedupRow(row2 Row) (Row, bool) {
 		sj.warned = true
 		Warning("semijoin-map large >", mapWarn)
 	}
-	sj.derived += row2.Derived()
-	if !sj.derivedWarned && sj.derived > derivedWarn {
-		sj.derivedWarned = true
-		Warning("semijoin-map derived large >", derivedWarn,
-			"average", sj.derived/sj.dedup.Size())
-	}
 	return row2, false
 }
 
@@ -449,8 +441,6 @@ func (sj *SemiJoin) Select(sels Sels) {
 		sj.source2.Select(sel2)
 		if sj.dedup != nil {
 			sj.dedup.Clear()
-			sj.derived = 0
-			sj.derivedWarned = false
 			sj.warned = false
 		}
 		sj.indexed = false

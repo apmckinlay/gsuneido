@@ -19,6 +19,21 @@ import (
 	"github.com/apmckinlay/gsuneido/util/slc"
 )
 
+func TestActionOffsets(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create tmp (a) key(a)")
+	db.act("insert {a: 1} into tmp")
+	ut := db.NewUpdateTran(AllPerms)
+	defer ut.Abort()
+	assert.T(t).This(DoAction(nil, ut, "update tmp set a = a + 1")).Is(1)
+	rows := ParseQuery("tmp", ut, nil).Simple(nil)
+	assert.T(t).This(len(rows)).Is(1)
+	assert.T(t).This(rows[0].GetVal(SimpleHeader([]string{"a"}), "a", nil, nil)).Is(IntVal(2))
+	assert.T(t).This(DoAction(nil, ut, "delete tmp")).Is(1)
+	assert.T(t).This(len(ParseQuery("tmp", ut, nil).Simple(nil))).Is(0)
+}
+
 func TestKeys(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()

@@ -39,7 +39,7 @@ func TestPermCursor(t *testing.T) {
 	perms := &Perms{}
 	perms.AddTable("tmp", "read")
 	allow := db.NewReadTran(perms)
-	row, _ := cur.Get(&Thread{}, &ReadTranLocal{ReadTran: allow}, Next)
+	row, _, _ := cur.Get(&Thread{}, &ReadTranLocal{ReadTran: allow}, Next)
 	a.This(row == nil).Is(false)
 }
 

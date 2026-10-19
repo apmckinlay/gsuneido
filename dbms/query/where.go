@@ -14,6 +14,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/core/trace"
+	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -866,7 +867,8 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 			// (only if the key exists, otherwise it may be malformed garbage
 			// from sels that the index expression cannot evaluate)
 			if row := w.tbl.LookupRaw(w.curPtrng.Org); row != nil &&
-				(w.bloom == nil || w.bloom.Has(row[0].Off)) &&
+				(w.bloom == nil || 
+					w.bloom.Has(db19.RecToOff(w.t.GetStore(), row[0]))) &&
 				(w.indexFilter == nil || w.ixFilter(th, w.curPtrng.Org)) {
 				w.nIn++
 				return row

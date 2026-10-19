@@ -14,6 +14,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -366,7 +367,7 @@ func TestWhere_consistent(t *testing.T) {
 	test := func(lhs int, op string, rhs int) {
 		t.Helper()
 		rec := new(RecordBuilder).Add(vals[lhs].(Packable)).Build()
-		c := &ast.RowContext{Hdr: hdr, Row: []DbRec{{Record: rec}}}
+		c := &ast.RowContext{Hdr: hdr, Row: Row{rec}}
 		query := "table where a " + op + " " + strs[rhs]
 		w := ParseQuery(query, wtestTran{}, nil).(*Where)
 		w.optInit()
@@ -817,9 +818,13 @@ func TestWhere_twoIndexes(t *testing.T) {
 	w := test("a = 1", OrderReq([]string{"b"}, 1), true, expected)
 	assert.T(t).That(int(w.tbl.ngets) >= 2*len(expected) && w.tbl.ngets < 200)
 	assert.T(t).That(w.dataFilter != nil)
+	points := ParseQuery("table where id in (1,11,12)", tran, nil).(*Where)
+	SetupReq(points, ReadMode, tran, OrderReq([]string{"id"}, 1))
+	points.bloom = w.bloom
+	assert.T(t).This(queryAll2(points)).Is("a=1 b=98 c=1 id=1 | a=1 b=88 c=1 id=11")
 	// Admit every offset to ensure the final filter rejects false positives.
 	for _, row := range ParseQuery("table", tran, nil).Simple(th) {
-		w.bloom.Add(row[0].Off)
+		w.bloom.Add(db19.RecToOff(tran.GetStore(), row[0]))
 	}
 	var ids []int
 	for row := w.Get(th, Next); row != nil; row = w.Get(th, Next) {

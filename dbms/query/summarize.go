@@ -452,7 +452,7 @@ func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
 	}
 	var rb RecordBuilder
 	rb.Add(IntVal(nr))
-	return Row{DbRec{Record: rb.Build()}}
+	return Row{rb.Build()}
 }
 
 func getIdx(th *Thread, su *Summarize, _ Dir) Row {
@@ -473,9 +473,9 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	rb.AddRaw(row.GetRawVal(su.source.Header(), su.ons[0], th, su.st))
 	rec := rb.Build()
 	if su.wholeRow {
-		return append(row, DbRec{Record: rec})
+		return append(row, rec)
 	}
-	return Row{DbRec{Record: rec}}
+	return Row{rec}
 }
 
 func (su *Summarize) Lookup(th *Thread, sels Sels) Row {
@@ -544,7 +544,7 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 		val, _ := ops[i].result()
 		rb.Add(val.(Packable))
 	}
-	return Row{DbRec{Record: rb.Build()}}
+	return Row{rb.Build()}
 }
 
 func (su *Summarize) buildMap() []mapPair {
@@ -707,7 +707,7 @@ func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 		val, _ := sum.result()
 		rb.Add(val.(Packable))
 	}
-	row := Row{DbRec{Record: rb.Build()}}
+	row := Row{rb.Build()}
 	if su.wholeRow {
 		_, wholeRow := sums[0].result()
 		row = append(wholeRow, row[0])

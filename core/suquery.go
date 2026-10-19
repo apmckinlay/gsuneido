@@ -141,13 +141,13 @@ func (q *SuQuery) GetRec(th *Thread, dir Dir) Value {
 	if dir == q.eof {
 		return False
 	}
-	row, table := q.iqc.(IQuery).Get(th, dir)
+	row, table, off := q.iqc.(IQuery).Get(th, dir)
 	if row == nil {
 		q.eof = dir
 		return False
 	}
 	q.eof = 0
-	return SuRecordFromRow(row, q.iqc.Header(), table, q.tran)
+	return SuRecordFromRow(row, q.iqc.Header(), table, q.tran, off)
 }
 
 func (q *SuQuery) Output(th *Thread, ob Container) {
@@ -212,13 +212,13 @@ func (q *SuCursor) GetRec(th *Thread, tran *SuTran, dir Dir) Value {
 	if dir == q.eof {
 		return False
 	}
-	row, table := q.iqc.(ICursor).Get(th, tran.itran, dir)
+	row, table, off := q.iqc.(ICursor).Get(th, tran.itran, dir)
 	if row == nil {
 		q.eof = dir
 		return False
 	}
 	q.eof = 0
-	return SuRecordFromRow(row, q.iqc.Header(), table, tran)
+	return SuRecordFromRow(row, q.iqc.Header(), table, tran, off)
 }
 
 func (q *SuCursor) ckActive() {

@@ -161,21 +161,21 @@ func (ms *muxSession) Final() int {
 	return ms.GetInt()
 }
 
-func (ms *muxSession) Get(_ *Thread, query Value, dir Dir) (Row, *Header, string) {
+func (ms *muxSession) Get(_ *Thread, query Value, dir Dir) (Row, *Header, string, uint64) {
 	return ms.get(0, query, dir)
 }
 
-func (ms *muxSession) get(tn int, query Value, dir Dir) (Row, *Header, string) {
+func (ms *muxSession) get(tn int, query Value, dir Dir) (Row, *Header, string, uint64) {
 	ms.PutCmd(commands.GetOne).PutByte(byte(dir)).PutInt(tn).PutVal(query)
 	ms.Request()
 	if !ms.GetBool() {
-		return nil, nil, ""
+		return nil, nil, "", 0
 	}
 	off := ms.GetInt()
 	hdr := ms.getHdr()
 	tbl := ms.GetStr()
-	row := ms.getRow(off)
-	return row, hdr, tbl
+	row := ms.getRow()
+	return row, hdr, tbl, uint64(off)
 }
 
 func (ms *muxSession) Info() Value {
@@ -288,8 +288,8 @@ func (ms *muxSession) getHdr() *Header {
 	return NewHeader([][]string{fields}, columns)
 }
 
-func (ms *muxSession) getRow(off int) Row {
-	return Row([]DbRec{{Record: ms.GetRec(), Off: uint64(off)}})
+func (ms *muxSession) getRow() Row {
+	return Row{ms.GetRec()}
 }
 
 // ------------------------------------------------------------------
@@ -327,7 +327,7 @@ func (tc *muxTran) Delete(_ *Thread, table string, off uint64) {
 	tc.Request()
 }
 
-func (tc *muxTran) Get(_ *Thread, query Value, dir Dir) (Row, *Header, string) {
+func (tc *muxTran) Get(_ *Thread, query Value, dir Dir) (Row, *Header, string, uint64) {
 	return tc.get(tc.tn, query, dir)
 }
 
@@ -448,16 +448,16 @@ func (ms *muxSession) newClientQuery(qn int) *muxQuery {
 
 var _ IQuery = (*muxQuery)(nil)
 
-func (q *muxQuery) Get(_ *Thread, dir Dir) (Row, string) {
+func (q *muxQuery) Get(_ *Thread, dir Dir) (Row, string, uint64) {
 	q.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(0).PutInt(q.id)
 	q.Request()
 	if !q.GetBool() {
-		return nil, ""
+		return nil, "", 0
 	}
 	off := q.GetInt()
 	table := q.GetStr()
-	row := q.getRow(off)
-	return row, table
+	row := q.getRow()
+	return row, table, uint64(off)
 }
 
 func (q *muxQuery) Output(_ *Thread, rec Record) {
@@ -476,15 +476,15 @@ func (ms *muxSession) newClientCursor(cn int) *muxCursor {
 
 var _ ICursor = (*muxCursor)(nil)
 
-func (q *muxCursor) Get(_ *Thread, tran ITran, dir Dir) (Row, string) {
+func (q *muxCursor) Get(_ *Thread, tran ITran, dir Dir) (Row, string, uint64) {
 	t := tran.(*muxTran)
 	q.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(t.tn).PutInt(q.id)
 	q.Request()
 	if !q.GetBool() {
-		return nil, ""
+		return nil, "", 0
 	}
 	off := q.GetInt()
 	table := q.GetStr()
-	row := q.getRow(off)
-	return row, table
+	row := q.getRow()
+	return row, table, uint64(off)
 }
