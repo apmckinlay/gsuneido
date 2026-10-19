@@ -34,20 +34,21 @@ import (
 //	go test -short -timeout=30s -run '^$' -bench 'Bitmap/BloomCost' -benchtime=500ms -count=3 -benchmem ./dbms/query
 //	go test -short -timeout=30s -run '^$' -bench 'Bitmap' -benchtime=500ms -benchmem ./dbms/query
 //
-// B/op measures allocations, not retained bitmap size.
+// B/op measures allocations, not retained size.
 
-type bitmapBenchTable struct {
-	name  string
-	rows  int
-	width int
+type benchTable struct {
+	name    string
+	rows    int
+	width   int
+	indexes string
 }
 
-var benchTables = []bitmapBenchTable{
-	{"bt", 1_000_000, 200},
-	{"bw", 1_000_000, 1000},
+var bloomBenchTables = []benchTable{
+	{"bt", 1_000_000, 200, "index(a) index(b)"},
+	{"bw", 1_000_000, 1000, "index(a) index(b)"},
 }
 
-var benchCases = []struct{ main, bitmap float64 }{
+var benchCases = []struct{ main, bloom float64 }{
 	{.5, .5}, {.25, .25}, {.1, .1}, {.05, .05}, {.01, .01}, {.002, .002},
 	{.5, .01}, {.01, .5},
 }
@@ -61,7 +62,7 @@ var (
 
 // One parent owns the shared fixture until all its subbenchmarks finish.
 func BenchmarkBitmap(b *testing.B) {
-	db := openBenchDb(b, benchTables)
+	db := openBenchDb(b, bloomBenchTables)
 	b.Run("Factors", func(b *testing.B) { benchmarkBitmapFactors(b, db) })
 	b.Run("Plan", func(b *testing.B) { benchmarkBitmapPlan(b, db) })
 	b.Run("BloomCost", func(b *testing.B) { benchmarkBloomCost(b, db) })
@@ -70,7 +71,7 @@ func BenchmarkBitmap(b *testing.B) {
 // Calibrate Bloom operations against Table.costFor, using the same field access
 // as BenchmarkTableGetCost, without adding checksum work to the scan baseline.
 func benchmarkBloomCost(b *testing.B, db *db19.Database) {
-	for _, bt := range benchTables {
+	for _, bt := range bloomBenchTables {
 		tran := db.NewReadTran(AllPerms)
 		defer tran.Complete()
 		for _, col := range []string{"k", "a"} {
@@ -134,7 +135,7 @@ func benchmarkBloomCost(b *testing.B, db *db19.Database) {
 // The query package cannot import db19/tools directly because tools imports query.
 var CompactDb func(dbfile string) error
 
-func openBenchDb(t testing.TB, tables []bitmapBenchTable) *db19.Database {
+func openBenchDb(t testing.TB, tables []benchTable) *db19.Database {
 	t.Helper()
 	// The database must share a filesystem with the compaction temp file,
 	// which db19/tools creates in the working directory.
@@ -154,25 +155,23 @@ func openBenchDb(t testing.TB, tables []bitmapBenchTable) *db19.Database {
 	db19.StartConcur(db, time.Hour)
 	fillBenchDb(db, tables)
 	db.Persist() // drain writes and merge all index layers before taking snapshots
-	if CompactDb != nil {
-		// Rewrite the database so table data and index nodes are contiguous
-		// and dead records are removed, as in a compacted production database.
-		db.Close()
-		if err := CompactDb(path); err != nil {
-			t.Fatal(err)
-		}
-		db, err = db19.OpenDatabase(path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		db19.StartConcur(db, time.Hour)
+	// Rewrite the database so table data and index nodes are contiguous
+	// and dead records are removed, as in a compacted production database.
+	db.Close()
+	if err := CompactDb(path); err != nil {
+		t.Fatal(err)
 	}
+	db, err = db19.OpenDatabase(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	db19.StartConcur(db, time.Hour)
 	return db
 }
 
-func fillBenchDb(db *db19.Database, tables []bitmapBenchTable) {
+func fillBenchDb(db *db19.Database, tables []benchTable) {
 	for _, bt := range tables {
-		doAdmin(db, "create "+bt.name+" (k, a, b, pad) key(k) index(a) index(b)")
+		doAdmin(db, "create "+bt.name+" (k, a, b, pad) key(k) "+bt.indexes)
 		pad := SuStr(strings.Repeat("x", bt.width))
 		r := rand.New(rand.NewPCG(1, 2))
 		const batch = 5000 // writeMax is 10000 per transaction
@@ -291,7 +290,7 @@ func collectOffsets(tbl *Table, sel *idxSel) []uint64 {
 // Each factor uses the same range, Cur/key path, callback, and GetFilter count.
 // Differences include GetRecord and (for recordRead) full-record checksumming.
 func benchmarkBitmapFactors(b *testing.B, db *db19.Database) {
-	for _, bt := range benchTables {
+	for _, bt := range bloomBenchTables {
 		tran := db.NewReadTran(AllPerms)
 		tbl := NewTable(tran, bt.name).(*Table)
 		for _, frac := range []float64{1, .5, .1, .01, .002} {
@@ -328,7 +327,7 @@ func benchmarkBitmapFactors(b *testing.B, db *db19.Database) {
 	}
 }
 
-func setupPlan(t testing.TB, query string, tran QueryTran, bitmap bool) *Where {
+func setupPlan(t testing.TB, query string, tran QueryTran, bloom bool) *Where {
 	t.Helper()
 	w := ParseQuery(query, tran, nil).(*Where)
 	w.optInit()
@@ -337,7 +336,7 @@ func setupPlan(t testing.TB, query string, tran QueryTran, bitmap bool) *Where {
 		t.Fatalf("missing index for %q", query)
 	}
 	ap := &whereApproach{index: main.index, idxSel: main, mode: ReadMode}
-	if bitmap {
+	if bloom {
 		ap.bloomSel = second
 	}
 	w.setApproach(NoneReq(1), ap, tran)
@@ -386,30 +385,30 @@ func benchPlan(b *testing.B, w *Where, tran *benchReadTran, reuse bool, limit in
 // Plan compares production Where execution, reuse, optimizer choice, and first
 // 10 rows.
 func benchmarkBitmapPlan(b *testing.B, db *db19.Database) {
-	for _, bt := range benchTables {
+	for _, bt := range bloomBenchTables {
 		for _, tc := range benchCases {
 			q := fmt.Sprintf("%s where a > %d and b > %d", bt.name,
-				benchThreshold(bt.rows, tc.main), benchThreshold(bt.rows, tc.bitmap))
-			b.Run(fmt.Sprintf("%s/a%g_b%g", bt.name, tc.main, tc.bitmap), func(b *testing.B) {
+				benchThreshold(bt.rows, tc.main), benchThreshold(bt.rows, tc.bloom))
+			b.Run(fmt.Sprintf("%s/a%g_b%g", bt.name, tc.main, tc.bloom), func(b *testing.B) {
 				tran := &benchReadTran{QueryTran: db.NewReadTran(AllPerms)}
 				baseline := setupPlan(b, q, tran, false)
 				th := &Thread{}
 				expected := drainBenchPlan(baseline, th, 0)
 				first := drainBenchPlan(baseline, th, 10)
-				for _, mode := range []string{"index", "bitmap", "bitmapReuse", "optimizer", "first10/index", "first10/bitmap"} {
+				for _, mode := range []string{"index", "bloom", "bloomReuse", "optimizer", "first10/index", "first10/bloom"} {
 					b.Run(mode, func(b *testing.B) {
-						bitmap := mode == "bitmap" || mode == "bitmapReuse" || mode == "first10/bitmap"
-						w := setupPlan(b, q, tran, bitmap)
+						bloom := mode == "bloom" || mode == "bloomReuse" || mode == "first10/bloom"
+						w := setupPlan(b, q, tran, bloom)
 						var fixed, variable Cost
 						if mode == "optimizer" {
 							query, f, v := Setup(ParseQuery(q, tran, nil), ReadMode, tran)
 							w, fixed, variable = query.(*Where), f, v
-							b.Logf("index %v, bitmap %v", w.tbl.index, w.bloomSel != nil)
+							b.Logf("index %v, bloom %v", w.tbl.index, w.bloomSel != nil)
 						} else {
 							main, second := findIdxSel(w, "a"), findIdxSel(w, "b")
 							_, c1, _ := w.tbl.costFor(second.index, ReadMode, NoneReq(1))
 							_, c2, _ := w.tbl.costFor(main.index, ReadMode, NoneReq(1))
-							if bitmap {
+							if bloom {
 								fixed, variable = WhereCost2(bt.rows, float64(c1), float64(c2), 1,
 									second.indexRangeFrac, second.indexFilterFrac, main.indexRangeFrac,
 									main.indexFilterFrac, main.hasDataFilter && second.hasDataFilter)
@@ -421,9 +420,9 @@ func benchmarkBitmapPlan(b *testing.B, db *db19.Database) {
 						if strings.HasPrefix(mode, "first10/") {
 							limit, result = 10, first
 						}
-						benchPlan(b, w, tran, mode == "bitmapReuse", limit, result)
+						benchPlan(b, w, tran, mode == "bloomReuse", limit, result)
 						if limit == 0 {
-							if mode == "bitmapReuse" {
+							if mode == "bloomReuse" {
 								fixed = 0
 							}
 							b.ReportMetric(float64(fixed+variable), "cost-units")
@@ -439,7 +438,7 @@ func benchmarkBitmapPlan(b *testing.B, db *db19.Database) {
 
 func TestBitmapBench(t *testing.T) {
 	a := assert.T(t)
-	db := openBenchDb(t, []bitmapBenchTable{{"small", 257, 0}})
+	db := openBenchDb(t, []benchTable{{"small", 257, 0, "index(a) index(b)"}})
 	tran := &benchReadTran{QueryTran: db.NewReadTran(AllPerms)}
 	q := "small where a > 20 and b > 120"
 	w := setupPlan(t, q, tran, false)
