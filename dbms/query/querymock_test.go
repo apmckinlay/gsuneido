@@ -102,14 +102,14 @@ func (*QueryMock) Rewind() {
 }
 
 func (m *QueryMock) Get(*Thread, Dir) Row {
-	if m.GetResult != nil {
+	if !m.GetResult.Eof() {
 		return m.GetResult
 	}
 	panic("QueryMock.Get not implemented")
 }
 
 func (m *QueryMock) Lookup(*Thread, Sels) Row {
-	if m.LookupResult != nil {
+	if !m.LookupResult.Eof() {
 		return m.LookupResult
 	}
 	panic("QueryMock.Lookup not implemented")

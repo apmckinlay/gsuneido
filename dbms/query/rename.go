@@ -184,7 +184,7 @@ func (r *Rename) setApproach(req Require, _ any, tran QueryTran) {
 func (r *Rename) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { r.tget += tsc.Read() - t }(tsc.Read())
 	row := r.source.Get(th, dir)
-	if row != nil {
+	if !row.Eof() {
 		r.ngets++
 	}
 	return row

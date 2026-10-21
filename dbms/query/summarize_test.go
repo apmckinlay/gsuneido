@@ -36,21 +36,21 @@ func TestSummarizeSelectFilter(t *testing.T) {
 	sels := Sels{{"a", Pack(SuInt16(2))}, {"max_c", Pack(SuInt16(20))}}
 	q.Select(sels)
 	row := q.Get(nil, Next)
-	assert.T(t).That(row != nil)
+	assert.T(t).That(!row.Eof())
 	hdr := q.Header()
 	assert.T(t).This(row.GetVal(hdr, "a", nil, nil)).Is(SuInt16(2))
 	assert.T(t).This(row.GetVal(hdr, "max_c", nil, nil)).Is(SuInt16(20))
 
 	// Should not get another row
 	row = q.Get(nil, Next)
-	assert.T(t).This(row).Is(nil)
+	assert.T(t).That(row.Eof())
 
 	// Test with wrong max_c - should return nil
 	q.Select(nil) // clear
 	sels[1].val = Pack(SuInt16(999))
 	q.Select(sels)
 	row = q.Get(nil, Next)
-	assert.T(t).This(row).Is(nil)
+	assert.T(t).This(row.Eof())
 }
 
 func TestSummarize_ByOnConflict(t *testing.T) {

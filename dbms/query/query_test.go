@@ -153,7 +153,7 @@ func queryAll2(q Query) string {
 	sep := ""
 	var sb strings.Builder
 	th := &Thread{}
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+	for row := q.Get(th, Next); !row.Eof(); row = q.Get(th, Next) {
 		sb.WriteString(sep)
 		sb.WriteString(row2str(hdr, row))
 		sep = " | "
@@ -163,7 +163,7 @@ func queryAll2(q Query) string {
 
 // row2str does not include "" values
 func row2str(hdr *Header, row Row) string {
-	if row == nil {
+	if row.Eof() {
 		return "nil"
 	}
 	cols := slices.Clone(hdr.Columns)
@@ -298,7 +298,7 @@ func TestLookupOnSingleton(t *testing.T) {
 
 	sels := Sels{{"a", Pack(IntVal(1))}, {"b", Pack(IntVal(2))}}
 	row := lookup(tbl, sels, nil, nil)
-	assert.T(t).This(row).Is(nil)
+	assert.T(t).That(row.Eof())
 
 	act(db, "insert {a: 1, b: 2, c: 3} into tmp")
 	tbl = NewTable(db.NewReadTran(AllPerms), "tmp")
@@ -308,7 +308,7 @@ func TestLookupOnSingleton(t *testing.T) {
 	// nonexistent row
 	sels = Sels{{"a", Pack(IntVal(3))}, {"b", Pack(IntVal(4))}}
 	row = lookup(tbl, sels, nil, nil)
-	assert.T(t).This(row).Is(nil)
+	assert.T(t).That(row.Eof())
 }
 
 func TestSingleton(t *testing.T) {
@@ -334,7 +334,7 @@ func TestSingleton(t *testing.T) {
 	bsels = Sels{{"b", Pack(SuInt16(2))}}
 	q.Select(bsels)
 	assert.This(queryAll2(q)).Is("")
-	assert.This(q.Lookup(nil, bsels)).Is(nil)
+	assert.That(q.Lookup(nil, bsels).Eof())
 }
 
 func TestWhereSplitBug(t *testing.T) {

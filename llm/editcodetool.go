@@ -111,7 +111,7 @@ func editCodeTool(ctx context.Context, library, name, mode string, line, count i
 	rq := rtran.Query(query, nil)
 	hdr := rq.Header()
 	row, _, off := rq.Get(th, core.Next)
-	if row == nil {
+	if row.Eof() {
 		rtran.Complete()
 		return editCodeOutput{}, fmt.Errorf("code not found for: %s in %s", name, library)
 	}

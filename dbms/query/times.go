@@ -140,35 +140,35 @@ func (t *Times) Rewind() {
 func (t *Times) Get(th *Thread, dir Dir) Row {
 	defer func(t0 uint64) { t.tget += tsc.Read() - t0 }(tsc.Read())
 	if t.state.Eof() {
-		return nil
+		return Row{}
 	}
 	row2 := t.source2.Get(th, dir)
 	if t.state.Rewound() {
 		t.state = iface.Within
 		t.row1 = t.source1.Get(th, dir)
-		if t.row1 == nil || row2 == nil {
+		if t.row1.Eof() || row2.Eof() {
 			t.state = iface.Eof
-			return nil
+			return Row{}
 		}
 	}
-	if row2 != nil && t.row1 == nil {
+	if !row2.Eof() && t.row1.Eof() {
 		t.row1 = t.source1.Get(th, dir)
-		if t.row1 == nil {
+		if t.row1.Eof() {
 			t.state = iface.Eof
-			return nil
+			return Row{}
 		}
 	}
-	if row2 == nil {
+	if row2.Eof() {
 		t.row1 = t.source1.Get(th, dir)
-		if t.row1 == nil {
+		if t.row1.Eof() {
 			t.state = iface.Eof
-			return nil
+			return Row{}
 		}
 		t.source2.Rewind()
 		row2 = t.source2.Get(th, dir)
-		if row2 == nil {
+		if row2.Eof() {
 			t.state = iface.Eof
-			return nil
+			return Row{}
 		}
 	}
 	t.ngets++
@@ -187,12 +187,12 @@ func (t *Times) Lookup(th *Thread, sels Sels) Row {
 	t.nlooks++
 	sel1, sel2 := t.splitSelect(sels)
 	row1 := t.source1.Lookup(th, sel1)
-	if row1 == nil {
-		return nil
+	if row1.Eof() {
+		return Row{}
 	}
 	row2 := t.source2.Lookup(th, sel2)
-	if row2 == nil {
-		return nil
+	if row2.Eof() {
+		return Row{}
 	}
 	return JoinRows(row1, row2)
 }

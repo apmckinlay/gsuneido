@@ -94,7 +94,7 @@ func BenchmarkTableGetCost(b *testing.B) {
 		for b.Loop() {
 			q.Rewind()
 			hdr := q.Header()
-			for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+			for row := q.Get(th, Next); !row.Eof(); row = q.Get(th, Next) {
 				row.GetRaw(hdr, "j")
 			}
 		}
@@ -141,7 +141,7 @@ func BenchmarkTempindex(b *testing.B) {
 					n := 0
 					for {
 						row := q.Get(th, Next)
-						if row == nil {
+						if row.Eof() {
 							break
 						}
 						n++
@@ -172,7 +172,7 @@ func BenchmarkTempindexScan(b *testing.B) {
 			ti := q.(*Sort).source.(*TempIndex)
 			// build the temp index once before measuring
 			q.Rewind()
-			for q.Get(th, Next) != nil {
+			for !q.Get(th, Next).Eof() {
 			}
 			b.Run(tbl, func(b *testing.B) {
 				for b.Loop() {
@@ -182,7 +182,7 @@ func BenchmarkTempindexScan(b *testing.B) {
 					n := 0
 					for {
 						row := q.Get(th, Next)
-						if row == nil {
+						if row.Eof() {
 							break
 						}
 						n++
@@ -245,7 +245,7 @@ func BenchmarkTempindexCreate(b *testing.B) {
 						q.Rewind()
 						for {
 							row := q.Get(th, Next)
-							if row == nil {
+							if row.Eof() {
 								break
 							}
 						}
@@ -275,7 +275,7 @@ func BenchmarkLookup(b *testing.B) {
 				for b.Loop() {
 					r := rand.Intn(nrec * 2)
 					sels[0].val = Pack(IntVal(r))
-					if q.Lookup(th, sels) != nil {
+					if !q.Lookup(th, sels).Eof() {
 						successful++
 					}
 				}

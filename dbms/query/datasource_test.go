@@ -45,7 +45,7 @@ func (ds *dataSource) rewind() {
 func (ds *dataSource) get(dir Dir) Row {
 	switch ds.pos {
 	case dsEof:
-		return nil
+		return Row{}
 	case dsRewound:
 		if dir == Next {
 			ds.pos = 0
@@ -61,7 +61,7 @@ func (ds *dataSource) get(dir Dir) Row {
 	}
 	if ds.pos < 0 || int(ds.pos) >= len(ds.rows) {
 		ds.pos = dsEof
-		return nil
+		return Row{}
 	}
 	return ds.rows[ds.pos]
 }

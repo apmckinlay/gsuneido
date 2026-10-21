@@ -33,8 +33,8 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 		query = qry.StripSort(query)
 		if row, hdr, s := fastGet(th, tran, query, ob, dir); hdr != nil {
 			var off uint64
-			if row != nil {
-				off = db19.RecToOff(tran.GetStore(), row[0])
+			if !row.Eof() {
+				off = db19.RecToOff(tran.GetStore(), row.Get(0))
 			}
 			return row, hdr, s, off
 		}
@@ -73,18 +73,18 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 			Warning(dir, "slow:", w.InCount(), query)
 		}
 	}
-	if row == nil {
-		return nil, nil, "", 0
+	if row.Eof() {
+		return Row{}, nil, "", 0
 	} else if dir == Any {
 		return existsRow, existsHdr, "", 0
 	}
-	if dir == Only && !single(q) && q.Get(th, Next) != nil {
+	if dir == Only && !single(q) && !q.Get(th, Next).Eof() {
 		panic("Query1 not unique: " + query)
 	}
-	return row, q.Header(), q.Updateable(), db19.RecToOff(tran.GetStore(), row[0])
+	return row, q.Header(), q.Updateable(), db19.RecToOff(tran.GetStore(), row.Get(0))
 }
 
-var existsRow = Row{"x"}
+var existsRow = NewRow("\x00")
 var existsHdr = SimpleHeader([]string{"x"})
 
 func getQuery(ob *SuObject) string {
@@ -135,7 +135,7 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 	case Strat:
 		_, strarg, _ = getIndex(th, tran, tbl, sels, dir)
 		if strarg == "" {
-			return nil, nil, ""
+			return Row{}, nil, ""
 		}
 		return existsRow, existsHdr, strarg
 	case Only:
@@ -151,13 +151,11 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 func getLookup(th *Thread, tran qry.QueryTran, table iTable, sels Sels, dir Dir) (Row, *Header) {
 	single, _, getfn := getIndex(th, tran, table, sels, dir)
 	if getfn == nil {
-		return nil, nil
+		return Row{}, nil
 	}
 	row := getfn()
-	if row != nil && !single {
-		if r2 := getfn(); r2 != nil {
-			panic("Query1 not unique")
-		}
+	if !row.Eof() && !single && !getfn().Eof() {
+		panic("Query1 not unique")
 	}
 	return row, table.Header()
 }
@@ -165,13 +163,13 @@ func getLookup(th *Thread, tran qry.QueryTran, table iTable, sels Sels, dir Dir)
 func getExists(th *Thread, tran qry.QueryTran, table iTable, sels Sels, dir Dir) (row Row, hdr *Header) {
 	_, _, getfn := getIndex(th, tran, table, sels, dir)
 	if getfn == nil {
-		return nil, nil
+		return Row{}, nil
 	}
 	row = getfn()
-	if row != nil {
+	if !row.Eof() {
 		return existsRow, existsHdr
 	}
-	return nil, existsHdr
+	return Row{}, existsHdr
 }
 
 func getIndex(th *Thread, tran qry.QueryTran, table iTable,
@@ -180,11 +178,11 @@ func getIndex(th *Thread, tran qry.QueryTran, table iTable,
 	st := qry.MakeSuTran(tran)
 	hdr := table.Header()
 	filter := func(osels Sels, row Row) Row {
-		if row != nil {
+		if !row.Eof() {
 			rr := NewRowRec(row, hdr, th, st)
 			for col, val := range osels.All() {
 				if rr.GetRawVal(col) != val {
-					return nil
+					return Row{}
 				}
 			}
 		}
@@ -242,7 +240,7 @@ func getIndex(th *Thread, tran qry.QueryTran, table iTable,
 		return false, strat, func() Row {
 			for n := 0; ; n++ {
 				row := table.Get(th, Next)
-				if row == nil || nil != filter(sels, row) {
+				if row.Eof() || !filter(sels, row).Eof() {
 					if n > slow[dir] {
 						Warning(dir, "slow:", n, table, formatFieldsVals(sels))
 					}
@@ -268,8 +266,8 @@ func getIndex(th *Thread, tran qry.QueryTran, table iTable,
 					continue
 				}
 				row := tbl.Get(th, Next)
-				if row == nil ||
-					(!row.SameAs(prevRow) && nil != filter(sels, row)) {
+				if row.Eof() ||
+					(!row.EqualRecs(prevRow) && !filter(sels, row).Eof()) {
 					trace.QueryOpt.Println(dir, "multi", tbl)
 					if n > slow[dir] {
 						Warning(dir, "slow:", n, tbl, formatFieldsVals(sels))

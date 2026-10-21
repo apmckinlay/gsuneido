@@ -367,7 +367,7 @@ func TestWhere_consistent(t *testing.T) {
 	test := func(lhs int, op string, rhs int) {
 		t.Helper()
 		rec := new(RecordBuilder).Add(vals[lhs].(Packable)).Build()
-		c := &ast.RowContext{Hdr: hdr, Row: Row{rec}}
+		c := &ast.RowContext{Hdr: hdr, Row: NewRow(rec)}
 		query := "table where a " + op + " " + strs[rhs]
 		w := ParseQuery(query, wtestTran{}, nil).(*Where)
 		w.optInit()
@@ -624,7 +624,7 @@ func TestWhere_keyfixed(t *testing.T) {
 	row = q.Get(th, Next)
 	assert.This(row2str(hdr, row)).Is("a=4 b=5 c=6 d=7")
 	row = q.Get(th, Next)
-	assert.This(row).Is(nil)
+	assert.That(row.Eof())
 }
 
 func TestSplit(t *testing.T) {
@@ -802,7 +802,7 @@ func TestWhere_twoIndexes(t *testing.T) {
 		get := func(dir Dir) []int {
 			w.Rewind()
 			var ids []int
-			for row := w.Get(th, dir); row != nil; row = w.Get(th, dir) {
+			for row := w.Get(th, dir); !row.Eof(); row = w.Get(th, dir) {
 				ids = append(ids, ToInt(row.GetVal(w.Header(), "id", th, nil)))
 			}
 			return ids
@@ -824,10 +824,10 @@ func TestWhere_twoIndexes(t *testing.T) {
 	assert.T(t).This(queryAll2(points)).Is("a=1 b=98 c=1 id=1 | a=1 b=88 c=1 id=11")
 	// Admit every offset to ensure the final filter rejects false positives.
 	for _, row := range ParseQuery("table", tran, nil).Simple(th) {
-		w.bloom.Add(db19.RecToOff(tran.GetStore(), row[0]))
+		w.bloom.Add(db19.RecToOff(tran.GetStore(), row.Get(0)))
 	}
 	var ids []int
-	for row := w.Get(th, Next); row != nil; row = w.Get(th, Next) {
+	for row := w.Get(th, Next); !row.Eof(); row = w.Get(th, Next) {
 		ids = append(ids, ToInt(row.GetVal(w.Header(), "id", th, nil)))
 	}
 	assert.T(t).This(ids).Is(expected)
@@ -835,12 +835,12 @@ func TestWhere_twoIndexes(t *testing.T) {
 	w.Rewind()
 	w.SetTran(tran)
 	assert.T(t).This(w.bloom).Is(bitmap)
-	assert.T(t).That(w.Get(th, Next) != nil)
+	assert.T(t).That(!w.Get(th, Next).Eof())
 	w.Select(Sels{{"b", Pack(IntVal(18))}})
 	assert.T(t).This(row2str(w.Header(), w.Get(th, Next))).Is("a=1 b=18 c=1 id=81")
-	assert.T(t).This(w.Get(th, Next)).Is(nil)
+	assert.T(t).That(w.Get(th, Next).Eof())
 	w.Select(Sels{{"b", Pack(IntVal(17))}})
-	assert.T(t).This(w.Get(th, Next)).Is(nil)
+	assert.T(t).That(w.Get(th, Next).Eof())
 	w.Select(nil)
 	assert.T(t).This(queryAll2(w)).Is(queryAll2(test("a = 1", GroupReq([]string{"b"}, 1, 5), false, expected)))
 
@@ -1123,11 +1123,11 @@ func TestWhere_indexFilter_point(t *testing.T) {
 	th := &Thread{}
 	// singleton: row is only reachable by a full-key point lookup, but the
 	// indexFilter (a + b > 100) must still reject it
-	assert.T(t).That(q.Get(th, Next) == nil)
+	assert.T(t).That(q.Get(th, Next).Eof())
 	q.Rewind()
 	assert.T(t).That(len(q.Simple(th)) == 0)
 	q.Select(Sels{{"a", Pack(SuInt16(1))}, {"b", Pack(SuInt16(2))}})
-	assert.T(t).That(q.Get(th, Next) == nil)
+	assert.T(t).That(q.Get(th, Next).Eof())
 }
 
 func TestWhere_Simple_filter(t *testing.T) {
@@ -1230,7 +1230,7 @@ func TestWhere_rangeBitmap(t *testing.T) {
 			}
 		}
 		th := &Thread{}
-		for row := w.Get(th, Next); row != nil; row = w.Get(th, Next) {
+		for row := w.Get(th, Next); !row.Eof(); row = w.Get(th, Next) {
 			k := ToInt(row.GetVal(w.Header(), "k", th, nil))
 			assert.T(t).That(expected[k])
 			delete(expected, k)
@@ -1275,7 +1275,7 @@ func (hdb *heapdb) queryCompare(t *testing.T, query string) {
 	q.Rewind()
 	hg := NewQueryHasher(hdr).CheckDups()
 	var get []Row
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+	for row := q.Get(th, Next); !row.Eof(); row = q.Get(th, Next) {
 		hg.Row(row)
 		get = append(get, row)
 	}

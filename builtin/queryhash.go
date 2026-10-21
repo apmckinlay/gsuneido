@@ -22,7 +22,7 @@ func QueryHash(th *Thread, args []Value) Value {
 	// fmt.Println(q.Strategy(true))
 	qh := qry.NewQueryHasher(q.Header()).CheckDups()
 
-	for row, _, _ := q.Get(th, Next); row != nil; row, _, _ = q.Get(th, Next) {
+	for row, _, _ := q.Get(th, Next); !row.Eof(); row, _, _ = q.Get(th, Next) {
 		qh.Row(row)
 	}
 	return qh.Result(details)

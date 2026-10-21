@@ -815,7 +815,7 @@ var MakeSuTran func(qt QueryTran) *SuTran
 func (w *Where) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { w.tget += tsc.Read() - t }(tsc.Read())
 	if w.selConflict || w.eof {
-		return nil
+		return Row{}
 	}
 	if w.bloomSel != nil && w.bloom == nil {
 		w.buildBitmap(th)
@@ -825,10 +825,10 @@ func (w *Where) Get(th *Thread, dir Dir) Row {
 		row := w.get(th, dir)
 		if w.filter(th, row) {
 			w.nOut++
-			if row == nil {
+			if row.Eof() {
 				w.eof = true
 				w.slowQueries()
-				return nil
+				return Row{}
 			}
 			w.ngets++
 			return row
@@ -846,13 +846,13 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 	for {
 		if w.idxSelPos != -1 && w.idxSelPos < len(w.idxSelActive.prefixRanges) &&
 			w.curPtrng.isRange() {
-			if row := w.getFilter(th, dir); row != nil {
+			if row := w.getFilter(th, dir); !row.Eof() {
 				w.nIn++
 				return row
 			}
 		}
 		if !w.advance(dir) {
-			return nil // eof
+			return Row{} // eof
 		}
 		if w.curPtrng.isRange() {
 			if w.idxSelActive.skipLen > 0 {
@@ -866,9 +866,9 @@ func (w *Where) get(th *Thread, dir Dir) Row {
 			// points bypass GetFilter, so apply the indexFilter to the key here
 			// (only if the key exists, otherwise it may be malformed garbage
 			// from sels that the index expression cannot evaluate)
-			if row := w.tbl.LookupRaw(w.curPtrng.Org); row != nil &&
-				(w.bloom == nil || 
-					w.bloom.Has(db19.RecToOff(w.t.GetStore(), row[0]))) &&
+			if row := w.tbl.LookupRaw(w.curPtrng.Org); !row.Eof() &&
+				(w.bloom == nil ||
+					w.bloom.Has(db19.RecToOff(w.t.GetStore(), row.Get(0)))) &&
 				(w.indexFilter == nil || w.ixFilter(th, w.curPtrng.Org)) {
 				w.nIn++
 				return row
@@ -927,7 +927,7 @@ func (w *Where) buildBitmap(th *Thread) {
 
 // filter applies singleSels and the dataFilter expression
 func (w *Where) filter(th *Thread, row Row) bool {
-	if row == nil {
+	if row.Eof() {
 		return true
 	}
 	if w.singleSels != nil &&
@@ -947,7 +947,7 @@ func (w *Where) filterExpr(th *Thread, row Row, expr ast.Expr) bool {
 	}
 	w.rowCtx.Th = th
 	w.rowCtx.Row = row
-	defer func() { w.rowCtx.Th, w.rowCtx.Row = nil, nil }()
+	defer func() { w.rowCtx.Th, w.rowCtx.Row = nil, Row{} }()
 	return expr.Eval(&w.rowCtx) == True
 }
 
@@ -1032,7 +1032,7 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	// sels (plus fixed) specify a single source row
 	w.nlooks++
 	if w.Fixed().Conflicts(sels) {
-		return nil
+		return Row{}
 	}
 	if w.fastSingle() || w.srcIndex == nil {
 		// can't use source.Lookup because cols may not cover the source index.
@@ -1055,7 +1055,7 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 	isels, _ := Split(cloned, sels, w.srcIndex)
 	row := lookup(w.source, isels, th, w.rowCtx.Tran)
 	if !w.filter(th, row) {
-		row = nil
+		row = Row{}
 	}
 	return row
 }

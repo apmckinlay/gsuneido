@@ -52,7 +52,7 @@ func (a *insertQueryAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	hdr := qr.Header()
 	fields := ut.GetSchema(a.table).Columns
 	n := 0
-	for row := qr.Get(th, Next); row != nil; row = qr.Get(th, Next) {
+	for row := qr.Get(th, Next); !row.Eof(); row = qr.Get(th, Next) {
 		rb := RecordBuilder{}
 		var tsField string
 		for _, f := range fields {
@@ -109,9 +109,9 @@ func (a *updateAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	ctx := ast.RowContext{Th: th, Tran: tran, Hdr: hdr}
 	n := 0
 	prev := uint64(0)
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+	for row := q.Get(th, Next); !row.Eof(); row = q.Get(th, Next) {
 		// avoid getting stuck on the same record
-		off := db19.RecToOff(ut.GetStore(), row[0])
+		off := db19.RecToOff(ut.GetStore(), row.Get(0))
 		if off == prev {
 			continue
 		}
@@ -146,8 +146,8 @@ func (a *deleteAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	}
 	n := 0
 	prev := uint64(0)
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
-		off := db19.RecToOff(ut.GetStore(), row[0])
+	for row := q.Get(th, Next); !row.Eof(); row = q.Get(th, Next) {
+		off := db19.RecToOff(ut.GetStore(), row.Get(0))
 		if off == prev {
 			continue
 		}

@@ -144,13 +144,13 @@ type Query interface {
 	// It does *not* clear any Select.
 	Rewind()
 
-	// Get returns the next or previous row, or nil if at end.
+	// Get returns the next or previous row, or an empty row if at end.
 	// It sticks at eof until Rewind.
 	// Rewind then Get Next returns the first row,
 	// Rewind then Get Prev returns the last row.
 	Get(th *Thread, dir Dir) Row
 
-	// Lookup returns the row matching the given key value, or nil if not found.
+	// Lookup returns the row matching the given key value, or an empty row if not found.
 	// It is valid (although not necessarily the most efficient)
 	// to implement Lookup with Select and Get (eg. [lookupViaSelectGet])
 	// in which case it should leave the select cleared.
@@ -710,7 +710,7 @@ func lookupViaSelectGet(q Query, th *Thread, sels Sels) Row {
 func getNext1(q Query, th *Thread) Row {
 	// this does *not* need to loop because the index is unique
 	row := q.Get(th, Next)
-	dbg.Assert(func() bool { return row == nil || q.Get(th, Next) == nil })
+	dbg.Assert(func() bool { return row.Eof() || q.Get(th, Next).Eof() })
 	return row
 }
 
@@ -720,13 +720,13 @@ func lookup(q Query, sels Sels, th *Thread, st *SuTran) Row {
 }
 
 func lookupFilter(hdr *Header, row Row, sels Sels, th *Thread, st *SuTran) Row {
-	if row != nil {
+	if !row.Eof() {
 		rr := NewRowRec(row, hdr, th, st)
 		for _, sel := range sels {
 			x := rr.GetRawVal(sel.col)
 			assert.That(len(x) == 0 || x[0] != PackForward)
 			if x != sel.val {
-				return nil
+				return Row{}
 			}
 		}
 	}

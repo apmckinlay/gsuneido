@@ -437,8 +437,8 @@ func (u *Union) setApproach(req Require, approach any, tran QueryTran) {
 	u.source2 = SetApproach(u.source2, ap.req2, tran)
 	u.header = JoinHeaders(u.source1.Header(), u.source2.Header())
 	u.src1Only = set.Difference(u.source1.Columns(), u.source2.Columns())
-	u.empty1 = make(Row, len(u.source1.Header().Fields))
-	u.empty2 = make(Row, len(u.source2.Header().Fields))
+	u.empty1 = NilsRow(len(u.source1.Header().Fields))
+	u.empty2 = NilsRow(len(u.source2.Header().Fields))
 	u.state = iface.Rewound
 	u.src1get = u.source1.Get
 	u.src2get = u.source2.Get
@@ -455,7 +455,7 @@ func (u *Union) Rewind() {
 func (u *Union) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { u.tget += tsc.Read() - t }(tsc.Read())
 	if u.state.Eof() {
-		return nil
+		return Row{}
 	}
 	var row Row
 	switch u.strat {
@@ -470,7 +470,7 @@ func (u *Union) Get(th *Thread, dir Dir) Row {
 	default:
 		panic(assert.ShouldNotReachHere())
 	}
-	if row != nil {
+	if !row.Eof() {
 		u.state = iface.Within
 		u.ngets++
 	} else {
@@ -488,7 +488,7 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 		if u.src1 {
 			for {
 				row = u.src1get(th, dir)
-				if row == nil {
+				if row.Eof() {
 					break
 				}
 				if !u.source2Has(th, row) {
@@ -496,17 +496,17 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 				}
 			}
 			if dir == Prev {
-				return nil
+				return Row{}
 			}
 			u.source2.Rewind() // source2 may be stuck at eof from a prior Prev
 			u.src1 = false
 		} else { // source2
 			row = u.src2get(th, dir)
-			if row != nil {
+			if !row.Eof() {
 				return JoinRows(u.empty1, row)
 			}
 			if dir == Next {
-				return nil
+				return Row{}
 			}
 			u.source1.Rewind() // source1 may be stuck at eof from a prior Next
 			u.src1 = true
@@ -534,13 +534,13 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 
 	u.prevDir = dir
 	u.src1, u.src2 = false, false
-	if u.row1 == nil && u.row2 == nil {
+	if u.row1.Eof() && u.row2.Eof() {
 		u.src1, u.src2 = true, true
-		return nil
-	} else if u.row2 == nil {
+		return Row{}
+	} else if u.row2.Eof() {
 		u.src1 = true
 		return JoinRows(u.row1, u.empty2)
-	} else if u.row1 == nil {
+	} else if u.row1.Eof() {
 		u.src2 = true
 		return JoinRows(u.empty1, u.row2)
 	}
@@ -563,14 +563,14 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 }
 
 func (u *Union) get1(th *Thread, dir Dir) {
-	if dir != u.prevDir && u.row1 == nil {
+	if dir != u.prevDir && u.row1.Eof() {
 		u.source1.Rewind()
 	}
 	u.row1 = u.src1get(th, dir)
 }
 
 func (u *Union) get2(th *Thread, dir Dir) {
-	if dir != u.prevDir && u.row2 == nil {
+	if dir != u.prevDir && u.row2.Eof() {
 		u.source2.Rewind()
 	}
 	u.row2 = u.src2get(th, dir)
@@ -608,13 +608,13 @@ func (u *Union) getMergeDisjoint(th *Thread, dir Dir) (r Row) {
 
 	u.prevDir = dir
 	u.src1, u.src2 = false, false
-	if u.row1 == nil && u.row2 == nil {
+	if u.row1.Eof() && u.row2.Eof() {
 		u.src1, u.src2 = true, true
-		return nil
-	} else if u.row2 == nil {
+		return Row{}
+	} else if u.row2.Eof() {
 		u.src1 = true
 		return JoinRows(u.row1, u.empty2)
-	} else if u.row1 == nil {
+	} else if u.row1.Eof() {
 		u.src2 = true
 		return JoinRows(u.empty1, u.row2)
 	}
@@ -679,18 +679,18 @@ func (u *Union) Lookup(th *Thread, sels Sels) Row {
 	hdr := u.Header()
 	row1 := u.source1.Lookup(th, selsForCols(sels, u.source1.Columns()))
 	row2 := u.source2.Lookup(th, selsForCols(sels, u.source2.Columns()))
-	if row1 != nil {
+	if !row1.Eof() {
 		row1 = JoinRows(row1, u.empty2)
 		row1 = lookupFilter(hdr, row1, sels, th, u.st)
 	}
-	if row2 != nil {
+	if !row2.Eof() {
 		row2 = JoinRows(u.empty1, row2)
 		row2 = lookupFilter(hdr, row2, sels, th, u.st)
 	}
-	if row1 == nil {
+	if row1.Eof() {
 		return row2
 	}
-	if row2 == nil {
+	if row2.Eof() {
 		return row1
 	}
 	dbg.Assert(func() bool { return EqualRows(hdr, row1, hdr, row2, u.allCols, th, u.st) })
@@ -699,8 +699,8 @@ func (u *Union) Lookup(th *Thread, sels Sels) Row {
 
 func (u *Union) Simple(th *Thread) []Row {
 	// rows1 + rows2 not in rows1
-	empty1 := make(Row, len(u.source1.Header().Fields))
-	empty2 := make(Row, len(u.source2.Header().Fields))
+	empty1 := NilsRow(len(u.source1.Header().Fields))
+	empty2 := NilsRow(len(u.source2.Header().Fields))
 	rows1 := u.source1.Simple(th)
 	rows2 := u.source2.Simple(th)
 	rows := rows1

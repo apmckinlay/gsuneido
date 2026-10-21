@@ -48,7 +48,7 @@ func tablesTool(ctx context.Context, prefix string) (output tablesOutput, err er
 
 	q := tran.Query(tablesQuery(prefix), nil)
 	hdr := q.Header()
-	for row, _, _ := q.Get(th, core.Next); row != nil; row, _, _ = q.Get(th, core.Next) {
+	for row, _, _ := q.Get(th, core.Next); !row.Eof(); row, _, _ = q.Get(th, core.Next) {
 		if len(output.Tables) >= queryLimit {
 			output.HasMore = true
 			break

@@ -7,24 +7,76 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"unsafe"
 
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/multi"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // Row is the result of database queries.
-// It is a list of Record so that operations e.g. join
-// can avoid building new records.
-type Row []Record
+// It holds record pointers so that operations e.g. join
+// can avoid building new records. Nil pointers represent missing records.
+type Row struct {
+	multi.Ptrs[byte]
+}
+
+// Eof reports whether row is the end-of-query sentinel.
+func (row Row) Eof() bool {
+	return row.Len() == 0
+}
+
+func NewRow(rec Record) Row {
+	var p *byte
+	if rec != "" {
+		p = unsafe.StringData(string(rec))
+	}
+	return Row{multi.New(p)}
+}
+
+// Get returns a record without copying or allocating.
+func (row Row) Get(i int) Record {
+	p := row.Ptrs.Get(i)
+	if p == nil {
+		return ""
+	}
+	return Record(unsafe.String(p, RecLenPtr(p)))
+}
+
+func (row Row) With(rec Record) Row {
+	var p *byte
+	if rec != "" {
+		p = unsafe.StringData(string(rec))
+	}
+	return Row{multi.With(row.Ptrs, p)}
+}
 
 func JoinRows(row1, row2 Row) Row {
-	return slc.With(row1, row2...)
+	return Row{multi.Join(row1.Ptrs, row2.Ptrs)}
+}
+
+// NilsRow returns a Row of n nil pointers
+func NilsRow(n int) Row {
+	return Row{multi.Nils[byte](n)}
+}
+
+func (row Row) String() string {
+	var sb strings.Builder
+	sb.WriteByte('[')
+	for i := range row.Len() {
+		if i > 0 {
+			sb.WriteByte(' ')
+		}
+		sb.WriteString(row.Get(i).String())
+	}
+	sb.WriteByte(']')
+	return sb.String()
 }
 
 // GetVal is used by query summarize and expr.
@@ -157,29 +209,35 @@ func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	if row[at.Reci] != "" { // not empty side of union
-		return row[at.Reci].GetRaw(int(at.Fldi)), true
+	if rec := row.Get(int(at.Reci)); rec != "" { // not empty side of union
+		return rec.GetRaw(int(at.Fldi)), true
 	}
 	// handle nil records from Union
-	n := min(len(row), len(hdr.Fields))
+	n := min(row.Len(), len(hdr.Fields))
 	for reci := int(at.Reci + 1); reci < n; reci++ {
-		if row[reci] != "" {
+		if rec := row.Get(reci); rec != "" {
 			if fldi := slices.Index(hdr.Fields[reci], fld); fldi >= 0 {
-				return row[reci].GetRaw(fldi), true
+				return rec.GetRaw(fldi), true
 			}
 		}
 	}
 	return "", false
 }
 
-// SameAs returns true if the component records have equal contents.
+// EqualRecs returns true if the component records have equal contents.
 // WARNING: this is not general equality, for that see EqualRows.
-func (row Row) SameAs(row2 Row) bool {
-	if len(row) != len(row2) {
+func (row Row) EqualRecs(row2 Row) bool {
+	if row == row2 {
+		return true
+	}
+	if row.Len() != row2.Len() {
 		return false
 	}
-	for i := range row {
-		if row[i] != row2[i] {
+	for i := range row.Len() {
+		if row.Ptrs.Get(i) == row2.Ptrs.Get(i) { // compare pointers
+			continue
+		}
+		if row.Get(i) != row2.Get(i) { // compare Record's
 			return false
 		}
 	}
@@ -374,7 +432,7 @@ func (hdr *Header) Physical() []string {
 
 // RowStr is used for debugging. It includes "" values.
 func RowStr(hdr *Header, row Row) string {
-	if row == nil {
+	if row.Eof() {
 		return "Row(nil)"
 	}
 	cols := slices.Clone(hdr.Columns)

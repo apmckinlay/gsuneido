@@ -43,7 +43,7 @@ type joinBase struct {
 	prevFixed1  Fixed
 	prevFixed2  Fixed
 	row1        Row
-	row2        Row // nil when we need a new row1
+	row2        Row // Eof when we need a new row1
 	lookupRow   Row
 	joinType    joinType
 	optimized   bool
@@ -432,24 +432,24 @@ func (jb *joinBase) Rewind() {
 	jb.rewind()
 }
 func (jb *joinBase) rewind() {
-	jb.row1 = nil
-	jb.row2 = nil
-	jb.lookupRow = nil
+	jb.row1 = Row{}
+	jb.row2 = Row{}
+	jb.lookupRow = Row{}
 }
 
 func (jn *Join) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { jn.tget += tsc.Read() - t }(tsc.Read())
 	for {
-		if jn.row2 == nil && !jn.nextRow1(th, dir) {
-			return nil
+		if jn.row2.Eof() && !jn.nextRow1(th, dir) {
+			return Row{}
 		}
 		if jn.joinType.toOne() {
 			jn.row2 = jn.lookupRow
-			jn.lookupRow = nil
+			jn.lookupRow = Row{}
 		} else {
 			jn.row2 = jn.source2.Get(th, dir)
 		}
-		if jn.row2 != nil {
+		if !jn.row2.Eof() {
 			dbg.Assert(func() bool { return jn.equalBy(th, jn.st, jn.row1, jn.row2) })
 			jn.ngets++
 			return JoinRows(jn.row1, jn.row2)
@@ -459,7 +459,7 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 
 func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	jn.row1 = jn.source1.Get(th, dir)
-	if jn.row1 == nil {
+	if jn.row1.Eof() {
 		return false
 	}
 	// fmt.Println("Join row1", jn.row1)
@@ -518,8 +518,8 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 	jn.nlooks++
 	sel1, sel2 := jn.splitSelect(sels)
 	row1 := jn.source1.Lookup(th, sel1)
-	if row1 == nil {
-		return nil
+	if row1.Eof() {
+		return Row{}
 	}
 	var row2 Row
 	sel2 = append(sel2, jn.projectRow1(th, row1)...)
@@ -532,8 +532,8 @@ func (jn *Join) Lookup(th *Thread, sels Sels) Row {
 		defer jn.Select(nil)
 		row2 = getNext1(jn.source2, th)
 	}
-	if row2 == nil {
-		return nil
+	if row2.Eof() {
+		return Row{}
 	}
 	dbg.Assert(func() bool { return jn.equalBy(th, jn.st, row1, row2) })
 	return JoinRows(row1, row2)
@@ -683,7 +683,7 @@ func (lj *LeftJoin) setApproach(req Require, approach any, tran QueryTran) {
 	}
 	lj.source1 = SetApproach(lj.source1, ap.req1, tran)
 	lj.source2 = SetApproach(lj.source2, ap.req2, tran)
-	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
+	lj.empty2 = NilsRow(len(lj.source2.Header().Fields))
 	lj.header = lj.getHeader()
 }
 
@@ -730,10 +730,10 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 	defer func(t uint64) { lj.tget += tsc.Read() - t }(tsc.Read())
 	row1out := true
 	for {
-		if lj.row2 == nil {
+		if lj.row2.Eof() {
 			lj.row1 = lj.source1.Get(th, dir)
-			if lj.row1 == nil {
-				return nil
+			if lj.row1.Eof() {
+				return Row{}
 			}
 			sels := lj.projectRow1(th, lj.row1)
 			if lj.joinType == many_to_one {
@@ -747,15 +747,15 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) (r Row) {
 		}
 		if lj.joinType.toOne() {
 			lj.row2 = lj.lookupRow
-			lj.lookupRow = nil
+			lj.lookupRow = Row{}
 		} else {
 			lj.row2 = lj.source2.Get(th, dir)
 		}
 		// fmt.Println(lj.strategy(), "row2", lj.row2)
-		if !row1out || lj.row2 != nil {
+		if !row1out || !lj.row2.Eof() {
 			row1out = true // regardless of filter
 			row2 := lj.row2
-			if row2 == nil {
+			if row2.Eof() {
 				row2 = lj.empty2
 			} else {
 				dbg.Assert(func() bool { return lj.equalBy(th, lj.st, lj.row1, row2) })
@@ -793,8 +793,8 @@ func (lj *LeftJoin) Lookup(th *Thread, sels Sels) Row {
 	sel1, sel2 := lj.splitSelect(sels)
 	lj.sel2 = sel2
 	row1 := lj.source1.Lookup(th, sel1)
-	if row1 == nil {
-		return nil
+	if row1.Eof() {
+		return Row{}
 	}
 	var row2 Row
 	sel := lj.projectRow1(th, row1)
@@ -806,19 +806,19 @@ func (lj *LeftJoin) Lookup(th *Thread, sels Sels) Row {
 		lj.source2.Select(sel)
 		row2 = lj.source2.Get(th, Next)
 	}
-	if row2 == nil {
+	if row2.Eof() {
 		row2 = lj.empty2
 	} else {
 		dbg.Assert(func() bool { return lj.equalBy(th, lj.st, row1, row2) })
 	}
 	if !lj.filter2(row2) {
-		return nil
+		return Row{}
 	}
 	return JoinRows(row1, row2)
 }
 
 func (lj *LeftJoin) Simple(th *Thread) []Row {
-	empty2 := make(Row, len(lj.source2.Header().Fields))
+	empty2 := NilsRow(len(lj.source2.Header().Fields))
 	rows1 := lj.source1.Simple(th)
 	rows2 := lj.source2.Simple(th)
 	rows := make([]Row, 0, len(rows1))

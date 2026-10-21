@@ -23,7 +23,7 @@ func TestSuRecord(t *testing.T) {
 
 func TestSuRecordFromRowOffset(t *testing.T) {
 	var rb RecordBuilder
-	row := Row{rb.Build()}
+	row := NewRow(rb.Build())
 	hdr := SimpleHeader(nil)
 	test := func(table string, off, expected uint64) {
 		t.Helper()
@@ -41,7 +41,7 @@ func TestSuRecord_ReadonlyUnpack(t *testing.T) {
 	b.Add(SuInt16(123))
 	b.Add(SuStr("foobar"))
 	rec := b.Build()
-	row := Row{rec}
+	row := NewRow(rec)
 
 	hdr := NewHeader([][]string{{"num", "str"}}, []string{"num", "str"})
 	surec := SuRecordFromRow(row, hdr, "", nil, 0)
@@ -65,7 +65,7 @@ func TestSuRecord_Concurrency(t *testing.T) {
 	rb := RecordBuilder{}
 	rb.Add(randCol())
 	rb.Add(randCol())
-	row := Row{rb.Build()}
+	row := NewRow(rb.Build())
 	getrec, setrec := func() (func() *SuRecord, func(*SuRecord)) {
 		rec := NewSuRecord()
 		rec.SetConcurrent()

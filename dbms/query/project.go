@@ -531,14 +531,14 @@ func (p *Project) Rewind() {
 
 func (p *Project) rewind() {
 	p.state = iface.Rewound
-	p.curRow = nil
-	p.prevRow = nil
+	p.curRow = Row{}
+	p.prevRow = Row{}
 }
 
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { p.tget += tsc.Read() - t }(tsc.Read())
 	if p.state.Eof() {
-		return nil
+		return Row{}
 	}
 	var row Row
 	switch p.strat {
@@ -551,7 +551,7 @@ func (p *Project) Get(th *Thread, dir Dir) Row {
 	default:
 		panic(assert.ShouldNotReachHere())
 	}
-	if row != nil {
+	if !row.Eof() {
 		p.state = iface.Within
 		p.ngets++
 	} else {
@@ -567,12 +567,12 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// i.e. skip over rows the same as previous output
 		for {
 			row := p.source.Get(th, dir)
-			if row == nil {
+			if row.Eof() {
 				p.prevRow = p.curRow
-				p.curRow = nil
-				return nil
+				p.curRow = Row{}
+				return Row{}
 			}
-			if p.state.Rewound() || p.curRow == nil ||
+			if p.state.Rewound() || p.curRow.Eof() ||
 				!p.header.EqualRows(row, p.curRow, th, p.st) {
 				p.prevRow = p.curRow
 				p.curRow = row
@@ -584,18 +584,18 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// i.e. output when next record is different
 		// (to get the same records as NEXT)
 
-		if p.state.Rewound() || (p.prevRow == nil && p.prevDir == Next) {
+		if p.state.Rewound() || (p.prevRow.Eof() && p.prevDir == Next) {
 			p.prevRow = p.source.Get(th, dir)
 		}
 		p.prevDir = dir
 		for {
-			if p.prevRow == nil {
-				p.curRow = nil
-				return nil
+			if p.prevRow.Eof() {
+				p.curRow = Row{}
+				return Row{}
 			}
 			row := p.prevRow
 			p.prevRow = p.source.Get(th, dir)
-			if p.prevRow == nil {
+			if p.prevRow.Eof() {
 				// source reached the front; rewind so Next direction works
 				p.source.Rewind()
 				p.curRow = row
@@ -637,18 +637,18 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 	}
 	for {
 		row := p.source.Get(th, dir)
-		if row == nil {
+		if row.Eof() {
 			break
 		}
 		oldRow, existed := p.dedupRow(th, row)
-		if !existed || row.SameAs(oldRow) {
+		if !existed || row.EqualRecs(oldRow) {
 			return row
 		}
 	}
 	if dir == Next {
 		p.indexed = true
 	}
-	return nil
+	return Row{}
 }
 
 func hashCols(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) uint64 {
@@ -669,7 +669,7 @@ func equalCols(x, y Row, hdr *Header, cols []string, th *Thread, st *SuTran) boo
 func (p *Project) buildDedup(th *Thread) {
 	for {
 		row := p.source.Get(th, Next)
-		if row == nil {
+		if row.Eof() {
 			break
 		}
 		p.dedupRow(th, row)

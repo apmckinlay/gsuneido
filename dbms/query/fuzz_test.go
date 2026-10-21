@@ -1375,14 +1375,14 @@ func (fc *fuzzCtx) testRandomGet(qh *QueryHash, sels Sels) {
 		expectedRow := data.get(dir)
 		row := fc.q.Get(fc.th, dir)
 
-		if expectedRow == nil && row != nil {
+		if expectedRow.Eof() && !row.Eof() {
 			fc.t.Fatalf("random walk step %d: %c from %v: expected nil, got row\nhistory %s",
 				i, dir, pos, history)
-		} else if expectedRow != nil && row == nil {
+		} else if !expectedRow.Eof() && row.Eof() {
 			fc.t.Log(fc.q)
 			fc.t.Fatalf("random walk step %d: %c from %v: expected row, got nil\nhistory %s",
 				i, dir, pos, history)
-		} else if expectedRow != nil && row != nil {
+		} else if !expectedRow.Eof() && !row.Eof() {
 			if !fc.hdr.EqualRows(row, expectedRow, nil, nil) {
 				fc.t.Fatalf("random walk step %d: %c from %v: row mismatch\nhistory %s",
 					i, dir, pos, history)
@@ -1403,7 +1403,7 @@ func getAllRows(q Query, dir Dir, th *Thread) []Row {
 	var rows []Row
 	for {
 		row := q.Get(th, dir)
-		if row == nil {
+		if row.Eof() {
 			break
 		}
 		rows = append(rows, row)
@@ -1420,11 +1420,11 @@ func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 	check := func(name string, row, expected Row) {
 		t := fc.t
 		t.Helper()
-		if expected == nil && row != nil {
+		if expected.Eof() && !row.Eof() {
 			t.Fatalf("%s: expected nil, got row", name)
-		} else if expected != nil && row == nil {
+		} else if !expected.Eof() && row.Eof() {
 			t.Fatalf("%s: expected row, got nil", name)
-		} else if expected != nil && row != nil {
+		} else if !expected.Eof() && !row.Eof() {
 			if !fc.hdr.EqualRows(row, expected, nil, nil) {
 				t.Fatalf("%s: row mismatch", name)
 			}
@@ -1444,10 +1444,10 @@ func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 	if n > 0 {
 		check("Next,Prev: N", row, nextRows[0])
 	} else {
-		check("Next,Prev: N (empty)", row, nil)
+		check("Next,Prev: N (empty)", row, Row{})
 	}
 	row = fc.q.Get(fc.th, Prev) // should be nil - nothing before first
-	check("Next,Prev: P", row, nil)
+	check("Next,Prev: P", row, Row{})
 
 	// Pattern 2: Rewind, Prev, Next - Prev from rewind goes to last, then Next should be nil
 	if n > 0 {
@@ -1455,7 +1455,7 @@ func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 		row = fc.q.Get(fc.th, Prev) // last row
 		check("Prev,Next: P", row, nextRows[n-1])
 		row = fc.q.Get(fc.th, Next) // should be nil - nothing after last
-		check("Prev,Next: N", row, nil)
+		check("Prev,Next: N", row, Row{})
 	}
 	// Pattern 3: Rewind, Prev, Prev, Next, Next
 	if n >= 2 {
@@ -1467,7 +1467,7 @@ func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 		row = fc.q.Get(fc.th, Next) // back to last (n-1)
 		check("PPNN: N1", row, nextRows[n-1])
 		row = fc.q.Get(fc.th, Next) // should be nil
-		check("PPNN: N2", row, nil)
+		check("PPNN: N2", row, Row{})
 	}
 
 	// Pattern 4: Rewind, Next, Next, Prev, Prev
@@ -1480,7 +1480,7 @@ func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 		row = fc.q.Get(fc.th, Prev) // back to first (0)
 		check("NNPP: P1", row, nextRows[0])
 		row = fc.q.Get(fc.th, Prev) // should be nil
-		check("NNPP: P2", row, nil)
+		check("NNPP: P2", row, Row{})
 	}
 
 	// Pattern 5: Next to end, past end (nil), then Prev
@@ -1492,9 +1492,9 @@ func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 			check("ToEnd: N"+strconv.Itoa(i), row, nextRows[i])
 		}
 		row = fc.q.Get(fc.th, Next) // past end
-		check("ToEnd: N-past", row, nil)
+		check("ToEnd: N-past", row, Row{})
 		row = fc.q.Get(fc.th, Prev) // plain stick: should be nil
-		check("ToEnd: P", row, nil)
+		check("ToEnd: P", row, Row{})
 	}
 
 	// Pattern 6: Prev to beginning, past beginning (nil), then Next
@@ -1506,9 +1506,9 @@ func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 			check("ToBegin: P"+strconv.Itoa(n-1-i), row, nextRows[i])
 		}
 		row = fc.q.Get(fc.th, Prev) // past beginning
-		check("ToBegin: P-past", row, nil)
+		check("ToBegin: P-past", row, Row{})
 		row = fc.q.Get(fc.th, Next) // plain stick: should be nil
-		check("ToBegin: N", row, nil)
+		check("ToBegin: N", row, Row{})
 	}
 
 	// Pattern 7: Rewind, Next, Prev, Next - plain stick at eof after Prev
@@ -1517,9 +1517,9 @@ func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 		row = fc.q.Get(fc.th, Next) // first
 		check("NPN: N1", row, nextRows[0])
 		row = fc.q.Get(fc.th, Prev) // nil
-		check("NPN: P", row, nil)
+		check("NPN: P", row, Row{})
 		row = fc.q.Get(fc.th, Next) // plain stick: nil
-		check("NPN: N2", row, nil)
+		check("NPN: N2", row, Row{})
 	}
 
 	// Pattern 8: Rewind, Prev, Next, Prev - plain stick at eof after Next
@@ -1528,9 +1528,9 @@ func (fc *fuzzCtx) testCursorPatterns(nextRows []Row) {
 		row = fc.q.Get(fc.th, Prev) // last
 		check("PNP: P1", row, nextRows[n-1])
 		row = fc.q.Get(fc.th, Next) // nil
-		check("PNP: N", row, nil)
+		check("PNP: N", row, Row{})
 		row = fc.q.Get(fc.th, Prev) // plain stick: nil
-		check("PNP: P2", row, nil)
+		check("PNP: P2", row, Row{})
 	}
 
 	// Reset for subsequent tests
@@ -1621,14 +1621,14 @@ func (fc *fuzzCtx) testNonExistentSelect(allRows []Row, hdr *Header, index []str
 	for range 10 {
 		// If there are no rows, use a dummy row sized to match hdr.Fields.
 		// This avoids panics when hdr.Fields references derived records (e.g. Extend).
-		srcRow := make(Row, len(hdr.Fields))
+		srcRow := NilsRow(len(hdr.Fields))
 		if len(allRows) > 0 {
 			srcRow = random(allRows, fc.rnd)
 		}
 		sels := fc.indexSelectCriteria(srcRow, hdr, index)
 		sels[fc.rnd.IntN(len(sels))].val = "nonexistent"
 		fc.q.Select(sels)
-		if fc.q.Get(fc.th, Next) != nil {
+		if !fc.q.Get(fc.th, Next).Eof() {
 			fc.t.Fatal("non-existent select returned a row")
 		}
 		fc.q.Select(nil) // clear select
@@ -1651,7 +1651,7 @@ func (fc *fuzzCtx) testRandomLookups(index []string, allRows []Row) {
 		sels := makeSels(hdr, srcRow, lookupCols, fc.th, nil)
 		if fc.rnd.IntN(2) == 0 {
 			result := lookup(fc.q, sels, fc.th, nil)
-			if result == nil {
+			if result.Eof() {
 				PrintTableInfo(fc.q)
 				for k, v := range fc.ft.rules {
 					fmt.Println(k, "=", v)
@@ -1672,7 +1672,7 @@ func (fc *fuzzCtx) testRandomLookups(index []string, allRows []Row) {
 				sels[r].val = ""
 			}
 			result := lookup(fc.q, sels, fc.th, nil)
-			if result != nil {
+			if !result.Eof() {
 				if exists(hdr, allRows, fc.th, sels) {
 					continue
 				}
@@ -1684,7 +1684,7 @@ func (fc *fuzzCtx) testRandomLookups(index []string, allRows []Row) {
 
 func exists(hdr *Header, allRows []Row, th *Thread, sels Sels) bool {
 	for _, row := range allRows {
-		if lookupFilter(hdr, row, sels, th, nil) != nil {
+		if !lookupFilter(hdr, row, sels, th, nil).Eof() {
 			return true
 		}
 	}

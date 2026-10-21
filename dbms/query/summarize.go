@@ -425,13 +425,13 @@ func (su *Summarize) Rewind() {
 func (su *Summarize) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { su.tget += tsc.Read() - t }(tsc.Read())
 	if su.state.Eof() {
-		return nil
+		return Row{}
 	}
 	for {
 		row := su.get(th, su, dir)
-		if row == nil {
+		if row.Eof() {
 			su.state = iface.Eof
-			return nil
+			return Row{}
 		}
 		su.state = iface.Within
 		if su.filter(row, th) {
@@ -443,21 +443,21 @@ func (su *Summarize) Get(th *Thread, dir Dir) Row {
 
 func getTbl(_ *Thread, su *Summarize, dir Dir) Row {
 	if su.state.Within() {
-		return nil
+		return Row{}
 	}
 	su.state = iface.Within
 	nr, _ := su.source.Nrows()
 	if nr == 0 {
-		return nil
+		return Row{}
 	}
 	var rb RecordBuilder
 	rb.Add(IntVal(nr))
-	return Row{rb.Build()}
+	return NewRow(rb.Build())
 }
 
 func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	if su.state.Within() {
-		return nil
+		return Row{}
 	}
 	su.state = iface.Within
 	dir := Prev // max
@@ -466,16 +466,16 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	}
 	su.source.Rewind()
 	row := su.source.Get(th, dir)
-	if row == nil {
-		return nil
+	if row.Eof() {
+		return Row{}
 	}
 	var rb RecordBuilder
 	rb.AddRaw(row.GetRawVal(su.source.Header(), su.ons[0], th, su.st))
 	rec := rb.Build()
 	if su.wholeRow {
-		return append(row, rec)
+		return row.With(rec)
 	}
-	return Row{rec}
+	return NewRow(rec)
 }
 
 func (su *Summarize) Lookup(th *Thread, sels Sels) Row {
@@ -490,8 +490,8 @@ func (su *Summarize) Lookup(th *Thread, sels Sels) Row {
 			}
 		}
 		srcRow := su.source.Lookup(th, bySels)
-		if srcRow == nil {
-			return nil
+		if srcRow.Eof() {
+			return Row{}
 		}
 		sums := su.newSums()
 		su.addToSums(sums, srcRow, th, su.st)
@@ -531,7 +531,7 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 		t.mapPos--
 	}
 	if t.mapPos < 0 || len(t.mapList) <= t.mapPos {
-		return nil
+		return Row{}
 	}
 	row := t.mapList[t.mapPos].row
 	rr := NewRowRec(row, su.source.Header(), th, su.st)
@@ -544,7 +544,7 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 		val, _ := ops[i].result()
 		rb.Add(val.(Packable))
 	}
-	return Row{rb.Build()}
+	return NewRow(rb.Build())
 }
 
 func (su *Summarize) buildMap() []mapPair {
@@ -558,7 +558,7 @@ func (su *Summarize) buildMap() []mapPair {
 	warned := false
 	for {
 		row := su.source.Get(su.th, Next)
-		if row == nil {
+		if row.Eof() {
 			break
 		}
 		rh := rowHash{hash: hashCols(row, hdr, su.by, su.th, su.st), row: row}
@@ -615,25 +615,25 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 		su.state = iface.Within // clear before source.Get (filter loop might call getSeq again)
 		t.sums = su.newSums()
 		t.curDir = dir
-		t.curRow = nil
+		t.curRow = Row{}
 		t.nextRow = su.source.Get(th, dir)
 	}
 
 	// if direction changes, have to skip over previous result
 	if dir != t.curDir {
-		returnedNil := t.curRow == nil // did previous call return nil?
-		if returnedNil {
-			// previous call returned nil, just get first row in new direction
+		returnedEmpty := t.curRow.Eof() // did previous call return an empty row?
+		if returnedEmpty {
+			// previous call returned an empty row, just get first row in new direction
 			su.source.Rewind()
 			t.nextRow = su.source.Get(th, dir)
 		} else {
 			// skip over previous group
-			if t.nextRow == nil {
+			if t.nextRow.Eof() {
 				su.source.Rewind()
 			}
 			for {
 				t.nextRow = su.source.Get(th, dir)
-				if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
+				if t.nextRow.Eof() || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
 					break
 				}
 			}
@@ -641,9 +641,9 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 		t.curDir = dir
 	}
 
-	if t.nextRow == nil {
-		t.curRow = nil // mark that we're returning nil
-		return nil
+	if t.nextRow.Eof() {
+		t.curRow = Row{} // mark that we're returning an empty row
+		return Row{}
 	}
 	t.curRow = t.nextRow
 	for i := range t.sums {
@@ -652,7 +652,7 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 	for {
 		su.addToSums(t.sums, t.nextRow, th, su.st)
 		t.nextRow = su.source.Get(th, dir)
-		if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
+		if t.nextRow.Eof() || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
 			break
 		}
 	}
@@ -707,10 +707,10 @@ func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 		val, _ := sum.result()
 		rb.Add(val.(Packable))
 	}
-	row := Row{rb.Build()}
+	row := NewRow(rb.Build())
 	if su.wholeRow {
 		_, wholeRow := sums[0].result()
-		row = append(wholeRow, row[0])
+		row = wholeRow.With(row.Get(0))
 	}
 	return row
 }
@@ -811,7 +811,7 @@ func (sum *sumCount) add(_ string, _ Value, _ Row) {
 	sum.count++
 }
 func (sum *sumCount) result() (Value, Row) {
-	return IntVal(sum.count), nil
+	return IntVal(sum.count), Row{}
 }
 func (sum *sumCount) reset() {
 	sum.count = 0
@@ -826,7 +826,7 @@ func (sum *sumTotal) add(_ string, val Value, _ Row) {
 	sum.total = OpAdd(sum.total, val)
 }
 func (sum *sumTotal) result() (Value, Row) {
-	return sum.total, nil
+	return sum.total, Row{}
 }
 func (sum *sumTotal) reset() {
 	sum.total = Zero
@@ -843,7 +843,7 @@ func (sum *sumAverage) add(_ string, val Value, _ Row) {
 	sum.total = OpAdd(sum.total, val)
 }
 func (sum *sumAverage) result() (Value, Row) {
-	return OpDiv(sum.total, IntVal(sum.count)), nil
+	return OpDiv(sum.total, IntVal(sum.count)), Row{}
 }
 func (sum *sumAverage) reset() {
 	sum.count = 0
@@ -856,7 +856,7 @@ type sumMin struct {
 }
 
 func (sum *sumMin) add(raw string, _ Value, row Row) {
-	if sum.row == nil || raw < sum.raw {
+	if sum.row.Eof() || raw < sum.raw {
 		sum.raw, sum.row = raw, row
 	}
 }
@@ -865,7 +865,7 @@ func (sum *sumMin) result() (Value, Row) {
 }
 func (sum *sumMin) reset() {
 	sum.raw = ""
-	sum.row = nil
+	sum.row = Row{}
 }
 
 type sumMax struct {
@@ -874,7 +874,7 @@ type sumMax struct {
 }
 
 func (sum *sumMax) add(raw string, _ Value, row Row) {
-	if sum.row == nil || raw > sum.raw {
+	if sum.row.Eof() || raw > sum.raw {
 		sum.raw, sum.row = raw, row
 	}
 }
@@ -883,7 +883,7 @@ func (sum *sumMax) result() (Value, Row) {
 }
 func (sum *sumMax) reset() {
 	sum.raw = ""
-	sum.row = nil
+	sum.row = Row{}
 }
 
 type sumList map[string]struct{}
@@ -907,7 +907,7 @@ func (sum sumList) result() (Value, Row) {
 		sort.Slice(list,
 			func(i, j int) bool { return list[i].Compare(list[j]) < 0 })
 	}
-	return NewSuObject(list), nil
+	return NewSuObject(list), Row{}
 }
 func (sum sumList) reset() {
 	for k := range sum {

@@ -99,7 +99,7 @@ func readCodeTool(ctx context.Context, library, name string, startLine int, numL
 	q := tran.Query(query, nil)
 	hdr := q.Header()
 	row, _, _ := q.Get(th, core.Next)
-	if row == nil {
+	if row.Eof() {
 		extra := ""
 		if core.Global.IsBuiltin(name) {
 			extra = " (it is built-in)"

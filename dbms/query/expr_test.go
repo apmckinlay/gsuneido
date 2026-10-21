@@ -86,7 +86,7 @@ func mkrow() (Row, *Header) {
 	rb.Add(SuStr("foo")) // s
 	rb.Add(SuStr("bar")) // t
 	rec := rb.Build()
-	row := Row{rec}
+	row := NewRow(rec)
 	hdr := SimpleHeader([]string{"x", "y", "s", "t"})
 	return row, hdr
 }

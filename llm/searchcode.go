@@ -105,7 +105,7 @@ func searchCode(ctx context.Context, library, nameRx, codeRx string, caseSensiti
 		clear(folderCache)
 		q := tran.Query(lib+" "+nameQuery, nil)
 		hdr := q.Header()
-		for row, _, _ := q.Get(th, core.Next); row != nil; row, _, _ = q.Get(th, core.Next) {
+		for row, _, _ := q.Get(th, core.Next); !row.Eof(); row, _, _ = q.Get(th, core.Next) {
 			if len(matches) >= searchLimit {
 				return searchCodeOutput{Matches: matches, HasMore: true}, nil
 			}
@@ -284,7 +284,7 @@ func fetchFolderInfo(th *core.Thread, tran core.ITran, st *core.SuTran, library 
 	folderArgs := core.SuObjectOf(core.StrVal(library))
 	folderArgs.Set(core.StrVal("num"), core.IntVal(num))
 	folder, fhdr, _, _ := tran.Get(th, folderArgs, core.Only)
-	if folder == nil {
+	if folder.Eof() {
 		return folderInfo{}, fmt.Errorf("folder not found: %d", num)
 	}
 	nameVal := folder.GetVal(fhdr, "name", th, st)

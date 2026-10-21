@@ -32,7 +32,7 @@ func QueryLast(th *Thread, args []Value) Value {
 
 func queryOne(th *Thread, args Value, dir Dir) Value {
 	row, hdr, table, off := th.Dbms().Get(th, args, dir)
-	if row == nil {
+	if row.Eof() {
 		return False
 	}
 	return SuRecordFromRow(row, hdr, table, nil, off) // no transaction
@@ -42,7 +42,7 @@ var _ = builtin(QueryEmptyQ, "(@args) :boolean")
 
 func QueryEmptyQ(th *Thread, args []Value) Value {
 	row, _, _, _ := th.Dbms().Get(th, args[0], Any)
-	return SuBool(row == nil)
+	return SuBool(row.Eof())
 }
 
 // extractQuery does queryWhere then Args and returns the query and the args.

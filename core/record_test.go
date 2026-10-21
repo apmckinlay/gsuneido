@@ -62,6 +62,22 @@ func TestLength(t *testing.T) {
 	assert(tblength(1, 0x10000)).Is(0x1000a)
 }
 
+func TestRecLenPtr(t *testing.T) {
+	assert := assert.T(t).This
+	test := func(header []byte, expected int) {
+		assert(RecLenPtr(&header[0])).Is(expected)
+		assert(RecLen(header)).Is(expected)
+	}
+	test([]byte{0}, 1)
+	test([]byte{type8 << 6, 1, 0xff}, 0xff)
+	test([]byte{type8<<6 | 0x3f, 0xff, 0xff}, 0xff)
+	test([]byte{type16 << 6, 1, 0x12, 0x34}, 0x1234)
+	test([]byte{type32 << 6, 1, 0x12, 0x34, 0x56, 0x78}, 0x12345678)
+	test([]byte{type32 << 6, 1, 0x7f, 0xff, 0xff, 0xff}, 0x7fffffff)
+	invalid := byte(1)
+	assert(func() { RecLenPtr(&invalid) }).Panics("invalid record type")
+}
+
 func BenchmarkRecordBuilder(b *testing.B) {
 	for b.Loop() {
 		b := RecordBuilder{}

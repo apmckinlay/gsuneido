@@ -177,7 +177,7 @@ func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { ts.tget += tsc.Read() - t }(tsc.Read())
 	ts.ensure()
 	if ts.state.Eof() {
-		return nil
+		return Row{}
 	}
 	if dir == Next {
 		if ts.state.Rewound() {
@@ -192,7 +192,7 @@ func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 	}
 	if ts.i < 0 || len(ts.info) <= ts.i {
 		ts.state = iface.Eof
-		return nil
+		return Row{}
 	}
 	ts.state = iface.Within
 	ts.ngets++
@@ -205,7 +205,7 @@ func (*Tables) row(info *meta.Info) Row {
 	rb.Add(IntVal(info.Nrows))
 	rb.Add(IntVal(info.Size))
 	rec := rb.Build()
-	return Row{rec}
+	return NewRow(rec)
 }
 
 func (ts *Tables) ensure() {
@@ -245,13 +245,13 @@ func (ts *Tables) Lookup(th *Thread, sels Sels) Row {
 		rb.Add(SuStr(table))
 		rec := rb.Build()
 		ts.ngets++
-		return Row{rec}
+		return NewRow(rec)
 	}
 	if ti := ts.tran.GetInfo(table); ti != nil {
 		ts.ngets++
 		return ts.row(ti)
 	}
-	return nil
+	return Row{}
 }
 
 //-------------------------------------------------------------------
@@ -323,7 +323,7 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { cs.tget += tsc.Read() - t }(tsc.Read())
 	cs.ensure()
 	if cs.state.Eof() {
-		return nil
+		return Row{}
 	}
 	var col string
 	var fld int
@@ -337,7 +337,7 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 				cs.si++
 				if cs.si >= len(cs.schema) {
 					cs.state = iface.Eof
-					return nil
+					return Row{}
 				}
 				cs.ci = 0
 			}
@@ -351,7 +351,7 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 				cs.si--
 				if cs.si < 0 {
 					cs.state = iface.Eof
-					return nil
+					return Row{}
 				}
 				cs.ci = len(cs.schema[cs.si].Columns) + len(cs.schema[cs.si].Derived) - 1
 			}
@@ -373,7 +373,7 @@ func (*Columns) row(table, col string, fld int) Row {
 	rb.Add(SuStr(col))
 	rb.Add(IntVal(fld))
 	rec := rb.Build()
-	return Row{rec}
+	return NewRow(rec)
 }
 
 func columnOrDerived(schema *meta.Schema, i int) (string, int) {
@@ -406,13 +406,13 @@ func (cs *Columns) Lookup(th *Thread, sels Sels) Row {
 		if i := slices.Index(cols, column); i >= 0 {
 			return cs.row(table, column, i)
 		}
-		return nil
+		return Row{}
 	}
 	if !cs.tran.HasTable(table) {
-		return nil
+		return Row{}
 	}
 	if column == "-" {
-		return nil // not included in the columns table
+		return Row{} // not included in the columns table
 	}
 	ts := cs.tran.GetSchema(table)
 	fld := -1
@@ -421,7 +421,7 @@ func (cs *Columns) Lookup(th *Thread, sels Sels) Row {
 	} else if !slices.ContainsFunc(ts.Derived,
 		// Derived are stored capitalized but reported uncapitalized
 		func(d string) bool { return str.UnCapitalize(d) == column }) {
-		return nil
+		return Row{}
 	}
 	return cs.row(table, column, fld)
 }
@@ -491,7 +491,7 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { is.tget += tsc.Read() - t }(tsc.Read())
 	is.ensure()
 	if is.state.Eof() {
-		return nil
+		return Row{}
 	}
 	if dir == Next {
 		if is.state.Rewound() {
@@ -502,7 +502,7 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 				is.si++
 				if is.si >= len(is.schema) {
 					is.state = iface.Eof
-					return nil
+					return Row{}
 				}
 				is.ci = 0
 			}
@@ -517,7 +517,7 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 				is.si--
 				if is.si < 0 {
 					is.state = iface.Eof
-					return nil
+					return Row{}
 				}
 				is.ci = len(is.schema[is.si].Indexes) - 1
 			}
@@ -549,7 +549,7 @@ func (is *Indexes) row(table string, idx *schema.Index) Row {
 		rb.Add(SuInt16(int(idx.Fk.Mode)))
 	}
 	rec := rb.Build()
-	return Row{rec}
+	return NewRow(rec)
 }
 
 func (is *Indexes) ensure() {
@@ -566,13 +566,13 @@ func (is *Indexes) Lookup(th *Thread, sels Sels) Row {
 	table := ToStr(Unpack(sels.MustGet("table")))
 	cols := ToStr(Unpack(sels.MustGet("columns")))
 	if !is.tran.HasTable(table) {
-		return nil // note: indexes does not include the virtual schema tables
+		return Row{} // note: indexes does not include the virtual schema tables
 	}
 	ts := is.tran.GetSchema(table)
 	if idx := ts.FindIndex(str.Split(cols, ",")); idx != nil {
 		return is.row(table, idx)
 	}
-	return nil
+	return Row{}
 }
 
 //-------------------------------------------------------------------
@@ -629,7 +629,7 @@ func (vs *Views) Rewind() {
 func (vs *Views) Get(_ *Thread, dir Dir) Row {
 	vs.ensure()
 	if vs.state.Eof() {
-		return nil
+		return Row{}
 	}
 	if dir == Next {
 		if vs.state.Rewound() {
@@ -644,7 +644,7 @@ func (vs *Views) Get(_ *Thread, dir Dir) Row {
 	}
 	if vs.i < 0 || len(vs.views) <= vs.i {
 		vs.state = iface.Eof
-		return nil
+		return Row{}
 	}
 	vs.state = iface.Within
 	return vs.row(vs.views[vs.i], vs.views[vs.i+1])
@@ -655,7 +655,7 @@ func (vs *Views) row(name, def string) Row {
 	rb.Add(SuStr(name))
 	rb.Add(SuStr(def))
 	rec := rb.Build()
-	return Row{rec}
+	return NewRow(rec)
 }
 
 func (vs *Views) ensure() {
@@ -684,7 +684,7 @@ func (vs *Views) Lookup(th *Thread, sels Sels) Row {
 	if def := vs.tran.GetView(name); def != "" {
 		return vs.row(name, def)
 	}
-	return nil
+	return Row{}
 }
 
 //-------------------------------------------------------------------
@@ -734,7 +734,7 @@ func (his *History) Rewind() {
 func (his *History) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { his.tget += tsc.Read() - t }(tsc.Read())
 	if his.state.Eof() {
-		return nil
+		return Row{}
 	}
 	if his.state.Rewound() {
 		his.off = 0
@@ -747,7 +747,7 @@ func (his *History) Get(_ *Thread, dir Dir) Row {
 	}
 	if state == nil {
 		his.state = iface.Eof
-		return nil
+		return Row{}
 	}
 	his.state = iface.Within
 	his.off = state.Off
@@ -755,7 +755,7 @@ func (his *History) Get(_ *Thread, dir Dir) Row {
 	rb.Add(SuDateFromUnixMilli(int(state.Asof)))
 	rec := rb.Build()
 	his.ngets++
-	return Row{rec}
+	return NewRow(rec)
 }
 
 func (his *History) Lookup(th *Thread, sels Sels) Row {
@@ -819,7 +819,7 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { st.tget += tsc.Read() - t }(tsc.Read())
 	st.ensure()
 	if st.state.Eof() {
-		return nil
+		return Row{}
 	}
 	var table, col string
 	var cs stats.ColStats
@@ -833,7 +833,7 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 			st.si++
 			if st.si >= len(st.tables) {
 				st.state = iface.Eof
-				return nil
+				return Row{}
 			}
 			st.ci = 0
 		}
@@ -847,7 +847,7 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 			st.si--
 			if st.si < 0 {
 				st.state = iface.Eof
-				return nil
+				return Row{}
 			}
 			st.ci = len(st.stats[st.tables[st.si]].Columns) - 1
 		}
@@ -869,7 +869,7 @@ func (*StatsTable) row(table string, col string, cs stats.ColStats) Row {
 	rb.Add(formatQuantiles(cs.Quantiles))
 	rb.Add(formatTops(cs.Tops))
 	rec := rb.Build()
-	return Row{rec}
+	return NewRow(rec)
 }
 
 func sortedCols(ts stats.TableStats) []string {
@@ -925,5 +925,5 @@ func (st *StatsTable) Lookup(th *Thread, sels Sels) Row {
 			return st.row(table, column, cs)
 		}
 	}
-	return nil
+	return Row{}
 }

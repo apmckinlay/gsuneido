@@ -142,7 +142,7 @@ func (q *SuQuery) GetRec(th *Thread, dir Dir) Value {
 		return False
 	}
 	row, table, off := q.iqc.(IQuery).Get(th, dir)
-	if row == nil {
+	if row.Eof() {
 		q.eof = dir
 		return False
 	}
@@ -213,7 +213,7 @@ func (q *SuCursor) GetRec(th *Thread, tran *SuTran, dir Dir) Value {
 		return False
 	}
 	row, table, off := q.iqc.(ICursor).Get(th, tran.itran, dir)
-	if row == nil {
+	if row.Eof() {
 		q.eof = dir
 		return False
 	}

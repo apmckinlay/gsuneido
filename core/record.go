@@ -6,6 +6,7 @@ package core
 import (
 	"fmt"
 	"strings"
+	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
@@ -82,6 +83,34 @@ func RecLen(r []byte) int {
 		j := hdrlen
 		return (int(r[j]) << 24) | (int(r[j+1]) << 16) |
 			(int(r[j+2]) << 8) | int(r[j+3])
+	default:
+		panic("invalid record type")
+	}
+}
+
+// RecLenPtr reads only the header bytes needed to determine the record length.
+// p must point to at least 1, 3, 4, or 6 readable bytes, depending on the type.
+func RecLenPtr(p *byte) int {
+	// Keep the common format small enough to inline into Row.Get.
+	if *p>>6 == type8 {
+		return int((*[hdrlen + 1]byte)(unsafe.Pointer(p))[hdrlen])
+	}
+	return recLenSlow(p)
+}
+
+//go:noinline
+func recLenSlow(p *byte) int {
+	if *p == 0 {
+		return 1
+	}
+	switch *p >> 6 {
+	case type16:
+		r := (*[hdrlen + 2]byte)(unsafe.Pointer(p))
+		return (int(r[hdrlen]) << 8) | int(r[hdrlen+1])
+	case type32:
+		r := (*[hdrlen + 4]byte)(unsafe.Pointer(p))
+		return (int(r[hdrlen]) << 24) | (int(r[hdrlen+1]) << 16) |
+			(int(r[hdrlen+2]) << 8) | int(r[hdrlen+3])
 	default:
 		panic("invalid record type")
 	}

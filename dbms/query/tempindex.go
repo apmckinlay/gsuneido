@@ -37,7 +37,6 @@ var selMin []string
 var selMax = []string{ixkey.Max}
 
 const tempindexWarn = 200_000 // ???
-const derivedWarn = 8_000_000 // ??? // derivedWarn is also used by Project
 
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	order = src.Fixed().RemoveFrom(order)
@@ -110,7 +109,7 @@ func (ti *TempIndex) Select(sels Sels) {
 func (ti *TempIndex) Lookup(th *Thread, sels Sels) Row {
 	ti.nlooks++
 	if ti.source.Fixed().Conflicts(sels) {
-		return nil
+		return Row{}
 	}
 	ti.th = th
 	defer func() { ti.th = nil }()
@@ -119,8 +118,8 @@ func (ti *TempIndex) Lookup(th *Thread, sels Sels) Row {
 	}
 	key := ti.makeKey(sels, true)
 	row := ti.iter.Seek(key)
-	if row == nil || !ti.matches(row, key) {
-		return nil
+	if row.Eof() || !ti.matches(row, key) {
+		return Row{}
 	}
 	return row
 }
@@ -157,7 +156,7 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 	ti.th = th
 	defer func() { ti.th = nil }()
 	if ti.conflict() || ti.state.Eof() {
-		return nil
+		return Row{}
 	}
 	if ti.iter == nil {
 		ti.iter = ti.makeIndex()
@@ -168,7 +167,7 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 			row = ti.iter.Seek(ti.selOrg)
 		} else { // Prev
 			row = ti.iter.Seek(ti.selEnd)
-			if row == nil {
+			if row.Eof() {
 				ti.iter.Rewind()
 			}
 			row = ti.iter.Get(dir)
@@ -177,9 +176,9 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 	} else {
 		row = ti.iter.Get(dir)
 	}
-	if row == nil || !ti.selected(row) {
+	if row.Eof() || !ti.selected(row) {
 		ti.state = iface.Eof
-		return nil
+		return Row{}
 	}
 	ti.ngets++
 	return row
@@ -238,23 +237,19 @@ type singleIter struct {
 func (ti *TempIndex) single() rowIter {
 	th2 := ti.th.NewChild() // sortlist runs in the background
 	defer th2.Close()
-	xrow := Row{""}
-	yrow := Row{""}
 	b := sortlist.NewSorting(
 		func(x Record) bool { return x == "" },
 		func(x, y Record) bool {
-			xrow[0] = x
-			yrow[0] = y
-			return ti.less(th2, xrow, yrow)
+			return ti.less(th2, NewRow(x), NewRow(y))
 		})
 	nrows := 0
 	warned := false
 	for {
 		row := ti.source.Get(ti.th, Next)
-		if row == nil {
+		if row.Eof() {
 			break
 		}
-		b.Add(row[0])
+		b.Add(row.Get(0))
 		nrows++
 		if nrows > tempindexWarn && !warned {
 			Warning("temp index large >", tempindexWarn)
@@ -266,8 +261,7 @@ func (ti *TempIndex) single() rowIter {
 	}
 	// NOTE: the closure captures ti not ti.th
 	lt := func(rec Record, key []string) bool {
-		xrow[0] = rec
-		return ti.less2(ti.th, xrow, key)
+		return ti.less2(ti.th, NewRow(rec), key)
 	}
 	return singleIter{b.Finish().Iter(lt)}
 }
@@ -325,9 +319,9 @@ func (it singleIter) Get(dir Dir) Row {
 
 func (it singleIter) get() Row {
 	if it.iter.Eof() {
-		return nil
+		return Row{}
 	}
-	return Row{it.iter.Cur()}
+	return NewRow(it.iter.Cur())
 }
 
 //-------------------------------------------------------------------
@@ -342,16 +336,15 @@ func (ti *TempIndex) multi() rowIter {
 	th2 := ti.th.NewChild() // sortlist runs in the background
 	defer th2.Close()
 	b := sortlist.NewSorting(
-		func(row Row) bool { return row == nil },
+		func(row Row) bool { return row.Eof() },
 		func(xrow, yrow Row) bool {
 			return ti.less(th2, xrow, yrow)
 		})
 	nrows := 0
 	warned := false
-	derived := 0
 	for {
 		row := ti.source.Get(ti.th, Next)
-		if row == nil {
+		if row.Eof() {
 			break
 		}
 		nrows++
@@ -363,10 +356,6 @@ func (ti *TempIndex) multi() rowIter {
 	}
 	if nrows > 2*tempindexWarn {
 		log.Println("temp index large =", nrows)
-	}
-	if derived > 2*derivedWarn {
-		log.Println("temp index derived large =",
-			derived, "average", derived/nrows)
 	}
 	// NOTE: the closure captures ti not ti.th
 	lt := func(row Row, key []string) bool {
@@ -395,7 +384,7 @@ func (it multiIter) Get(dir Dir) Row {
 
 func (it multiIter) get() Row {
 	if it.iter.Eof() {
-		return nil
+		return Row{}
 	}
 	return it.iter.Cur()
 }

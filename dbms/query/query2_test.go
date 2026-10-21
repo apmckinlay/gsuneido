@@ -54,7 +54,7 @@ func TestQuery(t *testing.T) {
 	hashes := make(map[uint64]struct{})
 	for {
 		row := q.Get(th, Next)
-		if row == nil {
+		if row.Eof() {
 			break
 		}
 		// fmt.Println(row2str(hdr, row))
@@ -70,7 +70,7 @@ func TestQuery(t *testing.T) {
 }
 
 // func row2str(hdr *Header, row Row) string {
-// 	if row == nil {
+// 	if row.Eof() {
 // 		return "nil"
 // 	}
 // 	var sb strings.Builder
@@ -146,7 +146,7 @@ func BenchmarkProject_Old(b *testing.B) {
 	q := ParseQuery("gl_transactions", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	data := make([]Row, 0, 1000)
-	for row := q.Get(nil, Next); row != nil; row = q.Get(nil, Next) {
+	for row := q.Get(nil, Next); !row.Eof(); row = q.Get(nil, Next) {
 		data = append(data, row)
 	}
 	hdr := q.Header()
@@ -174,7 +174,7 @@ func BenchmarkProject_Hmap(b *testing.B) {
 	q := ParseQuery("gl_transactions", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
 	data := make([]Row, 0, 1000)
-	for row := q.Get(nil, Next); row != nil; row = q.Get(nil, Next) {
+	for row := q.Get(nil, Next); !row.Eof(); row = q.Get(nil, Next) {
 		data = append(data, row)
 	}
 	hdr := q.Header()
@@ -229,8 +229,8 @@ func TestHeader_Union(t *testing.T) {
 	hdr := JoinHeaders(hdr1, hdr2)
 	rec1 := new(RecordBuilder).Add(IntVal(1)).Add(IntVal(2)).Add(IntVal(3)).Build()
 	rec2 := new(RecordBuilder).Add(IntVal(11)).Add(IntVal(33)).Build()
-	row1 := Row{rec1, ""}
-	row2 := Row{"", rec2}
+	row1 := NewRow(rec1).With("")
+	row2 := NewRow("").With(rec2)
 
 	th := &Thread{}
 	assert.This(row1.GetVal(hdr, "one", th, nil)).Is(IntVal(1))

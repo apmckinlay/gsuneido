@@ -154,7 +154,7 @@ func db_Top10(th *Thread, args []Value) Value {
 	sk := ss.New[string](128)
 	q := tran.Query(table, nil)
 	hdr := q.Header()
-	for row, _, _ := q.Get(th, Next); row != nil; row, _, _ = q.Get(th, Next) {
+	for row, _, _ := q.Get(th, Next); !row.Eof(); row, _, _ = q.Get(th, Next) {
 		sk.Add(row.GetRawVal(hdr, column, nil, nil))
 	}
 
@@ -184,7 +184,7 @@ func db_Distinct(th *Thread, args []Value) Value {
 		sketches[i] = hll.New()
 	}
 	q := t.Query(table, nil)
-	for row, _, _ := q.Get(th, Next); row != nil; row, _, _ = q.Get(th, Next) {
+	for row, _, _ := q.Get(th, Next); !row.Eof(); row, _, _ = q.Get(th, Next) {
 		for i, col := range cols {
 			sketches[i].Add(row.GetRawVal(hdr, col, nil, nil))
 		}

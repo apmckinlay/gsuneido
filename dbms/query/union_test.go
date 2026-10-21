@@ -42,7 +42,7 @@ func TestUnion_MergeSwitchDir(t *testing.T) {
 	}
 	hdr := q.Header()
 	a := func(row Row) int {
-		if row == nil {
+		if row.Eof() {
 			return 0
 		}
 		return ToInt(row.GetVal(hdr, "a", nil, nil))
@@ -62,7 +62,7 @@ func TestUnion_MergeSwitchDir(t *testing.T) {
 		}
 		row := get(dir)
 		assert.This(a(row)).Is(cur)
-		if row == nil {
+		if row.Eof() {
 			q.Rewind()
 		}
 	}

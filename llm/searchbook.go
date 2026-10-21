@@ -94,7 +94,7 @@ func searchBook(ctx context.Context, book, pathRx, textRx string, caseSensitive 
 	hdr := q.Header()
 
 	var matches []bookMatch
-	for row, _, _ := q.Get(th, core.Next); row != nil; row, _, _ = q.Get(th, core.Next) {
+	for row, _, _ := q.Get(th, core.Next); !row.Eof(); row, _, _ = q.Get(th, core.Next) {
 		if len(matches) >= searchLimit {
 			return searchBookOutput{Matches: matches, HasMore: true}, nil
 		}

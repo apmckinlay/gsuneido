@@ -312,9 +312,9 @@ func (tbl *Table) LookupRaw(key string) Row {
 	assert.That(tbl.schema.Indexes[tbl.iIndex].Mode != 'u' || key != "")
 	rec := tbl.tran.Lookup(tbl.name, tbl.iIndex, key)
 	if rec == "" {
-		return nil
+		return Row{}
 	}
-	return Row{rec}
+	return NewRow(rec)
 }
 
 func (tbl *Table) Output(th *Thread, rec Record) {
@@ -341,7 +341,7 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string, off uint64) bool) R
 			tbl.iter.Next(tbl.tran)
 		}
 		if tbl.iter.Eof() {
-			return nil
+			return Row{}
 		}
 		var off uint64
 		if filter != nil {
@@ -354,10 +354,10 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string, off uint64) bool) R
 			off = tbl.iter.CurOff()
 		}
 		rec := tbl.tran.GetRecord(off)
-		row := Row{rec}
+		row := NewRow(rec)
 		if tbl.singleton &&
 			!singletonFilter(tbl.header, row, tbl.sels) {
-			return nil
+			return Row{}
 		}
 		tbl.ngets++
 		return row
@@ -483,7 +483,7 @@ func (tbl *Table) Simple(*Thread) []Row {
 		}
 		off := tbl.iter.CurOff()
 		rec := tbl.tran.GetRecord(off)
-		row := Row{rec}
+		row := NewRow(rec)
 		rows = append(rows, row)
 		assert.That(len(rows) < maxSimple)
 	}

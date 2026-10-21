@@ -24,11 +24,11 @@ func TestTempIndexEmptyRecord(t *testing.T) {
 	source, _, _ := Setup(ParseQuery("tmp", tran, nil), ReadMode, tran)
 	ti := NewTempIndex(source, nil, tran)
 	th := &Thread{}
-	assert.T(t).This(ti.Get(th, Next)).Is(Row{"\x00"})
-	assert.T(t).This(ti.Get(th, Next)).Is(nil)
+	assert.T(t).That(ti.Get(th, Next).EqualRecs(NewRow("\x00")))
+	assert.T(t).That(ti.Get(th, Next).Eof())
 	ti.Rewind()
-	assert.T(t).This(ti.Get(th, Prev)).Is(Row{"\x00"})
-	assert.T(t).This(ti.Get(th, Prev)).Is(nil)
+	assert.T(t).That(ti.Get(th, Prev).EqualRecs(NewRow("\x00")))
+	assert.T(t).That(ti.Get(th, Prev).Eof())
 }
 
 // orderKind is the order in which mockSource generates rows (a, b).
@@ -58,7 +58,7 @@ func (s *mockSource) Rewind() {
 
 func (s *mockSource) Get(*Thread, Dir) Row {
 	if s.i >= s.nrows {
-		return nil
+		return Row{}
 	}
 	i := s.i
 	s.i++
@@ -78,13 +78,13 @@ func (s *mockSource) Get(*Thread, Dir) Row {
 		var rb RecordBuilder
 		rb.Add(IntVal(a))
 		rb.Add(IntVal(b))
-		return Row{rb.Build()}
+		return NewRow(rb.Build())
 	}
 	// multi: a and b are in separate records (like a join)
 	var rb1, rb2 RecordBuilder
 	rb1.Add(IntVal(a))
 	rb2.Add(IntVal(b))
-	return Row{rb1.Build(), rb2.Build()}
+	return NewRow(rb1.Build()).With(rb2.Build())
 }
 
 func newMockSource(cols []string, nrows int, kind orderKind, single bool) *mockSource {
@@ -146,7 +146,7 @@ func BenchmarkTempIndex(b *testing.B) {
 						src.Rewind()
 						ti.Rewind()
 						b.StartTimer()
-						if ti.Get(th, Next) == nil {
+						if ti.Get(th, Next).Eof() {
 							b.Fatal("no rows")
 						}
 					}
@@ -157,7 +157,7 @@ func BenchmarkTempIndex(b *testing.B) {
 					ti := NewTempIndex(src, order, tran)
 					ti.Get(th, Next) // build the sortlist up front
 					n := 1
-					for ti.Get(th, Next) != nil {
+					for !ti.Get(th, Next).Eof() {
 						n++
 					}
 					assert.This(n).Is(nrows)
@@ -165,7 +165,7 @@ func BenchmarkTempIndex(b *testing.B) {
 						b.StopTimer()
 						ti.Rewind()
 						b.StartTimer()
-						for ti.Get(th, Next) != nil {
+						for !ti.Get(th, Next).Eof() {
 						}
 					}
 				})

@@ -98,7 +98,7 @@ func (sort *Sort) Get(th *Thread, dir Dir) Row {
 		dir = dir.Reverse()
 	}
 	row := sort.source.Get(th, dir)
-	if row != nil {
+	if !row.Eof() {
 		sort.ngets++
 	}
 	return row

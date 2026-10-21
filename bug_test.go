@@ -54,7 +54,7 @@ func TestBug(t *testing.T) {
 	fmt.Println("\n--- Get result ---")
 	q.Rewind()
 	h1 := NewQueryHasher(hdr).CheckDups()
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+	for row := q.Get(th, Next); !row.Eof(); row = q.Get(th, Next) {
 		fmt.Print("row: ")
 		for _, fld := range hdr.GetFields() {
 			if fld != "-" {

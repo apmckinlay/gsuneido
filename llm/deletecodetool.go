@@ -59,7 +59,7 @@ func deleteCodeTool(ctx context.Context, library, name string) (deleteCodeOutput
 	rq := rtran.Query(query, nil)
 	hdr := rq.Header()
 	row, _, off := rq.Get(th, core.Next)
-	if row == nil {
+	if row.Eof() {
 		rtran.Complete()
 		return deleteCodeOutput{}, fmt.Errorf("code not found for: %s in %s", name, library)
 	}

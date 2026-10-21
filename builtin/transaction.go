@@ -112,7 +112,7 @@ func tran_QueryLast(th *Thread, this Value, args []Value) Value {
 
 func tranQueryOne(th *Thread, st *SuTran, args Value, dir Dir) Value {
 	row, hdr, table, off := st.GetRow(th, args, dir)
-	if row == nil {
+	if row.Eof() {
 		return False
 	}
 	return SuRecordFromRow(row, hdr, table, st, off)
@@ -122,7 +122,7 @@ var _ = method(tran_QueryEmptyQ, "(@args) :boolean")
 
 func tran_QueryEmptyQ(th *Thread, this Value, args []Value) Value {
 	row, _, _, _ := this.(*SuTran).GetRow(th, args[0], Any)
-	return SuBool(row == nil)
+	return SuBool(row.Eof())
 }
 
 var _ = method(tran_ReadCount, "() :number")

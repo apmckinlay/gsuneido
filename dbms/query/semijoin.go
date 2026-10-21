@@ -262,8 +262,8 @@ func (sj *SemiJoin) setApproach(req Require, approach any, tran QueryTran) {
 func (sj *SemiJoin) Rewind() {
 	sj.source1.Rewind()
 	sj.source2.Rewind()
-	sj.row2 = nil
-	sj.lookupRow = nil
+	sj.row2 = Row{}
+	sj.lookupRow = Row{}
 	sj.revState = iface.Rewound
 	// NOTE: sj.dedup and sj.indexed are NOT reset here - like Project,
 	// the dedup map remains valid for the underlying data across Rewind,
@@ -274,10 +274,10 @@ func (sj *SemiJoin) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { sj.tget += tsc.Read() - t }(tsc.Read())
 	if sj.reverse {
 		if sj.revState.Eof() {
-			return nil
+			return Row{}
 		}
 		row := sj.getReverse(th, dir)
-		if row != nil {
+		if !row.Eof() {
 			sj.revState = iface.Within
 		} else {
 			sj.revState = iface.Eof
@@ -286,8 +286,8 @@ func (sj *SemiJoin) Get(th *Thread, dir Dir) Row {
 	}
 	for {
 		row := sj.source1.Get(th, dir)
-		if row == nil {
-			return nil
+		if row.Eof() {
+			return Row{}
 		}
 		if sj.source2Has(th, row, dir) {
 			sj.ngets++
@@ -333,17 +333,17 @@ func (sj *SemiJoin) getReverse(th *Thread, dir Dir) Row {
 		}
 	}
 	for {
-		if sj.row2 == nil {
+		if sj.row2.Eof() {
 			row2 := sj.source2.Get(th, dir)
-			if row2 == nil {
+			if row2.Eof() {
 				if dir == Next {
 					sj.indexed = true
 				}
-				return nil
+				return Row{}
 			}
 			if needDedup {
 				oldRow2, existed := sj.dedupRow(row2)
-				if existed && !row2.SameAs(oldRow2) {
+				if existed && !row2.EqualRecs(oldRow2) {
 					continue // duplicate by values, not the canonical row2
 				}
 			}
@@ -359,16 +359,16 @@ func (sj *SemiJoin) getReverse(th *Thread, dir Dir) Row {
 		var row1 Row
 		if sj.joinType == one_to_one || sj.joinType == one_to_many {
 			row1 = sj.lookupRow
-			sj.lookupRow = nil
-			sj.row2 = nil
+			sj.lookupRow = Row{}
+			sj.row2 = Row{}
 		} else { // many_to_one, many_to_many
 			row1 = sj.source1.Get(th, dir)
-			if row1 == nil {
-				sj.row2 = nil
+			if row1.Eof() {
+				sj.row2 = Row{}
 				continue
 			}
 		}
-		if row1 != nil {
+		if !row1.Eof() {
 			sj.ngets++
 			return row1
 		}
@@ -384,7 +384,7 @@ func (sj *SemiJoin) getReverse(th *Thread, dir Dir) Row {
 func (sj *SemiJoin) buildDedup(th *Thread) {
 	for {
 		row2 := sj.source2.Get(th, Next)
-		if row2 == nil {
+		if row2.Eof() {
 			break
 		}
 		sj.dedupRow(row2)
@@ -416,12 +416,12 @@ func (sj *SemiJoin) projectRow2(th *Thread, row Row) Sels {
 func (sj *SemiJoin) source2Has(th *Thread, row Row, dir Dir) bool {
 	sels := makeSels(sj.source1.Header(), row, sj.by, th, sj.st)
 	if sj.joinType == one_to_one {
-		return lookup(sj.source2, sels, th, sj.st) != nil
+		return !lookup(sj.source2, sels, th, sj.st).Eof()
 	} else if sj.joinType == many_to_one {
-		return sj.lookupCache.Lookup(sj.source2, sels, th, sj.st) != nil
+		return !sj.lookupCache.Lookup(sj.source2, sels, th, sj.st).Eof()
 	}
 	sj.source2.Select(sels)
-	return sj.source2.Get(th, dir) != nil
+	return !sj.source2.Get(th, dir).Eof()
 }
 
 func (sj *SemiJoin) Select(sels Sels) {
@@ -465,8 +465,8 @@ func (sj *SemiJoin) Select(sels Sels) {
 func (sj *SemiJoin) Lookup(th *Thread, sels Sels) Row {
 	sj.nlooks++
 	row1 := sj.source1.Lookup(th, sels)
-	if row1 == nil || !sj.source2Has(th, row1, Next) {
-		return nil
+	if row1.Eof() || !sj.source2Has(th, row1, Next) {
+		return Row{}
 	}
 	return row1
 }

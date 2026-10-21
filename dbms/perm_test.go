@@ -40,7 +40,7 @@ func TestPermCursor(t *testing.T) {
 	perms.AddTable("tmp", "read")
 	allow := db.NewReadTran(perms)
 	row, _, _ := cur.Get(&Thread{}, &ReadTranLocal{ReadTran: allow}, Next)
-	a.This(row == nil).Is(false)
+	a.This(row.Eof()).Is(false)
 }
 
 // TestPermCursorBuild checks that the transaction a cursor is built with

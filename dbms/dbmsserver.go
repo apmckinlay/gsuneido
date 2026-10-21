@@ -570,7 +570,7 @@ func (ss *serverSession) getDir() Dir {
 const maxRec = 1024 * 1024 // 1 mb
 
 func (ss *serverSession) rowResult(tbl string, hdr *Header, sendHdr bool, row Row, off uint64) {
-	if row == nil {
+	if row.Eof() {
 		ss.PutBool(true).PutBool(false)
 	} else {
 		rec, flds := rowToRecord(row, hdr)
@@ -588,9 +588,9 @@ func (ss *serverSession) rowResult(tbl string, hdr *Header, sendHdr bool, row Ro
 
 func rowToRecord(row Row, hdr *Header) (rec Record, fields []string) {
 	// this must match cmdHeader
-	if len(row) == 1 {
+	if row.Len() == 1 {
 		assert.That(len(hdr.Fields) == 1)
-		return maybeSqueeze(row[0], hdr)
+		return maybeSqueeze(row.Get(0), hdr)
 	}
 	var rb RecordBuilder
 	fields = hdr.GetFields()

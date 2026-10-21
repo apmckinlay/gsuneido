@@ -331,7 +331,7 @@ func TestGetSchema(t *testing.T) {
 	}
 	val := func(row Row, hdr *Header, col string) string {
 		t.Helper()
-		if row == nil {
+		if row.Eof() {
 			return "<nil>"
 		}
 		return AsStr(row.GetVal(hdr, col, nil, nil))
@@ -343,7 +343,7 @@ func TestGetSchema(t *testing.T) {
 	row, hdr = test("tables", [2]string{"table", "tables"})
 	assert.T(t).Msg("tables tables").This(val(row, hdr, "table")).Is("tables")
 	row, _ = test("tables", [2]string{"table", "nosuch"})
-	assert.T(t).Msg("tables nosuch").This(row).Is(nil)
+	assert.T(t).Msg("tables nosuch").That(row.Eof())
 
 	// columns - regular, derived (uncapitalized), virtual, and nonexistent
 	row, hdr = test("columns", [2]string{"table", "tmp"}, [2]string{"column", "u"})
@@ -353,12 +353,12 @@ func TestGetSchema(t *testing.T) {
 		This(val(row, hdr, "column")).Is("foo")
 	assert.T(t).Msg("columns tmp foo field").This(val(row, hdr, "field")).Is("-1")
 	row, _ = test("columns", [2]string{"table", "tmp"}, [2]string{"column", "nosuch"})
-	assert.T(t).Msg("columns tmp nosuch").This(row).Is(nil)
+	assert.T(t).Msg("columns tmp nosuch").That(row.Eof())
 	row, hdr = test("columns", [2]string{"table", "tables"}, [2]string{"column", "nrows"})
 	assert.T(t).Msg("columns tables nrows (virtual)").
 		This(val(row, hdr, "field")).Is("1")
 	row, _ = test("columns", [2]string{"table", "nosuch"}, [2]string{"column", "x"})
-	assert.T(t).Msg("columns nosuch (no panic)").This(row).Is(nil)
+	assert.T(t).Msg("columns nosuch (no panic)").That(row.Eof())
 
 	// indexes - key, unique index, and nonexistent table
 	row, hdr = test("indexes", [2]string{"table", "tmp"}, [2]string{"columns", "k"})
@@ -366,13 +366,13 @@ func TestGetSchema(t *testing.T) {
 	row, hdr = test("indexes", [2]string{"table", "tmp"}, [2]string{"columns", "u"})
 	assert.T(t).Msg("indexes tmp u").This(val(row, hdr, "key")).Is("u")
 	row, _ = test("indexes", [2]string{"table", "nosuch"}, [2]string{"columns", "x"})
-	assert.T(t).Msg("indexes nosuch (no panic)").This(row).Is(nil)
+	assert.T(t).Msg("indexes nosuch (no panic)").That(row.Eof())
 
 	// views
 	row, hdr = test("views", [2]string{"view_name", "myview"})
 	assert.T(t).Msg("views myview").This(val(row, hdr, "view_definition")).Is("tmp")
 	row, _ = test("views", [2]string{"view_name", "nosuch"})
-	assert.T(t).Msg("views nosuch").This(row).Is(nil)
+	assert.T(t).Msg("views nosuch").That(row.Eof())
 }
 
 // TestGetSchemaNoSels verifies that querying a schema table with no sels
@@ -394,7 +394,7 @@ func TestGetSchemaNoSels(t *testing.T) {
 		ob.Add(SuStr(table))
 		row, hdr, _, _ := get(th, tran, ob, dir)
 		assert.T(t).Msg(table, " ", dir, " hdr").This(hdr != nil).Is(exists)
-		assert.T(t).Msg(table, " ", dir, " row").This(row != nil).Is(exists)
+		assert.T(t).Msg(table, " ", dir, " row").This(!row.Eof()).Is(exists)
 	}
 	for _, table := range []string{"tables", "columns", "indexes", "views", "dbstats"} {
 		test(table, Any, table != "views" && table != "dbstats")

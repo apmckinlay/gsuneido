@@ -498,11 +498,11 @@ func (q queryLocal) Get(th *Thread, dir Dir) (Row, string, uint64) {
 	defer UseMainSuneido(th)()
 	row := q.Query.Get(th, dir)
 	var off uint64
-	if row == nil {
+	if row.Eof() {
 		// this is required for SuQuery to stick at eof unidirectionally
 		q.Query.Rewind()
 	} else {
-		off = db19.RecToOff(q.store, row[0])
+		off = db19.RecToOff(q.store, row.Get(0))
 	}
 	return row, q.Query.Updateable(), off
 }

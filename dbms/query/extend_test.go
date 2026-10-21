@@ -48,7 +48,7 @@ func TestExtendSelect(t *testing.T) {
 	assert.That(q.fastSingle())
 
 	q.Select(Sels{{col: "ex", val: Pack(IntVal(0))}})
-	assert.This(q.Get(nil, Next)).Is(nil)
+	assert.That(q.Get(nil, Next).Eof())
 	q.Select(nil)
 
 	two := Sels{{col: "ex", val: Pack(IntVal(2))}}
@@ -59,7 +59,7 @@ func TestExtendSelect(t *testing.T) {
 
 	assert.This(RowStr(q.Header(), lookup(q, two, nil, nil))).
 		Is(`Row{abbrev='a' cnum=1 ex=2 name="axon"}`)
-	assert.That(lookup(q, Sels{{col: "ex", val: Pack(IntVal(0))}}, nil, nil) == nil)
+	assert.That(lookup(q, Sels{{col: "ex", val: Pack(IntVal(0))}}, nil, nil).Eof())
 }
 
 func TestExtendRuleBug(t *testing.T) {
@@ -111,7 +111,7 @@ func BenchmarkExtend(b *testing.B) {
 	rb.Add(SuStr("eh"))
 	rb.Add(SuStr("be"))
 	rb.Add(SuStr("see"))
-	row := Row{rb.Build()}
+	row := NewRow(rb.Build())
 	for b.Loop() {
 		e.extendRow(nil, row)
 	}
@@ -131,6 +131,6 @@ func TestExtendForwardBug(t *testing.T) {
 	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery(`((ivc join (bln where b1 is "")) leftjoin ((cus union (cus extend r1)) extend b1 = r1))`, tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
-	for row := q.Get(nil, Next); row != nil; row = q.Get(nil, Next) {
+	for row := q.Get(nil, Next); !row.Eof(); row = q.Get(nil, Next) {
 	}
 }

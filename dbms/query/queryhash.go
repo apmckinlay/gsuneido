@@ -120,7 +120,7 @@ func queryHashAll(db *db19.Database, query string) {
 
 	// fmt.Println("== Get ===")
 	h2 := NewQueryHasher(q.Header()).CheckDups()
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+	for row := q.Get(th, Next); !row.Eof(); row = q.Get(th, Next) {
 		// fmt.Println(row)
 		h2.Row(row)
 	}

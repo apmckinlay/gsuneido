@@ -435,7 +435,7 @@ func TestFuzzTable_Build(t *testing.T) {
 	}
 	q.Rewind()
 	row := q.Get(nil, Next)
-	if row == nil && len(hdr.Columns) > 0 {
+	if row.Eof() && len(hdr.Columns) > 0 {
 		t.Log("Table produced no rows (may be valid if emptyKey)")
 	}
 }

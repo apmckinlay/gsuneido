@@ -76,7 +76,7 @@ func (no *Nothing) setApproach(_ Require, _ any, tran QueryTran) {
 }
 
 func (*Nothing) Lookup(*Thread, Sels) Row {
-	return nil
+	return Row{}
 }
 
 func (no *Nothing) Output(th *Thread, rec Record) {
@@ -84,7 +84,7 @@ func (no *Nothing) Output(th *Thread, rec Record) {
 }
 
 func (*Nothing) Get(*Thread, Dir) Row {
-	return nil
+	return Row{}
 }
 
 func (*Nothing) Rewind() {

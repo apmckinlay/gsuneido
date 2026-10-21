@@ -32,7 +32,7 @@ func TestCodeTool(t *testing.T) {
 	rt := dbmsLocal.Transaction(false, core.AllPerms)
 	q := rt.Query("stdlib", nil)
 	row, _, _ := q.Get(th, core.Next)
-	assert.That(row != nil)
+	assert.That(!row.Eof())
 	rt.Complete()
 
 	// Test codeTool

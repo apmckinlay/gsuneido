@@ -113,7 +113,7 @@ func (r *SuRecord) ensureDeps() {
 
 func deps(row Row, hdr *Header) map[string][]string {
 	dependents := map[string][]string{}
-	if row != nil {
+	if !row.Eof() {
 		for _, flds := range hdr.Fields {
 			for _, f := range flds {
 				if strings.HasSuffix(f, "_deps") {
@@ -281,7 +281,7 @@ func (r *SuRecord) toObject() *SuObject {
 				if f != "-" && !strings.HasSuffix(f, "_deps") {
 					key := StrVal(f)
 					if !r.ob.hasKey(key) {
-						if raw := r.row[ri].GetRaw(fi); raw != "" {
+						if raw := r.row.Get(ri).GetRaw(fi); raw != "" {
 							if len(raw) > 0 && raw[0] == PackForward {
 								r.attachRule(f, makeFwdRule(raw[1:]))
 							} else {
@@ -335,7 +335,7 @@ func (r *SuRecord) DeleteAll() {
 	r.Lock()
 	defer r.Unlock()
 	r.ob.deleteAll()
-	r.row = nil
+	r.row = Row{}
 	r.userow = false
 }
 
@@ -372,7 +372,7 @@ func (r *SuRecord) delete(th *Thread, key Value, fn func(Value) Value) Value {
 	r.ensureDeps()
 	r.ob.mustBeMutable()
 	r.toObject()
-	r.row = nil
+	r.row = Row{}
 	v := fn(key)
 	if v != nil {
 		if keystr, ok := key.ToStr(); ok {
@@ -407,7 +407,7 @@ func (r *SuRecord) rowSize() int {
 			if f != "-" && !strings.HasSuffix(f, "_deps") {
 				key := StrVal(f)
 				if !r.ob.hasKey(key) {
-					if val := r.row[ri].GetRaw(fi); val != "" {
+					if val := r.row.Get(ri).GetRaw(fi); val != "" {
 						n++
 					}
 				}
@@ -667,7 +667,7 @@ func (r *SuRecord) deps(th *Thread, key string) {
 func (r *SuRecord) getPacked(th *Thread, key string) string {
 	result := r.ob.getIfPresent(StrVal(key)) // NOTE: ob.getIfPresent
 	packed := ""
-	if result == nil && r.row != nil { // even if !r.userow
+	if result == nil && !r.row.Eof() { // even if !r.userow
 		if s := r.row.GetRaw(r.hdr, key); s != "" {
 			packed = s
 			result = True

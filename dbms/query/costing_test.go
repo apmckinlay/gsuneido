@@ -298,6 +298,6 @@ func rowCost(index []string) Cost {
 
 func iterate(q Query) {
 	th := &Thread{}
-	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
+	for row := q.Get(th, Next); !row.Eof(); row = q.Get(th, Next) {
 	}
 }

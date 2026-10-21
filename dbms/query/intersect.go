@@ -210,8 +210,8 @@ func (it *Intersect) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { it.tget += tsc.Read() - t }(tsc.Read())
 	for {
 		row := it.source1.Get(th, dir)
-		if row == nil {
-			return nil
+		if row.Eof() {
+			return Row{}
 		}
 		if it.source2Has(th, row) {
 			it.ngets++
@@ -223,10 +223,10 @@ func (it *Intersect) Get(th *Thread, dir Dir) Row {
 func (it *Intersect) Lookup(th *Thread, sels Sels) Row {
 	it.nlooks++
 	row := it.source1.Lookup(th, sels)
-	if row == nil || it.source2Has(th, row) {
+	if row.Eof() || it.source2Has(th, row) {
 		return row
 	}
-	return nil
+	return Row{}
 }
 
 // COULD have a "merge" strategy (like Union)

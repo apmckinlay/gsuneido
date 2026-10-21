@@ -87,7 +87,7 @@ func createCodeTool(ctx context.Context, library, path, name, code string) (resu
 	rq := rtran.Query(query, nil)
 	hdr := rq.Header()
 	row, _, off := rq.Get(th, core.Next)
-	if row != nil {
+	if !row.Eof() {
 		st := core.NewSuTran(rtran, false)
 		groupVal := row.GetVal(hdr, "group", th, st)
 		group, _ := groupVal.IfInt()
@@ -221,7 +221,7 @@ func lookupFolder(th *core.Thread, tran core.ITran, library string, parent int, 
 	folderArgs.Set(core.StrVal("group"), core.IntVal(parent))
 	folderArgs.Set(core.StrVal("name"), core.StrVal(name))
 	row, hdr, _, _ := tran.Get(th, folderArgs, core.Only)
-	if row != nil {
+	if !row.Eof() {
 		num, err := intValue(row.GetVal(hdr, "num", th, nil), "num")
 		if err != nil {
 			return 0, false, false, err
@@ -234,7 +234,7 @@ func lookupFolder(th *core.Thread, tran core.ITran, library string, parent int, 
 	leafArgs.Set(core.StrVal("parent"), core.IntVal(parent))
 	leafArgs.Set(core.StrVal("name"), core.StrVal(name))
 	leaf, _, _, _ := tran.Get(th, leafArgs, core.Only)
-	return 0, false, leaf != nil, nil
+	return 0, false, !leaf.Eof(), nil
 }
 
 // maxLibNum returns the maximum num value in the library, or 0 if none.
@@ -243,7 +243,7 @@ func maxLibNum(th *core.Thread, tran core.ITran, library string) int {
 	hdr := q.Header()
 	st := core.NewSuTran(tran, false)
 	row, _, _ := q.Get(th, core.Next)
-	if row == nil {
+	if row.Eof() {
 		return 0
 	}
 	v := row.GetVal(hdr, "max_num", th, st)

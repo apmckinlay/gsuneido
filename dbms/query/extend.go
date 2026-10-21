@@ -241,12 +241,12 @@ func (e *Extend) setApproach(req Require, _ any, tran QueryTran) {
 func (e *Extend) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { e.tget += tsc.Read() - t }(tsc.Read())
 	if e.conflict {
-		return nil
+		return Row{}
 	}
 	for {
 		row := e.source.Get(th, dir)
-		if row == nil {
-			return nil
+		if row.Eof() {
+			return Row{}
 		}
 		if !e.hasExprs {
 			e.ngets++
@@ -255,7 +255,7 @@ func (e *Extend) Get(th *Thread, dir Dir) Row {
 		rec := e.extendRow(th, row)
 		if e.filter(rec, th, row) {
 			e.ngets++
-			return append(row, rec)
+			return row.With(rec)
 		}
 	}
 }
@@ -279,7 +279,7 @@ func (e *Extend) extendRow(th *Thread, row Row) Record {
 				rb.AddRaw(f)
 			} else {
 				// incrementally build record so extends can see previous ones
-				e.ctx.Row = append(row, rb.Build())
+				e.ctx.Row = row.With(rb.Build())
 				val := expr.Eval(&e.ctx)
 				rb.Add(val.(Packable))
 			}
@@ -302,8 +302,8 @@ func (e *Extend) filter(rec Record, th *Thread, row Row) bool {
 			x = rec.GetRaw(j)
 		}
 		if j == -1 || (len(x) > 0 && x[0] == PackForward) {
-			if extrow == nil {
-				extrow = append(row, rec)
+			if extrow.Len() == 0 {
+				extrow = row.With(rec)
 			}
 			x = extrow.GetRawVal(e.header, sel.col, th, e.ctx.Tran)
 		}
@@ -336,21 +336,21 @@ func (e *Extend) Select(sels Sels) {
 func (e *Extend) Lookup(th *Thread, sels Sels) Row {
 	e.nlooks++
 	if e.Fixed().Conflicts(sels) {
-		return nil
+		return Row{}
 	}
 	defer func() {
 		e.sels = nil
 	}()
 	srcsels := e.splitSelect(sels)
 	row := e.source.Lookup(th, srcsels)
-	if row == nil {
-		return nil
+	if row.Eof() {
+		return Row{}
 	}
 	if !e.hasExprs {
 		return row
 	}
 	rec := e.extendRow(th, row)
-	return append(row, rec)
+	return row.With(rec)
 }
 
 func (e *Extend) splitSelect(sels Sels) Sels {
@@ -372,7 +372,7 @@ func (e *Extend) Simple(th *Thread) []Row {
 	rows := e.source.Simple(th)
 	if e.hasExprs {
 		for i, row := range rows {
-			rows[i] = append(row, e.extendRow(th, row))
+			rows[i] = row.With(e.extendRow(th, row))
 		}
 	}
 	return rows

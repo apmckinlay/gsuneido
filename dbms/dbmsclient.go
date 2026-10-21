@@ -169,7 +169,7 @@ func (ms *muxSession) get(tn int, query Value, dir Dir) (Row, *Header, string, u
 	ms.PutCmd(commands.GetOne).PutByte(byte(dir)).PutInt(tn).PutVal(query)
 	ms.Request()
 	if !ms.GetBool() {
-		return nil, nil, "", 0
+		return Row{}, nil, "", 0
 	}
 	off := ms.GetInt()
 	hdr := ms.getHdr()
@@ -289,7 +289,7 @@ func (ms *muxSession) getHdr() *Header {
 }
 
 func (ms *muxSession) getRow() Row {
-	return Row{ms.GetRec()}
+	return NewRow(ms.GetRec())
 }
 
 // ------------------------------------------------------------------
@@ -452,7 +452,7 @@ func (q *muxQuery) Get(_ *Thread, dir Dir) (Row, string, uint64) {
 	q.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(0).PutInt(q.id)
 	q.Request()
 	if !q.GetBool() {
-		return nil, "", 0
+		return Row{}, "", 0
 	}
 	off := q.GetInt()
 	table := q.GetStr()
@@ -481,7 +481,7 @@ func (q *muxCursor) Get(_ *Thread, tran ITran, dir Dir) (Row, string, uint64) {
 	q.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(t.tn).PutInt(q.id)
 	q.Request()
 	if !q.GetBool() {
-		return nil, "", 0
+		return Row{}, "", 0
 	}
 	off := q.GetInt()
 	table := q.GetStr()

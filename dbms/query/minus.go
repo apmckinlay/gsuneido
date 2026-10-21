@@ -107,8 +107,8 @@ func (m *Minus) Get(th *Thread, dir Dir) Row {
 	defer func(t uint64) { m.tget += tsc.Read() - t }(tsc.Read())
 	for {
 		row := m.source1.Get(th, dir)
-		if row == nil {
-			return nil
+		if row.Eof() {
+			return Row{}
 		}
 		if !m.source2Has(th, row) {
 			m.ngets++
@@ -120,10 +120,10 @@ func (m *Minus) Get(th *Thread, dir Dir) Row {
 func (m *Minus) Lookup(th *Thread, sels Sels) Row {
 	m.nlooks++
 	row := m.source1.Lookup(th, sels)
-	if row == nil || !m.source2Has(th, row) {
+	if row.Eof() || !m.source2Has(th, row) {
 		return row
 	}
-	return nil
+	return Row{}
 }
 
 // COULD have a "merge" strategy (like Union)

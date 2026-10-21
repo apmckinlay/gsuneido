@@ -41,7 +41,7 @@ func getSchema(ctx context.Context, table string) (any, error) {
 	q := tran.Query(fmt.Sprintf("views where view_name = %q", table), nil)
 	defer q.Close()
 	row, _, _ := q.Get(th, core.Next)
-	if row == nil {
+	if row.Eof() {
 		return schemaOutput{Schema: ""}, fmt.Errorf("table or view not found: %s", table)
 	}
 	hdr := q.Header()

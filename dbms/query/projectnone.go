@@ -86,7 +86,7 @@ func (pn *ProjectNone) SetTran(t QueryTran) {
 func (pn *ProjectNone) hasRow() bool {
 	if !pn.hasrow.IsSet() {
 		row := pn.source.Get(nil, Next)
-		pn.hasrow.Set(row != nil)
+		pn.hasrow.Set(!row.Eof())
 		pn.source.Rewind()
 	}
 	return pn.hasrow.Get()
@@ -118,7 +118,7 @@ func (pn *ProjectNone) Lookup(_ *Thread, sels Sels) Row {
 	if pn.hasRow() {
 		return pnRow
 	}
-	return nil
+	return Row{}
 }
 
 var pjHeader = SimpleHeader([]string{})
@@ -131,7 +131,7 @@ func (*ProjectNone) Output(*Thread, Record) {
 	panic("can't Output to ProjectNone")
 }
 
-var pnRow = Row{""}
+var pnRow = NewRow("")
 
 func (pn *ProjectNone) Get(_ *Thread, _ Dir) Row {
 	if !pn.done {
@@ -140,7 +140,7 @@ func (pn *ProjectNone) Get(_ *Thread, _ Dir) Row {
 			return pnRow
 		}
 	}
-	return nil
+	return Row{}
 }
 
 func (pn *ProjectNone) Rewind() {

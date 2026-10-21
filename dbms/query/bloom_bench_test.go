@@ -84,7 +84,7 @@ func benchmarkBloomCost(b *testing.B, db *db19.Database) {
 				bytes, count := 0, 0
 				for b.Loop() {
 					tbl.Rewind()
-					for row := tbl.Get(nil, Next); row != nil; row = tbl.Get(nil, Next) {
+					for row := tbl.Get(nil, Next); !row.Eof(); row = tbl.Get(nil, Next) {
 						bytes += len(row.GetRaw(tbl.Header(), "pad"))
 						count++
 					}
@@ -351,9 +351,9 @@ type benchResult struct {
 func drainBenchPlan(w *Where, th *Thread, limit int) benchResult {
 	w.Rewind()
 	var result benchResult
-	for row := w.Get(th, Next); row != nil; row = w.Get(th, Next) {
+	for row := w.Get(th, Next); !row.Eof(); row = w.Get(th, Next) {
 		result.rows++
-		result.sum += db19.RecToOff(w.t.GetStore(), row[0])
+		result.sum += db19.RecToOff(w.t.GetStore(), row.Get(0))
 		if limit > 0 && result.rows == limit {
 			break
 		}
