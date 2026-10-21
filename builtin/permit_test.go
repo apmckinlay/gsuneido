@@ -45,3 +45,32 @@ func TestPermitAuthOnly(t *testing.T) {
 	assert.False(effective.SchemaActAllowed(PermCreate))
 	assert.False(effective.ServerEvalAllowed("Private"))
 }
+
+func TestPermitGetSet(t *testing.T) {
+	assert := assert.T(t)
+
+	th := &Thread{}
+	effective := &Perms{}
+	th.SetPerms(effective)
+
+	// Get returns the current permissions
+	get := compile.Constant(`function () { return Permit.Get() }`)
+	assert.That(th.Call(get).(suPerms).perms == effective)
+
+	// Set can only be called from Auth
+	set := compile.Constant(`function (p) { Permit.Set(p) }`)
+	th.SetNewPerms(nil)
+	assert.This(func() { th.Call(set, suPerms{perms: effective}) }).
+		Panics("Permit.Set can only be called from Auth")
+	th.Reset()
+
+	// Set from Auth replaces the current and new permissions
+	target := &Perms{}
+	target.AddTable("private", "write")
+	th.SetPerms(effective)
+	th.SetNewPerms(&Perms{})
+	th.Call(set, suPerms{perms: target})
+	assert.That(th.Perms() == target)
+	assert.That(th.NewPerms() == target)
+	assert.True(th.Perms().TableActAllowed("private", PermWrite))
+}

@@ -90,6 +90,24 @@ func perm_None(th *Thread, _ []Value) Value {
 	return nil
 }
 
+var _ = staticMethod(perm_Get, "()")
+
+func perm_Get(th *Thread, _ []Value) Value {
+	return suPerms{perms: th.Perms()}
+}
+
+var _ = staticMethod(perm_Set, "(perms) :void")
+
+func perm_Set(th *Thread, args []Value) Value {
+	if th.NewPerms() == nil {
+		panic("Permit.Set can only be called from Auth")
+	}
+	perms := args[0].(suPerms).perms
+	th.SetPerms(perms)
+	th.SetNewPerms(perms)
+	return nil
+}
+
 var _ = staticMethod(perm_Members, "() :object")
 
 func perm_Members() Value {
@@ -98,4 +116,22 @@ func perm_Members() Value {
 
 func (*suPermit) Lookup(_ *Thread, method string) Value {
 	return permMethods[method]
+}
+
+//-------------------------------------------------------------------
+
+// suPerms is the built-in type holding Perms, used by Get and Set
+type suPerms struct {
+	ValueBase[suPerms]
+	perms *Perms
+}
+
+var _ Value = suPerms{}
+
+func (s suPerms) Equal(other any) bool {
+	panic("unimplemented")
+}
+
+func (s suPerms) String() string {
+	return "permissions"
 }
