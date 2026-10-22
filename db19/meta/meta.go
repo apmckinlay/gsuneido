@@ -580,8 +580,11 @@ func (m *Meta) setFkeyIIndex(ts *Schema) {
 			} else {
 				target = m.GetRoSchema(fk.Table)
 			}
-			j := target.IIndex(fk.Columns)
-			fk.IIndex = j
+			if target == nil {
+				panic("can't create foreign key to nonexistent table: " +
+					ts.Table + " -> " + fk.Table)
+			}
+			fk.IIndex = target.IIndex(fk.Columns)
 		}
 	}
 }

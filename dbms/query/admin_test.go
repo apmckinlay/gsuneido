@@ -270,6 +270,32 @@ func TestAdminEnsure(t *testing.T) {
 	db.MustCheck()
 }
 
+func TestAdminEnsureMissingForeignKeyTable(t *testing.T) {
+	assert := assert.T(t)
+	test := func(populated bool) {
+		t.Helper()
+		db := createTestDb()
+		defer db.Close()
+		doAdmin(db, "ensure crash (a) key(a)")
+		if populated {
+			act(db, "insert { a: 1 } into crash")
+		}
+		assert.This(func() {
+			doAdmin(db, "ensure crash (a, b) key(a) index(b) in no_such_table(a)")
+		}).Panics("can't create foreign key to nonexistent table: crash -> no_such_table")
+		assert.This(db.Schema("crash")).Is("crash (a) key(a)")
+		db.MustCheck()
+
+		doAdmin(db, "create no_such_table (a) key(a)")
+		doAdmin(db, "ensure crash (a, b) key(a) index(b) in no_such_table(a)")
+		assert.This(db.Schema("crash")).
+			Is("crash (a,b) key(a) index(b) in no_such_table(a)")
+		db.MustCheck()
+	}
+	test(false)
+	test(true)
+}
+
 func TestAdminEnsure2(*testing.T) {
 	db := createTestDb()
 	defer db.Close()
