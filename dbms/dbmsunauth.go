@@ -66,7 +66,7 @@ func (du *DbmsUnauth) CloseConn() {
 }
 
 func (du *DbmsUnauth) Connections() Value {
-	panic(notauth)
+	return du.dbms.Connections()
 }
 
 func (du *DbmsUnauth) New() IDbms {
