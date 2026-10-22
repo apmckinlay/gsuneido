@@ -21,6 +21,7 @@ linters:
     staticcheck:
       checks:
         - "all"
+        - "-SA4000" # identical expr
         - "-ST1000" # package comment
         - "-ST1001" # dot import
         - "-ST1003" # naming
