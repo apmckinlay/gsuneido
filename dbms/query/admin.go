@@ -8,7 +8,6 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
-	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
 func DoAdmin(db *db19.Database, cmd string, sv *Sviews, perms *Perms) {
@@ -26,7 +25,6 @@ func DoAdminTest(db *db19.Database, cmd string) {
 // Nil permissions deny all schema changes.
 func checkSchemaPerm(perms *Perms, action SchemaPerm) {
 	if !perms.SchemaActAllowed(action) {
-		dbg.PrintStack()
 		panic("schema " + action.String() + " not authorized")
 	}
 }
