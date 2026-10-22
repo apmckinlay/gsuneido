@@ -8,6 +8,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
 func DoAdmin(db *db19.Database, cmd string, sv *Sviews, perms *Perms) {
@@ -25,7 +26,8 @@ func DoAdminTest(db *db19.Database, cmd string) {
 // Nil permissions deny all schema changes.
 func checkSchemaPerm(perms *Perms, action SchemaPerm) {
 	if !perms.SchemaActAllowed(action) {
-		panic("not authorized")
+		dbg.PrintStack()
+		panic("schema " + action.String() + " not authorized")
 	}
 }
 
@@ -72,6 +74,9 @@ func (a *ensureAdmin) String() string {
 
 func (a *ensureAdmin) execute(db *db19.Database, _ *Sviews, perms *Perms) {
 	checkForSystemTable(a.Table)
+	if db.SchemaSubset(&a.Schema) {
+		return // no changes needed, so no permission required
+	}
 	checkSchemaPerm(perms, PermCreate)
 	ts := db.GetState().Meta.GetRoSchema(a.Table)
 	if ts != nil && !perms.SchemaActAllowed(PermUpdate) {
@@ -79,7 +84,7 @@ func (a *ensureAdmin) execute(db *db19.Database, _ *Sviews, perms *Perms) {
 		// and keys, but not add new ones
 		for _, ix := range a.Indexes {
 			if ts.FindIndex(ix.Columns) == nil {
-				panic("not authorized: " + a.Table)
+				panic("schema update not authorized: " + a.Table)
 			}
 		}
 	}

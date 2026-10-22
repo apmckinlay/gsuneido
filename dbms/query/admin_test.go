@@ -145,6 +145,10 @@ func TestAdminNilPerms(t *testing.T) {
 		DoAdmin(db, "drop tmp", nil, nil)
 	}).Panics("not authorized")
 
+	// no changes needed requires no permission
+	DoAdmin(db, "ensure tmp "+tmpschema, nil, nil)
+	DoAdmin(db, "ensure tmp (a)", nil, nil)
+
 	DoAdmin(db, "create allowed (k) key(k)", nil, core.AllPerms)
 	DoAdmin(db, "ensure alsoallowed (k) key(k)", nil, core.AllPerms)
 	DoAdmin(db, "ensure allowed (x)", nil, core.AllPerms)

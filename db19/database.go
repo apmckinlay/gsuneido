@@ -263,10 +263,9 @@ func (db *Database) BtreeBuilder() *btree.Builder {
 	return btree.NewBuilder(db.Store)
 }
 
+// Ensure assumes the schema is not already a subset
+// (callers should check SchemaSubset first, e.g. to skip permission checks).
 func (db *Database) Ensure(sch *schema.Schema) {
-	if db.schemaSubset(sch) {
-		return // nothing to do, common fast case
-	}
 	db.lockSchema()
 	defer db.unlockSchema()
 	handled := false
@@ -316,8 +315,8 @@ func (db *Database) Ensure(sch *schema.Schema) {
 	})
 }
 
-// schemaSubset returns whether the table (ts) already has the ensure schema
-func (db *Database) schemaSubset(schema *schema.Schema) bool {
+// SchemaSubset returns whether the table (ts) already has the ensure schema
+func (db *Database) SchemaSubset(schema *schema.Schema) bool {
 	state := db.GetState()
 	ts := state.Meta.GetRoSchema(schema.Table)
 	if ts == nil || // table doesn't exist
