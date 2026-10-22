@@ -314,6 +314,10 @@ func fracLess(quantiles []string, x string) float64 {
 	}
 	// pos = number of quantiles strictly less than x
 	pos := sort.Search(n, func(i int) bool { return quantiles[i] >= x })
+	// Retain the last interval until x passes the sampled maximum.
+	if pos == n-1 {
+		pos--
+	}
 	frac := float64(pos) / float64(n-1)
 	if frac > 1 {
 		frac = 1

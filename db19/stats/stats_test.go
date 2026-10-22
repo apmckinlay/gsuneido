@@ -320,3 +320,27 @@ func TestStatsRangeFrac(t *testing.T) {
 	assert.That(ok)
 	assert.This(frac).Is(1)
 }
+
+func TestStatsRangeFracUpperTail(t *testing.T) {
+	quantiles := make([]string, 51)
+	for i := range quantiles {
+		quantiles[i] = fmt.Sprintf("%02d", i)
+	}
+	stats := Stats{"t": {Columns: map[string]ColStats{
+		"date": {Quantiles: quantiles},
+	}}}
+	test := func(from, to string, expected float64) {
+		t.Helper()
+		frac, ok := stats.RangeFrac("t", "date", from, to)
+		assert.T(t).That(ok)
+		assert.T(t).Msg(from, to).This(frac).Is(expected)
+	}
+	test("49", "99", .02)
+	test("49.5", "99", .02)
+	test("50", "99", .02)
+	test("50\x00", "99", 0)
+	test("", "50", .98)
+	test("49.5", "50\x00", .02)
+	test("", "99", 1)
+	test("50", "50", 0)
+}

@@ -18,6 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -418,6 +419,53 @@ func TestWhere_stats_wfrac(t *testing.T) {
 		.25*math.Sqrt(1./3.))
 	// unspanable
 	test("customer where F(name)", .5)
+}
+
+func TestWhere_stats_upperTail(t *testing.T) {
+	quantiles := make([]string, 51)
+	for i := range quantiles {
+		quantiles[i] = Pack(DateFromLiteral("19871201"))
+	}
+	quantiles[49] = Pack(DateFromLiteral("20260629"))
+	quantiles[50] = Pack(DateFromLiteral("20260917"))
+	tran := upperTailTran{testTran{stats: stats.Stats{
+		"ar_payments": {Count: 270021, Columns: map[string]stats.ColStats{
+			"arpay_date": {Quantiles: quantiles},
+		}},
+	}}}
+	w := ParseQuery(`ar_payments where bizpartner_num is #20230529.143324
+		and arpay_date >= #20260721 and arpay_type is "PY"
+		and arpay_void? isnt true`, tran, nil).(*Where)
+	fixed, variable, ap := w.optimize(ReadMode, NoneReq(1))
+	approach := ap.(*whereApproach)
+	assert.T(t).This(approach.index).Is([]string{"bizpartner_num", "arpay_num"})
+	assert.T(t).This(approach.bloomSel).Is(nil)
+	assert.T(t).This(fixed + variable).Is(1240)
+}
+
+type upperTailTran struct {
+	testTran
+}
+
+func (upperTailTran) GetSchema(string) *Schema {
+	schema := NewAdminParser(`ar_payments (arpay_num, bizpartner_num, arpay_date,
+		arpay_type, arpay_void?, glacct_num_bank, arpay_deposit, arpay_reconciled)
+		key(arpay_num)
+		index(glacct_num_bank, arpay_deposit, arpay_reconciled, arpay_date, arpay_num)
+		index(bizpartner_num, arpay_num)`).Schema()
+	setFields(&schema)
+	return &schema
+}
+
+func (upperTailTran) GetInfo(string) *meta.Info {
+	return &meta.Info{Table: "ar_payments", Nrows: 270021, Size: 100_000_000}
+}
+
+func (upperTailTran) RangeFrac(_ string, iIndex int, _, _ string) float64 {
+	if iIndex == 2 {
+		return 4.0 / 270021
+	}
+	return 1
 }
 
 type wtestTran struct {
