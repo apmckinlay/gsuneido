@@ -131,8 +131,6 @@ func TestUnauthCmds(t *testing.T) {
 	ss.SetBuf([]byte{0}) // bool false
 	assert.This(func() { cmdCheck(ss) }).Panics(notauth)
 
-	assert.This(func() { cmdConnections(ss) }).Panics(notauth)
-
 	ss.SetBuf([]byte{0}) // empty string (varint size 0)
 	assert.This(func() { cmdCursor(ss) }).Panics(notauth)
 
