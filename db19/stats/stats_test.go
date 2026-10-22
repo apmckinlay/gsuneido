@@ -338,9 +338,32 @@ func TestStatsRangeFracUpperTail(t *testing.T) {
 	test("49", "99", .02)
 	test("49.5", "99", .02)
 	test("50", "99", .02)
-	test("50\x00", "99", 0)
 	test("", "50", .98)
 	test("49.5", "50\x00", .02)
 	test("", "99", 1)
 	test("50", "50", 0)
+}
+
+func TestStatsRangeFracOutsideQuantiles(t *testing.T) {
+	stats := Stats{"t": {Columns: map[string]ColStats{
+		"date": {Quantiles: []string{"10", "20", "30", "40", "50"}},
+	}}}
+	test := func(from, to string, expected float64, known bool) {
+		t.Helper()
+		frac, ok := stats.RangeFrac("t", "date", from, to)
+		assert.T(t).Msg(from, to).This(ok).Is(known)
+		assert.T(t).Msg(from, to).This(frac).Is(expected)
+	}
+	test("51", "99", 0, false)
+	test("50\x00", "99", 0, false)
+	test("", "09", 0, false)
+	test("", "10", 0, false)
+	test("01", "09", 0, false)
+	test("51", "59", 0, false)
+	test("", "99", 1, true)
+	test("20", "99", .75, true)
+	test("", "40", .75, true)
+	test("50", "99", .25, true)
+	test("51", "51", 0, true)
+	test("59", "51", 0, true)
 }

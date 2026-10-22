@@ -282,6 +282,7 @@ func (stats Stats) PointFrac(table, col, value string) (float64, bool) {
 // and column that have a value in the specified range.
 // `from` is inclusive, `to` is exclusive.
 // The result is clamped to [0,1].
+// Nonempty ranges outside the sampled bounds have unknown selectivity.
 func (stats Stats) RangeFrac(table, col, from, to string) (float64, bool) {
 	ts, ok := stats[table]
 	if !ok {
@@ -294,7 +295,12 @@ func (stats Stats) RangeFrac(table, col, from, to string) (float64, bool) {
 	if from >= to {
 		return 0, true
 	}
-	frac := fracLess(cs.Quantiles, to) - fracLess(cs.Quantiles, from)
+	qs := cs.Quantiles
+	// Sampled bounds can miss both existing values and newer data.
+	if len(qs) == 0 || from > qs[len(qs)-1] || to <= qs[0] {
+		return 0, false
+	}
+	frac := fracLess(qs, to) - fracLess(qs, from)
 	return clamp01(frac), true
 }
 

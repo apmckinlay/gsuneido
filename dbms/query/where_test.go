@@ -433,14 +433,19 @@ func TestWhere_stats_upperTail(t *testing.T) {
 			"arpay_date": {Quantiles: quantiles},
 		}},
 	}}}
-	w := ParseQuery(`ar_payments where bizpartner_num is #20230529.143324
-		and arpay_date >= #20260721 and arpay_type is "PY"
-		and arpay_void? isnt true`, tran, nil).(*Where)
-	fixed, variable, ap := w.optimize(ReadMode, NoneReq(1))
-	approach := ap.(*whereApproach)
-	assert.T(t).This(approach.index).Is([]string{"bizpartner_num", "arpay_num"})
-	assert.T(t).This(approach.bloomSel).Is(nil)
-	assert.T(t).This(fixed + variable).Is(1240)
+	test := func(date string) {
+		t.Helper()
+		w := ParseQuery(`ar_payments where bizpartner_num is #20230529.143324
+			and arpay_date >= #`+date+` and arpay_type is "PY"
+			and arpay_void? isnt true`, tran, nil).(*Where)
+		fixed, variable, ap := w.optimize(ReadMode, NoneReq(1))
+		approach := ap.(*whereApproach)
+		assert.T(t).Msg(date).This(approach.index).Is([]string{"bizpartner_num", "arpay_num"})
+		assert.T(t).This(approach.bloomSel).Is(nil)
+		assert.T(t).This(fixed + variable).Is(1240)
+	}
+	test("20260721")
+	test("20260918")
 }
 
 type upperTailTran struct {
