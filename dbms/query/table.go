@@ -99,14 +99,14 @@ func (tbl *Table) Name() string {
 }
 
 func (tbl *Table) SetTran(t QueryTran) {
-	if tbl.tran != t {
-		t.CheckPerm(tbl.name, PermRead)
-	}
-	tbl.tran = t
 	schema := t.GetSchema(tbl.name)
 	if schema == nil {
 		panic("nonexistent table: " + tbl.name)
 	}
+	if tbl.tran != t {
+		t.CheckPerm(tbl.name, PermRead)
+	}
+	tbl.tran = t
 	// Update transactions can mutate info without changing its pointer.
 	tbl.info = t.GetInfo(tbl.name)
 	tbl.rowSiz.Set(tbl.getRowSize())
