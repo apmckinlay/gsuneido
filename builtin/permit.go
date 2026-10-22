@@ -132,6 +132,10 @@ func (s suPerms) Equal(other any) bool {
 	panic("unimplemented")
 }
 
+func (s suPerms) SetConcurrent() {
+	// ok
+}
+
 func (s suPerms) String() string {
 	return "permissions"
 }
