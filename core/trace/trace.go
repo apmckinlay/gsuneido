@@ -53,7 +53,8 @@ const (
 
 	Defer
 
-	Perm // used
+	Perm     // used
+	WhereOpt // used
 )
 
 func (w what) String() string {
@@ -80,6 +81,7 @@ func (w what) String() string {
 		Dbms:         "DBMS ",
 		Defer:        "DEFER ",
 		Perm:         "PERM ",
+		WhereOpt:     "WHEREOPT ",
 	}[w]
 }
 

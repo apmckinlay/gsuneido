@@ -531,11 +531,16 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 
 func (w *Where) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	w.optInit()
+	if trace.WhereOpt.On() {
+		trace.WhereOpt.Println(mode, req, String(w))
+	}
 	if w.conflict {
+		trace.WhereOpt.Println("    conflict, cost", 0)
 		return 0, 0, nil
 	}
 	if w.tbl == nil || w.tbl.isSingleton() {
 		fixcost, varcost := Optimize(w.source, mode, req)
+		trace.WhereOpt.Println("    source filtering, cost", fixcost, varcost)
 		return fixcost, varcost, nil
 	}
 	if req.use == ReqUnique {
@@ -550,6 +555,8 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 		// because source is a Table and Table keys are a subset of indexes
 		isel := w.idxSels[0]
 		cost := w.tbl.lookupCost(isel.index)
+		trace.WhereOpt.Println("    singleton, use first index",
+			isel.index, "cost", cost)
 		return 0, cost, &whereApproach{index: isel.index, cost: cost, idxSel: isel, mode: mode}
 	}
 	type bestIdx struct {
@@ -561,6 +568,7 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 	nrows, _ := w.tbl.Nrows()
 	for _, idx := range w.source.Indexes() {
 		if !req.SatisfiedByWithFixed(idx, w.fixed) {
+			trace.WhereOpt.Println("    index", idx, "does not satisfy requirement")
 			continue
 		}
 		_, varCost, _ := w.tbl.optimize(mode, OrderReq(idx, 1.0))
@@ -575,10 +583,17 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 		}
 		cost := WhereCost(float64(varCost), float64(req.frac), irFrac, ifFrac, df)
 		cost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
+		if trace.WhereOpt.On() {
+			trace.WhereOpt.Println("    candidate", idx, "scanCost", varCost,
+				"inFrac", float64(req.frac), "indexRangeFrac", irFrac,
+				"indexFilterFrac", ifFrac, "hasDataFilter", df,
+				"nseeks", req.nseeks, "cost", cost)
+		}
 		best.update(0, cost, bestIdx{index: idx, idxSel: isel})
 		// Cursors would have to rebuild the bloom on each transaction change.
 		// Group Selects may read too little to justify a full bloom build.
 		if mode == CursorMode || req.use == ReqGroup {
+			trace.WhereOpt.Println("    bloom not applicable to", mode, req)
 			continue
 		}
 		for _, bloomSel := range w.idxSels {
@@ -590,12 +605,28 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 				float64(req.frac), bloomSel.indexRangeFrac, bloomSel.indexFilterFrac,
 				irFrac, ifFrac, df)
 			varcost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
+			if trace.WhereOpt.On() {
+				trace.WhereOpt.Println("    candidate", idx,
+					"bloom", bloomSel.index, "buildScanCost", bloomCost,
+					"bloom indexRangeFrac", bloomSel.indexRangeFrac,
+					"bloom indexFilterFrac", bloomSel.indexFilterFrac,
+					"cost", fixcost, varcost, "total", fixcost+varcost)
+			}
 			best.update(fixcost, varcost,
 				bestIdx{index: idx, idxSel: isel, bloomSel: bloomSel})
 		}
 	}
 	if best.none() {
+		trace.WhereOpt.Println("    no index satisfies requirement")
 		return impossible, impossible, nil
+	}
+	if trace.WhereOpt.On() {
+		var bloom []string
+		if best.data.bloomSel != nil {
+			bloom = best.data.bloomSel.index
+		}
+		trace.WhereOpt.Println("    chosen", best.data.index, "bloom", bloom,
+			"cost", best.fixcost, best.varcost, "total", best.cost())
 	}
 	return best.fixcost, best.varcost, &whereApproach{index: best.data.index,
 		cost: best.fixcost + best.varcost, idxSel: best.data.idxSel,
@@ -607,12 +638,18 @@ func (w *Where) optWhereLookup(mode Mode, req Require) (Cost, Cost, any) {
 	for idxi, idx := range w.tbl.indexes {
 		if w.tbl.uniqueForLookup(idxi) && indexCovered(idx, req.cols, w.fixed) {
 			varcost := Cost(req.nseeks) * w.tbl.lookupCostI(idxi)
+			trace.WhereOpt.Println("    lookup candidate", idx, "nseeks", req.nseeks,
+				"cost", varcost)
 			best.update(0, varcost, idx)
+		} else {
+			trace.WhereOpt.Println("    lookup index", idx, "not unique or not covered")
 		}
 	}
 	if best.none() {
+		trace.WhereOpt.Println("    no lookup index satisfies requirement")
 		return impossible, impossible, nil
 	}
+	trace.WhereOpt.Println("    chosen lookup", best.data, "cost", best.varcost)
 	return 0, best.varcost, &whereApproach{index: best.data, cost: best.varcost, mode: mode}
 }
 
@@ -641,7 +678,6 @@ func (w *Where) optInit() {
 			}
 		}
 		w.idxSels = w.perIndex()
-		// fmt.Println("idxSels", w.idxSels)
 	}
 	// detect singleton when fixed covers a key (for non-Table sources).
 	// Required so we don't pick an index with extra columns
@@ -740,6 +776,14 @@ func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 		w.tbl = nil
 	} else {
 		ap := approach.(*whereApproach)
+		if trace.WhereOpt.On() {
+			var bloom []string
+			if ap.bloomSel != nil {
+				bloom = ap.bloomSel.index
+			}
+			trace.WhereOpt.Println("    setApproach", w.tbl.Name(), ap.mode, req,
+				"index", ap.index, "Bloom", bloom, "cost", ap.cost)
+		}
 		w.tbl.SetIndex(ap.index, ap.mode)
 		w.srcIndex = ap.index
 		w.bloomSel = ap.bloomSel

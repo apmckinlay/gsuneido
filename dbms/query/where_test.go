@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand/v2"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,11 +15,82 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
+
+func TestWhere_trace(t *testing.T) {
+	tran := testTran{stats: stats.Stats{
+		"customer": {Count: 100, Columns: map[string]stats.ColStats{
+			"name": {Cardinality: 4, TailFrac: 1,
+				Quantiles: []string{Pack(SuStr("a")), Pack(SuStr("c")),
+					Pack(SuStr("m")), Pack(SuStr("s"))}},
+		}},
+	}}
+	run := func(query string, mode Mode, req Require, enabled bool) (string, string) {
+		t.Helper()
+		f, err := os.CreateTemp(t.TempDir(), "trace")
+		assert.T(t).This(err).Is(nil)
+		defer f.Close()
+		stdout := os.Stdout
+		os.Stdout = f
+		flags := int(trace.Console)
+		if enabled {
+			flags |= int(trace.WhereOpt)
+		}
+		prev := trace.Set(flags)
+		defer func() {
+			os.Stdout = stdout
+			trace.Set(prev)
+		}()
+		w := ParseQuery(query, tran, nil).(*Where)
+		fixcost, varcost, ap := w.optimize(mode, req)
+		if varcost < impossible {
+			w.setApproach(req, ap, tran)
+		}
+		output, err := os.ReadFile(f.Name())
+		assert.T(t).This(err).Is(nil)
+		return string(output), fmt.Sprint(fixcost, varcost, String(w))
+	}
+	test := func(query string, mode Mode, req Require, expected ...string) {
+		t.Helper()
+		output, plan := run(query, mode, req, true)
+		for _, s := range expected {
+			assert.T(t).Msg(output).That(strings.Contains(output, s))
+		}
+		quiet, quietPlan := run(query, mode, req, false)
+		assert.T(t).This(quiet).Is("")
+		assert.T(t).This(plan).Is(quietPlan)
+	}
+	test("comp where a is 1 and c is 3", ReadMode, NoneReq(1),
+		"WHEREOPT", "colStatsFrac comp c 3 no stats, unknownFrac 0.5",
+		"RangeFrac comp [a b c] 1..1,max = 0.1",
+		"+c: <3..3,max>", "indexRangeFrac", "indexFilterFrac", "overallFrac",
+		"candidate [a b c] scanCost", "chosen [a b c]", "setApproach comp")
+	test("inven where item in (1,2)", ReadMode, NoneReq(1),
+		"prefix points inven [item] npoints 2 nrows 100 frac (.5 * npoints / nrows) 0.01")
+	test("customer where name in ('bob','joe')", ReadMode, NoneReq(1),
+		"colStatsFrac customer name 'bob' = 0.25",
+		"colStatsFrac customer name 'joe' = 0.25",
+		"colStatsFrac customer name total 0.5", "no usable index, wfrac 0.5")
+	test("customer where name >= 'm'", ReadMode, NoneReq(1),
+		"colStatsFrac customer name >='m' = 0.3333")
+	test("inven where item is 1", ReadMode, NoneReq(1),
+		"singleton", "singleton, use first index [item] cost")
+	test("abc where a < 1", ReadMode, OrderReq([]string{"b"}, 1),
+		"does not satisfy requirement", "candidate [b] bloom [a b]", "buildScanCost",
+		"chosen [b] bloom [a b]")
+	test("abc where a < 1", CursorMode, OrderReq([]string{"b"}, 1),
+		"bloom not applicable to", "chosen [b] bloom nil")
+	test("abc where a > 1", ReadMode, UniqueReq([]string{"b"}, 3),
+		"lookup candidate [b] nseeks 3 cost", "not unique or not covered",
+		"chosen lookup [b]")
+	test("customer where name is 'joe'", ReadMode, OrderReq([]string{"city"}, 1),
+		"no index satisfies requirement")
+}
 
 func TestWhere_perField(t *testing.T) {
 	test := func(query string, expectedCols string, expectedUnspanable string, expectedDataExprCount int) {

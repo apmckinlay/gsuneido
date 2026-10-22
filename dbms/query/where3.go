@@ -7,10 +7,12 @@ import (
 	"cmp"
 	"maps"
 	"math"
+	"strings"
 
 	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -23,6 +25,11 @@ const unknownFrac = .5
 // Its output is used by Nrows, bestIndex, and finally Get.
 // It sets w.singleton if the where selects a single row.
 func (w *Where) perIndex() []*idxSel {
+	if trace.WhereOpt.On() {
+		trace.WhereOpt.Println(w.tbl.Name(), w.expr.Echo(), "perIndex",
+			"unspanable", w.unspanable, "dataExprCount", w.dataExprCount,
+			"unknownFrac", unknownFrac)
+	}
 	colFracs := w.getColFracs(w.colSpans)
 	idxSels := make([]*idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
@@ -32,14 +39,21 @@ func (w *Where) perIndex() []*idxSel {
 		isel := w.buildIdxSel(schix.Fields, schix.Mode, w.colSpans)
 		if isel.singleton {
 			w.singleton = true
+			trace.WhereOpt.Println("    singleton", isel)
 			return []*idxSel{isel}
 		}
 		if len(isel.prefixRanges) == 0 {
+			trace.WhereOpt.Println("    index", isel.index, "no usable constraints")
 			continue
 		}
 		// calculate fracs
 		isel.prefixFrac = w.prefixFrac(isel)
 		frac := isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
+		if trace.WhereOpt.On() {
+			trace.WhereOpt.Println("    index", isel, "indexRangeFrac", isel.indexRangeFrac,
+				"indexFilterFrac", isel.indexFilterFrac, "hasDataFilter", isel.hasDataFilter,
+				"overallFrac", frac)
+		}
 		if frac < minFrac {
 			minFrac = frac
 		}
@@ -50,9 +64,11 @@ func (w *Where) perIndex() []*idxSel {
 		// use a dummy idxSel so we can use calcFracs
 		isel := &idxSel{}
 		w.wfrac = isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
+		trace.WhereOpt.Println("    no usable index, wfrac", w.wfrac)
 		return nil
 	}
 	w.wfrac = minFrac
+	trace.WhereOpt.Println("    wfrac", w.wfrac)
 	return idxSels
 }
 
@@ -88,12 +104,21 @@ func (w *Where) colStatsFrac(table, col string, spans []span) (float64, bool) {
 				statsBound(sp.org), statsBound(sp.end))
 		}
 		if !ok {
+			if trace.WhereOpt.On() {
+				trace.WhereOpt.Println("    colStatsFrac", table, col, sp,
+					"no stats, unknownFrac", unknownFrac)
+			}
 			return 0, false
+		}
+		if trace.WhereOpt.On() {
+			trace.WhereOpt.Println("    colStatsFrac", table, col, sp, "=", f)
 		}
 		frac += f
 	}
 	// cap the sum of the spans (each span fraction is already in [0,1])
-	return min(frac, 1.0), true
+	frac = min(frac, 1.0)
+	trace.WhereOpt.Println("    colStatsFrac", table, col, "total", frac)
+	return frac, true
 }
 
 // statsBound adjusts a span bound to the [from, to) semantics
@@ -437,12 +462,26 @@ func (w *Where) prefixFrac(isel *idxSel) float64 {
 		if pr.isPoint() {
 			npoints++
 		} else { // range
-			frac += w.t.RangeFrac(w.tbl.Name(), iIndex, pr.Org, pr.End)
+			f := w.t.RangeFrac(w.tbl.Name(), iIndex, pr.Org, pr.End)
+			if trace.WhereOpt.On() {
+				var bounds strings.Builder
+				showKey(&bounds, isel.encoded, pr.Org)
+				bounds.WriteString("..")
+				showKey(&bounds, isel.encoded, pr.End)
+				trace.WhereOpt.Println("    RangeFrac", w.tbl.Name(), isel.index,
+					bounds.String(), "=", f)
+			}
+			frac += f
 		}
 	}
 	nrows, _ := w.tbl.Nrows()
 	if nrows > 0 {
 		frac += .5 * float64(npoints) / float64(nrows) // ??? estimate 1/2 exist
+		if npoints > 0 && trace.WhereOpt.On() {
+			trace.WhereOpt.Println("    prefix points", w.tbl.Name(), isel.index,
+				"npoints", npoints, "nrows", nrows,
+				"frac (.5 * npoints / nrows)", .5*float64(npoints)/float64(nrows))
+		}
 	}
 	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
 	if frac > 1 {
