@@ -59,7 +59,9 @@ type Where struct {
 	// singleSels are set by Select when singleton
 	singleSels Sels
 
-	idxSels []*idxSel // from optInit, result of perIndex
+	idxSels       []*idxSel // from optInit, result of perIndex
+	colFracs      []colFrac
+	combinedFracs map[[2]*idxSel]float64
 	// idxSelPos is the current index in idxSel.ptrngs
 	idxSelPos int
 	// eof is set when advance returns false (past end or past beginning)
@@ -603,7 +605,7 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 			_, bloomCost, _ := w.tbl.costFor(bloomSel.index, mode, NoneReq(1))
 			fixcost, varcost := WhereCost2(nrows, float64(bloomCost), float64(varCost),
 				float64(req.frac), bloomSel.indexRangeFrac, bloomSel.indexFilterFrac,
-				irFrac, ifFrac, df)
+				irFrac, w.combinedIndexFrac(isel, bloomSel), df)
 			varcost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
 			if trace.WhereOpt.On() {
 				trace.WhereOpt.Println("    candidate", idx,
@@ -728,20 +730,69 @@ func WhereCost(cost, inFrac, irFrac, ifFrac float64, df bool) Cost {
 	return int(math.Round(cost))
 }
 
+// combinedIndexFrac counts predicates shared by the two indexes only once.
+func (w *Where) combinedIndexFrac(main, bloom *idxSel) float64 {
+	frac1 := bloom.indexRangeFrac * bloom.indexFilterFrac
+	if main == nil {
+		return frac1
+	}
+	pair := [2]*idxSel{main, bloom}
+	if frac, ok := w.combinedFracs[pair]; ok {
+		return frac
+	}
+	frac2 := main.indexRangeFrac * main.indexFilterFrac
+	overlap := false
+	for _, col := range main.index {
+		if slices.Contains(bloom.index, col) &&
+			(w.colSpans[col] != nil || slices.Contains(w.unspanable, col)) {
+			overlap = true
+			break
+		}
+	}
+	if !overlap {
+		return damp2(frac1, frac2)
+	}
+	// Keep the more selective index's probe estimate, and use column stats
+	// for the remaining predicates in the union of the indexes.
+	if frac1 < frac2 {
+		main, bloom = bloom, main
+	}
+	addsFilter := false
+	for _, col := range bloom.index {
+		if (w.colSpans[col] != nil || slices.Contains(w.unspanable, col)) &&
+			!slices.Contains(main.index, col) {
+			addsFilter = true
+			break
+		}
+	}
+	if !addsFilter {
+		// The more selective index already covers all predicates in both indexes.
+		return min(frac1, frac2)
+	}
+	combined := *main
+	combined.index = set.Union(main.index, bloom.index)
+	combined.calcFracs(w.colFracs, w.colSpans, w.unspanable, 0)
+	frac := min(frac1, frac2, combined.indexRangeFrac*combined.indexFilterFrac)
+	if w.combinedFracs == nil {
+		w.combinedFracs = make(map[[2]*idxSel]float64)
+	}
+	w.combinedFracs[pair] = frac
+	return frac
+}
+
 // WhereCost2 separates the full Bloom filter build from the second scan.
-func WhereCost2(nrows int, cost1, cost2, inFrac, irFrac1, ifFrac1, irFrac2, ifFrac2 float64,
-	df bool) (Cost, Cost) {
+// combinedFrac is the selectivity of both indexes with shared predicates counted once.
+func WhereCost2(nrows int, cost1, cost2, inFrac, irFrac1, ifFrac1, irFrac2,
+	combinedFrac float64, df bool) (Cost, Cost) {
 	if inFrac == 0 {
 		return 0, 0
 	}
 	fixcost := Cost(math.Round(whereIndexFrac * cost1 * irFrac1))
 	nOffsets := float64(nrows) * irFrac1 * ifFrac1
 	fixcost += bloomBaseCost + Cost(math.Round(bloomAddCost*nOffsets))
-	// Dampen the less selective filter to account for dependence, as in calcFracs.
+	ifFrac2 := 1.0
 	if irFrac2 > 0 {
-		frac1, frac2 := irFrac1*ifFrac1, irFrac2*ifFrac2
-		frac := min(frac1, frac2) * damp(1, max(frac1, frac2))
-		ifFrac2 = frac / irFrac2
+		ifFrac2 = combinedFrac / irFrac2
 	}
 	varcost := WhereCost(cost2, inFrac, irFrac2, ifFrac2, df)
 	if ifFrac2 < 1 || df {

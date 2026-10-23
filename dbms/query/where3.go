@@ -31,6 +31,7 @@ func (w *Where) perIndex() []*idxSel {
 			"unknownFrac", unknownFrac)
 	}
 	colFracs := w.getColFracs(w.colSpans)
+	w.colFracs = colFracs
 	idxSels := make([]*idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
 	minFrac := 1.0
@@ -497,6 +498,12 @@ func damp(i int, frac float64) float64 {
 		frac = math.Sqrt(frac)
 	}
 	return frac
+}
+
+// damp2 combines two fraction estimates, counting the overlap between
+// them once by dampening the larger with the smaller.
+func damp2(a, b float64) float64 {
+	return min(a, b) * damp(1, max(a, b))
 }
 
 // calcFracs calculates the selectivity of each stage (index range and filter).

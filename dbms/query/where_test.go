@@ -886,7 +886,9 @@ func TestWhere_Damp(t *testing.T) {
 func TestWhere_Cost2(t *testing.T) {
 	test := func(nrows int, inFrac, ir1, if1, ir2, if2 float64, df bool, fix, variable Cost) {
 		t.Helper()
-		f, v := WhereCost2(nrows, 100_000, 100_000, inFrac, ir1, if1, ir2, if2, df)
+		frac1, frac2 := ir1*if1, ir2*if2
+		combined := damp2(frac1, frac2)
+		f, v := WhereCost2(nrows, 100_000, 100_000, inFrac, ir1, if1, ir2, combined, df)
 		assert.T(t).This(f).Is(fix)
 		assert.T(t).This(v).Is(variable)
 	}
@@ -904,6 +906,104 @@ func TestWhere_Cost2(t *testing.T) {
 	test(2000, 1, .1, 1, 1, 1, false, 4_100, 37_000)
 	test(0, 1, .1, 1, 1, 1, false, 3_000, 28_000)
 	test(1, 1, .5, .5, 1, 1, false, 11_001, 40_005)
+}
+
+func TestWhere_combinedIndexFrac(t *testing.T) {
+	w := ParseQuery("comp where a > 1 and c > 1", testTran{}, nil).(*Where)
+	w.optInit()
+	test := func(main, bloom *idxSel, expected float64) {
+		t.Helper()
+		assert.T(t).This(w.combinedIndexFrac(main, bloom)).Is(expected)
+		assert.T(t).This(w.combinedIndexFrac(bloom, main)).Is(expected)
+	}
+	index := func(cols []string, prefixLen int, prefixFrac, filterFrac float64) *idxSel {
+		return &idxSel{index: cols, prefixLen: prefixLen, prefixFrac: prefixFrac,
+			indexRangeFrac: prefixFrac, indexFilterFrac: filterFrac}
+	}
+	a := index([]string{"a"}, 1, .1, 1)
+	c := index([]string{"c"}, 1, .2, 1)
+	ab := index([]string{"a", "b"}, 1, .1, 1)
+	ac := index([]string{"a", "c"}, 1, .1, math.Sqrt(.5))
+	test(a, c, .1*math.Sqrt(.2)) // disjoint predicates
+	test(ab, index([]string{"c", "b"}, 1, .2, 1),
+		.1*math.Sqrt(.2)) // a shared column without a predicate
+	test(a, ab, .1)                // identical predicates on different indexes
+	test(ab, ac, .1*math.Sqrt(.5)) // partially overlapping predicates
+	test(ac, index([]string{"c", "a"}, 1, .2, math.Sqrt(.5)),
+		.1*math.Sqrt(.5)) // shared predicates in different stages
+	assert.T(t).This(w.combinedIndexFrac(nil, a)).Is(.1)
+	assert.T(t).This(ac.indexFilterFrac).Is(math.Sqrt(.5))
+	assert.T(t).This(a.index).Is([]string{"a"})
+
+	w = ParseQuery("comp where a > 1 and F(c)", testTran{}, nil).(*Where)
+	w.optInit()
+	test(ac, index([]string{"a", "b", "c"}, 1, .1, math.Sqrt(.5)),
+		.1*math.Sqrt(.5)) // overlapping unspanable predicates
+
+	w = ParseQuery("comp where a > 1 and b > 1 and c > 1", testTran{}, nil).(*Where)
+	w.optInit()
+	ab = index([]string{"a", "b"}, 1, .1, math.Sqrt(.5))
+	test(ab, ac, .1*math.Sqrt(.5)*damp(2, .5))
+	assert.T(t).This(testing.AllocsPerRun(10, func() {
+		w.combinedIndexFrac(ab, ac)
+		w.combinedIndexFrac(ac, ab)
+	})).Is(0.)
+}
+
+func TestWhere_twoIndexesOverlap(t *testing.T) {
+	schema := NewAdminParser(`comp (a,b,c) key(a,b) key(a,c)`).Schema()
+	setFields(&schema)
+	tran := &overlapTran{tableSetTran: tableSetTran{QueryTran: testTran{}, schema: &schema,
+		info: &meta.Info{Table: "comp", Nrows: 10_000, Size: 100_000_000}}}
+	test := func(where string, index []string) {
+		t.Helper()
+		w := ParseQuery("comp where "+where, tran, nil).(*Where)
+		w.optInit()
+		statsCalls := tran.statsCalls
+		fixed, variable, ap := w.optimize(ReadMode, OrderReq(index, 1))
+		assert.T(t).This(tran.statsCalls).Is(statsCalls)
+		approach := ap.(*whereApproach)
+		assert.T(t).This(approach.index).Is(index)
+		assert.T(t).This(approach.bloomSel).Is(nil)
+		assert.T(t).This(fixed).Is(0)
+		_, scanCost, _ := w.tbl.costFor(index, ReadMode, NoneReq(1))
+		isel := w.getIdxSel(index)
+		assert.T(t).This(variable).Is(WhereCost(float64(scanCost), 1,
+			isel.indexRangeFrac, isel.indexFilterFrac, isel.hasDataFilter))
+	}
+	test("a > 1", []string{"a", "b"})
+	test("a > 1", []string{"a", "c"})
+	test("a > 1 and F(a)", []string{"a", "b"})
+	test("a > 1 and b > 1 and c > 1", []string{"a", "b"})
+}
+
+func BenchmarkWhere_optimizeOverlap(b *testing.B) {
+	schema := NewAdminParser(`comp (a,b,c,d,e,f,g,h,i)
+		key(a,b) key(a,c) key(a,d) key(a,e)
+		key(a,f) key(a,g) key(a,h) key(a,i)`).Schema()
+	setFields(&schema)
+	tran := &overlapTran{tableSetTran: tableSetTran{QueryTran: testTran{}, schema: &schema,
+		info: &meta.Info{Table: "comp", Nrows: 10_000, Size: 100_000_000}}}
+	w := ParseQuery("comp where a > 1 and b > 1", tran, nil).(*Where)
+	w.optInit()
+	b.ReportAllocs()
+	for b.Loop() {
+		w.optimize(ReadMode, NoneReq(1))
+	}
+}
+
+type overlapTran struct {
+	tableSetTran
+	statsCalls int
+}
+
+func (tr *overlapTran) Stats() stats.Stats {
+	tr.statsCalls++
+	return tr.tableSetTran.Stats()
+}
+
+func (*overlapTran) RangeFrac(string, int, string, string) float64 {
+	return .3
 }
 
 func TestWhere_twoIndexes(t *testing.T) {

@@ -411,7 +411,7 @@ func benchmarkBitmapPlan(b *testing.B, db *db19.Database) {
 							if bloom {
 								fixed, variable = WhereCost2(bt.rows, float64(c1), float64(c2), 1,
 									second.indexRangeFrac, second.indexFilterFrac, main.indexRangeFrac,
-									main.indexFilterFrac, main.hasDataFilter && second.hasDataFilter)
+									w.combinedIndexFrac(main, second), main.hasDataFilter && second.hasDataFilter)
 							} else {
 								variable = WhereCost(float64(c2), 1, main.indexRangeFrac, main.indexFilterFrac, main.hasDataFilter)
 							}
