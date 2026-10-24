@@ -365,6 +365,48 @@ func TestWhere_perIndex(t *testing.T) {
 		"(a,b,c) +b,c: <..'','',max> = ir: .35", d(.5, .5))
 }
 
+func TestWhere_singletonSkipsPrefixFrac(t *testing.T) {
+	schema := NewAdminParser("comp (a,b,c) key(b) index(a) key(c)").Schema()
+	setFields(&schema)
+	tran := &overlapTran{QueryTran: testTran{}, schema: &schema,
+		info: &meta.Info{Table: "comp", Nrows: 1000, Size: 100_000}}
+	w := ParseQuery("comp where a > 1 and c = 3", tran, nil).(*Where)
+	w.optInit()
+	assert.T(t).That(w.singleton)
+	assert.T(t).This(w.idxSels[0].index).Is([]string{"c"})
+	assert.T(t).This(tran.rangeFracCalls).Is(0)
+}
+
+func TestWhere_supersetPrefix(t *testing.T) {
+	test := func(indexes, where string, expected float64) *Where {
+		t.Helper()
+		schema := NewAdminParser("comp (id,a,b,c) key(id) " + indexes).Schema()
+		setFields(&schema)
+		tran := &overlapTran{QueryTran: testTran{}, schema: &schema,
+			info: &meta.Info{Table: "comp", Nrows: 1000, Size: 100_000}}
+		w := ParseQuery("comp where "+where, tran, nil).(*Where)
+		nrows, _ := w.Nrows()
+		assert.T(t).Msg(indexes, where).This(w.wfrac).Is(expected)
+		assert.T(t).This(nrows).Is(int(math.Round(expected * 1000)))
+		return w
+	}
+	// Equal probes: b must not reduce the overall estimate a second time.
+	w := test("index(a) index(a,b)", "a = 1 and b = 2", .3)
+	a := w.getIdxSel([]string{"a", "id"})
+	assert.T(t).This(a.indexRangeFrac).Is(.3)
+	assert.T(t).This(a.indexFilterFrac).Is(1.)
+	assert.T(t).That(a.hasDataFilter) // b still needs filtering when using (a)
+	test("index(a,b) index(a)", "a = 1 and b = 2", .3)
+	test("index(a) index(b,a)", "a = 1 and b = 2", .3)
+	// Predicates outside the superset probe still reduce the estimate.
+	test("index(a) index(a,b)", "a = 1 and b = 2 and c = 3", .3*math.Sqrt(.5))
+	// Equal and unrelated prefix sets are not strict supersets.
+	test("index(a) index(a,c)", "a = 1 and b = 2", .3*math.Sqrt(.5))
+	test("index(a) index(b)", "a = 1 and b = 2", .3*math.Sqrt(.5))
+	// Skip scan columns are estimates, not part of the btree probe.
+	test("index(a) index(c,a,b)", "a = 1 and b = 2", .3*math.Sqrt(.5))
+}
+
 func TestWhere_stats_wfrac(t *testing.T) {
 	pack := func(s string) string { return Pack(SuStr(s)) }
 	stats := stats.Stats{
@@ -994,7 +1036,8 @@ func BenchmarkWhere_optimizeOverlap(b *testing.B) {
 
 type overlapTran struct {
 	tableSetTran
-	statsCalls int
+	statsCalls     int
+	rangeFracCalls int
 }
 
 func (tr *overlapTran) Stats() stats.Stats {
@@ -1002,7 +1045,8 @@ func (tr *overlapTran) Stats() stats.Stats {
 	return tr.tableSetTran.Stats()
 }
 
-func (*overlapTran) RangeFrac(string, int, string, string) float64 {
+func (tr *overlapTran) RangeFrac(string, int, string, string) float64 {
+	tr.rangeFracCalls++
 	return .3
 }
 

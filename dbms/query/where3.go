@@ -15,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/core/trace"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/set"
 )
 
 const unknownFrac = .5
@@ -34,7 +35,7 @@ func (w *Where) perIndex() []*idxSel {
 	w.colFracs = colFracs
 	idxSels := make([]*idxSel, 0, 4)
 	indexes := w.tbl.schemaIndexes()
-	minFrac := 1.0
+	// Build all candidates first so a later singleton avoids prefixFrac probes.
 	for i := range indexes {
 		schix := &indexes[i]
 		isel := w.buildIdxSel(schix.Fields, schix.Mode, w.colSpans)
@@ -47,18 +48,6 @@ func (w *Where) perIndex() []*idxSel {
 			trace.WhereOpt.Println("    index", isel.index, "no usable constraints")
 			continue
 		}
-		// calculate fracs
-		isel.prefixFrac = w.prefixFrac(isel)
-		frac := isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
-		if trace.WhereOpt.On() {
-			trace.WhereOpt.Println("    index", isel, "indexRangeFrac", isel.indexRangeFrac,
-				"indexFilterFrac", isel.indexFilterFrac, "hasDataFilter", isel.hasDataFilter,
-				"overallFrac", frac)
-		}
-		if frac < minFrac {
-			minFrac = frac
-		}
-
 		idxSels = append(idxSels, isel)
 	}
 	if len(idxSels) == 0 {
@@ -67,6 +56,24 @@ func (w *Where) perIndex() []*idxSel {
 		w.wfrac = isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
 		trace.WhereOpt.Println("    no usable index, wfrac", w.wfrac)
 		return nil
+	}
+	minFrac := 1.0
+	for _, isel := range idxSels {
+		isel.prefixFrac = w.prefixFrac(isel)
+		frac := isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
+		if trace.WhereOpt.On() {
+			trace.WhereOpt.Println("    index", isel, "indexRangeFrac", isel.indexRangeFrac,
+				"indexFilterFrac", isel.indexFilterFrac, "hasDataFilter", isel.hasDataFilter,
+				"overallFrac", frac)
+		}
+		// Prefer a probe covering more predicates over guessing their
+		// additional selectivity. Keep all stage fractions for index costing.
+		if !slices.ContainsFunc(idxSels, func(other *idxSel) bool {
+			return other.prefixLen > isel.prefixLen &&
+				set.HasSubset(other.index[:other.prefixLen], isel.index[:isel.prefixLen])
+		}) {
+			minFrac = min(minFrac, frac)
+		}
 	}
 	w.wfrac = minFrac
 	trace.WhereOpt.Println("    wfrac", w.wfrac)
