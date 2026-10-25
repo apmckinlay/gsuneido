@@ -138,6 +138,32 @@ func fuzzRandom(ft *FT) Query {
 }
 
 //-------------------------------------------------------------------
+// go test -run '^$' -fuzz=FuzzColumns ./dbms/query
+
+var fuzzColumnsRunner = fuzzRunner{build: fuzzColumns}
+
+func FuzzColumns(f *testing.F) {
+	fuzzColumnsRunner.Fuzz(f)
+}
+
+func TestFuzzColumns(t *testing.T) {
+	fuzzColumnsRunner.Test(t)
+}
+
+// fuzzColumns builds a database with a variety of random tables and returns
+// the virtual "columns" table. This stresses Columns.Get, the per-table column
+// sorting (sortCols reuses one slice), and cursor navigation across table
+// boundaries.
+func fuzzColumns(ft *FT) Query {
+	// a variety of tables, some with derived (rule) columns
+	for range 10 {
+		ft.NewFuzzTable()
+	}
+	ft.rt = ft.db.NewReadTran(AllPerms)
+	return NewTable(ft.rt, "columns")
+}
+
+//-------------------------------------------------------------------
 
 func TestFuzzNothing(t *testing.T) {
 	ft := testFT()
@@ -1354,13 +1380,9 @@ func (fc *fuzzCtx) testRandomGet(qh *QueryHash, sels Sels) {
 	history := ""
 	nsteps := min(100, len(nextRows)*3)
 	for i := range nsteps {
-		// Occasionally add a Select to reset indexed flag for projMap
+		// Occasionally redo the Select to reset the indexed flag for projMap
 		if fc.rnd.IntN(20) == 0 { // 5% chance
-			if sels == nil {
-				fc.q.Select(nil) // this also rewinds
-			} else {
-				fc.q.Rewind()
-			}
+			fc.q.Select(sels) // this also rewinds
 			data.rewind()
 		}
 

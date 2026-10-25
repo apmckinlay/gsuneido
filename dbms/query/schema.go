@@ -6,6 +6,7 @@ package query
 import (
 	"slices"
 	"sort"
+	"strings"
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19"
@@ -126,8 +127,10 @@ func schemaTableCols(table string) []string {
 
 type Tables struct {
 	schemaTable
-	info []*meta.Info
-	i    int
+	info     []*meta.Info
+	posTable string
+	i        int
+	gap      bool
 }
 
 func (*Tables) String() string {
@@ -164,13 +167,26 @@ func (ts *Tables) Nrows() (int, int) {
 
 func (ts *Tables) SetTran(tran QueryTran) {
 	tran.CheckPerm("tables", PermRead)
+	if ts.state.Within() && !ts.gap {
+		ts.posTable = ts.info[ts.i].Table
+	}
 	ts.tran = tran
 	ts.info = nil
+	if ts.state.Within() {
+		ts.ensure()
+		var found bool
+		ts.i, found = slices.BinarySearchFunc(ts.info, ts.posTable,
+			func(info *meta.Info, table string) int {
+				return strings.Compare(info.Table, table)
+			})
+		ts.gap = !found
+	}
 }
 
 func (ts *Tables) Rewind() {
 	ts.i = -1
 	ts.state = iface.Rewound
+	ts.gap = false
 }
 
 func (ts *Tables) Get(_ *Thread, dir Dir) Row {
@@ -183,7 +199,9 @@ func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 		if ts.state.Rewound() {
 			ts.i = -1
 		}
-		ts.i++
+		if !ts.gap {
+			ts.i++
+		}
 	} else { // Prev
 		if ts.state.Rewound() {
 			ts.i = len(ts.info)
@@ -195,6 +213,7 @@ func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 		return Row{}
 	}
 	ts.state = iface.Within
+	ts.gap = false
 	ts.ngets++
 	return ts.row(ts.info[ts.i])
 }
@@ -258,10 +277,14 @@ func (ts *Tables) Lookup(th *Thread, sels Sels) Row {
 
 type Columns struct {
 	schemaTable
-	schema []*meta.Schema
-	si     int
-	ci     int
-	nrows  int
+	schema    []*meta.Schema
+	order     []int // reusable, sorted column indexes for the current table
+	posTable  string
+	posColumn string
+	si        int
+	ci        int
+	nrows     int
+	gap       bool // ci is an insertion point rather than a returned column
 }
 
 func (*Columns) String() string {
@@ -310,13 +333,55 @@ func (cs *Columns) getNrows() int {
 
 func (cs *Columns) SetTran(tran QueryTran) {
 	tran.CheckPerm("columns", PermRead)
+	var prev *meta.Schema
+	if cs.state.Within() && cs.si < len(cs.schema) {
+		prev = cs.schema[cs.si]
+	}
 	cs.tran = tran
 	cs.schema = nil
+	if !cs.state.Within() {
+		return
+	}
+	cs.ensure()
+	if cs.si < len(cs.schema) && cs.schema[cs.si] == prev {
+		return
+	}
+	// Resume by name, since both table positions and column indexes may change.
+	if !cs.gap {
+		cs.posTable = prev.Table
+		cs.posColumn, _ = columnOrDerived(prev, cs.order[cs.ci])
+	}
+	cs.si = sort.Search(len(cs.schema), func(i int) bool {
+		return cs.schema[i].Table >= cs.posTable
+	})
+	cs.ci, cs.gap = 0, true
+	if cs.si < len(cs.schema) {
+		cs.sortCols(cs.si)
+		if cs.schema[cs.si].Table == cs.posTable {
+			var found bool
+			cs.ci, found = slices.BinarySearchFunc(cs.order, cs.posColumn,
+				func(i int, col string) int {
+					name, _ := columnOrDerived(cs.schema[cs.si], i)
+					return strings.Compare(name, col)
+				})
+			cs.gap = !found
+		}
+	} else {
+		cs.order = cs.order[:0]
+	}
 }
 
 func (cs *Columns) Rewind() {
 	cs.si = -1
 	cs.state = iface.Rewound
+	cs.gap = false
+}
+
+func (cs *Columns) Select(sels Sels) {
+	if sels != nil {
+		panic(assert.ShouldNotReachHere())
+	}
+	cs.Rewind()
 }
 
 func (cs *Columns) Get(_ *Thread, dir Dir) Row {
@@ -325,46 +390,65 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	if cs.state.Eof() {
 		return Row{}
 	}
-	var col string
-	var fld int
-	for {
-		if dir == Next {
-			if cs.state.Rewound() {
-				cs.si, cs.ci = 0, -1
-			}
-			cs.ci++
-			for cs.ci >= len(cs.schema[cs.si].Columns)+len(cs.schema[cs.si].Derived) {
-				cs.si++
-				if cs.si >= len(cs.schema) {
-					cs.state = iface.Eof
-					return Row{}
-				}
-				cs.ci = 0
-			}
-		} else { // Prev
-			if cs.state.Rewound() {
-				cs.si = len(cs.schema)
-				cs.ci = 0
-			}
-			cs.ci--
-			for cs.ci < 0 {
-				cs.si--
-				if cs.si < 0 {
-					cs.state = iface.Eof
-					return Row{}
-				}
-				cs.ci = len(cs.schema[cs.si].Columns) + len(cs.schema[cs.si].Derived) - 1
-			}
+	if dir == Next {
+		if cs.state.Rewound() {
+			cs.si, cs.ci = 0, -1
+			cs.sortCols(cs.si)
 		}
-		col, fld = columnOrDerived(cs.schema[cs.si], cs.ci)
-		if col != "-" {
-			break
+		if !cs.gap {
+			cs.ci++
+		}
+		for cs.ci >= len(cs.order) {
+			cs.si++
+			if cs.si >= len(cs.schema) {
+				cs.state = iface.Eof
+				return Row{}
+			}
+			cs.ci = 0
+			cs.sortCols(cs.si)
+		}
+	} else { // Prev
+		if cs.state.Rewound() {
+			cs.si, cs.ci = len(cs.schema), 0
+		}
+		cs.ci--
+		for cs.ci < 0 {
+			cs.si--
+			if cs.si < 0 {
+				cs.state = iface.Eof
+				return Row{}
+			}
+			cs.sortCols(cs.si)
+			cs.ci = len(cs.order) - 1
 		}
 	}
 	cs.state = iface.Within
+	cs.gap = false
 	cs.ngets++
 	schema := cs.schema[cs.si]
+	col, fld := columnOrDerived(schema, cs.order[cs.ci])
 	return cs.row(schema.Table, col, fld)
+}
+
+// sortCols loads cs.order with the indexes (into Columns followed by Derived)
+// of the given schema's columns, sorted by column name and skipping "-".
+// It reuses cs.order to avoid allocating for each table.
+func (cs *Columns) sortCols(si int) {
+	s := cs.schema[si]
+	cs.order = cs.order[:0]
+	for i, col := range s.Columns {
+		if col != "-" {
+			cs.order = append(cs.order, i)
+		}
+	}
+	for i := range s.Derived {
+		cs.order = append(cs.order, len(s.Columns)+i)
+	}
+	slices.SortFunc(cs.order, func(a, b int) int {
+		ac, _ := columnOrDerived(s, a)
+		bc, _ := columnOrDerived(s, b)
+		return strings.Compare(ac, bc)
+	})
 }
 
 func (*Columns) row(table, col string, fld int) Row {
@@ -426,15 +510,45 @@ func (cs *Columns) Lookup(th *Thread, sels Sels) Row {
 	return cs.row(table, column, fld)
 }
 
+func (cs *Columns) Simple(*Thread) []Row {
+	cs.ensure()
+	rows := make([]Row, 0, cs.nrows)
+	var order []int // reused across schemas to avoid allocating for each
+	for _, schema := range cs.schema {
+		order = order[:0]
+		for i, col := range schema.Columns {
+			if col != "-" {
+				order = append(order, i)
+			}
+		}
+		for i := range schema.Derived {
+			order = append(order, len(schema.Columns)+i)
+		}
+		slices.SortFunc(order, func(a, b int) int {
+			ac, _ := columnOrDerived(schema, a)
+			bc, _ := columnOrDerived(schema, b)
+			return strings.Compare(ac, bc)
+		})
+		for _, i := range order {
+			col, fld := columnOrDerived(schema, i)
+			rows = append(rows, cs.row(schema.Table, col, fld))
+		}
+	}
+	return rows
+}
+
 //-------------------------------------------------------------------
 // note: indexes does not include tables, columns, indexes, views
 
 type Indexes struct {
 	schemaTable
-	schema []*meta.Schema
-	si     int
-	ci     int
-	nrows  int
+	schema     []*meta.Schema
+	posIndexes []schema.Index // old prefix through the current index, retained across gaps
+	posTable   string
+	si         int
+	ci         int
+	nrows      int
+	gap        bool
 }
 
 func (*Indexes) String() string {
@@ -479,12 +593,51 @@ func (is *Indexes) getNrows() int {
 
 func (is *Indexes) SetTran(tran QueryTran) {
 	tran.CheckPerm("indexes", PermRead)
+	var prev *meta.Schema
+	if is.state.Within() && is.si < len(is.schema) {
+		prev = is.schema[is.si]
+	}
 	is.tran = tran
 	is.schema = nil
+	if !is.state.Within() {
+		return
+	}
+	is.ensure()
+	if is.si < len(is.schema) && is.schema[is.si] == prev {
+		return
+	}
+	if !is.gap {
+		is.posTable = prev.Table
+		is.posIndexes = prev.Indexes[:is.ci+1]
+	}
+	is.si = sort.Search(len(is.schema), func(i int) bool {
+		return is.schema[i].Table >= is.posTable
+	})
+	is.ci, is.gap = 0, true
+	if is.si < len(is.schema) && is.schema[is.si].Table == is.posTable {
+		idxs := is.schema[is.si].Indexes
+		// Additions append and removals preserve physical order. If the
+		// current index is gone, resume after its last surviving predecessor.
+		for p := len(is.posIndexes) - 1; p >= 0; p-- {
+			i := slices.IndexFunc(idxs, func(idx schema.Index) bool {
+				return slices.Equal(idx.Columns, is.posIndexes[p].Columns)
+			})
+			if i >= 0 {
+				is.ci = i
+				if p == len(is.posIndexes)-1 {
+					is.gap = false
+				} else {
+					is.ci++
+				}
+				break
+			}
+		}
+	}
 }
 
 func (is *Indexes) Rewind() {
 	is.state = iface.Rewound
+	is.gap = false
 }
 
 func (is *Indexes) Get(_ *Thread, dir Dir) Row {
@@ -495,35 +648,35 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	}
 	if dir == Next {
 		if is.state.Rewound() {
-			is.si, is.ci = 0, 0
-		} else {
+			is.si, is.ci = 0, -1
+		}
+		if !is.gap {
 			is.ci++
-			if is.ci >= len(is.schema[is.si].Indexes) {
-				is.si++
-				if is.si >= len(is.schema) {
-					is.state = iface.Eof
-					return Row{}
-				}
-				is.ci = 0
+		}
+		for is.si >= len(is.schema) || is.ci >= len(is.schema[is.si].Indexes) {
+			is.si++
+			if is.si >= len(is.schema) {
+				is.state = iface.Eof
+				return Row{}
 			}
+			is.ci = 0
 		}
 	} else { // Prev
 		if is.state.Rewound() {
-			is.si = len(is.schema) - 1
-			is.ci = len(is.schema[is.si].Indexes) - 1
-		} else {
-			is.ci--
-			if is.ci < 0 {
-				is.si--
-				if is.si < 0 {
-					is.state = iface.Eof
-					return Row{}
-				}
-				is.ci = len(is.schema[is.si].Indexes) - 1
+			is.si, is.ci = len(is.schema), 0
+		}
+		is.ci--
+		for is.ci < 0 {
+			is.si--
+			if is.si < 0 {
+				is.state = iface.Eof
+				return Row{}
 			}
+			is.ci = len(is.schema[is.si].Indexes) - 1
 		}
 	}
 	is.state = iface.Within
+	is.gap = false
 	schema := is.schema[is.si]
 	is.ngets++
 	return is.row(schema.Table, &schema.Indexes[is.ci])
@@ -580,7 +733,9 @@ func (is *Indexes) Lookup(th *Thread, sels Sels) Row {
 type Views struct {
 	views []string
 	schemaTable
-	i int
+	posName string
+	i       int
+	gap     bool
 }
 
 func (*Views) String() string {
@@ -617,13 +772,24 @@ func (vs *Views) Nrows() (int, int) {
 
 func (vs *Views) SetTran(tran QueryTran) {
 	tran.CheckPerm("views", PermRead)
+	if vs.state.Within() && !vs.gap {
+		vs.posName = vs.views[vs.i]
+	}
 	vs.tran = tran
 	vs.views = nil
+	if vs.state.Within() {
+		vs.ensure()
+		vs.i = 2 * sort.Search(vs.Len(), func(i int) bool {
+			return vs.views[2*i] >= vs.posName
+		})
+		vs.gap = vs.i == len(vs.views) || vs.views[vs.i] != vs.posName
+	}
 }
 
 func (vs *Views) Rewind() {
 	vs.i = -2
 	vs.state = iface.Rewound
+	vs.gap = false
 }
 
 func (vs *Views) Get(_ *Thread, dir Dir) Row {
@@ -635,7 +801,9 @@ func (vs *Views) Get(_ *Thread, dir Dir) Row {
 		if vs.state.Rewound() {
 			vs.i = -2
 		}
-		vs.i += 2
+		if !vs.gap {
+			vs.i += 2
+		}
 	} else { // Prev
 		if vs.state.Rewound() {
 			vs.i = len(vs.views)
@@ -647,6 +815,7 @@ func (vs *Views) Get(_ *Thread, dir Dir) Row {
 		return Row{}
 	}
 	vs.state = iface.Within
+	vs.gap = false
 	return vs.row(vs.views[vs.i], vs.views[vs.i+1])
 }
 
