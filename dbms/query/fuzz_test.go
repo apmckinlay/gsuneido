@@ -1197,6 +1197,14 @@ func composeFuzzExtend(ft *FT, qs Query) Query {
 	cols := make([]string, n)
 	exprs := make([]ast.Expr, n)
 	qcols := qs.Columns()
+	// Don't reference a rule column that depends on another column: the
+	// Extend stores it as a forward ref, and a later project could drop that
+	// dependency, leaving the rule (and the extend column) uncomputable.
+	// Constant-only rules are fine because they need no dependency.
+	identCols := slc.WithoutFn(qcols, func(col string) bool {
+		_, depends := ft.ruleDeps[col]
+		return depends
+	})
 	for i := range n {
 		for j := 0; ; j++ {
 			name := "x" + strconv.Itoa(i)
@@ -1208,8 +1216,8 @@ func composeFuzzExtend(ft *FT, qs Query) Query {
 				break
 			}
 		}
-		if ft.rnd.IntN(2) == 0 && len(qcols) > 0 {
-			exprs[i] = &ast.Ident{Name: random(qcols, ft.rnd)}
+		if ft.rnd.IntN(2) == 0 && len(identCols) > 0 {
+			exprs[i] = &ast.Ident{Name: random(identCols, ft.rnd)}
 		} else {
 			exprs[i] = &ast.Constant{Val: IntVal(ft.rnd.IntN(1000))}
 		}
