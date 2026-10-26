@@ -463,6 +463,13 @@ func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, 
 		}
 	}
 
+	// wholeRow: a single min/max with no 'by' returns the whole source record,
+	// so its default output column name must not collide with a source column
+	wholeRowConflict := func(op, on string) bool {
+		return (op == "min" || op == "max") &&
+			slices.Contains(srcCols, defaultColName(op, on))
+	}
+
 	nops := 1 + rnd.IntN(3)
 	cols = make([]string, nops)
 	ops = make([]string, nops)
@@ -473,19 +480,17 @@ func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, 
 	if len(by) == 0 && len(indexes) > 0 && rnd.IntN(10) == 0 {
 		// Find the first column of an index for sumIdx
 		for _, idx := range indexes {
-			if len(idx) > 0 {
-				cols = make([]string, 1)
-				ops = make([]string, 1)
-				ons = make([]string, 1)
-				if rnd.IntN(2) == 0 {
-					ops[0] = "min"
-				} else {
-					ops[0] = "max"
-				}
-				ons[0] = idx[0]
-				cols[0] = "" // use default name
-				return
+			if len(idx) == 0 {
+				continue
 			}
+			op := "min"
+			if rnd.IntN(2) != 0 {
+				op = "max"
+			}
+			if wholeRowConflict(op, idx[0]) {
+				continue
+			}
+			return by, []string{""}, []string{op}, []string{idx[0]}
 		}
 	}
 	if len(by) == 0 && rnd.IntN(7) == 0 {
@@ -508,9 +513,16 @@ func randomSummarize(rnd *rand.Rand, srcCols []string, indexes [][]string) (by, 
 		}
 		pool := []pair(nil)
 		add := func(op, on string) {
-			if _, ok := bySet[defaultColName(op, on)]; !ok {
-				pool = append(pool, pair{op, on})
+			name := defaultColName(op, on)
+			if _, ok := bySet[name]; ok {
+				return
 			}
+			// wholeRow (only when by is empty) carries the source columns, so
+			// a min/max output column must not collide with a source column
+			if len(by) == 0 && wholeRowConflict(op, on) {
+				return
+			}
+			pool = append(pool, pair{op, on})
 		}
 		add("count", "")
 		for _, op := range sumOps {
