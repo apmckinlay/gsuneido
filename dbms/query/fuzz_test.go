@@ -18,6 +18,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -88,7 +89,7 @@ func FuzzRandom(f *testing.F) {
 }
 
 func TestFuzzRandomDebug(t *testing.T) {
-	fuzzRandomRunner.Run(t, 181, 161)
+	fuzzRandomRunner.Run(t, 465, 777)
 }
 
 func TestFuzzRandom(t *testing.T) {
@@ -280,10 +281,10 @@ func randomProjectCols(rnd *rand.Rand, srcCols []string, indexes [][]string,
 			prefixLen := 1 + rnd.IntN(len(index))
 			return index[:prefixLen]
 		}
-		// Fall through to original random selection
+		// Fall through to random selection
 	}
 
-	// 80% of the time, use original random selection (or when index is empty)
+	// 80% of the time, use random selection (or when index is empty)
 	n := 1 + rnd.IntN(len(srcCols)) // 1 to all columns
 	perm := rnd.Perm(len(srcCols))
 	cols := make([]string, 0, n)
@@ -719,23 +720,23 @@ func newCompatibleQS(ft *FT) (Query, Query) {
 
 	// keep the original columns on both to ensure indexes are valid
 	// and add some new ones
-	b1.columns = slices.Clip(b.columns)
-	i := len(b.columns)
+	b1.colflds = slices.Clip(b.colflds)
+	i := len(b.colflds)
 	for range rnd.IntN(7) {
 		col := "c" + strconv.Itoa(i)
-		b1.columns = append(b1.columns, col)
+		b1.colflds = append(b1.colflds, col)
 		i++
 	}
-	addExtraData(rnd, b1.data, b.columns, b1.columns)
+	addExtraData(rnd, b1.data, b.colflds, b1.colflds)
 
-	b2.columns = slices.Clip(b.columns)
-	i = len(b.columns)
+	b2.colflds = slices.Clip(b.colflds)
+	i = len(b.colflds)
 	for range rnd.IntN(7) {
 		col := "c" + strconv.Itoa(i)
-		b2.columns = append(b2.columns, col)
+		b2.colflds = append(b2.colflds, col)
 		i++
 	}
-	addExtraData(rnd, b2.data, b.columns, b2.columns)
+	addExtraData(rnd, b2.data, b.colflds, b2.colflds)
 
 	q1, q2 := b1.finish(), b2.finish()
 
@@ -789,10 +790,15 @@ func addExtraData(rnd *rand.Rand, data [][]string, baseCols, allCols []string) {
 }
 
 func makeAllColsKey(b *buildFT) {
-	// exclude rule columns since they can't be part of a key (they're derived)
-	cols := make([]string, 0, len(b.columns))
-	for _, col := range b.columns {
-		if !slices.Contains(b.ruleCols, col) {
+	// columns() is logical (no "-", derived uncapitalized). Exclude derived
+	// (rule) columns since they can't be part of a key.
+	ruleCols := make([]string, len(b.ruleCols))
+	for i, c := range b.ruleCols {
+		ruleCols[i] = str.UnCapitalize(c)
+	}
+	cols := make([]string, 0, len(b.colflds))
+	for _, col := range b.columns() {
+		if !slices.Contains(ruleCols, col) {
 			cols = append(cols, col)
 		}
 	}
@@ -880,7 +886,7 @@ func newFuzzJoin(ft *FT) (Query, Query, []string) {
 	var by []string
 	switch rnd.IntN(4) {
 	case 0: // 1:1
-		b1nc := len(b1.columns)
+		b1nc := len(b1.colflds)
 		key := joinBy(rnd, b1, b2)
 		by = key
 		addKey(rnd, b1, key)
@@ -902,7 +908,7 @@ func newFuzzJoin(ft *FT) (Query, Query, []string) {
 		if len(b1.data) < len(b2.data) {
 			b1, b2 = b2, b1
 		}
-		b1nc := len(b1.columns)
+		b1nc := len(b1.colflds)
 		by = joinBy(rnd, b1, b2)
 		addKey(rnd, b1, by)
 
@@ -939,12 +945,12 @@ func newFuzzJoin(ft *FT) (Query, Query, []string) {
 		b2.indexes = append(b2.indexes, by)
 	}
 	// Sometimes add a shared rule column to exercise rule-in-by paths.
-	// The column name is capitalized (Jr) so it's derived (not stored),
-	// but Table.Columns() returns it uncapitalized (jr), so by uses "jr".
+	// The column name is capitalized (Jr) so it's derived (not stored);
+	// columns() uncapitalizes it (jr) to match Table.Columns(), so by uses "jr".
 	if rnd.IntN(4) == 0 {
 		ruleCol := "Jr"
-		b1.columns = append(b1.columns, ruleCol)
-		b2.columns = append(b2.columns, ruleCol)
+		b1.colflds = append(b1.colflds, ruleCol)
+		b2.colflds = append(b2.colflds, ruleCol)
 		b1.ruleCols = append(b1.ruleCols, ruleCol)
 		b2.ruleCols = append(b2.ruleCols, ruleCol)
 		by = append(by, "jr")
@@ -976,8 +982,8 @@ func joinBy(rnd *rand.Rand, b1 *buildFT, b2 *buildFT) []string {
 	for i := range cols {
 		cols[i] = "j" + strconv.Itoa(i)
 	}
-	b1.columns = append(b1.columns, cols...)
-	b2.columns = append(b2.columns, cols...)
+	b1.colflds = append(b1.colflds, cols...)
+	b2.colflds = append(b2.colflds, cols...)
 	return cols
 }
 
@@ -1700,6 +1706,7 @@ func (fc *fuzzCtx) testRandomLookups(index []string, allRows []Row) {
 				}
 				fmt.Println("srcRow", RowStr(hdr, srcRow))
 				fmt.Println("sels", sels)
+				dbg.PrintStack()
 				fc.t.Fatal("lookup returned nil for existing key")
 			}
 			assert.That(rowsEqual(result, srcRow, hdr, cols))

@@ -281,3 +281,13 @@ func Shuffle[E any](rnd *rand.Rand, list []E) {
 		list[i], list[j] = list[j], list[i]
 	})
 }
+
+func Count[E comparable](list []E, e E) int {
+	n := 0
+	for _, x := range list {
+		if x == e {
+			n++
+		}
+	}
+	return n
+}

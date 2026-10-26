@@ -74,9 +74,9 @@ func fuzzProjectForCosting(ft *FT) Query {
 		// truncate to make len(data) divisible by projDupDiv
 		b.data = b.data[:len(b.data)-len(b.data)%projGrpDiv]
 
-		projCols := randomProjectCols(ft.rnd, b.columns, b.indexes, b.ruleDeps)
+		projCols := randomProjectCols(ft.rnd, b.columns(), b.indexes, b.ruleDeps)
 
-		if set.Equal(projCols, b.columns) {
+		if set.Equal(projCols, b.columns()) {
 			continue // Transform would eliminate
 		}
 
@@ -92,7 +92,7 @@ func fuzzProjectForCosting(ft *FT) Query {
 			}
 			projIdxs := make([]int, len(projCols))
 			for i, col := range projCols {
-				projIdxs[i] = b.colIndex[col]
+				projIdxs[i] = b.fldIndex(col)
 			}
 			for ri := range b.data {
 				g := ri / projGrpDiv
@@ -175,7 +175,7 @@ func TestCosting_Summarize(t *testing.T) {
 func fuzzSummarizeForCosting(ft *FT) Query {
 	for { // loop is so we can reject unusable and restart
 		b := ft.newFT().Sizes(ftMaxRows, 1, ftMaxIndexes).NoEmptyKey().construct()
-		if len(b.columns) == 0 {
+		if len(b.columns()) == 0 {
 			continue
 		}
 
@@ -189,7 +189,7 @@ func fuzzSummarizeForCosting(ft *FT) Query {
 			if len(b.indexes) > 0 && ft.rnd.IntN(2) == 0 {
 				col = random(b.indexes, ft.rnd)[0]
 			} else {
-				col = random(b.columns, ft.rnd)
+				col = random(b.columns(), ft.rnd)
 			}
 			op := "min"
 			if ft.rnd.IntN(2) == 0 {
@@ -199,7 +199,7 @@ func fuzzSummarizeForCosting(ft *FT) Query {
 				[]string{""}, []string{op}, []string{col})
 
 		case 2: // sumSeq with no by: total or average
-			col := random(b.columns, ft.rnd)
+			col := random(b.columns(), ft.rnd)
 			op := "total"
 			if ft.rnd.IntN(2) == 0 {
 				op = "average"
@@ -245,7 +245,7 @@ func fuzzSummarizeForCosting(ft *FT) Query {
 				[]string{""}, []string{"count"}, []string{""})
 
 		case 4: // sumMap: by not an index prefix and not a key
-			col := random(b.columns, ft.rnd)
+			col := random(b.columns(), ft.rnd)
 			by := []string{col}
 			isIdxPrefix := false
 			for _, idx := range b.indexes {
@@ -272,7 +272,7 @@ func fuzzSummarizeForCosting(ft *FT) Query {
 			if len(b.data) == 0 {
 				continue
 			}
-			ci := b.colIndex[col]
+			ci := b.fldIndex(col)
 			for ri := range b.data {
 				g := ri / sumGrpDiv
 				b.data[ri][ci] = col + "_" + strconv.Itoa(g)

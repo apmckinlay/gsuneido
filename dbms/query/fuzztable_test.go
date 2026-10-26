@@ -15,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
@@ -26,7 +27,8 @@ type FT struct {
 	rnd      *rand.Rand
 	nextNum  int
 	rt       *db19.ReadTran
-	rules    map[string]string
+	nextRule int
+	rules    map[string]string // for debugging
 	ruleRefs []string
 	ruleDeps map[string]string
 }
@@ -37,11 +39,15 @@ type buildFT struct {
 	maxKeys    int
 	maxIndexes int
 	prefix     string
-	columns    []string
-	colIndex   map[string]int
-	emptyKey   bool
-	keys       [][]string
-	indexes    [][]string
+	// colflds is the physical record slots: base columns plus derived (rule)
+	// columns, with dropped columns replaced by "-". data, colIndex, and
+	// cardinality are keyed/positioned on it.
+	// Use columns() for the logical view.
+	colflds  []string
+	colIndex map[string]int
+	emptyKey bool
+	keys     [][]string
+	indexes  [][]string
 	// uniqueIdx records which indexes are "unique index" rather than plain
 	// "index", keyed by the joined column names (indexKey) so the mapping
 	// stays correct even if indexes are later split, reordered, or shared
@@ -51,6 +57,27 @@ type buildFT struct {
 	data        [][]string
 	noEmptyKey  bool
 	ruleCols    []string
+}
+
+// columns returns the logical columns: base columns plus derived (rule)
+// columns, with dropped ("-") columns removed and derived names uncapitalized,
+// matching Query.Columns(). It is derived from colflds and must not be
+// modified by callers.
+func (b *buildFT) columns() []string {
+	cols := slices.DeleteFunc(slices.Clone(b.colflds),
+		func(c string) bool { return c == "-" })
+	for i, c := range cols {
+		cols[i] = str.UnCapitalize(c)
+	}
+	return cols
+}
+
+// fldIndex returns the physical field index for a column name
+func (b *buildFT) fldIndex(col string) int {
+	if i, ok := b.colIndex[col]; ok {
+		return i
+	}
+	panic("buildFT.fldIndex: unknown column: " + col)
 }
 
 func (ft *FT) NewFuzzTable() Query {
@@ -63,6 +90,7 @@ const (
 	ftMaxRules   = 3
 	ftMaxKeys    = 3
 	ftMaxIndexes = 3
+	ftMaxDel     = 3
 )
 
 func (ft *FT) newFT() *buildFT {
@@ -102,16 +130,30 @@ func (b *buildFT) construct() *buildFT {
 	b.makeKeys()
 	b.makeIndexes()
 	b.makeData()
+	b.dropColumns()
 	return b
 }
 
 func (b *buildFT) makeRules() {
+	base := b.colflds[:len(b.colflds)-len(b.ruleCols)]
+	nAvail := len(base) - slc.Count(base, "-")
+	pickAvail := func() string {
+		k := b.rnd.IntN(nAvail)
+		for _, c := range base {
+			if c != "-" {
+				if k == 0 {
+					return c
+				}
+				k--
+			}
+		}
+		panic(assert.ShouldNotReachHere())
+	}
 	for _, col := range b.ruleCols {
 		ruleName := "Rule_" + str.UnCapitalize(col)
 		var ruleExpr string
-		nonRuleCount := len(b.columns) - len(b.ruleCols)
-		if nonRuleCount > 0 && b.rnd.IntN(2) == 0 {
-			existingCol := b.columns[b.rnd.IntN(nonRuleCount)]
+		if nAvail > 0 && b.rnd.IntN(2) == 0 {
+			existingCol := pickAvail()
 			b.ruleRefs = append(b.ruleRefs, existingCol)
 			b.ruleDeps[str.UnCapitalize(col)] = existingCol
 			ruleExpr = "." + str.UnCapitalize(existingCol)
@@ -131,7 +173,7 @@ func (b *buildFT) finish() Query {
 	var sb strings.Builder
 	sb.WriteString("create ")
 	sb.WriteString(table)
-	sb.WriteString(str.Join("(,)", b.columns))
+	sb.WriteString(str.Join("(,)", b.colflds))
 	for _, key := range b.keys {
 		sb.WriteString(" key")
 		sb.WriteString(str.Join("(,)", key))
@@ -160,12 +202,12 @@ func (b *buildFT) finish() Query {
 
 func (b *buildFT) makeColumns() {
 	ncols := 1 + b.rnd.IntN(ftMaxCols)
-	b.columns = make([]string, ncols)
+	b.colflds = make([]string, ncols)
 	b.colIndex = make(map[string]int, ncols)
 	b.cardinality = make(map[string]int, ncols)
 	for i := range ncols {
 		col := b.prefix + strconv.Itoa(i)
-		b.columns[i] = col
+		b.colflds[i] = col
 		b.colIndex[col] = i
 		b.cardinality[col] = 1 + b.rnd.IntN(1009)
 	}
@@ -173,12 +215,14 @@ func (b *buildFT) makeColumns() {
 	if !b.noEmptyKey && b.rnd.IntN(2) == 0 {
 		nrule := 1 + b.rnd.IntN(ftMaxRules)
 		b.ruleCols = make([]string, 0, nrule)
-		for i := range nrule {
+		for range nrule {
+			i := b.nextRule
+			b.nextRule++
 			// capitalized so the column is derived (not stored), only from a rule
 			ruleCol := str.Capitalize(b.prefix) + "r" + strconv.Itoa(i)
 			b.ruleCols = append(b.ruleCols, ruleCol)
-			b.columns = append(b.columns, ruleCol)
-			b.colIndex[ruleCol] = len(b.columns) - 1
+			b.colflds = append(b.colflds, ruleCol)
+			b.colIndex[ruleCol] = len(b.colflds) - 1
 		}
 	}
 }
@@ -191,8 +235,8 @@ func (b *buildFT) makeKeys() {
 	}
 	nkeys := 1 + b.rnd.IntN(b.maxKeys)
 
-	nonRuleCols := make([]string, 0, len(b.columns))
-	for _, col := range b.columns {
+	nonRuleCols := make([]string, 0, len(b.colflds))
+	for _, col := range b.colflds {
 		if !slices.Contains(b.ruleCols, col) {
 			nonRuleCols = append(nonRuleCols, col)
 		}
@@ -217,11 +261,11 @@ func (b *buildFT) makeKeys() {
 }
 
 func (b *buildFT) makeIndexes() {
-	if b.emptyKey || len(b.columns) < 2 {
+	if b.emptyKey || len(b.colflds) < 2 {
 		return
 	}
-	nonRuleCols := make([]string, 0, len(b.columns))
-	for _, col := range b.columns {
+	nonRuleCols := make([]string, 0, len(b.colflds))
+	for _, col := range b.colflds {
 		if !slices.Contains(b.ruleCols, col) {
 			nonRuleCols = append(nonRuleCols, col)
 		}
@@ -290,9 +334,9 @@ func (b *buildFT) makeRowsData(nrows int) [][]string {
 
 	data := make([][]string, nrows)
 	for i := range nrows {
-		vals := make([]string, len(b.columns))
+		vals := make([]string, len(b.colflds))
 		// generate data for all the columns
-		for j, col := range b.columns {
+		for j, col := range b.colflds {
 			if slices.Contains(b.ruleCols, col) {
 				continue
 			}
@@ -354,12 +398,39 @@ func (b *buildFT) makeRowsData(nrows int) [][]string {
 func (b *buildFT) dataToRecord(vals []string) Record {
 	var rb RecordBuilder
 	for i, val := range vals {
-		if i < len(b.columns) && slices.Contains(b.ruleCols, b.columns[i]) {
+		if i < len(b.colflds) && slices.Contains(b.ruleCols, b.colflds[i]) {
 			continue
 		}
 		rb.Add(SuStr(val))
 	}
 	return rb.Build()
+}
+
+func (b *buildFT) dropColumns() {
+	nDel := b.rnd.IntN(ftMaxDel)
+	for range nDel {
+		i := b.rnd.IntN(len(b.colflds))
+		col := b.colflds[i]
+		if b.isUsed(col) {
+			continue
+		}
+		delete(b.colIndex, col)
+		b.colflds[i] = "-"
+	}
+}
+
+func (b *buildFT) isUsed(col string) bool {
+	for _, key := range b.keys {
+		if slices.Contains(key, col) {
+			return true
+		}
+	}
+	for _, idx := range b.indexes {
+		if slices.Contains(idx, col) {
+			return true
+		}
+	}
+	return slices.Contains(b.ruleCols, col)
 }
 
 //-------------------------------------------------------------------
@@ -440,19 +511,69 @@ func TestFuzzTable_Build(t *testing.T) {
 	}
 }
 
+func TestFuzzTable_dropColumns(t *testing.T) {
+	ft := testFT()
+	defer ft.db.Close()
+
+	// deterministic: build a table, then drop one column
+	bf := ft.newFT().Sizes(10, 2, 2)
+	bf.colflds = []string{"a", "b", "c", "d"}
+	bf.colIndex = map[string]int{"a": 0, "b": 1, "c": 2, "d": 3}
+	bf.cardinality = map[string]int{"a": 10, "b": 10, "c": 10, "d": 10}
+	bf.keys = [][]string{{"a"}}
+	bf.indexes = [][]string{{"b"}}
+	bf.ruleCols = []string{}
+	bf.dropColumns()
+
+	// "a" and "b" are in key/index, can't be dropped
+	for _, col := range []string{"a", "b"} {
+		if bf.colflds[bf.colIndex[col]] != col {
+			t.Errorf("column %q was dropped but it's in a key/index", col)
+		}
+	}
+	// "c" or "d" (or both) may have been dropped
+	nDel := 0
+	for _, col := range bf.colflds {
+		if col == "-" {
+			nDel++
+		}
+	}
+	if nDel > 2 {
+		t.Errorf("dropped %d columns, expected at most 2", nDel)
+	}
+
+	// build the table and verify Fields vs Columns
+	bf.data = [][]string{{"a_1", "b_2", "c_3", "d_4"}}
+	q := bf.finish()
+	hdr := q.Header()
+	nFields := len(hdr.Fields[0])
+	nCols := len(hdr.Columns)
+	if nFields != 4 {
+		t.Fatalf("expected 4 physical fields, got %d", nFields)
+	}
+	if nCols == 4 && nDel > 0 {
+		t.Errorf("dropped columns should not appear in Columns: %v", hdr.Columns)
+	}
+	for _, col := range hdr.Columns {
+		if col == "-" {
+			t.Errorf("deleted column should not appear in Columns: %v", hdr.Columns)
+		}
+	}
+}
+
 func TestFuzzTable_makeColumns(t *testing.T) {
 	for range 100 {
 		ft := testFT()
 		bf := ft.newFT()
 		bf.makeColumns()
 
-		if len(bf.columns) == 0 {
+		if len(bf.colflds) == 0 {
 			t.Fatal("No columns generated")
 		}
-		if len(bf.columns) > ftMaxCols+ftMaxRules {
-			t.Errorf("Too many columns: %d", len(bf.columns))
+		if len(bf.colflds) > ftMaxCols+ftMaxRules {
+			t.Errorf("Too many columns: %d", len(bf.colflds))
 		}
-		if len(bf.colIndex) != len(bf.columns) {
+		if len(bf.colIndex) != len(bf.colflds) {
 			t.Errorf("colIndex size mismatch")
 		}
 		for col, card := range bf.cardinality {
@@ -468,13 +589,13 @@ func TestFuzzTable_makeKeys(t *testing.T) {
 	defer ft.db.Close()
 
 	bf := ft.newFT()
-	bf.columns = []string{"a", "b", "c"}
+	bf.colflds = []string{"a", "b", "c"}
 	bf.colIndex = map[string]int{"a": 0, "b": 1, "c": 2}
 	bf.makeKeys()
 
 	for _, key := range bf.keys {
 		for _, col := range key {
-			if !slices.Contains(bf.columns, col) {
+			if !slices.Contains(bf.colflds, col) {
 				t.Errorf("Key column %s not in columns", col)
 			}
 		}
@@ -486,7 +607,7 @@ func TestFuzzTable_makeIndexes(t *testing.T) {
 	defer ft.db.Close()
 
 	bf := ft.newFT()
-	bf.columns = []string{"a", "b", "c"}
+	bf.colflds = []string{"a", "b", "c"}
 	bf.colIndex = map[string]int{"a": 0, "b": 1, "c": 2}
 	bf.keys = [][]string{{"a"}}
 	bf.makeIndexes()
@@ -510,7 +631,7 @@ func TestFuzzTable_makeIndexes(t *testing.T) {
 	// Verify all indexes contain only valid columns
 	for _, idx := range bf.indexes {
 		for _, col := range idx {
-			if !slices.Contains(bf.columns, col) {
+			if !slices.Contains(bf.colflds, col) {
 				t.Errorf("Index contains invalid column: %s", col)
 			}
 		}
@@ -532,7 +653,7 @@ func TestFuzzTable_makeData(t *testing.T) {
 	defer ft.db.Close()
 
 	bf := ft.newFT()
-	bf.columns = []string{"c0", "c1", "c2", "c3", "c4", "c5"}
+	bf.colflds = []string{"c0", "c1", "c2", "c3", "c4", "c5"}
 	bf.colIndex = map[string]int{"c0": 0, "c1": 1, "c2": 2, "c3": 3, "c4": 4, "c5": 5}
 	bf.keys = [][]string{{"c0"}, {"c1", "c2"}}
 	bf.cardinality = map[string]int{"c0": 10, "c1": 3, "c2": 50, "c3": 200, "c4": 5, "c5": 8}
@@ -541,8 +662,8 @@ func TestFuzzTable_makeData(t *testing.T) {
 	// single-column key c0 values should be unique
 	seen := map[string]int{}
 	for i, row := range bf.data {
-		if len(row) != len(bf.columns) {
-			t.Errorf("Row %d has %d columns, expected %d", i, len(row), len(bf.columns))
+		if len(row) != len(bf.colflds) {
+			t.Errorf("Row %d has %d columns, expected %d", i, len(row), len(bf.colflds))
 		}
 		v := row[bf.colIndex["c0"]]
 		if prev, ok := seen[v]; ok {
