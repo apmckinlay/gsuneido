@@ -18,6 +18,7 @@ type Agent struct {
 	client         *OpenAIClient
 	toolClient     *ToolClient
 	model          string
+	responseModel  string
 	prompt         string
 	history        []Message
 	outfn          OutFn
@@ -37,7 +38,7 @@ type Agent struct {
 }
 
 // OutFn is the push callback for streaming output.
-// what is one of "user", "think", "output", "tool", "complete"
+// what is one of "user", "responseModel", "think", "output", "tool", "complete"
 // approval is non-nil when a tool call requires user approval.
 type OutFn func(what, data string, approval *ToolApproval)
 
@@ -115,6 +116,7 @@ func (agent *Agent) Input(input string) {
 		panic("Input: request already in progress")
 	}
 	agent.inProgress = true
+	agent.responseModel = ""
 	agent.mu.Unlock()
 	go agent.request(input)
 }
@@ -148,6 +150,20 @@ func (agent *Agent) SetModel(model string) {
 		agent.logWrite("## {{ Model }}\n\n" + model + "\n\n")
 	}
 	agent.model = model
+}
+
+// Model returns the model currently used for requests.
+func (agent *Agent) GetModel() string {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	return agent.model
+}
+
+// GetResponseModel returns the model used by the provider for the last response.
+func (agent *Agent) GetResponseModel() string {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	return agent.responseModel
 }
 
 // LastUsage returns the token usage from the last response.
@@ -293,6 +309,15 @@ func (agent *Agent) doStream(ctx context.Context, req *ChatRequest) (
 	inThink := false
 
 	err = agent.client.Stream(ctx, req, func(chunk *ChatCompletionChunk) error {
+		if agent.responseModel == "" {
+			agent.mu.Lock()
+			agent.responseModel = chunk.Model
+			agent.mu.Unlock()
+			if chunk.Model != req.Model {
+				agent.emit("responseModel", req.Model+" ("+chunk.Model+")")
+				agent.logResponseModel(chunk.Model)
+			}
+		}
 		return agent.handleStreamChunk(chunk, &contentBuilder, &reasoningBuilder, &toolCallsState, &inThink)
 	})
 	if err != nil {

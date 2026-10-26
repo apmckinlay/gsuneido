@@ -141,6 +141,18 @@ func agent_SetModel(this, model Value) Value {
 	return nil
 }
 
+var _ = method(agent_GetModel, "() :string")
+
+func agent_GetModel(this Value) Value {
+	return SuStr(this.(*suAgent).agent.GetModel())
+}
+
+var _ = method(agent_GetResponseModel, "() :string")
+
+func agent_GetResponseModel(this Value) Value {
+	return SuStr(this.(*suAgent).agent.GetResponseModel())
+}
+
 var _ = method(agent_ClearHistory, "() :void")
 
 func agent_ClearHistory(this Value) Value {

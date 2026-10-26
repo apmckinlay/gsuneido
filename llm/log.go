@@ -105,6 +105,14 @@ func (agent *Agent) logToolResult(msg Message) {
 	agent.logWrite("## {{ ToolResult }}\n\n" + string(b) + "\n\n")
 }
 
+func (agent *Agent) logResponseModel(responseModel string) {
+	agent.ensureLogFile()
+	if agent.logFile == nil {
+		return
+	}
+	agent.logWrite("## {{ ResponseModel }}\n\n" + responseModel + "\n\n")
+}
+
 func (agent *Agent) closeLogFile() {
 	agent.flushThink()
 	if agent.logFile != nil {
@@ -174,12 +182,17 @@ func (agent *Agent) parseConversation(content string, outfn OutFn) error {
 		historyBody := strings.TrimRight(body, "\r\n")
 		logBody := body
 		switch role {
-		case "Model", "Prompt", "Continued":
+		case "Model", "ResponseModel", "Prompt", "Continued":
 			logBody = strings.TrimSpace(body)
 		}
 		switch role {
 		case "Model":
 			agent.model = logBody
+		case "ResponseModel":
+			agent.responseModel = logBody
+			if outfn != nil {
+				outfn("responseModel", logBody, nil)
+			}
 		case "User":
 			agent.history = append(agent.history, Message{Role: "user", Content: historyBody})
 			if outfn != nil {
