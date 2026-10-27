@@ -1207,10 +1207,6 @@ func composeFuzzExtend(ft *FT, qs Query) Query {
 	// Extend stores it as a forward ref, and a later project could drop that
 	// dependency, leaving the rule (and the extend column) uncomputable.
 	// Constant-only rules are fine because they need no dependency.
-	identCols := slc.WithoutFn(qcols, func(col string) bool {
-		_, depends := ft.ruleDeps[col]
-		return depends
-	})
 	for i := range n {
 		for j := 0; ; j++ {
 			name := "x" + strconv.Itoa(i)
@@ -1222,11 +1218,16 @@ func composeFuzzExtend(ft *FT, qs Query) Query {
 				break
 			}
 		}
-		if ft.rnd.IntN(2) == 0 && len(identCols) > 0 {
-			exprs[i] = &ast.Ident{Name: random(identCols, ft.rnd)}
-		} else {
-			exprs[i] = &ast.Constant{Val: IntVal(ft.rnd.IntN(1000))}
+		if ft.rnd.IntN(2) == 0 {
+			if k := slc.RandIndexFunc(ft.rnd, qcols, func(col string) bool {
+				_, depends := ft.ruleDeps[col]
+				return !depends
+			}); k != -1 {
+				exprs[i] = &ast.Ident{Name: qcols[k]}
+				continue
+			}
 		}
+		exprs[i] = &ast.Constant{Val: IntVal(ft.rnd.IntN(1000))}
 	}
 	return NewExtend(qs, cols, exprs)
 }
@@ -1254,9 +1255,10 @@ func fuzzQuery(t *testing.T, q Query, ft *FT) {
 	if len(indexes) == 0 || isEmptyKey(indexes) {
 		use = ReqNone
 	} else if use == ReqUnique {
-		keyIdxs := keyIndexes(q)
-		if len(keyIdxs) > 0 {
-			index = random(keyIdxs, ft.rnd)
+		if i := slc.RandIndexFunc(ft.rnd, indexes, func(ix []string) bool {
+			return slices.ContainsFunc(q.Keys(), func(k []string) bool { return set.Equal(ix, k) })
+		}); i != -1 {
+			index = indexes[i]
 		} else {
 			// fallback to all columns since this must contain a key
 			index = q.Columns()
@@ -1349,18 +1351,6 @@ type fuzzCtx struct {
 	q   Query
 	hdr *Header
 	th  *Thread
-}
-
-func keyIndexes(q Query) [][]string {
-	var keyIndexes [][]string
-	for _, index := range q.Indexes() {
-		for _, key := range q.Keys() {
-			if set.Equal(index, key) {
-				keyIndexes = append(keyIndexes, index)
-			}
-		}
-	}
-	return keyIndexes
 }
 
 func (fc *fuzzCtx) testRandomGet(qh *QueryHash, sels Sels) {

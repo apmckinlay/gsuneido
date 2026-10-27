@@ -15,7 +15,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bit"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
@@ -64,8 +63,7 @@ type buildFT struct {
 // matching Query.Columns(). It is derived from colflds and must not be
 // modified by callers.
 func (b *buildFT) columns() []string {
-	cols := slices.DeleteFunc(slices.Clone(b.colflds),
-		func(c string) bool { return c == "-" })
+	cols := slc.Without(b.colflds, "-")
 	for i, c := range cols {
 		cols[i] = str.UnCapitalize(c)
 	}
@@ -136,34 +134,29 @@ func (b *buildFT) construct() *buildFT {
 
 func (b *buildFT) makeRules() {
 	base := b.colflds[:len(b.colflds)-len(b.ruleCols)]
-	nAvail := len(base) - slc.Count(base, "-")
-	pickAvail := func() string {
-		k := b.rnd.IntN(nAvail)
-		for _, c := range base {
-			if c != "-" {
-				if k == 0 {
-					return c
-				}
-				k--
-			}
-		}
-		panic(assert.ShouldNotReachHere())
-	}
 	for _, col := range b.ruleCols {
 		ruleName := "Rule_" + str.UnCapitalize(col)
-		var ruleExpr string
-		if nAvail > 0 && b.rnd.IntN(2) == 0 {
-			existingCol := pickAvail()
-			b.ruleRefs = append(b.ruleRefs, existingCol)
-			b.ruleDeps[str.UnCapitalize(col)] = existingCol
-			ruleExpr = "." + str.UnCapitalize(existingCol)
-		} else {
-			ruleExpr = strconv.Itoa(b.rnd.IntN(1000))
-		}
+		ruleExpr := b.ruleExpr(base, col)
 		b.rules[ruleName] = ruleExpr
 		Global.TestDef(ruleName,
 			compile.Constant("function() { return "+ruleExpr+" }"))
 	}
+}
+
+func (b *buildFT) ruleExpr(base []string, col string) string {
+	if b.rnd.IntN(2) == 0 {
+		if i := slc.RandIndexFunc(b.rnd, base, notDeleted); i != -1 {
+			existingCol := base[i]
+			b.ruleRefs = append(b.ruleRefs, existingCol)
+			b.ruleDeps[str.UnCapitalize(col)] = existingCol
+			return "." + str.UnCapitalize(existingCol)
+		}
+	}
+	return strconv.Itoa(b.rnd.IntN(1000))
+}
+
+func notDeleted(col string) bool {
+	return col != "-"
 }
 
 func (b *buildFT) finish() Query {
@@ -409,28 +402,27 @@ func (b *buildFT) dataToRecord(vals []string) Record {
 func (b *buildFT) dropColumns() {
 	nDel := b.rnd.IntN(ftMaxDel)
 	for range nDel {
-		i := b.rnd.IntN(len(b.colflds))
-		col := b.colflds[i]
-		if b.isUsed(col) {
-			continue
+		i := slc.RandIndexFunc(b.rnd, b.colflds, b.notUsed)
+		if i == -1 {
+			break
 		}
-		delete(b.colIndex, col)
+		delete(b.colIndex, b.colflds[i])
 		b.colflds[i] = "-"
 	}
 }
 
-func (b *buildFT) isUsed(col string) bool {
+func (b *buildFT) notUsed(col string) bool {
 	for _, key := range b.keys {
 		if slices.Contains(key, col) {
-			return true
+			return false
 		}
 	}
 	for _, idx := range b.indexes {
 		if slices.Contains(idx, col) {
-			return true
+			return false
 		}
 	}
-	return slices.Contains(b.ruleCols, col)
+	return !slices.Contains(b.ruleCols, col)
 }
 
 //-------------------------------------------------------------------

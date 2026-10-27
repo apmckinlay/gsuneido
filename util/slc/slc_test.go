@@ -4,6 +4,7 @@
 package slc
 
 import (
+	"fmt"
 	"math/rand/v2"
 	"slices"
 	"strings"
@@ -292,4 +293,55 @@ func TestShuffle(t *testing.T) {
 	// Verify all elements are still present
 	slices.Sort(list)
 	assert.T(t).This(list).Is([]int{1, 2, 3, 4, 5})
+}
+
+func TestRandIndexFunc(t *testing.T) {
+	assert := assert.T(t).This
+	rnd := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
+
+	list := []int{10, 11, 12, 13, 14, 15, 16, 17, 18, 19}
+	even := func(n int) bool { return n%2 == 0 }
+	for range 100 {
+		i := RandIndexFunc(rnd, list, even)
+		assert(even(list[i])).Is(true)
+	}
+
+	condTrue := func(int) bool { return true }
+	condFalse := func(int) bool { return false }
+	var i int
+	condEqual := func(n int) bool { return n == list[i] }
+	bins := make([]int, len(list))
+	for range 1000 {
+		i = rnd.IntN(len(list))
+		assert(RandIndexFunc(rnd, list, condEqual)).Is(i)
+		assert(RandIndexFunc(rnd, list, condFalse)).Is(-1)
+		i := RandIndexFunc(rnd, list, condTrue)
+		bins[i]++
+	}
+	fmt.Println(bins)
+}
+
+func TestRandIndexFuncCoverage(t *testing.T) {
+	rnd := rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
+	const limit = 1000
+	s := make([]int, limit)
+	for i := range s {
+		s[i] = i
+	}
+	visited := make([]int, limit)
+	for n := 1; n < limit; n++ {
+		idx := RandIndexFunc(rnd, s[:n], func(v int) bool {
+			visited[v]++
+			return false
+		})
+		if idx != -1 {
+			t.Fatalf("n=%d: expected -1, got %d", n, idx)
+		}
+		for i, count := range visited[:n] {
+			if count != 1 {
+				t.Fatalf("n=%d: index %d visited %d times", n, i, count)
+			}
+		}
+		clear(visited)
+	}
 }

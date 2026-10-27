@@ -6,9 +6,12 @@ package slc
 
 import (
 	"cmp"
+	"math/bits"
 	"math/rand/v2"
 	"slices"
 	"unsafe"
+
+	"github.com/apmckinlay/gsuneido/util/bit"
 )
 
 func LastIndex[E comparable](list []E, e E) int {
@@ -290,4 +293,30 @@ func Count[E comparable](list []E, e E) int {
 		}
 	}
 	return n
+}
+
+// RandIndexFunc returns a random index of s where cond is true
+// or -1 if no such index exists.
+// It is not perfectly uniform but is good enough for things like fuzzing.
+func RandIndexFunc[T any](r *rand.Rand, s []T, cond func(T) bool) int {
+	n := uint64(len(s))
+	if n == 0 {
+		return -1
+	}
+	bitLen := bits.Len64(n - 1)
+	mask := uint64(1)<<bitLen - 1
+
+	const a uint64 = 6364136223846793005
+	c := r.Uint64() | 1
+	state := r.Uint64() & mask
+
+	key := r.Uint64() & mask
+	for range mask + 1 {
+		idx := bit.Mix(state, bitLen) ^ key
+		if idx < n && cond(s[idx]) {
+			return int(idx)
+		}
+		state = (a*state + c) & mask
+	}
+	return -1
 }
