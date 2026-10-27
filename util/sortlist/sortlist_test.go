@@ -6,7 +6,7 @@ package sortlist
 import (
 	"cmp"
 	"fmt"
-	"math/rand"
+	"math/rand/v2"
 	"sort"
 	"strconv"
 	"testing"
@@ -14,7 +14,6 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bit"
 )
 
 var z = func(x int) bool { return x == 0 }
@@ -63,7 +62,7 @@ func testSorting(_ *testing.T, nb uint8, n2 uint16) {
 	}
 	bldr := NewSorting(z, lt)
 	for range n {
-		bldr.Add(1 + int(rand.Int31())) // +1 so no zeros
+		bldr.Add(1 + int(rand.Int32())) // +1 so no zeros
 	}
 	bldr.Finish()
 	bldrInorder(bldr, n)
@@ -76,7 +75,7 @@ func testUnsorted(_ *testing.T, nb uint8, n2 uint16) {
 	}
 	bldr := NewUnsorted(z)
 	for range n {
-		bldr.Add(1 + int(rand.Int31())) // +1 so no zeros
+		bldr.Add(1 + int(rand.Int32())) // +1 so no zeros
 	}
 	bldr.Finish()
 	bldr.Sort(func(x, y int) bool { return x < y })
@@ -130,7 +129,7 @@ func randint() int {
 	for range 200 {
 		N++
 	}
-	return 1 + int(rand.Int31()) // +1 so no zeros
+	return 1 + int(rand.Int32()) // +1 so no zeros
 }
 
 func listInorder[T any](li List[T], nitems int, z func(x T) bool, lt func(x, y T) bool) {
@@ -737,8 +736,9 @@ func BenchmarkLarge(b *testing.B) {
 	b.Run("random", func(b *testing.B) {
 		for b.Loop() {
 			bldr := NewSorting(z, lt)
-			for i := range size {
-				bldr.Add(1 + int(bit.Cycle(uint64(i), uint64(size))))
+			rnd := rand.New(rand.NewPCG(1, 1))
+			for range size {
+				bldr.Add(1 + rnd.IntN(size))
 			}
 			bldr.Finish()
 			b.SetBytes(size * 8)
