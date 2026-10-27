@@ -6,7 +6,6 @@ package slc
 
 import (
 	"cmp"
-	"math/bits"
 	"math/rand/v2"
 	"slices"
 	"unsafe"
@@ -298,25 +297,16 @@ func Count[E comparable](list []E, e E) int {
 // RandIndexFunc returns a random index of s where cond is true
 // or -1 if no such index exists.
 // It is not perfectly uniform but is good enough for things like fuzzing.
-func RandIndexFunc[T any](r *rand.Rand, s []T, cond func(T) bool) int {
-	n := uint64(len(s))
-	if n == 0 {
+func RandIndexFunc[T any](rnd *rand.Rand, s []T, cond func(T) bool) int {
+	if len(s) == 0 {
 		return -1
 	}
-	bitLen := bits.Len64(n - 1)
-	mask := uint64(1)<<bitLen - 1
-
-	const a uint64 = 6364136223846793005
-	c := r.Uint64() | 1
-	state := r.Uint64() & mask
-
-	key := r.Uint64() & mask
-	for range mask + 1 {
-		idx := bit.Mix(state, bitLen) ^ key
-		if idx < n && cond(s[idx]) {
-			return int(idx)
+	gen := bit.NewGen(rnd, uint64(len(s)))
+	for range len(s) {
+		i := int(gen.Next())
+		if cond(s[i]) {
+			return i
 		}
-		state = (a*state + c) & mask
 	}
 	return -1
 }

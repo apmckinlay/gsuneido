@@ -88,32 +88,16 @@ func TestMix(t *testing.T) {
 	}
 }
 
-func TestCycle(t *testing.T) {
-	for range 100 {
-		rangeLimit := rand.Uint64()
-		x := rand.Uint64N(rangeLimit)
-		y := Cycle(x, rangeLimit)
-		assert.T(t).That(y < rangeLimit)
-	}
-	for range 100 {
-		rangeLimit := rand.Uint64N(100_000)
-		sum1 := uint64(0)
-		sum2 := uint64(0)
-		for i := range rangeLimit {
-			sum1 += i * i
-			x := Cycle(i, rangeLimit)
-			assert.T(t).That(x < rangeLimit)
-			sum2 += x * x
+func TestGen(t *testing.T) {
+	for _, n := range []uint64{1, 2, 7, 1000, 1024} {
+		gen := NewGen(rand.New(rand.NewPCG(1, 1)), n)
+		seen := make(map[uint64]bool, n)
+		for range n {
+			x := gen.Next()
+			assert.That(x < n && !seen[x])
+			seen[x] = true
 		}
-		assert.Msg(rangeLimit).This(sum2).Is(sum1)
+		assert.Msg(n).This(len(seen)).Is(int(n))
 	}
 }
 
-func TestGen(t *testing.T) {
-	rnd := rand.New(rand.NewPCG(1, 1))
-	g := NewGen(rnd, 1000)
-	for range 100 {
-		x := g.Next()
-		assert.T(t).That(x < 1000)
-	}
-}

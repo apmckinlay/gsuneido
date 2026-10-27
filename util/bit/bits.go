@@ -7,6 +7,8 @@ package bit
 import (
 	"math/bits"
 	"math/rand/v2"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // NextPow2 returns the smallest power of 2 >= n
@@ -61,43 +63,43 @@ func Mix(x uint64, bitLen int) uint64 {
 	return x
 }
 
-// Cycle uses a Linear Congruential Generator (LCG)
-// and cycle walking to produce a pseudo-random sequence in [0, rangeLimit)
-func Cycle(currentVal, rangeLimit uint64) uint64 {
-	// LCG parameters
-	bitLen := bits.Len64(rangeLimit)
-	m := uint64(1) << bitLen
-	const a uint64 = 6364136223846793005
-	const c uint64 = 1442695040888963407
-
-	// LCG
-	step := func(x uint64) uint64 {
-		return Mix((a*x+c)&(m-1), bitLen)
-	}
-
-	// Cycle Walking
-	nextState := step(currentVal)
-	for nextState >= rangeLimit {
-		nextState = step(nextState)
-	}
-
-	return nextState
-}
+//-------------------------------------------------------------------
 
 type Gen struct {
-	cur        uint64
+	state      uint64
 	rangeLimit uint64
 	bitLen     int
+	mask       uint64
+	inc        uint64
+	key        uint64
 }
 
+// NewGen returns a generator for a pseudo-random sequence in [0, rangeLimit)
+// It uses a Linear Congruential Generator (LCG) and cycle walking.
+// The sequence visits each value in [0, rangeLimit) exactly once before repeating.
 func NewGen(rnd *rand.Rand, rangeLimit uint64) *Gen {
+	assert.That(rangeLimit > 0)
+	bitLen := bits.Len64(rangeLimit - 1)
+	mask := uint64(1)<<bitLen - 1
 	return &Gen{
-		cur:        rnd.Uint64N(rangeLimit),
+		state:      rnd.Uint64() & mask,
 		rangeLimit: rangeLimit,
-		bitLen:     bits.Len64(rangeLimit)}
+		bitLen:     bitLen,
+		mask:       mask,
+		inc:        rnd.Uint64() | 1,
+		key:        rnd.Uint64() & mask,
+	}
 }
 
 func (g *Gen) Next() uint64 {
-	g.cur = Cycle(g.cur, g.rangeLimit)
-	return g.cur
+	// Advance a full period LCG (state) and apply Mix to the output
+	// separately, then cycle walk to stay within rangeLimit.
+	const a uint64 = 6364136223846793005
+	for {
+		x := Mix(g.state, g.bitLen) ^ g.key
+		g.state = (a*g.state + g.inc) & g.mask
+		if x < g.rangeLimit {
+			return x
+		}
+	}
 }
