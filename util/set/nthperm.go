@@ -7,7 +7,7 @@ import (
 	"math/rand/v2"
 	"slices"
 
-	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/bit"
 )
 
 // NPerms calculates P(n, k) = n! / (n-k)!
@@ -54,7 +54,7 @@ func RandPerm(rnd *rand.Rand, elements []string, k int) []string {
 type Gen struct {
 	elements []string
 	k        int
-	indexGen *bits.Gen
+	indexGen *bit.Gen
 }
 
 func NewGen(rnd *rand.Rand, elements []string, k int) *Gen {
@@ -63,7 +63,7 @@ func NewGen(rnd *rand.Rand, elements []string, k int) *Gen {
 	return &Gen{
 		elements: slices.Clone(elements),
 		k:        k,
-		indexGen: bits.NewGen(rnd, uint64(nPerms))}
+		indexGen: bit.NewGen(rnd, uint64(nPerms))}
 }
 
 func (g *Gen) Next() []string {

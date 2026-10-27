@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/bit"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
@@ -35,7 +35,7 @@ func TestInsertCompact(t *testing.T) {
 func TestQuery(t *testing.T) {
 	sk := New[int]()
 	for i := range 5000 {
-		sk.Insert(int(bits.Shuffle16(uint16(i))))
+		sk.Insert(int(bit.Shuffle16(uint16(i))))
 	}
 	// sk.print()
 	m := sk.Query(0.5)

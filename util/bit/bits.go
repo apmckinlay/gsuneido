@@ -2,7 +2,7 @@
 // Governed by the MIT license found in the LICENSE file.
 
 // Package bits provides bit manipulation functions
-package bits
+package bit
 
 import (
 	"math/bits"

@@ -16,7 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/bit"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -349,7 +349,7 @@ func (b *buildFT) makeRowsData(nrows int) [][]string {
 		// overwrite with unique values for keys
 		for _, key := range b.keys {
 			n := x
-			x = bits.Shuffle16(x) // shuffle ensures unique key values
+			x = bit.Shuffle16(x) // shuffle ensures unique key values
 			for k, col := range key {
 				// split n (a unique value) over the columns of the key
 				var v uint16
@@ -378,7 +378,7 @@ func (b *buildFT) makeRowsData(nrows int) [][]string {
 				continue
 			}
 			n := x
-			x = bits.Shuffle16(x)
+			x = bit.Shuffle16(x)
 			for k, col := range index {
 				var v uint16
 				if k < len(index)-1 {

@@ -9,7 +9,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/bit"
 )
 
 func TestTempIndexEmptyRecord(t *testing.T) {
@@ -65,11 +65,11 @@ func (s *mockSource) Get(*Thread, Dir) Row {
 	a, b := 0, 0
 	switch s.kind {
 	case randomOrder:
-		a = int(bits.Shuffle32(uint32(i)))
-		b = int(bits.Shuffle32(uint32(i) ^ 0x9e3779b9))
+		a = int(bit.Shuffle32(uint32(i)))
+		b = int(bit.Shuffle32(uint32(i) ^ 0x9e3779b9))
 	case groupedOrder:
 		a = i / orderGroupSize
-		b = int(bits.Shuffle32(uint32(i)))
+		b = int(bit.Shuffle32(uint32(i)))
 	case sortedOrder:
 		a = i / orderGroupSize
 		b = i % orderGroupSize

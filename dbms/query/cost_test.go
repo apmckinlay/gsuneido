@@ -13,7 +13,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/bit"
 
 	"github.com/apmckinlay/gsuneido/db19"
 )
@@ -70,7 +70,7 @@ func createData(db *db19.Database, nrecs, rsize int) {
 		t := db.NewUpdateTran(AllPerms)
 		var rb RecordBuilder
 		rb.Add(IntVal(i))                         // a: in order
-		rb.Add(IntVal(bits.Shuffle32(uint32(i)))) // b: random
+		rb.Add(IntVal(bit.Shuffle32(uint32(i)))) // b: random
 		rb.Add(IntVal(cgroup))                    // c: clustered
 		for range 7 {
 			rb.Add(SuStr(strings.Repeat("x", rsize/8)))

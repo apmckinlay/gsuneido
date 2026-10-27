@@ -18,7 +18,7 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/bit"
 )
 
 const blockSize = 4096
@@ -141,7 +141,7 @@ func (b *Builder[T]) Sort(less func(x, y T) bool) {
 
 func (b *Builder[T]) finishMerges() {
 	nb := len(b.blocks)
-	nb2 := bits.NextPow2(uint(nb))
+	nb2 := bit.NextPow2(uint(nb))
 	for len(b.blocks) < nb2 {
 		b.blocks = append(b.blocks, b.zeroBlock)
 		b.merges(len(b.blocks))

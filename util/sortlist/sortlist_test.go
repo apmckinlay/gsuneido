@@ -14,7 +14,7 @@ import (
 	"slices"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/bit"
 )
 
 var z = func(x int) bool { return x == 0 }
@@ -738,7 +738,7 @@ func BenchmarkLarge(b *testing.B) {
 		for b.Loop() {
 			bldr := NewSorting(z, lt)
 			for i := range size {
-				bldr.Add(1 + int(bits.Cycle(uint64(i), uint64(size))))
+				bldr.Add(1 + int(bit.Cycle(uint64(i), uint64(size))))
 			}
 			bldr.Finish()
 			b.SetBytes(size * 8)

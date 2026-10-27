@@ -17,7 +17,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/bit"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/slc"
@@ -991,7 +991,7 @@ func joinBy(rnd *rand.Rand, b1 *buildFT, b2 *buildFT) []string {
 func addKey(rnd *rand.Rand, b *buildFT, key []string) {
 	x := uint16(rnd.Int())
 	for i := range b.data {
-		x = bits.Shuffle16(x) // shuffle ensures unique key values
+		x = bit.Shuffle16(x) // shuffle ensures unique key values
 		n := x
 		for k := range key {
 			// split n (a unique value) over the columns of the key
