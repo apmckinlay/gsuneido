@@ -4,7 +4,6 @@
 package set
 
 import (
-	"math/rand/v2"
 	"strings"
 	"testing"
 
@@ -34,18 +33,4 @@ func TestSubPerm(t *testing.T) {
 		assert.That(!seen[s])
 		seen[s] = true
 	}
-}
-
-func TestGen(t *testing.T) {
-	elements := []string{"a", "b", "c", "d"}
-	g := NewGen(rand.New(rand.NewPCG(1, 1)), elements, 2)
-	n := NPerms(len(elements), 2)
-	seen := make(map[string]bool)
-	for range n {
-		perm := g.Next()
-		s := strings.Join(perm, ",")
-		assert.That(!seen[s])
-		seen[s] = true
-	}
-	assert.T(t).This(len(seen)).Is(n)
 }
