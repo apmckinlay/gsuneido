@@ -1664,7 +1664,7 @@ func (fc *fuzzCtx) testNonExistentSelect(allRows []Row, hdr *Header, index []str
 			srcRow = random(allRows, fc.rnd)
 		}
 		sels := fc.indexSelectCriteria(srcRow, hdr, index)
-		sels[fc.rnd.IntN(len(sels))].val = "nonexistent"
+		sels[fc.rnd.IntN(len(sels))].val = nonexistent
 		fc.q.Select(sels)
 		if !fc.q.Get(fc.th, Next).Eof() {
 			fc.t.Fatal("non-existent select returned a row")
@@ -1672,6 +1672,8 @@ func (fc *fuzzCtx) testNonExistentSelect(allRows []Row, hdr *Header, index []str
 		fc.q.Select(nil) // clear select
 	}
 }
+
+var nonexistent = Pack(SuStr("nonexistent"))
 
 //-------------------------------------------------------------------
 
@@ -1706,7 +1708,7 @@ func (fc *fuzzCtx) testRandomLookups(index []string, allRows []Row) {
 			if srcRow.GetRaw(hdr, lookupCols[r]) == "" {
 				sels[r].val = sels[r].col + "_" + strconv.Itoa(fc.rnd.IntN(100))
 			} else if fc.rnd.IntN(2) == 1 {
-				sels[r].val = "nonexistent"
+				sels[r].val = nonexistent
 			} else {
 				sels[r].val = ""
 			}
