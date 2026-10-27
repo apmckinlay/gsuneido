@@ -100,4 +100,3 @@ func TestGen(t *testing.T) {
 		assert.Msg(n).This(len(seen)).Is(int(n))
 	}
 }
-
