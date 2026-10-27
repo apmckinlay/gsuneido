@@ -204,6 +204,14 @@ func (sj *SemiJoin) optReverse(mode Mode, req Require) (Cost, Cost, any) {
 		// so it's never worth considering for a point Lookup.
 		return impossible, impossible, nil
 	}
+	if sj.fastSingle() {
+		// source1 yields at most one row, so forward just scans that one
+		// row and probes source2 - always cheaper than scanning source2.
+		// Also, reverse would Select source2, but when a fastSingle query's
+		// Require is cleared (see optimize), source2 is set up for ReqNone
+		// and does not support Select.
+		return impossible, impossible, nil
+	}
 	fixcost2, varcost2 := Optimize(sj.source2, mode, req)
 	if fixcost2+varcost2 >= impossible {
 		return impossible, impossible, nil
