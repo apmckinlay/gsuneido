@@ -47,13 +47,17 @@ func Shuffle16(n uint16) uint16 {
 	return n
 }
 
-// Mix shuffles x with b bits (bijective)
-// This ensures that every input maps to exactly one unique output.
+// Mix scrambles the low bitLen bits of x. Higher bits of x are ignored.
+// The result is a bijection on [0, 2^bitLen)
+// distinct masked inputs give distinct outputs, all within that range.
+// bitLen must be in [0, 64].
 func Mix(x uint64, bitLen int) uint64 {
-	m := uint64(1)<<bitLen - 1
-	x ^= x >> (bitLen / 2)
-	x = (x * 0xbf58476d1ce4e5b9) & (m) // A bijective multiplier
-	x ^= x >> (bitLen / 2)
+	mask := uint64(1)<<bitLen - 1
+	x &= mask
+	shift := max(1, bitLen/2)
+	x ^= x >> shift
+	x = (x * 0xbf58476d1ce4e5b9) & mask
+	x ^= x >> shift
 	return x
 }
 
