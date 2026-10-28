@@ -299,17 +299,9 @@ func mksimple() []int {
 	for range nitems {
 		slice = append(slice, randint())
 	}
-	sort.Sort(uint64Slice(slice))
+	slices.Sort(slice)
 	return slice
 }
-
-type uint64Slice []int
-
-func (p uint64Slice) Len() int { return len(p) }
-
-func (p uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
-
-func (p uint64Slice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
 //-------------------------------------------------------------------
 
@@ -459,7 +451,7 @@ func (li *merged) Add(x int) {
 func (li *merged) sortMerge() {
 	bi := len(li.blocks) - 1
 	// fmt.Printf("bi %b\n", bi)
-	sort.Sort(ablock2{block: li.blocks[bi], n: blockSize})
+	slices.Sort(li.blocks[bi][:])
 	for mergeSize := 1; bi&mergeSize == mergeSize; mergeSize <<= 1 {
 		li.merge(mergeSize)
 	}
@@ -555,26 +547,6 @@ func (li *merged) alloc() *block[int] {
 	return new(block[int])
 }
 
-// ablock handles sorting a possibly partial block
-type ablock2 struct {
-	*block[int]
-	n int
-}
-
-func (ab ablock2) Len() int {
-	return ab.n
-}
-
-func (ab ablock2) Swap(i, j int) {
-	b := ab.block
-	b[i], b[j] = b[j], b[i]
-}
-
-func (ab ablock2) Less(i, j int) bool {
-	b := ab.block
-	return b[i] < b[j]
-}
-
 //-------------------------------------------------------------------
 
 type conc struct {
@@ -624,7 +596,7 @@ func (li *conc) worker() {
 func (li *conc) sortMerge(nb int) {
 	bi := nb - 1
 	// fmt.Printf("sortMerge bi %b\n", bi)
-	sort.Sort(ablock2{block: li.blocks[bi], n: blockSize})
+	slices.Sort(li.blocks[bi][:])
 	for mergeSize := 1; bi&mergeSize == mergeSize; mergeSize <<= 1 {
 		li.merge(nb, mergeSize)
 	}

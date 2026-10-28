@@ -975,7 +975,7 @@ func (vs *Views) Get(_ *Thread, dir Dir) Row {
 
 // seek positions to the selected view, returning false if it is not present.
 func (vs *Views) seek() bool {
-	n := vs.Len()
+	n := len(vs.views)
 	idx := sort.Search(n, func(i int) bool {
 		return vs.views[i].name >= vs.selName
 	})
@@ -1023,17 +1023,9 @@ func (vs *Views) sort() {
 	if vs.req.use == ReqNone {
 		return
 	}
-	sort.Sort(vs)
-}
-
-func (vs *Views) Len() int {
-	return len(vs.views)
-}
-func (vs *Views) Less(i, j int) bool {
-	return vs.views[i].name < vs.views[j].name
-}
-func (vs *Views) Swap(i, j int) {
-	vs.views[i], vs.views[j] = vs.views[j], vs.views[i]
+	slices.SortFunc(vs.views, func(a, b view) int {
+		return strings.Compare(a.name, b.name)
+	})
 }
 
 func (vs *Views) Lookup(th *Thread, sels Sels) Row {

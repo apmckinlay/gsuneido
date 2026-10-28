@@ -6,7 +6,7 @@ package ixbuf
 import (
 	"fmt"
 	"math/rand/v2"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -183,7 +183,9 @@ func TestMergeRandom(*testing.T) {
 		assert.This(ib.Len()).Is(len(data))
 	}
 	assert.This(ib.Len()).Is(len(data))
-	sort.Sort(data)
+	slices.SortFunc(data, func(a, b slot) int {
+		return strings.Compare(a.key, b.key)
+	})
 	i := 0
 	iter := ib.Iter()
 	for k, o, ok := iter(); ok; k, o, ok = iter() {
@@ -192,10 +194,6 @@ func TestMergeRandom(*testing.T) {
 		i++
 	}
 }
-
-func (c chunk) Len() int           { return len(c) }
-func (c chunk) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
-func (c chunk) Less(i, j int) bool { return c[i].key < c[j].key }
 
 func TestMergeMore(t *testing.T) {
 	const n = 10
