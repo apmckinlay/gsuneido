@@ -26,6 +26,7 @@ type schemaTable struct {
 	cache
 	tran  QueryTran
 	state iface.State
+	req   Require
 	metrics
 }
 
@@ -67,7 +68,8 @@ func (*schemaTable) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	return impossible, impossible, nil
 }
 
-func (*schemaTable) setApproach(Require, any, QueryTran) {
+func (st *schemaTable) setApproach(req Require, _ any, _ QueryTran) {
+	st.req = req
 }
 
 func (*schemaTable) Select(Sels) {
@@ -148,6 +150,7 @@ type Tables struct {
 	selTable string
 	selLevel int // 0 = no select, 1 = table
 	i        int
+	sorted   bool
 }
 
 func (*Tables) String() string {
@@ -199,6 +202,7 @@ func (ts *Tables) SetTran(tran QueryTran) {
 	tran.CheckPerm("tables", PermRead)
 	ts.tran = tran
 	ts.info = nil
+	ts.sorted = false
 }
 
 // Select restricts Get to the {table} index prefix.
@@ -225,6 +229,7 @@ func (ts *Tables) Rewind() {
 func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { ts.tget += tsc.Read() - t }(tsc.Read())
 	ts.ensure()
+	ts.sort()
 	if ts.state.Eof() {
 		return Row{}
 	}
@@ -308,6 +313,19 @@ func (ts *Tables) ensure() {
 		&meta.Info{Table: "history", Nrows: historyNrows},
 		&meta.Info{Table: "dbstats", Nrows: ts.virtualNrows("dbstats")},
 	)
+}
+
+// sort orders info by table name. It is deferred until the first Get
+// (see Get) and skipped when the requirement is ReqNone, since an
+// unordered Get does not need the rows sorted.
+func (ts *Tables) sort() {
+	if ts.sorted {
+		return
+	}
+	ts.sorted = true
+	if ts.req.use == ReqNone {
+		return
+	}
 	sort.Slice(ts.info,
 		func(i, j int) bool { return ts.info[i].Table < ts.info[j].Table })
 }
@@ -390,6 +408,7 @@ type Columns struct {
 	ci        int
 	selLevel  int // 0 = no select, 1 = table, 2 = table and column
 	nrows     int
+	sorted    bool
 }
 
 func (*Columns) String() string {
@@ -453,6 +472,7 @@ func (cs *Columns) SetTran(tran QueryTran) {
 	tran.CheckPerm("columns", PermRead)
 	cs.tran = tran
 	cs.schema = nil
+	cs.sorted = false
 }
 
 func (cs *Columns) Rewind() {
@@ -483,6 +503,7 @@ func (cs *Columns) Select(sels Sels) {
 func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { cs.tget += tsc.Read() - t }(tsc.Read())
 	cs.ensure()
+	cs.sort()
 	if cs.state.Eof() {
 		return Row{}
 	}
@@ -633,9 +654,22 @@ func (cs *Columns) ensure() {
 		cs.schema = append(cs.schema,
 			&meta.Schema{Table: name, Columns: schemaTableCols(name)})
 	}
+	cs.nrows = cs.getNrows()
+}
+
+// sort orders schema by table name. It is deferred until the first Get
+// (see Get) and skipped when the requirement is ReqNone, since an
+// unordered Get does not need the rows sorted.
+func (cs *Columns) sort() {
+	if cs.sorted {
+		return
+	}
+	cs.sorted = true
+	if cs.req.use == ReqNone {
+		return
+	}
 	sort.Slice(cs.schema,
 		func(i, j int) bool { return cs.schema[i].Table < cs.schema[j].Table })
-	cs.nrows = cs.getNrows()
 }
 
 func (cs *Columns) Lookup(th *Thread, sels Sels) Row {
@@ -820,6 +854,7 @@ type Views struct {
 	selName  string
 	i        int
 	selLevel int // 0 = no select, 1 = view_name
+	sorted   bool
 }
 
 type view struct {
@@ -876,6 +911,7 @@ func (vs *Views) SetTran(tran QueryTran) {
 	tran.CheckPerm("views", PermRead)
 	vs.tran = tran
 	vs.views = nil
+	vs.sorted = false
 }
 
 // Select restricts Get to the {view_name} index prefix.
@@ -901,6 +937,7 @@ func (vs *Views) Rewind() {
 
 func (vs *Views) Get(_ *Thread, dir Dir) Row {
 	vs.ensure()
+	vs.sort()
 	if vs.state.Eof() {
 		return Row{}
 	}
@@ -972,6 +1009,19 @@ func (vs *Views) ensure() {
 	vs.views = make([]view, 0, 16)
 	for name, def := range vs.tran.Views() {
 		vs.views = append(vs.views, view{name, def})
+	}
+}
+
+// sort orders views by name. It is deferred until the first Get
+// (see Get) and skipped when the requirement is ReqNone, since an
+// unordered Get does not need the rows sorted.
+func (vs *Views) sort() {
+	if vs.sorted {
+		return
+	}
+	vs.sorted = true
+	if vs.req.use == ReqNone {
+		return
 	}
 	sort.Sort(vs)
 }

@@ -21,7 +21,7 @@ func TestQueryTool(t *testing.T) {
 	db := db19.CreateDb(stor.HeapStor(8192))
 	dbms := dbms.NewDbmsLocal(db)
 
-	result, err := queryTool(testToolContext(dbms), "tables")
+	result, err := queryTool(testToolContext(dbms), "tables sort table")
 	assert.That(err == nil)
 	assert.This(result.Results).Is("[\n" +
 		"[\"table\", \"nrows\", \"totalsize\"]\n" +
