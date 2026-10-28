@@ -39,8 +39,8 @@ func TestColumns(t *testing.T) {
 }
 
 // TestTablesLookup verifies that looking up a real table is a keyed GetInfo
-// (no ensure), matching Get, while virtual schema tables still resolve
-// (which requires ensure to build ts.info).
+// and that looking up a virtual schema table computes just its nrows, both
+// without running the full ensure that builds ts.info.
 func TestTablesLookup(t *testing.T) {
 	db := heapDb()
 	defer db.Close()
@@ -53,7 +53,7 @@ func TestTablesLookup(t *testing.T) {
 
 	row = ts.Lookup(nil, Sels{NewSel("table", Pack(SuStr("columns")))})
 	assert.T(t).Msg("virtual table").That(!row.Eof())
-	assert.T(t).That(ts.info != nil)
+	assert.T(t).Msg("ensure must not run for a virtual table").That(ts.info == nil)
 
 	row = ts.Lookup(nil, Sels{NewSel("table", Pack(SuStr("nosuch")))})
 	assert.T(t).Msg("nonexistent").That(row.Eof())

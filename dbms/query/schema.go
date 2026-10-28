@@ -294,9 +294,27 @@ func (ts *Tables) ensure() {
 		return
 	}
 	ts.info = ts.tran.GetAllInfo()
-
 	// count the virtual schema tables instead of constructing them
-	var ncols, nidxs int
+	nReal := len(ts.info)
+	ncols, nidxs := ts.schemaCounts()
+	for _, name := range schemaTableNames {
+		ncols += len(schemaTableCols(name))
+	}
+	ts.info = append(ts.info,
+		&meta.Info{Table: "tables", Nrows: nReal + len(schemaTableNames)},
+		&meta.Info{Table: "columns", Nrows: ncols},
+		&meta.Info{Table: "indexes", Nrows: nidxs},
+		&meta.Info{Table: "views", Nrows: ts.virtualNrows("views")},
+		&meta.Info{Table: "history", Nrows: historyNrows},
+		&meta.Info{Table: "dbstats", Nrows: ts.virtualNrows("dbstats")},
+	)
+	sort.Slice(ts.info,
+		func(i, j int) bool { return ts.info[i].Table < ts.info[j].Table })
+}
+
+// schemaCounts returns the number of real table columns and indexes,
+// iterating the schemas once so both are computed together.
+func (ts *Tables) schemaCounts() (ncols, nidxs int) {
 	for s := range ts.tran.Schemas() {
 		for _, col := range s.Columns {
 			if col != "-" {
@@ -306,29 +324,41 @@ func (ts *Tables) ensure() {
 		ncols += len(s.Derived)
 		nidxs += len(s.Indexes)
 	}
-	// the columns table also includes the virtual schema tables themselves
-	for _, name := range schemaTableNames {
-		ncols += len(schemaTableCols(name))
-	}
-	var nviews int
-	for range ts.tran.Views() {
-		nviews++
-	}
-	nstats := 0
-	for _, tbl := range ts.tran.Stats() {
-		nstats += len(tbl.Columns)
-	}
+	return
+}
 
-	ts.info = append(ts.info,
-		&meta.Info{Table: "tables", Nrows: len(ts.info) + len(schemaTableNames)},
-		&meta.Info{Table: "columns", Nrows: ncols},
-		&meta.Info{Table: "indexes", Nrows: nidxs},
-		&meta.Info{Table: "views", Nrows: nviews},
-		&meta.Info{Table: "history", Nrows: historyNrows},
-		&meta.Info{Table: "dbstats", Nrows: nstats},
-	)
-	sort.Slice(ts.info,
-		func(i, j int) bool { return ts.info[i].Table < ts.info[j].Table })
+// virtualNrows returns the number of rows in a virtual schema table
+// without building the full ts.info (see ensure).
+func (ts *Tables) virtualNrows(table string) int {
+	switch table {
+	case "tables":
+		return len(ts.tran.GetAllInfo()) + len(schemaTableNames)
+	case "columns":
+		ncols, _ := ts.schemaCounts()
+		// the columns table also includes the virtual schema tables themselves
+		for _, name := range schemaTableNames {
+			ncols += len(schemaTableCols(name))
+		}
+		return ncols
+	case "indexes":
+		_, nidxs := ts.schemaCounts()
+		return nidxs
+	case "views":
+		n := 0
+		for range ts.tran.Views() {
+			n++
+		}
+		return n
+	case "history":
+		return historyNrows
+	case "dbstats":
+		n := 0
+		for _, tbl := range ts.tran.Stats() {
+			n += len(tbl.Columns)
+		}
+		return n
+	}
+	return 0
 }
 
 func (ts *Tables) Lookup(th *Thread, sels Sels) Row {
@@ -342,14 +372,10 @@ func (ts *Tables) Lookup(th *Thread, sels Sels) Row {
 		}
 		return Row{}
 	}
-	// virtual schema table: its nrows comes from ts.info (see ensure)
-	ts.ensure()
-	i, found := ts.seek(table)
-	if !found {
-		return Row{}
-	}
+	// virtual schema table: compute just its nrows rather than building
+	// all of ts.info (see ensure)
 	ts.ngets++
-	return ts.row(ts.info[i])
+	return ts.row(&meta.Info{Table: table, Nrows: ts.virtualNrows(table)})
 }
 
 //-------------------------------------------------------------------
