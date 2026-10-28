@@ -37,6 +37,27 @@ func TestUnCapitalize(t *testing.T) {
 	assert(UnCapitalize("AbC")).Is("abC")
 }
 
+func TestEqualUncap(t *testing.T) {
+	test := func(x, y string) {
+		assert.T(t).That(EqualUncap(x, y))
+		assert.T(t).That(EqualUncap(y, x))
+	}
+	test("", "")
+	test("Foo", "foo")
+	test("Foo", "Foo")
+	test("Foo Bar", "foo Bar")
+	xtest := func(x, y string) {
+		assert.T(t).That(!EqualUncap(x, y))
+		assert.T(t).That(!EqualUncap(y, x))
+	}
+	xtest("", "x")
+	xtest("foo", "food")
+	xtest("foo", "bar")
+	xtest("FOO", "foo")
+	xtest("Foo", "fOO")
+	xtest("Foo Bar", "foo bar")
+}
+
 func TestIndexFunc(t *testing.T) {
 	f := func(c byte) bool {
 		return c == ' '

@@ -35,6 +35,19 @@ func UnCapitalize(s string) string {
 	return s
 }
 
+func EqualUncap(s1, s2 string) bool {
+	if len(s1) != len(s2) {
+		return false
+	}
+	if len(s1) == 0 {
+		return true
+	}
+	if ascii.ToLower(s1[0]) != ascii.ToLower(s2[0]) {
+		return false
+	}
+	return s1[1:] == s2[1:]
+}
+
 // IndexFunc returns the index of the first byte that the func returns true for
 // else -1
 func IndexFunc(s string, f func(byte) bool) int {

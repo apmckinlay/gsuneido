@@ -634,7 +634,7 @@ func (cs *Columns) Lookup(th *Thread, sels Sels) Row {
 		fld = i
 	} else if !slices.ContainsFunc(ts.Derived,
 		// Derived are stored capitalized but reported uncapitalized
-		func(d string) bool { return str.UnCapitalize(d) == column }) {
+		func(d string) bool { return str.EqualUncap(d, column) }) {
 		return Row{}
 	}
 	return cs.row(table, column, fld)
