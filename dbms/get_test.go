@@ -12,7 +12,9 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 func TestGetQuery(t *testing.T) {
@@ -400,4 +402,58 @@ func TestGetSchemaNoSels(t *testing.T) {
 		test(table, Any, table != "views" && table != "dbstats")
 		test(table, Strat, true)
 	}
+}
+
+// TestGetSchemaNotFound verifies that QueryEmpty? on a schema table select
+// that matches nothing is handled by the fast path rather than falling back
+// to the normal path, which would scan the whole (virtual) table and emit a
+// slow query warning.
+func TestGetSchemaNotFound(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	qry.DoAdminTest(db, "create tmp (k, u, data) key(k) index unique(u)")
+
+	tran := db.NewReadTran(AllPerms)
+	defer tran.Complete()
+	th := &Thread{}
+
+	ob := &SuObject{}
+	ob.Add(SuStr("columns"))
+	ob.Set(SuStr("table"), SuStr("tmp"))
+	ob.Set(SuStr("column"), SuStr("nosuch"))
+
+	// a fallback to the normal path would run a where over a full scan and
+	// emit a slow warning, so make any such warning throw
+	prevWarn := options.WarningsThrow.Load()
+	options.WarningsThrow.Store(regex.Compile("slow:"))
+	defer options.WarningsThrow.Store(prevWarn)
+	prevSlow := slow[Any]
+	slow[Any] = 0
+	defer func() { slow[Any] = prevSlow }()
+
+	row, hdr, _, _ := get(th, tran, ob, Any)
+	assert.T(t).Msg("not found").That(row.Eof())
+	assert.T(t).Msg("no header when not found").That(hdr == nil)
+}
+
+// TestGetInvalidField verifies that an invalid named argument is not silently
+// treated as "no match" by the fast path (which would ignore the nonexistent
+// column), but falls back to the normal path which reports the error.
+func TestGetInvalidField(t *testing.T) {
+	db := db19.CreateDb(stor.HeapStor(8192))
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	qry.DoAdminTest(db, "create tmp (k, u, data) key(k) index unique(u)")
+
+	tran := db.NewReadTran(AllPerms)
+	defer tran.Complete()
+	th := &Thread{}
+
+	ob := &SuObject{}
+	ob.Add(SuStr("tmp"))
+	ob.Set(StrVal("k"), SuInt16(999))
+	ob.Set(StrVal("typo"), SuInt16(1))
+	assert.T(t).This(func() { get(th, tran, ob, Only) }).
+		Panics("nonexistent columns: typo")
 }

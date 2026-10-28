@@ -190,23 +190,25 @@ func TestQueryGet(t *testing.T) {
 		'view_name'	0	'views'`)
 	test("tables",
 		"tables",
+		// nrows/totalsize are sizeTran's overridden values (testDb is too
+		// small to test optimization); real metadata is covered elsewhere
 		`nrows	table	totalsize
 		0	'dbstats'	0
 		0	'views'	0
-		2	'alias'	25
-		3	'hist2'	68
-		3	'inven'	42
-		4	'co'	55
-		4	'cus'	64
-		4	'customer'	98
-		4	'dates'	52
-		4	'hist'	91
-		4	'supplier'	128
-		4	'trans'	92
-		8	'task'	95
 		16	'indexes'	0
 		16	'tables'	0
-		49	'columns'	0`)
+		49	'columns'	0
+		1000	'alias'	100000
+		1000	'co'	100000
+		1000	'cus'	100000
+		1000	'customer'	100000
+		1000	'dates'	100000
+		1000	'inven'	100000
+		1000	'supplier'	100000
+		1000	'task'	100000
+		10000	'hist'	1000000
+		10000	'hist2'	1000000
+		10000	'trans'	1000000`)
 	test("customer",
 		"customer^(id)",
 		`city	id	name
@@ -757,10 +759,10 @@ func TestQueryGet(t *testing.T) {
 
 	// tempindex
 	test("tables intersect columns",
-		"columns intersect (tables tempindex(table))",
+		"tables intersect columns",
 		`table`)
 	test("tables minus tables",
-		"tables minus (tables tempindex(table))",
+		"tables minus tables",
 		`nrows	table	totalsize`)
 
 	test("(customer project id) union (customer project id)",

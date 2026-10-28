@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/set"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -31,7 +32,7 @@ func get(th *Thread, tran qry.QueryTran, args Value, dir Dir) (Row, *Header, str
 	if dir == Only || dir == Any ||
 		(dir == Strat && qry.GetSort(query) == "") {
 		query = qry.StripSort(query)
-		if row, hdr, s := fastGet(th, tran, query, ob, dir); hdr != nil {
+		if row, hdr, s, ok := fastGet(th, tran, query, ob, dir); ok {
 			var off uint64
 			if !row.Eof() {
 				off = db19.RecToOff(tran.GetStore(), row.Get(0))
@@ -111,18 +112,21 @@ var _ iTable = (*qry.Indexes)(nil)
 var _ iTable = (*qry.Views)(nil)
 var _ iTable = (*qry.StatsTable)(nil)
 
-// fastGet returns a nil Header to indicate it was not applicable
-func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir) (row Row, hdr *Header, strarg string) {
+// fastGet returns ok=false to indicate it was not applicable.
+// When ok is true the result is authoritative, even when no row was found
+// (in which case hdr is nil, matching the normal path in get).
+func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir) (row Row, hdr *Header, strarg string, ok bool) {
 	strarg = query
 	table := qry.JustTable(query)
 	if table == "" || tran.GetView(table) != "" {
 		return
 	}
-	tbl, ok := qry.NewTable(tran, table).(iTable)
-	if !ok {
+	tbl, isTbl := qry.NewTable(tran, table).(iTable)
+	if !isTbl {
 		return
 	}
 	sels := make(Sels, 0, ob.NamedSize())
+	fields := make([]string, 0, ob.NamedSize())
 	iter := ob.Iter2(false, true)
 	for k, v := iter(); v != nil; k, v = iter() {
 		field := ToStr(k)
@@ -130,46 +134,57 @@ func fastGet(th *Thread, tran qry.QueryTran, query string, ob *SuObject, dir Dir
 			continue
 		}
 		sels = append(sels, qry.NewSel(field, Pack(v.(Packable))))
+		fields = append(fields, field)
+	}
+	if !set.HasSubset(tbl.Columns(), fields) {
+		// invalid named argument(s): let the normal path report the error
+		// (it validates columns when building the where)
+		return Row{}, nil, "", false
 	}
 	switch dir {
 	case Strat:
 		_, strarg, _ = getIndex(th, tran, tbl, sels, dir)
 		if strarg == "" {
-			return Row{}, nil, ""
+			return Row{}, nil, "", false
 		}
-		return existsRow, existsHdr, strarg
+		return existsRow, existsHdr, strarg, true
 	case Only:
-		row, hdr = getLookup(th, tran, tbl, sels, dir)
+		row, hdr, ok = getLookup(th, tran, tbl, sels, dir)
 		return
 	case Any:
-		row, hdr = getExists(th, tran, tbl, sels, dir)
+		row, hdr, ok = getExists(th, tran, tbl, sels, dir)
 		return
 	}
 	panic(assert.ShouldNotReachHere())
 }
 
-func getLookup(th *Thread, tran qry.QueryTran, table iTable, sels Sels, dir Dir) (Row, *Header) {
+func getLookup(th *Thread, tran qry.QueryTran, table iTable, sels Sels, dir Dir) (row Row, hdr *Header, ok bool) {
 	single, _, getfn := getIndex(th, tran, table, sels, dir)
 	if getfn == nil {
-		return Row{}, nil
+		return Row{}, nil, false
 	}
-	row := getfn()
+	row = getfn()
 	if !row.Eof() && !single && !getfn().Eof() {
 		panic("Query1 not unique")
 	}
-	return row, table.Header()
+	if row.Eof() {
+		// no row: handled, but no header, to match the normal path in get
+		return Row{}, nil, true
+	}
+	return row, table.Header(), true
 }
 
-func getExists(th *Thread, tran qry.QueryTran, table iTable, sels Sels, dir Dir) (row Row, hdr *Header) {
+func getExists(th *Thread, tran qry.QueryTran, table iTable, sels Sels, dir Dir) (row Row, hdr *Header, ok bool) {
 	_, _, getfn := getIndex(th, tran, table, sels, dir)
 	if getfn == nil {
-		return Row{}, nil
+		return Row{}, nil, false
 	}
 	row = getfn()
 	if !row.Eof() {
-		return existsRow, existsHdr
+		return existsRow, existsHdr, true
 	}
-	return Row{}, existsHdr
+	// no row: handled, but no header, to match the normal path in get
+	return Row{}, nil, true
 }
 
 func getIndex(th *Thread, tran qry.QueryTran, table iTable,

@@ -48,6 +48,22 @@ func TestOptimize(t *testing.T) {
 		"comp^(a,b,c) where a is 1 tempindex(c,b)")
 	test("comp where a=1 and b=2 and c=3 sort c, a, b",
 		"comp^(a,b,c) where*1 a is 1 and b is 2 and c is 3")
+	test("tables leftjoin columns",
+		"tables leftjoin 1:n by(table) columns")
+	test("columns leftjoin tables",
+		"columns leftjoin n:1 by(table) tables")
+	test("columns union columns",
+		"columns union-merge columns")
+	test("columns join columns",
+		"columns join 1:1 by(table,column,field) columns")
+	test("tables union tables",
+		"tables union-merge tables")
+	test("tables join tables",
+		"tables join 1:1 by(table,nrows,totalsize) tables")
+	test("views union views",
+		"views union-merge views")
+	test("views join views",
+		"views join 1:1 by(view_name,view_definition) views")
 
 	test("supplier",
 		"supplier^(supplier)")

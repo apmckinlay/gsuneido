@@ -149,7 +149,9 @@ func ck(err error) {
 //-------------------------------------------------------------------
 
 // sizeTran wraps an actual transaction and overrides Nrows and Size
-// since testDb does not have enough data to test query optimization
+// since testDb does not have enough data to test query optimization.
+// Both GetInfo and GetAllInfo must report the same values, otherwise
+// a keyed lookup would disagree with a scan of the same table.
 type sizeTran struct {
 	QueryTran
 }
@@ -159,9 +161,21 @@ func (t sizeTran) GetInfo(table string) *meta.Info {
 	if info == nil {
 		return nil
 	}
+	return sizeInfo(info)
+}
+
+func (t sizeTran) GetAllInfo() []*meta.Info {
+	infos := t.QueryTran.GetAllInfo()
+	for i, info := range infos {
+		infos[i] = sizeInfo(info)
+	}
+	return infos
+}
+
+func sizeInfo(info *meta.Info) *meta.Info {
 	ti := *info // copy
 	ti.Nrows = 1000
-	if table == "trans" || table == "hist" || table == "hist2" {
+	if ti.Table == "trans" || ti.Table == "hist" || ti.Table == "hist2" {
 		ti.Nrows = 10_000
 	}
 	ti.Size = ti.Nrows * 100

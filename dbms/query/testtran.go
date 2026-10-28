@@ -88,32 +88,38 @@ func (testTran) CheckPerm(string, TablePerm) {
 }
 
 var testInfo = map[string]*meta.Info{
-	"alias":   {Nrows: 20, Size: 1000},
-	"task":    {Nrows: 200, Size: 20000},
-	"columns": {Nrows: 1000, Size: 100000},
-	"trans":   {Nrows: 200000, Size: 100000},
-	"hist2":   {Nrows: 1000, Size: 100000},
-	"comp":    {Nrows: 1000, Size: 100000},
-	"comp2":   {Nrows: 0, Size: 0},
+	"alias": {Nrows: 20, Size: 1000},
+	"task":  {Nrows: 200, Size: 20000},
+	"trans": {Nrows: 200000, Size: 100000},
+	"hist2": {Nrows: 1000, Size: 100000},
+	"comp":  {Nrows: 1000, Size: 100000},
+	"comp2": {Nrows: 0, Size: 0},
 }
 
 func (testTran) GetInfo(table string) *meta.Info {
-	if ti, ok := testInfo[table]; ok {
-		return ti
+	if _, ok := testSchemas[table]; !ok {
+		return nil
 	}
-	return &meta.Info{Table: table, Nrows: 100, Size: 10000}
+	return testInfoFor(table)
 }
 
 func (testTran) GetAllInfo() []*meta.Info {
 	infos := make([]*meta.Info, 0, len(testSchemas))
 	for table := range testSchemas {
-		info := meta.Info{Table: table, Nrows: 100, Size: 10000}
-		if ti, ok := testInfo[table]; ok {
-			info.Nrows, info.Size = ti.Nrows, ti.Size
-		}
-		infos = append(infos, &info)
+		infos = append(infos, testInfoFor(table))
 	}
 	return infos
+}
+
+// testInfoFor returns the Info for a real test table, applying any
+// testInfo override. GetInfo and GetAllInfo must agree on the same tables
+// and values, otherwise a keyed lookup disagrees with a scan.
+func testInfoFor(table string) *meta.Info {
+	info := meta.Info{Table: table, Nrows: 100, Size: 10000}
+	if ti, ok := testInfo[table]; ok {
+		info.Nrows, info.Size = ti.Nrows, ti.Size
+	}
+	return &info
 }
 
 func (testTran) GetAllSchema() []*meta.Schema {

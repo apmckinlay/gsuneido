@@ -129,6 +129,8 @@ type Tables struct {
 	schemaTable
 	info     []*meta.Info
 	posTable string
+	selTable string
+	selLevel int // 0 = no select, 1 = table
 	i        int
 	gap      bool
 }
@@ -141,12 +143,25 @@ func (*Tables) Name() string {
 	return "tables"
 }
 
+func (*Tables) optimize(_ Mode, req Require) (Cost, Cost, any) {
+	if req.SatisfiedBy(tablesIndexes[0]) {
+		return 0, 1000, nil
+	}
+	return impossible, impossible, nil
+}
+
 func (ts *Tables) Transform() Query {
 	return ts
 }
 
+var tablesIndexes = [][]string{{"table"}}
+
+func (*Tables) Indexes() [][]string {
+	return tablesIndexes
+}
+
 func (*Tables) Keys() [][]string {
-	return [][]string{{"table"}}
+	return tablesIndexes
 }
 
 var tablesFields = [][]string{{"table", "nrows", "totalsize"}}
@@ -175,12 +190,41 @@ func (ts *Tables) SetTran(tran QueryTran) {
 	if ts.state.Within() {
 		ts.ensure()
 		var found bool
-		ts.i, found = slices.BinarySearchFunc(ts.info, ts.posTable,
-			func(info *meta.Info, table string) int {
-				return strings.Compare(info.Table, table)
-			})
+		ts.i, found = ts.seek(ts.posTable)
 		ts.gap = !found
 	}
+}
+
+// seek returns the position of table in ts.info and whether it was found.
+func (ts *Tables) seek(table string) (int, bool) {
+	return slices.BinarySearchFunc(ts.info, table,
+		func(info *meta.Info, table string) int {
+			return strings.Compare(info.Table, table)
+		})
+}
+
+// Select restricts Get to the {table} index prefix.
+// Only the "table" column is used; other columns are ignored.
+// Select(nil) clears the restriction.
+func (ts *Tables) Select(sels Sels) {
+	ts.selLevel = 0
+	ts.selTable = ""
+	if sels != nil {
+		if v, ok := sels.Get("table"); ok {
+			// a non-string value decodes to "" which no table name matches
+			ts.selTable = selValue(v)
+			ts.selLevel = 1
+		}
+	}
+	ts.Rewind()
+}
+
+// inRange reports whether table is within the current select.
+func (ts *Tables) inRange(table string) bool {
+	if ts.selLevel == 1 {
+		return table == ts.selTable
+	}
+	return true
 }
 
 func (ts *Tables) Rewind() {
@@ -194,6 +238,19 @@ func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 	ts.ensure()
 	if ts.state.Eof() {
 		return Row{}
+	}
+	if ts.selLevel > 0 && ts.state.Rewound() {
+		// position at the selected row
+		i, found := ts.seek(ts.selTable)
+		if !found {
+			ts.state = iface.Eof
+			return Row{}
+		}
+		ts.i = i
+		ts.state = iface.Within
+		ts.gap = false
+		ts.ngets++
+		return ts.row(ts.info[ts.i])
 	}
 	if dir == Next {
 		if ts.state.Rewound() {
@@ -214,6 +271,10 @@ func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 	}
 	ts.state = iface.Within
 	ts.gap = false
+	if !ts.inRange(ts.info[ts.i].Table) {
+		ts.state = iface.Eof
+		return Row{}
+	}
 	ts.ngets++
 	return ts.row(ts.info[ts.i])
 }
@@ -258,19 +319,24 @@ func (ts *Tables) ensure() {
 }
 
 func (ts *Tables) Lookup(th *Thread, sels Sels) Row {
-	table := ToStr(Unpack(sels.MustGet("table")))
-	if schemaTableCols(table) != nil {
-		var rb RecordBuilder
-		rb.Add(SuStr(table))
-		rec := rb.Build()
-		ts.ngets++
-		return NewRow(rec)
+	table := selValue(sels.MustGet("table"))
+	if schemaTableCols(table) == nil {
+		// real table: keyed lookup. Get builds rows from GetAllInfo, so
+		// GetInfo must agree with it (see sizeTran) to keep Lookup consistent.
+		if ti := ts.tran.GetInfo(table); ti != nil {
+			ts.ngets++
+			return ts.row(ti)
+		}
+		return Row{}
 	}
-	if ti := ts.tran.GetInfo(table); ti != nil {
-		ts.ngets++
-		return ts.row(ti)
+	// virtual schema table: its nrows comes from ts.info (see ensure)
+	ts.ensure()
+	i, found := ts.seek(table)
+	if !found {
+		return Row{}
 	}
-	return Row{}
+	ts.ngets++
+	return ts.row(ts.info[i])
 }
 
 //-------------------------------------------------------------------
@@ -281,8 +347,11 @@ type Columns struct {
 	order     []int // reusable, sorted column indexes for the current table
 	posTable  string
 	posColumn string
+	selTable  string
+	selColumn string
 	si        int
 	ci        int
+	selLevel  int // 0 = no select, 1 = table, 2 = table and column
 	nrows     int
 	gap       bool // ci is an insertion point rather than a returned column
 }
@@ -295,12 +364,25 @@ func (*Columns) Name() string {
 	return "columns"
 }
 
+func (*Columns) optimize(_ Mode, req Require) (Cost, Cost, any) {
+	if req.SatisfiedBy(columnsIndexes[0]) {
+		return 0, 1000, nil
+	}
+	return impossible, impossible, nil
+}
+
 func (cs *Columns) Transform() Query {
 	return cs
 }
 
+var columnsIndexes = [][]string{{"table", "column"}}
+
+func (*Columns) Indexes() [][]string {
+	return columnsIndexes
+}
+
 func (*Columns) Keys() [][]string {
-	return [][]string{{"table", "column"}}
+	return columnsIndexes
 }
 
 var columnsFields = [][]string{{"table", "column", "field"}}
@@ -377,11 +459,86 @@ func (cs *Columns) Rewind() {
 	cs.gap = false
 }
 
+// Select restricts Get to a prefix of the emulated {table, column} index.
+// The prefix is either "table" or "table, column"; other columns are ignored.
+// Select(nil) clears the restriction.
 func (cs *Columns) Select(sels Sels) {
+	cs.selLevel = 0
+	cs.selTable = ""
+	cs.selColumn = ""
 	if sels != nil {
-		panic(assert.ShouldNotReachHere())
+		if v, ok := sels.Get("table"); ok {
+			cs.selTable = selValue(v)
+			cs.selLevel = 1
+			if v, ok := sels.Get("column"); ok {
+				cs.selColumn = selValue(v)
+				cs.selLevel = 2
+			}
+		}
 	}
 	cs.Rewind()
+}
+
+// selValue decodes a packed selection value as a string.
+// It returns "" if the value is not a string, which no table or column
+// name matches, so Select and Lookup (including non-string join keys)
+// tolerate it instead of panicking. This also covers the invalid packed
+// values the fuzzer uses for "non-existent" selects.
+func selValue(v string) string {
+	if v == "" {
+		return "" // empty string
+	}
+	if v[0] != PackString {
+		return ""
+	}
+	return v[1:]
+}
+
+// inRange reports whether (table, col) is within the current select.
+// Assumes the iteration order (table, column) matches the index order.
+func (cs *Columns) inRange(table, col string) bool {
+	switch cs.selLevel {
+	case 1:
+		return table == cs.selTable
+	case 2:
+		return table == cs.selTable && col == cs.selColumn
+	}
+	return true
+}
+
+// seek positions to the first (Next) or last (Prev) row matching the select,
+// returning false if the range is empty.
+func (cs *Columns) seek(dir Dir) bool {
+	si := sort.Search(len(cs.schema), func(i int) bool {
+		return cs.schema[i].Table >= cs.selTable
+	})
+	if si >= len(cs.schema) || cs.schema[si].Table != cs.selTable {
+		return false
+	}
+	cs.sortCols(si)
+	cs.si = si
+	if cs.selLevel == 1 {
+		if len(cs.order) == 0 {
+			return false
+		}
+		if dir == Next {
+			cs.ci = 0
+		} else {
+			cs.ci = len(cs.order) - 1
+		}
+		return true
+	}
+	s := cs.schema[si]
+	ci, found := slices.BinarySearchFunc(cs.order, cs.selColumn,
+		func(i int, col string) int {
+			name, _ := columnOrDerived(s, i)
+			return strings.Compare(name, col)
+		})
+	if !found {
+		return false
+	}
+	cs.ci = ci
+	return true
 }
 
 func (cs *Columns) Get(_ *Thread, dir Dir) Row {
@@ -389,6 +546,19 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	cs.ensure()
 	if cs.state.Eof() {
 		return Row{}
+	}
+	if cs.selLevel > 0 && cs.state.Rewound() {
+		// position at the start of the selected range
+		if !cs.seek(dir) {
+			cs.state = iface.Eof
+			return Row{}
+		}
+		cs.state = iface.Within
+		cs.gap = false
+		cs.ngets++
+		schema := cs.schema[cs.si]
+		col, fld := columnOrDerived(schema, cs.order[cs.ci])
+		return cs.row(schema.Table, col, fld)
 	}
 	if dir == Next {
 		if cs.state.Rewound() {
@@ -424,9 +594,13 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	}
 	cs.state = iface.Within
 	cs.gap = false
-	cs.ngets++
 	schema := cs.schema[cs.si]
 	col, fld := columnOrDerived(schema, cs.order[cs.ci])
+	if !cs.inRange(schema.Table, col) {
+		cs.state = iface.Eof
+		return Row{}
+	}
+	cs.ngets++
 	return cs.row(schema.Table, col, fld)
 }
 
@@ -483,8 +657,8 @@ func (cs *Columns) ensure() {
 }
 
 func (cs *Columns) Lookup(th *Thread, sels Sels) Row {
-	table := ToStr(Unpack(sels.MustGet("table")))
-	column := ToStr(Unpack(sels.MustGet("column")))
+	table := selValue(sels.MustGet("table"))
+	column := selValue(sels.MustGet("column"))
 	if cols := schemaTableCols(table); cols != nil {
 		// virtual schema table, not in the meta schema
 		if i := slices.Index(cols, column); i >= 0 {
@@ -733,9 +907,11 @@ func (is *Indexes) Lookup(th *Thread, sels Sels) Row {
 type Views struct {
 	views []string
 	schemaTable
-	posName string
-	i       int
-	gap     bool
+	posName  string
+	selName  string
+	i        int
+	selLevel int // 0 = no select, 1 = view_name
+	gap      bool
 }
 
 func (*Views) String() string {
@@ -746,12 +922,25 @@ func (*Views) Name() string {
 	return "views"
 }
 
+func (*Views) optimize(_ Mode, req Require) (Cost, Cost, any) {
+	if req.SatisfiedBy(viewsIndexes[0]) {
+		return 0, 1000, nil
+	}
+	return impossible, impossible, nil
+}
+
 func (vs *Views) Transform() Query {
 	return vs
 }
 
+var viewsIndexes = [][]string{{"view_name"}}
+
+func (*Views) Indexes() [][]string {
+	return viewsIndexes
+}
+
 func (*Views) Keys() [][]string {
-	return [][]string{{"view_name"}}
+	return viewsIndexes
 }
 
 var viewsFields = [][]string{{"view_name", "view_definition"}}
@@ -786,6 +975,43 @@ func (vs *Views) SetTran(tran QueryTran) {
 	}
 }
 
+// Select restricts Get to the {view_name} index prefix.
+// Only the "view_name" column is used; other columns are ignored.
+// Select(nil) clears the restriction.
+func (vs *Views) Select(sels Sels) {
+	vs.selLevel = 0
+	vs.selName = ""
+	if sels != nil {
+		if v, ok := sels.Get("view_name"); ok {
+			// a non-string value decodes to "" which no view name matches
+			vs.selName = selValue(v)
+			vs.selLevel = 1
+		}
+	}
+	vs.Rewind()
+}
+
+// inRange reports whether name is within the current select.
+func (vs *Views) inRange(name string) bool {
+	if vs.selLevel == 1 {
+		return name == vs.selName
+	}
+	return true
+}
+
+// seek positions to the selected view, returning false if it is not present.
+func (vs *Views) seek() bool {
+	n := vs.Len()
+	idx := sort.Search(n, func(i int) bool {
+		return vs.views[2*i] >= vs.selName
+	})
+	if idx >= n || vs.views[2*idx] != vs.selName {
+		return false
+	}
+	vs.i = 2 * idx
+	return true
+}
+
 func (vs *Views) Rewind() {
 	vs.i = -2
 	vs.state = iface.Rewound
@@ -796,6 +1022,16 @@ func (vs *Views) Get(_ *Thread, dir Dir) Row {
 	vs.ensure()
 	if vs.state.Eof() {
 		return Row{}
+	}
+	if vs.selLevel > 0 && vs.state.Rewound() {
+		// position at the selected view
+		if !vs.seek() {
+			vs.state = iface.Eof
+			return Row{}
+		}
+		vs.state = iface.Within
+		vs.gap = false
+		return vs.row(vs.views[vs.i], vs.views[vs.i+1])
 	}
 	if dir == Next {
 		if vs.state.Rewound() {
@@ -816,6 +1052,10 @@ func (vs *Views) Get(_ *Thread, dir Dir) Row {
 	}
 	vs.state = iface.Within
 	vs.gap = false
+	if !vs.inRange(vs.views[vs.i]) {
+		vs.state = iface.Eof
+		return Row{}
+	}
 	return vs.row(vs.views[vs.i], vs.views[vs.i+1])
 }
 
@@ -849,7 +1089,7 @@ func (vs *Views) Swap(i, j int) {
 }
 
 func (vs *Views) Lookup(th *Thread, sels Sels) Row {
-	name := ToStr(Unpack(sels.MustGet("view_name")))
+	name := selValue(sels.MustGet("view_name"))
 	if def := vs.tran.GetView(name); def != "" {
 		return vs.row(name, def)
 	}
