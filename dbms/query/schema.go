@@ -640,33 +640,6 @@ func (cs *Columns) Lookup(th *Thread, sels Sels) Row {
 	return cs.row(table, column, fld)
 }
 
-func (cs *Columns) Simple(*Thread) []Row {
-	cs.ensure()
-	rows := make([]Row, 0, cs.nrows)
-	var order []int // reused across schemas to avoid allocating for each
-	for _, schema := range cs.schema {
-		order = order[:0]
-		for i, col := range schema.Columns {
-			if col != "-" {
-				order = append(order, i)
-			}
-		}
-		for i := range schema.Derived {
-			order = append(order, len(schema.Columns)+i)
-		}
-		slices.SortFunc(order, func(a, b int) int {
-			ac, _ := columnOrDerived(schema, a)
-			bc, _ := columnOrDerived(schema, b)
-			return strings.Compare(ac, bc)
-		})
-		for _, i := range order {
-			col, fld := columnOrDerived(schema, i)
-			rows = append(rows, cs.row(schema.Table, col, fld))
-		}
-	}
-	return rows
-}
-
 //-------------------------------------------------------------------
 // note: indexes does not include tables, columns, indexes, views
 
