@@ -6,8 +6,6 @@ package query
 import (
 	"strings"
 
-	"slices"
-
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -136,26 +134,16 @@ func (p *adminParser) columns() (columns, derived []string) {
 			columns = append(columns, "-")
 		} else {
 			col := p.MatchIdent()
-			if str.Capitalized(col) {
-				derived = p.appendUnique(derived, col)
-			} else if strings.HasSuffix(col, "_lower!") {
-				derived = p.appendUnique(derived, col)
+			if str.Capitalized(col) || strings.HasSuffix(col, "_lower!") {
+				derived = append(derived, col)
 			} else {
-				columns = p.appendUnique(columns, col)
+				columns = append(columns, col)
 			}
-
 		}
 		p.MatchIf(tok.Comma)
 	}
 	p.Match(tok.RParen)
 	return columns, derived
-}
-
-func (p *adminParser) appendUnique(columns []string, col string) []string {
-	if slices.Contains(columns, col) {
-		p.Error("duplicate column:", col)
-	}
-	return append(columns, col)
 }
 
 func (p *adminParser) indexes() []Index {

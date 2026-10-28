@@ -225,6 +225,8 @@ func TestAdminCreate(t *testing.T) {
 		"invalid index column: bar")
 	xtest("xtmp (one,two,three_lower!) key(one)",
 		"_lower! nonexistent column: three")
+	xtest("xtmp (field,Field) key(field)",
+		"duplicate column")
 	db.MustCheck()
 }
 
@@ -248,6 +250,8 @@ func TestAdminEnsure(t *testing.T) {
 	doAdmin(db, "ensure tmp3 (a) key(a) index(a_lower!)")
 
 	assert.T(t).This(func() { doAdmin(db, "ensure tmp (z, z)") }).
+		Panics("duplicate column")
+	assert.T(t).This(func() { doAdmin(db, "ensure tmp (z, Z)") }).
 		Panics("duplicate column")
 
 	assert.T(t).This(func() { doAdmin(db, "ensure tmp key(x) key(x)") }).

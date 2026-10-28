@@ -41,6 +41,17 @@ func TestCheckDuplicateColumns(t *testing.T) {
 	}
 	s.Check() // Should not panic
 
+	// Test duplicate between Column and capitalized Derived
+	assert.This(func() {
+		s := Schema{
+			Table:   "test",
+			Columns: []string{"field", "b"},
+			Derived: []string{"Field"},
+			Indexes: []Index{{Mode: 'k', Columns: []string{"field"}}},
+		}
+		s.Check()
+	}).Panics("duplicate column")
+
 	// Test valid schema with no duplicates
 	s = Schema{
 		Table:   "test",

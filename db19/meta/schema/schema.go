@@ -211,10 +211,14 @@ func (sc *Schema) checkDerived() {
 	}
 	for _, col := range sc.Derived {
 		assert.That(ascii.IsUpper(col[0]) || strings.HasSuffix(col, "_lower!"))
-		if strings.HasSuffix(col, "_lower!") &&
-			!slices.Contains(sc.Columns, strings.TrimSuffix(col, "_lower!")) {
-			panic("_lower! nonexistent column: " +
-				strings.TrimSuffix(col, "_lower!"))
+		if strings.HasSuffix(col, "_lower!") {
+			if !slices.Contains(sc.Columns, strings.TrimSuffix(col, "_lower!")) {
+				panic("_lower! nonexistent column: " +
+					strings.TrimSuffix(col, "_lower!"))
+			}
+		} else if slices.Contains(sc.Columns, string(ascii.ToLower(col[0]))+col[1:]) {
+			// derived columns are accessed without the capitalization
+			panic("duplicate column in " + sc.Table)
 		}
 	}
 }
