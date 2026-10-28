@@ -24,7 +24,7 @@ func TestTablesTool(t *testing.T) {
 	output, err := tablesTool(testToolContext(dbmsLocal), "")
 	assert.That(err == nil)
 	assert.This(output.Tables).Is([]string{"alpha", "beta", "columns", "dbstats",
-		"gamma", "indexes", "tables", "views"})
+		"gamma", "history", "indexes", "tables", "views"})
 	assert.That(output.HasMore == false)
 
 	output, err = tablesTool(testToolContext(dbmsLocal), "b")

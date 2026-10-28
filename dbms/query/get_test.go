@@ -140,6 +140,7 @@ func TestQueryGet(t *testing.T) {
 		"columns",
 		`column	field	table
 		'abbrev'	1	'cus'
+		'asof'	0	'history'
 		'city'	2	'customer'
 		'city'	2	'supplier'
 		'cnum'	0	'cus'
@@ -196,13 +197,14 @@ func TestQueryGet(t *testing.T) {
 		0	'dbstats'	0
 		0	'views'	0
 		16	'indexes'	0
-		16	'tables'	0
-		49	'columns'	0
+		17	'tables'	0
+		50	'columns'	0
 		1000	'alias'	100000
 		1000	'co'	100000
 		1000	'cus'	100000
 		1000	'customer'	100000
 		1000	'dates'	100000
+		1000	'history'	0
 		1000	'inven'	100000
 		1000	'supplier'	100000
 		1000	'task'	100000

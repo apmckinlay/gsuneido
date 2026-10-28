@@ -103,7 +103,7 @@ func (*schemaTable) UniqueIndexes() [][]string {
 
 // schemaTableNames are the virtual schema tables.
 // Note: indexes does not include them.
-var schemaTableNames = []string{"tables", "columns", "indexes", "views", "dbstats"}
+var schemaTableNames = []string{"tables", "columns", "indexes", "views", "history", "dbstats"}
 
 // schemaTableCols returns the columns of a virtual schema table,
 // or nil if table is not one.
@@ -117,6 +117,8 @@ func schemaTableCols(table string) []string {
 		return indexesFields[0]
 	case "views":
 		return viewsFields[0]
+	case "history":
+		return historyFields[0]
 	case "dbstats":
 		return statsFields[0]
 	}
@@ -322,6 +324,7 @@ func (ts *Tables) ensure() {
 		&meta.Info{Table: "columns", Nrows: ncols},
 		&meta.Info{Table: "indexes", Nrows: nidxs},
 		&meta.Info{Table: "views", Nrows: nviews},
+		&meta.Info{Table: "history", Nrows: historyNrows},
 		&meta.Info{Table: "dbstats", Nrows: nstats},
 	)
 	sort.Slice(ts.info,
@@ -1013,18 +1016,22 @@ func (*History) Keys() [][]string {
 	return [][]string{{"asof"}}
 }
 
-var HistoryFields = [][]string{{"asof"}}
+var historyFields = [][]string{{"asof"}}
 
 func (*History) Columns() []string {
-	return HistoryFields[0]
+	return historyFields[0]
 }
 
 func (*History) Header() *Header {
-	return NewHeader(HistoryFields, HistoryFields[0])
+	return NewHeader(historyFields, historyFields[0])
 }
 
+// historyNrows is a constant estimate for the history data.
+// Counting the database states would be too slow.
+const historyNrows = 1000
+
 func (his *History) Nrows() (int, int) {
-	return 1000, 1000 // ???
+	return historyNrows, historyNrows
 }
 
 func (his *History) SetTran(tran QueryTran) {
