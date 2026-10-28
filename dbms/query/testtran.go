@@ -4,6 +4,7 @@
 package query
 
 import (
+	"iter"
 	"slices"
 	"strings"
 
@@ -122,15 +123,16 @@ func testInfoFor(table string) *meta.Info {
 	return &info
 }
 
-func (testTran) GetAllSchema() []*meta.Schema {
-	schemas := make([]*meta.Schema, 0, len(testSchemas))
-	for table, schema := range testSchemas {
-		schema.Table = table
-		setFields(schema)
-		schemas = append(schemas,
-			&meta.Schema{Schema: *schema})
+func (testTran) Schemas() iter.Seq[*meta.Schema] {
+	return func(yield func(*meta.Schema) bool) {
+		for table, schema := range testSchemas {
+			schema.Table = table
+			setFields(schema)
+			if !yield(&meta.Schema{Schema: *schema}) {
+				return
+			}
+		}
 	}
-	return schemas
 }
 
 func setFields(schema *Schema) {
@@ -161,8 +163,8 @@ func setFields(schema *Schema) {
 	}
 }
 
-func (testTran) GetAllViews() []string {
-	return nil
+func (testTran) Views() iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {}
 }
 
 func (t testTran) GetView(table string) string {

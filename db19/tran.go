@@ -5,6 +5,7 @@ package db19
 
 import (
 	"fmt"
+	"iter"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -72,16 +73,12 @@ func (t *tran) GetAllInfo() []*meta.Info {
 	return slices.AppendSeq(make([]*meta.Info, 0, 32), t.meta.Infos())
 }
 
-func (t *tran) GetAllSchema() []*meta.Schema {
-	return slices.AppendSeq(make([]*meta.Schema, 0, 32), t.meta.Tables())
+func (t *tran) Schemas() iter.Seq[*meta.Schema] {
+	return t.meta.Tables()
 }
 
-func (t *tran) GetAllViews() []string {
-	defs := make([]string, 0, 16)
-	for name, def := range t.meta.Views() {
-		defs = append(defs, name, def)
-	}
-	return defs
+func (t *tran) Views() iter.Seq2[string, string] {
+	return t.meta.Views()
 }
 
 func (t *tran) GetView(name string) string {

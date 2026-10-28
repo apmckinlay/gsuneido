@@ -38,6 +38,7 @@
 package query
 
 import (
+	"iter"
 	"math"
 	"sync/atomic"
 
@@ -341,8 +342,8 @@ type QueryTran interface {
 	CheckPerm(table string, action TablePerm)
 	GetInfo(table string) *meta.Info
 	GetAllInfo() []*meta.Info
-	GetAllSchema() []*meta.Schema
-	GetAllViews() []string
+	Schemas() iter.Seq[*meta.Schema]
+	Views() iter.Seq2[string, string]
 	GetView(string) string
 	GetStore() *stor.Stor
 	RangeFrac(table string, iIndex int, org, end string) float64

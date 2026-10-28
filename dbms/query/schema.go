@@ -293,21 +293,32 @@ func (ts *Tables) ensure() {
 	}
 	ts.info = ts.tran.GetAllInfo()
 
-	cols := Columns{tran: ts.tran}
-	ncols, _ := cols.Nrows()
-
-	idxs := Indexes{tran: ts.tran}
-	nidxs, _ := idxs.Nrows()
-
-	views := Views{tran: ts.tran}
-	nviews, _ := views.Nrows()
-
-	stats := StatsTable{tran: ts.tran}
-	nstats, _ := stats.Nrows()
+	// count the virtual schema tables instead of constructing them
+	var ncols, nidxs int
+	for s := range ts.tran.Schemas() {
+		for _, col := range s.Columns {
+			if col != "-" {
+				ncols++
+			}
+		}
+		ncols += len(s.Derived)
+		nidxs += len(s.Indexes)
+	}
+	// the columns table also includes the virtual schema tables themselves
+	for _, name := range schemaTableNames {
+		ncols += len(schemaTableCols(name))
+	}
+	var nviews int
+	for range ts.tran.Views() {
+		nviews++
+	}
+	nstats := 0
+	for _, tbl := range ts.tran.Stats() {
+		nstats += len(tbl.Columns)
+	}
 
 	ts.info = append(ts.info,
-		// +5 for tables, columns, indexes, views, dbstats
-		&meta.Info{Table: "tables", Nrows: len(ts.info) + 5},
+		&meta.Info{Table: "tables", Nrows: len(ts.info) + len(schemaTableNames)},
 		&meta.Info{Table: "columns", Nrows: ncols},
 		&meta.Info{Table: "indexes", Nrows: nidxs},
 		&meta.Info{Table: "views", Nrows: nviews},
@@ -588,7 +599,7 @@ func (cs *Columns) ensure() {
 	if cs.schema != nil {
 		return
 	}
-	cs.schema = cs.tran.GetAllSchema()
+	cs.schema = slices.AppendSeq(make([]*meta.Schema, 0, 32), cs.tran.Schemas())
 	for _, name := range schemaTableNames {
 		cs.schema = append(cs.schema,
 			&meta.Schema{Table: name, Columns: schemaTableCols(name)})
@@ -780,7 +791,7 @@ func (is *Indexes) ensure() {
 	if is.schema != nil {
 		return
 	}
-	is.schema = is.tran.GetAllSchema()
+	is.schema = slices.AppendSeq(make([]*meta.Schema, 0, 32), is.tran.Schemas())
 	sort.Slice(is.schema,
 		func(i, j int) bool { return is.schema[i].Table < is.schema[j].Table })
 	is.nrows = is.getNrows()
@@ -802,11 +813,16 @@ func (is *Indexes) Lookup(th *Thread, sels Sels) Row {
 //-------------------------------------------------------------------
 
 type Views struct {
-	views []string
+	views []view
 	schemaTable
 	selName  string
 	i        int
 	selLevel int // 0 = no select, 1 = view_name
+}
+
+type view struct {
+	name string
+	def  string
 }
 
 func (*Views) String() string {
@@ -850,7 +866,7 @@ func (*Views) Header() *Header {
 
 func (vs *Views) Nrows() (int, int) {
 	vs.ensure()
-	n := len(vs.views) / 2
+	n := len(vs.views)
 	return n, n
 }
 
@@ -877,7 +893,7 @@ func (vs *Views) Select(sels Sels) {
 }
 
 func (vs *Views) Rewind() {
-	vs.i = -2
+	vs.i = -1
 	vs.state = iface.Rewound
 }
 
@@ -893,41 +909,41 @@ func (vs *Views) Get(_ *Thread, dir Dir) Row {
 			return Row{}
 		}
 		vs.state = iface.Within
-		return vs.row(vs.views[vs.i], vs.views[vs.i+1])
+		return vs.row(vs.views[vs.i].name, vs.views[vs.i].def)
 	}
 	if dir == Next {
 		if vs.state.Rewound() {
-			vs.i = -2
+			vs.i = -1
 		}
-		vs.i += 2
+		vs.i++
 	} else { // Prev
 		if vs.state.Rewound() {
 			vs.i = len(vs.views)
 		}
-		vs.i -= 2
+		vs.i--
 	}
 	if vs.i < 0 || len(vs.views) <= vs.i {
 		vs.state = iface.Eof
 		return Row{}
 	}
 	vs.state = iface.Within
-	if !vs.inRange(vs.views[vs.i]) {
+	if !vs.inRange(vs.views[vs.i].name) {
 		vs.state = iface.Eof
 		return Row{}
 	}
-	return vs.row(vs.views[vs.i], vs.views[vs.i+1])
+	return vs.row(vs.views[vs.i].name, vs.views[vs.i].def)
 }
 
 // seek positions to the selected view, returning false if it is not present.
 func (vs *Views) seek() bool {
 	n := vs.Len()
 	idx := sort.Search(n, func(i int) bool {
-		return vs.views[2*i] >= vs.selName
+		return vs.views[i].name >= vs.selName
 	})
-	if idx >= n || vs.views[2*idx] != vs.selName {
+	if idx >= n || vs.views[idx].name != vs.selName {
 		return false
 	}
-	vs.i = 2 * idx
+	vs.i = idx
 	return true
 }
 
@@ -951,21 +967,21 @@ func (vs *Views) ensure() {
 	if vs.views != nil {
 		return
 	}
-	vs.views = vs.tran.GetAllViews()
+	vs.views = make([]view, 0, 16)
+	for name, def := range vs.tran.Views() {
+		vs.views = append(vs.views, view{name, def})
+	}
 	sort.Sort(vs)
 }
 
 func (vs *Views) Len() int {
-	return len(vs.views) / 2
+	return len(vs.views)
 }
 func (vs *Views) Less(i, j int) bool {
-	return vs.views[i*2] < vs.views[j*2]
+	return vs.views[i].name < vs.views[j].name
 }
 func (vs *Views) Swap(i, j int) {
-	i *= 2
-	j *= 2
 	vs.views[i], vs.views[j] = vs.views[j], vs.views[i]
-	vs.views[i+1], vs.views[j+1] = vs.views[j+1], vs.views[i+1]
 }
 
 func (vs *Views) Lookup(th *Thread, sels Sels) Row {
