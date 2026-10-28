@@ -1,6 +1,6 @@
 # gSuneido Project Context
 
-gSuneido is the Go implementation of the Suneido integrated language and database.
+gSuneido is the Go implementation of the Suneido integrated language and database. Do NOT refer to cSuneido or jSuneido, they are outdated.
 
 It uses the latest version of Go (see `/go.mod`)
 
