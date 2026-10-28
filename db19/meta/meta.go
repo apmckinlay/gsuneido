@@ -799,7 +799,7 @@ func dropColumn(ts *Schema, col string) bool {
 	if inIndex(ts, col) {
 		return false // can't drop if used by index
 	}
-	ucol := str.UnCapitalize(col)
+	ucol := str.Uncapitalize(col)
 	ccol := str.Capitalize(col)
 	if slices.Contains(ts.Columns, ucol) {
 		ts.Columns = slc.Replace1(ts.Columns, ucol, "-")

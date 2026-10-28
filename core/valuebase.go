@@ -34,7 +34,7 @@ func typeName[E any]() string {
 }
 
 func (ValueBase[E]) String() string {
-	return str.UnCapitalize(typeName[E]())
+	return str.Uncapitalize(typeName[E]())
 }
 
 func (ValueBase[E]) Type() types.Type {

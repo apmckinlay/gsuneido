@@ -122,7 +122,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 		}
 	}
 	for _, col := range tbl.schema.Derived {
-		cols = append(cols, str.UnCapitalize(col))
+		cols = append(cols, str.Uncapitalize(col))
 	}
 	tbl.header = NewHeader([][]string{tbl.schema.Columns}, cols)
 

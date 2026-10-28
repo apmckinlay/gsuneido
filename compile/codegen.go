@@ -322,7 +322,7 @@ func param(p string) (string, Flag) {
 	}
 	if flag&DotParam == DotParam && str.Capitalized(p) {
 		flag |= PubParam
-		p = str.UnCapitalize(p)
+		p = str.Uncapitalize(p)
 	}
 	return p, flag
 }

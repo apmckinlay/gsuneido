@@ -65,7 +65,7 @@ type buildFT struct {
 func (b *buildFT) columns() []string {
 	cols := slc.Without(b.colflds, "-")
 	for i, c := range cols {
-		cols[i] = str.UnCapitalize(c)
+		cols[i] = str.Uncapitalize(c)
 	}
 	return cols
 }
@@ -135,7 +135,7 @@ func (b *buildFT) construct() *buildFT {
 func (b *buildFT) makeRules() {
 	base := b.colflds[:len(b.colflds)-len(b.ruleCols)]
 	for _, col := range b.ruleCols {
-		ruleName := "Rule_" + str.UnCapitalize(col)
+		ruleName := "Rule_" + str.Uncapitalize(col)
 		ruleExpr := b.ruleExpr(base, col)
 		b.rules[ruleName] = ruleExpr
 		Global.TestDef(ruleName,
@@ -148,8 +148,8 @@ func (b *buildFT) ruleExpr(base []string, col string) string {
 		if i := slc.RandIndexFunc(b.rnd, base, notDeleted); i != -1 {
 			existingCol := base[i]
 			b.ruleRefs = append(b.ruleRefs, existingCol)
-			b.ruleDeps[str.UnCapitalize(col)] = existingCol
-			return "." + str.UnCapitalize(existingCol)
+			b.ruleDeps[str.Uncapitalize(col)] = existingCol
+			return "." + str.Uncapitalize(existingCol)
 		}
 	}
 	return strconv.Itoa(b.rnd.IntN(1000))

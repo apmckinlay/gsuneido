@@ -30,11 +30,11 @@ func TestCapitalize(t *testing.T) {
 
 func TestUnCapitalize(t *testing.T) {
 	assert := assert.T(t).This
-	assert(UnCapitalize("")).Is("")
-	assert(UnCapitalize("#$%")).Is("#$%")
-	assert(UnCapitalize("abc")).Is("abc")
-	assert(UnCapitalize("A")).Is("a")
-	assert(UnCapitalize("AbC")).Is("abC")
+	assert(Uncapitalize("")).Is("")
+	assert(Uncapitalize("#$%")).Is("#$%")
+	assert(Uncapitalize("abc")).Is("abc")
+	assert(Uncapitalize("A")).Is("a")
+	assert(Uncapitalize("AbC")).Is("abC")
 }
 
 func TestEqualUncap(t *testing.T) {
@@ -121,16 +121,16 @@ func TestAfterLast(t *testing.T) {
 
 func TestEqualCI(t *testing.T) {
 	test := func(x, y string) {
-		assert.T(t).That(EqualCI(x, y))
-		assert.T(t).That(EqualCI(y, x))
+		assert.T(t).That(EqualIgnoreCase(x, y))
+		assert.T(t).That(EqualIgnoreCase(y, x))
 	}
 	test("", "")
 	test("foo bar", "foo bar")
 	test("Foo Bar", "foo bar")
 	test("Foo Bar", "FOO BAR")
 	xtest := func(x, y string) {
-		assert.T(t).That(!EqualCI(x, y))
-		assert.T(t).That(!EqualCI(y, x))
+		assert.T(t).That(!EqualIgnoreCase(x, y))
+		assert.T(t).That(!EqualIgnoreCase(y, x))
 	}
 	xtest("", "xyz")
 	xtest("foo", "food")
@@ -152,7 +152,7 @@ func BenchmarkEqualCI(b *testing.B) {
 	for i := range b.N {
 		x := strs[i%len(strs)]
 		y := strs[(i+1)%len(strs)]
-		a = a || EqualCI(x, y)
+		a = a || EqualIgnoreCase(x, y)
 	}
 	B = a
 }

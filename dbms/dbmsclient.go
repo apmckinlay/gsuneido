@@ -277,7 +277,7 @@ func (ms *muxSession) getHdr() *Header {
 	for range n {
 		s := ms.GetStr()
 		if ascii.IsUpper(s[0]) {
-			s = str.UnCapitalize(s)
+			s = str.Uncapitalize(s)
 		} else if !strings.HasSuffix(s, "_lower!") {
 			fields = append(fields, s)
 		}

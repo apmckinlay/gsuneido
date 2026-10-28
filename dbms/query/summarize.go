@@ -461,7 +461,7 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	}
 	su.state = iface.Within
 	dir := Prev // max
-	if str.EqualCI(su.ops[0], "min") {
+	if str.EqualIgnoreCase(su.ops[0], "min") {
 		dir = Next
 	}
 	su.source.Rewind()

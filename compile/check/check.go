@@ -121,7 +121,7 @@ func (ck *Check) params(params []ast.Param, init set) set {
 		name := p.Name.Name
 		switch name[0] {
 		case '.':
-			name = str.UnCapitalize(name[1:])
+			name = str.Uncapitalize(name[1:])
 			ck.AllUsed[name] = struct{}{}
 		case '@', '_':
 			name = name[1:]

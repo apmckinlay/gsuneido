@@ -593,7 +593,7 @@ func (*Columns) row(table, col string, fld int) Row {
 func columnOrDerived(schema *meta.Schema, i int) (string, int) {
 	if i >= len(schema.Columns) {
 		i -= len(schema.Columns)
-		return str.UnCapitalize(schema.Derived[i]), -1
+		return str.Uncapitalize(schema.Derived[i]), -1
 	}
 	return schema.Columns[i], i
 }

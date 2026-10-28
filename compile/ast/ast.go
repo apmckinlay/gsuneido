@@ -131,7 +131,7 @@ func (a *Ident) ParamName() string {
 	name := a.Name
 	switch name[0] {
 	case '.':
-		name = str.UnCapitalize(name[1:])
+		name = str.Uncapitalize(name[1:])
 	case '@', '_':
 		name = name[1:]
 	}

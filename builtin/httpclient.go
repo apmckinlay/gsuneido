@@ -127,7 +127,7 @@ func addHeader(header http.Header, h Value) (contentLength int64) {
 		it := hdr.Iter2(false, true)
 		for k, v := it(); k != nil; k, v = it() {
 			key := strings.ReplaceAll(ToStr(k), "_", "-")
-			if str.EqualCI(key, "Content-Length") {
+			if str.EqualIgnoreCase(key, "Content-Length") {
 				contentLength = int64(ToInt(v))
 			}
 			if vals, ok := v.ToContainer(); ok {

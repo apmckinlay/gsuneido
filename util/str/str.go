@@ -27,8 +27,8 @@ func Capitalize(s string) string {
 	return s
 }
 
-// UnCapitalize returns the string with the first letter converted from A-Z to a-z
-func UnCapitalize(s string) string {
+// Uncapitalize returns the string with the first letter converted from A-Z to a-z
+func Uncapitalize(s string) string {
 	if len(s) > 0 && ascii.IsUpper(s[0]) {
 		s = string(ascii.ToLower(s[0])) + s[1:]
 	}
@@ -247,8 +247,8 @@ func ToUpper(s string) string {
 	return s
 }
 
-// EqualCI checks if two strings are equal ignoring (ascii) case
-func EqualCI(x, y string) bool {
+// EqualIgnoreCase checks if two strings are equal ignoring (ascii) case
+func EqualIgnoreCase(x, y string) bool {
 	if len(x) != len(y) {
 		return false
 	}

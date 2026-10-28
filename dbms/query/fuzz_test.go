@@ -768,7 +768,7 @@ func makeAllColsKey(b *buildFT) {
 	// (rule) columns since they can't be part of a key.
 	ruleCols := make([]string, len(b.ruleCols))
 	for i, c := range b.ruleCols {
-		ruleCols[i] = str.UnCapitalize(c)
+		ruleCols[i] = str.Uncapitalize(c)
 	}
 	cols := make([]string, 0, len(b.colflds))
 	for _, col := range b.columns() {
