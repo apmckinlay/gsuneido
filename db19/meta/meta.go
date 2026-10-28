@@ -123,6 +123,9 @@ func (m *Meta) Views() iter.Seq2[string, string] {
 func (m *Meta) Infos() iter.Seq[*Info] {
 	return func(yield func(*Info) bool) {
 		m.info.All()(func(info *Info) bool {
+			if ti, ok := m.difInfo[info.Table]; ok {
+				info = ti
+			}
 			return info.IsTomb() || yield(info)
 		})
 	}
