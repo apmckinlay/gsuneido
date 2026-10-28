@@ -85,7 +85,7 @@ func (t *tran) GetAllViews() []string {
 }
 
 func (t *tran) GetView(name string) string {
-	return t.db.GetView(name)
+	return t.meta.GetView(name)
 }
 
 func (t *tran) GetStore() *stor.Stor {
