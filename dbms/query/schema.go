@@ -1053,6 +1053,7 @@ type StatsTable struct {
 	schemaTable
 	stats  stats.Stats
 	tables []string
+	order  []string // reusable, sorted column names for the current table
 	si     int
 	ci     int
 	nrows  int
@@ -1110,17 +1111,17 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 	var cs stats.ColStats
 	if dir == Next {
 		if st.state.Rewound() {
-			st.si, st.ci = 0, -1
+			st.si, st.ci = -1, -1
 		}
 		st.ci++
-		for st.si >= len(st.tables) ||
-			st.ci >= len(st.stats[st.tables[st.si]].Columns) {
+		for st.si < 0 || st.si >= len(st.tables) || st.ci >= len(st.order) {
 			st.si++
 			if st.si >= len(st.tables) {
 				st.state = iface.Eof
 				return Row{}
 			}
 			st.ci = 0
+			st.sortCols(st.si)
 		}
 	} else { // Prev
 		if st.state.Rewound() {
@@ -1134,12 +1135,12 @@ func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
 				st.state = iface.Eof
 				return Row{}
 			}
-			st.ci = len(st.stats[st.tables[st.si]].Columns) - 1
+			st.sortCols(st.si)
+			st.ci = len(st.order) - 1
 		}
 	}
 	table = st.tables[st.si]
-	cols := sortedCols(st.stats[table])
-	col = cols[st.ci]
+	col = st.order[st.ci]
 	cs = st.stats[table].Columns[col]
 	st.state = iface.Within
 	st.ngets++
@@ -1157,13 +1158,15 @@ func (*StatsTable) row(table string, col string, cs stats.ColStats) Row {
 	return NewRow(rec)
 }
 
-func sortedCols(ts stats.TableStats) []string {
-	cols := make([]string, 0, len(ts.Columns))
+// sortCols loads st.order with the sorted column names of the given table.
+// It reuses st.order to avoid sorting (and allocating) for every row.
+func (st *StatsTable) sortCols(si int) {
+	ts := st.stats[st.tables[si]]
+	st.order = st.order[:0]
 	for col := range ts.Columns {
-		cols = append(cols, col)
+		st.order = append(st.order, col)
 	}
-	sort.Strings(cols)
-	return cols
+	sort.Strings(st.order)
 }
 
 func formatQuantiles(quantiles []string) *SuObject {
