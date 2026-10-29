@@ -35,6 +35,7 @@ func TestAgentLogging(t *testing.T) {
 
 	// Simulate logging an assistant message
 	agent.logMessage("assistant", "Hi there!")
+	agent.logResponseModel("provider/resolved-model")
 
 	// Simulate logging a tool call via assistant message with tool calls
 	agent.logAssistantToolCalls(Message{
@@ -66,7 +67,10 @@ func TestAgentLogging(t *testing.T) {
 
 	// Verify content uses new format
 	assert.T(t).True(strings.Contains(content, "## {{ Model }}"))
+	assert.T(t).True(strings.Contains(content, "## {{ ResponseModel }}"))
 	assert.T(t).True(strings.Contains(content, "test-model"))
+	assert.T(t).True(strings.Contains(content,
+		"## {{ ResponseModel }}\n\nprovider/resolved-model"))
 	assert.T(t).True(strings.Contains(content, "## {{ User }}"))
 	assert.T(t).True(strings.Contains(content, "Hello"))
 	assert.T(t).True(strings.Contains(content, "## {{ Assistant }}"))
@@ -136,6 +140,7 @@ func TestAgentSetModel(t *testing.T) {
 	// Change model
 	agent.SetModel("new-model")
 	assert.T(t).This(agent.model).Is("new-model")
+	assert.T(t).This(agent.GetModel()).Is("new-model")
 
 	agent.closeLogFile()
 
@@ -157,7 +162,11 @@ func TestAgentLoadConversation(t *testing.T) {
 	tmpFile := filepath.Join(t.TempDir(), "test.md")
 	content := `## {{ Model }}
 
-gpt-4
+test-router
+
+## {{ ResponseModel }}
+
+provider/model
 
 ## {{ Prompt }}
 
@@ -179,9 +188,8 @@ What is 2+2?
 	agent := NewAgent(testToolThread(), "", "", "test-model", currentPrompt, func(what, data string, _ *ToolApproval) {}, func() {}, func() {})
 	err = agent.LoadConversation(tmpFile, nil)
 	assert.T(t).This(err).Is(nil)
-
-	// Verify model was extracted
-	assert.T(t).This(agent.model).Is("gpt-4")
+	assert.T(t).This(agent.GetModel()).Is("test-router")
+	assert.T(t).This(agent.GetResponseModel()).Is("provider/model")
 
 	// Verify current prompt is retained (not replaced by file's prompt)
 	assert.T(t).This(agent.prompt).Is(currentPrompt)

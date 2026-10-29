@@ -18,6 +18,7 @@ type Agent struct {
 	client         *OpenAIClient
 	toolClient     *ToolClient
 	model          string
+	responseModel  string
 	prompt         string
 	history        []Message
 	outfn          OutFn
@@ -37,7 +38,7 @@ type Agent struct {
 }
 
 // OutFn is the push callback for streaming output.
-// what is one of "user", "think", "output", "tool", "complete"
+// what is one of "user", "responseModel", "think", "output", "tool", "complete"
 // approval is non-nil when a tool call requires user approval.
 type OutFn func(what, data string, approval *ToolApproval)
 
@@ -103,6 +104,7 @@ func NewAgent(parent *core.Thread, baseURL, apiKey, model, prompt string, outfn 
 
 func (agent *Agent) resetHistory() {
 	agent.history = nil
+	agent.responseModel = ""
 	if agent.prompt != "" {
 		agent.history = append(agent.history, Message{Role: "system", Content: agent.prompt})
 	}
@@ -115,6 +117,7 @@ func (agent *Agent) Input(input string) {
 		panic("Input: request already in progress")
 	}
 	agent.inProgress = true
+	agent.responseModel = ""
 	agent.mu.Unlock()
 	go agent.request(input)
 }
@@ -148,6 +151,20 @@ func (agent *Agent) SetModel(model string) {
 		agent.logWrite("## {{ Model }}\n\n" + model + "\n\n")
 	}
 	agent.model = model
+}
+
+// Model returns the model currently used for requests.
+func (agent *Agent) GetModel() string {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	return agent.model
+}
+
+// GetResponseModel returns the model used by the provider.
+func (agent *Agent) GetResponseModel() string {
+	agent.mu.Lock()
+	defer agent.mu.Unlock()
+	return agent.responseModel
 }
 
 // LastUsage returns the token usage from the last response.
@@ -318,13 +335,21 @@ type streamToolCall struct {
 // handleStreamChunk processes a single streaming chunk
 func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strings.Builder,
 	reasoning *strings.Builder, toolCallsState *[]*streamToolCall, inThink *bool) error {
-
+	responseModelNotification := ""
+	agent.mu.Lock()
+	if agent.responseModel == "" && chunk.Model != "" && chunk.Model != agent.model {
+		agent.responseModel = agent.model + " (" + chunk.Model + ")"
+		responseModelNotification = agent.responseModel
+	}
 	// Capture usage if present (typically in final chunk)
 	if chunk.Usage != nil {
-		agent.mu.Lock()
 		agent.usage = chunk.Usage
 		agent.totalCost += chunk.Usage.Cost
-		agent.mu.Unlock()
+	}
+	agent.mu.Unlock()
+	if responseModelNotification != "" {
+		agent.emit("responseModel", responseModelNotification)
+		agent.logResponseModel(responseModelNotification)
 	}
 
 	if len(chunk.Choices) == 0 {
