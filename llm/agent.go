@@ -153,7 +153,7 @@ func (agent *Agent) SetModel(model string) {
 	agent.model = model
 }
 
-// Model returns the model currently used for requests.
+// GetModel returns the model currently used for requests.
 func (agent *Agent) GetModel() string {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
