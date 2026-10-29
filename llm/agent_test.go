@@ -66,6 +66,7 @@ func TestAgentLogging(t *testing.T) {
 	content := string(data)
 
 	// Verify content uses new format
+	assert.T(t).True(strings.Contains(content, "## {{ Model }}"))
 	assert.T(t).True(strings.Contains(content, "## {{ ResponseModel }}"))
 	assert.T(t).True(strings.Contains(content, "test-model"))
 	assert.T(t).True(strings.Contains(content,

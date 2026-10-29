@@ -104,6 +104,7 @@ func NewAgent(parent *core.Thread, baseURL, apiKey, model, prompt string, outfn 
 
 func (agent *Agent) resetHistory() {
 	agent.history = nil
+	agent.responseModel = ""
 	if agent.prompt != "" {
 		agent.history = append(agent.history, Message{Role: "system", Content: agent.prompt})
 	}
@@ -159,7 +160,7 @@ func (agent *Agent) GetModel() string {
 	return agent.model
 }
 
-// GetResponseModel returns the model used by the provider for the last response.
+// GetResponseModel returns the model used by the provider.
 func (agent *Agent) GetResponseModel() string {
 	agent.mu.Lock()
 	defer agent.mu.Unlock()
@@ -309,15 +310,6 @@ func (agent *Agent) doStream(ctx context.Context, req *ChatRequest) (
 	inThink := false
 
 	err = agent.client.Stream(ctx, req, func(chunk *ChatCompletionChunk) error {
-		if agent.responseModel == "" {
-			agent.mu.Lock()
-			agent.responseModel = chunk.Model
-			agent.mu.Unlock()
-			if chunk.Model != req.Model {
-				agent.emit("responseModel", req.Model+" ("+chunk.Model+")")
-				agent.logResponseModel(chunk.Model)
-			}
-		}
 		return agent.handleStreamChunk(chunk, &contentBuilder, &reasoningBuilder, &toolCallsState, &inThink)
 	})
 	if err != nil {
@@ -343,13 +335,21 @@ type streamToolCall struct {
 // handleStreamChunk processes a single streaming chunk
 func (agent *Agent) handleStreamChunk(chunk *ChatCompletionChunk, content *strings.Builder,
 	reasoning *strings.Builder, toolCallsState *[]*streamToolCall, inThink *bool) error {
-
+	responseModelNotification := ""
+	agent.mu.Lock()
+	if agent.responseModel == "" && chunk.Model != "" && chunk.Model != agent.model {
+		agent.responseModel = agent.model + " (" + chunk.Model + ")"
+		responseModelNotification = agent.responseModel
+	}
 	// Capture usage if present (typically in final chunk)
 	if chunk.Usage != nil {
-		agent.mu.Lock()
 		agent.usage = chunk.Usage
 		agent.totalCost += chunk.Usage.Cost
-		agent.mu.Unlock()
+	}
+	agent.mu.Unlock()
+	if responseModelNotification != "" {
+		agent.emit("responseModel", responseModelNotification)
+		agent.logResponseModel(responseModelNotification)
 	}
 
 	if len(chunk.Choices) == 0 {
