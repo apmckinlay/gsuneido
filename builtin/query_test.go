@@ -68,25 +68,55 @@ func TestBuiltinRulePerms(t *testing.T) {
 
 func TestBuiltinTriggerPerms(t *testing.T) {
 	th := permsTestSetup(t)
+	restricted := th.Perms()
 	name := "Trigger_builtin_perm_public"
 	old := Global.GetIfPresent(name)
-	Global.TestDef(name, compile.Constant(`function (t, oldrec, newrec) {
-		Transaction(read:) {|nested|
-			nested.QueryFirst('builtin_perm_private sort id')
-			}
-		QueryFirst('builtin_perm_private sort id')
-		}`))
 	defer Global.TestDef(name, old)
+
 	fn := compile.Constant(`function () {
 		Transaction(update:) {|t|
 			t.QueryDo('insert {id: 2} into builtin_perm_public')
 			}
 		return true
 		}`)
-	assert.T(t).This(func() { th.Call(fn) }).Panics("not authorized: builtin_perm_private")
-	th.Reset()
-	th.SetPerms(AllPerms)
+
+	// triggers run with all permissions, so reading a private table is allowed
+	// even though the invoking thread only has access to builtin_perm_public
+	Global.TestDef(name, compile.Constant(`function (t, oldrec, newrec) {
+		Transaction(read:) {|nested|
+			nested.QueryFirst('builtin_perm_private sort id')
+			}
+		QueryFirst('builtin_perm_private sort id')
+		}`))
 	assert.T(t).This(th.Call(fn)).Is(True)
+
+	// but the invoking thread's permissions are restored afterwards
+	assert.T(t).This(func() {
+		th.Call(compile.Constant(
+			`function () { QueryFirst('builtin_perm_private sort id') }`))
+	}).Panics("not authorized: builtin_perm_private")
+	assert.That(th.Perms() == restricted)
+	th.Reset()
+	th.SetPerms(restricted)
+
+	// triggers can't grant permissions, i.e. NewPerms is nil while they run
+	// so Auth can't be fooled into escalating permissions from a trigger
+	builder := &Perms{}
+	th.SetNewPerms(builder)
+	Global.TestDef(name, compile.Constant(`function (t, oldrec, newrec) {
+		Permit.Table('builtin_perm_escalate', 'write')
+		}`))
+	fn2 := compile.Constant(`function () {
+		Transaction(update:) {|t|
+			t.QueryDo('insert {id: 3} into builtin_perm_public')
+			}
+		}`)
+	assert.T(t).This(func() { th.Call(fn2) }).
+		Panics("Permit.Table can only be called from Auth")
+
+	// NewPerms is restored so Auth can continue building permissions
+	assert.That(th.NewPerms() == builder)
+	th.Reset()
 }
 
 func TestBuiltinDatabasePerms(t *testing.T) {

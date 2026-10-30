@@ -65,7 +65,12 @@ func (t *triggers) call2(th *Thread, tran *SuTran, table string,
 	if fn == nil {
 		return
 	}
+	// run trigger with all permissions
+	perms := th.SetPerms(AllPerms)
+	newPerms := th.SetNewPerms(nil)
 	defer func() {
+		th.SetPerms(perms)
+		th.SetNewPerms(newPerms)
 		if e := recover(); e != nil {
 			WrapPanic(th, e, name)
 		}

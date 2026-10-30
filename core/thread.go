@@ -237,8 +237,10 @@ func (th *Thread) Perms() *Perms {
 	return th.perms
 }
 
-func (th *Thread) SetNewPerms(p *Perms) {
+func (th *Thread) SetNewPerms(p *Perms) *Perms {
+	prev := th.newPerms
 	th.newPerms = p
+	return prev
 }
 
 // NewPerms is only valid during Auth while building permissions.
