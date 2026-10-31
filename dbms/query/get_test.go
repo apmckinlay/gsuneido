@@ -101,10 +101,7 @@ func TestQueryGet(t *testing.T) {
 		assert.T(t).Msg("forward:", query).This(get(q, Next, hasSort)).Like(expected)
 		assert.T(t).Msg("reverse:", query).This(get(q, Prev, hasSort)).Like(expected)
 
-		if !strings.Contains(query, "tables") &&
-			!strings.Contains(query, "columns") &&
-			!strings.Contains(query, "indexes") &&
-			!strings.Contains(query, "summarize") {
+		if !strings.Contains(query, "summarize") {
 			simple := str(q2.Header(), q2.Simple(th), hasSort)
 			assert.T(t).Msg("simple:", query).This(simple).Like(expected)
 		}

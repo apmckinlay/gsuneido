@@ -396,6 +396,15 @@ func (ts *Tables) Lookup(th *Thread, sels Sels) Row {
 	return ts.row(&meta.Info{Table: table, Nrows: ts.virtualNrows(table)})
 }
 
+func (ts *Tables) Simple(*Thread) []Row {
+	ts.ensure()
+	rows := make([]Row, 0, len(ts.info))
+	for _, info := range ts.info {
+		rows = append(rows, ts.row(info))
+	}
+	return rows
+}
+
 //-------------------------------------------------------------------
 
 type Columns struct {
@@ -700,6 +709,19 @@ func (cs *Columns) Lookup(th *Thread, sels Sels) Row {
 	return cs.row(table, column, fld)
 }
 
+func (cs *Columns) Simple(*Thread) []Row {
+	cs.ensure()
+	rows := make([]Row, 0, cs.nrows)
+	for si := range cs.schema {
+		cs.sortCols(si)
+		for _, ci := range cs.order {
+			col, fld := columnOrDerived(cs.schema[si], ci)
+			rows = append(rows, cs.row(cs.schema[si].Table, col, fld))
+		}
+	}
+	return rows
+}
+
 //-------------------------------------------------------------------
 // note: indexes does not include tables, columns, indexes, views
 
@@ -844,6 +866,17 @@ func (is *Indexes) Lookup(th *Thread, sels Sels) Row {
 		return is.row(table, idx)
 	}
 	return Row{}
+}
+
+func (is *Indexes) Simple(*Thread) []Row {
+	is.ensure()
+	rows := make([]Row, 0, is.nrows)
+	for _, schema := range is.schema {
+		for i := range schema.Indexes {
+			rows = append(rows, is.row(schema.Table, &schema.Indexes[i]))
+		}
+	}
+	return rows
 }
 
 //-------------------------------------------------------------------
@@ -1034,6 +1067,15 @@ func (vs *Views) Lookup(th *Thread, sels Sels) Row {
 		return vs.row(name, def)
 	}
 	return Row{}
+}
+
+func (vs *Views) Simple(*Thread) []Row {
+	vs.ensure()
+	rows := make([]Row, 0, len(vs.views))
+	for _, v := range vs.views {
+		rows = append(rows, vs.row(v.name, v.def))
+	}
+	return rows
 }
 
 //-------------------------------------------------------------------
@@ -1282,4 +1324,21 @@ func (st *StatsTable) Lookup(th *Thread, sels Sels) Row {
 		}
 	}
 	return Row{}
+}
+
+func (st *StatsTable) Simple(*Thread) []Row {
+	st.ensure()
+	rows := make([]Row, 0, st.nrows)
+	for _, table := range st.tables {
+		ts := st.stats[table]
+		cols := make([]string, 0, len(ts.Columns))
+		for col := range ts.Columns {
+			cols = append(cols, col)
+		}
+		sort.Strings(cols)
+		for _, col := range cols {
+			rows = append(rows, st.row(table, col, ts.Columns[col]))
+		}
+	}
+	return rows
 }
