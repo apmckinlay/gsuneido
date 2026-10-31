@@ -783,6 +783,12 @@ func (is *Indexes) Rewind() {
 	is.state = iface.Rewound
 }
 
+// Select is a no-op other than rewinding; indexes does not support select.
+func (is *Indexes) Select(sels Sels) {
+	assert.That(sels == nil)
+	is.Rewind()
+}
+
 func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	defer func(t uint64) { is.tget += tsc.Read() - t }(tsc.Read())
 	is.ensure()
@@ -1209,6 +1215,12 @@ func (st *StatsTable) SetTran(tran QueryTran) {
 func (st *StatsTable) Rewind() {
 	st.si = -1
 	st.state = iface.Rewound
+}
+
+// Select is a no-op other than rewinding; dbstats does not support select.
+func (st *StatsTable) Select(sels Sels) {
+	assert.That(sels == nil)
+	st.Rewind()
 }
 
 func (st *StatsTable) Get(_ *Thread, dir Dir) Row {
