@@ -618,7 +618,7 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 			if slices.Equal(idx, bloomSel.index) {
 				continue
 			}
-			_, bloomCost, _ := w.tbl.costFor(bloomSel.index, mode, NoneReq(1))
+			bloomCost := w.tbl.costFor(bloomSel.index, NoneReq(1))
 			fixcost, varcost := WhereCost2(nrows, float64(bloomCost), float64(varCost),
 				float64(req.frac), bloomSel.indexRangeFrac, bloomSel.indexFilterFrac,
 				irFrac, w.combinedIndexFrac(isel, bloomSel), df)

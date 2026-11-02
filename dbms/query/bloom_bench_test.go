@@ -80,7 +80,7 @@ func benchmarkBloomCost(b *testing.B, db *db19.Database) {
 				index := tbl.indexes[slices.IndexFunc(tbl.indexes,
 					func(index []string) bool { return index[0] == col })]
 				tbl.SetIndex(index, ReadMode)
-				_, cost, _ := tbl.costFor(index, ReadMode, NoneReq(1))
+				cost := tbl.costFor(index, NoneReq(1))
 				bytes, count := 0, 0
 				for b.Loop() {
 					tbl.Rewind()
@@ -406,8 +406,8 @@ func benchmarkBitmapPlan(b *testing.B, db *db19.Database) {
 							b.Logf("index %v, bloom %v", w.tbl.index, w.bloomSel != nil)
 						} else {
 							main, second := findIdxSel(w, "a"), findIdxSel(w, "b")
-							_, c1, _ := w.tbl.costFor(second.index, ReadMode, NoneReq(1))
-							_, c2, _ := w.tbl.costFor(main.index, ReadMode, NoneReq(1))
+							c1 := w.tbl.costFor(second.index, NoneReq(1))
+							c2 := w.tbl.costFor(main.index, NoneReq(1))
 							if bloom {
 								fixed, variable = WhereCost2(bt.rows, float64(c1), float64(c2), 1,
 									second.indexRangeFrac, second.indexFilterFrac, main.indexRangeFrac,

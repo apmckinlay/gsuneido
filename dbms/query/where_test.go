@@ -1008,7 +1008,7 @@ func TestWhere_twoIndexesOverlap(t *testing.T) {
 		assert.T(t).This(approach.index).Is(index)
 		assert.T(t).This(approach.bloomSel).Is(nil)
 		assert.T(t).This(fixed).Is(0)
-		_, scanCost, _ := w.tbl.costFor(index, ReadMode, NoneReq(1))
+		scanCost := w.tbl.costFor(index, NoneReq(1))
 		isel := w.getIdxSel(index)
 		assert.T(t).This(variable).Is(WhereCost(float64(scanCost), 1,
 			isel.indexRangeFrac, isel.indexFilterFrac, isel.hasDataFilter))

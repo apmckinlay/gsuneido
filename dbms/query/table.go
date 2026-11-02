@@ -182,7 +182,9 @@ func (tbl *Table) SingleTable() bool {
 
 func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton || req.use == ReqNone {
-		return tbl.costFor(tbl.indexes[0], mode, req)
+		index := tbl.indexes[0]
+		return 0, tbl.costFor(index, req),
+			tableApproach{index: index, mode: mode}
 	}
 	best := newBest[[]string]()
 	for i, idx := range tbl.indexes {
@@ -190,14 +192,14 @@ func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 			continue
 		}
 		if req.SatisfiedBy(idx) {
-			f, v, _ := tbl.costFor(idx, mode, req)
-			best.update(f, v, idx)
+			v := tbl.costFor(idx, req)
+			best.update(0, v, idx)
 		}
 	}
 	if best.none() {
 		return impossible, impossible, nil
 	}
-	return best.fixcost, best.varcost, tableApproach{index: best.data, mode: mode}
+	return 0, best.varcost, tableApproach{index: best.data, mode: mode}
 }
 
 // uniqueForLookup returns whether a Lookup on this index yields at most one row.
@@ -207,7 +209,7 @@ func (tbl *Table) uniqueForLookup(i int) bool {
 	return tbl.schema.Indexes[i].Mode != 'u'
 }
 
-func (tbl *Table) costFor(index []string, mode Mode, req Require) (Cost, Cost, any) {
+func (tbl *Table) costFor(index []string, req Require) Cost {
 	rowCost := tableFast
 	if tbl.info.Size >= tableLarge && !slices.Equal(index, tbl.indexes[0]) {
 		rowCost = tableSlow
@@ -221,7 +223,7 @@ func (tbl *Table) costFor(index []string, mode Mode, req Require) (Cost, Cost, a
 			result += Cost(req.nseeks) * tbl.lookupCostI(idxi)
 		}
 	}
-	return 0, result, tableApproach{index: index, mode: mode}
+	return result
 }
 
 func (tbl *Table) setApproach(req Require, approach any, _ QueryTran) {
