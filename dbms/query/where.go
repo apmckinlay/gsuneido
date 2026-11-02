@@ -51,7 +51,7 @@ type Where struct {
 	selConflict  bool      // conflict from Select
 	expr         *ast.Nary // And
 
-	// curPtrng is idxSelActive.prefixRanges[idxSelPos]
+	// curPtrng is w.idxSelActive.prefixRanges[w.idxSelPos]
 	curPtrng pointRange
 
 	rowCtx ast.RowContext
@@ -62,7 +62,7 @@ type Where struct {
 	idxSels       []*idxSel // from optInit, result of perIndex
 	colFracs      []colFrac
 	combinedFracs map[[2]*idxSel]float64
-	// idxSelPos is the current index in idxSel.ptrngs
+	// idxSelPos is the current index in w.idxSelActive.prefixRanges
 	idxSelPos int
 	// eof is set when advance returns false (past end or past beginning)
 	// to enforce "plain stick" cursor behavior: once past eof, stay past eof
@@ -296,11 +296,11 @@ func (w *Where) Nrows() (int, int) {
 
 func (w *Where) calcNrows() (int, int) {
 	assert.That(w.optInited == optInitInProgress)
-	// Note: Nrows uses wfrac directly, while WhereCost uses the per-stage
-	// fractions (prefixFrac, skipFrac, etc.) from splitFrac. These are only
-	// consistent when a dataFilter is present; otherwise the cost model is
-	// intentionally pessimistic (see splitFrac). This is acceptable since
-	// cost is used for index selection, not row estimation.
+	// Note: Nrows uses wfrac directly, while WhereCost uses
+	// the per-stage fractions (prefixFrac, skipFrac, etc.).
+	// These are only consistent when a dataFilter is present;
+	// otherwise the cost model is intentionally pessimistic.
+	// This is acceptable since cost is used for index selection.
 	srcNrows, srcPop := w.source.Nrows()
 	if w.conflict || srcPop == 0 {
 		return 0, srcPop
@@ -342,48 +342,9 @@ func (w *Where) Transform() Query {
 		src := NewWhere(q.source, newExpr, w.t)
 		return NewRename(src, q.from, q.to).Transform()
 	case *Extend:
-		// move where before extend, unless it depends on rules
-		var before, after []ast.Expr
-		for _, e := range w.expr.Exprs {
-			if q.needRule(e.Columns()) {
-				after = append(after, e)
-			} else {
-				before = append(before, replaceExpr(e, q.cols, q.exprs, false))
-			}
-		}
-		if before == nil { // no split
-			return w.transform(src)
-		}
-		src := NewWhere(q.source,
-			&ast.Nary{Tok: tok.And, Exprs: before}, w.t)
-		q = NewExtend(src, q.cols, q.exprs)
-		if after == nil {
-			return q.Transform()
-		}
-		e := &ast.Nary{Tok: tok.And, Exprs: after}
-		return NewWhere(q, e, w.t).Transform()
+		return w.transformExtend(q)
 	case *Summarize:
-		// split where before & after summarize
-		cols1 := q.source.Columns()
-		var before, after []ast.Expr
-		for _, e := range w.expr.Exprs {
-			if set.HasSubset(cols1, e.Columns()) {
-				before = append(before, e)
-			} else {
-				after = append(after, e)
-			}
-		}
-		if before == nil { // no split
-			return w.transform(src)
-		}
-		src := NewWhere(q.source,
-			&ast.Nary{Tok: tok.And, Exprs: before}, w.t)
-		q = NewSummarize(src, q.hint, q.by, q.cols, q.ops, q.ons)
-		if after == nil {
-			return q.Transform()
-		}
-		e := &ast.Nary{Tok: tok.And, Exprs: after}
-		return NewWhere(q, e, w.t).Transform()
+		return w.transformSummarize(q)
 	case *Intersect:
 		// distribute where over intersect
 		// no project because Intersect Columns are the intersection
@@ -405,47 +366,98 @@ func (w *Where) Transform() Query {
 	case *Times:
 		// split where over times
 		return w.split(q, func(src1, src2 Query) Query {
-			return NewTimes(src1, src2).Transform()
+			return NewTimes(src1, src2)
 		})
 	case *Join:
 		// split where over join
 		return w.split(q, func(src1, src2 Query) Query {
-			return q.With(src1, src2).Transform()
+			return q.With(src1, src2)
 		})
+	case *LeftJoin:
+		if w.leftJoinToJoin(q) {
+			return w.split(q, func(src1, src2 Query) Query {
+				return NewJoin(src1, src2, q.by, w.t)
+			})
+		}
+		return w.transformLeftJoin(q)
 	case *SemiJoin:
 		// move where before semijoin
 		src1 := NewWhere(q.source1, w.expr, w.t)
 		return q.With(src1, q.source2).Transform()
-	case *LeftJoin:
-		if w.leftJoinToJoin(q) {
-			return w.split(q, func(src1, src2 Query) Query {
-				return NewJoin(src1, src2, q.by, w.t).Transform()
-			})
-		}
-		// split where over leftjoin (left side only)
-		cols1 := q.source1.Columns()
-		var common, exprs1 []ast.Expr
-		for _, e := range w.expr.Exprs {
-			if set.HasSubset(cols1, e.Columns()) {
-				exprs1 = append(exprs1, e)
-			} else {
-				common = append(common, e)
-			}
-		}
-		if exprs1 == nil { // no split
-			return w.transform(src)
-		}
-		src1 := NewWhere(q.source1,
-			&ast.Nary{Tok: tok.And, Exprs: exprs1}, w.t)
-		q2 := q.With(src1, q.source2).Transform()
-		if common == nil {
-			return q2
-		}
-		e := &ast.Nary{Tok: tok.And, Exprs: common}
-		return NewWhere(q2, e, w.t).Transform()
 	default:
 		return w.transform(src)
 	}
+}
+
+func (w *Where) transformExtend(q *Extend) Query {
+	// move where before extend, unless it depends on rules
+	var before, after []ast.Expr
+	for _, e := range w.expr.Exprs {
+		if q.needRule(e.Columns()) {
+			after = append(after, e)
+		} else {
+			before = append(before, replaceExpr(e, q.cols, q.exprs, false))
+		}
+	}
+	if before == nil { // no split
+		return w.transform(q)
+	}
+	src := NewWhere(q.source,
+		&ast.Nary{Tok: tok.And, Exprs: before}, w.t)
+	q2 := NewExtend(src, q.cols, q.exprs)
+	if after == nil {
+		return q2.Transform()
+	}
+	e := &ast.Nary{Tok: tok.And, Exprs: after}
+	return NewWhere(q2, e, w.t).Transform()
+}
+
+func (w *Where) transformSummarize(q *Summarize) Query {
+	// split where before & after summarize
+	cols1 := q.source.Columns()
+	var before, after []ast.Expr
+	for _, e := range w.expr.Exprs {
+		if set.HasSubset(cols1, e.Columns()) {
+			before = append(before, e)
+		} else {
+			after = append(after, e)
+		}
+	}
+	if before == nil { // no split
+		return w.transform(q)
+	}
+	src := NewWhere(q.source,
+		&ast.Nary{Tok: tok.And, Exprs: before}, w.t)
+	q2 := NewSummarize(src, q.hint, q.by, q.cols, q.ops, q.ons)
+	if after == nil {
+		return q2.Transform()
+	}
+	e := &ast.Nary{Tok: tok.And, Exprs: after}
+	return NewWhere(q2, e, w.t).Transform()
+}
+
+func (w *Where) transformLeftJoin(q *LeftJoin) Query {
+	// split where over leftjoin (left side only)
+	cols1 := q.source1.Columns()
+	var common, exprs1 []ast.Expr
+	for _, e := range w.expr.Exprs {
+		if set.HasSubset(cols1, e.Columns()) {
+			exprs1 = append(exprs1, e)
+		} else {
+			common = append(common, e)
+		}
+	}
+	if exprs1 == nil { // no split
+		return w.transform(q)
+	}
+	src1 := NewWhere(q.source1,
+		&ast.Nary{Tok: tok.And, Exprs: exprs1}, w.t)
+	q2 := q.With(src1, q.source2).Transform()
+	if common == nil {
+		return q2
+	}
+	e := &ast.Nary{Tok: tok.And, Exprs: common}
+	return NewWhere(q2, e, w.t).Transform()
 }
 
 func (w *Where) transform(src Query) Query {
@@ -487,19 +499,25 @@ func nEmpty(n int) []ast.Expr {
 	return list
 }
 
-func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
-	src2 := q2.(q2i).Source2()
-	src1 := q2.(q2i).Source()
+type query2i interface {
+	Query
+	q2i
+}
+
+func (w *Where) split(src query2i, newQ2 func(Query, Query) Query) Query {
+	src1 := src.Source()
+	src2 := src.Source2()
 	cols1 := src1.Columns()
 	cols2 := src2.Columns()
 	var common, exprs1, exprs2 []ast.Expr
 	for _, e := range w.expr.Exprs {
 		used := false
-		if set.HasSubset(cols1, e.Columns()) {
+		eCols := e.Columns()
+		if set.HasSubset(cols1, eCols) {
 			exprs1 = append(exprs1, e)
 			used = true
 		}
-		if set.HasSubset(cols2, (e.Columns())) {
+		if set.HasSubset(cols2, eCols) {
 			if used {
 				e = replaceExpr(e, nil, nil, true) // clone
 			}
@@ -510,18 +528,16 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 			common = append(common, e)
 		}
 	}
+	if exprs1 == nil && exprs2 == nil {
+		return w.transform(src)
+	}
 	if exprs1 != nil {
 		src1 = NewWhere(src1, &ast.Nary{Tok: tok.And, Exprs: exprs1}, w.t)
 	}
 	if exprs2 != nil {
 		src2 = NewWhere(src2, &ast.Nary{Tok: tok.And, Exprs: exprs2}, w.t)
 	}
-	if exprs1 != nil || exprs2 != nil {
-		q2 = newQ2(src1, src2).Transform()
-	}
-	if exprs1 == nil && exprs2 == nil {
-		return w.transform(q2)
-	}
+	q2 := newQ2(src1, src2).Transform()
 	if common != nil {
 		e := &ast.Nary{Tok: tok.And, Exprs: common}
 		return NewWhere(q2, e, w.t)
@@ -732,15 +748,15 @@ func WhereCost(cost, inFrac, irFrac, ifFrac float64, df bool) Cost {
 
 // combinedIndexFrac counts predicates shared by the two indexes only once.
 func (w *Where) combinedIndexFrac(main, bloom *idxSel) float64 {
-	frac1 := bloom.indexRangeFrac * bloom.indexFilterFrac
+	bloomFrac := bloom.indexRangeFrac * bloom.indexFilterFrac
 	if main == nil {
-		return frac1
+		return bloomFrac
 	}
 	pair := [2]*idxSel{main, bloom}
 	if frac, ok := w.combinedFracs[pair]; ok {
 		return frac
 	}
-	frac2 := main.indexRangeFrac * main.indexFilterFrac
+	mainFrac := main.indexRangeFrac * main.indexFilterFrac
 	overlap := false
 	for _, col := range main.index {
 		if slices.Contains(bloom.index, col) &&
@@ -750,29 +766,30 @@ func (w *Where) combinedIndexFrac(main, bloom *idxSel) float64 {
 		}
 	}
 	if !overlap {
-		return damp2(frac1, frac2)
+		return damp2(bloomFrac, mainFrac)
 	}
 	// Keep the more selective index's probe estimate, and use column stats
 	// for the remaining predicates in the union of the indexes.
-	if frac1 < frac2 {
-		main, bloom = bloom, main
+	minFracSel, maxFracSel := main, bloom
+	if bloomFrac < mainFrac {
+		minFracSel, maxFracSel = maxFracSel, minFracSel
 	}
 	addsFilter := false
-	for _, col := range bloom.index {
+	for _, col := range maxFracSel.index {
 		if (w.colSpans[col] != nil || slices.Contains(w.unspanable, col)) &&
-			!slices.Contains(main.index, col) {
+			!slices.Contains(minFracSel.index, col) {
 			addsFilter = true
 			break
 		}
 	}
 	if !addsFilter {
 		// The more selective index already covers all predicates in both indexes.
-		return min(frac1, frac2)
+		return min(bloomFrac, mainFrac)
 	}
-	combined := *main
-	combined.index = set.Union(main.index, bloom.index)
+	combined := *minFracSel
+	combined.index = set.Union(minFracSel.index, maxFracSel.index)
 	combined.calcFracs(w.colFracs, w.colSpans, w.unspanable, 0)
-	frac := min(frac1, frac2, combined.indexRangeFrac*combined.indexFilterFrac)
+	frac := min(bloomFrac, mainFrac, combined.indexRangeFrac*combined.indexFilterFrac)
 	if w.combinedFracs == nil {
 		w.combinedFracs = make(map[[2]*idxSel]float64)
 	}
@@ -826,53 +843,55 @@ func (w *Where) setApproach(req Require, approach any, tran QueryTran) {
 		w.srcIndex = req.cols
 		w.tbl = nil
 	} else {
-		ap := approach.(*whereApproach)
-		if trace.WhereOpt.On() {
-			var bloom []string
-			if ap.bloomSel != nil {
-				bloom = ap.bloomSel.index
-			}
-			trace.WhereOpt.Println("    setApproach", w.tbl.Name(), ap.mode, req,
-				"index", ap.index, "Bloom", bloom, "cost", ap.cost)
-		}
-		w.tbl.SetIndex(ap.index, ap.mode)
-		w.srcIndex = ap.index
-		w.bloomSel = ap.bloomSel
-		w.bloom = nil
-		isel := ap.idxSel
-		if w.bloomSel != nil {
-			w.bloomCtx = ixContext{cols: w.bloomSel.index,
-				encodes: w.tbl.IndexEncodes(w.bloomSel.index)}
-			w.bloomFilter, _ = w.splitExpr(w.bloomSel)
-			if isel == nil {
-				isel = &idxSel{index: ap.index,
-					encoded:      w.tbl.IndexEncodes(ap.index),
-					mode:         w.tbl.schema.Indexes[w.tbl.iIndex].Mode,
-					prefixRanges: []pointRange{pointRange(iface.All)}, indexRangeFrac: 1}
-			}
-		}
-		if isel != nil {
-			w.ixCtx.cols = ap.index
-			w.ixCtx.encodes = w.tbl.IndexEncodes(ap.index)
-			w.idxSelBase = isel
-			w.idxSelActive = w.idxSelBase
-			// Bloom filters have false positives, so retain their expressions.
-			w.indexFilter, w.dataFilter = w.splitExpr(isel)
-			w.tbl.setCost(float64(req.frac)*isel.indexRangeFrac, 0, ap.cost)
-			w.idxSelPos = -1
-		} else {
-			w.tbl.setCost(float64(req.frac), 0, ap.cost)
-		}
+		w.setApproachTable(approach, req)
 	}
 	w.header = w.source.Header()
 	w.rowCtx.Hdr = w.header
 }
 
+func (w *Where) setApproachTable(approach any, req Require) {
+	ap := approach.(*whereApproach)
+	if trace.WhereOpt.On() {
+		var bloom []string
+		if ap.bloomSel != nil {
+			bloom = ap.bloomSel.index
+		}
+		trace.WhereOpt.Println("    setApproach", w.tbl.Name(), ap.mode, req,
+			"index", ap.index, "Bloom", bloom, "cost", ap.cost)
+	}
+	w.tbl.SetIndex(ap.index, ap.mode)
+	w.srcIndex = ap.index
+	w.bloomSel = ap.bloomSel
+	w.bloom = nil
+	isel := ap.idxSel
+	if w.bloomSel != nil {
+		w.bloomCtx = ixContext{cols: w.bloomSel.index,
+			encodes: w.tbl.IndexEncodes(w.bloomSel.index)}
+		w.bloomFilter, _ = w.splitExpr(w.bloomSel)
+		if isel == nil {
+			isel = &idxSel{index: ap.index,
+				encoded:      w.tbl.IndexEncodes(ap.index),
+				mode:         w.tbl.schema.Indexes[w.tbl.iIndex].Mode,
+				prefixRanges: []pointRange{pointRange(iface.All)}, indexRangeFrac: 1}
+		}
+	}
+	if isel != nil {
+		w.ixCtx.cols = ap.index
+		w.ixCtx.encodes = w.tbl.IndexEncodes(ap.index)
+		w.idxSelBase = isel
+		w.idxSelActive = w.idxSelBase
+		// Bloom filters have false positives, so retain their expressions.
+		w.indexFilter, w.dataFilter = w.splitExpr(isel)
+		w.tbl.setCost(float64(req.frac)*isel.indexRangeFrac, 0, ap.cost)
+		w.idxSelPos = -1
+	} else {
+		w.tbl.setCost(float64(req.frac), 0, ap.cost)
+	}
+}
+
 func (w *Where) splitExpr(is *idxSel) (indexFilter, dataFilter ast.Expr) {
 	index := is.index
-	// fmt.Println("idxSel:", is)
 	rangeCols := is.RangeCols()
-	// fmt.Println("rangeCols:", rangeCols)
 
 	var ie, de []ast.Expr
 	for _, e := range w.expr.Exprs {
@@ -888,12 +907,10 @@ func (w *Where) splitExpr(is *idxSel) (indexFilter, dataFilter ast.Expr) {
 			ie = append(ie, e)
 		}
 	}
-	// fmt.Println("indexFilter:", ie)
-	// fmt.Println("dataFilter:", de)
-	return exprs(ie), exprs(de)
+	return andExpr(ie), andExpr(de)
 }
 
-func exprs(exprs []ast.Expr) ast.Expr {
+func andExpr(exprs []ast.Expr) ast.Expr {
 	if len(exprs) == 0 {
 		return nil
 	} else if len(exprs) == 1 {
@@ -913,7 +930,7 @@ func (w *Where) Get(th *Thread, dir Dir) Row {
 		return Row{}
 	}
 	if w.bloomSel != nil && w.bloom == nil {
-		w.buildBitmap(th)
+		w.buildBloom(th)
 	}
 	// apply the non-indexed filtering
 	for {
@@ -990,7 +1007,7 @@ func (w *Where) getFilter(th *Thread, dir Dir) Row {
 	return w.tbl.GetFilter(dir, filterFunc)
 }
 
-func (w *Where) buildBitmap(th *Thread) {
+func (w *Where) buildBloom(th *Thread) {
 	tbl := w.tbl.Clone()
 	tbl.iter = nil // the bloom scan must not move the ordered scan's cursor
 	tbl.SetIndex(w.bloomSel.index, ReadMode)
@@ -1102,15 +1119,7 @@ func (w *Where) Select(sels Sels) {
 	}
 
 	if w.idxSelBase == nil {
-		// add applicable fixed to sels for the source
-		// (same as Lookup) since source index may include fixed columns
-		sels = slices.Clip(sels)
-		for _, fix := range w.fixed {
-			if fix.Single() && slices.Contains(w.srcIndex, fix.col) &&
-				!sels.HasCol(fix.col) {
-				sels = append(sels, Sel{fix.col, fix.values[0]})
-			}
-		}
+		sels, _ := w.addFixedToSels(sels)
 		w.source.Select(sels)
 		return
 	}
@@ -1138,6 +1147,19 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 		row := getNext1(w, th)
 		return lookupFilter(w.Header(), row, sels, th, w.rowCtx.Tran)
 	}
+	sels, cloned := w.addFixedToSels(sels)
+	isels, _ := Split(cloned, sels, w.srcIndex)
+	row := lookup(w.source, isels, th, w.rowCtx.Tran)
+	if !w.filter(th, row) {
+		row = Row{}
+	}
+	return row
+}
+
+// addFixedToSels adds applicable fixed to sels for the source
+// since source index may include fixed columns.
+// Used by Select and Lookup.
+func (w *Where) addFixedToSels(sels Sels) (Sels, bool) {
 	cloned := false
 	sels = slices.Clip(sels)
 	for _, fix := range w.fixed {
@@ -1147,12 +1169,7 @@ func (w *Where) Lookup(th *Thread, sels Sels) Row {
 			cloned = true // because they're clipped, append will realloc
 		}
 	}
-	isels, _ := Split(cloned, sels, w.srcIndex)
-	row := lookup(w.source, isels, th, w.rowCtx.Tran)
-	if !w.filter(th, row) {
-		row = Row{}
-	}
-	return row
+	return sels, cloned
 }
 
 // Split partitions sels relative to cols, returning sub-slices.
