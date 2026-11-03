@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/dbms/query"
 )
 
-// Wire up database compaction for the bitmap benchmarks.
+// Wire up database compaction for benchmarks.
 // It lives in the external test package because db19/tools imports query.
 func init() {
 	query.CompactDb = func(dbfile string) error {

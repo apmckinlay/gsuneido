@@ -1061,12 +1061,12 @@ func TestWhere_twoIndexes(t *testing.T) {
 	tran := db.NewReadTran(AllPerms)
 	defer tran.Complete()
 	th := &Thread{}
-	test := func(where string, req Require, bitmap bool, expected []int) *Where {
+	test := func(where string, req Require, bloom bool, expected []int) *Where {
 		t.Helper()
 		w := ParseQuery("table where "+where, tran, nil).(*Where)
 		_, _, ap := w.optimize(ReadMode, req)
 		w.setApproach(req, ap, tran)
-		assert.T(t).This(w.bloomSel != nil).Is(bitmap)
+		assert.T(t).This(w.bloomSel != nil).Is(bloom)
 		assert.T(t).That(w.singleton || req.SatisfiedByWithFixed(w.srcIndex, w.fixed))
 		get := func(dir Dir) []int {
 			w.Rewind()
@@ -1100,10 +1100,10 @@ func TestWhere_twoIndexes(t *testing.T) {
 		ids = append(ids, ToInt(row.GetVal(w.Header(), "id", th, nil)))
 	}
 	assert.T(t).This(ids).Is(expected)
-	bitmap := w.bloom
+	bloom := w.bloom
 	w.Rewind()
 	w.SetTran(tran)
-	assert.T(t).This(w.bloom).Is(bitmap)
+	assert.T(t).This(w.bloom).Is(bloom)
 	assert.T(t).That(!w.Get(th, Next).Eof())
 	w.Select(Sels{{"b", Pack(IntVal(18))}})
 	assert.T(t).This(row2str(w.Header(), w.Get(th, Next))).Is("a=1 b=18 c=1 id=81")
@@ -1461,7 +1461,7 @@ func TestWhere_indexRanges(t *testing.T) {
 	}
 }
 
-func TestWhere_rangeBitmap(t *testing.T) {
+func TestWhere_rangeBloom(t *testing.T) {
 	db := syncHeapDb()
 	defer db.Close()
 	db.adm("create t (k, a, b) key(k) index(a) index(b)")
@@ -1485,13 +1485,13 @@ func TestWhere_rangeBitmap(t *testing.T) {
 	}
 	tran := db.NewReadTran(AllPerms)
 	defer tran.Complete()
-	// Selective ranges save enough record reads to offset bitmap construction.
-	test := func(thresh int, bitmap bool) {
+	// Selective ranges save enough record reads to offset bloom construction.
+	test := func(thresh int, bloom bool) {
 		t.Helper()
 		q := fmt.Sprintf("t where a > %d and b > %d", thresh, thresh)
 		q2, _, _ := Setup(ParseQuery(q, tran, nil), ReadMode, tran)
 		w := q2.(*Where)
-		assert.T(t).Msg(q).This(w.bloomSel != nil).Is(bitmap)
+		assert.T(t).Msg(q).This(w.bloomSel != nil).Is(bloom)
 		expected := make(map[int]bool)
 		for k, v := range values {
 			if v[0] > thresh && v[1] > thresh {
