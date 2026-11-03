@@ -83,9 +83,7 @@ func TestBuiltinTriggerPerms(t *testing.T) {
 	// triggers run with all permissions, so reading a private table is allowed
 	// even though the invoking thread only has access to builtin_perm_public
 	Global.TestDef(name, compile.Constant(`function (t, oldrec, newrec) {
-		Transaction(read:) {|nested|
-			nested.QueryFirst('builtin_perm_private sort id')
-			}
+		t.QueryFirst('builtin_perm_private sort id')
 		QueryFirst('builtin_perm_private sort id')
 		}`))
 	assert.T(t).This(th.Call(fn)).Is(True)

@@ -41,6 +41,14 @@ func (t *tran) CheckPerm(table string, action core.TablePerm) {
 	}
 }
 
+// SetPerms overrides the transaction's permissions
+// and returns the previous permissions.
+func (t *tran) SetPerms(perms *core.Perms) *core.Perms {
+	prev := t.perms
+	t.perms = perms
+	return prev
+}
+
 // GetInfo returns read-only Info for the table or nil if not found
 func (t *tran) GetInfo(table string) *meta.Info {
 	return t.meta.GetRoInfo(table)

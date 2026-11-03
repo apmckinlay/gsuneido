@@ -367,6 +367,12 @@ func (tc *muxTran) Num() int {
 	return tc.tn
 }
 
+// SetPerms can't be done on a client transaction
+// because permissions are enforced on the server.
+func (tc *muxTran) SetPerms(*Perms) *Perms {
+	panic("can't SetPerms on client transaction")
+}
+
 func (tc *muxTran) String() string {
 	pre := "rt"
 	if tc.tn%2 == 1 {

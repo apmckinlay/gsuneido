@@ -68,7 +68,9 @@ func (t *triggers) call2(th *Thread, tran *SuTran, table string,
 	// run trigger with all permissions
 	perms := th.SetPerms(AllPerms)
 	newPerms := th.SetNewPerms(nil)
+	trPerms := tran.SetPerms(AllPerms)
 	defer func() {
+		tran.SetPerms(trPerms)
 		th.SetPerms(perms)
 		th.SetNewPerms(newPerms)
 		if e := recover(); e != nil {

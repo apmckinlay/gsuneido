@@ -131,6 +131,10 @@ type ITran interface {
 	// with the date-times as unix milli
 	Asof(int64) int64
 
+	// SetPerms overrides the transaction's permissions
+	// and returns the previous permissions.
+	SetPerms(perms *Perms) *Perms
+
 	Num() int
 }
 

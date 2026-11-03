@@ -127,6 +127,12 @@ func (st *SuTran) Action(th *Thread, action string) int {
 	return st.itran.Action(th, action)
 }
 
+// SetPerms overrides the transaction's permissions
+// and returns the previous permissions.
+func (st *SuTran) SetPerms(perms *Perms) *Perms {
+	return st.itran.SetPerms(perms)
+}
+
 func (st *SuTran) Rollback() {
 	switch st.status {
 	case stAborted:
