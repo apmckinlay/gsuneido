@@ -435,6 +435,51 @@ func (q *TestQop) fastSingle() bool { // override Nothing
 	return false
 }
 
+func TestReqsForTimes(t *testing.T) {
+	test := func(n1, n2 int, req, expected1, expected2 Require) {
+		t.Helper()
+		src1 := &QueryMock{ColumnsResult: []string{"a"}, NrowsN: n1}
+		src2 := &QueryMock{ColumnsResult: []string{"x"}, NrowsN: n2}
+		req1, req2 := reqsForTimes(src1, src2, req)
+		assert.T(t).This(req1).Is(expected1)
+		assert.T(t).This(req2).Is(expected2)
+	}
+	test(4, 8, NoneReq(.5), NoneReq(.5), NoneReq(2))
+	test(4, 8, OrderReq([]string{"a"}, .5),
+		OrderReq([]string{"a"}, .5), NoneReq(2))
+	test(4, 8, GroupReq([]string{"a"}, .5, 3),
+		GroupReq([]string{"a"}, .5, 3), NoneReq(2))
+	test(0, 8, NoneReq(.5), NoneReq(1), NoneReq(.125))
+	test(4, 0, NoneReq(.5), NoneReq(.25), NoneReq(1))
+	test(0, 0, NoneReq(.5), NoneReq(1), NoneReq(1))
+	test(4, 0, GroupReq([]string{"a"}, .5, 3),
+		GroupReq([]string{"a"}, .25, 3), NoneReq(1))
+	unique := UniqueReq([]string{"a", "x"}, 3)
+	test(4, 8, unique, UniqueReq([]string{"a"}, 3), UniqueReq([]string{"x"}, 3))
+	test(0, 8, unique, UniqueReq([]string{"a"}, 3), UniqueReq([]string{"x"}, 3))
+	test(4, 0, unique, UniqueReq([]string{"a"}, 3), UniqueReq([]string{"x"}, 3))
+	test(0, 0, unique, UniqueReq([]string{"a"}, 3), UniqueReq([]string{"x"}, 3))
+}
+
+func TestTimesLookupEmpty(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create tmp1 (a) key(a)")
+	db.adm("create tmp2 (x) key(x)")
+	test := func(query string) {
+		t.Helper()
+		tran := db.NewReadTran(AllPerms)
+		q := ParseQuery(query, tran, nil)
+		q, _, _ = SetupReq(q, ReadMode, tran, UniqueReq([]string{"a", "x"}, 1))
+		assert.T(t).That(q.Lookup(nil, Sels{{"a", Pack(One)}, {"x", Pack(One)}}).Eof())
+	}
+	test("tmp1 times tmp2")
+	db.act("insert { a: 1 } into tmp1")
+	db.act("insert { a: 2 } into tmp1")
+	test("tmp1 times tmp2")
+	test("tmp2 times tmp1")
+}
+
 func TestTimesLookup(t *testing.T) {
 	db := db19.CreateDb(stor.HeapStor(8192))
 	db19.StartConcur(db, 50*time.Millisecond)

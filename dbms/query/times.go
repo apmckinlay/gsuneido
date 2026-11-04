@@ -102,23 +102,19 @@ func (t *Times) setApproach(req Require, approach any, tran QueryTran) {
 }
 
 func reqsForTimes(src1, src2 Query, req Require) (Require, Require) {
+	if req.use == ReqUnique {
+		return UniqueReq(set.Intersect(req.cols, src1.Columns()), req.nseeks),
+			UniqueReq(set.Intersect(req.cols, src2.Columns()), req.nseeks)
+	}
 	nrows1, _ := src1.Nrows()
 	nrows2, _ := src2.Nrows()
-	var frac2 float32
-	if nrows1 == 0 {
-		frac2 = float32(1) / float32(max(1, nrows2))
-	} else {
-		// frac2 may be > 1 since we read source2 nrows1 times
-		frac2 = req.frac * float32(nrows1)
-	}
 	req1 := req
-	req2 := NoneReq(frac2)
-	if req.use == ReqUnique {
-		req1 = UniqueReq(set.Intersect(req.cols, src1.Columns()), req.nseeks)
-		req2 = UniqueReq(set.Intersect(req.cols, src2.Columns()), req.nseeks)
-	}
-	if nrows2 == 0 {
+	// frac2 may be > 1 since we read source2 nrows1 times
+	req2 := NoneReq(req.frac * float32(nrows1))
+	if nrows1 == 0 || nrows2 == 0 {
+		// Get probes both sources once before detecting an empty product.
 		req1.frac = float32(1) / float32(max(1, nrows1))
+		req2.frac = float32(1) / float32(max(1, nrows2))
 	}
 	return req1, req2
 }
