@@ -400,7 +400,7 @@ func cmdAdmin(ss *serverSession) {
 	ss.PutBool(true)
 }
 
-const maxAuthTries = 3
+const maxAuthTries = 5
 
 var authLimiter = rate.NewLimiter(rate.Limit(4), 1)
 var authContext = context.Background()
