@@ -480,11 +480,15 @@ func TestWhere_stats_upperTail(t *testing.T) {
 		w := ParseQuery(`ar_payments where bizpartner_num is #20230529.143324
 			and arpay_date >= #`+date+` and arpay_type is "PY"
 			and arpay_void? isnt true`, tran, nil).(*Where)
-		fixed, variable, ap := w.optimize(ReadMode, NoneReq(1))
+		_, _, ap := w.optimize(ReadMode, NoneReq(1))
 		approach := ap.(*whereApproach)
+		// Check the chosen strategy rather than the exact cost: the
+		// highly-selective bizpartner index must win with no bloom whether
+		// the date falls in the last interval (20260721) or beyond the
+		// sampled bounds (20260918). A bad upper-tail estimate would give
+		// the date index a zero/small range frac and let it win instead.
 		assert.T(t).Msg(date).This(approach.index).Is([]string{"bizpartner_num", "arpay_num"})
 		assert.T(t).This(approach.bloomSel).Is(nil)
-		assert.T(t).This(fixed + variable).Is(1240)
 	}
 	test("20260721")
 	test("20260918")
@@ -1508,7 +1512,7 @@ func TestWhere_rangeBloom(t *testing.T) {
 	}
 	test(0, false)
 	test(5000, false)
-	test(10000, false)
+	test(10000, true)
 	test(15000, true)
 	test(19000, true)
 	// The more selective Bloom index must win in either index position.

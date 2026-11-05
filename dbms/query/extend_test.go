@@ -81,7 +81,7 @@ func TestExtendRuleBug2(t *testing.T) {
 	db.act("insert { ck: 1, c4: 2  } into cus")
 	assert.This(queryAll(db.Database,
 		`(((cus extend r0, a3 = c4) union (cus union cus)) where r0 is "")`)).
-		Is("a3=2 c4=2 ck=1 | c4=2 ck=1")
+		Is("c4=2 ck=1 | a3=2 c4=2 ck=1")
 }
 
 func TestExtendRuleWhereRaw(t *testing.T) {
@@ -118,9 +118,7 @@ func BenchmarkExtend(b *testing.B) {
 }
 
 func TestExtendForwardBug(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
+	assert.TestOnlyIndividually(t)
 	db, err := db19.OpenDb("../../suneido.db", stor.Read, true)
 	if err != nil {
 		panic(err.Error())

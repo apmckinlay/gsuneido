@@ -24,8 +24,8 @@ func TestCosting_Table(t *testing.T) {
 		q.SetTran(ft.rt)
 		iterate(q)
 		tbl := q.(*Table)
-		actualCost := Cost(tbl.ngets) * rowCost(tbl.index)
-		assert.This(fixcost + varcost).Is(actualCost)
+		assert.This(tbl.ngets).Is(tbl.info.Nrows)
+		assert.This(fixcost + varcost).Is(tableCost(tbl))
 		ft.db.Close()
 	}
 }
@@ -38,8 +38,7 @@ func TestCosting_Times(t *testing.T) {
 		q, fixcost, varcost := costingSetup(q, ft)
 		tbl1 := q.(*Times).source1.(*Table)
 		tbl2 := q.(*Times).source2.(*Table)
-		actualCost := Cost(tbl1.ngets)*rowCost(tbl1.index) +
-			Cost(tbl2.ngets)*rowCost(tbl2.index)
+		actualCost := tableCost(tbl1) + tableCost(tbl2)
 		if tbl1 != src1 { // reversed
 			actualCost += outOfOrder
 		}
@@ -55,7 +54,7 @@ func TestCosting_Project(t *testing.T) {
 		q, fixcost, varcost := costingSetup(q, ft)
 		proj := q.(*Project)
 		tbl := proj.source.(*Table)
-		actualCost := Cost(tbl.ngets) * rowCost(tbl.index)
+		actualCost := tableCost(tbl)
 		if proj.strat == projMap {
 			actualCost += Cost(tbl.ngets * 20)
 		}
@@ -158,11 +157,11 @@ func TestCosting_Summarize(t *testing.T) {
 		case sumTbl:
 			actualCost = 1
 		case sumSeq:
-			actualCost = Cost(tbl.ngets) * rowCost(tbl.index)
+			actualCost = tableCost(tbl)
 		case sumIdx:
-			actualCost = rowCost(tbl.index)
+			actualCost = tableCost(tbl)
 		case sumMap:
-			actualCost = Cost(tbl.ngets)*rowCost(tbl.index) + Cost(tbl.ngets)*20
+			actualCost = tableCost(tbl) + Cost(tbl.ngets)*20
 		}
 		diff := fixcost + varcost - actualCost
 		if diff < -1 || diff > 1 {
@@ -291,9 +290,17 @@ func costingSetup(q Query, ft *FT) (Query, Cost, Cost) {
 	return q, fixcost, varcost
 }
 
-// rowCost matches the per-get cost used by Table.costFor
-func rowCost(index []string) Cost {
-	return tableFast + len(index)*tableColCost
+func tableCost(tbl *Table) Cost {
+	if tbl.info.Nrows == 0 {
+		return 0
+	}
+	isPhysicalOrder := slices.Equal(tbl.index, tbl.indexes[0])
+	// costFor gives the cost of one full iteration; scale by the number of
+	// times the table was actually iterated (ngets / Nrows), matching the
+	// way the cost model scales by the requirement fraction.
+	perIter := scanCost(tbl.info.Nrows, tbl.info.Size, isPhysicalOrder) +
+		tbl.info.Nrows*len(tbl.index)*tableColCost
+	return int(tbl.ngets) * perIter / tbl.info.Nrows
 }
 
 func iterate(q Query) {

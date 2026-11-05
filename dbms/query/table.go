@@ -210,20 +210,54 @@ func (tbl *Table) uniqueForLookup(i int) bool {
 }
 
 func (tbl *Table) costFor(index []string, req Require) Cost {
-	rowCost := tableFast
-	if tbl.info.Size >= tableLarge && !slices.Equal(index, tbl.indexes[0]) {
-		rowCost = tableSlow
+	result := 0
+	if req.use == ReqUnique {
+		assert.That(req.frac == 0)
+	} else {
+		isPhysicalOrder := slices.Equal(index, tbl.indexes[0])
+		cost := scanCost(tbl.info.Nrows, tbl.info.Size, isPhysicalOrder)
+		// prefer indexes with fewer columns
+		cost += tbl.info.Nrows * len(index) * tableColCost
+		result = Cost(float64(req.frac) * float64(cost))
 	}
-	rowCost += len(index) * tableColCost
-	varcost := tbl.info.Nrows * rowCost
-	result := Cost(float64(req.frac) * float64(varcost))
 	if req.nseeks > 0 {
-		idxi := slc.IndexFn(tbl.indexes, index, slices.Equal)
-		if idxi != -1 {
-			result += Cost(req.nseeks) * tbl.lookupCostI(idxi)
+		if i := slc.IndexFn(tbl.indexes, index, slices.Equal); i != -1 {
+			result += Cost(req.nseeks) * tbl.lookupCostI(i)
 		}
 	}
 	return result
+}
+
+// scanCost is the cost to iterate an entire table.
+// It is based on BenchmarkTableGetCost
+func scanCost(tableRows, tableBytes int, isPhysicalOrder bool) Cost {
+
+	if tableRows <= 0 || tableBytes <= 0 {
+		return 0
+	}
+
+	recordSize := float64(tableBytes) / float64(tableRows)
+
+	// 1. Sequential base cost per row (scales with record size).
+	// A 200 B record evaluates exactly to 150 (matching old tableFast).
+	rowCost := scanBaseCost + (scanRowCost * recordSize)
+
+	// 2. Cold random access penalties
+	if !isPhysicalOrder {
+		// Cold baseline: un-prefetched DRAM line pulls on small tables
+		// (~2.5x physical)
+		coldFloor := scanColdBaseCost + (scanColdRowCost * recordSize)
+
+		// Cache spill penalty:
+		// TLB page-walks and DRAM row conflicts as table outgrows 16 MiB
+		mm := float64(tableBytes * tableBytes)
+		penaltyFactor := mm / (mm + (cacheMidpointBytes * cacheMidpointBytes))
+		dramSpill := penaltyFactor *
+			(scanSpillBaseCost + (scanSpillRowCost * recordSize))
+		rowCost += coldFloor + dramSpill
+	}
+
+	return tableRows * int(rowCost)
 }
 
 func (tbl *Table) setApproach(req Require, approach any, _ QueryTran) {

@@ -589,7 +589,7 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 			trace.WhereOpt.Println("    index", idx, "does not satisfy requirement")
 			continue
 		}
-		_, varCost, _ := w.tbl.optimize(mode, OrderReq(idx, 1.0))
+		varCost := w.tbl.costFor(idx, NoneReq(1.0))
 		irFrac := 1.0
 		ifFrac := 1.0
 		df := true

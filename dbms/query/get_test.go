@@ -324,13 +324,13 @@ func TestQueryGet(t *testing.T) {
 		'saskatoon'	'i'
 		'vancouver'	'e'`)
 	test("supplier project city",
-		"supplier^(city,supplier) project-seq city",
+		"supplier^(supplier) project-map city",
 		`city
 		'calgary'
 		'saskatoon'
 		'vancouver'`)
 	test("trans project item",
-		"trans^(item,date,id) project-seq item",
+		"trans^(date,item,id) project-map item",
 		`item
 		'disk'
 		'eraser'

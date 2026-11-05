@@ -132,7 +132,7 @@ func TestOptimize(t *testing.T) {
 	test("table project a sort a",
 		"table^(a) project-copy a")
 	test("abc project a",
-		"abc^(a,b) project-seq a")
+		"abc^(b) project-map a")
 	test("comp project b",
 		"comp^(a,b,c) project-map b")
 	test("comp where a is 1 and b is 2 project c",
