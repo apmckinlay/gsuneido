@@ -24,18 +24,18 @@ const outOfOrder = 10
 // table access
 
 const (
-	tableColCost = 5         // per index column adjustment to tableFast/Slow
+	tableColCost = 5 // per index column adjustment to tableFast/Slow
 )
 
 // scanCost constants (see Table.scanCost)
 const (
 	cacheMidpointBytes = 16_000_000 // cache saturation midpoint for 4 vCPU Graviton / small AMD instances
-	scanBaseCost       = 84.0  // sequential base cost per row
-	scanRowCost        = 0.33  // sequential cost per byte of record size
-	scanColdBaseCost   = 150.0 // cold random access base cost per row
-	scanColdRowCost    = 0.30  // cold random access cost per byte of record size
-	scanSpillBaseCost  = 550.0 // cache spill base cost per row
-	scanSpillRowCost   = 0.60  // cache spill cost per byte of record size
+	scanBaseCost       = 84.0       // sequential base cost per row
+	scanRowCost        = 0.33       // sequential cost per byte of record size
+	scanColdBaseCost   = 150.0      // cold random access base cost per row
+	scanColdRowCost    = 0.30       // cold random access cost per byte of record size
+	scanSpillBaseCost  = 550.0      // cache spill base cost per row
+	scanSpillRowCost   = 0.60       // cache spill cost per byte of record size
 )
 
 // tableLookupCost is the cost of a lookup based on the btree levels.
