@@ -302,6 +302,7 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta
 	newDer := set.Difference(a.Derived, ts.Derived)
 	createDerived(ts, newDer)
 	createIndexes(ts, ti, newIdxs, store)
+	schema.CheckUniqueIndexes(ts.Table, newIdxs, ts.Indexes)
 	ac := &schema.Schema{Table: a.Table, Indexes: newIdxs}
 	if ti.Nrows == 0 {
 		newIdxs = nil
@@ -511,6 +512,7 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 	createColumns(ts, ac.Columns)
 	createDerived(ts, ac.Derived)
 	createIndexes(ts, ti, ac.Indexes, store)
+	schema.CheckUniqueIndexes(ts.Table, ac.Indexes, ts.Indexes)
 	m.setFkeyIIndex(ts)
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)

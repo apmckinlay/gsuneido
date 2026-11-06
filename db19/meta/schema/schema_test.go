@@ -86,23 +86,12 @@ func TestCheckIndexes(t *testing.T) {
 			[]Index{{Mode: 'i', Columns: []string{}}})
 	}).Panics("index columns must not be empty")
 
-	// Test unique index that contains a key
-	assert.This(func() {
-		CheckIndexes("test", []string{"a", "b"},
-			[]Index{
-				{Mode: 'k', Columns: []string{"a"}},
-				{Mode: 'u', Columns: []string{"a", "b"}},
-			})
-	}).Panics("unique index contains key")
-
-	// Test unique index that contains a key via _lower!
-	assert.This(func() {
-		CheckIndexes("test", []string{"a", "b"},
-			[]Index{
-				{Mode: 'k', Columns: []string{"a_lower!"}},
-				{Mode: 'u', Columns: []string{"a", "b"}},
-			})
-	}).Panics("unique index contains key")
+	// Test unique index that contains a key is not checked here
+	CheckIndexes("test", []string{"a", "b"},
+		[]Index{
+			{Mode: 'k', Columns: []string{"a"}},
+			{Mode: 'u', Columns: []string{"a", "b"}},
+		}) // Should not panic
 
 	// Test valid indexes
 	CheckIndexes("test", []string{"a", "b"},
@@ -116,6 +105,43 @@ func TestCheckIndexes(t *testing.T) {
 		[]Index{
 			{Mode: 'k', Columns: []string{"a"}},
 			{Mode: 'u', Columns: []string{"b"}},
+		}) // Should not panic
+}
+
+func TestCheckUniqueIndexes(t *testing.T) {
+	assert := assert.T(t)
+
+	// Test unique index that contains a key
+	idxs := []Index{
+		{Mode: 'k', Columns: []string{"a"}},
+		{Mode: 'u', Columns: []string{"a", "b"}},
+	}
+	assert.This(func() {
+		CheckUniqueIndexes("test", idxs, idxs)
+	}).Panics("unique index contains key")
+
+	// Test unique index that contains a key via _lower!
+	idxs = []Index{
+		{Mode: 'k', Columns: []string{"a_lower!"}},
+		{Mode: 'u', Columns: []string{"a", "b"}},
+	}
+	assert.This(func() {
+		CheckUniqueIndexes("test", idxs, idxs)
+	}).Panics("unique index contains key")
+
+	// Test unique index that does not contain a key
+	idxs = []Index{
+		{Mode: 'k', Columns: []string{"a"}},
+		{Mode: 'u', Columns: []string{"b"}},
+	}
+	CheckUniqueIndexes("test", idxs, idxs) // Should not panic
+
+	// Test that only the new indexes are checked
+	CheckUniqueIndexes("test",
+		[]Index{{Mode: 'u', Columns: []string{"b"}}},
+		[]Index{
+			{Mode: 'k', Columns: []string{"a"}},
+			{Mode: 'u', Columns: []string{"a", "b"}},
 		}) // Should not panic
 }
 

@@ -230,7 +230,7 @@ func (db *Database) unlockSchema() {
 	db.schemaLock.Store(false)
 }
 
-func (db *Database) create(state *DbState, schema *schema.Schema) {
+func (db *Database) create(state *DbState, sch *schema.Schema) {
 	nTables := 0
 	for range state.Meta.Tables() {
 		nTables++
@@ -238,12 +238,13 @@ func (db *Database) create(state *DbState, schema *schema.Schema) {
 	if nTables >= maxTables {
 		panic("too many tables (limit " + strconv.Itoa(maxTables) + ")")
 	}
-	schema.Check()
-	ts := &meta.Schema{Schema: *schema}
+	sch.Check()
+	schema.CheckUniqueIndexes(sch.Table, sch.Indexes, sch.Indexes)
+	ts := &meta.Schema{Schema: *sch}
 	ts.SetupIndexes()
 	indexes := db.createIndexes(ts.Indexes)
-	ti := meta.NewInfo(schema.Table, indexes, 0, 0)
-	state.Meta = state.Meta.PutNew(ts, ti, schema)
+	ti := meta.NewInfo(sch.Table, indexes, 0, 0)
+	state.Meta = state.Meta.PutNew(ts, ti, sch)
 }
 
 func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {

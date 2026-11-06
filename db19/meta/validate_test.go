@@ -128,6 +128,42 @@ func TestValidateForeignKeys(t *testing.T) {
 	mu.freeze() // Should not panic
 }
 
+func TestValidateUniqueIndexContainsKey(t *testing.T) {
+	assert := assert.T(t)
+	store := stor.HeapStor(8192)
+
+	m := &Meta{}
+	m.schema.Hamt = SchemaHamt{}.Mutable().Freeze()
+	m.info.Hamt = InfoHamt{}.Mutable().Freeze()
+
+	base := &Schema{
+		Table:   "test",
+		Columns: []string{"a", "b"},
+		Indexes: []schema.Index{
+			{Mode: 'k', Columns: []string{"a"}},
+		}}
+	m = m.Put(base, NewInfo("test", nil, 0, 0))
+
+	// Checking an existing database must not treat it as corrupt,
+	// even if it already contains such an index.
+	bad := &Schema{
+		Table:   "test",
+		Columns: []string{"a", "b"},
+		Indexes: []schema.Index{
+			{Mode: 'k', Columns: []string{"a"}},
+			{Mode: 'u', Columns: []string{"a", "b"}},
+		}}
+	bad.Check(m.GetRoSchema) // Should not panic
+
+	// But altering a schema must reject a unique index containing a key.
+	assert.This(func() {
+		m.AlterCreate(&schema.Schema{
+			Table:   "test",
+			Indexes: []schema.Index{{Mode: 'u', Columns: []string{"a", "b"}}},
+		}, store)
+	}).Panics("unique index contains key")
+}
+
 func TestValidateCreateDuplicateColumn(t *testing.T) {
 	assert := assert.T(t)
 	store := stor.HeapStor(8192)

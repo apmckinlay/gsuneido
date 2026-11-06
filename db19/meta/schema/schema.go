@@ -245,18 +245,30 @@ func CheckIndexes(table string, cols []string, idxs []Index) {
 					col + " in " + table)
 			}
 		}
-		if ix.Mode == 'u' {
-			for j := range idxs {
-				key := &idxs[j]
-				if key.Mode == 'k' && containsKey(ix.Columns, key.Columns) {
-					panic("unique index contains key: " +
-						str.Join("(,)", ix.Columns) + " in " + table)
-				}
-			}
-		}
 		for j := range i {
 			if slices.Equal(ix.Columns, idxs[j].Columns) {
 				panic("duplicate index: " +
+					str.Join("(,)", ix.Columns) + " in " + table)
+			}
+		}
+	}
+}
+
+// CheckUniqueIndexes rejects unique indexes in newIdxs that contain a key
+// in allIdxs, since the key already enforces uniqueness.
+// This is a schema creation rule, so it is not applied when checking
+// an existing database, which may already contain such indexes.
+// For a whole new schema, pass the same slice for both.
+func CheckUniqueIndexes(table string, newIdxs, allIdxs []Index) {
+	for i := range newIdxs {
+		ix := &newIdxs[i]
+		if ix.Mode != 'u' {
+			continue
+		}
+		for j := range allIdxs {
+			key := &allIdxs[j]
+			if key.Mode == 'k' && containsKey(ix.Columns, key.Columns) {
+				panic("unique index contains key: " +
 					str.Join("(,)", ix.Columns) + " in " + table)
 			}
 		}
