@@ -18,13 +18,13 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 )
 
-const dbName = "costing.db"
+const dbName = "costing.tmp"
 const tableSchema = "(a, b, c, d, e, f, g, h, i, j) key(a) index(b)"
 
 var nrecs = []int{1000, 10_000, 100_000, 1_000_000}
 var rsizes = []int{200, 1000}
 
-// go test -v -run ^TestCosting_create$ ./dbms/query
+// go test -v -run ^TestCost_create$ ./dbms/query
 
 func TestCost_create(t *testing.T) {
 	assert.TestOnlyIndividually(t)
@@ -87,7 +87,7 @@ func createData(db *db19.Database, nrecs, rsize int) {
 // go test -run=NONE -bench ^BenchmarkTableGetCost$ ./dbms/query
 
 func BenchmarkTableGetCost(b *testing.B) {
-	db, err := db19.OpenDatabase("costing.db")
+	db, err := db19.OpenDatabase(dbName)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -113,8 +113,7 @@ func BenchmarkTableGetCost(b *testing.B) {
 		}
 		b.ReportMetric(0, "ns/op")
 		b.ReportMetric(
-			float64(1000*int64(b.N*nrec*rsize)/total.Nanoseconds()),
-			"mb/s")
+			float64(1000*int64(b.N*nrec*rsize)/total.Nanoseconds()), "mb/s")
 	}
 	for _, nrec = range nrecs {
 		for _, rsize = range rsizes {
@@ -141,8 +140,75 @@ func evictCache() {
 	sink += evictBuf[len(evictBuf)/2]
 }
 
+// go test -run=NONE -bench ^BenchmarkIndexCost$ ./dbms/query
+
+func BenchmarkIndexCost(b *testing.B) {
+	db, err := db19.OpenDatabase(dbName)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer db.Close()
+	var nrec int
+	rsize := rsizes[0]
+	var q Query
+	offFilter := func(uint64) bool { return false }
+	getOffsetFilter := func(b *testing.B) {
+		var total time.Duration
+		for b.Loop() {
+			if nrec*rsize < cacheSize {
+				// Queries normally run once on a cold cache.
+				// Only needed on small tables that could be cached.
+				evictCache()
+			}
+			q.Rewind()
+			t := time.Now()
+			row := q.(*Table).GetFilter(Next, offFilter, nil)
+			assert.That(row.Eof())
+			total += time.Since(t)
+		}
+		b.ReportMetric(0, "ns/op")
+		b.ReportMetric(float64(total.Nanoseconds()/int64(b.N*nrec)), "ns/key")
+	}
+	keyFilter := func(string, uint64) bool { return false }
+	getFilter := func(b *testing.B) {
+		var total time.Duration
+		for b.Loop() {
+			if nrec*rsize < cacheSize {
+				// Queries normally run once on a cold cache.
+				// Only needed on small tables that could be cached.
+				evictCache()
+			}
+			q.Rewind()
+			t := time.Now()
+			row := q.(*Table).GetFilter(Next, nil, keyFilter)
+			assert.That(row.Eof())
+			total += time.Since(t)
+		}
+		b.ReportMetric(0, "ns/op")
+		b.ReportMetric(float64(total.Nanoseconds()/int64(b.N*nrec)), "ns/key")
+	}
+	tran := db.NewReadTran(AllPerms)
+	for _, nrec = range nrecs {
+		tbl := tblname(nrec, rsize)
+		for _, idx := range []string{"a", "b"} {
+			q = ParseQuery(tbl, tran, nil)
+			q = setupIndex(q, ReadMode, tran, []string{idx})
+			b.Run("GetOffsetFilter "+tbl+"^"+idx, getOffsetFilter)
+		}
+	}
+	for _, nrec = range nrecs {
+		tbl := tblname(nrec, rsize)
+		for _, idx := range []string{"a", "b"} {
+			q = ParseQuery(tbl, tran, nil)
+			q = setupIndex(q, ReadMode, tran, []string{idx})
+			b.Run("GetFilter "+tbl+"^"+idx, getFilter)
+		}
+	}
+
+}
+
 func BenchmarkTempindex(b *testing.B) {
-	db, err := db19.OpenDatabase("costing.db")
+	db, err := db19.OpenDatabase(dbName)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -179,7 +245,7 @@ func BenchmarkTempindex(b *testing.B) {
 }
 
 func BenchmarkTempindexScan(b *testing.B) {
-	db, err := db19.OpenDatabase("costing.db")
+	db, err := db19.OpenDatabase(dbName)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -225,7 +291,7 @@ func BenchmarkTempindexScan(b *testing.B) {
 //   - factorPre:  sort _b,_a — data arrives in _b order (index), sort within groups by _a
 //   - factorNone: sort _c    — no index on _c, full sort from arbitrary order
 func BenchmarkTempindexCreate(b *testing.B) {
-	db, err := db19.OpenDatabase("costing.db")
+	db, err := db19.OpenDatabase(dbName)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -282,7 +348,7 @@ func BenchmarkTempindexCreate(b *testing.B) {
 }
 
 func BenchmarkLookup(b *testing.B) {
-	db, err := db19.OpenDatabase("costing.db")
+	db, err := db19.OpenDatabase(dbName)
 	if err != nil {
 		panic(err.Error())
 	}

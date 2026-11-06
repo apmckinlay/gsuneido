@@ -998,13 +998,16 @@ func (w *Where) ixFilter(th *Thread, key string) bool {
 
 func (w *Where) getFilter(th *Thread, dir Dir) Row {
 	var filterFunc func(string, uint64) bool
-	if w.indexFilter != nil || w.bloom != nil {
-		filterFunc = func(key string, off uint64) bool {
-			return (w.bloom == nil || w.bloom.Has(off)) &&
-				(w.indexFilter == nil || w.ixFilter(th, key))
+	if w.indexFilter != nil {
+		filterFunc = func(key string, _ uint64) bool {
+			return w.ixFilter(th, key)
 		}
 	}
-	return w.tbl.GetFilter(dir, filterFunc)
+	var offFilter func(uint64) bool
+	if w.bloom != nil {
+		offFilter = w.bloom.Has
+	}
+	return w.tbl.GetFilter(dir, offFilter, filterFunc)
 }
 
 func (w *Where) buildBloom(th *Thread) {
@@ -1026,9 +1029,16 @@ func (w *Where) buildBloom(th *Thread) {
 		} else {
 			tbl.SelectRaw(pr.Org, pr.End)
 		}
-		tbl.GetFilter(Next, func(key string, off uint64) bool {
+		if w.bloomFilter == nil {
+			tbl.GetFilter(Next, func(off uint64) bool {
+				bloom.Add(off)
+				return false // only offsets are needed, not data records
+			}, nil)
+			continue
+		}
+		tbl.GetFilter(Next, nil, func(key string, off uint64) bool {
 			w.bloomCtx.key = key
-			if w.bloomFilter == nil || w.bloomFilter.Eval(&w.bloomCtx) == True {
+			if w.bloomFilter.Eval(&w.bloomCtx) == True {
 				bloom.Add(off)
 			}
 			return false // only offsets are needed, not data records

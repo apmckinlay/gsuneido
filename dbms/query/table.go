@@ -364,10 +364,11 @@ func (tbl *Table) Rewind() {
 }
 
 func (tbl *Table) Get(_ *Thread, dir Dir) Row {
-	return tbl.GetFilter(dir, nil)
+	return tbl.GetFilter(dir, nil, nil)
 }
 
-func (tbl *Table) GetFilter(dir Dir, filter func(key string, off uint64) bool) Row {
+func (tbl *Table) GetFilter(dir Dir, offFilter func(uint64) bool,
+	keyFilter func(key string, off uint64) bool) Row {
 	defer func(t uint64) { tbl.tget += tsc.Read() - t }(tsc.Read())
 	tbl.ensureIter()
 	for {
@@ -379,15 +380,15 @@ func (tbl *Table) GetFilter(dir Dir, filter func(key string, off uint64) bool) R
 		if tbl.iter.Eof() {
 			return Row{}
 		}
-		var off uint64
-		if filter != nil {
-			key, o := tbl.iter.Cur()
-			if !filter(key, o) {
+		off := tbl.iter.CurOff()
+		if offFilter != nil && !offFilter(off) {
+			continue
+		}
+		if keyFilter != nil {
+			key, _ := tbl.iter.Cur() // allocates key string
+			if !keyFilter(key, off) {
 				continue
 			}
-			off = o
-		} else {
-			off = tbl.iter.CurOff()
 		}
 		rec := tbl.tran.GetRecord(off)
 		row := NewRow(rec)

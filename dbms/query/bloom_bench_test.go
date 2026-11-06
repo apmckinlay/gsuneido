@@ -272,7 +272,7 @@ func benchSelection(t testing.TB, tbl *Table, col string, rows int, frac float64
 func scanBenchOffsets(tbl *Table, sel *idxSel, visit func(string, uint64) bool) {
 	for _, pr := range sel.prefixRanges {
 		tbl.SelectRaw(pr.Org, pr.End)
-		tbl.GetFilter(Next, visit)
+		tbl.GetFilter(Next, nil, visit)
 	}
 }
 

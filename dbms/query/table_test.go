@@ -29,6 +29,41 @@ func (tr *tableSetTran) CheckPerm(string, core.TablePerm) {
 func (tr *tableSetTran) GetSchema(string) *Schema  { return tr.schema }
 func (tr *tableSetTran) GetInfo(string) *meta.Info { return tr.info }
 
+func TestTableGetFilter(t *testing.T) {
+	a := assert.T(t)
+	db := heapDb()
+	defer db.Close()
+	db.adm("create filtertest (a) key(a)")
+	db.act("insert {a: 1} into filtertest")
+	db.act("insert {a: 2} into filtertest")
+	tran := db.NewReadTran(core.AllPerms)
+	defer tran.Complete()
+	tbl := NewTable(tran, "filtertest").(*Table)
+	tbl.SetIndex([]string{"a"}, ReadMode)
+	test := func(dir core.Dir) {
+		t.Helper()
+		tbl.Rewind()
+		first := tbl.Get(nil, dir)
+		off := tbl.iter.CurOff()
+		offFilter := func(o uint64) bool { return o == off }
+		tbl.Rewind()
+		a.This(tbl.GetFilter(dir, offFilter, nil)).Is(first)
+		a.True(tbl.GetFilter(dir, offFilter, nil).Eof())
+
+		tbl.Rewind()
+		keyCalls := 0
+		keyFilter := func(_ string, o uint64) bool {
+			keyCalls++
+			a.This(o).Is(off)
+			return false
+		}
+		a.True(tbl.GetFilter(dir, offFilter, keyFilter).Eof())
+		a.This(keyCalls).Is(1)
+	}
+	test(core.Next)
+	test(core.Prev)
+}
+
 func TestTableSetTran(t *testing.T) {
 	a := assert.T(t)
 	tr := &tableSetTran{
