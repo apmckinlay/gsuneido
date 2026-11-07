@@ -53,6 +53,24 @@ func TestSummarizeSelectFilter(t *testing.T) {
 	assert.T(t).This(row.Eof())
 }
 
+func TestSummarize_DuplicateBy(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create t (a, b, c) key(a)")
+
+	tran := db.NewReadTran(AllPerms)
+	test := func(query, col string) {
+		t.Helper()
+		assert.T(t).This(func() {
+			ParseQuery(query, tran, nil)
+		}).Panics("summarize: duplicate by column: " + col)
+	}
+	test("t summarize a, a, count", "a")
+	test("t summarize a, b, a, count", "a")
+	test("t summarize a, b, b, total c", "b")
+	ParseQuery("t summarize a, b, total c, average c", tran, nil)
+}
+
 func TestSummarize_ByOnConflict(t *testing.T) {
 	db := heapDb()
 	defer db.Close()

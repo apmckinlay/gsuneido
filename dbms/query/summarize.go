@@ -120,6 +120,11 @@ func (su *Summarize) minmax1() bool {
 func (su *Summarize) checkSummarize() {
 	checkLower(su.by)
 	checkLower(su.ons)
+	for i, col := range su.by {
+		if slices.Contains(su.by[:i], col) {
+			panic("summarize: duplicate by column: " + col)
+		}
+	}
 	if conflict := set.Intersect(su.by, su.ons); len(conflict) > 0 {
 		panic("summarize: by and on columns conflict: " + str.Join(", ", conflict))
 	}
