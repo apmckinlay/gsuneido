@@ -54,10 +54,32 @@ func TestIdxSelString(t *testing.T) {
 		skipRange:       pointRange{Org: Pack(SuInt16(3)), End: Pack(SuInt16(6))},
 		indexRangeFrac:  .25,
 		indexFilterFrac: .5,
+		hasIndexFilter:  true,
 		hasDataFilter:   true,
 	}
 	assert.T(t).This(is.String()).
 		Is("(a,b,c,d,e) a: <1 | 2..4> +b: <3..6> = pr: .25 if: .5 df")
+
+	is = idxSel{
+		index:           []string{"a", "b", "c"},
+		indexFilterFrac: 1,
+		hasIndexFilter:  true,
+	}
+	assert.T(t).This(is.String()).Is("(a,b,c) = if: 1")
+
+	is = idxSel{
+		index:           []string{"a", "b", "c"},
+		indexFilterFrac: 0,
+		hasIndexFilter:  true,
+	}
+	assert.T(t).This(is.String()).Is("(a,b,c) = if: 0")
+
+	is = idxSel{
+		index:           []string{"a", "b", "c"},
+		indexFilterFrac: .5,
+		hasIndexFilter:  true,
+	}
+	assert.T(t).This(is.String()).Is("(a,b,c) = if: .5")
 
 	is = idxSel{
 		index: []string{"a", "b", "c"},

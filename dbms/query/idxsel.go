@@ -32,7 +32,8 @@ type idxSel struct {
 	skipRange pointRange
 
 	// hasDataFilter is where expressions that are not covered by the index
-	hasDataFilter bool
+	hasDataFilter  bool
+	hasIndexFilter bool
 
 	// indexRangeFrac is the fraction of the index
 	// that is selected by the prefix and skip pointRange
@@ -108,7 +109,7 @@ func (is *idxSel) String() string {
 			sb.WriteString(" ir: ")
 			sb.WriteString(fracStr(is.indexRangeFrac))
 		}
-		if is.indexFilterFrac != 0 && is.indexFilterFrac != 1 {
+		if is.hasIndexFilter {
 			sb.WriteString(" if: ")
 			sb.WriteString(fracStr(is.indexFilterFrac))
 		}

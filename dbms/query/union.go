@@ -640,17 +640,21 @@ func (u *Union) getMergeDisjoint(th *Thread, dir Dir) (r Row) {
 }
 
 func (u *Union) Select(sels Sels) {
-	// Select requires optimize with ReqGroup which requires unionMerge
-	// which requires req.cols and sels to be on common columns
-	// so we don't need to split sels
-	dbg.Assert(func() bool { return checkSels(sels, u.source1.Columns()) })
-	dbg.Assert(func() bool { return checkSels(sels, u.source2.Columns()) })
 	u.nsels++
 	u.state = iface.Rewound
-	u.src1get = u.source1.Get
-	u.src2get = u.source2.Get
-	u.source1.Select(sels)
-	u.source2.Select(sels)
+	selectSource := func(src Query) func(*Thread, Dir) Row {
+		cols := src.Columns()
+		// Missing columns have the empty value in the union result.
+		for _, sel := range sels {
+			if sel.val != "" && !slices.Contains(cols, sel.col) {
+				return func(*Thread, Dir) Row { return Row{} }
+			}
+		}
+		src.Select(selsForCols(sels, cols))
+		return src.Get
+	}
+	u.src1get = selectSource(u.source1)
+	u.src2get = selectSource(u.source2)
 }
 
 func selsForCols(sels Sels, srccols []string) Sels {

@@ -82,7 +82,7 @@ func TestWhere_trace(t *testing.T) {
 	test("inven where item is 1", ReadMode, NoneReq(1),
 		"singleton", "singleton, use first index [item] cost")
 	test("abc where a < 1", ReadMode, OrderReq([]string{"b"}, 1),
-		"does not satisfy requirement", "candidate [b] bloom [a b]", "buildScanCost",
+		"does not satisfy requirement", "candidate [b] bloom [a b]", "buildKeyFilter false",
 		"chosen [b] bloom [a b]")
 	test("abc where a < 1", CursorMode, OrderReq([]string{"b"}, 1),
 		"bloom not applicable to", "chosen [b] bloom nil")
@@ -305,7 +305,7 @@ func TestWhere_perIndex(t *testing.T) {
 		"(a,b,c) a: <1,max..max> = pr: .8 if: .71", d(.5, .8))
 	test("comp where a > 1 and F(a) and G(a)",
 		"(a,b,c) a: <1,max..max> = pr: .8 if: .59", d(.5, .5, .8))
-	test("comp where a is 1 and Foo()", "(a,b,c) a: <1..1,max> = pr: .1 df", d(.1, .5))
+	test("comp where a is 1 and Foo()", "(a,b,c) a: <1..1,max> = pr: .1 if: 1 df", d(.1, .5))
 
 	// table: key(a) nrows = 100
 	test("table where a >= ''",
@@ -874,11 +874,14 @@ func TestWhere_Cost(t *testing.T) {
 		irFrac float64
 		// ifFrac is the selectivity of the index filter (or 1 for none)
 		ifFrac float64
+		kf     bool
 		// df is whether there is additional filtering of the data
 		df bool
 		// inFrac is the amount the caller expects to read
 		inFrac float64
 	}
+	// 1000 rows of 200 byte records read via a non-physical-order index
+	const realCost = 360_000
 	test := func(eg *Eg, expected Cost) {
 		t.Helper()
 		// defaults
@@ -892,33 +895,42 @@ func TestWhere_Cost(t *testing.T) {
 			eg.inFrac = 1
 		}
 		cost :=
-			WhereCost(100_000, eg.inFrac, eg.irFrac, eg.ifFrac, eg.df)
+			WhereCost(1000, realCost, eg.inFrac, eg.irFrac, eg.ifFrac, eg.kf || eg.ifFrac < 1, eg.df)
 		assert(cost).Is(expected)
 	}
-	// baseline: all defaults => 100 * srcRows
-	test(&Eg{}, 100_000)
+	// baseline: all defaults => the scan cost
+	test(&Eg{}, 360_000)
 	// irFrac only
-	test(&Eg{irFrac: 1.0 / 1000}, 100)
+	test(&Eg{irFrac: 1.0 / 1000}, 360)
 	// dataFilter triggers pessimistic guard on inFrac
-	test(&Eg{df: true, inFrac: .01}, 25_750)
+	test(&Eg{df: true, inFrac: .01}, 92_700)
 	// ifFrac < 1 triggers pessimistic guard
-	test(&Eg{ifFrac: 0.5}, 60_000)
+	test(&Eg{ifFrac: 0.5}, 255_000)
 	// ifFrac < 1 + inFrac with pessimistic guard
-	test(&Eg{ifFrac: 0.1, inFrac: 0.5}, 17_500)
+	test(&Eg{ifFrac: 0.1, inFrac: 0.5}, 81_875)
 	// both irFrac and ifFrac
-	test(&Eg{irFrac: 0.1, ifFrac: 0.5}, 6_000)
+	test(&Eg{irFrac: 0.1, ifFrac: 0.5}, 25_500)
 	// dataFilter + ifFrac
-	test(&Eg{df: true, ifFrac: 0.5}, 60_000)
+	test(&Eg{df: true, ifFrac: 0.5}, 255_000)
 	// all parameters non-default
-	test(&Eg{irFrac: 0.5, ifFrac: 0.5, df: true, inFrac: 0.5}, 18_750)
+	test(&Eg{irFrac: 0.5, ifFrac: 0.5, df: true, inFrac: 0.5}, 79_688)
 	// inFrac without pessimistic guard (no dataFilter, ifFrac=1)
-	test(&Eg{inFrac: 0.5}, 50_000)
+	test(&Eg{inFrac: 0.5}, 180_000)
 	// irFrac + inFrac: no guard (pure index range, ifFrac=1, no dataFilter)
-	test(&Eg{irFrac: 0.1, inFrac: 0.5}, 5_000)
+	test(&Eg{irFrac: 0.1, inFrac: 0.5}, 18_000)
 	// dataFilter=true with inFrac=1: guard is no-op, same cost as baseline
-	test(&Eg{df: true}, 100_000)
+	test(&Eg{df: true}, 360_000)
 	// irFrac + dataFilter + small inFrac: guard applied to narrowed range
-	test(&Eg{irFrac: 0.5, df: true, inFrac: 0.01}, 12_875)
+	test(&Eg{irFrac: 0.5, df: true, inFrac: 0.01}, 46_350)
+	// A key filter still materializes keys when its selectivity is one.
+	test(&Eg{kf: true}, 410_000)
+	assert(WhereCost(1000, 100_000, 0, 1, 1, true, true)).Is(0)
+	assert(WhereCost(1000, 100_000, 1, 1, 0, true, false)).Is(100_000)
+	assert(WhereCost(1000, 1_000_000, 1, 1, 0, true, false)).Is(100_000)
+	// Low scan estimates must not subtract from the fixed index cost.
+	assert(WhereCost(1000, 0, 1, 1, 1, false, false)).Is(50_000)
+	assert(WhereCost(1000, 10_000, 1, 1, .5, true, false)).Is(100_000)
+	assert(WhereCost(1000, 50_000, 1, 1, .5, true, false)).Is(100_000)
 }
 
 func TestWhere_Damp(t *testing.T) {
@@ -930,28 +942,31 @@ func TestWhere_Damp(t *testing.T) {
 }
 
 func TestWhere_Cost2(t *testing.T) {
-	test := func(nrows int, inFrac, ir1, if1, ir2, if2 float64, df bool, fix, variable Cost) {
+	test := func(inFrac, ir1, if1, ir2, mainIf, combined float64,
+		kf1, kf2, df bool, fix, variable Cost) {
 		t.Helper()
-		frac1, frac2 := ir1*if1, ir2*if2
-		combined := damp2(frac1, frac2)
-		f, v := WhereCost2(nrows, 100_000, 100_000, inFrac, ir1, if1, ir2, combined, df)
+		f, v := WhereCost2(1000, 200_000, inFrac, ir1, if1, ir2, mainIf, combined, kf1, kf2, df)
 		assert.T(t).This(f).Is(fix)
 		assert.T(t).This(v).Is(variable)
 	}
-	test(1000, 1, 1, 1, 1, 1, false, 26_500, 104_500)
-	test(1000, .5, 1, 1, 1, 1, false, 26_500, 52_250)
-	test(1000, .5, 1, 1, 1, 1, true, 26_500, 65_313)
-	test(1000, 1, .1, 1, 1, 1, false, 3_550, 32_500)
-	test(1000, .5, .1, 1, 1, 1, false, 3_550, 20_313)
-	test(1000, 1, .1, .5, .2, .5, true, 3_275, 6_165)
-	test(1000, 1, .1, 1, .1, 1, false, 3_550, 4_980) // square-root dampening
-	test(1000, 1, .2, 1, .1, 1, false, 6_100, 6_028)
-	test(1000, 1, .1, 1, .2, 1, false, 3_550, 8_478)
-	test(1000, 1, .1, 1, 0, 1, false, 3_550, 0)
-	test(1000, 0, .1, 1, 1, 1, true, 0, 0)
-	test(2000, 1, .1, 1, 1, 1, false, 4_100, 37_000)
-	test(0, 1, .1, 1, 1, 1, false, 3_000, 28_000)
-	test(1, 1, .5, .5, 1, 1, false, 11_001, 40_005)
+	test(1, 1, 1, 1, 1, 1, false, false, false, 56_500, 204_500)
+	test(.5, 1, 1, 1, 1, 1, false, false, false, 56_500, 102_250)
+	test(.5, 1, 1, 1, 1, 1, false, false, true, 56_500, 127_813)
+	// Bloom-only probes do not allocate keys, even when selective.
+	test(1, .1, 1, 1, 1, .1, false, false, false, 6_550, 69_500)
+	test(.5, .1, 1, 1, 1, .1, false, false, false, 6_550, 43_438)
+	// Key materialization on the build is charged independently of selectivity.
+	test(1, .1, 1, 1, 1, .1, true, false, false, 11_550, 69_500)
+	test(1, .1, .5, 1, 1, .05, true, false, false, 11_275, 62_000)
+	// Only Bloom survivors pay the additional main key cost.
+	test(1, .1, 1, 1, .5, .05, false, true, false, 6_550, 67_000)
+	// Shared predicates cannot cause more key materializations than probes.
+	test(1, .1, 1, 1, .1, .1, false, true, false, 6_550, 119_500)
+	test(1, .1, 1, 0, 1, 0, false, true, false, 6_550, 0)
+	test(0, .1, 1, 1, 1, .1, false, true, true, 0, 0)
+	// Build cost is independent of record size and scan order.
+	f, _ := WhereCost2(1000, 2_000_000, 1, .1, 1, 1, 1, .1, false, false, false)
+	assert.T(t).This(f).Is(6_550)
 }
 
 func TestWhere_combinedIndexFrac(t *testing.T) {
@@ -1001,7 +1016,7 @@ func TestWhere_twoIndexesOverlap(t *testing.T) {
 	setFields(&schema)
 	tran := &overlapTran{tableSetTran: tableSetTran{QueryTran: testTran{}, schema: &schema,
 		info: &meta.Info{Table: "comp", Nrows: 10_000, Size: 100_000_000}}}
-	test := func(where string, index []string) {
+	test := func(where string, index []string, bloom bool) {
 		t.Helper()
 		w := ParseQuery("comp where "+where, tran, nil).(*Where)
 		w.optInit()
@@ -1010,17 +1025,29 @@ func TestWhere_twoIndexesOverlap(t *testing.T) {
 		assert.T(t).This(tran.statsCalls).Is(statsCalls)
 		approach := ap.(*whereApproach)
 		assert.T(t).This(approach.index).Is(index)
-		assert.T(t).This(approach.bloomSel).Is(nil)
-		assert.T(t).This(fixed).Is(0)
+		assert.T(t).This(approach.bloomSel != nil).Is(bloom)
 		scanCost := w.tbl.costFor(index, NoneReq(1))
 		isel := w.getIdxSel(index)
-		assert.T(t).This(variable).Is(WhereCost(float64(scanCost), 1,
-			isel.indexRangeFrac, isel.indexFilterFrac, isel.hasDataFilter))
+		nrows, _ := w.tbl.Nrows()
+		indexFilter, _ := w.splitExpr(isel)
+		assert.T(t).This(isel.hasIndexFilter).Is(indexFilter != nil)
+		if bloom {
+			bs := approach.bloomSel
+			f, v := WhereCost2(nrows, float64(scanCost), 1, bs.indexRangeFrac,
+				bs.indexFilterFrac, isel.indexRangeFrac, isel.indexFilterFrac,
+				w.combinedIndexFrac(isel, bs), bs.hasIndexFilter, isel.hasIndexFilter, isel.hasDataFilter)
+			assert.T(t).This(fixed).Is(f)
+			assert.T(t).This(variable).Is(v)
+		} else {
+			assert.T(t).This(fixed).Is(0)
+			assert.T(t).This(variable).Is(WhereCost(nrows, float64(scanCost), 1,
+				isel.indexRangeFrac, isel.indexFilterFrac, isel.hasIndexFilter, isel.hasDataFilter))
+		}
 	}
-	test("a > 1", []string{"a", "b"})
-	test("a > 1", []string{"a", "c"})
-	test("a > 1 and F(a)", []string{"a", "b"})
-	test("a > 1 and b > 1 and c > 1", []string{"a", "b"})
+	test("a > 1", []string{"a", "b"}, false)
+	test("a > 1", []string{"a", "c"}, false)
+	test("a > 1 and F(a)", []string{"a", "b"}, false)
+	test("a > 1 and b > 1 and c > 1", []string{"a", "b"}, true)
 }
 
 func BenchmarkWhere_optimizeOverlap(b *testing.B) {
@@ -1036,6 +1063,43 @@ func BenchmarkWhere_optimizeOverlap(b *testing.B) {
 	for b.Loop() {
 		w.optimize(ReadMode, NoneReq(1))
 	}
+}
+
+func TestWhere_coversIndexExpr(t *testing.T) {
+	schema := NewAdminParser(`comp (a,b,c,d) key(a,b,c) key(d)`).Schema()
+	setFields(&schema)
+	tran := &overlapTran{tableSetTran: tableSetTran{QueryTran: testTran{}, schema: &schema,
+		info: &meta.Info{Table: "comp", Nrows: 10_000, Size: 100_000_000}}}
+	test := func(where string, expected bool) {
+		t.Helper()
+		w := ParseQuery("comp where "+where, tran, nil).(*Where)
+		w.optInit()
+		exprCols := make([][]string, len(w.expr.Exprs))
+		for i, e := range w.expr.Exprs {
+			exprCols[i] = e.Columns()
+		}
+		assert.T(t).That(len(w.idxSels) > 0)
+		for _, isel := range w.idxSels {
+			// must agree with splitExpr
+			indexFilter, _ := w.splitExpr(isel)
+			assert.T(t).Msg(where, isel.index).
+				This(w.coversIndexExpr(isel, exprCols)).Is(indexFilter != nil)
+			if isel.index[0] == "a" {
+				assert.T(t).Msg(where, isel.index).
+					This(w.coversIndexExpr(isel, exprCols)).Is(expected)
+			}
+		}
+	}
+	test("a is 1", false)
+	test("a is 1 and b > 5", false)         // b is in the index range
+	test("a is 1 and c > 5", false)         // skip scan makes c part of the range
+	test("a > 1 and b > 5 and c > 5", true) // c is beyond the range
+	test("a is 1 and F(c)", true)           // unspanable, single column in index
+	test("a is 1 and d > 5", false)         // d is not in the index
+	test("a is 1 and b is c", true)         // multiple columns, all in the index
+	test("a is 1 and b is d", false)        // multiple columns, one not in the index
+	test("a is 1 and F(a)", true)           // unspanable on a range column
+	test("a is 1 and F(d) and c > 5", false)
 }
 
 type overlapTran struct {
@@ -1512,7 +1576,7 @@ func TestWhere_rangeBloom(t *testing.T) {
 	}
 	test(0, false)
 	test(5000, false)
-	test(10000, true)
+	test(10000, false)
 	test(15000, true)
 	test(19000, true)
 	// The more selective Bloom index must win in either index position.

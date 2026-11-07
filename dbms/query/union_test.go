@@ -82,6 +82,44 @@ func TestUnion_selsForCols(t *testing.T) {
 	test(Sels{{"x", ""}, {"y", ""}}, nil)
 }
 
+func TestUnion_SelectMissingColumn(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create one (a) key()")
+	db.adm("create two (b) key(b)")
+	db.act("insert {a: ''} into one")
+	db.act("insert {b: ''} into two")
+	tran := db.NewReadTran(AllPerms)
+	defer tran.Complete()
+	test := func(query, col string) {
+		t.Helper()
+		q := ParseQuery(query, tran, nil).Transform().(*Union)
+		req := NoneReq(1)
+		Optimize(q.source1, ReadMode, req)
+		Optimize(q.source2, ReadMode, req)
+		q.setApproach(req, &unionApproach{
+			strat: unionMerge, req1: req, req2: req,
+		}, tran)
+		check := func(sels Sels, n int) {
+			t.Helper()
+			q.Select(sels)
+			for _, dir := range []Dir{Next, Prev} {
+				q.Rewind()
+				for range n {
+					assert.T(t).That(!q.Get(nil, dir).Eof())
+				}
+				assert.T(t).That(q.Get(nil, dir).Eof())
+			}
+		}
+		check(Sels{{col, ""}}, 1)
+		check(Sels{{col, Pack(SuStr("nonexistent"))}}, 0)
+		check(Sels{{col, ""}}, 1)
+		check(nil, 1)
+	}
+	test("(one union two) where a is b", "b")
+	test("(two union one) where a is b", "b")
+}
+
 func TestUnion_DisjointRequiredIndexNoKey(t *testing.T) {
 	index := []string{"a"}
 	src1 := &QueryMock{

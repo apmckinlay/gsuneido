@@ -406,14 +406,14 @@ func benchmarkBitmapPlan(b *testing.B, db *db19.Database) {
 							b.Logf("index %v, bloom %v", w.tbl.index, w.bloomSel != nil)
 						} else {
 							main, second := findIdxSel(w, "a"), findIdxSel(w, "b")
-							c1 := w.tbl.costFor(second.index, NoneReq(1))
 							c2 := w.tbl.costFor(main.index, NoneReq(1))
 							if bloom {
-								fixed, variable = WhereCost2(bt.rows, float64(c1), float64(c2), 1,
+								fixed, variable = WhereCost2(bt.rows, float64(c2), 1,
 									second.indexRangeFrac, second.indexFilterFrac, main.indexRangeFrac,
-									w.combinedIndexFrac(main, second), main.hasDataFilter && second.hasDataFilter)
+									main.indexFilterFrac, w.combinedIndexFrac(main, second), second.hasIndexFilter,
+									main.hasIndexFilter, main.hasDataFilter && second.hasDataFilter)
 							} else {
-								variable = WhereCost(float64(c2), 1, main.indexRangeFrac, main.indexFilterFrac, main.hasDataFilter)
+								variable = WhereCost(bt.rows, float64(c2), 1, main.indexRangeFrac, main.indexFilterFrac, main.hasIndexFilter, main.hasDataFilter)
 							}
 						}
 						limit, result := 0, expected

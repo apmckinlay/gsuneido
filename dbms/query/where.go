@@ -593,13 +593,15 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 		irFrac := 1.0
 		ifFrac := 1.0
 		df := true
+		kf := false
 		isel := w.getIdxSel(idx)
 		if isel != nil {
 			irFrac = isel.indexRangeFrac
 			ifFrac = isel.indexFilterFrac
 			df = isel.hasDataFilter
+			kf = isel.hasIndexFilter
 		}
-		cost := WhereCost(float64(varCost), float64(req.frac), irFrac, ifFrac, df)
+		cost := WhereCost(nrows, float64(varCost), float64(req.frac), irFrac, ifFrac, kf, df)
 		cost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
 		if trace.WhereOpt.On() {
 			trace.WhereOpt.Println("    candidate", idx, "scanCost", varCost,
@@ -618,14 +620,13 @@ func (w *Where) optWhereIdx(mode Mode, req Require) (Cost, Cost, any) {
 			if slices.Equal(idx, bloomSel.index) {
 				continue
 			}
-			bloomCost := w.tbl.costFor(bloomSel.index, NoneReq(1))
-			fixcost, varcost := WhereCost2(nrows, float64(bloomCost), float64(varCost),
+			fixcost, varcost := WhereCost2(nrows, float64(varCost),
 				float64(req.frac), bloomSel.indexRangeFrac, bloomSel.indexFilterFrac,
-				irFrac, w.combinedIndexFrac(isel, bloomSel), df)
+				irFrac, ifFrac, w.combinedIndexFrac(isel, bloomSel), bloomSel.hasIndexFilter, kf, df)
 			varcost += Cost(req.nseeks) * w.tbl.lookupCost(idx)
 			if trace.WhereOpt.On() {
 				trace.WhereOpt.Println("    candidate", idx,
-					"bloom", bloomSel.index, "buildScanCost", bloomCost,
+					"bloom", bloomSel.index, "buildKeyFilter", bloomSel.hasIndexFilter,
 					"bloom indexRangeFrac", bloomSel.indexRangeFrac,
 					"bloom indexFilterFrac", bloomSel.indexFilterFrac,
 					"cost", fixcost, varcost, "total", fixcost+varcost)
@@ -714,7 +715,7 @@ func (w *Where) optInit() {
 	w.optInited = optInitYes
 }
 
-func WhereCost(cost, inFrac, irFrac, ifFrac float64, df bool) Cost {
+func WhereCost(nrows int, cost, inFrac, irFrac, ifFrac float64, kf, df bool) Cost {
 	// Model the cost of reading via a particular index.
 	// We have 3 potential filter stages:
 	// 1. Index Range (irFrac)
@@ -726,15 +727,16 @@ func WhereCost(cost, inFrac, irFrac, ifFrac float64, df bool) Cost {
 		return 0
 	}
 
-	// index range
-	cost *= irFrac
+	// The full scan already includes offset iteration. Only record access
+	// is reduced by index filtering; key materialization is additional.
+	indexCost := float64(nrows) * whereOffsetCost
+	dataCost := max(0, cost-indexCost) * ifFrac
+	if kf {
+		indexCost = float64(nrows) * whereKeyCost
+	}
+	cost = irFrac * (indexCost + dataCost)
 
-	// index filter
-	indexCost := whereIndexFrac * cost
-	dataCost := whereDataFrac * cost * ifFrac
-	cost = indexCost + dataCost
-
-	// data filter (dfFrac) does NOT affect cost (other than pessimism)
+	// data filter (df) does NOT affect cost (other than pessimism)
 	// because you still have to read everything
 
 	// apply inFrac
@@ -799,24 +801,34 @@ func (w *Where) combinedIndexFrac(main, bloom *idxSel) float64 {
 
 // WhereCost2 separates the full Bloom filter build from the second scan.
 // combinedFrac is the selectivity of both indexes with shared predicates counted once.
-func WhereCost2(nrows int, cost1, cost2, inFrac, irFrac1, ifFrac1, irFrac2,
-	combinedFrac float64, df bool) (Cost, Cost) {
+func WhereCost2(nrows int, cost2, inFrac, irFrac1, ifFrac1, irFrac2, mainIfFrac,
+	combinedFrac float64, kf1, kf2, df bool) (Cost, Cost) {
 	if inFrac == 0 {
 		return 0, 0
 	}
-	fixcost := Cost(math.Round(whereIndexFrac * cost1 * irFrac1))
+	entryCost := float64(whereOffsetCost)
+	if kf1 {
+		entryCost = whereKeyCost
+	}
+	fixcost := Cost(math.Round(float64(nrows) * entryCost * irFrac1))
 	nOffsets := float64(nrows) * irFrac1 * ifFrac1
 	fixcost += bloomBaseCost + Cost(math.Round(bloomAddCost*nOffsets))
 	ifFrac2 := 1.0
 	if irFrac2 > 0 {
 		ifFrac2 = combinedFrac / irFrac2
 	}
-	varcost := WhereCost(cost2, inFrac, irFrac2, ifFrac2, df)
+	varcost := WhereCost(nrows, cost2, inFrac, irFrac2, ifFrac2, false, df)
 	if ifFrac2 < 1 || df {
 		inFrac = wherePessimisticGuard(inFrac)
 	}
 	// Has runs before the main index filter, even for offsets it rejects.
 	nProbes := float64(nrows) * irFrac2 * inFrac
+	if kf2 && irFrac2*mainIfFrac > 0 {
+		// Estimate Bloom survivors before the main key filter, retaining
+		// combined selectivity's treatment of overlapping predicates.
+		bloomPassFrac := min(1.0, combinedFrac/(irFrac2*mainIfFrac))
+		varcost += Cost(math.Round((whereKeyCost - whereOffsetCost) * nProbes * bloomPassFrac))
+	}
 	varcost += Cost(math.Round(bloomHasCost * nProbes))
 	return fixcost, varcost
 }
@@ -908,6 +920,24 @@ func (w *Where) splitExpr(is *idxSel) (indexFilter, dataFilter ast.Expr) {
 		}
 	}
 	return andExpr(ie), andExpr(de)
+}
+
+// coversIndexExpr returns whether splitExpr would give a non-nil indexFilter.
+// It avoids building the expressions. exprCols is Columns() for each w.expr.Exprs
+func (w *Where) coversIndexExpr(is *idxSel, exprCols [][]string) bool {
+	for _, ecols := range exprCols {
+		if len(ecols) == 1 && !slices.Contains(w.unspanable, ecols[0]) {
+			if i := slices.Index(is.index, ecols[0]); i >= 0 &&
+				(i < is.prefixLen ||
+					(i >= is.skipStart && i < is.skipStart+is.skipLen)) {
+				continue // covered by index range
+			}
+		}
+		if set.HasSubset(is.index, ecols) {
+			return true
+		}
+	}
+	return false
 }
 
 func andExpr(exprs []ast.Expr) ast.Expr {

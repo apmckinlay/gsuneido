@@ -66,8 +66,8 @@ const (
 // where index cost (see WhereCost, WhereCost2)
 
 const (
-	whereIndexFrac = .2 // the index portion of the table cost
-	whereDataFrac  = .8 // the data portion of the table cost
+	whereOffsetCost = 50  // per index entry without materializing the key
+	whereKeyCost    = 100 // per index entry with key materialization
 )
 
 // wherePessimisticGuard floors selectivity estimates to avoid overly

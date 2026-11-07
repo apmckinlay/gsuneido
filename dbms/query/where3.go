@@ -57,10 +57,15 @@ func (w *Where) perIndex() []*idxSel {
 		trace.WhereOpt.Println("    no usable index, wfrac", w.wfrac)
 		return nil
 	}
+	exprCols := make([][]string, len(w.expr.Exprs))
+	for i, e := range w.expr.Exprs {
+		exprCols[i] = e.Columns() // allocates, so only do it once
+	}
 	minFrac := 1.0
 	for _, isel := range idxSels {
 		isel.prefixFrac = w.prefixFrac(isel)
 		frac := isel.calcFracs(colFracs, w.colSpans, w.unspanable, w.dataExprCount)
+		isel.hasIndexFilter = w.coversIndexExpr(isel, exprCols)
 		if trace.WhereOpt.On() {
 			trace.WhereOpt.Println("    index", isel, "indexRangeFrac", isel.indexRangeFrac,
 				"indexFilterFrac", isel.indexFilterFrac, "hasDataFilter", isel.hasDataFilter,
