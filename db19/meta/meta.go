@@ -230,7 +230,10 @@ func (mu *metaUpdate) validate() {
 		if !ts.isTable() {
 			return true
 		}
-		ts.Check(mu.getSchema)
+		ts.Check(func(table string) *Schema {
+			target, _ := mu.schema.Get(table)
+			return target
+		})
 		return true
 	})
 }
