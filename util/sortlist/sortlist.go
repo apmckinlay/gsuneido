@@ -48,16 +48,14 @@ type Builder[T any] struct {
 // WARNING: this creates a goroutine which must be ended by Finish.
 func NewSorting[T any](zero func(x T) bool, less func(x, y T) bool) *Builder[T] {
 	li := &Builder[T]{less: less, zero: zero, blocks: make([]*block[T], 0, 4),
-		work: make(chan void), done: make(chan any), zeroBlock: &block[T]{}}
+		work: make(chan void), done: make(chan any)}
 	go li.worker()
 	return li
 }
 
 // NewUnsorted returns a new list Builder without sorting.
 func NewUnsorted[T any](zero func(x T) bool) *Builder[T] {
-	li := &Builder[T]{blocks: make([]*block[T], 0, 4), zero: zero,
-		zeroBlock: &block[T]{}}
-	return li
+	return &Builder[T]{blocks: make([]*block[T], 0, 4), zero: zero}
 }
 
 // Add adds a value to the list.
@@ -143,7 +141,7 @@ func (b *Builder[T]) finishMerges() {
 	nb := len(b.blocks)
 	nb2 := bit.NextPow2(uint(nb))
 	for len(b.blocks) < nb2 {
-		b.blocks = append(b.blocks, b.zeroBlock)
+		b.blocks = append(b.blocks, b.getZeroBlock())
 		b.merges(len(b.blocks))
 	}
 	b.blocks = b.blocks[:nb]
@@ -241,6 +239,20 @@ func (b *Builder[T]) alloc() *block[T] {
 		return block
 	}
 	return new(block[T])
+}
+
+// getZeroBlock returns an all-zero block used to pad the block list
+// to a power of two for merging. It is created lazily.
+func (b *Builder[T]) getZeroBlock() *block[T] {
+	if b.zeroBlock == nil {
+		if len(b.free) == 0 {
+			b.zeroBlock = new(block[T]) // already zeroed
+		} else {
+			b.zeroBlock = b.alloc()
+			clear(b.zeroBlock[:]) // recycled blocks aren't zeroed
+		}
+	}
+	return b.zeroBlock
 }
 
 // mergeOutput is used to accumulate the result of a merge.
