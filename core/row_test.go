@@ -103,6 +103,23 @@ func TestRowUnion(t *testing.T) {
 	test(NewRow("").With(""), "")
 }
 
+func TestHeaderPhysical(t *testing.T) {
+	test := func(fields [][]string, expected []string) {
+		t.Helper()
+		hdr := NewHeader(fields, expected)
+		assert.T(t).This(hdr.Physical()).Is(expected)
+	}
+	test(nil, []string{})
+	test([][]string{{}}, []string{})
+	test([][]string{{"a", "b"}}, []string{"a", "b"})
+	test([][]string{{"-", "a", "-", "b", "-"}}, []string{"a", "b"})
+	test([][]string{{"-", "-"}}, []string{})
+	test([][]string{{"a", "b"}, {"b", "c"}}, []string{"a", "b", "c"})
+	test([][]string{{"-", "a", "-"}, {"a", "-", "b"}, {"b", "c"}},
+		[]string{"a", "b", "c"})
+	test([][]string{{}, {"a", "b"}, {"b", "c"}}, []string{"a", "b", "c"})
+}
+
 func BenchmarkRow_GetRawVal(b *testing.B) {
 	var row Row
 	hdr := SimpleHeader([]string{"foo", "bar"})

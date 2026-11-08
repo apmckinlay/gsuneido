@@ -420,9 +420,9 @@ func (hdr *Header) Physical() []string {
 		return slices.Clip(hdr.Fields[0])
 	}
 	result := make([]string, 0, len(hdr.Columns))
-	for _, flds := range hdr.Fields {
+	for i, flds := range hdr.Fields {
 		for _, fld := range flds {
-			if fld != "-" && !slices.Contains(result, fld) {
+			if fld != "-" && (i == 0 || !slices.Contains(result, fld)) {
 				result = append(result, fld)
 			}
 		}
