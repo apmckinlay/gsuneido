@@ -262,7 +262,13 @@ func (b *RecordBuilder) Trim() *RecordBuilder {
 
 const maxRecordLen = 1_000_000
 
+// emptyRecord is the canonical representation of a record with no values.
+const emptyRecord = Record("\x00")
+
 func (b *RecordBuilder) Build() Record {
+	if len(b.vals) == 0 {
+		return emptyRecord
+	}
 	bi := b.PreBuild()
 	return b.BuildInto(make([]byte, 0, bi.size), bi)
 }
