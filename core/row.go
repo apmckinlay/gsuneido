@@ -340,8 +340,8 @@ func (hdr *Header) HasDeleted() bool {
 	return ok
 }
 
-// GetFields returns a list of the fields, without deleted "-",
-// and without duplicates (e.g. from Join or Union)
+// GetFields preserves the first list's layout (for updates), including deleted "-",
+// then appends fields from subsequent lists without deleted slots or duplicates.
 // See also [Header.Physical]
 func (hdr *Header) GetFields() []string {
 	if len(hdr.Fields) == 1 {
@@ -351,7 +351,7 @@ func (hdr *Header) GetFields() []string {
 	result = append(result, hdr.Fields[0]...)
 	for _, fields := range hdr.Fields[1:] {
 		for _, fld := range fields {
-			if fld == "-" || !slices.Contains(result, fld) {
+			if fld != "-" && !slices.Contains(result, fld) {
 				result = append(result, fld)
 			}
 		}
@@ -414,7 +414,8 @@ func (hdr *Header) AppendDerived(fields []string) []string {
 	return fields
 }
 
-// Physical is like [Header.GetFields] but without deleted ("-")
+// Physical is the flattened Fields without deleted ("-") or duplicates
+// See also [Header.GetFields]
 func (hdr *Header) Physical() []string {
 	if len(hdr.Fields) == 1 && !slices.Contains(hdr.Fields[0], "-") {
 		return slices.Clip(hdr.Fields[0])

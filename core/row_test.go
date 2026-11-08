@@ -103,6 +103,18 @@ func TestRowUnion(t *testing.T) {
 	test(NewRow("").With(""), "")
 }
 
+func TestHeaderGetFields(t *testing.T) {
+	test := func(fields [][]string, expected []string) {
+		t.Helper()
+		hdr := NewHeader(fields, nil)
+		assert.T(t).This(hdr.GetFields()).Is(expected)
+	}
+	test([][]string{{"-", "a", "-", "b", "-"}}, []string{"-", "a", "-", "b", "-"})
+	test([][]string{{"-", "a", "-"}, {"a", "-", "b"}, {"-", "b", "c"}},
+		[]string{"-", "a", "-", "b", "c"})
+	test([][]string{{}, {"-", "a", "b"}, {"b", "-", "c"}}, []string{"a", "b", "c"})
+}
+
 func TestHeaderPhysical(t *testing.T) {
 	test := func(fields [][]string, expected []string) {
 		t.Helper()

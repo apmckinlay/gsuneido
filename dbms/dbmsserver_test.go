@@ -8,6 +8,7 @@ package dbms
 import (
 	"crypto/tls"
 	"net"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -88,6 +89,50 @@ func TestLogWithLimitEmpty(t *testing.T) {
 	result = sc.limitLog("hello")
 	assert.This(result).Is("hello")
 	assert.This(sc.logSize.Load()).Is(int32(7)) // 1 + (5 + 1) = 7
+}
+
+func TestRowToRecordSingleList(t *testing.T) {
+	hdr := SimpleHeader([]string{"a", "-", "b"})
+	rec := new(RecordBuilder).Add(One).Add(SuStr("gone")).Add(MinusOne).Build()
+	row := NewRow(rec)
+
+	r, fields := rowToRecord(row, hdr)
+	// single-list headers preserve the original layout, including "-"
+	assert.T(t).That(slices.Equal(fields, []string{"a", "-", "b"}))
+	assert.T(t).That(slices.Equal(hdr.GetFields(), fields))
+	assert.T(t).This(r.GetRaw(0)).Is(Pack(One))
+	assert.T(t).This(r.GetRaw(2)).Is(Pack(MinusOne))
+}
+
+func TestRowToRecordMultiList(t *testing.T) {
+	hdr := NewHeader([][]string{{"a", "-"}, {"-", "b"}}, []string{"a", "b"})
+	rec1 := new(RecordBuilder).Add(One).Add(SuStr("gone1")).Build()
+	rec2 := new(RecordBuilder).Add(SuStr("gone2")).Add(MinusOne).Build()
+	row := JoinRows(NewRow(rec1), NewRow(rec2))
+
+	r, fields := rowToRecord(row, hdr)
+	// Preserve the first list's deleted slots for Record.Update serialization.
+	assert.T(t).That(slices.Equal(fields, []string{"a", "-", "b"}))
+	assert.T(t).That(slices.Equal(hdr.GetFields(), fields))
+	assert.T(t).This(r.Count()).Is(3)
+	assert.T(t).This(r.GetRaw(0)).Is(Pack(One))
+	assert.T(t).This(r.GetRaw(1)).Is("")
+	assert.T(t).This(r.GetRaw(2)).Is(Pack(MinusOne))
+}
+
+func TestRowToRecordExtendedUpdate(t *testing.T) {
+	base := []string{"id", "-", "type"}
+	hdr := NewHeader([][]string{base, {"status"}}, []string{"id", "type", "status"})
+	row := NewRow(new(RecordBuilder).Add(One).Build()).
+		With(new(RecordBuilder).Add(One).Build())
+	rec, fields := rowToRecord(row, hdr)
+	clientHdr := SimpleHeader(fields)
+	r := SuRecordFromRow(NewRow(rec), clientHdr, "", nil, 0)
+	r.Put(nil, SuStr("type"), SuStr("Change"))
+	updated := r.ToRecord(nil, clientHdr)
+	assert.T(t).This(updated.GetRaw(1)).Is("")
+	assert.T(t).This(updated.GetRaw(2)).Is(Pack(SuStr("Change")))
+	assert.T(t).This(updated.GetRaw(3)).Is(Pack(One))
 }
 
 func TestNewServerConnUnauthorized(t *testing.T) {
