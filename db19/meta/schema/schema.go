@@ -189,19 +189,23 @@ func (sc *Schema) Check() {
 }
 
 func (sc *Schema) checkColumns() {
-	if len(sc.Columns) > maxColumns {
-		panic("too many columns in " + sc.Table + " (limit " + strconv.Itoa(maxColumns) + ")")
-	}
 	n := len(sc.Columns)
+	// delete ("-") columns are placeholders and don't count toward the limit
+	ncols := 0
 	for i := range n {
 		assert.That(sc.Columns[i] != "")
 		if sc.Columns[i] != "-" {
+			ncols++
 			for j := i + 1; j < n; j++ {
 				if sc.Columns[i] == sc.Columns[j] {
 					panic("duplicate column in " + sc.Table)
 				}
 			}
 		}
+	}
+	if ncols > maxColumns {
+		panic("too many columns in " + sc.Table +
+			" (limit " + strconv.Itoa(maxColumns) + ")")
 	}
 }
 
