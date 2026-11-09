@@ -205,14 +205,26 @@ func (r Record) Truncate(n int) Record {
 // ------------------------------------------------------------------
 
 // RecordBuilder is used to construct records. Zero value is ready to use.
+// WARNING: should not be copied or passed by value.
 type RecordBuilder struct {
+	buf  [4]Packable // first so it's cache aligned
 	vals []Packable
+	_    noCopy
 }
+
+// noCopy implements sync.Locker so `go vet` flags value copies.
+type noCopy struct{}
+
+func (*noCopy) Lock()   {}
+func (*noCopy) Unlock() {}
 
 const MaxValues = 0x3fff
 
 // Add appends a Packable
 func (b *RecordBuilder) Add(p Packable) *RecordBuilder {
+	if b.vals == nil {
+		b.vals = b.buf[:0]
+	}
 	b.vals = append(b.vals, p)
 	return b
 }
