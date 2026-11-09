@@ -877,7 +877,7 @@ func (ob *SuObject) ToRecord(th *Thread, hdr *Header) Record {
 	defer ob.RUnlock()
 	assert.That(len(hdr.Fields) == 1)
 	fields := hdr.Fields[0]
-	rb := RecordBuilder{}
+	var rb RecordBuilder
 	var tsField string
 	var ts PackableValue
 	for _, f := range fields {

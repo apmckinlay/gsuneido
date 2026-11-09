@@ -901,7 +901,7 @@ func (r *SuRecord) ToRecord(th *Thread, hdr *Header) Record {
 		}
 	}
 
-	rb := RecordBuilder{}
+	var rb RecordBuilder
 	var tsField string
 	var ts PackableValue
 	for _, f := range fields {

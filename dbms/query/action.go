@@ -53,7 +53,7 @@ func (a *insertQueryAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	fields := ut.GetSchema(a.table).Columns
 	n := 0
 	for row := qr.Get(th, Next); !row.Eof(); row = qr.Get(th, Next) {
-		rb := RecordBuilder{}
+		var rb RecordBuilder
 		var tsField string
 		for _, f := range fields {
 			if f == "-" || strings.HasSuffix(f, "_deps") {
