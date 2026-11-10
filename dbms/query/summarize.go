@@ -96,6 +96,7 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 	}
 	su := &Summarize{hint: hint, by: by, cols: cols, ops: ops, ons: ons}
 	su.source = src
+	su.checkOnColumns()
 	su.unique = hasKey(by, src.Keys(), src.Fixed())
 	// if single min or max, and on is a key, then we can give the whole row
 	su.wholeRow = su.minmax1() &&
@@ -110,6 +111,18 @@ func NewSummarize(src Query, hint sumHint, by, cols, ops, ons []string) *Summari
 	su.rowSiz.Set(su.source.rowSize() + len(su.cols)*8) // ???
 	su.fast1.Set(src.fastSingle())
 	return su
+}
+
+func (su *Summarize) checkOnColumns() {
+	var missing []string
+	for _, on := range su.ons {
+		if on != "" && !slices.Contains(su.source.Columns(), on) {
+			missing = append(missing, on)
+		}
+	}
+	if len(missing) > 0 {
+		panic("summarize: nonexistent columns: " + str.Join(", ", missing))
+	}
 }
 
 func (su *Summarize) minmax1() bool {

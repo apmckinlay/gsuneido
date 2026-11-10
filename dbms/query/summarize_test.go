@@ -71,6 +71,18 @@ func TestSummarize_DuplicateBy(t *testing.T) {
 	ParseQuery("t summarize a, b, total c, average c", tran, nil)
 }
 
+func TestSummarize_NonexistentOn(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create t (group, b) key(group)")
+
+	tran := db.NewReadTran(AllPerms)
+	assert.T(t).This(func() {
+		ParseQuery("t summarize group, list nonexistent", tran, nil)
+	}).Panics("summarize: nonexistent columns: nonexistent")
+	ParseQuery("t summarize group, count, total b", tran, nil)
+}
+
 func TestSummarize_ByOnConflict(t *testing.T) {
 	db := heapDb()
 	defer db.Close()
