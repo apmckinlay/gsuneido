@@ -1267,7 +1267,7 @@ func makeIter(keys []itertest.KeyOff) itertest.Iter {
 
 type testIter struct {
 	*OverIter
-	tran oiTran
+	tran OiTran
 }
 
 func (ti *testIter) Next() {

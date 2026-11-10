@@ -7,11 +7,17 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 )
 
+type OiTran interface {
+	GetIndexI(table string, iIndex int) *Overlay
+	Read(table string, iIndex int, from, to string)
+	Num() int
+}
+
 // IndexIter is the interface for index iterators.
 // It is implemented by OverIter and SimpleIter.
 type IndexIter interface {
-	Next(t oiTran)
-	Prev(t oiTran)
+	Next(t OiTran)
+	Prev(t OiTran)
 	Cur() (string, uint64)
 	CurOff() uint64
 	Eof() bool
@@ -25,7 +31,7 @@ type IndexIter interface {
 // with a single btree (no layers/mut).
 // It does not track reads and avoids unnecessary key allocations.
 type SimpleIter struct {
-	t     oiTran
+	t     OiTran
 	it    iface.Iter
 	state iface.State
 }
@@ -33,7 +39,7 @@ type SimpleIter struct {
 // NewSimpleIter creates an optimized iterator for read-only btree iteration.
 // - the overlay must not change during iteration
 // - no read tracking (e.g. read-only transaction)
-func NewSimpleIter(t oiTran, ov *Overlay) IndexIter {
+func NewSimpleIter(t OiTran, ov *Overlay) IndexIter {
 	bt := ov.bt
 	it := bt.Iterator()
 	if (ov.mut == nil || ov.mut.Len() == 0) &&
@@ -85,7 +91,7 @@ func (si *SimpleIter) SkipScan(prefixRng Range, suffixRng Range, skipStart int) 
 	si.it.SkipScan(prefixRng, suffixRng, skipStart)
 }
 
-func (si *SimpleIter) Next(t oiTran) {
+func (si *SimpleIter) Next(t OiTran) {
 	if t.Num() != si.t.Num() {
 		panic("SimpleIter tran changed")
 	}
@@ -101,7 +107,7 @@ func (si *SimpleIter) Next(t oiTran) {
 	}
 }
 
-func (si *SimpleIter) Prev(t oiTran) {
+func (si *SimpleIter) Prev(t OiTran) {
 	if t.Num() != si.t.Num() {
 		panic("SimpleIter tran changed")
 	}

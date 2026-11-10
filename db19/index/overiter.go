@@ -51,12 +51,6 @@ const (
 	prev dir = -1
 )
 
-type oiTran interface {
-	GetIndexI(table string, iIndex int) *Overlay
-	Read(table string, iIndex int, from, to string)
-	Num() int
-}
-
 func NewOverIter(table string, iIndex int) *OverIter {
 	return &OverIter{table: table, iIndex: iIndex, rng: iface.All, fastIdx: -1}
 }
@@ -116,7 +110,7 @@ func (oi *OverIter) SkipScan(prefixRng Range, suffixRng Range, skipStart int) {
 
 // Next -------------------------------------------------------------
 
-func (oi *OverIter) Next(t oiTran) {
+func (oi *OverIter) Next(t OiTran) {
 	// NOTE: keep this code in sync with Prev
 	if oi.state.Eof() {
 		return // stick at eof
@@ -146,7 +140,7 @@ func (oi *OverIter) Next(t oiTran) {
 	oi.lastDir = next
 }
 
-func (oi *OverIter) update(t oiTran) bool {
+func (oi *OverIter) update(t OiTran) bool {
 	ov := t.GetIndexI(oi.table, oi.iIndex)
 	if ov == oi.overlay {
 		return false
@@ -182,7 +176,7 @@ func (oi *OverIter) canFast(modified bool, d dir) bool {
 		!oi.iters[len(oi.iters)-1].Modified()
 }
 
-func (oi *OverIter) fastNext(t oiTran, prevKey string) bool {
+func (oi *OverIter) fastNext(t OiTran, prevKey string) bool {
 	it := oi.iters[oi.fastIdx]
 	it.Next()
 	if !it.Eof() && it.Key() < oi.secondMin {
@@ -297,7 +291,7 @@ func (oi *OverIter) minIter() (bool, string, uint64) {
 
 // Prev -------------------------------------------------------------
 
-func (oi *OverIter) Prev(t oiTran) {
+func (oi *OverIter) Prev(t OiTran) {
 	// NOTE: keep this code in sync with Next
 	if oi.state.Eof() {
 		return // stick at eof
@@ -328,7 +322,7 @@ func (oi *OverIter) Prev(t oiTran) {
 	oi.lastDir = prev
 }
 
-func (oi *OverIter) fastPrev(t oiTran, prevKey string) bool {
+func (oi *OverIter) fastPrev(t OiTran, prevKey string) bool {
 	it := oi.iters[oi.fastIdx]
 	it.Prev()
 	if !it.Eof() && it.Key() > oi.secondMax {
