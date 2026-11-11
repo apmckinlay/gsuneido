@@ -180,33 +180,13 @@ func unpackStr(p string) string {
 	return p[1:]
 }
 
-// tables -----------------------------------------------------------
+// infoEntry adapts *meta.Info to the schemaEntry interface.
+type infoEntry struct{ *meta.Info }
 
-func (t *ReadTran) tablesLookup(iIndex int, key string) core.Record {
-	assert.That(iIndex == 0)
-	name := unpackStr(key)
-	if name == "" {
-		return ""
-	}
-	info := t.meta.GetRoInfo(name)
-	if info == nil {
-		return ""
-	}
-	return tablesRow(info)
-}
-
-// tablesRow builds a tables_ row from a table's Info.
-func tablesRow(info *meta.Info) core.Record {
-	var rb core.RecordBuilder
-	rb.Add(core.SuStr(info.Table))
-	rb.Add(core.IntVal(info.Nrows))
-	rb.Add(core.IntVal(info.Size))
-	return rb.Build()
-}
-
-// sortInfos orders info by table name (the tables_ key).
-func sortInfos(infos []*meta.Info) {
-	sort.Slice(infos, func(i, j int) bool { return infos[i].Table < infos[j].Table })
+func (e infoEntry) keyAt() string   { return core.Pack(core.SuStr(e.Table)) }
+func (e infoEntry) boundAt() string { return e.Table }
+func (e infoEntry) row() core.Record {
+	return tablesRow(e.Info)
 }
 
 // schemaTableIndexIter returns an IndexIter for a "_" schema table.
@@ -245,29 +225,29 @@ func (t *ReadTran) schemaTableRangeFrac(table string, iIndex int, org, end strin
 		assert.That(iIndex == 0)
 		it := newTablesIter(t)
 		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.infos)), true
+		return rangeFrac(lo, hi, len(it.items)), true
 	case "columns_":
 		assert.That(iIndex == 0)
 		it := newColumnsIter(t)
 		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.entries)), true
+		return rangeFrac(lo, hi, len(it.items)), true
 	case "indexes_":
 		assert.That(iIndex == 0)
 		it := newIndexesIter(t)
 		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.entries)), true
+		return rangeFrac(lo, hi, len(it.items)), true
 	case "views_":
 		assert.That(iIndex == 0)
 		it := newViewsIter(t)
 		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.views)), true
+		return rangeFrac(lo, hi, len(it.items)), true
 	case "history_":
 		return .5, true
 	case "dbstats_":
 		assert.That(iIndex == 0)
 		it := newStatsIter(t)
 		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.entries)), true
+		return rangeFrac(lo, hi, len(it.items)), true
 	}
 	return 0, false
 }
@@ -307,104 +287,42 @@ func keyBounds(n int, keyAt func(int) string, org, end string) (int, int) {
 	return bound(org), bound(end)
 }
 
-// tablesIter is an index.IndexIter over the tables_ table.
-// It uses row ordinals instead of storage offsets.
-type tablesIter struct {
-	infos []*meta.Info
-	lo    int
-	hi    int
-	i     int
-	state iface.State
+// tables -----------------------------------------------------------
+
+func (t *ReadTran) tablesLookup(iIndex int, key string) core.Record {
+	assert.That(iIndex == 0)
+	name := unpackStr(key)
+	if name == "" {
+		return ""
+	}
+	info := t.meta.GetRoInfo(name)
+	if info == nil {
+		return ""
+	}
+	return tablesRow(info)
 }
 
-func newTablesIter(t *ReadTran) *tablesIter {
+func tablesRow(info *meta.Info) core.Record {
+	var rb core.RecordBuilder
+	rb.Add(core.SuStr(info.Table))
+	rb.Add(core.IntVal(info.Nrows))
+	rb.Add(core.IntVal(info.Size))
+	return rb.Build()
+}
+
+func newTablesIter(t *ReadTran) *schemaIter[infoEntry] {
 	infos := t.GetAllInfo()
-	sortInfos(infos)
-	return &tablesIter{
-		infos: infos,
-		hi:    len(infos),
-		state: iface.Rewound,
+	items := make([]infoEntry, len(infos))
+	for i, info := range infos {
+		items[i] = infoEntry{info}
 	}
-}
-
-func (it *tablesIter) Eof() bool    { return it.state.Eof() }
-func (it *tablesIter) HasCur() bool { return it.state.Within() }
-
-func (it *tablesIter) Cur() (string, uint64) {
-	it.checkHasCur()
-	return core.Pack(core.SuStr(it.infos[it.i].Table)), uint64(it.i) + 1
-}
-
-func (it *tablesIter) CurOff() uint64 {
-	it.checkHasCur()
-	return uint64(it.i) + 1
-}
-
-func (it *tablesIter) GetRecord(index.OiTran) core.Record {
-	it.checkHasCur()
-	return tablesRow(it.infos[it.i])
-}
-
-func (it *tablesIter) checkHasCur() {
-	if it.state.Eof() {
-		panic("tablesIter eof")
+	sort.Slice(items, func(i, j int) bool { return items[i].Table < items[j].Table })
+	return &schemaIter[infoEntry]{
+		items: items,
+		bound: nameBounds,
+		name:  "tablesIter",
+		hi:    len(items),
 	}
-	if it.state.Rewound() {
-		panic("tablesIter rewound")
-	}
-}
-
-func (it *tablesIter) Next(index.OiTran) {
-	switch it.state {
-	case iface.Eof:
-		return // stick at eof
-	case iface.Rewound:
-		it.i = it.lo
-	default:
-		it.i++
-	}
-	if it.i >= it.hi {
-		it.state = iface.Eof
-		return
-	}
-	it.state = iface.Within
-}
-
-func (it *tablesIter) Prev(index.OiTran) {
-	switch it.state {
-	case iface.Eof:
-		return // stick at eof
-	case iface.Rewound:
-		it.i = it.hi - 1
-	default:
-		it.i--
-	}
-	if it.i < it.lo {
-		it.state = iface.Eof
-		return
-	}
-	it.state = iface.Within
-}
-
-func (it *tablesIter) Rewind() {
-	it.state = iface.Rewound
-	it.i = 0
-}
-
-// bounds returns the [lo, hi) positions matching the key range [org, end).
-func (it *tablesIter) bounds(org, end string) (int, int) {
-	return nameBounds(len(it.infos),
-		func(i int) string { return it.infos[i].Table }, org, end)
-}
-
-func (it *tablesIter) Range(rng index.Range) {
-	it.lo, it.hi = it.bounds(rng.Org, rng.End)
-	it.state = iface.Rewound
-	it.i = 0
-}
-
-func (it *tablesIter) SkipScan(prefixRng, _ index.Range, _ int) {
-	assert.ShouldNotReachHere()
 }
 
 // columns ----------------------------------------------------------
@@ -436,7 +354,6 @@ func (t *ReadTran) columnsLookup(iIndex int, key string) core.Record {
 	return columnsRow(table, col, fld)
 }
 
-// columnsRow builds a columns_ row from a table, column, and field index.
 func columnsRow(table, column string, field int) core.Record {
 	var rb core.RecordBuilder
 	rb.Add(core.SuStr(table))
@@ -453,31 +370,13 @@ type columnEntry struct {
 	key    string
 }
 
-// columnsIter is an index.IndexIter over the columns_ table.
-// It uses row ordinals instead of storage offsets.
-type columnsIter struct {
-	entries []columnEntry
-	skip    schemaSkipScan
-	lo      int
-	hi      int
-	i       int
-	state   iface.State
+func (e columnEntry) keyAt() string   { return e.key }
+func (e columnEntry) boundAt() string { return e.key }
+func (e columnEntry) row() core.Record {
+	return columnsRow(e.table, e.column, e.field)
 }
 
-type schemaSkipScan struct {
-	rng   index.Range
-	start int
-}
-
-func (ss schemaSkipScan) matches(key string) bool {
-	if ss.start == 0 {
-		return true
-	}
-	_, suffix := ixkey.SplitPrefixSuffix(key, ss.start)
-	return ss.rng.Org <= suffix && suffix < ss.rng.End
-}
-
-func newColumnsIter(t *ReadTran) *columnsIter {
+func newColumnsIter(t *ReadTran) *schemaIter[columnEntry] {
 	entries := make([]columnEntry, 0, 32)
 	for sc := range t.meta.Tables() {
 		for field, col := range sc.Columns {
@@ -501,102 +400,13 @@ func newColumnsIter(t *ReadTran) *columnsIter {
 		}
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].key < entries[j].key })
-	return &columnsIter{
-		entries: entries,
-		hi:      len(entries),
-		state:   iface.Rewound,
+	return &schemaIter[columnEntry]{
+		items:  entries,
+		bound:  keyBounds,
+		name:   "columnsIter",
+		skipOK: true,
+		hi:     len(entries),
 	}
-}
-
-func (it *columnsIter) Eof() bool    { return it.state.Eof() }
-func (it *columnsIter) HasCur() bool { return it.state.Within() }
-
-func (it *columnsIter) Cur() (string, uint64) {
-	it.checkHasCur()
-	return it.entries[it.i].key, uint64(it.i) + 1
-}
-
-func (it *columnsIter) CurOff() uint64 {
-	it.checkHasCur()
-	return uint64(it.i) + 1
-}
-
-func (it *columnsIter) GetRecord(index.OiTran) core.Record {
-	it.checkHasCur()
-	e := it.entries[it.i]
-	return columnsRow(e.table, e.column, e.field)
-}
-
-func (it *columnsIter) checkHasCur() {
-	if it.state.Eof() {
-		panic("columnsIter eof")
-	}
-	if it.state.Rewound() {
-		panic("columnsIter rewound")
-	}
-}
-
-func (it *columnsIter) Next(index.OiTran) {
-	switch it.state {
-	case iface.Eof:
-		return // stick at eof
-	case iface.Rewound:
-		it.i = it.lo
-	default:
-		it.i++
-	}
-	for it.i < it.hi && !it.skip.matches(it.entries[it.i].key) {
-		it.i++
-	}
-	if it.i >= it.hi {
-		it.state = iface.Eof
-		return
-	}
-	it.state = iface.Within
-}
-
-func (it *columnsIter) Prev(index.OiTran) {
-	switch it.state {
-	case iface.Eof:
-		return // stick at eof
-	case iface.Rewound:
-		it.i = it.hi - 1
-	default:
-		it.i--
-	}
-	for it.i >= it.lo && !it.skip.matches(it.entries[it.i].key) {
-		it.i--
-	}
-	if it.i < it.lo {
-		it.state = iface.Eof
-		return
-	}
-	it.state = iface.Within
-}
-
-func (it *columnsIter) Rewind() {
-	it.state = iface.Rewound
-	it.i = 0
-}
-
-// bounds returns the [lo, hi) positions matching the key range [org, end).
-func (it *columnsIter) bounds(org, end string) (int, int) {
-	return keyBounds(len(it.entries),
-		func(i int) string { return it.entries[i].key }, org, end)
-}
-
-func (it *columnsIter) Range(rng index.Range) {
-	// the {table, column} keys are encoded and directly comparable
-	it.lo, it.hi = it.bounds(rng.Org, rng.End)
-	it.skip = schemaSkipScan{}
-	it.state = iface.Rewound
-	it.i = 0
-}
-
-func (it *columnsIter) SkipScan(prefixRng, suffixRng index.Range, skipStart int) {
-	assert.That(skipStart > 0)
-	it.Range(prefixRng)
-	it.skip = schemaSkipScan{rng: suffixRng, start: skipStart}
 }
 
 // indexes ----------------------------------------------------------
@@ -659,18 +469,13 @@ type indexEntry struct {
 	key   string
 }
 
-// indexesIter is an index.IndexIter over the indexes_ table.
-// It uses row ordinals instead of storage offsets.
-type indexesIter struct {
-	entries []indexEntry
-	skip    schemaSkipScan
-	lo      int
-	hi      int
-	i       int
-	state   iface.State
+func (e indexEntry) keyAt() string   { return e.key }
+func (e indexEntry) boundAt() string { return e.key }
+func (e indexEntry) row() core.Record {
+	return indexesRow(e.table, e.idx)
 }
 
-func newIndexesIter(t *ReadTran) *indexesIter {
+func newIndexesIter(t *ReadTran) *schemaIter[indexEntry] {
 	entries := make([]indexEntry, 0, 32)
 	for sc := range t.meta.Tables() {
 		for i := range sc.Indexes {
@@ -683,102 +488,13 @@ func newIndexesIter(t *ReadTran) *indexesIter {
 		}
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].key < entries[j].key })
-	return &indexesIter{
-		entries: entries,
-		hi:      len(entries),
-		state:   iface.Rewound,
+	return &schemaIter[indexEntry]{
+		items:  entries,
+		bound:  keyBounds,
+		name:   "indexesIter",
+		skipOK: true,
+		hi:     len(entries),
 	}
-}
-
-func (it *indexesIter) Eof() bool    { return it.state.Eof() }
-func (it *indexesIter) HasCur() bool { return it.state.Within() }
-
-func (it *indexesIter) Cur() (string, uint64) {
-	it.checkHasCur()
-	return it.entries[it.i].key, uint64(it.i) + 1
-}
-
-func (it *indexesIter) CurOff() uint64 {
-	it.checkHasCur()
-	return uint64(it.i) + 1
-}
-
-func (it *indexesIter) GetRecord(index.OiTran) core.Record {
-	it.checkHasCur()
-	e := it.entries[it.i]
-	return indexesRow(e.table, e.idx)
-}
-
-func (it *indexesIter) checkHasCur() {
-	if it.state.Eof() {
-		panic("indexesIter eof")
-	}
-	if it.state.Rewound() {
-		panic("indexesIter rewound")
-	}
-}
-
-func (it *indexesIter) Next(index.OiTran) {
-	switch it.state {
-	case iface.Eof:
-		return // stick at eof
-	case iface.Rewound:
-		it.i = it.lo
-	default:
-		it.i++
-	}
-	for it.i < it.hi && !it.skip.matches(it.entries[it.i].key) {
-		it.i++
-	}
-	if it.i >= it.hi {
-		it.state = iface.Eof
-		return
-	}
-	it.state = iface.Within
-}
-
-func (it *indexesIter) Prev(index.OiTran) {
-	switch it.state {
-	case iface.Eof:
-		return // stick at eof
-	case iface.Rewound:
-		it.i = it.hi - 1
-	default:
-		it.i--
-	}
-	for it.i >= it.lo && !it.skip.matches(it.entries[it.i].key) {
-		it.i--
-	}
-	if it.i < it.lo {
-		it.state = iface.Eof
-		return
-	}
-	it.state = iface.Within
-}
-
-func (it *indexesIter) Rewind() {
-	it.state = iface.Rewound
-	it.i = 0
-}
-
-// bounds returns the [lo, hi) positions matching the key range [org, end).
-func (it *indexesIter) bounds(org, end string) (int, int) {
-	return keyBounds(len(it.entries),
-		func(i int) string { return it.entries[i].key }, org, end)
-}
-
-func (it *indexesIter) Range(rng index.Range) {
-	// the {table, columns} keys are encoded and directly comparable
-	it.lo, it.hi = it.bounds(rng.Org, rng.End)
-	it.skip = schemaSkipScan{}
-	it.state = iface.Rewound
-	it.i = 0
-}
-
-func (it *indexesIter) SkipScan(prefixRng, suffixRng index.Range, skipStart int) {
-	assert.That(skipStart > 0)
-	it.Range(prefixRng)
-	it.skip = schemaSkipScan{rng: suffixRng, start: skipStart}
 }
 
 // views ------------------------------------------------------------
@@ -796,7 +512,6 @@ func (t *ReadTran) viewsLookup(iIndex int, key string) core.Record {
 	return viewsRow(name, def)
 }
 
-// viewsRow builds a views_ row from a view's name and definition.
 func viewsRow(name, def string) core.Record {
 	var rb core.RecordBuilder
 	rb.Add(core.SuStr(name))
@@ -804,112 +519,29 @@ func viewsRow(name, def string) core.Record {
 	return rb.Build()
 }
 
-// viewsIter is an index.IndexIter over the views_ table.
-// It uses row ordinals instead of storage offsets.
-type viewsIter struct {
-	views []viewEntry
-	lo    int
-	hi    int
-	i     int
-	state iface.State
-}
-
 type viewEntry struct {
 	name string
 	def  string
 }
 
-func newViewsIter(t *ReadTran) *viewsIter {
+func (v viewEntry) keyAt() string   { return core.Pack(core.SuStr(v.name)) }
+func (v viewEntry) boundAt() string { return v.name }
+func (v viewEntry) row() core.Record {
+	return viewsRow(v.name, v.def)
+}
+
+func newViewsIter(t *ReadTran) *schemaIter[viewEntry] {
 	views := make([]viewEntry, 0, 16)
 	for name, def := range t.Views() {
 		views = append(views, viewEntry{name, def})
 	}
 	sort.Slice(views, func(i, j int) bool { return views[i].name < views[j].name })
-	return &viewsIter{
-		views: views,
+	return &schemaIter[viewEntry]{
+		items: views,
+		bound: nameBounds,
+		name:  "viewsIter",
 		hi:    len(views),
-		state: iface.Rewound,
 	}
-}
-
-func (it *viewsIter) Eof() bool    { return it.state.Eof() }
-func (it *viewsIter) HasCur() bool { return it.state.Within() }
-
-func (it *viewsIter) Cur() (string, uint64) {
-	it.checkHasCur()
-	return core.Pack(core.SuStr(it.views[it.i].name)), uint64(it.i) + 1
-}
-
-func (it *viewsIter) CurOff() uint64 {
-	it.checkHasCur()
-	return uint64(it.i) + 1
-}
-
-func (it *viewsIter) GetRecord(index.OiTran) core.Record {
-	it.checkHasCur()
-	return viewsRow(it.views[it.i].name, it.views[it.i].def)
-}
-
-func (it *viewsIter) checkHasCur() {
-	if it.state.Eof() {
-		panic("viewsIter eof")
-	}
-	if it.state.Rewound() {
-		panic("viewsIter rewound")
-	}
-}
-
-func (it *viewsIter) Next(index.OiTran) {
-	switch it.state {
-	case iface.Eof:
-		return // stick at eof
-	case iface.Rewound:
-		it.i = it.lo
-	default:
-		it.i++
-	}
-	if it.i >= it.hi {
-		it.state = iface.Eof
-		return
-	}
-	it.state = iface.Within
-}
-
-func (it *viewsIter) Prev(index.OiTran) {
-	switch it.state {
-	case iface.Eof:
-		return // stick at eof
-	case iface.Rewound:
-		it.i = it.hi - 1
-	default:
-		it.i--
-	}
-	if it.i < it.lo {
-		it.state = iface.Eof
-		return
-	}
-	it.state = iface.Within
-}
-
-func (it *viewsIter) Rewind() {
-	it.state = iface.Rewound
-	it.i = 0
-}
-
-// bounds returns the [lo, hi) positions matching the key range [org, end).
-func (it *viewsIter) bounds(org, end string) (int, int) {
-	return nameBounds(len(it.views),
-		func(i int) string { return it.views[i].name }, org, end)
-}
-
-func (it *viewsIter) Range(rng index.Range) {
-	it.lo, it.hi = it.bounds(rng.Org, rng.End)
-	it.state = iface.Rewound
-	it.i = 0
-}
-
-func (it *viewsIter) SkipScan(prefixRng, _ index.Range, _ int) {
-	assert.ShouldNotReachHere()
 }
 
 // history ----------------------------------------------------------
@@ -1045,6 +677,8 @@ func (it *historyIter) SkipScan(prefixRng, _ index.Range, _ int) {
 	assert.ShouldNotReachHere()
 }
 
+// dbstats ----------------------------------------------------------
+
 func (t *ReadTran) statsLookup(iIndex int, key string) core.Record {
 	assert.That(iIndex == 0)
 	parts := ixkey.Decode(key)
@@ -1100,16 +734,13 @@ type statsEntry struct {
 	cs     stats.ColStats
 }
 
-type statsIter struct {
-	entries []statsEntry
-	skip    schemaSkipScan
-	lo      int
-	hi      int
-	i       int
-	state   iface.State
+func (e statsEntry) keyAt() string   { return e.key }
+func (e statsEntry) boundAt() string { return e.key }
+func (e statsEntry) row() core.Record {
+	return statsRow(e.table, e.column, e.cs)
 }
 
-func newStatsIter(t *ReadTran) *statsIter {
+func newStatsIter(t *ReadTran) *schemaIter[statsEntry] {
 	entries := make([]statsEntry, 0, 32)
 	for table, ts := range t.Stats() {
 		for column, cs := range ts.Columns {
@@ -1121,52 +752,92 @@ func newStatsIter(t *ReadTran) *statsIter {
 		}
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].key < entries[j].key })
-	return &statsIter{
-		entries: entries,
-		hi:      len(entries),
-		state:   iface.Rewound,
+	return &schemaIter[statsEntry]{
+		items:  entries,
+		bound:  keyBounds,
+		name:   "statsIter",
+		skipOK: true,
+		hi:     len(entries),
 	}
 }
 
-func (it *statsIter) Eof() bool    { return it.state.Eof() }
-func (it *statsIter) HasCur() bool { return it.state.Within() }
+//-------------------------------------------------------------------
 
-func (it *statsIter) Cur() (string, uint64) {
-	it.checkHasCur()
-	return it.entries[it.i].key, uint64(it.i) + 1
+// schemaSkipScan filters out keys whose suffix does not match the suffix range.
+type schemaSkipScan struct {
+	rng   index.Range
+	start int
 }
 
-func (it *statsIter) CurOff() uint64 {
+func (ss schemaSkipScan) matches(key string) bool {
+	if ss.start == 0 {
+		return true
+	}
+	_, suffix := ixkey.SplitPrefixSuffix(key, ss.start)
+	return ss.rng.Org <= suffix && suffix < ss.rng.End
+}
+
+// schemaEntry is the interface implemented by schemaIter items.
+type schemaEntry interface {
+	keyAt() string   // encoded key for Cur
+	boundAt() string // value compared against range bounds
+	row() core.Record
+}
+
+// schemaIter is an index.IndexIter over a materialized, sorted slice of
+// schema table rows. It uses row ordinals instead of storage offsets.
+type schemaIter[T schemaEntry] struct {
+	items  []T
+	bound  func(int, func(int) string, string, string) (int, int)
+	name   string
+	skipOK bool
+	skip   schemaSkipScan
+	lo     int
+	hi     int
+	i      int
+	state  iface.State
+}
+
+func (it *schemaIter[T]) Eof() bool    { return it.state.Eof() }
+func (it *schemaIter[T]) HasCur() bool { return it.state.Within() }
+
+func (it *schemaIter[T]) Cur() (string, uint64) {
+	it.checkHasCur()
+	return it.items[it.i].keyAt(), uint64(it.i) + 1
+}
+
+func (it *schemaIter[T]) CurOff() uint64 {
 	it.checkHasCur()
 	return uint64(it.i) + 1
 }
 
-func (it *statsIter) GetRecord(index.OiTran) core.Record {
+func (it *schemaIter[T]) GetRecord(index.OiTran) core.Record {
 	it.checkHasCur()
-	e := it.entries[it.i]
-	return statsRow(e.table, e.column, e.cs)
+	return it.items[it.i].row()
 }
 
-func (it *statsIter) checkHasCur() {
+func (it *schemaIter[T]) checkHasCur() {
 	if it.state.Eof() {
-		panic("statsIter eof")
+		panic(it.name + " eof")
 	}
 	if it.state.Rewound() {
-		panic("statsIter rewound")
+		panic(it.name + " rewound")
 	}
 }
 
-func (it *statsIter) Next(index.OiTran) {
+func (it *schemaIter[T]) Next(index.OiTran) {
 	switch it.state {
 	case iface.Eof:
-		return
+		return // stick at eof
 	case iface.Rewound:
 		it.i = it.lo
 	default:
 		it.i++
 	}
-	for it.i < it.hi && !it.skip.matches(it.entries[it.i].key) {
-		it.i++
+	if it.skip.start != 0 {
+		for it.i < it.hi && !it.skip.matches(it.items[it.i].keyAt()) {
+			it.i++
+		}
 	}
 	if it.i >= it.hi {
 		it.state = iface.Eof
@@ -1175,17 +846,19 @@ func (it *statsIter) Next(index.OiTran) {
 	it.state = iface.Within
 }
 
-func (it *statsIter) Prev(index.OiTran) {
+func (it *schemaIter[T]) Prev(index.OiTran) {
 	switch it.state {
 	case iface.Eof:
-		return
+		return // stick at eof
 	case iface.Rewound:
 		it.i = it.hi - 1
 	default:
 		it.i--
 	}
-	for it.i >= it.lo && !it.skip.matches(it.entries[it.i].key) {
-		it.i--
+	if it.skip.start != 0 {
+		for it.i >= it.lo && !it.skip.matches(it.items[it.i].keyAt()) {
+			it.i--
+		}
 	}
 	if it.i < it.lo {
 		it.state = iface.Eof
@@ -1194,24 +867,28 @@ func (it *statsIter) Prev(index.OiTran) {
 	it.state = iface.Within
 }
 
-func (it *statsIter) Rewind() {
+func (it *schemaIter[T]) Rewind() {
 	it.state = iface.Rewound
 	it.i = 0
 }
 
 // bounds returns the [lo, hi) positions matching the key range [org, end).
-func (it *statsIter) bounds(org, end string) (int, int) {
-	return keyBounds(len(it.entries),
-		func(i int) string { return it.entries[i].key }, org, end)
+func (it *schemaIter[T]) bounds(org, end string) (int, int) {
+	return it.bound(len(it.items),
+		func(i int) string { return it.items[i].boundAt() }, org, end)
 }
 
-func (it *statsIter) Range(rng index.Range) {
+func (it *schemaIter[T]) Range(rng index.Range) {
 	it.lo, it.hi = it.bounds(rng.Org, rng.End)
 	it.skip = schemaSkipScan{}
-	it.Rewind()
+	it.state = iface.Rewound
+	it.i = 0
 }
 
-func (it *statsIter) SkipScan(prefixRng, suffixRng index.Range, skipStart int) {
+func (it *schemaIter[T]) SkipScan(prefixRng, suffixRng index.Range, skipStart int) {
+	if !it.skipOK {
+		assert.ShouldNotReachHere()
+	}
 	assert.That(skipStart > 0)
 	it.Range(prefixRng)
 	it.skip = schemaSkipScan{rng: suffixRng, start: skipStart}
