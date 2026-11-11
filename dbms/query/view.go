@@ -29,7 +29,6 @@ func NewView(name string, src Query) *View {
 	v.setNrows(src.Nrows())
 	v.rowSiz.Set(src.rowSize())
 	v.fast1.Set(src.fastSingle())
-	v.singleTbl.Set(src.SingleTable())
 	return v
 }
 

@@ -30,7 +30,6 @@ func NewRename(src Query, from, to []string) *Rename {
 	r.setNrows(src.Nrows())
 	r.rowSiz.Set(src.rowSize())
 	r.fast1.Set(src.fastSingle())
-	r.singleTbl.Set(src.SingleTable())
 	return r
 }
 

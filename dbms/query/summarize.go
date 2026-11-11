@@ -256,10 +256,6 @@ func (su *Summarize) Updateable() string {
 	return ""
 }
 
-func (su *Summarize) SingleTable() bool {
-	return false
-}
-
 func (*Summarize) Output(*Thread, Record) {
 	panic("can't output to this query")
 }

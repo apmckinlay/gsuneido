@@ -96,14 +96,13 @@ func newMockSource(cols []string, nrows int, kind orderKind, single bool) *mockS
 	}
 	return &mockSource{
 		QueryMock: &QueryMock{
-			ColumnsResult:     cols,
-			HeaderResult:      hdr,
-			KeysResult:        [][]string{{cols[0]}},
-			FixedResult:       Fixed{},
-			NrowsN:            nrows,
-			NrowsP:            nrows,
-			RowSizeResult:     2 * 8,
-			SingleTableResult: single,
+			ColumnsResult: cols,
+			HeaderResult:  hdr,
+			KeysResult:    [][]string{{cols[0]}},
+			FixedResult:   Fixed{},
+			NrowsN:        nrows,
+			NrowsP:        nrows,
+			RowSizeResult: 2 * 8,
 		},
 		nrows:  nrows,
 		kind:   kind,

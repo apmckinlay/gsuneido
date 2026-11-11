@@ -113,10 +113,6 @@ type Query interface {
 	// else ""
 	Updateable() string
 
-	// SingleTable is used by TempIndex.
-	// It is true if the query Get returns a single record stored in the database
-	SingleTable() bool
-
 	// Indexes returns all the indexes.
 	// Unlike Keys, Indexes are physical access paths.
 	Indexes() [][]string
@@ -235,15 +231,14 @@ type queryBase struct {
 	// header must be set by constructors and setApproach.
 	// setApproach is necessary because the sources may get reversed
 	// which affects the order of Fields
-	header    *Header
-	keys      [][]string
-	indexes   [][]string
-	fixed     Fixed
-	nNrows    opt.Int
-	pNrows    opt.Int
-	rowSiz    opt.Int
-	fast1     opt.Bool
-	singleTbl opt.Bool
+	header  *Header
+	keys    [][]string
+	indexes [][]string
+	fixed   Fixed
+	nNrows  opt.Int
+	pNrows  opt.Int
+	rowSiz  opt.Int
+	fast1   opt.Bool
 	cache
 	metrics
 }
@@ -287,10 +282,6 @@ func (q *queryBase) rowSize() int {
 
 func (q *queryBase) fastSingle() bool {
 	return q.fast1.Get()
-}
-
-func (q *queryBase) SingleTable() bool {
-	return q.singleTbl.Get()
 }
 
 // Updateable is overridden by Query1
@@ -531,7 +522,7 @@ func optTempIndexBest(q Query, mode Mode, req Require) best[tiApproach] {
 	// for ReqUnique or ReqGroup with nseeks, add per-lookup cost on temp index
 	if u == ReqUnique || (u == ReqGroup && req.nseeks > 0) {
 		perLookup := tiMultiLookupCost
-		if q.SingleTable() {
+		if len(q.Header().Fields) == 1 {
 			perLookup = tiSingleLookupCost
 		}
 		best.varcost += Cost(req.nseeks) * perLookup
@@ -599,7 +590,7 @@ func ticost(srccost int, q Query, index []string, nrows int, frac float64,
 		fixcost += factor * Cost(fnrows*math.Log(fnrows)) // empirical
 	}
 	readCost := tiMultiReadCost
-	if q.SingleTable() {
+	if len(q.Header().Fields) == 1 {
 		readCost = tiSingleReadCost
 	}
 	varcost := Cost(frac * float64(nrows*readCost))
@@ -777,10 +768,6 @@ type Query2 struct {
 func (q2 *Query2) SetTran(t QueryTran) {
 	q2.source1.SetTran(t)
 	q2.source2.SetTran(t)
-}
-
-func (q2 *Query2) SingleTable() bool {
-	return false // not single
 }
 
 func (*Query2) Output(*Thread, Record) {

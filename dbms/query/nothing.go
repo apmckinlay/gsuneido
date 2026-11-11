@@ -59,10 +59,6 @@ func (no *Nothing) Updateable() string {
 	return no.table
 }
 
-func (*Nothing) SingleTable() bool {
-	return true
-}
-
 func (no *Nothing) SetTran(tran QueryTran) {
 	no.tran = tran
 }

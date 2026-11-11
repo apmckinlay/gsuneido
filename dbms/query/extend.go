@@ -57,7 +57,6 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 	e.setNrows(src.Nrows())
 	e.rowSiz.Set(e.getRowSize())
 	e.fast1.Set(src.fastSingle())
-	e.singleTbl.Set(!e.hasExprs && src.SingleTable())
 
 	for i, expr := range e.exprs {
 		if c, ok := expr.(*ast.Constant); ok {

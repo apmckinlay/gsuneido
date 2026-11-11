@@ -172,14 +172,6 @@ func (tbl *Table) Updateable() string {
 	return tbl.name
 }
 
-func (tbl *Table) SingleTable() bool {
-	switch tbl.name {
-	case "tables", "columns", "indexes":
-		return false
-	}
-	return true
-}
-
 func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if tbl.singleton || req.use == ReqNone {
 		index := tbl.indexes[0]

@@ -74,10 +74,6 @@ func (*ProjectNone) Updateable() string {
 	return "nothing"
 }
 
-func (*ProjectNone) SingleTable() bool {
-	return true
-}
-
 func (pn *ProjectNone) SetTran(t QueryTran) {
 	pn.source.SetTran(t)
 	pn.hasrow.UnSet()

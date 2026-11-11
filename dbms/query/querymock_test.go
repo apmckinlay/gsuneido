@@ -9,21 +9,20 @@ import . "github.com/apmckinlay/gsuneido/core"
 // By default all methods panic. Set fields to override return values.
 type QueryMock struct {
 	cache
-	ColumnsResult     []string
-	TransformResult   Query
-	OrderResult       []string
-	FixedResult       Fixed
-	UpdateableResult  string
-	SingleTableResult bool
-	IndexesResult     [][]string
-	KeysResult        [][]string
-	NrowsN, NrowsP    int
-	RowSizeResult     int
-	GetResult         Row
-	LookupResult      Row
-	HeaderResult      *Header
-	StringResult      string
-	OptimizeResult    struct {
+	ColumnsResult    []string
+	TransformResult  Query
+	OrderResult      []string
+	FixedResult      Fixed
+	UpdateableResult string
+	IndexesResult    [][]string
+	KeysResult       [][]string
+	NrowsN, NrowsP   int
+	RowSizeResult    int
+	GetResult        Row
+	LookupResult     Row
+	HeaderResult     *Header
+	StringResult     string
+	OptimizeResult   struct {
 		Fixcost, Varcost Cost
 		Approach         any
 	}
@@ -69,10 +68,6 @@ func (m *QueryMock) Fixed() Fixed {
 
 func (m *QueryMock) Updateable() string {
 	return m.UpdateableResult
-}
-
-func (m *QueryMock) SingleTable() bool {
-	return m.SingleTableResult
 }
 
 func (m *QueryMock) Indexes() [][]string {

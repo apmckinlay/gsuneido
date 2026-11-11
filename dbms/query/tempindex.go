@@ -47,7 +47,6 @@ func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 		fixed:  src.Fixed()}
 	ti.setNrows(src.Nrows())
 	ti.rowSiz.Set(src.rowSize())
-	ti.singleTbl.Set(src.SingleTable())
 	ti.fast1.Set(src.fastSingle())
 	ti.indexes = [][]string{order}
 	return &ti
@@ -194,7 +193,7 @@ func (ti *TempIndex) makeIndex() rowIter {
 	ti.st = MakeSuTran(ti.tran)
 	// need to copy header to avoid data race from concurrent sortlist
 	ti.header = ti.source.Header().Dup()
-	if ti.source.SingleTable() {
+	if len(ti.source.Header().Fields) == 1 {
 		return ti.single()
 	}
 	return ti.multi()
@@ -226,7 +225,7 @@ func (ti *TempIndex) conflict() bool {
 }
 
 //-------------------------------------------------------------------
-// single is for ti.source.SingleTable.
+// single is for ti.source.Header().Fields len == 1.
 // Since there is only one table,
 // we can store the single record directly in the sortlist.
 
@@ -325,7 +324,7 @@ func (it singleIter) get() Row {
 }
 
 //-------------------------------------------------------------------
-// multi is when we have multiple records (not ti.source.SingleTable).
+// multi is when we have multiple records (ti.source.Header().Fields len > 1).
 // So we store the Row's in the sortlist.
 
 type multiIter struct {

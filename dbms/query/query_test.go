@@ -219,11 +219,9 @@ func TestExtendAllRules(*testing.T) {
 	tran := db.NewReadTran(AllPerms)
 	q := ParseQuery("cus extend Foo, n=1, Bar", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
-	assert.That(!q.SingleTable())
 	assert.This(len(q.Header().Fields)).Is(2)
 	q = ParseQuery("cus extend Foo, Bar", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
-	assert.That(q.SingleTable())
 	assert.This(len(q.Header().Fields)).Is(1)
 }
 

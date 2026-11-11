@@ -49,10 +49,6 @@ func (*schemaTable) Updateable() string {
 	return ""
 }
 
-func (*schemaTable) SingleTable() bool {
-	return false // not a physical table
-}
-
 func (*schemaTable) rowSize() int {
 	return 32 // ???
 }

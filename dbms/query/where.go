@@ -125,7 +125,6 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	w.dataFilter = expr.(*ast.Nary)
 	w.header = src.Header()
 	w.rowSiz.Set(src.rowSize())
-	w.singleTbl.Set(src.SingleTable())
 	w.calcFixed()
 	if !w.conflict {
 		w.conflict = w.exprFalse()
