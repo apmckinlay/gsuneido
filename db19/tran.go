@@ -51,15 +51,16 @@ func (t *tran) SetPerms(perms *core.Perms) *core.Perms {
 
 // GetInfo returns read-only Info for the table or nil if not found
 func (t *tran) GetInfo(table string) *meta.Info {
-	if info := t.schemaTableInfo(table); info != nil {
-		return info
+	if st := getSchemaTable(table); st != nil {
+		nrows := st.nrows(t)
+		return &meta.Info{Table: table, Nrows: nrows, Size: nrows * 32}
 	}
 	return t.meta.GetRoInfo(table)
 }
 
 func (t *tran) GetSchema(table string) *schema.Schema {
-	if sc := schemaTableSchema(table); sc != nil {
-		return sc
+	if st := getSchemaTable(table); st != nil {
+		return st.schema()
 	}
 	return &t.getSchema(table).Schema
 }
@@ -173,8 +174,8 @@ func (t *ReadTran) ColToFld(table, col string) int {
 }
 
 func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 {
-	if frac, ok := t.schemaTableRangeFrac(table, iIndex, org, end); ok {
-		return frac
+	if st := getSchemaTable(table); st != nil {
+		return st.rangeFrac(t, iIndex, org, end)
 	}
 	info := t.meta.GetRoInfo(table)
 	idx := info.Indexes[iIndex]
@@ -183,8 +184,8 @@ func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 
 
 // Lookup returns the Record for a key, or "" if not found
 func (t *ReadTran) Lookup(table string, iIndex int, key string) core.Record {
-	if rec, ok := t.schemaTableLookup(table, iIndex, key); ok {
-		return rec
+	if st := getSchemaTable(table); st != nil {
+		return st.lookup(t, iIndex, key)
 	}
 	idx := t.meta.GetRoInfo(table).Indexes[iIndex]
 	off := idx.Lookup(key)
@@ -199,8 +200,8 @@ func (t *ReadTran) Lookup(table string, iIndex int, key string) core.Record {
 // OverIter for update transactions of multiple layers.
 func (t *ReadTran) IndexIter(table string, iIndex int) index.IndexIter {
 	t.CheckPerm(table, core.PermRead)
-	if ii := t.schemaTableIndexIter(table, iIndex); ii != nil {
-		return ii
+	if st := getSchemaTable(table); st != nil {
+		return st.indexIter(t, iIndex)
 	}
 	ti := t.meta.GetRoInfo(table)
 	if ti == nil {
@@ -351,8 +352,8 @@ func (t *UpdateTran) num() int {
 
 // Lookup returns the Record for a key, or "" if not found
 func (t *UpdateTran) Lookup(table string, iIndex int, key string) core.Record {
-	if rec, ok := t.schemaTableLookup(table, iIndex, key); ok {
-		return rec
+	if st := getSchemaTable(table); st != nil {
+		return st.lookup(&t.ReadTran, iIndex, key)
 	}
 	t.Read(table, iIndex, key, key)
 	return t.ReadTran.Lookup(table, iIndex, key)
@@ -362,8 +363,8 @@ func (t *UpdateTran) Lookup(table string, iIndex int, key string) core.Record {
 // except for schema tables which have no overlays to track.
 func (t *UpdateTran) IndexIter(table string, iIndex int) index.IndexIter {
 	t.CheckPerm(table, core.PermRead)
-	if ii := t.schemaTableIndexIter(table, iIndex); ii != nil {
-		return ii
+	if st := getSchemaTable(table); st != nil {
+		return st.indexIter(&t.ReadTran, iIndex)
 	}
 	return index.NewOverIter(table, iIndex)
 }

@@ -28,7 +28,33 @@ import (
 // The "_" suffix names are temporary during development and testing.
 
 func IsSchemaTable(table string) bool {
-	return schemaTableSchema(table) != nil
+	return getSchemaTable(table) != nil
+}
+
+type schemaTable interface {
+	schema() *schema.Schema
+	nrows(*tran) int
+	lookup(*ReadTran, int, string) core.Record
+	indexIter(*ReadTran, int) index.IndexIter
+	rangeFrac(*ReadTran, int, string, string) float64
+}
+
+func getSchemaTable(table string) schemaTable {
+	switch table {
+	case "tables_":
+		return tablesTable{}
+	case "columns_":
+		return columnsTable{}
+	case "indexes_":
+		return indexesTable{}
+	case "views_":
+		return viewsTable{}
+	case "history_":
+		return historyTable{}
+	case "dbstats_":
+		return statsTable{}
+	}
+	return nil
 }
 
 var tablesSchema = &schema.Schema{
@@ -73,100 +99,12 @@ var statsSchema = &schema.Schema{
 // historyNrows is a constant estimate; counting database states would be too slow.
 const historyNrows = 1000
 
-// schemaTableInfo returns the Info for a "_" schema table, or nil if not one.
-func (t *tran) schemaTableInfo(table string) *meta.Info {
-	nrows := 0
-	switch table {
-	case "tables_":
-		for range t.meta.Infos() {
-			nrows++
-		}
-	case "columns_":
-		for sc := range t.meta.Tables() {
-			for _, col := range sc.Columns {
-				if col != "-" {
-					nrows++
-				}
-			}
-			nrows += len(sc.Derived)
-		}
-	case "indexes_":
-		for sc := range t.meta.Tables() {
-			nrows += len(sc.Indexes)
-		}
-	case "views_":
-		for range t.meta.Views() {
-			nrows++
-		}
-	case "history_":
-		nrows = historyNrows
-	case "dbstats_":
-		for _, ts := range t.Stats() {
-			nrows += len(ts.Columns)
-		}
-	default:
-		return nil
-	}
-	return &meta.Info{Table: table, Nrows: nrows, Size: nrows * 32}
-}
-
-// schemaTableSchema returns the Schema for a "_" schema table, or nil if not one.
-func schemaTableSchema(table string) *schema.Schema {
-	switch table {
-	case "tables_":
-		return tablesSchema
-	case "columns_":
-		return columnsSchema
-	case "indexes_":
-		return indexesSchema
-	case "views_":
-		return viewsSchema
-	case "history_":
-		return historySchema
-	case "dbstats_":
-		return statsSchema
-	}
-	return nil
-}
-
-// schemaTableLookup performs a key lookup on a "_" schema table.
-// It returns the Record and true if table is such a table,
-// or "" and false otherwise.
-func (t *ReadTran) schemaTableLookup(table string, iIndex int, key string) (core.Record, bool) {
-	switch table {
-	case "tables_":
-		return t.tablesLookup(iIndex, key), true
-	case "columns_":
-		return t.columnsLookup(iIndex, key), true
-	case "indexes_":
-		return t.indexesLookup(iIndex, key), true
-	case "views_":
-		return t.viewsLookup(iIndex, key), true
-	case "history_":
-		panic("history_ lookup not implemented")
-	case "dbstats_":
-		return t.statsLookup(iIndex, key), true
-	}
-	return "", false
-}
-
 // SchemaTableAlias maps a "_" schema table name to the name of the schema
 // table it represents, so it reuses that table's permissions.
 // TEMPORARY to keep new "_" tables separate.
 func SchemaTableAlias(table string) string {
-	switch table {
-	case "tables_":
-		return "tables"
-	case "columns_":
-		return "columns"
-	case "indexes_":
-		return "indexes"
-	case "views_":
-		return "views"
-	case "history_":
-		return "history"
-	case "dbstats_":
-		return "dbstats"
+	if IsSchemaTable(table) {
+		return table[:len(table)-1]
 	}
 	return table
 }
@@ -178,86 +116,6 @@ func unpackStr(p string) string {
 		return ""
 	}
 	return p[1:]
-}
-
-// infoEntry adapts *meta.Info to the schemaEntry interface.
-type infoEntry struct{ *meta.Info }
-
-func (e infoEntry) keyAt() string   { return core.Pack(core.SuStr(e.Table)) }
-func (e infoEntry) boundAt() string { return e.Table }
-func (e infoEntry) row() core.Record {
-	return tablesRow(e.Info)
-}
-
-// schemaTableIndexIter returns an IndexIter for a "_" schema table.
-func (t *ReadTran) schemaTableIndexIter(table string, iIndex int) index.IndexIter {
-	switch table {
-	case "tables_":
-		assert.That(iIndex == 0)
-		return newTablesIter(t)
-	case "views_":
-		assert.That(iIndex == 0)
-		return newViewsIter(t)
-	case "columns_":
-		assert.That(iIndex == 0)
-		return newColumnsIter(t)
-	case "indexes_":
-		assert.That(iIndex == 0)
-		return newIndexesIter(t)
-	case "history_":
-		assert.That(iIndex == 0)
-		return newHistoryIter(t)
-	case "dbstats_":
-		assert.That(iIndex == 0)
-		return newStatsIter(t)
-	}
-	return nil
-}
-
-// schemaTableRangeFrac returns the estimated fraction of rows in the range
-// for a "_" schema table, or false if table is not one.
-// The schema tables have no btrees, so the fraction is computed from the
-// rows themselves. history_ is an exception: enumerating database states
-// would be too slow, so it returns a rough estimate.
-func (t *ReadTran) schemaTableRangeFrac(table string, iIndex int, org, end string) (float64, bool) {
-	switch table {
-	case "tables_":
-		assert.That(iIndex == 0)
-		it := newTablesIter(t)
-		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.items)), true
-	case "columns_":
-		assert.That(iIndex == 0)
-		it := newColumnsIter(t)
-		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.items)), true
-	case "indexes_":
-		assert.That(iIndex == 0)
-		it := newIndexesIter(t)
-		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.items)), true
-	case "views_":
-		assert.That(iIndex == 0)
-		it := newViewsIter(t)
-		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.items)), true
-	case "history_":
-		return .5, true
-	case "dbstats_":
-		assert.That(iIndex == 0)
-		it := newStatsIter(t)
-		lo, hi := it.bounds(org, end)
-		return rangeFrac(lo, hi, len(it.items)), true
-	}
-	return 0, false
-}
-
-// rangeFrac returns the fraction of n rows in the [lo, hi) range.
-func rangeFrac(lo, hi, n int) float64 {
-	if n == 0 || hi <= lo {
-		return 0
-	}
-	return float64(hi-lo) / float64(n)
 }
 
 // nameBounds returns the [lo, hi) positions of the names matching the
@@ -289,7 +147,28 @@ func keyBounds(n int, keyAt func(int) string, org, end string) (int, int) {
 
 // tables -----------------------------------------------------------
 
-func (t *ReadTran) tablesLookup(iIndex int, key string) core.Record {
+type tablesTable struct{}
+
+func (tablesTable) schema() *schema.Schema { return tablesSchema }
+
+func (tablesTable) nrows(t *tran) (n int) {
+	for range t.meta.Infos() {
+		n++
+	}
+	return n
+}
+
+func (tablesTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
+	assert.That(iIndex == 0)
+	return newTablesIter(t)
+}
+
+func (tablesTable) rangeFrac(t *ReadTran, iIndex int, org, end string) float64 {
+	assert.That(iIndex == 0)
+	return newTablesIter(t).rangeFrac(org, end)
+}
+
+func (tablesTable) lookup(t *ReadTran, iIndex int, key string) core.Record {
 	assert.That(iIndex == 0)
 	name := unpackStr(key)
 	if name == "" {
@@ -325,9 +204,44 @@ func newTablesIter(t *ReadTran) *schemaIter[infoEntry] {
 	}
 }
 
+// infoEntry adapts *meta.Info to the schemaEntry interface.
+type infoEntry struct{ *meta.Info }
+
+func (e infoEntry) keyAt() string   { return core.Pack(core.SuStr(e.Table)) }
+func (e infoEntry) boundAt() string { return e.Table }
+func (e infoEntry) row() core.Record {
+	return tablesRow(e.Info)
+}
+
 // columns ----------------------------------------------------------
 
-func (t *ReadTran) columnsLookup(iIndex int, key string) core.Record {
+type columnsTable struct{}
+
+func (columnsTable) schema() *schema.Schema { return columnsSchema }
+
+func (columnsTable) nrows(t *tran) (n int) {
+	for sc := range t.meta.Tables() {
+		for _, col := range sc.Columns {
+			if col != "-" {
+				n++
+			}
+		}
+		n += len(sc.Derived)
+	}
+	return n
+}
+
+func (columnsTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
+	assert.That(iIndex == 0)
+	return newColumnsIter(t)
+}
+
+func (columnsTable) rangeFrac(t *ReadTran, iIndex int, org, end string) float64 {
+	assert.That(iIndex == 0)
+	return newColumnsIter(t).rangeFrac(org, end)
+}
+
+func (columnsTable) lookup(t *ReadTran, iIndex int, key string) core.Record {
 	assert.That(iIndex == 0)
 	// the {table, column} key is encoded (see ixkey)
 	parts := ixkey.Decode(key)
@@ -411,7 +325,28 @@ func newColumnsIter(t *ReadTran) *schemaIter[columnEntry] {
 
 // indexes ----------------------------------------------------------
 
-func (t *ReadTran) indexesLookup(iIndex int, key string) core.Record {
+type indexesTable struct{}
+
+func (indexesTable) schema() *schema.Schema { return indexesSchema }
+
+func (indexesTable) nrows(t *tran) (n int) {
+	for sc := range t.meta.Tables() {
+		n += len(sc.Indexes)
+	}
+	return n
+}
+
+func (indexesTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
+	assert.That(iIndex == 0)
+	return newIndexesIter(t)
+}
+
+func (indexesTable) rangeFrac(t *ReadTran, iIndex int, org, end string) float64 {
+	assert.That(iIndex == 0)
+	return newIndexesIter(t).rangeFrac(org, end)
+}
+
+func (indexesTable) lookup(t *ReadTran, iIndex int, key string) core.Record {
 	assert.That(iIndex == 0)
 	// the {table, columns} key is encoded (see ixkey)
 	parts := ixkey.Decode(key)
@@ -499,7 +434,28 @@ func newIndexesIter(t *ReadTran) *schemaIter[indexEntry] {
 
 // views ------------------------------------------------------------
 
-func (t *ReadTran) viewsLookup(iIndex int, key string) core.Record {
+type viewsTable struct{}
+
+func (viewsTable) schema() *schema.Schema { return viewsSchema }
+
+func (viewsTable) nrows(t *tran) (n int) {
+	for range t.meta.Views() {
+		n++
+	}
+	return n
+}
+
+func (viewsTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
+	assert.That(iIndex == 0)
+	return newViewsIter(t)
+}
+
+func (viewsTable) rangeFrac(t *ReadTran, iIndex int, org, end string) float64 {
+	assert.That(iIndex == 0)
+	return newViewsIter(t).rangeFrac(org, end)
+}
+
+func (viewsTable) lookup(t *ReadTran, iIndex int, key string) core.Record {
 	assert.That(iIndex == 0)
 	name := unpackStr(key)
 	if name == "" {
@@ -545,6 +501,25 @@ func newViewsIter(t *ReadTran) *schemaIter[viewEntry] {
 }
 
 // history ----------------------------------------------------------
+
+type historyTable struct{}
+
+func (historyTable) schema() *schema.Schema { return historySchema }
+func (historyTable) nrows(*tran) int        { return historyNrows }
+
+func (historyTable) lookup(*ReadTran, int, string) core.Record {
+	panic("history_ lookup not implemented")
+}
+
+func (historyTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
+	assert.That(iIndex == 0)
+	return newHistoryIter(t)
+}
+
+// Enumerating database states would be too slow, so use a rough estimate.
+func (historyTable) rangeFrac(*ReadTran, int, string, string) float64 {
+	return .5
+}
 
 // historyIter is an index.IndexIter over the history_ table.
 // It scans database states directly instead of materializing a list,
@@ -679,7 +654,28 @@ func (it *historyIter) SkipScan(prefixRng, _ index.Range, _ int) {
 
 // dbstats ----------------------------------------------------------
 
-func (t *ReadTran) statsLookup(iIndex int, key string) core.Record {
+type statsTable struct{}
+
+func (statsTable) schema() *schema.Schema { return statsSchema }
+
+func (statsTable) nrows(t *tran) (n int) {
+	for _, ts := range t.Stats() {
+		n += len(ts.Columns)
+	}
+	return n
+}
+
+func (statsTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
+	assert.That(iIndex == 0)
+	return newStatsIter(t)
+}
+
+func (statsTable) rangeFrac(t *ReadTran, iIndex int, org, end string) float64 {
+	assert.That(iIndex == 0)
+	return newStatsIter(t).rangeFrac(org, end)
+}
+
+func (statsTable) lookup(t *ReadTran, iIndex int, key string) core.Record {
 	assert.That(iIndex == 0)
 	parts := ixkey.Decode(key)
 	if len(parts) != 2 {
@@ -876,6 +872,15 @@ func (it *schemaIter[T]) Rewind() {
 func (it *schemaIter[T]) bounds(org, end string) (int, int) {
 	return it.bound(len(it.items),
 		func(i int) string { return it.items[i].boundAt() }, org, end)
+}
+
+// rangeFrac computes the fraction from the rows, since schema tables have no btrees.
+func (it *schemaIter[T]) rangeFrac(org, end string) float64 {
+	lo, hi := it.bounds(org, end)
+	if len(it.items) == 0 || hi <= lo {
+		return 0
+	}
+	return float64(hi-lo) / float64(len(it.items))
 }
 
 func (it *schemaIter[T]) Range(rng index.Range) {
