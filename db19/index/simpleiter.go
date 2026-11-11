@@ -4,11 +4,13 @@
 package index
 
 import (
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 )
 
 type OiTran interface {
 	GetIndexI(table string, iIndex int) *Overlay
+	GetRecord(off uint64) core.Record
 	Read(table string, iIndex int, from, to string)
 	Num() int
 }
@@ -20,6 +22,7 @@ type IndexIter interface {
 	Prev(t OiTran)
 	Cur() (string, uint64)
 	CurOff() uint64
+	GetRecord(t OiTran) core.Record
 	Eof() bool
 	HasCur() bool
 	Rewind()
@@ -70,6 +73,10 @@ func (si *SimpleIter) Cur() (string, uint64) {
 func (si *SimpleIter) CurOff() uint64 {
 	si.checkHasCur()
 	return si.it.Offset()
+}
+
+func (si *SimpleIter) GetRecord(t OiTran) core.Record {
+	return t.GetRecord(si.CurOff())
 }
 
 func (si *SimpleIter) checkHasCur() {

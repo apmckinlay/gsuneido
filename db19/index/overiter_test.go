@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/itertest"
@@ -40,6 +41,10 @@ func (t *testTran) Num() int {
 	return 0
 }
 
+func (t *testTran) GetRecord(off uint64) core.Record {
+	return core.Record(strconv.FormatUint(off, 10))
+}
+
 func TestOverIter(t *testing.T) {
 	from := func(args ...int) *ixbuf.T {
 		ib := &ixbuf.T{}
@@ -64,6 +69,7 @@ func TestOverIter(t *testing.T) {
 			key, off := it.Cur()
 			assert.This(key).Is(strconv.Itoa(expected))
 			assert.This(off).Is(uint64(expected))
+			assert.This(it.GetRecord(&testTran{})).Is(core.Record(strconv.Itoa(expected)))
 		}
 	}
 	newTran := func() *testTran {

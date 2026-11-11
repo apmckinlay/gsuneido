@@ -36,7 +36,7 @@ type tran struct {
 // CheckPerm panics if the transaction's permissions do not allow action on table.
 // Nil permissions deny all access; use core.AllPerms for unrestricted access.
 func (t *tran) CheckPerm(table string, action core.TablePerm) {
-	if !t.perms.TableActAllowed(table, action) {
+	if !t.perms.TableActAllowed(SchemaTableAlias(table), action) {
 		panic("not authorized: " + table)
 	}
 }
@@ -51,10 +51,16 @@ func (t *tran) SetPerms(perms *core.Perms) *core.Perms {
 
 // GetInfo returns read-only Info for the table or nil if not found
 func (t *tran) GetInfo(table string) *meta.Info {
+	if info := t.schemaTableInfo(table); info != nil {
+		return info
+	}
 	return t.meta.GetRoInfo(table)
 }
 
 func (t *tran) GetSchema(table string) *schema.Schema {
+	if sc := schemaTableSchema(table); sc != nil {
+		return sc
+	}
 	return &t.getSchema(table).Schema
 }
 
@@ -79,6 +85,10 @@ func (t *UpdateTran) getRwInfo(table string) *meta.Info {
 
 func (t *tran) GetAllInfo() []*meta.Info {
 	return slices.AppendSeq(make([]*meta.Info, 0, 32), t.meta.Infos())
+}
+
+func (t *tran) Infos() iter.Seq[*meta.Info] {
+	return t.meta.Infos()
 }
 
 func (t *tran) Schemas() iter.Seq[*meta.Schema] {
@@ -163,6 +173,9 @@ func (t *ReadTran) ColToFld(table, col string) int {
 }
 
 func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 {
+	if frac, ok := t.schemaTableRangeFrac(table, iIndex, org, end); ok {
+		return frac
+	}
 	info := t.meta.GetRoInfo(table)
 	idx := info.Indexes[iIndex]
 	return idx.RangeFrac(org, end, info.Nrows, info.BtreeNrows)
@@ -170,6 +183,9 @@ func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 
 
 // Lookup returns the Record for a key, or "" if not found
 func (t *ReadTran) Lookup(table string, iIndex int, key string) core.Record {
+	if rec, ok := t.schemaTableLookup(table, iIndex, key); ok {
+		return rec
+	}
 	idx := t.meta.GetRoInfo(table).Indexes[iIndex]
 	off := idx.Lookup(key)
 	if off == 0 {
@@ -178,11 +194,14 @@ func (t *ReadTran) Lookup(table string, iIndex int, key string) core.Record {
 	return t.GetRecord(off)
 }
 
-// IndexIter returns a SimpleIter
-// for read-only transactions with a single btree (no layers).
-// Otherwise, it returns OverIter.
+// IndexIter returns an IndexIter:
+// SimpleIter for read-only transactions with a single btree (no layers),
+// OverIter for update transactions of multiple layers.
 func (t *ReadTran) IndexIter(table string, iIndex int) index.IndexIter {
 	t.CheckPerm(table, core.PermRead)
+	if ii := t.schemaTableIndexIter(table, iIndex); ii != nil {
+		return ii
+	}
 	ti := t.meta.GetRoInfo(table)
 	if ti == nil {
 		panic("nonexistent table: " + table)
@@ -332,13 +351,20 @@ func (t *UpdateTran) num() int {
 
 // Lookup returns the Record for a key, or "" if not found
 func (t *UpdateTran) Lookup(table string, iIndex int, key string) core.Record {
+	if rec, ok := t.schemaTableLookup(table, iIndex, key); ok {
+		return rec
+	}
 	t.Read(table, iIndex, key, key)
 	return t.ReadTran.Lookup(table, iIndex, key)
 }
 
-// IndexIter on UpdateTran always returns an OverIter
+// IndexIter on UpdateTran returns an OverIter
+// except for schema tables which have no overlays to track.
 func (t *UpdateTran) IndexIter(table string, iIndex int) index.IndexIter {
 	t.CheckPerm(table, core.PermRead)
+	if ii := t.schemaTableIndexIter(table, iIndex); ii != nil {
+		return ii
+	}
 	return index.NewOverIter(table, iIndex)
 }
 
@@ -357,6 +383,9 @@ func (t *UpdateTran) write() {
 }
 
 func (t *UpdateTran) Output(th *core.Thread, table string, rec core.Record) {
+	if IsSchemaTable(table) {
+		panic("can't output to schema table")
+	}
 	t.CheckPerm(table, core.PermWrite)
 	if t.db.corrupted.Load() {
 		return // prevent appending to database

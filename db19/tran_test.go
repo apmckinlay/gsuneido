@@ -14,8 +14,10 @@ import (
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
+	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
+	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -583,4 +585,139 @@ func TestCombineBug(t *testing.T) {
 	ut.Commit()
 
 	db.MustCheck()
+}
+
+func TestSchemaSkipScanIter(t *testing.T) {
+	db := CreateDb(stor.HeapStor(8192))
+	db.CheckerSync()
+	defer db.Close()
+	db.stats = make(stats.Stats)
+	for _, table := range []string{"aa", "ab", "ba", "ca"} {
+		db.Create(&schema.Schema{
+			Table:   table,
+			Columns: []string{"a", "b", "c"},
+			Indexes: []schema.Index{
+				{Mode: 'k', Columns: []string{"a"}},
+				{Mode: 'i', Columns: []string{"b"}},
+				{Mode: 'i', Columns: []string{"c"}},
+			},
+		})
+		db.stats[table] = stats.TableStats{Columns: map[string]stats.ColStats{
+			"a": {Cardinality: 1},
+			"b": {Cardinality: 42, Quantiles: []string{core.Pack(core.SuStr("median"))},
+				Tops: []stats.Top{{Value: core.Pack(core.SuStr("top")), Frac: .5}}},
+			"c": {Cardinality: 3},
+		}}
+	}
+	db.Create(&schema.Schema{
+		Table:   "zz",
+		Columns: []string{"a"},
+		Indexes: []schema.Index{{Mode: 'k', Columns: []string{}}},
+	})
+	rt := db.NewReadTran(core.AllPerms)
+	ut := db.NewUpdateTran(core.AllPerms)
+	defer ut.Abort()
+	for _, table := range []string{"columns_", "indexes_", "dbstats_"} {
+		t.Run(table, func(t *testing.T) {
+			testSchemaSkipScanIter(t, rt, table)
+			testSchemaSkipScanIter(t, ut, table)
+		})
+	}
+	it := rt.IndexIter("indexes_", 0)
+	it.SkipScan(iface.All, index.Range{Org: "", End: "\x00"}, 1)
+	it.Next(rt)
+	assert.T(t).False(it.Eof())
+	assert.T(t).This(it.GetRecord(rt).GetStr(0)).Is("zz")
+	assert.T(t).This(it.GetRecord(rt).GetStr(1)).Is("")
+	it.Next(rt)
+	assert.T(t).True(it.Eof())
+}
+
+func testSchemaSkipScanIter(t *testing.T, rt interface {
+	index.OiTran
+	IndexIter(string, int) index.IndexIter
+}, table string) {
+	t.Helper()
+	a := assert.T(t)
+	it := rt.IndexIter(table, 0)
+	pack := func(s string) string { return core.Pack(core.SuStr(s)) }
+	check := func(name, col string) {
+		t.Helper()
+		a.True(it.HasCur())
+		key, off := it.Cur()
+		a.This(key).Is(ixkey.CompKey(pack(name), pack(col)))
+		a.That(off > 0)
+		a.This(it.CurOff()).Is(off)
+		rec := it.GetRecord(rt)
+		a.This(rec.GetStr(0)).Is(name)
+		a.This(rec.GetStr(1)).Is(col)
+		if table == "dbstats_" && col == "b" {
+			a.This(core.ToInt(rec.GetVal(2))).Is(42)
+			a.This(rec.GetVal(3).(*core.SuObject).ListGet(0)).Is(core.SuStr("median"))
+			top := rec.GetVal(4).(*core.SuObject).ListGet(0).(*core.SuObject)
+			a.This(top.ListGet(0).String()).Is(".5")
+			a.This(top.ListGet(1)).Is(core.SuStr("top"))
+		}
+	}
+	it.SkipScan(iface.All, index.Range{Org: pack("b"), End: pack("d")}, 1)
+	for _, name := range []string{"aa", "ab", "ba", "ca"} {
+		for _, col := range []string{"b", "c"} {
+			it.Next(rt)
+			check(name, col)
+		}
+	}
+	it.Next(rt)
+	a.True(it.Eof())
+	it.Prev(rt)
+	a.True(it.Eof())
+	it.Rewind()
+	for _, name := range []string{"ca", "ba", "ab", "aa"} {
+		for _, col := range []string{"c", "b"} {
+			it.Prev(rt)
+			check(name, col)
+		}
+	}
+	it.Prev(rt)
+	a.True(it.Eof())
+
+	it.SkipScan(index.Range{Org: pack("ab"), End: pack("ca")},
+		index.Range{Org: pack("b"), End: pack("d")}, 1)
+	it.Next(rt)
+	check("ab", "b")
+	it.Next(rt)
+	check("ab", "c")
+	it.Prev(rt)
+	check("ab", "b")
+	it.Next(rt)
+	check("ab", "c")
+	it.Next(rt)
+	check("ba", "b")
+	it.Next(rt)
+	check("ba", "c")
+	it.Next(rt)
+	a.True(it.Eof())
+
+	it.SkipScan(index.Range{Org: pack("ca"), End: pack("ab")},
+		index.Range{Org: pack("b"), End: pack("d")}, 1)
+	it.Next(rt)
+	a.True(it.Eof())
+	it.Rewind()
+	it.Prev(rt)
+	a.True(it.Eof())
+
+	it.SkipScan(iface.All, index.Range{Org: pack("z"), End: ixkey.Max}, 1)
+	it.Next(rt)
+	a.True(it.Eof())
+	it.Rewind()
+	it.Prev(rt)
+	a.True(it.Eof())
+
+	it.SkipScan(iface.All, index.Range{Org: pack("b"), End: pack("c")}, 1)
+	it.Range(index.Range{Org: pack("aa"), End: pack("ab")})
+	for _, col := range []string{"a", "b", "c"} {
+		it.Next(rt)
+		check("aa", col)
+	}
+	it.Next(rt)
+	a.True(it.Eof())
 }

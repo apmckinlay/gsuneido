@@ -551,6 +551,10 @@ func (w *Where) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if trace.WhereOpt.On() {
 		trace.WhereOpt.Println(mode, req, String(w))
 	}
+	if w.tbl != nil && w.tbl.modeNotSupported(mode) {
+		trace.WhereOpt.Println("    schema table not supported by cursor")
+		return impossible, impossible, nil
+	}
 	if w.conflict {
 		trace.WhereOpt.Println("    conflict, cost", 0)
 		return 0, 0, nil

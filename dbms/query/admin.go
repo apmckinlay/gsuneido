@@ -36,8 +36,8 @@ func checkForSystemTable(table string) {
 }
 
 func isSystemTable(table string) bool {
-	switch table {
-	case "tables", "columns", "indexes", "views":
+	switch db19.SchemaTableAlias(table) {
+	case "tables", "columns", "indexes", "views", "history", "dbstats":
 		return true
 	}
 	return false

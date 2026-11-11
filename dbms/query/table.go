@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	. "github.com/apmckinlay/gsuneido/core"
+	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -169,10 +170,22 @@ func (tbl *Table) Fixed() Fixed {
 }
 
 func (tbl *Table) Updateable() string {
+	if db19.IsSchemaTable(tbl.name) {
+		return "" // schema tables are virtual, so they can't be updated
+	}
 	return tbl.name
 }
 
+// modeNotSupported reports whether the table is a virtual schema table.
+// These are materialized per transaction, so a cursor cannot use them.
+func (tbl *Table) modeNotSupported(mode Mode) bool {
+	return mode == CursorMode && db19.IsSchemaTable(tbl.name)
+}
+
 func (tbl *Table) optimize(mode Mode, req Require) (Cost, Cost, any) {
+	if tbl.modeNotSupported(mode) {
+		return impossible, impossible, nil
+	}
 	if tbl.singleton || req.use == ReqNone {
 		index := tbl.indexes[0]
 		return 0, tbl.costFor(index, req),
@@ -382,7 +395,7 @@ func (tbl *Table) GetFilter(dir Dir, offFilter func(uint64) bool,
 				continue
 			}
 		}
-		rec := tbl.tran.GetRecord(off)
+		rec := tbl.iter.GetRecord(tbl.tran)
 		row := NewRow(rec)
 		if tbl.singleton &&
 			!singletonFilter(tbl.header, row, tbl.sels) {
@@ -510,8 +523,7 @@ func (tbl *Table) Simple(*Thread) []Row {
 		if tbl.iter.Eof() {
 			break
 		}
-		off := tbl.iter.CurOff()
-		rec := tbl.tran.GetRecord(off)
+		rec := tbl.iter.GetRecord(tbl.tran)
 		row := NewRow(rec)
 		rows = append(rows, row)
 		assert.That(len(rows) < maxSimple)

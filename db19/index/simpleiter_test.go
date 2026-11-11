@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -28,6 +29,10 @@ func (t *simpleTestTran) Read(string, int, string, string) {
 
 func (t *simpleTestTran) Num() int {
 	return t.num
+}
+
+func (t *simpleTestTran) GetRecord(off uint64) core.Record {
+	return core.Record(strconv.FormatUint(off, 10))
 }
 
 func TestNewSimpleIter(t *testing.T) {
@@ -83,6 +88,7 @@ func TestSimpleIterBasic(t *testing.T) {
 	assert.That(si.HasCur())
 	key, off := si.Cur()
 	assert.This(key).Is("1")
+	assert.This(si.GetRecord(tran)).Is(core.Record("1"))
 	assert.This(off).Is(uint64(1))
 	assert.This(si.CurOff()).Is(uint64(1))
 

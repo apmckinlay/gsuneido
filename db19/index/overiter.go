@@ -6,6 +6,7 @@ package index
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -71,6 +72,10 @@ func (oi *OverIter) Cur() (string, uint64) {
 func (oi *OverIter) CurOff() uint64 {
 	oi.checkHasCur()
 	return oi.curOff
+}
+
+func (oi *OverIter) GetRecord(t OiTran) core.Record {
+	return t.GetRecord(oi.CurOff())
 }
 
 func (oi *OverIter) checkHasCur() {
