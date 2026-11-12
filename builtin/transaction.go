@@ -83,6 +83,14 @@ func tran_Query(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	return th.Call(args[1], q)
 }
 
+var requestRegex = regex.Compile(`(?i)\A(insert|delete|update)\>`)
+
+func mustNotBeAction(query string) {
+	if requestRegex.Matches(query) {
+		panic("transaction.Query: use QueryDo for insert, delete, or update requests")
+	}
+}
+
 var _ = method(tran_QueryDo, "(@args) :number")
 
 var queryParams = params("(query)")
@@ -154,12 +162,4 @@ var _ = method(tran_Asof, "(asof = false) :false|date")
 
 func tran_Asof(this, arg Value) Value {
 	return this.(*SuTran).Asof(arg)
-}
-
-var requestRegex = regex.Compile(`(?i)\A(insert|delete|update)\>`)
-
-func mustNotBeAction(query string) {
-	if requestRegex.Matches(query) {
-		panic("transaction.Query: use QueryDo for insert, delete, or update requests")
-	}
 }
