@@ -163,3 +163,14 @@ var _ = method(tran_Asof, "(asof = false) :false|date")
 func tran_Asof(this, arg Value) Value {
 	return this.(*SuTran).Asof(arg)
 }
+
+var _ = method(tran_TableInfo, "(table: string)")
+
+func tran_TableInfo(th *Thread, this Value, args []Value) Value {
+	tran := this.(*SuTran)
+	table := ToStr(args[0])
+	nrows, size := tran.TableInfo(table)
+		th.ReturnMulti = append(th.ReturnMulti[:0],
+			IntVal(nrows), IntVal(size))
+	return nil
+}

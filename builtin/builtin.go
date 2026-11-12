@@ -56,6 +56,11 @@ func builtinVal(name string, f any, p string) Value {
 		return &SuBuiltin7{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
 	case func(th *Thread, args []Value) Value:
 		return &SuBuiltin{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(th *Thread, this Value) Value:
+		assert.That(ps.Nparams == 0)
+		return &SuBuiltinMethod{Fn: func(th *Thread, this Value, _ []Value) Value {
+			return f(th, this)
+		}, BuiltinParams: BuiltinParams{ParamSpec: ps}}
 	case func(th *Thread, as *ArgSpec, args []Value) Value:
 		// params are just for documentation
 		return &SuBuiltinRaw{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}

@@ -57,15 +57,13 @@ func TestSchemaTablesLookup(t *testing.T) {
 	defer db.Close()
 	db.adm("create zz (a) key(a)")
 	db.act("insert {a: 1} into zz")
-	test := func(tran QueryTran, nrows int) {
+	test := func(tran QueryTran) {
 		t.Helper()
 		tbl := NewTable(tran, "tables_").(*Table)
+		a.This(tbl.Header().Columns).Is([]string{"table"})
 		tbl.SetIndex([]string{"table"}, ReadMode)
 		row := tbl.Lookup(nil, Sels{NewSel("table", Pack(SuStr("zz")))})
 		a.This(row.GetVal(tbl.Header(), "table", nil, nil)).Is(SuStr("zz"))
-		a.This(ToInt(row.GetVal(tbl.Header(), "nrows", nil, nil))).Is(nrows)
-		a.This(ToInt(row.GetVal(tbl.Header(), "totalsize", nil, nil))).
-			Is(tran.GetInfo("zz").Size)
 		a.True(tbl.Lookup(nil, Sels{NewSel("table", Pack(SuStr("missing")))}).Eof())
 		a.True(tbl.Lookup(nil, Sels{NewSel("table", Pack(One))}).Eof())
 
@@ -73,7 +71,6 @@ func TestSchemaTablesLookup(t *testing.T) {
 		tbl.Rewind()
 		iterRow := tbl.Get(nil, Next)
 		a.This(ToStr(iterRow.GetVal(tbl.Header(), "table", nil, nil))).Is("zz")
-		a.This(ToInt(iterRow.GetVal(tbl.Header(), "nrows", nil, nil))).Is(nrows)
 		a.True(tbl.Get(nil, Next).Eof())
 		tbl.Rewind()
 		a.This(ToStr(tbl.Get(nil, Prev).GetVal(tbl.Header(), "table", nil, nil))).Is("zz")
@@ -83,18 +80,17 @@ func TestSchemaTablesLookup(t *testing.T) {
 		q, _, _ = Setup(q, ReadMode, tran)
 		w := q.(*Where)
 		a.True(w.tbl != nil && w.idxSelBase != nil)
-		a.This(ToInt(q.Get(nil, Next).GetVal(q.Header(), "nrows", nil, nil))).Is(nrows)
+		a.This(q.Get(nil, Next).GetVal(q.Header(), "table", nil, nil)).Is(SuStr("zz"))
 		a.True(q.Get(nil, Next).Eof())
 	}
 	rt := db.NewReadTran(AllPerms)
-	test(rt, 1)
+	test(rt)
 	ut := db.NewUpdateTran(AllPerms)
 	defer ut.Abort()
 	DoAction(nil, ut, "insert {a: 2} into zz")
-	test(ut, 2)
-	test(rt, 1)
+	test(ut)
+	test(rt)
 	a.This(queryAll(db.Database, "tables_ where table = 'missing'")).Is("")
-	a.This(queryAll(db.Database, "tables_ where table = 'zz' and nrows = 2")).Is("")
 	a.This(queryAll(db.Database, "tables_ where table = 123")).Is("")
 	a.This(queryAll(db.Database, "tables_ project table")).Is("table=zz")
 	a.This(queryAll(db.Database, "tables_ where table >= 'zz' project table")).Is("table=zz")
@@ -140,8 +136,7 @@ func TestSchemaTablesIterRecords(t *testing.T) {
 		check := func(row Row, name string) {
 			t.Helper()
 			a.This(ToStr(row.GetVal(tbl.Header(), "table", nil, nil))).Is(name)
-			a.This(ToInt(row.GetVal(tbl.Header(), "nrows", nil, nil))).
-				Is(tran.GetInfo(name).Nrows)
+			a.This(row.Get(0).Count()).Is(1)
 		}
 		check(tbl.Get(nil, Next), "aa")
 		check(tbl.Get(nil, Next), "zz")

@@ -11,7 +11,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -59,7 +58,7 @@ func getSchemaTable(table string) schemaTable {
 
 var tablesSchema = &schema.Schema{
 	Table:   "tables_",
-	Columns: []string{"table", "nrows", "totalsize"},
+	Columns: []string{"table"},
 	Indexes: []schema.Index{{Mode: 'k', Columns: []string{"table"}, Fields: []string{"table"}}},
 }
 
@@ -152,7 +151,7 @@ type tablesTable struct{}
 func (tablesTable) schema() *schema.Schema { return tablesSchema }
 
 func (tablesTable) nrows(t *tran) (n int) {
-	for range t.meta.Infos() {
+	for range t.meta.Tables() {
 		n++
 	}
 	return n
@@ -174,29 +173,25 @@ func (tablesTable) lookup(t *ReadTran, iIndex int, key string) core.Record {
 	if name == "" {
 		return ""
 	}
-	info := t.meta.GetRoInfo(name)
-	if info == nil {
+	if t.meta.GetRoSchema(name) == nil {
 		return ""
 	}
-	return tablesRow(info)
+	return tablesRow(name)
 }
 
-func tablesRow(info *meta.Info) core.Record {
+func tablesRow(table string) core.Record {
 	var rb core.RecordBuilder
-	rb.Add(core.SuStr(info.Table))
-	rb.Add(core.IntVal(info.Nrows))
-	rb.Add(core.IntVal(info.Size))
+	rb.Add(core.SuStr(table))
 	return rb.Build()
 }
 
-func newTablesIter(t *ReadTran) *schemaIter[infoEntry] {
-	infos := t.GetAllInfo()
-	items := make([]infoEntry, len(infos))
-	for i, info := range infos {
-		items[i] = infoEntry{info}
+func newTablesIter(t *ReadTran) *schemaIter[tableEntry] {
+	items := make([]tableEntry, 0, 32)
+	for sc := range t.meta.Tables() {
+		items = append(items, tableEntry{sc.Table})
 	}
-	sort.Slice(items, func(i, j int) bool { return items[i].Table < items[j].Table })
-	return &schemaIter[infoEntry]{
+	sort.Slice(items, func(i, j int) bool { return items[i].table < items[j].table })
+	return &schemaIter[tableEntry]{
 		items: items,
 		bound: nameBounds,
 		name:  "tablesIter",
@@ -204,14 +199,11 @@ func newTablesIter(t *ReadTran) *schemaIter[infoEntry] {
 	}
 }
 
-// infoEntry adapts *meta.Info to the schemaEntry interface.
-type infoEntry struct{ *meta.Info }
+type tableEntry struct{ table string }
 
-func (e infoEntry) keyAt() string   { return core.Pack(core.SuStr(e.Table)) }
-func (e infoEntry) boundAt() string { return e.Table }
-func (e infoEntry) row() core.Record {
-	return tablesRow(e.Info)
-}
+func (e tableEntry) keyAt() string    { return core.Pack(core.SuStr(e.table)) }
+func (e tableEntry) boundAt() string  { return e.table }
+func (e tableEntry) row() core.Record { return tablesRow(e.table) }
 
 // columns ----------------------------------------------------------
 

@@ -122,6 +122,18 @@ func (st *SuTran) ReadCount() int {
 	return st.itran.ReadCount()
 }
 
+// TableInfo is only supported by local transactions.
+func (st *SuTran) TableInfo(table string) (nrows, size int) {
+	st.ckActive()
+	t, ok := st.itran.(interface {
+		TableInfo(string) (int, int)
+	})
+	if !ok {
+		panic("TableInfo requires a local transaction")
+	}
+	return t.TableInfo(table)
+}
+
 func (st *SuTran) Action(th *Thread, action string) int {
 	st.ckActive()
 	return st.itran.Action(th, action)

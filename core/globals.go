@@ -216,7 +216,6 @@ func (typeGlobal) Get(th *Thread, gnum Gnum) (result Value) {
 // Uses noDef to avoid repeatedly looking up nonexistent names.
 // It can't use errors for this (like Find does) because we don't have a gnum.
 func (typeGlobal) FindName(th *Thread, name string) Value {
-	// don't need to check builtins, since there are no built in rules or triggers
 	if x, ok := Global.findName(name); ok {
 		return x
 	}
@@ -239,6 +238,9 @@ func (typeGlobal) findName(name string) (Value, bool) {
 	g.lock.RLock()
 	defer g.lock.RUnlock()
 	if gn, ok := g.name2num[name]; ok { // name exists
+		if x := g.builtins[gn]; x != nil {
+			return x, true
+		}
 		if x := g.values[gn]; x != nil {
 			return x, true
 		}

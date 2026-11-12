@@ -58,6 +58,14 @@ func (t *tran) GetInfo(table string) *meta.Info {
 	return t.meta.GetRoInfo(table)
 }
 
+func (t *tran) TableInfo(table string) (nrows, size int) {
+	info := t.GetInfo(table)
+	if info == nil {
+		panic("nonexistent table: " + table)
+	}
+	return info.Nrows, info.Size
+}
+
 func (t *tran) GetSchema(table string) *schema.Schema {
 	if st := getSchemaTable(table); st != nil {
 		return st.schema()
