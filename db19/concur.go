@@ -216,7 +216,7 @@ func (ml *mergeList) drain(mergeChan chan todo) (_ todo, _ bool) {
 			if !ok { // channel closed
 				return
 			}
-			if td.ret == nil && ml.meta.SameSchemaAs(td.meta) {
+			if td.ret == nil && ml.meta.SchemaKey() == td.meta.SchemaKey() {
 				ml.add(td.tables)
 			} else {
 				return td, true // not added to merge (sync or persist)

@@ -6,11 +6,15 @@ package db19
 import (
 	"slices"
 	"sort"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/core"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/iface"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stats"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -55,6 +59,95 @@ func getSchemaTable(table string) schemaTable {
 	}
 	return nil
 }
+
+// The schema-table cache is kept "to the side" of metadata so that
+// materializations can be reused across queries and transactions.
+// Entries are keyed by the schema key (Meta.SchemaKey), which is
+// stable across ordinary data commits. A small number of newest versions is
+// retained; transactions and iterators keep older entries alive through Go
+// references, so eviction only drops the database's reference.
+// Older entries expire lazily after two minutes without a shared-cache hit.
+// The newest cached schema is always retained.
+
+const schemaCacheSize = 4
+const schemaCacheIdle = 2 * time.Minute
+
+type schemaCache struct {
+	mu      sync.Mutex
+	entries []*schemaCacheEntry // newest schema version first
+}
+
+func (c *schemaCache) get(m *meta.Meta) *schemaCacheEntry {
+	key := m.SchemaKey()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	now := time.Now()
+	if len(c.entries) > 1 {
+		newest := c.entries[0]
+		c.entries = slices.DeleteFunc(c.entries, func(e *schemaCacheEntry) bool {
+			return e != newest && now.Sub(e.lastUsed) >= schemaCacheIdle
+		})
+	}
+	if i := slices.IndexFunc(c.entries, func(e *schemaCacheEntry) bool {
+		return e.meta.SchemaKey() == key
+	}); i >= 0 {
+		c.entries[i].lastUsed = now
+		return c.entries[i]
+	}
+	e := newSchemaCacheEntry(m)
+	e.lastUsed = now
+	i := sort.Search(len(c.entries), func(i int) bool {
+		return c.entries[i].meta.SchemaVersion() <= m.SchemaVersion()
+	})
+	if i >= schemaCacheSize {
+		return e // old transactions must not displace newer schemas
+	}
+	c.entries = slices.Insert(c.entries, i, e)
+	if len(c.entries) > schemaCacheSize {
+		c.entries = slices.Delete(c.entries, schemaCacheSize, len(c.entries))
+	}
+	return e
+}
+
+// schemaCacheEntry holds lazily-built materializations for one schema version.
+// Each materialization is built at most once, independently of the others.
+type schemaCacheEntry struct {
+	meta     *meta.Meta
+	lastUsed time.Time // protected by schemaCache.mu
+	tables   func() []tableEntry
+	columns  func() []columnEntry
+	indexes  func() []indexEntry
+	views    func() []viewEntry
+}
+
+func newSchemaCacheEntry(m *meta.Meta) *schemaCacheEntry {
+	return &schemaCacheEntry{
+		meta:    m,
+		tables:  sync.OnceValue(func() []tableEntry { return buildTables(m) }),
+		columns: sync.OnceValue(func() []columnEntry { return buildColumns(m) }),
+		indexes: sync.OnceValue(func() []indexEntry { return buildIndexes(m) }),
+		views:   sync.OnceValue(func() []viewEntry { return buildViews(m) }),
+	}
+}
+
+// schemaEntry resolves (once) the transaction's captured schema cache entry.
+// Update transactions share entries because their local writes affect Info,
+// not Schema.
+func (t *tran) schemaEntry() *schemaCacheEntry {
+	if t.scache == nil {
+		if t.db != nil && !t.noSchemaCache {
+			t.scache = t.db.schemaCache.get(t.meta)
+		} else {
+			t.scache = newSchemaCacheEntry(t.meta) // Asof or tests
+		}
+	}
+	return t.scache
+}
+
+func (t *tran) tablesItems() []tableEntry   { return t.schemaEntry().tables() }
+func (t *tran) columnsItems() []columnEntry { return t.schemaEntry().columns() }
+func (t *tran) indexesItems() []indexEntry  { return t.schemaEntry().indexes() }
+func (t *tran) viewsItems() []viewEntry     { return t.schemaEntry().views() }
 
 var tablesSchema = &schema.Schema{
 	Table:   "tables_",
@@ -117,31 +210,16 @@ func unpackStr(p string) string {
 	return p[1:]
 }
 
-// nameBounds returns the [lo, hi) positions of the names matching the
-// packed key range [org, end) within a sorted list of names.
-// Non-string bounds sort before or after all names.
-func nameBounds(n int, nameAt func(int) string, org, end string) (int, int) {
-	return nameBound(n, nameAt, org), nameBound(n, nameAt, end)
-}
-
-func nameBound(n int, nameAt func(int) string, key string) int {
+// nameGE reports whether name sorts at or after the packed key.
+// Non-string keys sort before or after all names.
+func nameGE(name, key string) bool {
 	if key == "" || key[0] < core.PackString {
-		return 0
+		return true
 	}
 	if key[0] > core.PackString {
-		return n
+		return false
 	}
-	name := unpackStr(key)
-	return sort.Search(n, func(i int) bool { return nameAt(i) >= name })
-}
-
-// keyBounds returns the [lo, hi) positions of the encoded keys matching the
-// key range [org, end) within a sorted list of keys.
-func keyBounds(n int, keyAt func(int) string, org, end string) (int, int) {
-	bound := func(key string) int {
-		return sort.Search(n, func(i int) bool { return keyAt(i) >= key })
-	}
-	return bound(org), bound(end)
+	return name >= unpackStr(key)
 }
 
 // tables -----------------------------------------------------------
@@ -150,12 +228,7 @@ type tablesTable struct{}
 
 func (tablesTable) schema() *schema.Schema { return tablesSchema }
 
-func (tablesTable) nrows(t *tran) (n int) {
-	for range t.meta.Tables() {
-		n++
-	}
-	return n
-}
+func (tablesTable) nrows(t *tran) int { return len(t.tablesItems()) }
 
 func (tablesTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
 	assert.That(iIndex == 0)
@@ -185,25 +258,52 @@ func tablesRow(table string) core.Record {
 	return rb.Build()
 }
 
-func newTablesIter(t *ReadTran) *schemaIter[tableEntry] {
-	items := make([]tableEntry, 0, 32)
-	for sc := range t.meta.Tables() {
-		items = append(items, tableEntry{sc.Table})
-	}
-	sort.Slice(items, func(i, j int) bool { return items[i].table < items[j].table })
-	return &schemaIter[tableEntry]{
+func newTablesIter(t *ReadTran) *schemaIter[tableEntry, *tableEntry] {
+	items := t.tablesItems()
+	return &schemaIter[tableEntry, *tableEntry]{
 		items: items,
-		bound: nameBounds,
 		name:  "tablesIter",
 		hi:    len(items),
 	}
 }
 
-type tableEntry struct{ table string }
+func buildTables(m *meta.Meta) []tableEntry {
+	items := make([]tableEntry, 0, 32)
+	for sc := range m.Tables() {
+		items = append(items, tableEntry{table: sc.Table})
+	}
+	sort.Slice(items, func(i, j int) bool { return items[i].table < items[j].table })
+	return items
+}
 
-func (e tableEntry) keyAt() string    { return core.Pack(core.SuStr(e.table)) }
-func (e tableEntry) boundAt() string  { return e.table }
-func (e tableEntry) row() core.Record { return tablesRow(e.table) }
+type tableEntry struct {
+	table  string
+	cached atomic.Pointer[tableRow]
+}
+
+// tableRow is built on first access so that narrow schema queries do not
+// construct keys and records for every table.
+type tableRow struct {
+	key string
+	rec core.Record
+}
+
+func (e *tableEntry) keyAt() string         { return e.load().key }
+func (e *tableEntry) geKey(key string) bool { return nameGE(e.table, key) }
+func (e *tableEntry) row() core.Record      { return e.load().rec }
+
+func (e *tableEntry) load() *tableRow {
+	if row := e.cached.Load(); row != nil {
+		return row
+	}
+	// Rows are deterministic, so concurrent builders may safely overwrite.
+	row := &tableRow{
+		key: core.Pack(core.SuStr(e.table)),
+		rec: tablesRow(e.table),
+	}
+	e.cached.Store(row)
+	return row
+}
 
 // columns ----------------------------------------------------------
 
@@ -211,17 +311,7 @@ type columnsTable struct{}
 
 func (columnsTable) schema() *schema.Schema { return columnsSchema }
 
-func (columnsTable) nrows(t *tran) (n int) {
-	for sc := range t.meta.Tables() {
-		for _, col := range sc.Columns {
-			if col != "-" {
-				n++
-			}
-		}
-		n += len(sc.Derived)
-	}
-	return n
-}
+func (columnsTable) nrows(t *tran) int { return len(t.columnsItems()) }
 
 func (columnsTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
 	assert.That(iIndex == 0)
@@ -269,22 +359,39 @@ func columnsRow(table, column string, field int) core.Record {
 }
 
 // columnEntry is one row of the columns_ table with its encoded {table, column} key.
+// The key is eager because it is needed for sorting and range bounds.
 type columnEntry struct {
 	table  string
 	column string
 	field  int
 	key    string
+	cached atomic.Pointer[core.Record]
 }
 
-func (e columnEntry) keyAt() string   { return e.key }
-func (e columnEntry) boundAt() string { return e.key }
-func (e columnEntry) row() core.Record {
-	return columnsRow(e.table, e.column, e.field)
+func (e *columnEntry) keyAt() string         { return e.key }
+func (e *columnEntry) geKey(key string) bool { return e.key >= key }
+func (e *columnEntry) row() core.Record {
+	if rec := e.cached.Load(); rec != nil {
+		return *rec
+	}
+	rec := columnsRow(e.table, e.column, e.field)
+	e.cached.Store(&rec)
+	return rec
 }
 
-func newColumnsIter(t *ReadTran) *schemaIter[columnEntry] {
+func newColumnsIter(t *ReadTran) *schemaIter[columnEntry, *columnEntry] {
+	entries := t.columnsItems()
+	return &schemaIter[columnEntry, *columnEntry]{
+		items:  entries,
+		name:   "columnsIter",
+		skipOK: true,
+		hi:     len(entries),
+	}
+}
+
+func buildColumns(m *meta.Meta) []columnEntry {
 	entries := make([]columnEntry, 0, 32)
-	for sc := range t.meta.Tables() {
+	for sc := range m.Tables() {
 		for field, col := range sc.Columns {
 			if col == "-" {
 				continue
@@ -306,13 +413,7 @@ func newColumnsIter(t *ReadTran) *schemaIter[columnEntry] {
 		}
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].key < entries[j].key })
-	return &schemaIter[columnEntry]{
-		items:  entries,
-		bound:  keyBounds,
-		name:   "columnsIter",
-		skipOK: true,
-		hi:     len(entries),
-	}
+	return entries
 }
 
 // indexes ----------------------------------------------------------
@@ -321,12 +422,7 @@ type indexesTable struct{}
 
 func (indexesTable) schema() *schema.Schema { return indexesSchema }
 
-func (indexesTable) nrows(t *tran) (n int) {
-	for sc := range t.meta.Tables() {
-		n += len(sc.Indexes)
-	}
-	return n
-}
+func (indexesTable) nrows(t *tran) int { return len(t.indexesItems()) }
 
 func (indexesTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
 	assert.That(iIndex == 0)
@@ -390,21 +486,38 @@ func indexesRow(table string, idx *schema.Index) core.Record {
 }
 
 // indexEntry is one row of the indexes_ table with its encoded {table, columns} key.
+// The key is eager because it is needed for sorting and range bounds.
 type indexEntry struct {
-	table string
-	idx   *schema.Index
-	key   string
+	table  string
+	idx    *schema.Index
+	key    string
+	cached atomic.Pointer[core.Record]
 }
 
-func (e indexEntry) keyAt() string   { return e.key }
-func (e indexEntry) boundAt() string { return e.key }
-func (e indexEntry) row() core.Record {
-	return indexesRow(e.table, e.idx)
+func (e *indexEntry) keyAt() string         { return e.key }
+func (e *indexEntry) geKey(key string) bool { return e.key >= key }
+func (e *indexEntry) row() core.Record {
+	if rec := e.cached.Load(); rec != nil {
+		return *rec
+	}
+	rec := indexesRow(e.table, e.idx)
+	e.cached.Store(&rec)
+	return rec
 }
 
-func newIndexesIter(t *ReadTran) *schemaIter[indexEntry] {
+func newIndexesIter(t *ReadTran) *schemaIter[indexEntry, *indexEntry] {
+	entries := t.indexesItems()
+	return &schemaIter[indexEntry, *indexEntry]{
+		items:  entries,
+		name:   "indexesIter",
+		skipOK: true,
+		hi:     len(entries),
+	}
+}
+
+func buildIndexes(m *meta.Meta) []indexEntry {
 	entries := make([]indexEntry, 0, 32)
-	for sc := range t.meta.Tables() {
+	for sc := range m.Tables() {
 		for i := range sc.Indexes {
 			idx := &sc.Indexes[i]
 			entries = append(entries, indexEntry{
@@ -415,13 +528,7 @@ func newIndexesIter(t *ReadTran) *schemaIter[indexEntry] {
 		}
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].key < entries[j].key })
-	return &schemaIter[indexEntry]{
-		items:  entries,
-		bound:  keyBounds,
-		name:   "indexesIter",
-		skipOK: true,
-		hi:     len(entries),
-	}
+	return entries
 }
 
 // views ------------------------------------------------------------
@@ -430,12 +537,7 @@ type viewsTable struct{}
 
 func (viewsTable) schema() *schema.Schema { return viewsSchema }
 
-func (viewsTable) nrows(t *tran) (n int) {
-	for range t.meta.Views() {
-		n++
-	}
-	return n
-}
+func (viewsTable) nrows(t *tran) int { return len(t.viewsItems()) }
 
 func (viewsTable) indexIter(t *ReadTran, iIndex int) index.IndexIter {
 	assert.That(iIndex == 0)
@@ -468,28 +570,50 @@ func viewsRow(name, def string) core.Record {
 }
 
 type viewEntry struct {
-	name string
-	def  string
+	name   string
+	def    string
+	cached atomic.Pointer[viewRow]
 }
 
-func (v viewEntry) keyAt() string   { return core.Pack(core.SuStr(v.name)) }
-func (v viewEntry) boundAt() string { return v.name }
-func (v viewEntry) row() core.Record {
-	return viewsRow(v.name, v.def)
+type viewRow struct {
+	key string
+	rec core.Record
 }
 
-func newViewsIter(t *ReadTran) *schemaIter[viewEntry] {
-	views := make([]viewEntry, 0, 16)
-	for name, def := range t.Views() {
-		views = append(views, viewEntry{name, def})
+func (v *viewEntry) keyAt() string         { return v.load().key }
+func (v *viewEntry) geKey(key string) bool { return nameGE(v.name, key) }
+func (v *viewEntry) row() core.Record {
+	return v.load().rec
+}
+
+func (v *viewEntry) load() *viewRow {
+	if row := v.cached.Load(); row != nil {
+		return row
 	}
-	sort.Slice(views, func(i, j int) bool { return views[i].name < views[j].name })
-	return &schemaIter[viewEntry]{
+	row := &viewRow{
+		key: core.Pack(core.SuStr(v.name)),
+		rec: viewsRow(v.name, v.def),
+	}
+	v.cached.Store(row)
+	return row
+}
+
+func newViewsIter(t *ReadTran) *schemaIter[viewEntry, *viewEntry] {
+	views := t.viewsItems()
+	return &schemaIter[viewEntry, *viewEntry]{
 		items: views,
-		bound: nameBounds,
 		name:  "viewsIter",
 		hi:    len(views),
 	}
+}
+
+func buildViews(m *meta.Meta) []viewEntry {
+	views := make([]viewEntry, 0, 16)
+	for name, def := range m.Views() {
+		views = append(views, viewEntry{name: name, def: def})
+	}
+	sort.Slice(views, func(i, j int) bool { return views[i].name < views[j].name })
+	return views
 }
 
 // history ----------------------------------------------------------
@@ -722,13 +846,13 @@ type statsEntry struct {
 	cs     stats.ColStats
 }
 
-func (e statsEntry) keyAt() string   { return e.key }
-func (e statsEntry) boundAt() string { return e.key }
+func (e statsEntry) keyAt() string         { return e.key }
+func (e statsEntry) geKey(key string) bool { return e.key >= key }
 func (e statsEntry) row() core.Record {
 	return statsRow(e.table, e.column, e.cs)
 }
 
-func newStatsIter(t *ReadTran) *schemaIter[statsEntry] {
+func newStatsIter(t *ReadTran) *schemaIter[statsEntry, *statsEntry] {
 	entries := make([]statsEntry, 0, 32)
 	for table, ts := range t.Stats() {
 		for column, cs := range ts.Columns {
@@ -740,9 +864,8 @@ func newStatsIter(t *ReadTran) *schemaIter[statsEntry] {
 		}
 	}
 	sort.Slice(entries, func(i, j int) bool { return entries[i].key < entries[j].key })
-	return &schemaIter[statsEntry]{
+	return &schemaIter[statsEntry, *statsEntry]{
 		items:  entries,
-		bound:  keyBounds,
 		name:   "statsIter",
 		skipOK: true,
 		hi:     len(entries),
@@ -767,16 +890,20 @@ func (ss schemaSkipScan) matches(key string) bool {
 
 // schemaEntry is the interface implemented by schemaIter items.
 type schemaEntry interface {
-	keyAt() string   // encoded key for Cur
-	boundAt() string // value compared against range bounds
+	keyAt() string         // encoded key for Cur
+	geKey(key string) bool // entry sorts at or after the range key
 	row() core.Record
 }
 
 // schemaIter is an index.IndexIter over a materialized, sorted slice of
 // schema table rows. It uses row ordinals instead of storage offsets.
-type schemaIter[T schemaEntry] struct {
+// PT is the pointer type for T; entries use pointer methods so they can
+// publish lazy values atomically.
+type schemaIter[T any, PT interface {
+	*T
+	schemaEntry
+}] struct {
 	items  []T
-	bound  func(int, func(int) string, string, string) (int, int)
 	name   string
 	skipOK bool
 	skip   schemaSkipScan
@@ -786,25 +913,29 @@ type schemaIter[T schemaEntry] struct {
 	state  iface.State
 }
 
-func (it *schemaIter[T]) Eof() bool    { return it.state.Eof() }
-func (it *schemaIter[T]) HasCur() bool { return it.state.Within() }
-
-func (it *schemaIter[T]) Cur() (string, uint64) {
-	it.checkHasCur()
-	return it.items[it.i].keyAt(), uint64(it.i) + 1
+func (it *schemaIter[T, PT]) entry(i int) PT {
+	return PT(&it.items[i])
 }
 
-func (it *schemaIter[T]) CurOff() uint64 {
+func (it *schemaIter[T, PT]) Eof() bool    { return it.state.Eof() }
+func (it *schemaIter[T, PT]) HasCur() bool { return it.state.Within() }
+
+func (it *schemaIter[T, PT]) Cur() (string, uint64) {
+	it.checkHasCur()
+	return it.entry(it.i).keyAt(), uint64(it.i) + 1
+}
+
+func (it *schemaIter[T, PT]) CurOff() uint64 {
 	it.checkHasCur()
 	return uint64(it.i) + 1
 }
 
-func (it *schemaIter[T]) GetRecord(index.OiTran) core.Record {
+func (it *schemaIter[T, PT]) GetRecord(index.OiTran) core.Record {
 	it.checkHasCur()
-	return it.items[it.i].row()
+	return it.entry(it.i).row()
 }
 
-func (it *schemaIter[T]) checkHasCur() {
+func (it *schemaIter[T, PT]) checkHasCur() {
 	if it.state.Eof() {
 		panic(it.name + " eof")
 	}
@@ -813,61 +944,51 @@ func (it *schemaIter[T]) checkHasCur() {
 	}
 }
 
-func (it *schemaIter[T]) Next(index.OiTran) {
+func (it *schemaIter[T, PT]) Next(index.OiTran) { it.step(+1) }
+func (it *schemaIter[T, PT]) Prev(index.OiTran) { it.step(-1) }
+
+// step moves one row in direction dir (+1 or -1), skipping rows that
+// do not match the skip scan, and sets Eof when leaving [lo, hi).
+func (it *schemaIter[T, PT]) step(dir int) {
 	switch it.state {
 	case iface.Eof:
 		return // stick at eof
 	case iface.Rewound:
-		it.i = it.lo
-	default:
-		it.i++
-	}
-	if it.skip.start != 0 {
-		for it.i < it.hi && !it.skip.matches(it.items[it.i].keyAt()) {
-			it.i++
+		if dir > 0 {
+			it.i = it.lo
+		} else {
+			it.i = it.hi - 1
 		}
+	default:
+		it.i += dir
 	}
-	if it.i >= it.hi {
+	for it.i >= it.lo && it.i < it.hi &&
+		!it.skip.matches(it.entry(it.i).keyAt()) {
+		it.i += dir
+	}
+	if it.i < it.lo || it.i >= it.hi {
 		it.state = iface.Eof
 		return
 	}
 	it.state = iface.Within
 }
 
-func (it *schemaIter[T]) Prev(index.OiTran) {
-	switch it.state {
-	case iface.Eof:
-		return // stick at eof
-	case iface.Rewound:
-		it.i = it.hi - 1
-	default:
-		it.i--
-	}
-	if it.skip.start != 0 {
-		for it.i >= it.lo && !it.skip.matches(it.items[it.i].keyAt()) {
-			it.i--
-		}
-	}
-	if it.i < it.lo {
-		it.state = iface.Eof
-		return
-	}
-	it.state = iface.Within
-}
-
-func (it *schemaIter[T]) Rewind() {
+func (it *schemaIter[T, PT]) Rewind() {
 	it.state = iface.Rewound
 	it.i = 0
 }
 
 // bounds returns the [lo, hi) positions matching the key range [org, end).
-func (it *schemaIter[T]) bounds(org, end string) (int, int) {
-	return it.bound(len(it.items),
-		func(i int) string { return it.items[i].boundAt() }, org, end)
+func (it *schemaIter[T, PT]) bounds(org, end string) (int, int) {
+	n := len(it.items)
+	at := func(key string) int {
+		return sort.Search(n, func(i int) bool { return it.entry(i).geKey(key) })
+	}
+	return at(org), at(end)
 }
 
 // rangeFrac computes the fraction from the rows, since schema tables have no btrees.
-func (it *schemaIter[T]) rangeFrac(org, end string) float64 {
+func (it *schemaIter[T, PT]) rangeFrac(org, end string) float64 {
 	lo, hi := it.bounds(org, end)
 	if len(it.items) == 0 || hi <= lo {
 		return 0
@@ -875,14 +996,14 @@ func (it *schemaIter[T]) rangeFrac(org, end string) float64 {
 	return float64(hi-lo) / float64(len(it.items))
 }
 
-func (it *schemaIter[T]) Range(rng index.Range) {
+func (it *schemaIter[T, PT]) Range(rng index.Range) {
 	it.lo, it.hi = it.bounds(rng.Org, rng.End)
 	it.skip = schemaSkipScan{}
 	it.state = iface.Rewound
 	it.i = 0
 }
 
-func (it *schemaIter[T]) SkipScan(prefixRng, suffixRng index.Range, skipStart int) {
+func (it *schemaIter[T, PT]) SkipScan(prefixRng, suffixRng index.Range, skipStart int) {
 	if !it.skipOK {
 		assert.ShouldNotReachHere()
 	}

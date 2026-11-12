@@ -53,6 +53,10 @@ type Database struct {
 
 	stats stats.Stats
 	busy  stats.BusyTally
+
+	// schemaCache holds recent schema-table materializations, keyed by
+	// schema HAMT identity. See schema.go.
+	schemaCache schemaCache
 }
 
 const magic = "gsndo004"

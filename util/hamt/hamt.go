@@ -47,8 +47,10 @@ func (ht Hamt[K, E]) IsNil() bool {
 	return ht.root == nil
 }
 
-func (ht Hamt[K, E]) SameAs(ht2 Hamt[K, E]) bool {
-	return ht.root == ht2.root
+// Root returns the root node as an opaque, comparable value.
+// Two Hamts with the same root have the same contents.
+func (ht Hamt[K, E]) Root() any {
+	return ht.root
 }
 
 func (ht Hamt[K, E]) MustGet(key K) E {

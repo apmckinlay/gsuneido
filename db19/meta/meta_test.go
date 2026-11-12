@@ -7,12 +7,43 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bit"
 	"github.com/apmckinlay/gsuneido/util/hamt"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+func TestSchemaVersion(t *testing.T) {
+	assert := assert.T(t)
+	m := &Meta{}
+	assert.This(m.SchemaVersion()).Is(uint64(0))
+	m1 := m.Put(&Schema{Schema: schema.Schema{
+		Table: "t", Columns: []string{"a"},
+		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"a"}}},
+	}}, nil)
+	assert.This(m1.SchemaVersion()).Is(uint64(1))
+	assert.This(m.SchemaVersion()).Is(uint64(0))
+	m2 := m1.TouchTable("t") // metaUpdate.freeze path
+	assert.This(m2.SchemaVersion()).Is(uint64(2))
+	assert.This(m1.SchemaVersion()).Is(uint64(1))
+	assert.That(m1.SchemaKey() != m2.SchemaKey())
+	unchanged := newMetaUpdate(m2).freeze()
+	assert.This(unchanged.SchemaVersion()).Is(m2.SchemaVersion())
+	mutable := m1.Mutable()
+	assert.This(mutable.SchemaVersion()).Is(m1.SchemaVersion())
+	committed := mutable.LayeredOnto(m2)
+	assert.This(committed.SchemaVersion()).Is(m2.SchemaVersion())
+	assert.That(committed.SchemaKey() == m2.SchemaKey())
+	st := stor.HeapStor(8192)
+	committed.Write(st)
+	assert.This(committed.SchemaVersion()).Is(m2.SchemaVersion())
+	assert.That(committed.SchemaKey() == m2.SchemaKey())
+	view := committed.AddView("v", "t")
+	assert.This(view.SchemaVersion()).Is(uint64(3))
+	assert.This(view.Drop("v").SchemaVersion()).Is(uint64(4))
+}
 
 func TestMeta(t *testing.T) {
 	tbl := InfoHamt{}.Mutable()

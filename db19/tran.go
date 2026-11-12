@@ -31,6 +31,10 @@ type tran struct {
 	db    *Database
 	meta  *meta.Meta
 	perms *core.Perms
+	// scache is the transaction's captured schema-table materializations.
+	// It is resolved lazily on first schema-table access.
+	scache        *schemaCacheEntry
+	noSchemaCache bool // Asof snapshots must not enter the shared cache
 }
 
 // CheckPerm panics if the transaction's permissions do not allow action on table.
@@ -268,6 +272,8 @@ func (t *ReadTran) Asof(asof int64) int64 {
 		return 0
 	}
 	t.meta = state.Meta
+	t.scache = nil // schema may have changed, re-resolve on next access
+	t.noSchemaCache = true
 	t.asof = state.Asof
 	t.off = state.Off
 	return t.asof

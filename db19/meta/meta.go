@@ -29,8 +29,9 @@ type Meta struct {
 	// WARNING: do NOT modify the items from the hash tables.
 	// To modify an item, Get it, copy it, modify it, then Put the new version.
 	// Unfortunately, Go does not have any way to enforce this.
-	schema hamt.Chain[string, *Schema]
-	info   hamt.Chain[string, *Info]
+	schema        hamt.Chain[string, *Schema]
+	info          hamt.Chain[string, *Info]
+	schemaVersion uint64 // in-memory only; orders successive schema snapshots
 }
 
 func (m *Meta) Cksum() uint32 {
@@ -54,8 +55,16 @@ func (m *Meta) Mutable() *Meta {
 	return &ov2
 }
 
-func (m *Meta) SameSchemaAs(m2 *Meta) bool {
-	return m.schema.Hamt.SameAs(m2.schema.Hamt)
+// SchemaKey returns an opaque, comparable value identifying the schema version.
+// It is used for schema equality checks and as a cache key.
+func (m *Meta) SchemaKey() any {
+	return m.schema.Root()
+}
+
+// SchemaVersion orders schema snapshots derived from the same loaded Meta.
+// It is not persisted and is unchanged by data commits.
+func (m *Meta) SchemaVersion() uint64 {
+	return m.schemaVersion
 }
 
 // GetRoInfo returns read-only Info for the table or nil if not found
@@ -138,6 +147,7 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	schema := m.schema.Mutable()
 	schema.Put(ts)
 	cp.schema.Hamt = schema.Freeze()
+	cp.schemaVersion++
 	if ti != nil {
 		ti.lastMod = m.info.Clock
 		info := m.info.Mutable()
@@ -214,6 +224,7 @@ func (mu *metaUpdate) freeze() *Meta {
 	cp := *mu.meta
 	if mu.schema != (SchemaHamt{}) {
 		cp.schema.Hamt = mu.schema.Freeze()
+		cp.schemaVersion++
 	}
 	if mu.info != (InfoHamt{}) {
 		cp.info.Hamt = mu.info.Freeze()
