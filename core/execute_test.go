@@ -450,6 +450,51 @@ func TestBlockReturnMulti(t *testing.T) {
 	assert.This(th.Call(f)).Is(True)
 }
 
+func TestMultiReturnGet(t *testing.T) {
+	var th Thread
+
+	f := compile.Constant(`function () {
+		f = function() { return 12, 34 }
+		return f()[0]
+	}`)
+	assert.This(th.Call(f)).Is(SuInt16(12))
+	assert.That(len(th.ReturnMulti) == 0)
+
+	f = compile.Constant(`function () {
+		f = function() { return 12, 34 }
+		return f()[1]
+	}`)
+	assert.This(th.Call(f)).Is(SuInt16(34))
+
+	f = compile.Constant(`function () {
+		f = function() { return 12, 34, 56 }
+		i = 1
+		return f()[i]
+	}`)
+	assert.This(th.Call(f)).Is(SuInt16(34))
+
+	// single return value is indexed normally
+	f = compile.Constant(`function () {
+		f = function() { return #(10, 20) }
+		return f()[1]
+	}`)
+	assert.This(th.Call(f)).Is(SuInt16(20))
+
+	// no return value
+	f = compile.Constant(`function () {
+		f = function() { }
+		return f()[0]
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("no return value")
+
+	// index out of range
+	f = compile.Constant(`function () {
+		f = function() { return 12, 34 }
+		return f()[2]
+	}`)
+	assert.This(func() { th.Call(f) }).Panics("member not found: 2")
+}
+
 func TestBlockReturnSpread(t *testing.T) {
 	var th Thread
 

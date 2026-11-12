@@ -95,6 +95,8 @@ func TestCodegen(t *testing.T) {
 	test("n--", "One, LoadStore n SubEq retOrig")
 	test("a.b", "LoadValue a 'b', Get")
 	test("a[2]", "Load a, Int 2, Get")
+	test("f()[0]", "Load f, CallFuncNilOk (), Zero, Get")
+	test("f()[i]", "Load f, CallFuncNilOk (), Load i, Get")
 	test("a.b = 123", "LoadValue a 'b', Int 123, Put")
 	test("a[2] = false", "Load a, Int 2, False, Put")
 	test("a.b += 5", "LoadValue a 'b', Int 5, GetPut AddEq")

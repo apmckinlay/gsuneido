@@ -311,19 +311,15 @@ loop:
 			// Get
 			m := th.Pop()
 			ob := th.Pop()
-			val := ob.Get(th, m)
-			if val == nil {
-				if s, ok := m.ToStr(); ok {
-					val = ob.Lookup(th, s)
-					if val != nil {
-						val = NewSuMethod(ob, val)
-					}
-				}
+			if ob == nil {
+				th.Push(th.getMulti(m))
+			} else {
+				val := ob.Get(th, m)
 				if val == nil {
-					MemberNotFound(m)
+					val = th.getMember(ob, m)
 				}
+				th.Push(val)
 			}
-			th.Push(val)
 			// Value
 			valueIdx := fetchUint8()
 			th.Push(fr.fn.Values[valueIdx])
@@ -346,19 +342,15 @@ loop:
 		case op.Get:
 			m := th.Pop()
 			ob := th.Pop()
-			val := ob.Get(th, m)
-			if val == nil {
-				if s, ok := m.ToStr(); ok {
-					val = ob.Lookup(th, s)
-					if val != nil {
-						val = NewSuMethod(ob, val)
-					}
-				}
+			if ob == nil {
+				th.Push(th.getMulti(m))
+			} else {
+				val := ob.Get(th, m)
 				if val == nil {
-					MemberNotFound(m)
+					val = th.getMember(ob, m)
 				}
+				th.Push(val)
 			}
-			th.Push(val)
 		case op.Put:
 			val := th.Pop()
 			m := th.Pop()
@@ -761,6 +753,31 @@ loop:
 			Fatal("invalid op code:", int(oc))
 		}
 	}
+	return nil
+}
+
+// getMulti handles indexing the multiple return values of a call,
+// e.g. fn()[i]. It is only called when ob is nil.
+func (th *Thread) getMulti(m Value) Value {
+	if rm := th.ReturnMulti; len(rm) > 0 {
+		defer th.ClearReturnMulti()
+		if i, ok := m.IfInt(); ok && 0 <= i && i < len(rm) {
+			return rm[len(rm)-1-i]
+		}
+		MemberNotFound(m)
+	}
+	panic("no return value")
+}
+
+// getMember is the fallback for op.Get when ob.Get returns nil.
+// It looks up a method by name and binds it to ob.
+func (th *Thread) getMember(ob, m Value) Value {
+	if s, ok := m.ToStr(); ok {
+		if val := ob.Lookup(th, s); val != nil {
+			return NewSuMethod(ob, val)
+		}
+	}
+	MemberNotFound(m)
 	return nil
 }
 

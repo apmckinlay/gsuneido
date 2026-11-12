@@ -724,7 +724,9 @@ func (cg *cgen) expr2(node ast.Expr, ct calltype) {
 	case *ast.Trinary:
 		cg.trinary(node, ct)
 	case *ast.Mem:
-		cg.expr(node.E)
+		// allow the receiver to be a call with multiple return values
+		// e.g. fn()[i], handled by op.Get
+		cg.expr2(node.E, callNilOk)
 		cg.expr(node.M)
 		cg.emit(op.Get)
 	case *ast.RangeTo:
