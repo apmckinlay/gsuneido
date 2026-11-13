@@ -128,7 +128,6 @@ const (
 	Drop
 	Ensure
 	Extend
-	History
 	Index
 	Insert
 	Intersect

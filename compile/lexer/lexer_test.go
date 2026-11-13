@@ -201,7 +201,6 @@ var queryKeywords = map[string]tok.Token{
 	"extend":    tok.Extend,
 	"false":     tok.False,
 	"function":  tok.Function,
-	"history":   tok.History,
 	"in":        tok.In,
 	"index":     tok.Index,
 	"insert":    tok.Insert,

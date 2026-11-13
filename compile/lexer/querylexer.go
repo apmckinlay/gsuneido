@@ -145,9 +145,6 @@ func queryKeyword(s string) (tok.Token, string) {
 		if s == "destroy" {
 			return tok.Drop, "destroy"
 		}
-		if s == "history" {
-			return tok.History, "history"
-		}
 		if s == "project" {
 			return tok.Project, "project"
 		}
