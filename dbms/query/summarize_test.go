@@ -13,6 +13,30 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+func TestSummarizeSchemaCount(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create zz (a, b) key(a) index(b)")
+	db.adm("view foo = zz")
+	test := func(query, expected string) {
+		t.Helper()
+		tran := db.NewReadTran(AllPerms)
+		q := ParseQuery(query, tran, nil)
+		q, _, _ = Setup(q, ReadMode, tran)
+		assert.T(t).This(queryAll2(q)).Is(expected)
+		q = ParseQuery(query, tran, nil)
+		assert.T(t).This(func() {
+			Setup(q, CursorMode, tran)
+		}).Panics("invalid query:")
+	}
+	test("indexes summarize count", "count=8")
+	test("tables summarize count", "count=7")
+	test("columns summarize count", "count=20")
+	test("views summarize count", "count=1")
+	test("indexes rename table to name summarize count", "count=8")
+	test("indexes extend x = 1 summarize count", "count=8")
+}
+
 func TestSummarizeSelectFilter(t *testing.T) {
 	// Test that Select and Lookup properly split and filter on summarized columns
 	db := db19.CreateDb(stor.HeapStor(8192))

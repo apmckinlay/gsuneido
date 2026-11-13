@@ -278,7 +278,10 @@ func (su *Summarize) Transform() Query {
 func (su *Summarize) optimize(mode Mode, req Require) (Cost, Cost, any) {
 	if su.source.knowExactNrows() &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
-		Optimize(su.source, mode, NoneReq(0))
+		fixcost, varcost := Optimize(su.source, mode, NoneReq(0))
+		if fixcost+varcost >= impossible {
+			return impossible, impossible, nil
+		}
 		return 0, 1, &summarizeApproach{strat: sumTbl, req: NoneReq(0)}
 	}
 	seqFix, seqVar, seqApp := su.optSeq(mode, req)
