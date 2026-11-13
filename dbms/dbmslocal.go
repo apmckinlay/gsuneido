@@ -78,6 +78,10 @@ func (dbms *DbmsLocal) Check(full bool) string {
 	return ""
 }
 
+func (dbms *DbmsLocal) ClearStats() {
+	dbms.db.ClearStats()
+}
+
 func (*DbmsLocal) Connections() Value {
 	return connections()
 }

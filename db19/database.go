@@ -731,3 +731,9 @@ func (db *Database) BusyAdd(col string, weight int) {
 func (db *Database) Stats() stats.Stats {
 	return db.stats
 }
+
+// ClearStats discards the in-memory query optimizer statistics.
+func (db *Database) ClearStats() {
+	// potential race, but acceptable since only for manual testing
+	db.stats = nil
+}

@@ -48,6 +48,16 @@ func db_FullCheck(th *Thread, args []Value) Value {
 	return StrVal(th.Dbms().Check(true))
 }
 
+var _ = staticMethod(db_ClearStats, "() :void")
+
+func db_ClearStats(th *Thread, args []Value) Value {
+	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
+		dbms.ClearStats()
+		return nil
+	}
+	panic("Database.ClearStats only supported for local database")
+}
+
 var _ = staticMethod(db_Connections, "() :object")
 
 func db_Connections(th *Thread, args []Value) Value {
